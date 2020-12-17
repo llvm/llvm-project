@@ -13,6 +13,10 @@
 #include "descriptor.h"
 #include "entry-names.h"
 
+namespace Fortran::runtime::typeInfo {
+class DerivedType;
+}
+
 namespace Fortran::runtime {
 extern "C" {
 
@@ -29,7 +33,7 @@ void RTNAME(AllocatableInitIntrinsic)(
 void RTNAME(AllocatableInitCharacter)(Descriptor &, SubscriptValue length = 0,
     int kind = 1, int rank = 0, int corank = 0);
 void RTNAME(AllocatableInitDerived)(
-    Descriptor &, const DerivedType &, int rank = 0, int corank = 0);
+    Descriptor &, const typeInfo::DerivedType &, int rank = 0, int corank = 0);
 
 // Checks that an allocatable is not already allocated in statements
 // with STAT=.  Use this on a value descriptor before setting bounds or

@@ -14,6 +14,7 @@
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/PseudoProbe.h"
 #include "llvm/ProfileData/SampleProfReader.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
@@ -31,6 +32,8 @@ using namespace sampleprof;
 namespace llvm {
 namespace sampleprof {
 SampleProfileFormat FunctionSamples::Format;
+bool FunctionSamples::ProfileIsProbeBased = false;
+bool FunctionSamples::ProfileIsCS = false;
 bool FunctionSamples::UseMD5;
 } // namespace sampleprof
 } // namespace llvm
@@ -76,6 +79,8 @@ class SampleProfErrorCategoryType : public std::error_category {
       return "Uncompress failure";
     case sampleprof_error::zlib_unavailable:
       return "Zlib is unavailable";
+    case sampleprof_error::hash_mismatch:
+      return "Function hash mismatch";
     }
     llvm_unreachable("A value of sampleprof_error has no message.");
   }
@@ -128,6 +133,9 @@ raw_ostream &llvm::sampleprof::operator<<(raw_ostream &OS,
 
 /// Print the samples collected for a function on stream \p OS.
 void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
+  if (getFunctionHash())
+    OS << "CFG checksum " << getFunctionHash() << "\n";
+
   OS << TotalSamples << ", " << TotalHeadSamples << ", " << BodySamples.size()
      << " sampled lines\n";
 
@@ -173,6 +181,20 @@ raw_ostream &llvm::sampleprof::operator<<(raw_ostream &OS,
 unsigned FunctionSamples::getOffset(const DILocation *DIL) {
   return (DIL->getLine() - DIL->getScope()->getSubprogram()->getLine()) &
       0xffff;
+}
+
+LineLocation FunctionSamples::getCallSiteIdentifier(const DILocation *DIL) {
+  if (FunctionSamples::ProfileIsProbeBased)
+    // In a pseudo-probe based profile, a callsite is simply represented by the
+    // ID of the probe associated with the call instruction. The probe ID is
+    // encoded in the Discriminator field of the call instruction's debug
+    // metadata.
+    return LineLocation(PseudoProbeDwarfDiscriminator::extractProbeIndex(
+                            DIL->getDiscriminator()),
+                        0);
+  else
+    return LineLocation(FunctionSamples::getOffset(DIL),
+                        DIL->getBaseDiscriminator());
 }
 
 const FunctionSamples *FunctionSamples::findFunctionSamples(

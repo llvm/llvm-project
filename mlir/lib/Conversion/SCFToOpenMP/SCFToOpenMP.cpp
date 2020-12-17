@@ -66,7 +66,7 @@ static void insertOpenMPParallel(FuncOp func) {
   SmallVector<scf::ParallelOp, 4> topLevelParallelOps;
   func.walk([&topLevelParallelOps](scf::ParallelOp parallelOp) {
     // Ignore ops that are already within OpenMP parallel construct.
-    if (!parallelOp.getParentOfType<scf::ParallelOp>())
+    if (!parallelOp->getParentOfType<scf::ParallelOp>())
       topLevelParallelOps.push_back(parallelOp);
   });
 
@@ -87,7 +87,7 @@ static LogicalResult applyPatterns(FuncOp func) {
   ConversionTarget target(*func.getContext());
   target.addIllegalOp<scf::ParallelOp>();
   target.addDynamicallyLegalOp<scf::YieldOp>(
-      [](scf::YieldOp op) { return !isa<scf::ParallelOp>(op.getParentOp()); });
+      [](scf::YieldOp op) { return !isa<scf::ParallelOp>(op->getParentOp()); });
   target.addLegalDialect<omp::OpenMPDialect>();
 
   OwningRewritePatternList patterns;

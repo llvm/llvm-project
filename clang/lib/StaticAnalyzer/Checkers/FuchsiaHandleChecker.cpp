@@ -331,11 +331,6 @@ void FuchsiaHandleChecker::checkPreCall(const CallEvent &Call,
           return;
         }
       }
-      if (!hasFuchsiaAttr<UseHandleAttr>(PVD) &&
-          PVD->getType()->isIntegerType()) {
-        // Working around integer by-value escapes.
-        State = State->set<HStateMap>(Handle, HandleState::getEscaped());
-      }
     }
   }
   C.addTransition(State);
@@ -345,6 +340,10 @@ void FuchsiaHandleChecker::checkPostCall(const CallEvent &Call,
                                          CheckerContext &C) const {
   const FunctionDecl *FuncDecl = dyn_cast_or_null<FunctionDecl>(Call.getDecl());
   if (!FuncDecl)
+    return;
+
+  // If we analyzed the function body, then ignore the annotations.
+  if (C.wasInlined)
     return;
 
   ProgramStateRef State = C.getState();
@@ -417,6 +416,14 @@ void FuchsiaHandleChecker::checkPostCall(const CallEvent &Call,
         });
         State = State->set<HStateMap>(
             Handle, HandleState::getMaybeAllocated(ResultSymbol));
+      } else if (!hasFuchsiaAttr<UseHandleAttr>(PVD) &&
+                 PVD->getType()->isIntegerType()) {
+        // Working around integer by-value escapes.
+        // The by-value escape would not be captured in checkPointerEscape.
+        // If the function was not analyzed (otherwise wasInlined should be
+        // true) and there is no annotation on the handle, we assume the handle
+        // is escaped.
+        State = State->set<HStateMap>(Handle, HandleState::getEscaped());
       }
     }
   }

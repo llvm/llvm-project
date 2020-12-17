@@ -490,7 +490,8 @@ bool IsBuiltinDerivedType(const DerivedTypeSpec *derived, const char *name) {
   } else {
     const auto &symbol{derived->typeSymbol()};
     return symbol.owner().IsModule() &&
-        symbol.owner().GetName().value() == "__fortran_builtins" &&
+        (symbol.owner().GetName().value() == "__fortran_builtins" ||
+            symbol.owner().GetName().value() == "__fortran_type_info") &&
         symbol.name() == "__builtin_"s + name;
   }
 }
@@ -540,7 +541,8 @@ bool CanBeTypeBoundProc(const Symbol *symbol) {
   }
 }
 
-bool IsInitialized(const Symbol &symbol, bool ignoreDATAstatements) {
+bool IsInitialized(const Symbol &symbol, bool ignoreDATAstatements,
+    const Symbol *derivedTypeSymbol) {
   if (!ignoreDATAstatements && symbol.test(Symbol::Flag::InDataStmt)) {
     return true;
   } else if (IsNamedConstant(symbol)) {
@@ -554,7 +556,10 @@ bool IsInitialized(const Symbol &symbol, bool ignoreDATAstatements) {
       return true;
     } else if (!IsPointer(symbol) && object->type()) {
       if (const auto *derived{object->type()->AsDerived()}) {
-        if (derived->HasDefaultInitialization()) {
+        if (&derived->typeSymbol() == derivedTypeSymbol) {
+          // error recovery: avoid infinite recursion on invalid
+          // recursive usage of a derived type
+        } else if (derived->HasDefaultInitialization()) {
           return true;
         }
       }
@@ -634,10 +639,16 @@ bool IsAutomatic(const Symbol &symbol) {
 }
 
 bool IsFinalizable(const Symbol &symbol) {
-  if (const DeclTypeSpec * type{symbol.GetType()}) {
-    if (const DerivedTypeSpec * derived{type->AsDerived()}) {
-      return IsFinalizable(*derived);
+  if (IsPointer(symbol)) {
+    return false;
+  }
+  if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+    if (object->isDummy() && !IsIntentOut(symbol)) {
+      return false;
     }
+    const DeclTypeSpec *type{object->type()};
+    const DerivedTypeSpec *derived{type ? type->AsDerived() : nullptr};
+    return derived && IsFinalizable(*derived);
   }
   return false;
 }

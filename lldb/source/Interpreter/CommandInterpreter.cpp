@@ -1634,12 +1634,18 @@ Status CommandInterpreter::PreprocessCommand(std::string &command) {
 
 bool CommandInterpreter::HandleCommand(const char *command_line,
                                        LazyBool lazy_add_to_history,
-                                       CommandReturnObject &result,
-                                       ExecutionContext *override_context,
-                                       bool repeat_on_empty_command,
-                                       bool no_context_switching)
+                                       const ExecutionContext &override_context,
+                                       CommandReturnObject &result) {
 
-{
+  OverrideExecutionContext(override_context);
+  bool status = HandleCommand(command_line, lazy_add_to_history, result);
+  RestoreExecutionContext();
+  return status;
+}
+
+bool CommandInterpreter::HandleCommand(const char *command_line,
+                                       LazyBool lazy_add_to_history,
+                                       CommandReturnObject &result) {
 
   std::string command_string(command_line);
   std::string original_command_string(command_line);
@@ -1652,9 +1658,6 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
 
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(func_cat, "Handling command: %s.", command_line);
-
-  if (!no_context_switching)
-    UpdateExecutionContext(override_context);
 
   if (WasInterrupted()) {
     result.AppendError("interrupted");
@@ -1701,26 +1704,22 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   }
 
   if (empty_command) {
-    if (repeat_on_empty_command) {
-      if (m_command_history.IsEmpty()) {
-        result.AppendError("empty command");
-        result.SetStatus(eReturnStatusFailed);
-        return false;
-      } else {
-        command_line = m_repeat_command.c_str();
-        command_string = command_line;
-        original_command_string = command_line;
-        if (m_repeat_command.empty()) {
-          result.AppendError("No auto repeat.");
-          result.SetStatus(eReturnStatusFailed);
-          return false;
-        }
-      }
-      add_to_history = false;
-    } else {
-      result.SetStatus(eReturnStatusSuccessFinishNoResult);
-      return true;
+    if (m_command_history.IsEmpty()) {
+      result.AppendError("empty command");
+      result.SetStatus(eReturnStatusFailed);
+      return false;
     }
+
+    command_line = m_repeat_command.c_str();
+    command_string = command_line;
+    original_command_string = command_line;
+    if (m_repeat_command.empty()) {
+      result.AppendError("No auto repeat.");
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+
+    add_to_history = false;
   } else if (comment_command) {
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
     return true;
@@ -1857,8 +1856,6 @@ void CommandInterpreter::HandleCompletionMatches(CompletionRequest &request) {
 
 void CommandInterpreter::HandleCompletion(CompletionRequest &request) {
 
-  UpdateExecutionContext(nullptr);
-
   // Don't complete comments, and if the line we are completing is just the
   // history repeat character, substitute the appropriate history line.
   llvm::StringRef first_arg = request.GetParsedLine().GetArgumentAtIndex(0);
@@ -1889,8 +1886,6 @@ CommandInterpreter::GetAutoSuggestionForCommand(llvm::StringRef line) {
   }
   return llvm::None;
 }
-
-CommandInterpreter::~CommandInterpreter() {}
 
 void CommandInterpreter::UpdatePrompt(llvm::StringRef new_prompt) {
   EventSP prompt_change_event_sp(
@@ -2133,13 +2128,12 @@ void CommandInterpreter::SourceInitFile(FileSpec file,
   // broadcasting of the commands back to any appropriate listener (see
   // CommandObjectSource::Execute for more details).
   const bool saved_batch = SetBatchCommandMode(true);
-  ExecutionContext *ctx = nullptr;
   CommandInterpreterRunOptions options;
   options.SetSilent(true);
   options.SetPrintErrors(true);
   options.SetStopOnError(false);
   options.SetStopOnContinue(true);
-  HandleCommandsFromFile(file, ctx, options, result);
+  HandleCommandsFromFile(file, options, result);
   SetBatchCommandMode(saved_batch);
 }
 
@@ -2230,7 +2224,8 @@ PlatformSP CommandInterpreter::GetPlatform(bool prefer_target_platform) {
 }
 
 bool CommandInterpreter::DidProcessStopAbnormally() const {
-  TargetSP target_sp = m_debugger.GetTargetList().GetSelectedTarget();
+  auto exe_ctx = GetExecutionContext();
+  TargetSP target_sp = exe_ctx.GetTargetSP();
   if (!target_sp)
     return false;
 
@@ -2268,9 +2263,19 @@ bool CommandInterpreter::DidProcessStopAbnormally() const {
   return false;
 }
 
+void
+CommandInterpreter::HandleCommands(const StringList &commands,
+                                   const ExecutionContext &override_context,
+                                   const CommandInterpreterRunOptions &options,
+                                   CommandReturnObject &result) {
+
+  OverrideExecutionContext(override_context);
+  HandleCommands(commands, options, result);
+  RestoreExecutionContext();
+}
+
 void CommandInterpreter::HandleCommands(const StringList &commands,
-                                        ExecutionContext *override_context,
-                                        CommandInterpreterRunOptions &options,
+                                        const CommandInterpreterRunOptions &options,
                                         CommandReturnObject &result) {
   size_t num_lines = commands.GetSize();
 
@@ -2279,13 +2284,6 @@ void CommandInterpreter::HandleCommands(const StringList &commands,
   // from the function.
 
   bool old_async_execution = m_debugger.GetAsyncExecution();
-
-  // If we've been given an execution context, set it at the start, but don't
-  // keep resetting it or we will cause series of commands that change the
-  // context, then do an operation that relies on that context to fail.
-
-  if (override_context != nullptr)
-    UpdateExecutionContext(override_context);
 
   if (!options.GetStopOnContinue()) {
     m_debugger.SetAsyncExecution(false);
@@ -2305,19 +2303,12 @@ void CommandInterpreter::HandleCommands(const StringList &commands,
     CommandReturnObject tmp_result(m_debugger.GetUseColor());
     tmp_result.SetInteractive(result.GetInteractive());
 
-    // If override_context is not NULL, pass no_context_switching = true for
-    // HandleCommand() since we updated our context already.
-
     // We might call into a regex or alias command, in which case the
     // add_to_history will get lost.  This m_command_source_depth dingus is the
     // way we turn off adding to the history in that case, so set it up here.
     if (!options.GetAddToHistory())
       m_command_source_depth++;
-    bool success =
-        HandleCommand(cmd, options.m_add_to_history, tmp_result,
-                      nullptr, /* override_context */
-                      true,    /* repeat_on_empty_command */
-                      override_context != nullptr /* no_context_switching */);
+    bool success = HandleCommand(cmd, options.m_add_to_history, tmp_result);
     if (!options.GetAddToHistory())
       m_command_source_depth--;
 
@@ -2418,8 +2409,15 @@ enum {
 };
 
 void CommandInterpreter::HandleCommandsFromFile(
-    FileSpec &cmd_file, ExecutionContext *context,
-    CommandInterpreterRunOptions &options, CommandReturnObject &result) {
+    FileSpec &cmd_file, const ExecutionContext &context,
+    const CommandInterpreterRunOptions &options, CommandReturnObject &result) {
+  OverrideExecutionContext(context);
+  HandleCommandsFromFile(cmd_file, options, result);
+  RestoreExecutionContext();
+}
+
+void CommandInterpreter::HandleCommandsFromFile(FileSpec &cmd_file,
+    const CommandInterpreterRunOptions &options, CommandReturnObject &result) {
   if (!FileSystem::Instance().Exists(cmd_file)) {
     result.AppendErrorWithFormat(
         "Error reading commands from file %s - file not found.\n",
@@ -2720,24 +2718,26 @@ void CommandInterpreter::FindCommandsForApropos(llvm::StringRef search_word,
                            m_alias_dict);
 }
 
-void CommandInterpreter::UpdateExecutionContext(
-    ExecutionContext *override_context) {
-  if (override_context != nullptr) {
-    m_exe_ctx_ref = *override_context;
-  } else {
-    const bool adopt_selected = true;
-    m_exe_ctx_ref.SetTargetPtr(m_debugger.GetSelectedTarget().get(),
-                               adopt_selected);
-  }
+ExecutionContext CommandInterpreter::GetExecutionContext() const {
+  return !m_overriden_exe_contexts.empty()
+             ? m_overriden_exe_contexts.top()
+             : m_debugger.GetSelectedExecutionContext();
+}
+
+void CommandInterpreter::OverrideExecutionContext(
+    const ExecutionContext &override_context) {
+  m_overriden_exe_contexts.push(override_context);
+}
+
+void CommandInterpreter::RestoreExecutionContext() {
+  if (!m_overriden_exe_contexts.empty())
+    m_overriden_exe_contexts.pop();
 }
 
 void CommandInterpreter::GetProcessOutput() {
-  TargetSP target_sp(m_debugger.GetTargetList().GetSelectedTarget());
-  if (!target_sp)
-    return;
-
-  if (ProcessSP process_sp = target_sp->GetProcessSP())
-    m_debugger.FlushProcessOutput(*process_sp, /*flush_stdout*/ true,
+  auto *process_ptr = GetExecutionContext().GetProcessPtr();
+  if (process_ptr != nullptr)
+    m_debugger.FlushProcessOutput(*process_ptr, /*flush_stdout*/ true,
                                   /*flush_stderr*/ true);
 }
 

@@ -895,7 +895,7 @@ define i64 @packu_i64(i64 %a, i64 %b) nounwind {
 define i32 @packh_i32(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: packh_i32:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    andi a0, a0, 255
+; RV32I-NEXT:    zext.b a0, a0
 ; RV32I-NEXT:    slli a1, a1, 8
 ; RV32I-NEXT:    lui a2, 16
 ; RV32I-NEXT:    addi a2, a2, -256
@@ -927,7 +927,7 @@ define i32 @packh_i32(i32 %a, i32 %b) nounwind {
 define i64 @packh_i64(i64 %a, i64 %b) nounwind {
 ; RV32I-LABEL: packh_i64:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    andi a0, a0, 255
+; RV32I-NEXT:    zext.b a0, a0
 ; RV32I-NEXT:    slli a1, a2, 8
 ; RV32I-NEXT:    lui a2, 16
 ; RV32I-NEXT:    addi a2, a2, -256

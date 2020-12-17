@@ -36,7 +36,7 @@ void TemporaryObjectsCheck::registerMatchers(MatchFinder *Finder) {
 
   // Matcher for user-defined constructors.
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
+      traverse(TK_AsIs,
                cxxConstructExpr(hasParent(cxxFunctionalCastExpr()),
                                 hasDeclaration(cxxConstructorDecl(hasParent(
                                     cxxRecordDecl(matchesAnyName(Names))))))

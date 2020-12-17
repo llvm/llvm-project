@@ -97,7 +97,7 @@ static LogicalResult verify(AttributeOp op) {
   Value attrType = op.type();
   Optional<Attribute> attrValue = op.value();
 
-  if (!attrValue && isa<RewriteOp>(op.getParentOp()))
+  if (!attrValue && isa<RewriteOp>(op->getParentOp()))
     return op.emitOpError("expected constant value when specified within a "
                           "`pdl.rewrite`");
   if (attrValue && attrType)
@@ -273,7 +273,7 @@ static LogicalResult verifyResultTypesAreInferrable(OperationOp op,
 }
 
 static LogicalResult verify(OperationOp op) {
-  bool isWithinRewrite = isa<RewriteOp>(op.getParentOp());
+  bool isWithinRewrite = isa<RewriteOp>(op->getParentOp());
   if (isWithinRewrite && !op.name())
     return op.emitOpError("must have an operation name when nested within "
                           "a `pdl.rewrite`");

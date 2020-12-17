@@ -170,7 +170,9 @@ void IRTranslator::getAnalysisUsage(AnalysisUsage &AU) const {
 
 IRTranslator::ValueToVRegInfo::VRegListT &
 IRTranslator::allocateVRegs(const Value &Val) {
-  assert(!VMap.contains(Val) && "Value already allocated in VMap");
+  auto VRegsIt = VMap.findVRegs(Val);
+  if (VRegsIt != VMap.vregs_end())
+    return *VRegsIt->second;
   auto *Regs = VMap.getVRegs(Val);
   auto *Offsets = VMap.getOffsets(Val);
   SmallVector<LLT, 4> SplitTys;
@@ -2345,6 +2347,62 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
   return true;
 }
 
+bool IRTranslator::findUnwindDestinations(
+    const BasicBlock *EHPadBB,
+    BranchProbability Prob,
+    SmallVectorImpl<std::pair<MachineBasicBlock *, BranchProbability>>
+        &UnwindDests) {
+  EHPersonality Personality = classifyEHPersonality(
+      EHPadBB->getParent()->getFunction().getPersonalityFn());
+  bool IsMSVCCXX = Personality == EHPersonality::MSVC_CXX;
+  bool IsCoreCLR = Personality == EHPersonality::CoreCLR;
+  bool IsWasmCXX = Personality == EHPersonality::Wasm_CXX;
+  bool IsSEH = isAsynchronousEHPersonality(Personality);
+
+  if (IsWasmCXX) {
+    // Ignore this for now.
+    return false;
+  }
+
+  while (EHPadBB) {
+    const Instruction *Pad = EHPadBB->getFirstNonPHI();
+    BasicBlock *NewEHPadBB = nullptr;
+    if (isa<LandingPadInst>(Pad)) {
+      // Stop on landingpads. They are not funclets.
+      UnwindDests.emplace_back(&getMBB(*EHPadBB), Prob);
+      break;
+    }
+    if (isa<CleanupPadInst>(Pad)) {
+      // Stop on cleanup pads. Cleanups are always funclet entries for all known
+      // personalities.
+      UnwindDests.emplace_back(&getMBB(*EHPadBB), Prob);
+      UnwindDests.back().first->setIsEHScopeEntry();
+      UnwindDests.back().first->setIsEHFuncletEntry();
+      break;
+    }
+    if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(Pad)) {
+      // Add the catchpad handlers to the possible destinations.
+      for (const BasicBlock *CatchPadBB : CatchSwitch->handlers()) {
+        UnwindDests.emplace_back(&getMBB(*CatchPadBB), Prob);
+        // For MSVC++ and the CLR, catchblocks are funclets and need prologues.
+        if (IsMSVCCXX || IsCoreCLR)
+          UnwindDests.back().first->setIsEHFuncletEntry();
+        if (!IsSEH)
+          UnwindDests.back().first->setIsEHScopeEntry();
+      }
+      NewEHPadBB = CatchSwitch->getUnwindDest();
+    } else {
+      continue;
+    }
+
+    BranchProbabilityInfo *BPI = FuncInfo.BPI;
+    if (BPI && NewEHPadBB)
+      Prob *= BPI->getEdgeProbability(EHPadBB, NewEHPadBB);
+    EHPadBB = NewEHPadBB;
+  }
+  return true;
+}
+
 bool IRTranslator::translateInvoke(const User &U,
                                    MachineIRBuilder &MIRBuilder) {
   const InvokeInst &I = cast<InvokeInst>(U);
@@ -2384,14 +2442,28 @@ bool IRTranslator::translateInvoke(const User &U,
   MCSymbol *EndSymbol = Context.createTempSymbol();
   MIRBuilder.buildInstr(TargetOpcode::EH_LABEL).addSym(EndSymbol);
 
-  // FIXME: track probabilities.
+  SmallVector<std::pair<MachineBasicBlock *, BranchProbability>, 1> UnwindDests;
+  BranchProbabilityInfo *BPI = FuncInfo.BPI;
+  MachineBasicBlock *InvokeMBB = &MIRBuilder.getMBB();
+  BranchProbability EHPadBBProb =
+      BPI ? BPI->getEdgeProbability(InvokeMBB->getBasicBlock(), EHPadBB)
+          : BranchProbability::getZero();
+
+  if (!findUnwindDestinations(EHPadBB, EHPadBBProb, UnwindDests))
+    return false;
+
   MachineBasicBlock &EHPadMBB = getMBB(*EHPadBB),
                     &ReturnMBB = getMBB(*ReturnBB);
-  MF->addInvoke(&EHPadMBB, BeginSymbol, EndSymbol);
-  MIRBuilder.getMBB().addSuccessor(&ReturnMBB);
-  MIRBuilder.getMBB().addSuccessor(&EHPadMBB);
-  MIRBuilder.buildBr(ReturnMBB);
+  // Update successor info.
+  addSuccessorWithProb(InvokeMBB, &ReturnMBB);
+  for (auto &UnwindDest : UnwindDests) {
+    UnwindDest.first->setIsEHPad();
+    addSuccessorWithProb(InvokeMBB, UnwindDest.first, UnwindDest.second);
+  }
+  InvokeMBB->normalizeSuccProbs();
 
+  MF->addInvoke(&EHPadMBB, BeginSymbol, EndSymbol);
+  MIRBuilder.buildBr(ReturnMBB);
   return true;
 }
 
@@ -2773,8 +2845,8 @@ bool IRTranslator::translate(const Instruction &Inst) {
   // We only emit constants into the entry block from here. To prevent jumpy
   // debug behaviour set the line to 0.
   if (const DebugLoc &DL = Inst.getDebugLoc())
-    EntryBuilder->setDebugLoc(
-        DebugLoc::get(0, 0, DL.getScope(), DL.getInlinedAt()));
+    EntryBuilder->setDebugLoc(DILocation::get(
+        Inst.getContext(), 0, 0, DL.getScope(), DL.getInlinedAt()));
   else
     EntryBuilder->setDebugLoc(DebugLoc());
 

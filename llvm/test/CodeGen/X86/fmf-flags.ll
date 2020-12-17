@@ -118,7 +118,7 @@ define float @div_arcp_by_const(half %x) {
 ; X64-NEXT:    movzwl %ax, %edi
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    .cfi_def_cfa_offset 8
-; X64-NEXT:    jmp __gnu_h2f_ieee # TAILCALL
+; X64-NEXT:    jmp __gnu_h2f_ieee@PLT # TAILCALL
 ;
 ; X86-LABEL: div_arcp_by_const:
 ; X86:       # %bb.0:

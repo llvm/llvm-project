@@ -101,7 +101,7 @@ static cl::alias AllHeadersShort("x", cl::desc("Alias for --all-headers"),
 static cl::opt<std::string>
     ArchName("arch-name",
              cl::desc("Target arch to disassemble for, "
-                      "see -version for available targets"),
+                      "see --version for available targets"),
              cl::cat(ObjdumpCat));
 
 cl::opt<bool>
@@ -274,7 +274,7 @@ static cl::alias PrivateHeadersShort("p",
 cl::list<std::string>
     objdump::FilterSections("section",
                             cl::desc("Operate on the specified sections only. "
-                                     "With -macho dump segment,section"),
+                                     "With --macho dump segment,section"),
                             cl::cat(ObjdumpCat));
 static cl::alias FilterSectionsj("j", cl::desc("Alias for --section"),
                                  cl::NotHidden, cl::Grouping, cl::Prefix,
@@ -303,7 +303,7 @@ static cl::opt<bool> PrintSource(
     cl::desc(
         "Display source inlined with disassembly. Implies disassemble object"),
     cl::cat(ObjdumpCat));
-static cl::alias PrintSourceShort("S", cl::desc("Alias for -source"),
+static cl::alias PrintSourceShort("S", cl::desc("Alias for --source"),
                                   cl::NotHidden, cl::Grouping,
                                   cl::aliasopt(PrintSource));
 
@@ -335,11 +335,11 @@ static cl::alias DynamicSymbolTableShort("T",
                                          cl::NotHidden, cl::Grouping,
                                          cl::aliasopt(DynamicSymbolTable));
 
-cl::opt<std::string> objdump::TripleName(
-    "triple",
-    cl::desc(
-        "Target triple to disassemble for, see -version for available targets"),
-    cl::cat(ObjdumpCat));
+cl::opt<std::string>
+    objdump::TripleName("triple",
+                        cl::desc("Target triple to disassemble for, see "
+                                 "--version for available targets"),
+                        cl::cat(ObjdumpCat));
 
 cl::opt<bool> objdump::UnwindInfo("unwind-info",
                                   cl::desc("Display unwind information"),
@@ -1340,13 +1340,21 @@ PrettyPrinter &selectPrettyPrinter(Triple const &Triple) {
 static uint8_t getElfSymbolType(const ObjectFile *Obj, const SymbolRef &Sym) {
   assert(Obj->isELF());
   if (auto *Elf32LEObj = dyn_cast<ELF32LEObjectFile>(Obj))
-    return Elf32LEObj->getSymbol(Sym.getRawDataRefImpl())->getType();
+    return unwrapOrError(Elf32LEObj->getSymbol(Sym.getRawDataRefImpl()),
+                         Obj->getFileName())
+        ->getType();
   if (auto *Elf64LEObj = dyn_cast<ELF64LEObjectFile>(Obj))
-    return Elf64LEObj->getSymbol(Sym.getRawDataRefImpl())->getType();
+    return unwrapOrError(Elf64LEObj->getSymbol(Sym.getRawDataRefImpl()),
+                         Obj->getFileName())
+        ->getType();
   if (auto *Elf32BEObj = dyn_cast<ELF32BEObjectFile>(Obj))
-    return Elf32BEObj->getSymbol(Sym.getRawDataRefImpl())->getType();
+    return unwrapOrError(Elf32BEObj->getSymbol(Sym.getRawDataRefImpl()),
+                         Obj->getFileName())
+        ->getType();
   if (auto *Elf64BEObj = cast<ELF64BEObjectFile>(Obj))
-    return Elf64BEObj->getSymbol(Sym.getRawDataRefImpl())->getType();
+    return unwrapOrError(Elf64BEObj->getSymbol(Sym.getRawDataRefImpl()),
+                         Obj->getFileName())
+        ->getType();
   llvm_unreachable("Unsupported binary format");
 }
 
@@ -1362,7 +1370,9 @@ addDynamicElfSymbols(const ELFObjectFile<ELFT> *Obj,
     // ELFSymbolRef::getAddress() returns size instead of value for common
     // symbols which is not desirable for disassembly output. Overriding.
     if (SymbolType == ELF::STT_COMMON)
-      Address = Obj->getSymbol(Symbol.getRawDataRefImpl())->st_value;
+      Address = unwrapOrError(Obj->getSymbol(Symbol.getRawDataRefImpl()),
+                              Obj->getFileName())
+                    ->st_value;
 
     StringRef Name = unwrapOrError(Symbol.getName(), Obj->getFileName());
     if (Name.empty())

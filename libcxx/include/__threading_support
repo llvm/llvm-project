@@ -31,7 +31,7 @@
 #if defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
 # include <pthread.h>
 # include <sched.h>
-# ifdef __APPLE__
+# if defined(__APPLE__) || defined(__MVS__)
 #  define _LIBCPP_NO_NATIVE_SEMAPHORES
 # endif
 # ifndef _LIBCPP_NO_NATIVE_SEMAPHORES
@@ -87,11 +87,14 @@ typedef pthread_once_t __libcpp_exec_once_flag;
 #define _LIBCPP_EXEC_ONCE_INITIALIZER PTHREAD_ONCE_INIT
 
 // Thread id
-typedef pthread_t __libcpp_thread_id;
+#if defined(__MVS__)
+  typedef unsigned long long __libcpp_thread_id;
+#else
+  typedef pthread_t __libcpp_thread_id;
+#endif
 
 // Thread
-#define _LIBCPP_NULL_THREAD 0U
-
+#define _LIBCPP_NULL_THREAD ((__libcpp_thread_t()))
 typedef pthread_t __libcpp_thread_t;
 
 // Thread Local Storage
@@ -486,7 +489,7 @@ int __libcpp_execute_once(__libcpp_exec_once_flag *flag,
 // Returns non-zero if the thread ids are equal, otherwise 0
 bool __libcpp_thread_id_equal(__libcpp_thread_id t1, __libcpp_thread_id t2)
 {
-  return pthread_equal(t1, t2) != 0;
+  return t1 == t2;
 }
 
 // Returns non-zero if t1 < t2, otherwise 0
@@ -508,12 +511,17 @@ int __libcpp_thread_create(__libcpp_thread_t *__t, void *(*__func)(void *),
 
 __libcpp_thread_id __libcpp_thread_get_current_id()
 {
-  return pthread_self();
+  const __libcpp_thread_t thread = pthread_self();
+  return __libcpp_thread_get_id(&thread);
 }
 
 __libcpp_thread_id __libcpp_thread_get_id(const __libcpp_thread_t *__t)
 {
+#if defined(__MVS__)
+  return __t->__;
+#else
   return *__t;
+#endif
 }
 
 int __libcpp_thread_join(__libcpp_thread_t *__t)
@@ -653,7 +661,7 @@ bool __libcpp_thread_id_less(__libcpp_thread_id t1, __libcpp_thread_id t2)
 
 // Thread
 bool __libcpp_thread_isnull(const __libcpp_thread_t *__t) {
-  return *__t == 0;
+  return __libcpp_thread_get_id(__t) == 0;
 }
 
 int __libcpp_thread_create(__libcpp_thread_t *__t, void *(*__func)(void *),

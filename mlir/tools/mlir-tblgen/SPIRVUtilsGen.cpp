@@ -491,7 +491,7 @@ static void emitAttributeSerialization(const Attribute &attr,
                                        StringRef opVar, StringRef operandList,
                                        StringRef attrName, raw_ostream &os) {
   os << tabs
-     << formatv("if (auto attr = {0}.getAttr(\"{1}\")) {{\n", opVar, attrName);
+     << formatv("if (auto attr = {0}->getAttr(\"{1}\")) {{\n", opVar, attrName);
   if (attr.getAttrDefName() == "SPV_ScopeAttr" ||
       attr.getAttrDefName() == "SPV_MemorySemanticsAttr") {
     os << tabs
@@ -645,7 +645,7 @@ static void emitDecorationSerialization(const Operator &op, StringRef tabs,
                                         StringRef resultID, raw_ostream &os) {
   if (op.getNumResults() == 1) {
     // All non-argument attributes translated into OpDecorate instruction
-    os << tabs << formatv("for (auto attr : {0}.getAttrs()) {{\n", opVar);
+    os << tabs << formatv("for (auto attr : {0}->getAttrs()) {{\n", opVar);
     os << tabs
        << formatv("  if (llvm::any_of({0}, [&](StringRef elided)", elidedAttrs);
     os << " {return attr.first == elided;})) {\n";

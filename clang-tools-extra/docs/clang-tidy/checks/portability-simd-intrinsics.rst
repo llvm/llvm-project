@@ -6,7 +6,7 @@ portability-simd-intrinsics
 Finds SIMD intrinsics calls and suggests ``std::experimental::simd`` (`P0214`_)
 alternatives.
 
-If the option ``Suggest`` is set to non-zero, for
+If the option :option:`Suggest` is set to `true`, for
 
 .. code-block:: c++
 
@@ -37,7 +37,7 @@ Options
 
 .. option:: Suggest
 
-   If this option is set to non-zero (default is `0`), the check will suggest
+   If this option is set to `true` (default is `false`), the check will suggest
    `P0214`_ alternatives, otherwise it only points out the intrinsic function is
    non-portable.
 

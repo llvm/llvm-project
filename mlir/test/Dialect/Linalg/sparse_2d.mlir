@@ -1071,8 +1071,8 @@ func @matvec(%argA: tensor<16x32xf32>, %argb: tensor<32xf32>, %argx: tensor<16xf
 }
 
 // CHECK-LABEL:   func @sum_reduction(
-// CHECK-SAME:                %[[VAL_0:.*]]: tensor<10x20xf32>,
-// CHECK-SAME:                %[[VAL_1:.*]]: tensor<f32>) -> tensor<f32> {
+// CHECK-SAME:                        %[[VAL_0:.*0]]: tensor<10x20xf32>,
+// CHECK-SAME:                        %[[VAL_1:.*1]]: tensor<f32>) -> tensor<f32> {
 // CHECK:           %[[VAL_2:.*]] = constant 999 : index
 // CHECK:           %[[VAL_3:.*]] = constant 10 : index
 // CHECK:           %[[VAL_4:.*]] = constant 0 : index
@@ -1200,19 +1200,19 @@ func @scale(%arga: tensor<?x?xf64>) -> tensor<?x?xf64> {
 // CHECK:           scf.for %[[VAL_23:.*]] = %[[VAL_21]] to %[[VAL_22]] step %[[VAL_6]] {
 // CHECK:             %[[VAL_24:.*]] = load %[[VAL_8]]{{\[}}%[[VAL_23]]] : memref<?xindex>
 // CHECK:             scf.for %[[VAL_25:.*]] = %[[VAL_5]] to %[[VAL_15]] step %[[VAL_6]] {
-// CHECK:               %[[VAL_26:.*]] = load %[[VAL_9]]{{\[}}%[[VAL_23]]] : memref<?xindex>
-// CHECK:               %[[VAL_27:.*]] = addi %[[VAL_23]], %[[VAL_6]] : index
-// CHECK:               %[[VAL_28:.*]] = load %[[VAL_9]]{{\[}}%[[VAL_27]]] : memref<?xindex>
-// CHECK:               scf.for %[[VAL_29:.*]] = %[[VAL_26]] to %[[VAL_28]] step %[[VAL_6]] {
-// CHECK:                 %[[VAL_30:.*]] = load %[[VAL_10]]{{\[}}%[[VAL_29]]] : memref<?xindex>
-// CHECK:                 %[[VAL_31:.*]] = load %[[VAL_20]]{{\[}}%[[VAL_24]], %[[VAL_30]]] : memref<?x?xf32>
-// CHECK:                 %[[VAL_32:.*]] = load %[[VAL_11]]{{\[}}%[[VAL_29]]] : memref<?xf32>
-// CHECK:                 %[[VAL_33:.*]] = load %[[VAL_14]]{{\[}}%[[VAL_24]], %[[VAL_25]]] : memref<?x?xf32>
-// CHECK:                 %[[VAL_34:.*]] = load %[[VAL_17]]{{\[}}%[[VAL_25]], %[[VAL_30]]] : memref<?x?xf32>
-// CHECK:                 %[[VAL_35:.*]] = mulf %[[VAL_33]], %[[VAL_34]] : f32
-// CHECK:                 %[[VAL_36:.*]] = mulf %[[VAL_32]], %[[VAL_35]] : f32
-// CHECK:                 %[[VAL_37:.*]] = addf %[[VAL_31]], %[[VAL_36]] : f32
-// CHECK:                 store %[[VAL_37]], %[[VAL_20]]{{\[}}%[[VAL_24]], %[[VAL_30]]] : memref<?x?xf32>
+// CHECK:               %[[VAL_26:.*]] = load %[[VAL_14]]{{\[}}%[[VAL_24]], %[[VAL_25]]] : memref<?x?xf32>
+// CHECK:               %[[VAL_27:.*]] = load %[[VAL_9]]{{\[}}%[[VAL_23]]] : memref<?xindex>
+// CHECK:               %[[VAL_28:.*]] = addi %[[VAL_23]], %[[VAL_6]] : index
+// CHECK:               %[[VAL_29:.*]] = load %[[VAL_9]]{{\[}}%[[VAL_28]]] : memref<?xindex>
+// CHECK:               scf.for %[[VAL_30:.*]] = %[[VAL_27]] to %[[VAL_29]] step %[[VAL_6]] {
+// CHECK:                 %[[VAL_31:.*]] = load %[[VAL_10]]{{\[}}%[[VAL_30]]] : memref<?xindex>
+// CHECK:                 %[[VAL_32:.*]] = load %[[VAL_20]]{{\[}}%[[VAL_24]], %[[VAL_31]]] : memref<?x?xf32>
+// CHECK:                 %[[VAL_33:.*]] = load %[[VAL_11]]{{\[}}%[[VAL_30]]] : memref<?xf32>
+// CHECK:                 %[[VAL_34:.*]] = load %[[VAL_17]]{{\[}}%[[VAL_25]], %[[VAL_31]]] : memref<?x?xf32>
+// CHECK:                 %[[VAL_35:.*]] = mulf %[[VAL_26]], %[[VAL_34]] : f32
+// CHECK:                 %[[VAL_36:.*]] = mulf %[[VAL_33]], %[[VAL_35]] : f32
+// CHECK:                 %[[VAL_37:.*]] = addf %[[VAL_32]], %[[VAL_36]] : f32
+// CHECK:                 store %[[VAL_37]], %[[VAL_20]]{{\[}}%[[VAL_24]], %[[VAL_31]]] : memref<?x?xf32>
 // CHECK:               }
 // CHECK:             }
 // CHECK:           }

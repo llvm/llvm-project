@@ -104,6 +104,9 @@ public:
   void verify(LiveVirtRegBitSet& VisitedVRegs);
 #endif
 
+  // Get any virtual register that is assign to this physical unit
+  LiveInterval *getOneVReg() const;
+
   /// Query interferences between a single live virtual register and a live
   /// interval union.
   class Query {

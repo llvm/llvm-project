@@ -150,15 +150,9 @@ private:
 };
 
 /// A matcher that always returns true.
-///
-/// We only ever need one instance of this matcher, so we create a global one
-/// and reuse it to reduce the overhead of the matcher and increase the chance
-/// of cache hits.
 class TrueMatcherImpl : public DynMatcherInterface {
 public:
-  TrueMatcherImpl() {
-    Retain(); // Reference count will never become zero.
-  }
+  TrueMatcherImpl() = default;
 
   bool dynMatches(const DynTypedNode &, ASTMatchFinder *,
                   BoundNodesTreeBuilder *) const override {
@@ -192,8 +186,6 @@ private:
 };
 
 } // namespace
-
-static llvm::ManagedStatic<TrueMatcherImpl> TrueMatcherInstance;
 
 bool ASTMatchFinder::isTraversalIgnoringImplicitNodes() const {
   return getASTContext().getParentMapContext().getTraversalKind() ==
@@ -264,8 +256,7 @@ DynTypedMatcher::constructRestrictedWrapper(const DynTypedMatcher &InnerMatcher,
   return Copy;
 }
 
-DynTypedMatcher
-DynTypedMatcher::withTraversalKind(ast_type_traits::TraversalKind TK) {
+DynTypedMatcher DynTypedMatcher::withTraversalKind(TraversalKind TK) {
   auto Copy = *this;
   Copy.Implementation =
       new DynTraversalMatcherImpl(TK, std::move(Copy.Implementation));
@@ -273,7 +264,12 @@ DynTypedMatcher::withTraversalKind(ast_type_traits::TraversalKind TK) {
 }
 
 DynTypedMatcher DynTypedMatcher::trueMatcher(ASTNodeKind NodeKind) {
-  return DynTypedMatcher(NodeKind, NodeKind, &*TrueMatcherInstance);
+  // We only ever need one instance of TrueMatcherImpl, so we create a static
+  // instance and reuse it to reduce the overhead of the matcher and increase
+  // the chance of cache hits.
+  static const llvm::IntrusiveRefCntPtr<TrueMatcherImpl> Instance =
+      new TrueMatcherImpl();
+  return DynTypedMatcher(NodeKind, NodeKind, Instance);
 }
 
 bool DynTypedMatcher::canMatchNodesOfKind(ASTNodeKind Kind) const {
@@ -909,6 +905,8 @@ const internal::VariadicDynCastAllOfMatcher<Stmt, CXXNullPtrLiteralExpr>
     cxxNullPtrLiteralExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, ChooseExpr> chooseExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, GNUNullExpr> gnuNullExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, GenericSelectionExpr>
+    genericSelectionExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, AtomicExpr> atomicExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, StmtExpr> stmtExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, BinaryOperator>

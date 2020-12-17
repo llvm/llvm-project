@@ -836,11 +836,11 @@ body:             |
     %4:mqpr = MVE_VORR %0:mqpr, %0:mqpr, 1, %2:vccr, undef %4:mqpr
     %5:mqpr = MVE_VORR %4:mqpr, %4:mqpr, 1, %3:vccr, undef %5:mqpr
   bb.1:
-    %2:vccr = MVE_VCMPs32 %0:mqpr, %1:mqpr, 10, 0, $noreg
-    %3:vccr = MVE_VPNOT %2:vccr, 1, %2:vccr
-    %4:mqpr = MVE_VORR %0:mqpr, %1:mqpr, 1, %3:vccr, undef %4:mqpr
-    %5:mqpr = MVE_VORR %0:mqpr, %0:mqpr, 1, %2:vccr, undef %5:mqpr
-    %6:mqpr = MVE_VORR %1:mqpr, %0:mqpr, 1, %3:vccr, undef %6:mqpr
+    %12:vccr = MVE_VCMPs32 %0:mqpr, %1:mqpr, 10, 0, $noreg
+    %13:vccr = MVE_VPNOT %12:vccr, 1, %12:vccr
+    %14:mqpr = MVE_VORR %0:mqpr, %1:mqpr, 1, %13:vccr, undef %14:mqpr
+    %15:mqpr = MVE_VORR %0:mqpr, %0:mqpr, 1, %12:vccr, undef %15:mqpr
+    %16:mqpr = MVE_VORR %1:mqpr, %0:mqpr, 1, %13:vccr, undef %16:mqpr
     tBX_RET 14, $noreg, implicit %0:mqpr
 ...
 ---

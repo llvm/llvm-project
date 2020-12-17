@@ -1134,11 +1134,6 @@ def isGFX7GFX10 :
             "Subtarget->getGeneration() == AMDGPUSubtarget::GFX10">,
   AssemblerPredicate<(all_of (not FeatureGCN3Encoding), FeatureCIInsts)>;
 
-def isGFX7GFX8 :
-  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS ||"
-            "Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS">,
-  AssemblerPredicate<(all_of FeatureSouthernIslands, FeatureCIInsts)>;
-
 def isGFX7GFX8GFX9 :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS ||"
             "Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS ||"
@@ -1334,6 +1329,9 @@ def HasGetWaveIdInst : Predicate<"Subtarget->hasGetWaveIdInst()">,
 def HasMAIInsts : Predicate<"Subtarget->hasMAIInsts()">,
   AssemblerPredicate<(all_of FeatureMAIInsts)>;
 
+def HasSMemRealTime : Predicate<"Subtarget->hasSMemRealTime()">,
+  AssemblerPredicate<(all_of FeatureSMemRealTime)>;
+
 def HasSMemTimeInst : Predicate<"Subtarget->hasSMemTimeInst()">,
   AssemblerPredicate<(all_of FeatureSMemTimeInst)>;
 
@@ -1363,6 +1361,9 @@ def EnableLateCFGStructurize : Predicate<
 def EnableFlatScratch : Predicate<"Subtarget->enableFlatScratch()">;
 
 def DisableFlatScratch : Predicate<"!Subtarget->enableFlatScratch()">;
+
+def HasUnalignedAccessMode : Predicate<"Subtarget->hasUnalignedAccessMode()">,
+  AssemblerPredicate<(all_of FeatureUnalignedAccessMode)>;
 
 // Include AMDGPU TD files
 include "SISchedule.td"

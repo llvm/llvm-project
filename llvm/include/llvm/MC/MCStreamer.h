@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
+#include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCWinEH.h"
 #include "llvm/Support/Error.h"
@@ -1049,6 +1050,11 @@ public:
   /// Emit the given \p Instruction into the current section.
   virtual void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI);
 
+  /// Emit the a pseudo probe into the current section.
+  virtual void emitPseudoProbe(uint64_t Guid, uint64_t Index, uint64_t Type,
+                               uint64_t Attr,
+                               const MCPseudoProbeInlineStack &InlineStack);
+
   /// Set the bundle alignment mode from now on in the section.
   /// The argument is the power of 2 to which the alignment is set. The
   /// value 0 means turn the bundle alignment off.
@@ -1079,28 +1085,6 @@ public:
 /// Create a dummy machine code streamer, which does nothing. This is useful for
 /// timing the assembler front end.
 MCStreamer *createNullStreamer(MCContext &Ctx);
-
-/// Create a machine code streamer which will print out assembly for the native
-/// target, suitable for compiling with a native assembler.
-///
-/// \param InstPrint - If given, the instruction printer to use. If not given
-/// the MCInst representation will be printed.  This method takes ownership of
-/// InstPrint.
-///
-/// \param CE - If given, a code emitter to use to show the instruction
-/// encoding inline with the assembly. This method takes ownership of \p CE.
-///
-/// \param TAB - If given, a target asm backend to use to show the fixup
-/// information in conjunction with encoding information. This method takes
-/// ownership of \p TAB.
-///
-/// \param ShowInst - Whether to show the MCInst representation inline with
-/// the assembly.
-MCStreamer *createAsmStreamer(MCContext &Ctx,
-                              std::unique_ptr<formatted_raw_ostream> OS,
-                              bool isVerboseAsm, bool useDwarfDirectory,
-                              MCInstPrinter *InstPrint, MCCodeEmitter *CE,
-                              MCAsmBackend *TAB, bool ShowInst);
 
 } // end namespace llvm
 

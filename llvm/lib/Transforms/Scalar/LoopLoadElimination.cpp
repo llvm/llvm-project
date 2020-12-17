@@ -632,6 +632,9 @@ eliminateLoadsAcrossLoops(Function &F, LoopInfo &LI, DominatorTree &DT,
 
   // Now walk the identified inner loops.
   for (Loop *L : Worklist) {
+    // Match historical behavior
+    if (!L->isRotatedForm() || !L->getExitingBlock())
+      continue;
     // The actual work is performed by LoadEliminationForLoop.
     LoadEliminationForLoop LEL(L, &LI, GetLAI(*L), &DT, BFI, PSI);
     Changed |= LEL.processLoop();

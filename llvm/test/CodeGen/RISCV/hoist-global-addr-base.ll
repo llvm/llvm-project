@@ -128,18 +128,18 @@ define dso_local i32 @load_half() nounwind {
 ; CHECK-LABEL: load_half:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sw ra, 12(sp)
+; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    lui a0, %hi(foo+8)
 ; CHECK-NEXT:    lhu a0, %lo(foo+8)(a0)
 ; CHECK-NEXT:    addi a1, zero, 140
 ; CHECK-NEXT:    bne a0, a1, .LBB7_2
 ; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    mv a0, zero
-; CHECK-NEXT:    lw ra, 12(sp)
+; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB7_2: # %if.then
-; CHECK-NEXT:    call abort
+; CHECK-NEXT:    call abort@plt
 entry:
   %0 = load i16, i16* getelementptr inbounds ([6 x i16], [6 x i16]* @foo, i32 0, i32 4), align 2
   %cmp = icmp eq i16 %0, 140

@@ -18,12 +18,12 @@
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/SPIRV/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/SPIRVOps.h"
-#include "mlir/Dialect/SPIRV/Serialization.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/Target/SPIRV/Serialization.h"
 
 using namespace mlir;
 
@@ -175,12 +175,12 @@ void ConvertGpuLaunchFuncToVulkanLaunchFunc::convertGpuLaunchFunc(
       vulkanLaunchOperands);
 
   // Set SPIR-V binary shader data as an attribute.
-  vulkanLaunchCallOp.setAttr(
+  vulkanLaunchCallOp->setAttr(
       kSPIRVBlobAttrName,
       StringAttr::get({binary.data(), binary.size()}, loc->getContext()));
 
   // Set entry point name as an attribute.
-  vulkanLaunchCallOp.setAttr(
+  vulkanLaunchCallOp->setAttr(
       kSPIRVEntryPointAttrName,
       StringAttr::get(launchOp.getKernelName(), loc->getContext()));
 

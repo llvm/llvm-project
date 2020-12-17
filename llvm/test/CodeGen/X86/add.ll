@@ -553,8 +553,8 @@ define i32 @add_to_sub(i32 %a, i32 %b) {
   ret i32 %r
 }
 
-declare void @bar_i32(i32)
-declare void @bar_i64(i64)
+declare dso_local void @bar_i32(i32)
+declare dso_local void @bar_i64(i64)
 
 ; Make sure we can use sub -128 for add 128 when the flags are used.
 define void @add_i32_128_flag(i32 %x) {

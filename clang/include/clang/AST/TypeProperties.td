@@ -484,8 +484,12 @@ let Class = TagType in {
     let Read = [{ node->isDependentType() }];
   }
   def : Property<"declaration", DeclRef> {
-    // Serializing a reference to the canonical declaration is apparently
-    // necessary to make module-merging work.
+    // We don't know which declaration was originally referenced here, and we
+    // cannot reference a declaration that follows the use (because that can
+    // introduce deserialization cycles), so conservatively generate a
+    // reference to the first declaration.
+    // FIXME: If this is a reference to a class template specialization, that
+    // can still introduce a deserialization cycle.
     let Read = [{ node->getDecl()->getCanonicalDecl() }];
   }
 }
@@ -761,7 +765,7 @@ let Class = BuiltinType in {
       case BuiltinType::ID: return ctx.SINGLETON_ID;
 #include "clang/Basic/AArch64SVEACLETypes.def"
 
-#define PPC_MMA_VECTOR_TYPE(NAME, ID, SIZE) \
+#define PPC_VECTOR_TYPE(NAME, ID, SIZE) \
       case BuiltinType::ID: return ctx.ID##Ty;
 #include "clang/Basic/PPCTypes.def"
 

@@ -670,15 +670,17 @@ public:
                       << L->getHeader()->getParent()->getName()
                       << "\" checking " << *L << "\n");
 
+    // Having a single exit block implies there's also one exiting block.
     if (!L->getExitBlock())
       return fail("MultipleExitBlocks", "multiple exit blocks");
     if (!L->isLoopSimplifyForm())
       return fail("NotLoopSimplifyForm",
                   "loop is not in loop-simplify form");
+    if (!L->isRotatedForm())
+      return fail("NotBottomTested", "loop is not bottom tested");
 
     BasicBlock *PH = L->getLoopPreheader();
 
-    // LAA will check that we only have a single exiting block.
     LAI = &GetLAA(*L);
 
     // Currently, we only distribute to isolate the part of the loop with

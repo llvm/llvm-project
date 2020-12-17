@@ -38,8 +38,8 @@ Options
 
 .. option::  WarnOnLargeLength
 
-   When non-zero, the check will warn on a string with a length greater than
-   `LargeLengthThreshold`. Default is `1`.
+   When `true`, the check will warn on a string with a length greater than
+   :option:`LargeLengthThreshold`. Default is `true`.
 
 .. option::  LargeLengthThreshold
 

@@ -1,4 +1,5 @@
 import("//llvm/lib/Target/targets.gni")
+import("//llvm/utils/gn/build/mac_sdk.gni")
 import("//llvm/utils/gn/build/toolchain/compiler.gni")
 
 # In the GN build, compiler-rt is always built by just-built clang and lld.
@@ -19,7 +20,8 @@ group("compiler-rt") {
 
   # FIXME: Do this only if a gn arg compiler_rt_enable_ios is set?
   # That would match the cmake build.
-  if (host_os == "mac") {
+  # iOS SDKs aren't available in the commandline tools SDK.
+  if (host_os == "mac" && !mac_use_commandline_tools_sdk) {
     if (llvm_build_AArch64) {
       deps += [ "//compiler-rt/lib/builtins(//llvm/utils/gn/build/toolchain:stage2_ios_aarch64)" ]
     }

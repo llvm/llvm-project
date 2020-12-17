@@ -427,20 +427,23 @@ func @f() {
 
 // -----
 
-// assuming_all should not be removed if not all witnesses are statically passing.
+// assuming_all should not be removed if more than one witness is not
+// statically passing
 //
 // Additionally check that the attribute is moved to the end as this op is
 // commutative.
 // CHECK-LABEL: func @f
 func @f() {
-  // CHECK-NEXT: %[[UNKNOWN:.*]] = "test.source"
-  // CHECK-NEXT: shape.assuming_all %[[UNKNOWN]]
+  // CHECK-NEXT: %[[UNKNOWN1:.*]] = "test.source"
+  // CHECK-NEXT: %[[UNKNOWN2:.*]] = "test.source"
+  // CHECK-NEXT: shape.assuming_all %[[UNKNOWN1]], %[[UNKNOWN2]]
   // CHECK-NEXT: consume.witness
   // CHECK-NEXT: return
   %0 = shape.const_witness true
   %1 = "test.source"() : () -> !shape.witness
-  %2 = shape.assuming_all %0, %1
-  "consume.witness"(%2) : (!shape.witness) -> ()
+  %2 = "test.source"() : () -> !shape.witness
+  %3 = shape.assuming_all %0, %1, %2
+  "consume.witness"(%3) : (!shape.witness) -> ()
   return
 }
 
@@ -853,4 +856,40 @@ func @fold_to_extent_tensor_on_tensor(%arg: tensor<?xindex>) -> tensor<?xindex> 
   // CHECK-NOT: to_extent_tensor
   %casted = shape.to_extent_tensor %arg : tensor<?xindex> -> tensor<?xindex>
   return %casted : tensor<?xindex>
+}
+
+// -----
+
+// Fold assuming_all with a single input
+// CHECK-LABEL: @fold_assuming_all_single_element
+func @fold_assuming_all_single_element(%arg: tensor<?xindex>) {
+  // CHECK-NOT: assuming_all
+  %0 = "test.source"() : () -> (!shape.witness)
+  %1 = shape.assuming_all %0
+  "consume.witness"(%1) : (!shape.witness) -> ()
+  return
+}
+
+// -----
+
+// Verify that tensor_cast folding uses the correct type
+// CHECK-LABEL: @fold_tensor_cast_of_const_shape_returned
+func @fold_tensor_cast_of_const_shape_returned(%arg: i1) -> tensor<1xindex> {
+  // CHECK: constant dense<2> : tensor<1xindex>
+  // CHECK-NOT: tensor_cast
+  %0 = shape.const_shape [2] : tensor<?xindex>
+  %1 = tensor_cast %0 : tensor<?xindex> to tensor<1xindex>
+  return %1 : tensor<1xindex>
+}
+
+// -----
+
+// Verify that tensor_cast folding uses the correct type
+// CHECK-LABEL: @fold_tensor_cast_of_const_shape_returned_dynamic
+func @fold_tensor_cast_of_const_shape_returned_dynamic(%arg: i1) -> tensor<?xindex> {
+  // CHECK: shape.const_shape [2] : tensor<?xindex>
+  // CHECK-NOT: tensor_cast
+  %0 = shape.const_shape [2] : tensor<1xindex>
+  %1 = tensor_cast %0 : tensor<1xindex> to tensor<?xindex>
+  return %1 : tensor<?xindex>
 }

@@ -868,8 +868,8 @@ bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input,
           FileMgr.getBufferForFile(&File.getFileEntry(), /*isVolatile=*/true);
       if (MB) {
         // Create a new virtual file that will have the correct size.
-        const FileEntry *FE =
-            FileMgr.getVirtualFile(InputFile, (*MB)->getBufferSize(), 0);
+        FileEntryRef FE =
+            FileMgr.getVirtualFileRef(InputFile, (*MB)->getBufferSize(), 0);
         SourceMgr.overrideFileContents(FE, std::move(*MB));
         SourceMgr.setMainFileID(
             SourceMgr.createFileID(FE, SourceLocation(), Kind));
@@ -891,8 +891,8 @@ bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input,
     }
     std::unique_ptr<llvm::MemoryBuffer> SB = std::move(SBOrErr.get());
 
-    const FileEntry *File = FileMgr.getVirtualFile(SB->getBufferIdentifier(),
-                                                   SB->getBufferSize(), 0);
+    FileEntryRef File = FileMgr.getVirtualFileRef(SB->getBufferIdentifier(),
+                                                  SB->getBufferSize(), 0);
     SourceMgr.setMainFileID(
         SourceMgr.createFileID(File, SourceLocation(), Kind));
     SourceMgr.overrideFileContents(File, std::move(SB));
@@ -975,7 +975,7 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
        << " based upon " << BACKEND_PACKAGE_STRING
        << " default target " << llvm::sys::getDefaultTargetTriple() << "\n";
 
-  if (getFrontendOpts().ShowTimers)
+  if (getCodeGenOpts().TimePasses)
     createFrontendTimer();
 
   if (getFrontendOpts().ShowStats || !getFrontendOpts().StatsFile.empty())
@@ -1182,10 +1182,8 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
                                             diag::remark_module_build_done)
     << ModuleName;
 
-  // Delete the temporary module map file.
-  // FIXME: Even though we're executing under crash protection, it would still
-  // be nice to do this with RemoveFileOnSignal when we can. However, that
-  // doesn't make sense for all clients, so clean this up manually.
+  // Delete any remaining temporary files related to Instance, in case the
+  // module generation thread crashed.
   Instance.clearOutputFiles(/*EraseFiles=*/true);
 
   return !Instance.getDiagnostics().hasErrorOccurred();

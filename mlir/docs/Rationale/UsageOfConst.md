@@ -1,4 +1,4 @@
-# Usage of 'Const' in MLIR, for core IR types
+# Usage of 'const' in MLIR, for core IR types
 
 aka, where'd `const` go?
 

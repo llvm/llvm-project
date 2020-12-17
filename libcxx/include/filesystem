@@ -940,9 +940,8 @@ public:
   template <class _ECharT>
   typename enable_if<__can_convert_char<_ECharT>::value, path&>::type
   operator+=(_ECharT __x) {
-    basic_string<_ECharT> __tmp;
-    __tmp += __x;
-    _PathCVT<_ECharT>::__append_source(__pn_, __tmp);
+    _PathCVT<_ECharT>::__append_source(__pn_,
+                                       basic_string_view<_ECharT>(&__x, 1));
     return *this;
   }
 

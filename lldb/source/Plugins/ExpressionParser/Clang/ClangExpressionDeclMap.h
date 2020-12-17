@@ -380,6 +380,11 @@ private:
   /// Deallocate struct variables
   void DisableStructVars() { m_struct_vars.reset(); }
 
+  TypeSystemClang *GetScratchContext(Target &target) {
+    return ScratchTypeSystemClang::GetForTarget(target,
+                                                m_ast_context->getLangOpts());
+  }
+
   /// Get this parser's ID for use in extracting parser- and JIT-specific data
   /// from persistent variables.
   uint64_t GetParserID() { return (uint64_t) this; }

@@ -70,9 +70,11 @@ WasmDumper::dumpCustomSection(const WasmSection &WasmSec) {
       NameEntry.Index = Name.Index;
       if (Name.Type == llvm::wasm::NameType::FUNCTION) {
         NameSec->FunctionNames.push_back(NameEntry);
-      } else {
-        assert(Name.Type == llvm::wasm::NameType::GLOBAL);
+      } else if (Name.Type == llvm::wasm::NameType::GLOBAL) {
         NameSec->GlobalNames.push_back(NameEntry);
+      } else {
+        assert(Name.Type == llvm::wasm::NameType::DATA_SEGMENT);
+        NameSec->DataSegmentNames.push_back(NameEntry);
       }
     }
     CustomSec = std::move(NameSec);
@@ -106,6 +108,14 @@ WasmDumper::dumpCustomSection(const WasmSection &WasmSec) {
             WasmYAML::ComdatEntry{wasm::WASM_COMDAT_DATA, SegmentIndex});
       }
       SegmentIndex++;
+    }
+    uint32_t SectionIndex = 0;
+    for (const auto &Sec : Obj.sections()) {
+      const WasmSection &WasmSec = Obj.getWasmSection(Sec);
+      if (WasmSec.Comdat != UINT32_MAX)
+        LinkingSec->Comdats[WasmSec.Comdat].Entries.emplace_back(
+            WasmYAML::ComdatEntry{wasm::WASM_COMDAT_SECTION, SectionIndex});
+      SectionIndex++;
     }
 
     uint32_t SymbolIndex = 0;

@@ -5,7 +5,7 @@
 
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section ({{.*}}) .rel.dyn {
-// CHECK-NEXT:     R_386_RELATIVE - 0x0
+// CHECK-NEXT:     R_386_RELATIVE -
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 

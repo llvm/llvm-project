@@ -22,6 +22,14 @@ void f7() __attribute__((availability(macosx,message=L"wide"))); // expected-err
 
 void f8() __attribute__((availability(macosx,message="a" L"b"))); // expected-error {{expected string literal for optional message in 'availability' attribute}}
 
+void f9() __attribute__((availability(macosx,message=u8"b"))); // expected-error {{expected string literal for optional message in 'availability' attribute}}
+
+void f10() __attribute__((availability(macosx,message="a" u8"b"))); // expected-error {{expected string literal for optional message in 'availability' attribute}}
+
+void f11() __attribute__((availability(macosx,message=u"b"))); // expected-error {{expected string literal for optional message in 'availability' attribute}}
+
+void f12() __attribute__((availability(macosx,message="a" u"b"))); // expected-error {{expected string literal for optional message in 'availability' attribute}}
+
 // rdar://10095131
 enum E{
     gorf __attribute__((availability(macosx,introduced=8.5, message = 10.0))), // expected-error {{expected string literal for optional message in 'availability' attribute}}

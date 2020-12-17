@@ -565,8 +565,8 @@ protected:
 template <typename SourceOp>
 class ConvertOpToLLVMPattern : public ConvertToLLVMPattern {
 public:
-  ConvertOpToLLVMPattern(LLVMTypeConverter &typeConverter,
-                         PatternBenefit benefit = 1)
+  explicit ConvertOpToLLVMPattern(LLVMTypeConverter &typeConverter,
+                                  PatternBenefit benefit = 1)
       : ConvertToLLVMPattern(SourceOp::getOperationName(),
                              &typeConverter.getContext(), typeConverter,
                              benefit) {}

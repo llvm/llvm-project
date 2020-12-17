@@ -786,9 +786,6 @@ def VMUL_N_A64 : IOpInst<"vmul_n", "..1", "Qd", OP_MUL_N>;
 def FMLA_N : SOpInst<"vfma_n", "...1", "dQd", OP_FMLA_N>;
 def FMLS_N : SOpInst<"vfms_n", "...1", "fdQfQd", OP_FMLS_N>;
 
-def MLA_N : SOpInst<"vmla_n", "...1", "Qd", OP_MLA_N>;
-def MLS_N : SOpInst<"vmls_n", "...1", "Qd", OP_MLS_N>;
-
 ////////////////////////////////////////////////////////////////////////////////
 // Logical operations
 def BSL : SInst<"vbsl", ".U..", "dPlQdQPl">;
@@ -868,7 +865,7 @@ def CFMGT  : SOpInst<"vcgt", "U..", "lUldQdQlQUl", OP_GT>;
 def CFMLT  : SOpInst<"vclt", "U..", "lUldQdQlQUl", OP_LT>;
 
 def CMEQ  : SInst<"vceqz", "U.",
-                  "csilfUcUsUiUlPcPsPlQcQsQiQlQfQUcQUsQUiQUlQPcQPsdQdQPl">;
+                  "csilfUcUsUiUlPcPlQcQsQiQlQfQUcQUsQUiQUlQPcdQdQPl">;
 def CMGE  : SInst<"vcgez", "U.", "csilfdQcQsQiQlQfQd">;
 def CMLE  : SInst<"vclez", "U.", "csilfdQcQsQiQlQfQd">;
 def CMGT  : SInst<"vcgtz", "U.", "csilfdQcQsQiQlQfQd">;
@@ -1902,22 +1899,34 @@ let ArchGuard = "defined(__ARM_FEATURE_BF16_VECTOR_ARITHMETIC)" in {
   def VFMLALT_LANEQ_BF : SOpInst<"vbfmlalt_laneq", "..B(BQ)I", "Qf", OP_BFMLALT_LN>;
 }
 
+multiclass VCMLA_ROTS<string type, string lanety, string laneqty> {
+  foreach ROT = ["", "_rot90", "_rot180", "_rot270" ] in {
+    def   : SInst<"vcmla" # ROT, "....", type # "Q" # type>;
+  }
+}
+
 // v8.3-A Vector complex addition intrinsics
 let ArchGuard = "defined(__ARM_FEATURE_COMPLEX) && defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC)" in {
   def VCADD_ROT90_FP16   : SInst<"vcadd_rot90", "...", "h">;
   def VCADD_ROT270_FP16  : SInst<"vcadd_rot270", "...", "h">;
   def VCADDQ_ROT90_FP16  : SInst<"vcaddq_rot90", "QQQ", "h">;
   def VCADDQ_ROT270_FP16 : SInst<"vcaddq_rot270", "QQQ", "h">;
+
+  defm VCMLA_FP16  : VCMLA_ROTS<"h", "uint32x2_t", "uint32x4_t">;
 }
 let ArchGuard = "defined(__ARM_FEATURE_COMPLEX)" in {
   def VCADD_ROT90   : SInst<"vcadd_rot90", "...", "f">;
   def VCADD_ROT270  : SInst<"vcadd_rot270", "...", "f">;
   def VCADDQ_ROT90  : SInst<"vcaddq_rot90", "QQQ", "f">;
   def VCADDQ_ROT270 : SInst<"vcaddq_rot270", "QQQ", "f">;
+
+  defm VCMLA_F32        : VCMLA_ROTS<"f", "uint64x1_t", "uint64x2_t">;
 }
 let ArchGuard = "defined(__ARM_FEATURE_COMPLEX) && defined(__aarch64__)" in {
   def VCADDQ_ROT90_FP64  : SInst<"vcaddq_rot90", "QQQ", "d">;
   def VCADDQ_ROT270_FP64 : SInst<"vcaddq_rot270", "QQQ", "d">;
+
+  defm VCMLA_FP64 : VCMLA_ROTS<"d", "uint64x2_t", "uint64x2_t">;
 }
 
 // V8.2-A BFloat intrinsics

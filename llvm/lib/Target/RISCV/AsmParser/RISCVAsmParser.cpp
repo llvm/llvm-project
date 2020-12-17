@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/RISCVAsmBackend.h"
+#include "MCTargetDesc/RISCVInstPrinter.h"
 #include "MCTargetDesc/RISCVMCExpr.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "MCTargetDesc/RISCVTargetStreamer.h"
@@ -123,6 +124,10 @@ class RISCVAsmParser : public MCTargetAsmParser {
   // Helper to emit pseudo load/store instruction with a symbol.
   void emitLoadStoreSymbol(MCInst &Inst, unsigned Opcode, SMLoc IDLoc,
                            MCStreamer &Out, bool HasTmpReg);
+
+  // Helper to emit pseudo sign/zero extend instruction.
+  void emitPseudoExtend(MCInst &Inst, bool SignExtend, int64_t Width,
+                        SMLoc IDLoc, MCStreamer &Out);
 
   // Checks that a PseudoAddTPRel is using x4/tp in its second input operand.
   // Enforcing this using a restricted register class for the second input
@@ -275,33 +280,8 @@ struct RISCVOperand : public MCParsedAsmOperand {
     // e.g.: read/write or user/supervisor/machine privileges.
   };
 
-  enum class VSEW {
-    SEW_8 = 0,
-    SEW_16,
-    SEW_32,
-    SEW_64,
-    SEW_128,
-    SEW_256,
-    SEW_512,
-    SEW_1024,
-  };
-
-  enum class VLMUL {
-    LMUL_1 = 0,
-    LMUL_2,
-    LMUL_4,
-    LMUL_8,
-    LMUL_F8 = 5,
-    LMUL_F4,
-    LMUL_F2
-  };
-
   struct VTypeOp {
-    VSEW Sew;
-    VLMUL Lmul;
-    bool TailAgnostic;
-    bool MaskedoffAgnostic;
-    unsigned Encoding;
+    unsigned Val;
   };
 
   SMLoc StartLoc, EndLoc;
@@ -738,7 +718,7 @@ public:
   }
 
   StringRef getSysReg() const {
-    assert(Kind == KindTy::SystemRegister && "Invalid access!");
+    assert(Kind == KindTy::SystemRegister && "Invalid type access!");
     return StringRef(SysReg.Data, SysReg.Length);
   }
 
@@ -752,65 +732,25 @@ public:
     return Tok;
   }
 
-  static StringRef getSEWStr(VSEW Sew) {
-    switch (Sew) {
-    case VSEW::SEW_8:
-      return "e8";
-    case VSEW::SEW_16:
-      return "e16";
-    case VSEW::SEW_32:
-      return "e32";
-    case VSEW::SEW_64:
-      return "e64";
-    case VSEW::SEW_128:
-      return "e128";
-    case VSEW::SEW_256:
-      return "e256";
-    case VSEW::SEW_512:
-      return "e512";
-    case VSEW::SEW_1024:
-      return "e1024";
-    }
-    llvm_unreachable("Unknown SEW.");
-  }
-
-  static StringRef getLMULStr(VLMUL Lmul) {
-    switch (Lmul) {
-    case VLMUL::LMUL_1:
-      return "m1";
-    case VLMUL::LMUL_2:
-      return "m2";
-    case VLMUL::LMUL_4:
-      return "m4";
-    case VLMUL::LMUL_8:
-      return "m8";
-    case VLMUL::LMUL_F2:
-      return "mf2";
-    case VLMUL::LMUL_F4:
-      return "mf4";
-    case VLMUL::LMUL_F8:
-      return "mf8";
-    }
-    llvm_unreachable("Unknown LMUL.");
-  }
-
-  StringRef getVType(SmallString<32> &Buf) const {
-    assert(Kind == KindTy::VType && "Invalid access!");
-    Buf.append(getSEWStr(VType.Sew));
-    Buf.append(",");
-    Buf.append(getLMULStr(VType.Lmul));
-
-    return Buf.str();
+  unsigned getVType() const {
+    assert(Kind == KindTy::VType && "Invalid type access!");
+    return VType.Val;
   }
 
   void print(raw_ostream &OS) const override {
+    auto RegName = [](unsigned Reg) {
+      if (Reg)
+        return RISCVInstPrinter::getRegisterName(Reg);
+      else
+        return "noreg";
+    };
+
     switch (Kind) {
     case KindTy::Immediate:
       OS << *getImm();
       break;
     case KindTy::Register:
-      OS << "<register x";
-      OS << getReg() << ">";
+      OS << "<register " << RegName(getReg()) << ">";
       break;
     case KindTy::Token:
       OS << "'" << getToken() << "'";
@@ -819,8 +759,9 @@ public:
       OS << "<sysreg: " << getSysReg() << '>';
       break;
     case KindTy::VType:
-      SmallString<32> VTypeBuf;
-      OS << "<vtype: " << getVType(VTypeBuf) << '>';
+      OS << "<vtype: ";
+      RISCVVType::printVType(getVType(), OS);
+      OS << '>';
       break;
     }
   }
@@ -866,31 +807,10 @@ public:
     return Op;
   }
 
-  static std::unique_ptr<RISCVOperand>
-  createVType(APInt Sew, APInt Lmul, bool Fractional, bool TailAgnostic,
-              bool MaskedoffAgnostic, SMLoc S, bool IsRV64) {
+  static std::unique_ptr<RISCVOperand> createVType(unsigned VTypeI, SMLoc S,
+                                                   bool IsRV64) {
     auto Op = std::make_unique<RISCVOperand>(KindTy::VType);
-    Sew.ashrInPlace(3);
-    unsigned SewLog2 = Sew.logBase2();
-    unsigned LmulLog2 = Lmul.logBase2();
-    Op->VType.Sew = static_cast<VSEW>(SewLog2);
-    if (Fractional) {
-      unsigned Flmul = 8 - LmulLog2;
-      Op->VType.Lmul = static_cast<VLMUL>(Flmul);
-      Op->VType.Encoding =
-          ((Flmul & 0x4) << 3) | ((SewLog2 & 0x7) << 2) | (Flmul & 0x3);
-    } else {
-      Op->VType.Lmul = static_cast<VLMUL>(LmulLog2);
-      Op->VType.Encoding = (SewLog2 << 2) | LmulLog2;
-    }
-    if (TailAgnostic) {
-      Op->VType.Encoding |= 0x40;
-    }
-    if (MaskedoffAgnostic) {
-      Op->VType.Encoding |= 0x80;
-    }
-    Op->VType.TailAgnostic = TailAgnostic;
-    Op->VType.MaskedoffAgnostic = MaskedoffAgnostic;
+    Op->VType.Val = VTypeI;
     Op->StartLoc = S;
     Op->IsRV64 = IsRV64;
     return Op;
@@ -955,7 +875,7 @@ public:
 
   void addVTypeIOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createImm(VType.Encoding));
+    Inst.addOperand(MCOperand::createImm(getVType()));
   }
 
   // Returns the rounding mode represented by this RISCVOperand. Should only
@@ -1120,6 +1040,9 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 4) - 1);
   case Match_InvalidUImm5:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 5) - 1);
+  case Match_InvalidSImm5:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 4),
+                                      (1 << 4) - 1);
   case Match_InvalidSImm6:
     return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 5),
                                       (1 << 5) - 1);
@@ -1598,9 +1521,10 @@ OperandMatchResultTy RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
   StringRef Name = getLexer().getTok().getIdentifier();
   if (!Name.consume_front("e"))
     return MatchOperand_NoMatch;
-  APInt Sew(16, Name, 10);
-  if (Sew != 8 && Sew != 16 && Sew != 32 && Sew != 64 && Sew != 128 &&
-      Sew != 256 && Sew != 512 && Sew != 1024)
+  unsigned Sew;
+  if (Name.getAsInteger(10, Sew))
+    return MatchOperand_NoMatch;
+  if (!RISCVVType::isValidSEW(Sew))
     return MatchOperand_NoMatch;
   getLexer().Lex();
 
@@ -1612,12 +1536,11 @@ OperandMatchResultTy RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
   if (!Name.consume_front("m"))
     return MatchOperand_NoMatch;
   // "m" or "mf"
-  bool Fractional = false;
-  if (Name.consume_front("f")) {
-    Fractional = true;
-  }
-  APInt Lmul(16, Name, 10);
-  if (Lmul != 1 && Lmul != 2 && Lmul != 4 && Lmul != 8)
+  bool Fractional = Name.consume_front("f");
+  unsigned Lmul;
+  if (Name.getAsInteger(10, Lmul))
+    return MatchOperand_NoMatch;
+  if (!RISCVVType::isValidLMUL(Lmul, Fractional))
     return MatchOperand_NoMatch;
   getLexer().Lex();
 
@@ -1628,9 +1551,9 @@ OperandMatchResultTy RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
   Name = getLexer().getTok().getIdentifier();
   // ta or tu
   bool TailAgnostic;
-  if (Name.consume_front("ta"))
+  if (Name == "ta")
     TailAgnostic = true;
-  else if (Name.consume_front("tu"))
+  else if (Name == "tu")
     TailAgnostic = false;
   else
     return MatchOperand_NoMatch;
@@ -1642,11 +1565,11 @@ OperandMatchResultTy RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
 
   Name = getLexer().getTok().getIdentifier();
   // ma or mu
-  bool MaskedoffAgnostic;
-  if (Name.consume_front("ma"))
-    MaskedoffAgnostic = true;
-  else if (Name.consume_front("mu"))
-    MaskedoffAgnostic = false;
+  bool MaskAgnostic;
+  if (Name == "ma")
+    MaskAgnostic = true;
+  else if (Name == "mu")
+    MaskAgnostic = false;
   else
     return MatchOperand_NoMatch;
   getLexer().Lex();
@@ -1654,8 +1577,15 @@ OperandMatchResultTy RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
   if (getLexer().getKind() != AsmToken::EndOfStatement)
     return MatchOperand_NoMatch;
 
-  Operands.push_back(RISCVOperand::createVType(
-      Sew, Lmul, Fractional, TailAgnostic, MaskedoffAgnostic, S, isRV64()));
+  unsigned SewLog2 = Log2_32(Sew / 8);
+  unsigned LmulLog2 = Log2_32(Lmul);
+  RISCVVSEW VSEW = static_cast<RISCVVSEW>(SewLog2);
+  RISCVVLMUL VLMUL =
+      static_cast<RISCVVLMUL>(Fractional ? 8 - LmulLog2 : LmulLog2);
+
+  unsigned VTypeI =
+      RISCVVType::encodeVTYPE(VLMUL, VSEW, TailAgnostic, MaskAgnostic);
+  Operands.push_back(RISCVOperand::createVType(VTypeI, S, isRV64()));
 
   return MatchOperand_Success;
 }
@@ -2299,6 +2229,35 @@ void RISCVAsmParser::emitLoadStoreSymbol(MCInst &Inst, unsigned Opcode,
                     Opcode, IDLoc, Out);
 }
 
+void RISCVAsmParser::emitPseudoExtend(MCInst &Inst, bool SignExtend,
+                                      int64_t Width, SMLoc IDLoc,
+                                      MCStreamer &Out) {
+  // The sign/zero extend pseudo-instruction does two shifts, with the shift
+  // amounts dependent on the XLEN.
+  //
+  // The expansion looks like this
+  //
+  //    SLLI rd, rs, XLEN - Width
+  //    SR[A|R]I rd, rd, XLEN - Width
+  MCOperand DestReg = Inst.getOperand(0);
+  MCOperand SourceReg = Inst.getOperand(1);
+
+  unsigned SecondOpcode = SignExtend ? RISCV::SRAI : RISCV::SRLI;
+  int64_t ShAmt = (isRV64() ? 64 : 32) - Width;
+
+  assert(ShAmt > 0 && "Shift amount must be non-zero.");
+
+  emitToStreamer(Out, MCInstBuilder(RISCV::SLLI)
+                          .addOperand(DestReg)
+                          .addOperand(SourceReg)
+                          .addImm(ShAmt));
+
+  emitToStreamer(Out, MCInstBuilder(SecondOpcode)
+                          .addOperand(DestReg)
+                          .addOperand(DestReg)
+                          .addImm(ShAmt));
+}
+
 bool RISCVAsmParser::checkPseudoAddTPRel(MCInst &Inst,
                                          OperandVector &Operands) {
   assert(Inst.getOpcode() == RISCV::PseudoAddTPRel && "Invalid instruction");
@@ -2347,7 +2306,9 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
     unsigned Opcode = Inst.getOpcode();
     if (Opcode == RISCV::VADC_VVM || Opcode == RISCV::VADC_VXM ||
         Opcode == RISCV::VADC_VIM || Opcode == RISCV::VSBC_VVM ||
-        Opcode == RISCV::VSBC_VXM)
+        Opcode == RISCV::VSBC_VXM || Opcode == RISCV::VFMERGE_VFM ||
+        Opcode == RISCV::VMERGE_VIM || Opcode == RISCV::VMERGE_VVM ||
+        Opcode == RISCV::VMERGE_VXM)
       return Error(Loc, "The destination vector register group cannot be V0.");
 
     // Regardless masked or unmasked version, the number of operands is the
@@ -2461,6 +2422,18 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     if (checkPseudoAddTPRel(Inst, Operands))
       return true;
     break;
+  case RISCV::PseudoSEXT_B:
+    emitPseudoExtend(Inst, /*SignExtend=*/true, /*Width=*/8, IDLoc, Out);
+    return false;
+  case RISCV::PseudoSEXT_H:
+    emitPseudoExtend(Inst, /*SignExtend=*/true, /*Width=*/16, IDLoc, Out);
+    return false;
+  case RISCV::PseudoZEXT_H:
+    emitPseudoExtend(Inst, /*SignExtend=*/false, /*Width=*/16, IDLoc, Out);
+    return false;
+  case RISCV::PseudoZEXT_W:
+    emitPseudoExtend(Inst, /*SignExtend=*/false, /*Width=*/32, IDLoc, Out);
+    return false;
   }
 
   emitToStreamer(Out, Inst);

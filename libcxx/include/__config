@@ -1113,6 +1113,7 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
       defined(__APPLE__) || \
       defined(__CloudABI__) || \
       defined(__sun__) || \
+      defined(__MVS__) || \
       (defined(__MINGW32__) && __has_include(<pthread.h>))
 #    define _LIBCPP_HAS_THREAD_API_PTHREAD
 #  elif defined(__Fuchsia__)
@@ -1316,6 +1317,12 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #define _LIBCPP_NODEBUG_TYPE
 #endif
 #endif // !defined(_LIBCPP_NODEBUG_TYPE)
+
+#if __has_attribute(__preferred_name__)
+#define _LIBCPP_PREFERRED_NAME(x) __attribute__((__preferred_name__(x)))
+#else
+#define _LIBCPP_PREFERRED_NAME(x)
+#endif
 
 #if defined(_LIBCPP_ABI_MICROSOFT) && \
     (defined(_LIBCPP_COMPILER_MSVC) || __has_declspec_attribute(empty_bases))

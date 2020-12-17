@@ -233,7 +233,11 @@ bool IsArrayElement(const Expr<T> &expr, bool intoSubstring = false) {
     while (const Component * component{std::get_if<Component>(&ref->u)}) {
       ref = &component->base();
     }
-    return std::holds_alternative<ArrayRef>(ref->u);
+    if (const auto *coarrayRef{std::get_if<CoarrayRef>(&ref->u)}) {
+      return !coarrayRef->subscript().empty();
+    } else {
+      return std::holds_alternative<ArrayRef>(ref->u);
+    }
   } else {
     return false;
   }
@@ -830,9 +834,9 @@ parser::Message *SayWithDeclaration(
 // Check for references to impure procedures; returns the name
 // of one to complain about, if any exist.
 std::optional<std::string> FindImpureCall(
-    const IntrinsicProcTable &, const Expr<SomeType> &);
+    FoldingContext &, const Expr<SomeType> &);
 std::optional<std::string> FindImpureCall(
-    const IntrinsicProcTable &, const ProcedureRef &);
+    FoldingContext &, const ProcedureRef &);
 
 // Predicate: is a scalar expression suitable for naive scalar expansion
 // in the flattening of an array expression?
@@ -857,6 +861,41 @@ std::optional<parser::MessageFixedText> CheckProcCompatibility(bool isCall,
     const std::optional<characteristics::Procedure> &lhsProcedure,
     const characteristics::Procedure *rhsProcedure);
 
+// Scalar constant expansion
+class ScalarConstantExpander {
+public:
+  explicit ScalarConstantExpander(ConstantSubscripts &&extents)
+      : extents_{std::move(extents)} {}
+  ScalarConstantExpander(
+      ConstantSubscripts &&extents, std::optional<ConstantSubscripts> &&lbounds)
+      : extents_{std::move(extents)}, lbounds_{std::move(lbounds)} {}
+  ScalarConstantExpander(
+      ConstantSubscripts &&extents, ConstantSubscripts &&lbounds)
+      : extents_{std::move(extents)}, lbounds_{std::move(lbounds)} {}
+
+  template <typename A> A Expand(A &&x) const {
+    return std::move(x); // default case
+  }
+  template <typename T> Constant<T> Expand(Constant<T> &&x) {
+    auto expanded{x.Reshape(std::move(extents_))};
+    if (lbounds_) {
+      expanded.set_lbounds(std::move(*lbounds_));
+    }
+    return expanded;
+  }
+  template <typename T> Constant<T> Expand(Parentheses<T> &&x) {
+    return Expand(std::move(x)); // Constant<> can be parenthesized
+  }
+  template <typename T> Expr<T> Expand(Expr<T> &&x) {
+    return std::visit([&](auto &&x) { return Expr<T>{Expand(std::move(x))}; },
+        std::move(x.u));
+  }
+
+private:
+  ConstantSubscripts extents_;
+  std::optional<ConstantSubscripts> lbounds_;
+};
+
 } // namespace Fortran::evaluate
 
 namespace Fortran::semantics {
@@ -875,9 +914,12 @@ bool IsProcedurePointer(const Symbol &);
 bool IsSaved(const Symbol &); // saved implicitly or explicitly
 bool IsDummy(const Symbol &);
 bool IsFunctionResult(const Symbol &);
+bool IsKindTypeParameter(const Symbol &);
+bool IsLenTypeParameter(const Symbol &);
 
 // Follow use, host, and construct assocations to a variable, if any.
 const Symbol *GetAssociationRoot(const Symbol &);
+Symbol *GetAssociationRoot(Symbol &);
 const Symbol *FindCommonBlockContaining(const Symbol &);
 int CountLenParameters(const DerivedTypeSpec &);
 int CountNonConstantLenParameters(const DerivedTypeSpec &);

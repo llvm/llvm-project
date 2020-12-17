@@ -36,6 +36,10 @@ public:
   virtual ~OpAsmPrinter();
   virtual raw_ostream &getStream() const = 0;
 
+  /// Print a newline and indent the printer to the start of the current
+  /// operation.
+  virtual void printNewline() = 0;
+
   /// Print implementations for various things an operation contains.
   virtual void printOperand(Value value) = 0;
   virtual void printOperand(Value value, raw_ostream &os) = 0;
@@ -408,6 +412,35 @@ public:
 
   /// Parse a `...` token if present;
   virtual ParseResult parseOptionalEllipsis() = 0;
+
+  /// Parse an integer value from the stream.
+  template <typename IntT> ParseResult parseInteger(IntT &result) {
+    auto loc = getCurrentLocation();
+    OptionalParseResult parseResult = parseOptionalInteger(result);
+    if (!parseResult.hasValue())
+      return emitError(loc, "expected integer value");
+    return *parseResult;
+  }
+
+  /// Parse an optional integer value from the stream.
+  virtual OptionalParseResult parseOptionalInteger(uint64_t &result) = 0;
+
+  template <typename IntT>
+  OptionalParseResult parseOptionalInteger(IntT &result) {
+    auto loc = getCurrentLocation();
+
+    // Parse the unsigned variant.
+    uint64_t uintResult;
+    OptionalParseResult parseResult = parseOptionalInteger(uintResult);
+    if (!parseResult.hasValue() || failed(*parseResult))
+      return parseResult;
+
+    // Try to convert to the provided integer type.
+    result = IntT(uintResult);
+    if (uint64_t(result) != uintResult)
+      return emitError(loc, "integer value too large");
+    return success();
+  }
 
   //===--------------------------------------------------------------------===//
   // Attribute Parsing

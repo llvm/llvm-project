@@ -190,7 +190,7 @@ void TransferOptimization::storeToLoadForwarding(vector::TransferReadOp read) {
   if (lastwrite == nullptr)
     return;
 
-  Region *topRegion = lastwrite.getParentRegion();
+  Region *topRegion = lastwrite->getParentRegion();
   Operation *readAncestor = findAncestorOpInRegion(topRegion, read);
   assert(readAncestor &&
          "read op should be recursively part of the top region");

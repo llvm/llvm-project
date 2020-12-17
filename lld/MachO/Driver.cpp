@@ -40,6 +40,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/TextAPI/MachO/PackedVersion.h"
 
 #include <algorithm>
 
@@ -274,8 +275,7 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive) {
     if (config->allLoad || forceLoadArchive) {
       if (Optional<MemoryBufferRef> buffer = readFile(path)) {
         for (const ArchiveMember &member : getArchiveMembers(*buffer)) {
-          inputFiles.push_back(
-              make<ObjFile>(member.mbref, member.modTime, path));
+          inputFiles.insert(make<ObjFile>(member.mbref, member.modTime, path));
           printArchiveMemberLoad(
               (forceLoadArchive ? "-force_load" : "-all_load"),
               inputFiles.back());
@@ -293,7 +293,7 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive) {
       if (Optional<MemoryBufferRef> buffer = readFile(path)) {
         for (const ArchiveMember &member : getArchiveMembers(*buffer)) {
           if (hasObjCSection(member.mbref)) {
-            inputFiles.push_back(
+            inputFiles.insert(
                 make<ObjFile>(member.mbref, member.modTime, path));
             printArchiveMemberLoad("-ObjC", inputFiles.back());
           }
@@ -309,10 +309,8 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive) {
     break;
   case file_magic::macho_dynamically_linked_shared_lib:
   case file_magic::macho_dynamically_linked_shared_lib_stub:
-    newFile = make<DylibFile>(mbref);
-    break;
   case file_magic::tapi_file: {
-    if (Optional<DylibFile *> dylibFile = makeDylibFromTAPI(mbref))
+    if (Optional<DylibFile *> dylibFile = loadDylib(mbref))
       newFile = *dylibFile;
     break;
   }
@@ -327,7 +325,7 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive) {
     // print the .a name here.
     if (config->printEachFile && magic != file_magic::archive)
       lld::outs() << toString(newFile) << '\n';
-    inputFiles.push_back(newFile);
+    inputFiles.insert(newFile);
   }
   return newFile;
 }
@@ -491,12 +489,13 @@ static void parseOrderFile(StringRef path) {
 // with a path of .*/libfoo.{dylib, tbd}.
 // XXX ld64 seems to ignore the extension entirely when matching sub-libraries;
 // I'm not sure what the use case for that is.
-static bool markSubLibrary(StringRef searchName) {
+static bool markReexport(StringRef searchName, ArrayRef<StringRef> extensions) {
   for (InputFile *file : inputFiles) {
     if (auto *dylibFile = dyn_cast<DylibFile>(file)) {
       StringRef filename = path::filename(dylibFile->getName());
       if (filename.consume_front(searchName) &&
-          (filename == ".dylib" || filename == ".tbd")) {
+          (filename.empty() ||
+           find(extensions, filename) != extensions.end())) {
         dylibFile->reexport = true;
         return true;
       }
@@ -523,7 +522,7 @@ static void compileBitcodeFiles() {
       lto->add(*bitcodeFile);
 
   for (ObjFile *file : lto->compile())
-    inputFiles.push_back(file);
+    inputFiles.insert(file);
 }
 
 // Replaces common symbols with defined symbols residing in __common sections.
@@ -654,6 +653,36 @@ static bool isPie(opt::InputArgList &args) {
   return args.hasArg(OPT_pie);
 }
 
+static void parseClangOption(StringRef opt, const Twine &msg) {
+  std::string err;
+  raw_string_ostream os(err);
+
+  const char *argv[] = {"lld", opt.data()};
+  if (cl::ParseCommandLineOptions(2, argv, "", &os))
+    return;
+  os.flush();
+  error(msg + ": " + StringRef(err).trim());
+}
+
+static uint32_t parseDylibVersion(const opt::ArgList& args, unsigned id) {
+  const opt::Arg *arg = args.getLastArg(id);
+  if (!arg)
+    return 0;
+
+  if (config->outputType != MH_DYLIB) {
+    error(arg->getAsString(args) + ": only valid with -dylib");
+    return 0;
+  }
+
+  PackedVersion version;
+  if (!version.parse32(arg->getValue())) {
+    error(arg->getAsString(args) + ": malformed version");
+    return 0;
+  }
+
+  return version.rawValue();
+}
+
 bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
                  raw_ostream &stdoutOS, raw_ostream &stderrOS) {
   lld::stdoutOS = &stdoutOS;
@@ -703,10 +732,12 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   config->printEachFile = args.hasArg(OPT_t);
   config->printWhyLoad = args.hasArg(OPT_why_load);
   config->outputType = getOutputType(args);
+  config->ltoObjPath = args.getLastArgValue(OPT_object_path_lto);
   config->runtimePaths = args::getStrings(args, OPT_rpath);
   config->allLoad = args.hasArg(OPT_all_load);
   config->forceLoadObjC = args.hasArg(OPT_ObjC);
   config->demangle = args.hasArg(OPT_demangle);
+  config->implicitDylibs = !args.hasArg(OPT_no_implicit_dylibs);
 
   if (const opt::Arg *arg = args.getLastArg(OPT_static, OPT_dynamic))
     config->staticLink = (arg->getOption().getID() == OPT_static);
@@ -720,6 +751,10 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
           args.getLastArg(OPT_search_paths_first, OPT_search_dylibs_first))
     config->searchDylibsFirst =
         (arg && arg->getOption().getID() == OPT_search_dylibs_first);
+
+  config->dylibCompatibilityVersion =
+      parseDylibVersion(args, OPT_compatibility_version);
+  config->dylibCurrentVersion = parseDylibVersion(args, OPT_current_version);
 
   config->saveTemps = args.hasArg(OPT_save_temps);
 
@@ -736,6 +771,8 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     freeArena();
     return !errorCount();
   }
+
+  initLLVM(); // must be run before any call to addFile()
 
   for (const auto &arg : args) {
     const auto &opt = arg->getOption();
@@ -780,14 +817,27 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
 
   // Now that all dylibs have been loaded, search for those that should be
   // re-exported.
-  for (opt::Arg *arg : args.filtered(OPT_sub_library)) {
+  for (opt::Arg *arg : args.filtered(OPT_sub_library, OPT_sub_umbrella)) {
     config->hasReexports = true;
     StringRef searchName = arg->getValue();
-    if (!markSubLibrary(searchName))
-      error("-sub_library " + searchName + " does not match a supplied dylib");
+    std::vector<StringRef> extensions;
+    if (arg->getOption().getID() == OPT_sub_library)
+      extensions = {".dylib", ".tbd"};
+    else
+      extensions = {".tbd"};
+    if (!markReexport(searchName, extensions))
+      error(arg->getSpelling() + " " + searchName +
+            " does not match a supplied dylib");
   }
 
-  initLLVM();
+  // Parse LTO options.
+  if (auto *arg = args.getLastArg(OPT_mcpu))
+    parseClangOption(saver.save("-mcpu=" + StringRef(arg->getValue())),
+                     arg->getSpelling());
+
+  for (auto *arg : args.filtered(OPT_mllvm))
+    parseClangOption(arg->getValue(), arg->getSpelling());
+
   compileBitcodeFiles();
   replaceCommonSymbols();
 
@@ -809,7 +859,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     StringRef fileName = arg->getValue(2);
     Optional<MemoryBufferRef> buffer = readFile(fileName);
     if (buffer)
-      inputFiles.push_back(make<OpaqueFile>(*buffer, segName, sectName));
+      inputFiles.insert(make<OpaqueFile>(*buffer, segName, sectName));
   }
 
   // Initialize InputSections.

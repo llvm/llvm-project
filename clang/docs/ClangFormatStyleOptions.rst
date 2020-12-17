@@ -1713,11 +1713,14 @@ the configuration (without a prefix: ``Auto``).
   always need to be first.
 
   There is a third and optional field ``SortPriority`` which can used while
-  ``IncludeBloks = IBS_Regroup`` to define the priority in which ``#includes``
-  should be ordered, and value of ``Priority`` defines the order of
-  ``#include blocks`` and also enables to group ``#includes`` of different
-  priority for order.``SortPriority`` is set to the value of ``Priority``
-  as default if it is not assigned.
+  ``IncludeBlocks = IBS_Regroup`` to define the priority in which
+  ``#includes`` should be ordered. The value of ``Priority`` defines the
+  order of ``#include blocks`` and also allows the grouping of ``#includes``
+  of different priority. ``SortPriority`` is set to the value of
+  ``Priority`` as default if it is not assigned.
+
+  Each regular expression can be marked as case sensitive with the field
+  ``CaseSensitive``, per default it is not.
 
   To configure this in the .clang-format file, use:
 
@@ -1727,6 +1730,7 @@ the configuration (without a prefix: ``Auto``).
       - Regex:           '^"(llvm|llvm-c|clang|clang-c)/'
         Priority:        2
         SortPriority:    2
+        CaseSensitive:   true
       - Regex:           '^(<|"(gtest|gmock|isl|json)/)'
         Priority:        3
       - Regex:           '<[[:alnum:].]+>'
@@ -1912,6 +1916,30 @@ the configuration (without a prefix: ``Auto``).
        #endif
 
 
+
+**IndentPragmas** (``bool``)
+  Indent pragmas
+
+  When ``false``, pragmas are flushed left or follow IndentPPDirectives.
+  When ``true``, pragmas are indented to the current scope level.
+
+  .. code-block:: c++
+
+    false:                                  true:
+    #pragma once                   vs       #pragma once
+    void foo() {                            void foo() {
+    #pragma omp simd                          #pragma omp simd
+      for (int i=0;i<10;i++) {                for (int i=0;i<10;i++) {
+    #pragma omp simd                            #pragma omp simd
+        for (int i=0;i<10;i++) {                for (int i=0;i<10;i++) {
+        }                                       }
+    #if 1                                   #if 1
+    #pragma omp simd                            #pragma omp simd
+        for (int i=0;i<10;i++) {                for (int i=0;i<10;i++) {
+        }                                       }
+    #endif                                  #endif
+      }                                       }
+    }                                       }
 
 **IndentRequires** (``bool``)
   Indent the requires clause in a template

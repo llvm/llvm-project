@@ -139,6 +139,7 @@ public:
   bool selectADDRzri(SDValue N, SDValue &Base, SDValue &Index, SDValue &Offset);
   bool selectADDRzii(SDValue N, SDValue &Base, SDValue &Index, SDValue &Offset);
   bool selectADDRri(SDValue N, SDValue &Base, SDValue &Offset);
+  bool selectADDRzi(SDValue N, SDValue &Base, SDValue &Offset);
 
   StringRef getPassName() const override {
     return "VE DAG->DAG Pattern Instruction Selection";
@@ -247,6 +248,26 @@ bool VEDAGToDAGISel::selectADDRri(SDValue Addr, SDValue &Base,
   Base = Addr;
   Offset = CurDAG->getTargetConstant(0, SDLoc(Addr), MVT::i32);
   return true;
+}
+
+bool VEDAGToDAGISel::selectADDRzi(SDValue Addr, SDValue &Base,
+                                  SDValue &Offset) {
+  if (dyn_cast<FrameIndexSDNode>(Addr))
+    return false;
+  if (Addr.getOpcode() == ISD::TargetExternalSymbol ||
+      Addr.getOpcode() == ISD::TargetGlobalAddress ||
+      Addr.getOpcode() == ISD::TargetGlobalTLSAddress)
+    return false; // direct calls.
+
+  if (auto *CN = dyn_cast<ConstantSDNode>(Addr)) {
+    if (isInt<32>(CN->getSExtValue())) {
+      Base = CurDAG->getTargetConstant(0, SDLoc(Addr), MVT::i32);
+      Offset =
+          CurDAG->getTargetConstant(CN->getZExtValue(), SDLoc(Addr), MVT::i32);
+      return true;
+    }
+  }
+  return false;
 }
 
 bool VEDAGToDAGISel::matchADDRrr(SDValue Addr, SDValue &Base, SDValue &Index) {

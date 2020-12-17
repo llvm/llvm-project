@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
@@ -19,6 +19,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
@@ -1348,6 +1349,14 @@ void TypePrinter::printTag(TagDecl *D, raw_ostream &OS) {
 }
 
 void TypePrinter::printRecordBefore(const RecordType *T, raw_ostream &OS) {
+  // Print the preferred name if we have one for this type.
+  for (const auto *PNA : T->getDecl()->specific_attrs<PreferredNameAttr>()) {
+    if (declaresSameEntity(PNA->getTypedefType()->getAsCXXRecordDecl(),
+                           T->getDecl()))
+      return printTypeSpec(
+          PNA->getTypedefType()->castAs<TypedefType>()->getDecl(), OS);
+  }
+
   printTag(T->getDecl(), OS);
 }
 
@@ -1570,6 +1579,8 @@ void TypePrinter::printAttributedBefore(const AttributedType *T,
       OS << " _Nullable";
     else if (T->getAttrKind() == attr::TypeNullUnspecified)
       OS << " _Null_unspecified";
+    else if (T->getAttrKind() == attr::TypeNullableResult)
+      OS << " _Nullable_result";
     else
       llvm_unreachable("unhandled nullability");
     spaceBeforePlaceHolder(OS);
@@ -1640,6 +1651,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::LifetimeBound:
   case attr::TypeNonNull:
   case attr::TypeNullable:
+  case attr::TypeNullableResult:
   case attr::TypeNullUnspecified:
   case attr::ObjCGC:
   case attr::ObjCInertUnsafeUnretained:

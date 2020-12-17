@@ -91,4 +91,4 @@ return:                                           ; preds = %if.end, %if.then
   ret i64 %or.sink
 }
 
-declare i64 @bar()
+declare dso_local i64 @bar()

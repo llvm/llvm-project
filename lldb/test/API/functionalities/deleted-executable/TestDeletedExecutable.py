@@ -16,7 +16,7 @@ class TestDeletedExecutable(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfWindows # cannot delete a running executable
-    @expectedFailureAll(oslist=["freebsd", "linux"],
+    @expectedFailureAll(oslist=["linux"],
         triple=no_match('aarch64-.*-android'))
         # determining the architecture of the process fails
     @skipIfReproducer # File synchronization is not supported during replay.

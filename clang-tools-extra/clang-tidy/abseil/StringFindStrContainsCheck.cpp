@@ -31,6 +31,8 @@ using ::clang::transformer::makeRule;
 using ::clang::transformer::node;
 using ::clang::transformer::RewriteRule;
 
+AST_MATCHER(Type, isCharType) { return Node.isCharType(); }
+
 static const char DefaultStringLikeClasses[] = "::std::basic_string;"
                                                "::std::basic_string_view;"
                                                "::absl::string_view";
@@ -58,13 +60,15 @@ MakeRule(const LangOptions &LangOpts,
       hasUnqualifiedDesugaredType(recordType(hasDeclaration(StringLikeClass)));
   auto CharStarType =
       hasUnqualifiedDesugaredType(pointerType(pointee(isAnyCharacter())));
+  auto CharType = hasUnqualifiedDesugaredType(isCharType());
   auto StringNpos = declRefExpr(
       to(varDecl(hasName("npos"), hasDeclContext(StringLikeClass))));
   auto StringFind = cxxMemberCallExpr(
       callee(cxxMethodDecl(
           hasName("find"),
-          hasParameter(0, parmVarDecl(anyOf(hasType(StringType),
-                                            hasType(CharStarType)))))),
+          hasParameter(
+              0, parmVarDecl(anyOf(hasType(StringType), hasType(CharStarType),
+                                   hasType(CharType)))))),
       on(hasType(StringType)), hasArgument(0, expr().bind("parameter_to_find")),
       anyOf(hasArgument(1, integerLiteral(equals(0))),
             hasArgument(1, cxxDefaultArgExpr())),

@@ -120,6 +120,12 @@ static cl::opt<cl::boolOrDefault> DebugifyAndStripAll(
         "Debugify MIR before and Strip debug after "
         "each pass except those known to be unsafe when debug info is present"),
     cl::ZeroOrMore);
+static cl::opt<cl::boolOrDefault> DebugifyCheckAndStripAll(
+    "debugify-check-and-strip-all-safe", cl::Hidden,
+    cl::desc(
+        "Debugify MIR before, by checking and stripping the debug info after, "
+        "each pass except those known to be unsafe when debug info is present"),
+    cl::ZeroOrMore);
 enum RunOutliner { AlwaysOutline, NeverOutline, TargetDefault };
 // Enable or disable the MachineOutliner.
 static cl::opt<RunOutliner> EnableMachineOutliner(
@@ -625,15 +631,26 @@ void TargetPassConfig::addStripDebugPass() {
   PM->add(createStripDebugMachineModulePass(/*OnlyDebugified=*/true));
 }
 
+void TargetPassConfig::addCheckDebugPass() {
+  PM->add(createCheckDebugMachineModulePass());
+}
+
 void TargetPassConfig::addMachinePrePasses(bool AllowDebugify) {
-  if (AllowDebugify && DebugifyAndStripAll == cl::BOU_TRUE && DebugifyIsSafe)
+  if (AllowDebugify && DebugifyIsSafe &&
+      (DebugifyAndStripAll == cl::BOU_TRUE ||
+       DebugifyCheckAndStripAll == cl::BOU_TRUE))
     addDebugifyPass();
 }
 
 void TargetPassConfig::addMachinePostPasses(const std::string &Banner,
                                             bool AllowVerify, bool AllowStrip) {
-  if (DebugifyAndStripAll == cl::BOU_TRUE && DebugifyIsSafe)
-    addStripDebugPass();
+  if (DebugifyIsSafe) {
+    if (DebugifyCheckAndStripAll == cl::BOU_TRUE) {
+      addCheckDebugPass();
+      addStripDebugPass();
+    } else if (DebugifyAndStripAll == cl::BOU_TRUE)
+      addStripDebugPass();
+  }
   if (AllowVerify)
     addVerifyPass(Banner);
 }
@@ -710,7 +727,7 @@ void TargetPassConfig::addIRPasses() {
   // Add scalarization of target's unsupported masked memory intrinsics pass.
   // the unsupported intrinsic will be replaced with a chain of basic blocks,
   // that stores/loads element one-by-one if the appropriate mask bit is set.
-  addPass(createScalarizeMaskedMemIntrinPass());
+  addPass(createScalarizeMaskedMemIntrinLegacyPass());
 
   // Expand reduction intrinsics into shuffle sequences if the target wants to.
   // Allow disabling it for testing purposes.

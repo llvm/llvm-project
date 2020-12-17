@@ -27,8 +27,9 @@
 //      offsetA[.discriminator]: fnA:num_of_total_samples
 //       offsetA1[.discriminator]: number_of_samples [fn7:num fn8:num ... ]
 //       ...
+//      !CFGChecksum: num
 //
-// This is a nested tree in which the identation represents the nesting level
+// This is a nested tree in which the indentation represents the nesting level
 // of the inline stack. There are no blank lines in the file. And the spacing
 // within a single line is fixed. Additional spaces will result in an error
 // while reading the file.
@@ -47,10 +48,11 @@
 // in the prologue of the function (second number). This head sample
 // count provides an indicator of how frequently the function is invoked.
 //
-// There are two types of lines in the function body.
+// There are three types of lines in the function body.
 //
 // * Sampled line represents the profile information of a source location.
 // * Callsite line represents the profile information of a callsite.
+// * Metadata line represents extra metadata of the function.
 //
 // Each sampled line may contain several items. Some are optional (marked
 // below):
@@ -113,6 +115,18 @@
 // c. Number of samples. This is an integer quantity representing the
 //    total number of samples collected for the inlined instance at this
 //    callsite
+//
+// Metadata line can occur in lines with one indent only, containing extra
+// information for the top-level function. Furthermore, metadata can only
+// occur after all the body samples and callsite samples.
+// Each metadata line may contain a particular type of metadata, marked by
+// the starting characters annotated with !. We process each metadata line
+// independently, hence each metadata line has to form an independent piece
+// of information that does not require cross-line reference.
+// We support the following types of metadata:
+//
+// a. CFG Checksum (a.k.a. function hash):
+//   !CFGChecksum: 12345
 //
 //
 // Binary format
@@ -419,6 +433,12 @@ public:
   /// \brief Return the profile format.
   SampleProfileFormat getFormat() const { return Format; }
 
+  /// Whether input profile is based on pseudo probes.
+  bool profileIsProbeBased() const { return ProfileIsProbeBased; }
+
+  /// Whether input profile is fully context-sensitive
+  bool profileIsCS() const { return ProfileIsCS; }
+
   virtual std::unique_ptr<ProfileSymbolList> getProfileSymbolList() {
     return nullptr;
   };
@@ -460,6 +480,11 @@ protected:
   void computeSummary();
 
   std::unique_ptr<SampleProfileReaderItaniumRemapper> Remapper;
+
+  /// \brief Whether samples are collected based on pseudo probes.
+  bool ProfileIsProbeBased = false;
+
+  bool ProfileIsCS = false;
 
   /// \brief The format of sample.
   SampleProfileFormat Format = SPF_None;
@@ -598,9 +623,10 @@ private:
 
 protected:
   std::vector<SecHdrTableEntry> SecHdrTable;
-  std::error_code readSecHdrTableEntry();
+  std::error_code readSecHdrTableEntry(uint32_t Idx);
   std::error_code readSecHdrTable();
 
+  std::error_code readFuncMetadata();
   std::error_code readFuncOffsetTable();
   std::error_code readFuncProfiles();
   std::error_code readMD5NameTable();
@@ -613,6 +639,7 @@ protected:
                                          const SecHdrTableEntry &Entry);
   // placeholder for subclasses to dispatch their own section readers.
   virtual std::error_code readCustomSection(const SecHdrTableEntry &Entry) = 0;
+  virtual ErrorOr<StringRef> readStringFromTable() override;
 
   std::unique_ptr<ProfileSymbolList> ProfSymList;
 
@@ -623,6 +650,12 @@ protected:
   DenseSet<StringRef> FuncsToUse;
   /// Use all functions from the input profile.
   bool UseAllFuncs = true;
+
+  /// Use fixed length MD5 instead of ULEB128 encoding so NameTable doesn't
+  /// need to be read in up front and can be directly accessed using index.
+  bool FixedLengthMD5 = false;
+  /// The starting address of NameTable containing fixed length MD5.
+  const uint8_t *MD5NameMemStart = nullptr;
 
   /// If MD5 is used in NameTable section, the section saves uint64_t data.
   /// The uint64_t data has to be converted to a string and then the string
@@ -651,10 +684,7 @@ public:
   void collectFuncsFrom(const Module &M) override;
 
   /// Return whether names in the profile are all MD5 numbers.
-  virtual bool useMD5() override {
-    assert(!NameTable.empty() && "NameTable should have been initialized");
-    return MD5StringBuf && !MD5StringBuf->empty();
-  }
+  virtual bool useMD5() override { return MD5StringBuf.get(); }
 
   virtual std::unique_ptr<ProfileSymbolList> getProfileSymbolList() override {
     return std::move(ProfSymList);

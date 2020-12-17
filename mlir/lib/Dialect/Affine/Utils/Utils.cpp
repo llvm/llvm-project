@@ -92,7 +92,7 @@ static AffineIfOp hoistAffineIfOp(AffineIfOp ifOp, Operation *hoistOverOp) {
   operandMap.clear();
   b.setInsertionPointAfter(hoistOverOp);
   // We'll set an attribute to identify this op in a clone of this sub-tree.
-  ifOp.setAttr(idForIfOp, b.getBoolAttr(true));
+  ifOp->setAttr(idForIfOp, b.getBoolAttr(true));
   hoistOverOpClone = b.clone(*hoistOverOp, operandMap);
 
   // Promote the 'then' block of the original affine.if in the then version.
@@ -107,7 +107,7 @@ static AffineIfOp hoistAffineIfOp(AffineIfOp ifOp, Operation *hoistOverOp) {
   // Find the clone of the original affine.if op in the else version.
   AffineIfOp ifCloneInElse;
   hoistOverOpClone->walk([&](AffineIfOp ifClone) {
-    if (!ifClone.getAttr(idForIfOp))
+    if (!ifClone->getAttr(idForIfOp))
       return WalkResult::advance();
     ifCloneInElse = ifClone;
     return WalkResult::interrupt();
@@ -134,11 +134,43 @@ static AffineIfOp hoistAffineIfOp(AffineIfOp ifOp, Operation *hoistOverOp) {
 void mlir::affineParallelize(AffineForOp forOp) {
   Location loc = forOp.getLoc();
   OpBuilder outsideBuilder(forOp);
+
+  // If a loop has a 'max' in the lower bound, emit it outside the parallel loop
+  // as it does not have implicit 'max' behavior.
+  AffineMap lowerBoundMap = forOp.getLowerBoundMap();
+  ValueRange lowerBoundOperands = forOp.getLowerBoundOperands();
+  AffineMap upperBoundMap = forOp.getUpperBoundMap();
+  ValueRange upperBoundOperands = forOp.getUpperBoundOperands();
+
+  bool needsMax = lowerBoundMap.getNumResults() > 1;
+  bool needsMin = upperBoundMap.getNumResults() > 1;
+  AffineMap identityMap;
+  if (needsMax || needsMin) {
+    if (forOp->getParentOp() &&
+        !forOp->getParentOp()->hasTrait<OpTrait::AffineScope>())
+      return;
+
+    identityMap = AffineMap::getMultiDimIdentityMap(1, loc->getContext());
+  }
+  if (needsMax) {
+    auto maxOp = outsideBuilder.create<AffineMaxOp>(loc, lowerBoundMap,
+                                                    lowerBoundOperands);
+    lowerBoundMap = identityMap;
+    lowerBoundOperands = maxOp->getResults();
+  }
+
+  // Same for the upper bound.
+  if (needsMin) {
+    auto minOp = outsideBuilder.create<AffineMinOp>(loc, upperBoundMap,
+                                                    upperBoundOperands);
+    upperBoundMap = identityMap;
+    upperBoundOperands = minOp->getResults();
+  }
+
   // Creating empty 1-D affine.parallel op.
   AffineParallelOp newPloop = outsideBuilder.create<AffineParallelOp>(
-      loc, llvm::None, llvm::None, forOp.getLowerBoundMap(),
-      forOp.getLowerBoundOperands(), forOp.getUpperBoundMap(),
-      forOp.getUpperBoundOperands());
+      loc, llvm::None, llvm::None, lowerBoundMap, lowerBoundOperands,
+      upperBoundMap, upperBoundOperands);
   // Steal the body of the old affine for op and erase it.
   newPloop.region().takeBody(forOp.region());
   forOp.erase();
@@ -189,7 +221,7 @@ LogicalResult mlir::hoistAffineIfOp(AffineIfOp ifOp, bool *folded) {
   // Canonicalize to remove dead else blocks (happens whenever an 'if' moves up
   // a sequence of affine.fors that are all perfectly nested).
   applyPatternsAndFoldGreedily(
-      hoistedIfOp.getParentWithTrait<OpTrait::IsIsolatedFromAbove>(),
+      hoistedIfOp->getParentWithTrait<OpTrait::IsIsolatedFromAbove>(),
       frozenPatterns);
 
   return success();

@@ -157,8 +157,10 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       // Sequence association (15.5.2.11) applies -- rank need not match
       // if the actual argument is an array or array element designator.
     } else {
+      // Let CheckConformance accept scalars; storage association
+      // cases are checked here below.
       CheckConformance(messages, dummy.type.shape(), actualType.shape(),
-          "dummy argument", "actual argument");
+          "dummy argument", "actual argument", true, true);
     }
   } else {
     const auto &len{actualType.LEN()};
@@ -351,7 +353,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Pointer)};
   bool dummyIsContiguous{
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Contiguous)};
-  bool actualIsContiguous{IsSimplyContiguous(actual, context.intrinsics())};
+  bool actualIsContiguous{IsSimplyContiguous(actual, context)};
   bool dummyIsAssumedRank{dummy.type.attrs().test(
       characteristics::TypeAndShape::Attr::AssumedRank)};
   bool dummyIsAssumedShape{dummy.type.attrs().test(

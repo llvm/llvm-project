@@ -906,11 +906,31 @@ py::object PyOperation::create(
   if (attributes) {
     mlirAttributes.reserve(attributes->size());
     for (auto &it : *attributes) {
-
-      auto name = it.first.cast<std::string>();
-      auto &attribute = it.second.cast<PyAttribute &>();
-      // TODO: Verify attribute originates from the same context.
-      mlirAttributes.emplace_back(std::move(name), attribute);
+      std::string key;
+      try {
+        key = it.first.cast<std::string>();
+      } catch (py::cast_error &err) {
+        std::string msg = "Invalid attribute key (not a string) when "
+                          "attempting to create the operation \"" +
+                          name + "\" (" + err.what() + ")";
+        throw py::cast_error(msg);
+      }
+      try {
+        auto &attribute = it.second.cast<PyAttribute &>();
+        // TODO: Verify attribute originates from the same context.
+        mlirAttributes.emplace_back(std::move(key), attribute);
+      } catch (py::reference_cast_error &) {
+        // This exception seems thrown when the value is "None".
+        std::string msg =
+            "Found an invalid (`None`?) attribute value for the key \"" + key +
+            "\" when attempting to create the operation \"" + name + "\"";
+        throw py::cast_error(msg);
+      } catch (py::cast_error &err) {
+        std::string msg = "Invalid attribute value for the key \"" + key +
+                          "\" when attempting to create the operation \"" +
+                          name + "\" (" + err.what() + ")";
+        throw py::cast_error(msg);
+      }
     }
   }
   // Unpack/validate successors.
@@ -942,8 +962,10 @@ py::object PyOperation::create(
     llvm::SmallVector<MlirNamedAttribute, 4> mlirNamedAttributes;
     mlirNamedAttributes.reserve(mlirAttributes.size());
     for (auto &it : mlirAttributes)
-      mlirNamedAttributes.push_back(
-          mlirNamedAttributeGet(toMlirStringRef(it.first), it.second));
+      mlirNamedAttributes.push_back(mlirNamedAttributeGet(
+          mlirIdentifierGet(mlirAttributeGetContext(it.second),
+                            toMlirStringRef(it.first)),
+          it.second));
     mlirOperationStateAddAttributes(&state, mlirNamedAttributes.size(),
                                     mlirNamedAttributes.data());
   }
@@ -1114,7 +1136,10 @@ PyAttribute PyAttribute::createFromCapsule(py::object capsule) {
 
 PyNamedAttribute::PyNamedAttribute(MlirAttribute attr, std::string ownedName)
     : ownedName(new std::string(std::move(ownedName))) {
-  namedAttr = mlirNamedAttributeGet(toMlirStringRef(*this->ownedName), attr);
+  namedAttr = mlirNamedAttributeGet(
+      mlirIdentifierGet(mlirAttributeGetContext(attr),
+                        toMlirStringRef(*this->ownedName)),
+      attr);
 }
 
 //------------------------------------------------------------------------------
@@ -1353,8 +1378,9 @@ public:
     }
     MlirNamedAttribute namedAttr =
         mlirOperationGetAttribute(operation->get(), index);
-    return PyNamedAttribute(namedAttr.attribute,
-                            std::string(namedAttr.name.data));
+    return PyNamedAttribute(
+        namedAttr.attribute,
+        std::string(mlirIdentifierStr(namedAttr.name).data));
   }
 
   void dunderSetItem(const std::string &name, PyAttribute attr) {
@@ -1439,6 +1465,83 @@ public:
 
   /// Implemented by derived classes to add methods to the Python subclass.
   static void bindDerived(ClassTy &m) {}
+};
+
+class PyArrayAttribute : public PyConcreteAttribute<PyArrayAttribute> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAttributeIsAArray;
+  static constexpr const char *pyClassName = "ArrayAttr";
+  using PyConcreteAttribute::PyConcreteAttribute;
+
+  class PyArrayAttributeIterator {
+  public:
+    PyArrayAttributeIterator(PyAttribute attr) : attr(attr) {}
+
+    PyArrayAttributeIterator &dunderIter() { return *this; }
+
+    PyAttribute dunderNext() {
+      if (nextIndex >= mlirArrayAttrGetNumElements(attr.get())) {
+        throw py::stop_iteration();
+      }
+      return PyAttribute(attr.getContext(),
+                         mlirArrayAttrGetElement(attr.get(), nextIndex++));
+    }
+
+    static void bind(py::module &m) {
+      py::class_<PyArrayAttributeIterator>(m, "ArrayAttributeIterator")
+          .def("__iter__", &PyArrayAttributeIterator::dunderIter)
+          .def("__next__", &PyArrayAttributeIterator::dunderNext);
+    }
+
+  private:
+    PyAttribute attr;
+    int nextIndex = 0;
+  };
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](py::list attributes, DefaultingPyMlirContext context) {
+          SmallVector<MlirAttribute> mlirAttributes;
+          mlirAttributes.reserve(py::len(attributes));
+          for (auto attribute : attributes) {
+            try {
+              mlirAttributes.push_back(attribute.cast<PyAttribute>());
+            } catch (py::cast_error &err) {
+              std::string msg = std::string("Invalid attribute when attempting "
+                                            "to create an ArrayAttribute (") +
+                                err.what() + ")";
+              throw py::cast_error(msg);
+            } catch (py::reference_cast_error &err) {
+              // This exception seems thrown when the value is "None".
+              std::string msg =
+                  std::string("Invalid attribute (None?) when attempting to "
+                              "create an ArrayAttribute (") +
+                  err.what() + ")";
+              throw py::cast_error(msg);
+            }
+          }
+          MlirAttribute attr = mlirArrayAttrGet(
+              context->get(), mlirAttributes.size(), mlirAttributes.data());
+          return PyArrayAttribute(context->getRef(), attr);
+        },
+        py::arg("attributes"), py::arg("context") = py::none(),
+        "Gets a uniqued Array attribute");
+    c.def("__getitem__",
+          [](PyArrayAttribute &arr, intptr_t i) {
+            if (i >= mlirArrayAttrGetNumElements(arr))
+              throw py::index_error("ArrayAttribute index out of range");
+            return PyAttribute(arr.getContext(),
+                               mlirArrayAttrGetElement(arr, i));
+          })
+        .def("__len__",
+             [](const PyArrayAttribute &arr) {
+               return mlirArrayAttrGetNumElements(arr);
+             })
+        .def("__iter__", [](const PyArrayAttribute &arr) {
+          return PyArrayAttributeIterator(arr);
+        });
+  }
 };
 
 /// Float Point Attribute subclass - FloatAttr.
@@ -1551,7 +1654,7 @@ public:
         "get",
         [](std::string value, DefaultingPyMlirContext context) {
           MlirAttribute attr =
-              mlirStringAttrGet(context->get(), value.size(), &value[0]);
+              mlirStringAttrGet(context->get(), toMlirStringRef(value));
           return PyStringAttribute(context->getRef(), attr);
         },
         py::arg("value"), py::arg("context") = py::none(),
@@ -1560,7 +1663,7 @@ public:
         "get_typed",
         [](PyType &type, std::string value) {
           MlirAttribute attr =
-              mlirStringAttrTypedGet(type, value.size(), &value[0]);
+              mlirStringAttrTypedGet(type, toMlirStringRef(value));
           return PyStringAttribute(type.getContext(), attr);
         },
 
@@ -1865,6 +1968,58 @@ public:
   }
 };
 
+class PyDictAttribute : public PyConcreteAttribute<PyDictAttribute> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAttributeIsADictionary;
+  static constexpr const char *pyClassName = "DictAttr";
+  using PyConcreteAttribute::PyConcreteAttribute;
+
+  intptr_t dunderLen() { return mlirDictionaryAttrGetNumElements(*this); }
+
+  static void bindDerived(ClassTy &c) {
+    c.def("__len__", &PyDictAttribute::dunderLen);
+    c.def_static(
+        "get",
+        [](py::dict attributes, DefaultingPyMlirContext context) {
+          SmallVector<MlirNamedAttribute> mlirNamedAttributes;
+          mlirNamedAttributes.reserve(attributes.size());
+          for (auto &it : attributes) {
+            auto &mlir_attr = it.second.cast<PyAttribute &>();
+            auto name = it.first.cast<std::string>();
+            mlirNamedAttributes.push_back(mlirNamedAttributeGet(
+                mlirIdentifierGet(mlirAttributeGetContext(mlir_attr),
+                                  toMlirStringRef(name)),
+                mlir_attr));
+          }
+          MlirAttribute attr =
+              mlirDictionaryAttrGet(context->get(), mlirNamedAttributes.size(),
+                                    mlirNamedAttributes.data());
+          return PyDictAttribute(context->getRef(), attr);
+        },
+        py::arg("value"), py::arg("context") = py::none(),
+        "Gets an uniqued dict attribute");
+    c.def("__getitem__", [](PyDictAttribute &self, const std::string &name) {
+      MlirAttribute attr =
+          mlirDictionaryAttrGetElementByName(self, toMlirStringRef(name));
+      if (mlirAttributeIsNull(attr)) {
+        throw SetPyError(PyExc_KeyError,
+                         "attempt to access a non-existent attribute");
+      }
+      return PyAttribute(self.getContext(), attr);
+    });
+    c.def("__getitem__", [](PyDictAttribute &self, intptr_t index) {
+      if (index < 0 || index >= self.dunderLen()) {
+        throw SetPyError(PyExc_IndexError,
+                         "attempt to access out of bounds attribute");
+      }
+      MlirNamedAttribute namedAttr = mlirDictionaryAttrGetElement(self, index);
+      return PyNamedAttribute(
+          namedAttr.attribute,
+          std::string(mlirIdentifierStr(namedAttr.name).data));
+    });
+  }
+};
+
 /// Refinement of PyDenseElementsAttribute for attributes containing
 /// floating-point values. Supports element access.
 class PyDenseFPElementsAttribute
@@ -1899,6 +2054,28 @@ public:
 
   static void bindDerived(ClassTy &c) {
     c.def("__getitem__", &PyDenseFPElementsAttribute::dunderGetItem);
+  }
+};
+
+class PyTypeAttribute : public PyConcreteAttribute<PyTypeAttribute> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAttributeIsAType;
+  static constexpr const char *pyClassName = "TypeAttr";
+  using PyConcreteAttribute::PyConcreteAttribute;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](PyType value, DefaultingPyMlirContext context) {
+          MlirAttribute attr = mlirTypeAttrGet(value.get());
+          return PyTypeAttribute(context->getRef(), attr);
+        },
+        py::arg("value"), py::arg("context") = py::none(),
+        "Gets a uniqued Type attribute");
+    c.def_property_readonly("value", [](PyTypeAttribute &self) {
+      return PyType(self.getContext()->getRef(),
+                    mlirTypeAttrGetValue(self.get()));
+    });
   }
 };
 
@@ -3018,7 +3195,8 @@ void mlir::python::populateIRSubmodule(py::module &m) {
            [](PyNamedAttribute &self) {
              PyPrintAccumulator printAccum;
              printAccum.parts.append("NamedAttribute(");
-             printAccum.parts.append(self.namedAttr.name.data);
+             printAccum.parts.append(
+                 mlirIdentifierStr(self.namedAttr.name).data);
              printAccum.parts.append("=");
              mlirAttributePrint(self.namedAttr.attribute,
                                 printAccum.getCallback(),
@@ -3029,8 +3207,8 @@ void mlir::python::populateIRSubmodule(py::module &m) {
       .def_property_readonly(
           "name",
           [](PyNamedAttribute &self) {
-            return py::str(self.namedAttr.name.data,
-                           self.namedAttr.name.length);
+            return py::str(mlirIdentifierStr(self.namedAttr.name).data,
+                           mlirIdentifierStr(self.namedAttr.name).length);
           },
           "The name of the NamedAttribute binding")
       .def_property_readonly(
@@ -3047,12 +3225,16 @@ void mlir::python::populateIRSubmodule(py::module &m) {
 
   // Builtin attribute bindings.
   PyFloatAttribute::bind(m);
+  PyArrayAttribute::bind(m);
+  PyArrayAttribute::PyArrayAttributeIterator::bind(m);
   PyIntegerAttribute::bind(m);
   PyBoolAttribute::bind(m);
   PyStringAttribute::bind(m);
   PyDenseElementsAttribute::bind(m);
   PyDenseIntElementsAttribute::bind(m);
   PyDenseFPElementsAttribute::bind(m);
+  PyDictAttribute::bind(m);
+  PyTypeAttribute::bind(m);
   PyUnitAttribute::bind(m);
 
   //----------------------------------------------------------------------------

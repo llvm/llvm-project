@@ -71,15 +71,18 @@ to specify the target triple:
      ``amdhsa``     Compute kernels executed on HSA [HSA]_ compatible runtimes
                     such as:
 
-                    - AMD's ROCm runtime [AMD-ROCm]_ on Linux. See *AMD ROCm
-                      Release Notes* [AMD-ROCm-Release-Notes]_ for supported
-                      hardware and software.
-                    - AMD's PAL runtime using the *amdhsa* loader on Windows.
+                    - AMD's ROCm™ runtime [AMD-ROCm]_ using the *rocm-amdhsa*
+                      loader on Linux. See *AMD ROCm Platform Release Notes*
+                      [AMD-ROCm-Release-Notes]_ for supported hardware and
+                      software.
+                    - AMD's PAL runtime using the *pal-amdhsa* loader on
+                      Windows.
 
      ``amdpal``     Graphic shaders and compute kernels executed on AMD's PAL
-                    runtime using the *amdpal* loader on Windows and Linux Pro.
-     ``mesa3d``     Graphic shaders and compute kernels executed on Mesa 3D
-                    runtime.
+                    runtime using the *pal-amdpal* loader on Windows and Linux
+                    Pro.
+     ``mesa3d``     Graphic shaders and compute kernels executed on AMD's Mesa
+                    3D runtime using the *mesa-mesa3d* loader on Linux.
      ============== ============================================================
 
   .. table:: AMDGPU Environments
@@ -104,23 +107,21 @@ specific information.
   .. table:: AMDGPU Processors
      :name: amdgpu-processor-table
 
-     =========== =============== ============ ===== ================= =========== ============== ======================
-     Processor   Alternative     Target       dGPU/ Target            Target      OS             Example
-                 Processor       Triple       APU   Features          Properties  Support        Products
-                                 Architecture       Supported                     ()
-                                                                                  *(see*
-                                                                                  `amdgpu-os`_
+     =========== =============== ============ ===== ================= =========== =============== ======================
+     Processor   Alternative     Target       dGPU/ Target            Target      OS Support      Example
+                 Processor       Triple       APU   Features          Properties  *(see*          Products
+                                 Architecture       Supported                     `amdgpu-os`_
                                                                                   *and
                                                                                   corresponding
-                                                                                  runtime
-                                                                                  release notes
-                                                                                  for current
-                                                                                  information
-                                                                                  and level of
+                                                                                  runtime release
+                                                                                  notes for
+                                                                                  current
+                                                                                  information and
+                                                                                  level of
                                                                                   support)*
-     =========== =============== ============ ===== ================= =========== ============== ======================
+     =========== =============== ============ ===== ================= =========== =============== ======================
      **Radeon HD 2000/3000 Series (R600)** [AMD-RADEON-HD-2000-3000]_
-     ------------------------------------------------------------------------------------------------------------------
+     -------------------------------------------------------------------------------------------------------------------
      ``r600``                    ``r600``     dGPU                    - Does not
                                                                         support
                                                                         generic
@@ -142,7 +143,7 @@ specific information.
                                                                         address
                                                                         space
      **Radeon HD 4000 Series (R700)** [AMD-RADEON-HD-4000]_
-     ------------------------------------------------------------------------------------------------------------------
+     -------------------------------------------------------------------------------------------------------------------
      ``rv710``                   ``r600``     dGPU                    - Does not
                                                                         support
                                                                         generic
@@ -159,7 +160,7 @@ specific information.
                                                                         address
                                                                         space
      **Radeon HD 5000 Series (Evergreen)** [AMD-RADEON-HD-5000]_
-     ------------------------------------------------------------------------------------------------------------------
+     -------------------------------------------------------------------------------------------------------------------
      ``cedar``                   ``r600``     dGPU                    - Does not
                                                                         support
                                                                         generic
@@ -186,7 +187,7 @@ specific information.
                                                                         address
                                                                         space
      **Radeon HD 6000 Series (Northern Islands)** [AMD-RADEON-HD-6000]_
-     ------------------------------------------------------------------------------------------------------------------
+     -------------------------------------------------------------------------------------------------------------------
      ``barts``                   ``r600``     dGPU                    - Does not
                                                                         support
                                                                         generic
@@ -208,205 +209,208 @@ specific information.
                                                                         address
                                                                         space
      **GCN GFX6 (Southern Islands (SI))** [AMD-GCN-GFX6]_
-     ------------------------------------------------------------------------------------------------------------------
-     ``gfx600``  - ``tahiti``    ``amdgcn``   dGPU                    - Does not  - AMD PAL
+     -------------------------------------------------------------------------------------------------------------------
+     ``gfx600``  - ``tahiti``    ``amdgcn``   dGPU                    - Does not  - *pal-amdpal*
                                                                         support
                                                                         generic
                                                                         address
                                                                         space
-     ``gfx601``  - ``pitcairn``  ``amdgcn``   dGPU                    - Does not  - AMD PAL
+     ``gfx601``  - ``pitcairn``  ``amdgcn``   dGPU                    - Does not  - *pal-amdpal*
                  - ``verde``                                            support
                                                                         generic
                                                                         address
                                                                         space
-     ``gfx602``  - ``hainan``    ``amdgcn``   dGPU                    - Does not  - AMD PAL
+     ``gfx602``  - ``hainan``    ``amdgcn``   dGPU                    - Does not  - *pal-amdpal*
                  - ``oland``                                            support
                                                                         generic
                                                                         address
                                                                         space
      **GCN GFX7 (Sea Islands (CI))** [AMD-GCN-GFX7]_
-     ------------------------------------------------------------------------------------------------------------------
-     ``gfx700``  - ``kaveri``    ``amdgcn``   APU                                 - AMD ROCm     - A6-7000
-                                                                                  - AMD PAL      - A6 Pro-7050B
-                                                                                                 - A8-7100
-                                                                                                 - A8 Pro-7150B
-                                                                                                 - A10-7300
-                                                                                                 - A10 Pro-7350B
-                                                                                                 - FX-7500
-                                                                                                 - A8-7200P
-                                                                                                 - A10-7400P
-                                                                                                 - FX-7600P
-     ``gfx701``  - ``hawaii``    ``amdgcn``   dGPU                                - AMD ROCm     - FirePro W8100
-                                                                                  - AMD PAL      - FirePro W9100
-                                                                                                 - FirePro S9150
-                                                                                                 - FirePro S9170
-     ``gfx702``                  ``amdgcn``   dGPU                                - AMD ROCm     - Radeon R9 290
-                                                                                  - AMD PAL      - Radeon R9 290x
-                                                                                                 - Radeon R390
-                                                                                                 - Radeon R390x
-     ``gfx703``  - ``kabini``    ``amdgcn``   APU                                 - AMD PAL      - E1-2100
-                 - ``mullins``                                                                   - E1-2200
-                                                                                                 - E1-2500
-                                                                                                 - E2-3000
-                                                                                                 - E2-3800
-                                                                                                 - A4-5000
-                                                                                                 - A4-5100
-                                                                                                 - A6-5200
-                                                                                                 - A4 Pro-3340B
-     ``gfx704``  - ``bonaire``   ``amdgcn``   dGPU                                - AMD PAL      - Radeon HD 7790
-                                                                                                 - Radeon HD 8770
-                                                                                                 - R7 260
-                                                                                                 - R7 260X
-     ``gfx705``                  ``amdgcn``   APU                                 - AMD PAL      *TBA*
+     -------------------------------------------------------------------------------------------------------------------
+     ``gfx700``  - ``kaveri``    ``amdgcn``   APU                                 - *rocm-amdhsa* - A6-7000
+                                                                                  - *pal-amdhsa*  - A6 Pro-7050B
+                                                                                  - *pal-amdpal*  - A8-7100
+                                                                                                  - A8 Pro-7150B
+                                                                                                  - A10-7300
+                                                                                                  - A10 Pro-7350B
+                                                                                                  - FX-7500
+                                                                                                  - A8-7200P
+                                                                                                  - A10-7400P
+                                                                                                  - FX-7600P
+     ``gfx701``  - ``hawaii``    ``amdgcn``   dGPU                                - *rocm-amdhsa* - FirePro W8100
+                                                                                  - *pal-amdhsa*  - FirePro W9100
+                                                                                  - *pal-amdpal*  - FirePro S9150
+                                                                                                  - FirePro S9170
+     ``gfx702``                  ``amdgcn``   dGPU                                - *rocm-amdhsa* - Radeon R9 290
+                                                                                  - *pal-amdhsa*  - Radeon R9 290x
+                                                                                  - *pal-amdpal*  - Radeon R390
+                                                                                                  - Radeon R390x
+     ``gfx703``  - ``kabini``    ``amdgcn``   APU                                 - *pal-amdhsa*  - E1-2100
+                 - ``mullins``                                                    - *pal-amdpal*  - E1-2200
+                                                                                                  - E1-2500
+                                                                                                  - E2-3000
+                                                                                                  - E2-3800
+                                                                                                  - A4-5000
+                                                                                                  - A4-5100
+                                                                                                  - A6-5200
+                                                                                                  - A4 Pro-3340B
+     ``gfx704``  - ``bonaire``   ``amdgcn``   dGPU                                - *pal-amdhsa*  - Radeon HD 7790
+                                                                                  - *pal-amdpal*  - Radeon HD 8770
+                                                                                                  - R7 260
+                                                                                                  - R7 260X
+     ``gfx705``                  ``amdgcn``   APU                                 - *pal-amdhsa*  *TBA*
+                                                                                  - *pal-amdpal*
+                                                                                                  .. TODO::
 
-                                                                                                 .. TODO::
-
-                                                                                                    Add product
-                                                                                                    names.
+                                                                                                     Add product
+                                                                                                     names.
 
      **GCN GFX8 (Volcanic Islands (VI))** [AMD-GCN-GFX8]_
-     ------------------------------------------------------------------------------------------------------------------
-     ``gfx801``  - ``carrizo``   ``amdgcn``   APU   - xnack                       - AMD ROCm     - A6-8500P
-                                                                                  - AMD PAL      - Pro A6-8500B
-                                                                                                 - A8-8600P
-                                                                                                 - Pro A8-8600B
-                                                                                                 - FX-8800P
-                                                                                                 - Pro A12-8800B
-                                                                                                 - A10-8700P
-                                                                                                 - Pro A10-8700B
-                                                                                                 - A10-8780P
-                                                                                                 - A10-9600P
-                                                                                                 - A10-9630P
-                                                                                                 - A12-9700P
-                                                                                                 - A12-9730P
-                                                                                                 - FX-9800P
-                                                                                                 - FX-9830P
-                                                                                                 - E2-9010
-                                                                                                 - A6-9210
-                                                                                                 - A9-9410
-     ``gfx802``  - ``iceland``   ``amdgcn``   dGPU                                - AMD ROCm     - Radeon R9 285
-                 - ``tonga``                                                      - AMD PAL      - Radeon R9 380
-                                                                                                 - Radeon R9 385
-     ``gfx803``  - ``fiji``      ``amdgcn``   dGPU                                - AMD ROCm     - Radeon R9 Nano
-                                                                                  - AMD PAL      - Radeon R9 Fury
-                                                                                                 - Radeon R9 FuryX
-                                                                                                 - Radeon Pro Duo
-                                                                                                 - FirePro S9300x2
-                                                                                                 - Radeon Instinct MI8
-     \           - ``polaris10`` ``amdgcn``   dGPU                                - AMD ROCm     - Radeon RX 470
-                                                                                  - AMD PAL      - Radeon RX 480
-                                                                                                 - Radeon Instinct MI6
-     \           - ``polaris11`` ``amdgcn``   dGPU                                - AMD ROCm     - Radeon RX 460
-                                                                                  - AMD PAL
-     ``gfx805``  - ``tongapro``  ``amdgcn``   dGPU                                - AMD ROCm     - FirePro S7150
-                                                                                  - AMD PAL      - FirePro S7100
-                                                                                                 - FirePro W7100
-                                                                                                 - Mobile FirePro
-                                                                                                   M7170
-     ``gfx810``  - ``stoney``    ``amdgcn``   APU   - xnack                       - AMD ROCm     *TBA*
-                                                                                  - AMD PAL
-                                                                                                 .. TODO::
+     -------------------------------------------------------------------------------------------------------------------
+     ``gfx801``  - ``carrizo``   ``amdgcn``   APU   - xnack                       - *rocm-amdhsa* - A6-8500P
+                                                                                  - *pal-amdhsa*  - Pro A6-8500B
+                                                                                  - *pal-amdpal*  - A8-8600P
+                                                                                                  - Pro A8-8600B
+                                                                                                  - FX-8800P
+                                                                                                  - Pro A12-8800B
+                                                                                                  - A10-8700P
+                                                                                                  - Pro A10-8700B
+                                                                                                  - A10-8780P
+                                                                                                  - A10-9600P
+                                                                                                  - A10-9630P
+                                                                                                  - A12-9700P
+                                                                                                  - A12-9730P
+                                                                                                  - FX-9800P
+                                                                                                  - FX-9830P
+                                                                                                  - E2-9010
+                                                                                                  - A6-9210
+                                                                                                  - A9-9410
+     ``gfx802``  - ``iceland``   ``amdgcn``   dGPU                                - *rocm-amdhsa* - Radeon R9 285
+                 - ``tonga``                                                      - *pal-amdhsa*  - Radeon R9 380
+                                                                                  - *pal-amdpal*  - Radeon R9 385
+     ``gfx803``  - ``fiji``      ``amdgcn``   dGPU                                - *rocm-amdhsa* - Radeon R9 Nano
+                                                                                  - *pal-amdhsa*  - Radeon R9 Fury
+                                                                                  - *pal-amdpal*  - Radeon R9 FuryX
+                                                                                                  - Radeon Pro Duo
+                                                                                                  - FirePro S9300x2
+                                                                                                  - Radeon Instinct MI8
+     \           - ``polaris10`` ``amdgcn``   dGPU                                - *rocm-amdhsa* - Radeon RX 470
+                                                                                  - *pal-amdhsa*  - Radeon RX 480
+                                                                                  - *pal-amdpal*  - Radeon Instinct MI6
+     \           - ``polaris11`` ``amdgcn``   dGPU                                - *rocm-amdhsa* - Radeon RX 460
+                                                                                  - *pal-amdhsa*
+                                                                                  - *pal-amdpal*
+     ``gfx805``  - ``tongapro``  ``amdgcn``   dGPU                                - *rocm-amdhsa* - FirePro S7150
+                                                                                  - *pal-amdhsa*  - FirePro S7100
+                                                                                  - *pal-amdpal*  - FirePro W7100
+                                                                                                  - Mobile FirePro
+                                                                                                    M7170
+     ``gfx810``  - ``stoney``    ``amdgcn``   APU   - xnack                       - *rocm-amdhsa* *TBA*
+                                                                                  - *pal-amdhsa*
+                                                                                  - *pal-amdpal*  .. TODO::
 
-                                                                                                    Add product
-                                                                                                    names.
+                                                                                                     Add product
+                                                                                                     names.
 
-     **GCN GFX9** [AMD-GCN-GFX9]_
-     ------------------------------------------------------------------------------------------------------------------
-     ``gfx900``                  ``amdgcn``   dGPU  - xnack                       - AMD ROCm     - Radeon Vega
-                                                                                  - AMD PAL        Frontier Edition
-                                                                                                 - Radeon RX Vega 56
-                                                                                                 - Radeon RX Vega 64
-                                                                                                 - Radeon RX Vega 64
-                                                                                                   Liquid
-                                                                                                 - Radeon Instinct MI25
-     ``gfx902``                  ``amdgcn``   APU   - xnack                       - AMD ROCm     - Ryzen 3 2200G
-                                                                                  - AMD PAL      - Ryzen 5 2400G
-     ``gfx904``                  ``amdgcn``   dGPU  - xnack                       - AMD ROCm     *TBA*
-                                                                                  - AMD PAL
-                                                                                                 .. TODO::
+     **GCN GFX9 (Vega)** [AMD-GCN-GFX9]_
+     -------------------------------------------------------------------------------------------------------------------
+     ``gfx900``                  ``amdgcn``   dGPU  - xnack                       - *rocm-amdhsa* - Radeon Vega
+                                                                                  - *pal-amdhsa*    Frontier Edition
+                                                                                  - *pal-amdpal*  - Radeon RX Vega 56
+                                                                                                  - Radeon RX Vega 64
+                                                                                                  - Radeon RX Vega 64
+                                                                                                    Liquid
+                                                                                                  - Radeon Instinct MI25
+     ``gfx902``                  ``amdgcn``   APU   - xnack                       - *rocm-amdhsa* - Ryzen 3 2200G
+                                                                                  - *pal-amdhsa*  - Ryzen 5 2400G
+                                                                                  - *pal-amdpal*
+     ``gfx904``                  ``amdgcn``   dGPU  - xnack                       - *rocm-amdhsa* *TBA*
+                                                                                  - *pal-amdhsa*
+                                                                                  - *pal-amdpal*  .. TODO::
 
-                                                                                                    Add product
-                                                                                                    names.
+                                                                                                     Add product
+                                                                                                     names.
 
-     ``gfx906``                  ``amdgcn``   dGPU  - sramecc                     - AMD ROCm     - Radeon Instinct MI50
-                                                    - xnack                       - AMD PAL      - Radeon Instinct MI60
-                                                                                                 - Radeon VII
-                                                                                                 - Radeon Pro VII
-     ``gfx908``                  ``amdgcn``   dGPU  - sramecc                     - AMD ROCm     *TBA*
+     ``gfx906``                  ``amdgcn``   dGPU  - sramecc                     - *rocm-amdhsa* - Radeon Instinct MI50
+                                                    - xnack                       - *pal-amdhsa*  - Radeon Instinct MI60
+                                                                                  - *pal-amdpal*  - Radeon VII
+                                                                                                  - Radeon Pro VII
+     ``gfx908``                  ``amdgcn``   dGPU  - sramecc                     - *rocm-amdhsa* *TBA*
                                                     - xnack
-                                                                                                 .. TODO::
+                                                                                                  .. TODO::
 
-                                                                                                    Add product
-                                                                                                    names.
+                                                                                                     Add product
+                                                                                                     names.
 
-     ``gfx909``                  ``amdgcn``   APU   - xnack                       - AMD PAL      *TBA*
+     ``gfx909``                  ``amdgcn``   APU   - xnack                       - *pal-amdpal*  *TBA*
 
-                                                                                                 .. TODO::
+                                                                                                  .. TODO::
 
-                                                                                                    Add product
-                                                                                                    names.
+                                                                                                     Add product
+                                                                                                     names.
 
-     ``gfx90c``                  ``amdgcn``   APU   - xnack                       - AMD PAL      - Ryzen 7 4700G
-                                                                                                 - Ryzen 7 4700GE
-                                                                                                 - Ryzen 5 4600G
-                                                                                                 - Ryzen 5 4600GE
-                                                                                                 - Ryzen 3 4300G
-                                                                                                 - Ryzen 3 4300GE
-                                                                                                 - Ryzen Pro 4000G
-                                                                                                 - Ryzen 7 Pro 4700G
-                                                                                                 - Ryzen 7 Pro 4750GE
-                                                                                                 - Ryzen 5 Pro 4650G
-                                                                                                 - Ryzen 5 Pro 4650GE
-                                                                                                 - Ryzen 3 Pro 4350G
-                                                                                                 - Ryzen 3 Pro 4350GE
+     ``gfx90c``                  ``amdgcn``   APU   - xnack                       - *pal-amdpal*  - Ryzen 7 4700G
+                                                                                                  - Ryzen 7 4700GE
+                                                                                                  - Ryzen 5 4600G
+                                                                                                  - Ryzen 5 4600GE
+                                                                                                  - Ryzen 3 4300G
+                                                                                                  - Ryzen 3 4300GE
+                                                                                                  - Ryzen Pro 4000G
+                                                                                                  - Ryzen 7 Pro 4700G
+                                                                                                  - Ryzen 7 Pro 4750GE
+                                                                                                  - Ryzen 5 Pro 4650G
+                                                                                                  - Ryzen 5 Pro 4650GE
+                                                                                                  - Ryzen 3 Pro 4350G
+                                                                                                  - Ryzen 3 Pro 4350GE
 
-     **GCN GFX10** [AMD-GCN-GFX10]_
-     ------------------------------------------------------------------------------------------------------------------
-     ``gfx1010``                 ``amdgcn``   dGPU  - cumode                      - AMD ROCm     - Radeon RX 5700
-                                                    - wavefrontsize64             - AMD PAL      - Radeon RX 5700 XT
-                                                    - xnack                                      - Radeon Pro 5600 XT
-                                                                                                 - Radeon Pro 5600M
-     ``gfx1011``                 ``amdgcn``   dGPU  - cumode                      - AMD ROCm     *TBA*
-                                                    - wavefrontsize64             - AMD PAL
-                                                    - xnack
-                                                                                                 .. TODO::
+     **GCN GFX10 (RDNA 1)** [AMD-GCN-GFX10-RDNA1]_
+     -------------------------------------------------------------------------------------------------------------------
+     ``gfx1010``                 ``amdgcn``   dGPU  - cumode                      - *rocm-amdhsa* - Radeon RX 5700
+                                                    - wavefrontsize64             - *pal-amdhsa*  - Radeon RX 5700 XT
+                                                    - xnack                       - *pal-amdpal*  - Radeon Pro 5600 XT
+                                                                                                  - Radeon Pro 5600M
+     ``gfx1011``                 ``amdgcn``   dGPU  - cumode                      - *rocm-amdhsa* *TBA*
+                                                    - wavefrontsize64             - *pal-amdhsa*
+                                                    - xnack                       - *pal-amdpal*
+                                                                                                  .. TODO::
 
-                                                                                                    Add product
-                                                                                                    names.
+                                                                                                     Add product
+                                                                                                     names.
 
-     ``gfx1012``                 ``amdgcn``   dGPU  - cumode                      - AMD ROCm     - Radeon RX 5500
-                                                    - wavefrontsize64             - AMD PAL      - Radeon RX 5500 XT
-                                                    - xnack
+     ``gfx1012``                 ``amdgcn``   dGPU  - cumode                      - *rocm-amdhsa* - Radeon RX 5500
+                                                    - wavefrontsize64             - *pal-amdhsa*  - Radeon RX 5500 XT
+                                                    - xnack                       - *pal-amdpal*
+     **GCN GFX10 (RDNA 2)** [AMD-GCN-GFX10-RDNA2]_
+     -------------------------------------------------------------------------------------------------------------------
+     ``gfx1030``                 ``amdgcn``   dGPU  - cumode                      - *rocm-amdhsa* *TBA*
+                                                    - wavefrontsize64             - *pal-amdhsa*
+                                                                                  - *pal-amdpal*  .. TODO::
 
-     ``gfx1030``                 ``amdgcn``   dGPU  - cumode                      - AMD ROCm     *TBA*
-                                                    - wavefrontsize64             - AMD PAL
-                                                                                                 .. TODO::
+                                                                                                     Add product
+                                                                                                     names.
 
-                                                                                                    Add product
-                                                                                                    names.
+     ``gfx1031``                 ``amdgcn``   dGPU  - cumode                      - *rocm-amdhsa* *TBA*
+                                                    - wavefrontsize64             - *pal-amdhsa*
+                                                                                  - *pal-amdpal*  .. TODO::
 
-     ``gfx1031``                 ``amdgcn``   dGPU  - cumode                      - AMD ROCm     *TBA*
-                                                    - wavefrontsize64             - AMD PAL
-                                                                                                 .. TODO::
+                                                                                                     Add product
+                                                                                                     names.
 
-                                                                                                    Add product
-                                                                                                    names.
+     ``gfx1032``                 ``amdgcn``   dGPU  - cumode                      - *pal-amdhsa*  *TBA*
+                                                    - wavefrontsize64             - *pal-amdhsa*
+                                                                                  - *pal-amdpal*  .. TODO::
 
-     ``gfx1032``                 ``amdgcn``   dGPU  - cumode                      - AMD PAL      *TBA*
+                                                                                                     Add product
+                                                                                                     names.
+
+     ``gfx1033``                 ``amdgcn``   APU   - cumode                      - *pal-amdpal*  *TBA*
                                                     - wavefrontsize64
-                                                                                                 .. TODO::
+                                                                                                  .. TODO::
 
-                                                                                                    Add product
-                                                                                                    names.
+                                                                                                     Add product
+                                                                                                     names.
 
-     ``gfx1033``                 ``amdgcn``   APU   - cumode                      - AMD PAL      *TBA*
-                                                    - wavefrontsize64
-                                                                                                 .. TODO::
-
-                                                                                                    Add product
-                                                                                                    names.
-
-     =========== =============== ============ ===== ================= =========== ============== ======================
+     =========== =============== ============ ===== ================= =========== =============== ======================
 
 .. _amdgpu-target-features:
 
@@ -1325,10 +1329,11 @@ are deprecated and should not be used.
      ``AMD:AMDGPU:7:0:3`` ``gfx703``
      ``AMD:AMDGPU:7:0:4`` ``gfx704``
      ``AMD:AMDGPU:7:0:5`` ``gfx705``
-     ``AMD:AMDGPU:8:0:0`` ``gfx801:xnack-``
+     ``AMD:AMDGPU:8:0:0`` ``gfx802``
      ``AMD:AMDGPU:8:0:1`` ``gfx801:xnack+``
      ``AMD:AMDGPU:8:0:2`` ``gfx802``
      ``AMD:AMDGPU:8:0:3`` ``gfx803``
+     ``AMD:AMDGPU:8:0:4`` ``gfx803``
      ``AMD:AMDGPU:8:0:5`` ``gfx805``
      ``AMD:AMDGPU:8:1:0`` ``gfx810:xnack+``
      ``AMD:AMDGPU:9:0:0`` ``gfx900:xnack-``
@@ -3580,8 +3585,8 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      configuration
                                                      register. See
                                                      :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx10-table`.
-     448     1 bit   ENABLE_SGPR_PRIVATE_SEGMENT     Enable the setup of the
-                     _BUFFER                         SGPR user data registers
+     458:448 7 bits  *See separate bits below.*      Enable the setup of the
+                                                     SGPR user data registers
                                                      (see
                                                      :ref:`amdgpu-amdhsa-initial-kernel-execution-state`).
 
@@ -3592,12 +3597,15 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      ``compute_pgm_rsrc2.user_sgpr.user_sgpr_count``.
                                                      Any requests beyond 16
                                                      will be ignored.
-     449     1 bit   ENABLE_SGPR_DISPATCH_PTR        *see above*
-     450     1 bit   ENABLE_SGPR_QUEUE_PTR           *see above*
-     451     1 bit   ENABLE_SGPR_KERNARG_SEGMENT_PTR *see above*
-     452     1 bit   ENABLE_SGPR_DISPATCH_ID         *see above*
-     453     1 bit   ENABLE_SGPR_FLAT_SCRATCH_INIT   *see above*
-     454     1 bit   ENABLE_SGPR_PRIVATE_SEGMENT     *see above*
+     >448    1 bit   ENABLE_SGPR_PRIVATE_SEGMENT
+                     _BUFFER
+     >449    1 bit   ENABLE_SGPR_DISPATCH_PTR
+     >450    1 bit   ENABLE_SGPR_QUEUE_PTR
+     >451    1 bit   ENABLE_SGPR_KERNARG_SEGMENT_PTR
+     >452    1 bit   ENABLE_SGPR_DISPATCH_ID
+     >453    1 bit   ENABLE_SGPR_FLAT_SCRATCH_INIT
+
+     >454    1 bit   ENABLE_SGPR_PRIVATE_SEGMENT
                      _SIZE
      457:455 3 bits                                  Reserved, must be 0.
      458     1 bit   ENABLE_WAVEFRONT_SIZE32         GFX6-9
@@ -3911,8 +3919,12 @@ The fields used by CP for code objects before V3 also match those specified in
      ======= ======= =============================== ===========================================================================
      Bits    Size    Field Name                      Description
      ======= ======= =============================== ===========================================================================
-     0       1 bit   ENABLE_SGPR_PRIVATE_SEGMENT     Enable the setup of the
-                     _WAVEFRONT_OFFSET               SGPR wavefront scratch offset
+     0       1 bit   ENABLE_PRIVATE_SEGMENT          Enable the setup of the
+                                                     private segment.
+
+                                                     In addition, enable the
+                                                     setup of the SGPR
+                                                     wavefront scratch offset
                                                      system register (see
                                                      :ref:`amdgpu-amdhsa-initial-kernel-execution-state`).
 
@@ -4151,14 +4163,18 @@ SGPR register initial state is defined in
                 (kernel descriptor enable  of
                 field)                     SGPRs
      ========== ========================== ====== ==============================
-     First      Private Segment Buffer     4      V# that can be used, together
-                (enable_sgpr_private              with Scratch Wavefront Offset
-                _segment_buffer)                  as an offset, to access the
+     First      Private Segment Buffer     4      This is 4 SGPRs:
+                (enable_sgpr_private
+                _segment_buffer)
+                                                  V# that can be used,
+                                                  together with Scratch
+                                                  Wavefront Offset as an
+                                                  offset, to access the
                                                   private memory space using a
                                                   segment address.
 
-                                                  CP uses the value provided by
-                                                  the runtime.
+                                                  CP uses the value provided
+                                                  by the runtime.
      then       Dispatch Ptr               2      64-bit address of AQL dispatch
                 (enable_sgpr_dispatch_ptr)        packet for kernel dispatch
                                                   actually executing.
@@ -4323,16 +4339,18 @@ SGPR register initial state is defined in
      then       Work-Group Info            1      {first_wavefront, 14'b0000,
                 (enable_sgpr_workgroup            ordered_append_term[10:0],
                 _info)                            threadgroup_size_in_wavefronts[5:0]}
-     then       Scratch Wavefront Offset   1      32-bit byte offset from base
-                (enable_sgpr_private              of scratch base of queue
-                _segment_wavefront_offset)        executing the kernel
+     then       Scratch Wavefront Offset   1      This is 1 SGPR:
+                (enable_sgpr_private
+                _segment_wavefront_offset)
+                                                  32-bit byte offset from base
+                                                  of scratch base of queue
+                                                  executing the kernel
                                                   dispatch. Must be used as an
-                                                  offset with Private
-                                                  segment address when using
-                                                  Scratch Segment Buffer. It
-                                                  must be used to set up FLAT
-                                                  SCRATCH for flat addressing
-                                                  (see
+                                                  offset with Private segment
+                                                  address when using Scratch
+                                                  Segment Buffer. It must be
+                                                  used to set up FLAT SCRATCH
+                                                  for flat addressing (see
                                                   :ref:`amdgpu-amdhsa-kernel-prolog-flat-scratch`).
      ========== ========================== ====== ==============================
 
@@ -4377,8 +4395,8 @@ The setting of registers is done by GPU CP/ADC/SPI hardware as follows:
 4. The VGPRs are set by SPI which only supports specifying either (X), (X, Y)
    or (X, Y, Z).
 
-Flat Scratch register pair are adjacent SGPRs so they can be moved as a 64-bit
-value to the hardware required SGPRn-3 and SGPRn-4 respectively.
+See :ref:`amdgpu-amdhsa-kernel-prolog-flat-scratch` for Flat Scratch register
+pair initialization.
 
 The global segment can be accessed either using buffer instructions (GFX6 which
 has V# 64-bit address support), flat instructions (GFX7-GFX10), or global
@@ -4457,39 +4475,40 @@ pointer are replaced with immediate ``0`` offsets.
 Flat Scratch
 ++++++++++++
 
-If the kernel or any function it calls may use flat operations to access
-scratch memory, the prolog code must set up the FLAT_SCRATCH register pair
-(FLAT_SCRATCH_LO/FLAT_SCRATCH_HI which are in SGPRn-4/SGPRn-3). Initialization
-uses Flat Scratch Init and Scratch Wavefront Offset SGPR registers (see
-:ref:`amdgpu-amdhsa-initial-kernel-execution-state`):
-
 GFX6
   Flat scratch is not supported.
 
-GFX7-GFX8
+GFX7-GFX10
+  If the kernel or any function it calls may use flat operations to access
+  scratch memory, the prolog code must set up the FLAT_SCRATCH register pair
+  (FLAT_SCRATCH_LO/FLAT_SCRATCH_HI which are in SGPRn-4/SGPRn-3). Initialization
+  uses Flat Scratch Init and Scratch Wavefront Offset SGPR registers (see
+  :ref:`amdgpu-amdhsa-initial-kernel-execution-state`):
 
-  1. The low word of Flat Scratch Init is 32-bit byte offset from
-     ``SH_HIDDEN_PRIVATE_BASE_VIMID`` to the base of scratch backing memory
-     being managed by SPI for the queue executing the kernel dispatch. This is
-     the same value used in the Scratch Segment Buffer V# base address. The
-     prolog must add the value of Scratch Wavefront Offset to get the
-     wavefront's byte scratch backing memory offset from
-     ``SH_HIDDEN_PRIVATE_BASE_VIMID``. Since FLAT_SCRATCH_LO is in units of 256
-     bytes, the offset must be right shifted by 8 before moving into
-     FLAT_SCRATCH_LO.
-  2. The second word of Flat Scratch Init is 32-bit byte size of a single
-     work-items scratch memory usage. This is directly loaded from the kernel
-     dispatch packet Private Segment Byte Size and rounded up to a multiple of
-     DWORD. Having CP load it once avoids loading it at the beginning of every
-     wavefront. The prolog must move it to FLAT_SCRATCH_LO for use as FLAT
-     SCRATCH SIZE.
+  GFX7-GFX8
 
-GFX9-GFX10
-  The Flat Scratch Init is the 64-bit address of the base of scratch backing
-  memory being managed by SPI for the queue executing the kernel dispatch. The
-  prolog must add the value of Scratch Wavefront Offset and moved to the
-  FLAT_SCRATCH pair for use as the flat scratch base in flat memory
-  instructions.
+    1. The low word of Flat Scratch Init is 32-bit byte offset from
+       ``SH_HIDDEN_PRIVATE_BASE_VIMID`` to the base of scratch backing memory
+       being managed by SPI for the queue executing the kernel dispatch. This is
+       the same value used in the Scratch Segment Buffer V# base address. The
+       prolog must add the value of Scratch Wavefront Offset to get the
+       wavefront's byte scratch backing memory offset from
+       ``SH_HIDDEN_PRIVATE_BASE_VIMID``. Since FLAT_SCRATCH_LO is in units of 256
+       bytes, the offset must be right shifted by 8 before moving into
+       FLAT_SCRATCH_LO.
+    2. The second word of Flat Scratch Init is 32-bit byte size of a single
+       work-items scratch memory usage. This is directly loaded from the kernel
+       dispatch packet Private Segment Byte Size and rounded up to a multiple of
+       DWORD. Having CP load it once avoids loading it at the beginning of every
+       wavefront. The prolog must move it to FLAT_SCRATCH_LO for use as FLAT
+       SCRATCH SIZE.
+
+  GFX9-GFX10
+    The Flat Scratch Init is the 64-bit address of the base of scratch backing
+    memory being managed by SPI for the queue executing the kernel dispatch. The
+    prolog must add the value of the wave's Scratch Wavefront Offset and moved
+    as a 64-bit value to the FLAT_SCRATCH pair for use as the flat scratch base
+    in flat memory instructions.
 
 .. _amdgpu-amdhsa-kernel-prolog-private-segment-buffer:
 
@@ -8716,8 +8735,8 @@ in this description.
 
 For more information about instructions, their semantics and supported
 combinations of operands, refer to one of instruction set architecture manuals
-[AMD-GCN-GFX6]_, [AMD-GCN-GFX7]_, [AMD-GCN-GFX8]_, [AMD-GCN-GFX9]_ and
-[AMD-GCN-GFX10]_.
+[AMD-GCN-GFX6]_, [AMD-GCN-GFX7]_, [AMD-GCN-GFX8]_, [AMD-GCN-GFX9]_,
+[AMD-GCN-GFX10-RDNA1]_ and [AMD-GCN-GFX10-RDNA2]_.
 
 Operands
 ~~~~~~~~
@@ -9219,7 +9238,7 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                               Feature                          :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
                                                               Specific
                                                               (wavefrontsize64)
-     ``.amdhsa_system_sgpr_private_segment_wavefront_offset`` 0                   GFX6-GFX10   Controls ENABLE_SGPR_PRIVATE_SEGMENT_WAVEFRONT_OFFSET in
+     ``.amdhsa_system_sgpr_private_segment_wavefront_offset`` 0                   GFX6-GFX10   Controls ENABLE_PRIVATE_SEGMENT in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx10-table`.
      ``.amdhsa_system_sgpr_workgroup_id_x``                   1                   GFX6-GFX10   Controls ENABLE_SGPR_WORKGROUP_ID_X in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx10-table`.
@@ -9444,13 +9463,14 @@ Additional Documentation
 .. [AMD-GCN-GFX7] `AMD Sea Islands Series ISA <http://developer.amd.com/wordpress/media/2013/07/AMD_Sea_Islands_Instruction_Set_Architecture.pdf>`_
 .. [AMD-GCN-GFX8] `AMD GCN3 Instruction Set Architecture <http://amd-dev.wpengine.netdna-cdn.com/wordpress/media/2013/12/AMD_GCN3_Instruction_Set_Architecture_rev1.1.pdf>`__
 .. [AMD-GCN-GFX9] `AMD "Vega" Instruction Set Architecture <http://developer.amd.com/wordpress/media/2013/12/Vega_Shader_ISA_28July2017.pdf>`__
-.. [AMD-GCN-GFX10] `AMD "RDNA 1.0" Instruction Set Architecture <https://gpuopen.com/wp-content/uploads/2019/08/RDNA_Shader_ISA_5August2019.pdf>`__
+.. [AMD-GCN-GFX10-RDNA1] `AMD "RDNA 1.0" Instruction Set Architecture <https://gpuopen.com/wp-content/uploads/2019/08/RDNA_Shader_ISA_5August2019.pdf>`__
+.. [AMD-GCN-GFX10-RDNA2] `AMD "RDNA 2" Instruction Set Architecture <https://developer.amd.com/wp-content/resources/RDNA2_Shader_ISA_November2020.pdf>`__
 .. [AMD-RADEON-HD-2000-3000] `AMD R6xx shader ISA <http://developer.amd.com/wordpress/media/2012/10/R600_Instruction_Set_Architecture.pdf>`__
 .. [AMD-RADEON-HD-4000] `AMD R7xx shader ISA <http://developer.amd.com/wordpress/media/2012/10/R700-Family_Instruction_Set_Architecture.pdf>`__
 .. [AMD-RADEON-HD-5000] `AMD Evergreen shader ISA <http://developer.amd.com/wordpress/media/2012/10/AMD_Evergreen-Family_Instruction_Set_Architecture.pdf>`__
 .. [AMD-RADEON-HD-6000] `AMD Cayman/Trinity shader ISA <http://developer.amd.com/wordpress/media/2012/10/AMD_HD_6900_Series_Instruction_Set_Architecture.pdf>`__
-.. [AMD-ROCm] `AMD ROCm Platform <https://rocmdocs.amd.com/>`__
-.. [AMD-ROCm-github] `AMD ROCm github <http://github.com/RadeonOpenCompute>`__
+.. [AMD-ROCm] `AMD ROCm™ Platform <https://rocmdocs.amd.com/>`__
+.. [AMD-ROCm-github] `AMD ROCm™ github <http://github.com/RadeonOpenCompute>`__
 .. [AMD-ROCm-Release-Notes] `AMD ROCm Release Notes <https://github.com/RadeonOpenCompute/ROCm>`__
 .. [CLANG-ATTR] `Attributes in Clang <https://clang.llvm.org/docs/AttributeReference.html>`__
 .. [DWARF] `DWARF Debugging Information Format <http://dwarfstd.org/>`__

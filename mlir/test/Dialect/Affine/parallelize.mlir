@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -allow-unregistered-dialect -affine-parallelize| FileCheck %s
+// RUN: mlir-opt %s -allow-unregistered-dialect -affine-parallelize='max-nested=1' | FileCheck --check-prefix=MAX-NESTED %s
 
 // CHECK-LABEL:    func @reduce_window_max() {
 func @reduce_window_max() {
@@ -114,3 +115,48 @@ func @non_affine_load() {
   }
   return
 }
+
+// CHECK-LABEL: for_with_minmax
+func @for_with_minmax(%m: memref<?xf32>, %lb0: index, %lb1: index,
+                      %ub0: index, %ub1: index) {
+  // CHECK: %[[lb:.*]] = affine.max
+  // CHECK: %[[ub:.*]] = affine.min
+  // CHECK: affine.parallel (%{{.*}}) = (%[[lb]]) to (%[[ub]])
+  affine.for %i = max affine_map<(d0, d1) -> (d0, d1)>(%lb0, %lb1)
+          to min affine_map<(d0, d1) -> (d0, d1)>(%ub0, %ub1) {
+    affine.load %m[%i] : memref<?xf32>
+  }
+  return
+}
+
+// CHECK-LABEL: nested_for_with_minmax
+func @nested_for_with_minmax(%m: memref<?xf32>, %lb0: index,
+                             %ub0: index, %ub1: index) {
+  // CHECK: affine.parallel
+  affine.for %j = 0 to 10 {
+    // Cannot parallelize the inner loop because we would need to compute
+    // affine.max for its lower bound inside the loop, and that is not (yet)
+    // considered as a valid affine dimension.
+    // CHECK: affine.for
+    affine.for %i = max affine_map<(d0, d1) -> (d0, d1)>(%lb0, %j)
+            to min affine_map<(d0, d1) -> (d0, d1)>(%ub0, %ub1) {
+      affine.load %m[%i] : memref<?xf32>
+    }
+  }
+  return
+}
+
+// MAX-NESTED-LABEL: @max_nested
+func @max_nested(%m: memref<?x?xf32>, %lb0: index, %lb1: index,
+                 %ub0: index, %ub1: index) {
+  // MAX-NESTED: affine.parallel
+  affine.for %i = affine_map<(d0) -> (d0)>(%lb0) to affine_map<(d0) -> (d0)>(%ub0) {
+    // MAX-NESTED: affine.for
+    affine.for %j = affine_map<(d0) -> (d0)>(%lb1) to affine_map<(d0) -> (d0)>(%ub1) {
+      affine.load %m[%i, %j] : memref<?x?xf32>
+    }
+  }
+  return
+}
+
+

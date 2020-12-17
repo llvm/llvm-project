@@ -753,6 +753,10 @@ void SymtabSection::writeTo(uint8_t *buf) const {
         nList->n_value = defined->getVA();
       }
       nList->n_desc |= defined->isWeakDef() ? MachO::N_WEAK_DEF : 0;
+    } else if (auto *dysym = dyn_cast<DylibSymbol>(entry.sym)) {
+      uint16_t n_desc = nList->n_desc;
+      MachO::SET_LIBRARY_ORDINAL(n_desc, dysym->file->ordinal);
+      nList->n_desc = n_desc;
     }
     ++nList;
   }

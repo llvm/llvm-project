@@ -1630,7 +1630,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
       }
 #endif
 
-#if USE_ITT_BUILD
+#if USE_ITT_BUILD && USE_ITT_NOTIFY
       if (((__itt_frame_submit_v3_ptr && __itt_get_timestamp_ptr) ||
            KMP_ITT_DEBUG) &&
           __kmp_forkjoin_frames_mode == 3 &&
@@ -1644,7 +1644,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
         // create new stack stitching id before entering fork barrier
         parent_team->t.t_stack_id = __kmp_itt_stack_caller_create();
       }
-#endif /* USE_ITT_BUILD */
+#endif /* USE_ITT_BUILD && USE_ITT_NOTIFY */
 
       KF_TRACE(10, ("__kmp_fork_call: before internal fork: root=%p, team=%p, "
                     "master_th=%p, gtid=%d\n",
@@ -6356,11 +6356,12 @@ static char *__kmp_registration_str = NULL;
 // Value to be saved in env var __KMP_REGISTERED_LIB_<pid>.
 
 static inline char *__kmp_reg_status_name() {
-  /* On RHEL 3u5 if linked statically, getpid() returns different values in
-     each thread. If registration and unregistration go in different threads
-     (omp_misc_other_root_exit.cpp test case), the name of registered_lib_env
-     env var can not be found, because the name will contain different pid. */
-#if KMP_OS_UNIX && KMP_DYNAMIC_LIB // shared memory is with dynamic library
+/* On RHEL 3u5 if linked statically, getpid() returns different values in
+   each thread. If registration and unregistration go in different threads
+   (omp_misc_other_root_exit.cpp test case), the name of registered_lib_env
+   env var can not be found, because the name will contain different pid. */
+// macOS* complains about name being too long with additional getuid()
+#if KMP_OS_UNIX && !KMP_OS_DARWIN && KMP_DYNAMIC_LIB
   return __kmp_str_format("__KMP_REGISTERED_LIB_%d_%d", (int)getpid(),
                           (int)getuid());
 #else

@@ -144,7 +144,7 @@ void af(A *a) {
   // CFI-NEXT: {{^$}}
 
   // CFI: [[TRAPBB]]
-  // NDIAG-NEXT: call void @llvm.trap()
+  // NDIAG-NEXT: call void @llvm.ubsantrap(i8 2)
   // NDIAG-NEXT: unreachable
   // DIAG-NEXT: [[VTINT:%[^ ]*]] = ptrtoint i8* [[VT]] to i64
   // DIAG-NEXT: [[VTVALID:%[^ ]*]] = zext i1 [[VTVALID0]] to i64

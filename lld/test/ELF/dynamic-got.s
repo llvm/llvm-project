@@ -44,7 +44,7 @@
 
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section ({{.*}}) .rel.dyn {
-// CHECK-NEXT:     0x21C4 R_386_RELATIVE - 0x0
+// CHECK-NEXT:     0x21C4 R_386_RELATIVE -
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 

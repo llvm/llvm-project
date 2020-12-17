@@ -63,9 +63,7 @@ static void emitNameUsingSpelling(raw_ostream &OS, const Record &R) {
 
 class MarshallingInfo {
 public:
-  using Ptr = std::unique_ptr<MarshallingInfo>;
-
-  const char *MacroName;
+  static constexpr const char *MacroName = "OPTION_WITH_MARSHALLING";
   const Record &R;
   bool ShouldAlwaysEmit;
   StringRef KeyPath;
@@ -99,14 +97,9 @@ struct SimpleEnumValueTable {
   static constexpr const char *ValueTablesDecl =
       "static const SimpleEnumValueTable SimpleEnumValueTables[] = ";
 
-  MarshallingInfo(const Record &R)
-      : MacroName("OPTION_WITH_MARSHALLING"), R(R) {}
-  MarshallingInfo(const char *MacroName, const Record &R)
-      : MacroName(MacroName), R(R){};
+  MarshallingInfo(const Record &R) : R(R) {}
 
-  virtual ~MarshallingInfo() = default;
-
-  virtual void emit(raw_ostream &OS) const {
+  void emit(raw_ostream &OS) const {
     write_cstring(OS, StringRef(getOptionSpelling(R)));
     OS << ", ";
     OS << ShouldAlwaysEmit;
@@ -157,59 +150,35 @@ private:
 
 size_t MarshallingInfo::NextTableIndex = 0;
 
-class MarshallingInfoBooleanFlag : public MarshallingInfo {
-public:
-  const Record &NegOption;
-
-  MarshallingInfoBooleanFlag(const Record &Option, const Record &NegOption)
-      : MarshallingInfo("OPTION_WITH_MARSHALLING_BOOLEAN", Option),
-        NegOption(NegOption) {}
-
-  void emit(raw_ostream &OS) const override {
-    MarshallingInfo::emit(OS);
-    OS << ", ";
-    OS << getOptionName(NegOption);
-    OS << ", ";
-    write_cstring(OS, getOptionSpelling(NegOption));
-  }
-};
-
-static MarshallingInfo::Ptr createMarshallingInfo(const Record &R) {
+static MarshallingInfo createMarshallingInfo(const Record &R) {
   assert(!isa<UnsetInit>(R.getValueInit("KeyPath")) &&
          !isa<UnsetInit>(R.getValueInit("DefaultValue")) &&
          !isa<UnsetInit>(R.getValueInit("ValueMerger")) &&
          "MarshallingInfo must have a provide a keypath, default value and a "
          "value merger");
 
-  MarshallingInfo::Ptr Ret;
-  StringRef KindString = R.getValueAsString("MarshallingInfoKind");
-  if (KindString == "Default") {
-    Ret = std::make_unique<MarshallingInfo>(R);
-  } else if (KindString == "BooleanFlag") {
-    Ret = std::make_unique<MarshallingInfoBooleanFlag>(
-        R, *R.getValueAsDef("NegOption"));
-  }
+  MarshallingInfo Ret(R);
 
-  Ret->ShouldAlwaysEmit = R.getValueAsBit("ShouldAlwaysEmit");
-  Ret->KeyPath = R.getValueAsString("KeyPath");
-  Ret->DefaultValue = R.getValueAsString("DefaultValue");
-  Ret->NormalizedValuesScope = R.getValueAsString("NormalizedValuesScope");
-  Ret->ImpliedCheck = R.getValueAsString("ImpliedCheck");
-  Ret->ImpliedValue =
-      R.getValueAsOptionalString("ImpliedValue").getValueOr(Ret->DefaultValue);
+  Ret.ShouldAlwaysEmit = R.getValueAsBit("ShouldAlwaysEmit");
+  Ret.KeyPath = R.getValueAsString("KeyPath");
+  Ret.DefaultValue = R.getValueAsString("DefaultValue");
+  Ret.NormalizedValuesScope = R.getValueAsString("NormalizedValuesScope");
+  Ret.ImpliedCheck = R.getValueAsString("ImpliedCheck");
+  Ret.ImpliedValue =
+      R.getValueAsOptionalString("ImpliedValue").getValueOr(Ret.DefaultValue);
 
-  Ret->Normalizer = R.getValueAsString("Normalizer");
-  Ret->Denormalizer = R.getValueAsString("Denormalizer");
-  Ret->ValueMerger = R.getValueAsString("ValueMerger");
-  Ret->ValueExtractor = R.getValueAsString("ValueExtractor");
+  Ret.Normalizer = R.getValueAsString("Normalizer");
+  Ret.Denormalizer = R.getValueAsString("Denormalizer");
+  Ret.ValueMerger = R.getValueAsString("ValueMerger");
+  Ret.ValueExtractor = R.getValueAsString("ValueExtractor");
 
   if (!isa<UnsetInit>(R.getValueInit("NormalizedValues"))) {
     assert(!isa<UnsetInit>(R.getValueInit("Values")) &&
            "Cannot provide normalized values for value-less options");
-    Ret->TableIndex = MarshallingInfo::NextTableIndex++;
-    Ret->NormalizedValues = R.getValueAsListOfStrings("NormalizedValues");
-    Ret->Values.reserve(Ret->NormalizedValues.size());
-    Ret->ValueTableName = getOptionName(R) + "ValueTable";
+    Ret.TableIndex = MarshallingInfo::NextTableIndex++;
+    Ret.NormalizedValues = R.getValueAsListOfStrings("NormalizedValues");
+    Ret.Values.reserve(Ret.NormalizedValues.size());
+    Ret.ValueTableName = getOptionName(R) + "ValueTable";
 
     StringRef ValuesStr = R.getValueAsString("Values");
     for (;;) {
@@ -217,22 +186,18 @@ static MarshallingInfo::Ptr createMarshallingInfo(const Record &R) {
       if (Idx == StringRef::npos)
         break;
       if (Idx > 0)
-        Ret->Values.push_back(ValuesStr.slice(0, Idx));
+        Ret.Values.push_back(ValuesStr.slice(0, Idx));
       ValuesStr = ValuesStr.slice(Idx + 1, StringRef::npos);
     }
     if (!ValuesStr.empty())
-      Ret->Values.push_back(ValuesStr);
+      Ret.Values.push_back(ValuesStr);
 
-    assert(Ret->Values.size() == Ret->NormalizedValues.size() &&
+    assert(Ret.Values.size() == Ret.NormalizedValues.size() &&
            "The number of normalized values doesn't match the number of "
            "values");
   }
 
-  // FIXME: This is a workaround for a bug in older versions of clang (< 3.9)
-  //   The constructor that is supposed to allow for Derived to Base
-  //   conversion does not work. Remove this if we drop support for such
-  //   configurations.
-  return MarshallingInfo::Ptr(Ret.release());
+  return Ret;
 }
 
 /// OptParserEmitter - This tablegen backend takes an input .td file
@@ -458,18 +423,18 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
   array_pod_sort(OptsWithMarshalling.begin(), OptsWithMarshalling.end(),
                  CmpMarshallingOpts);
 
-  std::vector<MarshallingInfo::Ptr> MarshallingInfos;
+  std::vector<MarshallingInfo> MarshallingInfos;
   for (const auto *R : OptsWithMarshalling)
     MarshallingInfos.push_back(createMarshallingInfo(*R));
 
   for (const auto &MI : MarshallingInfos) {
-    OS << "#ifdef " << MI->MacroName << "\n";
-    OS << MI->MacroName << "(";
-    WriteOptRecordFields(OS, MI->R);
+    OS << "#ifdef " << MarshallingInfo::MacroName << "\n";
+    OS << MarshallingInfo::MacroName << "(";
+    WriteOptRecordFields(OS, MI.R);
     OS << ", ";
-    MI->emit(OS);
+    MI.emit(OS);
     OS << ")\n";
-    OS << "#endif // " << MI->MacroName << "\n";
+    OS << "#endif // " << MarshallingInfo::MacroName << "\n";
   }
 
   OS << "\n";
@@ -478,7 +443,7 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
   OS << MarshallingInfo::ValueTablePreamble;
   std::vector<StringRef> ValueTableNames;
   for (const auto &MI : MarshallingInfos)
-    if (auto MaybeValueTableName = MI->emitValueTable(OS))
+    if (auto MaybeValueTableName = MI.emitValueTable(OS))
       ValueTableNames.push_back(*MaybeValueTableName);
 
   OS << MarshallingInfo::ValueTablesDecl << "{";

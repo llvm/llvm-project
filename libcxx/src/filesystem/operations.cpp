@@ -849,8 +849,17 @@ bool __create_directory(const path& p, error_code* ec) {
 
   if (::mkdir(p.c_str(), static_cast<int>(perms::all)) == 0)
     return true;
-  if (errno != EEXIST)
+
+  if (errno == EEXIST) {
+    error_code mec = capture_errno();
+    error_code ignored_ec;
+    const file_status st = status(p, ignored_ec);
+    if (!is_directory(st)) {
+      err.report(mec);
+    }
+  } else {
     err.report(capture_errno());
+  }
   return false;
 }
 
@@ -868,8 +877,17 @@ bool __create_directory(path const& p, path const& attributes, error_code* ec) {
 
   if (::mkdir(p.c_str(), attr_stat.st_mode) == 0)
     return true;
-  if (errno != EEXIST)
+
+  if (errno == EEXIST) {
+    error_code mec = capture_errno();
+    error_code ignored_ec;
+    const file_status st = status(p, ignored_ec);
+    if (!is_directory(st)) {
+      err.report(mec);
+    }
+  } else {
     err.report(capture_errno());
+  }
   return false;
 }
 

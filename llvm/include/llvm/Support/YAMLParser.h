@@ -78,6 +78,9 @@ bool scanTokens(StringRef Input);
 /// escaped, but emitted verbatim.
 std::string escape(StringRef Input, bool EscapePrintable = true);
 
+/// Parse \p S as a bool according to https://yaml.org/type/bool.html.
+llvm::Optional<bool> parseBool(StringRef S);
+
 /// This class represents a YAML stream potentially containing multiple
 ///        documents.
 class Stream {
@@ -101,6 +104,8 @@ public:
   }
 
   void printError(Node *N, const Twine &Msg,
+                  SourceMgr::DiagKind Kind = SourceMgr::DK_Error);
+  void printError(const SMRange &Range, const Twine &Msg,
                   SourceMgr::DiagKind Kind = SourceMgr::DK_Error);
 
 private:
@@ -510,7 +515,6 @@ public:
       : Node(NK_Alias, D, StringRef(), StringRef()), Name(Val) {}
 
   StringRef getName() const { return Name; }
-  Node *getTarget();
 
   static bool classof(const Node *N) { return N->getType() == NK_Alias; }
 

@@ -15,4 +15,4 @@ define void @_Z4testv() {
   ret void
 }
 
-declare void @_Z8process36data_tS_S_(i64, i64, i64, i64, i64, i64)
+declare dso_local void @_Z8process36data_tS_S_(i64, i64, i64, i64, i64, i64)

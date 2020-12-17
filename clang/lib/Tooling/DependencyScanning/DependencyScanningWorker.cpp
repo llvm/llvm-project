@@ -154,7 +154,7 @@ DependencyScanningWorker::DependencyScanningWorker(
     : Format(Service.getFormat()) {
   DiagOpts = new DiagnosticOptions();
   PCHContainerOps = std::make_shared<PCHContainerOperations>();
-  RealFS = llvm::vfs::createPhysicalFileSystem().release();
+  RealFS = llvm::vfs::createPhysicalFileSystem();
   if (Service.canSkipExcludedPPRanges())
     PPSkipMappings =
         std::make_unique<ExcludedPreprocessorDirectiveSkipMapping>();

@@ -152,7 +152,6 @@ Changes to the OCaml bindings
 -----------------------------
 
 
-
 Changes to the C API
 --------------------
 

@@ -283,7 +283,7 @@ HexagonTargetLowering::getPreferredHvxVectorAction(MVT VecTy) const {
   // widen the vector. Note: the threshold was not selected in
   // any scientific way.
   ArrayRef<MVT> Tys = Subtarget.getHVXElementTypes();
-  if (llvm::find(Tys, ElemTy) != Tys.end()) {
+  if (llvm::is_contained(Tys, ElemTy)) {
     unsigned VecWidth = VecTy.getSizeInBits();
     bool HaveThreshold = HvxWidenThreshold.getNumOccurrences() > 0;
     if (HaveThreshold && 8*HvxWidenThreshold <= VecWidth)

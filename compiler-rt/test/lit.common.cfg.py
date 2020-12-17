@@ -582,5 +582,11 @@ if config.use_lld and config.has_lld and not config.use_lto:
 elif config.use_lld and (not config.has_lld):
   config.unsupported = True
 
+# Append any extra flags passed in lit_config
+append_target_cflags = lit_config.params.get('append_target_cflags', None)
+if append_target_cflags:
+  lit_config.note('Appending to extra_cflags: "{}"'.format(append_target_cflags))
+  extra_cflags += [append_target_cflags]
+
 config.clang = " " + " ".join(run_wrapper + [config.compile_wrapper, config.clang]) + " "
 config.target_cflags = " " + " ".join(target_cflags + extra_cflags) + " "

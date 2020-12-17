@@ -14,7 +14,7 @@
 namespace Fortran::evaluate {
 
 auto InitialImage::Add(ConstantSubscript offset, std::size_t bytes,
-    const Constant<SomeDerived> &x) -> Result {
+    const Constant<SomeDerived> &x, FoldingContext &context) -> Result {
   if (offset < 0 || offset + bytes > data_.size()) {
     return OutOfRange;
   } else {
@@ -36,7 +36,7 @@ auto InitialImage::Add(ConstantSubscript offset, std::size_t bytes,
             AddPointer(offset + component.offset(), indExpr.value());
           } else {
             Result added{Add(offset + component.offset(), component.size(),
-                indExpr.value())};
+                indExpr.value(), context)};
             if (added != Ok) {
               return Ok;
             }
@@ -88,7 +88,8 @@ public:
     using Scalar = typename Const::Element;
     std::size_t elements{TotalElementCount(extents_)};
     std::vector<Scalar> typedValue(elements);
-    auto elemBytes{ToInt64(type_.MeasureSizeInBytes(&context_))};
+    auto elemBytes{
+        ToInt64(type_.MeasureSizeInBytes(context_, GetRank(extents_) > 0))};
     CHECK(elemBytes && *elemBytes >= 0);
     std::size_t stride{static_cast<std::size_t>(*elemBytes)};
     CHECK(offset_ + elements * stride <= image_.data_.size());

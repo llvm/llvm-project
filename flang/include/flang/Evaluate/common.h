@@ -235,8 +235,9 @@ public:
   Rounding rounding() const { return rounding_; }
   bool flushSubnormalsToZero() const { return flushSubnormalsToZero_; }
   bool bigEndian() const { return bigEndian_; }
+  std::size_t maxAlignment() const { return maxAlignment_; }
   const semantics::DerivedTypeSpec *pdtInstance() const { return pdtInstance_; }
-  const evaluate::IntrinsicProcTable &intrinsics() const { return intrinsics_; }
+  const IntrinsicProcTable &intrinsics() const { return intrinsics_; }
 
   ConstantSubscript &StartImpliedDo(parser::CharBlock, ConstantSubscript = 1);
   std::optional<ConstantSubscript> GetImpliedDo(parser::CharBlock) const;
@@ -257,7 +258,8 @@ private:
   const IntrinsicProcTable &intrinsics_;
   Rounding rounding_{defaultRounding};
   bool flushSubnormalsToZero_{false};
-  bool bigEndian_{false};
+  static constexpr bool bigEndian_{false}; // TODO: configure for target
+  static constexpr std::size_t maxAlignment_{8}; // TODO: configure for target
   const semantics::DerivedTypeSpec *pdtInstance_{nullptr};
   std::map<parser::CharBlock, ConstantSubscript> impliedDos_;
 };

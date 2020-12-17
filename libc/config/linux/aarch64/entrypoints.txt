@@ -18,9 +18,15 @@ set(TARGET_LIBC_ENTRYPOINTS
     # errno.h entrypoints
     libc.src.errno.__errno_location
 
+    # stdlib.h entrypoints
+    libc.src.stdlib.abs
+    libc.src.stdlib.labs
+    libc.src.stdlib.llabs
+
     # string.h entrypoints
     libc.src.string.bzero
     libc.src.string.memchr
+    libc.src.string.memcmp
     libc.src.string.memcpy
     libc.src.string.memset
     libc.src.string.memrchr
@@ -82,6 +88,12 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.modf
     libc.src.math.modff
     libc.src.math.modfl
+    libc.src.math.remainderf
+    libc.src.math.remainder
+    libc.src.math.remainderl
+    libc.src.math.remquof
+    libc.src.math.remquo
+    libc.src.math.remquol
     libc.src.math.round
     libc.src.math.roundf
     libc.src.math.roundl

@@ -130,6 +130,6 @@ for.end:
   br i1 %tobool, label %for.cond, label %for.cond1
 }
 
-declare void @a()
+declare dso_local void @a()
 
 !1 = !{!"branch_weights", i32 1, i32 1000}

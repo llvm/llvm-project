@@ -27,8 +27,8 @@ GlobalNamesInHeadersCheck::GlobalNamesInHeadersCheck(StringRef Name,
   if (!utils::parseFileExtensions(RawStringHeaderFileExtensions,
                                   HeaderFileExtensions,
                                   utils::defaultFileExtensionDelimiters())) {
-    llvm::errs() << "Invalid header file extension: "
-                 << RawStringHeaderFileExtensions << "\n";
+    this->configurationDiag("Invalid header file extension: '%0'")
+        << RawStringHeaderFileExtensions;
   }
 }
 

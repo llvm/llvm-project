@@ -70,9 +70,8 @@ BindableMatcher<clang::Stmt> SignedCharMisuseCheck::charCastExpression(
   // We catch any type of casts to an integer. We need to have these cast
   // expressions explicitly to catch only those casts which are direct children
   // of the checked expressions. (e.g. assignment, declaration).
-  return traverse(ast_type_traits::TK_AsIs,
-                  expr(anyOf(ImplicitCastExpr, CStyleCastExpr, StaticCastExpr,
-                             FunctionalCastExpr)));
+  return traverse(TK_AsIs, expr(anyOf(ImplicitCastExpr, CStyleCastExpr,
+                                      StaticCastExpr, FunctionalCastExpr)));
 }
 
 void SignedCharMisuseCheck::registerMatchers(MatchFinder *Finder) {
@@ -84,14 +83,14 @@ void SignedCharMisuseCheck::registerMatchers(MatchFinder *Finder) {
   const auto UnSignedCharCastExpr =
       charCastExpression(false, IntegerType, "unsignedCastExpression");
 
-  // Catch assignments with singed char -> integer conversion.
+  // Catch assignments with signed char -> integer conversion.
   const auto AssignmentOperatorExpr =
       expr(binaryOperator(hasOperatorName("="), hasLHS(hasType(IntegerType)),
                           hasRHS(SignedCharCastExpr)));
 
   Finder->addMatcher(AssignmentOperatorExpr, this);
 
-  // Catch declarations with singed char -> integer conversion.
+  // Catch declarations with signed char -> integer conversion.
   const auto Declaration = varDecl(isDefinition(), hasType(IntegerType),
                                    hasInitializer(SignedCharCastExpr));
 

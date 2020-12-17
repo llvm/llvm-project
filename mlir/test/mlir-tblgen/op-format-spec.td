@@ -309,7 +309,7 @@ def LiteralInvalidB : TestFormat_Op<"literal_invalid_b", [{
 }]>;
 // CHECK-NOT: error
 def LiteralValid : TestFormat_Op<"literal_valid", [{
-  `_` `:` `,` `=` `<` `>` `(` `)` `[` `]` `?` `+` `*` ` ` `` `->` `abc$._`
+  `_` `:` `,` `=` `<` `>` `(` `)` `[` `]` `?` `+` `*` ` ` `` `->` `\n` `abc$._`
   attr-dict
 }]>;
 

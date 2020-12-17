@@ -4,7 +4,7 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-// OpenACC structure validity check list
+// OpenACC 3.1 structure validity check list
 //    1. invalid clauses on directive
 //    2. invalid repeated clauses on directive
 //    3. invalid nesting of regions
@@ -114,6 +114,9 @@ public:
 private:
 
   bool CheckAllowedModifier(llvm::acc::Clause clause);
+  bool IsComputeConstruct(llvm::acc::Directive directive) const;
+  bool IsInsideComputeConstruct() const;
+  void CheckNotInComputeConstruct();
   llvm::StringRef getClauseName(llvm::acc::Clause clause) override;
   llvm::StringRef getDirectiveName(llvm::acc::Directive directive) override;
 };

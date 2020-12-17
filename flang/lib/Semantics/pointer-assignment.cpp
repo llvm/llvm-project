@@ -45,7 +45,7 @@ public:
   PointerAssignmentChecker(evaluate::FoldingContext &context, const Symbol &lhs)
       : context_{context}, source_{lhs.name()},
         description_{"pointer '"s + lhs.name().ToString() + '\''}, lhs_{&lhs},
-        procedure_{Procedure::Characterize(lhs, context.intrinsics())} {
+        procedure_{Procedure::Characterize(lhs, context)} {
     set_lhsType(TypeAndShape::Characterize(lhs, context));
     set_isContiguous(lhs.attrs().test(Attr::CONTIGUOUS));
     set_isVolatile(lhs.attrs().test(Attr::VOLATILE));
@@ -143,7 +143,7 @@ bool PointerAssignmentChecker::Check(const evaluate::FunctionRef<T> &f) {
   } else if (const auto *intrinsic{f.proc().GetSpecificIntrinsic()}) {
     funcName = intrinsic->name;
   }
-  auto proc{Procedure::Characterize(f.proc(), context_.intrinsics())};
+  auto proc{Procedure::Characterize(f.proc(), context_)};
   if (!proc) {
     return false;
   }
@@ -169,7 +169,9 @@ bool PointerAssignmentChecker::Check(const evaluate::FunctionRef<T> &f) {
   } else if (lhsType_) {
     const auto *frTypeAndShape{funcResult->GetTypeAndShape()};
     CHECK(frTypeAndShape);
-    if (!lhsType_->IsCompatibleWith(context_.messages(), *frTypeAndShape)) {
+    if (!lhsType_->IsCompatibleWith(context_.messages(), *frTypeAndShape,
+            "pointer", "function result", false /*elemental*/,
+            true /*left: deferred shape*/, true /*right: deferred shape*/)) {
       msg = "%s is associated with the result of a reference to function '%s'"
             " whose pointer result has an incompatible type or shape"_err_en_US;
     }
@@ -262,7 +264,7 @@ bool PointerAssignmentChecker::Check(
 }
 
 bool PointerAssignmentChecker::Check(const evaluate::ProcedureDesignator &d) {
-  if (auto chars{Procedure::Characterize(d, context_.intrinsics())}) {
+  if (auto chars{Procedure::Characterize(d, context_)}) {
     return Check(d.GetName(), false, &*chars);
   } else {
     return Check(d.GetName(), false);
@@ -271,7 +273,7 @@ bool PointerAssignmentChecker::Check(const evaluate::ProcedureDesignator &d) {
 
 bool PointerAssignmentChecker::Check(const evaluate::ProcedureRef &ref) {
   const Procedure *procedure{nullptr};
-  auto chars{Procedure::Characterize(ref, context_.intrinsics())};
+  auto chars{Procedure::Characterize(ref, context_)};
   if (chars) {
     procedure = &*chars;
     if (chars->functionResult) {
@@ -299,10 +301,13 @@ bool PointerAssignmentChecker::LhsOkForUnlimitedPoly() const {
 template <typename... A>
 parser::Message *PointerAssignmentChecker::Say(A &&...x) {
   auto *msg{context_.messages().Say(std::forward<A>(x)...)};
-  if (lhs_) {
-    return evaluate::AttachDeclaration(msg, *lhs_);
-  } else if (!source_.empty()) {
-    msg->Attach(source_, "Declaration of %s"_en_US, description_);
+  if (msg) {
+    if (lhs_) {
+      return evaluate::AttachDeclaration(msg, *lhs_);
+    }
+    if (!source_.empty()) {
+      msg->Attach(source_, "Declaration of %s"_en_US, description_);
+    }
   }
   return msg;
 }
@@ -358,7 +363,7 @@ static bool CheckPointerBounds(
     }
   }
   if (isBoundsRemapping && rhs.Rank() != 1 &&
-      !evaluate::IsSimplyContiguous(rhs, context.intrinsics())) {
+      !evaluate::IsSimplyContiguous(rhs, context)) {
     messages.Say("Pointer bounds remapping target must have rank 1 or be"
                  " simply contiguous"_err_en_US); // 10.2.2.3(9)
   }

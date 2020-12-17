@@ -230,6 +230,19 @@ be using. Walkers were built to be flexible, though, so it's entirely reasonable
 (and expected) to create more specialized walkers (e.g. one that specifically
 queries ``GlobalsAA``, one that always stops at ``MemoryPhi`` nodes, etc).
 
+Default walker APIs
+^^^^^^^^^^^^^^^^^^^
+
+There are two main APIs used to retrive the clobbering access using the walker:
+
+-  ``MemoryAccess *getClobberingMemoryAccess(MemoryAccess *MA);`` return the
+   clobbering memory access for ``MA``, caching all intermediate results
+   computed along the way as part of each access queried.
+
+-  ``MemoryAccess *getClobberingMemoryAccess(MemoryAccess *MA, const MemoryLocation &Loc);``
+   returns the access clobbering memory location ``Loc``, starting at ``MA``.
+   Because this API does not request the clobbering access of a specific memory
+   access, there are no results that can be cached.
 
 Locating clobbers yourself
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -394,3 +407,9 @@ useful guarantee - all loads are optimized to point at the thing that
 actually clobbers them. This gives some nice properties.  For example,
 for a given store, you can find all loads actually clobbered by that
 store by walking the immediate uses of the store.
+
+LLVM Developers Meeting presentations
+-------------------------------------
+
+- `2016 LLVM Developers' Meeting: G. Burgess - MemorySSA in Five Minutes <https://www.youtube.com/watch?v=bdxWmryoHak>`_.
+- `2020 LLVM Developers' Meeting: S. Baziotis & S. Moll - Finding Your Way Around the LLVM Dependence Analysis Zoo <https://www.youtube.com/watch?v=1e5y6WDbXCQ>`_

@@ -13,10 +13,11 @@ module iso_c_binding
   use __Fortran_builtins, only: &
     c_f_pointer => __builtin_c_f_pointer, &
     c_ptr => __builtin_c_ptr, &
-    c_funptr => __builtin_c_funptr
+    c_funptr => __builtin_c_funptr, &
+    c_sizeof => sizeof
 
-  type(c_ptr), parameter :: c_null_ptr = c_ptr()
-  type(c_funptr), parameter :: c_null_funptr = c_funptr()
+  type(c_ptr), parameter :: c_null_ptr = c_ptr(0)
+  type(c_funptr), parameter :: c_null_funptr = c_funptr(0)
 
   ! Table 18.2 (in clause 18.3.1)
   ! TODO: Specialize (via macros?) for alternative targets
@@ -32,7 +33,7 @@ module iso_c_binding
     c_long = c_int64_t, &
     c_long_long = c_int64_t, &
     c_signed_char = c_int8_t, &
-    c_size_t = c_long_long, &
+    c_size_t = kind(c_sizeof(1)), &
     c_intmax_t = c_int128_t, &
     c_intptr_t = c_size_t, &
     c_ptrdiff_t = c_size_t
@@ -102,6 +103,5 @@ module iso_c_binding
   end function c_funloc
 
   ! TODO c_f_procpointer
-  ! TODO c_sizeof
 
 end module iso_c_binding

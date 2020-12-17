@@ -13,10 +13,10 @@
 #include "NearestIntegerOperations.h"
 #include "NormalFloat.h"
 
-#include "include/math.h"
 #include "utils/CPP/TypeTraits.h"
 
 #include <limits.h>
+#include <math.h>
 
 namespace __llvm_libc {
 namespace fputil {

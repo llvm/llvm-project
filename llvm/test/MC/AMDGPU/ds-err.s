@@ -46,7 +46,7 @@ ds_swizzle_b32 v8, v2 offset:
 // CHECK: error: expected a colon
 ds_swizzle_b32 v8, v2 offset-
 
-// CHECK: error: expected absolute expression
+// CHECK: error: expected a swizzle macro or an absolute expression
 ds_swizzle_b32 v8, v2 offset:SWIZZLE(QUAD_PERM, 0, 1, 2, 3)
 
 // CHECK: error: expected a swizzle mode

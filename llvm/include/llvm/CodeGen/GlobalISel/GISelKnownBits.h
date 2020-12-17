@@ -44,7 +44,6 @@ class GISelKnownBits : public GISelChangeObserver {
 public:
   GISelKnownBits(MachineFunction &MF, unsigned MaxDepth = 6);
   virtual ~GISelKnownBits() = default;
-  void setMF(MachineFunction &MF);
 
   const MachineFunction &getMachineFunction() const {
     return MF;

@@ -879,6 +879,10 @@ public:
                              Type *ResultType,
                              const Twine &Name = "");
 
+  /// Create a call to llvm.vscale, multiplied by \p Scaling. The type of VScale
+  /// will be the same type as that of \p Scaling.
+  Value *CreateVScale(Constant *Scaling, const Twine &Name = "");
+
   /// Create a call to intrinsic \p ID with 1 operand which is mangled on its
   /// type.
   CallInst *CreateUnaryIntrinsic(Intrinsic::ID ID, Value *V,
@@ -917,6 +921,22 @@ public:
   /// Create call to the maximum intrinsic.
   CallInst *CreateMaximum(Value *LHS, Value *RHS, const Twine &Name = "") {
     return CreateBinaryIntrinsic(Intrinsic::maximum, LHS, RHS, nullptr, Name);
+  }
+
+  /// Create a call to the experimental.vector.extract intrinsic.
+  CallInst *CreateExtractVector(Type *DstType, Value *SrcVec, Value *Idx,
+                                const Twine &Name = "") {
+    return CreateIntrinsic(Intrinsic::experimental_vector_extract,
+                           {DstType, SrcVec->getType()}, {SrcVec, Idx}, nullptr,
+                           Name);
+  }
+
+  /// Create a call to the experimental.vector.insert intrinsic.
+  CallInst *CreateInsertVector(Type *DstType, Value *SrcVec, Value *SubVec,
+                               Value *Idx, const Twine &Name = "") {
+    return CreateIntrinsic(Intrinsic::experimental_vector_insert,
+                           {DstType, SubVec->getType()}, {SrcVec, SubVec, Idx},
+                           nullptr, Name);
   }
 
 private:

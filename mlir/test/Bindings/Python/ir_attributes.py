@@ -255,3 +255,109 @@ def testDenseFPAttr():
 
 
 run(testDenseFPAttr)
+
+
+# CHECK-LABEL: TEST: testDictAttr
+def testDictAttr():
+  with Context():
+    dict_attr = {
+      'stringattr':  StringAttr.get('string'),
+      'integerattr' : IntegerAttr.get(
+        IntegerType.get_signless(32), 42)
+    }
+
+    a = DictAttr.get(dict_attr)
+
+    # CHECK attr: {integerattr = 42 : i32, stringattr = "string"}
+    print("attr:", a)
+
+    assert len(a) == 2
+
+    # CHECK: 42 : i32
+    print(a['integerattr'])
+
+    # CHECK: "string"
+    print(a['stringattr'])
+
+    # Check that exceptions are raised as expected.
+    try:
+      _ = a['does_not_exist']
+    except KeyError:
+      pass
+    else:
+      assert False, "Exception not produced"
+
+    try:
+      _ = a[42]
+    except IndexError:
+      pass
+    else:
+      assert False, "expected IndexError on accessing an out-of-bounds attribute"
+
+
+
+run(testDictAttr)
+
+# CHECK-LABEL: TEST: testTypeAttr
+def testTypeAttr():
+  with Context():
+    raw = Attribute.parse("vector<4xf32>")
+    # CHECK: attr: vector<4xf32>
+    print("attr:", raw)
+    type_attr = TypeAttr(raw)
+    # CHECK: f32
+    print(ShapedType(type_attr.value).element_type)
+
+
+run(testTypeAttr)
+
+
+# CHECK-LABEL: TEST: testArrayAttr
+def testArrayAttr():
+  with Context():
+    raw = Attribute.parse("[42, true, vector<4xf32>]")
+  # CHECK: attr: [42, true, vector<4xf32>]
+  print("raw attr:", raw)
+  # CHECK: - 42
+  # CHECK: - true
+  # CHECK: - vector<4xf32>
+  for attr in ArrayAttr(raw):
+    print("- ", attr)
+
+  with Context():
+    intAttr = Attribute.parse("42")
+    vecAttr = Attribute.parse("vector<4xf32>")
+    boolAttr = BoolAttr.get(True)
+    raw = ArrayAttr.get([vecAttr, boolAttr, intAttr])
+  # CHECK: attr: [vector<4xf32>, true, 42]
+  print("raw attr:", raw)
+  # CHECK: - vector<4xf32>
+  # CHECK: - true
+  # CHECK: - 42
+  arr = ArrayAttr(raw)
+  for attr in arr:
+    print("- ", attr)
+  # CHECK: attr[0]: vector<4xf32>
+  print("attr[0]:", arr[0])
+  # CHECK: attr[1]: true
+  print("attr[1]:", arr[1])
+  # CHECK: attr[2]: 42
+  print("attr[2]:", arr[2])
+  try:
+    print("attr[3]:", arr[3])
+  except IndexError as e:
+    # CHECK: Error: ArrayAttribute index out of range
+    print("Error: ", e)
+  with Context():
+    try:
+      ArrayAttr.get([None])
+    except RuntimeError as e:
+      # CHECK: Error: Invalid attribute (None?) when attempting to create an ArrayAttribute
+      print("Error: ", e)
+    try:
+      ArrayAttr.get([42])
+    except RuntimeError as e:
+      # CHECK: Error: Invalid attribute when attempting to create an ArrayAttribute (Unable to cast Python instance of type <class 'int'> to C++ type 'mlir::python::PyAttribute')
+      print("Error: ", e)
+run(testArrayAttr)
+

@@ -36,7 +36,7 @@ subroutine s1()
   end type derived
 
   type (derived(constVal, 3)) :: constDerivedKind
-!ERROR: Value of kind type parameter 'typekind' (nonconstval) is not a scalar INTEGER constant
+!ERROR: Value of kind type parameter 'typekind' (nonconstval) must be a scalar INTEGER constant
 !ERROR: Invalid specification expression: reference to local entity 'nonconstval'
   type (derived(nonConstVal, 3)) :: nonConstDerivedKind
 

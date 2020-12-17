@@ -246,6 +246,26 @@ private:
   std::unique_ptr<detail::PassPipelineCLParserImpl> impl;
 };
 
+/// This class implements a command-line parser spefically for MLIR pass names.
+/// It registers a cl option with a given argument and description that accepts
+/// a comma delimited list of pass names.
+class PassNameCLParser {
+public:
+  /// Construct a parser with the given command line description.
+  PassNameCLParser(StringRef arg, StringRef description);
+  ~PassNameCLParser();
+
+  /// Returns true if this parser contains any valid options to add.
+  bool hasAnyOccurrences() const;
+
+  /// Returns true if the given pass registry entry was registered at the
+  /// top-level of the parser, i.e. not within an explicit textual pipeline.
+  bool contains(const PassRegistryEntry *entry) const;
+
+private:
+  std::unique_ptr<detail::PassPipelineCLParserImpl> impl;
+};
+
 } // end namespace mlir
 
 #endif // MLIR_PASS_PASSREGISTRY_H_

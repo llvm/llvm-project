@@ -1291,6 +1291,16 @@ def err_expected_end_declare_target_or_variant : Error<
 def err_expected_begin_declare_variant
     : Error<"'#pragma omp end declare variant' with no matching '#pragma omp "
             "begin declare variant'">;
+def err_expected_begin_assumes
+    : Error<"'#pragma omp end assumes' with no matching '#pragma omp begin assumes'">;
+def warn_omp_unknown_assumption_clause_missing_id
+    : Warning<"valid %0 clauses start with %1; %select{token|tokens}2 will be ignored">,
+      InGroup<OpenMPClauses>;
+def warn_omp_unknown_assumption_clause_without_args
+    : Warning<"%0 clause should not be followed by arguments; tokens will be ignored">,
+      InGroup<OpenMPClauses>;
+def note_omp_assumption_clause_continue_here
+    : Note<"the ignored tokens spans until here">;
 def err_omp_declare_target_unexpected_clause: Error<
   "unexpected '%0' clause, only %select{'to' or 'link'|'to', 'link' or 'device_type'}1 clauses expected">;
 def err_omp_expected_clause: Error<

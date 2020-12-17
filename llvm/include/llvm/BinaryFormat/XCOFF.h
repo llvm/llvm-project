@@ -18,6 +18,7 @@
 
 namespace llvm {
 class StringRef;
+template <unsigned> class SmallString;
 
 namespace XCOFF {
 
@@ -28,6 +29,7 @@ constexpr size_t NameSize = 8;
 constexpr size_t SymbolTableEntrySize = 18;
 constexpr size_t RelocationSerializationSize32 = 10;
 constexpr uint16_t RelocOverflow = 65535;
+constexpr uint8_t AllocRegNo = 31;
 
 enum ReservedSectionNum : int16_t { N_DEBUG = -2, N_ABS = -1, N_UNDEF = 0 };
 
@@ -294,8 +296,27 @@ enum CFileCpuId : uint8_t {
 
 StringRef getMappingClassString(XCOFF::StorageMappingClass SMC);
 StringRef getRelocationTypeString(XCOFF::RelocationType Type);
+SmallString<32> parseParmsType(uint32_t Value, unsigned ParmsNum);
 
 struct TracebackTable {
+  enum LanguageID : uint8_t {
+    C,
+    Fortran,
+    Pascal,
+    Ada,
+    PL1,
+    Basic,
+    Lisp,
+    Cobol,
+    Modula2,
+    CPlusPlus,
+    Rpg,
+    PL8,
+    PLIX = PL8,
+    Assembly,
+    Java,
+    ObjectiveC
+  };
   // Byte 1
   static constexpr uint32_t VersionMask = 0xFF00'0000;
   static constexpr uint8_t VersionShift = 24;
@@ -374,12 +395,16 @@ struct TracebackTable {
 
 // Extended Traceback table flags.
 enum ExtendedTBTableFlag : uint8_t {
-  TB_OS1 = 0x80,         ///< Reserved for OS use
-  TB_RESERVED = 0x40,    ///< Reserved for compiler
-  TB_SSP_CANARY = 0x20,  ///< stack smasher canary present on stack
-  TB_OS2 = 0x10,         ///< Reserved for OS use
-  TB_LONGTBTABLE2 = 0x01 ///< Additional tbtable extension exists
+  TB_OS1 = 0x80,         ///< Reserved for OS use.
+  TB_RESERVED = 0x40,    ///< Reserved for compiler.
+  TB_SSP_CANARY = 0x20,  ///< stack smasher canary present on stack.
+  TB_OS2 = 0x10,         ///< Reserved for OS use.
+  TB_EH_INFO = 0x08,     ///< Exception handling info present.
+  TB_LONGTBTABLE2 = 0x01 ///< Additional tbtable extension exists.
 };
+
+StringRef getNameForTracebackTableLanguageId(TracebackTable::LanguageID LangId);
+SmallString<32> getExtendedTBTableFlagString(uint8_t Flag);
 
 } // end namespace XCOFF
 } // end namespace llvm

@@ -76,6 +76,8 @@
 #include "llvm/Support/GenericDomTree.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/IPO/SampleContextTracker.h"
+#include "llvm/Transforms/IPO/SampleProfileProbe.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/CallPromotionUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -102,6 +104,9 @@ STATISTIC(NumCSInlined,
           "Number of functions inlined with context sensitive profile");
 STATISTIC(NumCSNotInlined,
           "Number of functions not inlined with context sensitive profile");
+STATISTIC(NumMismatchedProfile,
+          "Number of functions with CFG mismatched profile");
+STATISTIC(NumMatchedProfile, "Number of functions with CFG matched profile");
 
 // Command line option to specify the file to read samples from. This is
 // mainly used for debugging.
@@ -339,6 +344,7 @@ protected:
   unsigned getFunctionLoc(Function &F);
   bool emitAnnotations(Function &F);
   ErrorOr<uint64_t> getInstWeight(const Instruction &I);
+  ErrorOr<uint64_t> getProbeWeight(const Instruction &I);
   ErrorOr<uint64_t> getBlockWeight(const BasicBlock *BB);
   const FunctionSamples *findCalleeFunctionSamples(const CallBase &I) const;
   std::vector<const FunctionSamples *>
@@ -424,6 +430,9 @@ protected:
   /// Profile reader object.
   std::unique_ptr<SampleProfileReader> Reader;
 
+  /// Profile tracker for different context.
+  std::unique_ptr<SampleContextTracker> ContextTracker;
+
   /// Samples collected for the body of this function.
   FunctionSamples *Samples = nullptr;
 
@@ -435,6 +444,9 @@ protected:
 
   /// Flag indicating whether the profile input loaded successfully.
   bool ProfileIsValid = false;
+
+  /// Flag indicating whether input profile is context-sensitive
+  bool ProfileIsCS = false;
 
   /// Flag indicating if the pass is invoked in ThinLTO compile phase.
   ///
@@ -483,6 +495,9 @@ protected:
 
   // External inline advisor used to replay inline decision from remarks.
   std::unique_ptr<ReplayInlineAdvisor> ExternalInlineAdvisor;
+
+  // A pseudo probe helper to correlate the imported sample counts.
+  std::unique_ptr<PseudoProbeManager> ProbeManager;
 };
 
 class SampleProfileLoaderLegacyPass : public ModulePass {
@@ -715,6 +730,9 @@ void SampleProfileLoader::printBlockWeight(raw_ostream &OS,
 ///
 /// \returns the weight of \p Inst.
 ErrorOr<uint64_t> SampleProfileLoader::getInstWeight(const Instruction &Inst) {
+  if (FunctionSamples::ProfileIsProbeBased)
+    return getProbeWeight(Inst);
+
   const DebugLoc &DLoc = Inst.getDebugLoc();
   if (!DLoc)
     return std::error_code();
@@ -733,9 +751,10 @@ ErrorOr<uint64_t> SampleProfileLoader::getInstWeight(const Instruction &Inst) {
   // (findCalleeFunctionSamples returns non-empty result), but not inlined here,
   // it means that the inlined callsite has no sample, thus the call
   // instruction should have 0 count.
-  if (auto *CB = dyn_cast<CallBase>(&Inst))
-    if (!CB->isIndirectCall() && findCalleeFunctionSamples(*CB))
-      return 0;
+  if (!ProfileIsCS)
+    if (const auto *CB = dyn_cast<CallBase>(&Inst))
+      if (!CB->isIndirectCall() && findCalleeFunctionSamples(*CB))
+        return 0;
 
   const DILocation *DIL = DLoc;
   uint32_t LineOffset = FunctionSamples::getOffset(DIL);
@@ -763,6 +782,47 @@ ErrorOr<uint64_t> SampleProfileLoader::getInstWeight(const Instruction &Inst) {
                       << " (line offset: " << LineOffset << "."
                       << DIL->getBaseDiscriminator() << " - weight: " << R.get()
                       << ")\n");
+  }
+  return R;
+}
+
+ErrorOr<uint64_t> SampleProfileLoader::getProbeWeight(const Instruction &Inst) {
+  assert(FunctionSamples::ProfileIsProbeBased &&
+         "Profile is not pseudo probe based");
+  Optional<PseudoProbe> Probe = extractProbe(Inst);
+  if (!Probe)
+    return std::error_code();
+
+  const FunctionSamples *FS = findFunctionSamples(Inst);
+  if (!FS)
+    return std::error_code();
+
+  // If a direct call/invoke instruction is inlined in profile
+  // (findCalleeFunctionSamples returns non-empty result), but not inlined here,
+  // it means that the inlined callsite has no sample, thus the call
+  // instruction should have 0 count.
+  if (const auto *CB = dyn_cast<CallBase>(&Inst))
+    if (!CB->isIndirectCall() && findCalleeFunctionSamples(*CB))
+      return 0;
+
+  const ErrorOr<uint64_t> &R = FS->findSamplesAt(Probe->Id, 0);
+  if (R) {
+    uint64_t Samples = R.get();
+    bool FirstMark = CoverageTracker.markSamplesUsed(FS, Probe->Id, 0, Samples);
+    if (FirstMark) {
+      ORE->emit([&]() {
+        OptimizationRemarkAnalysis Remark(DEBUG_TYPE, "AppliedSamples", &Inst);
+        Remark << "Applied " << ore::NV("NumSamples", Samples);
+        Remark << " samples from profile (ProbeId=";
+        Remark << ore::NV("ProbeId", Probe->Id);
+        Remark << ")";
+        return Remark;
+      });
+    }
+
+    LLVM_DEBUG(dbgs() << "    " << Probe->Id << ":" << Inst
+                      << " - weight: " << R.get() << ")\n");
+    return Samples;
   }
   return R;
 }
@@ -831,14 +891,16 @@ SampleProfileLoader::findCalleeFunctionSamples(const CallBase &Inst) const {
 
   StringRef CalleeName;
   if (Function *Callee = Inst.getCalledFunction())
-    CalleeName = Callee->getName();
+    CalleeName = FunctionSamples::getCanonicalFnName(*Callee);
+
+  if (ProfileIsCS)
+    return ContextTracker->getCalleeContextSamplesFor(Inst, CalleeName);
 
   const FunctionSamples *FS = findFunctionSamples(Inst);
   if (FS == nullptr)
     return nullptr;
 
-  return FS->findFunctionSamplesAt(LineLocation(FunctionSamples::getOffset(DIL),
-                                                DIL->getBaseDiscriminator()),
+  return FS->findFunctionSamplesAt(FunctionSamples::getCallSiteIdentifier(DIL),
                                    CalleeName, Reader->getRemapper());
 }
 
@@ -859,16 +921,13 @@ SampleProfileLoader::findIndirectCallFunctionSamples(
   if (FS == nullptr)
     return R;
 
-  uint32_t LineOffset = FunctionSamples::getOffset(DIL);
-  uint32_t Discriminator = DIL->getBaseDiscriminator();
-
-  auto T = FS->findCallTargetMapAt(LineOffset, Discriminator);
+  auto CallSite = FunctionSamples::getCallSiteIdentifier(DIL);
+  auto T = FS->findCallTargetMapAt(CallSite);
   Sum = 0;
   if (T)
     for (const auto &T_C : T.get())
       Sum += T_C.second;
-  if (const FunctionSamplesMap *M = FS->findFunctionSamplesMapAt(LineLocation(
-          FunctionSamples::getOffset(DIL), DIL->getBaseDiscriminator()))) {
+  if (const FunctionSamplesMap *M = FS->findFunctionSamplesMapAt(CallSite)) {
     if (M->empty())
       return R;
     for (const auto &NameFS : *M) {
@@ -896,13 +955,24 @@ SampleProfileLoader::findIndirectCallFunctionSamples(
 /// \returns the FunctionSamples pointer to the inlined instance.
 const FunctionSamples *
 SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
+  if (FunctionSamples::ProfileIsProbeBased) {
+    Optional<PseudoProbe> Probe = extractProbe(Inst);
+    if (!Probe)
+      return nullptr;
+  }
+
   const DILocation *DIL = Inst.getDebugLoc();
   if (!DIL)
     return Samples;
 
   auto it = DILocation2SampleMap.try_emplace(DIL,nullptr);
-  if (it.second)
-    it.first->second = Samples->findFunctionSamples(DIL, Reader->getRemapper());
+  if (it.second) {
+    if (ProfileIsCS)
+      it.first->second = ContextTracker->getContextSamplesFor(DIL);
+    else
+      it.first->second =
+          Samples->findFunctionSamples(DIL, Reader->getRemapper());
+  }
   return it.first->second;
 }
 
@@ -956,6 +1026,12 @@ bool SampleProfileLoader::shouldInlineColdCallee(CallBase &CallInst) {
 
   InlineCost Cost = getInlineCost(CallInst, getInlineParams(), GetTTI(*Callee),
                                   GetAC, GetTLI);
+
+  if (Cost.isNever())
+    return false;
+
+  if (Cost.isAlways())
+    return true;
 
   return Cost.getCost() <= SampleColdCallSiteThreshold;
 }
@@ -1017,7 +1093,7 @@ bool SampleProfileLoader::inlineHotFunctions(
             assert((!FunctionSamples::UseMD5 || FS->GUIDToFuncNameMap) &&
                    "GUIDToFuncNameMap has to be populated");
             AllCandidates.push_back(CB);
-            if (FS->getEntrySamples() > 0)
+            if (FS->getEntrySamples() > 0 || ProfileIsCS)
               localNotInlinedCallSites.try_emplace(CB, FS);
             if (callsiteIsHot(FS, PSI))
               Hot = true;
@@ -1075,6 +1151,8 @@ bool SampleProfileLoader::inlineHotFunctions(
             // If profile mismatches, we should not attempt to inline DI.
             if ((isa<CallInst>(DI) || isa<InvokeInst>(DI)) &&
                 inlineCallInstruction(cast<CallBase>(DI))) {
+              if (ProfileIsCS)
+                ContextTracker->markContextSamplesInlined(FS);
               localNotInlinedCallSites.erase(I);
               LocalChanged = true;
               ++NumCSInlined;
@@ -1088,6 +1166,9 @@ bool SampleProfileLoader::inlineHotFunctions(
       } else if (CalledFunction && CalledFunction->getSubprogram() &&
                  !CalledFunction->isDeclaration()) {
         if (inlineCallInstruction(*I)) {
+          if (ProfileIsCS)
+            ContextTracker->markContextSamplesInlined(
+                localNotInlinedCallSites[I]);
           localNotInlinedCallSites.erase(I);
           LocalChanged = true;
           ++NumCSInlined;
@@ -1565,13 +1646,11 @@ void SampleProfileLoader::propagateWeights(Function &F) {
           if (!DLoc)
             continue;
           const DILocation *DIL = DLoc;
-          uint32_t LineOffset = FunctionSamples::getOffset(DIL);
-          uint32_t Discriminator = DIL->getBaseDiscriminator();
-
           const FunctionSamples *FS = findFunctionSamples(I);
           if (!FS)
             continue;
-          auto T = FS->findCallTargetMapAt(LineOffset, Discriminator);
+          auto CallSite = FunctionSamples::getCallSiteIdentifier(DIL);
+          auto T = FS->findCallTargetMapAt(CallSite);
           if (!T || T.get().empty())
             continue;
           SmallVector<InstrProfValueData, 2> SortedCallTargets =
@@ -1735,11 +1814,22 @@ void SampleProfileLoader::computeDominanceAndLoopInfo(Function &F) {
 bool SampleProfileLoader::emitAnnotations(Function &F) {
   bool Changed = false;
 
-  if (getFunctionLoc(F) == 0)
-    return false;
+  if (FunctionSamples::ProfileIsProbeBased) {
+    if (!ProbeManager->profileIsValid(F, *Samples)) {
+      LLVM_DEBUG(
+          dbgs() << "Profile is invalid due to CFG mismatch for Function "
+                 << F.getName());
+      ++NumMismatchedProfile;
+      return false;
+    }
+    ++NumMatchedProfile;
+  } else {
+    if (getFunctionLoc(F) == 0)
+      return false;
 
-  LLVM_DEBUG(dbgs() << "Line number for the first instruction in "
-                    << F.getName() << ": " << getFunctionLoc(F) << "\n");
+    LLVM_DEBUG(dbgs() << "Line number for the first instruction in "
+                      << F.getName() << ": " << getFunctionLoc(F) << "\n");
+  }
 
   DenseSet<GlobalValue::GUID> InlinedGUIDs;
   Changed |= inlineHotFunctions(F, InlinedGUIDs);
@@ -1875,6 +1965,27 @@ bool SampleProfileLoader::doInitialization(Module &M,
       ExternalInlineAdvisor.reset();
   }
 
+  // Apply tweaks if context-sensitive profile is available.
+  if (Reader->profileIsCS()) {
+    ProfileIsCS = true;
+    FunctionSamples::ProfileIsCS = true;
+
+    // Tracker for profiles under different context
+    ContextTracker =
+        std::make_unique<SampleContextTracker>(Reader->getProfiles());
+  }
+
+  // Load pseudo probe descriptors for probe-based function samples.
+  if (Reader->profileIsProbeBased()) {
+    ProbeManager = std::make_unique<PseudoProbeManager>(M);
+    if (!ProbeManager->moduleIsProbed(M)) {
+      const char *Msg =
+          "Pseudo-probe-based profile requires SampleProfileProbePass";
+      Ctx.diagnose(DiagnosticInfoSampleProfile(Filename, Msg));
+      return false;
+    }
+  }
+
   return true;
 }
 
@@ -1940,9 +2051,10 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
   }
 
   // Account for cold calls not inlined....
-  for (const std::pair<Function *, NotInlinedProfileInfo> &pair :
-       notInlinedCallInfo)
-    updateProfileCallee(pair.first, pair.second.entryCount);
+  if (!ProfileIsCS)
+    for (const std::pair<Function *, NotInlinedProfileInfo> &pair :
+         notInlinedCallInfo)
+      updateProfileCallee(pair.first, pair.second.entryCount);
 
   return retval;
 }
@@ -1957,7 +2069,6 @@ bool SampleProfileLoaderLegacyPass::runOnModule(Module &M) {
 }
 
 bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) {
-
   DILocation2SampleMap.clear();
   // By default the entry count is initialized to -1, which will be treated
   // conservatively by getEntryCount as the same as unknown (None). This is
@@ -2010,7 +2121,12 @@ bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) 
     OwnedORE = std::make_unique<OptimizationRemarkEmitter>(&F);
     ORE = OwnedORE.get();
   }
-  Samples = Reader->getSamplesFor(F);
+
+  if (ProfileIsCS)
+    Samples = ContextTracker->getBaseSamplesFor(F);
+  else
+    Samples = Reader->getSamplesFor(F);
+
   if (Samples && !Samples->empty())
     return emitAnnotations(F);
   return false;

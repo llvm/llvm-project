@@ -179,6 +179,15 @@ void OmpStructureChecker::Leave(const parser::OpenMPDeclareSimdConstruct &) {
   dirContext_.pop_back();
 }
 
+void OmpStructureChecker::Enter(const parser::OpenMPDeclarativeAllocate &x) {
+  const auto &dir{std::get<parser::Verbatim>(x.t)};
+  PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_allocate);
+}
+
+void OmpStructureChecker::Leave(const parser::OpenMPDeclarativeAllocate &) {
+  dirContext_.pop_back();
+}
+
 void OmpStructureChecker::Enter(const parser::OpenMPDeclareTargetConstruct &x) {
   const auto &dir{std::get<parser::Verbatim>(x.t)};
   PushContext(dir.source, llvm::omp::Directive::OMPD_declare_target);
@@ -189,6 +198,15 @@ void OmpStructureChecker::Enter(const parser::OpenMPDeclareTargetConstruct &x) {
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPDeclareTargetConstruct &) {
+  dirContext_.pop_back();
+}
+
+void OmpStructureChecker::Enter(const parser::OpenMPExecutableAllocate &x) {
+  const auto &dir{std::get<parser::Verbatim>(x.t)};
+  PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_allocate);
+}
+
+void OmpStructureChecker::Leave(const parser::OpenMPExecutableAllocate &) {
   dirContext_.pop_back();
 }
 
@@ -208,7 +226,17 @@ void OmpStructureChecker::Enter(const parser::OpenMPFlushConstruct &x) {
   PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_flush);
 }
 
-void OmpStructureChecker::Leave(const parser::OpenMPFlushConstruct &) {
+void OmpStructureChecker::Leave(const parser::OpenMPFlushConstruct &x) {
+  if (FindClause(llvm::omp::Clause::OMPC_acquire) ||
+      FindClause(llvm::omp::Clause::OMPC_release) ||
+      FindClause(llvm::omp::Clause::OMPC_acq_rel)) {
+    if (const auto &flushList{
+            std::get<std::optional<parser::OmpObjectList>>(x.t)}) {
+      context_.Say(parser::FindSourceLocation(flushList),
+          "If memory-order-clause is RELEASE, ACQUIRE, or ACQ_REL, list items "
+          "must not be specified on the FLUSH directive"_err_en_US);
+    }
+  }
   dirContext_.pop_back();
 }
 
@@ -260,6 +288,22 @@ void OmpStructureChecker::Enter(const parser::OmpEndBlockDirective &x) {
     // no clauses are allowed
     break;
   }
+}
+
+void OmpStructureChecker::Enter(const parser::OpenMPAtomicConstruct &x) {
+  std::visit(
+      common::visitors{
+          [&](const auto &someAtomicConstruct) {
+            const auto &dir{std::get<parser::Verbatim>(someAtomicConstruct.t)};
+            PushContextAndClauseSets(
+                dir.source, llvm::omp::Directive::OMPD_atomic);
+          },
+      },
+      x.u);
+}
+
+void OmpStructureChecker::Leave(const parser::OpenMPAtomicConstruct &) {
+  dirContext_.pop_back();
 }
 
 // Clauses
@@ -381,7 +425,9 @@ CHECK_SIMPLE_CLAUSE(Acquire, OMPC_acquire)
 CHECK_SIMPLE_CLAUSE(SeqCst, OMPC_seq_cst)
 CHECK_SIMPLE_CLAUSE(Release, OMPC_release)
 CHECK_SIMPLE_CLAUSE(Relaxed, OMPC_relaxed)
+CHECK_SIMPLE_CLAUSE(Hint, OMPC_hint)
 
+CHECK_REQ_SCALAR_INT_CLAUSE(Allocator, OMPC_allocator)
 CHECK_REQ_SCALAR_INT_CLAUSE(Grainsize, OMPC_grainsize)
 CHECK_REQ_SCALAR_INT_CLAUSE(NumTasks, OMPC_num_tasks)
 CHECK_REQ_SCALAR_INT_CLAUSE(NumTeams, OMPC_num_teams)
@@ -449,7 +495,36 @@ CHECK_SIMPLE_PARSER_CLAUSE(OmpDistScheduleClause, OMPC_dist_schedule)
 CHECK_SIMPLE_PARSER_CLAUSE(OmpNowait, OMPC_nowait)
 CHECK_SIMPLE_PARSER_CLAUSE(OmpProcBindClause, OMPC_proc_bind)
 CHECK_SIMPLE_PARSER_CLAUSE(OmpReductionClause, OMPC_reduction)
+// Atomic-clause
+CHECK_SIMPLE_PARSER_CLAUSE(OmpAtomicRead, OMPC_read)
+CHECK_SIMPLE_PARSER_CLAUSE(OmpAtomicWrite, OMPC_write)
+CHECK_SIMPLE_PARSER_CLAUSE(OmpAtomicUpdate, OMPC_update)
+CHECK_SIMPLE_PARSER_CLAUSE(OmpAtomicCapture, OMPC_capture)
 
+void OmpStructureChecker::Leave(const parser::OmpAtomicRead &) {
+  CheckNotAllowedIfClause(llvm::omp::Clause::OMPC_read,
+      {llvm::omp::Clause::OMPC_release, llvm::omp::Clause::OMPC_acq_rel});
+}
+void OmpStructureChecker::Leave(const parser::OmpAtomicWrite &) {
+  CheckNotAllowedIfClause(llvm::omp::Clause::OMPC_write,
+      {llvm::omp::Clause::OMPC_acquire, llvm::omp::Clause::OMPC_acq_rel});
+}
+void OmpStructureChecker::Leave(const parser::OmpAtomicUpdate &) {
+  CheckNotAllowedIfClause(llvm::omp::Clause::OMPC_update,
+      {llvm::omp::Clause::OMPC_acquire, llvm::omp::Clause::OMPC_acq_rel});
+}
+// OmpAtomic node represents atomic directive without atomic-clause.
+// atomic-clause - READ,WRITE,UPDATE,CAPTURE.
+void OmpStructureChecker::Leave(const parser::OmpAtomic &) {
+  if (const auto *clause{FindClause(llvm::omp::Clause::OMPC_acquire)}) {
+    context_.Say(clause->source,
+        "Clause ACQUIRE is not allowed on the ATOMIC directive"_err_en_US);
+  }
+  if (const auto *clause{FindClause(llvm::omp::Clause::OMPC_acq_rel)}) {
+    context_.Say(clause->source,
+        "Clause ACQ_REL is not allowed on the ATOMIC directive"_err_en_US);
+  }
+}
 // Restrictions specific to each clause are implemented apart from the
 // generalized restrictions.
 void OmpStructureChecker::Enter(const parser::OmpAlignedClause &x) {

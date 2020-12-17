@@ -1,8 +1,8 @@
-; RUN: opt < %s -simplifycfg -S | \
+; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | \
 ; RUN:   not grep select
 
 ;; The PHI node in this example should not be turned into a select, as we are
-;; not able to ifcvt the entire block.  As such, converting to a select just 
+;; not able to ifcvt the entire block.  As such, converting to a select just
 ;; introduces inefficiency without saving copies.
 
 define i32 @bar(i1 %C) {

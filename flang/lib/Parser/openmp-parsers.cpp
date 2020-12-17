@@ -159,6 +159,8 @@ TYPE_PARSER(
         construct<OmpClause>(parenthesized(Parser<OmpAlignedClause>{})) ||
     "ALLOCATE" >>
         construct<OmpClause>(parenthesized(Parser<OmpAllocateClause>{})) ||
+    "ALLOCATOR" >> construct<OmpClause>(construct<OmpClause::Allocator>(
+                       parenthesized(scalarIntExpr))) ||
     "COLLAPSE" >> construct<OmpClause>(construct<OmpClause::Collapse>(
                       parenthesized(scalarIntConstantExpr))) ||
     "COPYIN" >> construct<OmpClause>(construct<OmpClause::Copyin>(
@@ -316,8 +318,20 @@ TYPE_PARSER(sourced(construct<OmpMemoryOrderClause>(
         "ACQUIRE" >> construct<OmpClause>(construct<OmpClause::Acquire>()) ||
         "RELAXED" >> construct<OmpClause>(construct<OmpClause::Relaxed>())))))
 
+// 2.17.7 Atomic construct
+//        atomic-clause -> memory-order-clause | HINT(hint-expression)
+TYPE_PARSER(sourced(construct<OmpAtomicClause>(
+    construct<OmpAtomicClause>(Parser<OmpMemoryOrderClause>{}) ||
+    construct<OmpAtomicClause>("HINT" >>
+        sourced(construct<OmpClause>(
+            construct<OmpClause::Hint>(parenthesized(constantExpr))))))))
+
+// atomic-clause-list -> [atomic-clause, [atomic-clause], ...]
+TYPE_PARSER(sourced(construct<OmpAtomicClauseList>(
+    many(maybe(","_tok) >> sourced(Parser<OmpAtomicClause>{})))))
+
 TYPE_PARSER(sourced(construct<OpenMPFlushConstruct>(verbatim("FLUSH"_tok),
-    maybe(Parser<OmpMemoryOrderClause>{}),
+    many(maybe(","_tok) >> sourced(Parser<OmpMemoryOrderClause>{})),
     maybe(parenthesized(Parser<OmpObjectList>{})))))
 
 // Simple Standalone Directives
@@ -407,32 +421,32 @@ TYPE_PARSER(construct<OmpEndAtomic>(startOmpLine >> "END ATOMIC"_tok))
 
 // OMP ATOMIC [MEMORY-ORDER-CLAUSE-LIST] READ [MEMORY-ORDER-CLAUSE-LIST]
 TYPE_PARSER("ATOMIC" >>
-    construct<OmpAtomicRead>(Parser<OmpClauseList>{} / maybe(","_tok),
-        verbatim("READ"_tok), Parser<OmpClauseList>{} / endOmpLine,
+    construct<OmpAtomicRead>(Parser<OmpAtomicClauseList>{} / maybe(","_tok),
+        verbatim("READ"_tok), Parser<OmpAtomicClauseList>{} / endOmpLine,
         statement(assignmentStmt), maybe(Parser<OmpEndAtomic>{} / endOmpLine)))
 
 // OMP ATOMIC [MEMORY-ORDER-CLAUSE-LIST] CAPTURE [MEMORY-ORDER-CLAUSE-LIST]
 TYPE_PARSER("ATOMIC" >>
-    construct<OmpAtomicCapture>(Parser<OmpClauseList>{} / maybe(","_tok),
-        verbatim("CAPTURE"_tok), Parser<OmpClauseList>{} / endOmpLine,
+    construct<OmpAtomicCapture>(Parser<OmpAtomicClauseList>{} / maybe(","_tok),
+        verbatim("CAPTURE"_tok), Parser<OmpAtomicClauseList>{} / endOmpLine,
         statement(assignmentStmt), statement(assignmentStmt),
         Parser<OmpEndAtomic>{} / endOmpLine))
 
 // OMP ATOMIC [MEMORY-ORDER-CLAUSE-LIST] UPDATE [MEMORY-ORDER-CLAUSE-LIST]
 TYPE_PARSER("ATOMIC" >>
-    construct<OmpAtomicUpdate>(Parser<OmpClauseList>{} / maybe(","_tok),
-        verbatim("UPDATE"_tok), Parser<OmpClauseList>{} / endOmpLine,
+    construct<OmpAtomicUpdate>(Parser<OmpAtomicClauseList>{} / maybe(","_tok),
+        verbatim("UPDATE"_tok), Parser<OmpAtomicClauseList>{} / endOmpLine,
         statement(assignmentStmt), maybe(Parser<OmpEndAtomic>{} / endOmpLine)))
 
-// OMP ATOMIC [MEMORY-ORDER-CLAUSE-LIST]
+// OMP ATOMIC [atomic-clause-list]
 TYPE_PARSER(construct<OmpAtomic>(verbatim("ATOMIC"_tok),
-    Parser<OmpClauseList>{} / endOmpLine, statement(assignmentStmt),
+    Parser<OmpAtomicClauseList>{} / endOmpLine, statement(assignmentStmt),
     maybe(Parser<OmpEndAtomic>{} / endOmpLine)))
 
 // OMP ATOMIC [MEMORY-ORDER-CLAUSE-LIST] WRITE [MEMORY-ORDER-CLAUSE-LIST]
 TYPE_PARSER("ATOMIC" >>
-    construct<OmpAtomicWrite>(Parser<OmpClauseList>{} / maybe(","_tok),
-        verbatim("WRITE"_tok), Parser<OmpClauseList>{} / endOmpLine,
+    construct<OmpAtomicWrite>(Parser<OmpAtomicClauseList>{} / maybe(","_tok),
+        verbatim("WRITE"_tok), Parser<OmpAtomicClauseList>{} / endOmpLine,
         statement(assignmentStmt), maybe(Parser<OmpEndAtomic>{} / endOmpLine)))
 
 // Atomic Construct
@@ -454,6 +468,13 @@ TYPE_PARSER(sourced(construct<OmpCriticalDirective>(verbatim("CRITICAL"_tok),
 TYPE_PARSER(construct<OpenMPCriticalConstruct>(
     Parser<OmpCriticalDirective>{}, block, Parser<OmpEndCriticalDirective>{}))
 
+// 2.11.3 Executable Allocate directive
+TYPE_PARSER(
+    sourced(construct<OpenMPExecutableAllocate>(verbatim("ALLOCATE"_tok),
+        maybe(parenthesized(Parser<OmpObjectList>{})), Parser<OmpClauseList>{},
+        maybe(nonemptyList(Parser<OpenMPDeclarativeAllocate>{})) / endOmpLine,
+        statement(allocateStmt))))
+
 // 2.8.2 Declare Simd construct
 TYPE_PARSER(
     sourced(construct<OpenMPDeclareSimdConstruct>(verbatim("DECLARE SIMD"_tok),
@@ -463,6 +484,12 @@ TYPE_PARSER(
 TYPE_PARSER(sourced(construct<OpenMPThreadprivate>(
     verbatim("THREADPRIVATE"_tok), parenthesized(Parser<OmpObjectList>{}))))
 
+// 2.11.3 Declarative Allocate directive
+TYPE_PARSER(
+    sourced(construct<OpenMPDeclarativeAllocate>(verbatim("ALLOCATE"_tok),
+        parenthesized(Parser<OmpObjectList>{}), Parser<OmpClauseList>{})) /
+    lookAhead(endOmpLine / !statement(allocateStmt)))
+
 // Declarative constructs
 TYPE_PARSER(startOmpLine >>
     sourced(construct<OpenMPDeclarativeConstruct>(
@@ -471,6 +498,8 @@ TYPE_PARSER(startOmpLine >>
             Parser<OpenMPDeclareSimdConstruct>{}) ||
         construct<OpenMPDeclarativeConstruct>(
             Parser<OpenMPDeclareTargetConstruct>{}) ||
+        construct<OpenMPDeclarativeConstruct>(
+            Parser<OpenMPDeclarativeAllocate>{}) ||
         construct<OpenMPDeclarativeConstruct>(Parser<OpenMPThreadprivate>{})) /
         endOmpLine)
 
@@ -511,6 +540,8 @@ TYPE_CONTEXT_PARSER("OpenMP construct"_en_US,
             // OpenMPStandaloneConstruct to resolve !$OMP ORDERED
             construct<OpenMPConstruct>(Parser<OpenMPStandaloneConstruct>{}),
             construct<OpenMPConstruct>(Parser<OpenMPAtomicConstruct>{}),
+            construct<OpenMPConstruct>(Parser<OpenMPExecutableAllocate>{}),
+            construct<OpenMPConstruct>(Parser<OpenMPDeclarativeAllocate>{}),
             construct<OpenMPConstruct>(Parser<OpenMPCriticalConstruct>{})))
 
 // END OMP Block directives

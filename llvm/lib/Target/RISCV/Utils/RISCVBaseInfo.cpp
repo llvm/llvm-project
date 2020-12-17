@@ -101,4 +101,40 @@ namespace RISCVVPseudosTable {
 
 } // namespace RISCVVPseudosTable
 
+void RISCVVType::printVType(unsigned VType, raw_ostream &OS) {
+  RISCVVSEW VSEW = getVSEW(VType);
+  RISCVVLMUL VLMUL = getVLMUL(VType);
+
+  unsigned Sew = 1 << (static_cast<unsigned>(VSEW) + 3);
+  OS << "e" << Sew;
+
+  switch (VLMUL) {
+  case RISCVVLMUL::LMUL_1:
+  case RISCVVLMUL::LMUL_2:
+  case RISCVVLMUL::LMUL_4:
+  case RISCVVLMUL::LMUL_8: {
+    unsigned LMul = 1 << static_cast<unsigned>(VLMUL);
+    OS << ",m" << LMul;
+    break;
+  }
+  case RISCVVLMUL::LMUL_F2:
+  case RISCVVLMUL::LMUL_F4:
+  case RISCVVLMUL::LMUL_F8: {
+    unsigned LMul = 1 << (8 - static_cast<unsigned>(VLMUL));
+    OS << ",mf" << LMul;
+    break;
+  }
+  }
+
+  if (isTailAgnostic(VType))
+    OS << ",ta";
+  else
+    OS << ",tu";
+
+  if (isMaskAgnostic(VType))
+    OS << ",ma";
+  else
+    OS << ",mu";
+}
+
 } // namespace llvm

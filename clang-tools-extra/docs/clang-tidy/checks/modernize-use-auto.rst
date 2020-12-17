@@ -183,8 +183,8 @@ Options
    names having a length less than the option value. The option affects
    expressions only, not iterators.
    Spaces between multi-lexeme type names (``long int``) are considered as one.
-   If ``RemoveStars`` option (see below) is set to non-zero, then ``*s`` in
-   the type are also counted as a part of the type name.
+   If the :option:`RemoveStars` option (see below) is set to `true`, then ``*s``
+   in the type are also counted as a part of the type name.
 
 .. code-block:: c++
 
@@ -216,7 +216,7 @@ Options
 
 .. option:: RemoveStars
 
-   If the option is set to non-zero (default is `0`), the check will remove
+   If the option is set to `true` (default is `false`), the check will remove
    stars from the non-typedef pointer types when replacing type names with
    ``auto``. Otherwise, the check will leave stars. For example:
 

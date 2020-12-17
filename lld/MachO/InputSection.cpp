@@ -26,6 +26,10 @@ uint64_t InputSection::getFileOffset() const {
   return parent->fileOff + outSecFileOff;
 }
 
+uint64_t InputSection::getFileSize() const {
+  return isZeroFill(flags) ? 0 : getSize();
+}
+
 uint64_t InputSection::getVA() const { return parent->addr + outSecOff; }
 
 void InputSection::writeTo(uint8_t *buf) {

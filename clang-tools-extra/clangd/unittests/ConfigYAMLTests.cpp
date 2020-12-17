@@ -67,6 +67,7 @@ ClangTidy:
   )yaml";
   auto Results = Fragment::parseYAML(YAML, "config.yaml", Diags.callback());
   EXPECT_THAT(Diags.Diagnostics, IsEmpty());
+  EXPECT_THAT(Diags.Files, ElementsAre("config.yaml"));
   ASSERT_EQ(Results.size(), 4u);
   EXPECT_FALSE(Results[0].If.HasUnrecognizedCondition);
   EXPECT_THAT(Results[0].If.PathMatch, ElementsAre(Val("abc")));
@@ -112,7 +113,7 @@ CompileFlags: {$unexpected^
 
   ASSERT_THAT(
       Diags.Diagnostics,
-      ElementsAre(AllOf(DiagMessage("Unknown If key UnknownCondition"),
+      ElementsAre(AllOf(DiagMessage("Unknown If key 'UnknownCondition'"),
                         DiagKind(llvm::SourceMgr::DK_Warning),
                         DiagPos(YAML.range("unknown").start),
                         DiagRange(YAML.range("unknown"))),

@@ -11,10 +11,10 @@
 
 #      LLVM-64:Relocations [
 # LLVM-64-NEXT:  Section (2) .rel.text {
-# LLVM-64-NEXT:    0x0 R_X86_64_NONE rel_0 0x0
-# LLVM-64-NEXT:    0x1 R_X86_64_PC32 rel_neg 0x0
-# LLVM-64-NEXT:    0x5 R_X86_64_PLT32 rel_pos 0x0
-# LLVM-64-NEXT:    0x9 R_X86_64_64 rel_64 0x0
+# LLVM-64-NEXT:    0x0 R_X86_64_NONE rel_0
+# LLVM-64-NEXT:    0x1 R_X86_64_PC32 rel_neg
+# LLVM-64-NEXT:    0x5 R_X86_64_PLT32 rel_pos
+# LLVM-64-NEXT:    0x9 R_X86_64_64 rel_64
 # LLVM-64-NEXT:  }
 # LLVM-64-NEXT:  Section (3) .rela.text {
 # LLVM-64-NEXT:    0x0 R_X86_64_NONE rela_0 0x0
@@ -60,25 +60,21 @@
 # LLVM-EXPAND-64-NEXT:      Offset: 0x0
 # LLVM-EXPAND-64-NEXT:      Type: R_X86_64_NONE (0)
 # LLVM-EXPAND-64-NEXT:      Symbol: rel_0 (1)
-# LLVM-EXPAND-64-NEXT:      Addend: 0x0
 # LLVM-EXPAND-64-NEXT:    }
 # LLVM-EXPAND-64-NEXT:    Relocation {
 # LLVM-EXPAND-64-NEXT:      Offset: 0x1
 # LLVM-EXPAND-64-NEXT:      Type: R_X86_64_PC32 (2)
 # LLVM-EXPAND-64-NEXT:      Symbol: rel_neg (2)
-# LLVM-EXPAND-64-NEXT:      Addend: 0x0
 # LLVM-EXPAND-64-NEXT:    }
 # LLVM-EXPAND-64-NEXT:    Relocation {
 # LLVM-EXPAND-64-NEXT:      Offset: 0x5
 # LLVM-EXPAND-64-NEXT:      Type: R_X86_64_PLT32 (4)
 # LLVM-EXPAND-64-NEXT:      Symbol: rel_pos (3)
-# LLVM-EXPAND-64-NEXT:      Addend: 0x0
 # LLVM-EXPAND-64-NEXT:    }
 # LLVM-EXPAND-64-NEXT:    Relocation {
 # LLVM-EXPAND-64-NEXT:      Offset: 0x9
 # LLVM-EXPAND-64-NEXT:      Type: R_X86_64_64 (1)
 # LLVM-EXPAND-64-NEXT:      Symbol: rel_64 (4)
-# LLVM-EXPAND-64-NEXT:      Addend: 0x0
 # LLVM-EXPAND-64-NEXT:    }
 # LLVM-EXPAND-64-NEXT:  }
 # LLVM-EXPAND-64-NEXT:  Section (3) .rela.text {
@@ -243,10 +239,10 @@ Symbols:
 
 # BROKEN-RELA-LLVM:      Relocations [
 # BROKEN-RELA-LLVM-NEXT:   Section (2) .rel.text {
-# BROKEN-RELA-LLVM-NEXT:     0x0 R_X86_64_NONE rel_0 0x0
-# BROKEN-RELA-LLVM-NEXT:     0x1 R_X86_64_PC32 rel_neg 0x0
-# BROKEN-RELA-LLVM-NEXT:     0x5 R_X86_64_PLT32 rel_pos 0x0
-# BROKEN-RELA-LLVM-NEXT:     0x9 R_X86_64_64 rel_64 0x0
+# BROKEN-RELA-LLVM-NEXT:     0x0 R_X86_64_NONE rel_0{{$}}
+# BROKEN-RELA-LLVM-NEXT:     0x1 R_X86_64_PC32 rel_neg{{$}}
+# BROKEN-RELA-LLVM-NEXT:     0x5 R_X86_64_PLT32 rel_pos{{$}}
+# BROKEN-RELA-LLVM-NEXT:     0x9 R_X86_64_64 rel_64{{$}}
 # BROKEN-RELA-LLVM-NEXT:   }
 # BROKEN-RELA-LLVM-NEXT:   Section (3) .rela.text {
 # BROKEN-RELA-LLVM-NEXT: warning: '[[FILE]]': unable to read relocations from SHT_RELA section with index 3: section [index 3] has an invalid sh_entsize: 1
@@ -300,9 +296,9 @@ Symbols:
 
 #      LLVM-32:Relocations [
 # LLVM-32-NEXT:  Section (2) .rel.text {
-# LLVM-32-NEXT:    0x0 R_386_NONE rel_0 0x0
-# LLVM-32-NEXT:    0x1 R_386_PC32 rel_neg 0x0
-# LLVM-32-NEXT:    0x5 R_386_PLT32 rel_pos 0x0
+# LLVM-32-NEXT:    0x0 R_386_NONE rel_0
+# LLVM-32-NEXT:    0x1 R_386_PC32 rel_neg
+# LLVM-32-NEXT:    0x5 R_386_PLT32 rel_pos
 # LLVM-32-NEXT:  }
 # LLVM-32-NEXT:  Section (3) .rela.text {
 # LLVM-32-NEXT:    0x0 R_386_NONE rela_0 0x0
@@ -347,19 +343,16 @@ Symbols:
 # LLVM-EXPAND-32-NEXT:      Offset: 0x0
 # LLVM-EXPAND-32-NEXT:      Type: R_386_NONE (0)
 # LLVM-EXPAND-32-NEXT:      Symbol: rel_0 (1)
-# LLVM-EXPAND-32-NEXT:      Addend: 0x0
 # LLVM-EXPAND-32-NEXT:    }
 # LLVM-EXPAND-32-NEXT:    Relocation {
 # LLVM-EXPAND-32-NEXT:      Offset: 0x1
 # LLVM-EXPAND-32-NEXT:      Type: R_386_PC32 (2)
 # LLVM-EXPAND-32-NEXT:      Symbol: rel_neg (2)
-# LLVM-EXPAND-32-NEXT:      Addend: 0x0
 # LLVM-EXPAND-32-NEXT:    }
 # LLVM-EXPAND-32-NEXT:    Relocation {
 # LLVM-EXPAND-32-NEXT:      Offset: 0x5
 # LLVM-EXPAND-32-NEXT:      Type: R_386_PLT32 (4)
 # LLVM-EXPAND-32-NEXT:      Symbol: rel_pos (3)
-# LLVM-EXPAND-32-NEXT:      Addend: 0x0
 # LLVM-EXPAND-32-NEXT:    }
 # LLVM-EXPAND-32-NEXT:  }
 # LLVM-EXPAND-32-NEXT:  Section (3) .rela.text {
@@ -475,10 +468,10 @@ Symbols:
 # LLVM-SHNAME:      Relocations [
 # LLVM-SHNAME-NEXT: warning: '[[FILE]]': unable to get the name of SHT_REL section with index 2: a section [index 2] has an invalid sh_name (0xffffffff) offset which goes past the end of the section name string table
 # LLVM-SHNAME-NEXT:   Section (2) <?> {
-# LLVM-SHNAME-NEXT:     0x0 R_X86_64_NONE rel_0 0x0
-# LLVM-SHNAME-NEXT:     0x1 R_X86_64_PC32 rel_neg 0x0
-# LLVM-SHNAME-NEXT:     0x5 R_X86_64_PLT32 rel_pos 0x0
-# LLVM-SHNAME-NEXT:     0x9 R_X86_64_64 rel_64 0x0
+# LLVM-SHNAME-NEXT:     0x0 R_X86_64_NONE rel_0{{$}}
+# LLVM-SHNAME-NEXT:     0x1 R_X86_64_PC32 rel_neg{{$}}
+# LLVM-SHNAME-NEXT:     0x5 R_X86_64_PLT32 rel_pos{{$}}
+# LLVM-SHNAME-NEXT:     0x9 R_X86_64_64 rel_64{{$}}
 # LLVM-SHNAME-NEXT:   }
 # LLVM-SHNAME-NEXT: warning: '[[FILE]]': unable to get the name of SHT_RELA section with index 3: a section [index 3] has an invalid sh_name (0xffffffff) offset which goes past the end of the section name string table
 # LLVM-SHNAME-NEXT:   Section (3) <?> {

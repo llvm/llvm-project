@@ -331,26 +331,6 @@ ds_swizzle_b32 v8, v2 offset:swizzle(XXX,1)
 //==============================================================================
 // expected absolute expression
 
-ds_swizzle_b32 v8, v2 offset:SWIZZLE(QUAD_PERM, 0, 1, 2, 3)
-// CHECK: error: expected absolute expression
-// CHECK-NEXT:{{^}}ds_swizzle_b32 v8, v2 offset:SWIZZLE(QUAD_PERM, 0, 1, 2, 3)
-// CHECK-NEXT:{{^}}                             ^
-
-s_sendmsg sendmsg(MSG_GS, GS_OP_CUTX, 0)
-// CHECK: error: expected absolute expression
-// CHECK-NEXT:{{^}}s_sendmsg sendmsg(MSG_GS, GS_OP_CUTX, 0)
-// CHECK-NEXT:{{^}}                          ^
-
-s_sendmsg sendmsg(MSG_GSX, GS_OP_CUT, 0)
-// CHECK: error: expected absolute expression
-// CHECK-NEXT:{{^}}s_sendmsg sendmsg(MSG_GSX, GS_OP_CUT, 0)
-// CHECK-NEXT:{{^}}                  ^
-
-s_setreg_b32  hwreg(HW_REG_WRONG), s2
-// CHECK: error: expected absolute expression
-// CHECK-NEXT:{{^}}s_setreg_b32  hwreg(HW_REG_WRONG), s2
-// CHECK-NEXT:{{^}}                    ^
-
 s_waitcnt vmcnt(x)
 // CHECK: error: expected absolute expression
 // CHECK-NEXT:{{^}}s_waitcnt vmcnt(x)
@@ -372,10 +352,42 @@ tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:BUF_NUM_FORMAT_UINT]
 // CHECK-NEXT:{{^}}                                                            ^
 
 //==============================================================================
+// expected a message name or an absolute expression
+
+s_sendmsg sendmsg(MSG_GSX, GS_OP_CUT, 0)
+// CHECK: error: expected a message name or an absolute expression
+// CHECK-NEXT:{{^}}s_sendmsg sendmsg(MSG_GSX, GS_OP_CUT, 0)
+// CHECK-NEXT:{{^}}                  ^
+
+//==============================================================================
+// expected a register name or an absolute expression
+
+s_setreg_b32  hwreg(HW_REG_WRONG), s2
+// CHECK: error: expected a register name or an absolute expression
+// CHECK-NEXT:{{^}}s_setreg_b32  hwreg(HW_REG_WRONG), s2
+// CHECK-NEXT:{{^}}                    ^
+
+//==============================================================================
+// expected a sendmsg macro or an absolute expression
+
+s_sendmsg undef
+// CHECK: error: expected a sendmsg macro or an absolute expression
+// CHECK-NEXT:{{^}}s_sendmsg undef
+// CHECK-NEXT:{{^}}          ^
+
+//==============================================================================
+// expected a swizzle macro or an absolute expression
+
+ds_swizzle_b32 v8, v2 offset:SWZ(QUAD_PERM, 0, 1, 2, 3)
+// CHECK: error: expected a swizzle macro or an absolute expression
+// CHECK-NEXT:{{^}}ds_swizzle_b32 v8, v2 offset:SWZ(QUAD_PERM, 0, 1, 2, 3)
+// CHECK-NEXT:{{^}}                             ^
+
+//==============================================================================
 // expected an 11-bit unsigned offset
 
 flat_atomic_cmpswap v0, v[1:2], v[3:4] offset:4095 glc
-// CHECK: error: expected an 11-bit unsigned offset
+// CHECK: error: expected a 11-bit unsigned offset
 // CHECK-NEXT:{{^}}flat_atomic_cmpswap v0, v[1:2], v[3:4] offset:4095 glc
 // CHECK-NEXT:{{^}}                                       ^
 
@@ -401,6 +413,22 @@ v_mov_b32_sdwa v1, sext(u)
 // CHECK: error: expected an absolute expression
 // CHECK-NEXT:{{^}}v_mov_b32_sdwa v1, sext(u)
 // CHECK-NEXT:{{^}}                        ^
+
+//==============================================================================
+// expected a hwreg macro or an absolute expression
+
+s_setreg_b32 undef, s2
+// CHECK: error: expected a hwreg macro or an absolute expression
+// CHECK-NEXT:{{^}}s_setreg_b32 undef, s2
+// CHECK-NEXT:{{^}}             ^
+
+//==============================================================================
+// expected an operation name or an absolute expression
+
+s_sendmsg sendmsg(MSG_GS, GS_OP_CUTX, 0)
+// CHECK: error: expected an operation name or an absolute expression
+// CHECK-NEXT:{{^}}s_sendmsg sendmsg(MSG_GS, GS_OP_CUTX, 0)
+// CHECK-NEXT:{{^}}                          ^
 
 //==============================================================================
 // failed parsing operand.
@@ -938,7 +966,17 @@ s_mov_b64 s[10:11], [s2,s1]
 v_movrels_b32_sdwa v0, 1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD
 // CHECK: error: source operand must be a VGPR
 // CHECK-NEXT:{{^}}v_movrels_b32_sdwa v0, 1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD
-// CHECK-NEXT:{{^}}^
+// CHECK-NEXT:{{^}}                       ^
+
+v_movrels_b32_sdwa v0, s0
+// CHECK: error: source operand must be a VGPR
+// CHECK-NEXT:{{^}}v_movrels_b32_sdwa v0, s0
+// CHECK-NEXT:{{^}}                       ^
+
+v_movrels_b32_sdwa v0, shared_base
+// CHECK: error: source operand must be a VGPR
+// CHECK-NEXT:{{^}}v_movrels_b32_sdwa v0, shared_base
+// CHECK-NEXT:{{^}}                       ^
 
 //==============================================================================
 // specified hardware register is not supported on this GPU

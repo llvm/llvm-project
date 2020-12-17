@@ -10,15 +10,13 @@
 target datalayout = "e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
-declare i1 @return_i1()
-declare void @func()
-declare void @consume(i32 addrspace(1)*)
-declare void @consume2(i32 addrspace(1)*, i32 addrspace(1)*)
-declare void @consume5(i32 addrspace(1)*, i32 addrspace(1)*, i32 addrspace(1)*, i32 addrspace(1)*, i32 addrspace(1)*)
-declare void @use1(i32 addrspace(1)*, i8 addrspace(1)*)
-declare i32* @fake_personality_function()
-declare i32 @foo(i32, i8 addrspace(1)*, i32, i32, i32)
-declare void @bar(i8 addrspace(1)*, i8 addrspace(1)*)
+declare dso_local i1 @return_i1()
+declare dso_local void @func()
+declare dso_local void @consume(i32 addrspace(1)*)
+declare dso_local void @consume2(i32 addrspace(1)*, i32 addrspace(1)*)
+declare dso_local void @consume5(i32 addrspace(1)*, i32 addrspace(1)*, i32 addrspace(1)*, i32 addrspace(1)*, i32 addrspace(1)*)
+declare dso_local void @use1(i32 addrspace(1)*, i8 addrspace(1)*)
+declare dso_local void @bar(i8 addrspace(1)*, i8 addrspace(1)*)
 
 ; test most simple relocate
 define i1 @test_relocate(i32 addrspace(1)* %a) gc "statepoint-example" {
@@ -317,46 +315,6 @@ entry:
   ret void
 }
 
-; Different IR Values which maps to the same SDValue must be assigned to the same VReg.
-; This is test is similar to test_gcptr_uniqueing but explicitly uses invokes for which this is important
-; Otherwise we may get a copy of statepoint result, inserted at the end ot statepoint block and used at landing pad
-define void @test_duplicate_ir_values() gc "statepoint-example" personality i32* ()* @fake_personality_function{
-;CHECK-VREG-LABEL: name:            test_duplicate_ir_values
-;CHECK-VREG:   bb.0.entry:
-;CHECK-VREG:     %0:gr64 = STATEPOINT 1, 16, 5, %8, $edi, $rsi, $edx, $ecx, $r8d, 2, 0, 2, 0, 2, 0, 2, 1, killed %1(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
-;CHECK-VREG:     JMP_1 %bb.1
-;CHECK-VREG:   bb.1.normal_continue:
-;CHECK-VREG:     MOV64mr %stack.0, 1, $noreg, 0, $noreg, %0 :: (store 8 into %stack.0)
-;CHECK-VREG:     %13:gr32 = MOV32ri 10
-;CHECK-VREG:     $edi = COPY %13
-;CHECK-VREG:     STATEPOINT 2882400000, 0, 1, @__llvm_deoptimize, $edi, 2, 0, 2, 2, 2, 2, 1, 8, %stack.0, 0, 1, 8, %stack.0, 0, 2, 0, 2, 0, 2, 0, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store 8 on %stack.0)
-;CHECK-VREG:   bb.2.exceptional_return (landing-pad):
-;CHECK-VREG:     EH_LABEL <mcsymbol >
-;CHECK-VREG:     MOV64mr %stack.0, 1, $noreg, 0, $noreg, %0 :: (store 8 into %stack.0)
-;CHECK-VREG:     %12:gr32 = MOV32ri -271
-;CHECK-VREG:     $edi = COPY %12
-;CHECK-VREG:     STATEPOINT 2882400000, 0, 1, @__llvm_deoptimize, $edi, 2, 0, 2, 0, 2, 1, 1, 8, %stack.0, 0, 2, 0, 2, 0, 2, 0, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store 8 on %stack.0)
-
-entry:
-  %local.0 = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* undef, align 8
-  %local.9 = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* undef, align 8
-  %statepoint_token1 = invoke token (i64, i32, i32 (i32, i8 addrspace(1)*, i32, i32, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32i32p1i8i32i32i32f(i64 1, i32 16, i32 (i32, i8 addrspace(1)*, i32, i32, i32)* nonnull @foo, i32 5, i32 0, i32 undef, i8 addrspace(1)* undef, i32 undef, i32 undef, i32 undef, i32 0, i32 0) [ "deopt"(), "gc-live"(i8 addrspace(1)* %local.0, i8 addrspace(1)* %local.9) ]
-          to label %normal_continue unwind label %exceptional_return
-
-normal_continue: ; preds = %entry
-  %local.0.relocated1 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %statepoint_token1, i32 0, i32 0) ; (%local.0, %local.0)
-  %local.9.relocated1 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %statepoint_token1, i32 1, i32 1) ; (%local.9, %local.9)
-  %safepoint_token2 = call token (i64, i32, void (i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64 2882400000, i32 0, void (i32)* nonnull @__llvm_deoptimize, i32 1, i32 2, i32 10, i32 0, i32 0) [ "deopt"(i8 addrspace(1)* %local.0.relocated1, i8 addrspace(1)* %local.9.relocated1), "gc-live"() ]
-  unreachable
-
-exceptional_return:                         ; preds = %entry
-  %lpad_token11090 = landingpad token
-          cleanup
-  %local.9.relocated2 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %lpad_token11090, i32 1, i32 1) ; (%local.9, %local.9)
-  %safepoint_token3 = call token (i64, i32, void (i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64 2882400000, i32 0, void (i32)* nonnull @__llvm_deoptimize, i32 1, i32 0, i32 -271, i32 0, i32 0) [ "deopt"(i8 addrspace(1)* %local.9.relocated2), "gc-live"() ]
-  unreachable
-}
-
 ; Test that CopyFromReg emitted during ISEL processing of gc.relocate are properly ordered w.r.t. statepoint.
 define i8 addrspace(1)* @test_isel_sched(i8 addrspace(1)* %0, i8 addrspace(1)* %1, i32 %2) gc "statepoint-example" {
 ;CHECK-VREG-LABEL: name:            test_isel_sched
@@ -387,12 +345,9 @@ entry:
 
 declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i32, ...)
 declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
-declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32)
-declare i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token, i32, i32)
+declare dso_local i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32)
+declare dso_local i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token, i32, i32)
 declare <2 x i8 addrspace(1)*> @llvm.experimental.gc.relocate.v2p1i8(token, i32, i32)
-declare i1 @llvm.experimental.gc.result.i1(token)
-declare void @__llvm_deoptimize(i32)
-declare token @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64 immarg, i32 immarg, void (i32)*, i32 immarg, i32 immarg, ...)
-declare token @llvm.experimental.gc.statepoint.p0f_i32i32p1i8i32i32i32f(i64 immarg, i32 immarg, i32 (i32, i8 addrspace(1)*, i32, i32, i32)*, i32 immarg, i32 immarg, ...)
+declare dso_local i1 @llvm.experimental.gc.result.i1(token)
 declare token @llvm.experimental.gc.statepoint.p0f_isVoidp1i8p1i8f(i64 immarg, i32 immarg, void (i8 addrspace(1)*, i8 addrspace(1)*)*, i32 immarg, i32 immarg, ...)
 

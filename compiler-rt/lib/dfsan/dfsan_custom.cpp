@@ -11,12 +11,6 @@
 // This file defines the custom functions listed in done_abilist.txt.
 //===----------------------------------------------------------------------===//
 
-#include "sanitizer_common/sanitizer_common.h"
-#include "sanitizer_common/sanitizer_internal_defs.h"
-#include "sanitizer_common/sanitizer_linux.h"
-
-#include "dfsan/dfsan.h"
-
 #include <arpa/inet.h>
 #include <assert.h>
 #include <ctype.h>
@@ -32,13 +26,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/epoll.h>
 #include <sys/resource.h>
 #include <sys/select.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
+
+#include "dfsan/dfsan.h"
+#include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_internal_defs.h"
+#include "sanitizer_common/sanitizer_linux.h"
 
 using namespace __dfsan;
 
@@ -426,6 +427,18 @@ SANITIZER_INTERFACE_ATTRIBUTE int __dfsw_pthread_create(
   return rv;
 }
 
+SANITIZER_INTERFACE_ATTRIBUTE int __dfsw_pthread_join(pthread_t thread,
+                                                      void **retval,
+                                                      dfsan_label thread_label,
+                                                      dfsan_label retval_label,
+                                                      dfsan_label *ret_label) {
+  int ret = pthread_join(thread, retval);
+  if (ret == 0 && retval)
+    dfsan_set_label(0, retval, sizeof(*retval));
+  *ret_label = 0;
+  return ret;
+}
+
 struct dl_iterate_phdr_info {
   int (*callback_trampoline)(void *callback, struct dl_phdr_info *info,
                              size_t size, void *data, dfsan_label info_label,
@@ -458,6 +471,20 @@ SANITIZER_INTERFACE_ATTRIBUTE int __dfsw_dl_iterate_phdr(
   dl_iterate_phdr_info dipi = { callback_trampoline, callback, data };
   *ret_label = 0;
   return dl_iterate_phdr(dl_iterate_phdr_cb, &dipi);
+}
+
+// This function is only available for glibc 2.27 or newer.  Mark it weak so
+// linking succeeds with older glibcs.
+SANITIZER_WEAK_ATTRIBUTE void _dl_get_tls_static_info(size_t *sizep,
+                                                      size_t *alignp);
+
+SANITIZER_INTERFACE_ATTRIBUTE void __dfsw__dl_get_tls_static_info(
+    size_t *sizep, size_t *alignp, dfsan_label sizep_label,
+    dfsan_label alignp_label) {
+  assert(_dl_get_tls_static_info);
+  _dl_get_tls_static_info(sizep, alignp);
+  dfsan_set_label(0, sizep, sizeof(*sizep));
+  dfsan_set_label(0, alignp, sizeof(*alignp));
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
@@ -716,6 +743,18 @@ int __dfsw_getpwuid_r(id_t uid, struct passwd *pwd,
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
+int __dfsw_epoll_wait(int epfd, struct epoll_event *events, int maxevents,
+                      int timeout, dfsan_label epfd_label,
+                      dfsan_label events_label, dfsan_label maxevents_label,
+                      dfsan_label timeout_label, dfsan_label *ret_label) {
+  int ret = epoll_wait(epfd, events, maxevents, timeout);
+  if (ret > 0)
+    dfsan_set_label(0, events, ret * sizeof(*events));
+  *ret_label = 0;
+  return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
 int __dfsw_poll(struct pollfd *fds, nfds_t nfds, int timeout,
                 dfsan_label dfs_label, dfsan_label nfds_label,
                 dfsan_label timeout_label, dfsan_label *ret_label) {
@@ -782,6 +821,16 @@ int __dfsw_sigaction(int signum, const struct sigaction *act,
   if (oldact) {
     dfsan_set_label(0, oldact, sizeof(struct sigaction));
   }
+  *ret_label = 0;
+  return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+int __dfsw_sigaltstack(const stack_t *ss, stack_t *old_ss, dfsan_label ss_label,
+                       dfsan_label old_ss_label, dfsan_label *ret_label) {
+  int ret = sigaltstack(ss, old_ss);
+  if (ret != -1 && old_ss)
+    dfsan_set_label(0, old_ss, sizeof(*old_ss));
   *ret_label = 0;
   return ret;
 }
@@ -867,6 +916,44 @@ SANITIZER_INTERFACE_ATTRIBUTE int __dfsw_nanosleep(const struct timespec *req,
   return ret;
 }
 
+static void clear_msghdr_labels(size_t bytes_written, struct msghdr *msg) {
+  dfsan_set_label(0, msg, sizeof(*msg));
+  dfsan_set_label(0, msg->msg_name, msg->msg_namelen);
+  dfsan_set_label(0, msg->msg_control, msg->msg_controllen);
+  for (size_t i = 0; bytes_written > 0; ++i) {
+    assert(i < msg->msg_iovlen);
+    struct iovec *iov = &msg->msg_iov[i];
+    size_t iov_written =
+        bytes_written < iov->iov_len ? bytes_written : iov->iov_len;
+    dfsan_set_label(0, iov->iov_base, iov_written);
+    bytes_written -= iov_written;
+  }
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE int __dfsw_recvmmsg(
+    int sockfd, struct mmsghdr *msgvec, unsigned int vlen, int flags,
+    struct timespec *timeout, dfsan_label sockfd_label,
+    dfsan_label msgvec_label, dfsan_label vlen_label, dfsan_label flags_label,
+    dfsan_label timeout_label, dfsan_label *ret_label) {
+  int ret = recvmmsg(sockfd, msgvec, vlen, flags, timeout);
+  for (int i = 0; i < ret; ++i) {
+    dfsan_set_label(0, &msgvec[i].msg_len, sizeof(msgvec[i].msg_len));
+    clear_msghdr_labels(msgvec[i].msg_len, &msgvec[i].msg_hdr);
+  }
+  *ret_label = 0;
+  return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE ssize_t __dfsw_recvmsg(
+    int sockfd, struct msghdr *msg, int flags, dfsan_label sockfd_label,
+    dfsan_label msg_label, dfsan_label flags_label, dfsan_label *ret_label) {
+  ssize_t ret = recvmsg(sockfd, msg, flags);
+  if (ret >= 0)
+    clear_msghdr_labels(ret, msg);
+  *ret_label = 0;
+  return ret;
+}
+
 SANITIZER_INTERFACE_ATTRIBUTE int
 __dfsw_socketpair(int domain, int type, int protocol, int sv[2],
                   dfsan_label domain_label, dfsan_label type_label,
@@ -877,6 +964,50 @@ __dfsw_socketpair(int domain, int type, int protocol, int sv[2],
   if (ret == 0) {
     dfsan_set_label(0, sv, sizeof(*sv) * 2);
   }
+  return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE int __dfsw_getsockopt(
+    int sockfd, int level, int optname, void *optval, socklen_t *optlen,
+    dfsan_label sockfd_label, dfsan_label level_label,
+    dfsan_label optname_label, dfsan_label optval_label,
+    dfsan_label optlen_label, dfsan_label *ret_label) {
+  int ret = getsockopt(sockfd, level, optname, optval, optlen);
+  if (ret != -1 && optval && optlen) {
+    dfsan_set_label(0, optlen, sizeof(*optlen));
+    dfsan_set_label(0, optval, *optlen);
+  }
+  *ret_label = 0;
+  return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE int __dfsw_getsockname(
+    int sockfd, struct sockaddr *addr, socklen_t *addrlen,
+    dfsan_label sockfd_label, dfsan_label addr_label, dfsan_label addrlen_label,
+    dfsan_label *ret_label) {
+  socklen_t origlen = addrlen ? *addrlen : 0;
+  int ret = getsockname(sockfd, addr, addrlen);
+  if (ret != -1 && addr && addrlen) {
+    socklen_t written_bytes = origlen < *addrlen ? origlen : *addrlen;
+    dfsan_set_label(0, addrlen, sizeof(*addrlen));
+    dfsan_set_label(0, addr, written_bytes);
+  }
+  *ret_label = 0;
+  return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE int __dfsw_getpeername(
+    int sockfd, struct sockaddr *addr, socklen_t *addrlen,
+    dfsan_label sockfd_label, dfsan_label addr_label, dfsan_label addrlen_label,
+    dfsan_label *ret_label) {
+  socklen_t origlen = addrlen ? *addrlen : 0;
+  int ret = getpeername(sockfd, addr, addrlen);
+  if (ret != -1 && addr && addrlen) {
+    socklen_t written_bytes = origlen < *addrlen ? origlen : *addrlen;
+    dfsan_set_label(0, addrlen, sizeof(*addrlen));
+    dfsan_set_label(0, addr, written_bytes);
+  }
+  *ret_label = 0;
   return ret;
 }
 

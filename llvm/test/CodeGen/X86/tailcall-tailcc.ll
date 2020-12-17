@@ -5,7 +5,7 @@
 ; With -tailcallopt, CodeGen guarantees a tail call optimization
 ; for all of these.
 
-declare tailcc i32 @tailcallee(i32 %a1, i32 %a2, i32 %a3, i32 %a4)
+declare dso_local tailcc i32 @tailcallee(i32 %a1, i32 %a2, i32 %a3, i32 %a4)
 
 define tailcc i32 @tailcaller(i32 %in1, i32 %in2) nounwind {
 ; X64-LABEL: tailcaller:
@@ -30,7 +30,7 @@ entry:
   ret i32 %tmp11
 }
 
-declare tailcc i8* @alias_callee()
+declare dso_local tailcc i8* @alias_callee()
 
 define tailcc noalias i8* @noalias_caller() nounwind {
 ; X64-LABEL: noalias_caller:
@@ -46,7 +46,7 @@ define tailcc noalias i8* @noalias_caller() nounwind {
   ret i8* %p
 }
 
-declare tailcc noalias i8* @noalias_callee()
+declare dso_local tailcc noalias i8* @noalias_callee()
 
 define tailcc i8* @alias_caller() nounwind {
 ; X64-LABEL: alias_caller:
@@ -62,7 +62,7 @@ define tailcc i8* @alias_caller() nounwind {
   ret i8* %p
 }
 
-declare tailcc i32 @i32_callee()
+declare dso_local tailcc i32 @i32_callee()
 
 define tailcc i32 @ret_undef() nounwind {
 ; X64-LABEL: ret_undef:
@@ -78,7 +78,7 @@ define tailcc i32 @ret_undef() nounwind {
   ret i32 undef
 }
 
-declare tailcc void @does_not_return()
+declare dso_local tailcc void @does_not_return()
 
 define tailcc i32 @noret() nounwind {
 ; X64-LABEL: noret:

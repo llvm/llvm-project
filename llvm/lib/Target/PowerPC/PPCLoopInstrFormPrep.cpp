@@ -81,10 +81,8 @@
 
 using namespace llvm;
 
-// By default, we limit this to creating 16 common bases out of loops per
-// function. 16 is a little over half of the allocatable register set.
 static cl::opt<unsigned> MaxVarsPrep("ppc-formprep-max-vars",
-                                 cl::Hidden, cl::init(16),
+                                 cl::Hidden, cl::init(24),
   cl::desc("Potential common base number threshold per function for PPC loop "
            "prep"));
 
@@ -94,8 +92,7 @@ static cl::opt<bool> PreferUpdateForm("ppc-formprep-prefer-update",
 
 // Sum of following 3 per loop thresholds for all loops can not be larger
 // than MaxVarsPrep.
-// By default, we limit this to creating 9 PHIs for one loop.
-// 9 and 3 for each kind prep are exterimental values on Power9.
+// now the thresholds for each kind prep are exterimental values on Power9.
 static cl::opt<unsigned> MaxVarsUpdateForm("ppc-preinc-prep-max-vars",
                                  cl::Hidden, cl::init(3),
   cl::desc("Potential PHI threshold per loop for PPC loop prep of update "
@@ -106,7 +103,7 @@ static cl::opt<unsigned> MaxVarsDSForm("ppc-dsprep-max-vars",
   cl::desc("Potential PHI threshold per loop for PPC loop prep of DS form"));
 
 static cl::opt<unsigned> MaxVarsDQForm("ppc-dqprep-max-vars",
-                                 cl::Hidden, cl::init(3),
+                                 cl::Hidden, cl::init(8),
   cl::desc("Potential PHI threshold per loop for PPC loop prep of DQ form"));
 
 

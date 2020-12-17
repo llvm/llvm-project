@@ -476,9 +476,8 @@ TEST_P(ASTMatchersTest, ThisPointerType) {
     return;
   }
 
-  StatementMatcher MethodOnY =
-      traverse(ast_type_traits::TK_AsIs,
-               cxxMemberCallExpr(thisPointerType(recordDecl(hasName("Y")))));
+  StatementMatcher MethodOnY = traverse(
+      TK_AsIs, cxxMemberCallExpr(thisPointerType(recordDecl(hasName("Y")))));
 
   EXPECT_TRUE(matches("class Y { public: void x(); }; void z() { Y y; y.x(); }",
                       MethodOnY));
@@ -741,8 +740,7 @@ TEST_P(ASTMatchersTest, Matcher_ConstructorCall) {
     return;
   }
 
-  StatementMatcher Constructor =
-      traverse(ast_type_traits::TK_AsIs, cxxConstructExpr());
+  StatementMatcher Constructor = traverse(TK_AsIs, cxxConstructExpr());
 
   EXPECT_TRUE(
       matches("class X { public: X(); }; void x() { X x; }", Constructor));
@@ -776,8 +774,7 @@ TEST_P(ASTMatchersTest, Matcher_BindTemporaryExpression) {
     return;
   }
 
-  StatementMatcher TempExpression =
-      traverse(ast_type_traits::TK_AsIs, cxxBindTemporaryExpr());
+  StatementMatcher TempExpression = traverse(TK_AsIs, cxxBindTemporaryExpr());
 
   StringRef ClassString = "class string { public: string(); ~string(); }; ";
 
@@ -810,7 +807,7 @@ TEST_P(ASTMatchersTest, MaterializeTemporaryExpr_MatchesTemporaryCXX11CXX14) {
   }
 
   StatementMatcher TempExpression =
-      traverse(ast_type_traits::TK_AsIs, materializeTemporaryExpr());
+      traverse(TK_AsIs, materializeTemporaryExpr());
 
   EXPECT_TRUE(matches("class string { public: string(); }; "
                       "string GetStringByValue();"
@@ -826,7 +823,7 @@ TEST_P(ASTMatchersTest, MaterializeTemporaryExpr_MatchesTemporary) {
 
   StringRef ClassString = "class string { public: string(); int length(); }; ";
   StatementMatcher TempExpression =
-      traverse(ast_type_traits::TK_AsIs, materializeTemporaryExpr());
+      traverse(TK_AsIs, materializeTemporaryExpr());
 
   EXPECT_TRUE(notMatches(ClassString +
                              "string* GetStringPointer(); "
@@ -985,6 +982,11 @@ TEST_P(ASTMatchersTest, GNUNullExpr) {
   EXPECT_TRUE(matches("int* i = __null;", gnuNullExpr()));
 }
 
+TEST_P(ASTMatchersTest, GenericSelectionExpr) {
+  EXPECT_TRUE(matches("void f() { (void)_Generic(1, int: 1, float: 2.0); }",
+                      genericSelectionExpr()));
+}
+
 TEST_P(ASTMatchersTest, AtomicExpr) {
   EXPECT_TRUE(matches("void foo() { int *ptr; __atomic_load_n(ptr, 1); }",
                       atomicExpr()));
@@ -1104,9 +1106,8 @@ TEST_P(ASTMatchersTest, BinaryConditionalOperator) {
     return;
   }
 
-  StatementMatcher AlwaysOne =
-      traverse(ast_type_traits::TK_AsIs,
-               binaryConditionalOperator(
+  StatementMatcher AlwaysOne = traverse(
+      TK_AsIs, binaryConditionalOperator(
                    hasCondition(implicitCastExpr(has(opaqueValueExpr(
                        hasSourceExpression((integerLiteral(equals(1)))))))),
                    hasFalseExpression(integerLiteral(equals(0)))));
@@ -1179,11 +1180,10 @@ TEST_P(ASTMatchersTest, CastExpr_MatchesExplicitCasts_CXX) {
 
 TEST_P(ASTMatchersTest, CastExpression_MatchesImplicitCasts) {
   // This test creates an implicit cast from int to char.
-  EXPECT_TRUE(
-      matches("char c = 0;", traverse(ast_type_traits::TK_AsIs, castExpr())));
+  EXPECT_TRUE(matches("char c = 0;", traverse(TK_AsIs, castExpr())));
   // This test creates an implicit cast from lvalue to rvalue.
   EXPECT_TRUE(matches("void f() { char c = 0, d = c; }",
-                      traverse(ast_type_traits::TK_AsIs, castExpr())));
+                      traverse(TK_AsIs, castExpr())));
 }
 
 TEST_P(ASTMatchersTest, CastExpr_DoesNotMatchNonCasts) {
@@ -1299,17 +1299,17 @@ TEST_P(ASTMatchersTest, CStyleCastExpr_DoesNotMatchOtherCasts) {
 
 TEST_P(ASTMatchersTest, ImplicitCastExpr_MatchesSimpleCase) {
   // This test creates an implicit const cast.
-  EXPECT_TRUE(matches("void f() { int x = 0; const int y = x; }",
-                      traverse(ast_type_traits::TK_AsIs,
-                               varDecl(hasInitializer(implicitCastExpr())))));
+  EXPECT_TRUE(
+      matches("void f() { int x = 0; const int y = x; }",
+              traverse(TK_AsIs, varDecl(hasInitializer(implicitCastExpr())))));
   // This test creates an implicit cast from int to char.
-  EXPECT_TRUE(matches("char c = 0;",
-                      traverse(ast_type_traits::TK_AsIs,
-                               varDecl(hasInitializer(implicitCastExpr())))));
+  EXPECT_TRUE(
+      matches("char c = 0;",
+              traverse(TK_AsIs, varDecl(hasInitializer(implicitCastExpr())))));
   // This test creates an implicit array-to-pointer cast.
-  EXPECT_TRUE(matches("int arr[6]; int *p = arr;",
-                      traverse(ast_type_traits::TK_AsIs,
-                               varDecl(hasInitializer(implicitCastExpr())))));
+  EXPECT_TRUE(
+      matches("int arr[6]; int *p = arr;",
+              traverse(TK_AsIs, varDecl(hasInitializer(implicitCastExpr())))));
 }
 
 TEST_P(ASTMatchersTest, ImplicitCastExpr_DoesNotMatchIncorrectly) {
@@ -1355,14 +1355,14 @@ TEST_P(ASTMatchersTest, ExprWithCleanups_MatchesExprWithCleanups) {
   if (!GetParam().isCXX()) {
     return;
   }
-  EXPECT_TRUE(matches("struct Foo { ~Foo(); };"
-                      "const Foo f = Foo();",
-                      traverse(ast_type_traits::TK_AsIs,
-                               varDecl(hasInitializer(exprWithCleanups())))));
-  EXPECT_FALSE(matches("struct Foo { }; Foo a;"
-                       "const Foo f = a;",
-                       traverse(ast_type_traits::TK_AsIs,
-                                varDecl(hasInitializer(exprWithCleanups())))));
+  EXPECT_TRUE(
+      matches("struct Foo { ~Foo(); };"
+              "const Foo f = Foo();",
+              traverse(TK_AsIs, varDecl(hasInitializer(exprWithCleanups())))));
+  EXPECT_FALSE(
+      matches("struct Foo { }; Foo a;"
+              "const Foo f = a;",
+              traverse(TK_AsIs, varDecl(hasInitializer(exprWithCleanups())))));
 }
 
 TEST_P(ASTMatchersTest, InitListExpr) {
@@ -1397,18 +1397,16 @@ TEST_P(ASTMatchersTest,
                    "struct A {"
                    "  A(std::initializer_list<int>) {}"
                    "};";
-  EXPECT_TRUE(
-      matches(code + "A a{0};",
-              traverse(ast_type_traits::TK_AsIs,
-                       cxxConstructExpr(has(cxxStdInitializerListExpr()),
-                                        hasDeclaration(cxxConstructorDecl(
-                                            ofClass(hasName("A"))))))));
-  EXPECT_TRUE(
-      matches(code + "A a = {0};",
-              traverse(ast_type_traits::TK_AsIs,
-                       cxxConstructExpr(has(cxxStdInitializerListExpr()),
-                                        hasDeclaration(cxxConstructorDecl(
-                                            ofClass(hasName("A"))))))));
+  EXPECT_TRUE(matches(
+      code + "A a{0};",
+      traverse(TK_AsIs, cxxConstructExpr(has(cxxStdInitializerListExpr()),
+                                         hasDeclaration(cxxConstructorDecl(
+                                             ofClass(hasName("A"))))))));
+  EXPECT_TRUE(matches(
+      code + "A a = {0};",
+      traverse(TK_AsIs, cxxConstructExpr(has(cxxStdInitializerListExpr()),
+                                         hasDeclaration(cxxConstructorDecl(
+                                             ofClass(hasName("A"))))))));
 
   EXPECT_TRUE(notMatches("int a[] = { 1, 2 };", cxxStdInitializerListExpr()));
   EXPECT_TRUE(notMatches("struct B { int x, y; }; B b = { 5, 6 };",
@@ -1492,25 +1490,21 @@ TEST_P(ASTMatchersTest, CxxExceptionHandling_SimpleCases) {
 }
 
 TEST_P(ASTMatchersTest, ParenExpr_SimpleCases) {
-  EXPECT_TRUE(
-      matches("int i = (3);", traverse(ast_type_traits::TK_AsIs, parenExpr())));
-  EXPECT_TRUE(matches("int i = (3 + 7);",
-                      traverse(ast_type_traits::TK_AsIs, parenExpr())));
-  EXPECT_TRUE(notMatches("int i = 3;",
-                         traverse(ast_type_traits::TK_AsIs, parenExpr())));
+  EXPECT_TRUE(matches("int i = (3);", traverse(TK_AsIs, parenExpr())));
+  EXPECT_TRUE(matches("int i = (3 + 7);", traverse(TK_AsIs, parenExpr())));
+  EXPECT_TRUE(notMatches("int i = 3;", traverse(TK_AsIs, parenExpr())));
   EXPECT_TRUE(notMatches("int f() { return 1; }; void g() { int a = f(); }",
-                         traverse(ast_type_traits::TK_AsIs, parenExpr())));
+                         traverse(TK_AsIs, parenExpr())));
 }
 
 TEST_P(ASTMatchersTest, IgnoringParens) {
-  EXPECT_FALSE(matches(
-      "const char* str = (\"my-string\");",
-      traverse(ast_type_traits::TK_AsIs,
-               implicitCastExpr(hasSourceExpression(stringLiteral())))));
-  EXPECT_TRUE(matches("const char* str = (\"my-string\");",
-                      traverse(ast_type_traits::TK_AsIs,
-                               implicitCastExpr(hasSourceExpression(
-                                   ignoringParens(stringLiteral()))))));
+  EXPECT_FALSE(matches("const char* str = (\"my-string\");",
+                       traverse(TK_AsIs, implicitCastExpr(hasSourceExpression(
+                                             stringLiteral())))));
+  EXPECT_TRUE(
+      matches("const char* str = (\"my-string\");",
+              traverse(TK_AsIs, implicitCastExpr(hasSourceExpression(
+                                    ignoringParens(stringLiteral()))))));
 }
 
 TEST_P(ASTMatchersTest, QualType) {

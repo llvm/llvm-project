@@ -36,9 +36,9 @@
 !qalias = type !quant.any<i1024<-4:3>:f32>
 
 // -----
-// Unrecognized storage type: storage size == 0
+// Unrecognized storage type: storage size
 // expected-error@+1 {{invalid integer width}}
-!qalias = type !quant.any<i0<-4:3>:f32>
+!qalias = type !quant.any<i0123123123123123<-4:3>:f32>
 
 // -----
 // Illegal storage min/max: max - min < 0

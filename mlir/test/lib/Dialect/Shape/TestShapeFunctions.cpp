@@ -57,7 +57,7 @@ void ReportShapeFnPass::runOnOperation() {
 
   module.getBodyRegion().walk([&](FuncOp func) {
     // Skip ops in the shape function library.
-    if (isa<shape::FunctionLibraryOp>(func.getParentOp()))
+    if (isa<shape::FunctionLibraryOp>(func->getParentOp()))
       return;
 
     func.walk([&](Operation *op) { remarkShapeFn(op); });

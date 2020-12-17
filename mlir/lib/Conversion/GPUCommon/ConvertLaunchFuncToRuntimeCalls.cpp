@@ -587,7 +587,8 @@ LogicalResult ConvertLaunchFuncOpToGpuRuntimeCallPattern::matchAndRewrite(
       launchOp, launchOp.getKernelModuleName());
   assert(kernelModule && "expected a kernel module");
 
-  auto binaryAttr = kernelModule.getAttrOfType<StringAttr>(gpuBinaryAnnotation);
+  auto binaryAttr =
+      kernelModule->getAttrOfType<StringAttr>(gpuBinaryAnnotation);
   if (!binaryAttr) {
     kernelModule.emitOpError()
         << "missing " << gpuBinaryAnnotation << " attribute";

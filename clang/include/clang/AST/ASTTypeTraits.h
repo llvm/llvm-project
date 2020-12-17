@@ -22,7 +22,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMapInfo.h"
-#include <type_traits>
+#include "llvm/Support/AlignOf.h"
 
 namespace llvm {
 
@@ -456,8 +456,9 @@ private:
   /// \c QualTypes, \c NestedNameSpecifierLocs, \c TypeLocs,
   /// \c TemplateArguments and \c TemplateArgumentLocs on the other hand do not
   /// have storage or unique pointers and thus need to be stored by value.
-  std::aligned_union_t<1, const void *, TemplateArgument, TemplateArgumentLoc,
-                       NestedNameSpecifierLoc, QualType, TypeLoc>
+  llvm::AlignedCharArrayUnion<const void *, TemplateArgument,
+                              TemplateArgumentLoc, NestedNameSpecifierLoc,
+                              QualType, TypeLoc>
       Storage;
 };
 
@@ -527,18 +528,6 @@ template <typename T, typename EnablerT> struct DynTypedNode::BaseConverter {
     return NULL;
   }
 };
-
-// Previously these types were defined in the clang::ast_type_traits namespace.
-// Provide typedefs so that legacy code can be fixed asynchronously.
-namespace ast_type_traits {
-using DynTypedNode = ::clang::DynTypedNode;
-using ASTNodeKind = ::clang::ASTNodeKind;
-using TraversalKind = ::clang::TraversalKind;
-
-constexpr TraversalKind TK_AsIs = ::clang::TK_AsIs;
-constexpr TraversalKind TK_IgnoreUnlessSpelledInSource =
-    ::clang::TK_IgnoreUnlessSpelledInSource;
-} // namespace ast_type_traits
 
 } // end namespace clang
 

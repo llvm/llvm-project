@@ -55,7 +55,7 @@ define float @test_fmaxf(float %x, float %y) {
 define float @test_fmaxf_minsize(float %x, float %y) minsize {
 ; CHECK-LABEL: test_fmaxf_minsize:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    jmp fmaxf # TAILCALL
+; CHECK-NEXT:    jmp fmaxf@PLT # TAILCALL
   %z = call float @fmaxf(float %x, float %y) readnone
   ret float %z
 }

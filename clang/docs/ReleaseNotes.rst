@@ -117,6 +117,7 @@ Modified Compiler Flags
 - Now that `this` pointers are tagged with `nonnull` and `dereferenceable(N)`,
   `-fno-delete-null-pointer-checks` has gained the power to remove the
   `nonnull` attribute on `this` for configurations that need it to be nullable.
+- ``-gsplit-dwarf`` no longer implies ``-g2``.
 
 New Pragmas in Clang
 --------------------
@@ -271,12 +272,14 @@ clang-format
     };
 
 
-- Experimental Support in clang-format for concepts has been improved, to 
+- Experimental Support in clang-format for concepts has been improved, to
   aid this the follow options have been added
 
 - Option ``IndentRequires`` has been added to indent the ``requires`` keyword
   in templates.
 - Option ``BreakBeforeConceptDeclarations`` has been added to aid the formatting of concepts.
+
+- Option ``IndentPragmas`` has been added to allow #pragma to indented with the current scope level. This is especially useful when using #pragma to mark OpenMP sections of code.
 
 
 libclang

@@ -246,7 +246,6 @@ def seg1addr : Separate<["-"], "seg1addr">,
      Group<grp_opts>;
 def no_implicit_dylibs : Flag<["-"], "no_implicit_dylibs">,
      HelpText<"Do not optimize public dylib transitive symbol references">,
-     Flags<[HelpHidden]>,
      Group<grp_opts>;
 def exported_symbols_order : Separate<["-"], "exported_symbols_order">,
      MetaVarName<"<file>">,
@@ -291,7 +290,6 @@ def mark_dead_strippable_dylib : Flag<["-"], "mark_dead_strippable_dylib">,
 def compatibility_version : Separate<["-"], "compatibility_version">,
      MetaVarName<"<version>">,
      HelpText<"Compatibility <version> of this library">,
-     Flags<[HelpHidden]>,
      Group<grp_dylib>;
 def dylib_compatibility_version : Separate<["-"], "dylib_compatibility_version">,
      MetaVarName<"<version>">,
@@ -302,7 +300,6 @@ def dylib_compatibility_version : Separate<["-"], "dylib_compatibility_version">
 def current_version : Separate<["-"], "current_version">,
      MetaVarName<"<version>">,
      HelpText<"Current <version> of this library">,
-     Flags<[HelpHidden]>,
      Group<grp_dylib>;
 def dylib_current_version : Separate<["-"], "dylib_current_version">,
      MetaVarName<"<version>">,
@@ -675,7 +672,6 @@ def sub_library : Separate<["-"], "sub_library">,
 def sub_umbrella : Separate<["-"], "sub_umbrella">,
      MetaVarName<"<name>">,
      HelpText<"Re-export the framework as <name>">,
-     Flags<[HelpHidden]>,
      Group<grp_rare>;
 def allowable_client : Separate<["-"], "allowable_client">,
      MetaVarName<"<name>">,
@@ -840,7 +836,6 @@ def no_objc_category_merging : Flag<["-"], "no_objc_category_merging">,
 def object_path_lto : Separate<["-"], "object_path_lto">,
      MetaVarName<"<path>">,
      HelpText<"Retain any temporary mach-o file in <path> that would otherwise be deleted during LTO">,
-     Flags<[HelpHidden]>,
      Group<grp_rare>;
 def lto_library : Separate<["-"], "lto_library">,
      MetaVarName<"<path>">,
@@ -877,7 +872,9 @@ def not_for_dyld_shared_cache : Flag<["-"], "not_for_dyld_shared_cache">,
      Group<grp_rare>;
 def mllvm : Separate<["-"], "mllvm">,
      HelpText<"Options to pass to LLVM">,
-     Flags<[HelpHidden]>,
+     Group<grp_rare>;
+def mcpu : Separate<["-"], "mcpu">,
+     HelpText<"Processor family target for LTO code generation">,
      Group<grp_rare>;
 
 def grp_deprecated : OptionGroup<"deprecated">, HelpText<"DEPRECATED">;
@@ -1209,10 +1206,6 @@ def iosmac_version_min : Flag<["-"], "iosmac_version_min">,
 def uikitformac_version_min : Flag<["-"], "uikitformac_version_min">,
      Alias<maccatalyst_version_min>,
      HelpText<"Alias for -maccatalyst_version_min">,
-     Flags<[HelpHidden]>,
-     Group<grp_undocumented>;
-def mcpu : Flag<["-"], "mcpu">,
-     HelpText<"This option is undocumented in ld64">,
      Flags<[HelpHidden]>,
      Group<grp_undocumented>;
 def no_compact_unwind : Flag<["-"], "no_compact_unwind">,

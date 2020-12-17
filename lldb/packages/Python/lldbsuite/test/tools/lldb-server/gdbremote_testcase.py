@@ -27,12 +27,10 @@ class _ConnectionRefused(IOError):
     pass
 
 
-class GdbRemoteTestCaseBase(TestBase):
-
-    NO_DEBUG_INFO_TESTCASE = True
+class GdbRemoteTestCaseBase(Base):
 
     # Default time out in seconds. The timeout is increased tenfold under Asan.
-    DEFAULT_TIMEOUT =  10 * (10 if ('ASAN_OPTIONS' in os.environ) else 1)
+    DEFAULT_TIMEOUT =  20 * (10 if ('ASAN_OPTIONS' in os.environ) else 1)
     # Default sleep time in seconds. The sleep time is doubled under Asan.
     DEFAULT_SLEEP   =  5  * (2  if ('ASAN_OPTIONS' in os.environ) else 1)
 
@@ -83,11 +81,10 @@ class GdbRemoteTestCaseBase(TestBase):
                    for channel in lldbtest_config.channels)
 
     def setUp(self):
-        TestBase.setUp(self)
+        super(GdbRemoteTestCaseBase, self).setUp()
 
         self.setUpBaseLogging()
         self.debug_monitor_extra_args = []
-        self._pump_queues = socket_packet_pump.PumpQueues()
 
         if self.isVerboseLoggingRequested():
             # If requested, full logs go to a log file
@@ -118,11 +115,12 @@ class GdbRemoteTestCaseBase(TestBase):
             self.stub_hostname = "localhost"
 
     def tearDown(self):
-        self._pump_queues.verify_queues_empty()
-
         self.logger.removeHandler(self._verbose_log_handler)
         self._verbose_log_handler = None
         TestBase.tearDown(self)
+
+    def build(self, *args, **kwargs):
+        self.buildDefault(*args, **kwargs)
 
     def getLocalServerLogFile(self):
         return self.log_basename + "-server.log"
@@ -342,6 +340,7 @@ class GdbRemoteTestCaseBase(TestBase):
 
         if self.reverse_connect:
             self.sock = sock.accept()[0]
+            self.sock.settimeout(self.DEFAULT_TIMEOUT)
 
         return server
 
@@ -354,6 +353,7 @@ class GdbRemoteTestCaseBase(TestBase):
             # Schedule debug monitor to be shut down during teardown.
             logger = self.logger
 
+            self._server = Server(self.sock, server)
             return server
 
         # We're using a random port algorithm to try not to collide with other ports,
@@ -375,6 +375,7 @@ class GdbRemoteTestCaseBase(TestBase):
                 try:
                     logger.info("Connect attempt %d", connect_attemps + 1)
                     self.sock = self.create_socket()
+                    self._server = Server(self.sock, server)
                     return server
                 except _ConnectionRefused as serr:
                     # Ignore, and try again.
@@ -632,9 +633,8 @@ class GdbRemoteTestCaseBase(TestBase):
     def expect_gdbremote_sequence(self):
         return expect_lldb_gdbserver_replay(
             self,
-            self.sock,
+            self._server,
             self.test_sequence,
-            self._pump_queues,
             self.DEFAULT_TIMEOUT * len(self.test_sequence),
             self.logger)
 

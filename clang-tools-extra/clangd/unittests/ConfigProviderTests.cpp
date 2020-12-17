@@ -79,6 +79,12 @@ CompileFlags:
   Unknown: 42
 )yaml";
 
+const char *AddFooWithTypoErr = R"yaml(
+CompileFlags:
+  Add: foo
+  Removr: 42
+)yaml";
+
 const char *AddBarBaz = R"yaml(
 CompileFlags:
   Add: bar
@@ -95,22 +101,37 @@ TEST(ProviderTest, FromYAMLFile) {
   auto P = Provider::fromYAMLFile(testPath("foo.yaml"), /*Directory=*/"", FS);
   auto Cfg = P->getConfig(Params(), Diags.callback());
   EXPECT_THAT(Diags.Diagnostics,
-              ElementsAre(DiagMessage("Unknown CompileFlags key Unknown")));
+              ElementsAre(DiagMessage("Unknown CompileFlags key 'Unknown'")));
+  EXPECT_THAT(Diags.Files, ElementsAre(testPath("foo.yaml")));
   EXPECT_THAT(getAddedArgs(Cfg), ElementsAre("foo"));
-  Diags.Diagnostics.clear();
+  Diags.clear();
 
   Cfg = P->getConfig(Params(), Diags.callback());
   EXPECT_THAT(Diags.Diagnostics, IsEmpty()) << "Cached, not re-parsed";
+  EXPECT_THAT(Diags.Files, IsEmpty());
   EXPECT_THAT(getAddedArgs(Cfg), ElementsAre("foo"));
+
+  FS.Files["foo.yaml"] = AddFooWithTypoErr;
+  Cfg = P->getConfig(Params(), Diags.callback());
+  EXPECT_THAT(
+      Diags.Diagnostics,
+      ElementsAre(DiagMessage(
+          "Unknown CompileFlags key 'Removr'; did you mean 'Remove'?")));
+  EXPECT_THAT(Diags.Files, ElementsAre(testPath("foo.yaml")));
+  EXPECT_THAT(getAddedArgs(Cfg), ElementsAre("foo"));
+  Diags.clear();
 
   FS.Files["foo.yaml"] = AddBarBaz;
   Cfg = P->getConfig(Params(), Diags.callback());
   EXPECT_THAT(Diags.Diagnostics, IsEmpty()) << "New config, no errors";
+  EXPECT_THAT(Diags.Files, ElementsAre(testPath("foo.yaml")));
   EXPECT_THAT(getAddedArgs(Cfg), ElementsAre("bar", "baz"));
+  Diags.clear();
 
   FS.Files.erase("foo.yaml");
   Cfg = P->getConfig(Params(), Diags.callback());
   EXPECT_THAT(Diags.Diagnostics, IsEmpty()) << "Missing file is not an error";
+  EXPECT_THAT(Diags.Files, IsEmpty());
   EXPECT_THAT(getAddedArgs(Cfg), IsEmpty());
 }
 
@@ -133,21 +154,27 @@ TEST(ProviderTest, FromAncestorRelativeYAMLFiles) {
 
   auto Cfg = P->getConfig(Params(), Diags.callback());
   EXPECT_THAT(Diags.Diagnostics, IsEmpty());
+  EXPECT_THAT(Diags.Files, IsEmpty());
   EXPECT_THAT(getAddedArgs(Cfg), IsEmpty());
 
   Cfg = P->getConfig(ABCParams, Diags.callback());
   EXPECT_THAT(Diags.Diagnostics,
-              ElementsAre(DiagMessage("Unknown CompileFlags key Unknown")));
+              ElementsAre(DiagMessage("Unknown CompileFlags key 'Unknown'")));
+  // FIXME: fails on windows: paths have mixed slashes like C:\a/b\c.yaml
+  EXPECT_THAT(Diags.Files,
+              ElementsAre(testPath("a/foo.yaml"), testPath("a/b/c/foo.yaml")));
   EXPECT_THAT(getAddedArgs(Cfg), ElementsAre("foo", "bar", "baz"));
-  Diags.Diagnostics.clear();
+  Diags.clear();
 
   Cfg = P->getConfig(AParams, Diags.callback());
   EXPECT_THAT(Diags.Diagnostics, IsEmpty()) << "Cached config";
+  EXPECT_THAT(Diags.Files, IsEmpty());
   EXPECT_THAT(getAddedArgs(Cfg), ElementsAre("foo"));
 
   FS.Files.erase("a/foo.yaml");
   Cfg = P->getConfig(ABCParams, Diags.callback());
   EXPECT_THAT(Diags.Diagnostics, IsEmpty());
+  EXPECT_THAT(Diags.Files, IsEmpty());
   EXPECT_THAT(getAddedArgs(Cfg), ElementsAre("bar", "baz"));
 }
 
@@ -167,9 +194,9 @@ TEST(ProviderTest, Staleness) {
   FS.Files["foo.yaml"] = AddFooWithErr;
   auto Cfg = P->getConfig(StaleOK, Diags.callback());
   EXPECT_THAT(Diags.Diagnostics,
-              ElementsAre(DiagMessage("Unknown CompileFlags key Unknown")));
+              ElementsAre(DiagMessage("Unknown CompileFlags key 'Unknown'")));
   EXPECT_THAT(getAddedArgs(Cfg), ElementsAre("foo"));
-  Diags.Diagnostics.clear();
+  Diags.clear();
 
   // Stale value reused by policy.
   FS.Files["foo.yaml"] = AddBarBaz;
@@ -211,14 +238,14 @@ CompileFlags:
   auto Cfg = P->getConfig(Bar, Diags.callback());
   ASSERT_THAT(Diags.Diagnostics, IsEmpty());
   EXPECT_THAT(getAddedArgs(Cfg), ElementsAre("bar"));
-  Diags.Diagnostics.clear();
+  Diags.clear();
 
   // This should be a relative match/exclude hence baz/bar.h should be excluded.
   P = Provider::fromAncestorRelativeYAMLFiles("foo.yaml", FS);
   Cfg = P->getConfig(Bar, Diags.callback());
   ASSERT_THAT(Diags.Diagnostics, IsEmpty());
   EXPECT_THAT(getAddedArgs(Cfg), IsEmpty());
-  Diags.Diagnostics.clear();
+  Diags.clear();
 }
 } // namespace
 } // namespace config

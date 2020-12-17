@@ -170,7 +170,7 @@ define signext i32 @weak_default_function_caller(i32 %i) {
 
 ; STATIC-LABEL: @weak_default_function_caller
 ; STATIC:       bl weak_default_function
-; STATIC-NOT:   nop
+; STATIC-NEXT:  nop
 ; STATIC:       blr
 
 ; CHECK-LABEL:  @weak_default_function_caller
@@ -223,12 +223,12 @@ define signext i32 @weak_local_function_caller(i32 %i) {
 
 ; STATIC-LABEL: @weak_local_function_caller
 ; STATIC:       bl weak_local_function
-; STATIC-NOT:   nop
+; STATIC-NEXT:  nop
 ; STATIC:       blr
 
 ; CHECK-LABEL:  @weak_local_function_caller
 ; CHECK:        bl weak_local_function
-; CHECK-NOT:    nop
+; CHECK-NEXT:   nop
 ; CHECK:        blr
 }
 
@@ -239,12 +239,12 @@ define i32 @external_local_function_caller(i32 %i) {
 
 ; STATIC-LABEL: @external_local_function_caller
 ; STATIC:       bl external_local_function
-; STATIC-NOT:  nop
+; STATIC-NEXT:  nop
 ; STATIC:       blr
 
 ; CHECK-LABEL:  @external_local_function_caller
 ; CHECK:        bl external_local_function
-; CHECK-NOT:    nop
+; CHECK-NEXT:   nop
 ; CHECK:        blr
 }
 
@@ -275,7 +275,7 @@ define signext i32 @weak_preemptable_function_caller(i32 %i) {
 
 ; STATIC-LABEL: @weak_preemptable_function_caller
 ; STATIC:       bl weak_preemptable_function
-; STATIC-NOT:   nop
+; STATIC-NEXT:  nop
 ; STATIC:       blr
 
 ; CHECK-LABEL:  @weak_preemptable_function_caller

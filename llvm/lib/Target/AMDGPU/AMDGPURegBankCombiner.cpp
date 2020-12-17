@@ -11,8 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AMDGPUTargetMachine.h"
 #include "AMDGPULegalizerInfo.h"
+#include "AMDGPURegisterBankInfo.h"
+#include "AMDGPUTargetMachine.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
@@ -22,13 +24,93 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/Support/Debug.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 
 #define DEBUG_TYPE "amdgpu-regbank-combiner"
 
 using namespace llvm;
 using namespace MIPatternMatch;
 
+class AMDGPURegBankCombinerHelper {
+protected:
+  MachineIRBuilder &B;
+  MachineFunction &MF;
+  MachineRegisterInfo &MRI;
+  const RegisterBankInfo &RBI;
+  const TargetRegisterInfo &TRI;
+  CombinerHelper &Helper;
+
+public:
+  AMDGPURegBankCombinerHelper(MachineIRBuilder &B, CombinerHelper &Helper)
+      : B(B), MF(B.getMF()), MRI(*B.getMRI()),
+        RBI(*MF.getSubtarget().getRegBankInfo()),
+        TRI(*MF.getSubtarget().getRegisterInfo()), Helper(Helper){};
+
+  bool isVgprRegBank(Register Reg);
+
+  struct RmUniformWFMatchInfo {
+    Register Dst, WFReplaceReg;
+  };
+
+  // Combine support to remove amdgcn_waterfall_readfirstlane or
+  // amdgcn_waterfall_begin intrinsics if the index is determined to be
+  // uniform. The SIInsertWaterfall pass can handle their removal and in some
+  // cases remove the waterfall altogether
+  bool matchRmUniformWF(MachineInstr &MI, RmUniformWFMatchInfo &MatchInfo);
+  void applyRmUniformWF(MachineInstr &MI, RmUniformWFMatchInfo &MatchInfo);
+};
+
+bool AMDGPURegBankCombinerHelper::isVgprRegBank(Register Reg) {
+  return RBI.getRegBank(Reg, MRI, TRI)->getID() == AMDGPU::VGPRRegBankID;
+}
+
+bool AMDGPURegBankCombinerHelper::matchRmUniformWF(
+    MachineInstr &MI, RmUniformWFMatchInfo &MatchInfo) {
+  auto IntrID = MI.getIntrinsicID();
+  Register Dst, WFReplaceReg;
+
+  switch (IntrID) {
+  case Intrinsic::amdgcn_waterfall_readfirstlane: {
+    Register IdxReg = MI.getOperand(3).getReg();
+    Register IdxSrcReg = getSrcRegIgnoringCopies(IdxReg, MRI);
+    if (!isVgprRegBank(IdxSrcReg)) {
+      WFReplaceReg = IdxSrcReg;
+      break;
+    }
+    return false;
+  }
+  case Intrinsic::amdgcn_waterfall_begin: {
+    Register IdxReg = MI.getOperand(3).getReg();
+    if (!isVgprRegBank(getSrcRegIgnoringCopies(IdxReg, MRI))) {
+      WFReplaceReg = MI.getOperand(2).getReg();
+      break;
+    }
+    return false;
+  }
+  default:
+    return false;
+  }
+
+  Dst = MI.getOperand(0).getReg();
+  MatchInfo = {Dst, WFReplaceReg};
+  return true;
+}
+
+void AMDGPURegBankCombinerHelper::applyRmUniformWF(
+    MachineInstr &MI, RmUniformWFMatchInfo &MatchInfo) {
+  MI.eraseFromParent();
+  Helper.replaceRegWith(MRI, MatchInfo.Dst, MatchInfo.WFReplaceReg);
+}
+
+class AMDGPURegBankCombinerHelperState {
+protected:
+  CombinerHelper &Helper;
+  AMDGPURegBankCombinerHelper &RegBankHelper;
+
+public:
+  AMDGPURegBankCombinerHelperState(CombinerHelper &Helper,
+                                   AMDGPURegBankCombinerHelper &RegBankHelper)
+      : Helper(Helper), RegBankHelper(RegBankHelper) {}
+};
 
 #define AMDGPUREGBANKCOMBINERHELPER_GENCOMBINERHELPER_DEPS
 #include "AMDGPUGenRegBankGICombiner.inc"
@@ -61,12 +143,14 @@ public:
 };
 
 bool AMDGPURegBankCombinerInfo::combine(GISelChangeObserver &Observer,
-                                              MachineInstr &MI,
-                                              MachineIRBuilder &B) const {
+                                        MachineInstr &MI,
+                                        MachineIRBuilder &B) const {
   CombinerHelper Helper(Observer, B, KB, MDT);
-  AMDGPUGenRegBankCombinerHelper Generated(GeneratedRuleCfg);
+  AMDGPURegBankCombinerHelper RegBankHelper(B, Helper);
+  AMDGPUGenRegBankCombinerHelper Generated(GeneratedRuleCfg, Helper,
+                                           RegBankHelper);
 
-  if (Generated.tryCombineAll(Observer, MI, B, Helper))
+  if (Generated.tryCombineAll(Observer, MI, B))
     return true;
 
   return false;

@@ -1046,7 +1046,7 @@ void spirv::AddressOfOp::build(OpBuilder &builder, OperationState &state,
 
 static LogicalResult verify(spirv::AddressOfOp addressOfOp) {
   auto varOp = dyn_cast_or_null<spirv::GlobalVariableOp>(
-      SymbolTable::lookupNearestSymbolFrom(addressOfOp.getParentOp(),
+      SymbolTable::lookupNearestSymbolFrom(addressOfOp->getParentOp(),
                                            addressOfOp.variable()));
   if (!varOp) {
     return addressOfOp.emitOpError("expected spv.globalVariable symbol");
@@ -1849,7 +1849,7 @@ static LogicalResult verify(spirv::FunctionCallOp functionCallOp) {
 
   auto funcOp =
       dyn_cast_or_null<spirv::FuncOp>(SymbolTable::lookupNearestSymbolFrom(
-          functionCallOp.getParentOp(), fnName));
+          functionCallOp->getParentOp(), fnName));
   if (!funcOp) {
     return functionCallOp.emitOpError("callee function '")
            << fnName << "' not found in nearest symbol table";
@@ -1898,7 +1898,7 @@ static LogicalResult verify(spirv::FunctionCallOp functionCallOp) {
 }
 
 CallInterfaceCallable spirv::FunctionCallOp::getCallableForCallee() {
-  return getAttrOfType<SymbolRefAttr>(kCallee);
+  return (*this)->getAttrOfType<SymbolRefAttr>(kCallee);
 }
 
 Operation::operand_range spirv::FunctionCallOp::getArgOperands() {
@@ -2005,9 +2005,9 @@ static LogicalResult verify(spirv::GlobalVariableOp varOp) {
   }
 
   if (auto init =
-          varOp.getAttrOfType<FlatSymbolRefAttr>(kInitializerAttrName)) {
+          varOp->getAttrOfType<FlatSymbolRefAttr>(kInitializerAttrName)) {
     Operation *initOp = SymbolTable::lookupNearestSymbolFrom(
-        varOp.getParentOp(), init.getValue());
+        varOp->getParentOp(), init.getValue());
     // TODO: Currently only variable initialization with specialization
     // constants and other variables is supported. They could be normal
     // constants in the module scope as well.
@@ -2066,7 +2066,7 @@ static LogicalResult verify(spirv::GroupNonUniformBroadcastOp broadcastOp) {
   // SPIR-V spec: "Before version 1.5, Id must come from a
   // constant instruction.
   auto targetEnv = spirv::getDefaultTargetEnv(broadcastOp.getContext());
-  if (auto spirvModule = broadcastOp.getParentOfType<spirv::ModuleOp>())
+  if (auto spirvModule = broadcastOp->getParentOfType<spirv::ModuleOp>())
     targetEnv = spirv::lookupTargetEnvOrDefault(spirvModule);
 
   if (targetEnv.getVersion() < spirv::Version::V_1_5) {
@@ -2407,12 +2407,12 @@ void spirv::LoopOp::addEntryAndMergeBlock() {
 //===----------------------------------------------------------------------===//
 
 static LogicalResult verify(spirv::MergeOp mergeOp) {
-  auto *parentOp = mergeOp.getParentOp();
+  auto *parentOp = mergeOp->getParentOp();
   if (!parentOp || !isa<spirv::SelectionOp, spirv::LoopOp>(parentOp))
     return mergeOp.emitOpError(
         "expected parent op to be 'spv.selection' or 'spv.loop'");
 
-  Block &parentLastBlock = mergeOp.getParentRegion()->back();
+  Block &parentLastBlock = mergeOp->getParentRegion()->back();
   if (mergeOp.getOperation() != parentLastBlock.getTerminator())
     return mergeOp.emitOpError(
         "can only be used in the last block of 'spv.selection' or 'spv.loop'");
@@ -2577,7 +2577,7 @@ static LogicalResult verify(spirv::ModuleOp moduleOp) {
 
 static LogicalResult verify(spirv::ReferenceOfOp referenceOfOp) {
   auto *specConstSym = SymbolTable::lookupNearestSymbolFrom(
-      referenceOfOp.getParentOp(), referenceOfOp.spec_const());
+      referenceOfOp->getParentOp(), referenceOfOp.spec_const());
   Type constType;
 
   auto specConstOp = dyn_cast_or_null<spirv::SpecConstantOp>(specConstSym);
@@ -2792,13 +2792,13 @@ static ParseResult parseSpecConstantOp(OpAsmParser &parser,
 static void print(spirv::SpecConstantOp constOp, OpAsmPrinter &printer) {
   printer << spirv::SpecConstantOp::getOperationName() << ' ';
   printer.printSymbolName(constOp.sym_name());
-  if (auto specID = constOp.getAttrOfType<IntegerAttr>(kSpecIdAttrName))
+  if (auto specID = constOp->getAttrOfType<IntegerAttr>(kSpecIdAttrName))
     printer << ' ' << kSpecIdAttrName << '(' << specID.getInt() << ')';
   printer << " = " << constOp.default_value();
 }
 
 static LogicalResult verify(spirv::SpecConstantOp constOp) {
-  if (auto specID = constOp.getAttrOfType<IntegerAttr>(kSpecIdAttrName))
+  if (auto specID = constOp->getAttrOfType<IntegerAttr>(kSpecIdAttrName))
     if (specID.getValue().isNegative())
       return constOp.emitOpError("SpecId cannot be negative");
 
@@ -3383,7 +3383,7 @@ static LogicalResult verify(spirv::SpecConstantCompositeOp constOp) {
 
     auto constituentSpecConstOp =
         dyn_cast<spirv::SpecConstantOp>(SymbolTable::lookupNearestSymbolFrom(
-            constOp.getParentOp(), constituent.getValue()));
+            constOp->getParentOp(), constituent.getValue()));
 
     if (constituentSpecConstOp.default_value().getType() !=
         cType.getElementType(index))
@@ -3391,6 +3391,77 @@ static LogicalResult verify(spirv::SpecConstantCompositeOp constOp) {
              << cType.getElementType(index) << ", but provided "
              << constituentSpecConstOp.default_value().getType();
   }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// spv.SpecConstantOperation
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseSpecConstantOperationOp(OpAsmParser &parser,
+                                                OperationState &state) {
+  Region *body = state.addRegion();
+
+  if (parser.parseKeyword("wraps"))
+    return failure();
+
+  body->push_back(new Block);
+  Block &block = body->back();
+  Operation *wrappedOp = parser.parseGenericOperation(&block, block.begin());
+
+  if (!wrappedOp)
+    return failure();
+
+  OpBuilder builder(parser.getBuilder().getContext());
+  builder.setInsertionPointToEnd(&block);
+  builder.create<spirv::YieldOp>(wrappedOp->getLoc(), wrappedOp->getResult(0));
+  state.location = wrappedOp->getLoc();
+
+  state.addTypes(wrappedOp->getResult(0).getType());
+
+  if (parser.parseOptionalAttrDict(state.attributes))
+    return failure();
+
+  return success();
+}
+
+static void print(spirv::SpecConstantOperationOp op, OpAsmPrinter &printer) {
+  printer << op.getOperationName() << " wraps ";
+  printer.printGenericOp(&op.body().front().front());
+}
+
+static LogicalResult verify(spirv::SpecConstantOperationOp constOp) {
+  Block &block = constOp.getRegion().getBlocks().front();
+
+  if (block.getOperations().size() != 2)
+    return constOp.emitOpError("expected exactly 2 nested ops");
+
+  Operation &enclosedOp = block.getOperations().front();
+
+  // TODO Add a `UsableInSpecConstantOp` trait and mark ops from the list below
+  // with it instead.
+  if (!isa<spirv::SConvertOp, spirv::UConvertOp, spirv::FConvertOp,
+           spirv::SNegateOp, spirv::NotOp, spirv::IAddOp, spirv::ISubOp,
+           spirv::IMulOp, spirv::UDivOp, spirv::SDivOp, spirv::UModOp,
+           spirv::SRemOp, spirv::SModOp, spirv::ShiftRightLogicalOp,
+           spirv::ShiftRightArithmeticOp, spirv::ShiftLeftLogicalOp,
+           spirv::BitwiseOrOp, spirv::BitwiseXorOp, spirv::BitwiseAndOp,
+           spirv::CompositeExtractOp, spirv::CompositeInsertOp,
+           spirv::LogicalOrOp, spirv::LogicalAndOp, spirv::LogicalNotOp,
+           spirv::LogicalEqualOp, spirv::LogicalNotEqualOp, spirv::SelectOp,
+           spirv::IEqualOp, spirv::INotEqualOp, spirv::ULessThanOp,
+           spirv::SLessThanOp, spirv::UGreaterThanOp, spirv::SGreaterThanOp,
+           spirv::ULessThanEqualOp, spirv::SLessThanEqualOp,
+           spirv::UGreaterThanEqualOp, spirv::SGreaterThanEqualOp>(enclosedOp))
+    return constOp.emitOpError("invalid enclosed op");
+
+  for (auto operand : enclosedOp.getOperands())
+    if (!isa<spirv::ConstantOp, spirv::SpecConstantOp,
+             spirv::SpecConstantCompositeOp, spirv::SpecConstantOperationOp>(
+            operand.getDefiningOp()))
+      return constOp.emitOpError(
+          "invalid operand, must be defined by a constant operation");
 
   return success();
 }

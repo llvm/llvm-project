@@ -1,8 +1,8 @@
-; RUN: opt < %s -simplifycfg -S > %t
+; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S > %t
 ; RUN: not grep "^BB.tomerge" %t
 ; RUN: grep "^BB.nomerge" %t | count 4
 
-; ModuleID = '<stdin>' 
+; ModuleID = '<stdin>'
 declare i1 @foo()
 
 declare i1 @bar(i32)
@@ -78,7 +78,7 @@ Pre-Exit:       ; preds = %Succ
         ; not completely trivial
 	%cond2 = call i1 @foo( )		; <i1> [#uses=1]
 	br i1 %cond2, label %Succ, label %Exit
-        
+
 Exit:		; preds = %Pre-Exit
 	ret void
 }

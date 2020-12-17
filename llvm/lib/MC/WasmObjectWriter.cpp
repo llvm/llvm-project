@@ -328,9 +328,6 @@ private:
   void writeCustomSection(WasmCustomSection &CustomSection,
                           const MCAssembler &Asm, const MCAsmLayout &Layout);
   void writeCustomRelocSections();
-  void
-  updateCustomSectionRelocations(const SmallVector<WasmFunction, 4> &Functions,
-                                 const MCAsmLayout &Layout);
 
   uint64_t getProvisionalValue(const WasmRelocationEntry &RelEntry,
                                const MCAsmLayout &Layout);
@@ -1370,6 +1367,9 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
     if (Mode == DwoMode::DwoOnly && !isDwoSection(Sec))
       continue;
 
+    LLVM_DEBUG(dbgs() << "Processing Section " << SectionName << "  group "
+                      << Section.getGroup() << "\n";);
+
     // .init_array sections are handled specially elsewhere.
     if (SectionName.startswith(".init_array"))
       continue;
@@ -1422,6 +1422,16 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
         TargetFeaturesSection =
             std::make_unique<WasmCustomSection>(Name, &Section);
         continue;
+      }
+
+      // Custom sections can also belong to COMDAT groups. In this case the
+      // decriptor's "index" field is the section index (in the final object
+      // file), but that is not known until after layout, so it must be fixed up
+      // later
+      if (const MCSymbolWasm *C = Section.getGroup()) {
+        Comdats[C->getName()].emplace_back(
+            WasmComdatEntry{wasm::WASM_COMDAT_SECTION,
+                            static_cast<uint32_t>(CustomSections.size())});
       }
 
       CustomSections.emplace_back(Name, &Section);
@@ -1790,10 +1800,10 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
     writeTypeSection(Signatures);
     writeImportSection(Imports, DataSize, TableElems.size());
     writeFunctionSection(Functions);
+    writeTableSection(Tables);
     // Skip the "memory" section; we import the memory instead.
     writeEventSection(Events);
     writeGlobalSection(Globals);
-    writeTableSection(Tables);
     writeExportSection(Exports);
     writeElemSection(TableElems);
     writeDataCountSection();
@@ -1802,9 +1812,17 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
     DataSectionIndex = writeDataSection(Layout);
   }
 
-  for (auto &CustomSection : CustomSections) {
-    writeCustomSection(CustomSection, Asm, Layout);
+  // The Sections in the COMDAT list have placeholder indices (their index among
+  // custom sections, rather than among all sections). Fix them up here.
+  for (auto &Group : Comdats) {
+    for (auto &Entry : Group.second) {
+      if (Entry.Kind == wasm::WASM_COMDAT_SECTION) {
+        Entry.Index += SectionCount;
+      }
+    }
   }
+  for (auto &CustomSection : CustomSections)
+    writeCustomSection(CustomSection, Asm, Layout);
 
   if (Mode != DwoMode::DwoOnly) {
     writeLinkingMetaDataSection(SymbolInfos, InitFuncs, Comdats);

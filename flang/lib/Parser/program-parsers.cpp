@@ -269,9 +269,9 @@ TYPE_PARSER(construct<Rename>("OPERATOR (" >>
 
 // R1412 only -> generic-spec | only-use-name | rename
 // R1413 only-use-name -> use-name
+// N.B. generic-spec and only-use-name are ambiguous; resolved with symbols
 TYPE_PARSER(construct<Only>(Parser<Rename>{}) ||
-    construct<Only>(indirect(genericSpec)) ||
-    construct<Only>(name)) // TODO: ambiguous, accepted by genericSpec
+    construct<Only>(indirect(genericSpec)) || construct<Only>(name))
 
 // R1416 submodule ->
 //         submodule-stmt [specification-part] [module-subprogram-part]

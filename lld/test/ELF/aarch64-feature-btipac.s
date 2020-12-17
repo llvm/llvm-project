@@ -24,14 +24,14 @@
 # BTIPACSO: 0000000000010360 <.plt>:
 # BTIPACSO-NEXT:    10360:              bti     c
 # BTIPACSO-NEXT:                        stp     x16, x30, [sp, #-16]!
-# BTIPACSO-NEXT:                        adrp    x16, #131072
+# BTIPACSO-NEXT:                        adrp    x16, 0x30000
 # BTIPACSO-NEXT:                        ldr     x17, [x16, #1136]
 # BTIPACSO-NEXT:                        add     x16, x16, #1136
 # BTIPACSO-NEXT:                        br      x17
 # BTIPACSO-NEXT:                        nop
 # BTIPACSO-NEXT:                        nop
 # BTIPACSO: 0000000000010380 <func3@plt>:
-# BTIPACSO-NEXT:    10380:              adrp    x16, #131072
+# BTIPACSO-NEXT:    10380:              adrp    x16, 0x30000
 # BTIPACSO-NEXT:                        ldr     x17, [x16, #1144]
 # BTIPACSO-NEXT:                        add     x16, x16, #1144
 # BTIPACSO-NEXT:                        br      x17
@@ -61,7 +61,7 @@
 # BTIPACEX: 0000000000210380 <.plt>:
 # BTIPACEX-NEXT:   210380:              bti     c
 # BTIPACEX-NEXT:                        stp     x16, x30, [sp, #-16]!
-# BTIPACEX-NEXT:                        adrp    x16, #131072
+# BTIPACEX-NEXT:                        adrp    x16, 0x230000
 # BTIPACEX-NEXT:                        ldr     x17, [x16, #1192]
 # BTIPACEX-NEXT:                        add     x16, x16, #1192
 # BTIPACEX-NEXT:                        br      x17
@@ -69,7 +69,7 @@
 # BTIPACEX-NEXT:                        nop
 # BTIPACEX: 00000000002103a0 <func2@plt>:
 # BTIPACEX-NEXT:   2103a0:              bti     c
-# BTIPACEX-NEXT:                        adrp    x16, #131072
+# BTIPACEX-NEXT:                        adrp    x16, 0x230000
 # BTIPACEX-NEXT:                        ldr     x17, [x16, #1200]
 # BTIPACEX-NEXT:                        add     x16, x16, #1200
 # BTIPACEX-NEXT:                        br      x17
@@ -93,7 +93,7 @@
 # EX: Disassembly of section .plt:
 # EX: 00000000002102f0 <.plt>:
 # EX-NEXT:   2102f0: stp     x16, x30, [sp, #-16]!
-# EX-NEXT:           adrp    x16, #131072
+# EX-NEXT:           adrp    x16, 0x230000
 # EX-NEXT:           ldr     x17, [x16, #1024]
 # EX-NEXT:           add     x16, x16, #1024
 # EX-NEXT:           br      x17
@@ -101,7 +101,7 @@
 # EX-NEXT:           nop
 # EX-NEXT:           nop
 # EX: 0000000000210310 <func2@plt>:
-# EX:        210310: adrp    x16, #131072
+# EX:        210310: adrp    x16, 0x230000
 # EX-NEXT:           ldr     x17, [x16, #1032]
 # EX-NEXT:           add     x16, x16, #1032
 # EX-NEXT:           br      x17
@@ -155,7 +155,7 @@ func1:
 # BTIPACEX2: 0000000000210380 <.plt>:
 # BTIPACEX2-NEXT:   210380:              bti     c
 # BTIPACEX2-NEXT:                        stp     x16, x30, [sp, #-16]!
-# BTIPACEX2-NEXT:                        adrp    x16, #131072
+# BTIPACEX2-NEXT:                        adrp    x16, 0x230000
 # BTIPACEX2-NEXT:                        ldr     x17, [x16, #1208]
 # BTIPACEX2-NEXT:                        add     x16, x16, #1208
 # BTIPACEX2-NEXT:                        br      x17
@@ -163,7 +163,7 @@ func1:
 # BTIPACEX2-NEXT:                        nop
 # BTIPACEX2: 00000000002103a0 <func2@plt>:
 # BTIPACEX2-NEXT:   2103a0:              bti     c
-# BTIPACEX2-NEXT:                        adrp    x16, #131072
+# BTIPACEX2-NEXT:                        adrp    x16, 0x230000
 # BTIPACEX2-NEXT:                        ldr     x17, [x16, #1216]
 # BTIPACEX2-NEXT:                        add     x16, x16, #1216
 # BTIPACEX2-NEXT:                        autia1716

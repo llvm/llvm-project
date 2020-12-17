@@ -302,7 +302,7 @@ static bool collectUnprimedAccPHIs(MachineRegisterInfo *MRI,
       // code.
       if (Opcode != PPC::PHI)
         continue;
-      if (std::find(PHIs.begin(), PHIs.end(), Instr) != PHIs.end())
+      if (llvm::is_contained(PHIs, Instr))
         return false;
       PHIs.push_back(Instr);
     }
@@ -987,7 +987,7 @@ bool PPCMIPeephole::simplifyCode(void) {
       case PPC::RLWINM_rec:
       case PPC::RLWINM8:
       case PPC::RLWINM8_rec: {
-        Simplified = TII->simplifyRotateAndMaskInstr(MI, ToErase);
+        Simplified = TII->combineRLWINM(MI, &ToErase);
         if (Simplified)
           ++NumRotatesCollapsed;
         break;

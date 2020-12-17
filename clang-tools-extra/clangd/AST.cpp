@@ -258,7 +258,7 @@ std::string printTemplateSpecializationArgs(const NamedDecl &ND) {
       // TemplateArgumentTypeLocs, they only have TemplateArgumentTypes. So we
       // create a new argument location list from TypeSourceInfo.
       auto STL = TSI->getTypeLoc().getAs<TemplateSpecializationTypeLoc>();
-      llvm::SmallVector<TemplateArgumentLoc, 8> ArgLocs;
+      llvm::SmallVector<TemplateArgumentLoc> ArgLocs;
       ArgLocs.reserve(STL.getNumArgs());
       for (unsigned I = 0; I < STL.getNumArgs(); ++I)
         ArgLocs.push_back(STL.getArgLoc(I));
@@ -303,8 +303,8 @@ SymbolID getSymbolID(const llvm::StringRef MacroName, const MacroInfo *MI,
 std::string printType(const QualType QT, const DeclContext &CurContext) {
   std::string Result;
   llvm::raw_string_ostream OS(Result);
-  auto Decls = explicitReferenceTargets(
-      ast_type_traits::DynTypedNode::create(QT), DeclRelation::Alias);
+  auto Decls =
+      explicitReferenceTargets(DynTypedNode::create(QT), DeclRelation::Alias);
   if (!Decls.empty())
     OS << getQualification(CurContext.getParentASTContext(), &CurContext,
                            Decls.front(),

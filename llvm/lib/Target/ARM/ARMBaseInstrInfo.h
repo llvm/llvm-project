@@ -360,6 +360,11 @@ public:
   /// Enable outlining by default at -Oz.
   bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const override;
 
+  bool isUnspillableTerminatorImpl(const MachineInstr *MI) const override {
+    return MI->getOpcode() == ARM::t2LoopEndDec ||
+           MI->getOpcode() == ARM::t2DoLoopStartTP;
+  }
+
 private:
   /// Returns an unused general-purpose register which can be used for
   /// constructing an outlined call if one exists. Returns 0 otherwise.
@@ -612,56 +617,6 @@ unsigned VCMPOpcodeToVPT(unsigned Opcode) {
   case ARM::MVE_VCMPs32r:
     return ARM::MVE_VPTv4s32r;
   }
-}
-
-static inline
-unsigned VCTPOpcodeToLSTP(unsigned Opcode, bool IsDoLoop) {
-  switch (Opcode) {
-  default:
-    llvm_unreachable("unhandled vctp opcode");
-    break;
-  case ARM::MVE_VCTP8:
-    return IsDoLoop ? ARM::MVE_DLSTP_8 : ARM::MVE_WLSTP_8;
-  case ARM::MVE_VCTP16:
-    return IsDoLoop ? ARM::MVE_DLSTP_16 : ARM::MVE_WLSTP_16;
-  case ARM::MVE_VCTP32:
-    return IsDoLoop ? ARM::MVE_DLSTP_32 : ARM::MVE_WLSTP_32;
-  case ARM::MVE_VCTP64:
-    return IsDoLoop ? ARM::MVE_DLSTP_64 : ARM::MVE_WLSTP_64;
-  }
-  return 0;
-}
-
-static inline unsigned getTailPredVectorWidth(unsigned Opcode) {
-  switch (Opcode) {
-  default:
-    llvm_unreachable("unhandled vctp opcode");
-  case ARM::MVE_VCTP8:  return 16;
-  case ARM::MVE_VCTP16: return 8;
-  case ARM::MVE_VCTP32: return 4;
-  case ARM::MVE_VCTP64: return 2;
-  }
-  return 0;
-}
-
-static inline bool isVCTP(const MachineInstr *MI) {
-  switch (MI->getOpcode()) {
-  default:
-    break;
-  case ARM::MVE_VCTP8:
-  case ARM::MVE_VCTP16:
-  case ARM::MVE_VCTP32:
-  case ARM::MVE_VCTP64:
-    return true;
-  }
-  return false;
-}
-
-static inline
-bool isLoopStart(MachineInstr &MI) {
-  return MI.getOpcode() == ARM::t2DoLoopStart ||
-         MI.getOpcode() == ARM::t2DoLoopStartTP ||
-         MI.getOpcode() == ARM::t2WhileLoopStart;
 }
 
 static inline

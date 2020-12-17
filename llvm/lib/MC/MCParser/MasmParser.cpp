@@ -783,8 +783,6 @@ private:
   /// def_range types parsed by this class.
   StringMap<CVDefRangeType> CVDefRangeTypeMap;
 
-  bool parseInitValue(unsigned Size);
-
   // ".ascii", ".asciz", ".string"
   bool parseDirectiveAscii(StringRef IDVal, bool ZeroTerminated);
 

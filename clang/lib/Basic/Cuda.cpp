@@ -72,23 +72,34 @@ CudaArchToStringMap arch_names[] = {
     SM(70), SM(72),                  // Volta
     SM(75),                          // Turing
     SM(80),                          // Ampere
-    GFX(600), // tahiti
-    GFX(601), // pitcairn, verde
-    GFX(602), // oland, hainan
-    GFX(700), // kaveri
-    GFX(701), // hawaii
-    GFX(702), // 290,290x,R390,R390x
-    GFX(703), // kabini mullins
-    GFX(704), // bonaire
-    GFX(705),
-    GFX(801), // carrizo
-    GFX(802), // tonga,iceland
-    GFX(803), // fiji,polaris10
-    GFX(805), // tongapro
-    GFX(810), // stoney
-    GFX(900), // vega, instinct
-    GFX(902), GFX(904), GFX(906), GFX(908), GFX(909), GFX(90c),
-    GFX(1010), GFX(1011), GFX(1012), GFX(1030), GFX(1031), GFX(1032), GFX(1033)
+    GFX(600),  // gfx600
+    GFX(601),  // gfx601
+    GFX(602),  // gfx602
+    GFX(700),  // gfx700
+    GFX(701),  // gfx701
+    GFX(702),  // gfx702
+    GFX(703),  // gfx703
+    GFX(704),  // gfx704
+    GFX(705),  // gfx705
+    GFX(801),  // gfx801
+    GFX(802),  // gfx802
+    GFX(803),  // gfx803
+    GFX(805),  // gfx805
+    GFX(810),  // gfx810
+    GFX(900),  // gfx900
+    GFX(902),  // gfx902
+    GFX(904),  // gfx903
+    GFX(906),  // gfx906
+    GFX(908),  // gfx908
+    GFX(909),  // gfx909
+    GFX(90c),  // gfx90c
+    GFX(1010), // gfx1010
+    GFX(1011), // gfx1011
+    GFX(1012), // gfx1012
+    GFX(1030), // gfx1030
+    GFX(1031), // gfx1031
+    GFX(1032), // gfx1032
+    GFX(1033), // gfx1033
     // clang-format on
 };
 #undef SM

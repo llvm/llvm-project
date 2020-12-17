@@ -33,7 +33,9 @@ add_mlir_library(MLIRIR
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/IR
 
   DEPENDS
+  MLIRBuiltinDialectIncGen
   MLIRBuiltinOpsIncGen
+  MLIRBuiltinTypesIncGen
   MLIRCallInterfacesIncGen
   MLIROpAsmInterfaceIncGen
   MLIRRegionKindInterfaceIncGen

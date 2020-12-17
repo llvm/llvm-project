@@ -1069,6 +1069,15 @@ bool isEntryFunctionCC(CallingConv::ID CC) {
   }
 }
 
+bool isModuleEntryFunctionCC(CallingConv::ID CC) {
+  switch (CC) {
+  case CallingConv::AMDGPU_Gfx:
+    return true;
+  default:
+    return isEntryFunctionCC(CC);
+  }
+}
+
 bool hasXNACK(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureXNACK];
 }
@@ -1534,6 +1543,14 @@ Optional<int64_t> getSMRDEncodedLiteralOffset32(const MCSubtargetInfo &ST,
 
   int64_t EncodedOffset = convertSMRDOffsetUnits(ST, ByteOffset);
   return isUInt<32>(EncodedOffset) ? Optional<int64_t>(EncodedOffset) : None;
+}
+
+unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST, bool Signed) {
+  // Address offset is 12-bit signed for GFX10, 13-bit for GFX9.
+  if (AMDGPU::isGFX10(ST))
+    return Signed ? 12 : 11;
+
+  return Signed ? 13 : 12;
 }
 
 // Given Imm, split it into the values to put into the SOffset and ImmOffset

@@ -29,7 +29,6 @@ private:
   RecordKeeper &Records;
 
   json::Value translateInit(const Init &I);
-  json::Array listSuperclasses(const Record &R);
 
 public:
   JSONEmitter(RecordKeeper &R);

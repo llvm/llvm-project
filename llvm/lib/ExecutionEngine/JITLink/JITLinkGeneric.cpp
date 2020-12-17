@@ -25,18 +25,6 @@ JITLinkerBase::~JITLinkerBase() {}
 void JITLinkerBase::linkPhase1(std::unique_ptr<JITLinkerBase> Self) {
 
   LLVM_DEBUG({
-    dbgs() << "Building jitlink graph for new input "
-           << Ctx->getObjectBuffer().getBufferIdentifier() << "...\n";
-  });
-
-  // Build the link graph.
-  if (auto GraphOrErr = buildGraph(Ctx->getObjectBuffer()))
-    G = std::move(*GraphOrErr);
-  else
-    return Ctx->notifyFailed(GraphOrErr.takeError());
-  assert(G && "Graph should have been created by buildGraph above");
-
-  LLVM_DEBUG({
     dbgs() << "Starting link phase 1 for graph " << G->getName() << "\n";
   });
 
@@ -266,7 +254,8 @@ Error JITLinkerBase::allocateSegments(const SegmentLayoutMap &Layout) {
   }
   LLVM_DEBUG(dbgs() << " }\n");
 
-  if (auto AllocOrErr = Ctx->getMemoryManager().allocate(Segments))
+  if (auto AllocOrErr =
+          Ctx->getMemoryManager().allocate(Ctx->getJITLinkDylib(), Segments))
     Alloc = std::move(*AllocOrErr);
   else
     return AllocOrErr.takeError();

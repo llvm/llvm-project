@@ -1964,6 +1964,7 @@ private:
 
     if (PrevToken->isOneOf(tok::l_paren, tok::l_square, tok::l_brace,
                            tok::comma, tok::semi, tok::kw_return, tok::colon,
+                           tok::kw_co_return, tok::kw_co_await, tok::kw_co_yield,
                            tok::equal, tok::kw_delete, tok::kw_sizeof,
                            tok::kw_throw) ||
         PrevToken->isOneOf(TT_BinaryOperator, TT_ConditionalExpr,

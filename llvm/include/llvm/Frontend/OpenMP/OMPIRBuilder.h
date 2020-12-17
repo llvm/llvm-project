@@ -201,15 +201,19 @@ public:
   /// convert the logical iteration variable to the loop counter variable in the
   /// loop body.
   ///
-  /// \param Loc       The insert and source location description.
+  /// \param Loc       The insert and source location description. The insert
+  ///                  location can be between two instructions or the end of a
+  ///                  degenerate block (e.g. a BB under construction).
   /// \param BodyGenCB Callback that will generate the loop body code.
   /// \param TripCount Number of iterations the loop body is executed.
+  /// \param Name      Base name used to derive BB and instruction names.
   ///
   /// \returns An object representing the created control flow structure which
   ///          can be used for loop-associated directives.
   CanonicalLoopInfo *createCanonicalLoop(const LocationDescription &Loc,
                                          LoopBodyGenCallbackTy BodyGenCB,
-                                         Value *TripCount);
+                                         Value *TripCount,
+                                         const Twine &Name = "loop");
 
   /// Generator for the control flow structure of an OpenMP canonical loop.
   ///
@@ -233,7 +237,7 @@ public:
   ///      for (uint8_t i = 100u; i > 0; i += 127u)
   ///
   ///
-  /// TODO: May need to add addtional parameters to represent:
+  /// TODO: May need to add additional parameters to represent:
   ///
   ///  * Allow representing downcounting with unsigned integers.
   ///
@@ -252,13 +256,46 @@ public:
   ///                  and Stop are signed integers.
   /// \param InclusiveStop Whether  \p Stop itself is a valid value for the loop
   ///                      counter.
+  /// \param ComputeIP Insertion point for instructions computing the trip
+  ///                  count. Can be used to ensure the trip count is available
+  ///                  at the outermost loop of a loop nest. If not set,
+  ///                  defaults to the preheader of the generated loop.
+  /// \param Name      Base name used to derive BB and instruction names.
   ///
   /// \returns An object representing the created control flow structure which
   ///          can be used for loop-associated directives.
   CanonicalLoopInfo *createCanonicalLoop(const LocationDescription &Loc,
                                          LoopBodyGenCallbackTy BodyGenCB,
                                          Value *Start, Value *Stop, Value *Step,
-                                         bool IsSigned, bool InclusiveStop);
+                                         bool IsSigned, bool InclusiveStop,
+                                         InsertPointTy ComputeIP = {},
+                                         const Twine &Name = "loop");
+
+  /// Modifies the canonical loop to be a statically-scheduled workshare loop.
+  ///
+  /// This takes a \p LoopInfo representing a canonical loop, such as the one
+  /// created by \p createCanonicalLoop and emits additional instructions to
+  /// turn it into a workshare loop. In particular, it calls to an OpenMP
+  /// runtime function in the preheader to obtain the loop bounds to be used in
+  /// the current thread, updates the relevant instructions in the canonical
+  /// loop and calls to an OpenMP runtime finalization function after the loop.
+  ///
+  /// \param Loc      The source location description, the insertion location
+  ///                 is not used.
+  /// \param CLI      A descriptor of the canonical loop to workshare.
+  /// \param AllocaIP An insertion point for Alloca instructions usable in the
+  ///                 preheader of the loop.
+  /// \param NeedsBarrier Indicates whether a barrier must be insterted after
+  ///                     the loop.
+  /// \param Chunk    The size of loop chunk considered as a unit when
+  ///                 scheduling. If \p nullptr, defaults to 1.
+  ///
+  /// \returns Updated CanonicalLoopInfo.
+  CanonicalLoopInfo *createStaticWorkshareLoop(const LocationDescription &Loc,
+                                               CanonicalLoopInfo *CLI,
+                                               InsertPointTy AllocaIP,
+                                               bool NeedsBarrier,
+                                               Value *Chunk = nullptr);
 
   /// Generator for '#omp flush'
   ///
@@ -618,6 +655,28 @@ private:
   /// \param CriticalName Name of the critical region.
   ///
   Value *getOMPCriticalRegionLock(StringRef CriticalName);
+
+  /// Create the control flow structure of a canonical OpenMP loop.
+  ///
+  /// The emitted loop will be disconnected, i.e. no edge to the loop's
+  /// preheader and no terminator in the AfterBB. The OpenMPIRBuilder's
+  /// IRBuilder location is not preserved.
+  ///
+  /// \param DL        DebugLoc used for the instructions in the skeleton.
+  /// \param TripCount Value to be used for the trip count.
+  /// \param F         Function in which to insert the BasicBlocks.
+  /// \param PreInsertBefore  Where to insert BBs that execute before the body,
+  ///                         typically the body itself.
+  /// \param PostInsertBefore Where to insert BBs that execute after the body.
+  /// \param Name      Base name used to derive BB
+  ///                  and instruction names.
+  ///
+  /// \returns The CanonicalLoopInfo that represents the emitted loop.
+  CanonicalLoopInfo *createLoopSkeleton(DebugLoc DL, Value *TripCount,
+                                        Function *F,
+                                        BasicBlock *PreInsertBefore,
+                                        BasicBlock *PostInsertBefore,
+                                        const Twine &Name = {});
 };
 
 /// Class to represented the control flow structure of an OpenMP canonical loop.
@@ -636,7 +695,9 @@ private:
 ///  |    Cond---\
 ///  |     |     |
 ///  |    Body   |
-///  |     |     |
+///  |    | |    |
+///  |   <...>   |
+///  |    | |    |
 ///   \--Latch   |
 ///              |
 ///             Exit
@@ -644,7 +705,9 @@ private:
 ///            After
 ///
 /// Code in the header, condition block, latch and exit block must not have any
-/// side-effect.
+/// side-effect. The body block is the single entry point into the loop body,
+/// which may contain arbitrary control flow as long as all control paths
+/// eventually branch to the latch block.
 ///
 /// Defined outside OpenMPIRBuilder because one cannot forward-declare nested
 /// classes.
@@ -662,9 +725,6 @@ private:
   BasicBlock *Latch;
   BasicBlock *Exit;
   BasicBlock *After;
-
-  /// Delete this loop if unused.
-  void eraseFromParent();
 
 public:
   /// The preheader ensures that there is only a single edge entering the loop.
@@ -701,7 +761,7 @@ public:
   /// statements/cancellations).
   BasicBlock *getAfter() const { return After; }
 
-  /// Returns the llvm::Value containing the number of loop iterations. I must
+  /// Returns the llvm::Value containing the number of loop iterations. It must
   /// be valid in the preheader and always interpreted as an unsigned integer of
   /// any bit-width.
   Value *getTripCount() const {
@@ -717,6 +777,11 @@ public:
     assert(isa<PHINode>(IndVarPHI) && "First inst must be the IV PHI");
     return IndVarPHI;
   }
+
+  /// Return the insertion point for user code in the body.
+  OpenMPIRBuilder::InsertPointTy getBodyIP() const {
+    return {Body, Body->begin()};
+  };
 
   /// Return the insertion point for user code after the loop.
   OpenMPIRBuilder::InsertPointTy getAfterIP() const {

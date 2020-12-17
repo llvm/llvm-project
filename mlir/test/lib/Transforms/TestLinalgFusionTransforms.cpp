@@ -192,7 +192,7 @@ struct TestLinalgGreedyFusion
       pm.addPass(createLoopInvariantCodeMotionPass());
       pm.addPass(createCanonicalizerPass());
       pm.addPass(createCSEPass());
-      LogicalResult res = pm.run(getFunction().getParentOfType<ModuleOp>());
+      LogicalResult res = pm.run(getFunction()->getParentOfType<ModuleOp>());
       if (failed(res))
         this->signalPassFailure();
     }

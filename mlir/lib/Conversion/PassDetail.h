@@ -25,8 +25,10 @@ class GPUModuleOp;
 } // end namespace gpu
 
 namespace LLVM {
-class LLVMDialect;
+class LLVMArmNeonDialect;
+class LLVMArmSVEDialect;
 class LLVMAVX512Dialect;
+class LLVMDialect;
 } // end namespace LLVM
 
 namespace NVVM {

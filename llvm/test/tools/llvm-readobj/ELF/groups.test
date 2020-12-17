@@ -403,7 +403,7 @@ Symbols:
 # SIGNAME1-GNU: COMDAT group section [    1] `.group' [] contains 2 sections:
 # SIGNAME1-GNU: COMDAT group section [    2] `.group1' [<?>] contains 2 sections:
 
-## Chech we report a warning when the string table that contains the signature symbol name is not null-terminated.
+## Check we report a warning when the string table that contains the signature symbol name is not null-terminated.
 
 # RUN: yaml2obj %s -DSTRTABCONTENT="0061626361" -DSYM1STNAME=4 -DSYM2STNAME=5 -o %t.signame2.o
 # RUN: llvm-readobj --elf-section-groups %t.signame2.o 2>&1 | \

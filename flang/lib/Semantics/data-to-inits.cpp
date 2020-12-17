@@ -229,9 +229,9 @@ DataInitializationCompiler::ConvertElement(
     // (most) other Fortran compilers do.  Pad on the right with spaces
     // when short, truncate the right if long.
     // TODO: big-endian targets
-    std::size_t bytes{static_cast<std::size_t>(evaluate::ToInt64(
-        type.MeasureSizeInBytes(&exprAnalyzer_.GetFoldingContext()))
-                                                   .value())};
+    auto bytes{static_cast<std::size_t>(evaluate::ToInt64(
+        type.MeasureSizeInBytes(exprAnalyzer_.GetFoldingContext(), false))
+                                            .value())};
     evaluate::BOZLiteralConstant bits{0};
     for (std::size_t j{0}; j < bytes; ++j) {
       char ch{j >= chValue->size() ? ' ' : chValue->at(j)};
@@ -329,7 +329,14 @@ bool DataInitializationCompiler::InitElement(
     exprAnalyzer_.Say("Initializer for '%s' must not be a procedure"_err_en_US,
         DescribeElement());
   } else if (auto designatorType{designator.GetType()}) {
-    if (auto converted{ConvertElement(*expr, *designatorType)}) {
+    if (expr->Rank() > 0) {
+      // Because initial-data-target is ambiguous with scalar-constant and
+      // scalar-constant-subobject at parse time, enforcement of scalar-*
+      // must be deferred to here.
+      exprAnalyzer_.Say(
+          "DATA statement value initializes '%s' with an array"_err_en_US,
+          DescribeElement());
+    } else if (auto converted{ConvertElement(*expr, *designatorType)}) {
       // value non-pointer initialization
       if (std::holds_alternative<evaluate::BOZLiteralConstant>(expr->u) &&
           designatorType->category() != TypeCategory::Integer) { // 8.6.7(11)
@@ -342,8 +349,8 @@ bool DataInitializationCompiler::InitElement(
             DescribeElement(), designatorType->AsFortran());
       }
       auto folded{evaluate::Fold(context, std::move(converted->first))};
-      switch (
-          GetImage().Add(offsetSymbol.offset(), offsetSymbol.size(), folded)) {
+      switch (GetImage().Add(
+          offsetSymbol.offset(), offsetSymbol.size(), folded, context)) {
       case evaluate::InitialImage::Ok:
         return true;
       case evaluate::InitialImage::NotAConstant:
@@ -427,15 +434,15 @@ static bool CombineSomeEquivalencedInits(
     // Compute the minimum common granularity
     if (auto dyType{evaluate::DynamicType::From(symbol)}) {
       minElementBytes = evaluate::ToInt64(
-          dyType->MeasureSizeInBytes(&exprAnalyzer.GetFoldingContext()))
+          dyType->MeasureSizeInBytes(exprAnalyzer.GetFoldingContext(), true))
                             .value_or(1);
     }
     for (const Symbol *s : conflicts) {
       if (auto dyType{evaluate::DynamicType::From(*s)}) {
-        minElementBytes = std::min(minElementBytes,
-            static_cast<std::size_t>(evaluate::ToInt64(
-                dyType->MeasureSizeInBytes(&exprAnalyzer.GetFoldingContext()))
-                                         .value_or(1)));
+        minElementBytes = std::min<std::size_t>(minElementBytes,
+            evaluate::ToInt64(dyType->MeasureSizeInBytes(
+                                  exprAnalyzer.GetFoldingContext(), true))
+                .value_or(1));
       } else {
         minElementBytes = 1;
       }
@@ -515,12 +522,10 @@ void ConstructInitializer(const Symbol &symbol,
       if (IsPointer(symbol)) {
         mutableObject.set_init(
             initialization.image.AsConstantDataPointer(*symbolType));
-        mutableObject.set_initWasValidated();
       } else {
         if (auto extents{evaluate::GetConstantExtents(context, symbol)}) {
           mutableObject.set_init(
               initialization.image.AsConstant(context, *symbolType, *extents));
-          mutableObject.set_initWasValidated();
         } else {
           exprAnalyzer.Say(symbol.name(),
               "internal: unknown shape for '%s' while constructing initializer from DATA"_err_en_US,

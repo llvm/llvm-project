@@ -202,7 +202,8 @@ struct WasmSymbolInfo {
 
 enum class NameType {
   FUNCTION,
-  GLOBAL
+  GLOBAL,
+  DATA_SEGMENT,
 };
 
 struct WasmDebugName {
@@ -313,9 +314,10 @@ enum : uint8_t {
 
 // Kind codes used in the custom "name" section
 enum : unsigned {
-  WASM_NAMES_FUNCTION = 0x1,
-  WASM_NAMES_LOCAL = 0x2,
-  WASM_NAMES_GLOBAL = 0x7,
+  WASM_NAMES_FUNCTION = 1,
+  WASM_NAMES_LOCAL = 2,
+  WASM_NAMES_GLOBAL = 7,
+  WASM_NAMES_DATA_SEGMENT = 9,
 };
 
 // Kind codes used in the custom "linking" section
@@ -330,6 +332,8 @@ enum : unsigned {
 enum : unsigned {
   WASM_COMDAT_DATA = 0x0,
   WASM_COMDAT_FUNCTION = 0x1,
+  // GLOBAL, EVENT, and TABLE are in here but LLVM doesn't use them yet.
+  WASM_COMDAT_SECTION = 0x5,
 };
 
 // Kind codes used in the custom "linking" section in the WASM_SYMBOL_TABLE

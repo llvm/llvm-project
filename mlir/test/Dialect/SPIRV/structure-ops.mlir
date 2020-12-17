@@ -757,3 +757,59 @@ spv.module Logical GLSL450 {
   // expected-error @+1 {{unsupported composite type}}
   spv.specConstantComposite @scc (@sc1) : !spv.coopmatrix<8x16xf32, Device>
 }
+
+//===----------------------------------------------------------------------===//
+// spv.SpecConstantOperation
+//===----------------------------------------------------------------------===//
+
+// -----
+
+spv.module Logical GLSL450 {
+  spv.func @foo() -> i32 "None" {
+    // CHECK: [[LHS:%.*]] = spv.constant
+    %0 = spv.constant 1: i32
+    // CHECK: [[RHS:%.*]] = spv.constant
+    %1 = spv.constant 1: i32
+
+    // CHECK: spv.SpecConstantOperation wraps "spv.IAdd"([[LHS]], [[RHS]]) : (i32, i32) -> i32
+    %2 = spv.SpecConstantOperation wraps "spv.IAdd"(%0, %1) : (i32, i32) -> i32
+
+    spv.ReturnValue %2 : i32
+  }
+}
+
+// -----
+
+spv.module Logical GLSL450 {
+  spv.func @foo() -> i32 "None" {
+    %0 = spv.constant 1: i32
+    // expected-error @+1 {{op expects parent op 'spv.SpecConstantOperation'}}
+    spv.mlir.yield %0 : i32
+  }
+}
+
+// -----
+
+spv.module Logical GLSL450 {
+  spv.func @foo() -> () "None" {
+    %0 = spv.Variable : !spv.ptr<i32, Function>
+
+    // expected-error @+1 {{invalid enclosed op}}
+    %1 = spv.SpecConstantOperation wraps "spv.Load"(%0) {memory_access = 0 : i32} : (!spv.ptr<i32, Function>) -> i32
+    spv.Return
+  }
+}
+
+// -----
+
+spv.module Logical GLSL450 {
+  spv.func @foo() -> () "None" {
+    %0 = spv.Variable : !spv.ptr<i32, Function>
+    %1 = spv.Load "Function" %0 : i32
+
+    // expected-error @+1 {{invalid operand, must be defined by a constant operation}}
+    %2 = spv.SpecConstantOperation wraps "spv.IAdd"(%1, %1) : (i32, i32) -> i32
+
+    spv.Return
+  }
+}

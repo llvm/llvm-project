@@ -31,6 +31,21 @@ vsetvli a2, a0, e8,m1,ma
 vsetvli a2, a0, e8,m1,mu
 # CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
+vsetvli a2, a0, e8x,m1,tu,mu
+# CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+
+vsetvli a2, a0, e8,m1z,tu,mu
+# CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+
+vsetvli a2, a0, e8,mf1,tu,mu
+# CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+
+vsetvli a2, a0, e8,m1,tu,mut
+# CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+
+vsetvli a2, a0, e8,m1,tut,mu
+# CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+
 vadd.vv v1, v3, v2, v4.t
 # CHECK-ERROR: operand must be v0.t
 
@@ -601,3 +616,19 @@ vmsge.vx v0, v4, a0, v0.t
 vmsge.vx v8, v4, a0, v0.t, v2
 # CHECK-ERROR: invalid operand for instruction
 # CHECK-ERROR-LABEL: vmsge.vx v8, v4, a0, v0.t, v2
+
+vmerge.vim v0, v1, 1, v0
+# CHECK-ERROR: The destination vector register group cannot be V0.
+# CHECK-ERROR-LABEL: vmerge.vim v0, v1, 1, v0
+
+vmerge.vvm v0, v1, v2, v0
+# CHECK-ERROR: The destination vector register group cannot be V0.
+# CHECK-ERROR-LABEL: vmerge.vvm v0, v1, v2, v0
+
+vmerge.vxm v0, v1, x1, v0
+# CHECK-ERROR: The destination vector register group cannot be V0.
+# CHECK-ERROR-LABEL: vmerge.vxm v0, v1, x1, v0
+
+vfmerge.vfm v0, v1, f1, v0
+# CHECK-ERROR: The destination vector register group cannot be V0.
+# CHECK-ERROR-LABEL: vfmerge.vfm v0, v1, f1, v0

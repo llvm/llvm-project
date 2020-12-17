@@ -38,7 +38,7 @@ func1:
 @ RELOC: Section {
 @ RELOC:   Name: .rel.ARM.extab.TEST1
 @ RELOC:   Relocations [
-@ RELOC:     0x0 R_ARM_PREL31 __gxx_personality_v0 0x0
+@ RELOC:     0x0 R_ARM_PREL31 __gxx_personality_v0
 @ RELOC:   ]
 @ RELOC: }
 
@@ -52,8 +52,8 @@ func1:
 @ RELOC: Section {
 @ RELOC:   Name: .rel.ARM.exidx.TEST1
 @ RELOC:   Relocations [
-@ RELOC:     0x0 R_ARM_PREL31 .TEST1 0x0
-@ RELOC:     0x4 R_ARM_PREL31 .ARM.extab.TEST1 0x0
+@ RELOC:     0x0 R_ARM_PREL31 .TEST1
+@ RELOC:     0x4 R_ARM_PREL31 .ARM.extab.TEST1
 @ RELOC:   ]
 @ RELOC: }
 
@@ -89,7 +89,7 @@ func2:
 @ RELOC: Section {
 @ RELOC:   Name: .rel.ARM.extab.TEST2
 @ RELOC:   Relocations [
-@ RELOC:     0x0 R_ARM_PREL31 __gxx_personality_v0 0x0
+@ RELOC:     0x0 R_ARM_PREL31 __gxx_personality_v0
 @ RELOC:   ]
 @ RELOC: }
 
@@ -103,7 +103,7 @@ func2:
 @ RELOC: Section {
 @ RELOC:   Name: .rel.ARM.exidx.TEST2
 @ RELOC:   Relocations [
-@ RELOC:     0x0 R_ARM_PREL31 .TEST2 0x0
-@ RELOC:     0x4 R_ARM_PREL31 .ARM.extab.TEST2 0x0
+@ RELOC:     0x0 R_ARM_PREL31 .TEST2
+@ RELOC:     0x4 R_ARM_PREL31 .ARM.extab.TEST2
 @ RELOC:   ]
 @ RELOC: }

@@ -25,19 +25,18 @@ namespace targets {
 class RISCVTargetInfo : public TargetInfo {
 protected:
   std::string ABI, CPU;
-  bool HasM;
-  bool HasA;
-  bool HasF;
-  bool HasD;
-  bool HasC;
-  bool HasB;
-  bool HasV;
-  bool HasZfh;
+  bool HasM = false;
+  bool HasA = false;
+  bool HasF = false;
+  bool HasD = false;
+  bool HasC = false;
+  bool HasB = false;
+  bool HasV = false;
+  bool HasZfh = false;
 
 public:
   RISCVTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
-      : TargetInfo(Triple), HasM(false), HasA(false), HasF(false), HasD(false),
-        HasC(false), HasB(false), HasV(false), HasZfh(false) {
+      : TargetInfo(Triple) {
     LongDoubleWidth = 128;
     LongDoubleAlign = 128;
     LongDoubleFormat = &llvm::APFloat::IEEEquad();

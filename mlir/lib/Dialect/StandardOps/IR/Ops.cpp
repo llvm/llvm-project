@@ -9,6 +9,7 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 
 #include "mlir/Dialect/CommonFolders.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BlockAndValueMapping.h"
@@ -153,6 +154,7 @@ static LogicalResult verifyCastOp(T op) {
 }
 
 void StandardOpsDialect::initialize() {
+  getContext()->loadDialect<tensor::TensorDialect>();
   addOperations<DmaStartOp, DmaWaitOp,
 #define GET_OP_LIST
 #include "mlir/Dialect/StandardOps/IR/Ops.cpp.inc"
@@ -287,7 +289,7 @@ static LogicalResult verify(AllocOp op) { return verifyAllocLikeOp(op); }
 
 static LogicalResult verify(AllocaOp op) {
   // An alloca op needs to have an ancestor with an allocation scope trait.
-  if (!op.getParentWithTrait<OpTrait::AutomaticAllocationScope>())
+  if (!op->getParentWithTrait<OpTrait::AutomaticAllocationScope>())
     return op.emitOpError(
         "requires an ancestor op with AutomaticAllocationScope trait");
 
@@ -547,7 +549,7 @@ static void print(OpAsmPrinter &p, GenericAtomicRMWOp op) {
 //===----------------------------------------------------------------------===//
 
 static LogicalResult verify(AtomicYieldOp op) {
-  Type parentType = op.getParentOp()->getResultTypes().front();
+  Type parentType = op->getParentOp()->getResultTypes().front();
   Type resultType = op.result().getType();
   if (parentType != resultType)
     return op.emitOpError() << "types mismatch between yield op: " << resultType
@@ -660,9 +662,7 @@ Block *BranchOp::getDest() { return getSuccessor(); }
 
 void BranchOp::setDest(Block *block) { return setSuccessor(block); }
 
-void BranchOp::eraseOperand(unsigned index) {
-  getOperation()->eraseOperand(index);
-}
+void BranchOp::eraseOperand(unsigned index) { (*this)->eraseOperand(index); }
 
 void BranchOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                                            MLIRContext *context) {
@@ -684,7 +684,7 @@ Block *BranchOp::getSuccessorForOperands(ArrayRef<Attribute>) { return dest(); }
 
 LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   // Check that the callee attribute was specified.
-  auto fnAttr = getAttrOfType<FlatSymbolRefAttr>("callee");
+  auto fnAttr = (*this)->getAttrOfType<FlatSymbolRefAttr>("callee");
   if (!fnAttr)
     return emitOpError("requires a 'callee' symbol reference attribute");
   FuncOp fn = symbolTable.lookupNearestSymbolFrom<FuncOp>(*this, fnAttr);
@@ -1138,7 +1138,7 @@ static LogicalResult verify(ConstantOp &op) {
   if (!value)
     return op.emitOpError("requires a 'value' attribute");
 
-  auto type = op.getType();
+  Type type = op.getType();
   if (!value.getType().isa<NoneType>() && type != value.getType())
     return op.emitOpError() << "requires attribute's type (" << value.getType()
                             << ") to match op's return type (" << type << ")";
@@ -1147,10 +1147,14 @@ static LogicalResult verify(ConstantOp &op) {
     return success();
 
   if (auto intAttr = value.dyn_cast<IntegerAttr>()) {
+    IntegerType intType = type.cast<IntegerType>();
+    if (!intType.isSignless())
+      return op.emitOpError("requires integer result types to be signless");
+
     // If the type has a known bitwidth we verify that the value can be
     // represented with the given bitwidth.
-    auto bitwidth = type.cast<IntegerType>().getWidth();
-    auto intVal = intAttr.getValue();
+    unsigned bitwidth = intType.getWidth();
+    APInt intVal = intAttr.getValue();
     if (!intVal.isSignedIntN(bitwidth) && !intVal.isIntN(bitwidth))
       return op.emitOpError("requires 'value' to be an integer within the "
                             "range of the integer result type");
@@ -1176,7 +1180,7 @@ static LogicalResult verify(ConstantOp &op) {
 
     // Try to find the referenced function.
     auto fn =
-        op.getParentOfType<ModuleOp>().lookupSymbol<FuncOp>(fnAttr.getValue());
+        op->getParentOfType<ModuleOp>().lookupSymbol<FuncOp>(fnAttr.getValue());
     if (!fn)
       return op.emitOpError()
              << "reference to undefined function '" << fnAttr.getValue() << "'";
@@ -1230,9 +1234,13 @@ bool ConstantOp::isBuildableWith(Attribute value, Type type) {
   // SymbolRefAttr can only be used with a function type.
   if (value.isa<SymbolRefAttr>())
     return type.isa<FunctionType>();
-  // Otherwise, the attribute must have the same type as 'type'.
+  // The attribute must have the same type as 'type'.
   if (value.getType() != type)
     return false;
+  // If the type is an integer type, it must be signless.
+  if (IntegerType integerTy = type.dyn_cast<IntegerType>())
+    if (!integerTy.isSignless())
+      return false;
   // Finally, check that the attribute kind is handled.
   return value.isa<IntegerAttr, FloatAttr, ElementsAttr, UnitAttr>();
 }
@@ -1857,18 +1865,18 @@ struct StaticDynamicTensorFromElements
 ///   <computation>
 ///   yield %1 : index
 /// } : tensor<?xindex>
-/// %extracted_element = extract_element %tensor[%c0] : tensor<?xi32>
+/// %extracted_element = tensor.extract %tensor[%c0] : tensor<?xi32>
 ///
 /// to just <computation> with %arg0 replaced by %c0. We only do this if the
 /// dynamic_tensor_from_elements operation has no side-effects.
-struct ExtractElementFromDynamicTensorFromElements
-    : public OpRewritePattern<ExtractElementOp> {
-  using OpRewritePattern<ExtractElementOp>::OpRewritePattern;
+struct ExtractFromDynamicTensorFromElements
+    : public OpRewritePattern<tensor::ExtractOp> {
+  using OpRewritePattern<tensor::ExtractOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(ExtractElementOp extract,
+  LogicalResult matchAndRewrite(tensor::ExtractOp extract,
                                 PatternRewriter &rewriter) const final {
     auto tensorFromElements =
-        extract.aggregate().getDefiningOp<DynamicTensorFromElementsOp>();
+        extract.tensor().getDefiningOp<DynamicTensorFromElementsOp>();
     if (!tensorFromElements || !wouldOpBeTriviallyDead(tensorFromElements))
       return failure();
 
@@ -1888,23 +1896,22 @@ struct ExtractElementFromDynamicTensorFromElements
 /// Canonicalizes the pattern of the form
 ///
 /// %val = tensor_cast %source : : tensor<?xi32> to tensor<2xi32>
-/// %extracted_element = extract_element %val[%c0] : tensor<2xi32>
+/// %extracted_element = tensor.extract %val[%c0] : tensor<2xi32>
 ///
 /// to
 ///
-/// %extracted_element = extract_element %source[%c0] : tensor<?xi32>
-struct ExtractElementFromTensorCast
-    : public OpRewritePattern<ExtractElementOp> {
-  using OpRewritePattern<ExtractElementOp>::OpRewritePattern;
+/// %extracted_element = tensor.extract %source[%c0] : tensor<?xi32>
+struct ExtractFromTensorCast : public OpRewritePattern<tensor::ExtractOp> {
+  using OpRewritePattern<tensor::ExtractOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(ExtractElementOp extract,
+  LogicalResult matchAndRewrite(tensor::ExtractOp extract,
                                 PatternRewriter &rewriter) const final {
-    auto tensorCast = extract.aggregate().getDefiningOp<TensorCastOp>();
+    auto tensorCast = extract.tensor().getDefiningOp<TensorCastOp>();
     if (!tensorCast)
       return failure();
 
-    rewriter.replaceOpWithNewOp<ExtractElementOp>(extract, tensorCast.source(),
-                                                  extract.getIndices());
+    rewriter.replaceOpWithNewOp<tensor::ExtractOp>(extract, tensorCast.source(),
+                                                   extract.indices());
     return success();
   }
 };
@@ -1913,51 +1920,9 @@ struct ExtractElementFromTensorCast
 
 void DynamicTensorFromElementsOp::getCanonicalizationPatterns(
     OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<ExtractElementFromDynamicTensorFromElements,
-                 ExtractElementFromTensorCast, StaticDynamicTensorFromElements>(
-      context);
-}
-
-//===----------------------------------------------------------------------===//
-// ExtractElementOp
-//===----------------------------------------------------------------------===//
-
-static LogicalResult verify(ExtractElementOp op) {
-  // Verify the # indices match if we have a ranked type.
-  auto aggregateType = op.getAggregate().getType().cast<ShapedType>();
-  if (aggregateType.hasRank() &&
-      aggregateType.getRank() != op.getNumOperands() - 1)
-    return op.emitOpError("incorrect number of indices for extract_element");
-
-  return success();
-}
-
-OpFoldResult ExtractElementOp::fold(ArrayRef<Attribute> operands) {
-  assert(!operands.empty() && "extract_element takes at least one operand");
-
-  // The aggregate operand must be a known constant.
-  Attribute aggregate = operands.front();
-  if (!aggregate)
-    return {};
-
-  // If this is a splat elements attribute, simply return the value. All of the
-  // elements of a splat attribute are the same.
-  if (auto splatAggregate = aggregate.dyn_cast<SplatElementsAttr>())
-    return splatAggregate.getSplatValue();
-
-  // Otherwise, collect the constant indices into the aggregate.
-  SmallVector<uint64_t, 8> indices;
-  for (Attribute indice : llvm::drop_begin(operands, 1)) {
-    if (!indice || !indice.isa<IntegerAttr>())
-      return {};
-    indices.push_back(indice.cast<IntegerAttr>().getInt());
-  }
-
-  // If this is an elements attribute, query the value at the given indices.
-  auto elementsAttr = aggregate.dyn_cast<ElementsAttr>();
-  if (elementsAttr && elementsAttr.isValidIndex(indices))
-    return elementsAttr.getValue(indices);
-  return {};
+  // TODO: Move extract patterns to tensor::ExtractOp.
+  results.insert<ExtractFromDynamicTensorFromElements, ExtractFromTensorCast,
+                 StaticDynamicTensorFromElements>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1983,20 +1948,20 @@ namespace {
 // Canonicalizes the pattern of the form
 //
 // %tensor = "tensor_from_elements(%element) : (i32) -> tensor<1xi32>
-// %extracted_element = extract_element %tensor[%c0] : tensor<1xi32>
+// %extracted_element = tensor.extract %tensor[%c0] : tensor<1xi32>
 //
 // to just %element.
 struct ExtractElementFromTensorFromElements
-    : public OpRewritePattern<ExtractElementOp> {
-  using OpRewritePattern<ExtractElementOp>::OpRewritePattern;
+    : public OpRewritePattern<tensor::ExtractOp> {
+  using OpRewritePattern<tensor::ExtractOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(ExtractElementOp extract,
+  LogicalResult matchAndRewrite(tensor::ExtractOp extract,
                                 PatternRewriter &rewriter) const final {
     if (extract.indices().size() != 1)
       return failure();
 
     auto tensorFromElements = dyn_cast_or_null<TensorFromElementsOp>(
-        extract.aggregate().getDefiningOp());
+        extract.tensor().getDefiningOp());
     if (tensorFromElements == nullptr)
       return failure();
 
@@ -2210,7 +2175,7 @@ OpFoldResult LoadOp::fold(ArrayRef<Attribute> cstOperands) {
 }
 
 namespace {
-/// Fold a load on a tensor_to_memref operation into an extract_element on the
+/// Fold a load on a tensor_to_memref operation into an tensor.extract on the
 /// corresponding tensor.
 struct LoadOfTensorToMemref : public OpRewritePattern<LoadOp> {
   using OpRewritePattern<LoadOp>::OpRewritePattern;
@@ -2221,8 +2186,8 @@ struct LoadOfTensorToMemref : public OpRewritePattern<LoadOp> {
     if (!tensorToMemref)
       return failure();
 
-    rewriter.replaceOpWithNewOp<ExtractElementOp>(load, tensorToMemref.tensor(),
-                                                  load.indices());
+    rewriter.replaceOpWithNewOp<tensor::ExtractOp>(
+        load, tensorToMemref.tensor(), load.indices());
     return success();
   }
 };
@@ -2626,7 +2591,7 @@ OpFoldResult RankOp::fold(ArrayRef<Attribute> operands) {
 //===----------------------------------------------------------------------===//
 
 static LogicalResult verify(ReturnOp op) {
-  auto function = cast<FuncOp>(op.getParentOp());
+  auto function = cast<FuncOp>(op->getParentOp());
 
   // The operand number and types must match the function signature.
   const auto &results = function.getType().getResults();

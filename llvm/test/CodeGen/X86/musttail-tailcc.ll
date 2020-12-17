@@ -4,7 +4,7 @@
 
 ; tailcc will turn all of these musttail calls into tail calls.
 
-declare tailcc i32 @tailcallee(i32 %a1, i32 %a2)
+declare dso_local tailcc i32 @tailcallee(i32 %a1, i32 %a2)
 
 define tailcc i32 @tailcaller(i32 %in1, i32 %in2) nounwind {
 ; X64-LABEL: tailcaller:
@@ -19,7 +19,7 @@ entry:
   ret i32 %tmp11
 }
 
-declare tailcc i8* @alias_callee()
+declare dso_local tailcc i8* @alias_callee()
 
 define tailcc noalias i8* @noalias_caller() nounwind {
 ; X64-LABEL: noalias_caller:
@@ -33,7 +33,7 @@ define tailcc noalias i8* @noalias_caller() nounwind {
   ret i8* %p
 }
 
-declare tailcc noalias i8* @noalias_callee()
+declare dso_local tailcc noalias i8* @noalias_callee()
 
 define tailcc i8* @alias_caller() nounwind {
 ; X64-LABEL: alias_caller:

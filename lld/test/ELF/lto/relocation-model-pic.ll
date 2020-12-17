@@ -1,4 +1,4 @@
-; REQUIRE: x86
+; REQUIRES: x86
 ; RUN: llvm-as %s -o %t.o
 
 ; RUN: ld.lld %t.o -o %t -save-temps -shared

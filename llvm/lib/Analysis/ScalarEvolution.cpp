@@ -6006,6 +6006,9 @@ ConstantRange ScalarEvolution::getRangeForAffineNoSelfWrappingAR(
   // iteration count estimate, and we might infer nw from some exit for which we
   // do not know max exit count (or any other side reasoning).
   // TODO: Turn into assert at some point.
+  if (getTypeSizeInBits(MaxBECount->getType()) >
+      getTypeSizeInBits(AddRec->getType()))
+    return ConstantRange::getFull(BitWidth);
   MaxBECount = getNoopOrZeroExtend(MaxBECount, AddRec->getType());
   const SCEV *RangeWidth = getMinusOne(AddRec->getType());
   const SCEV *StepAbs = getUMinExpr(Step, getNegativeSCEV(Step));
@@ -10639,7 +10642,7 @@ static bool IsMinMaxConsistingOf(const SCEV *MaybeMinMaxExpr,
   if (!MinMaxExpr)
     return false;
 
-  return find(MinMaxExpr->operands(), Candidate) != MinMaxExpr->op_end();
+  return is_contained(MinMaxExpr->operands(), Candidate);
 }
 
 static bool IsKnownPredicateViaAddRecStart(ScalarEvolution &SE,

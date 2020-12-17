@@ -62,7 +62,7 @@
 
 # REL: Relocations [
 # REL-NEXT:   Section (7) .rel.plt {
-# REL-NEXT:     0x[[PLTSLOT:[0-9A-F]+]] R_MIPS_JUMP_SLOT foo0 0x0
+# REL-NEXT:     0x[[PLTSLOT:[0-9A-F]+]] R_MIPS_JUMP_SLOT foo0
 # REL-NEXT:   }
 # REL-NEXT: ]
 

@@ -98,8 +98,8 @@ static Op createRegionOp(Fortran::lower::FirOpBuilder &builder,
   builder.setInsertionPointToStart(&block);
   builder.create<Terminator>(loc);
 
-  op.setAttr(Op::getOperandSegmentSizeAttr(),
-             builder.getI32VectorAttr(operandSegments));
+  op->setAttr(Op::getOperandSegmentSizeAttr(),
+              builder.getI32VectorAttr(operandSegments));
 
   // Place the insertion point to the start of the first block.
   builder.setInsertionPointToStart(&block);
@@ -114,8 +114,8 @@ static Op createSimpleOp(Fortran::lower::FirOpBuilder &builder,
                          const SmallVectorImpl<int32_t> &operandSegments) {
   llvm::ArrayRef<mlir::Type> argTy;
   Op op = builder.create<Op>(loc, argTy, operands);
-  op.setAttr(Op::getOperandSegmentSizeAttr(),
-             builder.getI32VectorAttr(operandSegments));
+  op->setAttr(Op::getOperandSegmentSizeAttr(),
+              builder.getI32VectorAttr(operandSegments));
   return op;
 }
 
@@ -231,8 +231,8 @@ static void genACC(Fortran::lower::AbstractConverter &converter,
     auto loopOp = createRegionOp<mlir::acc::LoopOp, mlir::acc::YieldOp>(
         firOpBuilder, currentLocation, operands, operandSegments);
 
-    loopOp.setAttr(mlir::acc::LoopOp::getExecutionMappingAttrName(),
-                   firOpBuilder.getI64IntegerAttr(executionMapping));
+    loopOp->setAttr(mlir::acc::LoopOp::getExecutionMappingAttrName(),
+                    firOpBuilder.getI64IntegerAttr(executionMapping));
 
     // Lower clauses mapped to attributes
     for (const auto &clause : accClauseList.v) {
@@ -241,19 +241,19 @@ static void genACC(Fortran::lower::AbstractConverter &converter,
         const auto *expr = Fortran::semantics::GetExpr(collapseClause->v);
         const auto collapseValue = Fortran::evaluate::ToInt64(*expr);
         if (collapseValue) {
-          loopOp.setAttr(mlir::acc::LoopOp::getCollapseAttrName(),
-                         firOpBuilder.getI64IntegerAttr(*collapseValue));
+          loopOp->setAttr(mlir::acc::LoopOp::getCollapseAttrName(),
+                          firOpBuilder.getI64IntegerAttr(*collapseValue));
         }
       } else if (std::get_if<Fortran::parser::AccClause::Seq>(&clause.u)) {
-        loopOp.setAttr(mlir::acc::LoopOp::getSeqAttrName(),
-                       firOpBuilder.getUnitAttr());
+        loopOp->setAttr(mlir::acc::LoopOp::getSeqAttrName(),
+                        firOpBuilder.getUnitAttr());
       } else if (std::get_if<Fortran::parser::AccClause::Independent>(
                      &clause.u)) {
-        loopOp.setAttr(mlir::acc::LoopOp::getIndependentAttrName(),
-                       firOpBuilder.getUnitAttr());
+        loopOp->setAttr(mlir::acc::LoopOp::getIndependentAttrName(),
+                        firOpBuilder.getUnitAttr());
       } else if (std::get_if<Fortran::parser::AccClause::Auto>(&clause.u)) {
-        loopOp.setAttr(mlir::acc::LoopOp::getAutoAttrName(),
-                       firOpBuilder.getUnitAttr());
+        loopOp->setAttr(mlir::acc::LoopOp::getAutoAttrName(),
+                        firOpBuilder.getUnitAttr());
       }
     }
   }
@@ -335,13 +335,18 @@ genACCParallelOp(Fortran::lower::AbstractConverter &converter,
                                           firOpBuilder.getI1Type(), cond);
     } else if (const auto *selfClause =
                    std::get_if<Fortran::parser::AccClause::Self>(&clause.u)) {
-      if (selfClause->v) {
-        Value cond = fir::getBase(converter.genExprValue(
-            *Fortran::semantics::GetExpr(*(selfClause->v))));
-        selfCond = firOpBuilder.createConvert(currentLocation,
-                                              firOpBuilder.getI1Type(), cond);
-      } else {
-        addSelfAttr = true;
+      const Fortran::parser::AccSelfClause &accSelfClause = selfClause->v;
+      if (const auto *optCondition =
+              std::get_if<std::optional<Fortran::parser::ScalarLogicalExpr>>(
+                  &accSelfClause.u)) {
+        if (*optCondition) {
+          Value cond = fir::getBase(converter.genExprValue(
+              *Fortran::semantics::GetExpr(*optCondition)));
+          selfCond = firOpBuilder.createConvert(currentLocation,
+                                                firOpBuilder.getI1Type(), cond);
+        } else {
+          addSelfAttr = true;
+        }
       }
     } else if (const auto *copyClause =
                    std::get_if<Fortran::parser::AccClause::Copy>(&clause.u)) {
@@ -420,14 +425,14 @@ genACCParallelOp(Fortran::lower::AbstractConverter &converter,
       firOpBuilder, currentLocation, operands, operandSegments);
 
   if (addAsyncAttr)
-    parallelOp.setAttr(mlir::acc::ParallelOp::getAsyncAttrName(),
-                       firOpBuilder.getUnitAttr());
+    parallelOp->setAttr(mlir::acc::ParallelOp::getAsyncAttrName(),
+                        firOpBuilder.getUnitAttr());
   if (addWaitAttr)
-    parallelOp.setAttr(mlir::acc::ParallelOp::getWaitAttrName(),
-                       firOpBuilder.getUnitAttr());
+    parallelOp->setAttr(mlir::acc::ParallelOp::getWaitAttrName(),
+                        firOpBuilder.getUnitAttr());
   if (addSelfAttr)
-    parallelOp.setAttr(mlir::acc::ParallelOp::getSelfAttrName(),
-                       firOpBuilder.getUnitAttr());
+    parallelOp->setAttr(mlir::acc::ParallelOp::getSelfAttrName(),
+                        firOpBuilder.getUnitAttr());
 }
 
 static void genACCDataOp(Fortran::lower::AbstractConverter &converter,

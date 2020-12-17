@@ -68,7 +68,7 @@ FPMatcher<T, C> getMatcher(T expectedValue) {
 #define DECLARE_SPECIAL_CONSTANTS(T)                                           \
   static const T zero = __llvm_libc::fputil::FPBits<T>::zero();                \
   static const T negZero = __llvm_libc::fputil::FPBits<T>::negZero();          \
-  static const T nan = __llvm_libc::fputil::FPBits<T>::buildNaN(1);            \
+  static const T aNaN = __llvm_libc::fputil::FPBits<T>::buildNaN(1);           \
   static const T inf = __llvm_libc::fputil::FPBits<T>::inf();                  \
   static const T negInf = __llvm_libc::fputil::FPBits<T>::negInf();
 

@@ -7755,6 +7755,15 @@ TEST_F(FormatTest, UnderstandsUnaryOperators) {
 
   verifyFormat("co_yield -1;");
   verifyFormat("co_return -1;");
+
+  // Check that * is not treated as a binary operator when we set PointerAlignment
+  // as PAS_Left after a keyword and not a declaration.
+  FormatStyle PASLeftStyle = getLLVMStyle();
+  PASLeftStyle.PointerAlignment = FormatStyle::PAS_Left;
+  verifyFormat("co_return *a;", PASLeftStyle);
+  verifyFormat("co_await *a;", PASLeftStyle);
+  verifyFormat("co_yield *a", PASLeftStyle);
+  verifyFormat("return *a;", PASLeftStyle);
 }
 
 TEST_F(FormatTest, DoesNotIndentRelativeToUnaryOperators) {
@@ -14116,6 +14125,7 @@ TEST_F(FormatTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(IndentCaseLabels);
   CHECK_PARSE_BOOL(IndentCaseBlocks);
   CHECK_PARSE_BOOL(IndentGotoLabels);
+  CHECK_PARSE_BOOL(IndentPragmas);
   CHECK_PARSE_BOOL(IndentRequires);
   CHECK_PARSE_BOOL(IndentWrappedFunctionNames);
   CHECK_PARSE_BOOL(KeepEmptyLinesAtTheStartOfBlocks);
@@ -14526,12 +14536,13 @@ TEST_F(FormatTest, ParsesConfiguration) {
 
   Style.IncludeStyle.IncludeCategories.clear();
   std::vector<tooling::IncludeStyle::IncludeCategory> ExpectedCategories = {
-      {"abc/.*", 2, 0}, {".*", 1, 0}};
+      {"abc/.*", 2, 0, false}, {".*", 1, 0, true}};
   CHECK_PARSE("IncludeCategories:\n"
               "  - Regex: abc/.*\n"
               "    Priority: 2\n"
               "  - Regex: .*\n"
-              "    Priority: 1",
+              "    Priority: 1\n"
+              "    CaseSensitive: true\n",
               IncludeStyle.IncludeCategories, ExpectedCategories);
   CHECK_PARSE("IncludeIsMainRegex: 'abc$'", IncludeStyle.IncludeIsMainRegex,
               "abc$");
@@ -16712,6 +16723,15 @@ TEST_F(FormatTest, GuessLanguageWithCaret) {
       guessLanguage("foo.h", "int(^foo[(kNumEntries + 10)])(char, float);"));
 }
 
+TEST_F(FormatTest, GuessLanguageWithPragmas) {
+  EXPECT_EQ(FormatStyle::LK_Cpp,
+            guessLanguage("foo.h", "__pragma(warning(disable:))"));
+  EXPECT_EQ(FormatStyle::LK_Cpp,
+            guessLanguage("foo.h", "#pragma(warning(disable:))"));
+  EXPECT_EQ(FormatStyle::LK_Cpp,
+            guessLanguage("foo.h", "_Pragma(warning(disable:))"));
+}
+
 TEST_F(FormatTest, FormatsInlineAsmSymbolicNames) {
   // ASM symbolic names are identifiers that must be surrounded by [] without
   // space in between:
@@ -17561,6 +17581,129 @@ TEST_F(FormatTest, ConceptsAndRequires) {
                "struct constant;",
                Style);
 }
+
+TEST_F(FormatTest, IndentPragmas) {
+  FormatStyle Style = getLLVMStyle();
+  Style.IndentPPDirectives = FormatStyle::PPDIS_None;
+
+  Style.IndentPragmas = false;
+  verifyFormat("#pragma once", Style);
+  verifyFormat("#pragma omp simd\n"
+               "for (int i = 0; i < 10; i++) {\n"
+               "}",
+               Style);
+  verifyFormat("void foo() {\n"
+               "#pragma omp simd\n"
+               "  for (int i = 0; i < 10; i++) {\n"
+               "  }\n"
+               "}",
+               Style);
+  verifyFormat("void foo() {\n"
+               "// outer loop\n"
+               "#pragma omp simd\n"
+               "  for (int k = 0; k < 10; k++) {\n"
+               "// inner loop\n"
+               "#pragma omp simd\n"
+               "    for (int j = 0; j < 10; j++) {\n"
+               "    }\n"
+               "  }\n"
+               "}",
+               Style);
+
+  verifyFormat("void foo() {\n"
+               "// outer loop\n"
+               "#if 1\n"
+               "#pragma omp simd\n"
+               "  for (int k = 0; k < 10; k++) {\n"
+               "// inner loop\n"
+               "#pragma omp simd\n"
+               "    for (int j = 0; j < 10; j++) {\n"
+               "    }\n"
+               "  }\n"
+               "#endif\n"
+               "}",
+               Style);
+
+  Style.IndentPragmas = true;
+  verifyFormat("#pragma once", Style);
+  verifyFormat("#pragma omp simd\n"
+               "for (int i = 0; i < 10; i++) {\n"
+               "}",
+               Style);
+  verifyFormat("void foo() {\n"
+               "  #pragma omp simd\n"
+               "  for (int i = 0; i < 10; i++) {\n"
+               "  }\n"
+               "}",
+               Style);
+  verifyFormat("void foo() {\n"
+               "  #pragma omp simd\n"
+               "  for (int i = 0; i < 10; i++) {\n"
+               "    #pragma omp simd\n"
+               "    for (int j = 0; j < 10; j++) {\n"
+               "    }\n"
+               "  }\n"
+               "}",
+               Style);
+
+  verifyFormat("void foo() {\n"
+               "  #pragma omp simd\n"
+               "  for (...) {\n"
+               "    #pragma omp simd\n"
+               "    for (...) {\n"
+               "    }\n"
+               "  }\n"
+               "}",
+               Style);
+
+  Style.IndentPPDirectives = FormatStyle::PPDIS_AfterHash;
+
+  verifyFormat("void foo() {\n"
+               "# pragma omp simd\n"
+               "  for (int i = 0; i < 10; i++) {\n"
+               "#   pragma omp simd\n"
+               "    for (int j = 0; j < 10; j++) {\n"
+               "    }\n"
+               "  }\n"
+               "}",
+               Style);
+
+  verifyFormat("void foo() {\n"
+               "#if 1\n"
+               "# pragma omp simd\n"
+               "  for (int k = 0; k < 10; k++) {\n"
+               "#   pragma omp simd\n"
+               "    for (int j = 0; j < 10; j++) {\n"
+               "    }\n"
+               "  }\n"
+               "#endif\n"
+               "}",
+               Style);
+
+  Style.IndentPPDirectives = FormatStyle::PPDIS_BeforeHash;
+  EXPECT_EQ("void foo() {\n"
+            "#if 1\n"
+            "  #pragma omp simd\n"
+            "  for (int k = 0; k < 10; k++) {\n"
+            "    #pragma omp simd\n"
+            "    for (int j = 0; j < 10; j++) {\n"
+            "    }\n"
+            "  }\n"
+            "#endif\n"
+            "}",
+            format("void foo() {\n"
+                   "#if 1\n"
+                   "  #pragma omp simd\n"
+                   "  for (int k = 0; k < 10; k++) {\n"
+                   "    #pragma omp simd\n"
+                   "    for (int j = 0; j < 10; j++) {\n"
+                   "    }\n"
+                   "  }\n"
+                   "#endif\n"
+                   "}",
+                   Style));
+}
+
 } // namespace
 } // namespace format
 } // namespace clang

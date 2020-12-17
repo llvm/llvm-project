@@ -137,23 +137,21 @@ define i32 @select_1_or_0_signext(i1 signext %cond) {
 define i32 @select_0_or_neg1(i1 %cond) {
 ; ARM-LABEL: select_0_or_neg1:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    mov r1, #1
-; ARM-NEXT:    bic r0, r1, r0
-; ARM-NEXT:    rsb r0, r0, #0
+; ARM-NEXT:    and r0, r0, #1
+; ARM-NEXT:    sub r0, r0, #1
 ; ARM-NEXT:    mov pc, lr
 ;
 ; THUMB2-LABEL: select_0_or_neg1:
 ; THUMB2:       @ %bb.0:
-; THUMB2-NEXT:    movs r1, #1
-; THUMB2-NEXT:    bic.w r0, r1, r0
-; THUMB2-NEXT:    rsbs r0, r0, #0
+; THUMB2-NEXT:    and r0, r0, #1
+; THUMB2-NEXT:    subs r0, #1
 ; THUMB2-NEXT:    bx lr
 ;
 ; THUMB-LABEL: select_0_or_neg1:
 ; THUMB:       @ %bb.0:
 ; THUMB-NEXT:    movs r1, #1
-; THUMB-NEXT:    bics r1, r0
-; THUMB-NEXT:    rsbs r0, r1, #0
+; THUMB-NEXT:    ands r1, r0
+; THUMB-NEXT:    subs r0, r1, #1
 ; THUMB-NEXT:    bx lr
   %sel = select i1 %cond, i32 0, i32 -1
   ret i32 %sel
@@ -162,21 +160,17 @@ define i32 @select_0_or_neg1(i1 %cond) {
 define i32 @select_0_or_neg1_zeroext(i1 zeroext %cond) {
 ; ARM-LABEL: select_0_or_neg1_zeroext:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    eor r0, r0, #1
-; ARM-NEXT:    rsb r0, r0, #0
+; ARM-NEXT:    sub r0, r0, #1
 ; ARM-NEXT:    mov pc, lr
 ;
 ; THUMB2-LABEL: select_0_or_neg1_zeroext:
 ; THUMB2:       @ %bb.0:
-; THUMB2-NEXT:    eor r0, r0, #1
-; THUMB2-NEXT:    rsbs r0, r0, #0
+; THUMB2-NEXT:    subs r0, #1
 ; THUMB2-NEXT:    bx lr
 ;
 ; THUMB-LABEL: select_0_or_neg1_zeroext:
 ; THUMB:       @ %bb.0:
-; THUMB-NEXT:    movs r1, #1
-; THUMB-NEXT:    eors r1, r0
-; THUMB-NEXT:    rsbs r0, r1, #0
+; THUMB-NEXT:    subs r0, r0, #1
 ; THUMB-NEXT:    bx lr
   %sel = select i1 %cond, i32 0, i32 -1
   ret i32 %sel

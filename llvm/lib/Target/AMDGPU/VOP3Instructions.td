@@ -694,7 +694,7 @@ def VOP3_PERMLANE_Profile : VOP3_Profile<VOPProfile <[i32, i32, i32, i32]>, VOP3
   let InsVOP3OpSel = (ins IntOpSelMods:$src0_modifiers, VRegSrc_32:$src0,
                           IntOpSelMods:$src1_modifiers, SCSrc_b32:$src1,
                           IntOpSelMods:$src2_modifiers, SCSrc_b32:$src2,
-                          VGPR_32:$vdst_in, op_sel:$op_sel);
+                          VGPR_32:$vdst_in, op_sel0:$op_sel);
   let HasClamp = 0;
   let HasOMod = 0;
 }

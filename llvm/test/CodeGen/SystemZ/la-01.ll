@@ -10,12 +10,12 @@
 @e1 = external dso_local global i32, align 1
 @d1 = global i32 1, align 1
 
-declare void @ef()
+declare dso_local void @ef()
 define void @df() {
   ret void
 }
 
-declare void @foo(i32 *)
+declare dso_local void @foo(i32 *)
 
 ; Test a load of a fully-aligned external variable.
 define i32 *@f1() {

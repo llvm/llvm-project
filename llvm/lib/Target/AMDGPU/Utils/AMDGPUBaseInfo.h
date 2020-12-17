@@ -582,6 +582,15 @@ bool isCompute(CallingConv::ID CC);
 LLVM_READNONE
 bool isEntryFunctionCC(CallingConv::ID CC);
 
+// These functions are considered entrypoints into the current module, i.e. they
+// are allowed to be called from outside the current module. This is different
+// from isEntryFunctionCC, which is only true for functions that are entered by
+// the hardware. Module entry points include all entry functions but also
+// include functions that can be called from other functions inside or outside
+// the current module. Module entry functions are allowed to allocate LDS.
+LLVM_READNONE
+bool isModuleEntryFunctionCC(CallingConv::ID CC);
+
 // FIXME: Remove this when calling conventions cleaned up
 LLVM_READNONE
 inline bool isKernel(CallingConv::ID CC) {
@@ -740,6 +749,13 @@ Optional<int64_t> getSMRDEncodedOffset(const MCSubtargetInfo &ST,
 /// instruction. This is only useful on CI.s
 Optional<int64_t> getSMRDEncodedLiteralOffset32(const MCSubtargetInfo &ST,
                                                 int64_t ByteOffset);
+
+/// For FLAT segment the offset must be positive;
+/// MSB is ignored and forced to zero.
+///
+/// \return The number of bits available for the offset field in flat
+/// instructions.
+unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST, bool Signed);
 
 /// \returns true if this offset is small enough to fit in the SMRD
 /// offset field.  \p ByteOffset should be the offset in bytes and

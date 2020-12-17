@@ -283,10 +283,9 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
     // The select condition may be a vector. We may only change the operand
     // type if the vector width remains the same (and matches the condition).
     if (auto *CondVTy = dyn_cast<VectorType>(CondTy)) {
-      if (!FIOpndTy->isVectorTy())
-        return nullptr;
-      if (cast<FixedVectorType>(CondVTy)->getNumElements() !=
-          cast<FixedVectorType>(FIOpndTy)->getNumElements())
+      if (!FIOpndTy->isVectorTy() ||
+          CondVTy->getElementCount() !=
+              cast<VectorType>(FIOpndTy)->getElementCount())
         return nullptr;
 
       // TODO: If the backend knew how to deal with casts better, we could
@@ -765,25 +764,24 @@ static Value *canonicalizeSaturatedAdd(ICmpInst *Cmp, Value *TVal, Value *FVal,
 
   // Match unsigned saturated add of 2 variables with an unnecessary 'not'.
   // There are 8 commuted variants.
-  // Canonicalize -1 (saturated result) to true value of the select. Just
-  // swapping the compare operands is legal, because the selected value is the
-  // same in case of equality, so we can interchange u< and u<=.
+  // Canonicalize -1 (saturated result) to true value of the select.
   if (match(FVal, m_AllOnes())) {
     std::swap(TVal, FVal);
-    std::swap(Cmp0, Cmp1);
+    Pred = CmpInst::getInversePredicate(Pred);
   }
   if (!match(TVal, m_AllOnes()))
     return nullptr;
 
-  // Canonicalize predicate to 'ULT'.
-  if (Pred == ICmpInst::ICMP_UGT) {
-    Pred = ICmpInst::ICMP_ULT;
+  // Canonicalize predicate to less-than or less-or-equal-than.
+  if (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_UGE) {
     std::swap(Cmp0, Cmp1);
+    Pred = CmpInst::getSwappedPredicate(Pred);
   }
-  if (Pred != ICmpInst::ICMP_ULT)
+  if (Pred != ICmpInst::ICMP_ULT && Pred != ICmpInst::ICMP_ULE)
     return nullptr;
 
   // Match unsigned saturated add of 2 variables with an unnecessary 'not'.
+  // Strictness of the comparison is irrelevant.
   Value *Y;
   if (match(Cmp0, m_Not(m_Value(X))) &&
       match(FVal, m_c_Add(m_Specific(X), m_Value(Y))) && Y == Cmp1) {
@@ -792,6 +790,7 @@ static Value *canonicalizeSaturatedAdd(ICmpInst *Cmp, Value *TVal, Value *FVal,
     return Builder.CreateBinaryIntrinsic(Intrinsic::uadd_sat, X, Y);
   }
   // The 'not' op may be included in the sum but not the compare.
+  // Strictness of the comparison is irrelevant.
   X = Cmp0;
   Y = Cmp1;
   if (match(FVal, m_c_Add(m_Not(m_Specific(X)), m_Specific(Y)))) {
@@ -802,7 +801,9 @@ static Value *canonicalizeSaturatedAdd(ICmpInst *Cmp, Value *TVal, Value *FVal,
         Intrinsic::uadd_sat, BO->getOperand(0), BO->getOperand(1));
   }
   // The overflow may be detected via the add wrapping round.
-  if (match(Cmp0, m_c_Add(m_Specific(Cmp1), m_Value(Y))) &&
+  // This is only valid for strict comparison!
+  if (Pred == ICmpInst::ICMP_ULT &&
+      match(Cmp0, m_c_Add(m_Specific(Cmp1), m_Value(Y))) &&
       match(FVal, m_c_Add(m_Specific(Cmp1), m_Specific(Y)))) {
     // ((X + Y) u< X) ? -1 : (X + Y) --> uadd.sat(X, Y)
     // ((X + Y) u< Y) ? -1 : (X + Y) --> uadd.sat(X, Y)
@@ -1984,11 +1985,11 @@ Instruction *InstCombinerImpl::foldSelectExtConst(SelectInst &Sel) {
 static Instruction *canonicalizeSelectToShuffle(SelectInst &SI) {
   Value *CondVal = SI.getCondition();
   Constant *CondC;
-  if (!CondVal->getType()->isVectorTy() || !match(CondVal, m_Constant(CondC)))
+  auto *CondValTy = dyn_cast<FixedVectorType>(CondVal->getType());
+  if (!CondValTy || !match(CondVal, m_Constant(CondC)))
     return nullptr;
 
-  unsigned NumElts =
-      cast<FixedVectorType>(CondVal->getType())->getNumElements();
+  unsigned NumElts = CondValTy->getNumElements();
   SmallVector<int, 16> Mask;
   Mask.reserve(NumElts);
   for (unsigned i = 0; i != NumElts; ++i) {

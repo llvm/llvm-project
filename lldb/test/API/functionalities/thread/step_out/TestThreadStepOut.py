@@ -145,7 +145,8 @@ class ThreadStepOutTestCase(TestBase):
         if len(breakpoint_threads) == 1:
             success = thread.Suspend()
             self.assertTrue(success, "Couldn't suspend a thread")
-            bkpt_threads = lldbutil.continue_to_breakpoint(bkpt)
+            bkpt_threads = lldbutil.continue_to_breakpoint(self.inferior_process,
+                                                           bkpt)
             self.assertEqual(len(bkpt_threads), 1, "Second thread stopped")
             success = thread.Resume()
             self.assertTrue(success, "Couldn't resume a thread")

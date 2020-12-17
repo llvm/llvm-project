@@ -68,6 +68,15 @@ define <2 x i1> @test8vec(<2 x i1> %C, <2 x i1> %X) {
   ret <2 x i1> %R
 }
 
+define <vscale x 2 x i1> @test8vvec(<vscale x 2 x i1> %C, <vscale x 2 x i1> %X) {
+; CHECK-LABEL: @test8vvec(
+; CHECK-NEXT:    [[R:%.*]] = and <vscale x 2 x i1> [[C:%.*]],  [[X:%.*]]
+; CHECK-NEXT:    ret <vscale x 2 x i1> [[R]]
+;
+  %R = select <vscale x 2 x i1> %C, <vscale x 2 x i1> %X, <vscale x 2 x i1> zeroinitializer
+  ret <vscale x 2 x i1> %R
+}
+
 define i1 @test9(i1 %C, i1 %X) {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 [[C:%.*]], true
@@ -86,6 +95,16 @@ define <2 x i1> @test9vec(<2 x i1> %C, <2 x i1> %X) {
 ;
   %R = select <2 x i1> %C, <2 x i1> <i1 false, i1 false>, <2 x i1> %X
   ret <2 x i1> %R
+}
+
+define <vscale x 2 x i1> @test9vvec(<vscale x 2 x i1> %C, <vscale x 2 x i1> %X) {
+; CHECK-LABEL: @test9vvec(
+; CHECK-NEXT:    [[NOT_C:%.*]] = xor <vscale x 2 x i1> [[C:%.*]], shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[R:%.*]] = and <vscale x 2 x i1> [[NOT_C]], [[X:%.*]]
+; CHECK-NEXT:    ret <vscale x 2 x i1> [[R]]
+;
+  %R = select <vscale x 2 x i1> %C, <vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> %X
+  ret <vscale x 2 x i1> %R
 }
 
 define i1 @test10(i1 %C, i1 %X) {
@@ -699,6 +718,34 @@ define i48 @test51(<3 x i1> %icmp, <3 x i16> %tmp) {
   ret i48 %tmp2
 }
 
+define <vscale x 4 x float> @bitcast_select_bitcast(<vscale x 4 x i1> %icmp, <vscale x 4 x i32> %a, <vscale x 4 x float> %b) {
+; CHECK-LABEL: @bitcast_select_bitcast(
+; CHECK-NEXT:    [[BC1:%.*]] = bitcast <vscale x 4 x i32> [[A:%.*]] to <vscale x 4 x float>
+; CHECK-NEXT:    [[SELECT:%.*]] = select <vscale x 4 x i1> [[ICMP:%.*]], <vscale x 4 x float> [[B:%.*]], <vscale x 4 x float> [[BC1]]
+; CHECK-NEXT:    ret <vscale x 4 x float> [[SELECT]]
+;
+  %bc1 = bitcast <vscale x 4 x float> %b to <vscale x 4 x i32>
+  %select = select <vscale x 4 x i1> %icmp, <vscale x 4 x i32> %bc1, <vscale x 4 x i32> %a
+  %bc2 = bitcast <vscale x 4 x i32> %select to <vscale x 4 x float>
+  ret <vscale x 4 x float> %bc2
+}
+
+define void @select_oneuse_bitcast(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x i32> %c, <vscale x 4 x i32> %d, <vscale x 4 x i32>* %ptr1) {
+; CHECK-LABEL: @select_oneuse_bitcast(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <vscale x 4 x i32> [[C:%.*]], [[D:%.*]]
+; CHECK-NEXT:    [[SEL1_V:%.*]] = select <vscale x 4 x i1> [[CMP]], <vscale x 4 x float> [[A:%.*]], <vscale x 4 x float> [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 4 x i32>* [[PTR1:%.*]] to <vscale x 4 x float>*
+; CHECK-NEXT:    store <vscale x 4 x float> [[SEL1_V]], <vscale x 4 x float>* [[TMP1]], align 16
+; CHECK-NEXT:    ret void
+;
+  %cmp = icmp ult <vscale x 4 x i32> %c, %d
+  %bc1 = bitcast <vscale x 4 x float> %a to <vscale x 4 x i32>
+  %bc2 = bitcast <vscale x 4 x float> %b to <vscale x 4 x i32>
+  %sel1 = select <vscale x 4 x i1> %cmp, <vscale x 4 x i32> %bc1, <vscale x 4 x i32> %bc2
+  store <vscale x 4 x i32> %sel1, <vscale x 4 x i32>* %ptr1
+  ret void
+}
+
 ; Allow select promotion even if there are multiple uses of bitcasted ops.
 ; Hoisting the selects allows later pattern matching to see that these are min/max ops.
 
@@ -720,6 +767,27 @@ define void @min_max_bitcast(<4 x float> %a, <4 x float> %b, <4 x i32>* %ptr1, <
   %sel2 = select <4 x i1> %cmp, <4 x i32> %bc2, <4 x i32> %bc1
   store <4 x i32> %sel1, <4 x i32>* %ptr1
   store <4 x i32> %sel2, <4 x i32>* %ptr2
+  ret void
+}
+
+define void @min_max_bitcast1(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x i32>* %ptr1, <vscale x 4 x i32>* %ptr2) {
+; CHECK-LABEL: @min_max_bitcast1(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt <vscale x 4 x float> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SEL1_V:%.*]] = select <vscale x 4 x i1> [[CMP]], <vscale x 4 x float> [[A]], <vscale x 4 x float> [[B]]
+; CHECK-NEXT:    [[SEL2_V:%.*]] = select <vscale x 4 x i1> [[CMP]], <vscale x 4 x float> [[B]], <vscale x 4 x float> [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 4 x i32>* [[PTR1:%.*]] to <vscale x 4 x float>*
+; CHECK-NEXT:    store <vscale x 4 x float> [[SEL1_V]], <vscale x 4 x float>* [[TMP1]], align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <vscale x 4 x i32>* [[PTR2:%.*]] to <vscale x 4 x float>*
+; CHECK-NEXT:    store <vscale x 4 x float> [[SEL2_V]], <vscale x 4 x float>* [[TMP2]], align 16
+; CHECK-NEXT:    ret void
+;
+  %cmp = fcmp olt <vscale x 4 x float> %a, %b
+  %bc1 = bitcast <vscale x 4 x float> %a to <vscale x 4 x i32>
+  %bc2 = bitcast <vscale x 4 x float> %b to <vscale x 4 x i32>
+  %sel1 = select <vscale x 4 x i1> %cmp, <vscale x 4 x i32> %bc1, <vscale x 4 x i32> %bc2
+  %sel2 = select <vscale x 4 x i1> %cmp, <vscale x 4 x i32> %bc2, <vscale x 4 x i32> %bc1
+  store <vscale x 4 x i32> %sel1, <vscale x 4 x i32>* %ptr1
+  store <vscale x 4 x i32> %sel2, <vscale x 4 x i32>* %ptr2
   ret void
 }
 

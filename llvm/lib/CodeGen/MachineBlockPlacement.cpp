@@ -1673,11 +1673,9 @@ MachineBasicBlock *MachineBlockPlacement::selectBestCandidateBlock(
   // worklist of already placed entries.
   // FIXME: If this shows up on profiles, it could be folded (at the cost of
   // some code complexity) into the loop below.
-  WorkList.erase(llvm::remove_if(WorkList,
-                                 [&](MachineBasicBlock *BB) {
-                                   return BlockToChain.lookup(BB) == &Chain;
-                                 }),
-                 WorkList.end());
+  llvm::erase_if(WorkList, [&](MachineBasicBlock *BB) {
+    return BlockToChain.lookup(BB) == &Chain;
+  });
 
   if (WorkList.empty())
     return nullptr;
@@ -2308,6 +2306,10 @@ void MachineBlockPlacement::rotateLoop(BlockChain &LoopChain,
   if (Bottom == ExitingBB)
     return;
 
+  // The entry block should always be the first BB in a function.
+  if (Top->isEntryBlock())
+    return;
+
   bool ViableTopFallthrough = hasViableTopFallthrough(Top, LoopBlockSet);
 
   // If the header has viable fallthrough, check whether the current loop
@@ -2382,6 +2384,11 @@ void MachineBlockPlacement::rotateLoopWithProfile(
     BlockChain &LoopChain, const MachineLoop &L,
     const BlockFilterSet &LoopBlockSet) {
   auto RotationPos = LoopChain.end();
+  MachineBasicBlock *ChainHeaderBB = *LoopChain.begin();
+
+  // The entry block should always be the first BB in a function.
+  if (ChainHeaderBB->isEntryBlock())
+    return;
 
   BlockFrequency SmallestRotationCost = BlockFrequency::getMaxFrequency();
 
@@ -2400,7 +2407,6 @@ void MachineBlockPlacement::rotateLoopWithProfile(
   // chain head is not the loop header. As we only consider natural loops with
   // single header, this computation can be done only once.
   BlockFrequency HeaderFallThroughCost(0);
-  MachineBasicBlock *ChainHeaderBB = *LoopChain.begin();
   for (auto *Pred : ChainHeaderBB->predecessors()) {
     BlockChain *PredChain = BlockToChain[Pred];
     if (!LoopBlockSet.count(Pred) &&
@@ -2537,10 +2543,14 @@ MachineBlockPlacement::collectLoopBlockSet(const MachineLoop &L) {
                     MBPI->getEdgeProbability(LoopPred, L.getHeader());
 
     for (MachineBasicBlock *LoopBB : L.getBlocks()) {
+      if (LoopBlockSet.count(LoopBB))
+        continue;
       auto Freq = MBFI->getBlockFreq(LoopBB).getFrequency();
       if (Freq == 0 || LoopFreq.getFrequency() / Freq > LoopToColdBlockRatio)
         continue;
-      LoopBlockSet.insert(LoopBB);
+      BlockChain *Chain = BlockToChain[LoopBB];
+      for (MachineBasicBlock *ChainBB : *Chain)
+        LoopBlockSet.insert(ChainBB);
     }
   } else
     LoopBlockSet.insert(L.block_begin(), L.block_end());
@@ -3032,12 +3042,7 @@ bool MachineBlockPlacement::maybeTailDuplicateBlock(
           SmallVectorImpl<MachineBasicBlock *> &RemoveList = BlockWorkList;
           if (RemBB->isEHPad())
             RemoveList = EHPadWorkList;
-          RemoveList.erase(
-              llvm::remove_if(RemoveList,
-                              [RemBB](MachineBasicBlock *BB) {
-                                return BB == RemBB;
-                              }),
-              RemoveList.end());
+          llvm::erase_value(RemoveList, RemBB);
         }
 
         // Handle the filter set

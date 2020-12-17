@@ -17,13 +17,13 @@ using FPBits = __llvm_libc::fputil::FPBits<double>;
 DECLARE_SPECIAL_CONSTANTS(double)
 
 TEST(FmaxTest, NaNArg) {
-  EXPECT_FP_EQ(inf, __llvm_libc::fmax(nan, inf));
-  EXPECT_FP_EQ(negInf, __llvm_libc::fmax(negInf, nan));
-  EXPECT_FP_EQ(0.0, __llvm_libc::fmax(nan, 0.0));
-  EXPECT_FP_EQ(-0.0, __llvm_libc::fmax(-0.0, nan));
-  EXPECT_FP_EQ(-1.2345, __llvm_libc::fmax(nan, -1.2345));
-  EXPECT_FP_EQ(1.2345, __llvm_libc::fmax(1.2345, nan));
-  EXPECT_NE(isnan(__llvm_libc::fmax(nan, nan)), 0);
+  EXPECT_FP_EQ(inf, __llvm_libc::fmax(aNaN, inf));
+  EXPECT_FP_EQ(negInf, __llvm_libc::fmax(negInf, aNaN));
+  EXPECT_FP_EQ(0.0, __llvm_libc::fmax(aNaN, 0.0));
+  EXPECT_FP_EQ(-0.0, __llvm_libc::fmax(-0.0, aNaN));
+  EXPECT_FP_EQ(-1.2345, __llvm_libc::fmax(aNaN, -1.2345));
+  EXPECT_FP_EQ(1.2345, __llvm_libc::fmax(1.2345, aNaN));
+  EXPECT_NE(isnan(__llvm_libc::fmax(aNaN, aNaN)), 0);
 }
 
 TEST(FmaxTest, InfArg) {

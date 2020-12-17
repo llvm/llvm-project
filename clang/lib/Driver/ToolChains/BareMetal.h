@@ -26,6 +26,10 @@ public:
   ~BareMetal() override = default;
 
   static bool handlesTarget(const llvm::Triple &Triple);
+
+  void findMultilibs(const Driver &D, const llvm::Triple &Triple,
+                     const llvm::opt::ArgList &Args);
+
 protected:
   Tool *buildLinker() const override;
 
@@ -67,6 +71,7 @@ public:
                            llvm::opt::ArgStringList &CmdArgs) const override;
   void AddLinkRuntimeLib(const llvm::opt::ArgList &Args,
                          llvm::opt::ArgStringList &CmdArgs) const;
+  std::string computeSysRoot() const override;
 };
 
 } // namespace toolchains

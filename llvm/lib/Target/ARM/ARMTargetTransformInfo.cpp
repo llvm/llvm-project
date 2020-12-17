@@ -1318,6 +1318,24 @@ int ARMTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                            CostKind, I);
 }
 
+unsigned ARMTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
+                                           Align Alignment,
+                                           unsigned AddressSpace,
+                                           TTI::TargetCostKind CostKind) {
+  if (ST->hasMVEIntegerOps()) {
+    if (Opcode == Instruction::Load && isLegalMaskedLoad(Src, Alignment))
+      return ST->getMVEVectorCostFactor();
+    if (Opcode == Instruction::Store && isLegalMaskedStore(Src, Alignment))
+      return ST->getMVEVectorCostFactor();
+  }
+  if (!isa<FixedVectorType>(Src))
+    return BaseT::getMaskedMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
+                                        CostKind);
+  // Scalar cost, which is currently very high due to the efficiency of the
+  // generated code.
+  return cast<FixedVectorType>(Src)->getNumElements() * 8;
+}
+
 int ARMTTIImpl::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,

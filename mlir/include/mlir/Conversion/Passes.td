@@ -396,12 +396,13 @@ def ConvertVectorToLLVM : Pass<"convert-vector-to-llvm", "ModuleOp"> {
     operations. The lowering pass provides several options to control
     the kinds of optimizations that are allowed. It also provides options
     that enable the use of one or more architectural-specific dialects
-    (AVX512, Neon, SVE, etc.) in combination with the architectural-neutral
-    vector dialect lowering.
+    (AVX512, ArmNeon, ArmSVE, etc.) in combination with the
+    architectural-neutral vector dialect lowering.
 
   }];
   let constructor = "mlir::createConvertVectorToLLVMPass()";
-  let dependentDialects = ["LLVM::LLVMDialect", "LLVM::LLVMAVX512Dialect"];
+  // Override explicitly in C++ to allow conditional dialect dependence.
+  // let dependentDialects;
   let options = [
     Option<"reassociateFPReductions", "reassociate-fp-reductions",
            "bool", /*default=*/"false",
@@ -413,7 +414,15 @@ def ConvertVectorToLLVM : Pass<"convert-vector-to-llvm", "ModuleOp"> {
     Option<"enableAVX512", "enable-avx512",
            "bool", /*default=*/"false",
            "Enables the use of AVX512 dialect while lowering the vector "
-	   "dialect.">
+	   "dialect.">,
+    Option<"enableArmNeon", "enable-arm-neon",
+           "bool", /*default=*/"false",
+           "Enables the use of ArmNeon dialect while lowering the vector "
+	   "dialect.">,
+    Option<"enableArmSVE", "enable-arm-sve",
+           "bool", /*default=*/"false",
+           "Enables the use of ArmSVE dialect while lowering the vector "
+       "dialect.">
   ];
 }
 

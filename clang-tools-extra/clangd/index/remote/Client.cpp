@@ -15,17 +15,44 @@
 #include "support/Logger.h"
 #include "support/Trace.h"
 #include "clang/Basic/Version.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 
+#include <atomic>
 #include <chrono>
+#include <memory>
 
 namespace clang {
 namespace clangd {
 namespace remote {
 namespace {
 
+llvm::StringRef toString(const grpc_connectivity_state &State) {
+  switch (State) {
+  case GRPC_CHANNEL_IDLE:
+    return "idle";
+  case GRPC_CHANNEL_CONNECTING:
+    return "connecting";
+  case GRPC_CHANNEL_READY:
+    return "ready";
+  case GRPC_CHANNEL_TRANSIENT_FAILURE:
+    return "transient failure";
+  case GRPC_CHANNEL_SHUTDOWN:
+    return "shutdown";
+  }
+  llvm_unreachable("Not a valid grpc_connectivity_state.");
+}
+
 class IndexClient : public clangd::SymbolIndex {
+  void updateConnectionStatus() const {
+    auto NewStatus = Channel->GetState(/*try_to_connect=*/false);
+    auto OldStatus = ConnectionStatus.exchange(NewStatus);
+    if (OldStatus != NewStatus)
+      vlog("Remote index connection [{0}]: {1} => {2}", ServerAddress,
+           toString(OldStatus), toString(NewStatus));
+  }
+
   template <typename RequestT, typename ReplyT>
   using StreamingCall = std::unique_ptr<grpc::ClientReader<ReplyT>> (
       remote::v1::SymbolIndex::Stub::*)(grpc::ClientContext *,
@@ -36,16 +63,20 @@ class IndexClient : public clangd::SymbolIndex {
   bool streamRPC(ClangdRequestT Request,
                  StreamingCall<RequestT, ReplyT> RPCCall,
                  CallbackT Callback) const {
+    updateConnectionStatus();
     bool FinalResult = false;
     trace::Span Tracer(RequestT::descriptor()->name());
     const auto RPCRequest = ProtobufMarshaller->toProtobuf(Request);
     SPAN_ATTACH(Tracer, "Request", RPCRequest.DebugString());
     grpc::ClientContext Context;
     Context.AddMetadata("version", clang::getClangToolFullVersion("clangd"));
-    std::chrono::system_clock::time_point Deadline =
-        std::chrono::system_clock::now() + DeadlineWaitingTime;
+    std::chrono::system_clock::time_point StartTime =
+        std::chrono::system_clock::now();
+    auto Deadline = StartTime + DeadlineWaitingTime;
     Context.set_deadline(Deadline);
     auto Reader = (Stub.get()->*RPCCall)(&Context, RPCRequest);
+    dlog("Sending {0}: {1}", RequestT::descriptor()->name(),
+         RPCRequest.DebugString());
     ReplyT Reply;
     unsigned Successful = 0;
     unsigned FailedToParse = 0;
@@ -65,17 +96,26 @@ class IndexClient : public clangd::SymbolIndex {
       Callback(*Response);
       ++Successful;
     }
+    auto Millis = std::chrono::duration_cast<std::chrono::milliseconds>(
+                      std::chrono::system_clock::now() - StartTime)
+                      .count();
+    vlog("Remote index [{0}]: {1} => {2} results in {3}ms.", ServerAddress,
+         RequestT::descriptor()->name(), Successful, Millis);
     SPAN_ATTACH(Tracer, "Status", Reader->Finish().ok());
     SPAN_ATTACH(Tracer, "Successful", Successful);
     SPAN_ATTACH(Tracer, "Failed to parse", FailedToParse);
+    updateConnectionStatus();
     return FinalResult;
   }
 
 public:
   IndexClient(
-      std::shared_ptr<grpc::Channel> Channel, llvm::StringRef ProjectRoot,
+      std::shared_ptr<grpc::Channel> Channel, llvm::StringRef Address,
+      llvm::StringRef ProjectRoot,
       std::chrono::milliseconds DeadlineTime = std::chrono::milliseconds(1000))
-      : Stub(remote::v1::SymbolIndex::NewStub(Channel)),
+      : Stub(remote::v1::SymbolIndex::NewStub(Channel)), Channel(Channel),
+        ServerAddress(Address),
+        ConnectionStatus(Channel->GetState(/*try_to_connect=*/true)),
         ProtobufMarshaller(new Marshaller(/*RemoteIndexRoot=*/"",
                                           /*LocalIndexRoot=*/ProjectRoot)),
         DeadlineWaitingTime(DeadlineTime) {
@@ -118,6 +158,9 @@ public:
 
 private:
   std::unique_ptr<remote::v1::SymbolIndex::Stub> Stub;
+  std::shared_ptr<grpc::Channel> Channel;
+  llvm::SmallString<256> ServerAddress;
+  mutable std::atomic<grpc_connectivity_state> ConnectionStatus;
   std::unique_ptr<Marshaller> ProtobufMarshaller;
   // Each request will be terminated if it takes too long.
   std::chrono::milliseconds DeadlineWaitingTime;
@@ -129,9 +172,8 @@ std::unique_ptr<clangd::SymbolIndex> getClient(llvm::StringRef Address,
                                                llvm::StringRef ProjectRoot) {
   const auto Channel =
       grpc::CreateChannel(Address.str(), grpc::InsecureChannelCredentials());
-  Channel->GetState(true);
   return std::unique_ptr<clangd::SymbolIndex>(
-      new IndexClient(Channel, ProjectRoot));
+      new IndexClient(Channel, Address, ProjectRoot));
 }
 
 } // namespace remote

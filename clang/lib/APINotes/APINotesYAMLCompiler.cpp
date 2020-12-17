@@ -89,6 +89,7 @@ template <> struct ScalarEnumerationTraits<NullabilityKind> {
     IO.enumCase(NK, "Nonnull", NullabilityKind::NonNull);
     IO.enumCase(NK, "Optional", NullabilityKind::Nullable);
     IO.enumCase(NK, "Unspecified", NullabilityKind::Unspecified);
+    IO.enumCase(NK, "NullableResult", NullabilityKind::NullableResult);
     // TODO: Mapping this to it's own value would allow for better cross
     // checking. Also the default should be Unknown.
     IO.enumCase(NK, "Scalar", NullabilityKind::Unspecified);

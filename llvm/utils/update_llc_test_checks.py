@@ -28,8 +28,13 @@ def main():
       '--extra_scrub', action='store_true',
       help='Always use additional regex to further reduce diffs between various subtargets')
   parser.add_argument(
+      '--x86_scrub_sp', action='store_true', default=True,
+      help='Use regex for x86 sp matching to reduce diffs between various subtargets')
+  parser.add_argument(
+      '--no_x86_scrub_sp', action='store_false', dest='x86_scrub_sp')
+  parser.add_argument(
       '--x86_scrub_rip', action='store_true', default=True,
-      help='Use more regex for x86 matching to reduce diffs between various subtargets')
+      help='Use more regex for x86 rip matching to reduce diffs between various subtargets')
   parser.add_argument(
       '--no_x86_scrub_rip', action='store_false', dest='x86_scrub_rip')
   parser.add_argument(
@@ -99,24 +104,28 @@ def main():
     else:
       check_indent = ''
 
-    func_dict = {}
-    func_order = {}
-    for p in run_list:
-      prefixes = p[0]
-      for prefix in prefixes:
-        func_dict.update({prefix: dict()})
-        func_order.update({prefix: []})
+    builder = common.FunctionTestBuilder(
+        run_list=run_list, 
+        flags=type('', (object,), {
+            'verbose': ti.args.verbose,
+            'function_signature': False,
+            'check_attributes': False}),
+        scrubber_args=[ti.args])
+
     for prefixes, llc_args, triple_in_cmd, march_in_cmd in run_list:
       common.debug('Extracted LLC cmd:', llc_tool, llc_args)
       common.debug('Extracted FileCheck prefixes:', str(prefixes))
 
-      raw_tool_output = common.invoke_tool(ti.args.llc_binary or llc_tool, llc_args, ti.path)
+      raw_tool_output = common.invoke_tool(ti.args.llc_binary or llc_tool,
+                                           llc_args, ti.path)
       triple = triple_in_cmd or triple_in_ir
       if not triple:
         triple = asm.get_triple_from_march(march_in_cmd)
 
-      asm.build_function_body_dictionary_for_triple(ti.args, raw_tool_output,
-          triple, prefixes, func_dict, func_order)
+      scrubber, function_re = asm.get_run_handler(triple)
+      builder.process_run_line(function_re, scrubber, raw_tool_output, prefixes)
+
+    func_dict = builder.finish_and_get_func_dict()
 
     is_in_function = False
     is_in_function_start = False
@@ -141,7 +150,7 @@ def main():
       common.dump_input_lines(output_lines, ti, prefix_set, ';')
 
       # Now generate all the checks.
-      common.add_checks_at_end(output_lines, run_list, func_order,
+      common.add_checks_at_end(output_lines, run_list, builder.func_order(),
                                check_indent + ';',
                                lambda my_output_lines, prefixes, func:
                                asm.add_asm_checks(my_output_lines,

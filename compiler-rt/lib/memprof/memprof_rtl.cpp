@@ -234,7 +234,7 @@ void MemprofInitTime() {
   if (LIKELY(memprof_timestamp_inited))
     return;
   timespec ts;
-  timespec_get(&ts, TIME_UTC);
+  clock_gettime(CLOCK_REALTIME, &ts);
   memprof_init_timestamp_s = ts.tv_sec;
   memprof_timestamp_inited = 1;
 }

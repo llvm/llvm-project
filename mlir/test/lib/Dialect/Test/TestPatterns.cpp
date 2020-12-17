@@ -467,7 +467,7 @@ struct TestBoundedRecursiveRewrite
                                 PatternRewriter &rewriter) const final {
     // Decrement the depth of the op in-place.
     rewriter.updateRootInPlace(op, [&] {
-      op.setAttr("depth", rewriter.getI64IntegerAttr(op.depth() - 1));
+      op->setAttr("depth", rewriter.getI64IntegerAttr(op.depth() - 1));
     });
     return success();
   }
@@ -899,7 +899,7 @@ struct TestMergeSingleBlockOps
   matchAndRewrite(SingleBlockImplicitTerminatorOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
     SingleBlockImplicitTerminatorOp parentOp =
-        op.getParentOfType<SingleBlockImplicitTerminatorOp>();
+        op->getParentOfType<SingleBlockImplicitTerminatorOp>();
     if (!parentOp)
       return failure();
     Block &innerBlock = op.region().front();
@@ -936,14 +936,14 @@ struct TestMergeBlocksPatternDriver
 
     /// Only allow `test.br` within test.merge_blocks op.
     target.addDynamicallyLegalOp<TestBranchOp>([&](TestBranchOp op) -> bool {
-      return op.getParentOfType<TestMergeBlocksOp>();
+      return op->getParentOfType<TestMergeBlocksOp>();
     });
 
     /// Expect that all nested test.SingleBlockImplicitTerminator ops are
     /// inlined.
     target.addDynamicallyLegalOp<SingleBlockImplicitTerminatorOp>(
         [&](SingleBlockImplicitTerminatorOp op) -> bool {
-          return !op.getParentOfType<SingleBlockImplicitTerminatorOp>();
+          return !op->getParentOfType<SingleBlockImplicitTerminatorOp>();
         });
 
     DenseSet<Operation *> unlegalizedOps;

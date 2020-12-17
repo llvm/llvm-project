@@ -59,14 +59,21 @@ enum class Kind { kTensor, kInvariant, kMulF, kMulI, kAddF, kAddI };
 /// children tensor expressions.
 struct TensorExp {
   TensorExp(Kind k, unsigned x, unsigned y, Value v)
-      : kind(k), e0(x), e1(y), val(v) {}
+      : kind(k), e0(x), e1(y), val(v) {
+    assert((kind == Kind::kTensor && e0 != -1u && e1 == -1u && !val) ||
+           (kind == Kind::kInvariant && e0 == -1u && e1 == -1u && val) ||
+           (kind >= Kind::kMulF && e0 != -1u && e1 != -1u && !val));
+  }
   Kind kind;
+  /// Indices of children expression(s).
   unsigned e0;
   unsigned e1;
+  /// Direct link to IR for an invariant. During code generation,
+  /// field is used to cache "hoisted" loop invariant tensor loads.
   Value val;
 };
 
-/// Lattice point. Each lattice point consist of a conjunction of tensor
+/// Lattice point. Each lattice point consists of a conjunction of tensor
 /// loop indices (encoded in a bitvector) and the index of the corresponding
 /// tensor expression.
 struct LatPoint {
@@ -74,7 +81,9 @@ struct LatPoint {
     bits.set(b);
   }
   LatPoint(const llvm::BitVector &b, unsigned e) : bits(b), exp(e) {}
+  /// Conjunction of tensor loop indices as bitvector.
   llvm::BitVector bits;
+  /// Index of the tensor expresssion.
   unsigned exp;
 };
 
@@ -502,8 +511,16 @@ static void genBuffers(Merger &merger, CodeGen &codegen,
 /// Generates a load on a dense or sparse tensor.
 static Value genTensorLoad(Merger &merger, CodeGen &codegen,
                            PatternRewriter &rewriter, linalg::GenericOp op,
-                           unsigned tensor) {
+                           unsigned exp) {
+  // Test if the load was hoisted to a higher loop nest.
+  Value val = merger.exp(exp).val;
+  if (val) {
+    merger.exp(exp).val = Value(); // reset
+    return val;
+  }
+  // Actual load.
   SmallVector<Value, 4> args;
+  unsigned tensor = merger.exp(exp).e0;
   auto map = op.getIndexingMap(tensor);
   bool sparse = false;
   for (unsigned i = 0, m = map.getNumResults(); i < m; ++i) {
@@ -515,7 +532,9 @@ static Value genTensorLoad(Merger &merger, CodeGen &codegen,
       args.push_back(codegen.pidxs[tensor][idx]); // position index
     }
   }
-  return rewriter.create<LoadOp>(op.getLoc(), codegen.buffers[tensor], args);
+  Location loc = op.getLoc();
+  Value ptr = codegen.buffers[tensor];
+  return rewriter.create<LoadOp>(loc, ptr, args);
 }
 
 /// Generates a store on a dense tensor.
@@ -528,25 +547,33 @@ static void genTensorStore(Merger &merger, CodeGen &codegen,
     unsigned idx = map.getDimPosition(i);
     args.push_back(codegen.loops[idx]); // universal dense index
   }
-  rewriter.create<StoreOp>(op.getLoc(), rhs, codegen.buffers[tensor], args);
+  Location loc = op.getLoc();
+  Value ptr = codegen.buffers[tensor];
+  rewriter.create<StoreOp>(loc, rhs, ptr, args);
 }
 
 /// Generates a pointer/index load from the sparse storage scheme.
-static Value genIntLoad(PatternRewriter &rewriter, Location loc, Value ptr,
-                        Value s) {
+static Value genLoad(PatternRewriter &rewriter, Location loc, Value ptr,
+                     Value s) {
   Value load = rewriter.create<LoadOp>(loc, ptr, s);
   return load.getType().isa<IndexType>()
              ? load
              : rewriter.create<IndexCastOp>(loc, load, rewriter.getIndexType());
 }
 
+/// Generates an invariant value.
+static Value genInvariantValue(Merger &merger, CodeGen &codegen,
+                               PatternRewriter &rewriter, unsigned exp) {
+  return merger.exp(exp).val;
+}
+
 /// Recursively generates tensor expression.
 static Value genExp(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
                     linalg::GenericOp op, unsigned exp) {
   if (merger.exp(exp).kind == Kind::kTensor)
-    return genTensorLoad(merger, codegen, rewriter, op, merger.exp(exp).e0);
+    return genTensorLoad(merger, codegen, rewriter, op, exp);
   else if (merger.exp(exp).kind == Kind::kInvariant)
-    return merger.exp(exp).val;
+    return genInvariantValue(merger, codegen, rewriter, exp);
   Value v0 = genExp(merger, codegen, rewriter, op, merger.exp(exp).e0);
   Value v1 = genExp(merger, codegen, rewriter, op, merger.exp(exp).e1);
   switch (merger.exp(exp).kind) {
@@ -561,6 +588,33 @@ static Value genExp(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
     return rewriter.create<AddFOp>(op.getLoc(), v0, v1);
   case Kind::kAddI:
     return rewriter.create<AddIOp>(op.getLoc(), v0, v1);
+  }
+}
+
+/// Hoists loop invariant tensor loads for which indices have been exhausted.
+static void genInvariants(Merger &merger, CodeGen &codegen,
+                          PatternRewriter &rewriter, linalg::GenericOp op,
+                          unsigned exp) {
+  if (merger.exp(exp).kind == Kind::kTensor) {
+    unsigned lhs = op.getNumInputsAndOutputs() - 1;
+    unsigned tensor = merger.exp(exp).e0;
+    if (tensor == lhs)
+      return; // TODO: scalarize reduction as well (using scf.yield)
+    auto map = op.getIndexingMap(tensor);
+    for (unsigned i = 0, m = map.getNumResults(); i < m; ++i) {
+      unsigned idx = map.getDimPosition(i);
+      if (!codegen.loops[idx])
+        return; // still in play
+    }
+    // All exhausted at this level.
+    merger.exp(exp).val = genTensorLoad(merger, codegen, rewriter, op, exp);
+
+  } else if (merger.exp(exp).kind != Kind::kInvariant) {
+    // Traverse into the binary operations. Note that we only hoist
+    // tensor loads, since subsequent MLIR/LLVM passes know how to
+    // deal with all other kinds of derived loop invariants.
+    genInvariants(merger, codegen, rewriter, op, merger.exp(exp).e0);
+    genInvariants(merger, codegen, rewriter, op, merger.exp(exp).e1);
   }
 }
 
@@ -590,9 +644,9 @@ static bool genInit(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
         Value one = rewriter.create<ConstantIndexOp>(loc, 1);
         Value p0 = (pat == 0) ? rewriter.create<ConstantIndexOp>(loc, 0)
                               : codegen.pidxs[tensor][topSort[pat - 1]];
-        codegen.pidxs[tensor][idx] = genIntLoad(rewriter, loc, ptr, p0);
+        codegen.pidxs[tensor][idx] = genLoad(rewriter, loc, ptr, p0);
         Value p1 = rewriter.create<AddIOp>(loc, p0, one);
-        codegen.highs[tensor][idx] = genIntLoad(rewriter, loc, ptr, p1);
+        codegen.highs[tensor][idx] = genLoad(rewriter, loc, ptr, p1);
       } else {
         // Dense index still in play.
         needsUniv = true;
@@ -608,7 +662,8 @@ static bool genInit(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
 /// Generates a for-loop on a single index.
 static Operation *genFor(Merger &merger, CodeGen &codegen,
                          PatternRewriter &rewriter, linalg::GenericOp op,
-                         bool isOuter, unsigned idx, llvm::BitVector &indices) {
+                         bool isOuter, bool isInner, unsigned idx,
+                         llvm::BitVector &indices) {
   unsigned fb = indices.find_first();
   unsigned tensor = merger.tensor(fb);
   assert(idx == merger.index(fb));
@@ -725,10 +780,15 @@ static Operation *genWhile(Merger &merger, CodeGen &codegen,
 /// singleton iteration or co-iteration over the given conjunction.
 static Operation *genLoop(Merger &merger, CodeGen &codegen,
                           PatternRewriter &rewriter, linalg::GenericOp op,
-                          bool isOuter, unsigned idx, bool needsUniv,
-                          llvm::BitVector &indices) {
-  if (indices.count() == 1)
-    return genFor(merger, codegen, rewriter, op, isOuter, idx, indices);
+                          std::vector<unsigned> &topSort, unsigned at,
+                          bool needsUniv, llvm::BitVector &indices) {
+  unsigned idx = topSort[at];
+  if (indices.count() == 1) {
+    bool isOuter = at == 0;
+    bool isInner = at == topSort.size() - 1;
+    return genFor(merger, codegen, rewriter, op, isOuter, isInner, idx,
+                  indices);
+  }
   return genWhile(merger, codegen, rewriter, op, idx, needsUniv, indices);
 }
 
@@ -749,7 +809,7 @@ static void genLocals(Merger &merger, CodeGen &codegen,
       assert(idx == merger.index(b));
       Value ptr = codegen.indices[tensor][idx];
       Value s = codegen.pidxs[tensor][idx];
-      Value load = genIntLoad(rewriter, loc, ptr, s);
+      Value load = genLoad(rewriter, loc, ptr, s);
       codegen.idxs[tensor][idx] = load;
       if (!needsUniv) {
         if (min) {
@@ -886,6 +946,7 @@ static void genStmt(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
   assert(lsize != 0);
   unsigned l0 = merger.set(lts)[0];
   LatPoint lat0 = merger.lat(l0);
+  genInvariants(merger, codegen, rewriter, op, exp);
   bool needsUniv =
       genInit(merger, codegen, rewriter, op, topSort, at, lat0.bits) &&
       lsize > 1;
@@ -897,9 +958,8 @@ static void genStmt(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
     // Emit loop.
     llvm::BitVector indices = lati.bits;
     optimizeIndices(merger, lsize, indices);
-    bool isOuter = at == 0;
-    Operation *loop = genLoop(merger, codegen, rewriter, op, isOuter, idx,
-                              needsUniv, indices);
+    Operation *loop =
+        genLoop(merger, codegen, rewriter, op, topSort, at, needsUniv, indices);
     genLocals(merger, codegen, rewriter, op, topSort, at, needsUniv, lati.bits);
 
     // Visit all lattices points with Li >= Lj to generate the
@@ -931,6 +991,7 @@ static void genStmt(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
     }
     rewriter.setInsertionPointAfter(loop);
   }
+  codegen.loops[idx] = Value();
 }
 
 namespace {

@@ -1349,7 +1349,7 @@ protected:
                             ConversionPatternRewriter &rewriter) const {
     // Convert the original function arguments. They are converted using the
     // LLVMTypeConverter provided to this legalization pattern.
-    auto varargsAttr = funcOp.getAttrOfType<BoolAttr>("std.varargs");
+    auto varargsAttr = funcOp->getAttrOfType<BoolAttr>("std.varargs");
     TypeConverter::SignatureConversion result(funcOp.getNumArguments());
     auto llvmType = getTypeConverter()->convertFunctionSignature(
         funcOp.getType(), varargsAttr && varargsAttr.getValue(), result);
@@ -1407,7 +1407,7 @@ struct FuncOpConversion : public FuncOpConversionBase {
       return failure();
 
     if (getTypeConverter()->getOptions().emitCWrappers ||
-        funcOp.getAttrOfType<UnitAttr>(kEmitIfaceAttrName)) {
+        funcOp->getAttrOfType<UnitAttr>(kEmitIfaceAttrName)) {
       if (newFuncOp.isExternal())
         wrapExternalFunction(rewriter, funcOp.getLoc(), *getTypeConverter(),
                              funcOp, newFuncOp);
@@ -1681,6 +1681,7 @@ using MulFOpLowering = VectorConvertToLLVMPattern<MulFOp, LLVM::FMulOp>;
 using MulIOpLowering = VectorConvertToLLVMPattern<MulIOp, LLVM::MulOp>;
 using NegFOpLowering = VectorConvertToLLVMPattern<NegFOp, LLVM::FNegOp>;
 using OrOpLowering = VectorConvertToLLVMPattern<OrOp, LLVM::OrOp>;
+using PowFOpLowering = VectorConvertToLLVMPattern<PowFOp, LLVM::PowOp>;
 using RemFOpLowering = VectorConvertToLLVMPattern<RemFOp, LLVM::FRemOp>;
 using SelectOpLowering = OneToOneConvertToLLVMPattern<SelectOp, LLVM::SelectOp>;
 using ShiftLeftOpLowering =
@@ -1717,7 +1718,7 @@ struct AssertOpLowering : public ConvertOpToLLVMPattern<AssertOp> {
     AssertOp::Adaptor transformed(operands);
 
     // Insert the `abort` declaration if necessary.
-    auto module = op.getParentOfType<ModuleOp>();
+    auto module = op->getParentOfType<ModuleOp>();
     auto abortFunc = module.lookupSymbol<LLVM::LLVMFuncOp>("abort");
     if (!abortFunc) {
       OpBuilder::InsertionGuard guard(rewriter);
@@ -2056,7 +2057,7 @@ struct AllocOpLowering : public AllocLikeOpLowering {
     Type elementPtrType = this->getElementPtrType(memRefType);
     Value allocatedPtr =
         createAllocCall(loc, "malloc", elementPtrType, {sizeBytes},
-                        allocOp.getParentOfType<ModuleOp>(), rewriter);
+                        allocOp->getParentOfType<ModuleOp>(), rewriter);
 
     Value alignedPtr = allocatedPtr;
     if (alignment) {
@@ -2138,7 +2139,7 @@ struct AlignedAllocOpLowering : public AllocLikeOpLowering {
     Type elementPtrType = this->getElementPtrType(memRefType);
     Value allocatedPtr = createAllocCall(
         loc, "aligned_alloc", elementPtrType, {allocAlignment, sizeBytes},
-        allocOp.getParentOfType<ModuleOp>(), rewriter);
+        allocOp->getParentOfType<ModuleOp>(), rewriter);
 
     return std::make_tuple(allocatedPtr, allocatedPtr);
   }
@@ -2363,11 +2364,11 @@ struct DeallocOpLowering : public ConvertOpToLLVMPattern<DeallocOp> {
 
     // Insert the `free` declaration if it is not already present.
     auto freeFunc =
-        op.getParentOfType<ModuleOp>().lookupSymbol<LLVM::LLVMFuncOp>("free");
+        op->getParentOfType<ModuleOp>().lookupSymbol<LLVM::LLVMFuncOp>("free");
     if (!freeFunc) {
       OpBuilder::InsertionGuard guard(rewriter);
       rewriter.setInsertionPointToStart(
-          op.getParentOfType<ModuleOp>().getBody());
+          op->getParentOfType<ModuleOp>().getBody());
       freeFunc = rewriter.create<LLVM::LLVMFuncOp>(
           rewriter.getUnknownLoc(), "free",
           LLVM::LLVMType::getFunctionTy(getVoidType(), getVoidPtrType(),
@@ -3963,6 +3964,7 @@ void mlir::populateStdToLLVMNonMemoryConversionPatterns(
       MulIOpLowering,
       NegFOpLowering,
       OrOpLowering,
+      PowFOpLowering,
       PrefetchOpLowering,
       ReOpLowering,
       RemFOpLowering,
@@ -4154,8 +4156,8 @@ struct LLVMLoweringPass : public ConvertStandardToLLVMBase<LLVMLoweringPass> {
     LLVMConversionTarget target(getContext());
     if (failed(applyPartialConversion(m, target, std::move(patterns))))
       signalPassFailure();
-    m.setAttr(LLVM::LLVMDialect::getDataLayoutAttrName(),
-              StringAttr::get(this->dataLayout, m.getContext()));
+    m->setAttr(LLVM::LLVMDialect::getDataLayoutAttrName(),
+               StringAttr::get(this->dataLayout, m.getContext()));
   }
 };
 } // end namespace

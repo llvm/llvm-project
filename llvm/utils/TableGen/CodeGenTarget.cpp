@@ -264,15 +264,20 @@ const StringRef CodeGenTarget::getName() const {
   return TargetRec->getName();
 }
 
+/// getInstNamespace - Find and return the target machine's instruction
+/// namespace. The namespace is cached because it is requested multiple times.
 StringRef CodeGenTarget::getInstNamespace() const {
-  for (const CodeGenInstruction *Inst : getInstructionsByEnumValue()) {
-    // Make sure not to pick up "TargetOpcode" by accidentally getting
-    // the namespace off the PHI instruction or something.
-    if (Inst->Namespace != "TargetOpcode")
-      return Inst->Namespace;
+  if (InstNamespace.empty()) {
+    for (const CodeGenInstruction *Inst : getInstructionsByEnumValue()) {
+      // We are not interested in the "TargetOpcode" namespace.
+      if (Inst->Namespace != "TargetOpcode") {
+        InstNamespace = Inst->Namespace;
+        break;
+      }
+    }
   }
 
-  return "";
+  return InstNamespace;
 }
 
 StringRef CodeGenTarget::getRegNamespace() const {
@@ -351,10 +356,7 @@ CodeGenTarget::getSuperRegForSubReg(const ValueTypeByHwMode &ValueTy,
       continue;
 
     // We have a class. Check if it supports this value type.
-    if (llvm::none_of(SubClassWithSubReg->VTs,
-                      [&ValueTy](const ValueTypeByHwMode &ClassVT) {
-                        return ClassVT == ValueTy;
-                      }))
+    if (!llvm::is_contained(SubClassWithSubReg->VTs, ValueTy))
       continue;
 
     // We have a register class which supports both the value type and

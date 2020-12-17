@@ -340,9 +340,10 @@ static Value getPHISourceValue(Block *current, Block *pred,
 
 /// Connect the PHI nodes to the results of preceding blocks.
 template <typename T>
-static void
-connectPHINodes(T &func, const DenseMap<Value, llvm::Value *> &valueMapping,
-                const DenseMap<Block *, llvm::BasicBlock *> &blockMapping) {
+static void connectPHINodes(
+    T &func, const DenseMap<Value, llvm::Value *> &valueMapping,
+    const DenseMap<Block *, llvm::BasicBlock *> &blockMapping,
+    const DenseMap<Operation *, llvm::Instruction *> &branchMapping) {
   // Skip the first block, it cannot be branched to and its arguments correspond
   // to the arguments of the LLVM function.
   for (auto it = std::next(func.begin()), eit = func.end(); it != eit; ++it) {
@@ -355,9 +356,17 @@ connectPHINodes(T &func, const DenseMap<Value, llvm::Value *> &valueMapping,
       auto &phiNode = numberedPhiNode.value();
       unsigned index = numberedPhiNode.index();
       for (auto *pred : bb->getPredecessors()) {
+        // Find the LLVM IR block that contains the converted terminator
+        // instruction and use it in the PHI node. Note that this block is not
+        // necessarily the same as blockMapping.lookup(pred), some operations
+        // (in particular, OpenMP operations using OpenMPIRBuilder) may have
+        // split the blocks.
+        llvm::Instruction *terminator =
+            branchMapping.lookup(pred->getTerminator());
+        assert(terminator && "missing the mapping for a terminator");
         phiNode.addIncoming(valueMapping.lookup(getPHISourceValue(
                                 bb, pred, numArguments, index)),
-                            blockMapping.lookup(pred));
+                            terminator->getParent());
       }
     }
   }
@@ -385,6 +394,9 @@ LogicalResult
 ModuleTranslation::convertOmpParallel(Operation &opInst,
                                       llvm::IRBuilder<> &builder) {
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
+  // TODO: support error propagation in OpenMPIRBuilder and use it instead of
+  // relying on captured variables.
+  LogicalResult bodyGenStatus = success();
 
   auto bodyGenCB = [&](InsertPointTy allocaIP, InsertPointTy codeGenIP,
                        llvm::BasicBlock &continuationIP) {
@@ -402,31 +414,10 @@ ModuleTranslation::convertOmpParallel(Operation &opInst,
       blockMapping[&bb] = llvmBB;
     }
 
-    // Then, convert blocks one by one in topological order to ensure
-    // defs are converted before uses.
-    llvm::SetVector<Block *> blocks = topologicalSort(region);
-    for (auto indexedBB : llvm::enumerate(blocks)) {
-      Block *bb = indexedBB.value();
-      llvm::BasicBlock *curLLVMBB = blockMapping[bb];
-      if (bb->isEntryBlock()) {
-        assert(codeGenIPBBTI->getNumSuccessors() == 1 &&
-               "OpenMPIRBuilder provided entry block has multiple successors");
-        assert(codeGenIPBBTI->getSuccessor(0) == &continuationIP &&
-               "ContinuationIP is not the successor of OpenMPIRBuilder "
-               "provided entry block");
-        codeGenIPBBTI->setSuccessor(0, curLLVMBB);
-      }
-
-      // TODO: Error not returned up the hierarchy
-      if (failed(convertBlock(*bb, /*ignoreArguments=*/indexedBB.index() == 0)))
-        return;
-    }
-
+    convertOmpOpRegions(region, valueMapping, blockMapping, codeGenIPBBTI,
+                        continuationIP, builder, bodyGenStatus);
     ompContinuationIPStack.pop_back();
 
-    // Finally, after all blocks have been traversed and values mapped,
-    // connect the PHI nodes to the results of preceding blocks.
-    connectPHINodes(region, valueMapping, blockMapping);
   };
 
   // TODO: Perform appropriate actions according to the data-sharing
@@ -459,9 +450,76 @@ ModuleTranslation::convertOmpParallel(Operation &opInst,
   // entry or the alloca insertion point as provided by the body callback
   // above.
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP(builder.saveIP());
+  if (failed(bodyGenStatus))
+    return failure();
   builder.restoreIP(
       ompBuilder->createParallel(builder, allocaIP, bodyGenCB, privCB, finiCB,
                                  ifCond, numThreads, pbKind, isCancellable));
+  return success();
+}
+
+void ModuleTranslation::convertOmpOpRegions(
+    Region &region, DenseMap<Value, llvm::Value *> &valueMapping,
+    DenseMap<Block *, llvm::BasicBlock *> &blockMapping,
+    llvm::Instruction *codeGenIPBBTI, llvm::BasicBlock &continuationIP,
+    llvm::IRBuilder<> &builder, LogicalResult &bodyGenStatus) {
+  // Convert blocks one by one in topological order to ensure
+  // defs are converted before uses.
+  llvm::SetVector<Block *> blocks = topologicalSort(region);
+  for (auto indexedBB : llvm::enumerate(blocks)) {
+    Block *bb = indexedBB.value();
+    llvm::BasicBlock *curLLVMBB = blockMapping[bb];
+    if (bb->isEntryBlock()) {
+      assert(codeGenIPBBTI->getNumSuccessors() == 1 &&
+             "OpenMPIRBuilder provided entry block has multiple successors");
+      assert(codeGenIPBBTI->getSuccessor(0) == &continuationIP &&
+             "ContinuationIP is not the successor of OpenMPIRBuilder "
+             "provided entry block");
+      codeGenIPBBTI->setSuccessor(0, curLLVMBB);
+    }
+
+    if (failed(convertBlock(*bb, /*ignoreArguments=*/indexedBB.index() == 0))) {
+      bodyGenStatus = failure();
+      return;
+    }
+  }
+  // Finally, after all blocks have been traversed and values mapped,
+  // connect the PHI nodes to the results of preceding blocks.
+  connectPHINodes(region, valueMapping, blockMapping, branchMapping);
+}
+
+LogicalResult ModuleTranslation::convertOmpMaster(Operation &opInst,
+                                                  llvm::IRBuilder<> &builder) {
+  using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
+  // TODO: support error propagation in OpenMPIRBuilder and use it instead of
+  // relying on captured variables.
+  LogicalResult bodyGenStatus = success();
+
+  auto bodyGenCB = [&](InsertPointTy allocaIP, InsertPointTy codeGenIP,
+                       llvm::BasicBlock &continuationIP) {
+    llvm::LLVMContext &llvmContext = llvmModule->getContext();
+
+    llvm::BasicBlock *codeGenIPBB = codeGenIP.getBlock();
+    llvm::Instruction *codeGenIPBBTI = codeGenIPBB->getTerminator();
+    ompContinuationIPStack.push_back(&continuationIP);
+
+    // MasterOp has only `1` region associated with it.
+    auto &region = cast<omp::MasterOp>(opInst).getRegion();
+    for (auto &bb : region) {
+      auto *llvmBB = llvm::BasicBlock::Create(
+          llvmContext, "omp.master.region", codeGenIP.getBlock()->getParent());
+      blockMapping[&bb] = llvmBB;
+    }
+    convertOmpOpRegions(region, valueMapping, blockMapping, codeGenIPBBTI,
+                        continuationIP, builder, bodyGenStatus);
+    ompContinuationIPStack.pop_back();
+  };
+
+  // TODO: Perform finalization actions for variables. This has to be
+  // called for variables which have destructors/finalizers.
+  auto finiCB = [&](InsertPointTy codeGenIP) {};
+
+  builder.restoreIP(ompBuilder->createMaster(builder, bodyGenCB, finiCB));
   return success();
 }
 
@@ -505,6 +563,7 @@ ModuleTranslation::convertOmpOperation(Operation &opInst,
       })
       .Case(
           [&](omp::ParallelOp) { return convertOmpParallel(opInst, builder); })
+      .Case([&](omp::MasterOp) { return convertOmpMaster(opInst, builder); })
       .Default([&](Operation *inst) {
         return inst->emitError("unsupported OpenMP operation: ")
                << inst->getName();
@@ -632,7 +691,9 @@ LogicalResult ModuleTranslation::convertOperation(Operation &opInst,
   // Emit branches.  We need to look up the remapped blocks and ignore the block
   // arguments that were transformed into PHI nodes.
   if (auto brOp = dyn_cast<LLVM::BrOp>(opInst)) {
-    builder.CreateBr(blockMapping[brOp.getSuccessor()]);
+    llvm::BranchInst *branch =
+        builder.CreateBr(blockMapping[brOp.getSuccessor()]);
+    branchMapping.try_emplace(&opInst, branch);
     return success();
   }
   if (auto condbrOp = dyn_cast<LLVM::CondBrOp>(opInst)) {
@@ -649,9 +710,11 @@ LogicalResult ModuleTranslation::convertOperation(Operation &opInst,
               .createBranchWeights(static_cast<uint32_t>(trueWeight),
                                    static_cast<uint32_t>(falseWeight));
     }
-    builder.CreateCondBr(valueMapping.lookup(condbrOp.getOperand(0)),
-                         blockMapping[condbrOp.getSuccessor(0)],
-                         blockMapping[condbrOp.getSuccessor(1)], branchWeights);
+    llvm::BranchInst *branch = builder.CreateCondBr(
+        valueMapping.lookup(condbrOp.getOperand(0)),
+        blockMapping[condbrOp.getSuccessor(0)],
+        blockMapping[condbrOp.getSuccessor(1)], branchWeights);
+    branchMapping.try_emplace(&opInst, branch);
     return success();
   }
 
@@ -843,10 +906,11 @@ forwardPassthroughAttributes(Location loc, Optional<ArrayAttr> attributes,
 }
 
 LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
-  // Clear the block and value mappings, they are only relevant within one
+  // Clear the block, branch value mappings, they are only relevant within one
   // function.
   blockMapping.clear();
   valueMapping.clear();
+  branchMapping.clear();
   llvm::Function *llvmFunc = functionMapping.lookup(func.getName());
 
   // Translate the debug information for this function.
@@ -914,7 +978,7 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
 
   // Finally, after all blocks have been traversed and values mapped, connect
   // the PHI nodes to the results of preceding blocks.
-  connectPHINodes(func, valueMapping, blockMapping);
+  connectPHINodes(func, valueMapping, blockMapping, branchMapping);
   return success();
 }
 

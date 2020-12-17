@@ -32,15 +32,18 @@
 #define MLIR_ASYNCRUNTIME_DEFINE_FUNCTIONS
 #endif // _WIN32
 
+namespace mlir {
+namespace runtime {
+
 //===----------------------------------------------------------------------===//
 // Async runtime API.
 //===----------------------------------------------------------------------===//
 
 // Runtime implementation of `async.token` data type.
-typedef struct AsyncToken MLIR_AsyncToken;
+typedef struct AsyncToken AsyncToken;
 
 // Runtime implementation of `async.group` data type.
-typedef struct AsyncGroup MLIR_AsyncGroup;
+typedef struct AsyncGroup AsyncGroup;
 
 // Async runtime uses LLVM coroutines to represent asynchronous tasks. Task
 // function is a coroutine handle and a resume function that continue coroutine
@@ -101,5 +104,8 @@ mlirAsyncRuntimeAwaitAllInGroupAndExecute(AsyncGroup *, CoroHandle, CoroResume);
 //===----------------------------------------------------------------------===//
 
 extern "C" MLIR_ASYNCRUNTIME_EXPORT void mlirAsyncRuntimePrintCurrentThreadId();
+
+} // namespace runtime
+} // namespace mlir
 
 #endif // MLIR_EXECUTIONENGINE_ASYNCRUNTIME_H_

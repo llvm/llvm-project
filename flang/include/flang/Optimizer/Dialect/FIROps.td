@@ -249,7 +249,7 @@ class fir_AllocatableOp<string mnemonic, list<OpTrait> traits = []> :
   }];
 
   let printer = [{
-    p << getOperationName() << ' ' << getAttr(inType());
+    p << getOperationName() << ' ' << (*this)->getAttr(inType());
     if (hasLenParams()) {
       // print the LEN parameters to a derived type in parens
       p << '(' << getLenParams() << " : " << getLenParams().getTypes() << ')';
@@ -267,10 +267,10 @@ class fir_AllocatableOp<string mnemonic, list<OpTrait> traits = []> :
     static constexpr llvm::StringRef lenpName() { return "len_param_count"; }
     mlir::Type getAllocatedType();
     
-    bool hasLenParams() { return bool{getAttr(lenpName())}; }
+    bool hasLenParams() { return bool{(*this)->getAttr(lenpName())}; }
     
     unsigned numLenParams() {
-      if (auto val = getAttrOfType<mlir::IntegerAttr>(lenpName()))
+      if (auto val = (*this)->getAttrOfType<mlir::IntegerAttr>(lenpName()))
         return val.getInt();
       return 0;
     }
@@ -291,7 +291,7 @@ class fir_AllocatableOp<string mnemonic, list<OpTrait> traits = []> :
 
     /// Get the input type of the allocation
     mlir::Type getInType() {
-      return getAttrOfType<mlir::TypeAttr>(inType()).getValue();
+      return (*this)->getAttrOfType<mlir::TypeAttr>(inType()).getValue();
     }
   }];
 
@@ -567,7 +567,7 @@ class fir_SwitchTerminatorOp<string mnemonic, list<OpTrait> traits = []> :
 
     // The number of destination conditions that may be tested
     unsigned getNumConditions() {
-      return getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).size();
+      return (*this)->getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).size();
     }
 
     // The selector is the value being tested to determine the destination
@@ -577,7 +577,7 @@ class fir_SwitchTerminatorOp<string mnemonic, list<OpTrait> traits = []> :
     }
 
     // The number of blocks that may be branched to
-    unsigned getNumDest() { return getOperation()->getNumSuccessors(); }
+    unsigned getNumDest() { return (*this)->getNumSuccessors(); }
 
     llvm::Optional<mlir::OperandRange> getCompareOperands(unsigned cond);
     llvm::Optional<llvm::ArrayRef<mlir::Value>> getCompareOperands(
@@ -688,7 +688,7 @@ class fir_IntegralSwitchTerminatorOp<string mnemonic,
     p << getOperationName() << ' ';
     p.printOperand(getSelector());
     p << " : " << getSelector().getType() << " [";
-    auto cases = getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).getValue();
+    auto cases = (*this)->getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).getValue();
     auto count = getNumConditions();
     for (decltype(count) i = 0; i != count; ++i) {
       if (i)
@@ -711,7 +711,7 @@ class fir_IntegralSwitchTerminatorOp<string mnemonic,
           getSelector().getType().isa<mlir::IndexType>() ||
           getSelector().getType().isa<fir::IntType>()))
       return emitOpError("must be an integer");
-    auto cases = getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).getValue();
+    auto cases = (*this)->getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).getValue();
     auto count = getNumDest();
     if (count == 0)
       return emitOpError("must have at least one successor");
@@ -810,7 +810,7 @@ def fir_SelectCaseOp : fir_SwitchTerminatorOp<"select_case"> {
     p << getOperationName() << ' ';
     p.printOperand(getSelector());
     p << " : " << getSelector().getType() << " [";
-    auto cases = getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).getValue();
+    auto cases = (*this)->getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).getValue();
     auto count = getNumConditions();
     for (decltype(count) i = 0; i != count; ++i) {
       if (i)
@@ -839,7 +839,7 @@ def fir_SelectCaseOp : fir_SwitchTerminatorOp<"select_case"> {
           getSelector().getType().isa<fir::LogicalType>() ||
           getSelector().getType().isa<fir::CharacterType>()))
       return emitOpError("must be an integer, character, or logical");
-    auto cases = getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).getValue();
+    auto cases = (*this)->getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).getValue();
     auto count = getNumDest();
     if (count == 0)
       return emitOpError("must have at least one successor");
@@ -925,7 +925,7 @@ def fir_SelectTypeOp : fir_SwitchTerminatorOp<"select_type"> {
     p << getOperationName() << ' ';
     p.printOperand(getSelector());
     p << " : " << getSelector().getType() << " [";
-    auto cases = getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).getValue();
+    auto cases = (*this)->getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).getValue();
     auto count = getNumConditions();
     for (decltype(count) i = 0; i != count; ++i) {
       if (i)
@@ -941,7 +941,7 @@ def fir_SelectTypeOp : fir_SwitchTerminatorOp<"select_type"> {
   let verifier = [{
     if (!(getSelector().getType().isa<fir::BoxType>()))
       return emitOpError("must be a boxed type");
-    auto cases = getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).getValue();
+    auto cases = (*this)->getAttrOfType<mlir::ArrayAttr>(getCasesAttr()).getValue();
     auto count = getNumDest();
     if (count == 0)
       return emitOpError("must have at least one successor");
@@ -1056,7 +1056,7 @@ def fir_EmboxOp : fir_Op<"embox", [NoSideEffect]> {
     if (getNumOperands() == 2) {
       p << ", ";
       p.printOperands(dims());
-    } else if (auto map = getAttr(layoutName())) {
+    } else if (auto map = (*this)->getAttr(layoutName())) {
       p << " [" << map << ']';
     }
     p.printOptionalAttrDict(getAttrs(), {layoutName(), lenpName()});
@@ -1097,9 +1097,9 @@ def fir_EmboxOp : fir_Op<"embox", [NoSideEffect]> {
   let extraClassDeclaration = [{
     static constexpr llvm::StringRef layoutName() { return "layout_map"; }
     static constexpr llvm::StringRef lenpName() { return "len_param_count"; }
-    bool hasLenParams() { return bool{getAttr(lenpName())}; }
+    bool hasLenParams() { return bool{(*this)->getAttr(lenpName())}; }
     unsigned numLenParams() {
-      if (auto x = getAttrOfType<mlir::IntegerAttr>(lenpName()))
+      if (auto x = (*this)->getAttrOfType<mlir::IntegerAttr>(lenpName()))
         return x.getInt();
       return 0;
     }
@@ -1213,13 +1213,13 @@ def fir_EmboxProcOp : fir_Op<"emboxproc", [NoSideEffect]> {
   }];
 
   let printer = [{
-    p << getOperationName() << ' ' << getAttr("funcname");
+    p << getOperationName() << ' ' << (*this)->getAttr("funcname");
     auto h = host();
     if (h) {
       p << ", ";
       p.printOperand(h);
     }
-    p << " : (" << getAttr("functype");
+    p << " : (" << (*this)->getAttr("functype");
     if (h)
       p << ", " << h.getType();
     p << ") -> " << getType();
@@ -1561,11 +1561,11 @@ def fir_CoordinateOp : fir_Op<"coordinate_of", [NoSideEffect]> {
   let parser = "return parseCoordinateOp(parser, result);";
 
   let printer = [{
-    p << getOperationName() << ' ' << getOperation()->getOperands();
+    p << getOperationName() << ' ' << (*this)->getOperands();
     p.printOptionalAttrDict(getAttrs(), /*elidedAttrs=*/{baseType()});
     p << " : ";
-    p.printFunctionalType(getOperation()->getOperandTypes(),
-        getOperation()->getResultTypes());
+    p.printFunctionalType((*this)->getOperandTypes(),
+        (*this)->getResultTypes());
   }];
   
   let verifier = [{
@@ -1587,7 +1587,7 @@ def fir_CoordinateOp : fir_Op<"coordinate_of", [NoSideEffect]> {
         if (!ref().getType().dyn_cast<BoxType>())
           return emitOpError("len_param_index must be used on box type");
       }
-    if (auto attr = getAttr(CoordinateOp::baseType())) {
+    if (auto attr = (*this)->getAttr(CoordinateOp::baseType())) {
       if (!attr.isa<mlir::TypeAttr>())
         return emitOpError("improperly constructed");
     } else {
@@ -1690,8 +1690,8 @@ def fir_FieldIndexOp : fir_OneResultOp<"field_index", [NoSideEffect]> {
 
   let printer = [{
     p << getOperationName() << ' '
-      << getAttrOfType<mlir::StringAttr>(fieldAttrName()).getValue() << ", "
-      << getAttr(typeAttrName());
+      << (*this)->getAttrOfType<mlir::StringAttr>(fieldAttrName()).getValue() 
+      << ", " << (*this)->getAttr(typeAttrName());
     if (getNumOperands()) {
       p << '(';
       p.printOperands(lenparams());
@@ -1826,8 +1826,8 @@ def fir_LenParamIndexOp : fir_OneResultOp<"len_param_index", [NoSideEffect]> {
 
   let printer = [{
     p << getOperationName() << ' '
-      << getAttrOfType<mlir::StringAttr>(fieldAttrName()).getValue() << ", "
-      << getAttr(typeAttrName());
+      << (*this)->getAttrOfType<mlir::StringAttr>(fieldAttrName()).getValue()
+      << ", " << (*this)->getAttr(typeAttrName());
   }];
 
   let builders = [
@@ -1841,7 +1841,7 @@ def fir_LenParamIndexOp : fir_OneResultOp<"len_param_index", [NoSideEffect]> {
     static constexpr llvm::StringRef fieldAttrName() { return "field_id"; }
     static constexpr llvm::StringRef typeAttrName() { return "on_type"; }
     mlir::Type getOnType() {
-      return getAttrOfType<TypeAttr>(typeAttrName()).getValue();
+      return (*this)->getAttrOfType<TypeAttr>(typeAttrName()).getValue();
     }
   }];
 }
@@ -1940,9 +1940,9 @@ def fir_LoopOp : region_Op<"do_loop",
       return getOperands().drop_front(getNumControlOperands());
     }
 
-    void setLowerBound(Value bound) { getOperation()->setOperand(0, bound); }
-    void setUpperBound(Value bound) { getOperation()->setOperand(1, bound); }
-    void setStep(Value step) { getOperation()->setOperand(2, step); }
+    void setLowerBound(Value bound) { (*this)->setOperand(0, bound); }
+    void setUpperBound(Value bound) { (*this)->setOperand(1, bound); }
+    void setStep(Value step) { (*this)->setOperand(2, step); }
 
     /// Number of region arguments for loop-carried values
     unsigned getNumRegionIterArgs() {
@@ -1952,18 +1952,18 @@ def fir_LoopOp : region_Op<"do_loop",
     unsigned getNumControlOperands() { return 3; }
     /// Does the operation hold operands for loop-carried values
     bool hasIterOperands() {
-      return getOperation()->getNumOperands() > getNumControlOperands();
+      return (*this)->getNumOperands() > getNumControlOperands();
     }
     /// Get Number of loop-carried values
     unsigned getNumIterOperands() {
-      return getOperation()->getNumOperands() - getNumControlOperands();
+      return (*this)->getNumOperands() - getNumControlOperands();
     }
 
     /// Get the body of the loop
     mlir::Block *getBody() { return &region().front(); }
 
     void setUnordered() {
-      getOperation()->setAttr(unorderedAttrName(),
+      (*this)->setAttr(unorderedAttrName(),
                               mlir::UnitAttr::get(getContext()));
     }
   }];
@@ -2062,9 +2062,9 @@ def fir_IterWhileOp : region_Op<"iterate_while",
       return getOperands().drop_front(getNumControlOperands());
     }
 
-    void setLowerBound(Value bound) { getOperation()->setOperand(0, bound); }
-    void setUpperBound(Value bound) { getOperation()->setOperand(1, bound); }
-    void setStep(mlir::Value step) { getOperation()->setOperand(2, step); }
+    void setLowerBound(Value bound) { (*this)->setOperand(0, bound); }
+    void setUpperBound(Value bound) { (*this)->setOperand(1, bound); }
+    void setStep(mlir::Value step) { (*this)->setOperand(2, step); }
 
     /// Number of region arguments for loop-carried values
     unsigned getNumRegionIterArgs() {
@@ -2074,11 +2074,11 @@ def fir_IterWhileOp : region_Op<"iterate_while",
     unsigned getNumControlOperands() { return 3; }
     /// Does the operation hold operands for loop-carried values
     bool hasIterOperands() {
-      return getOperation()->getNumOperands() > getNumControlOperands();
+      return (*this)->getNumOperands() > getNumControlOperands();
     }
     /// Get Number of loop-carried values
     unsigned getNumIterOperands() {
-      return getOperation()->getNumOperands() - getNumControlOperands();
+      return (*this)->getNumOperands() - getNumControlOperands();
     }
   }];
 }
@@ -2166,7 +2166,7 @@ def fir_DispatchOp : fir_Op<"dispatch",
   }];
 
   let printer = [{
-    p << getOperationName() << ' ' << getAttr("method") << '(';
+    p << getOperationName() << ' ' << (*this)->getAttr("method") << '(';
     p.printOperand(object());
     if (arg_operand_begin() != arg_operand_end()) {
       p << ", ";
@@ -2250,7 +2250,7 @@ def fir_StringLitOp : fir_Op<"string_lit", [NoSideEffect]> {
     auto eleTy = getType().cast<fir::SequenceType>().getEleTy();
     if (!eleTy.isa<fir::CharacterType>())
       return emitOpError("must have !fir.char type");
-    if (auto xl = getAttr(xlist())) {
+    if (auto xl = (*this)->getAttr(xlist())) {
       auto xList = xl.cast<mlir::ArrayAttr>();
       for (auto a : xList)
         if (!a.isa<mlir::IntegerAttr>())
@@ -2265,12 +2265,12 @@ def fir_StringLitOp : fir_Op<"string_lit", [NoSideEffect]> {
     static constexpr const char *xlist() { return "xlist"; }
 
     // Get the LEN attribute of this character constant
-    mlir::Attribute getSize() { return getAttr(size()); }
+    mlir::Attribute getSize() { return (*this)->getAttr(size()); }
     // Get the string value of this character constant
     mlir::Attribute getValue() {
-      if (auto attr = getAttr(value()))
+      if (auto attr = (*this)->getAttr(value()))
         return attr;
-      return getAttr(xlist());
+      return (*this)->getAttr(xlist());
     }
 
     /// Is this a wide character literal (1 character > 8 bits)
@@ -2381,7 +2381,7 @@ def fir_CmpfOp : fir_Op<"cmpf",
     static CmpFPredicate getPredicateByName(llvm::StringRef name);
 
     CmpFPredicate getPredicate() {
-      return (CmpFPredicate)getAttrOfType<mlir::IntegerAttr>(
+      return (CmpFPredicate)(*this)->getAttrOfType<mlir::IntegerAttr>(
           getPredicateAttrName()).getInt();
     }
   }];
@@ -2415,11 +2415,11 @@ def fir_ConstcOp : fir_Op<"constc", [NoSideEffect]> {
 
   let printer = [{
     p << getOperationName() << " (0x";
-    auto f1 = getAttr(realAttrName()).cast<mlir::FloatAttr>();
+    auto f1 = (*this)->getAttr(realAttrName()).cast<mlir::FloatAttr>();
     auto i1 = f1.getValue().bitcastToAPInt();
     p.getStream().write_hex(i1.getZExtValue());
     p << ", 0x";
-    auto f2 = getAttr(imagAttrName()).cast<mlir::FloatAttr>();
+    auto f2 = (*this)->getAttr(imagAttrName()).cast<mlir::FloatAttr>();
     auto i2 = f2.getValue().bitcastToAPInt();
     p.getStream().write_hex(i2.getZExtValue());
     p << ") : ";
@@ -2436,8 +2436,8 @@ def fir_ConstcOp : fir_Op<"constc", [NoSideEffect]> {
     static constexpr llvm::StringRef realAttrName() { return "real"; }
     static constexpr llvm::StringRef imagAttrName() { return "imaginary"; }
 
-    mlir::Attribute getReal() { return getAttr(realAttrName()); }
-    mlir::Attribute getImaginary() { return getAttr(imagAttrName()); }
+    mlir::Attribute getReal() { return (*this)->getAttr(realAttrName()); }
+    mlir::Attribute getImaginary() { return (*this)->getAttr(imagAttrName()); }
   }];
 }
 
@@ -2485,7 +2485,7 @@ def fir_CmpcOp : fir_Op<"cmpc",
     }
 
     CmpFPredicate getPredicate() {
-      return (CmpFPredicate)getAttrOfType<mlir::IntegerAttr>(
+      return (CmpFPredicate)(*this)->getAttrOfType<mlir::IntegerAttr>(
           getPredicateAttrName()).getInt();
     }
   }];
@@ -2601,7 +2601,7 @@ def fir_GenTypeDescOp : fir_OneResultOp<"gentypedesc", [NoSideEffect]> {
   }];
 
   let printer = [{
-    p << getOperationName() << ' ' << getAttr("in_type");
+    p << getOperationName() << ' ' << (*this)->getAttr("in_type");
     p.printOptionalAttrDict(getAttrs(), {"in_type"});
   }];
 
@@ -2623,7 +2623,7 @@ def fir_GenTypeDescOp : fir_OneResultOp<"gentypedesc", [NoSideEffect]> {
   let extraClassDeclaration = [{
     mlir::Type getInType() {
       // get the type that the type descriptor describes
-      return getAttrOfType<mlir::TypeAttr>("in_type").getValue();
+      return (*this)->getAttrOfType<mlir::TypeAttr>("in_type").getValue();
     }
   }];
 }
@@ -2697,15 +2697,15 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
     if (linkName().hasValue())
       p << ' ' << linkName().getValue();
     p << ' ';
-    p.printAttributeWithoutType(getAttr(symbolAttrName()));
+    p.printAttributeWithoutType((*this)->getAttr(symbolAttrName()));
     if (auto val = getValueOrNull())
       p << '(' << val << ')';
-    if (getAttr(constantAttrName()))
+    if ((*this)->getAttr(constantAttrName()))
       p << " constant";
     p << " : ";
     p.printType(getType());
     if (hasInitializationBody())
-      p.printRegion(getOperation()->getRegion(0), /*printEntryBlockArgs=*/false,
+      p.printRegion((*this)->getRegion(0), /*printEntryBlockArgs=*/false,
                     /*printBlockTerminators=*/true);
   }];
 
@@ -2738,7 +2738,7 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
 
     /// The printable type of the global
     mlir::Type getType() {
-      return getAttrOfType<TypeAttr>(typeAttrName()).getValue();
+      return (*this)->getAttrOfType<TypeAttr>(typeAttrName()).getValue();
     }
 
     /// The semantic type of the global
@@ -2754,7 +2754,7 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
     void appendInitialValue(mlir::Operation *op);
 
     /// A GlobalOp has one region.
-    mlir::Region &getRegion() { return getOperation()->getRegion(0); }
+    mlir::Region &getRegion() { return (*this)->getRegion(0); }
 
     /// A GlobalOp has one block.
     mlir::Block &getBlock() { return getRegion().front(); }
@@ -2763,13 +2763,14 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
     static mlir::ParseResult verifyValidLinkage(StringRef linkage);
 
     bool hasInitializationBody() {
-      return (getOperation()->getNumRegions() == 1) && !getRegion().empty() &&
+      return ((*this)->getNumRegions() == 1) && !getRegion().empty() &&
         !isa<fir::FirEndOp>(getBlock().front());
     }
 
     mlir::FlatSymbolRefAttr getSymbol() {
-      return mlir::FlatSymbolRefAttr::get(getAttrOfType<mlir::StringAttr>(
-          mlir::SymbolTable::getSymbolAttrName()).getValue(), getContext());
+      return mlir::FlatSymbolRefAttr::get(
+          (*this)->getAttrOfType<mlir::StringAttr>(
+              mlir::SymbolTable::getSymbolAttrName()).getValue(), getContext());
     }
   }];
 }
@@ -2811,8 +2812,8 @@ def fir_GlobalLenOp : fir_Op<"global_len", []> {
   }];
 
   let printer = [{
-    p << getOperationName() << ' ' << getAttr(lenParamAttrName()) << ", "
-      << getAttr(intAttrName());
+    p << getOperationName() << ' ' << (*this)->getAttr(lenParamAttrName()) 
+      << ", " << (*this)->getAttr(intAttrName());
   }];
 
   let extraClassDeclaration = [{
@@ -2865,11 +2866,11 @@ def fir_DispatchTableOp : fir_Op<"dispatch_table",
   }];
 
   let printer = [{
-    auto tableName = getAttrOfType<StringAttr>(
+    auto tableName = (*this)->getAttrOfType<StringAttr>(
       mlir::SymbolTable::getSymbolAttrName()).getValue();
     p << getOperationName() << " @" << tableName;
 
-    Region &body = getOperation()->getRegion(0);
+    Region &body = (*this)->getRegion(0);
     if (!body.empty())
       p.printRegion(body, /*printEntryBlockArgs=*/false,
                           /*printBlockTerminators=*/false);
@@ -2900,7 +2901,7 @@ def fir_DispatchTableOp : fir_Op<"dispatch_table",
     void appendTableEntry(mlir::Operation *op);
 
     mlir::Region &getRegion() {
-      return this->getOperation()->getRegion(0);
+      return (*this)->getRegion(0);
     }
 
     mlir::Block &getBlock() {
@@ -2946,8 +2947,8 @@ def fir_DTEntryOp : fir_Op<"dt_entry", []> {
   }];
 
   let printer = [{
-    p << getOperationName() << ' ' << getAttr(methodAttrName()) << ", "
-      << getAttr(procAttrName());
+    p << getOperationName() << ' ' << (*this)->getAttr(methodAttrName()) << ", "
+      << (*this)->getAttr(procAttrName());
   }];
 
   let extraClassDeclaration = [{

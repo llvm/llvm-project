@@ -28,20 +28,17 @@ public:
       ObjectLinkingLayer &Layer,
       std::unique_ptr<MaterializationResponsibility> MR,
       std::unique_ptr<MemoryBuffer> ObjBuffer)
-      : Layer(Layer), MR(std::move(MR)), ObjBuffer(std::move(ObjBuffer)) {}
+      : JITLinkContext(&MR->getTargetJITDylib()), Layer(Layer),
+        MR(std::move(MR)), ObjBuffer(std::move(ObjBuffer)) {}
 
   ~ObjectLinkingLayerJITLinkContext() {
     // If there is an object buffer return function then use it to
     // return ownership of the buffer.
-    if (Layer.ReturnObjectBuffer)
+    if (Layer.ReturnObjectBuffer && ObjBuffer)
       Layer.ReturnObjectBuffer(std::move(ObjBuffer));
   }
 
   JITLinkMemoryManager &getMemoryManager() override { return Layer.MemMgr; }
-
-  MemoryBufferRef getObjectBuffer() const override {
-    return ObjBuffer->getMemBufferRef();
-  }
 
   void notifyFailed(Error Err) override {
     for (auto &P : Layer.Plugins)
@@ -462,8 +459,19 @@ ObjectLinkingLayer::~ObjectLinkingLayer() {
 void ObjectLinkingLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
                               std::unique_ptr<MemoryBuffer> O) {
   assert(O && "Object must not be null");
-  jitLink(std::make_unique<ObjectLinkingLayerJITLinkContext>(
-      *this, std::move(R), std::move(O)));
+  auto ObjBuffer = O->getMemBufferRef();
+  auto Ctx = std::make_unique<ObjectLinkingLayerJITLinkContext>(
+      *this, std::move(R), std::move(O));
+  if (auto G = createLinkGraphFromObject(std::move(ObjBuffer)))
+    link(std::move(*G), std::move(Ctx));
+  else
+    Ctx->notifyFailed(G.takeError());
+}
+
+void ObjectLinkingLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
+                              std::unique_ptr<LinkGraph> G) {
+  link(std::move(G), std::make_unique<ObjectLinkingLayerJITLinkContext>(
+                         *this, std::move(R), nullptr));
 }
 
 void ObjectLinkingLayer::modifyPassConfig(MaterializationResponsibility &MR,

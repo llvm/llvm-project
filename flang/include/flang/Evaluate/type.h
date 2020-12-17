@@ -141,8 +141,10 @@ public:
     return charLength_;
   }
   std::optional<Expr<SubscriptInteger>> GetCharLength() const;
+
+  std::size_t GetAlignment(const FoldingContext &) const;
   std::optional<Expr<SubscriptInteger>> MeasureSizeInBytes(
-      FoldingContext * = nullptr) const;
+      FoldingContext &, bool aligned) const;
 
   std::string AsFortran() const;
   std::string AsFortran(std::string &&charLenExpr) const;
@@ -420,9 +422,6 @@ int SelectedCharKind(const std::string &, int defaultKind);
 int SelectedIntKind(std::int64_t precision = 0);
 int SelectedRealKind(
     std::int64_t precision = 0, std::int64_t range = 0, std::int64_t radix = 2);
-
-// Utilities
-bool IsKindTypeParameter(const semantics::Symbol &);
 
 // For generating "[extern] template class", &c. boilerplate
 #define EXPAND_FOR_EACH_INTEGER_KIND(M, P, S) \

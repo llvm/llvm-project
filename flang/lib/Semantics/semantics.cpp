@@ -167,7 +167,7 @@ static bool PerformStatementSemantics(
     SemanticsContext &context, parser::Program &program) {
   ResolveNames(context, program);
   RewriteParseTree(context, program);
-  ComputeOffsets(context);
+  ComputeOffsets(context, context.globalScope());
   CheckDeclarations(context);
   StatementSemanticsPass1{context}.Walk(program);
   StatementSemanticsPass2 pass2{context};
@@ -381,8 +381,8 @@ void DoDumpSymbols(llvm::raw_ostream &os, const Scope &scope, int indent) {
   if (const auto *symbol{scope.symbol()}) {
     os << ' ' << symbol->name();
   }
-  if (scope.size()) {
-    os << " size=" << scope.size() << " alignment=" << scope.alignment();
+  if (scope.alignment().has_value()) {
+    os << " size=" << scope.size() << " alignment=" << *scope.alignment();
   }
   if (scope.derivedTypeSpec()) {
     os << " instantiation of " << *scope.derivedTypeSpec();

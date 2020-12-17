@@ -9,8 +9,8 @@
 #ifndef GWP_ASAN_MUTEX_H_
 #define GWP_ASAN_MUTEX_H_
 
-#include "gwp_asan/platform_specific/mutex_fuchsia.h"
-#include "gwp_asan/platform_specific/mutex_posix.h"
+#include "gwp_asan/platform_specific/mutex_fuchsia.h" // IWYU pragma: keep
+#include "gwp_asan/platform_specific/mutex_posix.h"   // IWYU pragma: keep
 
 namespace gwp_asan {
 class Mutex final : PlatformMutex {

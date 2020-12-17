@@ -15,7 +15,7 @@ class TestStopReasonAfterExpression(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIfWindows
-    @expectedFailureAll(oslist=["freebsd"])
+    @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr48415")
     def test_thread_state_after_expr(self):
         self.build()
         self.main_source_file = lldb.SBFileSpec("main.cpp")

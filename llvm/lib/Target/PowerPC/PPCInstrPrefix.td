@@ -1600,13 +1600,9 @@ def Extracts {
 let Predicates = [MMA] in {
   def : Pat<(v512i1 (PPCAccBuild v4i32:$vs1, v4i32:$vs0, v4i32:$vs3, v4i32:$vs2)),
             (XXMTACC Concats.VecsToVecQuad)>;
-  def : Pat<(v256i1 (PPCPairBuild v4i32:$vs1, v4i32:$vs0)),
-            Concats.VecsToVecPair0>;
   def : Pat<(v512i1 (int_ppc_mma_assemble_acc v16i8:$vs1, v16i8:$vs0,
                                               v16i8:$vs3, v16i8:$vs2)),
             (XXMTACC Concats.VecsToVecQuad)>;
-  def : Pat<(v256i1 (int_ppc_mma_assemble_pair v16i8:$vs1, v16i8:$vs0)),
-            Concats.VecsToVecPair0>;
   def : Pat<(v512i1 (PPCxxmfacc v512i1:$AS)), (XXMFACC acc:$AS)>;
   def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, (i64 0))),
             Extracts.Vec0>;
@@ -1616,6 +1612,13 @@ let Predicates = [MMA] in {
             Extracts.Vec2>;
   def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, (i64 3))),
             Extracts.Vec3>;
+}
+
+let Predicates = [PairedVectorMemops] in {
+  def : Pat<(v256i1 (PPCPairBuild v4i32:$vs1, v4i32:$vs0)),
+            Concats.VecsToVecPair0>;
+  def : Pat<(v256i1 (int_ppc_mma_assemble_pair v16i8:$vs1, v16i8:$vs0)),
+            Concats.VecsToVecPair0>;
   def : Pat<(v4i32 (PPCPairExtractVsx vsrpevenrc:$v, (i64 0))),
             (v4i32 (EXTRACT_SUBREG $v, sub_vsx0))>;
   def : Pat<(v4i32 (PPCPairExtractVsx vsrpevenrc:$v, (i64 1))),
@@ -2562,6 +2565,9 @@ let AddedComplexity = 400, Predicates = [IsISA3_1] in {
             (STXVRDX (COPY_TO_REGCLASS $rS, VSRC), xoaddr:$src)>;
 }
 
+class xxevalPattern <dag pattern, bits<8> imm> :
+  Pat<(v4i32 pattern), (XXEVAL $vA, $vB, $vC, imm)> {}
+
 let AddedComplexity = 400, Predicates = [PrefixInstrs] in {
  def : Pat<(v4i32 (build_vector i32immNonAllOneNonZero:$A,
                                 i32immNonAllOneNonZero:$A,
@@ -2574,6 +2580,44 @@ let AddedComplexity = 400, Predicates = [PrefixInstrs] in {
  def : Pat<(f64 nzFPImmAsi32:$A),
            (COPY_TO_REGCLASS (XXSPLTIDP (getFPAs32BitInt fpimm:$A)),
                              VSFRC)>;
+
+  // Anonymous patterns for XXEVAL
+  // AND
+  // and(A, B, C)
+  def : xxevalPattern<(and v4i32:$vA, (and v4i32:$vB, v4i32:$vC)), 1>;
+  // and(A, xor(B, C))
+  def : xxevalPattern<(and v4i32:$vA, (xor v4i32:$vB, v4i32:$vC)), 6>;
+  // and(A, or(B, C))
+  def : xxevalPattern<(and v4i32:$vA, (or v4i32:$vB, v4i32:$vC)), 7>;
+  // and(A, nor(B, C))
+  def : xxevalPattern<(and v4i32:$vA, (vnot_ppc (or v4i32:$vB, v4i32:$vC))),
+                       8>;
+  // and(A, eqv(B, C))
+  def : xxevalPattern<(and v4i32:$vA, (vnot_ppc (xor v4i32:$vB, v4i32:$vC))),
+                       9>;
+  // and(A, nand(B, C))
+  def : xxevalPattern<(and v4i32:$vA, (vnot_ppc (and v4i32:$vB, v4i32:$vC))),
+                       14>;
+
+  // NAND
+  // nand(A, B, C)
+  def : xxevalPattern<(vnot_ppc (and v4i32:$vA, (and v4i32:$vB, v4i32:$vC))),
+                       !sub(255, 1)>;
+  // nand(A, xor(B, C))
+  def : xxevalPattern<(vnot_ppc (and v4i32:$vA, (xor v4i32:$vB, v4i32:$vC))),
+                       !sub(255, 6)>;
+  // nand(A, or(B, C))
+  def : xxevalPattern<(vnot_ppc (and v4i32:$vA, (or v4i32:$vB, v4i32:$vC))),
+                       !sub(255, 7)>;
+  // nand(A, nor(B, C))
+  def : xxevalPattern<(or (vnot_ppc v4i32:$vA), (or v4i32:$vB, v4i32:$vC)),
+                       !sub(255, 8)>;
+  // nand(A, eqv(B, C))
+  def : xxevalPattern<(or (vnot_ppc v4i32:$vA), (xor v4i32:$vB, v4i32:$vC)),
+                       !sub(255, 9)>;
+  // nand(A, nand(B, C))
+  def : xxevalPattern<(or (vnot_ppc v4i32:$vA), (and v4i32:$vB, v4i32:$vC)),
+                       !sub(255, 14)>;
 }
 
 let Predicates = [PrefixInstrs] in {

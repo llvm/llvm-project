@@ -66,6 +66,18 @@
 # RUN: echo '.weak foo; foo:' | llvm-mc -filetype=obj -triple=x86_64 - -o %tweak.o
 # RUN: ld.lld --fatal-warnings --warn-backrefs --start-lib %tweak.o --end-lib %t1.o %t2.o -o /dev/null
 
+## Check common symbols. A common sym might later be replaced by a non-common definition.
+# RUN: echo '.comm obj, 4' | llvm-mc -filetype=obj -triple=x86_64 -o %tcomm.o
+# RUN: echo '.type obj,@object; .data; .globl obj; .p2align 2; obj: .long 55; .size obj, 4' | llvm-mc -filetype=obj -triple=x86_64 -o %tstrong.o
+# RUN: echo '.globl foo; foo: movl obj(%rip), %eax' | llvm-mc -triple=x86_64 -filetype=obj -o %t5.o
+# RUN: llvm-ar rcs %tcomm.a %tcomm.o
+# RUN: llvm-ar rcs %tstrong.a %tstrong.o
+# RUN: ld.lld --warn-backrefs %tcomm.a %t1.o %t5.o 2>&1 -o /dev/null | FileCheck --check-prefix=COMM %s
+# RUN: ld.lld --fatal-warnings --warn-backrefs %tcomm.a %t1.o %t5.o %tstrong.a 2>&1 -o /dev/null
+# RUN: ld.lld --warn-backrefs --no-fortran-common %tcomm.a %t1.o %t5.o %tstrong.a 2>&1 -o /dev/null | FileCheck --check-prefix=COMM %s
+
+# COMM: ld.lld: warning: backward reference detected: obj in {{.*}}5.o refers to {{.*}}comm.a
+
 ## If a lazy definition appears after the backward reference, don't warn.
 ## A traditional Unix linker will resolve the reference to the later definition.
 # RUN: ld.lld --fatal-warnings --warn-backrefs %t2.a %t1.o %t2.a -o /dev/null

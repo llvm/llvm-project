@@ -31,8 +31,6 @@
 #include <utility>
 #include <vector>
 
-using namespace clang::ast_type_traits;
-
 namespace clang {
 namespace ast_matchers {
 namespace dynamic {
@@ -241,6 +239,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(functionProtoType);
   REGISTER_MATCHER(functionTemplateDecl);
   REGISTER_MATCHER(functionType);
+  REGISTER_MATCHER(genericSelectionExpr);
   REGISTER_MATCHER(gnuNullExpr);
   REGISTER_MATCHER(gotoStmt);
   REGISTER_MATCHER(has);

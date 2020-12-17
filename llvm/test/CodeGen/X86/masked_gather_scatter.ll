@@ -5,6 +5,7 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu  -mattr=+avx512vl -mattr=+avx512dq -code-model=large < %s | FileCheck %s --check-prefix=ALL --check-prefix=SKX --check-prefix=SKX_LARGE
 ; RUN: llc -mtriple=i386-unknown-linux-gnu  -mattr=+avx512vl -mattr=+avx512dq < %s | FileCheck %s --check-prefix=ALL --check-prefix=SKX_32
 ; RUN: opt -mtriple=x86_64-apple-darwin -scalarize-masked-mem-intrin -mcpu=corei7-avx -S < %s | FileCheck %s -check-prefix=SCALAR
+; RUN: opt -mtriple=x86_64-apple-darwin -passes=scalarize-masked-mem-intrin -mcpu=corei7-avx -S < %s | FileCheck %s -check-prefix=SCALAR
 ; RUN: llc -O0 -mtriple=x86_64-unknown-linux-gnu -mcpu=skx < %s -o /dev/null
 
 @glob_array = internal unnamed_addr constant [16 x i32] [i32 1, i32 1, i32 2, i32 3, i32 5, i32 8, i32 13, i32 21, i32 34, i32 55, i32 89, i32 144, i32 233, i32 377, i32 610, i32 987], align 16
@@ -765,45 +766,41 @@ define <16 x float> @test13(float* %base, <16 x i32> %ind) {
 define <16 x float> @test14(float* %base, i32 %ind, <16 x float*> %vec) {
 ; KNL_64-LABEL: test14:
 ; KNL_64:       # %bb.0:
-; KNL_64-NEXT:    vpbroadcastq %xmm0, %zmm0
-; KNL_64-NEXT:    vmovd %esi, %xmm1
-; KNL_64-NEXT:    vpbroadcastd %xmm1, %ymm1
-; KNL_64-NEXT:    vpmovsxdq %ymm1, %zmm1
-; KNL_64-NEXT:    vpsllq $2, %zmm1, %zmm1
-; KNL_64-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
+; KNL_64-NEXT:    vmovq %xmm0, %rax
+; KNL_64-NEXT:    vmovd %esi, %xmm0
+; KNL_64-NEXT:    vpbroadcastd %xmm0, %ymm0
+; KNL_64-NEXT:    vpmovsxdq %ymm0, %zmm0
+; KNL_64-NEXT:    vpsllq $2, %zmm0, %zmm0
 ; KNL_64-NEXT:    kxnorw %k0, %k0, %k1
-; KNL_64-NEXT:    vgatherqps (,%zmm0), %ymm1 {%k1}
+; KNL_64-NEXT:    vgatherqps (%rax,%zmm0), %ymm1 {%k1}
 ; KNL_64-NEXT:    vinsertf64x4 $1, %ymm1, %zmm1, %zmm0
 ; KNL_64-NEXT:    retq
 ;
 ; KNL_32-LABEL: test14:
 ; KNL_32:       # %bb.0:
-; KNL_32-NEXT:    vpbroadcastd %xmm0, %zmm0
+; KNL_32-NEXT:    vmovd %xmm0, %eax
 ; KNL_32-NEXT:    vpslld $2, {{[0-9]+}}(%esp){1to16}, %zmm1
-; KNL_32-NEXT:    vpaddd %zmm1, %zmm0, %zmm1
 ; KNL_32-NEXT:    kxnorw %k0, %k0, %k1
-; KNL_32-NEXT:    vgatherdps (,%zmm1), %zmm0 {%k1}
+; KNL_32-NEXT:    vgatherdps (%eax,%zmm1), %zmm0 {%k1}
 ; KNL_32-NEXT:    retl
 ;
 ; SKX-LABEL: test14:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpbroadcastq %xmm0, %zmm0
-; SKX-NEXT:    vpbroadcastd %esi, %ymm1
-; SKX-NEXT:    vpmovsxdq %ymm1, %zmm1
-; SKX-NEXT:    vpsllq $2, %zmm1, %zmm1
-; SKX-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
+; SKX-NEXT:    vmovq %xmm0, %rax
+; SKX-NEXT:    vpbroadcastd %esi, %ymm0
+; SKX-NEXT:    vpmovsxdq %ymm0, %zmm0
+; SKX-NEXT:    vpsllq $2, %zmm0, %zmm0
 ; SKX-NEXT:    kxnorw %k0, %k0, %k1
-; SKX-NEXT:    vgatherqps (,%zmm0), %ymm1 {%k1}
+; SKX-NEXT:    vgatherqps (%rax,%zmm0), %ymm1 {%k1}
 ; SKX-NEXT:    vinsertf64x4 $1, %ymm1, %zmm1, %zmm0
 ; SKX-NEXT:    retq
 ;
 ; SKX_32-LABEL: test14:
 ; SKX_32:       # %bb.0:
-; SKX_32-NEXT:    vpbroadcastd %xmm0, %zmm0
+; SKX_32-NEXT:    vmovd %xmm0, %eax
 ; SKX_32-NEXT:    vpslld $2, {{[0-9]+}}(%esp){1to16}, %zmm1
-; SKX_32-NEXT:    vpaddd %zmm1, %zmm0, %zmm1
 ; SKX_32-NEXT:    kxnorw %k0, %k0, %k1
-; SKX_32-NEXT:    vgatherdps (,%zmm1), %zmm0 {%k1}
+; SKX_32-NEXT:    vgatherdps (%eax,%zmm1), %zmm0 {%k1}
 ; SKX_32-NEXT:    retl
 
   %broadcast.splatinsert = insertelement <16 x float*> %vec, float* %base, i32 1

@@ -8,7 +8,9 @@
 
 #include "gwp_asan/common.h"
 
-#include <sys/syscall.h>
+#include <stdint.h>
+#include <sys/syscall.h> // IWYU pragma: keep
+// IWYU pragma: no_include <syscall.h>
 #include <unistd.h>
 
 namespace gwp_asan {

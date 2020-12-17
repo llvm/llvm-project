@@ -19,6 +19,7 @@
 #include "ARMSubtarget.h"
 #include "MCTargetDesc/ARMAddressingModes.h"
 #include "MCTargetDesc/ARMBaseInfo.h"
+#include "MVETailPredUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
@@ -4789,6 +4790,14 @@ bool ARMBaseInstrInfo::verifyInstruction(const MachineInstr &MI,
       }
     }
   }
+  if (MI.getOpcode() == ARM::MVE_VMOV_q_rr) {
+    assert(MI.getOperand(4).isImm() && MI.getOperand(5).isImm());
+    if ((MI.getOperand(4).getImm() != 2 && MI.getOperand(4).getImm() != 3) ||
+        MI.getOperand(4).getImm() != MI.getOperand(5).getImm() + 2) {
+      ErrInfo = "Incorrect array index for MVE_VMOV_q_rr";
+      return false;
+    }
+  }
   return true;
 }
 
@@ -5950,7 +5959,8 @@ ARMBaseInstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
   // Be conservative with ARMv8.1 MVE instructions.
   if (Opc == ARM::t2BF_LabelPseudo || Opc == ARM::t2DoLoopStart ||
       Opc == ARM::t2DoLoopStartTP || Opc == ARM::t2WhileLoopStart ||
-      Opc == ARM::t2LoopDec || Opc == ARM::t2LoopEnd)
+      Opc == ARM::t2LoopDec || Opc == ARM::t2LoopEnd ||
+      Opc == ARM::t2LoopEndDec)
     return outliner::InstrType::Illegal;
 
   const MCInstrDesc &MCID = MI.getDesc();

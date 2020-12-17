@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-fusion -debug-only=loop-fusion -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -S -loop-simplify -loop-fusion -debug-only=loop-fusion -disable-output < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 @B = common global [1024 x i32] zeroinitializer, align 16

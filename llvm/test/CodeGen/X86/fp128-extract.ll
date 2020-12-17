@@ -16,7 +16,7 @@ define fp128 @TestExtract(<2 x double> %x) nounwind {
 ; CHECK-NEXT:    movaps %xmm0, %xmm1
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    addq $40, %rsp
-; CHECK-NEXT:    jmp __multf3 # TAILCALL
+; CHECK-NEXT:    jmp __multf3@PLT # TAILCALL
 entry:
   ; Simplified instruction pattern from the output of llvm before r289042,
   ; for a boost function ...::insert<...>::traverse<...>().

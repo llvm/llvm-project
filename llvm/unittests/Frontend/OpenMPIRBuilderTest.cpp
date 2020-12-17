@@ -45,7 +45,7 @@ protected:
     F->setSubprogram(SP);
     auto Scope = DIB.createLexicalBlockFile(SP, File, 0);
     DIB.finalize();
-    DL = DebugLoc::get(3, 7, Scope);
+    DL = DILocation::get(Ctx, 3, 7, Scope);
   }
 
   void TearDown() override {
@@ -1024,51 +1024,144 @@ TEST_F(OpenMPIRBuilderTest, CanonicalLoopBounds) {
     return cast<ConstantInt>(TripCount)->getValue().getZExtValue();
   };
 
-  ASSERT_EQ(EvalTripCount(0, 0, 1, false, false), 0);
-  ASSERT_EQ(EvalTripCount(0, 1, 2, false, false), 1);
-  ASSERT_EQ(EvalTripCount(0, 42, 1, false, false), 42);
-  ASSERT_EQ(EvalTripCount(0, 42, 2, false, false), 21);
-  ASSERT_EQ(EvalTripCount(21, 42, 1, false, false), 21);
-  ASSERT_EQ(EvalTripCount(0, 5, 5, false, false), 1);
-  ASSERT_EQ(EvalTripCount(0, 9, 5, false, false), 2);
-  ASSERT_EQ(EvalTripCount(0, 11, 5, false, false), 3);
-  ASSERT_EQ(EvalTripCount(0, 0xFFFF, 1, false, false), 0xFFFF);
-  ASSERT_EQ(EvalTripCount(0xFFFF, 0, 1, false, false), 0);
-  ASSERT_EQ(EvalTripCount(0xFFFE, 0xFFFF, 1, false, false), 1);
-  ASSERT_EQ(EvalTripCount(0, 0xFFFF, 0x100, false, false), 0x100);
-  ASSERT_EQ(EvalTripCount(0, 0xFFFF, 0xFFFF, false, false), 1);
+  EXPECT_EQ(EvalTripCount(0, 0, 1, false, false), 0);
+  EXPECT_EQ(EvalTripCount(0, 1, 2, false, false), 1);
+  EXPECT_EQ(EvalTripCount(0, 42, 1, false, false), 42);
+  EXPECT_EQ(EvalTripCount(0, 42, 2, false, false), 21);
+  EXPECT_EQ(EvalTripCount(21, 42, 1, false, false), 21);
+  EXPECT_EQ(EvalTripCount(0, 5, 5, false, false), 1);
+  EXPECT_EQ(EvalTripCount(0, 9, 5, false, false), 2);
+  EXPECT_EQ(EvalTripCount(0, 11, 5, false, false), 3);
+  EXPECT_EQ(EvalTripCount(0, 0xFFFF, 1, false, false), 0xFFFF);
+  EXPECT_EQ(EvalTripCount(0xFFFF, 0, 1, false, false), 0);
+  EXPECT_EQ(EvalTripCount(0xFFFE, 0xFFFF, 1, false, false), 1);
+  EXPECT_EQ(EvalTripCount(0, 0xFFFF, 0x100, false, false), 0x100);
+  EXPECT_EQ(EvalTripCount(0, 0xFFFF, 0xFFFF, false, false), 1);
 
-  ASSERT_EQ(EvalTripCount(0, 6, 5, false, false), 2);
-  ASSERT_EQ(EvalTripCount(0, 0xFFFF, 0xFFFE, false, false), 2);
-  ASSERT_EQ(EvalTripCount(0, 0, 1, false, true), 1);
-  ASSERT_EQ(EvalTripCount(0, 0, 0xFFFF, false, true), 1);
-  ASSERT_EQ(EvalTripCount(0, 0xFFFE, 1, false, true), 0xFFFF);
-  ASSERT_EQ(EvalTripCount(0, 0xFFFE, 2, false, true), 0x8000);
+  EXPECT_EQ(EvalTripCount(0, 6, 5, false, false), 2);
+  EXPECT_EQ(EvalTripCount(0, 0xFFFF, 0xFFFE, false, false), 2);
+  EXPECT_EQ(EvalTripCount(0, 0, 1, false, true), 1);
+  EXPECT_EQ(EvalTripCount(0, 0, 0xFFFF, false, true), 1);
+  EXPECT_EQ(EvalTripCount(0, 0xFFFE, 1, false, true), 0xFFFF);
+  EXPECT_EQ(EvalTripCount(0, 0xFFFE, 2, false, true), 0x8000);
 
-  ASSERT_EQ(EvalTripCount(0, 0, -1, true, false), 0);
-  ASSERT_EQ(EvalTripCount(0, 1, -1, true, true), 0);
-  ASSERT_EQ(EvalTripCount(20, 5, -5, true, false), 3);
-  ASSERT_EQ(EvalTripCount(20, 5, -5, true, true), 4);
-  ASSERT_EQ(EvalTripCount(-4, -2, 2, true, false), 1);
-  ASSERT_EQ(EvalTripCount(-4, -3, 2, true, false), 1);
-  ASSERT_EQ(EvalTripCount(-4, -2, 2, true, true), 2);
+  EXPECT_EQ(EvalTripCount(0, 0, -1, true, false), 0);
+  EXPECT_EQ(EvalTripCount(0, 1, -1, true, true), 0);
+  EXPECT_EQ(EvalTripCount(20, 5, -5, true, false), 3);
+  EXPECT_EQ(EvalTripCount(20, 5, -5, true, true), 4);
+  EXPECT_EQ(EvalTripCount(-4, -2, 2, true, false), 1);
+  EXPECT_EQ(EvalTripCount(-4, -3, 2, true, false), 1);
+  EXPECT_EQ(EvalTripCount(-4, -2, 2, true, true), 2);
 
-  ASSERT_EQ(EvalTripCount(INT16_MIN, 0, 1, true, false), 0x8000);
-  ASSERT_EQ(EvalTripCount(INT16_MIN, 0, 1, true, true), 0x8001);
-  ASSERT_EQ(EvalTripCount(INT16_MIN, 0x7FFF, 1, true, false), 0xFFFF);
-  ASSERT_EQ(EvalTripCount(INT16_MIN + 1, 0x7FFF, 1, true, true), 0xFFFF);
-  ASSERT_EQ(EvalTripCount(INT16_MIN, 0, 0x7FFF, true, false), 2);
-  ASSERT_EQ(EvalTripCount(0x7FFF, 0, -1, true, false), 0x7FFF);
-  ASSERT_EQ(EvalTripCount(0, INT16_MIN, -1, true, false), 0x8000);
-  ASSERT_EQ(EvalTripCount(0, INT16_MIN, -16, true, false), 0x800);
-  ASSERT_EQ(EvalTripCount(0x7FFF, INT16_MIN, -1, true, false), 0xFFFF);
-  ASSERT_EQ(EvalTripCount(0x7FFF, 1, INT16_MIN, true, false), 1);
-  ASSERT_EQ(EvalTripCount(0x7FFF, -1, INT16_MIN, true, true), 2);
+  EXPECT_EQ(EvalTripCount(INT16_MIN, 0, 1, true, false), 0x8000);
+  EXPECT_EQ(EvalTripCount(INT16_MIN, 0, 1, true, true), 0x8001);
+  EXPECT_EQ(EvalTripCount(INT16_MIN, 0x7FFF, 1, true, false), 0xFFFF);
+  EXPECT_EQ(EvalTripCount(INT16_MIN + 1, 0x7FFF, 1, true, true), 0xFFFF);
+  EXPECT_EQ(EvalTripCount(INT16_MIN, 0, 0x7FFF, true, false), 2);
+  EXPECT_EQ(EvalTripCount(0x7FFF, 0, -1, true, false), 0x7FFF);
+  EXPECT_EQ(EvalTripCount(0, INT16_MIN, -1, true, false), 0x8000);
+  EXPECT_EQ(EvalTripCount(0, INT16_MIN, -16, true, false), 0x800);
+  EXPECT_EQ(EvalTripCount(0x7FFF, INT16_MIN, -1, true, false), 0xFFFF);
+  EXPECT_EQ(EvalTripCount(0x7FFF, 1, INT16_MIN, true, false), 1);
+  EXPECT_EQ(EvalTripCount(0x7FFF, -1, INT16_MIN, true, true), 2);
 
   // Finalize the function and verify it.
   Builder.CreateRetVoid();
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
+}
+
+TEST_F(OpenMPIRBuilderTest, StaticWorkShareLoop) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  IRBuilder<> Builder(BB);
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+
+  Type *LCTy = Type::getInt32Ty(Ctx);
+  Value *StartVal = ConstantInt::get(LCTy, 10);
+  Value *StopVal = ConstantInt::get(LCTy, 52);
+  Value *StepVal = ConstantInt::get(LCTy, 2);
+  auto LoopBodyGen = [&](InsertPointTy, llvm::Value *) {};
+
+  CanonicalLoopInfo *CLI = OMPBuilder.createCanonicalLoop(
+      Loc, LoopBodyGen, StartVal, StopVal, StepVal,
+      /*IsSigned=*/false, /*InclusiveStop=*/false);
+
+  Builder.SetInsertPoint(BB, BB->getFirstInsertionPt());
+  InsertPointTy AllocaIP = Builder.saveIP();
+
+  CLI = OMPBuilder.createStaticWorkshareLoop(Loc, CLI, AllocaIP,
+                                             /*NeedsBarrier=*/true);
+  auto AllocaIter = BB->begin();
+  ASSERT_GE(std::distance(BB->begin(), BB->end()), 4);
+  AllocaInst *PLastIter = dyn_cast<AllocaInst>(&*(AllocaIter++));
+  AllocaInst *PLowerBound = dyn_cast<AllocaInst>(&*(AllocaIter++));
+  AllocaInst *PUpperBound = dyn_cast<AllocaInst>(&*(AllocaIter++));
+  AllocaInst *PStride = dyn_cast<AllocaInst>(&*(AllocaIter++));
+  EXPECT_NE(PLastIter, nullptr);
+  EXPECT_NE(PLowerBound, nullptr);
+  EXPECT_NE(PUpperBound, nullptr);
+  EXPECT_NE(PStride, nullptr);
+
+  auto PreheaderIter = CLI->getPreheader()->begin();
+  ASSERT_GE(
+      std::distance(CLI->getPreheader()->begin(), CLI->getPreheader()->end()),
+      7);
+  StoreInst *LowerBoundStore = dyn_cast<StoreInst>(&*(PreheaderIter++));
+  StoreInst *UpperBoundStore = dyn_cast<StoreInst>(&*(PreheaderIter++));
+  StoreInst *StrideStore = dyn_cast<StoreInst>(&*(PreheaderIter++));
+  ASSERT_NE(LowerBoundStore, nullptr);
+  ASSERT_NE(UpperBoundStore, nullptr);
+  ASSERT_NE(StrideStore, nullptr);
+
+  auto *OrigLowerBound =
+      dyn_cast<ConstantInt>(LowerBoundStore->getValueOperand());
+  auto *OrigUpperBound =
+      dyn_cast<ConstantInt>(UpperBoundStore->getValueOperand());
+  auto *OrigStride = dyn_cast<ConstantInt>(StrideStore->getValueOperand());
+  ASSERT_NE(OrigLowerBound, nullptr);
+  ASSERT_NE(OrigUpperBound, nullptr);
+  ASSERT_NE(OrigStride, nullptr);
+  EXPECT_EQ(OrigLowerBound->getValue(), 0);
+  EXPECT_EQ(OrigUpperBound->getValue(), 20);
+  EXPECT_EQ(OrigStride->getValue(), 1);
+
+  // Check that the loop IV is updated to account for the lower bound returned
+  // by the OpenMP runtime call.
+  BinaryOperator *Add = dyn_cast<BinaryOperator>(&CLI->getBody()->front());
+  EXPECT_EQ(Add->getOperand(0), CLI->getIndVar());
+  auto *LoadedLowerBound = dyn_cast<LoadInst>(Add->getOperand(1));
+  ASSERT_NE(LoadedLowerBound, nullptr);
+  EXPECT_EQ(LoadedLowerBound->getPointerOperand(), PLowerBound);
+
+  // Check that the trip count is updated to account for the lower and upper
+  // bounds return by the OpenMP runtime call.
+  auto *AddOne = dyn_cast<Instruction>(CLI->getTripCount());
+  ASSERT_NE(AddOne, nullptr);
+  ASSERT_TRUE(AddOne->isBinaryOp());
+  auto *One = dyn_cast<ConstantInt>(AddOne->getOperand(1));
+  ASSERT_NE(One, nullptr);
+  EXPECT_EQ(One->getValue(), 1);
+  auto *Difference = dyn_cast<Instruction>(AddOne->getOperand(0));
+  ASSERT_NE(Difference, nullptr);
+  ASSERT_TRUE(Difference->isBinaryOp());
+  EXPECT_EQ(Difference->getOperand(1), LoadedLowerBound);
+  auto *LoadedUpperBound = dyn_cast<LoadInst>(Difference->getOperand(0));
+  ASSERT_NE(LoadedUpperBound, nullptr);
+  EXPECT_EQ(LoadedUpperBound->getPointerOperand(), PUpperBound);
+
+  // The original loop iterator should only be used in the condition, in the
+  // increment and in the statement that adds the lower bound to it.
+  Value *IV = CLI->getIndVar();
+  EXPECT_EQ(std::distance(IV->use_begin(), IV->use_end()), 3);
+
+  // The exit block should contain the "fini" call and the barrier call,
+  // plus the call to obtain the thread ID.
+  BasicBlock *ExitBlock = CLI->getExit();
+  size_t NumCallsInExitBlock =
+      count_if(*ExitBlock, [](Instruction &I) { return isa<CallInst>(I); });
+  EXPECT_EQ(NumCallsInExitBlock, 3u);
 }
 
 TEST_F(OpenMPIRBuilderTest, MasterDirective) {

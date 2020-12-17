@@ -52,6 +52,13 @@ public:
 
   Kind getKind() const { return kind; }
 
+  /// Get an opaque pointer to the constraint.
+  const void *getAsOpaquePointer() const { return def; }
+  /// Construct a constraint from the opaque pointer representation.
+  static Constraint getFromOpaquePointer(const void *ptr) {
+    return Constraint(reinterpret_cast<const llvm::Record *>(ptr));
+  }
+
 protected:
   Constraint(Kind kind, const llvm::Record *record);
 

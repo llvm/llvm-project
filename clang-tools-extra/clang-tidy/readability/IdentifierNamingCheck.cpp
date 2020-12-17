@@ -773,7 +773,8 @@ IdentifierNamingCheck::getStyleForFile(StringRef FileName) const {
   ClangTidyOptions Options = Context->getOptionsForFile(FileName);
   if (Options.Checks && GlobList(*Options.Checks).contains(CheckName)) {
     auto It = NamingStylesCache.try_emplace(
-        Parent, getFileStyleFromOptions({CheckName, Options.CheckOptions}));
+        Parent,
+        getFileStyleFromOptions({CheckName, Options.CheckOptions, Context}));
     assert(It.second);
     return It.first->getValue();
   }

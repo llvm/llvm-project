@@ -35,19 +35,16 @@ movl $9, z
 // CHECK-NEXT:       Offset:
 // CHECK-NEXT:       Type: R_386_COPY
 // CHECK-NEXT:       Symbol: x
-// CHECK-NEXT:       Addend: 0x0
 // CHECK-NEXT:     }
 // CHECK-NEXT:     Relocation {
 // CHECK-NEXT:       Offset:
 // CHECK-NEXT:       Type: R_386_COPY
 // CHECK-NEXT:       Symbol: y
-// CHECK-NEXT:       Addend: 0x0
 // CHECK-NEXT:     }
 // CHECK-NEXT:     Relocation {
 // CHECK-NEXT:       Offset:
 // CHECK-NEXT:       Type: R_386_COPY
 // CHECK-NEXT:       Symbol: z
-// CHECK-NEXT:       Addend: 0x0
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]

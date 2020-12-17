@@ -190,7 +190,7 @@ define void()* @get_external_default_function() {
   ret void()* @external_default_function
 }
 ; CHECK: movq external_default_function@GOTPCREL(%rip), %rax
-; STATIC: movl $external_default_function, %eax
+; STATIC: movq external_default_function@GOTPCREL(%rip), %rax
 ; CHECK32: movl external_default_function@GOT(%eax), %eax
 
 define dso_local void @strong_local_function() {
@@ -249,7 +249,7 @@ define void()* @get_external_preemptable_function() {
   ret void()* @external_preemptable_function
 }
 ; CHECK: movq external_preemptable_function@GOTPCREL(%rip), %rax
-; STATIC: movl $external_preemptable_function, %eax
+; STATIC: movq external_preemptable_function@GOTPCREL(%rip), %rax
 ; CHECK32: movl external_preemptable_function@GOT(%eax), %eax
 
 !llvm.module.flags = !{!0}

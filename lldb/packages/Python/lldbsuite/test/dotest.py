@@ -850,6 +850,14 @@ def checkDebugInfoSupport():
     if skipped:
         print("Skipping following debug info categories:", skipped)
 
+def checkDebugServerSupport():
+    from lldbsuite.test import lldbplatformutil
+
+    if lldbplatformutil.platformIsDarwin():
+        configuration.skip_categories.append("llgs")
+    else:
+        configuration.skip_categories.append("debugserver")
+
 def run_suite():
     # On MacOS X, check to make sure that domain for com.apple.DebugSymbols defaults
     # does not exist before proceeding to running the test suite.
@@ -944,14 +952,8 @@ def run_suite():
     checkLibstdcxxSupport()
     checkWatchpointSupport()
     checkDebugInfoSupport()
+    checkDebugServerSupport()
     checkObjcSupport()
-
-    # Perform LLGS tests only on platforms using it.
-    configuration.llgs_platform = (
-        target_platform in ["freebsd", "linux", "netbsd", "windows"])
-
-    # Perform debugserver tests elsewhere (i.e. on Darwin platforms).
-    configuration.debugserver_platform = not configuration.llgs_platform
 
     for testdir in configuration.testdirs:
         for (dirpath, dirnames, filenames) in os.walk(testdir):

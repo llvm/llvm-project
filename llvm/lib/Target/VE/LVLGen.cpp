@@ -68,6 +68,12 @@ bool LVLGen::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
   for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end();) {
     MachineBasicBlock::iterator MI = I;
 
+    // Check whether MI uses a vector length operand.  If so, we prepare for VL
+    // register.  We would like to reuse VL register as much as possible.  We
+    // also would like to keep the number of LEA instructions as fewer as
+    // possible.  Therefore, we use a regular scalar register to hold immediate
+    // values to load VL register.  And try to reuse identical scalar registers
+    // to avoid new LVLr instructions as much as possible.
     unsigned Reg = getVL(*MI);
     if (Reg != VE::NoRegister) {
       LLVM_DEBUG(dbgs() << "Vector instruction found: ");
@@ -78,6 +84,8 @@ bool LVLGen::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
                         << ". ");
 
       if (!HasRegForVL || RegForVL != Reg) {
+        // Use VL, but a different value in a different scalar register.
+        // So, generate new LVL instruction just before the current instruction.
         LLVM_DEBUG(dbgs() << "Generate a LVL instruction to load "
                           << RegName(Reg) << ".\n");
         BuildMI(MBB, I, MI->getDebugLoc(), TII->get(VE::LVLr)).addReg(Reg);
@@ -87,18 +95,15 @@ bool LVLGen::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
       } else {
         LLVM_DEBUG(dbgs() << "Reuse current VL.\n");
       }
-    } else if (HasRegForVL) {
-      // Old VL is overwritten, so disable HasRegForVL.
-      if (MI->findRegisterDefOperandIdx(RegForVL, false, false, TRI) != -1) {
-        LLVM_DEBUG(dbgs() << RegName(RegForVL) << " is killed: ");
-        LLVM_DEBUG(MI->dump());
-        HasRegForVL = false;
-      }
     }
+    // Check the update of a given scalar register holding an immediate value
+    // for VL register.  Also, a call doesn't preserve VL register.
     if (HasRegForVL) {
-      // The latest VL is killed, so disable HasRegForVL.
-      if (MI->killsRegister(RegForVL, TRI)) {
-        LLVM_DEBUG(dbgs() << RegName(RegForVL) << " is killed: ");
+      if (MI->definesRegister(RegForVL, TRI) ||
+          MI->modifiesRegister(RegForVL, TRI) ||
+          MI->killsRegister(RegForVL, TRI) || MI->isCall()) {
+        // The latest VL is needed to be updated, so disable HasRegForVL.
+        LLVM_DEBUG(dbgs() << RegName(RegForVL) << " is needed to be updated: ");
         LLVM_DEBUG(MI->dump());
         HasRegForVL = false;
       }

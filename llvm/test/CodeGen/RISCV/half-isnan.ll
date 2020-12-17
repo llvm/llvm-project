@@ -8,13 +8,13 @@ define zeroext i1 @half_is_nan(half %a) nounwind {
 ; RV32IZFH-LABEL: half_is_nan:
 ; RV32IZFH:       # %bb.0:
 ; RV32IZFH-NEXT:    feq.h a0, fa0, fa0
-; RV32IZFH-NEXT:    seqz a0, a0
+; RV32IZFH-NEXT:    xori a0, a0, 1
 ; RV32IZFH-NEXT:    ret
 ;
 ; RV64IZFH-LABEL: half_is_nan:
 ; RV64IZFH:       # %bb.0:
 ; RV64IZFH-NEXT:    feq.h a0, fa0, fa0
-; RV64IZFH-NEXT:    seqz a0, a0
+; RV64IZFH-NEXT:    xori a0, a0, 1
 ; RV64IZFH-NEXT:    ret
   %1 = fcmp uno half %a, 0.000000e+00
   ret i1 %1
