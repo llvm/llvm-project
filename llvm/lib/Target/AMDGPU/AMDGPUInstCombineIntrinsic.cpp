@@ -159,7 +159,8 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
   CallInst *NewCall = IC.Builder.CreateCall(I, Args);
   NewCall->takeName(&II);
   NewCall->copyMetadata(II);
-  NewCall->copyFastMathFlags(&II);
+  if (isa<FPMathOperator>(NewCall))
+    NewCall->copyFastMathFlags(&II);
   return IC.replaceInstUsesWith(II, NewCall);
 }
 

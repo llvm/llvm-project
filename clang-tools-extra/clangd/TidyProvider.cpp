@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TidyProvider.h"
+#include "../clang-tidy/ClangTidyModuleRegistry.h"
 #include "Config.h"
 #include "support/FileCache.h"
 #include "support/Logger.h"
@@ -14,6 +15,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSet.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -265,6 +268,26 @@ tidy::ClangTidyOptions getTidyOptionsForFile(TidyProviderRef Provider,
   if (Provider)
     Provider(Opts, Filename);
   return Opts;
+}
+
+bool isRegisteredTidyCheck(llvm::StringRef Check) {
+  assert(!Check.empty());
+  assert(!Check.contains('*') && !Check.contains(',') &&
+         "isRegisteredCheck doesn't support globs");
+  assert(Check.ltrim().front() != '-');
+
+  static const llvm::StringSet<llvm::BumpPtrAllocator> AllChecks = [] {
+    llvm::StringSet<llvm::BumpPtrAllocator> Result;
+    tidy::ClangTidyCheckFactories Factories;
+    for (tidy::ClangTidyModuleRegistry::entry E :
+         tidy::ClangTidyModuleRegistry::entries())
+      E.instantiate()->addCheckFactories(Factories);
+    for (const auto &Factory : Factories)
+      Result.insert(Factory.getKey());
+    return Result;
+  }();
+
+  return AllChecks.contains(Check);
 }
 } // namespace clangd
 } // namespace clang

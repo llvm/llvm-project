@@ -19870,7 +19870,7 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
   }
 
   if (VT == MVT::f128)
-    return LowerF128Call(Op, DAG, RTLIB::getSINTTOFP(SrcVT, VT));
+    return SDValue();
 
   SDValue ValueToStore = Src;
   if (SrcVT == MVT::i64 && Subtarget.hasSSE2() && !Subtarget.is64Bit())
@@ -20311,7 +20311,7 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   SDValue Chain = IsStrict ? Op.getOperand(0) : DAG.getEntryNode();
 
   if (DstVT == MVT::f128)
-    return LowerF128Call(Op, DAG, RTLIB::getUINTTOFP(SrcVT, DstVT));
+    return SDValue();
 
   if (DstVT.isVector())
     return lowerUINT_TO_FP_vec(Op, DAG, Subtarget);
@@ -21391,10 +21391,8 @@ SDValue X86TargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
   SDValue In = Op.getOperand(IsStrict ? 1 : 0);
   MVT SVT = In.getSimpleValueType();
 
-  if (VT == MVT::f128) {
-    RTLIB::Libcall LC = RTLIB::getFPEXT(SVT, VT);
-    return LowerF128Call(Op, DAG, LC);
-  }
+  if (VT == MVT::f128)
+    return SDValue();
 
   assert(SVT == MVT::v2f32 && "Only customize MVT::v2f32 type legalization!");
 
@@ -21408,31 +21406,12 @@ SDValue X86TargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue X86TargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
   bool IsStrict = Op->isStrictFPOpcode();
-
-  MVT VT = Op.getSimpleValueType();
   SDValue In = Op.getOperand(IsStrict ? 1 : 0);
-  MVT SVT = In.getSimpleValueType();
-
   // It's legal except when f128 is involved
-  if (SVT != MVT::f128)
+  if (In.getSimpleValueType() != MVT::f128)
     return Op;
 
-  RTLIB::Libcall LC = RTLIB::getFPROUND(SVT, VT);
-
-  // FP_ROUND node has a second operand indicating whether it is known to be
-  // precise. That doesn't take part in the LibCall so we can't directly use
-  // LowerF128Call.
-
-  SDLoc dl(Op);
-  SDValue Chain = IsStrict ? Op.getOperand(0) : SDValue();
-  MakeLibCallOptions CallOptions;
-  std::pair<SDValue, SDValue> Tmp = makeLibCall(DAG, LC, VT, In, CallOptions,
-                                                dl, Chain);
-
-  if (IsStrict)
-    return DAG.getMergeValues({ Tmp.first, Tmp.second }, dl);
-
-  return Tmp.first;
+  return SDValue();
 }
 
 static SDValue LowerFP16_TO_FP(SDValue Op, SelectionDAG &DAG) {
@@ -29719,25 +29698,6 @@ SDValue X86TargetLowering::LowerGC_TRANSITION(SDValue Op,
   return NOOP;
 }
 
-SDValue X86TargetLowering::LowerF128Call(SDValue Op, SelectionDAG &DAG,
-                                         RTLIB::Libcall Call) const {
-
-  bool IsStrict = Op->isStrictFPOpcode();
-  unsigned Offset = IsStrict ? 1 : 0;
-  SmallVector<SDValue, 2> Ops(Op->op_begin() + Offset, Op->op_end());
-
-  SDLoc dl(Op);
-  SDValue Chain = IsStrict ? Op.getOperand(0) : SDValue();
-  MakeLibCallOptions CallOptions;
-  std::pair<SDValue, SDValue> Tmp = makeLibCall(DAG, Call, MVT::f128, Ops,
-                                                CallOptions, dl, Chain);
-
-  if (IsStrict)
-    return DAG.getMergeValues({ Tmp.first, Tmp.second }, dl);
-
-  return Tmp.first;
-}
-
 // Custom split CVTPS2PH with wide types.
 static SDValue LowerCVTPS2PH(SDValue Op, SelectionDAG &DAG) {
   SDLoc dl(Op);
@@ -35172,23 +35132,6 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
     return CanonicalizeShuffleInput(RootVT, V1);
   }
 
-  // Attempt to match a subvector broadcast.
-  // shuffle(insert_subvector(undef, sub, 0), undef, 0, 0, 0, 0)
-  if (UnaryShuffle &&
-      (BaseMaskEltSizeInBits == 128 || BaseMaskEltSizeInBits == 256)) {
-    if (isUndefOrEqual(BaseMask, 0)) {
-      SDValue Src = Inputs[0];
-      if (Src.getOpcode() == ISD::INSERT_SUBVECTOR &&
-          Src.getOperand(0).isUndef() &&
-          Src.getOperand(1).getValueSizeInBits() == BaseMaskEltSizeInBits &&
-          MayFoldLoad(Src.getOperand(1)) && isNullConstant(Src.getOperand(2))) {
-        return DAG.getBitcast(RootVT, DAG.getNode(X86ISD::SUBV_BROADCAST, DL,
-                                                  Src.getValueType(),
-                                                  Src.getOperand(1)));
-      }
-    }
-  }
-
   // Handle 128/256-bit lane shuffles of 512-bit vectors.
   if (RootVT.is512BitVector() &&
       (NumBaseMaskElts == 2 || NumBaseMaskElts == 4)) {
@@ -39531,8 +39474,8 @@ static SDValue createPSADBW(SelectionDAG &DAG, const SDValue &Zext0,
 
 // Attempt to replace an min/max v8i16/v16i8 horizontal reduction with
 // PHMINPOSUW.
-static SDValue combineHorizontalMinMaxResult(SDNode *Extract, SelectionDAG &DAG,
-                                             const X86Subtarget &Subtarget) {
+static SDValue combineMinMaxReduction(SDNode *Extract, SelectionDAG &DAG,
+                                      const X86Subtarget &Subtarget) {
   // Bail without SSE41.
   if (!Subtarget.hasSSE41())
     return SDValue();
@@ -39605,9 +39548,8 @@ static SDValue combineHorizontalMinMaxResult(SDNode *Extract, SelectionDAG &DAG,
 }
 
 // Attempt to replace an all_of/any_of/parity style horizontal reduction with a MOVMSK.
-static SDValue combineHorizontalPredicateResult(SDNode *Extract,
-                                                SelectionDAG &DAG,
-                                                const X86Subtarget &Subtarget) {
+static SDValue combinePredicateReduction(SDNode *Extract, SelectionDAG &DAG,
+                                         const X86Subtarget &Subtarget) {
   // Bail without SSE2.
   if (!Subtarget.hasSSE2())
     return SDValue();
@@ -40098,8 +40040,8 @@ static SDValue scalarizeExtEltFP(SDNode *ExtElt, SelectionDAG &DAG) {
 
 /// Try to convert a vector reduction sequence composed of binops and shuffles
 /// into horizontal ops.
-static SDValue combineReductionToHorizontal(SDNode *ExtElt, SelectionDAG &DAG,
-                                            const X86Subtarget &Subtarget) {
+static SDValue combineArithReduction(SDNode *ExtElt, SelectionDAG &DAG,
+                                     const X86Subtarget &Subtarget) {
   assert(ExtElt->getOpcode() == ISD::EXTRACT_VECTOR_ELT && "Unexpected caller");
 
   // We need at least SSE2 to anything here.
@@ -40140,7 +40082,11 @@ static SDValue combineReductionToHorizontal(SDNode *ExtElt, SelectionDAG &DAG,
         Rdx = DAG.getNode(Opc, DL, Lo.getValueType(), Lo, Hi);
       }
     } else {
-      Rdx = widenSubVector(Rdx, false, Subtarget, DAG, DL, 128);
+      if (VecVT == MVT::v4i8)
+        Rdx = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i8, Rdx,
+                          DAG.getUNDEF(MVT::v4i8));
+      Rdx = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v16i8, Rdx,
+                        DAG.getUNDEF(MVT::v8i8));
       Rdx = getUnpackl(DAG, DL, MVT::v16i8, Rdx, DAG.getUNDEF(MVT::v16i8));
       Rdx = DAG.getBitcast(MVT::v8i16, Rdx);
     }
@@ -40295,7 +40241,7 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
     }
 
     // TODO - Remove this once we can handle the implicit zero-extension of
-    // X86ISD::PEXTRW/X86ISD::PEXTRB in combineHorizontalPredicateResult and
+    // X86ISD::PEXTRW/X86ISD::PEXTRB in combinePredicateReduction and
     // combineBasicSADPattern.
     return SDValue();
   }
@@ -40327,14 +40273,15 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
     return SAD;
 
   // Attempt to replace an all_of/any_of horizontal reduction with a MOVMSK.
-  if (SDValue Cmp = combineHorizontalPredicateResult(N, DAG, Subtarget))
+  if (SDValue Cmp = combinePredicateReduction(N, DAG, Subtarget))
     return Cmp;
 
   // Attempt to replace min/max v8i16/v16i8 reductions with PHMINPOSUW.
-  if (SDValue MinMax = combineHorizontalMinMaxResult(N, DAG, Subtarget))
+  if (SDValue MinMax = combineMinMaxReduction(N, DAG, Subtarget))
     return MinMax;
 
-  if (SDValue V = combineReductionToHorizontal(N, DAG, Subtarget))
+  // Attempt to optimize ADD/FADD/MUL reductions with HADD, promotion etc..
+  if (SDValue V = combineArithReduction(N, DAG, Subtarget))
     return V;
 
   if (SDValue V = scalarizeExtEltFP(N, DAG))
@@ -44494,8 +44441,8 @@ static SDValue detectAVGPattern(SDValue In, EVT VT, SelectionDAG &DAG,
   };
 
   // Check if each element of the vector is right-shifted by one.
-  auto LHS = In.getOperand(0);
-  auto RHS = In.getOperand(1);
+  SDValue LHS = In.getOperand(0);
+  SDValue RHS = In.getOperand(1);
   if (!IsConstVectorInRange(RHS, 1, 1))
     return SDValue();
   if (LHS.getOpcode() != ISD::ADD)
@@ -48846,10 +48793,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
 
   // Repeated subvectors.
   if (IsSplat) {
-    // If this broadcast/subv_broadcast is inserted into both halves, use a
-    // larger broadcast/subv_broadcast.
-    if (Op0.getOpcode() == X86ISD::VBROADCAST ||
-        Op0.getOpcode() == X86ISD::SUBV_BROADCAST)
+    // If this broadcast is inserted into both halves, use a larger broadcast.
+    if (Op0.getOpcode() == X86ISD::VBROADCAST)
       return DAG.getNode(Op0.getOpcode(), DL, VT, Op0.getOperand(0));
 
     // If this broadcast_load is inserted into both halves, use a larger

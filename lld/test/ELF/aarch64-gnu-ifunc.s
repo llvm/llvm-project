@@ -115,11 +115,11 @@
 // DISASM-NEXT: Disassembly of section .iplt:
 // DISASM-EMPTY:
 // DISASM-NEXT: <.iplt>:
-// DISASM-NEXT:  2101a0: adrp x16, #65536
+// DISASM-NEXT:  2101a0: adrp x16, 0x220000
 // DISASM-NEXT:  2101a4: ldr x17, [x16, #448]
 // DISASM-NEXT:  2101a8: add x16, x16, #448
 // DISASM-NEXT:  2101ac: br x17
-// DISASM-NEXT:  2101b0: adrp x16, #65536
+// DISASM-NEXT:  2101b0: adrp x16, 0x220000
 // DISASM-NEXT:  2101b4: ldr x17, [x16, #456]
 // DISASM-NEXT:  2101b8: add x16, x16, #456
 // DISASM-NEXT:  2101bc: br x17

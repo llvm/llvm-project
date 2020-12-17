@@ -25,19 +25,19 @@
 # RUN:     -compatibility_version 80000.1 -current_version 1.2.3 2>&1 | \
 # RUN:     FileCheck --check-prefix=BADMAJOR %s
 
-# BADMAJOR: error: -compatibility_version 80000.1: component 80000 out of range
+# BADMAJOR: error: -compatibility_version 80000.1: malformed version
 
 # RUN: not %lld -dylib -o %t/executable %t.o -o /dev/null \
 # RUN:     -compatibility_version 8.300 -current_version 1.2.3 2>&1 | \
 # RUN:     FileCheck --check-prefix=BADMINOR %s
 
-# BADMINOR: error: -compatibility_version 8.300: component 300 out of range
+# BADMINOR: error: -compatibility_version 8.300: malformed version
 
 # RUN: not %lld -dylib -o %t/executable %t.o -o /dev/null \
 # RUN:     -compatibility_version 8.8.300 -current_version 1.2.3 2>&1 | \
 # RUN:     FileCheck --check-prefix=BADSUBMINOR %s
 
-# BADSUBMINOR: error: -compatibility_version 8.8.300: component 300 out of range
+# BADSUBMINOR: error: -compatibility_version 8.8.300: malformed version
 
 # RUN: %lld -dylib -o %t/executable %t.o -o %t.dylib \
 # RUN:     -compatibility_version 1.2.3 -current_version 2.5.6

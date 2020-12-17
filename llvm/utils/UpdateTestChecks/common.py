@@ -258,6 +258,20 @@ class function_body(object):
   def __str__(self):
     return self.scrub
 
+def get_failed_prefixes(func_dict):
+  # This returns the list of those prefixes that failed to match any function,
+  # because there were conflicting bodies produced by different RUN lines, in
+  # all instances of the prefix. Effectively, this prefix is unused and should
+  # be removed.
+  for prefix in func_dict:
+    if func_dict[prefix] and (not [fct for fct in func_dict[prefix] 
+         if func_dict[prefix][fct] is not None]):
+      yield prefix
+
+def warn_on_failed_prefixes(func_dict):
+  for prefix in get_failed_prefixes(func_dict):
+      warn('Prefix %s had conflicting output from different RUN lines for all functions' % (prefix,))
+
 def build_function_body_dictionary(function_re, scrubber, scrubber_args, raw_tool_output, prefixes, func_dict, func_order, verbose, record_args, check_attributes):
   for m in function_re.finditer(raw_tool_output):
     if not m:
@@ -287,20 +301,53 @@ def build_function_body_dictionary(function_re, scrubber, scrubber_args, raw_too
         print('  ' + l, file=sys.stderr)
     for prefix in prefixes:
       if func in func_dict[prefix]:
-        if str(func_dict[prefix][func]) != scrubbed_body or (func_dict[prefix][func] and (func_dict[prefix][func].args_and_sig != args_and_sig or func_dict[prefix][func].attrs != attrs)):
-          if func_dict[prefix][func] and func_dict[prefix][func].is_same_except_arg_names(scrubbed_extra, args_and_sig, attrs):
+        if (func_dict[prefix][func] is None or
+            str(func_dict[prefix][func]) != scrubbed_body or
+            func_dict[prefix][func].args_and_sig != args_and_sig or
+                func_dict[prefix][func].attrs != attrs):
+          if (func_dict[prefix][func] is not None and
+              func_dict[prefix][func].is_same_except_arg_names(scrubbed_extra,
+                                                               args_and_sig,
+                                                               attrs)):
             func_dict[prefix][func].scrub = scrubbed_extra
             func_dict[prefix][func].args_and_sig = args_and_sig
             continue
           else:
-            if prefix == prefixes[-1]:
-              warn('Found conflicting asm under the same prefix: %r!' % (prefix,))
-            else:
-              func_dict[prefix][func] = None
-              continue
+            # This means a previous RUN line produced a body for this function
+            # that is different from the one produced by this current RUN line,
+            # so the body can't be common accross RUN lines. We use None to
+            # indicate that.
+            func_dict[prefix][func] = None
+            continue
 
       func_dict[prefix][func] = function_body(scrubbed_body, scrubbed_extra, args_and_sig, attrs)
       func_order[prefix].append(func)
+
+class FunctionTestBuilder:
+  def __init__(self, run_list, flags, scrubber_args):
+    self._verbose = flags.verbose
+    self._record_args = flags.function_signature
+    self._check_attributes = flags.check_attributes
+    self._scrubber_args = scrubber_args
+    self._func_dict = {}
+    self._func_order = {}
+    for tuple in run_list:
+      for prefix in tuple[0]:
+        self._func_dict.update({prefix:dict()})
+        self._func_order.update({prefix: []})
+
+  def finish_and_get_func_dict(self):
+    warn_on_failed_prefixes(self._func_dict)
+    return self._func_dict
+
+  def func_order(self):
+    return self._func_order
+  
+  def process_run_line(self, function_re, scrubber, raw_tool_output, prefixes):
+    build_function_body_dictionary(function_re, scrubber, self._scrubber_args,
+                                   raw_tool_output, prefixes, self._func_dict,
+                                   self._func_order, self._verbose,
+                                   self._record_args, self._check_attributes)
 
 ##### Generator of LLVM IR CHECK lines
 

@@ -1,4 +1,4 @@
-; RUN: opt -S <%s -simplifycfg | FileCheck %s
+; RUN: opt -S <%s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 | FileCheck %s
 
 define void @test_br(i32 %x) {
 entry:

@@ -63,10 +63,6 @@ public:
     return word_ == that.word_;
   }
 
-  // TODO: DIM, MAX, MIN, DPROD, FRACTION,
-  // INT/NINT, NEAREST, OUT_OF_RANGE,
-  // RRSPACING/SPACING, SCALE, SET_EXPONENT
-
   constexpr bool IsSignBitSet() const { return word_.BTEST(bits - 1); }
   constexpr bool IsNegative() const {
     return !IsNotANumber() && IsSignBitSet();
@@ -118,7 +114,7 @@ public:
       const Real &, Rounding rounding = defaultRounding) const;
 
   // SQRT(x**2 + y**2) but computed so as to avoid spurious overflow
-  // TODO: needed for CABS
+  // TODO: not yet implemented; needed for CABS
   ValueWithRealFlags<Real> HYPOT(
       const Real &, Rounding rounding = defaultRounding) const;
 

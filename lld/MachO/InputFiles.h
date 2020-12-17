@@ -14,6 +14,7 @@
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Memory.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Object/Archive.h"
@@ -131,6 +132,8 @@ public:
   static bool classof(const InputFile *f) { return f->kind() == DylibKind; }
 
   StringRef dylibName;
+  uint32_t compatibilityVersion = 0;
+  uint32_t currentVersion = 0;
   uint64_t ordinal = 0; // Ordinal numbering starts from 1, so 0 is a sentinel
   bool reexport = false;
   bool forceWeakImport = false;
@@ -158,7 +161,7 @@ public:
   std::unique_ptr<llvm::lto::InputFile> obj;
 };
 
-extern std::vector<InputFile *> inputFiles;
+extern llvm::SetVector<InputFile *> inputFiles;
 
 llvm::Optional<MemoryBufferRef> readFile(StringRef path);
 

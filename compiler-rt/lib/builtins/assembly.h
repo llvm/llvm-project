@@ -14,8 +14,8 @@
 #ifndef COMPILERRT_ASSEMBLY_H
 #define COMPILERRT_ASSEMBLY_H
 
-#if defined(__POWERPC__) || defined(__powerpc__) || defined(__ppc__)
-#define SEPARATOR @
+#if defined(__APPLE__) && defined(__aarch64__)
+#define SEPARATOR %%
 #else
 #define SEPARATOR ;
 #endif
@@ -243,16 +243,12 @@
   DECLARE_FUNC_ENCODING                                                        \
   name:
 
-// TODO(ilinpv) START & END parts will be merged when assembly parser bug
-// (kristina) in MasmParser::parseDirectiveCFIStartProc() is fixed.
-#define DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED_START(name)               \
+#define DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(name)                     \
   DEFINE_CODE_STATE                                                            \
   FUNC_ALIGN                                                                   \
   .globl name SEPARATOR                                                        \
   SYMBOL_IS_FUNC(name) SEPARATOR                                               \
-  DECLARE_SYMBOL_VISIBILITY(name)
-
-#define DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED_END(name)                 \
+  DECLARE_SYMBOL_VISIBILITY(name) SEPARATOR                                    \
   CFI_START SEPARATOR                                                          \
   DECLARE_FUNC_ENCODING                                                        \
   name: SEPARATOR BTI_C

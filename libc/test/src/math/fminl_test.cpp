@@ -17,13 +17,13 @@ using FPBits = __llvm_libc::fputil::FPBits<long double>;
 DECLARE_SPECIAL_CONSTANTS(long double)
 
 TEST(FminlTest, NaNArg) {
-  EXPECT_FP_EQ(inf, __llvm_libc::fminl(nan, inf));
-  EXPECT_FP_EQ(negInf, __llvm_libc::fminl(negInf, nan));
-  EXPECT_FP_EQ(0.0L, __llvm_libc::fminl(nan, 0.0L));
-  EXPECT_FP_EQ(-0.0L, __llvm_libc::fminl(-0.0L, nan));
-  EXPECT_FP_EQ(-1.2345L, __llvm_libc::fminl(nan, -1.2345L));
-  EXPECT_FP_EQ(1.2345L, __llvm_libc::fminl(1.2345L, nan));
-  EXPECT_NE(isnan(__llvm_libc::fminl(nan, nan)), 0);
+  EXPECT_FP_EQ(inf, __llvm_libc::fminl(aNaN, inf));
+  EXPECT_FP_EQ(negInf, __llvm_libc::fminl(negInf, aNaN));
+  EXPECT_FP_EQ(0.0L, __llvm_libc::fminl(aNaN, 0.0L));
+  EXPECT_FP_EQ(-0.0L, __llvm_libc::fminl(-0.0L, aNaN));
+  EXPECT_FP_EQ(-1.2345L, __llvm_libc::fminl(aNaN, -1.2345L));
+  EXPECT_FP_EQ(1.2345L, __llvm_libc::fminl(1.2345L, aNaN));
+  EXPECT_NE(isnan(__llvm_libc::fminl(aNaN, aNaN)), 0);
 }
 
 TEST(FminlTest, InfArg) {

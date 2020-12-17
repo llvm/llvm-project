@@ -865,17 +865,17 @@ const char *VETargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch ((VEISD::NodeType)Opcode) {
   case VEISD::FIRST_NUMBER:
     break;
-    TARGET_NODE_CASE(Lo)
-    TARGET_NODE_CASE(Hi)
+    TARGET_NODE_CASE(CALL)
     TARGET_NODE_CASE(GETFUNPLT)
     TARGET_NODE_CASE(GETSTACKTOP)
     TARGET_NODE_CASE(GETTLSADDR)
+    TARGET_NODE_CASE(GLOBAL_BASE_REG)
+    TARGET_NODE_CASE(Hi)
+    TARGET_NODE_CASE(Lo)
     TARGET_NODE_CASE(MEMBARRIER)
-    TARGET_NODE_CASE(CALL)
+    TARGET_NODE_CASE(RET_FLAG)
     TARGET_NODE_CASE(TS1AM)
     TARGET_NODE_CASE(VEC_BROADCAST)
-    TARGET_NODE_CASE(RET_FLAG)
-    TARGET_NODE_CASE(GLOBAL_BASE_REG)
 
     // Register the VVP_* SDNodes.
 #define ADD_VVP_OP(VVP_NAME, ...) TARGET_NODE_CASE(VVP_NAME)
@@ -1489,6 +1489,27 @@ SDValue VETargetLowering::lowerDYNAMIC_STACKALLOC(SDValue Op,
   return DAG.getMergeValues(Ops, DL);
 }
 
+static SDValue lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG,
+                              const VETargetLowering &TLI,
+                              const VESubtarget *Subtarget) {
+  SDLoc DL(Op);
+  MachineFunction &MF = DAG.getMachineFunction();
+  EVT PtrVT = TLI.getPointerTy(MF.getDataLayout());
+
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  MFI.setFrameAddressIsTaken(true);
+
+  unsigned Depth = Op.getConstantOperandVal(0);
+  const VERegisterInfo *RegInfo = Subtarget->getRegisterInfo();
+  unsigned FrameReg = RegInfo->getFrameRegister(MF);
+  SDValue FrameAddr =
+      DAG.getCopyFromReg(DAG.getEntryNode(), DL, FrameReg, PtrVT);
+  while (Depth--)
+    FrameAddr = DAG.getLoad(Op.getValueType(), DL, DAG.getEntryNode(),
+                            FrameAddr, MachinePointerInfo());
+  return FrameAddr;
+}
+
 static SDValue getSplatValue(SDNode *N) {
   if (auto *BuildVec = dyn_cast<BuildVectorSDNode>(N)) {
     return BuildVec->getSplatValue();
@@ -1529,6 +1550,8 @@ SDValue VETargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerConstantPool(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:
     return lowerDYNAMIC_STACKALLOC(Op, DAG);
+  case ISD::FRAMEADDR:
+    return lowerFRAMEADDR(Op, DAG, *this, Subtarget);
   case ISD::GlobalAddress:
     return lowerGlobalAddress(Op, DAG);
   case ISD::GlobalTLSAddress:

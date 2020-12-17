@@ -53,9 +53,12 @@ void LLVMSetMetadata2(LLVMValueRef Inst, unsigned KindID, LLVMMetadataRef MD) {
 void LLVMGoSetCurrentDebugLocation(LLVMBuilderRef Bref, unsigned Line,
                                   unsigned Col, LLVMMetadataRef Scope,
                                   LLVMMetadataRef InlinedAt) {
-  unwrap(Bref)->SetCurrentDebugLocation(
-      DebugLoc::get(Line, Col, Scope ? unwrap<MDNode>(Scope) : nullptr,
-                    InlinedAt ? unwrap<MDNode>(InlinedAt) : nullptr));
+  if (!Scope)
+    unwrap(Bref)->SetCurrentDebugLocation(DebugLoc());
+  else
+    unwrap(Bref)->SetCurrentDebugLocation(DILocation::get(
+        unwrap<MDNode>(Scope)->getContext(), Line, Col, unwrap<MDNode>(Scope),
+        InlinedAt ? unwrap<MDNode>(InlinedAt) : nullptr));
 }
 
 LLVMDebugLocMetadata LLVMGoGetCurrentDebugLocation(LLVMBuilderRef Bref) {

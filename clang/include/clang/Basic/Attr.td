@@ -3527,6 +3527,14 @@ def OMPDeclareVariant : InheritableAttr {
   }];
 }
 
+def Assumption : InheritableAttr {
+  let Spellings = [Clang<"assume">];
+  let Subjects = SubjectList<[Function, ObjCMethod]>;
+  let InheritEvenIfAlreadyPresent = 1;
+  let Documentation = [AssumptionDocs];
+  let Args = [StringArgument<"Assumption">];
+}
+
 def InternalLinkage : InheritableAttr {
   let Spellings = [Clang<"internal_linkage">];
   let Subjects = SubjectList<[Var, Function, CXXRecord]>;

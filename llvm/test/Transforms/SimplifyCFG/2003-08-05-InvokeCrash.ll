@@ -1,6 +1,6 @@
 ; Do not remove the invoke!
 ;
-; RUN: opt < %s -simplifycfg -disable-output
+; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -disable-output
 
 define i32 @test() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 	%A = invoke i32 @test( )

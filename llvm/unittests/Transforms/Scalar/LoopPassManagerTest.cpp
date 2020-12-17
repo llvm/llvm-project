@@ -193,6 +193,16 @@ struct MockLoopPassHandle
   MockLoopPassHandle() { setDefaults(); }
 };
 
+struct MockLoopNestPassHandle
+    : MockPassHandleBase<MockLoopNestPassHandle, LoopNest, LoopAnalysisManager,
+                         LoopStandardAnalysisResults &, LPMUpdater &> {
+  MOCK_METHOD4(run,
+               PreservedAnalyses(LoopNest &, LoopAnalysisManager &,
+                                 LoopStandardAnalysisResults &, LPMUpdater &));
+
+  MockLoopNestPassHandle() { setDefaults(); }
+};
+
 struct MockFunctionPassHandle
     : MockPassHandleBase<MockFunctionPassHandle, Function> {
   MOCK_METHOD2(run, PreservedAnalyses(Function &, FunctionAnalysisManager &));
@@ -242,6 +252,7 @@ protected:
 
   MockLoopAnalysisHandle MLAHandle;
   MockLoopPassHandle MLPHandle;
+  MockLoopNestPassHandle MLNPHandle;
   MockFunctionPassHandle MFPHandle;
   MockModulePassHandle MMPHandle;
 
@@ -1590,4 +1601,31 @@ TEST_F(LoopPassManagerTest, LoopDeletion) {
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
   MPM.run(*M, MAM);
 }
+
+TEST_F(LoopPassManagerTest, HandleLoopNestPass) {
+  ::testing::InSequence MakeExpectationsSequenced;
+
+  EXPECT_CALL(MLPHandle, run(HasName("loop.0.0"), _, _, _)).Times(2);
+  EXPECT_CALL(MLPHandle, run(HasName("loop.0.1"), _, _, _)).Times(2);
+  EXPECT_CALL(MLPHandle, run(HasName("loop.0"), _, _, _));
+  EXPECT_CALL(MLNPHandle, run(HasName("loop.0"), _, _, _));
+  EXPECT_CALL(MLPHandle, run(HasName("loop.0"), _, _, _));
+  EXPECT_CALL(MLNPHandle, run(HasName("loop.0"), _, _, _));
+  EXPECT_CALL(MLPHandle, run(HasName("loop.g.0"), _, _, _));
+  EXPECT_CALL(MLNPHandle, run(HasName("loop.g.0"), _, _, _));
+  EXPECT_CALL(MLPHandle, run(HasName("loop.g.0"), _, _, _));
+  EXPECT_CALL(MLNPHandle, run(HasName("loop.g.0"), _, _, _));
+
+  LoopPassManager LPM(true);
+  LPM.addPass(MLPHandle.getPass());
+  LPM.addPass(MLNPHandle.getPass());
+  LPM.addPass(MLPHandle.getPass());
+  LPM.addPass(MLNPHandle.getPass());
+
+  ModulePassManager MPM(true);
+  MPM.addPass(createModuleToFunctionPassAdaptor(
+      createFunctionToLoopPassAdaptor(std::move(LPM))));
+  MPM.run(*M, MAM);
 }
+
+} // namespace

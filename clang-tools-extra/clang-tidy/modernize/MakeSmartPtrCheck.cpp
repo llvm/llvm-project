@@ -176,7 +176,7 @@ void MakeSmartPtrCheck::checkConstruct(SourceManager &SM, ASTContext *Ctx,
   }
 
   // Find the location of the template's left angle.
-  size_t LAngle = ExprStr.find("<");
+  size_t LAngle = ExprStr.find('<');
   SourceLocation ConstructCallEnd;
   if (LAngle == StringRef::npos) {
     // If the template argument is missing (because it is part of the alias)

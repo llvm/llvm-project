@@ -13,6 +13,7 @@
 #include "support/ThreadsafeFS.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace clang {
 namespace clangd {
@@ -55,6 +56,10 @@ TidyProviderRef provideClangdConfig();
 
 tidy::ClangTidyOptions getTidyOptionsForFile(TidyProviderRef Provider,
                                              llvm::StringRef Filename);
+
+/// Returns if \p Check is a registered clang-tidy check
+/// \pre \p must not be empty, must not contain '*' or ',' or start with '-'.
+bool isRegisteredTidyCheck(llvm::StringRef Check);
 
 } // namespace clangd
 } // namespace clang

@@ -339,7 +339,7 @@ func @invalid_vector_type_3(%arg0: !llvm.vec<4 x float>, %arg1: !llvm.i32, %arg2
 // -----
 
 func @null_non_llvm_type() {
-  // expected-error@+1 {{expected LLVM IR pointer type}}
+  // expected-error@+1 {{must be LLVM pointer type, but got '!llvm.i32'}}
   llvm.mlir.null : !llvm.i32
 }
 

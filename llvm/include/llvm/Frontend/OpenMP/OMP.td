@@ -1593,6 +1593,9 @@ def OMP_Scan : Directive<"scan"> {
     VersionedClause<OMPC_Exclusive, 50>
   ];
 }
+def OMP_Assumes : Directive<"assumes"> {}
+def OMP_BeginAssumes : Directive<"begin assumes"> {}
+def OMP_EndAssumes : Directive<"end assumes"> {}
 def OMP_BeginDeclareVariant : Directive<"begin declare variant"> {}
 def OMP_EndDeclareVariant : Directive<"end declare variant"> {}
 def OMP_ParallelWorkshare : Directive<"parallel workshare"> {

@@ -26,8 +26,7 @@ TEST(TruncfTest, SpecialNumbers) {
   EXPECT_FP_EQ(inf, __llvm_libc::truncf(inf));
   EXPECT_FP_EQ(negInf, __llvm_libc::truncf(negInf));
 
-  ASSERT_NE(isnan(nan), 0);
-  ASSERT_NE(isnan(__llvm_libc::truncf(nan)), 0);
+  EXPECT_FP_EQ(aNaN, __llvm_libc::truncf(aNaN));
 }
 
 TEST(TruncfTest, RoundedNumbers) {

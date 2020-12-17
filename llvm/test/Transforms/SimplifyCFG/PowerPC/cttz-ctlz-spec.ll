@@ -1,4 +1,4 @@
-; RUN: opt -S -simplifycfg < %s | FileCheck -enable-var-scope %s
+; RUN: opt -S -simplifycfg -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -enable-var-scope %s
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 

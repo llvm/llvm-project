@@ -13,7 +13,7 @@ exit:
   ret void
 unreachable.unwind:
   cleanuppad within none []
-  unreachable  
+  unreachable
 }
 
 ; CHECK-LABEL: define void @test2()

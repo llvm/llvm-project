@@ -905,6 +905,8 @@ const internal::VariadicDynCastAllOfMatcher<Stmt, CXXNullPtrLiteralExpr>
     cxxNullPtrLiteralExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, ChooseExpr> chooseExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, GNUNullExpr> gnuNullExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, GenericSelectionExpr>
+    genericSelectionExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, AtomicExpr> atomicExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, StmtExpr> stmtExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, BinaryOperator>

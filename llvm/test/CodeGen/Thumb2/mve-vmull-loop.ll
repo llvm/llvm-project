@@ -4,38 +4,33 @@
 define arm_aapcs_vfpcc void @test32(i32* noalias nocapture readonly %x, i32* noalias nocapture readonly %y, i32* nocapture %z, i32 %n) {
 ; CHECK-LABEL: test32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r5, lr}
-; CHECK-NEXT:    push {r5, lr}
+; CHECK-NEXT:    .save {r4, r5, r7, lr}
+; CHECK-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-NEXT:    cmp r3, #1
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    poplt {r5, pc}
+; CHECK-NEXT:    blt .LBB0_2
 ; CHECK-NEXT:  .LBB0_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q1, [r0], #16
 ; CHECK-NEXT:    vldrw.u32 q2, [r1], #16
 ; CHECK-NEXT:    subs r3, #4
-; CHECK-NEXT:    vmullt.s32 q3, q2, q1
-; CHECK-NEXT:    vmov r5, s13
-; CHECK-NEXT:    vmov r12, s12
-; CHECK-NEXT:    lsrl r12, r5, #31
-; CHECK-NEXT:    vmov.32 q0[0], r12
-; CHECK-NEXT:    vmov r12, s14
-; CHECK-NEXT:    vmov.32 q0[1], r5
-; CHECK-NEXT:    vmov r5, s15
-; CHECK-NEXT:    lsrl r12, r5, #31
+; CHECK-NEXT:    vmullt.s32 q0, q2, q1
 ; CHECK-NEXT:    vmullb.s32 q3, q2, q1
-; CHECK-NEXT:    vmov.32 q0[2], r12
+; CHECK-NEXT:    vmov r5, s1
+; CHECK-NEXT:    vmov r12, s0
+; CHECK-NEXT:    vmov r7, s3
+; CHECK-NEXT:    lsrl r12, r5, #31
+; CHECK-NEXT:    vmov r4, s2
+; CHECK-NEXT:    lsrl r4, r7, #31
+; CHECK-NEXT:    vmov q0[2], q0[0], r4, r12
 ; CHECK-NEXT:    vmov r12, s12
-; CHECK-NEXT:    vmov.32 q0[3], r5
+; CHECK-NEXT:    vmov q0[3], q0[1], r7, r5
 ; CHECK-NEXT:    vmov r5, s13
+; CHECK-NEXT:    vmov r7, s15
 ; CHECK-NEXT:    lsrl r12, r5, #31
-; CHECK-NEXT:    vmov.32 q1[0], r12
-; CHECK-NEXT:    vmov r12, s14
-; CHECK-NEXT:    vmov.32 q1[1], r5
-; CHECK-NEXT:    vmov r5, s15
-; CHECK-NEXT:    lsrl r12, r5, #31
-; CHECK-NEXT:    vmov.32 q1[2], r12
-; CHECK-NEXT:    vmov.32 q1[3], r5
+; CHECK-NEXT:    vmov r4, s14
+; CHECK-NEXT:    lsrl r4, r7, #31
+; CHECK-NEXT:    vmov q1[2], q1[0], r4, r12
+; CHECK-NEXT:    vmov q1[3], q1[1], r7, r5
 ; CHECK-NEXT:    vmov.f32 s8, s6
 ; CHECK-NEXT:    vmov.f32 s9, s7
 ; CHECK-NEXT:    vmov.f32 s6, s0
@@ -47,8 +42,8 @@ define arm_aapcs_vfpcc void @test32(i32* noalias nocapture readonly %x, i32* noa
 ; CHECK-NEXT:    vmov.f32 s7, s10
 ; CHECK-NEXT:    vstrb.8 q1, [r2], #16
 ; CHECK-NEXT:    bne .LBB0_1
-; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
-; CHECK-NEXT:    pop {r5, pc}
+; CHECK-NEXT:  .LBB0_2: @ %for.cond.cleanup
+; CHECK-NEXT:    pop {r4, r5, r7, pc}
 entry:
   %0 = and i32 %n, 3
   %cmp = icmp eq i32 %0, 0

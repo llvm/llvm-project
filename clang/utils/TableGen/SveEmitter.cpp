@@ -207,7 +207,7 @@ public:
   /// a short form without the type-specifiers, e.g. 'svld1(..)' instead of
   /// 'svld1_u32(..)'.
   static bool isOverloadedIntrinsic(StringRef Name) {
-    auto BrOpen = Name.find("[");
+    auto BrOpen = Name.find('[');
     auto BrClose = Name.find(']');
     return BrOpen != std::string::npos && BrClose != std::string::npos;
   }
@@ -893,14 +893,14 @@ std::string Intrinsic::mangleName(ClassKind LocalCK) const {
 
   if (LocalCK == ClassG) {
     // Remove the square brackets and everything in between.
-    while (S.find("[") != std::string::npos) {
-      auto Start = S.find("[");
+    while (S.find('[') != std::string::npos) {
+      auto Start = S.find('[');
       auto End = S.find(']');
       S.erase(Start, (End-Start)+1);
     }
   } else {
     // Remove the square brackets.
-    while (S.find("[") != std::string::npos) {
+    while (S.find('[') != std::string::npos) {
       auto BrPos = S.find('[');
       if (BrPos != std::string::npos)
         S.erase(BrPos, 1);

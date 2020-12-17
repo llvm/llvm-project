@@ -157,7 +157,7 @@ parseCrossTUIndex(StringRef IndexPath) {
   unsigned LineNo = 1;
   while (std::getline(ExternalMapFile, Line)) {
     StringRef LineRef{Line};
-    const size_t Delimiter = LineRef.find(" ");
+    const size_t Delimiter = LineRef.find(' ');
     if (Delimiter > 0 && Delimiter != std::string::npos) {
       StringRef LookupName = LineRef.substr(0, Delimiter);
 

@@ -310,3 +310,18 @@ gpu.module @test_module {
     std.return %result32, %result64 : f32, f64
   }
 }
+
+// -----
+
+gpu.module @test_module {
+  // CHECK: llvm.func @__ocml_pow_f32(!llvm.float, !llvm.float) -> !llvm.float
+  // CHECK: llvm.func @__ocml_pow_f64(!llvm.double, !llvm.double) -> !llvm.double
+  // CHECK-LABEL: func @gpu_pow
+  func @gpu_pow(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+    %result32 = std.powf %arg_f32, %arg_f32 : f32
+    // CHECK: llvm.call @__ocml_pow_f32(%{{.*}}, %{{.*}}) : (!llvm.float, !llvm.float) -> !llvm.float
+    %result64 = std.powf %arg_f64, %arg_f64 : f64
+    // CHECK: llvm.call @__ocml_pow_f64(%{{.*}}, %{{.*}}) : (!llvm.double, !llvm.double) -> !llvm.double
+    std.return %result32, %result64 : f32, f64
+  }
+}

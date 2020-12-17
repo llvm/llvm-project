@@ -839,3 +839,15 @@ void block_capture_autoreleasing(A * __autoreleasing *a,
     (void)*l;
   }();
 }
+
+void test_vla_fold_keeps_strong(void) {
+  const unsigned bounds = 1;
+
+  static id array[bounds]; // expected-warning {{variable length array folded to constant array as an extension}}
+  typedef __typeof__(array) array_type;
+  typedef id __strong array_type[1];
+
+  static id weak_array[bounds] __weak; // expected-warning {{variable length array folded to constant array as an extension}}
+  typedef __typeof__(weak_array) weak_array_type;
+  typedef id __weak weak_array_type[1];
+}

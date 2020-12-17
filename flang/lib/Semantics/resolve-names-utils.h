@@ -19,6 +19,7 @@
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/type.h"
+#include "llvm/Support/raw_ostream.h"
 #include <forward_list>
 
 namespace Fortran::parser {
@@ -50,6 +51,11 @@ parser::MessageFixedText WithIsFatal(
 bool IsIntrinsicOperator(const SemanticsContext &, const SourceName &);
 bool IsLogicalConstant(const SemanticsContext &, const SourceName &);
 
+// Some intrinsic operators have more than one name (e.g. `operator(.eq.)` and
+// `operator(==)`). GetAllNames() returns them all, including symbolName.
+std::forward_list<std::string> GetAllNames(
+    const SemanticsContext &, const SourceName &);
+
 template <typename T>
 MaybeIntExpr EvaluateIntExpr(SemanticsContext &context, const T &expr) {
   if (MaybeExpr maybeExpr{
@@ -75,13 +81,11 @@ public:
 
   GenericKind kind() const { return kind_; }
   const SourceName &symbolName() const { return symbolName_.value(); }
-  // Some intrinsic operators have more than one name (e.g. `operator(.eq.)` and
-  // `operator(==)`). GetAllNames() returns them all, including symbolName.
-  std::forward_list<std::string> GetAllNames(SemanticsContext &) const;
   // Set the GenericKind in this symbol and resolve the corresponding
   // name if there is one
   void Resolve(Symbol *) const;
-  Symbol *FindInScope(SemanticsContext &, const Scope &) const;
+  friend llvm::raw_ostream &operator<<(
+      llvm::raw_ostream &, const GenericSpecInfo &);
 
 private:
   GenericKind kind_;

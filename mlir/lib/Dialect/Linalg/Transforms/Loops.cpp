@@ -71,7 +71,6 @@ static void inlineRegionAndEmitStore(OpType op, ArrayRef<Value> indexedValues,
   BlockAndValueMapping map;
   map.map(block.getArguments(), indexedValues);
   for (auto &op : block.without_terminator()) {
-    assert(op.getNumRegions() == 0 && "expected a non-nested region");
     auto *newOp = b.clone(op, map);
     map.map(op.getResults(), newOp->getResults());
   }

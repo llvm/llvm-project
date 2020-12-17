@@ -244,6 +244,7 @@ void TemplateArgument::Profile(llvm::FoldingSetNodeID &ID,
     break;
 
   case Declaration:
+    getParamTypeForDecl().Profile(ID);
     ID.AddPointer(getAsDecl()? getAsDecl()->getCanonicalDecl() : nullptr);
     break;
 

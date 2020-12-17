@@ -1,5 +1,5 @@
-; RUN: opt -S -loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -instsimplify -simplifycfg < %s | FileCheck %s
-; Note: -instsimplify -simplifycfg remove the (now dead) original loop, making
+; RUN: opt -S -loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -instsimplify -simplifycfg -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s
+; Note: -instsimplify -simplifycfg -simplifycfg-require-and-preserve-domtree=1 remove the (now dead) original loop, making
 ; it easy to test that the llvm.loop.unroll.disable hint is still present.
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

@@ -198,24 +198,6 @@ uint8x16_t test_vceqzq_p8(poly8x16_t a) {
   return vceqzq_p8(a);
 }
 
-// CHECK-LABEL: @test_vceqz_p16(
-// CHECK:   [[TMP0:%.*]] = bitcast <4 x i16> %a to <8 x i8>
-// CHECK:   [[TMP1:%.*]] = icmp eq <4 x i16> %a, zeroinitializer
-// CHECK:   [[VCEQZ_I:%.*]] = sext <4 x i1> [[TMP1]] to <4 x i16>
-// CHECK:   ret <4 x i16> [[VCEQZ_I]]
-uint16x4_t test_vceqz_p16(poly16x4_t a) {
-  return vceqz_p16(a);
-}
-
-// CHECK-LABEL: @test_vceqzq_p16(
-// CHECK:   [[TMP0:%.*]] = bitcast <8 x i16> %a to <16 x i8>
-// CHECK:   [[TMP1:%.*]] = icmp eq <8 x i16> %a, zeroinitializer
-// CHECK:   [[VCEQZ_I:%.*]] = sext <8 x i1> [[TMP1]] to <8 x i16>
-// CHECK:   ret <8 x i16> [[VCEQZ_I]]
-uint16x8_t test_vceqzq_p16(poly16x8_t a) {
-  return vceqzq_p16(a);
-}
-
 // CHECK-LABEL: @test_vceqzq_f64(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x double> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = fcmp oeq <2 x double> %a, zeroinitializer

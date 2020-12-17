@@ -141,8 +141,10 @@ public:
     return charLength_;
   }
   std::optional<Expr<SubscriptInteger>> GetCharLength() const;
+
+  std::size_t GetAlignment(const FoldingContext &) const;
   std::optional<Expr<SubscriptInteger>> MeasureSizeInBytes(
-      FoldingContext * = nullptr) const;
+      FoldingContext &, bool aligned) const;
 
   std::string AsFortran() const;
   std::string AsFortran(std::string &&charLenExpr) const;

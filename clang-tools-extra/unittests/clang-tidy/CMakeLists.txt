@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   FrontendOpenMP
   Support
+  TestingSupport
   )
 
 get_filename_component(CLANG_LINT_SOURCE_DIR

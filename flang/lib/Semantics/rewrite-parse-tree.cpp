@@ -43,7 +43,6 @@ public:
   void Post(parser::IoUnit &);
   void Post(parser::ReadStmt &);
   void Post(parser::WriteStmt &);
-  void Post(parser::DataStmtConstant &);
 
   // Name resolution yet implemented:
   // TODO: Can some/all of these now be enabled?
@@ -174,19 +173,6 @@ void RewriteMutator::Post(parser::ReadStmt &x) {
 
 void RewriteMutator::Post(parser::WriteStmt &x) {
   FixMisparsedUntaggedNamelistName(x);
-}
-
-void RewriteMutator::Post(parser::DataStmtConstant &x) {
-  if (auto *scalar{std::get_if<parser::Scalar<parser::ConstantValue>>(&x.u)}) {
-    if (auto *named{std::get_if<parser::NamedConstant>(&scalar->thing.u)}) {
-      if (const Symbol * symbol{named->v.symbol}) {
-        if (!IsNamedConstant(*symbol) && symbol->attrs().test(Attr::TARGET)) {
-          x.u = parser::InitialDataTarget{
-              parser::Designator{parser::DataRef{parser::Name{named->v}}}};
-        }
-      }
-    }
-  }
 }
 
 bool RewriteParseTree(SemanticsContext &context, parser::Program &program) {

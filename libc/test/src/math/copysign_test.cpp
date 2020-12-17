@@ -17,8 +17,8 @@ using FPBits = __llvm_libc::fputil::FPBits<double>;
 DECLARE_SPECIAL_CONSTANTS(double)
 
 TEST(CopySignTest, SpecialNumbers) {
-  EXPECT_FP_EQ(nan, __llvm_libc::copysign(nan, -1.0));
-  EXPECT_FP_EQ(nan, __llvm_libc::copysign(nan, 1.0));
+  EXPECT_FP_EQ(aNaN, __llvm_libc::copysign(aNaN, -1.0));
+  EXPECT_FP_EQ(aNaN, __llvm_libc::copysign(aNaN, 1.0));
 
   EXPECT_FP_EQ(negInf, __llvm_libc::copysign(inf, -1.0));
   EXPECT_FP_EQ(inf, __llvm_libc::copysign(negInf, 1.0));

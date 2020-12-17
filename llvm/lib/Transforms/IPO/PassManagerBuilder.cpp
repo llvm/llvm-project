@@ -569,6 +569,8 @@ void PassManagerBuilder::populateModulePassManager(
       // new unnamed globals.
       MPM.add(createNameAnonGlobalPass());
     }
+
+    MPM.add(createAnnotationRemarksLegacyPass());
     return;
   }
 

@@ -134,13 +134,17 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
     return false;
 
   // Check safety of replacing the scalar load with a larger vector load.
+  // We use minimal alignment (maximum flexibility) because we only care about
+  // the dereferenceable region. When calculating cost and creating a new op,
+  // we may use a larger value based on alignment attributes.
   unsigned MinVecNumElts = MinVectorSize / ScalarSize;
   auto *MinVecTy = VectorType::get(ScalarTy, MinVecNumElts, false);
-  Align Alignment = Load->getAlign();
-  if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Alignment, DL, Load, &DT))
+  if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Align(1), DL, Load, &DT))
     return false;
 
   // Original pattern: insertelt undef, load [free casts of] PtrOp, 0
+  // Use the greater of the alignment on the load or its source pointer.
+  Align Alignment = std::max(SrcPtr->getPointerAlignment(DL), Load->getAlign());
   Type *LoadTy = Load->getType();
   int OldCost = TTI.getMemoryOpCost(Instruction::Load, LoadTy, Alignment, AS);
   APInt DemandedElts = APInt::getOneBitSet(MinVecNumElts, 0);

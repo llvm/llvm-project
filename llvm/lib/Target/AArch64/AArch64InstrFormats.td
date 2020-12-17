@@ -263,6 +263,7 @@ def adrplabel : Operand<i64> {
   let EncoderMethod = "getAdrLabelOpValue";
   let PrintMethod = "printAdrpLabel";
   let ParserMatchClass = AdrpOperand;
+  let OperandType = "OPERAND_PCREL";
 }
 
 def AdrOperand : AsmOperandClass {
@@ -325,7 +326,7 @@ def simm9 : Operand<i64>, ImmLeaf<i64, [{ return Imm >= -256 && Imm < 256; }]> {
 }
 
 def SImm8Operand : SImmOperand<8>;
-def simm8 : Operand<i32>, ImmLeaf<i32, [{ return Imm >= -128 && Imm < 127; }]> {
+def simm8 : Operand<i32>, ImmLeaf<i32, [{ return Imm >= -128 && Imm < 128; }]> {
   let ParserMatchClass = SImm8Operand;
   let DecoderMethod = "DecodeSImm<8>";
 }

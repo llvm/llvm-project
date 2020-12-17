@@ -8,7 +8,6 @@
 
 #include "RoundToIntegerTest.h"
 
-#include "include/math.h"
 #include "src/math/lroundf.h"
 
 LIST_ROUND_TO_INTEGER_TESTS(float, long, __llvm_libc::lroundf)

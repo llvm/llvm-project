@@ -13,7 +13,6 @@
 #include "src/fenv/feclearexcept.h"
 #include "src/fenv/feraiseexcept.h"
 #include "src/fenv/fetestexcept.h"
-#include "utils/CPP/TypeTraits.h"
 #include "utils/FPUtil/FPBits.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 #include "utils/UnitTest/Test.h"
