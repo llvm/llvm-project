@@ -1143,8 +1143,9 @@ GetTypeFromTypeRef(TypeSystemSwiftTypeRef &ts,
 }
 
 llvm::Optional<size_t> SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
-    CompilerType type, const char *name, ExecutionContext *exe_ctx,
-    bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) {
+    CompilerType type, llvm::StringRef name, ExecutionContext *exe_ctx,
+    bool omit_empty_base_classes,
+    llvm::MutableArrayRef<uint32_t> child_indexes) {
   return {};
 }
 
