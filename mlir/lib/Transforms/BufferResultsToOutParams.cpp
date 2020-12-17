@@ -35,8 +35,8 @@ static void updateFuncOp(FuncOp func,
   // Add the new arguments to the function type.
   auto newArgTypes = llvm::to_vector<6>(
       llvm::concat<const Type>(functionType.getInputs(), erasedResultTypes));
-  auto newFunctionType = FunctionType::get(
-      newArgTypes, functionType.getResults(), func.getContext());
+  auto newFunctionType = FunctionType::get(func.getContext(), newArgTypes,
+                                           functionType.getResults());
   func.setType(newFunctionType);
 
   // Transfer the result attributes to arg attributes.

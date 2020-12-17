@@ -179,7 +179,7 @@ FuncOp FuncOp::clone(BlockAndValueMapping &mapper) {
     for (unsigned i = 0, e = getNumArguments(); i != e; ++i)
       if (!mapper.contains(getArgument(i)))
         inputTypes.push_back(newType.getInput(i));
-    newType = FunctionType::get(inputTypes, newType.getResults(), getContext());
+    newType = FunctionType::get(getContext(), inputTypes, newType.getResults());
   }
 
   // Create the new function.

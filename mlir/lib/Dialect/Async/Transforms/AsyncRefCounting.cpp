@@ -118,7 +118,7 @@ LogicalResult AsyncRefCountingPass::addAutomaticRefCounting(Value value) {
     builder.setInsertionPointToStart(value.getParentBlock());
 
   Location loc = value.getLoc();
-  auto i32 = IntegerType::get(32, ctx);
+  auto i32 = IntegerType::get(ctx, 32);
 
   // Drop the reference count immediately if the value has no uses.
   if (value.getUses().empty()) {

@@ -152,7 +152,7 @@ void ExecuteOp::build(OpBuilder &builder, OperationState &result,
   int32_t numDependencies = dependencies.size();
   int32_t numOperands = operands.size();
   auto operandSegmentSizes = DenseIntElementsAttr::get(
-      VectorType::get({2}, IntegerType::get(32, result.getContext())),
+      VectorType::get({2}, builder.getIntegerType(32)),
       {numDependencies, numOperands});
   result.addAttribute(kOperandSegmentSizesAttr, operandSegmentSizes);
 

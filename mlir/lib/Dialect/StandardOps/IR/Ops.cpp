@@ -714,7 +714,7 @@ LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 }
 
 FunctionType CallOp::getCalleeType() {
-  return FunctionType::get(getOperandTypes(), getResultTypes(), getContext());
+  return FunctionType::get(getContext(), getOperandTypes(), getResultTypes());
 }
 
 //===----------------------------------------------------------------------===//
@@ -753,7 +753,7 @@ void CallIndirectOp::getCanonicalizationPatterns(
 
 // Return the type of the same shape (scalar, vector or tensor) containing i1.
 static Type getI1SameShape(Type type) {
-  auto i1Type = IntegerType::get(1, type.getContext());
+  auto i1Type = IntegerType::get(type.getContext(), 1);
   if (auto tensorType = type.dyn_cast<RankedTensorType>())
     return RankedTensorType::get(tensorType.getShape(), i1Type);
   if (type.isa<UnrankedTensorType>())
@@ -914,7 +914,7 @@ OpFoldResult CmpFOp::fold(ArrayRef<Attribute> operands) {
     return {};
 
   auto val = applyCmpPredicate(getPredicate(), lhs.getValue(), rhs.getValue());
-  return IntegerAttr::get(IntegerType::get(1, getContext()), APInt(1, val));
+  return IntegerAttr::get(IntegerType::get(getContext(), 1), APInt(1, val));
 }
 
 //===----------------------------------------------------------------------===//

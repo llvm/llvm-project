@@ -151,7 +151,7 @@ mlir::Type fir::BoxDimsOp::getTupleType() {
   // note: triple, but 4 is nearest power of 2
   llvm::SmallVector<mlir::Type, 4> triple{
       getResult(0).getType(), getResult(1).getType(), getResult(2).getType()};
-  return mlir::TupleType::get(triple, getContext());
+  return mlir::TupleType::get(getContext(), triple);
 }
 
 //===----------------------------------------------------------------------===//
@@ -171,7 +171,7 @@ static void printCallOp(mlir::OpAsmPrinter &p, fir::CallOp &op) {
   auto resultTypes{op.getResultTypes()};
   llvm::SmallVector<Type, 8> argTypes(
       llvm::drop_begin(op.getOperandTypes(), isDirect ? 0 : 1));
-  p << " : " << FunctionType::get(argTypes, resultTypes, op.getContext());
+  p << " : " << FunctionType::get(op.getContext(), argTypes, resultTypes);
 }
 
 static mlir::ParseResult parseCallOp(mlir::OpAsmParser &parser,
@@ -1565,4 +1565,3 @@ fir::GlobalOp fir::createGlobalOp(mlir::Location loc, mlir::ModuleOp module,
 
 #define GET_OP_CLASSES
 #include "flang/Optimizer/Dialect/FIROps.cpp.inc"
-

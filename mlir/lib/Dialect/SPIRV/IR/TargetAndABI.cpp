@@ -123,7 +123,7 @@ spirv::getEntryPointABIAttr(ArrayRef<int32_t> localSize, MLIRContext *context) {
   assert(localSize.size() == 3);
   return spirv::EntryPointABIAttr::get(
       DenseElementsAttr::get<int32_t>(
-          VectorType::get(3, IntegerType::get(32, context)), localSize)
+          VectorType::get(3, IntegerType::get(context, 32)), localSize)
           .cast<DenseIntElementsAttr>(),
       context);
 }
