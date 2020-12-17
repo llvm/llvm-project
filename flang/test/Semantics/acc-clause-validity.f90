@@ -1240,18 +1240,4 @@ program openacc_clause_validity
   !ERROR: Only array element or subarray are allowed in CACHE directive
   !$acc cache(/i/)
 
- contains
-
-   subroutine sub1(a)
-     real :: a(:)
-     !ERROR: At least one of GANG, SEQ, VECTOR, WORKER clause must appear on the ROUTINE directive
-     !$acc routine
-   end subroutine sub1
-
-   subroutine sub2(a)
-     real :: a(:)
-     !ERROR: Clause NOHOST is not allowed after clause DEVICE_TYPE on the ROUTINE directive
-     !$acc routine seq device_type(*) nohost
-   end subroutine sub2
-
 end program openacc_clause_validity
