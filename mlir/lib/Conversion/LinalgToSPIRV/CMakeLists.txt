@@ -15,5 +15,6 @@ add_mlir_conversion_library(MLIRLinalgToSPIRVTransforms
   MLIRLinalgUtils
   MLIRPass
   MLIRSPIRV
+  MLIRSPIRVConversion
   MLIRSupport
   )

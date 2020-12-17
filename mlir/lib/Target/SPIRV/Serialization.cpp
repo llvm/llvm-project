@@ -12,10 +12,10 @@
 
 #include "mlir/Target/SPIRV/Serialization.h"
 
-#include "mlir/Dialect/SPIRV/SPIRVAttributes.h"
-#include "mlir/Dialect/SPIRV/SPIRVDialect.h"
-#include "mlir/Dialect/SPIRV/SPIRVOps.h"
-#include "mlir/Dialect/SPIRV/SPIRVTypes.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/RegionGraphTraits.h"
 #include "mlir/Support/LogicalResult.h"
@@ -2107,7 +2107,7 @@ Serializer::processOp<spirv::CopyMemoryOp>(spirv::CopyMemoryOp op) {
 // Pull in auto-generated Serializer::dispatchToAutogenSerialization() and
 // various Serializer::processOp<...>() specializations.
 #define GET_SERIALIZATION_FNS
-#include "mlir/Dialect/SPIRV/SPIRVSerialization.inc"
+#include "mlir/Dialect/SPIRV/IR/SPIRVSerialization.inc"
 } // namespace
 
 LogicalResult Serializer::emitDecoration(uint32_t target,
