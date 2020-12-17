@@ -1156,6 +1156,13 @@ defm PseudoVDIV        : VPseudoBinaryV_VV_VX;
 defm PseudoVREMU       : VPseudoBinaryV_VV_VX;
 defm PseudoVREM        : VPseudoBinaryV_VV_VX;
 
+//===----------------------------------------------------------------------===//
+// 12.12. Vector Widening Integer Multiply Instructions
+//===----------------------------------------------------------------------===//
+defm PseudoVWMUL       : VPseudoBinaryW_VV_VX;
+defm PseudoVWMULU      : VPseudoBinaryW_VV_VX;
+defm PseudoVWMULSU     : VPseudoBinaryW_VV_VX;
+
 } // Predicates = [HasStdExtV]
 
 let Predicates = [HasStdExtV, HasStdExtF] in {
@@ -1273,6 +1280,13 @@ defm "" : VPatBinaryV_VV_VX<"int_riscv_vdivu", "PseudoVDIVU", AllIntegerVectors>
 defm "" : VPatBinaryV_VV_VX<"int_riscv_vdiv", "PseudoVDIV", AllIntegerVectors>;
 defm "" : VPatBinaryV_VV_VX<"int_riscv_vremu", "PseudoVREMU", AllIntegerVectors>;
 defm "" : VPatBinaryV_VV_VX<"int_riscv_vrem", "PseudoVREM", AllIntegerVectors>;
+
+//===----------------------------------------------------------------------===//
+// 12.12. Vector Widening Integer Multiply Instructions
+//===----------------------------------------------------------------------===//
+defm "" : VPatBinaryW_VV_VX<"int_riscv_vwmul", "PseudoVWMUL">;
+defm "" : VPatBinaryW_VV_VX<"int_riscv_vwmulu", "PseudoVWMULU">;
+defm "" : VPatBinaryW_VV_VX<"int_riscv_vwmulsu", "PseudoVWMULSU">;
 
 } // Predicates = [HasStdExtV]
 
