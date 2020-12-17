@@ -5081,7 +5081,7 @@ def fopenmp_host_ir_file_path : Separate<["-"], "fopenmp-host-ir-file-path">,
 def fsycl_is_device : Flag<["-"], "fsycl-is-device">,
   HelpText<"Generate code for SYCL device.">;
 
-} // let Flags = [CC1Option]
+} // let Flags = [CC1Option, NoDriverOption]
 
 //===----------------------------------------------------------------------===//
 // cc1as-only Options
