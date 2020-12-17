@@ -1,4 +1,4 @@
-; RUN: opt -simplifycfg -S < %s | FileCheck %s
+; RUN: opt -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S < %s | FileCheck %s
 
 %0 = type { i32*, i32* }
 

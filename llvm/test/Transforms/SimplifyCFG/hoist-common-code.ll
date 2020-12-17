@@ -1,4 +1,4 @@
-; RUN: opt < %s -simplifycfg -S -hoist-common-insts=true | not grep br
+; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S -hoist-common-insts=true | not grep br
 
 declare void @bar(i32)
 

@@ -6316,7 +6316,7 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
   if ((pred_empty(BB) && BB != &BB->getParent()->getEntryBlock()) ||
       BB->getSinglePredecessor() == BB) {
     LLVM_DEBUG(dbgs() << "Removing BB: \n" << *BB);
-    DeleteDeadBlock(BB);
+    DeleteDeadBlock(BB, DTU);
     return true;
   }
 
