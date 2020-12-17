@@ -1358,3 +1358,60 @@ llvm.func @useInlineAsm(%arg0: !llvm.i32) {
   llvm.return
 }
 
+// -----
+
+// CHECK-LABEL: @switch_args
+llvm.func @switch_args(%arg0: !llvm.i32) {
+  %0 = llvm.mlir.constant(5 : i32) : !llvm.i32
+  %1 = llvm.mlir.constant(7 : i32) : !llvm.i32
+  %2 = llvm.mlir.constant(11 : i32) : !llvm.i32
+  // CHECK:      switch i32 %[[SWITCH_arg0:[0-9]+]], label %[[SWITCHDEFAULT_bb1:[0-9]+]] [
+  // CHECK-NEXT:   i32 -1, label %[[SWITCHCASE_bb2:[0-9]+]]
+  // CHECK-NEXT:   i32 1, label %[[SWITCHCASE_bb3:[0-9]+]]
+  // CHECK-NEXT: ]
+  llvm.switch %arg0, ^bb1 [
+    -1: ^bb2(%0 : !llvm.i32),
+    1: ^bb3(%1, %2 : !llvm.i32, !llvm.i32)
+  ]
+
+// CHECK:      [[SWITCHDEFAULT_bb1]]:
+// CHECK-NEXT:   ret i32 %[[SWITCH_arg0]]
+^bb1:  // pred: ^bb0
+  llvm.return %arg0 : !llvm.i32
+
+// CHECK:      [[SWITCHCASE_bb2]]:
+// CHECK-NEXT:   phi i32 [ 5, %1 ]
+// CHECK-NEXT:   ret i32
+^bb2(%3: !llvm.i32): // pred: ^bb0
+  llvm.return %1 : !llvm.i32
+
+// CHECK:      [[SWITCHCASE_bb3]]:
+// CHECK-NEXT:   phi i32 [ 7, %1 ]
+// CHECK-NEXT:   phi i32 [ 11, %1 ]
+// CHECK-NEXT:   ret i32
+^bb3(%4: !llvm.i32, %5: !llvm.i32): // pred: ^bb0
+  llvm.return %4 : !llvm.i32
+}
+
+// CHECK-LABEL: @switch_weights
+llvm.func @switch_weights(%arg0: !llvm.i32) {
+  %0 = llvm.mlir.constant(19 : i32) : !llvm.i32
+  %1 = llvm.mlir.constant(23 : i32) : !llvm.i32
+  %2 = llvm.mlir.constant(29 : i32) : !llvm.i32
+  // CHECK: !prof ![[SWITCH_WEIGHT_NODE:[0-9]+]]
+  llvm.switch %arg0, ^bb1(%0 : !llvm.i32) [
+    9: ^bb2(%1, %2 : !llvm.i32, !llvm.i32),
+    99: ^bb3
+  ] {branch_weights = dense<[13, 17, 19]> : vector<3xi32>}
+
+^bb1(%3: !llvm.i32):  // pred: ^bb0
+  llvm.return %3 : !llvm.i32
+
+^bb2(%4: !llvm.i32, %5: !llvm.i32): // pred: ^bb0
+  llvm.return %5 : !llvm.i32
+
+^bb3: // pred: ^bb0
+  llvm.return %arg0 : !llvm.i32
+}
+
+// CHECK: ![[SWITCH_WEIGHT_NODE]] = !{!"branch_weights", i32 13, i32 17, i32 19}

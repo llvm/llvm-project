@@ -635,6 +635,50 @@ def LLVM_UnreachableOp : LLVM_TerminatorOp<"unreachable", []> {
   let printer = [{ p << getOperationName(); }];
 }
 
+def LLVM_SwitchOp : LLVM_TerminatorOp<"switch",
+    [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BranchOpInterface>,
+     NoSideEffect]> {
+  let arguments = (ins LLVM_i32:$value,
+                   Variadic<AnyType>:$defaultOperands,
+                   Variadic<AnyType>:$caseOperands,
+                   OptionalAttr<ElementsAttr>:$case_values,
+                   OptionalAttr<ElementsAttr>:$case_operand_offsets,
+                   OptionalAttr<ElementsAttr>:$branch_weights);
+  let successors = (successor
+                    AnySuccessor:$defaultDestination,
+                    VariadicSuccessor<AnySuccessor>:$caseDestinations);
+
+  let verifier = [{ return ::verify(*this); }];
+  let assemblyFormat = [{
+    $value `,`
+    $defaultDestination (`(` $defaultOperands^ `:` type($defaultOperands) `)`)?
+    `[` `\n` custom<SwitchOpCases>($case_values, $caseDestinations,
+                                   $caseOperands, type($caseOperands),
+                                   $case_operand_offsets) `]`
+    attr-dict
+  }];
+
+  let builders = [
+    OpBuilderDAG<(ins "Value":$value,
+      "Block *":$defaultDestination,
+      "ValueRange":$defaultOperands,
+      CArg<"ArrayRef<int32_t>", "{}">:$caseValues,
+      CArg<"BlockRange", "{}">:$caseDestinations,
+      CArg<"ArrayRef<ValueRange>", "{}">:$caseOperands,
+      CArg<"ArrayRef<int32_t>", "{}">:$branchWeights)>,
+    LLVM_TerminatorPassthroughOpBuilder
+  ];
+
+  let extraClassDeclaration = [{
+    /// Return the operands for the case destination block at the given index.
+    OperandRange getCaseOperands(unsigned index);
+
+    /// Return a mutable range of operands for the case destination block at the
+    /// given index.
+    MutableOperandRange getCaseOperandsMutable(unsigned index);
+  }];
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Auxiliary operations (do not appear in LLVM IR but necessary for the dialect
 // to work correctly).
