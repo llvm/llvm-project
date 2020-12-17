@@ -434,4 +434,4 @@ MLIR, blocks are not values and don't need a type.
 All operations in the LLVM IR dialect have a custom form in MLIR. The mnemonic
 of an operation is that used in LLVM IR prefixed with "`llvm.`".
 
-[include "Dialects/LLVMOps.md"
+[include "Dialects/LLVMOps.md"]
