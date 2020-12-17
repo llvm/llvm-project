@@ -4,7 +4,7 @@
 
 // host-no-diagnostics
 
-void bar1(void) {
+void bar1(void) {    // all-remark {{[OMP100] Potentially unknown OpenMP target region caller}}
 #pragma omp parallel // #0
                      // all-remark@#0 {{Found a parallel region that is called in a target region but not part of a combined target construct nor nesed inside a target construct without intermediate code. This can lead to excessive register usage for unrelated target regions in the same translation unit due to spurious call edges assumed by ptxas.}}
                      // safe-remark@#0 {{Parallel region is not known to be called from a unique single target region, maybe the surrounding function has external linkage?; will not attempt to rewrite the state machine use.}}
@@ -13,7 +13,7 @@ void bar1(void) {
   {
   }
 }
-void bar2(void) {
+void bar2(void) {    // all-remark {{[OMP100] Potentially unknown OpenMP target region caller}}
 #pragma omp parallel // #1
                      // all-remark@#1 {{Found a parallel region that is called in a target region but not part of a combined target construct nor nesed inside a target construct without intermediate code. This can lead to excessive register usage for unrelated target regions in the same translation unit due to spurious call edges assumed by ptxas.}}
                      // safe-remark@#1 {{Parallel region is not known to be called from a unique single target region, maybe the surrounding function has external linkage?; will not attempt to rewrite the state machine use.}}
