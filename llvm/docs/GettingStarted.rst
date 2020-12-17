@@ -170,7 +170,7 @@ Package                                                     Version      Notes
 =========================================================== ============ ==========================================
 `CMake <http://cmake.org/>`__                               >=3.13.4     Makefile/workspace generator
 `GCC <http://gcc.gnu.org/>`_                                >=5.1.0      C/C++ compiler\ :sup:`1`
-`python <http://www.python.org/>`_                          >=2.7        Automated test suite\ :sup:`2`
+`python <http://www.python.org/>`_                          >=3.6        Automated test suite\ :sup:`2`
 `zlib <http://zlib.net>`_                                   >=1.2.3.4    Compression library\ :sup:`3`
 `GNU Make <http://savannah.gnu.org/projects/make>`_         3.79, 3.79.1 Makefile/build processor\ :sup:`4`
 =========================================================== ============ ==========================================
