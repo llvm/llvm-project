@@ -252,6 +252,10 @@ static cl::opt<bool> PGOInstrumentEntry(
     "pgo-instrument-entry", cl::init(false), cl::Hidden,
     cl::desc("Force to instrument function entry basicblock."));
 
+static cl::opt<bool>
+    PGOFixEntryCount("pgo-fix-entry-count", cl::init(true), cl::Hidden,
+                     cl::desc("Fix function entry count in profile use."));
+
 static cl::opt<bool> PGOVerifyHotBFI(
     "pgo-verify-hot-bfi", cl::init(false), cl::Hidden,
     cl::desc("Print out the non-match BFI count if a hot raw profile count "
@@ -1640,6 +1644,53 @@ PreservedAnalyses PGOInstrumentationGen::run(Module &M,
   return PreservedAnalyses::none();
 }
 
+// Using the ratio b/w sums of profile count values and BFI count values to
+// adjust the func entry count.
+static void fixFuncEntryCount(PGOUseFunc &Func, LoopInfo &LI,
+                              BranchProbabilityInfo &NBPI) {
+  Function &F = Func.getFunc();
+  BlockFrequencyInfo NBFI(F, NBPI, LI);
+#ifndef NDEBUG
+  auto BFIEntryCount = F.getEntryCount();
+  assert(BFIEntryCount.hasValue() && (BFIEntryCount.getCount() > 0) &&
+         "Invalid BFI Entrycount");
+#endif
+  auto SumCount = APFloat::getZero(APFloat::IEEEdouble());
+  auto SumBFICount = APFloat::getZero(APFloat::IEEEdouble());
+  for (auto &BBI : F) {
+    uint64_t CountValue = 0;
+    uint64_t BFICountValue = 0;
+    if (!Func.findBBInfo(&BBI))
+      continue;
+    auto BFICount = NBFI.getBlockProfileCount(&BBI);
+    CountValue = Func.getBBInfo(&BBI).CountValue;
+    BFICountValue = BFICount.getValue();
+    SumCount.add(APFloat(CountValue * 1.0), APFloat::rmNearestTiesToEven);
+    SumBFICount.add(APFloat(BFICountValue * 1.0), APFloat::rmNearestTiesToEven);
+  }
+  if (SumCount.isZero())
+    return;
+
+  assert(SumBFICount.compare(APFloat(0.0)) == APFloat::cmpGreaterThan &&
+         "Incorrect sum of BFI counts");
+  if (SumBFICount.compare(SumCount) == APFloat::cmpEqual)
+    return;
+  double Scale = (SumCount / SumBFICount).convertToDouble();
+  if (Scale < 1.001 && Scale > 0.999)
+    return;
+
+  uint64_t FuncEntryCount = Func.getBBInfo(&*F.begin()).CountValue;
+  uint64_t NewEntryCount = 0.5 + FuncEntryCount * Scale;
+  if (NewEntryCount == 0)
+    NewEntryCount = 1;
+  if (NewEntryCount != FuncEntryCount) {
+    F.setEntryCount(ProfileCount(NewEntryCount, Function::PCT_Real));
+    LLVM_DEBUG(dbgs() << "FixFuncEntryCount: in " << F.getName()
+                      << ", entry_count " << FuncEntryCount << " --> "
+                      << NewEntryCount << "\n");
+  }
+}
+
 // Compare the profile count values with BFI count values, and print out
 // the non-matching ones.
 static void verifyFuncBFI(PGOUseFunc &Func, LoopInfo &LI,
@@ -1842,10 +1893,15 @@ static bool annotateAllFunctions(
       }
     }
 
-    // Verify BlockFrequency information.
-    if (PGOVerifyBFI || PGOVerifyHotBFI) {
+    if (PGOVerifyBFI || PGOVerifyHotBFI || PGOFixEntryCount) {
       LoopInfo LI{DominatorTree(F)};
       BranchProbabilityInfo NBPI(F, LI);
+
+      // Fix func entry count.
+      if (PGOFixEntryCount)
+        fixFuncEntryCount(Func, LI, NBPI);
+
+      // Verify BlockFrequency information.
       uint64_t HotCountThreshold = 0, ColdCountThreshold = 0;
       if (PGOVerifyHotBFI) {
         HotCountThreshold = PSI->getOrCompHotCountThreshold();

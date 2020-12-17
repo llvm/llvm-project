@@ -1928,7 +1928,7 @@ bool AMDGPUDAGToDAGISel::SelectScratchSAddr(SDNode *N,
   if (!TII->isLegalFLATOffset(COffsetVal, AMDGPUAS::PRIVATE_ADDRESS, true)) {
     int64_t RemainderOffset = COffsetVal;
     int64_t ImmField = 0;
-    const unsigned NumBits = TII->getNumFlatOffsetBits(true);
+    const unsigned NumBits = AMDGPU::getNumFlatOffsetBits(*Subtarget, true);
     // Use signed division by a power of two to truncate towards 0.
     int64_t D = 1LL << (NumBits - 1);
     RemainderOffset = (COffsetVal / D) * D;

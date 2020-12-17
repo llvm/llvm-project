@@ -7,10 +7,10 @@ target triple = "x86_64-pc-windows-msvc18.0.0"
 
 ; This case arises when two objects with empty destructors are cleaned up.
 ;
-; void f1() { 
+; void f1() {
 ;   S a;
 ;   S b;
-;   g(); 
+;   g();
 ; }
 ;
 ; In this case, both cleanup pads can be eliminated and the invoke can be
@@ -44,7 +44,7 @@ ehcleanup.1:                                      ; preds = %ehcleanup
 ; outside of a try-block and an object with a non-empty destructor must be
 ; cleaned up within the try-block.
 ;
-; void f2() { 
+; void f2() {
 ;   S a;
 ;   try {
 ;     S2 b;
@@ -107,7 +107,7 @@ ehcleanup.1:
 ; outside of a try-block and an object with an empty destructor must be cleaned
 ; within the try-block.
 ;
-; void f3() { 
+; void f3() {
 ;   S2 a;
 ;   try {
 ;     S b;
@@ -168,7 +168,7 @@ ehcleanup.1:
 ; This case arises when an object with an empty destructor may require cleanup
 ; from either inside or outside of a try-block.
 ;
-; void f4() { 
+; void f4() {
 ;   S a;
 ;   g();
 ;   try {
@@ -184,7 +184,7 @@ ehcleanup.1:
 ; CHECK: entry:
 ; CHECK:   call void @g
 ; Note: The cleanuppad simplification will insert an unconditional branch here
-;       but it will be eliminated, placing the following invoke in the entry BB. 
+;       but it will be eliminated, placing the following invoke in the entry BB.
 ; CHECK:   invoke void @g()
 ; CHECK:           to label %try.cont unwind label %catch.dispatch
 ; CHECK: catch.dispatch:
@@ -373,7 +373,7 @@ return:                                           ; preds = %invoke.cont.1, %cat
 ; CHECK-NOT: ehcleanup:
 ; CHECK-NOT:   cleanuppad
 ; CHECK: catch.dispatch:
-; CHECK:   %x = phi i32 [ 2, %invoke.cont ], [ 1, %entry ], [ %x, %catch.cont ] 
+; CHECK:   %x = phi i32 [ 2, %invoke.cont ], [ 1, %entry ], [ %x, %catch.cont ]
 ; CHECK: }
 define void @f8() personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
 entry:

@@ -14,6 +14,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <functional>
 #include <string>
@@ -310,6 +311,11 @@ std::error_code parseLineFilter(llvm::StringRef LineFilter,
 /// error.
 llvm::ErrorOr<ClangTidyOptions>
 parseConfiguration(llvm::MemoryBufferRef Config);
+
+using DiagCallback = llvm::function_ref<void(const llvm::SMDiagnostic &)>;
+
+llvm::ErrorOr<ClangTidyOptions>
+parseConfigurationWithDiags(llvm::MemoryBufferRef Config, DiagCallback Handler);
 
 /// Serializes configuration to a YAML-encoded string.
 std::string configurationAsText(const ClangTidyOptions &Options);

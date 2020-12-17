@@ -112,12 +112,12 @@ public:
                            DINode::FlagZero, DISubprogram::SPFlagDefinition);
 
     // Make some nested scopes.
-    OutermostLoc = DebugLoc::get(3, 1, OurFunc);
-    InBlockLoc = DebugLoc::get(4, 1, OurBlock);
-    InlinedLoc = DebugLoc::get(10, 1, ToInlineFunc, InBlockLoc.get());
+    OutermostLoc = DILocation::get(Ctx, 3, 1, OurFunc);
+    InBlockLoc = DILocation::get(Ctx, 4, 1, OurBlock);
+    InlinedLoc = DILocation::get(Ctx, 10, 1, ToInlineFunc, InBlockLoc.get());
 
     // Make a scope that isn't nested within the others.
-    NotNestedBlockLoc = DebugLoc::get(4, 1, AnotherBlock);
+    NotNestedBlockLoc = DILocation::get(Ctx, 4, 1, AnotherBlock);
 
     DIB.finalize();
   }

@@ -9,7 +9,7 @@
 
 // <string_view>
 
-//   constexpr bool starts_with(const CharT *x) const;
+//   constexpr bool ends_with(const CharT *x) const;
 
 #include <string_view>
 #include <cassert>

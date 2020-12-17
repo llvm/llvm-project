@@ -8,7 +8,6 @@
 
 #include "HypotTest.h"
 
-#include "include/math.h"
 #include "src/math/hypotf.h"
 
 using HypotfTest = HypotTestTemplate<float>;

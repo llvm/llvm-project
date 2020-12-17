@@ -81,13 +81,19 @@ public:
   llvm::Optional<ProjectInfo> getProjectInfo(PathRef File) const override;
 
 private:
-  /// Caches compilation databases loaded from directories.
-  struct CachedCDB {
-    std::string Path; // Not case-folded.
-    std::unique_ptr<clang::tooling::CompilationDatabase> CDB = nullptr;
-    bool SentBroadcast = false;
-  };
-  CachedCDB &getCDBInDirLocked(PathRef File) const;
+  class DirectoryCache;
+  // If there's an explicit CompileCommandsDir, cache of the CDB found there.
+  mutable std::unique_ptr<DirectoryCache> OnlyDirCache;
+
+  // Keyed by possibly-case-folded directory path.
+  // We can hand out pointers as they're stable and entries are never removed.
+  // Empty if CompileCommandsDir is given (OnlyDirCache is used instead).
+  mutable llvm::StringMap<DirectoryCache> DirCaches;
+  // DirCaches access must be locked (unlike OnlyDirCache, which is threadsafe).
+  mutable std::mutex DirCachesMutex;
+
+  std::vector<DirectoryCache *>
+  getDirectoryCaches(llvm::ArrayRef<llvm::StringRef> Dirs) const;
 
   struct CDBLookupRequest {
     PathRef FileName;
@@ -95,21 +101,13 @@ private:
     bool ShouldBroadcast = false;
   };
   struct CDBLookupResult {
-    tooling::CompilationDatabase *CDB = nullptr;
+    std::shared_ptr<const tooling::CompilationDatabase> CDB;
     ProjectInfo PI;
   };
   llvm::Optional<CDBLookupResult> lookupCDB(CDBLookupRequest Request) const;
 
   // Performs broadcast on governed files.
   void broadcastCDB(CDBLookupResult Res) const;
-
-  mutable std::mutex Mutex;
-  // Keyed by possibly-case-folded directory path.
-  mutable llvm::StringMap<CachedCDB> CompilationDatabases;
-
-  /// Used for command argument pointing to folder where compile_commands.json
-  /// is located.
-  llvm::Optional<Path> CompileCommandsDir;
 };
 
 /// Extracts system include search path from drivers matching QueryDriverGlobs

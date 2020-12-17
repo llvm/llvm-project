@@ -1,4 +1,4 @@
-; RUN: opt < %s -simplifycfg -adce -S | \
+; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -adce -S | \
 ; RUN:   not grep "call void @f1"
 ; END.
 

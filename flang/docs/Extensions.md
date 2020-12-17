@@ -129,7 +129,7 @@ accepted if enabled by command-line options.
 * A `RETURN` statement may appear in a main program.
 * DATA statement initialization is allowed for procedure pointers outside
   structure constructors.
-* Nonstandard intrinsic functions: ISNAN
+* Nonstandard intrinsic functions: ISNAN, SIZEOF
 
 ### Extensions supported when enabled by options
 
@@ -144,10 +144,11 @@ accepted if enabled by command-line options.
   rule imposes an artificially small constraint in some cases
   where Fortran mandates that something have the default `INTEGER`
   type: specifically, the results of references to the intrinsic functions
-  `SIZE`, `LBOUND`, `UBOUND`, `SHAPE`, and the location reductions
+  `SIZE`, `STORAGE_SIZE`,`LBOUND`, `UBOUND`, `SHAPE`, and the location reductions
   `FINDLOC`, `MAXLOC`, and `MINLOC` in the absence of an explicit
   `KIND=` actual argument.  We return `INTEGER(KIND=8)` by default in
   these cases when the `-flarge-sizes` option is enabled.
+  `SIZEOF` and `C_SIZEOF` always return `INTEGER(KIND=8)`.
 * Treat each specification-part like is has `IMPLICIT NONE`
   [-fimplicit-none-type-always]
 * Ignore occurrences of `IMPLICIT NONE` and `IMPLICIT NONE(TYPE)`

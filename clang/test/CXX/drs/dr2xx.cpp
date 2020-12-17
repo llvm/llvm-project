@@ -292,9 +292,9 @@ namespace dr224 { // dr224: no
     template <int, typename T> struct X { typedef T type; };
     template <class T> class A {
       static const int i = 5;
-      X<i, int>::type w; // FIXME: expected-error {{missing 'typename'}}
-      X<A::i, char>::type x; // FIXME: expected-error {{missing 'typename'}}
-      X<A<T>::i, double>::type y; // FIXME: expected-error {{missing 'typename'}}
+      X<i, int>::type w;
+      X<A::i, char>::type x;
+      X<A<T>::i, double>::type y;
       X<A<T*>::i, long>::type z; // expected-error {{missing 'typename'}}
       int f();
     };

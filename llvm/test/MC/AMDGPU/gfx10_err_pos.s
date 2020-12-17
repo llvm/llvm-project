@@ -387,7 +387,7 @@ ds_swizzle_b32 v8, v2 offset:SWZ(QUAD_PERM, 0, 1, 2, 3)
 // expected an 11-bit unsigned offset
 
 flat_atomic_cmpswap v0, v[1:2], v[3:4] offset:4095 glc
-// CHECK: error: expected an 11-bit unsigned offset
+// CHECK: error: expected a 11-bit unsigned offset
 // CHECK-NEXT:{{^}}flat_atomic_cmpswap v0, v[1:2], v[3:4] offset:4095 glc
 // CHECK-NEXT:{{^}}                                       ^
 

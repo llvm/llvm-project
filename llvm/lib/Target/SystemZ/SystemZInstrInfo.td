@@ -290,33 +290,32 @@ let isCall = 1, Defs = [R14D, CC] in {
                          [(z_tls_ldcall tglobaltlsaddr:$I2)]>;
 }
 
-// Sibling calls.  Indirect sibling calls must be via R1, since R2 upwards
-// are argument registers and since branching to R0 is a no-op.
+// Sibling calls.
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1 in {
   def CallJG : Alias<6, (outs), (ins pcrel32:$I2),
                      [(z_sibcall pcrel32:$I2)]>;
-  let Uses = [R1D] in
-    def CallBR : Alias<2, (outs), (ins), [(z_sibcall R1D)]>;
+  def CallBR : Alias<2, (outs), (ins ADDR64:$R2),
+                     [(z_sibcall ADDR64:$R2)]>;
 }
 
 // Conditional sibling calls.
 let CCMaskFirst = 1, isCall = 1, isTerminator = 1, isReturn = 1 in {
   def CallBRCL : Alias<6, (outs), (ins cond4:$valid, cond4:$R1,
                                    pcrel32:$I2), []>;
-  let Uses = [R1D] in
-    def CallBCR : Alias<2, (outs), (ins cond4:$valid, cond4:$R1), []>;
+  def CallBCR : Alias<2, (outs), (ins cond4:$valid, cond4:$R1,
+                                  ADDR64:$R2), []>;
 }
 
 // Fused compare and conditional sibling calls.
-let isCall = 1, isTerminator = 1, isReturn = 1, Uses = [R1D] in {
-  def CRBCall : Alias<6, (outs), (ins GR32:$R1, GR32:$R2, cond4:$M3), []>;
-  def CGRBCall : Alias<6, (outs), (ins GR64:$R1, GR64:$R2, cond4:$M3), []>;
-  def CIBCall : Alias<6, (outs), (ins GR32:$R1, imm32sx8:$I2, cond4:$M3), []>;
-  def CGIBCall : Alias<6, (outs), (ins GR64:$R1, imm64sx8:$I2, cond4:$M3), []>;
-  def CLRBCall : Alias<6, (outs), (ins GR32:$R1, GR32:$R2, cond4:$M3), []>;
-  def CLGRBCall : Alias<6, (outs), (ins GR64:$R1, GR64:$R2, cond4:$M3), []>;
-  def CLIBCall : Alias<6, (outs), (ins GR32:$R1, imm32zx8:$I2, cond4:$M3), []>;
-  def CLGIBCall : Alias<6, (outs), (ins GR64:$R1, imm64zx8:$I2, cond4:$M3), []>;
+let isCall = 1, isTerminator = 1, isReturn = 1 in {
+  def CRBCall : Alias<6, (outs), (ins GR32:$R1, GR32:$R2, cond4:$M3, ADDR64:$R4), []>;
+  def CGRBCall : Alias<6, (outs), (ins GR64:$R1, GR64:$R2, cond4:$M3, ADDR64:$R4), []>;
+  def CIBCall : Alias<6, (outs), (ins GR32:$R1, imm32sx8:$I2, cond4:$M3, ADDR64:$R4), []>;
+  def CGIBCall : Alias<6, (outs), (ins GR64:$R1, imm64sx8:$I2, cond4:$M3, ADDR64:$R4), []>;
+  def CLRBCall : Alias<6, (outs), (ins GR32:$R1, GR32:$R2, cond4:$M3, ADDR64:$R4), []>;
+  def CLGRBCall : Alias<6, (outs), (ins GR64:$R1, GR64:$R2, cond4:$M3, ADDR64:$R4), []>;
+  def CLIBCall : Alias<6, (outs), (ins GR32:$R1, imm32zx8:$I2, cond4:$M3, ADDR64:$R4), []>;
+  def CLGIBCall : Alias<6, (outs), (ins GR64:$R1, imm64zx8:$I2, cond4:$M3, ADDR64:$R4), []>;
 }
 
 // A return instruction (br %r14).

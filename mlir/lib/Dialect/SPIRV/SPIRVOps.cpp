@@ -3396,35 +3396,39 @@ static LogicalResult verify(spirv::SpecConstantCompositeOp constOp) {
 }
 
 //===----------------------------------------------------------------------===//
-// spv.mlir.yield
+// spv.SpecConstantOperation
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(spirv::YieldOp yieldOp) {
-  Operation *parentOp = yieldOp->getParentOp();
+static ParseResult parseSpecConstantOperationOp(OpAsmParser &parser,
+                                                OperationState &state) {
+  Region *body = state.addRegion();
 
-  if (!parentOp || !isa<spirv::SpecConstantOperationOp>(parentOp))
-    return yieldOp.emitOpError(
-        "expected parent op to be 'spv.SpecConstantOperation'");
+  if (parser.parseKeyword("wraps"))
+    return failure();
 
-  Block &block = parentOp->getRegion(0).getBlocks().front();
-  Operation &enclosedOp = block.getOperations().front();
+  body->push_back(new Block);
+  Block &block = body->back();
+  Operation *wrappedOp = parser.parseGenericOperation(&block, block.begin());
 
-  if (yieldOp.getOperand().getDefiningOp() != &enclosedOp)
-    return yieldOp.emitOpError(
-        "expected operand to be defined by preceeding op");
+  if (!wrappedOp)
+    return failure();
+
+  OpBuilder builder(parser.getBuilder().getContext());
+  builder.setInsertionPointToEnd(&block);
+  builder.create<spirv::YieldOp>(wrappedOp->getLoc(), wrappedOp->getResult(0));
+  state.location = wrappedOp->getLoc();
+
+  state.addTypes(wrappedOp->getResult(0).getType());
+
+  if (parser.parseOptionalAttrDict(state.attributes))
+    return failure();
 
   return success();
 }
 
-static ParseResult parseSpecConstantOperationOp(OpAsmParser &parser,
-                                                OperationState &state) {
-  // TODO: For now, only generic form is supported.
-  return failure();
-}
-
 static void print(spirv::SpecConstantOperationOp op, OpAsmPrinter &printer) {
-  // TODO
-  printer.printGenericOp(op);
+  printer << op.getOperationName() << " wraps ";
+  printer.printGenericOp(&op.body().front().front());
 }
 
 static LogicalResult verify(spirv::SpecConstantOperationOp constOp) {
@@ -3432,11 +3436,6 @@ static LogicalResult verify(spirv::SpecConstantOperationOp constOp) {
 
   if (block.getOperations().size() != 2)
     return constOp.emitOpError("expected exactly 2 nested ops");
-
-  Operation &yieldOp = block.getOperations().back();
-
-  if (!isa<spirv::YieldOp>(yieldOp))
-    return constOp.emitOpError("expected terminator to be a yield op");
 
   Operation &enclosedOp = block.getOperations().front();
 
@@ -3457,21 +3456,12 @@ static LogicalResult verify(spirv::SpecConstantOperationOp constOp) {
            spirv::UGreaterThanEqualOp, spirv::SGreaterThanEqualOp>(enclosedOp))
     return constOp.emitOpError("invalid enclosed op");
 
-  if (enclosedOp.getNumOperands() != constOp.getOperands().size())
-    return constOp.emitOpError("invalid number of operands; expected ")
-           << enclosedOp.getNumOperands() << ", actual "
-           << constOp.getOperands().size();
-
-  if (enclosedOp.getNumOperands() != constOp.getRegion().getNumArguments())
-    return constOp.emitOpError("invalid number of region arguments; expected ")
-           << enclosedOp.getNumOperands() << ", actual "
-           << constOp.getRegion().getNumArguments();
-
-  for (auto operand : constOp.getOperands())
+  for (auto operand : enclosedOp.getOperands())
     if (!isa<spirv::ConstantOp, spirv::SpecConstantOp,
              spirv::SpecConstantCompositeOp, spirv::SpecConstantOperationOp>(
             operand.getDefiningOp()))
-      return constOp.emitOpError("invalid operand");
+      return constOp.emitOpError(
+          "invalid operand, must be defined by a constant operation");
 
   return success();
 }

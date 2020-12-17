@@ -100,7 +100,12 @@ std::string s_func() {
   return std::string();
 }
 
-int main() {
+void takesBool(bool)
+{
+
+}
+
+bool returnsBool() {
   std::set<int> intSet;
   std::string str;
   std::string str2;
@@ -397,6 +402,42 @@ int main() {
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used
   // CHECK-FIXES: {{^  }}if (derived.empty()){{$}}
+
+  takesBool(derived.size());
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: the 'empty' method should be used
+  // CHECK-FIXES: {{^  }}takesBool(!derived.empty());
+
+  takesBool(derived.size() == 0);
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: the 'empty' method should be used
+  // CHECK-FIXES: {{^  }}takesBool(derived.empty());
+
+  takesBool(derived.size() != 0);
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: the 'empty' method should be used
+  // CHECK-FIXES: {{^  }}takesBool(!derived.empty());
+
+  bool b1 = derived.size();
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: the 'empty' method should be used
+  // CHECK-FIXES: {{^  }}bool b1 = !derived.empty();
+
+  bool b2(derived.size());
+  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: the 'empty' method should be used
+  // CHECK-FIXES: {{^  }}bool b2(!derived.empty());
+
+  auto b3 = static_cast<bool>(derived.size());
+  // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: the 'empty' method should be used
+  // CHECK-FIXES: {{^  }}auto b3 = static_cast<bool>(!derived.empty());
+
+  auto b4 = (bool)derived.size();
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: the 'empty' method should be used
+  // CHECK-FIXES: {{^  }}auto b4 = (bool)!derived.empty();
+
+  auto b5 = bool(derived.size());
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: the 'empty' method should be used
+  // CHECK-FIXES: {{^  }}auto b5 = bool(!derived.empty());
+
+  return derived.size();
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: the 'empty' method should be used
+  // CHECK-FIXES: {{^  }}return !derived.empty();
 }
 
 #define CHECKSIZE(x) if (x.size()) {}

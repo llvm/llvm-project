@@ -791,7 +791,7 @@ bool PrintfSpecifier::fixType(QualType QT, const LangOptions &LangOpt,
 #define SVE_TYPE(Name, Id, SingletonId) \
   case BuiltinType::Id:
 #include "clang/Basic/AArch64SVEACLETypes.def"
-#define PPC_MMA_VECTOR_TYPE(Name, Id, Size) \
+#define PPC_VECTOR_TYPE(Name, Id, Size) \
   case BuiltinType::Id:
 #include "clang/Basic/PPCTypes.def"
 #define SIGNED_TYPE(Id, SingletonId)

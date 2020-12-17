@@ -60,6 +60,9 @@ public:
 
   DYLDRendezvous(lldb_private::Process *process);
 
+  /// Update the cached executable path.
+  void UpdateExecutablePath();
+
   /// Update the internal snapshot of runtime linker rendezvous and recompute
   /// the currently loaded modules.
   ///

@@ -92,7 +92,7 @@ public:
   /// llvm::formatv will call this function when using an instance as a
   /// replacement value.
   void format(raw_ostream &os, StringRef options) override {
-    if (params.size() && prependComma)
+    if (!params.empty() && prependComma)
       os << ", ";
 
     switch (emitFormat) {
@@ -146,8 +146,9 @@ class DialectAsmPrinter;
 /// case.
 ///
 /// {0}: The name of the typeDef class.
+/// {1}: The name of the type base class.
 static const char *const typeDefDeclSingletonBeginStr = R"(
-  class {0}: public ::mlir::Type::TypeBase<{0}, ::mlir::Type, ::mlir::TypeStorage> {{
+  class {0}: public ::mlir::Type::TypeBase<{0}, {1}, ::mlir::TypeStorage> {{
   public:
     /// Inherit some necessary constructors from 'TypeBase'.
     using Base::Base;
@@ -158,15 +159,16 @@ static const char *const typeDefDeclSingletonBeginStr = R"(
 /// case.
 ///
 /// {0}: The name of the typeDef class.
-/// {1}: The typeDef storage class namespace.
-/// {2}: The storage class name.
-/// {3}: The list of parameters with types.
+/// {1}: The name of the type base class.
+/// {2}: The typeDef storage class namespace.
+/// {3}: The storage class name.
+/// {4}: The list of parameters with types.
 static const char *const typeDefDeclParametricBeginStr = R"(
-  namespace {1} {
-    struct {2};
+  namespace {2} {
+    struct {3};
   }
-  class {0}: public ::mlir::Type::TypeBase<{0}, ::mlir::Type,
-                                        {1}::{2}> {{
+  class {0}: public ::mlir::Type::TypeBase<{0}, {1},
+                                        {2}::{3}> {{
   public:
     /// Inherit some necessary constructors from 'TypeBase'.
     using Base::Base;
@@ -196,10 +198,11 @@ static void emitTypeDefDecl(const TypeDef &typeDef, raw_ostream &os) {
   // template.
   if (typeDef.getNumParameters() == 0)
     os << formatv(typeDefDeclSingletonBeginStr, typeDef.getCppClassName(),
-                  typeDef.getStorageNamespace(), typeDef.getStorageClassName());
+                  typeDef.getCppBaseClassName());
   else
     os << formatv(typeDefDeclParametricBeginStr, typeDef.getCppClassName(),
-                  typeDef.getStorageNamespace(), typeDef.getStorageClassName());
+                  typeDef.getCppBaseClassName(), typeDef.getStorageNamespace(),
+                  typeDef.getStorageClassName());
 
   // Emit the extra declarations first in case there's a type definition in
   // there.
@@ -208,8 +211,10 @@ static void emitTypeDefDecl(const TypeDef &typeDef, raw_ostream &os) {
 
   TypeParamCommaFormatter emitTypeNamePairsAfterComma(
       TypeParamCommaFormatter::EmitFormat::TypeNamePairs, params);
-  os << llvm::formatv("    static {0} get(::mlir::MLIRContext* ctxt{1});\n",
-                      typeDef.getCppClassName(), emitTypeNamePairsAfterComma);
+  if (!params.empty()) {
+    os << llvm::formatv("    static {0} get(::mlir::MLIRContext* ctxt{1});\n",
+                        typeDef.getCppClassName(), emitTypeNamePairsAfterComma);
+  }
 
   // Emit the verify invariants declaration.
   if (typeDef.genVerifyInvariantsDecl())
@@ -252,16 +257,8 @@ static bool emitTypeDefDecls(const llvm::RecordKeeper &recordKeeper,
   // Output the common "header".
   os << typeDefDeclHeader;
 
-  if (typeDefs.size() > 0) {
+  if (!typeDefs.empty()) {
     NamespaceEmitter nsEmitter(os, typeDefs.begin()->getDialect());
-
-    // Well known print/parse dispatch function declarations. These are called
-    // from Dialect::parseType() and Dialect::printType() methods.
-    os << "  ::mlir::Type generatedTypeParser(::mlir::MLIRContext* ctxt, "
-          "::mlir::DialectAsmParser& parser, ::llvm::StringRef mnenomic);\n";
-    os << "  ::mlir::LogicalResult generatedTypePrinter(::mlir::Type type, "
-          "::mlir::DialectAsmPrinter& printer);\n";
-    os << "\n";
 
     // Declare all the type classes first (in case they reference each other).
     for (const TypeDef &typeDef : typeDefs)
@@ -488,14 +485,16 @@ static void emitTypeDefDef(TypeDef typeDef, raw_ostream &os) {
   if (typeDef.genStorageClass() && typeDef.getNumParameters() > 0)
     emitStorageClass(typeDef, os);
 
-  os << llvm::formatv(
-      "{0} {0}::get(::mlir::MLIRContext* ctxt{1}) {{\n"
-      "  return Base::get(ctxt{2});\n}\n",
-      typeDef.getCppClassName(),
-      TypeParamCommaFormatter(
-          TypeParamCommaFormatter::EmitFormat::TypeNamePairs, parameters),
-      TypeParamCommaFormatter(TypeParamCommaFormatter::EmitFormat::JustParams,
-                              parameters));
+  if (!parameters.empty()) {
+    os << llvm::formatv(
+        "{0} {0}::get(::mlir::MLIRContext* ctxt{1}) {{\n"
+        "  return Base::get(ctxt{2});\n}\n",
+        typeDef.getCppClassName(),
+        TypeParamCommaFormatter(
+            TypeParamCommaFormatter::EmitFormat::TypeNamePairs, parameters),
+        TypeParamCommaFormatter(TypeParamCommaFormatter::EmitFormat::JustParams,
+                                parameters));
+  }
 
   // Emit the parameter accessors.
   if (typeDef.genAccessors())
@@ -526,38 +525,40 @@ static void emitTypeDefDef(TypeDef typeDef, raw_ostream &os) {
 
 /// Emit the dialect printer/parser dispatcher. User's code should call these
 /// functions from their dialect's print/parse methods.
-static void emitParsePrintDispatch(SmallVectorImpl<TypeDef> &typeDefs,
-                                   raw_ostream &os) {
-  if (typeDefs.size() == 0)
+static void emitParsePrintDispatch(ArrayRef<TypeDef> types, raw_ostream &os) {
+  if (llvm::none_of(types, [](const TypeDef &type) {
+        return type.getMnemonic().hasValue();
+      })) {
     return;
-  const Dialect &dialect = typeDefs.begin()->getDialect();
-  NamespaceEmitter ns(os, dialect);
+  }
 
-  // The parser dispatch is just a list of if-elses, matching on the mnemonic
-  // and calling the class's parse function.
-  os << "::mlir::Type generatedTypeParser(::mlir::MLIRContext* ctxt, "
+  // The parser dispatch is just a list of if-elses, matching on the
+  // mnemonic and calling the class's parse function.
+  os << "static ::mlir::Type generatedTypeParser(::mlir::MLIRContext* "
+        "ctxt, "
         "::mlir::DialectAsmParser& parser, ::llvm::StringRef mnemonic) {\n";
-  for (const TypeDef &typeDef : typeDefs)
-    if (typeDef.getMnemonic())
+  for (const TypeDef &type : types)
+    if (type.getMnemonic())
       os << formatv("  if (mnemonic == {0}::{1}::getMnemonic()) return "
                     "{0}::{1}::parse(ctxt, parser);\n",
-                    typeDef.getDialect().getCppNamespace(),
-                    typeDef.getCppClassName());
+                    type.getDialect().getCppNamespace(),
+                    type.getCppClassName());
   os << "  return ::mlir::Type();\n";
   os << "}\n\n";
 
   // The printer dispatch uses llvm::TypeSwitch to find and call the correct
   // printer.
-  os << "::mlir::LogicalResult generatedTypePrinter(::mlir::Type type, "
+  os << "static ::mlir::LogicalResult generatedTypePrinter(::mlir::Type "
+        "type, "
         "::mlir::DialectAsmPrinter& printer) {\n"
      << "  ::mlir::LogicalResult found = ::mlir::success();\n"
      << "  ::llvm::TypeSwitch<::mlir::Type>(type)\n";
-  for (auto typeDef : typeDefs)
-    if (typeDef.getMnemonic())
+  for (const TypeDef &type : types)
+    if (type.getMnemonic())
       os << formatv("    .Case<{0}::{1}>([&](::mlir::Type t) {{ "
                     "t.dyn_cast<{0}::{1}>().print(printer); })\n",
-                    typeDef.getDialect().getCppNamespace(),
-                    typeDef.getCppClassName());
+                    type.getDialect().getCppNamespace(),
+                    type.getCppClassName());
   os << "    .Default([&found](::mlir::Type) { found = ::mlir::failure(); "
         "});\n"
      << "  return found;\n"
