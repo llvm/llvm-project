@@ -209,6 +209,8 @@ public:
     switch (getKind()) {
     case attr::SwiftContext:
       return ParameterABI::SwiftContext;
+    case attr::SwiftAsyncContext:
+      return ParameterABI::SwiftAsyncContext;
     case attr::SwiftErrorResult:
       return ParameterABI::SwiftErrorResult;
     case attr::SwiftIndirectResult:
