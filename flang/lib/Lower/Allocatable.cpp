@@ -21,6 +21,7 @@
 #include "flang/Lower/Runtime.h"
 #include "flang/Lower/Todo.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
@@ -112,14 +113,20 @@ unwrapSymbol(const Fortran::parser::AllocateObject &allocObj) {
 // 1)%alloc_component` For now, getting the last name symbol is OK since there
 // is only one name.
 static fir::MutableBoxValue
-genBoxAddress(Fortran::lower::AbstractConverter &converter, mlir::Location loc,
-              const Fortran::parser::AllocateObject &allocObj) {
-  // FIXME: once the front-end exposes Expr, use genExprMutableBox to keep track
-  // of the non deferred lengths parameters here. They are already in the
-  // descriptor, so the compiled code is correct without knowing them, but we
-  // lose runtime checks opportunities.
-  auto addr = converter.getSymbolAddress(unwrapSymbol(allocObj));
-  return fir::MutableBoxValue{addr, llvm::None};
+genMutableBoxValue(Fortran::lower::AbstractConverter &converter,
+                   mlir::Location loc,
+                   const Fortran::parser::AllocateObject &allocObj) {
+  const auto &symbol = unwrapSymbol(allocObj);
+  Fortran::evaluate::DataRef ref(symbol);
+  auto dyType = Fortran::evaluate::DynamicType::From(symbol);
+  if (dyType)
+    if (auto maybeExpr =
+            Fortran::evaluate::TypedWrapper<Fortran::evaluate::Designator,
+                                            Fortran::evaluate::DataRef>(
+                *dyType, std::move(ref)))
+      return converter.genExprMutableBox(*maybeExpr, &loc);
+  fir::emitFatalError(
+      loc, "could not build expression from symbol in allocate statement");
 }
 
 namespace {
@@ -192,6 +199,9 @@ private:
     const auto &getAllocObj() const {
       return std::get<Fortran::parser::AllocateObject>(alloc.t);
     }
+    const Fortran::semantics::Symbol &getSymbol() const {
+      return unwrapSymbol(getAllocObj());
+    }
     const auto &getShapeSpecs() const {
       return std::get<std::list<Fortran::parser::AllocateShapeSpec>>(alloc.t);
     }
@@ -232,7 +242,7 @@ private:
   }
 
   void lowerAllocation(const Allocation &alloc) {
-    auto boxAddr = genBoxAddress(converter, loc, alloc.getAllocObj());
+    auto boxAddr = genMutableBoxValue(converter, loc, alloc.getAllocObj());
     mlir::Value backupBox;
 
     if (sourceExpr) {
@@ -253,8 +263,99 @@ private:
     TODO("Error hanlding in allocate statement");
   }
 
+  static bool lowerBoundsAreOnes(const Allocation &alloc) {
+    for (const auto &shapeSpec : alloc.getShapeSpecs())
+      if (std::get<0>(shapeSpec.t))
+        return false;
+    return true;
+  }
+
+  /// Build name for the fir::allocmem generated for alloc.
+  std::string mangleAlloc(const Allocation &alloc) {
+    return converter.mangleName(alloc.getSymbol()) + ".alloc";
+  }
+
+  /// Generate allocation without runtime calls.
+  /// Only for intrinsic types. No coarrays, no polymorphism. No error recovery.
+  void genInlinedAllocation(const Allocation &alloc,
+                            fir::MutableBoxValue &boxAddr) {
+    mlir::SmallVector<mlir::Value, 2> lBounds;
+    mlir::SmallVector<mlir::Value, 2> uBounds;
+    Fortran::lower::StatementContext stmtCtx;
+    auto idxTy = builder.getIndexType();
+    auto lBoundsAreOnes = lowerBoundsAreOnes(alloc);
+    for (const auto &shapeSpec : alloc.getShapeSpecs()) {
+      if (!lBoundsAreOnes) {
+        if (const auto &lbExpr = std::get<0>(shapeSpec.t)) {
+          auto lb = fir::getBase(converter.genExprValue(
+              Fortran::semantics::GetExpr(*lbExpr), stmtCtx, loc));
+          lBounds.emplace_back(builder.createConvert(loc, idxTy, lb));
+        } else {
+          lBounds.emplace_back(builder.createIntegerConstant(loc, idxTy, 1));
+        }
+      }
+      auto ub = fir::getBase(converter.genExprValue(
+          Fortran::semantics::GetExpr(std::get<1>(shapeSpec.t)), stmtCtx, loc));
+      uBounds.emplace_back(builder.createConvert(loc, idxTy, ub));
+    }
+
+    mlir::Value shape;
+    mlir::SmallVector<mlir::Value, 2> extents;
+    if (!uBounds.empty()) {
+      if (lBoundsAreOnes) {
+        auto shapeType =
+            fir::ShapeType::get(builder.getContext(), uBounds.size());
+        shape = builder.create<fir::ShapeOp>(loc, shapeType, uBounds);
+        extents = uBounds;
+      } else {
+        auto one = builder.createIntegerConstant(loc, idxTy, 1);
+        mlir::SmallVector<mlir::Value, 2> shapeShiftBounds;
+        for (auto [lb, ub] : llvm::zip(lBounds, uBounds)) {
+          auto diff = builder.create<mlir::SubIOp>(loc, ub, lb);
+          auto extent = builder.create<mlir::AddIOp>(loc, diff, one);
+          extents.emplace_back(extent);
+          shapeShiftBounds.emplace_back(lb);
+          shapeShiftBounds.emplace_back(extent);
+        }
+        auto shapeShiftType =
+            fir::ShapeShiftType::get(builder.getContext(), uBounds.size());
+        shape = builder.create<fir::ShapeShiftOp>(loc, shapeShiftType,
+                                                  shapeShiftBounds);
+      }
+    }
+    mlir::SmallVector<mlir::Value, 2> lengths;
+    if (auto charTy = boxAddr.getEleTy().dyn_cast<fir::CharacterType>()) {
+      if (charTy.getLen() == fir::CharacterType::unknownLen()) {
+        if (!lenParams.empty())
+          lengths.emplace_back(builder.createConvert(loc, idxTy, lenParams[0]));
+        else if (boxAddr.hasNonDeferredLenParams())
+          lengths.emplace_back(builder.createConvert(
+              loc, idxTy, boxAddr.nonDeferredLenParams()[0]));
+        else
+          mlir::emitError(
+              loc,
+              "could not deduce character lengths in character allocation");
+      }
+    }
+
+    // FIXME AllocMemOp is ignoring its length arguments. Squeezed in into the
+    // extents for now.
+    extents.append(lengths.begin(), lengths.end());
+    mlir::Value heap = builder.create<fir::AllocMemOp>(
+        loc, boxAddr.getBaseTy(), mangleAlloc(alloc), llvm::None, extents);
+    mlir::Value emptySlice;
+    auto box = builder.create<fir::EmboxOp>(loc, boxAddr.getBoxTy(), heap,
+                                            shape, emptySlice, lengths);
+    builder.create<fir::StoreOp>(loc, box, boxAddr.getAddr());
+  }
+
   void genSimpleAllocation(const Allocation &alloc,
                            fir::MutableBoxValue boxAddr) {
+    if (!boxAddr.isDerived() && !errorManagement.hasErrorRecovery() &&
+        !alloc.type.IsPolymorphic() && !alloc.hasCoarraySpec()) {
+      genInlinedAllocation(alloc, boxAddr);
+      return;
+    }
     if (alloc.hasCoarraySpec())
       TODO("coarray allocation");
     if (alloc.type.IsPolymorphic())
@@ -387,6 +488,30 @@ void Fortran::lower::genAllocateStmt(
   return;
 }
 
+// Generate deallocation of a pointer/allocatable.
+static void genDeallocate(Fortran::lower::FirOpBuilder &builder,
+                          mlir::Location loc, fir::MutableBoxValue box,
+                          ErrorManagementValues &errorManagement) {
+  // For derived and when error recovery is present, use runtime.
+  if (box.isDerived() || errorManagement.hasErrorRecovery()) {
+    // TODO use return stat for error recovery
+    genAllocatableDeallocate(
+        builder, loc, box.getAddr(), errorManagement.hasStat,
+        errorManagement.errMsgBoxAddr, errorManagement.sourceFile,
+        errorManagement.sourceLine);
+    return;
+  }
+  // Inlined deallocate.
+  auto boxValue = builder.create<fir::LoadOp>(loc, box.getAddr());
+  auto boxTy = box.getBoxTy();
+  auto heapOrPtrTy = boxTy.getEleTy();
+  auto addr = builder.create<fir::BoxAddrOp>(loc, heapOrPtrTy, boxValue);
+  builder.create<fir::FreeMemOp>(loc, addr);
+  auto deallocatedBox =
+      createUnallocatedBox(builder, loc, boxTy, box.nonDeferredLenParams());
+  builder.create<fir::StoreOp>(loc, deallocatedBox, box.getAddr());
+}
+
 void Fortran::lower::genDeallocateStmt(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::parser::DeallocateStmt &stmt, mlir::Location loc) {
@@ -410,14 +535,8 @@ void Fortran::lower::genDeallocateStmt(
   errorManagement.lower(converter, loc, statExpr, errMsgExpr);
   for (const auto &allocateObject :
        std::get<std::list<Fortran::parser::AllocateObject>>(stmt.t)) {
-    auto boxAddr = genBoxAddress(converter, loc, allocateObject).getAddr();
-    if (!boxAddr)
-      TODO("Allocatable type not lowered yet");
-    // TODO use return stat for error recovery
-    genAllocatableDeallocate(builder, loc, boxAddr, errorManagement.hasStat,
-                             errorManagement.errMsgBoxAddr,
-                             errorManagement.sourceFile,
-                             errorManagement.sourceLine);
+    auto box = genMutableBoxValue(converter, loc, allocateObject);
+    genDeallocate(builder, loc, box, errorManagement);
   }
 }
 
