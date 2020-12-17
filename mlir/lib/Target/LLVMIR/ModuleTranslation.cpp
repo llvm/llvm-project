@@ -327,6 +327,7 @@ static Value getPHISourceValue(Block *current, Block *pred,
   assert(std::adjacent_find(successors.begin(), successors.end()) ==
              successors.end() &&
          "successors with arguments in LLVM branches must be different blocks");
+  (void)successors;
 
   // For instructions that branch based on a condition value, we need to take
   // the operands for the branch that was taken.
