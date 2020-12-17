@@ -49,8 +49,8 @@ declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) n
 
 define void @copy_1_byte(i8* %d, i8* %s) {
 ; CHECK-LABEL: define {{.+}} @copy_1_byte({{.+}}
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, i8* [[S:%.*]], align 1
-; CHECK-NEXT:    store i8 [[TMP1]], i8* [[D:%.*]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, i8* [[S:%.*]], align 1, !annotation [[ANN]]
+; CHECK-NEXT:    store i8 [[TMP1]], i8* [[D:%.*]], align 1, !annotation [[ANN]]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %d, i8* %s, i32 1, i1 false), !annotation !0
@@ -61,8 +61,8 @@ declare i8* @memcpy(i8* noalias returned, i8* noalias nocapture readonly, i64) n
 
 define void @libcallcopy_1_byte(i8* %d, i8* %s) {
 ; CHECK-LABEL: define {{.+}} @libcallcopy_1_byte({{.+}}
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, i8* [[S:%.*]], align 1
-; CHECK-NEXT:    store i8 [[TMP1]], i8* [[D:%.*]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, i8* [[S:%.*]], align 1, !annotation [[ANN]]
+; CHECK-NEXT:    store i8 [[TMP1]], i8* [[D:%.*]], align 1, !annotation [[ANN]]
 ; CHECK-NEXT:    ret void
 ;
   call i8* @memcpy(i8* %d, i8* %s, i64 1), !annotation !0
@@ -73,8 +73,8 @@ declare i8* @__memcpy_chk(i8*, i8*, i64, i64) nofree nounwind
 
 define void @libcallcopy_1_byte_chk(i8* %d, i8* %s) {
 ; CHECK-LABEL: define {{.+}} @libcallcopy_1_byte_chk({{.+}}
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, i8* [[S:%.*]], align 1
-; CHECK-NEXT:    store i8 [[TMP1]], i8* [[D:%.*]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, i8* [[S:%.*]], align 1, !annotation [[ANN]]
+; CHECK-NEXT:    store i8 [[TMP1]], i8* [[D:%.*]], align 1, !annotation [[ANN]]
 ; CHECK-NEXT:    ret void
 ;
   call i8* @__memcpy_chk(i8* %d, i8* %s, i64 1, i64 1), !annotation !0
@@ -85,8 +85,8 @@ declare void @llvm.memmove.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, 
 
 define void @move_1_byte(i8* %d, i8* %s) {
 ; CHECK-LABEL: define {{.+}} @move_1_byte({{.+}}
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, i8* [[S:%.*]], align 1
-; CHECK-NEXT:    store i8 [[TMP1]], i8* [[D:%.*]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, i8* [[S:%.*]], align 1, !annotation [[ANN]]
+; CHECK-NEXT:    store i8 [[TMP1]], i8* [[D:%.*]], align 1, !annotation [[ANN]]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memmove.p0i8.p0i8.i32(i8* %d, i8* %s, i32 1, i1 false), !annotation !0
@@ -97,8 +97,8 @@ declare i8* @memmove(i8* returned, i8* nocapture readonly, i64) nofree nounwind
 
 define void @libcallmove_1_byte(i8* %d, i8* %s) {
 ; CHECK-LABEL: define {{.+}} @libcallmove_1_byte({{.+}}
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, i8* [[S:%.*]], align 1
-; CHECK-NEXT:    store i8 [[TMP1]], i8* [[D:%.*]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, i8* [[S:%.*]], align 1, !annotation [[ANN]]
+; CHECK-NEXT:    store i8 [[TMP1]], i8* [[D:%.*]], align 1, !annotation [[ANN]]
 ; CHECK-NEXT:    ret void
 ;
   call i8* @memmove(i8* %d, i8* %s, i64 1), !annotation !0
@@ -109,8 +109,8 @@ declare i8* @__memmove_chk(i8*, i8*, i64, i64) nofree nounwind
 
 define void @libcallmove_1_byte_chk(i8* %d, i8* %s) {
 ; CHECK-LABEL: define {{.+}} @libcallmove_1_byte_chk({{.+}}
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, i8* [[S:%.*]], align 1
-; CHECK-NEXT:    store i8 [[TMP1]], i8* [[D:%.*]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, i8* [[S:%.*]], align 1, !annotation [[ANN]]
+; CHECK-NEXT:    store i8 [[TMP1]], i8* [[D:%.*]], align 1, !annotation [[ANN]]
 ; CHECK-NEXT:    ret void
 ;
   call i8* @__memmove_chk(i8* %d, i8* %s, i64 1, i64 1), !annotation !0
@@ -121,7 +121,7 @@ declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i1) argmemo
 
 define void @set_1_byte(i8* %d) {
 ; CHECK-LABEL: define {{.+}} @set_1_byte({{.+}}
-; CHECK-NEXT:    store i8 1, i8* [[D:%.*]], align 1
+; CHECK-NEXT:    store i8 1, i8* [[D:%.*]], align 1, !annotation [[ANN]]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p0i8.i32(i8* %d, i8 1, i32 1, i1 false), !annotation !0
@@ -132,7 +132,7 @@ declare i8* @memset(i8*, i32, i64) nofree
 
 define void @libcall_set_1_byte(i8* %d) {
 ; CHECK-LABEL: define {{.+}} @libcall_set_1_byte({{.+}}
-; CHECK-NEXT:    store i8 1, i8* [[D:%.*]], align 1
+; CHECK-NEXT:    store i8 1, i8* [[D:%.*]], align 1, !annotation [[ANN]]
 ; CHECK-NEXT:    ret void
 ;
   call i8* @memset(i8* %d, i32 1, i64 1), !annotation !0
@@ -143,7 +143,7 @@ declare i8* @__memset_chk(i8*, i32, i64, i64) nofree
 
 define void @libcall_set_1_byte_chk(i8* %d) {
 ; CHECK-LABEL: define {{.+}} @libcall_set_1_byte_chk({{.+}}
-; CHECK-NEXT:    store i8 1, i8* [[D:%.*]], align 1
+; CHECK-NEXT:    store i8 1, i8* [[D:%.*]], align 1, !annotation [[ANN]]
 ; CHECK-NEXT:    ret void
 ;
   call i8* @__memset_chk(i8* %d, i32 1, i64 1, i64 1), !annotation !0
