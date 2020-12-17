@@ -26,6 +26,7 @@
 #include "swift/AST/DiagnosticEngine.h"
 #include "swift/AST/DiagnosticsSema.h"
 #include "swift/AST/ExistentialLayout.h"
+#include "swift/AST/GenericParamList.h"
 #include "swift/AST/GenericSignature.h"
 #include "swift/AST/IRGenOptions.h"
 #include "swift/AST/ImportCache.h"
