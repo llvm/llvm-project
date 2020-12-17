@@ -1140,6 +1140,29 @@ defm PseudoVMIN        : VPseudoBinaryV_VV_VX;
 defm PseudoVMAXU       : VPseudoBinaryV_VV_VX;
 defm PseudoVMAX        : VPseudoBinaryV_VV_VX;
 
+//===----------------------------------------------------------------------===//
+// 12.10. Vector Single-Width Integer Multiply Instructions
+//===----------------------------------------------------------------------===//
+defm PseudoVMUL        : VPseudoBinaryV_VV_VX;
+defm PseudoVMULH       : VPseudoBinaryV_VV_VX;
+defm PseudoVMULHU      : VPseudoBinaryV_VV_VX;
+defm PseudoVMULHSU     : VPseudoBinaryV_VV_VX;
+
+//===----------------------------------------------------------------------===//
+// 12.11. Vector Integer Divide Instructions
+//===----------------------------------------------------------------------===//
+defm PseudoVDIVU       : VPseudoBinaryV_VV_VX;
+defm PseudoVDIV        : VPseudoBinaryV_VV_VX;
+defm PseudoVREMU       : VPseudoBinaryV_VV_VX;
+defm PseudoVREM        : VPseudoBinaryV_VV_VX;
+
+//===----------------------------------------------------------------------===//
+// 12.12. Vector Widening Integer Multiply Instructions
+//===----------------------------------------------------------------------===//
+defm PseudoVWMUL       : VPseudoBinaryW_VV_VX;
+defm PseudoVWMULU      : VPseudoBinaryW_VV_VX;
+defm PseudoVWMULSU     : VPseudoBinaryW_VV_VX;
+
 } // Predicates = [HasStdExtV]
 
 let Predicates = [HasStdExtV, HasStdExtF] in {
@@ -1241,6 +1264,29 @@ defm "" : VPatBinaryV_VV_VX<"int_riscv_vminu", "PseudoVMINU", AllIntegerVectors>
 defm "" : VPatBinaryV_VV_VX<"int_riscv_vmin", "PseudoVMIN", AllIntegerVectors>;
 defm "" : VPatBinaryV_VV_VX<"int_riscv_vmaxu", "PseudoVMAXU", AllIntegerVectors>;
 defm "" : VPatBinaryV_VV_VX<"int_riscv_vmax", "PseudoVMAX", AllIntegerVectors>;
+
+//===----------------------------------------------------------------------===//
+// 12.10. Vector Single-Width Integer Multiply Instructions
+//===----------------------------------------------------------------------===//
+defm "" : VPatBinaryV_VV_VX<"int_riscv_vmul", "PseudoVMUL", AllIntegerVectors>;
+defm "" : VPatBinaryV_VV_VX<"int_riscv_vmulh", "PseudoVMULH", AllIntegerVectors>;
+defm "" : VPatBinaryV_VV_VX<"int_riscv_vmulhu", "PseudoVMULHU", AllIntegerVectors>;
+defm "" : VPatBinaryV_VV_VX<"int_riscv_vmulhsu", "PseudoVMULHSU", AllIntegerVectors>;
+
+//===----------------------------------------------------------------------===//
+// 12.11. Vector Integer Divide Instructions
+//===----------------------------------------------------------------------===//
+defm "" : VPatBinaryV_VV_VX<"int_riscv_vdivu", "PseudoVDIVU", AllIntegerVectors>;
+defm "" : VPatBinaryV_VV_VX<"int_riscv_vdiv", "PseudoVDIV", AllIntegerVectors>;
+defm "" : VPatBinaryV_VV_VX<"int_riscv_vremu", "PseudoVREMU", AllIntegerVectors>;
+defm "" : VPatBinaryV_VV_VX<"int_riscv_vrem", "PseudoVREM", AllIntegerVectors>;
+
+//===----------------------------------------------------------------------===//
+// 12.12. Vector Widening Integer Multiply Instructions
+//===----------------------------------------------------------------------===//
+defm "" : VPatBinaryW_VV_VX<"int_riscv_vwmul", "PseudoVWMUL">;
+defm "" : VPatBinaryW_VV_VX<"int_riscv_vwmulu", "PseudoVWMULU">;
+defm "" : VPatBinaryW_VV_VX<"int_riscv_vwmulsu", "PseudoVWMULSU">;
 
 } // Predicates = [HasStdExtV]
 
