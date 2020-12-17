@@ -322,7 +322,32 @@ def build_function_body_dictionary(function_re, scrubber, scrubber_args, raw_too
 
       func_dict[prefix][func] = function_body(scrubbed_body, scrubbed_extra, args_and_sig, attrs)
       func_order[prefix].append(func)
-  warn_on_failed_prefixes(func_dict)
+
+class FunctionTestBuilder:
+  def __init__(self, run_list, flags, scrubber_args):
+    self._verbose = flags.verbose
+    self._record_args = flags.function_signature
+    self._check_attributes = flags.check_attributes
+    self._scrubber_args = scrubber_args
+    self._func_dict = {}
+    self._func_order = {}
+    for tuple in run_list:
+      for prefix in tuple[0]:
+        self._func_dict.update({prefix:dict()})
+        self._func_order.update({prefix: []})
+
+  def finish_and_get_func_dict(self):
+    warn_on_failed_prefixes(self._func_dict)
+    return self._func_dict
+
+  def func_order(self):
+    return self._func_order
+  
+  def process_run_line(self, function_re, scrubber, raw_tool_output, prefixes):
+    build_function_body_dictionary(function_re, scrubber, self._scrubber_args,
+                                   raw_tool_output, prefixes, self._func_dict,
+                                   self._func_order, self._verbose,
+                                   self._record_args, self._check_attributes)
 
 ##### Generator of LLVM IR CHECK lines
 
