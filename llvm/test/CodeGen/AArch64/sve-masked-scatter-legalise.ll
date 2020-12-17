@@ -25,6 +25,16 @@ define void @masked_scatter_nxv8i16(<vscale x 8 x i16> %data, i16* %base, <vscal
   ret void
 }
 
+define void @masked_scatter_nxv8bf16(<vscale x 8 x bfloat> %data, bfloat* %base, <vscale x 8 x i16> %offsets, <vscale x 8 x i1> %mask) #0 {
+; CHECK-LABEL: masked_scatter_nxv8bf16
+; CHECK-DAG: st1h { {{z[0-9]+}}.s }, {{p[0-9]+}}, [x0, {{z[0-9]+}}.s, sxtw #1]
+; CHECK-DAG: st1h { {{z[0-9]+}}.s }, {{p[0-9]+}}, [x0, {{z[0-9]+}}.s, sxtw #1]
+; CHECK: ret
+  %ptrs = getelementptr bfloat, bfloat* %base, <vscale x 8 x i16> %offsets
+  call void @llvm.masked.scatter.nxv8bf16(<vscale x 8 x bfloat> %data, <vscale x 8 x bfloat*> %ptrs, i32 1, <vscale x 8 x i1> %mask)
+  ret void
+}
+
 define void @masked_scatter_nxv8f32(<vscale x 8 x float> %data, float* %base, <vscale x 8 x i32> %indexes, <vscale x 8 x i1> %masks) {
 ; CHECK-LABEL: masked_scatter_nxv8f32
 ; CHECK-DAG: st1w { z0.s }, {{p[0-9]+}}, [x0, {{z[0-9]+}}.s, uxtw #2]
@@ -56,4 +66,6 @@ define void @masked_scatter_nxv32i32(<vscale x 32 x i32> %data, i32* %base, <vsc
 declare void @llvm.masked.scatter.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i8*>,  i32, <vscale x 16 x i1>)
 declare void @llvm.masked.scatter.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i16*>,  i32, <vscale x 8 x i1>)
 declare void @llvm.masked.scatter.nxv8f32(<vscale x 8 x float>, <vscale x 8 x float*>, i32, <vscale x 8 x i1>)
+declare void @llvm.masked.scatter.nxv8bf16(<vscale x 8 x bfloat>, <vscale x 8 x bfloat*>, i32, <vscale x 8 x i1>)
 declare void @llvm.masked.scatter.nxv32i32(<vscale x 32 x i32>, <vscale x 32 x i32*>,  i32, <vscale x 32 x i1>)
+attributes #0 = { "target-features"="+sve,+bf16" }
