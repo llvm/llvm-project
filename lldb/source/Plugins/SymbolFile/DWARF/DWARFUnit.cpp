@@ -34,7 +34,8 @@ DWARFUnit::DWARFUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
                      const DWARFAbbreviationDeclarationSet &abbrevs,
                      DIERef::Section section, bool is_dwo)
     : UserID(uid), m_dwarf(dwarf), m_header(header), m_abbrevs(&abbrevs),
-      m_cancel_scopes(false), m_section(section), m_is_dwo(is_dwo) {}
+      m_cancel_scopes(false), m_section(section), m_is_dwo(is_dwo),
+      m_dwo_id(header.GetDWOId()) {}
 
 DWARFUnit::~DWARFUnit() = default;
 
@@ -284,6 +285,11 @@ void DWARFUnit::SetDwoStrOffsetsBase() {
   SetStrOffsetsBase(baseOffset);
 }
 
+uint64_t DWARFUnit::GetDWOId() {
+  ExtractUnitDIEIfNeeded();
+  return m_dwo_id;
+}
+
 // m_die_array_mutex must be already held as read/write.
 void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
   llvm::Optional<uint64_t> addr_base, gnu_addr_base, ranges_base,
@@ -337,6 +343,9 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
     case DW_AT_GNU_ranges_base:
       gnu_ranges_base = form_value.Unsigned();
       break;
+    case DW_AT_GNU_dwo_id:
+      m_dwo_id = form_value.Unsigned();
+      break;
     }
   }
 
@@ -350,9 +359,8 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
   if (!dwo_symbol_file)
     return;
 
-  uint64_t main_dwo_id =
-      cu_die.GetAttributeValueAsUnsigned(this, DW_AT_GNU_dwo_id, 0);
-  DWARFUnit *dwo_cu = dwo_symbol_file->GetDWOCompileUnitForHash(main_dwo_id);
+  DWARFUnit *dwo_cu = dwo_symbol_file->GetDWOCompileUnitForHash(m_dwo_id);
+
   if (!dwo_cu)
     return; // Can't fetch the compile unit from the dwo file.
   dwo_cu->SetUserData(this);
@@ -788,7 +796,8 @@ DWARFUnitHeader::extract(const DWARFDataExtractor &data,
     header.m_unit_type = data.GetU8(offset_ptr);
     header.m_addr_size = data.GetU8(offset_ptr);
     header.m_abbr_offset = data.GetDWARFOffset(offset_ptr);
-    if (header.m_unit_type == llvm::dwarf::DW_UT_skeleton)
+    if (header.m_unit_type == llvm::dwarf::DW_UT_skeleton ||
+        header.m_unit_type == llvm::dwarf::DW_UT_split_compile)
       header.m_dwo_id = data.GetU64(offset_ptr);
   } else {
     header.m_abbr_offset = data.GetDWARFOffset(offset_ptr);
