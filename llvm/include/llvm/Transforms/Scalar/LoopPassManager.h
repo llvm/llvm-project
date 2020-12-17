@@ -36,21 +36,10 @@
 #ifndef LLVM_TRANSFORMS_SCALAR_LOOPPASSMANAGER_H
 #define LLVM_TRANSFORMS_SCALAR_LOOPPASSMANAGER_H
 
-#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/PriorityWorklist.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/Analysis/AssumptionCache.h"
-#include "llvm/Analysis/BasicAliasAnalysis.h"
-#include "llvm/Analysis/BlockFrequencyInfo.h"
-#include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopNestAnalysis.h"
-#include "llvm/Analysis/MemorySSA.h"
-#include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManager.h"
