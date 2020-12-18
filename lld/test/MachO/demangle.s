@@ -6,8 +6,8 @@
 # RUN: not %lld -demangle %t.o -o /dev/null 2>&1 | \
 # RUN:     FileCheck --check-prefix=DEMANGLE %s
 
-# CHECK: undefined symbol __Z1fv
-# DEMANGLE: undefined symbol f()
+# CHECK: undefined symbol: __Z1fv
+# DEMANGLE: undefined symbol: f()
 
 .globl _main
 _main:

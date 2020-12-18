@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SymbolTable.h"
+#include "Config.h"
 #include "InputFiles.h"
 #include "Symbols.h"
 #include "lld/Common/ErrorHandler.h"
@@ -152,6 +153,28 @@ Symbol *SymbolTable::addDSOHandle(const MachHeaderSection *header) {
   }
   replaceSymbol<DSOHandle>(s, header);
   return s;
+}
+
+void lld::macho::treatUndefinedSymbol(StringRef symbolName,
+                                      StringRef fileName) {
+  std::string message = ("undefined symbol: " + symbolName).str();
+  if (!fileName.empty())
+    message += ("\n>>> referenced by " + fileName).str();
+  switch (config->undefinedSymbolTreatment) {
+  case UndefinedSymbolTreatment::suppress:
+    break;
+  case UndefinedSymbolTreatment::error:
+    error(message);
+    break;
+  case UndefinedSymbolTreatment::warning:
+    warn(message);
+    break;
+  case UndefinedSymbolTreatment::dynamic_lookup:
+    error("dynamic_lookup unimplemented for " + message);
+    break;
+  case UndefinedSymbolTreatment::unknown:
+    llvm_unreachable("unknown -undefined TREATMENT");
+  }
 }
 
 SymbolTable *macho::symtab;
