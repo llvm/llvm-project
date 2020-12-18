@@ -93,6 +93,7 @@ static void replaceValue(Value &Old, Value &New) {
 
 bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   // Match insert into fixed vector of scalar value.
+  // TODO: Handle non-zero insert index.
   auto *Ty = dyn_cast<FixedVectorType>(I.getType());
   Value *Scalar;
   if (!Ty || !match(&I, m_InsertElt(m_Undef(), m_Value(Scalar), m_ZeroInt())) ||
@@ -115,7 +116,6 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
       mustSuppressSpeculation(*Load))
     return false;
 
-  // TODO: Extend this to match GEP with constant offsets.
   const DataLayout &DL = I.getModule()->getDataLayout();
   Value *SrcPtr = Load->getPointerOperand()->stripPointerCasts();
   assert(isa<PointerType>(SrcPtr->getType()) && "Expected a pointer type");
@@ -127,10 +127,13 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   if (AS != SrcPtr->getType()->getPointerAddressSpace())
     SrcPtr = Load->getPointerOperand();
 
+  // We are potentially transforming byte-sized (8-bit) memory accesses, so make
+  // sure we have all of our type-based constraints in place for this target.
   Type *ScalarTy = Scalar->getType();
   uint64_t ScalarSize = ScalarTy->getPrimitiveSizeInBits();
   unsigned MinVectorSize = TTI.getMinVectorRegisterBitWidth();
-  if (!ScalarSize || !MinVectorSize || MinVectorSize % ScalarSize != 0)
+  if (!ScalarSize || !MinVectorSize || MinVectorSize % ScalarSize != 0 ||
+      ScalarSize % 8 != 0)
     return false;
 
   // Check safety of replacing the scalar load with a larger vector load.
@@ -139,12 +142,45 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   // we may use a larger value based on alignment attributes.
   unsigned MinVecNumElts = MinVectorSize / ScalarSize;
   auto *MinVecTy = VectorType::get(ScalarTy, MinVecNumElts, false);
-  if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Align(1), DL, Load, &DT))
-    return false;
+  unsigned OffsetEltIndex = 0;
+  Align Alignment = Load->getAlign();
+  if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Align(1), DL, Load, &DT)) {
+    // It is not safe to load directly from the pointer, but we can still peek
+    // through gep offsets and check if it safe to load from a base address with
+    // updated alignment. If it is, we can shuffle the element(s) into place
+    // after loading.
+    unsigned OffsetBitWidth = DL.getIndexTypeSizeInBits(SrcPtr->getType());
+    APInt Offset(OffsetBitWidth, 0);
+    SrcPtr = SrcPtr->stripAndAccumulateInBoundsConstantOffsets(DL, Offset);
+
+    // We want to shuffle the result down from a high element of a vector, so
+    // the offset must be positive.
+    if (Offset.isNegative())
+      return false;
+
+    // The offset must be a multiple of the scalar element to shuffle cleanly
+    // in the element's size.
+    uint64_t ScalarSizeInBytes = ScalarSize / 8;
+    if (Offset.urem(ScalarSizeInBytes) != 0)
+      return false;
+
+    // If we load MinVecNumElts, will our target element still be loaded?
+    OffsetEltIndex = Offset.udiv(ScalarSizeInBytes).getZExtValue();
+    if (OffsetEltIndex >= MinVecNumElts)
+      return false;
+
+    if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Align(1), DL, Load, &DT))
+      return false;
+
+    // Update alignment with offset value. Note that the offset could be negated
+    // to more accurately represent "(new) SrcPtr - Offset = (old) SrcPtr", but
+    // negation does not change the result of the alignment calculation.
+    Alignment = commonAlignment(Alignment, Offset.getZExtValue());
+  }
 
   // Original pattern: insertelt undef, load [free casts of] PtrOp, 0
   // Use the greater of the alignment on the load or its source pointer.
-  Align Alignment = std::max(SrcPtr->getPointerAlignment(DL), Load->getAlign());
+  Alignment = std::max(SrcPtr->getPointerAlignment(DL), Alignment);
   Type *LoadTy = Load->getType();
   int OldCost = TTI.getMemoryOpCost(Instruction::Load, LoadTy, Alignment, AS);
   APInt DemandedElts = APInt::getOneBitSet(MinVecNumElts, 0);
@@ -153,6 +189,9 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
 
   // New pattern: load VecPtr
   int NewCost = TTI.getMemoryOpCost(Instruction::Load, MinVecTy, Alignment, AS);
+  // Optionally, we are shuffling the loaded vector element(s) into place.
+  if (OffsetEltIndex)
+    NewCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, MinVecTy);
 
   // We can aggressively convert to the vector form because the backend can
   // invert this transform if it does not result in a performance win.
@@ -168,12 +207,13 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   // Set everything but element 0 to undef to prevent poison from propagating
   // from the extra loaded memory. This will also optionally shrink/grow the
   // vector from the loaded size to the output size.
-  // We assume this operation has no cost in codegen.
+  // We assume this operation has no cost in codegen if there was no offset.
   // Note that we could use freeze to avoid poison problems, but then we might
   // still need a shuffle to change the vector size.
   unsigned OutputNumElts = Ty->getNumElements();
   SmallVector<int, 16> Mask(OutputNumElts, UndefMaskElem);
-  Mask[0] = 0;
+  assert(OffsetEltIndex < MinVecNumElts && "Address offset too big");
+  Mask[0] = OffsetEltIndex;
   VecLd = Builder.CreateShuffleVector(VecLd, Mask);
 
   replaceValue(I, *VecLd);
