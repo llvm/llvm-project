@@ -229,6 +229,14 @@ let TargetPrefix = "riscv" in {
     let ExtendOperand = 3;
   }
 
+  // For vmv.v.v, vmv.v.x, vmv.v.i
+  // Input: (vector_in/scalar_in, vl)
+  class RISCVUnary : Intrinsic<[llvm_anyvector_ty],
+                               [llvm_any_ty, llvm_anyint_ty],
+                               [IntrNoMem] >, RISCVVIntrinsic {
+    let ExtendOperand = 1;
+  }
+
   multiclass RISCVUSLoad {
     def "int_riscv_" # NAME : RISCVUSLoad;
     def "int_riscv_" # NAME # "_mask" : RISCVUSLoadMask;
@@ -328,4 +336,7 @@ let TargetPrefix = "riscv" in {
   defm vsadd : RISCVSaturatingBinaryAAX;
   defm vssubu : RISCVSaturatingBinaryAAX;
   defm vssub : RISCVSaturatingBinaryAAX;
+
+  def int_riscv_vmv_v_v : RISCVUnary;
+  def int_riscv_vmv_v_x : RISCVUnary;
 } // TargetPrefix = "riscv"
