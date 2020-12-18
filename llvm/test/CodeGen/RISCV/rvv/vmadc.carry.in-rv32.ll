@@ -738,10 +738,10 @@ define <vscale x 2 x i1> @intrinsic_vmadc.carry.in_vim_nxv2i1_nxv2i8_i8(<vscale 
 entry:
 ; CHECK-LABEL: intrinsic_vmadc.carry.in_vim_nxv2i1_nxv2i8_i8
 ; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e8,mf4,ta,mu
-; CHECK:       vmadc.vim {{v[0-9]+}}, {{v[0-9]+}}, 9, v0
+; CHECK:       vmadc.vim {{v[0-9]+}}, {{v[0-9]+}}, -9, v0
   %a = call <vscale x 2 x i1> @llvm.riscv.vmadc.carry.in.nxv2i1.i8(
     <vscale x 2 x i8> %0,
-    i8 9,
+    i8 -9,
     <vscale x 2 x i1> %1,
     i32 %2)
 
@@ -766,10 +766,10 @@ define <vscale x 8 x i1> @intrinsic_vmadc.carry.in_vim_nxv8i1_nxv8i8_i8(<vscale 
 entry:
 ; CHECK-LABEL: intrinsic_vmadc.carry.in_vim_nxv8i1_nxv8i8_i8
 ; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e8,m1,ta,mu
-; CHECK:       vmadc.vim {{v[0-9]+}}, {{v[0-9]+}}, 9, v0
+; CHECK:       vmadc.vim {{v[0-9]+}}, {{v[0-9]+}}, -9, v0
   %a = call <vscale x 8 x i1> @llvm.riscv.vmadc.carry.in.nxv8i1.i8(
     <vscale x 8 x i8> %0,
-    i8 9,
+    i8 -9,
     <vscale x 8 x i1> %1,
     i32 %2)
 
@@ -794,10 +794,10 @@ define <vscale x 32 x i1> @intrinsic_vmadc.carry.in_vim_nxv32i1_nxv32i8_i8(<vsca
 entry:
 ; CHECK-LABEL: intrinsic_vmadc.carry.in_vim_nxv32i1_nxv32i8_i8
 ; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e8,m4,ta,mu
-; CHECK:       vmadc.vim {{v[0-9]+}}, {{v[0-9]+}}, 9, v0
+; CHECK:       vmadc.vim {{v[0-9]+}}, {{v[0-9]+}}, -9, v0
   %a = call <vscale x 32 x i1> @llvm.riscv.vmadc.carry.in.nxv32i1.i8(
     <vscale x 32 x i8> %0,
-    i8 9,
+    i8 -9,
     <vscale x 32 x i1> %1,
     i32 %2)
 
@@ -822,10 +822,10 @@ define <vscale x 1 x i1> @intrinsic_vmadc.carry.in_vim_nxv1i1_nxv1i16_i16(<vscal
 entry:
 ; CHECK-LABEL: intrinsic_vmadc.carry.in_vim_nxv1i1_nxv1i16_i16
 ; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e16,mf4,ta,mu
-; CHECK:       vmadc.vim {{v[0-9]+}}, {{v[0-9]+}}, 9, v0
+; CHECK:       vmadc.vim {{v[0-9]+}}, {{v[0-9]+}}, -9, v0
   %a = call <vscale x 1 x i1> @llvm.riscv.vmadc.carry.in.nxv1i1.i16(
     <vscale x 1 x i16> %0,
-    i16 9,
+    i16 -9,
     <vscale x 1 x i1> %1,
     i32 %2)
 
@@ -850,10 +850,10 @@ define <vscale x 4 x i1> @intrinsic_vmadc.carry.in_vim_nxv4i1_nxv4i16_i16(<vscal
 entry:
 ; CHECK-LABEL: intrinsic_vmadc.carry.in_vim_nxv4i1_nxv4i16_i16
 ; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e16,m1,ta,mu
-; CHECK:       vmadc.vim {{v[0-9]+}}, {{v[0-9]+}}, 9, v0
+; CHECK:       vmadc.vim {{v[0-9]+}}, {{v[0-9]+}}, -9, v0
   %a = call <vscale x 4 x i1> @llvm.riscv.vmadc.carry.in.nxv4i1.i16(
     <vscale x 4 x i16> %0,
-    i16 9,
+    i16 -9,
     <vscale x 4 x i1> %1,
     i32 %2)
 
@@ -878,10 +878,10 @@ define <vscale x 16 x i1> @intrinsic_vmadc.carry.in_vim_nxv16i1_nxv16i16_i16(<vs
 entry:
 ; CHECK-LABEL: intrinsic_vmadc.carry.in_vim_nxv16i1_nxv16i16_i16
 ; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e16,m4,ta,mu
-; CHECK:       vmadc.vim {{v[0-9]+}}, {{v[0-9]+}}, 9, v0
+; CHECK:       vmadc.vim {{v[0-9]+}}, {{v[0-9]+}}, -9, v0
   %a = call <vscale x 16 x i1> @llvm.riscv.vmadc.carry.in.nxv16i1.i16(
     <vscale x 16 x i16> %0,
-    i16 9,
+    i16 -9,
     <vscale x 16 x i1> %1,
     i32 %2)
 
@@ -906,10 +906,10 @@ define <vscale x 1 x i1> @intrinsic_vmadc.carry.in_vim_nxv1i1_nxv1i32_i32(<vscal
 entry:
 ; CHECK-LABEL: intrinsic_vmadc.carry.in_vim_nxv1i1_nxv1i32_i32
 ; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e32,mf2,ta,mu
-; CHECK:       vmadc.vim {{v[0-9]+}}, {{v[0-9]+}}, 9, v0
+; CHECK:       vmadc.vim {{v[0-9]+}}, {{v[0-9]+}}, -9, v0
   %a = call <vscale x 1 x i1> @llvm.riscv.vmadc.carry.in.nxv1i1.i32(
     <vscale x 1 x i32> %0,
-    i32 9,
+    i32 -9,
     <vscale x 1 x i1> %1,
     i32 %2)
 
@@ -934,10 +934,10 @@ define <vscale x 4 x i1> @intrinsic_vmadc.carry.in_vim_nxv4i1_nxv4i32_i32(<vscal
 entry:
 ; CHECK-LABEL: intrinsic_vmadc.carry.in_vim_nxv4i1_nxv4i32_i32
 ; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e32,m2,ta,mu
-; CHECK:       vmadc.vim {{v[0-9]+}}, {{v[0-9]+}}, 9, v0
+; CHECK:       vmadc.vim {{v[0-9]+}}, {{v[0-9]+}}, -9, v0
   %a = call <vscale x 4 x i1> @llvm.riscv.vmadc.carry.in.nxv4i1.i32(
     <vscale x 4 x i32> %0,
-    i32 9,
+    i32 -9,
     <vscale x 4 x i1> %1,
     i32 %2)
 
@@ -962,10 +962,10 @@ define <vscale x 16 x i1> @intrinsic_vmadc.carry.in_vim_nxv16i1_nxv16i32_i32(<vs
 entry:
 ; CHECK-LABEL: intrinsic_vmadc.carry.in_vim_nxv16i1_nxv16i32_i32
 ; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e32,m8,ta,mu
-; CHECK:       vmadc.vim {{v[0-9]+}}, {{v[0-9]+}}, 9, v0
+; CHECK:       vmadc.vim {{v[0-9]+}}, {{v[0-9]+}}, -9, v0
   %a = call <vscale x 16 x i1> @llvm.riscv.vmadc.carry.in.nxv16i1.i32(
     <vscale x 16 x i32> %0,
-    i32 9,
+    i32 -9,
     <vscale x 16 x i1> %1,
     i32 %2)
 
