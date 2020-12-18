@@ -432,12 +432,13 @@ TEST_F(DirectoryBasedGlobalCompilationDatabaseCacheTest, Cacheable) {
   EXPECT_THAT(FooBar, hasFlag("-DFOOBAR")) << "cdb reloaded";
 
   // compile_commands.json takes precedence over compile_flags.txt.
-  FS.Files["foo/compile_commands.json"] = llvm::formatv(R"json([{
+  FS.Files["foo/compile_commands.json"] =
+      llvm::formatv(R"json([{
     "file": "{0}/foo/dummy.cc",
     "command": "clang -DBAZ dummy.cc",
     "directory": "{0}/foo",
   }])json",
-                                                        testRoot());
+                    llvm::sys::path::convert_to_slash(testRoot()));
   EXPECT_EQ(FooBar, lookupCDB(GDB, testPath("foo/test.cc"), Stale))
       << "cache still valid";
   auto Baz = lookupCDB(GDB, testPath("foo/test.cc"), Fresh);
