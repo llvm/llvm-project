@@ -1190,7 +1190,7 @@ llvm::Optional<size_t> SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
       // the number of fields are increased to match.
       if (name.startswith("payload_data_")) {
         uint32_t index;
-        if (name.take_back().getAsInteger(10, index) && index <= 2) {
+        if (name.take_back().getAsInteger(10, index) && index < 3) {
           child_indexes.push_back(index);
           return child_indexes.size();
         }
