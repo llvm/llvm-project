@@ -335,7 +335,7 @@ define <2 x i32> @not_cond_vec_undef(<2 x i1> %c, <2 x i32> %tv, <2 x i32> %fv) 
 !1 = !{!"branch_weights", i32 2, i32 10}
 !2 = !{!"branch_weights", i32 3, i32 10}
 
-; CHECK-DAG: ![[$MD1]] = !{!"branch_weights", i32 2, i32 10}
-; CHECK-DAG: ![[$MD3]] = !{!"branch_weights", i32 10, i32 2}
-; CHECK-DAG: ![[$MD4]] = !{!"branch_weights", i32 10, i32 3}
+; CHECK:      !0 = !{!"branch_weights", i32 2, i32 10}
+; CHECK-NEXT: !1 = !{!"branch_weights", i32 10, i32 2}
+; CHECK-NEXT: !2 = !{!"branch_weights", i32 10, i32 3}
 
