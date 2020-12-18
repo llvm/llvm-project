@@ -23,8 +23,9 @@ using namespace lldb_private;
 using namespace llvm;
 
 struct TestTypeSystemSwiftTypeRef : public testing::Test {
-  TypeSystemSwiftTypeRef m_swift_ts = TypeSystemSwiftTypeRef(nullptr);
+  TypeSystemSwiftTypeRef m_swift_ts;
 
+  TestTypeSystemSwiftTypeRef() : m_swift_ts(nullptr) {}
   CompilerType GetCompilerType(std::string mangled_name) {
     ConstString internalized(mangled_name);
     return m_swift_ts.GetTypeFromMangledTypename(internalized);
