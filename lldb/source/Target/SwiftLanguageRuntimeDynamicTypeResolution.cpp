@@ -1182,7 +1182,7 @@ llvm::Optional<size_t> SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
     case RecordKind::ThickFunction:
       // There are two fields, `function` and `context`, but they're not exposed
       // by lldb.
-      return {};
+      return 0;
     case RecordKind::OpaqueExistential:
       // `OpaqueExistential` is documented as:
       //     An existential is a three-word buffer followed by value metadata...
