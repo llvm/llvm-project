@@ -980,9 +980,8 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, vm = 1 in {
 // Floating-Point Scalar Move Instructions
 def VFMV_F_S : RVInstV<0b010000, 0b00000, OPFVV, (outs FPR32:$vd),
                       (ins VR:$vs2), "vfmv.f.s", "$vd, $vs2">;
-let Constraints = "$vd = $vd_wb" in
-def VFMV_S_F : RVInstV2<0b010000, 0b00000, OPFVF, (outs VR:$vd_wb),
-                      (ins VR:$vd, FPR32:$rs1), "vfmv.s.f", "$vd, $rs1">;
+def VFMV_S_F : RVInstV2<0b010000, 0b00000, OPFVF, (outs VR:$vd),
+                      (ins FPR32:$rs1), "vfmv.s.f", "$vd, $rs1">;
 
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0, vm = 1
 } // Predicates = [HasStdExtV, HasStdExtF]
