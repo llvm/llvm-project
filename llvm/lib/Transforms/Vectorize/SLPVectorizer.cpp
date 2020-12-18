@@ -6911,12 +6911,12 @@ public:
     ReductionData.initReductionOps(ReductionOps);
     while (!Stack.empty()) {
       Instruction *TreeN = Stack.back().first;
-      unsigned EdgeToVist = Stack.back().second++;
+      unsigned EdgeToVisit = Stack.back().second++;
       OperationData OpData = getOperationData(TreeN);
       bool IsReducedValue = OpData != ReductionData;
 
       // Postorder vist.
-      if (IsReducedValue || EdgeToVist == OpData.getNumberOfOperands()) {
+      if (IsReducedValue || EdgeToVisit == OpData.getNumberOfOperands()) {
         if (IsReducedValue)
           ReducedVals.push_back(TreeN);
         else {
@@ -6942,7 +6942,7 @@ public:
       }
 
       // Visit left or right.
-      Value *NextV = TreeN->getOperand(EdgeToVist);
+      Value *NextV = TreeN->getOperand(EdgeToVisit);
       if (NextV != Phi) {
         auto *I = dyn_cast<Instruction>(NextV);
         OpData = getOperationData(I);
