@@ -118,7 +118,7 @@ Symbols:
 # RUN: yaml2obj %s --docnum=6 -o %t6
 # RUN: llvm-readobj --symbols %t6 2>&1 | FileCheck -DFILE=%t6 --check-prefix=INVALID-SYM-SIZE %s
 
-# INVALID-SYM-SIZE: warning: '[[FILE]]': unable to read symbols from the SHT_SYMTAB section: section [index 1] has an invalid sh_entsize: 32
+# INVALID-SYM-SIZE: warning: '[[FILE]]': unable to read symbols from the SHT_SYMTAB section: section [index 1] has invalid sh_entsize: expected 24, but got 32
 
 --- !ELF
 FileHeader:
@@ -630,7 +630,7 @@ Symbols:
 # RUN: yaml2obj %s --docnum=29 -o %t29
 # RUN: llvm-readobj -V %t29 2>&1 | FileCheck -DFILE=%t29 --check-prefix=INVALID-VER-SHENTSIZE %s
 
-# INVALID-VER-SHENTSIZE: warning: '[[FILE]]': cannot read content of SHT_GNU_versym section with index 1: section [index 1] has an invalid sh_entsize: 3
+# INVALID-VER-SHENTSIZE: warning: '[[FILE]]': cannot read content of SHT_GNU_versym section with index 1: section [index 1] has invalid sh_entsize: expected 2, but got 3
 
 --- !ELF
 FileHeader:

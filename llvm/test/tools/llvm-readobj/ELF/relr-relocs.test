@@ -169,14 +169,14 @@ Sections:
 
 # BROKEN-LLVM:      Relocations [
 # BROKEN-LLVM-NEXT:   Section (1) .relr.dyn {
-# BROKEN-LLVM-NEXT: warning: '[[FILE]]': unable to read relocations from [[SECNAME]] section with index 1: section [index 1] has an invalid sh_entsize: 1
+# BROKEN-LLVM-NEXT: warning: '[[FILE]]': unable to read relocations from [[SECNAME]] section with index 1: section [index 1] has invalid sh_entsize: expected 4, but got 1
 # BROKEN-LLVM-NEXT:   }
 # BROKEN-LLVM-NEXT: ]
 
-# BROKEN-GNU:      warning: '[[FILE]]': unable to get the number of relocations in [[SECNAME]] section with index 1: section [index 1] has an invalid sh_entsize: 1
+# BROKEN-GNU:      warning: '[[FILE]]': unable to get the number of relocations in [[SECNAME]] section with index 1: section [index 1] has invalid sh_entsize: expected 4, but got 1
 # BROKEN-GNU:      Relocation section '.relr.dyn' at offset 0x34 contains <?> entries:
 # BROKEN-GNU-NEXT:  Offset     Info    Type                Sym. Value  Symbol's Name
-# BROKEN-GNU-NEXT: warning: '[[FILE]]': unable to read relocations from [[SECNAME]] section with index 1: section [index 1] has an invalid sh_entsize: 1
+# BROKEN-GNU-NEXT: warning: '[[FILE]]': unable to read relocations from [[SECNAME]] section with index 1: section [index 1] has invalid sh_entsize: expected 4, but got 1
 
 ## Case B: check the case when relocations can't be read from an SHT_ANDROID_RELR section.
 ##         SHT_ANDROID_RELR = 0x6fffff00.

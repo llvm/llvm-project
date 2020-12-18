@@ -412,7 +412,8 @@ Expected<ArrayRef<T>>
 ELFFile<ELFT>::getSectionContentsAsArray(const Elf_Shdr &Sec) const {
   if (Sec.sh_entsize != sizeof(T) && sizeof(T) != 1)
     return createError("section " + getSecIndexForError(*this, Sec) +
-                       " has an invalid sh_entsize: " + Twine(Sec.sh_entsize));
+                       " has invalid sh_entsize: expected " + Twine(sizeof(T)) +
+                       ", but got " + Twine(Sec.sh_entsize));
 
   uintX_t Offset = Sec.sh_offset;
   uintX_t Size = Sec.sh_size;
@@ -618,17 +619,17 @@ template <class ELFT>
 template <typename T>
 Expected<const T *> ELFFile<ELFT>::getEntry(const Elf_Shdr &Section,
                                             uint32_t Entry) const {
-  if (sizeof(T) != Section.sh_entsize)
-    return createError("section " + getSecIndexForError(*this, Section) +
-                       " has invalid sh_entsize: expected " + Twine(sizeof(T)) +
-                       ", but got " + Twine(Section.sh_entsize));
-  uint64_t Pos = Section.sh_offset + (uint64_t)Entry * sizeof(T);
-  if (Pos + sizeof(T) > Buf.size())
-    return createError("unable to access section " +
-                       getSecIndexForError(*this, Section) + " data at 0x" +
-                       Twine::utohexstr(Pos) +
-                       ": offset goes past the end of file");
-  return reinterpret_cast<const T *>(base() + Pos);
+  Expected<ArrayRef<T>> EntriesOrErr = getSectionContentsAsArray<T>(Section);
+  if (!EntriesOrErr)
+    return EntriesOrErr.takeError();
+
+  ArrayRef<T> Arr = *EntriesOrErr;
+  if (Entry >= Arr.size())
+    return createError("can't read an entry at 0x" +
+                       Twine::utohexstr(Entry * sizeof(T)) +
+                       ": it goes past the end of the section (0x" +
+                       Twine::utohexstr(Section.sh_size) + ")");
+  return &Arr[Entry];
 }
 
 template <class ELFT>

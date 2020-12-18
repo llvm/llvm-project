@@ -47,7 +47,7 @@ Symbols:
 # RUN: llvm-readelf %t2.o --cg-profile | FileCheck %s --check-prefix=GNU
 
 # LLVM-ERR:      CGProfile [
-# LLVM-ERR-NEXT: warning: '[[FILE]]': unable to dump the SHT_LLVM_CALL_GRAPH_PROFILE section: section [index 1] has an invalid sh_entsize: 15
+# LLVM-ERR-NEXT: warning: '[[FILE]]': unable to dump the SHT_LLVM_CALL_GRAPH_PROFILE section: section [index 1] has invalid sh_entsize: expected 16, but got 15
 # LLVM-ERR-NEXT: ]
 
 ## Check we report a warning when unable to dump a name of a symbol.

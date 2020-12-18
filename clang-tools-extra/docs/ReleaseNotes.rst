@@ -99,6 +99,12 @@ New checks
   Finds kernel files and include directives whose filename is `kernel.cl`,
   `Verilog.cl`, or `VHDL.cl`.
 
+- New :doc:`altera-single-work-item-barrier
+  <clang-tidy/checks/altera-single-work-item-barrier>` check.
+
+  Finds OpenCL kernel functions that call a barrier function but do not call
+  an ID function.
+
 - New :doc:`altera-struct-pack-align
   <clang-tidy/checks/altera-struct-pack-align>` check.
 

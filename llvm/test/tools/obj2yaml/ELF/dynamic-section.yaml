@@ -255,4 +255,4 @@ Sections:
 # RUN: yaml2obj -DENTSIZE=0xff %s -o %t2
 # RUN: not obj2yaml %t2 2>&1 | FileCheck %s --check-prefix=ENTSIZE
 
-# ENTSIZE: section [index 1] has an invalid sh_entsize: 255
+# ENTSIZE: section [index 1] has invalid sh_entsize: expected 16, but got 255
