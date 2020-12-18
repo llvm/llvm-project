@@ -178,6 +178,61 @@ private:
 
   /// The memory allocator used to allocate new IRInstructionData.
   SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+
+  /// Custom InstVisitor to classify different instructions for whether it can
+  /// be analyzed for similarity.  This is needed as there may be instruction we
+  /// can identify as having similarity, but are more complicated to outline.
+  struct InstructionAllowed
+      : public InstVisitor<InstructionAllowed, bool> {
+    InstructionAllowed() {}
+
+    // TODO: Determine a scheme to resolve when the label is similar enough.
+    bool visitBranchInst(BranchInst &BI) { return false; }
+    // TODO: Determine a scheme to resolve when the labels are similar enough.
+    bool visitPHINode(PHINode &PN) { return false; }
+    // TODO: Handle allocas.
+    bool visitAllocaInst(AllocaInst &AI) { return false; }
+    // VAArg instructions are not allowed since this could cause difficulty when
+    // differentiating between different sets of variable instructions in
+    // the deduplicated outlined regions.
+    bool visitVAArgInst(VAArgInst &VI) { return false; }
+    // We exclude all exception handling cases since they are so context
+    // dependent.
+    bool visitLandingPadInst(LandingPadInst &LPI) { return false; }
+    bool visitFuncletPadInst(FuncletPadInst &FPI) { return false; }
+    // DebugInfo should be included in the regions, but should not be
+    // analyzed for similarity as it has no bearing on the outcome of the
+    // program.
+    bool visitDbgInfoIntrinsic(DbgInfoIntrinsic &DII) {
+      return true;
+    }
+    // TODO: Handle GetElementPtrInsts
+    bool visitGetElementPtrInst(GetElementPtrInst &GEPI) {
+      return false;
+    }
+    // TODO: Handle specific intrinsics individually from those that can be
+    // handled.
+    bool IntrinsicInst(IntrinsicInst &II) { return false; }
+    // TODO: Handle CallInsts, there will need to be handling for special kinds
+    // of calls, as well as calls to intrinsics.
+    bool visitCallInst(CallInst &CI) { return false; }
+    // TODO: Handle FreezeInsts.  Since a frozen value could be frozen inside
+    // the outlined region, and then returned as an output, this will have to be
+    // handled differently.
+    bool visitFreezeInst(FreezeInst &CI) { return false; }
+    // TODO: We do not current handle similarity that changes the control flow.
+    bool visitInvokeInst(InvokeInst &II) { return false; }
+    // TODO: We do not current handle similarity that changes the control flow.
+    bool visitCallBrInst(CallBrInst &CBI) { return false; }
+    // TODO: Handle interblock similarity.
+    bool visitTerminator(Instruction &I) { return false; }
+    bool visitInstruction(Instruction &I) { 
+      return true;
+    }
+  };
+
+  /// A InstVisitor used to exclude certain instructions from being outlined.
+  InstructionAllowed InstructionClassifier;
 };
 
 /// Pass to outline similar regions.
