@@ -54,7 +54,7 @@ T tmain(T argc) {
   for (int i = 0; i < 10; ++i) foo();
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for dist_schedule (static, argv[1]=2) // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error3 {{expression must have integral or unscoped enumeration type, not 'char *'}}
+#pragma omp distribute parallel for dist_schedule (static, argv[1]=2) // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error 2{{expression must have integral or unscoped enumeration type, not 'char *'}}
   for (int i = 0; i < 10; ++i) foo();
   return T();
 }
