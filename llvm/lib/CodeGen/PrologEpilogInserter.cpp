@@ -620,12 +620,12 @@ void PEI::spillCalleeSavedRegs(MachineFunction &MF) {
       if (!MFI.hasCalls())
         NumLeafFuncWithSpills++;
 
-      for (MachineBasicBlock *SaveBlock : SaveBlocks) {
+      for (MachineBasicBlock *SaveBlock : SaveBlocks)
         insertCSRSaves(*SaveBlock, CSI);
-        // Update the live-in information of all the blocks up to the save
-        // point.
-        updateLiveness(MF);
-      }
+
+      // Update the live-in information of all the blocks up to the save point.
+      updateLiveness(MF);
+
       for (MachineBasicBlock *RestoreBlock : RestoreBlocks)
         insertCSRRestores(*RestoreBlock, CSI);
     }
