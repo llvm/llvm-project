@@ -53,8 +53,8 @@ bool CommandObjectRegexCommand::DoExecute(llvm::StringRef command,
       // Pass in true for "no context switching".  The command that called us
       // should have set up the context appropriately, we shouldn't have to
       // redo that.
-      return m_interpreter.HandleCommand(
-          new_command.c_str(), eLazyBoolCalculate, result, nullptr, true, true);
+      return m_interpreter.HandleCommand(new_command.c_str(),
+                                         eLazyBoolCalculate, result);
     }
   }
   result.SetStatus(eReturnStatusFailed);
