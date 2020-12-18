@@ -1211,8 +1211,9 @@ llvm::Optional<size_t> SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
     case ReferenceKind::Weak:
     case ReferenceKind::Unowned:
     case ReferenceKind::Unmanaged:
-      // TODO: Dereference
-      return {};
+      return GetIndexOfChildMemberWithName(GetWeakReferent(*ts, type), name,
+                                           exe_ctx, omit_empty_base_classes,
+                                           child_indexes);
     case ReferenceKind::Strong: {
       auto *reflection_ctx = GetReflectionContext();
       auto &builder = reflection_ctx->getBuilder();
