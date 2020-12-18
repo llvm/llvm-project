@@ -97,15 +97,25 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .moreElementsToNextPow2(0);
 
   getActionDefinitionsBuilder(G_SHL)
-    .legalFor({{s32, s32}, {s64, s64},
-               {v2s32, v2s32}, {v4s32, v4s32}, {v2s64, v2s64}})
-    .clampScalar(1, s32, s64)
-    .clampScalar(0, s32, s64)
-    .widenScalarToNextPow2(0)
-    .clampNumElements(0, v2s32, v4s32)
-    .clampNumElements(0, v2s64, v2s64)
-    .moreElementsToNextPow2(0)
-    .minScalarSameAs(1, 0);
+      .customIf([=](const LegalityQuery &Query) {
+        const auto &SrcTy = Query.Types[0];
+        const auto &AmtTy = Query.Types[1];
+        return !SrcTy.isVector() && SrcTy.getSizeInBits() == 32 &&
+               AmtTy.getSizeInBits() == 32;
+      })
+      .legalFor({{s32, s32},
+                 {s64, s64},
+                 {s32, s64},
+                 {v2s32, v2s32},
+                 {v4s32, v4s32},
+                 {v2s64, v2s64}})
+      .clampScalar(1, s32, s64)
+      .clampScalar(0, s32, s64)
+      .widenScalarToNextPow2(0)
+      .clampNumElements(0, v2s32, v4s32)
+      .clampNumElements(0, v2s64, v2s64)
+      .moreElementsToNextPow2(0)
+      .minScalarSameAs(1, 0);
 
   getActionDefinitionsBuilder(G_PTR_ADD)
       .legalFor({{p0, s64}, {v2p0, v2s64}})
