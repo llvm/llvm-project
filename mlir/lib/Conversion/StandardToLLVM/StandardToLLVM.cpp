@@ -1897,8 +1897,8 @@ struct ConstantOpLowering : public ConvertOpToLLVMPattern<ConstantOp> {
       if (!type)
         return rewriter.notifyMatchFailure(op, "failed to convert result type");
 
-      MutableDictionaryAttr attrs(op.getAttrs());
-      attrs.remove(rewriter.getIdentifier("value"));
+      NamedAttrList attrs(op->getAttrDictionary());
+      attrs.erase("value");
       rewriter.replaceOpWithNewOp<LLVM::AddressOfOp>(
           op, type.cast<LLVM::LLVMType>(), symbolRef.getValue(),
           attrs.getAttrs());

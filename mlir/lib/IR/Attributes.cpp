@@ -35,7 +35,7 @@ void AttributeStorage::setType(Type newType) {
 Type Attribute::getType() const { return impl->getType(); }
 
 /// Return the context this attribute belongs to.
-MLIRContext *Attribute::getContext() const { return getType().getContext(); }
+MLIRContext *Attribute::getContext() const { return getDialect().getContext(); }
 
 /// Get the dialect this attribute is registered to.
 Dialect &Attribute::getDialect() const {

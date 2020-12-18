@@ -910,7 +910,7 @@ void OpEmitter::genNamedOperandSetters() {
             "range.first, range.second";
     if (attrSizedOperands)
       body << ", ::mlir::MutableOperandRange::OperandSegment(" << i
-           << "u, *getOperation()->getMutableAttrDict().getNamed("
+           << "u, *getOperation()->getAttrDictionary().getNamed("
               "\"operand_segment_sizes\"))";
     body << ");\n";
   }
