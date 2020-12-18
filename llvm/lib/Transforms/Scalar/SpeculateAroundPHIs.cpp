@@ -756,13 +756,10 @@ static bool tryToSpeculatePHIs(SmallVectorImpl<PHINode *> &PNs,
   // For each PHI node in this block, check whether there are immediate folding
   // opportunities from speculation, and whether that speculation will be
   // valid. This determise the set of safe PHIs to speculate.
-  PNs.erase(llvm::remove_if(PNs,
-                            [&](PHINode *PN) {
-                              return !isSafeAndProfitableToSpeculateAroundPHI(
-                                  *PN, CostSavingsMap, PotentialSpecSet,
-                                  UnsafeSet, DT, TTI);
-                            }),
-            PNs.end());
+  llvm::erase_if(PNs, [&](PHINode *PN) {
+    return !isSafeAndProfitableToSpeculateAroundPHI(
+        *PN, CostSavingsMap, PotentialSpecSet, UnsafeSet, DT, TTI);
+  });
   // If no PHIs were profitable, skip.
   if (PNs.empty()) {
     LLVM_DEBUG(dbgs() << "  No safe and profitable PHIs found!\n");

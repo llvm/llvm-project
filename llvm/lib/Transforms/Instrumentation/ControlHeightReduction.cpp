@@ -950,10 +950,9 @@ void CHR::checkScopeHoistable(CHRScope *Scope) {
                 << "Dropped select due to unhoistable branch";
           });
         }
-        Selects.erase(std::remove_if(Selects.begin(), Selects.end(),
-                                     [EntryBB](SelectInst *SI) {
-                                       return SI->getParent() == EntryBB;
-                                     }), Selects.end());
+        llvm::erase_if(Selects, [EntryBB](SelectInst *SI) {
+          return SI->getParent() == EntryBB;
+        });
         Unhoistables.clear();
         InsertPoint = Branch;
       }
