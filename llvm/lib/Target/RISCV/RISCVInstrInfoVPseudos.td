@@ -14,6 +14,10 @@
 ///
 //===----------------------------------------------------------------------===//
 
+def riscv_vmv_x_s : SDNode<"RISCVISD::VMV_X_S",
+                           SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisVec<1>,
+                                                SDTCisInt<1>]>>;
+
 // X0 has special meaning for vsetvl/vsetvli.
 //  rd | rs1 |   AVL value | Effect on vl
 //--------------------------------------------------------------
@@ -1350,6 +1354,30 @@ defm PseudoVFRSUB      : VPseudoBinaryV_VX</*IsFloat=*/1>;
 } // Predicates = [HasStdExtV, HasStdExtF]
 
 //===----------------------------------------------------------------------===//
+// 17.1. Integer Scalar Move Instructions
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasStdExtV] in {
+let mayLoad = 0, mayStore = 0, hasSideEffects = 0, usesCustomInserter = 1,
+    Uses = [VL, VTYPE] in {
+  foreach m = MxList.m in {
+    let VLMul = m.value in {
+      let SEWIndex = 2, BaseInstr = VMV_X_S in
+      def PseudoVMV_X_S # "_" # m.MX: Pseudo<(outs GPR:$rd),
+                                             (ins m.vrclass:$rs2, ixlenimm:$sew),
+                                             []>, RISCVVPseudo;
+      let VLIndex = 3, SEWIndex = 4, BaseInstr = VMV_S_X,
+          Constraints = "$rd = $rs1" in
+      def PseudoVMV_S_X # "_" # m.MX: Pseudo<(outs m.vrclass:$rd),
+                                             (ins m.vrclass:$rs1, GPR:$rs2,
+                                             GPR:$vl, ixlenimm:$sew),
+                                             []>, RISCVVPseudo;
+    }
+  }
+}
+}
+
+//===----------------------------------------------------------------------===//
 // Patterns.
 //===----------------------------------------------------------------------===//
 let Predicates = [HasStdExtV] in {
@@ -1514,3 +1542,18 @@ defm "" : VPatBinaryV_VV_VX<"int_riscv_vfsub", "PseudoVFSUB", AllFloatVectors>;
 defm "" : VPatBinaryV_VX<"int_riscv_vfrsub", "PseudoVFRSUB", AllFloatVectors>;
 
 } // Predicates = [HasStdExtV, HasStdExtF]
+
+//===----------------------------------------------------------------------===//
+// 17.1. Integer Scalar Move Instructions
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasStdExtV] in {
+foreach vti = AllIntegerVectors in {
+  def : Pat<(riscv_vmv_x_s (vti.Vector vti.RegClass:$rs2)),
+            (!cast<Instruction>("PseudoVMV_X_S_" # vti.LMul.MX) $rs2, vti.SEW)>;
+  def : Pat<(vti.Vector (int_riscv_vmv_s_x (vti.Vector vti.RegClass:$rs1),
+                                           GPR:$rs2, GPR:$vl)),
+            (!cast<Instruction>("PseudoVMV_S_X_" # vti.LMul.MX)
+             (vti.Vector $rs1), $rs2, (NoX0 GPR:$vl), vti.SEW)>;
+}
+} // Predicates = [HasStdExtV]
