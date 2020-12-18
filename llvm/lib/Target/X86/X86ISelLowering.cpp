@@ -38007,7 +38007,7 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     SDValue Src = Op.getOperand(0);
     MVT SrcVT = Src.getSimpleValueType();
     if (!SrcVT.isVector())
-      return false;
+      break;
     // Don't bother broadcasting if we just need the 0'th element.
     if (DemandedElts == 1) {
       if (Src.getValueType() != VT)
@@ -38060,6 +38060,33 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
       ExtSizeInBits = SizeInBits / 4;
 
     switch (Opc) {
+      // Scalar broadcast.
+    case X86ISD::VBROADCAST: {
+      SDLoc DL(Op);
+      SDValue Src = Op.getOperand(0);
+      if (Src.getValueSizeInBits() > ExtSizeInBits)
+        Src = extractSubVector(Src, 0, TLO.DAG, DL, ExtSizeInBits);
+      EVT BcstVT = EVT::getVectorVT(*TLO.DAG.getContext(), VT.getScalarType(),
+                                    ExtSizeInBits / VT.getScalarSizeInBits());
+      SDValue Bcst = TLO.DAG.getNode(X86ISD::VBROADCAST, DL, BcstVT, Src);
+      return TLO.CombineTo(Op, insertSubVector(TLO.DAG.getUNDEF(VT), Bcst, 0,
+                                               TLO.DAG, DL, ExtSizeInBits));
+    }
+    case X86ISD::VBROADCAST_LOAD: {
+      SDLoc DL(Op);
+      auto *MemIntr = cast<MemIntrinsicSDNode>(Op);
+      EVT BcstVT = EVT::getVectorVT(*TLO.DAG.getContext(), VT.getScalarType(),
+                                    ExtSizeInBits / VT.getScalarSizeInBits());
+      SDVTList Tys = TLO.DAG.getVTList(BcstVT, MVT::Other);
+      SDValue Ops[] = {MemIntr->getOperand(0), MemIntr->getOperand(1)};
+      SDValue Bcst = TLO.DAG.getMemIntrinsicNode(
+          X86ISD::VBROADCAST_LOAD, DL, Tys, Ops, MemIntr->getMemoryVT(),
+          MemIntr->getMemOperand());
+      TLO.DAG.makeEquivalentMemoryOrdering(SDValue(MemIntr, 1),
+                                           Bcst.getValue(1));
+      return TLO.CombineTo(Op, insertSubVector(TLO.DAG.getUNDEF(VT), Bcst, 0,
+                                               TLO.DAG, DL, ExtSizeInBits));
+    }
       // Subvector broadcast.
     case X86ISD::SUBV_BROADCAST: {
       SDLoc DL(Op);
@@ -49363,27 +49390,6 @@ static SDValue combineExtractSubvector(SDNode *N, SelectionDAG &DAG,
     return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT,
                        getZeroVector(VT, Subtarget, DAG, DL),
                        InVec.getOperand(1), InVec.getOperand(2));
-  }
-
-  // If we're extracting from a broadcast then we're better off just
-  // broadcasting to the smaller type directly, assuming this is the only use.
-  // As its a broadcast we don't care about the extraction index.
-  if (InVec.getOpcode() == X86ISD::VBROADCAST && InVec.hasOneUse() &&
-      InVec.getOperand(0).getValueSizeInBits() <= SizeInBits)
-    return DAG.getNode(X86ISD::VBROADCAST, SDLoc(N), VT, InVec.getOperand(0));
-
-  if (InVec.getOpcode() == X86ISD::VBROADCAST_LOAD && InVec.hasOneUse()) {
-    auto *MemIntr = cast<MemIntrinsicSDNode>(InVec);
-    if (MemIntr->getMemoryVT().getSizeInBits() <= SizeInBits) {
-      SDVTList Tys = DAG.getVTList(VT, MVT::Other);
-      SDValue Ops[] = {MemIntr->getChain(), MemIntr->getBasePtr()};
-      SDValue BcastLd =
-          DAG.getMemIntrinsicNode(X86ISD::VBROADCAST_LOAD, SDLoc(N), Tys, Ops,
-                                  MemIntr->getMemoryVT(),
-                                  MemIntr->getMemOperand());
-      DAG.ReplaceAllUsesOfValueWith(SDValue(MemIntr, 1), BcastLd.getValue(1));
-      return BcastLd;
-    }
   }
 
   // If we're extracting an upper subvector from a broadcast we should just
