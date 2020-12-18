@@ -1890,16 +1890,8 @@ private:
         return builder->allocateLocal(loc, ty, nm, args, lenParams,
                                       var.isTarget());
       }
-    auto local =
-        builder->allocateLocal(loc, ty, nm, shape, lenParams, var.isTarget());
-    // Set local pointer/allocatable to null.
-    if (var.isHeapAlloc() || var.isPointer()) {
-      auto zero =
-          builder->createIntegerConstant(loc, builder->getIndexType(), 0);
-      auto null = builder->createConvert(loc, ty, zero);
-      builder->create<fir::StoreOp>(loc, null, local);
-    }
-    return local;
+    return builder->allocateLocal(loc, ty, nm, shape, lenParams,
+                                  var.isTarget());
   }
   /// Instantiate a local variable. Precondition: Each variable will be visited
   /// such that if its properties depend on other variables, the variables upon
@@ -2284,19 +2276,6 @@ private:
     mapSymbolAttributes(var, stmtCtx, local);
   }
 
-  mlir::Value createLocalAllocatable(mlir::Location loc,
-                                     const Fortran::lower::pft::Variable &var,
-                                     mlir::Type boxTy,
-                                     mlir::ValueRange nonDeferredParams) {
-    auto boxAlloc =
-        builder->allocateLocal(loc, boxTy, mangleName(var.getSymbol()),
-                               llvm::None, llvm::None, var.isTarget());
-    auto box = Fortran::lower::createUnallocatedBox(*builder, loc, boxTy,
-                                                    nonDeferredParams);
-    builder->create<fir::StoreOp>(loc, box, boxAlloc);
-    return boxAlloc;
-  }
-
   //===--------------------------------------------------------------===//
   // Lower Variables specification expressions and attributes
   //===--------------------------------------------------------------===//
@@ -2325,6 +2304,17 @@ private:
     // First deal with pointers an allocatables, because their handling here
     // is the same regardless of their rank.
     if (Fortran::semantics::IsAllocatableOrPointer(sym)) {
+      // Get address of fir.box describing the entity.
+      // global
+      auto boxAlloc = preAlloc;
+      // dummy or passed result
+      if (!boxAlloc)
+        if (auto symbox = lookupSymbol(sym))
+          boxAlloc = symbox.getAddr();
+      // local
+      if (!boxAlloc)
+        boxAlloc = createNewLocal(loc, var, preAlloc);
+      // Lower non deferred parameters.
       llvm::SmallVector<mlir::Value, 1> nonDeferredLenParams;
       auto lenTy = builder->getCharacterLengthType();
       if (sba.isChar()) {
@@ -2334,20 +2324,13 @@ private:
         else if (auto lenExpr = sba.getCharLenExpr())
           nonDeferredLenParams.push_back(
               createFIRExpr(loc, &*lenExpr, stmtCtx));
+        // TODO: assumed length allocatable. Need to read the
+        // input descriptor.
       }
-      // TODO: derived type length parameters
-      // global
-      auto boxAlloc = preAlloc;
-      // dummy or passed result
-      if (!boxAlloc)
-        if (auto symbox = lookupSymbol(sym))
-          boxAlloc = symbox.getAddr();
-      // local
-      if (!boxAlloc)
-        boxAlloc = createLocalAllocatable(loc, var, genType(var),
-                                          nonDeferredLenParams);
-      localSymbols.addAllocatableOrPointer(var.getSymbol(), boxAlloc,
-                                           nonDeferredLenParams, replace);
+      // TODO: non deferred derived type length parameters
+      auto box = Fortran::lower::createMutableBox(*this, loc, var, boxAlloc,
+                                                  nonDeferredLenParams);
+      localSymbols.addAllocatableOrPointer(var.getSymbol(), box, replace);
       return;
     }
 
