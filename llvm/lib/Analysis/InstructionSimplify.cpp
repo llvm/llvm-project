@@ -4020,11 +4020,12 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
 
     // X == 0 ? abs(X) : -abs(X) --> -abs(X)
     // X == 0 ? -abs(X) : abs(X) --> abs(X)
-    if (match(TrueVal, m_Intrinsic<Intrinsic::abs>(m_Value(X))) &&
-        match(FalseVal, m_Neg(m_Intrinsic<Intrinsic::abs>(m_Specific(X)))))
+    if (match(TrueVal, m_Intrinsic<Intrinsic::abs>(m_Specific(CmpLHS))) &&
+        match(FalseVal, m_Neg(m_Intrinsic<Intrinsic::abs>(m_Specific(CmpLHS)))))
       return FalseVal;
-    if (match(TrueVal, m_Neg(m_Intrinsic<Intrinsic::abs>(m_Value(X)))) &&
-        match(FalseVal, m_Intrinsic<Intrinsic::abs>(m_Specific(X))))
+    if (match(TrueVal,
+              m_Neg(m_Intrinsic<Intrinsic::abs>(m_Specific(CmpLHS)))) &&
+        match(FalseVal, m_Intrinsic<Intrinsic::abs>(m_Specific(CmpLHS))))
       return FalseVal;
   }
 
