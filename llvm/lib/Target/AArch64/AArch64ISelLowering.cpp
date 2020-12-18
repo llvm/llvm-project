@@ -184,6 +184,8 @@ static bool isMergePassthruOpcode(unsigned Opc) {
     return false;
   case AArch64ISD::BITREVERSE_MERGE_PASSTHRU:
   case AArch64ISD::BSWAP_MERGE_PASSTHRU:
+  case AArch64ISD::CTLZ_MERGE_PASSTHRU:
+  case AArch64ISD::CTPOP_MERGE_PASSTHRU:
   case AArch64ISD::DUP_MERGE_PASSTHRU:
   case AArch64ISD::FNEG_MERGE_PASSTHRU:
   case AArch64ISD::SIGN_EXTEND_INREG_MERGE_PASSTHRU:
@@ -1070,6 +1072,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     for (auto VT : {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv4i32, MVT::nxv2i64}) {
       setOperationAction(ISD::BITREVERSE, VT, Custom);
       setOperationAction(ISD::BSWAP, VT, Custom);
+      setOperationAction(ISD::CTLZ, VT, Custom);
+      setOperationAction(ISD::CTPOP, VT, Custom);
+      setOperationAction(ISD::CTTZ, VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
       setOperationAction(ISD::UINT_TO_FP, VT, Custom);
       setOperationAction(ISD::SINT_TO_FP, VT, Custom);
@@ -1188,6 +1193,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
       // These operations are not supported on NEON but SVE can do them.
       setOperationAction(ISD::BITREVERSE, MVT::v1i64, Custom);
+      setOperationAction(ISD::CTLZ, MVT::v1i64, Custom);
+      setOperationAction(ISD::CTLZ, MVT::v2i64, Custom);
+      setOperationAction(ISD::CTTZ, MVT::v1i64, Custom);
       setOperationAction(ISD::MUL, MVT::v1i64, Custom);
       setOperationAction(ISD::MUL, MVT::v2i64, Custom);
       setOperationAction(ISD::SDIV, MVT::v8i8, Custom);
@@ -1223,6 +1231,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       for (auto VT : {MVT::v8i8, MVT::v16i8, MVT::v4i16, MVT::v8i16,
                       MVT::v2i32, MVT::v4i32, MVT::v2i64}) {
         setOperationAction(ISD::BITREVERSE, VT, Custom);
+        setOperationAction(ISD::CTTZ, VT, Custom);
         setOperationAction(ISD::VECREDUCE_AND, VT, Custom);
         setOperationAction(ISD::VECREDUCE_OR, VT, Custom);
         setOperationAction(ISD::VECREDUCE_XOR, VT, Custom);
@@ -1338,6 +1347,9 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::ANY_EXTEND, VT, Custom);
   setOperationAction(ISD::BITREVERSE, VT, Custom);
   setOperationAction(ISD::BSWAP, VT, Custom);
+  setOperationAction(ISD::CTLZ, VT, Custom);
+  setOperationAction(ISD::CTPOP, VT, Custom);
+  setOperationAction(ISD::CTTZ, VT, Custom);
   setOperationAction(ISD::FADD, VT, Custom);
   setOperationAction(ISD::FCEIL, VT, Custom);
   setOperationAction(ISD::FDIV, VT, Custom);
@@ -1944,6 +1956,8 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::STNP)
     MAKE_CASE(AArch64ISD::BITREVERSE_MERGE_PASSTHRU)
     MAKE_CASE(AArch64ISD::BSWAP_MERGE_PASSTHRU)
+    MAKE_CASE(AArch64ISD::CTLZ_MERGE_PASSTHRU)
+    MAKE_CASE(AArch64ISD::CTPOP_MERGE_PASSTHRU)
     MAKE_CASE(AArch64ISD::DUP_MERGE_PASSTHRU)
     MAKE_CASE(AArch64ISD::INDEX_VECTOR)
     MAKE_CASE(AArch64ISD::UABD)
@@ -3577,6 +3591,17 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::aarch64_sve_ptrue:
     return DAG.getNode(AArch64ISD::PTRUE, dl, Op.getValueType(),
                        Op.getOperand(1));
+  case Intrinsic::aarch64_sve_clz:
+    return DAG.getNode(AArch64ISD::CTLZ_MERGE_PASSTHRU, dl, Op.getValueType(),
+                       Op.getOperand(2), Op.getOperand(3), Op.getOperand(1));
+  case Intrinsic::aarch64_sve_cnt: {
+    SDValue Data = Op.getOperand(3);
+    // CTPOP only supports integer operands.
+    if (Data.getValueType().isFloatingPoint())
+      Data = DAG.getNode(ISD::BITCAST, dl, Op.getValueType(), Data);
+    return DAG.getNode(AArch64ISD::CTPOP_MERGE_PASSTHRU, dl, Op.getValueType(),
+                       Op.getOperand(2), Data, Op.getOperand(1));
+  }
   case Intrinsic::aarch64_sve_dupq_lane:
     return LowerDUPQLane(Op, DAG);
   case Intrinsic::aarch64_sve_convert_from_svbool:
@@ -4378,6 +4403,11 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
                                /*OverrideNEON=*/true);
   case ISD::BSWAP:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::BSWAP_MERGE_PASSTHRU);
+  case ISD::CTLZ:
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::CTLZ_MERGE_PASSTHRU,
+                               /*OverrideNEON=*/true);
+  case ISD::CTTZ:
+    return LowerCTTZ(Op, DAG);
   }
 }
 
@@ -6484,6 +6514,9 @@ SDValue AArch64TargetLowering::LowerCTPOP(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i128, UaddLV);
   }
 
+  if (VT.isScalableVector() || useSVEForFixedLengthVectorVT(VT))
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::CTPOP_MERGE_PASSTHRU);
+
   assert((VT == MVT::v1i64 || VT == MVT::v2i64 || VT == MVT::v2i32 ||
           VT == MVT::v4i32 || VT == MVT::v4i16 || VT == MVT::v8i16) &&
          "Unexpected type for custom ctpop lowering");
@@ -6505,6 +6538,16 @@ SDValue AArch64TargetLowering::LowerCTPOP(SDValue Op, SelectionDAG &DAG) const {
   }
 
   return Val;
+}
+
+SDValue AArch64TargetLowering::LowerCTTZ(SDValue Op, SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  assert(VT.isScalableVector() ||
+         useSVEForFixedLengthVectorVT(VT, /*OverrideNEON=*/true));
+
+  SDLoc DL(Op);
+  SDValue RBIT = DAG.getNode(ISD::BITREVERSE, DL, VT, Op.getOperand(0));
+  return DAG.getNode(ISD::CTLZ, DL, VT, RBIT);
 }
 
 SDValue AArch64TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
