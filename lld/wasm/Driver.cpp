@@ -67,7 +67,7 @@ static void initLLVM() {
 
 class LinkerDriver {
 public:
-  void link(ArrayRef<const char *> argsArr);
+  void linkerMain(ArrayRef<const char *> argsArr);
 
 private:
   void createFiles(opt::InputArgList &args);
@@ -98,7 +98,7 @@ bool link(ArrayRef<const char *> args, bool canExitEarly, raw_ostream &stdoutOS,
   symtab = make<SymbolTable>();
 
   initLLVM();
-  LinkerDriver().link(args);
+  LinkerDriver().linkerMain(args);
 
   // Exit immediately if we don't need to return to the caller.
   // This saves time because the overhead of calling destructors
@@ -787,7 +787,7 @@ static void wrapSymbols(ArrayRef<WrappedSymbol> wrapped) {
     symtab->wrap(w.sym, w.real, w.wrap);
 }
 
-void LinkerDriver::link(ArrayRef<const char *> argsArr) {
+void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   WasmOptTable parser;
   opt::InputArgList args = parser.parse(argsArr.slice(1));
 
