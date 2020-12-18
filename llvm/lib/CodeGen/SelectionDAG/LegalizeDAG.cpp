@@ -179,6 +179,7 @@ private:
                              SmallVectorImpl<SDValue> &Results);
   void PromoteLegalFP_TO_INT(SDNode *N, const SDLoc &dl,
                              SmallVectorImpl<SDValue> &Results);
+  SDValue PromoteLegalFP_TO_INT_SAT(SDNode *Node, const SDLoc &dl);
 
   SDValue ExpandBITREVERSE(SDValue Op, const SDLoc &dl);
   SDValue ExpandBSWAP(SDValue Op, const SDLoc &dl);
@@ -1136,10 +1137,11 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   case ISD::SSUBSAT:
   case ISD::USUBSAT:
   case ISD::SSHLSAT:
-  case ISD::USHLSAT: {
+  case ISD::USHLSAT:
+  case ISD::FP_TO_SINT_SAT:
+  case ISD::FP_TO_UINT_SAT:
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
     break;
-  }
   case ISD::SMULFIX:
   case ISD::SMULFIXSAT:
   case ISD::UMULFIX:
@@ -2736,6 +2738,30 @@ void SelectionDAGLegalize::PromoteLegalFP_TO_INT(SDNode *N, const SDLoc &dl,
     Results.push_back(Operation.getValue(1));
 }
 
+/// Promote FP_TO_*INT_SAT operation to a larger result type. At this point
+/// the result and operand types are legal and there must be a legal
+/// FP_TO_*INT_SAT operation for a larger result type.
+SDValue SelectionDAGLegalize::PromoteLegalFP_TO_INT_SAT(SDNode *Node,
+                                                        const SDLoc &dl) {
+  unsigned Opcode = Node->getOpcode();
+
+  // Scan for the appropriate larger type to use.
+  EVT NewOutTy = Node->getValueType(0);
+  while (true) {
+    NewOutTy = (MVT::SimpleValueType)(NewOutTy.getSimpleVT().SimpleTy + 1);
+    assert(NewOutTy.isInteger() && "Ran out of possibilities!");
+
+    if (TLI.isOperationLegalOrCustom(Opcode, NewOutTy))
+      break;
+  }
+
+  // Saturation width is determined by second operand, so we don't have to
+  // perform any fixup and can directly truncate the result.
+  SDValue Result = DAG.getNode(Opcode, dl, NewOutTy, Node->getOperand(0),
+                               Node->getOperand(1));
+  return DAG.getNode(ISD::TRUNCATE, dl, Node->getValueType(0), Result);
+}
+
 /// Legalize a BITREVERSE scalar/vector operation as a series of mask + shifts.
 SDValue SelectionDAGLegalize::ExpandBITREVERSE(SDValue Op, const SDLoc &dl) {
   EVT VT = Op.getValueType();
@@ -3166,6 +3192,10 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       LLVM_DEBUG(dbgs() << "Successfully expanded STRICT_FP_TO_UINT node\n");
       return true;
     }
+    break;
+  case ISD::FP_TO_SINT_SAT:
+  case ISD::FP_TO_UINT_SAT:
+    Results.push_back(TLI.expandFP_TO_INT_SAT(Node, DAG));
     break;
   case ISD::VAARG:
     Results.push_back(DAG.expandVAArg(Node));
@@ -4641,6 +4671,10 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::FP_TO_SINT:
   case ISD::STRICT_FP_TO_SINT:
     PromoteLegalFP_TO_INT(Node, dl, Results);
+    break;
+  case ISD::FP_TO_UINT_SAT:
+  case ISD::FP_TO_SINT_SAT:
+    Results.push_back(PromoteLegalFP_TO_INT_SAT(Node, dl));
     break;
   case ISD::UINT_TO_FP:
   case ISD::STRICT_UINT_TO_FP:
