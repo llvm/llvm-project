@@ -76,20 +76,22 @@ Operation *Operation::create(Location location, OperationName name,
                              ArrayRef<NamedAttribute> attributes,
                              BlockRange successors, unsigned numRegions) {
   return create(location, name, resultTypes, operands,
-                MutableDictionaryAttr(attributes), successors, numRegions);
+                DictionaryAttr::get(attributes, location.getContext()),
+                successors, numRegions);
 }
 
 /// Create a new Operation from operation state.
 Operation *Operation::create(const OperationState &state) {
   return create(state.location, state.name, state.types, state.operands,
-                state.attributes, state.successors, state.regions);
+                state.attributes.getDictionary(state.getContext()),
+                state.successors, state.regions);
 }
 
 /// Create a new Operation with the specific fields.
 Operation *Operation::create(Location location, OperationName name,
                              TypeRange resultTypes, ValueRange operands,
-                             MutableDictionaryAttr attributes,
-                             BlockRange successors, RegionRange regions) {
+                             DictionaryAttr attributes, BlockRange successors,
+                             RegionRange regions) {
   unsigned numRegions = regions.size();
   Operation *op = create(location, name, resultTypes, operands, attributes,
                          successors, numRegions);
@@ -99,12 +101,12 @@ Operation *Operation::create(Location location, OperationName name,
   return op;
 }
 
-/// Overload of create that takes an existing MutableDictionaryAttr to avoid
+/// Overload of create that takes an existing DictionaryAttr to avoid
 /// unnecessarily uniquing a list of attributes.
 Operation *Operation::create(Location location, OperationName name,
                              TypeRange resultTypes, ValueRange operands,
-                             MutableDictionaryAttr attributes,
-                             BlockRange successors, unsigned numRegions) {
+                             DictionaryAttr attributes, BlockRange successors,
+                             unsigned numRegions) {
   // We only need to allocate additional memory for a subset of results.
   unsigned numTrailingResults = OpResult::getNumTrailing(resultTypes.size());
   unsigned numInlineResults = OpResult::getNumInline(resultTypes.size());
@@ -164,12 +166,12 @@ Operation *Operation::create(Location location, OperationName name,
 
 Operation::Operation(Location location, OperationName name,
                      TypeRange resultTypes, unsigned numSuccessors,
-                     unsigned numRegions,
-                     const MutableDictionaryAttr &attributes,
+                     unsigned numRegions, DictionaryAttr attributes,
                      bool hasOperandStorage)
     : location(location), numSuccs(numSuccessors), numRegions(numRegions),
       hasOperandStorage(hasOperandStorage), hasSingleResult(false), name(name),
       attrs(attributes) {
+  assert(attributes && "unexpected null attribute dictionary");
   assert(llvm::all_of(resultTypes, [](Type t) { return t; }) &&
          "unexpected null result type");
   if (!resultTypes.empty()) {

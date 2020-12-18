@@ -542,7 +542,7 @@ private:
   DenseMap<uint32_t, StringRef> debugInfoMap;
 
   // Result <id> to decorations mapping.
-  DenseMap<uint32_t, MutableDictionaryAttr> decorations;
+  DenseMap<uint32_t, NamedAttrList> decorations;
 
   // Result <id> to type decorations.
   DenseMap<uint32_t, uint32_t> typeDecorations;

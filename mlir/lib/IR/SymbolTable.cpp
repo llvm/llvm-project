@@ -456,8 +456,8 @@ static WalkResult walkSymbolRefs(
     Operation *op,
     function_ref<WalkResult(SymbolTable::SymbolUse, ArrayRef<int>)> callback) {
   // Check to see if the operation has any attributes.
-  DictionaryAttr attrDict = op->getMutableAttrDict().getDictionaryOrNull();
-  if (!attrDict)
+  DictionaryAttr attrDict = op->getAttrDictionary();
+  if (attrDict.empty())
     return WalkResult::advance();
 
   // A worklist of a container attribute and the current index into the held

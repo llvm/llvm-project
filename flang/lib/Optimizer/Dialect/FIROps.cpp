@@ -1008,7 +1008,7 @@ getMutableSuccessorOperands(unsigned pos, mlir::MutableOperandRange operands,
                             StringRef offsetAttr) {
   Operation *owner = operands.getOwner();
   NamedAttribute targetOffsetAttr =
-      *owner->getMutableAttrDict().getNamed(offsetAttr);
+      *owner->getAttrDictionary().getNamed(offsetAttr);
   return getSubOperands(
       pos, operands, targetOffsetAttr.second.cast<DenseIntElementsAttr>(),
       mlir::MutableOperandRange::OperandSegment(pos, targetOffsetAttr));
