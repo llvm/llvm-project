@@ -495,10 +495,6 @@ def X86Vfpclasss   : SDNode<"X86ISD::VFPCLASSS",
                        SDTypeProfile<1, 2, [SDTCisVT<0, v1i1>,
                                             SDTCisFP<1>, SDTCisVT<2, i32>]>,[]>;
 
-def X86SubVBroadcast : SDNode<"X86ISD::SUBV_BROADCAST",
-                    SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>,
-                                         SDTCisSubVecOfVec<1, 0>]>, []>;
-
 def X86VBroadcast : SDNode<"X86ISD::VBROADCAST", SDTVBroadcast>;
 def X86VBroadcastm : SDNode<"X86ISD::VBROADCASTM", SDTVBroadcastm>;
 
