@@ -195,10 +195,6 @@ class GdbRemoteTestCaseBase(Base):
             # Remove if it's there.
             self.debug_monitor_exe = re.sub(r' \(deleted\)$', '', exe)
         else:
-            # TODO: enable this
-            if platform.system() == 'Windows':
-                reverse_connect = False
-
             self.debug_monitor_exe = get_lldb_server_exe()
             if not self.debug_monitor_exe:
                 self.skipTest("lldb-server exe not found")
