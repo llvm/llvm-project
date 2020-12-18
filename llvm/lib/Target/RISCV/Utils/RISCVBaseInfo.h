@@ -346,7 +346,8 @@ enum class RISCVVLMUL {
   LMUL_2,
   LMUL_4,
   LMUL_8,
-  LMUL_F8 = 5,
+  LMUL_RESERVED,
+  LMUL_F8,
   LMUL_F4,
   LMUL_F2
 };
