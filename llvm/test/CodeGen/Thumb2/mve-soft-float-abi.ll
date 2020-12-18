@@ -70,11 +70,9 @@ define <2 x i64> @vector_add_i64(<2 x i64> %lhs, <2 x i64> %rhs) {
 ; CHECK-FP-NEXT:    vmov r2, s1
 ; CHECK-FP-NEXT:    vmov r0, s5
 ; CHECK-FP-NEXT:    adds r1, r1, r3
-; CHECK-FP-NEXT:    vmov.32 q0[0], r1
+; CHECK-FP-NEXT:    vmov q0[2], q0[0], r1, lr
 ; CHECK-FP-NEXT:    adcs r0, r2
-; CHECK-FP-NEXT:    vmov.32 q0[1], r0
-; CHECK-FP-NEXT:    vmov.32 q0[2], lr
-; CHECK-FP-NEXT:    vmov.32 q0[3], r12
+; CHECK-FP-NEXT:    vmov q0[3], q0[1], r0, r12
 ; CHECK-FP-NEXT:    vmov r0, r1, d0
 ; CHECK-FP-NEXT:    vmov r2, r3, d1
 ; CHECK-FP-NEXT:    pop {r7, pc}

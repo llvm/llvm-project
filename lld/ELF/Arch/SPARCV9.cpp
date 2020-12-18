@@ -78,7 +78,7 @@ RelExpr SPARCV9::getRelExpr(RelType type, const Symbol &s,
     return R_NONE;
   case R_SPARC_TLS_LE_HIX22:
   case R_SPARC_TLS_LE_LOX10:
-    return R_TLS;
+    return R_TPREL;
   default:
     error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));

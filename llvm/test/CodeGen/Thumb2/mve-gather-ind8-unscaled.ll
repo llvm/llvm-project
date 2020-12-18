@@ -63,15 +63,13 @@ define arm_aapcs_vfpcc <2 x i8> @unscaled_v2i8_i8(i8* %base, <2 x i8>* %offptr) 
 ; CHECK-NEXT:    ldrb r2, [r1]
 ; CHECK-NEXT:    vmov.i32 q0, #0xff
 ; CHECK-NEXT:    ldrb r1, [r1, #1]
-; CHECK-NEXT:    vmov.32 q1[0], r2
-; CHECK-NEXT:    vmov.32 q1[2], r1
+; CHECK-NEXT:    vmov q1[2], q1[0], r2, r1
 ; CHECK-NEXT:    vand q0, q1, q0
-; CHECK-NEXT:    vmov r1, s0
-; CHECK-NEXT:    vmov r2, s2
+; CHECK-NEXT:    vmov r1, s2
+; CHECK-NEXT:    vmov r2, s0
 ; CHECK-NEXT:    ldrb r1, [r0, r1]
 ; CHECK-NEXT:    ldrb r0, [r0, r2]
-; CHECK-NEXT:    vmov.32 q0[0], r1
-; CHECK-NEXT:    vmov.32 q0[2], r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
   %offs = load <2 x i8>, <2 x i8>* %offptr, align 1

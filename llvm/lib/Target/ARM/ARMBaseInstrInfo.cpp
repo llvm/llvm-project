@@ -4790,6 +4790,14 @@ bool ARMBaseInstrInfo::verifyInstruction(const MachineInstr &MI,
       }
     }
   }
+  if (MI.getOpcode() == ARM::MVE_VMOV_q_rr) {
+    assert(MI.getOperand(4).isImm() && MI.getOperand(5).isImm());
+    if ((MI.getOperand(4).getImm() != 2 && MI.getOperand(4).getImm() != 3) ||
+        MI.getOperand(4).getImm() != MI.getOperand(5).getImm() + 2) {
+      ErrInfo = "Incorrect array index for MVE_VMOV_q_rr";
+      return false;
+    }
+  }
   return true;
 }
 

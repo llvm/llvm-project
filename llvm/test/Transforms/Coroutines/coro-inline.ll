@@ -1,7 +1,7 @@
-; RUN: opt < %s -always-inline -barrier -coro-early -barrier -coro-split -S | FileCheck %s
-; RUN: opt < %s -enable-new-pm  -always-inline -coro-early -coro-split  -S | FileCheck %s
-; RUN: opt < %s -sample-profile-file=%S/Inputs/sample.text.prof -pgo-kind=pgo-sample-use-pipeline -coro-early -barrier -sample-profile -barrier -coro-split  -disable-inlining=true -S | FileCheck %s
-; RUN: opt < %s -enable-new-pm -sample-profile-file=%S/Inputs/sample.text.prof -pgo-kind=pgo-sample-use-pipeline -coro-early -sample-profile -coro-split  -disable-inlining=true -S | FileCheck %s
+; RUN: opt < %s -always-inline -barrier -coro-split -S | FileCheck %s
+; RUN: opt < %s -passes='always-inline,cgscc(coro-split)' -S | FileCheck %s
+; RUN: opt < %s -sample-profile-file=%S/Inputs/sample.text.prof -pgo-kind=pgo-sample-use-pipeline -sample-profile -coro-split -disable-inlining=true -S | FileCheck %s
+; RUN: opt < %s -sample-profile-file=%S/Inputs/sample.text.prof -pgo-kind=pgo-sample-use-pipeline -passes='sample-profile,cgscc(coro-split)' -disable-inlining=true -S | FileCheck %s
 
 ; Function Attrs: alwaysinline ssp uwtable
 define void @ff() #0 !dbg !12 {
@@ -11,7 +11,6 @@ entry:
   ret void
 }
 
-; CHECK:  call void @ff()
 ; Function Attrs: alwaysinline ssp uwtable
 define void @foo() #0 !dbg !8 {
 entry:
@@ -20,11 +19,14 @@ entry:
   call void @ff(), !dbg !11
   ret void
 }
+; CHECK-LABEL: define void @foo()
+; CHECK:         call void @ff()
+
 
 declare token @llvm.coro.id(i32, i8* readnone, i8* nocapture readonly, i8*)
 declare i8* @llvm.coro.begin(token, i8* writeonly)
 
-attributes #0 = { alwaysinline ssp uwtable "coroutine.presplit"="1" "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+cx16,+cx8,+fxsr,+mmx,+sahf,+sse,+sse2,+sse3,+sse4.1,+ssse3,+x87" "unsafe-fp-math"="false" "use-sample-profile" "use-soft-float"="false" }
+attributes #0 = { alwaysinline ssp uwtable "coroutine.presplit"="1" "use-sample-profile" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5, !6}

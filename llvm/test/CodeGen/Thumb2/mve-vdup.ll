@@ -38,10 +38,8 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @vdup_i64(i64 %src) {
 ; CHECK-LABEL: vdup_i64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.32 q0[0], r0
-; CHECK-NEXT:    vmov.32 q0[1], r1
-; CHECK-NEXT:    vmov.32 q0[2], r0
-; CHECK-NEXT:    vmov.32 q0[3], r1
+; CHECK-NEXT:    vmov q0[2], q0[0], r0, r0
+; CHECK-NEXT:    vmov q0[3], q0[1], r1, r1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = insertelement <2 x i64> undef, i64 %src, i32 0
