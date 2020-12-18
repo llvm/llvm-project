@@ -5941,6 +5941,11 @@ ASTContext::getCanonicalTemplateArgument(const TemplateArgument &Arg) const {
     case TemplateArgument::Integral:
       return TemplateArgument(Arg, getCanonicalType(Arg.getIntegralType()));
 
+    case TemplateArgument::UncommonValue:
+      return TemplateArgument(*this,
+                              getCanonicalType(Arg.getUncommonValueType()),
+                              Arg.getAsUncommonValue());
+
     case TemplateArgument::Type:
       return TemplateArgument(getCanonicalType(Arg.getAsType()));
 

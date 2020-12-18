@@ -13,6 +13,8 @@ add_flang_library(flangFrontend
 
   LINK_LIBS
   FortranParser
+  FortranSemantics
+  FortranCommon
   clangBasic
   clangDriver
 

@@ -983,6 +983,10 @@ void USRGenerator::VisitTemplateArgument(const TemplateArgument &Arg) {
     VisitType(Arg.getIntegralType());
     Out << Arg.getAsIntegral();
     break;
+
+  case TemplateArgument::UncommonValue:
+    // FIXME: Visit value.
+    break;
   }
 }
 

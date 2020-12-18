@@ -496,8 +496,10 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   if (const auto &Dir = Params.initializationOptions.compilationDatabasePath)
     Opts.CompileCommandsDir = Dir;
   if (Opts.UseDirBasedCDB) {
-    BaseCDB = std::make_unique<DirectoryBasedGlobalCompilationDatabase>(
-        Opts.CompileCommandsDir);
+    DirectoryBasedGlobalCompilationDatabase::Options CDBOpts(TFS);
+    CDBOpts.CompileCommandsDir = Opts.CompileCommandsDir;
+    BaseCDB =
+        std::make_unique<DirectoryBasedGlobalCompilationDatabase>(CDBOpts);
     BaseCDB = getQueryDriverDatabase(llvm::makeArrayRef(Opts.QueryDriverGlobs),
                                      std::move(BaseCDB));
   }
@@ -704,6 +706,10 @@ void ClangdLSPServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {
   //  - this is useful e.g. when switching git branches, but we're likely to see
   //    fresh headers but still have the old-branch main-file content
   Server->onFileEvent(Params);
+  // FIXME: observe config files, immediately expire time-based caches, reparse:
+  //  - compile_commands.json and compile_flags.txt
+  //  - .clang_format and .clang-tidy
+  //  - .clangd and clangd/config.yaml
 }
 
 void ClangdLSPServer::onCommand(const ExecuteCommandParams &Params,

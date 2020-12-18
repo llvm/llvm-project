@@ -16426,6 +16426,120 @@ Examples:
       %a = load i16, i16* @x, align 2
       %res = call float @llvm.convert.from.fp16(i16 %a)
 
+Saturating floating-point to integer conversions
+------------------------------------------------
+
+The ``fptoui`` and ``fptosi`` instructions return a
+:ref:`poison value <poisonvalues>` if the rounded-towards-zero value is not
+representable by the result type. These intrinsics provide an alternative
+conversion, which will saturate towards the smallest and largest representable
+integer values instead.
+
+'``llvm.fptoui.sat.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.fptoui.sat`` on any
+floating-point argument type and any integer result type, or vectors thereof.
+Not all targets may support all types, however.
+
+::
+
+      declare i32 @llvm.fptoui.sat.i32.f32(float %f)
+      declare i19 @llvm.fptoui.sat.i19.f64(double %f)
+      declare <4 x i100> @llvm.fptoui.sat.v4i100.v4f128(<4 x fp128> %f)
+
+Overview:
+"""""""""
+
+This intrinsic converts the argument into an unsigned integer using saturating
+semantics.
+
+Arguments:
+""""""""""
+
+The argument may be any floating-point or vector of floating-point type. The
+return value may be any integer or vector of integer type. The number of vector
+elements in argument and return must be the same.
+
+Semantics:
+""""""""""
+
+The conversion to integer is performed subject to the following rules:
+
+- If the argument is any NaN, zero is returned.
+- If the argument is smaller than zero (this includes negative infinity),
+  zero is returned.
+- If the argument is larger than the largest representable unsigned integer of
+  the result type (this includes positive infinity), the largest representable
+  unsigned integer is returned.
+- Otherwise, the result of rounding the argument towards zero is returned.
+
+Example:
+""""""""
+
+.. code-block:: text
+
+      %a = call i8 @llvm.fptoui.sat.i8.f32(float 123.9)              ; yields i8: 123
+      %b = call i8 @llvm.fptoui.sat.i8.f32(float -5.7)               ; yields i8:   0
+      %c = call i8 @llvm.fptoui.sat.i8.f32(float 377.0)              ; yields i8: 255
+      %d = call i8 @llvm.fptoui.sat.i8.f32(float 0xFFF8000000000000) ; yields i8:   0
+
+'``llvm.fptosi.sat.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.fptosi.sat`` on any
+floating-point argument type and any integer result type, or vectors thereof.
+Not all targets may support all types, however.
+
+::
+
+      declare i32 @llvm.fptosi.sat.i32.f32(float %f)
+      declare i19 @llvm.fptosi.sat.i19.f64(double %f)
+      declare <4 x i100> @llvm.fptosi.sat.v4i100.v4f128(<4 x fp128> %f)
+
+Overview:
+"""""""""
+
+This intrinsic converts the argument into a signed integer using saturating
+semantics.
+
+Arguments:
+""""""""""
+
+The argument may be any floating-point or vector of floating-point type. The
+return value may be any integer or vector of integer type. The number of vector
+elements in argument and return must be the same.
+
+Semantics:
+""""""""""
+
+The conversion to integer is performed subject to the following rules:
+
+- If the argument is any NaN, zero is returned.
+- If the argument is smaller than the smallest representable signed integer of
+  the result type (this includes negative infinity), the smallest
+  representable signed integer is returned.
+- If the argument is larger than the largest representable signed integer of
+  the result type (this includes positive infinity), the largest representable
+  signed integer is returned.
+- Otherwise, the result of rounding the argument towards zero is returned.
+
+Example:
+""""""""
+
+.. code-block:: text
+
+      %a = call i8 @llvm.fptosi.sat.i8.f32(float 23.9)               ; yields i8:   23
+      %b = call i8 @llvm.fptosi.sat.i8.f32(float -130.8)             ; yields i8: -128
+      %c = call i8 @llvm.fptosi.sat.i8.f32(float 999.0)              ; yields i8:  127
+      %d = call i8 @llvm.fptosi.sat.i8.f32(float 0xFFF8000000000000) ; yields i8:    0
+
 .. _dbg_intrinsics:
 
 Debugger Intrinsics
