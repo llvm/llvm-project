@@ -64,7 +64,7 @@ class TestSwiftInterfaceDSYM(TestBase):
         lldbutil.check_variable(self, child_y, False, value="0")
 
         child_x = var.GetChildMemberWithName("x") # MyPoint.x isn't public
-        self.assertFalse(child_x.IsValid())
+        self.assertTrue(child_x.IsValid())
 
         # Expression evaluation using types from the .swiftinterface only
         # dylibs should work too
