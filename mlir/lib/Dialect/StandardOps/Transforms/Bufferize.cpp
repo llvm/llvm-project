@@ -118,20 +118,6 @@ public:
 } // namespace
 
 namespace {
-class BufferizeTensorCastOp : public OpConversionPattern<TensorCastOp> {
-public:
-  using OpConversionPattern::OpConversionPattern;
-  LogicalResult
-  matchAndRewrite(TensorCastOp op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    auto resultType = getTypeConverter()->convertType(op.getType());
-    rewriter.replaceOpWithNewOp<MemRefCastOp>(op, resultType, operands[0]);
-    return success();
-  }
-};
-} // namespace
-
-namespace {
 class BufferizeTensorFromElementsOp
     : public OpConversionPattern<TensorFromElementsOp> {
 public:
@@ -162,7 +148,6 @@ void mlir::populateStdBufferizePatterns(MLIRContext *context,
       BufferizeDimOp,
       BufferizeDynamicTensorFromElementsOp,
       BufferizeSelectOp,
-      BufferizeTensorCastOp,
       BufferizeTensorFromElementsOp
       // clang-format on
       >(typeConverter, context);
@@ -180,8 +165,7 @@ struct StdBufferizePass : public StdBufferizeBase<StdBufferizePass> {
     target.addLegalDialect<scf::SCFDialect>();
 
     populateStdBufferizePatterns(context, typeConverter, patterns);
-    target.addIllegalOp<DynamicTensorFromElementsOp, TensorCastOp,
-                        TensorFromElementsOp>();
+    target.addIllegalOp<DynamicTensorFromElementsOp, TensorFromElementsOp>();
     // We only bufferize the case of tensor selected type and scalar condition,
     // as that boils down to a select over memref descriptors (don't need to
     // touch the data).

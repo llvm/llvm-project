@@ -19,6 +19,7 @@
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Dominance.h"
@@ -517,13 +518,13 @@ Optional<FusionInfo> mlir::linalg::fuseProducerOfTensor(OpBuilder &b,
   // Replace use.
   // Canonicalizations are not guaranteed to have happened before constructing
   // `fusedProducer`. In the tensor case this can result in temporary type
-  // mismatches. Insert a `tensor_cast` op to propagate the transformation
+  // mismatches. Insert a `tensor.cast` op to propagate the transformation
   // invariant that types are compatible.
   Value def = fusedProducer->getResult(producerIdx);
   OpOperand &use = consumer->getOpOperand(consumerIdx);
   Type consumerType = use.get().getType();
   if (consumerType != def.getType())
-    def = b.create<TensorCastOp>(fusedProducer.getLoc(), consumerType, def);
+    def = b.create<tensor::CastOp>(fusedProducer.getLoc(), consumerType, def);
   use.set(def);
   return FusionInfo{producerOp, fusedProducer};
 }
