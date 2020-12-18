@@ -401,6 +401,22 @@ class VPseudoSStoreMask<VReg StClass>:
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
+// Unary instruction that is never masked so HasDummyMask=0.
+class VPseudoUnaryNoDummyMask<VReg RetClass,
+                              DAGOperand Op2Class> :
+        Pseudo<(outs RetClass:$rd),
+               (ins Op2Class:$rs1, GPR:$vl, ixlenimm:$sew), []>,
+        RISCVVPseudo {
+  let mayLoad = 0;
+  let mayStore = 0;
+  let hasSideEffects = 0;
+  let usesCustomInserter = 1;
+  let Uses = [VL, VTYPE];
+  let VLIndex = 2;
+  let SEWIndex = 3;
+  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
+}
+
 class VPseudoBinaryNoMask<VReg RetClass,
                           VReg Op1Class,
                           DAGOperand Op2Class,
@@ -619,6 +635,16 @@ multiclass VPseudoBinaryV_IM<bit CarryOut = 0, bit CarryIn = 1,
                            !if(!and(!eq(CarryIn, 1), !eq(CarryOut, 0)),
                                GetVRegNoV0<m.vrclass>.R, m.vrclass)),
                            m.vrclass, simm5, m, CarryIn, Constraint>;
+}
+
+multiclass VPseudoUnaryV_V_X_I_NoDummyMask {
+  foreach m = MxList.m in {
+    let VLMul = m.value in {
+      def "_V_" # m.MX : VPseudoUnaryNoDummyMask<m.vrclass, m.vrclass>;
+      def "_X_" # m.MX : VPseudoUnaryNoDummyMask<m.vrclass, GPR>;
+      def "_I_" # m.MX : VPseudoUnaryNoDummyMask<m.vrclass, simm5>;
+    }
+  }
 }
 
 multiclass VPseudoBinaryV_VV_VX_VI<Operand ImmType = simm5> {
@@ -1296,6 +1322,12 @@ defm PseudoVWMULU      : VPseudoBinaryW_VV_VX;
 defm PseudoVWMULSU     : VPseudoBinaryW_VV_VX;
 
 //===----------------------------------------------------------------------===//
+// 12.17. Vector Integer Move Instructions
+//===----------------------------------------------------------------------===//
+
+defm PseudoVMV_V       : VPseudoUnaryV_V_X_I_NoDummyMask;
+
+//===----------------------------------------------------------------------===//
 // 13.1. Vector Single-Width Saturating Add and Subtract
 //===----------------------------------------------------------------------===//
 let Defs = [VXSAT], hasSideEffects = 1 in {
@@ -1443,6 +1475,25 @@ defm "" : VPatBinaryV_VV_VX<"int_riscv_vrem", "PseudoVREM", AllIntegerVectors>;
 defm "" : VPatBinaryW_VV_VX<"int_riscv_vwmul", "PseudoVWMUL">;
 defm "" : VPatBinaryW_VV_VX<"int_riscv_vwmulu", "PseudoVWMULU">;
 defm "" : VPatBinaryW_VV_VX<"int_riscv_vwmulsu", "PseudoVWMULSU">;
+
+//===----------------------------------------------------------------------===//
+// 12.17. Vector Integer Move Instructions
+//===----------------------------------------------------------------------===//
+foreach vti = AllVectors in {
+  def : Pat<(vti.Vector (int_riscv_vmv_v_v (vti.Vector vti.RegClass:$rs1),
+                                           GPR:$vl)),
+            (!cast<Instruction>("PseudoVMV_V_V_"#vti.LMul.MX)
+             $rs1, (NoX0 GPR:$vl), vti.SEW)>;
+}
+
+foreach vti = AllIntegerVectors in {
+  def : Pat<(vti.Vector (int_riscv_vmv_v_x GPR:$rs2, GPR:$vl)),
+            (!cast<Instruction>("PseudoVMV_V_X_"#vti.LMul.MX)
+             $rs2, (NoX0 GPR:$vl), vti.SEW)>;
+  def : Pat<(vti.Vector (int_riscv_vmv_v_x simm5:$imm5, GPR:$vl)),
+            (!cast<Instruction>("PseudoVMV_V_I_"#vti.LMul.MX)
+             simm5:$imm5, (NoX0 GPR:$vl), vti.SEW)>;
+}
 
 //===----------------------------------------------------------------------===//
 // 13.1. Vector Single-Width Saturating Add and Subtract
