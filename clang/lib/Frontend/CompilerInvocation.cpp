@@ -1922,15 +1922,11 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
         << A->getAsString(Args) << A->getValue();
   }
 
-  Opts.OutputFile = std::string(Args.getLastArgValue(OPT_o));
   Opts.Plugins = Args.getAllArgValues(OPT_load);
-  Opts.TimeTraceGranularity = getLastArgIntValue(
-      Args, OPT_ftime_trace_granularity_EQ, Opts.TimeTraceGranularity, Diags);
   Opts.ASTMergeFiles = Args.getAllArgValues(OPT_ast_merge);
   Opts.LLVMArgs = Args.getAllArgValues(OPT_mllvm);
   Opts.ASTDumpDecls = Args.hasArg(OPT_ast_dump, OPT_ast_dump_EQ);
   Opts.ASTDumpAll = Args.hasArg(OPT_ast_dump_all, OPT_ast_dump_all_EQ);
-  Opts.ASTDumpFilter = std::string(Args.getLastArgValue(OPT_ast_dump_filter));
   Opts.ModuleMapFiles = Args.getAllArgValues(OPT_fmodule_map_file);
   // Only the -fmodule-file=<file> form.
   for (const auto *A : Args.filtered(OPT_fmodule_file)) {
@@ -1945,22 +1941,10 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
     Diags.Report(diag::err_drv_argument_only_allowed_with) << "-fsystem-module"
                                                            << "-emit-module";
 
-  Opts.OverrideRecordLayoutsFile =
-      std::string(Args.getLastArgValue(OPT_foverride_record_layout_EQ));
-  Opts.AuxTriple = std::string(Args.getLastArgValue(OPT_aux_triple));
   if (Args.hasArg(OPT_aux_target_cpu))
     Opts.AuxTargetCPU = std::string(Args.getLastArgValue(OPT_aux_target_cpu));
   if (Args.hasArg(OPT_aux_target_feature))
     Opts.AuxTargetFeatures = Args.getAllArgValues(OPT_aux_target_feature);
-  Opts.StatsFile = std::string(Args.getLastArgValue(OPT_stats_file));
-
-  Opts.MTMigrateDir =
-      std::string(Args.getLastArgValue(OPT_mt_migrate_directory));
-  Opts.ARCMTMigrateReportOut =
-      std::string(Args.getLastArgValue(OPT_arcmt_migrate_report_output));
-
-  Opts.ObjCMTWhiteListPath =
-      std::string(Args.getLastArgValue(OPT_objcmt_whitelist_dir_path));
 
   if (Opts.ARCMTAction != FrontendOptions::ARCMT_None &&
       Opts.ObjCMTAction != FrontendOptions::ObjCMT_None) {
