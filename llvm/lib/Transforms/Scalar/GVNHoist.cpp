@@ -293,15 +293,6 @@ private:
   // Return true when there are exception handling in BB.
   bool hasEH(const BasicBlock *BB);
 
-  // Return true when a successor of BB dominates A.
-  bool successorDominate(const BasicBlock *BB, const BasicBlock *A) {
-    for (const BasicBlock *Succ : successors(BB))
-      if (DT->dominates(Succ, A))
-        return true;
-
-    return false;
-  }
-
   // Return true when I1 appears before I2 in the instructions of BB.
   bool firstInBB(const Instruction *I1, const Instruction *I2) {
     assert(I1->getParent() == I2->getParent());
