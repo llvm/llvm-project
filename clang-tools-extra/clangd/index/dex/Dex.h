@@ -67,6 +67,16 @@ public:
     this->BackingDataSize = BackingDataSize;
   }
 
+  template <typename SymbolRange, typename RefsRange, typename RelationsRange,
+            typename FileRange, typename Payload>
+  Dex(SymbolRange &&Symbols, RefsRange &&Refs, RelationsRange &&Relations,
+      FileRange &&Files, Payload &&BackingData, size_t BackingDataSize)
+      : Dex(std::forward<SymbolRange>(Symbols), std::forward<RefsRange>(Refs),
+            std::forward<RelationsRange>(Relations),
+            std::forward<Payload>(BackingData), BackingDataSize) {
+    this->Files = std::forward<FileRange>(Files);
+  }
+
   /// Builds an index from slabs. The index takes ownership of the slab.
   static std::unique_ptr<SymbolIndex> build(SymbolSlab, RefSlab, RelationSlab);
 
@@ -83,6 +93,9 @@ public:
   void relations(const RelationsRequest &Req,
                  llvm::function_ref<void(const SymbolID &, const Symbol &)>
                      Callback) const override;
+
+  llvm::unique_function<bool(llvm::StringRef) const>
+  indexedFiles() const override;
 
   size_t estimateMemoryUsage() const override;
 
@@ -112,6 +125,8 @@ private:
                 "RelationKind should be of same size as a uint8_t");
   llvm::DenseMap<std::pair<SymbolID, uint8_t>, std::vector<SymbolID>> Relations;
   std::shared_ptr<void> KeepAlive; // poor man's move-only std::any
+  // Set of files which were used during this index build.
+  llvm::StringSet<> Files;
   // Size of memory retained by KeepAlive.
   size_t BackingDataSize = 0;
 };

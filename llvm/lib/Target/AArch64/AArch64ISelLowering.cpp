@@ -3812,6 +3812,8 @@ unsigned getSignExtendedGatherOpcode(unsigned Opcode) {
     return Opcode;
   case AArch64ISD::GLD1_MERGE_ZERO:
     return AArch64ISD::GLD1S_MERGE_ZERO;
+  case AArch64ISD::GLD1_IMM_MERGE_ZERO:
+    return AArch64ISD::GLD1S_IMM_MERGE_ZERO;
   case AArch64ISD::GLD1_UXTW_MERGE_ZERO:
     return AArch64ISD::GLD1S_UXTW_MERGE_ZERO;
   case AArch64ISD::GLD1_SXTW_MERGE_ZERO:
@@ -3841,6 +3843,60 @@ bool getGatherScatterIndexIsExtended(SDValue Index) {
   }
 
   return false;
+}
+
+// If the base pointer of a masked gather or scatter is null, we
+// may be able to swap BasePtr & Index and use the vector + register
+// or vector + immediate addressing mode, e.g.
+// VECTOR + REGISTER:
+//    getelementptr nullptr, <vscale x N x T> (splat(%offset)) + %indices)
+// -> getelementptr %offset, <vscale x N x T> %indices
+// VECTOR + IMMEDIATE:
+//    getelementptr nullptr, <vscale x N x T> (splat(#x)) + %indices)
+// -> getelementptr #x, <vscale x N x T> %indices
+void selectGatherScatterAddrMode(SDValue &BasePtr, SDValue &Index, EVT MemVT,
+                                 unsigned &Opcode, bool IsGather,
+                                 SelectionDAG &DAG) {
+  if (!isNullConstant(BasePtr))
+    return;
+
+  ConstantSDNode *Offset = nullptr;
+  if (Index.getOpcode() == ISD::ADD)
+    if (auto SplatVal = DAG.getSplatValue(Index.getOperand(1))) {
+      if (isa<ConstantSDNode>(SplatVal))
+        Offset = cast<ConstantSDNode>(SplatVal);
+      else {
+        BasePtr = SplatVal;
+        Index = Index->getOperand(0);
+        return;
+      }
+    }
+
+  unsigned NewOp =
+      IsGather ? AArch64ISD::GLD1_IMM_MERGE_ZERO : AArch64ISD::SST1_IMM_PRED;
+
+  if (!Offset) {
+    std::swap(BasePtr, Index);
+    Opcode = NewOp;
+    return;
+  }
+
+  uint64_t OffsetVal = Offset->getZExtValue();
+  unsigned ScalarSizeInBytes = MemVT.getScalarSizeInBits() / 8;
+  auto ConstOffset = DAG.getConstant(OffsetVal, SDLoc(Index), MVT::i64);
+
+  if (OffsetVal % ScalarSizeInBytes || OffsetVal / ScalarSizeInBytes > 31) {
+    // Index is out of range for the immediate addressing mode
+    BasePtr = ConstOffset;
+    Index = Index->getOperand(0);
+    return;
+  }
+
+  // Immediate is in range
+  Opcode = NewOp;
+  BasePtr = Index->getOperand(0);
+  Index = ConstOffset;
+  return;
 }
 
 SDValue AArch64TargetLowering::LowerMGATHER(SDValue Op,
@@ -3892,6 +3948,9 @@ SDValue AArch64TargetLowering::LowerMGATHER(SDValue Op,
     Index = Index.getOperand(0);
 
   unsigned Opcode = getGatherVecOpcode(IsScaled, IsSigned, IdxNeedsExtend);
+  selectGatherScatterAddrMode(BasePtr, Index, MemVT, Opcode,
+                              /*isGather=*/true, DAG);
+
   if (ResNeedsSignExtend)
     Opcode = getSignExtendedGatherOpcode(Opcode);
 
@@ -3944,9 +4003,12 @@ SDValue AArch64TargetLowering::LowerMSCATTER(SDValue Op,
   if (getGatherScatterIndexIsExtended(Index))
     Index = Index.getOperand(0);
 
+  unsigned Opcode = getScatterVecOpcode(IsScaled, IsSigned, NeedsExtend);
+  selectGatherScatterAddrMode(BasePtr, Index, MemVT, Opcode,
+                              /*isGather=*/false, DAG);
+
   SDValue Ops[] = {Chain, StoreVal, Mask, BasePtr, Index, InputVT};
-  return DAG.getNode(getScatterVecOpcode(IsScaled, IsSigned, NeedsExtend), DL,
-                     VTs, Ops);
+  return DAG.getNode(Opcode, DL, VTs, Ops);
 }
 
 // Custom lower trunc store for v4i8 vectors, since it is promoted to v4i16.

@@ -14,6 +14,7 @@
 #include "Symbol.h"
 #include "SymbolID.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/JSON.h"
@@ -121,6 +122,11 @@ public:
       llvm::function_ref<void(const SymbolID &Subject, const Symbol &Object)>
           Callback) const = 0;
 
+  /// Returns function which checks if the specified file was used to build this
+  /// index or not. The function must only be called while the index is alive.
+  virtual llvm::unique_function<bool(llvm::StringRef) const>
+  indexedFiles() const = 0;
+
   /// Returns estimated size of index (in bytes).
   virtual size_t estimateMemoryUsage() const = 0;
 };
@@ -144,6 +150,9 @@ public:
   void relations(const RelationsRequest &,
                  llvm::function_ref<void(const SymbolID &, const Symbol &)>)
       const override;
+
+  llvm::unique_function<bool(llvm::StringRef) const>
+  indexedFiles() const override;
 
   size_t estimateMemoryUsage() const override;
 

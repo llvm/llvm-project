@@ -12,7 +12,6 @@ class TestGdbRemoteLibrariesSvr4Support(gdbremote_testcase.GdbRemoteTestCaseBase
     FEATURE_NAME = "qXfer:libraries-svr4:read"
 
     def setup_test(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         env = {}

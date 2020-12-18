@@ -3399,9 +3399,10 @@ define <4 x float> @test_masked_z_16xfloat_to_4xfloat_perm_mem_mask1(<16 x float
 define <4 x float> @test_masked_16xfloat_to_4xfloat_perm_mem_mask2(<16 x float>* %vp, <4 x float> %vec2, <4 x float> %mask) {
 ; CHECK-LABEL: test_masked_16xfloat_to_4xfloat_perm_mem_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps 32(%rdi), %ymm2
-; CHECK-NEXT:    vbroadcastsd {{.*#+}} ymm3 = [60129542148,60129542148,60129542148,60129542148]
-; CHECK-NEXT:    vpermi2ps (%rdi), %ymm2, %ymm3
+; CHECK-NEXT:    vmovddup {{.*#+}} xmm2 = [60129542148,60129542148]
+; CHECK-NEXT:    # xmm2 = mem[0,0]
+; CHECK-NEXT:    vmovaps 32(%rdi), %ymm3
+; CHECK-NEXT:    vpermt2ps (%rdi), %ymm2, %ymm3
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqps %xmm2, %xmm1, %k1
 ; CHECK-NEXT:    vmovaps %xmm3, %xmm0 {%k1}
@@ -3417,11 +3418,12 @@ define <4 x float> @test_masked_16xfloat_to_4xfloat_perm_mem_mask2(<16 x float>*
 define <4 x float> @test_masked_z_16xfloat_to_4xfloat_perm_mem_mask2(<16 x float>* %vp, <4 x float> %mask) {
 ; CHECK-LABEL: test_masked_z_16xfloat_to_4xfloat_perm_mem_mask2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps 32(%rdi), %ymm2
-; CHECK-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [60129542148,60129542148,60129542148,60129542148]
+; CHECK-NEXT:    vmovddup {{.*#+}} xmm2 = [60129542148,60129542148]
+; CHECK-NEXT:    # xmm2 = mem[0,0]
+; CHECK-NEXT:    vmovaps 32(%rdi), %ymm1
 ; CHECK-NEXT:    vxorps %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqps %xmm3, %xmm0, %k1
-; CHECK-NEXT:    vpermi2ps (%rdi), %ymm2, %ymm1 {%k1} {z}
+; CHECK-NEXT:    vpermt2ps (%rdi), %ymm2, %ymm1 {%k1} {z}
 ; CHECK-NEXT:    vmovaps %xmm1, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq

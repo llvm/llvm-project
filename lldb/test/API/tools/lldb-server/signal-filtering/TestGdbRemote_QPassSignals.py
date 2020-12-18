@@ -49,7 +49,6 @@ class TestGdbRemote_QPassSignals(gdbremote_testcase.GdbRemoteTestCaseBase):
     @llgs_test
     @skipUnlessPlatform(["linux", "android"])
     def test_q_pass_signals(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         procs = self.prep_debug_monitor_and_inferior()
@@ -65,7 +64,6 @@ class TestGdbRemote_QPassSignals(gdbremote_testcase.GdbRemoteTestCaseBase):
     @llgs_test
     @skipUnlessPlatform(["linux", "android"])
     def test_change_signals_at_runtime(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         procs = self.prep_debug_monitor_and_inferior()
@@ -84,7 +82,6 @@ class TestGdbRemote_QPassSignals(gdbremote_testcase.GdbRemoteTestCaseBase):
     @expectedFailureNetBSD
     @llgs_test
     def test_default_signals_behavior(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         procs = self.prep_debug_monitor_and_inferior()
@@ -99,7 +96,6 @@ class TestGdbRemote_QPassSignals(gdbremote_testcase.GdbRemoteTestCaseBase):
     @llgs_test
     @skipUnlessPlatform(["linux", "android"])
     def test_support_q_pass_signals(self):
-        self.init_llgs_test()
         self.build()
 
         # Start up the stub and start/prep the inferior.

@@ -19,7 +19,6 @@ class TestAutoInstallMainExecutable(gdbremote_testcase.GdbRemoteTestCaseBase):
     @expectedFailureAll(hostoslist=["windows"], triple='.*-android')
     def test_target_auto_install_main_executable(self):
         self.build()
-        self.init_llgs_test()
 
         # Manually install the modified binary.
         working_dir = lldb.remote_platform.GetWorkingDirectory()
