@@ -36,6 +36,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRStandard
   MLIRStandardOpsTransforms
   MLIRStandardToLLVM
+  MLIRTensor
   MLIRTransforms
   MLIRTransformUtils
   MLIRVector

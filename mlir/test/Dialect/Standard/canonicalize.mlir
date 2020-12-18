@@ -116,17 +116,17 @@ func @dim_of_memref_reshape(%arg0: memref<*xf32>, %arg1: memref<?xindex>)
   return %1 : index
 }
 
-// Test case: Folding dim(tensor_cast %0, %idx) -> dim %0, %idx
-// CHECK-LABEL: func @fold_dim_of_tensor_cast
+// Test case: Folding dim(tensor.cast %0, %idx) -> dim %0, %idx
+// CHECK-LABEL: func @fold_dim_of_tensor.cast
 //  CHECK-SAME:   %[[ARG0:.[a-z0-9A-Z_]+]]: tensor<4x?xf32>
 //   CHECK-DAG:   %[[C1:.+]] = constant 1 : index
 //   CHECK-DAG:   %[[C4:.+]] = constant 4 : index
 //       CHECK:   %[[T0:.+]] = dim %[[ARG0]], %[[C1]]
 //  CHECK-NEXT:   return %[[C4]], %[[T0]]
-func @fold_dim_of_tensor_cast(%arg0 : tensor<4x?xf32>) -> (index, index) {
+func @fold_dim_of_tensor.cast(%arg0 : tensor<4x?xf32>) -> (index, index) {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
-  %0 = tensor_cast %arg0 : tensor<4x?xf32> to tensor<?x?xf32>
+  %0 = tensor.cast %arg0 : tensor<4x?xf32> to tensor<?x?xf32>
   %1 = dim %0, %c0 : tensor<?x?xf32>
   %2 = dim %0, %c1 : tensor<?x?xf32>
   return %1, %2: index, index

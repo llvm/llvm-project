@@ -1,12 +1,13 @@
 // RUN: mlir-opt %s -linalg-bufferize -std-bufferize -tensor-constant-bufferize \
-// RUN: -func-bufferize -finalizing-bufferize  -convert-linalg-to-loops \
+// RUN: -tensor-bufferize -func-bufferize -finalizing-bufferize  -convert-linalg-to-loops \
 // RUN: -convert-linalg-to-llvm -convert-std-to-llvm | \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
 // RUN: | FileCheck %s
 
 // RUN: mlir-opt %s  -linalg-tile="linalg-tile-sizes=1,2,3" -linalg-bufferize \
-// RUN: -scf-bufferize -std-bufferize -tensor-constant-bufferize -func-bufferize \
+// RUN: -scf-bufferize -std-bufferize -tensor-constant-bufferize -tensor-bufferize \
+// RUN: -func-bufferize \
 // RUN: -finalizing-bufferize -convert-linalg-to-loops -convert-scf-to-std \
 // RUN: -convert-linalg-to-llvm | \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
@@ -23,7 +24,7 @@ func @main() {
   %D = linalg.matmul ins(%A, %B: tensor<2x3xf32>, tensor<3x4xf32>)
                      init(%C: tensor<2x4xf32>) -> tensor<2x4xf32>
 
-  %unranked = tensor_cast %D : tensor<2x4xf32> to tensor<*xf32>
+  %unranked = tensor.cast %D : tensor<2x4xf32> to tensor<*xf32>
   call @print_memref_f32(%unranked) : (tensor<*xf32>) -> ()
 
   //      CHECK: Unranked Memref base@ = {{0x[-9a-f]*}}
