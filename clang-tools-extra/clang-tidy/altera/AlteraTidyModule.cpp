@@ -10,6 +10,7 @@
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
 #include "KernelNameRestrictionCheck.h"
+#include "SingleWorkItemBarrierCheck.h"
 #include "StructPackAlignCheck.h"
 
 using namespace clang::ast_matchers;
@@ -23,6 +24,8 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<KernelNameRestrictionCheck>(
         "altera-kernel-name-restriction");
+    CheckFactories.registerCheck<SingleWorkItemBarrierCheck>(
+        "altera-single-work-item-barrier");
     CheckFactories.registerCheck<StructPackAlignCheck>(
         "altera-struct-pack-align");
   }
