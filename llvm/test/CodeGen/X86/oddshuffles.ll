@@ -2027,7 +2027,7 @@ define <16 x i32> @splat_v3i32(<3 x i32>* %ptr) {
 ; AVX2-SLOW-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
 ; AVX2-SLOW-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX2-SLOW-NEXT:    vblendps {{.*#+}} ymm0 = ymm2[0],ymm1[1],ymm2[2,3,4,5,6,7]
-; AVX2-SLOW-NEXT:    vbroadcastss %xmm1, %ymm1
+; AVX2-SLOW-NEXT:    vbroadcastss %xmm1, %xmm1
 ; AVX2-SLOW-NEXT:    vblendps {{.*#+}} ymm1 = ymm2[0,1],ymm1[2],ymm2[3,4,5,6,7]
 ; AVX2-SLOW-NEXT:    retq
 ;
