@@ -152,6 +152,14 @@ public:
               });
   }
 
+  llvm::unique_function<bool(llvm::StringRef) const> indexedFiles() const {
+    // FIXME: For now we always return "false" regardless of whether the file
+    //        was indexed or not. A possible implementation could be based on
+    //        the idea that we do not want to send a request at every
+    //        call of a function returned by IndexClient::indexedFiles().
+    return [](llvm::StringRef) { return false; };
+  }
+
   // IndexClient does not take any space since the data is stored on the
   // server.
   size_t estimateMemoryUsage() const override { return 0; }

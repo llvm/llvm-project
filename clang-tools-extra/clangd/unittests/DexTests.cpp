@@ -732,6 +732,20 @@ TEST(DexTests, Relations) {
   EXPECT_THAT(Results, UnorderedElementsAre(Child1.ID, Child2.ID));
 }
 
+TEST(DexIndex, IndexedFiles) {
+  SymbolSlab Symbols;
+  RefSlab Refs;
+  auto Size = Symbols.bytes() + Refs.bytes();
+  auto Data = std::make_pair(std::move(Symbols), std::move(Refs));
+  llvm::StringSet<> Files = {testPath("foo.cc"), testPath("bar.cc")};
+  Dex I(std::move(Data.first), std::move(Data.second), RelationSlab(),
+        std::move(Files), std::move(Data), Size);
+  auto ContainsFile = I.indexedFiles();
+  EXPECT_TRUE(ContainsFile("unittest:///foo.cc"));
+  EXPECT_TRUE(ContainsFile("unittest:///bar.cc"));
+  EXPECT_FALSE(ContainsFile("unittest:///foobar.cc"));
+}
+
 TEST(DexTest, PreferredTypesBoosting) {
   auto Sym1 = symbol("t1");
   Sym1.Type = "T1";
