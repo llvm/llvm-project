@@ -79,6 +79,21 @@ class RISCVVIntrinsic {
 }
 
 let TargetPrefix = "riscv" in {
+  // We use anyint here but we only support XLen.
+  def int_riscv_vsetvli   : Intrinsic<[llvm_anyint_ty],
+                           /* AVL */  [LLVMMatchType<0>,
+                           /* VSEW */  LLVMMatchType<0>,
+                           /* VLMUL */ LLVMMatchType<0>],
+                                      [IntrNoMem, IntrHasSideEffects,
+                                       ImmArg<ArgIndex<1>>,
+                                       ImmArg<ArgIndex<2>>]>;
+  def int_riscv_vsetvlimax : Intrinsic<[llvm_anyint_ty],
+                            /* VSEW */ [LLVMMatchType<0>,
+                            /* VLMUL */ LLVMMatchType<0>],
+                                      [IntrNoMem, IntrHasSideEffects,
+                                       ImmArg<ArgIndex<0>>,
+                                       ImmArg<ArgIndex<1>>]>;
+
   // For unit stride load
   // Input: (pointer, vl)
   class RISCVUSLoad
