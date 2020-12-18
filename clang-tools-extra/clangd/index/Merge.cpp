@@ -99,23 +99,18 @@ bool MergedIndex::refs(const RefsRequest &Req,
   // and we can't reliably deduplicate them because offsets may differ slightly.
   // We consider the dynamic index authoritative and report all its refs,
   // and only report static index refs from other files.
-  //
-  // FIXME: The heuristic fails if the dynamic index contains a file, but all
-  // refs were removed (we will report stale ones from the static index).
-  // Ultimately we should explicit check which index has the file instead.
-  llvm::StringSet<> DynamicIndexFileURIs;
   More |= Dynamic->refs(Req, [&](const Ref &O) {
-    DynamicIndexFileURIs.insert(O.Location.FileURI);
     Callback(O);
     assert(Remaining != 0);
     --Remaining;
   });
   if (Remaining == 0 && More)
     return More;
+  auto DynamicContainsFile = Dynamic->indexedFiles();
   // We return less than Req.Limit if static index returns more refs for dirty
   // files.
-  bool StaticHadMore =  Static->refs(Req, [&](const Ref &O) {
-    if (DynamicIndexFileURIs.count(O.Location.FileURI))
+  bool StaticHadMore = Static->refs(Req, [&](const Ref &O) {
+    if (DynamicContainsFile(O.Location.FileURI))
       return; // ignore refs that have been seen from dynamic index.
     if (Remaining == 0) {
       More = true;
@@ -125,6 +120,14 @@ bool MergedIndex::refs(const RefsRequest &Req,
     Callback(O);
   });
   return More || StaticHadMore;
+}
+
+llvm::unique_function<bool(llvm::StringRef) const>
+MergedIndex::indexedFiles() const {
+  return [DynamicContainsFile{Dynamic->indexedFiles()},
+          StaticContainsFile{Static->indexedFiles()}](llvm::StringRef FileURI) {
+    return DynamicContainsFile(FileURI) || StaticContainsFile(FileURI);
+  };
 }
 
 void MergedIndex::relations(

@@ -54,6 +54,9 @@ public:
                  llvm::function_ref<void(const SymbolID &, const Symbol &)>
                      Callback) const override;
 
+  llvm::unique_function<bool(llvm::StringRef) const>
+  indexedFiles() const override;
+
   ProjectAwareIndex(IndexFactory Gen) : Gen(std::move(Gen)) {}
 
 private:
@@ -110,6 +113,14 @@ void ProjectAwareIndex::relations(
   trace::Span Tracer("ProjectAwareIndex::relations");
   if (auto *Idx = getIndex())
     return Idx->relations(Req, Callback);
+}
+
+llvm::unique_function<bool(llvm::StringRef) const>
+ProjectAwareIndex::indexedFiles() const {
+  trace::Span Tracer("ProjectAwareIndex::indexedFiles");
+  if (auto *Idx = getIndex())
+    return Idx->indexedFiles();
+  return [](llvm::StringRef) { return false; };
 }
 
 SymbolIndex *ProjectAwareIndex::getIndex() const {

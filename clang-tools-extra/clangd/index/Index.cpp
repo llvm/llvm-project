@@ -76,6 +76,11 @@ void SwapIndex::relations(
   return snapshot()->relations(R, CB);
 }
 
+llvm::unique_function<bool(llvm::StringRef) const>
+SwapIndex::indexedFiles() const {
+  return snapshot()->indexedFiles();
+}
+
 size_t SwapIndex::estimateMemoryUsage() const {
   return snapshot()->estimateMemoryUsage();
 }
