@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/DWARF/DWARFDebugArangeSet.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -166,9 +167,9 @@ TEST(DWARFDebugArangeSet, UnevenLength) {
       "of the tuple size");
 }
 
-TEST(DWARFDebugArangeSet, ZeroLengthEntry) {
+TEST(DWARFDebugArangeSet, ZeroAddressEntry) {
   static const char DebugArangesSecRaw[] =
-      "\x24\x00\x00\x00" // Length
+      "\x1c\x00\x00\x00" // Length
       "\x02\x00"         // Version
       "\x00\x00\x00\x00" // Debug Info Offset
       "\x04"             // Address Size
@@ -176,14 +177,68 @@ TEST(DWARFDebugArangeSet, ZeroLengthEntry) {
       "\x00\x00\x00\x00" // Padding
       "\x00\x00\x00\x00" // Entry1: Address
       "\x01\x00\x00\x00" //         Length
+      "\x00\x00\x00\x00" // Termination tuple
+      "\x00\x00\x00\x00";
+  DWARFDataExtractor Extractor(
+      StringRef(DebugArangesSecRaw, sizeof(DebugArangesSecRaw) - 1),
+      /*IsLittleEndian=*/true,
+      /*AddressSize=*/4);
+  DWARFDebugArangeSet Set;
+  uint64_t Offset = 0;
+  ASSERT_THAT_ERROR(Set.extract(Extractor, &Offset),
+                    Succeeded());
+  auto Range = Set.descriptors();
+  auto Iter = Range.begin();
+  ASSERT_EQ(std::distance(Iter, Range.end()), 1u);
+  EXPECT_EQ(Iter->Address, 0u);
+  EXPECT_EQ(Iter->Length, 1u);
+}
+
+TEST(DWARFDebugArangeSet, ZeroLengthEntry) {
+  static const char DebugArangesSecRaw[] =
+      "\x1c\x00\x00\x00" // Length
+      "\x02\x00"         // Version
+      "\x00\x00\x00\x00" // Debug Info Offset
+      "\x04"             // Address Size
+      "\x00"             // Segment Selector Size
+      "\x00\x00\x00\x00" // Padding
+      "\x01\x00\x00\x00" // Entry1: Address
+      "\x00\x00\x00\x00" //         Length
+      "\x00\x00\x00\x00" // Termination tuple
+      "\x00\x00\x00\x00";
+  DWARFDataExtractor Extractor(
+      StringRef(DebugArangesSecRaw, sizeof(DebugArangesSecRaw) - 1),
+      /*IsLittleEndian=*/true,
+      /*AddressSize=*/4);
+  DWARFDebugArangeSet Set;
+  uint64_t Offset = 0;
+  ASSERT_THAT_ERROR(Set.extract(Extractor, &Offset),
+                    Succeeded());
+  auto Range = Set.descriptors();
+  auto Iter = Range.begin();
+  ASSERT_EQ(std::distance(Iter, Range.end()), 1u);
+  EXPECT_EQ(Iter->Address, 1u);
+  EXPECT_EQ(Iter->Length, 0u);
+}
+
+TEST(DWARFDebugArangesSet, PrematureTerminator) {
+  static const char DebugArangesSecRaw[] =
+      "\x24\x00\x00\x00" // Length
+      "\x02\x00"         // Version
+      "\x00\x00\x00\x00" // Debug Info Offset
+      "\x04"             // Address Size
+      "\x00"             // Segment Selector Size
+      "\x00\x00\x00\x00" // Padding
+      "\x00\x00\x00\x00" // Entry1: Premature
+      "\x00\x00\x00\x00" //         terminator
       "\x01\x00\x00\x00" // Entry2: Address
-      "\x00\x00\x00\x00" //         Length (invalid)
+      "\x01\x00\x00\x00" //         Length
       "\x00\x00\x00\x00" // Termination tuple
       "\x00\x00\x00\x00";
   ExpectExtractError(
       DebugArangesSecRaw,
-      "address range table at offset 0x0 has an invalid tuple (length = 0) "
-      "at offset 0x18");
+      "address range table at offset 0x0 has a premature "
+      "terminator entry at offset 0x10");
 }
 
 } // end anonymous namespace
