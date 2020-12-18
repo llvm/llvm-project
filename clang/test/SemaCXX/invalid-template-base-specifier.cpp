@@ -12,11 +12,11 @@ void test() { Crash<int>(); } // expected-note {{in instantiation of template cl
 template <typename T>
 using Alias = decltype(Foo(T())); // expected-error {{no matching function for call to 'Foo'}}
 template <typename T>
-struct Crash2 : decltype(Alias<T>()) { // expected-note {{in instantiation of template type alias 'Alias' requested here}}
+struct Crash2 : decltype(Alias<T>()) { // expected-note {{in instantiation of template type alias 'Alias' requested here}} expected-error {{base specifier must name a class}}
   Crash2(){};
 };
 
-void test2() { Crash2<int>(); } // expected-note {{in instantiation of template class 'Crash2<int>' requested here}}
+void test2() { Crash2<int>(); } // expected-note 2{{in instantiation of template class 'Crash2<int>' requested here}}
 
 template <typename T>
 class Base {};
