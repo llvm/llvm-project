@@ -1083,6 +1083,8 @@ DIE *DwarfUnit::getOrCreateModule(const DIModule *M) {
             getOrCreateSourceID(M->getFile()));
   if (M->getLineNo())
     addUInt(MDie, dwarf::DW_AT_decl_line, None, M->getLineNo());
+  if (M->getIsDecl())
+    addFlag(MDie, dwarf::DW_AT_declaration);
 
   return &MDie;
 }
