@@ -1046,6 +1046,7 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
   if (auto *rti =
           llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(ti)) {
     switch (rti->getRecordKind()) {
+    case swift::reflection::RecordKind::ExistentialMetatype:
     case swift::reflection::RecordKind::ThickFunction:
       // There are two fields, `function` and `context`, but they're not exposed
       // by lldb.
@@ -1181,6 +1182,7 @@ llvm::Optional<size_t> SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
     // Structs and Tuples.
     auto *rti = llvm::cast<RecordTypeInfo>(ti);
     switch (rti->getRecordKind()) {
+    case RecordKind::ExistentialMetatype:
     case RecordKind::ThickFunction:
       // There are two fields, `function` and `context`, but they're not exposed
       // by lldb.
