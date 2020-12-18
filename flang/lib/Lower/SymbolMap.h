@@ -267,10 +267,9 @@ public:
             force);
   }
 
-  void addAllocatableOrPointer(semantics::SymbolRef sym, mlir::Value boxAddress,
-                               llvm::ArrayRef<mlir::Value> params,
-                               bool force = false) {
-    makeSym(sym, SymbolBox::PointerOrAllocatable(boxAddress, params), force);
+  void addAllocatableOrPointer(semantics::SymbolRef sym,
+                               fir::MutableBoxValue box, bool force = false) {
+    makeSym(sym, box, force);
   }
 
   /// Find `symbol` and return its value if it appears in the current mappings.

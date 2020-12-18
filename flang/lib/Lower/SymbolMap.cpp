@@ -107,11 +107,31 @@ llvm::raw_ostream &fir::operator<<(llvm::raw_ostream &os,
 
 llvm::raw_ostream &fir::operator<<(llvm::raw_ostream &os,
                                    const fir::MutableBoxValue &box) {
-  os << "boxaddress: { box: " << box.getAddr();
+  os << "mutablebox: { box: " << box.getAddr();
   if (!box.lenParams.empty()) {
-    os << ", type params: [";
+    os << ", non deferred type params: [";
     llvm::interleaveComma(box.lenParams, os);
     os << "]";
+  }
+  const auto &properties = box.mutableProperties;
+  if (!properties.isEmpty()) {
+    os << ", mutableProperties: { addr: " << properties.addr;
+    if (!properties.lbounds.empty()) {
+      os << ", lbounds: [";
+      llvm::interleaveComma(properties.lbounds, os);
+      os << "]";
+    }
+    if (!properties.extents.empty()) {
+      os << ", shape: [";
+      llvm::interleaveComma(properties.extents, os);
+      os << "]";
+    }
+    if (!properties.deferredParams.empty()) {
+      os << ", deferred type params: [";
+      llvm::interleaveComma(properties.deferredParams, os);
+      os << "]";
+    }
+    os << "}";
   }
   return os << "}";
 }

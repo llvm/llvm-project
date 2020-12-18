@@ -15,6 +15,7 @@
 
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/Matcher.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
@@ -212,6 +213,26 @@ protected:
 /// Used for triple notation (array slices)
 using RangeBoxValue = std::tuple<mlir::Value, mlir::Value, mlir::Value>;
 
+/// Set of variables (addresses) holding the allocatable properties. These may
+/// be empty in case it is not deemed safe to duplicate the descriptor
+/// information locally (For instance, a volatile allocatable will always be
+/// lowered to a descriptor to preserve the integrity of the entity and its
+/// associated properties. As such, all references to the entity and its
+/// property will go through the descriptor explicitly.).
+class MutableProperties {
+public:
+  bool isEmpty() const { return !addr; }
+  mlir::Value addr;
+  llvm::SmallVector<mlir::Value, 2> extents;
+  llvm::SmallVector<mlir::Value, 2> lbounds;
+  /// Only keep track of the deferred length parameters through variables, since
+  /// they are the only ones that can change as per the deferred type parameters
+  /// definition in F2018 standard section 3.147.12.2.
+  /// Non-deferred values are returned by
+  /// MutableBoxValue.nonDeferredLenParams().
+  llvm::SmallVector<mlir::Value, 2> deferredParams;
+};
+
 /// MutableBoxValue is used for entities that are represented by the address of
 /// a box. This is intended to be used for entities whose base address, shape
 /// and type are not constant in the entity lifetime (e.g Allocatables and
@@ -222,9 +243,11 @@ public:
   /// deferred length parameters \p lenParameters. The non deferred length
   /// parameters must always be provided, even if they are constant and already
   /// reflected in the address type.
-  MutableBoxValue(mlir::Value addr, llvm::ArrayRef<mlir::Value> lenParameters)
+  MutableBoxValue(mlir::Value addr, mlir::ValueRange lenParameters,
+                  MutableProperties mutableProperties)
       : AbstractBox(addr), lenParams{lenParameters.begin(),
-                                     lenParameters.end()} {
+                                     lenParameters.end()},
+        mutableProperties{mutableProperties} {
     // Currently only accepts fir.(ref/ptr/heap)<fir.box<type>> mlir::Value for
     // the address. This may change if we accept
     // fir.(ref/ptr/heap)<fir.heap<type>> for scalar without length parameters.
@@ -280,10 +303,18 @@ public:
   /// Does this entity has any non deferred length parameters ?
   bool hasNonDeferredLenParams() const { return !lenParams.empty(); }
   /// Return the non deferred length parameters.
-  llvm::ArrayRef<mlir::Value> nonDeferredLenParams() { return lenParams; }
+  llvm::ArrayRef<mlir::Value> nonDeferredLenParams() const { return lenParams; }
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &,
                                        const MutableBoxValue &);
   LLVM_DUMP_METHOD void dump() const { llvm::errs() << *this; }
+
+  /// Set of variable is used instead of a descriptor to hold the entity
+  /// properties instead of a fir.ref<fir.box<>>.
+  bool isDescribedByVariables() const { return !mutableProperties.isEmpty(); }
+
+  const MutableProperties &getMutableProperties() const {
+    return mutableProperties;
+  }
 
 protected:
   /// Validate the address type form in the constructor.
@@ -292,6 +323,10 @@ protected:
   /// derived). Non-deferred length parameters cannot change dynamically, as
   /// opposed to deferred type parameters (3.147.12.2).
   llvm::SmallVector<mlir::Value, 2> lenParams;
+  /// Set of variables holding the extents, lower bounds and
+  /// base address when it is deemed safe to work with these variables rather
+  /// than directly with a descriptor.
+  MutableProperties mutableProperties;
 };
 
 class ExtendedValue;
