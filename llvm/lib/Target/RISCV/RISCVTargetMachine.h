@@ -47,6 +47,6 @@ public:
   virtual bool isNoopAddrSpaceCast(unsigned SrcAS,
                                    unsigned DstAS) const override;
 };
-}
+} // namespace llvm
 
 #endif
