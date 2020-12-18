@@ -78,7 +78,7 @@ private:
 
 class LinkerDriver {
 public:
-  void link(llvm::ArrayRef<const char *> args);
+  void linkerMain(llvm::ArrayRef<const char *> args);
 
   // Used by the resolver to parse .drectve section contents.
   void parseDirectives(InputFile *file);
