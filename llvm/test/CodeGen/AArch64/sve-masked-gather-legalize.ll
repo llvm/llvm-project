@@ -45,11 +45,28 @@ define <vscale x 2 x i64> @masked_sgather_zext(i8* %base, <vscale x 2 x i64> %of
 ; Tests that exercise various type legalisation scenarios for ISD::MGATHER.
 
 ; Code generate load of an illegal datatype via promotion.
+define <vscale x 2 x i8> @masked_gather_nxv2i8(<vscale x 2 x i8*> %ptrs, <vscale x 2 x i1> %mask) {
+; CHECK-LABEL: masked_gather_nxv2i8:
+; CHECK: ld1sb { z0.d }, p0/z, [z0.d]
+; CHECK: ret
+  %data = call <vscale x 2 x i8> @llvm.masked.gather.nxv2i8(<vscale x 2 x i8*> %ptrs, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i8> undef)
+  ret <vscale x 2 x i8> %data
+}
+
+; Code generate load of an illegal datatype via promotion.
+define <vscale x 2 x i16> @masked_gather_nxv2i16(<vscale x 2 x i16*> %ptrs, <vscale x 2 x i1> %mask) {
+; CHECK-LABEL: masked_gather_nxv2i16:
+; CHECK: ld1sh { z0.d }, p0/z, [z0.d]
+; CHECK: ret
+  %data = call <vscale x 2 x i16> @llvm.masked.gather.nxv2i16(<vscale x 2 x i16*> %ptrs, i32 2, <vscale x 2 x i1> %mask, <vscale x 2 x i16> undef)
+  ret <vscale x 2 x i16> %data
+}
+
+; Code generate load of an illegal datatype via promotion.
 define <vscale x 2 x i32> @masked_gather_nxv2i32(<vscale x 2 x i32*> %ptrs, <vscale x 2 x i1> %mask) {
 ; CHECK-LABEL: masked_gather_nxv2i32:
-; CHECK-DAG: mov x8, xzr
-; CHECK-DAG: ld1sw { z0.d }, p0/z, [x8, z0.d]
-; CHECK:     ret
+; CHECK: ld1sw { z0.d }, p0/z, [z0.d]
+; CHECK: ret
   %data = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32(<vscale x 2 x i32*> %ptrs, i32 4, <vscale x 2 x i1> %mask, <vscale x 2 x i32> undef)
   ret <vscale x 2 x i32> %data
 }
@@ -92,11 +109,10 @@ define <vscale x 32 x i32> @masked_gather_nxv32i32(i32* %base, <vscale x 32 x i3
 define <vscale x 4 x i32> @masked_sgather_nxv4i8(<vscale x 4 x i8*> %ptrs, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: masked_sgather_nxv4i8:
 ; CHECK:         pfalse p1.b
-; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    zip2 p2.s, p0.s, p1.s
 ; CHECK-NEXT:    zip1 p0.s, p0.s, p1.s
-; CHECK-NEXT:    ld1sb { z1.d }, p2/z, [x8, z1.d]
-; CHECK-NEXT:    ld1sb { z0.d }, p0/z, [x8, z0.d]
+; CHECK-NEXT:    ld1sb { z1.d }, p2/z, [z1.d]
+; CHECK-NEXT:    ld1sb { z0.d }, p0/z, [z0.d]
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    sxtb z0.s, p0/m, z0.s
@@ -109,8 +125,6 @@ define <vscale x 4 x i32> @masked_sgather_nxv4i8(<vscale x 4 x i8*> %ptrs, <vsca
 declare <vscale x 2 x i8> @llvm.masked.gather.nxv2i8(<vscale x 2 x i8*>, i32, <vscale x 2 x i1>, <vscale x 2 x i8>)
 declare <vscale x 2 x i16> @llvm.masked.gather.nxv2i16(<vscale x 2 x i16*>, i32, <vscale x 2 x i1>, <vscale x 2 x i16>)
 declare <vscale x 2 x i32> @llvm.masked.gather.nxv2i32(<vscale x 2 x i32*>, i32, <vscale x 2 x i1>, <vscale x 2 x i32>)
-
 declare <vscale x 4 x i8> @llvm.masked.gather.nxv4i8(<vscale x 4 x i8*>, i32, <vscale x 4 x i1>, <vscale x 4 x i8>)
-
 declare <vscale x 16 x i8> @llvm.masked.gather.nxv16i8(<vscale x 16 x i8*>, i32, <vscale x 16 x i1>, <vscale x 16 x i8>)
 declare <vscale x 32 x i32> @llvm.masked.gather.nxv32i32(<vscale x 32 x i32*>, i32, <vscale x 32 x i1>, <vscale x 32 x i32>)
