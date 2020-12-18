@@ -1593,6 +1593,10 @@ foreach n = 0-31 in {
 }
 }
 
+// Statistical Profiling Extension system register
+let Requires = [{ {AArch64::FeatureSPE_EEF} }] in
+def : RWSysReg<"PMSNEVFR_EL1",      0b11, 0b000, 0b1001, 0b1001, 0b001>;
+
 // Cyclone specific system registers
 //                                 Op0    Op1     CRn     CRm    Op2
 let Requires = [{ {AArch64::ProcAppleA7} }] in

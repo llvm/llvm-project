@@ -159,6 +159,8 @@ def HasLS64          : Predicate<"Subtarget->hasLS64()">,
                        AssemblerPredicate<(all_of FeatureLS64), "ls64">;
 def HasBRBE          : Predicate<"Subtarget->hasBRBE()">,
                        AssemblerPredicate<(all_of FeatureBRBE), "brbe">;
+def HasSPE_EEF       : Predicate<"Subtarget->hasSPE_EEF()">,
+                       AssemblerPredicate<(all_of FeatureSPE_EEF), "spe-eef">;
 def IsLE             : Predicate<"Subtarget->isLittleEndian()">;
 def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
 def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;
