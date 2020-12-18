@@ -2583,6 +2583,10 @@ void CXXNameMangler::mangleType(QualType T) {
       if (isa<DecltypeType, TypeOfType>(T))
         break;
 
+      // FIXME: We presumably shouldn't strip off ElaboratedTypes with
+      // instantation-dependent qualifiers. See
+      // https://github.com/itanium-cxx-abi/cxx-abi/issues/114.
+
       QualType Desugared
         = T.getSingleStepDesugaredType(Context.getASTContext());
       if (Desugared == T)
