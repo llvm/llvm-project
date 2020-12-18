@@ -412,8 +412,7 @@ void Writer::scanRelocations() {
     for (Reloc &r : isec->relocs) {
       if (auto *s = r.referent.dyn_cast<lld::macho::Symbol *>()) {
         if (isa<Undefined>(s))
-          error("undefined symbol " + toString(*s) + ", referenced from " +
-                toString(isec->file));
+          treatUndefinedSymbol(toString(*s), toString(isec->file));
         else
           target->prepareSymbolRelocation(s, isec, r);
       } else {

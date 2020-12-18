@@ -55,6 +55,8 @@ private:
   std::vector<Symbol *> symVector;
 };
 
+extern void treatUndefinedSymbol(StringRef symbolName, StringRef fileName);
+
 extern SymbolTable *symtab;
 
 } // namespace macho
