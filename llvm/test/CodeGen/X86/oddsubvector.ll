@@ -141,7 +141,7 @@ define <16 x i32> @PR42819(<8 x i32>* %a0) {
 ;
 ; AVX512-LABEL: PR42819:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovdqu (%rdi), %xmm0
+; AVX512-NEXT:    vmovdqu (%rdi), %ymm0
 ; AVX512-NEXT:    movw $-8192, %ax # imm = 0xE000
 ; AVX512-NEXT:    kmovw %eax, %k1
 ; AVX512-NEXT:    vpexpandd %zmm0, %zmm0 {%k1} {z}
