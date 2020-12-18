@@ -47,7 +47,6 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
     @skipUnlessPlatform(["netbsd"])
     @debugserver_test
     def test_signal_one_thread_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_launch()
         self.signal_one_thread()
@@ -55,7 +54,6 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
     @skipUnlessPlatform(["netbsd"])
     @llgs_test
     def test_signal_one_thread_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         self.signal_one_thread()
@@ -76,7 +74,6 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
     @skipUnlessPlatform(["netbsd"])
     @debugserver_test
     def test_signal_all_threads_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_launch()
         self.signal_all_threads()
@@ -84,7 +81,6 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
     @skipUnlessPlatform(["netbsd"])
     @llgs_test
     def test_signal_all_threads_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         self.signal_all_threads()
@@ -105,7 +101,6 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
     @skipUnlessPlatform(["netbsd"])
     @debugserver_test
     def test_signal_two_of_three_threads_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_launch()
         self.signal_two_of_three_threads()
@@ -113,7 +108,6 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
     @skipUnlessPlatform(["netbsd"])
     @llgs_test
     def test_signal_two_of_three_threads_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         self.signal_two_of_three_threads()
@@ -134,7 +128,6 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
     @skipUnlessPlatform(["netbsd"])
     @debugserver_test
     def test_signal_two_signals_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_launch()
         self.signal_two_signals()
@@ -142,7 +135,6 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
     @skipUnlessPlatform(["netbsd"])
     @llgs_test
     def test_signal_two_signals_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         self.signal_two_signals()

@@ -37,7 +37,6 @@ class TestGdbRemoteModuleInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @llgs_test
     def test_module_info(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         self.module_info()

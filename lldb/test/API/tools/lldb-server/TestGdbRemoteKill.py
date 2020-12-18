@@ -46,14 +46,12 @@ class TestGdbRemoteKill(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @debugserver_test
     def test_attach_commandline_kill_after_initial_stop_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_attach()
         self.attach_commandline_kill_after_initial_stop()
 
     @llgs_test
     def test_attach_commandline_kill_after_initial_stop_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_attach()
         self.attach_commandline_kill_after_initial_stop()

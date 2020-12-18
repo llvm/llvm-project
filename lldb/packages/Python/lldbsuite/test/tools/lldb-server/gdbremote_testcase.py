@@ -80,6 +80,10 @@ class GdbRemoteTestCaseBase(Base):
         return any(("gdb-remote" in channel)
                    for channel in lldbtest_config.channels)
 
+    def getDebugServer(self):
+        method = getattr(self, self.testMethodName)
+        return getattr(method, "debug_server", None)
+
     def setUp(self):
         super(GdbRemoteTestCaseBase, self).setUp()
 
@@ -113,6 +117,12 @@ class GdbRemoteTestCaseBase(Base):
                 self.stub_hostname = host
         else:
             self.stub_hostname = "localhost"
+
+        debug_server = self.getDebugServer()
+        if debug_server == "debugserver":
+            self._init_debugserver_test()
+        else:
+            self._init_llgs_test()
 
     def tearDown(self):
         self.logger.removeHandler(self._verbose_log_handler)
@@ -150,7 +160,7 @@ class GdbRemoteTestCaseBase(Base):
         self.test_sequence = GdbRemoteTestSequence(self.logger)
 
 
-    def init_llgs_test(self):
+    def _init_llgs_test(self):
         reverse_connect = True
         if lldb.remote_platform:
             # Reverse connections may be tricky due to firewalls/NATs.
@@ -198,7 +208,7 @@ class GdbRemoteTestCaseBase(Base):
 
         self.reverse_connect = reverse_connect
 
-    def init_debugserver_test(self):
+    def _init_debugserver_test(self):
         self.debug_monitor_exe = get_debugserver_exe()
         if not self.debug_monitor_exe:
             self.skipTest("debugserver exe not found")

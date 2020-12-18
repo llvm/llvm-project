@@ -24,13 +24,11 @@ class TestGdbRemoteExitCode(GdbRemoteTestCaseBase):
     @debugserver_test
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_inferior_exit_0_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.inferior_exit_0()
 
     @llgs_test
     def test_inferior_exit_0_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.inferior_exit_0()
 
@@ -50,12 +48,10 @@ class TestGdbRemoteExitCode(GdbRemoteTestCaseBase):
     @debugserver_test
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_inferior_exit_42_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.inferior_exit_42()
 
     @llgs_test
     def test_inferior_exit_42_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.inferior_exit_42()
