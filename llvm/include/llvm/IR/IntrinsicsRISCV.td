@@ -378,6 +378,7 @@ let TargetPrefix = "riscv" in {
   }
 
   defm vle : RISCVUSLoad;
+  defm vleff : RISCVUSLoad;
   defm vse : RISCVUSStore;
   defm vlse: RISCVSLoad;
   defm vsse: RISCVSStore;
