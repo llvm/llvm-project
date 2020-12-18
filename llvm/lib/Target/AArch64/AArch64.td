@@ -415,6 +415,9 @@ def FeatureLS64 : SubtargetFeature<"ls64", "HasLS64",
 def FeatureBRBE : SubtargetFeature<"brbe", "HasBRBE",
     "true", "Enable Branch Record Buffer Extension">;
 
+def FeatureSPE_EEF : SubtargetFeature<"spe-eef", "HasSPE_EEF",
+    "true", "Enable extra register in the Statistical Profiling Extension">;
+
 def FeatureFineGrainedTraps : SubtargetFeature<"fgt", "HasFineGrainedTraps",
     "true", "Enable fine grained virtualization traps extension">;
 
