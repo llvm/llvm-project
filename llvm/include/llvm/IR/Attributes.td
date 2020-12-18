@@ -63,6 +63,9 @@ def Cold : EnumAttr<"cold">;
 /// Can only be moved to control-equivalent blocks.
 def Convergent : EnumAttr<"convergent">;
 
+/// Marks function as being in a hot path and frequently called.
+def Hot: EnumAttr<"hot">;
+
 /// Pointer is known to be dereferenceable.
 def Dereferenceable : IntAttr<"dereferenceable">;
 
