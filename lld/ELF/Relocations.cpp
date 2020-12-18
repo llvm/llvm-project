@@ -1073,7 +1073,7 @@ static void addPltEntry(PltSection *plt, GotPltSection *gotPlt,
 static void addGotEntry(Symbol &sym) {
   in.got->addEntry(sym);
 
-  RelExpr expr = sym.isTls() ? R_TLS : R_ABS;
+  RelExpr expr = sym.isTls() ? R_TPREL : R_ABS;
   uint64_t off = sym.getGotOffset();
 
   // If a GOT slot value can be calculated at link-time, which is now,
