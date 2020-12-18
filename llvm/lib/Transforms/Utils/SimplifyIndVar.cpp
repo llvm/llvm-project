@@ -1654,7 +1654,7 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
     assert(LoopExitingBlock && L->contains(LoopExitingBlock) &&
            "Not a LCSSA Phi?");
     WidePN->addIncoming(WideBO, LoopExitingBlock);
-    Builder.SetInsertPoint(User->getParent()->getFirstNonPHI());
+    Builder.SetInsertPoint(&*User->getParent()->getFirstInsertionPt());
     auto *TruncPN = Builder.CreateTrunc(WidePN, User->getType());
     User->replaceAllUsesWith(TruncPN);
     DeadInsts.emplace_back(User);
