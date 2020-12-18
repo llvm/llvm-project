@@ -1820,7 +1820,8 @@ static bool EvaluateFloat(const Expr *E, APFloat &Result, EvalInfo &Info);
 static bool EvaluateComplex(const Expr *E, ComplexValue &Res, EvalInfo &Info);
 static bool EvaluateAtomic(const Expr *E, const LValue *This, APValue &Result,
                            EvalInfo &Info);
-static bool EvaluateAsRValue(EvalInfo &Info, const Expr *E, APValue &Result);
+static bool EvaluateAsRValue(EvalInfo &Info, const Expr *E, APValue &Result,
+                             bool &Dependent);
 
 /// Evaluate an integer or fixed point expression into an APResult.
 static bool EvaluateFixedPointOrInteger(const Expr *E, APFixedPoint &Result,
@@ -2121,7 +2122,8 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
                                   QualType Type, const APValue &Value,
                                   ConstantExprKind Kind,
                                   SourceLocation SubobjectLoc,
-                                  CheckedTemporaries &CheckedTemps);
+                                  CheckedTemporaries &CheckedTemps,
+                                  bool &Dependent);
 
 /// Check that this reference or pointer core constant expression is a valid
 /// value for an address or reference constant expression. Return true if we
@@ -2129,7 +2131,8 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
 static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
                                           QualType Type, const LValue &LVal,
                                           ConstantExprKind Kind,
-                                          CheckedTemporaries &CheckedTemps) {
+                                          CheckedTemporaries &CheckedTemps,
+                                          bool &Dependent) {
   bool IsReferenceType = Type->isReferenceType();
 
   APValue::LValueBase Base = LVal.getLValueBase();
@@ -2214,6 +2217,8 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
   }
 
   if (BaseVD) {
+    Dependent |= BaseVD->isTemplated();
+
     if (const VarDecl *Var = dyn_cast<const VarDecl>(BaseVD)) {
       // Check if this is a thread-local variable.
       if (Var->getTLSKind())
@@ -2244,6 +2249,9 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
     }
   } else if (const auto *MTE =
                  dyn_cast_or_null<MaterializeTemporaryExpr>(BaseE)) {
+    if (auto *Extending = MTE->getExtendingDecl())
+      Dependent |= Extending->isTemplated();
+
     if (CheckedTemps.insert(MTE).second) {
       QualType TempType = getType(Base);
       if (TempType.isDestructedType()) {
@@ -2256,8 +2264,8 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
       APValue *V = MTE->getOrCreateValue(false);
       assert(V && "evasluation result refers to uninitialised temporary");
       if (!CheckEvaluationResult(CheckEvaluationResultKind::ConstantExpression,
-                                 Info, MTE->getExprLoc(), TempType, *V,
-                                 Kind, SourceLocation(), CheckedTemps))
+                                 Info, MTE->getExprLoc(), TempType, *V, Kind,
+                                 SourceLocation(), CheckedTemps, Dependent))
         return false;
     }
   }
@@ -2286,13 +2294,15 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
 
 /// Member pointers are constant expressions unless they point to a
 /// non-virtual dllimport member function.
-static bool CheckMemberPointerConstantExpression(EvalInfo &Info,
-                                                 SourceLocation Loc,
-                                                 QualType Type,
-                                                 const APValue &Value,
-                                                 ConstantExprKind Kind) {
+static bool
+CheckMemberPointerConstantExpression(EvalInfo &Info, SourceLocation Loc,
+                                     QualType Type, const APValue &Value,
+                                     ConstantExprKind Kind, bool &Dependent) {
   const ValueDecl *Member = Value.getMemberPointerDecl();
-  const auto *FD = dyn_cast_or_null<CXXMethodDecl>(Member);
+  if (!Member)
+    return true;
+  Dependent |= Member->isTemplated();
+  const auto *FD = dyn_cast<CXXMethodDecl>(Member);
   if (!FD)
     return true;
   if (FD->isConsteval()) {
@@ -2341,7 +2351,8 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
                                   QualType Type, const APValue &Value,
                                   ConstantExprKind Kind,
                                   SourceLocation SubobjectLoc,
-                                  CheckedTemporaries &CheckedTemps) {
+                                  CheckedTemporaries &CheckedTemps,
+                                  bool &Dependent) {
   if (!Value.hasValue()) {
     Info.FFDiag(DiagLoc, diag::note_constexpr_uninitialized)
       << true << Type;
@@ -2363,20 +2374,20 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
     for (unsigned I = 0, N = Value.getArrayInitializedElts(); I != N; ++I) {
       if (!CheckEvaluationResult(CERK, Info, DiagLoc, EltTy,
                                  Value.getArrayInitializedElt(I), Kind,
-                                 SubobjectLoc, CheckedTemps))
+                                 SubobjectLoc, CheckedTemps, Dependent))
         return false;
     }
     if (!Value.hasArrayFiller())
       return true;
     return CheckEvaluationResult(CERK, Info, DiagLoc, EltTy,
                                  Value.getArrayFiller(), Kind, SubobjectLoc,
-                                 CheckedTemps);
+                                 CheckedTemps, Dependent);
   }
   if (Value.isUnion() && Value.getUnionField()) {
     return CheckEvaluationResult(
         CERK, Info, DiagLoc, Value.getUnionField()->getType(),
         Value.getUnionValue(), Kind, Value.getUnionField()->getLocation(),
-        CheckedTemps);
+        CheckedTemps, Dependent);
   }
   if (Value.isStruct()) {
     RecordDecl *RD = Type->castAs<RecordType>()->getDecl();
@@ -2385,7 +2396,7 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
       for (const CXXBaseSpecifier &BS : CD->bases()) {
         if (!CheckEvaluationResult(CERK, Info, DiagLoc, BS.getType(),
                                    Value.getStructBase(BaseIndex), Kind,
-                                   BS.getBeginLoc(), CheckedTemps))
+                                   BS.getBeginLoc(), CheckedTemps, Dependent))
           return false;
         ++BaseIndex;
       }
@@ -2395,8 +2406,8 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
         continue;
 
       if (!CheckEvaluationResult(CERK, Info, DiagLoc, I->getType(),
-                                 Value.getStructField(I->getFieldIndex()),
-                                 Kind, I->getLocation(), CheckedTemps))
+                                 Value.getStructField(I->getFieldIndex()), Kind,
+                                 I->getLocation(), CheckedTemps, Dependent))
         return false;
     }
   }
@@ -2406,12 +2417,13 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
     LValue LVal;
     LVal.setFrom(Info.Ctx, Value);
     return CheckLValueConstantExpression(Info, DiagLoc, Type, LVal, Kind,
-                                         CheckedTemps);
+                                         CheckedTemps, Dependent);
   }
 
   if (Value.isMemberPointer() &&
       CERK == CheckEvaluationResultKind::ConstantExpression)
-    return CheckMemberPointerConstantExpression(Info, DiagLoc, Type, Value, Kind);
+    return CheckMemberPointerConstantExpression(Info, DiagLoc, Type, Value,
+                                                Kind, Dependent);
 
   // Everything else is fine.
   return true;
@@ -2422,7 +2434,7 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
 /// check that the expression is of literal type.
 static bool CheckConstantExpression(EvalInfo &Info, SourceLocation DiagLoc,
                                     QualType Type, const APValue &Value,
-                                    ConstantExprKind Kind) {
+                                    ConstantExprKind Kind, bool &Dependent) {
   // Nothing to check for a constant expression of type 'cv void'.
   if (Type->isVoidType())
     return true;
@@ -2430,17 +2442,18 @@ static bool CheckConstantExpression(EvalInfo &Info, SourceLocation DiagLoc,
   CheckedTemporaries CheckedTemps;
   return CheckEvaluationResult(CheckEvaluationResultKind::ConstantExpression,
                                Info, DiagLoc, Type, Value, Kind,
-                               SourceLocation(), CheckedTemps);
+                               SourceLocation(), CheckedTemps, Dependent);
 }
 
 /// Check that this evaluated value is fully-initialized and can be loaded by
 /// an lvalue-to-rvalue conversion.
 static bool CheckFullyInitialized(EvalInfo &Info, SourceLocation DiagLoc,
                                   QualType Type, const APValue &Value) {
+  bool Dependent = false;
   CheckedTemporaries CheckedTemps;
   return CheckEvaluationResult(
       CheckEvaluationResultKind::FullyInitialized, Info, DiagLoc, Type, Value,
-      ConstantExprKind::Normal, SourceLocation(), CheckedTemps);
+      ConstantExprKind::Normal, SourceLocation(), CheckedTemps, Dependent);
 }
 
 /// Enforce C++2a [expr.const]/4.17, which disallows new-expressions unless
@@ -11114,7 +11127,9 @@ static bool EvaluateBuiltinConstantP(EvalInfo &Info, const Expr *Arg) {
       ArgType->isAnyComplexType() || ArgType->isPointerType() ||
       ArgType->isNullPtrType()) {
     APValue V;
-    if (!::EvaluateAsRValue(Info, Arg, V) || Info.EvalStatus.HasSideEffects) {
+    bool Dependent = false;
+    if (!::EvaluateAsRValue(Info, Arg, V, Dependent) ||
+        Info.EvalStatus.HasSideEffects) {
       Fold.keepDiagnostics();
       return false;
     }
@@ -11416,7 +11431,8 @@ static bool tryEvaluateBuiltinObjectSize(const Expr *E, unsigned Type,
       // It's possible for us to be given GLValues if we're called via
       // Expr::tryEvaluateObjectSize.
       APValue RVal;
-      if (!EvaluateAsRValue(Info, E, RVal))
+      bool Dependent = false;
+      if (!EvaluateAsRValue(Info, E, RVal, Dependent))
         return false;
       LVal.setFrom(Info.Ctx, RVal);
     } else if (!EvaluatePointer(ignorePointerCastsAndParens(E), LVal, Info,
@@ -12852,8 +12868,9 @@ bool RecordExprEvaluator::VisitBinCmp(const BinaryOperator *E) {
     LV.set(VD);
     if (!handleLValueToRValueConversion(Info, E, E->getType(), LV, Result))
       return false;
+    bool Dependent = false;
     return CheckConstantExpression(Info, E->getExprLoc(), E->getType(), Result,
-                                   ConstantExprKind::Normal);
+                                   ConstantExprKind::Normal, Dependent);
   };
   return EvaluateComparisonBinaryOperator(Info, E, OnSuccess, [&]() {
     return ExprEvaluatorBaseTy::VisitBinCmp(E);
@@ -14623,7 +14640,8 @@ static bool EvaluateInPlace(APValue &Result, EvalInfo &Info, const LValue &This,
 
 /// EvaluateAsRValue - Try to evaluate this expression, performing an implicit
 /// lvalue-to-rvalue cast if it is an lvalue.
-static bool EvaluateAsRValue(EvalInfo &Info, const Expr *E, APValue &Result) {
+static bool EvaluateAsRValue(EvalInfo &Info, const Expr *E, APValue &Result,
+                             bool &Dependent) {
   assert(!E->isValueDependent());
   if (Info.EnableNewConstInterp) {
     if (!Info.Ctx.getInterpContext().evaluateAsRValue(Info, E, Result))
@@ -14648,7 +14666,7 @@ static bool EvaluateAsRValue(EvalInfo &Info, const Expr *E, APValue &Result) {
 
   // Check this core constant expression is a constant expression.
   return CheckConstantExpression(Info, E->getExprLoc(), E->getType(), Result,
-                                 ConstantExprKind::Normal) &&
+                                 ConstantExprKind::Normal, Dependent) &&
          CheckMemoryLeaks(Info);
 }
 
@@ -14694,7 +14712,7 @@ static bool EvaluateAsRValue(const Expr *E, Expr::EvalResult &Result,
   if (FastEvaluateAsRValue(E, Result, Ctx, IsConst))
     return IsConst;
 
-  return EvaluateAsRValue(Info, E, Result.Val);
+  return EvaluateAsRValue(Info, E, Result.Val, Result.Dependent);
 }
 
 static bool EvaluateAsInt(const Expr *E, Expr::EvalResult &ExprResult,
@@ -14804,9 +14822,9 @@ bool Expr::EvaluateAsLValue(EvalResult &Result, const ASTContext &Ctx,
   CheckedTemporaries CheckedTemps;
   if (!EvaluateLValue(this, LV, Info) || !Info.discardCleanups() ||
       Result.HasSideEffects ||
-      !CheckLValueConstantExpression(Info, getExprLoc(),
-                                     Ctx.getLValueReferenceType(getType()), LV,
-                                     ConstantExprKind::Normal, CheckedTemps))
+      !CheckLValueConstantExpression(
+          Info, getExprLoc(), Ctx.getLValueReferenceType(getType()), LV,
+          ConstantExprKind::Normal, CheckedTemps, Result.Dependent))
     return false;
 
   LV.moveInto(Result.Val);
@@ -14865,7 +14883,7 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
     llvm_unreachable("Unhandled cleanup; missing full expression marker?");
 
   if (!CheckConstantExpression(Info, getExprLoc(), getStorageType(Ctx, this),
-                               Result.Val, Kind))
+                               Result.Val, Kind, Result.Dependent))
     return false;
   if (!CheckMemoryLeaks(Info))
     return false;
@@ -14929,8 +14947,9 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
     if (!Info.discardCleanups())
       llvm_unreachable("Unhandled cleanup; missing full expression marker?");
   }
+  bool Dependent = false;
   return CheckConstantExpression(Info, DeclLoc, DeclTy, Value,
-                                 ConstantExprKind::Normal) &&
+                                 ConstantExprKind::Normal, Dependent) &&
          CheckMemoryLeaks(Info);
 }
 
@@ -14997,7 +15016,7 @@ APSInt Expr::EvaluateKnownConstIntCheckOverflow(
   Info.InConstantContext = true;
   Info.CheckingForUndefinedBehavior = true;
 
-  bool Result = ::EvaluateAsRValue(Info, this, EVResult.Val);
+  bool Result = ::EvaluateAsRValue(this, EVResult, Ctx, Info);
   (void)Result;
   assert(Result && "Could not evaluate expression");
   assert(EVResult.Val.isInt() && "Expression did not evaluate to integer");
@@ -15009,13 +15028,10 @@ void Expr::EvaluateForOverflow(const ASTContext &Ctx) const {
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
 
-  bool IsConst;
   EvalResult EVResult;
-  if (!FastEvaluateAsRValue(this, EVResult, Ctx, IsConst)) {
-    EvalInfo Info(Ctx, EVResult, EvalInfo::EM_IgnoreSideEffects);
-    Info.CheckingForUndefinedBehavior = true;
-    (void)::EvaluateAsRValue(Info, this, EVResult.Val);
-  }
+  EvalInfo Info(Ctx, EVResult, EvalInfo::EM_IgnoreSideEffects);
+  Info.CheckingForUndefinedBehavior = true;
+  (void)::EvaluateAsRValue(this, EVResult, Ctx, Info);
 }
 
 bool Expr::EvalResult::isGlobalLValue() const {
@@ -15565,8 +15581,9 @@ bool Expr::isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result,
   EvalInfo Info(Ctx, Status, EvalInfo::EM_ConstantExpression);
 
   APValue Scratch;
+  bool Dependent = false;
   bool IsConstExpr =
-      ::EvaluateAsRValue(Info, this, Result ? *Result : Scratch) &&
+      ::EvaluateAsRValue(Info, this, Result ? *Result : Scratch, Dependent) &&
       // FIXME: We don't produce a diagnostic for this, but the callers that
       // call us on arbitrary full-expressions should generally not care.
       Info.discardCleanups() && !Status.HasSideEffects;

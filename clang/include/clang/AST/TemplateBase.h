@@ -252,6 +252,12 @@ public:
   /// Whether this template argument is dependent on a template
   /// parameter such that its result can change from one instantiation to
   /// another.
+  ///
+  /// It's not always meaningful to ask whether a template argument is
+  /// dependent before it's been converted to match a template parameter;
+  /// whether a non-type template argument is dependent depends on the
+  /// corresponding parameter. For an unconverted template argument, this
+  /// returns true if the argument *might* be dependent.
   bool isDependent() const;
 
   /// Whether this template argument is dependent on a template
@@ -674,13 +680,6 @@ struct alignas(void *) ASTTemplateKWAndArgsInfo {
   void initializeFrom(SourceLocation TemplateKWLoc,
                       const TemplateArgumentListInfo &List,
                       TemplateArgumentLoc *OutArgArray);
-  // FIXME: The parameter Deps is the result populated by this method, the
-  // caller doesn't need it since it is populated by computeDependence. remove
-  // it.
-  void initializeFrom(SourceLocation TemplateKWLoc,
-                      const TemplateArgumentListInfo &List,
-                      TemplateArgumentLoc *OutArgArray,
-                      TemplateArgumentDependence &Deps);
   void initializeFrom(SourceLocation TemplateKWLoc);
 
   void copyInto(const TemplateArgumentLoc *ArgArray,

@@ -147,7 +147,7 @@ void test_templated() {
 
   auto explicit_by_value_unused = [i] {}; // expected-warning{{lambda capture 'i' is not used}}
   auto explicit_by_value_unused_sizeof = [i] { return sizeof(i); }; // expected-warning{{lambda capture 'i' is not required to be captured for this use}}
-  auto explicit_by_value_unused_decltype = [i] { decltype(i) j = 0; }; // expected-warning{{lambda capture 'i' is not used}}
+  auto explicit_by_value_unused_decltype = [i] { decltype(i) j = 0; }; // expected-warning{{lambda capture 'i' is not required to be captured for this use}}
   auto explicit_by_value_unused_const = [k] { return k + 1; };         // expected-warning{{lambda capture 'k' is not required to be captured for this use}}
   auto explicit_by_value_unused_const_generic = [k](auto c) { return k + 1; }; // expected-warning{{lambda capture 'k' is not required to be captured for this use}}
 
