@@ -666,7 +666,7 @@ bool GuardWideningImpl::combineRangeChecks(
     };
 
     copy_if(Checks, std::back_inserter(CurrentChecks), IsCurrentCheck);
-    Checks.erase(remove_if(Checks, IsCurrentCheck), Checks.end());
+    erase_if(Checks, IsCurrentCheck);
 
     assert(CurrentChecks.size() != 0 && "We know we have at least one!");
 

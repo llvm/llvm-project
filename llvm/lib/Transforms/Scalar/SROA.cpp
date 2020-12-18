@@ -467,12 +467,8 @@ class AllocaSlices::partition_iterator
         // Remove the uses which have ended in the prior partition. This
         // cannot change the max split slice end because we just checked that
         // the prior partition ended prior to that max.
-        P.SplitTails.erase(llvm::remove_if(P.SplitTails,
-                                           [&](Slice *S) {
-                                             return S->endOffset() <=
-                                                    P.EndOffset;
-                                           }),
-                           P.SplitTails.end());
+        llvm::erase_if(P.SplitTails,
+                       [&](Slice *S) { return S->endOffset() <= P.EndOffset; });
         assert(llvm::any_of(P.SplitTails,
                             [&](Slice *S) {
                               return S->endOffset() == MaxSplitSliceEndOffset;
@@ -1076,9 +1072,7 @@ AllocaSlices::AllocaSlices(const DataLayout &DL, AllocaInst &AI)
     return;
   }
 
-  Slices.erase(
-      llvm::remove_if(Slices, [](const Slice &S) { return S.isDead(); }),
-      Slices.end());
+  llvm::erase_if(Slices, [](const Slice &S) { return S.isDead(); });
 
   // Sort the uses. This arranges for the offsets to be in ascending order,
   // and the sizes to be in descending order.
@@ -1932,12 +1926,9 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
   // do that until all the backends are known to produce good code for all
   // integer vector types.
   if (!HaveCommonEltTy) {
-    CandidateTys.erase(
-        llvm::remove_if(CandidateTys,
-                        [](VectorType *VTy) {
-                          return !VTy->getElementType()->isIntegerTy();
-                        }),
-        CandidateTys.end());
+    llvm::erase_if(CandidateTys, [](VectorType *VTy) {
+      return !VTy->getElementType()->isIntegerTy();
+    });
 
     // If there were no integer vector types, give up.
     if (CandidateTys.empty())
@@ -3902,63 +3893,53 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
   // such loads and stores, we can only pre-split them if their splits exactly
   // match relative to their starting offset. We have to verify this prior to
   // any rewriting.
-  Stores.erase(
-      llvm::remove_if(Stores,
-                      [&UnsplittableLoads, &SplitOffsetsMap](StoreInst *SI) {
-                        // Lookup the load we are storing in our map of split
-                        // offsets.
-                        auto *LI = cast<LoadInst>(SI->getValueOperand());
-                        // If it was completely unsplittable, then we're done,
-                        // and this store can't be pre-split.
-                        if (UnsplittableLoads.count(LI))
-                          return true;
+  llvm::erase_if(Stores, [&UnsplittableLoads, &SplitOffsetsMap](StoreInst *SI) {
+    // Lookup the load we are storing in our map of split
+    // offsets.
+    auto *LI = cast<LoadInst>(SI->getValueOperand());
+    // If it was completely unsplittable, then we're done,
+    // and this store can't be pre-split.
+    if (UnsplittableLoads.count(LI))
+      return true;
 
-                        auto LoadOffsetsI = SplitOffsetsMap.find(LI);
-                        if (LoadOffsetsI == SplitOffsetsMap.end())
-                          return false; // Unrelated loads are definitely safe.
-                        auto &LoadOffsets = LoadOffsetsI->second;
+    auto LoadOffsetsI = SplitOffsetsMap.find(LI);
+    if (LoadOffsetsI == SplitOffsetsMap.end())
+      return false; // Unrelated loads are definitely safe.
+    auto &LoadOffsets = LoadOffsetsI->second;
 
-                        // Now lookup the store's offsets.
-                        auto &StoreOffsets = SplitOffsetsMap[SI];
+    // Now lookup the store's offsets.
+    auto &StoreOffsets = SplitOffsetsMap[SI];
 
-                        // If the relative offsets of each split in the load and
-                        // store match exactly, then we can split them and we
-                        // don't need to remove them here.
-                        if (LoadOffsets.Splits == StoreOffsets.Splits)
-                          return false;
+    // If the relative offsets of each split in the load and
+    // store match exactly, then we can split them and we
+    // don't need to remove them here.
+    if (LoadOffsets.Splits == StoreOffsets.Splits)
+      return false;
 
-                        LLVM_DEBUG(
-                            dbgs()
-                            << "    Mismatched splits for load and store:\n"
-                            << "      " << *LI << "\n"
-                            << "      " << *SI << "\n");
+    LLVM_DEBUG(dbgs() << "    Mismatched splits for load and store:\n"
+                      << "      " << *LI << "\n"
+                      << "      " << *SI << "\n");
 
-                        // We've found a store and load that we need to split
-                        // with mismatched relative splits. Just give up on them
-                        // and remove both instructions from our list of
-                        // candidates.
-                        UnsplittableLoads.insert(LI);
-                        return true;
-                      }),
-      Stores.end());
+    // We've found a store and load that we need to split
+    // with mismatched relative splits. Just give up on them
+    // and remove both instructions from our list of
+    // candidates.
+    UnsplittableLoads.insert(LI);
+    return true;
+  });
   // Now we have to go *back* through all the stores, because a later store may
   // have caused an earlier store's load to become unsplittable and if it is
   // unsplittable for the later store, then we can't rely on it being split in
   // the earlier store either.
-  Stores.erase(llvm::remove_if(Stores,
-                               [&UnsplittableLoads](StoreInst *SI) {
-                                 auto *LI =
-                                     cast<LoadInst>(SI->getValueOperand());
-                                 return UnsplittableLoads.count(LI);
-                               }),
-               Stores.end());
+  llvm::erase_if(Stores, [&UnsplittableLoads](StoreInst *SI) {
+    auto *LI = cast<LoadInst>(SI->getValueOperand());
+    return UnsplittableLoads.count(LI);
+  });
   // Once we've established all the loads that can't be split for some reason,
   // filter any that made it into our list out.
-  Loads.erase(llvm::remove_if(Loads,
-                              [&UnsplittableLoads](LoadInst *LI) {
-                                return UnsplittableLoads.count(LI);
-                              }),
-              Loads.end());
+  llvm::erase_if(Loads, [&UnsplittableLoads](LoadInst *LI) {
+    return UnsplittableLoads.count(LI);
+  });
 
   // If no loads or stores are left, there is no pre-splitting to be done for
   // this alloca.
@@ -4232,8 +4213,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
   }
 
   // Remove the killed slices that have ben pre-split.
-  AS.erase(llvm::remove_if(AS, [](const Slice &S) { return S.isDead(); }),
-           AS.end());
+  llvm::erase_if(AS, [](const Slice &S) { return S.isDead(); });
 
   // Insert our new slices. This will sort and merge them into the sorted
   // sequence.
@@ -4247,11 +4227,9 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
 
   // Finally, don't try to promote any allocas that new require re-splitting.
   // They have already been added to the worklist above.
-  PromotableAllocas.erase(
-      llvm::remove_if(
-          PromotableAllocas,
-          [&](AllocaInst *AI) { return ResplitPromotableAllocas.count(AI); }),
-      PromotableAllocas.end());
+  llvm::erase_if(PromotableAllocas, [&](AllocaInst *AI) {
+    return ResplitPromotableAllocas.count(AI);
+  });
 
   return true;
 }
@@ -4768,8 +4746,7 @@ PreservedAnalyses SROA::runImpl(Function &F, DominatorTree &RunDT,
         auto IsInSet = [&](AllocaInst *AI) { return DeletedAllocas.count(AI); };
         Worklist.remove_if(IsInSet);
         PostPromotionWorklist.remove_if(IsInSet);
-        PromotableAllocas.erase(llvm::remove_if(PromotableAllocas, IsInSet),
-                                PromotableAllocas.end());
+        llvm::erase_if(PromotableAllocas, IsInSet);
         DeletedAllocas.clear();
       }
     }
