@@ -28,14 +28,28 @@
 
 // --- C++20 features ---
 
+#if check(aggregate_paren_init, 0, 0, 0, 0, 0)
+// FIXME: 201902 in C++20
+#error "wrong value for __cpp_aggregate_paren_init"
+#endif
+
 #if defined(CHAR8_T) ? check(char8_t, 201811, 201811, 201811, 201811, 201811) : \
     defined(NO_CHAR8_T) ? check(char8_t, 0, 0, 0, 0, 0) : \
     check(char8_t, 0, 0, 0, 0, 201811)
 #error "wrong value for __cpp_char8_t"
 #endif
 
+#if check(concepts, 0, 0, 0, 0, 201907)
+#error "wrong value for __cpp_concepts"
+#endif
+
 #if check(conditional_explicit, 0, 0, 0, 0, 201806)
 #error "wrong value for __cpp_conditional_explicit"
+#endif
+
+#if check(consteval, 0, 0, 0, 0, 0)
+// FIXME: 201811 in C++20
+#error "wrong value for __cpp_consteval"
 #endif
 
 // constexpr checked below
@@ -51,6 +65,8 @@
 #if check(constinit, 0, 0, 0, 0, 201907)
 #error "wrong value for __cpp_constinit"
 #endif
+
+// deduction_guides checked below
 
 #if check(designated_initializers, 0, 0, 0, 0, 201707)
 #error "wrong value for __cpp_designated_initializers"
@@ -68,8 +84,14 @@
 
 // init_captures checked below
 
-#if check(concepts, 0, 0, 0, 0, 201907)
-#error "wrong value for __cpp_concepts"
+#if check(modules, 0, 0, 0, 0, 0)
+// FIXME: 201907 in C++20
+#error "wrong value for __cpp_modules"
+#endif
+
+#if check(using_enum, 0, 0, 0, 0, 0)
+// FIXME: 201907 in C++20
+#error "wrong value for __cpp_using_enum"
 #endif
 
 // --- C++17 features ---
@@ -113,6 +135,7 @@
 // static_assert checked below
 
 #if check(deduction_guides, 0, 0, 0, 201703, 201703)
+// FIXME: 201907 in C++20
 #error "wrong value for __cpp_deduction_guides"
 #endif
 
