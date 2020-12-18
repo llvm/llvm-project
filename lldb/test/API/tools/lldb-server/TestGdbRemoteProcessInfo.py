@@ -36,13 +36,11 @@ class TestGdbRemoteProcessInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
     @debugserver_test
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_qProcessInfo_returns_running_process_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.qProcessInfo_returns_running_process()
 
     @llgs_test
     def test_qProcessInfo_returns_running_process_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.qProcessInfo_returns_running_process()
 
@@ -69,14 +67,12 @@ class TestGdbRemoteProcessInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_attach_commandline_qProcessInfo_reports_correct_pid_debugserver(
             self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_attach()
         self.attach_commandline_qProcessInfo_reports_correct_pid()
 
     @llgs_test
     def test_attach_commandline_qProcessInfo_reports_correct_pid_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_attach()
         self.attach_commandline_qProcessInfo_reports_correct_pid()
@@ -101,13 +97,11 @@ class TestGdbRemoteProcessInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
     @debugserver_test
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_qProcessInfo_reports_valid_endian_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.qProcessInfo_reports_valid_endian()
 
     @llgs_test
     def test_qProcessInfo_reports_valid_endian_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.qProcessInfo_reports_valid_endian()
 
@@ -162,20 +156,17 @@ class TestGdbRemoteProcessInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
     @debugserver_test
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_qProcessInfo_contains_cputype_cpusubtype_debugserver_darwin(self):
-        self.init_debugserver_test()
         self.build()
         self.qProcessInfo_contains_keys(set(['cputype', 'cpusubtype']))
 
     @skipUnlessDarwin
     @llgs_test
     def test_qProcessInfo_contains_cputype_cpusubtype_llgs_darwin(self):
-        self.init_llgs_test()
         self.build()
         self.qProcessInfo_contains_keys(set(['cputype', 'cpusubtype']))
 
     @llgs_test
     def test_qProcessInfo_contains_triple_ppid_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.qProcessInfo_contains_keys(set(['triple', 'parent-pid']))
 
@@ -183,7 +174,6 @@ class TestGdbRemoteProcessInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
     @debugserver_test
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_qProcessInfo_does_not_contain_triple_debugserver_darwin(self):
-        self.init_debugserver_test()
         self.build()
         # We don't expect to see triple on darwin.  If we do, we'll prefer triple
         # to cputype/cpusubtype and skip some darwin-based ProcessGDBRemote ArchSpec setup
@@ -193,7 +183,6 @@ class TestGdbRemoteProcessInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
     @skipUnlessDarwin
     @llgs_test
     def test_qProcessInfo_does_not_contain_triple_llgs_darwin(self):
-        self.init_llgs_test()
         self.build()
         # We don't expect to see triple on darwin.  If we do, we'll prefer triple
         # to cputype/cpusubtype and skip some darwin-based ProcessGDBRemote ArchSpec setup
@@ -203,6 +192,5 @@ class TestGdbRemoteProcessInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
     @skipIfDarwin
     @llgs_test
     def test_qProcessInfo_does_not_contain_cputype_cpusubtype_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.qProcessInfo_does_not_contain_keys(set(['cputype', 'cpusubtype']))

@@ -32,7 +32,6 @@ class TestGdbRemoteThreadName(gdbremote_testcase.GdbRemoteTestCaseBase):
     @llgs_test
     def test(self):
         """ Make sure lldb-server can retrieve inferior thread name"""
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         procs = self.prep_debug_monitor_and_inferior()

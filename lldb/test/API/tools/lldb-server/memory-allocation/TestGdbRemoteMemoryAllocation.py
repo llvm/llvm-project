@@ -51,7 +51,6 @@ class TestGdbRemoteMemoryAllocation(gdbremote_testcase.GdbRemoteTestCaseBase):
     def test_supported(self):
         """Make sure (de)allocation works on platforms where it's supposed to
         work"""
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         procs = self.prep_debug_monitor_and_inferior()
@@ -68,7 +67,6 @@ class TestGdbRemoteMemoryAllocation(gdbremote_testcase.GdbRemoteTestCaseBase):
         """Make sure we get an "unsupported" error on platforms where the
         feature is not implemented."""
 
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         procs = self.prep_debug_monitor_and_inferior()
@@ -83,7 +81,6 @@ class TestGdbRemoteMemoryAllocation(gdbremote_testcase.GdbRemoteTestCaseBase):
     def test_bad_packet(self):
         """Make sure we get a proper error for malformed packets."""
 
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         procs = self.prep_debug_monitor_and_inferior()

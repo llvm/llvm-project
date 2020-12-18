@@ -86,14 +86,12 @@ class TestGdbRemoteExpeditedRegisters(
 
     @debugserver_test
     def test_stop_notification_contains_any_registers_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_launch()
         self.stop_notification_contains_any_registers()
 
     @llgs_test
     def test_stop_notification_contains_any_registers_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         self.stop_notification_contains_any_registers()
@@ -112,14 +110,12 @@ class TestGdbRemoteExpeditedRegisters(
     @debugserver_test
     def test_stop_notification_contains_no_duplicate_registers_debugserver(
             self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_launch()
         self.stop_notification_contains_no_duplicate_registers()
 
     @llgs_test
     def test_stop_notification_contains_no_duplicate_registers_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         self.stop_notification_contains_no_duplicate_registers()
@@ -129,14 +125,12 @@ class TestGdbRemoteExpeditedRegisters(
 
     @debugserver_test
     def test_stop_notification_contains_pc_register_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_launch()
         self.stop_notification_contains_pc_register()
 
     @llgs_test
     def test_stop_notification_contains_pc_register_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         self.stop_notification_contains_pc_register()
@@ -148,14 +142,12 @@ class TestGdbRemoteExpeditedRegisters(
 
     @debugserver_test
     def test_stop_notification_contains_fp_register_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_launch()
         self.stop_notification_contains_fp_register()
 
     @llgs_test
     def test_stop_notification_contains_fp_register_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         self.stop_notification_contains_fp_register()
@@ -165,14 +157,12 @@ class TestGdbRemoteExpeditedRegisters(
 
     @debugserver_test
     def test_stop_notification_contains_sp_register_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_launch()
         self.stop_notification_contains_sp_register()
 
     @llgs_test
     def test_stop_notification_contains_sp_register_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         self.stop_notification_contains_sp_register()
@@ -183,7 +173,6 @@ class TestGdbRemoteExpeditedRegisters(
     def test_stop_notification_contains_vg_register_llgs(self):
         if not self.isAArch64SVE():
             self.skipTest('SVE registers must be supported.')
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         self.stop_notification_contains_aarch64_vg_register()

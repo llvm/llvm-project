@@ -15,13 +15,11 @@ class TestGdbRemoteConnection(gdbremote_testcase.GdbRemoteTestCaseBase):
     # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     @skipIfDarwinEmbedded
     def test_reverse_connect_debugserver(self):
-        self.init_debugserver_test()
         self._reverse_connect()
 
     @llgs_test
     @skipIfRemote  # reverse connect is not a supported use case for now
     def test_reverse_connect_llgs(self):
-        self.init_llgs_test()
         self._reverse_connect()
 
     def _reverse_connect(self):
@@ -33,14 +31,12 @@ class TestGdbRemoteConnection(gdbremote_testcase.GdbRemoteTestCaseBase):
     @debugserver_test
     @skipIfRemote
     def test_named_pipe_debugserver(self):
-        self.init_debugserver_test()
         self._named_pipe()
 
     @llgs_test
     @skipIfRemote
     @skipIfWindows
     def test_named_pipe_llgs(self):
-        self.init_llgs_test()
         self._named_pipe()
 
     def _named_pipe(self):

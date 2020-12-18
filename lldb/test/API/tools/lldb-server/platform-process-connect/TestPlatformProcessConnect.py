@@ -16,7 +16,6 @@ class TestPlatformProcessConnect(gdbremote_testcase.GdbRemoteTestCaseBase):
     @expectedFailureAll(hostoslist=["windows"], triple='.*-android')
     def test_platform_process_connect(self):
         self.build()
-        self.init_llgs_test()
 
         working_dir = lldb.remote_platform.GetWorkingDirectory()
         src = lldb.SBFileSpec(self.getBuildArtifact("a.out"))
