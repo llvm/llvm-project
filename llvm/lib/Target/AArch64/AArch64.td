@@ -412,6 +412,9 @@ def FeatureHCX : SubtargetFeature<
 def FeatureLS64 : SubtargetFeature<"ls64", "HasLS64",
     "true", "Enable Armv8.7-A LD64B/ST64B Accelerator Extension">;
 
+def FeatureBRBE : SubtargetFeature<"brbe", "HasBRBE",
+    "true", "Enable Branch Record Buffer Extension">;
+
 def FeatureFineGrainedTraps : SubtargetFeature<"fgt", "HasFineGrainedTraps",
     "true", "Enable fine grained virtualization traps extension">;
 

@@ -157,6 +157,8 @@ def HasWFxT          : Predicate<"Subtarget->hasWFxT()">,
                        AssemblerPredicate<(all_of FeatureWFxT), "wfxt">;
 def HasLS64          : Predicate<"Subtarget->hasLS64()">,
                        AssemblerPredicate<(all_of FeatureLS64), "ls64">;
+def HasBRBE          : Predicate<"Subtarget->hasBRBE()">,
+                       AssemblerPredicate<(all_of FeatureBRBE), "brbe">;
 def IsLE             : Predicate<"Subtarget->isLittleEndian()">;
 def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
 def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;
