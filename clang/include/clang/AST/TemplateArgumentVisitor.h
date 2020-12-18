@@ -37,6 +37,7 @@ public:
       DISPATCH(Declaration);
       DISPATCH(NullPtr);
       DISPATCH(Integral);
+      DISPATCH(UncommonValue);
       DISPATCH(Template);
       DISPATCH(TemplateExpansion);
       DISPATCH(Expression);
@@ -59,6 +60,7 @@ public:
   VISIT_METHOD(Declaration);
   VISIT_METHOD(NullPtr);
   VISIT_METHOD(Integral);
+  VISIT_METHOD(UncommonValue);
   VISIT_METHOD(Template);
   VISIT_METHOD(TemplateExpansion);
   VISIT_METHOD(Expression);
