@@ -38,6 +38,12 @@
 #pragma GCC diagnostic ignored "-Wunused-function"
 #endif
 
+#if defined(_LIBCPP_WIN32API)
+#define PS(x) (L##x)
+#else
+#define PS(x) (x)
+#endif
+
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
 namespace detail {
@@ -94,8 +100,8 @@ static string format_string_imp(const char* msg, ...) {
   return result;
 }
 
-const char* unwrap(string const& s) { return s.c_str(); }
-const char* unwrap(path const& p) { return p.native().c_str(); }
+const path::value_type* unwrap(path::string_type const& s) { return s.c_str(); }
+const path::value_type* unwrap(path const& p) { return p.native().c_str(); }
 template <class Arg>
 Arg const& unwrap(Arg const& a) {
   static_assert(!is_class<Arg>::value, "cannot pass class here");

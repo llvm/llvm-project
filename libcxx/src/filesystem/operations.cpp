@@ -171,11 +171,14 @@ public:
     switch (State) {
     case PS_BeforeBegin:
     case PS_AtEnd:
-      return "";
+      return PS("");
     case PS_InRootDir:
-      return "/";
+      if (RawEntry[0] == '\\')
+        return PS("\\");
+      else
+        return PS("/");
     case PS_InTrailingSep:
-      return "";
+      return PS("");
     case PS_InRootName:
     case PS_InFilenames:
       return RawEntry;
@@ -283,8 +286,8 @@ private:
 };
 
 string_view_pair separate_filename(string_view_t const& s) {
-  if (s == "." || s == ".." || s.empty())
-    return string_view_pair{s, ""};
+  if (s == PS(".") || s == PS("..") || s.empty())
+    return string_view_pair{s, PS("")};
   auto pos = s.find_last_of('.');
   if (pos == string_view_t::npos || pos == 0)
     return string_view_pair{s, string_view_t{}};
@@ -495,19 +498,25 @@ _FilesystemClock::time_point _FilesystemClock::now() noexcept {
 
 filesystem_error::~filesystem_error() {}
 
+#if defined(_LIBCPP_WIN32API)
+#define PS_FMT "%ls"
+#else
+#define PS_FMT "%s"
+#endif
+
 void filesystem_error::__create_what(int __num_paths) {
   const char* derived_what = system_error::what();
   __storage_->__what_ = [&]() -> string {
-    const char* p1 = path1().native().empty() ? "\"\"" : path1().c_str();
-    const char* p2 = path2().native().empty() ? "\"\"" : path2().c_str();
+    const path::value_type* p1 = path1().native().empty() ? PS("\"\"") : path1().c_str();
+    const path::value_type* p2 = path2().native().empty() ? PS("\"\"") : path2().c_str();
     switch (__num_paths) {
     default:
       return detail::format_string("filesystem error: %s", derived_what);
     case 1:
-      return detail::format_string("filesystem error: %s [%s]", derived_what,
+      return detail::format_string("filesystem error: %s [" PS_FMT "]", derived_what,
                                    p1);
     case 2:
-      return detail::format_string("filesystem error: %s [%s] [%s]",
+      return detail::format_string("filesystem error: %s [" PS_FMT "] [" PS_FMT "]",
                                    derived_what, p1, p2);
     }
   }();
@@ -1222,10 +1231,10 @@ path __temp_directory_path(error_code* ec) {
   error_code m_ec;
   file_status st = detail::posix_stat(p, &m_ec);
   if (!status_known(st))
-    return err.report(m_ec, "cannot access path \"%s\"", p);
+    return err.report(m_ec, "cannot access path \"" PS_FMT "\"", p);
 
   if (!exists(st) || !is_directory(st))
-    return err.report(errc::not_a_directory, "path \"%s\" is not a directory",
+    return err.report(errc::not_a_directory, "path \"" PS_FMT "\" is not a directory",
                       p);
 
   return p;
@@ -1281,7 +1290,7 @@ path& path::replace_extension(path const& replacement) {
   }
   if (!replacement.empty()) {
     if (replacement.native()[0] != '.') {
-      __pn_ += ".";
+      __pn_ += PS(".");
     }
     __pn_.append(replacement.__pn_);
   }
@@ -1403,11 +1412,11 @@ enum PathPartKind : unsigned char {
 static PathPartKind ClassifyPathPart(string_view_t Part) {
   if (Part.empty())
     return PK_TrailingSep;
-  if (Part == ".")
+  if (Part == PS("."))
     return PK_Dot;
-  if (Part == "..")
+  if (Part == PS(".."))
     return PK_DotDot;
-  if (Part == "/")
+  if (Part == PS("/"))
     return PK_RootSep;
   return PK_Filename;
 }
@@ -1456,7 +1465,7 @@ path path::lexically_normal() const {
         NewPathSize -= Parts.back().first.size();
         Parts.pop_back();
       } else if (LastKind != PK_RootSep)
-        AddPart(PK_DotDot, "..");
+        AddPart(PK_DotDot, PS(".."));
       MaybeNeedTrailingSep = LastKind == PK_Filename;
       break;
     }
@@ -1471,7 +1480,7 @@ path path::lexically_normal() const {
   }
   // [fs.path.generic]p6.8: If the path is empty, add a dot.
   if (Parts.empty())
-    return ".";
+    return PS(".");
 
   // [fs.path.generic]p6.7: If the last filename is dot-dot, remove any
   // trailing directory-separator.
@@ -1483,7 +1492,7 @@ path path::lexically_normal() const {
     Result /= PK.first;
 
   if (NeedTrailingSep)
-    Result /= "";
+    Result /= PS("");
 
   return Result;
 }
@@ -1492,9 +1501,9 @@ static int DetermineLexicalElementCount(PathParser PP) {
   int Count = 0;
   for (; PP; ++PP) {
     auto Elem = *PP;
-    if (Elem == "..")
+    if (Elem == PS(".."))
       --Count;
-    else if (Elem != "." && Elem != "")
+    else if (Elem != PS(".") && Elem != PS(""))
       ++Count;
   }
   return Count;
@@ -1541,15 +1550,15 @@ path path::lexically_relative(const path& base) const {
     return {};
 
   // if n == 0 and (a == end() || a->empty()), returns path("."); otherwise
-  if (ElemCount == 0 && (PP.atEnd() || *PP == ""))
-    return ".";
+  if (ElemCount == 0 && (PP.atEnd() || *PP == PS("")))
+    return PS(".");
 
   // return a path constructed with 'n' dot-dot elements, followed by the the
   // elements of '*this' after the mismatch.
   path Result;
   // FIXME: Reserve enough room in Result that it won't have to re-allocate.
   while (ElemCount--)
-    Result /= "..";
+    Result /= PS("..");
   for (; PP; ++PP)
     Result /= *PP;
   return Result;
@@ -1562,7 +1571,7 @@ static int CompareRootName(PathParser *LHS, PathParser *RHS) {
     return 0;
 
   auto GetRootName = [](PathParser *Parser) -> string_view_t {
-    return Parser->inRootName() ? **Parser : "";
+    return Parser->inRootName() ? **Parser : PS("");
   };
   int res = GetRootName(LHS).compare(GetRootName(RHS));
   ConsumeRootName(LHS);
