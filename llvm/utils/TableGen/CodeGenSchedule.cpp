@@ -1718,6 +1718,9 @@ std::vector<unsigned> CodeGenSchedModels::getAllProcIndices() const {
   for (const auto &PM : ProcModelMap)
     if (PM.second != 0)
       ProcIdVec.push_back(PM.second);
+  // The order of the keys (Record pointers) of ProcModelMap are not stable.
+  // Sort to stabalize the values.
+  llvm::sort(ProcIdVec);
   return ProcIdVec;
 }
 
