@@ -67,3 +67,7 @@ dc cvap, x7
 .arch_extension rcpc
 ldapr x0, [x1]
 // CHECK: ldapr x0, [x1]
+
+.arch_extension ls64
+ld64b x0, [x13]
+// CHECK: ld64b x0, [x13]
