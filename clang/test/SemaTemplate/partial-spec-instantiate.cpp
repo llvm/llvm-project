@@ -51,8 +51,6 @@ namespace rdar9169404 {
   X<bool, -1>::type value;
 #if __cplusplus >= 201103L
   // expected-error@-2 {{non-type template argument evaluates to -1, which cannot be narrowed to type 'bool'}}
-#else
-  // expected-no-diagnostics
 #endif
 }
 
@@ -97,4 +95,20 @@ namespace rdar39524996 {
     Container<int> c;
     takesWrapperInContainer(c);
   }
+}
+
+namespace InstantiationDependent {
+  template<typename> using ignore = void; // expected-warning 0-1{{extension}}
+  template<typename T, typename = void> struct A {
+    static const bool specialized = false;
+  };
+  template<typename T> struct Hide { typedef void type; };
+  template<typename T> struct A<T, Hide<ignore<typename T::type> >::type> {
+    static const bool specialized = true;
+  };
+
+  struct X {};
+  struct Y { typedef int type; };
+  _Static_assert(!A<X>::specialized, "");
+  _Static_assert(A<Y>::specialized, "");
 }
