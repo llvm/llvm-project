@@ -87,11 +87,9 @@ define <4 x i64> *@vld2_v2i64(<4 x i64> *%src, <2 x i64> *%dst) {
 ; CHECK-NEXT:    vmov r2, s1
 ; CHECK-NEXT:    adc.w r12, r12, lr
 ; CHECK-NEXT:    adds r5, r5, r4
-; CHECK-NEXT:    vmov.32 q0[0], r5
+; CHECK-NEXT:    vmov q0[2], q0[0], r5, r6
 ; CHECK-NEXT:    adcs r2, r3
-; CHECK-NEXT:    vmov.32 q0[1], r2
-; CHECK-NEXT:    vmov.32 q0[2], r6
-; CHECK-NEXT:    vmov.32 q0[3], r12
+; CHECK-NEXT:    vmov q0[3], q0[1], r2, r12
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    pop {r4, r5, r6, pc}
 entry:

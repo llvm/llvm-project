@@ -43,18 +43,16 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @foo_int32_float(<4 x float> %src) {
 ; CHECK-MVE-LABEL: foo_int32_float:
 ; CHECK-MVE:       @ %bb.0: @ %entry
-; CHECK-MVE-NEXT:    vcvt.s32.f32 s4, s0
-; CHECK-MVE-NEXT:    vcvt.s32.f32 s6, s1
-; CHECK-MVE-NEXT:    vcvt.s32.f32 s10, s2
+; CHECK-MVE-NEXT:    vcvt.s32.f32 s4, s2
+; CHECK-MVE-NEXT:    vcvt.s32.f32 s6, s0
 ; CHECK-MVE-NEXT:    vcvt.s32.f32 s8, s3
+; CHECK-MVE-NEXT:    vcvt.s32.f32 s10, s1
 ; CHECK-MVE-NEXT:    vmov r0, s4
-; CHECK-MVE-NEXT:    vmov.32 q0[0], r0
-; CHECK-MVE-NEXT:    vmov r0, s6
-; CHECK-MVE-NEXT:    vmov.32 q0[1], r0
-; CHECK-MVE-NEXT:    vmov r0, s10
-; CHECK-MVE-NEXT:    vmov.32 q0[2], r0
+; CHECK-MVE-NEXT:    vmov r1, s6
+; CHECK-MVE-NEXT:    vmov q0[2], q0[0], r1, r0
 ; CHECK-MVE-NEXT:    vmov r0, s8
-; CHECK-MVE-NEXT:    vmov.32 q0[3], r0
+; CHECK-MVE-NEXT:    vmov r1, s10
+; CHECK-MVE-NEXT:    vmov q0[3], q0[1], r1, r0
 ; CHECK-MVE-NEXT:    bx lr
 ;
 ; CHECK-MVEFP-LABEL: foo_int32_float:
@@ -69,18 +67,16 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @foo_uint32_float(<4 x float> %src) {
 ; CHECK-MVE-LABEL: foo_uint32_float:
 ; CHECK-MVE:       @ %bb.0: @ %entry
-; CHECK-MVE-NEXT:    vcvt.u32.f32 s4, s0
-; CHECK-MVE-NEXT:    vcvt.u32.f32 s6, s1
-; CHECK-MVE-NEXT:    vcvt.u32.f32 s10, s2
+; CHECK-MVE-NEXT:    vcvt.u32.f32 s4, s2
+; CHECK-MVE-NEXT:    vcvt.u32.f32 s6, s0
 ; CHECK-MVE-NEXT:    vcvt.u32.f32 s8, s3
+; CHECK-MVE-NEXT:    vcvt.u32.f32 s10, s1
 ; CHECK-MVE-NEXT:    vmov r0, s4
-; CHECK-MVE-NEXT:    vmov.32 q0[0], r0
-; CHECK-MVE-NEXT:    vmov r0, s6
-; CHECK-MVE-NEXT:    vmov.32 q0[1], r0
-; CHECK-MVE-NEXT:    vmov r0, s10
-; CHECK-MVE-NEXT:    vmov.32 q0[2], r0
+; CHECK-MVE-NEXT:    vmov r1, s6
+; CHECK-MVE-NEXT:    vmov q0[2], q0[0], r1, r0
 ; CHECK-MVE-NEXT:    vmov r0, s8
-; CHECK-MVE-NEXT:    vmov.32 q0[3], r0
+; CHECK-MVE-NEXT:    vmov r1, s10
+; CHECK-MVE-NEXT:    vmov q0[3], q0[1], r1, r0
 ; CHECK-MVE-NEXT:    bx lr
 ;
 ; CHECK-MVEFP-LABEL: foo_uint32_float:
@@ -349,24 +345,21 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @foo_int64_float(<2 x double> %src) {
 ; CHECK-LABEL: foo_int64_float:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r7, lr}
-; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:    .save {r4, r5, r7, lr}
+; CHECK-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-NEXT:    .vsave {d8, d9}
 ; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    vmov q4, q0
+; CHECK-NEXT:    vmov r0, r1, d9
+; CHECK-NEXT:    bl __aeabi_d2lz
+; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    mov r5, r1
 ; CHECK-NEXT:    vmov r0, r1, d8
 ; CHECK-NEXT:    bl __aeabi_d2lz
-; CHECK-NEXT:    vmov r2, r3, d9
-; CHECK-NEXT:    vmov.32 q4[0], r0
-; CHECK-NEXT:    vmov.32 q4[1], r1
-; CHECK-NEXT:    mov r0, r2
-; CHECK-NEXT:    mov r1, r3
-; CHECK-NEXT:    bl __aeabi_d2lz
-; CHECK-NEXT:    vmov.32 q4[2], r0
-; CHECK-NEXT:    vmov.32 q4[3], r1
-; CHECK-NEXT:    vmov q0, q4
+; CHECK-NEXT:    vmov q0[2], q0[0], r0, r4
+; CHECK-NEXT:    vmov q0[3], q0[1], r1, r5
 ; CHECK-NEXT:    vpop {d8, d9}
-; CHECK-NEXT:    pop {r7, pc}
+; CHECK-NEXT:    pop {r4, r5, r7, pc}
 entry:
   %out = fptosi <2 x double> %src to <2 x i64>
   ret <2 x i64> %out
@@ -375,24 +368,21 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @foo_uint64_float(<2 x double> %src) {
 ; CHECK-LABEL: foo_uint64_float:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r7, lr}
-; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:    .save {r4, r5, r7, lr}
+; CHECK-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-NEXT:    .vsave {d8, d9}
 ; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    vmov q4, q0
+; CHECK-NEXT:    vmov r0, r1, d9
+; CHECK-NEXT:    bl __aeabi_d2ulz
+; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    mov r5, r1
 ; CHECK-NEXT:    vmov r0, r1, d8
 ; CHECK-NEXT:    bl __aeabi_d2ulz
-; CHECK-NEXT:    vmov r2, r3, d9
-; CHECK-NEXT:    vmov.32 q4[0], r0
-; CHECK-NEXT:    vmov.32 q4[1], r1
-; CHECK-NEXT:    mov r0, r2
-; CHECK-NEXT:    mov r1, r3
-; CHECK-NEXT:    bl __aeabi_d2ulz
-; CHECK-NEXT:    vmov.32 q4[2], r0
-; CHECK-NEXT:    vmov.32 q4[3], r1
-; CHECK-NEXT:    vmov q0, q4
+; CHECK-NEXT:    vmov q0[2], q0[0], r0, r4
+; CHECK-NEXT:    vmov q0[3], q0[1], r1, r5
 ; CHECK-NEXT:    vpop {d8, d9}
-; CHECK-NEXT:    pop {r7, pc}
+; CHECK-NEXT:    pop {r4, r5, r7, pc}
 entry:
   %out = fptoui <2 x double> %src to <2 x i64>
   ret <2 x i64> %out

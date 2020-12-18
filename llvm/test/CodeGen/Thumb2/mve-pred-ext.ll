@@ -64,10 +64,8 @@ define arm_aapcs_vfpcc <2 x i64> @sext_v2i1_v2i64(<2 x i64> %src) {
 ; CHECK-NEXT:    movlt r2, #1
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    csetm r1, ne
-; CHECK-NEXT:    vmov.32 q0[0], r1
-; CHECK-NEXT:    vmov.32 q0[1], r1
-; CHECK-NEXT:    vmov.32 q0[2], r0
-; CHECK-NEXT:    vmov.32 q0[3], r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r1, r0
+; CHECK-NEXT:    vmov q0[3], q0[1], r1, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %c = icmp sgt <2 x i64> %src, zeroinitializer
@@ -141,8 +139,7 @@ define arm_aapcs_vfpcc <2 x i64> @zext_v2i1_v2i64(<2 x i64> %src) {
 ; CHECK-NEXT:    movlt r0, #1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, ne
-; CHECK-NEXT:    vmov.32 q0[0], r0
-; CHECK-NEXT:    vmov.32 q0[2], r1
+; CHECK-NEXT:    vmov q0[2], q0[0], r0, r1
 ; CHECK-NEXT:    vand q0, q0, q1
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 4
@@ -201,16 +198,14 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @trunc_v2i1_v2i64(<2 x i64> %src) {
 ; CHECK-LABEL: trunc_v2i1_v2i64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov r1, s0
 ; CHECK-NEXT:    vmov r0, s2
-; CHECK-NEXT:    and r1, r1, #1
-; CHECK-NEXT:    rsbs r1, r1, #0
+; CHECK-NEXT:    vmov r1, s0
 ; CHECK-NEXT:    and r0, r0, #1
-; CHECK-NEXT:    vmov.32 q1[0], r1
+; CHECK-NEXT:    and r1, r1, #1
 ; CHECK-NEXT:    rsbs r0, r0, #0
-; CHECK-NEXT:    vmov.32 q1[1], r1
-; CHECK-NEXT:    vmov.32 q1[2], r0
-; CHECK-NEXT:    vmov.32 q1[3], r0
+; CHECK-NEXT:    rsbs r1, r1, #0
+; CHECK-NEXT:    vmov q1[2], q1[0], r1, r0
+; CHECK-NEXT:    vmov q1[3], q1[1], r1, r0
 ; CHECK-NEXT:    vand q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
