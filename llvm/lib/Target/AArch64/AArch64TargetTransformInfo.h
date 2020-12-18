@@ -228,6 +228,8 @@ public:
     return 2;
   }
 
+  bool supportsScalableVectors() const { return ST->hasSVE(); }
+
   bool useReductionIntrinsic(unsigned Opcode, Type *Ty,
                              TTI::ReductionFlags Flags) const;
 
