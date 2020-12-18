@@ -152,8 +152,8 @@ static Optional<bool> normalizeSimpleNegativeFlag(OptSpecifier Opt, unsigned,
 /// argument.
 static void denormalizeSimpleFlag(SmallVectorImpl<const char *> &Args,
                                   const char *Spelling,
-                                  CompilerInvocation::StringAllocator, unsigned,
-                                  /*T*/...) {
+                                  CompilerInvocation::StringAllocator,
+                                  Option::OptionClass, unsigned, /*T*/...) {
   Args.push_back(Spelling);
 }
 
@@ -200,10 +200,39 @@ static auto makeBooleanOptionNormalizer(bool Value, bool OtherValue,
 
 static auto makeBooleanOptionDenormalizer(bool Value) {
   return [Value](SmallVectorImpl<const char *> &Args, const char *Spelling,
-                 CompilerInvocation::StringAllocator, unsigned, bool KeyPath) {
+                 CompilerInvocation::StringAllocator, Option::OptionClass,
+                 unsigned, bool KeyPath) {
     if (KeyPath == Value)
       Args.push_back(Spelling);
   };
+}
+
+static void denormalizeStringImpl(SmallVectorImpl<const char *> &Args,
+                                  const char *Spelling,
+                                  CompilerInvocation::StringAllocator SA,
+                                  Option::OptionClass OptClass, unsigned,
+                                  Twine Value) {
+  switch (OptClass) {
+  case Option::SeparateClass:
+  case Option::JoinedOrSeparateClass:
+    Args.push_back(Spelling);
+    Args.push_back(SA(Value));
+    break;
+  case Option::JoinedClass:
+    Args.push_back(SA(Twine(Spelling) + Value));
+    break;
+  default:
+    llvm_unreachable("Cannot denormalize an option with option class "
+                     "incompatible with string denormalization.");
+  }
+}
+
+template <typename T>
+static void
+denormalizeString(SmallVectorImpl<const char *> &Args, const char *Spelling,
+                  CompilerInvocation::StringAllocator SA,
+                  Option::OptionClass OptClass, unsigned TableIndex, T Value) {
+  denormalizeStringImpl(Args, Spelling, SA, OptClass, TableIndex, Twine(Value));
 }
 
 static Optional<SimpleEnumValue>
@@ -247,12 +276,13 @@ static llvm::Optional<unsigned> normalizeSimpleEnum(OptSpecifier Opt,
 static void denormalizeSimpleEnumImpl(SmallVectorImpl<const char *> &Args,
                                       const char *Spelling,
                                       CompilerInvocation::StringAllocator SA,
+                                      Option::OptionClass OptClass,
                                       unsigned TableIndex, unsigned Value) {
   assert(TableIndex < SimpleEnumValueTablesSize);
   const SimpleEnumValueTable &Table = SimpleEnumValueTables[TableIndex];
   if (auto MaybeEnumVal = findValueTableByValue(Table, Value)) {
-    Args.push_back(Spelling);
-    Args.push_back(MaybeEnumVal->Name);
+    denormalizeString(Args, Spelling, SA, OptClass, TableIndex,
+                      MaybeEnumVal->Name);
   } else {
     llvm_unreachable("The simple enum value was not correctly defined in "
                      "the tablegen option description");
@@ -263,22 +293,10 @@ template <typename T>
 static void denormalizeSimpleEnum(SmallVectorImpl<const char *> &Args,
                                   const char *Spelling,
                                   CompilerInvocation::StringAllocator SA,
+                                  Option::OptionClass OptClass,
                                   unsigned TableIndex, T Value) {
-  return denormalizeSimpleEnumImpl(Args, Spelling, SA, TableIndex,
+  return denormalizeSimpleEnumImpl(Args, Spelling, SA, OptClass, TableIndex,
                                    static_cast<unsigned>(Value));
-}
-
-static void denormalizeSimpleEnumJoined(SmallVectorImpl<const char *> &Args,
-                                        const char *Spelling,
-                                        CompilerInvocation::StringAllocator SA,
-                                        unsigned TableIndex, unsigned Value) {
-  assert(TableIndex < SimpleEnumValueTablesSize);
-  const SimpleEnumValueTable &Table = SimpleEnumValueTables[TableIndex];
-  if (auto MaybeEnumVal = findValueTableByValue(Table, Value))
-    Args.push_back(SA(Twine(Spelling) + MaybeEnumVal->Name));
-  else
-    llvm_unreachable("The simple enum value was not correctly defined in "
-                     "the tablegen option description");
 }
 
 static Optional<std::string> normalizeString(OptSpecifier Opt, int TableIndex,
@@ -288,25 +306,6 @@ static Optional<std::string> normalizeString(OptSpecifier Opt, int TableIndex,
   if (!Arg)
     return None;
   return std::string(Arg->getValue());
-}
-
-static void denormalizeString(SmallVectorImpl<const char *> &Args,
-                              const char *Spelling,
-                              CompilerInvocation::StringAllocator SA, unsigned,
-                              Twine Value) {
-  Args.push_back(Spelling);
-  Args.push_back(SA(Value));
-}
-
-template <typename T,
-          std::enable_if_t<!std::is_convertible<T, Twine>::value &&
-                               std::is_constructible<Twine, T>::value,
-                           bool> = false>
-static void denormalizeString(SmallVectorImpl<const char *> &Args,
-                              const char *Spelling,
-                              CompilerInvocation::StringAllocator SA,
-                              unsigned TableIndex, T Value) {
-  denormalizeString(Args, Spelling, SA, TableIndex, Twine(Value));
 }
 
 template <typename IntTy>
@@ -3267,7 +3266,8 @@ void CompilerInvocation::generateCC1CommandLine(
           (Extracted !=                                                        \
            static_cast<decltype(this->KEYPATH)>(                               \
                (IMPLIED_CHECK) ? (IMPLIED_VALUE) : (DEFAULT_VALUE))))          \
-        DENORMALIZER(Args, SPELLING, SA, TABLE_INDEX, Extracted);              \
+        DENORMALIZER(Args, SPELLING, SA, Option::KIND##Class, TABLE_INDEX,     \
+                     Extracted);                                               \
     }(EXTRACTOR(this->KEYPATH));                                               \
   }
 
