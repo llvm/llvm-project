@@ -167,8 +167,7 @@ void RTDyldObjectLinkingLayer::emit(
 
 void RTDyldObjectLinkingLayer::registerJITEventListener(JITEventListener &L) {
   std::lock_guard<std::mutex> Lock(RTDyldLayerMutex);
-  assert(llvm::none_of(EventListeners,
-                       [&](JITEventListener *O) { return O == &L; }) &&
+  assert(!llvm::is_contained(EventListeners, &L) &&
          "Listener has already been registered");
   EventListeners.push_back(&L);
 }
