@@ -36,6 +36,8 @@ define i32 @test_out_of_bounds_store_nonlocal(i1 %c) {
 ; CHECK-NEXT:    [[D:%.*]] = alloca [1 x i32], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [1 x i32], [1 x i32]* [[D]], i64 0, i64 0
+; CHECK-NEXT:    store i32 10, i32* [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC:%.*]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[FOR_BODY_1:%.*]], label [[FOR_END:%.*]]
