@@ -647,7 +647,8 @@ bool AArch64AsmPrinter::printAsmRegInClass(const MachineOperand &MO,
   const TargetRegisterInfo *RI = STI->getRegisterInfo();
   Register Reg = MO.getReg();
   unsigned RegToPrint = RC->getRegister(RI->getEncodingValue(Reg));
-  assert(RI->regsOverlap(RegToPrint, Reg));
+  if (!RI->regsOverlap(RegToPrint, Reg))
+    return true;
   O << AArch64InstPrinter::getRegisterName(RegToPrint, AltName);
   return false;
 }
