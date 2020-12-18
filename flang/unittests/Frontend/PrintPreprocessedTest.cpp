@@ -76,4 +76,60 @@ TEST(FrontendAction, PrintPreprocessedInput) {
   llvm::sys::fs::remove(inputFile);
   compInst.ClearOutputFiles(/*EraseFiles=*/true);
 }
+
+TEST(FrontendAction, ParseSyntaxOnly) {
+  std::string inputFile = "test-file.f";
+  std::error_code ec;
+
+  // 1. Create the input file for the file manager
+  // AllSources (which is used to manage files inside every compiler instance),
+  // works with paths. This means that it requires a physical file. Create one.
+  std::unique_ptr<llvm::raw_fd_ostream> os{
+      new llvm::raw_fd_ostream(inputFile, ec, llvm::sys::fs::OF_None)};
+  if (ec)
+    FAIL() << "Fail to create the file need by the test";
+
+  // Populate the input file with the pre-defined input and flush it.
+  *(os) << "! if_stmt.f90:\n"
+        << "IF (A > 0.0) IF (B < 0.0) A = LOG (A)\n"
+        << "END";
+  os.reset();
+
+  // Get the path of the input file
+  llvm::SmallString<64> cwd;
+  if (std::error_code ec = llvm::sys::fs::current_path(cwd))
+    FAIL() << "Failed to obtain the current working directory";
+  std::string testFilePath(cwd.c_str());
+  testFilePath += "/" + inputFile;
+
+  // 2. Prepare the compiler (CompilerInvocation + CompilerInstance)
+  CompilerInstance compInst;
+  compInst.CreateDiagnostics();
+  auto invocation = std::make_shared<CompilerInvocation>();
+  invocation->frontendOpts().programAction_ = ParseSyntaxOnly;
+
+  compInst.set_invocation(std::move(invocation));
+  compInst.frontendOpts().inputs_.push_back(
+      FrontendInputFile(testFilePath, Language::Fortran));
+
+  // 3. Set-up the output stream for the semantic diagnostics.
+  llvm::SmallVector<char, 256> outputDiagBuffer;
+  std::unique_ptr<llvm::raw_pwrite_stream> outputStream(
+      new llvm::raw_svector_ostream(outputDiagBuffer));
+  compInst.set_semaOutputStream(std::move(outputStream));
+
+  // 4. Execute the ParseSyntaxOnly action
+  bool success = ExecuteCompilerInvocation(&compInst);
+
+  // 5. Validate the expected output
+  EXPECT_FALSE(success);
+  EXPECT_TRUE(!outputDiagBuffer.empty());
+  EXPECT_TRUE(
+      llvm::StringRef(outputDiagBuffer.data())
+          .startswith(
+              ":2:14: error: IF statement is not allowed in IF statement\n"));
+
+  // 6. Clear the input files.
+  llvm::sys::fs::remove(inputFile);
+}
 } // namespace

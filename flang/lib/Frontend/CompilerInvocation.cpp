@@ -93,6 +93,9 @@ static InputKind ParseFrontendArgs(FrontendOptions &opts,
     case clang::driver::options::OPT_E:
       opts.programAction_ = PrintPreprocessedInput;
       break;
+    case clang::driver::options::OPT_fsyntax_only:
+      opts.programAction_ = ParseSyntaxOnly;
+      break;
 
       // TODO:
       // case clang::driver::options::OPT_emit_obj:
