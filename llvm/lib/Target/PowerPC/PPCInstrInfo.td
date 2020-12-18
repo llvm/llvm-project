@@ -495,37 +495,41 @@ def imm64ZExt32  : Operand<i64>, ImmLeaf<i64, [{
   return isUInt<32>(Imm);
 }]>;
 
-// Some r+i load/store instructions (such as LD, STD, LDU, etc.) that require
+// This is a somewhat weaker condition than actually checking for 4-byte
+// alignment. It is simply checking that the displacement can be represented
+// as an immediate that is a multiple of 4 (i.e. the requirements for DS-Form
+// instructions).
+// But some r+i load/store instructions (such as LD, STD, LDU, etc.) that require
 // restricted memrix (4-aligned) constants are alignment sensitive. If these
 // offsets are hidden behind TOC entries than the values of the lower-order
 // bits cannot be checked directly. As a result, we need to also incorporate
 // an alignment check into the relevant patterns.
 
-def aligned4load : PatFrag<(ops node:$ptr), (load node:$ptr), [{
-  return cast<LoadSDNode>(N)->getAlignment() >= 4;
+def DSFormLoad : PatFrag<(ops node:$ptr), (load node:$ptr), [{
+  return isOffsetMultipleOf(N, 4) || cast<LoadSDNode>(N)->getAlignment() >= 4;
 }]>;
-def aligned4store : PatFrag<(ops node:$val, node:$ptr),
+def DSFormStore : PatFrag<(ops node:$val, node:$ptr),
                             (store node:$val, node:$ptr), [{
-  return cast<StoreSDNode>(N)->getAlignment() >= 4;
+  return isOffsetMultipleOf(N, 4) || cast<StoreSDNode>(N)->getAlignment() >= 4;
 }]>;
-def aligned4sextloadi32 : PatFrag<(ops node:$ptr), (sextloadi32 node:$ptr), [{
-  return cast<LoadSDNode>(N)->getAlignment() >= 4;
+def DSFormSextLoadi32 : PatFrag<(ops node:$ptr), (sextloadi32 node:$ptr), [{
+  return isOffsetMultipleOf(N, 4) || cast<LoadSDNode>(N)->getAlignment() >= 4;
 }]>;
-def aligned4pre_store : PatFrag<
+def DSFormPreStore : PatFrag<
                           (ops node:$val, node:$base, node:$offset),
                           (pre_store node:$val, node:$base, node:$offset), [{
-  return cast<StoreSDNode>(N)->getAlignment() >= 4;
+  return isOffsetMultipleOf(N, 4) || cast<StoreSDNode>(N)->getAlignment() >= 4;
 }]>;
 
-def unaligned4load : PatFrag<(ops node:$ptr), (load node:$ptr), [{
-  return cast<LoadSDNode>(N)->getAlignment() < 4;
+def NonDSFormLoad : PatFrag<(ops node:$ptr), (load node:$ptr), [{
+  return cast<LoadSDNode>(N)->getAlignment() < 4 && !isOffsetMultipleOf(N, 4);
 }]>;
-def unaligned4store : PatFrag<(ops node:$val, node:$ptr),
+def NonDSFormStore : PatFrag<(ops node:$val, node:$ptr),
                               (store node:$val, node:$ptr), [{
-  return cast<StoreSDNode>(N)->getAlignment() < 4;
+  return cast<StoreSDNode>(N)->getAlignment() < 4 && !isOffsetMultipleOf(N, 4);
 }]>;
-def unaligned4sextloadi32 : PatFrag<(ops node:$ptr), (sextloadi32 node:$ptr), [{
-  return cast<LoadSDNode>(N)->getAlignment() < 4;
+def NonDSFormSextLoadi32 : PatFrag<(ops node:$ptr), (sextloadi32 node:$ptr), [{
+  return cast<LoadSDNode>(N)->getAlignment() < 4 && !isOffsetMultipleOf(N, 4);
 }]>;
 
 // This is a somewhat weaker condition than actually checking for 16-byte
