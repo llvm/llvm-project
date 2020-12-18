@@ -2020,10 +2020,9 @@ public:
     Put(")");
   }
   void Unparse(const OmpAllocateClause &x) {
-    Word("ALLOCATE(");
-    Walk(std::get<std::optional<OmpAllocateClause::Allocator>>(x.t), ":");
+    Walk(std::get<std::optional<OmpAllocateClause::Allocator>>(x.t));
+    Put(":");
     Walk(std::get<OmpObjectList>(x.t));
-    Put(")");
   }
   void Unparse(const OmpDependSinkVecLength &x) {
     Walk(std::get<DefinedOperator>(x.t));

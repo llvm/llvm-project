@@ -157,8 +157,8 @@ TYPE_PARSER(
     "ACQ_REL" >> construct<OmpClause>(construct<OmpClause::AcqRel>()) ||
     "ALIGNED" >>
         construct<OmpClause>(parenthesized(Parser<OmpAlignedClause>{})) ||
-    "ALLOCATE" >>
-        construct<OmpClause>(parenthesized(Parser<OmpAllocateClause>{})) ||
+    "ALLOCATE" >> construct<OmpClause>(construct<OmpClause::Allocate>(
+                      parenthesized(Parser<OmpAllocateClause>{}))) ||
     "ALLOCATOR" >> construct<OmpClause>(construct<OmpClause::Allocator>(
                        parenthesized(scalarIntExpr))) ||
     "COLLAPSE" >> construct<OmpClause>(construct<OmpClause::Collapse>(
