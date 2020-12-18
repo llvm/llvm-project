@@ -1219,15 +1219,18 @@ llvm::Optional<size_t> SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
       auto &builder = reflection_ctx->getBuilder();
       auto tc = TypeConverter(builder);
       auto tip = LLDBTypeInfoProvider(*this, *ts);
-      auto *class_ti = tc.getClassInstanceTypeInfo(tr, 0, &tip);
-      while (auto *record_ti = llvm::cast_or_null<RecordTypeInfo>(class_ti)) {
-        auto super_tr = builder.lookupSuperclass(tr);
-        uint32_t offset = super_tr ? 1 : 0;
+      // The class_tr pointer is used to iterate the class hierarchy, from the
+      // current class, each superclass, and ends on null.
+      auto *class_tr = tr;
+      while (class_tr) {
+        auto *record_ti = llvm::cast<RecordTypeInfo>(
+            tc.getClassInstanceTypeInfo(tr, 0, &tip));
+        class_tr = builder.lookupSuperclass(class_tr);
+        uint32_t offset = class_tr ? 1 : 0;
         if (auto size = findFieldWithName(record_ti->getFields(), name,
                                           child_indexes, offset)) {
           return size;
         }
-        class_ti = reflection_ctx->getTypeInfo(super_tr, &tip);
       }
       return {};
     }
