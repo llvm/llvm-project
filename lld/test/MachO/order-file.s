@@ -55,6 +55,16 @@
 # RUN: %lld -lSystem -o %t/test-archive-1 %t/foo.a %t/test.o -order_file %t/ord-1
 # RUN: llvm-objdump -d %t/test-archive-1 | FileCheck %s --check-prefix=FOO-FIRST
 
+# RUN: %lld -lSystem -o %t/test-archive-file-no-match %t/test.o %t/foo.a -order_file %t/ord-file-match
+# RUN: llvm-objdump -d %t/test-archive-file-no-match | FileCheck %s --check-prefix=FOO-SECOND
+# RUN: %lld -lSystem -o %t/test-archive %t/foo.a %t/test.o -order_file %t/ord-file-match
+# RUN: llvm-objdump -d %t/test-archive-file-no-match | FileCheck %s --check-prefix=FOO-SECOND
+
+# RUN: %lld -lSystem -o %t/test-archive-1 %t/test.o %t/foo.a -order_file %t/ord-archive-match
+# RUN: llvm-objdump -d %t/test-archive-1 | FileCheck %s --check-prefix=FOO-FIRST
+# RUN: %lld -lSystem -o %t/test-archive-1 %t/foo.a %t/test.o -order_file %t/ord-archive-match
+# RUN: llvm-objdump -d %t/test-archive-1 | FileCheck %s --check-prefix=FOO-FIRST
+
 # RUN: %lld -lSystem -o %t/test-archive-file-no-match %t/test.o %t/foo.a -order_file %t/ord-file-nomatch
 # RUN: llvm-objdump -d %t/test-archive-file-no-match | FileCheck %s --check-prefix=FOO-SECOND
 # RUN: %lld -lSystem -o %t/test-archive %t/foo.a %t/test.o -order_file %t/ord-file-nomatch
@@ -102,6 +112,10 @@ _main # just a comment
 
 #--- ord-file-match
 foo.o:-[Foo doFoo:andBar:]
+_main
+
+#--- ord-archive-match
+foo.a(foo.o):-[Foo doFoo:andBar:]
 _main
 
 #--- ord-file-nomatch

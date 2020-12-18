@@ -32,6 +32,7 @@
 
 using namespace llvm;
 using namespace llvm::MachO;
+using namespace llvm::sys;
 using namespace lld;
 using namespace lld::macho;
 
@@ -497,9 +498,16 @@ void Writer::createLoadCommands() {
 }
 
 static size_t getSymbolPriority(const SymbolPriorityEntry &entry,
-                                const InputFile &file) {
-  return std::max(entry.objectFiles.lookup(sys::path::filename(file.getName())),
-                  entry.anyObjectFile);
+                                const InputFile *f) {
+  // We don't use toString(InputFile *) here because it returns the full path
+  // for object files, and we only want the basename.
+  StringRef filename;
+  if (f->archiveName.empty())
+    filename = path::filename(f->getName());
+  else
+    filename = saver.save(path::filename(f->archiveName) + "(" +
+                          path::filename(f->getName()) + ")");
+  return std::max(entry.objectFiles.lookup(filename), entry.anyObjectFile);
 }
 
 // Each section gets assigned the priority of the highest-priority symbol it
@@ -517,12 +525,12 @@ static DenseMap<const InputSection *, size_t> buildInputSectionPriorities() {
 
     SymbolPriorityEntry &entry = it->second;
     size_t &priority = sectionPriorities[sym.isec];
-    priority = std::max(priority, getSymbolPriority(entry, *sym.isec->file));
+    priority = std::max(priority, getSymbolPriority(entry, sym.isec->file));
   };
 
   // TODO: Make sure this handles weak symbols correctly.
   for (InputFile *file : inputFiles)
-    if (isa<ObjFile>(file) || isa<ArchiveFile>(file))
+    if (isa<ObjFile>(file))
       for (lld::macho::Symbol *sym : file->symbols)
         if (auto *d = dyn_cast<Defined>(sym))
           addSym(*d);
