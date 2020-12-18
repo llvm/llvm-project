@@ -220,11 +220,11 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
   Prefixes.insert(std::make_pair(PrefixKeyT(), "prefix_0"));
   unsigned CurPrefix = 0;
   for (const Record &R : llvm::make_pointee_range(Opts)) {
-    std::vector<StringRef> prf = R.getValueAsListOfStrings("Prefixes");
-    PrefixKeyT prfkey(prf.begin(), prf.end());
+    std::vector<StringRef> RPrefixes = R.getValueAsListOfStrings("Prefixes");
+    PrefixKeyT PrefixKey(RPrefixes.begin(), RPrefixes.end());
     unsigned NewPrefix = CurPrefix + 1;
-    if (Prefixes.insert(std::make_pair(prfkey, (Twine("prefix_") +
-                                              Twine(NewPrefix)).str())).second)
+    std::string Prefix = (Twine("prefix_") + Twine(NewPrefix)).str();
+    if (Prefixes.insert(std::make_pair(PrefixKey, Prefix)).second)
       CurPrefix = NewPrefix;
   }
 
@@ -299,8 +299,8 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
 
   auto WriteOptRecordFields = [&](raw_ostream &OS, const Record &R) {
     // The option prefix;
-    std::vector<StringRef> prf = R.getValueAsListOfStrings("Prefixes");
-    OS << Prefixes[PrefixKeyT(prf.begin(), prf.end())] << ", ";
+    std::vector<StringRef> RPrefixes = R.getValueAsListOfStrings("Prefixes");
+    OS << Prefixes[PrefixKeyT(RPrefixes.begin(), RPrefixes.end())] << ", ";
 
     // The option string.
     emitNameUsingSpelling(OS, R);
