@@ -172,9 +172,23 @@ static bool frameIndexMayFold(const SIInstrInfo *TII,
                               const MachineInstr &UseMI,
                               int OpNo,
                               const MachineOperand &OpToFold) {
-  return OpToFold.isFI() &&
-    TII->isMUBUF(UseMI) &&
-    OpNo == AMDGPU::getNamedOperandIdx(UseMI.getOpcode(), AMDGPU::OpName::vaddr);
+  if (!OpToFold.isFI())
+    return false;
+
+  if (TII->isMUBUF(UseMI))
+    return OpNo == AMDGPU::getNamedOperandIdx(UseMI.getOpcode(),
+                                              AMDGPU::OpName::vaddr);
+  if (!TII->isFLATScratch(UseMI))
+    return false;
+
+  int SIdx = AMDGPU::getNamedOperandIdx(UseMI.getOpcode(),
+                                        AMDGPU::OpName::saddr);
+  if (OpNo == SIdx)
+    return true;
+
+  int VIdx = AMDGPU::getNamedOperandIdx(UseMI.getOpcode(),
+                                        AMDGPU::OpName::vaddr);
+  return OpNo == VIdx && SIdx == -1;
 }
 
 FunctionPass *llvm::createSIFoldOperandsPass() {
@@ -631,25 +645,36 @@ void SIFoldOperands::foldOperand(
     // Sanity check that this is a stack access.
     // FIXME: Should probably use stack pseudos before frame lowering.
 
-    if (TII->getNamedOperand(*UseMI, AMDGPU::OpName::srsrc)->getReg() !=
-        MFI->getScratchRSrcReg())
-      return;
+    if (TII->isMUBUF(*UseMI)) {
+      if (TII->getNamedOperand(*UseMI, AMDGPU::OpName::srsrc)->getReg() !=
+          MFI->getScratchRSrcReg())
+        return;
 
-    // Ensure this is either relative to the current frame or the current wave.
-    MachineOperand &SOff =
-        *TII->getNamedOperand(*UseMI, AMDGPU::OpName::soffset);
-    if ((!SOff.isReg() || SOff.getReg() != MFI->getStackPtrOffsetReg()) &&
-        (!SOff.isImm() || SOff.getImm() != 0))
-      return;
+      // Ensure this is either relative to the current frame or the current
+      // wave.
+      MachineOperand &SOff =
+          *TII->getNamedOperand(*UseMI, AMDGPU::OpName::soffset);
+      if ((!SOff.isReg() || SOff.getReg() != MFI->getStackPtrOffsetReg()) &&
+          (!SOff.isImm() || SOff.getImm() != 0))
+        return;
+
+      // If this is relative to the current wave, update it to be relative to
+      // the current frame.
+      if (SOff.isImm())
+        SOff.ChangeToRegister(MFI->getStackPtrOffsetReg(), false);
+    }
 
     // A frame index will resolve to a positive constant, so it should always be
     // safe to fold the addressing mode, even pre-GFX9.
     UseMI->getOperand(UseOpIdx).ChangeToFrameIndex(OpToFold.getIndex());
 
-    // If this is relative to the current wave, update it to be relative to the
-    // current frame.
-    if (SOff.isImm())
-      SOff.ChangeToRegister(MFI->getStackPtrOffsetReg(), false);
+    if (TII->isFLATScratch(*UseMI) &&
+        AMDGPU::getNamedOperandIdx(UseMI->getOpcode(),
+                                   AMDGPU::OpName::vaddr) != -1) {
+      unsigned NewOpc = AMDGPU::getFlatScratchInstSSfromSV(UseMI->getOpcode());
+      UseMI->setDesc(TII->get(NewOpc));
+    }
+
     return;
   }
 
