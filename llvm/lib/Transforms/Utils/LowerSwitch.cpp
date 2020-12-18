@@ -474,10 +474,8 @@ void ProcessSwitchInst(SwitchInst *SI,
     // cases.
     assert(MaxPop > 0 && PopSucc);
     Default = PopSucc;
-    Cases.erase(
-        llvm::remove_if(
-            Cases, [PopSucc](const CaseRange &R) { return R.BB == PopSucc; }),
-        Cases.end());
+    llvm::erase_if(Cases,
+                   [PopSucc](const CaseRange &R) { return R.BB == PopSucc; });
 
     // If there are no cases left, just branch.
     if (Cases.empty()) {
