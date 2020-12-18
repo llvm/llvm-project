@@ -183,21 +183,20 @@ public:
 
   /// Set the attributes held by this operation.
   void setAttrs(ArrayRef<NamedAttribute> attributes) {
-    state->setAttrs(attributes);
+    state->setAttrs(DictionaryAttr::get(attributes, getContext()));
   }
-  void setAttrs(MutableDictionaryAttr newAttrs) { state->setAttrs(newAttrs); }
+  void setAttrs(DictionaryAttr newAttrs) { state->setAttrs(newAttrs); }
 
   /// Set the dialect attributes for this operation, and preserve all dependent.
   template <typename DialectAttrs> void setDialectAttrs(DialectAttrs &&attrs) {
-    state->setDialectAttrs(std::move(attrs));
+    state->setDialectAttrs(std::forward<DialectAttrs>(attrs));
   }
 
-  /// Remove the attribute with the specified name if it exists.  The return
-  /// value indicates whether the attribute was present or not.
-  MutableDictionaryAttr::RemoveResult removeAttr(Identifier name) {
-    return state->removeAttr(name);
-  }
-  MutableDictionaryAttr::RemoveResult removeAttr(StringRef name) {
+  /// Remove the attribute with the specified name if it exists. Return the
+  /// attribute that was erased, or nullptr if there was no attribute with such
+  /// name.
+  Attribute removeAttr(Identifier name) { return state->removeAttr(name); }
+  Attribute removeAttr(StringRef name) {
     return state->removeAttr(Identifier::get(name, getContext()));
   }
 

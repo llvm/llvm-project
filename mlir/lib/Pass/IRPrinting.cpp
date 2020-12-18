@@ -32,7 +32,7 @@ public:
       //   - Operation pointer
       addDataToHash(hasher, op);
       //   - Attributes
-      addDataToHash(hasher, op->getMutableAttrDict());
+      addDataToHash(hasher, op->getAttrDictionary());
       //   - Blocks in Regions
       for (Region &region : op->getRegions()) {
         for (Block &block : region) {

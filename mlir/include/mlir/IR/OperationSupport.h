@@ -32,7 +32,6 @@ namespace mlir {
 class Dialect;
 class DictionaryAttr;
 class ElementsAttr;
-class MutableDictionaryAttr;
 class Operation;
 struct OperationState;
 class OpAsmParser;
@@ -226,6 +225,7 @@ public:
 
   NamedAttrList() : dictionarySorted({}, true) {}
   NamedAttrList(ArrayRef<NamedAttribute> attributes);
+  NamedAttrList(DictionaryAttr attributes);
   NamedAttrList(const_iterator in_start, const_iterator in_end);
 
   bool operator!=(const NamedAttrList &other) const {
@@ -239,13 +239,26 @@ public:
   void append(StringRef name, Attribute attr);
 
   /// Add an attribute with the specified name.
-  void append(Identifier name, Attribute attr);
+  void append(Identifier name, Attribute attr) {
+    append(NamedAttribute(name, attr));
+  }
+
+  /// Append the given named attribute.
+  void append(NamedAttribute attr) { push_back(attr); }
 
   /// Add an array of named attributes.
-  void append(ArrayRef<NamedAttribute> newAttributes);
+  template <typename RangeT> void append(RangeT &&newAttributes) {
+    append(std::begin(newAttributes), std::end(newAttributes));
+  }
 
   /// Add a range of named attributes.
-  void append(const_iterator in_start, const_iterator in_end);
+  template <typename IteratorT>
+  void append(IteratorT in_start, IteratorT in_end) {
+    // TODO: expand to handle case where values appended are in order & after
+    // end of current list.
+    dictionarySorted.setPointerAndInt(nullptr, false);
+    attrs.append(in_start, in_end);
+  }
 
   /// Replaces the attributes with new list of attributes.
   void assign(const_iterator in_start, const_iterator in_end);
@@ -285,9 +298,11 @@ public:
   Optional<NamedAttribute> getNamed(Identifier name) const;
 
   /// If the an attribute exists with the specified name, change it to the new
-  /// value.  Otherwise, add a new attribute with the specified name/value.
-  void set(Identifier name, Attribute value);
-  void set(StringRef name, Attribute value);
+  /// value. Otherwise, add a new attribute with the specified name/value.
+  /// Returns the previous attribute value of `name`, or null if no
+  /// attribute previously existed with `name`.
+  Attribute set(Identifier name, Attribute value);
+  Attribute set(StringRef name, Attribute value);
 
   /// Erase the attribute with the given name from the list. Return the
   /// attribute that was erased, or nullptr if there was no attribute with such
@@ -300,7 +315,6 @@ public:
 
   NamedAttrList &operator=(const SmallVectorImpl<NamedAttribute> &rhs);
   operator ArrayRef<NamedAttribute>() const;
-  operator MutableDictionaryAttr() const;
 
 private:
   /// Return whether the attributes are sorted.

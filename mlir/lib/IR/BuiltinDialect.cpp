@@ -85,7 +85,7 @@ FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
 }
 FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
                       ArrayRef<NamedAttribute> attrs,
-                      ArrayRef<MutableDictionaryAttr> argAttrs) {
+                      ArrayRef<DictionaryAttr> argAttrs) {
   FuncOp func = create(location, name, type, attrs);
   func.setAllArgAttrs(argAttrs);
   return func;
@@ -93,7 +93,7 @@ FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
 
 void FuncOp::build(OpBuilder &builder, OperationState &state, StringRef name,
                    FunctionType type, ArrayRef<NamedAttribute> attrs,
-                   ArrayRef<MutableDictionaryAttr> argAttrs) {
+                   ArrayRef<DictionaryAttr> argAttrs) {
   state.addAttribute(SymbolTable::getSymbolAttrName(),
                      builder.getStringAttr(name));
   state.addAttribute(getTypeAttrName(), TypeAttr::get(type));
@@ -105,7 +105,7 @@ void FuncOp::build(OpBuilder &builder, OperationState &state, StringRef name,
   assert(type.getNumInputs() == argAttrs.size());
   SmallString<8> argAttrName;
   for (unsigned i = 0, e = type.getNumInputs(); i != e; ++i)
-    if (auto argDict = argAttrs[i].getDictionary(builder.getContext()))
+    if (DictionaryAttr argDict = argAttrs[i])
       state.addAttribute(getArgAttrName(i, argAttrName), argDict);
 }
 

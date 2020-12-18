@@ -962,7 +962,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func",
     OpBuilderDAG<(ins "StringRef":$name, "LLVMType":$type,
       CArg<"Linkage", "Linkage::External">:$linkage,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs,
-      CArg<"ArrayRef<MutableDictionaryAttr>", "{}">:$argAttrs)>
+      CArg<"ArrayRef<DictionaryAttr>", "{}">:$argAttrs)>
   ];
 
   let extraClassDeclaration = [{

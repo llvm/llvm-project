@@ -408,7 +408,6 @@ def U : Separate<["-"], "U">,
 def undefined : Separate<["-"], "undefined">,
      MetaVarName<"<treatment>">,
      HelpText<"Handle undefined symbols according to <treatment>: error, warning, suppress, or dynamic_lookup (default is error)">,
-     Flags<[HelpHidden]>,
      Group<grp_resolve>;
 def rpath : Separate<["-"], "rpath">,
      MetaVarName<"<path>">,

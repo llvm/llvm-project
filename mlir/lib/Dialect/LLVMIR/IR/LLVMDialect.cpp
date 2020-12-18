@@ -1597,7 +1597,7 @@ Block *LLVMFuncOp::addEntryBlock() {
 void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
                        StringRef name, LLVMType type, LLVM::Linkage linkage,
                        ArrayRef<NamedAttribute> attrs,
-                       ArrayRef<MutableDictionaryAttr> argAttrs) {
+                       ArrayRef<DictionaryAttr> argAttrs) {
   result.addRegion();
   result.addAttribute(SymbolTable::getSymbolAttrName(),
                       builder.getStringAttr(name));
@@ -1613,7 +1613,7 @@ void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
          "expected as many argument attribute lists as arguments");
   SmallString<8> argAttrName;
   for (unsigned i = 0; i < numInputs; ++i)
-    if (auto argDict = argAttrs[i].getDictionary(builder.getContext()))
+    if (DictionaryAttr argDict = argAttrs[i])
       result.addAttribute(getArgAttrName(i, argAttrName), argDict);
 }
 
