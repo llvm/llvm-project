@@ -23,8 +23,8 @@
 # DISASM-NEXT:                 orl   {{.*}}(%rip), %edi  # 202240
 # DISASM-NEXT:                 sbbl  {{.*}}(%rip), %esi  # 202240
 # DISASM-NEXT:                 subl  {{.*}}(%rip), %ebp  # 202240
-# DISASM-NEXT:                 xorl  {{.*}}(%rip), %r8d  # 202240
-# DISASM-NEXT:                 testl %r15d, {{.*}}(%rip) # 202240
+# DISASM-NEXT:                 xorl  $0x203248, %r8d
+# DISASM-NEXT:                 testl $0x203248, %r15d
 # DISASM-NEXT:   201200:       adcq  $0x203248, %rax
 # DISASM-NEXT:                 addq  $0x203248, %rbx
 # DISASM-NEXT:                 andq  $0x203248, %rcx
