@@ -422,50 +422,59 @@ Sections:
   ASSERT_THAT_EXPECTED(SymtabSecOrErr, Succeeded());
   ASSERT_EQ((*SymtabSecOrErr)->sh_type, ELF::SHT_SYMTAB);
 
+  auto DoCheck = [&](unsigned BrokenSymIndex, const char *ErrMsg) {
+    ELFSymbolRef BrokenSym = Obj.toSymbolRef(*SymtabSecOrErr, BrokenSymIndex);
+
+    // 1) Check the behavior of ELFObjectFile<ELFT>::getSymbolName().
+    //    SymbolRef::getName() calls it internally. We can't test it directly,
+    //    because it is protected.
+    EXPECT_THAT_ERROR(BrokenSym.getName().takeError(),
+                      FailedWithMessage(ErrMsg));
+
+    // 2) Check the behavior of ELFObjectFile<ELFT>::getSymbol().
+    EXPECT_THAT_ERROR(Obj.getSymbol(BrokenSym.getRawDataRefImpl()).takeError(),
+                      FailedWithMessage(ErrMsg));
+
+    // 3) Check the behavior of ELFObjectFile<ELFT>::getSymbolSection().
+    //    SymbolRef::getSection() calls it internally. We can't test it
+    //    directly, because it is protected.
+    EXPECT_THAT_ERROR(BrokenSym.getSection().takeError(),
+                      FailedWithMessage(ErrMsg));
+
+    // 4) Check the behavior of ELFObjectFile<ELFT>::getSymbolFlags().
+    //    SymbolRef::getFlags() calls it internally. We can't test it directly,
+    //    because it is protected.
+    EXPECT_THAT_ERROR(BrokenSym.getFlags().takeError(),
+                      FailedWithMessage(ErrMsg));
+
+    // 5) Check the behavior of ELFObjectFile<ELFT>::getSymbolType().
+    //    SymbolRef::getType() calls it internally. We can't test it directly,
+    //    because it is protected.
+    EXPECT_THAT_ERROR(BrokenSym.getType().takeError(),
+                      FailedWithMessage(ErrMsg));
+
+    // 6) Check the behavior of ELFObjectFile<ELFT>::getSymbolAddress().
+    //    SymbolRef::getAddress() calls it internally. We can't test it
+    //    directly, because it is protected.
+    EXPECT_THAT_ERROR(BrokenSym.getAddress().takeError(),
+                      FailedWithMessage(ErrMsg));
+
+    // Finally, check the `ELFFile<ELFT>::getEntry` API. This is an underlying
+    // method that generates errors for all cases above.
+    EXPECT_THAT_EXPECTED(
+        Elf.getEntry<typename ELF64LE::Sym>(**SymtabSecOrErr, 0), Succeeded());
+    EXPECT_THAT_ERROR(
+        Elf.getEntry<typename ELF64LE::Sym>(**SymtabSecOrErr, BrokenSymIndex)
+            .takeError(),
+        FailedWithMessage(ErrMsg));
+  };
+
+  // We create a symbol with an index that is too large to exist in the symbol
+  // table.
+  DoCheck(0x1, "can't read an entry at 0x18: it goes past the end of the "
+               "section (0x18)");
+
   // We create a symbol with an index that is too large to exist in the object.
-  constexpr unsigned BrokenSymIndex = 0xFFFFFFFF;
-  ELFSymbolRef BrokenSym = Obj.toSymbolRef(*SymtabSecOrErr, BrokenSymIndex);
-
-  const char *ErrMsg = "unable to access section [index 1] data at "
-                       "0x1800000028: offset goes past the end of file";
-  // 1) Check the behavior of ELFObjectFile<ELFT>::getSymbolName().
-  //    SymbolRef::getName() calls it internally. We can't test it directly,
-  //    because it is protected.
-  EXPECT_THAT_ERROR(BrokenSym.getName().takeError(), FailedWithMessage(ErrMsg));
-
-  // 2) Check the behavior of ELFObjectFile<ELFT>::getSymbol().
-  EXPECT_THAT_ERROR(Obj.getSymbol(BrokenSym.getRawDataRefImpl()).takeError(),
-                    FailedWithMessage(ErrMsg));
-
-  // 3) Check the behavior of ELFObjectFile<ELFT>::getSymbolSection().
-  //    SymbolRef::getSection() calls it internally. We can't test it directly,
-  //    because it is protected.
-  EXPECT_THAT_ERROR(BrokenSym.getSection().takeError(),
-                    FailedWithMessage(ErrMsg));
-
-  // 4) Check the behavior of ELFObjectFile<ELFT>::getSymbolFlags().
-  //    SymbolRef::getFlags() calls it internally. We can't test it directly,
-  //    because it is protected.
-  EXPECT_THAT_ERROR(BrokenSym.getFlags().takeError(),
-                    FailedWithMessage(ErrMsg));
-
-  // 5) Check the behavior of ELFObjectFile<ELFT>::getSymbolType().
-  //    SymbolRef::getType() calls it internally. We can't test it directly,
-  //    because it is protected.
-  EXPECT_THAT_ERROR(BrokenSym.getType().takeError(), FailedWithMessage(ErrMsg));
-
-  // 6) Check the behavior of ELFObjectFile<ELFT>::getSymbolAddress().
-  //    SymbolRef::getAddress() calls it internally. We can't test it directly,
-  //    because it is protected.
-  EXPECT_THAT_ERROR(BrokenSym.getAddress().takeError(),
-                    FailedWithMessage(ErrMsg));
-
-  // Finally, check the `ELFFile<ELFT>::getEntry` API. This is an underlying
-  // method that generates errors for all cases above.
-  EXPECT_THAT_EXPECTED(Elf.getEntry<typename ELF64LE::Sym>(**SymtabSecOrErr, 0),
-                       Succeeded());
-  EXPECT_THAT_ERROR(
-      Elf.getEntry<typename ELF64LE::Sym>(**SymtabSecOrErr, BrokenSymIndex)
-          .takeError(),
-      FailedWithMessage(ErrMsg));
+  DoCheck(0xFFFFFFFF, "can't read an entry at 0x17ffffffe8: it goes past the "
+                      "end of the section (0x18)");
 }
