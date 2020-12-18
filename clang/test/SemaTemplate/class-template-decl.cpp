@@ -167,3 +167,17 @@ namespace abstract_dependent_class {
   };
   template<typename T> A<T> *A<T>::clone() { return new A<T>; } // expected-error {{abstract class type 'A<T>'}}
 }
+
+namespace qualified_out_of_line {
+  struct rbnode {};
+  template<typename T, typename U> struct pair {};
+  template<typename K, typename V> struct rbtree {
+    using base = rbnode;
+    pair<base, base> f();
+  };
+  template<typename K, typename V>
+  pair<typename rbtree<K, V>::base, typename rbtree<K, V>::base>
+  rbtree<K, V>::f() {
+    return {};
+  }
+}
