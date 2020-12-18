@@ -812,7 +812,7 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
   case R_RELAX_TLS_GD_TO_LE:
   case R_RELAX_TLS_IE_TO_LE:
   case R_RELAX_TLS_LD_TO_LE:
-  case R_TLS:
+  case R_TPREL:
     // It is not very clear what to return if the symbol is undefined. With
     // --noinhibit-exec, even a non-weak undefined reference may reach here.
     // Just return A, which matches R_ABS, and the behavior of some dynamic
@@ -821,7 +821,7 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
       return a;
     return getTlsTpOffset(sym) + a;
   case R_RELAX_TLS_GD_TO_LE_NEG:
-  case R_NEG_TLS:
+  case R_TPREL_NEG:
     if (sym.isUndefined())
       return a;
     return -getTlsTpOffset(sym) + a;
