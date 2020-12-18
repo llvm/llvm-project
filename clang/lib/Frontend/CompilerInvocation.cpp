@@ -353,7 +353,7 @@ static T extractMaskValue(T KeyPath) {
 
 static void FixupInvocation(CompilerInvocation &Invocation,
                             DiagnosticsEngine &Diags,
-                            InputArgList &Args) {
+                            const InputArgList &Args) {
   LangOptions &LangOpts = *Invocation.getLangOpts();
   DiagnosticOptions &DiagOpts = Invocation.getDiagnosticOpts();
   CodeGenOptions &CodeGenOpts = Invocation.getCodeGenOpts();
@@ -403,6 +403,11 @@ static void FixupInvocation(CompilerInvocation &Invocation,
       Diags.Report(diag::err_drv_argument_not_allowed_with)
           << A->getSpelling() << T.getTriple();
   }
+
+  if (!CodeGenOpts.ProfileRemappingFile.empty() && CodeGenOpts.LegacyPassManager)
+    Diags.Report(diag::err_drv_argument_only_allowed_with)
+        << Args.getLastArg(OPT_fprofile_remapping_file_EQ)->getAsString(Args)
+        << "-fno-legacy-pass-manager";
 }
 
 //===----------------------------------------------------------------------===//
@@ -845,28 +850,6 @@ static void parseXRayInstrumentationBundle(StringRef FlagName, StringRef Bundle,
   }
 }
 
-// Set the profile kind for fprofile-instrument.
-static void setPGOInstrumentor(CodeGenOptions &Opts, ArgList &Args,
-                               DiagnosticsEngine &Diags) {
-  Arg *A = Args.getLastArg(OPT_fprofile_instrument_EQ);
-  if (A == nullptr)
-    return;
-  StringRef S = A->getValue();
-  unsigned I = llvm::StringSwitch<unsigned>(S)
-                   .Case("none", CodeGenOptions::ProfileNone)
-                   .Case("clang", CodeGenOptions::ProfileClangInstr)
-                   .Case("llvm", CodeGenOptions::ProfileIRInstr)
-                   .Case("csllvm", CodeGenOptions::ProfileCSIRInstr)
-                   .Default(~0U);
-  if (I == ~0U) {
-    Diags.Report(diag::err_drv_invalid_pgo_instrumentor) << A->getAsString(Args)
-                                                         << S;
-    return;
-  }
-  auto Instrumentor = static_cast<CodeGenOptions::ProfileInstrKind>(I);
-  Opts.setProfileInstr(Instrumentor);
-}
-
 // Set the profile kind using fprofile-instrument-use-path.
 static void setPGOUseInstrumentor(CodeGenOptions &Opts,
                                   const Twine &ProfileName) {
@@ -928,60 +911,11 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     }
   }
 
-  if (Arg *A = Args.getLastArg(OPT_fveclib)) {
-    StringRef Name = A->getValue();
-    if (Name == "Accelerate")
-      Opts.setVecLib(CodeGenOptions::Accelerate);
-    else if (Name == "libmvec")
-      Opts.setVecLib(CodeGenOptions::LIBMVEC);
-    else if (Name == "MASSV")
-      Opts.setVecLib(CodeGenOptions::MASSV);
-    else if (Name == "SVML")
-      Opts.setVecLib(CodeGenOptions::SVML);
-    else if (Name == "none")
-      Opts.setVecLib(CodeGenOptions::NoLibrary);
-    else
-      Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Name;
-  }
-
-  if (Arg *A = Args.getLastArg(OPT_debug_info_kind_EQ)) {
-    unsigned Val =
-        llvm::StringSwitch<unsigned>(A->getValue())
-            .Case("line-tables-only", codegenoptions::DebugLineTablesOnly)
-            .Case("line-directives-only", codegenoptions::DebugDirectivesOnly)
-            .Case("constructor", codegenoptions::DebugInfoConstructor)
-            .Case("limited", codegenoptions::LimitedDebugInfo)
-            .Case("standalone", codegenoptions::FullDebugInfo)
-            .Case("unused-types", codegenoptions::UnusedTypeInfo)
-            .Default(~0U);
-    if (Val == ~0U)
-      Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args)
-                                                << A->getValue();
-    else
-      Opts.setDebugInfo(static_cast<codegenoptions::DebugInfoKind>(Val));
-  }
   // If -fuse-ctor-homing is set and limited debug info is already on, then use
   // constructor homing.
   if (Args.getLastArg(OPT_fuse_ctor_homing))
     if (Opts.getDebugInfo() == codegenoptions::LimitedDebugInfo)
       Opts.setDebugInfo(codegenoptions::DebugInfoConstructor);
-
-  if (Arg *A = Args.getLastArg(OPT_debugger_tuning_EQ)) {
-    unsigned Val = llvm::StringSwitch<unsigned>(A->getValue())
-                       .Case("gdb", unsigned(llvm::DebuggerKind::GDB))
-                       .Case("lldb", unsigned(llvm::DebuggerKind::LLDB))
-                       .Case("sce", unsigned(llvm::DebuggerKind::SCE))
-                       .Default(~0U);
-    if (Val == ~0U)
-      Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args)
-                                                << A->getValue();
-    else
-      Opts.setDebuggerTuning(static_cast<llvm::DebuggerKind>(Val));
-  }
-  Opts.DwarfVersion = getLastArgIntValue(Args, OPT_dwarf_version_EQ, 0, Diags);
-  Opts.SplitDwarfFile = std::string(Args.getLastArgValue(OPT_split_dwarf_file));
-  Opts.SplitDwarfOutput =
-      std::string(Args.getLastArgValue(OPT_split_dwarf_output));
 
   for (const auto &Arg : Args.getAllArgValues(OPT_fdebug_prefix_map_EQ)) {
     auto Split = StringRef(Arg).split('=');
@@ -1001,10 +935,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
 
   Opts.NewStructPathTBAA = !Args.hasArg(OPT_no_struct_path_tbaa) &&
                            Args.hasArg(OPT_new_struct_path_tbaa);
-  Opts.DwarfDebugFlags =
-      std::string(Args.getLastArgValue(OPT_dwarf_debug_flags));
-  Opts.RecordCommandLine =
-      std::string(Args.getLastArgValue(OPT_record_command_line));
   Opts.OptimizeSize = getOptimizationLevelSize(Args);
   Opts.SimplifyLibCalls = !(Args.hasArg(OPT_fno_builtin) ||
                             Args.hasArg(OPT_ffreestanding));
@@ -1014,8 +944,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
       Args.hasFlag(OPT_funroll_loops, OPT_fno_unroll_loops,
                    (Opts.OptimizationLevel > 1));
 
-  Opts.SampleProfileFile =
-      std::string(Args.getLastArgValue(OPT_fprofile_sample_use_EQ));
   Opts.DebugNameTable = static_cast<unsigned>(
       Args.hasArg(OPT_ggnu_pubnames)
           ? llvm::DICompileUnit::DebugNameTableKind::GNU
@@ -1023,43 +951,10 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
                 ? llvm::DICompileUnit::DebugNameTableKind::Default
                 : llvm::DICompileUnit::DebugNameTableKind::None);
 
-  setPGOInstrumentor(Opts, Args, Diags);
-  Opts.InstrProfileOutput =
-      std::string(Args.getLastArgValue(OPT_fprofile_instrument_path_EQ));
-  Opts.ProfileInstrumentUsePath =
-      std::string(Args.getLastArgValue(OPT_fprofile_instrument_use_path_EQ));
   if (!Opts.ProfileInstrumentUsePath.empty())
     setPGOUseInstrumentor(Opts, Opts.ProfileInstrumentUsePath);
-  Opts.ProfileRemappingFile =
-      std::string(Args.getLastArgValue(OPT_fprofile_remapping_file_EQ));
-  if (!Opts.ProfileRemappingFile.empty() && Opts.LegacyPassManager) {
-    Diags.Report(diag::err_drv_argument_only_allowed_with)
-        << Args.getLastArg(OPT_fprofile_remapping_file_EQ)->getAsString(Args)
-        << "-fno-legacy-pass-manager";
-  }
 
   Opts.CodeModel = TargetOpts.CodeModel;
-  Opts.DebugPass = std::string(Args.getLastArgValue(OPT_mdebug_pass));
-
-  // Handle -mframe-pointer option.
-  if (Arg *A = Args.getLastArg(OPT_mframe_pointer_EQ)) {
-    CodeGenOptions::FramePointerKind FP;
-    StringRef Name = A->getValue();
-    bool ValidFP = true;
-    if (Name == "none")
-      FP = CodeGenOptions::FramePointerKind::None;
-    else if (Name == "non-leaf")
-      FP = CodeGenOptions::FramePointerKind::NonLeaf;
-    else if (Name == "all")
-      FP = CodeGenOptions::FramePointerKind::All;
-    else {
-      Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Name;
-      Success = false;
-      ValidFP = false;
-    }
-    if (ValidFP)
-      Opts.setFramePointer(FP);
-  }
 
   if (const Arg *A = Args.getLastArg(OPT_ftime_report, OPT_ftime_report_EQ)) {
     Opts.TimePasses = true;
@@ -1081,18 +976,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     }
   }
 
-  Opts.FloatABI = std::string(Args.getLastArgValue(OPT_mfloat_abi));
-  Opts.LimitFloatPrecision =
-      std::string(Args.getLastArgValue(OPT_mlimit_float_precision));
   Opts.Reciprocals = Args.getAllArgValues(OPT_mrecip_EQ);
-
-  Opts.NumRegisterParameters = getLastArgIntValue(Args, OPT_mregparm, 0, Diags);
-  Opts.SmallDataLimit =
-      getLastArgIntValue(Args, OPT_msmall_data_limit, 0, Diags);
-  Opts.TrapFuncName = std::string(Args.getLastArgValue(OPT_ftrap_function_EQ));
-
-  Opts.BBSections =
-      std::string(Args.getLastArgValue(OPT_fbasic_block_sections_EQ, "none"));
 
   // Basic Block Sections implies Function Sections.
   Opts.FunctionSections =
@@ -1121,9 +1005,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
             .Case("obj", FrontendOpts.OutputFile)
             .Default(llvm::sys::path::filename(FrontendOpts.OutputFile).str());
 
-  Opts.ThinLinkBitcodeFile =
-      std::string(Args.getLastArgValue(OPT_fthin_link_bitcode_EQ));
-
   // The memory profile runtime appends the pid to make this name more unique.
   const char *MemProfileBasename = "memprof.profraw";
   if (Args.hasArg(OPT_fmemory_profile_EQ)) {
@@ -1133,11 +1014,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     Opts.MemoryProfileOutput = std::string(Path);
   } else if (Args.hasArg(OPT_fmemory_profile))
     Opts.MemoryProfileOutput = MemProfileBasename;
-
-  Opts.PreferVectorWidth =
-      std::string(Args.getLastArgValue(OPT_mprefer_vector_width_EQ));
-
-  Opts.MainFileName = std::string(Args.getLastArgValue(OPT_main_file_name));
 
   if (Opts.EmitGcovArcs || Opts.EmitGcovNotes) {
     Opts.CoverageDataFile =
@@ -1158,22 +1034,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
         memcpy(Opts.CoverageVersion, CoverageVersion.data(), 4);
       }
     }
-  }
-  // Handle -fembed-bitcode option.
-  if (Arg *A = Args.getLastArg(OPT_fembed_bitcode_EQ)) {
-    StringRef Name = A->getValue();
-    unsigned Model = llvm::StringSwitch<unsigned>(Name)
-        .Case("off", CodeGenOptions::Embed_Off)
-        .Case("all", CodeGenOptions::Embed_All)
-        .Case("bitcode", CodeGenOptions::Embed_Bitcode)
-        .Case("marker", CodeGenOptions::Embed_Marker)
-        .Default(~0U);
-    if (Model == ~0U) {
-      Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Name;
-      Success = false;
-    } else
-      Opts.setEmbedBitcode(
-          static_cast<CodeGenOptions::EmbedBitcodeKind>(Model));
   }
   // FIXME: For backend options that are not yet recorded as function
   // attributes in the IR, keep track of them so we can embed them in a
@@ -1196,8 +1056,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     }
   }
 
-  Opts.XRayInstructionThreshold =
-      getLastArgIntValue(Args, OPT_fxray_instruction_threshold_EQ, 200, Diags);
   Opts.XRayTotalFunctionGroups =
       getLastArgIntValue(Args, OPT_fxray_function_groups, 1, Diags);
   Opts.XRaySelectedFunctionGroup =
@@ -1211,11 +1069,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     for (const auto &A : XRayInstrBundles)
       parseXRayInstrumentationBundle("-fxray-instrumentation-bundle=", A, Args,
                                      Diags, Opts.XRayInstrumentationBundle);
-
-  Opts.PatchableFunctionEntryCount =
-      getLastArgIntValue(Args, OPT_fpatchable_function_entry_EQ, 0, Diags);
-  Opts.PatchableFunctionEntryOffset = getLastArgIntValue(
-      Args, OPT_fpatchable_function_entry_offset_EQ, 0, Diags);
 
   if (const Arg *A = Args.getLastArg(OPT_fcf_protection_EQ)) {
     StringRef Name = A->getValue();
@@ -1241,8 +1094,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     Opts.setCompressDebugSections(DCT);
   }
 
-  Opts.DebugCompilationDir =
-      std::string(Args.getLastArgValue(OPT_fdebug_compilation_dir));
   for (auto *A :
        Args.filtered(OPT_mlink_bitcode_file, OPT_mlink_builtin_bitcode)) {
     CodeGenOptions::BitcodeFileToLink F;
@@ -1256,14 +1107,10 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     }
     Opts.LinkBitcodeFiles.push_back(F);
   }
-  Opts.SanitizeCoverageType =
-      getLastArgIntValue(Args, OPT_fsanitize_coverage_type, 0, Diags);
   Opts.SanitizeCoverageAllowlistFiles =
       Args.getAllArgValues(OPT_fsanitize_coverage_allowlist);
   Opts.SanitizeCoverageBlocklistFiles =
       Args.getAllArgValues(OPT_fsanitize_coverage_blocklist);
-  Opts.SanitizeMemoryTrackOrigins =
-      getLastArgIntValue(Args, OPT_fsanitize_memory_track_origins_EQ, 0, Diags);
   Opts.SSPBufferSize =
       getLastArgIntValue(Args, OPT_stack_protector_buffer_size, 8, Diags);
 
@@ -1281,36 +1128,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
       std::string(Args.getLastArgValue(OPT_mstack_protector_guard_reg_EQ,
                                        "none"));
 
-  if (Arg *A = Args.getLastArg(OPT_mstack_alignment)) {
-    StringRef Val = A->getValue();
-    unsigned StackAlignment = Opts.StackAlignment;
-    Val.getAsInteger(10, StackAlignment);
-    Opts.StackAlignment = StackAlignment;
-  }
-
-  if (Arg *A = Args.getLastArg(OPT_mstack_probe_size)) {
-    StringRef Val = A->getValue();
-    unsigned StackProbeSize = Opts.StackProbeSize;
-    Val.getAsInteger(0, StackProbeSize);
-    Opts.StackProbeSize = StackProbeSize;
-  }
-
-  if (Arg *A = Args.getLastArg(OPT_fobjc_dispatch_method_EQ)) {
-    StringRef Name = A->getValue();
-    unsigned Method = llvm::StringSwitch<unsigned>(Name)
-      .Case("legacy", CodeGenOptions::Legacy)
-      .Case("non-legacy", CodeGenOptions::NonLegacy)
-      .Case("mixed", CodeGenOptions::Mixed)
-      .Default(~0U);
-    if (Method == ~0U) {
-      Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Name;
-      Success = false;
-    } else {
-      Opts.setObjCDispatchMethod(
-        static_cast<CodeGenOptions::ObjCDispatchMethodKind>(Method));
-    }
-  }
-
 
   if (Args.getLastArg(OPT_femulated_tls) ||
       Args.getLastArg(OPT_fno_emulated_tls)) {
@@ -1318,24 +1135,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     Opts.EmulatedTLS =
         Args.hasFlag(OPT_femulated_tls, OPT_fno_emulated_tls, false);
   }
-
-  if (Arg *A = Args.getLastArg(OPT_ftlsmodel_EQ)) {
-    StringRef Name = A->getValue();
-    unsigned Model = llvm::StringSwitch<unsigned>(Name)
-        .Case("global-dynamic", CodeGenOptions::GeneralDynamicTLSModel)
-        .Case("local-dynamic", CodeGenOptions::LocalDynamicTLSModel)
-        .Case("initial-exec", CodeGenOptions::InitialExecTLSModel)
-        .Case("local-exec", CodeGenOptions::LocalExecTLSModel)
-        .Default(~0U);
-    if (Model == ~0U) {
-      Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Name;
-      Success = false;
-    } else {
-      Opts.setDefaultTLSModel(static_cast<CodeGenOptions::TLSModel>(Model));
-    }
-  }
-
-  Opts.TLSSize = getLastArgIntValue(Args, OPT_mtls_size_EQ, 0, Diags);
 
   if (Arg *A = Args.getLastArg(OPT_fdenormal_fp_math_EQ)) {
     StringRef Val = A->getValue();
@@ -1397,7 +1196,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.LinkerOptions = Args.getAllArgValues(OPT_linker_option);
   bool NeedLocTracking = false;
 
-  Opts.OptRecordFile = std::string(Args.getLastArgValue(OPT_opt_record_file));
   if (!Opts.OptRecordFile.empty())
     NeedLocTracking = true;
 
@@ -1480,20 +1278,11 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
                       Args.getAllArgValues(OPT_fsanitize_trap_EQ), Diags,
                       Opts.SanitizeTrap);
 
-  Opts.CudaGpuBinaryFileName =
-      std::string(Args.getLastArgValue(OPT_fcuda_include_gpubinary));
-
-  Opts.EmitCheckPathComponentsToStrip = getLastArgIntValue(
-      Args, OPT_fsanitize_undefined_strip_path_components_EQ, 0, Diags);
-
   Opts.EmitVersionIdentMetadata = Args.hasFlag(OPT_Qy, OPT_Qn, true);
 
   Opts.DefaultFunctionAttrs = Args.getAllArgValues(OPT_default_function_attr);
 
   Opts.PassPlugins = Args.getAllArgValues(OPT_fpass_plugin_EQ);
-
-  Opts.SymbolPartition =
-      std::string(Args.getLastArgValue(OPT_fsymbol_partition_EQ));
 
   return Success;
 }
