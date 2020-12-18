@@ -26,7 +26,7 @@ public:
     EXPECT_FP_EQ(nan, func(negZero, nan));
     EXPECT_FP_EQ(nan, func(nan, T(-1.2345)));
     EXPECT_FP_EQ(nan, func(T(1.2345), nan));
-    EXPECT_NE(isnan(func(nan, nan)), 0);
+    EXPECT_FP_EQ(func(nan, nan), nan);
   }
 
   void testInfArg(FuncPtr func) {
