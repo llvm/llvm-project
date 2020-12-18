@@ -1237,6 +1237,12 @@ TEST(CrossFileRenameTests, DirtyBuffer) {
     void relations(const RelationsRequest &Req,
                    llvm::function_ref<void(const SymbolID &, const Symbol &)>
                        Callback) const override {}
+
+    llvm::unique_function<bool(llvm::StringRef) const>
+    indexedFiles() const override {
+      return [](llvm::StringRef) { return false; };
+    }
+
     size_t estimateMemoryUsage() const override { return 0; }
   } PIndex;
   Results = rename({MainCode.point(),
@@ -1285,6 +1291,12 @@ TEST(CrossFileRenameTests, DeduplicateRefsFromIndex) {
     void relations(const RelationsRequest &,
                    llvm::function_ref<void(const SymbolID &, const Symbol &)>)
         const override {}
+
+    llvm::unique_function<bool(llvm::StringRef) const>
+    indexedFiles() const override {
+      return [](llvm::StringRef) { return false; };
+    }
+
     size_t estimateMemoryUsage() const override { return 0; }
     Ref ReturnedRef;
   } DIndex(XRefInBarCC);

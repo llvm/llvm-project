@@ -313,6 +313,17 @@ void Dex::relations(
   }
 }
 
+llvm::unique_function<bool(llvm::StringRef) const> Dex::indexedFiles() const {
+  return [this](llvm::StringRef FileURI) {
+    auto Path = URI::resolve(FileURI);
+    if (!Path) {
+      llvm::consumeError(Path.takeError());
+      return false;
+    }
+    return Files.contains(*Path);
+  };
+}
+
 size_t Dex::estimateMemoryUsage() const {
   size_t Bytes = Symbols.size() * sizeof(const Symbol *);
   Bytes += SymbolQuality.size() * sizeof(float);
