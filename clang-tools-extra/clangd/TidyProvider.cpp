@@ -19,6 +19,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <memory>
 
@@ -44,8 +45,25 @@ public:
         [this](llvm::Optional<llvm::StringRef> Data) {
           Value.reset();
           if (Data && !Data->empty()) {
-            if (auto Parsed = tidy::parseConfiguration(
-                    llvm::MemoryBufferRef(*Data, path())))
+            tidy::DiagCallback Diagnostics = [](const llvm::SMDiagnostic &D) {
+              switch (D.getKind()) {
+              case llvm::SourceMgr::DK_Error:
+                elog("tidy-config error at {0}:{1}:{2}: {3}", D.getFilename(),
+                     D.getLineNo(), D.getColumnNo(), D.getMessage());
+                break;
+              case llvm::SourceMgr::DK_Warning:
+                log("tidy-config warning at {0}:{1}:{2}: {3}", D.getFilename(),
+                    D.getLineNo(), D.getColumnNo(), D.getMessage());
+                break;
+              case llvm::SourceMgr::DK_Note:
+              case llvm::SourceMgr::DK_Remark:
+                vlog("tidy-config note at {0}:{1}:{2}: {3}", D.getFilename(),
+                     D.getLineNo(), D.getColumnNo(), D.getMessage());
+                break;
+              }
+            };
+            if (auto Parsed = tidy::parseConfigurationWithDiags(
+                    llvm::MemoryBufferRef(*Data, path()), Diagnostics))
               Value = std::make_shared<const tidy::ClangTidyOptions>(
                   std::move(*Parsed));
             else
