@@ -161,6 +161,12 @@ class MarshallingInfoString<code keypath, code defaultvalue="std::string()">
   code Denormalizer = "denormalizeString";
 }
 
+class MarshallingInfoStringInt<code keypath, code defaultvalue="0", code type="unsigned">
+  : MarshallingInfo<keypath, defaultvalue> {
+  code Normalizer = "normalizeStringIntegral<"#type#">";
+  code Denormalizer = "denormalizeString";
+}
+
 class MarshallingInfoFlag<code keypath, code defaultvalue = "false">
   : MarshallingInfo<keypath, defaultvalue> {
   code Normalizer = "normalizeSimpleFlag";
