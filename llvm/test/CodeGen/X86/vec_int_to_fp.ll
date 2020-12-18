@@ -734,8 +734,8 @@ define <2 x double> @uitofp_4i32_to_2f64(<4 x i32> %a) {
 ;
 ; AVX2-LABEL: uitofp_4i32_to_2f64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [4.503599627370496E+15,4.503599627370496E+15]
+; AVX2-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; AVX2-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vsubpd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
