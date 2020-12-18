@@ -690,6 +690,13 @@ typedef string __path_string;
 typedef char __path_value;
 #endif
 
+#if defined(_LIBCPP_WIN32API)
+_LIBCPP_FUNC_VIS
+size_t __wide_to_char(const wstring&, char*, size_t);
+_LIBCPP_FUNC_VIS
+size_t __char_to_wide(const string&, wchar_t*, size_t);
+#endif
+
 template <class _ECharT>
 struct _PathCVT;
 
@@ -793,6 +800,48 @@ struct _PathCVT<__path_value> {
 };
 
 #if defined(_LIBCPP_WIN32API)
+template <>
+struct _PathCVT<char> {
+
+  static void
+  __append_string(__path_string& __dest, const basic_string<char> &__str) {
+      size_t __size = __char_to_wide(__str, nullptr, 0);
+      size_t __pos = __dest.size();
+      __dest.resize(__pos + __size);
+      __char_to_wide(__str, const_cast<__path_value*>(__dest.data()) + __pos, __size);
+  }
+
+  template <class _Iter>
+  static typename enable_if<__is_exactly_cpp17_input_iterator<_Iter>::value>::type
+  __append_range(__path_string& __dest, _Iter __b, _Iter __e) {
+    basic_string<char> __tmp(__b, __e);
+    __append_string(__dest, __tmp);
+  }
+
+  template <class _Iter>
+  static typename enable_if<__is_cpp17_forward_iterator<_Iter>::value>::type
+  __append_range(__path_string& __dest, _Iter __b, _Iter __e) {
+    basic_string<char> __tmp(__b, __e);
+    __append_string(__dest, __tmp);
+  }
+
+  template <class _Iter>
+  static void __append_range(__path_string& __dest, _Iter __b, _NullSentinel) {
+    const char __sentinel = char{};
+    basic_string<char> __tmp;
+    for (; *__b != __sentinel; ++__b)
+      __tmp.push_back(*__b);
+    __append_string(__dest, __tmp);
+  }
+
+  template <class _Source>
+  static void __append_source(__path_string& __dest, _Source const& __s) {
+    using _Traits = __is_pathable<_Source>;
+    __append_range(__dest, _Traits::__range_begin(__s),
+                   _Traits::__range_end(__s));
+  }
+};
+
 template <class _ECharT>
 struct _PathExport {
   typedef __narrow_to_utf8<sizeof(wchar_t) * __CHAR_BIT__> _Narrower;
@@ -803,6 +852,17 @@ struct _PathExport {
     string __utf8;
     _Narrower()(back_inserter(__utf8), __src.data(), __src.data() + __src.size());
     _Widener()(back_inserter(__dest), __utf8.data(), __utf8.data() + __utf8.size());
+  }
+};
+
+template <>
+struct _PathExport<char> {
+  template <class _Str>
+  static void __append(_Str& __dest, const __path_string& __src) {
+    size_t __size = __wide_to_char(__src, nullptr, 0);
+    size_t __pos = __dest.size();
+    __dest.resize(__size);
+    __wide_to_char(__src, const_cast<char*>(__dest.data()) + __pos, __size);
   }
 };
 
@@ -1110,7 +1170,11 @@ public:
     return string<char>();
   }
   _LIBCPP_INLINE_VISIBILITY __u8_string u8string() const {
-    return string<__u8_string::value_type>();
+    using _CVT = __narrow_to_utf8<sizeof(wchar_t) * __CHAR_BIT__>;
+    __u8_string __s;
+    __s.reserve(__pn_.size());
+    _CVT()(back_inserter(__s), __pn_.data(), __pn_.data() + __pn_.size());
+    return __s;
   }
 
   _LIBCPP_INLINE_VISIBILITY _VSTD::u16string u16string() const {
@@ -1373,8 +1437,41 @@ _LIBCPP_INLINE_VISIBILITY _LIBCPP_DEPRECATED_WITH_CHAR8_T
       is_same<typename __is_pathable<_InputIt>::__char_type, char>::value,
       "u8path(Iter, Iter) requires Iter have a value_type of type 'char'"
       " or 'char8_t'");
+#if defined(_LIBCPP_WIN32API)
+  string __tmp(__f, __l);
+  using _CVT = __widen_from_utf8<sizeof(wchar_t) * __CHAR_BIT__>;
+  _VSTD::wstring __w;
+  __w.reserve(__tmp.size());
+  _CVT()(back_inserter(__w), __tmp.data(), __tmp.data() + __tmp.size());
+  return path(__w);
+#else
   return path(__f, __l);
+#endif /* !_LIBCPP_WIN32API */
 }
+
+#if defined(_LIBCPP_WIN32API)
+template <class _InputIt>
+_LIBCPP_INLINE_VISIBILITY _LIBCPP_DEPRECATED_WITH_CHAR8_T
+    typename enable_if<__is_pathable<_InputIt>::value, path>::type
+    u8path(_InputIt __f, _NullSentinel) {
+  static_assert(
+#ifndef _LIBCPP_NO_HAS_CHAR8_T
+      is_same<typename __is_pathable<_InputIt>::__char_type, char8_t>::value ||
+#endif
+      is_same<typename __is_pathable<_InputIt>::__char_type, char>::value,
+      "u8path(Iter, Iter) requires Iter have a value_type of type 'char'"
+      " or 'char8_t'");
+  string __tmp;
+  const char __sentinel = char{};
+  for (; *__f != __sentinel; ++__f)
+    __tmp.push_back(*__f);
+  using _CVT = __widen_from_utf8<sizeof(wchar_t) * __CHAR_BIT__>;
+  _VSTD::wstring __w;
+  __w.reserve(__tmp.size());
+  _CVT()(back_inserter(__w), __tmp.data(), __tmp.data() + __tmp.size());
+  return path(__w);
+}
+#endif /* _LIBCPP_WIN32API */
 
 template <class _Source>
 _LIBCPP_INLINE_VISIBILITY _LIBCPP_DEPRECATED_WITH_CHAR8_T
@@ -1387,7 +1484,12 @@ _LIBCPP_INLINE_VISIBILITY _LIBCPP_DEPRECATED_WITH_CHAR8_T
       is_same<typename __is_pathable<_Source>::__char_type, char>::value,
       "u8path(Source const&) requires Source have a character type of type "
       "'char' or 'char8_t'");
+#if defined(_LIBCPP_WIN32API)
+  using _Traits = __is_pathable<_Source>;
+  return u8path(__unwrap_iter(_Traits::__range_begin(__s)), __unwrap_iter(_Traits::__range_end(__s)));
+#else
   return path(__s);
+#endif
 }
 
 class _LIBCPP_TYPE_VIS path::iterator {

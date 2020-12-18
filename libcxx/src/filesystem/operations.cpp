@@ -17,9 +17,15 @@
 
 #include "filesystem_common.h"
 
-#include <unistd.h>
-#include <sys/stat.h>
-#include <sys/statvfs.h>
+#if defined(_LIBCPP_WIN32API)
+# define WIN32_LEAN_AND_MEAN
+# define NOMINMAX
+# include <windows.h>
+#else
+# include <unistd.h>
+# include <sys/stat.h>
+# include <sys/statvfs.h>
+#endif
 #include <time.h>
 #include <fcntl.h> /* values for fchmodat */
 
@@ -1679,6 +1685,36 @@ path::iterator& path::iterator::__decrement() {
   __stashed_elem_.__assign_view(*PP);
   return *this;
 }
+
+#if defined(_LIBCPP_WIN32API)
+////////////////////////////////////////////////////////////////////////////
+// Windows path conversions
+size_t __wide_to_char(const wstring &str, char *out, size_t outlen) {
+  if (str.empty())
+    return 0;
+  ErrorHandler<size_t> err("__wide_to_char", nullptr);
+  UINT codepage = AreFileApisANSI() ? CP_ACP : CP_OEMCP;
+  BOOL used_default = FALSE;
+  int ret = WideCharToMultiByte(codepage, 0, str.data(), str.size(), out,
+                                outlen, nullptr, &used_default);
+  if (ret <= 0 || used_default)
+    return err.report(errc::illegal_byte_sequence);
+  return ret;
+}
+
+size_t __char_to_wide(const string &str, wchar_t *out, size_t outlen) {
+  if (str.empty())
+    return 0;
+  ErrorHandler<size_t> err("__char_to_wide", nullptr);
+  UINT codepage = AreFileApisANSI() ? CP_ACP : CP_OEMCP;
+  int ret = MultiByteToWideChar(codepage, MB_ERR_INVALID_CHARS, str.data(),
+                                str.size(), out, outlen);
+  if (ret <= 0)
+    return err.report(errc::illegal_byte_sequence);
+  return ret;
+}
+#endif
+
 
 ///////////////////////////////////////////////////////////////////////////////
 //                           directory entry definitions
