@@ -317,20 +317,20 @@ func @reshape_splat_constant_float64() -> tensor<2x4x2xf64>
 
 // -----
 
-// CHECK-LABEL: func @tensor_cast(
-func @tensor_cast(%a : tensor<3x4xf32>, %b : tensor<4x?xf32>, %c : tensor<3x?xf32>)
+// CHECK-LABEL: func @tensor.cast(
+func @tensor.cast(%a : tensor<3x4xf32>, %b : tensor<4x?xf32>, %c : tensor<3x?xf32>)
   -> tensor<3x?xf32>
 {
-  %ta = tensor_cast %a : tensor<3x4xf32> to tensor<?x?xf32>
-  %tb = tensor_cast %b : tensor<4x?xf32> to tensor<?x?xf32>
-  %tc = tensor_cast %c : tensor<3x?xf32> to tensor<?x?xf32>
+  %ta = tensor.cast %a : tensor<3x4xf32> to tensor<?x?xf32>
+  %tb = tensor.cast %b : tensor<4x?xf32> to tensor<?x?xf32>
+  %tc = tensor.cast %c : tensor<3x?xf32> to tensor<?x?xf32>
 
   //      CHECK:  linalg.matmul ins({{.*}}tensor<3x4xf32>, tensor<4x?xf32>)
   // CHECK-SAME:    init({{.*}}tensor<3x?xf32>) -> tensor<3x?xf32>
   %0 = linalg.matmul ins(%ta, %tb: tensor<?x?xf32>, tensor<?x?xf32>)
                init(%tc: tensor<?x?xf32>) -> tensor<?x?xf32>
 
-  %1 = tensor_cast %0 : tensor<?x?xf32> to tensor<3x?xf32>
+  %1 = tensor.cast %0 : tensor<?x?xf32> to tensor<3x?xf32>
 
   return %1: tensor<3x?xf32>
 }
@@ -360,7 +360,7 @@ func @init_tensor_canonicalize() -> (tensor<4x5x?xf32>) {
 }
 // CHECK: func @init_tensor_canonicalize
 // CHECK:   %[[T0:.+]] = linalg.init_tensor [4, 5, 6] : tensor<4x5x6xf32>
-// CHECK:   %[[T1:.+]] = tensor_cast %[[T0]] : tensor<4x5x6xf32> to tensor<4x5x?xf32>
+// CHECK:   %[[T1:.+]] = tensor.cast %[[T0]] : tensor<4x5x6xf32> to tensor<4x5x?xf32>
 // CHECK:   return %[[T1]]
 
 // -----

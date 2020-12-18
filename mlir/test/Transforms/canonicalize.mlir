@@ -661,23 +661,15 @@ func @lowered_affine_ceildiv() -> (index, index) {
 
 // Checks that NOP casts are removed.
 // CHECK-LABEL: cast_values
-func @cast_values(%arg0: tensor<*xi32>, %arg1: memref<?xi32>) -> (tensor<2xi32>, memref<2xi32>) {
-
-  // NOP casts
-  %0 = tensor_cast %arg0 : tensor<*xi32> to tensor<*xi32>
-  %1 = memref_cast %arg1 : memref<?xi32> to memref<?xi32>
-
-  // CHECK-NEXT: %0 = tensor_cast %arg0 : tensor<*xi32> to tensor<2xi32>
-  // CHECK-NEXT: %1 = memref_cast %arg1 : memref<?xi32> to memref<2xi32>
-  %2 = tensor_cast %0 : tensor<*xi32> to tensor<2xi32>
+func @cast_values(%arg0: memref<?xi32>) -> memref<2xi32> {
+  // NOP cast
+  %1 = memref_cast %arg0 : memref<?xi32> to memref<?xi32>
+  // CHECK-NEXT: %[[RET:.*]] = memref_cast %arg0 : memref<?xi32> to memref<2xi32>
   %3 = memref_cast %1 : memref<?xi32> to memref<2xi32>
-
-  // NOP casts
-  %4 = tensor_cast %2 : tensor<2xi32> to tensor<2xi32>
+  // NOP cast
   %5 = memref_cast %3 : memref<2xi32> to memref<2xi32>
-
-  // CHECK-NEXT: return %0, %1 : tensor<2xi32>, memref<2xi32>
-  return %4, %5 : tensor<2xi32>, memref<2xi32>
+  // CHECK-NEXT: return %[[RET]] : memref<2xi32>
+  return %5 : memref<2xi32>
 }
 
 // -----
@@ -1121,57 +1113,8 @@ func @static_dynamic_tensor_from_elements(%size1: index, %size4: index) -> tenso
     yield %1 : index
   // CHECK: : tensor<3x?x5x7x?xindex>
   } : tensor<3x?x?x7x?xindex>
-  // CHECK: tensor_cast %{{.*}} : tensor<3x?x5x7x?xindex> to tensor<3x?x?x7x?xindex>
+  // CHECK: tensor.cast %{{.*}} : tensor<3x?x5x7x?xindex> to tensor<3x?x?x7x?xindex>
   return %0 : tensor<3x?x?x7x?xindex>
-}
-
-// -----
-
-// CHECK-LABEL: @tensor_cast_chain_ok
-// CHECK-SAME: %[[IN:.*]]: tensor<*xi32>
-func @tensor_cast_chain_ok(%input: tensor<*xi32>) -> tensor<4x8xi32> {
-  // CHECK-NEXT: %[[RES:.*]] = tensor_cast %[[IN]] : tensor<*xi32> to tensor<4x8xi32>
-  %0 = tensor_cast %input : tensor<*xi32> to tensor<4x?xi32>
-  %1 = tensor_cast %0 : tensor<4x?xi32> to tensor<4x8xi32>
-  // CHECK-NEXT: return %[[RES]]
-  return %1 : tensor<4x8xi32>
-}
-
-// -----
-
-// CHECK-LABEL: @tensor_cast_chain_regain
-// CHECK-SAME: %[[IN:.*]]: tensor<4xi32>
-func @tensor_cast_chain_regain(%input: tensor<4xi32>) -> tensor<4xi32> {
-  %0 = tensor_cast %input : tensor<4xi32> to tensor<?xi32>
-  %1 = tensor_cast %0 : tensor<?xi32> to tensor<4xi32>
-  // CHECK-NEXT: return %[[IN]]
-  return %1 : tensor<4xi32>
-}
-
-// -----
-
-// CHECK-LABEL: @tensor_cast_chain_keep
-// CHECK-SAME: %[[IN:.*]]: tensor<?x?xi32>
-func @tensor_cast_chain_keep(%input: tensor<?x?xi32>) -> tensor<?x8xi32> {
-  // CHECK-NEXT: %[[C1:.*]] = tensor_cast %[[IN]]
-  %0 = tensor_cast %input : tensor<?x?xi32> to tensor<4x?xi32>
-  // CHECK-NEXT: %[[C2:.*]] = tensor_cast %[[C1]]
-  %1 = tensor_cast %0 : tensor<4x?xi32> to tensor<?x8xi32>
-  // CHECK-NEXT: return %[[C2]]
-  return %1 : tensor<?x8xi32>
-}
-
-// -----
-
-// CHECK-LABEL: @tensor_cast_chain_invalid
-// CHECK-SAME: %[[IN:.*]]: tensor<4x8xi32>
-func @tensor_cast_chain_invalid(%input: tensor<4x8xi32>) -> tensor<8x4xi32> {
-  // CHECK-NEXT: %[[C1:.*]] = tensor_cast %[[IN]]
-  %0 = tensor_cast %input : tensor<4x8xi32> to tensor<?x?xi32>
-  // CHECK-NEXT: %[[C2:.*]] = tensor_cast %[[C1]]
-  %1 = tensor_cast %0 : tensor<?x?xi32> to tensor<8x4xi32>
-  // CHECK-NEXT: return %[[C2]]
-  return %1 : tensor<8x4xi32>
 }
 
 // -----
@@ -1189,30 +1132,16 @@ func @subtensor(%t: tensor<8x16x4xf32>, %arg0 : index, %arg1 : index)
 
   // CHECK: subtensor %{{.*}}[0, 0, 0] [7, 11, 2] [1, 1, 1] :
   // CHECK-SAME: tensor<8x16x4xf32> to tensor<7x11x2xf32>
-  // CHECK: tensor_cast %{{.*}} : tensor<7x11x2xf32> to tensor<?x?x?xf32>
+  // CHECK: tensor.cast %{{.*}} : tensor<7x11x2xf32> to tensor<?x?x?xf32>
   %1 = subtensor %t[%c0, %c0, %c0] [%c7, %c11, %c2] [%c1, %c1, %c1]
     : tensor<8x16x4xf32> to tensor<?x?x?xf32>
 
   // Test: subtensor with one dynamic operand can also be folded.
   // CHECK: subtensor %{{.*}}[0, 0, 0] [2, %[[ARG0]], 2] [1, 1, 1] :
   // CHECK-SAME: tensor<?x?x?xf32> to tensor<2x?x2xf32>
-  // CHECK: tensor_cast %{{.*}} : tensor<2x?x2xf32> to tensor<?x?x?xf32>
+  // CHECK: tensor.cast %{{.*}} : tensor<2x?x2xf32> to tensor<?x?x?xf32>
   %2 = subtensor %1[%c0, %c0, %c0] [%c2, %arg0, %c2] [%c1, %c1, %c1]
     : tensor<?x?x?xf32> to tensor<?x?x?xf32>
 
   return %2 : tensor<?x?x?xf32>
-}
-
-// -----
-
-// CHECK-LABEL: func @extract_from_tensor_cast
-// CHECK-SAME: %[[TENSOR:.*]]: tensor<*xf32>
-func @extract_from_tensor_cast(%tensor: tensor<*xf32>) -> f32 {
-  // CHECK-NEXT: %[[C0:.*]] = constant 0 : index
-  %c0 = constant 0 : index
-  // CHECK-NOT: tensor_cast
-  %casted = tensor_cast %tensor : tensor<*xf32> to tensor<?xf32>
-  // CHECK-NEXT: tensor.extract %[[TENSOR]][%[[C0]]]
-  %result = tensor.extract %casted[%c0] : tensor<?xf32>
-  return %result : f32
 }
