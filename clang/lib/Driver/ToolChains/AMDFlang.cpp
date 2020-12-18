@@ -1,4 +1,3 @@
-#ifndef __AMDFLANG__
 //===--- AMDFlang.cpp - Flang+LLVM ToolChain Implementations ----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -30,9 +29,6 @@
 #include "llvm/Support/TargetParser.h"
 #include "llvm/Support/YAMLParser.h"
 
-#ifdef LLVM_ON_UNIX
-#include <unistd.h> // For getuid().
-#endif
 #include <cassert>
 
 using namespace clang::driver;
@@ -232,9 +228,10 @@ void AMDFlang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   // Contiguous pointer checks
-  if (Arg *A = Args.getLastArg(options::OPT_fsanitize_EQ)) {
-    for (const StringRef &val : A->getValues()) {
-      if (val.equals("discontiguous") || val.equals("undefined") ) {
+  if (const Arg *A = Args.getLastArg(options::OPT_fsanitize_EQ)) {
+    for (const StringRef SVal : A->getValues()) {
+      const bool Discontiguous = SVal.equals("discontiguous");
+      if ( Discontiguous || SVal.equals("undefined") ) {
         // -x 54 0x40 -x 54 0x80 -x 54 0x200
         UpperCmdArgs.push_back("-x");
         UpperCmdArgs.push_back("54");
@@ -243,7 +240,7 @@ void AMDFlang::ConstructJob(Compilation &C, const JobAction &JA,
         // -fsanitze=discontiguous has no meaning in LLVM, only flang driver needs to
         // recognize it. However -fsanitize=undefined needs to be passed on for further
         // processing by the non-flang part of the driver.
-        if (val.equals("discontiguous"))
+        if (Discontiguous)
           A->claim();
         break;
       }
@@ -1080,5 +1077,3 @@ if(Args.getAllArgValues(options::OPT_fopenmp_targets_EQ).size() > 0) {
 AMDFlang::AMDFlang(const ToolChain &TC) : Tool("flang", "flang frontend", TC) {}
 
 AMDFlang::~AMDFlang() {}
-
-#endif

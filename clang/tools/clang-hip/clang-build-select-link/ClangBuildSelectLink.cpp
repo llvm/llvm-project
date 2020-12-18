@@ -133,7 +133,6 @@ static bool loadArFile(const char *argv0, const std::string ArchiveName,
         errs() << "Parsing member '" << goodname
                << "' of archive library to module.\n";
       SMDiagnostic ParseErr;
-      StringRef DataLayoutString;
       Expected<MemoryBufferRef> MemBuf = C.getMemoryBufferRef();
       if (Error E = MemBuf.takeError()) {
         errs() << argv0 << ": ";

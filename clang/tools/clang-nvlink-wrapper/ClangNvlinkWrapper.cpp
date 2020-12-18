@@ -31,9 +31,6 @@ using namespace llvm;
 // The name this program was invoked as.
 static StringRef ToolName;
 
-// The basename of this program.
-static StringRef Stem;
-
 const char NVLWHelp[] = R"(
 OVERVIEW: Clang Nvlink Wrapper
 
