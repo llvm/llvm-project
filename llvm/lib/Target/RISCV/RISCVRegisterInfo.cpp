@@ -98,6 +98,7 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // V registers for code generation. We handle them manually.
   markSuperRegs(Reserved, RISCV::VL);
   markSuperRegs(Reserved, RISCV::VTYPE);
+  markSuperRegs(Reserved, RISCV::VXSAT);
 
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;

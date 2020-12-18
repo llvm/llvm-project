@@ -350,8 +350,13 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     // RVV intrinsics may have illegal operands.
     setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i8, Custom);
     setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i16, Custom);
-    if (Subtarget.is64Bit())
+    setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i8, Custom);
+    setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i16, Custom);
+
+    if (Subtarget.is64Bit()) {
       setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i32, Custom);
+      setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i32, Custom);
+    }
   }
 
   // Function alignments.
@@ -599,6 +604,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   }
   case ISD::INTRINSIC_WO_CHAIN:
     return LowerINTRINSIC_WO_CHAIN(Op, DAG);
+  case ISD::INTRINSIC_W_CHAIN:
+    return LowerINTRINSIC_W_CHAIN(Op, DAG);
   case ISD::BSWAP:
   case ISD::BITREVERSE: {
     // Convert BSWAP/BITREVERSE to GREVI to enable GREVI combinining.
@@ -1052,6 +1059,36 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getRegister(RISCV::X4, PtrVT);
   }
   }
+}
+
+SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
+                                                    SelectionDAG &DAG) const {
+  unsigned IntNo = cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
+  SDLoc DL(Op);
+
+  if (Subtarget.hasStdExtV()) {
+    // Some RVV intrinsics may claim that they want an integer operand to be
+    // extended.
+    if (const RISCVVIntrinsicsTable::RISCVVIntrinsicInfo *II =
+            RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IntNo)) {
+      if (II->ExtendedOperand) {
+        // The operands start from the second argument in INTRINSIC_W_CHAIN.
+        unsigned ExtendOp = II->ExtendedOperand + 1;
+        assert(ExtendOp < Op.getNumOperands());
+        SmallVector<SDValue, 8> Operands(Op->op_begin(), Op->op_end());
+        SDValue &ScalarOp = Operands[ExtendOp];
+        if (ScalarOp.getValueType() == MVT::i32 ||
+            ScalarOp.getValueType() == MVT::i16 ||
+            ScalarOp.getValueType() == MVT::i8) {
+          ScalarOp =
+              DAG.getNode(ISD::ANY_EXTEND, DL, Subtarget.getXLenVT(), ScalarOp);
+          return DAG.getNode(ISD::INTRINSIC_W_CHAIN, DL, Op->getVTList(), Operands);
+        }
+      }
+    }
+  }
+
+  return SDValue();
 }
 
 // Returns the opcode of the target-specific SDNode that implements the 32-bit

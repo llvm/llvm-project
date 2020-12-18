@@ -1295,6 +1295,16 @@ defm PseudoVWMUL       : VPseudoBinaryW_VV_VX;
 defm PseudoVWMULU      : VPseudoBinaryW_VV_VX;
 defm PseudoVWMULSU     : VPseudoBinaryW_VV_VX;
 
+//===----------------------------------------------------------------------===//
+// 13.1. Vector Single-Width Saturating Add and Subtract
+//===----------------------------------------------------------------------===//
+let Defs = [VXSAT], hasSideEffects = 1 in {
+  defm PseudoVSADDU      : VPseudoBinaryV_VV_VX_VI;
+  defm PseudoVSADD       : VPseudoBinaryV_VV_VX_VI;
+  defm PseudoVSSUBU      : VPseudoBinaryV_VV_VX;
+  defm PseudoVSSUB       : VPseudoBinaryV_VV_VX;
+}
+
 } // Predicates = [HasStdExtV]
 
 let Predicates = [HasStdExtV, HasStdExtF] in {
@@ -1433,6 +1443,14 @@ defm "" : VPatBinaryV_VV_VX<"int_riscv_vrem", "PseudoVREM", AllIntegerVectors>;
 defm "" : VPatBinaryW_VV_VX<"int_riscv_vwmul", "PseudoVWMUL">;
 defm "" : VPatBinaryW_VV_VX<"int_riscv_vwmulu", "PseudoVWMULU">;
 defm "" : VPatBinaryW_VV_VX<"int_riscv_vwmulsu", "PseudoVWMULSU">;
+
+//===----------------------------------------------------------------------===//
+// 13.1. Vector Single-Width Saturating Add and Subtract
+//===----------------------------------------------------------------------===//
+defm "" : VPatBinaryV_VV_VX_VI<"int_riscv_vsaddu", "PseudoVSADDU", AllIntegerVectors>;
+defm "" : VPatBinaryV_VV_VX_VI<"int_riscv_vsadd", "PseudoVSADD", AllIntegerVectors>;
+defm "" : VPatBinaryV_VV_VX<"int_riscv_vssubu", "PseudoVSSUBU", AllIntegerVectors>;
+defm "" : VPatBinaryV_VV_VX<"int_riscv_vssub", "PseudoVSSUB", AllIntegerVectors>;
 
 } // Predicates = [HasStdExtV]
 
