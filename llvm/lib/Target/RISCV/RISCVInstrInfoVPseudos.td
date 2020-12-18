@@ -47,7 +47,7 @@ class LMULInfo<int lmul, VReg regclass, VReg wregclass, string mx> {
 def V_M1  : LMULInfo<0b000,   VR,   VRM2, "M1">;
 def V_M2  : LMULInfo<0b001, VRM2,   VRM4, "M2">;
 def V_M4  : LMULInfo<0b010, VRM4,   VRM8, "M4">;
-def V_M8  : LMULInfo<0b011, VRM8, NoVReg, "M8">;
+def V_M8  : LMULInfo<0b011, VRM8,     VR, "M8">;
 
 def V_MF8 : LMULInfo<0b101,   VR, VR, "MF8">;
 def V_MF4 : LMULInfo<0b110,   VR, VR, "MF4">;
