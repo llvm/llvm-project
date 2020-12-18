@@ -258,71 +258,6 @@ class function_body(object):
   def __str__(self):
     return self.scrub
 
-def get_failed_prefixes(func_dict):
-  # This returns the list of those prefixes that failed to match any function,
-  # because there were conflicting bodies produced by different RUN lines, in
-  # all instances of the prefix. Effectively, this prefix is unused and should
-  # be removed.
-  for prefix in func_dict:
-    if func_dict[prefix] and (not [fct for fct in func_dict[prefix] 
-         if func_dict[prefix][fct] is not None]):
-      yield prefix
-
-def warn_on_failed_prefixes(func_dict):
-  for prefix in get_failed_prefixes(func_dict):
-      warn('Prefix %s had conflicting output from different RUN lines for all functions' % (prefix,))
-
-def build_function_body_dictionary(function_re, scrubber, scrubber_args, raw_tool_output, prefixes, func_dict, func_order, verbose, record_args, check_attributes):
-  for m in function_re.finditer(raw_tool_output):
-    if not m:
-      continue
-    func = m.group('func')
-    body = m.group('body')
-    attrs = m.group('attrs') if check_attributes else ''
-    # Determine if we print arguments, the opening brace, or nothing after the function name
-    if record_args and 'args_and_sig' in m.groupdict():
-        args_and_sig = scrub_body(m.group('args_and_sig').strip())
-    elif 'args_and_sig' in m.groupdict():
-        args_and_sig = '('
-    else:
-        args_and_sig = ''
-    scrubbed_body = do_scrub(body, scrubber, scrubber_args, extra = False)
-    scrubbed_extra = do_scrub(body, scrubber, scrubber_args, extra = True)
-    if 'analysis' in m.groupdict():
-      analysis = m.group('analysis')
-      if analysis.lower() != 'cost model analysis':
-        warn('Unsupported analysis mode: %r!' % (analysis,))
-    if func.startswith('stress'):
-      # We only use the last line of the function body for stress tests.
-      scrubbed_body = '\n'.join(scrubbed_body.splitlines()[-1:])
-    if verbose:
-      print('Processing function: ' + func, file=sys.stderr)
-      for l in scrubbed_body.splitlines():
-        print('  ' + l, file=sys.stderr)
-    for prefix in prefixes:
-      if func in func_dict[prefix]:
-        if (func_dict[prefix][func] is None or
-            str(func_dict[prefix][func]) != scrubbed_body or
-            func_dict[prefix][func].args_and_sig != args_and_sig or
-                func_dict[prefix][func].attrs != attrs):
-          if (func_dict[prefix][func] is not None and
-              func_dict[prefix][func].is_same_except_arg_names(scrubbed_extra,
-                                                               args_and_sig,
-                                                               attrs)):
-            func_dict[prefix][func].scrub = scrubbed_extra
-            func_dict[prefix][func].args_and_sig = args_and_sig
-            continue
-          else:
-            # This means a previous RUN line produced a body for this function
-            # that is different from the one produced by this current RUN line,
-            # so the body can't be common accross RUN lines. We use None to
-            # indicate that.
-            func_dict[prefix][func] = None
-            continue
-
-      func_dict[prefix][func] = function_body(scrubbed_body, scrubbed_extra, args_and_sig, attrs)
-      func_order[prefix].append(func)
-
 class FunctionTestBuilder:
   def __init__(self, run_list, flags, scrubber_args):
     self._verbose = flags.verbose
@@ -337,17 +272,80 @@ class FunctionTestBuilder:
         self._func_order.update({prefix: []})
 
   def finish_and_get_func_dict(self):
-    warn_on_failed_prefixes(self._func_dict)
+    for prefix in self._get_failed_prefixes():
+      warn('Prefix %s had conflicting output from different RUN lines for all functions' % (prefix,))
     return self._func_dict
 
   def func_order(self):
     return self._func_order
   
   def process_run_line(self, function_re, scrubber, raw_tool_output, prefixes):
-    build_function_body_dictionary(function_re, scrubber, self._scrubber_args,
-                                   raw_tool_output, prefixes, self._func_dict,
-                                   self._func_order, self._verbose,
-                                   self._record_args, self._check_attributes)
+    for m in function_re.finditer(raw_tool_output):
+      if not m:
+        continue
+      func = m.group('func')
+      body = m.group('body')
+      attrs = m.group('attrs') if self._check_attributes else ''
+      # Determine if we print arguments, the opening brace, or nothing after the
+      # function name
+      if self._record_args and 'args_and_sig' in m.groupdict():
+          args_and_sig = scrub_body(m.group('args_and_sig').strip())
+      elif 'args_and_sig' in m.groupdict():
+          args_and_sig = '('
+      else:
+          args_and_sig = ''
+      scrubbed_body = do_scrub(body, scrubber, self._scrubber_args,
+                               extra=False)
+      scrubbed_extra = do_scrub(body, scrubber, self._scrubber_args,
+                                extra=True)
+      if 'analysis' in m.groupdict():
+        analysis = m.group('analysis')
+        if analysis.lower() != 'cost model analysis':
+          warn('Unsupported analysis mode: %r!' % (analysis,))
+      if func.startswith('stress'):
+        # We only use the last line of the function body for stress tests.
+        scrubbed_body = '\n'.join(scrubbed_body.splitlines()[-1:])
+      if self._verbose:
+        print('Processing function: ' + func, file=sys.stderr)
+        for l in scrubbed_body.splitlines():
+          print('  ' + l, file=sys.stderr)
+      for prefix in prefixes:
+        if func in self._func_dict[prefix]:
+          if (self._func_dict[prefix][func] is None or
+              str(self._func_dict[prefix][func]) != scrubbed_body or
+              self._func_dict[prefix][func].args_and_sig != args_and_sig or
+                  self._func_dict[prefix][func].attrs != attrs):
+            if (self._func_dict[prefix][func] is not None and
+                self._func_dict[prefix][func].is_same_except_arg_names(
+                scrubbed_extra,
+                args_and_sig,
+                attrs)):
+              self._func_dict[prefix][func].scrub = scrubbed_extra
+              self._func_dict[prefix][func].args_and_sig = args_and_sig
+              continue
+            else:
+              # This means a previous RUN line produced a body for this function
+              # that is different from the one produced by this current RUN line,
+              # so the body can't be common accross RUN lines. We use None to
+              # indicate that.
+              self._func_dict[prefix][func] = None
+              continue
+
+        self._func_dict[prefix][func] = function_body(
+            scrubbed_body, scrubbed_extra, args_and_sig, attrs)
+        self._func_order[prefix].append(func)
+
+  def _get_failed_prefixes(self):
+    # This returns the list of those prefixes that failed to match any function,
+    # because there were conflicting bodies produced by different RUN lines, in
+    # all instances of the prefix. Effectively, this prefix is unused and should
+    # be removed.
+    for prefix in self._func_dict:
+      if (self._func_dict[prefix] and 
+          (not [fct for fct in self._func_dict[prefix]
+                if self._func_dict[prefix][fct] is not None])):
+        yield prefix
+
 
 ##### Generator of LLVM IR CHECK lines
 
