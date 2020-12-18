@@ -121,6 +121,7 @@
 #include "lldb/Utility/ReproducerProvider.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/XcodeSDK.h"
+#include "lldb/Utility/ReproducerProvider.h"
 #include "llvm/ADT/ScopeExit.h"
 
 #include "Plugins/Platform/MacOSX/PlatformDarwin.h"
@@ -1659,8 +1660,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
                main_compile_unit_sp->GetPrimaryFile().GetCString());
   }
 
-  llvm::Triple triple = arch.GetTriple();
-
+  llvm::Triple triple = GetSwiftFriendlyTriple(arch.GetTriple());
   if (triple.getOS() == llvm::Triple::UnknownOS) {
     // cl_kernels are the only binaries that don't have an
     // LC_MIN_VERSION_xxx load command. This avoids a Swift assertion.
@@ -2353,9 +2353,24 @@ llvm::Triple SwiftASTContext::GetSwiftFriendlyTriple(llvm::Triple triple) {
     // technically incorrect, as the `*-unknown-linux` environment
     // represents the bare-metal environment, because Swift is
     // currently hosted only, we can get away with it.
-    if (triple.isOSLinux() &&
-        triple.getEnvironment() == llvm::Triple::UnknownEnvironment)
-      triple.setEnvironment(llvm::Triple::GNU);
+    if (triple.isOSLinux()) {
+      if (triple.getEnvironment() == llvm::Triple::UnknownEnvironment)
+        triple.setEnvironment(llvm::Triple::GNU);
+      // Contrary to what it appears, this is not a no-op.  This spells the
+      // `unknown` vendor as `unknown` rather than the empty (``) string.  This
+      // is required to ensure that the module triple matches exactly for Swift.
+      if (triple.getVendor() == llvm::Triple::UnknownVendor)
+        triple.setVendor(llvm::Triple::UnknownVendor);
+    }
+
+    // Set the vendor to `unknown` on Windows as the Swift standard library is
+    // overly aggressive in matching the triple.  The vendor field is
+    // initialized to `pc` by LLDB though there is no official vendor associated
+    // with the open source toolchain, and so this field is rightly
+    // canonicalized to `unknown`.  This allows loading of the Swift standard
+    // library for the REPL.
+    if (triple.isOSWindows() && triple.isWindowsMSVCEnvironment())
+      triple.setVendor(llvm::Triple::UnknownVendor);
     triple.normalize();
     return triple;
   }
@@ -3349,6 +3364,12 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
     m_ast_context_ap->addModuleLoader(std::move(memory_buffer_loader_ap));
   }
 
+  // Add a module interface checker.
+  m_ast_context_ap->addModuleInterfaceChecker(
+    std::make_unique<swift::ModuleInterfaceCheckerImpl>(*m_ast_context_ap,
+      moduleCachePath, prebuiltModuleCachePath,
+      swift::ModuleInterfaceLoaderOptions()));
+
   // 2. Create and install the module interface loader.
   //
   // The ordering of 2-4 is the same as the Swift compiler's 1-3,
@@ -3363,8 +3384,9 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   if (loading_mode != swift::ModuleLoadingMode::OnlySerialized) {
     std::unique_ptr<swift::ModuleLoader> module_interface_loader_ap(
         swift::ModuleInterfaceLoader::create(
-            *m_ast_context_ap, moduleCachePath, prebuiltModuleCachePath,
-            m_dependency_tracker.get(), loading_mode));
+          *m_ast_context_ap, *static_cast<swift::ModuleInterfaceCheckerImpl*>(
+            m_ast_context_ap->getModuleInterfaceChecker()), m_dependency_tracker.get(),
+          loading_mode));
     if (module_interface_loader_ap)
       m_ast_context_ap->addModuleLoader(std::move(module_interface_loader_ap));
   }
