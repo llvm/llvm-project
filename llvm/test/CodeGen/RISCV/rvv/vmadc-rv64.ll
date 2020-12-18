@@ -809,10 +809,10 @@ define <vscale x 2 x i1> @intrinsic_vmadc_vi_nxv2i1_nxv2i8_i8(<vscale x 2 x i8> 
 entry:
 ; CHECK-LABEL: intrinsic_vmadc_vi_nxv2i1_nxv2i8_i8
 ; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e8,mf4,ta,mu
-; CHECK:       vmadc.vi {{v[0-9]+}}, {{v[0-9]+}}, 9
+; CHECK:       vmadc.vi {{v[0-9]+}}, {{v[0-9]+}}, -9
   %a = call <vscale x 2 x i1> @llvm.riscv.vmadc.nxv2i1.i8(
     <vscale x 2 x i8> %0,
-    i8 9,
+    i8 -9,
     i64 %1)
 
   ret <vscale x 2 x i1> %a
@@ -835,10 +835,10 @@ define <vscale x 8 x i1> @intrinsic_vmadc_vi_nxv8i1_nxv8i8_i8(<vscale x 8 x i8> 
 entry:
 ; CHECK-LABEL: intrinsic_vmadc_vi_nxv8i1_nxv8i8_i8
 ; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e8,m1,ta,mu
-; CHECK:       vmadc.vi {{v[0-9]+}}, {{v[0-9]+}}, 9
+; CHECK:       vmadc.vi {{v[0-9]+}}, {{v[0-9]+}}, -9
   %a = call <vscale x 8 x i1> @llvm.riscv.vmadc.nxv8i1.i8(
     <vscale x 8 x i8> %0,
-    i8 9,
+    i8 -9,
     i64 %1)
 
   ret <vscale x 8 x i1> %a
@@ -861,10 +861,10 @@ define <vscale x 32 x i1> @intrinsic_vmadc_vi_nxv32i1_nxv32i8_i8(<vscale x 32 x 
 entry:
 ; CHECK-LABEL: intrinsic_vmadc_vi_nxv32i1_nxv32i8_i8
 ; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e8,m4,ta,mu
-; CHECK:       vmadc.vi {{v[0-9]+}}, {{v[0-9]+}}, 9
+; CHECK:       vmadc.vi {{v[0-9]+}}, {{v[0-9]+}}, -9
   %a = call <vscale x 32 x i1> @llvm.riscv.vmadc.nxv32i1.i8(
     <vscale x 32 x i8> %0,
-    i8 9,
+    i8 -9,
     i64 %1)
 
   ret <vscale x 32 x i1> %a
@@ -887,10 +887,10 @@ define <vscale x 1 x i1> @intrinsic_vmadc_vi_nxv1i1_nxv1i16_i16(<vscale x 1 x i1
 entry:
 ; CHECK-LABEL: intrinsic_vmadc_vi_nxv1i1_nxv1i16_i16
 ; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e16,mf4,ta,mu
-; CHECK:       vmadc.vi {{v[0-9]+}}, {{v[0-9]+}}, 9
+; CHECK:       vmadc.vi {{v[0-9]+}}, {{v[0-9]+}}, -9
   %a = call <vscale x 1 x i1> @llvm.riscv.vmadc.nxv1i1.i16(
     <vscale x 1 x i16> %0,
-    i16 9,
+    i16 -9,
     i64 %1)
 
   ret <vscale x 1 x i1> %a
@@ -913,10 +913,10 @@ define <vscale x 4 x i1> @intrinsic_vmadc_vi_nxv4i1_nxv4i16_i16(<vscale x 4 x i1
 entry:
 ; CHECK-LABEL: intrinsic_vmadc_vi_nxv4i1_nxv4i16_i16
 ; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e16,m1,ta,mu
-; CHECK:       vmadc.vi {{v[0-9]+}}, {{v[0-9]+}}, 9
+; CHECK:       vmadc.vi {{v[0-9]+}}, {{v[0-9]+}}, -9
   %a = call <vscale x 4 x i1> @llvm.riscv.vmadc.nxv4i1.i16(
     <vscale x 4 x i16> %0,
-    i16 9,
+    i16 -9,
     i64 %1)
 
   ret <vscale x 4 x i1> %a
@@ -939,10 +939,10 @@ define <vscale x 16 x i1> @intrinsic_vmadc_vi_nxv16i1_nxv16i16_i16(<vscale x 16 
 entry:
 ; CHECK-LABEL: intrinsic_vmadc_vi_nxv16i1_nxv16i16_i16
 ; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e16,m4,ta,mu
-; CHECK:       vmadc.vi {{v[0-9]+}}, {{v[0-9]+}}, 9
+; CHECK:       vmadc.vi {{v[0-9]+}}, {{v[0-9]+}}, -9
   %a = call <vscale x 16 x i1> @llvm.riscv.vmadc.nxv16i1.i16(
     <vscale x 16 x i16> %0,
-    i16 9,
+    i16 -9,
     i64 %1)
 
   ret <vscale x 16 x i1> %a
@@ -965,10 +965,10 @@ define <vscale x 1 x i1> @intrinsic_vmadc_vi_nxv1i1_nxv1i32_i32(<vscale x 1 x i3
 entry:
 ; CHECK-LABEL: intrinsic_vmadc_vi_nxv1i1_nxv1i32_i32
 ; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e32,mf2,ta,mu
-; CHECK:       vmadc.vi {{v[0-9]+}}, {{v[0-9]+}}, 9
+; CHECK:       vmadc.vi {{v[0-9]+}}, {{v[0-9]+}}, -9
   %a = call <vscale x 1 x i1> @llvm.riscv.vmadc.nxv1i1.i32(
     <vscale x 1 x i32> %0,
-    i32 9,
+    i32 -9,
     i64 %1)
 
   ret <vscale x 1 x i1> %a
@@ -991,10 +991,10 @@ define <vscale x 4 x i1> @intrinsic_vmadc_vi_nxv4i1_nxv4i32_i32(<vscale x 4 x i3
 entry:
 ; CHECK-LABEL: intrinsic_vmadc_vi_nxv4i1_nxv4i32_i32
 ; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e32,m2,ta,mu
-; CHECK:       vmadc.vi {{v[0-9]+}}, {{v[0-9]+}}, 9
+; CHECK:       vmadc.vi {{v[0-9]+}}, {{v[0-9]+}}, -9
   %a = call <vscale x 4 x i1> @llvm.riscv.vmadc.nxv4i1.i32(
     <vscale x 4 x i32> %0,
-    i32 9,
+    i32 -9,
     i64 %1)
 
   ret <vscale x 4 x i1> %a
@@ -1017,10 +1017,10 @@ define <vscale x 16 x i1> @intrinsic_vmadc_vi_nxv16i1_nxv16i32_i32(<vscale x 16 
 entry:
 ; CHECK-LABEL: intrinsic_vmadc_vi_nxv16i1_nxv16i32_i32
 ; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e32,m8,ta,mu
-; CHECK:       vmadc.vi {{v[0-9]+}}, {{v[0-9]+}}, 9
+; CHECK:       vmadc.vi {{v[0-9]+}}, {{v[0-9]+}}, -9
   %a = call <vscale x 16 x i1> @llvm.riscv.vmadc.nxv16i1.i32(
     <vscale x 16 x i32> %0,
-    i32 9,
+    i32 -9,
     i64 %1)
 
   ret <vscale x 16 x i1> %a
@@ -1043,10 +1043,10 @@ define <vscale x 2 x i1> @intrinsic_vmadc_vi_nxv2i1_nxv2i64_i64(<vscale x 2 x i6
 entry:
 ; CHECK-LABEL: intrinsic_vmadc_vi_nxv2i1_nxv2i64_i64
 ; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e64,m2,ta,mu
-; CHECK:       vmadc.vi {{v[0-9]+}}, {{v[0-9]+}}, 9
+; CHECK:       vmadc.vi {{v[0-9]+}}, {{v[0-9]+}}, -9
   %a = call <vscale x 2 x i1> @llvm.riscv.vmadc.nxv2i1.i64(
     <vscale x 2 x i64> %0,
-    i64 9,
+    i64 -9,
     i64 %1)
 
   ret <vscale x 2 x i1> %a
@@ -1069,10 +1069,10 @@ define <vscale x 8 x i1> @intrinsic_vmadc_vi_nxv8i1_nxv8i64_i64(<vscale x 8 x i6
 entry:
 ; CHECK-LABEL: intrinsic_vmadc_vi_nxv8i1_nxv8i64_i64
 ; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e64,m8,ta,mu
-; CHECK:       vmadc.vi {{v[0-9]+}}, {{v[0-9]+}}, 9
+; CHECK:       vmadc.vi {{v[0-9]+}}, {{v[0-9]+}}, -9
   %a = call <vscale x 8 x i1> @llvm.riscv.vmadc.nxv8i1.i64(
     <vscale x 8 x i64> %0,
-    i64 9,
+    i64 -9,
     i64 %1)
 
   ret <vscale x 8 x i1> %a
