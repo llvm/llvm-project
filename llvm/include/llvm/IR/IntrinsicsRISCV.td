@@ -349,4 +349,12 @@ let TargetPrefix = "riscv" in {
                                     [IntrNoMem]>, RISCVVIntrinsic {
     let ExtendOperand = 2;
   }
+
+  def int_riscv_vfmv_f_s : Intrinsic<[LLVMVectorElementType<0>],
+                                     [llvm_anyfloat_ty],
+                                     [IntrNoMem]>, RISCVVIntrinsic;
+  def int_riscv_vfmv_s_f : Intrinsic<[llvm_anyfloat_ty],
+                                     [LLVMMatchType<0>, LLVMVectorElementType<0>,
+                                      llvm_anyint_ty],
+                                     [IntrNoMem]>, RISCVVIntrinsic;
 } // TargetPrefix = "riscv"
