@@ -2582,6 +2582,11 @@ void CXXNameMangler::mangleType(QualType T) {
       // instantation-dependent qualifiers. See
       // https://github.com/itanium-cxx-abi/cxx-abi/issues/114.
 
+      // Don't desugar instantiation-dependent decltype / typeof types. We need
+      // to mangle the expression as written.
+      if (isa<DecltypeType, TypeOfType>(T))
+        break;
+
       QualType Desugared
         = T.getSingleStepDesugaredType(Context.getASTContext());
       if (Desugared == T)

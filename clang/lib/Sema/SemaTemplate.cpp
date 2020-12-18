@@ -3661,7 +3661,6 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
 
   QualType CanonType;
 
-  bool InstantiationDependent = false;
   if (TypeAliasTemplateDecl *AliasTemplate =
           dyn_cast<TypeAliasTemplateDecl>(Template)) {
 
@@ -3724,7 +3723,7 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
     }
   } else if (Name.isDependent() ||
              TemplateSpecializationType::anyDependentTemplateArguments(
-               TemplateArgs, InstantiationDependent)) {
+                 TemplateArgs, Converted)) {
     // This class template specialization is a dependent
     // type. Therefore, its canonical type is another class template
     // specialization type that contains all of the converted
@@ -4315,11 +4314,9 @@ DeclResult Sema::ActOnVarTemplateSpecialization(
 
     // FIXME: Move these checks to CheckTemplatePartialSpecializationArgs so we
     // also do them during instantiation.
-    bool InstantiationDependent;
     if (!Name.isDependent() &&
-        !TemplateSpecializationType::anyDependentTemplateArguments(
-            TemplateArgs.arguments(),
-            InstantiationDependent)) {
+        !TemplateSpecializationType::anyDependentTemplateArguments(TemplateArgs,
+                                                                   Converted)) {
       Diag(TemplateNameLoc, diag::err_partial_spec_fully_specialized)
           << VarTemplate->getDeclName();
       IsPartialSpecialization = false;
@@ -4480,10 +4477,9 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
     return true;
 
   // Produce a placeholder value if the specialization is dependent.
-  bool InstantiationDependent = false;
   if (Template->getDeclContext()->isDependentContext() ||
-      TemplateSpecializationType::anyDependentTemplateArguments(
-          TemplateArgs, InstantiationDependent))
+      TemplateSpecializationType::anyDependentTemplateArguments(TemplateArgs,
+                                                                Converted))
     return DeclResult();
 
   // Find the variable template specialization declaration that
@@ -4669,22 +4665,16 @@ Sema::CheckConceptTemplateId(const CXXScopeSpec &SS,
     return ExprError();
 
   ConstraintSatisfaction Satisfaction;
-  bool AreArgsDependent = false;
-  for (TemplateArgument &Arg : Converted) {
-    if (Arg.isDependent()) {
-      AreArgsDependent = true;
-      break;
-    }
-  }
+  bool AreArgsDependent =
+      TemplateSpecializationType::anyDependentTemplateArguments(*TemplateArgs,
+                                                                Converted);
   if (!AreArgsDependent &&
-      CheckConstraintSatisfaction(NamedConcept,
-                                  {NamedConcept->getConstraintExpr()},
-                                  Converted,
-                                  SourceRange(SS.isSet() ? SS.getBeginLoc() :
-                                                       ConceptNameInfo.getLoc(),
-                                                TemplateArgs->getRAngleLoc()),
-                                    Satisfaction))
-      return ExprError();
+      CheckConstraintSatisfaction(
+          NamedConcept, {NamedConcept->getConstraintExpr()}, Converted,
+          SourceRange(SS.isSet() ? SS.getBeginLoc() : ConceptNameInfo.getLoc(),
+                      TemplateArgs->getRAngleLoc()),
+          Satisfaction))
+    return ExprError();
 
   return ConceptSpecializationExpr::Create(Context,
       SS.isSet() ? SS.getWithLocInContext(Context) : NestedNameSpecifierLoc{},
@@ -6630,6 +6620,12 @@ CheckTemplateArgumentAddressOfObjectOrFunction(Sema &S,
                                                      Arg, ArgType))
     return true;
 
+  // Don't build a resolved template argument naming a dependent declaration.
+  if (Entity->isTemplated()) {
+    Converted = TemplateArgument(ArgIn);
+    return false;
+  }
+
   // Create the template argument.
   Converted = TemplateArgument(cast<ValueDecl>(Entity->getCanonicalDecl()),
                                S.Context.getCanonicalType(ParamType));
@@ -6644,8 +6640,6 @@ static bool CheckTemplateArgumentPointerToMember(Sema &S,
                                                  QualType ParamType,
                                                  Expr *&ResultArg,
                                                  TemplateArgument &Converted) {
-  bool Invalid = false;
-
   Expr *Arg = ResultArg;
   bool ObjCLifetimeConversion;
 
@@ -6661,7 +6655,7 @@ static bool CheckTemplateArgumentPointerToMember(Sema &S,
   // See http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_defects.html#773
   bool ExtraParens = false;
   while (ParenExpr *Parens = dyn_cast<ParenExpr>(Arg)) {
-    if (!Invalid && !ExtraParens) {
+    if (!ExtraParens) {
       S.Diag(Arg->getBeginLoc(),
              S.getLangOpts().CPlusPlus11
                  ? diag::warn_cxx98_compat_template_arg_extra_parens
@@ -6690,13 +6684,8 @@ static bool CheckTemplateArgumentPointerToMember(Sema &S,
     ValueDecl *VD = DRE->getDecl();
     if (VD->getType()->isMemberPointerType()) {
       if (isa<NonTypeTemplateParmDecl>(VD)) {
-        if (Arg->isTypeDependent() || Arg->isValueDependent()) {
-          Converted = TemplateArgument(Arg);
-        } else {
-          VD = cast<ValueDecl>(VD->getCanonicalDecl());
-          Converted = TemplateArgument(VD, ParamType);
-        }
-        return Invalid;
+        Converted = TemplateArgument(Arg);
+        return false;
       }
     }
 
@@ -6755,7 +6744,7 @@ static bool CheckTemplateArgumentPointerToMember(Sema &S,
       ValueDecl *D = cast<ValueDecl>(DRE->getDecl()->getCanonicalDecl());
       Converted = TemplateArgument(D, S.Context.getCanonicalType(ParamType));
     }
-    return Invalid;
+    return false;
   }
 
   // We found something else, but we don't know specifically what it is.
@@ -6932,14 +6921,17 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
     //   A template-argument for a non-type template parameter shall be
     //   a converted constant expression of the type of the template-parameter.
     APValue Value;
+    bool ValueDependent = false;
     ExprResult ArgResult = CheckConvertedConstantExpression(
-        Arg, ParamType, Value, CCEK_TemplateArg, Param);
+        Arg, ParamType, Value, CCEK_TemplateArg, Param, &ValueDependent);
     if (ArgResult.isInvalid())
       return ExprError();
 
     // For a value-dependent argument, CheckConvertedConstantExpression is
-    // permitted (and expected) to be unable to determine a value.
-    if (ArgResult.get()->isValueDependent()) {
+    // permitted (and expected) to be unable to determine a value. We might find
+    // the evaluated result refers to a dependent declaration even though the
+    // template argument is not a value-dependent expression.
+    if (ValueDependent) {
       Converted = TemplateArgument(ArgResult.get());
       return ArgResult;
     }
@@ -8345,10 +8337,9 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
 
     // FIXME: Move this to CheckTemplatePartialSpecializationArgs so we
     // also do it during instantiation.
-    bool InstantiationDependent;
     if (!Name.isDependent() &&
-        !TemplateSpecializationType::anyDependentTemplateArguments(
-            TemplateArgs.arguments(), InstantiationDependent)) {
+        !TemplateSpecializationType::anyDependentTemplateArguments(TemplateArgs,
+                                                                   Converted)) {
       Diag(TemplateNameLoc, diag::err_partial_spec_fully_specialized)
         << ClassTemplate->getDeclName();
       isPartialSpecialization = false;
@@ -10741,7 +10732,7 @@ namespace {
     /// For the purposes of type reconstruction, a type has already been
     /// transformed if it is NULL or if it is not dependent.
     bool AlreadyTransformed(QualType T) {
-      return T.isNull() || !T->isDependentType();
+      return T.isNull() || !T->isInstantiationDependentType();
     }
 
     /// Returns the location of the entity whose type is being
@@ -10794,7 +10785,7 @@ namespace {
 TypeSourceInfo *Sema::RebuildTypeInCurrentInstantiation(TypeSourceInfo *T,
                                                         SourceLocation Loc,
                                                         DeclarationName Name) {
-  if (!T || !T->getType()->isDependentType())
+  if (!T || !T->getType()->isInstantiationDependentType())
     return T;
 
   CurrentInstantiationRebuilder Rebuilder(*this, Loc, Name);
