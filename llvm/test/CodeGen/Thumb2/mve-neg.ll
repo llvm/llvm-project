@@ -43,10 +43,8 @@ define arm_aapcs_vfpcc <2 x i64> @neg_v2i64(<2 x i64> %s1) {
 ; CHECK-NEXT:    sbc.w r0, r12, r0
 ; CHECK-NEXT:    rsbs r2, r2, #0
 ; CHECK-NEXT:    sbc.w r3, r12, r3
-; CHECK-NEXT:    vmov.32 q0[0], r2
-; CHECK-NEXT:    vmov.32 q0[1], r3
-; CHECK-NEXT:    vmov.32 q0[2], r1
-; CHECK-NEXT:    vmov.32 q0[3], r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r2, r1
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r0
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = sub nsw <2 x i64> zeroinitializer, %s1
