@@ -268,12 +268,6 @@ public:
   /// Default constructor - creates an invalid induction.
   InductionDescriptor() = default;
 
-  /// Get the consecutive direction. Returns:
-  ///   0 - unknown or non-consecutive.
-  ///   1 - consecutive and increasing.
-  ///  -1 - consecutive and decreasing.
-  int getConsecutiveDirection() const;
-
   Value *getStartValue() const { return StartValue; }
   InductionKind getKind() const { return IK; }
   const SCEV *getStep() const { return Step; }
