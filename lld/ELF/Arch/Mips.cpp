@@ -146,7 +146,7 @@ RelExpr MIPS<ELFT>::getRelExpr(RelType type, const Symbol &s,
   case R_MIPS_TLS_TPREL64:
   case R_MICROMIPS_TLS_TPREL_HI16:
   case R_MICROMIPS_TLS_TPREL_LO16:
-    return R_TLS;
+    return R_TPREL;
   case R_MIPS_PC32:
   case R_MIPS_PC16:
   case R_MIPS_PC19_S2:
