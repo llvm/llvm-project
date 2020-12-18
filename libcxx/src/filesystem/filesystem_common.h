@@ -17,11 +17,13 @@
 #include "cstdlib"
 #include "ctime"
 
-#include <unistd.h>
-#include <sys/stat.h>
-#include <sys/statvfs.h>
-#include <sys/time.h> // for ::utimes as used in __last_write_time
-#include <fcntl.h>    /* values for fchmodat */
+#if !defined(_LIBCPP_WIN32API)
+# include <unistd.h>
+# include <sys/stat.h>
+# include <sys/statvfs.h>
+# include <sys/time.h> // for ::utimes as used in __last_write_time
+# include <fcntl.h>    /* values for fchmodat */
+#endif
 
 #include "../include/apple_availability.h"
 
@@ -47,6 +49,12 @@
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
 namespace detail {
+
+#if defined(_LIBCPP_WIN32API)
+// Non anonymous, to allow access from two translation units.
+errc __win_err_to_errc(int err);
+#endif
+
 namespace {
 
 static string format_string_imp(const char* msg, ...) {
@@ -117,6 +125,12 @@ error_code capture_errno() {
   _LIBCPP_ASSERT(errno, "Expected errno to be non-zero");
   return error_code(errno, generic_category());
 }
+
+#if defined(_LIBCPP_WIN32API)
+error_code make_windows_error(int err) {
+  return make_error_code(__win_err_to_errc(err));
+}
+#endif
 
 template <class T>
 T error_value();
