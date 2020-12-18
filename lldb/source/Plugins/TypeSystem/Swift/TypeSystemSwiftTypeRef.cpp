@@ -2345,7 +2345,7 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
   if (m_swift_ast_context->GetNumChildren(ReconstructType(type),
                                           omit_empty_base_classes, exe_ctx) <
       runtime->GetNumChildren({this, type}, valobj).getValueOr(0))
-    return fallback();
+    return impl();
 
 #ifndef NDEBUG
   std::string ast_child_name;
