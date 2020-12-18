@@ -1160,7 +1160,7 @@ func @mul_sss(%arga: tensor<32x16x8xf32>, %argb: tensor<32x16x8xf32>) -> tensor<
     [ "D", "D" ]        // A
   ],
   iterator_types = ["parallel", "parallel", "reduction", "reduction"],
-  doc = "A(i,j) = SUM_k,l B(i,k,l) * C(k,j) * D(l,j)"
+  doc = "A(i,j) += SUM_k,l B(i,k,l) * C(k,j) * D(l,j)"
 }
 
 // CHECK-LABEL:   func @kernel_3d(
@@ -1223,17 +1223,18 @@ func @kernel_3d(%arga: tensor<?x?xf32>,
   } -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
 }
+
 #trait_sum_reduction = {
   indexing_maps = [
-    affine_map<(i,j,k) -> (i,j,k)>,  // a
+    affine_map<(i,j,k) -> (i,j,k)>,  // A
     affine_map<(i,j,k) -> ()>        // x (scalar out)
   ],
   sparse = [
-    [ "S", "S", "S" ],  // a
+    [ "S", "S", "S" ],  // A
     [ ]                 // x
   ],
   iterator_types = ["reduction", "reduction", "reduction"],
-  doc = "x = SUM_ijk a(i,j,k)"
+  doc = "x += SUM_ijk A(i,j,k)"
 }
 
 // CHECK-LABEL:   func @sum_reduction(
@@ -1260,16 +1261,17 @@ func @kernel_3d(%arga: tensor<?x?xf32>,
 // CHECK:               %[[VAL_20:.*]] = load %[[VAL_9]]{{\[}}%[[VAL_19]]] : memref<?xindex>
 // CHECK:               %[[VAL_21:.*]] = addi %[[VAL_19]], %[[VAL_4]] : index
 // CHECK:               %[[VAL_22:.*]] = load %[[VAL_9]]{{\[}}%[[VAL_21]]] : memref<?xindex>
-// CHECK:               scf.for %[[VAL_23:.*]] = %[[VAL_20]] to %[[VAL_22]] step %[[VAL_4]] {
-// CHECK:                 %[[VAL_24:.*]] = load %[[VAL_12]][] : memref<f32>
-// CHECK:                 %[[VAL_25:.*]] = load %[[VAL_11]]{{\[}}%[[VAL_23]]] : memref<?xf32>
-// CHECK:                 %[[VAL_26:.*]] = addf %[[VAL_24]], %[[VAL_25]] : f32
-// CHECK:                 store %[[VAL_26]], %[[VAL_12]][] : memref<f32>
+// CHECK:               %[[VAL_23:.*]] = load %[[VAL_12]][] : memref<f32>
+// CHECK:               %[[VAL_24:.*]] = scf.for %[[VAL_25:.*]] = %[[VAL_20]] to %[[VAL_22]] step %[[VAL_4]] iter_args(%[[VAL_26:.*]] = %[[VAL_23]]) -> (f32) {
+// CHECK:                 %[[VAL_27:.*]] = load %[[VAL_11]]{{\[}}%[[VAL_25]]] : memref<?xf32>
+// CHECK:                 %[[VAL_28:.*]] = addf %[[VAL_26]], %[[VAL_27]] : f32
+// CHECK:                 scf.yield %[[VAL_28]] : f32
 // CHECK:               }
+// CHECK:               store %[[VAL_29:.*]], %[[VAL_12]][] : memref<f32>
 // CHECK:             }
 // CHECK:           }
-// CHECK:           %[[VAL_27:.*]] = tensor_load %[[VAL_12]] : memref<f32>
-// CHECK:           return %[[VAL_27]] : tensor<f32>
+// CHECK:           %[[VAL_30:.*]] = tensor_load %[[VAL_12]] : memref<f32>
+// CHECK:           return %[[VAL_30]] : tensor<f32>
 // CHECK:         }
 func @sum_reduction(%arga: tensor<10x20x30xf32>, %argx: tensor<f32>) -> tensor<f32> {
   %0 = linalg.generic #trait_sum_reduction
@@ -1282,21 +1284,80 @@ func @sum_reduction(%arga: tensor<10x20x30xf32>, %argx: tensor<f32>) -> tensor<f
   return %0 : tensor<f32>
 }
 
+#trait_sum_reduction_inv = {
+  indexing_maps = [
+    affine_map<(i,j,k) -> (i,j,k)>,  // A
+    affine_map<(i,j,k) -> (i)>,      // b
+    affine_map<(i,j,k) -> ()>        // x (scalar out)
+  ],
+  sparse = [
+    [ "D", "D", "D" ], // A
+    [ "D" ],           // b
+    [ ]                // x
+  ],
+  iterator_types = ["reduction", "reduction", "reduction"],
+  doc = "x += SUM_i A(i,j,k) * b(i)"
+}
+
+// CHECK-LABEL:   func @sum_reduction_inv(
+// CHECK-SAME:                            %[[VAL_0:.*]]: tensor<?x?x?xf32>,
+// CHECK-SAME:                            %[[VAL_1:.*]]: tensor<?xf32>,
+// CHECK-SAME:                            %[[VAL_2:.*]]: tensor<f32>) -> tensor<f32> {
+// CHECK:           %[[VAL_3:.*]] = constant 2 : index
+// CHECK:           %[[VAL_4:.*]] = constant 0 : index
+// CHECK:           %[[VAL_5:.*]] = constant 1 : index
+// CHECK:           %[[VAL_6:.*]] = dim %[[VAL_0]], %[[VAL_4]] : tensor<?x?x?xf32>
+// CHECK:           %[[VAL_7:.*]] = dim %[[VAL_0]], %[[VAL_5]] : tensor<?x?x?xf32>
+// CHECK:           %[[VAL_8:.*]] = dim %[[VAL_0]], %[[VAL_3]] : tensor<?x?x?xf32>
+// CHECK:           %[[VAL_9:.*]] = alloca(%[[VAL_6]], %[[VAL_7]], %[[VAL_8]]) : memref<?x?x?xf32>
+// CHECK:           %[[VAL_10:.*]] = dim %[[VAL_1]], %[[VAL_4]] : tensor<?xf32>
+// CHECK:           %[[VAL_11:.*]] = alloca(%[[VAL_10]]) : memref<?xf32>
+// CHECK:           %[[VAL_12:.*]] = alloca() : memref<f32>
+// CHECK:           scf.for %[[VAL_13:.*]] = %[[VAL_4]] to %[[VAL_10]] step %[[VAL_5]] {
+// CHECK:             %[[VAL_14:.*]] = load %[[VAL_11]]{{\[}}%[[VAL_13]]] : memref<?xf32>
+// CHECK:             scf.for %[[VAL_15:.*]] = %[[VAL_4]] to %[[VAL_7]] step %[[VAL_5]] {
+// CHECK:               %[[VAL_16:.*]] = load %[[VAL_12]][] : memref<f32>
+// CHECK:               %[[VAL_17:.*]] = scf.for %[[VAL_18:.*]] = %[[VAL_4]] to %[[VAL_8]] step %[[VAL_5]] iter_args(%[[VAL_19:.*]] = %[[VAL_16]]) -> (f32) {
+// CHECK:                 %[[VAL_20:.*]] = load %[[VAL_9]]{{\[}}%[[VAL_13]], %[[VAL_15]], %[[VAL_18]]] : memref<?x?x?xf32>
+// CHECK:                 %[[VAL_21:.*]] = mulf %[[VAL_20]], %[[VAL_14]] : f32
+// CHECK:                 %[[VAL_22:.*]] = addf %[[VAL_19]], %[[VAL_21]] : f32
+// CHECK:                 scf.yield %[[VAL_22]] : f32
+// CHECK:               }
+// CHECK:               store %[[VAL_23:.*]], %[[VAL_12]][] : memref<f32>
+// CHECK:             }
+// CHECK:           }
+// CHECK:           %[[VAL_24:.*]] = tensor_load %[[VAL_12]] : memref<f32>
+// CHECK:           return %[[VAL_24]] : tensor<f32>
+// CHECK:         }
+func @sum_reduction_inv(%arga: tensor<?x?x?xf32>,
+                        %argb: tensor<?xf32>,
+		        %argx: tensor<f32>) -> tensor<f32> {
+  %0 = linalg.generic #trait_sum_reduction_inv
+    ins(%arga, %argb : tensor<?x?x?xf32>, tensor<?xf32>)
+    init(%argx : tensor<f32>) {
+      ^bb(%a : f32, %b : f32, %x : f32):
+        %0 = mulf %a, %b  : f32
+        %1 = addf %x, %0  : f32
+        linalg.yield %1: f32
+  } -> tensor<f32>
+  return %0 : tensor<f32>
+}
+
 #trait_invariants = {
   indexing_maps = [
     affine_map<(i,j,k) -> (i)>,      // a
     affine_map<(i,j,k) -> (j)>,      // b
     affine_map<(i,j,k) -> (k)>,      // c
-    affine_map<(i,j,k) -> (i,j,k)>   // x
+    affine_map<(i,j,k) -> (i,j,k)>   // X (out)
   ],
   sparse = [
     [ "D" ],           // a
     [ "D" ],           // b
     [ "D" ],           // c
-    [ "D", "D", "D" ]  // x
+    [ "D", "D", "D" ]  // X
   ],
   iterator_types = ["parallel", "parallel", "parallel"],
-  doc = "x(i,j,k) = a(i) * b(j) * c(k)"
+  doc = "X(i,j,k) = a(i) * b(j) * c(k)"
 }
 
 // CHECK-LABEL:   func @invariants(
