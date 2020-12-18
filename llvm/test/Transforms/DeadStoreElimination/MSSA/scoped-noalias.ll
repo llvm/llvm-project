@@ -4,13 +4,13 @@
 ; Assume that %p1 != %p2 if and only if %c is true. In that case the noalias
 ; metadata is correct, but the first store cannot be eliminated, as it may be
 ; read-clobbered by the load.
-; TODO The store is incorrectly eliminated.
 define void @test(i1 %c, i8* %p1, i8* %p2) {
 ; CHECK-LABEL: @test(
+; CHECK-NEXT:    store i8 0, i8* [[P1:%.*]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i8, i8* [[P2:%.*]], align 1, !alias.scope !0
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    store i8 1, i8* [[P1:%.*]], align 1, !noalias !0
+; CHECK-NEXT:    store i8 1, i8* [[P1]], align 1, !noalias !0
 ; CHECK-NEXT:    ret void
 ; CHECK:       else:
 ; CHECK-NEXT:    store i8 2, i8* [[P1]], align 1

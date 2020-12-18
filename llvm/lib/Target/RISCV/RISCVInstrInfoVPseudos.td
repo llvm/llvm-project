@@ -14,6 +14,10 @@
 ///
 //===----------------------------------------------------------------------===//
 
+def riscv_vmv_x_s : SDNode<"RISCVISD::VMV_X_S",
+                           SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisVec<1>,
+                                                SDTCisInt<1>]>>;
+
 // X0 has special meaning for vsetvl/vsetvli.
 //  rd | rs1 |   AVL value | Effect on vl
 //--------------------------------------------------------------
@@ -401,6 +405,22 @@ class VPseudoSStoreMask<VReg StClass>:
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
+// Unary instruction that is never masked so HasDummyMask=0.
+class VPseudoUnaryNoDummyMask<VReg RetClass,
+                              DAGOperand Op2Class> :
+        Pseudo<(outs RetClass:$rd),
+               (ins Op2Class:$rs1, GPR:$vl, ixlenimm:$sew), []>,
+        RISCVVPseudo {
+  let mayLoad = 0;
+  let mayStore = 0;
+  let hasSideEffects = 0;
+  let usesCustomInserter = 1;
+  let Uses = [VL, VTYPE];
+  let VLIndex = 2;
+  let SEWIndex = 3;
+  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
+}
+
 class VPseudoBinaryNoMask<VReg RetClass,
                           VReg Op1Class,
                           DAGOperand Op2Class,
@@ -619,6 +639,16 @@ multiclass VPseudoBinaryV_IM<bit CarryOut = 0, bit CarryIn = 1,
                            !if(!and(!eq(CarryIn, 1), !eq(CarryOut, 0)),
                                GetVRegNoV0<m.vrclass>.R, m.vrclass)),
                            m.vrclass, simm5, m, CarryIn, Constraint>;
+}
+
+multiclass VPseudoUnaryV_V_X_I_NoDummyMask {
+  foreach m = MxList.m in {
+    let VLMul = m.value in {
+      def "_V_" # m.MX : VPseudoUnaryNoDummyMask<m.vrclass, m.vrclass>;
+      def "_X_" # m.MX : VPseudoUnaryNoDummyMask<m.vrclass, GPR>;
+      def "_I_" # m.MX : VPseudoUnaryNoDummyMask<m.vrclass, simm5>;
+    }
+  }
 }
 
 multiclass VPseudoBinaryV_VV_VX_VI<Operand ImmType = simm5> {
@@ -1296,6 +1326,12 @@ defm PseudoVWMULU      : VPseudoBinaryW_VV_VX;
 defm PseudoVWMULSU     : VPseudoBinaryW_VV_VX;
 
 //===----------------------------------------------------------------------===//
+// 12.17. Vector Integer Move Instructions
+//===----------------------------------------------------------------------===//
+
+defm PseudoVMV_V       : VPseudoUnaryV_V_X_I_NoDummyMask;
+
+//===----------------------------------------------------------------------===//
 // 13.1. Vector Single-Width Saturating Add and Subtract
 //===----------------------------------------------------------------------===//
 let Defs = [VXSAT], hasSideEffects = 1 in {
@@ -1315,6 +1351,55 @@ defm PseudoVFADD       : VPseudoBinaryV_VV_VX</*IsFloat=*/1>;
 defm PseudoVFSUB       : VPseudoBinaryV_VV_VX</*IsFloat=*/1>;
 defm PseudoVFRSUB      : VPseudoBinaryV_VX</*IsFloat=*/1>;
 
+} // Predicates = [HasStdExtV, HasStdExtF]
+
+//===----------------------------------------------------------------------===//
+// 17.1. Integer Scalar Move Instructions
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasStdExtV] in {
+let mayLoad = 0, mayStore = 0, hasSideEffects = 0, usesCustomInserter = 1,
+    Uses = [VL, VTYPE] in {
+  foreach m = MxList.m in {
+    let VLMul = m.value in {
+      let SEWIndex = 2, BaseInstr = VMV_X_S in
+      def PseudoVMV_X_S # "_" # m.MX: Pseudo<(outs GPR:$rd),
+                                             (ins m.vrclass:$rs2, ixlenimm:$sew),
+                                             []>, RISCVVPseudo;
+      let VLIndex = 3, SEWIndex = 4, BaseInstr = VMV_S_X,
+          Constraints = "$rd = $rs1" in
+      def PseudoVMV_S_X # "_" # m.MX: Pseudo<(outs m.vrclass:$rd),
+                                             (ins m.vrclass:$rs1, GPR:$rs2,
+                                                  GPR:$vl, ixlenimm:$sew),
+                                             []>, RISCVVPseudo;
+    }
+  }
+}
+} // Predicates = [HasStdExtV]
+
+//===----------------------------------------------------------------------===//
+// 17.2. Floating-Point Scalar Move Instructions
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasStdExtV, HasStdExtF] in {
+let mayLoad = 0, mayStore = 0, hasSideEffects = 0, usesCustomInserter = 1,
+    Uses = [VL, VTYPE] in {
+  foreach m = MxList.m in {
+    let VLMul = m.value in {
+      let SEWIndex = 2, BaseInstr = VFMV_F_S in
+      def PseudoVFMV_F_S # "_" # m.MX : Pseudo<(outs FPR32:$rd),
+                                               (ins m.vrclass:$rs2,
+                                                    ixlenimm:$sew),
+                                               []>, RISCVVPseudo;
+      let VLIndex = 3, SEWIndex = 4, BaseInstr = VFMV_S_F,
+          Constraints = "$rd = $rs1" in
+      def PseudoVFMV_S_F # "_" # m.MX : Pseudo<(outs m.vrclass:$rd),
+                                               (ins m.vrclass:$rs1, FPR32:$rs2,
+                                                    GPR:$vl, ixlenimm:$sew),
+                                               []>, RISCVVPseudo;
+    }
+  }
+}
 } // Predicates = [HasStdExtV, HasStdExtF]
 
 //===----------------------------------------------------------------------===//
@@ -1445,6 +1530,25 @@ defm "" : VPatBinaryW_VV_VX<"int_riscv_vwmulu", "PseudoVWMULU">;
 defm "" : VPatBinaryW_VV_VX<"int_riscv_vwmulsu", "PseudoVWMULSU">;
 
 //===----------------------------------------------------------------------===//
+// 12.17. Vector Integer Move Instructions
+//===----------------------------------------------------------------------===//
+foreach vti = AllVectors in {
+  def : Pat<(vti.Vector (int_riscv_vmv_v_v (vti.Vector vti.RegClass:$rs1),
+                                           GPR:$vl)),
+            (!cast<Instruction>("PseudoVMV_V_V_"#vti.LMul.MX)
+             $rs1, (NoX0 GPR:$vl), vti.SEW)>;
+}
+
+foreach vti = AllIntegerVectors in {
+  def : Pat<(vti.Vector (int_riscv_vmv_v_x GPR:$rs2, GPR:$vl)),
+            (!cast<Instruction>("PseudoVMV_V_X_"#vti.LMul.MX)
+             $rs2, (NoX0 GPR:$vl), vti.SEW)>;
+  def : Pat<(vti.Vector (int_riscv_vmv_v_x simm5:$imm5, GPR:$vl)),
+            (!cast<Instruction>("PseudoVMV_V_I_"#vti.LMul.MX)
+             simm5:$imm5, (NoX0 GPR:$vl), vti.SEW)>;
+}
+
+//===----------------------------------------------------------------------===//
 // 13.1. Vector Single-Width Saturating Add and Subtract
 //===----------------------------------------------------------------------===//
 defm "" : VPatBinaryV_VV_VX_VI<"int_riscv_vsaddu", "PseudoVSADDU", AllIntegerVectors>;
@@ -1462,4 +1566,50 @@ defm "" : VPatBinaryV_VV_VX<"int_riscv_vfadd", "PseudoVFADD", AllFloatVectors>;
 defm "" : VPatBinaryV_VV_VX<"int_riscv_vfsub", "PseudoVFSUB", AllFloatVectors>;
 defm "" : VPatBinaryV_VX<"int_riscv_vfrsub", "PseudoVFRSUB", AllFloatVectors>;
 
+} // Predicates = [HasStdExtV, HasStdExtF]
+
+//===----------------------------------------------------------------------===//
+// 17.1. Integer Scalar Move Instructions
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasStdExtV] in {
+foreach vti = AllIntegerVectors in {
+  def : Pat<(riscv_vmv_x_s (vti.Vector vti.RegClass:$rs2)),
+            (!cast<Instruction>("PseudoVMV_X_S_" # vti.LMul.MX) $rs2, vti.SEW)>;
+  def : Pat<(vti.Vector (int_riscv_vmv_s_x (vti.Vector vti.RegClass:$rs1),
+                                           GPR:$rs2, GPR:$vl)),
+            (!cast<Instruction>("PseudoVMV_S_X_" # vti.LMul.MX)
+             (vti.Vector $rs1), $rs2, (NoX0 GPR:$vl), vti.SEW)>;
+}
+} // Predicates = [HasStdExtV]
+
+//===----------------------------------------------------------------------===//
+// 17.2. Floating-Point Scalar Move Instructions
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasStdExtV, HasStdExtF] in {
+foreach fvti = AllFloatVectors in {
+  defvar instr = !cast<Instruction>("PseudoVFMV_F_S_" # fvti.LMul.MX);
+  def : Pat<(fvti.Scalar (int_riscv_vfmv_f_s (fvti.Vector fvti.RegClass:$rs2))),
+             // Floating point instructions with a scalar result will always
+             // generate the result in a register of class FPR32. When dealing
+             // with the f64 variant of a pattern we need to promote the FPR32
+             // subregister generated by the instruction to the FPR64 base
+             // register expected by the type in the pattern
+             !cond(!eq(!cast<string>(fvti.ScalarRegClass),
+                       !cast<string>(FPR64)):
+                      (SUBREG_TO_REG (i32 -1),
+                                     (instr $rs2, fvti.SEW), sub_32),
+                   !eq(!cast<string>(fvti.ScalarRegClass),
+                       !cast<string>(FPR16)):
+                      (EXTRACT_SUBREG (instr $rs2, fvti.SEW), sub_16),
+                   !eq(1, 1):
+                      (instr $rs2, fvti.SEW))>;
+
+  def : Pat<(fvti.Vector (int_riscv_vfmv_s_f (fvti.Vector fvti.RegClass:$rs1),
+                         (fvti.Scalar fvti.ScalarRegClass:$rs2), GPR:$vl)),
+            (!cast<Instruction>("PseudoVFMV_S_F_" # fvti.LMul.MX)
+             (fvti.Vector $rs1), ToFPR32<fvti.Scalar, fvti.ScalarRegClass, "rs2">.ret,
+             (NoX0 GPR:$vl), fvti.SEW)>;
+}
 } // Predicates = [HasStdExtV, HasStdExtF]

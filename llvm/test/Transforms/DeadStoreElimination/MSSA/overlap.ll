@@ -67,13 +67,11 @@ end:
   ret void
 }
 
-; TODO: The store to %a0 is dead, because only %a1 is read later.
+; The store to %a0 is dead, because only %a1 is read later.
 define void @test3(i1 %c) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:    [[A:%.*]] = alloca [2 x i8], align 1
-; CHECK-NEXT:    [[A0:%.*]] = getelementptr [2 x i8], [2 x i8]* [[A]], i32 0, i32 0
 ; CHECK-NEXT:    [[A1:%.*]] = getelementptr [2 x i8], [2 x i8]* [[A]], i32 0, i32 1
-; CHECK-NEXT:    store i8 1, i8* [[A0]], align 1
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    store [2 x i8] zeroinitializer, [2 x i8]* [[A]], align 1
@@ -102,10 +100,8 @@ else:
 define void @test4(i1 %c) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    [[A:%.*]] = alloca [2 x i8], align 1
-; CHECK-NEXT:    [[A0:%.*]] = getelementptr [2 x i8], [2 x i8]* [[A]], i32 0, i32 0
 ; CHECK-NEXT:    [[A1:%.*]] = getelementptr [2 x i8], [2 x i8]* [[A]], i32 0, i32 1
 ; CHECK-NEXT:    store i8 1, i8* [[A1]], align 1
-; CHECK-NEXT:    store i8 1, i8* [[A0]], align 1
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    store [2 x i8] zeroinitializer, [2 x i8]* [[A]], align 1

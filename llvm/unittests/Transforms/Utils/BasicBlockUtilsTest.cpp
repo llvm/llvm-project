@@ -7,10 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/MemorySSA.h"
+#include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/PostDominators.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
@@ -26,6 +31,13 @@ static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
   if (!Mod)
     Err.print("BasicBlockUtilsTests", errs());
   return Mod;
+}
+
+static BasicBlock *getBasicBlockByName(Function &F, StringRef Name) {
+  for (BasicBlock &BB : F)
+    if (BB.getName() == Name)
+      return &BB;
+  llvm_unreachable("Expected to find basic block!");
 }
 
 TEST(BasicBlockUtils, EliminateUnreachableBlocks) {
@@ -57,6 +69,224 @@ TEST(BasicBlockUtils, EliminateUnreachableBlocks) {
   EXPECT_EQ(F->size(), (size_t)3);
   EXPECT_TRUE(DT.verify());
 }
+
+TEST(BasicBlockUtils, SplitEdge_ex1) {
+  LLVMContext C;
+  std::unique_ptr<Module> M =
+      parseIR(C, "define void @foo(i1 %cond0) {\n"
+                 "entry:\n"
+                 "  br i1 %cond0, label %bb0, label %bb1\n"
+                 "bb0:\n"
+                 " %0 = mul i32 1, 2\n"
+                 "  br label %bb1\n"
+                 "bb1:\n"
+                 "  br label %bb2\n"
+                 "bb2:\n"
+                 "  ret void\n"
+                 "}\n"
+                 "\n");
+
+  Function *F = M->getFunction("foo");
+  DominatorTree DT(*F);
+  BasicBlock *SrcBlock;
+  BasicBlock *DestBlock;
+  BasicBlock *NewBB;
+
+  SrcBlock = getBasicBlockByName(*F, "entry");
+  DestBlock = getBasicBlockByName(*F, "bb0");
+  NewBB = SplitEdge(SrcBlock, DestBlock, &DT, nullptr, nullptr);
+
+  EXPECT_TRUE(DT.verify());
+  EXPECT_EQ(NewBB->getSinglePredecessor(), SrcBlock);
+  EXPECT_EQ(NewBB->getSingleSuccessor(), DestBlock);
+  EXPECT_EQ(NewBB->getParent(), F);
+
+  bool BBFlag = false;
+  for (BasicBlock &BB : *F) {
+    if (BB.getName() == NewBB->getName()) {
+      BBFlag = true;
+    }
+  }
+  EXPECT_TRUE(BBFlag);
+}
+
+TEST(BasicBlockUtils, SplitEdge_ex2) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, "define void @foo() {\n"
+                                         "bb0:\n"
+                                         "  br label %bb2\n"
+                                         "bb1:\n"
+                                         "  br label %bb2\n"
+                                         "bb2:\n"
+                                         "  ret void\n"
+                                         "}\n"
+                                         "\n");
+
+  Function *F = M->getFunction("foo");
+  DominatorTree DT(*F);
+
+  BasicBlock *SrcBlock;
+  BasicBlock *DestBlock;
+  BasicBlock *NewBB;
+
+  SrcBlock = getBasicBlockByName(*F, "bb0");
+  DestBlock = getBasicBlockByName(*F, "bb2");
+  NewBB = SplitEdge(SrcBlock, DestBlock, &DT, nullptr, nullptr);
+
+  EXPECT_TRUE(DT.verify());
+  EXPECT_EQ(NewBB->getSinglePredecessor(), SrcBlock);
+  EXPECT_EQ(NewBB->getSingleSuccessor(), DestBlock);
+  EXPECT_EQ(NewBB->getParent(), F);
+
+  bool BBFlag = false;
+  for (BasicBlock &BB : *F) {
+    if (BB.getName() == NewBB->getName()) {
+      BBFlag = true;
+    }
+  }
+  EXPECT_TRUE(BBFlag);
+}
+
+TEST(BasicBlockUtils, SplitEdge_ex3) {
+  LLVMContext C;
+  std::unique_ptr<Module> M =
+      parseIR(C, "define i32 @foo(i32 %n) {\n"
+                 "entry:\n"
+                 " br label %header\n"
+                 "header:\n"
+                 " %sum.02 = phi i32 [ 0, %entry ], [ %sum.1, %bb3 ]\n"
+                 " %0 = phi i32 [ 0, %entry ], [ %4, %bb3 ] \n"
+                 " %1 = icmp slt i32 %0, %n \n"
+                 " br i1 %1, label %bb0, label %bb1\n"
+                 "bb0:\n"
+                 "  %2 = add nsw i32 %sum.02, 2\n"
+                 "  br label %bb2\n"
+                 "bb1:\n"
+                 "  %3 = add nsw i32 %sum.02, 1\n"
+                 "  br label %bb2\n"
+                 "bb2:\n"
+                 "  %sum.1 = phi i32 [ %2, %bb0 ], [ %3, %bb1 ]\n"
+                 "  br label %bb3\n"
+                 "bb3:\n"
+                 "  %4 = add nsw i32 %0, 1 \n"
+                 "  %5 = icmp slt i32 %4, 100\n"
+                 "  br i1 %5, label %header, label %bb4\n"
+                 "bb4:\n"
+                 " %sum.0.lcssa = phi i32 [ %sum.1, %bb3 ]\n"
+                 " ret i32 %sum.0.lcssa\n"
+                 "}\n"
+                 "\n");
+
+  Function *F = M->getFunction("foo");
+  DominatorTree DT(*F);
+
+  LoopInfo LI(DT);
+
+  DataLayout DL("e-i64:64-f80:128-n8:16:32:64-S128");
+  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfo TLI(TLII);
+  AssumptionCache AC(*F);
+  AAResults AA(TLI);
+
+  BasicAAResult BAA(DL, *F, TLI, AC, &DT);
+  AA.addAAResult(BAA);
+
+  MemorySSA MSSA(*F, &AA, &DT);
+  MemorySSAUpdater Updater(&MSSA);
+
+  BasicBlock *SrcBlock;
+  BasicBlock *DestBlock;
+  BasicBlock *NewBB;
+
+  SrcBlock = getBasicBlockByName(*F, "header");
+  DestBlock = getBasicBlockByName(*F, "bb0");
+  NewBB = SplitEdge(SrcBlock, DestBlock, &DT, &LI, &Updater);
+
+  Updater.getMemorySSA()->verifyMemorySSA();
+  EXPECT_TRUE(DT.verify());
+  EXPECT_NE(LI.getLoopFor(SrcBlock), nullptr);
+  EXPECT_NE(LI.getLoopFor(DestBlock), nullptr);
+  EXPECT_NE(LI.getLoopFor(NewBB), nullptr);
+  EXPECT_EQ(NewBB->getSinglePredecessor(), SrcBlock);
+  EXPECT_EQ(NewBB->getSingleSuccessor(), DestBlock);
+  EXPECT_EQ(NewBB->getParent(), F);
+
+  bool BBFlag = false;
+  for (BasicBlock &BB : *F) {
+    if (BB.getName() == NewBB->getName()) {
+      BBFlag = true;
+    }
+  }
+  EXPECT_TRUE(BBFlag);
+}
+
+TEST(BasicBlockUtils, splitBasicBlockBefore_ex1) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, "define void @foo() {\n"
+                                         "bb0:\n"
+                                         " %0 = mul i32 1, 2\n"
+                                         "  br label %bb2\n"
+                                         "bb1:\n"
+                                         "  br label %bb3\n"
+                                         "bb2:\n"
+                                         "  %1 = phi  i32 [ %0, %bb0 ]\n"
+                                         "  br label %bb3\n"
+                                         "bb3:\n"
+                                         "  ret void\n"
+                                         "}\n"
+                                         "\n");
+
+  Function *F = M->getFunction("foo");
+  DominatorTree DT(*F);
+
+  BasicBlock *DestBlock;
+  BasicBlock *NewBB;
+
+  DestBlock = getBasicBlockByName(*F, "bb2");
+
+  NewBB = DestBlock->splitBasicBlockBefore(DestBlock->front().getIterator(),
+                                           "test");
+
+  PHINode *PN = dyn_cast<PHINode>(&(DestBlock->front()));
+  EXPECT_EQ(PN->getIncomingBlock(0), NewBB);
+  EXPECT_EQ(NewBB->getName(), "test");
+  EXPECT_EQ(NewBB->getSingleSuccessor(), DestBlock);
+  EXPECT_EQ(DestBlock->getSinglePredecessor(), NewBB);
+}
+
+#ifndef NDEBUG
+TEST(BasicBlockUtils, splitBasicBlockBefore_ex2) {
+  LLVMContext C;
+  std::unique_ptr<Module> M =
+      parseIR(C, "define void @foo() {\n"
+                 "bb0:\n"
+                 " %0 = mul i32 1, 2\n"
+                 "  br label %bb2\n"
+                 "bb1:\n"
+                 "  br label %bb2\n"
+                 "bb2:\n"
+                 "  %1 = phi  i32 [ %0, %bb0 ], [ 1, %bb1 ]\n"
+                 "  br label %bb3\n"
+                 "bb3:\n"
+                 "  ret void\n"
+                 "}\n"
+                 "\n");
+
+  Function *F = M->getFunction("foo");
+  DominatorTree DT(*F);
+
+  BasicBlock *DestBlock;
+
+  DestBlock = getBasicBlockByName(*F, "bb2");
+
+  ASSERT_DEATH(
+      {
+        DestBlock->splitBasicBlockBefore(DestBlock->front().getIterator(),
+                                         "test");
+      },
+      "cannot split on multi incoming phis");
+}
+#endif
 
 TEST(BasicBlockUtils, NoUnreachableBlocksToEliminate) {
   LLVMContext C;
