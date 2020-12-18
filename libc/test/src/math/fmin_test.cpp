@@ -23,7 +23,7 @@ TEST(FminTest, NaNArg) {
   EXPECT_FP_EQ(-0.0, __llvm_libc::fmin(-0.0, aNaN));
   EXPECT_FP_EQ(-1.2345, __llvm_libc::fmin(aNaN, -1.2345));
   EXPECT_FP_EQ(1.2345, __llvm_libc::fmin(1.2345, aNaN));
-  EXPECT_NE(isnan(__llvm_libc::fmin(aNaN, aNaN)), 0);
+  EXPECT_FP_EQ(aNaN, __llvm_libc::fmin(aNaN, aNaN));
 }
 
 TEST(FminTest, InfArg) {
