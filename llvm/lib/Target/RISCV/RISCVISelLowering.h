@@ -77,6 +77,11 @@ enum NodeType : unsigned {
   GREVIW,
   GORCI,
   GORCIW,
+  // Vector Extension
+  // VMV_X_S matches the semantics of vmv.x.s. The result is always XLenVT
+  // sign extended from the vector element size. NOTE: The result size will
+  // never be less than the vector element size.
+  VMV_X_S,
 };
 } // namespace RISCVISD
 
