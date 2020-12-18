@@ -180,6 +180,13 @@ void IROutliner::pruneIncompatibleRegions(
     if (CurrentEndIdx != 0 && StartIdx <= CurrentEndIdx)
       continue;
 
+    bool BadInst = any_of(IRSC, [this](IRInstructionData &ID) {
+      return !this->InstructionClassifier.visit(ID.Inst);
+    });
+
+    if (BadInst)
+      continue;
+
     OutlinableRegion *OS = new (RegionAllocator.Allocate())
         OutlinableRegion(IRSC, CurrentGroup);
     CurrentGroup.Regions.push_back(OS);
@@ -216,10 +223,12 @@ bool IROutliner::extractSection(OutlinableRegion &Region) {
   // should not be outlined in this round.  So marking these as illegal is
   // allowed.
   IRInstructionDataList *IDL = Region.Candidate->front()->IDL;
-  Region.NewFront = new (InstDataAllocator.Allocate())
-      IRInstructionData(*RewrittenBB->begin(), false, *IDL);
-  Region.NewBack = new (InstDataAllocator.Allocate())
-      IRInstructionData(*std::prev(std::prev(RewrittenBB->end())), false, *IDL);
+  Instruction *BeginRewritten = &*RewrittenBB->begin();
+  Instruction *EndRewritten = &*RewrittenBB->begin();
+  Region.NewFront = new (InstDataAllocator.Allocate()) IRInstructionData(
+      *BeginRewritten, InstructionClassifier.visit(*BeginRewritten), *IDL);
+  Region.NewBack = new (InstDataAllocator.Allocate()) IRInstructionData(
+      *EndRewritten, InstructionClassifier.visit(*EndRewritten), *IDL);
 
   // Insert the first IRInstructionData of the new region in front of the
   // first IRInstructionData of the IRSimilarityCandidate.
