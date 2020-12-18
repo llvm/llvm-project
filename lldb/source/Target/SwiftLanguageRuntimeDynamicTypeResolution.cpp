@@ -1142,10 +1142,99 @@ GetTypeFromTypeRef(TypeSystemSwiftTypeRef &ts,
   return ts.RemangleAsType(dem, node);
 }
 
+static llvm::Optional<size_t>
+findFieldWithName(const std::vector<swift::reflection::FieldInfo> &fields,
+                  llvm::StringRef name, std::vector<uint32_t> &child_indexes,
+                  uint32_t offset = 0) {
+  uint32_t index = 0;
+  auto it = std::find_if(fields.begin(), fields.end(), [&](const auto &field) {
+    // A nonnull TypeRef is required for enum cases, where it represents cases
+    // that have a payload. In other types it will be true anyway.
+    if (field.TR == nullptr)
+      return false;
+    if (name != field.Name) {
+      ++index;
+      return false;
+    }
+    return true;
+  });
+  if (it == fields.end())
+    return {};
+  child_indexes.push_back(offset + index);
+  return child_indexes.size();
+}
+
 llvm::Optional<size_t> SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
     CompilerType type, llvm::StringRef name, ExecutionContext *exe_ctx,
     bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) {
-  return {};
+  auto *ts =
+      llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(type.GetTypeSystem());
+  if (!ts)
+    return {};
+
+  using namespace swift::reflection;
+  // Try the static type metadata.
+  const TypeRef *tr = nullptr;
+  auto *ti = GetTypeInfo(type, exe_ctx->GetFramePtr(), &tr);
+  switch (ti->getKind()) {
+  case TypeInfoKind::Record: {
+    // Structs and Tuples.
+    auto *rti = llvm::cast<RecordTypeInfo>(ti);
+    switch (rti->getRecordKind()) {
+    case RecordKind::ThickFunction:
+      // There are two fields, `function` and `context`, but they're not exposed
+      // by lldb.
+      return {};
+    case RecordKind::OpaqueExistential:
+      // `OpaqueExistential` is documented as:
+      //     An existential is a three-word buffer followed by value metadata...
+      // The buffer is exposed as children named `payload_data_{0,1,2}`, and
+      // the number of fields are increased to match.
+      if (name.startswith("payload_data_")) {
+        uint32_t index;
+        if (name.take_back().getAsInteger(10, index) && index <= 2) {
+          child_indexes.push_back(index);
+          return child_indexes.size();
+        }
+      }
+      return findFieldWithName(rti->getFields(), name, child_indexes, 3);
+    default:
+      return findFieldWithName(rti->getFields(), name, child_indexes);
+    }
+  }
+  case TypeInfoKind::Enum: {
+    auto *eti = llvm::cast<EnumTypeInfo>(ti);
+    return findFieldWithName(eti->getCases(), name, child_indexes);
+  }
+  case TypeInfoKind::Reference: {
+    // Objects.
+    auto *rti = llvm::cast<ReferenceTypeInfo>(ti);
+    switch (rti->getReferenceKind()) {
+    case ReferenceKind::Weak:
+    case ReferenceKind::Unowned:
+    case ReferenceKind::Unmanaged:
+      // TODO: Dereference
+      return {};
+    case ReferenceKind::Strong: {
+      auto *reflection_ctx = GetReflectionContext();
+      auto &builder = reflection_ctx->getBuilder();
+      auto tc = TypeConverter(builder);
+      auto tip = LLDBTypeInfoProvider(*this, *ts);
+      auto *cti = tc.getClassInstanceTypeInfo(tr, 0, &tip);
+      if (auto *rti = llvm::cast_or_null<RecordTypeInfo>(cti)) {
+        if (auto size =
+                findFieldWithName(rti->getFields(), name, child_indexes))
+          return size;
+        // TODO: handle base classes.
+      }
+      return {};
+    }
+    }
+  }
+  default:
+    // FIXME: Implement more cases.
+    return {};
+  }
 }
 
 CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
