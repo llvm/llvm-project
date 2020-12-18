@@ -2277,11 +2277,13 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
     // -sycl-std applies to any SYCL source, not only those containing kernels,
     // but also those using the SYCL API
     if (const Arg *A = Args.getLastArg(OPT_sycl_std_EQ)) {
-      Opts.SYCLVersion = llvm::StringSwitch<unsigned>(A->getValue())
-                             .Cases("2017", "1.2.1", "121", "sycl-1.2.1", 2017)
-                             .Default(0U);
+      Opts.setSYCLVersion(
+          llvm::StringSwitch<LangOptions::SYCLMajorVersion>(A->getValue())
+              .Cases("2017", "1.2.1", "121", "sycl-1.2.1",
+                     LangOptions::SYCL_2017)
+              .Default(LangOptions::SYCL_None));
 
-      if (Opts.SYCLVersion == 0U) {
+      if (Opts.getSYCLVersion() == LangOptions::SYCL_None) {
         // User has passed an invalid value to the flag, this is an error
         Diags.Report(diag::err_drv_invalid_value)
             << A->getAsString(Args) << A->getValue();
