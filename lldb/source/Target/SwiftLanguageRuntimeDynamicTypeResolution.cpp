@@ -1221,14 +1221,15 @@ llvm::Optional<size_t> SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
       auto &builder = reflection_ctx->getBuilder();
       auto tc = TypeConverter(builder);
       auto tip = LLDBTypeInfoProvider(*this, *ts);
-      auto *cti = tc.getClassInstanceTypeInfo(tr, 0, &tip);
-      if (auto *rti = llvm::cast_or_null<RecordTypeInfo>(cti)) {
-        uint32_t offset = builder.lookupSuperclass(tr) ? 1 : 0;
-        if (auto size = findFieldWithName(rti->getFields(), name, child_indexes,
-                                          offset)) {
+      auto *class_ti = tc.getClassInstanceTypeInfo(tr, 0, &tip);
+      while (auto *record_ti = llvm::cast_or_null<RecordTypeInfo>(class_ti)) {
+        auto super_tr = builder.lookupSuperclass(tr);
+        uint32_t offset = super_tr ? 1 : 0;
+        if (auto size = findFieldWithName(record_ti->getFields(), name,
+                                          child_indexes, offset)) {
           return size;
         }
-        // TODO: handle base classes.
+        class_ti = reflection_ctx->getTypeInfo(super_tr, &tip);
       }
       return {};
     }
