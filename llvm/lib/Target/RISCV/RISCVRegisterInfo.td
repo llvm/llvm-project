@@ -396,9 +396,6 @@ class VReg<list<ValueType> regTypes, dag regList, int Vlmul>
   int Size = !mul(Vlmul, 64); // FIXME: assuming ELEN=64
 }
 
-// Dummy V register class.
-def NoVReg : VReg<[vint8m1_t], (add V0), 0>;
-
 def VR : VReg<[vint8mf2_t, vint8mf4_t, vint8mf8_t,
                vint16mf2_t, vint16mf4_t, vint32mf2_t,
                vint8m1_t, vint16m1_t, vint32m1_t, vint64m1_t,
