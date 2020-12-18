@@ -91,7 +91,7 @@ bool link(ArrayRef<const char *> args, bool canExitEarly, raw_ostream &stdoutOS,
   symtab = make<SymbolTable>();
   driver = make<LinkerDriver>();
 
-  driver->link(args);
+  driver->linkerMain(args);
 
   // Call exit() if we can to avoid calling destructors.
   if (canExitEarly)
@@ -1197,7 +1197,7 @@ Optional<std::string> getReproduceFile(const opt::InputArgList &args) {
   return None;
 }
 
-void LinkerDriver::link(ArrayRef<const char *> argsArr) {
+void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   ScopedTimer rootTimer(Timer::root());
 
   // Needed for LTO.
