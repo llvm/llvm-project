@@ -95,6 +95,21 @@ let TargetPrefix = "riscv" in {
                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                      llvm_anyint_ty],
                     [NoCapture<ArgIndex<1>>, IntrReadMem]>, RISCVVIntrinsic;
+  // For strided load
+  // Input: (pointer, stride, vl)
+  class RISCVSLoad
+        : Intrinsic<[llvm_anyvector_ty],
+                    [LLVMPointerType<LLVMMatchType<0>>,
+                     llvm_anyint_ty, LLVMMatchType<1>],
+                    [NoCapture<ArgIndex<0>>, IntrReadMem]>, RISCVVIntrinsic;
+  // For strided load with mask
+  // Input: (maskedoff, pointer, stride, mask, vl)
+  class RISCVSLoadMask
+        : Intrinsic<[llvm_anyvector_ty ],
+                    [LLVMMatchType<0>,
+                     LLVMPointerType<LLVMMatchType<0>>, llvm_anyint_ty,
+                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, LLVMMatchType<1>],
+                    [NoCapture<ArgIndex<1>>, IntrReadMem]>, RISCVVIntrinsic;
   // For unit stride store
   // Input: (vector_in, pointer, vl)
   class RISCVUSStore
@@ -111,6 +126,22 @@ let TargetPrefix = "riscv" in {
                      LLVMPointerType<LLVMMatchType<0>>,
                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                      llvm_anyint_ty],
+                    [NoCapture<ArgIndex<1>>, IntrWriteMem]>, RISCVVIntrinsic;
+  // For strided store
+  // Input: (vector_in, pointer, stride, vl)
+  class RISCVSStore
+        : Intrinsic<[],
+                    [llvm_anyvector_ty,
+                     LLVMPointerType<LLVMMatchType<0>>,
+                     llvm_anyint_ty, LLVMMatchType<1>],
+                    [NoCapture<ArgIndex<1>>, IntrWriteMem]>, RISCVVIntrinsic;
+  // For stride store with mask
+  // Input: (vector_in, pointer, stirde, mask, vl)
+  class RISCVSStoreMask
+        : Intrinsic<[],
+                    [llvm_anyvector_ty,
+                     LLVMPointerType<LLVMMatchType<0>>, llvm_anyint_ty,
+                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, LLVMMatchType<1>],
                     [NoCapture<ArgIndex<1>>, IntrWriteMem]>, RISCVVIntrinsic;
   // For destination vector type is the same as first source vector.
   // Input: (vector_in, vector_in/scalar_in, vl)
@@ -182,9 +213,17 @@ let TargetPrefix = "riscv" in {
     def "int_riscv_" # NAME : RISCVUSLoad;
     def "int_riscv_" # NAME # "_mask" : RISCVUSLoadMask;
   }
+  multiclass RISCVSLoad {
+    def "int_riscv_" # NAME : RISCVSLoad;
+    def "int_riscv_" # NAME # "_mask" : RISCVSLoadMask;
+  }
   multiclass RISCVUSStore {
     def "int_riscv_" # NAME : RISCVUSStore;
     def "int_riscv_" # NAME # "_mask" : RISCVUSStoreMask;
+  }
+  multiclass RISCVSStore {
+    def "int_riscv_" # NAME : RISCVSStore;
+    def "int_riscv_" # NAME # "_mask" : RISCVSStoreMask;
   }
 
   multiclass RISCVBinaryAAX {
@@ -207,6 +246,8 @@ let TargetPrefix = "riscv" in {
 
   defm vle : RISCVUSLoad;
   defm vse : RISCVUSStore;
+  defm vlse: RISCVSLoad;
+  defm vsse: RISCVSStore;
 
   defm vadd : RISCVBinaryAAX;
   defm vsub : RISCVBinaryAAX;
