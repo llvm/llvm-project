@@ -1541,24 +1541,6 @@ bool Equivalent(llvm::Optional<T> l, T r) {
   return Equivalent(l, llvm::Optional<T>(r));
 }
 
-template <typename T>
-bool Equivalent(const std::vector<T> &l, const std::vector<T> &r) {
-  if (std::equal(l.begin(), l.end(), r.begin(), r.end()))
-    return true;
-
-  auto join = [](const std::vector<T> &v) -> std::string {
-    if (v.empty())
-      return {};
-    std::ostringstream buf;
-    buf << v[0];
-    for (size_t i = 1; i < v.size(); ++i)
-      buf << ", " << v[i];
-    return buf.str();
-  };
-  llvm::dbgs() << join(l) << " != " << join(r) << "\n";
-  return false;
-}
-
 } // namespace
 #endif
 
@@ -2399,17 +2381,43 @@ size_t TypeSystemSwiftTypeRef::GetIndexOfChildMemberWithName(
         // checking the return value, plus the by-ref `child_indexes`.
         if (!m_swift_ast_context)
           return *index_size;
-        auto v_type = ReconstructType(type);
-        std::vector<uint32_t> v_child_indexes;
-        auto v_index_size = m_swift_ast_context->GetIndexOfChildMemberWithName(
-            v_type, name, exe_ctx, omit_empty_base_classes, v_child_indexes);
-        bool equivalent =
-            !v_type || (Equivalent(*index_size, v_index_size) &&
-                        Equivalent(child_indexes, v_child_indexes));
-        if (!equivalent)
-          llvm::dbgs() << "failing type was " << (const char *)type << "\n";
-        assert(equivalent &&
-               "TypeSystemSwiftTypeRef diverges from SwiftASTContext");
+        auto ast_type = ReconstructType(type);
+        if (!ast_type)
+          return *index_size;
+        std::vector<uint32_t> ast_child_indexes;
+        auto ast_index_size = m_swift_ast_context->GetIndexOfChildMemberWithName(
+                ast_type, name, exe_ctx, omit_empty_base_classes,
+                ast_child_indexes);
+        // The runtime has more info than the AST. No useful validation can be
+        // done.
+        if (*index_size > ast_index_size)
+          return *index_size;
+
+        auto fail = [&]() {
+          auto join = [](const auto &v) {
+            std::ostringstream buf;
+            buf << "{";
+            for (const auto &item : v)
+              buf << item << ",";
+            buf.seekp(-1, std::ios_base::end);
+            buf << "}";
+            return buf.str();
+          };
+          llvm::dbgs() << join(child_indexes)
+                       << " != " << join(ast_child_indexes) << "\n";
+          llvm::dbgs() << "failing type was " << (const char *)type
+                       << ", member was " << name << "\n";
+          assert(false &&
+                 "TypeSystemSwiftTypeRef diverges from SwiftASTContext");
+        };
+        if (*index_size != ast_index_size)
+          fail();
+        for (unsigned i = 0; i < *index_size; ++i)
+          if (child_indexes[i] < ast_child_indexes[i])
+            // When the runtime may know know about more children. When this
+            // happens, indexes will be larger. But if an index is smaller, that
+            // means the runtime has dropped info somehow.
+            fail();
 #endif
         return *index_size;
       }
