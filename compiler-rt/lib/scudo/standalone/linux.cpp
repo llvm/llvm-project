@@ -35,10 +35,6 @@
 #define ANDROID_PR_SET_VMA_ANON_NAME 0
 #endif
 
-#ifdef ANDROID_EXPERIMENTAL_MTE
-#include <bionic/mte_kernel.h>
-#endif
-
 namespace scudo {
 
 uptr getPageSize() { return static_cast<uptr>(sysconf(_SC_PAGESIZE)); }
@@ -54,7 +50,10 @@ void *map(void *Addr, uptr Size, UNUSED const char *Name, uptr Flags,
     MmapProt = PROT_NONE;
   } else {
     MmapProt = PROT_READ | PROT_WRITE;
-#if defined(__aarch64__) && defined(ANDROID_EXPERIMENTAL_MTE)
+#if defined(__aarch64__)
+#ifndef PROT_MTE
+#define PROT_MTE 0x20
+#endif
     if (Flags & MAP_MEMTAG)
       MmapProt |= PROT_MTE;
 #endif
