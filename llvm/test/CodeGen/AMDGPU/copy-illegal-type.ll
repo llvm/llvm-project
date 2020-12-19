@@ -567,7 +567,7 @@ define amdgpu_kernel void @test_copy_v4i8_volatile_load(<4 x i8> addrspace(1)* %
 ; SI-NEXT:    s_mov_b32 s5, s7
 ; SI-NEXT:    s_mov_b32 s6, s2
 ; SI-NEXT:    s_mov_b32 s7, s3
-; SI-NEXT:    buffer_load_dword v0, off, s[4:7], 0
+; SI-NEXT:    buffer_load_dword v0, off, s[4:7], 0 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
@@ -584,7 +584,7 @@ define amdgpu_kernel void @test_copy_v4i8_volatile_load(<4 x i8> addrspace(1)* %
 ; VI-NEXT:    s_mov_b32 s5, s7
 ; VI-NEXT:    s_mov_b32 s6, s2
 ; VI-NEXT:    s_mov_b32 s7, s3
-; VI-NEXT:    buffer_load_dword v0, off, s[4:7], 0
+; VI-NEXT:    buffer_load_dword v0, off, s[4:7], 0 glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
@@ -612,9 +612,13 @@ define amdgpu_kernel void @test_copy_v4i8_volatile_store(<4 x i8> addrspace(1)* 
 ; SI-NEXT:    s_mov_b32 s1, s5
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_store_byte v3, off, s[0:3], 0 offset:3
+; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_store_byte v2, off, s[0:3], 0 offset:2
+; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_store_byte v1, off, s[0:3], 0 offset:1
+; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_store_byte v0, off, s[0:3], 0
+; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: test_copy_v4i8_volatile_store:
@@ -635,9 +639,13 @@ define amdgpu_kernel void @test_copy_v4i8_volatile_store(<4 x i8> addrspace(1)* 
 ; VI-NEXT:    s_mov_b32 s1, s5
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_store_byte v3, off, s[0:3], 0 offset:3
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_store_byte v2, off, s[0:3], 0 offset:2
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_store_byte v1, off, s[0:3], 0 offset:1
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_store_byte v0, off, s[0:3], 0
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_endpgm
   %val = load <4 x i8>, <4 x i8> addrspace(1)* %in, align 4
   store volatile <4 x i8> %val, <4 x i8> addrspace(1)* %out, align 4

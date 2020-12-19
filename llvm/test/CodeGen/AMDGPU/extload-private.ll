@@ -35,7 +35,7 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}load_i16_zext_private:
-; SI: buffer_load_ushort v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 offset:4{{$}}
+; SI: buffer_load_ushort v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 offset:4 glc{{$}}
 define amdgpu_kernel void @load_i16_zext_private(i32 addrspace(1)* %out) {
 entry:
   %tmp0 = alloca i16, addrspace(5)

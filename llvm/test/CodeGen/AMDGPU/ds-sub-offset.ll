@@ -50,6 +50,7 @@ define amdgpu_kernel void @write_ds_sub0_offset0_global_clamp_bit(float %dummy.v
 ; CI-NEXT:    s_mov_b32 s1, s0
 ; CI-NEXT:    ds_write_b32 v0, v2 offset:12
 ; CI-NEXT:    buffer_store_dword v1, off, s[0:3], 0
+; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: write_ds_sub0_offset0_global_clamp_bit:
@@ -66,6 +67,7 @@ define amdgpu_kernel void @write_ds_sub0_offset0_global_clamp_bit(float %dummy.v
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    global_store_dword v[0:1], v2, off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_endpgm
 entry:
   %x.i = call i32 @llvm.amdgcn.workitem.id.x() #1
@@ -237,6 +239,7 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset_clamp_
 ; CI-NEXT:    s_mov_b32 s1, s0
 ; CI-NEXT:    ds_write2_b32 v0, v2, v3 offset1:1
 ; CI-NEXT:    buffer_store_dword v1, off, s[0:3], 0
+; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: add_x_shl_neg_to_sub_misaligned_i64_max_offset_clamp_bit:
@@ -254,6 +257,7 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset_clamp_
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    global_store_dword v[0:1], v2, off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_endpgm
   %x.i = call i32 @llvm.amdgcn.workitem.id.x() #0
   %neg = sub i32 0, %x.i
