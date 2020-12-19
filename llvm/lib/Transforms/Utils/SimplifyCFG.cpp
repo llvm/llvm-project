@@ -2607,6 +2607,7 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
 /// introducing a select if the return values disagree.
 bool SimplifyCFGOpt::SimplifyCondBranchToTwoReturns(BranchInst *BI,
                                                     IRBuilder<> &Builder) {
+  auto *BB = BI->getParent();
   assert(BI->isConditional() && "Must be a conditional branch");
   BasicBlock *TrueSucc = BI->getSuccessor(0);
   BasicBlock *FalseSucc = BI->getSuccessor(1);
@@ -2626,8 +2627,8 @@ bool SimplifyCFGOpt::SimplifyCondBranchToTwoReturns(BranchInst *BI,
   // there is no return value for this function, just change the
   // branch into a return.
   if (FalseRet->getNumOperands() == 0) {
-    TrueSucc->removePredecessor(BI->getParent());
-    FalseSucc->removePredecessor(BI->getParent());
+    TrueSucc->removePredecessor(BB);
+    FalseSucc->removePredecessor(BB);
     Builder.CreateRetVoid();
     EraseTerminatorAndDCECond(BI);
     return true;
@@ -2641,10 +2642,10 @@ bool SimplifyCFGOpt::SimplifyCondBranchToTwoReturns(BranchInst *BI,
   // Unwrap any PHI nodes in the return blocks.
   if (PHINode *TVPN = dyn_cast_or_null<PHINode>(TrueValue))
     if (TVPN->getParent() == TrueSucc)
-      TrueValue = TVPN->getIncomingValueForBlock(BI->getParent());
+      TrueValue = TVPN->getIncomingValueForBlock(BB);
   if (PHINode *FVPN = dyn_cast_or_null<PHINode>(FalseValue))
     if (FVPN->getParent() == FalseSucc)
-      FalseValue = FVPN->getIncomingValueForBlock(BI->getParent());
+      FalseValue = FVPN->getIncomingValueForBlock(BB);
 
   // In order for this transformation to be safe, we must be able to
   // unconditionally execute both operands to the return.  This is
@@ -2660,8 +2661,8 @@ bool SimplifyCFGOpt::SimplifyCondBranchToTwoReturns(BranchInst *BI,
 
   // Okay, we collected all the mapped values and checked them for sanity, and
   // defined to really do this transformation.  First, update the CFG.
-  TrueSucc->removePredecessor(BI->getParent());
-  FalseSucc->removePredecessor(BI->getParent());
+  TrueSucc->removePredecessor(BB);
+  FalseSucc->removePredecessor(BB);
 
   // Insert select instructions where needed.
   Value *BrCond = BI->getCondition();
