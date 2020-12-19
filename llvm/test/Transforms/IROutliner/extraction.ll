@@ -48,26 +48,24 @@ entry:
   ret void
 }
 
+; There are potential ouptuts in this sections, but we do not extract sections
+; with outputs right now, since they cannot be consolidated.
 define void @extract_outs1() #0 {
 ; CHECK-LABEL: @extract_outs1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DOTLOC:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[ADD_LOC:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[OUTPUT:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[RESULT:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[LT_CAST:%.*]] = bitcast i32* [[ADD_LOC]] to i8*
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 -1, i8* [[LT_CAST]])
-; CHECK-NEXT:    [[LT_CAST1:%.*]] = bitcast i32* [[DOTLOC]] to i8*
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 -1, i8* [[LT_CAST1]])
-; CHECK-NEXT:    call void @extract_outs1.outlined(i32* [[A]], i32* [[B]], i32* [[OUTPUT]], i32* [[ADD_LOC]], i32* [[DOTLOC]])
-; CHECK-NEXT:    [[ADD_RELOAD:%.*]] = load i32, i32* [[ADD_LOC]], align 4
-; CHECK-NEXT:    [[DOTRELOAD:%.*]] = load i32, i32* [[DOTLOC]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 -1, i8* [[LT_CAST]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 -1, i8* [[LT_CAST1]])
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[OUTPUT]], align 4
-; CHECK-NEXT:    call void @extract_outs1.outlined.1(i32 [[DOTRELOAD]], i32 [[ADD_RELOAD]], i32* [[RESULT]])
+; CHECK-NEXT:    store i32 2, i32* [[A]], align 4
+; CHECK-NEXT:    store i32 3, i32* [[B]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[A]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[B]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    store i32 [[ADD]], i32* [[OUTPUT]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[OUTPUT]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[OUTPUT]], align 4
+; CHECK-NEXT:    call void @extract_outs1.outlined(i32 [[TMP2]], i32 [[ADD]], i32* [[RESULT]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -88,25 +86,23 @@ entry:
   ret void
 }
 
+; There are potential ouptuts in this sections, but we do not extract sections
+; with outputs right now, since they cannot be consolidated.
 define void @extract_outs2() #0 {
 ; CHECK-LABEL: @extract_outs2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DOTLOC:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[ADD_LOC:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[OUTPUT:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[RESULT:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[LT_CAST:%.*]] = bitcast i32* [[ADD_LOC]] to i8*
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 -1, i8* [[LT_CAST]])
-; CHECK-NEXT:    [[LT_CAST1:%.*]] = bitcast i32* [[DOTLOC]] to i8*
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 -1, i8* [[LT_CAST1]])
-; CHECK-NEXT:    call void @extract_outs2.outlined(i32* [[A]], i32* [[B]], i32* [[OUTPUT]], i32* [[ADD_LOC]], i32* [[DOTLOC]])
-; CHECK-NEXT:    [[ADD_RELOAD:%.*]] = load i32, i32* [[ADD_LOC]], align 4
-; CHECK-NEXT:    [[DOTRELOAD:%.*]] = load i32, i32* [[DOTLOC]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 -1, i8* [[LT_CAST]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 -1, i8* [[LT_CAST1]])
-; CHECK-NEXT:    call void @extract_outs2.outlined.2(i32 [[DOTRELOAD]], i32 [[ADD_RELOAD]], i32* [[RESULT]])
+; CHECK-NEXT:    store i32 2, i32* [[A]], align 4
+; CHECK-NEXT:    store i32 3, i32* [[B]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[A]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[B]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    store i32 [[ADD]], i32* [[OUTPUT]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[OUTPUT]], align 4
+; CHECK-NEXT:    call void @extract_outs2.outlined(i32 [[TMP2]], i32 [[ADD]], i32* [[RESULT]])
 ; CHECK-NEXT:    ret void
 ;
 entry:

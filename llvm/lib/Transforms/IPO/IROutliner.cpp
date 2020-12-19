@@ -41,6 +41,13 @@ struct OutlinableGroup {
   /// Flag for whether we should not consider this group of OutlinableRegions
   /// for extraction.
   bool IgnoreGroup = false;
+
+  /// For the \ref Regions, we look at every Value.  If it is a constant,
+  /// we check whether it is the same in Region.
+  ///
+  /// \param [in,out] NotSame contains the global value numbers where the
+  /// constant is not always the same, and must be passed in as an argument.
+  void findSameConstants(DenseSet<unsigned> &NotSame);
 };
 
 /// Move the contents of \p SourceBB to before the last instruction of \p
@@ -142,6 +149,198 @@ void OutlinableRegion::reattachCandidate() {
   FollowBB = nullptr;
 
   CandidateSplit = false;
+}
+
+/// Find whether \p V matches the Constants previously found for the \p GVN.
+///
+/// \param V - The value to check for consistency.
+/// \param GVN - The global value number assigned to \p V.
+/// \param GVNToConstant - The mapping of global value number to Constants.
+/// \returns true if the Value matches the Constant mapped to by V and false if
+/// it \p V is a Constant but does not match.
+/// \returns None if \p V is not a Constant.
+static Optional<bool>
+constantMatches(Value *V, unsigned GVN,
+                DenseMap<unsigned, Constant *> &GVNToConstant) {
+  // See if we have a constants
+  Constant *CST = dyn_cast<Constant>(V);
+  if (!CST)
+    return None;
+
+  // Holds a mapping from a global value number to a Constant.
+  DenseMap<unsigned, Constant *>::iterator GVNToConstantIt;
+  bool Inserted;
+
+  // If we have a constant, try to make a new entry in the GVNToConstant.
+  std::tie(GVNToConstantIt, Inserted) =
+      GVNToConstant.insert(std::make_pair(GVN, CST));
+  // If it was found and is not equal, it is not the same. We do not
+  // handle this case yet, and exit early.
+  if (Inserted || (GVNToConstantIt->second == CST))
+    return true;
+
+  return false;
+}
+
+/// Find whether \p Region matches the global value numbering to Constant mapping
+/// found so far.
+///
+/// \param Region - The OutlinableRegion we are checking for constants
+/// \param NotSame - The set of global value numbers that do not have the same
+/// constant in each region.
+/// \returns true if all Constants are the same in every use of a Constant in \p
+/// Region and false if not
+static bool
+collectRegionsConstants(OutlinableRegion &Region,
+                       DenseMap<unsigned, Constant *> &GVNToConstant,
+                       DenseSet<unsigned> &NotSame) {
+  IRSimilarityCandidate &C = *Region.Candidate;
+  for (IRInstructionData &ID : C) {
+
+    // Iterate over the operands in an instruction. If the global value number,
+    // assigned by the IRSimilarityCandidate, has been seen before, we check if
+    // the the number has been found to be not the same value in each instance.
+    for (Value *V : ID.OperVals) {
+      Optional<unsigned> GVNOpt = C.getGVN(V);
+      assert(GVNOpt.hasValue() && "Expected a GVN for operand?");
+      unsigned GVN = GVNOpt.getValue();
+
+      // If this global value has been found to not be the same, it could have
+      // just been a register, check that it is not a constant value.
+      if (NotSame.find(GVN) != NotSame.end()) {
+        if (isa<Constant>(V))
+          return false;
+        continue;
+      }
+
+      // If it has been the same so far, we check the value for if the
+      // associated Constant value match the previous instances of the same
+      // global value number.  If the global value does not map to a Constant,
+      // it is considered to not be the same value.
+      Optional<bool> ConstantMatches = constantMatches(V, GVN, GVNToConstant);
+      if (ConstantMatches.hasValue()) {
+        if (ConstantMatches.getValue())
+          continue;
+        else
+          return false;
+      }
+
+      // While this value is a register, it might not have been previously,
+      // make sure we don't already have a constant mapped to this global value
+      // number.
+      if (GVNToConstant.find(GVN) != GVNToConstant.end())
+        return false;
+
+      NotSame.insert(GVN);
+    }
+  }
+
+  return true;
+}
+
+void OutlinableGroup::findSameConstants(DenseSet<unsigned> &NotSame) {
+  DenseMap<unsigned, Constant *> GVNToConstant;
+
+  for (OutlinableRegion *Region : Regions)
+    if (!collectRegionsConstants(*Region, GVNToConstant, NotSame)) {
+      IgnoreGroup = true;
+      return;
+    }
+}
+
+/// Find the GVN for the inputs that have been found by the CodeExtractor,
+/// excluding the ones that will be removed by llvm.assumes as these will be
+/// removed by the CodeExtractor.
+///
+/// \param [in] C - The IRSimilarityCandidate containing the region we are
+/// analyzing.
+/// \param [in] CurrentInputs - The set of inputs found by the
+/// CodeExtractor.
+/// \param [out] CurrentInputNumbers - The global value numbers for the extracted
+/// arguments.
+static void mapInputsToGVNs(IRSimilarityCandidate &C,
+                            SetVector<Value *> &CurrentInputs,
+                            std::vector<unsigned> &EndInputNumbers) {
+  // Get the global value number for each input.
+  for (Value *Input : CurrentInputs) {
+    assert(Input && "Have a nullptr as an input");
+    assert(C.getGVN(Input).hasValue() &&
+           "Could not find a numbering for the given input");
+    EndInputNumbers.push_back(C.getGVN(Input).getValue());
+  }
+}
+
+/// Find the input GVNs and the output values for a region of Instructions.
+/// Using the code extractor, we collect the inputs to the extracted function.
+///
+/// The \p Region can be identifed as needing to be ignored in this function.
+/// It should be checked whether it should be ignored after a call to this
+/// function.
+///
+/// \param [in,out] Region - The region of code to be analyzed.
+/// \param [out] Inputs - The global value numbers for the extracted arguments.
+/// \param [out] ArgInputs - The values of the inputs to the extracted function.
+static void getCodeExtractorArguments(OutlinableRegion &Region,
+                                      std::vector<unsigned> &InputGVNs,
+                                      SetVector<Value *> &ArgInputs) {
+  IRSimilarityCandidate &C = *Region.Candidate;
+
+  // OverallInputs are the inputs to the region found by the CodeExtractor,
+  // SinkCands and HoistCands are used by the CodeExtractor to find sunken
+  // allocas of values whose lifetimes are contained completely within the
+  // outlined region. Outputs are values used outside of the outlined region
+  // found by the CodeExtractor.
+  SetVector<Value *> OverallInputs, SinkCands, HoistCands, Outputs;
+
+  // Use the code extractor to get the inputs and outputs, without sunken
+  // allocas or removing llvm.assumes.
+  CodeExtractor *CE = Region.CE;
+  CE->findInputsOutputs(OverallInputs, Outputs, SinkCands);
+  assert(Region.StartBB && "Region must have a start BasicBlock!");
+  Function *OrigF = Region.StartBB->getParent();
+  CodeExtractorAnalysisCache CEAC(*OrigF);
+  BasicBlock *Dummy = nullptr;
+
+  // The region may be ineligible due to VarArgs in the parent function. In this
+  // case we ignore the region.
+  if (!CE->isEligible()) {
+    Region.IgnoreRegion = true;
+    return;
+  }
+
+  // Find if any values are going to be sunk into the function when extracted
+  CE->findAllocas(CEAC, SinkCands, HoistCands, Dummy);
+  CE->findInputsOutputs(ArgInputs, Outputs, SinkCands);
+
+  // TODO: Support regions with output values.  Outputs add an extra layer of
+  // resolution that adds too much complexity at this stage.
+  if (Outputs.size() > 0) {
+    Region.IgnoreRegion = true;
+    return;
+  }
+
+  // TODO: Support regions with sunken allocas: values whose lifetimes are
+  // contained completely within the outlined region.  These are not guaranteed
+  // to be the same in every region, so we must elevate them all to arguments
+  // when they appear.  If these values are not equal, it means there is some
+  // Input in OverallInputs that was removed for ArgInputs.
+  if (ArgInputs.size() != OverallInputs.size()) {
+    Region.IgnoreRegion = true;
+    return;
+  }
+
+  mapInputsToGVNs(C, OverallInputs, InputGVNs);
+}
+
+void IROutliner::findAddInputsOutputs(
+    Module &M, OutlinableRegion &Region) {
+  std::vector<unsigned> Inputs;
+  SetVector<Value *> ArgInputs;
+
+  getCodeExtractorArguments(Region, Inputs, ArgInputs);
+
+  if (Region.IgnoreRegion)
+    return;
 }
 
 void IROutliner::pruneIncompatibleRegions(
@@ -271,6 +470,7 @@ unsigned IROutliner::doOutline(Module &M) {
                                RHS[0].getLength() * RHS.size();
                       });
 
+  DenseSet<unsigned> NotSame;
   // Iterate over the possible sets of similarity.
   for (SimilarityGroup &CandidateVec : SimilarityCandidates) {
     OutlinableGroup CurrentGroup;
@@ -284,7 +484,18 @@ unsigned IROutliner::doOutline(Module &M) {
     if (CurrentGroup.Regions.size() < 2)
       continue;
 
-    // Create a CodeExtractor for each outlinable region.
+    // Determine if there are any values that are the same constant throughout
+    // each section in the set.
+    NotSame.clear();
+    CurrentGroup.findSameConstants(NotSame);
+
+    if (CurrentGroup.IgnoreGroup)
+      continue;
+
+    // Create a CodeExtractor for each outlinable region. Identify inputs and
+    // outputs for each section using the code extractor and create the argument
+    // types for the Aggregate Outlining Function.
+    std::vector<OutlinableRegion *> OutlinedRegions;
     for (OutlinableRegion *OS : CurrentGroup.Regions) {
       // Break the outlinable region out of its parent BasicBlock into its own
       // BasicBlocks (see function implementation).
@@ -293,10 +504,17 @@ unsigned IROutliner::doOutline(Module &M) {
       OS->CE = new (ExtractorAllocator.Allocate())
           CodeExtractor(BE, nullptr, false, nullptr, nullptr, nullptr, false,
                         false, "outlined");
+      findAddInputsOutputs(M, *OS);
+      if (!OS->IgnoreRegion)
+        OutlinedRegions.push_back(OS);
+      else
+        OS->reattachCandidate();
     }
 
-    // Create functions out of all the sections, and mark them as outlined
-    std::vector<OutlinableRegion *> OutlinedRegions;
+    CurrentGroup.Regions = std::move(OutlinedRegions);
+
+    // Create functions out of all the sections, and mark them as outlined.
+    OutlinedRegions.clear();
     for (OutlinableRegion *OS : CurrentGroup.Regions) {
       OutlinedFunctionNum++;
       bool FunctionOutlined = extractSection(*OS);
