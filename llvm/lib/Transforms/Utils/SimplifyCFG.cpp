@@ -4424,7 +4424,7 @@ bool SimplifyCFGOpt::simplifyReturn(ReturnInst *RI, IRBuilder<> &Builder) {
       BasicBlock *Pred = UncondBranchPreds.pop_back_val();
       LLVM_DEBUG(dbgs() << "FOLDING: " << *BB
                         << "INTO UNCOND BRANCH PRED: " << *Pred);
-      (void)FoldReturnIntoUncondBranch(RI, BB, Pred);
+      (void)FoldReturnIntoUncondBranch(RI, BB, Pred, DTU);
     }
 
     // If we eliminated all predecessors of the block, delete the block now.
@@ -4432,7 +4432,10 @@ bool SimplifyCFGOpt::simplifyReturn(ReturnInst *RI, IRBuilder<> &Builder) {
       // We know there are no successors, so just nuke the block.
       if (LoopHeaders)
         LoopHeaders->erase(BB);
-      BB->eraseFromParent();
+      if (DTU)
+        DTU->deleteBB(BB);
+      else
+        BB->eraseFromParent();
     }
 
     return true;
