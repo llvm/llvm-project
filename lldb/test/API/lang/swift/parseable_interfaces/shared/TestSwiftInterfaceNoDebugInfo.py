@@ -128,7 +128,8 @@ class TestSwiftInterfaceNoDebugInfo(TestBase):
         child_y = var.GetChildMemberWithName("y") # MyPoint.y is public
         lldbutil.check_variable(self, child_y, False, value="0")
 
-        child_x = var.GetChildMemberWithName("x") # MyPoint.x isn't public
+        # MyPoint.x isn't public, but LLDB can find it through type metadata.
+        child_x = var.GetChildMemberWithName("x")
         self.assertTrue(child_x.IsValid())
 
         # Expression evaluation using types from the .swiftinterface only
