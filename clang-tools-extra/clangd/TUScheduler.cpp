@@ -385,7 +385,7 @@ public:
                                 ParsingCallbacks &Callbacks);
   ~ASTWorker();
 
-  void update(ParseInputs Inputs, WantDiagnostics);
+  void update(ParseInputs Inputs, WantDiagnostics, bool ContentChanged);
   void
   runWithAST(llvm::StringRef Name,
              llvm::unique_function<void(llvm::Expected<InputsAndAST>)> Action,
@@ -419,6 +419,18 @@ public:
   bool isASTCached() const;
 
 private:
+  // Details of an update request that are relevant to scheduling.
+  struct UpdateType {
+    // Do we want diagnostics from this version?
+    // If Yes, we must always build this version.
+    // If No, we only need to build this version if it's read.
+    // If Auto, we build if it's read or if the debounce expires.
+    WantDiagnostics Diagnostics;
+    // Did the main-file content of the document change?
+    // If so, we're allowed to cancel certain invalidated preceding reads.
+    bool ContentChanged;
+  };
+
   /// Publishes diagnostics for \p Inputs. It will build an AST or reuse the
   /// cached one if applicable. Assumes LatestPreamble is compatible for \p
   /// Inputs.
@@ -431,9 +443,10 @@ private:
   void run();
   /// Signal that run() should finish processing pending requests and exit.
   void stop();
+
   /// Adds a new task to the end of the request queue.
   void startTask(llvm::StringRef Name, llvm::unique_function<void()> Task,
-                 llvm::Optional<WantDiagnostics> UpdateType,
+                 llvm::Optional<UpdateType> Update,
                  TUScheduler::ASTActionInvalidation);
 
   /// Determines the next action to perform.
@@ -449,7 +462,7 @@ private:
     std::string Name;
     steady_clock::time_point AddTime;
     Context Ctx;
-    llvm::Optional<WantDiagnostics> UpdateType;
+    llvm::Optional<UpdateType> Update;
     TUScheduler::ASTActionInvalidation InvalidationPolicy;
     Canceler Invalidate;
   };
@@ -598,7 +611,8 @@ ASTWorker::~ASTWorker() {
 #endif
 }
 
-void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
+void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags,
+                       bool ContentChanged) {
   std::string TaskName = llvm::formatv("Update ({0})", Inputs.Version);
   auto Task = [=]() mutable {
     // Get the actual command as `Inputs` does not have a command.
@@ -679,7 +693,8 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
     });
     return;
   };
-  startTask(TaskName, std::move(Task), WantDiags, TUScheduler::NoInvalidation);
+  startTask(TaskName, std::move(Task), UpdateType{WantDiags, ContentChanged},
+            TUScheduler::NoInvalidation);
 }
 
 void ASTWorker::runWithAST(
@@ -723,7 +738,7 @@ void ASTWorker::runWithAST(
          FileInputs.Version);
     Action(InputsAndAST{FileInputs, **AST});
   };
-  startTask(Name, std::move(Task), /*UpdateType=*/None, Invalidation);
+  startTask(Name, std::move(Task), /*Update=*/None, Invalidation);
 }
 
 void PreambleThread::build(Request Req) {
@@ -960,7 +975,7 @@ void ASTWorker::stop() {
 
 void ASTWorker::startTask(llvm::StringRef Name,
                           llvm::unique_function<void()> Task,
-                          llvm::Optional<WantDiagnostics> UpdateType,
+                          llvm::Optional<UpdateType> Update,
                           TUScheduler::ASTActionInvalidation Invalidation) {
   if (RunSync) {
     assert(!Done && "running a task after stop()");
@@ -974,11 +989,11 @@ void ASTWorker::startTask(llvm::StringRef Name,
     std::lock_guard<std::mutex> Lock(Mutex);
     assert(!Done && "running a task after stop()");
     // Cancel any requests invalidated by this request.
-    if (UpdateType) {
+    if (Update && Update->ContentChanged) {
       for (auto &R : llvm::reverse(Requests)) {
         if (R.InvalidationPolicy == TUScheduler::InvalidateOnUpdate)
           R.Invalidate();
-        if (R.UpdateType)
+        if (R.Update && R.Update->ContentChanged)
           break; // Older requests were already invalidated by the older update.
       }
     }
@@ -992,7 +1007,7 @@ void ASTWorker::startTask(llvm::StringRef Name,
           /*Reason=*/static_cast<int>(ErrorCode::ContentModified));
     }
     Requests.push_back({std::move(Task), std::string(Name), steady_clock::now(),
-                        std::move(Ctx), UpdateType, Invalidation,
+                        std::move(Ctx), Update, Invalidation,
                         std::move(Invalidate)});
   }
   RequestsCV.notify_all();
@@ -1093,20 +1108,20 @@ Deadline ASTWorker::scheduleLocked() {
   for (auto I = Requests.begin(), E = Requests.end(); I != E; ++I) {
     if (!isCancelled(I->Ctx)) {
       // Cancellations after the first read don't affect current scheduling.
-      if (I->UpdateType == None)
+      if (I->Update == None)
         break;
       continue;
     }
     // Cancelled reads are moved to the front of the queue and run immediately.
-    if (I->UpdateType == None) {
+    if (I->Update == None) {
       Request R = std::move(*I);
       Requests.erase(I);
       Requests.push_front(std::move(R));
       return Deadline::zero();
     }
     // Cancelled updates are downgraded to auto-diagnostics, and may be elided.
-    if (I->UpdateType == WantDiagnostics::Yes)
-      I->UpdateType = WantDiagnostics::Auto;
+    if (I->Update->Diagnostics == WantDiagnostics::Yes)
+      I->Update->Diagnostics = WantDiagnostics::Auto;
   }
 
   while (shouldSkipHeadLocked()) {
@@ -1119,7 +1134,7 @@ Deadline ASTWorker::scheduleLocked() {
   // We debounce "maybe-unused" writes, sleeping in case they become dead.
   // But don't delay reads (including updates where diagnostics are needed).
   for (const auto &R : Requests)
-    if (R.UpdateType == None || R.UpdateType == WantDiagnostics::Yes)
+    if (R.Update == None || R.Update->Diagnostics == WantDiagnostics::Yes)
       return Deadline::zero();
   // Front request needs to be debounced, so determine when we're ready.
   Deadline D(Requests.front().AddTime + UpdateDebounce.compute(RebuildTimes));
@@ -1130,16 +1145,16 @@ Deadline ASTWorker::scheduleLocked() {
 bool ASTWorker::shouldSkipHeadLocked() const {
   assert(!Requests.empty());
   auto Next = Requests.begin();
-  auto UpdateType = Next->UpdateType;
-  if (!UpdateType) // Only skip updates.
+  auto Update = Next->Update;
+  if (!Update) // Only skip updates.
     return false;
   ++Next;
   // An update is live if its AST might still be read.
   // That is, if it's not immediately followed by another update.
-  if (Next == Requests.end() || !Next->UpdateType)
+  if (Next == Requests.end() || !Next->Update)
     return false;
   // The other way an update can be live is if its diagnostics might be used.
-  switch (*UpdateType) {
+  switch (Update->Diagnostics) {
   case WantDiagnostics::Yes:
     return false; // Always used.
   case WantDiagnostics::No:
@@ -1147,8 +1162,7 @@ bool ASTWorker::shouldSkipHeadLocked() const {
   case WantDiagnostics::Auto:
     // Used unless followed by an update that generates diagnostics.
     for (; Next != Requests.end(); ++Next)
-      if (Next->UpdateType == WantDiagnostics::Yes ||
-          Next->UpdateType == WantDiagnostics::Auto)
+      if (Next->Update && Next->Update->Diagnostics != WantDiagnostics::No)
         return true; // Prefer later diagnostics.
     return false;
   }
@@ -1274,6 +1288,7 @@ bool TUScheduler::update(PathRef File, ParseInputs Inputs,
                          WantDiagnostics WantDiags) {
   std::unique_ptr<FileData> &FD = Files[File];
   bool NewFile = FD == nullptr;
+  bool ContentChanged = false;
   if (!FD) {
     // Create a new worker to process the AST-related tasks.
     ASTWorkerHandle Worker =
@@ -1282,10 +1297,12 @@ bool TUScheduler::update(PathRef File, ParseInputs Inputs,
                           Barrier, Opts, *Callbacks);
     FD = std::unique_ptr<FileData>(
         new FileData{Inputs.Contents, std::move(Worker)});
-  } else {
+    ContentChanged = true;
+  } else if (FD->Contents != Inputs.Contents) {
+    ContentChanged = true;
     FD->Contents = Inputs.Contents;
   }
-  FD->Worker->update(std::move(Inputs), WantDiags);
+  FD->Worker->update(std::move(Inputs), WantDiags, ContentChanged);
   return NewFile;
 }
 
