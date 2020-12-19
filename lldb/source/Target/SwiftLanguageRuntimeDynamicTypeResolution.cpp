@@ -997,6 +997,7 @@ llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffset(
 
 static CompilerType GetWeakReferent(TypeSystemSwiftTypeRef &ts,
                                     CompilerType type) {
+  // FIXME: This is very similar to TypeSystemSwiftTypeRef::GetReferentType().
   using namespace swift::Demangle;
   Demangler dem;
   auto mangled = type.GetMangledTypeName().GetStringRef();
