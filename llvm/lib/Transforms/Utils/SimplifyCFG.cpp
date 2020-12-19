@@ -4200,14 +4200,17 @@ bool SimplifyCFGOpt::simplifySingleResume(ResumeInst *RI) {
   // Turn all invokes that unwind here into calls and delete the basic block.
   for (pred_iterator PI = pred_begin(BB), PE = pred_end(BB); PI != PE;) {
     BasicBlock *Pred = *PI++;
-    removeUnwindEdge(Pred);
+    removeUnwindEdge(Pred, DTU);
     ++NumInvokes;
   }
 
   // The landingpad is now unreachable.  Zap it.
   if (LoopHeaders)
     LoopHeaders->erase(BB);
-  BB->eraseFromParent();
+  if (DTU)
+    DTU->deleteBB(BB);
+  else
+    BB->eraseFromParent();
   return true;
 }
 
