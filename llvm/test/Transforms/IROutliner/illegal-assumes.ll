@@ -7,19 +7,15 @@
 define void @outline_assumes() {
 ; CHECK-LABEL: @outline_assumes(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DL_LOC:%.*]] = alloca i1, align 1
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[C:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[D:%.*]] = alloca i1, align 4
-; CHECK-NEXT:    [[LT_CAST:%.*]] = bitcast i1* [[DL_LOC]] to i8*
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 -1, i8* [[LT_CAST]])
-; CHECK-NEXT:    call void @outline_assumes.outlined.5(i1* [[D]], i1* [[DL_LOC]])
-; CHECK-NEXT:    [[DL_RELOAD:%.*]] = load i1, i1* [[DL_LOC]], align 1
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 -1, i8* [[LT_CAST]])
-; CHECK-NEXT:    [[SPLIT_INST:%.*]] = sub i1 [[DL_RELOAD]], [[DL_RELOAD]]
+; CHECK-NEXT:    store i1 true, i1* [[D]], align 4
+; CHECK-NEXT:    [[DL:%.*]] = load i1, i1* [[D]], align 1
+; CHECK-NEXT:    [[SPLIT_INST:%.*]] = sub i1 [[DL]], [[DL]]
 ; CHECK-NEXT:    call void @outline_assumes.outlined(i32* [[A]], i32* [[B]], i32* [[C]])
-; CHECK-NEXT:    call void @llvm.assume(i1 [[DL_RELOAD]])
+; CHECK-NEXT:    call void @llvm.assume(i1 [[DL]])
 ; CHECK-NEXT:    call void @outline_assumes.outlined.1(i32* [[A]], i32* [[B]], i32* [[C]])
 ; CHECK-NEXT:    ret void
 ;
@@ -44,18 +40,14 @@ entry:
 define void @outline_assumes2() {
 ; CHECK-LABEL: @outline_assumes2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DL_LOC:%.*]] = alloca i1, align 1
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[C:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[D:%.*]] = alloca i1, align 4
-; CHECK-NEXT:    [[LT_CAST:%.*]] = bitcast i1* [[DL_LOC]] to i8*
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 -1, i8* [[LT_CAST]])
-; CHECK-NEXT:    call void @outline_assumes2.outlined.6(i1* [[D]], i1* [[DL_LOC]])
-; CHECK-NEXT:    [[DL_RELOAD:%.*]] = load i1, i1* [[DL_LOC]], align 1
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 -1, i8* [[LT_CAST]])
+; CHECK-NEXT:    store i1 false, i1* [[D]], align 4
+; CHECK-NEXT:    [[DL:%.*]] = load i1, i1* [[D]], align 1
 ; CHECK-NEXT:    call void @outline_assumes2.outlined(i32* [[A]], i32* [[B]], i32* [[C]])
-; CHECK-NEXT:    call void @llvm.assume(i1 [[DL_RELOAD]])
+; CHECK-NEXT:    call void @llvm.assume(i1 [[DL]])
 ; CHECK-NEXT:    call void @outline_assumes2.outlined.2(i32* [[A]], i32* [[B]], i32* [[C]])
 ; CHECK-NEXT:    ret void
 ;
