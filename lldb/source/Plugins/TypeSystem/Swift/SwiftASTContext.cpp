@@ -7259,8 +7259,8 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
 // second index 1 is the child index for "m_b" within class A.
 
 size_t SwiftASTContext::GetIndexOfChildMemberWithName(
-    opaque_compiler_type_t type, const char *name, bool omit_empty_base_classes,
-    std::vector<uint32_t> &child_indexes) {
+    opaque_compiler_type_t type, const char *name, ExecutionContext *exe_ctx,
+    bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) {
   VALID_OR_RETURN(0);
 
   if (type && name && name[0]) {
@@ -7282,7 +7282,7 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
     case swift::TypeKind::UnownedStorage:
     case swift::TypeKind::WeakStorage:
       return ToCompilerType(swift_can_type->getReferenceStorageReferent())
-          .GetIndexOfChildMemberWithName(name, omit_empty_base_classes,
+          .GetIndexOfChildMemberWithName(name, exe_ctx, omit_empty_base_classes,
                                          child_indexes);
     case swift::TypeKind::GenericTypeParam:
     case swift::TypeKind::DependentMember:
@@ -7363,7 +7363,7 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
         CompilerType superclass_type =
             ToCompilerType(superclass_swift_type.getPointer());
         if (superclass_type.GetIndexOfChildMemberWithName(
-                name, omit_empty_base_classes, child_indexes))
+                name, exe_ctx, omit_empty_base_classes, child_indexes))
           return child_indexes.size();
 
         // We didn't find a stored property matching "name" in our
@@ -7409,7 +7409,7 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
 
       if (pointee_clang_type.IsAggregateType()) {
         return pointee_clang_type.GetIndexOfChildMemberWithName(
-            name, omit_empty_base_classes, child_indexes);
+            name, exe_ctx, omit_empty_base_classes, child_indexes);
       }
     } break;
     case swift::TypeKind::UnboundGeneric:

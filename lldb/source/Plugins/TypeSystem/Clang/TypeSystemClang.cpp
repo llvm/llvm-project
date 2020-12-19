@@ -6504,7 +6504,8 @@ static uint32_t GetIndexForRecordChild(const clang::RecordDecl *record_decl,
 
 size_t TypeSystemClang::GetIndexOfChildMemberWithName(
     lldb::opaque_compiler_type_t type, const char *name,
-    bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) {
+    ExecutionContext *exe_ctx, bool omit_empty_base_classes,
+    std::vector<uint32_t> &child_indexes) {
   if (type && name && name[0]) {
     clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
     const clang::Type::TypeClass type_class = qual_type->getTypeClass();
@@ -6532,7 +6533,7 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
             CompilerType field_type = GetType(field->getType());
             child_indexes.push_back(child_idx);
             if (field_type.GetIndexOfChildMemberWithName(
-                    name, omit_empty_base_classes, child_indexes))
+                    name, exe_ctx, omit_empty_base_classes, child_indexes))
               return child_indexes.size();
             child_indexes.pop_back();
 
@@ -6641,7 +6642,7 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
                   GetType(getASTContext().getObjCInterfaceType(
                       superclass_interface_decl));
               if (superclass_clang_type.GetIndexOfChildMemberWithName(
-                      name, omit_empty_base_classes, child_indexes)) {
+                      name, exe_ctx, omit_empty_base_classes, child_indexes)) {
                 // We did find an ivar in a superclass so just return the
                 // results!
                 return child_indexes.size();
@@ -6661,7 +6662,7 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
           llvm::cast<clang::ObjCObjectPointerType>(qual_type.getTypePtr())
               ->getPointeeType());
       return objc_object_clang_type.GetIndexOfChildMemberWithName(
-          name, omit_empty_base_classes, child_indexes);
+          name, exe_ctx, omit_empty_base_classes, child_indexes);
     } break;
 
     case clang::Type::ConstantArray: {
@@ -6713,7 +6714,7 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
 
       if (pointee_clang_type.IsAggregateType()) {
         return pointee_clang_type.GetIndexOfChildMemberWithName(
-            name, omit_empty_base_classes, child_indexes);
+            name, exe_ctx, omit_empty_base_classes, child_indexes);
       }
     } break;
 
@@ -6722,7 +6723,7 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
 
       if (pointee_clang_type.IsAggregateType()) {
         return pointee_clang_type.GetIndexOfChildMemberWithName(
-            name, omit_empty_base_classes, child_indexes);
+            name, exe_ctx, omit_empty_base_classes, child_indexes);
       }
     } break;
 
@@ -6737,10 +6738,9 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
 // doesn't descend into the children, but only looks one level deep and name
 // matches can include base class names.
 
-uint32_t
-TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
-                                         const char *name,
-                                         bool omit_empty_base_classes) {
+uint32_t TypeSystemClang::GetIndexOfChildWithName(
+    lldb::opaque_compiler_type_t type, const char *name,
+    ExecutionContext *exe_ctx, bool omit_empty_base_classes) {
   if (type && name && name[0]) {
     clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
 
@@ -6842,7 +6842,7 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
           llvm::cast<clang::ObjCObjectPointerType>(qual_type.getTypePtr())
               ->getPointeeType());
       return pointee_clang_type.GetIndexOfChildWithName(
-          name, omit_empty_base_classes);
+          name, exe_ctx, omit_empty_base_classes);
     } break;
 
     case clang::Type::ConstantArray: {
@@ -6892,7 +6892,7 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
       CompilerType pointee_type = GetType(reference_type->getPointeeType());
 
       if (pointee_type.IsAggregateType()) {
-        return pointee_type.GetIndexOfChildWithName(name,
+        return pointee_type.GetIndexOfChildWithName(name, exe_ctx,
                                                     omit_empty_base_classes);
       }
     } break;
@@ -6903,7 +6903,7 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
       CompilerType pointee_type = GetType(pointer_type->getPointeeType());
 
       if (pointee_type.IsAggregateType()) {
-        return pointee_type.GetIndexOfChildWithName(name,
+        return pointee_type.GetIndexOfChildWithName(name, exe_ctx,
                                                     omit_empty_base_classes);
       } else {
         //                    if (parent_name)

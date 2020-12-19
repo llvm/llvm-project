@@ -35,6 +35,9 @@
 #include "clang/APINotes/APINotesManager.h"
 #include "clang/APINotes/APINotesReader.h"
 
+#include <algorithm>
+#include <sstream>
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -2324,7 +2327,7 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
   if (m_swift_ast_context->GetNumChildren(ReconstructType(type),
                                           omit_empty_base_classes, exe_ctx) <
       runtime->GetNumChildren({this, type}, valobj).getValueOr(0))
-    return fallback();
+    return impl();
 
 #ifndef NDEBUG
   std::string ast_child_name;
@@ -2365,11 +2368,70 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
 }
 
 size_t TypeSystemSwiftTypeRef::GetIndexOfChildMemberWithName(
-    opaque_compiler_type_t type, const char *name, bool omit_empty_base_classes,
-    std::vector<uint32_t> &child_indexes) {
+    opaque_compiler_type_t type, const char *name, ExecutionContext *exe_ctx,
+    bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) {
+  if (auto *exe_scope = exe_ctx->GetBestExecutionContextScope())
+    if (auto *runtime =
+            SwiftLanguageRuntime::Get(exe_scope->CalculateProcess()))
+      if (auto index_size = runtime->GetIndexOfChildMemberWithName(
+              GetCanonicalType(type), name, exe_ctx, omit_empty_base_classes,
+              child_indexes)) {
+#ifndef NDEBUG
+        // This block is a custom VALIDATE_AND_RETURN implementation to support
+        // checking the return value, plus the by-ref `child_indexes`.
+        if (!m_swift_ast_context)
+          return *index_size;
+        auto ast_type = ReconstructType(type);
+        if (!ast_type)
+          return *index_size;
+        std::vector<uint32_t> ast_child_indexes;
+        auto ast_index_size = m_swift_ast_context->GetIndexOfChildMemberWithName(
+                ast_type, name, exe_ctx, omit_empty_base_classes,
+                ast_child_indexes);
+        // The runtime has more info than the AST. No useful validation can be
+        // done.
+        if (*index_size > ast_index_size)
+          return *index_size;
+
+        auto fail = [&]() {
+          auto join = [](const auto &v) {
+            std::ostringstream buf;
+            buf << "{";
+            for (const auto &item : v)
+              buf << item << ",";
+            buf.seekp(-1, std::ios_base::end);
+            buf << "}";
+            return buf.str();
+          };
+          llvm::dbgs() << join(child_indexes)
+                       << " != " << join(ast_child_indexes) << "\n";
+          llvm::dbgs() << "failing type was " << (const char *)type
+                       << ", member was " << name << "\n";
+          assert(false &&
+                 "TypeSystemSwiftTypeRef diverges from SwiftASTContext");
+        };
+        if (*index_size != ast_index_size)
+          fail();
+        for (unsigned i = 0; i < *index_size; ++i)
+          if (child_indexes[i] < ast_child_indexes[i])
+            // When the runtime may know know about more children. When this
+            // happens, indexes will be larger. But if an index is smaller, that
+            // means the runtime has dropped info somehow.
+            fail();
+#endif
+        return *index_size;
+      }
+
+  LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+            "Using SwiftASTContext::GetIndexOfChildMemberWithName fallback for "
+            "type %s",
+            AsMangledName(type));
+
   return m_swift_ast_context->GetIndexOfChildMemberWithName(
-      ReconstructType(type), name, omit_empty_base_classes, child_indexes);
+      ReconstructType(type), name, exe_ctx, omit_empty_base_classes,
+      child_indexes);
 }
+
 size_t
 TypeSystemSwiftTypeRef::GetNumTemplateArguments(opaque_compiler_type_t type) {
   return m_swift_ast_context->GetNumTemplateArguments(ReconstructType(type));

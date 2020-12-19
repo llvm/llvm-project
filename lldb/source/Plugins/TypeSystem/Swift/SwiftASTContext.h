@@ -610,7 +610,8 @@ public:
   // name, not just the first.
   size_t
   GetIndexOfChildMemberWithName(lldb::opaque_compiler_type_t type,
-                                const char *name, bool omit_empty_base_classes,
+                                const char *name, ExecutionContext *exe_ctx,
+                                bool omit_empty_base_classes,
                                 std::vector<uint32_t> &child_indexes) override;
 
   size_t GetNumTemplateArguments(lldb::opaque_compiler_type_t type) override;

@@ -595,7 +595,8 @@ lldb::ValueObjectSP ValueObject::GetChildAtNamePath(
 
 size_t ValueObject::GetIndexOfChildWithName(ConstString name) {
   bool omit_empty_base_classes = true;
-  return GetCompilerType().GetIndexOfChildWithName(name.GetCString(),
+  ExecutionContext exe_ctx(GetExecutionContextRef());
+  return GetCompilerType().GetIndexOfChildWithName(name.GetCString(), &exe_ctx,
                                                    omit_empty_base_classes);
 }
 
@@ -614,9 +615,10 @@ ValueObjectSP ValueObject::GetChildMemberWithName(ConstString name,
   if (!GetCompilerType().IsValid())
     return ValueObjectSP();
 
+  ExecutionContext exe_ctx(GetExecutionContextRef());
   const size_t num_child_indexes =
       GetCompilerType().GetIndexOfChildMemberWithName(
-          name.GetCString(), omit_empty_base_classes, child_indexes);
+          name.GetCString(), &exe_ctx, omit_empty_base_classes, child_indexes);
   if (num_child_indexes == 0)
     return nullptr;
 

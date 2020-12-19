@@ -119,5 +119,5 @@ class TestLibraryIndirect(TestBase):
             "other = 10",
             "(Int) simple = 1"])
         self.expect("e container", substrs=["(SomeLibrary.ContainsTwoInts)", "wrapped = 0x", "other = 10"])
-        self.expect("e container.wrapped", substrs=["(SomeLibrary.BoxedTwoInts)", "0x", "{}"])
+        self.expect("e container.wrapped", substrs=["(SomeLibrary.BoxedTwoInts)", "value = (first = 2, second = 3)"])
         self.expect("e container.wrapped.value", error=True, substrs=["value of type 'BoxedTwoInts' has no member 'value'"])

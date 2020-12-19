@@ -324,7 +324,7 @@ public:
 
   /// Lookup a child given a name. This function will match base class names and
   /// member member names in "clang_type" only, not descendants.
-  uint32_t GetIndexOfChildWithName(const char *name,
+  uint32_t GetIndexOfChildWithName(const char *name, ExecutionContext *exe_ctx,
                                    bool omit_empty_base_classes) const;
 
   /// Lookup a child member given a name. This function will match member names
@@ -334,7 +334,8 @@ public:
   /// vector<vector<uint32_t>>
   /// so we catch all names that match a given child name, not just the first.
   size_t
-  GetIndexOfChildMemberWithName(const char *name, bool omit_empty_base_classes,
+  GetIndexOfChildMemberWithName(const char *name, ExecutionContext *exe_ctx,
+                                bool omit_empty_base_classes,
                                 std::vector<uint32_t> &child_indexes) const;
 
   size_t GetNumTemplateArguments() const;
