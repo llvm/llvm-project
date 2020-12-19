@@ -56,6 +56,7 @@ createARMInstructionSelector(const ARMBaseTargetMachine &TM, const ARMSubtarget 
                              const ARMRegisterBankInfo &RBI);
 Pass *createMVEGatherScatterLoweringPass();
 FunctionPass *createARMSLSHardeningPass();
+FunctionPass *createARMIndirectThunks();
 
 void LowerARMMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
                                   ARMAsmPrinter &AP);

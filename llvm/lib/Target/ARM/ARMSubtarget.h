@@ -468,6 +468,9 @@ protected:
   /// Branches.
   bool HardenSlsRetBr = false;
 
+  /// Harden against Straight Line Speculation for indirect calls.
+  bool HardenSlsBlr = false;
+
   /// stackAlignment - The minimum alignment known to hold of the stack frame on
   /// entry to the function and which must be maintained by every function.
   Align stackAlignment = Align(4);
@@ -911,6 +914,7 @@ public:
   unsigned getGPRAllocationOrder(const MachineFunction &MF) const;
 
   bool hardenSlsRetBr() const { return HardenSlsRetBr; }
+  bool hardenSlsBlr() const { return HardenSlsBlr; }
 };
 
 } // end namespace llvm

@@ -540,6 +540,7 @@ void ARMPassConfig::addPreSched2() {
     addPass(&PostRASchedulerID);
   }
 
+  addPass(createARMIndirectThunks());
   addPass(createARMSLSHardeningPass());
 }
 
