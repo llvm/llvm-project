@@ -1420,6 +1420,12 @@ static bool ContainsSugaredParen(swift::Demangle::NodePointer node) {
 /// Compare two swift types from different type systems by comparing their
 /// (canonicalized) mangled name.
 template <> bool Equivalent<CompilerType>(CompilerType l, CompilerType r) {
+  // See comments in SwiftASTContext::ReconstructType(). For
+  // SILFunctionTypes the mapping isn't bijective.
+  auto *ast_ctx = llvm::cast<SwiftASTContext>(r.GetTypeSystem());
+  if (((void *)ast_ctx->ReconstructType(l.GetMangledTypeName())) ==
+      r.GetOpaqueQualType())
+    return true;
   ConstString lhs = l.GetMangledTypeName();
   ConstString rhs = r.GetMangledTypeName();
   if (lhs == ConstString("$sSiD") && rhs == ConstString("$sSuD"))
