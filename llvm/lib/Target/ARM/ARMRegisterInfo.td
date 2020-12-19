@@ -235,6 +235,23 @@ def GPR : RegisterClass<"ARM", [i32], 32, (add (sequence "R%u", 0, 12),
   let DiagnosticString = "operand must be a register in range [r0, r15]";
 }
 
+// Register set that excludes registers that are reserved for procedure calls.
+// This is used for pseudo-instructions that are actually implemented using a
+// procedure call.
+def GPRnoip : RegisterClass<"ARM", [i32], 32, (sub GPR, R12, LR)> {
+  // Allocate LR as the first CSR since it is always saved anyway.
+  // For Thumb1 mode, we don't want to allocate hi regs at all, as we don't
+  // know how to spill them. If we make our prologue/epilogue code smarter at
+  // some point, we can go back to using the above allocation orders for the
+  // Thumb1 instructions that know how to use hi regs.
+  let AltOrders = [(add GPRnoip, GPRnoip), (trunc GPRnoip, 8),
+                   (add (trunc GPRnoip, 8), (shl GPRnoip, 8))];
+  let AltOrderSelect = [{
+      return MF.getSubtarget<ARMSubtarget>().getGPRAllocationOrder(MF);
+  }];
+  let DiagnosticString = "operand must be a register in range [r0, r14]";
+}
+
 // GPRs without the PC.  Some ARM instructions do not allow the PC in
 // certain operand slots, particularly as the destination.  Primarily
 // useful for disassembly.

@@ -2304,8 +2304,9 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
           MIB.addImm(0);
         MIB.add(predOps(ARMCC::AL));
 
-        MIB = BuildMI(MBB, MBBI, MI.getDebugLoc(),
-                      TII->get(Thumb ? ARM::tBLXr : ARM::BLX));
+        MIB =
+            BuildMI(MBB, MBBI, MI.getDebugLoc(),
+                    TII->get(Thumb ? gettBLXrOpcode(*MF) : getBLXOpcode(*MF)));
         if (Thumb)
           MIB.add(predOps(ARMCC::AL));
         MIB.addReg(Reg, RegState::Kill);

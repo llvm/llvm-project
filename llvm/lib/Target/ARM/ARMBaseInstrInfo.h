@@ -640,13 +640,16 @@ static inline bool isIndirectCall(const MachineInstr &MI) {
   switch (Opc) {
     // indirect calls:
   case ARM::BLX:
+  case ARM::BLX_noip:
   case ARM::BLX_pred:
+  case ARM::BLX_pred_noip:
   case ARM::BX_CALL:
   case ARM::BMOVPCRX_CALL:
   case ARM::TCRETURNri:
   case ARM::TAILJMPr:
   case ARM::TAILJMPr4:
   case ARM::tBLXr:
+  case ARM::tBLXr_noip:
   case ARM::tBLXNSr:
   case ARM::tBLXNS_CALL:
   case ARM::tBX_CALL:
@@ -907,6 +910,10 @@ inline bool isGatherScatter(IntrinsicInst *IntInst) {
     return false;
   return isGather(IntInst) || isScatter(IntInst);
 }
+
+unsigned getBLXOpcode(const MachineFunction &MF);
+unsigned gettBLXrOpcode(const MachineFunction &MF);
+unsigned getBLXpredOpcode(const MachineFunction &MF);
 
 } // end namespace llvm
 

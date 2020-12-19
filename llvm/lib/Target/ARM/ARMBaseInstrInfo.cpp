@@ -5803,7 +5803,9 @@ outliner::OutlinedFunction ARMBaseInstrInfo::getOutliningCandidateInfo(
     NumBytesToCreateFrame = Costs.FrameTailCall;
     SetCandidateCallInfo(MachineOutlinerTailCall, Costs.CallTailCall);
   } else if (LastInstrOpcode == ARM::BL || LastInstrOpcode == ARM::BLX ||
-             LastInstrOpcode == ARM::tBL || LastInstrOpcode == ARM::tBLXr ||
+             LastInstrOpcode == ARM::BLX_noip || LastInstrOpcode == ARM::tBL ||
+             LastInstrOpcode == ARM::tBLXr ||
+             LastInstrOpcode == ARM::tBLXr_noip ||
              LastInstrOpcode == ARM::tBLXi) {
     FrameID = MachineOutlinerThunk;
     NumBytesToCreateFrame = Costs.FrameThunk;
@@ -6051,7 +6053,8 @@ ARMBaseInstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
     // we don't get unexpected results with call pseudo-instructions.
     auto UnknownCallOutlineType = outliner::InstrType::Illegal;
     if (Opc == ARM::BL || Opc == ARM::tBL || Opc == ARM::BLX ||
-        Opc == ARM::tBLXr || Opc == ARM::tBLXi)
+        Opc == ARM::BLX_noip || Opc == ARM::tBLXr || Opc == ARM::tBLXr_noip ||
+        Opc == ARM::tBLXi)
       UnknownCallOutlineType = outliner::InstrType::LegalTerminator;
 
     if (!Callee)
@@ -6343,3 +6346,19 @@ bool ARMBaseInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   // spill/restore and VPT predication.
   return isVCTP(&MI) && !isPredicated(MI);
 }
+
+unsigned llvm::getBLXOpcode(const MachineFunction &MF) {
+  return (MF.getSubtarget<ARMSubtarget>().hardenSlsBlr()) ? ARM::BLX_noip
+                                                          : ARM::BLX;
+}
+
+unsigned llvm::gettBLXrOpcode(const MachineFunction &MF) {
+  return (MF.getSubtarget<ARMSubtarget>().hardenSlsBlr()) ? ARM::tBLXr_noip
+                                                          : ARM::tBLXr;
+}
+
+unsigned llvm::getBLXpredOpcode(const MachineFunction &MF) {
+  return (MF.getSubtarget<ARMSubtarget>().hardenSlsBlr()) ? ARM::BLX_pred_noip
+                                                          : ARM::BLX_pred;
+}
+

@@ -143,9 +143,7 @@ static const struct ThunkNameRegMode {
     {"__llvm_slsblr_thunk_arm_r9", ARM::R9, false},
     {"__llvm_slsblr_thunk_arm_r10", ARM::R10, false},
     {"__llvm_slsblr_thunk_arm_r11", ARM::R11, false},
-    {"__llvm_slsblr_thunk_arm_r12", ARM::R12, false},
     {"__llvm_slsblr_thunk_arm_sp", ARM::SP, false},
-    {"__llvm_slsblr_thunk_arm_lr", ARM::LR, false},
     {"__llvm_slsblr_thunk_arm_pc", ARM::PC, false},
     {"__llvm_slsblr_thunk_thumb_r0", ARM::R0, true},
     {"__llvm_slsblr_thunk_thumb_r1", ARM::R1, true},
@@ -159,9 +157,7 @@ static const struct ThunkNameRegMode {
     {"__llvm_slsblr_thunk_thumb_r9", ARM::R9, true},
     {"__llvm_slsblr_thunk_thumb_r10", ARM::R10, true},
     {"__llvm_slsblr_thunk_thumb_r11", ARM::R11, true},
-    {"__llvm_slsblr_thunk_thumb_r12", ARM::R12, true},
     {"__llvm_slsblr_thunk_thumb_sp", ARM::SP, true},
-    {"__llvm_slsblr_thunk_thumb_lr", ARM::LR, true},
     {"__llvm_slsblr_thunk_thumb_pc", ARM::PC, true},
 };
 
@@ -252,25 +248,18 @@ MachineBasicBlock &ARMSLSHardening::ConvertIndirectCallToIndirectJump(
   // SLSBLRThunkInserter.
   // This function merely needs to transform an indirect call to a direct call
   // to __llvm_slsblr_thunk_xN.
-  //
-  // Since linkers are allowed to clobber R12 on function calls, the above
-  // mitigation only works if the original indirect call instruction was not
-  // using R12. Code generation before must make sure that no indirect call
-  // using R12 was produced if the mitigation is enabled.
-  // Also, the transformation is incorrect if the indirect call uses LR, so
-  // also have to avoid that.
-  // FIXME: that will be done in a follow-on patch.
-
   MachineInstr &IndirectCall = *MBBI;
   assert(isIndirectCall(IndirectCall) && !IndirectCall.isReturn());
   int RegOpIdxOnIndirectCall = -1;
   bool isThumb;
   switch (IndirectCall.getOpcode()) {
-  case ARM::BLX:      // !isThumb2
+  case ARM::BLX:   // !isThumb2
+  case ARM::BLX_noip:   // !isThumb2
     isThumb = false;
     RegOpIdxOnIndirectCall = 0;
     break;
   case ARM::tBLXr:      // isThumb2
+  case ARM::tBLXr_noip: // isThumb2
     isThumb = true;
     RegOpIdxOnIndirectCall = 2;
     break;
@@ -279,6 +268,12 @@ MachineBasicBlock &ARMSLSHardening::ConvertIndirectCallToIndirectJump(
   }
 
   Register Reg = IndirectCall.getOperand(RegOpIdxOnIndirectCall).getReg();
+  // Since linkers are allowed to clobber R12 on function calls, the above
+  // mitigation only works if the original indirect call instruction was not
+  // using R12. Code generation before must make sure that no indirect call
+  // using R12 was produced if the mitigation is enabled.
+  // Also, the transformation is incorrect if the indirect call uses LR, so
+  // also have to avoid that.
   assert(Reg != ARM::R12 && Reg != ARM::LR);
   bool RegIsKilled = IndirectCall.getOperand(RegOpIdxOnIndirectCall).isKill();
 
