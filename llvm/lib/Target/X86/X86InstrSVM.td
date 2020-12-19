@@ -26,37 +26,47 @@ def CLGI : I<0x01, MRM_DD, (outs), (ins), "clgi", []>, TB;
 
 // 0F 01 DE
 let Uses = [EAX] in
-def SKINIT : I<0x01, MRM_DE, (outs), (ins), "skinit\t{%eax|eax}", []>, TB;
+def SKINIT : I<0x01, MRM_DE, (outs), (ins), "skinit", []>, TB;
 
 // 0F 01 D8
 let Uses = [EAX] in
-def VMRUN32 : I<0x01, MRM_D8, (outs), (ins), "vmrun\t{%eax|eax}", []>, TB,
+def VMRUN32 : I<0x01, MRM_D8, (outs), (ins), "vmrun", []>, TB,
                 Requires<[Not64BitMode]>;
 let Uses = [RAX] in
-def VMRUN64 : I<0x01, MRM_D8, (outs), (ins), "vmrun\t{%rax|rax}", []>, TB,
+def VMRUN64 : I<0x01, MRM_D8, (outs), (ins), "vmrun", []>, TB,
                 Requires<[In64BitMode]>;
 
 // 0F 01 DA
 let Uses = [EAX] in
-def VMLOAD32 : I<0x01, MRM_DA, (outs), (ins), "vmload\t{%eax|eax}", []>, TB,
+def VMLOAD32 : I<0x01, MRM_DA, (outs), (ins), "vmload", []>, TB,
                  Requires<[Not64BitMode]>;
 let Uses = [RAX] in
-def VMLOAD64 : I<0x01, MRM_DA, (outs), (ins), "vmload\t{%rax|rax}", []>, TB,
+def VMLOAD64 : I<0x01, MRM_DA, (outs), (ins), "vmload", []>, TB,
                  Requires<[In64BitMode]>;
 
 // 0F 01 DB
 let Uses = [EAX] in
-def VMSAVE32 : I<0x01, MRM_DB, (outs), (ins), "vmsave\t{%eax|eax}", []>, TB,
+def VMSAVE32 : I<0x01, MRM_DB, (outs), (ins), "vmsave", []>, TB,
                  Requires<[Not64BitMode]>;
 let Uses = [RAX] in
-def VMSAVE64 : I<0x01, MRM_DB, (outs), (ins), "vmsave\t{%rax|rax}", []>, TB,
+def VMSAVE64 : I<0x01, MRM_DB, (outs), (ins), "vmsave", []>, TB,
                  Requires<[In64BitMode]>;
 
 // 0F 01 DF
 let Uses = [EAX, ECX] in
 def INVLPGA32 : I<0x01, MRM_DF, (outs), (ins),
-                "invlpga\t{%eax, %ecx|eax, ecx}", []>, TB, Requires<[Not64BitMode]>;
+                "invlpga", []>, TB, Requires<[Not64BitMode]>;
 let Uses = [RAX, ECX] in
 def INVLPGA64 : I<0x01, MRM_DF, (outs), (ins),
-                "invlpga\t{%rax, %ecx|rax, ecx}", []>, TB, Requires<[In64BitMode]>;
+                "invlpga", []>, TB, Requires<[In64BitMode]>;
 } // SchedRW
+
+def : InstAlias<"skinit\t{%eax|eax}", (SKINIT), 0>;
+def : InstAlias<"vmrun\t{%eax|eax}", (VMRUN32), 0>, Requires<[Not64BitMode]>;
+def : InstAlias<"vmrun\t{%rax|rax}", (VMRUN64), 0>, Requires<[In64BitMode]>;
+def : InstAlias<"vmload\t{%eax|eax}", (VMLOAD32), 0>, Requires<[Not64BitMode]>;
+def : InstAlias<"vmload\t{%rax|rax}", (VMLOAD64), 0>, Requires<[In64BitMode]>;
+def : InstAlias<"vmsave\t{%eax|eax}", (VMSAVE32), 0>, Requires<[Not64BitMode]>;
+def : InstAlias<"vmsave\t{%rax|rax}", (VMSAVE64), 0>, Requires<[In64BitMode]>;
+def : InstAlias<"invlpga\t{%eax, %ecx|eax, ecx}", (INVLPGA32), 0>, Requires<[Not64BitMode]>;
+def : InstAlias<"invlpga\t{%rax, %ecx|rax, ecx}", (INVLPGA64), 0>, Requires<[In64BitMode]>;
