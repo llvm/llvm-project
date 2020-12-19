@@ -4736,18 +4736,48 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
 
                                                            1. buffer/global/flat_load
                                                               glc=1
+                                                           2. s_waitcnt vmcnt(0)
 
-                                                         - nontemporal
+                                                            - Must happen before
+                                                              any following volatile
+                                                              global/generic
+                                                              load/store.
+                                                            - Ensures that
+                                                              volatile
+                                                              operations to
+                                                              different
+                                                              addresses will not
+                                                              be reordered by
+                                                              hardware.
+
+                                                         - !volatile & nontemporal
 
                                                            1. buffer/global/flat_load
                                                               glc=1 slc=1
 
      load         *none*       *none*         - local    1. ds_load
-     store        *none*       *none*         - global   - !nontemporal
+     store        *none*       *none*         - global   - !volatile & !nontemporal
                                               - generic
                                               - private    1. buffer/global/flat_store
                                               - constant
-                                                         - nontemporal
+                                                         - volatile & !nontemporal
+
+                                                           1. buffer/global/flat_store
+                                                           2. s_waitcnt vmcnt(0)
+
+                                                            - Must happen before
+                                                              any following volatile
+                                                              global/generic
+                                                              load/store.
+                                                            - Ensures that
+                                                              volatile
+                                                              operations to
+                                                              different
+                                                              addresses will not
+                                                              be reordered by
+                                                              hardware.
+
+                                                         - !volatile & nontemporal
 
                                                            1. buffer/global/flat_store
                                                               glc=1 slc=1
@@ -6008,18 +6038,48 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-table`.
 
                                                            1. buffer/global/flat_load
                                                               glc=1 dlc=1
+                                                           2. s_waitcnt vmcnt(0)
 
-                                                         - nontemporal
+                                                            - Must happen before
+                                                              any following volatile
+                                                              global/generic
+                                                              load/store.
+                                                            - Ensures that
+                                                              volatile
+                                                              operations to
+                                                              different
+                                                              addresses will not
+                                                              be reordered by
+                                                              hardware.
+
+                                                         - !volatile & nontemporal
 
                                                            1. buffer/global/flat_load
                                                               slc=1
 
      load         *none*       *none*         - local    1. ds_load
-     store        *none*       *none*         - global   - !nontemporal
+     store        *none*       *none*         - global   - !volatile & !nontemporal
                                               - generic
                                               - private    1. buffer/global/flat_store
                                               - constant
-                                                         - nontemporal
+                                                         - volatile & !nontemporal
+
+                                                           1. buffer/global/flat_store
+                                                           2. s_waitcnt vscnt(0)
+
+                                                            - Must happen before
+                                                              any following volatile
+                                                              global/generic
+                                                              load/store.
+                                                            - Ensures that
+                                                              volatile
+                                                              operations to
+                                                              different
+                                                              addresses will not
+                                                              be reordered by
+                                                              hardware.
+
+                                                         - !volatile & nontemporal
 
                                                             1. buffer/global/flat_store
                                                                slc=1

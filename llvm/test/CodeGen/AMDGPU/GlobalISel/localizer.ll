@@ -17,17 +17,23 @@ define amdgpu_kernel void @localize_constants(i1 %cond) {
 ; GFX9-NEXT:  ; %bb.1: ; %bb1
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0x5be6
 ; GFX9-NEXT:    global_store_dword v[0:1], v0, off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0x1c7
 ; GFX9-NEXT:    global_store_dword v[0:1], v0, off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0x3e8
 ; GFX9-NEXT:    global_store_dword v[0:1], v0, off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0x1c8
 ; GFX9-NEXT:    global_store_dword v[0:1], v0, off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0x3e7
 ; GFX9-NEXT:    global_store_dword v[0:1], v0, off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0x7b
 ; GFX9-NEXT:    s_mov_b32 s0, 0
 ; GFX9-NEXT:    global_store_dword v[0:1], v0, off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:  BB0_2: ; %Flow
 ; GFX9-NEXT:    s_xor_b32 s0, s0, -1
 ; GFX9-NEXT:    s_and_b32 s0, s0, 1
@@ -36,16 +42,22 @@ define amdgpu_kernel void @localize_constants(i1 %cond) {
 ; GFX9-NEXT:  ; %bb.3: ; %bb0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0x7b
 ; GFX9-NEXT:    global_store_dword v[0:1], v0, off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0x1c8
 ; GFX9-NEXT:    global_store_dword v[0:1], v0, off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0x3e7
 ; GFX9-NEXT:    global_store_dword v[0:1], v0, off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0x3e8
 ; GFX9-NEXT:    global_store_dword v[0:1], v0, off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0x1c7
 ; GFX9-NEXT:    global_store_dword v[0:1], v0, off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0x5be6
 ; GFX9-NEXT:    global_store_dword v[0:1], v0, off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:  BB0_4: ; %bb2
 ; GFX9-NEXT:    s_endpgm
 entry:
@@ -104,7 +116,9 @@ define amdgpu_kernel void @localize_globals(i1 %cond) {
 ; GFX9-NEXT:    s_mov_b32 s0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_store_dword v0, v0, s[6:7]
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_store_dword v0, v1, s[4:5]
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:  BB1_2: ; %Flow
 ; GFX9-NEXT:    s_xor_b32 s0, s0, -1
 ; GFX9-NEXT:    s_and_b32 s0, s0, 1
@@ -123,7 +137,9 @@ define amdgpu_kernel void @localize_globals(i1 %cond) {
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_store_dword v0, v0, s[0:1]
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_store_dword v0, v1, s[2:3]
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:  BB1_4: ; %bb2
 ; GFX9-NEXT:    s_endpgm
 entry:
@@ -165,11 +181,13 @@ define void @localize_internal_globals(i1 %cond) {
 ; GFX9-NEXT:    s_addc_u32 s7, s7, static.gv2@rel32@hi+12
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    global_store_dword v0, v0, s[6:7]
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_getpc_b64 s[6:7]
 ; GFX9-NEXT:    s_add_u32 s6, s6, static.gv3@rel32@lo+4
 ; GFX9-NEXT:    s_addc_u32 s7, s7, static.gv3@rel32@hi+12
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX9-NEXT:    global_store_dword v0, v1, s[6:7]
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:  BB2_2: ; %Flow
 ; GFX9-NEXT:    s_or_saveexec_b64 s[4:5], s[4:5]
 ; GFX9-NEXT:    s_xor_b64 exec, exec, s[4:5]
@@ -180,11 +198,13 @@ define void @localize_internal_globals(i1 %cond) {
 ; GFX9-NEXT:    s_addc_u32 s7, s7, static.gv0@rel32@hi+12
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    global_store_dword v0, v0, s[6:7]
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_getpc_b64 s[6:7]
 ; GFX9-NEXT:    s_add_u32 s6, s6, static.gv1@rel32@lo+4
 ; GFX9-NEXT:    s_addc_u32 s7, s7, static.gv1@rel32@hi+12
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX9-NEXT:    global_store_dword v0, v1, s[6:7]
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:  BB2_4: ; %bb2
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)

@@ -537,10 +537,10 @@ define void @void_func_byval_struct_i8_i32({ i8, i32 } addrspace(5)* byval({ i8,
 }
 
 ; GCN-LABEL: {{^}}void_func_byval_struct_i8_i32_x2:
-; GCN: buffer_load_ubyte v[[ELT0_0:[0-9]+]], off, s[0:3], s32{{$}}
-; GCN: buffer_load_dword v[[ELT1_0:[0-9]+]], off, s[0:3], s32 offset:4{{$}}
-; GCN: buffer_load_ubyte v[[ELT0_1:[0-9]+]], off, s[0:3], s32 offset:8{{$}}
-; GCN: buffer_load_dword v[[ELT1_1:[0-9]+]], off, s[0:3], s32 offset:12{{$}}
+; GCN: buffer_load_ubyte v[[ELT0_0:[0-9]+]], off, s[0:3], s32 glc{{$}}
+; GCN: buffer_load_dword v[[ELT1_0:[0-9]+]], off, s[0:3], s32 offset:4 glc{{$}}
+; GCN: buffer_load_ubyte v[[ELT0_1:[0-9]+]], off, s[0:3], s32 offset:8 glc{{$}}
+; GCN: buffer_load_dword v[[ELT1_1:[0-9]+]], off, s[0:3], s32 offset:12 glc{{$}}
 
 ; GCN: ds_write_b32 v0, v0
 ; GCN: s_setpc_b64

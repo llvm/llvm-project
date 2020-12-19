@@ -14,6 +14,7 @@ define amdgpu_kernel void @store_inline_imm_neg_0.0_i16(i16 addrspace(1)* %out) 
 ; GFX10-NEXT:    s_mov_b32 s2, -1 ; encoding: [0xc1,0x03,0x82,0xbe]
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0) ; encoding: [0x7f,0xc0,0x8c,0xbf]
 ; GFX10-NEXT:    buffer_store_short v0, off, s[0:3], 0 ; encoding: [0x00,0x00,0x68,0xe0,0x00,0x00,0x00,0x80]
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0xfd,0xbb]
 ; GFX10-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
 ;
 ; VI-LABEL: store_inline_imm_neg_0.0_i16:
@@ -24,6 +25,7 @@ define amdgpu_kernel void @store_inline_imm_neg_0.0_i16(i16 addrspace(1)* %out) 
 ; VI-NEXT:    v_mov_b32_e32 v0, 0xffff8000 ; encoding: [0xff,0x02,0x00,0x7e,0x00,0x80,0xff,0xff]
 ; VI-NEXT:    s_waitcnt lgkmcnt(0) ; encoding: [0x7f,0x00,0x8c,0xbf]
 ; VI-NEXT:    buffer_store_short v0, off, s[0:3], 0 ; encoding: [0x00,0x00,0x68,0xe0,0x00,0x00,0x00,0x80]
+; VI-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x0f,0x8c,0xbf]
 ; VI-NEXT:    s_endpgm ; encoding: [0x00,0x00,0x81,0xbf]
 ;
 ; SI-LABEL: store_inline_imm_neg_0.0_i16:
@@ -34,6 +36,7 @@ define amdgpu_kernel void @store_inline_imm_neg_0.0_i16(i16 addrspace(1)* %out) 
 ; SI-NEXT:    v_mov_b32_e32 v0, 0x8000
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
+; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    s_endpgm
   store volatile i16 -32768, i16 addrspace(1)* %out
   ret void

@@ -165,6 +165,7 @@ define void @func_call_align1024_bp_gets_vgpr_spill(<32 x i32> %a, i32 %b) #0 {
 ; GCN: s_mov_b32 s34, s32
 ; GCN: v_mov_b32_e32 v32, 0
 ; GCN: buffer_store_dword v32, off, s[0:3], s33 offset:1024
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: buffer_load_dword v{{[0-9]+}}, off, s[0:3], s34
 ; GCN: s_add_u32 s32, s32, 0x30000
 
@@ -236,10 +237,10 @@ define void @no_free_scratch_sgpr_for_bp_copy(<32 x i32> %a, i32 %b) #0 {
 ; GCN: s_mov_b32 s34, s32
 ; GCN: buffer_load_dword v{{[0-9]+}}, off, s[0:3], s34
 ; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s33 offset:128
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: ;;#ASMSTART
 ; GCN-NEXT: ;;#ASMEND
-; GCN: s_waitcnt vmcnt(0)
-; GCN-NEXT: s_setpc_b64 s[30:31]
+; GCN: s_setpc_b64 s[30:31]
   %local_val = alloca i32, align 128, addrspace(5)
   store volatile i32 %b, i32 addrspace(5)* %local_val, align 128
   ; Use all clobberable registers, so BP has to spill to a VGPR.

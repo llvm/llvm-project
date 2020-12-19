@@ -87,8 +87,6 @@ define amdgpu_kernel void @test_call_external_void_func_i1_imm() #0 {
 ; GCN: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
 ; GCN-NEXT: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i1_signext@rel32@lo+4
 ; GCN-NEXT: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i1_signext@rel32@hi+12
-
-; GCN: s_waitcnt vmcnt(0)
 ; GCN-NEXT: v_bfe_i32 v0, v0, 0, 1
 ; GCN-NEXT: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
 ; GCN-NEXT: s_endpgm
@@ -110,9 +108,6 @@ define amdgpu_kernel void @test_call_external_void_func_i1_signext(i32) #0 {
 ; GCN: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
 ; GCN-NEXT: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i1_zeroext@rel32@lo+4
 ; GCN-NEXT: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i1_zeroext@rel32@hi+12
-
-
-; GCN: s_waitcnt vmcnt(0)
 ; GCN-NEXT: v_and_b32_e32 v0, 1, v0
 ; GCN-NEXT: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
 ; GCN-NEXT: s_endpgm

@@ -245,7 +245,7 @@ bb3:
 
 ; GCN: v_mov_b32_e32 [[BB4_K:v[0-9]+]], 63
 ; GCN: buffer_store_dword [[BB4_K]]
-; GCN-NEXT: s_endpgm
+; GCN: s_endpgm
 ; GCN-NEXT: .Lfunc_end{{[0-9]+}}:
 define amdgpu_kernel void @uniform_unconditional_min_long_forward_branch(i32 addrspace(1)* %arg, i32 %arg1) {
 bb0:
