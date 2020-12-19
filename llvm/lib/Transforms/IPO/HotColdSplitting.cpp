@@ -86,10 +86,6 @@ static cl::opt<int>
                        cl::desc("Base penalty for splitting cold code (as a "
                                 "multiple of TCC_Basic)"));
 
-static cl::opt<int> MaxParametersForSplit(
-    "hotcoldsplit-max-params", cl::init(8), cl::Hidden,
-    cl::desc("Maximum number of parameters for a split function"));
-
 static cl::opt<bool> EnableColdSection(
     "enable-cold-section", cl::init(false), cl::Hidden,
     cl::desc("Enable placement of extracted cold functions"
@@ -100,6 +96,10 @@ static cl::opt<std::string>
                     cl::Hidden,
                     cl::desc("Name for the section containing cold functions "
                              "extracted by hot-cold splitting."));
+
+static cl::opt<int> MaxParametersForSplit(
+    "hotcoldsplit-max-params", cl::init(4), cl::Hidden,
+    cl::desc("Maximum number of parameters for a split function"));
 
 namespace {
 // Same as blockEndsInUnreachable in CodeGen/BranchFolding.cpp. Do not modify
@@ -303,7 +303,7 @@ static int getOutliningPenalty(ArrayRef<BasicBlock *> Region,
     }
   }
 
-  // Apply an penalty for calling the split function. Factor in the cost of
+  // Apply a penalty for calling the split function. Factor in the cost of
   // materializing all of the parameters.
   int NumOutputsAndSplitPhis = NumOutputs + NumSplitExitPhis;
   int NumParams = NumInputs + NumOutputsAndSplitPhis;
