@@ -75,9 +75,13 @@ static void insertSpeculationBarrier(const ARMSubtarget *ST,
   assert(std::prev(MBBI)->isTerminator() &&
          "SpeculationBarrierEndBB must only follow terminators.");
   const TargetInstrInfo *TII = ST->getInstrInfo();
-  unsigned BarrierOpc = ST->hasSB() && !AlwaysUseISBDSB
-                            ? ARM::SpeculationBarrierSBEndBB
-                            : ARM::SpeculationBarrierISBDSBEndBB;
+  assert(ST->hasDataBarrier() || ST->hasSB());
+  bool ProduceSB = ST->hasSB() && !AlwaysUseISBDSB;
+  unsigned BarrierOpc =
+      ProduceSB ? (ST->isThumb() ? ARM::t2SpeculationBarrierSBEndBB
+                                 : ARM::SpeculationBarrierSBEndBB)
+                : (ST->isThumb() ? ARM::t2SpeculationBarrierISBDSBEndBB
+                                 : ARM::SpeculationBarrierISBDSBEndBB);
   if (MBBI == MBB.end() || !isSpeculationBarrierEndBBOpcode(MBBI->getOpcode()))
     BuildMI(MBB, MBBI, DL, TII->get(BarrierOpc));
 }
@@ -96,6 +100,7 @@ bool ARMSLSHardening::runOnMachineFunction(MachineFunction &MF) {
 bool ARMSLSHardening::hardenReturnsAndBRs(MachineBasicBlock &MBB) const {
   if (!ST->hardenSlsRetBr())
     return false;
+  assert(!ST->isThumb1Only());
   bool Modified = false;
   MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator(), E = MBB.end();
   MachineBasicBlock::iterator NextMBBI;

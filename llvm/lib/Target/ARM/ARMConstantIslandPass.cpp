@@ -359,6 +359,10 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
   isThumb2 = AFI->isThumb2Function();
 
   bool GenerateTBB = isThumb2 || (isThumb1 && SynthesizeThumb1TBB);
+  // TBB generation code in this constant island pass has not been adapted to
+  // deal with speculation barriers.
+  if (STI->hardenSlsRetBr())
+    GenerateTBB = false;
 
   // Renumber all of the machine basic blocks in the function, guaranteeing that
   // the numbers agree with the position of the block in the function.
