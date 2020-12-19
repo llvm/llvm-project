@@ -14,9 +14,9 @@ define void @outline_assumes() {
 ; CHECK-NEXT:    store i1 true, i1* [[D]], align 4
 ; CHECK-NEXT:    [[DL:%.*]] = load i1, i1* [[D]], align 1
 ; CHECK-NEXT:    [[SPLIT_INST:%.*]] = sub i1 [[DL]], [[DL]]
-; CHECK-NEXT:    call void @outlined_ir_func_0(i32* [[A]], i32* [[B]], i32* [[C]])
+; CHECK-NEXT:    call void @outline_assumes.outlined(i32* [[A]], i32* [[B]], i32* [[C]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[DL]])
-; CHECK-NEXT:    call void @outlined_ir_func_1(i32* [[A]], i32* [[B]], i32* [[C]])
+; CHECK-NEXT:    call void @outline_assumes.outlined.1(i32* [[A]], i32* [[B]], i32* [[C]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -46,9 +46,9 @@ define void @outline_assumes2() {
 ; CHECK-NEXT:    [[D:%.*]] = alloca i1, align 4
 ; CHECK-NEXT:    store i1 false, i1* [[D]], align 4
 ; CHECK-NEXT:    [[DL:%.*]] = load i1, i1* [[D]], align 1
-; CHECK-NEXT:    call void @outlined_ir_func_0(i32* [[A]], i32* [[B]], i32* [[C]])
+; CHECK-NEXT:    call void @outline_assumes2.outlined(i32* [[A]], i32* [[B]], i32* [[C]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[DL]])
-; CHECK-NEXT:    call void @outlined_ir_func_1(i32* [[A]], i32* [[B]], i32* [[C]])
+; CHECK-NEXT:    call void @outline_assumes2.outlined.2(i32* [[A]], i32* [[B]], i32* [[C]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -78,9 +78,9 @@ define void @outline_assumes3() {
 ; CHECK-NEXT:    store i1 true, i1* [[D]], align 4
 ; CHECK-NEXT:    [[DL:%.*]] = load i1, i1* [[D]], align 1
 ; CHECK-NEXT:    [[SPLIT_INST:%.*]] = add i1 [[DL]], [[DL]]
-; CHECK-NEXT:    call void @outlined_ir_func_0(i32* [[A]], i32* [[B]], i32* [[C]])
+; CHECK-NEXT:    call void @outline_assumes3.outlined(i32* [[A]], i32* [[B]], i32* [[C]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[DL]])
-; CHECK-NEXT:    call void @outlined_ir_func_2(i32* [[A]])
+; CHECK-NEXT:    call void @outline_assumes3.outlined.3(i32* [[A]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -110,9 +110,9 @@ define void @outline_assumes4() {
 ; CHECK-NEXT:    store i1 false, i1* [[D]], align 4
 ; CHECK-NEXT:    [[DL:%.*]] = load i1, i1* [[D]], align 1
 ; CHECK-NEXT:    [[SPLIT_INST:%.*]] = add i1 [[DL]], [[DL]]
-; CHECK-NEXT:    call void @outlined_ir_func_0(i32* [[A]], i32* [[B]], i32* [[C]])
+; CHECK-NEXT:    call void @outline_assumes4.outlined(i32* [[A]], i32* [[B]], i32* [[C]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[DL]])
-; CHECK-NEXT:    call void @outlined_ir_func_2(i32* [[A]])
+; CHECK-NEXT:    call void @outline_assumes4.outlined.4(i32* [[A]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
