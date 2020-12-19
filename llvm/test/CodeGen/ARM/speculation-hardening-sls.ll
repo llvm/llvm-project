@@ -1,8 +1,13 @@
 ; RUN: llc -mattr=harden-sls-retbr -verify-machineinstrs -mtriple=armv8-linux-gnueabi < %s | FileCheck %s --check-prefixes=CHECK,ARM,HARDEN,ISBDSB,ISBDSBDAGISEL -dump-input-context=100
+; RUN: llc -mattr=harden-sls-retbr -verify-machineinstrs -mtriple=thumbv8-linux-gnueabi < %s | FileCheck %s --check-prefixes=CHECK,THUMB,HARDENTHUMB,HARDEN,ISBDSB,ISBDSBDAGISEL -dump-input-context=100
 ; RUN: llc -mattr=harden-sls-retbr -mattr=+sb -verify-machineinstrs -mtriple=armv8-linux-gnueabi < %s | FileCheck %s --check-prefixes=CHECK,ARM,HARDEN,SB,SBDAGISEL -dump-input-context=100
+; RUN: llc -mattr=harden-sls-retbr -mattr=+sb -verify-machineinstrs -mtriple=thumbv8-linux-gnueabi < %s | FileCheck %s --check-prefixes=CHECK,THUMB,HARDENTHUMB,HARDEN,SB,SBDAGISEL -dump-input-context=100
 ; RUN: llc -verify-machineinstrs -mtriple=armv8-linux-gnueabi < %s | FileCheck %s --check-prefixes=CHECK,ARM,NOHARDEN,NOHARDENARM -dump-input-context=100
+; RUN: llc -verify-machineinstrs -mtriple=thumbv8-linux-gnueabi < %s | FileCheck %s --check-prefixes=CHECK,THUMB,NOHARDEN,NOHARDENTHUMB
 ; RUN: llc -global-isel -global-isel-abort=0 -mattr=harden-sls-retbr -verify-machineinstrs -mtriple=armv8-linux-gnueabi < %s | FileCheck %s --check-prefixes=CHECK,ARM,HARDEN,ISBDSB
+; RUN: llc -global-isel -global-isel-abort=0 -mattr=harden-sls-retbr -verify-machineinstrs -mtriple=thumbv8-linux-gnueabi < %s | FileCheck %s --check-prefixes=CHECK,THUMB,HARDENTHUMB,HARDEN,ISBDSB
 ; RUN: llc -global-isel -global-isel-abort=0 -mattr=harden-sls-retbr -mattr=+sb -verify-machineinstrs -mtriple=armv8-linux-gnueabi < %s | FileCheck %s --check-prefixes=CHECK,ARM,HARDEN,SB
+; RUN: llc -global-isel -global-isel-abort=0 -mattr=harden-sls-retbr -mattr=+sb -verify-machineinstrs -mtriple=thumbv8-linux-gnueabi < %s | FileCheck %s --check-prefixes=CHECK,THUMB,HARDENTHUMB,HARDEN,SB
 
 ; Function Attrs: norecurse nounwind readnone
 define dso_local i32 @double_return(i32 %a, i32 %b) local_unnamed_addr {
@@ -18,6 +23,7 @@ if.then:                                          ; preds = %entry
 ; CHECK-LABEL: double_return:
 ; HARDEN:          {{bx lr$}}
 ; NOHARDENARM:     {{bxge lr$}}
+; NOHARDENTHUMB:   {{bx lr$}}
 ; ISBDSB-NEXT: dsb sy
 ; ISBDSB-NEXT: isb
 ; SB-NEXT:     {{ sb$}}
@@ -46,6 +52,7 @@ entry:
   %0 = load i8*, i8** %arrayidx, align 8
   indirectbr i8* %0, [label %return, label %l2]
 ; ARM:       bx r0
+; THUMB:     mov pc, r0
 ; ISBDSB-NEXT: dsb sy
 ; ISBDSB-NEXT: isb
 ; SB-NEXT:     {{ sb$}}
@@ -108,6 +115,8 @@ entry:
     i32 4, label %sw.bb5
   ]
 ; ARM:             ldr pc, [{{r[0-9]}}, {{r[0-9]}}, lsl #2]
+; NOHARDENTHUMB:   tbb [pc, {{r[0-9]}}]
+; HARDENTHUMB:     mov pc, {{r[0-9]}}
 ; ISBDSB-NEXT:     dsb sy
 ; ISBDSB-NEXT:     isb
 ; SB-NEXT:         {{ sb$}}

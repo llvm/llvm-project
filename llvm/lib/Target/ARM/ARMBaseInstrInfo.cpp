@@ -775,9 +775,11 @@ unsigned ARMBaseInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return Size;
   }
   case ARM::SpeculationBarrierISBDSBEndBB:
+  case ARM::t2SpeculationBarrierISBDSBEndBB:
     // This gets lowered to 2 4-byte instructions.
     return 8;
   case ARM::SpeculationBarrierSBEndBB:
+  case ARM::t2SpeculationBarrierSBEndBB:
     // This gets lowered to 1 4-byte instructions.
     return 4;
   }

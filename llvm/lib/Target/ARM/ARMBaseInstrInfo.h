@@ -643,7 +643,9 @@ static inline bool isIndirectControlFlowNotComingBack(const MachineInstr &MI) {
 
 static inline bool isSpeculationBarrierEndBBOpcode(int Opc) {
   return Opc == ARM::SpeculationBarrierISBDSBEndBB ||
-         Opc == ARM::SpeculationBarrierSBEndBB;
+         Opc == ARM::SpeculationBarrierSBEndBB ||
+         Opc == ARM::t2SpeculationBarrierISBDSBEndBB ||
+         Opc == ARM::t2SpeculationBarrierSBEndBB;
 }
 
 static inline bool isPopOpcode(int Opc) {
