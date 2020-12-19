@@ -2679,7 +2679,7 @@ std::tuple<bool, bool> InstrRefBasedLDV::vlocJoin(
     for (auto p : BlockOrders) {
       // If the predecessor isn't in scope / to be explored, we'll never be
       // able to join any locations.
-      if (BlocksToExplore.find(p) == BlocksToExplore.end()) {
+      if (!BlocksToExplore.contains(p)) {
         Bail = true;
         break;
       }

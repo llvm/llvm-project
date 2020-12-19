@@ -286,14 +286,14 @@ bool checkNumberingAndReplace(
   // instruction.
 
   DenseSet<unsigned> &TargetSet = Val->second;
-  if (TargetSet.size() > 1 && TargetSet.find(TargetArgVal) != TargetSet.end()) {
+  if (TargetSet.size() > 1 && TargetSet.contains(TargetArgVal)) {
     TargetSet.clear();
     TargetSet.insert(TargetArgVal);
     return true;
   }
 
   // Return true if we can find the value in the set.
-  return TargetSet.find(TargetArgVal) != TargetSet.end();
+  return TargetSet.contains(TargetArgVal);
 }
 
 bool IRSimilarityCandidate::compareOperandMapping(OperandMapping A,
@@ -375,14 +375,12 @@ bool IRSimilarityCandidate::compareStructure(const IRSimilarityCandidate &A,
     // Ensure that the mappings for the instructions exists.
     std::tie(ValueMappingIt, WasInserted) = ValueNumberMappingA.insert(
         std::make_pair(InstValA, DenseSet<unsigned>({InstValB})));
-    if (!WasInserted && ValueMappingIt->second.find(InstValB) ==
-                            ValueMappingIt->second.end())
+    if (!WasInserted && !ValueMappingIt->second.contains(InstValB))
       return false;
 
     std::tie(ValueMappingIt, WasInserted) = ValueNumberMappingB.insert(
         std::make_pair(InstValB, DenseSet<unsigned>({InstValA})));
-    if (!WasInserted && ValueMappingIt->second.find(InstValA) ==
-                            ValueMappingIt->second.end())
+    if (!WasInserted && !ValueMappingIt->second.contains(InstValA))
       return false;
 
     // TODO: Handle commutative instructions by mapping one operand to many
