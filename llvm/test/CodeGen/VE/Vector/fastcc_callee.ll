@@ -120,3 +120,20 @@ define fastcc <256 x i32> @vreg_arg_v256i32_r6(<256 x i32> %p0, <256 x i32> %p1,
 ; define <256 x i32> @vreg_arg_v256i32_r8(<256 x i32> %p0, <256 x i32> %p1, <256 x i32> %p2, <256 x i32> %p3, <256 x i32> %p4, <256 x i32> %p5, <256 x i32> %p6, <256 x i32> %p7, <256 x i32> %p8) {
 ;   ret <256 x i32> %p8
 ; }
+
+define fastcc <256 x i1> @vreg_arg_v256i1_vm7(<256 x i1> %vm1, <256 x i1> %vm2, <256 x i1> %vm3, <256 x i1> %vm4, <256 x i1> %vm5, <256 x i1> %vm6, <256 x i1> %vm7, <256 x i1> %vm8) {
+; CHECK-LABEL: vreg_arg_v256i1_vm7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andm %vm1, %vm0, %vm6
+; CHECK-NEXT:    b.l.t (, %s10)
+  ret <256 x i1> %vm6
+}
+
+define fastcc <512 x i1> @vreg_arg_v512i1_vmp3(<512 x i1> %vmp1, <512 x i1> %vmp2, <512 x i1> %vmp3, <512 x i1> %vmp4) {
+; CHECK-LABEL: vreg_arg_v512i1_vmp3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andm %vm2, %vm0, %vm6
+; CHECK-NEXT:    andm %vm3, %vm0, %vm7
+; CHECK-NEXT:    b.l.t (, %s10)
+  ret <512 x i1> %vmp3
+}
