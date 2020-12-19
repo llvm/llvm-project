@@ -396,6 +396,10 @@ let TargetPrefix = "riscv" in {
   defm vmsbc_borrow_in : RISCVBinaryMaskOutWithV0;
   defm vmsbc : RISCVBinaryMaskOut;
 
+  defm vand : RISCVBinaryAAX;
+  defm vor : RISCVBinaryAAX;
+  defm vxor : RISCVBinaryAAX;
+
   defm vsll : RISCVBinaryAAX;
   defm vsrl : RISCVBinaryAAX;
   defm vsra : RISCVBinaryAAX;
