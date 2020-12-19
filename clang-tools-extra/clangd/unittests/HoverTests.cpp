@@ -239,7 +239,7 @@ class Foo {})cpp";
          HI.Name = "c";
          HI.Kind = index::SymbolKind::Variable;
          HI.Definition = "auto *c = &b";
-         HI.Type = "class (lambda) **";
+         HI.Type = "(lambda) **";
          HI.ReturnType = "bool";
          HI.Parameters = {
              {std::string("int"), std::string("T"), llvm::None},
@@ -611,7 +611,7 @@ class Foo {})cpp";
           [](HoverInfo &HI) {
             HI.Name = "auto";
             HI.Kind = index::SymbolKind::TypeAlias;
-            HI.Definition = "class Foo<class X>";
+            HI.Definition = "class Foo<X>";
           }},
       {// Falls back to primary template, when the type is not instantiated.
        R"cpp(
@@ -718,8 +718,8 @@ class Foo {})cpp";
          HI.Definition = "X &setY(float v)";
          HI.LocalScope = "X::";
          HI.Documentation = "Trivial setter for `Y`.";
-         HI.Type = "struct X &(float)";
-         HI.ReturnType = "struct X &";
+         HI.Type = "X &(float)";
+         HI.ReturnType = "X &";
          HI.Parameters.emplace();
          HI.Parameters->emplace_back();
          HI.Parameters->back().Type = "float";
@@ -1943,7 +1943,7 @@ TEST(Hover, All) {
             HI.Kind = index::SymbolKind::Variable;
             HI.NamespaceScope = "";
             HI.LocalScope = "test::";
-            HI.Type = "struct Test &&";
+            HI.Type = "Test &&";
             HI.Definition = "Test &&test = {}";
           }},
       {
@@ -2211,7 +2211,7 @@ TEST(Hover, All) {
           )cpp",
           [](HoverInfo &HI) {
             HI.Name = "this";
-            HI.Definition = "Foo *";
+            HI.Definition = "ns::Foo *";
           }},
       {
           R"cpp(// this expr for template class
