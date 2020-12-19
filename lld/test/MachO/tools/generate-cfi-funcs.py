@@ -24,7 +24,7 @@ def print_function(name):
   have_lsda = (random.random() < lsda_odds)
   frame_size = random.randint(4, 64) * 16
   frame_offset = -random.randint(0, (frame_size/16 - 4)) * 16
-  reg_count = random.randint(0, 4)
+  reg_count = random.randint(0, 5)
   reg_combo = random.randint(0, factorial(reg_count) - 1)
   regs_saved = saved_regs_combined[reg_count][reg_combo]
   global func_size_low, func_size_high
