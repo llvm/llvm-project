@@ -553,6 +553,12 @@ void ARMConstantIslands::doInitialJumpTablePlacement(
   MachineBasicBlock *LastCorrectlyNumberedBB = nullptr;
   for (MachineBasicBlock &MBB : *MF) {
     auto MI = MBB.getLastNonDebugInstr();
+    // Look past potential SpeculationBarriers at end of BB.
+    while (MI != MBB.end() &&
+           (isSpeculationBarrierEndBBOpcode(MI->getOpcode()) ||
+            MI->isDebugInstr()))
+      --MI;
+
     if (MI == MBB.end())
       continue;
 
@@ -784,6 +790,7 @@ initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs) {
               NegOk = true;
               IsSoImm = true;
               unsigned CPI = I.getOperand(op).getIndex();
+              assert(CPI < CPEMIs.size());
               MachineInstr *CPEMI = CPEMIs[CPI];
               const Align CPEAlign = getCPEAlign(CPEMI);
               const unsigned LogCPEAlign = Log2(CPEAlign);
