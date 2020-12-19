@@ -476,7 +476,7 @@ bool ObjCARCContract::tryToPeepholeInstruction(
       --BBI;
     } while (IsNoopInstruction(&*BBI));
 
-    if (&*BBI == GetArgRCIdentityRoot(Inst)) {
+    if (GetRCIdentityRoot(&*BBI) == GetArgRCIdentityRoot(Inst)) {
       LLVM_DEBUG(dbgs() << "Adding inline asm marker for the return value "
                            "optimization.\n");
       Changed = true;
