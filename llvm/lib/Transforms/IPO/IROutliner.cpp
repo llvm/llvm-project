@@ -162,7 +162,7 @@ void IROutliner::pruneIncompatibleRegions(
     unsigned EndIdx = IRSC.getEndIdx();
 
     for (unsigned Idx = StartIdx; Idx <= EndIdx; Idx++)
-      if (Outlined.find(Idx) != Outlined.end()) {
+      if (Outlined.contains(Idx)) {
         PreviouslyOutlined = true;
         break;
       }
