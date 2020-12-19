@@ -49,34 +49,29 @@ public:
     compactUnwindSection = cuSection;
   }
 
+  using EncodingMap = llvm::DenseMap<compact_unwind_encoding_t, size_t>;
+
+  struct SecondLevelPage {
+    uint32_t kind;
+    size_t entryIndex;
+    size_t entryCount;
+    size_t byteCount;
+    std::vector<compact_unwind_encoding_t> localEncodings;
+    EncodingMap localEncodingIndexes;
+  };
+
 private:
   std::vector<std::pair<compact_unwind_encoding_t, size_t>> commonEncodings;
+  EncodingMap commonEncodingIndexes;
   std::vector<uint32_t> personalities;
   std::vector<unwind_info_section_header_lsda_index_entry> lsdaEntries;
   std::vector<CompactUnwindEntry64> cuVector;
   std::vector<const CompactUnwindEntry64 *> cuPtrVector;
-  std::vector<std::vector<const CompactUnwindEntry64 *>::const_iterator>
-      pageBounds;
+  std::vector<SecondLevelPage> secondLevelPages;
   MergedOutputSection *compactUnwindSection = nullptr;
   uint64_t level2PagesOffset = 0;
   uint64_t unwindInfoSize = 0;
 };
-
-#define UNWIND_INFO_COMMON_ENCODINGS_MAX 127
-
-#define UNWIND_INFO_SECOND_LEVEL_PAGE_SIZE 4096
-#define UNWIND_INFO_REGULAR_SECOND_LEVEL_ENTRIES_MAX                           \
-  ((UNWIND_INFO_SECOND_LEVEL_PAGE_SIZE -                                       \
-    sizeof(unwind_info_regular_second_level_page_header)) /                    \
-   sizeof(unwind_info_regular_second_level_entry))
-#define UNWIND_INFO_COMPRESSED_SECOND_LEVEL_ENTRIES_MAX                        \
-  ((UNWIND_INFO_SECOND_LEVEL_PAGE_SIZE -                                       \
-    sizeof(unwind_info_compressed_second_level_page_header)) /                 \
-   sizeof(uint32_t))
-
-#define UNWIND_INFO_COMPRESSED_ENTRY_FUNC_OFFSET_BITS 24
-#define UNWIND_INFO_COMPRESSED_ENTRY_FUNC_OFFSET_MASK                          \
-  UNWIND_INFO_COMPRESSED_ENTRY_FUNC_OFFSET(~0)
 
 } // namespace macho
 } // namespace lld

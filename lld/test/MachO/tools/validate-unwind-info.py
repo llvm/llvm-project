@@ -45,7 +45,7 @@ def main():
     sys.exit("no program symbols found in input")
 
   program_common_encodings = (
-    re.findall(r"^\s+encoding\[\d+\]: 0x(%s+)$" % hex,
+    re.findall(r"^\s+encoding\[(?:\d|\d\d|1[01]\d|12[0-6])\]: 0x(%s+)$" % hex,
                objdump_string, re.MULTILINE))
   if not program_common_encodings:
     sys.exit("no common encodings found in input")
@@ -53,7 +53,7 @@ def main():
   program_encodings_map = {program_symbols_map[address]:encoding
     for address, encoding in
     re.findall(r"^\s+\[\d+\]: function offset=0x(%s+), " % hex +
-               r"encoding\[\d+\]=0x(%s+)$" % hex,
+               r"encoding(?:\[\d+\])?=0x(%s+)$" % hex,
                objdump_string, re.MULTILINE)}
   if not object_encodings_map:
     sys.exit("no program encodings found in input")
@@ -73,8 +73,8 @@ def main():
 
   if program_encodings_map != object_encodings_map:
     if args.debug:
-      pprint("program encodings map:\n" + program_encodings_map)
-      pprint("object encodings map:\n" + object_encodings_map)
+      pprint("program encodings map:\n" + str(program_encodings_map))
+      pprint("object encodings map:\n" + str(object_encodings_map))
     sys.exit("encoding maps differ")
 
   # Count frequency of object-file folded encodings
@@ -86,11 +86,12 @@ def main():
                           sorted(encoding_frequency_map,
                                  key=lambda x: (encoding_frequency_map.get(x), x),
                                  reverse=True)]
+  del encoding_frequencies[127:]
 
   if program_common_encodings != encoding_frequencies:
     if args.debug:
-      pprint("program common encodings:\n" + program_common_encodings)
-      pprint("object encoding frequencies:\n" + encoding_frequencies)
+      pprint("program common encodings:\n" + str(program_common_encodings))
+      pprint("object encoding frequencies:\n" + str(encoding_frequencies))
     sys.exit("encoding frequencies differ")
 
 
