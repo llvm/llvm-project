@@ -179,7 +179,7 @@ propagateAttributesToRefs(GlobalValueSummary *S,
     if (!VI.getAccessSpecifier()) {
       if (!MarkedNonReadWriteOnly.insert(VI).second)
         continue;
-    } else if (MarkedNonReadWriteOnly.find(VI) != MarkedNonReadWriteOnly.end())
+    } else if (MarkedNonReadWriteOnly.contains(VI))
       continue;
     for (auto &Ref : VI.getSummaryList())
       // If references to alias is not read/writeonly then aliasee
