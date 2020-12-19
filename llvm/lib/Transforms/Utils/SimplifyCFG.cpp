@@ -2437,7 +2437,7 @@ static bool FoldCondBranchOnPHI(BranchInst *BI, const DataLayout &DL,
 /// Given a BB that starts with the specified two-entry PHI node,
 /// see if we can eliminate it.
 static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
-                                const DataLayout &DL) {
+                                DomTreeUpdater *DTU, const DataLayout &DL) {
   // Ok, this is a two entry PHI node.  Check to see if this is a simple "if
   // statement", which has a very simple dominance structure.  Basically, we
   // are trying to find the condition that is being branched on, which
@@ -2587,7 +2587,18 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   Instruction *OldTI = DomBlock->getTerminator();
   Builder.SetInsertPoint(OldTI);
   Builder.CreateBr(BB);
+
+  SmallVector<DominatorTree::UpdateType, 3> Updates;
+  if (DTU) {
+    for (auto *Successor : successors(DomBlock))
+      Updates.push_back({DominatorTree::Delete, DomBlock, Successor});
+    Updates.push_back({DominatorTree::Insert, DomBlock, BB});
+  }
+
   OldTI->eraseFromParent();
+  if (DTU)
+    DTU->applyUpdatesPermissive(Updates);
+
   return true;
 }
 
@@ -6381,7 +6392,7 @@ bool SimplifyCFGOpt::simplifyOnceImpl(BasicBlock *BB) {
     // eliminate it, do so now.
     if (auto *PN = dyn_cast<PHINode>(BB->begin()))
       if (PN->getNumIncomingValues() == 2)
-        Changed |= FoldTwoEntryPHINode(PN, TTI, DL);
+        Changed |= FoldTwoEntryPHINode(PN, TTI, DTU, DL);
   }
 
   Instruction *Terminator = BB->getTerminator();
