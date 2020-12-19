@@ -283,11 +283,10 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
                          IntrHasSideEffects]>;
   def int_x86_sse_ldmxcsr :
               Intrinsic<[], [llvm_ptr_ty],
-                        [IntrReadMem, IntrArgMemOnly, IntrHasSideEffects,
                          // FIXME: LDMXCSR does not actually write to memory,
-                         // but Fast and DAG Isel both use writing to memory
-                         // as a proxy for having side effects.
-                         IntrWriteMem]>;
+                         // but intrinsic properties are generated incorrectly
+                         // for IntrReadMem+IntrHasSideEffects.
+                        [/*IntrReadMem,*/ IntrArgMemOnly, IntrHasSideEffects]>;
 }
 
 // Misc.

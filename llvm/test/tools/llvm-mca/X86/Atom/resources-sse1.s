@@ -230,7 +230,7 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  1      70    35.00   *                   divps	(%rax), %xmm2
 # CHECK-NEXT:  1      34    17.00                       divss	%xmm0, %xmm2
 # CHECK-NEXT:  1      34    17.00   *                   divss	(%rax), %xmm2
-# CHECK-NEXT:  1      5     2.50    *             U     ldmxcsr	(%rax)
+# CHECK-NEXT:  1      5     2.50    *      *      U     ldmxcsr	(%rax)
 # CHECK-NEXT:  1      1     1.00    *      *      U     maskmovq	%mm0, %mm1
 # CHECK-NEXT:  1      5     5.00                        maxps	%xmm0, %xmm2
 # CHECK-NEXT:  1      5     5.00    *                   maxps	(%rax), %xmm2
