@@ -89,6 +89,7 @@ static_library("LLVMARMCodeGen") {
     "ARMParallelDSP.cpp",
     "ARMRegisterBankInfo.cpp",
     "ARMRegisterInfo.cpp",
+    "ARMSLSHardening.cpp",
     "ARMSelectionDAGInfo.cpp",
     "ARMSubtarget.cpp",
     "ARMTargetMachine.cpp",
