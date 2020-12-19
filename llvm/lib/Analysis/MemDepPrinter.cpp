@@ -72,9 +72,6 @@ namespace {
       assert(dep.isUnknown() && "unexpected dependence type");
       return InstTypePair(dep.getInst(), Unknown);
     }
-    static InstTypePair getInstTypePair(const Instruction* inst, DepType type) {
-      return InstTypePair(inst, type);
-    }
   };
 }
 
