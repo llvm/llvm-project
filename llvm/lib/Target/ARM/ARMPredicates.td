@@ -189,6 +189,9 @@ let RecomputePerFunction = 1 in {
   def UseFPVMLx: Predicate<"((Subtarget->useFPVMLx() &&"
                            "  TM.Options.AllowFPOpFusion != FPOpFusion::Fast) ||"
                            "Subtarget->hasMinSize())">;
+  def SLSBLRMitigation : Predicate<[{ MF->getSubtarget<ARMSubtarget>().hardenSlsBlr() }]>;
+  def NoSLSBLRMitigation : Predicate<[{ !MF->getSubtarget<ARMSubtarget>().hardenSlsBlr() }]>;
+
 }
 def UseMulOps        : Predicate<"Subtarget->useMulOps()">;
 
