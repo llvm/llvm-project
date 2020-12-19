@@ -56,12 +56,3 @@ entry:
 ; CHECK-NEXT:    [[AL:%.*]] = load i32, i32* [[ARG0]], align 4
 ; CHECK-NEXT:    [[BL:%.*]] = load i32, i32* [[ARG1]], align 4
 ; CHECK-NEXT:    [[CL:%.*]] = load i32, i32* [[ARG2]], align 4
-
-; CHECK: define internal void @[[FUNCTION_1]](i32* [[ARG0:%.*]], i32* [[ARG1:%.*]], i32* [[ARG2:%.*]])
-; CHECK: entry_to_outline:
-; CHECK-NEXT:    store i32 2, i32* [[ARG0]], align 4
-; CHECK-NEXT:    store i32 3, i32* [[ARG1]], align 4
-; CHECK-NEXT:    store i32 4, i32* [[ARG2]], align 4
-; CHECK-NEXT:    [[AL:%.*]] = load i32, i32* [[ARG0]], align 4
-; CHECK-NEXT:    [[BL:%.*]] = load i32, i32* [[ARG1]], align 4
-; CHECK-NEXT:    [[CL:%.*]] = load i32, i32* [[ARG2]], align 4

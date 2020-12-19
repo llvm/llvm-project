@@ -154,6 +154,13 @@ private:
   pruneIncompatibleRegions(std::vector<IRSimilarityCandidate> &CandidateVec,
                            OutlinableGroup &CurrentGroup);
 
+  /// Identify the needed extracted inputs in a section, and add to the overall
+  /// function if needed.
+  ///
+  /// \param [in] M - The module to outline from.
+  /// \param [in,out] Region - The region to be extracted
+  void findAddInputsOutputs(Module &M, OutlinableRegion &Region);
+
   /// Extract \p Region into its own function.
   ///
   /// \param [in] Region - The region to be extracted into its own function.
@@ -182,8 +189,7 @@ private:
   /// Custom InstVisitor to classify different instructions for whether it can
   /// be analyzed for similarity.  This is needed as there may be instruction we
   /// can identify as having similarity, but are more complicated to outline.
-  struct InstructionAllowed
-      : public InstVisitor<InstructionAllowed, bool> {
+  struct InstructionAllowed : public InstVisitor<InstructionAllowed, bool> {
     InstructionAllowed() {}
 
     // TODO: Determine a scheme to resolve when the label is similar enough.
@@ -203,13 +209,9 @@ private:
     // DebugInfo should be included in the regions, but should not be
     // analyzed for similarity as it has no bearing on the outcome of the
     // program.
-    bool visitDbgInfoIntrinsic(DbgInfoIntrinsic &DII) {
-      return true;
-    }
+    bool visitDbgInfoIntrinsic(DbgInfoIntrinsic &DII) { return true; }
     // TODO: Handle GetElementPtrInsts
-    bool visitGetElementPtrInst(GetElementPtrInst &GEPI) {
-      return false;
-    }
+    bool visitGetElementPtrInst(GetElementPtrInst &GEPI) { return false; }
     // TODO: Handle specific intrinsics individually from those that can be
     // handled.
     bool IntrinsicInst(IntrinsicInst &II) { return false; }
@@ -226,9 +228,7 @@ private:
     bool visitCallBrInst(CallBrInst &CBI) { return false; }
     // TODO: Handle interblock similarity.
     bool visitTerminator(Instruction &I) { return false; }
-    bool visitInstruction(Instruction &I) { 
-      return true;
-    }
+    bool visitInstruction(Instruction &I) { return true; }
   };
 
   /// A InstVisitor used to exclude certain instructions from being outlined.
