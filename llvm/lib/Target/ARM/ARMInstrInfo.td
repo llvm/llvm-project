@@ -6365,6 +6365,15 @@ def SPACE : PseudoInst<(outs GPR:$Rd), (ins i32imm:$size, GPR:$Rn),
                        NoItinerary,
                        [(set GPR:$Rd, (int_arm_space timm:$size, GPR:$Rn))]>;
 
+// SpeculationBarrierEndBB must only be used after an unconditional control
+// flow, i.e. after a terminator for which isBarrier is True.
+let hasSideEffects = 1, isCodeGenOnly = 1, isTerminator = 1, isBarrier = 1 in {
+  def SpeculationBarrierISBDSBEndBB
+      : PseudoInst<(outs), (ins), NoItinerary, []>, Sched<[]>;
+  def SpeculationBarrierSBEndBB
+      : PseudoInst<(outs), (ins), NoItinerary, []>, Sched<[]>;
+}
+
 //===----------------------------------
 // Atomic cmpxchg for -O0
 //===----------------------------------

@@ -635,6 +635,17 @@ bool isIndirectBranchOpcode(int Opc) {
   return Opc == ARM::BX || Opc == ARM::MOVPCRX || Opc == ARM::tBRIND;
 }
 
+static inline bool isIndirectControlFlowNotComingBack(const MachineInstr &MI) {
+  int opc = MI.getOpcode();
+  return MI.isReturn() || isIndirectBranchOpcode(MI.getOpcode()) ||
+         isJumpTableBranchOpcode(opc);
+}
+
+static inline bool isSpeculationBarrierEndBBOpcode(int Opc) {
+  return Opc == ARM::SpeculationBarrierISBDSBEndBB ||
+         Opc == ARM::SpeculationBarrierSBEndBB;
+}
+
 static inline bool isPopOpcode(int Opc) {
   return Opc == ARM::tPOP_RET || Opc == ARM::LDMIA_RET ||
          Opc == ARM::t2LDMIA_RET || Opc == ARM::tPOP || Opc == ARM::LDMIA_UPD ||

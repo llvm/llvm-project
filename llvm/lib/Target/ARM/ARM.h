@@ -55,6 +55,7 @@ InstructionSelector *
 createARMInstructionSelector(const ARMBaseTargetMachine &TM, const ARMSubtarget &STI,
                              const ARMRegisterBankInfo &RBI);
 Pass *createMVEGatherScatterLoweringPass();
+FunctionPass *createARMSLSHardeningPass();
 
 void LowerARMMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
                                   ARMAsmPrinter &AP);
@@ -71,6 +72,7 @@ void initializeMVEVPTOptimisationsPass(PassRegistry &);
 void initializeARMLowOverheadLoopsPass(PassRegistry &);
 void initializeMVETailPredicationPass(PassRegistry &);
 void initializeMVEGatherScatterLoweringPass(PassRegistry &);
+void initializeARMSLSHardeningPass(PassRegistry &);
 
 } // end namespace llvm
 
