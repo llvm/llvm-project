@@ -2515,7 +2515,21 @@ CompilerType TypeSystemSwiftTypeRef::GetErrorType() {
 
 CompilerType
 TypeSystemSwiftTypeRef::GetReferentType(opaque_compiler_type_t type) {
-  return m_swift_ast_context->GetReferentType(ReconstructType(type));
+  auto impl = [&]() -> CompilerType {
+    using namespace swift::Demangle;
+    Demangler dem;
+    NodePointer node = GetDemangledType(dem, AsMangledName(type));
+    if (!node ||
+        (node->getKind() != Node::Kind::Unowned &&
+         node->getKind() != Node::Kind::Unmanaged) ||
+        !node->hasChildren())
+      return {this, type};
+    node = node->getFirstChild();
+    if (!node || node->getKind() != Node::Kind::Type || !node->hasChildren())
+      return {this, type};
+    return RemangleAsType(dem, node);
+  };
+  VALIDATE_AND_RETURN(impl, GetReferentType, type, (ReconstructType(type)));
 }
 
 CompilerType
