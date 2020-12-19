@@ -1219,8 +1219,8 @@ llvm::Optional<size_t> SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
     case ReferenceKind::Strong: {
       auto *reflection_ctx = GetReflectionContext();
       auto &builder = reflection_ctx->getBuilder();
-      auto tc = TypeConverter(builder);
-      auto tip = LLDBTypeInfoProvider(*this, *ts);
+      TypeConverter tc(builder);
+      LLDBTypeInfoProvider tip(*this, *ts);
       // The class_tr pointer is used to iterate the class hierarchy, from the
       // current class, each superclass, and ends on null.
       auto *class_tr = tr;
