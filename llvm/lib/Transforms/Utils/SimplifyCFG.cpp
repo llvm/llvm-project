@@ -4159,7 +4159,7 @@ bool SimplifyCFGOpt::simplifyCommonResume(ResumeInst *RI) {
     for (pred_iterator PI = pred_begin(TrivialBB), PE = pred_end(TrivialBB);
          PI != PE;) {
       BasicBlock *Pred = *PI++;
-      removeUnwindEdge(Pred);
+      removeUnwindEdge(Pred, DTU);
       ++NumInvokes;
     }
 
@@ -4170,11 +4170,17 @@ bool SimplifyCFGOpt::simplifyCommonResume(ResumeInst *RI) {
     // predecessors.
     TrivialBB->getTerminator()->eraseFromParent();
     new UnreachableInst(RI->getContext(), TrivialBB);
+    if (DTU)
+      DTU->applyUpdatesPermissive({{DominatorTree::Delete, TrivialBB, BB}});
   }
 
   // Delete the resume block if all its predecessors have been removed.
-  if (pred_empty(BB))
-    BB->eraseFromParent();
+  if (pred_empty(BB)) {
+    if (DTU)
+      DTU->deleteBB(BB);
+    else
+      BB->eraseFromParent();
+  }
 
   return !TrivialUnwindBlocks.empty();
 }
