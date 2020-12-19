@@ -1,13 +1,17 @@
-; RUN: llc -mattr=harden-sls-retbr -verify-machineinstrs -mtriple=armv8-linux-gnueabi < %s | FileCheck %s --check-prefixes=CHECK,ARM,HARDEN,ISBDSB,ISBDSBDAGISEL -dump-input-context=100
-; RUN: llc -mattr=harden-sls-retbr -verify-machineinstrs -mtriple=thumbv8-linux-gnueabi < %s | FileCheck %s --check-prefixes=CHECK,THUMB,HARDENTHUMB,HARDEN,ISBDSB,ISBDSBDAGISEL -dump-input-context=100
-; RUN: llc -mattr=harden-sls-retbr -mattr=+sb -verify-machineinstrs -mtriple=armv8-linux-gnueabi < %s | FileCheck %s --check-prefixes=CHECK,ARM,HARDEN,SB,SBDAGISEL -dump-input-context=100
-; RUN: llc -mattr=harden-sls-retbr -mattr=+sb -verify-machineinstrs -mtriple=thumbv8-linux-gnueabi < %s | FileCheck %s --check-prefixes=CHECK,THUMB,HARDENTHUMB,HARDEN,SB,SBDAGISEL -dump-input-context=100
+; RUN: llc -mattr=harden-sls-retbr -mattr=harden-sls-blr -verify-machineinstrs -mtriple=armv8-linux-gnueabi < %s | FileCheck %s --check-prefixes=CHECK,ARM,HARDEN,ISBDSB,ISBDSBDAGISEL -dump-input-context=100
+; RUN: llc -mattr=harden-sls-retbr -mattr=harden-sls-blr -verify-machineinstrs -mtriple=thumbv8-linux-gnueabi < %s | FileCheck %s --check-prefixes=CHECK,THUMB,HARDENTHUMB,HARDEN,ISBDSB,ISBDSBDAGISEL -dump-input-context=100
+; RUN: llc -mattr=harden-sls-retbr -mattr=harden-sls-blr -mattr=+sb -verify-machineinstrs -mtriple=armv8-linux-gnueabi < %s | FileCheck %s --check-prefixes=CHECK,ARM,HARDEN,SB,SBDAGISEL -dump-input-context=100
+; RUN: llc -mattr=harden-sls-retbr -mattr=harden-sls-blr -mattr=+sb -verify-machineinstrs -mtriple=thumbv8-linux-gnueabi < %s | FileCheck %s --check-prefixes=CHECK,THUMB,HARDENTHUMB,HARDEN,SB,SBDAGISEL -dump-input-context=100
 ; RUN: llc -verify-machineinstrs -mtriple=armv8-linux-gnueabi < %s | FileCheck %s --check-prefixes=CHECK,ARM,NOHARDEN,NOHARDENARM -dump-input-context=100
 ; RUN: llc -verify-machineinstrs -mtriple=thumbv8-linux-gnueabi < %s | FileCheck %s --check-prefixes=CHECK,THUMB,NOHARDEN,NOHARDENTHUMB
-; RUN: llc -global-isel -global-isel-abort=0 -mattr=harden-sls-retbr -verify-machineinstrs -mtriple=armv8-linux-gnueabi < %s | FileCheck %s --check-prefixes=CHECK,ARM,HARDEN,ISBDSB
-; RUN: llc -global-isel -global-isel-abort=0 -mattr=harden-sls-retbr -verify-machineinstrs -mtriple=thumbv8-linux-gnueabi < %s | FileCheck %s --check-prefixes=CHECK,THUMB,HARDENTHUMB,HARDEN,ISBDSB
-; RUN: llc -global-isel -global-isel-abort=0 -mattr=harden-sls-retbr -mattr=+sb -verify-machineinstrs -mtriple=armv8-linux-gnueabi < %s | FileCheck %s --check-prefixes=CHECK,ARM,HARDEN,SB
-; RUN: llc -global-isel -global-isel-abort=0 -mattr=harden-sls-retbr -mattr=+sb -verify-machineinstrs -mtriple=thumbv8-linux-gnueabi < %s | FileCheck %s --check-prefixes=CHECK,THUMB,HARDENTHUMB,HARDEN,SB
+; RUN: llc -global-isel -global-isel-abort=0 -mattr=harden-sls-retbr -mattr=harden-sls-blr -verify-machineinstrs -mtriple=armv8-linux-gnueabi < %s | FileCheck %s --check-prefixes=CHECK,ARM,HARDEN,ISBDSB
+; RUN: llc -global-isel -global-isel-abort=0 -mattr=harden-sls-retbr -mattr=harden-sls-blr -verify-machineinstrs -mtriple=thumbv8-linux-gnueabi < %s | FileCheck %s --check-prefixes=CHECK,THUMB,HARDENTHUMB,HARDEN,ISBDSB
+; RUN: llc -global-isel -global-isel-abort=0 -mattr=harden-sls-retbr -mattr=harden-sls-blr -mattr=+sb -verify-machineinstrs -mtriple=armv8-linux-gnueabi < %s | FileCheck %s --check-prefixes=CHECK,ARM,HARDEN,SB
+; RUN: llc -global-isel -global-isel-abort=0 -mattr=harden-sls-retbr -mattr=harden-sls-blr -mattr=+sb -verify-machineinstrs -mtriple=thumbv8-linux-gnueabi < %s | FileCheck %s --check-prefixes=CHECK,THUMB,HARDENTHUMB,HARDEN,SB
+; RUN: llc -fast-isel -mattr=harden-sls-retbr -mattr=harden-sls-blr -verify-machineinstrs -mtriple=armv8-linux-gnueabi < %s | FileCheck %s --check-prefixes=CHECK,ARM,HARDEN,ISBDSB
+; RUN: llc -fast-isel -mattr=harden-sls-retbr -mattr=harden-sls-blr -verify-machineinstrs -mtriple=thumbv8-linux-gnueabi < %s | FileCheck %s --check-prefixes=CHECK,THUMB,HARDENTHUMB,HARDEN,ISBDSB
+; RUN: llc -fast-isel -mattr=harden-sls-retbr -mattr=harden-sls-blr -mattr=+sb -verify-machineinstrs -mtriple=armv8-linux-gnueabi < %s | FileCheck %s --check-prefixes=CHECK,ARM,HARDEN,SB
+; RUN: llc -fast-isel -mattr=harden-sls-retbr -mattr=harden-sls-blr -mattr=+sb -verify-machineinstrs -mtriple=thumbv8-linux-gnueabi < %s | FileCheck %s --check-prefixes=CHECK,THUMB,HARDENTHUMB,HARDEN,SB
 
 ; Function Attrs: norecurse nounwind readnone
 define dso_local i32 @double_return(i32 %a, i32 %b) local_unnamed_addr {
@@ -149,3 +153,43 @@ sw.epilog:                                        ; preds = %sw.bb5, %entry
 ; ISBDSB-NEXT: isb
 ; SB-NEXT:     {{ sb$}}
 }
+
+define dso_local i32 @indirect_call(
+i32 (...)* nocapture %f1, i32 (...)* nocapture %f2) {
+entry:
+; CHECK-LABEL: indirect_call:
+  %callee.knr.cast = bitcast i32 (...)* %f1 to i32 ()*
+  %call = tail call i32 %callee.knr.cast()
+; HARDENARM: bl {{__llvm_slsblr_thunk_arm_r[0-9]+$}}
+; HARDENTHUMB: bl {{__llvm_slsblr_thunk_thumb_r[0-9]+$}}
+  %callee.knr.cast1 = bitcast i32 (...)* %f2 to i32 ()*
+  %call2 = tail call i32 %callee.knr.cast1()
+; HARDENARM: bl {{__llvm_slsblr_thunk_arm_r[0-9]+$}}
+; HARDENTHUMB: bl {{__llvm_slsblr_thunk_thumb_r[0-9]+$}}
+  %add = add nsw i32 %call2, %call
+  ret i32 %add
+; CHECK: .Lfunc_end
+}
+
+; verify calling through a function pointer.
+@a = dso_local local_unnamed_addr global i32 (...)* null, align 8
+@b = dso_local local_unnamed_addr global i32 0, align 4
+define dso_local void @indirect_call_global() local_unnamed_addr {
+; CHECK-LABEL: indirect_call_global:
+entry:
+  %0 = load i32 ()*, i32 ()** bitcast (i32 (...)** @a to i32 ()**), align 8
+  %call = tail call i32 %0()  nounwind
+; HARDENARM: bl {{__llvm_slsblr_thunk_arm_r[0-9]+$}}
+; HARDENTHUMB: bl {{__llvm_slsblr_thunk_thumb_r[0-9]+$}}
+  store i32 %call, i32* @b, align 4
+  ret void
+; CHECK: .Lfunc_end
+}
+
+; HARDEN-label: __llvm_slsblr_thunk_(arm|thumb)_r5:
+; HARDEN:    bx r5
+; ISBDSB-NEXT: dsb sy
+; ISBDSB-NEXT: isb
+; SB-NEXT:     dsb sy
+; SB-NEXT:     isb
+; HARDEN-NEXT: .Lfunc_end
