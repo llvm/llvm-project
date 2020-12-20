@@ -44,7 +44,6 @@ class IRInterpreterTestCase(TestBase):
     @expectedFailureAll(
         oslist=['windows'],
         bugnumber="http://llvm.org/pr21765")
-    @expectedFailureNetBSD
     def test_ir_interpreter(self):
         self.build_and_run()
 

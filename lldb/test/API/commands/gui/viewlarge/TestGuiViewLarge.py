@@ -16,6 +16,7 @@ class GuiViewLargeCommandTest(PExpectTest):
     @skipIfAsan
     @skipIfCursesSupportMissing
     @skipIfRemote # "run" command will not work correctly for remote debug
+    @expectedFailureNetBSD
     def test_gui(self):
         self.build()
 

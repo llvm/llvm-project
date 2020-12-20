@@ -20,7 +20,6 @@ class TestConflictingSymbols(TestBase):
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489")
     @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr48416")
-    @expectedFailureNetBSD
     def test_conflicting_symbols(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

@@ -1,5 +1,5 @@
 # UNSUPPORTED: system-freebsd
-# XFAIL: system-netbsd
+# UNSUPPORTED: system-netbsd
 
 # Flaky
 # UNSUPPORTED: system-linux

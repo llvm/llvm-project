@@ -84,6 +84,7 @@ class ProcessAttachTestCase(TestBase):
         process = target.GetProcess()
         self.assertTrue(process, PROCESS_IS_VALID)
 
+    @expectedFailureNetBSD
     def test_attach_to_process_by_id_correct_executable_offset(self):
         """
         Test that after attaching to a process the executable offset
