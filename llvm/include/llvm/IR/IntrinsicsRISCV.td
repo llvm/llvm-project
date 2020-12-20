@@ -388,6 +388,11 @@ let TargetPrefix = "riscv" in {
   defm vfsub : RISCVBinaryAAX;
   defm vfrsub : RISCVBinaryAAX;
 
+  defm vfwadd : RISCVBinaryABX;
+  defm vfwsub : RISCVBinaryABX;
+  defm vfwadd_w : RISCVBinaryAAX;
+  defm vfwsub_w : RISCVBinaryAAX;
+
   defm vsaddu : RISCVSaturatingBinaryAAX;
   defm vsadd : RISCVSaturatingBinaryAAX;
   defm vssubu : RISCVSaturatingBinaryAAX;
@@ -413,4 +418,14 @@ let TargetPrefix = "riscv" in {
                                      [LLVMMatchType<0>, LLVMVectorElementType<0>,
                                       llvm_anyint_ty],
                                      [IntrNoMem]>, RISCVVIntrinsic;
+
+  defm vfmul : RISCVBinaryAAX;
+  defm vfdiv : RISCVBinaryAAX;
+  defm vfrdiv : RISCVBinaryAAX;
+
+  defm vfwmul : RISCVBinaryABX;
+
+  defm vfsgnj : RISCVBinaryAAX;
+  defm vfsgnjn : RISCVBinaryAAX;
+  defm vfsgnjx : RISCVBinaryAAX;
 } // TargetPrefix = "riscv"

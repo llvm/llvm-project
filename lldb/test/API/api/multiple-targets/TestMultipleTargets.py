@@ -21,6 +21,7 @@ class TestMultipleTargets(TestBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr20282")
+    @expectedFlakeyNetBSD
     def test_multiple_targets(self):
         env = {self.dylibPath: self.getLLDBLibraryEnvVal()}
 
