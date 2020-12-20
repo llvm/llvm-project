@@ -1500,6 +1500,13 @@ defm PseudoVFADD       : VPseudoBinaryV_VV_VX</*IsFloat=*/1>;
 defm PseudoVFSUB       : VPseudoBinaryV_VV_VX</*IsFloat=*/1>;
 defm PseudoVFRSUB      : VPseudoBinaryV_VX</*IsFloat=*/1>;
 
+//===----------------------------------------------------------------------===//
+// 14.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
+//===----------------------------------------------------------------------===//
+defm PseudoVFMUL       : VPseudoBinaryV_VV_VX</*IsFloat=*/1>;
+defm PseudoVFDIV       : VPseudoBinaryV_VV_VX</*IsFloat=*/1>;
+defm PseudoVFRDIV      : VPseudoBinaryV_VX</*IsFloat=*/1>;
+
 } // Predicates = [HasStdExtV, HasStdExtF]
 
 //===----------------------------------------------------------------------===//
@@ -1763,6 +1770,13 @@ let Predicates = [HasStdExtV, HasStdExtF] in {
 defm "" : VPatBinaryV_VV_VX<"int_riscv_vfadd", "PseudoVFADD", AllFloatVectors>;
 defm "" : VPatBinaryV_VV_VX<"int_riscv_vfsub", "PseudoVFSUB", AllFloatVectors>;
 defm "" : VPatBinaryV_VX<"int_riscv_vfrsub", "PseudoVFRSUB", AllFloatVectors>;
+
+//===----------------------------------------------------------------------===//
+// 14.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
+//===----------------------------------------------------------------------===//
+defm "" : VPatBinaryV_VV_VX<"int_riscv_vfmul", "PseudoVFMUL", AllFloatVectors>;
+defm "" : VPatBinaryV_VV_VX<"int_riscv_vfdiv", "PseudoVFDIV", AllFloatVectors>;
+defm "" : VPatBinaryV_VX<"int_riscv_vfrdiv", "PseudoVFRDIV", AllFloatVectors>;
 
 } // Predicates = [HasStdExtV, HasStdExtF]
 
