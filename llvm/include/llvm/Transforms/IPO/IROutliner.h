@@ -70,6 +70,17 @@ struct OutlinableRegion {
   IRInstructionData *NewFront = nullptr;
   IRInstructionData *NewBack = nullptr;
 
+  /// The number of extracted inputs from the CodeExtractor.
+  unsigned NumExtractedInputs;
+
+  /// Mapping the extracted argument number to the argument number in the
+  /// overall function.  Since there will be inputs, such as elevated constants
+  /// that are not the same in each region in a SimilarityGroup, or values that
+  /// cannot be sunk into the extracted section in every region, we must keep
+  /// track of which extracted argument maps to which overall argument.
+  DenseMap<unsigned, unsigned> ExtractedArgToAgg;
+  DenseMap<unsigned, unsigned> AggArgToExtracted;
+
   /// Used to create an outlined function.
   CodeExtractor *CE = nullptr;
 
@@ -154,6 +165,17 @@ private:
   pruneIncompatibleRegions(std::vector<IRSimilarityCandidate> &CandidateVec,
                            OutlinableGroup &CurrentGroup);
 
+  /// Create the function based on the overall types found in the current
+  /// regions being outlined.
+  ///
+  /// \param M - The module to outline from.
+  /// \param [in,out] CG - The OutlinableGroup for the regions to be outlined.
+  /// \param [in] FunctionNameSuffix - How many functions have we previously
+  /// created.
+  /// \returns the newly created function.
+  Function *createFunction(Module &M, OutlinableGroup &CG,
+                           unsigned FunctionNameSuffix);
+
   /// Identify the needed extracted inputs in a section, and add to the overall
   /// function if needed.
   ///
@@ -166,6 +188,19 @@ private:
   /// \param [in] Region - The region to be extracted into its own function.
   /// \returns True if it was successfully outlined.
   bool extractSection(OutlinableRegion &Region);
+
+  /// For the similarities found, and the extracted sections, create a single
+  /// outlined function with appropriate output blocks as necessary.
+  ///
+  /// \param [in] M - The module to outline from
+  /// \param [in] CurrentGroup - The set of extracted sections to consolidate.
+  /// \param [in,out] FuncsToRemove - List of functions to remove from the
+  /// module after outlining is completed.
+  /// \param [in,out] OutlinedFunctionNum - the number of new outlined
+  /// functions.
+  void deduplicateExtractedSections(Module &M, OutlinableGroup &CurrentGroup,
+                                    std::vector<Function *> &FuncsToRemove,
+                                    unsigned &OutlinedFunctionNum);
 
   /// The set of outlined Instructions, identified by their location in the
   /// sequential ordering of instructions in a Module.
