@@ -413,4 +413,8 @@ let TargetPrefix = "riscv" in {
                                      [LLVMMatchType<0>, LLVMVectorElementType<0>,
                                       llvm_anyint_ty],
                                      [IntrNoMem]>, RISCVVIntrinsic;
+
+  defm vfmul : RISCVBinaryAAX;
+  defm vfdiv : RISCVBinaryAAX;
+  defm vfrdiv : RISCVBinaryAAX;
 } // TargetPrefix = "riscv"
