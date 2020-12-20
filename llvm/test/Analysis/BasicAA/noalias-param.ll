@@ -22,9 +22,9 @@ entry:
   ret void
 }
 
-; TODO: Result should be the same for byval instead of noalias.
+; Result should be the same for byval instead of noalias.
 ; CHECK-LABEL: byval
-; CHECK: MayAlias: i32* %a, i32* %b
+; CHECK: NoAlias: i32* %a, i32* %b
 define void @byval(i32* byval(i32) %a, i32* %b) nounwind {
 entry:
   store i32 1, i32* %a
