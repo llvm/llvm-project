@@ -1507,6 +1507,13 @@ defm PseudoVFMUL       : VPseudoBinaryV_VV_VX</*IsFloat=*/1>;
 defm PseudoVFDIV       : VPseudoBinaryV_VV_VX</*IsFloat=*/1>;
 defm PseudoVFRDIV      : VPseudoBinaryV_VX</*IsFloat=*/1>;
 
+//===----------------------------------------------------------------------===//
+// 14.12. Vector Floating-Point Sign-Injection Instructions
+//===----------------------------------------------------------------------===//
+defm PseudoVFSGNJ      : VPseudoBinaryV_VV_VX</*IsFloat=*/1>;
+defm PseudoVFSGNJN     : VPseudoBinaryV_VV_VX</*IsFloat=*/1>;
+defm PseudoVFSGNJX     : VPseudoBinaryV_VV_VX</*IsFloat=*/1>;
+
 } // Predicates = [HasStdExtV, HasStdExtF]
 
 //===----------------------------------------------------------------------===//
@@ -1777,6 +1784,13 @@ defm "" : VPatBinaryV_VX<"int_riscv_vfrsub", "PseudoVFRSUB", AllFloatVectors>;
 defm "" : VPatBinaryV_VV_VX<"int_riscv_vfmul", "PseudoVFMUL", AllFloatVectors>;
 defm "" : VPatBinaryV_VV_VX<"int_riscv_vfdiv", "PseudoVFDIV", AllFloatVectors>;
 defm "" : VPatBinaryV_VX<"int_riscv_vfrdiv", "PseudoVFRDIV", AllFloatVectors>;
+
+//===----------------------------------------------------------------------===//
+// 14.12. Vector Floating-Point Sign-Injection Instructions
+//===----------------------------------------------------------------------===//
+defm "" : VPatBinaryV_VV_VX<"int_riscv_vfsgnj", "PseudoVFSGNJ", AllFloatVectors>;
+defm "" : VPatBinaryV_VV_VX<"int_riscv_vfsgnjn", "PseudoVFSGNJN", AllFloatVectors>;
+defm "" : VPatBinaryV_VV_VX<"int_riscv_vfsgnjx", "PseudoVFSGNJX", AllFloatVectors>;
 
 } // Predicates = [HasStdExtV, HasStdExtF]
 
