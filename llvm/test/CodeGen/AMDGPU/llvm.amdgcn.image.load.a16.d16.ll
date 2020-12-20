@@ -1,5 +1,6 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10 %s
 
 ; GCN-LABEL: {{^}}load.f16.1d:
 ; GFX9: image_load v0, v0, s[0:7] dmask:0x1 unorm a16 d16

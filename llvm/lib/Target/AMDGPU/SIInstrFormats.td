@@ -281,7 +281,7 @@ class VINTRPe <bits<2> op> : Enc32 {
   let Inst{31-26} = 0x32; // encoding
 }
 
-class MIMGe : Enc64 {
+class MIMGe_gfxpre11 : Enc64 {
   bits<8> vdata;
   bits<4> dmask;
   bits<1> unorm;
@@ -308,7 +308,7 @@ class MIMGe : Enc64 {
   let Inst{63} = d16;
 }
 
-class MIMGe_gfx6789 <bits<8> op> : MIMGe {
+class MIMGe_gfx6789 <bits<8> op> : MIMGe_gfxpre11 {
   bits<8> vaddr;
   bits<1> da;
 
@@ -318,7 +318,7 @@ class MIMGe_gfx6789 <bits<8> op> : MIMGe {
   let Inst{39-32} = vaddr;
 }
 
-class MIMGe_gfx10 <bits<8> op> : MIMGe {
+class MIMGe_gfx10 <bits<8> op> : MIMGe_gfxpre11 {
   bits<8> vaddr0;
   bits<3> dim;
   bits<2> nsa;
@@ -332,6 +332,44 @@ class MIMGe_gfx10 <bits<8> op> : MIMGe {
   let Inst{24-18} = op{6-0};
   let Inst{39-32} = vaddr0;
   let Inst{62} = a16;
+}
+
+class MIMGe_gfx11 <bits<8> op> : Enc64 {
+  bits<8> vdata;
+  bits<4> dmask;
+  bits<1> unorm;
+  bits<1> glc;
+  bits<1> r128;
+  bits<1> tfe;
+  bits<1> lwe;
+  bits<1> slc;
+  bits<7> srsrc;
+  bits<7> ssamp;
+  bit d16;
+  bits<1> a16;
+  bits<8> vaddr0;
+  bits<3> dim;
+  bits<1> nsa;
+  bits<1> dlc;
+
+  let Inst{0} = nsa;
+  let Inst{4-2} = dim;
+  let Inst{7} = unorm;
+  let Inst{11-8} = dmask;
+  let Inst{12} = slc;
+  let Inst{13} = dlc;
+  let Inst{14} = glc;
+  let Inst{15} = r128;
+  let Inst{16} = a16;
+  let Inst{17} = d16;
+  let Inst{25-18} = op;
+  let Inst{31-26} = 0x3c;
+  let Inst{39-32} = vaddr0;
+  let Inst{47-40} = vdata;
+  let Inst{52-48} = srsrc{6-2};
+  let Inst{53} = tfe;
+  let Inst{54} = lwe;
+  let Inst{62-58} = ssamp{6-2};
 }
 
 class EXPe : Enc64 {

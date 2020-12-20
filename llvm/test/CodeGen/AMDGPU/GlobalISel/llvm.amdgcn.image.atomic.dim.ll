@@ -2,6 +2,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -o - %s | FileCheck -check-prefix=GFX6 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -o - %s | FileCheck -check-prefix=GFX8 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -o - %s | FileCheck -check-prefix=GFX10 %s
+; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -o - %s | FileCheck -check-prefix=GFX10 %s
 
 
 define amdgpu_ps float @atomic_swap_i32_1d(<8 x i32> inreg %rsrc, i32 %data, i32 %s) {

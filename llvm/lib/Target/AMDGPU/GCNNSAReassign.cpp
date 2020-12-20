@@ -159,8 +159,16 @@ GCNNSAReassign::scavengeRegs(SmallVectorImpl<LiveInterval *> &Intervals) const {
 GCNNSAReassign::NSA_Status
 GCNNSAReassign::CheckNSA(const MachineInstr &MI, bool Fast) const {
   const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
-  if (!Info || Info->MIMGEncoding != AMDGPU::MIMGEncGfx10NSA)
+  if (!Info)
     return NSA_Status::NOT_NSA;
+
+  switch (Info->MIMGEncoding) {
+  case AMDGPU::MIMGEncGfx10NSA:
+  case AMDGPU::MIMGEncGfx11NSA:
+    break;
+  default:
+    return NSA_Status::NOT_NSA;
+  }
 
   int VAddr0Idx =
     AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::vaddr0);

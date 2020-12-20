@@ -519,7 +519,6 @@ DecodeStatus AMDGPUDisassembler::convertDPP8Inst(MCInst &MI) const {
 // Note that before gfx10, the MIMG encoding provided no information about
 // VADDR size. Consequently, decoded instructions always show address as if it
 // has 1 dword, which could be not really so.
-// TODO-GFX11
 DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
 
   int VDstIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
@@ -556,7 +555,7 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
   bool IsNSA = false;
   unsigned AddrSize = Info->VAddrDwords;
 
-  if (STI.getFeatureBits()[AMDGPU::FeatureGFX10]) {
+  if (isGFX10Plus()) {
     unsigned DimIdx =
         AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::dim);
     const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
@@ -568,7 +567,8 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
                (BaseOpcode->Gradients ? Dim->NumGradients : 0) +
                (BaseOpcode->Coordinates ? Dim->NumCoords : 0) +
                (BaseOpcode->LodOrClampOrMip ? 1 : 0);
-    IsNSA = Info->MIMGEncoding == AMDGPU::MIMGEncGfx10NSA;
+    IsNSA = Info->MIMGEncoding == AMDGPU::MIMGEncGfx10NSA ||
+            Info->MIMGEncoding == AMDGPU::MIMGEncGfx11NSA;
     if (!IsNSA) {
       if (AddrSize > 8)
         AddrSize = 16;
@@ -621,9 +621,9 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
     }
   }
 
+  // If not using NSA on GFX10+, widen address register to correct size.
   unsigned NewVAddr0 = AMDGPU::NoRegister;
-  if (STI.getFeatureBits()[AMDGPU::FeatureGFX10] && !IsNSA &&
-      AddrSize != Info->VAddrDwords) {
+  if (isGFX10Plus() && !IsNSA && AddrSize != Info->VAddrDwords) {
     unsigned VAddr0 = MI.getOperand(VAddr0Idx).getReg();
     unsigned VAddrSub0 = MRI.getSubReg(VAddr0, AMDGPU::sub0);
     VAddr0 = (VAddrSub0 != 0) ? VAddrSub0 : VAddr0;

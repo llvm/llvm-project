@@ -5899,6 +5899,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
       AMDGPU::getMIMGMIPMappingInfo(Intr->BaseOpcode);
   unsigned IntrOpcode = Intr->BaseOpcode;
   bool IsGFX10Plus = AMDGPU::isGFX10Plus(*Subtarget);
+  bool IsGFX11Plus = AMDGPU::isGFX11Plus(*Subtarget);
 
   SmallVector<EVT, 3> ResultTypes(Op->values());
   SmallVector<EVT, 3> OrigResultTypes(Op->values());
@@ -6078,8 +6079,16 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   //
   // SIShrinkInstructions will convert NSA encodings to non-NSA after register
   // allocation when possible.
-  bool UseNSA =
-      ST->hasFeature(AMDGPU::FeatureNSAEncoding) && VAddrs.size() >= 3;
+  //
+  // Disable NSA if it has more registers than can be addressed.
+  //
+  // TODO: we can actually allow partial NSA where the final register is a
+  // contiguous set of the remaining addresses.
+  // This could help where there are more addresses than supported.
+  //
+  bool UseNSA = ST->hasFeature(AMDGPU::FeatureNSAEncoding) &&
+      VAddrs.size() >= 3 && VAddrs.size() <= AMDGPU::getMIMGNSALimit(*Subtarget);
+
   SDValue VAddr;
   if (!UseNSA)
     VAddr = getBuildDwordsVector(DAG, DL, VAddrs);
@@ -6189,7 +6198,12 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
       UseNSA ? VAddrs.size() : VAddr.getValueType().getSizeInBits() / 32;
   int Opcode = -1;
 
-  if (IsGFX10Plus) {
+  if (IsGFX11Plus) {
+    Opcode = AMDGPU::getMIMGOpcode(IntrOpcode,
+                                   UseNSA ? AMDGPU::MIMGEncGfx11NSA
+                                          : AMDGPU::MIMGEncGfx11Default,
+                                   NumVDataDwords, NumVAddrDwords);
+  } else if (IsGFX10Plus) {
     Opcode = AMDGPU::getMIMGOpcode(IntrOpcode,
                                    UseNSA ? AMDGPU::MIMGEncGfx10NSA
                                           : AMDGPU::MIMGEncGfx10Default,
