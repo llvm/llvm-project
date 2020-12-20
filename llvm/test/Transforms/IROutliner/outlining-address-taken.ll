@@ -34,7 +34,7 @@ define void @outline_2() {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[C:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @[[FUNCTION_2:.*]](i32* [[A]], i32* [[B]], i32* [[C]])
+; CHECK-NEXT:    call void @[[FUNCTION_1]](i32* [[A]], i32* [[B]], i32* [[C]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -81,7 +81,7 @@ new_block:
   ret void
 }
 
-; CHECK: define internal void @[[FUNCTION_2]](i32* [[ARG0:%.*]], i32* [[ARG1:%.*]], i32* [[ARG2:%.*]])
+; CHECK: define internal void @[[FUNCTION_1]](i32* [[ARG0:%.*]], i32* [[ARG1:%.*]], i32* [[ARG2:%.*]])
 ; CHECK: entry_to_outline:
 ; CHECK-NEXT:    store i32 2, i32* [[ARG0]], align 4
 ; CHECK-NEXT:    store i32 3, i32* [[ARG1]], align 4

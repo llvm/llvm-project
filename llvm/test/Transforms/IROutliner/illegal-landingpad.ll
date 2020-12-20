@@ -17,7 +17,7 @@ define void @function1() personality i8 3 {
 ; CHECK:       exception:
 ; CHECK-NEXT:    [[CLEANUP:%.*]] = landingpad i8
 ; CHECK-NEXT:    cleanup
-; CHECK-NEXT:    call void @function1.outlined(i32* [[A]], i32* [[B]])
+; CHECK-NEXT:    call void @outlined_ir_func_0(i32* [[A]], i32* [[B]])
 ; CHECK-NEXT:    br label [[NORMAL]]
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret void
@@ -45,7 +45,7 @@ define void @function2() personality i8 3 {
 ; CHECK:       exception:
 ; CHECK-NEXT:    [[CLEANUP:%.*]] = landingpad i8
 ; CHECK-NEXT:    cleanup
-; CHECK-NEXT:    call void @function2.outlined(i32* [[A]], i32* [[B]])
+; CHECK-NEXT:    call void @outlined_ir_func_0(i32* [[A]], i32* [[B]])
 ; CHECK-NEXT:    br label [[NORMAL]]
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret void

@@ -38,9 +38,25 @@ struct OutlinableGroup {
   /// The sections that could be outlined
   std::vector<OutlinableRegion *> Regions;
 
+  /// The argument types for the function created as the overall function to
+  /// replace the extracted function for each region.
+  std::vector<Type *> ArgumentTypes;
+  /// The FunctionType for the overall function.
+  FunctionType *OutlinedFunctionType = nullptr;
+  /// The Function for the collective overall function.
+  Function *OutlinedFunction = nullptr;
+
   /// Flag for whether we should not consider this group of OutlinableRegions
   /// for extraction.
   bool IgnoreGroup = false;
+
+  /// Flag for whether the \ref ArgumentTypes have been defined after the
+  /// extraction of the first region.
+  bool InputTypesSet = false;
+
+  /// The number of input values in \ref ArgumentTypes.  Anything after this
+  /// index in ArgumentTypes is an output argument.
+  unsigned NumAggregateInputs = 0;
 
   /// For the \ref Regions, we look at every Value.  If it is a constant,
   /// we check whether it is the same in Region.
@@ -182,18 +198,19 @@ constantMatches(Value *V, unsigned GVN,
   return false;
 }
 
-/// Find whether \p Region matches the global value numbering to Constant mapping
-/// found so far.
+/// Find whether \p Region matches the global value numbering to Constant
+/// mapping found so far.
 ///
 /// \param Region - The OutlinableRegion we are checking for constants
+/// \param GVNToConstant - The mapping of global value number to Constants.
 /// \param NotSame - The set of global value numbers that do not have the same
 /// constant in each region.
 /// \returns true if all Constants are the same in every use of a Constant in \p
 /// Region and false if not
 static bool
 collectRegionsConstants(OutlinableRegion &Region,
-                       DenseMap<unsigned, Constant *> &GVNToConstant,
-                       DenseSet<unsigned> &NotSame) {
+                        DenseMap<unsigned, Constant *> &GVNToConstant,
+                        DenseSet<unsigned> &NotSame) {
   IRSimilarityCandidate &C = *Region.Candidate;
   for (IRInstructionData &ID : C) {
 
@@ -248,6 +265,48 @@ void OutlinableGroup::findSameConstants(DenseSet<unsigned> &NotSame) {
     }
 }
 
+Function *IROutliner::createFunction(Module &M, OutlinableGroup &Group,
+                                     unsigned FunctionNameSuffix) {
+  assert(!Group.OutlinedFunction && "Function is already defined!");
+
+  Group.OutlinedFunctionType = FunctionType::get(
+      Type::getVoidTy(M.getContext()), Group.ArgumentTypes, false);
+
+  // These functions will only be called from within the same module, so
+  // we can set an internal linkage.
+  Group.OutlinedFunction = Function::Create(
+      Group.OutlinedFunctionType, GlobalValue::InternalLinkage,
+      "outlined_ir_func_" + std::to_string(FunctionNameSuffix), M);
+
+  Group.OutlinedFunction->addFnAttr(Attribute::OptimizeForSize);
+  Group.OutlinedFunction->addFnAttr(Attribute::MinSize);
+
+  return Group.OutlinedFunction;
+}
+
+/// Move each BasicBlock in \p Old to \p New.
+///
+/// \param [in] Old - the function to move the basic blocks from.
+/// \param [in] New - The function to move the basic blocks to.
+/// \returns the first return block for the function in New.
+static BasicBlock *moveFunctionData(Function &Old, Function &New) {
+  Function::iterator CurrBB, NextBB, FinalBB;
+  BasicBlock *NewEnd = nullptr;
+  std::vector<Instruction *> DebugInsts;
+  for (CurrBB = Old.begin(), FinalBB = Old.end(); CurrBB != FinalBB;
+       CurrBB = NextBB) {
+    NextBB = std::next(CurrBB);
+    CurrBB->removeFromParent();
+    CurrBB->insertInto(&New);
+    Instruction *I = CurrBB->getTerminator();
+    if (ReturnInst *RI = dyn_cast<ReturnInst>(I))
+      NewEnd = &(*CurrBB);
+  }
+
+  assert(NewEnd && "No return instruction for new function?");
+  return NewEnd;
+}
+
 /// Find the GVN for the inputs that have been found by the CodeExtractor,
 /// excluding the ones that will be removed by llvm.assumes as these will be
 /// removed by the CodeExtractor.
@@ -256,8 +315,8 @@ void OutlinableGroup::findSameConstants(DenseSet<unsigned> &NotSame) {
 /// analyzing.
 /// \param [in] CurrentInputs - The set of inputs found by the
 /// CodeExtractor.
-/// \param [out] CurrentInputNumbers - The global value numbers for the extracted
-/// arguments.
+/// \param [out] CurrentInputNumbers - The global value numbers for the
+/// extracted arguments.
 static void mapInputsToGVNs(IRSimilarityCandidate &C,
                             SetVector<Value *> &CurrentInputs,
                             std::vector<unsigned> &EndInputNumbers) {
@@ -278,7 +337,8 @@ static void mapInputsToGVNs(IRSimilarityCandidate &C,
 /// function.
 ///
 /// \param [in,out] Region - The region of code to be analyzed.
-/// \param [out] Inputs - The global value numbers for the extracted arguments.
+/// \param [out] InputGVNs - The global value numbers for the extracted
+/// arguments.
 /// \param [out] ArgInputs - The values of the inputs to the extracted function.
 static void getCodeExtractorArguments(OutlinableRegion &Region,
                                       std::vector<unsigned> &InputGVNs,
@@ -332,8 +392,65 @@ static void getCodeExtractorArguments(OutlinableRegion &Region,
   mapInputsToGVNs(C, OverallInputs, InputGVNs);
 }
 
-void IROutliner::findAddInputsOutputs(
-    Module &M, OutlinableRegion &Region) {
+/// Look over the inputs and map each input argument to an argument in the
+/// overall function for the regions.  This creates a way to replace the
+/// arguments of the extracted function, with the arguments of the new overall
+/// function.
+///
+/// \param [in,out] Region - The region of code to be analyzed.
+/// \param [in] InputsGVNs - The global value numbering of the input values
+/// collected.
+/// \param [in] ArgInputs - The values of the arguments to the extracted
+/// function.
+static void
+findExtractedInputToOverallInputMapping(OutlinableRegion &Region,
+                                        std::vector<unsigned> InputGVNs,
+                                        SetVector<Value *> &ArgInputs) {
+
+  IRSimilarityCandidate &C = *Region.Candidate;
+  OutlinableGroup &Group = *Region.Parent;
+
+  // This counts the argument number in the overall function.
+  unsigned TypeIndex = 0;
+
+  // This counts the argument number in the extracted function.
+  unsigned OriginalIndex = 0;
+
+  // Find the mapping of the extracted arguments to the arguments for the
+  // overall function.
+  for (unsigned InputVal : InputGVNs) {
+    Optional<Value *> InputOpt = C.fromGVN(InputVal);
+    assert(InputOpt.hasValue() && "Global value number not found?");
+    Value *Input = InputOpt.getValue();
+
+    if (!Group.InputTypesSet)
+      Group.ArgumentTypes.push_back(Input->getType());
+
+    // It is not a constant, check if it is a sunken alloca.  If it is not,
+    // create the mapping from extracted to overall.  If it is, create the
+    // mapping of the index to the value.
+    unsigned Found = ArgInputs.count(Input);
+    assert(Found && "Input cannot be found!");
+
+    Region.ExtractedArgToAgg.insert(std::make_pair(OriginalIndex, TypeIndex));
+    Region.AggArgToExtracted.insert(std::make_pair(TypeIndex, OriginalIndex));
+    OriginalIndex++;
+    TypeIndex++;
+  }
+
+  // If we do not have definitions for the OutlinableGroup holding the region,
+  // set the length of the inputs here.  We should have the same inputs for
+  // all of the different regions contained in the OutlinableGroup since they
+  // are all structurally similar to one another
+  if (!Group.InputTypesSet) {
+    Group.NumAggregateInputs = TypeIndex;
+    Group.InputTypesSet = true;
+  }
+
+  Region.NumExtractedInputs = OriginalIndex;
+}
+
+void IROutliner::findAddInputsOutputs(Module &M, OutlinableRegion &Region) {
   std::vector<unsigned> Inputs;
   SetVector<Value *> ArgInputs;
 
@@ -341,6 +458,124 @@ void IROutliner::findAddInputsOutputs(
 
   if (Region.IgnoreRegion)
     return;
+
+  // Map the inputs found by the CodeExtractor to the arguments found for
+  // the overall function.
+  findExtractedInputToOverallInputMapping(Region, Inputs, ArgInputs);
+}
+
+/// Replace the extracted function in the Region with a call to the overall
+/// function constructed from the deduplicated similar regions, replacing and
+/// remapping the values passed to the extracted function as arguments to the
+/// new arguments of the overall function.
+///
+/// \param [in] M - The module to outline from.
+/// \param [in] Region - The regions of extracted code to be replaced with a new
+/// function.
+/// \returns a call instruction with the replaced function.
+CallInst *replaceCalledFunction(Module &M, OutlinableRegion &Region) {
+  std::vector<Value *> NewCallArgs;
+  DenseMap<unsigned, unsigned>::iterator ArgPair;
+
+  OutlinableGroup &Group = *Region.Parent;
+  CallInst *Call = Region.Call;
+  assert(Call && "Call to replace is nullptr?");
+  Function *AggFunc = Group.OutlinedFunction;
+  assert(AggFunc && "Function to replace with is nullptr?");
+
+  // If the arguments are the same size, there are not values that need to be
+  // made argument, or different output registers to handle.  We can simply
+  // replace the called function in this case.
+  assert(AggFunc->arg_size() == Call->arg_size() &&
+         "Can only replace calls with the same number of arguments!");
+
+  LLVM_DEBUG(dbgs() << "Replace call to " << *Call << " with call to "
+                    << *AggFunc << " with same number of arguments\n");
+  Call->setCalledFunction(AggFunc);
+  return Call;
+}
+
+// Within an extracted function, replace the argument uses of the extracted
+// region with the arguments of the function for an OutlinableGroup.
+//
+// \param OS [in] - The region of extracted code to be changed.
+static void replaceArgumentUses(OutlinableRegion &Region) {
+  OutlinableGroup &Group = *Region.Parent;
+  assert(Region.ExtractedFunction && "Region has no extracted function?");
+
+  for (unsigned ArgIdx = 0; ArgIdx < Region.ExtractedFunction->arg_size();
+       ArgIdx++) {
+    assert(Region.ExtractedArgToAgg.find(ArgIdx) !=
+               Region.ExtractedArgToAgg.end() &&
+           "No mapping from extracted to outlined?");
+    unsigned AggArgIdx = Region.ExtractedArgToAgg.find(ArgIdx)->second;
+    Argument *AggArg = Group.OutlinedFunction->getArg(AggArgIdx);
+    Argument *Arg = Region.ExtractedFunction->getArg(ArgIdx);
+    // The argument is an input, so we can simply replace it with the overall
+    // argument value
+    LLVM_DEBUG(dbgs() << "Replacing uses of input " << *Arg << " in function "
+                      << *Region.ExtractedFunction << " with " << *AggArg
+                      << " in function " << *Group.OutlinedFunction << "\n");
+    Arg->replaceAllUsesWith(AggArg);
+  }
+}
+
+/// Fill the new function that will serve as the replacement function for all of
+/// the extracted regions of a certain structure from the first region in the
+/// list of regions.  Replace this first region's extracted function with the
+/// new overall function.
+///
+/// \param M [in] - The module we are outlining from.
+/// \param CurrentGroup [in] - The group of regions to be outlined.
+/// \param FuncsToRemove [in,out] - Extracted functions to erase from module
+/// once outlining is complete.
+static void fillOverallFunction(Module &M, OutlinableGroup &CurrentGroup,
+                                std::vector<Function *> &FuncsToRemove) {
+  OutlinableRegion *CurrentOS = CurrentGroup.Regions[0];
+
+  // Move first extracted function's instructions into new function
+  LLVM_DEBUG(dbgs() << "Move instructions from "
+                    << *CurrentOS->ExtractedFunction << " to instruction "
+                    << *CurrentGroup.OutlinedFunction << "\n");
+  moveFunctionData(*CurrentOS->ExtractedFunction,
+                   *CurrentGroup.OutlinedFunction);
+
+  // Transfer the attributes
+  for (Attribute A :
+       CurrentOS->ExtractedFunction->getAttributes().getFnAttributes())
+    CurrentGroup.OutlinedFunction->addFnAttr(A);
+
+  replaceArgumentUses(*CurrentOS);
+
+  // Replace the call to the extracted function with the outlined function.
+  CurrentOS->Call = replaceCalledFunction(M, *CurrentOS);
+
+  // We only delete the extracted funcitons at the end since we may need to
+  // reference instructions contained in them for mapping purposes.
+  FuncsToRemove.push_back(CurrentOS->ExtractedFunction);
+}
+
+void IROutliner::deduplicateExtractedSections(
+    Module &M, OutlinableGroup &CurrentGroup,
+    std::vector<Function *> &FuncsToRemove, unsigned &OutlinedFunctionNum) {
+  createFunction(M, CurrentGroup, OutlinedFunctionNum);
+
+  std::vector<BasicBlock *> OutputStoreBBs;
+
+  OutlinableRegion *CurrentOS;
+
+  fillOverallFunction(M, CurrentGroup, FuncsToRemove);
+
+  // Do the same for the other extracted functions
+  for (unsigned Idx = 1; Idx < CurrentGroup.Regions.size(); Idx++) {
+    CurrentOS = CurrentGroup.Regions[Idx];
+
+    replaceArgumentUses(*CurrentOS);
+    CurrentOS->Call = replaceCalledFunction(M, *CurrentOS);
+    FuncsToRemove.push_back(CurrentOS->ExtractedFunction);
+  }
+
+  OutlinedFunctionNum++;
 }
 
 void IROutliner::pruneIncompatibleRegions(
@@ -471,6 +706,7 @@ unsigned IROutliner::doOutline(Module &M) {
                       });
 
   DenseSet<unsigned> NotSame;
+  std::vector<Function *> FuncsToRemove;
   // Iterate over the possible sets of similarity.
   for (SimilarityGroup &CandidateVec : SimilarityCandidates) {
     OutlinableGroup CurrentGroup;
@@ -516,7 +752,6 @@ unsigned IROutliner::doOutline(Module &M) {
     // Create functions out of all the sections, and mark them as outlined.
     OutlinedRegions.clear();
     for (OutlinableRegion *OS : CurrentGroup.Regions) {
-      OutlinedFunctionNum++;
       bool FunctionOutlined = extractSection(*OS);
       if (FunctionOutlined) {
         unsigned StartIdx = OS->Candidate->getStartIdx();
@@ -529,7 +764,16 @@ unsigned IROutliner::doOutline(Module &M) {
     }
 
     CurrentGroup.Regions = std::move(OutlinedRegions);
+
+    if (CurrentGroup.Regions.empty())
+      continue;
+
+    deduplicateExtractedSections(M, CurrentGroup, FuncsToRemove,
+                                 OutlinedFunctionNum);
   }
+
+  for (Function *F : FuncsToRemove)
+    F->eraseFromParent();
 
   return OutlinedFunctionNum;
 }

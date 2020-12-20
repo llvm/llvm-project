@@ -10,7 +10,7 @@ define void @extract1() {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[C:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @extract1.outlined(i32* [[A]], i32* [[B]], i32* [[C]])
+; CHECK-NEXT:    call void @outlined_ir_func_0(i32* [[A]], i32* [[B]], i32* [[C]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -32,7 +32,7 @@ define void @extract2() {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[C:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @extract2.outlined(i32* [[A]], i32* [[B]], i32* [[C]])
+; CHECK-NEXT:    call void @outlined_ir_func_0(i32* [[A]], i32* [[B]], i32* [[C]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -65,7 +65,7 @@ define void @extract_outs1() #0 {
 ; CHECK-NEXT:    store i32 [[ADD]], i32* [[OUTPUT]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[OUTPUT]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[OUTPUT]], align 4
-; CHECK-NEXT:    call void @extract_outs1.outlined(i32 [[TMP2]], i32 [[ADD]], i32* [[RESULT]])
+; CHECK-NEXT:    call void @outlined_ir_func_1(i32 [[TMP2]], i32 [[ADD]], i32* [[RESULT]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -102,7 +102,7 @@ define void @extract_outs2() #0 {
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    store i32 [[ADD]], i32* [[OUTPUT]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[OUTPUT]], align 4
-; CHECK-NEXT:    call void @extract_outs2.outlined(i32 [[TMP2]], i32 [[ADD]], i32* [[RESULT]])
+; CHECK-NEXT:    call void @outlined_ir_func_1(i32 [[TMP2]], i32 [[ADD]], i32* [[RESULT]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
