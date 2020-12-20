@@ -501,3 +501,19 @@ struct NegativeImplicitInheritedCtor : NegativeImplicitInheritedCtorBase {
 void Bug33557() {
   NegativeImplicitInheritedCtor I(5);
 }
+
+struct NegativeDefaultedCtorOutOfDecl {
+  NegativeDefaultedCtorOutOfDecl(const NegativeDefaultedCtorOutOfDecl &);
+  int F;
+};
+
+NegativeDefaultedCtorOutOfDecl::NegativeDefaultedCtorOutOfDecl(const NegativeDefaultedCtorOutOfDecl &) = default;
+
+struct PositiveDefaultConstructorOutOfDecl {
+  PositiveDefaultConstructorOutOfDecl();
+  int F;
+  // CHECK-FIXES: int F{};
+};
+
+PositiveDefaultConstructorOutOfDecl::PositiveDefaultConstructorOutOfDecl() = default;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: constructor does not initialize these fields: F
