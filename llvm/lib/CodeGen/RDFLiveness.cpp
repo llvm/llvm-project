@@ -300,7 +300,7 @@ NodeList Liveness::getAllReachingDefs(RegisterRef RefRR,
   auto DeadP = [](const NodeAddr<DefNode*> DA) -> bool {
     return DA.Addr->getFlags() & NodeAttrs::Dead;
   };
-  RDefs.resize(std::distance(RDefs.begin(), llvm::remove_if(RDefs, DeadP)));
+  llvm::erase_if(RDefs, DeadP);
 
   return RDefs;
 }

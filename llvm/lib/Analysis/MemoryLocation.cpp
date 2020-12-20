@@ -22,7 +22,7 @@ void LocationSize::print(raw_ostream &OS) const {
   OS << "LocationSize::";
   if (*this == beforeOrAfterPointer())
     OS << "beforeOrAfterPointer";
-  if (*this == afterPointer())
+  else if (*this == afterPointer())
     OS << "afterPointer";
   else if (*this == mapEmpty())
     OS << "mapEmpty";

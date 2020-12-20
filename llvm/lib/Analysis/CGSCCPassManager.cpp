@@ -1039,23 +1039,20 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
     DeadTargets.push_back(&E.getNode());
   }
   // Remove the easy cases quickly and actually pull them out of our list.
-  DeadTargets.erase(
-      llvm::remove_if(DeadTargets,
-                      [&](Node *TargetN) {
-                        SCC &TargetC = *G.lookupSCC(*TargetN);
-                        RefSCC &TargetRC = TargetC.getOuterRefSCC();
+  llvm::erase_if(DeadTargets, [&](Node *TargetN) {
+    SCC &TargetC = *G.lookupSCC(*TargetN);
+    RefSCC &TargetRC = TargetC.getOuterRefSCC();
 
-                        // We can't trivially remove internal targets, so skip
-                        // those.
-                        if (&TargetRC == RC)
-                          return false;
+    // We can't trivially remove internal targets, so skip
+    // those.
+    if (&TargetRC == RC)
+      return false;
 
-                        RC->removeOutgoingEdge(N, *TargetN);
-                        LLVM_DEBUG(dbgs() << "Deleting outgoing edge from '"
-                                          << N << "' to '" << TargetN << "'\n");
-                        return true;
-                      }),
-      DeadTargets.end());
+    RC->removeOutgoingEdge(N, *TargetN);
+    LLVM_DEBUG(dbgs() << "Deleting outgoing edge from '" << N << "' to '"
+                      << TargetN << "'\n");
+    return true;
+  });
 
   // Now do a batch removal of the internal ref edges left.
   auto NewRefSCCs = RC->removeInternalRefEdge(N, DeadTargets);

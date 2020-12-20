@@ -1304,8 +1304,7 @@ public:
   ///
   /// Erases all attachments matching the \c shouldRemove predicate.
   template <class PredTy> void remove_if(PredTy shouldRemove) {
-    Attachments.erase(llvm::remove_if(Attachments, shouldRemove),
-                      Attachments.end());
+    llvm::erase_if(Attachments, shouldRemove);
   }
 };
 

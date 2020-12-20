@@ -625,10 +625,11 @@ Expected<const T *> ELFFile<ELFT>::getEntry(const Elf_Shdr &Section,
 
   ArrayRef<T> Arr = *EntriesOrErr;
   if (Entry >= Arr.size())
-    return createError("can't read an entry at 0x" +
-                       Twine::utohexstr(Entry * sizeof(T)) +
-                       ": it goes past the end of the section (0x" +
-                       Twine::utohexstr(Section.sh_size) + ")");
+    return createError(
+        "can't read an entry at 0x" +
+        Twine::utohexstr(Entry * static_cast<uint64_t>(sizeof(T))) +
+        ": it goes past the end of the section (0x" +
+        Twine::utohexstr(Section.sh_size) + ")");
   return &Arr[Entry];
 }
 
