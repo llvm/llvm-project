@@ -5,11 +5,11 @@
 # RUN: rm -f %t/foo.a
 # RUN: llvm-ar rcs %t/foo.a %t/foo.o
 
-# FOO-FIRST: <_foo>:
+# FOO-FIRST: <_bar>:
 # FOO-FIRST: <_main>:
 
 # FOO-SECOND: <_main>:
-# FOO-SECOND: <_foo>:
+# FOO-SECOND: <_bar>:
 
 # RUN: %lld -lSystem -o %t/test-1 %t/test.o %t/foo.o -order_file %t/ord-1
 # RUN: llvm-objdump -d %t/test-1 | FileCheck %s --check-prefix=FOO-FIRST
@@ -83,9 +83,9 @@
 # RUN: %lld -lSystem -o %t/test-4 %t/foo.o %t/test.o -order_file %t/ord-multiple-4
 # RUN: llvm-objdump -d %t/test-4 | FileCheck %s --check-prefix=FOO-FIRST
 
-## _foo and _bar both point to the same location. When both symbols appear in
-## an order file, the location in question should be ordered according to the
-## lowest-ordered symbol that references it.
+## -[Foo doFoo:andBar:] and _bar both point to the same location. When both
+## symbols appear in an order file, the location in question should be ordered
+## according to the lowest-ordered symbol that references it.
 
 # RUN: %lld -lSystem -o %t/test-alias %t/test.o %t/foo.o -order_file %t/ord-alias
 # RUN: llvm-objdump -d %t/test-alias | FileCheck %s --check-prefix=FOO-FIRST
@@ -93,63 +93,63 @@
 # RUN: llvm-objdump -d %t/test-alias | FileCheck %s --check-prefix=FOO-FIRST
 
 #--- ord-1
-_foo # just a comment
+-[Foo doFoo:andBar:] # just a comment
 _main # another comment
 
 #--- ord-2
 _main # just a comment
-_foo # another comment
+-[Foo doFoo:andBar:] # another comment
 
 #--- ord-file-match
-foo.o:_foo
+foo.o:-[Foo doFoo:andBar:]
 _main
 
 #--- ord-file-nomatch
-bar.o:_foo
+bar.o:-[Foo doFoo:andBar:]
 _main
-_foo
+-[Foo doFoo:andBar:]
 
 #--- ord-arch-match
-x86_64:_foo
+x86_64:-[Foo doFoo:andBar:]
 _main
 
 #--- ord-arch-nomatch
-ppc:_foo
+ppc:-[Foo doFoo:andBar:]
 _main
-_foo
+-[Foo doFoo:andBar:]
 
 #--- ord-arch-file-match
-x86_64:bar.o:_foo
+x86_64:bar.o:-[Foo doFoo:andBar:]
 _main
 
 #--- ord-multiple-1
-_foo
+-[Foo doFoo:andBar:]
 _main
-foo.o:_foo
+foo.o:-[Foo doFoo:andBar:]
 
 #--- ord-multiple-2
-foo.o:_foo
+foo.o:-[Foo doFoo:andBar:]
 _main
-_foo
+-[Foo doFoo:andBar:]
 
 #--- ord-multiple-3
-_foo
+-[Foo doFoo:andBar:]
 _main
-_foo
+-[Foo doFoo:andBar:]
 
 #--- ord-multiple-4
-foo.o:_foo
+foo.o:-[Foo doFoo:andBar:]
 _main
-foo.o:_foo
+foo.o:-[Foo doFoo:andBar:]
 
 #--- ord-alias
 _bar
 _main
-_foo
+-[Foo doFoo:andBar:]
 
 #--- foo.s
-.globl _foo
-_foo:
+.globl "-[Foo doFoo:andBar:]"
+"-[Foo doFoo:andBar:]":
 _bar:
   ret
 
@@ -157,5 +157,5 @@ _bar:
 .globl _main
 
 _main:
-  callq _foo
+  callq "-[Foo doFoo:andBar:]"
   ret
