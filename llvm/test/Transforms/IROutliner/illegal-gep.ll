@@ -12,7 +12,7 @@ define void @function1(%struct.ST* %s, i64 %t) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @function1.outlined(i32* [[A]], i32* [[B]])
+; CHECK-NEXT:    call void @outlined_ir_func_0(i32* [[A]], i32* [[B]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_ST:%.*]], %struct.ST* [[S:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ST]], %struct.ST* [[S]], i64 [[T:%.*]]
 ; CHECK-NEXT:    ret void
@@ -32,7 +32,7 @@ define void @function2(%struct.ST* %s, i64 %t) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @function2.outlined(i32* [[A]], i32* [[B]])
+; CHECK-NEXT:    call void @outlined_ir_func_0(i32* [[A]], i32* [[B]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_ST:%.*]], %struct.ST* [[S:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_ST]], %struct.ST* [[S]], i64 [[T:%.*]]
 ; CHECK-NEXT:    ret void
