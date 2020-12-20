@@ -14,6 +14,7 @@ class TestCase(TestBase):
     @skipIfLinux
     # freebsd's dlopen ditto
     @expectedFailureAll(oslist=["freebsd"])
+    @expectedFailureNetBSD
     @no_debug_info_test
     def test(self):
         self.build()

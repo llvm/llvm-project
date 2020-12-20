@@ -52,6 +52,7 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.signal_one_thread()
 
     @skipUnlessPlatform(["netbsd"])
+    @expectedFailureNetBSD
     @llgs_test
     def test_signal_one_thread_llgs(self):
         self.build()
@@ -79,6 +80,7 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.signal_all_threads()
 
     @skipUnlessPlatform(["netbsd"])
+    @expectedFailureNetBSD
     @llgs_test
     def test_signal_all_threads_llgs(self):
         self.build()
