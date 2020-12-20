@@ -32,7 +32,7 @@ define void @outline_constants2() {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[C:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @[[FUNCTION_0]](i32* [[A]], i32* [[B]], i32* [[C]])
+; CHECK-NEXT:    call void @[[FUNCTION_1:.*]](i32* [[A]], i32* [[B]], i32* [[C]])
 ; CHECK-NEXT:    ret void
 ;
 entry:

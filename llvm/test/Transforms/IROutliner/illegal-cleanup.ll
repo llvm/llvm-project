@@ -16,7 +16,7 @@ define void @function1() personality i8 3 {
 ; CHECK-NEXT:    to label [[NORMAL:%.*]] unwind label [[EXCEPTION:%.*]]
 ; CHECK:       exception:
 ; CHECK-NEXT:    [[CLEAN:%.*]] = cleanuppad within none []
-; CHECK-NEXT:    call void @outlined_ir_func_0(i32* [[A]], i32* [[B]])
+; CHECK-NEXT:    call void @function1.outlined(i32* [[A]], i32* [[B]])
 ; CHECK-NEXT:    br label [[NORMAL]]
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret void
@@ -43,7 +43,7 @@ define void @function2() personality i8 3 {
 ; CHECK-NEXT:    to label [[NORMAL:%.*]] unwind label [[EXCEPTION:%.*]]
 ; CHECK:       exception:
 ; CHECK-NEXT:    [[CLEAN:%.*]] = cleanuppad within none []
-; CHECK-NEXT:    call void @outlined_ir_func_0(i32* [[A]], i32* [[B]])
+; CHECK-NEXT:    call void @function2.outlined(i32* [[A]], i32* [[B]])
 ; CHECK-NEXT:    br label [[NORMAL]]
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret void

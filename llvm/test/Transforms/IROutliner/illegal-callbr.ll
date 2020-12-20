@@ -9,11 +9,11 @@ define i32 @function1(i32 %a, i32 %b) {
 ; CHECK-LABEL: @function1(
 ; CHECK-NEXT:  bb0:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[A:%.*]], 4
-; CHECK-NEXT:    call void @outlined_ir_func_0(i32 [[B:%.*]])
+; CHECK-NEXT:    call void @function1.outlined(i32 [[B:%.*]])
 ; CHECK-NEXT:    callbr void asm "xorl $0, $0
 ; CHECK-NEXT:    to label [[NORMAL:%.*]] [label %fail1]
 ; CHECK:       normal:
-; CHECK-NEXT:    call void @outlined_ir_func_0(i32 [[B]])
+; CHECK-NEXT:    call void @function1.outlined.1(i32 [[B]])
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       fail1:
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[B]], 1
@@ -39,11 +39,11 @@ define i32 @function2(i32 %a, i32 %b) {
 ; CHECK-LABEL: @function2(
 ; CHECK-NEXT:  bb0:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[A:%.*]], 4
-; CHECK-NEXT:    call void @outlined_ir_func_0(i32 [[B:%.*]])
+; CHECK-NEXT:    call void @function2.outlined(i32 [[B:%.*]])
 ; CHECK-NEXT:    callbr void asm "xorl $0, $0
 ; CHECK-NEXT:    to label [[NORMAL:%.*]] [label %fail1]
 ; CHECK:       normal:
-; CHECK-NEXT:    call void @outlined_ir_func_0(i32 [[B]])
+; CHECK-NEXT:    call void @function2.outlined.2(i32 [[B]])
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       fail1:
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[B]], 1
