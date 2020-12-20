@@ -283,6 +283,17 @@ let TargetPrefix = "riscv" in {
     let ExtendOperand = 1;
   }
 
+  class RISCVTernaryAAAXNoMask
+        : Intrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyint_ty,
+                     LLVMMatchType<1>],
+                    [IntrNoMem]>, RISCVVIntrinsic;
+  class RISCVTernaryAAAXMask
+        : Intrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyint_ty,
+                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, LLVMMatchType<1>],
+                    [IntrNoMem]>, RISCVVIntrinsic;
+
   multiclass RISCVUSLoad {
     def "int_riscv_" # NAME : RISCVUSLoad;
     def "int_riscv_" # NAME # "_mask" : RISCVUSLoadMask;
@@ -327,6 +338,10 @@ let TargetPrefix = "riscv" in {
   multiclass RISCVSaturatingBinaryAAX {
     def "int_riscv_" # NAME : RISCVSaturatingBinaryAAXNoMask;
     def "int_riscv_" # NAME # "_mask" : RISCVSaturatingBinaryAAXMask;
+  }
+  multiclass RISCVTernaryAAAX {
+    def "int_riscv_" # NAME : RISCVTernaryAAAXNoMask;
+    def "int_riscv_" # NAME # "_mask" : RISCVTernaryAAAXMask;
   }
 
   defm vle : RISCVUSLoad;
@@ -428,4 +443,7 @@ let TargetPrefix = "riscv" in {
   defm vfsgnj : RISCVBinaryAAX;
   defm vfsgnjn : RISCVBinaryAAX;
   defm vfsgnjx : RISCVBinaryAAX;
+
+  defm vslideup : RISCVTernaryAAAX;
+  defm vslidedown : RISCVTernaryAAAX;
 } // TargetPrefix = "riscv"
