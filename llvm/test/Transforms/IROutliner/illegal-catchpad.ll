@@ -18,7 +18,7 @@ define void @function1() personality i8 3 {
 ; CHECK-NEXT:    [[CS1:%.*]] = catchswitch within none [label %catchpad1] unwind to caller
 ; CHECK:       catchpad1:
 ; CHECK-NEXT:    [[TMP0:%.*]] = catchpad within [[CS1]] []
-; CHECK-NEXT:    call void @function1.outlined(i32* [[A]], i32* [[B]])
+; CHECK-NEXT:    call void @outlined_ir_func_0(i32* [[A]], i32* [[B]])
 ; CHECK-NEXT:    br label [[NORMAL]]
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret void
@@ -49,7 +49,7 @@ define void @function2() personality i8 3 {
 ; CHECK-NEXT:    [[CS1:%.*]] = catchswitch within none [label %catchpad1] unwind to caller
 ; CHECK:       catchpad1:
 ; CHECK-NEXT:    [[TMP0:%.*]] = catchpad within [[CS1]] []
-; CHECK-NEXT:    call void @function2.outlined(i32* [[A]], i32* [[B]])
+; CHECK-NEXT:    call void @outlined_ir_func_0(i32* [[A]], i32* [[B]])
 ; CHECK-NEXT:    br label [[NORMAL]]
 ; CHECK:       normal:
 ; CHECK-NEXT:    ret void
