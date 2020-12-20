@@ -12,7 +12,7 @@ define void @function1() personality i8 3 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @outlined_ir_func_0(i32* [[A]], i32* [[B]])
+; CHECK-NEXT:    call void @function1.outlined(i32* [[A]], i32* [[B]])
 ; CHECK-NEXT:    invoke void @llvm.donothing()
 ; CHECK-NEXT:    to label [[NORMAL:%.*]] unwind label [[EXCEPTION:%.*]]
 ; CHECK:       exception:
@@ -40,7 +40,7 @@ define void @function2() personality i8 3 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @outlined_ir_func_0(i32* [[A]], i32* [[B]])
+; CHECK-NEXT:    call void @function2.outlined(i32* [[A]], i32* [[B]])
 ; CHECK-NEXT:    invoke void @llvm.donothing()
 ; CHECK-NEXT:    to label [[NORMAL:%.*]] unwind label [[EXCEPTION:%.*]]
 ; CHECK:       exception:

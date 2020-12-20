@@ -10,7 +10,7 @@
 define void @outline_globals1() {
 ; CHECK-LABEL: @outline_globals1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @outlined_ir_func_0()
+; CHECK-NEXT:    call void @[[FUNCTION_0:.*]]()
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -23,7 +23,7 @@ entry:
 define void @outline_globals2() {
 ; CHECK-LABEL: @outline_globals2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @outlined_ir_func_0()
+; CHECK-NEXT:    call void @[[FUNCTION_1:.*]]()
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -33,7 +33,14 @@ entry:
   ret void
 }
 
-; CHECK: define internal void @outlined_ir_func_0()
+; CHECK: define internal void @[[FUNCTION_0]]()
+; CHECK: entry_to_outline:
+; CHECK-NEXT: [[TMP1:%.*]] = load i32, i32* @global1, align 4
+; CHECK-NEXT: [[TMP2:%.*]] = load i32, i32* @global2, align 4
+; CHECK-NEXT: [[ADD:%.*]] = add i32 [[TMP1]], [[TMP2]]
+
+
+; CHECK: define internal void @[[FUNCTION_1]]()
 ; CHECK: entry_to_outline:
 ; CHECK-NEXT: [[TMP1:%.*]] = load i32, i32* @global1, align 4
 ; CHECK-NEXT: [[TMP2:%.*]] = load i32, i32* @global2, align 4
