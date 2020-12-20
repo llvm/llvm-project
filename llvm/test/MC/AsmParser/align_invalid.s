@@ -8,3 +8,7 @@
 .align 32
 # ELF-NOT: error
 # DARWIN: error: invalid alignment value
+
+.align 0x100000000
+# ELF:    error: alignment must be smaller than 2**32
+# DARWIN: error: invalid alignment value

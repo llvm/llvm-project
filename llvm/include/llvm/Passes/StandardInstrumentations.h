@@ -72,7 +72,7 @@ private:
   bool shouldRun(StringRef PassID, Any IR);
 };
 
-class OptBisectInstrumentation : public OptBisect {
+class OptBisectInstrumentation {
 public:
   OptBisectInstrumentation() {}
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
