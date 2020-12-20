@@ -563,9 +563,6 @@ private:
   // Is this is context-sensitive instrumentation.
   bool IsCS;
 
-  // If we instrument function entry BB by default.
-  bool InstrumentFuncEntry;
-
   // A map that stores the Comdat group in function F.
   std::unordered_multimap<Comdat *, GlobalValue *> &ComdatMembers;
 
