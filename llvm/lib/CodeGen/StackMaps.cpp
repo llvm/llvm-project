@@ -361,10 +361,7 @@ StackMaps::parseRegisterLiveOutMask(const uint32_t *Mask) const {
     }
   }
 
-  LiveOuts.erase(
-      llvm::remove_if(LiveOuts,
-                      [](const LiveOutReg &LO) { return LO.Reg == 0; }),
-      LiveOuts.end());
+  llvm::erase_if(LiveOuts, [](const LiveOutReg &LO) { return LO.Reg == 0; });
 
   return LiveOuts;
 }

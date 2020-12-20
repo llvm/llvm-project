@@ -1636,9 +1636,7 @@ bool DwarfDebug::buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
 
     // Remove all values that are no longer live.
     size_t Index = std::distance(EB, EI);
-    auto Last =
-        remove_if(OpenRanges, [&](OpenRange &R) { return R.first <= Index; });
-    OpenRanges.erase(Last, OpenRanges.end());
+    erase_if(OpenRanges, [&](OpenRange &R) { return R.first <= Index; });
 
     // If we are dealing with a clobbering entry, this iteration will result in
     // a location list entry starting after the clobbering instruction.
