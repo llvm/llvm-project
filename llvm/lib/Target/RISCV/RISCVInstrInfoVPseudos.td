@@ -1544,6 +1544,11 @@ defm PseudoVFDIV       : VPseudoBinaryV_VV_VX</*IsFloat=*/1>;
 defm PseudoVFRDIV      : VPseudoBinaryV_VX</*IsFloat=*/1>;
 
 //===----------------------------------------------------------------------===//
+// 14.5. Vector Widening Floating-Point Multiply
+//===----------------------------------------------------------------------===//
+defm PseudoVFWMUL      : VPseudoBinaryW_VV_VX</*IsFloat=*/1>;
+
+//===----------------------------------------------------------------------===//
 // 14.12. Vector Floating-Point Sign-Injection Instructions
 //===----------------------------------------------------------------------===//
 defm PseudoVFSGNJ      : VPseudoBinaryV_VV_VX</*IsFloat=*/1>;
@@ -1828,6 +1833,11 @@ defm "" : VPatBinaryW_WV_WX<"int_riscv_vfwsub_w", "PseudoVFWSUB", AllWidenableFl
 defm "" : VPatBinaryV_VV_VX<"int_riscv_vfmul", "PseudoVFMUL", AllFloatVectors>;
 defm "" : VPatBinaryV_VV_VX<"int_riscv_vfdiv", "PseudoVFDIV", AllFloatVectors>;
 defm "" : VPatBinaryV_VX<"int_riscv_vfrdiv", "PseudoVFRDIV", AllFloatVectors>;
+
+//===----------------------------------------------------------------------===//
+// 14.5. Vector Widening Floating-Point Multiply
+//===----------------------------------------------------------------------===//
+defm "" : VPatBinaryW_VV_VX<"int_riscv_vfwmul", "PseudoVFWMUL", AllWidenableFloatVectors>;
 
 //===----------------------------------------------------------------------===//
 // 14.12. Vector Floating-Point Sign-Injection Instructions
