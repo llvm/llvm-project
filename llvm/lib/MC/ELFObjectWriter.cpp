@@ -1258,9 +1258,9 @@ void ELFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
                                                const MCAsmLayout &Layout) {
   // The presence of symbol versions causes undefined symbols and
   // versions declared with @@@ to be renamed.
-  for (const std::pair<StringRef, const MCSymbol *> &P : Asm.Symvers) {
-    StringRef AliasName = P.first;
-    const auto &Symbol = cast<MCSymbolELF>(*P.second);
+  for (const MCAssembler::Symver &S : Asm.Symvers) {
+    StringRef AliasName = S.Name;
+    const auto &Symbol = cast<MCSymbolELF>(*S.Sym);
     size_t Pos = AliasName.find('@');
     assert(Pos != StringRef::npos);
 
@@ -1286,18 +1286,16 @@ void ELFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
     if (!Symbol.isUndefined() && !Rest.startswith("@@@"))
       continue;
 
-    // FIXME: Get source locations for these errors or diagnose them earlier.
     if (Symbol.isUndefined() && Rest.startswith("@@") &&
         !Rest.startswith("@@@")) {
-      Asm.getContext().reportError(SMLoc(), "versioned symbol " + AliasName +
-                                                " must be defined");
+      Asm.getContext().reportError(S.Loc, "default version symbol " +
+                                              AliasName + " must be defined");
       continue;
     }
 
     if (Renames.count(&Symbol) && Renames[&Symbol] != Alias) {
-      Asm.getContext().reportError(
-          SMLoc(), llvm::Twine("multiple symbol versions defined for ") +
-                       Symbol.getName());
+      Asm.getContext().reportError(S.Loc, Twine("multiple versions for ") +
+                                              Symbol.getName());
       continue;
     }
 

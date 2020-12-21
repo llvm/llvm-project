@@ -342,7 +342,8 @@ void MCELFStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {
 
 void MCELFStreamer::emitELFSymverDirective(StringRef AliasName,
                                            const MCSymbol *Aliasee) {
-  getAssembler().Symvers.push_back({AliasName, Aliasee});
+  getAssembler().Symvers.push_back(
+      MCAssembler::Symver{AliasName, Aliasee, getStartTokLoc()});
 }
 
 void MCELFStreamer::emitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
