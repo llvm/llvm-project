@@ -45,6 +45,7 @@ class VPWidenMemoryInstructionRecipe;
 class VPValue {
   friend class VPBuilder;
   friend class VPDef;
+  friend class VPInstruction;
   friend struct VPlanTransforms;
   friend class VPBasicBlock;
   friend class VPInterleavedAccessInfo;
@@ -236,7 +237,7 @@ public:
   }
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
-  static inline bool classof(const VPRecipeBase *Recipe);
+  static inline bool classof(const VPDef *Recipe);
 };
 
 /// This class augments a recipe with a set of VPValues defined by the recipe.
@@ -246,6 +247,9 @@ public:
 /// from VPDef before VPValue.
 class VPDef {
   friend class VPValue;
+
+  /// Subclass identifier (for isa/dyn_cast).
+  const unsigned char SubclassID;
 
   /// The VPValues defined by this VPDef.
   TinyPtrVector<VPValue *> DefinedValues;
@@ -269,6 +273,30 @@ class VPDef {
   }
 
 public:
+  /// An enumeration for keeping track of the concrete subclass of VPRecipeBase
+  /// that is actually instantiated. Values of this enumeration are kept in the
+  /// SubclassID field of the VPRecipeBase objects. They are used for concrete
+  /// type identification.
+  using VPRecipeTy = enum {
+    VPBlendSC,
+    VPBranchOnMaskSC,
+    VPInstructionSC,
+    VPInterleaveSC,
+    VPPredInstPHISC,
+    VPReductionSC,
+    VPReplicateSC,
+    VPWidenCallSC,
+    VPWidenCanonicalIVSC,
+    VPWidenGEPSC,
+    VPWidenIntOrFpInductionSC,
+    VPWidenMemoryInstructionSC,
+    VPWidenPHISC,
+    VPWidenSC,
+    VPWidenSelectSC
+  };
+
+  VPDef(const unsigned char SC) : SubclassID(SC) {}
+
   virtual ~VPDef() {
     for (VPValue *D : make_early_inc_range(DefinedValues)) {
       assert(D->Def == this &&
@@ -295,6 +323,11 @@ public:
 
   /// Returns the number of values defined by the VPDef.
   unsigned getNumDefinedValues() const { return DefinedValues.size(); }
+
+  /// \return an ID for the concrete type of this object.
+  /// This is used to implement the classof checks. This should not be used
+  /// for any other purpose, as the values may change as LLVM evolves.
+  unsigned getVPDefID() const { return SubclassID; }
 };
 
 class VPlan;
