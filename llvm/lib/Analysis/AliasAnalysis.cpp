@@ -943,9 +943,9 @@ bool llvm::isNoAliasCall(const Value *V) {
   return false;
 }
 
-bool llvm::isNoAliasArgument(const Value *V) {
+static bool isNoAliasOrByValArgument(const Value *V) {
   if (const Argument *A = dyn_cast<Argument>(V))
-    return A->hasNoAliasAttr();
+    return A->hasNoAliasAttr() || A->hasByValAttr();
   return false;
 }
 
@@ -956,13 +956,13 @@ bool llvm::isIdentifiedObject(const Value *V) {
     return true;
   if (isNoAliasCall(V))
     return true;
-  if (const Argument *A = dyn_cast<Argument>(V))
-    return A->hasNoAliasAttr() || A->hasByValAttr();
+  if (isNoAliasOrByValArgument(V))
+    return true;
   return false;
 }
 
 bool llvm::isIdentifiedFunctionLocal(const Value *V) {
-  return isa<AllocaInst>(V) || isNoAliasCall(V) || isNoAliasArgument(V);
+  return isa<AllocaInst>(V) || isNoAliasCall(V) || isNoAliasOrByValArgument(V);
 }
 
 void llvm::getAAResultsAnalysisUsage(AnalysisUsage &AU) {
