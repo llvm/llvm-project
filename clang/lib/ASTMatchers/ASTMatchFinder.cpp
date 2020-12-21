@@ -475,6 +475,55 @@ public:
         }
       }
       return true;
+    } else if (auto *LE = dyn_cast<LambdaExpr>(S)) {
+      for (auto I : llvm::zip(LE->captures(), LE->capture_inits())) {
+        auto C = std::get<0>(I);
+        ASTNodeNotSpelledInSourceScope RAII(
+            this, TraversingASTNodeNotSpelledInSource || !C.isExplicit());
+        TraverseLambdaCapture(LE, &C, std::get<1>(I));
+      }
+
+      {
+        ASTNodeNotSpelledInSourceScope RAII(this, true);
+        TraverseDecl(LE->getLambdaClass());
+      }
+      {
+        ASTNodeNotAsIsSourceScope RAII(this, true);
+
+        // We need to poke around to find the bits that might be explicitly
+        // written.
+        TypeLoc TL = LE->getCallOperator()->getTypeSourceInfo()->getTypeLoc();
+        FunctionProtoTypeLoc Proto = TL.getAsAdjusted<FunctionProtoTypeLoc>();
+
+        if (auto *TPL = LE->getTemplateParameterList()) {
+          for (NamedDecl *D : *TPL) {
+            TraverseDecl(D);
+          }
+          if (Expr *RequiresClause = TPL->getRequiresClause()) {
+            TraverseStmt(RequiresClause);
+          }
+        }
+
+        if (LE->hasExplicitParameters()) {
+          // Visit parameters.
+          for (ParmVarDecl *Param : Proto.getParams())
+            TraverseDecl(Param);
+        }
+
+        const auto *T = Proto.getTypePtr();
+        for (const auto &E : T->exceptions())
+          TraverseType(E);
+
+        if (Expr *NE = T->getNoexceptExpr())
+          TraverseStmt(NE, Queue);
+
+        if (LE->hasExplicitResultType())
+          TraverseTypeLoc(Proto.getReturnLoc());
+        TraverseStmt(LE->getTrailingRequiresClause());
+
+        TraverseStmt(LE->getBody());
+      }
+      return true;
     }
     return RecursiveASTVisitor<MatchASTVisitor>::dataTraverseNode(S, Queue);
   }
@@ -617,6 +666,9 @@ public:
   bool IsMatchingInASTNodeNotSpelledInSource() const override {
     return TraversingASTNodeNotSpelledInSource;
   }
+  bool IsMatchingInASTNodeNotAsIs() const override {
+    return TraversingASTNodeNotAsIs;
+  }
 
   bool TraverseTemplateInstantiations(ClassTemplateDecl *D) {
     ASTNodeNotSpelledInSourceScope RAII(this, true);
@@ -638,6 +690,7 @@ public:
 
 private:
   bool TraversingASTNodeNotSpelledInSource = false;
+  bool TraversingASTNodeNotAsIs = false;
   bool TraversingASTChildrenNotSpelledInSource = false;
 
   struct ASTNodeNotSpelledInSourceScope {
@@ -648,6 +701,18 @@ private:
     ~ASTNodeNotSpelledInSourceScope() {
       MV->TraversingASTNodeNotSpelledInSource = MB;
     }
+
+  private:
+    MatchASTVisitor *MV;
+    bool MB;
+  };
+
+  struct ASTNodeNotAsIsSourceScope {
+    ASTNodeNotAsIsSourceScope(MatchASTVisitor *V, bool B)
+        : MV(V), MB(V->TraversingASTNodeNotAsIs) {
+      V->TraversingASTNodeNotAsIs = B;
+    }
+    ~ASTNodeNotAsIsSourceScope() { MV->TraversingASTNodeNotAsIs = MB; }
 
   private:
     MatchASTVisitor *MV;
