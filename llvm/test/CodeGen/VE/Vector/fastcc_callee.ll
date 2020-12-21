@@ -137,3 +137,11 @@ define fastcc <512 x i1> @vreg_arg_v512i1_vmp3(<512 x i1> %vmp1, <512 x i1> %vmp
 ; CHECK-NEXT:    b.l.t (, %s10)
   ret <512 x i1> %vmp3
 }
+
+define fastcc <256 x i1> @vmp_cc_bug(<256 x i1> %vm1, <256 x i1> %vm2, <512 x i1> %vmp2, <256 x i1> %vm6) {
+; CHECK-LABEL: vmp_cc_bug:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andm %vm1, %vm0, %vm6
+; CHECK-NEXT:    b.l.t (, %s10)
+  ret <256 x i1> %vm6
+}
