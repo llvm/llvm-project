@@ -304,8 +304,7 @@ protected:
       }
 
       const char *file_path = command.GetArgumentAtIndex(0);
-      static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-      Timer scoped_timer(func_cat, "(lldb) target create '%s'", file_path);
+      LLDB_SCOPED_TIMERF("(lldb) target create '%s'", file_path);
       FileSpec file_spec;
 
       if (file_path) {
