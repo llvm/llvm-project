@@ -157,33 +157,26 @@ static void denormalizeSimpleFlag(SmallVectorImpl<const char *> &Args,
   Args.push_back(Spelling);
 }
 
-namespace {
-template <typename T> struct FlagToValueNormalizer {
-  T Value;
+template <typename T> static constexpr bool is_uint64_t_convertible() {
+  return !std::is_same<T, uint64_t>::value &&
+         llvm::is_integral_or_enum<T>::value;
+}
 
-  Optional<T> operator()(OptSpecifier Opt, unsigned, const ArgList &Args,
-                         DiagnosticsEngine &) {
+template <typename T,
+          std::enable_if_t<!is_uint64_t_convertible<T>(), bool> = false>
+static auto makeFlagToValueNormalizer(T Value) {
+  return [Value](OptSpecifier Opt, unsigned, const ArgList &Args,
+                 DiagnosticsEngine &) -> Optional<T> {
     if (Args.hasArg(Opt))
       return Value;
     return None;
-  }
-};
-} // namespace
-
-template <typename T> static constexpr bool is_int_convertible() {
-  return sizeof(T) <= sizeof(uint64_t) &&
-         std::is_trivially_constructible<T, uint64_t>::value &&
-         std::is_trivially_constructible<uint64_t, T>::value;
+  };
 }
 
-template <typename T, std::enable_if_t<is_int_convertible<T>(), bool> = false>
-static FlagToValueNormalizer<uint64_t> makeFlagToValueNormalizer(T Value) {
-  return FlagToValueNormalizer<uint64_t>{Value};
-}
-
-template <typename T, std::enable_if_t<!is_int_convertible<T>(), bool> = false>
-static FlagToValueNormalizer<T> makeFlagToValueNormalizer(T Value) {
-  return FlagToValueNormalizer<T>{std::move(Value)};
+template <typename T,
+          std::enable_if_t<is_uint64_t_convertible<T>(), bool> = false>
+static auto makeFlagToValueNormalizer(T Value) {
+  return makeFlagToValueNormalizer(uint64_t(Value));
 }
 
 static auto makeBooleanOptionNormalizer(bool Value, bool OtherValue,
