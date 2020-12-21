@@ -77,7 +77,7 @@ on the standard library facilities and the LLVM support libraries as much as
 possible.
 
 LLVM support libraries (for example, `ADT
-<https://github.com/llvm/llvm-project/tree/master/llvm/include/llvm/ADT>`_)
+<https://github.com/llvm/llvm-project/tree/main/llvm/include/llvm/ADT>`_)
 implement specialized data structures or functionality missing in the standard
 library. Such libraries are usually implemented in the ``llvm`` namespace and
 follow the expected standard interface, when there is one.

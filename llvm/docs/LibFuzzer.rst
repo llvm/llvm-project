@@ -571,7 +571,7 @@ Periodically restart both fuzzers so that they can use each other's findings.
 Currently, there is no simple way to run both fuzzing engines in parallel while sharing the same corpus dir.
 
 You may also use AFL on your target function ``LLVMFuzzerTestOneInput``:
-see an example `here <https://github.com/llvm/llvm-project/tree/master/compiler-rt/lib/fuzzer/afl>`__.
+see an example `here <https://github.com/llvm/llvm-project/tree/main/compiler-rt/lib/fuzzer/afl>`__.
 
 How good is my fuzzer?
 ----------------------
@@ -815,7 +815,7 @@ Trophies
 .. _AddressSanitizer: https://clang.llvm.org/docs/AddressSanitizer.html
 .. _LeakSanitizer: https://clang.llvm.org/docs/LeakSanitizer.html
 .. _Heartbleed: http://en.wikipedia.org/wiki/Heartbleed
-.. _FuzzerInterface.h: https://github.com/llvm/llvm-project/blob/master/compiler-rt/lib/fuzzer/FuzzerInterface.h
+.. _FuzzerInterface.h: https://github.com/llvm/llvm-project/blob/main/compiler-rt/lib/fuzzer/FuzzerInterface.h
 .. _3.7.0: https://llvm.org/releases/3.7.0/docs/LibFuzzer.html
 .. _building Clang from trunk: https://clang.llvm.org/get_started.html
 .. _MemorySanitizer: https://clang.llvm.org/docs/MemorySanitizer.html
