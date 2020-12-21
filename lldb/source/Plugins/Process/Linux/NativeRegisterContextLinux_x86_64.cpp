@@ -41,11 +41,8 @@ static inline int get_cpuid_count(unsigned int __leaf,
 using namespace lldb_private;
 using namespace lldb_private::process_linux;
 
-// Private namespace.
-
-namespace {
 // x86 32-bit general purpose registers.
-const uint32_t g_gpr_regnums_i386[] = {
+static const uint32_t g_gpr_regnums_i386[] = {
     lldb_eax_i386,      lldb_ebx_i386,    lldb_ecx_i386, lldb_edx_i386,
     lldb_edi_i386,      lldb_esi_i386,    lldb_ebp_i386, lldb_esp_i386,
     lldb_eip_i386,      lldb_eflags_i386, lldb_cs_i386,  lldb_fs_i386,
@@ -62,7 +59,7 @@ static_assert((sizeof(g_gpr_regnums_i386) / sizeof(g_gpr_regnums_i386[0])) -
               "g_gpr_regnums_i386 has wrong number of register infos");
 
 // x86 32-bit floating point registers.
-const uint32_t g_fpu_regnums_i386[] = {
+static const uint32_t g_fpu_regnums_i386[] = {
     lldb_fctrl_i386,    lldb_fstat_i386,     lldb_ftag_i386,  lldb_fop_i386,
     lldb_fiseg_i386,    lldb_fioff_i386,     lldb_foseg_i386, lldb_fooff_i386,
     lldb_mxcsr_i386,    lldb_mxcsrmask_i386, lldb_st0_i386,   lldb_st1_i386,
@@ -80,7 +77,7 @@ static_assert((sizeof(g_fpu_regnums_i386) / sizeof(g_fpu_regnums_i386[0])) -
               "g_fpu_regnums_i386 has wrong number of register infos");
 
 // x86 32-bit AVX registers.
-const uint32_t g_avx_regnums_i386[] = {
+static const uint32_t g_avx_regnums_i386[] = {
     lldb_ymm0_i386,     lldb_ymm1_i386, lldb_ymm2_i386, lldb_ymm3_i386,
     lldb_ymm4_i386,     lldb_ymm5_i386, lldb_ymm6_i386, lldb_ymm7_i386,
     LLDB_INVALID_REGNUM // register sets need to end with this flag
@@ -196,7 +193,7 @@ static_assert((sizeof(g_mpx_regnums_x86_64) / sizeof(g_mpx_regnums_x86_64[0])) -
               "g_mpx_regnums_x86_64 has wrong number of register infos");
 
 // Number of register sets provided by this context.
-enum { k_num_extended_register_sets = 2, k_num_register_sets = 4 };
+constexpr unsigned k_num_extended_register_sets = 2, k_num_register_sets = 4;
 
 // Register sets for x86 32-bit.
 static const RegisterSet g_reg_sets_i386[k_num_register_sets] = {
@@ -219,7 +216,6 @@ static const RegisterSet g_reg_sets_x86_64[k_num_register_sets] = {
      g_avx_regnums_x86_64},
     { "Memory Protection Extensions", "mpx", k_num_mpx_registers_x86_64,
      g_mpx_regnums_x86_64}};
-}
 
 #define REG_CONTEXT_SIZE (GetRegisterInfoInterface().GetGPRSize() + sizeof(FPR))
 
