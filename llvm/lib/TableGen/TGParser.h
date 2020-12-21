@@ -254,7 +254,6 @@ private:  // Parser methods.
                        TypedInit *FirstItem = nullptr);
   RecTy *ParseType();
   Init *ParseOperation(Record *CurRec, RecTy *ItemType);
-  Init *ParseOperationSubstr(Record *CurRec, RecTy *ItemType);
   Init *ParseOperationForEachFilter(Record *CurRec, RecTy *ItemType);
   Init *ParseOperationCond(Record *CurRec, RecTy *ItemType);
   RecTy *ParseOperatorType();

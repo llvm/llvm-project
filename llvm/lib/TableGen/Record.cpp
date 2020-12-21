@@ -1325,27 +1325,6 @@ Init *TernOpInit::Fold(Record *CurRec) const {
     }
     break;
   }
-
-  case SUBSTR: {
-    StringInit *LHSs = dyn_cast<StringInit>(LHS);
-    IntInit *MHSi = dyn_cast<IntInit>(MHS);
-    IntInit *RHSi = dyn_cast<IntInit>(RHS);
-    if (LHSs && MHSi && RHSi) {
-      int64_t StringSize = LHSs->getValue().size();
-      int64_t Start = MHSi->getValue();
-      int64_t Length = RHSi->getValue();
-      if (Start < 0 || Start > StringSize)
-        PrintError(CurRec->getLoc(),
-                   Twine("!substr start position is out of range 0...") +
-                       std::to_string(StringSize) + ": " +
-                       std::to_string(Start));
-      if (Length < 0)
-        PrintError(CurRec->getLoc(), "!substr length must be nonnegative");
-      return StringInit::get(LHSs->getValue().substr(Start, Length),
-                             LHSs->getFormat());
-    }
-    break;
-  }
   }
 
   return const_cast<TernOpInit *>(this);
@@ -1385,12 +1364,11 @@ std::string TernOpInit::getAsString() const {
   std::string Result;
   bool UnquotedLHS = false;
   switch (getOpcode()) {
-  case DAG: Result = "!dag"; break;
-  case FILTER: Result = "!filter"; UnquotedLHS = true; break;
-  case FOREACH: Result = "!foreach"; UnquotedLHS = true; break;
-  case IF: Result = "!if"; break;
   case SUBST: Result = "!subst"; break;
-  case SUBSTR: Result = "!substr"; break;
+  case FOREACH: Result = "!foreach"; UnquotedLHS = true; break;
+  case FILTER: Result = "!filter"; UnquotedLHS = true; break;
+  case IF: Result = "!if"; break;
+  case DAG: Result = "!dag"; break;
   }
   return (Result + "(" +
           (UnquotedLHS ? LHS->getAsUnquotedString() : LHS->getAsString()) +
