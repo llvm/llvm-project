@@ -1220,7 +1220,7 @@ std::string renderTUAction(const PreambleAction PA, const ASTAction &AA) {
   }
   if (Result.empty())
     return "idle";
-  return llvm::join(Result, ",");
+  return llvm::join(Result, ", ");
 }
 
 } // namespace
