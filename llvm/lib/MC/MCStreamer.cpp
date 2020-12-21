@@ -1076,7 +1076,7 @@ void MCStreamer::emitAbsoluteSymbolDiff(const MCSymbol *Hi, const MCSymbol *Lo,
   }
 
   // Otherwise, emit with .set (aka assignment).
-  MCSymbol *SetLabel = Context.createTempSymbol("set", true);
+  MCSymbol *SetLabel = Context.createTempSymbol("set");
   emitAssignment(SetLabel, Diff);
   emitSymbolValue(SetLabel, Size);
 }

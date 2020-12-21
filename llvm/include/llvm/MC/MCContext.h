@@ -397,12 +397,16 @@ namespace llvm {
     /// unspecified name.
     MCSymbol *createLinkerPrivateTempSymbol();
 
-    /// Create and return a new assembler temporary symbol with a unique but
-    /// unspecified name.
-    MCSymbol *createTempSymbol(bool CanBeUnnamed = true);
+    /// Create a temporary symbol with a unique name. The name will be omitted
+    /// in the symbol table if UseNamesOnTempLabels is false (default except
+    /// MCAsmStreamer). The overload without Name uses an unspecified name.
+    MCSymbol *createTempSymbol();
+    MCSymbol *createTempSymbol(const Twine &Name, bool AlwaysAddSuffix = true);
 
-    MCSymbol *createTempSymbol(const Twine &Name, bool AlwaysAddSuffix,
-                               bool CanBeUnnamed = true);
+    /// Create a temporary symbol with a unique name whose name cannot be
+    /// omitted in the symbol table. This is rarely used.
+    MCSymbol *createNamedTempSymbol();
+    MCSymbol *createNamedTempSymbol(const Twine &Name);
 
     /// Create the definition of a directional local symbol for numbered label
     /// (used for "1:" definitions).
