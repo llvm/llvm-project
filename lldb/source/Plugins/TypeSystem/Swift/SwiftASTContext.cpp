@@ -6363,7 +6363,8 @@ SwiftASTContext::GetNumDirectBaseClasses(opaque_compiler_type_t opaque_type) {
   return 0;
 }
 
-uint32_t SwiftASTContext::GetNumFields(opaque_compiler_type_t type) {
+uint32_t SwiftASTContext::GetNumFields(opaque_compiler_type_t type,
+                                       ExecutionContext *exe_ctx) {
   VALID_OR_RETURN(0);
 
   if (!type)
