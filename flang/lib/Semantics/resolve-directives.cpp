@@ -638,10 +638,10 @@ void AccAttributeVisitor::PrivatizeAssociatedLoopIndex(
 void AccAttributeVisitor::Post(const parser::AccDefaultClause &x) {
   if (!dirContext_.empty()) {
     switch (x.v) {
-    case parser::AccDefaultClause::Arg::Present:
+    case llvm::acc::DefaultValue::ACC_Default_present:
       SetContextDefaultDSA(Symbol::Flag::AccPresent);
       break;
-    case parser::AccDefaultClause::Arg::None:
+    case llvm::acc::DefaultValue::ACC_Default_none:
       SetContextDefaultDSA(Symbol::Flag::AccNone);
       break;
     }
