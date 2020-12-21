@@ -384,8 +384,12 @@ void VPBasicBlock::execute(VPTransformState *State) {
 
 void VPBasicBlock::dropAllReferences(VPValue *NewValue) {
   for (VPRecipeBase &R : Recipes) {
-    if (auto *VPV = R.toVPValue())
-      VPV->replaceAllUsesWith(NewValue);
+    if (VPValue *Def = R.toVPValue())
+      Def->replaceAllUsesWith(NewValue);
+    else if (auto *IR = dyn_cast<VPInterleaveRecipe>(&R)) {
+      for (auto *Def : IR->definedValues())
+        Def->replaceAllUsesWith(NewValue);
+    }
 
     if (auto *User = R.toVPUser())
       for (unsigned I = 0, E = User->getNumOperands(); I != E; I++)

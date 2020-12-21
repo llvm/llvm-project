@@ -569,6 +569,7 @@ public:
   /// BlockInMask is non-null. Use \p State to translate given VPValues to IR
   /// values in the vectorized loop.
   void vectorizeInterleaveGroup(const InterleaveGroup<Instruction> *Group,
+                                ArrayRef<VPValue *> VPDefs,
                                 VPTransformState &State, VPValue *Addr,
                                 ArrayRef<VPValue *> StoredValues,
                                 VPValue *BlockInMask = nullptr);
@@ -2514,8 +2515,9 @@ static bool useMaskedInterleavedAccesses(const TargetTransformInfo &TTI) {
 //        <0, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11>    ; Interleave R,G,B elements
 //   store <12 x i32> %interleaved.vec              ; Write 4 tuples of R,G,B
 void InnerLoopVectorizer::vectorizeInterleaveGroup(
-    const InterleaveGroup<Instruction> *Group, VPTransformState &State,
-    VPValue *Addr, ArrayRef<VPValue *> StoredValues, VPValue *BlockInMask) {
+    const InterleaveGroup<Instruction> *Group, ArrayRef<VPValue *> VPDefs,
+    VPTransformState &State, VPValue *Addr, ArrayRef<VPValue *> StoredValues,
+    VPValue *BlockInMask) {
   Instruction *Instr = Group->getInsertPos();
   const DataLayout &DL = Instr->getModule()->getDataLayout();
 
@@ -2617,6 +2619,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
 
     // For each member in the group, shuffle out the appropriate data from the
     // wide loads.
+    unsigned J = 0;
     for (unsigned I = 0; I < InterleaveFactor; ++I) {
       Instruction *Member = Group->getMember(I);
 
@@ -2641,8 +2644,9 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
         if (Group->isReverse())
           StridedVec = reverseVector(StridedVec);
 
-        VectorLoopValueMap.setVectorValue(Member, Part, StridedVec);
+        State.set(VPDefs[J], Member, StridedVec, Part);
       }
+      ++J;
     }
     return;
   }
@@ -7980,9 +7984,8 @@ VPValue *VPRecipeBuilder::createBlockInMask(BasicBlock *BB, VPlanPtr &Plan) {
   return BlockMaskCache[BB] = BlockMask;
 }
 
-VPWidenMemoryInstructionRecipe *
-VPRecipeBuilder::tryToWidenMemory(Instruction *I, VFRange &Range,
-                                  VPlanPtr &Plan) {
+VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(Instruction *I, VFRange &Range,
+                                                VPlanPtr &Plan) {
   assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
          "Must be called with either a load or store");
 
@@ -8472,16 +8475,17 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
       if (auto *SI = dyn_cast_or_null<StoreInst>(IG->getMember(i)))
         StoredValues.push_back(Plan->getOrAddVPValue(SI->getOperand(0)));
 
-    (new VPInterleaveRecipe(IG, Recipe->getAddr(), StoredValues,
-                            Recipe->getMask()))
-        ->insertBefore(Recipe);
-
+    auto *VPIG = new VPInterleaveRecipe(IG, Recipe->getAddr(), StoredValues,
+                                        Recipe->getMask());
+    VPIG->insertBefore(Recipe);
+    unsigned J = 0;
     for (unsigned i = 0; i < IG->getFactor(); ++i)
       if (Instruction *Member = IG->getMember(i)) {
         if (!Member->getType()->isVoidTy()) {
           VPValue *OriginalV = Plan->getVPValue(Member);
           Plan->removeVPValueFor(Member);
-          OriginalV->replaceAllUsesWith(Plan->getOrAddVPValue(Member));
+          OriginalV->replaceAllUsesWith(VPIG->getVPValue(J));
+          J++;
         }
         RecipeBuilder.getRecipe(Member)->eraseFromParent();
       }
@@ -8713,8 +8717,8 @@ void VPBlendRecipe::execute(VPTransformState &State) {
 
 void VPInterleaveRecipe::execute(VPTransformState &State) {
   assert(!State.Instance && "Interleave group being replicated.");
-  State.ILV->vectorizeInterleaveGroup(IG, State, getAddr(), getStoredValues(),
-                                      getMask());
+  State.ILV->vectorizeInterleaveGroup(IG, definedValues(), State, getAddr(),
+                                      getStoredValues(), getMask());
 }
 
 void VPReductionRecipe::execute(VPTransformState &State) {
