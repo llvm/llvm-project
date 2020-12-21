@@ -492,8 +492,9 @@ static void getVectorElementwiseOpUnrollState(Operation *op,
   assert(resultType && "Expected op with vector result type");
   auto resultShape = resultType.getShape();
   // Verify that all operands have the same vector type as result.
-  assert(llvm::all_of(op->getOperandTypes(),
-                      [=](Type type) { return type == resultType; }));
+  assert(llvm::all_of(op->getOperandTypes(), [=](Type type) {
+    return type.cast<VectorType>().getShape() == resultShape;
+  }));
 
   // Create trivial elementwise identity index map based on 'resultShape'.
   DenseMap<int64_t, int64_t> indexMap;
@@ -504,8 +505,9 @@ static void getVectorElementwiseOpUnrollState(Operation *op,
   // Create VectorState each operand and single result.
   unsigned numVectors = op->getNumOperands() + op->getNumResults();
   vectors.resize(numVectors);
-  for (unsigned i = 0; i < op->getNumOperands(); ++i)
-    vectors[i] = {resultType, indexMap, i, false};
+  for (auto it : llvm::enumerate(op->getOperandTypes()))
+    vectors[it.index()] = {it.value().cast<VectorType>(), indexMap,
+                           static_cast<int64_t>(it.index()), false};
   vectors[numVectors - 1] = {resultType, indexMap, -1, false};
   resultIndex = numVectors - 1;
 }
