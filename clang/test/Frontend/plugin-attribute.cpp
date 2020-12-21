@@ -18,5 +18,5 @@ int var1 __attribute__((example("otherstring"))) = 1; // expected-warning {{'exa
 class Example {
   void __attribute__((example)) fn3(); // expected-error {{'example' attribute only allowed at file scope}}
 };
-void fn4() __attribute__((example(123))) { } // expected-error {{'example's first argument should be a string literal}}
-void fn5() __attribute__((example("a","b", 3, 4.0))) { } // expected-error {{'example' attribute only allowed at most three arguments}}
+void fn4() __attribute__((example(123))) { } // expected-error {{first argument to the 'example' attribute must be a string literal}}
+void fn5() __attribute__((example("a","b", 3, 4.0))) { } // expected-error {{'example' attribute only accepts at most three arguments}}
