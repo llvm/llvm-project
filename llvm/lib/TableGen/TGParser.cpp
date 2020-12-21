@@ -1496,6 +1496,10 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     return (TernOpInit::get(Code, LHS, MHS, RHS, Type))->Fold(CurRec);
   }
 
+  case tgtok::XSubstr: {
+    return ParseOperationSubstr(CurRec, ItemType);
+  }
+
   case tgtok::XCond:
     return ParseOperationCond(CurRec, ItemType);
 
@@ -1653,6 +1657,94 @@ RecTy *TGParser::ParseOperatorType() {
   }
 
   return Type;
+}
+
+/// Parse the !substr operation. Return null on error.
+///
+/// Substr ::= !substr(string, start-int [, length-int]) => string
+Init *TGParser::ParseOperationSubstr(Record *CurRec, RecTy *ItemType) {
+  TernOpInit::TernaryOp Code = TernOpInit::SUBSTR;
+  RecTy *Type = StringRecTy::get();
+
+  Lex.Lex(); // eat the operation
+
+  if (!consume(tgtok::l_paren)) {
+    TokError("expected '(' after !substr operator");
+    return nullptr;
+  }
+
+  Init *LHS = ParseValue(CurRec);
+  if (!LHS)
+    return nullptr;
+
+  if (!consume(tgtok::comma)) {
+    TokError("expected ',' in !substr operator");
+    return nullptr;
+  }
+
+  SMLoc MHSLoc = Lex.getLoc();
+  Init *MHS = ParseValue(CurRec);
+  if (!MHS)
+    return nullptr;
+
+  SMLoc RHSLoc = Lex.getLoc();
+  Init *RHS;
+  if (consume(tgtok::comma)) {
+    RHSLoc = Lex.getLoc();
+    RHS = ParseValue(CurRec);
+    if (!RHS)
+      return nullptr;
+  } else {
+    RHS = IntInit::get(SIZE_MAX);
+  }
+
+  if (!consume(tgtok::r_paren)) {
+    TokError("expected ')' in !substr operator");
+    return nullptr;
+  }
+
+  if (ItemType && !Type->typeIsConvertibleTo(ItemType)) {
+    Error(RHSLoc, Twine("expected value of type '") +
+                  ItemType->getAsString() + "', got '" +
+                  Type->getAsString() + "'");
+  }
+
+  TypedInit *LHSt = dyn_cast<TypedInit>(LHS);
+  if (!LHSt && !isa<UnsetInit>(LHS)) {
+    TokError("could not determine type of the string in !substr");
+    return nullptr;
+  }
+  if (LHSt && !isa<StringRecTy>(LHSt->getType())) {
+    TokError(Twine("expected string, got type '") +
+             LHSt->getType()->getAsString() + "'");
+    return nullptr;
+  }
+
+  TypedInit *MHSt = dyn_cast<TypedInit>(MHS);
+  if (!MHSt && !isa<UnsetInit>(MHS)) {
+    TokError("could not determine type of the start position in !substr");
+    return nullptr;
+  }
+  if (MHSt && !isa<IntRecTy>(MHSt->getType())) {
+    Error(MHSLoc, Twine("expected int, got type '") +
+                      MHSt->getType()->getAsString() + "'");
+    return nullptr;
+  }
+
+  if (RHS) {
+    TypedInit *RHSt = dyn_cast<TypedInit>(RHS);
+    if (!RHSt && !isa<UnsetInit>(RHS)) {
+      TokError("could not determine type of the length in !substr");
+      return nullptr;
+    }
+    if (RHSt && !isa<IntRecTy>(RHSt->getType())) {
+      TokError(Twine("expected int, got type '") +
+               RHSt->getType()->getAsString() + "'");
+      return nullptr;
+    }
+  }
+
+  return (TernOpInit::get(Code, LHS, MHS, RHS, Type))->Fold(CurRec);
 }
 
 /// Parse the !foreach and !filter operations. Return null on error.
@@ -2206,7 +2298,8 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
   case tgtok::XFoldl:
   case tgtok::XForEach:
   case tgtok::XFilter:
-  case tgtok::XSubst: { // Value ::= !ternop '(' Value ',' Value ',' Value ')'
+  case tgtok::XSubst:
+  case tgtok::XSubstr: { // Value ::= !ternop '(' Value ',' Value ',' Value ')'
     return ParseOperation(CurRec, ItemType);
   }
   }
