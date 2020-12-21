@@ -39,8 +39,9 @@
 // CHECK:         }
 func @add_dd(%arga: tensor<32x16xf32>, %argb: tensor<32x16xf32>) -> tensor<32x16xf32> {
   %0 = linalg.generic #trait_dd
-    ins(%arga, %argb: tensor<32x16xf32>, tensor<32x16xf32>) {
-      ^bb(%a: f32, %b: f32):
+     ins(%arga, %argb: tensor<32x16xf32>, tensor<32x16xf32>)
+    outs(%arga: tensor<32x16xf32>) {
+      ^bb(%a: f32, %b: f32, %s: f32):
         %0 = addf %a, %b  : f32
         linalg.yield %0 : f32
   } -> tensor<32x16xf32>
@@ -70,8 +71,9 @@ func @add_dd(%arga: tensor<32x16xf32>, %argb: tensor<32x16xf32>) -> tensor<32x16
 // CHECK:         }
 func @mul_dd(%arga: tensor<32x16xf32>, %argb: tensor<32x16xf32>) -> tensor<32x16xf32> {
   %0 = linalg.generic #trait_dd
-    ins(%arga, %argb: tensor<32x16xf32>, tensor<32x16xf32>) {
-      ^bb(%a: f32, %b: f32):
+     ins(%arga, %argb: tensor<32x16xf32>, tensor<32x16xf32>)
+    outs(%arga : tensor<32x16xf32>) {
+      ^bb(%a: f32, %b: f32, %s: f32):
         %0 = mulf %a, %b  : f32
         linalg.yield %0 : f32
   } -> tensor<32x16xf32>
@@ -146,8 +148,9 @@ func @mul_dd(%arga: tensor<32x16xf32>, %argb: tensor<32x16xf32>) -> tensor<32x16
 // CHECK:         }
 func @add_ds(%arga: tensor<32x16xf32>, %argb: tensor<32x16xf32>) -> tensor<32x16xf32> {
   %0 = linalg.generic #trait_ds
-    ins(%arga, %argb: tensor<32x16xf32>, tensor<32x16xf32>) {
-      ^bb(%a: f32, %b: f32):
+     ins(%arga, %argb: tensor<32x16xf32>, tensor<32x16xf32>)
+    outs(%arga : tensor<32x16xf32>) {
+      ^bb(%a: f32, %b: f32, %s: f32):
         %0 = addf %a, %b  : f32
         linalg.yield %0 : f32
   } -> tensor<32x16xf32>
@@ -183,8 +186,9 @@ func @add_ds(%arga: tensor<32x16xf32>, %argb: tensor<32x16xf32>) -> tensor<32x16
 // CHECK:         }
 func @mul_ds(%arga: tensor<32x16xf32>, %argb: tensor<32x16xf32>) -> tensor<32x16xf32> {
   %0 = linalg.generic #trait_ds
-    ins(%arga, %argb: tensor<32x16xf32>, tensor<32x16xf32>) {
-      ^bb(%a: f32, %b: f32):
+     ins(%arga, %argb: tensor<32x16xf32>, tensor<32x16xf32>)
+    outs(%arga : tensor<32x16xf32>) {
+      ^bb(%a: f32, %b: f32, %s: f32):
         %0 = mulf %a, %b  : f32
         linalg.yield %0 : f32
   } -> tensor<32x16xf32>
@@ -264,8 +268,9 @@ func @mul_ds(%arga: tensor<32x16xf32>, %argb: tensor<32x16xf32>) -> tensor<32x16
 // CHECK:         }
 func @add_sd(%arga: tensor<32x16xf32>, %argb: tensor<32x16xf32>) -> tensor<32x16xf32> {
   %0 = linalg.generic #trait_sd
-    ins(%arga, %argb: tensor<32x16xf32>, tensor<32x16xf32>) {
-      ^bb(%a: f32, %b: f32):
+     ins(%arga, %argb: tensor<32x16xf32>, tensor<32x16xf32>)
+    outs(%arga : tensor<32x16xf32>) {
+      ^bb(%a: f32, %b: f32, %s: f32):
         %0 = addf %a, %b  : f32
         linalg.yield %0 : f32
   } -> tensor<32x16xf32>
@@ -302,8 +307,9 @@ func @add_sd(%arga: tensor<32x16xf32>, %argb: tensor<32x16xf32>) -> tensor<32x16
 // CHECK:         }
 func @mul_sd(%arga: tensor<32x16xf32>, %argb: tensor<32x16xf32>) -> tensor<32x16xf32> {
   %0 = linalg.generic #trait_sd
-    ins(%arga, %argb: tensor<32x16xf32>, tensor<32x16xf32>) {
-      ^bb(%a: f32, %b: f32):
+     ins(%arga, %argb: tensor<32x16xf32>, tensor<32x16xf32>)
+    outs(%arga : tensor<32x16xf32>) {
+      ^bb(%a: f32, %b: f32, %s: f32):
         %0 = mulf %a, %b  : f32
         linalg.yield %0 : f32
   } -> tensor<32x16xf32>
@@ -409,8 +415,9 @@ func @mul_sd(%arga: tensor<32x16xf32>, %argb: tensor<32x16xf32>) -> tensor<32x16
 // CHECK:         }
 func @add_ss(%arga: tensor<32x16xf32>, %argb: tensor<32x16xf32>) -> tensor<32x16xf32> {
   %0 = linalg.generic #trait_ss
-    ins(%arga, %argb: tensor<32x16xf32>, tensor<32x16xf32>) {
-      ^bb(%a: f32, %b: f32):
+     ins(%arga, %argb: tensor<32x16xf32>, tensor<32x16xf32>)
+    outs(%arga : tensor<32x16xf32>) {
+      ^bb(%a: f32, %b: f32, %s: f32):
         %0 = addf %a, %b  : f32
         linalg.yield %0 : f32
   } -> tensor<32x16xf32>
@@ -450,8 +457,9 @@ func @add_ss(%arga: tensor<32x16xf32>, %argb: tensor<32x16xf32>) -> tensor<32x16
 // CHECK:         }
 func @mul_ss(%arga: tensor<32x16xf32>, %argb: tensor<32x16xf32>) -> tensor<32x16xf32> {
   %0 = linalg.generic #trait_ss
-    ins(%arga, %argb: tensor<32x16xf32>, tensor<32x16xf32>) {
-      ^bb(%a: f32, %b: f32):
+     ins(%arga, %argb: tensor<32x16xf32>, tensor<32x16xf32>)
+    outs(%arga : tensor<32x16xf32>) {
+      ^bb(%a: f32, %b: f32, %s: f32):
         %0 = mulf %a, %b  : f32
         linalg.yield %0 : f32
   } -> tensor<32x16xf32>
@@ -627,8 +635,9 @@ func @mul_ss(%arga: tensor<32x16xf32>, %argb: tensor<32x16xf32>) -> tensor<32x16
 // CHECK:         }
 func @add_ss_ss(%arga: tensor<32x16xf32>, %argb: tensor<32x16xf32>) -> tensor<32x16xf32> {
   %0 = linalg.generic #trait_ss_ss
-    ins(%arga, %argb: tensor<32x16xf32>, tensor<32x16xf32>) {
-      ^bb(%a: f32, %b: f32):
+     ins(%arga, %argb: tensor<32x16xf32>, tensor<32x16xf32>)
+    outs(%arga : tensor<32x16xf32>) {
+      ^bb(%a: f32, %b: f32, %s: f32):
         %0 = addf %a, %b  : f32
         linalg.yield %0 : f32
   } -> tensor<32x16xf32>
@@ -721,8 +730,9 @@ func @add_ss_ss(%arga: tensor<32x16xf32>, %argb: tensor<32x16xf32>) -> tensor<32
 // CHECK:         }
 func @mul_ss_ss(%arga: tensor<32x16xf32>, %argb: tensor<32x16xf32>) -> tensor<32x16xf32> {
   %0 = linalg.generic #trait_ss_ss
-    ins(%arga, %argb: tensor<32x16xf32>, tensor<32x16xf32>) {
-      ^bb(%a: f32, %b: f32):
+     ins(%arga, %argb: tensor<32x16xf32>, tensor<32x16xf32>)
+    outs(%arga : tensor<32x16xf32>) {
+      ^bb(%a: f32, %b: f32, %s: f32):
         %0 = mulf %a, %b  : f32
         linalg.yield %0 : f32
   } -> tensor<32x16xf32>
@@ -898,8 +908,9 @@ func @mul_ss_ss(%arga: tensor<32x16xf32>, %argb: tensor<32x16xf32>) -> tensor<32
 // CHECK:         }
 func @add_sd_ds(%arga: tensor<32x16xf32>, %argb: tensor<32x16xf32>) -> tensor<32x16xf32> {
   %0 = linalg.generic #trait_ss_ss
-    ins(%arga, %argb: tensor<32x16xf32>, tensor<32x16xf32>) {
-      ^bb(%a: f32, %b: f32):
+     ins(%arga, %argb: tensor<32x16xf32>, tensor<32x16xf32>)
+    outs(%arga : tensor<32x16xf32>) {
+      ^bb(%a: f32, %b: f32, %s: f32):
         %0 = addf %a, %b  : f32
         linalg.yield %0 : f32
   } -> tensor<32x16xf32>
@@ -992,8 +1003,9 @@ func @add_sd_ds(%arga: tensor<32x16xf32>, %argb: tensor<32x16xf32>) -> tensor<32
 // CHECK:         }
 func @mul_sd_ds(%arga: tensor<32x16xf32>, %argb: tensor<32x16xf32>) -> tensor<32x16xf32> {
   %0 = linalg.generic #trait_ss_ss
-    ins(%arga, %argb: tensor<32x16xf32>, tensor<32x16xf32>) {
-      ^bb(%a: f32, %b: f32):
+     ins(%arga, %argb: tensor<32x16xf32>, tensor<32x16xf32>)
+    outs(%arga : tensor<32x16xf32>) {
+      ^bb(%a: f32, %b: f32, %s: f32):
         %0 = mulf %a, %b  : f32
         linalg.yield %0 : f32
   } -> tensor<32x16xf32>
@@ -1048,8 +1060,8 @@ func @mul_sd_ds(%arga: tensor<32x16xf32>, %argb: tensor<32x16xf32>) -> tensor<32
 // CHECK:         }
 func @matvec(%argA: tensor<16x32xf32>, %argb: tensor<32xf32>, %argx: tensor<16xf32>) -> tensor<16xf32> {
   %0 = linalg.generic #trait_matvec
-      ins(%argA, %argb : tensor<16x32xf32>, tensor<32xf32>)
-      init(%argx : tensor<16xf32>) {
+       ins(%argA, %argb : tensor<16x32xf32>, tensor<32xf32>)
+      outs(%argx : tensor<16xf32>) {
     ^bb(%A: f32, %b: f32, %x: f32):
       %0 = mulf %A, %b : f32
       %1 = addf %0, %x : f32
@@ -1099,8 +1111,8 @@ func @matvec(%argA: tensor<16x32xf32>, %argb: tensor<32xf32>, %argx: tensor<16xf
 // CHECK:         }
 func @sum_reduction(%arga: tensor<10x20xf32>, %argx: tensor<f32>) -> tensor<f32> {
   %0 = linalg.generic #trait_sum_reduction
-    ins(%arga : tensor<10x20xf32>)
-    init(%argx : tensor<f32>) {
+     ins(%arga : tensor<10x20xf32>)
+    outs(%argx : tensor<f32>) {
       ^bb(%a : f32, %x : f32):
         %0 = addf %x, %a  : f32
         linalg.yield %0: f32
@@ -1150,8 +1162,9 @@ func @sum_reduction(%arga: tensor<10x20xf32>, %argx: tensor<f32>) -> tensor<f32>
 func @scale(%arga: tensor<?x?xf64>) -> tensor<?x?xf64> {
   %0 = constant 2.0 : f64
   %1 = linalg.generic #trait_scale
-    ins(%arga: tensor<?x?xf64>) {
-      ^bb(%a: f64):
+     ins(%arga: tensor<?x?xf64>)
+    outs(%arga: tensor<?x?xf64>) {
+      ^bb(%a: f64, %s: f64):
         %2 = mulf %a, %0  : f64
         linalg.yield %2 : f64
   } -> tensor<?x?xf64>
@@ -1224,10 +1237,10 @@ func @scale(%arga: tensor<?x?xf64>) -> tensor<?x?xf64> {
 func @sampled_dense_dense(%args: tensor<?x?xf32>,
                           %arga: tensor<?x?xf32>,
                           %argb: tensor<?x?xf32>,
-			  %argx: tensor<?x?xf32>) -> tensor<?x?xf32> {
+                          %argx: tensor<?x?xf32>) -> tensor<?x?xf32> {
   %0 = linalg.generic #trait_sampled_dense_dense
-    ins(%args, %arga, %argb : tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>)
-    init(%argx : tensor<?x?xf32>) {
+     ins(%args, %arga, %argb : tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>)
+    outs(%argx : tensor<?x?xf32>) {
       ^bb(%s : f32, %a : f32, %b : f32, %x : f32):
         %0 = mulf %a, %b  : f32
         %1 = mulf %s, %0  : f32
@@ -1457,7 +1470,7 @@ func @sum_kernel_with_inv(%arga: tensor<?x?xf32>,
                                             tensor<?x?xf32>,
                                             tensor<?xf32>,
                                             tensor<f32>)
-    init(%argx : tensor<?xf32>) {
+    outs(%argx : tensor<?xf32>) {
       ^bb(%a : f32, %b : f32, %c : f32, %d : f32, %e : f32, %x : f32):
         %0 = mulf %a, %b  : f32
         %1 = mulf %0, %d  : f32

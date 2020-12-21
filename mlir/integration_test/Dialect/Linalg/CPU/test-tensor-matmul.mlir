@@ -22,7 +22,7 @@ func @main() {
   %C = constant dense<1000.0> : tensor<2x4xf32>
 
   %D = linalg.matmul ins(%A, %B: tensor<2x3xf32>, tensor<3x4xf32>)
-                     init(%C: tensor<2x4xf32>) -> tensor<2x4xf32>
+                     outs(%C: tensor<2x4xf32>) -> tensor<2x4xf32>
 
   %unranked = tensor.cast %D : tensor<2x4xf32> to tensor<*xf32>
   call @print_memref_f32(%unranked) : (tensor<*xf32>) -> ()

@@ -375,9 +375,9 @@ tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ValueRange tileSizes,
   // 2. Create the tiled loops.
   LinalgOp res = op;
   SmallVector<Value, 4> ivs, tensorResults;
-  auto initTensors = op.getInitTensors();
+  auto outputTensors = op.getOutputTensors();
   GenerateLoopNest<LoopTy>::doit(
-      loopRanges, /*iterArgInitValues*/ initTensors, iteratorTypes,
+      loopRanges, /*iterArgInitValues*/ outputTensors, iteratorTypes,
       [&](ValueRange localIvs, ValueRange iterArgs) -> scf::ValueVector {
         auto &b = ScopedContext::getBuilderRef();
         auto loc = ScopedContext::getLocation();
@@ -392,14 +392,16 @@ tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ValueRange tileSizes,
         else
           interchangedIvs.assign(ivs.begin(), ivs.end());
 
-        assert(op.getNumInitTensors() == iterArgs.size() &&
-               "num init tensors must match number of loop iter arguments");
-        // This uses knowledge about position of the init tensor in the list
-        // of operands.
-        auto operands = llvm::to_vector<4>(op.getShapedOperands());
-        std::copy(iterArgs.begin(), iterArgs.end(),
-                  operands.begin() + op.getNumInputsAndOutputBuffers());
+        assert(op.getNumOutputTensors() == iterArgs.size() &&
+               "num output tensors must match number of loop iter arguments");
 
+        auto operands = llvm::to_vector<4>(op.getInputs());
+        SmallVector<Value, 4> outputBuffers = op.getOutputBuffers();
+        // TODO: thanks to simplifying assumption we do not need to worry about
+        // order of output buffers and tensors: there is only ever one kind.
+        assert(outputBuffers.empty() || iterArgs.empty());
+        operands.append(outputBuffers.begin(), outputBuffers.end());
+        operands.append(iterArgs.begin(), iterArgs.end());
         SmallVector<Value, 4> tiledOperands =
             makeTiledShapes(b, loc, op, operands, shapeSizesToLoopsMap,
                             interchangedIvs, tileSizes, allShapeSizes);
@@ -407,41 +409,31 @@ tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ValueRange tileSizes,
         tiledOperands.append(nonShapedOperands.begin(),
                              nonShapedOperands.end());
 
-        // If LinalgOp has results, they must all be tied to init tensors.
-        // We enforce this to ensure all tiled ops have been rewritten in
-        // "init tensor" form. This ensures tiling has anchor values into which
-        // to subtensor / subtensor_insert. Otherwise tiling would need to
-        // allocate which is not acceptable.
-        // This would not be the case with a special terminator op that
-        // generates the whole tensor (instead of inserting a subtensor). But
-        // the generator-based abstraction has other issues.
-        assert(op.getNumInitTensors() == op->getNumResults() &&
-               "expected same number of init tensors as number of results");
-
-        // Handle init tensor operands.
-        // This uses knowledge about position of the init tensor in the list
-        // of operands.
-        // TODO: InterfaceAdaptor ?
+        // TODO: use an interface/adaptor to avoid leaking position in
+        // `tiledOperands`.
         SmallVector<Type, 4> resultTensorTypes;
-        for (auto idx : llvm::seq<unsigned>(0, op.getNumInitTensors()))
+        for (OpOperand *opOperand : op.getOutputTensorsOpOperands())
           resultTensorTypes.push_back(
-              tiledOperands[op.getNumInputsAndOutputBuffers() + idx].getType());
+              tiledOperands[opOperand->getOperandNumber()].getType());
 
         res = op.clone(b, loc, resultTensorTypes, tiledOperands);
 
-        // Insert a subtensor_insert for each init subtensor.
-        for (unsigned idx = 0, e = op.getNumInitTensors(); idx != e; ++idx) {
-          Value initTensor =
-              tiledOperands[op.getNumInputsAndOutputBuffers() + idx];
-          if (auto subtensor = initTensor.getDefiningOp<SubTensorOp>()) {
+        // Insert a subtensor_insert for each output tensor.
+        unsigned resultIdx = 0;
+        for (OpOperand *opOperand : op.getOutputTensorsOpOperands()) {
+          // TODO: use an interface/adaptor to avoid leaking position in
+          // `tiledOperands`.
+          Value outputTensor = tiledOperands[opOperand->getOperandNumber()];
+          if (auto subtensor = outputTensor.getDefiningOp<SubTensorOp>()) {
             tensorResults.push_back(b.create<SubTensorInsertOp>(
-                loc, subtensor.source().getType(), res->getResult(idx),
+                loc, subtensor.source().getType(), res->getResult(resultIdx),
                 subtensor.source(), subtensor.offsets(), subtensor.sizes(),
                 subtensor.strides(), subtensor.static_offsets(),
                 subtensor.static_sizes(), subtensor.static_strides()));
           } else {
-            tensorResults.push_back(res->getResult(idx));
+            tensorResults.push_back(res->getResult(resultIdx));
           }
+          ++resultIdx;
         }
         return scf::ValueVector(tensorResults.begin(), tensorResults.end());
       },

@@ -1101,7 +1101,7 @@ TEST_FUNC(linalg_metadata_ops) {
 //  CHECK-SAME:                      affine_map<(d0, d1, d2) -> (d0, d1)>],
 //  CHECK-SAME:     iterator_types = ["parallel", "parallel", "reduction"]
 // CHECK-SAME: ins(%{{[a-z0-9]*}}, %{{[a-z0-9]*}} : tensor<?x?xf32>, memref<?x?xf32>)
-// CHECK-SAME: init(%{{[a-z0-9]*}} : tensor<?x?xf32>)
+// CHECK-SAME: outs(%{{[a-z0-9]*}} : tensor<?x?xf32>)
 //       CHECK:     mulf
 //       CHECK:     addf
 //       CHECK:   } -> tensor<?x?xf32>
@@ -1115,14 +1115,15 @@ TEST_FUNC(linalg_tensors_test) {
       {ShapedType::kDynamicSize, ShapedType::kDynamicSize}, f32Type, {}, 0);
   auto tensorType = RankedTensorType::get(
       {ShapedType::kDynamicSize, ShapedType::kDynamicSize}, f32Type);
-  auto f = makeFunction("linalg_tensors", {}, {tensorType, memrefType});
+  auto f =
+      makeFunction("linalg_tensors", {}, {tensorType, memrefType, tensorType});
 
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
-  Value A(f.getArgument(0)), B(f.getArgument(1));
+  Value A(f.getArgument(0)), B(f.getArgument(1)), C(f.getArgument(2));
   AffineExpr i, j;
   bindDims(&globalContext(), i, j);
-  StructuredIndexed SA(A), SB(B), SC(tensorType);
+  StructuredIndexed SA(A), SB(B), SC(C);
   Value added = linalg_generic_pointwise_add(SA({i, j}), SB({i, j}), SC({i, j}))
                     ->getResult(0);
   Value maxed = linalg_generic_pointwise_max(
@@ -1223,7 +1224,8 @@ TEST_FUNC(builder_loop_for_yield) {
                                  [&](Value iv, ValueRange args) {
                                    Value sum = args[0] + args[1];
                                    return scf::ValueVector{args[1], sum};
-                                 }).getResults();
+                                 })
+                     .getResults();
   results[0] + results[1];
 
   // clang-format off

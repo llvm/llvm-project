@@ -673,6 +673,11 @@ class AnyStridedMemRefOfRank<int rank> :
             MemRefRankOf<[AnyType], [rank]>.predicate]>,
        AnyStridedMemRef.description # " of rank " # rank>;
 
+class StridedMemRefRankOf<list<Type> allowedTypes, list<int> ranks> :
+    Type<And<[MemRefOf<allowedTypes>.predicate, HasAnyRankOfPred<ranks>]>,
+         StrJoin<!foreach(rank, ranks, rank # "D"), "/">.result # " " #
+         MemRefOf<allowedTypes>.description>;
+
 // This represents a generic tuple without any constraints on element type.
 def AnyTuple : Type<IsTupleTypePred, "tuple">;
 
