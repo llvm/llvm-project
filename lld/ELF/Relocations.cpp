@@ -1400,10 +1400,17 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
     in.got->hasGotOffRel = true;
   }
 
-  // Process some TLS relocations, including relaxing TLS relocations.
-  // Note that this function does not handle all TLS relocations.
-  if (unsigned processed =
-          handleTlsRelocation<ELFT>(type, sym, sec, offset, addend, expr)) {
+  // Process TLS relocations, including relaxing TLS relocations. Note that
+  // R_TPREL and R_TPREL_NEG relocations are resolved in processRelocAux.
+  if (expr == R_TPREL || expr == R_TPREL_NEG) {
+    if (config->shared) {
+      errorOrWarn("relocation " + toString(type) + " against " + toString(sym) +
+                  " cannot be used with -shared" +
+                  getLocation(sec, sym, offset));
+      return;
+    }
+  } else if (unsigned processed = handleTlsRelocation<ELFT>(
+                 type, sym, sec, offset, addend, expr)) {
     i += (processed - 1);
     return;
   }

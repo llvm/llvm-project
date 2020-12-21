@@ -8,6 +8,14 @@
 #RELOC:      Relocations [
 #RELOC-NEXT: ]
 
+## Reject local-exec TLS relocations for -shared.
+# RUN: not ld.lld -shared %tmain.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR --implicit-check-not=error:
+
+# ERR: error: relocation R_AARCH64_TLSLE_ADD_TPREL_HI12 against v1 cannot be used with -shared
+# ERR: error: relocation R_AARCH64_TLSLE_ADD_TPREL_LO12_NC against v1 cannot be used with -shared
+# ERR: error: relocation R_AARCH64_TLSLE_ADD_TPREL_HI12 against v2 cannot be used with -shared
+# ERR: error: relocation R_AARCH64_TLSLE_ADD_TPREL_LO12_NC against v2 cannot be used with -shared
+
 .globl _start
 _start:
  mrs x0, TPIDR_EL0

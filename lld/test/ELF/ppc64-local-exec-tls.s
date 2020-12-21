@@ -4,6 +4,18 @@
 // RUN: llvm-readelf -r %t.o | FileCheck --check-prefix=InputRelocs %s
 // RUN: llvm-objdump -d %t | FileCheck --check-prefix=Dis %s
 
+// RUN: not ld.lld -shared %t.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
+
+/// Reject local-exec TLS relocations for -shared.
+// ERR: error: relocation R_PPC64_TPREL16_HA against a cannot be used with -shared
+// ERR: error: relocation R_PPC64_TPREL16_LO against a cannot be used with -shared
+// ERR: error: relocation R_PPC64_TPREL16 against b cannot be used with -shared
+// ERR: error: relocation R_PPC64_TPREL16_HI against b cannot be used with -shared
+// ERR: error: relocation R_PPC64_TPREL16_DS against b cannot be used with -shared
+// ERR: error: relocation R_PPC64_TPREL16_LO_DS against b cannot be used with -shared
+// ERR: error: relocation R_PPC64_TPREL16_HIGHESTA against b cannot be used with -shared
+// ERR: error: relocation R_PPC64_TPREL16_HIGHERA against b cannot be used with -shared
+
 	.text
 	.abiversion 2
 	.globl	test_local_exec                    # -- Begin function test_local_exec
