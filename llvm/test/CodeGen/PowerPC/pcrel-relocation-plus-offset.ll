@@ -50,8 +50,8 @@ define dso_local signext i32 @getElementExtern4() local_unnamed_addr {
 ; CHECK-S-LABEL: getElementExtern4:
 ; CHECK-S:       # %bb.0: # %entry
 ; CHECK-S-NEXT:    pld r3, array1@got@pcrel(0), 1
-; CHECK-S-NEXT:  .Lpcrel:
-; CHECK-S-NEXT:    .reloc .Lpcrel-8,R_PPC64_PCREL_OPT,.-(.Lpcrel-8)
+; CHECK-S-NEXT:  .Lpcrel0:
+; CHECK-S-NEXT:    .reloc .Lpcrel0-8,R_PPC64_PCREL_OPT,.-(.Lpcrel0-8)
 ; CHECK-S-NEXT:    lwa r3, 16(r3)
 ; CHECK-S-NEXT:    blr
 ; CHECK-O-LABEL: <getElementExtern4>:
@@ -69,8 +69,8 @@ define dso_local signext i32 @getElementExternNegative() local_unnamed_addr {
 ; CHECK-S-LABEL: getElementExternNegative:
 ; CHECK-S:       # %bb.0: # %entry
 ; CHECK-S-NEXT:    pld r3, array1@got@pcrel(0), 1
-; CHECK-S-NEXT:  .Lpcrel0:
-; CHECK-S-NEXT:    .reloc .Lpcrel0-8,R_PPC64_PCREL_OPT,.-(.Lpcrel0-8)
+; CHECK-S-NEXT:  .Lpcrel1:
+; CHECK-S-NEXT:    .reloc .Lpcrel1-8,R_PPC64_PCREL_OPT,.-(.Lpcrel1-8)
 ; CHECK-S-NEXT:    lwa r3, -4(r3)
 ; CHECK-S-NEXT:    blr
 ; CHECK-O-LABEL: <getElementExternNegative>:
