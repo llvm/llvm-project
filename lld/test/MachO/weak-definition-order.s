@@ -1,13 +1,13 @@
 # REQUIRES: x86
-# RUN: mkdir -p %t
+# RUN: rm -rf %t; split-file %s %t
 
 ## This test demonstrates that when we have two weak symbols of the same type,
 ## we pick the one whose containing file appears earlier in the command-line
 ## invocation.
 
-# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t/test.o
-# RUN: echo ".globl _foo; .weak_definition _foo; .section __TEXT,weak1; _foo:" | llvm-mc -filetype=obj -triple=x86_64-apple-darwin -o %t/weak1.o
-# RUN: echo ".globl _foo; .weak_definition _foo; .section __TEXT,weak2; _foo:" | llvm-mc -filetype=obj -triple=x86_64-apple-darwin -o %t/weak2.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/test.s -o %t/test.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/weak1.s -o %t/weak1.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/weak2.s -o %t/weak2.o
 
 # RUN: %lld -lSystem -o %t/obj12 -L%t %t/weak1.o %t/weak2.o %t/test.o
 # RUN: llvm-objdump --syms %t/obj12 | FileCheck %s --check-prefix=WEAK1
@@ -29,6 +29,19 @@
 # DYLIB1: __DATA   __la_symbol_ptr    0x{{[0-9a-f]*}} pointer 0 libweak1         _foo
 # DYLIB2: __DATA   __la_symbol_ptr    0x{{[0-9a-f]*}} pointer 0 libweak2         _foo
 
+#--- weak1.s
+.globl _foo
+.weak_definition _foo
+.section __TEXT,weak1;
+_foo:
+
+#--- weak2.s
+.globl _foo
+.weak_definition _foo
+.section __TEXT,weak2
+_foo:
+
+#--- test.s
 .globl _main
 _main:
   callq _foo

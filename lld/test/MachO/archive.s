@@ -1,11 +1,10 @@
 # REQUIRES: x86
-# RUN: mkdir -p %t
-# RUN: echo ".global _boo; _boo: ret"                           | llvm-mc -filetype=obj -triple=x86_64-apple-darwin -o %t/2.o
-# RUN: echo ".global _bar; _bar: ret"                           | llvm-mc -filetype=obj -triple=x86_64-apple-darwin -o %t/3.o
-# RUN: echo ".global _undefined; .global _unused; _unused: ret" | llvm-mc -filetype=obj -triple=x86_64-apple-darwin -o %t/4.o
-# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t/main.o
+# RUN: rm -rf %t; split-file %s %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/2.s -o %t/2.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/3.s -o %t/3.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/4.s -o %t/4.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/main.s -o %t/main.o
 
-# RUN: rm -f %t/test.a
 # RUN: llvm-ar rcs %t/test.a %t/2.o %t/3.o %t/4.o
 # RUN: %lld %t/main.o %t/test.a -o %t/test.out
 
@@ -33,9 +32,24 @@
 # ALL-LOAD: T _main
 # ALL-LOAD: T _unused
 
-.global _main
+#--- 2.s
+.globl _boo
+_boo:
+  ret
+
+#--- 3.s
+.globl _bar
+_bar:
+  ret
+
+#--- 4.s
+.globl _undefined, _unused
+_unused:
+  ret
+
+#--- main.s
+.globl _main
 _main:
   callq _boo
   callq _bar
-  mov $0, %rax
   ret
