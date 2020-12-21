@@ -447,6 +447,55 @@ public:
 };
 }; // END Anonymous namespace
 
+
+/// Returns the Swift type for a ValueObject representing a variable.
+/// An invalid CompilerType is returned on error.
+static CompilerType GetSwiftTypeForVariableValueObject(
+    lldb::ValueObjectSP valobj_sp, lldb::StackFrameSP &stack_frame_sp,
+    SwiftLanguageRuntime *runtime, bool use_dynamic_value) {
+  // Check that the passed ValueObject is valid.
+  if (!valobj_sp || valobj_sp->GetError().Fail())
+    return CompilerType();
+  CompilerType result = valobj_sp->GetCompilerType();
+  if (use_dynamic_value)
+    result = runtime->BindGenericTypeParameters(*stack_frame_sp, result);
+  if (!result.GetTypeSystem()->SupportsLanguage(lldb::eLanguageTypeSwift))
+    return CompilerType();
+  return result;
+}
+
+/// Return the type for a local variable. This function is threading a
+/// fine line between using dynamic type resolution to resolve generic
+/// types and not resolving too much: Objective-C classes can have
+/// more specific private implementations that LLDB can resolve, but
+/// SwiftASTContext cannot see because there is no header file that
+/// would declare them.
+static CompilerType ResolveVariable(
+    lldb::VariableSP variable_sp, lldb::StackFrameSP &stack_frame_sp,
+    SwiftLanguageRuntime * runtime, lldb::DynamicValueType use_dynamic) {
+  lldb::ValueObjectSP valobj_sp =
+      stack_frame_sp->GetValueObjectForFrameVariable(variable_sp,
+                                                     lldb::eNoDynamicValues);
+  const bool use_dynamic_value = use_dynamic > lldb::eNoDynamicValues;
+
+  CompilerType var_type = GetSwiftTypeForVariableValueObject(
+      valobj_sp, stack_frame_sp, runtime, use_dynamic_value);
+
+  if (!var_type.IsValid())
+    return {};
+
+  // If the type can't be realized and dynamic types are allowed, fall back to
+  // the dynamic type.
+  if (!SwiftASTContext::IsFullyRealized(var_type) && use_dynamic_value) {
+    var_type = GetSwiftTypeForVariableValueObject(
+        valobj_sp->GetDynamicValue(use_dynamic), stack_frame_sp, runtime,
+        use_dynamic_value);
+    if (!var_type.IsValid())
+      return {};
+  }
+  return var_type;
+}
+
 static void AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
                                SwiftASTContextForExpressions &swift_ast_context,
                                SwiftASTManipulator &manipulator,
@@ -475,16 +524,10 @@ static void AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
   if (!self_var_sp)
     return;
 
-  CompilerType self_type;
-
-  if (stack_frame_sp) {
-    lldb::ValueObjectSP valobj_sp =
-        stack_frame_sp->GetValueObjectForFrameVariable(self_var_sp,
-                                                       use_dynamic);
-
-    if (valobj_sp)
-      self_type = valobj_sp->GetCompilerType();
-  }
+  auto *swift_runtime =
+      SwiftLanguageRuntime::Get(stack_frame_sp->GetThread()->GetProcess());
+  CompilerType self_type =
+      ResolveVariable(self_var_sp, stack_frame_sp, swift_runtime, use_dynamic);
 
   if (!self_type.IsValid()) {
     if (Type *type = self_var_sp->GetType()) {
@@ -504,8 +547,6 @@ static void AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
   if (!imported_self_type.IsValid())
     return;
 
-  auto *swift_runtime =
-      SwiftLanguageRuntime::Get(stack_frame_sp->GetThread()->GetProcess());
   auto *stack_frame = stack_frame_sp.get();
   imported_self_type = swift_runtime->BindGenericTypeParameters(
       *stack_frame, imported_self_type);
@@ -588,22 +629,6 @@ static void AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
   }
 }
 
-/// Returns the Swift type for a ValueObject representing a variable.
-/// An invalid CompilerType is returned on error.
-static CompilerType GetSwiftTypeForVariableValueObject(
-    lldb::ValueObjectSP valobj_sp, lldb::StackFrameSP &stack_frame_sp,
-    SwiftLanguageRuntime *runtime, bool use_dynamic_value) {
-  // Check that the passed ValueObject is valid.
-  if (!valobj_sp || valobj_sp->GetError().Fail())
-    return CompilerType();
-  CompilerType result = valobj_sp->GetCompilerType();
-  if (use_dynamic_value)
-    result = runtime->BindGenericTypeParameters(*stack_frame_sp, result);
-  if (!result.GetTypeSystem()->SupportsLanguage(lldb::eLanguageTypeSwift))
-    return CompilerType();
-  return result;
-}
-
 /// Create a \c VariableInfo record for \c variable if there isn't
 /// already shadowing inner declaration in \c processed_variables.
 static llvm::Optional<llvm::Error> AddVariableInfo(
@@ -633,27 +658,8 @@ static llvm::Optional<llvm::Error> AddVariableInfo(
   if (!stack_frame_sp)
     return llvm::None;
 
-  lldb::ValueObjectSP valobj_sp =
-      stack_frame_sp->GetValueObjectForFrameVariable(variable_sp,
-                                                     lldb::eNoDynamicValues);
-
-  const bool use_dynamic_value = use_dynamic > lldb::eNoDynamicValues;
-
-  CompilerType var_type = GetSwiftTypeForVariableValueObject(
-      valobj_sp, stack_frame_sp, runtime, use_dynamic_value);
-
-  if (!var_type.IsValid())
-    return {};
-
-  // If the type can't be realized and dynamic types are allowed, fall back to
-  // the dynamic type.
-  if (!SwiftASTContext::IsFullyRealized(var_type) && use_dynamic_value) {
-    var_type = GetSwiftTypeForVariableValueObject(
-        valobj_sp->GetDynamicValue(use_dynamic), stack_frame_sp, runtime,
-        use_dynamic_value);
-    if (!var_type.IsValid())
-      return {};
-  }
+  CompilerType var_type =
+      ResolveVariable(variable_sp, stack_frame_sp, runtime, use_dynamic);
 
   Status error;
   CompilerType target_type = ast_context.ImportType(var_type, error);
