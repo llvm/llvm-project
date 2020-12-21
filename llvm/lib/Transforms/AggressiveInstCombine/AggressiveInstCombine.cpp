@@ -21,6 +21,7 @@
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -39,6 +40,8 @@ using namespace PatternMatch;
 STATISTIC(NumAnyOrAllBitsSet, "Number of any/all-bits-set patterns folded");
 STATISTIC(NumGuardedRotates,
           "Number of guarded rotates transformed into funnel shifts");
+STATISTIC(NumGuardedFunnelShifts,
+          "Number of guarded funnel shifts transformed into funnel shifts");
 STATISTIC(NumPopCountRecognized, "Number of popcount idioms recognized");
 
 namespace {
@@ -67,17 +70,17 @@ public:
 };
 } // namespace
 
-/// Match a pattern for a bitwise rotate operation that partially guards
-/// against undefined behavior by branching around the rotation when the shift
-/// amount is 0.
-static bool foldGuardedRotateToFunnelShift(Instruction &I) {
+/// Match a pattern for a bitwise funnel/rotate operation that partially guards
+/// against undefined behavior by branching around the funnel-shift/rotation
+/// when the shift amount is 0.
+static bool foldGuardedFunnelShift(Instruction &I, const DominatorTree &DT) {
   if (I.getOpcode() != Instruction::PHI || I.getNumOperands() != 2)
     return false;
 
   // As with the one-use checks below, this is not strictly necessary, but we
   // are being cautious to avoid potential perf regressions on targets that
-  // do not actually have a rotate instruction (where the funnel shift would be
-  // expanded back into math/shift/logic ops).
+  // do not actually have a funnel/rotate instruction (where the funnel shift
+  // would be expanded back into math/shift/logic ops).
   if (!isPowerOf2_32(I.getType()->getScalarSizeInBits()))
     return false;
 
@@ -111,30 +114,41 @@ static bool foldGuardedRotateToFunnelShift(Instruction &I) {
     return Intrinsic::not_intrinsic;
   };
 
-  // One phi operand must be a rotate operation, and the other phi operand must
-  // be the source value of that rotate operation:
+  // One phi operand must be a funnel/rotate operation, and the other phi
+  // operand must be the source value of that funnel/rotate operation:
   // phi [ rotate(RotSrc, ShAmt), FunnelBB ], [ RotSrc, GuardBB ]
+  // phi [ fshl(ShVal0, ShVal1, ShAmt), FunnelBB ], [ ShVal0, GuardBB ]
+  // phi [ fshr(ShVal0, ShVal1, ShAmt), FunnelBB ], [ ShVal1, GuardBB ]
   PHINode &Phi = cast<PHINode>(I);
   unsigned FunnelOp = 0, GuardOp = 1;
   Value *P0 = Phi.getOperand(0), *P1 = Phi.getOperand(1);
   Value *ShVal0, *ShVal1, *ShAmt;
   Intrinsic::ID IID = matchFunnelShift(P0, ShVal0, ShVal1, ShAmt);
-  if (IID == Intrinsic::not_intrinsic || ShVal0 != ShVal1 || ShVal0 != P1) {
+  if (IID == Intrinsic::not_intrinsic ||
+      (IID == Intrinsic::fshl && ShVal0 != P1) ||
+      (IID == Intrinsic::fshr && ShVal1 != P1)) {
     IID = matchFunnelShift(P1, ShVal0, ShVal1, ShAmt);
-    if (IID == Intrinsic::not_intrinsic || ShVal0 != ShVal1 || ShVal0 != P0)
+    if (IID == Intrinsic::not_intrinsic ||
+        (IID == Intrinsic::fshl && ShVal0 != P0) ||
+        (IID == Intrinsic::fshr && ShVal1 != P0))
       return false;
     assert((IID == Intrinsic::fshl || IID == Intrinsic::fshr) &&
            "Pattern must match funnel shift left or right");
     std::swap(FunnelOp, GuardOp);
   }
-  assert(ShVal0 == ShVal1 && "Rotation funnel shift pattern expected");
 
   // The incoming block with our source operand must be the "guard" block.
-  // That must contain a cmp+branch to avoid the rotate when the shift amount
-  // is equal to 0. The other incoming block is the block with the rotate.
+  // That must contain a cmp+branch to avoid the funnel/rotate when the shift
+  // amount is equal to 0. The other incoming block is the block with the
+  // funnel/rotate.
   BasicBlock *GuardBB = Phi.getIncomingBlock(GuardOp);
   BasicBlock *FunnelBB = Phi.getIncomingBlock(FunnelOp);
   Instruction *TermI = GuardBB->getTerminator();
+
+  // Ensure that the shift values dominate each block.
+  if (!DT.dominates(ShVal0, TermI) || !DT.dominates(ShVal1, TermI))
+    return false;
+
   ICmpInst::Predicate Pred;
   BasicBlock *PhiBB = Phi.getParent();
   if (!match(TermI, m_Br(m_ICmp(Pred, m_Specific(ShAmt), m_ZeroInt()),
@@ -144,24 +158,39 @@ static bool foldGuardedRotateToFunnelShift(Instruction &I) {
   if (Pred != CmpInst::ICMP_EQ)
     return false;
 
+  IRBuilder<> Builder(PhiBB, PhiBB->getFirstInsertionPt());
+
+  if (ShVal0 == ShVal1)
+    ++NumGuardedRotates;
+  else
+    ++NumGuardedFunnelShifts;
+
+  // If this is not a rotate then the select was blocking poison from the
+  // 'shift-by-zero' non-TVal, but a funnel shift won't - so freeze it.
+  bool IsFshl = IID == Intrinsic::fshl;
+  if (ShVal0 != ShVal1) {
+    if (IsFshl && !llvm::isGuaranteedNotToBePoison(ShVal1))
+      ShVal1 = Builder.CreateFreeze(ShVal1);
+    else if (!IsFshl && !llvm::isGuaranteedNotToBePoison(ShVal0))
+      ShVal0 = Builder.CreateFreeze(ShVal0);
+  }
+
   // We matched a variation of this IR pattern:
   // GuardBB:
   //   %cmp = icmp eq i32 %ShAmt, 0
   //   br i1 %cmp, label %PhiBB, label %FunnelBB
   // FunnelBB:
   //   %sub = sub i32 32, %ShAmt
-  //   %shr = lshr i32 %RotSrc, %sub
-  //   %shl = shl i32 %RotSrc, %ShAmt
-  //   %rot = or i32 %shr, %shl
+  //   %shr = lshr i32 %ShVal1, %sub
+  //   %shl = shl i32 %ShVal0, %ShAmt
+  //   %fsh = or i32 %shr, %shl
   //   br label %PhiBB
   // PhiBB:
-  //   %cond = phi i32 [ %RotSrc, %FunnelBB ], [ %RotSrc, %GuardBB ]
+  //   %cond = phi i32 [ %fsh, %FunnelBB ], [ %ShVal0, %GuardBB ]
   // -->
-  // llvm.fshl.i32(i32 %RotSrc, i32 %RotSrc, i32 %ShAmt)
-  IRBuilder<> Builder(PhiBB, PhiBB->getFirstInsertionPt());
+  // llvm.fshl.i32(i32 %ShVal0, i32 %ShVal1, i32 %ShAmt)
   Function *F = Intrinsic::getDeclaration(Phi.getModule(), IID, Phi.getType());
   Phi.replaceAllUsesWith(Builder.CreateCall(F, {ShVal0, ShVal1, ShAmt}));
-  ++NumGuardedRotates;
   return true;
 }
 
@@ -350,7 +379,7 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT) {
     // iteratively in this loop rather than waiting until the end.
     for (Instruction &I : make_range(BB.rbegin(), BB.rend())) {
       MadeChange |= foldAnyOrAllBitsSet(I);
-      MadeChange |= foldGuardedRotateToFunnelShift(I);
+      MadeChange |= foldGuardedFunnelShift(I, DT);
       MadeChange |= tryToRecognizePopCount(I); 
     }
   }
