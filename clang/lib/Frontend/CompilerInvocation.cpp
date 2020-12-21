@@ -323,6 +323,23 @@ static Optional<IntTy> normalizeStringIntegral(OptSpecifier Opt, int,
   return Res;
 }
 
+static Optional<std::vector<std::string>>
+normalizeStringVector(OptSpecifier Opt, int, const ArgList &Args,
+                      DiagnosticsEngine &) {
+  return Args.getAllArgValues(Opt);
+}
+
+static void denormalizeStringVector(SmallVectorImpl<const char *> &Args,
+                                    const char *Spelling,
+                                    CompilerInvocation::StringAllocator SA,
+                                    Option::OptionClass OptClass,
+                                    unsigned TableIndex,
+                                    const std::vector<std::string> &Values) {
+  for (const std::string &Value : Values) {
+    denormalizeString(Args, Spelling, SA, OptClass, TableIndex, Value);
+  }
+}
+
 static Optional<std::string> normalizeTriple(OptSpecifier Opt, int TableIndex,
                                              const ArgList &Args,
                                              DiagnosticsEngine &Diags) {
@@ -1715,7 +1732,6 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   Opts.LLVMArgs = Args.getAllArgValues(OPT_mllvm);
   Opts.ASTDumpDecls = Args.hasArg(OPT_ast_dump, OPT_ast_dump_EQ);
   Opts.ASTDumpAll = Args.hasArg(OPT_ast_dump_all, OPT_ast_dump_all_EQ);
-  Opts.ModuleMapFiles = Args.getAllArgValues(OPT_fmodule_map_file);
   // Only the -fmodule-file=<file> form.
   for (const auto *A : Args.filtered(OPT_fmodule_file)) {
     StringRef Val = A->getValue();
