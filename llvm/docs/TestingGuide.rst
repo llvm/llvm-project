@@ -73,7 +73,7 @@ transforming it. They are tested in general using the same infrastructure as the
 regression tests, by creating a separate "Printer" pass to consume the analysis
 result and print it on the standard output in a textual format suitable for
 FileCheck.
-See `llvm/test/Analysis/BranchProbabilityInfo/loop.ll <https://github.com/llvm/llvm-project/blob/master/llvm/test/Analysis/BranchProbabilityInfo/loop.ll>`_
+See `llvm/test/Analysis/BranchProbabilityInfo/loop.ll <https://github.com/llvm/llvm-project/blob/main/llvm/test/Analysis/BranchProbabilityInfo/loop.ll>`_
 for an example of such test.
 
 ``test-suite``
