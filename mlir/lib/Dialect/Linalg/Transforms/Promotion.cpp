@@ -172,7 +172,8 @@ LinalgOpInstancePromotionOptions::LinalgOpInstancePromotionOptions(
     LinalgOp linalgOp, const LinalgPromotionOptions &options)
     : subViews(), dynamicBuffers(options.dynamicBuffers),
       alignment(options.alignment) {
-  unsigned nBuffers = linalgOp.getNumInputsAndOutputBuffers();
+  assert(linalgOp.hasBufferSemantics() && "revisit usage of shaped operand");
+  unsigned nBuffers = linalgOp.getNumShapedOperands();
   auto vUseFullTileBuffers =
       options.useFullTileBuffers.getValueOr(llvm::SmallBitVector());
   vUseFullTileBuffers.resize(nBuffers, options.useFullTileBuffersDefault);
@@ -180,7 +181,7 @@ LinalgOpInstancePromotionOptions::LinalgOpInstancePromotionOptions(
   for (unsigned idx = 0; idx != nBuffers; ++idx) {
     if (options.operandsToPromote && !options.operandsToPromote->count(idx))
       continue;
-    auto *op = linalgOp.getBuffer(idx).getDefiningOp();
+    auto *op = linalgOp.getShapedOperand(idx).getDefiningOp();
     if (auto sv = dyn_cast_or_null<SubViewOp>(op)) {
       subViews[idx] = sv;
       useFullTileBuffers[sv] = vUseFullTileBuffers[idx];
@@ -326,10 +327,10 @@ promoteSubViews(OpBuilder &b, LinalgOp op,
   // operands are not views. This is to support cases such as FillOp taking
   // extra scalars etc.  Keep a reference to output buffers;
   SmallVector<Value, 8> opViews;
-  opViews.reserve(op.getNumInputsAndOutputs());
+  opViews.reserve(op.getNumShapedOperands());
   SmallVector<std::pair<Value, Value>, 8> writebackViews;
   writebackViews.reserve(promotedBuffersAndViews->size());
-  for (auto view : llvm::enumerate(op.getInputsAndOutputBuffers())) {
+  for (auto view : llvm::enumerate(op.getShapedOperands())) {
     if (options.subViews.count(view.index()) != 0) {
       if (options.useFullTileBuffers[view.value()])
         opViews.push_back(
@@ -371,7 +372,7 @@ mlir::linalg::promoteSubviewsPrecondition(Operation *op,
   if (!linOp || !linOp.hasBufferSemantics())
     return failure();
   // Check that at least one of the requested operands is indeed a subview.
-  for (auto en : llvm::enumerate(linOp.getInputsAndOutputBuffers())) {
+  for (auto en : llvm::enumerate(linOp.getShapedOperands())) {
     auto sv = isa_and_nonnull<SubViewOp>(en.value().getDefiningOp());
     if (sv) {
       if (!options.operandsToPromote.hasValue() ||
