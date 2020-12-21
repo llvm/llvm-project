@@ -29,9 +29,6 @@
 using namespace lldb_private;
 using namespace lldb_private::process_freebsd;
 
-// Private namespace.
-
-namespace {
 // x86 64-bit general purpose registers.
 static const uint32_t g_gpr_regnums_x86_64[] = {
     lldb_rax_x86_64,    lldb_rbx_x86_64,    lldb_rcx_x86_64, lldb_rdx_x86_64,
@@ -138,7 +135,7 @@ static_assert((sizeof(g_dbr_regnums_x86_64) / sizeof(g_dbr_regnums_x86_64[0])) -
               "g_dbr_regnums_x86_64 has wrong number of register infos");
 
 // x86 32-bit general purpose registers.
-const uint32_t g_gpr_regnums_i386[] = {
+static const uint32_t g_gpr_regnums_i386[] = {
     lldb_eax_i386,      lldb_ebx_i386,    lldb_ecx_i386, lldb_edx_i386,
     lldb_edi_i386,      lldb_esi_i386,    lldb_ebp_i386, lldb_esp_i386,
     lldb_eip_i386,      lldb_eflags_i386, lldb_cs_i386,  lldb_fs_i386,
@@ -155,7 +152,7 @@ static_assert((sizeof(g_gpr_regnums_i386) / sizeof(g_gpr_regnums_i386[0])) -
               "g_gpr_regnums_i386 has wrong number of register infos");
 
 // x86 32-bit floating point registers.
-const uint32_t g_fpu_regnums_i386[] = {
+static const uint32_t g_fpu_regnums_i386[] = {
     lldb_fctrl_i386,    lldb_fstat_i386,     lldb_ftag_i386,  lldb_fop_i386,
     lldb_fiseg_i386,    lldb_fioff_i386,     lldb_foseg_i386, lldb_fooff_i386,
     lldb_mxcsr_i386,    lldb_mxcsrmask_i386, lldb_st0_i386,   lldb_st1_i386,
@@ -236,7 +233,6 @@ static const RegisterSet g_reg_sets_x86_64[k_num_register_sets] = {
 };
 
 #define REG_CONTEXT_SIZE (GetRegisterInfoInterface().GetGPRSize())
-} // namespace
 
 NativeRegisterContextFreeBSD *
 NativeRegisterContextFreeBSD::CreateHostNativeRegisterContextFreeBSD(
