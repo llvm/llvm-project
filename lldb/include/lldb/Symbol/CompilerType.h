@@ -290,7 +290,7 @@ public:
       std::function<bool(const CompilerType &integer_type, ConstString name,
                          const llvm::APSInt &value)> const &callback) const;
 
-  uint32_t GetNumFields() const;
+  uint32_t GetNumFields(ExecutionContext *exe_ctx = nullptr) const;
 
   CompilerType GetFieldAtIndex(size_t idx, std::string &name,
                                uint64_t *bit_offset_ptr,

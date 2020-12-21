@@ -789,7 +789,8 @@ SwiftLanguage::GetHardcodedSynthetics() {
                   is_imported = true;
               }
 
-              if (is_imported && type.GetNumFields() == 0)
+              ExecutionContext exe_ctx(valobj.GetExecutionContextRef());
+              if (is_imported && type.GetNumFields(&exe_ctx) == 0)
                 return true;
               if (valobj.IsBaseClass() && type.IsRuntimeGeneratedType()) {
                 auto parent(valobj.GetParent());

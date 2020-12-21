@@ -320,7 +320,8 @@ public:
                          ConstString name,
                          const llvm::APSInt &value)> const &callback) {}
 
-  virtual uint32_t GetNumFields(lldb::opaque_compiler_type_t type) = 0;
+  virtual uint32_t GetNumFields(lldb::opaque_compiler_type_t type,
+                                ExecutionContext *exe_ctx = nullptr) = 0;
 
   virtual CompilerType GetFieldAtIndex(lldb::opaque_compiler_type_t type,
                                        size_t idx, std::string &name,
