@@ -1599,6 +1599,13 @@ defm PseudoVMSBC       : VPseudoBinaryM_VM_XM<"@earlyclobber $rd">;
 defm PseudoVMSBC       : VPseudoBinaryM_V_X<"@earlyclobber $rd">;
 
 //===----------------------------------------------------------------------===//
+// 12.5. Vector Bitwise Logical Instructions
+//===----------------------------------------------------------------------===//
+defm PseudoVAND        : VPseudoBinaryV_VV_VX_VI;
+defm PseudoVOR         : VPseudoBinaryV_VV_VX_VI;
+defm PseudoVXOR        : VPseudoBinaryV_VV_VX_VI;
+
+//===----------------------------------------------------------------------===//
 // 12.6. Vector Single-Width Bit Shift Instructions
 //===----------------------------------------------------------------------===//
 defm PseudoVSLL        : VPseudoBinaryV_VV_VX_VI<uimm5>;
@@ -1913,6 +1920,13 @@ defm "" : VPatBinaryM_V_X_I<"int_riscv_vmadc", "PseudoVMADC">;
 defm "" : VPatBinaryV_VM_XM<"int_riscv_vsbc", "PseudoVSBC">;
 defm "" : VPatBinaryM_VM_XM<"int_riscv_vmsbc_borrow_in", "PseudoVMSBC">;
 defm "" : VPatBinaryM_V_X<"int_riscv_vmsbc", "PseudoVMSBC">;
+
+//===----------------------------------------------------------------------===//
+// 12.5. Vector Bitwise Logical Instructions
+//===----------------------------------------------------------------------===//
+defm "" : VPatBinaryV_VV_VX_VI<"int_riscv_vand", "PseudoVAND", AllIntegerVectors>;
+defm "" : VPatBinaryV_VV_VX_VI<"int_riscv_vor", "PseudoVOR", AllIntegerVectors>;
+defm "" : VPatBinaryV_VV_VX_VI<"int_riscv_vxor", "PseudoVXOR", AllIntegerVectors>;
 
 //===----------------------------------------------------------------------===//
 // 12.6. Vector Single-Width Bit Shift Instructions
