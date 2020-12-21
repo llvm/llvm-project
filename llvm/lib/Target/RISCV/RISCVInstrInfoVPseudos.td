@@ -1658,6 +1658,39 @@ let Defs = [VXSAT], hasSideEffects = 1 in {
   defm PseudoVSSUB       : VPseudoBinaryV_VV_VX;
 }
 
+//===----------------------------------------------------------------------===//
+// 13.2. Vector Single-Width Averaging Add and Subtract
+//===----------------------------------------------------------------------===//
+let Uses = [VL, VTYPE, VXRM], hasSideEffects = 1 in {
+  defm PseudoVAADDU      : VPseudoBinaryV_VV_VX;
+  defm PseudoVAADD       : VPseudoBinaryV_VV_VX;
+  defm PseudoVASUBU      : VPseudoBinaryV_VV_VX;
+  defm PseudoVASUB       : VPseudoBinaryV_VV_VX;
+}
+
+//===----------------------------------------------------------------------===//
+// 13.3. Vector Single-Width Fractional Multiply with Rounding and Saturation
+//===----------------------------------------------------------------------===//
+let Uses = [VL, VTYPE, VXRM], Defs = [VXSAT], hasSideEffects = 1 in {
+  defm PseudoVSMUL      : VPseudoBinaryV_VV_VX;
+}
+
+//===----------------------------------------------------------------------===//
+// 13.4. Vector Single-Width Scaling Shift Instructions
+//===----------------------------------------------------------------------===//
+let Uses = [VL, VTYPE, VXRM], hasSideEffects = 1 in {
+  defm PseudoVSSRL        : VPseudoBinaryV_VV_VX_VI<uimm5>;
+  defm PseudoVSSRA        : VPseudoBinaryV_VV_VX_VI<uimm5>;
+}
+
+//===----------------------------------------------------------------------===//
+// 13.5. Vector Narrowing Fixed-Point Clip Instructions
+//===----------------------------------------------------------------------===//
+let Uses = [VL, VTYPE, VXRM], Defs = [VXSAT], hasSideEffects = 1 in {
+  defm PseudoVNCLIP     : VPseudoBinaryV_WV_WX_WI;
+  defm PseudoVNCLIPU    : VPseudoBinaryV_WV_WX_WI;
+}
+
 } // Predicates = [HasStdExtV]
 
 let Predicates = [HasStdExtV, HasStdExtF] in {
@@ -1954,6 +1987,33 @@ defm "" : VPatBinaryV_VV_VX_VI<"int_riscv_vsaddu", "PseudoVSADDU", AllIntegerVec
 defm "" : VPatBinaryV_VV_VX_VI<"int_riscv_vsadd", "PseudoVSADD", AllIntegerVectors>;
 defm "" : VPatBinaryV_VV_VX<"int_riscv_vssubu", "PseudoVSSUBU", AllIntegerVectors>;
 defm "" : VPatBinaryV_VV_VX<"int_riscv_vssub", "PseudoVSSUB", AllIntegerVectors>;
+
+//===----------------------------------------------------------------------===//
+// 13.2. Vector Single-Width Averaging Add and Subtract
+//===----------------------------------------------------------------------===//
+defm "" : VPatBinaryV_VV_VX<"int_riscv_vaaddu", "PseudoVAADDU", AllIntegerVectors>;
+defm "" : VPatBinaryV_VV_VX<"int_riscv_vaadd", "PseudoVAADD", AllIntegerVectors>;
+defm "" : VPatBinaryV_VV_VX<"int_riscv_vasubu", "PseudoVASUBU", AllIntegerVectors>;
+defm "" : VPatBinaryV_VV_VX<"int_riscv_vasub", "PseudoVASUB", AllIntegerVectors>;
+
+//===----------------------------------------------------------------------===//
+// 13.3. Vector Single-Width Fractional Multiply with Rounding and Saturation
+//===----------------------------------------------------------------------===//
+defm "" : VPatBinaryV_VV_VX<"int_riscv_vsmul", "PseudoVSMUL", AllIntegerVectors>;
+
+//===----------------------------------------------------------------------===//
+// 13.4. Vector Single-Width Scaling Shift Instructions
+//===----------------------------------------------------------------------===//
+defm "" : VPatBinaryV_VV_VX_VI<"int_riscv_vssrl", "PseudoVSSRL", AllIntegerVectors,
+                               uimm5>;
+defm "" : VPatBinaryV_VV_VX_VI<"int_riscv_vssra", "PseudoVSSRA", AllIntegerVectors,
+                               uimm5>;
+
+//===----------------------------------------------------------------------===//
+// 13.5. Vector Narrowing Fixed-Point Clip Instructions
+//===----------------------------------------------------------------------===//
+defm "" : VPatBinaryV_WV_WX_WI<"int_riscv_vnclipu", "PseudoVNCLIPU", AllWidenableIntVectors>;
+defm "" : VPatBinaryV_WV_WX_WI<"int_riscv_vnclip", "PseudoVNCLIP", AllWidenableIntVectors>;
 
 } // Predicates = [HasStdExtV]
 
