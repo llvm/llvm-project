@@ -14,9 +14,6 @@
 #if SCUDO_LINUX
 #include <sys/auxv.h>
 #include <sys/prctl.h>
-#if defined(ANDROID_EXPERIMENTAL_MTE)
-#include <bionic/mte_kernel.h>
-#endif
 #endif
 
 namespace scudo {
@@ -56,20 +53,28 @@ inline uint8_t extractTag(uptr Ptr) {
 #if defined(__aarch64__)
 
 inline bool systemSupportsMemoryTagging() {
-#if defined(ANDROID_EXPERIMENTAL_MTE)
-  return getauxval(AT_HWCAP2) & HWCAP2_MTE;
-#else
-  return false;
+#ifndef HWCAP2_MTE
+#define HWCAP2_MTE (1 << 18)
 #endif
+  return getauxval(AT_HWCAP2) & HWCAP2_MTE;
 }
 
 inline bool systemDetectsMemoryTagFaultsTestOnly() {
-#if defined(ANDROID_EXPERIMENTAL_MTE)
-  return (prctl(PR_GET_TAGGED_ADDR_CTRL, 0, 0, 0, 0) & PR_MTE_TCF_MASK) !=
-         PR_MTE_TCF_NONE;
-#else
-  return false;
+#ifndef PR_GET_TAGGED_ADDR_CTRL
+#define PR_GET_TAGGED_ADDR_CTRL 56
 #endif
+#ifndef PR_MTE_TCF_SHIFT
+#define PR_MTE_TCF_SHIFT 1
+#endif
+#ifndef PR_MTE_TCF_NONE
+#define PR_MTE_TCF_NONE (0UL << PR_MTE_TCF_SHIFT)
+#endif
+#ifndef PR_MTE_TCF_MASK
+#define PR_MTE_TCF_MASK (3UL << PR_MTE_TCF_SHIFT)
+#endif
+  return (static_cast<unsigned long>(
+              prctl(PR_GET_TAGGED_ADDR_CTRL, 0, 0, 0, 0)) &
+          PR_MTE_TCF_MASK) != PR_MTE_TCF_NONE;
 }
 
 inline void disableMemoryTagChecksTestOnly() {
