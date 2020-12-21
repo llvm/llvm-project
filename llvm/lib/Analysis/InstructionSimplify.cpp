@@ -1999,6 +1999,30 @@ static Value *omitCheckForZeroBeforeInvertedMulWithOverflow(Value *Op0,
   return NotOp1;
 }
 
+/// Given a bitwise logic op, check if the operands are add/sub with a common
+/// source value and inverted constant (identity: C - X -> ~(X + ~C)).
+static Value *simplifyLogicOfAddSub(Value *Op0, Value *Op1,
+                                    Instruction::BinaryOps Opcode) {
+  assert(Op0->getType() == Op1->getType() && "Mismatched binop types");
+  assert(BinaryOperator::isBitwiseLogicOp(Opcode) && "Expected logic op");
+  Value *X;
+  Constant *C1, *C2;
+  if ((match(Op0, m_Add(m_Value(X), m_Constant(C1))) &&
+       match(Op1, m_Sub(m_Constant(C2), m_Specific(X)))) ||
+      (match(Op1, m_Add(m_Value(X), m_Constant(C1))) &&
+       match(Op0, m_Sub(m_Constant(C2), m_Specific(X))))) {
+    if (ConstantExpr::getNot(C1) == C2) {
+      // (X + C) & (~C - X) --> (X + C) & ~(X + C) --> 0
+      // (X + C) | (~C - X) --> (X + C) | ~(X + C) --> -1
+      // (X + C) ^ (~C - X) --> (X + C) ^ ~(X + C) --> -1
+      Type *Ty = Op0->getType();
+      return Opcode == Instruction::And ? ConstantInt::getNullValue(Ty)
+                                        : ConstantInt::getAllOnesValue(Ty);
+    }
+  }
+  return nullptr;
+}
+
 /// Given operands for an And, see if we can fold the result.
 /// If not, this returns null.
 static Value *SimplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
@@ -2034,6 +2058,9 @@ static Value *SimplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   // A & (A | ?) = A
   if (match(Op1, m_c_Or(m_Specific(Op0), m_Value())))
     return Op0;
+
+  if (Value *V = simplifyLogicOfAddSub(Op0, Op1, Instruction::And))
+    return V;
 
   // A mask that only clears known zeros of a shifted value is a no-op.
   Value *X;
@@ -2194,6 +2221,9 @@ static Value *SimplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   if (match(Op1, m_Not(m_c_And(m_Specific(Op0), m_Value()))))
     return Constant::getAllOnesValue(Op0->getType());
 
+  if (Value *V = simplifyLogicOfAddSub(Op0, Op1, Instruction::Or))
+    return V;
+
   Value *A, *B;
   // (A & ~B) | (A ^ B) -> (A ^ B)
   // (~B & A) | (A ^ B) -> (A ^ B)
@@ -2322,6 +2352,9 @@ static Value *SimplifyXorInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   if (match(Op0, m_Not(m_Specific(Op1))) ||
       match(Op1, m_Not(m_Specific(Op0))))
     return Constant::getAllOnesValue(Op0->getType());
+
+  if (Value *V = simplifyLogicOfAddSub(Op0, Op1, Instruction::Xor))
+    return V;
 
   // Try some generic simplifications for associative operations.
   if (Value *V = SimplifyAssociativeBinOp(Instruction::Xor, Op0, Op1, Q,

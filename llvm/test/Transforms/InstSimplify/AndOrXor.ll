@@ -1053,10 +1053,7 @@ define <2 x i32> @shl_or_and3v(<2 x i16> %a, <2 x i16> %b) {
 
 define i8 @and_add_sub(i8 %x) {
 ; CHECK-LABEL: @and_add_sub(
-; CHECK-NEXT:    [[A:%.*]] = add i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[S:%.*]] = sub i8 0, [[X]]
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[A]], [[S]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 0
 ;
   %a = add i8 %x, -1
   %s = sub i8 0, %x
@@ -1066,10 +1063,7 @@ define i8 @and_add_sub(i8 %x) {
 
 define <2 x i8> @and_sub_add(<2 x i8> %x) {
 ; CHECK-LABEL: @and_sub_add(
-; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[X:%.*]], <i8 -4, i8 -4>
-; CHECK-NEXT:    [[S:%.*]] = sub <2 x i8> <i8 3, i8 3>, [[X]]
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[S]], [[A]]
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+; CHECK-NEXT:    ret <2 x i8> zeroinitializer
 ;
   %a = add <2 x i8> %x, <i8 -4, i8 -4>
   %s = sub <2 x i8> <i8 3, i8 3>, %x
@@ -1079,10 +1073,7 @@ define <2 x i8> @and_sub_add(<2 x i8> %x) {
 
 define i89 @or_add_sub(i89 %x) {
 ; CHECK-LABEL: @or_add_sub(
-; CHECK-NEXT:    [[A:%.*]] = add i89 [[X:%.*]], 5
-; CHECK-NEXT:    [[S:%.*]] = sub i89 -6, [[X]]
-; CHECK-NEXT:    [[R:%.*]] = or i89 [[A]], [[S]]
-; CHECK-NEXT:    ret i89 [[R]]
+; CHECK-NEXT:    ret i89 -1
 ;
   %a = add i89 %x, 5
   %s = sub i89 -6, %x
@@ -1092,10 +1083,7 @@ define i89 @or_add_sub(i89 %x) {
 
 define <3 x i8> @or_sub_add(<3 x i8> %x) {
 ; CHECK-LABEL: @or_sub_add(
-; CHECK-NEXT:    [[A:%.*]] = add <3 x i8> [[X:%.*]], <i8 42, i8 -12, i8 0>
-; CHECK-NEXT:    [[S:%.*]] = sub <3 x i8> <i8 -43, i8 11, i8 -1>, [[X]]
-; CHECK-NEXT:    [[R:%.*]] = or <3 x i8> [[S]], [[A]]
-; CHECK-NEXT:    ret <3 x i8> [[R]]
+; CHECK-NEXT:    ret <3 x i8> <i8 -1, i8 -1, i8 -1>
 ;
   %a = add <3 x i8> %x, <i8 42, i8 -12, i8 0>
   %s = sub <3 x i8> <i8 -43, i8 11, i8 -1>, %x
@@ -1106,10 +1094,7 @@ define <3 x i8> @or_sub_add(<3 x i8> %x) {
 
 define <2 x i17> @xor_add_sub(<2 x i17> %x) {
 ; CHECK-LABEL: @xor_add_sub(
-; CHECK-NEXT:    [[A:%.*]] = add <2 x i17> [[X:%.*]], <i17 3000, i17 23>
-; CHECK-NEXT:    [[S:%.*]] = sub <2 x i17> <i17 -3001, i17 -24>, [[X]]
-; CHECK-NEXT:    [[R:%.*]] = xor <2 x i17> [[A]], [[S]]
-; CHECK-NEXT:    ret <2 x i17> [[R]]
+; CHECK-NEXT:    ret <2 x i17> <i17 -1, i17 -1>
 ;
   %a = add <2 x i17> %x, <i17 3000, i17 23>
   %s = sub <2 x i17> <i17 -3001, i17 -24>, %x
@@ -1119,16 +1104,15 @@ define <2 x i17> @xor_add_sub(<2 x i17> %x) {
 
 define i8 @xor_sub_add(i8 %x) {
 ; CHECK-LABEL: @xor_sub_add(
-; CHECK-NEXT:    [[A:%.*]] = add i8 [[X:%.*]], 33
-; CHECK-NEXT:    [[S:%.*]] = sub i8 -34, [[X]]
-; CHECK-NEXT:    [[R:%.*]] = xor i8 [[S]], [[A]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 -1
 ;
   %a = add i8 %x, 33
   %s = sub i8 -34, %x
   %r = xor i8 %s, %a
   ret i8 %r
 }
+
+; Negative test
 
 define i8 @and_add_sub_wrong_const(i8 %x) {
 ; CHECK-LABEL: @and_add_sub_wrong_const(
@@ -1143,6 +1127,8 @@ define i8 @and_add_sub_wrong_const(i8 %x) {
   ret i8 %r
 }
 
+; Negative test
+
 define i8 @or_add_sub_wrong_var(i8 %x, i8 %y) {
 ; CHECK-LABEL: @or_add_sub_wrong_var(
 ; CHECK-NEXT:    [[A:%.*]] = add i8 [[X:%.*]], 5
@@ -1155,6 +1141,8 @@ define i8 @or_add_sub_wrong_var(i8 %x, i8 %y) {
   %r = or i8 %a, %s
   ret i8 %r
 }
+
+; Negative test
 
 define i8 @xor_add_sub_wrong_op(i8 %x) {
 ; CHECK-LABEL: @xor_add_sub_wrong_op(
