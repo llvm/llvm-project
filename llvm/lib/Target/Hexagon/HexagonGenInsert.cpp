@@ -1089,9 +1089,7 @@ void HexagonGenInsert::pruneCoveredSets(unsigned VR) {
     auto IsEmpty = [] (const IFRecordWithRegSet &IR) -> bool {
       return IR.second.empty();
     };
-    auto End = llvm::remove_if(LL, IsEmpty);
-    if (End != LL.end())
-      LL.erase(End, LL.end());
+    llvm::erase_if(LL, IsEmpty);
   } else {
     // The definition of VR is constant-extended, and all candidates have
     // empty removable-register sets. Pick the maximum candidate, and remove
@@ -1179,9 +1177,7 @@ void HexagonGenInsert::pruneRegCopies(unsigned VR) {
   auto IsCopy = [] (const IFRecordWithRegSet &IR) -> bool {
     return IR.first.Wdh == 32 && (IR.first.Off == 0 || IR.first.Off == 32);
   };
-  auto End = llvm::remove_if(LL, IsCopy);
-  if (End != LL.end())
-    LL.erase(End, LL.end());
+  llvm::erase_if(LL, IsCopy);
 }
 
 void HexagonGenInsert::pruneCandidates() {

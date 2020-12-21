@@ -5378,11 +5378,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
         // Call site info is used for function's parameter entry value
         // tracking. For now we track only simple cases when parameter
         // is transferred through whole register.
-        CSInfo.erase(std::remove_if(CSInfo.begin(), CSInfo.end(),
-                                    [&VA](MachineFunction::ArgRegPair ArgReg) {
-                                      return ArgReg.Reg == VA.getLocReg();
-                                    }),
-                     CSInfo.end());
+        llvm::erase_if(CSInfo, [&VA](MachineFunction::ArgRegPair ArgReg) {
+          return ArgReg.Reg == VA.getLocReg();
+        });
       } else {
         RegsToPass.emplace_back(VA.getLocReg(), Arg);
         RegsUsed.insert(VA.getLocReg());
