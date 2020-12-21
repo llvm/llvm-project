@@ -62,6 +62,15 @@ LLDB_NUMBER_TYPEMAP(signed long long);
 
 //===----------------------------------------------------------------------===//
 
+// FIXME:
+//  Ideally all the typemaps should be revisited in a future SB API revision.
+//  Typemaps, usually, modifies the function signatures and might spawn
+//  different LLDB APIs across languages (C++, Python, Lua...).
+//  Historically, typemaps have been used to replace SWIG's deficiencies,
+//  but SWIG itself evolved and some API design choices are now redundant.
+
+//===----------------------------------------------------------------------===//
+
 // Typemap definitions to allow SWIG to properly handle char buffer.
 
 // typemap for a char buffer
