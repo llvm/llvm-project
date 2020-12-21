@@ -15,6 +15,7 @@
 #define LLVM_IR_OPTBISECT_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ManagedStatic.h"
 
 namespace llvm {
 
@@ -32,7 +33,7 @@ public:
     return true;
   }
 
-  /// isEnabled should return true before calling shouldRunPass
+  /// isEnabled() should return true before calling shouldRunPass().
   virtual bool isEnabled() const { return false; }
 };
 
@@ -55,6 +56,14 @@ public:
 
   /// Checks the bisect limit to determine if the specified pass should run.
   ///
+  /// This forwards to checkPass().
+  bool shouldRunPass(const Pass *P, StringRef IRDescription) override;
+
+  /// isEnabled() should return true before calling shouldRunPass().
+  bool isEnabled() const override { return BisectEnabled; }
+
+  /// Checks the bisect limit to determine if the specified pass should run.
+  ///
   /// If the bisect limit is set to -1, the function prints a message describing
   /// the pass and the bisect number assigned to it and return true.  Otherwise,
   /// the function prints a message with the bisect number assigned to the
@@ -64,12 +73,6 @@ public:
   /// Most passes should not call this routine directly. Instead, they are
   /// called through helper routines provided by the pass base classes.  For
   /// instance, function passes should call FunctionPass::skipFunction().
-  bool shouldRunPass(const Pass *P, StringRef IRDescription) override;
-
-  /// isEnabled should return true before calling shouldRunPass
-  bool isEnabled() const override { return BisectEnabled; }
-
-protected:
   bool checkPass(const StringRef PassName, const StringRef TargetDesc);
 
 private:
@@ -77,6 +80,9 @@ private:
   unsigned LastBisectNum = 0;
 };
 
+/// Singleton instance of the OptBisect class, so multiple pass managers don't
+/// need to coordinate their uses of OptBisect.
+extern ManagedStatic<OptBisect> OptBisector;
 } // end namespace llvm
 
 #endif // LLVM_IR_OPTBISECT_H
