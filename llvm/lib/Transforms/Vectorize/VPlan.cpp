@@ -120,49 +120,17 @@ VPUser *VPRecipeBase::toVPUser() {
 }
 
 VPValue *VPRecipeBase::toVPValue() {
+  if (getNumDefinedValues() == 1)
+    return getVPValue();
   if (auto *V = dyn_cast<VPInstruction>(this))
-    return V;
-  if (auto *V = dyn_cast<VPReductionRecipe>(this))
-    return V;
-  if (auto *V = dyn_cast<VPWidenMemoryInstructionRecipe>(this)) {
-    if (!V->isStore())
-      return V->getVPValue();
-    else
-      return nullptr;
-  }
-  if (auto *V = dyn_cast<VPWidenCallRecipe>(this))
-    return V;
-  if (auto *V = dyn_cast<VPWidenSelectRecipe>(this))
-    return V;
-  if (auto *V = dyn_cast<VPWidenGEPRecipe>(this))
-    return V;
-  if (auto *V = dyn_cast<VPWidenRecipe>(this))
-    return V;
-  if (auto *V = dyn_cast<VPReplicateRecipe>(this))
     return V;
   return nullptr;
 }
 
 const VPValue *VPRecipeBase::toVPValue() const {
+  if (getNumDefinedValues() == 1)
+    return getVPValue();
   if (auto *V = dyn_cast<VPInstruction>(this))
-    return V;
-  if (auto *V = dyn_cast<VPReductionRecipe>(this))
-    return V;
-  if (auto *V = dyn_cast<VPWidenMemoryInstructionRecipe>(this)) {
-    if (!V->isStore())
-      return V->getVPValue();
-    else
-      return nullptr;
-  }
-  if (auto *V = dyn_cast<VPWidenCallRecipe>(this))
-    return V;
-  if (auto *V = dyn_cast<VPWidenSelectRecipe>(this))
-    return V;
-  if (auto *V = dyn_cast<VPWidenGEPRecipe>(this))
-    return V;
-  if (auto *V = dyn_cast<VPWidenRecipe>(this))
-    return V;
-  if (auto *V = dyn_cast<VPReplicateRecipe>(this))
     return V;
   return nullptr;
 }
