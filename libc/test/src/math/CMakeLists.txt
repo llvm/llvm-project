@@ -391,6 +391,141 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  rint_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    rint_test.cpp
+  HDRS
+    RIntTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.rint
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  rintf_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    rintf_test.cpp
+  HDRS
+    RIntTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.rintf
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  rintl_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    rintl_test.cpp
+  HDRS
+    RIntTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.rintl
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  lrint_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    lrint_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.lrint
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  lrintf_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    lrintf_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.lrintf
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  lrintl_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    lrintl_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.lrintl
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  llrint_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    llrint_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.llrint
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  llrintf_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    llrintf_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.llrintf
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  llrintl_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    llrintl_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.llrintl
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
   expf_test
   NEED_MPFR
   SUITE
