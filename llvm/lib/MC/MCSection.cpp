@@ -28,7 +28,7 @@ MCSection::MCSection(SectionVariant V, StringRef Name, SectionKind K,
 
 MCSymbol *MCSection::getEndSymbol(MCContext &Ctx) {
   if (!End)
-    End = Ctx.createTempSymbol("sec_end", true);
+    End = Ctx.createTempSymbol("sec_end");
   return End;
 }
 

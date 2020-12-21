@@ -232,11 +232,16 @@ MCSymbol *MCContext::createSymbol(StringRef Name, bool AlwaysAddSuffix,
   llvm_unreachable("Infinite loop");
 }
 
-MCSymbol *MCContext::createTempSymbol(const Twine &Name, bool AlwaysAddSuffix,
-                                      bool CanBeUnnamed) {
+MCSymbol *MCContext::createTempSymbol(const Twine &Name, bool AlwaysAddSuffix) {
   SmallString<128> NameSV;
   raw_svector_ostream(NameSV) << MAI->getPrivateGlobalPrefix() << Name;
-  return createSymbol(NameSV, AlwaysAddSuffix, CanBeUnnamed);
+  return createSymbol(NameSV, AlwaysAddSuffix, true);
+}
+
+MCSymbol *MCContext::createNamedTempSymbol(const Twine &Name) {
+  SmallString<128> NameSV;
+  raw_svector_ostream(NameSV) << MAI->getPrivateGlobalPrefix() << Name;
+  return createSymbol(NameSV, true, false);
 }
 
 MCSymbol *MCContext::createLinkerPrivateTempSymbol() {
@@ -245,8 +250,10 @@ MCSymbol *MCContext::createLinkerPrivateTempSymbol() {
   return createSymbol(NameSV, true, false);
 }
 
-MCSymbol *MCContext::createTempSymbol(bool CanBeUnnamed) {
-  return createTempSymbol("tmp", true, CanBeUnnamed);
+MCSymbol *MCContext::createTempSymbol() { return createTempSymbol("tmp"); }
+
+MCSymbol *MCContext::createNamedTempSymbol() {
+  return createNamedTempSymbol("tmp");
 }
 
 unsigned MCContext::NextInstance(unsigned LocalLabelVal) {
@@ -267,7 +274,7 @@ MCSymbol *MCContext::getOrCreateDirectionalLocalSymbol(unsigned LocalLabelVal,
                                                        unsigned Instance) {
   MCSymbol *&Sym = LocalSymbols[std::make_pair(LocalLabelVal, Instance)];
   if (!Sym)
-    Sym = createTempSymbol(false);
+    Sym = createNamedTempSymbol();
   return Sym;
 }
 
