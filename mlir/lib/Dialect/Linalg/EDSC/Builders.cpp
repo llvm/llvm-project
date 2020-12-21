@@ -23,36 +23,25 @@ using namespace mlir::scf;
 
 Operation *mlir::edsc::makeGenericLinalgOp(
     ArrayRef<IteratorType> iteratorTypes, ArrayRef<StructuredIndexed> inputs,
-    ArrayRef<StructuredIndexed> outputBuffers, ArrayRef<Value> initTensors,
-    ArrayRef<StructuredIndexed> resultTensorTypes,
+    ArrayRef<StructuredIndexed> outputs, TypeRange resultTensorTypes,
     function_ref<void(ValueRange)> regionBuilder, ArrayRef<Value> otherValues,
     ArrayRef<Attribute> otherAttributes) {
   OpBuilder &builder = edsc::ScopedContext::getBuilderRef();
 
   // Build maps
   SmallVector<SmallVector<AffineExpr, 4>, 4> exprsList;
-  exprsList.reserve(inputs.size() + outputBuffers.size() + initTensors.size());
-  for (auto container : {inputs, outputBuffers, resultTensorTypes})
+  exprsList.reserve(inputs.size() + outputs.size());
+
+  for (auto container : {inputs, outputs})
     for (const StructuredIndexed &s : container)
       exprsList.emplace_back(s.getExprs().begin(), s.getExprs().end());
   auto maps = AffineMap::inferFromExprList(exprsList);
 
-  SmallVector<Type, 4> types;
-  assert(llvm::all_of(resultTensorTypes, [](const StructuredIndexed &s) {
-    return !s.hasValue();
-  }));
-  std::copy(resultTensorTypes.begin(), resultTensorTypes.end(),
-            std::back_inserter(types));
-
-  SmallVector<Value, 4> inputValues, outputBufferValues, initTensorValues;
+  SmallVector<Value, 4> inputValues, outputValues;
   inputValues.reserve(inputs.size());
-  outputBufferValues.reserve(outputBuffers.size());
-  initTensorValues.reserve(initTensors.size());
+  outputValues.reserve(outputs.size());
   std::copy(inputs.begin(), inputs.end(), std::back_inserter(inputValues));
-  std::copy(outputBuffers.begin(), outputBuffers.end(),
-            std::back_inserter(outputBufferValues));
-  std::copy(initTensors.begin(), initTensors.end(),
-            std::back_inserter(initTensorValues));
+  std::copy(outputs.begin(), outputs.end(), std::back_inserter(outputValues));
 
   auto iteratorStrTypes =
       llvm::to_vector<8>(llvm::map_range(iteratorTypes, toString));
@@ -61,10 +50,9 @@ Operation *mlir::edsc::makeGenericLinalgOp(
       edsc::ScopedContext::getBuilderRef()
           .create<linalg::GenericOp>(
               edsc::ScopedContext::getLocation(),
-              types,
+              resultTensorTypes,
               inputValues,
-              outputBufferValues,
-              initTensorValues,
+              outputValues,
               builder.getAffineMapArrayAttr(maps),
               builder.getStrArrayAttr(iteratorStrTypes),
               StringAttr() /*doc*/,
@@ -77,12 +65,10 @@ Operation *mlir::edsc::makeGenericLinalgOp(
 
   using namespace edsc;
   SmallVector<Type, 4> blockTypes;
-  blockTypes.reserve(inputs.size() + outputBuffers.size() + initTensors.size());
-  for (auto container : {inputs, outputBuffers})
+  blockTypes.reserve(inputs.size() + outputs.size());
+  for (auto container : {inputs, outputs})
     for (const StructuredIndexed &s : container)
       blockTypes.push_back(getElementTypeOrSelf(s.getType()));
-  for (Value v : initTensors)
-    blockTypes.push_back(getElementTypeOrSelf(v.getType()));
 
   assert(op->getNumRegions() == 1);
   assert(op->getRegion(0).empty());
@@ -119,11 +105,10 @@ Operation *mlir::edsc::ops::linalg_generic_pointwise(
     linalg_yield(unaryOp(a));
   };
   if (O.getType().isa<RankedTensorType>())
-    return makeGenericLinalgOp(iterTypes, /*inputs=*/{I}, /*outputBuffers=*/{},
-                               /*initTensors=*/{}, /*resultTensorTypes=*/{O},
-                               fun);
-  return makeGenericLinalgOp(iterTypes, /*inputs=*/{I}, /*outputBuffers=*/{O},
-                             /*initTensors=*/{}, /*resultTensorTypes=*/{}, fun);
+    return makeGenericLinalgOp(iterTypes, /*inputs=*/{I}, /*outputs=*/{O},
+                               /*resultTensorTypes=*/{O}, fun);
+  return makeGenericLinalgOp(iterTypes, /*inputs=*/{I}, /*outputs=*/{O},
+                             /*resultTensorTypes=*/{}, fun);
 }
 
 Operation *mlir::edsc::ops::linalg_generic_pointwise_tanh(StructuredIndexed I,
@@ -144,12 +129,10 @@ Operation *mlir::edsc::ops::linalg_generic_pointwise(
     linalg_yield(binaryOp(a, b));
   };
   if (O.getType().isa<RankedTensorType>())
-    return makeGenericLinalgOp(
-        iterTypes, /*inputs=*/{I1, I2}, /*outputBuffers=*/{},
-        /*initTensors=*/{}, /*resultTensorTypes=*/{O}, fun);
+    return makeGenericLinalgOp(iterTypes, /*inputs=*/{I1, I2}, /*outputs=*/{O},
+                               /*resultTensorTypes=*/{O}, fun);
   return makeGenericLinalgOp(iterTypes, /*inputs=*/{I1, I2},
-                             /*outputBuffers=*/{O},
-                             /*initTensors=*/{}, /*resultTensorTypes=*/{}, fun);
+                             /*outputs=*/{O}, /*resultTensorTypes=*/{}, fun);
 }
 
 Operation *mlir::edsc::ops::linalg_generic_pointwise_add(StructuredIndexed I1,
@@ -181,8 +164,7 @@ mlir::edsc::ops::linalg_generic_matmul(Value vA, Value vB, Value vC,
   return makeGenericLinalgOp(
     {IteratorType::Parallel, IteratorType::Parallel, IteratorType::Reduction},
     /*inputs=*/{A({m, k}), B({k, n})},
-    /*outputBuffers=*/{C({m, n})},
-    /*initTensors=*/{},
+    /*outputs=*/{C({m, n})},
     /*resultTensorTypes=*/{},
     regionBuilder);
   // clang-format on
@@ -199,8 +181,7 @@ mlir::edsc::ops::linalg_generic_matmul(Value vA, Value vB, Value vC,
   return makeGenericLinalgOp(
     {IteratorType::Parallel, IteratorType::Parallel, IteratorType::Reduction},
     /*inputs=*/{A({m, k}), B({k, n})},
-    /*outputBuffers=*/{},
-    /*initTensors=*/{C({m, n})},
+    /*outputs=*/{C({m, n})},
     /*resultTensorTypes=*/{D({m, n})},
     regionBuilder);
   // clang-format on
@@ -236,8 +217,7 @@ Operation *mlir::edsc::ops::linalg_generic_conv_nhwc(Value vI, Value vW,
          simplifyAffineExpr(s[1] * w + d[1] * kw, numDims, 0),
          c}),
       W({kh, kw, c, f}) },
-    /*outputBuffers=*/{ O({b, h, w, f}) },
-    /*initTensors=*/{},
+    /*outputs=*/{ O({b, h, w, f}) },
     /*resultTensorTypes=*/{},
     macRegionBuilder);
   // clang-format on
@@ -272,9 +252,8 @@ Operation *mlir::edsc::ops::linalg_generic_dilated_conv_nhwc(
          simplifyAffineExpr(s[1] * w + d[1] * kw, numDims, 0),
          c}),
       W({kh, kw, c, dm})},
-    /*outputBuffers=*/{
+    /*outputs=*/{
       O({b, h, w, simplifyAffineExpr(c * depth_multiplier + dm, numDims, 0)})},
-    /*initTensors=*/{},
     /*resultTensorTypes=*/{},
     macRegionBuilder);
   // clang-format on

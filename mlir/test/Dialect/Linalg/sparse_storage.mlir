@@ -88,8 +88,9 @@
 
 func @mul_dd(%arga: tensor<32xf64>, %argb: tensor<32xf64>) -> tensor<32xf64> {
   %0 = linalg.generic #trait_mul_1d
-    ins(%arga, %argb: tensor<32xf64>, tensor<32xf64>) {
-      ^bb(%a: f64, %b: f64):
+     ins(%arga, %argb: tensor<32xf64>, tensor<32xf64>)
+    outs(%arga : tensor<32xf64>) {
+      ^bb(%a: f64, %b: f64, %s: f64):
         %0 = mulf %a, %b  : f64
         linalg.yield %0 : f64
   } -> tensor<32xf64>

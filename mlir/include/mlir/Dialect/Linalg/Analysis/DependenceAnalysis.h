@@ -45,19 +45,17 @@ private:
 class LinalgDependenceGraph {
 public:
   enum DependenceType { RAR = 0, RAW, WAR, WAW, NumTypes };
-  struct LinalgOpView {
-    Operation *op;
-    unsigned operandIndex;
-  };
+  // TODO: OpOperand tracks dependencies on buffer operands. Tensor result will
+  // need an extension to use OpResult.
   struct LinalgDependenceGraphElem {
     // dependentOpView may be either:
     //   1. src in the case of dependencesIntoGraphs.
     //   2. dst in the case of dependencesFromDstGraphs.
-    LinalgOpView dependentOpView;
+    OpOperand *dependentOpView;
     // View in the op that is used to index in the graph:
     //   1. src in the case of dependencesFromDstGraphs.
     //   2. dst in the case of dependencesIntoGraphs.
-    LinalgOpView indexingOpView;
+    OpOperand *indexingOpView;
     // Type of the dependence.
     DependenceType dependenceType;
   };
@@ -161,8 +159,8 @@ private:
   // Uses std::pair to keep operations and view together and avoid usage errors
   // related to src/dst and producer/consumer terminology in the context of
   // dependences.
-  void addDependenceElem(DependenceType dt, LinalgOpView indexingOpView,
-                         LinalgOpView dependentOpView);
+  void addDependenceElem(DependenceType dt, OpOperand *indexingOpView,
+                         OpOperand *dependentOpView);
 
   /// Implementation detail for findCoveringxxx.
   SmallVector<Operation *, 8>

@@ -1453,54 +1453,45 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
   const char *header = R"FMT(  def {0} : LinalgStructuredBase_Op<"{1}", [
     AttrSizedOperandSegments,
     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
-    NamedStructuredOpTrait,
     SingleBlockImplicitTerminator<"YieldOp">]> {
       let arguments = (ins Variadic<AnyShaped>:$inputs,
-                           Variadic<AnyMemRef>:$output_buffers,
-                           Variadic<AnyRankedTensor>:$init_tensors);
+                           Variadic<AnyShaped>:$outputs);
       let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
       let regions = (region AnyRegion:$region);
 
       let skipDefaultBuilders = 1;
       let builders = [ OpBuilderDAG<
-        (ins "ValueRange":$inputs, "ValueRange":$outputBuffers),
+        (ins "ValueRange":$inputs, "ValueRange":$outputs),
         [{{
           $_state.addOperands(inputs);
-          $_state.addOperands(outputBuffers);
+          $_state.addOperands(outputs);
           $_state.addAttribute(
             "operand_segment_sizes",
             $_builder.getI32VectorAttr({{
               static_cast<int32_t>(inputs.size()),
-              static_cast<int32_t>(outputBuffers.size()),
-              static_cast<int32_t>(0)}));
+              static_cast<int32_t>(outputs.size())}));
           buildNamedStructuredOpRegionAndAttributes<{0}>(
             $_builder,
             $_state,
             TypeRange(inputs),
-            TypeRange(outputBuffers),
-            TypeRange(),
-            TypeRange());
+            TypeRange(outputs));
         }]>, OpBuilderDAG<
         (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
-             "ValueRange":$outputBuffers, "ValueRange":$initTensors),
+             "ValueRange":$outputs),
         [{{
           $_state.addOperands(inputs);
-          $_state.addOperands(outputBuffers);
-          $_state.addOperands(initTensors);
+          $_state.addOperands(outputs);
           $_state.addTypes(resultTensorTypes);
           $_state.addAttribute(
             "operand_segment_sizes",
             $_builder.getI32VectorAttr({{
               static_cast<int32_t>(inputs.size()),
-              static_cast<int32_t>(outputBuffers.size()),
-              static_cast<int32_t>(initTensors.size())}));
+              static_cast<int32_t>(outputs.size())}));
           buildNamedStructuredOpRegionAndAttributes<{0}>(
             $_builder,
             $_state,
             TypeRange(inputs),
-            TypeRange(outputBuffers),
-            TypeRange(initTensors),
-            resultTensorTypes);
+            TypeRange(outputs));
         }]>, OpBuilderDAG<
         (ins "TypeRange":$resultTensorTypes, "ValueRange":$operands,
              CArg<"ArrayRef<NamedAttribute>", "{{}">:$attributes),
@@ -1513,7 +1504,6 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
       ];
       let printer = [{{ return ::printNamedStructuredOp(p, *this); }];
       let parser = [{{ return ::parseNamedStructuredOp<{0}>(parser, result); }];
-      let verifier = [{{ return ::verifyNamedStructuredOp(*this); }];
       let hasFolder = 1;
       let hasCanonicalizer = 1;
 
