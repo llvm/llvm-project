@@ -7285,7 +7285,6 @@ OperandMatchResultTy AMDGPUAsmParser::parseDim(OperandVector &Operands) {
 
 OperandMatchResultTy AMDGPUAsmParser::parseDPP8(OperandVector &Operands) {
   SMLoc S = Parser.getTok().getLoc();
-  StringRef Prefix;
 
   if (!isGFX10Plus() || !trySkipId("dpp8", AsmToken::Colon))
     return MatchOperand_NoMatch;
