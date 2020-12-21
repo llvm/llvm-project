@@ -205,10 +205,8 @@ void SparcMCExpr::fixELFSymbolsInTLSFixups(MCAssembler &Asm) const {
     MCSymbol *Symbol = Asm.getContext().getOrCreateSymbol("__tls_get_addr");
     Asm.registerSymbol(*Symbol);
     auto ELFSymbol = cast<MCSymbolELF>(Symbol);
-    if (!ELFSymbol->isBindingSet()) {
+    if (!ELFSymbol->isBindingSet())
       ELFSymbol->setBinding(ELF::STB_GLOBAL);
-      ELFSymbol->setExternal(true);
-    }
     LLVM_FALLTHROUGH;
   }
   case VK_Sparc_TLS_GD_HI22:

@@ -18,7 +18,7 @@ define fp128 @loadConstant() {
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    lis r3, 1
 ; CHECK-P8-NEXT:    ori r3, r3, 5
-; CHECK-P8-NEXT:    sldi r4, r3, 46
+; CHECK-P8-NEXT:    rldic r4, r3, 46, 1
 ; CHECK-P8-NEXT:    li r3, 0
 ; CHECK-P8-NEXT:    blr
   entry:
@@ -47,7 +47,7 @@ define fp128 @loadConstant2(fp128 %a, fp128 %b) {
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    lis r5, 1
 ; CHECK-P8-NEXT:    ori r5, r5, 5
-; CHECK-P8-NEXT:    sldi r6, r5, 46
+; CHECK-P8-NEXT:    rldic r6, r5, 46, 1
 ; CHECK-P8-NEXT:    li r5, 0
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop

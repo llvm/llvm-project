@@ -68,9 +68,9 @@ define dso_local double @speculatable_callee_intermediate_instructions (double* 
   ; CHECK-NEXT: stdu r1, -48(r1)
   ; CHECK-NEXT: mr r30, r3
   ; CHECK-NEXT: bl callee
-  ; CHECK-NEXT: lis r3, 16404
-  ; CHECK-NEXT: ori r3, r3, 52428
-  ; CHECK-NEXT: sldi r3, r3, 32
+  ; CHECK-NEXT: lis r3, 4101
+  ; CHECK-NEXT: ori r3, r3, 13107
+  ; CHECK-NEXT: rldic r3, r3, 34, 1
   ; CHECK-NEXT: oris r3, r3, 52428
   ; CHECK-NEXT: ori r3, r3, 52429
   ; CHECK-NEXT: std r3, 0(r30)
