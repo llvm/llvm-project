@@ -62,7 +62,7 @@ def OMPC_Collapse : Clause<"collapse"> {
 }
 def OMPC_Default : Clause<"default"> {
   let clangClass = "OMPDefaultClause";
-  let flangClass = "OmpDefaultClause";
+  let flangClassValue = "OmpDefaultClause";
 }
 def OMPC_Private : Clause<"private"> {
   let clangClass = "OMPPrivateClause";

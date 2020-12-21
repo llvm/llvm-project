@@ -2058,11 +2058,6 @@ public:
                       },
         x.u);
   }
-  bool Pre(const OmpDefaultClause &) {
-    Word("DEFAULT(");
-    return true;
-  }
-  void Post(const OmpDefaultClause &) { Put(")"); }
   bool Pre(const OmpProcBindClause &) {
     Word("PROC_BIND(");
     return true;
