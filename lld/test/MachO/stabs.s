@@ -1,13 +1,12 @@
 # REQUIRES: x86, shell
 # UNSUPPORTED: system-windows
-# RUN: split-file %s %t
+# RUN: rm -rf %t; split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/test.s -o %t/test.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/foo.s -o %t/foo.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/no-debug.s -o %t/no-debug.o
 ## Set modtimes of the files for deterministic test output.
 # RUN: env TZ=UTC touch -t "197001010000.16" %t/test.o
 # RUN: env TZ=UTC touch -t "197001010000.32" %t/foo.o
-# RUN: rm -f %t/foo.a
 # RUN: llvm-ar rcsU %t/foo.a %t/foo.o
 
 # RUN: %lld -lSystem %t/test.o %t/foo.o %t/no-debug.o -o %t/test

@@ -1,8 +1,7 @@
 ; REQUIRES: x86
-; RUN: split-file %s %t
+; RUN: rm -rf %t; split-file %s %t
 ; RUN: llvm-as %t/foo.ll -o %t/foo.o
 ; RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/test.s -o %t/test.o
-; RUN: rm -f %t/foo.a
 ; RUN: llvm-ar rcs %t/foo.a %t/foo.o
 ; RUN: %lld -save-temps -lSystem %t/test.o %t/foo.a -o %t/test
 ; RUN: llvm-objdump -d --macho --no-show-raw-insn %t/test | FileCheck %s

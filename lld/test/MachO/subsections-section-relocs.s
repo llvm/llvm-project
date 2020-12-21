@@ -1,9 +1,6 @@
 # REQUIRES: x86
-# RUN: mkdir -p %t
-# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t/test.o
-
-# RUN: echo "_bar_str" > %t/order-file
-# RUN: echo "_foo_str" >> %t/order-file
+# RUN: rm -rf %t; split-file %s %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/test.s -o %t/test.o
 
 # RUN: %lld -o %t/test %t/test.o -order_file %t/order-file
 # RUN: llvm-objdump --section-headers -d --no-show-raw-insn %t/test | FileCheck %s
@@ -20,6 +17,11 @@
 # STRINGS: Private symbol
 # STRINGS: foo
 
+#--- order-file
+_bar_str
+_foo_str
+
+#--- test.s
 .text
 .globl _main, _foo_str, _bar_str
 
