@@ -464,7 +464,7 @@ void ELFWriter::writeHeader(const MCAssembler &Asm) {
 
 uint64_t ELFWriter::SymbolValue(const MCSymbol &Sym,
                                 const MCAsmLayout &Layout) {
-  if (Sym.isCommon() && (Sym.isTargetCommon() || Sym.isExternal()))
+  if (Sym.isCommon())
     return Sym.getCommonAlignment();
 
   uint64_t Res;
@@ -1278,7 +1278,6 @@ void ELFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
 
     // Aliases defined with .symvar copy the binding from the symbol they alias.
     // This is the first place we are able to copy this information.
-    Alias->setExternal(Symbol.isExternal());
     Alias->setBinding(Symbol.getBinding());
     Alias->setVisibility(Symbol.getVisibility());
     Alias->setOther(Symbol.getOther());
