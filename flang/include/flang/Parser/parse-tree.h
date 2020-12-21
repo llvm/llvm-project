@@ -3859,8 +3859,7 @@ struct AccBindClause {
 };
 
 struct AccDefaultClause {
-  ENUM_CLASS(Arg, None, Present)
-  WRAPPER_CLASS_BOILERPLATE(AccDefaultClause, Arg);
+  WRAPPER_CLASS_BOILERPLATE(AccDefaultClause, llvm::acc::DefaultValue);
   CharBlock source;
 };
 

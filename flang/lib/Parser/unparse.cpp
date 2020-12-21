@@ -1850,10 +1850,10 @@ public:
   }
   void Unparse(const AccDefaultClause &x) {
     switch (x.v) {
-    case AccDefaultClause::Arg::None:
+    case llvm::acc::DefaultValue::ACC_Default_none:
       Put("NONE");
       break;
-    case AccDefaultClause::Arg::Present:
+    case llvm::acc::DefaultValue::ACC_Default_present:
       Put("PRESENT");
       break;
     }
