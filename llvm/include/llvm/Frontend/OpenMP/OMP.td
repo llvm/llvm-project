@@ -107,7 +107,7 @@ def OMP_PROC_BIND_default : ClauseVal<"default",5,0> {}
 def OMP_PROC_BIND_unknown : ClauseVal<"unknown",6,0> { let isDefault = true; }
 def OMPC_ProcBind : Clause<"proc_bind"> {
   let clangClass = "OMPProcBindClause";
-  let flangClass = "OmpProcBindClause";
+  let flangClassValue = "OmpProcBindClause";
   let enumClauseValue = "ProcBindKind";
   let allowedClauseValues = [
     OMP_PROC_BIND_master,
