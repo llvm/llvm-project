@@ -304,6 +304,20 @@ let TargetPrefix = "riscv" in {
                     [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyint_ty,
                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, LLVMMatchType<1>],
                     [IntrNoMem]>, RISCVVIntrinsic;
+  class RISCVTernaryAAXANoMask
+        : Intrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, llvm_any_ty, LLVMMatchType<0>,
+                     llvm_anyint_ty],
+                    [IntrNoMem]>, RISCVVIntrinsic {
+    let ExtendOperand = 2;
+  }
+  class RISCVTernaryAAXAMask
+        : Intrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, llvm_any_ty, LLVMMatchType<0>,
+                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty],
+                    [IntrNoMem]>, RISCVVIntrinsic {
+    let ExtendOperand = 2;
+  }
 
   multiclass RISCVUSLoad {
     def "int_riscv_" # NAME : RISCVUSLoad;
@@ -357,6 +371,10 @@ let TargetPrefix = "riscv" in {
   multiclass RISCVTernaryAAAX {
     def "int_riscv_" # NAME : RISCVTernaryAAAXNoMask;
     def "int_riscv_" # NAME # "_mask" : RISCVTernaryAAAXMask;
+  }
+  multiclass RISCVTernaryAAXA {
+    def "int_riscv_" # NAME : RISCVTernaryAAXANoMask;
+    def "int_riscv_" # NAME # "_mask" : RISCVTernaryAAXAMask;
   }
 
   defm vle : RISCVUSLoad;
@@ -417,6 +435,11 @@ let TargetPrefix = "riscv" in {
   defm vwmul : RISCVBinaryABX;
   defm vwmulu : RISCVBinaryABX;
   defm vwmulsu : RISCVBinaryABX;
+
+  defm vmacc : RISCVTernaryAAXA;
+  defm vnmsac : RISCVTernaryAAXA;
+  defm vmadd : RISCVTernaryAAXA;
+  defm vnmsub : RISCVTernaryAAXA;
 
   defm vfadd : RISCVBinaryAAX;
   defm vfsub : RISCVBinaryAAX;
