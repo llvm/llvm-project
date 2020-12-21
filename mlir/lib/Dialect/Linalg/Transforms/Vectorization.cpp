@@ -411,7 +411,7 @@ LogicalResult LinalgCopyVTRForwardingPattern::matchAndRewrite(
     vector::TransferReadOp xferOp, PatternRewriter &rewriter) const {
 
   // Transfer into `view`.
-  Value viewOrAlloc = xferOp.memref();
+  Value viewOrAlloc = xferOp.source();
   if (!viewOrAlloc.getDefiningOp<ViewOp>() &&
       !viewOrAlloc.getDefiningOp<AllocOp>())
     return failure();
@@ -487,7 +487,7 @@ LogicalResult LinalgCopyVTRForwardingPattern::matchAndRewrite(
 LogicalResult LinalgCopyVTWForwardingPattern::matchAndRewrite(
     vector::TransferWriteOp xferOp, PatternRewriter &rewriter) const {
   // Transfer into `viewOrAlloc`.
-  Value viewOrAlloc = xferOp.memref();
+  Value viewOrAlloc = xferOp.source();
   if (!viewOrAlloc.getDefiningOp<ViewOp>() &&
       !viewOrAlloc.getDefiningOp<AllocOp>())
     return failure();

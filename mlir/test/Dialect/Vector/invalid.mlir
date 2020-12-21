@@ -269,7 +269,7 @@ func @test_vector.transfer_read(%arg0: vector<4x3xf32>) {
   %c3 = constant 3 : index
   %f0 = constant 0.0 : f32
   %vf0 = splat %f0 : vector<4x3xf32>
-  // expected-error@+1 {{ requires memref type}}
+  // expected-error@+1 {{ requires memref or ranked tensor type}}
   %0 = vector.transfer_read %arg0[%c3, %c3], %vf0 : vector<4x3xf32>, vector<1x1x2x3xf32>
 }
 
@@ -297,7 +297,7 @@ func @test_vector.transfer_read(%arg0: memref<?x?xf32>) {
 func @test_vector.transfer_read(%arg0: memref<?x?xf32>) {
   %c3 = constant 3 : index
   %cst = constant 3.0 : f32
-  // expected-error@+1 {{requires a permutation_map with input dims of the same rank as the memref type}}
+  // expected-error@+1 {{requires a permutation_map with input dims of the same rank as the source type}}
   %0 = vector.transfer_read %arg0[%c3, %c3], %cst {permutation_map = affine_map<(d0)->(d0)>} : memref<?x?xf32>, vector<128xf32>
 }
 
@@ -343,7 +343,7 @@ func @test_vector.transfer_read(%arg0: memref<?x?xvector<4x3xf32>>) {
   %c3 = constant 3 : index
   %f0 = constant 0.0 : f32
   %vf0 = splat %f0 : vector<4x3xf32>
-  // expected-error@+1 {{requires memref vector element and vector result ranks to match}}
+  // expected-error@+1 {{requires source vector element and vector result ranks to match}}
   %0 = vector.transfer_read %arg0[%c3, %c3], %vf0 {permutation_map = affine_map<(d0, d1)->(d0, d1)>} : memref<?x?xvector<4x3xf32>>, vector<3xf32>
 }
 
@@ -353,7 +353,7 @@ func @test_vector.transfer_read(%arg0: memref<?x?xvector<6xf32>>) {
   %c3 = constant 3 : index
   %f0 = constant 0.0 : f32
   %vf0 = splat %f0 : vector<6xf32>
-  // expected-error@+1 {{requires the bitwidth of the minor 1-D vector to be an integral multiple of the bitwidth of the minor 1-D vector of the memref}}
+  // expected-error@+1 {{requires the bitwidth of the minor 1-D vector to be an integral multiple of the bitwidth of the minor 1-D vector of the source}}
   %0 = vector.transfer_read %arg0[%c3, %c3], %vf0 : memref<?x?xvector<6xf32>>, vector<3xf32>
 }
 
@@ -392,7 +392,7 @@ func @test_vector.transfer_write(%arg0: vector<4x3xf32>) {
   %c3 = constant 3 : index
   %f0 = constant 0.0 : f32
   %vf0 = splat %f0 : vector<4x3xf32>
-  // expected-error@+1 {{ requires memref type}}
+  // expected-error@+1 {{ requires memref or ranked tensor type}}
   vector.transfer_write %arg0, %arg0[%c3, %c3] : vector<4x3xf32>, f32
 }
 
@@ -419,7 +419,7 @@ func @test_vector.transfer_write(%arg0: memref<?x?xf32>) {
 func @test_vector.transfer_write(%arg0: memref<?x?xf32>) {
   %c3 = constant 3 : index
   %cst = constant dense<3.0> : vector<128 x f32>
-  // expected-error@+1 {{requires a permutation_map with input dims of the same rank as the memref type}}
+  // expected-error@+1 {{requires a permutation_map with input dims of the same rank as the source type}}
   vector.transfer_write %cst, %arg0[%c3, %c3] {permutation_map = affine_map<(d0)->(d0)>} : vector<128xf32>, memref<?x?xf32>
 }
 
