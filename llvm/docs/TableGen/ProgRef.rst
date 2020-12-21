@@ -216,8 +216,7 @@ TableGen provides "bang operators" that have a wide variety of uses:
                : !interleave !isa         !le          !listconcat  !listsplat
                : !lt         !mul         !ne          !not         !or
                : !setdagop   !shl         !size        !sra         !srl
-               : !strconcat  !sub         !subst       !substr      !tail
-               : !xor
+               : !strconcat  !sub         !subst       !tail        !xor
 
 The ``!cond`` operator has a slightly different
 syntax compared to other bang operators, so it is defined separately:
@@ -1723,13 +1722,6 @@ and non-0 as true.
     The *value* can be a record name, in which case the operator produces the *repl*
     record if the *target* record name equals the *value* record name; otherwise it
     produces the *value*.
-
-``!substr(``\ *string*\ ``,`` *start*\ [``,`` *length*]\ ``)``
-    This operator extracts a substring of the given *string*. The starting
-    position of the substring is specified by *start*, which can range
-    between 0 and the length of the string. The length of the substring
-    is specified by *length*; if not specified, the rest of the string is
-    extracted. The *start* and *length* arguments must be integers.
 
 ``!tail(``\ *a*\ ``)``
     This operator produces a new list with all the elements
