@@ -466,8 +466,8 @@ static unsigned buildLattices(Merger &merger, linalg::GenericOp op,
     // set to the undefined index in that dimension. An invariant expression
     // is set to a synthetic tensor with undefined indices only.
     unsigned s = merger.addSet();
-    unsigned t = kind == Kind::kTensor ? merger.exp(exp).e0
-                                       : op.getNumShapedOperands() - 1;
+    unsigned t =
+        kind == Kind::kTensor ? merger.exp(exp).e0 : op.getNumShapedOperands();
     merger.set(s).push_back(merger.addLat(t, idx, exp));
     return s;
   }
