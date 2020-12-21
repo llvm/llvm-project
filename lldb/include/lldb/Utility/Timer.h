@@ -73,4 +73,11 @@ private:
 
 } // namespace lldb_private
 
+#define LLDB_SCOPED_TIMER()                                                    \
+  static ::lldb_private::Timer::Category _cat(LLVM_PRETTY_FUNCTION);           \
+  ::lldb_private::Timer _scoped_timer(_cat, LLVM_PRETTY_FUNCTION)
+#define LLDB_SCOPED_TIMERF(...)                                                \
+  static ::lldb_private::Timer::Category _cat(LLVM_PRETTY_FUNCTION);           \
+  ::lldb_private::Timer _scoped_timer(_cat, __VA_ARGS__)
+
 #endif // LLDB_UTILITY_TIMER_H

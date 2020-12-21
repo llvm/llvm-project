@@ -224,8 +224,7 @@ bool CommandInterpreter::GetSpaceReplPrompts() const {
 }
 
 void CommandInterpreter::Initialize() {
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
+  LLDB_SCOPED_TIMER();
 
   CommandReturnObject result(m_debugger.GetUseColor());
 
@@ -487,8 +486,7 @@ const char *CommandInterpreter::ProcessEmbeddedScriptCommands(const char *arg) {
   m_command_dict[NAME] = std::make_shared<CLASS>(*this);
 
 void CommandInterpreter::LoadCommandDictionary() {
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
+  LLDB_SCOPED_TIMER();
 
   REGISTER_COMMAND_OBJECT("apropos", CommandObjectApropos);
   REGISTER_COMMAND_OBJECT("breakpoint", CommandObjectMultiwordBreakpoint);
@@ -1649,9 +1647,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
                                    command_line);
 
   LLDB_LOGF(log, "Processing command: %s", command_line);
-
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, "Handling command: %s.", command_line);
+  LLDB_SCOPED_TIMERF("Processing command: %s.", command_line);
 
   if (!no_context_switching)
     UpdateExecutionContext(override_context);
