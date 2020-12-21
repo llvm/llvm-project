@@ -816,8 +816,6 @@ static SDNode *selectI64ImmDirect(SelectionDAG *CurDAG, const SDLoc &dl,
   unsigned LZ = countLeadingZeros<uint64_t>(Imm);
   unsigned TO = countTrailingOnes<uint64_t>(Imm);
   unsigned LO = countLeadingOnes<uint64_t>(Imm);
-  // Count of ones follwing the leading zeros.
-  unsigned FO = countLeadingOnes<uint64_t>(Imm << LZ);
   unsigned Hi32 = Hi_32(Imm);
   unsigned Lo32 = Lo_32(Imm);
   SDNode *Result = nullptr;
@@ -843,6 +841,9 @@ static SDNode *selectI64ImmDirect(SelectionDAG *CurDAG, const SDLoc &dl,
 
   // Following patterns use 2 instructions to materialize the Imm.
   InstCnt = 2;
+  assert(LZ < 64 && "Unexpected leading zeros here.");
+  // Count of ones follwing the leading zeros.
+  unsigned FO = countLeadingOnes<uint64_t>(Imm << LZ);
   // 2-1) Patterns : {zeros}{31-bit value}
   //                 {ones}{31-bit value}
   if (isInt<32>(Imm)) {
