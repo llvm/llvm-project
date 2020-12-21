@@ -107,6 +107,12 @@ void GenerateEnumClauseVal(const std::vector<Record *> &Records,
       EnumHelperFuncs += (llvm::Twine(EnumName) + llvm::Twine(" get") +
                           llvm::Twine(EnumName) + llvm::Twine("(StringRef);\n"))
                              .str();
+
+      EnumHelperFuncs +=
+          (llvm::Twine("llvm::StringRef get") + llvm::Twine(DirLang.getName()) +
+           llvm::Twine(EnumName) + llvm::Twine("Name(") +
+           llvm::Twine(EnumName) + llvm::Twine(");\n"))
+              .str();
     }
   }
 }
@@ -335,6 +341,22 @@ void GenerateGetKindClauseVal(const DirectiveLanguage &DirLang,
          << ")\n";
     }
     OS << "    .Default(" << DefaultName << ");\n";
+    OS << "}\n";
+
+    OS << "\n";
+    OS << "llvm::StringRef llvm::" << DirLang.getCppNamespace() << "::get"
+       << DirLang.getName() << EnumName
+       << "Name(llvm::" << DirLang.getCppNamespace() << "::" << EnumName
+       << " x) {\n";
+    OS << "  switch (x) {\n";
+    for (const auto &CV : ClauseVals) {
+      ClauseVal CVal{CV};
+      OS << "    case " << CV->getName() << ":\n";
+      OS << "      return \"" << CVal.getFormattedName() << "\";\n";
+    }
+    OS << "  }\n"; // switch
+    OS << "  llvm_unreachable(\"Invalid " << DirLang.getName() << " "
+       << EnumName << " kind\");\n";
     OS << "}\n";
   }
 }

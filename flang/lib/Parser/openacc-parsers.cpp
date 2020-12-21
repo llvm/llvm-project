@@ -171,9 +171,9 @@ TYPE_PARSER(sourced(construct<AccBindClause>(parenthesized(name))) ||
     sourced(construct<AccBindClause>(parenthesized(scalarDefaultCharExpr))))
 
 // 2.5.14 Default clause
-TYPE_PARSER(construct<AccDefaultClause>(
-    parenthesized(first("NONE" >> pure(AccDefaultClause::Arg::None),
-        "PRESENT" >> pure(AccDefaultClause::Arg::Present)))))
+TYPE_PARSER(construct<AccDefaultClause>(parenthesized(
+    first("NONE" >> pure(llvm::acc::DefaultValue::ACC_Default_none),
+        "PRESENT" >> pure(llvm::acc::DefaultValue::ACC_Default_present)))))
 
 // SELF clause is either a simple optional condition for compute construct
 // or a synonym of the HOST clause for the update directive 2.14.4 holding

@@ -68,7 +68,11 @@ public:
 #include "llvm/Frontend/OpenACC/ACC.cpp.inc"
   NODE(parser, AccBindClause)
   NODE(parser, AccDefaultClause)
-  NODE_ENUM(parser::AccDefaultClause, Arg)
+  static std::string GetNodeName(const llvm::acc::DefaultValue &x) {
+    return llvm::Twine(
+        "llvm::acc::DefaultValue = ", llvm::acc::getOpenACCDefaultValueName(x))
+        .str();
+  }
   NODE(parser, AccClauseList)
   NODE(parser, AccCombinedDirective)
   NODE(parser, AccDataModifier)
