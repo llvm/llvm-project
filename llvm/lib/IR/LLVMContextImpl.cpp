@@ -219,19 +219,8 @@ void LLVMContextImpl::getSyncScopeNames(
     SSNs[SSE.second] = SSE.first();
 }
 
-/// Singleton instance of the OptBisect class.
-///
-/// This singleton is accessed via the LLVMContext::getOptPassGate() function.
-/// It provides a mechanism to disable passes and individual optimizations at
-/// compile time based on a command line option (-opt-bisect-limit) in order to
-/// perform a bisecting search for optimization-related problems.
-///
-/// Even if multiple LLVMContext objects are created, they will all return the
-/// same instance of OptBisect in order to provide a single bisect count.  Any
-/// code that uses the OptBisect object should be serialized when bisection is
-/// enabled in order to enable a consistent bisect count.
-static ManagedStatic<OptBisect> OptBisector;
-
+/// Gets the OptPassGate for this LLVMContextImpl, which defaults to the
+/// singleton OptBisect if not explicitly set.
 OptPassGate &LLVMContextImpl::getOptPassGate() const {
   if (!OPG)
     OPG = &(*OptBisector);
