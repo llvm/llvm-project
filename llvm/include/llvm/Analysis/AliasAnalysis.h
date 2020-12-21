@@ -1097,9 +1097,6 @@ public:
 /// Return true if this pointer is returned by a noalias function.
 bool isNoAliasCall(const Value *V);
 
-/// Return true if this is an argument with the noalias attribute.
-bool isNoAliasArgument(const Value *V);
-
 /// Return true if this pointer refers to a distinct and identifiable object.
 /// This returns true for:
 ///    Global Variables and Functions (but not Global Aliases)
