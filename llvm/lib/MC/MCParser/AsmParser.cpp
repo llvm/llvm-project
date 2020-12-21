@@ -3342,6 +3342,8 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, unsigned ValueSize) {
       Alignment = 1;
     if (!isPowerOf2_64(Alignment))
       ReturnVal |= Error(AlignmentLoc, "alignment must be a power of 2");
+    if (!isUInt<32>(Alignment))
+      ReturnVal |= Error(AlignmentLoc, "alignment must be smaller than 2**32");
   }
 
   // Diagnose non-sensical max bytes to align.
