@@ -135,6 +135,10 @@ void VETargetLowering::initSPUActions() {
   /// Stack {
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i32, Custom);
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i64, Custom);
+
+  // Use the default implementation.
+  setOperationAction(ISD::STACKSAVE, MVT::Other, Expand);
+  setOperationAction(ISD::STACKRESTORE, MVT::Other, Expand);
   /// } Stack
 
   /// Branch {
