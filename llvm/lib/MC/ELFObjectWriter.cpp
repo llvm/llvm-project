@@ -1395,9 +1395,10 @@ bool ELFObjectWriter::shouldRelocateWithSymbol(const MCAssembler &Asm,
       if (C != 0)
         return true;
 
-      // It looks like gold has a bug (http://sourceware.org/PR16794) and can
-      // only handle section relocations to mergeable sections if using RELA.
-      if (!hasRelocationAddend())
+      // gold<2.34 incorrectly ignored the addend for R_386_GOTOFF (9)
+      // (http://sourceware.org/PR16794).
+      if (TargetObjectWriter->getEMachine() == ELF::EM_386 &&
+          Type == ELF::R_386_GOTOFF)
         return true;
     }
 
