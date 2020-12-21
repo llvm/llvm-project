@@ -429,8 +429,7 @@ findExtractedInputToOverallInputMapping(OutlinableRegion &Region,
     // It is not a constant, check if it is a sunken alloca.  If it is not,
     // create the mapping from extracted to overall.  If it is, create the
     // mapping of the index to the value.
-    unsigned Found = ArgInputs.count(Input);
-    assert(Found && "Input cannot be found!");
+    assert(ArgInputs.count(Input) && "Input cannot be found!");
 
     Region.ExtractedArgToAgg.insert(std::make_pair(OriginalIndex, TypeIndex));
     Region.AggArgToExtracted.insert(std::make_pair(TypeIndex, OriginalIndex));
@@ -475,7 +474,6 @@ void IROutliner::findAddInputsOutputs(Module &M, OutlinableRegion &Region) {
 /// \returns a call instruction with the replaced function.
 CallInst *replaceCalledFunction(Module &M, OutlinableRegion &Region) {
   std::vector<Value *> NewCallArgs;
-  DenseMap<unsigned, unsigned>::iterator ArgPair;
 
   OutlinableGroup &Group = *Region.Parent;
   CallInst *Call = Region.Call;
