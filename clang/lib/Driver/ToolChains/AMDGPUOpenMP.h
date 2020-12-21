@@ -125,7 +125,7 @@ public:
   computeMSVCVersion(const Driver *D,
                      const llvm::opt::ArgList &Args) const override;
 
-  unsigned GetDefaultDwarfVersion() const override { return 5; }
+  unsigned GetDefaultDwarfVersion() const override { return 4; }
 
   const ToolChain &HostTC;
 

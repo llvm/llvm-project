@@ -9,4 +9,4 @@
 // RUN:   %s 2>&1 | FileCheck %s
 
 // CHECK: [[CLANG:".*clang.*"]] "-cc1" "-mllvm" "--amdhsa-code-object-version=4" "-triple" "amdgcn-amd-amdhsa"
-// CHECK-SAME: "-dwarf-version=5"
+// CHECK-SAME: "-dwarf-version=4"
