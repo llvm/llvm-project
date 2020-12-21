@@ -380,6 +380,7 @@ let RegAltNameIndices = [ABIRegAltName] in {
   def VTYPE  : RISCVReg<0, "vtype", ["vtype"]>;
   def VL     : RISCVReg<0, "vl", ["vl"]>;
   def VXSAT  : RISCVReg<0, "vxsat", ["vxsat"]>;
+  def VXRM   : RISCVReg<0, "vxrm", ["vxrm"]>;
 }
 
 class RegisterTypes<list<ValueType> reg_types> {

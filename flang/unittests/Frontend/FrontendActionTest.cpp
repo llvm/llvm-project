@@ -18,7 +18,7 @@ using namespace Fortran::frontend;
 namespace {
 
 TEST(FrontendAction, PrintPreprocessedInput) {
-  std::string inputFile = "test-file.f";
+  std::string inputFile = "pp-test-file.f";
   std::error_code ec;
 
   // 1. Create the input file for the file manager
@@ -78,7 +78,7 @@ TEST(FrontendAction, PrintPreprocessedInput) {
 }
 
 TEST(FrontendAction, ParseSyntaxOnly) {
-  std::string inputFile = "test-file.f";
+  std::string inputFile = "syntax-only-test-file.f";
   std::error_code ec;
 
   // 1. Create the input file for the file manager
