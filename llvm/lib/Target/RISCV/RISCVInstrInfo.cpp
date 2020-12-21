@@ -763,10 +763,7 @@ outliner::OutlinedFunction RISCVInstrInfo::getOutliningCandidateInfo(
     return !LRU.available(RISCV::X5);
   };
 
-  RepeatedSequenceLocs.erase(std::remove_if(RepeatedSequenceLocs.begin(),
-                                            RepeatedSequenceLocs.end(),
-                                            CannotInsertCall),
-                             RepeatedSequenceLocs.end());
+  llvm::erase_if(RepeatedSequenceLocs, CannotInsertCall);
 
   // If the sequence doesn't have enough candidates left, then we're done.
   if (RepeatedSequenceLocs.size() < 2)
