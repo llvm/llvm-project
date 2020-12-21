@@ -305,7 +305,7 @@ namespace llvm {
     }
 
     /// Get location information used by debugging information.
-    const DebugLoc &getCurrentDebugLocation() const {
+    DebugLoc getCurrentDebugLocation() const {
       return Builder.getCurrentDebugLocation();
     }
 
