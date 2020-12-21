@@ -70,7 +70,7 @@ define i64 @xori_test_b(i64 %a) {
 ; CHECK-LABEL: xori_test_b:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 1
-; CHECK-NEXT:    sldi 4, 4, 32
+; CHECK-NEXT:    rldic 4, 4, 32, 31
 ; CHECK-NEXT:    xor 3, 3, 4
 ; CHECK-NEXT:    blr
 entry:

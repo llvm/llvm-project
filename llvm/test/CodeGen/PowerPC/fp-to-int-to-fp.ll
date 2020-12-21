@@ -68,7 +68,7 @@ define float @fooul(float %X) #0 {
 ; PPC64-NEXT:    addis 3, 2, .LCPI2_0@toc@ha
 ; PPC64-NEXT:    li 4, 1
 ; PPC64-NEXT:    lfs 0, .LCPI2_0@toc@l(3)
-; PPC64-NEXT:    sldi 4, 4, 63
+; PPC64-NEXT:    rldic 4, 4, 63, 0
 ; PPC64-NEXT:    fsubs 2, 1, 0
 ; PPC64-NEXT:    fcmpu 0, 1, 0
 ; PPC64-NEXT:    fctidz 2, 2
@@ -150,7 +150,7 @@ define double @fooudl(double %X) #0 {
 ; PPC64-NEXT:    addis 3, 2, .LCPI3_0@toc@ha
 ; PPC64-NEXT:    li 4, 1
 ; PPC64-NEXT:    lfs 0, .LCPI3_0@toc@l(3)
-; PPC64-NEXT:    sldi 4, 4, 63
+; PPC64-NEXT:    rldic 4, 4, 63, 0
 ; PPC64-NEXT:    fsub 2, 1, 0
 ; PPC64-NEXT:    fcmpu 0, 1, 0
 ; PPC64-NEXT:    fctidz 2, 2
@@ -161,7 +161,7 @@ define double @fooudl(double %X) #0 {
 ; PPC64-NEXT:    ld 5, -16(1)
 ; PPC64-NEXT:    xor 3, 3, 4
 ; PPC64-NEXT:    li 4, 1107
-; PPC64-NEXT:    sldi 4, 4, 52
+; PPC64-NEXT:    rldic 4, 4, 52, 1
 ; PPC64-NEXT:    bc 12, 0, .LBB3_1
 ; PPC64-NEXT:    b .LBB3_2
 ; PPC64-NEXT:  .LBB3_1: # %entry
@@ -173,7 +173,7 @@ define double @fooudl(double %X) #0 {
 ; PPC64-NEXT:    addis 5, 2, .LCPI3_1@toc@ha
 ; PPC64-NEXT:    std 4, -24(1)
 ; PPC64-NEXT:    li 4, 1075
-; PPC64-NEXT:    sldi 4, 4, 52
+; PPC64-NEXT:    rldic 4, 4, 52, 1
 ; PPC64-NEXT:    or 3, 3, 4
 ; PPC64-NEXT:    lfd 0, .LCPI3_1@toc@l(5)
 ; PPC64-NEXT:    std 3, -32(1)
