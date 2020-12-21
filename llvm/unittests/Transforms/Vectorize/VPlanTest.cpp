@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "../lib/Transforms/Vectorize/VPlan.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "gtest/gtest.h"
@@ -470,7 +471,8 @@ TEST(VPRecipeTest, CastVPInterleaveRecipeToVPUser) {
 
   VPValue Addr;
   VPValue Mask;
-  VPInterleaveRecipe Recipe(nullptr, &Addr, {}, &Mask);
+  InterleaveGroup<Instruction> IG(4, false, Align(4));
+  VPInterleaveRecipe Recipe(&IG, &Addr, {}, &Mask);
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));

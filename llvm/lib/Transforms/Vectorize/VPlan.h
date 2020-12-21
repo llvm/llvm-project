@@ -1047,7 +1047,7 @@ public:
 /// or stores into one wide load/store and shuffles. The first operand of a
 /// VPInterleave recipe is the address, followed by the stored values, followed
 /// by an optional mask.
-class VPInterleaveRecipe : public VPRecipeBase, public VPUser {
+class VPInterleaveRecipe : public VPRecipeBase, public VPDef, public VPUser {
   const InterleaveGroup<Instruction> *IG;
 
   bool HasMask = false;
@@ -1055,7 +1055,14 @@ class VPInterleaveRecipe : public VPRecipeBase, public VPUser {
 public:
   VPInterleaveRecipe(const InterleaveGroup<Instruction> *IG, VPValue *Addr,
                      ArrayRef<VPValue *> StoredValues, VPValue *Mask)
-      : VPRecipeBase(VPInterleaveSC), VPUser({Addr}), IG(IG) {
+      : VPRecipeBase(VPInterleaveSC), VPUser(Addr), IG(IG) {
+    for (unsigned i = 0; i < IG->getFactor(); ++i)
+      if (Instruction *I = IG->getMember(i)) {
+        if (I->getType()->isVoidTy())
+          continue;
+        new VPValue(I, this);
+      }
+
     for (auto *SV : StoredValues)
       addOperand(SV);
     if (Mask) {
