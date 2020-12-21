@@ -534,8 +534,8 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 
   GVSym->redefineIfPossible();
   if (GVSym->isDefined() || GVSym->isVariable())
-    report_fatal_error("symbol '" + Twine(GVSym->getName()) +
-                       "' is already defined");
+    OutContext.reportError(SMLoc(), "symbol '" + Twine(GVSym->getName()) +
+                                        "' is already defined");
 
   if (MAI->hasDotTypeDotSizeDirective())
     OutStreamer->emitSymbolAttribute(EmittedSym, MCSA_ELF_TypeObject);
