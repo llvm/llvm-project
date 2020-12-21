@@ -1897,7 +1897,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // LSJLJEH:
     Register SrcReg = MI->getOperand(0).getReg();
     Register ValReg = MI->getOperand(1).getReg();
-    MCSymbol *Label = OutContext.createTempSymbol("SJLJEH", false, true);
+    MCSymbol *Label = OutContext.createTempSymbol("SJLJEH", true, true);
     OutStreamer->AddComment("eh_setjmp begin");
     EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::tMOVr)
       .addReg(ValReg)
