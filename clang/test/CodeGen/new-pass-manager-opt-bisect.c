@@ -1,3 +1,5 @@
+// REQUIRES: x86-registered-target
+
 // Make sure opt-bisect works through both pass managers
 //
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -O1 -fexperimental-new-pass-manager %s -mllvm -opt-bisect-limit=-1 -emit-obj -o /dev/null 2>&1 | FileCheck %s
