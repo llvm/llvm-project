@@ -318,8 +318,9 @@ void UnwindInfoSection::writeTo(uint8_t *buf) const {
         *ep++ = (it->second << COMPRESSED_ENTRY_FUNC_OFFSET_BITS) |
                 (cuep->functionAddress - functionAddressBase);
       }
-      memcpy(ep, page.localEncodings.data(),
-             page.localEncodings.size() * sizeof(uint32_t));
+      if (page.localEncodings.size() != 0)
+        memcpy(ep, page.localEncodings.data(),
+               page.localEncodings.size() * sizeof(uint32_t));
     } else {
       auto *p2p =
           reinterpret_cast<unwind_info_regular_second_level_page_header *>(pp);
