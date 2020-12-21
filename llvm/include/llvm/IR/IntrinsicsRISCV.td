@@ -274,6 +274,25 @@ let TargetPrefix = "riscv" in {
                     [IntrNoMem, IntrHasSideEffects]>, RISCVVIntrinsic {
     let ExtendOperand = 3;
   }
+  // For Saturating binary operations.
+  // The destination vector type is NOT the same as first source vector.
+  // Input: (vector_in, vector_in/scalar_in, vl)
+  class RISCVSaturatingBinaryABXNoMask
+        : Intrinsic<[llvm_anyvector_ty],
+                    [llvm_anyvector_ty, llvm_any_ty, llvm_anyint_ty],
+                    [IntrNoMem, IntrHasSideEffects]>, RISCVVIntrinsic {
+    let ExtendOperand = 2;
+  }
+  // For Saturating binary operations with mask.
+  // The destination vector type is NOT the same as first source vector (with mask).
+  // Input: (maskedoff, vector_in, vector_in/scalar_in, mask, vl)
+  class RISCVSaturatingBinaryABXMask
+        : Intrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, llvm_anyvector_ty, llvm_any_ty,
+                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty],
+                    [IntrNoMem, IntrHasSideEffects]>, RISCVVIntrinsic {
+    let ExtendOperand = 3;
+  }
 
   // For vmv.v.v, vmv.v.x, vmv.v.i
   // Input: (vector_in/scalar_in, vl)
@@ -338,6 +357,10 @@ let TargetPrefix = "riscv" in {
   multiclass RISCVSaturatingBinaryAAX {
     def "int_riscv_" # NAME : RISCVSaturatingBinaryAAXNoMask;
     def "int_riscv_" # NAME # "_mask" : RISCVSaturatingBinaryAAXMask;
+  }
+  multiclass RISCVSaturatingBinaryABX {
+    def "int_riscv_" # NAME : RISCVSaturatingBinaryABXNoMask;
+    def "int_riscv_" # NAME # "_mask" : RISCVSaturatingBinaryABXMask;
   }
   multiclass RISCVTernaryAAAX {
     def "int_riscv_" # NAME : RISCVTernaryAAAXNoMask;
@@ -446,4 +469,17 @@ let TargetPrefix = "riscv" in {
 
   defm vslideup : RISCVTernaryAAAX;
   defm vslidedown : RISCVTernaryAAAX;
+
+  defm vaaddu : RISCVSaturatingBinaryAAX;
+  defm vaadd : RISCVSaturatingBinaryAAX;
+  defm vasubu : RISCVSaturatingBinaryAAX;
+  defm vasub : RISCVSaturatingBinaryAAX;
+
+  defm vsmul : RISCVSaturatingBinaryAAX;
+
+  defm vssrl : RISCVSaturatingBinaryAAX;
+  defm vssra : RISCVSaturatingBinaryAAX;
+
+  defm vnclipu : RISCVSaturatingBinaryABX;
+  defm vnclip : RISCVSaturatingBinaryABX;
 } // TargetPrefix = "riscv"

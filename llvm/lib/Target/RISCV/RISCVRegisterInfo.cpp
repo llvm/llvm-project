@@ -99,6 +99,7 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   markSuperRegs(Reserved, RISCV::VL);
   markSuperRegs(Reserved, RISCV::VTYPE);
   markSuperRegs(Reserved, RISCV::VXSAT);
+  markSuperRegs(Reserved, RISCV::VXRM);
 
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;
