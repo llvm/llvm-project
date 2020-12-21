@@ -111,7 +111,7 @@ void mlir::linalg::hoistRedundantVectorTransfers(FuncOp func) {
       vector::TransferWriteOp transferWrite;
       for (auto *sliceOp : llvm::reverse(forwardSlice)) {
         auto candidateWrite = dyn_cast<vector::TransferWriteOp>(sliceOp);
-        if (!candidateWrite || candidateWrite.memref() != transferRead.memref())
+        if (!candidateWrite || candidateWrite.source() != transferRead.source())
           continue;
         transferWrite = candidateWrite;
       }
@@ -142,7 +142,7 @@ void mlir::linalg::hoistRedundantVectorTransfers(FuncOp func) {
       DominanceInfo dom(loop);
       if (!dom.properlyDominates(transferRead.getOperation(), transferWrite))
         return WalkResult::advance();
-      for (auto &use : transferRead.memref().getUses()) {
+      for (auto &use : transferRead.source().getUses()) {
         if (!dom.properlyDominates(loop, use.getOwner()))
           continue;
         if (use.getOwner() == transferRead.getOperation() ||

@@ -47,7 +47,7 @@ def VectorUnrollOpInterface : OpInterface<"VectorUnrollOpInterface"> {
 
 def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
   let description = [{
-    Encodes properties of an operation on vectors that can be unrolled.
+    Encodes properties of a transfer read or write operation.
   }];
   let cppNamespace = "::mlir";
 
@@ -83,11 +83,11 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
       }]
     >,
     InterfaceMethod<
-      /*desc=*/"Return the memref operand.",
+      /*desc=*/"Return the memref or ranked tensor operand.",
       /*retTy=*/"Value",
-      /*methodName=*/"memref",
+      /*methodName=*/"source",
       /*args=*/(ins),
-      /*methodBody=*/"return $_op.memref();"
+      /*methodBody=*/"return $_op.source();"
       /*defaultImplementation=*/
     >,
     InterfaceMethod<
@@ -123,13 +123,13 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
       /*defaultImplementation=*/
     >,
     InterfaceMethod<
-      /*desc=*/"Return the MemRefType.",
-      /*retTy=*/"MemRefType",
-      /*methodName=*/"getMemRefType",
+      /*desc=*/"Return the ShapedType.",
+      /*retTy=*/"ShapedType",
+      /*methodName=*/"getShapedType",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/
-        "return $_op.memref().getType().template cast<MemRefType>();"
+        "return $_op.source().getType().template cast<ShapedType>();"
     >,
     InterfaceMethod<
       /*desc=*/"Return the VectorType.",
@@ -152,14 +152,14 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
         "return $_op.permutation_map().getNumResults();"
     >,
     InterfaceMethod<
-      /*desc=*/[{ Return the number of leading memref dimensions that do not
+      /*desc=*/[{ Return the number of leading shaped dimensions that do not
                   participate in the permutation map.}],
       /*retTy=*/"unsigned",
-      /*methodName=*/"getLeadingMemRefRank",
+      /*methodName=*/"getLeadingShapedRank",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/
-        "return $_op.getMemRefType().getRank() - $_op.getTransferRank();"
+        "return $_op.getShapedType().getRank() - $_op.getTransferRank();"
     >,
     InterfaceMethod<
       /*desc=*/[{ Returns true if at least one of the dimensions is masked.}],
@@ -178,8 +178,8 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
       /*desc=*/[{
       Helper function to account for the fact that `permutationMap` results and
       `op.indices` sizes may not match and may not be aligned. The first
-      `getLeadingMemRefRank()` indices may just be indexed and not transferred
-      from/into the vector.
+      `getLeadingShapedRank()` indices may just be indexed and not
+      transferred from/into the vector.
       For example:
       ```
          vector.transfer %0[%i, %j, %k, %c0] :
@@ -195,7 +195,7 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         for (int64_t resultIdx = 0,
-                   indicesIdx = $_op.getLeadingMemRefRank(),
+                   indicesIdx = $_op.getLeadingShapedRank(),
                    eResult = $_op.getTransferRank();
            resultIdx < eResult;
            ++resultIdx, ++indicesIdx)
