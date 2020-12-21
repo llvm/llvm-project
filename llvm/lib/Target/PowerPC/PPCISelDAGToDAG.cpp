@@ -2356,7 +2356,7 @@ class BitPermutationSelector {
   }
 
   void eraseMatchingBitGroups(function_ref<bool(const BitGroup &)> F) {
-    BitGroups.erase(remove_if(BitGroups, F), BitGroups.end());
+    erase_if(BitGroups, F);
   }
 
   SmallVector<ValueBit, 64> Bits;
