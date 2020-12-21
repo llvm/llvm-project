@@ -339,7 +339,7 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
         // Create the symbol.
         MCContext &Context = MF->getContext();
         MCSymbol *Symbol =
-            Context.createTempSymbol(Twine("pcrel"), false, false);
+            Context.createTempSymbol(Twine("pcrel"), true, false);
         MachineOperand PCRelLabel =
             MachineOperand::CreateMCSymbol(Symbol, PPCII::MO_PCREL_OPT_FLAG);
         Pair->DefInst->addOperand(*MF, PCRelLabel);

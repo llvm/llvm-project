@@ -23,16 +23,16 @@ define dso_local signext i32 @ReadGlobalVarChar() local_unnamed_addr  {
 ; LE-LABEL: ReadGlobalVarChar:
 ; LE:       # %bb.0: # %entry
 ; LE-NEXT:    pld r3, valChar@got@pcrel(0), 1
-; LE-NEXT:  .Lpcrel:
-; LE-NEXT:    .reloc .Lpcrel-8,R_PPC64_PCREL_OPT,.-(.Lpcrel-8)
+; LE-NEXT:  .Lpcrel0:
+; LE-NEXT:    .reloc .Lpcrel0-8,R_PPC64_PCREL_OPT,.-(.Lpcrel0-8)
 ; LE-NEXT:    lbz r3, 0(r3)
 ; LE-NEXT:    blr
 ;
 ; BE-LABEL: ReadGlobalVarChar:
 ; BE:       # %bb.0: # %entry
 ; BE-NEXT:    pld r3, valChar@got@pcrel(0), 1
-; BE-NEXT:  .Lpcrel:
-; BE-NEXT:    .reloc .Lpcrel-8,R_PPC64_PCREL_OPT,.-(.Lpcrel-8)
+; BE-NEXT:  .Lpcrel0:
+; BE-NEXT:    .reloc .Lpcrel0-8,R_PPC64_PCREL_OPT,.-(.Lpcrel0-8)
 ; BE-NEXT:    lbz r3, 0(r3)
 ; BE-NEXT:    blr
 entry:
@@ -64,16 +64,16 @@ define dso_local signext i32 @ReadGlobalVarShort() local_unnamed_addr  {
 ; LE-LABEL: ReadGlobalVarShort:
 ; LE:       # %bb.0: # %entry
 ; LE-NEXT:    pld r3, valShort@got@pcrel(0), 1
-; LE-NEXT:  .Lpcrel0:
-; LE-NEXT:    .reloc .Lpcrel0-8,R_PPC64_PCREL_OPT,.-(.Lpcrel0-8)
+; LE-NEXT:  .Lpcrel1:
+; LE-NEXT:    .reloc .Lpcrel1-8,R_PPC64_PCREL_OPT,.-(.Lpcrel1-8)
 ; LE-NEXT:    lha r3, 0(r3)
 ; LE-NEXT:    blr
 ;
 ; BE-LABEL: ReadGlobalVarShort:
 ; BE:       # %bb.0: # %entry
 ; BE-NEXT:    pld r3, valShort@got@pcrel(0), 1
-; BE-NEXT:  .Lpcrel0:
-; BE-NEXT:    .reloc .Lpcrel0-8,R_PPC64_PCREL_OPT,.-(.Lpcrel0-8)
+; BE-NEXT:  .Lpcrel1:
+; BE-NEXT:    .reloc .Lpcrel1-8,R_PPC64_PCREL_OPT,.-(.Lpcrel1-8)
 ; BE-NEXT:    lha r3, 0(r3)
 ; BE-NEXT:    blr
 entry:
@@ -105,16 +105,16 @@ define dso_local signext i32 @ReadGlobalVarInt() local_unnamed_addr  {
 ; LE-LABEL: ReadGlobalVarInt:
 ; LE:       # %bb.0: # %entry
 ; LE-NEXT:    pld r3, valInt@got@pcrel(0), 1
-; LE-NEXT:  .Lpcrel1:
-; LE-NEXT:    .reloc .Lpcrel1-8,R_PPC64_PCREL_OPT,.-(.Lpcrel1-8)
+; LE-NEXT:  .Lpcrel2:
+; LE-NEXT:    .reloc .Lpcrel2-8,R_PPC64_PCREL_OPT,.-(.Lpcrel2-8)
 ; LE-NEXT:    lwa r3, 0(r3)
 ; LE-NEXT:    blr
 ;
 ; BE-LABEL: ReadGlobalVarInt:
 ; BE:       # %bb.0: # %entry
 ; BE-NEXT:    pld r3, valInt@got@pcrel(0), 1
-; BE-NEXT:  .Lpcrel1:
-; BE-NEXT:    .reloc .Lpcrel1-8,R_PPC64_PCREL_OPT,.-(.Lpcrel1-8)
+; BE-NEXT:  .Lpcrel2:
+; BE-NEXT:    .reloc .Lpcrel2-8,R_PPC64_PCREL_OPT,.-(.Lpcrel2-8)
 ; BE-NEXT:    lwa r3, 0(r3)
 ; BE-NEXT:    blr
 entry:
@@ -145,16 +145,16 @@ define dso_local signext i32 @ReadGlobalVarUnsigned() local_unnamed_addr  {
 ; LE-LABEL: ReadGlobalVarUnsigned:
 ; LE:       # %bb.0: # %entry
 ; LE-NEXT:    pld r3, valUnsigned@got@pcrel(0), 1
-; LE-NEXT:  .Lpcrel2:
-; LE-NEXT:    .reloc .Lpcrel2-8,R_PPC64_PCREL_OPT,.-(.Lpcrel2-8)
+; LE-NEXT:  .Lpcrel3:
+; LE-NEXT:    .reloc .Lpcrel3-8,R_PPC64_PCREL_OPT,.-(.Lpcrel3-8)
 ; LE-NEXT:    lwa r3, 0(r3)
 ; LE-NEXT:    blr
 ;
 ; BE-LABEL: ReadGlobalVarUnsigned:
 ; BE:       # %bb.0: # %entry
 ; BE-NEXT:    pld r3, valUnsigned@got@pcrel(0), 1
-; BE-NEXT:  .Lpcrel2:
-; BE-NEXT:    .reloc .Lpcrel2-8,R_PPC64_PCREL_OPT,.-(.Lpcrel2-8)
+; BE-NEXT:  .Lpcrel3:
+; BE-NEXT:    .reloc .Lpcrel3-8,R_PPC64_PCREL_OPT,.-(.Lpcrel3-8)
 ; BE-NEXT:    lwa r3, 0(r3)
 ; BE-NEXT:    blr
 entry:
@@ -185,16 +185,16 @@ define dso_local signext i32 @ReadGlobalVarLong() local_unnamed_addr  {
 ; LE-LABEL: ReadGlobalVarLong:
 ; LE:       # %bb.0: # %entry
 ; LE-NEXT:    pld r3, valLong@got@pcrel(0), 1
-; LE-NEXT:  .Lpcrel3:
-; LE-NEXT:    .reloc .Lpcrel3-8,R_PPC64_PCREL_OPT,.-(.Lpcrel3-8)
+; LE-NEXT:  .Lpcrel4:
+; LE-NEXT:    .reloc .Lpcrel4-8,R_PPC64_PCREL_OPT,.-(.Lpcrel4-8)
 ; LE-NEXT:    lwa r3, 0(r3)
 ; LE-NEXT:    blr
 ;
 ; BE-LABEL: ReadGlobalVarLong:
 ; BE:       # %bb.0: # %entry
 ; BE-NEXT:    pld r3, valLong@got@pcrel(0), 1
-; BE-NEXT:  .Lpcrel3:
-; BE-NEXT:    .reloc .Lpcrel3-8,R_PPC64_PCREL_OPT,.-(.Lpcrel3-8)
+; BE-NEXT:  .Lpcrel4:
+; BE-NEXT:    .reloc .Lpcrel4-8,R_PPC64_PCREL_OPT,.-(.Lpcrel4-8)
 ; BE-NEXT:    lwa r3, 4(r3)
 ; BE-NEXT:    blr
 entry:
@@ -226,16 +226,16 @@ define dso_local i32* @ReadGlobalPtr() local_unnamed_addr  {
 ; LE-LABEL: ReadGlobalPtr:
 ; LE:       # %bb.0: # %entry
 ; LE-NEXT:    pld r3, ptr@got@pcrel(0), 1
-; LE-NEXT:  .Lpcrel4:
-; LE-NEXT:    .reloc .Lpcrel4-8,R_PPC64_PCREL_OPT,.-(.Lpcrel4-8)
+; LE-NEXT:  .Lpcrel5:
+; LE-NEXT:    .reloc .Lpcrel5-8,R_PPC64_PCREL_OPT,.-(.Lpcrel5-8)
 ; LE-NEXT:    ld r3, 0(r3)
 ; LE-NEXT:    blr
 ;
 ; BE-LABEL: ReadGlobalPtr:
 ; BE:       # %bb.0: # %entry
 ; BE-NEXT:    pld r3, ptr@got@pcrel(0), 1
-; BE-NEXT:  .Lpcrel4:
-; BE-NEXT:    .reloc .Lpcrel4-8,R_PPC64_PCREL_OPT,.-(.Lpcrel4-8)
+; BE-NEXT:  .Lpcrel5:
+; BE-NEXT:    .reloc .Lpcrel5-8,R_PPC64_PCREL_OPT,.-(.Lpcrel5-8)
 ; BE-NEXT:    ld r3, 0(r3)
 ; BE-NEXT:    blr
 entry:
@@ -247,9 +247,9 @@ define dso_local void @WriteGlobalPtr() local_unnamed_addr  {
 ; LE-LABEL: WriteGlobalPtr:
 ; LE:       # %bb.0: # %entry
 ; LE-NEXT:    pld r3, ptr@got@pcrel(0), 1
-; LE-NEXT:  .Lpcrel5:
+; LE-NEXT:  .Lpcrel6:
 ; LE-NEXT:    li r4, 3
-; LE-NEXT:    .reloc .Lpcrel5-8,R_PPC64_PCREL_OPT,.-(.Lpcrel5-8)
+; LE-NEXT:    .reloc .Lpcrel6-8,R_PPC64_PCREL_OPT,.-(.Lpcrel6-8)
 ; LE-NEXT:    ld r3, 0(r3)
 ; LE-NEXT:    stw r4, 0(r3)
 ; LE-NEXT:    blr
@@ -257,9 +257,9 @@ define dso_local void @WriteGlobalPtr() local_unnamed_addr  {
 ; BE-LABEL: WriteGlobalPtr:
 ; BE:       # %bb.0: # %entry
 ; BE-NEXT:    pld r3, ptr@got@pcrel(0), 1
-; BE-NEXT:  .Lpcrel5:
+; BE-NEXT:  .Lpcrel6:
 ; BE-NEXT:    li r4, 3
-; BE-NEXT:    .reloc .Lpcrel5-8,R_PPC64_PCREL_OPT,.-(.Lpcrel5-8)
+; BE-NEXT:    .reloc .Lpcrel6-8,R_PPC64_PCREL_OPT,.-(.Lpcrel6-8)
 ; BE-NEXT:    ld r3, 0(r3)
 ; BE-NEXT:    stw r4, 0(r3)
 ; BE-NEXT:    blr
@@ -287,16 +287,16 @@ define dso_local signext i32 @ReadGlobalArray() local_unnamed_addr  {
 ; LE-LABEL: ReadGlobalArray:
 ; LE:       # %bb.0: # %entry
 ; LE-NEXT:    pld r3, array@got@pcrel(0), 1
-; LE-NEXT:  .Lpcrel6:
-; LE-NEXT:    .reloc .Lpcrel6-8,R_PPC64_PCREL_OPT,.-(.Lpcrel6-8)
+; LE-NEXT:  .Lpcrel7:
+; LE-NEXT:    .reloc .Lpcrel7-8,R_PPC64_PCREL_OPT,.-(.Lpcrel7-8)
 ; LE-NEXT:    lwa r3, 12(r3)
 ; LE-NEXT:    blr
 ;
 ; BE-LABEL: ReadGlobalArray:
 ; BE:       # %bb.0: # %entry
 ; BE-NEXT:    pld r3, array@got@pcrel(0), 1
-; BE-NEXT:  .Lpcrel6:
-; BE-NEXT:    .reloc .Lpcrel6-8,R_PPC64_PCREL_OPT,.-(.Lpcrel6-8)
+; BE-NEXT:  .Lpcrel7:
+; BE-NEXT:    .reloc .Lpcrel7-8,R_PPC64_PCREL_OPT,.-(.Lpcrel7-8)
 ; BE-NEXT:    lwa r3, 12(r3)
 ; BE-NEXT:    blr
 entry:
@@ -327,16 +327,16 @@ define dso_local signext i32 @ReadGlobalStruct() local_unnamed_addr  {
 ; LE-LABEL: ReadGlobalStruct:
 ; LE:       # %bb.0: # %entry
 ; LE-NEXT:    pld r3, structure@got@pcrel(0), 1
-; LE-NEXT:  .Lpcrel7:
-; LE-NEXT:    .reloc .Lpcrel7-8,R_PPC64_PCREL_OPT,.-(.Lpcrel7-8)
+; LE-NEXT:  .Lpcrel8:
+; LE-NEXT:    .reloc .Lpcrel8-8,R_PPC64_PCREL_OPT,.-(.Lpcrel8-8)
 ; LE-NEXT:    lwa r3, 4(r3)
 ; LE-NEXT:    blr
 ;
 ; BE-LABEL: ReadGlobalStruct:
 ; BE:       # %bb.0: # %entry
 ; BE-NEXT:    pld r3, structure@got@pcrel(0), 1
-; BE-NEXT:  .Lpcrel7:
-; BE-NEXT:    .reloc .Lpcrel7-8,R_PPC64_PCREL_OPT,.-(.Lpcrel7-8)
+; BE-NEXT:  .Lpcrel8:
+; BE-NEXT:    .reloc .Lpcrel8-8,R_PPC64_PCREL_OPT,.-(.Lpcrel8-8)
 ; BE-NEXT:    lwa r3, 4(r3)
 ; BE-NEXT:    blr
 entry:
@@ -368,8 +368,8 @@ define dso_local void @ReadFuncPtr() local_unnamed_addr  {
 ; LE:         .localentry ReadFuncPtr, 1
 ; LE-NEXT:  # %bb.0: # %entry
 ; LE-NEXT:    pld r3, ptrfunc@got@pcrel(0), 1
-; LE-NEXT:  .Lpcrel8:
-; LE-NEXT:    .reloc .Lpcrel8-8,R_PPC64_PCREL_OPT,.-(.Lpcrel8-8)
+; LE-NEXT:  .Lpcrel9:
+; LE-NEXT:    .reloc .Lpcrel9-8,R_PPC64_PCREL_OPT,.-(.Lpcrel9-8)
 ; LE-NEXT:    ld r12, 0(r3)
 ; LE-NEXT:    mtctr r12
 ; LE-NEXT:    bctr
@@ -379,8 +379,8 @@ define dso_local void @ReadFuncPtr() local_unnamed_addr  {
 ; BE:         .localentry ReadFuncPtr, 1
 ; BE-NEXT:  # %bb.0: # %entry
 ; BE-NEXT:    pld r3, ptrfunc@got@pcrel(0), 1
-; BE-NEXT:  .Lpcrel8:
-; BE-NEXT:    .reloc .Lpcrel8-8,R_PPC64_PCREL_OPT,.-(.Lpcrel8-8)
+; BE-NEXT:  .Lpcrel9:
+; BE-NEXT:    .reloc .Lpcrel9-8,R_PPC64_PCREL_OPT,.-(.Lpcrel9-8)
 ; BE-NEXT:    ld r12, 0(r3)
 ; BE-NEXT:    mtctr r12
 ; BE-NEXT:    bctr
