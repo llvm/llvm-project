@@ -535,6 +535,11 @@ let TargetPrefix = "riscv" in {
   defm vslideup : RISCVTernaryAAAX;
   defm vslidedown : RISCVTernaryAAAX;
 
+  defm vslide1up : RISCVBinaryAAX;
+  defm vslide1down : RISCVBinaryAAX;
+  defm vfslide1up : RISCVBinaryAAX;
+  defm vfslide1down : RISCVBinaryAAX;
+
   defm vaaddu : RISCVSaturatingBinaryAAX;
   defm vaadd : RISCVSaturatingBinaryAAX;
   defm vasubu : RISCVSaturatingBinaryAAX;
@@ -554,5 +559,4 @@ let TargetPrefix = "riscv" in {
   defm vmfle : RISCVCompare;
   defm vmfgt : RISCVCompare;
   defm vmfge : RISCVCompare;
-
 } // TargetPrefix = "riscv"
