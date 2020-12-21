@@ -1882,6 +1882,10 @@ AAManager PassBuilder::buildDefaultAAPipeline() {
   // results from `GlobalsAA` through a readonly proxy.
   AA.registerModuleAnalysis<GlobalsAA>();
 
+  // Add target-specific alias analyses.
+  if (TM)
+    TM->registerAliasAnalyses(AA);
+
   return AA;
 }
 
