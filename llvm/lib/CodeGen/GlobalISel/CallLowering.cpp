@@ -93,6 +93,8 @@ void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,
     Flags.setSRet();
   if (Attrs.hasAttribute(OpIdx, Attribute::SwiftSelf))
     Flags.setSwiftSelf();
+  if (Attrs.hasAttribute(OpIdx, Attribute::SwiftAsync))
+    Flags.setSwiftAsync();
   if (Attrs.hasAttribute(OpIdx, Attribute::SwiftError))
     Flags.setSwiftError();
   if (Attrs.hasAttribute(OpIdx, Attribute::ByVal))
