@@ -334,7 +334,13 @@ public:
 
   LogicalResult matchAndRewrite(AffineYieldOp op,
                                 PatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<scf::YieldOp>(op);
+    if (isa<scf::ParallelOp>(op.getParentOp())) {
+      // scf.parallel does not yield any values via its terminator scf.yield but
+      // models reductions differently using additional ops in its region.
+      rewriter.replaceOpWithNewOp<scf::YieldOp>(op);
+      return success();
+    }
+    rewriter.replaceOpWithNewOp<scf::YieldOp>(op, op.operands());
     return success();
   }
 };
@@ -349,13 +355,54 @@ public:
     Value lowerBound = lowerAffineLowerBound(op, rewriter);
     Value upperBound = lowerAffineUpperBound(op, rewriter);
     Value step = rewriter.create<ConstantIndexOp>(loc, op.getStep());
-    auto f = rewriter.create<scf::ForOp>(loc, lowerBound, upperBound, step);
-    rewriter.eraseBlock(f.getBody());
-    rewriter.inlineRegionBefore(op.region(), f.region(), f.region().end());
-    rewriter.eraseOp(op);
+    auto scfForOp = rewriter.create<scf::ForOp>(loc, lowerBound, upperBound,
+                                                step, op.getIterOperands());
+    rewriter.eraseBlock(scfForOp.getBody());
+    rewriter.inlineRegionBefore(op.region(), scfForOp.region(),
+                                scfForOp.region().end());
+    rewriter.replaceOp(op, scfForOp.results());
     return success();
   }
 };
+
+/// Returns the identity value associated with an AtomicRMWKind op.
+static Value getIdentityValue(AtomicRMWKind op, OpBuilder &builder,
+                              Location loc) {
+  switch (op) {
+  case AtomicRMWKind::addf:
+    return builder.create<ConstantOp>(loc, builder.getF32FloatAttr(0));
+  case AtomicRMWKind::addi:
+    return builder.create<ConstantOp>(loc, builder.getI32IntegerAttr(0));
+  case AtomicRMWKind::mulf:
+    return builder.create<ConstantOp>(loc, builder.getF32FloatAttr(1));
+  case AtomicRMWKind::muli:
+    return builder.create<ConstantOp>(loc, builder.getI32IntegerAttr(1));
+  // TODO: Add remaining reduction operations.
+  default:
+    emitOptionalError(loc, "Reduction operation type not supported");
+  }
+  return nullptr;
+}
+
+/// Return the value obtained by applying the reduction operation kind
+/// associated with a binary AtomicRMWKind op to `lhs` and `rhs`.
+static Value getReductionOp(AtomicRMWKind op, OpBuilder &builder, Location loc,
+                            Value lhs, Value rhs) {
+  switch (op) {
+  case AtomicRMWKind::addf:
+    return builder.create<AddFOp>(loc, lhs, rhs);
+  case AtomicRMWKind::addi:
+    return builder.create<AddIOp>(loc, lhs, rhs);
+  case AtomicRMWKind::mulf:
+    return builder.create<MulFOp>(loc, lhs, rhs);
+  case AtomicRMWKind::muli:
+    return builder.create<MulIOp>(loc, lhs, rhs);
+  // TODO: Add remaining reduction operations.
+  default:
+    emitOptionalError(loc, "Reduction operation type not supported");
+  }
+  return nullptr;
+}
 
 /// Convert an `affine.parallel` (loop nest) operation into a `scf.parallel`
 /// operation.
@@ -369,12 +416,13 @@ public:
     SmallVector<Value, 8> steps;
     SmallVector<Value, 8> upperBoundTuple;
     SmallVector<Value, 8> lowerBoundTuple;
+    SmallVector<Value, 8> identityVals;
     // Finding lower and upper bound by expanding the map expression.
     // Checking if expandAffineMap is not giving NULL.
-    Optional<SmallVector<Value, 8>> upperBound = expandAffineMap(
-        rewriter, loc, op.upperBoundsMap(), op.getUpperBoundsOperands());
     Optional<SmallVector<Value, 8>> lowerBound = expandAffineMap(
         rewriter, loc, op.lowerBoundsMap(), op.getLowerBoundsOperands());
+    Optional<SmallVector<Value, 8>> upperBound = expandAffineMap(
+        rewriter, loc, op.upperBoundsMap(), op.getUpperBoundsOperands());
     if (!lowerBound || !upperBound)
       return failure();
     upperBoundTuple = *upperBound;
@@ -383,13 +431,62 @@ public:
     for (Attribute step : op.steps())
       steps.push_back(rewriter.create<ConstantIndexOp>(
           loc, step.cast<IntegerAttr>().getInt()));
-    // Creating empty scf.parallel op body with appropriate bounds.
-    auto parallelOp = rewriter.create<scf::ParallelOp>(loc, lowerBoundTuple,
-                                                       upperBoundTuple, steps);
-    rewriter.eraseBlock(parallelOp.getBody());
-    rewriter.inlineRegionBefore(op.region(), parallelOp.region(),
-                                parallelOp.region().end());
-    rewriter.eraseOp(op);
+    // Get the terminator op.
+    Operation *affineParOpTerminator = op.getBody()->getTerminator();
+    scf::ParallelOp parOp;
+    if (op.results().empty()) {
+      // Case with no reduction operations/return values.
+      parOp = rewriter.create<scf::ParallelOp>(loc, lowerBoundTuple,
+                                               upperBoundTuple, steps,
+                                               /*bodyBuilderFn=*/nullptr);
+      rewriter.eraseBlock(parOp.getBody());
+      rewriter.inlineRegionBefore(op.region(), parOp.region(),
+                                  parOp.region().end());
+      rewriter.replaceOp(op, parOp.results());
+      return success();
+    }
+    // Case with affine.parallel with reduction operations/return values.
+    // scf.parallel handles the reduction operation differently unlike
+    // affine.parallel.
+    ArrayRef<Attribute> reductions = op.reductions().getValue();
+    for (Attribute reduction : reductions) {
+      // For each of the reduction operations get the identity values for
+      // initialization of the result values.
+      Optional<AtomicRMWKind> reductionOp = symbolizeAtomicRMWKind(
+          static_cast<uint64_t>(reduction.cast<IntegerAttr>().getInt()));
+      assert(reductionOp.hasValue() &&
+             "Reduction operation cannot be of None Type");
+      AtomicRMWKind reductionOpValue = reductionOp.getValue();
+      identityVals.push_back(getIdentityValue(reductionOpValue, rewriter, loc));
+    }
+    parOp = rewriter.create<scf::ParallelOp>(
+        loc, lowerBoundTuple, upperBoundTuple, steps, identityVals,
+        /*bodyBuilderFn=*/nullptr);
+
+    //  Copy the body of the affine.parallel op.
+    rewriter.eraseBlock(parOp.getBody());
+    rewriter.inlineRegionBefore(op.region(), parOp.region(),
+                                parOp.region().end());
+    assert(reductions.size() == affineParOpTerminator->getNumOperands() &&
+           "Unequal number of reductions and operands.");
+    for (unsigned i = 0, end = reductions.size(); i < end; i++) {
+      // For each of the reduction operations get the respective mlir::Value.
+      Optional<AtomicRMWKind> reductionOp =
+          symbolizeAtomicRMWKind(reductions[i].cast<IntegerAttr>().getInt());
+      assert(reductionOp.hasValue() &&
+             "Reduction Operation cannot be of None Type");
+      AtomicRMWKind reductionOpValue = reductionOp.getValue();
+      rewriter.setInsertionPoint(&parOp.getBody()->back());
+      auto reduceOp = rewriter.create<scf::ReduceOp>(
+          loc, affineParOpTerminator->getOperand(i));
+      rewriter.setInsertionPointToEnd(&reduceOp.reductionOperator().front());
+      Value reductionResult =
+          getReductionOp(reductionOpValue, rewriter, loc,
+                         reduceOp.reductionOperator().front().getArgument(0),
+                         reduceOp.reductionOperator().front().getArgument(1));
+      rewriter.create<scf::ReduceReturnOp>(loc, reductionResult);
+    }
+    rewriter.replaceOp(op, parOp.results());
     return success();
   }
 };
