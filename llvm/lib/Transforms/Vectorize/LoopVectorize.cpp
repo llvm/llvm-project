@@ -5512,6 +5512,19 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     return MaxVF;
   }
 
+  // Avoid tail folding if the trip count is known to be a multiple of any VF we
+  // chose.
+  ScalarEvolution *SE = PSE.getSE();
+  const SCEV *BackedgeTakenCount = PSE.getBackedgeTakenCount();
+  const SCEV *ExitCount = SE->getAddExpr(
+      BackedgeTakenCount, SE->getOne(BackedgeTakenCount->getType()));
+  unsigned TCisMultipleOf = 1 << SE->GetMinTrailingZeros(ExitCount);
+  if (TCisMultipleOf % MaxVFtimesIC == 0) {
+    // Accept MaxVF if we do not have a tail.
+    LLVM_DEBUG(dbgs() << "LV: No tail will remain for any chosen VF.\n");
+    return MaxVF;
+  }
+
   // If we don't know the precise trip count, or if the trip count that we
   // found modulo the vectorization factor is not zero, try to fold the tail
   // by masking.
