@@ -51,7 +51,6 @@ template <> struct PointerLikeTypeTraits<clang::Expr *> {
 
 namespace clang {
 
-class APValue;
 class ASTContext;
 class DiagnosticBuilder;
 class Expr;
@@ -82,12 +81,6 @@ public:
     /// The template argument is an integral value stored in an llvm::APSInt
     /// that was provided for an integral non-type template parameter.
     Integral,
-
-    /// The template argument is a non-type template argument that can't be
-    /// represented by the special-case Declaration, NullPtr, or Integral
-    /// forms. These values are only ever produced by constant evaluation,
-    /// so cannot be dependent.
-    UncommonValue,
 
     /// The template argument is a template name that was provided for a
     /// template template parameter.
@@ -132,11 +125,6 @@ private:
     };
     void *Type;
   };
-  struct V {
-    unsigned Kind;
-    const APValue *Value;
-    void *Type;
-  };
   struct A {
     unsigned Kind;
     unsigned NumArgs;
@@ -154,7 +142,6 @@ private:
   union {
     struct DA DeclArg;
     struct I Integer;
-    struct V Value;
     struct A Args;
     struct TA TemplateArg;
     struct TV TypeOrValue;
@@ -170,8 +157,9 @@ public:
     TypeOrValue.V = reinterpret_cast<uintptr_t>(T.getAsOpaquePtr());
   }
 
-  /// Construct a template argument that refers to a (non-dependent)
-  /// declaration.
+  /// Construct a template argument that refers to a
+  /// declaration, which is either an external declaration or a
+  /// template declaration.
   TemplateArgument(ValueDecl *D, QualType QT) {
     assert(D && "Expected decl");
     DeclArg.Kind = Declaration;
@@ -181,11 +169,7 @@ public:
 
   /// Construct an integral constant template argument. The memory to
   /// store the value is allocated with Ctx.
-  TemplateArgument(const ASTContext &Ctx, const llvm::APSInt &Value,
-                   QualType Type);
-
-  /// Construct a template argument from an arbitrary constant value.
-  TemplateArgument(const ASTContext &Ctx, QualType Type, const APValue &Value);
+  TemplateArgument(ASTContext &Ctx, const llvm::APSInt &Value, QualType Type);
 
   /// Construct an integral constant template argument with the same
   /// value as Other but a different type.
@@ -356,16 +340,6 @@ public:
     Integer.Type = T.getAsOpaquePtr();
   }
 
-  /// Get the value of an UncommonValue.
-  const APValue &getAsUncommonValue() const {
-    return *Value.Value;
-  }
-
-  /// Get the type of an UncommonValue.
-  QualType getUncommonValueType() const {
-    return QualType::getFromOpaquePtr(Value.Type);
-  }
-
   /// If this is a non-type template argument, get its type. Otherwise,
   /// returns a null QualType.
   QualType getNonTypeTemplateArgumentType() const;
@@ -510,7 +484,6 @@ public:
     assert(Argument.getKind() == TemplateArgument::NullPtr ||
            Argument.getKind() == TemplateArgument::Integral ||
            Argument.getKind() == TemplateArgument::Declaration ||
-           Argument.getKind() == TemplateArgument::UncommonValue ||
            Argument.getKind() == TemplateArgument::Expression);
   }
 
@@ -566,11 +539,6 @@ public:
 
   Expr *getSourceIntegralExpression() const {
     assert(Argument.getKind() == TemplateArgument::Integral);
-    return LocInfo.getAsExpr();
-  }
-
-  Expr *getSourceUncommonValueExpression() const {
-    assert(Argument.getKind() == TemplateArgument::UncommonValue);
     return LocInfo.getAsExpr();
   }
 

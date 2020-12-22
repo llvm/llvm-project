@@ -72,7 +72,6 @@ class CountPropertyType<string typeName = ""> : PropertyType<typeName> {
 
 def APInt : PropertyType<"llvm::APInt"> { let PassByReference = 1; }
 def APSInt : PropertyType<"llvm::APSInt"> { let PassByReference = 1; }
-def APValue : PropertyType { let PassByReference = 1; }
 def ArraySizeModifier : EnumPropertyType<"ArrayType::ArraySizeModifier">;
 def AttrKind : EnumPropertyType<"attr::Kind">;
 def AutoTypeKeyword : EnumPropertyType;
@@ -449,17 +448,6 @@ let Class = PropertyTypeCase<TemplateArgument, "Integral"> in {
   }
   def : Creator<[{
     return TemplateArgument(ctx, value, type);
-  }]>;
-}
-let Class = PropertyTypeCase<TemplateArgument, "UncommonValue"> in {
-  def : Property<"value", APValue> {
-    let Read = [{ node.getAsUncommonValue() }];
-  }
-  def : Property<"type", QualType> {
-    let Read = [{ node.getUncommonValueType() }];
-  }
-  def : Creator<[{
-    return TemplateArgument(ctx, type, value);
   }]>;
 }
 let Class = PropertyTypeCase<TemplateArgument, "Template"> in {

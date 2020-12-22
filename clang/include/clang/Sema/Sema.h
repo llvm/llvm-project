@@ -7623,8 +7623,8 @@ public:
                                           QualType ParamType,
                                           SourceLocation Loc);
   ExprResult
-  BuildExpressionFromNonTypeTemplateArgument(const TemplateArgument &Arg,
-                                             SourceLocation Loc);
+  BuildExpressionFromIntegralTemplateArgument(const TemplateArgument &Arg,
+                                              SourceLocation Loc);
 
   /// Enumeration describing how template parameter lists are compared
   /// for equality.
