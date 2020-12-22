@@ -3039,23 +3039,12 @@ class OffloadingActionBuilder final {
       assert(OpenMPDeviceActions.size() == ToolChains.size() &&
              "Number of OpenMP actions and toolchains do not match.");
 
-      // FIXME:  Is there an easier way to determine amdgcn at this point?
-      bool Is_amdgcn = false;
-      for (Arg *A : Args) {
-        if (A->getOption().matches(options::OPT_Xopenmp_target_EQ)) {
-          for (auto *V : A->getValues()) {
-            StringRef VStr = StringRef(V);
-            if (VStr.startswith("-march=")) {
-              if (StringRef(VStr.str().substr(7)).startswith("gfx"))
-                Is_amdgcn = true;
-            }
-          }
-        }
-      }
+      const ToolChain *OpenMPTC =
+          C.getSingleOffloadToolChain<Action::OFK_OpenMP>();
 
       // amdgcn does not support linking of object files, therefore we skip
       // backend and assemble phases to output LLVM IR.
-      if (Is_amdgcn &&
+      if (OpenMPTC->getTriple().isAMDGCN() &&
           (CurPhase == phases::Backend || CurPhase == phases::Assemble))
         return CompileDeviceOnly ? ABRT_Ignore_Host : ABRT_Success;
 
