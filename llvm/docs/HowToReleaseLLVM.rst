@@ -50,9 +50,16 @@ The release process is roughly as follows:
 
 * Finally, release!
 
-The release process will be accelerated for dot releases.  If the first round
-of testing finds no critical bugs and no regressions since the last major release,
-then additional rounds of testing will not be required.
+* Announce bug fix release schedule to the LLVM community and update the website.
+
+* Tag bug fix -rc1 after 4 weeks have passed.
+
+* Tag bug fix -rc2 4 weeks after -rc1.
+
+* Tag additional -rc candidates, if needed, to fix critical issues in
+  previous -rc releases.
+
+* Tag final release.
 
 Release Process
 ===============
@@ -119,7 +126,7 @@ Tag release candidates:
 
   $ git tag -a llvmorg-X.Y.Z-rcN
 
-The Release Manager may supply pre-packaged source tarballs for users.  This can
+The Release Manager must supply pre-packaged source tarballs for users.  This can
 be done with the export.sh script in utils/release.
 
 Tarballs, release binaries,  or any other release artifacts must be uploaded to
@@ -153,23 +160,16 @@ The minimum required version of the tools you'll need are :doc:`here <GettingSta
 Release Qualification Criteria
 ------------------------------
 
-A release is qualified when it has no regressions from the previous release (or
-baseline).  Regressions are related to correctness first and performance second.
-(We may tolerate some minor performance regressions if they are deemed
-necessary for the general quality of the compiler.)
+There are no official release qualification criteria.  It is up to the
+the release manager to determine when a release is ready.  The release manager
+should pay attention to the results of community testing, the number of outstanding
+bugs, and then number of regressions when determining whether or not to make a
+release.
 
-More specifically, Clang/LLVM is qualified when it has a clean test with all
-supported sub-projects included (``make check-all``), per target, and it has no
-regressions with the ``test-suite`` in relation to the previous release.
-
-Regressions are new failures in the set of tests that are used to qualify
-each product and only include things on the list.  Every release will have
-some bugs in it.  It is the reality of developing a complex piece of
-software.  We need a very concrete and definitive release criteria that
-ensures we have monotonically improving quality on some metric.  The metric we
-use is described below.  This doesn't mean that we don't care about other
-criteria, but these are the criteria which we found to be most important and
-which must be satisfied before a release can go out.
+The community values time based releases, so releases should not be delayed for
+too long unless there are critical issues remaining.  In most cases, the only
+kind of bugs that are critical enough to block a release would be a major regression
+from a previous release.
 
 Official Testing
 ----------------
@@ -288,17 +288,26 @@ Below are the rules regarding patching the release branch:
    manager, the official release testers or the code owners with approval from
    the release manager.
 
-#. During the first round of testing, patches that fix regressions or that are
-   small and relatively risk free (verified by the appropriate code owner) are
-   applied to the branch.  Code owners are asked to be very conservative in
-   approving patches for the branch.  We reserve the right to reject any patch
-   that does not fix a regression as previously defined.
+#. Release managers are encouraged, but not required, to get approval from code
+   owners before approving patches.  If there is no code owner or the code owner
+   is unreachable then release managers can ask approval from patch reviewers or
+   other developers active in that area.
 
-#. During the remaining rounds of testing, only patches that fix critical
-   regressions may be applied.
+#. *Before RC1* Patches should be limited to bug fixes, important optimization
+   improvements, or completion of features that were started before the branch
+   was created.  As with all phases, release managers and code owners can reject
+   patches that are deemed too invasive.
 
-#. For dot releases all patches must maintain both API and ABI compatibility with
-   the previous major release.  Only bug-fixes will be accepted.
+#. *Before RC2* Patches should be limited to bug fixes or backend specific
+   improvements that are determined to be very safe.
+
+#. *Before RC3/Final Major Release* Patches should be limited to critical
+   bugs or regressions.
+
+#. *Bug fix releases* Patches should be limited to bug fixes or very safe
+   and critical performance improvements.  Patches must maintain both API and
+   ABI compatibility with the previous major release.
+
 
 Merging Patches
 ^^^^^^^^^^^^^^^
