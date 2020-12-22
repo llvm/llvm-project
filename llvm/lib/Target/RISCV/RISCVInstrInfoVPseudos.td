@@ -749,13 +749,14 @@ multiclass VPseudoBinaryV_VM<bit CarryOut = 0, bit CarryIn = 1,
 }
 
 multiclass VPseudoBinaryV_XM<bit CarryOut = 0, bit CarryIn = 1,
-                             string Constraint = ""> {
+                             string Constraint = "", bit IsFloat = 0> {
   foreach m = MxList.m in
-    def "_VX" # !if(CarryIn, "M", "") # "_" # m.MX :
+    def !if(IsFloat, "_VF", "_VX") # !if(CarryIn, "M", "") # "_" # m.MX :
       VPseudoBinaryCarryIn<!if(CarryOut, VR,
                            !if(!and(CarryIn, !not(CarryOut)),
                                GetVRegNoV0<m.vrclass>.R, m.vrclass)),
-                           m.vrclass, GPR, m, CarryIn, Constraint>;
+                           m.vrclass, !if(IsFloat, FPR32, GPR),
+                           m, CarryIn, Constraint>;
 }
 
 multiclass VPseudoBinaryV_IM<bit CarryOut = 0, bit CarryIn = 1,
@@ -1389,8 +1390,9 @@ multiclass VPatBinaryV_WI<string intrinsic, string instruction,
 }
 
 multiclass VPatBinaryV_VM<string intrinsic, string instruction,
-                          bit CarryOut = 0> {
-  foreach vti = AllIntegerVectors in
+                          bit CarryOut = 0,
+                          list<VTypeInfo> vtilist = AllIntegerVectors> {
+  foreach vti = vtilist in
     defm : VPatBinaryCarryIn<intrinsic, instruction, "VVM",
                              !if(CarryOut, vti.Mask, vti.Vector),
                              vti.Vector, vti.Vector, vti.Mask,
@@ -1399,13 +1401,15 @@ multiclass VPatBinaryV_VM<string intrinsic, string instruction,
 }
 
 multiclass VPatBinaryV_XM<string intrinsic, string instruction,
-                          bit CarryOut = 0> {
-  foreach vti = AllIntegerVectors in
-    defm : VPatBinaryCarryIn<intrinsic, instruction, "VXM",
+                          bit CarryOut = 0,
+                          list<VTypeInfo> vtilist = AllIntegerVectors> {
+  foreach vti = vtilist in
+    defm : VPatBinaryCarryIn<intrinsic, instruction,
+                             !if(!eq(vti.Scalar, XLenVT), "VXM", "VFM"),
                              !if(CarryOut, vti.Mask, vti.Vector),
-                             vti.Vector, XLenVT, vti.Mask,
+                             vti.Vector, vti.Scalar, vti.Mask,
                              vti.SEW, vti.LMul,
-                             vti.RegClass, GPR>;
+                             vti.RegClass, vti.ScalarRegClass>;
 }
 
 multiclass VPatBinaryV_IM<string intrinsic, string instruction,
@@ -1863,6 +1867,11 @@ defm PseudoVWMACCSU    : VPseudoTernaryW_VV_VX;
 defm PseudoVWMACCUS    : VPseudoTernaryW_VX;
 
 //===----------------------------------------------------------------------===//
+// 12.15. Vector Integer Merge Instructions
+//===----------------------------------------------------------------------===//
+defm PseudoVMERGE      : VPseudoBinaryV_VM_XM_IM;
+
+//===----------------------------------------------------------------------===//
 // 12.17. Vector Integer Move Instructions
 //===----------------------------------------------------------------------===//
 
@@ -1975,6 +1984,13 @@ defm PseudoVMFLT       : VPseudoBinaryM_VV_VX</*IsFloat=*/1>;
 defm PseudoVMFLE       : VPseudoBinaryM_VV_VX</*IsFloat=*/1>;
 defm PseudoVMFGT       : VPseudoBinaryM_VX</*IsFloat=*/1>;
 defm PseudoVMFGE       : VPseudoBinaryM_VX</*IsFloat=*/1>;
+
+//===----------------------------------------------------------------------===//
+// 14.15. Vector Floating-Point Merge Instruction
+//===----------------------------------------------------------------------===//
+defm PseudoVFMERGE     : VPseudoBinaryV_XM</*CarryOut =*/0,/*CarryIn =*/true,
+                                           /*Constraint =*/"", /*IsFloat=*/true>;
+
 } // Predicates = [HasStdExtV, HasStdExtF]
 
 //===----------------------------------------------------------------------===//
@@ -2257,6 +2273,11 @@ defm "" : VPatTernaryW_VV_VX<"int_riscv_vwmaccsu", "PseudoVWMACCSU", AllWidenabl
 defm "" : VPatTernaryW_VX<"int_riscv_vwmaccus", "PseudoVWMACCUS", AllWidenableIntVectors>;
 
 //===----------------------------------------------------------------------===//
+// 12.15. Vector Integer Merge Instructions
+//===----------------------------------------------------------------------===//
+defm "" : VPatBinaryV_VM_XM_IM<"int_riscv_vmerge", "PseudoVMERGE">;
+
+//===----------------------------------------------------------------------===//
 // 12.17. Vector Integer Move Instructions
 //===----------------------------------------------------------------------===//
 foreach vti = AllVectors in {
@@ -2374,6 +2395,15 @@ defm "" : VPatBinaryM_VV_VX<"int_riscv_vmflt", "PseudoVMFLT", AllFloatVectors>;
 defm "" : VPatBinaryM_VV_VX<"int_riscv_vmfne", "PseudoVMFNE", AllFloatVectors>;
 defm "" : VPatBinaryM_VX<"int_riscv_vmfgt", "PseudoVMFGT", AllFloatVectors>;
 defm "" : VPatBinaryM_VX<"int_riscv_vmfge", "PseudoVMFGE", AllFloatVectors>;
+
+//===----------------------------------------------------------------------===//
+// 14.15. Vector Floating-Point Merge Instruction
+//===----------------------------------------------------------------------===//
+// We can use vmerge.vvm to support vector-vector vfmerge.
+defm "" : VPatBinaryV_VM<"int_riscv_vfmerge", "PseudoVMERGE",
+                         /*CarryOut = */0, /*vtilist=*/AllFloatVectors>;
+defm "" : VPatBinaryV_XM<"int_riscv_vfmerge", "PseudoVFMERGE",
+                         /*CarryOut = */0, /*vtilist=*/AllFloatVectors>;
 
 } // Predicates = [HasStdExtV, HasStdExtF]
 
