@@ -679,7 +679,8 @@ def MP : Flag<["-"], "MP">, Group<M_Group>, Flags<[CC1Option]>,
 def MQ : JoinedOrSeparate<["-"], "MQ">, Group<M_Group>, Flags<[CC1Option]>,
     HelpText<"Specify name of main file output to quote in depfile">;
 def MT : JoinedOrSeparate<["-"], "MT">, Group<M_Group>, Flags<[CC1Option]>,
-    HelpText<"Specify name of main file output in depfile">;
+    HelpText<"Specify name of main file output in depfile">,
+    MarshallingInfoStringVector<"DependencyOutputOpts.Targets">;
 def MV : Flag<["-"], "MV">, Group<M_Group>, Flags<[CC1Option]>,
     HelpText<"Use NMake/Jom format for the depfile">,
     MarshallingInfoFlag<"DependencyOutputOpts.OutputFormat", "DependencyOutputFormat::Make">,
@@ -753,7 +754,8 @@ def Wp_COMMA : CommaJoined<["-"], "Wp,">,
   MetaVarName<"<arg>">, Group<Preprocessor_Group>;
 def Wundef_prefix_EQ : CommaJoined<["-"], "Wundef-prefix=">, Group<W_value_Group>,
   Flags<[CC1Option, CoreOption, HelpHidden]>, MetaVarName<"<arg>">,
-  HelpText<"Enable warnings for undefined macros with a prefix in the comma separated list <arg>">;
+  HelpText<"Enable warnings for undefined macros with a prefix in the comma separated list <arg>">,
+  MarshallingInfoStringVector<"DiagnosticOpts->UndefPrefixes">;
 def Wwrite_strings : Flag<["-"], "Wwrite-strings">, Group<W_Group>, Flags<[CC1Option, HelpHidden]>;
 def Wno_write_strings : Flag<["-"], "Wno-write-strings">, Group<W_Group>, Flags<[CC1Option, HelpHidden]>;
 def W_Joined : Joined<["-"], "W">, Group<W_Group>, Flags<[CC1Option, CoreOption]>,
@@ -1387,7 +1389,8 @@ def fno_sanitize_EQ : CommaJoined<["-"], "fno-sanitize=">, Group<f_clang_Group>,
                       Flags<[CoreOption, NoXarchOption]>;
 def fsanitize_blacklist : Joined<["-"], "fsanitize-blacklist=">,
                           Group<f_clang_Group>,
-                          HelpText<"Path to blacklist file for sanitizers">;
+                          HelpText<"Path to blacklist file for sanitizers">,
+                          MarshallingInfoStringVector<"LangOpts->SanitizerBlacklistFiles">;
 def fsanitize_system_blacklist : Joined<["-"], "fsanitize-system-blacklist=">,
   HelpText<"Path to system blacklist file for sanitizers">,
   Flags<[CC1Option]>;
@@ -1405,13 +1408,15 @@ def fno_sanitize_coverage
                "Sanitizers">, Values<"func,bb,edge,indirect-calls,trace-bb,trace-cmp,trace-div,trace-gep,8bit-counters,trace-pc,trace-pc-guard,no-prune,inline-8bit-counters,inline-bool-flag">;
 def fsanitize_coverage_allowlist : Joined<["-"], "fsanitize-coverage-allowlist=">,
     Group<f_clang_Group>, Flags<[CoreOption, NoXarchOption]>,
-    HelpText<"Restrict sanitizer coverage instrumentation exclusively to modules and functions that match the provided special case list, except the blocked ones">;
+    HelpText<"Restrict sanitizer coverage instrumentation exclusively to modules and functions that match the provided special case list, except the blocked ones">,
+    MarshallingInfoStringVector<"CodeGenOpts.SanitizeCoverageAllowlistFiles">;
 def : Joined<["-"], "fsanitize-coverage-whitelist=">,
   Group<f_clang_Group>, Flags<[CoreOption, HelpHidden]>, Alias<fsanitize_coverage_allowlist>,
   HelpText<"Deprecated, use -fsanitize-coverage-allowlist= instead">;
 def fsanitize_coverage_blocklist : Joined<["-"], "fsanitize-coverage-blocklist=">,
     Group<f_clang_Group>, Flags<[CoreOption, NoXarchOption]>,
-    HelpText<"Disable sanitizer coverage instrumentation for modules and functions that match the provided special case list, even the allowed ones">;
+    HelpText<"Disable sanitizer coverage instrumentation for modules and functions that match the provided special case list, even the allowed ones">,
+    MarshallingInfoStringVector<"CodeGenOpts.SanitizeCoverageBlocklistFiles">;
 def : Joined<["-"], "fsanitize-coverage-blacklist=">,
   Group<f_clang_Group>, Flags<[CoreOption, HelpHidden]>, Alias<fsanitize_coverage_blocklist>,
   HelpText<"Deprecated, use -fsanitize-coverage-blocklist= instead">;
@@ -1616,7 +1621,8 @@ defm delete_null_pointer_checks : BoolFOption<"delete-null-pointer-checks",
 
 def frewrite_map_file : Separate<["-"], "frewrite-map-file">,
                         Group<f_Group>,
-                        Flags<[ NoXarchOption, CC1Option ]>;
+                        Flags<[ NoXarchOption, CC1Option ]>,
+                        MarshallingInfoStringVector<"CodeGenOpts.RewriteMapFiles">;
 def frewrite_map_file_EQ : Joined<["-"], "frewrite-map-file=">,
                            Group<f_Group>,
                            Flags<[NoXarchOption]>;
@@ -1694,15 +1700,18 @@ def fxray_instruction_threshold_ :
 def fxray_always_instrument :
   JoinedOrSeparate<["-"], "fxray-always-instrument=">,
   Group<f_Group>, Flags<[CC1Option]>,
-  HelpText<"DEPRECATED: Filename defining the whitelist for imbuing the 'always instrument' XRay attribute.">;
+  HelpText<"DEPRECATED: Filename defining the whitelist for imbuing the 'always instrument' XRay attribute.">,
+  MarshallingInfoStringVector<"LangOpts->XRayAlwaysInstrumentFiles">;
 def fxray_never_instrument :
   JoinedOrSeparate<["-"], "fxray-never-instrument=">,
   Group<f_Group>, Flags<[CC1Option]>,
-  HelpText<"DEPRECATED: Filename defining the whitelist for imbuing the 'never instrument' XRay attribute.">;
+  HelpText<"DEPRECATED: Filename defining the whitelist for imbuing the 'never instrument' XRay attribute.">,
+  MarshallingInfoStringVector<"LangOpts->XRayNeverInstrumentFiles">;
 def fxray_attr_list :
   JoinedOrSeparate<["-"], "fxray-attr-list=">,
   Group<f_Group>, Flags<[CC1Option]>,
-  HelpText<"Filename defining the list of functions/types for imbuing XRay attributes.">;
+  HelpText<"Filename defining the list of functions/types for imbuing XRay attributes.">,
+  MarshallingInfoStringVector<"LangOpts->XRayAttrListFiles">;
 def fxray_modes :
   JoinedOrSeparate<["-"], "fxray-modes=">,
   Group<f_Group>, Flags<[CC1Option]>,
@@ -2191,7 +2200,8 @@ def fplugin_EQ : Joined<["-"], "fplugin=">, Group<f_Group>, Flags<[NoXarchOption
   HelpText<"Load the named plugin (dynamic shared object)">;
 def fpass_plugin_EQ : Joined<["-"], "fpass-plugin=">,
   Group<f_Group>, Flags<[CC1Option]>, MetaVarName<"<dsopath>">,
-  HelpText<"Load pass plugin from a dynamic shared object file (only with new pass manager).">;
+  HelpText<"Load pass plugin from a dynamic shared object file (only with new pass manager).">,
+  MarshallingInfoStringVector<"CodeGenOpts.PassPlugins">;
 defm preserve_as_comments : BoolFOption<"preserve-as-comments",
   "CodeGenOpts.PreserveAsmComments", DefaultsToTrue,
   ChangedBy<NegFlag, [], "Do not preserve comments in inline assembly">,
@@ -2639,7 +2649,8 @@ def iframeworkwithsysroot : JoinedOrSeparate<["-"], "iframeworkwithsysroot">,
            "absolute paths are relative to -isysroot">,
   MetaVarName<"<directory>">, Flags<[CC1Option]>;
 def imacros : JoinedOrSeparate<["-", "--"], "imacros">, Group<clang_i_Group>, Flags<[CC1Option]>,
-  HelpText<"Include macros from file before parsing">, MetaVarName<"<file>">;
+  HelpText<"Include macros from file before parsing">, MetaVarName<"<file>">,
+  MarshallingInfoStringVector<"PreprocessorOpts->MacroIncludes">;
 def image__base : Separate<["-"], "image_base">;
 def include_ : JoinedOrSeparate<["-", "--"], "include">, Group<clang_i_Group>, EnumName<"include">,
     MetaVarName<"<file>">, HelpText<"Include file before parsing">, Flags<[CC1Option]>;
@@ -2786,7 +2797,8 @@ def mkernel : Flag<["-"], "mkernel">, Group<m_Group>;
 def mlinker_version_EQ : Joined<["-"], "mlinker-version=">,
   Flags<[NoXarchOption]>;
 def mllvm : Separate<["-"], "mllvm">, Flags<[CC1Option,CC1AsOption,CoreOption]>,
-  HelpText<"Additional arguments to forward to LLVM's option processing">;
+  HelpText<"Additional arguments to forward to LLVM's option processing">,
+  MarshallingInfoStringVector<"FrontendOpts.LLVMArgs">;
 def mmacosx_version_min_EQ : Joined<["-"], "mmacosx-version-min=">,
   Group<m_Group>, HelpText<"Set Mac OS X deployment target">;
 def mmacos_version_min_EQ : Joined<["-"], "mmacos-version-min=">,
@@ -3124,7 +3136,8 @@ def mno_implicit_float : Flag<["-"], "mno-implicit-float">, Group<m_Group>,
   HelpText<"Don't generate implicit floating point instructions">;
 def mimplicit_float : Flag<["-"], "mimplicit-float">, Group<m_Group>;
 def mrecip : Flag<["-"], "mrecip">, Group<m_Group>;
-def mrecip_EQ : CommaJoined<["-"], "mrecip=">, Group<m_Group>, Flags<[CC1Option]>;
+def mrecip_EQ : CommaJoined<["-"], "mrecip=">, Group<m_Group>, Flags<[CC1Option]>,
+  MarshallingInfoStringVector<"CodeGenOpts.Reciprocals">;
 def mprefer_vector_width_EQ : Joined<["-"], "mprefer-vector-width=">, Group<m_Group>, Flags<[CC1Option]>,
   HelpText<"Specifies preferred vector width for auto-vectorization. Defaults to 'none' which allows target specific decisions.">,
   MarshallingInfoString<"CodeGenOpts.PreferVectorWidth">;
@@ -4120,7 +4133,8 @@ def tune_cpu : Separate<["-"], "tune-cpu">,
   HelpText<"Tune for a specific cpu type">,
   MarshallingInfoString<"TargetOpts->TuneCPU">;
 def target_feature : Separate<["-"], "target-feature">,
-  HelpText<"Target specific attributes">;
+  HelpText<"Target specific attributes">,
+  MarshallingInfoStringVector<"TargetOpts->FeaturesAsWritten">;
 def triple : Separate<["-"], "triple">,
   HelpText<"Specify target triple (e.g. i686-apple-darwin9)">,
   MarshallingInfoString<"TargetOpts->Triple", "llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple())">,
@@ -4323,7 +4337,8 @@ def debug_info_macro : Flag<["-"], "debug-info-macro">,
   HelpText<"Emit macro debug information">,
   MarshallingInfoFlag<"CodeGenOpts.MacroDebugInfo">;
 def default_function_attr : Separate<["-"], "default-function-attr">,
-  HelpText<"Apply given attribute to all functions">;
+  HelpText<"Apply given attribute to all functions">,
+  MarshallingInfoStringVector<"CodeGenOpts.DefaultFunctionAttrs">;
 def dwarf_version_EQ : Joined<["-"], "dwarf-version=">,
   MarshallingInfoStringInt<"CodeGenOpts.DwarfVersion">;
 def debugger_tuning_EQ : Joined<["-"], "debugger-tuning=">,
@@ -4496,9 +4511,11 @@ def vectorize_slp : Flag<["-"], "vectorize-slp">,
   HelpText<"Run the SLP vectorization passes">,
   MarshallingInfoFlag<"CodeGenOpts.VectorizeSLP">;
 def dependent_lib : Joined<["--"], "dependent-lib=">,
-  HelpText<"Add dependent library">;
+  HelpText<"Add dependent library">,
+  MarshallingInfoStringVector<"CodeGenOpts.DependentLibraries">;
 def linker_option : Joined<["--"], "linker-option=">,
-  HelpText<"Add linker option">;
+  HelpText<"Add linker option">,
+  MarshallingInfoStringVector<"CodeGenOpts.LinkerOptions">;
 def fsanitize_coverage_type : Joined<["-"], "fsanitize-coverage-type=">,
                               HelpText<"Sanitizer coverage type">,
                               MarshallingInfoStringInt<"CodeGenOpts.SanitizeCoverageType">;
@@ -4658,7 +4675,8 @@ def fcaret_diagnostics_max_lines :
 def verify_EQ : CommaJoined<["-"], "verify=">,
   MetaVarName<"<prefixes>">,
   HelpText<"Verify diagnostic output using comment directives that start with"
-           " prefixes in the comma-separated sequence <prefixes>">;
+           " prefixes in the comma-separated sequence <prefixes>">,
+  MarshallingInfoStringVector<"DiagnosticOpts->VerifyPrefixes">;
 def verify : Flag<["-"], "verify">,
   HelpText<"Equivalent to -verify=expected">;
 def verify_ignore_unexpected : Flag<["-"], "verify-ignore-unexpected">,
@@ -4679,7 +4697,8 @@ def cc1as : Flag<["-"], "cc1as">;
 
 def ast_merge : Separate<["-"], "ast-merge">,
   MetaVarName<"<ast file>">,
-  HelpText<"Merge the given AST file into the translation unit being compiled.">;
+  HelpText<"Merge the given AST file into the translation unit being compiled.">,
+  MarshallingInfoStringVector<"FrontendOpts.ASTMergeFiles">;
 def aux_target_cpu : Separate<["-"], "aux-target-cpu">,
   HelpText<"Target a specific auxiliary cpu type">;
 def aux_target_feature : Separate<["-"], "aux-target-feature">,
@@ -4746,11 +4765,13 @@ def fmodule_map_file_home_is_cwd : Flag<["-"], "fmodule-map-file-home-is-cwd">,
   MarshallingInfoFlag<"HeaderSearchOpts->ModuleMapFileHomeIsCwd">;
 def fmodule_feature : Separate<["-"], "fmodule-feature">,
   MetaVarName<"<feature>">,
-  HelpText<"Enable <feature> in module map requires declarations">;
+  HelpText<"Enable <feature> in module map requires declarations">,
+  MarshallingInfoStringVector<"LangOpts->ModuleFeatures">;
 def fmodules_embed_file_EQ : Joined<["-"], "fmodules-embed-file=">,
   MetaVarName<"<file>">,
   HelpText<"Embed the contents of the specified file into the module file "
-           "being compiled.">;
+           "being compiled.">,
+  MarshallingInfoStringVector<"FrontendOpts.ModulesEmbedFiles">;
 def fmodules_embed_all_files : Joined<["-"], "fmodules-embed-all-files">,
   HelpText<"Embed the contents of all files read by this compilation into "
            "the produced module file.">,
@@ -5190,7 +5211,8 @@ def disable_pragma_debug_crash : Flag<["-"], "disable-pragma-debug-crash">,
 //===----------------------------------------------------------------------===//
 
 def cl_ext_EQ : CommaJoined<["-"], "cl-ext=">,
-  HelpText<"OpenCL only. Enable or disable OpenCL extensions. The argument is a comma-separated sequence of one or more extension names, each prefixed by '+' or '-'.">;
+  HelpText<"OpenCL only. Enable or disable OpenCL extensions. The argument is a comma-separated sequence of one or more extension names, each prefixed by '+' or '-'.">,
+  MarshallingInfoStringVector<"TargetOpts->OpenCLExtensionsAsWritten">;
 
 //===----------------------------------------------------------------------===//
 // CUDA Options
