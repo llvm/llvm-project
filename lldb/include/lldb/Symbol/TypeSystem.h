@@ -175,6 +175,8 @@ public:
     return false;
   }
 
+  virtual bool IsScopedEnumerationType(lldb::opaque_compiler_type_t type) = 0;
+
   virtual bool IsPossibleDynamicType(lldb::opaque_compiler_type_t type,
                                      CompilerType *target_type, // Can pass NULL
                                      bool check_cplusplus, bool check_objc) = 0;

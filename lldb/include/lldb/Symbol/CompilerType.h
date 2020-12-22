@@ -82,6 +82,8 @@ public:
 
   bool IsAnonymousType() const;
 
+  bool IsScopedEnumerationType() const;
+
   bool IsBeingDefined() const;
 
   bool IsCharType() const;
