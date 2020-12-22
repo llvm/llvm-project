@@ -24,17 +24,17 @@ include "CSKYInstrFormats.td"
 
 class oimm<int num> : Operand<i32>,
   ImmLeaf<i32, "return isUInt<"#num#">(Imm - 1);"> {
-  let EncoderMethod = "getOImmOpValue<"#num#">";
+  let EncoderMethod = "getOImmOpValue";
 }
 
 class uimm<int num, int shift = 0> : Operand<i32>,
   ImmLeaf<i32, "return isShiftedUInt<"#num#", "#shift#">(Imm);"> {
-  let EncoderMethod = "getImmOpValue<"#num#", "#shift#">";
+  let EncoderMethod = "getImmOpValue<"#shift#">";
 }
 
 class simm<int num, int shift = 0> : Operand<i32>,
   ImmLeaf<i32, "return isShiftedInt<"#num#", "#shift#">(Imm);"> {
-  let EncoderMethod = "getImmOpValue<"#num#", "#shift#">";
+  let EncoderMethod = "getImmOpValue<"#shift#">";
 }
 
 def nimm_XFORM : SDNodeXForm<imm, [{
