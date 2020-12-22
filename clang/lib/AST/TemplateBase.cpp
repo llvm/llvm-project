@@ -137,7 +137,6 @@ TemplateArgument::TemplateArgument(const ASTContext &Ctx, QualType Type,
   else {
     Value.Kind = UncommonValue;
     Value.Value = new (Ctx) APValue(V);
-    Ctx.addDestruction(Value.Value);
     Value.Type = Type.getAsOpaquePtr();
   }
 }
