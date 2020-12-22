@@ -8,6 +8,7 @@
 
 #include "gtest/gtest.h"
 #include "flang/Frontend/CompilerInstance.h"
+#include "flang/Frontend/CompilerInvocation.h"
 #include "flang/Frontend/FrontendOptions.h"
 #include "flang/FrontendTool/Utils.h"
 #include "llvm/Support/FileSystem.h"
@@ -17,119 +18,120 @@ using namespace Fortran::frontend;
 
 namespace {
 
-TEST(FrontendAction, PrintPreprocessedInput) {
-  std::string inputFile = "pp-test-file.f";
-  std::error_code ec;
+class FrontendActionTest : public ::testing::Test {
+protected:
+  // AllSources (which is used to manage files inside every compiler
+  // instance), works with paths. So we need a filename and a path for the
+  // input file.
+  // TODO: We could use `-` for inputFilePath_, but then we'd need a way to
+  // write to stdin that's then read by AllSources. Ideally, AllSources should
+  // be capable of reading from any stream.
+  std::string inputFileName_;
+  std::string inputFilePath_;
+  // The output stream for the input file. Use this to populate the input.
+  std::unique_ptr<llvm::raw_fd_ostream> inputFileOs_;
 
-  // 1. Create the input file for the file manager
-  // AllSources (which is used to manage files inside every compiler instance),
-  // works with paths. This means that it requires a physical file. Create one.
-  std::unique_ptr<llvm::raw_fd_ostream> os{
-      new llvm::raw_fd_ostream(inputFile, ec, llvm::sys::fs::OF_None)};
-  if (ec)
-    FAIL() << "Fail to create the file need by the test";
+  std::error_code ec_;
 
+  CompilerInstance compInst_;
+  std::shared_ptr<CompilerInvocation> invocation_;
+
+  void SetUp() override {
+    // Generate a unique test file name.
+    const testing::TestInfo *const test_info =
+        testing::UnitTest::GetInstance()->current_test_info();
+    inputFileName_ = std::string(test_info->name()) + "_test-file.f";
+
+    // Create the input file stream. Note that this stream is populated
+    // separately in every test (i.e. the input is test specific).
+    inputFileOs_ = std::make_unique<llvm::raw_fd_ostream>(
+        inputFileName_, ec_, llvm::sys::fs::OF_None);
+    if (ec_)
+      FAIL() << "Failed to create the input file";
+
+    // Get the path of the input file.
+    llvm::SmallString<256> cwd;
+    if (std::error_code ec_ = llvm::sys::fs::current_path(cwd))
+      FAIL() << "Failed to obtain the current working directory";
+    inputFilePath_ = cwd.c_str();
+    inputFilePath_ += "/" + inputFileName_;
+
+    // Prepare the compiler (CompilerInvocation + CompilerInstance)
+    compInst_.CreateDiagnostics();
+    invocation_ = std::make_shared<CompilerInvocation>();
+
+    compInst_.set_invocation(std::move(invocation_));
+    compInst_.frontendOpts().inputs_.push_back(
+        FrontendInputFile(inputFilePath_, Language::Fortran));
+  }
+
+  void TearDown() override {
+    // Clear the input file.
+    llvm::sys::fs::remove(inputFileName_);
+
+    // Clear the output files.
+    // Note that these tests use an output buffer (as opposed to an output
+    // file), hence there are no physical output files to delete and
+    // `EraseFiles` is set to `false`. Also, some actions (e.g.
+    // `ParseSyntaxOnly`) don't generated output. In such cases there's no
+    // output to clear and `ClearOutputFile` returns immediately.
+    compInst_.ClearOutputFiles(/*EraseFiles=*/false);
+  }
+};
+
+TEST_F(FrontendActionTest, PrintPreprocessedInput) {
   // Populate the input file with the pre-defined input and flush it.
-  *(os) << "! test-file.F:\n"
-        << "#ifdef NEW\n"
-        << "  Program A \n"
-        << "#else\n"
-        << "  Program B\n"
-        << "#endif";
-  os.reset();
+  *(inputFileOs_) << "#ifdef NEW\n"
+                  << "  Program A \n"
+                  << "#else\n"
+                  << "  Program B\n"
+                  << "#endif";
+  inputFileOs_.reset();
 
-  // Get the path of the input file
-  llvm::SmallString<64> cwd;
-  if (std::error_code ec = llvm::sys::fs::current_path(cwd))
-    FAIL() << "Failed to obtain the current working directory";
-  std::string testFilePath(cwd.c_str());
-  testFilePath += "/" + inputFile;
+  // Set-up the action kind.
+  compInst_.invocation().frontendOpts().programAction_ = PrintPreprocessedInput;
 
-  // 2. Prepare the compiler (CompilerInvocation + CompilerInstance)
-  CompilerInstance compInst;
-  compInst.CreateDiagnostics();
-  auto invocation = std::make_shared<CompilerInvocation>();
-  invocation->frontendOpts().programAction_ = PrintPreprocessedInput;
-
-  compInst.set_invocation(std::move(invocation));
-  compInst.frontendOpts().inputs_.push_back(
-      FrontendInputFile(testFilePath, Language::Fortran));
-
-  // 3. Set-up the output stream. Using output buffer wrapped as an output
+  // Set-up the output stream. We are using output buffer wrapped as an output
   // stream, as opposed to an actual file (or a file descriptor).
   llvm::SmallVector<char, 256> outputFileBuffer;
   std::unique_ptr<llvm::raw_pwrite_stream> outputFileStream(
       new llvm::raw_svector_ostream(outputFileBuffer));
-  compInst.set_outputStream(std::move(outputFileStream));
+  compInst_.set_outputStream(std::move(outputFileStream));
 
-  // 4. Run the earlier defined FrontendAction
-  bool success = ExecuteCompilerInvocation(&compInst);
+  // Execute the action.
+  bool success = ExecuteCompilerInvocation(&compInst_);
 
-  // 5. Validate the expected output
+  // Validate the expected output.
   EXPECT_TRUE(success);
   EXPECT_TRUE(!outputFileBuffer.empty());
   EXPECT_TRUE(
       llvm::StringRef(outputFileBuffer.data()).startswith("program b\n"));
-
-  // 6. Clear the input and the output files. Since we used an output buffer,
-  // there are no physical output files to delete.
-  llvm::sys::fs::remove(inputFile);
-  compInst.ClearOutputFiles(/*EraseFiles=*/true);
 }
 
-TEST(FrontendAction, ParseSyntaxOnly) {
-  std::string inputFile = "syntax-only-test-file.f";
-  std::error_code ec;
-
-  // 1. Create the input file for the file manager
-  // AllSources (which is used to manage files inside every compiler instance),
-  // works with paths. This means that it requires a physical file. Create one.
-  std::unique_ptr<llvm::raw_fd_ostream> os{
-      new llvm::raw_fd_ostream(inputFile, ec, llvm::sys::fs::OF_None)};
-  if (ec)
-    FAIL() << "Fail to create the file need by the test";
-
+TEST_F(FrontendActionTest, ParseSyntaxOnly) {
   // Populate the input file with the pre-defined input and flush it.
-  *(os) << "! if_stmt.f90:\n"
-        << "IF (A > 0.0) IF (B < 0.0) A = LOG (A)\n"
-        << "END";
-  os.reset();
+  *(inputFileOs_) << "IF (A > 0.0) IF (B < 0.0) A = LOG (A)\n"
+                  << "END";
+  inputFileOs_.reset();
 
-  // Get the path of the input file
-  llvm::SmallString<64> cwd;
-  if (std::error_code ec = llvm::sys::fs::current_path(cwd))
-    FAIL() << "Failed to obtain the current working directory";
-  std::string testFilePath(cwd.c_str());
-  testFilePath += "/" + inputFile;
+  // Set-up the action kind.
+  compInst_.invocation().frontendOpts().programAction_ = ParseSyntaxOnly;
 
-  // 2. Prepare the compiler (CompilerInvocation + CompilerInstance)
-  CompilerInstance compInst;
-  compInst.CreateDiagnostics();
-  auto invocation = std::make_shared<CompilerInvocation>();
-  invocation->frontendOpts().programAction_ = ParseSyntaxOnly;
-
-  compInst.set_invocation(std::move(invocation));
-  compInst.frontendOpts().inputs_.push_back(
-      FrontendInputFile(testFilePath, Language::Fortran));
-
-  // 3. Set-up the output stream for the semantic diagnostics.
+  // Set-up the output stream for the semantic diagnostics.
   llvm::SmallVector<char, 256> outputDiagBuffer;
   std::unique_ptr<llvm::raw_pwrite_stream> outputStream(
       new llvm::raw_svector_ostream(outputDiagBuffer));
-  compInst.set_semaOutputStream(std::move(outputStream));
+  compInst_.set_semaOutputStream(std::move(outputStream));
 
-  // 4. Execute the ParseSyntaxOnly action
-  bool success = ExecuteCompilerInvocation(&compInst);
+  // Execute the action.
+  bool success = ExecuteCompilerInvocation(&compInst_);
 
-  // 5. Validate the expected output
+  // Validate the expected output.
   EXPECT_FALSE(success);
   EXPECT_TRUE(!outputDiagBuffer.empty());
   EXPECT_TRUE(
       llvm::StringRef(outputDiagBuffer.data())
           .startswith(
-              ":2:14: error: IF statement is not allowed in IF statement\n"));
-
-  // 6. Clear the input files.
-  llvm::sys::fs::remove(inputFile);
+              ":1:14: error: IF statement is not allowed in IF statement\n"));
 }
 } // namespace
