@@ -66,6 +66,19 @@ public:
   bool matchCvtF32UByteN(MachineInstr &MI, CvtF32UByteMatchInfo &MatchInfo);
   void applyCvtF32UByteN(MachineInstr &MI,
                          const CvtF32UByteMatchInfo &MatchInfo);
+
+  struct ClampI64ToI16MatchInfo {
+    int64_t Cmp1;
+    int64_t Cmp2;
+    Register Origin;
+  };
+
+  bool matchClampI64ToI16(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                MachineFunction &MF,
+                                ClampI64ToI16MatchInfo &MatchInfo);
+
+  void applyClampI64ToI16(MachineInstr &MI,
+                          const ClampI64ToI16MatchInfo &MatchInfo);
 };
 
 bool AMDGPUPostLegalizerCombinerHelper::matchFMinFMaxLegacy(
@@ -242,6 +255,91 @@ void AMDGPUPostLegalizerCombinerHelper::applyCvtF32UByteN(
 
   assert(MI.getOpcode() != NewOpc);
   B.buildInstr(NewOpc, {MI.getOperand(0)}, {CvtSrc}, MI.getFlags());
+  MI.eraseFromParent();
+}
+
+bool AMDGPUPostLegalizerCombinerHelper::matchClampI64ToI16(MachineInstr &MI, MachineRegisterInfo &MRI,
+                               MachineFunction &MF,
+                               ClampI64ToI16MatchInfo &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_TRUNC && "Invalid instruction!");
+  const LLT SrcType = MRI.getType(MI.getOperand(1).getReg());
+  if (SrcType != LLT::scalar(64))
+    return false;
+
+  MachineIRBuilder B(MI);
+
+  LLVM_DEBUG(dbgs() << "Matching Clamp i64 to i16");
+
+  if (mi_match(MI.getOperand(1).getReg(), MRI,
+               m_MaxMin(m_ICst(MatchInfo.Cmp1),
+                        m_ICst(MatchInfo.Cmp2),
+                        m_Reg(MatchInfo.Origin)))) {
+    const auto Cmp1 = static_cast<int64_t>(MatchInfo.Cmp1);
+    const auto Cmp2 = static_cast<int64_t>(MatchInfo.Cmp2);
+
+    const int64_t Min = static_cast<int64_t>(std::numeric_limits<int16_t>::min());
+    const int64_t Max = static_cast<int64_t>(std::numeric_limits<int16_t>::max());
+
+    // are we really trying to clamp against short boundaries?
+    return ((Cmp2 >= Cmp1 && Cmp1 >= Min && Cmp2 <= Max) ||
+            (Cmp1 >= Cmp2 && Cmp1 <= Max && Cmp2 >= Min));
+  }
+
+  return false;
+}
+
+void AMDGPUPostLegalizerCombinerHelper::applyClampI64ToI16(MachineInstr &MI,
+                               const ClampI64ToI16MatchInfo &MatchInfo) {
+  LLVM_DEBUG(dbgs() << "Combining MI");
+
+  MachineIRBuilder B(MI);
+  MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+
+  Register Src = MatchInfo.Origin;
+  assert(MRI.getType(Src) == LLT::scalar(64));
+  const LLT S32 = LLT::scalar(32);
+
+  auto Unmerge = B.buildUnmerge(S32, Src);
+  Register Hi32 = Unmerge->getOperand(0).getReg();
+  Register Lo32 = Unmerge->getOperand(1).getReg();
+  MRI.setRegClass(Hi32, &AMDGPU::VGPR_32RegClass);
+  MRI.setRegClass(Lo32, &AMDGPU::VGPR_32RegClass);
+
+  constexpr unsigned int CvtOpcode = AMDGPU::V_CVT_PK_I16_I32_e64;
+  assert(MI.getOpcode() != CvtOpcode);
+
+  Register CvtDst = MRI.createGenericVirtualRegister(S32);
+  MRI.setRegClass(CvtDst, &AMDGPU::VGPR_32RegClass);
+
+  auto CvtPk = B.buildInstr(CvtOpcode);
+  CvtPk.addDef(CvtDst);
+  CvtPk.addReg(Hi32);
+  CvtPk.addReg(Lo32);
+  CvtPk.setMIFlags(MI.getFlags());
+
+  auto min = std::min(MatchInfo.Cmp1, MatchInfo.Cmp2);
+  auto max = std::max(MatchInfo.Cmp1, MatchInfo.Cmp2);
+
+  Register MinBoundaryDst = MRI.createGenericVirtualRegister(S32);
+  MRI.setRegClass(MinBoundaryDst, &AMDGPU::VGPR_32RegClass);
+  B.buildConstant(MinBoundaryDst, min);
+
+  Register MaxBoundaryDst = MRI.createGenericVirtualRegister(S32);
+  MRI.setRegClass(MaxBoundaryDst, &AMDGPU::VGPR_32RegClass);
+  B.buildConstant(MaxBoundaryDst, max);
+
+  Register MedDst = MRI.createGenericVirtualRegister(S32);
+  MRI.setRegClass(MedDst, &AMDGPU::VGPR_32RegClass);
+
+  auto Med = B.buildInstr(AMDGPU::V_MED3_I32);
+  Med.addDef(MedDst);
+  Med.addReg(MinBoundaryDst);
+  Med.addReg(CvtDst);
+  Med.addReg(MaxBoundaryDst);
+  Med.setMIFlags(MI.getFlags());
+
+  B.buildCopy(MI.getOperand(0).getReg(), MedDst);
+
   MI.eraseFromParent();
 }
 
