@@ -157,33 +157,26 @@ static void denormalizeSimpleFlag(SmallVectorImpl<const char *> &Args,
   Args.push_back(Spelling);
 }
 
-namespace {
-template <typename T> struct FlagToValueNormalizer {
-  T Value;
+template <typename T> static constexpr bool is_uint64_t_convertible() {
+  return !std::is_same<T, uint64_t>::value &&
+         llvm::is_integral_or_enum<T>::value;
+}
 
-  Optional<T> operator()(OptSpecifier Opt, unsigned, const ArgList &Args,
-                         DiagnosticsEngine &) {
+template <typename T,
+          std::enable_if_t<!is_uint64_t_convertible<T>(), bool> = false>
+static auto makeFlagToValueNormalizer(T Value) {
+  return [Value](OptSpecifier Opt, unsigned, const ArgList &Args,
+                 DiagnosticsEngine &) -> Optional<T> {
     if (Args.hasArg(Opt))
       return Value;
     return None;
-  }
-};
-} // namespace
-
-template <typename T> static constexpr bool is_int_convertible() {
-  return sizeof(T) <= sizeof(uint64_t) &&
-         std::is_trivially_constructible<T, uint64_t>::value &&
-         std::is_trivially_constructible<uint64_t, T>::value;
+  };
 }
 
-template <typename T, std::enable_if_t<is_int_convertible<T>(), bool> = false>
-static FlagToValueNormalizer<uint64_t> makeFlagToValueNormalizer(T Value) {
-  return FlagToValueNormalizer<uint64_t>{Value};
-}
-
-template <typename T, std::enable_if_t<!is_int_convertible<T>(), bool> = false>
-static FlagToValueNormalizer<T> makeFlagToValueNormalizer(T Value) {
-  return FlagToValueNormalizer<T>{std::move(Value)};
+template <typename T,
+          std::enable_if_t<is_uint64_t_convertible<T>(), bool> = false>
+static auto makeFlagToValueNormalizer(T Value) {
+  return makeFlagToValueNormalizer(uint64_t(Value));
 }
 
 static auto makeBooleanOptionNormalizer(bool Value, bool OtherValue,
@@ -321,6 +314,23 @@ static Optional<IntTy> normalizeStringIntegral(OptSpecifier Opt, int,
         << Arg->getAsString(Args) << Arg->getValue();
   }
   return Res;
+}
+
+static Optional<std::vector<std::string>>
+normalizeStringVector(OptSpecifier Opt, int, const ArgList &Args,
+                      DiagnosticsEngine &) {
+  return Args.getAllArgValues(Opt);
+}
+
+static void denormalizeStringVector(SmallVectorImpl<const char *> &Args,
+                                    const char *Spelling,
+                                    CompilerInvocation::StringAllocator SA,
+                                    Option::OptionClass OptClass,
+                                    unsigned TableIndex,
+                                    const std::vector<std::string> &Values) {
+  for (const std::string &Value : Values) {
+    denormalizeString(Args, Spelling, SA, OptClass, TableIndex, Value);
+  }
 }
 
 static Optional<std::string> normalizeTriple(OptSpecifier Opt, int TableIndex,
@@ -1715,7 +1725,6 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   Opts.LLVMArgs = Args.getAllArgValues(OPT_mllvm);
   Opts.ASTDumpDecls = Args.hasArg(OPT_ast_dump, OPT_ast_dump_EQ);
   Opts.ASTDumpAll = Args.hasArg(OPT_ast_dump_all, OPT_ast_dump_all_EQ);
-  Opts.ModuleMapFiles = Args.getAllArgValues(OPT_fmodule_map_file);
   // Only the -fmodule-file=<file> form.
   for (const auto *A : Args.filtered(OPT_fmodule_file)) {
     StringRef Val = A->getValue();

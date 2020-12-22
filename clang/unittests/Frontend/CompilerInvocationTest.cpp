@@ -18,6 +18,7 @@ using namespace llvm;
 using namespace clang;
 
 using ::testing::Contains;
+using ::testing::HasSubstr;
 using ::testing::StrEq;
 
 namespace {
@@ -406,6 +407,45 @@ TEST_F(CommandLineTest, JoinedEnumDefault) {
               Not(Contains(StrEq("-fobjc-dispatch-method=legacy"))));
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fobjc-dispatch-method="))));
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("legacy"))));
+}
+
+TEST_F(CommandLineTest, StringVectorEmpty) {
+  const char *Args[] = {""};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(Invocation.getFrontendOpts().ModuleMapFiles.empty());
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs, Not(Contains(HasSubstr("-fmodule-map-file="))));
+}
+
+TEST_F(CommandLineTest, StringVectorSingle) {
+  const char *Args[] = {"-fmodule-map-file=a"};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_EQ(Invocation.getFrontendOpts().ModuleMapFiles,
+            std::vector<std::string>({"a"}));
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_EQ(count(GeneratedArgs, StringRef("-fmodule-map-file=a")), 1);
+}
+
+TEST_F(CommandLineTest, StringVectorMultiple) {
+  const char *Args[] = {"-fmodule-map-file=a", "-fmodule-map-file=b"};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(Invocation.getFrontendOpts().ModuleMapFiles ==
+              std::vector<std::string>({"a", "b"}));
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_EQ(count(GeneratedArgs, StringRef("-fmodule-map-file=a")), 1);
+  ASSERT_EQ(count(GeneratedArgs, StringRef("-fmodule-map-file=b")), 1);
 }
 
 // Tree of boolean options that can be (directly or transitively) implied by
