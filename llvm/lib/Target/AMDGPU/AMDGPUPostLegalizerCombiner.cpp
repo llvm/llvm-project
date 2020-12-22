@@ -1,4 +1,5 @@
-//=== lib/CodeGen/GlobalISel/AMDGPUPostLegalizerCombiner.cpp ---------------===//
+//=== lib/CodeGen/GlobalISel/AMDGPUPostLegalizerCombiner.cpp
+//---------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,9 +12,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+<<<<<<< HEAD
 #include "AMDGPU.h"
 #include "AMDGPULegalizerInfo.h"
 #include "GCNSubtarget.h"
+=======
+#include "AMDGPULegalizerInfo.h"
+#include "AMDGPUTargetMachine.h"
+>>>>>>> clang-format
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
@@ -22,7 +28,11 @@
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+<<<<<<< HEAD
 #include "llvm/Target/TargetMachine.h"
+=======
+#include "llvm/Support/Debug.h"
+>>>>>>> clang-format
 
 #define DEBUG_TYPE "amdgpu-postlegalizer-combiner"
 
@@ -74,8 +84,8 @@ public:
   };
 
   bool matchClampI64ToI16(MachineInstr &MI, MachineRegisterInfo &MRI,
-                                MachineFunction &MF,
-                                ClampI64ToI16MatchInfo &MatchInfo);
+                          MachineFunction &MF,
+                          ClampI64ToI16MatchInfo &MatchInfo);
 
   void applyClampI64ToI16(MachineInstr &MI,
                           const ClampI64ToI16MatchInfo &MatchInfo);
@@ -201,11 +211,11 @@ void AMDGPUPostLegalizerCombinerHelper::applyUCharToFloat(MachineInstr &MI) {
     SrcReg = B.buildAnyExtOrTrunc(S32, SrcReg).getReg(0);
 
   if (Ty == S32) {
-    B.buildInstr(AMDGPU::G_AMDGPU_CVT_F32_UBYTE0, {DstReg},
-                   {SrcReg}, MI.getFlags());
+    B.buildInstr(AMDGPU::G_AMDGPU_CVT_F32_UBYTE0, {DstReg}, {SrcReg},
+                 MI.getFlags());
   } else {
-    auto Cvt0 = B.buildInstr(AMDGPU::G_AMDGPU_CVT_F32_UBYTE0, {S32},
-                             {SrcReg}, MI.getFlags());
+    auto Cvt0 = B.buildInstr(AMDGPU::G_AMDGPU_CVT_F32_UBYTE0, {S32}, {SrcReg},
+                             MI.getFlags());
     B.buildFPTrunc(DstReg, Cvt0, MI.getFlags());
   }
 
@@ -258,9 +268,9 @@ void AMDGPUPostLegalizerCombinerHelper::applyCvtF32UByteN(
   MI.eraseFromParent();
 }
 
-bool AMDGPUPostLegalizerCombinerHelper::matchClampI64ToI16(MachineInstr &MI, MachineRegisterInfo &MRI,
-                               MachineFunction &MF,
-                               ClampI64ToI16MatchInfo &MatchInfo) {
+bool AMDGPUPostLegalizerCombinerHelper::matchClampI64ToI16(
+    MachineInstr &MI, MachineRegisterInfo &MRI, MachineFunction &MF,
+    ClampI64ToI16MatchInfo &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_TRUNC && "Invalid instruction!");
   const LLT SrcType = MRI.getType(MI.getOperand(1).getReg());
   if (SrcType != LLT::scalar(64))
@@ -271,14 +281,15 @@ bool AMDGPUPostLegalizerCombinerHelper::matchClampI64ToI16(MachineInstr &MI, Mac
   LLVM_DEBUG(dbgs() << "Matching Clamp i64 to i16");
 
   if (mi_match(MI.getOperand(1).getReg(), MRI,
-               m_MaxMin(m_ICst(MatchInfo.Cmp1),
-                        m_ICst(MatchInfo.Cmp2),
+               m_MaxMin(m_ICst(MatchInfo.Cmp1), m_ICst(MatchInfo.Cmp2),
                         m_Reg(MatchInfo.Origin)))) {
     const auto Cmp1 = static_cast<int64_t>(MatchInfo.Cmp1);
     const auto Cmp2 = static_cast<int64_t>(MatchInfo.Cmp2);
 
-    const int64_t Min = static_cast<int64_t>(std::numeric_limits<int16_t>::min());
-    const int64_t Max = static_cast<int64_t>(std::numeric_limits<int16_t>::max());
+    const int64_t Min =
+        static_cast<int64_t>(std::numeric_limits<int16_t>::min());
+    const int64_t Max =
+        static_cast<int64_t>(std::numeric_limits<int16_t>::max());
 
     // are we really trying to clamp against short boundaries?
     return ((Cmp2 >= Cmp1 && Cmp1 >= Min && Cmp2 <= Max) ||
@@ -288,8 +299,8 @@ bool AMDGPUPostLegalizerCombinerHelper::matchClampI64ToI16(MachineInstr &MI, Mac
   return false;
 }
 
-void AMDGPUPostLegalizerCombinerHelper::applyClampI64ToI16(MachineInstr &MI,
-                               const ClampI64ToI16MatchInfo &MatchInfo) {
+void AMDGPUPostLegalizerCombinerHelper::applyClampI64ToI16(
+    MachineInstr &MI, const ClampI64ToI16MatchInfo &MatchInfo) {
   LLVM_DEBUG(dbgs() << "Combining MI");
 
   MachineIRBuilder B(MI);
@@ -429,6 +440,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
+
 private:
   bool IsOptNone;
 };
@@ -448,7 +460,7 @@ void AMDGPUPostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 AMDGPUPostLegalizerCombiner::AMDGPUPostLegalizerCombiner(bool IsOptNone)
-  : MachineFunctionPass(ID), IsOptNone(IsOptNone) {
+    : MachineFunctionPass(ID), IsOptNone(IsOptNone) {
   initializeAMDGPUPostLegalizerCombinerPass(*PassRegistry::getPassRegistry());
 }
 
@@ -462,8 +474,8 @@ bool AMDGPUPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
       MF.getTarget().getOptLevel() != CodeGenOpt::None && !skipFunction(F);
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  const AMDGPULegalizerInfo *LI
-    = static_cast<const AMDGPULegalizerInfo *>(ST.getLegalizerInfo());
+  const AMDGPULegalizerInfo *LI =
+      static_cast<const AMDGPULegalizerInfo *>(ST.getLegalizerInfo());
 
   GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
   MachineDominatorTree *MDT =
@@ -476,8 +488,8 @@ bool AMDGPUPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
 
 char AMDGPUPostLegalizerCombiner::ID = 0;
 INITIALIZE_PASS_BEGIN(AMDGPUPostLegalizerCombiner, DEBUG_TYPE,
-                      "Combine AMDGPU machine instrs after legalization",
-                      false, false)
+                      "Combine AMDGPU machine instrs after legalization", false,
+                      false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelKnownBitsAnalysis)
 INITIALIZE_PASS_END(AMDGPUPostLegalizerCombiner, DEBUG_TYPE,
