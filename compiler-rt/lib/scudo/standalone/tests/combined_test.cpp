@@ -45,38 +45,36 @@ bool isPrimaryAllocation(scudo::uptr Size, scudo::uptr Alignment) {
 }
 
 template <class AllocatorT>
-bool isTaggedAllocation(AllocatorT *Allocator, scudo::uptr Size,
-                        scudo::uptr Alignment) {
-  return Allocator->useMemoryTaggingTestOnly() &&
-         scudo::systemDetectsMemoryTagFaultsTestOnly() &&
-         isPrimaryAllocation<AllocatorT>(Size, Alignment);
-}
-
-template <class AllocatorT>
 void checkMemoryTaggingMaybe(AllocatorT *Allocator, void *P, scudo::uptr Size,
                              scudo::uptr Alignment) {
-  if (!isTaggedAllocation(Allocator, Size, Alignment))
-    return;
-
-  Size = scudo::roundUpTo(Size, scudo::archMemoryTagGranuleSize());
-  EXPECT_DEATH(
-      {
-        disableDebuggerdMaybe();
-        reinterpret_cast<char *>(P)[-1] = 0xaa;
-      },
-      "");
-  EXPECT_DEATH(
-      {
-        disableDebuggerdMaybe();
-        reinterpret_cast<char *>(P)[Size] = 0xaa;
-      },
-      "");
+  const scudo::uptr MinAlignment = 1UL << SCUDO_MIN_ALIGNMENT_LOG;
+  Size = scudo::roundUpTo(Size, MinAlignment);
+  if (Allocator->useMemoryTaggingTestOnly())
+    EXPECT_DEATH(
+        {
+          disableDebuggerdMaybe();
+          reinterpret_cast<char *>(P)[-1] = 0xaa;
+        },
+        "");
+  if (isPrimaryAllocation<AllocatorT>(Size, Alignment)
+          ? Allocator->useMemoryTaggingTestOnly()
+          : Alignment == MinAlignment) {
+    EXPECT_DEATH(
+        {
+          disableDebuggerdMaybe();
+          reinterpret_cast<char *>(P)[Size] = 0xaa;
+        },
+        "");
+  }
 }
 
 template <typename Config> struct TestAllocator : scudo::Allocator<Config> {
   TestAllocator() {
     this->reset();
     this->initThreadMaybe();
+    if (scudo::archSupportsMemoryTagging() &&
+        !scudo::systemDetectsMemoryTagFaultsTestOnly())
+      this->disableMemoryTagging();
   }
   ~TestAllocator() { this->unmapTestOnly(); }
 };
@@ -180,8 +178,8 @@ template <class Config> static void testAllocator() {
   bool Found = false;
   for (scudo::uptr I = 0; I < 1024U && !Found; I++) {
     void *P = Allocator->allocate(NeedleSize, Origin);
-    if (Allocator->untagPointerMaybe(P) ==
-        Allocator->untagPointerMaybe(NeedleP))
+    if (Allocator->getHeaderTaggedPointer(P) ==
+        Allocator->getHeaderTaggedPointer(NeedleP))
       Found = true;
     Allocator->deallocate(P, Origin);
   }
@@ -248,38 +246,30 @@ template <class Config> static void testAllocator() {
 
   Allocator->releaseToOS();
 
-  if (Allocator->useMemoryTaggingTestOnly() &&
-      scudo::systemDetectsMemoryTagFaultsTestOnly()) {
-    // Check that use-after-free is detected.
-    for (scudo::uptr SizeLog = 0U; SizeLog <= 20U; SizeLog++) {
-      const scudo::uptr Size = 1U << SizeLog;
-      if (!isTaggedAllocation(Allocator.get(), Size, 1))
-        continue;
-      // UAF detection is probabilistic, so we repeat the test up to 256 times
-      // if necessary. With 15 possible tags this means a 1 in 15^256 chance of
-      // a false positive.
-      EXPECT_DEATH(
-          {
-            disableDebuggerdMaybe();
-            for (unsigned I = 0; I != 256; ++I) {
-              void *P = Allocator->allocate(Size, Origin);
-              Allocator->deallocate(P, Origin);
-              reinterpret_cast<char *>(P)[0] = 0xaa;
-            }
-          },
-          "");
-      EXPECT_DEATH(
-          {
-            disableDebuggerdMaybe();
-            for (unsigned I = 0; I != 256; ++I) {
-              void *P = Allocator->allocate(Size, Origin);
-              Allocator->deallocate(P, Origin);
-              reinterpret_cast<char *>(P)[Size - 1] = 0xaa;
-            }
-          },
-          "");
-    }
+  // Check that use-after-free is detected.
+  for (scudo::uptr SizeLog = 0U; SizeLog <= 20U; SizeLog++) {
+    const scudo::uptr Size = 1U << SizeLog;
+    if (!Allocator->useMemoryTaggingTestOnly())
+      continue;
+    EXPECT_DEATH(
+        {
+          disableDebuggerdMaybe();
+          void *P = Allocator->allocate(Size, Origin);
+          Allocator->deallocate(P, Origin);
+          reinterpret_cast<char *>(P)[0] = 0xaa;
+        },
+        "");
+    EXPECT_DEATH(
+        {
+          disableDebuggerdMaybe();
+          void *P = Allocator->allocate(Size, Origin);
+          Allocator->deallocate(P, Origin);
+          reinterpret_cast<char *>(P)[Size - 1] = 0xaa;
+        },
+        "");
+  }
 
+  if (Allocator->useMemoryTaggingTestOnly()) {
     // Check that disabling memory tagging works correctly.
     void *P = Allocator->allocate(2048, Origin);
     EXPECT_DEATH(reinterpret_cast<char *>(P)[2048] = 0xaa, "");
@@ -289,7 +279,7 @@ template <class Config> static void testAllocator() {
     Allocator->deallocate(P, Origin);
 
     P = Allocator->allocate(2048, Origin);
-    EXPECT_EQ(Allocator->untagPointerMaybe(P), P);
+    EXPECT_EQ(scudo::untagPointer(P), P);
     reinterpret_cast<char *>(P)[2048] = 0xaa;
     Allocator->deallocate(P, Origin);
 
