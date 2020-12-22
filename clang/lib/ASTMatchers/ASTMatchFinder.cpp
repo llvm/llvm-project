@@ -463,6 +463,22 @@ public:
   bool TraverseConstructorInitializer(CXXCtorInitializer *CtorInit);
   bool TraverseTemplateArgumentLoc(TemplateArgumentLoc TAL);
 
+  bool dataTraverseNode(Stmt *S, DataRecursionQueue *Queue) {
+    if (auto *RF = dyn_cast<CXXForRangeStmt>(S)) {
+      for (auto *SubStmt : RF->children()) {
+        if (SubStmt == RF->getInit() || SubStmt == RF->getLoopVarStmt() ||
+            SubStmt == RF->getRangeInit() || SubStmt == RF->getBody()) {
+          TraverseStmt(SubStmt, Queue);
+        } else {
+          ASTNodeNotSpelledInSourceScope RAII(this, true);
+          TraverseStmt(SubStmt, Queue);
+        }
+      }
+      return true;
+    }
+    return RecursiveASTVisitor<MatchASTVisitor>::dataTraverseNode(S, Queue);
+  }
+
   // Matches children or descendants of 'Node' with 'BaseMatcher'.
   bool memoizedMatchesRecursively(const DynTypedNode &Node, ASTContext &Ctx,
                                   const DynTypedMatcher &Matcher,
