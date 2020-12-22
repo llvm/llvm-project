@@ -167,8 +167,8 @@ TYPE_PARSER(
                     parenthesized(Parser<OmpObjectList>{}))) ||
     "COPYPRIVATE" >> construct<OmpClause>(construct<OmpClause::Copyprivate>(
                          (parenthesized(Parser<OmpObjectList>{})))) ||
-    "DEFAULT"_id >>
-        construct<OmpClause>(parenthesized(Parser<OmpDefaultClause>{})) ||
+    "DEFAULT"_id >> construct<OmpClause>(construct<OmpClause::Default>(
+                        parenthesized(Parser<OmpDefaultClause>{}))) ||
     "DEFAULTMAP" >>
         construct<OmpClause>(parenthesized(Parser<OmpDefaultmapClause>{})) ||
     "DEPEND" >>
