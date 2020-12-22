@@ -373,13 +373,11 @@ def apple_simulator_test(platform):
 
 def debugserver_test(func):
     """Decorate the item as a debugserver test."""
-    func.debug_server = "debugserver"
     return add_test_categories(["debugserver"])(func)
 
 
 def llgs_test(func):
     """Decorate the item as a lldb-server test."""
-    func.debug_server = "llgs"
     return add_test_categories(["llgs"])(func)
 
 
