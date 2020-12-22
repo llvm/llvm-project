@@ -1,5 +1,7 @@
 ; RUN: llc -mtriple=x86_64-linux-android < %s | FileCheck -check-prefix=CHECK-X86-64 %s 
 ; RUN: llc -mtriple=i686-linux-android < %s | FileCheck -check-prefix=CHECK-X86-32 %s 
+; RUN: llc -mtriple=x86_64-unknown-freebsd < %s | FileCheck -check-prefix=CHECK-X86-64 %s
+; RUN: llc -mtriple=x86_64-pc-linux-gnu < %s | FileCheck -check-prefix=CHECK-X86-64 %s
 
 define i32 @foo() local_unnamed_addr #0 {
 
