@@ -649,7 +649,7 @@ void GenerateFlangClauseUnparse(const DirectiveLanguage &DirLang,
   }
 }
 
-// Generate the implemenation section for the enumeration in the directive
+// Generate the implementation section for the enumeration in the directive
 // language
 void EmitDirectivesFlangImpl(const DirectiveLanguage &DirLang,
                              raw_ostream &OS) {
@@ -733,7 +733,7 @@ void GenerateClauseClassMacro(const DirectiveLanguage &DirLang,
   OS << "#undef CLAUSE\n";
 }
 
-// Generate the implemenation section for the enumeration in the directive
+// Generate the implementation section for the enumeration in the directive
 // language.
 void EmitDirectivesGen(RecordKeeper &Records, raw_ostream &OS) {
   const auto DirLang = DirectiveLanguage{Records};
@@ -745,7 +745,7 @@ void EmitDirectivesGen(RecordKeeper &Records, raw_ostream &OS) {
   GenerateClauseClassMacro(DirLang, OS);
 }
 
-// Generate the implemenation for the enumeration in the directive
+// Generate the implementation for the enumeration in the directive
 // language. This code can be included in library.
 void EmitDirectivesImpl(RecordKeeper &Records, raw_ostream &OS) {
   const auto DirLang = DirectiveLanguage{Records};

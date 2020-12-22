@@ -323,6 +323,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::GlobalAddress, XLenVT, Custom);
   setOperationAction(ISD::BlockAddress, XLenVT, Custom);
   setOperationAction(ISD::ConstantPool, XLenVT, Custom);
+  setOperationAction(ISD::JumpTable, XLenVT, Custom);
 
   setOperationAction(ISD::GlobalTLSAddress, XLenVT, Custom);
 
@@ -367,8 +368,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setMinFunctionAlignment(FunctionAlignment);
   setPrefFunctionAlignment(FunctionAlignment);
 
-  // Effectively disable jump table generation.
-  setMinimumJumpTableEntries(INT_MAX);
+  setMinimumJumpTableEntries(5);
 
   // Jumps are expensive, compared to logic
   setJumpIsExpensive();
@@ -565,6 +565,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerBlockAddress(Op, DAG);
   case ISD::ConstantPool:
     return lowerConstantPool(Op, DAG);
+  case ISD::JumpTable:
+    return lowerJumpTable(Op, DAG);
   case ISD::GlobalTLSAddress:
     return lowerGlobalTLSAddress(Op, DAG);
   case ISD::SELECT:
@@ -643,6 +645,11 @@ static SDValue getTargetNode(ConstantPoolSDNode *N, SDLoc DL, EVT Ty,
                                    N->getOffset(), Flags);
 }
 
+static SDValue getTargetNode(JumpTableSDNode *N, SDLoc DL, EVT Ty,
+                             SelectionDAG &DAG, unsigned Flags) {
+  return DAG.getTargetJumpTable(N->getIndex(), Ty, Flags);
+}
+
 template <class NodeTy>
 SDValue RISCVTargetLowering::getAddr(NodeTy *N, SelectionDAG &DAG,
                                      bool IsLocal) const {
@@ -716,6 +723,13 @@ SDValue RISCVTargetLowering::lowerBlockAddress(SDValue Op,
 SDValue RISCVTargetLowering::lowerConstantPool(SDValue Op,
                                                SelectionDAG &DAG) const {
   ConstantPoolSDNode *N = cast<ConstantPoolSDNode>(Op);
+
+  return getAddr(N, DAG);
+}
+
+SDValue RISCVTargetLowering::lowerJumpTable(SDValue Op,
+                                            SelectionDAG &DAG) const {
+  JumpTableSDNode *N = cast<JumpTableSDNode>(Op);
 
   return getAddr(N, DAG);
 }

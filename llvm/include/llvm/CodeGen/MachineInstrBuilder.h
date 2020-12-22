@@ -305,6 +305,9 @@ public:
       case MachineOperand::MO_BlockAddress:
         return addBlockAddress(Disp.getBlockAddress(), Disp.getOffset() + off,
                                TargetFlags);
+      case MachineOperand::MO_JumpTableIndex:
+        assert(off == 0 && "cannot create offset into jump tables");
+        return addJumpTableIndex(Disp.getIndex(), TargetFlags);
     }
   }
 
