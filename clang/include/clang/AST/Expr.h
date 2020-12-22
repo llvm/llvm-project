@@ -578,12 +578,12 @@ public:
   struct EvalStatus {
     /// Whether the evaluated expression has side effects.
     /// For example, (f() && 0) can be folded, but it still has side effects.
-    bool HasSideEffects = false;
+    bool HasSideEffects;
 
     /// Whether the evaluation hit undefined behavior.
     /// For example, 1.0 / 0.0 can be folded to Inf, but has undefined behavior.
     /// Likewise, INT_MAX + 1 can be folded to INT_MIN, but has UB.
-    bool HasUndefinedBehavior = false;
+    bool HasUndefinedBehavior;
 
     /// Diag - If this is non-null, it will be filled in with a stack of notes
     /// indicating why evaluation failed (or why it failed to produce a constant
@@ -592,7 +592,10 @@ public:
     /// foldable. If the expression is foldable, but not a constant expression,
     /// the notes will describes why it isn't a constant expression. If the
     /// expression *is* a constant expression, no notes will be produced.
-    SmallVectorImpl<PartialDiagnosticAt> *Diag = nullptr;
+    SmallVectorImpl<PartialDiagnosticAt> *Diag;
+
+    EvalStatus()
+        : HasSideEffects(false), HasUndefinedBehavior(false), Diag(nullptr) {}
 
     // hasSideEffects - Return true if the evaluated expression has
     // side effects.
@@ -603,11 +606,8 @@ public:
 
   /// EvalResult is a struct with detailed info about an evaluated expression.
   struct EvalResult : EvalStatus {
-    /// This is the value the expression can be folded to.
+    /// Val - This is the value the expression can be folded to.
     APValue Val;
-    /// Indicates whether Val contains a pointer or reference or pointer to
-    /// member naming a templated entity, and thus the value is dependent.
-    bool Dependent = false;
 
     // isGlobalLValue - Return true if the evaluated lvalue expression
     // is global.

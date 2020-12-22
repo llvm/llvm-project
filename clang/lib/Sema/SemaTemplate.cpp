@@ -6620,12 +6620,6 @@ CheckTemplateArgumentAddressOfObjectOrFunction(Sema &S,
                                                      Arg, ArgType))
     return true;
 
-  // Don't build a resolved template argument naming a dependent declaration.
-  if (Entity->isTemplated()) {
-    Converted = TemplateArgument(ArgIn);
-    return false;
-  }
-
   // Create the template argument.
   Converted = TemplateArgument(cast<ValueDecl>(Entity->getCanonicalDecl()),
                                S.Context.getCanonicalType(ParamType));
@@ -6640,6 +6634,8 @@ static bool CheckTemplateArgumentPointerToMember(Sema &S,
                                                  QualType ParamType,
                                                  Expr *&ResultArg,
                                                  TemplateArgument &Converted) {
+  bool Invalid = false;
+
   Expr *Arg = ResultArg;
   bool ObjCLifetimeConversion;
 
@@ -6655,7 +6651,7 @@ static bool CheckTemplateArgumentPointerToMember(Sema &S,
   // See http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_defects.html#773
   bool ExtraParens = false;
   while (ParenExpr *Parens = dyn_cast<ParenExpr>(Arg)) {
-    if (!ExtraParens) {
+    if (!Invalid && !ExtraParens) {
       S.Diag(Arg->getBeginLoc(),
              S.getLangOpts().CPlusPlus11
                  ? diag::warn_cxx98_compat_template_arg_extra_parens
@@ -6684,8 +6680,13 @@ static bool CheckTemplateArgumentPointerToMember(Sema &S,
     ValueDecl *VD = DRE->getDecl();
     if (VD->getType()->isMemberPointerType()) {
       if (isa<NonTypeTemplateParmDecl>(VD)) {
-        Converted = TemplateArgument(Arg);
-        return false;
+        if (Arg->isTypeDependent() || Arg->isValueDependent()) {
+          Converted = TemplateArgument(Arg);
+        } else {
+          VD = cast<ValueDecl>(VD->getCanonicalDecl());
+          Converted = TemplateArgument(VD, ParamType);
+        }
+        return Invalid;
       }
     }
 
@@ -6744,7 +6745,7 @@ static bool CheckTemplateArgumentPointerToMember(Sema &S,
       ValueDecl *D = cast<ValueDecl>(DRE->getDecl()->getCanonicalDecl());
       Converted = TemplateArgument(D, S.Context.getCanonicalType(ParamType));
     }
-    return false;
+    return Invalid;
   }
 
   // We found something else, but we don't know specifically what it is.
@@ -6921,17 +6922,14 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
     //   A template-argument for a non-type template parameter shall be
     //   a converted constant expression of the type of the template-parameter.
     APValue Value;
-    bool ValueDependent = false;
     ExprResult ArgResult = CheckConvertedConstantExpression(
-        Arg, ParamType, Value, CCEK_TemplateArg, Param, &ValueDependent);
+        Arg, ParamType, Value, CCEK_TemplateArg, Param);
     if (ArgResult.isInvalid())
       return ExprError();
 
     // For a value-dependent argument, CheckConvertedConstantExpression is
-    // permitted (and expected) to be unable to determine a value. We might find
-    // the evaluated result refers to a dependent declaration even though the
-    // template argument is not a value-dependent expression.
-    if (ValueDependent) {
+    // permitted (and expected) to be unable to determine a value.
+    if (ArgResult.get()->isValueDependent()) {
       Converted = TemplateArgument(ArgResult.get());
       return ArgResult;
     }
