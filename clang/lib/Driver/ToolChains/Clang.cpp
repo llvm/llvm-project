@@ -3067,15 +3067,12 @@ static void RenderSSPOptions(const Driver &D, const ToolChain &TC,
   }
 }
 
-static void RenderSCPOptions(const Driver &D, const ToolChain &TC,
-                             const ArgList &Args, ArgStringList &CmdArgs) {
+static void RenderSCPOptions(const ToolChain &TC, const ArgList &Args,
+                             ArgStringList &CmdArgs) {
   const llvm::Triple &EffectiveTriple = TC.getEffectiveTriple();
 
-  if (EffectiveTriple.isOSWindows()) {
-    D.Diag(diag::err_drv_stack_clash_protection_unsupported_on_toolchain)
-        << EffectiveTriple.getOSName();
+  if (!EffectiveTriple.isOSLinux())
     return;
-  }
 
   if (!EffectiveTriple.isX86() && !EffectiveTriple.isSystemZ() &&
       !EffectiveTriple.isPPC64())
@@ -5553,7 +5550,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString("-mspeculative-load-hardening"));
 
   RenderSSPOptions(D, TC, Args, CmdArgs, KernelOrKext);
-  RenderSCPOptions(D, TC, Args, CmdArgs);
+  RenderSCPOptions(TC, Args, CmdArgs);
   RenderTrivialAutoVarInitOptions(D, TC, Args, CmdArgs);
 
   // Translate -mstackrealign
