@@ -1,6 +1,7 @@
 /// Check default CC1 and linker options for ppc32.
 // RUN: %clang -### -target powerpc-unknown-linux-gnu %s 2>&1 | FileCheck --check-prefix=PPC32 %s
-// PPC32: "-mfloat-abi" "hard"
+// PPC32:      "-munwind-tables"
+// PPC32-SAME: "-mfloat-abi" "hard"
 
 // PPC32: "-m" "elf32ppclinux"
 
@@ -38,11 +39,12 @@
 
 
 /// Check default CC1 and linker options for ppc64.
-// RUN: %clang -### -target powerpc64le-unknown-linux-gnu %s 2>&1 | FileCheck --check-prefix=PPC64 %s
-// RUN: %clang -### -target powerpc64-unknown-linux-gnu %s 2>&1 | FileCheck -check-prefix=PPC64BE %s
-// PPC64: "-mfloat-abi" "hard"
+// RUN: %clang -### -target powerpc64le-unknown-linux-gnu %s 2>&1 | FileCheck --check-prefixes=PPC64,PPC64LE %s
+// RUN: %clang -### -target powerpc64-unknown-linux-gnu %s 2>&1 | FileCheck --check-prefixes=PPC64,PPC64BE %s
+// PPC64:      "-munwind-tables"
+// PPC64-SAME: "-mfloat-abi" "hard"
 
-// PPC64: "-m" "elf64lppc"
+// PPC64LE: "-m" "elf64lppc"
 // PPC64BE: "-m" "elf64ppc"
 
 // check -msoft-float option for ppc64
