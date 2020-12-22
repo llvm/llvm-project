@@ -2065,7 +2065,6 @@ public:
         std::get<std::optional<OmpDefaultmapClause::VariableCategory>>(x.t));
     Word(")");
   }
-  void Unparse(const OmpNowait &) { Word("NOWAIT"); }
   void Unparse(const OmpDistScheduleClause &x) {
     Word("DIST_SCHEDULE(STATIC");
     Walk(", ", x.v);

@@ -508,7 +508,6 @@ public:
         "llvm::omp::Clause = ", llvm::omp::getOpenMPClauseName(x))
         .str();
   }
-  NODE(parser, OmpNowait)
   NODE(parser, OmpObject)
   NODE(parser, OmpObjectList)
   NODE(parser, OmpProcBindClause)

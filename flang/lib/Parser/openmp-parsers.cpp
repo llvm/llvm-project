@@ -203,7 +203,7 @@ TYPE_PARSER(
     "NOGROUP" >> construct<OmpClause>(construct<OmpClause::Nogroup>()) ||
     "NOTINBRANCH" >>
         construct<OmpClause>(construct<OmpClause::Notinbranch>()) ||
-    "NOWAIT" >> construct<OmpClause>(construct<OmpNowait>()) ||
+    "NOWAIT" >> construct<OmpClause>(construct<OmpClause::Nowait>()) ||
     "NUM_TASKS" >> construct<OmpClause>(construct<OmpClause::NumTasks>(
                        parenthesized(scalarIntExpr))) ||
     "NUM_TEAMS" >> construct<OmpClause>(construct<OmpClause::NumTeams>(
