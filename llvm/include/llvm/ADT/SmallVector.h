@@ -460,7 +460,8 @@ public:
     this->Size = 0;
   }
 
-  void resize(size_type N) {
+private:
+  template <bool ForOverwrite> void resizeImpl(size_type N) {
     if (N < this->size()) {
       this->destroy_range(this->begin()+N, this->end());
       this->set_size(N);
@@ -468,10 +469,19 @@ public:
       if (this->capacity() < N)
         this->grow(N);
       for (auto I = this->end(), E = this->begin() + N; I != E; ++I)
-        new (&*I) T();
+        if (ForOverwrite)
+          new (&*I) T;
+        else
+          new (&*I) T();
       this->set_size(N);
     }
   }
+
+public:
+  void resize(size_type N) { resizeImpl<false>(N); }
+
+  /// Like resize, but \ref T is POD, the new values won't be initialized.
+  void resize_for_overwrite(size_type N) { resizeImpl<true>(N); }
 
   void resize(size_type N, const T &NV) {
     if (N == this->size())
