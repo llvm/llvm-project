@@ -131,6 +131,8 @@ public:
 
   bool IsAnonymousType();
 
+  bool IsScopedEnumerationType();
+
   lldb::SBType GetPointerType();
 
   lldb::SBType GetPointeeType();

@@ -271,6 +271,14 @@ bool SBType::IsAnonymousType() {
   return m_opaque_sp->GetCompilerType(true).IsAnonymousType();
 }
 
+bool SBType::IsScopedEnumerationType() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBType, IsScopedEnumerationType);
+
+  if (!IsValid())
+    return false;
+  return m_opaque_sp->GetCompilerType(true).IsScopedEnumerationType();
+}
+
 lldb::SBType SBType::GetFunctionReturnType() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBType, SBType, GetFunctionReturnType);
 
@@ -935,6 +943,7 @@ void RegisterMethods<SBType>(Registry &R) {
   LLDB_REGISTER_METHOD(bool, SBType, IsPolymorphicClass, ());
   LLDB_REGISTER_METHOD(bool, SBType, IsTypedefType, ());
   LLDB_REGISTER_METHOD(bool, SBType, IsAnonymousType, ());
+  LLDB_REGISTER_METHOD(bool, SBType, IsScopedEnumerationType, ());
   LLDB_REGISTER_METHOD(lldb::SBType, SBType, GetFunctionReturnType, ());
   LLDB_REGISTER_METHOD(lldb::SBTypeList, SBType, GetFunctionArgumentTypes,
                        ());

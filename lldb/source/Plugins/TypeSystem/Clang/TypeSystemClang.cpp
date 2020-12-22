@@ -3147,6 +3147,20 @@ bool TypeSystemClang::IsEnumerationType(lldb::opaque_compiler_type_t type,
   return false;
 }
 
+bool TypeSystemClang::IsScopedEnumerationType(
+    lldb::opaque_compiler_type_t type) {
+  if (type) {
+    const clang::EnumType *enum_type = llvm::dyn_cast<clang::EnumType>(
+        GetCanonicalQualType(type)->getCanonicalTypeInternal());
+
+    if (enum_type) {
+      return enum_type->isScopedEnumeralType();
+    }
+  }
+
+  return false;
+}
+
 bool TypeSystemClang::IsPointerType(lldb::opaque_compiler_type_t type,
                                     CompilerType *pointee_type) {
   if (type) {
