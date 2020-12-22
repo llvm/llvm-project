@@ -144,3 +144,13 @@ class TypeAndTypeListTestCase(TestBase):
         myint_type = target.FindFirstType('myint')
         self.DebugSBType(myint_type)
         self.assertTrue(myint_arr_element_type == myint_type)
+
+        # Test enum methods.
+        enum_type = target.FindFirstType('EnumType')
+        self.assertTrue(enum_type)
+        self.DebugSBType(enum_type)
+        self.assertFalse(enum_type.IsScopedEnumerationType())
+        scoped_enum_type = target.FindFirstType('ScopedEnumType')
+        self.assertTrue(scoped_enum_type)
+        self.DebugSBType(scoped_enum_type)
+        self.assertTrue(scoped_enum_type.IsScopedEnumerationType())

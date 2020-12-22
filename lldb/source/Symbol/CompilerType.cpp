@@ -40,6 +40,12 @@ bool CompilerType::IsAnonymousType() const {
   return false;
 }
 
+bool CompilerType::IsScopedEnumerationType() const {
+  if (IsValid())
+    return m_type_system->IsScopedEnumerationType(m_type);
+  return false;
+}
+
 bool CompilerType::IsArrayType(CompilerType *element_type_ptr, uint64_t *size,
                                bool *is_incomplete) const {
   if (IsValid())
