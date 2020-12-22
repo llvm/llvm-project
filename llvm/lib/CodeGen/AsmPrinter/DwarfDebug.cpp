@@ -2477,13 +2477,13 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
       DwarfExpr.addExpression(std::move(ExprCursor));
       return;
   } else if (Value.isConstantFP()) {
-    if (AP.getDwarfVersion() >= 4 && !AP.getDwarfDebug()->tuneForSCE()) {
+    if (AP.getDwarfVersion() >= 4 && !AP.getDwarfDebug()->tuneForSCE() &&
+        !ExprCursor) {
       DwarfExpr.addConstantFP(Value.getConstantFP()->getValueAPF(), AP);
       return;
-    } else if (Value.getConstantFP()
-                   ->getValueAPF()
-                   .bitcastToAPInt()
-                   .getBitWidth() <= 64 /*bits*/)
+    }
+    if (Value.getConstantFP()->getValueAPF().bitcastToAPInt().getBitWidth() <=
+        64 /*bits*/)
       DwarfExpr.addUnsignedConstant(
           Value.getConstantFP()->getValueAPF().bitcastToAPInt());
     else
