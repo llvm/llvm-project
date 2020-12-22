@@ -1939,15 +1939,6 @@ def region;
 // Marker used to identify the successor list for an op.
 def successor;
 
-// Base class for custom builders. This is a transient class that will go away
-// when the transition to the DAG form of builder declaration is complete.
-// Should not be used directly.
-class OpBuilderBase<dag dp, code b> {
-  string params = ?;
-  dag dagParams = dp;
-  code body = b;
-}
-
 // Class for defining a custom builder.
 //
 // TableGen generates several generic builders for each op by default (see
@@ -1986,11 +1977,9 @@ class OpBuilderBase<dag dp, code b> {
 // If an empty string is passed in for `body`, then *only* the builder
 // declaration will be generated; this provides a way to define complicated
 // builders entirely in C++.
-class OpBuilderDAG<dag p, code b = ""> : OpBuilderBase<p, b>;
-
-// Deprecated version of OpBuilder that takes the builder signature as string.
-class OpBuilder<string p, code b = ""> : OpBuilderBase<(ins), b> {
-  let params = p;
+class OpBuilderDAG<dag p, code b = ""> {
+  dag dagParams = p;
+  code body = b;
 }
 
 // A base decorator class that may optionally be added to OpVariables.
@@ -2068,7 +2057,7 @@ class Op<Dialect dialect, string mnemonic, list<OpTrait> props = []> {
   //                   ValueRange operands,
   //                   ArrayRef<NamedAttribute> attributes);
   // ```
-  list<OpBuilderBase> builders = ?;
+  list<OpBuilderDAG> builders = ?;
 
   // Avoid generating default build functions.  Custom builders must be
   // provided.
