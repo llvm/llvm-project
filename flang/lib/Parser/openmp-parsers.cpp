@@ -216,8 +216,8 @@ TYPE_PARSER(
                       parenthesized(scalarIntExpr))) ||
     "PRIVATE" >> construct<OmpClause>(construct<OmpClause::Private>(
                      parenthesized(Parser<OmpObjectList>{}))) ||
-    "PROC_BIND" >>
-        construct<OmpClause>(parenthesized(Parser<OmpProcBindClause>{})) ||
+    "PROC_BIND" >> construct<OmpClause>(construct<OmpClause::ProcBind>(
+                       parenthesized(Parser<OmpProcBindClause>{}))) ||
     "REDUCTION" >>
         construct<OmpClause>(parenthesized(Parser<OmpReductionClause>{})) ||
     "RELAXED" >> construct<OmpClause>(construct<OmpClause::Relaxed>()) ||

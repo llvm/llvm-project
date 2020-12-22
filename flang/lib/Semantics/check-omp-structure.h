@@ -150,6 +150,7 @@ public:
   void Enter(const parser::OmpClause::Ordered &);
   void Enter(const parser::OmpClause::Priority &);
   void Enter(const parser::OmpClause::Private &);
+  void Enter(const parser::OmpClause::ProcBind &);
   void Enter(const parser::OmpClause::Safelen &);
   void Enter(const parser::OmpClause::Shared &);
   void Enter(const parser::OmpClause::Simdlen &);
@@ -182,7 +183,6 @@ public:
   void Enter(const parser::OmpIfClause &);
   void Enter(const parser::OmpLinearClause &);
   void Enter(const parser::OmpMapClause &);
-  void Enter(const parser::OmpProcBindClause &);
   void Enter(const parser::OmpReductionClause &);
   void Enter(const parser::OmpScheduleClause &);
 
