@@ -204,7 +204,6 @@ def OMPC_Hint : Clause<"hint"> {
 }
 def OMPC_DistSchedule : Clause<"dist_schedule"> {
   let clangClass = "OMPDistScheduleClause";
-  let flangClass = "OmpDistScheduleClause";
   let flangClassValue = "ScalarIntExpr";
   let isValueOptional = true;
 }

@@ -2065,11 +2065,6 @@ public:
         std::get<std::optional<OmpDefaultmapClause::VariableCategory>>(x.t));
     Word(")");
   }
-  void Unparse(const OmpDistScheduleClause &x) {
-    Word("DIST_SCHEDULE(STATIC");
-    Walk(", ", x.v);
-    Put(")");
-  }
 #define GEN_FLANG_CLAUSE_UNPARSE
 #include "llvm/Frontend/OpenMP/OMP.inc"
   void Unparse(const OmpLoopDirective &x) {
