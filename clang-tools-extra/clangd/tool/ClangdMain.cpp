@@ -50,6 +50,10 @@
 #include <unistd.h>
 #endif
 
+#ifdef __GLIBC__
+#include <malloc.h>
+#endif
+
 namespace clang {
 namespace clangd {
 
@@ -497,6 +501,29 @@ opt<bool> CollectMainFileRefs{
     init(ClangdServer::Options().CollectMainFileRefs),
 };
 
+#if defined(__GLIBC__) && CLANGD_MALLOC_TRIM
+opt<bool> EnableMallocTrim{
+    "malloc-trim",
+    cat(Misc),
+    desc("Release memory periodically via malloc_trim(3)."),
+    init(true),
+};
+
+std::function<void()> getMemoryCleanupFunction() {
+  if (!EnableMallocTrim)
+    return nullptr;
+  // Leave a few MB at the top of the heap: it is insignificant
+  // and will most likely be needed by the main thread
+  constexpr size_t MallocTrimPad = 20'000'000;
+  return []() {
+    if (malloc_trim(MallocTrimPad))
+      vlog("Released memory via malloc_trim");
+  };
+}
+#else
+std::function<void()> getMemoryCleanupFunction() { return nullptr; }
+#endif
+
 #if CLANGD_ENABLE_REMOTE
 opt<std::string> RemoteIndexAddress{
     "remote-index-address",
@@ -797,6 +824,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   Opts.BuildRecoveryAST = RecoveryAST;
   Opts.PreserveRecoveryASTType = RecoveryASTType;
   Opts.FoldingRanges = FoldingRanges;
+  Opts.MemoryCleanup = getMemoryCleanupFunction();
 
   Opts.CodeComplete.IncludeIneligibleResults = IncludeIneligibleResults;
   Opts.CodeComplete.Limit = LimitResults;
