@@ -178,6 +178,7 @@ public:
     } else if (auto Handler = Notifications.lookup(Method)) {
       Handler(std::move(Params));
       Server.maybeExportMemoryProfile();
+      Server.maybeCleanupMemory();
     } else {
       log("unhandled notification {0}", Method);
     }
@@ -453,6 +454,7 @@ void ClangdLSPServer::callRaw(StringRef Method, llvm::json::Value Params,
 
 void ClangdLSPServer::notify(llvm::StringRef Method, llvm::json::Value Params) {
   log("--> {0}", Method);
+  maybeCleanupMemory();
   std::lock_guard<std::mutex> Lock(TranspWriter);
   Transp.notify(Method, std::move(Params));
 }
@@ -1301,6 +1303,27 @@ void ClangdLSPServer::maybeExportMemoryProfile() {
   NextProfileTime = Now + ProfileInterval;
 }
 
+void ClangdLSPServer::maybeCleanupMemory() {
+  // Memory cleanup is probably expensive, throttle it
+  static constexpr auto MemoryCleanupInterval = std::chrono::minutes(1);
+
+  if (!Opts.MemoryCleanup)
+    return;
+
+  // FIXME: this can probably be done without a mutex
+  // and the logic could be shared with maybeExportMemoryProfile
+  {
+    auto Now = std::chrono::steady_clock::now();
+    std::lock_guard<std::mutex> Lock(NextMemoryCleanupTimeMutex);
+    if (Now < NextMemoryCleanupTime)
+      return;
+    NextMemoryCleanupTime = Now + MemoryCleanupInterval;
+  }
+
+  vlog("Calling memory cleanup callback");
+  Opts.MemoryCleanup();
+}
+
 // FIXME: This function needs to be properly tested.
 void ClangdLSPServer::onChangeConfiguration(
     const DidChangeConfigurationParams &Params) {
@@ -1507,8 +1530,9 @@ ClangdLSPServer::ClangdLSPServer(class Transport &Transp,
     MsgHandler->bind("textDocument/foldingRange", &ClangdLSPServer::onFoldingRange);
   // clang-format on
 
-  // Delay first profile until we've finished warming up.
-  NextProfileTime = std::chrono::steady_clock::now() + std::chrono::minutes(1);
+  // Delay first profile and memory cleanup until we've finished warming up.
+  NextMemoryCleanupTime = NextProfileTime =
+      std::chrono::steady_clock::now() + std::chrono::minutes(1);
 }
 
 ClangdLSPServer::~ClangdLSPServer() {
@@ -1621,6 +1645,10 @@ void ClangdLSPServer::onDiagnosticsReady(PathRef File, llvm::StringRef Version,
 void ClangdLSPServer::onBackgroundIndexProgress(
     const BackgroundQueue::Stats &Stats) {
   static const char ProgressToken[] = "backgroundIndexProgress";
+
+  // The background index did some work, maybe we need to cleanup
+  maybeCleanupMemory();
+
   std::lock_guard<std::mutex> Lock(BackgroundIndexProgressMutex);
 
   auto NotifyProgress = [this](const BackgroundQueue::Stats &Stats) {

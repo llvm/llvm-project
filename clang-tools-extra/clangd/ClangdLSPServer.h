@@ -48,6 +48,9 @@ public:
     llvm::Optional<Path> CompileCommandsDir;
     /// The offset-encoding to use, or None to negotiate it over LSP.
     llvm::Optional<OffsetEncoding> Encoding;
+    /// If set, periodically called to release memory.
+    /// Consider malloc_trim(3)
+    std::function<void()> MemoryCleanup = nullptr;
 
     /// Per-feature options. Generally ClangdServer lets these vary
     /// per-request, but LSP allows limited/no customizations.
@@ -184,9 +187,17 @@ private:
   /// profiling hasn't happened recently.
   void maybeExportMemoryProfile();
 
+  /// Run the MemoryCleanup callback if it's time.
+  /// This method is thread safe.
+  void maybeCleanupMemory();
+
   /// Timepoint until which profiling is off. It is used to throttle profiling
   /// requests.
   std::chrono::steady_clock::time_point NextProfileTime;
+
+  /// Next time we want to call the MemoryCleanup callback.
+  std::mutex NextMemoryCleanupTimeMutex;
+  std::chrono::steady_clock::time_point NextMemoryCleanupTime;
 
   /// Since initialization of CDBs and ClangdServer is done lazily, the
   /// following context captures the one used while creating ClangdLSPServer and
