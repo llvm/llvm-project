@@ -551,6 +551,15 @@ let TargetPrefix = "riscv" in {
 
   defm vfwmul : RISCVBinaryABX;
 
+  defm vfmacc : RISCVTernaryAAXA;
+  defm vfnmacc : RISCVTernaryAAXA;
+  defm vfmsac : RISCVTernaryAAXA;
+  defm vfnmsac : RISCVTernaryAAXA;
+  defm vfmadd : RISCVTernaryAAXA;
+  defm vfnmadd : RISCVTernaryAAXA;
+  defm vfmsub : RISCVTernaryAAXA;
+  defm vfnmsub : RISCVTernaryAAXA;
+
   defm vfsgnj : RISCVBinaryAAX;
   defm vfsgnjn : RISCVBinaryAAX;
   defm vfsgnjx : RISCVBinaryAAX;
