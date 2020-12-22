@@ -100,9 +100,7 @@ TEST(ContainsN, Two) {
 TEST_F(CommandLineTest, BoolOptionDefaultTrueSingleFlagNotPresent) {
   const char *Args[] = {""};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-
-  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_TRUE(Invocation.getFrontendOpts().UseTemporary);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
@@ -113,9 +111,7 @@ TEST_F(CommandLineTest, BoolOptionDefaultTrueSingleFlagNotPresent) {
 TEST_F(CommandLineTest, BoolOptionDefaultTrueSingleFlagPresent) {
   const char *Args[] = {"-fno-temp-file"};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-
-  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_FALSE(Invocation.getFrontendOpts().UseTemporary);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
@@ -126,10 +122,8 @@ TEST_F(CommandLineTest, BoolOptionDefaultTrueSingleFlagPresent) {
 TEST_F(CommandLineTest, BoolOptionDefaultTrueSingleFlagUnknownPresent) {
   const char *Args[] = {"-ftemp-file"};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-
   // Driver-only flag.
-  ASSERT_TRUE(Diags->hasErrorOccurred());
+  ASSERT_FALSE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_TRUE(Invocation.getFrontendOpts().UseTemporary);
 }
 
@@ -140,8 +134,7 @@ TEST_F(CommandLineTest, BoolOptionDefaultTrueSingleFlagUnknownPresent) {
 TEST_F(CommandLineTest, BoolOptionDefaultTruePresentNone) {
   const char *Args[] = {""};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_TRUE(Invocation.getCodeGenOpts().Autolink);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
@@ -152,8 +145,7 @@ TEST_F(CommandLineTest, BoolOptionDefaultTruePresentNone) {
 TEST_F(CommandLineTest, BoolOptionDefaultTruePresentNegChange) {
   const char *Args[] = {"-fno-autolink"};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_FALSE(Invocation.getCodeGenOpts().Autolink);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
@@ -164,8 +156,8 @@ TEST_F(CommandLineTest, BoolOptionDefaultTruePresentNegChange) {
 TEST_F(CommandLineTest, BoolOptionDefaultTruePresentPosReset) {
   const char *Args[] = {"-fautolink"};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-  ASSERT_TRUE(Diags->hasErrorOccurred()); // Driver-only flag.
+  // Driver-only flag.
+  ASSERT_FALSE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_TRUE(Invocation.getCodeGenOpts().Autolink);
 }
 
@@ -176,8 +168,7 @@ TEST_F(CommandLineTest, BoolOptionDefaultTruePresentPosReset) {
 TEST_F(CommandLineTest, BoolOptionDefaultFalsePresentNone) {
   const char *Args[] = {""};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_FALSE(Invocation.getCodeGenOpts().NoInlineLineTables);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
@@ -188,8 +179,7 @@ TEST_F(CommandLineTest, BoolOptionDefaultFalsePresentNone) {
 TEST_F(CommandLineTest, BoolOptionDefaultFalsePresentNegChange) {
   const char *Args[] = {"-gno-inline-line-tables"};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_TRUE(Invocation.getCodeGenOpts().NoInlineLineTables);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
@@ -200,8 +190,8 @@ TEST_F(CommandLineTest, BoolOptionDefaultFalsePresentNegChange) {
 TEST_F(CommandLineTest, BoolOptionDefaultFalsePresentPosReset) {
   const char *Args[] = {"-ginline-line-tables"};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-  ASSERT_TRUE(Diags->hasErrorOccurred()); // Driver-only flag.
+  // Driver-only flag.
+  ASSERT_FALSE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_FALSE(Invocation.getCodeGenOpts().NoInlineLineTables);
 }
 
@@ -212,8 +202,7 @@ TEST_F(CommandLineTest, BoolOptionDefaultFalsePresentPosReset) {
 TEST_F(CommandLineTest, BoolOptionDefaultFalsePresentNoneX) {
   const char *Args[] = {""};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_FALSE(Invocation.getCodeGenOpts().CodeViewGHash);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
@@ -224,8 +213,7 @@ TEST_F(CommandLineTest, BoolOptionDefaultFalsePresentNoneX) {
 TEST_F(CommandLineTest, BoolOptionDefaultFalsePresentPosChange) {
   const char *Args[] = {"-gcodeview-ghash"};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_TRUE(Invocation.getCodeGenOpts().CodeViewGHash);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
@@ -236,8 +224,8 @@ TEST_F(CommandLineTest, BoolOptionDefaultFalsePresentPosChange) {
 TEST_F(CommandLineTest, BoolOptionDefaultFalsePresentNegReset) {
   const char *Args[] = {"-gno-codeview-ghash"};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-  ASSERT_TRUE(Diags->hasErrorOccurred()); // Driver-only flag.
+  // Driver-only flag.
+  ASSERT_FALSE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_FALSE(Invocation.getCodeGenOpts().CodeViewGHash);
 }
 
@@ -259,9 +247,7 @@ static constexpr const char *PassManagerChangedByFlag =
 TEST_F(CommandLineTest, BoolOptionDefaultArbitraryTwoFlagsPresentNone) {
   const char *Args = {""};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-
-  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_EQ(Invocation.getCodeGenOpts().LegacyPassManager, PassManagerDefault);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
@@ -273,8 +259,7 @@ TEST_F(CommandLineTest, BoolOptionDefaultArbitraryTwoFlagsPresentNone) {
 TEST_F(CommandLineTest, BoolOptionDefaultArbitraryTwoFlagsPresentChange) {
   const char *Args[] = {PassManagerChangedByFlag};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_EQ(Invocation.getCodeGenOpts().LegacyPassManager, !PassManagerDefault);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
@@ -285,8 +270,7 @@ TEST_F(CommandLineTest, BoolOptionDefaultArbitraryTwoFlagsPresentChange) {
 TEST_F(CommandLineTest, BoolOptionDefaultArbitraryTwoFlagsPresentReset) {
   const char *Args[] = {PassManagerResetByFlag};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_EQ(Invocation.getCodeGenOpts().LegacyPassManager, PassManagerDefault);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
@@ -304,9 +288,7 @@ TEST_F(CommandLineTest, BoolOptionDefaultArbitraryTwoFlagsPresentReset) {
 TEST_F(CommandLineTest, BoolOptionCC1ViaLetPresentNone) {
   const char *Args[] = {""};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-
-  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_FALSE(Invocation.getCodeGenOpts().DebugPassManager);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
@@ -318,9 +300,7 @@ TEST_F(CommandLineTest, BoolOptionCC1ViaLetPresentNone) {
 TEST_F(CommandLineTest, BoolOptionCC1ViaLetPresentPos) {
   const char *Args[] = {"-fdebug-pass-manager"};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-
-  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_TRUE(Invocation.getCodeGenOpts().DebugPassManager);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
@@ -332,9 +312,7 @@ TEST_F(CommandLineTest, BoolOptionCC1ViaLetPresentPos) {
 TEST_F(CommandLineTest, BoolOptionCC1ViaLetPresentNeg) {
   const char *Args[] = {"-fno-debug-pass-manager"};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-
-  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_FALSE(Invocation.getCodeGenOpts().DebugPassManager);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
@@ -346,9 +324,7 @@ TEST_F(CommandLineTest, BoolOptionCC1ViaLetPresentNeg) {
 TEST_F(CommandLineTest, CanGenerateCC1CommandLineFlag) {
   const char *Args[] = {"-fmodules-strict-context-hash"};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-
-  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 
@@ -359,9 +335,7 @@ TEST_F(CommandLineTest, CanGenerateCC1CommandLineSeparate) {
   const char *TripleCStr = "i686-apple-darwin9";
   const char *Args[] = {"-triple", TripleCStr};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-
-  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 
@@ -373,9 +347,7 @@ TEST_F(CommandLineTest,  CanGenerateCC1CommandLineSeparateRequiredPresent) {
       llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple());
   const char *Args[] = {"-triple", DefaultTriple.c_str()};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-
-  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 
@@ -388,9 +360,7 @@ TEST_F(CommandLineTest, CanGenerateCC1CommandLineSeparateRequiredAbsent) {
       llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple());
   const char *Args[] = {""};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-
-  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 
@@ -401,9 +371,7 @@ TEST_F(CommandLineTest, CanGenerateCC1CommandLineSeparateRequiredAbsent) {
 TEST_F(CommandLineTest, SeparateEnumNonDefault) {
   const char *Args[] = {"-mrelocation-model", "static"};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-
-  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_EQ(Invocation.getCodeGenOpts().RelocationModel, Reloc::Model::Static);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
@@ -417,9 +385,7 @@ TEST_F(CommandLineTest, SeparateEnumNonDefault) {
 TEST_F(CommandLineTest, SeparateEnumDefault) {
   const char *Args[] = {"-mrelocation-model", "pic"};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-
-  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_EQ(Invocation.getCodeGenOpts().RelocationModel, Reloc::Model::PIC_);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
@@ -433,9 +399,7 @@ TEST_F(CommandLineTest, SeparateEnumDefault) {
 TEST_F(CommandLineTest, JoinedEnumNonDefault) {
   const char *Args[] = {"-fobjc-dispatch-method=non-legacy"};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-
-  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_EQ(Invocation.getCodeGenOpts().getObjCDispatchMethod(),
             CodeGenOptions::NonLegacy);
 
@@ -450,9 +414,7 @@ TEST_F(CommandLineTest, JoinedEnumNonDefault) {
 TEST_F(CommandLineTest, JoinedEnumDefault) {
   const char *Args[] = {"-fobjc-dispatch-method=legacy"};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-
-  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_EQ(Invocation.getCodeGenOpts().getObjCDispatchMethod(),
             CodeGenOptions::Legacy);
 
@@ -467,9 +429,7 @@ TEST_F(CommandLineTest, JoinedEnumDefault) {
 TEST_F(CommandLineTest, StringVectorEmpty) {
   const char *Args[] = {""};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-
-  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_TRUE(Invocation.getFrontendOpts().ModuleMapFiles.empty());
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
@@ -480,9 +440,7 @@ TEST_F(CommandLineTest, StringVectorEmpty) {
 TEST_F(CommandLineTest, StringVectorSingle) {
   const char *Args[] = {"-fmodule-map-file=a"};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-
-  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_EQ(Invocation.getFrontendOpts().ModuleMapFiles,
             std::vector<std::string>({"a"}));
 
@@ -495,9 +453,7 @@ TEST_F(CommandLineTest, StringVectorSingle) {
 TEST_F(CommandLineTest, StringVectorMultiple) {
   const char *Args[] = {"-fmodule-map-file=a", "-fmodule-map-file=b"};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-
-  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_TRUE(Invocation.getFrontendOpts().ModuleMapFiles ==
               std::vector<std::string>({"a", "b"}));
 
@@ -513,9 +469,7 @@ TEST_F(CommandLineTest, StringVectorMultiple) {
 TEST_F(CommandLineTest, StringVectorCommaJoinedNone) {
   const char *Args[] = {""};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-
-  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_TRUE(Invocation.getLangOpts()->CommentOpts.BlockCommandNames.empty());
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
@@ -527,9 +481,7 @@ TEST_F(CommandLineTest, StringVectorCommaJoinedNone) {
 TEST_F(CommandLineTest, StringVectorCommaJoinedSingle) {
   const char *Args[] = {"-fcomment-block-commands=x,y"};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-
-  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_EQ(Invocation.getLangOpts()->CommentOpts.BlockCommandNames,
             std::vector<std::string>({"x", "y"}));
 
@@ -543,9 +495,7 @@ TEST_F(CommandLineTest, StringVectorCommaJoinedMultiple) {
   const char *Args[] = {"-fcomment-block-commands=x,y",
                         "-fcomment-block-commands=a,b"};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-
-  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_EQ(Invocation.getLangOpts()->CommentOpts.BlockCommandNames,
             std::vector<std::string>({"x", "y", "a", "b"}));
 
@@ -640,9 +590,7 @@ TEST_F(CommandLineTest, WideIntegerHighValue) {
 TEST_F(CommandLineTest, ImpliedBoolOptionsNoFlagPresent) {
   const char *Args[] = {""};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-
-  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_FALSE(Invocation.getLangOpts()->CLUnsafeMath);
   ASSERT_FALSE(Invocation.getCodeGenOpts().LessPreciseFPMAD);
   ASSERT_FALSE(Invocation.getLangOpts()->UnsafeFPMath);
@@ -661,9 +609,7 @@ TEST_F(CommandLineTest, ImpliedBoolOptionsNoFlagPresent) {
 TEST_F(CommandLineTest, ImpliedBoolOptionsRootFlagPresent) {
   const char *Args[] = {"-cl-unsafe-math-optimizations"};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-
-  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   // Explicitly provided root flag.
   ASSERT_TRUE(Invocation.getLangOpts()->CLUnsafeMath);
   // Directly implied by explicitly provided root flag.
@@ -686,9 +632,7 @@ TEST_F(CommandLineTest, ImpliedBoolOptionsAllFlagsPresent) {
   const char *Args[] = {"-cl-unsafe-math-optimizations", "-cl-mad-enable",
                         "-menable-unsafe-fp-math", "-freciprocal-math"};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-
-  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_TRUE(Invocation.getLangOpts()->CLUnsafeMath);
   ASSERT_TRUE(Invocation.getCodeGenOpts().LessPreciseFPMAD);
   ASSERT_TRUE(Invocation.getLangOpts()->UnsafeFPMath);
@@ -708,8 +652,7 @@ TEST_F(CommandLineTest, ImpliedBoolOptionsImpliedFlagsPresent) {
   const char *Args[] = {"-cl-mad-enable", "-menable-unsafe-fp-math",
                         "-freciprocal-math"};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
   ASSERT_FALSE(Invocation.getLangOpts()->CLUnsafeMath);
   ASSERT_TRUE(Invocation.getCodeGenOpts().LessPreciseFPMAD);
   ASSERT_TRUE(Invocation.getLangOpts()->UnsafeFPMath);
@@ -729,9 +672,7 @@ TEST_F(CommandLineTest, ImpliedBoolOptionsImpliedFlagsPresent) {
 TEST_F(CommandLineTest, PresentAndNotImpliedGenerated) {
   const char *Args[] = {"-cl-mad-enable", "-menable-unsafe-fp-math"};
 
-  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
-
-  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 

@@ -129,10 +129,9 @@ CompilerInvocationBase::~CompilerInvocationBase() = default;
 #include "clang/Driver/Options.inc"
 #undef SIMPLE_ENUM_VALUE_TABLE
 
-static llvm::Optional<bool> normalizeSimpleFlag(OptSpecifier Opt,
-                                                unsigned TableIndex,
-                                                const ArgList &Args,
-                                                DiagnosticsEngine &Diags) {
+static llvm::Optional<bool>
+normalizeSimpleFlag(OptSpecifier Opt, unsigned TableIndex, const ArgList &Args,
+                    DiagnosticsEngine &Diags, bool &Success) {
   if (Args.hasArg(Opt))
     return true;
   return None;
@@ -140,7 +139,8 @@ static llvm::Optional<bool> normalizeSimpleFlag(OptSpecifier Opt,
 
 static Optional<bool> normalizeSimpleNegativeFlag(OptSpecifier Opt, unsigned,
                                                   const ArgList &Args,
-                                                  DiagnosticsEngine &) {
+                                                  DiagnosticsEngine &,
+                                                  bool &Success) {
   if (Args.hasArg(Opt))
     return false;
   return None;
@@ -166,7 +166,7 @@ template <typename T,
           std::enable_if_t<!is_uint64_t_convertible<T>(), bool> = false>
 static auto makeFlagToValueNormalizer(T Value) {
   return [Value](OptSpecifier Opt, unsigned, const ArgList &Args,
-                 DiagnosticsEngine &) -> Optional<T> {
+                 DiagnosticsEngine &, bool &Success) -> Optional<T> {
     if (Args.hasArg(Opt))
       return Value;
     return None;
@@ -182,8 +182,8 @@ static auto makeFlagToValueNormalizer(T Value) {
 static auto makeBooleanOptionNormalizer(bool Value, bool OtherValue,
                                         OptSpecifier OtherOpt) {
   return [Value, OtherValue, OtherOpt](OptSpecifier Opt, unsigned,
-                                       const ArgList &Args,
-                                       DiagnosticsEngine &) -> Optional<bool> {
+                                       const ArgList &Args, DiagnosticsEngine &,
+                                       bool &Success) -> Optional<bool> {
     if (const Arg *A = Args.getLastArg(Opt, OtherOpt)) {
       return A->getOption().matches(Opt) ? Value : OtherValue;
     }
@@ -246,10 +246,9 @@ findValueTableByValue(const SimpleEnumValueTable &Table, unsigned Value) {
   return None;
 }
 
-static llvm::Optional<unsigned> normalizeSimpleEnum(OptSpecifier Opt,
-                                                    unsigned TableIndex,
-                                                    const ArgList &Args,
-                                                    DiagnosticsEngine &Diags) {
+static llvm::Optional<unsigned>
+normalizeSimpleEnum(OptSpecifier Opt, unsigned TableIndex, const ArgList &Args,
+                    DiagnosticsEngine &Diags, bool &Success) {
   assert(TableIndex < SimpleEnumValueTablesSize);
   const SimpleEnumValueTable &Table = SimpleEnumValueTables[TableIndex];
 
@@ -261,6 +260,7 @@ static llvm::Optional<unsigned> normalizeSimpleEnum(OptSpecifier Opt,
   if (auto MaybeEnumVal = findValueTableByName(Table, ArgValue))
     return MaybeEnumVal->Value;
 
+  Success = false;
   Diags.Report(diag::err_drv_invalid_value)
       << Arg->getAsString(Args) << ArgValue;
   return None;
@@ -294,7 +294,8 @@ static void denormalizeSimpleEnum(SmallVectorImpl<const char *> &Args,
 
 static Optional<std::string> normalizeString(OptSpecifier Opt, int TableIndex,
                                              const ArgList &Args,
-                                             DiagnosticsEngine &Diags) {
+                                             DiagnosticsEngine &Diags,
+                                             bool &Success) {
   auto *Arg = Args.getLastArg(Opt);
   if (!Arg)
     return None;
@@ -302,14 +303,15 @@ static Optional<std::string> normalizeString(OptSpecifier Opt, int TableIndex,
 }
 
 template <typename IntTy>
-static Optional<IntTy> normalizeStringIntegral(OptSpecifier Opt, int,
-                                               const ArgList &Args,
-                                               DiagnosticsEngine &Diags) {
+static Optional<IntTy>
+normalizeStringIntegral(OptSpecifier Opt, int, const ArgList &Args,
+                        DiagnosticsEngine &Diags, bool &Success) {
   auto *Arg = Args.getLastArg(Opt);
   if (!Arg)
     return None;
   IntTy Res;
   if (StringRef(Arg->getValue()).getAsInteger(0, Res)) {
+    Success = false;
     Diags.Report(diag::err_drv_invalid_int_value)
         << Arg->getAsString(Args) << Arg->getValue();
   }
@@ -318,7 +320,7 @@ static Optional<IntTy> normalizeStringIntegral(OptSpecifier Opt, int,
 
 static Optional<std::vector<std::string>>
 normalizeStringVector(OptSpecifier Opt, int, const ArgList &Args,
-                      DiagnosticsEngine &) {
+                      DiagnosticsEngine &, bool &Success) {
   return Args.getAllArgValues(Opt);
 }
 
@@ -356,7 +358,8 @@ static void denormalizeStringVector(SmallVectorImpl<const char *> &Args,
 
 static Optional<std::string> normalizeTriple(OptSpecifier Opt, int TableIndex,
                                              const ArgList &Args,
-                                             DiagnosticsEngine &Diags) {
+                                             DiagnosticsEngine &Diags,
+                                             bool &Success) {
   auto *Arg = Args.getLastArg(Opt);
   if (!Arg)
     return None;
@@ -2970,6 +2973,8 @@ static void ParseTargetArgs(TargetOptions &Opts, ArgList &Args,
 
 bool CompilerInvocation::parseSimpleArgs(const ArgList &Args,
                                          DiagnosticsEngine &Diags) {
+  bool Success = true;
+
 #define OPTION_WITH_MARSHALLING(                                               \
     PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
     HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
@@ -2980,14 +2985,16 @@ bool CompilerInvocation::parseSimpleArgs(const ArgList &Args,
     if (IMPLIED_CHECK)                                                         \
       this->KEYPATH = MERGER(this->KEYPATH, IMPLIED_VALUE);                    \
     if (SHOULD_PARSE)                                                          \
-      if (auto MaybeValue = NORMALIZER(OPT_##ID, TABLE_INDEX, Args, Diags))    \
+      if (auto MaybeValue = \
+            NORMALIZER(OPT_##ID, TABLE_INDEX, Args, Diags, Success))    \
         this->KEYPATH = MERGER(                                                \
             this->KEYPATH, static_cast<decltype(this->KEYPATH)>(*MaybeValue)); \
   }
 
 #include "clang/Driver/Options.inc"
 #undef OPTION_WITH_MARSHALLING
-  return true;
+
+  return Success;
 }
 
 bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
