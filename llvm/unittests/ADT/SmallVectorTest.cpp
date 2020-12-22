@@ -345,24 +345,24 @@ TEST(SmallVectorTest, ResizeForOverwrite) {
   {
     // Heap allocated storage.
     SmallVector<unsigned, 0> V;
-    V.push_back(5);
+    V.push_back(5U);
     V.pop_back();
-    V.resize_for_overwrite(V.size() + 1);
-    EXPECT_EQ(5, V.back());
+    V.resize_for_overwrite(V.size() + 1U);
+    EXPECT_EQ(5U, V.back());
     V.pop_back();
     V.resize(V.size() + 1);
-    EXPECT_EQ(0, V.back());
+    EXPECT_EQ(0U, V.back());
   }
   {
     // Inline storage.
     SmallVector<unsigned, 2> V;
-    V.push_back(5);
+    V.push_back(5U);
     V.pop_back();
-    V.resize_for_overwrite(V.size() + 1);
-    EXPECT_EQ(5, V.back());
+    V.resize_for_overwrite(V.size() + 1U);
+    EXPECT_EQ(5U, V.back());
     V.pop_back();
     V.resize(V.size() + 1);
-    EXPECT_EQ(0, V.back());
+    EXPECT_EQ(0U, V.back());
   }
 }
 
