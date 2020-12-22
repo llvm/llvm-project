@@ -110,8 +110,7 @@ bool ScriptInterpreterLua::ExecuteOneLine(llvm::StringRef command,
 }
 
 void ScriptInterpreterLua::ExecuteInterpreterLoop() {
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
+  LLDB_SCOPED_TIMER();
 
   // At the moment, the only time the debugger does not have an input file
   // handle is when this is called directly from lua, in which case it is
