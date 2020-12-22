@@ -195,8 +195,8 @@ convertStructTypeWithOffset(spirv::StructType type,
       llvm::map_range(type.getElementTypes(), [&](Type elementType) {
         return converter.convertType(elementType).cast<LLVM::LLVMType>();
       }));
-  return LLVM::LLVMType::getStructTy(type.getContext(), elementsVector,
-                                     /*isPacked=*/false);
+  return LLVM::LLVMStructType::getLiteral(type.getContext(), elementsVector,
+                                          /*isPacked=*/false);
 }
 
 /// Converts SPIR-V struct with no offset to packed LLVM struct.
@@ -206,15 +206,15 @@ static Type convertStructTypePacked(spirv::StructType type,
       llvm::map_range(type.getElementTypes(), [&](Type elementType) {
         return converter.convertType(elementType).cast<LLVM::LLVMType>();
       }));
-  return LLVM::LLVMType::getStructTy(type.getContext(), elementsVector,
-                                     /*isPacked=*/true);
+  return LLVM::LLVMStructType::getLiteral(type.getContext(), elementsVector,
+                                          /*isPacked=*/true);
 }
 
 /// Creates LLVM dialect constant with the given value.
 static Value createI32ConstantOf(Location loc, PatternRewriter &rewriter,
                                  unsigned value) {
   return rewriter.create<LLVM::ConstantOp>(
-      loc, LLVM::LLVMType::getInt32Ty(rewriter.getContext()),
+      loc, LLVM::LLVMIntegerType::get(rewriter.getContext(), 32),
       rewriter.getIntegerAttr(rewriter.getI32Type(), value));
 }
 
@@ -258,7 +258,7 @@ static Optional<Type> convertArrayType(spirv::ArrayType type,
   auto llvmElementType =
       converter.convertType(elementType).cast<LLVM::LLVMType>();
   unsigned numElements = type.getNumElements();
-  return LLVM::LLVMType::getArrayTy(llvmElementType, numElements);
+  return LLVM::LLVMArrayType::get(llvmElementType, numElements);
 }
 
 /// Converts SPIR-V pointer type to LLVM pointer. Pointer's storage class is not
@@ -279,7 +279,7 @@ static Optional<Type> convertRuntimeArrayType(spirv::RuntimeArrayType type,
     return llvm::None;
   auto elementType =
       converter.convertType(type.getElementType()).cast<LLVM::LLVMType>();
-  return LLVM::LLVMType::getArrayTy(elementType, 0);
+  return LLVM::LLVMArrayType::get(elementType, 0);
 }
 
 /// Converts SPIR-V struct to LLVM struct. There is no support of structs with
@@ -666,15 +666,15 @@ public:
     //   int32_t executionMode;
     //   int32_t values[];          // optional values
     // };
-    auto llvmI32Type = LLVM::LLVMType::getInt32Ty(context);
+    auto llvmI32Type = LLVM::LLVMIntegerType::get(context, 32);
     SmallVector<LLVM::LLVMType, 2> fields;
     fields.push_back(llvmI32Type);
     ArrayAttr values = op.values();
     if (!values.empty()) {
-      auto arrayType = LLVM::LLVMType::getArrayTy(llvmI32Type, values.size());
+      auto arrayType = LLVM::LLVMArrayType::get(llvmI32Type, values.size());
       fields.push_back(arrayType);
     }
-    auto structType = LLVM::LLVMType::getStructTy(context, fields);
+    auto structType = LLVM::LLVMStructType::getLiteral(context, fields);
 
     // Create `llvm.mlir.global` with initializer region containing one block.
     auto global = rewriter.create<LLVM::GlobalOp>(

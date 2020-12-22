@@ -85,7 +85,7 @@ private:
       return operand;
 
     return rewriter.create<LLVM::FPExtOp>(
-        operand.getLoc(), LLVM::LLVMType::getFloatTy(rewriter.getContext()),
+        operand.getLoc(), LLVM::LLVMFloatType::get(rewriter.getContext()),
         operand);
   }
 
@@ -96,8 +96,7 @@ private:
     for (Value operand : operands) {
       operandTypes.push_back(operand.getType().cast<LLVMType>());
     }
-    return LLVMType::getFunctionTy(resultType, operandTypes,
-                                   /*isVarArg=*/false);
+    return LLVM::LLVMFunctionType::get(resultType, operandTypes);
   }
 
   StringRef getFunctionName(LLVM::LLVMType type) const {

@@ -48,13 +48,16 @@ public:
     Value newOp;
     switch (dimensionToIndex(op)) {
     case X:
-      newOp = rewriter.create<XOp>(loc, LLVM::LLVMType::getInt32Ty(context));
+      newOp =
+          rewriter.create<XOp>(loc, LLVM::LLVMIntegerType::get(context, 32));
       break;
     case Y:
-      newOp = rewriter.create<YOp>(loc, LLVM::LLVMType::getInt32Ty(context));
+      newOp =
+          rewriter.create<YOp>(loc, LLVM::LLVMIntegerType::get(context, 32));
       break;
     case Z:
-      newOp = rewriter.create<ZOp>(loc, LLVM::LLVMType::getInt32Ty(context));
+      newOp =
+          rewriter.create<ZOp>(loc, LLVM::LLVMIntegerType::get(context, 32));
       break;
     default:
       return failure();
@@ -62,10 +65,10 @@ public:
 
     if (indexBitwidth > 32) {
       newOp = rewriter.create<LLVM::SExtOp>(
-          loc, LLVM::LLVMType::getIntNTy(context, indexBitwidth), newOp);
+          loc, LLVM::LLVMIntegerType::get(context, indexBitwidth), newOp);
     } else if (indexBitwidth < 32) {
       newOp = rewriter.create<LLVM::TruncOp>(
-          loc, LLVM::LLVMType::getIntNTy(context, indexBitwidth), newOp);
+          loc, LLVM::LLVMIntegerType::get(context, indexBitwidth), newOp);
     }
 
     rewriter.replaceOp(op, {newOp});

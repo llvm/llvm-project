@@ -45,7 +45,8 @@ public:
     // Populate type conversions.
     LLVMTypeConverter type_converter(m.getContext());
     type_converter.addConversion([&](test::TestType type) {
-      return LLVM::LLVMType::getInt8PtrTy(m.getContext());
+      return LLVM::LLVMPointerType::get(
+          LLVM::LLVMIntegerType::get(m.getContext(), 8));
     });
 
     // Populate patterns.
