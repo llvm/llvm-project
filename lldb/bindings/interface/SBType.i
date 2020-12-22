@@ -245,6 +245,9 @@ public:
     GetCanonicalType();
 
     lldb::SBType
+    GetEnumerationIntegerType();
+
+    lldb::SBType
     GetArrayElementType ();
 
     lldb::SBType
