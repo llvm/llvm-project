@@ -91,7 +91,7 @@ Yes, LLVM/Clang allows math functions and complex arithmetic inside of OpenMP ta
 that are compiled for GPUs.
 
 Clang provides a set of wrapper headers that are found first when `math.h` and
-`complex.h`, for C, `cmath` and `complex`, foc C++, or similar headers are
+`complex.h`, for C, `cmath` and `complex`, for C++, or similar headers are
 included by the application. These wrappers will eventually include the system
 version of the corresponding header file after setting up a target device
 specific environment. The fact that the system header is included is important
