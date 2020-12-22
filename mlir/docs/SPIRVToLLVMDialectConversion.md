@@ -377,7 +377,7 @@ entry points in LLVM. At the moment, we use the following approach:
   entry point. For example, `LocalSize` provides information about the
   work-group size that can be reused.
 
-  In order to preserve this inforamtion, `spv.ExecutionMode` is converted to
+  In order to preserve this information, `spv.ExecutionMode` is converted to
   a struct global variable that stores the execution mode id and any variables
   associated with it. In C, the struct has the structure shown below.
 
@@ -816,7 +816,140 @@ to LLVM ops. At the moment, SPIR-V module attributes are ignored.
 
 ## `mlir-spirv-cpu-runner`
 
-**Note: this is a section in progress, more information will appear soon**
+`mlir-spirv-cpu-runner` allows to execute `gpu` dialect kernel on the CPU via
+SPIR-V to LLVM dialect conversion. Currently, only single-threaded kernel is
+supported.
+
+To build the runner, add the following option to `cmake`:
+```bash
+-DMLIR_SPIRV_CPU_RUNNER_ENABLED=1
+```
+
+### Pipeline
+
+The `gpu` module with the kernel and the host code undergo the following
+transformations:
+
+*   Convert the `gpu` module into SPIR-V dialect, lower ABI attributes and
+    update version, capability and extension.
+
+*   Emulate the kernel call by converting the launching operation into a normal
+    function call. The data from the host side to the device is passed via
+    copying to global variables. These are created in both the host and the
+    kernel code and later linked when nested modules are folded.
+
+*   Convert SPIR-V dialect kernel to LLVM dialect via the new conversion path.
+
+After these passes, the IR transforms into a nested LLVM module - a main module
+representing the host code and a kernel module. These modules are linked and
+executed using `ExecutionEngine`.
+
+### Walk-through
+
+This section gives a detailed overview of the IR changes while running
+`mlir-spirv-cpu-runner`. First, consider that we have the following IR. (For
+simplicity some type annotations and function implementations have been
+omitted).
+
+```mlir
+gpu.module @foo {
+  gpu.func @bar(%arg: memref<8xi32>) {
+    // Kernel code.
+    gpu.return
+  }
+}
+
+func @main() {
+  // Fill the buffer with some data
+  %buffer = alloc : memref<8xi32>
+  %data = ...
+  call fillBuffer(%buffer, %data)
+
+  "gpu.launch_func"(/*grid dimensions*/, %buffer) {
+    kernel = @foo::bar
+  }
+}
+```
+
+Lowering `gpu` dialect to SPIR-V dialect results in
+
+```mlir
+spv.module @__spv__foo /*VCE triple and other metadata here*/ {
+  spv.globalVariable @__spv__foo_arg bind(0,0) : ...
+  spv.func @bar() {
+    // Kernel code.
+  }
+  spv.EntryPoint @bar, ...
+}
+
+func @main() {
+  // Fill the buffer with some data.
+  %buffer = alloc : memref<8xi32>
+  %data = ...
+  call fillBuffer(%buffer, %data)
+
+  "gpu.launch_func"(/*grid dimensions*/, %buffer) {
+    kernel = @foo::bar
+  }
+}
+```
+
+Then, the lowering from standard dialect to LLVM dialect is applied to the host
+code.
+
+```mlir
+spv.module @__spv__foo /*VCE triple and other metadata here*/ {
+  spv.globalVariable @__spv__foo_arg bind(0,0) : ...
+  spv.func @bar() {
+    // Kernel code.
+  }
+  spv.EntryPoint @bar, ...
+}
+
+// Kernel function declaration.
+llvm.func @__spv__foo_bar() : ...
+
+llvm.func @main() {
+  // Fill the buffer with some data.
+  llvm.call fillBuffer(%buffer, %data)
+
+  // Copy data to the global variable, call kernel, and copy the data back.
+  %addr = llvm.mlir.addressof @__spv__foo_arg_descriptor_set0_binding0 : ...
+  "llvm.intr.memcpy"(%addr, %buffer) : ...
+  llvm.call @__spv__foo_bar()
+  "llvm.intr.memcpy"(%buffer, %addr) : ...
+
+  llvm.return
+}
+```
+
+Finally, SPIR-V module is converted to LLVM and the symbol names are resolved
+for the linkage.
+
+```mlir
+module @__spv__foo {
+  llvm.mlir.global @__spv__foo_arg_descriptor_set0_binding0 : ...
+  llvm.func @__spv__foo_bar() {
+    // Kernel code.
+  }
+}
+
+// Kernel function declaration.
+llvm.func @__spv__foo_bar() : ...
+
+llvm.func @main() {
+  // Fill the buffer with some data.
+  llvm.call fillBuffer(%buffer, %data)
+
+  // Copy data to the global variable, call kernel, and copy the data back.
+  %addr = llvm.mlir.addressof @__spv__foo_arg_descriptor_set0_binding0 : ...
+  "llvm.intr.memcpy"(%addr, %buffer) : ...
+  llvm.call @__spv__foo_bar()
+  "llvm.intr.memcpy"(%buffer, %addr) : ...
+
+  llvm.return
+}
+```
 
 [LLVMFunctionAttributes]: https://llvm.org/docs/LangRef.html#function-attributes
 [SPIRVFunctionAttributes]: https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#_a_id_function_control_a_function_control
