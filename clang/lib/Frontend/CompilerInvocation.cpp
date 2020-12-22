@@ -388,7 +388,6 @@ static void FixupInvocation(CompilerInvocation &Invocation,
                             DiagnosticsEngine &Diags,
                             const InputArgList &Args) {
   LangOptions &LangOpts = *Invocation.getLangOpts();
-  DiagnosticOptions &DiagOpts = Invocation.getDiagnosticOpts();
   CodeGenOptions &CodeGenOpts = Invocation.getCodeGenOpts();
   TargetOptions &TargetOpts = Invocation.getTargetOpts();
   FrontendOptions &FrontendOpts = Invocation.getFrontendOpts();
@@ -401,8 +400,6 @@ static void FixupInvocation(CompilerInvocation &Invocation,
   LangOpts.ForceEmitVTables = CodeGenOpts.ForceEmitVTables;
   LangOpts.SpeculativeLoadHardening = CodeGenOpts.SpeculativeLoadHardening;
   LangOpts.CurrentModule = LangOpts.ModuleName;
-
-  llvm::sys::Process::UseANSIEscapeCodes(DiagOpts.UseANSIEscapeCodes);
 
   llvm::Triple T(TargetOpts.Triple);
   llvm::Triple::ArchType Arch = T.getArch();
@@ -1404,14 +1401,14 @@ static bool checkVerifyPrefixes(const std::vector<std::string> &VerifyPrefixes,
                                       IMPLIED_CHECK, IMPLIED_VALUE,            \
                                       NORMALIZER, MERGER, TABLE_INDEX)         \
   if ((FLAGS)&options::CC1Option) {                                            \
-    this->KEYPATH = MERGER(this->KEYPATH, DEFAULT_VALUE);                      \
+    KEYPATH = MERGER(KEYPATH, DEFAULT_VALUE);                                  \
     if (IMPLIED_CHECK)                                                         \
-      this->KEYPATH = MERGER(this->KEYPATH, IMPLIED_VALUE);                    \
+      KEYPATH = MERGER(KEYPATH, IMPLIED_VALUE);                                \
     if (SHOULD_PARSE)                                                          \
       if (auto MaybeValue =                                                    \
               NORMALIZER(OPT_##ID, TABLE_INDEX, ARGS, DIAGS, SUCCESS))         \
-        this->KEYPATH = MERGER(                                                \
-            this->KEYPATH, static_cast<decltype(this->KEYPATH)>(*MaybeValue)); \
+        KEYPATH =                                                              \
+            MERGER(KEYPATH, static_cast<decltype(KEYPATH)>(*MaybeValue));      \
   }
 
 bool CompilerInvocation::parseSimpleArgs(const ArgList &Args,
@@ -1433,8 +1430,6 @@ bool CompilerInvocation::parseSimpleArgs(const ArgList &Args,
   return Success;
 }
 
-#undef PARSE_OPTION_WITH_MARSHALLING
-
 bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
                                 DiagnosticsEngine *Diags,
                                 bool DefaultDiagColor) {
@@ -1447,79 +1442,28 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
 
   bool Success = true;
 
-  Opts.DiagnosticLogFile =
-      std::string(Args.getLastArgValue(OPT_diagnostic_log_file));
+#define DIAG_OPTION_WITH_MARSHALLING(                                          \
+    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
+    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
+    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
+    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
+  PARSE_OPTION_WITH_MARSHALLING(Args, *Diags, Success, ID, FLAGS, PARAM,       \
+                                SHOULD_PARSE, Opts.KEYPATH, DEFAULT_VALUE,     \
+                                IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER,      \
+                                MERGER, TABLE_INDEX)
+#include "clang/Driver/Options.inc"
+#undef DIAG_OPTION_WITH_MARSHALLING
+
+  llvm::sys::Process::UseANSIEscapeCodes(Opts.UseANSIEscapeCodes);
+
   if (Arg *A =
           Args.getLastArg(OPT_diagnostic_serialized_file, OPT__serialize_diags))
     Opts.DiagnosticSerializationFile = A->getValue();
-  Opts.IgnoreWarnings = Args.hasArg(OPT_w);
-  Opts.NoRewriteMacros = Args.hasArg(OPT_Wno_rewrite_macros);
-  Opts.Pedantic = Args.hasArg(OPT_pedantic);
-  Opts.PedanticErrors = Args.hasArg(OPT_pedantic_errors);
-  Opts.ShowCarets = !Args.hasArg(OPT_fno_caret_diagnostics);
   Opts.ShowColors = parseShowColorsArgs(Args, DefaultDiagColor);
-  Opts.ShowColumn = !Args.hasArg(OPT_fno_show_column);
-  Opts.ShowFixits = !Args.hasArg(OPT_fno_diagnostics_fixit_info);
-  Opts.ShowLocation = !Args.hasArg(OPT_fno_show_source_location);
-  Opts.AbsolutePath = Args.hasArg(OPT_fdiagnostics_absolute_paths);
-  Opts.ShowOptionNames = !Args.hasArg(OPT_fno_diagnostics_show_option);
 
-  // Default behavior is to not to show note include stacks.
-  Opts.ShowNoteIncludeStack = false;
-  if (Arg *A = Args.getLastArg(OPT_fdiagnostics_show_note_include_stack,
-                               OPT_fno_diagnostics_show_note_include_stack))
-    if (A->getOption().matches(OPT_fdiagnostics_show_note_include_stack))
-      Opts.ShowNoteIncludeStack = true;
-
-  StringRef ShowOverloads =
-    Args.getLastArgValue(OPT_fshow_overloads_EQ, "all");
-  if (ShowOverloads == "best")
-    Opts.setShowOverloads(Ovl_Best);
-  else if (ShowOverloads == "all")
-    Opts.setShowOverloads(Ovl_All);
-  else {
-    Success = false;
-    Diags->Report(diag::err_drv_invalid_value)
-        << Args.getLastArg(OPT_fshow_overloads_EQ)->getAsString(Args)
-        << ShowOverloads;
-  }
-
-  StringRef ShowCategory =
-    Args.getLastArgValue(OPT_fdiagnostics_show_category, "none");
-  if (ShowCategory == "none")
-    Opts.ShowCategories = 0;
-  else if (ShowCategory == "id")
-    Opts.ShowCategories = 1;
-  else if (ShowCategory == "name")
-    Opts.ShowCategories = 2;
-  else {
-    Success = false;
-    Diags->Report(diag::err_drv_invalid_value)
-        << Args.getLastArg(OPT_fdiagnostics_show_category)->getAsString(Args)
-        << ShowCategory;
-  }
-
-  StringRef Format =
-    Args.getLastArgValue(OPT_fdiagnostics_format, "clang");
-  if (Format == "clang")
-    Opts.setFormat(DiagnosticOptions::Clang);
-  else if (Format == "msvc")
-    Opts.setFormat(DiagnosticOptions::MSVC);
-  else if (Format == "msvc-fallback") {
-    Opts.setFormat(DiagnosticOptions::MSVC);
+  if (Args.getLastArgValue(OPT_fdiagnostics_format) == "msvc-fallback")
     Opts.CLFallbackMode = true;
-  } else if (Format == "vi")
-    Opts.setFormat(DiagnosticOptions::Vi);
-  else {
-    Success = false;
-    Diags->Report(diag::err_drv_invalid_value)
-        << Args.getLastArg(OPT_fdiagnostics_format)->getAsString(Args)
-        << Format;
-  }
 
-  Opts.ShowSourceRanges = Args.hasArg(OPT_fdiagnostics_print_source_range_info);
-  Opts.ShowParseableFixits = Args.hasArg(OPT_fdiagnostics_parseable_fixits);
-  Opts.ShowPresumedLoc = !Args.hasArg(OPT_fno_diagnostics_use_presumed_location);
   Opts.VerifyDiagnostics = Args.hasArg(OPT_verify) || Args.hasArg(OPT_verify_EQ);
   if (Args.hasArg(OPT_verify))
     Opts.VerifyPrefixes.push_back("expected");
@@ -1538,39 +1482,19 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
   if (Args.hasArg(OPT_verify_ignore_unexpected))
     DiagMask = DiagnosticLevelMask::All;
   Opts.setVerifyIgnoreUnexpected(DiagMask);
-  Opts.ElideType = !Args.hasArg(OPT_fno_elide_type);
-  Opts.ShowTemplateTree = Args.hasArg(OPT_fdiagnostics_show_template_tree);
-  Opts.ErrorLimit = getLastArgIntValue(Args, OPT_ferror_limit, 0, Diags);
-  Opts.MacroBacktraceLimit =
-      getLastArgIntValue(Args, OPT_fmacro_backtrace_limit,
-                         DiagnosticOptions::DefaultMacroBacktraceLimit, Diags);
-  Opts.TemplateBacktraceLimit = getLastArgIntValue(
-      Args, OPT_ftemplate_backtrace_limit,
-      DiagnosticOptions::DefaultTemplateBacktraceLimit, Diags);
-  Opts.ConstexprBacktraceLimit = getLastArgIntValue(
-      Args, OPT_fconstexpr_backtrace_limit,
-      DiagnosticOptions::DefaultConstexprBacktraceLimit, Diags);
-  Opts.SpellCheckingLimit = getLastArgIntValue(
-      Args, OPT_fspell_checking_limit,
-      DiagnosticOptions::DefaultSpellCheckingLimit, Diags);
-  Opts.SnippetLineLimit = getLastArgIntValue(
-      Args, OPT_fcaret_diagnostics_max_lines,
-      DiagnosticOptions::DefaultSnippetLineLimit, Diags);
-  Opts.TabStop = getLastArgIntValue(Args, OPT_ftabstop,
-                                    DiagnosticOptions::DefaultTabStop, Diags);
   if (Opts.TabStop == 0 || Opts.TabStop > DiagnosticOptions::MaxTabStop) {
     Opts.TabStop = DiagnosticOptions::DefaultTabStop;
     Diags->Report(diag::warn_ignoring_ftabstop_value)
         << Opts.TabStop << DiagnosticOptions::DefaultTabStop;
   }
-  Opts.MessageLength =
-      getLastArgIntValue(Args, OPT_fmessage_length_EQ, 0, Diags);
 
   addDiagnosticArgs(Args, OPT_W_Group, OPT_W_value_Group, Opts.Warnings);
   addDiagnosticArgs(Args, OPT_R_Group, OPT_R_value_Group, Opts.Remarks);
 
   return Success;
 }
+
+#undef PARSE_OPTION_WITH_MARSHALLING
 
 /// Parse the argument to the -ftest-module-file-extension
 /// command-line argument.
@@ -3250,24 +3174,45 @@ void CompilerInvocation::generateCC1CommandLine(
     SmallVectorImpl<const char *> &Args, StringAllocator SA) const {
   // Capture the extracted value as a lambda argument to avoid potential issues
   // with lifetime extension of the reference.
+#define GENERATE_OPTION_WITH_MARSHALLING(                                      \
+    ARGS, STRING_ALLOCATOR, KIND, FLAGS, SPELLING, ALWAYS_EMIT, KEYPATH,       \
+    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, EXTRACTOR,      \
+    TABLE_INDEX)                                                               \
+  if ((FLAGS)&options::CC1Option) {                                            \
+    [&](const auto &Extracted) {                                               \
+      if (ALWAYS_EMIT ||                                                       \
+          (Extracted !=                                                        \
+           static_cast<decltype(KEYPATH)>((IMPLIED_CHECK) ? (IMPLIED_VALUE)    \
+                                                          : (DEFAULT_VALUE)))) \
+        DENORMALIZER(ARGS, SPELLING, STRING_ALLOCATOR, Option::KIND##Class,    \
+                     TABLE_INDEX, Extracted);                                  \
+    }(EXTRACTOR(KEYPATH));                                                     \
+  }
+
 #define OPTION_WITH_MARSHALLING(                                               \
     PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
     HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
     DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
     MERGER, EXTRACTOR, TABLE_INDEX)                                            \
-  if ((FLAGS)&options::CC1Option) {                                            \
-    [&](const auto &Extracted) {                                               \
-      if (ALWAYS_EMIT ||                                                       \
-          (Extracted !=                                                        \
-           static_cast<decltype(this->KEYPATH)>(                               \
-               (IMPLIED_CHECK) ? (IMPLIED_VALUE) : (DEFAULT_VALUE))))          \
-        DENORMALIZER(Args, SPELLING, SA, Option::KIND##Class, TABLE_INDEX,     \
-                     Extracted);                                               \
-    }(EXTRACTOR(this->KEYPATH));                                               \
-  }
+  GENERATE_OPTION_WITH_MARSHALLING(                                            \
+      Args, SA, KIND, FLAGS, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,    \
+      IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, EXTRACTOR, TABLE_INDEX)
+
+#define DIAG_OPTION_WITH_MARSHALLING(                                          \
+    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
+    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
+    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
+    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
+  GENERATE_OPTION_WITH_MARSHALLING(                                            \
+      Args, SA, KIND, FLAGS, SPELLING, ALWAYS_EMIT, DiagnosticOpts->KEYPATH,   \
+      DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, EXTRACTOR,    \
+      TABLE_INDEX)
 
 #include "clang/Driver/Options.inc"
+
+#undef DIAG_OPTION_WITH_MARSHALLING
 #undef OPTION_WITH_MARSHALLING
+#undef GENERATE_OPTION_WITH_MARSHALLING
 }
 
 IntrusiveRefCntPtr<llvm::vfs::FileSystem>
