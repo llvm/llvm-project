@@ -350,6 +350,12 @@ CompilerType CompilerType::GetFullyUnqualifiedType() const {
   return CompilerType();
 }
 
+CompilerType CompilerType::GetEnumerationIntegerType() const {
+  if (IsValid())
+    return m_type_system->GetEnumerationIntegerType(m_type);
+  return CompilerType();
+}
+
 int CompilerType::GetFunctionArgumentCount() const {
   if (IsValid()) {
     return m_type_system->GetFunctionArgumentCount(m_type);
