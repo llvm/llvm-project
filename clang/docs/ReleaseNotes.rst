@@ -118,6 +118,10 @@ Modified Compiler Flags
   `-fno-delete-null-pointer-checks` has gained the power to remove the
   `nonnull` attribute on `this` for configurations that need it to be nullable.
 - ``-gsplit-dwarf`` no longer implies ``-g2``.
+- ``-fasynchronous-unwind-tables`` is now the default on Linux AArch64/PowerPC.
+  This behavior matches newer GCC.
+  (`D91760 <https://reviews.llvm.org/D91760>`_)
+  (`D92054 <https://reviews.llvm.org/D92054>`_)
 
 Removed Compiler Flags
 -------------------------

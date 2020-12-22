@@ -169,8 +169,7 @@ getShapeDefiningLoopRange(LinalgOp op, unsigned loopDepth,
   auto maps = op.indexing_maps();
   // Iterate over the inputs and outputs in order.
   // Extract the subranges from the linearized ranges.
-  SmallVector<Value, 8> ios(op.getInputsAndOutputBuffers());
-  for (auto en : llvm::enumerate(ios)) {
+  for (auto en : llvm::enumerate(op.getShapedOperands())) {
     // The method `getRangeFromOperandShape` requires using SubViewOp or
     // SubTensorOps. If the value isnt defined from there continue.
     // todo: The method should be adapted to get the values from
@@ -381,6 +380,8 @@ static bool isSameSubView(Value a, Value b) {
 static Optional<LinalgDependenceGraph::LinalgDependenceGraphElem>
 findFusableProducer(LinalgOp consumer, unsigned consumerIdx,
                     const LinalgDependenceGraph &dependenceGraph) {
+  assert(consumer.hasBufferSemantics() && "revisit usage of shaped operand");
+
   // Only consider RAW and WAW atm.
   for (auto depType : {
            LinalgDependenceGraph::DependenceType::RAW,
@@ -390,26 +391,25 @@ findFusableProducer(LinalgOp consumer, unsigned consumerIdx,
              dependenceGraph.getDependencesInto(consumer, depType),
              [consumerIdx](
                  LinalgDependenceGraph::LinalgDependenceGraphElem elem) {
-               return elem.indexingOpView.operandIndex == consumerIdx;
+               return elem.indexingOpView->getOperandNumber() == consumerIdx;
              })) {
-      auto producer = cast<LinalgOp>(dependence.dependentOpView.op);
 
       // Check that the dependence is indeed on the input `consumerIdx` view.
-      auto consumedView =
-          consumer.getBuffer(dependence.indexingOpView.operandIndex);
-      if (!isSameSubView(consumer.getBuffer(consumerIdx), consumedView))
+      Value consumedView = dependence.indexingOpView->get();
+      if (!isSameSubView(consumer.getShapedOperand(consumerIdx), consumedView))
         continue;
 
       // Consumer consumes this view, `isStructurallyFusableProducer` also
       // checks whether it is a strict subview of the producer view.
-      auto producedView =
-          producer.getBuffer(dependence.dependentOpView.operandIndex);
+      auto producer = cast<LinalgOp>(dependence.dependentOpView->getOwner());
+      Value producedView = dependence.dependentOpView->get();
       LLVM_DEBUG(llvm::dbgs()
                  << "\n"
                  << LinalgDependenceGraph::getDependenceTypeStr(depType)
-                 << "producer: " << *producer.getOperation()
-                 << " view: " << producedView << " output index: "
-                 << dependence.dependentOpView.operandIndex -
+                 << "producer: " << *dependence.dependentOpView->getOwner()
+                 << " view: " << dependence.dependentOpView->get()
+                 << " output index: "
+                 << dependence.dependentOpView->getOperandNumber() -
                         producer.getNumInputs()
                  << "\n");
       (void)producedView;
@@ -433,13 +433,15 @@ mlir::linalg::fuseProducerOfBuffer(OpBuilder &b, LinalgOp consumer,
   if (!fusableDependence)
     return {};
 
-  LinalgOp producerOp = cast<LinalgOp>(fusableDependence->dependentOpView.op);
+  LinalgOp producerOp =
+      cast<LinalgOp>(fusableDependence->dependentOpView->getOwner());
   // If producer is already in the same block as consumer, we are done.
   if (consumer->getBlock() == producerOp->getBlock())
     return {};
 
-  unsigned producerIdx = fusableDependence->dependentOpView.operandIndex -
-                         producerOp.getNumInputs();
+  unsigned producerIdx =
+      fusableDependence->dependentOpView->getOperandNumber() -
+      producerOp.getNumInputs();
   Value consumerView = consumer.getShapedOperand(consumerIdx);
 
   // Must be a subview or a slice to guarantee there are loops we can fuse
@@ -548,12 +550,12 @@ static AffineMap pruneReductionDimsFromMap(ArrayRef<Attribute> iteratorTypes,
 ///       inverse(producerIndexMap).compose(consumerIndexMap)
 static Optional<AffineMap> getConsumerLoopToProducerLoopMap(
     LinalgDependenceGraph::LinalgDependenceGraphElem dependence) {
-  auto producer = cast<LinalgOp>(dependence.dependentOpView.op);
+  auto producer = cast<LinalgOp>(dependence.dependentOpView->getOwner());
   AffineMap producerIndexingMap =
-      producer.getIndexingMap(dependence.dependentOpView.operandIndex);
-  auto consumer = cast<LinalgOp>(dependence.indexingOpView.op);
+      producer.getIndexingMap(dependence.dependentOpView->getOperandNumber());
+  auto consumer = cast<LinalgOp>(dependence.indexingOpView->getOwner());
   AffineMap consumerIndexingMap =
-      consumer.getIndexingMap(dependence.indexingOpView.operandIndex);
+      consumer.getIndexingMap(dependence.indexingOpView->getOperandNumber());
 
   AffineMap prunedProducerIndexingMap = pruneReductionDimsFromMap(
       producer.iterator_types().getValue(), producerIndexingMap);
@@ -733,14 +735,14 @@ FusableOpDependencesTy mlir::linalg::findAllFusableDependences(
   DenseMap<Operation *, AffineMap> fusedProducerIndexingMap;
   for (LinalgOp op : reverse(ops)) {
     for (auto operandIndex :
-         llvm::seq<unsigned>(0, op.getNumInputsAndOutputBuffers())) {
+         llvm::seq<unsigned>(0, op.getNumShapedOperands())) {
       Optional<LinalgDependenceGraph::LinalgDependenceGraphElem>
           fusableDependence =
               findFusableProducer(op, operandIndex, dependenceGraph);
       if (!fusableDependence)
         continue;
       LinalgOp producerOp =
-          cast<LinalgOp>(fusableDependence->dependentOpView.op);
+          cast<LinalgOp>(fusableDependence->dependentOpView->getOwner());
       // Do not fuse dependences that are to operations not in the same basic
       // block. This avoid moving fused operations across loops that might
       // themselves carry dependency making the fusion illegal.
@@ -750,7 +752,8 @@ FusableOpDependencesTy mlir::linalg::findAllFusableDependences(
       }
       // Make sure that the indexing map of the view used for fusion in the
       // producer is a projected permutation.
-      unsigned producerIdx = fusableDependence->dependentOpView.operandIndex;
+      unsigned producerIdx =
+          fusableDependence->dependentOpView->getOperandNumber();
       AffineMap producerMap = producerOp.getIndexingMap(producerIdx);
       if (!producerMap.isProjectedPermutation()) {
         op.emitRemark(
@@ -760,7 +763,8 @@ FusableOpDependencesTy mlir::linalg::findAllFusableDependences(
         return FusableOpDependencesTy{};
       }
 
-      unsigned consumerIdx = fusableDependence->indexingOpView.operandIndex;
+      unsigned consumerIdx =
+          fusableDependence->indexingOpView->getOperandNumber();
       AffineMap consumerMap = op.getIndexingMap(consumerIdx);
       if (!consumerMap.isProjectedPermutation()) {
         op.emitRemark(

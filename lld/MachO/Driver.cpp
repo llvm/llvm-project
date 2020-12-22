@@ -524,7 +524,7 @@ static void replaceCommonSymbols() {
 
     replaceSymbol<Defined>(sym, sym->getName(), isec, /*value=*/0,
                            /*isWeakDef=*/false,
-                           /*isExternal=*/true);
+                           /*isExternal=*/true, common->privateExtern);
   }
 }
 

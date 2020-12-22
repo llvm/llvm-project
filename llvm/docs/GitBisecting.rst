@@ -23,7 +23,7 @@ See https://git-scm.com/docs/git-bisect for a good overview. In summary:
   .. code-block:: bash
 
      git bisect start
-     git bisect bad master
+     git bisect bad main
      git bisect good f00ba
 
 git will check out a revision in between. Try to reproduce your problem at
@@ -33,8 +33,8 @@ If you can't repro at the current commit (maybe the build is broken), run
 ``git bisect skip`` and git will pick a nearby alternate commit.
 
 (To abort a bisect, run ``git bisect reset``, and if git complains about not
-being able to reset, do the usual ``git checkout -f master; git reset --hard
-origin/master`` dance and try again).
+being able to reset, do the usual ``git checkout -f main; git reset --hard
+origin/main`` dance and try again).
 
 ``git bisect run``
 ==================

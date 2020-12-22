@@ -62,7 +62,7 @@ def OMPC_Collapse : Clause<"collapse"> {
 }
 def OMPC_Default : Clause<"default"> {
   let clangClass = "OMPDefaultClause";
-  let flangClass = "OmpDefaultClause";
+  let flangClassValue = "OmpDefaultClause";
 }
 def OMPC_Private : Clause<"private"> {
   let clangClass = "OMPPrivateClause";
@@ -107,7 +107,7 @@ def OMP_PROC_BIND_default : ClauseVal<"default",5,0> {}
 def OMP_PROC_BIND_unknown : ClauseVal<"unknown",6,0> { let isDefault = true; }
 def OMPC_ProcBind : Clause<"proc_bind"> {
   let clangClass = "OMPProcBindClause";
-  let flangClass = "OmpProcBindClause";
+  let flangClassValue = "OmpProcBindClause";
   let enumClauseValue = "ProcBindKind";
   let allowedClauseValues = [
     OMP_PROC_BIND_master,
@@ -147,7 +147,6 @@ def OMPC_Ordered : Clause<"ordered"> {
 }
 def OMPC_NoWait : Clause<"nowait"> {
   let clangClass = "OMPNowaitClause";
-  let flangClass = "OmpNowait";
 }
 def OMPC_Untied : Clause<"untied"> { let clangClass = "OMPUntiedClause"; }
 def OMPC_Mergeable : Clause<"mergeable"> {
@@ -205,7 +204,6 @@ def OMPC_Hint : Clause<"hint"> {
 }
 def OMPC_DistSchedule : Clause<"dist_schedule"> {
   let clangClass = "OMPDistScheduleClause";
-  let flangClass = "OmpDistScheduleClause";
   let flangClassValue = "ScalarIntExpr";
   let isValueOptional = true;
 }
@@ -254,7 +252,7 @@ def OMPC_AtomicDefaultMemOrder : Clause<"atomic_default_mem_order"> {
 }
 def OMPC_Allocate : Clause<"allocate"> {
   let clangClass = "OMPAllocateClause";
-  let flangClass = "OmpAllocateClause";
+  let flangClassValue = "OmpAllocateClause";
 }
 def OMPC_NonTemporal : Clause<"nontemporal"> {
   let clangClass = "OMPNontemporalClause";

@@ -1,5 +1,5 @@
 # REQUIRES: x86
-# RUN: mkdir -p %t
+# RUN: rm -rf %t; split-file %s %t
 
 ## This tests examines the effect of .weak_definition on symbols in an archive
 ## that are not referenced directly, but which are still loaded due to some
@@ -9,13 +9,11 @@
 ## will be fetched when linking against the main test file due to its references
 ## to _bar and _baz.
 
-# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t/test.o
-# RUN: echo ".globl _foo, _bar; .section __TEXT,nonweak; _bar: _foo:" | llvm-mc -filetype=obj -triple=x86_64-apple-darwin -o %t/foo.o
-# RUN: echo ".globl _foo, _baz; .weak_definition _foo; .section __TEXT,weak; _baz: _foo:" | llvm-mc -filetype=obj -triple=x86_64-apple-darwin -o %t/weakfoo.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/test.s -o %t/test.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/foo.s -o %t/foo.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/weakfoo.s -o %t/weakfoo.o
 
-# RUN: rm -f %t/foo.a
 # RUN: llvm-ar --format=darwin rcs %t/foo.a %t/foo.o
-# RUN: rm -f %t/weakfoo.a
 # RUN: llvm-ar --format=darwin rcs %t/weakfoo.a %t/weakfoo.o
 
 # PREFER-NONWEAK-OBJECT: O __TEXT,nonweak _foo
@@ -35,6 +33,20 @@
 # RUN: %lld -lSystem -o %t/nonweak-ar-weak-obj -L%t %t/foo.a %t/weakfoo.o %t/test.o
 # RUN: llvm-objdump --syms %t/nonweak-ar-weak-obj | FileCheck %s --check-prefix=PREFER-NONWEAK-OBJECT
 
+#--- foo.s
+.globl _foo, _bar
+.section __TEXT,nonweak
+_bar:
+_foo:
+
+#--- weakfoo.s
+.globl _foo, _baz
+.weak_definition _foo
+.section __TEXT,weak
+_baz:
+_foo:
+
+#--- test.s
 .globl _main
 _main:
   callq _bar

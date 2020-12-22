@@ -199,9 +199,8 @@ private:
     // block argument.
     auto scalarArg = scalarValue.cast<BlockArgument>();
     assert(scalarArg.getOwner() == &generic.region().front());
-    Value vector_arg =
-        generic.getInputsAndOutputBuffers()[scalarArg.getArgNumber()];
-    Value vectorResult = transferReadVector(builder, vector_arg);
+    Value vectorArg = generic.getShapedOperand(scalarArg.getArgNumber());
+    Value vectorResult = transferReadVector(builder, vectorArg);
     valueCache[scalarArg] = vectorResult;
     return vectorResult;
   }
@@ -277,7 +276,7 @@ static void vectorizeElementwise(linalg::GenericOp op, OpBuilder &builder) {
 LogicalResult mlir::linalg::vectorizeLinalgOpPrecondition(Operation *op) {
   auto linalgOp = cast<linalg::LinalgOp>(op);
   // All types must be static shape to go to vector.
-  for (Value operand : linalgOp.getInputsAndOutputBuffers())
+  for (Value operand : linalgOp.getShapedOperands())
     if (!operand.getType().cast<ShapedType>().hasStaticShape())
       return failure();
   for (Type outputTensorType : linalgOp.getOutputTensorTypes())
@@ -411,7 +410,7 @@ LogicalResult LinalgCopyVTRForwardingPattern::matchAndRewrite(
     vector::TransferReadOp xferOp, PatternRewriter &rewriter) const {
 
   // Transfer into `view`.
-  Value viewOrAlloc = xferOp.memref();
+  Value viewOrAlloc = xferOp.source();
   if (!viewOrAlloc.getDefiningOp<ViewOp>() &&
       !viewOrAlloc.getDefiningOp<AllocOp>())
     return failure();
@@ -487,7 +486,7 @@ LogicalResult LinalgCopyVTRForwardingPattern::matchAndRewrite(
 LogicalResult LinalgCopyVTWForwardingPattern::matchAndRewrite(
     vector::TransferWriteOp xferOp, PatternRewriter &rewriter) const {
   // Transfer into `viewOrAlloc`.
-  Value viewOrAlloc = xferOp.memref();
+  Value viewOrAlloc = xferOp.source();
   if (!viewOrAlloc.getDefiningOp<ViewOp>() &&
       !viewOrAlloc.getDefiningOp<AllocOp>())
     return failure();

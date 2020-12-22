@@ -45,8 +45,8 @@ static linalg::GenericOp createGenericOpFromNamedOp(linalg::LinalgOp namedOp,
   SmallVector<Type, 4> types(resultTypes.begin(), resultTypes.end());
 
   return builder.create<linalg::GenericOp>(
-      namedOp.getLoc(), types, namedOp.getInputs(), namedOp.getOutputBuffers(),
-      namedOp.getInitTensors(), indexingMaps, iterators,
+      namedOp.getLoc(), types, namedOp.getInputs(), namedOp.getOutputs(),
+      indexingMaps, iterators,
       [&regionBuilder](OpBuilder &bodyBuilder, Location loc, ValueRange) {
         edsc::ScopedContext scope(bodyBuilder, loc);
         regionBuilder(*bodyBuilder.getBlock());
@@ -153,8 +153,8 @@ linalg::GenericOp GeneralizeConvOp::createGenericOp(linalg::ConvOp convOp,
       llvm::to_vector<4>(convOp.iterator_types().getAsValueRange<StringAttr>());
   return builder.create<linalg::GenericOp>(
       convOp.getLoc(), /*resultTensorTypes=*/ArrayRef<Type>(),
-      convOp.getInputBuffers(), convOp.getOutputBuffers(),
-      /*initTensors=*/ValueRange(), indexingMaps, iterators,
+      convOp.getInputBuffers(), convOp.getOutputBuffers(), indexingMaps,
+      iterators,
       [](OpBuilder &bodyBuilder, Location bodyLoc, ValueRange bodyArgs) {
         Value mul =
             bodyBuilder.create<MulFOp>(bodyLoc, bodyArgs[0], bodyArgs[1]);

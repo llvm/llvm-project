@@ -2,7 +2,6 @@
 # RUN: rm -rf %t; split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/test.s -o %t/test.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/foo.s -o %t/foo.o
-# RUN: rm -f %t/foo.a
 # RUN: llvm-ar rcs %t/foo.a %t/foo.o
 
 # FOO-FIRST: <_bar>:

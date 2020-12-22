@@ -1477,12 +1477,12 @@ struct DimOfCastOp : public OpRewritePattern<DimOp> {
     return success();
   }
 };
-
 } // end anonymous namespace.
 
 void DimOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                                         MLIRContext *context) {
-  results.insert<DimOfMemRefReshape, DimOfCastOp<tensor::CastOp>>(context);
+  results.insert<DimOfMemRefReshape, DimOfCastOp<TensorToMemrefOp>,
+                 DimOfCastOp<tensor::CastOp>>(context);
 }
 
 // ---------------------------------------------------------------------------

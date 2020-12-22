@@ -53,6 +53,16 @@ namespace llvm {
 // Forward declarations of an update tracking API used in the pass manager.
 class LPMUpdater;
 
+namespace {
+
+template <typename PassT>
+using HasRunOnLoopT = decltype(std::declval<PassT>().run(
+    std::declval<Loop &>(), std::declval<LoopAnalysisManager &>(),
+    std::declval<LoopStandardAnalysisResults &>(),
+    std::declval<LPMUpdater &>()));
+
+} // namespace
+
 // Explicit specialization and instantiation declarations for the pass manager.
 // See the comments on the definition of the specialization for details on how
 // it differs from the primary template.
@@ -62,13 +72,6 @@ class PassManager<Loop, LoopAnalysisManager, LoopStandardAnalysisResults &,
     : public PassInfoMixin<
           PassManager<Loop, LoopAnalysisManager, LoopStandardAnalysisResults &,
                       LPMUpdater &>> {
-private:
-  template <typename PassT>
-  using HasRunOnLoopT = decltype(std::declval<PassT>().run(
-      std::declval<Loop &>(), std::declval<LoopAnalysisManager &>(),
-      std::declval<LoopStandardAnalysisResults &>(),
-      std::declval<LPMUpdater &>()));
-
 public:
   /// Construct a pass manager.
   ///
@@ -154,6 +157,9 @@ public:
 
   static bool isRequired() { return true; }
 
+  size_t getNumLoopPasses() const { return LoopPasses.size(); }
+  size_t getNumLoopNestPasses() const { return LoopNestPasses.size(); }
+
 protected:
   using LoopPassConceptT =
       detail::PassConcept<Loop, LoopAnalysisManager,
@@ -227,6 +233,13 @@ class FunctionToLoopPassAdaptor;
 /// A reference to an instance of this class is passed as an argument to each
 /// Loop pass, and Loop passes should use it to update LPM infrastructure if
 /// they modify the loop nest structure.
+///
+/// \c LPMUpdater comes with two modes: the loop mode and the loop-nest mode. In
+/// loop mode, all the loops in the function will be pushed into the worklist
+/// and when new loops are added to the pipeline, their subloops are also
+/// inserted recursively. On the other hand, in loop-nest mode, only top-level
+/// loops are contained in the worklist and the addition of new (top-level)
+/// loops will not trigger the addition of their subloops.
 class LPMUpdater {
 public:
   /// This can be queried by loop passes which run other loop passes (like pass
@@ -248,6 +261,8 @@ public:
   /// state, this routine will mark that the current loop should be skipped by
   /// the rest of the pass management infrastructure.
   void markLoopAsDeleted(Loop &L, llvm::StringRef Name) {
+    assert((!LoopNestMode || L.isOutermost()) &&
+           "L should be a top-level loop in loop-nest mode.");
     LAM.clear(L, Name);
     assert((&L == CurrentL || CurrentL->contains(&L)) &&
            "Cannot delete a loop outside of the "
@@ -263,6 +278,8 @@ public:
   /// loops within them will be visited in postorder as usual for the loop pass
   /// manager.
   void addChildLoops(ArrayRef<Loop *> NewChildLoops) {
+    assert(!LoopNestMode &&
+           "Child loops should not be pushed in loop-nest mode.");
     // Insert ourselves back into the worklist first, as this loop should be
     // revisited after all the children have been processed.
     Worklist.insert(CurrentL);
@@ -294,7 +311,10 @@ public:
              "All of the new loops must be siblings of the current loop!");
 #endif
 
-    appendLoopsToWorklist(NewSibLoops, Worklist);
+    if (LoopNestMode)
+      Worklist.insert(NewSibLoops);
+    else
+      appendLoopsToWorklist(NewSibLoops, Worklist);
 
     // No need to skip the current loop or revisit it, as sibling loops
     // shouldn't impact anything.
@@ -324,6 +344,7 @@ private:
 
   Loop *CurrentL;
   bool SkipCurrentLoop;
+  const bool LoopNestMode;
 
 #ifndef NDEBUG
   // In debug builds we also track the parent loop to implement asserts even in
@@ -332,8 +353,8 @@ private:
 #endif
 
   LPMUpdater(SmallPriorityWorklist<Loop *, 4> &Worklist,
-             LoopAnalysisManager &LAM)
-      : Worklist(Worklist), LAM(LAM) {}
+             LoopAnalysisManager &LAM, bool LoopNestMode = false)
+      : Worklist(Worklist), LAM(LAM), LoopNestMode(LoopNestMode) {}
 };
 
 template <typename IRUnitT, typename PassT>
@@ -366,6 +387,15 @@ Optional<PreservedAnalyses> LoopPassManager::runSinglePass(
 /// FunctionAnalysisManager it will run the \c LoopAnalysisManagerFunctionProxy
 /// analysis prior to running the loop passes over the function to enable a \c
 /// LoopAnalysisManager to be used within this run safely.
+///
+/// The adaptor comes with two modes: the loop mode and the loop-nest mode, and
+/// the worklist updater lived inside will be in the same mode as the adaptor
+/// (refer to the documentation of \c LPMUpdater for more detailed explanation).
+/// Specifically, in loop mode, all loops in the funciton will be pushed into
+/// the worklist and processed by \p Pass, while only top-level loops are
+/// processed in loop-nest mode. Please refer to the various specializations of
+/// \fn createLoopFunctionToLoopPassAdaptor to see when loop mode and loop-nest
+/// mode are used.
 class FunctionToLoopPassAdaptor
     : public PassInfoMixin<FunctionToLoopPassAdaptor> {
 public:
@@ -376,10 +406,12 @@ public:
   explicit FunctionToLoopPassAdaptor(std::unique_ptr<PassConceptT> Pass,
                                      bool UseMemorySSA = false,
                                      bool UseBlockFrequencyInfo = false,
-                                     bool DebugLogging = false)
+                                     bool DebugLogging = false,
+                                     bool LoopNestMode = false)
       : Pass(std::move(Pass)), LoopCanonicalizationFPM(DebugLogging),
         UseMemorySSA(UseMemorySSA),
-        UseBlockFrequencyInfo(UseBlockFrequencyInfo) {
+        UseBlockFrequencyInfo(UseBlockFrequencyInfo),
+        LoopNestMode(LoopNestMode) {
     LoopCanonicalizationFPM.addPass(LoopSimplifyPass());
     LoopCanonicalizationFPM.addPass(LCSSAPass());
   }
@@ -389,6 +421,8 @@ public:
 
   static bool isRequired() { return true; }
 
+  bool isLoopNestMode() const { return LoopNestMode; }
+
 private:
   std::unique_ptr<PassConceptT> Pass;
 
@@ -396,12 +430,16 @@ private:
 
   bool UseMemorySSA = false;
   bool UseBlockFrequencyInfo = false;
+  const bool LoopNestMode;
 };
 
 /// A function to deduce a loop pass type and wrap it in the templated
 /// adaptor.
+///
+/// If \p Pass is a loop pass, the returned adaptor will be in loop mode.
 template <typename LoopPassT>
-FunctionToLoopPassAdaptor
+inline std::enable_if_t<is_detected<HasRunOnLoopT, LoopPassT>::value,
+                        FunctionToLoopPassAdaptor>
 createFunctionToLoopPassAdaptor(LoopPassT Pass, bool UseMemorySSA = false,
                                 bool UseBlockFrequencyInfo = false,
                                 bool DebugLogging = false) {
@@ -410,7 +448,46 @@ createFunctionToLoopPassAdaptor(LoopPassT Pass, bool UseMemorySSA = false,
                         LoopStandardAnalysisResults &, LPMUpdater &>;
   return FunctionToLoopPassAdaptor(
       std::make_unique<PassModelT>(std::move(Pass)), UseMemorySSA,
-      UseBlockFrequencyInfo, DebugLogging);
+      UseBlockFrequencyInfo, DebugLogging, false);
+}
+
+/// If \p Pass is a loop-nest pass, \p Pass will first be wrapped into a
+/// \c LoopPassManager and the returned adaptor will be in loop-nest mode.
+template <typename LoopNestPassT>
+inline std::enable_if_t<!is_detected<HasRunOnLoopT, LoopNestPassT>::value,
+                        FunctionToLoopPassAdaptor>
+createFunctionToLoopPassAdaptor(LoopNestPassT Pass, bool UseMemorySSA = false,
+                                bool UseBlockFrequencyInfo = false,
+                                bool DebugLogging = false) {
+  LoopPassManager LPM(DebugLogging);
+  LPM.addPass(std::move(Pass));
+  using PassModelT =
+      detail::PassModel<Loop, LoopPassManager, PreservedAnalyses,
+                        LoopAnalysisManager, LoopStandardAnalysisResults &,
+                        LPMUpdater &>;
+  return FunctionToLoopPassAdaptor(std::make_unique<PassModelT>(std::move(LPM)),
+                                   UseMemorySSA, UseBlockFrequencyInfo,
+                                   DebugLogging, true);
+}
+
+/// If \p Pass is an instance of \c LoopPassManager, the returned adaptor will
+/// be in loop-nest mode if the pass manager contains only loop-nest passes.
+template <>
+inline FunctionToLoopPassAdaptor
+createFunctionToLoopPassAdaptor<LoopPassManager>(LoopPassManager LPM,
+                                                 bool UseMemorySSA,
+                                                 bool UseBlockFrequencyInfo,
+                                                 bool DebugLogging) {
+  // Check if LPM contains any loop pass and if it does not, returns an adaptor
+  // in loop-nest mode.
+  using PassModelT =
+      detail::PassModel<Loop, LoopPassManager, PreservedAnalyses,
+                        LoopAnalysisManager, LoopStandardAnalysisResults &,
+                        LPMUpdater &>;
+  bool LoopNestMode = (LPM.getNumLoopPasses() == 0);
+  return FunctionToLoopPassAdaptor(std::make_unique<PassModelT>(std::move(LPM)),
+                                   UseMemorySSA, UseBlockFrequencyInfo,
+                                   DebugLogging, LoopNestMode);
 }
 
 /// Pass for printing a loop's contents as textual IR.

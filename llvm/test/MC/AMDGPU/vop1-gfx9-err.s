@@ -12,7 +12,6 @@ v_swap_b32 v1, s0
 // GFX9: error: invalid operand for instruction
 // VI: error: instruction not supported on this GPU
 
-// FIXME: Better error for it requiring VOP1 encoding
 v_swap_b32_e64 v1, v2
 // GFX9: :1: error: e64 variant of this instruction is not supported
 // CI: :1: error: instruction not supported on this GPU

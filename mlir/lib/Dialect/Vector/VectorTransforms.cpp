@@ -492,8 +492,9 @@ static void getVectorElementwiseOpUnrollState(Operation *op,
   assert(resultType && "Expected op with vector result type");
   auto resultShape = resultType.getShape();
   // Verify that all operands have the same vector type as result.
-  assert(llvm::all_of(op->getOperandTypes(),
-                      [=](Type type) { return type == resultType; }));
+  assert(llvm::all_of(op->getOperandTypes(), [=](Type type) {
+    return type.cast<VectorType>().getShape() == resultShape;
+  }));
 
   // Create trivial elementwise identity index map based on 'resultShape'.
   DenseMap<int64_t, int64_t> indexMap;
@@ -504,8 +505,9 @@ static void getVectorElementwiseOpUnrollState(Operation *op,
   // Create VectorState each operand and single result.
   unsigned numVectors = op->getNumOperands() + op->getNumResults();
   vectors.resize(numVectors);
-  for (unsigned i = 0; i < op->getNumOperands(); ++i)
-    vectors[i] = {resultType, indexMap, i, false};
+  for (auto it : llvm::enumerate(op->getOperandTypes()))
+    vectors[it.index()] = {it.value().cast<VectorType>(), indexMap,
+                           static_cast<int64_t>(it.index()), false};
   vectors[numVectors - 1] = {resultType, indexMap, -1, false};
   resultIndex = numVectors - 1;
 }
@@ -597,7 +599,7 @@ static Value unrollTransferReadOp(vector::TransferReadOp readOp,
 
   Location loc = readOp.getLoc();
   auto memrefElementType =
-      readOp.memref().getType().cast<MemRefType>().getElementType();
+      readOp.source().getType().cast<MemRefType>().getElementType();
   auto tupleType = generateExtractSlicesOpResultType(
       sourceVectorType, targetShape, strides, builder);
   int64_t numSlices = tupleType.size();
@@ -612,7 +614,7 @@ static Value unrollTransferReadOp(vector::TransferReadOp readOp,
     // `masked` attribute propagates conservatively: if the coarse op didn't
     // need masking, the fine op doesn't either.
     vectorTupleValues[index] = builder.create<vector::TransferReadOp>(
-        loc, sliceVectorType, readOp.memref(), sliceIndices,
+        loc, sliceVectorType, readOp.source(), sliceIndices,
         readOp.permutation_map(), readOp.padding(),
         readOp.masked() ? *readOp.masked() : ArrayAttr());
   };
@@ -644,14 +646,14 @@ mlir::vector::unrollTransferWriteOp(OpBuilder &builder, Operation *op,
   Value tuple = builder.create<vector::ExtractSlicesOp>(
       loc, tupleType, writeOp.vector(), targetShape, strides);
   auto memrefElementType =
-      writeOp.memref().getType().cast<MemRefType>().getElementType();
+      writeOp.source().getType().cast<MemRefType>().getElementType();
   SmallVector<Value, 4> indices(writeOp.indices().begin(),
                                 writeOp.indices().end());
   auto createSlice = [&](unsigned index, ArrayRef<Value> sliceIndices) {
     auto element = builder.create<vector::TupleGetOp>(
         loc, tupleType.getType(index), tuple, builder.getI64IntegerAttr(index));
     builder.create<vector::TransferWriteOp>(
-        loc, element.getResult(), writeOp.memref(), sliceIndices,
+        loc, element.getResult(), writeOp.source(), sliceIndices,
         writeOp.permutation_map(),
         writeOp.masked() ? *writeOp.masked() : ArrayAttr());
   };
@@ -760,7 +762,7 @@ struct SplitTransferWriteOp : public OpRewritePattern<vector::TransferWriteOp> {
 
     Location loc = xferWriteOp.getLoc();
     auto memrefElementType =
-        xferWriteOp.memref().getType().cast<MemRefType>().getElementType();
+        xferWriteOp.source().getType().cast<MemRefType>().getElementType();
     SmallVector<Value, 4> indices(xferWriteOp.indices().begin(),
                                   xferWriteOp.indices().end());
     auto createSlice = [&](unsigned index, ArrayRef<Value> sliceIndices) {
@@ -768,7 +770,7 @@ struct SplitTransferWriteOp : public OpRewritePattern<vector::TransferWriteOp> {
       // `masked` attribute propagates conservatively: if the coarse op didn't
       // need masking, the fine op doesn't either.
       rewriter.create<vector::TransferWriteOp>(
-          loc, tupleOp.getOperand(index), xferWriteOp.memref(), sliceIndices,
+          loc, tupleOp.getOperand(index), xferWriteOp.source(), sliceIndices,
           xferWriteOp.permutation_map(),
           xferWriteOp.masked() ? *xferWriteOp.masked() : ArrayAttr());
     };
@@ -2142,7 +2144,7 @@ static Value createScopedInBoundsCond(VectorTransferOpInterface xferOp) {
     // Fold or create the check that `index + vector_size` <= `memref_size`.
     Value sum = xferOp.indices()[indicesIdx] + std_constant_index(vectorSize);
     Value cond =
-        createScopedFoldedSLE(sum, std_dim(xferOp.memref(), indicesIdx));
+        createScopedFoldedSLE(sum, std_dim(xferOp.source(), indicesIdx));
     if (!cond)
       return;
     // Conjunction over all dims for which we are in-bounds.
@@ -2207,23 +2209,23 @@ static MemRefType getCastCompatibleMemRefType(MemRefType aT, MemRefType bT) {
 }
 
 /// Operates under a scoped context to build the intersection between the
-/// view `xferOp.memref()` @ `xferOp.indices()` and the view `alloc`.
+/// view `xferOp.source()` @ `xferOp.indices()` and the view `alloc`.
 // TODO: view intersection/union/differences should be a proper std op.
 static Value createScopedSubViewIntersection(VectorTransferOpInterface xferOp,
                                              Value alloc) {
   using namespace edsc::intrinsics;
-  int64_t memrefRank = xferOp.getMemRefType().getRank();
+  int64_t memrefRank = xferOp.getShapedType().getRank();
   // TODO: relax this precondition, will require rank-reducing subviews.
   assert(memrefRank == alloc.getType().cast<MemRefType>().getRank() &&
          "Expected memref rank to match the alloc rank");
   Value one = std_constant_index(1);
   ValueRange leadingIndices =
-      xferOp.indices().take_front(xferOp.getLeadingMemRefRank());
+      xferOp.indices().take_front(xferOp.getLeadingShapedRank());
   SmallVector<Value, 4> sizes;
   sizes.append(leadingIndices.begin(), leadingIndices.end());
   xferOp.zipResultAndIndexing([&](int64_t resultIdx, int64_t indicesIdx) {
     using MapList = ArrayRef<ArrayRef<AffineExpr>>;
-    Value dimMemRef = std_dim(xferOp.memref(), indicesIdx);
+    Value dimMemRef = std_dim(xferOp.source(), indicesIdx);
     Value dimAlloc = std_dim(alloc, resultIdx);
     Value index = xferOp.indices()[indicesIdx];
     AffineExpr i, j, k;
@@ -2235,7 +2237,7 @@ static Value createScopedSubViewIntersection(VectorTransferOpInterface xferOp,
                                  ValueRange{dimMemRef, index, dimAlloc});
     sizes.push_back(affineMin);
   });
-  return std_sub_view(xferOp.memref(), xferOp.indices(), sizes,
+  return std_sub_view(xferOp.source(), xferOp.indices(), sizes,
                       SmallVector<Value, 4>(memrefRank, one));
 }
 
@@ -2263,12 +2265,12 @@ static scf::IfOp createScopedFullPartialLinalgCopy(
   using namespace edsc::intrinsics;
   scf::IfOp fullPartialIfOp;
   Value zero = std_constant_index(0);
-  Value memref = xferOp.memref();
+  Value memref = xferOp.source();
   conditionBuilder(
       returnTypes, inBoundsCond,
       [&]() -> scf::ValueVector {
         Value res = memref;
-        if (compatibleMemRefType != xferOp.getMemRefType())
+        if (compatibleMemRefType != xferOp.getShapedType())
           res = std_memref_cast(memref, compatibleMemRefType);
         scf::ValueVector viewAndIndices{res};
         viewAndIndices.insert(viewAndIndices.end(), xferOp.indices().begin(),
@@ -2317,12 +2319,12 @@ static scf::IfOp createScopedFullPartialVectorTransferRead(
   using namespace edsc::intrinsics;
   scf::IfOp fullPartialIfOp;
   Value zero = std_constant_index(0);
-  Value memref = xferOp.memref();
+  Value memref = xferOp.source();
   conditionBuilder(
       returnTypes, inBoundsCond,
       [&]() -> scf::ValueVector {
         Value res = memref;
-        if (compatibleMemRefType != xferOp.getMemRefType())
+        if (compatibleMemRefType != xferOp.getShapedType())
           res = std_memref_cast(memref, compatibleMemRefType);
         scf::ValueVector viewAndIndices{res};
         viewAndIndices.insert(viewAndIndices.end(), xferOp.indices().begin(),
@@ -2376,7 +2378,7 @@ static scf::IfOp createScopedFullPartialVectorTransferRead(
 ///
 /// Preconditions:
 ///  1. `xferOp.permutation_map()` must be a minor identity map
-///  2. the rank of the `xferOp.memref()` and the rank of the `xferOp.vector()`
+///  2. the rank of the `xferOp.source()` and the rank of the `xferOp.vector()`
 ///  must be equal. This will be relaxed in the future but requires
 ///  rank-reducing subviews.
 LogicalResult mlir::vector::splitFullAndPartialTransfer(
@@ -2404,8 +2406,8 @@ LogicalResult mlir::vector::splitFullAndPartialTransfer(
     return failure();
 
   OpBuilder::InsertionGuard guard(b);
-  if (xferOp.memref().getDefiningOp())
-    b.setInsertionPointAfter(xferOp.memref().getDefiningOp());
+  if (Operation *sourceOp = xferOp.source().getDefiningOp())
+    b.setInsertionPointAfter(sourceOp);
   else
     b.setInsertionPoint(xferOp);
   ScopedContext scope(b, xferOp.getLoc());
@@ -2426,8 +2428,9 @@ LogicalResult mlir::vector::splitFullAndPartialTransfer(
                        b.getI64IntegerAttr(32));
   }
 
-  MemRefType compatibleMemRefType = getCastCompatibleMemRefType(
-      xferOp.getMemRefType(), alloc.getType().cast<MemRefType>());
+  MemRefType compatibleMemRefType =
+      getCastCompatibleMemRefType(xferOp.getShapedType().cast<MemRefType>(),
+                                  alloc.getType().cast<MemRefType>());
 
   // Read case: full fill + partial copy -> unmasked vector.xfer_read.
   SmallVector<Type, 4> returnTypes(1 + xferOp.getTransferRank(),
@@ -2543,7 +2546,7 @@ struct TransferReadExtractPattern
           extract.ids()[idCount++] *
               std_constant_index(extract.getResultType().getDimSize(pos));
     }
-    Value newRead = vector_transfer_read(extract.getType(), read.memref(),
+    Value newRead = vector_transfer_read(extract.getType(), read.source(),
                                          indices, read.permutation_map(),
                                          read.padding(), read.maskedAttr());
     Value dest = rewriter.create<ConstantOp>(
@@ -2579,7 +2582,7 @@ struct TransferWriteInsertPattern
           insert.ids()[idCount++] *
               std_constant_index(insert.getSourceVectorType().getDimSize(pos));
     }
-    vector_transfer_write(insert.vector(), write.memref(), indices,
+    vector_transfer_write(insert.vector(), write.source(), indices,
                           write.permutation_map(), write.maskedAttr());
     rewriter.eraseOp(write);
     return success();

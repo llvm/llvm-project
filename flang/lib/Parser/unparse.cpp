@@ -1850,10 +1850,10 @@ public:
   }
   void Unparse(const AccDefaultClause &x) {
     switch (x.v) {
-    case AccDefaultClause::Arg::None:
+    case llvm::acc::DefaultValue::ACC_Default_none:
       Put("NONE");
       break;
-    case AccDefaultClause::Arg::Present:
+    case llvm::acc::DefaultValue::ACC_Default_present:
       Put("PRESENT");
       break;
     }
@@ -2020,10 +2020,9 @@ public:
     Put(")");
   }
   void Unparse(const OmpAllocateClause &x) {
-    Word("ALLOCATE(");
-    Walk(std::get<std::optional<OmpAllocateClause::Allocator>>(x.t), ":");
+    Walk(std::get<std::optional<OmpAllocateClause::Allocator>>(x.t));
+    Put(":");
     Walk(std::get<OmpObjectList>(x.t));
-    Put(")");
   }
   void Unparse(const OmpDependSinkVecLength &x) {
     Walk(std::get<DefinedOperator>(x.t));
@@ -2059,28 +2058,12 @@ public:
                       },
         x.u);
   }
-  bool Pre(const OmpDefaultClause &) {
-    Word("DEFAULT(");
-    return true;
-  }
-  void Post(const OmpDefaultClause &) { Put(")"); }
-  bool Pre(const OmpProcBindClause &) {
-    Word("PROC_BIND(");
-    return true;
-  }
-  void Post(const OmpProcBindClause &) { Put(")"); }
   void Unparse(const OmpDefaultmapClause &x) {
     Word("DEFAULTMAP(");
     Walk(std::get<OmpDefaultmapClause::ImplicitBehavior>(x.t));
     Walk(":",
         std::get<std::optional<OmpDefaultmapClause::VariableCategory>>(x.t));
     Word(")");
-  }
-  void Unparse(const OmpNowait &) { Word("NOWAIT"); }
-  void Unparse(const OmpDistScheduleClause &x) {
-    Word("DIST_SCHEDULE(STATIC");
-    Walk(", ", x.v);
-    Put(")");
   }
 #define GEN_FLANG_CLAUSE_UNPARSE
 #include "llvm/Frontend/OpenMP/OMP.inc"
