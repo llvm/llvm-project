@@ -24,9 +24,13 @@
 // should avoid confounding factors, ensuring that we actually test the
 // functions themselves, regardless of how the builtins are lowered. We need to
 // use asm labels because we can't redeclare the builtins.
+// Note: we need to prepend an underscore to this name for e.g. macOS.
+#define _STRINGIFY(x) #x
+#define STRINGIFY(x) _STRINGIFY(x)
+#define EXTERNAL_NAME(name) asm(STRINGIFY(__USER_LABEL_PREFIX__) #name)
 
-void __atomic_load_c(int size, const void *src, void *dest,
-                     int model) asm("__atomic_load");
+void __atomic_load_c(int size, void *src, void *dest,
+                     int model) EXTERNAL_NAME(__atomic_load);
 
 uint8_t __atomic_load_1(uint8_t *src, int model);
 uint16_t __atomic_load_2(uint16_t *src, int model);
@@ -34,7 +38,7 @@ uint32_t __atomic_load_4(uint32_t *src, int model);
 uint64_t __atomic_load_8(uint64_t *src, int model);
 
 void __atomic_store_c(int size, void *dest, const void *src,
-                      int model) asm("__atomic_store");
+                      int model) EXTERNAL_NAME(__atomic_store);
 
 void __atomic_store_1(uint8_t *dest, uint8_t val, int model);
 void __atomic_store_2(uint16_t *dest, uint16_t val, int model);
@@ -42,7 +46,7 @@ void __atomic_store_4(uint32_t *dest, uint32_t val, int model);
 void __atomic_store_8(uint64_t *dest, uint64_t val, int model);
 
 void __atomic_exchange_c(int size, void *ptr, const void *val, void *old,
-                         int model) asm("__atomic_exchange");
+                         int model) EXTERNAL_NAME(__atomic_exchange);
 
 uint8_t __atomic_exchange_1(uint8_t *dest, uint8_t val, int model);
 uint16_t __atomic_exchange_2(uint16_t *dest, uint16_t val, int model);
@@ -51,7 +55,7 @@ uint64_t __atomic_exchange_8(uint64_t *dest, uint64_t val, int model);
 
 int __atomic_compare_exchange_c(int size, void *ptr, void *expected,
                                 const void *desired, int success, int failure)
-                                asm("__atomic_compare_exchange");
+    EXTERNAL_NAME(__atomic_compare_exchange);
 
 bool __atomic_compare_exchange_1(uint8_t *ptr, uint8_t *expected,
                                  uint8_t desired, int success, int failure);
