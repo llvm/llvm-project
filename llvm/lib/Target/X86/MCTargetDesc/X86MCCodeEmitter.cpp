@@ -409,6 +409,12 @@ void X86MCCodeEmitter::emitMemModRMByte(const MCInst &MI, unsigned Op,
       switch (Opcode) {
       default:
         return X86::reloc_riprel_4byte;
+      case X86::MOV64rm:
+        // movq loads is a subset of reloc_riprel_4byte_relax_rex. It is a
+        // special case because COFF and Mach-O don't support ELF's more
+        // flexible R_X86_64_REX_GOTPCRELX relaxation.
+        assert(HasREX);
+        return X86::reloc_riprel_4byte_movq_load;
       case X86::ADC32rm:
       case X86::ADD32rm:
       case X86::AND32rm:
@@ -419,13 +425,6 @@ void X86MCCodeEmitter::emitMemModRMByte(const MCInst &MI, unsigned Op,
       case X86::SUB32rm:
       case X86::TEST32mr:
       case X86::XOR32rm:
-        return X86::reloc_riprel_4byte_relax;
-      case X86::MOV64rm:
-        // movq loads is a subset of reloc_riprel_4byte_relax_rex. It is a
-        // special case because COFF and Mach-O don't support ELF's more
-        // flexible R_X86_64_REX_GOTPCRELX relaxation.
-        assert(HasREX);
-        return X86::reloc_riprel_4byte_movq_load;
       case X86::CALL64m:
       case X86::JMP64m:
       case X86::TAILJMPm64:

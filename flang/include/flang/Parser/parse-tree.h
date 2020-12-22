@@ -3468,13 +3468,13 @@ struct OmpClause {
   UNION_CLASS_BOILERPLATE(OmpClause);
 
 #define GEN_FLANG_CLAUSE_PARSER_CLASSES
-#include "llvm/Frontend/OpenMP/OMP.cpp.inc"
+#include "llvm/Frontend/OpenMP/OMP.inc"
 
   CharBlock source;
 
   std::variant<
 #define GEN_FLANG_CLAUSE_PARSER_CLASSES_LIST
-#include "llvm/Frontend/OpenMP/OMP.cpp.inc"
+#include "llvm/Frontend/OpenMP/OMP.inc"
       >
       u;
 };
@@ -3852,9 +3852,14 @@ struct AccDeclarativeDirective {
 };
 
 // OpenACC Clauses
+struct AccBindClause {
+  UNION_CLASS_BOILERPLATE(AccBindClause);
+  std::variant<Name, ScalarDefaultCharExpr> u;
+  CharBlock source;
+};
+
 struct AccDefaultClause {
-  ENUM_CLASS(Arg, None, Present)
-  WRAPPER_CLASS_BOILERPLATE(AccDefaultClause, Arg);
+  WRAPPER_CLASS_BOILERPLATE(AccDefaultClause, llvm::acc::DefaultValue);
   CharBlock source;
 };
 
@@ -4048,7 +4053,8 @@ struct OpenACCCombinedConstruct {
 struct OpenACCDeclarativeConstruct {
   UNION_CLASS_BOILERPLATE(OpenACCDeclarativeConstruct);
   CharBlock source;
-  std::variant<OpenACCStandaloneDeclarativeConstruct> u;
+  std::variant<OpenACCStandaloneDeclarativeConstruct, OpenACCRoutineConstruct>
+      u;
 };
 
 // OpenACC directives enclosing do loop
@@ -4068,8 +4074,8 @@ struct OpenACCStandaloneConstruct {
 struct OpenACCConstruct {
   UNION_CLASS_BOILERPLATE(OpenACCConstruct);
   std::variant<OpenACCBlockConstruct, OpenACCCombinedConstruct,
-      OpenACCLoopConstruct, OpenACCStandaloneConstruct, OpenACCRoutineConstruct,
-      OpenACCCacheConstruct, OpenACCWaitConstruct, OpenACCAtomicConstruct>
+      OpenACCLoopConstruct, OpenACCStandaloneConstruct, OpenACCCacheConstruct,
+      OpenACCWaitConstruct, OpenACCAtomicConstruct>
       u;
 };
 

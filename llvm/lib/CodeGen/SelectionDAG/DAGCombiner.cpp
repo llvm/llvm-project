@@ -2150,16 +2150,7 @@ SDValue DAGCombiner::foldBinOpIntoSelect(SDNode *BO) {
       !isConstantFPBuildVectorOrConstantFP(CBO))
     return SDValue();
 
-  EVT VT = Sel.getValueType();
-
-  // In case of shift value and shift amount may have different VT. For instance
-  // on x86 shift amount is i8 regardles of LHS type. Bail out if we have
-  // swapped operands and value types do not match. NB: x86 is fine if operands
-  // are not swapped with shift amount VT being not bigger than shifted value.
-  // TODO: that is possible to check for a shift operation, correct VTs and
-  // still perform optimization on x86 if needed.
-  if (SelOpNo && VT != CBO.getValueType())
-    return SDValue();
+  EVT VT = BO->getValueType(0);
 
   // We have a select-of-constants followed by a binary operator with a
   // constant. Eliminate the binop by pulling the constant math into the select.

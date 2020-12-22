@@ -108,7 +108,7 @@ rescheduleLexographically(std::vector<MachineInstr *> instructions,
     OS.flush();
 
     // Trim the assignment, or start from the beginning in the case of a store.
-    const size_t i = S.find("=");
+    const size_t i = S.find('=');
     StringInstrMap.push_back({(i == std::string::npos) ? S : S.substr(i), II});
   }
 

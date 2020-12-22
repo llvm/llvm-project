@@ -26,6 +26,12 @@ NamedAttrList::NamedAttrList(ArrayRef<NamedAttribute> attributes) {
   assign(attributes.begin(), attributes.end());
 }
 
+NamedAttrList::NamedAttrList(DictionaryAttr attributes)
+    : NamedAttrList(attributes ? attributes.getValue()
+                               : ArrayRef<NamedAttribute>()) {
+  dictionarySorted.setPointerAndInt(attributes, true);
+}
+
 NamedAttrList::NamedAttrList(const_iterator in_start, const_iterator in_end) {
   assign(in_start, in_end);
 }
@@ -52,33 +58,9 @@ DictionaryAttr NamedAttrList::getDictionary(MLIRContext *context) const {
   return dictionarySorted.getPointer().cast<DictionaryAttr>();
 }
 
-NamedAttrList::operator MutableDictionaryAttr() const {
-  if (attrs.empty())
-    return MutableDictionaryAttr();
-  return getDictionary(attrs.front().second.getContext());
-}
-
 /// Add an attribute with the specified name.
 void NamedAttrList::append(StringRef name, Attribute attr) {
   append(Identifier::get(name, attr.getContext()), attr);
-}
-
-/// Add an attribute with the specified name.
-void NamedAttrList::append(Identifier name, Attribute attr) {
-  push_back({name, attr});
-}
-
-/// Add an array of named attributes.
-void NamedAttrList::append(ArrayRef<NamedAttribute> newAttributes) {
-  append(newAttributes.begin(), newAttributes.end());
-}
-
-/// Add a range of named attributes.
-void NamedAttrList::append(const_iterator in_start, const_iterator in_end) {
-  // TODO: expand to handle case where values appended are in order & after
-  // end of current list.
-  dictionarySorted.setPointerAndInt(nullptr, false);
-  attrs.append(in_start, in_end);
 }
 
 /// Replaces the attributes with new list of attributes.
@@ -136,26 +118,28 @@ Optional<NamedAttribute> NamedAttrList::getNamed(Identifier name) const {
 
 /// If the an attribute exists with the specified name, change it to the new
 /// value.  Otherwise, add a new attribute with the specified name/value.
-void NamedAttrList::set(Identifier name, Attribute value) {
+Attribute NamedAttrList::set(Identifier name, Attribute value) {
   assert(value && "attributes may never be null");
 
   // Look for an existing value for the given name, and set it in-place.
   auto *it = findAttr(attrs, name, isSorted());
   if (it != attrs.end()) {
-    // Bail out early if the value is the same as what we already have.
-    if (it->second == value)
-      return;
-    dictionarySorted.setPointer(nullptr);
-    it->second = value;
-    return;
+    // Only update if the value is different from the existing.
+    Attribute oldValue = it->second;
+    if (oldValue != value) {
+      dictionarySorted.setPointer(nullptr);
+      it->second = value;
+    }
+    return oldValue;
   }
 
   // Otherwise, insert the new attribute into its sorted position.
   it = llvm::lower_bound(attrs, name);
   dictionarySorted.setPointer(nullptr);
   attrs.insert(it, {name, value});
+  return Attribute();
 }
-void NamedAttrList::set(StringRef name, Attribute value) {
+Attribute NamedAttrList::set(StringRef name, Attribute value) {
   assert(value && "setting null attribute not supported");
   return set(mlir::Identifier::get(name, value.getContext()), value);
 }
@@ -555,7 +539,7 @@ llvm::hash_code OperationEquivalence::computeHash(Operation *op, Flags flags) {
   //   - Operation Name
   //   - Attributes
   llvm::hash_code hash =
-      llvm::hash_combine(op->getName(), op->getMutableAttrDict());
+      llvm::hash_combine(op->getName(), op->getAttrDictionary());
 
   //   - Result Types
   ArrayRef<Type> resultTypes = op->getResultTypes();
@@ -597,7 +581,7 @@ bool OperationEquivalence::isEquivalentTo(Operation *lhs, Operation *rhs,
   if (lhs->getNumOperands() != rhs->getNumOperands())
     return false;
   // Compare attributes.
-  if (lhs->getMutableAttrDict() != rhs->getMutableAttrDict())
+  if (lhs->getAttrDictionary() != rhs->getAttrDictionary())
     return false;
   // Compare result types.
   ArrayRef<Type> lhsResultTypes = lhs->getResultTypes();

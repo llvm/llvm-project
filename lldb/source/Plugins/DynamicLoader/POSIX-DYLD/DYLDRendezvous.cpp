@@ -94,12 +94,13 @@ DYLDRendezvous::DYLDRendezvous(Process *process)
     : m_process(process), m_rendezvous_addr(LLDB_INVALID_ADDRESS), m_current(),
       m_previous(), m_loaded_modules(), m_soentries(), m_added_soentries(),
       m_removed_soentries() {
-  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
-
   m_thread_info.valid = false;
+  UpdateExecutablePath();
+}
 
-  // Cache a copy of the executable path
+void DYLDRendezvous::UpdateExecutablePath() {
   if (m_process) {
+    Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
     Module *exe_mod = m_process->GetTarget().GetExecutableModulePointer();
     if (exe_mod) {
       m_exe_file_spec = exe_mod->GetPlatformFileSpec();

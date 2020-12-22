@@ -34,6 +34,7 @@
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -284,7 +285,7 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive) {
     } else if (config->forceLoadObjC) {
       for (const object::Archive::Symbol &sym : file->symbols())
         if (sym.getName().startswith(objc::klass))
-          symtab->addUndefined(sym.getName());
+          symtab->addUndefined(sym.getName(), /*isWeakRef=*/false);
 
       // TODO: no need to look for ObjC sections for a given archive member if
       // we already found that it contains an ObjC symbol. We should also
@@ -324,7 +325,7 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive) {
     // printArchiveMemberLoad() prints both .a and .o names, so no need to
     // print the .a name here.
     if (config->printEachFile && magic != file_magic::archive)
-      lld::outs() << toString(newFile) << '\n';
+      message(toString(newFile));
     inputFiles.insert(newFile);
   }
   return newFile;
@@ -392,19 +393,15 @@ static void addFileList(StringRef path) {
     addFile(path, false);
 }
 
-static std::array<StringRef, 6> archNames{"arm",    "arm64", "i386",
-                                          "x86_64", "ppc",   "ppc64"};
-static bool isArchString(StringRef s) {
-  static DenseSet<StringRef> archNamesSet(archNames.begin(), archNames.end());
-  return archNamesSet.find(s) != archNamesSet.end();
-}
-
 // An order file has one entry per line, in the following format:
 //
-//   <arch>:<object file>:<symbol name>
+//   <cpu>:<object file>:<symbol name>
 //
-// <arch> and <object file> are optional. If not specified, then that entry
-// matches any symbol of that name.
+// <cpu> and <object file> are optional. If not specified, then that entry
+// matches any symbol of that name. Parsing this format is not quite
+// straightforward because the symbol name itself can contain colons, so when
+// encountering a colon, we consider the preceding characters to decide if it
+// can be a valid CPU type or file path.
 //
 // If a symbol is matched by multiple entries, then it takes the lowest-ordered
 // entry (the one nearest to the front of the list.)
@@ -419,59 +416,37 @@ static void parseOrderFile(StringRef path) {
 
   MemoryBufferRef mbref = *buffer;
   size_t priority = std::numeric_limits<size_t>::max();
-  for (StringRef rest : args::getLines(mbref)) {
-    StringRef arch, objectFile, symbol;
+  for (StringRef line : args::getLines(mbref)) {
+    StringRef objectFile, symbol;
+    line = line.take_until([](char c) { return c == '#'; }); // ignore comments
+    line = line.ltrim();
 
-    std::array<StringRef, 3> fields;
-    uint8_t fieldCount = 0;
-    while (rest != "" && fieldCount < 3) {
-      std::pair<StringRef, StringRef> p = getToken(rest, ": \t\n\v\f\r");
-      StringRef tok = p.first;
-      rest = p.second;
-
-      // Check if we have a comment
-      if (tok == "" || tok[0] == '#')
-        break;
-
-      fields[fieldCount++] = tok;
-    }
-
-    switch (fieldCount) {
-    case 3:
-      arch = fields[0];
-      objectFile = fields[1];
-      symbol = fields[2];
-      break;
-    case 2:
-      (isArchString(fields[0]) ? arch : objectFile) = fields[0];
-      symbol = fields[1];
-      break;
-    case 1:
-      symbol = fields[0];
-      break;
-    case 0:
-      break;
-    default:
-      llvm_unreachable("too many fields in order file");
-    }
-
-    if (!arch.empty()) {
-      if (!isArchString(arch)) {
-        error("invalid arch \"" + arch + "\" in order file: expected one of " +
-              llvm::join(archNames, ", "));
-        continue;
-      }
-
-      // TODO: Update when we extend support for other archs
-      if (arch != "x86_64")
-        continue;
-    }
-
-    if (!objectFile.empty() && !objectFile.endswith(".o")) {
-      error("invalid object file name \"" + objectFile +
-            "\" in order file: should end with .o");
+    CPUType cpuType = StringSwitch<CPUType>(line)
+                          .StartsWith("i386:", CPU_TYPE_I386)
+                          .StartsWith("x86_64:", CPU_TYPE_X86_64)
+                          .StartsWith("arm:", CPU_TYPE_ARM)
+                          .StartsWith("arm64:", CPU_TYPE_ARM64)
+                          .StartsWith("ppc:", CPU_TYPE_POWERPC)
+                          .StartsWith("ppc64:", CPU_TYPE_POWERPC64)
+                          .Default(CPU_TYPE_ANY);
+    // Drop the CPU type as well as the colon
+    if (cpuType != CPU_TYPE_ANY)
+      line = line.drop_until([](char c) { return c == ':'; }).drop_front();
+    // TODO: Update when we extend support for other CPUs
+    if (cpuType != CPU_TYPE_ANY && cpuType != CPU_TYPE_X86_64)
       continue;
+
+    constexpr std::array<StringRef, 2> fileEnds = {".o:", ".o):"};
+    for (StringRef fileEnd : fileEnds) {
+      size_t pos = line.find(fileEnd);
+      if (pos != StringRef::npos) {
+        // Split the string around the colon
+        objectFile = line.take_front(pos + fileEnd.size() - 1);
+        line = line.drop_front(pos + fileEnd.size());
+        break;
+      }
     }
+    symbol = line.trim();
 
     if (!symbol.empty()) {
       SymbolPriorityEntry &entry = config->priorities[symbol];
@@ -549,7 +524,7 @@ static void replaceCommonSymbols() {
 
     replaceSymbol<Defined>(sym, sym->getName(), isec, /*value=*/0,
                            /*isWeakDef=*/false,
-                           /*isExternal=*/true);
+                           /*isExternal=*/true, common->privateExtern);
   }
 }
 
@@ -596,6 +571,22 @@ static void handlePlatformVersion(const opt::Arg *arg) {
     error(Twine("malformed minimum version: ") + minVersionStr);
   if (config->platform.sdk.tryParse(sdkVersionStr))
     error(Twine("malformed sdk version: ") + sdkVersionStr);
+}
+
+static void handleUndefined(const opt::Arg *arg) {
+  StringRef treatmentStr = arg->getValue(0);
+  config->undefinedSymbolTreatment =
+      llvm::StringSwitch<UndefinedSymbolTreatment>(treatmentStr)
+          .Case("error", UndefinedSymbolTreatment::error)
+          .Case("warning", UndefinedSymbolTreatment::warning)
+          .Case("suppress", UndefinedSymbolTreatment::suppress)
+          .Case("dynamic_lookup", UndefinedSymbolTreatment::dynamic_lookup)
+          .Default(UndefinedSymbolTreatment::unknown);
+  if (config->undefinedSymbolTreatment == UndefinedSymbolTreatment::unknown) {
+    warn(Twine("unknown -undefined TREATMENT '") + treatmentStr +
+         "', defaulting to 'error'");
+    config->undefinedSymbolTreatment = UndefinedSymbolTreatment::error;
+  }
 }
 
 static void warnIfDeprecatedOption(const opt::Option &opt) {
@@ -722,7 +713,8 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   symtab = make<SymbolTable>();
   target = createTargetInfo(args);
 
-  config->entry = symtab->addUndefined(args.getLastArgValue(OPT_e, "_main"));
+  config->entry = symtab->addUndefined(args.getLastArgValue(OPT_e, "_main"),
+                                       /*isWeakRef=*/false);
   config->outputFile = args.getLastArgValue(OPT_o, "a.out");
   config->installName =
       args.getLastArgValue(OPT_install_name, config->outputFile);
@@ -806,6 +798,9 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
       break;
     case OPT_platform_version:
       handlePlatformVersion(arg);
+      break;
+    case OPT_undefined:
+      handleUndefined(arg);
       break;
     default:
       break;

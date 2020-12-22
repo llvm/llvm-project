@@ -37,8 +37,6 @@ STATISTIC(NumberOfSelfCopies,
           "Number of self copy instructions eliminated");
 STATISTIC(NumFrameOffFoldInPreEmit,
           "Number of folding frame offset by using r+r in pre-emit peephole");
-STATISTIC(NumRotateInstrFoldInPreEmit,
-          "Number of folding Rotate instructions in pre-emit peephole");
 
 static cl::opt<bool>
 EnablePCRelLinkerOpt("ppc-pcrel-linker-opt", cl::Hidden, cl::init(true),
@@ -123,7 +121,7 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
       for (auto BBI = MBB.instr_begin(); BBI != MBB.instr_end(); ++BBI) {
         // Skip load immediate that is marked to be erased later because it
         // cannot be used to replace any other instructions.
-        if (InstrsToErase.find(&*BBI) != InstrsToErase.end())
+        if (InstrsToErase.contains(&*BBI))
           continue;
         // Skip non-load immediate.
         unsigned Opc = BBI->getOpcode();
@@ -340,8 +338,7 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
 
         // Create the symbol.
         MCContext &Context = MF->getContext();
-        MCSymbol *Symbol =
-            Context.createTempSymbol(Twine("pcrel"), false, false);
+        MCSymbol *Symbol = Context.createNamedTempSymbol("pcrel");
         MachineOperand PCRelLabel =
             MachineOperand::CreateMCSymbol(Symbol, PPCII::MO_PCREL_OPT_FLAG);
         Pair->DefInst->addOperand(*MF, PCRelLabel);
@@ -473,13 +470,6 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
             NumFrameOffFoldInPreEmit++;
             LLVM_DEBUG(dbgs() << "Frame offset folding by using index form: ");
             LLVM_DEBUG(MI.dump());
-          }
-          MachineInstr *ToErase = nullptr;
-          if (TII->simplifyRotateAndMaskInstr(MI, ToErase)) {
-            Changed = true;
-            NumRotateInstrFoldInPreEmit++;
-            if (ToErase)
-              InstrsToErase.push_back(ToErase);
           }
         }
 

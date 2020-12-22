@@ -12,6 +12,7 @@
 #include "CompileCommands.h"
 #include "support/Function.h"
 #include "support/Path.h"
+#include "support/ThreadsafeFS.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/Optional.h"
@@ -66,8 +67,22 @@ protected:
 class DirectoryBasedGlobalCompilationDatabase
     : public GlobalCompilationDatabase {
 public:
-  DirectoryBasedGlobalCompilationDatabase(
-      llvm::Optional<Path> CompileCommandsDir);
+  struct Options {
+    Options(const ThreadsafeFS &TFS) : TFS(TFS) {}
+
+    const ThreadsafeFS &TFS;
+    // Frequency to check whether e.g. compile_commands.json has changed.
+    std::chrono::steady_clock::duration RevalidateAfter =
+        std::chrono::seconds(5);
+    // Frequency to check whether e.g. compile_commands.json has been created.
+    // (This is more expensive to check frequently, as we check many locations).
+    std::chrono::steady_clock::duration RevalidateMissingAfter =
+        std::chrono::seconds(30);
+    // Only look for a compilation database in this one fixed directory.
+    llvm::Optional<Path> CompileCommandsDir;
+  };
+
+  DirectoryBasedGlobalCompilationDatabase(const Options &Opts);
   ~DirectoryBasedGlobalCompilationDatabase() override;
 
   /// Scans File's parents looking for compilation databases.
@@ -81,6 +96,8 @@ public:
   llvm::Optional<ProjectInfo> getProjectInfo(PathRef File) const override;
 
 private:
+  Options Opts;
+
   class DirectoryCache;
   // If there's an explicit CompileCommandsDir, cache of the CDB found there.
   mutable std::unique_ptr<DirectoryCache> OnlyDirCache;
@@ -99,6 +116,10 @@ private:
     PathRef FileName;
     // Whether this lookup should trigger discovery of the CDB found.
     bool ShouldBroadcast = false;
+    // Cached results newer than this are considered fresh and not checked
+    // against disk.
+    std::chrono::steady_clock::time_point FreshTime;
+    std::chrono::steady_clock::time_point FreshTimeMissing;
   };
   struct CDBLookupResult {
     std::shared_ptr<const tooling::CompilationDatabase> CDB;
@@ -108,6 +129,9 @@ private:
 
   // Performs broadcast on governed files.
   void broadcastCDB(CDBLookupResult Res) const;
+
+  // cache test calls lookupCDB directly to ensure valid/invalid times.
+  friend class DirectoryBasedGlobalCompilationDatabaseCacheTest;
 };
 
 /// Extracts system include search path from drivers matching QueryDriverGlobs

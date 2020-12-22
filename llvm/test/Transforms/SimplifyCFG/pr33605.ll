@@ -1,4 +1,4 @@
-; RUN: opt < %s -simplifycfg -S | FileCheck %s
+; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
 
 ; Skip simplifying unconditional branches from empty blocks in simplifyCFG,
 ; when it can destroy canonical loop structure.

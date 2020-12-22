@@ -263,6 +263,7 @@ def adrplabel : Operand<i64> {
   let EncoderMethod = "getAdrLabelOpValue";
   let PrintMethod = "printAdrpLabel";
   let ParserMatchClass = AdrpOperand;
+  let OperandType = "OPERAND_PCREL";
 }
 
 def AdrOperand : AsmOperandClass {
@@ -1296,8 +1297,9 @@ class SimpleSystemI<bit L, dag iops, string asm, string operands,
 }
 
 // System instructions which have an Rt register.
-class RtSystemI<bit L, dag oops, dag iops, string asm, string operands>
-    : BaseSystemI<L, oops, iops, asm, operands>,
+class RtSystemI<bit L, dag oops, dag iops, string asm, string operands,
+                list<dag> pattern = []>
+    : BaseSystemI<L, oops, iops, asm, operands, pattern>,
       Sched<[WriteSys]> {
   bits<5> Rt;
   let Inst{4-0} = Rt;
@@ -1323,6 +1325,16 @@ class TMSystemI<bits<4> CRm, string asm, list<dag> pattern>
                     (outs GPR64:$Rt), (ins), asm, "\t$Rt", pattern> {
   bits<5> Rt;
   let Inst{4-0} = Rt;
+}
+
+// System instructions that pass a register argument
+// This class assumes the register is for input rather than output.
+class RegInputSystemI<bits<4> CRm, bits<3> Op2, string asm,
+                      list<dag> pattern = []>
+    : RtSystemI<0, (outs), (ins GPR64:$Rt), asm, "\t$Rt", pattern> {
+  let Inst{20-12} = 0b000110001;
+  let Inst{11-8} = CRm;
+  let Inst{7-5} = Op2;
 }
 
 // System instructions for transactional memory - no operand
@@ -1364,6 +1376,14 @@ def BarrierAsmOperand : AsmOperandClass {
 def barrier_op : Operand<i32> {
   let PrintMethod = "printBarrierOption";
   let ParserMatchClass = BarrierAsmOperand;
+}
+def BarriernXSAsmOperand : AsmOperandClass {
+  let Name = "BarriernXS";
+  let ParserMethod = "tryParseBarriernXSOperand";
+}
+def barrier_nxs_op : Operand<i32> {
+  let PrintMethod = "printBarriernXSOption";
+  let ParserMatchClass = BarriernXSAsmOperand;
 }
 class CRmSystemI<Operand crmtype, bits<3> opc, string asm,
                  list<dag> pattern = []>
@@ -1446,6 +1466,7 @@ class MRSI : RtSystemI<1, (outs GPR64:$Rt), (ins mrs_sysreg_op:$systemreg),
                        "mrs", "\t$Rt, $systemreg"> {
   bits<16> systemreg;
   let Inst{20-5} = systemreg;
+  let DecoderNamespace = "Fallback";
 }
 
 // FIXME: Some of these def NZCV, others don't. Best way to model that?
@@ -1455,6 +1476,7 @@ class MSRI : RtSystemI<0, (outs), (ins msr_sysreg_op:$systemreg, GPR64:$Rt),
                        "msr", "\t$systemreg, $Rt"> {
   bits<16> systemreg;
   let Inst{20-5} = systemreg;
+  let DecoderNamespace = "Fallback";
 }
 
 def SystemPStateFieldWithImm0_15Operand : AsmOperandClass {
@@ -11231,6 +11253,35 @@ multiclass STOPregister<string asm, string instr> {
                     !cast<Instruction>(instr # "W")>;
   def : BaseSTOPregister<asm,        GPR64, XZR,
                     !cast<Instruction>(instr # "X")>;
+}
+
+class LoadStore64B_base<bits<3> opc, string asm_inst, string asm_ops,
+                        dag iops, dag oops, list<dag> pat>
+    : I<oops, iops, asm_inst, asm_ops, "", pat>,
+      Sched<[]> /* FIXME: fill in scheduling details once known */ {
+  bits<5> Rt;
+  bits<5> Rn;
+  let Inst{31-21} = 0b11111000001;
+  let Inst{15}    = 1;
+  let Inst{14-12} = opc;
+  let Inst{11-10} = 0b00;
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Rt;
+
+  let Predicates = [HasV8_7a];
+}
+
+class LoadStore64B<bits<3> opc, string asm_inst, dag iops, dag oops,
+                      list<dag> pat = []>
+    : LoadStore64B_base<opc, asm_inst, "\t$Rt, [$Rn]", iops, oops, pat> {
+  let Inst{20-16} = 0b11111;
+}
+
+class Store64BV<bits<3> opc, string asm_inst, list<dag> pat = []>
+    : LoadStore64B_base<opc, asm_inst, "\t$Rs, $Rt, [$Rn]",
+                       (ins GPR64x8:$Rt, GPR64sp:$Rn), (outs GPR64:$Rs), pat> {
+  bits<5> Rs;
+  let Inst{20-16} = Rs;
 }
 
 //----------------------------------------------------------------------------

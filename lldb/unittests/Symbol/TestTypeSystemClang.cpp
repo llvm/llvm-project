@@ -482,9 +482,8 @@ TEST_F(TestTypeSystemClang, TemplateArguments) {
   m_ast->CompleteTagDeclarationDefinition(type);
 
   // typedef foo<int, 47> foo_def;
-  CompilerType typedef_type = m_ast->CreateTypedefType(
-      type, "foo_def",
-      m_ast->CreateDeclContext(m_ast->GetTranslationUnitDecl()), 0);
+  CompilerType typedef_type = type.CreateTypedef(
+      "foo_def", m_ast->CreateDeclContext(m_ast->GetTranslationUnitDecl()), 0);
 
   CompilerType auto_type(
       m_ast.get(),

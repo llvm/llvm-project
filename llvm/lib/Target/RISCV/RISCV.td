@@ -160,8 +160,7 @@ def HasRVCHints : Predicate<"Subtarget->enableRVCHintInstrs()">,
 
 def FeatureStdExtV
     : SubtargetFeature<"experimental-v", "HasStdExtV", "true",
-                       "'V' (Vector Instructions)",
-                       [FeatureStdExtF]>;
+                       "'V' (Vector Instructions)">;
 def HasStdExtV : Predicate<"Subtarget->hasStdExtV()">,
                            AssemblerPredicate<(all_of FeatureStdExtV),
                            "'V' (Vector Instructions)">;

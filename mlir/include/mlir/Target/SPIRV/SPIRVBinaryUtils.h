@@ -13,7 +13,7 @@
 #ifndef MLIR_TARGET_SPIRV_BINARY_UTILS_H_
 #define MLIR_TARGET_SPIRV_BINARY_UTILS_H_
 
-#include "mlir/Dialect/SPIRV/SPIRVOps.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Support/LogicalResult.h"
 
 #include <cstdint>

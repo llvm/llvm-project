@@ -577,6 +577,7 @@ namespace clang {
     ExpectedStmt VisitVAArgExpr(VAArgExpr *E);
     ExpectedStmt VisitChooseExpr(ChooseExpr *E);
     ExpectedStmt VisitGNUNullExpr(GNUNullExpr *E);
+    ExpectedStmt VisitGenericSelectionExpr(GenericSelectionExpr *E);
     ExpectedStmt VisitPredefinedExpr(PredefinedExpr *E);
     ExpectedStmt VisitDeclRefExpr(DeclRefExpr *E);
     ExpectedStmt VisitImplicitValueInitExpr(ImplicitValueInitExpr *E);
@@ -805,6 +806,17 @@ ASTNodeImporter::import(const TemplateArgument &From) {
     if (!ToTypeOrErr)
       return ToTypeOrErr.takeError();
     return TemplateArgument(*ToTypeOrErr, /*isNullPtr*/true);
+  }
+
+  case TemplateArgument::UncommonValue: {
+    ExpectedType ToTypeOrErr = import(From.getUncommonValueType());
+    if (!ToTypeOrErr)
+      return ToTypeOrErr.takeError();
+    Expected<APValue> ToValueOrErr = import(From.getAsUncommonValue());
+    if (!ToValueOrErr)
+      return ToValueOrErr.takeError();
+    return TemplateArgument(Importer.getToContext(), *ToTypeOrErr,
+                            *ToValueOrErr);
   }
 
   case TemplateArgument::Template: {
@@ -6526,6 +6538,40 @@ ExpectedStmt ASTNodeImporter::VisitGNUNullExpr(GNUNullExpr *E) {
   return new (Importer.getToContext()) GNUNullExpr(*TypeOrErr, *BeginLocOrErr);
 }
 
+ExpectedStmt
+ASTNodeImporter::VisitGenericSelectionExpr(GenericSelectionExpr *E) {
+  Error Err = Error::success();
+  auto ToGenericLoc = importChecked(Err, E->getGenericLoc());
+  auto *ToControllingExpr = importChecked(Err, E->getControllingExpr());
+  auto ToDefaultLoc = importChecked(Err, E->getDefaultLoc());
+  auto ToRParenLoc = importChecked(Err, E->getRParenLoc());
+  if (Err)
+    return std::move(Err);
+
+  ArrayRef<const TypeSourceInfo *> FromAssocTypes(E->getAssocTypeSourceInfos());
+  SmallVector<TypeSourceInfo *, 1> ToAssocTypes(FromAssocTypes.size());
+  if (Error Err = ImportContainerChecked(FromAssocTypes, ToAssocTypes))
+    return std::move(Err);
+
+  ArrayRef<const Expr *> FromAssocExprs(E->getAssocExprs());
+  SmallVector<Expr *, 1> ToAssocExprs(FromAssocExprs.size());
+  if (Error Err = ImportContainerChecked(FromAssocExprs, ToAssocExprs))
+    return std::move(Err);
+
+  const ASTContext &ToCtx = Importer.getToContext();
+  if (E->isResultDependent()) {
+    return GenericSelectionExpr::Create(
+        ToCtx, ToGenericLoc, ToControllingExpr,
+        llvm::makeArrayRef(ToAssocTypes), llvm::makeArrayRef(ToAssocExprs),
+        ToDefaultLoc, ToRParenLoc, E->containsUnexpandedParameterPack());
+  }
+
+  return GenericSelectionExpr::Create(
+      ToCtx, ToGenericLoc, ToControllingExpr, llvm::makeArrayRef(ToAssocTypes),
+      llvm::makeArrayRef(ToAssocExprs), ToDefaultLoc, ToRParenLoc,
+      E->containsUnexpandedParameterPack(), E->getResultIndex());
+}
+
 ExpectedStmt ASTNodeImporter::VisitPredefinedExpr(PredefinedExpr *E) {
 
   Error Err = Error::success();
@@ -8223,7 +8269,7 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
       return make_error<ImportError>(*Error);
     }
 
-    // If FromD has some updated flags after last import, apply it
+    // If FromD has some updated flags after last import, apply it.
     updateFlags(FromD, ToD);
     // If we encounter a cycle during an import then we save the relevant part
     // of the import path associated to the Decl.

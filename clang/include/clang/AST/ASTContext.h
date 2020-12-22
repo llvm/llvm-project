@@ -2818,8 +2818,8 @@ public:
   /// for destruction.
   template <typename T> void addDestruction(T *Ptr) const {
     if (!std::is_trivially_destructible<T>::value) {
-      auto DestroyPtr = [](void *V) { static_cast<T *>(V)->~T(); };
-      AddDeallocation(DestroyPtr, Ptr);
+      auto DestroyPtr = [](void *V) { ((T*)V)->~T(); };
+      AddDeallocation(DestroyPtr, (void*)Ptr);
     }
   }
 
@@ -3086,13 +3086,12 @@ public:
   };
 
   struct SectionInfo {
-    DeclaratorDecl *Decl;
+    NamedDecl *Decl;
     SourceLocation PragmaSectionLocation;
     int SectionFlags;
 
     SectionInfo() = default;
-    SectionInfo(DeclaratorDecl *Decl,
-                SourceLocation PragmaSectionLocation,
+    SectionInfo(NamedDecl *Decl, SourceLocation PragmaSectionLocation,
                 int SectionFlags)
         : Decl(Decl), PragmaSectionLocation(PragmaSectionLocation),
           SectionFlags(SectionFlags) {}

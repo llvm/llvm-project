@@ -1,4 +1,4 @@
-; RUN: opt -S -simplifycfg < %s | FileCheck %s
+; RUN: opt -S -simplifycfg -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s
 
 define i32 @speculate_vector_extract(i32 %d, <4 x i32> %v) #0 {
 ; CHECK-LABEL: @speculate_vector_extract(

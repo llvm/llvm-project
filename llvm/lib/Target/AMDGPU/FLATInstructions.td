@@ -192,22 +192,32 @@ multiclass FLAT_Global_Load_Pseudo<string opName, RegisterClass regClass, bit Ha
 }
 
 class FLAT_Global_Load_AddTid_Pseudo <string opName, RegisterClass regClass,
-  bit HasTiedOutput = 0, bit HasSignedOffset = 0> : FLAT_Pseudo<
+  bit HasTiedOutput = 0, bit HasSignedOffset = 0, bit EnableSaddr = 0> : FLAT_Pseudo<
   opName,
   (outs regClass:$vdst),
-  !con((ins SReg_64:$saddr, flat_offset:$offset, GLC_0:$glc, SLC_0:$slc, DLC_0:$dlc),
+  !con(!if(EnableSaddr, (ins SReg_64:$saddr), (ins)),
+    (ins flat_offset:$offset, GLC_0:$glc, SLC_0:$slc, DLC_0:$dlc),
     !if(HasTiedOutput, (ins regClass:$vdst_in), (ins))),
-  " $vdst, $saddr$offset$glc$slc$dlc"> {
+  " $vdst, "#!if(EnableSaddr, "$saddr", "off")#"$offset$glc$slc$dlc"> {
   let is_flat_global = 1;
   let has_data = 0;
   let mayLoad = 1;
   let has_vaddr = 0;
   let has_saddr = 1;
-  let enabled_saddr = 1;
+  let enabled_saddr = EnableSaddr;
   let maybeAtomic = 1;
+  let PseudoInstr = opName#!if(EnableSaddr, "_SADDR", "");
 
   let Constraints = !if(HasTiedOutput, "$vdst = $vdst_in", "");
   let DisableEncoding = !if(HasTiedOutput, "$vdst_in", "");
+}
+
+multiclass FLAT_Global_Load_AddTid_Pseudo<string opName, RegisterClass regClass,
+  bit HasTiedOutput = 0, bit HasSignedOffset = 0> {
+  def "" : FLAT_Global_Load_AddTid_Pseudo<opName, regClass, HasTiedOutput, HasSignedOffset>,
+    GlobalSaddrTable<0, opName>;
+  def _SADDR : FLAT_Global_Load_AddTid_Pseudo<opName, regClass, HasTiedOutput, HasSignedOffset, 1>,
+    GlobalSaddrTable<1, opName>;
 }
 
 multiclass FLAT_Global_Store_Pseudo<string opName, RegisterClass regClass> {
@@ -220,21 +230,29 @@ multiclass FLAT_Global_Store_Pseudo<string opName, RegisterClass regClass> {
 }
 
 class FLAT_Global_Store_AddTid_Pseudo <string opName, RegisterClass vdataClass,
-  bit HasSignedOffset = 0> : FLAT_Pseudo<
+  bit HasSignedOffset = 0, bit EnableSaddr = 0> : FLAT_Pseudo<
   opName,
   (outs),
-  !con(
-    (ins vdataClass:$vdata, SReg_64:$saddr),
-      (ins flat_offset:$offset, GLC:$glc, SLC:$slc, DLC:$dlc)),
-  " $vdata, $saddr$offset$glc$slc$dlc"> {
+  !con(!if(EnableSaddr, (ins vdataClass:$vdata, SReg_64:$saddr), (ins vdataClass:$vdata)),
+    (ins flat_offset:$offset, GLC:$glc, SLC:$slc, DLC:$dlc)),
+  " $vdata, "#!if(EnableSaddr, "$saddr", "off")#"$offset$glc$slc$dlc"> {
   let is_flat_global = 1;
   let mayLoad  = 0;
   let mayStore = 1;
   let has_vdst = 0;
   let has_vaddr = 0;
   let has_saddr = 1;
-  let enabled_saddr = 1;
+  let enabled_saddr = EnableSaddr;
   let maybeAtomic = 1;
+  let PseudoInstr = opName#!if(EnableSaddr, "_SADDR", "");
+}
+
+multiclass FLAT_Global_Store_AddTid_Pseudo<string opName, RegisterClass regClass,
+  bit HasSignedOffset = 0> {
+  def "" : FLAT_Global_Store_AddTid_Pseudo<opName, regClass, HasSignedOffset>,
+    GlobalSaddrTable<0, opName>;
+  def _SADDR : FLAT_Global_Store_AddTid_Pseudo<opName, regClass, HasSignedOffset, 1>,
+    GlobalSaddrTable<1, opName>;
 }
 
 class FlatScratchInst <string sv_op, string mode> {
@@ -603,7 +621,7 @@ defm GLOBAL_LOAD_SBYTE_D16_HI : FLAT_Global_Load_Pseudo <"global_load_sbyte_d16_
 defm GLOBAL_LOAD_SHORT_D16    : FLAT_Global_Load_Pseudo <"global_load_short_d16", VGPR_32, 1>;
 defm GLOBAL_LOAD_SHORT_D16_HI : FLAT_Global_Load_Pseudo <"global_load_short_d16_hi", VGPR_32, 1>;
 let OtherPredicates = [HasGFX10_BEncoding] in
-def  GLOBAL_LOAD_DWORD_ADDTID : FLAT_Global_Load_AddTid_Pseudo <"global_load_dword_addtid", VGPR_32>;
+defm GLOBAL_LOAD_DWORD_ADDTID : FLAT_Global_Load_AddTid_Pseudo <"global_load_dword_addtid", VGPR_32>;
 
 defm GLOBAL_STORE_BYTE    : FLAT_Global_Store_Pseudo <"global_store_byte", VGPR_32>;
 defm GLOBAL_STORE_SHORT   : FLAT_Global_Store_Pseudo <"global_store_short", VGPR_32>;
@@ -612,7 +630,7 @@ defm GLOBAL_STORE_DWORDX2 : FLAT_Global_Store_Pseudo <"global_store_dwordx2", VR
 defm GLOBAL_STORE_DWORDX3 : FLAT_Global_Store_Pseudo <"global_store_dwordx3", VReg_96>;
 defm GLOBAL_STORE_DWORDX4 : FLAT_Global_Store_Pseudo <"global_store_dwordx4", VReg_128>;
 let OtherPredicates = [HasGFX10_BEncoding] in
-def  GLOBAL_STORE_DWORD_ADDTID : FLAT_Global_Store_AddTid_Pseudo <"global_store_dword_addtid", VGPR_32>;
+defm GLOBAL_STORE_DWORD_ADDTID : FLAT_Global_Store_AddTid_Pseudo <"global_store_dword_addtid", VGPR_32>;
 
 defm GLOBAL_STORE_BYTE_D16_HI  : FLAT_Global_Store_Pseudo <"global_store_byte_d16_hi", VGPR_32>;
 defm GLOBAL_STORE_SHORT_D16_HI : FLAT_Global_Store_Pseudo <"global_store_short_d16_hi", VGPR_32>;
@@ -1651,8 +1669,8 @@ defm GLOBAL_ATOMIC_DEC_X2       : FLAT_Real_GlblAtomics_gfx10<0x05d>;
 defm GLOBAL_ATOMIC_FCMPSWAP_X2  : FLAT_Real_GlblAtomics_gfx10<0x05e>;
 defm GLOBAL_ATOMIC_FMIN_X2      : FLAT_Real_GlblAtomics_gfx10<0x05f>;
 defm GLOBAL_ATOMIC_FMAX_X2      : FLAT_Real_GlblAtomics_gfx10<0x060>;
-defm GLOBAL_LOAD_DWORD_ADDTID   : FLAT_Real_Base_gfx10<0x016>;
-defm GLOBAL_STORE_DWORD_ADDTID  : FLAT_Real_Base_gfx10<0x017>;
+defm GLOBAL_LOAD_DWORD_ADDTID   : FLAT_Real_AllAddr_gfx10<0x016>;
+defm GLOBAL_STORE_DWORD_ADDTID  : FLAT_Real_AllAddr_gfx10<0x017>;
 
 // ENC_FLAT_SCRATCH.
 defm SCRATCH_LOAD_UBYTE         : FLAT_Real_ScratchAllAddr_gfx10<0x008>;

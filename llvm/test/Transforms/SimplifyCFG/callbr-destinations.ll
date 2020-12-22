@@ -1,4 +1,4 @@
-; RUN: opt < %s -simplifycfg -disable-output
+; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -disable-output
 ;
 ; Test that SimplifyCFG does not cause CallBr instructions to have duplicate
 ; destinations, which will cause the verifier to assert.

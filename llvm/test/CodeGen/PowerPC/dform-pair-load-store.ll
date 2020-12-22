@@ -8,8 +8,8 @@
 ; This test checks that LSR properly recognizes lxvp/stxvp as load/store
 ; intrinsics to avoid generating x-form instructions instead of d-forms.
 
-declare <256 x i1> @llvm.ppc.mma.lxvp(i8*)
-declare void @llvm.ppc.mma.stxvp(<256 x i1>, i8*)
+declare <256 x i1> @llvm.ppc.vsx.lxvp(i8*)
+declare void @llvm.ppc.vsx.stxvp(<256 x i1>, i8*)
 define void @foo(i32 zeroext %n, <256 x i1>* %ptr, <256 x i1>* %ptr2) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
@@ -78,24 +78,24 @@ for.cond.cleanup:
 for.body:
   %indvars.iv = phi i64 [ 0, %for.body.lr.ph ], [ %indvars.iv.next, %for.body ]
   %2 = getelementptr i8, i8* %0, i64 %indvars.iv
-  %3 = tail call <256 x i1> @llvm.ppc.mma.lxvp(i8* %2)
+  %3 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* %2)
   %add2 = add nuw nsw i64 %indvars.iv, 32
   %4 = getelementptr i8, i8* %0, i64 %add2
-  %5 = tail call <256 x i1> @llvm.ppc.mma.lxvp(i8* %4)
+  %5 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* %4)
   %add4 = add nuw nsw i64 %indvars.iv, 64
   %6 = getelementptr i8, i8* %0, i64 %add4
-  %7 = tail call <256 x i1> @llvm.ppc.mma.lxvp(i8* %6)
+  %7 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* %6)
   %add6 = add nuw nsw i64 %indvars.iv, 96
   %8 = getelementptr i8, i8* %0, i64 %add6
-  %9 = tail call <256 x i1> @llvm.ppc.mma.lxvp(i8* %8)
+  %9 = tail call <256 x i1> @llvm.ppc.vsx.lxvp(i8* %8)
   %10 = getelementptr i8, i8* %1, i64 %indvars.iv
-  tail call void @llvm.ppc.mma.stxvp(<256 x i1> %3, i8* %10)
+  tail call void @llvm.ppc.vsx.stxvp(<256 x i1> %3, i8* %10)
   %11 = getelementptr i8, i8* %1, i64 %add2
-  tail call void @llvm.ppc.mma.stxvp(<256 x i1> %5, i8* %11)
+  tail call void @llvm.ppc.vsx.stxvp(<256 x i1> %5, i8* %11)
   %12 = getelementptr i8, i8* %1, i64 %add4
-  tail call void @llvm.ppc.mma.stxvp(<256 x i1> %7, i8* %12)
+  tail call void @llvm.ppc.vsx.stxvp(<256 x i1> %7, i8* %12)
   %13 = getelementptr i8, i8* %1, i64 %add6
-  tail call void @llvm.ppc.mma.stxvp(<256 x i1> %9, i8* %13)
+  tail call void @llvm.ppc.vsx.stxvp(<256 x i1> %9, i8* %13)
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body

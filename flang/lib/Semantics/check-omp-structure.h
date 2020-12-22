@@ -27,7 +27,7 @@ using OmpClauseSet =
     Fortran::common::EnumSet<llvm::omp::Clause, llvm::omp::Clause_enumSize>;
 
 #define GEN_FLANG_DIRECTIVE_CLAUSE_SETS
-#include "llvm/Frontend/OpenMP/OMP.cpp.inc"
+#include "llvm/Frontend/OpenMP/OMP.inc"
 
 namespace llvm {
 namespace omp {
@@ -85,7 +85,7 @@ public:
   OmpStructureChecker(SemanticsContext &context)
       : DirectiveStructureChecker(context,
 #define GEN_FLANG_DIRECTIVE_CLAUSE_MAP
-#include "llvm/Frontend/OpenMP/OMP.cpp.inc"
+#include "llvm/Frontend/OpenMP/OMP.inc"
         ) {
   }
 
@@ -127,6 +127,7 @@ public:
   void Leave(const parser::OmpClauseList &);
   void Enter(const parser::OmpClause &);
   void Enter(const parser::OmpNowait &);
+  void Enter(const parser::OmpClause::Allocate &);
   void Enter(const parser::OmpClause::Allocator &);
   void Enter(const parser::OmpClause::Inbranch &);
   void Enter(const parser::OmpClause::Mergeable &);
@@ -174,7 +175,6 @@ public:
   void Enter(const parser::OmpAtomicCapture &);
   void Leave(const parser::OmpAtomic &);
   void Enter(const parser::OmpAlignedClause &);
-  void Enter(const parser::OmpAllocateClause &);
   void Enter(const parser::OmpDefaultClause &);
   void Enter(const parser::OmpDefaultmapClause &);
   void Enter(const parser::OmpDependClause &);

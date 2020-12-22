@@ -71,7 +71,7 @@
 // DISASMDSO-NEXT: <.plt>:
 // DISASMDSO-NEXT:     10340: stp     x16, x30, [sp, #-0x10]!
 // &(.got.plt[2]) = 0x30450 + 2 * 8 = 0x30460
-// DISASMDSO-NEXT:     10344: adrp    x16, #0x20000
+// DISASMDSO-NEXT:     10344: adrp    x16, 0x30000
 // DISASMDSO-NEXT:     10348: ldr     x17, [x16, #0x460]
 // DISASMDSO-NEXT:     1034c: add     x16, x16, #0x460
 // DISASMDSO-NEXT:     10350: br      x17
@@ -83,7 +83,7 @@
 // &.got.plt[foo] = 0x30468
 // DISASMDSO-EMPTY:
 // DISASMDSO-NEXT:   <foo@plt>:
-// DISASMDSO-NEXT:     10360: adrp    x16, #0x20000
+// DISASMDSO-NEXT:     10360: adrp    x16, 0x30000
 // DISASMDSO-NEXT:     10364: ldr     x17, [x16, #0x468]
 // DISASMDSO-NEXT:     10368: add     x16, x16, #0x468
 // DISASMDSO-NEXT:     1036c: br      x17
@@ -92,7 +92,7 @@
 // &.got.plt[foo] = 0x30470
 // DISASMDSO-EMPTY:
 // DISASMDSO-NEXT:   <bar@plt>:
-// DISASMDSO-NEXT:     10370: adrp    x16, #0x20000
+// DISASMDSO-NEXT:     10370: adrp    x16, 0x30000
 // DISASMDSO-NEXT:     10374: ldr     x17, [x16, #0x470]
 // DISASMDSO-NEXT:     10378: add     x16, x16, #0x470
 // DISASMDSO-NEXT:     1037c: br      x17
@@ -101,7 +101,7 @@
 // 0x30468 = 0x10000 + 131072 + 1128
 // DISASMDSO-EMPTY:
 // DISASMDSO-NEXT:   <weak@plt>:
-// DISASMDSO-NEXT:     10380: adrp    x16, #0x20000
+// DISASMDSO-NEXT:     10380: adrp    x16, 0x30000
 // DISASMDSO-NEXT:     10384: ldr     x17, [x16, #0x478]
 // DISASMDSO-NEXT:     10388: add     x16, x16, #0x478
 // DISASMDSO-NEXT:     1038c: br      x17
@@ -163,7 +163,7 @@
 // DISASMEXE-NEXT: <.plt>:
 // DISASMEXE-NEXT:    2102e0: stp     x16, x30, [sp, #-0x10]!
 // &(.got.plt[2]) = 0x2303f0 + 2 * 8 = 0x230400
-// DISASMEXE-NEXT:    2102e4: adrp    x16, #0x20000
+// DISASMEXE-NEXT:    2102e4: adrp    x16, 0x230000
 // DISASMEXE-NEXT:    2102e8: ldr     x17, [x16, #0x400]
 // DISASMEXE-NEXT:    2102ec: add     x16, x16, #0x400
 // DISASMEXE-NEXT:    2102f0: br      x17
@@ -174,7 +174,7 @@
 // bar@plt
 // DISASMEXE-EMPTY:
 // DISASMEXE-NEXT:   <bar@plt>:
-// DISASMEXE-NEXT:    210300: adrp    x16, #0x20000
+// DISASMEXE-NEXT:    210300: adrp    x16, 0x230000
 // DISASMEXE-NEXT:    210304: ldr     x17, [x16, #0x408]
 // DISASMEXE-NEXT:    210308: add     x16, x16, #0x408
 // DISASMEXE-NEXT:    21030c: br      x17
@@ -182,7 +182,7 @@
 // weak@plt
 // DISASMEXE-EMPTY:
 // DISASMEXE-NEXT:   <weak@plt>:
-// DISASMEXE-NEXT:    210310: adrp    x16, #0x20000
+// DISASMEXE-NEXT:    210310: adrp    x16, 0x230000
 // DISASMEXE-NEXT:    210314: ldr     x17, [x16, #0x410]
 // DISASMEXE-NEXT:    210318: add     x16, x16, #0x410
 // DISASMEXE-NEXT:    21031c: br      x17

@@ -50,8 +50,12 @@ public:
   InstrProfIterator(InstrProfReader *Reader) : Reader(Reader) { Increment(); }
 
   InstrProfIterator &operator++() { Increment(); return *this; }
-  bool operator==(const InstrProfIterator &RHS) { return Reader == RHS.Reader; }
-  bool operator!=(const InstrProfIterator &RHS) { return Reader != RHS.Reader; }
+  bool operator==(const InstrProfIterator &RHS) const {
+    return Reader == RHS.Reader;
+  }
+  bool operator!=(const InstrProfIterator &RHS) const {
+    return Reader != RHS.Reader;
+  }
   value_type &operator*() { return Record; }
   value_type *operator->() { return &Record; }
 };

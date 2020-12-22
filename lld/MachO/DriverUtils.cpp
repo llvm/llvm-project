@@ -208,7 +208,7 @@ uint32_t macho::getModTime(StringRef path) {
 
 void macho::printArchiveMemberLoad(StringRef reason, const InputFile *f) {
   if (config->printEachFile)
-    lld::outs() << toString(f) << '\n';
+    message(toString(f));
   if (config->printWhyLoad)
-    lld::outs() << reason << " forced load of " << toString(f) << '\n';
+    message(reason + " forced load of " + toString(f));
 }

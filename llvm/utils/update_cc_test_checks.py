@@ -176,8 +176,8 @@ def config():
   return args, parser
 
 
-def get_function_body(args, filename, clang_args, extra_commands, prefixes,
-                      triple_in_cmd, func_dict, func_order):
+def get_function_body(builder, args, filename, clang_args, extra_commands, 
+                      prefixes):
   # TODO Clean up duplication of asm/common build_function_body_dictionary
   # Invoke external tool and extract function bodies.
   raw_tool_output = common.invoke_tool(args.clang, clang_args, filename)
@@ -195,10 +195,9 @@ def get_function_body(args, filename, clang_args, extra_commands, prefixes,
       raw_tool_output = common.invoke_tool(extra_args[0],
                                            extra_args[1:], f.name)
   if '-emit-llvm' in clang_args:
-    common.build_function_body_dictionary(
-            common.OPT_FUNCTION_RE, common.scrub_body, [],
-            raw_tool_output, prefixes, func_dict, func_order, args.verbose,
-            args.function_signature, args.check_attributes)
+    builder.process_run_line(
+            common.OPT_FUNCTION_RE, common.scrub_body, raw_tool_output,
+            prefixes)
   else:
     print('The clang command line should include -emit-llvm as asm tests '
           'are discouraged in Clang testsuite.', file=sys.stderr)
@@ -248,25 +247,25 @@ def main():
       run_list.append((check_prefixes, clang_args, commands[1:-1], triple_in_cmd))
 
     # Execute clang, generate LLVM IR, and extract functions.
-    func_dict = {}
-    func_order = {}
-    for p in run_list:
-      prefixes = p[0]
-      for prefix in prefixes:
-        func_dict.update({prefix: dict()})
-        func_order.update({prefix: []})
+
+    builder = common.FunctionTestBuilder(
+      run_list=run_list,
+      flags=ti.args,
+      scrubber_args=[])
+
     for prefixes, clang_args, extra_commands, triple_in_cmd in run_list:
       common.debug('Extracted clang cmd: clang {}'.format(clang_args))
       common.debug('Extracted FileCheck prefixes: {}'.format(prefixes))
 
-      get_function_body(ti.args, ti.path, clang_args, extra_commands, prefixes,
-                        triple_in_cmd, func_dict, func_order)
+      get_function_body(builder, ti.args, ti.path, clang_args, extra_commands, 
+                        prefixes)
 
       # Invoke clang -Xclang -ast-dump=json to get mapping from start lines to
       # mangled names. Forward all clang args for now.
       for k, v in get_line2spell_and_mangled(ti.args, clang_args).items():
         line2spell_and_mangled_list[k].append(v)
 
+    func_dict = builder.finish_and_get_func_dict()
     global_vars_seen_dict = {}
     prefix_set = set([prefix for p in run_list for prefix in p[0]])
     output_lines = []
@@ -302,8 +301,8 @@ def main():
                              prefixes,
                              func_dict, func)
 
-      common.add_checks_at_end(output_lines, run_list, func_order, '//',
-                               lambda my_output_lines, prefixes, func:
+      common.add_checks_at_end(output_lines, run_list, builder.func_order(), 
+                               '//', lambda my_output_lines, prefixes, func:
                                check_generator(my_output_lines,
                                                prefixes, func))
     else:

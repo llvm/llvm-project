@@ -22,8 +22,6 @@ v_mad_mix_f32 v0, abs(v1), v2, v3
 // GFX9-MADMIX: v_mad_mix_f32 v0, |v1|, v2, v3 ; encoding: [0x00,0x01,0xa0,0xd3,0x01,0x05,0x0e,0x04]
 // GFX9-FMAMIX-ERR: error: instruction not supported on this GPU
 
-// FIXME: Improve diagnistics
-
 v_mad_mix_f32 v0, v1, abs(v2), v3
 // GFX9-MADMIX: v_mad_mix_f32 v0, v1, |v2|, v3 ; encoding: [0x00,0x02,0xa0,0xd3,0x01,0x05,0x0e,0x04]
 // GFX9-FMAMIX-ERR: error: instruction not supported on this GPU
@@ -79,8 +77,6 @@ v_mad_mixhi_f16 v0, v1, v2, v3 clamp
 v_mad_mix_f32 v0, v1, v2, v3 op_sel:[0,0,0]
 // GFX9-MADMIX: v_mad_mix_f32 v0, v1, v2, v3 ; encoding: [0x00,0x00,0xa0,0xd3,0x01,0x05,0x0e,0x04]
 // GFX9-FMAMIX-ERR: error: instruction not supported on this GPU
-
-// FIXME: Improve diagnistics
 
 v_mad_mix_f32 v0, v1, v2, v3 op_sel:[1,0,0]
 // GFX9-MADMIX: v_mad_mix_f32 v0, v1, v2, v3 op_sel:[1,0,0] ; encoding: [0x00,0x08,0xa0,0xd3,0x01,0x05,0x0e,0x04]

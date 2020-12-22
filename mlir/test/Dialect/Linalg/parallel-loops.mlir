@@ -64,7 +64,7 @@ func @lower_outer_parallel(%A: memref<?x?x?x?xf32>, %B: memref<?x?x?xf32>) {
 
 #accesses = [
   affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3, d4, d5)>,
-  affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d2, d4, d5)>
+  affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d4, d3)>
 ]
 #trait = {
   iterator_types = ["parallel", "parallel", "reduction", "parallel", "parallel", "reduction"],
@@ -94,4 +94,4 @@ func @lower_mixed_parallel(%A: memref<?x?x?x?x?x?xf32>, %B: memref<?x?x?x?xf32>)
 //       CHECK:     scf.parallel (%[[IV3:.*]], %[[IV4:.*]]) = (%[[C0]], %[[C0]]) to (%[[D3]], %[[D4]]) step (%[[C1]], %[[C1]])
 //       CHECK:       scf.for %[[IV5:.*]] = %[[C0]] to %[[D5]] step %[[C1]]
 //       CHECK:       load %{{.*}}[%[[IV0]], %[[IV1]], %[[IV2]], %[[IV3]], %[[IV4]], %[[IV5]]]
-//       CHECK:       store %{{.*}}, %{{.*}}[%[[IV0]], %[[IV2]], %[[IV4]], %[[IV5]]]
+//       CHECK:       store %{{.*}}, %{{.*}}[%[[IV0]], %[[IV1]], %[[IV4]], %[[IV3]]]

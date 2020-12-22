@@ -1161,6 +1161,7 @@ namespace llvm {
     SDValue LowerSIGN_EXTEND_INREG(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerMUL(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerROTL(SDValue Op, SelectionDAG &DAG) const;
 
     SDValue LowerVectorLoad(SDValue Op, SelectionDAG &DAG) const;

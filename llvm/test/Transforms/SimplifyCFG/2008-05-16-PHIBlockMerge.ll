@@ -1,4 +1,4 @@
-; RUN: opt < %s -simplifycfg -S > %t
+; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S > %t
 ; RUN: not grep "^BB.tomerge" %t
 ; RUN: grep "^BB.nomerge" %t | count 4
 

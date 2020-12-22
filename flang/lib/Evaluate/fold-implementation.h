@@ -443,9 +443,8 @@ Expr<TR> FoldElementalIntrinsicHelper(FoldingContext &context,
     // Compute the shape of the result based on shapes of arguments
     ConstantSubscripts shape;
     int rank{0};
-    const ConstantSubscripts *shapes[sizeof...(TA)]{
-        &std::get<I>(*args)->shape()...};
-    const int ranks[sizeof...(TA)]{std::get<I>(*args)->Rank()...};
+    const ConstantSubscripts *shapes[]{&std::get<I>(*args)->shape()...};
+    const int ranks[]{std::get<I>(*args)->Rank()...};
     for (unsigned int i{0}; i < sizeof...(TA); ++i) {
       if (ranks[i] > 0) {
         if (rank == 0) {
@@ -470,20 +469,19 @@ Expr<TR> FoldElementalIntrinsicHelper(FoldingContext &context,
     std::vector<Scalar<TR>> results;
     if (TotalElementCount(shape) > 0) {
       ConstantBounds bounds{shape};
-      ConstantSubscripts index(rank, 1);
+      ConstantSubscripts resultIndex(rank, 1);
+      ConstantSubscripts argIndex[]{std::get<I>(*args)->lbounds()...};
       do {
         if constexpr (std::is_same_v<WrapperType<TR, TA...>,
                           ScalarFuncWithContext<TR, TA...>>) {
-          results.emplace_back(func(context,
-              (ranks[I] ? std::get<I>(*args)->At(index)
-                        : std::get<I>(*args)->GetScalarValue().value())...));
+          results.emplace_back(
+              func(context, std::get<I>(*args)->At(argIndex[I])...));
         } else if constexpr (std::is_same_v<WrapperType<TR, TA...>,
                                  ScalarFunc<TR, TA...>>) {
-          results.emplace_back(func(
-              (ranks[I] ? std::get<I>(*args)->At(index)
-                        : std::get<I>(*args)->GetScalarValue().value())...));
+          results.emplace_back(func(std::get<I>(*args)->At(argIndex[I])...));
         }
-      } while (bounds.IncrementSubscripts(index));
+        (std::get<I>(*args)->IncrementSubscripts(argIndex[I]), ...);
+      } while (bounds.IncrementSubscripts(resultIndex));
     }
     // Build and return constant result
     if constexpr (TR::category == TypeCategory::Character) {
@@ -732,17 +730,11 @@ private:
     Expr<T> folded{Fold(context_, common::Clone(expr.value()))};
     if (const auto *c{UnwrapConstantValue<T>(folded)}) {
       // Copy elements in Fortran array element order
-      ConstantSubscripts shape{c->shape()};
-      int rank{c->Rank()};
-      ConstantSubscripts index(GetRank(shape), 1);
-      for (std::size_t n{c->size()}; n-- > 0;) {
-        elements_.emplace_back(c->At(index));
-        for (int d{0}; d < rank; ++d) {
-          if (++index[d] <= shape[d]) {
-            break;
-          }
-          index[d] = 1;
-        }
+      if (c->size() > 0) {
+        ConstantSubscripts index{c->lbounds()};
+        do {
+          elements_.emplace_back(c->At(index));
+        } while (c->IncrementSubscripts(index));
       }
       return true;
     } else {

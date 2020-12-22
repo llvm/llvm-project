@@ -10476,16 +10476,16 @@
 // CHECK: 	vmxon	305419896
         	vmxon	0x12345678
 
-// CHECK: 	vmrun %eax
+// CHECK: 	vmrun
         	vmrun %eax
 
 // CHECK: 	vmmcall
         	vmmcall
 
-// CHECK: 	vmload %eax
+// CHECK: 	vmload
         	vmload %eax
 
-// CHECK: 	vmsave %eax
+// CHECK: 	vmsave
         	vmsave %eax
 
 // CHECK: 	stgi
@@ -10494,10 +10494,10 @@
 // CHECK: 	clgi
         	clgi
 
-// CHECK: 	skinit %eax
+// CHECK: 	skinit
         	skinit %eax
 
-// CHECK: 	invlpga %eax, %ecx
+// CHECK: 	invlpga
         	invlpga %eax, %ecx
 
 // CHECK:   blendvps	%xmm0, (%eax), %xmm1   # encoding: [0x66,0x0f,0x38,0x14,0x08]

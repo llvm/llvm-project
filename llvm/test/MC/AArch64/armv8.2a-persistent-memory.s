@@ -4,4 +4,4 @@
 
   dc cvap, x7
 // CHECK: dc cvap, x7   // encoding: [0x27,0x7c,0x0b,0xd5]
-// ERROR: error: DC CVAP requires ccpp
+// ERROR: error: DC CVAP requires: ccpp

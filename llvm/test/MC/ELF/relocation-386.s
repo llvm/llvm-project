@@ -8,7 +8,10 @@
 // I386: Format: elf32-i386
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section {{.*}} .rel.text {
-// CHECK-NEXT:     0x2          R_386_GOTOFF     .Lfoo
+/// Do not use STT_SECTION symbol for R_386_GOTOFF to work around a gold<2.34 bug
+/// https://sourceware.org/bugzilla/show_bug.cgi?id=16794
+// I386-NEXT:      0x2          R_386_GOTOFF     .Lfoo
+// IAMCU-NEXT:     0x2          R_386_GOTOFF     .rodata.str1.1
 // CHECK-NEXT:     0x{{[^ ]+}}  R_386_PLT32      bar2
 // CHECK-NEXT:     0x{{[^ ]+}}  R_386_GOTPC      _GLOBAL_OFFSET_TABLE_
 // Relocation 3 (bar3@GOTOFF) is done with symbol 7 (bss)

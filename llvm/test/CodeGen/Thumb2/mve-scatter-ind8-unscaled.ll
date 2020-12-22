@@ -64,7 +64,7 @@ define arm_aapcs_vfpcc void @unscaled_v2i8_i8(i8* %base, <2 x i8>* %offptr, <2 x
 ; CHECK-NEXT:    ldrb r2, [r1]
 ; CHECK-NEXT:    vmov.i32 q1, #0xff
 ; CHECK-NEXT:    ldrb r1, [r1, #1]
-; CHECK-NEXT:    vmov q2[2], q2[0], r1, r2
+; CHECK-NEXT:    vmov q2[2], q2[0], r2, r1
 ; CHECK-NEXT:    vmov r2, s0
 ; CHECK-NEXT:    vand q1, q2, q1
 ; CHECK-NEXT:    vmov r1, s4

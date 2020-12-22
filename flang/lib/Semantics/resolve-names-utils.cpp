@@ -29,6 +29,8 @@ using common::NumericOperator;
 using common::RelationalOperator;
 using IntrinsicOperator = parser::DefinedOperator::IntrinsicOperator;
 
+static constexpr const char *operatorPrefix{"operator("};
+
 static GenericKind MapIntrinsicOperator(IntrinsicOperator);
 
 Symbol *Resolve(const parser::Name &name, Symbol *symbol) {
@@ -65,43 +67,43 @@ bool IsIntrinsicOperator(
   return false;
 }
 
+template <typename E>
+std::forward_list<std::string> GetOperatorNames(
+    const SemanticsContext &context, E opr) {
+  std::forward_list<std::string> result;
+  for (const char *name : context.languageFeatures().GetNames(opr)) {
+    result.emplace_front(std::string{operatorPrefix} + name + ')');
+  }
+  return result;
+}
+
+std::forward_list<std::string> GetAllNames(
+    const SemanticsContext &context, const SourceName &name) {
+  std::string str{name.ToString()};
+  if (!name.empty() && name.end()[-1] == ')' &&
+      name.ToString().rfind(std::string{operatorPrefix}, 0) == 0) {
+    for (int i{0}; i != common::LogicalOperator_enumSize; ++i) {
+      auto names{GetOperatorNames(context, LogicalOperator{i})};
+      if (std::find(names.begin(), names.end(), str) != names.end()) {
+        return names;
+      }
+    }
+    for (int i{0}; i != common::RelationalOperator_enumSize; ++i) {
+      auto names{GetOperatorNames(context, RelationalOperator{i})};
+      if (std::find(names.begin(), names.end(), str) != names.end()) {
+        return names;
+      }
+    }
+  }
+  return {str};
+}
+
 bool IsLogicalConstant(
     const SemanticsContext &context, const SourceName &name) {
   std::string str{name.ToString()};
   return str == ".true." || str == ".false." ||
       (context.IsEnabled(LanguageFeature::LogicalAbbreviations) &&
           (str == ".t" || str == ".f."));
-}
-
-// The operators <, <=, >, >=, ==, and /= always have the same interpretations
-// as the operators .LT., .LE., .GT., .GE., .EQ., and .NE., respectively.
-std::forward_list<std::string> GenericSpecInfo::GetAllNames(
-    SemanticsContext &context) const {
-  auto getNames{[&](auto opr) {
-    std::forward_list<std::string> result;
-    for (const char *name : context.languageFeatures().GetNames(opr)) {
-      result.emplace_front("operator("s + name + ')');
-    }
-    return result;
-  }};
-  return std::visit(
-      common::visitors{[&](const LogicalOperator &x) { return getNames(x); },
-          [&](const RelationalOperator &x) { return getNames(x); },
-          [&](const auto &) -> std::forward_list<std::string> {
-            return {symbolName_.value().ToString()};
-          }},
-      kind_.u);
-}
-
-Symbol *GenericSpecInfo::FindInScope(
-    SemanticsContext &context, const Scope &scope) const {
-  for (const auto &name : GetAllNames(context)) {
-    auto iter{scope.find(SourceName{name})};
-    if (iter != scope.end()) {
-      return &*iter->second;
-    }
-  }
-  return nullptr;
 }
 
 void GenericSpecInfo::Resolve(Symbol *symbol) const {
@@ -160,6 +162,16 @@ void GenericSpecInfo::Analyze(const parser::GenericSpec &x) {
           },
       },
       x.u);
+}
+
+llvm::raw_ostream &operator<<(
+    llvm::raw_ostream &os, const GenericSpecInfo &info) {
+  os << "GenericSpecInfo: kind=" << info.kind_.ToString();
+  os << " parseName="
+     << (info.parseName_ ? info.parseName_->ToString() : "null");
+  os << " symbolName="
+     << (info.symbolName_ ? info.symbolName_->ToString() : "null");
+  return os;
 }
 
 // parser::DefinedOperator::IntrinsicOperator -> GenericKind

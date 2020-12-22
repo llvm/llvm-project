@@ -51,6 +51,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
     @skipIfDarwin
     @skipIfWindows
     @skipIfRemote
+    @expectedFailureNetBSD
     def test_attach(self):
         """
             This test attaches to a process that creates a file. We attach and disconnect

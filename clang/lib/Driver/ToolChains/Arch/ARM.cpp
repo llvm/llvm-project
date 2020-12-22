@@ -32,6 +32,12 @@ bool arm::isARMMProfile(const llvm::Triple &Triple) {
   return llvm::ARM::parseArchProfile(Arch) == llvm::ARM::ProfileKind::M;
 }
 
+// True if A-profile.
+bool arm::isARMAProfile(const llvm::Triple &Triple) {
+  llvm::StringRef Arch = Triple.getArchName();
+  return llvm::ARM::parseArchProfile(Arch) == llvm::ARM::ProfileKind::A;
+}
+
 // Get Arch/CPU from args.
 void arm::getARMArchCPUFromArgs(const ArgList &Args, llvm::StringRef &Arch,
                                 llvm::StringRef &CPU, bool FromAs) {
@@ -606,6 +612,45 @@ fp16_fml_fallthrough:
 
   if (Args.hasArg(options::OPT_mno_neg_immediates))
     Features.push_back("+no-neg-immediates");
+
+  // Enable/disable straight line speculation hardening.
+  if (Arg *A = Args.getLastArg(options::OPT_mharden_sls_EQ)) {
+    StringRef Scope = A->getValue();
+    bool EnableRetBr = false;
+    bool EnableBlr = false;
+    if (Scope != "none" && Scope != "all") {
+      SmallVector<StringRef, 4> Opts;
+      Scope.split(Opts, ",");
+      for (auto Opt : Opts) {
+        Opt = Opt.trim();
+        if (Opt == "retbr") {
+          EnableRetBr = true;
+          continue;
+        }
+        if (Opt == "blr") {
+          EnableBlr = true;
+          continue;
+        }
+        D.Diag(diag::err_invalid_sls_hardening)
+            << Scope << A->getAsString(Args);
+        break;
+      }
+    } else if (Scope == "all") {
+      EnableRetBr = true;
+      EnableBlr = true;
+    }
+
+    if (EnableRetBr || EnableBlr)
+      if (!(isARMAProfile(Triple) && getARMSubArchVersionNumber(Triple) >= 7))
+        D.Diag(diag::err_sls_hardening_arm_not_supported)
+            << Scope << A->getAsString(Args);
+
+    if (EnableRetBr)
+      Features.push_back("+harden-sls-retbr");
+    if (EnableBlr)
+      Features.push_back("+harden-sls-blr");
+  }
+
 }
 
 const std::string arm::getARMArch(StringRef Arch, const llvm::Triple &Triple) {

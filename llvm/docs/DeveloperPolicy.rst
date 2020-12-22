@@ -80,7 +80,7 @@ Making and Submitting a Patch
 When making a patch for review, the goal is to make it as easy for the reviewer
 to read it as possible.  As such, we recommend that you:
 
-#. Make your patch against git master, not a branch, and not an old version
+#. Make your patch against git main, not a branch, and not an old version
    of LLVM.  This makes it easy to apply the patch.  For information on how to
    clone from git, please see the :ref:`Getting Started Guide
    <checkout>`.
@@ -146,7 +146,7 @@ problem, we have a notion of an 'owner' for a piece of the code.  The sole
 responsibility of a code owner is to ensure that a commit to their area of the
 code is appropriately reviewed, either by themself or by someone else.  The list
 of current code owners can be found in the file `CODE_OWNERS.TXT
-<https://github.com/llvm/llvm-project/blob/master/llvm/CODE_OWNERS.TXT>`_ in the
+<https://github.com/llvm/llvm-project/blob/main/llvm/CODE_OWNERS.TXT>`_ in the
 root of the LLVM source tree.
 
 Note that code ownership is completely different than reviewers: anyone can

@@ -1,5 +1,5 @@
-; RUN: opt < %s -simplifycfg -S | FileCheck %s
-; RUN: opt < %s -strip-debug -simplifycfg -S | FileCheck %s
+; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
+; RUN: opt < %s -strip-debug -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
 
 ; Verify that the and.2 instruction is eliminated even in the presence of a
 ; preceding debug intrinsic.

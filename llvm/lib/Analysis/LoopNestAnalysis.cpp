@@ -306,6 +306,8 @@ static bool checkLoopsStructure(const Loop &OuterLoop, const Loop &InnerLoop,
   return true;
 }
 
+AnalysisKey LoopNestAnalysis::Key;
+
 raw_ostream &llvm::operator<<(raw_ostream &OS, const LoopNest &LN) {
   OS << "IsPerfect=";
   if (LN.getMaxPerfectDepth() == LN.getNestDepth())

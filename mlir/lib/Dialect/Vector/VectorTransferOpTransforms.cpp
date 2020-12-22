@@ -94,7 +94,7 @@ void TransferOptimization::deadStoreOp(vector::TransferWriteOp write) {
                     << "\n");
   llvm::SmallVector<Operation *, 8> reads;
   Operation *firstOverwriteCandidate = nullptr;
-  for (auto *user : write.memref().getUsers()) {
+  for (auto *user : write.source().getUsers()) {
     if (user == write.getOperation())
       continue;
     if (auto nextWrite = dyn_cast<vector::TransferWriteOp>(user)) {
@@ -163,7 +163,7 @@ void TransferOptimization::storeToLoadForwarding(vector::TransferReadOp read) {
                     << "\n");
   SmallVector<Operation *, 8> blockingWrites;
   vector::TransferWriteOp lastwrite = nullptr;
-  for (Operation *user : read.memref().getUsers()) {
+  for (Operation *user : read.source().getUsers()) {
     if (isa<vector::TransferReadOp>(user))
       continue;
     if (auto write = dyn_cast<vector::TransferWriteOp>(user)) {

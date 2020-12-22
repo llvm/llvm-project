@@ -130,8 +130,12 @@ public:
 
     Iterator& operator++() { ++I; return *this; }
     Iterator operator++(int) { auto T = *this; ++I; return T; }
-    bool operator==(const ConstIterator& X) const { return I == X.I; }
-    bool operator!=(const ConstIterator& X) const { return I != X.I; }
+    friend bool operator==(const Iterator &X, const Iterator &Y) {
+      return X.I == Y.I;
+    }
+    friend bool operator!=(const Iterator &X, const Iterator &Y) {
+      return X.I != Y.I;
+    }
   };
 
   class ConstIterator {
@@ -155,8 +159,12 @@ public:
 
     ConstIterator& operator++() { ++I; return *this; }
     ConstIterator operator++(int) { auto T = *this; ++I; return T; }
-    bool operator==(const ConstIterator& X) const { return I == X.I; }
-    bool operator!=(const ConstIterator& X) const { return I != X.I; }
+    friend bool operator==(const ConstIterator &X, const ConstIterator &Y) {
+      return X.I == Y.I;
+    }
+    friend bool operator!=(const ConstIterator &X, const ConstIterator &Y) {
+      return X.I != Y.I;
+    }
   };
 
   using iterator = Iterator;

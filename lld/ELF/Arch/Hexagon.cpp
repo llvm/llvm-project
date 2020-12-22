@@ -154,7 +154,7 @@ RelExpr Hexagon::getRelExpr(RelType type, const Symbol &s,
   case R_HEX_TPREL_32_6_X:
   case R_HEX_TPREL_HI16:
   case R_HEX_TPREL_LO16:
-    return R_TLS;
+    return R_TPREL;
   default:
     error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));

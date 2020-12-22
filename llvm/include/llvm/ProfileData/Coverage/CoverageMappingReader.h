@@ -67,10 +67,10 @@ public:
     increment();
     return *this;
   }
-  bool operator==(const CoverageMappingIterator &RHS) {
+  bool operator==(const CoverageMappingIterator &RHS) const {
     return Reader == RHS.Reader;
   }
-  bool operator!=(const CoverageMappingIterator &RHS) {
+  bool operator!=(const CoverageMappingIterator &RHS) const {
     return Reader != RHS.Reader;
   }
   Expected<CoverageMappingRecord &> operator*() {

@@ -4,6 +4,7 @@ set(LLVM_TARGET_DEFINITIONS CSKY.td)
 
 tablegen(LLVM CSKYGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM CSKYGenInstrInfo.inc -gen-instr-info)
+tablegen(LLVM CSKYGenMCCodeEmitter.inc -gen-emitter)
 
 add_public_tablegen_target(CSKYCommonTableGen)
 
@@ -22,3 +23,4 @@ add_llvm_target(CSKYCodeGen
   )
 
 add_subdirectory(TargetInfo)
+add_subdirectory(MCTargetDesc)

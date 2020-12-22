@@ -20,6 +20,7 @@ class CrashingRecursiveInferiorStepTestCase(TestBase):
 
     @skipIfTargetAndroid()  # debuggerd interferes with this test on Android
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
+    @expectedFailureNetBSD
     def test_recursive_inferior_crashing_step_after_break(self):
         """Test that lldb functions correctly after stepping through a crash."""
         self.build()

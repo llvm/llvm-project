@@ -1,4 +1,4 @@
-; RUN: opt -simplifycfg -S < %s | FileCheck %s
+; RUN: opt -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S < %s | FileCheck %s
 
 define void @ifconvertstore(i32* %A, i32 %B, i32 %C, i32 %D) {
 ; CHECK-LABEL: @ifconvertstore(

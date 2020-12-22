@@ -1,4 +1,4 @@
-; RUN: opt < %s -simplifycfg -S | not grep call
+; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | not grep call
 
 declare void @bar()
 

@@ -49,7 +49,7 @@ mlir::Type genFIRType(mlir::MLIRContext *context) {
   if constexpr (TC == Fortran::common::TypeCategory::Integer) {
     auto bits{Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer,
                                       KIND>::Scalar::bits};
-    return mlir::IntegerType::get(bits, context);
+    return mlir::IntegerType::get(context, bits);
   } else if constexpr (TC == Fortran::common::TypeCategory::Logical ||
                        TC == Fortran::common::TypeCategory::Character ||
                        TC == Fortran::common::TypeCategory::Complex) {
@@ -278,7 +278,7 @@ private:
 
   // some sequence of `n` bytes
   mlir::Type gen(const Fortran::evaluate::StaticDataObject::Pointer &ptr) {
-    mlir::Type byteTy{mlir::IntegerType::get(8, context)};
+    mlir::Type byteTy{mlir::IntegerType::get(context, 8)};
     return fir::SequenceType::get(trivialShape(ptr->itemBytes()), byteTy);
   }
 

@@ -10,7 +10,6 @@ add_mlir_dialect_library(MLIRLLVMIR
 
   DEPENDS
   MLIRLLVMOpsIncGen
-  MLIRLLVMConversionsIncGen
   MLIROpenMPOpsIncGen
   intrinsics_gen
 

@@ -18,6 +18,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PseudoProbe.h"
+#include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Target/TargetMachine.h"
 #include <unordered_map>
 
@@ -25,11 +26,36 @@ namespace llvm {
 
 class Module;
 
+using namespace sampleprof;
 using BlockIdMap = std::unordered_map<BasicBlock *, uint32_t>;
 using InstructionIdMap = std::unordered_map<Instruction *, uint32_t>;
 
 enum class PseudoProbeReservedId { Invalid = 0, Last = Invalid };
 
+class PseudoProbeDescriptor {
+  uint64_t FunctionGUID;
+  uint64_t FunctionHash;
+
+public:
+  PseudoProbeDescriptor(uint64_t GUID, uint64_t Hash)
+      : FunctionGUID(GUID), FunctionHash(Hash) {}
+  uint64_t getFunctionGUID() const { return FunctionGUID; }
+  uint64_t getFunctionHash() const { return FunctionHash; }
+};
+
+// This class serves sample counts correlation for SampleProfileLoader by
+// analyzing pseudo probes and their function descriptors injected by
+// SampleProfileProber.
+class PseudoProbeManager {
+  DenseMap<uint64_t, PseudoProbeDescriptor> GUIDToProbeDescMap;
+
+  const PseudoProbeDescriptor *getDesc(const Function &F) const;
+
+public:
+  PseudoProbeManager(const Module &M);
+  bool moduleIsProbed(const Module &M) const;
+  bool profileIsValid(const Function &F, const FunctionSamples &Samples) const;
+};
 
 /// Sample profile pseudo prober.
 ///

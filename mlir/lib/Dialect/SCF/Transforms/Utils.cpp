@@ -96,7 +96,7 @@ void mlir::outlineIfOp(OpBuilder &b, scf::IfOp ifOp, FuncOp *thenFn,
 
     ValueRange values(captures.getArrayRef());
     FunctionType type =
-        FunctionType::get(values.getTypes(), ifOp.getResultTypes(), ctx);
+        FunctionType::get(ctx, values.getTypes(), ifOp.getResultTypes());
     auto outlinedFunc = b.create<FuncOp>(loc, funcName, type);
     b.setInsertionPointToStart(outlinedFunc.addEntryBlock());
     BlockAndValueMapping bvm;

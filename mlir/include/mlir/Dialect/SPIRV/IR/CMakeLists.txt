@@ -1,0 +1,38 @@
+add_mlir_dialect(SPIRVOps spv)
+add_mlir_doc(SPIRVOps -gen-op-doc SPIRVOps Dialects/)
+
+set(LLVM_TARGET_DEFINITIONS SPIRVBase.td)
+mlir_tablegen(SPIRVEnums.h.inc -gen-enum-decls)
+mlir_tablegen(SPIRVEnums.cpp.inc -gen-enum-defs)
+add_public_tablegen_target(MLIRSPIRVEnumsIncGen)
+add_dependencies(mlir-headers MLIRSPIRVEnumsIncGen)
+
+set(LLVM_TARGET_DEFINITIONS SPIRVBase.td)
+mlir_tablegen(SPIRVEnumAvailability.h.inc -gen-spirv-enum-avail-decls)
+mlir_tablegen(SPIRVEnumAvailability.cpp.inc -gen-spirv-enum-avail-defs)
+mlir_tablegen(SPIRVCapabilityImplication.inc -gen-spirv-capability-implication)
+add_public_tablegen_target(MLIRSPIRVEnumAvailabilityIncGen)
+add_dependencies(mlir-headers MLIRSPIRVEnumAvailabilityIncGen)
+
+set(LLVM_TARGET_DEFINITIONS SPIRVOps.td)
+mlir_tablegen(SPIRVAvailability.h.inc -gen-avail-interface-decls)
+mlir_tablegen(SPIRVAvailability.cpp.inc -gen-avail-interface-defs)
+mlir_tablegen(SPIRVOpAvailabilityImpl.inc -gen-spirv-avail-impls)
+add_public_tablegen_target(MLIRSPIRVAvailabilityIncGen)
+add_dependencies(mlir-headers MLIRSPIRVAvailabilityIncGen)
+
+set(LLVM_TARGET_DEFINITIONS SPIRVOps.td)
+mlir_tablegen(SPIRVSerialization.inc -gen-spirv-serialization)
+add_public_tablegen_target(MLIRSPIRVSerializationGen)
+add_dependencies(mlir-headers MLIRSPIRVSerializationGen)
+
+set(LLVM_TARGET_DEFINITIONS SPIRVBase.td)
+mlir_tablegen(SPIRVAttrUtils.inc -gen-spirv-attr-utils)
+add_public_tablegen_target(MLIRSPIRVAttrUtilsGen)
+add_dependencies(mlir-headers MLIRSPIRVAttrUtilsGen)
+
+set(LLVM_TARGET_DEFINITIONS TargetAndABI.td)
+mlir_tablegen(TargetAndABI.h.inc -gen-struct-attr-decls)
+mlir_tablegen(TargetAndABI.cpp.inc -gen-struct-attr-defs)
+add_public_tablegen_target(MLIRSPIRVTargetAndABIIncGen)
+add_dependencies(mlir-headers MLIRSPIRVTargetAndABIIncGen)

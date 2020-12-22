@@ -1,9 +1,9 @@
 // Test CodeGen for Security Check Overflow Builtins.
 // rdar://13421498
 
-// RUN: %clang_cc1 -triple "i686-unknown-unknown"   -emit-llvm -x c %s -o - | FileCheck %s
-// RUN: %clang_cc1 -triple "x86_64-unknown-unknown" -emit-llvm -x c %s -o - | FileCheck %s
-// RUN: %clang_cc1 -triple "x86_64-mingw32"         -emit-llvm -x c %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple "i686-unknown-unknown"   -emit-llvm -x c %s -o - | FileCheck -DLONG_TYPE=i32 -DLONG_MAX=2147483647 %s
+// RUN: %clang_cc1 -triple "x86_64-unknown-unknown" -emit-llvm -x c %s -o - | FileCheck -DLONG_TYPE=i64 -DLONG_MAX=9223372036854775807 %s
+// RUN: %clang_cc1 -triple "x86_64-mingw32"         -emit-llvm -x c %s -o - | FileCheck -DLONG_TYPE=i32 -DLONG_MAX=2147483647 %s
 
 extern unsigned UnsignedErrorCode;
 extern unsigned long UnsignedLongErrorCode;
@@ -106,6 +106,51 @@ unsigned test_mul_overflow_uint_uint_uint(unsigned x, unsigned y) {
   // CHECK: store i32 [[Q]], i32*
   // CHECK: br i1 [[C]]
   unsigned r;
+  if (__builtin_mul_overflow(x, y, &r))
+    overflowed();
+  return r;
+}
+
+int test_mul_overflow_uint_uint_int(unsigned x, unsigned y) {
+  // CHECK-LABEL: define {{(dso_local )?}}i32 @test_mul_overflow_uint_uint_int
+  // CHECK: [[S:%.+]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 %{{.+}}, i32 %{{.+}})
+  // CHECK-DAG: [[Q:%.+]] = extractvalue { i32, i1 } [[S]], 0
+  // CHECK-DAG: [[C:%.+]] = extractvalue { i32, i1 } [[S]], 1
+  // CHECK: [[C1:%.+]] = icmp ugt i32 [[Q]], 2147483647
+  // CHECK: [[C2:%.+]] = or i1 [[C]], [[C1]]
+  // CHECK: store i32 [[Q]], i32*
+  // CHECK: br i1 [[C2]]
+  int r;
+  if (__builtin_mul_overflow(x, y, &r))
+    overflowed();
+  return r;
+}
+
+int test_mul_overflow_uint_uint_int_volatile(unsigned x, unsigned y) {
+  // CHECK-LABEL: define {{(dso_local )?}}i32 @test_mul_overflow_uint_uint_int_volatile
+  // CHECK: [[S:%.+]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 %{{.+}}, i32 %{{.+}})
+  // CHECK-DAG: [[Q:%.+]] = extractvalue { i32, i1 } [[S]], 0
+  // CHECK-DAG: [[C:%.+]] = extractvalue { i32, i1 } [[S]], 1
+  // CHECK: [[C1:%.+]] = icmp ugt i32 [[Q]], 2147483647
+  // CHECK: [[C2:%.+]] = or i1 [[C]], [[C1]]
+  // CHECK: store volatile i32 [[Q]], i32*
+  // CHECK: br i1 [[C2]]
+  volatile int r;
+  if (__builtin_mul_overflow(x, y, &r))
+    overflowed();
+  return r;
+}
+
+long test_mul_overflow_ulong_ulong_long(unsigned long x, unsigned long y) {
+  // CHECK-LABEL: @test_mul_overflow_ulong_ulong_long
+  // CHECK: [[S:%.+]] =  call { [[LONG_TYPE]], i1 } @llvm.umul.with.overflow.[[LONG_TYPE]]([[LONG_TYPE]] %{{.+}}, [[LONG_TYPE]] %{{.+}})
+  // CHECK-DAG: [[Q:%.+]] = extractvalue { [[LONG_TYPE]], i1 } [[S]], 0
+  // CHECK-DAG: [[C:%.+]] = extractvalue { [[LONG_TYPE]], i1 } [[S]], 1
+  // CHECK: [[C1:%.+]] = icmp ugt [[LONG_TYPE]] [[Q]], [[LONG_MAX]]
+  // CHECK: [[C2:%.+]] = or i1 [[C]], [[C1]]
+  // LONG64: store [[LONG_TYPE]] [[Q]], [[LONG_TYPE]]*
+  // LONG64: br i1 [[C2]]
+  long r;
   if (__builtin_mul_overflow(x, y, &r))
     overflowed();
   return r;

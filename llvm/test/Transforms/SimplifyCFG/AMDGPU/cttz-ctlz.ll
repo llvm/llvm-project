@@ -1,5 +1,5 @@
-; RUN: opt -S -simplifycfg -mtriple=amdgcn-unknown-unknown -mcpu=tahiti < %s | FileCheck -check-prefix=SI -check-prefix=ALL %s
-; RUN: opt -S -simplifycfg -mtriple=amdgcn-unknown-unknown -mcpu=tonga < %s | FileCheck -check-prefix=SI -check-prefix=ALL %s
+; RUN: opt -S -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -mtriple=amdgcn-unknown-unknown -mcpu=tahiti < %s | FileCheck -check-prefix=SI -check-prefix=ALL %s
+; RUN: opt -S -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -mtriple=amdgcn-unknown-unknown -mcpu=tonga < %s | FileCheck -check-prefix=SI -check-prefix=ALL %s
 
 
 define i64 @test1(i64 %A) {

@@ -1027,7 +1027,7 @@ CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request) {
   std::vector<std::string> envs = GetStrings(launch_request_arguments, "env");
   llvm::json::Object environment;
   for (const std::string &env : envs) {
-    size_t index = env.find("=");
+    size_t index = env.find('=');
     environment.try_emplace(env.substr(0, index), env.substr(index + 1));
   }
   run_in_terminal_args.try_emplace("env",

@@ -267,8 +267,9 @@ exit:
 ; CHECK: NoAlias:  i8* %a, i8* %p.base
 ; CHECK: NoAlias:  i8* %a, i8* %p.outer
 ; CHECK: NoAlias:  i8* %a, i8* %p.outer.next
-; CHECK: NoAlias:  i8* %a, i8* %p.inner
+; CHECK: MayAlias: i8* %a, i8* %p.inner
 ; CHECK: NoAlias:  i8* %a, i8* %p.inner.next
+; TODO: (a, p.inner) could be NoAlias
 define void @nested_loop2(i1 %c, i1 %c2, i8* noalias %p.base) {
 entry:
   %a = alloca i8

@@ -1383,7 +1383,7 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      100   0.25                  U     insl	%dx, %es:(%rdi)
 # CHECK-NEXT:  1      100   0.25    *      *      U     int	$7
 # CHECK-NEXT:  1      100   0.25                  U     invlpg	(%rax)
-# CHECK-NEXT:  1      100   0.25                  U     invlpga	%rax, %ecx
+# CHECK-NEXT:  1      100   0.25                  U     invlpga
 # CHECK-NEXT:  1      100   0.25                        lahf
 # CHECK-NEXT:  2      8     0.50    *                   leave
 # CHECK-NEXT:  1      100   0.25                  U     lodsb	(%rsi), %al
@@ -2314,7 +2314,7 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     insl	%dx, %es:(%rdi)
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     int	$7
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     invlpg	(%rax)
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     invlpga	%rax, %ecx
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     invlpga
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     lahf
 # CHECK-NEXT: 0.50   0.50   0.25   0.25   0.25   0.25    -      -      -      -      -      -     leave
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     lodsb	(%rsi), %al

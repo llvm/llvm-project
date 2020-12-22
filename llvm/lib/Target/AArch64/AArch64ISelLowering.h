@@ -907,8 +907,6 @@ private:
   SDValue LowerShiftRightParts(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVSETCC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCTPOP(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerF128Call(SDValue Op, SelectionDAG &DAG,
-                        RTLIB::Libcall Call) const;
   SDValue LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const;

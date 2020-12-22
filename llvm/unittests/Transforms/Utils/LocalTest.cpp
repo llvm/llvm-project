@@ -999,7 +999,7 @@ TEST(Local, SimplifyCFGWithNullAC) {
   ASSERT_TRUE(TestBB);
 
   // %test.bb is expected to be simplified by FoldCondBranchOnPHI.
-  EXPECT_TRUE(simplifyCFG(TestBB, TTI, Options));
+  EXPECT_TRUE(simplifyCFG(TestBB, TTI, /*DTU=*/nullptr, Options));
 }
 
 TEST(Local, CanReplaceOperandWithVariable) {

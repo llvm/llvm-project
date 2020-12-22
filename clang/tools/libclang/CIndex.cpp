@@ -1493,6 +1493,11 @@ bool CursorVisitor::VisitTemplateArgumentLoc(const TemplateArgumentLoc &TAL) {
       return Visit(MakeCXCursor(E, StmtParent, TU, RegionOfInterest));
     return false;
 
+  case TemplateArgument::UncommonValue:
+    if (Expr *E = TAL.getSourceUncommonValueExpression())
+      return Visit(MakeCXCursor(E, StmtParent, TU, RegionOfInterest));
+    return false;
+
   case TemplateArgument::NullPtr:
     if (Expr *E = TAL.getSourceNullPtrExpression())
       return Visit(MakeCXCursor(E, StmtParent, TU, RegionOfInterest));
@@ -2174,8 +2179,9 @@ class OMPClauseEnqueue : public ConstOMPClauseVisitor<OMPClauseEnqueue> {
 
 public:
   OMPClauseEnqueue(EnqueueVisitor *Visitor) : Visitor(Visitor) {}
-#define OMP_CLAUSE_CLASS(Enum, Str, Class) void Visit##Class(const Class *C);
-#include "llvm/Frontend/OpenMP/OMPKinds.def"
+#define GEN_CLANG_CLAUSE_CLASS
+#define CLAUSE_CLASS(Enum, Str, Class) void Visit##Class(const Class *C);
+#include "llvm/Frontend/OpenMP/OMP.inc"
   void VisitOMPClauseWithPreInit(const OMPClauseWithPreInit *C);
   void VisitOMPClauseWithPostUpdate(const OMPClauseWithPostUpdate *C);
 };

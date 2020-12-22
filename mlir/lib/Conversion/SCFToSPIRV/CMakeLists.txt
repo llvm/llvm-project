@@ -11,6 +11,7 @@ add_mlir_conversion_library(MLIRSCFToSPIRV
   MLIRAffine
   MLIRAffineToStandard
   MLIRSPIRV
+  MLIRSPIRVConversion
   MLIRIR
   MLIRLinalg
   MLIRPass

@@ -1,4 +1,4 @@
-; RUN: opt -S -simplifycfg < %s | FileCheck %s
+; RUN: opt -S -simplifycfg -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s
 
 ; We're sign extending an 8-bit value.
 ; The switch condition must be in the range [-128, 127], so any cases outside of that range must be dead.

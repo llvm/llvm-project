@@ -14,9 +14,9 @@
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/SPIRV/LayoutUtils.h"
-#include "mlir/Dialect/SPIRV/SPIRVDialect.h"
-#include "mlir/Dialect/SPIRV/SPIRVOps.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
+#include "mlir/Dialect/SPIRV/Utils/LayoutUtils.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
@@ -407,8 +407,7 @@ public:
     // cover all possible corner cases.
     if (isSignedIntegerOrVector(srcType) ||
         isUnsignedIntegerOrVector(srcType)) {
-      auto *context = rewriter.getContext();
-      auto signlessType = IntegerType::get(getBitWidth(srcType), context);
+      auto signlessType = rewriter.getIntegerType(getBitWidth(srcType));
 
       if (srcType.isa<VectorType>()) {
         auto dstElementsAttr = constOp.value().cast<DenseIntElementsAttr>();

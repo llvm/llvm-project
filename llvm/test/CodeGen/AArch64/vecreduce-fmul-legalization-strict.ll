@@ -59,10 +59,7 @@ define float @test_v3f32(<3 x float> %a) nounwind {
 define fp128 @test_v2f128(<2 x fp128> %a) nounwind {
 ; CHECK-LABEL: test_v2f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    bl __multf3
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b __multf3
   %b = call fp128 @llvm.vector.reduce.fmul.f128.v2f128(fp128 0xL00000000000000003fff00000000000000, <2 x fp128> %a)
   ret fp128 %b
 }

@@ -20,6 +20,13 @@ class ProcessAttachTestCase(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
 
+    def setUp(self):
+        # Call super's setUp().
+        TestBase.setUp(self)
+        # Find the line number to break for main.c.
+        self.line = line_number('main.cpp',
+                                '// Waiting to be attached...')
+
     @skipIfiOSSimulator
     def test_attach_to_process_by_id(self):
         """Test attach by process id"""
@@ -76,6 +83,29 @@ class ProcessAttachTestCase(TestBase):
 
         process = target.GetProcess()
         self.assertTrue(process, PROCESS_IS_VALID)
+
+    @expectedFailureNetBSD
+    def test_attach_to_process_by_id_correct_executable_offset(self):
+        """
+        Test that after attaching to a process the executable offset
+        is determined correctly on FreeBSD.  This is a regression test
+        for dyld plugin getting the correct executable path,
+        and therefore being able to identify it in the module list.
+        """
+
+        self.build()
+        exe = self.getBuildArtifact(exe_name)
+
+        # In order to reproduce, we must spawn using a relative path
+        popen = self.spawnSubprocess(os.path.relpath(exe))
+
+        self.runCmd("process attach -p " + str(popen.pid))
+
+        # Make suer we did not attach to early
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.cpp", self.line, num_expected_locations=1, loc_exact=False)
+        self.runCmd("process continue")
+        self.expect("p g_val", substrs=["$0 = 12345"])
 
     def tearDown(self):
         # Destroy process before TestBase.tearDown()

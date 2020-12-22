@@ -26,8 +26,7 @@ TEST(CeilTest, SpecialNumbers) {
   EXPECT_FP_EQ(inf, __llvm_libc::ceil(inf));
   EXPECT_FP_EQ(negInf, __llvm_libc::ceil(negInf));
 
-  ASSERT_NE(isnan(aNaN), 0);
-  ASSERT_NE(isnan(__llvm_libc::ceil(aNaN)), 0);
+  EXPECT_FP_EQ(aNaN, __llvm_libc::ceil(aNaN));
 }
 
 TEST(CeilTest, RoundedNumbers) {

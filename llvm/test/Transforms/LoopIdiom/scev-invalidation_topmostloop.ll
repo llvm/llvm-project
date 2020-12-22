@@ -1,4 +1,4 @@
-; RUN: opt -S -indvars -loop-idiom -verify -loop-simplifycfg -loop-idiom < %s | FileCheck %s
+; RUN: opt -S -indvars -loop-idiom -verify -loop-simplifycfg -simplifycfg-require-and-preserve-domtree=1 -loop-idiom < %s | FileCheck %s
 
 target triple = "x86_64-unknown-linux-gnu"
 

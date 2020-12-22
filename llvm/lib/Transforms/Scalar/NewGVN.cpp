@@ -801,9 +801,6 @@ private:
   Value *findPHIOfOpsLeader(const Expression *, const Instruction *,
                             const BasicBlock *) const;
 
-  // New instruction creation.
-  void handleNewInstruction(Instruction *) {}
-
   // Various instruction touch utilities
   template <typename Map, typename KeyType, typename Func>
   void for_each_found(Map &, const KeyType &, Func);

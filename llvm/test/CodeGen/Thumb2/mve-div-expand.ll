@@ -5,18 +5,18 @@
 define arm_aapcs_vfpcc <4 x i32> @udiv_i32(<4 x i32> %in1, <4 x i32> %in2) {
 ; CHECK-LABEL: udiv_i32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov r0, s4
-; CHECK-NEXT:    vmov r1, s0
+; CHECK-NEXT:    vmov r0, s6
+; CHECK-NEXT:    vmov r1, s2
 ; CHECK-NEXT:    udiv r0, r1, r0
-; CHECK-NEXT:    vmov r1, s6
-; CHECK-NEXT:    vmov r2, s2
+; CHECK-NEXT:    vmov r1, s4
+; CHECK-NEXT:    vmov r2, s0
 ; CHECK-NEXT:    udiv r1, r2, r1
-; CHECK-NEXT:    vmov r2, s3
+; CHECK-NEXT:    vmov r2, s1
 ; CHECK-NEXT:    vmov q2[2], q2[0], r1, r0
-; CHECK-NEXT:    vmov r0, s5
-; CHECK-NEXT:    vmov r1, s1
+; CHECK-NEXT:    vmov r0, s7
+; CHECK-NEXT:    vmov r1, s3
 ; CHECK-NEXT:    udiv r0, r1, r0
-; CHECK-NEXT:    vmov r1, s7
+; CHECK-NEXT:    vmov r1, s5
 ; CHECK-NEXT:    udiv r1, r2, r1
 ; CHECK-NEXT:    vmov q2[3], q2[1], r1, r0
 ; CHECK-NEXT:    vmov q0, q2
@@ -29,18 +29,18 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @sdiv_i32(<4 x i32> %in1, <4 x i32> %in2) {
 ; CHECK-LABEL: sdiv_i32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov r0, s4
-; CHECK-NEXT:    vmov r1, s0
+; CHECK-NEXT:    vmov r0, s6
+; CHECK-NEXT:    vmov r1, s2
 ; CHECK-NEXT:    sdiv r0, r1, r0
-; CHECK-NEXT:    vmov r1, s6
-; CHECK-NEXT:    vmov r2, s2
+; CHECK-NEXT:    vmov r1, s4
+; CHECK-NEXT:    vmov r2, s0
 ; CHECK-NEXT:    sdiv r1, r2, r1
-; CHECK-NEXT:    vmov r2, s3
+; CHECK-NEXT:    vmov r2, s1
 ; CHECK-NEXT:    vmov q2[2], q2[0], r1, r0
-; CHECK-NEXT:    vmov r0, s5
-; CHECK-NEXT:    vmov r1, s1
+; CHECK-NEXT:    vmov r0, s7
+; CHECK-NEXT:    vmov r1, s3
 ; CHECK-NEXT:    sdiv r0, r1, r0
-; CHECK-NEXT:    vmov r1, s7
+; CHECK-NEXT:    vmov r1, s5
 ; CHECK-NEXT:    sdiv r1, r2, r1
 ; CHECK-NEXT:    vmov q2[3], q2[1], r1, r0
 ; CHECK-NEXT:    vmov q0, q2
@@ -55,20 +55,20 @@ define arm_aapcs_vfpcc <4 x i32> @urem_i32(<4 x i32> %in1, <4 x i32> %in2) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    vmov r0, s4
-; CHECK-NEXT:    vmov r1, s0
+; CHECK-NEXT:    vmov r0, s6
+; CHECK-NEXT:    vmov r1, s2
 ; CHECK-NEXT:    udiv r2, r1, r0
 ; CHECK-NEXT:    mls r12, r2, r0, r1
-; CHECK-NEXT:    vmov r1, s6
-; CHECK-NEXT:    vmov r2, s2
+; CHECK-NEXT:    vmov r1, s4
+; CHECK-NEXT:    vmov r2, s0
 ; CHECK-NEXT:    udiv r3, r2, r1
 ; CHECK-NEXT:    mls lr, r3, r1, r2
-; CHECK-NEXT:    vmov r2, s5
-; CHECK-NEXT:    vmov r3, s1
-; CHECK-NEXT:    udiv r0, r3, r2
-; CHECK-NEXT:    mls r0, r0, r2, r3
 ; CHECK-NEXT:    vmov r2, s7
 ; CHECK-NEXT:    vmov r3, s3
+; CHECK-NEXT:    udiv r0, r3, r2
+; CHECK-NEXT:    mls r0, r0, r2, r3
+; CHECK-NEXT:    vmov r2, s5
+; CHECK-NEXT:    vmov r3, s1
 ; CHECK-NEXT:    vmov q0[2], q0[0], lr, r12
 ; CHECK-NEXT:    udiv r1, r3, r2
 ; CHECK-NEXT:    mls r1, r1, r2, r3
@@ -84,20 +84,20 @@ define arm_aapcs_vfpcc <4 x i32> @srem_i32(<4 x i32> %in1, <4 x i32> %in2) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    vmov r0, s4
-; CHECK-NEXT:    vmov r1, s0
+; CHECK-NEXT:    vmov r0, s6
+; CHECK-NEXT:    vmov r1, s2
 ; CHECK-NEXT:    sdiv r2, r1, r0
 ; CHECK-NEXT:    mls r12, r2, r0, r1
-; CHECK-NEXT:    vmov r1, s6
-; CHECK-NEXT:    vmov r2, s2
+; CHECK-NEXT:    vmov r1, s4
+; CHECK-NEXT:    vmov r2, s0
 ; CHECK-NEXT:    sdiv r3, r2, r1
 ; CHECK-NEXT:    mls lr, r3, r1, r2
-; CHECK-NEXT:    vmov r2, s5
-; CHECK-NEXT:    vmov r3, s1
-; CHECK-NEXT:    sdiv r0, r3, r2
-; CHECK-NEXT:    mls r0, r0, r2, r3
 ; CHECK-NEXT:    vmov r2, s7
 ; CHECK-NEXT:    vmov r3, s3
+; CHECK-NEXT:    sdiv r0, r3, r2
+; CHECK-NEXT:    mls r0, r0, r2, r3
+; CHECK-NEXT:    vmov r2, s5
+; CHECK-NEXT:    vmov r3, s1
 ; CHECK-NEXT:    vmov q0[2], q0[0], lr, r12
 ; CHECK-NEXT:    sdiv r1, r3, r2
 ; CHECK-NEXT:    mls r1, r1, r2, r3
@@ -737,17 +737,17 @@ define arm_aapcs_vfpcc <2 x i64> @udiv_i64(<2 x i64> %in1, <2 x i64> %in2) {
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11}
 ; CHECK-NEXT:    vmov q4, q1
 ; CHECK-NEXT:    vmov q5, q0
-; CHECK-NEXT:    vmov r0, s20
-; CHECK-NEXT:    vmov r1, s21
-; CHECK-NEXT:    vmov r2, s16
-; CHECK-NEXT:    vmov r3, s17
-; CHECK-NEXT:    bl __aeabi_uldivmod
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    mov r5, r1
 ; CHECK-NEXT:    vmov r0, s22
 ; CHECK-NEXT:    vmov r1, s23
 ; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    vmov r3, s19
+; CHECK-NEXT:    bl __aeabi_uldivmod
+; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s20
+; CHECK-NEXT:    vmov r1, s21
+; CHECK-NEXT:    vmov r2, s16
+; CHECK-NEXT:    vmov r3, s17
 ; CHECK-NEXT:    bl __aeabi_uldivmod
 ; CHECK-NEXT:    vmov q0[2], q0[0], r0, r4
 ; CHECK-NEXT:    vmov q0[3], q0[1], r1, r5
@@ -767,17 +767,17 @@ define arm_aapcs_vfpcc <2 x i64> @sdiv_i64(<2 x i64> %in1, <2 x i64> %in2) {
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11}
 ; CHECK-NEXT:    vmov q4, q1
 ; CHECK-NEXT:    vmov q5, q0
-; CHECK-NEXT:    vmov r0, s20
-; CHECK-NEXT:    vmov r1, s21
-; CHECK-NEXT:    vmov r2, s16
-; CHECK-NEXT:    vmov r3, s17
-; CHECK-NEXT:    bl __aeabi_ldivmod
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    mov r5, r1
 ; CHECK-NEXT:    vmov r0, s22
 ; CHECK-NEXT:    vmov r1, s23
 ; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    vmov r3, s19
+; CHECK-NEXT:    bl __aeabi_ldivmod
+; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s20
+; CHECK-NEXT:    vmov r1, s21
+; CHECK-NEXT:    vmov r2, s16
+; CHECK-NEXT:    vmov r3, s17
 ; CHECK-NEXT:    bl __aeabi_ldivmod
 ; CHECK-NEXT:    vmov q0[2], q0[0], r0, r4
 ; CHECK-NEXT:    vmov q0[3], q0[1], r1, r5
@@ -797,17 +797,17 @@ define arm_aapcs_vfpcc <2 x i64> @urem_i64(<2 x i64> %in1, <2 x i64> %in2) {
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11}
 ; CHECK-NEXT:    vmov q4, q1
 ; CHECK-NEXT:    vmov q5, q0
-; CHECK-NEXT:    vmov r0, s20
-; CHECK-NEXT:    vmov r1, s21
-; CHECK-NEXT:    vmov r2, s16
-; CHECK-NEXT:    vmov r3, s17
-; CHECK-NEXT:    bl __aeabi_uldivmod
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    mov r5, r3
 ; CHECK-NEXT:    vmov r0, s22
 ; CHECK-NEXT:    vmov r1, s23
 ; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    vmov r3, s19
+; CHECK-NEXT:    bl __aeabi_uldivmod
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    mov r5, r3
+; CHECK-NEXT:    vmov r0, s20
+; CHECK-NEXT:    vmov r1, s21
+; CHECK-NEXT:    vmov r2, s16
+; CHECK-NEXT:    vmov r3, s17
 ; CHECK-NEXT:    bl __aeabi_uldivmod
 ; CHECK-NEXT:    vmov q0[2], q0[0], r2, r4
 ; CHECK-NEXT:    vmov q0[3], q0[1], r3, r5
@@ -827,17 +827,17 @@ define arm_aapcs_vfpcc <2 x i64> @srem_i64(<2 x i64> %in1, <2 x i64> %in2) {
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11}
 ; CHECK-NEXT:    vmov q4, q1
 ; CHECK-NEXT:    vmov q5, q0
-; CHECK-NEXT:    vmov r0, s20
-; CHECK-NEXT:    vmov r1, s21
-; CHECK-NEXT:    vmov r2, s16
-; CHECK-NEXT:    vmov r3, s17
-; CHECK-NEXT:    bl __aeabi_ldivmod
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    mov r5, r3
 ; CHECK-NEXT:    vmov r0, s22
 ; CHECK-NEXT:    vmov r1, s23
 ; CHECK-NEXT:    vmov r2, s18
 ; CHECK-NEXT:    vmov r3, s19
+; CHECK-NEXT:    bl __aeabi_ldivmod
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    mov r5, r3
+; CHECK-NEXT:    vmov r0, s20
+; CHECK-NEXT:    vmov r1, s21
+; CHECK-NEXT:    vmov r2, s16
+; CHECK-NEXT:    vmov r3, s17
 ; CHECK-NEXT:    bl __aeabi_ldivmod
 ; CHECK-NEXT:    vmov q0[2], q0[0], r2, r4
 ; CHECK-NEXT:    vmov q0[3], q0[1], r3, r5

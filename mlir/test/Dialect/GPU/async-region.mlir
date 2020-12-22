@@ -18,7 +18,11 @@ module attributes {gpu.container_module} {
     // CHECK: %[[t2:.*]] = gpu.launch_func async [%[[t1]]]
     gpu.launch_func @kernels::@kernel
         blocks in (%sz, %sz, %sz) threads in (%sz, %sz, %sz)
-    // CHECK: gpu.wait [%[[t2]]]
+    // CHECK: %[[m:.*]], %[[t3:.*]] = gpu.alloc async [%[[t2]]] ()
+    %0 = gpu.alloc() : memref<7xf32>
+    // CHECK: %[[t4:.*]] = gpu.dealloc async [%[[t3]]] %[[m]]
+    gpu.dealloc %0 : memref<7xf32>
+    // CHECK: gpu.wait [%[[t4]]]
     // CHECK: call @foo
     call @foo() : () -> ()
     return
@@ -97,5 +101,28 @@ module attributes {gpu.container_module} {
     // CHECK: gpu.wait [%[[t]]]
     async.await %a1 : !async.token
     return
+  }
+
+ // CHECK-LABEL:func @async_execute_with_result(%{{.*}}: index)
+  func @async_execute_with_result(%sz : index) -> index {
+    // CHECK: %[[a0:.*]], %[[f0:.*]]:2 = async.execute
+    // CHECK-SAME: -> (!async.value<index>, !async.value<!gpu.async.token>)
+    %a0, %f0 = async.execute -> !async.value<index> {
+      // CHECK: %[[t:.*]] = gpu.launch_func async
+      gpu.launch_func @kernels::@kernel
+          blocks in (%sz, %sz, %sz) threads in (%sz, %sz, %sz)
+      // CHECK-NOT: gpu.wait
+      // CHECK: async.yield {{.*}}, %[[t]] : index, !gpu.async.token
+      async.yield %sz : index
+    }
+
+    // CHECK: async.await %[[a0]] : !async.token
+    // CHECK: %[[t:.*]] = async.await %[[f0]]#1 : !async.value<!gpu.async.token>
+    // CHECK: gpu.wait [%[[t]]]
+    async.await %a0 : !async.token
+    // CHECK: %[[x:.*]] = async.await %[[f0]]#0 : !async.value<index>
+    %x = async.await %f0 : !async.value<index>
+    // CHECK: return %[[x]] : index
+    return %x : index
   }
 }

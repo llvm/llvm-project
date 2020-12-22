@@ -1839,12 +1839,21 @@ public:
   void Unparse(const AccDataModifier::Modifier &x) {
     Word(AccDataModifier::EnumToString(x));
   }
+  void Unparse(const AccBindClause &x) {
+    std::visit(common::visitors{
+                   [&](const Name &y) { Put('('), Walk(y), Put(')'); },
+                   [&](const ScalarDefaultCharExpr &y) {
+                     Put('('), Walk(y), Put(')');
+                   },
+               },
+        x.u);
+  }
   void Unparse(const AccDefaultClause &x) {
     switch (x.v) {
-    case AccDefaultClause::Arg::None:
+    case llvm::acc::DefaultValue::ACC_Default_none:
       Put("NONE");
       break;
-    case AccDefaultClause::Arg::Present:
+    case llvm::acc::DefaultValue::ACC_Default_present:
       Put("PRESENT");
       break;
     }
@@ -2011,10 +2020,9 @@ public:
     Put(")");
   }
   void Unparse(const OmpAllocateClause &x) {
-    Word("ALLOCATE(");
-    Walk(std::get<std::optional<OmpAllocateClause::Allocator>>(x.t), ":");
+    Walk(std::get<std::optional<OmpAllocateClause::Allocator>>(x.t));
+    Put(":");
     Walk(std::get<OmpObjectList>(x.t));
-    Put(")");
   }
   void Unparse(const OmpDependSinkVecLength &x) {
     Walk(std::get<DefinedOperator>(x.t));
@@ -2074,7 +2082,7 @@ public:
     Put(")");
   }
 #define GEN_FLANG_CLAUSE_UNPARSE
-#include "llvm/Frontend/OpenMP/OMP.cpp.inc"
+#include "llvm/Frontend/OpenMP/OMP.inc"
   void Unparse(const OmpLoopDirective &x) {
     switch (x.v) {
     case llvm::omp::Directive::OMPD_distribute:

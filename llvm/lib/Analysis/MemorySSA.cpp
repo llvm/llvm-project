@@ -2581,3 +2581,19 @@ void MemoryDef::deleteMe(DerivedUser *Self) {
 void MemoryUse::deleteMe(DerivedUser *Self) {
   delete static_cast<MemoryUse *>(Self);
 }
+
+bool upward_defs_iterator::IsGuaranteedLoopInvariant(Value *Ptr) const {
+  auto IsGuaranteedLoopInvariantBase = [](Value *Ptr) {
+    Ptr = Ptr->stripPointerCasts();
+    if (!isa<Instruction>(Ptr))
+      return true;
+    return isa<AllocaInst>(Ptr);
+  };
+
+  Ptr = Ptr->stripPointerCasts();
+  if (auto *GEP = dyn_cast<GEPOperator>(Ptr)) {
+    return IsGuaranteedLoopInvariantBase(GEP->getPointerOperand()) &&
+           GEP->hasAllConstantIndices();
+  }
+  return IsGuaranteedLoopInvariantBase(Ptr);
+}

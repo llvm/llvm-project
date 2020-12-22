@@ -13,6 +13,7 @@
 #include "DwarfException.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/MC/MCSectionXCOFF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -37,8 +38,8 @@ void AIXException::emitExceptionInfoTable(const MCSymbol *LSDA,
 
   Asm->OutStreamer->SwitchSection(
       Asm->getObjFileLowering().getCompactUnwindSection());
-  MCSymbol *EHInfoLabel = MMI->getContext().getOrCreateSymbol(
-      "__ehinfo." + Twine(Asm->getFunctionNumber()));
+  MCSymbol *EHInfoLabel =
+      TargetLoweringObjectFileXCOFF::getEHInfoTableSymbol(Asm->MF);
   Asm->OutStreamer->emitLabel(EHInfoLabel);
 
   // Version number.
@@ -60,20 +61,16 @@ void AIXException::emitExceptionInfoTable(const MCSymbol *LSDA,
 }
 
 void AIXException::endFunction(const MachineFunction *MF) {
-  const Function &F = MF->getFunction();
-  bool HasLandingPads = !MF->getLandingPads().empty();
-  const Function *Per = nullptr;
-  if (F.hasPersonalityFn())
-    Per = dyn_cast<Function>(F.getPersonalityFn()->stripPointerCasts());
-  bool EmitEHBlock =
-      HasLandingPads || (F.hasPersonalityFn() &&
-                         !isNoOpWithoutInvoke(classifyEHPersonality(Per)) &&
-                         F.needsUnwindTableEntry());
-
-  if (!EmitEHBlock)
+  if (!TargetLoweringObjectFileXCOFF::ShouldEmitEHBlock(MF))
     return;
 
   const MCSymbol *LSDALabel = emitExceptionTable();
+
+  const Function &F = MF->getFunction();
+  assert(F.hasPersonalityFn() &&
+         "Landingpads are presented, but no personality routine is found.");
+  const Function *Per =
+      dyn_cast<Function>(F.getPersonalityFn()->stripPointerCasts());
   const MCSymbol *PerSym = Asm->TM.getSymbol(Per);
 
   emitExceptionInfoTable(LSDALabel, PerSym);

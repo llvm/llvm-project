@@ -696,23 +696,6 @@ func @tensor_from_elements() {
   return
 }
 
-// CHECK-LABEL: func @tensor_cast(%arg0
-func @tensor_cast(%arg0: tensor<*xf32>, %arg1 : tensor<4x4xf32>, %arg2: tensor<?x?xf32>) {
-  // CHECK: %0 = tensor_cast %arg0 : tensor<*xf32> to tensor<?x?xf32>
-  %0 = tensor_cast %arg0 : tensor<*xf32> to tensor<?x?xf32>
-
-  // CHECK: %1 = tensor_cast %arg1 : tensor<4x4xf32> to tensor<*xf32>
-  %1 = tensor_cast %arg1 : tensor<4x4xf32> to tensor<*xf32>
-
-  // CHECK: %2 = tensor_cast %arg2 : tensor<?x?xf32> to tensor<4x?xf32>
-  %2 = tensor_cast %arg2 : tensor<?x?xf32> to tensor<4x?xf32>
-
-  // CHECK: %3 = tensor_cast %2 : tensor<4x?xf32> to tensor<?x?xf32>
-  %3 = tensor_cast %2 : tensor<4x?xf32> to tensor<?x?xf32>
-
-  return
-}
-
 // CHECK-LABEL: func @memref_cast(%arg0
 func @memref_cast(%arg0: memref<4xf32>, %arg1 : memref<?xf32>, %arg2 : memref<64x16x4xf32, offset: 0, strides: [64, 4, 1]>) {
   // CHECK: %0 = memref_cast %arg0 : memref<4xf32> to memref<?xf32>

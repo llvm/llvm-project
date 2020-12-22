@@ -982,6 +982,11 @@ TEST_P(ASTMatchersTest, GNUNullExpr) {
   EXPECT_TRUE(matches("int* i = __null;", gnuNullExpr()));
 }
 
+TEST_P(ASTMatchersTest, GenericSelectionExpr) {
+  EXPECT_TRUE(matches("void f() { (void)_Generic(1, int: 1, float: 2.0); }",
+                      genericSelectionExpr()));
+}
+
 TEST_P(ASTMatchersTest, AtomicExpr) {
   EXPECT_TRUE(matches("void foo() { int *ptr; __atomic_load_n(ptr, 1); }",
                       atomicExpr()));

@@ -13,6 +13,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
@@ -383,6 +384,22 @@ std::error_code parseLineFilter(StringRef LineFilter,
 llvm::ErrorOr<ClangTidyOptions>
 parseConfiguration(llvm::MemoryBufferRef Config) {
   llvm::yaml::Input Input(Config);
+  ClangTidyOptions Options;
+  Input >> Options;
+  if (Input.error())
+    return Input.error();
+  return Options;
+}
+
+static void diagHandlerImpl(const llvm::SMDiagnostic &Diag, void *Ctx) {
+  (*reinterpret_cast<DiagCallback *>(Ctx))(Diag);
+};
+
+llvm::ErrorOr<ClangTidyOptions>
+parseConfigurationWithDiags(llvm::MemoryBufferRef Config,
+                            DiagCallback Handler) {
+  llvm::yaml::Input Input(Config, nullptr, Handler ? diagHandlerImpl : nullptr,
+                          &Handler);
   ClangTidyOptions Options;
   Input >> Options;
   if (Input.error())

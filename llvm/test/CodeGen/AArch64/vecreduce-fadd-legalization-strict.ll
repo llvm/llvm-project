@@ -73,13 +73,10 @@ define double @test_v1f64_neutral(<1 x double> %a) nounwind {
 define fp128 @test_v1f128(<1 x fp128> %a, fp128 %s) nounwind {
 ; CHECK-LABEL: test_v1f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    mov v2.16b, v0.16b
 ; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    mov v1.16b, v2.16b
-; CHECK-NEXT:    bl __addtf3
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b __addtf3
   %b = call fp128 @llvm.vector.reduce.fadd.f128.v1f128(fp128 %s, <1 x fp128> %a)
   ret fp128 %b
 }
@@ -151,10 +148,9 @@ define fp128 @test_v2f128(<2 x fp128> %a, fp128 %s) nounwind {
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    bl __addtf3
 ; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:    bl __addtf3
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #32 // =32
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b __addtf3
   %b = call fp128 @llvm.vector.reduce.fadd.f128.v2f128(fp128 %s, <2 x fp128> %a)
   ret fp128 %b
 }
@@ -162,10 +158,7 @@ define fp128 @test_v2f128(<2 x fp128> %a, fp128 %s) nounwind {
 define fp128 @test_v2f128_neutral(<2 x fp128> %a) nounwind {
 ; CHECK-LABEL: test_v2f128_neutral:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    bl __addtf3
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b __addtf3
   %b = call fp128 @llvm.vector.reduce.fadd.f128.v2f128(fp128 0xL00000000000000008000000000000000, <2 x fp128> %a)
   ret fp128 %b
 }

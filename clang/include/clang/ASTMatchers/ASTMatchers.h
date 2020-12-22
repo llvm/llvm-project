@@ -2362,6 +2362,10 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, ChooseExpr>
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, GNUNullExpr>
     gnuNullExpr;
 
+/// Matches C11 _Generic expression.
+extern const internal::VariadicDynCastAllOfMatcher<Stmt, GenericSelectionExpr>
+    genericSelectionExpr;
+
 /// Matches atomic builtins.
 /// Example matches __atomic_load_n(ptr, 1)
 /// \code

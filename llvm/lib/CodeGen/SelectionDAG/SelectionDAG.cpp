@@ -8966,23 +8966,30 @@ void SelectionDAG::AddDbgLabel(SDDbgLabel *DB) {
   DbgInfo->add(DB);
 }
 
-SDValue SelectionDAG::makeEquivalentMemoryOrdering(LoadSDNode *OldLoad,
-                                                   SDValue NewMemOp) {
-  assert(isa<MemSDNode>(NewMemOp.getNode()) && "Expected a memop node");
+SDValue SelectionDAG::makeEquivalentMemoryOrdering(SDValue OldChain,
+                                                   SDValue NewMemOpChain) {
+  assert(isa<MemSDNode>(NewMemOpChain) && "Expected a memop node");
+  assert(NewMemOpChain.getValueType() == MVT::Other && "Expected a token VT");
   // The new memory operation must have the same position as the old load in
   // terms of memory dependency. Create a TokenFactor for the old load and new
   // memory operation and update uses of the old load's output chain to use that
   // TokenFactor.
-  SDValue OldChain = SDValue(OldLoad, 1);
-  SDValue NewChain = SDValue(NewMemOp.getNode(), 1);
-  if (OldChain == NewChain || !OldLoad->hasAnyUseOfValue(1))
-    return NewChain;
+  if (OldChain == NewMemOpChain || OldChain.use_empty())
+    return NewMemOpChain;
 
-  SDValue TokenFactor =
-      getNode(ISD::TokenFactor, SDLoc(OldLoad), MVT::Other, OldChain, NewChain);
+  SDValue TokenFactor = getNode(ISD::TokenFactor, SDLoc(OldChain), MVT::Other,
+                                OldChain, NewMemOpChain);
   ReplaceAllUsesOfValueWith(OldChain, TokenFactor);
-  UpdateNodeOperands(TokenFactor.getNode(), OldChain, NewChain);
+  UpdateNodeOperands(TokenFactor.getNode(), OldChain, NewMemOpChain);
   return TokenFactor;
+}
+
+SDValue SelectionDAG::makeEquivalentMemoryOrdering(LoadSDNode *OldLoad,
+                                                   SDValue NewMemOp) {
+  assert(isa<MemSDNode>(NewMemOp.getNode()) && "Expected a memop node");
+  SDValue OldChain = SDValue(OldLoad, 1);
+  SDValue NewMemOpChain = NewMemOp.getValue(1);
+  return makeEquivalentMemoryOrdering(OldChain, NewMemOpChain);
 }
 
 SDValue SelectionDAG::getSymbolFunctionGlobalAddress(SDValue Op,

@@ -246,7 +246,7 @@ LANGOPT(GPUExcludeWrongSideOverloads, 1, 0, "always exclude wrong side overloads
 
 LANGOPT(SYCL              , 1, 0, "SYCL")
 LANGOPT(SYCLIsDevice      , 1, 0, "Generate code for SYCL device")
-LANGOPT(SYCLVersion       , 32, 0, "Version of the SYCL standard used")
+ENUM_LANGOPT(SYCLVersion  , SYCLMajorVersion, 1, SYCL_None, "Version of the SYCL standard used")
 
 LANGOPT(HIPUseNewLaunchAPI, 1, 0, "Use new kernel launching API for HIP")
 

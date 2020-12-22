@@ -414,8 +414,9 @@ class OMPClauseProfiler : public ConstOMPClauseVisitor<OMPClauseProfiler> {
 
 public:
   OMPClauseProfiler(StmtProfiler *P) : Profiler(P) { }
-#define OMP_CLAUSE_CLASS(Enum, Str, Class) void Visit##Class(const Class *C);
-#include "llvm/Frontend/OpenMP/OMPKinds.def"
+#define GEN_CLANG_CLAUSE_CLASS
+#define CLAUSE_CLASS(Enum, Str, Class) void Visit##Class(const Class *C);
+#include "llvm/Frontend/OpenMP/OMP.inc"
   void VistOMPClauseWithPreInit(const OMPClauseWithPreInit *C);
   void VistOMPClauseWithPostUpdate(const OMPClauseWithPostUpdate *C);
 };
@@ -2205,6 +2206,12 @@ void StmtProfiler::VisitTemplateArgument(const TemplateArgument &Arg) {
   case TemplateArgument::Integral:
     VisitType(Arg.getIntegralType());
     Arg.getAsIntegral().Profile(ID);
+    break;
+
+  case TemplateArgument::UncommonValue:
+    VisitType(Arg.getUncommonValueType());
+    // FIXME: Do we need to recursively decompose this ourselves?
+    Arg.getAsUncommonValue().Profile(ID);
     break;
 
   case TemplateArgument::Expression:

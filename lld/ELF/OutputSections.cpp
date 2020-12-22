@@ -418,7 +418,11 @@ void OutputSection::finalize() {
   if (!config->copyRelocs || (type != SHT_RELA && type != SHT_REL))
     return;
 
-  if (isa<SyntheticSection>(first))
+  // Skip if 'first' is synthetic, i.e. not a section created by --emit-relocs.
+  // Normally 'type' was changed by 'first' so 'first' should be non-null.
+  // However, if the output section is .rela.dyn, 'type' can be set by the empty
+  // synthetic .rela.plt and first can be null.
+  if (!first || isa<SyntheticSection>(first))
     return;
 
   link = in.symTab->getParent()->sectionIndex;

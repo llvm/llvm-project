@@ -36,28 +36,28 @@ define arm_aapcs_vfpcc <2 x i64> @sadd_int64_t(<2 x i64> %src1, <2 x i64> %src2)
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, lr}
 ; CHECK-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NEXT:    vmov r0, s5
-; CHECK-NEXT:    vmov r2, s1
-; CHECK-NEXT:    vmov lr, s4
-; CHECK-NEXT:    vmov r5, s6
-; CHECK-NEXT:    vmov r6, s2
+; CHECK-NEXT:    vmov r0, s7
+; CHECK-NEXT:    vmov r2, s3
+; CHECK-NEXT:    vmov lr, s6
+; CHECK-NEXT:    vmov r5, s4
+; CHECK-NEXT:    vmov r6, s0
 ; CHECK-NEXT:    cmp.w r0, #-1
 ; CHECK-NEXT:    cset r1, gt
 ; CHECK-NEXT:    cmp.w r2, #-1
 ; CHECK-NEXT:    cset r3, gt
 ; CHECK-NEXT:    cmp r3, r1
-; CHECK-NEXT:    vmov r1, s0
+; CHECK-NEXT:    vmov r1, s2
 ; CHECK-NEXT:    cset r12, eq
 ; CHECK-NEXT:    adds.w r1, r1, lr
 ; CHECK-NEXT:    adcs r0, r2
 ; CHECK-NEXT:    cmp.w r0, #-1
 ; CHECK-NEXT:    cset r2, gt
 ; CHECK-NEXT:    cmp r3, r2
-; CHECK-NEXT:    vmov r3, s7
+; CHECK-NEXT:    vmov r3, s5
 ; CHECK-NEXT:    cset r2, ne
 ; CHECK-NEXT:    and.w r2, r2, r12
 ; CHECK-NEXT:    ands r12, r2, #1
-; CHECK-NEXT:    vmov r2, s3
+; CHECK-NEXT:    vmov r2, s1
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    asrne r1, r0, #31
 ; CHECK-NEXT:    cmp.w r3, #-1
@@ -132,17 +132,17 @@ define arm_aapcs_vfpcc <2 x i64> @uadd_int64_t(<2 x i64> %src1, <2 x i64> %src2)
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    vmov r2, s4
+; CHECK-NEXT:    vmov r2, s6
 ; CHECK-NEXT:    mov.w r12, #0
-; CHECK-NEXT:    vmov r3, s0
-; CHECK-NEXT:    vmov r0, s5
-; CHECK-NEXT:    vmov r1, s1
-; CHECK-NEXT:    vmov r4, s6
-; CHECK-NEXT:    vmov r5, s2
-; CHECK-NEXT:    adds r2, r2, r3
-; CHECK-NEXT:    vmov r3, s7
-; CHECK-NEXT:    adcs r0, r1
+; CHECK-NEXT:    vmov r3, s2
+; CHECK-NEXT:    vmov r0, s7
 ; CHECK-NEXT:    vmov r1, s3
+; CHECK-NEXT:    vmov r4, s4
+; CHECK-NEXT:    vmov r5, s0
+; CHECK-NEXT:    adds r2, r2, r3
+; CHECK-NEXT:    vmov r3, s5
+; CHECK-NEXT:    adcs r0, r1
+; CHECK-NEXT:    vmov r1, s1
 ; CHECK-NEXT:    adcs lr, r12, #0
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne.w r2, #-1
@@ -201,28 +201,28 @@ define arm_aapcs_vfpcc <2 x i64> @ssub_int64_t(<2 x i64> %src1, <2 x i64> %src2)
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, lr}
 ; CHECK-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NEXT:    vmov r0, s5
-; CHECK-NEXT:    vmov r2, s1
-; CHECK-NEXT:    vmov lr, s4
-; CHECK-NEXT:    vmov r5, s6
-; CHECK-NEXT:    vmov r6, s2
+; CHECK-NEXT:    vmov r0, s7
+; CHECK-NEXT:    vmov r2, s3
+; CHECK-NEXT:    vmov lr, s6
+; CHECK-NEXT:    vmov r5, s4
+; CHECK-NEXT:    vmov r6, s0
 ; CHECK-NEXT:    cmp.w r0, #-1
 ; CHECK-NEXT:    cset r1, gt
 ; CHECK-NEXT:    cmp.w r2, #-1
 ; CHECK-NEXT:    cset r3, gt
 ; CHECK-NEXT:    cmp r3, r1
-; CHECK-NEXT:    vmov r1, s0
+; CHECK-NEXT:    vmov r1, s2
 ; CHECK-NEXT:    cset r12, ne
 ; CHECK-NEXT:    subs.w r1, r1, lr
 ; CHECK-NEXT:    sbc.w r0, r2, r0
 ; CHECK-NEXT:    cmp.w r0, #-1
 ; CHECK-NEXT:    cset r2, gt
 ; CHECK-NEXT:    cmp r3, r2
-; CHECK-NEXT:    vmov r3, s7
+; CHECK-NEXT:    vmov r3, s5
 ; CHECK-NEXT:    cset r2, ne
 ; CHECK-NEXT:    and.w r2, r2, r12
 ; CHECK-NEXT:    ands r12, r2, #1
-; CHECK-NEXT:    vmov r2, s3
+; CHECK-NEXT:    vmov r2, s1
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    asrne r1, r0, #31
 ; CHECK-NEXT:    cmp.w r3, #-1
@@ -297,19 +297,19 @@ define arm_aapcs_vfpcc <2 x i64> @usub_int64_t(<2 x i64> %src1, <2 x i64> %src2)
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    vmov r2, s4
+; CHECK-NEXT:    vmov r2, s6
 ; CHECK-NEXT:    mov.w r12, #0
-; CHECK-NEXT:    vmov r3, s0
-; CHECK-NEXT:    vmov r0, s5
-; CHECK-NEXT:    vmov r1, s1
-; CHECK-NEXT:    vmov r4, s6
-; CHECK-NEXT:    vmov r5, s2
+; CHECK-NEXT:    vmov r3, s2
+; CHECK-NEXT:    vmov r0, s7
+; CHECK-NEXT:    vmov r1, s3
+; CHECK-NEXT:    vmov r4, s4
+; CHECK-NEXT:    vmov r5, s0
 ; CHECK-NEXT:    subs r2, r3, r2
-; CHECK-NEXT:    vmov r3, s7
+; CHECK-NEXT:    vmov r3, s5
 ; CHECK-NEXT:    sbcs.w r0, r1, r0
 ; CHECK-NEXT:    adc r1, r12, #0
 ; CHECK-NEXT:    rsbs.w lr, r1, #1
-; CHECK-NEXT:    vmov r1, s3
+; CHECK-NEXT:    vmov r1, s1
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne r2, #0
 ; CHECK-NEXT:    subs r4, r5, r4

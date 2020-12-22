@@ -1,6 +1,6 @@
 ; Make sure this doesn't turn into an infinite loop
 
-; RUN: opt < %s -simplifycfg -instsimplify -simplifycfg | llvm-dis | FileCheck %s
+; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -instsimplify -simplifycfg -simplifycfg-require-and-preserve-domtree=1 | llvm-dis | FileCheck %s
 
 %struct.anon = type { i32, i32, i32, i32, [1024 x i8] }
 @_zero_ = external global %struct.anon*		; <%struct.anon**> [#uses=2]

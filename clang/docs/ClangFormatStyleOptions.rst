@@ -1205,16 +1205,47 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-      try {
-        foo();
-      } catch () {
+      namespace N {
+      enum E {
+        E1,
+        E2,
+      };
+
+      class C {
+      public:
+        C();
+      };
+
+      bool baz(int i) {
+        try {
+          do {
+            switch (i) {
+            case 1: {
+              foobar();
+              break;
+            }
+            default: {
+              break;
+            }
+            }
+          } while (--i);
+          return true;
+        } catch (...) {
+          handleError();
+          return false;
+        }
       }
-      void foo() { bar(); }
-      class foo {};
-      if (foo()) {
-      } else {
+
+      void foo(bool b) {
+        if (b) {
+          baz(2);
+        } else {
+          baz(5);
+        }
       }
-      enum X : int { A, B };
+
+      void bar() { foo(true); }
+      } // namespace N
 
   * ``BS_Linux`` (in configuration: ``Linux``)
     Like ``Attach``, but break before braces on function, namespace and
@@ -1222,18 +1253,51 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-      try {
-        foo();
-      } catch () {
-      }
-      void foo() { bar(); }
-      class foo
+      namespace N
       {
+      enum E {
+        E1,
+        E2,
       };
-      if (foo()) {
-      } else {
+
+      class C
+      {
+      public:
+        C();
+      };
+
+      bool baz(int i)
+      {
+        try {
+          do {
+            switch (i) {
+            case 1: {
+              foobar();
+              break;
+            }
+            default: {
+              break;
+            }
+            }
+          } while (--i);
+          return true;
+        } catch (...) {
+          handleError();
+          return false;
+        }
       }
-      enum X : int { A, B };
+
+      void foo(bool b)
+      {
+        if (b) {
+          baz(2);
+        } else {
+          baz(5);
+        }
+      }
+
+      void bar() { foo(true); }
+      } // namespace N
 
   * ``BS_Mozilla`` (in configuration: ``Mozilla``)
     Like ``Attach``, but break before braces on enum, function, and record
@@ -1241,18 +1305,51 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-      try {
-        foo();
-      } catch () {
-      }
-      void foo() { bar(); }
-      class foo
+      namespace N {
+      enum E
       {
+        E1,
+        E2,
       };
-      if (foo()) {
-      } else {
+
+      class C
+      {
+      public:
+        C();
+      };
+
+      bool baz(int i)
+      {
+        try {
+          do {
+            switch (i) {
+            case 1: {
+              foobar();
+              break;
+            }
+            default: {
+              break;
+            }
+            }
+          } while (--i);
+          return true;
+        } catch (...) {
+          handleError();
+          return false;
+        }
       }
-      enum X : int { A, B };
+
+      void foo(bool b)
+      {
+        if (b) {
+          baz(2);
+        } else {
+          baz(5);
+        }
+      }
+
+      void bar() { foo(true); }
+      } // namespace N
 
   * ``BS_Stroustrup`` (in configuration: ``Stroustrup``)
     Like ``Attach``, but break before function definitions, ``catch``, and
@@ -1260,75 +1357,175 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-      try {
-        foo();
-      }
-      catch () {
-      }
-      void foo() { bar(); }
-      class foo {
+      namespace N {
+      enum E {
+        E1,
+        E2,
       };
-      if (foo()) {
+
+      class C {
+      public:
+        C();
+      };
+
+      bool baz(int i)
+      {
+        try {
+          do {
+            switch (i) {
+            case 1: {
+              foobar();
+              break;
+            }
+            default: {
+              break;
+            }
+            }
+          } while (--i);
+          return true;
+        }
+        catch (...) {
+          handleError();
+          return false;
+        }
       }
-      else {
+
+      void foo(bool b)
+      {
+        if (b) {
+          baz(2);
+        }
+        else {
+          baz(5);
+        }
       }
-      enum X : int { A, B };
+
+      void bar() { foo(true); }
+      } // namespace N
 
   * ``BS_Allman`` (in configuration: ``Allman``)
     Always break before braces.
 
     .. code-block:: c++
 
-      try
+      namespace N
       {
-        foo();
-      }
-      catch ()
+      enum E
       {
-      }
-      void foo() { bar(); }
-      class foo
-      {
+        E1,
+        E2,
       };
-      if (foo())
+
+      class C
       {
-      }
-      else
-      {
-      }
-      enum X : int
-      {
-        A,
-        B
+      public:
+        C();
       };
+
+      bool baz(int i)
+      {
+        try
+        {
+          do
+          {
+            switch (i)
+            {
+            case 1:
+            {
+              foobar();
+              break;
+            }
+            default:
+            {
+              break;
+            }
+            }
+          } while (--i);
+          return true;
+        }
+        catch (...)
+        {
+          handleError();
+          return false;
+        }
+      }
+
+      void foo(bool b)
+      {
+        if (b)
+        {
+          baz(2);
+        }
+        else
+        {
+          baz(5);
+        }
+      }
+
+      void bar() { foo(true); }
+      } // namespace N
 
   * ``BS_Whitesmiths`` (in configuration: ``Whitesmiths``)
     Like ``Allman`` but always indent braces and line up code with braces.
 
     .. code-block:: c++
 
-      try
+      namespace N
         {
-        foo();
-        }
-      catch ()
+      enum E
         {
-        }
-      void foo() { bar(); }
-      class foo
-        {
+        E1,
+        E2,
         };
-      if (foo())
+
+      class C
         {
-        }
-      else
-        {
-        }
-      enum X : int
-        {
-        A,
-        B
+      public:
+        C();
         };
+
+      bool baz(int i)
+        {
+        try
+          {
+          do
+            {
+            switch (i)
+              {
+              case 1:
+              {
+              foobar();
+              break;
+              }
+              default:
+              {
+              break;
+              }
+              }
+            } while (--i);
+          return true;
+          }
+        catch (...)
+          {
+          handleError();
+          return false;
+          }
+        }
+
+      void foo(bool b)
+        {
+        if (b)
+          {
+          baz(2);
+          }
+        else
+          {
+          baz(5);
+          }
+        }
+
+      void bar() { foo(true); }
+        } // namespace N
 
   * ``BS_GNU`` (in configuration: ``GNU``)
     Always break before braces and add an extra level of indentation to
@@ -1337,45 +1534,112 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-      try
-        {
-          foo();
-        }
-      catch ()
-        {
-        }
-      void foo() { bar(); }
-      class foo
+      namespace N
       {
-      };
-      if (foo())
-        {
-        }
-      else
-        {
-        }
-      enum X : int
+      enum E
       {
-        A,
-        B
+        E1,
+        E2,
       };
+
+      class C
+      {
+      public:
+        C();
+      };
+
+      bool baz(int i)
+      {
+        try
+          {
+            do
+              {
+                switch (i)
+                  {
+                  case 1:
+                    {
+                      foobar();
+                      break;
+                    }
+                  default:
+                    {
+                      break;
+                    }
+                  }
+              }
+            while (--i);
+            return true;
+          }
+        catch (...)
+          {
+            handleError();
+            return false;
+          }
+      }
+
+      void foo(bool b)
+      {
+        if (b)
+          {
+            baz(2);
+          }
+        else
+          {
+            baz(5);
+          }
+      }
+
+      void bar() { foo(true); }
+      } // namespace N
 
   * ``BS_WebKit`` (in configuration: ``WebKit``)
     Like ``Attach``, but break before functions.
 
     .. code-block:: c++
 
-      try {
-        foo();
-      } catch () {
-      }
-      void foo() { bar(); }
-      class foo {
+      namespace N {
+      enum E {
+        E1,
+        E2,
       };
-      if (foo()) {
-      } else {
+
+      class C {
+      public:
+        C();
+      };
+
+      bool baz(int i)
+      {
+        try {
+          do {
+            switch (i) {
+            case 1: {
+              foobar();
+              break;
+            }
+            default: {
+              break;
+            }
+            }
+          } while (--i);
+          return true;
+        } catch (...) {
+          handleError();
+          return false;
+        }
       }
-      enum X : int { A, B };
+
+      void foo(bool b)
+      {
+        if (b) {
+          baz(2);
+        } else {
+          baz(5);
+        }
+      }
+
+      void bar() { foo(true); }
+      } // namespace N
 
   * ``BS_Custom`` (in configuration: ``Custom``)
     Configure each individual brace in `BraceWrapping`.

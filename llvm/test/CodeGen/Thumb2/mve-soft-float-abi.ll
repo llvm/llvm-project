@@ -59,16 +59,16 @@ define <2 x i64> @vector_add_i64(<2 x i64> %lhs, <2 x i64> %rhs) {
 ; CHECK-FP-NEXT:    vmov d0, r0, r1
 ; CHECK-FP-NEXT:    add r0, sp, #8
 ; CHECK-FP-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-FP-NEXT:    vmov r1, s0
-; CHECK-FP-NEXT:    vmov r3, s4
-; CHECK-FP-NEXT:    vmov r0, s1
-; CHECK-FP-NEXT:    vmov r2, s5
+; CHECK-FP-NEXT:    vmov r1, s2
+; CHECK-FP-NEXT:    vmov r0, s3
+; CHECK-FP-NEXT:    vmov r3, s6
+; CHECK-FP-NEXT:    vmov r2, s7
 ; CHECK-FP-NEXT:    adds.w lr, r1, r3
-; CHECK-FP-NEXT:    vmov r3, s2
-; CHECK-FP-NEXT:    vmov r1, s6
+; CHECK-FP-NEXT:    vmov r3, s0
+; CHECK-FP-NEXT:    vmov r1, s4
 ; CHECK-FP-NEXT:    adc.w r12, r0, r2
-; CHECK-FP-NEXT:    vmov r2, s3
-; CHECK-FP-NEXT:    vmov r0, s7
+; CHECK-FP-NEXT:    vmov r2, s1
+; CHECK-FP-NEXT:    vmov r0, s5
 ; CHECK-FP-NEXT:    adds r1, r1, r3
 ; CHECK-FP-NEXT:    vmov q0[2], q0[0], r1, lr
 ; CHECK-FP-NEXT:    adcs r0, r2

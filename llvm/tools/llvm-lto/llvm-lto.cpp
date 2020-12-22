@@ -465,7 +465,7 @@ static void createCombinedModuleSummaryIndex() {
 static void getThinLTOOldAndNewPrefix(std::string &OldPrefix,
                                       std::string &NewPrefix) {
   assert(ThinLTOPrefixReplace.empty() ||
-         ThinLTOPrefixReplace.find(";") != StringRef::npos);
+         ThinLTOPrefixReplace.find(';') != StringRef::npos);
   StringRef PrefixReplace = ThinLTOPrefixReplace;
   std::pair<StringRef, StringRef> Split = PrefixReplace.split(";");
   OldPrefix = Split.first.str();

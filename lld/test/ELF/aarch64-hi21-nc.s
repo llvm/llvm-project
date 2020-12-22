@@ -4,5 +4,5 @@
 // RUN: llvm-objdump -d %t | FileCheck %s
 
 foo = . + 0x1100000000000000
-// CHECK: adrp x0, #0
+// CHECK: adrp x0, 0x210000
 adrp x0, :pg_hi21_nc:foo

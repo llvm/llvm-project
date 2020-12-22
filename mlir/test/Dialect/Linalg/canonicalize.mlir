@@ -232,7 +232,6 @@ func @no_fold_memref_reshape(%arg0 : memref<?x?xf32>) -> memref<?x?xf32>
 // -----
 
 #accesses = [
-  affine_map<(i) -> (i)>,
   affine_map<(i) -> (i)>
 ]
 
@@ -246,7 +245,7 @@ func @dce_zero_memref(%arg0 : memref<0xf32>, %arg1: tensor<0xf32>) -> tensor<0xf
   linalg.copy(%arg0, %arg0): memref<0xf32>, memref<0xf32>
 
   // tensor<0xf32> cannot be dce'ed
-  %1 = linalg.generic #trait ins(%arg1 : tensor<0xf32>) {
+  %1 = linalg.generic #trait outs(%arg1 : tensor<0xf32>) {
   ^bb(%0: f32) :
     linalg.yield %0 : f32
   } -> tensor<0xf32>
@@ -317,20 +316,20 @@ func @reshape_splat_constant_float64() -> tensor<2x4x2xf64>
 
 // -----
 
-// CHECK-LABEL: func @tensor_cast(
-func @tensor_cast(%a : tensor<3x4xf32>, %b : tensor<4x?xf32>, %c : tensor<3x?xf32>)
+// CHECK-LABEL: func @tensor.cast(
+func @tensor.cast(%a : tensor<3x4xf32>, %b : tensor<4x?xf32>, %c : tensor<3x?xf32>)
   -> tensor<3x?xf32>
 {
-  %ta = tensor_cast %a : tensor<3x4xf32> to tensor<?x?xf32>
-  %tb = tensor_cast %b : tensor<4x?xf32> to tensor<?x?xf32>
-  %tc = tensor_cast %c : tensor<3x?xf32> to tensor<?x?xf32>
+  %ta = tensor.cast %a : tensor<3x4xf32> to tensor<?x?xf32>
+  %tb = tensor.cast %b : tensor<4x?xf32> to tensor<?x?xf32>
+  %tc = tensor.cast %c : tensor<3x?xf32> to tensor<?x?xf32>
 
   //      CHECK:  linalg.matmul ins({{.*}}tensor<3x4xf32>, tensor<4x?xf32>)
-  // CHECK-SAME:    init({{.*}}tensor<3x?xf32>) -> tensor<3x?xf32>
+  // CHECK-SAME:    outs({{.*}}tensor<3x?xf32>) -> tensor<3x?xf32>
   %0 = linalg.matmul ins(%ta, %tb: tensor<?x?xf32>, tensor<?x?xf32>)
-               init(%tc: tensor<?x?xf32>) -> tensor<?x?xf32>
+                    outs(%tc: tensor<?x?xf32>) -> tensor<?x?xf32>
 
-  %1 = tensor_cast %0 : tensor<?x?xf32> to tensor<3x?xf32>
+  %1 = tensor.cast %0 : tensor<?x?xf32> to tensor<3x?xf32>
 
   return %1: tensor<3x?xf32>
 }
@@ -344,10 +343,49 @@ func @tensor_cast(%a : tensor<3x4xf32>, %b : tensor<4x?xf32>, %c : tensor<3x?xf3
 func @linalg_effects(%a : tensor<?x?xf32>, %b : memref<?x?xf32>, %c : tensor<?x?xf32>) {
   // CHECK-NOT:   %{{.*}} = linalg.matmul
   %t = linalg.matmul ins(%a, %b : tensor<?x?xf32>, memref<?x?xf32>)
-                    init(%c : tensor<?x?xf32>) -> tensor<?x?xf32>
+                    outs(%c : tensor<?x?xf32>) -> tensor<?x?xf32>
 
   // CHECK-NOT:   %{{.*}} = linalg.matmul
   linalg.matmul ins(%a, %c : tensor<?x?xf32>, tensor<?x?xf32>)
                outs(%b : memref<?x?xf32>)
   return
 }
+// -----
+
+func @init_tensor_canonicalize() -> (tensor<4x5x?xf32>) {
+  %c6 = constant 6 : index
+  %0 = linalg.init_tensor [4, 5, %c6] : tensor<4x5x?xf32>
+  return %0 : tensor<4x5x?xf32>
+}
+// CHECK: func @init_tensor_canonicalize
+// CHECK:   %[[T0:.+]] = linalg.init_tensor [4, 5, 6] : tensor<4x5x6xf32>
+// CHECK:   %[[T1:.+]] = tensor.cast %[[T0]] : tensor<4x5x6xf32> to tensor<4x5x?xf32>
+// CHECK:   return %[[T1]]
+
+// -----
+
+func @init_tensor_static_dim() -> (index, index) {
+  %c0 = constant 0 : index
+  %c2 = constant 2 : index
+  %c6 = constant 6 : index
+  %0 = linalg.init_tensor [4, 5, %c6] : tensor<4x5x?xf32>
+  %1 = dim %0, %c2 : tensor<4x5x?xf32>
+  %2 = dim %0, %c0 : tensor<4x5x?xf32>
+  return %1, %2 : index, index
+}
+//      CHECK: func @init_tensor_static_dim
+//  CHECK-DAG:   %[[C4:.+]] = constant 4 : index
+//  CHECK-DAG:   %[[C6:.+]] = constant 6 : index
+//      CHECK:   return %[[C6]], %[[C4]]
+
+// -----
+
+func @init_tensor_dynamic_dim(%arg0 : index) -> (index) {
+  %c2 = constant 2 : index
+  %0 = linalg.init_tensor [4, 5, %arg0] : tensor<4x5x?xf32>
+  %1 = dim %0, %c2 : tensor<4x5x?xf32>
+  return %1 : index
+}
+//      CHECK: func @init_tensor_dynamic_dim
+// CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: index
+//      CHECK:   return %[[ARG0]]

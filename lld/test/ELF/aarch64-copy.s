@@ -67,7 +67,7 @@ _start:
 // S + A - P = 0x2303f0 + 0 - 0x21031c = 131284
 // CODE-NEXT:  21031c: adr  x1, #131284
 // Page(S + A) - Page(P) = Page(0x230400) - Page(0x210320) = 131072
-// CODE-NEXT:  210320: adrp x2, #131072
+// CODE-NEXT:  210320: adrp x2, 0x230000
 // (S + A) & 0xFFF = (0x230400 + 0) & 0xFFF = 1024
 // CODE-NEXT:  210324: add  x2, x2, #1024
 

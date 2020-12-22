@@ -4935,6 +4935,15 @@ def : InstAlias<"pssbb", (t2DSB 0x4, 14, 0), 1>, Requires<[HasDB, IsThumb2]>;
 // Armv8-R 'Data Full Barrier'
 def : InstAlias<"dfb${p}", (t2DSB 0xc, pred:$p), 1>, Requires<[HasDFB]>;
 
+// SpeculationBarrierEndBB must only be used after an unconditional control
+// flow, i.e. after a terminator for which isBarrier is True.
+let hasSideEffects = 1, isCodeGenOnly = 1, isTerminator = 1, isBarrier = 1 in {
+  def t2SpeculationBarrierISBDSBEndBB
+      : PseudoInst<(outs), (ins), NoItinerary, []>, Sched<[]>;
+  def t2SpeculationBarrierSBEndBB
+      : PseudoInst<(outs), (ins), NoItinerary, []>, Sched<[]>;
+}
+
 // Alias for LDR, LDRB, LDRH, LDRSB, and LDRSH without the ".w" optional
 // width specifier.
 def : t2InstAlias<"ldr${p} $Rt, $addr",

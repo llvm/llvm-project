@@ -34,11 +34,11 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @neg_v2i64(<2 x i64> %s1) {
 ; CHECK-LABEL: neg_v2i64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov r1, s0
+; CHECK-NEXT:    vmov r1, s2
 ; CHECK-NEXT:    mov.w r12, #0
-; CHECK-NEXT:    vmov r0, s1
-; CHECK-NEXT:    vmov r2, s2
-; CHECK-NEXT:    vmov r3, s3
+; CHECK-NEXT:    vmov r0, s3
+; CHECK-NEXT:    vmov r2, s0
+; CHECK-NEXT:    vmov r3, s1
 ; CHECK-NEXT:    rsbs r1, r1, #0
 ; CHECK-NEXT:    sbc.w r0, r12, r0
 ; CHECK-NEXT:    rsbs r2, r2, #0

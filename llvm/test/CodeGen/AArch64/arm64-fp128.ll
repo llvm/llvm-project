@@ -7,16 +7,11 @@
 define fp128 @test_add() {
 ; CHECK-LABEL: test_add:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    adrp x8, lhs
 ; CHECK-NEXT:    ldr q0, [x8, :lo12:lhs]
 ; CHECK-NEXT:    adrp x8, rhs
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:rhs]
-; CHECK-NEXT:    bl __addtf3
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b __addtf3
 
   %lhs = load fp128, fp128* @lhs, align 16
   %rhs = load fp128, fp128* @rhs, align 16
@@ -28,16 +23,11 @@ define fp128 @test_add() {
 define fp128 @test_sub() {
 ; CHECK-LABEL: test_sub:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    adrp x8, lhs
 ; CHECK-NEXT:    ldr q0, [x8, :lo12:lhs]
 ; CHECK-NEXT:    adrp x8, rhs
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:rhs]
-; CHECK-NEXT:    bl __subtf3
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b __subtf3
 
   %lhs = load fp128, fp128* @lhs, align 16
   %rhs = load fp128, fp128* @rhs, align 16
@@ -49,16 +39,11 @@ define fp128 @test_sub() {
 define fp128 @test_mul() {
 ; CHECK-LABEL: test_mul:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    adrp x8, lhs
 ; CHECK-NEXT:    ldr q0, [x8, :lo12:lhs]
 ; CHECK-NEXT:    adrp x8, rhs
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:rhs]
-; CHECK-NEXT:    bl __multf3
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b __multf3
 
   %lhs = load fp128, fp128* @lhs, align 16
   %rhs = load fp128, fp128* @rhs, align 16
@@ -70,16 +55,11 @@ define fp128 @test_mul() {
 define fp128 @test_div() {
 ; CHECK-LABEL: test_div:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    adrp x8, lhs
 ; CHECK-NEXT:    ldr q0, [x8, :lo12:lhs]
 ; CHECK-NEXT:    adrp x8, rhs
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:rhs]
-; CHECK-NEXT:    bl __divtf3
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b __divtf3
 
   %lhs = load fp128, fp128* @lhs, align 16
   %rhs = load fp128, fp128* @rhs, align 16

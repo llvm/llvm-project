@@ -18,6 +18,23 @@ define i32 @shrinkExtractElt_i64_to_i32_0(<3 x i64> %x) {
   ret i32 %t
 }
 
+define i32 @vscale_shrinkExtractElt_i64_to_i32_0(<vscale x 3 x i64> %x) {
+; LE-LABEL: @vscale_shrinkExtractElt_i64_to_i32_0(
+; LE-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 3 x i64> [[X:%.*]] to <vscale x 6 x i32>
+; LE-NEXT:    [[T:%.*]] = extractelement <vscale x 6 x i32> [[TMP1]], i32 0
+; LE-NEXT:    ret i32 [[T]]
+;
+; BE-LABEL: @vscale_shrinkExtractElt_i64_to_i32_0(
+; BE-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 3 x i64> [[X:%.*]] to <vscale x 6 x i32>
+; BE-NEXT:    [[T:%.*]] = extractelement <vscale x 6 x i32> [[TMP1]], i32 1
+; BE-NEXT:    ret i32 [[T]]
+;
+  %e = extractelement <vscale x 3 x i64> %x, i32 0
+  %t = trunc i64 %e to i32
+  ret i32 %t
+}
+
+
 define i32 @shrinkExtractElt_i64_to_i32_1(<3 x i64> %x) {
 ; LE-LABEL: @shrinkExtractElt_i64_to_i32_1(
 ; LE-NEXT:    [[TMP1:%.*]] = bitcast <3 x i64> [[X:%.*]] to <6 x i32>

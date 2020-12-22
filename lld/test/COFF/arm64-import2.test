@@ -19,10 +19,10 @@
 # AFTER:  140001004:      06 00 00 94     bl      0x14000101c
 # AFTER:  140001008:      c0 03 5f d6     ret
 # AFTER:  14000100c:      ff cc cc cc     <unknown>
-# AFTER:  140001010:      10 00 00 b0     adrp    x16, #4096
+# AFTER:  140001010:      10 00 00 b0     adrp    x16, 0x140002000
 # AFTER:  140001014:      10 32 40 f9     ldr     x16, [x16, #96]
 # AFTER:  140001018:      00 02 1f d6     br      x16
-# AFTER:  14000101c:      10 00 00 b0     adrp    x16, #4096
+# AFTER:  14000101c:      10 00 00 b0     adrp    x16, 0x140002000
 # AFTER:  140001020:      10 3a 40 f9     ldr     x16, [x16, #112]
 # AFTER:  140001024:      00 02 1f d6     br      x16
 

@@ -16,8 +16,8 @@
 #include "../PassDetail.h"
 #include "mlir/Conversion/GPUToVulkan/ConvertGPUToVulkanPass.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
-#include "mlir/Dialect/SPIRV/SPIRVDialect.h"
-#include "mlir/Dialect/SPIRV/SPIRVOps.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -122,7 +122,7 @@ LogicalResult ConvertGpuLaunchFuncToVulkanLaunchFunc::declareVulkanLaunchFunc(
   }
 
   // Declare vulkan launch function.
-  auto funcType = FunctionType::get(vulkanLaunchTypes, {}, loc->getContext());
+  auto funcType = builder.getFunctionType(vulkanLaunchTypes, {});
   builder.create<FuncOp>(loc, kVulkanLaunch, funcType).setPrivate();
 
   return success();

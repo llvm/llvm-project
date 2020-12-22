@@ -2743,7 +2743,7 @@ Triple MachOObjectFile::getHostArch() {
 
 bool MachOObjectFile::isValidArch(StringRef ArchFlag) {
   auto validArchs = getValidArchs();
-  return llvm::find(validArchs, ArchFlag) != validArchs.end();
+  return llvm::is_contained(validArchs, ArchFlag);
 }
 
 ArrayRef<StringRef> MachOObjectFile::getValidArchs() {

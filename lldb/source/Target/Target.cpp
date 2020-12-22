@@ -3351,7 +3351,7 @@ Target::StopHookCommandLine::HandleStop(ExecutionContext &exc_ctx,
   // Force Async:
   bool old_async = debugger.GetAsyncExecution();
   debugger.SetAsyncExecution(true);
-  debugger.GetCommandInterpreter().HandleCommands(GetCommands(), exc_ctx,
+  debugger.GetCommandInterpreter().HandleCommands(GetCommands(), &exc_ctx,
                                                   options, result);
   debugger.SetAsyncExecution(old_async);
   lldb::ReturnStatus status = result.GetStatus();

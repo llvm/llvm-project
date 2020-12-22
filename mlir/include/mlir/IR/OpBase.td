@@ -475,8 +475,9 @@ def AnyComplex : Type<CPred<"$_self.isa<::mlir::ComplexType>()">,
 class OpaqueType<string dialect, string name, string description>
   : Type<CPred<"isOpaqueTypeWithName($_self, \""#dialect#"\", \""#name#"\")">,
          description>,
-    BuildableType<"::mlir::OpaqueType::get($_builder.getIdentifier(\""
-                  # dialect # "\"), \"" # name # "\", $_builder.getContext())">;
+    BuildableType<"::mlir::OpaqueType::get($_builder.getContext(), "
+                  "$_builder.getIdentifier(\"" # dialect # "\"), \""
+                  # name # "\")">;
 
 // Function Type
 
@@ -671,6 +672,11 @@ class AnyStridedMemRefOfRank<int rank> :
   Type<And<[AnyStridedMemRef.predicate,
             MemRefRankOf<[AnyType], [rank]>.predicate]>,
        AnyStridedMemRef.description # " of rank " # rank>;
+
+class StridedMemRefRankOf<list<Type> allowedTypes, list<int> ranks> :
+    Type<And<[MemRefOf<allowedTypes>.predicate, HasAnyRankOfPred<ranks>]>,
+         StrJoin<!foreach(rank, ranks, rank # "D"), "/">.result # " " #
+         MemRefOf<allowedTypes>.description>;
 
 // This represents a generic tuple without any constraints on element type.
 def AnyTuple : Type<IsTupleTypePred, "tuple">;

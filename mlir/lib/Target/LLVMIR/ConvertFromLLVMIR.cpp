@@ -236,7 +236,7 @@ Type Importer::getStdTypeForAttr(LLVMType type) {
 Attribute Importer::getConstantAsAttr(llvm::Constant *value) {
   if (auto *ci = dyn_cast<llvm::ConstantInt>(value))
     return b.getIntegerAttr(
-        IntegerType::get(ci->getType()->getBitWidth(), context),
+        IntegerType::get(context, ci->getType()->getBitWidth()),
         ci->getValue());
   if (auto *c = dyn_cast<llvm::ConstantDataArray>(value))
     if (c->isString())

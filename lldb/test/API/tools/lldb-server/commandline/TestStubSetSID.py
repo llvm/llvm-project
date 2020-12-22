@@ -42,7 +42,6 @@ class TestStubSetSIDTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
     @debugserver_test
     @skipIfRemote  # --setsid not used on remote platform and currently it is also impossible to get the sid of lldb-platform running on a remote target
     def test_sid_is_same_without_setsid_debugserver(self):
-        self.init_debugserver_test()
         self.set_inferior_startup_launch()
         self.sid_is_same_without_setsid()
 
@@ -50,14 +49,12 @@ class TestStubSetSIDTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
     @llgs_test
     @skipIfRemote  # --setsid not used on remote platform and currently it is also impossible to get the sid of lldb-platform running on a remote target
     def test_sid_is_same_without_setsid_llgs(self):
-        self.init_llgs_test()
         self.set_inferior_startup_launch()
         self.sid_is_same_without_setsid()
 
     @debugserver_test
     @skipIfRemote  # --setsid not used on remote platform and currently it is also impossible to get the sid of lldb-platform running on a remote target
     def test_sid_is_different_with_setsid_debugserver(self):
-        self.init_debugserver_test()
         self.set_inferior_startup_launch()
         self.sid_is_different_with_setsid()
 
@@ -65,14 +62,12 @@ class TestStubSetSIDTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
     @llgs_test
     @skipIfRemote  # --setsid not used on remote platform and currently it is also impossible to get the sid of lldb-platform running on a remote target
     def test_sid_is_different_with_setsid_llgs(self):
-        self.init_llgs_test()
         self.set_inferior_startup_launch()
         self.sid_is_different_with_setsid()
 
     @debugserver_test
     @skipIfRemote  # --setsid not used on remote platform and currently it is also impossible to get the sid of lldb-platform running on a remote target
     def test_sid_is_different_with_S_debugserver(self):
-        self.init_debugserver_test()
         self.set_inferior_startup_launch()
         self.sid_is_different_with_S()
 
@@ -80,6 +75,5 @@ class TestStubSetSIDTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
     @llgs_test
     @skipIfRemote  # --setsid not used on remote platform and currently it is also impossible to get the sid of lldb-platform running on a remote target
     def test_sid_is_different_with_S_llgs(self):
-        self.init_llgs_test()
         self.set_inferior_startup_launch()
         self.sid_is_different_with_S()

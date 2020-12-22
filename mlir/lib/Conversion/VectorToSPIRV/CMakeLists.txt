@@ -10,6 +10,7 @@ add_mlir_conversion_library(MLIRVectorToSPIRV
 
   LINK_LIBS PUBLIC
   MLIRSPIRV
+  MLIRSPIRVConversion
   MLIRVector
   MLIRTransforms
   )

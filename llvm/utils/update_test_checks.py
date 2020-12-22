@@ -102,22 +102,21 @@ def main():
       prefix_list.append((check_prefixes, tool_cmd_args))
 
     global_vars_seen_dict = {}
-    func_dict = {}
-    func_order = {}
-    for prefixes, _ in prefix_list:
-      for prefix in prefixes:
-        func_dict.update({prefix: dict()})
-        func_order.update({prefix: []})
+    builder = common.FunctionTestBuilder(
+      run_list=prefix_list,
+      flags=ti.args,
+      scrubber_args=[])
+
     for prefixes, opt_args in prefix_list:
       common.debug('Extracted opt cmd: ' + opt_basename + ' ' + opt_args)
       common.debug('Extracted FileCheck prefixes: ' + str(prefixes))
 
-      raw_tool_output = common.invoke_tool(ti.args.opt_binary, opt_args, ti.path)
-      common.build_function_body_dictionary(
-              common.OPT_FUNCTION_RE, common.scrub_body, [],
-              raw_tool_output, prefixes, func_dict, func_order, ti.args.verbose,
-              ti.args.function_signature, ti.args.check_attributes)
+      raw_tool_output = common.invoke_tool(ti.args.opt_binary, opt_args, 
+                                           ti.path)
+      builder.process_run_line(common.OPT_FUNCTION_RE, common.scrub_body,
+              raw_tool_output, prefixes)
 
+    func_dict = builder.finish_and_get_func_dict()
     is_in_function = False
     is_in_function_start = False
     prefix_set = set([prefix for prefixes, _ in prefix_list for prefix in prefixes])
@@ -140,8 +139,8 @@ def main():
       common.dump_input_lines(output_lines, ti, prefix_set, ';')
 
       # Now generate all the checks.
-      common.add_checks_at_end(output_lines, prefix_list, func_order, ';',
-                               lambda my_output_lines, prefixes, func:
+      common.add_checks_at_end(output_lines, prefix_list, builder.func_order(),
+                               ';', lambda my_output_lines, prefixes, func:
                                common.add_ir_checks(my_output_lines, ';',
                                                     prefixes,
                                                     func_dict, func, False,

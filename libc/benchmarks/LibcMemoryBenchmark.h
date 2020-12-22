@@ -13,7 +13,6 @@
 #define LLVM_LIBC_UTILS_BENCHMARK_MEMORY_BENCHMARK_H
 
 #include "LibcBenchmark.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Alignment.h"
 #include <cstdint>
@@ -26,65 +25,78 @@ namespace libc_benchmarks {
 // Configuration
 //--------------
 
-// Specifies a range of sizes to explore.
-struct SizeRange {
-  uint32_t From = 0;  // Inclusive
-  uint32_t To = 1024; // Inclusive
-  uint32_t Step = 1;
+struct StudyConfiguration {
+  // One of 'memcpy', 'memset', 'memcmp'.
+  // The underlying implementation is always the llvm libc one.
+  // e.g. 'memcpy' will test '__llvm_libc::memcpy'
+  std::string Function;
+
+  // The number of trials to run for this benchmark.
+  // If in SweepMode, each individual sizes are measured 'NumTrials' time.
+  // i.e 'NumTrials' measurements for 0, 'NumTrials' measurements for 1 ...
+  uint32_t NumTrials = 1;
+
+  // Toggles between Sweep Mode and Distribution Mode (default).
+  // See 'SweepModeMaxSize' and 'SizeDistributionName' below.
+  bool IsSweepMode = false;
+
+  // Maximum size to use when measuring a ramp of size values (SweepMode).
+  // The benchmark measures all sizes from 0 to SweepModeMaxSize.
+  // Note: in sweep mode the same size is sampled several times in a row this
+  // will allow the processor to learn it and optimize the branching pattern.
+  // The resulting measurement is likely to be idealized.
+  uint32_t SweepModeMaxSize = 0; // inclusive
+
+  // The name of the distribution to be used to randomize the size parameter.
+  // This is used when SweepMode is false (default).
+  std::string SizeDistributionName;
+
+  // This parameter allows to control how the buffers are accessed during
+  // benchmark:
+  // None : Use a fixed address that is at least cache line aligned,
+  //    1 : Use random address,
+  //   >1 : Use random address aligned to value.
+  MaybeAlign AccessAlignment = None;
+
+  // When Function == 'memcmp', this is the buffers mismatch position.
+  //  0 : Buffers always compare equal,
+  // >0 : Buffers compare different at byte N-1.
+  uint32_t MemcmpMismatchAt = 0;
 };
 
-// An object to define how to test a memory function.
-struct StudyConfiguration {
-  // The number of run for the study.
-  uint32_t Runs = 1;
+struct Runtime {
+  // Details about the Host (cpu name, cpu frequency, cache hierarchy).
+  HostState Host;
 
-  // The size of the buffers (1 buffer for memset but 2 for memcpy or memcmp).
-  // When testing small sizes, it's important to keep the total allocated
-  // size under the size of the L1 cache (usually 16 or 32KiB). The framework
-  // will also use 2KiB of additional L1 memory to store the function
-  // parameters.
-  uint32_t BufferSize = 8192;
+  // The framework will populate this value so all data accessed during the
+  // benchmark will stay in L1 data cache. This includes bookkeeping data.
+  uint32_t BufferSize = 0;
 
-  // The range of sizes to exercise.
-  SizeRange Size;
+  // This is the number of distinct parameters used in a single batch.
+  // The framework always tests a batch of randomized parameter to prevent the
+  // cpu from learning branching patterns.
+  uint32_t BatchParameterCount = 0;
 
-  MaybeAlign AddressAlignment; //  Unset : Use start of buffer which is at
-                               //         least cache line aligned)
-                               //     1 : Use random address,
-                               //    >1 : Use random address aligned to value.
-
-  // The value to use for memset.
-  uint8_t MemsetValue = 0;
-
-  // The mismatch position for memcmp.
-  uint32_t MemcmpMismatchAt = 0; //  0 : Buffer compare equal,
-                                 // >0 : Buffer compare different at byte N-1.
+  // The benchmark options that were used to perform the measurement.
+  // This is decided by the framework.
+  BenchmarkOptions BenchmarkOptions;
 };
 
 //--------
 // Results
 //--------
 
-// The time to run one iteration of the function under test for the specified
-// Size.
-struct Measurement {
-  uint32_t Size = 0;
-  Duration Runtime = {};
-};
-
-// The measurements for a specific function.
-struct FunctionMeasurements {
-  std::string Name;
-  std::vector<Measurement> Measurements;
-};
-
 // The root object containing all the data (configuration and measurements).
 struct Study {
-  HostState Host;
-  BenchmarkOptions Options;
+  std::string StudyName;
+  Runtime Runtime;
   StudyConfiguration Configuration;
-  SmallVector<FunctionMeasurements, 4> Functions;
+  std::vector<Duration> Measurements;
 };
+
+//------
+// Utils
+//------
 
 // Provides an aligned, dynamically allocated buffer.
 class AlignedBuffer {
@@ -95,7 +107,8 @@ public:
   static constexpr size_t Alignment = 1024;
 
   explicit AlignedBuffer(size_t Size)
-      : Buffer(static_cast<char *>(aligned_alloc(1024, Size))), Size(Size) {}
+      : Buffer(static_cast<char *>(aligned_alloc(Alignment, Size))),
+        Size(Size) {}
   ~AlignedBuffer() { free(Buffer); }
 
   inline char *operator+(size_t Index) { return Buffer + Index; }
@@ -106,36 +119,6 @@ public:
   inline char *end() { return Buffer + Size; }
 };
 
-// Implements the ParameterProvider abstraction needed by the `benchmark`
-// function. This implementation makes sure that all parameters will fit into
-// `StorageSize` bytes. The total memory accessed during benchmark should be
-// less than the data L1 cache, that is the storage for the ParameterProvider
-// and the memory buffers.
-template <typename Context, size_t StorageSize = 8 * 1024>
-class SmallParameterProvider {
-  using ParameterType = typename Context::ParameterType;
-  ByteConstrainedArray<ParameterType, StorageSize> Parameters;
-  size_t LastIterations;
-  Context &Ctx;
-
-public:
-  explicit SmallParameterProvider(Context &C) : Ctx(C) {}
-  SmallParameterProvider(const SmallParameterProvider &) = delete;
-  SmallParameterProvider &operator=(const SmallParameterProvider &) = delete;
-
-  // Useful to compute the histogram of the size parameter.
-  CircularArrayRef<ParameterType> getLastBatch() const {
-    return cycle(Parameters, LastIterations);
-  }
-
-  // Implements the interface needed by the `benchmark` function.
-  CircularArrayRef<ParameterType> generateBatch(size_t Iterations) {
-    LastIterations = Iterations;
-    Ctx.Randomize(Parameters);
-    return getLastBatch();
-  }
-};
-
 // Helper to generate random buffer offsets that satisfy the configuration
 // constraints.
 class OffsetDistribution {
@@ -143,7 +126,8 @@ class OffsetDistribution {
   uint32_t Factor;
 
 public:
-  explicit OffsetDistribution(const StudyConfiguration &Conf);
+  explicit OffsetDistribution(size_t BufferSize, size_t MaxSizeValue,
+                              MaybeAlign AccessAlignment);
 
   template <class Generator> uint32_t operator()(Generator &G) {
     return Distribution(G) * Factor;
@@ -159,7 +143,8 @@ class MismatchOffsetDistribution {
   const uint32_t MismatchAt;
 
 public:
-  explicit MismatchOffsetDistribution(const StudyConfiguration &Conf);
+  explicit MismatchOffsetDistribution(size_t BufferSize, size_t MaxSizeValue,
+                                      size_t MismatchAt);
 
   explicit operator bool() const { return !MismatchIndices.empty(); }
 

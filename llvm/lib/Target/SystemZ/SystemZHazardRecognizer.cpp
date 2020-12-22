@@ -179,7 +179,7 @@ void SystemZHazardRecognizer::dumpSU(SUnit *SU, raw_ostream &OS) const {
       *SchedModel->getProcResource(PI->ProcResourceIdx);
     std::string FU(PRD.Name);
     // trim e.g. Z13_FXaUnit -> FXa
-    FU = FU.substr(FU.find("_") + 1);
+    FU = FU.substr(FU.find('_') + 1);
     size_t Pos = FU.find("Unit");
     if (Pos != std::string::npos)
       FU.resize(Pos);

@@ -34,22 +34,16 @@ TEST(AlignedBuffer, Empty) {
 }
 
 TEST(OffsetDistribution, AlignToBegin) {
-  StudyConfiguration Conf;
-  Conf.BufferSize = 8192;
-  Conf.AddressAlignment = None;
-
-  OffsetDistribution OD(Conf);
+  const size_t BufferSize = 8192;
+  OffsetDistribution OD(BufferSize, 1024, None);
   std::default_random_engine Gen;
   for (size_t I = 0; I <= 10; ++I)
     EXPECT_EQ(OD(Gen), 0U);
 }
 
 TEST(OffsetDistribution, NoAlignment) {
-  StudyConfiguration Conf;
-  Conf.BufferSize = 8192;
-  Conf.Size.To = 1;
-
-  OffsetDistribution OD(Conf);
+  const size_t BufferSize = 8192;
+  OffsetDistribution OD(BufferSize, 1, Align(1));
   std::default_random_engine Gen;
   for (size_t I = 0; I <= 10; ++I)
     EXPECT_THAT(OD(Gen), AllOf(Ge(0U), Lt(8192U)));
@@ -61,49 +55,42 @@ MATCHER_P(IsDivisibleBy, n, "") {
 }
 
 TEST(OffsetDistribution, Aligned) {
-  StudyConfiguration Conf;
-  Conf.BufferSize = 8192;
-  Conf.AddressAlignment = Align(16);
-  Conf.Size.To = 1;
-
-  OffsetDistribution OD(Conf);
+  const size_t BufferSize = 8192;
+  OffsetDistribution OD(BufferSize, 1, Align(16));
   std::default_random_engine Gen;
   for (size_t I = 0; I <= 10; ++I)
     EXPECT_THAT(OD(Gen), AllOf(Ge(0U), Lt(8192U), IsDivisibleBy(16U)));
 }
 
 TEST(MismatchOffsetDistribution, EqualBufferDisablesDistribution) {
-  StudyConfiguration Conf;
-  Conf.MemcmpMismatchAt = 0; // buffer are equal.
+  const size_t BufferSize = 8192;
+  const uint32_t MismatchAt = 0; // buffer are equal.
 
-  MismatchOffsetDistribution MOD(Conf);
+  MismatchOffsetDistribution MOD(BufferSize, 1024, MismatchAt);
   EXPECT_FALSE(MOD);
 }
 
 TEST(MismatchOffsetDistribution, DifferentBufferDisablesDistribution) {
-  StudyConfiguration Conf;
-  Conf.MemcmpMismatchAt = 1; // buffer are different.
+  const size_t BufferSize = 8192;
+  const uint32_t MismatchAt = 1; // buffer are different.
 
-  MismatchOffsetDistribution MOD(Conf);
+  MismatchOffsetDistribution MOD(BufferSize, 1024, MismatchAt);
   EXPECT_FALSE(MOD);
 }
 
 TEST(MismatchOffsetDistribution, MismatchAt2) {
-  const uint32_t MismatchAt = 2;
-  const uint32_t ToSize = 4;
-  StudyConfiguration Conf;
-  Conf.BufferSize = 16;
-  Conf.MemcmpMismatchAt = MismatchAt; // buffer are different at position 2.
-  Conf.Size.To = ToSize;
+  const size_t BufferSize = 16;
+  const uint32_t MismatchAt = 2; // buffer are different at position 2.
+  const uint32_t MaxSize = 4;
 
-  MismatchOffsetDistribution MOD(Conf);
+  MismatchOffsetDistribution MOD(BufferSize, MaxSize, MismatchAt);
   EXPECT_TRUE(MOD);
-  // We test equality up to ToSize (=4) so we need spans of 4 equal bytes spaced
-  // by one mismatch.
+  // We test equality up to MaxSize (=4) so we need spans of 4 equal bytes
+  // spaced by one mismatch.
   EXPECT_THAT(MOD.getMismatchIndices(), ElementsAre(5, 9, 13));
   std::default_random_engine Gen;
   for (size_t Iterations = 0; Iterations <= 10; ++Iterations) {
-    for (size_t Size = Conf.Size.From; Size <= ToSize; ++Size) {
+    for (size_t Size = 0; Size <= MaxSize; ++Size) {
       if (Size >= MismatchAt)
         EXPECT_THAT(MOD(Gen, Size),
                     AnyOf(5 - MismatchAt, 9 - MismatchAt, 13 - MismatchAt));

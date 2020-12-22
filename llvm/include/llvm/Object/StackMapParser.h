@@ -36,11 +36,13 @@ public:
       return tmp;
     }
 
-    bool operator==(const AccessorIterator &Other) {
+    bool operator==(const AccessorIterator &Other) const {
       return A.P == Other.A.P;
     }
 
-    bool operator!=(const AccessorIterator &Other) { return !(*this == Other); }
+    bool operator!=(const AccessorIterator &Other) const {
+      return !(*this == Other);
+    }
 
     AccessorT& operator*() { return A; }
     AccessorT* operator->() { return &A; }

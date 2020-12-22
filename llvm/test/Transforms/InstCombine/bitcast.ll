@@ -75,9 +75,9 @@ define <2 x i32> @or_bitcast_int_to_vec(i64 %a) {
 
 define <2 x i64> @is_negative(<4 x i32> %x) {
 ; CHECK-LABEL: @is_negative(
-; CHECK-NEXT:    [[LOBIT:%.*]] = ashr <4 x i32> %x, <i32 31, i32 31, i32 31, i32 31>
-; CHECK-NEXT:    [[NOTNOT:%.*]] = bitcast <4 x i32> [[LOBIT]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[NOTNOT]]
+; CHECK-NEXT:    [[LOBIT:%.*]] = ashr <4 x i32> [[X:%.*]], <i32 31, i32 31, i32 31, i32 31>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[LOBIT]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %lobit = ashr <4 x i32> %x, <i32 31, i32 31, i32 31, i32 31>
   %not = xor <4 x i32> %lobit, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -91,7 +91,7 @@ define <2 x i64> @is_negative(<4 x i32> %x) {
 
 define <4 x i32> @is_negative_bonus_bitcast(<4 x i32> %x) {
 ; CHECK-LABEL: @is_negative_bonus_bitcast(
-; CHECK-NEXT:    [[LOBIT:%.*]] = ashr <4 x i32> %x, <i32 31, i32 31, i32 31, i32 31>
+; CHECK-NEXT:    [[LOBIT:%.*]] = ashr <4 x i32> [[X:%.*]], <i32 31, i32 31, i32 31, i32 31>
 ; CHECK-NEXT:    ret <4 x i32> [[LOBIT]]
 ;
   %lobit = ashr <4 x i32> %x, <i32 31, i32 31, i32 31, i32 31>
@@ -564,6 +564,10 @@ define void @constant_fold_vector_to_half() {
 
 ; Ensure that we do not crash when looking at such a weird bitcast.
 define i8* @bitcast_from_single_element_pointer_vector_to_pointer(<1 x i8*> %ptrvec) {
+; CHECK-LABEL: @bitcast_from_single_element_pointer_vector_to_pointer(
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <1 x i8*> [[PTRVEC:%.*]], i32 0
+; CHECK-NEXT:    ret i8* [[TMP1]]
+;
   %ptr = bitcast <1 x i8*> %ptrvec to i8*
   ret i8* %ptr
 }

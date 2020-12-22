@@ -75,7 +75,7 @@ static bool isPlatformEnvironment(const TargetInfo &Target, StringRef Feature) {
     return true;
 
   auto CmpPlatformEnv = [](StringRef LHS, StringRef RHS) {
-    auto Pos = LHS.find("-");
+    auto Pos = LHS.find('-');
     if (Pos == StringRef::npos)
       return false;
     SmallString<128> NewLHS = LHS.slice(0, Pos);

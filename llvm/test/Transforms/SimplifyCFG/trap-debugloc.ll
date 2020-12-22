@@ -1,4 +1,4 @@
-; RUN: opt -S -simplifycfg < %s | FileCheck %s
+; RUN: opt -S -simplifycfg -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s
 ; Radar 9342286
 ; Assign DebugLoc to trap instruction.
 define void @foo() nounwind ssp !dbg !0 {

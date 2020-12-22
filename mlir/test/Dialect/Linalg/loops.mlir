@@ -1144,14 +1144,18 @@ func @generic_const_init(%arg0: memref<?xf32>) {
   indexing_maps = #scalar_access,
   library_call = "some_external_fn"
 }
-func @scalar_code(%arg0: memref<f32>, %arg1 : memref<f32>, %arg2 : memref<f32>)
+func @scalar_code(%arg0: memref<f32>, %arg1 : memref<f32>, %arg2 : memref<f32>, %arg3 : i1)
 {
   linalg.generic #scalar_trait
     ins(%arg0, %arg1 : memref<f32>, memref<f32>)
    outs(%arg2 : memref<f32>) {
   ^bb(%a : f32, %b : f32, %c : f32) :
-    %0 = addf %a, %b : f32
-    linalg.yield %0 : f32
+    %result = scf.if %arg3 -> (f32) {
+      scf.yield %a : f32
+    } else {
+      scf.yield %b : f32
+    }
+    linalg.yield %result : f32
   }
   return
 }
@@ -1162,7 +1166,10 @@ func @scalar_code(%arg0: memref<f32>, %arg1 : memref<f32>, %arg2 : memref<f32>)
 //   CHECKLOOP-NOT: scf.for
 //       CHECKLOOP: load %[[ARG0]][]
 //       CHECKLOOP: load %[[ARG1]][]
-//       CHECKLOOP: addf
+//       CHECKLOOP: scf.if
+//       CHECKLOOP: scf.yield
+//       CHECKLOOP: else
+//       CHECKLOOP: scf.yield
 //       CHECKLOOP: store %{{.*}}, %[[ARG2]][]
 
 // CHECKPARALLEL-LABEL: @scalar_code
@@ -1172,7 +1179,10 @@ func @scalar_code(%arg0: memref<f32>, %arg1 : memref<f32>, %arg2 : memref<f32>)
 //   CHECKPARALLEL-NOT: scf.for
 //       CHECKPARALLEL: load %[[ARG0]][]
 //       CHECKPARALLEL: load %[[ARG1]][]
-//       CHECKPARALLEL: addf
+//       CHECKPARALLEL: scf.if
+//       CHECKPARALLEL: scf.yield
+//       CHECKPARALLEL: else
+//       CHECKPARALLEL: scf.yield
 //       CHECKPARALLEL: store %{{.*}}, %[[ARG2]][]
 
 //----------------------------------------------------------------------------//

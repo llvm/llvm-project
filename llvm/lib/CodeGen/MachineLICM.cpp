@@ -157,7 +157,7 @@ namespace {
     SmallVector<SmallVector<unsigned, 8>, 16> BackTrace;
 
     // For each opcode, keep a list of potential CSE instructions.
-    DenseMap<unsigned, std::vector<const MachineInstr *>> CSEMap;
+    DenseMap<unsigned, std::vector<MachineInstr *>> CSEMap;
 
     enum {
       SpeculateFalse   = 0,
@@ -259,13 +259,12 @@ namespace {
 
     MachineInstr *ExtractHoistableLoad(MachineInstr *MI);
 
-    const MachineInstr *
-    LookForDuplicate(const MachineInstr *MI,
-                     std::vector<const MachineInstr *> &PrevMIs);
+    MachineInstr *LookForDuplicate(const MachineInstr *MI,
+                                   std::vector<MachineInstr *> &PrevMIs);
 
-    bool EliminateCSE(
-        MachineInstr *MI,
-        DenseMap<unsigned, std::vector<const MachineInstr *>>::iterator &CI);
+    bool
+    EliminateCSE(MachineInstr *MI,
+                 DenseMap<unsigned, std::vector<MachineInstr *>>::iterator &CI);
 
     bool MayCSE(MachineInstr *MI);
 
@@ -1405,10 +1404,10 @@ void MachineLICMBase::InitCSEMap(MachineBasicBlock *BB) {
 
 /// Find an instruction amount PrevMIs that is a duplicate of MI.
 /// Return this instruction if it's found.
-const MachineInstr*
+MachineInstr *
 MachineLICMBase::LookForDuplicate(const MachineInstr *MI,
-                                  std::vector<const MachineInstr*> &PrevMIs) {
-  for (const MachineInstr *PrevMI : PrevMIs)
+                                  std::vector<MachineInstr *> &PrevMIs) {
+  for (MachineInstr *PrevMI : PrevMIs)
     if (TII->produceSameValue(*MI, *PrevMI, (PreRegAlloc ? MRI : nullptr)))
       return PrevMI;
 
@@ -1419,14 +1418,15 @@ MachineLICMBase::LookForDuplicate(const MachineInstr *MI,
 /// computes the same value. If it's found, do a RAU on with the definition of
 /// the existing instruction rather than hoisting the instruction to the
 /// preheader.
-bool MachineLICMBase::EliminateCSE(MachineInstr *MI,
-    DenseMap<unsigned, std::vector<const MachineInstr *>>::iterator &CI) {
+bool MachineLICMBase::EliminateCSE(
+    MachineInstr *MI,
+    DenseMap<unsigned, std::vector<MachineInstr *>>::iterator &CI) {
   // Do not CSE implicit_def so ProcessImplicitDefs can properly propagate
   // the undef property onto uses.
   if (CI == CSEMap.end() || MI->isImplicitDef())
     return false;
 
-  if (const MachineInstr *Dup = LookForDuplicate(MI, CI->second)) {
+  if (MachineInstr *Dup = LookForDuplicate(MI, CI->second)) {
     LLVM_DEBUG(dbgs() << "CSEing " << *MI << " with " << *Dup);
 
     // Replace virtual registers defined by MI by their counterparts defined
@@ -1466,6 +1466,9 @@ bool MachineLICMBase::EliminateCSE(MachineInstr *MI,
       Register DupReg = Dup->getOperand(Idx).getReg();
       MRI->replaceRegWith(Reg, DupReg);
       MRI->clearKillFlags(DupReg);
+      // Clear Dup dead flag if any, we reuse it for Reg.
+      if (!MRI->use_nodbg_empty(DupReg))
+        Dup->getOperand(Idx).setIsDead(false);
     }
 
     MI->eraseFromParent();
@@ -1479,8 +1482,8 @@ bool MachineLICMBase::EliminateCSE(MachineInstr *MI,
 /// the loop.
 bool MachineLICMBase::MayCSE(MachineInstr *MI) {
   unsigned Opcode = MI->getOpcode();
-  DenseMap<unsigned, std::vector<const MachineInstr *>>::iterator
-    CI = CSEMap.find(Opcode);
+  DenseMap<unsigned, std::vector<MachineInstr *>>::iterator CI =
+      CSEMap.find(Opcode);
   // Do not CSE implicit_def so ProcessImplicitDefs can properly propagate
   // the undef property onto uses.
   if (CI == CSEMap.end() || MI->isImplicitDef())
@@ -1534,8 +1537,8 @@ bool MachineLICMBase::Hoist(MachineInstr *MI, MachineBasicBlock *Preheader) {
 
   // Look for opportunity to CSE the hoisted instruction.
   unsigned Opcode = MI->getOpcode();
-  DenseMap<unsigned, std::vector<const MachineInstr *>>::iterator
-    CI = CSEMap.find(Opcode);
+  DenseMap<unsigned, std::vector<MachineInstr *>>::iterator CI =
+      CSEMap.find(Opcode);
   if (!EliminateCSE(MI, CI)) {
     // Otherwise, splice the instruction to the preheader.
     Preheader->splice(Preheader->getFirstTerminator(),MI->getParent(),MI);

@@ -65,7 +65,8 @@ define i32 @f3() {
 ; X32-LABEL: f3:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl i2@{{.*}}(%rip), %eax
-; X32-NEXT:    movl %fs:(%eax), %eax
+; X32-NEXT:    movl %fs:0, %ecx
+; X32-NEXT:    movl (%ecx,%eax), %eax
 ; X32-NEXT:    retq
 ;
 ; X64-LABEL: f3:

@@ -328,3 +328,153 @@ Sections:
 
   ASSERT_THAT_EXPECTED(ExpectedFile, Succeeded());
 }
+
+// Test that we are able to create an ELFObjectFile even when loadable segments
+// are unsorted by virtual address.
+// Test that ELFFile<ELFT>::toMappedAddr works properly in this case.
+
+TEST(ELFObjectFileTest, InvalidLoadSegmentsOrderTest) {
+  SmallString<0> Storage;
+  Expected<ELFObjectFile<ELF64LE>> ExpectedFile = toBinary<ELF64LE>(Storage, R"(
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:         .foo
+    Type:         SHT_PROGBITS
+    Address:      0x1000
+    Offset:       0x3000
+    ContentArray: [ 0x11 ]
+  - Name:         .bar
+    Type:         SHT_PROGBITS
+    Address:      0x2000
+    Offset:       0x4000
+    ContentArray: [ 0x99 ]
+ProgramHeaders:
+  - Type:     PT_LOAD
+    VAddr:    0x2000
+    FirstSec: .bar
+    LastSec:  .bar
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .foo
+    LastSec:  .foo
+)");
+
+  ASSERT_THAT_EXPECTED(ExpectedFile, Succeeded());
+
+  std::string WarnString;
+  auto ToMappedAddr = [&](uint64_t Addr) -> const uint8_t * {
+    Expected<const uint8_t *> DataOrErr =
+        ExpectedFile->getELFFile().toMappedAddr(Addr, [&](const Twine &Msg) {
+          EXPECT_TRUE(WarnString.empty());
+          WarnString = Msg.str();
+          return Error::success();
+        });
+
+    if (!DataOrErr) {
+      ADD_FAILURE() << toString(DataOrErr.takeError());
+      return nullptr;
+    }
+
+    EXPECT_TRUE(WarnString ==
+                "loadable segments are unsorted by virtual address");
+    WarnString = "";
+    return *DataOrErr;
+  };
+
+  const uint8_t *Data = ToMappedAddr(0x1000);
+  ASSERT_TRUE(Data);
+  MemoryBufferRef Buf = ExpectedFile->getMemoryBufferRef();
+  EXPECT_EQ((const char *)Data - Buf.getBufferStart(), 0x3000);
+  EXPECT_EQ(Data[0], 0x11);
+
+  Data = ToMappedAddr(0x2000);
+  ASSERT_TRUE(Data);
+  Buf = ExpectedFile->getMemoryBufferRef();
+  EXPECT_EQ((const char *)Data - Buf.getBufferStart(), 0x4000);
+  EXPECT_EQ(Data[0], 0x99);
+}
+
+// This is a test for API that is related to symbols.
+// We check that errors are properly reported here.
+TEST(ELFObjectFileTest, InvalidSymbolTest) {
+  SmallString<0> Storage;
+  Expected<ELFObjectFile<ELF64LE>> ElfOrErr = toBinary<ELF64LE>(Storage, R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .symtab
+    Type: SHT_SYMTAB
+)");
+
+  ASSERT_THAT_EXPECTED(ElfOrErr, Succeeded());
+  const ELFFile<ELF64LE> &Elf = ElfOrErr->getELFFile();
+  const ELFObjectFile<ELF64LE> &Obj = *ElfOrErr;
+
+  Expected<const typename ELF64LE::Shdr *> SymtabSecOrErr = Elf.getSection(1);
+  ASSERT_THAT_EXPECTED(SymtabSecOrErr, Succeeded());
+  ASSERT_EQ((*SymtabSecOrErr)->sh_type, ELF::SHT_SYMTAB);
+
+  auto DoCheck = [&](unsigned BrokenSymIndex, const char *ErrMsg) {
+    ELFSymbolRef BrokenSym = Obj.toSymbolRef(*SymtabSecOrErr, BrokenSymIndex);
+
+    // 1) Check the behavior of ELFObjectFile<ELFT>::getSymbolName().
+    //    SymbolRef::getName() calls it internally. We can't test it directly,
+    //    because it is protected.
+    EXPECT_THAT_ERROR(BrokenSym.getName().takeError(),
+                      FailedWithMessage(ErrMsg));
+
+    // 2) Check the behavior of ELFObjectFile<ELFT>::getSymbol().
+    EXPECT_THAT_ERROR(Obj.getSymbol(BrokenSym.getRawDataRefImpl()).takeError(),
+                      FailedWithMessage(ErrMsg));
+
+    // 3) Check the behavior of ELFObjectFile<ELFT>::getSymbolSection().
+    //    SymbolRef::getSection() calls it internally. We can't test it
+    //    directly, because it is protected.
+    EXPECT_THAT_ERROR(BrokenSym.getSection().takeError(),
+                      FailedWithMessage(ErrMsg));
+
+    // 4) Check the behavior of ELFObjectFile<ELFT>::getSymbolFlags().
+    //    SymbolRef::getFlags() calls it internally. We can't test it directly,
+    //    because it is protected.
+    EXPECT_THAT_ERROR(BrokenSym.getFlags().takeError(),
+                      FailedWithMessage(ErrMsg));
+
+    // 5) Check the behavior of ELFObjectFile<ELFT>::getSymbolType().
+    //    SymbolRef::getType() calls it internally. We can't test it directly,
+    //    because it is protected.
+    EXPECT_THAT_ERROR(BrokenSym.getType().takeError(),
+                      FailedWithMessage(ErrMsg));
+
+    // 6) Check the behavior of ELFObjectFile<ELFT>::getSymbolAddress().
+    //    SymbolRef::getAddress() calls it internally. We can't test it
+    //    directly, because it is protected.
+    EXPECT_THAT_ERROR(BrokenSym.getAddress().takeError(),
+                      FailedWithMessage(ErrMsg));
+
+    // Finally, check the `ELFFile<ELFT>::getEntry` API. This is an underlying
+    // method that generates errors for all cases above.
+    EXPECT_THAT_EXPECTED(
+        Elf.getEntry<typename ELF64LE::Sym>(**SymtabSecOrErr, 0), Succeeded());
+    EXPECT_THAT_ERROR(
+        Elf.getEntry<typename ELF64LE::Sym>(**SymtabSecOrErr, BrokenSymIndex)
+            .takeError(),
+        FailedWithMessage(ErrMsg));
+  };
+
+  // We create a symbol with an index that is too large to exist in the symbol
+  // table.
+  DoCheck(0x1, "can't read an entry at 0x18: it goes past the end of the "
+               "section (0x18)");
+
+  // We create a symbol with an index that is too large to exist in the object.
+  DoCheck(0xFFFFFFFF, "can't read an entry at 0x17ffffffe8: it goes past the "
+                      "end of the section (0x18)");
+}

@@ -85,8 +85,13 @@ static Error getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
 
   if (!Undef) {
     symbol_iterator SI = RelRef.getSymbol();
-    const typename ELFT::Sym *Sym = Obj->getSymbol(SI->getRawDataRefImpl());
-    if (Sym->getType() == ELF::STT_SECTION) {
+    Expected<const typename ELFT::Sym *> SymOrErr =
+        Obj->getSymbol(SI->getRawDataRefImpl());
+    // TODO: test this error.
+    if (!SymOrErr)
+      return SymOrErr.takeError();
+
+    if ((*SymOrErr)->getType() == ELF::STT_SECTION) {
       Expected<section_iterator> SymSI = SI->getSection();
       if (!SymSI)
         return SymSI.takeError();

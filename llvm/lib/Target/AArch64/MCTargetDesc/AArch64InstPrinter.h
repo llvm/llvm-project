@@ -156,10 +156,12 @@ protected:
 
   void printVectorIndex(const MCInst *MI, unsigned OpNum,
                         const MCSubtargetInfo &STI, raw_ostream &O);
-  void printAdrpLabel(const MCInst *MI, unsigned OpNum,
+  void printAdrpLabel(const MCInst *MI, uint64_t Address, unsigned OpNum,
                       const MCSubtargetInfo &STI, raw_ostream &O);
   void printBarrierOption(const MCInst *MI, unsigned OpNum,
                           const MCSubtargetInfo &STI, raw_ostream &O);
+  void printBarriernXSOption(const MCInst *MI, unsigned OpNum,
+                             const MCSubtargetInfo &STI, raw_ostream &O);
   void printMSRSystemRegister(const MCInst *MI, unsigned OpNum,
                               const MCSubtargetInfo &STI, raw_ostream &O);
   void printMRSSystemRegister(const MCInst *MI, unsigned OpNum,
@@ -188,6 +190,8 @@ protected:
                     const MCSubtargetInfo &STI, raw_ostream &O);
   void printGPR64as32(const MCInst *MI, unsigned OpNum,
                       const MCSubtargetInfo &STI, raw_ostream &O);
+  void printGPR64x8(const MCInst *MI, unsigned OpNum,
+                    const MCSubtargetInfo &STI, raw_ostream &O);
   template <int Width>
   void printZPRasFPR(const MCInst *MI, unsigned OpNum,
                      const MCSubtargetInfo &STI, raw_ostream &O);

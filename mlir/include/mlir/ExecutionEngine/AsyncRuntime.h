@@ -32,6 +32,9 @@
 #define MLIR_ASYNCRUNTIME_DEFINE_FUNCTIONS
 #endif // _WIN32
 
+namespace mlir {
+namespace runtime {
+
 //===----------------------------------------------------------------------===//
 // Async runtime API.
 //===----------------------------------------------------------------------===//
@@ -101,5 +104,8 @@ mlirAsyncRuntimeAwaitAllInGroupAndExecute(AsyncGroup *, CoroHandle, CoroResume);
 //===----------------------------------------------------------------------===//
 
 extern "C" MLIR_ASYNCRUNTIME_EXPORT void mlirAsyncRuntimePrintCurrentThreadId();
+
+} // namespace runtime
+} // namespace mlir
 
 #endif // MLIR_EXECUTIONENGINE_ASYNCRUNTIME_H_

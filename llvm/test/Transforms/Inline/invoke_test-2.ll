@@ -1,7 +1,7 @@
 ; Test that if an invoked function is inlined, and if that function cannot
 ; throw, that the dead handler is now unreachable.
 
-; RUN: opt < %s -inline -simplifycfg -S | FileCheck %s
+; RUN: opt < %s -inline -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
 
 declare void @might_throw()
 

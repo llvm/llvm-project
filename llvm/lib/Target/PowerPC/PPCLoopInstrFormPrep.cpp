@@ -276,9 +276,9 @@ static Value *GetPointerOperand(Value *MemI) {
     return SMemI->getPointerOperand();
   } else if (IntrinsicInst *IMemI = dyn_cast<IntrinsicInst>(MemI)) {
     if (IMemI->getIntrinsicID() == Intrinsic::prefetch ||
-        IMemI->getIntrinsicID() == Intrinsic::ppc_mma_lxvp)
+        IMemI->getIntrinsicID() == Intrinsic::ppc_vsx_lxvp)
       return IMemI->getArgOperand(0);
-    if (IMemI->getIntrinsicID() == Intrinsic::ppc_mma_stxvp)
+    if (IMemI->getIntrinsicID() == Intrinsic::ppc_vsx_stxvp)
       return IMemI->getArgOperand(1);
   }
 
@@ -347,10 +347,10 @@ SmallVector<Bucket, 16> PPCLoopInstrFormPrep::collectCandidates(
         PtrValue = SMemI->getPointerOperand();
       } else if (IntrinsicInst *IMemI = dyn_cast<IntrinsicInst>(&J)) {
         if (IMemI->getIntrinsicID() == Intrinsic::prefetch ||
-            IMemI->getIntrinsicID() == Intrinsic::ppc_mma_lxvp) {
+            IMemI->getIntrinsicID() == Intrinsic::ppc_vsx_lxvp) {
           MemI = IMemI;
           PtrValue = IMemI->getArgOperand(0);
-        } else if (IMemI->getIntrinsicID() == Intrinsic::ppc_mma_stxvp) {
+        } else if (IMemI->getIntrinsicID() == Intrinsic::ppc_vsx_stxvp) {
           MemI = IMemI;
           PtrValue = IMemI->getArgOperand(1);
         } else continue;
@@ -834,8 +834,8 @@ bool PPCLoopInstrFormPrep::runOnLoop(Loop *L) {
       return false;
     // There are no update forms for P10 lxvp/stxvp intrinsic.
     auto *II = dyn_cast<IntrinsicInst>(I);
-    if (II && ((II->getIntrinsicID() == Intrinsic::ppc_mma_lxvp) ||
-               II->getIntrinsicID() == Intrinsic::ppc_mma_stxvp))
+    if (II && ((II->getIntrinsicID() == Intrinsic::ppc_vsx_lxvp) ||
+               II->getIntrinsicID() == Intrinsic::ppc_vsx_stxvp))
       return false;
     // See getPreIndexedAddressParts, the displacement for LDU/STDU has to
     // be 4's multiple (DS-form). For i64 loads/stores when the displacement
@@ -877,8 +877,8 @@ bool PPCLoopInstrFormPrep::runOnLoop(Loop *L) {
     // Check if it is a P10 lxvp/stxvp intrinsic.
     auto *II = dyn_cast<IntrinsicInst>(I);
     if (II)
-      return II->getIntrinsicID() == Intrinsic::ppc_mma_lxvp ||
-             II->getIntrinsicID() == Intrinsic::ppc_mma_stxvp;
+      return II->getIntrinsicID() == Intrinsic::ppc_vsx_lxvp ||
+             II->getIntrinsicID() == Intrinsic::ppc_vsx_stxvp;
     // Check if it is a P9 vector load/store.
     return ST && ST->hasP9Vector() &&
            (PtrValue->getType()->getPointerElementType()->isVectorTy());

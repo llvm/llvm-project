@@ -189,7 +189,7 @@ struct FoldUnitDimLoops : public OpRewritePattern<GenericOpTy> {
     if (!invertedMap)
       return failure();
     SmallVector<int64_t, 4> dims;
-    for (ShapedType shapedType : op.getInputOutputShapedTypes())
+    for (ShapedType shapedType : op.getShapedOperandTypes())
       dims.append(shapedType.getShape().begin(), shapedType.getShape().end());
     DenseSet<unsigned> unitDims;
     ArrayAttr iteratorTypes = op.iterator_types();
@@ -295,7 +295,7 @@ struct ReplaceUnitExtentTensors : public OpRewritePattern<GenericOpTy> {
   LogicalResult matchAndRewrite(GenericOpTy op,
                                 PatternRewriter &rewriter) const override {
     // TODO: support init_tensors and reductions.
-    if (!op.hasTensorSemantics() || !op.init_tensors().empty())
+    if (!op.hasTensorSemantics() || op.getNumInitTensors() != 0)
       return failure();
 
     MLIRContext *context = rewriter.getContext();
@@ -306,7 +306,7 @@ struct ReplaceUnitExtentTensors : public OpRewritePattern<GenericOpTy> {
     SmallVector<ShapedType, 4> newInputOutputTypes;
     bool doCanonicalization = false;
     for (auto it :
-         llvm::zip(op.getIndexingMaps(), op.getInputOutputShapedTypes())) {
+         llvm::zip(op.getIndexingMaps(), op.getShapedOperandTypes())) {
       auto replacementInfo = replaceUnitExtents(
           std::get<0>(it), std::get<1>(it).template cast<RankedTensorType>(),
           context);
@@ -342,19 +342,16 @@ struct ReplaceUnitExtentTensors : public OpRewritePattern<GenericOpTy> {
     };
 
     SmallVector<Value, 4> newInputs = insertReshapes(op.inputs());
-    SmallVector<Value, 4> newOutputBuffers =
-        insertReshapes(op.output_buffers());
-    SmallVector<Value, 4> newInitTensors = insertReshapes(op.init_tensors());
+    SmallVector<Value, 4> newOutputs = insertReshapes(op.outputs());
 
-    // If any result type change, insert a reshape to convert from the original
+    // If any result type changes, insert a reshape to convert from the original
     // type to the new type.
     SmallVector<Type, 4> resultTypes;
     resultTypes.reserve(op.getNumResults());
     for (unsigned i : llvm::seq<unsigned>(0, op.getNumResults()))
       resultTypes.push_back(newInputOutputTypes[i + op.getNumInputs()]);
     GenericOpTy replacementOp = rewriter.create<GenericOpTy>(
-        loc, resultTypes, newInputs, newOutputBuffers, newInitTensors,
-        newIndexingMaps,
+        loc, resultTypes, newInputs, newOutputs, newIndexingMaps,
         llvm::to_vector<4>(
             op.iterator_types().template getAsValueRange<StringAttr>()));
     rewriter.inlineRegionBefore(op.region(), replacementOp.region(),
@@ -364,7 +361,7 @@ struct ReplaceUnitExtentTensors : public OpRewritePattern<GenericOpTy> {
     // the original shape.
     SmallVector<Value, 4> resultReplacements;
     for (auto result : llvm::enumerate(replacementOp.getResults())) {
-      unsigned index = result.index() + replacementOp.getNumOperands();
+      unsigned index = result.index() + replacementOp.getNumInputs();
       RankedTensorType origResultType = op.getResult(result.index())
                                             .getType()
                                             .template cast<RankedTensorType>();

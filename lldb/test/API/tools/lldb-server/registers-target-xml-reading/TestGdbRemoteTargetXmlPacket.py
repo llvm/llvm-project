@@ -15,7 +15,6 @@ class TestGdbRemoteTargetXmlPacket(gdbremote_testcase.GdbRemoteTestCaseBase):
     @expectedFailureNetBSD
     @llgs_test
     def test_g_target_xml_returns_correct_data(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
 

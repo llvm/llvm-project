@@ -81,13 +81,14 @@
 // RUN:     {key: readability-identifier-naming.LocalPointerPrefix, value: 'l_'}, \
 // RUN:     {key: readability-identifier-naming.LocalConstantPointerCase, value: CamelCase}, \
 // RUN:     {key: readability-identifier-naming.LocalConstantPointerPrefix, value: 'lc_'}, \
-// RUN:   ]}' -- -fno-delayed-template-parsing -Dbad_macro \
+// RUN:   ]}' -- -fno-delayed-template-parsing -Dbad_macro -std=c++17 -fcoroutines-ts \
 // RUN:   -I%S/Inputs/readability-identifier-naming \
 // RUN:   -isystem %S/Inputs/readability-identifier-naming/system
 
 // clang-format off
 
 #include <system-header.h>
+#include <coroutines.h>
 #include "user-header.h"
 // NO warnings or fixes expected from declarations within header files without
 // the -header-filter= option
@@ -287,7 +288,7 @@ public:
   // Overriding a badly-named base isn't a new violation.
   void BadBaseMethod() override {}
   // CHECK-FIXES: {{^}}  void v_Bad_Base_Method() override {}
-  
+
   void foo() {
     BadBaseMethod();
     // CHECK-FIXES: {{^}}    v_Bad_Base_Method();
@@ -614,3 +615,14 @@ template<typename type_t>
 auto GetRes(type_t& Param) -> decltype(Param.res());
 // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: invalid case style for parameter 'Param'
 // CHECK-FIXES: auto GetRes(type_t& a_param) -> decltype(a_param.res());
+
+// Check implicit declarations in coroutines
+
+struct async_obj {
+public:
+  never_suspend operator co_await() const noexcept;
+};
+
+task ImplicitDeclTest(async_obj &a_object) {
+  co_await a_object;  // CHECK-MESSAGES-NOT: warning: invalid case style for local variable
+}

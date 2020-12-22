@@ -140,7 +140,8 @@ public:
     }
   }
 
-  // Apply subscripts.
+  // Apply subscripts.  An empty subscript list is allowed for
+  // a scalar constant.
   Element At(const ConstantSubscripts &) const;
 
   Constant Reshape(ConstantSubscripts &&) const;
@@ -177,7 +178,7 @@ public:
     }
   }
 
-  // Apply subscripts
+  // Apply subscripts, if any.
   Scalar<Result> At(const ConstantSubscripts &) const;
 
   Constant Reshape(ConstantSubscripts &&) const;

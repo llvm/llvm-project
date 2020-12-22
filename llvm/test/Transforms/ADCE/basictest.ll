@@ -1,4 +1,4 @@
-; RUN: opt < %s -adce -simplifycfg | llvm-dis
+; RUN: opt < %s -adce -simplifycfg -simplifycfg-require-and-preserve-domtree=1 | llvm-dis
 ; RUN: opt < %s -passes=adce | llvm-dis
 
 define i32 @Test(i32 %A, i32 %B) {

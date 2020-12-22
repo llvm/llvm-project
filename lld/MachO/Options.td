@@ -346,7 +346,7 @@ def bundle_loader : Separate<["-"], "bundle_loader">,
 def grp_object : OptionGroup<"object">, HelpText<"CREATING AN OBJECT FILE">;
 
 def keep_private_externs : Flag<["-"], "keep_private_externs">,
-     HelpText<"Do not convert private external symbols to static symbols">,
+     HelpText<"Do not convert private external symbols to static symbols (only valid with -r)">,
      Flags<[HelpHidden]>,
      Group<grp_object>;
 def d : Flag<["-"], "d">,
@@ -408,7 +408,6 @@ def U : Separate<["-"], "U">,
 def undefined : Separate<["-"], "undefined">,
      MetaVarName<"<treatment>">,
      HelpText<"Handle undefined symbols according to <treatment>: error, warning, suppress, or dynamic_lookup (default is error)">,
-     Flags<[HelpHidden]>,
      Group<grp_resolve>;
 def rpath : Separate<["-"], "rpath">,
      MetaVarName<"<path>">,
