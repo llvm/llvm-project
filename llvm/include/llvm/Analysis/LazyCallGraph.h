@@ -258,7 +258,6 @@ public:
     iterator begin() { return iterator(Edges.begin(), Edges.end()); }
     iterator end() { return iterator(Edges.end(), Edges.end()); }
 
-    Edge &operator[](int i) { return Edges[i]; }
     Edge &operator[](Node &N) {
       assert(EdgeIndexMap.find(&N) != EdgeIndexMap.end() && "No such edge!");
       auto &E = Edges[EdgeIndexMap.find(&N)->second];
