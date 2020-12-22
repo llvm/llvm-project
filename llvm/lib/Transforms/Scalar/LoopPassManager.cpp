@@ -222,11 +222,16 @@ PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
 
   // Register the worklist and loop analysis manager so that loop passes can
   // update them when they mutate the loop nest structure.
-  LPMUpdater Updater(Worklist, LAM);
+  LPMUpdater Updater(Worklist, LAM, LoopNestMode);
 
   // Add the loop nests in the reverse order of LoopInfo. See method
   // declaration.
-  appendLoopsToWorklist(LI, Worklist);
+  if (!LoopNestMode) {
+    appendLoopsToWorklist(LI, Worklist);
+  } else {
+    for (Loop *L : LI)
+      Worklist.insert(L);
+  }
 
 #ifndef NDEBUG
   PI.pushBeforeNonSkippedPassCallback([&LAR, &LI](StringRef PassID, Any IR) {
@@ -247,6 +252,8 @@ PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
 
   do {
     Loop *L = Worklist.pop_back_val();
+    assert(!(LoopNestMode && L->getParentLoop()) &&
+           "L should be a top-level loop in loop-nest mode.");
 
     // Reset the update structure for this loop.
     Updater.CurrentL = L;
