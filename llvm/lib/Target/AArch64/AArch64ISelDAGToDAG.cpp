@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AArch64MachineFunctionInfo.h"
 #include "AArch64TargetMachine.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "llvm/ADT/APSInt.h"
@@ -4033,6 +4034,17 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       return;
     }
 
+    case Intrinsic::swift_async_context_addr:
+      SDLoc DL(Node);
+      CurDAG->SelectNodeTo(Node, AArch64::SUBXri, MVT::i64,
+                           CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL,
+                                                  AArch64::FP, MVT::i64),
+                           CurDAG->getTargetConstant(8, DL, MVT::i32),
+                           CurDAG->getTargetConstant(0, DL, MVT::i32));
+      auto &MF = CurDAG->getMachineFunction();
+      MF.getFrameInfo().setFrameAddressIsTaken(true);
+      MF.getInfo<AArch64FunctionInfo>()->setHasSwiftAsyncContext(true);
+      return;
     }
     break;
   }
