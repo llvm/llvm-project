@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: libcpp-has-no-threads, c++03
-// REQUIRES: non-lockfree-atomics
+// REQUIRES: is-lockfree-runtime-function
 
 // GCC currently fails because it needs -fabi-version=6 to fix mangling of
 // std::atomic when used with __attribute__((vector(X))).
