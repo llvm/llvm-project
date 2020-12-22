@@ -151,6 +151,12 @@ protected:
       "mgpuMemFree",
       llvmVoidType,
       {llvmPointerType /* void *ptr */, llvmPointerType /* void *stream */}};
+  FunctionCallBuilder memcpyCallBuilder = {
+      "mgpuMemcpy",
+      llvmVoidType,
+      {llvmPointerType /* void *dst */, llvmPointerType /* void *src */,
+       llvmIntPtrType /* intptr_t sizeBytes */,
+       llvmPointerType /* void *stream */}};
 };
 
 /// A rewrite pattern to convert gpu.host_register operations into a GPU runtime
@@ -267,6 +273,20 @@ class EraseGpuModuleOpPattern : public OpRewritePattern<gpu::GPUModuleOp> {
     rewriter.eraseOp(op);
     return success();
   }
+};
+
+/// A rewrite pattern to convert gpu.memcpy operations into a GPU runtime
+/// call. Currently it supports CUDA and ROCm (HIP).
+class ConvertMemcpyOpToGpuRuntimeCallPattern
+    : public ConvertOpToGpuRuntimeCallPattern<gpu::MemcpyOp> {
+public:
+  ConvertMemcpyOpToGpuRuntimeCallPattern(LLVMTypeConverter &typeConverter)
+      : ConvertOpToGpuRuntimeCallPattern<gpu::MemcpyOp>(typeConverter) {}
+
+private:
+  LogicalResult
+  matchAndRewrite(gpu::MemcpyOp memcpyOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override;
 };
 } // namespace
 
@@ -643,6 +663,50 @@ LogicalResult ConvertLaunchFuncOpToGpuRuntimeCallPattern::matchAndRewrite(
   return success();
 }
 
+LogicalResult ConvertMemcpyOpToGpuRuntimeCallPattern::matchAndRewrite(
+    gpu::MemcpyOp memcpyOp, ArrayRef<Value> operands,
+    ConversionPatternRewriter &rewriter) const {
+  auto memRefType = memcpyOp.src().getType().cast<MemRefType>();
+
+  if (failed(areAllLLVMTypes(memcpyOp, operands, rewriter)) ||
+      !isSupportedMemRefType(memRefType) ||
+      failed(isAsyncWithOneDependency(rewriter, memcpyOp)))
+    return failure();
+
+  auto loc = memcpyOp.getLoc();
+  auto adaptor = gpu::MemcpyOpAdaptor(operands, memcpyOp->getAttrDictionary());
+
+  MemRefDescriptor srcDesc(adaptor.src());
+
+  Value numElements =
+      memRefType.hasStaticShape()
+          ? createIndexConstant(rewriter, loc, memRefType.getNumElements())
+          // For identity layouts (verified above), the number of elements is
+          // stride[0] * size[0].
+          : rewriter.create<LLVM::MulOp>(loc, srcDesc.stride(rewriter, loc, 0),
+                                         srcDesc.size(rewriter, loc, 0));
+
+  Type elementPtrType = getElementPtrType(memRefType);
+  Value nullPtr = rewriter.create<LLVM::NullOp>(loc, elementPtrType);
+  Value gepPtr = rewriter.create<LLVM::GEPOp>(
+      loc, elementPtrType, ArrayRef<Value>{nullPtr, numElements});
+  auto sizeBytes =
+      rewriter.create<LLVM::PtrToIntOp>(loc, getIndexType(), gepPtr);
+
+  auto src = rewriter.create<LLVM::BitcastOp>(
+      loc, llvmPointerType, srcDesc.alignedPtr(rewriter, loc));
+  auto dst = rewriter.create<LLVM::BitcastOp>(
+      loc, llvmPointerType,
+      MemRefDescriptor(adaptor.dst()).alignedPtr(rewriter, loc));
+
+  auto stream = adaptor.asyncDependencies().front();
+  memcpyCallBuilder.create(loc, rewriter, {dst, src, sizeBytes, stream});
+
+  rewriter.replaceOp(memcpyOp, {stream});
+
+  return success();
+}
+
 std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
 mlir::createGpuToLLVMConversionPass(StringRef gpuBinaryAnnotation) {
   return std::make_unique<GpuToLLVMConversionPass>(gpuBinaryAnnotation);
@@ -658,6 +722,7 @@ void mlir::populateGpuToLLVMConversionPatterns(
   patterns.insert<ConvertAllocOpToGpuRuntimeCallPattern,
                   ConvertDeallocOpToGpuRuntimeCallPattern,
                   ConvertHostRegisterOpToGpuRuntimeCallPattern,
+                  ConvertMemcpyOpToGpuRuntimeCallPattern,
                   ConvertWaitAsyncOpToGpuRuntimeCallPattern,
                   ConvertWaitOpToGpuRuntimeCallPattern>(converter);
   patterns.insert<ConvertLaunchFuncOpToGpuRuntimeCallPattern>(
