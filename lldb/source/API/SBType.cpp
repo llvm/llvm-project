@@ -344,6 +344,16 @@ lldb::SBType SBType::GetCanonicalType() {
   return LLDB_RECORD_RESULT(SBType());
 }
 
+SBType SBType::GetEnumerationIntegerType() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBType, SBType, GetEnumerationIntegerType);
+
+  if (IsValid()) {
+    return LLDB_RECORD_RESULT(
+        SBType(m_opaque_sp->GetCompilerType(true).GetEnumerationIntegerType()));
+  }
+  return LLDB_RECORD_RESULT(SBType());
+}
+
 lldb::BasicType SBType::GetBasicType() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::BasicType, SBType, GetBasicType);
 
@@ -952,6 +962,7 @@ void RegisterMethods<SBType>(Registry &R) {
                        GetMemberFunctionAtIndex, (uint32_t));
   LLDB_REGISTER_METHOD(lldb::SBType, SBType, GetUnqualifiedType, ());
   LLDB_REGISTER_METHOD(lldb::SBType, SBType, GetCanonicalType, ());
+  LLDB_REGISTER_METHOD(lldb::SBType, SBType, GetEnumerationIntegerType, ());
   LLDB_REGISTER_METHOD(lldb::BasicType, SBType, GetBasicType, ());
   LLDB_REGISTER_METHOD(lldb::SBType, SBType, GetBasicType, (lldb::BasicType));
   LLDB_REGISTER_METHOD(uint32_t, SBType, GetNumberOfDirectBaseClasses, ());

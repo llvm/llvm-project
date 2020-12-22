@@ -31,6 +31,7 @@ public:
 
 enum EnumType {};
 enum class ScopedEnumType {};
+enum class EnumUChar : unsigned char {};
 
 int main (int argc, char const *argv[])
 {
@@ -63,6 +64,7 @@ int main (int argc, char const *argv[])
 
     EnumType enum_type;
     ScopedEnumType scoped_enum_type;
+    EnumUChar scoped_enum_type_uchar;
 
     return 0; // Break at this line
 }

@@ -187,6 +187,8 @@ public:
 
   CompilerType GetFullyUnqualifiedType() const;
 
+  CompilerType GetEnumerationIntegerType() const;
+
   /// Returns -1 if this isn't a function of if the function doesn't
   /// have a prototype Returns a value >= 0 if there is a prototype.
   int GetFunctionArgumentCount() const;

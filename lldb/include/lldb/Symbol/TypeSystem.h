@@ -227,6 +227,9 @@ public:
 
   virtual CompilerType GetCanonicalType(lldb::opaque_compiler_type_t type) = 0;
 
+  virtual CompilerType
+  GetEnumerationIntegerType(lldb::opaque_compiler_type_t type) = 0;
+
   // Returns -1 if this isn't a function of if the function doesn't have a
   // prototype Returns a value >= 0 if there is a prototype.
   virtual int GetFunctionArgumentCount(lldb::opaque_compiler_type_t type) = 0;
