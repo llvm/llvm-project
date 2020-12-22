@@ -61,7 +61,7 @@ define void @foo(i32 %vla_size) #0 {
 ; CHECK-LE-NEXT:  .LBB0_6: # %entry
 ; CHECK-LE-NEXT:    addi r3, r1, 2048
 ; CHECK-LE-NEXT:    lbz r3, 0(r3)
-; CHECK-LE-NEXT:    ld r1, 0(r1)
+; CHECK-LE-NEXT:    mr r1, r30
 ; CHECK-LE-NEXT:    ld r31, -8(r1)
 ; CHECK-LE-NEXT:    ld r30, -16(r1)
 ; CHECK-LE-NEXT:    blr

@@ -544,7 +544,7 @@ define i32 @f8(i64 %i) local_unnamed_addr #0 {
 ; CHECK-LE-NEXT:    li r5, 1
 ; CHECK-LE-NEXT:    stwx r5, r4, r3
 ; CHECK-LE-NEXT:    lwz r3, 64(r1)
-; CHECK-LE-NEXT:    ld r1, 0(r1)
+; CHECK-LE-NEXT:    mr r1, r30
 ; CHECK-LE-NEXT:    ld r30, -16(r1)
 ; CHECK-LE-NEXT:    blr
 ;
@@ -562,7 +562,7 @@ define i32 @f8(i64 %i) local_unnamed_addr #0 {
 ; CHECK-BE-NEXT:    sldi r3, r3, 2
 ; CHECK-BE-NEXT:    stwx r5, r4, r3
 ; CHECK-BE-NEXT:    lwz r3, 64(r1)
-; CHECK-BE-NEXT:    ld r1, 0(r1)
+; CHECK-BE-NEXT:    mr r1, r30
 ; CHECK-BE-NEXT:    ld r30, -16(r1)
 ; CHECK-BE-NEXT:    blr
 ;
@@ -631,7 +631,7 @@ define i32 @f9(i64 %i) local_unnamed_addr #0 {
 ; CHECK-LE-NEXT:    li r5, 1
 ; CHECK-LE-NEXT:    stwx r5, r4, r3
 ; CHECK-LE-NEXT:    lwz r3, 2048(r1)
-; CHECK-LE-NEXT:    ld r1, 0(r1)
+; CHECK-LE-NEXT:    mr r1, r30
 ; CHECK-LE-NEXT:    ld r30, -16(r1)
 ; CHECK-LE-NEXT:    blr
 ;
@@ -669,7 +669,7 @@ define i32 @f9(i64 %i) local_unnamed_addr #0 {
 ; CHECK-BE-NEXT:    sldi r3, r3, 2
 ; CHECK-BE-NEXT:    stwx r5, r4, r3
 ; CHECK-BE-NEXT:    lwz r3, 2048(r1)
-; CHECK-BE-NEXT:    ld r1, 0(r1)
+; CHECK-BE-NEXT:    mr r1, r30
 ; CHECK-BE-NEXT:    ld r30, -16(r1)
 ; CHECK-BE-NEXT:    blr
 ;
@@ -743,7 +743,7 @@ define i32 @f10(i64 %i) local_unnamed_addr #0 {
 ; CHECK-LE-NEXT:    li r5, 1
 ; CHECK-LE-NEXT:    stwx r5, r4, r3
 ; CHECK-LE-NEXT:    lwz r3, 1024(r1)
-; CHECK-LE-NEXT:    ld r1, 0(r1)
+; CHECK-LE-NEXT:    mr r1, r30
 ; CHECK-LE-NEXT:    ld r30, -16(r1)
 ; CHECK-LE-NEXT:    blr
 ;
@@ -780,7 +780,7 @@ define i32 @f10(i64 %i) local_unnamed_addr #0 {
 ; CHECK-BE-NEXT:    sldi r3, r3, 2
 ; CHECK-BE-NEXT:    stwx r5, r4, r3
 ; CHECK-BE-NEXT:    lwz r3, 1024(r1)
-; CHECK-BE-NEXT:    ld r1, 0(r1)
+; CHECK-BE-NEXT:    mr r1, r30
 ; CHECK-BE-NEXT:    ld r30, -16(r1)
 ; CHECK-BE-NEXT:    blr
 ;
@@ -884,7 +884,7 @@ define void @f11(i32 %vla_size, i64 %i) #0 {
 ; CHECK-LE-NEXT:  .LBB11_8:
 ; CHECK-LE-NEXT:    addi r3, r1, -32768
 ; CHECK-LE-NEXT:    lbz r3, 0(r3)
-; CHECK-LE-NEXT:    ld r1, 0(r1)
+; CHECK-LE-NEXT:    mr r1, r30
 ; CHECK-LE-NEXT:    ld r31, -8(r1)
 ; CHECK-LE-NEXT:    ld r30, -16(r1)
 ; CHECK-LE-NEXT:    blr
@@ -954,7 +954,7 @@ define void @f11(i32 %vla_size, i64 %i) #0 {
 ; CHECK-BE-NEXT:  .LBB11_8:
 ; CHECK-BE-NEXT:    addi r3, r1, -32768
 ; CHECK-BE-NEXT:    lbz r3, 0(r3)
-; CHECK-BE-NEXT:    ld r1, 0(r1)
+; CHECK-BE-NEXT:    mr r1, r30
 ; CHECK-BE-NEXT:    ld r31, -8(r1)
 ; CHECK-BE-NEXT:    ld r30, -16(r1)
 ; CHECK-BE-NEXT:    blr

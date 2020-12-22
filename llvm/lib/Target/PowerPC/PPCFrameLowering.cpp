@@ -1644,11 +1644,18 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
     // offset by the STDU/STDUX/STWU/STWUX instruction. For targets with red
     // zone add this offset back now.
 
+    // If the function has a base pointer, the stack pointer has been copied
+    // to it so we can restore it by copying in the other direction.
+    if (HasRedZone && HasBP) {
+      BuildMI(MBB, MBBI, dl, OrInst, RBReg).
+        addReg(BPReg).
+        addReg(BPReg);
+    }
     // If this function contained a fastcc call and GuaranteedTailCallOpt is
     // enabled (=> hasFastCall()==true) the fastcc call might contain a tail
     // call which invalidates the stack pointer value in SP(0). So we use the
     // value of R31 in this case. Similar situation exists with setjmp.
-    if (FI->hasFastCall() || MF.exposesReturnsTwice()) {
+    else if (FI->hasFastCall() || MF.exposesReturnsTwice()) {
       assert(HasFP && "Expecting a valid frame pointer.");
       if (!HasRedZone)
         RBReg = FPReg;
