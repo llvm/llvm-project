@@ -254,7 +254,7 @@ def OMPC_AtomicDefaultMemOrder : Clause<"atomic_default_mem_order"> {
 }
 def OMPC_Allocate : Clause<"allocate"> {
   let clangClass = "OMPAllocateClause";
-  let flangClass = "OmpAllocateClause";
+  let flangClassValue = "OmpAllocateClause";
 }
 def OMPC_NonTemporal : Clause<"nontemporal"> {
   let clangClass = "OMPNontemporalClause";
