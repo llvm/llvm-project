@@ -418,6 +418,7 @@ CHECK_SIMPLE_CLAUSE(Link, OMPC_link)
 CHECK_SIMPLE_CLAUSE(Mergeable, OMPC_mergeable)
 CHECK_SIMPLE_CLAUSE(Nogroup, OMPC_nogroup)
 CHECK_SIMPLE_CLAUSE(Notinbranch, OMPC_notinbranch)
+CHECK_SIMPLE_CLAUSE(Nowait, OMPC_nowait)
 CHECK_SIMPLE_CLAUSE(To, OMPC_to)
 CHECK_SIMPLE_CLAUSE(Uniform, OMPC_uniform)
 CHECK_SIMPLE_CLAUSE(Untied, OMPC_untied)
@@ -493,7 +494,6 @@ void OmpStructureChecker::CheckIsVarPartOfAnotherVar(
 }
 // Following clauses have a seperate node in parse-tree.h.
 CHECK_SIMPLE_PARSER_CLAUSE(OmpDistScheduleClause, OMPC_dist_schedule)
-CHECK_SIMPLE_PARSER_CLAUSE(OmpNowait, OMPC_nowait)
 CHECK_SIMPLE_PARSER_CLAUSE(OmpReductionClause, OMPC_reduction)
 // Atomic-clause
 CHECK_SIMPLE_PARSER_CLAUSE(OmpAtomicRead, OMPC_read)

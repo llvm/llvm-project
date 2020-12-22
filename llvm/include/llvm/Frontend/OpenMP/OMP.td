@@ -147,7 +147,6 @@ def OMPC_Ordered : Clause<"ordered"> {
 }
 def OMPC_NoWait : Clause<"nowait"> {
   let clangClass = "OMPNowaitClause";
-  let flangClass = "OmpNowait";
 }
 def OMPC_Untied : Clause<"untied"> { let clangClass = "OMPUntiedClause"; }
 def OMPC_Mergeable : Clause<"mergeable"> {

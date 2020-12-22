@@ -126,12 +126,12 @@ public:
 
   void Leave(const parser::OmpClauseList &);
   void Enter(const parser::OmpClause &);
-  void Enter(const parser::OmpNowait &);
   void Enter(const parser::OmpClause::Allocate &);
   void Enter(const parser::OmpClause::Allocator &);
   void Enter(const parser::OmpClause::Inbranch &);
   void Enter(const parser::OmpClause::Mergeable &);
   void Enter(const parser::OmpClause::Nogroup &);
+  void Enter(const parser::OmpClause::Nowait &);
   void Enter(const parser::OmpClause::Notinbranch &);
   void Enter(const parser::OmpClause::Untied &);
   void Enter(const parser::OmpClause::Collapse &);
