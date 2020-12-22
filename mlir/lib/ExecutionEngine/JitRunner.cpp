@@ -196,19 +196,30 @@ template <typename Type>
 Error checkCompatibleReturnType(LLVM::LLVMFuncOp mainFunction);
 template <>
 Error checkCompatibleReturnType<int32_t>(LLVM::LLVMFuncOp mainFunction) {
-  if (!mainFunction.getType().getFunctionResultType().isIntegerTy(32))
+  auto resultType = mainFunction.getType()
+                        .cast<LLVM::LLVMFunctionType>()
+                        .getReturnType()
+                        .dyn_cast<LLVM::LLVMIntegerType>();
+  if (!resultType || resultType.getBitWidth() != 32)
     return make_string_error("only single llvm.i32 function result supported");
   return Error::success();
 }
 template <>
 Error checkCompatibleReturnType<int64_t>(LLVM::LLVMFuncOp mainFunction) {
-  if (!mainFunction.getType().getFunctionResultType().isIntegerTy(64))
+  auto resultType = mainFunction.getType()
+                        .cast<LLVM::LLVMFunctionType>()
+                        .getReturnType()
+                        .dyn_cast<LLVM::LLVMIntegerType>();
+  if (!resultType || resultType.getBitWidth() != 64)
     return make_string_error("only single llvm.i64 function result supported");
   return Error::success();
 }
 template <>
 Error checkCompatibleReturnType<float>(LLVM::LLVMFuncOp mainFunction) {
-  if (!mainFunction.getType().getFunctionResultType().isFloatTy())
+  if (!mainFunction.getType()
+           .cast<LLVM::LLVMFunctionType>()
+           .getReturnType()
+           .isa<LLVM::LLVMFloatType>())
     return make_string_error("only single llvm.f32 function result supported");
   return Error::success();
 }
@@ -220,7 +231,7 @@ Error compileAndExecuteSingleReturnFunction(Options &options, ModuleOp module,
   if (!mainFunction || mainFunction.isExternal())
     return make_string_error("entry point not found");
 
-  if (mainFunction.getType().getFunctionNumParams() != 0)
+  if (mainFunction.getType().cast<LLVM::LLVMFunctionType>().getNumParams() != 0)
     return make_string_error("function inputs not supported");
 
   if (Error error = checkCompatibleReturnType<Type>(mainFunction))

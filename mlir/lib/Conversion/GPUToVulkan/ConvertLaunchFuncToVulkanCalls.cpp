@@ -75,7 +75,7 @@ private:
     //   int64_t sizes[Rank]; // omitted when rank == 0
     //   int64_t strides[Rank]; // omitted when rank == 0
     // };
-    auto llvmPtrToElementType = elemenType.getPointerTo();
+    auto llvmPtrToElementType = LLVM::LLVMPointerType::get(elemenType);
     auto llvmArrayRankElementSizeType =
         LLVM::LLVMType::getArrayTy(getInt64Type(), rank);
 
@@ -131,16 +131,18 @@ private:
 
   /// Returns a string representation from the given `type`.
   StringRef stringifyType(LLVM::LLVMType type) {
-    if (type.isFloatTy())
+    if (type.isa<LLVM::LLVMFloatType>())
       return "Float";
-    if (type.isHalfTy())
+    if (type.isa<LLVM::LLVMHalfType>())
       return "Half";
-    if (type.isIntegerTy(32))
-      return "Int32";
-    if (type.isIntegerTy(16))
-      return "Int16";
-    if (type.isIntegerTy(8))
-      return "Int8";
+    if (auto intType = type.dyn_cast<LLVM::LLVMIntegerType>()) {
+      if (intType.getBitWidth() == 32)
+        return "Int32";
+      if (intType.getBitWidth() == 16)
+        return "Int16";
+      if (intType.getBitWidth() == 8)
+        return "Int8";
+    }
 
     llvm_unreachable("unsupported type");
   }
@@ -238,11 +240,11 @@ void VulkanLaunchFuncToVulkanCallsPass::createBindMemRefCalls(
         llvm::formatv("bindMemRef{0}D{1}", rank, stringifyType(type)).str();
     // Special case for fp16 type. Since it is not a supported type in C we use
     // int16_t and bitcast the descriptor.
-    if (type.isHalfTy()) {
+    if (type.isa<LLVM::LLVMHalfType>()) {
       auto memRefTy =
           getMemRefType(rank, LLVM::LLVMType::getInt16Ty(&getContext()));
       ptrToMemRefDescriptor = builder.create<LLVM::BitcastOp>(
-          loc, memRefTy.getPointerTo(), ptrToMemRefDescriptor);
+          loc, LLVM::LLVMPointerType::get(memRefTy), ptrToMemRefDescriptor);
     }
     // Create call to `bindMemRef`.
     builder.create<LLVM::CallOp>(
@@ -257,11 +259,12 @@ void VulkanLaunchFuncToVulkanCallsPass::createBindMemRefCalls(
 LogicalResult VulkanLaunchFuncToVulkanCallsPass::deduceMemRefRankAndType(
     Value ptrToMemRefDescriptor, uint32_t &rank, LLVM::LLVMType &type) {
   auto llvmPtrDescriptorTy =
-      ptrToMemRefDescriptor.getType().dyn_cast<LLVM::LLVMType>();
+      ptrToMemRefDescriptor.getType().dyn_cast<LLVM::LLVMPointerType>();
   if (!llvmPtrDescriptorTy)
     return failure();
 
-  auto llvmDescriptorTy = llvmPtrDescriptorTy.getPointerElementTy();
+  auto llvmDescriptorTy =
+      llvmPtrDescriptorTy.getElementType().dyn_cast<LLVM::LLVMStructType>();
   // template <typename Elem, size_t Rank>
   // struct {
   //   Elem *allocated;
@@ -270,15 +273,19 @@ LogicalResult VulkanLaunchFuncToVulkanCallsPass::deduceMemRefRankAndType(
   //   int64_t sizes[Rank]; // omitted when rank == 0
   //   int64_t strides[Rank]; // omitted when rank == 0
   // };
-  if (!llvmDescriptorTy || !llvmDescriptorTy.isStructTy())
+  if (!llvmDescriptorTy)
     return failure();
 
-  type = llvmDescriptorTy.getStructElementType(0).getPointerElementTy();
-  if (llvmDescriptorTy.getStructNumElements() == 3) {
+  type = llvmDescriptorTy.getBody()[0]
+             .cast<LLVM::LLVMPointerType>()
+             .getElementType();
+  if (llvmDescriptorTy.getBody().size() == 3) {
     rank = 0;
     return success();
   }
-  rank = llvmDescriptorTy.getStructElementType(3).getArrayNumElements();
+  rank = llvmDescriptorTy.getBody()[3]
+             .cast<LLVM::LLVMArrayType>()
+             .getNumElements();
   return success();
 }
 
@@ -326,13 +333,13 @@ void VulkanLaunchFuncToVulkanCallsPass::declareVulkanFunctions(Location loc) {
                                 LLVM::LLVMType::getHalfTy(&getContext())}) {
       std::string fnName = "bindMemRef" + std::to_string(i) + "D" +
                            std::string(stringifyType(type));
-      if (type.isHalfTy())
+      if (type.isa<LLVM::LLVMHalfType>())
         type = LLVM::LLVMType::getInt16Ty(&getContext());
       if (!module.lookupSymbol(fnName)) {
         auto fnType = LLVM::LLVMType::getFunctionTy(
             getVoidType(),
             {getPointerType(), getInt32Type(), getInt32Type(),
-             getMemRefType(i, type).getPointerTo()},
+             LLVM::LLVMPointerType::get(getMemRefType(i, type))},
             /*isVarArg=*/false);
         builder.create<LLVM::LLVMFuncOp>(loc, fnName, fnType);
       }

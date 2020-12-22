@@ -89,11 +89,11 @@ define void @store_v16i8_a32(<16 x i8> *%p, <16 x i8> %v) {
   ret void
 }
 
-; 1 is the default alignment for v8x16.load_splat so no attribute is needed.
+; 1 is the default alignment for v128.load8_splat so no attribute is needed.
 
 ; CHECK-LABEL: load_splat_v16i8_a1:
 ; CHECK-NEXT: .functype load_splat_v16i8_a1 (i32) -> (v128){{$}}
-; CHECK-NEXT: v8x16.load_splat $push[[R:[0-9]+]]=, 0($0){{$}}
+; CHECK-NEXT: v128.load8_splat $push[[R:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <16 x i8> @load_splat_v16i8_a1(i8* %p) {
   %e = load i8, i8* %p, align 1
@@ -106,7 +106,7 @@ define <16 x i8> @load_splat_v16i8_a1(i8* %p) {
 
 ; CHECK-LABEL: load_splat_v16i8_a2:
 ; CHECK-NEXT: .functype load_splat_v16i8_a2 (i32) -> (v128){{$}}
-; CHECK-NEXT: v8x16.load_splat $push[[R:[0-9]+]]=, 0($0){{$}}
+; CHECK-NEXT: v128.load8_splat $push[[R:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <16 x i8> @load_splat_v16i8_a2(i8* %p) {
   %e = load i8, i8* %p, align 2
@@ -304,7 +304,7 @@ define <8 x i16> @load_sext_v8i16_a16(<8 x i8>* %p) {
 
 ; CHECK-LABEL: load_splat_v8i16_a1:
 ; CHECK-NEXT: .functype load_splat_v8i16_a1 (i32) -> (v128){{$}}
-; CHECK-NEXT: v16x8.load_splat $push[[R:[0-9]+]]=, 0($0):p2align=0{{$}}
+; CHECK-NEXT: v128.load16_splat $push[[R:[0-9]+]]=, 0($0):p2align=0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <8 x i16> @load_splat_v8i16_a1(i16* %p) {
   %e = load i16, i16* %p, align 1
@@ -313,11 +313,11 @@ define <8 x i16> @load_splat_v8i16_a1(i16* %p) {
   ret <8 x i16> %v2
 }
 
-; 2 is the default alignment for v16x8.load_splat so no attribute is needed.
+; 2 is the default alignment for v128.load16_splat so no attribute is needed.
 
 ; CHECK-LABEL: load_splat_v8i16_a2:
 ; CHECK-NEXT: .functype load_splat_v8i16_a2 (i32) -> (v128){{$}}
-; CHECK-NEXT: v16x8.load_splat $push[[R:[0-9]+]]=, 0($0){{$}}
+; CHECK-NEXT: v128.load16_splat $push[[R:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <8 x i16> @load_splat_v8i16_a2(i16* %p) {
   %e = load i16, i16* %p, align 2
@@ -330,7 +330,7 @@ define <8 x i16> @load_splat_v8i16_a2(i16* %p) {
 
 ; CHECK-LABEL: load_splat_v8i16_a4:
 ; CHECK-NEXT: .functype load_splat_v8i16_a4 (i32) -> (v128){{$}}
-; CHECK-NEXT: v16x8.load_splat $push[[R:[0-9]+]]=, 0($0){{$}}
+; CHECK-NEXT: v128.load16_splat $push[[R:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <8 x i16> @load_splat_v8i16_a4(i16* %p) {
   %e = load i16, i16* %p, align 4
@@ -528,7 +528,7 @@ define <4 x i32> @load_sext_v4i32_a16(<4 x i16>* %p) {
 
 ; CHECK-LABEL: load_splat_v4i32_a1:
 ; CHECK-NEXT: .functype load_splat_v4i32_a1 (i32) -> (v128){{$}}
-; CHECK-NEXT: v32x4.load_splat $push[[R:[0-9]+]]=, 0($0):p2align=0{{$}}
+; CHECK-NEXT: v128.load32_splat $push[[R:[0-9]+]]=, 0($0):p2align=0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <4 x i32> @load_splat_v4i32_a1(i32* %addr) {
   %e = load i32, i32* %addr, align 1
@@ -539,7 +539,7 @@ define <4 x i32> @load_splat_v4i32_a1(i32* %addr) {
 
 ; CHECK-LABEL: load_splat_v4i32_a2:
 ; CHECK-NEXT: .functype load_splat_v4i32_a2 (i32) -> (v128){{$}}
-; CHECK-NEXT: v32x4.load_splat $push[[R:[0-9]+]]=, 0($0):p2align=1{{$}}
+; CHECK-NEXT: v128.load32_splat $push[[R:[0-9]+]]=, 0($0):p2align=1{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <4 x i32> @load_splat_v4i32_a2(i32* %addr) {
   %e = load i32, i32* %addr, align 2
@@ -548,11 +548,11 @@ define <4 x i32> @load_splat_v4i32_a2(i32* %addr) {
   ret <4 x i32> %v2
 }
 
-; 4 is the default alignment for v32x4.load_splat so no attribute is needed.
+; 4 is the default alignment for v128.load32_splat so no attribute is needed.
 
 ; CHECK-LABEL: load_splat_v4i32_a4:
 ; CHECK-NEXT: .functype load_splat_v4i32_a4 (i32) -> (v128){{$}}
-; CHECK-NEXT: v32x4.load_splat $push[[R:[0-9]+]]=, 0($0){{$}}
+; CHECK-NEXT: v128.load32_splat $push[[R:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <4 x i32> @load_splat_v4i32_a4(i32* %addr) {
   %e = load i32, i32* %addr, align 4
@@ -565,7 +565,7 @@ define <4 x i32> @load_splat_v4i32_a4(i32* %addr) {
 
 ; CHECK-LABEL: load_splat_v4i32_a8:
 ; CHECK-NEXT: .functype load_splat_v4i32_a8 (i32) -> (v128){{$}}
-; CHECK-NEXT: v32x4.load_splat $push[[R:[0-9]+]]=, 0($0){{$}}
+; CHECK-NEXT: v128.load32_splat $push[[R:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <4 x i32> @load_splat_v4i32_a8(i32* %addr) {
   %e = load i32, i32* %addr, align 8
@@ -660,7 +660,7 @@ define void @store_v2i64_a32(<2 x i64> *%p, <2 x i64> %v) {
 
 ; CHECK-LABEL: load_splat_v2i64_a1:
 ; CHECK-NEXT: .functype load_splat_v2i64_a1 (i32) -> (v128){{$}}
-; CHECK-NEXT: v64x2.load_splat $push[[R:[0-9]+]]=, 0($0):p2align=0{{$}}
+; CHECK-NEXT: v128.load64_splat $push[[R:[0-9]+]]=, 0($0):p2align=0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <2 x i64> @load_splat_v2i64_a1(i64* %p) {
   %e = load i64, i64* %p, align 1
@@ -671,7 +671,7 @@ define <2 x i64> @load_splat_v2i64_a1(i64* %p) {
 
 ; CHECK-LABEL: load_splat_v2i64_a2:
 ; CHECK-NEXT: .functype load_splat_v2i64_a2 (i32) -> (v128){{$}}
-; CHECK-NEXT: v64x2.load_splat $push[[R:[0-9]+]]=, 0($0):p2align=1{{$}}
+; CHECK-NEXT: v128.load64_splat $push[[R:[0-9]+]]=, 0($0):p2align=1{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <2 x i64> @load_splat_v2i64_a2(i64* %p) {
   %e = load i64, i64* %p, align 2
@@ -682,7 +682,7 @@ define <2 x i64> @load_splat_v2i64_a2(i64* %p) {
 
 ; CHECK-LABEL: load_splat_v2i64_a4:
 ; CHECK-NEXT: .functype load_splat_v2i64_a4 (i32) -> (v128){{$}}
-; CHECK-NEXT: v64x2.load_splat $push[[R:[0-9]+]]=, 0($0):p2align=2{{$}}
+; CHECK-NEXT: v128.load64_splat $push[[R:[0-9]+]]=, 0($0):p2align=2{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <2 x i64> @load_splat_v2i64_a4(i64* %p) {
   %e = load i64, i64* %p, align 4
@@ -691,11 +691,11 @@ define <2 x i64> @load_splat_v2i64_a4(i64* %p) {
   ret <2 x i64> %v2
 }
 
-; 8 is the default alignment for v64x2.load_splat so no attribute is needed.
+; 8 is the default alignment for v128.load64_splat so no attribute is needed.
 
 ; CHECK-LABEL: load_splat_v2i64_a8:
 ; CHECK-NEXT: .functype load_splat_v2i64_a8 (i32) -> (v128){{$}}
-; CHECK-NEXT: v64x2.load_splat $push[[R:[0-9]+]]=, 0($0){{$}}
+; CHECK-NEXT: v128.load64_splat $push[[R:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <2 x i64> @load_splat_v2i64_a8(i64* %p) {
   %e = load i64, i64* %p, align 8
@@ -708,7 +708,7 @@ define <2 x i64> @load_splat_v2i64_a8(i64* %p) {
 
 ; CHECK-LABEL: load_splat_v2i64_a16:
 ; CHECK-NEXT: .functype load_splat_v2i64_a16 (i32) -> (v128){{$}}
-; CHECK-NEXT: v64x2.load_splat $push[[R:[0-9]+]]=, 0($0){{$}}
+; CHECK-NEXT: v128.load64_splat $push[[R:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <2 x i64> @load_splat_v2i64_a16(i64* %p) {
   %e = load i64, i64* %p, align 16

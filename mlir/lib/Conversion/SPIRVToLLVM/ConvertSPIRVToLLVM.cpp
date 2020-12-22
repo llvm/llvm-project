@@ -66,8 +66,10 @@ static unsigned getBitWidth(Type type) {
 
 /// Returns the bit width of LLVMType integer or vector.
 static unsigned getLLVMTypeBitWidth(LLVM::LLVMType type) {
-  return type.isVectorTy() ? type.getVectorElementType().getIntegerBitWidth()
-                           : type.getIntegerBitWidth();
+  auto vectorType = type.dyn_cast<LLVM::LLVMVectorType>();
+  return (vectorType ? vectorType.getElementType() : type)
+      .cast<LLVM::LLVMIntegerType>()
+      .getBitWidth();
 }
 
 /// Creates `IntegerAttribute` with all bits set for given type
@@ -265,7 +267,7 @@ static Type convertPointerType(spirv::PointerType type,
                                TypeConverter &converter) {
   auto pointeeType =
       converter.convertType(type.getPointeeType()).cast<LLVM::LLVMType>();
-  return pointeeType.getPointerTo();
+  return LLVM::LLVMPointerType::get(pointeeType);
 }
 
 /// Converts SPIR-V runtime array to LLVM array. Since LLVM allows indexing over

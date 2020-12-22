@@ -64,55 +64,55 @@ defm : LoadPatOffsetOnly<vec_t, load, "LOAD_V128">;
 defm : LoadPatGlobalAddrOffOnly<vec_t, load, "LOAD_V128">;
 }
 
-// vNxM.load_splat
-multiclass SIMDLoadSplat<string vec, bits<32> simdop> {
+// v128.loadX_splat
+multiclass SIMDLoadSplat<int size, bits<32> simdop> {
   let mayLoad = 1, UseNamedOperandTable = 1 in {
-  defm LOAD_SPLAT_#vec#_A32 :
+  defm LOAD#size#_SPLAT_A32 :
     SIMD_I<(outs V128:$dst),
            (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
            (outs),
            (ins P2Align:$p2align, offset32_op:$off), [],
-           vec#".load_splat\t$dst, ${off}(${addr})$p2align",
-           vec#".load_splat\t$off$p2align", simdop>;
-  defm LOAD_SPLAT_#vec#_A64 :
+           "v128.load"#size#"_splat\t$dst, ${off}(${addr})$p2align",
+           "v128.load"#size#"_splat\t$off$p2align", simdop>;
+  defm LOAD#size#_SPLAT_A64 :
     SIMD_I<(outs V128:$dst),
            (ins P2Align:$p2align, offset64_op:$off, I64:$addr),
            (outs),
            (ins P2Align:$p2align, offset64_op:$off), [],
-           vec#".load_splat\t$dst, ${off}(${addr})$p2align",
-           vec#".load_splat\t$off$p2align", simdop>;
+           "v128.load"#size#"_splat\t$dst, ${off}(${addr})$p2align",
+           "v128.load"#size#"_splat\t$off$p2align", simdop>;
   }
 }
 
-defm "" : SIMDLoadSplat<"v8x16", 7>;
-defm "" : SIMDLoadSplat<"v16x8", 8>;
-defm "" : SIMDLoadSplat<"v32x4", 9>;
-defm "" : SIMDLoadSplat<"v64x2", 10>;
+defm "" : SIMDLoadSplat<8, 7>;
+defm "" : SIMDLoadSplat<16, 8>;
+defm "" : SIMDLoadSplat<32, 9>;
+defm "" : SIMDLoadSplat<64, 10>;
 
 def wasm_load_splat_t : SDTypeProfile<1, 1, [SDTCisPtrTy<1>]>;
 def wasm_load_splat : SDNode<"WebAssemblyISD::LOAD_SPLAT", wasm_load_splat_t,
                              [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def load_splat : PatFrag<(ops node:$addr), (wasm_load_splat node:$addr)>;
 
-foreach args = [["v16i8", "v8x16"], ["v8i16", "v16x8"], ["v4i32", "v32x4"],
-                ["v2i64", "v64x2"], ["v4f32", "v32x4"], ["v2f64", "v64x2"]] in {
+foreach args = [["v16i8", "8"], ["v8i16", "16"], ["v4i32", "32"],
+                ["v2i64", "64"], ["v4f32", "32"], ["v2f64", "64"]] in {
 defm : LoadPatNoOffset<!cast<ValueType>(args[0]),
                        load_splat,
-                       "LOAD_SPLAT_"#args[1]>;
+                       "LOAD"#args[1]#"_SPLAT">;
 defm : LoadPatImmOff<!cast<ValueType>(args[0]),
                      load_splat,
                      regPlusImm,
-                     "LOAD_SPLAT_"#args[1]>;
+                     "LOAD"#args[1]#"_SPLAT">;
 defm : LoadPatImmOff<!cast<ValueType>(args[0]),
                      load_splat,
                      or_is_add,
-                     "LOAD_SPLAT_"#args[1]>;
+                     "LOAD"#args[1]#"_SPLAT">;
 defm : LoadPatOffsetOnly<!cast<ValueType>(args[0]),
                          load_splat,
-                         "LOAD_SPLAT_"#args[1]>;
+                         "LOAD"#args[1]#"_SPLAT">;
 defm : LoadPatGlobalAddrOffOnly<!cast<ValueType>(args[0]),
                                 load_splat,
-                                "LOAD_SPLAT_"#args[1]>;
+                                "LOAD"#args[1]#"_SPLAT">;
 }
 
 // Load and extend
@@ -401,10 +401,10 @@ defm SHUFFLE :
            vec_i8imm_op:$mC, vec_i8imm_op:$mD,
            vec_i8imm_op:$mE, vec_i8imm_op:$mF),
          [],
-         "v8x16.shuffle\t$dst, $x, $y, "#
+         "i8x16.shuffle\t$dst, $x, $y, "#
            "$m0, $m1, $m2, $m3, $m4, $m5, $m6, $m7, "#
            "$m8, $m9, $mA, $mB, $mC, $mD, $mE, $mF",
-         "v8x16.shuffle\t"#
+         "i8x16.shuffle\t"#
            "$m0, $m1, $m2, $m3, $m4, $m5, $m6, $m7, "#
            "$m8, $m9, $mA, $mB, $mC, $mD, $mE, $mF",
          13>;
@@ -433,14 +433,14 @@ def : Pat<(vec_t (wasm_shuffle (vec_t V128:$x), (vec_t V128:$y),
             (i32 LaneIdx32:$mE), (i32 LaneIdx32:$mF)))>;
 }
 
-// Swizzle lanes: v8x16.swizzle
+// Swizzle lanes: i8x16.swizzle
 def wasm_swizzle_t : SDTypeProfile<1, 2, []>;
 def wasm_swizzle : SDNode<"WebAssemblyISD::SWIZZLE", wasm_swizzle_t>;
 defm SWIZZLE :
   SIMD_I<(outs V128:$dst), (ins V128:$src, V128:$mask), (outs), (ins),
          [(set (v16i8 V128:$dst),
            (wasm_swizzle (v16i8 V128:$src), (v16i8 V128:$mask)))],
-         "v8x16.swizzle\t$dst, $src, $mask", "v8x16.swizzle", 14>;
+         "i8x16.swizzle\t$dst, $src, $mask", "i8x16.swizzle", 14>;
 
 def : Pat<(int_wasm_swizzle (v16i8 V128:$src), (v16i8 V128:$mask)),
           (SWIZZLE V128:$src, V128:$mask)>;

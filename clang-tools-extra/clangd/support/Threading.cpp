@@ -116,5 +116,17 @@ void wait(std::unique_lock<std::mutex> &Lock, std::condition_variable &CV,
   CV.wait_until(Lock, D.time());
 }
 
+bool PeriodicThrottler::operator()() {
+  Rep Now = Stopwatch::now().time_since_epoch().count();
+  Rep OldNext = Next.load(std::memory_order_acquire);
+  if (Now < OldNext)
+    return false;
+  // We're ready to run (but may be racing other threads).
+  // Work out the updated target time, and run if we successfully bump it.
+  Rep NewNext = Now + Period;
+  return Next.compare_exchange_strong(OldNext, NewNext,
+                                      std::memory_order_acq_rel);
+}
+
 } // namespace clangd
 } // namespace clang

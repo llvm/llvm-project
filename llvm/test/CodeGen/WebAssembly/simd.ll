@@ -202,9 +202,9 @@ define <16 x i8> @replace_zero_v16i8(<16 x i8> %v, i8 %x) {
 }
 
 ; CHECK-LABEL: shuffle_v16i8:
-; NO-SIMD128-NOT: v8x16
+; NO-SIMD128-NOT: i8x16
 ; SIMD128-NEXT: .functype shuffle_v16i8 (v128, v128) -> (v128){{$}}
-; SIMD128-NEXT: v8x16.shuffle $push[[R:[0-9]+]]=, $0, $1,
+; SIMD128-NEXT: i8x16.shuffle $push[[R:[0-9]+]]=, $0, $1,
 ; SIMD128-SAME: 0, 17, 2, 19, 4, 21, 6, 23, 8, 25, 10, 27, 12, 29, 14, 31{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <16 x i8> @shuffle_v16i8(<16 x i8> %x, <16 x i8> %y) {
@@ -215,9 +215,9 @@ define <16 x i8> @shuffle_v16i8(<16 x i8> %x, <16 x i8> %y) {
 }
 
 ; CHECK-LABEL: shuffle_undef_v16i8:
-; NO-SIMD128-NOT: v8x16
+; NO-SIMD128-NOT: i8x16
 ; SIMD128-NEXT: .functype shuffle_undef_v16i8 (v128, v128) -> (v128){{$}}
-; SIMD128-NEXT: v8x16.shuffle $push[[R:[0-9]+]]=, $0, $0,
+; SIMD128-NEXT: i8x16.shuffle $push[[R:[0-9]+]]=, $0, $0,
 ; SIMD128-SAME: 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <16 x i8> @shuffle_undef_v16i8(<16 x i8> %x, <16 x i8> %y) {
@@ -472,9 +472,9 @@ define <8 x i16> @replace_zero_v8i16(<8 x i16> %v, i16 %x) {
 }
 
 ; CHECK-LABEL: shuffle_v8i16:
-; NO-SIMD128-NOT: v8x16
+; NO-SIMD128-NOT: i8x16
 ; SIMD128-NEXT: .functype shuffle_v8i16 (v128, v128) -> (v128){{$}}
-; SIMD128-NEXT: v8x16.shuffle $push[[R:[0-9]+]]=, $0, $1,
+; SIMD128-NEXT: i8x16.shuffle $push[[R:[0-9]+]]=, $0, $1,
 ; SIMD128-SAME: 0, 1, 18, 19, 4, 5, 22, 23, 8, 9, 26, 27, 12, 13, 30, 31{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <8 x i16> @shuffle_v8i16(<8 x i16> %x, <8 x i16> %y) {
@@ -484,9 +484,9 @@ define <8 x i16> @shuffle_v8i16(<8 x i16> %x, <8 x i16> %y) {
 }
 
 ; CHECK-LABEL: shuffle_undef_v8i16:
-; NO-SIMD128-NOT: v8x16
+; NO-SIMD128-NOT: i8x16
 ; SIMD128-NEXT: .functype shuffle_undef_v8i16 (v128, v128) -> (v128){{$}}
-; SIMD128-NEXT: v8x16.shuffle $push[[R:[0-9]+]]=, $0, $0,
+; SIMD128-NEXT: i8x16.shuffle $push[[R:[0-9]+]]=, $0, $0,
 ; SIMD128-SAME: 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <8 x i16> @shuffle_undef_v8i16(<8 x i16> %x, <8 x i16> %y) {
@@ -634,9 +634,9 @@ define <4 x i32> @replace_zero_v4i32(<4 x i32> %v, i32 %x) {
 }
 
 ; CHECK-LABEL: shuffle_v4i32:
-; NO-SIMD128-NOT: v8x16
+; NO-SIMD128-NOT: i8x16
 ; SIMD128-NEXT: .functype shuffle_v4i32 (v128, v128) -> (v128){{$}}
-; SIMD128-NEXT: v8x16.shuffle $push[[R:[0-9]+]]=, $0, $1,
+; SIMD128-NEXT: i8x16.shuffle $push[[R:[0-9]+]]=, $0, $1,
 ; SIMD128-SAME: 0, 1, 2, 3, 20, 21, 22, 23, 8, 9, 10, 11, 28, 29, 30, 31{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <4 x i32> @shuffle_v4i32(<4 x i32> %x, <4 x i32> %y) {
@@ -646,9 +646,9 @@ define <4 x i32> @shuffle_v4i32(<4 x i32> %x, <4 x i32> %y) {
 }
 
 ; CHECK-LABEL: shuffle_undef_v4i32:
-; NO-SIMD128-NOT: v8x16
+; NO-SIMD128-NOT: i8x16
 ; SIMD128-NEXT: .functype shuffle_undef_v4i32 (v128, v128) -> (v128){{$}}
-; SIMD128-NEXT: v8x16.shuffle $push[[R:[0-9]+]]=, $0, $0,
+; SIMD128-NEXT: i8x16.shuffle $push[[R:[0-9]+]]=, $0, $0,
 ; SIMD128-SAME: 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <4 x i32> @shuffle_undef_v4i32(<4 x i32> %x, <4 x i32> %y) {
@@ -785,9 +785,9 @@ define <2 x i64> @replace_zero_v2i64(<2 x i64> %v, i64 %x) {
 }
 
 ; CHECK-LABEL: shuffle_v2i64:
-; NO-SIMD128-NOT: v8x16
+; NO-SIMD128-NOT: i8x16
 ; SIMD128-NEXT: .functype shuffle_v2i64 (v128, v128) -> (v128){{$}}
-; SIMD128-NEXT: v8x16.shuffle $push[[R:[0-9]+]]=, $0, $1,
+; SIMD128-NEXT: i8x16.shuffle $push[[R:[0-9]+]]=, $0, $1,
 ; SIMD128-SAME: 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <2 x i64> @shuffle_v2i64(<2 x i64> %x, <2 x i64> %y) {
@@ -796,9 +796,9 @@ define <2 x i64> @shuffle_v2i64(<2 x i64> %x, <2 x i64> %y) {
 }
 
 ; CHECK-LABEL: shuffle_undef_v2i64:
-; NO-SIMD128-NOT: v8x16
+; NO-SIMD128-NOT: i8x16
 ; SIMD128-NEXT: .functype shuffle_undef_v2i64 (v128, v128) -> (v128){{$}}
-; SIMD128-NEXT: v8x16.shuffle $push[[R:[0-9]+]]=, $0, $0,
+; SIMD128-NEXT: i8x16.shuffle $push[[R:[0-9]+]]=, $0, $0,
 ; SIMD128-SAME: 8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <2 x i64> @shuffle_undef_v2i64(<2 x i64> %x, <2 x i64> %y) {
@@ -934,9 +934,9 @@ define <4 x float> @replace_zero_v4f32(<4 x float> %v, float %x) {
 }
 
 ; CHECK-LABEL: shuffle_v4f32:
-; NO-SIMD128-NOT: v8x16
+; NO-SIMD128-NOT: i8x16
 ; SIMD128-NEXT: .functype shuffle_v4f32 (v128, v128) -> (v128){{$}}
-; SIMD128-NEXT: v8x16.shuffle $push[[R:[0-9]+]]=, $0, $1,
+; SIMD128-NEXT: i8x16.shuffle $push[[R:[0-9]+]]=, $0, $1,
 ; SIMD128-SAME: 0, 1, 2, 3, 20, 21, 22, 23, 8, 9, 10, 11, 28, 29, 30, 31{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <4 x float> @shuffle_v4f32(<4 x float> %x, <4 x float> %y) {
@@ -946,9 +946,9 @@ define <4 x float> @shuffle_v4f32(<4 x float> %x, <4 x float> %y) {
 }
 
 ; CHECK-LABEL: shuffle_undef_v4f32:
-; NO-SIMD128-NOT: v8x16
+; NO-SIMD128-NOT: i8x16
 ; SIMD128-NEXT: .functype shuffle_undef_v4f32 (v128, v128) -> (v128){{$}}
-; SIMD128-NEXT: v8x16.shuffle $push[[R:[0-9]+]]=, $0, $0,
+; SIMD128-NEXT: i8x16.shuffle $push[[R:[0-9]+]]=, $0, $0,
 ; SIMD128-SAME: 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <4 x float> @shuffle_undef_v4f32(<4 x float> %x, <4 x float> %y) {
@@ -1085,9 +1085,9 @@ define <2 x double> @replace_zero_v2f64(<2 x double> %v, double %x) {
 }
 
 ; CHECK-LABEL: shuffle_v2f64:
-; NO-SIMD128-NOT: v8x16
+; NO-SIMD128-NOT: i8x16
 ; SIMD128-NEXT: .functype shuffle_v2f64 (v128, v128) -> (v128){{$}}
-; SIMD128-NEXT: v8x16.shuffle $push[[R:[0-9]+]]=, $0, $1,
+; SIMD128-NEXT: i8x16.shuffle $push[[R:[0-9]+]]=, $0, $1,
 ; SIMD128-SAME: 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <2 x double> @shuffle_v2f64(<2 x double> %x, <2 x double> %y) {
@@ -1097,9 +1097,9 @@ define <2 x double> @shuffle_v2f64(<2 x double> %x, <2 x double> %y) {
 }
 
 ; CHECK-LABEL: shuffle_undef_v2f64:
-; NO-SIMD128-NOT: v8x16
+; NO-SIMD128-NOT: i8x16
 ; SIMD128-NEXT: .functype shuffle_undef_v2f64 (v128, v128) -> (v128){{$}}
-; SIMD128-NEXT: v8x16.shuffle $push[[R:[0-9]+]]=, $0, $0,
+; SIMD128-NEXT: i8x16.shuffle $push[[R:[0-9]+]]=, $0, $0,
 ; SIMD128-SAME: 8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <2 x double> @shuffle_undef_v2f64(<2 x double> %x, <2 x double> %y) {
