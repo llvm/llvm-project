@@ -430,6 +430,7 @@ CHECK_SIMPLE_CLAUSE(Release, OMPC_release)
 CHECK_SIMPLE_CLAUSE(Relaxed, OMPC_relaxed)
 CHECK_SIMPLE_CLAUSE(Hint, OMPC_hint)
 CHECK_SIMPLE_CLAUSE(ProcBind, OMPC_proc_bind)
+CHECK_SIMPLE_CLAUSE(DistSchedule, OMPC_dist_schedule)
 
 CHECK_REQ_SCALAR_INT_CLAUSE(Allocator, OMPC_allocator)
 CHECK_REQ_SCALAR_INT_CLAUSE(Grainsize, OMPC_grainsize)
@@ -493,7 +494,6 @@ void OmpStructureChecker::CheckIsVarPartOfAnotherVar(
   }
 }
 // Following clauses have a seperate node in parse-tree.h.
-CHECK_SIMPLE_PARSER_CLAUSE(OmpDistScheduleClause, OMPC_dist_schedule)
 CHECK_SIMPLE_PARSER_CLAUSE(OmpReductionClause, OMPC_reduction)
 // Atomic-clause
 CHECK_SIMPLE_PARSER_CLAUSE(OmpAtomicRead, OMPC_read)

@@ -3456,10 +3456,6 @@ struct OmpDependClause {
   std::variant<Source, Sink, InOut> u;
 };
 
-// dist_schedule clause does not fit in generic clause class for tablegen.
-// Therefore it is declared separatly here.
-WRAPPER_CLASS(OmpDistScheduleClause, std::optional<ScalarIntExpr>);
-
 // OpenMP Clauses
 struct OmpClause {
   UNION_CLASS_BOILERPLATE(OmpClause);
