@@ -57,8 +57,9 @@ static ParseResult parseNVVMShflSyncBflyOp(OpAsmParser &parser,
   for (auto &attr : result.attributes) {
     if (attr.first != "return_value_and_is_valid")
       continue;
-    if (type.isStructTy() && type.getStructNumElements() > 0)
-      type = type.getStructElementType(0);
+    auto structType = type.dyn_cast<LLVM::LLVMStructType>();
+    if (structType && !structType.getBody().empty())
+      type = structType.getBody()[0];
     break;
   }
 
