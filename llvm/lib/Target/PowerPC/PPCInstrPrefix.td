@@ -2554,16 +2554,21 @@ let Predicates = [IsISA3_1, HasVSX] in {
             (COPY_TO_REGCLASS (XVCVBF16SPN RCCp.AToVSRC), VRRC)>;
 }
 
-let AddedComplexity = 400, Predicates = [IsISA3_1] in {
-  def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$rS, 0)), xoaddr:$src),
-            (STXVRBX (COPY_TO_REGCLASS $rS, VSRC), xoaddr:$src)>;
-  def : Pat<(truncstorei16 (i32 (vector_extract v8i16:$rS, 0)), xoaddr:$src),
-            (STXVRHX (COPY_TO_REGCLASS $rS, VSRC), xoaddr:$src)>;
-  def : Pat<(store (i32 (vector_extract v4i32:$rS, 0)), xoaddr:$src),
-            (STXVRWX (COPY_TO_REGCLASS $rS, VSRC), xoaddr:$src)>;
-  def : Pat<(store (i64 (vector_extract v2i64:$rS, 0)), xoaddr:$src),
-            (STXVRDX (COPY_TO_REGCLASS $rS, VSRC), xoaddr:$src)>;
-}
+let AddedComplexity = 400, Predicates = [IsISA3_1, IsLittleEndian] in {
+  // Store element 0 of a VSX register to memory
+  def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$src, 0)), xoaddr:$dst),
+            (STXVRBX (COPY_TO_REGCLASS v16i8:$src, VSRC), xoaddr:$dst)>;
+  def : Pat<(truncstorei16 (i32 (vector_extract v8i16:$src, 0)), xoaddr:$dst),
+            (STXVRHX (COPY_TO_REGCLASS v8i16:$src, VSRC), xoaddr:$dst)>;
+  def : Pat<(store (i32 (extractelt v4i32:$src, 0)), xoaddr:$dst),
+            (STXVRWX (COPY_TO_REGCLASS v4i32:$src, VSRC), xoaddr:$dst)>;
+  def : Pat<(store (f32 (extractelt v4f32:$src, 0)), xoaddr:$dst),
+            (STXVRWX (COPY_TO_REGCLASS v4f32:$src, VSRC), xoaddr:$dst)>;
+  def : Pat<(store (i64 (extractelt v2i64:$src, 0)), xoaddr:$dst),
+            (STXVRDX (COPY_TO_REGCLASS v2i64:$src, VSRC), xoaddr:$dst)>;
+  def : Pat<(store (f64 (extractelt v2f64:$src, 0)), xoaddr:$dst),
+            (STXVRDX (COPY_TO_REGCLASS v2f64:$src, VSRC), xoaddr:$dst)>;
+ }
 
 class xxevalPattern <dag pattern, bits<8> imm> :
   Pat<(v4i32 pattern), (XXEVAL $vA, $vB, $vC, imm)> {}
