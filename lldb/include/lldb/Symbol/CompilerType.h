@@ -82,6 +82,8 @@ public:
 
   bool IsAnonymousType() const;
 
+  bool IsScopedEnumerationType() const;
+
   bool IsBeingDefined() const;
 
   bool IsCharType() const;
@@ -184,6 +186,8 @@ public:
   CompilerType GetCanonicalType() const;
 
   CompilerType GetFullyUnqualifiedType() const;
+
+  CompilerType GetEnumerationIntegerType() const;
 
   /// Returns -1 if this isn't a function of if the function doesn't
   /// have a prototype Returns a value >= 0 if there is a prototype.

@@ -2524,6 +2524,13 @@ def getFlatScratchInstSTfromSS : InstrMapping {
   let ValueCols = [["ST"]];
 }
 
+def getFlatScratchInstSSfromSV : InstrMapping {
+  let FilterClass = "FlatScratchInst";
+  let RowFields = ["SVOp"];
+  let ColFields = ["Mode"];
+  let KeyCol = ["SV"];
+  let ValueCols = [["SS"]];
+}
 
 include "SIInstructions.td"
 
