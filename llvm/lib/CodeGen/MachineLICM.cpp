@@ -800,8 +800,13 @@ void MachineLICMBase::SinkIntoLoop() {
        I != Preheader->instr_end(); ++I) {
     // We need to ensure that we can safely move this instruction into the loop.
     // As such, it must not have side-effects, e.g. such as a call has.
-    if (IsLoopInvariantInst(*I) && !HasLoopPHIUse(&*I))
+    LLVM_DEBUG(dbgs() << "LICM: Analysing sink candidate: " << *I);
+    if (IsLoopInvariantInst(*I) && !HasLoopPHIUse(&*I)) {
+      LLVM_DEBUG(dbgs() << "LICM: Added as sink candidate.\n");
       Candidates.push_back(&*I);
+      continue;
+    }
+    LLVM_DEBUG(dbgs() << "LICM: Not added as sink candidate.\n");
   }
 
   for (MachineInstr *I : Candidates) {
@@ -811,8 +816,11 @@ void MachineLICMBase::SinkIntoLoop() {
     if (!MRI->hasOneDef(MO.getReg()))
       continue;
     bool CanSink = true;
-    MachineBasicBlock *B = nullptr;
+    MachineBasicBlock *SinkBlock = nullptr;
+    LLVM_DEBUG(dbgs() << "LICM: Try sinking: " << *I);
+
     for (MachineInstr &MI : MRI->use_instructions(MO.getReg())) {
+      LLVM_DEBUG(dbgs() << "LICM:    Analysing use: "; MI.dump());
       // FIXME: Come up with a proper cost model that estimates whether sinking
       // the instruction (and thus possibly executing it on every loop
       // iteration) is more expensive than a register.
@@ -821,24 +829,40 @@ void MachineLICMBase::SinkIntoLoop() {
         CanSink = false;
         break;
       }
-      if (!B) {
-        B = MI.getParent();
+      if (!SinkBlock) {
+        SinkBlock = MI.getParent();
+        LLVM_DEBUG(dbgs() << "LICM:   Setting sink block to: "
+                          << printMBBReference(*SinkBlock) << "\n");
         continue;
       }
-      B = DT->findNearestCommonDominator(B, MI.getParent());
-      if (!B) {
+      SinkBlock = DT->findNearestCommonDominator(SinkBlock, MI.getParent());
+      if (!SinkBlock) {
+        LLVM_DEBUG(dbgs() << "LICM:   Can't find nearest dominator\n");
         CanSink = false;
         break;
       }
+      LLVM_DEBUG(dbgs() << "LICM:   Setting nearest common dom block: " <<
+                 printMBBReference(*SinkBlock) << "\n");
     }
-    if (!CanSink || !B || B == Preheader)
+    if (!CanSink) {
+      LLVM_DEBUG(dbgs() << "LICM: Can't sink instruction.\n");
       continue;
+    }
+    if (!SinkBlock) {
+      LLVM_DEBUG(dbgs() << "LICM: Not sinking, can't find sink block.\n");
+      continue;
+    }
+    if (SinkBlock == Preheader) {
+      LLVM_DEBUG(dbgs() << "LICM: Not sinking, sink block is the preheader\n");
+      continue;
+    }
 
-    LLVM_DEBUG(dbgs() << "Sinking to " << printMBBReference(*B) << " from "
-                      << printMBBReference(*I->getParent()) << ": " << *I);
-    B->splice(B->getFirstNonPHI(), Preheader, I);
+    LLVM_DEBUG(dbgs() << "LICM: Sinking to " << printMBBReference(*SinkBlock)
+                      << " from " << printMBBReference(*I->getParent())
+                      << ": " << *I);
+    SinkBlock->splice(SinkBlock->getFirstNonPHI(), Preheader, I);
 
-    // The instruction is is moved from its basic block, so do not retain the
+    // The instruction is moved from its basic block, so do not retain the
     // debug information.
     assert(!I->isDebugInstr() && "Should not sink debug inst");
     I->setDebugLoc(DebugLoc());
@@ -1028,6 +1052,7 @@ bool MachineLICMBase::IsLICMCandidate(MachineInstr &I) {
   bool DontMoveAcrossStore = true;
   if ((!I.isSafeToMove(AA, DontMoveAcrossStore)) &&
       !(HoistConstStores && isInvariantStore(I, TRI, MRI))) {
+    LLVM_DEBUG(dbgs() << "LICM: Instruction not safe to move.\n");
     return false;
   }
 
@@ -1038,8 +1063,10 @@ bool MachineLICMBase::IsLICMCandidate(MachineInstr &I) {
   // indexed load from a jump table.
   // Stores and side effects are already checked by isSafeToMove.
   if (I.mayLoad() && !mayLoadFromGOTOrConstantPool(I) &&
-      !IsGuaranteedToExecute(I.getParent()))
+      !IsGuaranteedToExecute(I.getParent())) {
+    LLVM_DEBUG(dbgs() << "LICM: Load not guaranteed to execute.\n");
     return false;
+  }
 
   // Convergent attribute has been used on operations that involve inter-thread
   // communication which results are implicitly affected by the enclosing
@@ -1056,8 +1083,10 @@ bool MachineLICMBase::IsLICMCandidate(MachineInstr &I) {
 /// physical registers aren't accessed explicitly, and there are no side
 /// effects that aren't captured by the operands or other flags.
 bool MachineLICMBase::IsLoopInvariantInst(MachineInstr &I) {
-  if (!IsLICMCandidate(I))
+  if (!IsLICMCandidate(I)) {
+    LLVM_DEBUG(dbgs() << "LICM: Instruction not a LICM candidate\n");
     return false;
+  }
 
   // The instruction is loop invariant if all of its operands are.
   for (const MachineOperand &MO : I.operands()) {
