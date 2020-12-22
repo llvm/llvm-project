@@ -126,13 +126,13 @@ private:
   bool handleMessage(llvm::json::Value Message, MessageHandler &Handler);
   // Writes outgoing message to Out stream.
   void sendMessage(llvm::json::Value Message) {
-    std::string S;
-    llvm::raw_string_ostream OS(S);
+    OutputBuffer.clear();
+    llvm::raw_svector_ostream OS(OutputBuffer);
     OS << llvm::formatv(Pretty ? "{0:2}" : "{0}", Message);
-    OS.flush();
-    Out << "Content-Length: " << S.size() << "\r\n\r\n" << S;
+    Out << "Content-Length: " << OutputBuffer.size() << "\r\n\r\n"
+        << OutputBuffer;
     Out.flush();
-    vlog(">>> {0}\n", S);
+    vlog(">>> {0}\n", OutputBuffer);
   }
 
   // Read raw string messages from input stream.
@@ -143,6 +143,7 @@ private:
   llvm::Optional<std::string> readDelimitedMessage();
   llvm::Optional<std::string> readStandardMessage();
 
+  llvm::SmallVector<char, 0> OutputBuffer;
   std::FILE *In;
   llvm::raw_ostream &Out;
   llvm::raw_ostream &InMirror;
