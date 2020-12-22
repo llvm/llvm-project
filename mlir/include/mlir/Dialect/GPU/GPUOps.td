@@ -879,4 +879,39 @@ def GPU_DeallocOp : GPU_Op<"dealloc", [
   }];
 }
 
+def GPU_MemcpyOp : GPU_Op<"memcpy", [
+    GPU_AsyncOpInterface, MemoryEffects<[MemRead, MemWrite]>
+  ]> {
+
+  let summary = "GPU memcpy operation";
+
+  let description = [{
+    The `gpu.memcpy` operation copies the content of one memref to another.
+
+    The op does not execute before all async dependencies have finished
+    executing.
+
+    If the `async` keyword is present, the op is executed asynchronously (i.e.
+    it does not block until the execution has finished on the device). In
+    that case, it returns a !gpu.async.token.
+
+    Example:
+
+    ```mlir
+    %token = gpu.memcpy async [%dep] %dst, %src : memref<?xf32, 1>, memref<?xf32>
+    ```
+  }];
+
+  let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
+                   Arg<AnyMemRef, "", [MemWrite]>:$dst,
+                   Arg<AnyMemRef, "", [MemRead]>:$src);
+  let results = (outs Optional<GPU_AsyncToken>:$asyncToken);
+
+  let assemblyFormat = [{
+    custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
+    $dst`,` $src `:` type($dst)`,` type($src) attr-dict
+  }];
+  let verifier = [{ return ::verify(*this); }];
+}
+
 #endif // GPU_OPS

@@ -444,3 +444,17 @@ func @async_wait_without_result() {
   // expected-error @+1 {{custom op 'gpu.wait' needs to be named when marked 'async'}}
   gpu.wait async
 }
+
+// -----
+
+func @memcpy_incompatible_type(%dst : memref<?xf32>, %src : memref<?xi32>) {
+  // expected-error @+1 {{'gpu.memcpy' op arguments have incompatible element type}}
+  gpu.memcpy %dst, %src  : memref<?xf32>, memref<?xi32>
+}
+
+// -----
+
+func @memcpy_incompatible_shape(%dst : memref<7xf32>, %src : memref<9xf32>) {
+  // expected-error @+1 {{'gpu.memcpy' op arguments have incompatible shape}}
+  gpu.memcpy %dst, %src  : memref<7xf32>, memref<9xf32>
+}
