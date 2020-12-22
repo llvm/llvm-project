@@ -748,7 +748,8 @@ static std::error_code getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
   StringRef Target;
   if (!undef) {
     symbol_iterator SI = RelRef.getSymbol();
-    const Elf_Sym *symb = Obj->getSymbol(SI->getRawDataRefImpl());
+    const Elf_Sym *symb = unwrapOrError(Obj->getSymbol(SI->getRawDataRefImpl()),
+                                        Obj->getFileName());
     if (symb->getType() == ELF::STT_SECTION) {
       Expected<section_iterator> SymSI = SI->getSection();
       if (!SymSI)
@@ -1119,13 +1120,21 @@ static bool getHidden(RelocationRef RelRef) {
 static uint8_t getElfSymbolType(const ObjectFile *Obj, const SymbolRef &Sym) {
   assert(Obj->isELF());
   if (auto *Elf32LEObj = dyn_cast<ELF32LEObjectFile>(Obj))
-    return Elf32LEObj->getSymbol(Sym.getRawDataRefImpl())->getType();
+    return unwrapOrError(Elf32LEObj->getSymbol(Sym.getRawDataRefImpl()),
+                         Obj->getFileName())
+        ->getType();
   if (auto *Elf64LEObj = dyn_cast<ELF64LEObjectFile>(Obj))
-    return Elf64LEObj->getSymbol(Sym.getRawDataRefImpl())->getType();
+    return unwrapOrError(Elf64LEObj->getSymbol(Sym.getRawDataRefImpl()),
+                         Obj->getFileName())
+        ->getType();
   if (auto *Elf32BEObj = dyn_cast<ELF32BEObjectFile>(Obj))
-    return Elf32BEObj->getSymbol(Sym.getRawDataRefImpl())->getType();
+    return unwrapOrError(Elf32BEObj->getSymbol(Sym.getRawDataRefImpl()),
+                         Obj->getFileName())
+        ->getType();
   if (auto *Elf64BEObj = cast<ELF64BEObjectFile>(Obj))
-    return Elf64BEObj->getSymbol(Sym.getRawDataRefImpl())->getType();
+    return unwrapOrError(Elf64BEObj->getSymbol(Sym.getRawDataRefImpl()),
+                         Obj->getFileName())
+        ->getType();
   llvm_unreachable("Unsupported binary format");
 }
 
