@@ -155,6 +155,7 @@ public:
   void Enter(const parser::OmpClause::Safelen &);
   void Enter(const parser::OmpClause::Shared &);
   void Enter(const parser::OmpClause::Simdlen &);
+  void Enter(const parser::OmpClause::TaskReduction &);
   void Enter(const parser::OmpClause::ThreadLimit &);
   void Enter(const parser::OmpClause::To &);
   void Enter(const parser::OmpClause::Link &);
