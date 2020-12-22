@@ -778,6 +778,27 @@ multiclass VPseudoUnaryV_V_X_I_NoDummyMask {
   }
 }
 
+// The destination EEW is 1.
+// The source EEW is 8, 16, 32, or 64.
+// When the destination EEW is different from source EEW, we need to use
+// @earlyclobber to avoid the overlap between destination and source registers.
+multiclass VPseudoBinaryM_VV {
+  foreach m = MxList.m in
+    defm _VV : VPseudoBinary<VR, m.vrclass, m.vrclass, m, "@earlyclobber $rd">;
+}
+
+multiclass VPseudoBinaryM_VX<bit IsFloat> {
+  foreach m = MxList.m in
+    defm !if(!eq(IsFloat, 0), "_VX", "_VF") :
+      VPseudoBinary<VR, m.vrclass, !if(!eq(IsFloat, 0), GPR, FPR32), m,
+                    "@earlyclobber $rd">;
+}
+
+multiclass VPseudoBinaryM_VI {
+  foreach m = MxList.m in
+    defm _VI : VPseudoBinary<VR, m.vrclass, simm5, m, "@earlyclobber $rd">;
+}
+
 multiclass VPseudoBinaryV_VV_VX_VI<Operand ImmType = simm5> {
   defm "" : VPseudoBinaryV_VV;
   defm "" : VPseudoBinaryV_VX</*IsFloat=*/0>;
@@ -882,6 +903,22 @@ multiclass VPseudoTernaryV_VV_VX_AAXA<string Constraint = ""> {
 multiclass VPseudoTernaryV_VX_VI<Operand ImmType = simm5, string Constraint = ""> {
   defm "" : VPseudoTernaryV_VX<Constraint>;
   defm "" : VPseudoTernaryV_VI<ImmType, Constraint>;
+}
+
+multiclass VPseudoBinaryM_VV_VX_VI {
+  defm "" : VPseudoBinaryM_VV;
+  defm "" : VPseudoBinaryM_VX</*IsFloat=*/0>;
+  defm "" : VPseudoBinaryM_VI;
+}
+
+multiclass VPseudoBinaryM_VV_VX<bit IsFloat = 0> {
+  defm "" : VPseudoBinaryM_VV;
+  defm "" : VPseudoBinaryM_VX<IsFloat>;
+}
+
+multiclass VPseudoBinaryM_VX_VI {
+  defm "" : VPseudoBinaryM_VX</*IsFloat=*/0>;
+  defm "" : VPseudoBinaryM_VI;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1387,6 +1424,34 @@ multiclass VPatBinaryV_I<string intrinsic, string instruction> {
                              vti.RegClass, simm5>;
 }
 
+multiclass VPatBinaryM_VV<string intrinsic, string instruction,
+                          list<VTypeInfo> vtilist> {
+  foreach vti = vtilist in
+    defm : VPatBinary<intrinsic, instruction, "VV",
+                      vti.Mask, vti.Vector, vti.Vector, vti.Mask,
+                      vti.SEW, vti.LMul, VR,
+                      vti.RegClass, vti.RegClass>;
+}
+
+multiclass VPatBinaryM_VX<string intrinsic, string instruction,
+                          list<VTypeInfo> vtilist> {
+  foreach vti = vtilist in
+    defm : VPatBinary<intrinsic, instruction,
+                      !if(!eq(vti.Scalar, XLenVT), "VX", "VF"),
+                      vti.Mask, vti.Vector, vti.Scalar, vti.Mask,
+                      vti.SEW, vti.LMul, VR,
+                      vti.RegClass, vti.ScalarRegClass>;
+}
+
+multiclass VPatBinaryM_VI<string intrinsic, string instruction,
+                          list<VTypeInfo> vtilist> {
+  foreach vti = vtilist in
+    defm : VPatBinary<intrinsic, instruction, "VI",
+                      vti.Mask, vti.Vector, XLenVT, vti.Mask,
+                      vti.SEW, vti.LMul, VR,
+                      vti.RegClass, simm5>;
+}
+
 multiclass VPatBinaryV_VV_VX_VI<string intrinsic, string instruction,
                                 list<VTypeInfo> vtilist, Operand ImmType = simm5>
 {
@@ -1538,6 +1603,28 @@ multiclass VPatTernaryV_VX_VI<string intrinsic, string instruction,
   defm "" : VPatTernaryV_VI<intrinsic, instruction, vtilist, Imm_type>;
 }
 
+multiclass VPatBinaryM_VV_VX_VI<string intrinsic, string instruction,
+                                list<VTypeInfo> vtilist>
+{
+  defm "" : VPatBinaryM_VV<intrinsic, instruction, vtilist>;
+  defm "" : VPatBinaryM_VX<intrinsic, instruction, vtilist>;
+  defm "" : VPatBinaryM_VI<intrinsic, instruction, vtilist>;
+}
+
+multiclass VPatBinaryM_VV_VX<string intrinsic, string instruction,
+                             list<VTypeInfo> vtilist>
+{
+  defm "" : VPatBinaryM_VV<intrinsic, instruction, vtilist>;
+  defm "" : VPatBinaryM_VX<intrinsic, instruction, vtilist>;
+}
+
+multiclass VPatBinaryM_VX_VI<string intrinsic, string instruction,
+                             list<VTypeInfo> vtilist>
+{
+  defm "" : VPatBinaryM_VX<intrinsic, instruction, vtilist>;
+  defm "" : VPatBinaryM_VI<intrinsic, instruction, vtilist>;
+}
+
 //===----------------------------------------------------------------------===//
 // Pseudo instructions and patterns.
 //===----------------------------------------------------------------------===//
@@ -1668,6 +1755,18 @@ defm PseudoVNSRL       : VPseudoBinaryV_WV_WX_WI;
 defm PseudoVNSRA       : VPseudoBinaryV_WV_WX_WI;
 
 //===----------------------------------------------------------------------===//
+// 12.8. Vector Integer Comparison Instructions
+//===----------------------------------------------------------------------===//
+defm PseudoVMSEQ       : VPseudoBinaryM_VV_VX_VI;
+defm PseudoVMSNE       : VPseudoBinaryM_VV_VX_VI;
+defm PseudoVMSLTU      : VPseudoBinaryM_VV_VX;
+defm PseudoVMSLT       : VPseudoBinaryM_VV_VX;
+defm PseudoVMSLEU      : VPseudoBinaryM_VV_VX_VI;
+defm PseudoVMSLE       : VPseudoBinaryM_VV_VX_VI;
+defm PseudoVMSGTU      : VPseudoBinaryM_VX_VI;
+defm PseudoVMSGT       : VPseudoBinaryM_VX_VI;
+
+//===----------------------------------------------------------------------===//
 // 12.9. Vector Integer Min/Max Instructions
 //===----------------------------------------------------------------------===//
 defm PseudoVMINU       : VPseudoBinaryV_VV_VX;
@@ -1792,6 +1891,15 @@ defm PseudoVFSGNJ      : VPseudoBinaryV_VV_VX</*IsFloat=*/1>;
 defm PseudoVFSGNJN     : VPseudoBinaryV_VV_VX</*IsFloat=*/1>;
 defm PseudoVFSGNJX     : VPseudoBinaryV_VV_VX</*IsFloat=*/1>;
 
+//===----------------------------------------------------------------------===//
+// 14.13. Vector Floating-Point Compare Instructions
+//===----------------------------------------------------------------------===//
+defm PseudoVMFEQ       : VPseudoBinaryM_VV_VX</*IsFloat=*/1>;
+defm PseudoVMFNE       : VPseudoBinaryM_VV_VX</*IsFloat=*/1>;
+defm PseudoVMFLT       : VPseudoBinaryM_VV_VX</*IsFloat=*/1>;
+defm PseudoVMFLE       : VPseudoBinaryM_VV_VX</*IsFloat=*/1>;
+defm PseudoVMFGT       : VPseudoBinaryM_VX</*IsFloat=*/1>;
+defm PseudoVMFGE       : VPseudoBinaryM_VX</*IsFloat=*/1>;
 } // Predicates = [HasStdExtV, HasStdExtF]
 
 //===----------------------------------------------------------------------===//
@@ -2005,6 +2113,19 @@ defm "" : VPatBinaryV_WV_WX_WI<"int_riscv_vnsrl", "PseudoVNSRL", AllWidenableInt
 defm "" : VPatBinaryV_WV_WX_WI<"int_riscv_vnsra", "PseudoVNSRA", AllWidenableIntVectors>;
 
 //===----------------------------------------------------------------------===//
+// 12.8. Vector Integer Comparison Instructions
+//===----------------------------------------------------------------------===//
+defm "" : VPatBinaryM_VV_VX_VI<"int_riscv_vmseq", "PseudoVMSEQ", AllIntegerVectors>;
+defm "" : VPatBinaryM_VV_VX_VI<"int_riscv_vmsne", "PseudoVMSNE", AllIntegerVectors>;
+defm "" : VPatBinaryM_VV_VX<"int_riscv_vmsltu", "PseudoVMSLTU", AllIntegerVectors>;
+defm "" : VPatBinaryM_VV_VX<"int_riscv_vmslt", "PseudoVMSLT", AllIntegerVectors>;
+defm "" : VPatBinaryM_VV_VX_VI<"int_riscv_vmsleu", "PseudoVMSLEU", AllIntegerVectors>;
+defm "" : VPatBinaryM_VV_VX_VI<"int_riscv_vmsle", "PseudoVMSLE", AllIntegerVectors>;
+
+defm "" : VPatBinaryM_VX_VI<"int_riscv_vmsgtu", "PseudoVMSGTU", AllIntegerVectors>;
+defm "" : VPatBinaryM_VX_VI<"int_riscv_vmsgt", "PseudoVMSGT", AllIntegerVectors>;
+
+//===----------------------------------------------------------------------===//
 // 12.9. Vector Integer Min/Max Instructions
 //===----------------------------------------------------------------------===//
 defm "" : VPatBinaryV_VV_VX<"int_riscv_vminu", "PseudoVMINU", AllIntegerVectors>;
@@ -2133,6 +2254,16 @@ defm "" : VPatBinaryW_VV_VX<"int_riscv_vfwmul", "PseudoVFWMUL", AllWidenableFloa
 defm "" : VPatBinaryV_VV_VX<"int_riscv_vfsgnj", "PseudoVFSGNJ", AllFloatVectors>;
 defm "" : VPatBinaryV_VV_VX<"int_riscv_vfsgnjn", "PseudoVFSGNJN", AllFloatVectors>;
 defm "" : VPatBinaryV_VV_VX<"int_riscv_vfsgnjx", "PseudoVFSGNJX", AllFloatVectors>;
+
+//===----------------------------------------------------------------------===//
+// 14.13. Vector Floating-Point Compare Instructions
+//===----------------------------------------------------------------------===//
+defm "" : VPatBinaryM_VV_VX<"int_riscv_vmfeq", "PseudoVMFEQ", AllFloatVectors>;
+defm "" : VPatBinaryM_VV_VX<"int_riscv_vmfle", "PseudoVMFLE", AllFloatVectors>;
+defm "" : VPatBinaryM_VV_VX<"int_riscv_vmflt", "PseudoVMFLT", AllFloatVectors>;
+defm "" : VPatBinaryM_VV_VX<"int_riscv_vmfne", "PseudoVMFNE", AllFloatVectors>;
+defm "" : VPatBinaryM_VX<"int_riscv_vmfgt", "PseudoVMFGT", AllFloatVectors>;
+defm "" : VPatBinaryM_VX<"int_riscv_vmfge", "PseudoVMFGE", AllFloatVectors>;
 
 } // Predicates = [HasStdExtV, HasStdExtF]
 
