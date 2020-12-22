@@ -52,22 +52,11 @@ All patches go through the regular `LLVM review process
 Q: How to build an OpenMP offload capable compiler?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-To build an *effective* OpenMP offload capable compiler we recommend a two
-stage build. The first stage Clang does not require to be offload capable but
-all backends that are targeted by OpenMP need to be enabled. By default, Clang
-will be build with all backends enabled. This initial (stage 1) Clang is used
-to create a second Clang compiler that is offload capable as well as the
-:ref:`device runtime libraries <device_runtime>` that will be linked into the
-offloaded code to provide OpenMP runtime support on the device.
-
-Generic information about building LLVM is available `here
-<https://llvm.org/docs/GettingStarted.html>`__. The CMake options for the
-second stage Clang should include:
-
-- `LIBOMPTARGET_NVPTX_CUDA_COMPILER=$STAGE1/bin/clang` to use the stage one
-  compiler for the device runtime compilation.
-- `LIBOMPTARGET_NVPTX_ENABLE_BCLIB=ON` to enable efficient device runtimes in
-  bitcode format.
+To build an *effective* OpenMP offload capable compiler, only one extra CMake
+option, `LLVM_ENABLE_RUNTIMES="OPENMP"`, is needed when building LLVM (Generic
+information about building LLVM is available `here <https://llvm.org/docs/GettingStarted.html>`__.).
+Make sure all backends that are targeted by OpenMP to be enabled. By default,
+Clang will be build with all backends enabled.
 
 If your build machine is not the target machine or automatic detection of the
 available GPUs failed, you should also set:
