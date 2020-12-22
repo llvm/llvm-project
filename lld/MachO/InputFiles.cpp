@@ -280,22 +280,33 @@ void ObjFile::parseRelocations(const section_64 &sec,
 static macho::Symbol *createDefined(const structs::nlist_64 &sym,
                                     StringRef name, InputSection *isec,
                                     uint32_t value) {
-  if (sym.n_type & N_EXT)
-    // Global defined symbol
-    return symtab->addDefined(name, isec, value, sym.n_desc & N_WEAK_DEF);
-  // Local defined symbol
+  // Symbol scope is determined by sym.n_type & (N_EXT | N_PEXT):
+  // N_EXT: Global symbols
+  // N_EXT | N_PEXT: Linkage unit (think: dylib) scoped
+  // N_PEXT: Does not occur in input files in practice,
+  //         a private extern must be external.
+  // 0: Translation-unit scoped. These are not in the symbol table.
+
+  if (sym.n_type & (N_EXT | N_PEXT)) {
+    assert((sym.n_type & N_EXT) && "invalid input");
+    return symtab->addDefined(name, isec, value, sym.n_desc & N_WEAK_DEF,
+                              sym.n_type & N_PEXT);
+  }
   return make<Defined>(name, isec, value, sym.n_desc & N_WEAK_DEF,
-                       /*isExternal=*/false);
+                       /*isExternal=*/false, /*isPrivateExtern=*/false);
 }
 
 // Absolute symbols are defined symbols that do not have an associated
 // InputSection. They cannot be weak.
 static macho::Symbol *createAbsolute(const structs::nlist_64 &sym,
                                      StringRef name) {
-  if (sym.n_type & N_EXT)
-    return symtab->addDefined(name, nullptr, sym.n_value, /*isWeakDef=*/false);
+  if (sym.n_type & (N_EXT | N_PEXT)) {
+    assert((sym.n_type & N_EXT) && "invalid input");
+    return symtab->addDefined(name, nullptr, sym.n_value, /*isWeakDef=*/false,
+                              sym.n_type & N_PEXT);
+  }
   return make<Defined>(name, nullptr, sym.n_value, /*isWeakDef=*/false,
-                       /*isExternal=*/false);
+                       /*isExternal=*/false, /*isPrivateExtern=*/false);
 }
 
 macho::Symbol *ObjFile::parseNonSectionSymbol(const structs::nlist_64 &sym,
@@ -306,7 +317,8 @@ macho::Symbol *ObjFile::parseNonSectionSymbol(const structs::nlist_64 &sym,
     return sym.n_value == 0
                ? symtab->addUndefined(name, sym.n_desc & N_WEAK_REF)
                : symtab->addCommon(name, this, sym.n_value,
-                                   1 << GET_COMM_ALIGN(sym.n_desc));
+                                   1 << GET_COMM_ALIGN(sym.n_desc),
+                                   sym.n_type & N_PEXT);
   case N_ABS:
     return createAbsolute(sym, name);
   case N_PBUD:
