@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-container-size-empty %t
+// RUN: %check_clang_tidy %s readability-container-size-empty %t -- -- -fno-delayed-template-parsing
 
 namespace std {
 template <typename T> struct vector {

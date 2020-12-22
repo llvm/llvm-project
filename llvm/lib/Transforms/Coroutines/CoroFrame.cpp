@@ -2170,8 +2170,25 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
   }
 
   // Put CoroEnds into their own blocks.
-  for (CoroEndInst *CE : Shape.CoroEnds)
+  for (AnyCoroEndInst *CE : Shape.CoroEnds) {
     splitAround(CE, "CoroEnd");
+
+    // Emit the musttail call function in a new block before the CoroEnd.
+    // We do this here so that the right suspend crossing info is computed for
+    // the uses of the musttail call function call. (Arguments to the coro.end
+    // instructions would be ignored)
+    if (auto *AsyncEnd = dyn_cast<CoroAsyncEndInst>(CE)) {
+      auto *MustTailCallFn = AsyncEnd->getMustTailCallFunction();
+      if (!MustTailCallFn)
+        continue;
+      IRBuilder<> Builder(AsyncEnd);
+      SmallVector<Value *, 8> Args(AsyncEnd->args());
+      auto Arguments = ArrayRef<Value *>(Args).drop_front(3);
+      auto *Call = createMustTailCall(AsyncEnd->getDebugLoc(), MustTailCallFn,
+                                      Arguments, Builder);
+      splitAround(Call, "MustTailCall.Before.CoroEnd");
+    }
+  }
 
   // Transforms multi-edge PHI Nodes, so that any value feeding into a PHI will
   // never has its definition separated from the PHI by the suspend point.
