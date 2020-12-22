@@ -120,12 +120,15 @@ Expected<uint64_t> KernelSym::getCodeOffset(
 }
 
 Expected<const FunctionSym *>
-FunctionSym::asFunctionSym(const HSACodeObject::Elf_Sym *Sym) {
-  if (Sym->getType() != ELF::STT_FUNC &&
-      Sym->getType() != ELF::STT_AMDGPU_HSA_KERNEL)
+FunctionSym::asFunctionSym(Expected<const HSACodeObject::Elf_Sym *> Sym) {
+  if (!Sym)
+    return Sym.takeError();
+
+  if ((*Sym)->getType() != ELF::STT_FUNC &&
+      (*Sym)->getType() != ELF::STT_AMDGPU_HSA_KERNEL)
     return createError("invalid symbol type");
 
-  return static_cast<const FunctionSym *>(Sym);
+  return static_cast<const FunctionSym *>(*Sym);
 }
 
 Expected<const KernelSym *> KernelSym::asKernelSym(const FunctionSym *Sym) {

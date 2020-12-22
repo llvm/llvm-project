@@ -158,7 +158,7 @@ public:
     const object::ELF64LEObjectFile::Elf_Shdr *Text) const;
 
   static Expected<const FunctionSym *>
-  asFunctionSym(const object::ELF64LEObjectFile::Elf_Sym *Sym);
+  asFunctionSym(Expected<const object::ELF64LEObjectFile::Elf_Sym *> Sym);
 };
 
 class KernelSym : public FunctionSym {
