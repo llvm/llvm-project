@@ -406,6 +406,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause &x) {
 CHECK_SIMPLE_CLAUSE(Allocate, OMPC_allocate)
 CHECK_SIMPLE_CLAUSE(Copyin, OMPC_copyin)
 CHECK_SIMPLE_CLAUSE(Copyprivate, OMPC_copyprivate)
+CHECK_SIMPLE_CLAUSE(Default, OMPC_default)
 CHECK_SIMPLE_CLAUSE(Device, OMPC_device)
 CHECK_SIMPLE_CLAUSE(Final, OMPC_final)
 CHECK_SIMPLE_CLAUSE(Firstprivate, OMPC_firstprivate)
@@ -490,7 +491,6 @@ void OmpStructureChecker::CheckIsVarPartOfAnotherVar(
   }
 }
 // Following clauses have a seperate node in parse-tree.h.
-CHECK_SIMPLE_PARSER_CLAUSE(OmpDefaultClause, OMPC_default)
 CHECK_SIMPLE_PARSER_CLAUSE(OmpDistScheduleClause, OMPC_dist_schedule)
 CHECK_SIMPLE_PARSER_CLAUSE(OmpNowait, OMPC_nowait)
 CHECK_SIMPLE_PARSER_CLAUSE(OmpProcBindClause, OMPC_proc_bind)
