@@ -1600,6 +1600,16 @@ foreach eew = EEWList in {
 }
 
 //===----------------------------------------------------------------------===//
+// 7.7. Unit-stride Fault-Only-First Loads
+//===----------------------------------------------------------------------===//
+
+// vleff may update VL register
+let hasSideEffects = 1, Defs = [VL] in
+foreach eew = EEWList in {
+  defm PseudoVLE # eew # FF : VPseudoUSLoad;
+}
+
+//===----------------------------------------------------------------------===//
 // Pseudo Instructions
 //===----------------------------------------------------------------------===//
 
@@ -1865,6 +1875,9 @@ foreach vti = AllVectors in
 {
   defm : VPatUSLoad<"int_riscv_vle",
                     "PseudoVLE" # vti.SEW,
+                    vti.Vector, vti.Mask, vti.SEW, vti.LMul, vti.RegClass>;
+  defm : VPatUSLoad<"int_riscv_vleff",
+                    "PseudoVLE" # vti.SEW # "FF",
                     vti.Vector, vti.Mask, vti.SEW, vti.LMul, vti.RegClass>;
   defm : VPatUSStore<"int_riscv_vse",
                      "PseudoVSE" # vti.SEW,
