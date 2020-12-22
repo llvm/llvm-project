@@ -75,10 +75,6 @@ protected:
   // for multiple underlying IRs (Polly?) by providing a new VPlan front-end,
   // back-end and analysis information for the new IR.
 
-  /// Return the underlying Value attached to this VPValue.
-  Value *getUnderlyingValue() { return UnderlyingVal; }
-  const Value *getUnderlyingValue() const { return UnderlyingVal; }
-
   // Set \p Val as the underlying Value of this VPValue.
   void setUnderlyingValue(Value *Val) {
     assert(!UnderlyingVal && "Underlying Value is already set.");
@@ -86,6 +82,10 @@ protected:
   }
 
 public:
+  /// Return the underlying Value attached to this VPValue.
+  Value *getUnderlyingValue() { return UnderlyingVal; }
+  const Value *getUnderlyingValue() const { return UnderlyingVal; }
+
   /// An enumeration for keeping track of the concrete subclass of VPValue that
   /// are actually instantiated. Values of this enumeration are kept in the
   /// SubclassID field of the VPValue objects. They are used for concrete

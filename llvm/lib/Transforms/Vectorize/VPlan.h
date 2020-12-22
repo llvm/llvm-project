@@ -677,22 +677,13 @@ public:
   /// nullptr otherwise.
   VPUser *toVPUser();
 
-  /// Returns a pointer to a VPValue, if the recipe inherits from VPValue or
-  /// nullptr otherwise.
-  VPValue *toVPValue();
-  const VPValue *toVPValue() const;
-
   /// Returns the underlying instruction, if the recipe is a VPValue or nullptr
   /// otherwise.
   Instruction *getUnderlyingInstr() {
-    if (auto *VPV = toVPValue())
-      return cast_or_null<Instruction>(VPV->getUnderlyingValue());
-    return nullptr;
+    return cast<Instruction>(getVPValue()->getUnderlyingValue());
   }
   const Instruction *getUnderlyingInstr() const {
-    if (auto *VPV = toVPValue())
-      return cast_or_null<Instruction>(VPV->getUnderlyingValue());
-    return nullptr;
+    return cast<Instruction>(getVPValue()->getUnderlyingValue());
   }
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
@@ -720,7 +711,7 @@ inline bool VPUser::classof(const VPDef *Def) {
 /// While as any Recipe it may generate a sequence of IR instructions when
 /// executed, these instructions would always form a single-def expression as
 /// the VPInstruction is also a single def-use vertex.
-class VPInstruction : public VPValue, public VPUser, public VPRecipeBase {
+class VPInstruction : public VPRecipeBase, public VPUser, public VPValue {
   friend class VPlanSlp;
 
 public:
@@ -746,12 +737,12 @@ protected:
 
 public:
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands)
-      : VPValue(VPValue::VPVInstructionSC), VPUser(Operands),
-        VPRecipeBase(VPRecipeBase::VPInstructionSC), Opcode(Opcode) {}
+      : VPRecipeBase(VPRecipeBase::VPInstructionSC), VPUser(Operands),
+        VPValue(VPValue::VPVInstructionSC, nullptr, this), Opcode(Opcode) {}
 
   VPInstruction(unsigned Opcode, ArrayRef<VPInstruction *> Operands)
-      : VPValue(VPValue::VPVInstructionSC), VPUser({}),
-        VPRecipeBase(VPRecipeBase::VPInstructionSC), Opcode(Opcode) {
+      : VPRecipeBase(VPRecipeBase::VPInstructionSC), VPUser({}),
+        VPValue(VPValue::VPVInstructionSC, nullptr, this), Opcode(Opcode) {
     for (auto *I : Operands)
       addOperand(I->getVPValue());
   }
