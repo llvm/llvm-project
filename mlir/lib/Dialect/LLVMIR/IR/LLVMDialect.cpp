@@ -198,8 +198,8 @@ void SwitchOp::build(OpBuilder &builder, OperationState &result, Value value,
                      ArrayRef<int32_t> caseValues, BlockRange caseDestinations,
                      ArrayRef<ValueRange> caseOperands,
                      ArrayRef<int32_t> branchWeights) {
-  SmallVector<Value> flattenedCaseOperands;
-  SmallVector<int32_t> caseOperandOffsets;
+  SmallVector<Value, 8> flattenedCaseOperands;
+  SmallVector<int32_t, 8> caseOperandOffsets;
   int32_t offset = 0;
   for (ValueRange operands : caseOperands) {
     flattenedCaseOperands.append(operands.begin(), operands.end());
@@ -230,8 +230,8 @@ parseSwitchOpCases(OpAsmParser &parser, ElementsAttr &caseValues,
                    SmallVectorImpl<OpAsmParser::OperandType> &caseOperands,
                    SmallVectorImpl<Type> &caseOperandTypes,
                    ElementsAttr &caseOperandOffsets) {
-  SmallVector<int32_t> values;
-  SmallVector<int32_t> offsets;
+  SmallVector<int32_t, 8> values;
+  SmallVector<int32_t, 8> offsets;
   int32_t value, offset = 0;
   do {
     OptionalParseResult integerParseResult = parser.parseOptionalInteger(value);
@@ -243,7 +243,7 @@ parseSwitchOpCases(OpAsmParser &parser, ElementsAttr &caseValues,
     values.push_back(value);
 
     Block *destination;
-    SmallVector<OpAsmParser::OperandType> operands;
+    SmallVector<OpAsmParser::OperandType, 8> operands;
     if (parser.parseColon() || parser.parseSuccessor(destination))
       return failure();
     if (!parser.parseOptionalLParen()) {
