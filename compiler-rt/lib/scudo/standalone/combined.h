@@ -100,7 +100,7 @@ public:
 
       // Reset tag to 0 as this chunk may have been previously used for a tagged
       // user allocation.
-      if (UNLIKELY(Allocator.useMemoryTagging()))
+      if (UNLIKELY(useMemoryTagging<Params>(Allocator.Primary.Options.load())))
         storeTags(reinterpret_cast<uptr>(Ptr),
                   reinterpret_cast<uptr>(Ptr) + sizeof(QuarantineBatch));
 
@@ -161,6 +161,9 @@ public:
       Primary.Options.set(OptionBit::DeallocTypeMismatch);
     if (getFlags()->delete_size_mismatch)
       Primary.Options.set(OptionBit::DeleteSizeMismatch);
+    if (allocatorSupportsMemoryTagging<Params>() &&
+        systemSupportsMemoryTagging())
+      Primary.Options.set(OptionBit::UseMemoryTagging);
     Primary.Options.set(OptionBit::UseOddEvenTags);
 
     QuarantineMaxChunkSize =
@@ -240,7 +243,7 @@ public:
   }
 
   ALWAYS_INLINE void *untagPointerMaybe(void *Ptr) {
-    if (Primary.SupportsMemoryTagging)
+    if (allocatorSupportsMemoryTagging<Params>())
       return reinterpret_cast<void *>(
           untagPointer(reinterpret_cast<uptr>(Ptr)));
     return Ptr;
@@ -367,7 +370,7 @@ public:
       //
       // When memory tagging is enabled, zeroing the contents is done as part of
       // setting the tag.
-      if (UNLIKELY(useMemoryTagging(Options))) {
+      if (UNLIKELY(useMemoryTagging<Params>(Options))) {
         uptr PrevUserPtr;
         Chunk::UnpackedHeader Header;
         const uptr BlockSize = PrimaryT::getSizeByClassId(ClassId);
@@ -594,7 +597,7 @@ public:
                      : BlockEnd - (reinterpret_cast<uptr>(OldPtr) + NewSize)) &
             Chunk::SizeOrUnusedBytesMask;
         Chunk::compareExchangeHeader(Cookie, OldPtr, &NewHeader, &OldHeader);
-        if (UNLIKELY(ClassId && useMemoryTagging(Options))) {
+        if (UNLIKELY(ClassId && useMemoryTagging<Params>(Options))) {
           resizeTaggedChunk(reinterpret_cast<uptr>(OldTaggedPtr) + OldSize,
                             reinterpret_cast<uptr>(OldTaggedPtr) + NewSize,
                             BlockEnd);
@@ -692,7 +695,7 @@ public:
       if (getChunkFromBlock(Block, &Chunk, &Header) &&
           Header.State == Chunk::State::Allocated) {
         uptr TaggedChunk = Chunk;
-        if (useMemoryTagging(Primary.Options.load()))
+        if (useMemoryTagging<Params>(Primary.Options.load()))
           TaggedChunk = loadTag(Chunk);
         Callback(TaggedChunk, getSize(reinterpret_cast<void *>(Chunk), &Header),
                  Arg);
@@ -783,14 +786,13 @@ public:
            Header.State == Chunk::State::Allocated;
   }
 
-  bool useMemoryTagging() const {
-    return useMemoryTagging(Primary.Options.load());
+  bool useMemoryTaggingTestOnly() const {
+    return useMemoryTagging<Params>(Primary.Options.load());
   }
-  static bool useMemoryTagging(Options Options) {
-    return PrimaryT::useMemoryTagging(Options);
+  void disableMemoryTagging() {
+    if (allocatorSupportsMemoryTagging<Params>())
+      Primary.Options.clear(OptionBit::UseMemoryTagging);
   }
-
-  void disableMemoryTagging() { Primary.disableMemoryTagging(); }
 
   void setTrackAllocationStacks(bool Track) {
     initThreadMaybe();
@@ -823,7 +825,7 @@ public:
                            const char *MemoryTags, uintptr_t MemoryAddr,
                            size_t MemorySize) {
     *ErrorInfo = {};
-    if (!PrimaryT::SupportsMemoryTagging ||
+    if (!allocatorSupportsMemoryTagging<Params>() ||
         MemoryAddr + MemorySize < MemoryAddr)
       return;
 
@@ -942,7 +944,7 @@ private:
 
   static_assert(MinAlignment >= sizeof(Chunk::PackedHeader),
                 "Minimal alignment must at least cover a chunk header.");
-  static_assert(!PrimaryT::SupportsMemoryTagging ||
+  static_assert(!allocatorSupportsMemoryTagging<Params>() ||
                     MinAlignment >= archMemoryTagGranuleSize(),
                 "");
 
@@ -1037,7 +1039,7 @@ private:
   void quarantineOrDeallocateChunk(Options Options, void *Ptr,
                                    Chunk::UnpackedHeader *Header, uptr Size) {
     Chunk::UnpackedHeader NewHeader = *Header;
-    if (UNLIKELY(NewHeader.ClassId && useMemoryTagging(Options))) {
+    if (UNLIKELY(NewHeader.ClassId && useMemoryTagging<Params>(Options))) {
       u8 PrevTag = extractTag(loadTag(reinterpret_cast<uptr>(Ptr)));
       if (!TSDRegistry.getDisableMemInit()) {
         uptr TaggedBegin, TaggedEnd;
