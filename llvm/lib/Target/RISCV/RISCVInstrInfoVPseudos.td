@@ -890,6 +890,18 @@ multiclass VPseudoTernaryV_VX_AAXA<string Constraint = ""> {
     defm _VX : VPseudoTernary<m.vrclass, GPR, m.vrclass, m, Constraint>;
 }
 
+multiclass VPseudoTernaryW_VV {
+  defvar constraint = "@earlyclobber $rd";
+  foreach m = MxList.m in
+    defm _VV : VPseudoTernary<m.wvrclass, m.vrclass, m.vrclass, m, constraint>;
+}
+
+multiclass VPseudoTernaryW_VX {
+  defvar constraint = "@earlyclobber $rd";
+  foreach m = MxList.m in
+    defm _VX : VPseudoTernary<m.wvrclass, GPR, m.vrclass, m, constraint>;
+}
+
 multiclass VPseudoTernaryV_VI<Operand ImmType = simm5, string Constraint = ""> {
   foreach m = MxList.m in
     defm _VI : VPseudoTernary<m.vrclass, m.vrclass, ImmType, m, Constraint>;
@@ -903,6 +915,11 @@ multiclass VPseudoTernaryV_VV_VX_AAXA<string Constraint = ""> {
 multiclass VPseudoTernaryV_VX_VI<Operand ImmType = simm5, string Constraint = ""> {
   defm "" : VPseudoTernaryV_VX<Constraint>;
   defm "" : VPseudoTernaryV_VI<ImmType, Constraint>;
+}
+
+multiclass VPseudoTernaryW_VV_VX {
+  defm "" : VPseudoTernaryW_VV;
+  defm "" : VPseudoTernaryW_VX;
 }
 
 multiclass VPseudoBinaryM_VV_VX_VI {
@@ -1591,6 +1608,30 @@ multiclass VPatTernaryV_VI<string intrinsic, string instruction,
                       vti.RegClass, Imm_type>;
 }
 
+multiclass VPatTernaryW_VV<string intrinsic, string instruction,
+                           list<VTypeInfoToWide> vtilist> {
+  foreach vtiToWti = vtilist in {
+    defvar vti = vtiToWti.Vti;
+    defvar wti = vtiToWti.Wti;
+    defm : VPatTernary<intrinsic, instruction, "VV",
+                      wti.Vector, vti.Vector, vti.Vector,
+                      vti.Mask, vti.SEW, vti.LMul,
+                      wti.RegClass, vti.RegClass, vti.RegClass>;
+  }
+}
+
+multiclass VPatTernaryW_VX<string intrinsic, string instruction,
+                           list<VTypeInfoToWide> vtilist> {
+  foreach vtiToWti = vtilist in {
+    defvar vti = vtiToWti.Vti;
+    defvar wti = vtiToWti.Wti;
+    defm : VPatTernary<intrinsic, instruction, "VX",
+                      wti.Vector, XLenVT, vti.Vector,
+                      vti.Mask, vti.SEW, vti.LMul,
+                      wti.RegClass, vti.ScalarRegClass, vti.RegClass>;
+  }
+}
+
 multiclass VPatTernaryV_VV_VX_AAXA<string intrinsic, string instruction,
                               list<VTypeInfo> vtilist> {
   defm "" : VPatTernaryV_VV<intrinsic, instruction, vtilist>;
@@ -1609,6 +1650,12 @@ multiclass VPatBinaryM_VV_VX_VI<string intrinsic, string instruction,
   defm "" : VPatBinaryM_VV<intrinsic, instruction, vtilist>;
   defm "" : VPatBinaryM_VX<intrinsic, instruction, vtilist>;
   defm "" : VPatBinaryM_VI<intrinsic, instruction, vtilist>;
+}
+
+multiclass VPatTernaryW_VV_VX<string intrinsic, string instruction,
+                              list<VTypeInfoToWide> vtilist> {
+  defm "" : VPatTernaryW_VV<intrinsic, instruction, vtilist>;
+  defm "" : VPatTernaryW_VX<intrinsic, instruction, vtilist>;
 }
 
 multiclass VPatBinaryM_VV_VX<string intrinsic, string instruction,
@@ -1804,6 +1851,14 @@ defm PseudoVMACC       : VPseudoTernaryV_VV_VX_AAXA;
 defm PseudoVNMSAC      : VPseudoTernaryV_VV_VX_AAXA;
 defm PseudoVMADD       : VPseudoTernaryV_VV_VX_AAXA;
 defm PseudoVNMSUB      : VPseudoTernaryV_VV_VX_AAXA;
+
+//===----------------------------------------------------------------------===//
+// 12.14. Vector Widening Integer Multiply-Add Instructions
+//===----------------------------------------------------------------------===//
+defm PseudoVWMACCU     : VPseudoTernaryW_VV_VX;
+defm PseudoVWMACC      : VPseudoTernaryW_VV_VX;
+defm PseudoVWMACCSU    : VPseudoTernaryW_VV_VX;
+defm PseudoVWMACCUS    : VPseudoTernaryW_VX;
 
 //===----------------------------------------------------------------------===//
 // 12.17. Vector Integer Move Instructions
@@ -2172,6 +2227,14 @@ defm "" : VPatTernaryV_VV_VX_AAXA<"int_riscv_vmadd", "PseudoVMADD", AllIntegerVe
 defm "" : VPatTernaryV_VV_VX_AAXA<"int_riscv_vnmsub", "PseudoVNMSUB", AllIntegerVectors>;
 defm "" : VPatTernaryV_VV_VX_AAXA<"int_riscv_vmacc", "PseudoVMACC", AllIntegerVectors>;
 defm "" : VPatTernaryV_VV_VX_AAXA<"int_riscv_vnmsac", "PseudoVNMSAC", AllIntegerVectors>;
+
+//===----------------------------------------------------------------------===//
+// 12.14. Vector Widening Integer Multiply-Add Instructions
+//===----------------------------------------------------------------------===//
+defm "" : VPatTernaryW_VV_VX<"int_riscv_vwmaccu", "PseudoVWMACCU", AllWidenableIntVectors>;
+defm "" : VPatTernaryW_VV_VX<"int_riscv_vwmacc", "PseudoVWMACC", AllWidenableIntVectors>;
+defm "" : VPatTernaryW_VV_VX<"int_riscv_vwmaccsu", "PseudoVWMACCSU", AllWidenableIntVectors>;
+defm "" : VPatTernaryW_VX<"int_riscv_vwmaccus", "PseudoVWMACCUS", AllWidenableIntVectors>;
 
 //===----------------------------------------------------------------------===//
 // 12.17. Vector Integer Move Instructions
