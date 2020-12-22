@@ -14,7 +14,7 @@ entry:
 
 ; CHECK:      define i64 @weird_identity_but_ok(i64 %sz)
 ; CHECK-NEXT: entry:
-; CHECK-NEXT:   ret i64 %sz
+; CHECK:   ret i64 %sz
 ; CHECK-NEXT: }
 
 define i64 @phis_are_neat(i1 %which) {
@@ -101,6 +101,57 @@ for.end:                                          ; preds = %for.body, %entry
 ; CHECK:   define void @f()
 ; CHECK:     call i64 @llvm.objectsize.i64.p0i8(
 
+define void @bdos_cmpm1(i64 %alloc) {
+entry:
+  %obj = call i8* @malloc(i64 %alloc)
+  %objsize = call i64 @llvm.objectsize.i64.p0i8(i8* %obj, i1 0, i1 0, i1 1)
+  %cmp.not = icmp eq i64 %objsize, -1
+  br i1 %cmp.not, label %if.else, label %if.then
+
+if.then:
+  call void @fortified_chk(i8* %obj, i64 %objsize)
+  br label %if.end
+
+if.else:
+  call void @unfortified(i8* %obj, i64 %objsize)
+  br label %if.end
+
+if.end:                                           ; preds = %if.else, %if.then
+  ret void
+}
+
+; CHECK:  define void @bdos_cmpm1(
+; CHECK:    [[TMP:%.*]] = icmp ne i64 %alloc, -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP]])
+; CHECK-NEXT:    br i1 false, label %if.else, label %if.then
+; CHECK:    call void @fortified_chk(i8* %obj, i64 %alloc)
+
+define void @bdos_cmpm1_expr(i64 %alloc, i64 %part) {
+entry:
+  %sz = udiv i64 %alloc, %part
+  %obj = call i8* @malloc(i64 %sz)
+  %objsize = call i64 @llvm.objectsize.i64.p0i8(i8* %obj, i1 0, i1 0, i1 1)
+  %cmp.not = icmp eq i64 %objsize, -1
+  br i1 %cmp.not, label %if.else, label %if.then
+
+if.then:
+  call void @fortified_chk(i8* %obj, i64 %objsize)
+  br label %if.end
+
+if.else:
+  call void @unfortified(i8* %obj, i64 %objsize)
+  br label %if.end
+
+if.end:                                           ; preds = %if.else, %if.then
+  ret void
+}
+
+; CHECK:  define void @bdos_cmpm1_expr(
+; CHECK:    [[TMP:%.*]] = icmp ne i64 [[SZ:%.*]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP]])
+; CHECK-NEXT:    br i1 false, label %if.else, label %if.then
+; CHECK:    call void @fortified_chk(i8* %obj, i64 [[SZ]])
+
 declare void @bury(i32) local_unnamed_addr #2
 
 ; Function Attrs: nounwind allocsize(0)
@@ -113,3 +164,7 @@ declare void @free(i8* nocapture)
 
 ; Function Attrs: nounwind readnone speculatable
 declare i64 @llvm.objectsize.i64.p0i8(i8*, i1, i1, i1)
+
+declare void @fortified_chk(i8*, i64)
+
+declare void @unfortified(i8*, i64)
