@@ -8,7 +8,7 @@
 # RUN: llvm-readobj --syms --macho-dysymtab %t/test | FileCheck %s
 # CHECK:      Symbols [
 # CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: _local (2)
+# CHECK-NEXT:     Name: _local
 # CHECK-NEXT:     Type: Section (0xE)
 # CHECK-NEXT:     Section: __data (0x4)
 # CHECK-NEXT:     RefType: UndefinedNonLazy (0x0)
@@ -17,7 +17,16 @@
 # CHECK-NEXT:     Value: 0x1{{[0-9a-f]*}}
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: _main (9)
+# CHECK-NEXT:     Name: __dyld_private
+# CHECK-NEXT:     Type: Section (0xE)
+# CHECK-NEXT:     Section: __data (0x4)
+# CHECK-NEXT:     RefType: UndefinedNonLazy (0x0)
+# CHECK-NEXT:     Flags [ (0x0)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Value: 0x1{{[0-9a-f]*}}
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: _main
 # CHECK-NEXT:     Extern
 # CHECK-NEXT:     Type: Section (0xE)
 # CHECK-NEXT:     Section: __text (0x1)
@@ -27,7 +36,7 @@
 # CHECK-NEXT:     Value: 0x1{{[0-9a-f]*}}
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: _external (55)
+# CHECK-NEXT:     Name: _external
 # CHECK-NEXT:     Extern
 # CHECK-NEXT:     Type: Section (0xE)
 # CHECK-NEXT:     Section: __data (0x4)
@@ -37,7 +46,7 @@
 # CHECK-NEXT:     Value: 0x1{{[0-9a-f]*}}
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: _external_weak (65)
+# CHECK-NEXT:     Name: _external_weak
 # CHECK-NEXT:     Extern
 # CHECK-NEXT:     Type: Section (0xE)
 # CHECK-NEXT:     Section: __text (0x1)
@@ -48,17 +57,7 @@
 # CHECK-NEXT:     Value: 0x1{{[0-9a-f]*}}
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: __dyld_private (103)
-# CHECK-NEXT:     Extern
-# CHECK-NEXT:     Type: Section (0xE)
-# CHECK-NEXT:     Section: __data (0x4)
-# CHECK-NEXT:     RefType: UndefinedNonLazy (0x0)
-# CHECK-NEXT:     Flags [ (0x0)
-# CHECK-NEXT:     ]
-# CHECK-NEXT:     Value: 0x1{{[0-9a-f]*}}
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: dyld_stub_binder (15)
+# CHECK-NEXT:     Name: dyld_stub_binder
 # CHECK-NEXT:     Extern
 # CHECK-NEXT:     Type: Undef (0x0)
 # CHECK-NEXT:     Section:  (0x0)
@@ -68,7 +67,7 @@
 # CHECK-NEXT:     Value: 0x0
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: _dynamic (80)
+# CHECK-NEXT:     Name: _dynamic
 # CHECK-NEXT:     Extern
 # CHECK-NEXT:     Type: Undef (0x0)
 # CHECK-NEXT:     Section:  (0x0)
@@ -81,9 +80,9 @@
 # CHECK-NEXT: ]
 # CHECK-NEXT: Dysymtab {
 # CHECK-NEXT:   ilocalsym: 0
-# CHECK-NEXT:   nlocalsym: 1
-# CHECK-NEXT:   iextdefsym: 1
-# CHECK-NEXT:   nextdefsym: 4
+# CHECK-NEXT:   nlocalsym: 2
+# CHECK-NEXT:   iextdefsym: 2
+# CHECK-NEXT:   nextdefsym: 3
 # CHECK-NEXT:   iundefsym: 5
 # CHECK-NEXT:   nundefsym: 2
 

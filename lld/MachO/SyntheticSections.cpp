@@ -362,12 +362,10 @@ void WeakBindingSection::writeTo(uint8_t *buf) const {
 }
 
 bool macho::needsBinding(const Symbol *sym) {
-  if (isa<DylibSymbol>(sym)) {
+  if (isa<DylibSymbol>(sym))
     return true;
-  } else if (const auto *defined = dyn_cast<Defined>(sym)) {
-    if (defined->isWeakDef() && defined->isExternal())
-      return true;
-  }
+  if (const auto *defined = dyn_cast<Defined>(sym))
+    return defined->isExternalWeakDef();
   return false;
 }
 
@@ -380,7 +378,7 @@ void macho::addNonLazyBindingEntries(const Symbol *sym,
       in.weakBinding->addEntry(sym, section, offset, addend);
   } else if (auto *defined = dyn_cast<Defined>(sym)) {
     in.rebase->addEntry(section, offset);
-    if (defined->isWeakDef() && defined->isExternal())
+    if (defined->isExternalWeakDef())
       in.weakBinding->addEntry(sym, section, offset, addend);
   } else if (isa<DSOHandle>(sym)) {
     error("cannot bind to " + DSOHandle::name);
@@ -446,8 +444,10 @@ void StubHelperSection::setup() {
   in.got->addEntry(stubBinder);
 
   inputSections.push_back(in.imageLoaderCache);
-  symtab->addDefined("__dyld_private", in.imageLoaderCache, 0,
-                     /*isWeakDef=*/false);
+  dyldPrivate =
+      make<Defined>("__dyld_private", in.imageLoaderCache, 0,
+                    /*isWeakDef=*/false,
+                    /*isExternal=*/false, /*isPrivateExtern=*/false);
 }
 
 ImageLoaderCacheSection::ImageLoaderCacheSection() {
@@ -555,7 +555,7 @@ void macho::prepareBranchTarget(Symbol *sym) {
       }
     }
   } else if (auto *defined = dyn_cast<Defined>(sym)) {
-    if (defined->isWeakDef() && defined->isExternal()) {
+    if (defined->isExternalWeakDef()) {
       if (in.stubs->addEntry(sym)) {
         in.rebase->addEntry(in.lazyPointers, sym->stubsIndex * WordSize);
         in.weakBinding->addEntry(sym, in.lazyPointers,
@@ -570,9 +570,10 @@ ExportSection::ExportSection()
 
 void ExportSection::finalizeContents() {
   trieBuilder.setImageBase(in.header->addr);
-  // TODO: We should check symbol visibility.
   for (const Symbol *sym : symtab->getSymbols()) {
     if (const auto *defined = dyn_cast<Defined>(sym)) {
+      if (defined->privateExtern)
+        continue;
       trieBuilder.addSymbol(*defined);
       hasWeakSymbol = hasWeakSymbol || sym->isWeakDef();
     }
@@ -710,6 +711,13 @@ void SymtabSection::finalizeContents() {
     }
   }
 
+  // __dyld_private is a local symbol too. It's linker-created and doesn't
+  // exist in any object file.
+  if (Defined* dyldPrivate = in.stubHelper->dyldPrivate) {
+    uint32_t strx = stringTableSection.addString(dyldPrivate->getName());
+    localSymbols.push_back({dyldPrivate, strx});
+  }
+
   for (Symbol *sym : symtab->getSymbols()) {
     uint32_t strx = stringTableSection.addString(sym->getName());
     if (auto *defined = dyn_cast<Defined>(sym)) {
@@ -752,18 +760,31 @@ void SymtabSection::writeTo(uint8_t *buf) const {
     nList->n_strx = entry.strx;
     // TODO populate n_desc with more flags
     if (auto *defined = dyn_cast<Defined>(entry.sym)) {
+      uint8_t scope = 0;
+      if (defined->privateExtern) {
+        // Private external -- dylib scoped symbol.
+        // Promote to non-external at link time.
+        assert(defined->isExternal() && "invalid input file");
+        scope = MachO::N_PEXT;
+      } else if (defined->isExternal()) {
+        // Normal global symbol.
+        scope = MachO::N_EXT;
+      } else {
+        // TU-local symbol from localSymbols.
+        scope = 0;
+      }
+
       if (defined->isAbsolute()) {
-        nList->n_type = MachO::N_EXT | MachO::N_ABS;
+        nList->n_type = scope | MachO::N_ABS;
         nList->n_sect = MachO::NO_SECT;
         nList->n_value = defined->value;
       } else {
-        nList->n_type =
-            (defined->isExternal() ? MachO::N_EXT : 0) | MachO::N_SECT;
+        nList->n_type = scope | MachO::N_SECT;
         nList->n_sect = defined->isec->parent->index;
         // For the N_SECT symbol type, n_value is the address of the symbol
         nList->n_value = defined->getVA();
       }
-      nList->n_desc |= defined->isWeakDef() ? MachO::N_WEAK_DEF : 0;
+      nList->n_desc |= defined->isExternalWeakDef() ? MachO::N_WEAK_DEF : 0;
     } else if (auto *dysym = dyn_cast<DylibSymbol>(entry.sym)) {
       uint16_t n_desc = nList->n_desc;
       MachO::SET_LIBRARY_ORDINAL(n_desc, dysym->file->ordinal);
