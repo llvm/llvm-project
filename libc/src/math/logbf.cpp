@@ -11,6 +11,6 @@
 
 namespace __llvm_libc {
 
-float LLVM_LIBC_ENTRYPOINT(logbf)(float x) { return fputil::logb(x); }
+LLVM_LIBC_FUNCTION(float, logbf, (float x)) { return fputil::logb(x); }
 
 } // namespace __llvm_libc

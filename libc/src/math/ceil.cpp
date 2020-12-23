@@ -11,6 +11,6 @@
 
 namespace __llvm_libc {
 
-double LLVM_LIBC_ENTRYPOINT(ceil)(double x) { return fputil::ceil(x); }
+LLVM_LIBC_FUNCTION(double, ceil, (double x)) { return fputil::ceil(x); }
 
 } // namespace __llvm_libc

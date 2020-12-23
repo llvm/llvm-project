@@ -11,7 +11,7 @@
 
 namespace __llvm_libc {
 
-long double LLVM_LIBC_ENTRYPOINT(frexpl)(long double x, int *exp) {
+LLVM_LIBC_FUNCTION(long double, frexpl, (long double x, int *exp)) {
   return fputil::frexp(x, *exp);
 }
 

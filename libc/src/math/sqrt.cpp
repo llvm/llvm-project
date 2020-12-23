@@ -11,6 +11,6 @@
 
 namespace __llvm_libc {
 
-double LLVM_LIBC_ENTRYPOINT(sqrt)(double x) { return fputil::sqrt(x); }
+LLVM_LIBC_FUNCTION(double, sqrt, (double x)) { return fputil::sqrt(x); }
 
 } // namespace __llvm_libc

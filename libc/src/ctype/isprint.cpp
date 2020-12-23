@@ -14,7 +14,7 @@ namespace __llvm_libc {
 
 // TODO: Currently restricted to default locale.
 // These should be extended using locale information.
-int LLVM_LIBC_ENTRYPOINT(isprint)(int c) {
+LLVM_LIBC_FUNCTION(int, isprint, (int c)) {
   const unsigned ch = c;
   return (ch - ' ') < 95;
 }

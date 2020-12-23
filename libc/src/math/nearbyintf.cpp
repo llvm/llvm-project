@@ -11,7 +11,7 @@
 
 namespace __llvm_libc {
 
-float LLVM_LIBC_ENTRYPOINT(nearbyintf)(float x) {
+LLVM_LIBC_FUNCTION(float, nearbyintf, (float x)) {
   return fputil::roundUsingCurrentRoundingMode(x);
 }
 

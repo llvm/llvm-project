@@ -18,7 +18,7 @@
 
 namespace __llvm_libc {
 
-int LLVM_LIBC_ENTRYPOINT(thrd_join)(thrd_t *thread, int *retval) {
+LLVM_LIBC_FUNCTION(int, thrd_join, (thrd_t * thread, int *retval)) {
   FutexData *clear_tid_address =
       reinterpret_cast<FutexData *>(thread->__clear_tid);
 

@@ -15,7 +15,7 @@ namespace __llvm_libc {
 
 // TODO: Currently restricted to default locale.
 // These should be extended using locale information.
-int LLVM_LIBC_ENTRYPOINT(isxdigit)(int c) {
+LLVM_LIBC_FUNCTION(int, isxdigit, (int c)) {
   const unsigned ch = c;
   return internal::isdigit(ch) || (ch | 32) - 'a' < 6;
 }

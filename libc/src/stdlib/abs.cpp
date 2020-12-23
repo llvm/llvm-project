@@ -12,7 +12,7 @@
 
 namespace __llvm_libc {
 
-int LLVM_LIBC_ENTRYPOINT(abs)(int n) {
+LLVM_LIBC_FUNCTION(int, abs, (int n)) {
   // integer_abs from abs_utils.h.
   return integer_abs(n);
 }
