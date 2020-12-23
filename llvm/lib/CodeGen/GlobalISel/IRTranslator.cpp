@@ -368,7 +368,7 @@ bool IRTranslator::translateRet(const User &U, MachineIRBuilder &MIRBuilder) {
   // The target may mess up with the insertion point, but
   // this is not important as a return is the last instruction
   // of the block anyway.
-  return CLI->lowerReturn(MIRBuilder, Ret, VRegs, SwiftErrorVReg);
+  return CLI->lowerReturn(MIRBuilder, Ret, VRegs, FuncInfo, SwiftErrorVReg);
 }
 
 void IRTranslator::emitBranchForMergedCondition(
@@ -3067,6 +3067,8 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   else
     FuncInfo.BPI = nullptr;
 
+  FuncInfo.CanLowerReturn = CLI->checkReturnTypeForCallConv(*MF);
+
   const auto &TLI = *MF->getSubtarget().getTargetLowering();
 
   SL = std::make_unique<GISelSwitchLowering>(this, FuncInfo);
@@ -3140,7 +3142,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
     }
   }
 
-  if (!CLI->lowerFormalArguments(*EntryBuilder.get(), F, VRegArgs)) {
+  if (!CLI->lowerFormalArguments(*EntryBuilder.get(), F, VRegArgs, FuncInfo)) {
     OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
                                F.getSubprogram(), &F.getEntryBlock());
     R << "unable to lower arguments: " << ore::NV("Prototype", F.getType());

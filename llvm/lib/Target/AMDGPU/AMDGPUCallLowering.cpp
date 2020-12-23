@@ -447,9 +447,9 @@ bool AMDGPUCallLowering::lowerReturnVal(MachineIRBuilder &B,
   return handleAssignments(B, SplitRetInfos, RetHandler);
 }
 
-bool AMDGPUCallLowering::lowerReturn(MachineIRBuilder &B,
-                                     const Value *Val,
-                                     ArrayRef<Register> VRegs) const {
+bool AMDGPUCallLowering::lowerReturn(MachineIRBuilder &B, const Value *Val,
+                                     ArrayRef<Register> VRegs,
+                                     FunctionLoweringInfo &FLI) const {
 
   MachineFunction &MF = B.getMF();
   MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -775,8 +775,8 @@ static void packSplitRegsToOrigType(MachineIRBuilder &B,
 }
 
 bool AMDGPUCallLowering::lowerFormalArguments(
-    MachineIRBuilder &B, const Function &F,
-    ArrayRef<ArrayRef<Register>> VRegs) const {
+    MachineIRBuilder &B, const Function &F, ArrayRef<ArrayRef<Register>> VRegs,
+    FunctionLoweringInfo &FLI) const {
   CallingConv::ID CC = F.getCallingConv();
 
   // The infrastructure for normal calling convention lowering is essentially
