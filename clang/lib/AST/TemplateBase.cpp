@@ -131,17 +131,25 @@ TemplateArgumentDependence TemplateArgument::getDependence() const {
     return TemplateArgumentDependence::Dependent |
            TemplateArgumentDependence::Instantiation;
 
+  case Declaration: {
+    auto *DC = dyn_cast<DeclContext>(getAsDecl());
+    if (!DC)
+      DC = getAsDecl()->getDeclContext();
+    if (DC->isDependentContext())
+      Deps = TemplateArgumentDependence::Dependent |
+             TemplateArgumentDependence::Instantiation;
+    return Deps;
+  }
+
   case NullPtr:
   case Integral:
-  case Declaration:
     return TemplateArgumentDependence::None;
 
   case Expression:
     Deps = toTemplateArgumentDependence(getAsExpr()->getDependence());
-    // Instantiation-dependent expression arguments are considered dependent
-    // until they're resolved to another form.
-    if (Deps & TemplateArgumentDependence::Instantiation)
-      Deps |= TemplateArgumentDependence::Dependent;
+    if (isa<PackExpansionExpr>(getAsExpr()))
+      Deps |= TemplateArgumentDependence::Dependent |
+              TemplateArgumentDependence::Instantiation;
     return Deps;
 
   case Pack:
@@ -536,8 +544,8 @@ ASTTemplateArgumentListInfo::ASTTemplateArgumentListInfo(
   NumTemplateArgs = Info.size();
 
   TemplateArgumentLoc *ArgBuffer = getTrailingObjects<TemplateArgumentLoc>();
-  std::uninitialized_copy(Info.arguments().begin(), Info.arguments().end(),
-                          ArgBuffer);
+  for (unsigned i = 0; i != NumTemplateArgs; ++i)
+    new (&ArgBuffer[i]) TemplateArgumentLoc(Info[i]);
 }
 
 void ASTTemplateKWAndArgsInfo::initializeFrom(
@@ -547,8 +555,9 @@ void ASTTemplateKWAndArgsInfo::initializeFrom(
   LAngleLoc = Info.getLAngleLoc();
   RAngleLoc = Info.getRAngleLoc();
   NumTemplateArgs = Info.size();
-  std::uninitialized_copy(Info.arguments().begin(), Info.arguments().end(),
-                          OutArgArray);
+
+  for (unsigned i = 0; i != NumTemplateArgs; ++i)
+    new (&OutArgArray[i]) TemplateArgumentLoc(Info[i]);
 }
 
 void ASTTemplateKWAndArgsInfo::initializeFrom(SourceLocation TemplateKWLoc) {
@@ -557,6 +566,21 @@ void ASTTemplateKWAndArgsInfo::initializeFrom(SourceLocation TemplateKWLoc) {
   RAngleLoc = SourceLocation();
   this->TemplateKWLoc = TemplateKWLoc;
   NumTemplateArgs = 0;
+}
+
+void ASTTemplateKWAndArgsInfo::initializeFrom(
+    SourceLocation TemplateKWLoc, const TemplateArgumentListInfo &Info,
+    TemplateArgumentLoc *OutArgArray, TemplateArgumentDependence &Deps) {
+  this->TemplateKWLoc = TemplateKWLoc;
+  LAngleLoc = Info.getLAngleLoc();
+  RAngleLoc = Info.getRAngleLoc();
+  NumTemplateArgs = Info.size();
+
+  for (unsigned i = 0; i != NumTemplateArgs; ++i) {
+    Deps |= Info[i].getArgument().getDependence();
+
+    new (&OutArgArray[i]) TemplateArgumentLoc(Info[i]);
+  }
 }
 
 void ASTTemplateKWAndArgsInfo::copyInto(const TemplateArgumentLoc *ArgArray,
