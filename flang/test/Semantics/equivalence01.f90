@@ -197,3 +197,20 @@ subroutine s16
   end interface
 
 end subroutine s16
+
+module m17
+  real :: dupName
+contains
+  real function f17a()
+    implicit none
+    real :: y
+    !ERROR: No explicit type declared for 'dupname'
+    equivalence (dupName, y) 
+  end function f17a
+  real function f17b()
+    real :: y
+    ! The following implicitly declares an object called "dupName" local to 
+    ! the function f17b().  OK since there's no "implicit none
+    equivalence (dupName, y) 
+  end function f17b
+end module m17

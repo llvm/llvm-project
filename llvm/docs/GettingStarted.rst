@@ -121,6 +121,7 @@ Linux              amd64                 GCC, Clang
 Linux              ARM                   GCC, Clang
 Linux              Mips                  GCC, Clang
 Linux              PowerPC               GCC, Clang
+Linux              SystemZ               GCC, Clang
 Solaris            V9 (Ultrasparc)       GCC
 FreeBSD            x86\ :sup:`1`         GCC, Clang
 FreeBSD            amd64                 GCC, Clang
@@ -169,7 +170,7 @@ Package                                                     Version      Notes
 =========================================================== ============ ==========================================
 `CMake <http://cmake.org/>`__                               >=3.13.4     Makefile/workspace generator
 `GCC <http://gcc.gnu.org/>`_                                >=5.1.0      C/C++ compiler\ :sup:`1`
-`python <http://www.python.org/>`_                          >=2.7        Automated test suite\ :sup:`2`
+`python <http://www.python.org/>`_                          >=3.6        Automated test suite\ :sup:`2`
 `zlib <http://zlib.net>`_                                   >=1.2.3.4    Compression library\ :sup:`3`
 `GNU Make <http://savannah.gnu.org/projects/make>`_         3.79, 3.79.1 Makefile/build processor\ :sup:`4`
 =========================================================== ============ ==========================================
@@ -456,7 +457,7 @@ either via emailing to llvm-commits, or, preferably, via :ref:`Phabricator
 
 You'll generally want to make sure your branch has a single commit,
 corresponding to the review you wish to send, up-to-date with the upstream
-``origin/master`` branch, and doesn't contain merges. Once you have that, you
+``origin/main`` branch, and doesn't contain merges. Once you have that, you
 can start `a Phabricator review <Phabricator.html>`_ (or use ``git show`` or
 ``git format-patch`` to output the diff, and attach it to an email message).
 
@@ -500,7 +501,7 @@ For developers to commit changes from Git
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Once a patch is reviewed, you should rebase it, re-test locally, and commit the
-changes to LLVM's master branch. This is done using `git push` if you have the
+changes to LLVM's main branch. This is done using `git push` if you have the
 required access rights. See `committing a change
 <Phabricator.html#committing-a-change>`_ for Phabricator based commits or
 `obtaining commit access <DeveloperPolicy.html#obtaining-commit-access>`_
@@ -514,13 +515,13 @@ accepted commit on the branch named `branch-with-change`.
   # Go to the branch with your accepted commit.
   % git checkout branch-with-change
   # Rebase your change onto the latest commits on Github.
-  % git pull --rebase origin master
+  % git pull --rebase origin main
   # Rerun the appropriate tests if needed.
   % ninja check-$whatever
   # Check that the list of commits about to be pushed is correct.
-  % git log origin/master...HEAD --oneline
+  % git log origin/main...HEAD --oneline
   # Push to Github.
-  % git push origin HEAD:master
+  % git push origin HEAD:main
 
 LLVM currently has a linear-history policy, which means that merge commits are
 not allowed. The `llvm-project` repo on github is configured to reject pushes

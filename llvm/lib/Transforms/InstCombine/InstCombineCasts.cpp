@@ -907,20 +907,21 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
   Value *VecOp;
   ConstantInt *Cst;
   if (match(Src, m_OneUse(m_ExtractElt(m_Value(VecOp), m_ConstantInt(Cst))))) {
-    auto *VecOpTy = cast<FixedVectorType>(VecOp->getType());
-    unsigned VecNumElts = VecOpTy->getNumElements();
+    auto *VecOpTy = cast<VectorType>(VecOp->getType());
+    auto VecElts = VecOpTy->getElementCount();
 
     // A badly fit destination size would result in an invalid cast.
     if (SrcWidth % DestWidth == 0) {
       uint64_t TruncRatio = SrcWidth / DestWidth;
-      uint64_t BitCastNumElts = VecNumElts * TruncRatio;
+      uint64_t BitCastNumElts = VecElts.getKnownMinValue() * TruncRatio;
       uint64_t VecOpIdx = Cst->getZExtValue();
       uint64_t NewIdx = DL.isBigEndian() ? (VecOpIdx + 1) * TruncRatio - 1
                                          : VecOpIdx * TruncRatio;
       assert(BitCastNumElts <= std::numeric_limits<uint32_t>::max() &&
              "overflow 32-bits");
 
-      auto *BitCastTo = FixedVectorType::get(DestTy, BitCastNumElts);
+      auto *BitCastTo =
+          VectorType::get(DestTy, BitCastNumElts, VecElts.isScalable());
       Value *BitCast = Builder.CreateBitCast(VecOp, BitCastTo);
       return ExtractElementInst::Create(BitCast, Builder.getInt32(NewIdx));
     }
@@ -1974,12 +1975,9 @@ Instruction *InstCombinerImpl::visitPtrToInt(PtrToIntInst &CI) {
   unsigned PtrSize = DL.getPointerSizeInBits(AS);
   if (TySize != PtrSize) {
     Type *IntPtrTy = DL.getIntPtrType(CI.getContext(), AS);
-    if (auto *VecTy = dyn_cast<VectorType>(Ty)) {
-      // Handle vectors of pointers.
-      // FIXME: what should happen for scalable vectors?
-      IntPtrTy = FixedVectorType::get(
-          IntPtrTy, cast<FixedVectorType>(VecTy)->getNumElements());
-    }
+    // Handle vectors of pointers.
+    if (auto *VecTy = dyn_cast<VectorType>(Ty))
+      IntPtrTy = VectorType::get(IntPtrTy, VecTy->getElementCount());
 
     Value *P = Builder.CreatePtrToInt(SrcOp, IntPtrTy);
     return CastInst::CreateIntegerCast(P, Ty, /*isSigned=*/false);
@@ -2660,13 +2658,11 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
     // a bitcast to a vector with the same # elts.
     Value *ShufOp0 = Shuf->getOperand(0);
     Value *ShufOp1 = Shuf->getOperand(1);
-    unsigned NumShufElts =
-        cast<FixedVectorType>(Shuf->getType())->getNumElements();
-    unsigned NumSrcVecElts =
-        cast<FixedVectorType>(ShufOp0->getType())->getNumElements();
+    auto ShufElts = cast<VectorType>(Shuf->getType())->getElementCount();
+    auto SrcVecElts = cast<VectorType>(ShufOp0->getType())->getElementCount();
     if (Shuf->hasOneUse() && DestTy->isVectorTy() &&
-        cast<FixedVectorType>(DestTy)->getNumElements() == NumShufElts &&
-        NumShufElts == NumSrcVecElts) {
+        cast<VectorType>(DestTy)->getElementCount() == ShufElts &&
+        ShufElts == SrcVecElts) {
       BitCastInst *Tmp;
       // If either of the operands is a cast from CI.getType(), then
       // evaluating the shuffle in the casted destination's type will allow
@@ -2689,8 +2685,9 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
     // TODO: We should match the related pattern for bitreverse.
     if (DestTy->isIntegerTy() &&
         DL.isLegalInteger(DestTy->getScalarSizeInBits()) &&
-        SrcTy->getScalarSizeInBits() == 8 && NumShufElts % 2 == 0 &&
-        Shuf->hasOneUse() && Shuf->isReverse()) {
+        SrcTy->getScalarSizeInBits() == 8 &&
+        ShufElts.getKnownMinValue() % 2 == 0 && Shuf->hasOneUse() &&
+        Shuf->isReverse()) {
       assert(ShufOp0->getType() == SrcTy && "Unexpected shuffle mask");
       assert(isa<UndefValue>(ShufOp1) && "Unexpected shuffle op");
       Function *Bswap =
@@ -2730,12 +2727,9 @@ Instruction *InstCombinerImpl::visitAddrSpaceCast(AddrSpaceCastInst &CI) {
   Type *DestElemTy = DestTy->getElementType();
   if (SrcTy->getElementType() != DestElemTy) {
     Type *MidTy = PointerType::get(DestElemTy, SrcTy->getAddressSpace());
-    if (VectorType *VT = dyn_cast<VectorType>(CI.getType())) {
-      // Handle vectors of pointers.
-      // FIXME: what should happen for scalable vectors?
-      MidTy = FixedVectorType::get(MidTy,
-                                   cast<FixedVectorType>(VT)->getNumElements());
-    }
+    // Handle vectors of pointers.
+    if (VectorType *VT = dyn_cast<VectorType>(CI.getType()))
+      MidTy = VectorType::get(MidTy, VT->getElementCount());
 
     Value *NewBitCast = Builder.CreateBitCast(Src, MidTy);
     return new AddrSpaceCastInst(NewBitCast, CI.getType());

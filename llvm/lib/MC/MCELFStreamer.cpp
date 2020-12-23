@@ -221,7 +221,6 @@ bool MCELFStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
   case MCSA_ELF_TypeGnuUniqueObject:
     Symbol->setType(CombineSymbolTypes(Symbol->getType(), ELF::STT_OBJECT));
     Symbol->setBinding(ELF::STB_GNU_UNIQUE);
-    Symbol->setExternal(true);
     break;
 
   case MCSA_Global:
@@ -233,7 +232,6 @@ bool MCELFStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
                                Symbol->getName() +
                                    " changed binding to STB_GLOBAL");
     Symbol->setBinding(ELF::STB_GLOBAL);
-    Symbol->setExternal(true);
     break;
 
   case MCSA_WeakReference:
@@ -244,7 +242,6 @@ bool MCELFStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
       getContext().reportWarning(
           getStartTokLoc(), Symbol->getName() + " changed binding to STB_WEAK");
     Symbol->setBinding(ELF::STB_WEAK);
-    Symbol->setExternal(true);
     break;
 
   case MCSA_Local:
@@ -253,7 +250,6 @@ bool MCELFStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
                                Symbol->getName() +
                                    " changed binding to STB_LOCAL");
     Symbol->setBinding(ELF::STB_LOCAL);
-    Symbol->setExternal(false);
     break;
 
   case MCSA_ELF_TypeFunction:
@@ -308,10 +304,8 @@ void MCELFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
   auto *Symbol = cast<MCSymbolELF>(S);
   getAssembler().registerSymbol(*Symbol);
 
-  if (!Symbol->isBindingSet()) {
+  if (!Symbol->isBindingSet())
     Symbol->setBinding(ELF::STB_GLOBAL);
-    Symbol->setExternal(true);
-  }
 
   Symbol->setType(ELF::STT_OBJECT);
 
@@ -342,7 +336,8 @@ void MCELFStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {
 
 void MCELFStreamer::emitELFSymverDirective(StringRef AliasName,
                                            const MCSymbol *Aliasee) {
-  getAssembler().Symvers.push_back({AliasName, Aliasee});
+  getAssembler().Symvers.push_back(
+      MCAssembler::Symver{AliasName, Aliasee, getStartTokLoc()});
 }
 
 void MCELFStreamer::emitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
@@ -351,7 +346,6 @@ void MCELFStreamer::emitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
   // FIXME: Should this be caught and done earlier?
   getAssembler().registerSymbol(*Symbol);
   Symbol->setBinding(ELF::STB_LOCAL);
-  Symbol->setExternal(false);
   emitCommonSymbol(Symbol, Size, ByteAlignment);
 }
 
@@ -498,10 +492,8 @@ void MCELFStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE) {
   // Not a temporary, referece it as a weak undefined.
   bool Created;
   getAssembler().registerSymbol(*S, &Created);
-  if (Created) {
+  if (Created)
     cast<MCSymbolELF>(S)->setBinding(ELF::STB_WEAK);
-    cast<MCSymbolELF>(S)->setExternal(true);
-  }
 }
 
 void MCELFStreamer::finalizeCGProfile() {

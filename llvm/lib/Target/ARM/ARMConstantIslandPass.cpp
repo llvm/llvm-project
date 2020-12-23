@@ -359,6 +359,10 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
   isThumb2 = AFI->isThumb2Function();
 
   bool GenerateTBB = isThumb2 || (isThumb1 && SynthesizeThumb1TBB);
+  // TBB generation code in this constant island pass has not been adapted to
+  // deal with speculation barriers.
+  if (STI->hardenSlsRetBr())
+    GenerateTBB = false;
 
   // Renumber all of the machine basic blocks in the function, guaranteeing that
   // the numbers agree with the position of the block in the function.
@@ -553,6 +557,12 @@ void ARMConstantIslands::doInitialJumpTablePlacement(
   MachineBasicBlock *LastCorrectlyNumberedBB = nullptr;
   for (MachineBasicBlock &MBB : *MF) {
     auto MI = MBB.getLastNonDebugInstr();
+    // Look past potential SpeculationBarriers at end of BB.
+    while (MI != MBB.end() &&
+           (isSpeculationBarrierEndBBOpcode(MI->getOpcode()) ||
+            MI->isDebugInstr()))
+      --MI;
+
     if (MI == MBB.end())
       continue;
 
@@ -784,6 +794,7 @@ initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs) {
               NegOk = true;
               IsSoImm = true;
               unsigned CPI = I.getOperand(op).getIndex();
+              assert(CPI < CPEMIs.size());
               MachineInstr *CPEMI = CPEMIs[CPI];
               const Align CPEAlign = getCPEAlign(CPEMI);
               const unsigned LogCPEAlign = Log2(CPEAlign);

@@ -198,14 +198,14 @@ func @matmul_tensors(
 //      CHECK:       %[[sTB:.*]] = subtensor %[[TB]][{{.*}}] : tensor<?x?xf32> to tensor<?x?xf32>
 //      CHECK:       %[[sTC:.*]] = subtensor %[[TC2]][{{.*}}] : tensor<?x?xf32> to tensor<?x?xf32>
 //      CHECK:       %[[sTD:.*]] = linalg.matmul ins(%[[sTA]], %[[sTB]] : tensor<?x?xf32>, tensor<?x?xf32>)
-// CHECK-SAME:                                  init(%[[sTC]] : tensor<?x?xf32>)  -> tensor<?x?xf32>
+// CHECK-SAME:                                  outs(%[[sTC]] : tensor<?x?xf32>)  -> tensor<?x?xf32>
 //      CHECK:       %[[TD:.*]] = subtensor_insert %[[sTD]] into %[[TC2]][{{.*}}]  : tensor<?x?xf32> into tensor<?x?xf32>
 //      CHECK:       scf.yield %[[TD]] : tensor<?x?xf32>
 //      CHECK:     scf.yield %[[TD2]] : tensor<?x?xf32>
 //      CHECK:   scf.yield %[[TD1]] : tensor<?x?xf32>
   %0 = linalg.matmul {__internal_linalg_transform__ = "tensors_distribute1"}
        ins(%arg0, %arg1: tensor<?x?xf32>, tensor<?x?xf32>)
-      init(%arg2: tensor<?x?xf32>)
+      outs(%arg2: tensor<?x?xf32>)
     -> tensor<?x?xf32>
 
 //      CHECK: return %[[TD0]] : tensor<?x?xf32>

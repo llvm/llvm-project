@@ -1,4 +1,4 @@
-; RUN: opt < %s -sccp -simplifycfg -S | \
+; RUN: opt < %s -sccp -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | \
 ; RUN:   not grep then:
 
 define void @cprop_test11(i32* %data.1) {

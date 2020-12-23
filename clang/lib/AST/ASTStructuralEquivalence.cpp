@@ -233,6 +233,24 @@ class StmtComparer {
     return E1->isExact() == E2->isExact() && E1->getValue() == E2->getValue();
   }
 
+  bool IsStmtEquivalent(const GenericSelectionExpr *E1,
+                        const GenericSelectionExpr *E2) {
+    for (auto Pair : zip_longest(E1->getAssocTypeSourceInfos(),
+                                 E2->getAssocTypeSourceInfos())) {
+      Optional<TypeSourceInfo *> Child1 = std::get<0>(Pair);
+      Optional<TypeSourceInfo *> Child2 = std::get<1>(Pair);
+      // Skip this case if there are a different number of associated types.
+      if (!Child1 || !Child2)
+        return false;
+
+      if (!IsStructurallyEquivalent(Context, (*Child1)->getType(),
+                                    (*Child2)->getType()))
+        return false;
+    }
+
+    return true;
+  }
+
   bool IsStmtEquivalent(const ImplicitCastExpr *CastE1,
                         const ImplicitCastExpr *CastE2) {
     return IsStructurallyEquivalent(Context, CastE1->getType(),
@@ -546,6 +564,10 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   case TemplateArgument::Expression:
     return IsStructurallyEquivalent(Context, Arg1.getAsExpr(),
                                     Arg2.getAsExpr());
+
+  case TemplateArgument::UncommonValue:
+    // FIXME: Do we need to customize the comparison?
+    return Arg1.structurallyEquals(Arg2);
 
   case TemplateArgument::Pack:
     if (Arg1.pack_size() != Arg2.pack_size())

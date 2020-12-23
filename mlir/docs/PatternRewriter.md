@@ -238,7 +238,7 @@ between, and within dialects using a concept of "legality". This framework
 allows for transforming illegal operations to those supported by a provided
 conversion target, via a set of pattern-based operation rewriting patterns. This
 framework also provides support for type conversions. More information on this
-driver can be found [here](DialectConversion.nd).
+driver can be found [here](DialectConversion.md).
 
 ### Greedy Pattern Rewrite Driver
 

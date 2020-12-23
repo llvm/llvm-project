@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -simplifycfg -S | grep " = phi " | count 1
+; RUN: opt < %s -instcombine -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | grep " = phi " | count 1
 
 ; instcombine should sort the PHI operands so that simplifycfg can see the
 ; duplicate and remove it.

@@ -441,24 +441,24 @@ dc gzva, x17
 // CHECK: dc cigdvac, x16       // encoding: [0xb0,0x7e,0x0b,0xd5]
 // CHECK: dc gzva, x17          // encoding: [0x91,0x74,0x0b,0xd5]
 
-// NOMTE: DC IGVAC requires mte
-// NOMTE: DC IGSW requires mte
-// NOMTE: DC CGSW requires mte
-// NOMTE: DC CIGSW requires mte
-// NOMTE: DC CGVAC requires mte
-// NOMTE: DC CGVAP requires mte
-// NOMTE: DC CGVADP requires mte
-// NOMTE: DC CIGVAC requires mte
-// NOMTE: DC GVA requires mte
-// NOMTE: DC IGDVAC requires mte
-// NOMTE: DC IGDSW requires mte
-// NOMTE: DC CGDSW requires mte
-// NOMTE: DC CIGDSW requires mte
-// NOMTE: DC CGDVAC requires mte
-// NOMTE: DC CGDVAP requires mte
-// NOMTE: DC CGDVADP requires mte
-// NOMTE: DC CIGDVAC requires mte
-// NOMTE: DC GZVA requires mte
+// NOMTE: DC IGVAC requires: mte
+// NOMTE: DC IGSW requires: mte
+// NOMTE: DC CGSW requires: mte
+// NOMTE: DC CIGSW requires: mte
+// NOMTE: DC CGVAC requires: mte
+// NOMTE: DC CGVAP requires: mte
+// NOMTE: DC CGVADP requires: mte
+// NOMTE: DC CIGVAC requires: mte
+// NOMTE: DC GVA requires: mte
+// NOMTE: DC IGDVAC requires: mte
+// NOMTE: DC IGDSW requires: mte
+// NOMTE: DC CGDSW requires: mte
+// NOMTE: DC CIGDSW requires: mte
+// NOMTE: DC CGDVAC requires: mte
+// NOMTE: DC CGDVAP requires: mte
+// NOMTE: DC CGDVADP requires: mte
+// NOMTE: DC CIGDVAC requires: mte
+// NOMTE: DC GZVA requires: mte
 
 mrs x0, tco
 mrs x1, gcr_el1

@@ -81,6 +81,9 @@ protected:
   /// mapped to the address space
   lldb::addr_t m_interpreter_base;
 
+  /// Contains the pointer to the interpret module, if loaded.
+  std::weak_ptr<lldb_private::Module> m_interpreter_module;
+
   /// Loaded module list. (link map for each module)
   std::map<lldb::ModuleWP, lldb::addr_t, std::owner_less<lldb::ModuleWP>>
       m_loaded_modules;
@@ -94,6 +97,9 @@ protected:
   static bool RendezvousBreakpointHit(
       void *baton, lldb_private::StoppointCallbackContext *context,
       lldb::user_id_t break_id, lldb::user_id_t break_loc_id);
+
+  /// Indicates whether the initial set of modules was reported added.
+  bool m_initial_modules_added;
 
   /// Helper method for RendezvousBreakpointHit.  Updates LLDB's current set
   /// of loaded modules.

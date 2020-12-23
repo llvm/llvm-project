@@ -31,6 +31,7 @@ Clang-Tidy Checks
    `abseil-time-subtraction <abseil-time-subtraction.html>`_, "Yes"
    `abseil-upgrade-duration-conversions <abseil-upgrade-duration-conversions.html>`_, "Yes"
    `altera-kernel-name-restriction <altera-kernel-name-restriction.html>`_,
+   `altera-single-work-item-barrier <altera-single-work-item-barrier.html>`_, "Yes"
    `altera-struct-pack-align <altera-struct-pack-align.html>`_,
    `android-cloexec-accept <android-cloexec-accept.html>`_, "Yes"
    `android-cloexec-accept4 <android-cloexec-accept4.html>`_,

@@ -35,7 +35,7 @@ ComplexType ComplexType::get(Type elementType) {
   return Base::get(elementType.getContext(), elementType);
 }
 
-ComplexType ComplexType::getChecked(Type elementType, Location location) {
+ComplexType ComplexType::getChecked(Location location, Type elementType) {
   return Base::getChecked(location, elementType);
 }
 
@@ -76,7 +76,7 @@ IntegerType::SignednessSemantics IntegerType::getSignedness() const {
 IntegerType IntegerType::scaleElementBitwidth(unsigned scale) {
   if (!scale)
     return IntegerType();
-  return IntegerType::get(scale * getWidth(), getSignedness(), getContext());
+  return IntegerType::get(getContext(), scale * getWidth(), getSignedness());
 }
 
 //===----------------------------------------------------------------------===//
@@ -126,8 +126,8 @@ FloatType FloatType::scaleElementBitwidth(unsigned scale) {
 // FunctionType
 //===----------------------------------------------------------------------===//
 
-FunctionType FunctionType::get(TypeRange inputs, TypeRange results,
-                               MLIRContext *context) {
+FunctionType FunctionType::get(MLIRContext *context, TypeRange inputs,
+                               TypeRange results) {
   return Base::get(context, inputs, results);
 }
 
@@ -182,20 +182,20 @@ FunctionType::getWithoutArgsAndResults(ArrayRef<unsigned> argIndices,
     newResultTypes = newResultTypesBuffer;
   }
 
-  return get(newInputTypes, newResultTypes, getContext());
+  return get(getContext(), newInputTypes, newResultTypes);
 }
 
 //===----------------------------------------------------------------------===//
 // OpaqueType
 //===----------------------------------------------------------------------===//
 
-OpaqueType OpaqueType::get(Identifier dialect, StringRef typeData,
-                           MLIRContext *context) {
+OpaqueType OpaqueType::get(MLIRContext *context, Identifier dialect,
+                           StringRef typeData) {
   return Base::get(context, dialect, typeData);
 }
 
-OpaqueType OpaqueType::getChecked(Identifier dialect, StringRef typeData,
-                                  MLIRContext *context, Location location) {
+OpaqueType OpaqueType::getChecked(Location location, Identifier dialect,
+                                  StringRef typeData) {
   return Base::getChecked(location, dialect, typeData);
 }
 
@@ -313,8 +313,8 @@ VectorType VectorType::get(ArrayRef<int64_t> shape, Type elementType) {
   return Base::get(elementType.getContext(), shape, elementType);
 }
 
-VectorType VectorType::getChecked(ArrayRef<int64_t> shape, Type elementType,
-                                  Location location) {
+VectorType VectorType::getChecked(Location location, ArrayRef<int64_t> shape,
+                                  Type elementType) {
   return Base::getChecked(location, shape, elementType);
 }
 
@@ -379,9 +379,9 @@ RankedTensorType RankedTensorType::get(ArrayRef<int64_t> shape,
   return Base::get(elementType.getContext(), shape, elementType);
 }
 
-RankedTensorType RankedTensorType::getChecked(ArrayRef<int64_t> shape,
-                                              Type elementType,
-                                              Location location) {
+RankedTensorType RankedTensorType::getChecked(Location location,
+                                              ArrayRef<int64_t> shape,
+                                              Type elementType) {
   return Base::getChecked(location, shape, elementType);
 }
 
@@ -406,8 +406,8 @@ UnrankedTensorType UnrankedTensorType::get(Type elementType) {
   return Base::get(elementType.getContext(), elementType);
 }
 
-UnrankedTensorType UnrankedTensorType::getChecked(Type elementType,
-                                                  Location location) {
+UnrankedTensorType UnrankedTensorType::getChecked(Location location,
+                                                  Type elementType) {
   return Base::getChecked(location, elementType);
 }
 
@@ -448,9 +448,10 @@ MemRefType MemRefType::get(ArrayRef<int64_t> shape, Type elementType,
 /// UnknownLoc.  If the MemRefType defined by the arguments would be
 /// ill-formed, emits errors (to the handler registered with the context or to
 /// the error stream) and returns nullptr.
-MemRefType MemRefType::getChecked(ArrayRef<int64_t> shape, Type elementType,
+MemRefType MemRefType::getChecked(Location location, ArrayRef<int64_t> shape,
+                                  Type elementType,
                                   ArrayRef<AffineMap> affineMapComposition,
-                                  unsigned memorySpace, Location location) {
+                                  unsigned memorySpace) {
   return getImpl(shape, elementType, affineMapComposition, memorySpace,
                  location);
 }
@@ -524,9 +525,9 @@ UnrankedMemRefType UnrankedMemRefType::get(Type elementType,
   return Base::get(elementType.getContext(), elementType, memorySpace);
 }
 
-UnrankedMemRefType UnrankedMemRefType::getChecked(Type elementType,
-                                                  unsigned memorySpace,
-                                                  Location location) {
+UnrankedMemRefType UnrankedMemRefType::getChecked(Location location,
+                                                  Type elementType,
+                                                  unsigned memorySpace) {
   return Base::getChecked(location, elementType, memorySpace);
 }
 
@@ -694,12 +695,12 @@ LogicalResult mlir::getStridesAndOffset(MemRefType t,
 
 /// Get or create a new TupleType with the provided element types. Assumes the
 /// arguments define a well-formed type.
-TupleType TupleType::get(TypeRange elementTypes, MLIRContext *context) {
+TupleType TupleType::get(MLIRContext *context, TypeRange elementTypes) {
   return Base::get(context, elementTypes);
 }
 
 /// Get or create an empty tuple type.
-TupleType TupleType::get(MLIRContext *context) { return get({}, context); }
+TupleType TupleType::get(MLIRContext *context) { return get(context, {}); }
 
 /// Return the elements types for this tuple.
 ArrayRef<Type> TupleType::getTypes() const { return getImpl()->getTypes(); }

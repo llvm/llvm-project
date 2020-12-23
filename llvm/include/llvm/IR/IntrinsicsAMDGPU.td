@@ -1330,6 +1330,7 @@ def int_amdgcn_interp_p2 :
           // See int_amdgcn_v_interp_p1 for why this is IntrNoMem.
 
 // __builtin_amdgcn_interp_p1_f16 <i>, <attr_chan>, <attr>, <high>, <m0>
+// high selects whether high or low 16-bits are loaded from LDS
 def int_amdgcn_interp_p1_f16 :
   GCCBuiltin<"__builtin_amdgcn_interp_p1_f16">,
   Intrinsic<[llvm_float_ty],
@@ -1338,6 +1339,7 @@ def int_amdgcn_interp_p1_f16 :
              ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>]>;
 
 // __builtin_amdgcn_interp_p2_f16 <p1>, <j>, <attr_chan>, <attr>, <high>, <m0>
+// high selects whether high or low 16-bits are loaded from LDS
 def int_amdgcn_interp_p2_f16 :
   GCCBuiltin<"__builtin_amdgcn_interp_p2_f16">,
   Intrinsic<[llvm_half_ty],

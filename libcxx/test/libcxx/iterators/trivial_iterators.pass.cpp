@@ -166,13 +166,13 @@ int main(int, char**)
 //  iterators from libc++'s containers
 //
 
-//  string
+//  vector
     static_assert(( std::__libcpp_is_trivial_iterator<std::vector<char>::iterator>              ::value), "");
     static_assert(( std::__libcpp_is_trivial_iterator<std::vector<char>::const_iterator>        ::value), "");
     static_assert(( std::__libcpp_is_trivial_iterator<std::vector<char>::reverse_iterator>      ::value), "");
     static_assert(( std::__libcpp_is_trivial_iterator<std::vector<char>::const_reverse_iterator>::value), "");
 
-//  vector
+//  string
     static_assert(( std::__libcpp_is_trivial_iterator<std::basic_string<char>::iterator>              ::value), "");
     static_assert(( std::__libcpp_is_trivial_iterator<std::basic_string<char>::const_iterator>        ::value), "");
     static_assert(( std::__libcpp_is_trivial_iterator<std::basic_string<char>::reverse_iterator>      ::value), "");

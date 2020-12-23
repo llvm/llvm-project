@@ -254,7 +254,7 @@ def OMPC_AtomicDefaultMemOrder : Clause<"atomic_default_mem_order"> {
 }
 def OMPC_Allocate : Clause<"allocate"> {
   let clangClass = "OMPAllocateClause";
-  let flangClass = "OmpAllocateClause";
+  let flangClassValue = "OmpAllocateClause";
 }
 def OMPC_NonTemporal : Clause<"nontemporal"> {
   let clangClass = "OMPNontemporalClause";
@@ -1593,6 +1593,9 @@ def OMP_Scan : Directive<"scan"> {
     VersionedClause<OMPC_Exclusive, 50>
   ];
 }
+def OMP_Assumes : Directive<"assumes"> {}
+def OMP_BeginAssumes : Directive<"begin assumes"> {}
+def OMP_EndAssumes : Directive<"end assumes"> {}
 def OMP_BeginDeclareVariant : Directive<"begin declare variant"> {}
 def OMP_EndDeclareVariant : Directive<"end declare variant"> {}
 def OMP_ParallelWorkshare : Directive<"parallel workshare"> {

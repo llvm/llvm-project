@@ -56,9 +56,9 @@ void LLVMGoSetCurrentDebugLocation(LLVMBuilderRef Bref, unsigned Line,
   if (!Scope)
     unwrap(Bref)->SetCurrentDebugLocation(DebugLoc());
   else
-    unwrap(Bref)->SetCurrentDebugLocation(
-        DILocation::get(Scope->getContext(), Line, Col, unwrap<MDNode>(Scope),
-                        InlinedAt ? unwrap<MDNode>(InlinedAt) : nullptr));
+    unwrap(Bref)->SetCurrentDebugLocation(DILocation::get(
+        unwrap<MDNode>(Scope)->getContext(), Line, Col, unwrap<MDNode>(Scope),
+        InlinedAt ? unwrap<MDNode>(InlinedAt) : nullptr));
 }
 
 LLVMDebugLocMetadata LLVMGoGetCurrentDebugLocation(LLVMBuilderRef Bref) {

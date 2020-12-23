@@ -1881,6 +1881,10 @@ void PPCAIXAsmPrinter::emitTracebackTable() {
       (SecondHalfOfMandatoryField & 0xff000000) >> 24, 1);
 
   // Set the 6th byte of mandatory field.
+  bool ShouldEmitEHBlock = TargetLoweringObjectFileXCOFF::ShouldEmitEHBlock(MF);
+  if (ShouldEmitEHBlock)
+    SecondHalfOfMandatoryField |= TracebackTable::HasExtensionTableMask;
+
   uint32_t GPRSaved = 0;
 
   // X13 is reserved under 64-bit environment.
@@ -1977,6 +1981,35 @@ void PPCAIXAsmPrinter::emitTracebackTable() {
     OutStreamer->AddComment("AllocaUsed");
     OutStreamer->emitIntValueInHex(AllocReg, sizeof(AllocReg));
   }
+
+  uint8_t ExtensionTableFlag = 0;
+  if (SecondHalfOfMandatoryField & TracebackTable::HasExtensionTableMask) {
+    if (ShouldEmitEHBlock)
+      ExtensionTableFlag |= ExtendedTBTableFlag::TB_EH_INFO;
+
+    CommentOS << "ExtensionTableFlag = "
+              << getExtendedTBTableFlagString(ExtensionTableFlag);
+    EmitCommentAndValue(ExtensionTableFlag, sizeof(ExtensionTableFlag));
+  }
+
+  if (ExtensionTableFlag & ExtendedTBTableFlag::TB_EH_INFO) {
+    auto &Ctx = OutStreamer->getContext();
+    MCSymbol *EHInfoSym =
+        TargetLoweringObjectFileXCOFF::getEHInfoTableSymbol(MF);
+    MCSymbol *TOCEntry = lookUpOrCreateTOCEntry(EHInfoSym);
+    const MCSymbol *TOCBaseSym =
+        cast<MCSectionXCOFF>(getObjFileLowering().getTOCBaseSection())
+            ->getQualNameSymbol();
+    const MCExpr *Exp =
+        MCBinaryExpr::createSub(MCSymbolRefExpr::create(TOCEntry, Ctx),
+                                MCSymbolRefExpr::create(TOCBaseSym, Ctx), Ctx);
+
+    const DataLayout &DL = getDataLayout();
+    OutStreamer->emitValueToAlignment(4);
+    OutStreamer->AddComment("EHInfo Table");
+    OutStreamer->emitValue(Exp, DL.getPointerSize());
+  }
+
 #undef GENBOOLCOMMENT
 #undef GENVALUECOMMENT
 }

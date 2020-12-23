@@ -33,7 +33,7 @@ functions.
 
 ## Challenges
 
-As seen in the [README.md](README.md#benchmarking-regimes) the microbenchmarking
+As seen in the [README.md](README.md#stochastic-mode) the microbenchmarking
 facility should focus on measuring **low latency code**. If copying a few bytes
 takes in the order of a few cycles, the benchmark should be able to **measure
 accurately down to the cycle**.
@@ -76,7 +76,7 @@ Each vendor decides which performance counters to implement and their exact
 meaning. Although we want to benchmark `llvm-libc` memory functions for all
 available [target
 triples](https://clang.llvm.org/docs/CrossCompilation.html#target-triple), there
-are **no guarantees that the counter we're interested in is available.** 
+are **no guarantees that the counter we're interested in is available.**
 
 ### Additional imprecisions
 

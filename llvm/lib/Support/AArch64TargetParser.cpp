@@ -100,6 +100,8 @@ bool AArch64::getExtensionFeatures(uint64_t Extensions,
     Features.push_back("+sve2-bitperm");
   if (Extensions & AEK_RCPC)
     Features.push_back("+rcpc");
+  if (Extensions & AEK_BRBE)
+    Features.push_back("+brbe");
 
   return true;
 }
@@ -118,6 +120,8 @@ bool AArch64::getArchFeatures(AArch64::ArchKind AK,
     Features.push_back("+v8.5a");
   if (AK == AArch64::ArchKind::ARMV8_6A)
     Features.push_back("+v8.6a");
+  if (AK == AArch64::ArchKind::ARMV8_7A)
+    Features.push_back("+v8.7a");
   if(AK == AArch64::ArchKind::ARMV8R)
     Features.push_back("+v8r");
 

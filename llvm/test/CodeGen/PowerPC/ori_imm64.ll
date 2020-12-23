@@ -37,10 +37,9 @@ entry:
 define i64 @ori_test_4(i64 %a) {
 ; CHECK-LABEL: ori_test_4:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li 4, 4112
-; CHECK-NEXT:    sldi 4, 4, 32
-; CHECK-NEXT:    oris 4, 4, 4112
-; CHECK-NEXT:    ori 4, 4, 65535
+; CHECK-NEXT:    lis 4, -32640
+; CHECK-NEXT:    ori 4, 4, 32903
+; CHECK-NEXT:    rldicl 4, 4, 13, 19
 ; CHECK-NEXT:    or 3, 3, 4
 ; CHECK-NEXT:    blr
 entry:
@@ -53,7 +52,7 @@ define i64 @test_test_5(i64 %a, i64 %b) {
 ; CHECK-LABEL: test_test_5:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 5, 1
-; CHECK-NEXT:    sldi 5, 5, 32
+; CHECK-NEXT:    rldic 5, 5, 32, 31
 ; CHECK-NEXT:    or 5, 3, 5
 ; CHECK-NEXT:    add 4, 5, 4
 ; CHECK-NEXT:    sub 3, 3, 4

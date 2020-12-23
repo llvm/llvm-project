@@ -161,9 +161,21 @@ class MarshallingInfoString<code keypath, code defaultvalue="std::string()">
   code Denormalizer = "denormalizeString";
 }
 
+class MarshallingInfoStringInt<code keypath, code defaultvalue="0", code type="unsigned">
+  : MarshallingInfo<keypath, defaultvalue> {
+  code Normalizer = "normalizeStringIntegral<"#type#">";
+  code Denormalizer = "denormalizeString";
+}
+
 class MarshallingInfoFlag<code keypath, code defaultvalue = "false">
   : MarshallingInfo<keypath, defaultvalue> {
   code Normalizer = "normalizeSimpleFlag";
+  code Denormalizer = "denormalizeSimpleFlag";
+}
+
+class MarshallingInfoNegativeFlag<code keypath, code defaultvalue = "true">
+  : MarshallingInfo<keypath, defaultvalue> {
+  code Normalizer = "normalizeSimpleNegativeFlag";
   code Denormalizer = "denormalizeSimpleFlag";
 }
 
@@ -176,17 +188,14 @@ class MarshallingInfoBitfieldFlag<code keypath, code value>
 
 // Marshalling info for booleans. Applied to the flag setting keypath to false.
 class MarshallingInfoBooleanFlag<code keypath, code defaultvalue, code value, code name,
-                                 code other_value, code other_name, string other_spelling>
+                                 code other_value, code other_name>
   : MarshallingInfoFlag<keypath, defaultvalue> {
   code Normalizer = "makeBooleanOptionNormalizer("#value#", "#other_value#", OPT_"#other_name#")";
-  code Denormalizer = "makeBooleanOptionDenormalizer("#value#", \""#other_spelling#"\")";
+  code Denormalizer = "makeBooleanOptionDenormalizer("#value#")";
 }
 
 // Mixins for additional marshalling attributes.
 
-class IsNegative {
-  code Normalizer = "normalizeSimpleNegativeFlag";
-}
 class AlwaysEmit { bit ShouldAlwaysEmit = true; }
 class Normalizer<code normalizer> { code Normalizer = normalizer; }
 class Denormalizer<code denormalizer> { code Denormalizer = denormalizer; }
@@ -195,9 +204,6 @@ class NormalizedValues<list<code> definitions> { list<code> NormalizedValues = d
 class AutoNormalizeEnum {
   code Normalizer = "normalizeSimpleEnum";
   code Denormalizer = "denormalizeSimpleEnum";
-}
-class AutoNormalizeEnumJoined : AutoNormalizeEnum {
-  code Denormalizer = "denormalizeSimpleEnumJoined";
 }
 class ValueMerger<code merger> { code ValueMerger = merger; }
 class ValueExtractor<code extractor> { code ValueExtractor = extractor; }

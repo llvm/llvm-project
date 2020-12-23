@@ -107,7 +107,7 @@ public:
     // TODO: when we go to k > 1-D vectors adapt minorRank.
     minorRank = 1;
     majorRank = vectorType.getRank() - minorRank;
-    leadingRank = xferOp.getLeadingMemRefRank();
+    leadingRank = xferOp.getLeadingShapedRank();
     majorVectorType =
         VectorType::get(vectorType.getShape().take_front(majorRank),
                         vectorType.getElementType());
@@ -115,9 +115,9 @@ public:
         VectorType::get(vectorType.getShape().take_back(minorRank),
                         vectorType.getElementType());
     /// Memref of minor vector type is used for individual transfers.
-    memRefMinorVectorType =
-        MemRefType::get(majorVectorType.getShape(), minorVectorType, {},
-                        xferOp.getMemRefType().getMemorySpace());
+    memRefMinorVectorType = MemRefType::get(
+        majorVectorType.getShape(), minorVectorType, {},
+        xferOp.getShapedType().template cast<MemRefType>().getMemorySpace());
   }
 
   LogicalResult doReplace();
@@ -155,7 +155,7 @@ void NDTransferOpHelper<ConcreteOp>::emitLoops(
                             const MemRefBoundsCapture &)>
         loopBodyBuilder) {
   /// Loop nest operates on the major dimensions
-  MemRefBoundsCapture memrefBoundsCapture(xferOp.memref());
+  MemRefBoundsCapture memrefBoundsCapture(xferOp.source());
 
   if (options.unroll) {
     auto shape = majorVectorType.getShape();
@@ -272,9 +272,9 @@ LogicalResult NDTransferOpHelper<TransferReadOp>::doReplace() {
       indexing.append(leadingOffsets.begin(), leadingOffsets.end());
       indexing.append(majorIvsPlusOffsets.begin(), majorIvsPlusOffsets.end());
       indexing.append(minorOffsets.begin(), minorOffsets.end());
-      Value memref = xferOp.memref();
+      Value memref = xferOp.source();
       auto map =
-          getTransferMinorIdentityMap(xferOp.getMemRefType(), minorVectorType);
+          getTransferMinorIdentityMap(xferOp.getShapedType(), minorVectorType);
       ArrayAttr masked;
       if (!xferOp.isMaskedDim(xferOp.getVectorType().getRank() - 1)) {
         OpBuilder &b = ScopedContext::getBuilderRef();
@@ -379,13 +379,13 @@ LogicalResult NDTransferOpHelper<TransferWriteOp>::doReplace() {
       else
         result = std_load(alloc, majorIvs);
       auto map =
-          getTransferMinorIdentityMap(xferOp.getMemRefType(), minorVectorType);
+          getTransferMinorIdentityMap(xferOp.getShapedType(), minorVectorType);
       ArrayAttr masked;
       if (!xferOp.isMaskedDim(xferOp.getVectorType().getRank() - 1)) {
         OpBuilder &b = ScopedContext::getBuilderRef();
         masked = b.getBoolArrayAttr({false});
       }
-      vector_transfer_write(result, xferOp.memref(), indexing,
+      vector_transfer_write(result, xferOp.source(), indexing,
                             AffineMapAttr::get(map), masked);
     };
 
@@ -422,7 +422,7 @@ template <typename TransferOpTy>
 static int computeCoalescedIndex(TransferOpTy transfer) {
   // rank of the remote memory access, coalescing behavior occurs on the
   // innermost memory dimension.
-  auto remoteRank = transfer.getMemRefType().getRank();
+  auto remoteRank = transfer.getShapedType().getRank();
   // Iterate over the results expressions of the permutation map to determine
   // the loop order for creating pointwise copies between remote and local
   // memories.
@@ -536,13 +536,14 @@ LogicalResult VectorTransferRewriter<TransferReadOp>::matchAndRewrite(
   using namespace mlir::edsc::op;
 
   TransferReadOp transfer = cast<TransferReadOp>(op);
-
+  auto memRefType = transfer.getShapedType().dyn_cast<MemRefType>();
+  if (!memRefType)
+    return failure();
   // Fall back to a loop if the fastest varying stride is not 1 or it is
   // permuted.
   int64_t offset;
   SmallVector<int64_t, 4> strides;
-  auto successStrides =
-      getStridesAndOffset(transfer.getMemRefType(), strides, offset);
+  auto successStrides = getStridesAndOffset(memRefType, strides, offset);
   if (succeeded(successStrides) && strides.back() == 1 &&
       transfer.permutation_map().isMinorIdentity()) {
     // If > 1D, emit a bunch of loops around 1-D vector transfers.
@@ -557,8 +558,8 @@ LogicalResult VectorTransferRewriter<TransferReadOp>::matchAndRewrite(
   // Conservative lowering to scalar load / stores.
   // 1. Setup all the captures.
   ScopedContext scope(rewriter, transfer.getLoc());
-  StdIndexedValue remote(transfer.memref());
-  MemRefBoundsCapture memRefBoundsCapture(transfer.memref());
+  StdIndexedValue remote(transfer.source());
+  MemRefBoundsCapture memRefBoundsCapture(transfer.source());
   VectorBoundsCapture vectorBoundsCapture(transfer.vector());
   int coalescedIdx = computeCoalescedIndex(transfer);
   // Swap the vectorBoundsCapture which will reorder loop bounds.
@@ -584,7 +585,7 @@ LogicalResult VectorTransferRewriter<TransferReadOp>::matchAndRewrite(
       std::swap(ivsStorage.back(), ivsStorage[coalescedIdx]);
 
     ArrayRef<Value> ivs(ivsStorage);
-    Value pos = std_index_cast(IntegerType::get(32, ctx), ivs.back());
+    Value pos = std_index_cast(IntegerType::get(ctx, 32), ivs.back());
     Value inVector = local(ivs.drop_back());
     auto loadValue = [&](ArrayRef<Value> indices) {
       Value vector = vector_insert_element(remote(indices), inVector, pos);
@@ -621,13 +622,15 @@ LogicalResult VectorTransferRewriter<TransferWriteOp>::matchAndRewrite(
   using namespace edsc::op;
 
   TransferWriteOp transfer = cast<TransferWriteOp>(op);
+  auto memRefType = transfer.getShapedType().template dyn_cast<MemRefType>();
+  if (!memRefType)
+    return failure();
 
   // Fall back to a loop if the fastest varying stride is not 1 or it is
   // permuted.
   int64_t offset;
   SmallVector<int64_t, 4> strides;
-  auto successStrides =
-      getStridesAndOffset(transfer.getMemRefType(), strides, offset);
+  auto successStrides = getStridesAndOffset(memRefType, strides, offset);
   if (succeeded(successStrides) && strides.back() == 1 &&
       transfer.permutation_map().isMinorIdentity()) {
     // If > 1D, emit a bunch of loops around 1-D vector transfers.
@@ -641,8 +644,8 @@ LogicalResult VectorTransferRewriter<TransferWriteOp>::matchAndRewrite(
 
   // 1. Setup all the captures.
   ScopedContext scope(rewriter, transfer.getLoc());
-  StdIndexedValue remote(transfer.memref());
-  MemRefBoundsCapture memRefBoundsCapture(transfer.memref());
+  StdIndexedValue remote(transfer.source());
+  MemRefBoundsCapture memRefBoundsCapture(transfer.source());
   Value vectorValue(transfer.vector());
   VectorBoundsCapture vectorBoundsCapture(transfer.vector());
   int coalescedIdx = computeCoalescedIndex(transfer);
@@ -671,7 +674,7 @@ LogicalResult VectorTransferRewriter<TransferWriteOp>::matchAndRewrite(
 
     ArrayRef<Value> ivs(ivsStorage);
     Value pos =
-        std_index_cast(IntegerType::get(32, op->getContext()), ivs.back());
+        std_index_cast(IntegerType::get(op->getContext(), 32), ivs.back());
     auto storeValue = [&](ArrayRef<Value> indices) {
       Value scalar = vector_extract_element(local(ivs.drop_back()), pos);
       remote(indices) = scalar;

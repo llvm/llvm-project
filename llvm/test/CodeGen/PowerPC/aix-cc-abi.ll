@@ -241,7 +241,7 @@ entry:
 
 ; 64BIT: ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
 ; 64BIT: renamable $x3 = LI8 1
-; 64BIT: renamable $x5 = RLDICR killed renamable $x3, 31, 32
+; 64BIT: renamable $x5 = RLDIC killed renamable $x3, 31, 32
 ; 64BIT: $x3 = LI8 1
 ; 64BIT: $x4 = LI8 1
 ; 64BIT: $x6 = LIS8 32768

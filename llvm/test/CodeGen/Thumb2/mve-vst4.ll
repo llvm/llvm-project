@@ -11,13 +11,13 @@ define void @vst4_v2i32(<2 x i32> *%src, <8 x i32> *%dst) {
 ; CHECK-NEXT:    ldrd lr, r12, [r0]
 ; CHECK-NEXT:    ldrd r3, r2, [r0, #8]
 ; CHECK-NEXT:    ldrd r4, r0, [r0, #16]
-; CHECK-NEXT:    vmov q1[2], q1[0], r0, r4
+; CHECK-NEXT:    vmov q1[2], q1[0], r4, r0
 ; CHECK-NEXT:    vmov.f64 d0, d2
 ; CHECK-NEXT:    vmov.f32 s1, s6
 ; CHECK-NEXT:    vmov.f32 s2, s4
 ; CHECK-NEXT:    vmov.f32 s3, s6
-; CHECK-NEXT:    vmov q1[2], q1[0], r3, lr
-; CHECK-NEXT:    vmov q1[3], q1[1], r2, r12
+; CHECK-NEXT:    vmov q1[2], q1[0], lr, r3
+; CHECK-NEXT:    vmov q1[3], q1[1], r12, r2
 ; CHECK-NEXT:    vmov.f64 d4, d2
 ; CHECK-NEXT:    vmov.f32 s9, s6
 ; CHECK-NEXT:    vmov.f32 s10, s0
@@ -207,19 +207,19 @@ define void @vst4_v2i16(<2 x i16> *%src, <8 x i16> *%dst) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, lr}
 ; CHECK-NEXT:    push {r4, lr}
-; CHECK-NEXT:    ldrh r2, [r0]
+; CHECK-NEXT:    ldrh r2, [r0, #2]
 ; CHECK-NEXT:    ldrh.w r12, [r0, #4]
 ; CHECK-NEXT:    ldrh r3, [r0, #8]
 ; CHECK-NEXT:    ldrh.w lr, [r0, #6]
 ; CHECK-NEXT:    ldrh r4, [r0, #10]
-; CHECK-NEXT:    ldrh r0, [r0, #2]
+; CHECK-NEXT:    ldrh r0, [r0]
 ; CHECK-NEXT:    vmov q0[2], q0[0], r0, r2
-; CHECK-NEXT:    vmov r2, s0
-; CHECK-NEXT:    vmov.16 q0[0], r2
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vmov.16 q0[0], r0
 ; CHECK-NEXT:    vmov.16 q0[1], r12
 ; CHECK-NEXT:    vmov.16 q0[2], r3
 ; CHECK-NEXT:    vmov.16 q0[3], r3
-; CHECK-NEXT:    vmov.16 q0[4], r0
+; CHECK-NEXT:    vmov.16 q0[4], r2
 ; CHECK-NEXT:    vmov.16 q0[5], lr
 ; CHECK-NEXT:    vmov.16 q0[6], r4
 ; CHECK-NEXT:    vmov.16 q0[7], r4
@@ -374,7 +374,7 @@ define void @vst4_v2i8(<2 x i8> *%src, <8 x i8> *%dst) {
 ; CHECK-NEXT:    ldrb r2, [r0]
 ; CHECK-NEXT:    ldrb r3, [r0, #1]
 ; CHECK-NEXT:    ldrb.w r12, [r0, #2]
-; CHECK-NEXT:    vmov q0[2], q0[0], r3, r2
+; CHECK-NEXT:    vmov q0[2], q0[0], r2, r3
 ; CHECK-NEXT:    ldrb.w lr, [r0, #3]
 ; CHECK-NEXT:    vmov r2, s0
 ; CHECK-NEXT:    ldrb r4, [r0, #5]
@@ -912,8 +912,8 @@ define void @vst4_v4f16(<4 x half> *%src, <16 x half> *%dst) {
 ; CHECK-NEXT:    ldrd lr, r12, [r0]
 ; CHECK-NEXT:    ldrd r3, r2, [r0, #8]
 ; CHECK-NEXT:    ldrd r4, r0, [r0, #16]
-; CHECK-NEXT:    vmov q1[2], q1[0], r3, lr
-; CHECK-NEXT:    vmov q1[3], q1[1], r2, r12
+; CHECK-NEXT:    vmov q1[2], q1[0], lr, r3
+; CHECK-NEXT:    vmov q1[3], q1[1], r12, r2
 ; CHECK-NEXT:    vmov q0[2], q0[0], r4, r4
 ; CHECK-NEXT:    vmov r3, s5
 ; CHECK-NEXT:    vmov q0[3], q0[1], r0, r0

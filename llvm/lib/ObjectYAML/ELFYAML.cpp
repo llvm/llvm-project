@@ -1065,6 +1065,9 @@ struct NormalizedOther {
       Map["STO_MIPS_PLT"] = ELF::STO_MIPS_PLT;
       Map["STO_MIPS_OPTIONAL"] = ELF::STO_MIPS_OPTIONAL;
     }
+
+    if (EMachine == ELF::EM_AARCH64)
+      Map["STO_AARCH64_VARIANT_PCS"] = ELF::STO_AARCH64_VARIANT_PCS;
     return Map;
   }
 
@@ -1114,8 +1117,8 @@ void MappingTraits<ELFYAML::Symbol>::mapping(IO &IO, ELFYAML::Symbol &Symbol) {
   IO.mapOptional("Section", Symbol.Section);
   IO.mapOptional("Index", Symbol.Index);
   IO.mapOptional("Binding", Symbol.Binding, ELFYAML::ELF_STB(0));
-  IO.mapOptional("Value", Symbol.Value, Hex64(0));
-  IO.mapOptional("Size", Symbol.Size, Hex64(0));
+  IO.mapOptional("Value", Symbol.Value);
+  IO.mapOptional("Size", Symbol.Size);
 
   // Symbol's Other field is a bit special. It is usually a field that
   // represents st_other and holds the symbol visibility. However, on some

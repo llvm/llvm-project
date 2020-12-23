@@ -14,7 +14,6 @@
 
 #include "llvm/Transforms/Utils/LoopVersioning.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemorySSA.h"

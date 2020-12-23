@@ -15,6 +15,7 @@ add_mlir_library(MLIRSPIRVTestPasses
   MLIRIR
   MLIRPass
   MLIRSPIRV
+  MLIRSPIRVConversion
   MLIRSPIRVModuleCombiner
   MLIRSupport
   )

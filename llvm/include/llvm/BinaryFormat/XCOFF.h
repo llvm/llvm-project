@@ -395,14 +395,16 @@ struct TracebackTable {
 
 // Extended Traceback table flags.
 enum ExtendedTBTableFlag : uint8_t {
-  TB_OS1 = 0x80,         ///< Reserved for OS use
-  TB_RESERVED = 0x40,    ///< Reserved for compiler
-  TB_SSP_CANARY = 0x20,  ///< stack smasher canary present on stack
-  TB_OS2 = 0x10,         ///< Reserved for OS use
-  TB_LONGTBTABLE2 = 0x01 ///< Additional tbtable extension exists
+  TB_OS1 = 0x80,         ///< Reserved for OS use.
+  TB_RESERVED = 0x40,    ///< Reserved for compiler.
+  TB_SSP_CANARY = 0x20,  ///< stack smasher canary present on stack.
+  TB_OS2 = 0x10,         ///< Reserved for OS use.
+  TB_EH_INFO = 0x08,     ///< Exception handling info present.
+  TB_LONGTBTABLE2 = 0x01 ///< Additional tbtable extension exists.
 };
 
 StringRef getNameForTracebackTableLanguageId(TracebackTable::LanguageID LangId);
+SmallString<32> getExtendedTBTableFlagString(uint8_t Flag);
 
 } // end namespace XCOFF
 } // end namespace llvm

@@ -1,6 +1,6 @@
 ; Test merging of blocks with phi nodes.
 ;
-; RUN: opt < %s -simplifycfg -S > %t
+; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S > %t
 ; RUN: not grep N: %t
 ; RUN: not grep X: %t
 ; RUN: not grep 'switch i32[^U]+%U' %t

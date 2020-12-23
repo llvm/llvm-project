@@ -11,12 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 
-#ifndef CONVERT_GPU_TO_SPIRV
-#define CONVERT_GPU_TO_SPIRV
+#ifndef MLIR_CONVERSION_GPU_TO_SPIRV
+#define MLIR_CONVERSION_GPU_TO_SPIRV
 
 include "mlir/Dialect/GPU/GPUOps.td"
-include "mlir/Dialect/SPIRV/SPIRVStructureOps.td"
+include "mlir/Dialect/SPIRV/IR/SPIRVStructureOps.td"
 
 def : Pat<(GPU_ModuleEndOp), (SPV_ModuleEndOp)>;
 
-#endif // CONVERT_GPU_TO_SPIRV
+#endif // MLIR_CONVERSION_GPU_TO_SPIRV

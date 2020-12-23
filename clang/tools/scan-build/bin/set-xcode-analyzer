@@ -5,8 +5,8 @@
 # This one has the scripting bridge enabled.
 
 import sys
-if sys.version_info < (2, 7):
-    print "set-xcode-analyzer requires Python 2.7 or later"
+if sys.version_info < (3, 6):
+    print "set-xcode-analyzer requires Python 3.6 or later"
     sys.exit(1)
 
 import os

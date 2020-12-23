@@ -2245,6 +2245,7 @@ static void writeDIModule(raw_ostream &Out, const DIModule *N,
   Printer.printString("apinotes", N->getAPINotesFile());
   Printer.printMetadata("file", N->getRawFile());
   Printer.printInt("line", N->getLineNo());
+  Printer.printBool("isDecl", N->getIsDecl(), /* Default */ false);
   Out << ")";
 }
 

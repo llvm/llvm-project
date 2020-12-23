@@ -1,4 +1,4 @@
-; RUN: opt < %s -mattr=avx -force-vector-width=2 -force-vector-interleave=1 -loop-vectorize -simplifycfg -S | FileCheck %s
+; RUN: opt < %s -mattr=avx -force-vector-width=2 -force-vector-interleave=1 -loop-vectorize -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
 ; RUN: opt -mcpu=skylake-avx512 -S -force-vector-width=8 -force-vector-interleave=1 -loop-vectorize < %s | FileCheck %s --check-prefix=SINK-GATHER
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"

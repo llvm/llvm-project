@@ -128,6 +128,8 @@ public:
                         [](const Loop *L) { return L->isLoopSimplifyForm(); });
   }
 
+  StringRef getName() const { return Loops.front()->getName(); }
+
 protected:
   const unsigned MaxPerfectDepth; // maximum perfect nesting depth level.
   LoopVectorTy Loops; // the loops in the nest (in breadth first order).

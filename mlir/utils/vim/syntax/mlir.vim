@@ -40,7 +40,7 @@ syn keyword mlirOps alloc alloca addf addi and call call_indirect cmpf cmpi
 syn keyword mlirOps constant dealloc divf dma_start dma_wait dim exp
 syn keyword mlirOps getTensor index_cast load log memref_cast
 syn keyword mlirOps memref_shape_cast mulf muli negf powf prefetch rsqrt sitofp
-syn keyword mlirOps splat store select sqrt subf subi subview tanh tensor_cast
+syn keyword mlirOps splat store select sqrt subf subi subview tanh
 syn keyword mlirOps view
 
 " Affine ops.

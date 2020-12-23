@@ -245,6 +245,56 @@ LogicalResult OperationVerifier::verifyOperation(Operation &op) {
   return success();
 }
 
+/// Attach a note to an in-flight diagnostic that provide more information about
+/// where an op operand is defined.
+static void attachNoteForOperandDefinition(InFlightDiagnostic &diag,
+                                           Operation &op, Value operand) {
+  if (auto *useOp = operand.getDefiningOp()) {
+    Diagnostic &note = diag.attachNote(useOp->getLoc());
+    note << "operand defined here";
+    Block *block1 = op.getBlock();
+    Block *block2 = useOp->getBlock();
+    Region *region1 = block1->getParent();
+    Region *region2 = block2->getParent();
+    if (block1 == block2)
+      note << " (op in the same block)";
+    else if (region1 == region2)
+      note << " (op in the same region)";
+    else if (region2->isProperAncestor(region1))
+      note << " (op in a parent region)";
+    else if (region1->isProperAncestor(region2))
+      note << " (op in a child region)";
+    else
+      note << " (op is neither in a parent nor in a child region)";
+    return;
+  }
+  // Block argument case.
+  Block *block1 = op.getBlock();
+  Block *block2 = operand.cast<BlockArgument>().getOwner();
+  Region *region1 = block1->getParent();
+  Region *region2 = block2->getParent();
+  Location loc = UnknownLoc::get(op.getContext());
+  if (block2->getParentOp())
+    loc = block2->getParentOp()->getLoc();
+  Diagnostic &note = diag.attachNote(loc);
+  if (!region2) {
+    note << " (block without parent)";
+    return;
+  }
+  if (block1 == block2)
+    llvm::report_fatal_error("Internal error in dominance verification");
+  int index = std::distance(region2->begin(), block2->getIterator());
+  note << "operand defined as a block argument (block #" << index;
+  if (region1 == region2)
+    note << " in the same region)";
+  else if (region2->isProperAncestor(region1))
+    note << " in a parent region)";
+  else if (region1->isProperAncestor(region2))
+    note << " in a child region)";
+  else
+    note << " neither in a parent nor in a child region)";
+}
+
 LogicalResult OperationVerifier::verifyDominance(Region &region) {
   // Verify the dominance of each of the held operations.
   for (Block &block : region) {
@@ -254,14 +304,14 @@ LogicalResult OperationVerifier::verifyDominance(Region &region) {
         // Check that operands properly dominate this use.
         for (unsigned operandNo = 0, e = op.getNumOperands(); operandNo != e;
              ++operandNo) {
-          auto operand = op.getOperand(operandNo);
+          Value operand = op.getOperand(operandNo);
           if (domInfo->properlyDominates(operand, &op))
             continue;
 
-          auto diag = op.emitError("operand #")
-                      << operandNo << " does not dominate this use";
-          if (auto *useOp = operand.getDefiningOp())
-            diag.attachNote(useOp->getLoc()) << "operand defined here";
+          InFlightDiagnostic diag = op.emitError("operand #")
+                                    << operandNo
+                                    << " does not dominate this use";
+          attachNoteForOperandDefinition(diag, op, operand);
           return failure();
         }
     // Recursively verify dominance within each operation in the

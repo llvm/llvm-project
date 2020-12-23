@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 ; RUN: opt < %s -loop-vectorize -disable-output -debug-only=loop-vectorize 2>&1 | FileCheck %s --check-prefix=COST
-; RUN: opt < %s -loop-vectorize -force-vector-width=2 -instcombine -simplifycfg -S | FileCheck %s
+; RUN: opt < %s -loop-vectorize -force-vector-width=2 -instcombine -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"

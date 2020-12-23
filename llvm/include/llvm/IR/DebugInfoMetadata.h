@@ -2297,49 +2297,52 @@ class DIModule : public DIScope {
   friend class LLVMContextImpl;
   friend class MDNode;
   unsigned LineNo;
+  bool IsDecl;
 
   DIModule(LLVMContext &Context, StorageType Storage, unsigned LineNo,
-           ArrayRef<Metadata *> Ops)
+           bool IsDecl, ArrayRef<Metadata *> Ops)
       : DIScope(Context, DIModuleKind, Storage, dwarf::DW_TAG_module, Ops),
-        LineNo(LineNo) {}
+        LineNo(LineNo), IsDecl(IsDecl) {}
   ~DIModule() = default;
 
   static DIModule *getImpl(LLVMContext &Context, DIFile *File, DIScope *Scope,
                            StringRef Name, StringRef ConfigurationMacros,
                            StringRef IncludePath, StringRef APINotesFile,
-                           unsigned LineNo, StorageType Storage,
+                           unsigned LineNo, bool IsDecl, StorageType Storage,
                            bool ShouldCreate = true) {
     return getImpl(Context, File, Scope, getCanonicalMDString(Context, Name),
                    getCanonicalMDString(Context, ConfigurationMacros),
                    getCanonicalMDString(Context, IncludePath),
-                   getCanonicalMDString(Context, APINotesFile), LineNo, Storage,
-                   ShouldCreate);
+                   getCanonicalMDString(Context, APINotesFile), LineNo, IsDecl,
+                   Storage, ShouldCreate);
   }
   static DIModule *getImpl(LLVMContext &Context, Metadata *File,
                            Metadata *Scope, MDString *Name,
                            MDString *ConfigurationMacros, MDString *IncludePath,
-                           MDString *APINotesFile, unsigned LineNo,
+                           MDString *APINotesFile, unsigned LineNo, bool IsDecl,
                            StorageType Storage, bool ShouldCreate = true);
 
   TempDIModule cloneImpl() const {
     return getTemporary(getContext(), getFile(), getScope(), getName(),
                         getConfigurationMacros(), getIncludePath(),
-                        getAPINotesFile(), getLineNo());
+                        getAPINotesFile(), getLineNo(), getIsDecl());
   }
 
 public:
   DEFINE_MDNODE_GET(DIModule,
                     (DIFile * File, DIScope *Scope, StringRef Name,
                      StringRef ConfigurationMacros, StringRef IncludePath,
-                     StringRef APINotesFile, unsigned LineNo),
+                     StringRef APINotesFile, unsigned LineNo,
+                     bool IsDecl = false),
                     (File, Scope, Name, ConfigurationMacros, IncludePath,
-                     APINotesFile, LineNo))
+                     APINotesFile, LineNo, IsDecl))
   DEFINE_MDNODE_GET(DIModule,
                     (Metadata * File, Metadata *Scope, MDString *Name,
                      MDString *ConfigurationMacros, MDString *IncludePath,
-                     MDString *APINotesFile, unsigned LineNo),
+                     MDString *APINotesFile, unsigned LineNo,
+                     bool IsDecl = false),
                     (File, Scope, Name, ConfigurationMacros, IncludePath,
-                     APINotesFile, LineNo))
+                     APINotesFile, LineNo, IsDecl))
 
   TempDIModule clone() const { return cloneImpl(); }
 
@@ -2349,6 +2352,7 @@ public:
   StringRef getIncludePath() const { return getStringOperand(4); }
   StringRef getAPINotesFile() const { return getStringOperand(5); }
   unsigned getLineNo() const { return LineNo; }
+  bool getIsDecl() const { return IsDecl; }
 
   Metadata *getRawScope() const { return getOperand(1); }
   MDString *getRawName() const { return getOperandAs<MDString>(2); }

@@ -191,8 +191,8 @@ TEST(BasicBlockUtils, SplitEdge_ex3) {
   BasicAAResult BAA(DL, *F, TLI, AC, &DT);
   AA.addAAResult(BAA);
 
-  MemorySSA *MSSA = new MemorySSA(*F, &AA, &DT);
-  MemorySSAUpdater *Updater = new MemorySSAUpdater(MSSA);
+  MemorySSA MSSA(*F, &AA, &DT);
+  MemorySSAUpdater Updater(&MSSA);
 
   BasicBlock *SrcBlock;
   BasicBlock *DestBlock;
@@ -200,9 +200,9 @@ TEST(BasicBlockUtils, SplitEdge_ex3) {
 
   SrcBlock = getBasicBlockByName(*F, "header");
   DestBlock = getBasicBlockByName(*F, "bb0");
-  NewBB = SplitEdge(SrcBlock, DestBlock, &DT, &LI, Updater);
+  NewBB = SplitEdge(SrcBlock, DestBlock, &DT, &LI, &Updater);
 
-  Updater->getMemorySSA()->verifyMemorySSA();
+  Updater.getMemorySSA()->verifyMemorySSA();
   EXPECT_TRUE(DT.verify());
   EXPECT_NE(LI.getLoopFor(SrcBlock), nullptr);
   EXPECT_NE(LI.getLoopFor(DestBlock), nullptr);
@@ -254,6 +254,7 @@ TEST(BasicBlockUtils, splitBasicBlockBefore_ex1) {
   EXPECT_EQ(DestBlock->getSinglePredecessor(), NewBB);
 }
 
+#ifndef NDEBUG
 TEST(BasicBlockUtils, splitBasicBlockBefore_ex2) {
   LLVMContext C;
   std::unique_ptr<Module> M =
@@ -285,6 +286,7 @@ TEST(BasicBlockUtils, splitBasicBlockBefore_ex2) {
       },
       "cannot split on multi incoming phis");
 }
+#endif
 
 TEST(BasicBlockUtils, NoUnreachableBlocksToEliminate) {
   LLVMContext C;

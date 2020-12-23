@@ -275,7 +275,7 @@ signed char fp16_char_overflow(__fp16 *p) {
 
 // CHECK-COMMON-LABEL: @float_float_overflow
 float float_float_overflow(double f) {
-  // CHECK-UBSAN-NOT: call {{.*}} @__ubsan_handle_float_cast_overflow(i8* bitcast ({{.*}} @[[LINE_1600]] to i8*),
+  // CHECK-UBSAN-NOT: call {{.*}} @__ubsan_handle_float_cast_overflow(
   // CHECK-TRAP-NOT:  call {{.*}} @llvm.ubsantrap(i8 19) [[NR_NUW]]
   // CHECK-COMMON: }
   return f;

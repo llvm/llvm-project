@@ -35,6 +35,47 @@ using namespace llvm;
 STATISTIC(ArtificialDbgLine,
           "Number of probes that have an artificial debug line");
 
+PseudoProbeManager::PseudoProbeManager(const Module &M) {
+  if (NamedMDNode *FuncInfo = M.getNamedMetadata(PseudoProbeDescMetadataName)) {
+    for (const auto *Operand : FuncInfo->operands()) {
+      const auto *MD = cast<MDNode>(Operand);
+      auto GUID =
+          mdconst::dyn_extract<ConstantInt>(MD->getOperand(0))->getZExtValue();
+      auto Hash =
+          mdconst::dyn_extract<ConstantInt>(MD->getOperand(1))->getZExtValue();
+      GUIDToProbeDescMap.try_emplace(GUID, PseudoProbeDescriptor(GUID, Hash));
+    }
+  }
+}
+
+const PseudoProbeDescriptor *
+PseudoProbeManager::getDesc(const Function &F) const {
+  auto I = GUIDToProbeDescMap.find(
+      Function::getGUID(FunctionSamples::getCanonicalFnName(F)));
+  return I == GUIDToProbeDescMap.end() ? nullptr : &I->second;
+}
+
+bool PseudoProbeManager::moduleIsProbed(const Module &M) const {
+  return M.getNamedMetadata(PseudoProbeDescMetadataName);
+}
+
+bool PseudoProbeManager::profileIsValid(const Function &F,
+                                        const FunctionSamples &Samples) const {
+  const auto *Desc = getDesc(F);
+  if (!Desc) {
+    LLVM_DEBUG(dbgs() << "Probe descriptor missing for Function " << F.getName()
+                      << "\n");
+    return false;
+  } else {
+    if (Desc->getFunctionHash() != Samples.getFunctionHash()) {
+      LLVM_DEBUG(dbgs() << "Hash mismatch for Function " << F.getName()
+                        << "\n");
+      return false;
+    }
+  }
+  return true;
+}
+
 SampleProfileProber::SampleProfileProber(Function &Func,
                                          const std::string &CurModuleUniqueId)
     : F(&Func), CurModuleUniqueId(CurModuleUniqueId) {

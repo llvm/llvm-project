@@ -32,11 +32,31 @@ entry:
   ret void
 }
 
+; CHECK-LABEL: define i8* @foo3(
+; CHECK: call i8* @returnsArg(
+; CHECK-NEXT: call void asm sideeffect
+
+define i8* @foo3(i8* %a) {
+  %call = call i8* @returnsArg(i8* %a)
+  call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %call)
+  ret i8* %call
+}
+
+; CHECK-LABEL: define i8* @foo4(
+; CHECK: call i8* @returnsArg(
+; CHECK-NEXT: call void asm sideeffect
+
+define i8* @foo4(i8* %a) {
+  %call = call i8* @returnsArg(i8* %a)
+  call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %a)
+  ret i8* %call
+}
 
 declare i32* @qux()
 declare i8* @llvm.objc.retainAutoreleasedReturnValue(i8*)
 declare i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8*)
 declare void @bar(i8*)
+declare i8* @returnsArg(i8* returned)
 
 !llvm.module.flags = !{!0}
 

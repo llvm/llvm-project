@@ -143,7 +143,8 @@ struct DOTGraphTraits<CallGraphDOTInfo *> : public DefaultDOTGraphTraits {
            std::string(CGInfo->getModule()->getModuleIdentifier());
   }
 
-  static bool isNodeHidden(const CallGraphNode *Node) {
+  static bool isNodeHidden(const CallGraphNode *Node,
+                           const CallGraphDOTInfo *CGInfo) {
     if (CallMultiGraph || Node->getFunction())
       return false;
     return true;

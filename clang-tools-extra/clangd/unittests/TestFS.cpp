@@ -99,8 +99,9 @@ public:
   llvm::Expected<std::string>
   getAbsolutePath(llvm::StringRef /*Authority*/, llvm::StringRef Body,
                   llvm::StringRef HintPath) const override {
-    if (!HintPath.startswith(testRoot()))
-      return error("Hint path doesn't start with test root: {0}", HintPath);
+    if (!HintPath.empty() && !HintPath.startswith(testRoot()))
+      return error("Hint path is not empty and doesn't start with {0}: {1}",
+                   testRoot(), HintPath);
     if (!Body.consume_front("/"))
       return error("Body of an unittest: URI must start with '/'");
     llvm::SmallString<16> Path(Body.begin(), Body.end());

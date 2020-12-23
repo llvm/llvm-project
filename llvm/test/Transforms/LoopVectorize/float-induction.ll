@@ -1,7 +1,7 @@
 ; RUN: opt < %s  -loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -dce -instcombine -S | FileCheck --check-prefix VEC4_INTERL1 %s
 ; RUN: opt < %s  -loop-vectorize -force-vector-interleave=2 -force-vector-width=4 -dce -instcombine -S | FileCheck --check-prefix VEC4_INTERL2 %s
 ; RUN: opt < %s  -loop-vectorize -force-vector-interleave=2 -force-vector-width=1 -dce -instcombine -S | FileCheck --check-prefix VEC1_INTERL2 %s
-; RUN: opt < %s  -loop-vectorize -force-vector-interleave=1 -force-vector-width=2 -dce -simplifycfg -instcombine -simplifycfg -keep-loops=false -S | FileCheck --check-prefix VEC2_INTERL1_PRED_STORE %s
+; RUN: opt < %s  -loop-vectorize -force-vector-interleave=1 -force-vector-width=2 -dce -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -instcombine -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -keep-loops=false -S | FileCheck --check-prefix VEC2_INTERL1_PRED_STORE %s
 
 @fp_inc = common global float 0.000000e+00, align 4
 
@@ -232,10 +232,10 @@ for.body:                                         ; preds = %for.body, %for.body
   %exitcond = icmp eq i32 %lftr.wideiv, %N
   br i1 %exitcond, label %for.end.loopexit, label %for.body
 
-for.end.loopexit:                                 
+for.end.loopexit:
   br label %for.end
 
-for.end: 
+for.end:
   ret void
 }
 

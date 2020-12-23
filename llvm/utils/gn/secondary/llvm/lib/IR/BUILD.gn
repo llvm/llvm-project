@@ -62,6 +62,7 @@ static_library("IR") {
     "PassTimingInfo.cpp",
     "PrintPasses.cpp",
     "ProfileSummary.cpp",
+    "PseudoProbe.cpp",
     "SafepointIRVerifier.cpp",
     "Statepoint.cpp",
     "StructuralHash.cpp",

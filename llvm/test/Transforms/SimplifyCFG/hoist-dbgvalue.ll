@@ -1,4 +1,4 @@
-; RUN: opt -simplifycfg -S < %s | FileCheck %s
+; RUN: opt -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S < %s | FileCheck %s
 
 define i32 @foo(i32 %i) nounwind ssp !dbg !0 {
   call void @llvm.dbg.value(metadata i32 %i, metadata !6, metadata !DIExpression()), !dbg !7

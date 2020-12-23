@@ -544,6 +544,7 @@ VarDecl *Sema::buildCoroutinePromise(SourceLocation Loc) {
   auto *VD = VarDecl::Create(Context, FD, FD->getLocation(), FD->getLocation(),
                              &PP.getIdentifierTable().get("__promise"), T,
                              Context.getTrivialTypeSourceInfo(T, Loc), SC_None);
+  VD->setImplicit();
   CheckVariableDeclarationType(VD);
   if (VD->isInvalidDecl())
     return nullptr;
@@ -1577,6 +1578,7 @@ bool CoroutineStmtBuilder::makeGroDeclAndReturnStmt() {
       S.Context, &FD, FD.getLocation(), FD.getLocation(),
       &S.PP.getIdentifierTable().get("__coro_gro"), GroType,
       S.Context.getTrivialTypeSourceInfo(GroType, Loc), SC_None);
+  GroDecl->setImplicit();
 
   S.CheckVariableDeclarationType(GroDecl);
   if (GroDecl->isInvalidDecl())

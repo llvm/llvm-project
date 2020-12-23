@@ -35,12 +35,12 @@ using namespace sampleprof;
 int main(int argc, const char *argv[]) {
   InitLLVM X(argc, argv);
 
-  cl::ParseCommandLineOptions(argc, argv, "llvm SPGO profile generator\n");
-
   // Initialize targets and assembly printers/parsers.
   InitializeAllTargetInfos();
   InitializeAllTargetMCs();
   InitializeAllDisassemblers();
+
+  cl::ParseCommandLineOptions(argc, argv, "llvm SPGO profile generator\n");
 
   // Load binaries and parse perf events and samples
   PerfReader Reader(BinaryFilenames);

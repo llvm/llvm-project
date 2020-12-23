@@ -17,10 +17,10 @@ namespace llvm {
 namespace libc_benchmarks {
 
 // Parses a Study from a json string.
-Expected<Study> ParseJsonStudy(StringRef Content);
+Expected<Study> parseJsonStudy(StringRef Content);
 
 // Serialize a Study as json.
-void SerializeToJson(const Study &S, llvm::json::OStream &JOS);
+void serializeToJson(const Study &S, llvm::json::OStream &JOS);
 
 } // namespace libc_benchmarks
 } // namespace llvm

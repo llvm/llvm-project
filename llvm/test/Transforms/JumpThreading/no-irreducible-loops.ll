@@ -1,4 +1,4 @@
-; RUN: opt < %s -jump-threading -loop-rotate -instcombine -indvars -loop-unroll -simplifycfg -S -verify-dom-info -verify-loop-info > %t
+; RUN: opt < %s -jump-threading -loop-rotate -instcombine -indvars -loop-unroll -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S -verify-dom-info -verify-loop-info > %t
 ; RUN: grep "store volatile" %t | count 3
 ; RUN: not grep "br label" %t
 

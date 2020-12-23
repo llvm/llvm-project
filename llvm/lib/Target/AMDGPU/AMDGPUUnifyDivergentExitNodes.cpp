@@ -188,7 +188,8 @@ static BasicBlock *unifyReturnBlockSet(Function &F,
 
   for (BasicBlock *BB : ReturningBlocks) {
     // Cleanup possible branch to unconditional branch to the return.
-    simplifyCFG(BB, TTI, SimplifyCFGOptions().bonusInstThreshold(2));
+    simplifyCFG(BB, TTI, /*DTU=*/nullptr,
+                SimplifyCFGOptions().bonusInstThreshold(2));
   }
 
   return NewRetBlock;

@@ -624,11 +624,11 @@ static std::string getBisectDescription(Any IR) {
 
 void OptBisectInstrumentation::registerCallbacks(
     PassInstrumentationCallbacks &PIC) {
-  if (!isEnabled())
+  if (!OptBisector->isEnabled())
     return;
-
-  PIC.registerShouldRunOptionalPassCallback([this](StringRef PassID, Any IR) {
-    return isIgnored(PassID) || checkPass(PassID, getBisectDescription(IR));
+  PIC.registerShouldRunOptionalPassCallback([](StringRef PassID, Any IR) {
+    return isIgnored(PassID) ||
+           OptBisector->checkPass(PassID, getBisectDescription(IR));
   });
 }
 

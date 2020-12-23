@@ -15,6 +15,7 @@
 #ifndef MLIR_C_SUPPORT_H
 #define MLIR_C_SUPPORT_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 

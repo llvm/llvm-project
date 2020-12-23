@@ -63,15 +63,25 @@ void t72() { t71(); }
 // CHECK: call void @t71() [[COLDSITE:#[0-9]+]]
 // CHECK: declare void @t71() [[COLDDECL:#[0-9]+]]
 
-// CHECK: define void @t10() [[NUW]] section "SECT" {
-void t10(void) __attribute__((section("SECT")));
+// CHECK: define void @t82() [[HOTDEF:#[0-9]+]] {
+void t81(void) __attribute__((hot));
+void t82() __attribute__((hot));
+void t82() { t81(); }
+// CHECK: call void @t81() [[HOTSITE:#[0-9]+]]
+// CHECK: declare void @t81() [[HOTDECL:#[0-9]+]]
+
+// CHECK: define void @t10() [[NUW]] section "xSECT" {
+void t10(void) __attribute__((section("xSECT")));
 void t10(void) {}
-// CHECK: define void @t11() [[NUW]] section "SECT" {
-void __attribute__((section("SECT"))) t11(void) {}
+// CHECK: define void @t11() [[NUW]] section "xSECT" {
+void __attribute__((section("xSECT"))) t11(void) {}
 
 // CHECK: define i32 @t19() [[NUW]] {
 extern int t19(void) __attribute__((weak_import));
 int t19(void) {
+// RUN: %clang_cc1 -emit-llvm -fcf-protection=branch -triple i386-linux-gnu -o %t %s
+// RUN: %clang_cc1 -emit-llvm -fcf-protection=branch -triple i386-linux-gnu -o %t %s
+// RUN: %clang_cc1 -emit-llvm -fcf-protection=branch -triple i386-linux-gnu -o %t %s
   return 10;
 }
 
@@ -111,6 +121,9 @@ void t24(f_t f1) {
 // CHECK: attributes [[NR]] = { noinline noreturn nounwind{{.*}} }
 // CHECK: attributes [[COLDDEF]] = { cold {{.*}}}
 // CHECK: attributes [[COLDDECL]] = { cold {{.*}}}
+// CHECK: attributes [[HOTDEF]] = { hot {{.*}}}
+// CHECK: attributes [[HOTDECL]] = { hot {{.*}}}
 // CHECK: attributes [[NOCF_CHECK_FUNC]] = { nocf_check {{.*}}}
 // CHECK: attributes [[COLDSITE]] = { cold {{.*}}}
+// CHECK: attributes [[HOTSITE]] = { hot {{.*}}}
 // CHECK: attributes [[NOCF_CHECK_CALL]] = { nocf_check }

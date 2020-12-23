@@ -290,6 +290,12 @@ public:
   bool getDependencies(const NodeType &Src, const NodeType &Dst,
                        DependenceList &Deps) const;
 
+  /// Return a string representing the type of dependence that the dependence
+  /// analysis identified between the two given nodes. This function assumes
+  /// that there is a memory dependence between the given two nodes.
+  const std::string getDependenceString(const NodeType &Src,
+                                        const NodeType &Dst) const;
+
 protected:
   // Name of the graph.
   std::string Name;
@@ -461,6 +467,26 @@ bool DependenceGraphInfo<NodeType>::getDependencies(
         Deps.push_back(std::move(Dep));
 
   return !Deps.empty();
+}
+
+template <typename NodeType>
+const std::string
+DependenceGraphInfo<NodeType>::getDependenceString(const NodeType &Src,
+                                                   const NodeType &Dst) const {
+  std::string Str;
+  raw_string_ostream OS(Str);
+  DependenceList Deps;
+  if (!getDependencies(Src, Dst, Deps))
+    return OS.str();
+  interleaveComma(Deps, OS, [&](const std::unique_ptr<Dependence> &D) {
+    D->dump(OS);
+    // Remove the extra new-line character printed by the dump
+    // method
+    if (OS.str().back() == '\n')
+      OS.str().pop_back();
+  });
+
+  return OS.str();
 }
 
 //===--------------------------------------------------------------------===//

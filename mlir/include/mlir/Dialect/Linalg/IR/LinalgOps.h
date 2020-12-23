@@ -9,7 +9,6 @@
 #ifndef MLIR_DIALECT_LINALG_LINALGOPS_H_
 #define MLIR_DIALECT_LINALG_LINALGOPS_H_
 
-#include "mlir/Dialect/Linalg/IR/LinalgTraits.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
@@ -111,9 +110,17 @@ SmallVector<AffineExpr, 4> concat(ArrayRef<AffineExpr> a,
 void getDimsOfType(Operation *op, StringRef iteratorTypeName,
                    SmallVectorImpl<AffineExpr> &res);
 
+namespace detail {
+LogicalResult verifyStructuredOpInterface(Operation *op);
+} // namespace detail
 } // namespace linalg
 } // namespace mlir
 
+namespace mlir {
+namespace linalg {
+class IndexedGenericOp;
+} // namespace linalg
+} // namespace mlir
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOpsInterfaces.h.inc"
 
 #define GET_OP_CLASSES

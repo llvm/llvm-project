@@ -505,8 +505,6 @@ namespace llvm {
     VBROADCAST,
     // Broadcast mask to vector.
     VBROADCASTM,
-    // Broadcast subvector to vector.
-    SUBV_BROADCAST,
 
     /// SSE4A Extraction and Insertion.
     EXTRQI,
@@ -776,8 +774,11 @@ namespace llvm {
     // extract_vector_elt, store.
     VEXTRACT_STORE,
 
-    // scalar broadcast from memory
+    // scalar broadcast from memory.
     VBROADCAST_LOAD,
+
+    // subvector broadcast from memory.
+    SUBV_BROADCAST_LOAD,
 
     // Store FP control world into i16 memory.
     FNSTCW16m,
@@ -1523,9 +1524,6 @@ namespace llvm {
     SDValue lowerFaddFsub(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const;
-
-    SDValue LowerF128Call(SDValue Op, SelectionDAG &DAG,
-                          RTLIB::Libcall Call) const;
 
     SDValue
     LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,

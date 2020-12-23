@@ -72,9 +72,30 @@ config("compiler_defaults") {
     ldflags += [ "-mmacosx-version-min=10.10" ]
   }
 
+  assert(symbol_level == 0 || symbol_level == 1 || symbol_level == 2,
+         "Unexpected symbol_level")
   if (host_os != "win") {
-    if (is_debug) {
+    if (symbol_level == 2) {
       cflags += [ "-g" ]
+
+      # For full debug-info -g builds, --gdb-index makes links ~15% slower, and
+      # gdb symbol reading time 1500% faster (lld links in 4.4 instead of 3.9s,
+      # and gdb loads and runs it in 2s instead of in 30s).  It's likely that
+      # people doing symbol_level=2 want to run a debugger (since
+      # symbol_level=2 isn't the default). So this seems like the right
+      # tradeoff.
+      if (host_os != "mac" && use_lld) {
+        cflags += [ "-ggnu-pubnames" ]  # PR34820
+        ldflags += [ "-Wl,--gdb-index" ]
+      }
+    } else if (symbol_level == 1) {
+      cflags += [ "-g1" ]
+
+      # For linetable-only -g1 builds, --gdb-index makes links ~8% slower, but
+      # links are 4x faster than -g builds so it's a fairly small absolute cost.
+      # On the other hand, gdb startup is well below 1s with and without the
+      # index, and people using -g1 likely don't use a debugger. So don't use
+      # the flag here.
     }
     if (is_optimized) {
       cflags += [ "-O3" ]
@@ -88,11 +109,14 @@ config("compiler_defaults") {
       "-fvisibility-inlines-hidden",
     ]
   } else {
-    if (is_debug) {
+    if (symbol_level != 0) {
       cflags += [
         "/Zi",
         "/FS",
       ]
+      if (symbol_level == 1 && is_clang) {
+        cflags += [ "-gline-tables-only" ]
+      }
       ldflags += [ "/DEBUG" ]
 
       # Speed up links with ghash on windows.

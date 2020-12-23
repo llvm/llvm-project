@@ -17,6 +17,7 @@
 #include "llvm-c/Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/BasicBlock.h"
@@ -24,6 +25,7 @@
 #include "llvm/IR/ConstantFolder.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
@@ -91,7 +93,28 @@ public:
 
 /// Common base class shared among various IRBuilders.
 class IRBuilderBase {
-  DebugLoc CurDbgLocation;
+  /// Pairs of (metadata kind, MDNode *) that should be added to all newly
+  /// created instructions, like !dbg metadata.
+  SmallVector<std::pair<unsigned, MDNode *>, 2> MetadataToCopy;
+
+  /// Add or update the an entry (Kind, MD) to MetadataToCopy, if \p MD is not
+  /// null. If \p MD is null, remove the entry with \p Kind.
+  void AddOrRemoveMetadataToCopy(unsigned Kind, MDNode *MD) {
+    if (!MD) {
+      erase_if(MetadataToCopy, [Kind](const std::pair<unsigned, MDNode *> &KV) {
+        return KV.first == Kind;
+      });
+      return;
+    }
+
+    for (auto &KV : MetadataToCopy)
+      if (KV.first == Kind) {
+        KV.second = MD;
+        return;
+      }
+
+    MetadataToCopy.emplace_back(Kind, MD);
+  }
 
 protected:
   BasicBlock *BB;
@@ -125,7 +148,7 @@ public:
   template<typename InstTy>
   InstTy *Insert(InstTy *I, const Twine &Name = "") const {
     Inserter.InsertHelper(I, Name, BB, InsertPt);
-    SetInstDebugLocation(I);
+    AddMetadataToInst(I);
     return I;
   }
 
@@ -182,16 +205,42 @@ public:
   }
 
   /// Set location information used by debugging information.
-  void SetCurrentDebugLocation(DebugLoc L) { CurDbgLocation = std::move(L); }
+  void SetCurrentDebugLocation(DebugLoc L) {
+    AddOrRemoveMetadataToCopy(LLVMContext::MD_dbg, L.getAsMDNode());
+  }
+
+  /// Collect metadata with IDs \p MetadataKinds from \p Src which should be
+  /// added to all created instructions. Entries present in MedataDataToCopy but
+  /// not on \p Src will be dropped from MetadataToCopy.
+  void CollectMetadataToCopy(Instruction *Src,
+                             ArrayRef<unsigned> MetadataKinds) {
+    for (unsigned K : MetadataKinds)
+      AddOrRemoveMetadataToCopy(K, Src->getMetadata(K));
+  }
 
   /// Get location information used by debugging information.
-  const DebugLoc &getCurrentDebugLocation() const { return CurDbgLocation; }
+  DebugLoc getCurrentDebugLocation() const {
+    for (auto &KV : MetadataToCopy)
+      if (KV.first == LLVMContext::MD_dbg)
+        return {cast<DILocation>(KV.second)};
+
+    return {};
+  }
 
   /// If this builder has a current debug location, set it on the
   /// specified instruction.
   void SetInstDebugLocation(Instruction *I) const {
-    if (CurDbgLocation)
-      I->setDebugLoc(CurDbgLocation);
+    for (const auto &KV : MetadataToCopy)
+      if (KV.first == LLVMContext::MD_dbg) {
+        I->setDebugLoc(DebugLoc(KV.second));
+        return;
+      }
+  }
+
+  /// Add all entries in MetadataToCopy to \p I.
+  void AddMetadataToInst(Instruction *I) const {
+    for (auto &KV : MetadataToCopy)
+      I->setMetadata(KV.first, KV.second);
   }
 
   /// Get the return type of the current function that we're emitting
@@ -301,7 +350,7 @@ public:
     }
   }
 
-  void setConstrainedFPCallAttr(CallInst *I) {
+  void setConstrainedFPCallAttr(CallBase *I) {
     I->addAttribute(AttributeList::FunctionIndex, Attribute::StrictFP);
   }
 
@@ -923,6 +972,22 @@ public:
     return CreateBinaryIntrinsic(Intrinsic::maximum, LHS, RHS, nullptr, Name);
   }
 
+  /// Create a call to the experimental.vector.extract intrinsic.
+  CallInst *CreateExtractVector(Type *DstType, Value *SrcVec, Value *Idx,
+                                const Twine &Name = "") {
+    return CreateIntrinsic(Intrinsic::experimental_vector_extract,
+                           {DstType, SrcVec->getType()}, {SrcVec, Idx}, nullptr,
+                           Name);
+  }
+
+  /// Create a call to the experimental.vector.insert intrinsic.
+  CallInst *CreateInsertVector(Type *DstType, Value *SrcVec, Value *SubVec,
+                               Value *Idx, const Twine &Name = "") {
+    return CreateIntrinsic(Intrinsic::experimental_vector_insert,
+                           {DstType, SubVec->getType()}, {SrcVec, SubVec, Idx},
+                           nullptr, Name);
+  }
+
 private:
   /// Create a call to a masked intrinsic with given Id.
   CallInst *CreateMaskedIntrinsic(Intrinsic::ID Id, ArrayRef<Value *> Ops,
@@ -1023,16 +1088,21 @@ public:
                            ArrayRef<Value *> Args,
                            ArrayRef<OperandBundleDef> OpBundles,
                            const Twine &Name = "") {
-    return Insert(
-        InvokeInst::Create(Ty, Callee, NormalDest, UnwindDest, Args, OpBundles),
-        Name);
+    InvokeInst *II =
+        InvokeInst::Create(Ty, Callee, NormalDest, UnwindDest, Args, OpBundles);
+    if (IsFPConstrained)
+      setConstrainedFPCallAttr(II);
+    return Insert(II, Name);
   }
   InvokeInst *CreateInvoke(FunctionType *Ty, Value *Callee,
                            BasicBlock *NormalDest, BasicBlock *UnwindDest,
                            ArrayRef<Value *> Args = None,
                            const Twine &Name = "") {
-    return Insert(InvokeInst::Create(Ty, Callee, NormalDest, UnwindDest, Args),
-                  Name);
+    InvokeInst *II =
+        InvokeInst::Create(Ty, Callee, NormalDest, UnwindDest, Args);
+    if (IsFPConstrained)
+      setConstrainedFPCallAttr(II);
+    return Insert(II, Name);
   }
 
   InvokeInst *CreateInvoke(FunctionCallee Callee, BasicBlock *NormalDest,

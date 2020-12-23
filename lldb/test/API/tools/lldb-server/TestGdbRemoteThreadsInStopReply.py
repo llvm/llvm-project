@@ -177,14 +177,12 @@ class TestGdbRemoteThreadsInStopReply(
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     @debugserver_test
     def test_QListThreadsInStopReply_supported_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_launch()
         self.QListThreadsInStopReply_supported()
 
     @llgs_test
     def test_QListThreadsInStopReply_supported_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         self.QListThreadsInStopReply_supported()
@@ -199,7 +197,6 @@ class TestGdbRemoteThreadsInStopReply(
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     @debugserver_test
     def test_stop_reply_reports_multiple_threads_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_launch()
         self.stop_reply_reports_multiple_threads(5)
@@ -212,7 +209,6 @@ class TestGdbRemoteThreadsInStopReply(
     @skipIfNetBSD
     @llgs_test
     def test_stop_reply_reports_multiple_threads_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         self.stop_reply_reports_multiple_threads(5)
@@ -226,7 +222,6 @@ class TestGdbRemoteThreadsInStopReply(
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     @debugserver_test
     def test_no_QListThreadsInStopReply_supplies_no_threads_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_launch()
         self.no_QListThreadsInStopReply_supplies_no_threads(5)
@@ -235,7 +230,6 @@ class TestGdbRemoteThreadsInStopReply(
     @skipIfNetBSD
     @llgs_test
     def test_no_QListThreadsInStopReply_supplies_no_threads_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         self.no_QListThreadsInStopReply_supplies_no_threads(5)
@@ -265,7 +259,6 @@ class TestGdbRemoteThreadsInStopReply(
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     @debugserver_test
     def test_stop_reply_reports_correct_threads_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_launch()
         self.stop_reply_reports_correct_threads(5)
@@ -274,7 +267,6 @@ class TestGdbRemoteThreadsInStopReply(
     @skipIfNetBSD
     @llgs_test
     def test_stop_reply_reports_correct_threads_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         self.stop_reply_reports_correct_threads(5)
@@ -300,7 +292,6 @@ class TestGdbRemoteThreadsInStopReply(
     @skipIfNetBSD
     @llgs_test
     def test_stop_reply_contains_thread_pcs_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         self.stop_reply_contains_thread_pcs(5)
@@ -308,7 +299,6 @@ class TestGdbRemoteThreadsInStopReply(
     @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     @debugserver_test
     def test_stop_reply_contains_thread_pcs_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_launch()
         self.stop_reply_contains_thread_pcs(5)

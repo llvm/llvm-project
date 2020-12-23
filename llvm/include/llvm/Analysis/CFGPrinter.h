@@ -295,7 +295,7 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
                         " fillcolor=\"" + Color + "70\"";
     return Attrs;
   }
-  bool isNodeHidden(const BasicBlock *Node);
+  bool isNodeHidden(const BasicBlock *Node, const DOTFuncInfo *CFGInfo);
   void computeHiddenNodes(const Function *F);
 };
 } // End llvm namespace

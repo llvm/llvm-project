@@ -25,8 +25,9 @@ namespace {
 struct X86_64 : TargetInfo {
   X86_64();
 
-  uint64_t getImplicitAddend(MemoryBufferRef, const section_64 &,
-                             const relocation_info &) const override;
+  bool isPairedReloc(relocation_info) const override;
+  uint64_t getAddend(MemoryBufferRef, const section_64 &, relocation_info,
+                     relocation_info) const override;
   void relocateOne(uint8_t *loc, const Reloc &, uint64_t val) const override;
 
   void writeStub(uint8_t *buf, const macho::Symbol &) const override;
@@ -43,7 +44,7 @@ struct X86_64 : TargetInfo {
 } // namespace
 
 static std::string getErrorLocation(MemoryBufferRef mb, const section_64 &sec,
-                                    const relocation_info &rel) {
+                                    relocation_info rel) {
   return ("invalid relocation at offset " + std::to_string(rel.r_address) +
           " of " + sec.segname + "," + sec.sectname + " in " +
           mb.getBufferIdentifier())
@@ -51,7 +52,7 @@ static std::string getErrorLocation(MemoryBufferRef mb, const section_64 &sec,
 }
 
 static void validateLength(MemoryBufferRef mb, const section_64 &sec,
-                           const relocation_info &rel,
+                           relocation_info rel,
                            ArrayRef<uint8_t> validLengths) {
   if (find(validLengths, rel.r_length) != validLengths.end())
     return;
@@ -68,8 +69,13 @@ static void validateLength(MemoryBufferRef mb, const section_64 &sec,
   fatal(msg);
 }
 
-uint64_t X86_64::getImplicitAddend(MemoryBufferRef mb, const section_64 &sec,
-                                   const relocation_info &rel) const {
+bool X86_64::isPairedReloc(relocation_info rel) const {
+  return rel.r_type == X86_64_RELOC_SUBTRACTOR;
+}
+
+uint64_t X86_64::getAddend(MemoryBufferRef mb, const section_64 &sec,
+                           relocation_info rel,
+                           relocation_info pairedRel) const {
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   const uint8_t *loc = buf + sec.offset + rel.r_address;
 
@@ -139,7 +145,7 @@ void X86_64::relocateOne(uint8_t *loc, const Reloc &r, uint64_t val) const {
     break;
   default:
     llvm_unreachable(
-        "getImplicitAddend should have flagged all unhandled relocation types");
+        "getAddend should have flagged all unhandled relocation types");
   }
 
   switch (r.length) {

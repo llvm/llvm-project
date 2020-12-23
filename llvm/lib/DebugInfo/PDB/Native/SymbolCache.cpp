@@ -481,11 +481,19 @@ SymbolCache::findLineTable(uint16_t Modi) const {
       auto ColIt = Group.Columns.begin();
       auto ColsEnd = Group.Columns.end();
 
+      // Add a line to mark the beginning of this section.
+      uint64_t StartAddr =
+          Session.getVAFromSectOffset(RelocSegment, RelocOffset);
+      LineInfo FirstLine(Group.LineNumbers.front().Flags);
+      uint32_t ColNum =
+          (Lines.hasColumnInfo()) ? Group.Columns.front().StartColumn : 0;
+      Entries.push_back({StartAddr, FirstLine, ColNum, Group.NameIndex, false});
+
       for (const LineNumberEntry &LN : Group.LineNumbers) {
         uint64_t VA =
             Session.getVAFromSectOffset(RelocSegment, RelocOffset + LN.Offset);
         LineInfo Line(LN.Flags);
-        uint32_t ColNum = 0;
+        ColNum = 0;
 
         if (Lines.hasColumnInfo() && ColIt != ColsEnd) {
           ColNum = ColIt->StartColumn;
@@ -495,12 +503,10 @@ SymbolCache::findLineTable(uint16_t Modi) const {
       }
 
       // Add a terminal entry line to mark the end of this subsection.
-      uint64_t VA = Session.getVAFromSectOffset(
-          RelocSegment, RelocOffset + Lines.header()->CodeSize);
+      uint64_t EndAddr = StartAddr + Lines.header()->CodeSize;
       LineInfo LastLine(Group.LineNumbers.back().Flags);
-      uint32_t ColNum =
-          (Lines.hasColumnInfo()) ? Group.Columns.back().StartColumn : 0;
-      Entries.push_back({VA, LastLine, ColNum, Group.NameIndex, true});
+      ColNum = (Lines.hasColumnInfo()) ? Group.Columns.back().StartColumn : 0;
+      Entries.push_back({EndAddr, LastLine, ColNum, Group.NameIndex, true});
 
       EntryList.push_back(Entries);
     }

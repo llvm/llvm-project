@@ -279,6 +279,15 @@ TEST_P(ImportExpr, ImportGNUNullExpr) {
              functionDecl(hasDescendant(gnuNullExpr(hasType(isInteger())))));
 }
 
+TEST_P(ImportExpr, ImportGenericSelectionExpr) {
+  MatchVerifier<Decl> Verifier;
+
+  testImport(
+      "void declToImport() { int x; (void)_Generic(x, int: 0, float: 1); }",
+      Lang_C99, "", Lang_C99, Verifier,
+      functionDecl(hasDescendant(genericSelectionExpr())));
+}
+
 TEST_P(ImportExpr, ImportCXXNullPtrLiteralExpr) {
   MatchVerifier<Decl> Verifier;
   testImport(
@@ -1085,6 +1094,36 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportChooseExpr) {
   EXPECT_EQ(FromChooseExpr->isConditionTrue(), ToChooseExpr->isConditionTrue());
   EXPECT_EQ(FromChooseExpr->isConditionDependent(),
             ToChooseExpr->isConditionDependent());
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, ImportGenericSelectionExpr) {
+  Decl *From, *To;
+  std::tie(From, To) = getImportedDecl(
+      R"(
+      int declToImport() {
+        int x;
+        return _Generic(x, int: 0, default: 1);
+      }
+      )",
+      Lang_C99, "", Lang_C99);
+
+  auto ToResults =
+      match(genericSelectionExpr().bind("expr"), To->getASTContext());
+  auto FromResults =
+      match(genericSelectionExpr().bind("expr"), From->getASTContext());
+
+  const GenericSelectionExpr *FromGenericSelectionExpr =
+      selectFirst<GenericSelectionExpr>("expr", FromResults);
+  ASSERT_TRUE(FromGenericSelectionExpr);
+
+  const GenericSelectionExpr *ToGenericSelectionExpr =
+      selectFirst<GenericSelectionExpr>("expr", ToResults);
+  ASSERT_TRUE(ToGenericSelectionExpr);
+
+  EXPECT_EQ(FromGenericSelectionExpr->isResultDependent(),
+            ToGenericSelectionExpr->isResultDependent());
+  EXPECT_EQ(FromGenericSelectionExpr->getResultIndex(),
+            ToGenericSelectionExpr->getResultIndex());
 }
 
 TEST_P(ASTImporterOptionSpecificTestBase,

@@ -313,6 +313,9 @@ public:
   /// Add a pass to remove debug info from the MIR.
   void addStripDebugPass();
 
+  /// Add a pass to check synthesized debug info for MIR.
+  void addCheckDebugPass();
+
   /// Add standard passes before a pass that's about to be added. For example,
   /// the DebugifyMachineModulePass if it is enabled.
   void addMachinePrePasses(bool AllowDebugify = true);

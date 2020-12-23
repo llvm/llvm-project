@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -instcombine -jump-threading -licm -simple-loop-unswitch -instcombine -indvars -loop-deletion -gvn -simplifycfg -verify -disable-output
+; RUN: opt < %s -inline -instcombine -jump-threading -licm -simple-loop-unswitch -instcombine -indvars -loop-deletion -gvn -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -verify -disable-output
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:128:128"
 target triple = "i386-apple-darwin9"
@@ -18,7 +18,7 @@ target triple = "i386-apple-darwin9"
 @scaleFactorsPH = external global [2 x [2 x %struct.BF_PartHolder*]]		; <[2 x [2 x %struct.BF_PartHolder*]]*> [#uses=1]
 @slen1_tab = external constant [16 x i32]		; <[16 x i32]*> [#uses=1]
 
-declare %struct.BF_PartHolder* @BF_addElement(%struct.BF_PartHolder*, %struct.BF_BitstreamElement*) nounwind 
+declare %struct.BF_PartHolder* @BF_addElement(%struct.BF_PartHolder*, %struct.BF_BitstreamElement*) nounwind
 
 define %struct.BF_PartHolder* @BF_addEntry(%struct.BF_PartHolder* %thePH, i32 %value, i32 %length) nounwind  {
 entry:
@@ -38,7 +38,7 @@ bb13:		; preds = %entry
 
 define void @III_format_bitstream(%struct.lame_global_flags* %gfp, i32 %bitsPerFrame, [2 x [576 x i32]]* %l3_enc, %struct.III_side_info_t* %l3_side, [2 x %struct.III_scalefac_t]* %scalefac, %struct.Bit_stream_struc* %in_bs) nounwind  {
 entry:
-	call fastcc void @encodeMainData( %struct.lame_global_flags* %gfp, [2 x [576 x i32]]* %l3_enc, %struct.III_side_info_t* %l3_side, [2 x %struct.III_scalefac_t]* %scalefac ) nounwind 
+	call fastcc void @encodeMainData( %struct.lame_global_flags* %gfp, [2 x [576 x i32]]* %l3_enc, %struct.III_side_info_t* %l3_side, [2 x %struct.III_scalefac_t]* %scalefac ) nounwind
 	unreachable
 }
 

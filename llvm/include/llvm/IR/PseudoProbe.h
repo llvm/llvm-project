@@ -13,10 +13,13 @@
 #ifndef LLVM_IR_PSEUDOPROBE_H
 #define LLVM_IR_PSEUDOPROBE_H
 
+#include "llvm/ADT/Optional.h"
 #include <cassert>
 #include <cstdint>
 
 namespace llvm {
+
+class Instruction;
 
 constexpr const char *PseudoProbeDescMetadataName = "llvm.pseudo_probe_desc";
 
@@ -49,6 +52,15 @@ struct PseudoProbeDwarfDiscriminator {
     return (Value >> 29) & 0x7;
   }
 };
+
+struct PseudoProbe {
+  uint32_t Id;
+  uint32_t Type;
+  uint32_t Attr;
+};
+
+Optional<PseudoProbe> extractProbe(const Instruction &Inst);
+
 } // end namespace llvm
 
 #endif // LLVM_IR_PSEUDOPROBE_H

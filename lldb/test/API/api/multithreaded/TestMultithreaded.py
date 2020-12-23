@@ -31,7 +31,6 @@ class SBBreakpointCallbackCase(TestBase):
     @skipIfNoSBHeaders
     # clang-cl does not support throw or catch (llvm.org/pr24538)
     @skipIfWindows
-    @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr48370')
     def test_python_stop_hook(self):
         """Test that you can run a python command in a stop-hook when stdin is File based. """
         self.build_and_test('driver.cpp test_stop-hook.cpp',

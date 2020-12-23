@@ -1,7 +1,7 @@
 ; This is the test case taken from Appel's book that illustrates a hard case
 ; that SCCP gets right, and when followed by ADCE, is completely eliminated
 ;
-; RUN: opt < %s -sccp -simplifycfg -indvars -loop-deletion -dce -simplifycfg -S | not grep br
+; RUN: opt < %s -sccp -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -indvars -loop-deletion -dce -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | not grep br
 
 define i32 @"test function"(i32 %i0, i32 %j0) {
 BB1:

@@ -12,7 +12,6 @@ class TestGdbRemoteLibrariesSvr4Support(gdbremote_testcase.GdbRemoteTestCaseBase
     FEATURE_NAME = "qXfer:libraries-svr4:read"
 
     def setup_test(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         env = {}
@@ -120,7 +119,7 @@ class TestGdbRemoteLibrariesSvr4Support(gdbremote_testcase.GdbRemoteTestCaseBase
 
     @llgs_test
     @skipUnlessPlatform(["linux", "android", "freebsd", "netbsd"])
-    @expectedFailureAll(oslist=["freebsd", "netbsd"])
+    @expectedFailureNetBSD
     def test_libraries_svr4_load_addr(self):
         self.setup_test()
         self.libraries_svr4_has_correct_load_addr()

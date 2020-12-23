@@ -91,7 +91,7 @@ bool link(ArrayRef<const char *> args, bool canExitEarly, raw_ostream &stdoutOS,
   symtab = make<SymbolTable>();
   driver = make<LinkerDriver>();
 
-  driver->link(args);
+  driver->linkerMain(args);
 
   // Call exit() if we can to avoid calling destructors.
   if (canExitEarly)
@@ -1197,7 +1197,7 @@ Optional<std::string> getReproduceFile(const opt::InputArgList &args) {
   return None;
 }
 
-void LinkerDriver::link(ArrayRef<const char *> argsArr) {
+void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   ScopedTimer rootTimer(Timer::root());
 
   // Needed for LTO.
@@ -1263,7 +1263,7 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   // because it doesn't start with "/", but we deliberately chose "--" to
   // avoid conflict with /version and for compatibility with clang-cl.
   if (args.hasArg(OPT_dash_dash_version)) {
-    lld::outs() << getLLDVersion() << "\n";
+    message(getLLDVersion());
     return;
   }
 

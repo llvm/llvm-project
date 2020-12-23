@@ -12,7 +12,6 @@ flat_load_dword v1, v[3:4] offset:-1
 // VI-ERR: :28: error: flat offset modifier is not supported on this GPU
 // GFX9-ERR: :28: error: expected a 12-bit unsigned offset
 
-// FIXME: Error on VI in wrong column
 flat_load_dword v1, v[3:4] offset:4095
 // GFX9: flat_load_dword v1, v[3:4] offset:4095 ; encoding: [0xff,0x0f,0x50,0xdc,0x03,0x00,0x00,0x01]
 // VI-ERR: :28: error: flat offset modifier is not supported on this GPU

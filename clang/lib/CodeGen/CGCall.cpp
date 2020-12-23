@@ -1945,6 +1945,8 @@ void CodeGenModule::ConstructAttributeList(
       FuncAttrs.addAttribute(llvm::Attribute::NoReturn);
     if (TargetDecl->hasAttr<ColdAttr>())
       FuncAttrs.addAttribute(llvm::Attribute::Cold);
+    if (TargetDecl->hasAttr<HotAttr>())
+      FuncAttrs.addAttribute(llvm::Attribute::Hot);
     if (TargetDecl->hasAttr<NoDuplicateAttr>())
       FuncAttrs.addAttribute(llvm::Attribute::NoDuplicate);
     if (TargetDecl->hasAttr<ConvergentAttr>())
@@ -1969,6 +1971,8 @@ void CodeGenModule::ConstructAttributeList(
           FuncAttrs.addAttribute(llvm::Attribute::NoReturn);
         NBA = Fn->getAttr<NoBuiltinAttr>();
       }
+      if (!AttrOnCallSite && TargetDecl->hasAttr<NoMergeAttr>())
+        FuncAttrs.addAttribute(llvm::Attribute::NoMerge);
     }
 
     // 'const', 'pure' and 'noalias' attributed functions are also nounwind.
@@ -4979,11 +4983,13 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         Attrs.addAttribute(getLLVMContext(), llvm::AttributeList::FunctionIndex,
                            llvm::Attribute::StrictFP);
 
-  // Add call-site nomerge attribute if exists.
-  if (InNoMergeAttributedStmt)
-    Attrs =
-      Attrs.addAttribute(getLLVMContext(), llvm::AttributeList::FunctionIndex,
-                         llvm::Attribute::NoMerge);
+  // Add nomerge attribute to the call-site if the callee function doesn't have
+  // the attribute.
+  if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl))
+    if (!FD->hasAttr<NoMergeAttr>() && InNoMergeAttributedStmt)
+      Attrs = Attrs.addAttribute(getLLVMContext(),
+                                 llvm::AttributeList::FunctionIndex,
+                                 llvm::Attribute::NoMerge);
 
   // Apply some call-site-specific attributes.
   // TODO: work this into building the attribute set.

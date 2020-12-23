@@ -48,7 +48,7 @@
 // DISASM-EMPTY:
 // DISASM-NEXT: <.plt>:
 // DISASM-NEXT:    2102f0: stp     x16, x30, [sp, #-16]!
-// DISASM-NEXT:    2102f4: adrp    x16, #131072
+// DISASM-NEXT:    2102f4: adrp    x16, 0x230000
 // DISASM-NEXT:    2102f8: ldr     x17, [x16, #1104]
 // DISASM-NEXT:    2102fc: add     x16, x16, #1104
 // DISASM-NEXT:    210300: br      x17
@@ -57,13 +57,13 @@
 // DISASM-NEXT:    21030c: nop
 // DISASM-EMPTY:
 // DISASM-NEXT:   <bar2@plt>:
-// DISASM-NEXT:    210310: adrp    x16, #131072
+// DISASM-NEXT:    210310: adrp    x16, 0x230000
 // DISASM-NEXT:    210314: ldr     x17, [x16, #1112]
 // DISASM-NEXT:    210318: add     x16, x16, #1112
 // DISASM-NEXT:    21031c: br      x17
 // DISASM-EMPTY:
 // DISASM-NEXT:   <zed2@plt>:
-// DISASM-NEXT:    210320: adrp    x16, #131072
+// DISASM-NEXT:    210320: adrp    x16, 0x230000
 // DISASM-NEXT:    210324: ldr     x17, [x16, #1120]
 // DISASM-NEXT:    210328: add     x16, x16, #1120
 // DISASM-NEXT:    21032c: br      x17
@@ -71,11 +71,11 @@
 // DISASM-NEXT: Disassembly of section .iplt:
 // DISASM-EMPTY:
 // DISASM-NEXT: <.iplt>:
-// DISASM-NEXT:    210330: adrp    x16, #131072
+// DISASM-NEXT:    210330: adrp    x16, 0x230000
 // DISASM-NEXT:    210334: ldr     x17, [x16, #1128]
 // DISASM-NEXT:    210338: add     x16, x16, #1128
 // DISASM-NEXT:    21033c: br      x17
-// DISASM-NEXT:    210340: adrp    x16, #131072
+// DISASM-NEXT:    210340: adrp    x16, 0x230000
 // DISASM-NEXT:    210344: ldr     x17, [x16, #1136]
 // DISASM-NEXT:    210348: add     x16, x16, #1136
 // DISASM-NEXT:    21034c: br      x17

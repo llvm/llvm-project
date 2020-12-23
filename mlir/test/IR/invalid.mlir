@@ -464,7 +464,49 @@ func @dominance_failure() {
   "foo"(%x) : (i32) -> ()    // expected-error {{operand #0 does not dominate this use}}
   br ^bb1
 ^bb1:
-  %x = "bar"() : () -> i32    // expected-note {{operand defined here}}
+  %x = "bar"() : () -> i32    // expected-note {{operand defined here (op in the same region)}}
+  return
+}
+
+// -----
+
+func @dominance_failure() {
+^bb0:
+  "foo"(%x) : (i32) -> ()    // expected-error {{operand #0 does not dominate this use}}
+  %x = "bar"() : () -> i32    // expected-note {{operand defined here (op in the same block)}}
+  br ^bb1
+^bb1:
+  return
+}
+
+// -----
+
+func @dominance_failure() {
+  "foo"() ({
+    "foo"(%x) : (i32) -> ()    // expected-error {{operand #0 does not dominate this use}}
+  }) : () -> ()
+  %x = "bar"() : () -> i32    // expected-note {{operand defined here (op in a parent region)}}
+  return
+}
+
+// -----
+
+func @dominance_failure() {  //  expected-note {{operand defined as a block argument (block #1 in the same region)}}
+^bb0:
+  br ^bb1(%x : i32)    // expected-error {{operand #0 does not dominate this use}}
+^bb1(%x : i32):
+  return
+}
+
+// -----
+
+func @dominance_failure() {  //  expected-note {{operand defined as a block argument (block #1 in a parent region)}}
+^bb0:
+  %f = "foo"() ({
+    "foo"(%x) : (i32) -> ()    // expected-error {{operand #0 does not dominate this use}}
+  }) : () -> (i32)
+  br ^bb1(%f : i32)
+^bb1(%x : i32):
   return
 }
 

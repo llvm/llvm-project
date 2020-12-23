@@ -386,7 +386,11 @@ location of certain calls. For example, it will prevent tail merging otherwise
 identical code sequences that raise an exception or terminate the program. Tail
 merging normally reduces the precision of source location information, making
 stack traces less useful for debugging. This attribute gives the user control
-over the tradeoff between code size and debug information precision.
+over the tradeoff between code size and debug information precision. 
+
+``nomerge`` attribute can also be used as function attribute to prevent all 
+calls to the specified function from merging. It has no effect on indirect 
+calls.
   }];
 }
 
@@ -3346,7 +3350,7 @@ As ``global_device`` and ``global_host`` are a subset of
 ``__global/opencl_global`` address spaces it is allowed to convert
 ``global_device`` and ``global_host`` address spaces to
 ``__global/opencl_global`` address spaces (following ISO/IEC TR 18037 5.1.3
-"Address space nesting and rules for pointers).
+"Address space nesting and rules for pointers").
   }];
 }
 
@@ -5648,4 +5652,23 @@ to non-secure state, except via return values. See `ARMv8-M Security Extensions:
 Requirements on Development Tools - Engineering Specification Documentation
 <https://developer.arm.com/docs/ecm0359818/latest/>`_ for more information.
   }];
+}
+
+def AlwaysInlineDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+Inlining heuristics are disabled and inlining is always attempted regardless of
+optimization level.
+
+Does not guarantee that inline substitution actually occurs.
+
+See also `the Microsoft Docs on Inline Functions`_, `the GCC Common Function
+Attribute docs`_, and `the GCC Inline docs`_.
+
+.. _the Microsoft Docs on Inline Functions: https://docs.microsoft.com/en-us/cpp/cpp/inline-functions-cpp
+.. _the GCC Common Function Attribute docs: https://gcc.gnu.org/onlinedocs/gcc/Common-Function-Attributes.html
+.. _the GCC Inline docs: https://gcc.gnu.org/onlinedocs/gcc/Inline.html
+
+}];
+  let Heading = "always_inline, __force_inline";
 }

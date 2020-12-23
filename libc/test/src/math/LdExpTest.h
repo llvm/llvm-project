@@ -44,7 +44,7 @@ public:
       ASSERT_FP_EQ(negZero, func(negZero, exp));
       ASSERT_FP_EQ(inf, func(inf, exp));
       ASSERT_FP_EQ(negInf, func(negInf, exp));
-      ASSERT_NE(isnan(func(nan, exp)), 0);
+      ASSERT_FP_EQ(nan, func(nan, exp));
     }
   }
 

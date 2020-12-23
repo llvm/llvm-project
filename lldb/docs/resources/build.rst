@@ -73,7 +73,7 @@ commands below.
   > yum install libedit-devel libxml2-devel ncurses-devel python-devel swig
   > sudo apt-get install build-essential subversion swig python3-dev libedit-dev libncurses5-dev
   > pkg install swig python
-  > pkgin install swig python27 cmake ninja-build
+  > pkgin install swig python36 cmake ninja-build
   > brew install swig cmake ninja
 
 Note that there's an `incompatibility

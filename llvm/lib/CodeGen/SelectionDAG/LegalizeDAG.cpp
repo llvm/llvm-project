@@ -179,6 +179,7 @@ private:
                              SmallVectorImpl<SDValue> &Results);
   void PromoteLegalFP_TO_INT(SDNode *N, const SDLoc &dl,
                              SmallVectorImpl<SDValue> &Results);
+  SDValue PromoteLegalFP_TO_INT_SAT(SDNode *Node, const SDLoc &dl);
 
   SDValue ExpandBITREVERSE(SDValue Op, const SDLoc &dl);
   SDValue ExpandBSWAP(SDValue Op, const SDLoc &dl);
@@ -1136,10 +1137,11 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   case ISD::SSUBSAT:
   case ISD::USUBSAT:
   case ISD::SSHLSAT:
-  case ISD::USHLSAT: {
+  case ISD::USHLSAT:
+  case ISD::FP_TO_SINT_SAT:
+  case ISD::FP_TO_UINT_SAT:
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
     break;
-  }
   case ISD::SMULFIX:
   case ISD::SMULFIXSAT:
   case ISD::UMULFIX:
@@ -1812,6 +1814,19 @@ SDValue SelectionDAGLegalize::EmitStackConvert(SDValue SrcOp, EVT SlotVT,
 SDValue SelectionDAGLegalize::EmitStackConvert(SDValue SrcOp, EVT SlotVT,
                                                EVT DestVT, const SDLoc &dl,
                                                SDValue Chain) {
+  unsigned SrcSize = SrcOp.getValueSizeInBits();
+  unsigned SlotSize = SlotVT.getSizeInBits();
+  unsigned DestSize = DestVT.getSizeInBits();
+  Type *DestType = DestVT.getTypeForEVT(*DAG.getContext());
+  Align DestAlign = DAG.getDataLayout().getPrefTypeAlign(DestType);
+
+  // Don't convert with stack if the load/store is expensive.
+  if ((SrcSize > SlotSize &&
+       !TLI.isTruncStoreLegalOrCustom(SrcOp.getValueType(), SlotVT)) ||
+      (SlotSize < DestSize &&
+       !TLI.isLoadExtLegalOrCustom(ISD::EXTLOAD, DestVT, SlotVT)))
+    return SDValue();
+
   // Create the stack frame object.
   Align SrcAlign = DAG.getDataLayout().getPrefTypeAlign(
       SrcOp.getValueType().getTypeForEVT(*DAG.getContext()));
@@ -1821,12 +1836,6 @@ SDValue SelectionDAGLegalize::EmitStackConvert(SDValue SrcOp, EVT SlotVT,
   int SPFI = StackPtrFI->getIndex();
   MachinePointerInfo PtrInfo =
       MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SPFI);
-
-  unsigned SrcSize = SrcOp.getValueSizeInBits();
-  unsigned SlotSize = SlotVT.getSizeInBits();
-  unsigned DestSize = DestVT.getSizeInBits();
-  Type *DestType = DestVT.getTypeForEVT(*DAG.getContext());
-  Align DestAlign = DAG.getDataLayout().getPrefTypeAlign(DestType);
 
   // Emit a store to the stack slot.  Use a truncstore if the input value is
   // later than DestVT.
@@ -2415,7 +2424,11 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(SDNode *Node,
 
   // TODO: Should any fast-math-flags be set for the created nodes?
   LLVM_DEBUG(dbgs() << "Legalizing INT_TO_FP\n");
-  if (SrcVT == MVT::i32 && TLI.isTypeLegal(MVT::f64)) {
+  if (SrcVT == MVT::i32 && TLI.isTypeLegal(MVT::f64) &&
+      (DestVT.bitsLE(MVT::f64) ||
+       TLI.isOperationLegal(Node->isStrictFPOpcode() ? ISD::STRICT_FP_EXTEND
+                                                     : ISD::FP_EXTEND,
+                            DestVT))) {
     LLVM_DEBUG(dbgs() << "32-bit [signed|unsigned] integer to float/double "
                          "expansion\n");
 
@@ -2477,8 +2490,9 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(SDNode *Node,
     }
     return Result;
   }
-  // Code below here assumes !isSigned without checking again.
-  assert(!isSigned && "Legalize cannot Expand SINT_TO_FP for i64 yet");
+
+  if (isSigned)
+    return SDValue();
 
   // TODO: Generalize this for use with other types.
   if (((SrcVT == MVT::i32 || SrcVT == MVT::i64) && DestVT == MVT::f32) ||
@@ -2537,6 +2551,11 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(SDNode *Node,
     return DAG.getSelect(dl, DestVT, SignBitTest, Slow, Fast);
   }
 
+  // Don't expand it if there isn't cheap fadd.
+  if (!TLI.isOperationLegalOrCustom(
+          Node->isStrictFPOpcode() ? ISD::STRICT_FADD : ISD::FADD, DestVT))
+    return SDValue();
+
   // The following optimization is valid only if every value in SrcVT (when
   // treated as signed) is representable in DestVT.  Check that the mantissa
   // size of DestVT is >= than the number of bits in SrcVT -1.
@@ -2563,7 +2582,8 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(SDNode *Node,
   // offset depending on the data type.
   uint64_t FF;
   switch (SrcVT.getSimpleVT().SimpleTy) {
-  default: llvm_unreachable("Unsupported integer type!");
+  default:
+    return SDValue();
   case MVT::i8 : FF = 0x43800000ULL; break;  // 2^8  (as a float)
   case MVT::i16: FF = 0x47800000ULL; break;  // 2^16 (as a float)
   case MVT::i32: FF = 0x4F800000ULL; break;  // 2^32 (as a float)
@@ -2716,6 +2736,30 @@ void SelectionDAGLegalize::PromoteLegalFP_TO_INT(SDNode *N, const SDLoc &dl,
   Results.push_back(Trunc);
   if (IsStrict)
     Results.push_back(Operation.getValue(1));
+}
+
+/// Promote FP_TO_*INT_SAT operation to a larger result type. At this point
+/// the result and operand types are legal and there must be a legal
+/// FP_TO_*INT_SAT operation for a larger result type.
+SDValue SelectionDAGLegalize::PromoteLegalFP_TO_INT_SAT(SDNode *Node,
+                                                        const SDLoc &dl) {
+  unsigned Opcode = Node->getOpcode();
+
+  // Scan for the appropriate larger type to use.
+  EVT NewOutTy = Node->getValueType(0);
+  while (true) {
+    NewOutTy = (MVT::SimpleValueType)(NewOutTy.getSimpleVT().SimpleTy + 1);
+    assert(NewOutTy.isInteger() && "Ran out of possibilities!");
+
+    if (TLI.isOperationLegalOrCustom(Opcode, NewOutTy))
+      break;
+  }
+
+  // Saturation width is determined by second operand, so we don't have to
+  // perform any fixup and can directly truncate the result.
+  SDValue Result = DAG.getNode(Opcode, dl, NewOutTy, Node->getOperand(0),
+                               Node->getOperand(1));
+  return DAG.getNode(ISD::TRUNCATE, dl, Node->getValueType(0), Result);
 }
 
 /// Legalize a BITREVERSE scalar/vector operation as a series of mask + shifts.
@@ -3034,16 +3078,19 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       break;
     // We fall back to use stack operation when the FP_ROUND operation
     // isn't available.
-    Tmp1 = EmitStackConvert(Node->getOperand(1), Node->getValueType(0),
-                            Node->getValueType(0), dl, Node->getOperand(0));
-    ReplaceNode(Node, Tmp1.getNode());
-    LLVM_DEBUG(dbgs() << "Successfully expanded STRICT_FP_ROUND node\n");
-    return true;
+    if ((Tmp1 = EmitStackConvert(Node->getOperand(1), Node->getValueType(0),
+                                 Node->getValueType(0), dl,
+                                 Node->getOperand(0)))) {
+      ReplaceNode(Node, Tmp1.getNode());
+      LLVM_DEBUG(dbgs() << "Successfully expanded STRICT_FP_ROUND node\n");
+      return true;
+    }
+    break;
   case ISD::FP_ROUND:
   case ISD::BITCAST:
-    Tmp1 = EmitStackConvert(Node->getOperand(0), Node->getValueType(0),
-                            Node->getValueType(0), dl);
-    Results.push_back(Tmp1);
+    if ((Tmp1 = EmitStackConvert(Node->getOperand(0), Node->getValueType(0),
+                                 Node->getValueType(0), dl)))
+      Results.push_back(Tmp1);
     break;
   case ISD::STRICT_FP_EXTEND:
     // When strict mode is enforced we can't do expansion because it
@@ -3058,17 +3105,19 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       break;
     // We fall back to use stack operation when the FP_EXTEND operation
     // isn't available.
-    Tmp1 = EmitStackConvert(Node->getOperand(1),
-                            Node->getOperand(1).getValueType(),
-                            Node->getValueType(0), dl, Node->getOperand(0));
-    ReplaceNode(Node, Tmp1.getNode());
-    LLVM_DEBUG(dbgs() << "Successfully expanded STRICT_FP_EXTEND node\n");
-    return true;
+    if ((Tmp1 = EmitStackConvert(
+             Node->getOperand(1), Node->getOperand(1).getValueType(),
+             Node->getValueType(0), dl, Node->getOperand(0)))) {
+      ReplaceNode(Node, Tmp1.getNode());
+      LLVM_DEBUG(dbgs() << "Successfully expanded STRICT_FP_EXTEND node\n");
+      return true;
+    }
+    break;
   case ISD::FP_EXTEND:
-    Tmp1 = EmitStackConvert(Node->getOperand(0),
-                            Node->getOperand(0).getValueType(),
-                            Node->getValueType(0), dl);
-    Results.push_back(Tmp1);
+    if ((Tmp1 = EmitStackConvert(Node->getOperand(0),
+                                 Node->getOperand(0).getValueType(),
+                                 Node->getValueType(0), dl)))
+      Results.push_back(Tmp1);
     break;
   case ISD::SIGN_EXTEND_INREG: {
     EVT ExtraVT = cast<VTSDNode>(Node->getOperand(1))->getVT();
@@ -3113,10 +3162,11 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     LLVM_FALLTHROUGH;
   case ISD::SINT_TO_FP:
   case ISD::STRICT_SINT_TO_FP:
-    Tmp1 = ExpandLegalINT_TO_FP(Node, Tmp2);
-    Results.push_back(Tmp1);
-    if (Node->isStrictFPOpcode())
-      Results.push_back(Tmp2);
+    if ((Tmp1 = ExpandLegalINT_TO_FP(Node, Tmp2))) {
+      Results.push_back(Tmp1);
+      if (Node->isStrictFPOpcode())
+        Results.push_back(Tmp2);
+    }
     break;
   case ISD::FP_TO_SINT:
     if (TLI.expandFP_TO_SINT(Node, Tmp1, DAG))
@@ -3142,6 +3192,10 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       LLVM_DEBUG(dbgs() << "Successfully expanded STRICT_FP_TO_UINT node\n");
       return true;
     }
+    break;
+  case ISD::FP_TO_SINT_SAT:
+  case ISD::FP_TO_UINT_SAT:
+    Results.push_back(TLI.expandFP_TO_INT_SAT(Node, DAG));
     break;
   case ISD::VAARG:
     Results.push_back(DAG.expandVAArg(Node));
@@ -4001,6 +4055,8 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       Results.push_back(Fadd.getValue(1));
       break;
     }
+    case ISD::STRICT_SINT_TO_FP:
+    case ISD::STRICT_UINT_TO_FP:
     case ISD::STRICT_LRINT:
     case ISD::STRICT_LLRINT:
     case ISD::STRICT_LROUND:
@@ -4333,11 +4389,131 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     Results.push_back(ExpandLibCall(LC, Node, false));
     break;
   }
+  case ISD::STRICT_SINT_TO_FP:
+  case ISD::STRICT_UINT_TO_FP:
+  case ISD::SINT_TO_FP:
+  case ISD::UINT_TO_FP: {
+    // TODO - Common the code with DAGTypeLegalizer::SoftenFloatRes_XINT_TO_FP
+    bool IsStrict = Node->isStrictFPOpcode();
+    bool Signed = Node->getOpcode() == ISD::SINT_TO_FP ||
+                  Node->getOpcode() == ISD::STRICT_SINT_TO_FP;
+    EVT SVT = Node->getOperand(IsStrict ? 1 : 0).getValueType();
+    EVT RVT = Node->getValueType(0);
+    EVT NVT = EVT();
+    SDLoc dl(Node);
+
+    // Even if the input is legal, no libcall may exactly match, eg. we don't
+    // have i1 -> fp conversions. So, it needs to be promoted to a larger type,
+    // eg: i13 -> fp. Then, look for an appropriate libcall.
+    RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
+    for (unsigned t = MVT::FIRST_INTEGER_VALUETYPE;
+         t <= MVT::LAST_INTEGER_VALUETYPE && LC == RTLIB::UNKNOWN_LIBCALL;
+         ++t) {
+      NVT = (MVT::SimpleValueType)t;
+      // The source needs to big enough to hold the operand.
+      if (NVT.bitsGE(SVT))
+        LC = Signed ? RTLIB::getSINTTOFP(NVT, RVT)
+                    : RTLIB::getUINTTOFP(NVT, RVT);
+    }
+    assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unable to legalize as libcall");
+
+    SDValue Chain = IsStrict ? Node->getOperand(0) : SDValue();
+    // Sign/zero extend the argument if the libcall takes a larger type.
+    SDValue Op = DAG.getNode(Signed ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND, dl,
+                             NVT, Node->getOperand(IsStrict ? 1 : 0));
+    TargetLowering::MakeLibCallOptions CallOptions;
+    CallOptions.setSExt(Signed);
+    std::pair<SDValue, SDValue> Tmp =
+        TLI.makeLibCall(DAG, LC, RVT, Op, CallOptions, dl, Chain);
+    Results.push_back(Tmp.first);
+    if (IsStrict)
+      Results.push_back(Tmp.second);
+    break;
+  }
+  case ISD::FP_TO_SINT:
+  case ISD::FP_TO_UINT:
+  case ISD::STRICT_FP_TO_SINT:
+  case ISD::STRICT_FP_TO_UINT: {
+    // TODO - Common the code with DAGTypeLegalizer::SoftenFloatOp_FP_TO_XINT.
+    bool IsStrict = Node->isStrictFPOpcode();
+    bool Signed = Node->getOpcode() == ISD::FP_TO_SINT ||
+                  Node->getOpcode() == ISD::STRICT_FP_TO_SINT;
+
+    SDValue Op = Node->getOperand(IsStrict ? 1 : 0);
+    EVT SVT = Op.getValueType();
+    EVT RVT = Node->getValueType(0);
+    EVT NVT = EVT();
+    SDLoc dl(Node);
+
+    // Even if the result is legal, no libcall may exactly match, eg. we don't
+    // have fp -> i1 conversions. So, it needs to be promoted to a larger type,
+    // eg: fp -> i32. Then, look for an appropriate libcall.
+    RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
+    for (unsigned IntVT = MVT::FIRST_INTEGER_VALUETYPE;
+         IntVT <= MVT::LAST_INTEGER_VALUETYPE && LC == RTLIB::UNKNOWN_LIBCALL;
+         ++IntVT) {
+      NVT = (MVT::SimpleValueType)IntVT;
+      // The type needs to big enough to hold the result.
+      if (NVT.bitsGE(RVT))
+        LC = Signed ? RTLIB::getFPTOSINT(SVT, NVT)
+                    : RTLIB::getFPTOUINT(SVT, NVT);
+    }
+    assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unable to legalize as libcall");
+
+    SDValue Chain = IsStrict ? Node->getOperand(0) : SDValue();
+    TargetLowering::MakeLibCallOptions CallOptions;
+    std::pair<SDValue, SDValue> Tmp =
+        TLI.makeLibCall(DAG, LC, NVT, Op, CallOptions, dl, Chain);
+
+    // Truncate the result if the libcall returns a larger type.
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, RVT, Tmp.first));
+    if (IsStrict)
+      Results.push_back(Tmp.second);
+    break;
+  }
+
+  case ISD::FP_ROUND:
+  case ISD::STRICT_FP_ROUND: {
+    // X = FP_ROUND(Y, TRUNC)
+    // TRUNC is a flag, which is always an integer that is zero or one.
+    // If TRUNC is 0, this is a normal rounding, if it is 1, this FP_ROUND
+    // is known to not change the value of Y.
+    // We can only expand it into libcall if the TRUNC is 0.
+    bool IsStrict = Node->isStrictFPOpcode();
+    SDValue Op = Node->getOperand(IsStrict ? 1 : 0);
+    SDValue Chain = IsStrict ? Node->getOperand(0) : SDValue();
+    EVT VT = Node->getValueType(0);
+    assert(cast<ConstantSDNode>(Node->getOperand(IsStrict ? 2 : 1))
+               ->isNullValue() &&
+           "Unable to expand as libcall if it is not normal rounding");
+
+    RTLIB::Libcall LC = RTLIB::getFPROUND(Op.getValueType(), VT);
+    assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unable to legalize as libcall");
+
+    TargetLowering::MakeLibCallOptions CallOptions;
+    std::pair<SDValue, SDValue> Tmp =
+        TLI.makeLibCall(DAG, LC, VT, Op, CallOptions, SDLoc(Node), Chain);
+    Results.push_back(Tmp.first);
+    if (IsStrict)
+      Results.push_back(Tmp.second);
+    break;
+  }
+  case ISD::FP_EXTEND: {
+    Results.push_back(
+        ExpandLibCall(RTLIB::getFPEXT(Node->getOperand(0).getValueType(),
+                                      Node->getValueType(0)),
+                      Node, false));
+    break;
+  }
+  case ISD::STRICT_FP_EXTEND:
   case ISD::STRICT_FP_TO_FP16: {
     RTLIB::Libcall LC =
-        RTLIB::getFPROUND(Node->getOperand(1).getValueType(), MVT::f16);
-    assert(LC != RTLIB::UNKNOWN_LIBCALL &&
-           "Unable to expand strict_fp_to_fp16");
+        Node->getOpcode() == ISD::STRICT_FP_TO_FP16
+            ? RTLIB::getFPROUND(Node->getOperand(1).getValueType(), MVT::f16)
+            : RTLIB::getFPEXT(Node->getOperand(1).getValueType(),
+                              Node->getValueType(0));
+    assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unable to legalize as libcall");
+
     TargetLowering::MakeLibCallOptions CallOptions;
     std::pair<SDValue, SDValue> Tmp =
         TLI.makeLibCall(DAG, LC, Node->getValueType(0), Node->getOperand(1),
@@ -4495,6 +4671,10 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::FP_TO_SINT:
   case ISD::STRICT_FP_TO_SINT:
     PromoteLegalFP_TO_INT(Node, dl, Results);
+    break;
+  case ISD::FP_TO_UINT_SAT:
+  case ISD::FP_TO_SINT_SAT:
+    Results.push_back(PromoteLegalFP_TO_INT_SAT(Node, dl));
     break;
   case ISD::UINT_TO_FP:
   case ISD::STRICT_UINT_TO_FP:

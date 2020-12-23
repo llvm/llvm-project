@@ -150,7 +150,7 @@ DynamicSymbols: []
 # INVALID-ENT-SIZE-GNU-NEXT:      1: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND foo@<corrupt>
 # INVALID-ENT-SIZE-GNU:      Version symbols section '.gnu.version' contains 1 entries:
 # INVALID-ENT-SIZE-GNU-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 0 ()
-# INVALID-ENT-SIZE-GNU-NEXT: warning: '[[FILE]]': cannot read content of SHT_GNU_versym section with index 1: section [index 1] has an invalid sh_entsize: 3
+# INVALID-ENT-SIZE-GNU-NEXT: warning: '[[FILE]]': cannot read content of SHT_GNU_versym section with index 1: section [index 1] has invalid sh_entsize: expected 2, but got 3
 
 # INVALID-ENT-SIZE-LLVM:      DynamicSymbols [
 # INVALID-ENT-SIZE-LLVM-NEXT: warning: '[[FILE]]': section [index 1] has invalid sh_entsize: expected 2, but got 3
@@ -174,7 +174,7 @@ DynamicSymbols: []
 # INVALID-ENT-SIZE-LLVM-NEXT:   }
 # INVALID-ENT-SIZE-LLVM-NEXT: ]
 # INVALID-ENT-SIZE-LLVM:      VersionSymbols [
-# INVALID-ENT-SIZE-LLVM-NEXT: warning: '[[FILE]]': cannot read content of SHT_GNU_versym section with index 1: section [index 1] has an invalid sh_entsize: 3
+# INVALID-ENT-SIZE-LLVM-NEXT: warning: '[[FILE]]': cannot read content of SHT_GNU_versym section with index 1: section [index 1] has invalid sh_entsize: expected 2, but got 3
 # INVALID-ENT-SIZE-LLVM-NEXT: ]
 
 --- !ELF

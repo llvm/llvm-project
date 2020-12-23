@@ -80,15 +80,16 @@ define i64 @test_xaddrX4_loop(i8* %p) {
 ; CHECK-NEXT:    li r5, 3
 ; CHECK-NEXT:    mtctr r3
 ; CHECK-NEXT:    li r3, 0
-; loop instruction number is changed from 5 to 4, so its align is changed from 5 to 4.
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB4_1: # %for.body
-; CHECK:         ldu r6, 8(r4)
+; CHECK-NEXT:    #
+; CHECK-NEXT:    ldu r6, 8(r4)
 ; CHECK-NEXT:    ldx r7, r4, r5
 ; CHECK-NEXT:    maddld r3, r7, r6, r3
 ; CHECK-NEXT:    bdnz .LBB4_1
 ; CHECK-NEXT:  # %bb.2: # %for.end
 ; CHECK-NEXT:    blr
+; loop instruction number is changed from 5 to 4, so its align is changed from 5 to 4.
 entry:
   br label %for.body
 

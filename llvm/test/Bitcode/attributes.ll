@@ -404,8 +404,20 @@ define void @f68() mustprogress
   ret void
 }
 
-; CHECK; define void @f69() #43
-define void @f70() nocallback
+; CHECK; define void @f69() #42
+define void @f69() nocallback
+{
+  ret void
+}
+
+; CHECK: define void @f70() #43
+define void @f70() cold
+{
+  ret void
+}
+
+; CHECK: define void @f71() #44
+define void @f71() hot
 {
   ret void
 }
@@ -453,4 +465,6 @@ define void @f70() nocallback
 ; CHECK: attributes #40 = { null_pointer_is_valid }
 ; CHECK: attributes #41 = { mustprogress }
 ; CHECK: attributes #42 = { nocallback }
+; CHECK: attributes #43 = { cold }
+; CHECK: attributes #44 = { hot }
 ; CHECK: attributes #[[NOBUILTIN]] = { nobuiltin }

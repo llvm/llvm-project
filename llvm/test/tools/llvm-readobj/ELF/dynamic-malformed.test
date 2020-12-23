@@ -414,3 +414,58 @@ ProgramHeaders:
 # PAST-THE-EOF-NEXT: {{[(]?}}RPATH{{[)]?}}     Library rpath: [<?>]
 # PAST-THE-EOF-NEXT: {{[(]?}}RUNPATH{{[)]?}}   Library runpath: [<?>]
 # PAST-THE-EOF-NEXT: {{[(]?}}NULL{{[)]?}}      0x0
+
+## Check that we report a warning when we try to map an address, but loadable
+## segments appear unsorted by the p_vaddr member. In this case we are still
+## able to map an address.
+
+# RUN: yaml2obj %s --docnum=7 -o %t10
+# RUN: llvm-readobj --dynamic-table %t10 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t10 --implicit-check-not=warning: --check-prefixes=OUT-OF-ORDER,OUT-OF-ORDER-LLVM
+# RUN: llvm-readelf --dynamic-table %t10 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t10 --implicit-check-not=warning: --check-prefixes=OUT-OF-ORDER,OUT-OF-ORDER-GNU
+
+# OUT-OF-ORDER:           warning: '[[FILE]]': loadable segments are unsorted by virtual address
+
+# OUT-OF-ORDER-LLVM:      DynamicSection [ (2 entries)
+# OUT-OF-ORDER-LLVM-NEXT:   Tag                Type   Name/Value
+# OUT-OF-ORDER-LLVM-NEXT:   0x0000000000000005 STRTAB 0x1000
+# OUT-OF-ORDER-LLVM-NEXT:   0x0000000000000000 NULL   0x0
+# OUT-OF-ORDER-LLVM-NEXT: ]
+
+# OUT-OF-ORDER-GNU:       Dynamic section at offset 0xe9 contains 2 entries:
+# OUT-OF-ORDER-GNU-NEXT:   Tag                Type     Name/Value
+# OUT-OF-ORDER-GNU-NEXT:   0x0000000000000005 (STRTAB) 0x1000
+# OUT-OF-ORDER-GNU-NEXT:   0x0000000000000000 (NULL)   0x0
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:    .dynstr
+    Type:    SHT_STRTAB
+    Address: 0x1000
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Address: 0x1010
+    Entries:
+      - Tag:   DT_STRTAB
+        Value: 0x1000
+      - Tag:   DT_NULL
+        Value: 0
+Symbols: []
+ProgramHeaders:
+  - Type:     PT_LOAD
+    VAddr:    0x1010
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynstr
+    LastSec:  .dynstr
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1010
+    FirstSec: .dynamic
+    LastSec:  .dynamic

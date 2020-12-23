@@ -25,22 +25,23 @@ namespace {
 
 Study getStudy() {
   return Study{
-      HostState{
-          "CpuName", 123, {CacheInfo{"A", 1, 2, 3}, CacheInfo{"B", 4, 5, 6}}},
-      BenchmarkOptions{std::chrono::seconds(1), std::chrono::seconds(2), 10,
-                       100, 6, 100, 0.1, 2, BenchmarkLog::Full},
-      StudyConfiguration{2, 3, SizeRange{4, 5, 6}, Align(8), 9, 10},
-      {FunctionMeasurements{"A",
-                            {Measurement{3, std::chrono::seconds(3)},
-                             Measurement{3, std::chrono::seconds(4)}}},
-       FunctionMeasurements{"B", {}}}};
+      "StudyName",
+      Runtime{HostState{"CpuName",
+                        123,
+                        {CacheInfo{"A", 1, 2, 3}, CacheInfo{"B", 4, 5, 6}}},
+              456, 789,
+              BenchmarkOptions{std::chrono::seconds(1), std::chrono::seconds(2),
+                               10, 100, 6, 100, 0.1, 2, BenchmarkLog::Full}},
+      StudyConfiguration{std::string("Function"), 30U, false, 32U,
+                         std::string("Distribution"), Align(16), 3U},
+      {std::chrono::seconds(3), std::chrono::seconds(4)}};
 }
 
-static std::string SerializeToString(const Study &S) {
+static std::string serializeToString(const Study &S) {
   std::string Buffer;
   raw_string_ostream RSO(Buffer);
   json::OStream JOS(RSO);
-  SerializeToJson(S, JOS);
+  serializeToJson(S, JOS);
   return Buffer;
 }
 
@@ -54,14 +55,25 @@ MATCHER(EqualsCacheInfo, "") {
                             A, result_listener);
 }
 
-auto Equals(const HostState &H) -> auto {
+auto equals(const HostState &H) -> auto {
   return AllOf(
       Field(&HostState::CpuName, H.CpuName),
       Field(&HostState::CpuFrequency, H.CpuFrequency),
       Field(&HostState::Caches, Pointwise(EqualsCacheInfo(), H.Caches)));
 }
 
-auto Equals(const BenchmarkOptions &BO) -> auto {
+auto equals(const StudyConfiguration &SC) -> auto {
+  return AllOf(
+      Field(&StudyConfiguration::Function, SC.Function),
+      Field(&StudyConfiguration::NumTrials, SC.NumTrials),
+      Field(&StudyConfiguration::IsSweepMode, SC.IsSweepMode),
+      Field(&StudyConfiguration::SweepModeMaxSize, SC.SweepModeMaxSize),
+      Field(&StudyConfiguration::SizeDistributionName, SC.SizeDistributionName),
+      Field(&StudyConfiguration::AccessAlignment, SC.AccessAlignment),
+      Field(&StudyConfiguration::MemcmpMismatchAt, SC.MemcmpMismatchAt));
+}
+
+auto equals(const BenchmarkOptions &BO) -> auto {
   return AllOf(
       Field(&BenchmarkOptions::MinDuration, BO.MinDuration),
       Field(&BenchmarkOptions::MaxDuration, BO.MaxDuration),
@@ -74,58 +86,33 @@ auto Equals(const BenchmarkOptions &BO) -> auto {
       Field(&BenchmarkOptions::Log, BO.Log));
 }
 
-auto Equals(const SizeRange &SR) -> auto {
-  return AllOf(Field(&SizeRange::From, SR.From), Field(&SizeRange::To, SR.To),
-               Field(&SizeRange::Step, SR.Step));
+auto equals(const Runtime &RI) -> auto {
+  return AllOf(Field(&Runtime::Host, equals(RI.Host)),
+               Field(&Runtime::BufferSize, RI.BufferSize),
+               Field(&Runtime::BatchParameterCount, RI.BatchParameterCount),
+               Field(&Runtime::BenchmarkOptions, equals(RI.BenchmarkOptions)));
 }
 
-auto Equals(const StudyConfiguration &SC) -> auto {
-  return AllOf(
-      Field(&StudyConfiguration::Runs, SC.Runs),
-      Field(&StudyConfiguration::BufferSize, SC.BufferSize),
-      Field(&StudyConfiguration::Size, Equals(SC.Size)),
-      Field(&StudyConfiguration::AddressAlignment, SC.AddressAlignment),
-      Field(&StudyConfiguration::MemsetValue, SC.MemsetValue),
-      Field(&StudyConfiguration::MemcmpMismatchAt, SC.MemcmpMismatchAt));
-}
-
-MATCHER(EqualsMeasurement, "") {
-  const Measurement &A = ::testing::get<0>(arg);
-  const Measurement &B = ::testing::get<1>(arg);
-  return ExplainMatchResult(AllOf(Field(&Measurement::Size, B.Size),
-                                  Field(&Measurement::Runtime, B.Runtime)),
-                            A, result_listener);
-}
-
-MATCHER(EqualsFunctions, "") {
-  const FunctionMeasurements &A = ::testing::get<0>(arg);
-  const FunctionMeasurements &B = ::testing::get<1>(arg);
-  return ExplainMatchResult(
-      AllOf(Field(&FunctionMeasurements::Name, B.Name),
-            Field(&FunctionMeasurements::Measurements,
-                  Pointwise(EqualsMeasurement(), B.Measurements))),
-      A, result_listener);
-}
-
-auto Equals(const Study &S) -> auto {
-  return AllOf(
-      Field(&Study::Host, Equals(S.Host)),
-      Field(&Study::Options, Equals(S.Options)),
-      Field(&Study::Configuration, Equals(S.Configuration)),
-      Field(&Study::Functions, Pointwise(EqualsFunctions(), S.Functions)));
+auto equals(const Study &S) -> auto {
+  return AllOf(Field(&Study::StudyName, S.StudyName),
+               Field(&Study::Runtime, equals(S.Runtime)),
+               Field(&Study::Configuration, equals(S.Configuration)),
+               Field(&Study::Measurements, S.Measurements));
 }
 
 TEST(JsonTest, RoundTrip) {
   const Study S = getStudy();
-  auto StudyOrError = ParseJsonStudy(SerializeToString(S));
+  const auto Serialized = serializeToString(S);
+  auto StudyOrError = parseJsonStudy(Serialized);
   if (auto Err = StudyOrError.takeError())
-    EXPECT_FALSE(Err) << "Unexpected error";
+    EXPECT_FALSE(Err) << "Unexpected error : " << Err << "\n" << Serialized;
   const Study &Parsed = *StudyOrError;
-  EXPECT_THAT(Parsed, Equals(S));
+  EXPECT_THAT(Parsed, equals(S)) << Serialized << "\n"
+                                 << serializeToString(Parsed);
 }
 
 TEST(JsonTest, SupplementaryField) {
-  auto Failure = ParseJsonStudy(R"({
+  auto Failure = parseJsonStudy(R"({
       "UnknownField": 10
     }
   )");
@@ -133,17 +120,19 @@ TEST(JsonTest, SupplementaryField) {
 }
 
 TEST(JsonTest, InvalidType) {
-  auto Failure = ParseJsonStudy(R"({
-      "Options": 1
+  auto Failure = parseJsonStudy(R"({
+      "Runtime": 1
     }
   )");
   EXPECT_EQ(toString(Failure.takeError()), "Expected JSON Object");
 }
 
 TEST(JsonTest, InvalidDuration) {
-  auto Failure = ParseJsonStudy(R"({
-      "Options": {
-        "MinDuration": "Duration should be a Number"
+  auto Failure = parseJsonStudy(R"({
+      "Runtime": {
+        "BenchmarkOptions": {
+          "MinDuration": "Duration should be a Number"
+        }
       }
     }
   )");
@@ -151,9 +140,9 @@ TEST(JsonTest, InvalidDuration) {
 }
 
 TEST(JsonTest, InvalidAlignType) {
-  auto Failure = ParseJsonStudy(R"({
-      "Configuration":{
-        "AddressAlignment": "Align should be an Integer"
+  auto Failure = parseJsonStudy(R"({
+      "Configuration": {
+        "AccessAlignment": "Align should be an Integer"
       }
     }
   )");
@@ -161,9 +150,9 @@ TEST(JsonTest, InvalidAlignType) {
 }
 
 TEST(JsonTest, InvalidAlign) {
-  auto Failure = ParseJsonStudy(R"({
-      "Configuration":{
-        "AddressAlignment":3
+  auto Failure = parseJsonStudy(R"({
+      "Configuration": {
+        "AccessAlignment": 3
       }
     }
   )");
@@ -172,9 +161,11 @@ TEST(JsonTest, InvalidAlign) {
 }
 
 TEST(JsonTest, InvalidBenchmarkLogType) {
-  auto Failure = ParseJsonStudy(R"({
-      "Options":{
-        "Log": 3
+  auto Failure = parseJsonStudy(R"({
+      "Runtime": {
+        "BenchmarkOptions":{
+          "Log": 3
+        }
       }
     }
   )");
@@ -183,9 +174,11 @@ TEST(JsonTest, InvalidBenchmarkLogType) {
 }
 
 TEST(JsonTest, InvalidBenchmarkLog) {
-  auto Failure = ParseJsonStudy(R"({
-      "Options":{
-        "Log": "Unknown"
+  auto Failure = parseJsonStudy(R"({
+      "Runtime": {
+        "BenchmarkOptions":{
+          "Log": "Unknown"
+        }
       }
     }
   )");

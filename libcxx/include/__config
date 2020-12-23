@@ -1082,7 +1082,7 @@ typedef unsigned int   char32_t;
 #endif
 
 #ifndef _LIBCPP_HAS_NO_ASAN
-_LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
+extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
   const void *, const void *, const void *, const void *);
 #endif
 

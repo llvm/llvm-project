@@ -1183,7 +1183,6 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
   MachineBasicBlock *MBB = MI->getParent();
   MachineFunction *MF = MBB->getParent();
   SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
-  DenseSet<Register> SGPRSpillVGPRDefinedSet; // FIXME: This should be removed
   const SIFrameLowering *TFL = ST.getFrameLowering();
 
   ArrayRef<SIMachineFunctionInfo::SpilledReg> VGPRSpills
@@ -1220,20 +1219,13 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
 
       bool UseKill = IsKill && i == NumSubRegs - 1;
 
-      // During SGPR spilling to VGPR, determine if the VGPR is defined. The
-      // only circumstance in which we say it is undefined is when it is the
-      // first spill to this VGPR in the first basic block.
-      bool VGPRDefined = true;
-      if (MBB == &MF->front())
-        VGPRDefined = !SGPRSpillVGPRDefinedSet.insert(Spill.VGPR).second;
-
       // Mark the "old value of vgpr" input undef only if this is the first sgpr
       // spill to this specific vgpr in the first basic block.
       auto MIB =
           BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_WRITELANE_B32), Spill.VGPR)
               .addReg(SubReg, getKillRegState(UseKill))
               .addImm(Spill.Lane)
-              .addReg(Spill.VGPR, VGPRDefined ? 0 : RegState::Undef);
+              .addReg(Spill.VGPR);
 
       if (NeedsCFI)
         TFL->buildCFIForSGPRToVGPRSpill(*MBB, MI, DL, SubReg, Spill.VGPR,

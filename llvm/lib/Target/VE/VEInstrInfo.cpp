@@ -341,6 +341,11 @@ static void copyPhysSubRegs(MachineBasicBlock &MBB,
       MachineInstrBuilder MIB =
           BuildMI(MBB, I, DL, MCID, SubDest).addReg(SubSrc).addImm(0);
       MovMI = MIB.getInstr();
+    } else if (MCID.getOpcode() == VE::ANDMmm) {
+      // generate "ANDM, dest, vm0, src" instruction.
+      MachineInstrBuilder MIB =
+          BuildMI(MBB, I, DL, MCID, SubDest).addReg(VE::VM0).addReg(SubSrc);
+      MovMI = MIB.getInstr();
     } else {
       llvm_unreachable("Unexpected reg-to-reg copy instruction");
     }
@@ -379,6 +384,16 @@ void VEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                   .addReg(SrcReg, getKillRegState(KillSrc))
                                   .addReg(SubTmp, getKillRegState(true));
     MIB.getInstr()->addRegisterKilled(TmpReg, TRI, true);
+  } else if (VE::VMRegClass.contains(DestReg, SrcReg)) {
+    BuildMI(MBB, I, DL, get(VE::ANDMmm), DestReg)
+        .addReg(VE::VM0)
+        .addReg(SrcReg, getKillRegState(KillSrc));
+  } else if (VE::VM512RegClass.contains(DestReg, SrcReg)) {
+    // Use two instructions.
+    const unsigned SubRegIdx[] = {VE::sub_vm_even, VE::sub_vm_odd};
+    unsigned int NumSubRegs = 2;
+    copyPhysSubRegs(MBB, I, DL, DestReg, SrcReg, KillSrc, get(VE::ANDMmm),
+                    NumSubRegs, SubRegIdx, &getRegisterInfo());
   } else if (VE::F128RegClass.contains(DestReg, SrcReg)) {
     // Use two instructions.
     const unsigned SubRegIdx[] = {VE::sub_even, VE::sub_odd};

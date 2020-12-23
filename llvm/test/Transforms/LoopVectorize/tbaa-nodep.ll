@@ -1,5 +1,5 @@
-; RUN: opt < %s  -tbaa -basic-aa -loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -dce -instcombine -simplifycfg -S | FileCheck %s
-; RUN: opt < %s  -basic-aa -loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -dce -instcombine -simplifycfg -S | FileCheck %s --check-prefix=CHECK-NOTBAA
+; RUN: opt < %s  -tbaa -basic-aa -loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -dce -instcombine -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
+; RUN: opt < %s  -basic-aa -loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -dce -instcombine -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s --check-prefix=CHECK-NOTBAA
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Function Attrs: nounwind uwtable

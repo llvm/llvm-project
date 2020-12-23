@@ -416,12 +416,9 @@ DeclRefExpr::DeclRefExpr(const ASTContext &Ctx,
       RefersToEnclosingVariableOrCapture;
   DeclRefExprBits.NonOdrUseReason = NOUR;
   if (TemplateArgs) {
-    auto Deps = TemplateArgumentDependence::None;
     getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
-        TemplateKWLoc, *TemplateArgs, getTrailingObjects<TemplateArgumentLoc>(),
-        Deps);
-    assert(!(Deps & TemplateArgumentDependence::Dependent) &&
-           "built a DeclRefExpr with dependent template args");
+        TemplateKWLoc, *TemplateArgs,
+        getTrailingObjects<TemplateArgumentLoc>());
   } else if (TemplateKWLoc.isValid()) {
     getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
         TemplateKWLoc);
@@ -1524,16 +1521,8 @@ MemberExpr *MemberExpr::Create(
   MemberExpr *E = new (Mem) MemberExpr(Base, IsArrow, OperatorLoc, MemberDecl,
                                        NameInfo, T, VK, OK, NOUR);
 
-  // FIXME: remove remaining dependence computation to computeDependence().
-  auto Deps = E->getDependence();
+  // FIXME: Move this into the constructor.
   if (HasQualOrFound) {
-    // FIXME: Wrong. We should be looking at the member declaration we found.
-    if (QualifierLoc && QualifierLoc.getNestedNameSpecifier()->isDependent())
-      Deps |= ExprDependence::TypeValueInstantiation;
-    else if (QualifierLoc &&
-             QualifierLoc.getNestedNameSpecifier()->isInstantiationDependent())
-      Deps |= ExprDependence::Instantiation;
-
     E->MemberExprBits.HasQualifierOrFoundDecl = true;
 
     MemberExprNameQualifier *NQ =
@@ -1546,16 +1535,26 @@ MemberExpr *MemberExpr::Create(
       TemplateArgs || TemplateKWLoc.isValid();
 
   if (TemplateArgs) {
-    auto TemplateArgDeps = TemplateArgumentDependence::None;
     E->getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
         TemplateKWLoc, *TemplateArgs,
-        E->getTrailingObjects<TemplateArgumentLoc>(), TemplateArgDeps);
-    if (TemplateArgDeps & TemplateArgumentDependence::Instantiation)
-      Deps |= ExprDependence::Instantiation;
+        E->getTrailingObjects<TemplateArgumentLoc>());
   } else if (TemplateKWLoc.isValid()) {
     E->getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
         TemplateKWLoc);
   }
+
+  // FIXME: remove remaining dependence computation to computeDependence().
+  auto Deps = E->getDependence();
+  if (NestedNameSpecifier *Qual = E->getQualifier()) {
+    // FIXME: Wrong. We should be looking at the member declaration we found.
+    if (Qual->isDependent())
+      Deps |= ExprDependence::TypeValueInstantiation;
+    else if (Qual->isInstantiationDependent())
+      Deps |= ExprDependence::Instantiation;
+  }
+  if (TemplateSpecializationType::anyInstantiationDependentTemplateArguments(
+          E->template_arguments()))
+    Deps |= ExprDependence::Instantiation;
   E->setDependence(Deps);
 
   return E;
@@ -3243,9 +3242,6 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   if (!IncludePossibleEffects && getExprLoc().isMacroID())
     return false;
 
-  if (isInstantiationDependent())
-    return IncludePossibleEffects;
-
   switch (getStmtClass()) {
   case NoStmtClass:
   #define ABSTRACT_STMT(Type)
@@ -3265,7 +3261,8 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case TypoExprClass:
   case RecoveryExprClass:
   case CXXFoldExprClass:
-    llvm_unreachable("shouldn't see dependent / unresolved nodes here");
+    // Make a conservative assumption for dependent nodes.
+    return IncludePossibleEffects;
 
   case DeclRefExprClass:
   case ObjCIvarRefExprClass:

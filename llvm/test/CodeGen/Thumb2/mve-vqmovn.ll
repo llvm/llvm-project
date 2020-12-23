@@ -164,13 +164,13 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @vqmovni64_smaxmin(<2 x i64> %s0) {
 ; CHECK-LABEL: vqmovni64_smaxmin:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov r2, s0
+; CHECK-NEXT:    vmov r2, s2
 ; CHECK-NEXT:    mvn r12, #-2147483648
-; CHECK-NEXT:    vmov r1, s1
+; CHECK-NEXT:    vmov r1, s3
 ; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    vmov r3, s2
+; CHECK-NEXT:    vmov r3, s0
 ; CHECK-NEXT:    subs.w r2, r2, r12
-; CHECK-NEXT:    vmov r2, s3
+; CHECK-NEXT:    vmov r2, s1
 ; CHECK-NEXT:    sbcs r1, r1, #0
 ; CHECK-NEXT:    mov.w r1, #0
 ; CHECK-NEXT:    it lt
@@ -192,11 +192,11 @@ define arm_aapcs_vfpcc <2 x i64> @vqmovni64_smaxmin(<2 x i64> %s0) {
 ; CHECK-NEXT:    vand q0, q0, q1
 ; CHECK-NEXT:    vbic q2, q2, q1
 ; CHECK-NEXT:    vorr q0, q0, q2
-; CHECK-NEXT:    vmov r2, s0
-; CHECK-NEXT:    vmov r1, s1
-; CHECK-NEXT:    vmov r3, s2
+; CHECK-NEXT:    vmov r2, s2
+; CHECK-NEXT:    vmov r1, s3
+; CHECK-NEXT:    vmov r3, s0
 ; CHECK-NEXT:    rsbs.w r2, r2, #-2147483648
-; CHECK-NEXT:    vmov r2, s3
+; CHECK-NEXT:    vmov r2, s1
 ; CHECK-NEXT:    sbcs.w r1, r12, r1
 ; CHECK-NEXT:    mov.w r1, #0
 ; CHECK-NEXT:    it lt
@@ -240,13 +240,13 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @vqmovni64_sminmax(<2 x i64> %s0) {
 ; CHECK-LABEL: vqmovni64_sminmax:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov r2, s0
+; CHECK-NEXT:    vmov r2, s2
 ; CHECK-NEXT:    mov.w r12, #-1
-; CHECK-NEXT:    vmov r1, s1
+; CHECK-NEXT:    vmov r1, s3
 ; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    vmov r3, s2
+; CHECK-NEXT:    vmov r3, s0
 ; CHECK-NEXT:    rsbs.w r2, r2, #-2147483648
-; CHECK-NEXT:    vmov r2, s3
+; CHECK-NEXT:    vmov r2, s1
 ; CHECK-NEXT:    sbcs.w r1, r12, r1
 ; CHECK-NEXT:    mov.w r1, #0
 ; CHECK-NEXT:    it lt
@@ -268,11 +268,11 @@ define arm_aapcs_vfpcc <2 x i64> @vqmovni64_sminmax(<2 x i64> %s0) {
 ; CHECK-NEXT:    vand q0, q0, q1
 ; CHECK-NEXT:    vbic q2, q2, q1
 ; CHECK-NEXT:    vorr q0, q0, q2
-; CHECK-NEXT:    vmov r2, s0
-; CHECK-NEXT:    vmov r1, s1
-; CHECK-NEXT:    vmov r3, s2
+; CHECK-NEXT:    vmov r2, s2
+; CHECK-NEXT:    vmov r1, s3
+; CHECK-NEXT:    vmov r3, s0
 ; CHECK-NEXT:    subs.w r2, r2, r12
-; CHECK-NEXT:    vmov r2, s3
+; CHECK-NEXT:    vmov r2, s1
 ; CHECK-NEXT:    sbcs r1, r1, #0
 ; CHECK-NEXT:    mov.w r1, #0
 ; CHECK-NEXT:    it lt
@@ -316,13 +316,13 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @vqmovni64_umaxmin(<2 x i64> %s0) {
 ; CHECK-LABEL: vqmovni64_umaxmin:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov r1, s0
+; CHECK-NEXT:    vmov r1, s2
 ; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    vmov r0, s1
+; CHECK-NEXT:    vmov r0, s3
 ; CHECK-NEXT:    vmov.i64 q2, #0xffffffff
-; CHECK-NEXT:    vmov r3, s2
+; CHECK-NEXT:    vmov r3, s0
 ; CHECK-NEXT:    subs.w r1, r1, #-1
-; CHECK-NEXT:    vmov r1, s3
+; CHECK-NEXT:    vmov r1, s1
 ; CHECK-NEXT:    sbcs r0, r0, #0
 ; CHECK-NEXT:    mov.w r0, #0
 ; CHECK-NEXT:    it lo
@@ -350,13 +350,13 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @vqmovni64_uminmax(<2 x i64> %s0) {
 ; CHECK-LABEL: vqmovni64_uminmax:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov r1, s0
+; CHECK-NEXT:    vmov r1, s2
 ; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    vmov r0, s1
+; CHECK-NEXT:    vmov r0, s3
 ; CHECK-NEXT:    vmov.i64 q2, #0xffffffff
-; CHECK-NEXT:    vmov r3, s2
+; CHECK-NEXT:    vmov r3, s0
 ; CHECK-NEXT:    subs.w r1, r1, #-1
-; CHECK-NEXT:    vmov r1, s3
+; CHECK-NEXT:    vmov r1, s1
 ; CHECK-NEXT:    sbcs r0, r0, #0
 ; CHECK-NEXT:    mov.w r0, #0
 ; CHECK-NEXT:    it lo

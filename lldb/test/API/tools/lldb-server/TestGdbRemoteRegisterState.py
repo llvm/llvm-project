@@ -95,7 +95,6 @@ class TestGdbRemoteRegisterState(gdbremote_testcase.GdbRemoteTestCaseBase):
     @debugserver_test
     def test_grp_register_save_restore_works_with_suffix_debugserver(self):
         USE_THREAD_SUFFIX = True
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_launch()
         self.grp_register_save_restore_works(USE_THREAD_SUFFIX)
@@ -103,7 +102,6 @@ class TestGdbRemoteRegisterState(gdbremote_testcase.GdbRemoteTestCaseBase):
     @llgs_test
     def test_grp_register_save_restore_works_with_suffix_llgs(self):
         USE_THREAD_SUFFIX = True
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         self.grp_register_save_restore_works(USE_THREAD_SUFFIX)
@@ -111,7 +109,6 @@ class TestGdbRemoteRegisterState(gdbremote_testcase.GdbRemoteTestCaseBase):
     @debugserver_test
     def test_grp_register_save_restore_works_no_suffix_debugserver(self):
         USE_THREAD_SUFFIX = False
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_launch()
         self.grp_register_save_restore_works(USE_THREAD_SUFFIX)
@@ -119,7 +116,6 @@ class TestGdbRemoteRegisterState(gdbremote_testcase.GdbRemoteTestCaseBase):
     @llgs_test
     def test_grp_register_save_restore_works_no_suffix_llgs(self):
         USE_THREAD_SUFFIX = False
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         self.grp_register_save_restore_works(USE_THREAD_SUFFIX)

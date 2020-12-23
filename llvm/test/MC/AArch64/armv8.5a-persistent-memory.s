@@ -4,4 +4,4 @@
 
 dc cvadp, x7
 // CHECK:  dc cvadp, x7   // encoding: [0x27,0x7d,0x0b,0xd5]
-// NOCCDP: error: DC CVADP requires ccdp
+// NOCCDP: error: DC CVADP requires: ccdp

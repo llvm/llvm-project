@@ -3,7 +3,7 @@
 ; nodes away allows the branches to be eliminated, performing a simple form of
 ; 'if conversion'.
 
-; RUN: opt < %s -simplifycfg -S > %t.xform
+; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S > %t.xform
 ; RUN:   not grep phi %t.xform
 ; RUN:   grep ret %t.xform
 

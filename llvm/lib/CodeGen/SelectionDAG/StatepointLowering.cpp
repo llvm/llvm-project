@@ -546,6 +546,18 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
   // Decide which deriver pointers will go on VRegs
   unsigned MaxVRegPtrs = MaxRegistersForGCPointers.getValue();
 
+  // Pointers used on exceptional path of invoke statepoint.
+  // We cannot assing them to VRegs.
+  SmallSet<SDValue, 8> LPadPointers;
+  if (auto *StInvoke = dyn_cast_or_null<InvokeInst>(SI.StatepointInstr)) {
+    LandingPadInst *LPI = StInvoke->getLandingPadInst();
+    for (auto *Relocate : SI.GCRelocates)
+      if (Relocate->getOperand(0) == LPI) {
+        LPadPointers.insert(Builder.getValue(Relocate->getBasePtr()));
+        LPadPointers.insert(Builder.getValue(Relocate->getDerivedPtr()));
+      }
+  }
+
   LLVM_DEBUG(dbgs() << "Deciding how to lower GC Pointers:\n");
 
   // List of unique lowered GC Pointer values.
@@ -554,6 +566,14 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
   DenseMap<SDValue, unsigned> GCPtrIndexMap;
 
   unsigned CurNumVRegs = 0;
+
+  auto canPassGCPtrOnVReg = [&](SDValue SD) {
+    if (SD.getValueType().isVector())
+      return false;
+    if (LPadPointers.count(SD))
+      return false;
+    return !willLowerDirectly(SD);
+  };
 
   auto processGCPtr = [&](const Value *V) {
     SDValue PtrSD = Builder.getValue(V);
@@ -564,7 +584,9 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
     assert(!LowerAsVReg.count(PtrSD) && "must not have been seen");
     if (LowerAsVReg.size() == MaxVRegPtrs)
       return;
-    if (willLowerDirectly(PtrSD) || V->getType()->isVectorTy()) {
+    assert(V->getType()->isVectorTy() == PtrSD.getValueType().isVector() &&
+           "IR and SD types disagree");
+    if (!canPassGCPtrOnVReg(PtrSD)) {
       LLVM_DEBUG(dbgs() << "direct/spill "; PtrSD.dump(&Builder.DAG));
       return;
     }

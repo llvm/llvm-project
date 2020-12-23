@@ -94,6 +94,6 @@ void PPCFunctionInfo::appendParameterType(ParamType Type) {
   }
 
   assert(Type != FixedType && "FixedType should already be handled.");
-  if (30 - Bits >= 0)
+  if (Bits < 31)
     ParameterType |= Type << (30 - Bits);
 }
