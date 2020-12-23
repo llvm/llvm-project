@@ -67,7 +67,7 @@ will be completely disabled.
 LIBOMPTARGET_INFO
 """""""""""""""""
 
-``LIBOMPTARGET_INFO`` allows the user to request different types runtime
+``LIBOMPTARGET_INFO`` allows the user to request different types of runtime
 information from ``libomptarget``. ``LIBOMPTARGET_INFO`` uses a 32-bit field to
 enable or disable different types of information. This includes information
 about data-mappings and kernel execution. It is recommended to build your
