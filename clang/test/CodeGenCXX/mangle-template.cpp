@@ -342,23 +342,3 @@ namespace fixed_size_parameter_pack {
   template<int ...Ns> void f(A<unsigned, char, long long>::B<0, Ns...>);
   void g() { f<1, 2>({}); }
 }
-
-namespace type_qualifier {
-  template<typename T> using int_t = int;
-  template<typename T> void f(decltype(int_t<T*>() + 1)) {}
-  // FIXME: This mangling doesn't work: we need to mangle the
-  // instantiation-dependent 'int_t' operand.
-  // CHECK: @_ZN14type_qualifier1fIPiEEvDTplcvi_ELi1EE
-  template void f<int*>(int);
-
-  // Note that this template has different constraints but would mangle the
-  // same:
-  //template<typename T> void f(decltype(int_t<typename T::type>() + 1)) {}
-
-  struct impl { using type = void; };
-  template<typename T> using alias = impl;
-  template<typename T> void g(decltype(alias<T*>::type(), 1)) {}
-  // FIXME: Similarly we need to mangle the `T*` in here.
-  // CHECK: @_ZN14type_qualifier1gIPiEEvDTcmcvv_ELi1EE
-  template void g<int*>(int);
-}
