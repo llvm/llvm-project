@@ -47,6 +47,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/CmpInstAnalysis.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
@@ -1961,7 +1962,8 @@ inline match_LoopInvariant<Ty> m_LoopInvariant(const Ty &M, const Loop *L) {
 /// \endcode
 static bool detectShiftUntilBitTestIdiom(Loop *CurLoop, Value *&BaseX,
                                          Value *&BitMask, Value *&BitPos,
-                                         Value *&CurrX, Value *&NextX) {
+                                         Value *&CurrX, Value *&NextX,
+                                         size_t &CanonicalHeaderSize) {
   LLVM_DEBUG(dbgs() << DEBUG_TYPE
              " Performing shift-until-bittest idiom detection.\n");
 
@@ -1992,6 +1994,7 @@ static bool detectShiftUntilBitTestIdiom(Loop *CurLoop, Value *&BaseX,
   // Step 2: Check if the backedge's condition is in desirable form.
 
   auto MatchVariableBitMask = [&]() {
+    CanonicalHeaderSize = 5;
     return ICmpInst::isEquality(Pred) && match(CmpRHS, m_Zero()) &&
            match(CmpLHS,
                  m_c_And(m_Value(CurrX),
@@ -2001,14 +2004,24 @@ static bool detectShiftUntilBitTestIdiom(Loop *CurLoop, Value *&BaseX,
                                              CurLoop))));
   };
   auto MatchConstantBitMask = [&]() {
+    CanonicalHeaderSize = 5;
     return ICmpInst::isEquality(Pred) && match(CmpRHS, m_Zero()) &&
            match(CmpLHS, m_And(m_Value(CurrX),
                                m_CombineAnd(m_Value(BitMask), m_Power2()))) &&
            (BitPos = ConstantExpr::getExactLogBase2(cast<Constant>(BitMask)));
   };
+  auto MatchDecomposableConstantBitMask = [&]() {
+    CanonicalHeaderSize = 4;
 
-  if (!MatchVariableBitMask() && !MatchConstantBitMask()) {
-    // FIXME: support sign bit test (use llvm::decomposeBitTestICmp()).
+    APInt Mask;
+    return llvm::decomposeBitTestICmp(CmpLHS, CmpRHS, Pred, CurrX, Mask) &&
+           ICmpInst::isEquality(Pred) && Mask.isPowerOf2() &&
+           (BitMask = ConstantInt::get(CurrX->getType(), Mask)) &&
+           (BitPos = ConstantInt::get(CurrX->getType(), Mask.logBase2()));
+  };
+
+  if (!MatchVariableBitMask() && !MatchConstantBitMask() &&
+      !MatchDecomposableConstantBitMask()) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE " Bad backedge comparison.\n");
     return false;
   }
@@ -2097,8 +2110,9 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
   bool MadeChange = false;
 
   Value *X, *BitMask, *BitPos, *XCurr, *XNext;
-  if (!detectShiftUntilBitTestIdiom(CurLoop, X, BitMask, BitPos, XCurr,
-                                    XNext)) {
+  size_t CanonicalHeaderSize;
+  if (!detectShiftUntilBitTestIdiom(CurLoop, X, BitMask, BitPos, XCurr, XNext,
+                                    CanonicalHeaderSize)) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE
                " shift-until-bittest idiom detection failed.\n");
     return MadeChange;
@@ -2118,7 +2132,6 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
   // The loop must not have any other instructions other than the idiom itself.
   // FIXME: we could just rewrite the loop with countable trip count.
   size_t HeaderSize = LoopHeaderBB->sizeWithoutDebug();
-  constexpr size_t CanonicalHeaderSize = 5;
   assert(HeaderSize >= CanonicalHeaderSize);
   if (HeaderSize > CanonicalHeaderSize) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE " Won't be able to delete loop!\n");
