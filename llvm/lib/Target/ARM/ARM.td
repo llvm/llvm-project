@@ -660,7 +660,8 @@ def ProcR52     : SubtargetFeature<"r52", "ARMProcFamily", "CortexR52",
 
 def ProcM3      : SubtargetFeature<"m3", "ARMProcFamily", "CortexM3",
                                    "Cortex-M3 ARM processors", []>;
-
+def ProcM7      : SubtargetFeature<"m7", "ARMProcFamily", "CortexM7",
+                                   "Cortex-M7 ARM processors", []>;
 
 //===----------------------------------------------------------------------===//
 // ARM Helper classes.
@@ -1191,6 +1192,7 @@ def : ProcessorModel<"cortex-m4", CortexM4Model,        [ARMv7em,
                                                          FeatureHasNoBranchPredictor]>;
 
 def : ProcessorModel<"cortex-m7", CortexM7Model,        [ARMv7em,
+                                                         ProcM7,
                                                          FeatureFPARMv8_D16,
                                                          FeatureUseMISched]>;
 
