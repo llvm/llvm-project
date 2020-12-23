@@ -76,7 +76,13 @@ void MergedIndex::lookup(
   Dynamic->lookup(Req, [&](const Symbol &S) { B.insert(S); });
 
   auto RemainingIDs = Req.IDs;
+  auto DynamicContainsFile = Dynamic->indexedFiles();
   Static->lookup(Req, [&](const Symbol &S) {
+    // We expect the definition to see the canonical declaration, so it seems
+    // to be enough to check only the definition if it exists.
+    if (DynamicContainsFile(S.Definition ? S.Definition.FileURI
+                                         : S.CanonicalDeclaration.FileURI))
+      return;
     const Symbol *Sym = B.find(S.ID);
     RemainingIDs.erase(S.ID);
     if (!Sym)
