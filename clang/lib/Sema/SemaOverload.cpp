@@ -5774,9 +5774,7 @@ static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
 
     if (Notes.empty()) {
       // It's a constant expression.
-      Expr *E = Result.get();
-      if (!isa<ConstantExpr>(E))
-        E = ConstantExpr::Create(S.Context, Result.get(), Value);
+      Expr *E = ConstantExpr::Create(S.Context, Result.get(), Value);
       if (ReturnPreNarrowingValue)
         Value = std::move(PreNarrowingValue);
       return E;

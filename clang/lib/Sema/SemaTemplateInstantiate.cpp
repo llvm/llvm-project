@@ -1556,18 +1556,16 @@ ExprResult TemplateInstantiator::transformNonTypeTemplateParmRef(
       VD = nullptr;
     }
 
-    QualType paramType = arg.getNonTypeTemplateArgumentType();
+    QualType paramType = VD ? arg.getParamTypeForDecl() : arg.getNullPtrType();
     assert(!paramType.isNull() && "type substitution failed for param type");
     assert(!paramType->isDependentType() && "param type still dependent");
     result = SemaRef.BuildExpressionFromDeclTemplateArgument(arg, paramType, loc);
     refParam = paramType->isReferenceType();
   } else {
-    QualType paramType = arg.getNonTypeTemplateArgumentType();
-    result = SemaRef.BuildExpressionFromNonTypeTemplateArgument(arg, loc);
-    refParam = paramType->isReferenceType();
+    result = SemaRef.BuildExpressionFromIntegralTemplateArgument(arg, loc);
     assert(result.isInvalid() ||
            SemaRef.Context.hasSameType(result.get()->getType(),
-                                       paramType.getNonReferenceType()));
+                                       arg.getIntegralType()));
   }
 
   if (result.isInvalid())
