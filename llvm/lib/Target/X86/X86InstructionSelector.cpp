@@ -479,7 +479,7 @@ static void X86SelectAddress(const MachineInstr &I,
          "unsupported type.");
 
   if (I.getOpcode() == TargetOpcode::G_PTR_ADD) {
-    if (auto COff = getConstantVRegVal(I.getOperand(2).getReg(), MRI)) {
+    if (auto COff = getConstantVRegSExtVal(I.getOperand(2).getReg(), MRI)) {
       int64_t Imm = *COff;
       if (isInt<32>(Imm)) { // Check for displacement overflow.
         AM.Disp = static_cast<int32_t>(Imm);
