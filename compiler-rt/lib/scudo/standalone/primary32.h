@@ -50,7 +50,6 @@ public:
   typedef SizeClassAllocator32<Config> ThisT;
   typedef SizeClassAllocatorLocalCache<ThisT> CacheT;
   typedef typename CacheT::TransferBatch TransferBatch;
-  static const bool SupportsMemoryTagging = false;
 
   static uptr getSizeByClassId(uptr ClassId) {
     return (ClassId == SizeClassMap::BatchClassId)
@@ -215,9 +214,6 @@ public:
     }
     return TotalReleasedBytes;
   }
-
-  static bool useMemoryTagging(UNUSED Options Options) { return false; }
-  void disableMemoryTagging() {}
 
   const char *getRegionInfoArrayAddress() const { return nullptr; }
   static uptr getRegionInfoArraySize() { return 0; }

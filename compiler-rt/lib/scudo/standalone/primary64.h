@@ -46,8 +46,6 @@ public:
   typedef SizeClassAllocator64<Config> ThisT;
   typedef SizeClassAllocatorLocalCache<ThisT> CacheT;
   typedef typename CacheT::TransferBatch TransferBatch;
-  static const bool SupportsMemoryTagging =
-      allocatorSupportsMemoryTagging<Config>();
 
   static uptr getSizeByClassId(uptr ClassId) {
     return (ClassId == SizeClassMap::BatchClassId)
@@ -76,9 +74,6 @@ public:
       Region->ReleaseInfo.LastReleaseAtNs = Time;
     }
     setOption(Option::ReleaseInterval, static_cast<sptr>(ReleaseToOsInterval));
-
-    if (SupportsMemoryTagging && systemSupportsMemoryTagging())
-      Options.set(OptionBit::UseMemoryTagging);
   }
   void init(s32 ReleaseToOsInterval) {
     memset(this, 0, sizeof(*this));
@@ -192,11 +187,6 @@ public:
     }
     return TotalReleasedBytes;
   }
-
-  static bool useMemoryTagging(Options Options) {
-    return SupportsMemoryTagging && Options.get(OptionBit::UseMemoryTagging);
-  }
-  void disableMemoryTagging() { Options.clear(OptionBit::UseMemoryTagging); }
 
   const char *getRegionInfoArrayAddress() const {
     return reinterpret_cast<const char *>(RegionInfoArray);
@@ -335,7 +325,7 @@ private:
       if (!map(reinterpret_cast<void *>(RegionBeg + MappedUser), UserMapSize,
                "scudo:primary",
                MAP_ALLOWNOMEM | MAP_RESIZABLE |
-                   (useMemoryTagging(Options.load()) ? MAP_MEMTAG : 0),
+                   (useMemoryTagging<Config>(Options.load()) ? MAP_MEMTAG : 0),
                &Region->Data))
         return nullptr;
       Region->MappedUser += UserMapSize;
