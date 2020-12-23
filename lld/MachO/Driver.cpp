@@ -548,20 +548,19 @@ static void handlePlatformVersion(const opt::Arg *arg) {
 
   // TODO(compnerd) see if we can generate this case list via XMACROS
   config->platform.kind =
-      llvm::StringSwitch<llvm::MachO::PlatformKind>(lowerDash(platformStr))
-          .Cases("macos", "1", llvm::MachO::PlatformKind::macOS)
-          .Cases("ios", "2", llvm::MachO::PlatformKind::iOS)
-          .Cases("tvos", "3", llvm::MachO::PlatformKind::tvOS)
-          .Cases("watchos", "4", llvm::MachO::PlatformKind::watchOS)
-          .Cases("bridgeos", "5", llvm::MachO::PlatformKind::bridgeOS)
-          .Cases("mac-catalyst", "6", llvm::MachO::PlatformKind::macCatalyst)
-          .Cases("ios-simulator", "7", llvm::MachO::PlatformKind::iOSSimulator)
-          .Cases("tvos-simulator", "8",
-                 llvm::MachO::PlatformKind::tvOSSimulator)
-          .Cases("watchos-simulator", "9",
-                 llvm::MachO::PlatformKind::watchOSSimulator)
-          .Default(llvm::MachO::PlatformKind::unknown);
-  if (config->platform.kind == llvm::MachO::PlatformKind::unknown)
+      StringSwitch<PlatformKind>(lowerDash(platformStr))
+          .Cases("macos", "1", PlatformKind::macOS)
+          .Cases("ios", "2", PlatformKind::iOS)
+          .Cases("tvos", "3", PlatformKind::tvOS)
+          .Cases("watchos", "4", PlatformKind::watchOS)
+          .Cases("bridgeos", "5", PlatformKind::bridgeOS)
+          .Cases("mac-catalyst", "6", PlatformKind::macCatalyst)
+          .Cases("ios-simulator", "7", PlatformKind::iOSSimulator)
+          .Cases("tvos-simulator", "8", PlatformKind::tvOSSimulator)
+          .Cases("watchos-simulator", "9", PlatformKind::watchOSSimulator)
+          .Cases("driverkit", "10", PlatformKind::driverKit)
+          .Default(PlatformKind::unknown);
+  if (config->platform.kind == PlatformKind::unknown)
     error(Twine("malformed platform: ") + platformStr);
   // TODO: check validity of version strings, which varies by platform
   // NOTE: ld64 accepts version strings with 5 components
@@ -637,8 +636,12 @@ static bool isPie(opt::InputArgList &args) {
   // to PIE from 10.7, arm64 should always be PIE, etc
   assert(config->arch == AK_x86_64 || config->arch == AK_x86_64h);
 
-  if (config->platform.kind == MachO::PlatformKind::macOS &&
+  PlatformKind kind = config->platform.kind;
+  if (kind == PlatformKind::macOS &&
       config->platform.minimum >= VersionTuple(10, 6))
+    return true;
+
+  if (kind == PlatformKind::iOSSimulator || kind == PlatformKind::driverKit)
     return true;
 
   return args.hasArg(OPT_pie);
