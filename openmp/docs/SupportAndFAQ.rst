@@ -80,3 +80,32 @@ For now, the answer is most likely *no*. Please see :ref:`build_offload_capable_
 Q: Does OpenMP offloading support work in packages distributed as part of my OS?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 For now, the answer is most likely *no*. Please see :ref:`build_offload_capable_compiler`.
+
+
+.. _math_and_complex_in_target_regions:
+
+Q: Does Clang support `<math.h>` and `<complex.h>` operations in OpenMP target on GPUs?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Yes, LLVM/Clang allows math functions and complex arithmetic inside of OpenMP target regions
+that are compiled for GPUs.
+
+Clang provides a set of wrapper headers that are found first when `math.h` and
+`complex.h`, for C, `cmath` and `complex`, foc C++, or similar headers are
+included by the application. These wrappers will eventually include the system
+version of the corresponding header file after setting up a target device
+specific environment. The fact that the system header is included is important
+because they differ based on the architecture and operating system and may
+contain preprocessor, variable, and function definitions that need to be
+available in the target region regardless of the targeted device architecture.
+However, various functions may require specialized device versions, e.g.,
+`sin`, and others are only available on certain devices, e.g., `__umul64hi`. To
+provide "native" support for math and complex on the respective architecture,
+Clang will wrap the "native" math functions, e.g., as provided by the device
+vendor, in an OpenMP begin/end declare variant. These functions will then be
+picked up instead of the host versions while host only variables and function
+definitions are still available. Complex arithmetic and functions are support
+through a similar mechanism. It is worth noting that this support requires
+`extensions to the OpenMP begin/end declare variant context selector
+<https://clang.llvm.org/docs/AttributeReference.html#pragma-omp-declare-variant>`__
+that are exposed through LLVM/Clang to the user as well.
