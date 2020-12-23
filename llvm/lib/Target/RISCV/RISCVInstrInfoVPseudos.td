@@ -543,7 +543,7 @@ class VPseudoBinaryCarryIn<VReg RetClass,
                            bit CarryIn,
                            string Constraint> :
         Pseudo<(outs RetClass:$rd),
-               !if(!eq(CarryIn, 1),
+               !if(CarryIn,
                   (ins Op1Class:$rs2, Op2Class:$rs1, VMV0:$carry, GPR:$vl,
                        ixlenimm:$sew),
                   (ins Op1Class:$rs2, Op2Class:$rs1, GPR:$vl, ixlenimm:$sew)), []>,
@@ -554,8 +554,8 @@ class VPseudoBinaryCarryIn<VReg RetClass,
   let usesCustomInserter = 1;
   let Constraints = Constraint;
   let Uses = [VL, VTYPE];
-  let VLIndex = !if(!eq(CarryIn, 1), 4, 3);
-  let SEWIndex = !if(!eq(CarryIn, 1), 5, 4);
+  let VLIndex = !if(CarryIn, 4, 3);
+  let SEWIndex = !if(CarryIn, 5, 4);
   let MergeOpIndex = InvalidIndex.V;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
   let VLMul = MInfo.value;
@@ -675,8 +675,8 @@ multiclass VPseudoBinaryV_VV {
 
 multiclass VPseudoBinaryV_VX<bit IsFloat> {
   foreach m = MxList.m in
-    defm !if(!eq(IsFloat, 0), "_VX", "_VF") : VPseudoBinary<m.vrclass, m.vrclass,
-                             !if(!eq(IsFloat, 0), GPR, FPR32), m>;
+    defm !if(IsFloat, "_VF", "_VX") : VPseudoBinary<m.vrclass, m.vrclass,
+                             !if(IsFloat, FPR32, GPR), m>;
 }
 
 multiclass VPseudoBinaryV_VI<Operand ImmType = simm5> {
@@ -699,8 +699,8 @@ multiclass VPseudoBinaryW_VV {
 
 multiclass VPseudoBinaryW_VX<bit IsFloat> {
   foreach m = MxList.m[0-5] in
-    defm !if(!eq(IsFloat, 0), "_VX", "_VF") : VPseudoBinary<m.wvrclass, m.vrclass,
-                             !if(!eq(IsFloat, 0), GPR, FPR32), m,
+    defm !if(IsFloat, "_VF", "_VX") : VPseudoBinary<m.wvrclass, m.vrclass,
+                             !if(IsFloat, FPR32, GPR), m,
                              "@earlyclobber $rd">;
 }
 
@@ -712,8 +712,8 @@ multiclass VPseudoBinaryW_WV {
 
 multiclass VPseudoBinaryW_WX<bit IsFloat> {
   foreach m = MxList.m[0-5] in
-    defm !if(!eq(IsFloat, 0), "_WX", "_WF") : VPseudoBinary<m.wvrclass, m.wvrclass,
-                             !if(!eq(IsFloat, 0), GPR, FPR32), m,
+    defm !if(IsFloat, "_WF", "_WX") : VPseudoBinary<m.wvrclass, m.wvrclass,
+                             !if(IsFloat, FPR32, GPR), m,
                              "@earlyclobber $rd">;
 }
 
@@ -741,9 +741,9 @@ multiclass VPseudoBinaryV_WI {
 multiclass VPseudoBinaryV_VM<bit CarryOut = 0, bit CarryIn = 1,
                              string Constraint = ""> {
   foreach m = MxList.m in
-    def "_VV" # !if(!eq(CarryIn, 1), "M", "") # "_" # m.MX :
-      VPseudoBinaryCarryIn<!if(!eq(CarryOut, 1), VR,
-                           !if(!and(!eq(CarryIn, 1), !eq(CarryOut, 0)),
+    def "_VV" # !if(CarryIn, "M", "") # "_" # m.MX :
+      VPseudoBinaryCarryIn<!if(CarryOut, VR,
+                           !if(!and(CarryIn, !not(CarryOut)),
                                GetVRegNoV0<m.vrclass>.R, m.vrclass)),
                            m.vrclass, m.vrclass, m, CarryIn, Constraint>;
 }
@@ -751,9 +751,9 @@ multiclass VPseudoBinaryV_VM<bit CarryOut = 0, bit CarryIn = 1,
 multiclass VPseudoBinaryV_XM<bit CarryOut = 0, bit CarryIn = 1,
                              string Constraint = ""> {
   foreach m = MxList.m in
-    def "_VX" # !if(!eq(CarryIn, 1), "M", "") # "_" # m.MX :
-      VPseudoBinaryCarryIn<!if(!eq(CarryOut, 1), VR,
-                           !if(!and(!eq(CarryIn, 1), !eq(CarryOut, 0)),
+    def "_VX" # !if(CarryIn, "M", "") # "_" # m.MX :
+      VPseudoBinaryCarryIn<!if(CarryOut, VR,
+                           !if(!and(CarryIn, !not(CarryOut)),
                                GetVRegNoV0<m.vrclass>.R, m.vrclass)),
                            m.vrclass, GPR, m, CarryIn, Constraint>;
 }
@@ -761,9 +761,9 @@ multiclass VPseudoBinaryV_XM<bit CarryOut = 0, bit CarryIn = 1,
 multiclass VPseudoBinaryV_IM<bit CarryOut = 0, bit CarryIn = 1,
                              string Constraint = ""> {
   foreach m = MxList.m in
-    def "_VI" # !if(!eq(CarryIn, 1), "M", "") # "_" # m.MX :
-      VPseudoBinaryCarryIn<!if(!eq(CarryOut, 1), VR,
-                           !if(!and(!eq(CarryIn, 1), !eq(CarryOut, 0)),
+    def "_VI" # !if(CarryIn, "M", "") # "_" # m.MX :
+      VPseudoBinaryCarryIn<!if(CarryOut, VR,
+                           !if(!and(CarryIn, !not(CarryOut)),
                                GetVRegNoV0<m.vrclass>.R, m.vrclass)),
                            m.vrclass, simm5, m, CarryIn, Constraint>;
 }
@@ -789,8 +789,8 @@ multiclass VPseudoBinaryM_VV {
 
 multiclass VPseudoBinaryM_VX<bit IsFloat> {
   foreach m = MxList.m in
-    defm !if(!eq(IsFloat, 0), "_VX", "_VF") :
-      VPseudoBinary<VR, m.vrclass, !if(!eq(IsFloat, 0), GPR, FPR32), m,
+    defm !if(IsFloat, "_VF", "_VX") :
+      VPseudoBinary<VR, m.vrclass, !if(IsFloat, FPR32, GPR), m,
                     "@earlyclobber $rd">;
 }
 
@@ -1374,7 +1374,7 @@ multiclass VPatBinaryV_VM<string intrinsic, string instruction,
                           bit CarryOut = 0> {
   foreach vti = AllIntegerVectors in
     defm : VPatBinaryCarryIn<intrinsic, instruction, "VVM",
-                             !if(!eq(CarryOut, 1), vti.Mask, vti.Vector),
+                             !if(CarryOut, vti.Mask, vti.Vector),
                              vti.Vector, vti.Vector, vti.Mask,
                              vti.SEW, vti.LMul,
                              vti.RegClass, vti.RegClass>;
@@ -1384,7 +1384,7 @@ multiclass VPatBinaryV_XM<string intrinsic, string instruction,
                           bit CarryOut = 0> {
   foreach vti = AllIntegerVectors in
     defm : VPatBinaryCarryIn<intrinsic, instruction, "VXM",
-                             !if(!eq(CarryOut, 1), vti.Mask, vti.Vector),
+                             !if(CarryOut, vti.Mask, vti.Vector),
                              vti.Vector, XLenVT, vti.Mask,
                              vti.SEW, vti.LMul,
                              vti.RegClass, GPR>;
@@ -1394,7 +1394,7 @@ multiclass VPatBinaryV_IM<string intrinsic, string instruction,
                           bit CarryOut = 0> {
   foreach vti = AllIntegerVectors in
     defm : VPatBinaryCarryIn<intrinsic, instruction, "VIM",
-                             !if(!eq(CarryOut, 1), vti.Mask, vti.Vector),
+                             !if(CarryOut, vti.Mask, vti.Vector),
                              vti.Vector, XLenVT, vti.Mask,
                              vti.SEW, vti.LMul,
                              vti.RegClass, simm5>;
