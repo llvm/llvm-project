@@ -21,6 +21,7 @@ include "FLATInstructions.td"
 include "BUFInstructions.td"
 include "EXPInstructions.td"
 include "LDSDIRInstructions.td"
+include "VINTERPInstructions.td"
 
 //===----------------------------------------------------------------------===//
 // VINTRP Instructions

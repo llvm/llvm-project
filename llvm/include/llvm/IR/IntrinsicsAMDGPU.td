@@ -1391,6 +1391,38 @@ def int_amdgcn_lds_param_load :
             [IntrNoMem, IntrSpeculatable, IntrWillReturn,
              ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
 
+// __builtin_amdgcn_interp_inreg_p10 <p>, <i>, <p0>
+def int_amdgcn_interp_inreg_p10 :
+  GCCBuiltin<"__builtin_amdgcn_interp_inreg_p10">,
+  Intrinsic<[llvm_float_ty],
+            [llvm_float_ty, llvm_float_ty, llvm_float_ty],
+            [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
+
+// __builtin_amdgcn_interp_inreg_p2 <p>, <j>, <tmp>
+def int_amdgcn_interp_inreg_p2 :
+  GCCBuiltin<"__builtin_amdgcn_interp_inreg_p2">,
+  Intrinsic<[llvm_float_ty],
+            [llvm_float_ty, llvm_float_ty, llvm_float_ty],
+            [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
+
+// __builtin_amdgcn_interp_inreg_p10_f16 <p>, <i>, <p0>, <high>
+// high selects whether high or low 16-bits are used for p and p0 operands
+def int_amdgcn_interp_inreg_p10_f16:
+  GCCBuiltin<"__builtin_amdgcn_interp_inreg_p10_f16">,
+  Intrinsic<[llvm_float_ty],
+            [llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_i1_ty],
+            [IntrNoMem, IntrSpeculatable, IntrWillReturn,
+             ImmArg<ArgIndex<3>>]>;
+
+// __builtin_amdgcn_interp_inreg_p2_f16 <p>, <j>, <tmp>, <high>
+// high selects whether high or low 16-bits are used for p operand
+def int_amdgcn_interp_inreg_p2_f16 :
+  GCCBuiltin<"__builtin_amdgcn_interp_inreg_p2_f16">,
+  Intrinsic<[llvm_half_ty],
+            [llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_i1_ty],
+            [IntrNoMem, IntrSpeculatable, IntrWillReturn,
+             ImmArg<ArgIndex<3>>]>;
+
 // Pixel shaders only: whether the current pixel is live (i.e. not a helper
 // invocation for derivative computation).
 def int_amdgcn_ps_live : Intrinsic <
@@ -2085,6 +2117,16 @@ def int_amdgcn_mfma_f32_16x16x8bf16 : GCCBuiltin<"__builtin_amdgcn_mfma_f32_16x1
             llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
             [IntrConvergent, IntrNoMem, IntrWillReturn,
              ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>]>;
+
+//===----------------------------------------------------------------------===//
+// gfx11 intrinsics
+// ===----------------------------------------------------------------------===//
+
+def int_amdgcn_global_atomic_fmin : AMDGPUGlobalAtomicRtn<llvm_anyfloat_ty>;
+def int_amdgcn_global_atomic_fmax : AMDGPUGlobalAtomicRtn<llvm_anyfloat_ty>;
+def int_amdgcn_flat_atomic_fadd   : AMDGPUGlobalAtomicRtn<llvm_anyfloat_ty>;
+def int_amdgcn_flat_atomic_fmin   : AMDGPUGlobalAtomicRtn<llvm_anyfloat_ty>;
+def int_amdgcn_flat_atomic_fmax   : AMDGPUGlobalAtomicRtn<llvm_anyfloat_ty>;
 
 //===----------------------------------------------------------------------===//
 // Special Intrinsics for backend internal use only. No frontend

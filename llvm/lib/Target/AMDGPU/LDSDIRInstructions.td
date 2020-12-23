@@ -94,14 +94,14 @@ class LDSDIR_Real<bits<2> op, LDSDIR_Pseudo lds, int subtarget> :
 def LDS_DIRECT_LOAD : LDSDIR_Pseudo<"lds_direct_load", 1>;
 def LDS_PARAM_LOAD : LDSDIR_Pseudo<"lds_param_load", 0>;
 
-def : Pat <
-  (int_amdgcn_lds_direct_load M0),
+def : GCNPat <
+  (f32 (int_amdgcn_lds_direct_load M0)),
   (LDS_DIRECT_LOAD 0)
 >;
 
-def : Pat <
-  (int_amdgcn_lds_param_load (i32 timm:$attrchan), (i32 timm:$attr), M0),
-  (LDS_PARAM_LOAD $attrchan, $attr, 0)
+def : GCNPat <
+  (f32 (int_amdgcn_lds_param_load timm:$attr, timm:$attrchan, M0)),
+  (LDS_PARAM_LOAD timm:$attr, timm:$attrchan, 0)
 >;
 
 //===----------------------------------------------------------------------===//

@@ -1165,6 +1165,7 @@ def exp_tgt : NamedOperandU32<"ExpTgt", NamedMatchClass<"ExpTgt", 0>> {
 }
 
 def wait_vdst : NamedOperandU8<"WaitVDST", NamedMatchClass<"WaitVDST">>;
+def wait_exp : NamedOperandU8<"WaitEXP", NamedMatchClass<"WaitEXP">>;
 
 } // End OperandType = "OPERAND_IMMEDIATE"
 
@@ -1345,6 +1346,12 @@ def VOP3OpSel  : ComplexPattern<untyped, 2, "SelectVOP3OpSel">;
 def VOP3OpSelMods  : ComplexPattern<untyped, 2, "SelectVOP3OpSelMods">;
 
 def VOP3PMadMixMods  : ComplexPattern<untyped, 2, "SelectVOP3PMadMixMods">;
+
+def VOP3BMods0 : ComplexPattern<untyped, 4, "SelectVOP3BMods0">;
+def VOP3BMods  : ComplexPattern<untyped, 2, "SelectVOP3BMods">;
+
+def VINTERPMods  : ComplexPattern<untyped, 2, "SelectVINTERPMods">;
+def VINTERPModsHi  : ComplexPattern<untyped, 2, "SelectVINTERPModsHi">;
 
 //===----------------------------------------------------------------------===//
 // SI assembler operands
