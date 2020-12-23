@@ -43,11 +43,11 @@ define amdgpu_ps half @v_interp_f16(float inreg %i, float inreg %j, i32 inreg %m
 ; GCN-NEXT:    v_mov_b32_e32 v1, s0
 ; GCN-NEXT:    v_mov_b32_e32 v2, s1
 ; GCN-NEXT:    s_waitcnt expcnt(0)
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2) instskip(SKIP_2) instid1(VALU_DEP_2)
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2) instskip(SKIP_1) instid1(VALU_DEP_2)
 ; GCN-NEXT:    v_interp_p10_f16_f32 v3, v0, v1, v0
 ; GCN-NEXT:    v_interp_p10_f16_f32 v1, v0, v1, v0 op_sel:[1,0,1,0]
-; GCN-NEXT:    s_and_b32 exec_lo, exec_lo, s3
 ; GCN-NEXT:    v_interp_p2_f16_f32 v3, v0, v2, v3
+; GCN-NEXT:    s_and_b32 exec_lo, exec_lo, s3
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2) instskip(NEXT) instid1(VALU_DEP_1)
 ; GCN-NEXT:    v_interp_p2_f16_f32 v0, v0, v2, v1 op_sel:[1,0,0,0]
 ; GCN-NEXT:    v_add_f16_e32 v0, v3, v0
