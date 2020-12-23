@@ -1389,6 +1389,48 @@ The following table summarizes the handling of `coro.end`_ intrinsic.
 |            | Landingpad  | nothing           | nothing                       |
 +------------+-------------+-------------------+-------------------------------+
 
+
+'llvm.coro.end.async' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+::
+
+  declare i1 @llvm.coro.end.async(i8* <handle>, i1 <unwind>, ...)
+
+Overview:
+"""""""""
+
+The '``llvm.coro.end.async``' marks the point where execution of the resume part
+of the coroutine should end and control should return to the caller. As part of
+its variable tail arguments this instruction allows to specify a function and
+the function's arguments that are to be tail called as the last action before
+returning.
+
+
+Arguments:
+""""""""""
+
+The first argument should refer to the coroutine handle of the enclosing
+coroutine. A frontend is allowed to supply null as the first parameter, in this
+case `coro-early` pass will replace the null with an appropriate coroutine
+handle value.
+
+The second argument should be `true` if this coro.end is in the block that is
+part of the unwind sequence leaving the coroutine body due to an exception and
+`false` otherwise.
+
+The third argument if present should specify a function to be called.
+
+If the third argument is present, the remaining arguments are the arguments to
+the function call.
+
+.. code-block:: llvm
+
+  call i1 (i8*, i1, ...) @llvm.coro.end.async(
+                           i8* %hdl, i1 0,
+                           void (i8*, %async.task*, %async.actor*)* @must_tail_call_return,
+                           i8* %ctxt, %async.task* %task, %async.actor* %actor)
+  unreachable
+
 .. _coro.suspend:
 .. _suspend points:
 

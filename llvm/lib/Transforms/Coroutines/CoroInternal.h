@@ -92,7 +92,7 @@ enum class ABI {
 // values used during CoroSplit pass.
 struct LLVM_LIBRARY_VISIBILITY Shape {
   CoroBeginInst *CoroBegin;
-  SmallVector<CoroEndInst *, 4> CoroEnds;
+  SmallVector<AnyCoroEndInst *, 4> CoroEnds;
   SmallVector<CoroSizeInst *, 2> CoroSizes;
   SmallVector<AnyCoroSuspendInst *, 4> CoroSuspends;
   SmallVector<CallInst*, 2> SwiftErrorOps;
@@ -270,6 +270,8 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
 };
 
 void buildCoroutineFrame(Function &F, Shape &Shape);
+CallInst *createMustTailCall(DebugLoc Loc, Function *MustTailCallFn,
+                             ArrayRef<Value *> Arguments, IRBuilder<> &);
 } // End namespace coro.
 } // End namespace llvm
 
