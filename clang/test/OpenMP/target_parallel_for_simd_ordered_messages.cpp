@@ -56,7 +56,7 @@ T tmain(T argc, S **argv) {
   for (int i = ST; i < N; i++)
     argv[0][i] = argv[0][i] - argv[0][i - ST];
 
-// expected-error@+1 {{'ordered' clause with a parameter can not be specified in '#pragma omp target parallel for simd' directive}}
+// expected-error@+1 {{integral constant expression}} expected-note@+1 0+{{constant expression}}
 #pragma omp target parallel for simd ordered(j = 2) // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int i = ST; i < N; i++)
     argv[0][i] = argv[0][i] - argv[0][i - ST];
