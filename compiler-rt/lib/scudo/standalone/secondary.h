@@ -245,7 +245,7 @@ private:
   atomic_s32 ReleaseToOsIntervalMs;
 };
 
-template <class CacheT> class MapAllocator {
+template <typename Config> class MapAllocator {
 public:
   void initLinkerInitialized(GlobalStats *S, s32 ReleaseToOsInterval = -1) {
     Cache.initLinkerInitialized(ReleaseToOsInterval);
@@ -295,7 +295,7 @@ public:
   void releaseToOS() { Cache.releaseToOS(); }
 
 private:
-  CacheT Cache;
+  typename Config::SecondaryCache Cache;
 
   HybridMutex Mutex;
   DoublyLinkedList<LargeBlock::Header> InUseBlocks;
@@ -318,8 +318,8 @@ private:
 // For allocations requested with an alignment greater than or equal to a page,
 // the committed memory will amount to something close to Size - AlignmentHint
 // (pending rounding and headers).
-template <class CacheT>
-void *MapAllocator<CacheT>::allocate(uptr Size, uptr AlignmentHint,
+template <typename Config>
+void *MapAllocator<Config>::allocate(uptr Size, uptr AlignmentHint,
                                      uptr *BlockEnd,
                                      FillContentsMode FillContents) {
   DCHECK_GE(Size, AlignmentHint);
@@ -410,7 +410,7 @@ void *MapAllocator<CacheT>::allocate(uptr Size, uptr AlignmentHint,
   return reinterpret_cast<void *>(Ptr + LargeBlock::getHeaderSize());
 }
 
-template <class CacheT> void MapAllocator<CacheT>::deallocate(void *Ptr) {
+template <typename Config> void MapAllocator<Config>::deallocate(void *Ptr) {
   LargeBlock::Header *H = LargeBlock::getHeader(Ptr);
   const uptr Block = reinterpret_cast<uptr>(H);
   const uptr CommitSize = H->BlockEnd - Block;
@@ -430,8 +430,8 @@ template <class CacheT> void MapAllocator<CacheT>::deallocate(void *Ptr) {
   unmap(Addr, Size, UNMAP_ALL, &Data);
 }
 
-template <class CacheT>
-void MapAllocator<CacheT>::getStats(ScopedString *Str) const {
+template <typename Config>
+void MapAllocator<Config>::getStats(ScopedString *Str) const {
   Str->append(
       "Stats: MapAllocator: allocated %zu times (%zuK), freed %zu times "
       "(%zuK), remains %zu (%zuK) max %zuM\n",
