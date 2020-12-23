@@ -547,8 +547,7 @@ private:
     if (N < this->size()) {
       this->pop_back_n(this->size() - N);
     } else if (N > this->size()) {
-      if (this->capacity() < N)
-        this->grow(N);
+      this->reserve(N);
       for (auto I = this->end(), E = this->begin() + N; I != E; ++I)
         if (ForOverwrite)
           new (&*I) T;
@@ -628,8 +627,7 @@ public:
   void assign(size_type NumElts, const T &Elt) {
     this->assertSafeToReferenceAfterResize(&Elt, 0);
     clear();
-    if (this->capacity() < NumElts)
-      this->grow(NumElts);
+    this->reserve(NumElts);
     this->set_size(NumElts);
     std::uninitialized_fill(this->begin(), this->end(), Elt);
   }
