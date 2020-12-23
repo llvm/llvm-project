@@ -125,7 +125,8 @@ ArrayType::ArrayType(TypeClass tc, QualType et, QualType can,
     //   template<int ...N> int arr[] = {N...};
     : Type(tc, can,
            et->getDependence() |
-               (sz ? toTypeDependence(sz->getDependence())
+               (sz ? toTypeDependence(
+                         turnValueToTypeDependence(sz->getDependence()))
                    : TypeDependence::None) |
                (tc == VariableArray ? TypeDependence::VariablyModified
                                     : TypeDependence::None) |
@@ -3392,8 +3393,9 @@ QualType MacroQualifiedType::getModifiedType() const {
 
 TypeOfExprType::TypeOfExprType(Expr *E, QualType can)
     : Type(TypeOfExpr, can,
-           typeToTypeDependence(E->getDependence(),
-                                E->getType()->getDependence())),
+           toTypeDependence(E->getDependence()) |
+               (E->getType()->getDependence() &
+                TypeDependence::VariablyModified)),
       TOExpr(E) {}
 
 bool TypeOfExprType::isSugared() const {
@@ -3413,12 +3415,18 @@ void DependentTypeOfExprType::Profile(llvm::FoldingSetNodeID &ID,
 }
 
 DecltypeType::DecltypeType(Expr *E, QualType underlyingType, QualType can)
+    // C++11 [temp.type]p2: "If an expression e involves a template parameter,
+    // decltype(e) denotes a unique dependent type." Hence a decltype type is
+    // type-dependent even if its expression is only instantiation-dependent.
     : Type(Decltype, can,
-           typeToTypeDependence(E->getDependence(),
-                                E->getType()->getDependence())),
+           toTypeDependence(E->getDependence()) |
+               (E->isInstantiationDependent() ? TypeDependence::Dependent
+                                              : TypeDependence::None) |
+               (E->getType()->getDependence() &
+                TypeDependence::VariablyModified)),
       E(E), UnderlyingType(underlyingType) {}
 
-bool DecltypeType::isSugared() const { return !E->isTypeDependent(); }
+bool DecltypeType::isSugared() const { return !E->isInstantiationDependent(); }
 
 QualType DecltypeType::desugar() const {
   if (isSugared())

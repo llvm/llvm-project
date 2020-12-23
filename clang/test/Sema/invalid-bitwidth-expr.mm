@@ -26,7 +26,6 @@ template <typename T>
 auto func() {
   // error-bit should be propagated from TemplateArgument to NestNameSpecifier.
   class Base<decltype(Foo(T()))>::type C; // expected-error {{no matching function for call to 'Foo'}}
-  // expected-error@-1 {{no class named 'type' in 'Base<bool>'}}
   return C;
 }
 struct Z {
