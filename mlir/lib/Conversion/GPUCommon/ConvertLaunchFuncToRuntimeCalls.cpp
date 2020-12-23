@@ -55,8 +55,7 @@ public:
   FunctionCallBuilder(StringRef functionName, LLVM::LLVMType returnType,
                       ArrayRef<LLVM::LLVMType> argumentTypes)
       : functionName(functionName),
-        functionType(LLVM::LLVMFunctionType::get(returnType, argumentTypes,
-                                                 /*isVarArg=*/false)) {}
+        functionType(LLVM::LLVMFunctionType::get(returnType, argumentTypes)) {}
   LLVM::CallOp create(Location loc, OpBuilder &builder,
                       ArrayRef<Value> arguments) const;
 
@@ -74,14 +73,15 @@ public:
 protected:
   MLIRContext *context = &this->getTypeConverter()->getContext();
 
-  LLVM::LLVMType llvmVoidType = LLVM::LLVMType::getVoidTy(context);
-  LLVM::LLVMType llvmPointerType = LLVM::LLVMType::getInt8PtrTy(context);
+  LLVM::LLVMType llvmVoidType = LLVM::LLVMVoidType::get(context);
+  LLVM::LLVMType llvmPointerType =
+      LLVM::LLVMPointerType::get(LLVM::LLVMIntegerType::get(context, 8));
   LLVM::LLVMType llvmPointerPointerType =
       LLVM::LLVMPointerType::get(llvmPointerType);
-  LLVM::LLVMType llvmInt8Type = LLVM::LLVMType::getInt8Ty(context);
-  LLVM::LLVMType llvmInt32Type = LLVM::LLVMType::getInt32Ty(context);
-  LLVM::LLVMType llvmInt64Type = LLVM::LLVMType::getInt64Ty(context);
-  LLVM::LLVMType llvmIntPtrType = LLVM::LLVMType::getIntNTy(
+  LLVM::LLVMType llvmInt8Type = LLVM::LLVMIntegerType::get(context, 8);
+  LLVM::LLVMType llvmInt32Type = LLVM::LLVMIntegerType::get(context, 32);
+  LLVM::LLVMType llvmInt64Type = LLVM::LLVMIntegerType::get(context, 64);
+  LLVM::LLVMType llvmIntPtrType = LLVM::LLVMIntegerType::get(
       context, this->getTypeConverter()->getPointerBitwidth(0));
 
   FunctionCallBuilder moduleLoadCallBuilder = {
@@ -515,7 +515,8 @@ Value ConvertLaunchFuncOpToGpuRuntimeCallPattern::generateParamsArray(
   argumentTypes.reserve(numArguments);
   for (auto argument : arguments)
     argumentTypes.push_back(argument.getType().cast<LLVM::LLVMType>());
-  auto structType = LLVM::LLVMType::createStructTy(argumentTypes, StringRef());
+  auto structType = LLVM::LLVMStructType::getNewIdentified(context, StringRef(),
+                                                           argumentTypes);
   auto one = builder.create<LLVM::ConstantOp>(loc, llvmInt32Type,
                                               builder.getI32IntegerAttr(1));
   auto structPtr = builder.create<LLVM::AllocaOp>(
@@ -716,10 +717,10 @@ mlir::createGpuToLLVMConversionPass(StringRef gpuBinaryAnnotation) {
 void mlir::populateGpuToLLVMConversionPatterns(
     LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
     StringRef gpuBinaryAnnotation) {
-  converter.addConversion(
-      [context = &converter.getContext()](gpu::AsyncTokenType type) -> Type {
-        return LLVM::LLVMType::getInt8PtrTy(context);
-      });
+  converter.addConversion([context = &converter.getContext()](
+                              gpu::AsyncTokenType type) -> Type {
+    return LLVM::LLVMPointerType::get(LLVM::LLVMIntegerType::get(context, 8));
+  });
   patterns.insert<ConvertAllocOpToGpuRuntimeCallPattern,
                   ConvertDeallocOpToGpuRuntimeCallPattern,
                   ConvertHostRegisterOpToGpuRuntimeCallPattern,

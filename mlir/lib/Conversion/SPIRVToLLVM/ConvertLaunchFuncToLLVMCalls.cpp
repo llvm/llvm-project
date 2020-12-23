@@ -60,7 +60,7 @@ static unsigned calculateGlobalIndex(spirv::GlobalVariableOp op) {
 static void copy(Location loc, Value dst, Value src, Value size,
                  OpBuilder &builder) {
   MLIRContext *context = builder.getContext();
-  auto llvmI1Type = LLVM::LLVMType::getInt1Ty(context);
+  auto llvmI1Type = LLVM::LLVMIntegerType::get(context, 1);
   Value isVolatile = builder.create<LLVM::ConstantOp>(
       loc, llvmI1Type, builder.getBoolAttr(false));
   builder.create<LLVM::MemcpyOp>(loc, dst, src, size, isVolatile);
@@ -183,9 +183,8 @@ class GPULaunchLowering : public ConvertOpToLLVMPattern<gpu::LaunchFuncOp> {
       rewriter.setInsertionPointToStart(module.getBody());
       kernelFunc = rewriter.create<LLVM::LLVMFuncOp>(
           rewriter.getUnknownLoc(), newKernelFuncName,
-          LLVM::LLVMType::getFunctionTy(LLVM::LLVMType::getVoidTy(context),
-                                        ArrayRef<LLVM::LLVMType>(),
-                                        /*isVarArg=*/false));
+          LLVM::LLVMFunctionType::get(LLVM::LLVMVoidType::get(context),
+                                      ArrayRef<LLVM::LLVMType>()));
       rewriter.setInsertionPoint(launchOp);
     }
 

@@ -209,7 +209,7 @@ static LogicalResult getIndexedPtrs(ConversionPatternRewriter &rewriter,
   if (failed(getBase(rewriter, loc, memref, memRefType, base)))
     return failure();
   auto pType = MemRefDescriptor(memref).getElementPtrType();
-  auto ptrsType = LLVM::LLVMType::getVectorTy(pType, vType.getDimSize(0));
+  auto ptrsType = LLVM::LLVMFixedVectorType::get(pType, vType.getDimSize(0));
   ptrs = rewriter.create<LLVM::GEPOp>(loc, ptrsType, base, indices);
   return success();
 }
@@ -748,7 +748,7 @@ public:
 
     // Remaining extraction of element from 1-D LLVM vector
     auto position = positionAttrs.back().cast<IntegerAttr>();
-    auto i64Type = LLVM::LLVMType::getInt64Ty(rewriter.getContext());
+    auto i64Type = LLVM::LLVMIntegerType::get(rewriter.getContext(), 64);
     auto constant = rewriter.create<LLVM::ConstantOp>(loc, i64Type, position);
     extracted =
         rewriter.create<LLVM::ExtractElementOp>(loc, extracted, constant);
@@ -856,7 +856,7 @@ public:
     }
 
     // Insertion of an element into a 1-D LLVM vector.
-    auto i64Type = LLVM::LLVMType::getInt64Ty(rewriter.getContext());
+    auto i64Type = LLVM::LLVMIntegerType::get(rewriter.getContext(), 64);
     auto constant = rewriter.create<LLVM::ConstantOp>(loc, i64Type, position);
     Value inserted = rewriter.create<LLVM::InsertElementOp>(
         loc, typeConverter->convertType(oneDVectorType), extracted,
@@ -1123,7 +1123,7 @@ public:
         }))
       return failure();
 
-    auto int64Ty = LLVM::LLVMType::getInt64Ty(rewriter.getContext());
+    auto int64Ty = LLVM::LLVMIntegerType::get(rewriter.getContext(), 64);
 
     // Create descriptor.
     auto desc = MemRefDescriptor::undef(rewriter, loc, llvmTargetDescriptorTy);
@@ -1362,11 +1362,11 @@ private:
       switch (conversion) {
       case PrintConversion::ZeroExt64:
         value = rewriter.create<ZeroExtendIOp>(
-            loc, value, LLVM::LLVMType::getInt64Ty(rewriter.getContext()));
+            loc, value, LLVM::LLVMIntegerType::get(rewriter.getContext(), 64));
         break;
       case PrintConversion::SignExt64:
         value = rewriter.create<SignExtendIOp>(
-            loc, value, LLVM::LLVMType::getInt64Ty(rewriter.getContext()));
+            loc, value, LLVM::LLVMIntegerType::get(rewriter.getContext(), 64));
         break;
       case PrintConversion::None:
         break;
@@ -1410,27 +1410,25 @@ private:
     OpBuilder moduleBuilder(module.getBodyRegion());
     return moduleBuilder.create<LLVM::LLVMFuncOp>(
         op->getLoc(), name,
-        LLVM::LLVMType::getFunctionTy(
-            LLVM::LLVMType::getVoidTy(op->getContext()), params,
-            /*isVarArg=*/false));
+        LLVM::LLVMFunctionType::get(LLVM::LLVMVoidType::get(op->getContext()),
+                                    params));
   }
 
   // Helpers for method names.
   Operation *getPrintI64(Operation *op) const {
     return getPrint(op, "printI64",
-                    LLVM::LLVMType::getInt64Ty(op->getContext()));
+                    LLVM::LLVMIntegerType::get(op->getContext(), 64));
   }
   Operation *getPrintU64(Operation *op) const {
     return getPrint(op, "printU64",
-                    LLVM::LLVMType::getInt64Ty(op->getContext()));
+                    LLVM::LLVMIntegerType::get(op->getContext(), 64));
   }
   Operation *getPrintFloat(Operation *op) const {
-    return getPrint(op, "printF32",
-                    LLVM::LLVMType::getFloatTy(op->getContext()));
+    return getPrint(op, "printF32", LLVM::LLVMFloatType::get(op->getContext()));
   }
   Operation *getPrintDouble(Operation *op) const {
     return getPrint(op, "printF64",
-                    LLVM::LLVMType::getDoubleTy(op->getContext()));
+                    LLVM::LLVMDoubleType::get(op->getContext()));
   }
   Operation *getPrintOpen(Operation *op) const {
     return getPrint(op, "printOpen", {});

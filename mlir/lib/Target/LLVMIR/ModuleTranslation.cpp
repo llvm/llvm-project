@@ -769,13 +769,12 @@ LogicalResult ModuleTranslation::convertOperation(Operation &opInst,
 
     LLVM::LLVMType resultType;
     if (inlineAsmOp.getNumResults() == 0) {
-      resultType = LLVM::LLVMType::getVoidTy(mlirModule->getContext());
+      resultType = LLVM::LLVMVoidType::get(mlirModule->getContext());
     } else {
       assert(inlineAsmOp.getNumResults() == 1);
       resultType = inlineAsmOp.getResultTypes()[0].cast<LLVM::LLVMType>();
     }
-    auto ft = LLVM::LLVMType::getFunctionTy(resultType, operandTypes,
-                                            /*isVarArg=*/false);
+    auto ft = LLVM::LLVMFunctionType::get(resultType, operandTypes);
     llvm::InlineAsm *inlineAsmInst =
         inlineAsmOp.asm_dialect().hasValue()
             ? llvm::InlineAsm::get(
