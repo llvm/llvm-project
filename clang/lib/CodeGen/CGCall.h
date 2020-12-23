@@ -145,7 +145,8 @@ public:
   /// isn't a direct call.
   CGCallee(const CGCalleeInfo &abstractInfo, llvm::Value *functionPtr,
            const CGPointerAuthInfo &pointerAuthInfo)
-      : KindOrFunctionPointer(SpecialKind(uintptr_t(functionPtr))) {
+      : KindOrFunctionPointer(
+            SpecialKind(reinterpret_cast<uintptr_t>(functionPtr))) {
     OrdinaryInfo.AbstractInfo = abstractInfo;
     OrdinaryInfo.PointerAuthInfo = pointerAuthInfo;
     assert(functionPtr && "configuring callee without function pointer");
@@ -226,7 +227,8 @@ public:
   }
   void setFunctionPointer(llvm::Value *functionPtr) {
     assert(isOrdinary());
-    KindOrFunctionPointer = SpecialKind(uintptr_t(functionPtr));
+    KindOrFunctionPointer =
+        SpecialKind(reinterpret_cast<uintptr_t>(functionPtr));
   }
   void setPointerAuthInfo(CGPointerAuthInfo pointerAuth) {
     assert(isOrdinary());
