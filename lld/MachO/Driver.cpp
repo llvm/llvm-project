@@ -690,8 +690,13 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   if (args.hasArg(OPT_help_hidden)) {
     parser.printHelp(argsArr[0], /*showHidden=*/true);
     return true;
-  } else if (args.hasArg(OPT_help)) {
+  }
+  if (args.hasArg(OPT_help)) {
     parser.printHelp(argsArr[0], /*showHidden=*/false);
+    return true;
+  }
+  if (args.hasArg(OPT_version)) {
+    message(getLLDVersion());
     return true;
   }
 
