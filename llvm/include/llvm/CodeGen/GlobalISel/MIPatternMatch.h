@@ -43,7 +43,7 @@ struct ConstantMatch {
   int64_t &CR;
   ConstantMatch(int64_t &C) : CR(C) {}
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
-    if (auto MaybeCst = getConstantVRegVal(Reg, MRI)) {
+    if (auto MaybeCst = getConstantVRegSExtVal(Reg, MRI)) {
       CR = *MaybeCst;
       return true;
     }
