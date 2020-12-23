@@ -67,7 +67,7 @@ define <16 x i8> @shl_abs(<16 x i8> %v, i8 %a) {
 ; CHECK-NEXT: i8x16.splat $push1=, $1
 ; CHECK-NEXT: i8x16.splat $push0=, $2
 ; CHECK-NEXT: i8x16.add $push2=, $pop1, $pop0
-; CHECK-NEXT: v8x16.shuffle $push3=, $pop2, $0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT: i8x16.shuffle $push3=, $pop2, $0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK-NEXT: i8x16.abs $push101=, $pop3
 ; CHECK-NEXT: local.tee $push100=, $3=, $pop101
 ; CHECK-NEXT: i8x16.extract_lane_u $push9=, $pop100, 0
