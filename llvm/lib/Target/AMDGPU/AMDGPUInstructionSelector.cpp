@@ -3427,22 +3427,18 @@ AMDGPUInstructionSelector::selectFlatOffsetImpl(MachineOperand &Root) const {
   if (!STI.hasFlatInstOffsets())
     return Default;
 
-  const MachineInstr *OpDef = MRI->getVRegDef(Root.getReg());
-  if (!OpDef || OpDef->getOpcode() != AMDGPU::G_PTR_ADD)
-    return Default;
-
-  Optional<int64_t> Offset =
-      getConstantVRegSExtVal(OpDef->getOperand(2).getReg(), *MRI);
-  if (!Offset.hasValue())
+  Register PtrBase;
+  int64_t ConstOffset;
+  std::tie(PtrBase, ConstOffset) =
+      getPtrBaseWithConstantOffset(Root.getReg(), *MRI);
+  if (ConstOffset == 0)
     return Default;
 
   unsigned AddrSpace = (*MI->memoperands_begin())->getAddrSpace();
-  if (!TII.isLegalFLATOffset(Offset.getValue(), AddrSpace, Signed))
+  if (!TII.isLegalFLATOffset(ConstOffset, AddrSpace, Signed))
     return Default;
 
-  Register BasePtr = OpDef->getOperand(1).getReg();
-
-  return std::make_pair(BasePtr, Offset.getValue());
+  return std::make_pair(PtrBase, ConstOffset);
 }
 
 InstructionSelector::ComplexRendererFns
