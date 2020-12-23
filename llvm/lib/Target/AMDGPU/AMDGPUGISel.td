@@ -85,6 +85,14 @@ def gi_mubuf_scratch_offen :
     GIComplexOperandMatcher<s32, "selectMUBUFScratchOffen">,
     GIComplexPatternEquiv<MUBUFScratchOffen>;
 
+def gi_flat_scratch_offset :
+    GIComplexOperandMatcher<s32, "selectFlatOffsetSigned">,
+    GIComplexPatternEquiv<ScratchOffset>;
+
+def gi_flat_scratch_saddr :
+    GIComplexOperandMatcher<s32, "selectScratchSAddr">,
+    GIComplexPatternEquiv<ScratchSAddr>;
+
 def gi_ds_1addr_1offset :
     GIComplexOperandMatcher<s32, "selectDS1Addr1Offset">,
     GIComplexPatternEquiv<DS1Addr1Offset>;

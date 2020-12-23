@@ -3589,6 +3589,67 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root) const {
            }}};
 }
 
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectScratchSAddr(MachineOperand &Root) const {
+  Register Addr = Root.getReg();
+  Register PtrBase;
+  int64_t ConstOffset;
+  int64_t ImmOffset = 0;
+
+  // Match the immediate offset first, which canonically is moved as low as
+  // possible.
+  std::tie(PtrBase, ConstOffset) = getPtrBaseWithConstantOffset(Addr, *MRI);
+
+  if (ConstOffset != 0 &&
+      TII.isLegalFLATOffset(ConstOffset, AMDGPUAS::PRIVATE_ADDRESS, true)) {
+    Addr = PtrBase;
+    ImmOffset = ConstOffset;
+  }
+
+  auto AddrDef = getDefSrcRegIgnoringCopies(Addr, *MRI);
+  if (!AddrDef)
+    return None;
+
+  if (AddrDef->MI->getOpcode() == AMDGPU::G_FRAME_INDEX) {
+    int FI = AddrDef->MI->getOperand(1).getIndex();
+    return {{
+        [=](MachineInstrBuilder &MIB) { MIB.addFrameIndex(FI); }, // saddr
+        [=](MachineInstrBuilder &MIB) { MIB.addImm(ImmOffset); } // offset
+    }};
+  }
+
+  Register SAddr = AddrDef->Reg;
+
+  if (AddrDef->MI->getOpcode() == AMDGPU::G_PTR_ADD) {
+    Register LHS = AddrDef->MI->getOperand(1).getReg();
+    Register RHS = AddrDef->MI->getOperand(2).getReg();
+    auto LHSDef = getDefSrcRegIgnoringCopies(LHS, *MRI);
+    auto RHSDef = getDefSrcRegIgnoringCopies(RHS, *MRI);
+
+    if (LHSDef && RHSDef &&
+        LHSDef->MI->getOpcode() == AMDGPU::G_FRAME_INDEX &&
+        isSGPR(RHSDef->Reg)) {
+      int FI = LHSDef->MI->getOperand(1).getIndex();
+      MachineInstr &I = *Root.getParent();
+      MachineBasicBlock *BB = I.getParent();
+      const DebugLoc &DL = I.getDebugLoc();
+      SAddr = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+
+      BuildMI(*BB, &I, DL, TII.get(AMDGPU::S_ADD_U32), SAddr)
+        .addFrameIndex(FI)
+        .addReg(RHSDef->Reg);
+    }
+  }
+
+  if (!isSGPR(SAddr))
+    return None;
+
+  return {{
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(SAddr); }, // saddr
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(ImmOffset); } // offset
+  }};
+}
+
 static bool isStackPtrRelative(const MachinePointerInfo &PtrInfo) {
   auto PSV = PtrInfo.V.dyn_cast<const PseudoSourceValue *>();
   return PSV && PSV->isStack();
