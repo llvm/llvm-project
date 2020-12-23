@@ -369,7 +369,7 @@ LogicalResult ConvertAllocOpToGpuRuntimeCallPattern::matchAndRewrite(
   MemRefType memRefType = allocOp.getType();
 
   if (failed(areAllLLVMTypes(allocOp, operands, rewriter)) ||
-      !isSupportedMemRefType(memRefType) ||
+      !isConvertibleAndHasIdentityMaps(memRefType) ||
       failed(isAsyncWithOneDependency(rewriter, allocOp)))
     return failure();
 
@@ -670,7 +670,7 @@ LogicalResult ConvertMemcpyOpToGpuRuntimeCallPattern::matchAndRewrite(
   auto memRefType = memcpyOp.src().getType().cast<MemRefType>();
 
   if (failed(areAllLLVMTypes(memcpyOp, operands, rewriter)) ||
-      !isSupportedMemRefType(memRefType) ||
+      !isConvertibleAndHasIdentityMaps(memRefType) ||
       failed(isAsyncWithOneDependency(rewriter, memcpyOp)))
     return failure();
 

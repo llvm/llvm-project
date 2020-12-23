@@ -1087,7 +1087,8 @@ Value ConvertToLLVMPattern::getStridedElementPtr(
 
 // Check if the MemRefType `type` is supported by the lowering. We currently
 // only support memrefs with identity maps.
-bool ConvertToLLVMPattern::isSupportedMemRefType(MemRefType type) const {
+bool ConvertToLLVMPattern::isConvertibleAndHasIdentityMaps(
+    MemRefType type) const {
   if (!typeConverter->convertType(type.getElementType()))
     return false;
   return type.getAffineMaps().empty() ||
@@ -1105,7 +1106,7 @@ void ConvertToLLVMPattern::getMemRefDescriptorSizes(
     Location loc, MemRefType memRefType, ArrayRef<Value> dynamicSizes,
     ConversionPatternRewriter &rewriter, SmallVectorImpl<Value> &sizes,
     SmallVectorImpl<Value> &strides, Value &sizeBytes) const {
-  assert(isSupportedMemRefType(memRefType) &&
+  assert(isConvertibleAndHasIdentityMaps(memRefType) &&
          "layout maps must have been normalized away");
 
   sizes.reserve(memRefType.getRank());
@@ -1977,7 +1978,7 @@ private:
 
   LogicalResult match(Operation *op) const override {
     MemRefType memRefType = getMemRefResultType(op);
-    return success(isSupportedMemRefType(memRefType));
+    return success(isConvertibleAndHasIdentityMaps(memRefType));
   }
 
   // An `alloc` is converted into a definition of a memref descriptor value and
@@ -2411,7 +2412,7 @@ struct GlobalMemrefOpLowering : public ConvertOpToLLVMPattern<GlobalMemrefOp> {
   matchAndRewrite(GlobalMemrefOp global, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     MemRefType type = global.type().cast<MemRefType>();
-    if (!isSupportedMemRefType(type))
+    if (!isConvertibleAndHasIdentityMaps(type))
       return failure();
 
     LLVM::LLVMType arrayTy =
@@ -3031,12 +3032,12 @@ struct RankOpLowering : public ConvertOpToLLVMPattern<RankOp> {
 template <typename Derived>
 struct LoadStoreOpLowering : public ConvertOpToLLVMPattern<Derived> {
   using ConvertOpToLLVMPattern<Derived>::ConvertOpToLLVMPattern;
-  using ConvertOpToLLVMPattern<Derived>::isSupportedMemRefType;
+  using ConvertOpToLLVMPattern<Derived>::isConvertibleAndHasIdentityMaps;
   using Base = LoadStoreOpLowering<Derived>;
 
   LogicalResult match(Derived op) const override {
     MemRefType type = op.getMemRefType();
-    return isSupportedMemRefType(type) ? success() : failure();
+    return isConvertibleAndHasIdentityMaps(type) ? success() : failure();
   }
 };
 
