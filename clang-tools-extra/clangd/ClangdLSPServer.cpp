@@ -1285,13 +1285,7 @@ void ClangdLSPServer::publishDiagnostics(
 }
 
 void ClangdLSPServer::maybeExportMemoryProfile() {
-  if (!trace::enabled())
-    return;
-  // Profiling might be expensive, so we throttle it to happen once every 5
-  // minutes.
-  static constexpr auto ProfileInterval = std::chrono::minutes(5);
-  auto Now = std::chrono::steady_clock::now();
-  if (Now < NextProfileTime)
+  if (!trace::enabled() || !ShouldProfile())
     return;
 
   static constexpr trace::Metric MemoryUsage(
@@ -1300,27 +1294,11 @@ void ClangdLSPServer::maybeExportMemoryProfile() {
   MemoryTree MT;
   profile(MT);
   record(MT, "clangd_lsp_server", MemoryUsage);
-  NextProfileTime = Now + ProfileInterval;
 }
 
 void ClangdLSPServer::maybeCleanupMemory() {
-  // Memory cleanup is probably expensive, throttle it
-  static constexpr auto MemoryCleanupInterval = std::chrono::minutes(1);
-
-  if (!Opts.MemoryCleanup)
+  if (!Opts.MemoryCleanup || !ShouldCleanupMemory())
     return;
-
-  // FIXME: this can probably be done without a mutex
-  // and the logic could be shared with maybeExportMemoryProfile
-  {
-    auto Now = std::chrono::steady_clock::now();
-    std::lock_guard<std::mutex> Lock(NextMemoryCleanupTimeMutex);
-    if (Now < NextMemoryCleanupTime)
-      return;
-    NextMemoryCleanupTime = Now + MemoryCleanupInterval;
-  }
-
-  vlog("Calling memory cleanup callback");
   Opts.MemoryCleanup();
 }
 
@@ -1481,10 +1459,15 @@ void ClangdLSPServer::onAST(const ASTParams &Params,
 ClangdLSPServer::ClangdLSPServer(class Transport &Transp,
                                  const ThreadsafeFS &TFS,
                                  const ClangdLSPServer::Options &Opts)
-    : BackgroundContext(Context::current().clone()), Transp(Transp),
+    : ShouldProfile(/*Period=*/std::chrono::minutes(5),
+                    /*Delay=*/std::chrono::minutes(1)),
+      ShouldCleanupMemory(/*Period=*/std::chrono::minutes(1),
+                          /*Delay=*/std::chrono::minutes(1)),
+      BackgroundContext(Context::current().clone()), Transp(Transp),
       MsgHandler(new MessageHandler(*this)), TFS(TFS),
       SupportedSymbolKinds(defaultSymbolKinds()),
       SupportedCompletionItemKinds(defaultCompletionItemKinds()), Opts(Opts) {
+
   // clang-format off
   MsgHandler->bind("initialize", &ClangdLSPServer::onInitialize);
   MsgHandler->bind("initialized", &ClangdLSPServer::onInitialized);
@@ -1529,10 +1512,6 @@ ClangdLSPServer::ClangdLSPServer(class Transport &Transp,
   if (Opts.FoldingRanges)
     MsgHandler->bind("textDocument/foldingRange", &ClangdLSPServer::onFoldingRange);
   // clang-format on
-
-  // Delay first profile and memory cleanup until we've finished warming up.
-  NextMemoryCleanupTime = NextProfileTime =
-      std::chrono::steady_clock::now() + std::chrono::minutes(1);
 }
 
 ClangdLSPServer::~ClangdLSPServer() {
