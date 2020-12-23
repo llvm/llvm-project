@@ -1855,6 +1855,12 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
 
   Value *PtrOp = GEP.getOperand(0);
 
+  // The only pointer that is inbounds of null is null.
+  if (isa<ConstantPointerNull>(PtrOp) && GEP.isInBounds() &&
+      !NullPointerIsDefined(GEP.getFunction(),
+                            PtrOp->getType()->getPointerAddressSpace()))
+    return replaceInstUsesWith(GEP, PtrOp);
+
   // Eliminate unneeded casts for indices, and replace indices which displace
   // by multiples of a zero size type with zero.
   bool MadeChange = false;
