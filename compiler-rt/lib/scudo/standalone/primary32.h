@@ -39,20 +39,15 @@ namespace scudo {
 // Memory used by this allocator is never unmapped but can be partially
 // reclaimed if the platform allows for it.
 
-template <class SizeClassMapT, uptr RegionSizeLog,
-          s32 MinReleaseToOsIntervalMs = INT32_MIN,
-          s32 MaxReleaseToOsIntervalMs = INT32_MAX>
-class SizeClassAllocator32 {
+template <typename Config> class SizeClassAllocator32 {
 public:
-  typedef SizeClassMapT SizeClassMap;
+  typedef typename Config::SizeClassMap SizeClassMap;
   // The bytemap can only track UINT8_MAX - 1 classes.
   static_assert(SizeClassMap::LargestClassId <= (UINT8_MAX - 1), "");
   // Regions should be large enough to hold the largest Block.
-  static_assert((1UL << RegionSizeLog) >= SizeClassMap::MaxSize, "");
-  typedef SizeClassAllocator32<SizeClassMapT, RegionSizeLog,
-                               MinReleaseToOsIntervalMs,
-                               MaxReleaseToOsIntervalMs>
-      ThisT;
+  static_assert((1UL << Config::PrimaryRegionSizeLog) >= SizeClassMap::MaxSize,
+                "");
+  typedef SizeClassAllocator32<Config> ThisT;
   typedef SizeClassAllocatorLocalCache<ThisT> CacheT;
   typedef typename CacheT::TransferBatch TransferBatch;
   static const bool SupportsMemoryTagging = false;
@@ -199,9 +194,9 @@ public:
 
   bool setOption(Option O, sptr Value) {
     if (O == Option::ReleaseInterval) {
-      const s32 Interval =
-          Max(Min(static_cast<s32>(Value), MaxReleaseToOsIntervalMs),
-              MinReleaseToOsIntervalMs);
+      const s32 Interval = Max(
+          Min(static_cast<s32>(Value), Config::PrimaryMaxReleaseToOsIntervalMs),
+          Config::PrimaryMinReleaseToOsIntervalMs);
       atomic_store_relaxed(&ReleaseToOsIntervalMs, Interval);
       return true;
     }
@@ -236,8 +231,9 @@ public:
 
 private:
   static const uptr NumClasses = SizeClassMap::NumClasses;
-  static const uptr RegionSize = 1UL << RegionSizeLog;
-  static const uptr NumRegions = SCUDO_MMAP_RANGE_SIZE >> RegionSizeLog;
+  static const uptr RegionSize = 1UL << Config::PrimaryRegionSizeLog;
+  static const uptr NumRegions =
+      SCUDO_MMAP_RANGE_SIZE >> Config::PrimaryRegionSizeLog;
   static const u32 MaxNumBatches = SCUDO_ANDROID ? 4U : 8U;
   typedef FlatByteMap<NumRegions> ByteMap;
 
@@ -270,7 +266,7 @@ private:
   static_assert(sizeof(SizeClassInfo) % SCUDO_CACHE_LINE_SIZE == 0, "");
 
   uptr computeRegionId(uptr Mem) {
-    const uptr Id = Mem >> RegionSizeLog;
+    const uptr Id = Mem >> Config::PrimaryRegionSizeLog;
     CHECK_LT(Id, NumRegions);
     return Id;
   }

@@ -268,6 +268,11 @@ inline void setRandomTag(void *Ptr, uptr Size, uptr ExcludeMask,
   *TaggedEnd = storeTags(*TaggedBegin, *TaggedBegin + Size);
 }
 
+template <typename Config>
+inline constexpr bool allocatorSupportsMemoryTagging() {
+  return archSupportsMemoryTagging() && Config::MaySupportMemoryTagging;
+}
+
 } // namespace scudo
 
 #endif
