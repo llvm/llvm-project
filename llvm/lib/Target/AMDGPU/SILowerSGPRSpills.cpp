@@ -98,7 +98,7 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
   if (!TFI->spillCalleeSavedRegisters(SaveBlock, I, CSI, TRI)) {
     for (const CalleeSavedInfo &CS : CSI) {
       // Insert the spill to the stack frame.
-      unsigned Reg = CS.getReg();
+      MCRegister Reg = CS.getReg();
 
       MachineInstrSpan MIS(I, &SaveBlock);
       const TargetRegisterClass *RC =
@@ -217,7 +217,8 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(MachineFunction &MF) {
     const MCPhysReg *CSRegs = MRI.getCalleeSavedRegs();
 
     for (unsigned I = 0; CSRegs[I]; ++I) {
-      unsigned Reg = CSRegs[I];
+      MCRegister Reg = CSRegs[I];
+
       if (SavedRegs.test(Reg)) {
         const TargetRegisterClass *RC =
           TRI->getMinimalPhysRegClass(Reg, MVT::i32);
