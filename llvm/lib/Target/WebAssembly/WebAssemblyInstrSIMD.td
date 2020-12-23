@@ -37,6 +37,75 @@ def ImmI#SIZE : ImmLeaf<i32,
 foreach SIZE = [2, 4, 8, 16, 32] in
 def LaneIdx#SIZE : ImmLeaf<i32, "return 0 <= Imm && Imm < "#SIZE#";">;
 
+class Vec {
+  ValueType vt;
+  ValueType lane_vt;
+  WebAssemblyRegClass lane_rc;
+  int lane_bits;
+  ImmLeaf lane_idx;
+  string prefix;
+  Vec split;
+}
+
+def I8x16 : Vec {
+  let vt = v16i8;
+  let lane_vt = i32;
+  let lane_rc = I32;
+  let lane_bits = 8;
+  let lane_idx = LaneIdx16;
+  let prefix = "i8x16";
+}
+
+def I16x8 : Vec {
+  let vt = v8i16;
+  let lane_vt = i32;
+  let lane_rc = I32;
+  let lane_bits = 16;
+  let lane_idx = LaneIdx8;
+  let prefix = "i16x8";
+  let split = I8x16;
+}
+
+def I32x4 : Vec {
+  let vt = v4i32;
+  let lane_vt = i32;
+  let lane_rc = I32;
+  let lane_bits = 32;
+  let lane_idx = LaneIdx4;
+  let prefix = "i32x4";
+  let split = I16x8;
+}
+
+def I64x2 : Vec {
+  let vt = v2i64;
+  let lane_vt = i64;
+  let lane_rc = I64;
+  let lane_bits = 64;
+  let lane_idx = LaneIdx2;
+  let prefix = "i64x2";
+  let split = I32x4;
+}
+
+def F32x4 : Vec {
+  let vt = v4f32;
+  let lane_vt = f32;
+  let lane_rc = F32;
+  let lane_bits = 32;
+  let lane_idx = LaneIdx4;
+  let prefix = "f32x4";
+}
+
+def F64x2 : Vec {
+  let vt = v2f64;
+  let lane_vt = f64;
+  let lane_rc = F64;
+  let lane_bits = 64;
+  let lane_idx = LaneIdx2;
+  let prefix = "f64x2";
+}
+
+defvar AllVecs = [I8x16, I16x8, I32x4, I64x2, F32x4, F64x2];
+
 //===----------------------------------------------------------------------===//
 // Load and store
 //===----------------------------------------------------------------------===//
@@ -56,12 +125,12 @@ defm LOAD_V128_A64 :
 }
 
 // Def load patterns from WebAssemblyInstrMemory.td for vector types
-foreach vec_t = [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64] in {
-defm : LoadPatNoOffset<vec_t, load, "LOAD_V128">;
-defm : LoadPatImmOff<vec_t, load, regPlusImm, "LOAD_V128">;
-defm : LoadPatImmOff<vec_t, load, or_is_add, "LOAD_V128">;
-defm : LoadPatOffsetOnly<vec_t, load, "LOAD_V128">;
-defm : LoadPatGlobalAddrOffOnly<vec_t, load, "LOAD_V128">;
+foreach vec = AllVecs in {
+defm : LoadPatNoOffset<vec.vt, load, "LOAD_V128">;
+defm : LoadPatImmOff<vec.vt, load, regPlusImm, "LOAD_V128">;
+defm : LoadPatImmOff<vec.vt, load, or_is_add, "LOAD_V128">;
+defm : LoadPatOffsetOnly<vec.vt, load, "LOAD_V128">;
+defm : LoadPatGlobalAddrOffOnly<vec.vt, load, "LOAD_V128">;
 }
 
 // v128.loadX_splat
@@ -94,87 +163,75 @@ def wasm_load_splat : SDNode<"WebAssemblyISD::LOAD_SPLAT", wasm_load_splat_t,
                              [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def load_splat : PatFrag<(ops node:$addr), (wasm_load_splat node:$addr)>;
 
-foreach args = [["v16i8", "8"], ["v8i16", "16"], ["v4i32", "32"],
-                ["v2i64", "64"], ["v4f32", "32"], ["v2f64", "64"]] in {
-defm : LoadPatNoOffset<!cast<ValueType>(args[0]),
-                       load_splat,
-                       "LOAD"#args[1]#"_SPLAT">;
-defm : LoadPatImmOff<!cast<ValueType>(args[0]),
-                     load_splat,
-                     regPlusImm,
-                     "LOAD"#args[1]#"_SPLAT">;
-defm : LoadPatImmOff<!cast<ValueType>(args[0]),
-                     load_splat,
-                     or_is_add,
-                     "LOAD"#args[1]#"_SPLAT">;
-defm : LoadPatOffsetOnly<!cast<ValueType>(args[0]),
-                         load_splat,
-                         "LOAD"#args[1]#"_SPLAT">;
-defm : LoadPatGlobalAddrOffOnly<!cast<ValueType>(args[0]),
-                                load_splat,
-                                "LOAD"#args[1]#"_SPLAT">;
+foreach vec = AllVecs in {
+defvar inst = "LOAD"#vec.lane_bits#"_SPLAT";
+defm : LoadPatNoOffset<vec.vt, load_splat, inst>;
+defm : LoadPatImmOff<vec.vt, load_splat, regPlusImm, inst>;
+defm : LoadPatImmOff<vec.vt, load_splat, or_is_add, inst>;
+defm : LoadPatOffsetOnly<vec.vt, load_splat, inst>;
+defm : LoadPatGlobalAddrOffOnly<vec.vt, load_splat, inst>;
 }
 
 // Load and extend
-multiclass SIMDLoadExtend<ValueType vec_t, string name, bits<32> simdop> {
+multiclass SIMDLoadExtend<Vec vec, string loadPat, bits<32> simdop> {
+  defvar signed = vec.prefix#".load"#loadPat#"_s";
+  defvar unsigned = vec.prefix#".load"#loadPat#"_u";
   let mayLoad = 1, UseNamedOperandTable = 1 in {
-  defm LOAD_EXTEND_S_#vec_t#_A32 :
+  defm LOAD_EXTEND_S_#vec#_A32 :
     SIMD_I<(outs V128:$dst),
            (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
            (outs), (ins P2Align:$p2align, offset32_op:$off), [],
-           name#"_s\t$dst, ${off}(${addr})$p2align",
-           name#"_s\t$off$p2align", simdop>;
-  defm LOAD_EXTEND_U_#vec_t#_A32 :
+           signed#"\t$dst, ${off}(${addr})$p2align",
+           signed#"\t$off$p2align", simdop>;
+  defm LOAD_EXTEND_U_#vec#_A32 :
     SIMD_I<(outs V128:$dst),
            (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
            (outs), (ins P2Align:$p2align, offset32_op:$off), [],
-           name#"_u\t$dst, ${off}(${addr})$p2align",
-           name#"_u\t$off$p2align", !add(simdop, 1)>;
-  defm LOAD_EXTEND_S_#vec_t#_A64 :
+           unsigned#"\t$dst, ${off}(${addr})$p2align",
+           unsigned#"\t$off$p2align", !add(simdop, 1)>;
+  defm LOAD_EXTEND_S_#vec#_A64 :
     SIMD_I<(outs V128:$dst),
            (ins P2Align:$p2align, offset64_op:$off, I64:$addr),
            (outs), (ins P2Align:$p2align, offset64_op:$off), [],
-           name#"_s\t$dst, ${off}(${addr})$p2align",
-           name#"_s\t$off$p2align", simdop>;
-  defm LOAD_EXTEND_U_#vec_t#_A64 :
+           signed#"\t$dst, ${off}(${addr})$p2align",
+           signed#"\t$off$p2align", simdop>;
+  defm LOAD_EXTEND_U_#vec#_A64 :
     SIMD_I<(outs V128:$dst),
            (ins P2Align:$p2align, offset64_op:$off, I64:$addr),
            (outs), (ins P2Align:$p2align, offset64_op:$off), [],
-           name#"_u\t$dst, ${off}(${addr})$p2align",
-           name#"_u\t$off$p2align", !add(simdop, 1)>;
+           unsigned#"\t$dst, ${off}(${addr})$p2align",
+           unsigned#"\t$off$p2align", !add(simdop, 1)>;
   }
 }
 
-defm "" : SIMDLoadExtend<v8i16, "i16x8.load8x8", 1>;
-defm "" : SIMDLoadExtend<v4i32, "i32x4.load16x4", 3>;
-defm "" : SIMDLoadExtend<v2i64, "i64x2.load32x2", 5>;
+defm "" : SIMDLoadExtend<I16x8, "8x8", 1>;
+defm "" : SIMDLoadExtend<I32x4, "16x4", 3>;
+defm "" : SIMDLoadExtend<I64x2, "32x2", 5>;
 
-foreach types = [[v8i16, i8], [v4i32, i16], [v2i64, i32]] in
-foreach exts = [["sextloadv", "_S"],
-                ["zextloadv", "_U"],
-                ["extloadv", "_U"]] in {
-defm : LoadPatNoOffset<types[0], !cast<PatFrag>(exts[0]#types[1]),
-                       "LOAD_EXTEND"#exts[1]#"_"#types[0]>;
-defm : LoadPatImmOff<types[0], !cast<PatFrag>(exts[0]#types[1]), regPlusImm,
-                     "LOAD_EXTEND"#exts[1]#"_"#types[0]>;
-defm : LoadPatImmOff<types[0], !cast<PatFrag>(exts[0]#types[1]), or_is_add,
-                     "LOAD_EXTEND"#exts[1]#"_"#types[0]>;
-defm : LoadPatOffsetOnly<types[0], !cast<PatFrag>(exts[0]#types[1]),
-                         "LOAD_EXTEND"#exts[1]#"_"#types[0]>;
-defm : LoadPatGlobalAddrOffOnly<types[0], !cast<PatFrag>(exts[0]#types[1]),
-                                "LOAD_EXTEND"#exts[1]#"_"#types[0]>;
+foreach vec = [I16x8, I32x4, I64x2] in
+foreach exts = [["sextloadvi", "_S"],
+                ["zextloadvi", "_U"],
+                ["extloadvi", "_U"]] in {
+defvar loadpat = !cast<PatFrag>(exts[0]#vec.split.lane_bits);
+defvar inst = "LOAD_EXTEND"#exts[1]#"_"#vec;
+defm : LoadPatNoOffset<vec.vt, loadpat, inst>;
+defm : LoadPatImmOff<vec.vt, loadpat, regPlusImm, inst>;
+defm : LoadPatImmOff<vec.vt, loadpat, or_is_add, inst>;
+defm : LoadPatOffsetOnly<vec.vt, loadpat, inst>;
+defm : LoadPatGlobalAddrOffOnly<vec.vt, loadpat, inst>;
 }
 
 // Load lane into zero vector
-multiclass SIMDLoadZero<ValueType vec_t, string name, bits<32> simdop> {
+multiclass SIMDLoadZero<Vec vec, bits<32> simdop> {
+  defvar name = "v128.load"#vec.lane_bits#"_zero";
   let mayLoad = 1, UseNamedOperandTable = 1 in {
-  defm LOAD_ZERO_#vec_t#_A32 :
+  defm LOAD_ZERO_#vec#_A32 :
     SIMD_I<(outs V128:$dst),
            (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
            (outs), (ins P2Align:$p2align, offset32_op:$off), [],
            name#"\t$dst, ${off}(${addr})$p2align",
            name#"\t$off$p2align", simdop>;
-  defm LOAD_ZERO_#vec_t#_A64 :
+  defm LOAD_ZERO_#vec#_A64 :
     SIMD_I<(outs V128:$dst),
            (ins P2Align:$p2align, offset64_op:$off, I64:$addr),
            (outs), (ins P2Align:$p2align, offset64_op:$off), [],
@@ -185,35 +242,31 @@ multiclass SIMDLoadZero<ValueType vec_t, string name, bits<32> simdop> {
 
 // TODO: Also support v4f32 and v2f64 once the instructions are merged
 // to the proposal
-defm "" : SIMDLoadZero<v4i32, "v128.load32_zero", 252>;
-defm "" : SIMDLoadZero<v2i64, "v128.load64_zero", 253>;
+defm "" : SIMDLoadZero<I32x4, 252>;
+defm "" : SIMDLoadZero<I64x2, 253>;
 
-defm : LoadPatNoOffset<v4i32, int_wasm_load32_zero, "LOAD_ZERO_v4i32">;
-defm : LoadPatNoOffset<v2i64, int_wasm_load64_zero, "LOAD_ZERO_v2i64">;
-
-defm : LoadPatImmOff<v4i32, int_wasm_load32_zero, regPlusImm, "LOAD_ZERO_v4i32">;
-defm : LoadPatImmOff<v2i64, int_wasm_load64_zero, regPlusImm, "LOAD_ZERO_v2i64">;
-
-defm : LoadPatImmOff<v4i32, int_wasm_load32_zero, or_is_add, "LOAD_ZERO_v4i32">;
-defm : LoadPatImmOff<v2i64, int_wasm_load64_zero, or_is_add, "LOAD_ZERO_v2i64">;
-
-defm : LoadPatOffsetOnly<v4i32, int_wasm_load32_zero, "LOAD_ZERO_v4i32">;
-defm : LoadPatOffsetOnly<v2i64, int_wasm_load64_zero, "LOAD_ZERO_v2i64">;
-
-defm : LoadPatGlobalAddrOffOnly<v4i32, int_wasm_load32_zero, "LOAD_ZERO_v4i32">;
-defm : LoadPatGlobalAddrOffOnly<v2i64, int_wasm_load64_zero, "LOAD_ZERO_v2i64">;
+foreach vec = [I32x4, I64x2] in {
+defvar loadpat = !cast<Intrinsic>("int_wasm_load"#vec.lane_bits#"_zero");
+defvar inst = "LOAD_ZERO_"#vec;
+defm : LoadPatNoOffset<vec.vt, loadpat, inst>;
+defm : LoadPatImmOff<vec.vt, loadpat, regPlusImm, inst>;
+defm : LoadPatImmOff<vec.vt, loadpat, or_is_add, inst>;
+defm : LoadPatOffsetOnly<vec.vt, loadpat, inst>;
+defm : LoadPatGlobalAddrOffOnly<vec.vt, loadpat, inst>;
+}
 
 // Load lane
-multiclass SIMDLoadLane<ValueType vec_t, string name, bits<32> simdop> {
+multiclass SIMDLoadLane<Vec vec, bits<32> simdop> {
+  defvar name = "v128.load"#vec.lane_bits#"_lane";
   let mayLoad = 1, UseNamedOperandTable = 1 in {
-  defm LOAD_LANE_#vec_t#_A32 :
+  defm LOAD_LANE_#vec#_A32 :
     SIMD_I<(outs V128:$dst),
            (ins P2Align:$p2align, offset32_op:$off, vec_i8imm_op:$idx,
                 I32:$addr, V128:$vec),
            (outs), (ins P2Align:$p2align, offset32_op:$off, vec_i8imm_op:$idx),
            [], name#"\t$dst, ${off}(${addr})$p2align, $vec, $idx",
            name#"\t$off$p2align, $idx", simdop>;
-  defm LOAD_LANE_#vec_t#_A64 :
+  defm LOAD_LANE_#vec#_A64 :
     SIMD_I<(outs V128:$dst),
            (ins P2Align:$p2align, offset64_op:$off, vec_i8imm_op:$idx,
                 I64:$addr, V128:$vec),
@@ -225,25 +278,29 @@ multiclass SIMDLoadLane<ValueType vec_t, string name, bits<32> simdop> {
 
 // TODO: Also support v4f32 and v2f64 once the instructions are merged
 // to the proposal
-defm "" : SIMDLoadLane<v16i8, "v128.load8_lane", 88>;
-defm "" : SIMDLoadLane<v8i16, "v128.load16_lane", 89>;
-defm "" : SIMDLoadLane<v4i32, "v128.load32_lane", 90>;
-defm "" : SIMDLoadLane<v2i64, "v128.load64_lane", 91>;
+defm "" : SIMDLoadLane<I8x16, 88>;
+defm "" : SIMDLoadLane<I16x8, 89>;
+defm "" : SIMDLoadLane<I32x4, 90>;
+defm "" : SIMDLoadLane<I64x2, 91>;
 
 // Select loads with no constant offset.
-multiclass LoadLanePatNoOffset<ValueType ty, PatFrag kind, ImmLeaf lane_imm_t> {
-  def : Pat<(ty (kind (i32 I32:$addr), (ty V128:$vec), (i32 lane_imm_t:$idx))),
-            (!cast<NI>("LOAD_LANE_"#ty#"_A32") 0, 0, imm:$idx, I32:$addr, V128:$vec)>,
+multiclass LoadLanePatNoOffset<Vec vec, PatFrag kind> {
+  defvar load_lane_a32 = !cast<NI>("LOAD_LANE_"#vec#"_A32");
+  defvar load_lane_a64 = !cast<NI>("LOAD_LANE_"#vec#"_A64");
+  def : Pat<(vec.vt (kind (i32 I32:$addr),
+              (vec.vt V128:$vec), (i32 vec.lane_idx:$idx))),
+            (load_lane_a32 0, 0, imm:$idx, I32:$addr, V128:$vec)>,
         Requires<[HasAddr32]>;
-  def : Pat<(ty (kind (i64 I64:$addr), (ty V128:$vec), (i32 lane_imm_t:$idx))),
-            (!cast<NI>("LOAD_LANE_"#ty#"_A64") 0, 0, imm:$idx, I64:$addr, V128:$vec)>,
+  def : Pat<(vec.vt (kind (i64 I64:$addr),
+              (vec.vt V128:$vec), (i32 vec.lane_idx:$idx))),
+            (load_lane_a64 0, 0, imm:$idx, I64:$addr, V128:$vec)>,
         Requires<[HasAddr64]>;
 }
 
-defm : LoadLanePatNoOffset<v16i8, int_wasm_load8_lane, LaneIdx16>;
-defm : LoadLanePatNoOffset<v8i16, int_wasm_load16_lane, LaneIdx8>;
-defm : LoadLanePatNoOffset<v4i32, int_wasm_load32_lane, LaneIdx4>;
-defm : LoadLanePatNoOffset<v2i64, int_wasm_load64_lane, LaneIdx2>;
+defm : LoadLanePatNoOffset<I8x16, int_wasm_load8_lane>;
+defm : LoadLanePatNoOffset<I16x8, int_wasm_load16_lane>;
+defm : LoadLanePatNoOffset<I32x4, int_wasm_load32_lane>;
+defm : LoadLanePatNoOffset<I64x2, int_wasm_load64_lane>;
 
 // TODO: Also support the other load patterns for load_lane once the instructions
 // are merged to the proposal.
@@ -263,25 +320,26 @@ defm STORE_V128_A64 :
 }
 
 // Def store patterns from WebAssemblyInstrMemory.td for vector types
-foreach vec_t = [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64] in {
-defm : StorePatNoOffset<vec_t, store, "STORE_V128">;
-defm : StorePatImmOff<vec_t, store, regPlusImm, "STORE_V128">;
-defm : StorePatImmOff<vec_t, store, or_is_add, "STORE_V128">;
-defm : StorePatOffsetOnly<vec_t, store, "STORE_V128">;
-defm : StorePatGlobalAddrOffOnly<vec_t, store, "STORE_V128">;
+foreach vec = AllVecs in {
+defm : StorePatNoOffset<vec.vt, store, "STORE_V128">;
+defm : StorePatImmOff<vec.vt, store, regPlusImm, "STORE_V128">;
+defm : StorePatImmOff<vec.vt, store, or_is_add, "STORE_V128">;
+defm : StorePatOffsetOnly<vec.vt, store, "STORE_V128">;
+defm : StorePatGlobalAddrOffOnly<vec.vt, store, "STORE_V128">;
 }
 
 // Store lane
-multiclass SIMDStoreLane<ValueType vec_t, string name, bits<32> simdop> {
+multiclass SIMDStoreLane<Vec vec, bits<32> simdop> {
+  defvar name = "v128.store"#vec.lane_bits#"_lane";
   let mayStore = 1, UseNamedOperandTable = 1 in {
-  defm STORE_LANE_#vec_t#_A32 :
+  defm STORE_LANE_#vec#_A32 :
     SIMD_I<(outs),
            (ins P2Align:$p2align, offset32_op:$off, vec_i8imm_op:$idx,
                 I32:$addr, V128:$vec),
            (outs), (ins P2Align:$p2align, offset32_op:$off, vec_i8imm_op:$idx),
            [], name#"\t${off}(${addr})$p2align, $vec, $idx",
            name#"\t$off$p2align, $idx", simdop>;
-  defm STORE_LANE_#vec_t#_A64 :
+  defm STORE_LANE_#vec#_A64 :
     SIMD_I<(outs V128:$dst),
            (ins P2Align:$p2align, offset64_op:$off, vec_i8imm_op:$idx,
                 I64:$addr, V128:$vec),
@@ -293,27 +351,27 @@ multiclass SIMDStoreLane<ValueType vec_t, string name, bits<32> simdop> {
 
 // TODO: Also support v4f32 and v2f64 once the instructions are merged
 // to the proposal
-defm "" : SIMDStoreLane<v16i8, "v128.store8_lane", 92>;
-defm "" : SIMDStoreLane<v8i16, "v128.store16_lane", 93>;
-defm "" : SIMDStoreLane<v4i32, "v128.store32_lane", 94>;
-defm "" : SIMDStoreLane<v2i64, "v128.store64_lane", 95>;
+defm "" : SIMDStoreLane<I8x16, 92>;
+defm "" : SIMDStoreLane<I16x8, 93>;
+defm "" : SIMDStoreLane<I32x4, 94>;
+defm "" : SIMDStoreLane<I64x2, 95>;
 
 // Select stores with no constant offset.
-multiclass StoreLanePatNoOffset<ValueType ty, PatFrag kind, ImmLeaf lane_imm_t> {
-  def : Pat<(kind (i32 I32:$addr), (ty V128:$vec), (i32 lane_imm_t:$idx)),
-            (!cast<NI>("STORE_LANE_"#ty#"_A32")
-              0, 0, imm:$idx, I32:$addr, ty:$vec)>,
+multiclass StoreLanePatNoOffset<Vec vec, PatFrag kind> {
+  def : Pat<(kind (i32 I32:$addr), (vec.vt V128:$vec), (i32 vec.lane_idx:$idx)),
+            (!cast<NI>("STORE_LANE_"#vec#"_A32")
+              0, 0, imm:$idx, I32:$addr, vec.vt:$vec)>,
         Requires<[HasAddr32]>;
-  def : Pat<(kind (i64 I64:$addr), (ty V128:$vec), (i32 lane_imm_t:$idx)),
-            (!cast<NI>("STORE_LANE_"#ty#"_A64")
-              0, 0, imm:$idx, I64:$addr, ty:$vec)>,
+  def : Pat<(kind (i64 I64:$addr), (vec.vt V128:$vec), (i32 vec.lane_idx:$idx)),
+            (!cast<NI>("STORE_LANE_"#vec#"_A64")
+              0, 0, imm:$idx, I64:$addr, vec.vt:$vec)>,
         Requires<[HasAddr64]>;
 }
 
-defm : StoreLanePatNoOffset<v16i8, int_wasm_store8_lane, LaneIdx16>;
-defm : StoreLanePatNoOffset<v8i16, int_wasm_store16_lane, LaneIdx8>;
-defm : StoreLanePatNoOffset<v4i32, int_wasm_store32_lane, LaneIdx4>;
-defm : StoreLanePatNoOffset<v2i64, int_wasm_store64_lane, LaneIdx2>;
+defm : StoreLanePatNoOffset<I8x16, int_wasm_store8_lane>;
+defm : StoreLanePatNoOffset<I16x8, int_wasm_store16_lane>;
+defm : StoreLanePatNoOffset<I32x4, int_wasm_store32_lane>;
+defm : StoreLanePatNoOffset<I64x2, int_wasm_store64_lane>;
 
 // TODO: Also support the other store patterns for store_lane once the
 // instructions are merged to the proposal.
