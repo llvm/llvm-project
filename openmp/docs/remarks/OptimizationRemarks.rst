@@ -1,6 +1,31 @@
 OpenMP Optimization Remarks
 ===========================
 
+The :doc:`OpenMP-Aware optimization pass </optimizations/OpenMPOpt>` is able to
+generate compiler remarks for performed and missed optimisations. To emit them,
+pass ``-Rpass=openmp-opt``, ``-Rpass-analysis=openmp-opt``, and
+``-Rpass-missed=openmp-opt`` to the Clang invocation.  For more information and
+features of the remark system the clang documentation should be consulted:
+
++ `Clang options to emit optimization reports <https://clang.llvm.org/docs/UsersManual.html#options-to-emit-optimization-reports>`_
++ `Clang diagnostic and remark flags <https://clang.llvm.org/docs/ClangCommandLineReference.html#diagnostic-flags>`_
++ The `-foptimization-record-file flag
+  <https://clang.llvm.org/docs/ClangCommandLineReference.html#cmdoption-clang-foptimization-record-file>`_
+  and the `-fsave-optimization-record flag
+  <https://clang.llvm.org/docs/ClangCommandLineReference.html#cmdoption-clang1-fsave-optimization-record>`_
+
+
+.. _ompXXX:
+
+Some OpenMP remarks start with a "tag", like `[OMP100]`, which indicates that
+there is further information about them on this page. To directly jump to the
+respective entry, navigate to
+`https://openmp.llvm.org/docs/remarks/OptimizationRemarks.html#ompXXX <https://openmp.llvm.org/docs/remarks/OptimizationRemarks.html#ompXXX>`_ where `XXX` is
+the three digit code shown in the tag.
+
+
+----
+
 
 .. _omp100:
 .. _omp_no_external_caller_in_target_region:
