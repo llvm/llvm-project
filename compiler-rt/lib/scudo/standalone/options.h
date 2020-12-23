@@ -11,6 +11,7 @@
 
 #include "atomic_helpers.h"
 #include "common.h"
+#include "memtag.h"
 
 namespace scudo {
 
@@ -35,6 +36,11 @@ struct Options {
         (Val >> static_cast<u32>(OptionBit::FillContents0of2)) & 3);
   }
 };
+
+template <typename Config> bool useMemoryTagging(Options Options) {
+  return allocatorSupportsMemoryTagging<Config>() &&
+         Options.get(OptionBit::UseMemoryTagging);
+}
 
 struct AtomicOptions {
   atomic_u32 Val;
