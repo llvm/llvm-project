@@ -19,6 +19,7 @@
 #include "support/Context.h"
 #include "support/MemoryTree.h"
 #include "support/Path.h"
+#include "support/Threading.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringSet.h"
@@ -186,18 +187,12 @@ private:
   /// Runs profiling and exports memory usage metrics if tracing is enabled and
   /// profiling hasn't happened recently.
   void maybeExportMemoryProfile();
+  PeriodicThrottler ShouldProfile;
 
   /// Run the MemoryCleanup callback if it's time.
   /// This method is thread safe.
   void maybeCleanupMemory();
-
-  /// Timepoint until which profiling is off. It is used to throttle profiling
-  /// requests.
-  std::chrono::steady_clock::time_point NextProfileTime;
-
-  /// Next time we want to call the MemoryCleanup callback.
-  std::mutex NextMemoryCleanupTimeMutex;
-  std::chrono::steady_clock::time_point NextMemoryCleanupTime;
+  PeriodicThrottler ShouldCleanupMemory;
 
   /// Since initialization of CDBs and ClangdServer is done lazily, the
   /// following context captures the one used while creating ClangdLSPServer and
