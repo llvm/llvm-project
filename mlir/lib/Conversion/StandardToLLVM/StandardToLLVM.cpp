@@ -1085,12 +1085,6 @@ Value ConvertToLLVMPattern::getStridedElementPtr(
                : base;
 }
 
-Value ConvertToLLVMPattern::getDataPtr(
-    Location loc, MemRefType type, Value memRefDesc, ValueRange indices,
-    ConversionPatternRewriter &rewriter) const {
-  return getStridedElementPtr(loc, type, memRefDesc, indices, rewriter);
-}
-
 // Check if the MemRefType `type` is supported by the lowering. We currently
 // only support memrefs with identity maps.
 bool ConvertToLLVMPattern::isSupportedMemRefType(MemRefType type) const {
