@@ -4,9 +4,9 @@
 # RUN: llc %s -mtriple=s390x-linux-gnu -mcpu=z13 -start-before=codegenprepare \
 # RUN:   -stop-after codegenprepare -o - | FileCheck %s
 #
-# CHECK-LABEL: bb2:
+# CHECK-LABEL: bb1:
 # CHECK:       ret
-# CHECK-LABEL: bb4:
+# CHECK-LABEL: bb2:
 # CHECK:       ret
 
 
