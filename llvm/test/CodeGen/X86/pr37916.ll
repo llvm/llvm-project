@@ -7,7 +7,7 @@
 define void @fn1() local_unnamed_addr {
 ; CHECK-LABEL: fn1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:  .LBB0_1: # %if.end
+; CHECK:       .LBB0_1: # %if.end
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl a+4, %eax
 ; CHECK-NEXT:    orl a, %eax
