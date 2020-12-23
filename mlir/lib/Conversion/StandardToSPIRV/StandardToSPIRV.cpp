@@ -1,4 +1,4 @@
-//===- ConvertStandardToSPIRV.cpp - Standard to SPIR-V dialect conversion--===//
+//===- StandardToSPIRV.cpp - Standard to SPIR-V Patterns ------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements patterns to convert standard ops to SPIR-V ops.
+// This file implements patterns to convert standard dialect to SPIR-V dialect.
 //
 //===----------------------------------------------------------------------===//
 

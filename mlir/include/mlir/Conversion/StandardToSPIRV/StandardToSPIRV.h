@@ -1,4 +1,4 @@
-//===- ConvertStandardToSPIRV.h - Convert to SPIR-V dialect -----*- C++ -*-===//
+//===- StandardToSPIRV.h - Standard to SPIR-V Patterns --------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,21 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Provides patterns to lower StandardOps to SPIR-V dialect.
+// Provides patterns to convert Standard dialect to SPIR-V dialect.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_CONVERSION_STANDARDTOSPIRV_CONVERTSTANDARDTOSPIRV_H
-#define MLIR_CONVERSION_STANDARDTOSPIRV_CONVERTSTANDARDTOSPIRV_H
+#ifndef MLIR_CONVERSION_STANDARDTOSPIRV_STANDARDTOSPIRV_H
+#define MLIR_CONVERSION_STANDARDTOSPIRV_STANDARDTOSPIRV_H
 
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
 class SPIRVTypeConverter;
 
-/// Appends to a pattern list additional patterns for translating StandardOps to
-/// SPIR-V ops. Also adds the patterns legalize ops not directly translated to
-/// SPIR-V dialect.
+/// Appends to a pattern list additional patterns for translating standard ops
+/// to SPIR-V ops. Also adds the patterns to legalize ops not directly
+/// translated to SPIR-V dialect.
 void populateStandardToSPIRVPatterns(MLIRContext *context,
                                      SPIRVTypeConverter &typeConverter,
                                      OwningRewritePatternList &patterns);
@@ -32,4 +32,4 @@ void populateStdLegalizationPatternsForSPIRVLowering(
 
 } // namespace mlir
 
-#endif // MLIR_CONVERSION_STANDARDTOSPIRV_CONVERTSTANDARDTOSPIRV_H
+#endif // MLIR_CONVERSION_STANDARDTOSPIRV_STANDARDTOSPIRV_H

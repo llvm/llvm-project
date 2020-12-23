@@ -1,4 +1,4 @@
-//===- ConvertGPUToSPIRV.h - GPU Ops to SPIR-V dialect patterns ----C++ -*-===//
+//===- GPUToSPIRV.h - GPU to SPIR-V Patterns --------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Provides patterns for lowering GPU Ops to SPIR-V dialect.
+// Provides patterns to convert GPU dialect to SPIR-V dialect.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_CONVERSION_GPUTOSPIRV_CONVERTGPUTOSPIRV_H
-#define MLIR_CONVERSION_GPUTOSPIRV_CONVERTGPUTOSPIRV_H
+#ifndef MLIR_CONVERSION_GPUTOSPIRV_GPUTOSPIRV_H
+#define MLIR_CONVERSION_GPUTOSPIRV_GPUTOSPIRV_H
 
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -26,4 +26,4 @@ void populateGPUToSPIRVPatterns(MLIRContext *context,
                                 OwningRewritePatternList &patterns);
 } // namespace mlir
 
-#endif // MLIR_CONVERSION_GPUTOSPIRV_CONVERTGPUTOSPIRV_H
+#endif // MLIR_CONVERSION_GPUTOSPIRV_GPUTOSPIRV_H

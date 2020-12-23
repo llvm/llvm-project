@@ -1,7 +1,7 @@
 add_mlir_conversion_library(MLIRSPIRVToLLVM
   ConvertLaunchFuncToLLVMCalls.cpp
-  ConvertSPIRVToLLVM.cpp
-  ConvertSPIRVToLLVMPass.cpp
+  SPIRVToLLVM.cpp
+  SPIRVToLLVMPass.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/SPIRVToLLVM
