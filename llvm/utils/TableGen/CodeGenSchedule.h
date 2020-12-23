@@ -410,7 +410,7 @@ public:
   ArrayRef<OpcodeGroup> getGroups() const { return Groups; }
 };
 
-using ProcModelMapTy = std::map<const Record*, unsigned>;
+using ProcModelMapTy = DenseMap<const Record *, unsigned>;
 
 /// Top level container for machine model data.
 class CodeGenSchedModels {

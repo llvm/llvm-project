@@ -327,6 +327,7 @@ public:
   void setup();
 
   DylibSymbol *stubBinder = nullptr;
+  Defined *dyldPrivate = nullptr;
 };
 
 // This section contains space for just a single word, and will be used by dyld

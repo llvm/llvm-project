@@ -417,6 +417,38 @@ TEST_F(TUSchedulerTests, Invalidation) {
   EXPECT_EQ(4, Actions.load()) << "All actions should run (some with error)";
 }
 
+// We don't invalidate requests for updates that don't change the file content.
+// These are mostly "refresh this file" events synthesized inside clangd itself.
+// (Usually the AST rebuild is elided after verifying that all inputs are
+// unchanged, but invalidation decisions happen earlier and so independently).
+// See https://github.com/clangd/clangd/issues/620
+TEST_F(TUSchedulerTests, InvalidationUnchanged) {
+  auto Path = testPath("foo.cpp");
+  TUScheduler S(CDB, optsForTest(), captureDiags());
+  std::atomic<int> Actions(0);
+
+  Notification Start;
+  updateWithDiags(S, Path, "a", WantDiagnostics::Yes, [&](std::vector<Diag>) {
+    Start.wait();
+  });
+  S.runWithAST(
+      "invalidatable", Path,
+      [&](llvm::Expected<InputsAndAST> AST) {
+        ++Actions;
+        EXPECT_TRUE(bool(AST))
+            << "Should not invalidate based on an update with same content: "
+            << llvm::toString(AST.takeError());
+      },
+      TUScheduler::InvalidateOnUpdate);
+  updateWithDiags(S, Path, "a", WantDiagnostics::Yes, [&](std::vector<Diag>) {
+    ADD_FAILURE() << "Shouldn't build, identical to previous";
+  });
+  Start.notify();
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+
+  EXPECT_EQ(1, Actions.load()) << "All actions should run";
+}
+
 TEST_F(TUSchedulerTests, ManyUpdates) {
   const int FilesCount = 3;
   const int UpdatesPerFile = 10;

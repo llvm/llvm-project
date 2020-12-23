@@ -25,7 +25,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/LiveVariables.h"
@@ -70,6 +69,9 @@ using namespace llvm;
 #include "AMDGPUGenInstrInfo.inc"
 
 namespace llvm {
+
+class AAResults;
+
 namespace AMDGPU {
 #define GET_D16ImageDimIntrinsics_IMPL
 #define GET_ImageDimIntrinsicTable_IMPL
@@ -137,7 +139,7 @@ static bool nodesHaveSameOperandValue(SDNode *N0, SDNode* N1, unsigned OpName) {
 }
 
 bool SIInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
-                                                    AliasAnalysis *AA) const {
+                                                    AAResults *AA) const {
   // TODO: The generic check fails for VALU instructions that should be
   // rematerializable due to implicit reads of exec. We really want all of the
   // generic logic for this except for this.

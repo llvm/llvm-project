@@ -150,7 +150,7 @@ RelExpr ARM::getRelExpr(RelType type, const Symbol &s,
   case R_ARM_NONE:
     return R_NONE;
   case R_ARM_TLS_LE32:
-    return R_TLS;
+    return R_TPREL;
   case R_ARM_V4BX:
     // V4BX is just a marker to indicate there's a "bx rN" instruction at the
     // given address. It can be used to implement a special linker mode which

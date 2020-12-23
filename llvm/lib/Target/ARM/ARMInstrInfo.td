@@ -2492,23 +2492,29 @@ let isCall = 1,
   }
 
   // ARMv5T and above
-  def BLX : AXI<(outs), (ins GPR:$func), BrMiscFrm,
-                IIC_Br, "blx\t$func",
-                [(ARMcall GPR:$func)]>,
+  def BLX : AXI<(outs), (ins GPR:$func), BrMiscFrm, IIC_Br, "blx\t$func", []>,
             Requires<[IsARM, HasV5T]>, Sched<[WriteBrL]> {
     bits<4> func;
     let Inst{31-4} = 0b1110000100101111111111110011;
     let Inst{3-0}  = func;
   }
+  def BLX_noip :  ARMPseudoExpand<(outs), (ins GPRnoip:$func),
+                   4, IIC_Br, [], (BLX GPR:$func)>,
+                  Requires<[IsARM, HasV5T]>, Sched<[WriteBrL]>;
+
 
   def BLX_pred : AI<(outs), (ins GPR:$func), BrMiscFrm,
-                    IIC_Br, "blx", "\t$func",
-                    [(ARMcall_pred GPR:$func)]>,
+                    IIC_Br, "blx", "\t$func", []>,
                  Requires<[IsARM, HasV5T]>, Sched<[WriteBrL]> {
     bits<4> func;
     let Inst{27-4} = 0b000100101111111111110011;
     let Inst{3-0}  = func;
   }
+  def BLX_pred_noip :  ARMPseudoExpand<(outs), (ins GPRnoip:$func),
+                   4, IIC_Br, [],
+                   (BLX_pred GPR:$func, (ops 14, zero_reg))>,
+                   Requires<[IsARM, HasV5T]>, Sched<[WriteBrL]>;
+
 
   // ARMv4T
   // Note: Restrict $func to the tGPR regclass to prevent it being in LR.
@@ -2533,6 +2539,16 @@ let isCall = 1,
                   []>,
              Requires<[IsARM]>, Sched<[WriteBr]>;
 }
+
+def : ARMPat<(ARMcall GPR:$func), (BLX $func)>,
+      Requires<[IsARM, HasV5T, NoSLSBLRMitigation]>;
+def : ARMPat<(ARMcall GPRnoip:$func), (BLX_noip $func)>,
+      Requires<[IsARM, HasV5T, SLSBLRMitigation]>;
+def : ARMPat<(ARMcall_pred GPR:$func), (BLX_pred $func)>,
+      Requires<[IsARM, HasV5T, NoSLSBLRMitigation]>;
+def : ARMPat<(ARMcall_pred GPRnoip:$func), (BLX_pred_noip $func)>,
+      Requires<[IsARM, HasV5T, SLSBLRMitigation]>;
+
 
 let isBranch = 1, isTerminator = 1 in {
   // FIXME: should be able to write a pattern for ARMBrcond, but can't use
@@ -6364,6 +6380,15 @@ let mayLoad = 1, mayStore =1, hasSideEffects = 1, hasNoSchedulingInfo = 1 in
 def SPACE : PseudoInst<(outs GPR:$Rd), (ins i32imm:$size, GPR:$Rn),
                        NoItinerary,
                        [(set GPR:$Rd, (int_arm_space timm:$size, GPR:$Rn))]>;
+
+// SpeculationBarrierEndBB must only be used after an unconditional control
+// flow, i.e. after a terminator for which isBarrier is True.
+let hasSideEffects = 1, isCodeGenOnly = 1, isTerminator = 1, isBarrier = 1 in {
+  def SpeculationBarrierISBDSBEndBB
+      : PseudoInst<(outs), (ins), NoItinerary, []>, Sched<[]>;
+  def SpeculationBarrierSBEndBB
+      : PseudoInst<(outs), (ins), NoItinerary, []>, Sched<[]>;
+}
 
 //===----------------------------------
 // Atomic cmpxchg for -O0

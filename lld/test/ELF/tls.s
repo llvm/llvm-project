@@ -4,6 +4,26 @@
 // RUN: llvm-readobj -S -l --symbols %tout | FileCheck %s
 // RUN: llvm-objdump -d %tout | FileCheck %s --check-prefix=DIS
 
+/// Reject local-exec TLS relocations for -shared, regardless of the preemptibility.
+// RUN: not ld.lld -shared %t -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
+// RUN: not ld.lld -shared -Bsymbolic %t -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
+
+// ERR:       error: relocation R_X86_64_TPOFF32 against a cannot be used with -shared
+// ERR-NEXT:  defined in {{.*}}
+// ERR-NEXT:  referenced by {{.*}}:(.text+0x4)
+// ERR-EMPTY:
+// ERR-NEXT:  error: relocation R_X86_64_TPOFF32 against b cannot be used with -shared
+// ERR-NEXT:  defined in {{.*}}
+// ERR-NEXT:  referenced by {{.*}}:(.text+0xC)
+// ERR-EMPTY:
+// ERR-NEXT:  error: relocation R_X86_64_TPOFF32 against c cannot be used with -shared
+// ERR-NEXT:  defined in {{.*}}
+// ERR-NEXT:  referenced by {{.*}}:(.text+0x14)
+// ERR-EMPTY:
+// ERR-NEXT:  error: relocation R_X86_64_TPOFF32 against d cannot be used with -shared
+// ERR-NEXT:  defined in {{.*}}
+// ERR-NEXT:  referenced by {{.*}}:(.text+0x1C)
+
 .global _start
 _start:
   movl %fs:a@tpoff, %eax

@@ -1498,6 +1498,10 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       int64_t Offset = FrameInfo.getObjectOffset(Index);
       if (ST.enableFlatScratch()) {
         if (TII->isFLATScratch(*MI)) {
+          assert((int16_t)FIOperandNum ==
+                 AMDGPU::getNamedOperandIdx(MI->getOpcode(),
+                                            AMDGPU::OpName::saddr));
+
           // The offset is always swizzled, just replace it
           if (FrameReg)
             FIOp.ChangeToRegister(FrameReg, false);

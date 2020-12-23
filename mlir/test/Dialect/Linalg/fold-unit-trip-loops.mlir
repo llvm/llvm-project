@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -linalg-fold-unit-extent-dims="fold-one-trip-loops-only" -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -linalg-fold-unit-extent-dims="fold-one-trip-loops-only" | FileCheck %s
 
 #accesses = [
   affine_map<(i, j, k, l, m) -> (i, k, m)>,
@@ -11,11 +11,12 @@
   library_call = "some_external_func"
 }
 
-func @drop_one_trip_loops(%arg0 : tensor<?x1x?xf32>) -> tensor<?x1x?x1x?xf32>
+func @drop_one_trip_loops(%arg0 : tensor<?x1x?xf32>, %shape: tensor<?x1x?x1x?xf32>) -> tensor<?x1x?x1x?xf32>
 {
   %0 = linalg.generic #trait
-    ins(%arg0 : tensor<?x1x?xf32>) {
-       ^bb0(%arg1 : f32) :
+    ins(%arg0 : tensor<?x1x?xf32>)
+    outs(%shape : tensor<?x1x?x1x?xf32>) {
+       ^bb0(%arg1 : f32, %arg2 : f32) :
          linalg.yield %arg1 : f32
        } -> tensor<?x1x?x1x?xf32>
   return %0 : tensor<?x1x?x1x?xf32>
@@ -40,8 +41,9 @@ func @drop_one_trip_loops(%arg0 : tensor<?x1x?xf32>) -> tensor<?x1x?x1x?xf32>
 func @drop_all_loops(%arg0 : tensor<1x1xf32>) -> tensor<1x1xf32>
 {
   %0 = linalg.generic #trait
-    ins(%arg0 : tensor<1x1xf32>) {
-       ^bb0(%arg1: f32) :
+     ins(%arg0 : tensor<1x1xf32>)
+    outs(%arg0 : tensor<1x1xf32>) {
+       ^bb0(%arg1: f32, %arg2: f32) :
          linalg.yield %arg1 : f32
        } -> tensor<1x1xf32>
   return %0 : tensor<1x1xf32>
@@ -91,10 +93,11 @@ func @drop_all_loops(%arg0 : memref<1x1xf32>, %arg1 : memref<1x1xf32>)
   library_call = "some_external_fn"
 }
 
-func @leading_dim_1_canonicalization(%arg0: tensor<1x5xf32>) -> tensor<5xf32> {
+func @leading_dim_1_canonicalization(%arg0: tensor<1x5xf32>, %shape: tensor<5xf32>) -> tensor<5xf32> {
   %0 = linalg.generic #trait
-      ins(%arg0 : tensor<1x5xf32>) {
-    ^bb0(%arg2: f32):     // no predecessors
+       ins(%arg0 : tensor<1x5xf32>)
+      outs(%shape : tensor<5xf32>) {
+    ^bb0(%arg2: f32, %arg3: f32):     // no predecessors
       linalg.yield %arg2 : f32
   } -> tensor<5xf32>
   return %0 : tensor<5xf32>

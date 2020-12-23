@@ -47,7 +47,17 @@ Major New Features
 Improvements to clangd
 ----------------------
 
-The improvements are...
+- clangd's memory usage is significantly reduced on most Linux systems.
+  In particular, memory usage should not increase dramatically over time.
+
+  The standard allocator on most systems is glibc's ptmalloc2, and it creates
+  disproportionately large heaps when handling clangd's allocation patterns.
+  By default, clangd will now periodically call ``malloc_trim`` to release free
+  pages on glibc systems.
+
+  Users of other allocators (such as ``jemalloc`` or ``tcmalloc``) on glibc
+  systems can disable this using ``--malloc_trim=0`` or the CMake flag
+  ``-DCLANGD_MALLOC_TRIM=0``.
 
 Improvements to clang-doc
 -------------------------
@@ -98,6 +108,12 @@ New checks
 
   Finds kernel files and include directives whose filename is `kernel.cl`,
   `Verilog.cl`, or `VHDL.cl`.
+
+- New :doc:`altera-single-work-item-barrier
+  <clang-tidy/checks/altera-single-work-item-barrier>` check.
+
+  Finds OpenCL kernel functions that call a barrier function but do not call
+  an ID function.
 
 - New :doc:`altera-struct-pack-align
   <clang-tidy/checks/altera-struct-pack-align>` check.

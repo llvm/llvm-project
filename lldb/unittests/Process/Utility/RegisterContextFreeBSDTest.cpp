@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if defined(__FreeBSD__)
-
 // clang-format off
 #include <sys/types.h>
 #include <machine/reg.h>
@@ -233,5 +231,3 @@ TEST(RegisterContextFreeBSDTest, i386) {
 }
 
 #endif // defined(__i386__) || defined(__x86_64__)
-
-#endif // defined(__FreeBSD__)

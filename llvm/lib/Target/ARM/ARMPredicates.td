@@ -77,6 +77,8 @@ def HasV8_5a         : Predicate<"Subtarget->hasV8_5aOps()">,
                                  AssemblerPredicate<(all_of HasV8_5aOps), "armv8.5a">;
 def HasV8_6a         : Predicate<"Subtarget->hasV8_6aOps()">,
                                  AssemblerPredicate<(all_of HasV8_6aOps), "armv8.6a">;
+def HasV8_7a         : Predicate<"Subtarget->hasV8_7aOps()">,
+                                 AssemblerPredicate<(all_of HasV8_7aOps), "armv8.7a">;
 def NoVFP            : Predicate<"!Subtarget->hasVFP2Base()">;
 def HasVFP2          : Predicate<"Subtarget->hasVFP2Base()">,
                                  AssemblerPredicate<(all_of FeatureVFP2_SP), "VFP2">;
@@ -187,6 +189,9 @@ let RecomputePerFunction = 1 in {
   def UseFPVMLx: Predicate<"((Subtarget->useFPVMLx() &&"
                            "  TM.Options.AllowFPOpFusion != FPOpFusion::Fast) ||"
                            "Subtarget->hasMinSize())">;
+  def SLSBLRMitigation : Predicate<[{ MF->getSubtarget<ARMSubtarget>().hardenSlsBlr() }]>;
+  def NoSLSBLRMitigation : Predicate<[{ !MF->getSubtarget<ARMSubtarget>().hardenSlsBlr() }]>;
+
 }
 def UseMulOps        : Predicate<"Subtarget->useMulOps()">;
 

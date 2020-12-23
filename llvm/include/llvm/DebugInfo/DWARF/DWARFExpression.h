@@ -167,10 +167,5 @@ inline bool operator==(const DWARFExpression::iterator &LHS,
                        const DWARFExpression::iterator &RHS) {
   return LHS.Expr == RHS.Expr && LHS.Offset == RHS.Offset;
 }
-
-inline bool operator!=(const DWARFExpression::iterator &LHS,
-                       const DWARFExpression::iterator &RHS) {
-  return !(LHS == RHS);
-}
 }
 #endif

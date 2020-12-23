@@ -33,10 +33,8 @@ define i8 @smax_nsw(i8 %a, i8 %b) {
 
 define i8 @abs_swapped(i8 %a) {
 ; CHECK-LABEL: @abs_swapped(
-; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[A:%.*]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i8 [[A]], 0
-; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 [[NEG]], i8 [[A]]
-; CHECK-NEXT:    ret i8 [[M1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.abs.i8(i8 [[A:%.*]], i1 false)
+; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %neg = sub i8 0, %a
   %cmp1 = icmp sgt i8 %a, 0
@@ -81,9 +79,8 @@ define i8 @abs_different_constants(i8 %a) {
 
 define i8 @nabs_different_constants(i8 %a) {
 ; CHECK-LABEL: @nabs_different_constants(
-; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[A:%.*]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i8 [[A]], 0
-; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 [[A]], i8 [[NEG]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.abs.i8(i8 [[A:%.*]], i1 false)
+; CHECK-NEXT:    [[M1:%.*]] = sub i8 0, [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[M1]]
 ;
   %neg = sub i8 0, %a

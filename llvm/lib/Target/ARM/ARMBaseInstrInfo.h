@@ -635,6 +635,67 @@ bool isIndirectBranchOpcode(int Opc) {
   return Opc == ARM::BX || Opc == ARM::MOVPCRX || Opc == ARM::tBRIND;
 }
 
+static inline bool isIndirectCall(const MachineInstr &MI) {
+  int Opc = MI.getOpcode();
+  switch (Opc) {
+    // indirect calls:
+  case ARM::BLX:
+  case ARM::BLX_noip:
+  case ARM::BLX_pred:
+  case ARM::BLX_pred_noip:
+  case ARM::BX_CALL:
+  case ARM::BMOVPCRX_CALL:
+  case ARM::TCRETURNri:
+  case ARM::TAILJMPr:
+  case ARM::TAILJMPr4:
+  case ARM::tBLXr:
+  case ARM::tBLXr_noip:
+  case ARM::tBLXNSr:
+  case ARM::tBLXNS_CALL:
+  case ARM::tBX_CALL:
+  case ARM::tTAILJMPr:
+    assert(MI.isCall(MachineInstr::IgnoreBundle));
+    return true;
+    // direct calls:
+  case ARM::BL:
+  case ARM::BL_pred:
+  case ARM::BMOVPCB_CALL:
+  case ARM::BL_PUSHLR:
+  case ARM::BLXi:
+  case ARM::TCRETURNdi:
+  case ARM::TAILJMPd:
+  case ARM::SVC:
+  case ARM::HVC:
+  case ARM::TPsoft:
+  case ARM::tTAILJMPd:
+  case ARM::t2SMC:
+  case ARM::t2HVC:
+  case ARM::tBL:
+  case ARM::tBLXi:
+  case ARM::tBL_PUSHLR:
+  case ARM::tTAILJMPdND:
+  case ARM::tSVC:
+  case ARM::tTPsoft:
+    assert(MI.isCall(MachineInstr::IgnoreBundle));
+    return false;
+  }
+  assert(!MI.isCall(MachineInstr::IgnoreBundle));
+  return false;
+}
+
+static inline bool isIndirectControlFlowNotComingBack(const MachineInstr &MI) {
+  int opc = MI.getOpcode();
+  return MI.isReturn() || isIndirectBranchOpcode(MI.getOpcode()) ||
+         isJumpTableBranchOpcode(opc);
+}
+
+static inline bool isSpeculationBarrierEndBBOpcode(int Opc) {
+  return Opc == ARM::SpeculationBarrierISBDSBEndBB ||
+         Opc == ARM::SpeculationBarrierSBEndBB ||
+         Opc == ARM::t2SpeculationBarrierISBDSBEndBB ||
+         Opc == ARM::t2SpeculationBarrierSBEndBB;
+}
+
 static inline bool isPopOpcode(int Opc) {
   return Opc == ARM::tPOP_RET || Opc == ARM::LDMIA_RET ||
          Opc == ARM::t2LDMIA_RET || Opc == ARM::tPOP || Opc == ARM::LDMIA_UPD ||
@@ -849,6 +910,10 @@ inline bool isGatherScatter(IntrinsicInst *IntInst) {
     return false;
   return isGather(IntInst) || isScatter(IntInst);
 }
+
+unsigned getBLXOpcode(const MachineFunction &MF);
+unsigned gettBLXrOpcode(const MachineFunction &MF);
+unsigned getBLXpredOpcode(const MachineFunction &MF);
 
 } // end namespace llvm
 

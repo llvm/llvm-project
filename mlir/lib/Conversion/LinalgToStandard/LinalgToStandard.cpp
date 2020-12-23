@@ -65,7 +65,7 @@ static FlatSymbolRefAttr getLibraryCallSymbolRef(Operation *op,
   assert(op->getNumResults() == 0 &&
          "Library call for linalg operation can be generated only for ops that "
          "have void return types");
-  auto libFnType = FunctionType::get(inputTypes, {}, rewriter.getContext());
+  auto libFnType = rewriter.getFunctionType(inputTypes, {});
 
   OpBuilder::InsertionGuard guard(rewriter);
   // Insert before module terminator.

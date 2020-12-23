@@ -6183,6 +6183,20 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                              DAG.getNode(ISD::BITCAST, sdl, MVT::f16,
                                          getValue(I.getArgOperand(0)))));
     return;
+  case Intrinsic::fptosi_sat: {
+    EVT Type = TLI.getValueType(DAG.getDataLayout(), I.getType());
+    SDValue SatW = DAG.getConstant(Type.getScalarSizeInBits(), sdl, MVT::i32);
+    setValue(&I, DAG.getNode(ISD::FP_TO_SINT_SAT, sdl, Type,
+                             getValue(I.getArgOperand(0)), SatW));
+    return;
+  }
+  case Intrinsic::fptoui_sat: {
+    EVT Type = TLI.getValueType(DAG.getDataLayout(), I.getType());
+    SDValue SatW = DAG.getConstant(Type.getScalarSizeInBits(), sdl, MVT::i32);
+    setValue(&I, DAG.getNode(ISD::FP_TO_UINT_SAT, sdl, Type,
+                             getValue(I.getArgOperand(0)), SatW));
+    return;
+  }
   case Intrinsic::pcmarker: {
     SDValue Tmp = getValue(I.getArgOperand(0));
     DAG.setRoot(DAG.getNode(ISD::PCMARKER, sdl, MVT::Other, getRoot(), Tmp));

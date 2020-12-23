@@ -14,13 +14,24 @@
 #include "../PassDetail.h"
 #include "mlir/Conversion/StandardToSPIRV/ConvertStandardToSPIRV.h"
 #include "mlir/Conversion/StandardToSPIRV/ConvertStandardToSPIRVPass.h"
-#include "mlir/Dialect/SPIRV/SPIRVDialect.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
+
+/// Helpers to access the memref operand for each op.
+static Value getMemRefOperand(LoadOp op) { return op.memref(); }
+
+static Value getMemRefOperand(vector::TransferReadOp op) { return op.source(); }
+
+static Value getMemRefOperand(StoreOp op) { return op.memref(); }
+
+static Value getMemRefOperand(vector::TransferWriteOp op) {
+  return op.source();
+}
 
 namespace {
 /// Merges subview operation with load/transferRead operation.
@@ -141,7 +152,7 @@ template <typename OpTy>
 LogicalResult
 LoadOpOfSubViewFolder<OpTy>::matchAndRewrite(OpTy loadOp,
                                              PatternRewriter &rewriter) const {
-  auto subViewOp = loadOp.memref().template getDefiningOp<SubViewOp>();
+  auto subViewOp = getMemRefOperand(loadOp).template getDefiningOp<SubViewOp>();
   if (!subViewOp) {
     return failure();
   }
@@ -162,7 +173,8 @@ template <typename OpTy>
 LogicalResult
 StoreOpOfSubViewFolder<OpTy>::matchAndRewrite(OpTy storeOp,
                                               PatternRewriter &rewriter) const {
-  auto subViewOp = storeOp.memref().template getDefiningOp<SubViewOp>();
+  auto subViewOp =
+      getMemRefOperand(storeOp).template getDefiningOp<SubViewOp>();
   if (!subViewOp) {
     return failure();
   }

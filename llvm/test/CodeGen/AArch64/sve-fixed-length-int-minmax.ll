@@ -69,14 +69,14 @@ define void @smax_v64i8(<64 x i8>* %a, <64 x i8>* %b) #0 {
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].b, vl32
 ; VBITS_EQ_256-DAG: mov w[[A:[0-9]+]], #32
-; VBITS_EQ_256-DAG: ld1b { [[OP1_LO:z[0-9]+]].b }, [[PG]]/z, [x0, x[[A]]]
-; VBITS_EQ_256-DAG: ld1b { [[OP1_HI:z[0-9]+]].b }, [[PG]]/z, [x0]
-; VBITS_EQ_256-DAG: ld1b { [[OP2_LO:z[0-9]+]].b }, [[PG]]/z, [x1, x[[A]]]
-; VBITS_EQ_256-DAG: ld1b { [[OP2_HI:z[0-9]+]].b }, [[PG]]/z, [x1]
+; VBITS_EQ_256-DAG: ld1b { [[OP1_LO:z[0-9]+]].b }, [[PG]]/z, [x0]
+; VBITS_EQ_256-DAG: ld1b { [[OP1_HI:z[0-9]+]].b }, [[PG]]/z, [x0, x[[A]]]
+; VBITS_EQ_256-DAG: ld1b { [[OP2_LO:z[0-9]+]].b }, [[PG]]/z, [x1]
+; VBITS_EQ_256-DAG: ld1b { [[OP2_HI:z[0-9]+]].b }, [[PG]]/z, [x1, x[[A]]]
 ; VBITS_EQ_256-DAG: smax [[RES_LO:z[0-9]+]].b, [[PG]]/m, [[OP1_LO]].b, [[OP2_LO]].b
 ; VBITS_EQ_256-DAG: smax [[RES_HI:z[0-9]+]].b, [[PG]]/m, [[OP1_HI]].b, [[OP2_HI]].b
-; VBITS_EQ_256-DAG: st1b { [[RES_LO]].b }, [[PG]], [x0, x[[A]]]
-; VBITS_EQ_256-DAG: st1b { [[RES_HI]].b }, [[PG]], [x0]
+; VBITS_EQ_256-DAG: st1b { [[RES_LO]].b }, [[PG]], [x0]
+; VBITS_EQ_256-DAG: st1b { [[RES_HI]].b }, [[PG]], [x0, x[[A]]]
 ; VBITS_EQ_256-NEXT: ret
   %op1 = load <64 x i8>, <64 x i8>* %a
   %op2 = load <64 x i8>, <64 x i8>* %b
@@ -442,14 +442,14 @@ define void @smin_v64i8(<64 x i8>* %a, <64 x i8>* %b) #0 {
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].b, vl32
 ; VBITS_EQ_256-DAG: mov w[[A:[0-9]+]], #32
-; VBITS_EQ_256-DAG: ld1b { [[OP1_LO:z[0-9]+]].b }, [[PG]]/z, [x0, x[[A]]]
-; VBITS_EQ_256-DAG: ld1b { [[OP1_HI:z[0-9]+]].b }, [[PG]]/z, [x0]
-; VBITS_EQ_256-DAG: ld1b { [[OP2_LO:z[0-9]+]].b }, [[PG]]/z, [x1, x[[A]]]
-; VBITS_EQ_256-DAG: ld1b { [[OP2_HI:z[0-9]+]].b }, [[PG]]/z, [x1]
+; VBITS_EQ_256-DAG: ld1b { [[OP1_LO:z[0-9]+]].b }, [[PG]]/z, [x0]
+; VBITS_EQ_256-DAG: ld1b { [[OP1_HI:z[0-9]+]].b }, [[PG]]/z, [x0, x[[A]]]
+; VBITS_EQ_256-DAG: ld1b { [[OP2_LO:z[0-9]+]].b }, [[PG]]/z, [x1]
+; VBITS_EQ_256-DAG: ld1b { [[OP2_HI:z[0-9]+]].b }, [[PG]]/z, [x1, x[[A]]]
 ; VBITS_EQ_256-DAG: smin [[RES_LO:z[0-9]+]].b, [[PG]]/m, [[OP1_LO]].b, [[OP2_LO]].b
 ; VBITS_EQ_256-DAG: smin [[RES_HI:z[0-9]+]].b, [[PG]]/m, [[OP1_HI]].b, [[OP2_HI]].b
-; VBITS_EQ_256-DAG: st1b { [[RES_LO]].b }, [[PG]], [x0, x[[A]]]
-; VBITS_EQ_256-DAG: st1b { [[RES_HI]].b }, [[PG]], [x0]
+; VBITS_EQ_256-DAG: st1b { [[RES_LO]].b }, [[PG]], [x0]
+; VBITS_EQ_256-DAG: st1b { [[RES_HI]].b }, [[PG]], [x0, x[[A]]]
   %op1 = load <64 x i8>, <64 x i8>* %a
   %op2 = load <64 x i8>, <64 x i8>* %b
   %res = call <64 x i8> @llvm.smin.v64i8(<64 x i8> %op1, <64 x i8> %op2)
@@ -814,14 +814,14 @@ define void @umax_v64i8(<64 x i8>* %a, <64 x i8>* %b) #0 {
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].b, vl32
 ; VBITS_EQ_256-DAG: mov w[[A:[0-9]+]], #32
-; VBITS_EQ_256-DAG: ld1b { [[OP1_LO:z[0-9]+]].b }, [[PG]]/z, [x0, x[[A]]]
-; VBITS_EQ_256-DAG: ld1b { [[OP1_HI:z[0-9]+]].b }, [[PG]]/z, [x0]
-; VBITS_EQ_256-DAG: ld1b { [[OP2_LO:z[0-9]+]].b }, [[PG]]/z, [x1, x[[A]]]
-; VBITS_EQ_256-DAG: ld1b { [[OP2_HI:z[0-9]+]].b }, [[PG]]/z, [x1]
+; VBITS_EQ_256-DAG: ld1b { [[OP1_LO:z[0-9]+]].b }, [[PG]]/z, [x0]
+; VBITS_EQ_256-DAG: ld1b { [[OP1_HI:z[0-9]+]].b }, [[PG]]/z, [x0, x[[A]]]
+; VBITS_EQ_256-DAG: ld1b { [[OP2_LO:z[0-9]+]].b }, [[PG]]/z, [x1]
+; VBITS_EQ_256-DAG: ld1b { [[OP2_HI:z[0-9]+]].b }, [[PG]]/z, [x1, x[[A]]]
 ; VBITS_EQ_256-DAG: umax [[RES_LO:z[0-9]+]].b, [[PG]]/m, [[OP1_LO]].b, [[OP2_LO]].b
 ; VBITS_EQ_256-DAG: umax [[RES_HI:z[0-9]+]].b, [[PG]]/m, [[OP1_HI]].b, [[OP2_HI]].b
-; VBITS_EQ_256-DAG: st1b { [[RES_LO]].b }, [[PG]], [x0, x[[A]]]
-; VBITS_EQ_256-DAG: st1b { [[RES_HI]].b }, [[PG]], [x0]
+; VBITS_EQ_256-DAG: st1b { [[RES_LO]].b }, [[PG]], [x0]
+; VBITS_EQ_256-DAG: st1b { [[RES_HI]].b }, [[PG]], [x0, x[[A]]]
 ; VBITS_EQ_256-NEXT: ret
   %op1 = load <64 x i8>, <64 x i8>* %a
   %op2 = load <64 x i8>, <64 x i8>* %b
@@ -1187,14 +1187,14 @@ define void @umin_v64i8(<64 x i8>* %a, <64 x i8>* %b) #0 {
 ; Ensure sensible type legalisation.
 ; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].b, vl32
 ; VBITS_EQ_256-DAG: mov w[[A:[0-9]+]], #32
-; VBITS_EQ_256-DAG: ld1b { [[OP1_LO:z[0-9]+]].b }, [[PG]]/z, [x0, x[[A]]]
-; VBITS_EQ_256-DAG: ld1b { [[OP1_HI:z[0-9]+]].b }, [[PG]]/z, [x0]
-; VBITS_EQ_256-DAG: ld1b { [[OP2_LO:z[0-9]+]].b }, [[PG]]/z, [x1, x[[A]]]
-; VBITS_EQ_256-DAG: ld1b { [[OP2_HI:z[0-9]+]].b }, [[PG]]/z, [x1]
+; VBITS_EQ_256-DAG: ld1b { [[OP1_LO:z[0-9]+]].b }, [[PG]]/z, [x0]
+; VBITS_EQ_256-DAG: ld1b { [[OP1_HI:z[0-9]+]].b }, [[PG]]/z, [x0, x[[A]]]
+; VBITS_EQ_256-DAG: ld1b { [[OP2_LO:z[0-9]+]].b }, [[PG]]/z, [x1]
+; VBITS_EQ_256-DAG: ld1b { [[OP2_HI:z[0-9]+]].b }, [[PG]]/z, [x1, x[[A]]]
 ; VBITS_EQ_256-DAG: umin [[RES_LO:z[0-9]+]].b, [[PG]]/m, [[OP1_LO]].b, [[OP2_LO]].b
 ; VBITS_EQ_256-DAG: umin [[RES_HI:z[0-9]+]].b, [[PG]]/m, [[OP1_HI]].b, [[OP2_HI]].b
-; VBITS_EQ_256-DAG: st1b { [[RES_LO]].b }, [[PG]], [x0, x[[A]]]
-; VBITS_EQ_256-DAG: st1b { [[RES_HI]].b }, [[PG]], [x0]
+; VBITS_EQ_256-DAG: st1b { [[RES_LO]].b }, [[PG]], [x0]
+; VBITS_EQ_256-DAG: st1b { [[RES_HI]].b }, [[PG]], [x0, x[[A]]]
   %op1 = load <64 x i8>, <64 x i8>* %a
   %op2 = load <64 x i8>, <64 x i8>* %b
   %res = call <64 x i8> @llvm.umin.v64i8(<64 x i8> %op1, <64 x i8> %op2)

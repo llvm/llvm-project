@@ -20,40 +20,42 @@ namespace libc_benchmarks {
 // When alignment is set, the distribution is scaled down by `Factor` and scaled
 // up again by the same amount during sampling.
 static std::uniform_int_distribution<uint32_t>
-GetOffsetDistribution(const StudyConfiguration &Conf) {
-  if (Conf.AddressAlignment &&
-      *Conf.AddressAlignment > AlignedBuffer::Alignment)
+getOffsetDistribution(size_t BufferSize, size_t MaxSizeValue,
+                      MaybeAlign AccessAlignment) {
+  if (AccessAlignment && *AccessAlignment > AlignedBuffer::Alignment)
     report_fatal_error(
-        "AddressAlignment must be less or equal to AlignedBuffer::Alignment");
-  if (!Conf.AddressAlignment)
+        "AccessAlignment must be less or equal to AlignedBuffer::Alignment");
+  if (!AccessAlignment)
     return std::uniform_int_distribution<uint32_t>(0, 0); // Always 0.
   // If we test up to Size bytes, the returned offset must stay under
   // BuffersSize - Size.
-  int64_t MaxOffset = Conf.BufferSize;
-  MaxOffset -= Conf.Size.To;
+  int64_t MaxOffset = BufferSize;
+  MaxOffset -= MaxSizeValue;
   MaxOffset -= 1;
   if (MaxOffset < 0)
     report_fatal_error(
         "BufferSize too small to exercise specified Size configuration");
-  MaxOffset /= Conf.AddressAlignment->value();
+  MaxOffset /= AccessAlignment->value();
   return std::uniform_int_distribution<uint32_t>(0, MaxOffset);
 }
 
-OffsetDistribution::OffsetDistribution(const StudyConfiguration &Conf)
-    : Distribution(GetOffsetDistribution(Conf)),
-      Factor(Conf.AddressAlignment.valueOrOne().value()) {}
+OffsetDistribution::OffsetDistribution(size_t BufferSize, size_t MaxSizeValue,
+                                       MaybeAlign AccessAlignment)
+    : Distribution(
+          getOffsetDistribution(BufferSize, MaxSizeValue, AccessAlignment)),
+      Factor(AccessAlignment.valueOrOne().value()) {}
 
 // Precomputes offset where to insert mismatches between the two buffers.
-MismatchOffsetDistribution::MismatchOffsetDistribution(
-    const StudyConfiguration &Conf)
-    : MismatchAt(Conf.MemcmpMismatchAt) {
+MismatchOffsetDistribution::MismatchOffsetDistribution(size_t BufferSize,
+                                                       size_t MaxSizeValue,
+                                                       size_t MismatchAt)
+    : MismatchAt(MismatchAt) {
   if (MismatchAt <= 1)
     return;
-  const auto ToSize = Conf.Size.To;
-  for (size_t I = ToSize + 1; I < Conf.BufferSize; I += ToSize)
+  for (size_t I = MaxSizeValue + 1; I < BufferSize; I += MaxSizeValue)
     MismatchIndices.push_back(I);
   if (MismatchIndices.empty())
-    llvm::report_fatal_error("Unable to generate mismatch");
+    report_fatal_error("Unable to generate mismatch");
   MismatchIndexSelector =
       std::uniform_int_distribution<size_t>(0, MismatchIndices.size() - 1);
 }

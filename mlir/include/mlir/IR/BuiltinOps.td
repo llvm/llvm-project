@@ -77,7 +77,7 @@ def FuncOp : Builtin_Op<"func", [
   let builders = [OpBuilderDAG<(ins
     "StringRef":$name, "FunctionType":$type,
     CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs,
-    CArg<"ArrayRef<MutableDictionaryAttr>", "{}">:$argAttrs)
+    CArg<"ArrayRef<DictionaryAttr>", "{}">:$argAttrs)
   >];
   let extraClassDeclaration = [{
     static FuncOp create(Location location, StringRef name, FunctionType type,
@@ -86,7 +86,7 @@ def FuncOp : Builtin_Op<"func", [
                          iterator_range<dialect_attr_iterator> attrs);
     static FuncOp create(Location location, StringRef name, FunctionType type,
                          ArrayRef<NamedAttribute> attrs,
-                         ArrayRef<MutableDictionaryAttr> argAttrs);
+                         ArrayRef<DictionaryAttr> argAttrs);
 
     /// Create a deep copy of this function and all of its blocks, remapping any
     /// operands that use values outside of the function using the map that is

@@ -43,7 +43,7 @@ entry:
 
 ; CHECK: std 3, 48(30)
 
-; CHECK: ld 1, 0(1)
+; CHECK: mr 1, 30
 ; CHECK-DAG: ld [[SR:[0-9]+]], 16(1)
 ; CHECK-DAG: ld 30, -16(1)
 ; CHECK-DAG: mtlr [[SR]]
@@ -69,7 +69,7 @@ entry:
 
 ; CHECK-FP: std 3, 48(30)
 
-; CHECK-FP: ld 1, 0(1)
+; CHECK-FP: mr 1, 30
 ; CHECK-FP-DAG: ld [[SR:[0-9]+]], 16(1)
 ; CHECK-FP-DAG: ld 31, -8(1)
 ; CHECK-FP-DAG: ld 30, -16(1)

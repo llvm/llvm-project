@@ -1,12 +1,6 @@
 // RUN: llvm-mc -arch=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck %s --check-prefix=CIVI --check-prefix=CI
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s --check-prefix=CIVI --check-prefix=VI
 
-// FIXME: For missing instruction the error message is:
-//  error: too few operands for instruction
-// It should be:
-//  error: instruction not supported on this GPU
-//
-
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tonga %s 2>&1 | FileCheck %s --check-prefix=NOVI --implicit-check-not=error:
 // RUN: not llvm-mc -arch=amdgcn %s 2>&1 | FileCheck %s --check-prefix=NOSI --implicit-check-not=error:
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck %s --check-prefix=NOSI --implicit-check-not=error:

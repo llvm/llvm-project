@@ -34,12 +34,7 @@ UNUSED static void disableDebuggerdMaybe() {
 }
 
 template <class AllocatorT>
-bool isTaggedAllocation(AllocatorT *Allocator, scudo::uptr Size,
-                        scudo::uptr Alignment) {
-  if (!Allocator->useMemoryTagging() ||
-      !scudo::systemDetectsMemoryTagFaultsTestOnly())
-    return false;
-
+bool isPrimaryAllocation(scudo::uptr Size, scudo::uptr Alignment) {
   const scudo::uptr MinAlignment = 1UL << SCUDO_MIN_ALIGNMENT_LOG;
   if (Alignment < MinAlignment)
     Alignment = MinAlignment;
@@ -47,6 +42,14 @@ bool isTaggedAllocation(AllocatorT *Allocator, scudo::uptr Size,
       scudo::roundUpTo(Size, MinAlignment) +
       ((Alignment > MinAlignment) ? Alignment : scudo::Chunk::getHeaderSize());
   return AllocatorT::PrimaryT::canAllocate(NeededSize);
+}
+
+template <class AllocatorT>
+bool isTaggedAllocation(AllocatorT *Allocator, scudo::uptr Size,
+                        scudo::uptr Alignment) {
+  return Allocator->useMemoryTaggingTestOnly() &&
+         scudo::systemDetectsMemoryTagFaultsTestOnly() &&
+         isPrimaryAllocation<AllocatorT>(Size, Alignment);
 }
 
 template <class AllocatorT>
@@ -147,9 +150,9 @@ template <class Config> static void testAllocator() {
   }
   Allocator->releaseToOS();
 
-  // Ensure that specifying PatternOrZeroFill returns a pattern-filled block in
-  // the primary allocator, and either pattern or zero filled block in the
-  // secondary.
+  // Ensure that specifying PatternOrZeroFill returns a pattern or zero filled
+  // block. The primary allocator only produces pattern filled blocks if MTE
+  // is disabled, so we only require pattern filled blocks in that case.
   Allocator->setFillContents(scudo::PatternOrZeroFill);
   for (scudo::uptr SizeLog = 0U; SizeLog <= 20U; SizeLog++) {
     for (scudo::uptr Delta = 0U; Delta <= 4U; Delta++) {
@@ -158,7 +161,8 @@ template <class Config> static void testAllocator() {
       EXPECT_NE(P, nullptr);
       for (scudo::uptr I = 0; I < Size; I++) {
         unsigned char V = (reinterpret_cast<unsigned char *>(P))[I];
-        if (AllocatorT::PrimaryT::canAllocate(Size))
+        if (isPrimaryAllocation<AllocatorT>(Size, 1U << MinAlignLog) &&
+            !Allocator->useMemoryTaggingTestOnly())
           ASSERT_EQ(V, scudo::PatternFillByte);
         else
           ASSERT_TRUE(V == scudo::PatternFillByte || V == 0);
@@ -244,7 +248,7 @@ template <class Config> static void testAllocator() {
 
   Allocator->releaseToOS();
 
-  if (Allocator->useMemoryTagging() &&
+  if (Allocator->useMemoryTaggingTestOnly() &&
       scudo::systemDetectsMemoryTagFaultsTestOnly()) {
     // Check that use-after-free is detected.
     for (scudo::uptr SizeLog = 0U; SizeLog <= 20U; SizeLog++) {
@@ -397,10 +401,15 @@ struct DeathSizeClassConfig {
 
 static const scudo::uptr DeathRegionSizeLog = 20U;
 struct DeathConfig {
+  static const bool MaySupportMemoryTagging = false;
+
   // Tiny allocator, its Primary only serves chunks of four sizes.
-  using DeathSizeClassMap = scudo::FixedSizeClassMap<DeathSizeClassConfig>;
-  typedef scudo::SizeClassAllocator64<DeathSizeClassMap, DeathRegionSizeLog>
-      Primary;
+  using SizeClassMap = scudo::FixedSizeClassMap<DeathSizeClassConfig>;
+  typedef scudo::SizeClassAllocator64<DeathConfig> Primary;
+  static const scudo::uptr PrimaryRegionSizeLog = DeathRegionSizeLog;
+  static const scudo::s32 PrimaryMinReleaseToOsIntervalMs = INT32_MIN;
+  static const scudo::s32 PrimaryMaxReleaseToOsIntervalMs = INT32_MAX;
+
   typedef scudo::MapAllocatorNoCache SecondaryCache;
   template <class A> using TSDRegistryT = scudo::TSDRegistrySharedT<A, 1U, 1U>;
 };
@@ -456,13 +465,13 @@ TEST(ScudoCombinedTest, FullRegion) {
   std::vector<void *> V;
   scudo::uptr FailedAllocationsCount = 0;
   for (scudo::uptr ClassId = 1U;
-       ClassId <= DeathConfig::DeathSizeClassMap::LargestClassId; ClassId++) {
+       ClassId <= DeathConfig::SizeClassMap::LargestClassId; ClassId++) {
     const scudo::uptr Size =
-        DeathConfig::DeathSizeClassMap::getSizeByClassId(ClassId);
+        DeathConfig::SizeClassMap::getSizeByClassId(ClassId);
     // Allocate enough to fill all of the regions above this one.
     const scudo::uptr MaxNumberOfChunks =
         ((1U << DeathRegionSizeLog) / Size) *
-        (DeathConfig::DeathSizeClassMap::LargestClassId - ClassId + 1);
+        (DeathConfig::SizeClassMap::LargestClassId - ClassId + 1);
     void *P;
     for (scudo::uptr I = 0; I <= MaxNumberOfChunks; I++) {
       P = Allocator->allocate(Size - 64U, Origin);
@@ -484,7 +493,7 @@ TEST(ScudoCombinedTest, OddEven) {
   using SizeClassMap = AllocatorT::PrimaryT::SizeClassMap;
   auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
 
-  if (!Allocator->useMemoryTagging())
+  if (!Allocator->useMemoryTaggingTestOnly())
     return;
 
   auto CheckOddEven = [](scudo::uptr P1, scudo::uptr P2) {

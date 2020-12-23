@@ -594,7 +594,7 @@ public:
   /// \return
   ///     Returns \b true if this Process has not been finalized
   ///     and \b false otherwise.
-  bool IsValid() const { return !m_finalize_called; }
+  bool IsValid() const { return !m_finalizing; }
 
   /// Return a multi-word command object that can be used to expose plug-in
   /// specific commands.
@@ -2831,10 +2831,11 @@ protected:
                            // m_currently_handling_do_on_removals are true,
                            // Resume will only request a resume, using this
                            // flag to check.
-  bool m_finalizing; // This is set at the beginning of Process::Finalize() to
-                     // stop functions from looking up or creating things
-                     // during a finalize call
-  bool m_finalize_called; // This is set at the end of Process::Finalize()
+
+  /// This is set at the beginning of Process::Finalize() to stop functions
+  /// from looking up or creating things during or after a finalize call.
+  std::atomic<bool> m_finalizing;
+
   bool m_clear_thread_plans_on_stop;
   bool m_force_next_event_delivery;
   lldb::StateType m_last_broadcast_state; /// This helps with the Public event
@@ -2938,6 +2939,8 @@ protected:
   void LoadOperatingSystemPlugin(bool flush);
 
 private:
+  Status DestroyImpl(bool force_kill);
+
   /// This is the part of the event handling that for a process event. It
   /// decides what to do with the event and returns true if the event needs to
   /// be propagated to the user, and false otherwise. If the event is not

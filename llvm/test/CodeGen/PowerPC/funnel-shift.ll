@@ -227,10 +227,10 @@ define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) {
 ;
 ; CHECK64-LABEL: fshl_i37:
 ; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    lis 6, -8857
+; CHECK64-NEXT:    lis 6, 28339
 ; CHECK64-NEXT:    sldi 4, 4, 27
-; CHECK64-NEXT:    ori 6, 6, 51366
-; CHECK64-NEXT:    sldi 6, 6, 32
+; CHECK64-NEXT:    ori 6, 6, 58451
+; CHECK64-NEXT:    rldic 6, 6, 33, 0
 ; CHECK64-NEXT:    oris 6, 6, 3542
 ; CHECK64-NEXT:    ori 6, 6, 31883
 ; CHECK64-NEXT:    mulhdu 6, 5, 6
@@ -540,10 +540,10 @@ define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) {
 ;
 ; CHECK64-LABEL: fshr_i37:
 ; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    lis 6, -8857
+; CHECK64-NEXT:    lis 6, 28339
 ; CHECK64-NEXT:    sldi 4, 4, 27
-; CHECK64-NEXT:    ori 6, 6, 51366
-; CHECK64-NEXT:    sldi 6, 6, 32
+; CHECK64-NEXT:    ori 6, 6, 58451
+; CHECK64-NEXT:    rldic 6, 6, 33, 0
 ; CHECK64-NEXT:    oris 6, 6, 3542
 ; CHECK64-NEXT:    ori 6, 6, 31883
 ; CHECK64-NEXT:    mulhdu 6, 5, 6

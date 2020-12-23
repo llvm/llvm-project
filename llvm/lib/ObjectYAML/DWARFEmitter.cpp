@@ -650,7 +650,7 @@ Error DWARFYAML::emitDebugAddr(raw_ostream &OS, const Data &DI) {
     writeInteger((uint8_t)TableEntry.SegSelectorSize, OS, DI.IsLittleEndian);
 
     for (const SegAddrPair &Pair : TableEntry.SegAddrPairs) {
-      if (TableEntry.SegSelectorSize != 0)
+      if (TableEntry.SegSelectorSize != yaml::Hex8{0})
         if (Error Err = writeVariableSizedInteger(Pair.Segment,
                                                   TableEntry.SegSelectorSize,
                                                   OS, DI.IsLittleEndian))

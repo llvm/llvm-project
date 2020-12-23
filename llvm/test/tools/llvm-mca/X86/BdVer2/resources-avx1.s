@@ -1218,7 +1218,7 @@ vzeroupper
 # CHECK-NEXT:  1      7     1.50    *                   vinsertps	$1, (%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      5     1.50    *                   vlddqu	(%rax), %xmm2
 # CHECK-NEXT:  2      5     1.50    *                   vlddqu	(%rax), %ymm2
-# CHECK-NEXT:  1      5     0.50    *             U     vldmxcsr	(%rax)
+# CHECK-NEXT:  1      5     0.50    *      *      U     vldmxcsr	(%rax)
 # CHECK-NEXT:  1      1     1.50    *      *      U     vmaskmovdqu	%xmm0, %xmm1
 # CHECK-NEXT:  1      6     2.00    *                   vmaskmovpd	(%rax), %xmm0, %xmm2
 # CHECK-NEXT:  2      6     2.00    *                   vmaskmovpd	(%rax), %ymm0, %ymm2

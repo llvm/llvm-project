@@ -165,8 +165,8 @@ public:
   static Error checkOffset(MemoryBufferRef M, uintptr_t Addr,
                            const uint64_t Size) {
     if (Addr + Size < Addr || Addr + Size < Size ||
-        Addr + Size > uintptr_t(M.getBufferEnd()) ||
-        Addr < uintptr_t(M.getBufferStart())) {
+        Addr + Size > reinterpret_cast<uintptr_t>(M.getBufferEnd()) ||
+        Addr < reinterpret_cast<uintptr_t>(M.getBufferStart())) {
       return errorCodeToError(object_error::unexpected_eof);
     }
     return Error::success();

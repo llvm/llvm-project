@@ -109,6 +109,8 @@ void RISCVVType::printVType(unsigned VType, raw_ostream &OS) {
   OS << "e" << Sew;
 
   switch (VLMUL) {
+  case RISCVVLMUL::LMUL_RESERVED:
+    llvm_unreachable("Unexpected LMUL value!");
   case RISCVVLMUL::LMUL_1:
   case RISCVVLMUL::LMUL_2:
   case RISCVVLMUL::LMUL_4:

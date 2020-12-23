@@ -19,7 +19,7 @@ Should be working on UNIX operating systems.
 Prerequisites
 -------------
 
-1. **python** interpreter (version 2.7, 3.2, 3.3, 3.4, 3.5).
+1. **python** interpreter (version 3.6 or later).
 
 
 How to use

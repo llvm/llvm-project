@@ -600,6 +600,8 @@ public:
   bool IsEnumerationType(lldb::opaque_compiler_type_t type,
                          bool &is_signed) override;
 
+  bool IsScopedEnumerationType(lldb::opaque_compiler_type_t type) override;
+
   static bool IsObjCClassType(const CompilerType &type);
 
   static bool IsObjCClassTypeAndHasIVars(const CompilerType &type,
@@ -665,14 +667,6 @@ public:
 
   // Creating related types
 
-  /// Using the current type, create a new typedef to that type using
-  /// "typedef_name" as the name and "decl_ctx" as the decl context.
-  /// \param opaque_payload is an opaque TypePayloadClang.
-  static CompilerType
-  CreateTypedefType(const CompilerType &type, const char *typedef_name,
-                    const CompilerDeclContext &compiler_decl_ctx,
-                    uint32_t opaque_payload);
-
   CompilerType GetArrayElementType(lldb::opaque_compiler_type_t type,
                                    ExecutionContextScope *exe_scope) override;
 
@@ -683,6 +677,9 @@ public:
 
   CompilerType
   GetFullyUnqualifiedType(lldb::opaque_compiler_type_t type) override;
+
+  CompilerType
+  GetEnumerationIntegerType(lldb::opaque_compiler_type_t type) override;
 
   // Returns -1 if this isn't a function of if the function doesn't have a
   // prototype Returns a value >= 0 if there is a prototype.
@@ -720,6 +717,9 @@ public:
 
   CompilerType AddRestrictModifier(lldb::opaque_compiler_type_t type) override;
 
+  /// Using the current type, create a new typedef to that type using
+  /// "typedef_name" as the name and "decl_ctx" as the decl context.
+  /// \param opaque_payload is an opaque TypePayloadClang.
   CompilerType CreateTypedef(lldb::opaque_compiler_type_t type,
                              const char *name,
                              const CompilerDeclContext &decl_ctx,

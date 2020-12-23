@@ -355,6 +355,9 @@ ${error} Set RUNTIMES_BUILD_ALLOW_DARWIN to allow a single darwin triple.")
     string(REPLACE "-" "_" canon_name ${projName})
     string(TOUPPER ${canon_name} canon_name)
     list(APPEND prefixes ${canon_name})
+    if (${canon_name} STREQUAL "OPENMP")
+      list(APPEND prefixes "LIBOMP" "LIBOMPTARGET")
+    endif()
     # Many compiler-rt options start with SANITIZER_ rather than COMPILER_RT_,
     # so when compiler-rt is enabled, consider both.
     if(canon_name STREQUAL "COMPILER_RT")

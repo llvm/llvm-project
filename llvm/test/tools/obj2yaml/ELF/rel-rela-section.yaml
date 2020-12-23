@@ -30,11 +30,12 @@ DynamicSymbols: []
 ## Here we use the 0xFE value instead of expected 0x18/0x10.
 
 # RUN: yaml2obj -DTYPE=SHT_RELA --docnum=2 %s -o %t2.rela
-# RUN: not obj2yaml %t2.rela 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: not obj2yaml %t2.rela 2>&1 | FileCheck %s --check-prefix=ERR1
 # RUN: yaml2obj -DTYPE=SHT_REL  --docnum=2 %s -o %t2.rel
-# RUN: not obj2yaml %t2.rel 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: not obj2yaml %t2.rel 2>&1 | FileCheck %s --check-prefix=ERR2
 
-# ERR: section [index 1] has an invalid sh_entsize: 254
+# ERR1: section [index 1] has invalid sh_entsize: expected 24, but got 254
+# ERR2: section [index 1] has invalid sh_entsize: expected 16, but got 254
 
 --- !ELF
 FileHeader:

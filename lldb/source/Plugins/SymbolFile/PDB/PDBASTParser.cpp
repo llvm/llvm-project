@@ -550,8 +550,8 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     if (!ast_typedef.IsValid()) {
       CompilerType target_ast_type = target_type->GetFullCompilerType();
 
-      ast_typedef = m_ast.CreateTypedefType(
-          target_ast_type, name.c_str(), m_ast.CreateDeclContext(decl_ctx), 0);
+      ast_typedef = target_ast_type.CreateTypedef(
+          name.c_str(), m_ast.CreateDeclContext(decl_ctx), 0);
       if (!ast_typedef)
         return nullptr;
 

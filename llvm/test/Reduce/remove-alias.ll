@@ -5,8 +5,7 @@
 
 ; CHECK-INTERESTINGNESS: define void @fn3
 
-; CHECK-FINAL-NOT: global
-
+; CHECK-FINAL-NOT: = {{.*}} global
 ; CHECK-FINAL-NOT: = alias
 
 ; CHECK-FINAL-NOT: @llvm.used

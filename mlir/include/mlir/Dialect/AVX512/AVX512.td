@@ -35,8 +35,8 @@ def MaskRndScaleOp : AVX512_Op<"mask.rndscale", [NoSideEffect,
   AllTypesMatch<["src", "a", "dst"]>,
   TypesMatchWith<"imm has the same number of bits as elements in dst",
                  "dst", "imm",
-                 "IntegerType::get(($_self.cast<VectorType>().getShape()[0]),"
-                 "  $_self.getContext())">]> {
+                 "IntegerType::get($_self.getContext(), "
+                 "($_self.cast<VectorType>().getShape()[0]))">]> {
   let summary = "Masked roundscale op";
   let description = [{
     The mask.rndscale op is an AVX512 specific op that can lower to the proper
@@ -67,8 +67,8 @@ def MaskScaleFOp : AVX512_Op<"mask.scalef", [NoSideEffect,
   AllTypesMatch<["src", "a", "b", "dst"]>,
   TypesMatchWith<"k has the same number of bits as elements in dst",
                  "dst", "k",
-                 "IntegerType::get(($_self.cast<VectorType>().getShape()[0]),"
-                 "  $_self.getContext())">]> {
+                 "IntegerType::get($_self.getContext(), "
+                 "($_self.cast<VectorType>().getShape()[0]))">]> {
   let summary = "ScaleF op";
   let description = [{
     The `mask.scalef` op is an AVX512 specific op that can lower to the proper

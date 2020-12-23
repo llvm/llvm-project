@@ -938,10 +938,8 @@ public:
 
   bool td_empty() const { return TargetDepAttrs.empty(); }
 
-  bool operator==(const AttrBuilder &B);
-  bool operator!=(const AttrBuilder &B) {
-    return !(*this == B);
-  }
+  bool operator==(const AttrBuilder &B) const;
+  bool operator!=(const AttrBuilder &B) const { return !(*this == B); }
 };
 
 namespace AttributeFuncs {

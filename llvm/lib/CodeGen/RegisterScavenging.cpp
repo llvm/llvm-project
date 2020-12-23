@@ -573,9 +573,8 @@ Register RegScavenger::scavengeRegisterBackwards(const TargetRegisterClass &RC,
                             RestoreAfter);
   MCPhysReg Reg = P.first;
   MachineBasicBlock::iterator SpillBefore = P.second;
-  assert(Reg != 0 && "No register left to scavenge!");
   // Found an available register?
-  if (SpillBefore == MBB.end()) {
+  if (Reg != 0 && SpillBefore == MBB.end()) {
     LLVM_DEBUG(dbgs() << "Scavenged free register: " << printReg(Reg, TRI)
                << '\n');
     return Reg;
@@ -583,6 +582,8 @@ Register RegScavenger::scavengeRegisterBackwards(const TargetRegisterClass &RC,
 
   if (!AllowSpill)
     return 0;
+
+  assert(Reg != 0 && "No register left to scavenge!");
 
   MachineBasicBlock::iterator ReloadAfter =
     RestoreAfter ? std::next(MBBI) : MBBI;

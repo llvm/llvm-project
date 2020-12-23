@@ -13,7 +13,7 @@ define void @copy_to_conceal(<8 x i16>* %inp) #0 {
 ; CHECK-NEXT:    ld 4, -8(1)
 ; CHECK-NEXT:    std 4, 8(3)
 ; CHECK-NEXT:    ld 4, -16(1)
-; CHECK-NEXT:    stdx 4, 0, 3
+; CHECK-NEXT:    std 4, 0(3)
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-VSX-LABEL: copy_to_conceal:

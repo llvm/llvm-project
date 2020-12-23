@@ -898,10 +898,10 @@ define <vscale x 2 x i8> @intrinsic_vadc_vim_nxv2i8_nxv2i8_i8(<vscale x 2 x i8> 
 entry:
 ; CHECK-LABEL: intrinsic_vadc_vim_nxv2i8_nxv2i8_i8
 ; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e8,mf4,ta,mu
-; CHECK:       vadc.vim {{v[0-9]+}}, {{v[0-9]+}}, 9, v0
+; CHECK:       vadc.vim {{v[0-9]+}}, {{v[0-9]+}}, -9, v0
   %a = call <vscale x 2 x i8> @llvm.riscv.vadc.nxv2i8.i8(
     <vscale x 2 x i8> %0,
-    i8 9,
+    i8 -9,
     <vscale x 2 x i1> %1,
     i64 %2)
 
@@ -926,10 +926,10 @@ define <vscale x 8 x i8> @intrinsic_vadc_vim_nxv8i8_nxv8i8_i8(<vscale x 8 x i8> 
 entry:
 ; CHECK-LABEL: intrinsic_vadc_vim_nxv8i8_nxv8i8_i8
 ; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e8,m1,ta,mu
-; CHECK:       vadc.vim {{v[0-9]+}}, {{v[0-9]+}}, 9, v0
+; CHECK:       vadc.vim {{v[0-9]+}}, {{v[0-9]+}}, -9, v0
   %a = call <vscale x 8 x i8> @llvm.riscv.vadc.nxv8i8.i8(
     <vscale x 8 x i8> %0,
-    i8 9,
+    i8 -9,
     <vscale x 8 x i1> %1,
     i64 %2)
 
@@ -954,10 +954,10 @@ define <vscale x 32 x i8> @intrinsic_vadc_vim_nxv32i8_nxv32i8_i8(<vscale x 32 x 
 entry:
 ; CHECK-LABEL: intrinsic_vadc_vim_nxv32i8_nxv32i8_i8
 ; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e8,m4,ta,mu
-; CHECK:       vadc.vim {{v[0-9]+}}, {{v[0-9]+}}, 9, v0
+; CHECK:       vadc.vim {{v[0-9]+}}, {{v[0-9]+}}, -9, v0
   %a = call <vscale x 32 x i8> @llvm.riscv.vadc.nxv32i8.i8(
     <vscale x 32 x i8> %0,
-    i8 9,
+    i8 -9,
     <vscale x 32 x i1> %1,
     i64 %2)
 
@@ -982,10 +982,10 @@ define <vscale x 1 x i16> @intrinsic_vadc_vim_nxv1i16_nxv1i16_i16(<vscale x 1 x 
 entry:
 ; CHECK-LABEL: intrinsic_vadc_vim_nxv1i16_nxv1i16_i16
 ; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e16,mf4,ta,mu
-; CHECK:       vadc.vim {{v[0-9]+}}, {{v[0-9]+}}, 9, v0
+; CHECK:       vadc.vim {{v[0-9]+}}, {{v[0-9]+}}, -9, v0
   %a = call <vscale x 1 x i16> @llvm.riscv.vadc.nxv1i16.i16(
     <vscale x 1 x i16> %0,
-    i16 9,
+    i16 -9,
     <vscale x 1 x i1> %1,
     i64 %2)
 
@@ -1010,10 +1010,10 @@ define <vscale x 4 x i16> @intrinsic_vadc_vim_nxv4i16_nxv4i16_i16(<vscale x 4 x 
 entry:
 ; CHECK-LABEL: intrinsic_vadc_vim_nxv4i16_nxv4i16_i16
 ; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e16,m1,ta,mu
-; CHECK:       vadc.vim {{v[0-9]+}}, {{v[0-9]+}}, 9, v0
+; CHECK:       vadc.vim {{v[0-9]+}}, {{v[0-9]+}}, -9, v0
   %a = call <vscale x 4 x i16> @llvm.riscv.vadc.nxv4i16.i16(
     <vscale x 4 x i16> %0,
-    i16 9,
+    i16 -9,
     <vscale x 4 x i1> %1,
     i64 %2)
 
@@ -1038,10 +1038,10 @@ define <vscale x 16 x i16> @intrinsic_vadc_vim_nxv16i16_nxv16i16_i16(<vscale x 1
 entry:
 ; CHECK-LABEL: intrinsic_vadc_vim_nxv16i16_nxv16i16_i16
 ; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e16,m4,ta,mu
-; CHECK:       vadc.vim {{v[0-9]+}}, {{v[0-9]+}}, 9, v0
+; CHECK:       vadc.vim {{v[0-9]+}}, {{v[0-9]+}}, -9, v0
   %a = call <vscale x 16 x i16> @llvm.riscv.vadc.nxv16i16.i16(
     <vscale x 16 x i16> %0,
-    i16 9,
+    i16 -9,
     <vscale x 16 x i1> %1,
     i64 %2)
 
@@ -1066,10 +1066,10 @@ define <vscale x 1 x i32> @intrinsic_vadc_vim_nxv1i32_nxv1i32_i32(<vscale x 1 x 
 entry:
 ; CHECK-LABEL: intrinsic_vadc_vim_nxv1i32_nxv1i32_i32
 ; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e32,mf2,ta,mu
-; CHECK:       vadc.vim {{v[0-9]+}}, {{v[0-9]+}}, 9, v0
+; CHECK:       vadc.vim {{v[0-9]+}}, {{v[0-9]+}}, -9, v0
   %a = call <vscale x 1 x i32> @llvm.riscv.vadc.nxv1i32.i32(
     <vscale x 1 x i32> %0,
-    i32 9,
+    i32 -9,
     <vscale x 1 x i1> %1,
     i64 %2)
 
@@ -1094,10 +1094,10 @@ define <vscale x 4 x i32> @intrinsic_vadc_vim_nxv4i32_nxv4i32_i32(<vscale x 4 x 
 entry:
 ; CHECK-LABEL: intrinsic_vadc_vim_nxv4i32_nxv4i32_i32
 ; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e32,m2,ta,mu
-; CHECK:       vadc.vim {{v[0-9]+}}, {{v[0-9]+}}, 9, v0
+; CHECK:       vadc.vim {{v[0-9]+}}, {{v[0-9]+}}, -9, v0
   %a = call <vscale x 4 x i32> @llvm.riscv.vadc.nxv4i32.i32(
     <vscale x 4 x i32> %0,
-    i32 9,
+    i32 -9,
     <vscale x 4 x i1> %1,
     i64 %2)
 
@@ -1122,10 +1122,10 @@ define <vscale x 16 x i32> @intrinsic_vadc_vim_nxv16i32_nxv16i32_i32(<vscale x 1
 entry:
 ; CHECK-LABEL: intrinsic_vadc_vim_nxv16i32_nxv16i32_i32
 ; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e32,m8,ta,mu
-; CHECK:       vadc.vim {{v[0-9]+}}, {{v[0-9]+}}, 9, v0
+; CHECK:       vadc.vim {{v[0-9]+}}, {{v[0-9]+}}, -9, v0
   %a = call <vscale x 16 x i32> @llvm.riscv.vadc.nxv16i32.i32(
     <vscale x 16 x i32> %0,
-    i32 9,
+    i32 -9,
     <vscale x 16 x i1> %1,
     i64 %2)
 
@@ -1150,10 +1150,10 @@ define <vscale x 2 x i64> @intrinsic_vadc_vim_nxv2i64_nxv2i64_i64(<vscale x 2 x 
 entry:
 ; CHECK-LABEL: intrinsic_vadc_vim_nxv2i64_nxv2i64_i64
 ; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e64,m2,ta,mu
-; CHECK:       vadc.vim {{v[0-9]+}}, {{v[0-9]+}}, 9, v0
+; CHECK:       vadc.vim {{v[0-9]+}}, {{v[0-9]+}}, -9, v0
   %a = call <vscale x 2 x i64> @llvm.riscv.vadc.nxv2i64.i64(
     <vscale x 2 x i64> %0,
-    i64 9,
+    i64 -9,
     <vscale x 2 x i1> %1,
     i64 %2)
 
@@ -1178,10 +1178,10 @@ define <vscale x 8 x i64> @intrinsic_vadc_vim_nxv8i64_nxv8i64_i64(<vscale x 8 x 
 entry:
 ; CHECK-LABEL: intrinsic_vadc_vim_nxv8i64_nxv8i64_i64
 ; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e64,m8,ta,mu
-; CHECK:       vadc.vim {{v[0-9]+}}, {{v[0-9]+}}, 9, v0
+; CHECK:       vadc.vim {{v[0-9]+}}, {{v[0-9]+}}, -9, v0
   %a = call <vscale x 8 x i64> @llvm.riscv.vadc.nxv8i64.i64(
     <vscale x 8 x i64> %0,
-    i64 9,
+    i64 -9,
     <vscale x 8 x i1> %1,
     i64 %2)
 

@@ -148,9 +148,9 @@ RelExpr X86::getRelExpr(RelType type, const Symbol &s,
   case R_386_GOTOFF:
     return R_GOTPLTREL;
   case R_386_TLS_LE:
-    return R_TLS;
+    return R_TPREL;
   case R_386_TLS_LE_32:
-    return R_NEG_TLS;
+    return R_TPREL_NEG;
   case R_386_NONE:
     return R_NONE;
   default:

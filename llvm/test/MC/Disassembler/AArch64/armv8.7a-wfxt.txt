@@ -1,0 +1,11 @@
+# RUN: llvm-mc -triple=aarch64 -mattr=+wfxt -disassemble %s | FileCheck %s
+# RUN: llvm-mc -triple=aarch64 -mattr=+v8.7a -disassemble %s | FileCheck %s
+# RUN: llvm-mc -triple=aarch64 -disassemble %s | FileCheck --check-prefix=CHECK-NO-WFxT %s
+
+[0x11,0x10,0x03,0xd5]
+# CHECK: wfet x17
+# CHECK-NO-WFxT: msr S0_3_C1_C0_0, x17
+
+[0x23,0x10,0x03,0xd5]
+# CHECK: wfit x3
+# CHECK-NO-WFxT: msr S0_3_C1_C0_1, x3

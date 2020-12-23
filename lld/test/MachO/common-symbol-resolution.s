@@ -1,5 +1,5 @@
 # REQUIRES: x86
-# RUN: split-file %s %t
+# RUN: rm -rf %t; split-file %s %t
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/common.s -o %t/common.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/weak-common.s -o %t/weak-common.o
@@ -11,7 +11,6 @@
 
 # RUN: %lld -lSystem -order_file %t/order -dylib %t/libfoo.o -o %t/libfoo.dylib
 
-# RUN: rm -f %t/defined.a %t/weak-defined-and-common.a
 # RUN: llvm-ar rcs %t/defined.a %t/defined.o
 # RUN: llvm-ar rcs %t/weak-defined-and-common.a %t/weak-defined.o %t/common.o
 

@@ -20,6 +20,7 @@ ExternalProject_Add(google-benchmark
     SOURCE_DIR ${LIBC_SOURCE_DIR}/../llvm/utils/benchmark
     INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/google-benchmark
     CMAKE_CACHE_ARGS
+        -DBUILD_SHARED_LIBS:BOOL=OFF
         -DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=ON
         -DCMAKE_C_COMPILER:STRING=${CMAKE_C_COMPILER}
         -DCMAKE_CXX_COMPILER:STRING=${CMAKE_CXX_COMPILER}
@@ -114,7 +115,10 @@ add_library(libc-memory-benchmark
     MemorySizeDistributions.cpp
     MemorySizeDistributions.h
 )
-target_link_libraries(libc-memory-benchmark PUBLIC libc-benchmark)
+target_link_libraries(libc-memory-benchmark
+    PUBLIC
+    libc-benchmark
+)
 fix_rtti(libc-memory-benchmark)
 
 add_libc_benchmark_unittest(libc-memory-benchmark-test
@@ -138,54 +142,14 @@ add_libc_benchmark_unittest(json-test
 )
 
 #==============================================================================
-# Benchmark tests configuration
+# Benchmarking tool
 #==============================================================================
 
-function(add_libc_benchmark_analysis conf_target run_target)
-    set(png_file "/tmp/last-${conf_target}.png")
-    set(render_target render-${conf_target})
-    add_custom_target(${render_target}
-        COMMAND python3 render.py3 ${json_file} --headless --output=${png_file}
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        COMMENT "render ${libc_target} to ${png_file}"
-    )
-    add_dependencies(${render_target} ${run_target})
-
-    set(display_target display-${conf_target})
-    add_custom_target(${display_target}
-        COMMAND python3 render.py3 ${json_file}
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        COMMENT "display ${libc_target}"
-    )
-    add_dependencies(${display_target} ${run_target})
-endfunction()
-
-function(add_libc_benchmark_configuration target configuration)
-    set(conf_target ${target}-${configuration})
-    set(json_file "/tmp/last-${conf_target}.json")
-    set(run_target run-${conf_target})
-    add_custom_target(${run_target}
-        COMMAND ${libc_target} --conf=configuration_${configuration}.json -o ${json_file}
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    )
-    add_libc_benchmark_analysis(${conf_target} ${run_target})
-endfunction()
-
-function(add_libc_benchmark name file entrypoint_target)
-    set(libc_target libc-${name}-benchmark)
-    add_executable(${libc_target}
-        EXCLUDE_FROM_ALL
-        ${file}
-        LibcMemoryBenchmarkMain.h
-        LibcMemoryBenchmarkMain.cpp
-    )
-
+add_executable(libc-benchmark-main
+    EXCLUDE_FROM_ALL
+    LibcMemoryBenchmarkMain.cpp
+)
+foreach(entrypoint_target libc.src.string.memcpy libc.src.string.memset)
     get_target_property(entrypoint_object_file ${entrypoint_target} "OBJECT_FILE_RAW")
-    target_link_libraries(${libc_target} PUBLIC json ${entrypoint_object_file})
-    foreach(configuration "small" "big")
-        add_libc_benchmark_configuration(${libc_target} ${configuration})
-    endforeach()
-endfunction()
-
-add_libc_benchmark(memcpy Memcpy.cpp libc.src.string.memcpy)
-add_libc_benchmark(memset Memset.cpp libc.src.string.memset)
+    target_link_libraries(libc-benchmark-main PUBLIC json ${entrypoint_object_file})
+endforeach()

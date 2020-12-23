@@ -1013,9 +1013,7 @@ void SymbolFileDWARFDebugMap::FindFunctions(
     FunctionNameType name_type_mask, bool include_inlines,
     SymbolContextList &sc_list) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat,
-                     "SymbolFileDWARFDebugMap::FindFunctions (name = %s)",
+  LLDB_SCOPED_TIMERF("SymbolFileDWARFDebugMap::FindFunctions (name = %s)",
                      name.GetCString());
 
   ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
@@ -1034,9 +1032,7 @@ void SymbolFileDWARFDebugMap::FindFunctions(const RegularExpression &regex,
                                             bool include_inlines,
                                             SymbolContextList &sc_list) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat,
-                     "SymbolFileDWARFDebugMap::FindFunctions (regex = '%s')",
+  LLDB_SCOPED_TIMERF("SymbolFileDWARFDebugMap::FindFunctions (regex = '%s')",
                      regex.GetText().str().c_str());
 
   ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
@@ -1055,9 +1051,7 @@ void SymbolFileDWARFDebugMap::GetTypes(SymbolContextScope *sc_scope,
                                        lldb::TypeClass type_mask,
                                        TypeList &type_list) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat,
-                     "SymbolFileDWARFDebugMap::GetTypes (type_mask = 0x%8.8x)",
+  LLDB_SCOPED_TIMERF("SymbolFileDWARFDebugMap::GetTypes (type_mask = 0x%8.8x)",
                      type_mask);
 
   SymbolFileDWARF *oso_dwarf = nullptr;

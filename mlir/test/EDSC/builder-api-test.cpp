@@ -56,7 +56,7 @@ static FuncOp makeFunction(StringRef name, ArrayRef<Type> results = {},
                            ArrayRef<Type> args = {}) {
   auto &ctx = globalContext();
   auto function = FuncOp::create(UnknownLoc::get(&ctx), name,
-                                 FunctionType::get(args, results, &ctx));
+                                 FunctionType::get(&ctx, args, results));
   function.addEntryBlock();
   return function;
 }
@@ -277,7 +277,7 @@ TEST_FUNC(builder_blocks) {
 
 TEST_FUNC(builder_cond_branch) {
   auto f = makeFunction("builder_cond_branch", {},
-                        {IntegerType::get(1, &globalContext())});
+                        {IntegerType::get(&globalContext(), 1)});
 
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
@@ -390,8 +390,8 @@ TEST_FUNC(insertion_in_block) {
 
 TEST_FUNC(zero_and_std_sign_extendi_op_i1_to_i8) {
   using namespace edsc::op;
-  auto i1Type = IntegerType::get(1, &globalContext());
-  auto i8Type = IntegerType::get(8, &globalContext());
+  auto i1Type = IntegerType::get(&globalContext(), 1);
+  auto i8Type = IntegerType::get(&globalContext(), 8);
   auto memrefType = MemRefType::get({}, i1Type, {}, 0);
   auto f = makeFunction("zero_and_std_sign_extendi_op", {},
                         {memrefType, memrefType});
@@ -414,7 +414,7 @@ TEST_FUNC(zero_and_std_sign_extendi_op_i1_to_i8) {
 }
 
 TEST_FUNC(operator_or) {
-  auto i1Type = IntegerType::get(/*width=*/1, &globalContext());
+  auto i1Type = IntegerType::get(&globalContext(), /*width=*/1);
   auto f = makeFunction("operator_or", {}, {i1Type, i1Type});
 
   OpBuilder builder(f.getBody());
@@ -435,7 +435,7 @@ TEST_FUNC(operator_or) {
 }
 
 TEST_FUNC(operator_and) {
-  auto i1Type = IntegerType::get(/*width=*/1, &globalContext());
+  auto i1Type = IntegerType::get(&globalContext(), /*width=*/1);
   auto f = makeFunction("operator_and", {}, {i1Type, i1Type});
 
   OpBuilder builder(f.getBody());
@@ -536,7 +536,7 @@ TEST_FUNC(fptrunc_f32_bf16) {
 
 TEST_FUNC(select_op_i32) {
   using namespace edsc::op;
-  auto i32Type = IntegerType::get(32, &globalContext());
+  auto i32Type = IntegerType::get(&globalContext(), 32);
   auto memrefType = MemRefType::get(
       {ShapedType::kDynamicSize, ShapedType::kDynamicSize}, i32Type, {}, 0);
   auto f = makeFunction("select_op", {}, {memrefType});
@@ -1101,7 +1101,7 @@ TEST_FUNC(linalg_metadata_ops) {
 //  CHECK-SAME:                      affine_map<(d0, d1, d2) -> (d0, d1)>],
 //  CHECK-SAME:     iterator_types = ["parallel", "parallel", "reduction"]
 // CHECK-SAME: ins(%{{[a-z0-9]*}}, %{{[a-z0-9]*}} : tensor<?x?xf32>, memref<?x?xf32>)
-// CHECK-SAME: init(%{{[a-z0-9]*}} : tensor<?x?xf32>)
+// CHECK-SAME: outs(%{{[a-z0-9]*}} : tensor<?x?xf32>)
 //       CHECK:     mulf
 //       CHECK:     addf
 //       CHECK:   } -> tensor<?x?xf32>
@@ -1115,14 +1115,15 @@ TEST_FUNC(linalg_tensors_test) {
       {ShapedType::kDynamicSize, ShapedType::kDynamicSize}, f32Type, {}, 0);
   auto tensorType = RankedTensorType::get(
       {ShapedType::kDynamicSize, ShapedType::kDynamicSize}, f32Type);
-  auto f = makeFunction("linalg_tensors", {}, {tensorType, memrefType});
+  auto f =
+      makeFunction("linalg_tensors", {}, {tensorType, memrefType, tensorType});
 
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
-  Value A(f.getArgument(0)), B(f.getArgument(1));
+  Value A(f.getArgument(0)), B(f.getArgument(1)), C(f.getArgument(2));
   AffineExpr i, j;
   bindDims(&globalContext(), i, j);
-  StructuredIndexed SA(A), SB(B), SC(tensorType);
+  StructuredIndexed SA(A), SB(B), SC(C);
   Value added = linalg_generic_pointwise_add(SA({i, j}), SB({i, j}), SC({i, j}))
                     ->getResult(0);
   Value maxed = linalg_generic_pointwise_max(
@@ -1223,7 +1224,8 @@ TEST_FUNC(builder_loop_for_yield) {
                                  [&](Value iv, ValueRange args) {
                                    Value sum = args[0] + args[1];
                                    return scf::ValueVector{args[1], sum};
-                                 }).getResults();
+                                 })
+                     .getResults();
   results[0] + results[1];
 
   // clang-format off

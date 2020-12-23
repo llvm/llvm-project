@@ -49,9 +49,7 @@ void DWARFUnit::ExtractUnitDIEIfNeeded() {
   if (m_first_die)
     return; // Already parsed
 
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, "%8.8x: DWARFUnit::ExtractUnitDIEIfNeeded()",
-                     GetOffset());
+  LLDB_SCOPED_TIMERF("%8.8x: DWARFUnit::ExtractUnitDIEIfNeeded()", GetOffset());
 
   // Set the offset to that of the first DIE and calculate the start of the
   // next compilation unit header.
@@ -145,9 +143,7 @@ DWARFUnit::ScopedExtractDIEs &DWARFUnit::ScopedExtractDIEs::operator=(
 void DWARFUnit::ExtractDIEsRWLocked() {
   llvm::sys::ScopedWriter first_die_lock(m_first_die_mutex);
 
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, "%8.8x: DWARFUnit::ExtractDIEsIfNeeded()",
-                     GetOffset());
+  LLDB_SCOPED_TIMERF("%8.8x: DWARFUnit::ExtractDIEsIfNeeded()", GetOffset());
 
   // Set the offset to that of the first DIE and calculate the start of the
   // next compilation unit header.

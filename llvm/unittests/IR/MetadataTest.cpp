@@ -2459,9 +2459,10 @@ TEST_F(DIModuleTest, get) {
   StringRef Includes = "-I.";
   StringRef APINotes = "/tmp/m.apinotes";
   unsigned LineNo = 4;
+  bool IsDecl = true;
 
   auto *N = DIModule::get(Context, File, Scope, Name, ConfigMacro, Includes,
-                          APINotes, LineNo);
+                          APINotes, LineNo, IsDecl);
 
   EXPECT_EQ(dwarf::DW_TAG_module, N->getTag());
   EXPECT_EQ(File, N->getFile());
@@ -2471,22 +2472,25 @@ TEST_F(DIModuleTest, get) {
   EXPECT_EQ(Includes, N->getIncludePath());
   EXPECT_EQ(APINotes, N->getAPINotesFile());
   EXPECT_EQ(LineNo, N->getLineNo());
+  EXPECT_EQ(IsDecl, N->getIsDecl());
   EXPECT_EQ(N, DIModule::get(Context, File, Scope, Name, ConfigMacro, Includes,
-                             APINotes, LineNo));
+                             APINotes, LineNo, IsDecl));
   EXPECT_NE(N, DIModule::get(Context, getFile(), getFile(), Name, ConfigMacro,
-                             Includes, APINotes, LineNo));
+                             Includes, APINotes, LineNo, IsDecl));
   EXPECT_NE(N, DIModule::get(Context, File, Scope, "other", ConfigMacro,
-                             Includes, APINotes, LineNo));
+                             Includes, APINotes, LineNo, IsDecl));
   EXPECT_NE(N, DIModule::get(Context, File, Scope, Name, "other", Includes,
-                             APINotes, LineNo));
+                             APINotes, LineNo, IsDecl));
   EXPECT_NE(N, DIModule::get(Context, File, Scope, Name, ConfigMacro, "other",
-                             APINotes, LineNo));
+                             APINotes, LineNo, IsDecl));
   EXPECT_NE(N, DIModule::get(Context, File, Scope, Name, ConfigMacro, Includes,
-                             "other", LineNo));
+                             "other", LineNo, IsDecl));
   EXPECT_NE(N, DIModule::get(Context, getFile(), Scope, Name, ConfigMacro,
-                             Includes, APINotes, LineNo));
+                             Includes, APINotes, LineNo, IsDecl));
   EXPECT_NE(N, DIModule::get(Context, File, Scope, Name, ConfigMacro, Includes,
-                             APINotes, 5));
+                             APINotes, 5, IsDecl));
+  EXPECT_NE(N, DIModule::get(Context, File, Scope, Name, ConfigMacro, Includes,
+                             APINotes, LineNo, false));
 
   TempDIModule Temp = N->clone();
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));

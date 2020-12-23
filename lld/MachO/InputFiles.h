@@ -38,6 +38,7 @@ namespace macho {
 class InputSection;
 class Symbol;
 struct Reloc;
+enum class RefState : uint8_t;
 
 // If --reproduce option is given, all input files are written
 // to this tar archive.
@@ -135,6 +136,7 @@ public:
   uint32_t compatibilityVersion = 0;
   uint32_t currentVersion = 0;
   uint64_t ordinal = 0; // Ordinal numbering starts from 1, so 0 is a sentinel
+  RefState refState;
   bool reexport = false;
   bool forceWeakImport = false;
 };

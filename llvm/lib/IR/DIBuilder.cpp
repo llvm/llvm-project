@@ -874,9 +874,10 @@ DINamespace *DIBuilder::createNameSpace(DIScope *Scope, StringRef Name,
 DIModule *DIBuilder::createModule(DIScope *Scope, StringRef Name,
                                   StringRef ConfigurationMacros,
                                   StringRef IncludePath, StringRef APINotesFile,
-                                  DIFile *File, unsigned LineNo) {
+                                  DIFile *File, unsigned LineNo, bool IsDecl) {
   return DIModule::get(VMContext, File, getNonCompileUnitScope(Scope), Name,
-                       ConfigurationMacros, IncludePath, APINotesFile, LineNo);
+                       ConfigurationMacros, IncludePath, APINotesFile, LineNo,
+                       IsDecl);
 }
 
 DILexicalBlockFile *DIBuilder::createLexicalBlockFile(DIScope *Scope,

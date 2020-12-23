@@ -177,7 +177,6 @@ class BasicExprCommandsTestCase(TestBase):
     # rdar://problem/8686536
     # CommandInterpreter::HandleCommand is stripping \'s from input for
     # WantsRawCommand commands
-    @expectedFailureNetBSD
     def test_expr_commands_can_handle_quotes(self):
         """Throw some expression commands with quotes at lldb."""
         self.build()

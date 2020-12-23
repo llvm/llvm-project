@@ -403,8 +403,10 @@ void OmpStructureChecker::Enter(const parser::OmpClause &x) {
 
 // Following clauses do not have a seperate node in parse-tree.h.
 // They fall under 'struct OmpClause' in parse-tree.h.
+CHECK_SIMPLE_CLAUSE(Allocate, OMPC_allocate)
 CHECK_SIMPLE_CLAUSE(Copyin, OMPC_copyin)
 CHECK_SIMPLE_CLAUSE(Copyprivate, OMPC_copyprivate)
+CHECK_SIMPLE_CLAUSE(Default, OMPC_default)
 CHECK_SIMPLE_CLAUSE(Device, OMPC_device)
 CHECK_SIMPLE_CLAUSE(Final, OMPC_final)
 CHECK_SIMPLE_CLAUSE(Firstprivate, OMPC_firstprivate)
@@ -416,6 +418,7 @@ CHECK_SIMPLE_CLAUSE(Link, OMPC_link)
 CHECK_SIMPLE_CLAUSE(Mergeable, OMPC_mergeable)
 CHECK_SIMPLE_CLAUSE(Nogroup, OMPC_nogroup)
 CHECK_SIMPLE_CLAUSE(Notinbranch, OMPC_notinbranch)
+CHECK_SIMPLE_CLAUSE(Nowait, OMPC_nowait)
 CHECK_SIMPLE_CLAUSE(To, OMPC_to)
 CHECK_SIMPLE_CLAUSE(Uniform, OMPC_uniform)
 CHECK_SIMPLE_CLAUSE(Untied, OMPC_untied)
@@ -426,6 +429,8 @@ CHECK_SIMPLE_CLAUSE(SeqCst, OMPC_seq_cst)
 CHECK_SIMPLE_CLAUSE(Release, OMPC_release)
 CHECK_SIMPLE_CLAUSE(Relaxed, OMPC_relaxed)
 CHECK_SIMPLE_CLAUSE(Hint, OMPC_hint)
+CHECK_SIMPLE_CLAUSE(ProcBind, OMPC_proc_bind)
+CHECK_SIMPLE_CLAUSE(DistSchedule, OMPC_dist_schedule)
 
 CHECK_REQ_SCALAR_INT_CLAUSE(Allocator, OMPC_allocator)
 CHECK_REQ_SCALAR_INT_CLAUSE(Grainsize, OMPC_grainsize)
@@ -489,11 +494,6 @@ void OmpStructureChecker::CheckIsVarPartOfAnotherVar(
   }
 }
 // Following clauses have a seperate node in parse-tree.h.
-CHECK_SIMPLE_PARSER_CLAUSE(OmpAllocateClause, OMPC_allocate)
-CHECK_SIMPLE_PARSER_CLAUSE(OmpDefaultClause, OMPC_default)
-CHECK_SIMPLE_PARSER_CLAUSE(OmpDistScheduleClause, OMPC_dist_schedule)
-CHECK_SIMPLE_PARSER_CLAUSE(OmpNowait, OMPC_nowait)
-CHECK_SIMPLE_PARSER_CLAUSE(OmpProcBindClause, OMPC_proc_bind)
 CHECK_SIMPLE_PARSER_CLAUSE(OmpReductionClause, OMPC_reduction)
 // Atomic-clause
 CHECK_SIMPLE_PARSER_CLAUSE(OmpAtomicRead, OMPC_read)

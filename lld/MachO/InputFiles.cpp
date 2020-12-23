@@ -206,31 +206,53 @@ static InputSection *findContainingSubsection(SubsectionMap &map,
 void ObjFile::parseRelocations(const section_64 &sec,
                                SubsectionMap &subsecMap) {
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
-  ArrayRef<any_relocation_info> anyRelInfos(
-      reinterpret_cast<const any_relocation_info *>(buf + sec.reloff),
-      sec.nreloc);
+  ArrayRef<relocation_info> relInfos(
+      reinterpret_cast<const relocation_info *>(buf + sec.reloff), sec.nreloc);
 
-  for (const any_relocation_info &anyRelInfo : anyRelInfos) {
-    if (anyRelInfo.r_word0 & R_SCATTERED)
+  for (size_t i = 0; i < relInfos.size(); i++) {
+    // Paired relocations serve as Mach-O's method for attaching a
+    // supplemental datum to a primary relocation record. ELF does not
+    // need them because the *_RELOC_RELA records contain the extra
+    // addend field, vs. *_RELOC_REL which omit the addend.
+    //
+    // The {X86_64,ARM64}_RELOC_SUBTRACTOR record holds the subtrahend,
+    // and the paired *_RELOC_UNSIGNED record holds the minuend. The
+    // datum for each is a symbolic address. The result is the runtime
+    // offset between two addresses.
+    //
+    // The ARM64_RELOC_ADDEND record holds the addend, and the paired
+    // ARM64_RELOC_BRANCH26 or ARM64_RELOC_PAGE21/PAGEOFF12 holds the
+    // base symbolic address.
+    //
+    // Note: X86 does not use *_RELOC_ADDEND because it can embed an
+    // addend into the instruction stream. On X86, a relocatable address
+    // field always occupies an entire contiguous sequence of byte(s),
+    // so there is no need to merge opcode bits with address
+    // bits. Therefore, it's easy and convenient to store addends in the
+    // instruction-stream bytes that would otherwise contain zeroes. By
+    // contrast, RISC ISAs such as ARM64 mix opcode bits with with
+    // address bits so that bitwise arithmetic is necessary to extract
+    // and insert them. Storing addends in the instruction stream is
+    // possible, but inconvenient and more costly at link time.
+
+    relocation_info pairedInfo = relInfos[i];
+    relocation_info relInfo =
+        target->isPairedReloc(pairedInfo) ? relInfos[++i] : pairedInfo;
+    assert(i < relInfos.size());
+    if (relInfo.r_address & R_SCATTERED)
       fatal("TODO: Scattered relocations not supported");
-
-    auto relInfo = reinterpret_cast<const relocation_info &>(anyRelInfo);
 
     Reloc r;
     r.type = relInfo.r_type;
     r.pcrel = relInfo.r_pcrel;
     r.length = relInfo.r_length;
-    uint64_t rawAddend = target->getImplicitAddend(mb, sec, relInfo);
-
+    r.offset = relInfo.r_address;
+    // For unpaired relocs, pairdInfo (just a copy of relInfo) is ignored
+    uint64_t rawAddend = target->getAddend(mb, sec, relInfo, pairedInfo);
     if (relInfo.r_extern) {
       r.referent = symbols[relInfo.r_symbolnum];
       r.addend = rawAddend;
     } else {
-      if (relInfo.r_symbolnum == 0 || relInfo.r_symbolnum > subsections.size())
-        fatal("invalid section index in relocation for offset " +
-              std::to_string(r.offset) + " in section " + sec.sectname +
-              " of " + getName());
-
       SubsectionMap &referentSubsecMap = subsections[relInfo.r_symbolnum - 1];
       const section_64 &referentSec = sectionHeaders[relInfo.r_symbolnum - 1];
       uint32_t referentOffset;
@@ -250,7 +272,6 @@ void ObjFile::parseRelocations(const section_64 &sec,
       r.addend = referentOffset;
     }
 
-    r.offset = relInfo.r_address;
     InputSection *subsec = findContainingSubsection(subsecMap, &r.offset);
     subsec->relocs.push_back(r);
   }
@@ -259,22 +280,33 @@ void ObjFile::parseRelocations(const section_64 &sec,
 static macho::Symbol *createDefined(const structs::nlist_64 &sym,
                                     StringRef name, InputSection *isec,
                                     uint32_t value) {
-  if (sym.n_type & N_EXT)
-    // Global defined symbol
-    return symtab->addDefined(name, isec, value, sym.n_desc & N_WEAK_DEF);
-  // Local defined symbol
+  // Symbol scope is determined by sym.n_type & (N_EXT | N_PEXT):
+  // N_EXT: Global symbols
+  // N_EXT | N_PEXT: Linkage unit (think: dylib) scoped
+  // N_PEXT: Does not occur in input files in practice,
+  //         a private extern must be external.
+  // 0: Translation-unit scoped. These are not in the symbol table.
+
+  if (sym.n_type & (N_EXT | N_PEXT)) {
+    assert((sym.n_type & N_EXT) && "invalid input");
+    return symtab->addDefined(name, isec, value, sym.n_desc & N_WEAK_DEF,
+                              sym.n_type & N_PEXT);
+  }
   return make<Defined>(name, isec, value, sym.n_desc & N_WEAK_DEF,
-                       /*isExternal=*/false);
+                       /*isExternal=*/false, /*isPrivateExtern=*/false);
 }
 
 // Absolute symbols are defined symbols that do not have an associated
 // InputSection. They cannot be weak.
 static macho::Symbol *createAbsolute(const structs::nlist_64 &sym,
                                      StringRef name) {
-  if (sym.n_type & N_EXT)
-    return symtab->addDefined(name, nullptr, sym.n_value, /*isWeakDef=*/false);
+  if (sym.n_type & (N_EXT | N_PEXT)) {
+    assert((sym.n_type & N_EXT) && "invalid input");
+    return symtab->addDefined(name, nullptr, sym.n_value, /*isWeakDef=*/false,
+                              sym.n_type & N_PEXT);
+  }
   return make<Defined>(name, nullptr, sym.n_value, /*isWeakDef=*/false,
-                       /*isExternal=*/false);
+                       /*isExternal=*/false, /*isPrivateExtern=*/false);
 }
 
 macho::Symbol *ObjFile::parseNonSectionSymbol(const structs::nlist_64 &sym,
@@ -283,9 +315,10 @@ macho::Symbol *ObjFile::parseNonSectionSymbol(const structs::nlist_64 &sym,
   switch (type) {
   case N_UNDF:
     return sym.n_value == 0
-               ? symtab->addUndefined(name)
+               ? symtab->addUndefined(name, sym.n_desc & N_WEAK_REF)
                : symtab->addCommon(name, this, sym.n_value,
-                                   1 << GET_COMM_ALIGN(sym.n_desc));
+                                   1 << GET_COMM_ALIGN(sym.n_desc),
+                                   sym.n_type & N_PEXT);
   case N_ABS:
     return createAbsolute(sym, name);
   case N_PBUD:
@@ -527,7 +560,7 @@ void loadReexport(StringRef path, DylibFile *umbrella) {
 }
 
 DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella)
-    : InputFile(DylibKind, mb) {
+    : InputFile(DylibKind, mb), refState(RefState::Unreferenced) {
   if (umbrella == nullptr)
     umbrella = this;
 
@@ -580,7 +613,7 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella)
 }
 
 DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella)
-    : InputFile(DylibKind, interface) {
+    : InputFile(DylibKind, interface), refState(RefState::Unreferenced) {
   if (umbrella == nullptr)
     umbrella = this;
 

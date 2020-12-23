@@ -817,9 +817,7 @@ def int_arm_neon_vcadd_rot90  : Neon_2Arg_Intrinsic;
 def int_arm_neon_vcadd_rot270 : Neon_2Arg_Intrinsic;
 
 // GNU eabi mcount
-def int_arm_gnu_eabi_mcount : Intrinsic<[],
-                                    [],
-                                    [IntrReadMem, IntrWriteMem]>;
+def int_arm_gnu_eabi_mcount : Intrinsic<[], [], []>;
 
 def int_arm_mve_pred_i2v : Intrinsic<
   [llvm_anyvector_ty], [llvm_i32_ty], [IntrNoMem]>;

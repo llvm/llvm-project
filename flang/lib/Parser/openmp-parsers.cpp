@@ -157,8 +157,8 @@ TYPE_PARSER(
     "ACQ_REL" >> construct<OmpClause>(construct<OmpClause::AcqRel>()) ||
     "ALIGNED" >>
         construct<OmpClause>(parenthesized(Parser<OmpAlignedClause>{})) ||
-    "ALLOCATE" >>
-        construct<OmpClause>(parenthesized(Parser<OmpAllocateClause>{})) ||
+    "ALLOCATE" >> construct<OmpClause>(construct<OmpClause::Allocate>(
+                      parenthesized(Parser<OmpAllocateClause>{}))) ||
     "ALLOCATOR" >> construct<OmpClause>(construct<OmpClause::Allocator>(
                        parenthesized(scalarIntExpr))) ||
     "COLLAPSE" >> construct<OmpClause>(construct<OmpClause::Collapse>(
@@ -167,8 +167,8 @@ TYPE_PARSER(
                     parenthesized(Parser<OmpObjectList>{}))) ||
     "COPYPRIVATE" >> construct<OmpClause>(construct<OmpClause::Copyprivate>(
                          (parenthesized(Parser<OmpObjectList>{})))) ||
-    "DEFAULT"_id >>
-        construct<OmpClause>(parenthesized(Parser<OmpDefaultClause>{})) ||
+    "DEFAULT"_id >> construct<OmpClause>(construct<OmpClause::Default>(
+                        parenthesized(Parser<OmpDefaultClause>{}))) ||
     "DEFAULTMAP" >>
         construct<OmpClause>(parenthesized(Parser<OmpDefaultmapClause>{})) ||
     "DEPEND" >>
@@ -176,7 +176,7 @@ TYPE_PARSER(
     "DEVICE" >> construct<OmpClause>(construct<OmpClause::Device>(
                     parenthesized(scalarIntExpr))) ||
     "DIST_SCHEDULE" >>
-        construct<OmpClause>(construct<OmpDistScheduleClause>(
+        construct<OmpClause>(construct<OmpClause::DistSchedule>(
             parenthesized("STATIC" >> maybe("," >> scalarIntExpr)))) ||
     "FINAL" >> construct<OmpClause>(construct<OmpClause::Final>(
                    parenthesized(scalarLogicalExpr))) ||
@@ -203,7 +203,7 @@ TYPE_PARSER(
     "NOGROUP" >> construct<OmpClause>(construct<OmpClause::Nogroup>()) ||
     "NOTINBRANCH" >>
         construct<OmpClause>(construct<OmpClause::Notinbranch>()) ||
-    "NOWAIT" >> construct<OmpClause>(construct<OmpNowait>()) ||
+    "NOWAIT" >> construct<OmpClause>(construct<OmpClause::Nowait>()) ||
     "NUM_TASKS" >> construct<OmpClause>(construct<OmpClause::NumTasks>(
                        parenthesized(scalarIntExpr))) ||
     "NUM_TEAMS" >> construct<OmpClause>(construct<OmpClause::NumTeams>(
@@ -216,8 +216,8 @@ TYPE_PARSER(
                       parenthesized(scalarIntExpr))) ||
     "PRIVATE" >> construct<OmpClause>(construct<OmpClause::Private>(
                      parenthesized(Parser<OmpObjectList>{}))) ||
-    "PROC_BIND" >>
-        construct<OmpClause>(parenthesized(Parser<OmpProcBindClause>{})) ||
+    "PROC_BIND" >> construct<OmpClause>(construct<OmpClause::ProcBind>(
+                       parenthesized(Parser<OmpProcBindClause>{}))) ||
     "REDUCTION" >>
         construct<OmpClause>(parenthesized(Parser<OmpReductionClause>{})) ||
     "RELAXED" >> construct<OmpClause>(construct<OmpClause::Relaxed>()) ||

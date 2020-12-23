@@ -20,6 +20,52 @@ class Tensor_Op<string mnemonic, list<OpTrait> traits = []>
 }
 
 //===----------------------------------------------------------------------===//
+// CastOp
+//===----------------------------------------------------------------------===//
+
+def Tensor_CastOp : Tensor_Op<"cast", [NoSideEffect]> {
+  let summary = "tensor cast operation";
+  let description = [{
+    Convert a tensor from one type to an equivalent type without changing any
+    data elements. The source and destination types must both be tensor types
+    with the same element type. If both are ranked, then the rank should be the
+    same and static dimensions should match. The operation is invalid if
+    converting to a mismatching constant dimension.
+
+    Example:
+
+    ```mlir
+    // Convert from unknown rank to rank 2 with unknown dimension sizes.
+    %2 = tensor.cast %1 : tensor<*xf32> to tensor<?x?xf32>
+
+    // Convert to a type with more known dimensions.
+    %3 = tensor.cast %2 : tensor<?x?xf32> to tensor<4x?xf32>
+
+    // Discard static dimension and rank information.
+    %4 = tensor.cast %3 : tensor<4x?xf32> to tensor<?x?xf32>
+    %5 = tensor.cast %4 : tensor<?x?xf32> to tensor<*xf32>
+    ```
+  }];
+
+  let arguments = (ins AnyTensor:$source);
+  let results = (outs AnyTensor:$dest);
+  let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
+  let verifier = "return impl::verifyCastOp(*this, areCastCompatible);";
+
+  let extraClassDeclaration = [{
+    /// Return true if `a` and `b` are valid operand and result pairs for
+    /// the operation.
+    static bool areCastCompatible(Type a, Type b);
+
+    /// The result of a tensor.cast is always a tensor.
+    TensorType getType() { return getResult().getType().cast<TensorType>(); }
+  }];
+
+  let hasFolder = 1;
+  let hasCanonicalizer = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // ExtractOp
 //===----------------------------------------------------------------------===//
 

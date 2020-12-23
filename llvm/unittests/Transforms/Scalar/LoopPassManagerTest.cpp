@@ -1603,28 +1603,69 @@ TEST_F(LoopPassManagerTest, LoopDeletion) {
 }
 
 TEST_F(LoopPassManagerTest, HandleLoopNestPass) {
-  ::testing::InSequence MakeExpectationsSequenced;
+  ::testing::Sequence FSequence, GSequence;
 
-  EXPECT_CALL(MLPHandle, run(HasName("loop.0.0"), _, _, _)).Times(2);
-  EXPECT_CALL(MLPHandle, run(HasName("loop.0.1"), _, _, _)).Times(2);
-  EXPECT_CALL(MLPHandle, run(HasName("loop.0"), _, _, _));
-  EXPECT_CALL(MLNPHandle, run(HasName("loop.0"), _, _, _));
-  EXPECT_CALL(MLPHandle, run(HasName("loop.0"), _, _, _));
-  EXPECT_CALL(MLNPHandle, run(HasName("loop.0"), _, _, _));
-  EXPECT_CALL(MLPHandle, run(HasName("loop.g.0"), _, _, _));
-  EXPECT_CALL(MLNPHandle, run(HasName("loop.g.0"), _, _, _));
-  EXPECT_CALL(MLPHandle, run(HasName("loop.g.0"), _, _, _));
-  EXPECT_CALL(MLNPHandle, run(HasName("loop.g.0"), _, _, _));
+  EXPECT_CALL(MLPHandle, run(HasName("loop.0.0"), _, _, _))
+      .Times(2)
+      .InSequence(FSequence);
+  EXPECT_CALL(MLPHandle, run(HasName("loop.0.1"), _, _, _))
+      .Times(2)
+      .InSequence(FSequence);
+  EXPECT_CALL(MLPHandle, run(HasName("loop.0"), _, _, _)).InSequence(FSequence);
+  EXPECT_CALL(MLNPHandle, run(HasName("loop.0"), _, _, _))
+      .InSequence(FSequence);
+  EXPECT_CALL(MLPHandle, run(HasName("loop.0"), _, _, _)).InSequence(FSequence);
+  EXPECT_CALL(MLNPHandle, run(HasName("loop.0"), _, _, _))
+      .InSequence(FSequence);
+  EXPECT_CALL(MLPHandle, run(HasName("loop.g.0"), _, _, _))
+      .InSequence(GSequence);
+  EXPECT_CALL(MLNPHandle, run(HasName("loop.g.0"), _, _, _))
+      .InSequence(GSequence);
+  EXPECT_CALL(MLPHandle, run(HasName("loop.g.0"), _, _, _))
+      .InSequence(GSequence);
+  EXPECT_CALL(MLNPHandle, run(HasName("loop.g.0"), _, _, _))
+      .InSequence(GSequence);
 
-  LoopPassManager LPM(true);
-  LPM.addPass(MLPHandle.getPass());
-  LPM.addPass(MLNPHandle.getPass());
-  LPM.addPass(MLPHandle.getPass());
-  LPM.addPass(MLNPHandle.getPass());
+  EXPECT_CALL(MLNPHandle, run(HasName("loop.0"), _, _, _))
+      .InSequence(FSequence);
+  EXPECT_CALL(MLNPHandle, run(HasName("loop.g.0"), _, _, _))
+      .InSequence(GSequence);
+
+  EXPECT_CALL(MLNPHandle, run(HasName("loop.0"), _, _, _))
+      .InSequence(FSequence);
+  EXPECT_CALL(MLNPHandle, run(HasName("loop.g.0"), _, _, _))
+      .InSequence(GSequence);
 
   ModulePassManager MPM(true);
-  MPM.addPass(createModuleToFunctionPassAdaptor(
-      createFunctionToLoopPassAdaptor(std::move(LPM))));
+  FunctionPassManager FPM(true);
+
+  {
+    LoopPassManager LPM(true);
+    LPM.addPass(MLPHandle.getPass());
+    LPM.addPass(MLNPHandle.getPass());
+    LPM.addPass(MLPHandle.getPass());
+    LPM.addPass(MLNPHandle.getPass());
+
+    auto Adaptor = createFunctionToLoopPassAdaptor(std::move(LPM));
+    ASSERT_FALSE(Adaptor.isLoopNestMode());
+    FPM.addPass(std::move(Adaptor));
+  }
+
+  {
+    auto Adaptor = createFunctionToLoopPassAdaptor(MLNPHandle.getPass());
+    ASSERT_TRUE(Adaptor.isLoopNestMode());
+    FPM.addPass(std::move(Adaptor));
+  }
+
+  {
+    LoopPassManager LPM(true);
+    LPM.addPass(MLNPHandle.getPass());
+    auto Adaptor = createFunctionToLoopPassAdaptor(MLNPHandle.getPass());
+    ASSERT_TRUE(Adaptor.isLoopNestMode());
+    FPM.addPass(std::move(Adaptor));
+  }
+
+  MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
   MPM.run(*M, MAM);
 }
 

@@ -2038,8 +2038,7 @@ static void relocationViaAlloca(
 /// tests in ways which make them less useful in testing fused safepoints.
 template <typename T> static void unique_unsorted(SmallVectorImpl<T> &Vec) {
   SmallSet<T, 8> Seen;
-  Vec.erase(remove_if(Vec, [&](const T &V) { return !Seen.insert(V).second; }),
-            Vec.end());
+  erase_if(Vec, [&](const T &V) { return !Seen.insert(V).second; });
 }
 
 /// Insert holders so that each Value is obviously live through the entire

@@ -22,6 +22,7 @@
 #include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
@@ -840,6 +841,23 @@ static void print(OpAsmPrinter &p, GPUModuleOp op) {
                                      {SymbolTable::getSymbolAttrName()});
   p.printRegion(op->getRegion(0), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/false);
+}
+
+//===----------------------------------------------------------------------===//
+// GPUMemcpyOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(MemcpyOp op) {
+  auto srcType = op.src().getType();
+  auto dstType = op.dst().getType();
+
+  if (getElementTypeOrSelf(srcType) != getElementTypeOrSelf(dstType))
+    return op.emitOpError("arguments have incompatible element type");
+
+  if (failed(verifyCompatibleShape(srcType, dstType)))
+    return op.emitOpError("arguments have incompatible shape");
+
+  return success();
 }
 
 static ParseResult parseAsyncDependencies(

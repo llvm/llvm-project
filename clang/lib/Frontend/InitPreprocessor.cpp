@@ -476,7 +476,7 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
 
   if (LangOpts.SYCL) {
     // SYCL Version is set to a value when building SYCL applications
-    if (LangOpts.SYCLVersion == 2017)
+    if (LangOpts.getSYCLVersion() == LangOptions::SYCL_2017)
       Builder.defineMacro("CL_SYCL_LANGUAGE_VERSION", "121");
   }
 
@@ -565,7 +565,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_aggregate_bases", "201603L");
     Builder.defineMacro("__cpp_structured_bindings", "201606L");
     Builder.defineMacro("__cpp_nontype_template_args",
-                        "201411L"); // (not latest)
+                        LangOpts.CPlusPlus20 ? "201911L" : "201411L");
     Builder.defineMacro("__cpp_fold_expressions", "201603L");
     Builder.defineMacro("__cpp_guaranteed_copy_elision", "201606L");
     Builder.defineMacro("__cpp_nontype_template_parameter_auto", "201606L");

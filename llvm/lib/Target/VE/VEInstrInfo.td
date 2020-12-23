@@ -1608,6 +1608,8 @@ def vehi_only : OutPatFrag<(ops node:$hi),
                            (LEASLzii 0, 0, $hi)>;
 def vehi_lo : OutPatFrag<(ops node:$hi, node:$lo),
                          (LEASLrii $lo, 0, $hi)>;
+def vehi_lo_imm : OutPatFrag<(ops node:$hi, node:$lo, node:$idx),
+                             (LEASLrii $lo, $idx, $hi)>;
 def vehi_baselo : OutPatFrag<(ops node:$base, node:$hi, node:$lo),
                              (LEASLrri $base, $lo, $hi)>;
 foreach type = [ "tblockaddress", "tconstpool", "texternalsym", "tglobaladdr",
@@ -1615,6 +1617,8 @@ foreach type = [ "tblockaddress", "tconstpool", "texternalsym", "tglobaladdr",
   def : Pat<(VElo !cast<SDNode>(type):$lo), (velo_only $lo)>;
   def : Pat<(VEhi !cast<SDNode>(type):$hi), (vehi_only $hi)>;
   def : Pat<(add (VEhi !cast<SDNode>(type):$hi), I64:$lo), (vehi_lo $hi, $lo)>;
+  def : Pat<(add (add (VEhi !cast<SDNode>(type):$hi), I64:$lo), simm7:$val),
+            (vehi_lo_imm $hi, $lo, (LO7 $val))>;
   def : Pat<(add I64:$base, (add (VEhi !cast<SDNode>(type):$hi), I64:$lo)),
             (vehi_baselo $base, $hi, $lo)>;
 }

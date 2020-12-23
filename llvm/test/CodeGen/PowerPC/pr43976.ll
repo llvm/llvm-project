@@ -13,7 +13,7 @@ define dso_local signext i32 @b() local_unnamed_addr #0 {
 ; CHECK-NEXT:    li r4, 1
 ; CHECK-NEXT:    lfd f0, a@toc@l(r3)
 ; CHECK-NEXT:    addis r3, r2, .LCPI0_0@toc@ha
-; CHECK-NEXT:    sldi r4, r4, 63
+; CHECK-NEXT:    rldic r4, r4, 63, 0
 ; CHECK-NEXT:    lfs f1, .LCPI0_0@toc@l(r3)
 ; CHECK-NEXT:    fsub f2, f0, f1
 ; CHECK-NEXT:    fctidz f2, f2

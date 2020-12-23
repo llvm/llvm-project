@@ -1565,19 +1565,20 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
   }
 
   case bitc::METADATA_MODULE: {
-    if (Record.size() < 5 || Record.size() > 8)
+    if (Record.size() < 5 || Record.size() > 9)
       return error("Invalid record");
 
-    unsigned Offset = Record.size() >= 7 ? 2 : 1;
+    unsigned Offset = Record.size() >= 8 ? 2 : 1;
     IsDistinct = Record[0];
     MetadataList.assignValue(
         GET_OR_DISTINCT(
             DIModule,
-            (Context, Record.size() >= 7 ? getMDOrNull(Record[1]) : nullptr,
+            (Context, Record.size() >= 8 ? getMDOrNull(Record[1]) : nullptr,
              getMDOrNull(Record[0 + Offset]), getMDString(Record[1 + Offset]),
              getMDString(Record[2 + Offset]), getMDString(Record[3 + Offset]),
              getMDString(Record[4 + Offset]),
-             Record.size() <= 7 ? 0 : Record[7])),
+             Record.size() <= 7 ? 0 : Record[7],
+             Record.size() <= 8 ? false : Record[8])),
         NextMetadataNo);
     NextMetadataNo++;
     break;

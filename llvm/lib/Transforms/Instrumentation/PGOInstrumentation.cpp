@@ -563,9 +563,6 @@ private:
   // Is this is context-sensitive instrumentation.
   bool IsCS;
 
-  // If we instrument function entry BB by default.
-  bool InstrumentFuncEntry;
-
   // A map that stores the Comdat group in function F.
   std::unordered_multimap<Comdat *, GlobalValue *> &ComdatMembers;
 
@@ -1921,6 +1918,17 @@ static bool annotateAllFunctions(
                       << "\n");
   }
   for (auto &F : ColdFunctions) {
+    // Only set when there is no Attribute::Hot set by the user. For Hot
+    // attribute, user's annotation has the precedence over the profile.
+    if (F->hasFnAttribute(Attribute::Hot)) {
+      auto &Ctx = M.getContext();
+      std::string Msg = std::string("Function ") + F->getName().str() +
+                        std::string(" is annotated as a hot function but"
+                                    " the profile is cold");
+      Ctx.diagnose(
+          DiagnosticInfoPGOProfile(M.getName().data(), Msg, DS_Warning));
+      continue;
+    }
     F->addFnAttr(Attribute::Cold);
     LLVM_DEBUG(dbgs() << "Set cold attribute to function: " << F->getName()
                       << "\n");

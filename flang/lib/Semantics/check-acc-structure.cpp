@@ -235,6 +235,18 @@ void AccStructureChecker::Leave(const parser::OpenACCStandaloneConstruct &x) {
 
 void AccStructureChecker::Enter(const parser::OpenACCRoutineConstruct &x) {
   PushContextAndClauseSets(x.source, llvm::acc::Directive::ACCD_routine);
+  const auto &optName{std::get<std::optional<parser::Name>>(x.t)};
+  if (!optName) {
+    const auto &verbatim{std::get<parser::Verbatim>(x.t)};
+    const auto &scope{context_.FindScope(verbatim.source)};
+    const Scope &containingScope{GetProgramUnitContaining(scope)};
+    if (containingScope.kind() == Scope::Kind::Module) {
+      context_.Say(GetContext().directiveSource,
+          "ROUTINE directive without name must appear within the specification "
+          "part of a subroutine or function definition, or within an interface "
+          "body for a subroutine or function in an interface block"_err_en_US);
+    }
+  }
 }
 void AccStructureChecker::Leave(const parser::OpenACCRoutineConstruct &) {
   // Restriction - line 2790

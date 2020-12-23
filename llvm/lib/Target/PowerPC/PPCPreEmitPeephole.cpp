@@ -121,7 +121,7 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
       for (auto BBI = MBB.instr_begin(); BBI != MBB.instr_end(); ++BBI) {
         // Skip load immediate that is marked to be erased later because it
         // cannot be used to replace any other instructions.
-        if (InstrsToErase.find(&*BBI) != InstrsToErase.end())
+        if (InstrsToErase.contains(&*BBI))
           continue;
         // Skip non-load immediate.
         unsigned Opc = BBI->getOpcode();
@@ -338,8 +338,7 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
 
         // Create the symbol.
         MCContext &Context = MF->getContext();
-        MCSymbol *Symbol =
-            Context.createTempSymbol(Twine("pcrel"), false, false);
+        MCSymbol *Symbol = Context.createNamedTempSymbol("pcrel");
         MachineOperand PCRelLabel =
             MachineOperand::CreateMCSymbol(Symbol, PPCII::MO_PCREL_OPT_FLAG);
         Pair->DefInst->addOperand(*MF, PCRelLabel);

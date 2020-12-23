@@ -271,6 +271,14 @@ bool SBType::IsAnonymousType() {
   return m_opaque_sp->GetCompilerType(true).IsAnonymousType();
 }
 
+bool SBType::IsScopedEnumerationType() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBType, IsScopedEnumerationType);
+
+  if (!IsValid())
+    return false;
+  return m_opaque_sp->GetCompilerType(true).IsScopedEnumerationType();
+}
+
 lldb::SBType SBType::GetFunctionReturnType() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBType, SBType, GetFunctionReturnType);
 
@@ -333,6 +341,16 @@ lldb::SBType SBType::GetCanonicalType() {
   if (IsValid())
     return LLDB_RECORD_RESULT(
         SBType(TypeImplSP(new TypeImpl(m_opaque_sp->GetCanonicalType()))));
+  return LLDB_RECORD_RESULT(SBType());
+}
+
+SBType SBType::GetEnumerationIntegerType() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBType, SBType, GetEnumerationIntegerType);
+
+  if (IsValid()) {
+    return LLDB_RECORD_RESULT(
+        SBType(m_opaque_sp->GetCompilerType(true).GetEnumerationIntegerType()));
+  }
   return LLDB_RECORD_RESULT(SBType());
 }
 
@@ -935,6 +953,7 @@ void RegisterMethods<SBType>(Registry &R) {
   LLDB_REGISTER_METHOD(bool, SBType, IsPolymorphicClass, ());
   LLDB_REGISTER_METHOD(bool, SBType, IsTypedefType, ());
   LLDB_REGISTER_METHOD(bool, SBType, IsAnonymousType, ());
+  LLDB_REGISTER_METHOD(bool, SBType, IsScopedEnumerationType, ());
   LLDB_REGISTER_METHOD(lldb::SBType, SBType, GetFunctionReturnType, ());
   LLDB_REGISTER_METHOD(lldb::SBTypeList, SBType, GetFunctionArgumentTypes,
                        ());
@@ -943,6 +962,7 @@ void RegisterMethods<SBType>(Registry &R) {
                        GetMemberFunctionAtIndex, (uint32_t));
   LLDB_REGISTER_METHOD(lldb::SBType, SBType, GetUnqualifiedType, ());
   LLDB_REGISTER_METHOD(lldb::SBType, SBType, GetCanonicalType, ());
+  LLDB_REGISTER_METHOD(lldb::SBType, SBType, GetEnumerationIntegerType, ());
   LLDB_REGISTER_METHOD(lldb::BasicType, SBType, GetBasicType, ());
   LLDB_REGISTER_METHOD(lldb::SBType, SBType, GetBasicType, (lldb::BasicType));
   LLDB_REGISTER_METHOD(uint32_t, SBType, GetNumberOfDirectBaseClasses, ());

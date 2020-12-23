@@ -107,6 +107,12 @@ void GenerateEnumClauseVal(const std::vector<Record *> &Records,
       EnumHelperFuncs += (llvm::Twine(EnumName) + llvm::Twine(" get") +
                           llvm::Twine(EnumName) + llvm::Twine("(StringRef);\n"))
                              .str();
+
+      EnumHelperFuncs +=
+          (llvm::Twine("llvm::StringRef get") + llvm::Twine(DirLang.getName()) +
+           llvm::Twine(EnumName) + llvm::Twine("Name(") +
+           llvm::Twine(EnumName) + llvm::Twine(");\n"))
+              .str();
     }
   }
 }
@@ -335,6 +341,22 @@ void GenerateGetKindClauseVal(const DirectiveLanguage &DirLang,
          << ")\n";
     }
     OS << "    .Default(" << DefaultName << ");\n";
+    OS << "}\n";
+
+    OS << "\n";
+    OS << "llvm::StringRef llvm::" << DirLang.getCppNamespace() << "::get"
+       << DirLang.getName() << EnumName
+       << "Name(llvm::" << DirLang.getCppNamespace() << "::" << EnumName
+       << " x) {\n";
+    OS << "  switch (x) {\n";
+    for (const auto &CV : ClauseVals) {
+      ClauseVal CVal{CV};
+      OS << "    case " << CV->getName() << ":\n";
+      OS << "      return \"" << CVal.getFormattedName() << "\";\n";
+    }
+    OS << "  }\n"; // switch
+    OS << "  llvm_unreachable(\"Invalid " << DirLang.getName() << " "
+       << EnumName << " kind\");\n";
     OS << "}\n";
   }
 }
@@ -627,7 +649,7 @@ void GenerateFlangClauseUnparse(const DirectiveLanguage &DirLang,
   }
 }
 
-// Generate the implemenation section for the enumeration in the directive
+// Generate the implementation section for the enumeration in the directive
 // language
 void EmitDirectivesFlangImpl(const DirectiveLanguage &DirLang,
                              raw_ostream &OS) {
@@ -645,7 +667,73 @@ void EmitDirectivesFlangImpl(const DirectiveLanguage &DirLang,
   GenerateFlangClauseUnparse(DirLang, OS);
 }
 
-// Generate the implemenation section for the enumeration in the directive
+void GenerateClauseClassMacro(const DirectiveLanguage &DirLang,
+                              raw_ostream &OS) {
+  // Generate macros style information for legacy code in clang
+  IfDefScope Scope("GEN_CLANG_CLAUSE_CLASS", OS);
+
+  OS << "\n";
+
+  OS << "#ifndef CLAUSE\n";
+  OS << "#define CLAUSE(Enum, Str, Implicit)\n";
+  OS << "#endif\n";
+  OS << "#ifndef CLAUSE_CLASS\n";
+  OS << "#define CLAUSE_CLASS(Enum, Str, Class)\n";
+  OS << "#endif\n";
+  OS << "#ifndef CLAUSE_NO_CLASS\n";
+  OS << "#define CLAUSE_NO_CLASS(Enum, Str)\n";
+  OS << "#endif\n";
+  OS << "\n";
+  OS << "#define __CLAUSE(Name, Class)                      \\\n";
+  OS << "  CLAUSE(" << DirLang.getClausePrefix()
+     << "##Name, #Name, /* Implicit */ false) \\\n";
+  OS << "  CLAUSE_CLASS(" << DirLang.getClausePrefix()
+     << "##Name, #Name, Class)\n";
+  OS << "#define __CLAUSE_NO_CLASS(Name)                    \\\n";
+  OS << "  CLAUSE(" << DirLang.getClausePrefix()
+     << "##Name, #Name, /* Implicit */ false) \\\n";
+  OS << "  CLAUSE_NO_CLASS(" << DirLang.getClausePrefix() << "##Name, #Name)\n";
+  OS << "#define __IMPLICIT_CLAUSE_CLASS(Name, Str, Class)  \\\n";
+  OS << "  CLAUSE(" << DirLang.getClausePrefix()
+     << "##Name, Str, /* Implicit */ true)    \\\n";
+  OS << "  CLAUSE_CLASS(" << DirLang.getClausePrefix()
+     << "##Name, Str, Class)\n";
+  OS << "#define __IMPLICIT_CLAUSE_NO_CLASS(Name, Str)      \\\n";
+  OS << "  CLAUSE(" << DirLang.getClausePrefix()
+     << "##Name, Str, /* Implicit */ true)    \\\n";
+  OS << "  CLAUSE_NO_CLASS(" << DirLang.getClausePrefix() << "##Name, Str)\n";
+  OS << "\n";
+
+  for (const auto &R : DirLang.getClauses()) {
+    Clause C{R};
+    if (C.getClangClass().empty()) { // NO_CLASS
+      if (C.isImplicit()) {
+        OS << "__IMPLICIT_CLAUSE_NO_CLASS(" << C.getFormattedName() << ", \""
+           << C.getFormattedName() << "\")\n";
+      } else {
+        OS << "__CLAUSE_NO_CLASS(" << C.getFormattedName() << ")\n";
+      }
+    } else { // CLASS
+      if (C.isImplicit()) {
+        OS << "__IMPLICIT_CLAUSE_CLASS(" << C.getFormattedName() << ", \""
+           << C.getFormattedName() << "\", " << C.getClangClass() << ")\n";
+      } else {
+        OS << "__CLAUSE(" << C.getFormattedName() << ", " << C.getClangClass()
+           << ")\n";
+      }
+    }
+  }
+
+  OS << "\n";
+  OS << "#undef __IMPLICIT_CLAUSE_NO_CLASS\n";
+  OS << "#undef __IMPLICIT_CLAUSE_CLASS\n";
+  OS << "#undef __CLAUSE\n";
+  OS << "#undef CLAUSE_NO_CLASS\n";
+  OS << "#undef CLAUSE_CLASS\n";
+  OS << "#undef CLAUSE\n";
+}
+
+// Generate the implementation section for the enumeration in the directive
 // language.
 void EmitDirectivesGen(RecordKeeper &Records, raw_ostream &OS) {
   const auto DirLang = DirectiveLanguage{Records};
@@ -653,9 +741,11 @@ void EmitDirectivesGen(RecordKeeper &Records, raw_ostream &OS) {
     return;
 
   EmitDirectivesFlangImpl(DirLang, OS);
+
+  GenerateClauseClassMacro(DirLang, OS);
 }
 
-// Generate the implemenation for the enumeration in the directive
+// Generate the implementation for the enumeration in the directive
 // language. This code can be included in library.
 void EmitDirectivesImpl(RecordKeeper &Records, raw_ostream &OS) {
   const auto DirLang = DirectiveLanguage{Records};

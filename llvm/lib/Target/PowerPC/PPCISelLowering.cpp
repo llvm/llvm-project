@@ -9189,7 +9189,7 @@ static SDValue getCanonicalConstSplat(uint64_t Val, unsigned SplatSize, EVT VT,
   EVT ReqVT = VT != MVT::Other ? VT : VTys[SplatSize-1];
 
   // For a splat with all ones, turn it to vspltisb 0xFF to canonicalize.
-  if (Val == ((1LU << (SplatSize * 8)) - 1)) {
+  if (Val == ((1LLU << (SplatSize * 8)) - 1)) {
     SplatSize = 1;
     Val = 0xFF;
   }
@@ -10614,7 +10614,7 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getRegister(PPC::R2, MVT::i32);
 
   case Intrinsic::ppc_mma_disassemble_acc:
-  case Intrinsic::ppc_mma_disassemble_pair: {
+  case Intrinsic::ppc_vsx_disassemble_pair: {
     int NumVecs = 2;
     SDValue WideVec = Op.getOperand(1);
     if (IntrinsicID == Intrinsic::ppc_mma_disassemble_acc) {

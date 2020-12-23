@@ -147,6 +147,10 @@ MLIR_CAPI_EXPORTED MlirStringRef mlirDialectGetNamespace(MlirDialect dialect);
 MLIR_CAPI_EXPORTED MlirLocation mlirLocationFileLineColGet(
     MlirContext context, MlirStringRef filename, unsigned line, unsigned col);
 
+/// Creates a call site location with a callee and a caller.
+MLIR_CAPI_EXPORTED MlirLocation mlirLocationCallSiteGet(MlirLocation callee,
+                                                        MlirLocation caller);
+
 /// Creates a location with unknown position owned by the given context.
 MLIR_CAPI_EXPORTED MlirLocation mlirLocationUnknownGet(MlirContext context);
 

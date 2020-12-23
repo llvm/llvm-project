@@ -15,19 +15,19 @@ define arm_aapcs_vfpcc void @test32(i32* noalias nocapture readonly %x, i32* noa
 ; CHECK-NEXT:    subs r3, #4
 ; CHECK-NEXT:    vmullt.s32 q0, q2, q1
 ; CHECK-NEXT:    vmullb.s32 q3, q2, q1
-; CHECK-NEXT:    vmov r5, s1
-; CHECK-NEXT:    vmov r12, s0
-; CHECK-NEXT:    vmov r7, s3
+; CHECK-NEXT:    vmov r5, s3
+; CHECK-NEXT:    vmov r12, s2
+; CHECK-NEXT:    vmov r7, s1
 ; CHECK-NEXT:    lsrl r12, r5, #31
-; CHECK-NEXT:    vmov r4, s2
+; CHECK-NEXT:    vmov r4, s0
 ; CHECK-NEXT:    lsrl r4, r7, #31
 ; CHECK-NEXT:    vmov q0[2], q0[0], r4, r12
-; CHECK-NEXT:    vmov r12, s12
+; CHECK-NEXT:    vmov r12, s14
 ; CHECK-NEXT:    vmov q0[3], q0[1], r7, r5
-; CHECK-NEXT:    vmov r5, s13
-; CHECK-NEXT:    vmov r7, s15
+; CHECK-NEXT:    vmov r5, s15
+; CHECK-NEXT:    vmov r7, s13
 ; CHECK-NEXT:    lsrl r12, r5, #31
-; CHECK-NEXT:    vmov r4, s14
+; CHECK-NEXT:    vmov r4, s12
 ; CHECK-NEXT:    lsrl r4, r7, #31
 ; CHECK-NEXT:    vmov q1[2], q1[0], r4, r12
 ; CHECK-NEXT:    vmov q1[3], q1[1], r7, r5

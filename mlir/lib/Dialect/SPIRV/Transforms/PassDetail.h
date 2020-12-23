@@ -18,7 +18,7 @@ class ModuleOp;
 } // end namespace spirv
 
 #define GEN_PASS_CLASSES
-#include "mlir/Dialect/SPIRV/Passes.h.inc"
+#include "mlir/Dialect/SPIRV/Transforms/Passes.h.inc"
 
 } // end namespace mlir
 

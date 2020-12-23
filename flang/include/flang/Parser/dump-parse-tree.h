@@ -66,8 +66,13 @@ public:
   NODE(parser, AccClause)
 #define GEN_FLANG_DUMP_PARSE_TREE_CLAUSES
 #include "llvm/Frontend/OpenACC/ACC.cpp.inc"
+  NODE(parser, AccBindClause)
   NODE(parser, AccDefaultClause)
-  NODE_ENUM(parser::AccDefaultClause, Arg)
+  static std::string GetNodeName(const llvm::acc::DefaultValue &x) {
+    return llvm::Twine(
+        "llvm::acc::DefaultValue = ", llvm::acc::getOpenACCDefaultValueName(x))
+        .str();
+  }
   NODE(parser, AccClauseList)
   NODE(parser, AccCombinedDirective)
   NODE(parser, AccDataModifier)
@@ -461,7 +466,7 @@ public:
   NODE_ENUM(OmpCancelType, Type)
   NODE(parser, OmpClause)
 #define GEN_FLANG_DUMP_PARSE_TREE_CLAUSES
-#include "llvm/Frontend/OpenMP/OMP.cpp.inc"
+#include "llvm/Frontend/OpenMP/OMP.inc"
   NODE(parser, OmpClauseList)
   NODE(parser, OmpCriticalDirective)
   NODE(parser, OmpDeclareTargetSpecifier)
@@ -480,7 +485,6 @@ public:
   NODE_ENUM(OmpDependenceType, Type)
   NODE(parser, OmpDependSinkVec)
   NODE(parser, OmpDependSinkVecLength)
-  NODE(parser, OmpDistScheduleClause)
   NODE(parser, OmpEndAtomic)
   NODE(parser, OmpEndBlockDirective)
   NODE(parser, OmpEndCriticalDirective)
@@ -503,7 +507,6 @@ public:
         "llvm::omp::Clause = ", llvm::omp::getOpenMPClauseName(x))
         .str();
   }
-  NODE(parser, OmpNowait)
   NODE(parser, OmpObject)
   NODE(parser, OmpObjectList)
   NODE(parser, OmpProcBindClause)

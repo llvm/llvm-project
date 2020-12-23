@@ -79,7 +79,6 @@ print >> out_file, '''\
 <!--*************************************************************************-->
 <h1>C++ Defect Report Support in Clang</h1>
 <!--*************************************************************************-->
-<p>Last updated: $Date$</p>
 
 <h2 id="cxxdr">C++ defect report implementation status</h2>
 

@@ -1399,7 +1399,7 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
 
   // Remove all exits which aren't both rewriteable and execute on every
   // iteration.
-  auto NewEnd = llvm::remove_if(ExitingBlocks, [&](BasicBlock *ExitingBB) {
+  llvm::erase_if(ExitingBlocks, [&](BasicBlock *ExitingBB) {
     // If our exitting block exits multiple loops, we can only rewrite the
     // innermost one.  Otherwise, we're changing how many times the innermost
     // loop runs before it exits.
@@ -1421,7 +1421,6 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
 
     return false;
   });
-  ExitingBlocks.erase(NewEnd, ExitingBlocks.end());
 
   if (ExitingBlocks.empty())
     return false;

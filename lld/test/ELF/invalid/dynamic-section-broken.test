@@ -1,7 +1,7 @@
 ## .dynamic section has invalid sh_entsize, check we report it.
 # RUN: yaml2obj --docnum=1 %s -o %t.so
 # RUN: not ld.lld %t.so -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR1
-# ERR1: error: {{.*}}.so: section [index 1] has an invalid sh_entsize: 291
+# ERR1: error: {{.*}}.so: section [index 1] has invalid sh_entsize: expected 16, but got 291
 
 --- !ELF
 FileHeader:

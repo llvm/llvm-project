@@ -2693,6 +2693,7 @@ static const AttrClassDescriptor AttrClassDescriptors[] = {
   { "ATTR", "Attr" },
   { "TYPE_ATTR", "TypeAttr" },
   { "STMT_ATTR", "StmtAttr" },
+  { "DECL_OR_STMT_ATTR", "DeclOrStmtAttr" },
   { "INHERITABLE_ATTR", "InheritableAttr" },
   { "DECL_OR_TYPE_ATTR", "DeclOrTypeAttr" },
   { "INHERITABLE_PARAM_ATTR", "InheritableParamAttr" },
@@ -3779,7 +3780,8 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
     OS << (Attr.isSubClassOf("TypeAttr") ||
            Attr.isSubClassOf("DeclOrTypeAttr")) << ";\n";
     OS << "    IsStmt = ";
-    OS << Attr.isSubClassOf("StmtAttr") << ";\n";
+    OS << (Attr.isSubClassOf("StmtAttr") || Attr.isSubClassOf("DeclOrStmtAttr"))
+       << ";\n";
     OS << "    IsKnownToGCC = ";
     OS << IsKnownToGCC(Attr) << ";\n";
     OS << "    IsSupportedByPragmaAttribute = ";

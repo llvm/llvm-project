@@ -131,7 +131,7 @@ HELPER_REGISTER_BINARY_INT_VP(vp_shl, VP_SHL, Shl)
 HELPER_REGISTER_BINARY_INT_VP(vp_srem, VP_SREM, SRem)
 
 // llvm.vp.sub(x,y,mask,vlen)
-HELPER_REGISTER_BINARY_INT_VP(vp_sub, VP_Sub, Sub)
+HELPER_REGISTER_BINARY_INT_VP(vp_sub, VP_SUB, Sub)
 
 // llvm.vp.udiv(x,y,mask,vlen)
 HELPER_REGISTER_BINARY_INT_VP(vp_udiv, VP_UDIV, UDiv)

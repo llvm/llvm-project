@@ -1289,20 +1289,20 @@ define <4 x i16> @dont_fold_urem_i16_smax(<4 x i16> %x) {
 define <4 x i64> @dont_fold_srem_i64(<4 x i64> %x) {
 ; P9LE-LABEL: dont_fold_srem_i64:
 ; P9LE:       # %bb.0:
-; P9LE-NEXT:    lis r4, 24749
+; P9LE-NEXT:    lis r4, 12374
 ; P9LE-NEXT:    mfvsrd r3, v3
-; P9LE-NEXT:    ori r4, r4, 47142
-; P9LE-NEXT:    sldi r4, r4, 32
+; P9LE-NEXT:    ori r4, r4, 56339
+; P9LE-NEXT:    rldic r4, r4, 33, 1
 ; P9LE-NEXT:    oris r4, r4, 58853
 ; P9LE-NEXT:    ori r4, r4, 6055
 ; P9LE-NEXT:    mulhd r4, r3, r4
 ; P9LE-NEXT:    rldicl r5, r4, 1, 63
 ; P9LE-NEXT:    sradi r4, r4, 11
 ; P9LE-NEXT:    add r4, r4, r5
-; P9LE-NEXT:    lis r5, -19946
+; P9LE-NEXT:    lis r5, 5698
 ; P9LE-NEXT:    mulli r4, r4, 5423
-; P9LE-NEXT:    ori r5, r5, 17096
-; P9LE-NEXT:    sldi r5, r5, 32
+; P9LE-NEXT:    ori r5, r5, 51289
+; P9LE-NEXT:    rldic r5, r5, 35, 0
 ; P9LE-NEXT:    oris r5, r5, 22795
 ; P9LE-NEXT:    sub r3, r3, r4
 ; P9LE-NEXT:    mfvsrld r4, v3
@@ -1315,10 +1315,10 @@ define <4 x i64> @dont_fold_srem_i64(<4 x i64> %x) {
 ; P9LE-NEXT:    mulli r5, r5, 23
 ; P9LE-NEXT:    sub r4, r4, r5
 ; P9LE-NEXT:    mtvsrdd v3, r3, r4
-; P9LE-NEXT:    lis r4, 25653
+; P9LE-NEXT:    lis r4, 3206
 ; P9LE-NEXT:    mfvsrd r3, v2
-; P9LE-NEXT:    ori r4, r4, 15432
-; P9LE-NEXT:    sldi r4, r4, 32
+; P9LE-NEXT:    ori r4, r4, 42889
+; P9LE-NEXT:    rldic r4, r4, 35, 1
 ; P9LE-NEXT:    oris r4, r4, 1603
 ; P9LE-NEXT:    ori r4, r4, 21445
 ; P9LE-NEXT:    mulhd r4, r3, r4
@@ -1333,20 +1333,20 @@ define <4 x i64> @dont_fold_srem_i64(<4 x i64> %x) {
 ;
 ; P9BE-LABEL: dont_fold_srem_i64:
 ; P9BE:       # %bb.0:
-; P9BE-NEXT:    lis r4, 24749
+; P9BE-NEXT:    lis r4, 12374
 ; P9BE-NEXT:    mfvsrld r3, v3
-; P9BE-NEXT:    ori r4, r4, 47142
-; P9BE-NEXT:    sldi r4, r4, 32
+; P9BE-NEXT:    ori r4, r4, 56339
+; P9BE-NEXT:    rldic r4, r4, 33, 1
 ; P9BE-NEXT:    oris r4, r4, 58853
 ; P9BE-NEXT:    ori r4, r4, 6055
 ; P9BE-NEXT:    mulhd r4, r3, r4
 ; P9BE-NEXT:    rldicl r5, r4, 1, 63
 ; P9BE-NEXT:    sradi r4, r4, 11
 ; P9BE-NEXT:    add r4, r4, r5
-; P9BE-NEXT:    lis r5, -19946
-; P9BE-NEXT:    ori r5, r5, 17096
+; P9BE-NEXT:    lis r5, 5698
+; P9BE-NEXT:    ori r5, r5, 51289
 ; P9BE-NEXT:    mulli r4, r4, 5423
-; P9BE-NEXT:    sldi r5, r5, 32
+; P9BE-NEXT:    rldic r5, r5, 35, 0
 ; P9BE-NEXT:    oris r5, r5, 22795
 ; P9BE-NEXT:    sub r3, r3, r4
 ; P9BE-NEXT:    mfvsrd r4, v3
@@ -1359,10 +1359,10 @@ define <4 x i64> @dont_fold_srem_i64(<4 x i64> %x) {
 ; P9BE-NEXT:    mulli r5, r5, 23
 ; P9BE-NEXT:    sub r4, r4, r5
 ; P9BE-NEXT:    mtvsrdd v3, r4, r3
-; P9BE-NEXT:    lis r4, 25653
+; P9BE-NEXT:    lis r4, 3206
 ; P9BE-NEXT:    mfvsrld r3, v2
-; P9BE-NEXT:    ori r4, r4, 15432
-; P9BE-NEXT:    sldi r4, r4, 32
+; P9BE-NEXT:    ori r4, r4, 42889
+; P9BE-NEXT:    rldic r4, r4, 35, 1
 ; P9BE-NEXT:    oris r4, r4, 1603
 ; P9BE-NEXT:    ori r4, r4, 21445
 ; P9BE-NEXT:    mulhd r4, r3, r4
@@ -1376,18 +1376,18 @@ define <4 x i64> @dont_fold_srem_i64(<4 x i64> %x) {
 ;
 ; P8LE-LABEL: dont_fold_srem_i64:
 ; P8LE:       # %bb.0:
-; P8LE-NEXT:    lis r3, 24749
-; P8LE-NEXT:    lis r4, -19946
-; P8LE-NEXT:    lis r5, 25653
+; P8LE-NEXT:    lis r3, 12374
+; P8LE-NEXT:    lis r4, 5698
+; P8LE-NEXT:    lis r5, 3206
 ; P8LE-NEXT:    xxswapd vs0, v3
 ; P8LE-NEXT:    mfvsrd r6, v3
-; P8LE-NEXT:    ori r3, r3, 47142
-; P8LE-NEXT:    ori r4, r4, 17096
-; P8LE-NEXT:    ori r5, r5, 15432
+; P8LE-NEXT:    ori r3, r3, 56339
+; P8LE-NEXT:    ori r4, r4, 51289
+; P8LE-NEXT:    ori r5, r5, 42889
 ; P8LE-NEXT:    mfvsrd r7, v2
-; P8LE-NEXT:    sldi r3, r3, 32
-; P8LE-NEXT:    sldi r4, r4, 32
-; P8LE-NEXT:    sldi r5, r5, 32
+; P8LE-NEXT:    rldic r3, r3, 33, 1
+; P8LE-NEXT:    rldic r4, r4, 35, 0
+; P8LE-NEXT:    rldic r5, r5, 35, 1
 ; P8LE-NEXT:    oris r3, r3, 58853
 ; P8LE-NEXT:    oris r4, r4, 22795
 ; P8LE-NEXT:    mffprd r8, f0
@@ -1425,19 +1425,19 @@ define <4 x i64> @dont_fold_srem_i64(<4 x i64> %x) {
 ;
 ; P8BE-LABEL: dont_fold_srem_i64:
 ; P8BE:       # %bb.0:
-; P8BE-NEXT:    lis r4, -19946
-; P8BE-NEXT:    lis r3, 24749
+; P8BE-NEXT:    lis r4, 5698
+; P8BE-NEXT:    lis r3, 12374
 ; P8BE-NEXT:    xxswapd vs0, v3
-; P8BE-NEXT:    lis r5, 25653
+; P8BE-NEXT:    lis r5, 3206
 ; P8BE-NEXT:    xxswapd vs1, v2
-; P8BE-NEXT:    ori r4, r4, 17096
-; P8BE-NEXT:    ori r3, r3, 47142
-; P8BE-NEXT:    ori r5, r5, 15432
+; P8BE-NEXT:    ori r4, r4, 51289
+; P8BE-NEXT:    ori r3, r3, 56339
+; P8BE-NEXT:    ori r5, r5, 42889
 ; P8BE-NEXT:    mfvsrd r6, v3
-; P8BE-NEXT:    sldi r4, r4, 32
-; P8BE-NEXT:    sldi r3, r3, 32
+; P8BE-NEXT:    rldic r4, r4, 35, 0
+; P8BE-NEXT:    rldic r3, r3, 33, 1
 ; P8BE-NEXT:    oris r4, r4, 22795
-; P8BE-NEXT:    sldi r5, r5, 32
+; P8BE-NEXT:    rldic r5, r5, 35, 1
 ; P8BE-NEXT:    oris r3, r3, 58853
 ; P8BE-NEXT:    mffprd r7, f0
 ; P8BE-NEXT:    ori r4, r4, 8549

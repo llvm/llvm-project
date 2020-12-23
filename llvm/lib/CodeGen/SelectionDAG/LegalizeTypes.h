@@ -315,6 +315,7 @@ private:
   SDValue PromoteIntRes_CTTZ(SDNode *N);
   SDValue PromoteIntRes_EXTRACT_VECTOR_ELT(SDNode *N);
   SDValue PromoteIntRes_FP_TO_XINT(SDNode *N);
+  SDValue PromoteIntRes_FP_TO_XINT_SAT(SDNode *N);
   SDValue PromoteIntRes_FP_TO_FP16(SDNode *N);
   SDValue PromoteIntRes_FREEZE(SDNode *N);
   SDValue PromoteIntRes_INT_EXTEND(SDNode *N);
@@ -424,6 +425,7 @@ private:
   void ExpandIntRes_FLT_ROUNDS        (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_FP_TO_SINT        (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_FP_TO_UINT        (SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandIntRes_FP_TO_XINT_SAT    (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_LLROUND_LLRINT    (SDNode *N, SDValue &Lo, SDValue &Hi);
 
   void ExpandIntRes_Logical           (SDNode *N, SDValue &Lo, SDValue &Hi);
@@ -561,6 +563,7 @@ private:
   SDValue SoftenFloatOp_BR_CC(SDNode *N);
   SDValue SoftenFloatOp_FP_ROUND(SDNode *N);
   SDValue SoftenFloatOp_FP_TO_XINT(SDNode *N);
+  SDValue SoftenFloatOp_FP_TO_XINT_SAT(SDNode *N);
   SDValue SoftenFloatOp_LROUND(SDNode *N);
   SDValue SoftenFloatOp_LLROUND(SDNode *N);
   SDValue SoftenFloatOp_LRINT(SDNode *N);
@@ -678,6 +681,7 @@ private:
   SDValue PromoteFloatOp_FCOPYSIGN(SDNode *N, unsigned OpNo);
   SDValue PromoteFloatOp_FP_EXTEND(SDNode *N, unsigned OpNo);
   SDValue PromoteFloatOp_FP_TO_XINT(SDNode *N, unsigned OpNo);
+  SDValue PromoteFloatOp_FP_TO_XINT_SAT(SDNode *N, unsigned OpNo);
   SDValue PromoteFloatOp_STORE(SDNode *N, unsigned OpNo);
   SDValue PromoteFloatOp_SELECT_CC(SDNode *N, unsigned OpNo);
   SDValue PromoteFloatOp_SETCC(SDNode *N, unsigned OpNo);
@@ -717,6 +721,7 @@ private:
   SDValue SoftPromoteHalfOp_FCOPYSIGN(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_FP_EXTEND(SDNode *N);
   SDValue SoftPromoteHalfOp_FP_TO_XINT(SDNode *N);
+  SDValue SoftPromoteHalfOp_FP_TO_XINT_SAT(SDNode *N);
   SDValue SoftPromoteHalfOp_SETCC(SDNode *N);
   SDValue SoftPromoteHalfOp_SELECT_CC(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_STORE(SDNode *N, unsigned OpNo);
@@ -761,6 +766,7 @@ private:
   SDValue ScalarizeVecRes_SETCC(SDNode *N);
   SDValue ScalarizeVecRes_UNDEF(SDNode *N);
   SDValue ScalarizeVecRes_VECTOR_SHUFFLE(SDNode *N);
+  SDValue ScalarizeVecRes_FP_TO_XINT_SAT(SDNode *N);
 
   SDValue ScalarizeVecRes_FIX(SDNode *N);
 
@@ -830,6 +836,7 @@ private:
   void SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N, SDValue &Lo,
                                   SDValue &Hi);
   void SplitVecRes_VAARG(SDNode *N, SDValue &Lo, SDValue &Hi);
+  void SplitVecRes_FP_TO_XINT_SAT(SDNode *N, SDValue &Lo, SDValue &Hi);
 
   // Vector Operand Splitting: <128 x ty> -> 2 x <64 x ty>.
   bool SplitVectorOperand(SDNode *N, unsigned OpNo);
@@ -852,6 +859,7 @@ private:
   SDValue SplitVecOp_VSETCC(SDNode *N);
   SDValue SplitVecOp_FP_ROUND(SDNode *N);
   SDValue SplitVecOp_FCOPYSIGN(SDNode *N);
+  SDValue SplitVecOp_FP_TO_XINT_SAT(SDNode *N);
 
   //===--------------------------------------------------------------------===//
   // Vector Widening Support: LegalizeVectorTypes.cpp
@@ -900,6 +908,7 @@ private:
   SDValue WidenVecRes_OverflowOp(SDNode *N, unsigned ResNo);
   SDValue WidenVecRes_Convert(SDNode *N);
   SDValue WidenVecRes_Convert_StrictFP(SDNode *N);
+  SDValue WidenVecRes_FP_TO_XINT_SAT(SDNode *N);
   SDValue WidenVecRes_FCOPYSIGN(SDNode *N);
   SDValue WidenVecRes_POWI(SDNode *N);
   SDValue WidenVecRes_Unary(SDNode *N);
@@ -921,6 +930,7 @@ private:
   SDValue WidenVecOp_VSELECT(SDNode *N);
 
   SDValue WidenVecOp_Convert(SDNode *N);
+  SDValue WidenVecOp_FP_TO_XINT_SAT(SDNode *N);
   SDValue WidenVecOp_FCOPYSIGN(SDNode *N);
   SDValue WidenVecOp_VECREDUCE(SDNode *N);
   SDValue WidenVecOp_VECREDUCE_SEQ(SDNode *N);

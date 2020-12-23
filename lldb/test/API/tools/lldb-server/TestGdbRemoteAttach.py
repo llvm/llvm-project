@@ -53,14 +53,12 @@ class TestGdbRemoteAttach(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @debugserver_test
     def test_attach_with_vAttach_debugserver(self):
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_attach_manually()
         self.attach_with_vAttach()
 
     @llgs_test
     def test_attach_with_vAttach_llgs(self):
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_attach_manually()
         self.attach_with_vAttach()

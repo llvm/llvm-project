@@ -182,19 +182,19 @@ define arm_aapcs_vfpcc <2 x i64> @vqshrni64_smaxmin(<2 x i64> %so) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    vmov r1, s1
+; CHECK-NEXT:    vmov r1, s3
 ; CHECK-NEXT:    mvn r12, #-2147483648
-; CHECK-NEXT:    vmov r2, s0
+; CHECK-NEXT:    vmov r2, s2
 ; CHECK-NEXT:    mov.w lr, #0
 ; CHECK-NEXT:    asrl r2, r1, #3
-; CHECK-NEXT:    vmov r4, s2
+; CHECK-NEXT:    vmov r4, s0
 ; CHECK-NEXT:    subs.w r3, r2, r12
 ; CHECK-NEXT:    sbcs r3, r1, #0
 ; CHECK-NEXT:    mov.w r3, #0
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    movlt r3, #1
 ; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    vmov r3, s3
+; CHECK-NEXT:    vmov r3, s1
 ; CHECK-NEXT:    csetm r5, ne
 ; CHECK-NEXT:    asrl r4, r3, #3
 ; CHECK-NEXT:    subs.w r0, r4, r12
@@ -214,11 +214,11 @@ define arm_aapcs_vfpcc <2 x i64> @vqshrni64_smaxmin(<2 x i64> %so) {
 ; CHECK-NEXT:    vbic q1, q1, q0
 ; CHECK-NEXT:    vand q0, q2, q0
 ; CHECK-NEXT:    vorr q0, q0, q1
-; CHECK-NEXT:    vmov r1, s0
-; CHECK-NEXT:    vmov r0, s1
-; CHECK-NEXT:    vmov r3, s2
+; CHECK-NEXT:    vmov r1, s2
+; CHECK-NEXT:    vmov r0, s3
+; CHECK-NEXT:    vmov r3, s0
 ; CHECK-NEXT:    rsbs.w r1, r1, #-2147483648
-; CHECK-NEXT:    vmov r1, s3
+; CHECK-NEXT:    vmov r1, s1
 ; CHECK-NEXT:    sbcs.w r0, r2, r0
 ; CHECK-NEXT:    mov.w r0, #0
 ; CHECK-NEXT:    it lt
@@ -265,19 +265,19 @@ define arm_aapcs_vfpcc <2 x i64> @vqshrni64_sminmax(<2 x i64> %so) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    vmov r1, s1
+; CHECK-NEXT:    vmov r1, s3
 ; CHECK-NEXT:    mov.w r12, #-1
-; CHECK-NEXT:    vmov r2, s0
+; CHECK-NEXT:    vmov r2, s2
 ; CHECK-NEXT:    mov.w lr, #0
 ; CHECK-NEXT:    asrl r2, r1, #3
-; CHECK-NEXT:    vmov r4, s2
+; CHECK-NEXT:    vmov r4, s0
 ; CHECK-NEXT:    rsbs.w r3, r2, #-2147483648
 ; CHECK-NEXT:    sbcs.w r3, r12, r1
 ; CHECK-NEXT:    mov.w r3, #0
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    movlt r3, #1
 ; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    vmov r3, s3
+; CHECK-NEXT:    vmov r3, s1
 ; CHECK-NEXT:    csetm r0, ne
 ; CHECK-NEXT:    asrl r4, r3, #3
 ; CHECK-NEXT:    rsbs.w r5, r4, #-2147483648
@@ -297,11 +297,11 @@ define arm_aapcs_vfpcc <2 x i64> @vqshrni64_sminmax(<2 x i64> %so) {
 ; CHECK-NEXT:    vbic q1, q1, q0
 ; CHECK-NEXT:    vand q0, q2, q0
 ; CHECK-NEXT:    vorr q0, q0, q1
-; CHECK-NEXT:    vmov r1, s0
-; CHECK-NEXT:    vmov r0, s1
-; CHECK-NEXT:    vmov r3, s2
+; CHECK-NEXT:    vmov r1, s2
+; CHECK-NEXT:    vmov r0, s3
+; CHECK-NEXT:    vmov r3, s0
 ; CHECK-NEXT:    subs r1, r1, r2
-; CHECK-NEXT:    vmov r1, s3
+; CHECK-NEXT:    vmov r1, s1
 ; CHECK-NEXT:    sbcs r0, r0, #0
 ; CHECK-NEXT:    mov.w r0, #0
 ; CHECK-NEXT:    it lt
@@ -348,19 +348,19 @@ define arm_aapcs_vfpcc <2 x i64> @vqshrni64_umaxmin(<2 x i64> %so) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    vmov r5, s1
+; CHECK-NEXT:    vmov r5, s3
 ; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vmov r0, s2
 ; CHECK-NEXT:    vmov.i64 q1, #0xffffffff
 ; CHECK-NEXT:    lsrl r0, r5, #3
-; CHECK-NEXT:    vmov r4, s2
+; CHECK-NEXT:    vmov r4, s0
 ; CHECK-NEXT:    subs.w r3, r0, #-1
 ; CHECK-NEXT:    sbcs r3, r5, #0
 ; CHECK-NEXT:    mov.w r3, #0
 ; CHECK-NEXT:    it lo
 ; CHECK-NEXT:    movlo r3, #1
 ; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    vmov r3, s3
+; CHECK-NEXT:    vmov r3, s1
 ; CHECK-NEXT:    csetm r12, ne
 ; CHECK-NEXT:    lsrl r4, r3, #3
 ; CHECK-NEXT:    subs.w r1, r4, #-1
@@ -389,19 +389,19 @@ define arm_aapcs_vfpcc <2 x i64> @vqshrni64_uminmax(<2 x i64> %so) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    vmov r5, s1
+; CHECK-NEXT:    vmov r5, s3
 ; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vmov r0, s2
 ; CHECK-NEXT:    vmov.i64 q1, #0xffffffff
 ; CHECK-NEXT:    lsrl r0, r5, #3
-; CHECK-NEXT:    vmov r4, s2
+; CHECK-NEXT:    vmov r4, s0
 ; CHECK-NEXT:    subs.w r3, r0, #-1
 ; CHECK-NEXT:    sbcs r3, r5, #0
 ; CHECK-NEXT:    mov.w r3, #0
 ; CHECK-NEXT:    it lo
 ; CHECK-NEXT:    movlo r3, #1
 ; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    vmov r3, s3
+; CHECK-NEXT:    vmov r3, s1
 ; CHECK-NEXT:    csetm r12, ne
 ; CHECK-NEXT:    lsrl r4, r3, #3
 ; CHECK-NEXT:    subs.w r1, r4, #-1

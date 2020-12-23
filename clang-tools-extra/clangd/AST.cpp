@@ -350,8 +350,7 @@ public:
       return true;
 
     if (auto *AT = D->getType()->getContainedAutoType()) {
-      if (!AT->getDeducedType().isNull())
-        DeducedType = AT->getDeducedType();
+      DeducedType = AT->desugar();
     }
     return true;
   }

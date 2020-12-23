@@ -3243,9 +3243,6 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   if (!IncludePossibleEffects && getExprLoc().isMacroID())
     return false;
 
-  if (isInstantiationDependent())
-    return IncludePossibleEffects;
-
   switch (getStmtClass()) {
   case NoStmtClass:
   #define ABSTRACT_STMT(Type)
@@ -3265,7 +3262,8 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case TypoExprClass:
   case RecoveryExprClass:
   case CXXFoldExprClass:
-    llvm_unreachable("shouldn't see dependent / unresolved nodes here");
+    // Make a conservative assumption for dependent nodes.
+    return IncludePossibleEffects;
 
   case DeclRefExprClass:
   case ObjCIvarRefExprClass:

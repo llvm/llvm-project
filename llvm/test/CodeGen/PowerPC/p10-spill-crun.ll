@@ -105,8 +105,8 @@ define dso_local void @P10_Spill_CR_UN(%2* %arg, %1* %arg1, i32 %arg2) local_unn
 ; CHECK-NEXT:    paddi r4, 0, global_4@PCREL, 1
 ; CHECK-NEXT:    stw r3, 176(r1)
 ; CHECK-NEXT:    pld r3, global_3@got@pcrel(0), 1
-; CHECK-NEXT:  .Lpcrel:
-; CHECK-NEXT:    .reloc .Lpcrel-8,R_PPC64_PCREL_OPT,.-(.Lpcrel-8)
+; CHECK-NEXT:  .Lpcrel0:
+; CHECK-NEXT:    .reloc .Lpcrel0-8,R_PPC64_PCREL_OPT,.-(.Lpcrel0-8)
 ; CHECK-NEXT:    ld r12, 0(r3)
 ; CHECK-NEXT:    mtctr r12
 ; CHECK-NEXT:    bctrl

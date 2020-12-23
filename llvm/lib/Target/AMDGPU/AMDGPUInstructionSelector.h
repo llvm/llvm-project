@@ -208,6 +208,9 @@ private:
   selectGlobalSAddr(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
+  selectScratchSAddr(MachineOperand &Root) const;
+
+  InstructionSelector::ComplexRendererFns
   selectMUBUFScratchOffen(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectMUBUFScratchOffset(MachineOperand &Root) const;
