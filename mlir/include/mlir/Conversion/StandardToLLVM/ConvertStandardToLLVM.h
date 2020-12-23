@@ -446,7 +446,8 @@ public:
   /// Builds IR extracting the pointer to the first element of the size array.
   static Value sizeBasePtr(OpBuilder &builder, Location loc,
                            LLVMTypeConverter &typeConverter,
-                           Value memRefDescPtr, LLVM::LLVMType elemPtrPtrType);
+                           Value memRefDescPtr,
+                           LLVM::LLVMPointerType elemPtrPtrType);
   /// Builds IR extracting the size[index] from the descriptor.
   static Value size(OpBuilder &builder, Location loc,
                     LLVMTypeConverter typeConverter, Value sizeBasePtr,
