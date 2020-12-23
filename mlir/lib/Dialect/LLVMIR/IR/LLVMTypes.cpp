@@ -37,129 +37,6 @@ LLVMDialect &LLVMType::getDialect() {
 }
 
 //----------------------------------------------------------------------------//
-// Misc type utilities.
-
-llvm::TypeSize LLVMType::getPrimitiveSizeInBits() {
-  return llvm::TypeSwitch<LLVMType, llvm::TypeSize>(*this)
-      .Case<LLVMHalfType, LLVMBFloatType>(
-          [](LLVMType) { return llvm::TypeSize::Fixed(16); })
-      .Case<LLVMFloatType>([](LLVMType) { return llvm::TypeSize::Fixed(32); })
-      .Case<LLVMDoubleType, LLVMX86MMXType>(
-          [](LLVMType) { return llvm::TypeSize::Fixed(64); })
-      .Case<LLVMIntegerType>([](LLVMIntegerType intTy) {
-        return llvm::TypeSize::Fixed(intTy.getBitWidth());
-      })
-      .Case<LLVMX86FP80Type>([](LLVMType) { return llvm::TypeSize::Fixed(80); })
-      .Case<LLVMPPCFP128Type, LLVMFP128Type>(
-          [](LLVMType) { return llvm::TypeSize::Fixed(128); })
-      .Case<LLVMVectorType>([](LLVMVectorType t) {
-        llvm::TypeSize elementSize =
-            t.getElementType().getPrimitiveSizeInBits();
-        llvm::ElementCount elementCount = t.getElementCount();
-        assert(!elementSize.isScalable() &&
-               "vector type should have fixed-width elements");
-        return llvm::TypeSize(elementSize.getFixedSize() *
-                                  elementCount.getKnownMinValue(),
-                              elementCount.isScalable());
-      })
-      .Default([](LLVMType ty) {
-        assert((ty.isa<LLVMVoidType, LLVMLabelType, LLVMMetadataType,
-                       LLVMTokenType, LLVMStructType, LLVMArrayType,
-                       LLVMPointerType, LLVMFunctionType>()) &&
-               "unexpected missing support for primitive type");
-        return llvm::TypeSize::Fixed(0);
-      });
-}
-
-//----------------------------------------------------------------------------//
-// Integer type utilities.
-
-bool LLVMType::isIntegerTy(unsigned bitwidth) {
-  if (auto intType = dyn_cast<LLVMIntegerType>())
-    return intType.getBitWidth() == bitwidth;
-  return false;
-}
-unsigned LLVMType::getIntegerBitWidth() {
-  return cast<LLVMIntegerType>().getBitWidth();
-}
-
-LLVMType LLVMType::getArrayElementType() {
-  return cast<LLVMArrayType>().getElementType();
-}
-
-//----------------------------------------------------------------------------//
-// Array type utilities.
-
-unsigned LLVMType::getArrayNumElements() {
-  return cast<LLVMArrayType>().getNumElements();
-}
-
-bool LLVMType::isArrayTy() { return isa<LLVMArrayType>(); }
-
-//----------------------------------------------------------------------------//
-// Vector type utilities.
-
-LLVMType LLVMType::getVectorElementType() {
-  return cast<LLVMVectorType>().getElementType();
-}
-
-unsigned LLVMType::getVectorNumElements() {
-  return cast<LLVMFixedVectorType>().getNumElements();
-}
-llvm::ElementCount LLVMType::getVectorElementCount() {
-  return cast<LLVMVectorType>().getElementCount();
-}
-
-bool LLVMType::isVectorTy() { return isa<LLVMVectorType>(); }
-
-//----------------------------------------------------------------------------//
-// Function type utilities.
-
-LLVMType LLVMType::getFunctionParamType(unsigned argIdx) {
-  return cast<LLVMFunctionType>().getParamType(argIdx);
-}
-
-unsigned LLVMType::getFunctionNumParams() {
-  return cast<LLVMFunctionType>().getNumParams();
-}
-
-LLVMType LLVMType::getFunctionResultType() {
-  return cast<LLVMFunctionType>().getReturnType();
-}
-
-bool LLVMType::isFunctionTy() { return isa<LLVMFunctionType>(); }
-
-bool LLVMType::isFunctionVarArg() {
-  return cast<LLVMFunctionType>().isVarArg();
-}
-
-//----------------------------------------------------------------------------//
-// Pointer type utilities.
-
-LLVMType LLVMType::getPointerTo(unsigned addrSpace) {
-  return LLVMPointerType::get(*this, addrSpace);
-}
-
-LLVMType LLVMType::getPointerElementTy() {
-  return cast<LLVMPointerType>().getElementType();
-}
-
-bool LLVMType::isPointerTy() { return isa<LLVMPointerType>(); }
-
-//----------------------------------------------------------------------------//
-// Struct type utilities.
-
-LLVMType LLVMType::getStructElementType(unsigned i) {
-  return cast<LLVMStructType>().getBody()[i];
-}
-
-unsigned LLVMType::getStructNumElements() {
-  return cast<LLVMStructType>().getBody().size();
-}
-
-bool LLVMType::isStructTy() { return isa<LLVMStructType>(); }
-
-//----------------------------------------------------------------------------//
 // Utilities used to generate floating point types.
 
 LLVMType LLVMType::getDoubleTy(MLIRContext *context) {
@@ -193,6 +70,10 @@ LLVMType LLVMType::getIntNTy(MLIRContext *context, unsigned numBits) {
   return LLVMIntegerType::get(context, numBits);
 }
 
+LLVMType LLVMType::getInt8PtrTy(MLIRContext *context) {
+  return LLVMPointerType::get(LLVMIntegerType::get(context, 8));
+}
+
 //----------------------------------------------------------------------------//
 // Utilities used to generate other miscellaneous types.
 
@@ -220,8 +101,6 @@ LLVMType LLVMType::getVectorTy(LLVMType elementType, unsigned numElements) {
 LLVMType LLVMType::getVoidTy(MLIRContext *context) {
   return LLVMVoidType::get(context);
 }
-
-bool LLVMType::isVoidTy() { return isa<LLVMVoidType>(); }
 
 //----------------------------------------------------------------------------//
 // Creation and setting of LLVM's identified struct types
@@ -470,7 +349,7 @@ LLVMStructType::verifyConstructionInvariants(Location loc,
 
 bool LLVMVectorType::isValidElementType(LLVMType type) {
   return type.isa<LLVMIntegerType, LLVMPointerType>() ||
-         type.isFloatingPointTy();
+         mlir::LLVM::isCompatibleFloatingPointType(type);
 }
 
 /// Support type casting functionality.
@@ -535,4 +414,43 @@ LLVMScalableVectorType::getChecked(Location loc, LLVMType elementType,
 
 unsigned LLVMScalableVectorType::getMinNumElements() {
   return getImpl()->numElements;
+}
+
+//===----------------------------------------------------------------------===//
+// Utility functions.
+//===----------------------------------------------------------------------===//
+
+llvm::TypeSize mlir::LLVM::getPrimitiveTypeSizeInBits(Type type) {
+  assert(isCompatibleType(type) &&
+         "expected a type compatible with the LLVM dialect");
+
+  return llvm::TypeSwitch<Type, llvm::TypeSize>(type)
+      .Case<LLVMHalfType, LLVMBFloatType>(
+          [](LLVMType) { return llvm::TypeSize::Fixed(16); })
+      .Case<LLVMFloatType>([](LLVMType) { return llvm::TypeSize::Fixed(32); })
+      .Case<LLVMDoubleType, LLVMX86MMXType>(
+          [](LLVMType) { return llvm::TypeSize::Fixed(64); })
+      .Case<LLVMIntegerType>([](LLVMIntegerType intTy) {
+        return llvm::TypeSize::Fixed(intTy.getBitWidth());
+      })
+      .Case<LLVMX86FP80Type>([](LLVMType) { return llvm::TypeSize::Fixed(80); })
+      .Case<LLVMPPCFP128Type, LLVMFP128Type>(
+          [](LLVMType) { return llvm::TypeSize::Fixed(128); })
+      .Case<LLVMVectorType>([](LLVMVectorType t) {
+        llvm::TypeSize elementSize =
+            getPrimitiveTypeSizeInBits(t.getElementType());
+        llvm::ElementCount elementCount = t.getElementCount();
+        assert(!elementSize.isScalable() &&
+               "vector type should have fixed-width elements");
+        return llvm::TypeSize(elementSize.getFixedSize() *
+                                  elementCount.getKnownMinValue(),
+                              elementCount.isScalable());
+      })
+      .Default([](Type ty) {
+        assert((ty.isa<LLVMVoidType, LLVMLabelType, LLVMMetadataType,
+                       LLVMTokenType, LLVMStructType, LLVMArrayType,
+                       LLVMPointerType, LLVMFunctionType>()) &&
+               "unexpected missing support for primitive type");
+        return llvm::TypeSize::Fixed(0);
+      });
 }

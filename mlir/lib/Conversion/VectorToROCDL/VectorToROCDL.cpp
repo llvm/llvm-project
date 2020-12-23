@@ -78,9 +78,9 @@ public:
     auto toLLVMTy = [&](Type t) {
       return this->getTypeConverter()->convertType(t);
     };
-    LLVM::LLVMType vecTy =
-        toLLVMTy(xferOp.getVectorType()).template cast<LLVM::LLVMType>();
-    unsigned vecWidth = vecTy.getVectorNumElements();
+    auto vecTy = toLLVMTy(xferOp.getVectorType())
+                     .template cast<LLVM::LLVMFixedVectorType>();
+    unsigned vecWidth = vecTy.getNumElements();
     Location loc = xferOp->getLoc();
 
     // The backend result vector scalarization have trouble scalarize

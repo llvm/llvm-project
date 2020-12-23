@@ -51,8 +51,8 @@ struct GPUFuncOpLowering : ConvertOpToLLVMPattern<gpu::GPUFuncOp> {
 
     // Rewrite the original GPU function to an LLVM function.
     auto funcType = typeConverter->convertType(gpuFuncOp.getType())
-                        .template cast<LLVM::LLVMType>()
-                        .getPointerElementTy();
+                        .template cast<LLVM::LLVMPointerType>()
+                        .getElementType();
 
     // Remap proper input types.
     TypeConverter::SignatureConversion signatureConversion(
@@ -94,10 +94,11 @@ struct GPUFuncOpLowering : ConvertOpToLLVMPattern<gpu::GPUFuncOp> {
       for (auto en : llvm::enumerate(workgroupBuffers)) {
         LLVM::GlobalOp global = en.value();
         Value address = rewriter.create<LLVM::AddressOfOp>(loc, global);
-        auto elementType = global.getType().getArrayElementType();
+        auto elementType =
+            global.getType().cast<LLVM::LLVMArrayType>().getElementType();
         Value memory = rewriter.create<LLVM::GEPOp>(
-            loc, elementType.getPointerTo(global.addr_space()), address,
-            ArrayRef<Value>{zero, zero});
+            loc, LLVM::LLVMPointerType::get(elementType, global.addr_space()),
+            address, ArrayRef<Value>{zero, zero});
 
         // Build a memref descriptor pointing to the buffer to plug with the
         // existing memref infrastructure. This may use more registers than
@@ -123,9 +124,10 @@ struct GPUFuncOpLowering : ConvertOpToLLVMPattern<gpu::GPUFuncOp> {
         // Explicitly drop memory space when lowering private memory
         // attributions since NVVM models it as `alloca`s in the default
         // memory space and does not support `alloca`s with addrspace(5).
-        auto ptrType = typeConverter->convertType(type.getElementType())
-                           .template cast<LLVM::LLVMType>()
-                           .getPointerTo(AllocaAddrSpace);
+        auto ptrType = LLVM::LLVMPointerType::get(
+            typeConverter->convertType(type.getElementType())
+                .template cast<LLVM::LLVMType>(),
+            AllocaAddrSpace);
         Value numElements = rewriter.create<LLVM::ConstantOp>(
             gpuFuncOp.getLoc(), int64Ty,
             rewriter.getI64IntegerAttr(type.getNumElements()));

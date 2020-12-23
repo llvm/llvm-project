@@ -79,7 +79,7 @@ struct AsyncAPI {
 
   static FunctionType executeFunctionType(MLIRContext *ctx) {
     auto hdl = LLVM::LLVMType::getInt8PtrTy(ctx);
-    auto resume = resumeFunctionType(ctx).getPointerTo();
+    auto resume = LLVM::LLVMPointerType::get(resumeFunctionType(ctx));
     return FunctionType::get(ctx, {hdl, resume}, {});
   }
 
@@ -91,13 +91,13 @@ struct AsyncAPI {
 
   static FunctionType awaitAndExecuteFunctionType(MLIRContext *ctx) {
     auto hdl = LLVM::LLVMType::getInt8PtrTy(ctx);
-    auto resume = resumeFunctionType(ctx).getPointerTo();
+    auto resume = LLVM::LLVMPointerType::get(resumeFunctionType(ctx));
     return FunctionType::get(ctx, {TokenType::get(ctx), hdl, resume}, {});
   }
 
   static FunctionType awaitAllAndExecuteFunctionType(MLIRContext *ctx) {
     auto hdl = LLVM::LLVMType::getInt8PtrTy(ctx);
-    auto resume = resumeFunctionType(ctx).getPointerTo();
+    auto resume = LLVM::LLVMPointerType::get(resumeFunctionType(ctx));
     return FunctionType::get(ctx, {GroupType::get(ctx), hdl, resume}, {});
   }
 
@@ -507,7 +507,7 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
   // A pointer to coroutine resume intrinsic wrapper.
   auto resumeFnTy = AsyncAPI::resumeFunctionType(ctx);
   auto resumePtr = builder.create<LLVM::AddressOfOp>(
-      loc, resumeFnTy.getPointerTo(), kResume);
+      loc, LLVM::LLVMPointerType::get(resumeFnTy), kResume);
 
   // Save the coroutine state: @llvm.coro.save
   auto coroSave = builder.create<LLVM::CallOp>(
@@ -750,7 +750,7 @@ public:
       // A pointer to coroutine resume intrinsic wrapper.
       auto resumeFnTy = AsyncAPI::resumeFunctionType(ctx);
       auto resumePtr = builder.create<LLVM::AddressOfOp>(
-          loc, resumeFnTy.getPointerTo(), kResume);
+          loc, LLVM::LLVMPointerType::get(resumeFnTy), kResume);
 
       // Save the coroutine state: @llvm.coro.save
       auto coroSave = builder.create<LLVM::CallOp>(

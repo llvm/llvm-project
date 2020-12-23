@@ -55,14 +55,14 @@ public:
   FunctionCallBuilder(StringRef functionName, LLVM::LLVMType returnType,
                       ArrayRef<LLVM::LLVMType> argumentTypes)
       : functionName(functionName),
-        functionType(LLVM::LLVMType::getFunctionTy(returnType, argumentTypes,
-                                                   /*isVarArg=*/false)) {}
+        functionType(LLVM::LLVMFunctionType::get(returnType, argumentTypes,
+                                                 /*isVarArg=*/false)) {}
   LLVM::CallOp create(Location loc, OpBuilder &builder,
                       ArrayRef<Value> arguments) const;
 
 private:
   StringRef functionName;
-  LLVM::LLVMType functionType;
+  LLVM::LLVMFunctionType functionType;
 };
 
 template <typename OpTy>
@@ -76,7 +76,8 @@ protected:
 
   LLVM::LLVMType llvmVoidType = LLVM::LLVMType::getVoidTy(context);
   LLVM::LLVMType llvmPointerType = LLVM::LLVMType::getInt8PtrTy(context);
-  LLVM::LLVMType llvmPointerPointerType = llvmPointerType.getPointerTo();
+  LLVM::LLVMType llvmPointerPointerType =
+      LLVM::LLVMPointerType::get(llvmPointerType);
   LLVM::LLVMType llvmInt8Type = LLVM::LLVMType::getInt8Ty(context);
   LLVM::LLVMType llvmInt32Type = LLVM::LLVMType::getInt32Ty(context);
   LLVM::LLVMType llvmInt64Type = LLVM::LLVMType::getInt64Ty(context);
@@ -312,7 +313,7 @@ LLVM::CallOp FunctionCallBuilder::create(Location loc, OpBuilder &builder,
         .create<LLVM::LLVMFuncOp>(loc, functionName, functionType);
   }();
   return builder.create<LLVM::CallOp>(
-      loc, const_cast<LLVM::LLVMType &>(functionType).getFunctionResultType(),
+      loc, const_cast<LLVM::LLVMFunctionType &>(functionType).getReturnType(),
       builder.getSymbolRefAttr(function), arguments);
 }
 
@@ -518,7 +519,7 @@ Value ConvertLaunchFuncOpToGpuRuntimeCallPattern::generateParamsArray(
   auto one = builder.create<LLVM::ConstantOp>(loc, llvmInt32Type,
                                               builder.getI32IntegerAttr(1));
   auto structPtr = builder.create<LLVM::AllocaOp>(
-      loc, structType.getPointerTo(), one, /*alignment=*/0);
+      loc, LLVM::LLVMPointerType::get(structType), one, /*alignment=*/0);
   auto arraySize = builder.create<LLVM::ConstantOp>(
       loc, llvmInt32Type, builder.getI32IntegerAttr(numArguments));
   auto arrayPtr = builder.create<LLVM::AllocaOp>(loc, llvmPointerPointerType,
@@ -529,7 +530,7 @@ Value ConvertLaunchFuncOpToGpuRuntimeCallPattern::generateParamsArray(
     auto index = builder.create<LLVM::ConstantOp>(
         loc, llvmInt32Type, builder.getI32IntegerAttr(en.index()));
     auto fieldPtr = builder.create<LLVM::GEPOp>(
-        loc, argumentTypes[en.index()].getPointerTo(), structPtr,
+        loc, LLVM::LLVMPointerType::get(argumentTypes[en.index()]), structPtr,
         ArrayRef<Value>{zero, index.getResult()});
     builder.create<LLVM::StoreOp>(loc, en.value(), fieldPtr);
     auto elementPtr = builder.create<LLVM::GEPOp>(loc, llvmPointerPointerType,
