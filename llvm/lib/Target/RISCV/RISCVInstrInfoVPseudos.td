@@ -898,10 +898,11 @@ multiclass VPseudoTernaryW_VV {
     defm _VV : VPseudoTernary<m.wvrclass, m.vrclass, m.vrclass, m, constraint>;
 }
 
-multiclass VPseudoTernaryW_VX {
+multiclass VPseudoTernaryW_VX<bit IsFloat> {
   defvar constraint = "@earlyclobber $rd";
   foreach m = MxList.m in
-    defm _VX : VPseudoTernary<m.wvrclass, GPR, m.vrclass, m, constraint>;
+    defm !if(IsFloat, "_VF", "_VX")  : VPseudoTernary<m.wvrclass,
+                             !if(IsFloat, FPR32, GPR), m.vrclass, m, constraint>;
 }
 
 multiclass VPseudoTernaryV_VI<Operand ImmType = simm5, string Constraint = ""> {
@@ -919,9 +920,9 @@ multiclass VPseudoTernaryV_VX_VI<Operand ImmType = simm5, string Constraint = ""
   defm "" : VPseudoTernaryV_VI<ImmType, Constraint>;
 }
 
-multiclass VPseudoTernaryW_VV_VX {
+multiclass VPseudoTernaryW_VV_VX<bit IsFloat = false> {
   defm "" : VPseudoTernaryW_VV;
-  defm "" : VPseudoTernaryW_VX;
+  defm "" : VPseudoTernaryW_VX<IsFloat>;
 }
 
 multiclass VPseudoBinaryM_VV_VX_VI {
@@ -1631,10 +1632,11 @@ multiclass VPatTernaryW_VX<string intrinsic, string instruction,
   foreach vtiToWti = vtilist in {
     defvar vti = vtiToWti.Vti;
     defvar wti = vtiToWti.Wti;
-    defm : VPatTernary<intrinsic, instruction, "VX",
-                      wti.Vector, XLenVT, vti.Vector,
-                      vti.Mask, vti.SEW, vti.LMul,
-                      wti.RegClass, vti.ScalarRegClass, vti.RegClass>;
+    defm : VPatTernary<intrinsic, instruction,
+                       !if(!eq(vti.Scalar, XLenVT), "VX", "VF"),
+                       wti.Vector, vti.Scalar, vti.Vector,
+                       vti.Mask, vti.SEW, vti.LMul,
+                       wti.RegClass, vti.ScalarRegClass, vti.RegClass>;
   }
 }
 
@@ -1864,7 +1866,7 @@ defm PseudoVNMSUB      : VPseudoTernaryV_VV_VX_AAXA;
 defm PseudoVWMACCU     : VPseudoTernaryW_VV_VX;
 defm PseudoVWMACC      : VPseudoTernaryW_VV_VX;
 defm PseudoVWMACCSU    : VPseudoTernaryW_VV_VX;
-defm PseudoVWMACCUS    : VPseudoTernaryW_VX;
+defm PseudoVWMACCUS    : VPseudoTernaryW_VX</*IsFloat*/false>;
 
 //===----------------------------------------------------------------------===//
 // 12.15. Vector Integer Merge Instructions
@@ -1961,6 +1963,14 @@ defm PseudoVFMADD      : VPseudoTernaryV_VV_VX_AAXA</*IsFloat*/true>;
 defm PseudoVFNMADD     : VPseudoTernaryV_VV_VX_AAXA</*IsFloat*/true>;
 defm PseudoVFMSUB      : VPseudoTernaryV_VV_VX_AAXA</*IsFloat*/true>;
 defm PseudoVFNMSUB     : VPseudoTernaryV_VV_VX_AAXA</*IsFloat*/true>;
+
+//===----------------------------------------------------------------------===//
+// 14.7. Vector Widening Floating-Point Fused Multiply-Add Instructions
+//===----------------------------------------------------------------------===//
+defm PseudoVFWMACC     : VPseudoTernaryW_VV_VX</*IsFloat*/true>;
+defm PseudoVFWNMACC    : VPseudoTernaryW_VV_VX</*IsFloat*/true>;
+defm PseudoVFWMSAC     : VPseudoTernaryW_VV_VX</*IsFloat*/true>;
+defm PseudoVFWNMSAC    : VPseudoTernaryW_VV_VX</*IsFloat*/true>;
 
 //===----------------------------------------------------------------------===//
 // 14.9. Vector Floating-Point Min/Max Instructions
@@ -2372,6 +2382,14 @@ defm "" : VPatTernaryV_VV_VX_AAXA<"int_riscv_vfmadd", "PseudoVFMADD", AllFloatVe
 defm "" : VPatTernaryV_VV_VX_AAXA<"int_riscv_vfnmadd", "PseudoVFNMADD", AllFloatVectors>;
 defm "" : VPatTernaryV_VV_VX_AAXA<"int_riscv_vfmsub", "PseudoVFMSUB", AllFloatVectors>;
 defm "" : VPatTernaryV_VV_VX_AAXA<"int_riscv_vfnmsub", "PseudoVFNMSUB", AllFloatVectors>;
+
+//===----------------------------------------------------------------------===//
+// 14.7. Vector Widening Floating-Point Fused Multiply-Add Instructions
+//===----------------------------------------------------------------------===//
+defm "" : VPatTernaryW_VV_VX<"int_riscv_vfwmacc", "PseudoVFWMACC", AllWidenableFloatVectors>;
+defm "" : VPatTernaryW_VV_VX<"int_riscv_vfwnmacc", "PseudoVFWNMACC", AllWidenableFloatVectors>;
+defm "" : VPatTernaryW_VV_VX<"int_riscv_vfwmsac", "PseudoVFWMSAC", AllWidenableFloatVectors>;
+defm "" : VPatTernaryW_VV_VX<"int_riscv_vfwnmsac", "PseudoVFWNMSAC", AllWidenableFloatVectors>;
 
 //===----------------------------------------------------------------------===//
 // 14.9. Vector Floating-Point Min/Max Instructions
