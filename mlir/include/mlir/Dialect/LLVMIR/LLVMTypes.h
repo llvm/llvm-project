@@ -53,9 +53,7 @@ class LLVMIntegerType;
 ///
 /// The LLVM dialect in MLIR fully reflects the LLVM IR type system, prodiving a
 /// separate MLIR type for each LLVM IR type. All types are represented as
-/// separate subclasses and are compatible with the isa/cast infrastructure. For
-/// convenience, the base class provides most of the APIs available on
-/// llvm::Type in addition to MLIR-compatible APIs.
+/// separate subclasses and are compatible with the isa/cast infrastructure.
 ///
 /// The LLVM dialect type system is closed: parametric types can only refer to
 /// other LLVM dialect types. This is consistent with LLVM IR and enables a more
@@ -64,6 +62,11 @@ class LLVMIntegerType;
 /// Similarly to other MLIR types, LLVM dialect types are owned by the MLIR
 /// context, have an immutable identifier (for most types except identified
 /// structs, the entire type is the identifier) and are thread-safe.
+///
+/// This class is a thin common base class for different types available in the
+/// LLVM dialect. It intentionally does not provide the API similar to
+/// llvm::Type to avoid confusion and highlight potentially expensive operations
+/// (e.g., type creation in MLIR takes a lock, so it's better to cache types).
 class LLVMType : public Type {
 public:
   /// Inherit base constructors.
@@ -79,98 +82,6 @@ public:
   static bool classof(Type type);
 
   LLVMDialect &getDialect();
-
-  /// Utilities used to generate floating point types.
-  static LLVMType getDoubleTy(MLIRContext *context);
-  static LLVMType getFloatTy(MLIRContext *context);
-  static LLVMType getBFloatTy(MLIRContext *context);
-  static LLVMType getHalfTy(MLIRContext *context);
-  static LLVMType getFP128Ty(MLIRContext *context);
-  static LLVMType getX86_FP80Ty(MLIRContext *context);
-
-  /// Utilities used to generate integer types.
-  static LLVMType getIntNTy(MLIRContext *context, unsigned numBits);
-  static LLVMType getInt1Ty(MLIRContext *context) {
-    return getIntNTy(context, /*numBits=*/1);
-  }
-  static LLVMType getInt8Ty(MLIRContext *context) {
-    return getIntNTy(context, /*numBits=*/8);
-  }
-  static LLVMType getInt8PtrTy(MLIRContext *context);
-  static LLVMType getInt16Ty(MLIRContext *context) {
-    return getIntNTy(context, /*numBits=*/16);
-  }
-  static LLVMType getInt32Ty(MLIRContext *context) {
-    return getIntNTy(context, /*numBits=*/32);
-  }
-  static LLVMType getInt64Ty(MLIRContext *context) {
-    return getIntNTy(context, /*numBits=*/64);
-  }
-
-  /// Utilities used to generate other miscellaneous types.
-  static LLVMType getArrayTy(LLVMType elementType, uint64_t numElements);
-  static LLVMType getFunctionTy(LLVMType result, ArrayRef<LLVMType> params,
-                                bool isVarArg);
-  static LLVMType getFunctionTy(LLVMType result, bool isVarArg) {
-    return getFunctionTy(result, llvm::None, isVarArg);
-  }
-  static LLVMType getStructTy(MLIRContext *context, ArrayRef<LLVMType> elements,
-                              bool isPacked = false);
-  static LLVMType getStructTy(MLIRContext *context, bool isPacked = false) {
-    return getStructTy(context, llvm::None, isPacked);
-  }
-  template <typename... Args>
-  static typename std::enable_if<llvm::are_base_of<LLVMType, Args...>::value,
-                                 LLVMType>::type
-  getStructTy(LLVMType elt1, Args... elts) {
-    SmallVector<LLVMType, 8> fields({elt1, elts...});
-    return getStructTy(elt1.getContext(), fields);
-  }
-  static LLVMType getVectorTy(LLVMType elementType, unsigned numElements);
-
-  /// Void type utilities.
-  static LLVMType getVoidTy(MLIRContext *context);
-
-  // Creation and setting of LLVM's identified struct types
-  static LLVMType createStructTy(MLIRContext *context,
-                                 ArrayRef<LLVMType> elements,
-                                 Optional<StringRef> name,
-                                 bool isPacked = false);
-
-  static LLVMType createStructTy(MLIRContext *context,
-                                 Optional<StringRef> name) {
-    return createStructTy(context, llvm::None, name);
-  }
-
-  static LLVMType createStructTy(ArrayRef<LLVMType> elements,
-                                 Optional<StringRef> name,
-                                 bool isPacked = false) {
-    assert(!elements.empty() &&
-           "This method may not be invoked with an empty list");
-    LLVMType ele0 = elements.front();
-    return createStructTy(ele0.getContext(), elements, name, isPacked);
-  }
-
-  template <typename... Args>
-  static typename std::enable_if_t<llvm::are_base_of<LLVMType, Args...>::value,
-                                   LLVMType>
-  createStructTy(StringRef name, LLVMType elt1, Args... elts) {
-    SmallVector<LLVMType, 8> fields({elt1, elts...});
-    Optional<StringRef> opt_name(name);
-    return createStructTy(elt1.getContext(), fields, opt_name);
-  }
-
-  static LLVMType setStructTyBody(LLVMType structType,
-                                  ArrayRef<LLVMType> elements,
-                                  bool isPacked = false);
-
-  template <typename... Args>
-  static typename std::enable_if_t<llvm::are_base_of<LLVMType, Args...>::value,
-                                   LLVMType>
-  setStructTyBody(LLVMType structType, LLVMType elt1, Args... elts) {
-    SmallVector<LLVMType, 8> fields({elt1, elts...});
-    return setStructTyBody(structType, fields);
-  }
 };
 
 //===----------------------------------------------------------------------===//
@@ -385,6 +296,14 @@ public:
   /// similarly to the rest of MLIR type ::get methods.
   static LLVMStructType getIdentified(MLIRContext *context, StringRef name);
   static LLVMStructType getIdentifiedChecked(Location loc, StringRef name);
+
+  /// Gets a new identified struct with the given body. The body _cannot_ be
+  /// changed later. If a struct with the given name already exists, renames
+  /// the struct by appending a `.` followed by a number to the name. Renaming
+  /// happens even if the existing struct has the same body.
+  static LLVMStructType getNewIdentified(MLIRContext *context, StringRef name,
+                                         ArrayRef<LLVMType> elements,
+                                         bool isPacked = false);
 
   /// Gets or creates a literal struct with the given body in the provided
   /// context.
