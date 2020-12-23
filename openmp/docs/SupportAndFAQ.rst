@@ -53,7 +53,7 @@ Q: How to build an OpenMP offload capable compiler?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 To build an *effective* OpenMP offload capable compiler, only one extra CMake
-option, `LLVM_ENABLE_RUNTIMES="OPENMP"`, is needed when building LLVM (Generic
+option, `LLVM_ENABLE_RUNTIMES="openmp"`, is needed when building LLVM (Generic
 information about building LLVM is available `here <https://llvm.org/docs/GettingStarted.html>`__.).
 Make sure all backends that are targeted by OpenMP to be enabled. By default,
 Clang will be build with all backends enabled.
