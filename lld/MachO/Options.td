@@ -18,6 +18,8 @@ def reproduce: Separate<["--"], "reproduce">;
 def reproduce_eq: Joined<["--"], "reproduce=">,
     Alias<!cast<Separate>(reproduce)>,
     HelpText<"Write tar file containing inputs and command to reproduce link">;
+def version: Flag<["--"], "version">,
+    HelpText<"Display the version number and exit">;
 
 
 // This is a complete Options.td compiled from Apple's ld(1) manpage
@@ -508,7 +510,7 @@ def bitcode_symbol_map : Separate<["-"], "bitcode_symbol_map">,
 def grp_rare : OptionGroup<"rare">, HelpText<"RARELY USED">;
 
 def v : Flag<["-"], "v">,
-     HelpText<"Print the linker version">,
+     HelpText<"Print the linker version and search paths and exit">,
      Group<grp_rare>;
 def version_details : Flag<["-"], "version_details">,
      HelpText<"Print the linker version in JSON form">,
