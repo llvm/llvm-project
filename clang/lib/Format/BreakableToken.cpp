@@ -41,8 +41,8 @@ static bool IsBlank(char C) {
 
 static StringRef getLineCommentIndentPrefix(StringRef Comment,
                                             const FormatStyle &Style) {
-  static const char *const KnownCStylePrefixes[] = {"///<", "//!<", "///", "//",
-                                                    "//!"};
+  static const char *const KnownCStylePrefixes[] = {"///<", "//!<", "///",
+                                                    "//",   "//!",  "//:"};
   static const char *const KnownTextProtoPrefixes[] = {"//", "#", "##", "###",
                                                        "####"};
   ArrayRef<const char *> KnownPrefixes(KnownCStylePrefixes);
