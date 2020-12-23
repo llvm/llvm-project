@@ -185,6 +185,16 @@ void SILowerSGPRSpills::calculateSaveRestoreBlocks(MachineFunction &MF) {
   }
 }
 
+// TODO: To support shrink wrapping, this would need to copy
+// PrologEpilogInserter's updateLiveness.
+static void updateLiveness(MachineFunction &MF, ArrayRef<CalleeSavedInfo> CSI) {
+  MachineBasicBlock &EntryBB = MF.front();
+
+  for (const CalleeSavedInfo &CSIReg : CSI)
+    EntryBB.addLiveIn(CSIReg.getReg());
+  EntryBB.sortUniqueLiveIns();
+}
+
 bool SILowerSGPRSpills::spillCalleeSavedRegs(MachineFunction &MF) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const Function &F = MF.getFunction();
@@ -221,6 +231,10 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(MachineFunction &MF) {
     if (!CSI.empty()) {
       for (MachineBasicBlock *SaveBlock : SaveBlocks)
         insertCSRSaves(*SaveBlock, CSI, LIS);
+
+      // Add live ins to save blocks.
+      assert(SaveBlocks.size() == 1 && "shrink wrapping not fully implemented");
+      updateLiveness(MF, CSI);
 
       for (MachineBasicBlock *RestoreBlock : RestoreBlocks)
         insertCSRRestores(*RestoreBlock, CSI, LIS);
