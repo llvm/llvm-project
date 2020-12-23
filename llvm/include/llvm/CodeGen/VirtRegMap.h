@@ -151,7 +151,7 @@ class TargetInstrInfo;
     bool hasKnownPreference(Register VirtReg);
 
     /// records virtReg is a split live interval from SReg.
-    void setIsSplitFromReg(Register virtReg, unsigned SReg) {
+    void setIsSplitFromReg(Register virtReg, Register SReg) {
       Virt2SplitMap[virtReg.id()] = SReg;
       if (hasShape(SReg)) {
         Virt2ShapeMap[virtReg.id()] = getShape(SReg);
@@ -159,7 +159,7 @@ class TargetInstrInfo;
     }
 
     /// returns the live interval virtReg is split from.
-    unsigned getPreSplitReg(Register virtReg) const {
+    Register getPreSplitReg(Register virtReg) const {
       return Virt2SplitMap[virtReg.id()];
     }
 
@@ -167,8 +167,8 @@ class TargetInstrInfo;
     /// from through splitting.
     /// A register that was not created by splitting is its own original.
     /// This operation is idempotent.
-    unsigned getOriginal(unsigned VirtReg) const {
-      unsigned Orig = getPreSplitReg(VirtReg);
+    Register getOriginal(Register VirtReg) const {
+      Register Orig = getPreSplitReg(VirtReg);
       return Orig ? Orig : VirtReg;
     }
 
