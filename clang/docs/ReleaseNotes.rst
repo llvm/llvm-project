@@ -296,6 +296,10 @@ clang-format
 - Option ``SpaceBeforeCaseColon`` has been added to add a space before the
   colon in a case or default statement.
 
+- Option ``StatementAttributeLikeMacros`` has been added to declare
+  macros which are not parsed as a type in front of a statement. See
+  the documentation for an example.
+
 
 libclang
 --------
