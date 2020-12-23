@@ -885,9 +885,10 @@ multiclass VPseudoTernaryV_VX<string Constraint = ""> {
     defm _VX : VPseudoTernary<m.vrclass, m.vrclass, GPR, m, Constraint>;
 }
 
-multiclass VPseudoTernaryV_VX_AAXA<string Constraint = ""> {
+multiclass VPseudoTernaryV_VX_AAXA<bit IsFloat, string Constraint = ""> {
   foreach m = MxList.m in
-    defm _VX : VPseudoTernary<m.vrclass, GPR, m.vrclass, m, Constraint>;
+    defm !if(IsFloat, "_VF", "_VX") : VPseudoTernary<m.vrclass,
+                             !if(IsFloat, FPR32, GPR), m.vrclass, m, Constraint>;
 }
 
 multiclass VPseudoTernaryW_VV {
@@ -907,9 +908,9 @@ multiclass VPseudoTernaryV_VI<Operand ImmType = simm5, string Constraint = ""> {
     defm _VI : VPseudoTernary<m.vrclass, m.vrclass, ImmType, m, Constraint>;
 }
 
-multiclass VPseudoTernaryV_VV_VX_AAXA<string Constraint = ""> {
+multiclass VPseudoTernaryV_VV_VX_AAXA<bit IsFloat = 0, string Constraint = ""> {
   defm "" : VPseudoTernaryV_VV<Constraint>;
-  defm "" : VPseudoTernaryV_VX_AAXA<Constraint>;
+  defm "" : VPseudoTernaryV_VX_AAXA<IsFloat, Constraint>;
 }
 
 multiclass VPseudoTernaryV_VX_VI<Operand ImmType = simm5, string Constraint = ""> {
@@ -1593,7 +1594,8 @@ multiclass VPatTernaryV_VX<string intrinsic, string instruction,
 multiclass VPatTernaryV_VX_AAXA<string intrinsic, string instruction,
                            list<VTypeInfo> vtilist> {
   foreach vti = vtilist in
-    defm : VPatTernary<intrinsic, instruction, "VX",
+    defm : VPatTernary<intrinsic, instruction,
+                       !if(!eq(vti.Scalar, XLenVT), "VX", "VF"),
                        vti.Vector, vti.Scalar, vti.Vector, vti.Mask,
                        vti.SEW, vti.LMul, vti.RegClass,
                        vti.ScalarRegClass, vti.RegClass>;
@@ -1938,6 +1940,18 @@ defm PseudoVFRDIV      : VPseudoBinaryV_VX</*IsFloat=*/1>;
 // 14.5. Vector Widening Floating-Point Multiply
 //===----------------------------------------------------------------------===//
 defm PseudoVFWMUL      : VPseudoBinaryW_VV_VX</*IsFloat=*/1>;
+
+//===----------------------------------------------------------------------===//
+// 14.6. Vector Single-Width Floating-Point Fused Multiply-Add Instructions
+//===----------------------------------------------------------------------===//
+defm PseudoVFMACC      : VPseudoTernaryV_VV_VX_AAXA</*IsFloat*/true>;
+defm PseudoVFNMACC     : VPseudoTernaryV_VV_VX_AAXA</*IsFloat*/true>;
+defm PseudoVFMSAC      : VPseudoTernaryV_VV_VX_AAXA</*IsFloat*/true>;
+defm PseudoVFNMSAC     : VPseudoTernaryV_VV_VX_AAXA</*IsFloat*/true>;
+defm PseudoVFMADD      : VPseudoTernaryV_VV_VX_AAXA</*IsFloat*/true>;
+defm PseudoVFNMADD     : VPseudoTernaryV_VV_VX_AAXA</*IsFloat*/true>;
+defm PseudoVFMSUB      : VPseudoTernaryV_VV_VX_AAXA</*IsFloat*/true>;
+defm PseudoVFNMSUB     : VPseudoTernaryV_VV_VX_AAXA</*IsFloat*/true>;
 
 //===----------------------------------------------------------------------===//
 // 14.12. Vector Floating-Point Sign-Injection Instructions
@@ -2319,6 +2333,18 @@ defm "" : VPatBinaryV_VX<"int_riscv_vfrdiv", "PseudoVFRDIV", AllFloatVectors>;
 // 14.5. Vector Widening Floating-Point Multiply
 //===----------------------------------------------------------------------===//
 defm "" : VPatBinaryW_VV_VX<"int_riscv_vfwmul", "PseudoVFWMUL", AllWidenableFloatVectors>;
+
+//===----------------------------------------------------------------------===//
+// 14.6. Vector Single-Width Floating-Point Fused Multiply-Add Instructions
+//===----------------------------------------------------------------------===//
+defm "" : VPatTernaryV_VV_VX_AAXA<"int_riscv_vfmacc", "PseudoVFMACC", AllFloatVectors>;
+defm "" : VPatTernaryV_VV_VX_AAXA<"int_riscv_vfnmacc", "PseudoVFNMACC", AllFloatVectors>;
+defm "" : VPatTernaryV_VV_VX_AAXA<"int_riscv_vfmsac", "PseudoVFMSAC", AllFloatVectors>;
+defm "" : VPatTernaryV_VV_VX_AAXA<"int_riscv_vfnmsac", "PseudoVFNMSAC", AllFloatVectors>;
+defm "" : VPatTernaryV_VV_VX_AAXA<"int_riscv_vfmadd", "PseudoVFMADD", AllFloatVectors>;
+defm "" : VPatTernaryV_VV_VX_AAXA<"int_riscv_vfnmadd", "PseudoVFNMADD", AllFloatVectors>;
+defm "" : VPatTernaryV_VV_VX_AAXA<"int_riscv_vfmsub", "PseudoVFMSUB", AllFloatVectors>;
+defm "" : VPatTernaryV_VV_VX_AAXA<"int_riscv_vfnmsub", "PseudoVFNMSUB", AllFloatVectors>;
 
 //===----------------------------------------------------------------------===//
 // 14.12. Vector Floating-Point Sign-Injection Instructions
