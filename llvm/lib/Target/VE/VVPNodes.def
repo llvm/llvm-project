@@ -27,6 +27,7 @@
 // Integer arithmetic.
 ADD_BINARY_VVP_OP(VVP_ADD,ADD)
 
+ADD_BINARY_VVP_OP(VVP_AND,AND)
 
 #undef ADD_BINARY_VVP_OP
 #undef ADD_VVP_OP

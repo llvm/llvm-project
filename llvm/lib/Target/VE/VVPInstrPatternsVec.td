@@ -66,3 +66,6 @@ multiclass VectorBinaryArith_ShortLong<
 defm : VectorBinaryArith_ShortLong<c_vvp_add,
                                    i64, v256i64, "VADDSL",
                                    i32, v256i32, "VADDSWSX">;
+defm : VectorBinaryArith_ShortLong<c_vvp_and,
+                                   i64, v256i64, "VAND",
+                                   i32, v256i32, "PVANDLO">;
