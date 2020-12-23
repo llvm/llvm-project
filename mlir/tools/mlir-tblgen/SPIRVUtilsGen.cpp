@@ -647,8 +647,7 @@ static void emitDecorationSerialization(const Operator &op, StringRef tabs,
     // All non-argument attributes translated into OpDecorate instruction
     os << tabs << formatv("for (auto attr : {0}->getAttrs()) {{\n", opVar);
     os << tabs
-       << formatv("  if (llvm::any_of({0}, [&](StringRef elided)", elidedAttrs);
-    os << " {return attr.first == elided;})) {\n";
+       << formatv("  if (llvm::is_contained({0}, attr.first)) {{", elidedAttrs);
     os << tabs << "    continue;\n";
     os << tabs << "  }\n";
     os << tabs
@@ -666,14 +665,35 @@ static void emitSerializationFunction(const Record *attrClass,
                                       const Record *record, const Operator &op,
                                       raw_ostream &os) {
   // If the record has 'autogenSerialization' set to 0, nothing to do
-  if (!record->getValueAsBit("autogenSerialization")) {
+  if (!record->getValueAsBit("autogenSerialization"))
     return;
-  }
+
   StringRef opVar("op"), operands("operands"), elidedAttrs("elidedAttrs"),
       resultID("resultID");
+
   os << formatv(
       "template <> LogicalResult\nSerializer::processOp<{0}>({0} {1}) {{\n",
       op.getQualCppClassName(), opVar);
+
+  // Special case for ops without attributes in TableGen definitions
+  if (op.getNumAttributes() == 0 && op.getNumVariableLengthOperands() == 0) {
+    std::string extInstSet;
+    std::string opcode;
+    if (record->isSubClassOf("SPV_ExtInstOp")) {
+      extInstSet =
+          formatv("\"{0}\"", record->getValueAsString("extendedInstSetName"));
+      opcode = std::to_string(record->getValueAsInt("extendedInstOpcode"));
+    } else {
+      extInstSet = "\"\"";
+      opcode = formatv("static_cast<uint32_t>(spirv::Opcode::{0})",
+                       record->getValueAsString("spirvOpName"));
+    }
+
+    os << formatv("  return processOpWithoutGrammarAttr({0}, {1}, {2});\n}\n\n",
+                  opVar, extInstSet, opcode);
+    return;
+  }
+
   os << formatv("  SmallVector<uint32_t, 4> {0};\n", operands);
   os << formatv("  SmallVector<StringRef, 2> {0};\n", elidedAttrs);
 
