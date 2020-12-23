@@ -271,16 +271,9 @@ define amdgpu_kernel void @vload2_private(i16 addrspace(1)* nocapture readonly %
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    scratch_store_short off, v0, vcc_hi offset:8
 ; FLATSCR-NEXT:    s_mov_b32 vcc_hi, 0
-; FLATSCR-NEXT:    scratch_load_ushort v0, off, vcc_hi offset:4
+; FLATSCR-NEXT:    scratch_load_dword v0, off, vcc_hi offset:4
 ; FLATSCR-NEXT:    s_mov_b32 vcc_hi, 0
-; FLATSCR-NEXT:    scratch_load_ushort v3, off, vcc_hi offset:6
-; FLATSCR-NEXT:    s_mov_b32 vcc_hi, 0
-; FLATSCR-NEXT:    s_waitcnt vmcnt(1)
-; FLATSCR-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR-NEXT:    v_mov_b32_e32 v1, v3
-; FLATSCR-NEXT:    scratch_load_short_d16_hi v1, off, vcc_hi offset:8
-; FLATSCR-NEXT:    v_lshl_or_b32 v0, v3, 16, v0
+; FLATSCR-NEXT:    scratch_load_dword v1, off, vcc_hi offset:6
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    global_store_dwordx2 v2, v[0:1], s[2:3]
 ; FLATSCR-NEXT:    s_endpgm
