@@ -6772,7 +6772,8 @@ class HorizontalReduction {
       // in this case.
       // Do not perform analysis of remaining operands of ParentStackElem.first
       // instruction, this whole instruction is an extra argument.
-      ParentStackElem.second = ParentStackElem.first->getNumOperands();
+      OperationData OpData = getOperationData(ParentStackElem.first);
+      ParentStackElem.second = OpData.getNumberOfOperands();
     } else {
       // We ran into something like:
       // ParentStackElem.first += ... + ExtraArg + ...
