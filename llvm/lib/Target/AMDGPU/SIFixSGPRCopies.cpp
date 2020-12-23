@@ -213,8 +213,12 @@ static bool tryChangeVGPRtoSGPRinCopy(MachineInstr &MI,
     if (UseMI == &MI)
       continue;
     if (MO.isDef() || UseMI->getParent() != MI.getParent() ||
-        UseMI->getOpcode() <= TargetOpcode::GENERIC_OP_END ||
-        !TII->isOperandLegal(*UseMI, UseMI->getOperandNo(&MO), &Src))
+        UseMI->getOpcode() <= TargetOpcode::GENERIC_OP_END)
+      return false;
+
+    unsigned OpIdx = UseMI->getOperandNo(&MO);
+    if (OpIdx >= UseMI->getDesc().getNumOperands() ||
+        !TII->isOperandLegal(*UseMI, OpIdx, &Src))
       return false;
   }
   // Change VGPR to SGPR destination.
