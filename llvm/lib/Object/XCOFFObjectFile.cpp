@@ -31,7 +31,7 @@ static const uint16_t NoRelMask = 0x0001;
 template <typename T>
 static Expected<const T *> getObject(MemoryBufferRef M, const void *Ptr,
                                      const uint64_t Size = sizeof(T)) {
-  uintptr_t Addr = uintptr_t(Ptr);
+  uintptr_t Addr = reinterpret_cast<uintptr_t>(Ptr);
   if (Error E = Binary::checkOffset(M, Addr, Size))
     return std::move(E);
   return reinterpret_cast<const T *>(Addr);
@@ -283,7 +283,7 @@ XCOFFObjectFile::getSectionContents(DataRefImpl Sec) const {
 
   const uint8_t * ContentStart = base() + OffsetToRaw;
   uint64_t SectionSize = getSectionSize(Sec);
-  if (checkOffset(Data, uintptr_t(ContentStart), SectionSize))
+  if (checkOffset(Data, reinterpret_cast<uintptr_t>(ContentStart), SectionSize))
     return make_error<BinaryError>();
 
   return makeArrayRef(ContentStart,SectionSize);

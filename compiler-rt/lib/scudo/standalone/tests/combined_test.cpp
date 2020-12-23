@@ -47,7 +47,7 @@ bool isPrimaryAllocation(scudo::uptr Size, scudo::uptr Alignment) {
 template <class AllocatorT>
 bool isTaggedAllocation(AllocatorT *Allocator, scudo::uptr Size,
                         scudo::uptr Alignment) {
-  return Allocator->useMemoryTagging() &&
+  return Allocator->useMemoryTaggingTestOnly() &&
          scudo::systemDetectsMemoryTagFaultsTestOnly() &&
          isPrimaryAllocation<AllocatorT>(Size, Alignment);
 }
@@ -162,7 +162,7 @@ template <class Config> static void testAllocator() {
       for (scudo::uptr I = 0; I < Size; I++) {
         unsigned char V = (reinterpret_cast<unsigned char *>(P))[I];
         if (isPrimaryAllocation<AllocatorT>(Size, 1U << MinAlignLog) &&
-            !Allocator->useMemoryTagging())
+            !Allocator->useMemoryTaggingTestOnly())
           ASSERT_EQ(V, scudo::PatternFillByte);
         else
           ASSERT_TRUE(V == scudo::PatternFillByte || V == 0);
@@ -248,7 +248,7 @@ template <class Config> static void testAllocator() {
 
   Allocator->releaseToOS();
 
-  if (Allocator->useMemoryTagging() &&
+  if (Allocator->useMemoryTaggingTestOnly() &&
       scudo::systemDetectsMemoryTagFaultsTestOnly()) {
     // Check that use-after-free is detected.
     for (scudo::uptr SizeLog = 0U; SizeLog <= 20U; SizeLog++) {
@@ -493,7 +493,7 @@ TEST(ScudoCombinedTest, OddEven) {
   using SizeClassMap = AllocatorT::PrimaryT::SizeClassMap;
   auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
 
-  if (!Allocator->useMemoryTagging())
+  if (!Allocator->useMemoryTaggingTestOnly())
     return;
 
   auto CheckOddEven = [](scudo::uptr P1, scudo::uptr P2) {

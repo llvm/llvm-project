@@ -673,10 +673,10 @@ multiclass VPseudoBinaryV_VV {
     defm _VV : VPseudoBinary<m.vrclass, m.vrclass, m.vrclass, m>;
 }
 
-multiclass VPseudoBinaryV_VX<bit IsFloat> {
+multiclass VPseudoBinaryV_VX<bit IsFloat, string Constraint = ""> {
   foreach m = MxList.m in
     defm !if(IsFloat, "_VF", "_VX") : VPseudoBinary<m.vrclass, m.vrclass,
-                             !if(IsFloat, FPR32, GPR), m>;
+                             !if(IsFloat, FPR32, GPR), m, Constraint>;
 }
 
 multiclass VPseudoBinaryV_VI<Operand ImmType = simm5> {
@@ -885,9 +885,22 @@ multiclass VPseudoTernaryV_VX<string Constraint = ""> {
     defm _VX : VPseudoTernary<m.vrclass, m.vrclass, GPR, m, Constraint>;
 }
 
-multiclass VPseudoTernaryV_VX_AAXA<string Constraint = ""> {
+multiclass VPseudoTernaryV_VX_AAXA<bit IsFloat, string Constraint = ""> {
   foreach m = MxList.m in
-    defm _VX : VPseudoTernary<m.vrclass, GPR, m.vrclass, m, Constraint>;
+    defm !if(IsFloat, "_VF", "_VX") : VPseudoTernary<m.vrclass,
+                             !if(IsFloat, FPR32, GPR), m.vrclass, m, Constraint>;
+}
+
+multiclass VPseudoTernaryW_VV {
+  defvar constraint = "@earlyclobber $rd";
+  foreach m = MxList.m in
+    defm _VV : VPseudoTernary<m.wvrclass, m.vrclass, m.vrclass, m, constraint>;
+}
+
+multiclass VPseudoTernaryW_VX {
+  defvar constraint = "@earlyclobber $rd";
+  foreach m = MxList.m in
+    defm _VX : VPseudoTernary<m.wvrclass, GPR, m.vrclass, m, constraint>;
 }
 
 multiclass VPseudoTernaryV_VI<Operand ImmType = simm5, string Constraint = ""> {
@@ -895,14 +908,19 @@ multiclass VPseudoTernaryV_VI<Operand ImmType = simm5, string Constraint = ""> {
     defm _VI : VPseudoTernary<m.vrclass, m.vrclass, ImmType, m, Constraint>;
 }
 
-multiclass VPseudoTernaryV_VV_VX_AAXA<string Constraint = ""> {
+multiclass VPseudoTernaryV_VV_VX_AAXA<bit IsFloat = 0, string Constraint = ""> {
   defm "" : VPseudoTernaryV_VV<Constraint>;
-  defm "" : VPseudoTernaryV_VX_AAXA<Constraint>;
+  defm "" : VPseudoTernaryV_VX_AAXA<IsFloat, Constraint>;
 }
 
 multiclass VPseudoTernaryV_VX_VI<Operand ImmType = simm5, string Constraint = ""> {
   defm "" : VPseudoTernaryV_VX<Constraint>;
   defm "" : VPseudoTernaryV_VI<ImmType, Constraint>;
+}
+
+multiclass VPseudoTernaryW_VV_VX {
+  defm "" : VPseudoTernaryW_VV;
+  defm "" : VPseudoTernaryW_VX;
 }
 
 multiclass VPseudoBinaryM_VV_VX_VI {
@@ -1576,7 +1594,8 @@ multiclass VPatTernaryV_VX<string intrinsic, string instruction,
 multiclass VPatTernaryV_VX_AAXA<string intrinsic, string instruction,
                            list<VTypeInfo> vtilist> {
   foreach vti = vtilist in
-    defm : VPatTernary<intrinsic, instruction, "VX",
+    defm : VPatTernary<intrinsic, instruction,
+                       !if(!eq(vti.Scalar, XLenVT), "VX", "VF"),
                        vti.Vector, vti.Scalar, vti.Vector, vti.Mask,
                        vti.SEW, vti.LMul, vti.RegClass,
                        vti.ScalarRegClass, vti.RegClass>;
@@ -1589,6 +1608,30 @@ multiclass VPatTernaryV_VI<string intrinsic, string instruction,
                       vti.Vector, vti.Vector, XLenVT, vti.Mask,
                       vti.SEW, vti.LMul, vti.RegClass,
                       vti.RegClass, Imm_type>;
+}
+
+multiclass VPatTernaryW_VV<string intrinsic, string instruction,
+                           list<VTypeInfoToWide> vtilist> {
+  foreach vtiToWti = vtilist in {
+    defvar vti = vtiToWti.Vti;
+    defvar wti = vtiToWti.Wti;
+    defm : VPatTernary<intrinsic, instruction, "VV",
+                      wti.Vector, vti.Vector, vti.Vector,
+                      vti.Mask, vti.SEW, vti.LMul,
+                      wti.RegClass, vti.RegClass, vti.RegClass>;
+  }
+}
+
+multiclass VPatTernaryW_VX<string intrinsic, string instruction,
+                           list<VTypeInfoToWide> vtilist> {
+  foreach vtiToWti = vtilist in {
+    defvar vti = vtiToWti.Vti;
+    defvar wti = vtiToWti.Wti;
+    defm : VPatTernary<intrinsic, instruction, "VX",
+                      wti.Vector, XLenVT, vti.Vector,
+                      vti.Mask, vti.SEW, vti.LMul,
+                      wti.RegClass, vti.ScalarRegClass, vti.RegClass>;
+  }
 }
 
 multiclass VPatTernaryV_VV_VX_AAXA<string intrinsic, string instruction,
@@ -1609,6 +1652,12 @@ multiclass VPatBinaryM_VV_VX_VI<string intrinsic, string instruction,
   defm "" : VPatBinaryM_VV<intrinsic, instruction, vtilist>;
   defm "" : VPatBinaryM_VX<intrinsic, instruction, vtilist>;
   defm "" : VPatBinaryM_VI<intrinsic, instruction, vtilist>;
+}
+
+multiclass VPatTernaryW_VV_VX<string intrinsic, string instruction,
+                              list<VTypeInfoToWide> vtilist> {
+  defm "" : VPatTernaryW_VV<intrinsic, instruction, vtilist>;
+  defm "" : VPatTernaryW_VX<intrinsic, instruction, vtilist>;
 }
 
 multiclass VPatBinaryM_VV_VX<string intrinsic, string instruction,
@@ -1806,6 +1855,14 @@ defm PseudoVMADD       : VPseudoTernaryV_VV_VX_AAXA;
 defm PseudoVNMSUB      : VPseudoTernaryV_VV_VX_AAXA;
 
 //===----------------------------------------------------------------------===//
+// 12.14. Vector Widening Integer Multiply-Add Instructions
+//===----------------------------------------------------------------------===//
+defm PseudoVWMACCU     : VPseudoTernaryW_VV_VX;
+defm PseudoVWMACC      : VPseudoTernaryW_VV_VX;
+defm PseudoVWMACCSU    : VPseudoTernaryW_VV_VX;
+defm PseudoVWMACCUS    : VPseudoTernaryW_VX;
+
+//===----------------------------------------------------------------------===//
 // 12.17. Vector Integer Move Instructions
 //===----------------------------------------------------------------------===//
 
@@ -1885,6 +1942,18 @@ defm PseudoVFRDIV      : VPseudoBinaryV_VX</*IsFloat=*/1>;
 defm PseudoVFWMUL      : VPseudoBinaryW_VV_VX</*IsFloat=*/1>;
 
 //===----------------------------------------------------------------------===//
+// 14.6. Vector Single-Width Floating-Point Fused Multiply-Add Instructions
+//===----------------------------------------------------------------------===//
+defm PseudoVFMACC      : VPseudoTernaryV_VV_VX_AAXA</*IsFloat*/true>;
+defm PseudoVFNMACC     : VPseudoTernaryV_VV_VX_AAXA</*IsFloat*/true>;
+defm PseudoVFMSAC      : VPseudoTernaryV_VV_VX_AAXA</*IsFloat*/true>;
+defm PseudoVFNMSAC     : VPseudoTernaryV_VV_VX_AAXA</*IsFloat*/true>;
+defm PseudoVFMADD      : VPseudoTernaryV_VV_VX_AAXA</*IsFloat*/true>;
+defm PseudoVFNMADD     : VPseudoTernaryV_VV_VX_AAXA</*IsFloat*/true>;
+defm PseudoVFMSUB      : VPseudoTernaryV_VV_VX_AAXA</*IsFloat*/true>;
+defm PseudoVFNMSUB     : VPseudoTernaryV_VV_VX_AAXA</*IsFloat*/true>;
+
+//===----------------------------------------------------------------------===//
 // 14.12. Vector Floating-Point Sign-Injection Instructions
 //===----------------------------------------------------------------------===//
 defm PseudoVFSGNJ      : VPseudoBinaryV_VV_VX</*IsFloat=*/1>;
@@ -1954,8 +2023,17 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0, usesCustomInserter = 1,
 //===----------------------------------------------------------------------===//
 // 17.3. Vector Slide Instructions
 //===----------------------------------------------------------------------===//
-defm PseudoVSLIDEUP    : VPseudoTernaryV_VX_VI<uimm5, "@earlyclobber $rd">;
-defm PseudoVSLIDEDOWN  : VPseudoTernaryV_VX_VI<uimm5>;
+let Predicates = [HasStdExtV] in {
+  defm PseudoVSLIDEUP    : VPseudoTernaryV_VX_VI<uimm5, "@earlyclobber $rd">;
+  defm PseudoVSLIDEDOWN  : VPseudoTernaryV_VX_VI<uimm5>;
+  defm PseudoVSLIDE1UP   : VPseudoBinaryV_VX</*IsFloat*/false, "@earlyclobber $rd">;
+  defm PseudoVSLIDE1DOWN : VPseudoBinaryV_VX</*IsFloat*/false>;
+} // Predicates = [HasStdExtV]
+
+let Predicates = [HasStdExtV, HasStdExtF] in {
+  defm PseudoVFSLIDE1UP  : VPseudoBinaryV_VX</*IsFloat*/true, "@earlyclobber $rd">;
+  defm PseudoVFSLIDE1DOWN : VPseudoBinaryV_VX</*IsFloat*/true>;
+} // Predicates = [HasStdExtV, HasStdExtF]
 
 //===----------------------------------------------------------------------===//
 // Patterns.
@@ -2165,6 +2243,14 @@ defm "" : VPatTernaryV_VV_VX_AAXA<"int_riscv_vmacc", "PseudoVMACC", AllIntegerVe
 defm "" : VPatTernaryV_VV_VX_AAXA<"int_riscv_vnmsac", "PseudoVNMSAC", AllIntegerVectors>;
 
 //===----------------------------------------------------------------------===//
+// 12.14. Vector Widening Integer Multiply-Add Instructions
+//===----------------------------------------------------------------------===//
+defm "" : VPatTernaryW_VV_VX<"int_riscv_vwmaccu", "PseudoVWMACCU", AllWidenableIntVectors>;
+defm "" : VPatTernaryW_VV_VX<"int_riscv_vwmacc", "PseudoVWMACC", AllWidenableIntVectors>;
+defm "" : VPatTernaryW_VV_VX<"int_riscv_vwmaccsu", "PseudoVWMACCSU", AllWidenableIntVectors>;
+defm "" : VPatTernaryW_VX<"int_riscv_vwmaccus", "PseudoVWMACCUS", AllWidenableIntVectors>;
+
+//===----------------------------------------------------------------------===//
 // 12.17. Vector Integer Move Instructions
 //===----------------------------------------------------------------------===//
 foreach vti = AllVectors in {
@@ -2249,6 +2335,18 @@ defm "" : VPatBinaryV_VX<"int_riscv_vfrdiv", "PseudoVFRDIV", AllFloatVectors>;
 defm "" : VPatBinaryW_VV_VX<"int_riscv_vfwmul", "PseudoVFWMUL", AllWidenableFloatVectors>;
 
 //===----------------------------------------------------------------------===//
+// 14.6. Vector Single-Width Floating-Point Fused Multiply-Add Instructions
+//===----------------------------------------------------------------------===//
+defm "" : VPatTernaryV_VV_VX_AAXA<"int_riscv_vfmacc", "PseudoVFMACC", AllFloatVectors>;
+defm "" : VPatTernaryV_VV_VX_AAXA<"int_riscv_vfnmacc", "PseudoVFNMACC", AllFloatVectors>;
+defm "" : VPatTernaryV_VV_VX_AAXA<"int_riscv_vfmsac", "PseudoVFMSAC", AllFloatVectors>;
+defm "" : VPatTernaryV_VV_VX_AAXA<"int_riscv_vfnmsac", "PseudoVFNMSAC", AllFloatVectors>;
+defm "" : VPatTernaryV_VV_VX_AAXA<"int_riscv_vfmadd", "PseudoVFMADD", AllFloatVectors>;
+defm "" : VPatTernaryV_VV_VX_AAXA<"int_riscv_vfnmadd", "PseudoVFNMADD", AllFloatVectors>;
+defm "" : VPatTernaryV_VV_VX_AAXA<"int_riscv_vfmsub", "PseudoVFMSUB", AllFloatVectors>;
+defm "" : VPatTernaryV_VV_VX_AAXA<"int_riscv_vfnmsub", "PseudoVFNMSUB", AllFloatVectors>;
+
+//===----------------------------------------------------------------------===//
 // 14.12. Vector Floating-Point Sign-Injection Instructions
 //===----------------------------------------------------------------------===//
 defm "" : VPatBinaryV_VV_VX<"int_riscv_vfsgnj", "PseudoVFSGNJ", AllFloatVectors>;
@@ -2323,9 +2421,13 @@ foreach fvti = AllFloatVectors in {
 let Predicates = [HasStdExtV] in {
   defm "" : VPatTernaryV_VX_VI<"int_riscv_vslideup", "PseudoVSLIDEUP", AllIntegerVectors, uimm5>;
   defm "" : VPatTernaryV_VX_VI<"int_riscv_vslidedown", "PseudoVSLIDEDOWN", AllIntegerVectors, uimm5>;
+  defm "" : VPatBinaryV_VX<"int_riscv_vslide1up", "PseudoVSLIDE1UP", AllIntegerVectors>;
+  defm "" : VPatBinaryV_VX<"int_riscv_vslide1down", "PseudoVSLIDE1DOWN", AllIntegerVectors>;
 } // Predicates = [HasStdExtV]
 
 let Predicates = [HasStdExtV, HasStdExtF] in {
   defm "" : VPatTernaryV_VX_VI<"int_riscv_vslideup", "PseudoVSLIDEUP", AllFloatVectors, uimm5>;
   defm "" : VPatTernaryV_VX_VI<"int_riscv_vslidedown", "PseudoVSLIDEDOWN", AllFloatVectors, uimm5>;
+  defm "" : VPatBinaryV_VX<"int_riscv_vfslide1up", "PseudoVFSLIDE1UP", AllFloatVectors>;
+  defm "" : VPatBinaryV_VX<"int_riscv_vfslide1down", "PseudoVFSLIDE1DOWN", AllFloatVectors>;
 } // Predicates = [HasStdExtV, HasStdExtF]
