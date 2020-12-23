@@ -55,7 +55,7 @@
 # RUN:        -platform_version 0 1 5 \
 # RUN:     | FileCheck --check-prefix=FAIL-PLATFORM %s
 # RUN: not %lld -o %t %t.o 2>&1 \
-# RUN:        -platform_version 10 1 5 \
+# RUN:        -platform_version 11 1 5 \
 # RUN:     | FileCheck --check-prefix=FAIL-PLATFORM %s
 # FAIL-PLATFORM: malformed platform: {{.*}}
 # FAIL-PLATFORM-NOT: malformed {{minimum|sdk}} version: {{.*}}
