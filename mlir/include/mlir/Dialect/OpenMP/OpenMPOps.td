@@ -185,6 +185,11 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments]> {
   ];
 
   let regions = (region AnyRegion:$region);
+
+  let extraClassDeclaration = [{
+    /// Returns the number of loops in the workshape loop nest.
+    unsigned getNumLoops() { return lowerBound().size(); }
+  }];
 }
 
 def YieldOp : OpenMP_Op<"yield", [NoSideEffect, ReturnLike, Terminator,
