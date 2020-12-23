@@ -1097,6 +1097,15 @@ multiclass VPseudoUnaryV_F_NoDummyMask {
   }
 }
 
+multiclass VPseudoUnaryV_V {
+  foreach m = MxList.m in {
+    let VLMul = m.value in {
+      def "_V_" # m.MX : VPseudoUnaryNoMask<m.vrclass, m.vrclass>;
+      def "_V_" # m.MX # "_MASK" : VPseudoUnaryMask<m.vrclass, m.vrclass>;
+    }
+  }
+}
+
 multiclass PseudoUnaryV_VF2 {
   defvar constraints = "@earlyclobber $rd";
   foreach m = MxList.m[1-6] in
@@ -1688,6 +1697,18 @@ multiclass VPatUnaryV_VF<string intrinsic, string instruction, string suffix,
    }
 }
 
+multiclass VPatUnaryV_V<string intrinsic, string instruction,
+                        list<VTypeInfo> vtilist> {
+  foreach vti = vtilist in {
+    def : VPatUnaryNoMask<intrinsic, instruction, "V",
+                          vti.Vector, vti.Vector,
+                          vti.SEW, vti.LMul, vti.RegClass>;
+    def : VPatUnaryMask<intrinsic, instruction, "V",
+                        vti.Vector, vti.Vector, vti.Mask,
+                        vti.SEW, vti.LMul, vti.RegClass, vti.RegClass>;
+  }
+}
+
 multiclass VPatNullaryV<string intrinsic, string instruction>
 {
   foreach vti = AllIntegerVectors in {
@@ -1711,7 +1732,6 @@ multiclass VPatNullaryM<string intrinsic, string inst> {
                         (!cast<Instruction>(inst#"_M_"#mti.BX)
                         (NoX0 GPR:$vl), mti.SEW)>;
 }
-
 
 multiclass VPatBinary<string intrinsic,
                       string inst,
@@ -2574,7 +2594,6 @@ defm PseudoVMERGE      : VPseudoBinaryV_VM_XM_IM;
 //===----------------------------------------------------------------------===//
 // 12.17. Vector Integer Move Instructions
 //===----------------------------------------------------------------------===//
-
 defm PseudoVMV_V       : VPseudoUnaryV_V_X_I_NoDummyMask;
 
 //===----------------------------------------------------------------------===//
@@ -2669,6 +2688,11 @@ defm PseudoVFWMACC     : VPseudoTernaryW_VV_VX</*IsFloat*/true>;
 defm PseudoVFWNMACC    : VPseudoTernaryW_VV_VX</*IsFloat*/true>;
 defm PseudoVFWMSAC     : VPseudoTernaryW_VV_VX</*IsFloat*/true>;
 defm PseudoVFWNMSAC    : VPseudoTernaryW_VV_VX</*IsFloat*/true>;
+
+//===----------------------------------------------------------------------===//
+// 14.8. Vector Floating-Point Square-Root Instruction
+//===----------------------------------------------------------------------===//
+defm PseudoVFSQRT      : VPseudoUnaryV_V;
 
 //===----------------------------------------------------------------------===//
 // 14.11. Vector Floating-Point Min/Max Instructions
@@ -3305,6 +3329,11 @@ defm "" : VPatTernaryW_VV_VX<"int_riscv_vfwmacc", "PseudoVFWMACC", AllWidenableF
 defm "" : VPatTernaryW_VV_VX<"int_riscv_vfwnmacc", "PseudoVFWNMACC", AllWidenableFloatVectors>;
 defm "" : VPatTernaryW_VV_VX<"int_riscv_vfwmsac", "PseudoVFWMSAC", AllWidenableFloatVectors>;
 defm "" : VPatTernaryW_VV_VX<"int_riscv_vfwnmsac", "PseudoVFWNMSAC", AllWidenableFloatVectors>;
+
+//===----------------------------------------------------------------------===//
+// 14.8. Vector Floating-Point Square-Root Instruction
+//===----------------------------------------------------------------------===//
+defm "" : VPatUnaryV_V<"int_riscv_vfsqrt", "PseudoVFSQRT", AllFloatVectors>;
 
 //===----------------------------------------------------------------------===//
 // 14.11. Vector Floating-Point Min/Max Instructions
