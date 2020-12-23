@@ -2576,13 +2576,9 @@ void Sema::ProcessPropertyDecl(ObjCPropertyDecl *property) {
 
       // Invent the arguments for the setter. We don't bother making a
       // nice name for the argument.
-      ParmVarDecl *Argument = ParmVarDecl::Create(Context, SetterMethod,
-                                                  Loc, Loc,
-                                                  property->getIdentifier(),
-                                                  paramTy,
-                                                  /*TInfo=*/nullptr,
-                                                  SC_None,
-                                                  nullptr);
+      ParmVarDecl *Argument = ParmVarDecl::Create(
+          Context, SetterMethod, Loc, Loc, property->getIdentifier(), paramTy,
+          /*TInfo=*/nullptr, StorageClass::None, nullptr);
       SetterMethod->setMethodParams(Context, Argument, None);
 
       AddPropertyAttrs(*this, SetterMethod, property);

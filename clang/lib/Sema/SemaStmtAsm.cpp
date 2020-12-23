@@ -195,7 +195,7 @@ static StringRef extractRegisterName(const Expr *Expression,
   if (const DeclRefExpr *AsmDeclRef = dyn_cast<DeclRefExpr>(Expression)) {
     // Handle cases where the expression is a variable
     const VarDecl *Variable = dyn_cast<VarDecl>(AsmDeclRef->getDecl());
-    if (Variable && Variable->getStorageClass() == SC_Register) {
+    if (Variable && Variable->getStorageClass() == StorageClass::Register) {
       if (AsmLabelAttr *Attr = Variable->getAttr<AsmLabelAttr>())
         if (Target.isValidGCCRegisterName(Attr->getLabel()))
           return Target.getNormalizedGCCRegisterName(Attr->getLabel(), true);

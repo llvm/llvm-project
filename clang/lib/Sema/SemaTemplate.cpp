@@ -2218,9 +2218,10 @@ struct ConvertConstructorToDeductionGuideTransform {
     // Build the parameters, needed during deduction / substitution.
     SmallVector<ParmVarDecl*, 4> Params;
     for (auto T : ParamTypes) {
-      ParmVarDecl *NewParam = ParmVarDecl::Create(
-          SemaRef.Context, DC, Loc, Loc, nullptr, T,
-          SemaRef.Context.getTrivialTypeSourceInfo(T, Loc), SC_None, nullptr);
+      ParmVarDecl *NewParam =
+          ParmVarDecl::Create(SemaRef.Context, DC, Loc, Loc, nullptr, T,
+                              SemaRef.Context.getTrivialTypeSourceInfo(T, Loc),
+                              StorageClass::None, nullptr);
       NewParam->setScopeInfo(0, Params.size());
       FPTL.setParam(Params.size(), NewParam);
       Params.push_back(NewParam);
@@ -4331,9 +4332,10 @@ DeclResult Sema::ActOnVarTemplateSpecialization(
       //   -- The argument list of the specialization shall not be identical
       //      to the implicit argument list of the primary template.
       Diag(TemplateNameLoc, diag::err_partial_spec_args_match_primary_template)
-        << /*variable template*/ 1
-        << /*is definition*/(SC != SC_Extern && !CurContext->isRecord())
-        << FixItHint::CreateRemoval(SourceRange(LAngleLoc, RAngleLoc));
+          << /*variable template*/ 1
+          << /*is definition*/ (SC != StorageClass::Extern &&
+                                !CurContext->isRecord())
+          << FixItHint::CreateRemoval(SourceRange(LAngleLoc, RAngleLoc));
       // FIXME: Recover from this by treating the declaration as a redeclaration
       // of the primary template.
       return true;

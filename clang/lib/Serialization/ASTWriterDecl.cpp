@@ -983,7 +983,7 @@ void ASTDeclWriter::VisitIndirectFieldDecl(IndirectFieldDecl *D) {
 void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
   VisitRedeclarable(D);
   VisitDeclaratorDecl(D);
-  Record.push_back(D->getStorageClass());
+  Record.push_back(static_cast<uint64_t>(D->getStorageClass()));
   Record.push_back(D->getTSCSpec());
   Record.push_back(D->getInitStyle());
   Record.push_back(D->isARCPseudoStrong());
@@ -1099,23 +1099,15 @@ void ASTDeclWriter::VisitParmVarDecl(ParmVarDecl *D) {
   // If the assumptions about the DECL_PARM_VAR abbrev are true, use it.  Here
   // we dynamically check for the properties that we optimize for, but don't
   // know are true of all PARM_VAR_DECLs.
-  if (D->getDeclContext() == D->getLexicalDeclContext() &&
-      !D->hasAttrs() &&
-      !D->hasExtInfo() &&
-      !D->isImplicit() &&
-      !D->isUsed(false) &&
-      !D->isInvalidDecl() &&
-      !D->isReferenced() &&
-      D->getAccess() == AS_none &&
-      !D->isModulePrivate() &&
-      D->getStorageClass() == 0 &&
+  if (D->getDeclContext() == D->getLexicalDeclContext() && !D->hasAttrs() &&
+      !D->hasExtInfo() && !D->isImplicit() && !D->isUsed(false) &&
+      !D->isInvalidDecl() && !D->isReferenced() && D->getAccess() == AS_none &&
+      !D->isModulePrivate() && D->getStorageClass() == StorageClass::None &&
       D->getInitStyle() == VarDecl::CInit && // Can params have anything else?
-      D->getFunctionScopeDepth() == 0 &&
-      D->getObjCDeclQualifier() == 0 &&
-      !D->isKNRPromoted() &&
-      !D->hasInheritedDefaultArg() &&
+      D->getFunctionScopeDepth() == 0 && D->getObjCDeclQualifier() == 0 &&
+      !D->isKNRPromoted() && !D->hasInheritedDefaultArg() &&
       D->getInit() == nullptr &&
-      !D->hasUninstantiatedDefaultArg())  // No default expr.
+      !D->hasUninstantiatedDefaultArg()) // No default expr.
     AbbrevToUse = Writer.getDeclParmVarAbbrev();
 
   // Check things we know are true of *every* PARM_VAR_DECL, which is more than

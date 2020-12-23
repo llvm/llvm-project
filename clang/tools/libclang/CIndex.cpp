@@ -8120,7 +8120,7 @@ static const Decl *maybeGetTemplateCursor(const Decl *D) {
 }
 
 enum CX_StorageClass clang_Cursor_getStorageClass(CXCursor C) {
-  StorageClass sc = SC_None;
+  StorageClass sc = StorageClass::None;
   const Decl *D = getCursorDecl(C);
   if (D) {
     if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
@@ -8134,17 +8134,17 @@ enum CX_StorageClass clang_Cursor_getStorageClass(CXCursor C) {
     return CX_SC_Invalid;
   }
   switch (sc) {
-  case SC_None:
+  case StorageClass::None:
     return CX_SC_None;
-  case SC_Extern:
+  case StorageClass::Extern:
     return CX_SC_Extern;
-  case SC_Static:
+  case StorageClass::Static:
     return CX_SC_Static;
-  case SC_PrivateExtern:
+  case StorageClass::PrivateExtern:
     return CX_SC_PrivateExtern;
-  case SC_Auto:
+  case StorageClass::Auto:
     return CX_SC_Auto;
-  case SC_Register:
+  case StorageClass::Register:
     return CX_SC_Register;
   }
   llvm_unreachable("Unhandled storage class!");

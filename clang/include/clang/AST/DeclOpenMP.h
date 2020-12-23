@@ -388,7 +388,7 @@ class OMPCapturedExprDecl final : public VarDecl {
                       QualType Type, TypeSourceInfo *TInfo,
                       SourceLocation StartLoc)
       : VarDecl(OMPCapturedExpr, C, DC, StartLoc, StartLoc, Id, Type, TInfo,
-                SC_None) {
+                StorageClass::None) {
     setImplicit();
   }
 

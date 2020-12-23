@@ -1388,7 +1388,7 @@ void CodeGenFunction::EmitAndRegisterVariableArrayDimensions(
       auto *ArtificialDecl = VarDecl::Create(
           getContext(), const_cast<DeclContext *>(D.getDeclContext()),
           D.getLocation(), D.getLocation(), NameIdent, QT,
-          getContext().CreateTypeSourceInfo(QT), SC_Auto);
+          getContext().CreateTypeSourceInfo(QT), StorageClass::Auto);
       ArtificialDecl->setImplicit();
 
       MD = DI->EmitDeclareOfAutoVariable(ArtificialDecl, VlaSize.NumElts,

@@ -10622,8 +10622,8 @@ void ASTReader::diagnoseOdrViolations() {
         // class needs to be checked instead.
         const auto FirstStorage = FirstMethod->getStorageClass();
         const auto SecondStorage = SecondMethod->getStorageClass();
-        const bool FirstStatic = FirstStorage == SC_Static;
-        const bool SecondStatic = SecondStorage == SC_Static;
+        const bool FirstStatic = FirstStorage == StorageClass::Static;
+        const bool SecondStatic = SecondStorage == StorageClass::Static;
         if (FirstStatic != SecondStatic) {
           ODRDiagDeclError(FirstRecord, FirstModule, FirstMethod->getLocation(),
                            FirstMethod->getSourceRange(), MethodStatic)
