@@ -694,6 +694,11 @@ void SymtabSection::emitStabs() {
 }
 
 void SymtabSection::finalizeContents() {
+  auto addSymbol = [&](std::vector<SymtabEntry> &symbols, Symbol *sym) {
+    uint32_t strx = stringTableSection.addString(sym->getName());
+    symbols.push_back({sym, strx});
+  };
+
   // Local symbols aren't in the SymbolTable, so we walk the list of object
   // files to gather them.
   for (InputFile *file : inputFiles) {
@@ -702,10 +707,8 @@ void SymtabSection::finalizeContents() {
         // TODO: when we implement -dead_strip, we should filter out symbols
         // that belong to dead sections.
         if (auto *defined = dyn_cast<Defined>(sym)) {
-          if (!defined->isExternal()) {
-            uint32_t strx = stringTableSection.addString(sym->getName());
-            localSymbols.push_back({sym, strx});
-          }
+          if (!defined->isExternal())
+            addSymbol(localSymbols, sym);
         }
       }
     }
@@ -713,19 +716,16 @@ void SymtabSection::finalizeContents() {
 
   // __dyld_private is a local symbol too. It's linker-created and doesn't
   // exist in any object file.
-  if (Defined* dyldPrivate = in.stubHelper->dyldPrivate) {
-    uint32_t strx = stringTableSection.addString(dyldPrivate->getName());
-    localSymbols.push_back({dyldPrivate, strx});
-  }
+  if (Defined* dyldPrivate = in.stubHelper->dyldPrivate)
+    addSymbol(localSymbols, dyldPrivate);
 
   for (Symbol *sym : symtab->getSymbols()) {
-    uint32_t strx = stringTableSection.addString(sym->getName());
     if (auto *defined = dyn_cast<Defined>(sym)) {
       assert(defined->isExternal());
-      externalSymbols.push_back({sym, strx});
+      addSymbol(externalSymbols, sym);
     } else if (auto *dysym = dyn_cast<DylibSymbol>(sym)) {
       if (dysym->isReferenced())
-        undefinedSymbols.push_back({sym, strx});
+        addSymbol(undefinedSymbols, sym);
     }
   }
 
