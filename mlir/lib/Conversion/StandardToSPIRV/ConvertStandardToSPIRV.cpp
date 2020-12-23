@@ -924,10 +924,14 @@ LoadOpPattern::matchAndRewrite(LoadOp loadOp, ArrayRef<Value> operands,
 LogicalResult
 ReturnOpPattern::matchAndRewrite(ReturnOp returnOp, ArrayRef<Value> operands,
                                  ConversionPatternRewriter &rewriter) const {
-  if (returnOp.getNumOperands()) {
+  if (returnOp.getNumOperands() > 1)
     return failure();
+
+  if (returnOp.getNumOperands() == 1) {
+    rewriter.replaceOpWithNewOp<spirv::ReturnValueOp>(returnOp, operands[0]);
+  } else {
+    rewriter.replaceOpWithNewOp<spirv::ReturnOp>(returnOp);
   }
-  rewriter.replaceOpWithNewOp<spirv::ReturnOp>(returnOp);
   return success();
 }
 
