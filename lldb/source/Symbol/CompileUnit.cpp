@@ -75,8 +75,7 @@ void CompileUnit::ForeachFunction(
 
 lldb::FunctionSP CompileUnit::FindFunction(
     llvm::function_ref<bool(const FunctionSP &)> matching_lambda) {
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, "CompileUnit::FindFunction");
+  LLDB_SCOPED_TIMER();
 
   lldb::ModuleSP module = CalculateSymbolContextModule();
 

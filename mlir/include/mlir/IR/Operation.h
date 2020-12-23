@@ -36,12 +36,12 @@ public:
                            ArrayRef<NamedAttribute> attributes,
                            BlockRange successors, unsigned numRegions);
 
-  /// Overload of create that takes an existing MutableDictionaryAttr to avoid
+  /// Overload of create that takes an existing DictionaryAttr to avoid
   /// unnecessarily uniquing a list of attributes.
   static Operation *create(Location location, OperationName name,
                            TypeRange resultTypes, ValueRange operands,
-                           MutableDictionaryAttr attributes,
-                           BlockRange successors, unsigned numRegions);
+                           DictionaryAttr attributes, BlockRange successors,
+                           unsigned numRegions);
 
   /// Create a new Operation from the fields stored in `state`.
   static Operation *create(const OperationState &state);
@@ -49,7 +49,7 @@ public:
   /// Create a new Operation with the specific fields.
   static Operation *create(Location location, OperationName name,
                            TypeRange resultTypes, ValueRange operands,
-                           MutableDictionaryAttr attributes,
+                           DictionaryAttr attributes,
                            BlockRange successors = {},
                            RegionRange regions = {});
 
@@ -304,21 +304,19 @@ public:
   // the lifetime of an operation.
 
   /// Return all of the attributes on this operation.
-  ArrayRef<NamedAttribute> getAttrs() { return attrs.getAttrs(); }
+  ArrayRef<NamedAttribute> getAttrs() { return attrs.getValue(); }
 
   /// Return all of the attributes on this operation as a DictionaryAttr.
-  DictionaryAttr getAttrDictionary() {
-    return attrs.getDictionary(getContext());
-  }
-
-  /// Return mutable container of all the attributes on this operation.
-  MutableDictionaryAttr &getMutableAttrDict() { return attrs; }
+  DictionaryAttr getAttrDictionary() { return attrs; }
 
   /// Set the attribute dictionary on this operation.
-  /// Using a MutableDictionaryAttr is more efficient as it does not require new
-  /// uniquing in the MLIRContext.
-  void setAttrs(MutableDictionaryAttr newAttrs) { attrs = newAttrs; }
-  void setAttrs(ArrayRef<NamedAttribute> newAttrs) { attrs = newAttrs; }
+  void setAttrs(DictionaryAttr newAttrs) {
+    assert(newAttrs && "expected valid attribute dictionary");
+    attrs = newAttrs;
+  }
+  void setAttrs(ArrayRef<NamedAttribute> newAttrs) {
+    setAttrs(DictionaryAttr::get(newAttrs, getContext()));
+  }
 
   /// Return the specified attribute if present, null otherwise.
   Attribute getAttr(Identifier name) { return attrs.get(name); }
@@ -342,19 +340,28 @@ public:
   }
 
   /// If the an attribute exists with the specified name, change it to the new
-  /// value.  Otherwise, add a new attribute with the specified name/value.
-  void setAttr(Identifier name, Attribute value) { attrs.set(name, value); }
+  /// value. Otherwise, add a new attribute with the specified name/value.
+  void setAttr(Identifier name, Attribute value) {
+    NamedAttrList attributes(attrs);
+    if (attributes.set(name, value) != value)
+      attrs = attributes.getDictionary(getContext());
+  }
   void setAttr(StringRef name, Attribute value) {
     setAttr(Identifier::get(name, getContext()), value);
   }
 
-  /// Remove the attribute with the specified name if it exists.  The return
-  /// value indicates whether the attribute was present or not.
-  MutableDictionaryAttr::RemoveResult removeAttr(Identifier name) {
-    return attrs.remove(name);
+  /// Remove the attribute with the specified name if it exists. Return the
+  /// attribute that was erased, or nullptr if there was no attribute with such
+  /// name.
+  Attribute removeAttr(Identifier name) {
+    NamedAttrList attributes(attrs);
+    Attribute removedAttr = attributes.erase(name);
+    if (removedAttr)
+      attrs = attributes.getDictionary(getContext());
+    return removedAttr;
   }
-  MutableDictionaryAttr::RemoveResult removeAttr(StringRef name) {
-    return attrs.remove(Identifier::get(name, getContext()));
+  Attribute removeAttr(StringRef name) {
+    return removeAttr(Identifier::get(name, getContext()));
   }
 
   /// A utility iterator that filters out non-dialect attributes.
@@ -394,12 +401,12 @@ public:
   /// Set the dialect attributes for this operation, and preserve all dependent.
   template <typename DialectAttrT>
   void setDialectAttrs(DialectAttrT &&dialectAttrs) {
-    SmallVector<NamedAttribute, 16> attrs;
-    attrs.assign(std::begin(dialectAttrs), std::end(dialectAttrs));
+    NamedAttrList attrs;
+    attrs.append(std::begin(dialectAttrs), std::end(dialectAttrs));
     for (auto attr : getAttrs())
-      if (!attr.first.strref().count('.'))
+      if (!attr.first.strref().contains('.'))
         attrs.push_back(attr);
-    setAttrs(llvm::makeArrayRef(attrs));
+    setAttrs(attrs.getDictionary(getContext()));
   }
 
   //===--------------------------------------------------------------------===//
@@ -648,7 +655,7 @@ private:
 private:
   Operation(Location location, OperationName name, TypeRange resultTypes,
             unsigned numSuccessors, unsigned numRegions,
-            const MutableDictionaryAttr &attributes, bool hasOperandStorage);
+            DictionaryAttr attributes, bool hasOperandStorage);
 
   // Operations are deleted through the destroy() member because they are
   // allocated with malloc.
@@ -731,7 +738,7 @@ private:
   OperationName name;
 
   /// This holds general named attributes for the operation.
-  MutableDictionaryAttr attrs;
+  DictionaryAttr attrs;
 
   // allow ilist_traits access to 'block' field.
   friend struct llvm::ilist_traits<Operation>;

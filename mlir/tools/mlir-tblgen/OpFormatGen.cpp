@@ -1482,7 +1482,7 @@ const char *regionSingleBlockImplicitTerminatorPrinterCode = R"(
   {
     bool printTerminator = true;
     if (auto *term = {0}.empty() ? nullptr : {0}.begin()->getTerminator()) {{
-      printTerminator = !term->getMutableAttrDict().empty() ||
+      printTerminator = !term->getAttrDictionary().empty() ||
                         term->getNumOperands() != 0 ||
                         term->getNumResults() != 0;
     }
@@ -1555,10 +1555,7 @@ static void genCustomDirectivePrinter(CustomDirective *customDir,
       body << attr->getVar()->name << "Attr()";
 
     } else if (isa<AttrDictDirective>(&param)) {
-      // Enforce the const-ness since getMutableAttrDict() returns a reference
-      // into the Operations `attr` member.
-      body << "(const "
-              "MutableDictionaryAttr&)getOperation()->getMutableAttrDict()";
+      body << "getOperation()->getAttrDictionary()";
 
     } else if (auto *operand = dyn_cast<OperandVariable>(&param)) {
       body << operand->getVar()->name << "()";

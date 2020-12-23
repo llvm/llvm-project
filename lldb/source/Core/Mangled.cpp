@@ -228,9 +228,7 @@ static char *GetItaniumDemangledStr(const char *M) {
 bool Mangled::DemangleWithRichManglingInfo(
     RichManglingContext &context, SkipMangledNameFn *skip_mangled_name) {
   // We need to generate and cache the demangled name.
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat,
-                     "Mangled::DemangleWithRichNameIndexInfo (m_mangled = %s)",
+  LLDB_SCOPED_TIMERF("Mangled::DemangleWithRichNameIndexInfo (m_mangled = %s)",
                      m_mangled.GetCString());
 
   // Others are not meant to arrive here. ObjC names or C's main() for example
@@ -299,8 +297,7 @@ ConstString Mangled::GetDemangledName() const {
   // already decoded our mangled name.
   if (m_mangled && m_demangled.IsNull()) {
     // We need to generate and cache the demangled name.
-    static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-    Timer scoped_timer(func_cat, "Mangled::GetDemangledName (m_mangled = %s)",
+    LLDB_SCOPED_TIMERF("Mangled::GetDemangledName (m_mangled = %s)",
                        m_mangled.GetCString());
 
     // Don't bother running anything that isn't mangled

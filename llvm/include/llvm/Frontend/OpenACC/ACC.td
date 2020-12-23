@@ -48,7 +48,7 @@ def ACCC_Attach : Clause<"attach"> {
 
 // 2.15.1
 def ACCC_Bind : Clause<"bind"> {
-  let flangClassValue = "Name";
+  let flangClassValue = "AccBindClause";
 }
 
 // 2.12
@@ -80,8 +80,16 @@ def ACCC_Create : Clause<"create"> {
 }
 
 // 2.5.15
+def ACC_Default_none : ClauseVal<"none", 1, 0> { let isDefault = 1; }
+def ACC_Default_present : ClauseVal<"present", 0, 0> {}
+
 def ACCC_Default : Clause<"default"> {
   let flangClassValue = "AccDefaultClause";
+  let enumClauseValue = "DefaultValue";
+  let allowedClauseValues = [
+    ACC_Default_present,
+    ACC_Default_none
+  ];
 }
 
 // 2.14.3
@@ -341,6 +349,8 @@ def ACC_Parallel : Directive<"parallel"> {
 
 // 2.5.2
 def ACC_Serial : Directive<"serial"> {
+  // Spec line 950-951: clause is as for the parallel construct except that the
+  // num_gangs, num_workers, and vector_length clauses are not permitted.
   let allowedClauses = [
     VersionedClause<ACCC_Attach>,
     VersionedClause<ACCC_Copy>,
@@ -349,10 +359,10 @@ def ACC_Serial : Directive<"serial"> {
     VersionedClause<ACCC_Create>,
     VersionedClause<ACCC_DevicePtr>,
     VersionedClause<ACCC_DeviceType>,
-    VersionedClause<ACCC_FirstPrivate>,
     VersionedClause<ACCC_NoCreate>,
     VersionedClause<ACCC_Present>,
     VersionedClause<ACCC_Private>,
+    VersionedClause<ACCC_FirstPrivate>,
     VersionedClause<ACCC_Wait>
   ];
   let allowedOnceClauses = [

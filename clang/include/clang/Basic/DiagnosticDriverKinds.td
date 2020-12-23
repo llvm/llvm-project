@@ -86,8 +86,6 @@ def err_drv_invalid_thread_model_for_target : Error<
   "invalid thread model '%0' in '%1' for this target">;
 def err_drv_invalid_linker_name : Error<
   "invalid linker name in argument '%0'">;
-def err_drv_invalid_pgo_instrumentor : Error<
-  "invalid PGO instrumentor in argument '%0'">;
 def err_drv_invalid_rtlib_name : Error<
   "invalid runtime library name in argument '%0'">;
 def err_drv_unsupported_rtlib_for_platform : Error<
@@ -350,6 +348,8 @@ def err_invalid_branch_protection: Error <
   "invalid branch protection option '%0' in '%1'">;
 def err_invalid_sls_hardening : Error<
   "invalid sls hardening option '%0' in '%1'">;
+def err_sls_hardening_arm_not_supported : Error<
+  "-mharden-sls is only supported on armv7-a or later">;
 
 def note_drv_command_failed_diag_msg : Note<
   "diagnostic msg: %0">;

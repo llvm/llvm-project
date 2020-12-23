@@ -12,10 +12,10 @@
 
 #include "mlir/Target/SPIRV/Deserialization.h"
 
-#include "mlir/Dialect/SPIRV/SPIRVAttributes.h"
-#include "mlir/Dialect/SPIRV/SPIRVModule.h"
-#include "mlir/Dialect/SPIRV/SPIRVOps.h"
-#include "mlir/Dialect/SPIRV/SPIRVTypes.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVModule.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Location.h"
@@ -542,7 +542,7 @@ private:
   DenseMap<uint32_t, StringRef> debugInfoMap;
 
   // Result <id> to decorations mapping.
-  DenseMap<uint32_t, MutableDictionaryAttr> decorations;
+  DenseMap<uint32_t, NamedAttrList> decorations;
 
   // Result <id> to type decorations.
   DenseMap<uint32_t, uint32_t> typeDecorations;
@@ -1182,7 +1182,7 @@ LogicalResult Deserializer::processType(spirv::Opcode opcode,
     // signless semantics for such cases.
     auto sign = operands[2] == 1 ? IntegerType::SignednessSemantics::Signed
                                  : IntegerType::SignednessSemantics::Signless;
-    typeMap[operands[0]] = IntegerType::get(operands[1], sign, context);
+    typeMap[operands[0]] = IntegerType::get(context, operands[1], sign);
   } break;
   case spirv::Opcode::OpTypeFloat: {
     if (operands.size() != 2)
@@ -1345,7 +1345,7 @@ LogicalResult Deserializer::processFunctionType(ArrayRef<uint32_t> operands) {
   if (!isVoidType(returnType)) {
     returnTypes = llvm::makeArrayRef(returnType);
   }
-  typeMap[operands[0]] = FunctionType::get(argTypes, returnTypes, context);
+  typeMap[operands[0]] = FunctionType::get(context, argTypes, returnTypes);
   return success();
 }
 
@@ -2778,7 +2778,7 @@ Deserializer::processOp<spirv::CopyMemoryOp>(ArrayRef<uint32_t> words) {
 // Pull in auto-generated Deserializer::dispatchToAutogenDeserialization() and
 // various Deserializer::processOp<...>() specializations.
 #define GET_DESERIALIZATION_FNS
-#include "mlir/Dialect/SPIRV/SPIRVSerialization.inc"
+#include "mlir/Dialect/SPIRV/IR/SPIRVSerialization.inc"
 } // namespace
 
 namespace mlir {

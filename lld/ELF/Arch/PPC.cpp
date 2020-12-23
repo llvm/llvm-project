@@ -259,7 +259,7 @@ RelExpr PPC::getRelExpr(RelType type, const Symbol &s,
   case R_PPC_TPREL16_HA:
   case R_PPC_TPREL16_LO:
   case R_PPC_TPREL16_HI:
-    return R_TLS;
+    return R_TPREL;
   default:
     error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));

@@ -36,7 +36,7 @@
 ; CHECK:      loop_begin.us1:                                   ; preds = %loop_begin.backedge.us5, %.split.split.us
 ; CHECK-NEXT:   %var_val.us2 = load i32, i32* %var
 ; CHECK-NEXT:   switch i32 2, label %default.us-lcssa.us-lcssa.us [
-; CHECK-NEXT:     i32 1, label %inc.us4
+; CHECK-NEXT:     i32 1, label %inc.split.us
 ; CHECK-NEXT:     i32 2, label %dec.us3
 ; CHECK-NEXT:   ]
 
@@ -50,15 +50,15 @@
 ; CHECK:      loop_begin:                                       ; preds = %loop_begin.backedge, %.split.split
 ; CHECK-NEXT:   %var_val = load i32, i32* %var
 ; CHECK-NEXT:   switch i32 %c, label %default.us-lcssa.us-lcssa [
-; CHECK-NEXT:     i32 1, label %inc
-; CHECK-NEXT:     i32 2, label %dec
+; CHECK-NEXT:     i32 1, label %inc.split
+; CHECK-NEXT:     i32 2, label %dec.split
 ; CHECK-NEXT:   ]
 
-; CHECK:      inc:                                              ; preds = %loop_begin
-; CHECK-NEXT:   br i1 true, label %us-unreachable.us-lcssa, label %inc.split
+; CHECK:      inc.split:                                        ; preds = %loop_begin
+; CHECK-NEXT:   br i1 true, label %us-unreachable.us-lcssa, label %inc
 
-; CHECK:      dec:                                              ; preds = %loop_begin
-; CHECK-NEXT:   br i1 true, label %us-unreachable6, label %dec.split
+; CHECK:      dec.split:                                        ; preds = %loop_begin
+; CHECK-NEXT:   br i1 true, label %us-unreachable6, label %dec
 
 define i32 @test(i32* %var) {
   %mem = alloca i32

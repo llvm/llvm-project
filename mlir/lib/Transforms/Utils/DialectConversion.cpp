@@ -557,7 +557,7 @@ class OperationTransactionState {
 public:
   OperationTransactionState() = default;
   OperationTransactionState(Operation *op)
-      : op(op), loc(op->getLoc()), attrs(op->getMutableAttrDict()),
+      : op(op), loc(op->getLoc()), attrs(op->getAttrDictionary()),
         operands(op->operand_begin(), op->operand_end()),
         successors(op->successor_begin(), op->successor_end()) {}
 
@@ -577,7 +577,7 @@ public:
 private:
   Operation *op;
   LocationAttr loc;
-  MutableDictionaryAttr attrs;
+  DictionaryAttr attrs;
   SmallVector<Value, 8> operands;
   SmallVector<Block *, 2> successors;
 };
@@ -2522,8 +2522,8 @@ struct FuncOpSignatureConversion : public OpConversionPattern<FuncOp> {
 
     // Update the function signature in-place.
     rewriter.updateRootInPlace(funcOp, [&] {
-      funcOp.setType(FunctionType::get(result.getConvertedTypes(), newResults,
-                                       funcOp.getContext()));
+      funcOp.setType(FunctionType::get(funcOp.getContext(),
+                                       result.getConvertedTypes(), newResults));
     });
     return success();
   }

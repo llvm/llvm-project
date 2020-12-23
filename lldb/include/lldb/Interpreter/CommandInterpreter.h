@@ -24,9 +24,7 @@
 #include "lldb/Utility/StringList.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"
-
 #include <mutex>
-#include <stack>
 
 namespace lldb_private {
 class CommandInterpreter;
@@ -247,7 +245,7 @@ public:
 
   CommandInterpreter(Debugger &debugger, bool synchronous_execution);
 
-  ~CommandInterpreter() override = default;
+  ~CommandInterpreter() override;
 
   // These two functions fill out the Broadcaster interface:
 
@@ -302,11 +300,10 @@ public:
                                   CommandReturnObject &result);
 
   bool HandleCommand(const char *command_line, LazyBool add_to_history,
-                     const ExecutionContext &override_context,
-                     CommandReturnObject &result);
-
-  bool HandleCommand(const char *command_line, LazyBool add_to_history,
-                     CommandReturnObject &result);
+                     CommandReturnObject &result,
+                     ExecutionContext *override_context = nullptr,
+                     bool repeat_on_empty_command = true,
+                     bool no_context_switching = false);
 
   bool WasInterrupted() const;
 
@@ -315,7 +312,9 @@ public:
   /// \param[in] commands
   ///    The list of commands to execute.
   /// \param[in,out] context
-  ///    The execution context in which to run the commands.
+  ///    The execution context in which to run the commands. Can be nullptr in
+  ///    which case the default
+  ///    context will be used.
   /// \param[in] options
   ///    This object holds the options used to control when to stop, whether to
   ///    execute commands,
@@ -325,13 +324,8 @@ public:
   ///    safely,
   ///    and failed with some explanation if we aborted executing the commands
   ///    at some point.
-  void HandleCommands(const StringList &commands,
-                      const ExecutionContext &context,
-                      const CommandInterpreterRunOptions &options,
-                      CommandReturnObject &result);
-
-  void HandleCommands(const StringList &commands,
-                      const CommandInterpreterRunOptions &options,
+  void HandleCommands(const StringList &commands, ExecutionContext *context,
+                      CommandInterpreterRunOptions &options,
                       CommandReturnObject &result);
 
   /// Execute a list of commands from a file.
@@ -339,7 +333,9 @@ public:
   /// \param[in] file
   ///    The file from which to read in commands.
   /// \param[in,out] context
-  ///    The execution context in which to run the commands.
+  ///    The execution context in which to run the commands. Can be nullptr in
+  ///    which case the default
+  ///    context will be used.
   /// \param[in] options
   ///    This object holds the options used to control when to stop, whether to
   ///    execute commands,
@@ -349,12 +345,8 @@ public:
   ///    safely,
   ///    and failed with some explanation if we aborted executing the commands
   ///    at some point.
-  void HandleCommandsFromFile(FileSpec &file, const ExecutionContext &context,
-                              const CommandInterpreterRunOptions &options,
-                              CommandReturnObject &result);
-
-  void HandleCommandsFromFile(FileSpec &file,
-                              const CommandInterpreterRunOptions &options,
+  void HandleCommandsFromFile(FileSpec &file, ExecutionContext *context,
+                              CommandInterpreterRunOptions &options,
                               CommandReturnObject &result);
 
   CommandObject *GetCommandObjectForCommand(llvm::StringRef &command_line);
@@ -399,7 +391,12 @@ public:
 
   Debugger &GetDebugger() { return m_debugger; }
 
-  ExecutionContext GetExecutionContext() const;
+  ExecutionContext GetExecutionContext() {
+    const bool thread_and_frame_only_if_stopped = true;
+    return m_exe_ctx_ref.Lock(thread_and_frame_only_if_stopped);
+  }
+
+  void UpdateExecutionContext(ExecutionContext *override_context);
 
   lldb::PlatformSP GetPlatform(bool prefer_target_platform);
 
@@ -584,10 +581,6 @@ protected:
                                      StringList *descriptions = nullptr) const;
 
 private:
-  void OverrideExecutionContext(const ExecutionContext &override_context);
-
-  void RestoreExecutionContext();
-
   Status PreprocessCommand(std::string &command);
 
   void SourceInitFile(FileSpec file, CommandReturnObject &result);
@@ -626,9 +619,8 @@ private:
 
   Debugger &m_debugger; // The debugger session that this interpreter is
                         // associated with
-  // Execution contexts that were temporarily set by some of HandleCommand*
-  // overloads.
-  std::stack<ExecutionContext> m_overriden_exe_contexts;
+  ExecutionContextRef m_exe_ctx_ref; // The current execution context to use
+                                     // when handling commands
   bool m_synchronous_execution;
   bool m_skip_lldbinit_files;
   bool m_skip_app_init_files;

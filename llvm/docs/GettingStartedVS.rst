@@ -51,7 +51,7 @@ You will also need the `CMake <http://www.cmake.org/>`_ build system since it
 generates the project files you will use to build with.
 
 If you would like to run the LLVM tests you will need `Python
-<http://www.python.org/>`_. Version 2.7 and newer are known to work. You will
+<http://www.python.org/>`_. Version 3.6 and newer are known to work. You will
 need `GnuWin32 <http://gnuwin32.sourceforge.net/>`_ tools, too.
 
 Do not install the LLVM directory tree into a path containing spaces (e.g.

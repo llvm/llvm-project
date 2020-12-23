@@ -8,9 +8,8 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 define <4 x i64> @broadcast128(<2 x i64> %src) {
 ; CHECK-LABEL: broadcast128:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    ## kill: def $xmm0 killed $xmm0 def $ymm0
 ; CHECK-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; CHECK-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; CHECK-NEXT:    retq
   %1 = alloca <2 x i64>, align 16
   %2 = bitcast <2 x i64>* %1 to i8*

@@ -1,18 +1,17 @@
 # REQUIRES: x86
-# RUN: mkdir -p %t
-# RUN: echo '.globl _foo, _bar, _baz; _foo: _bar: _baz:' | \
-# RUN:   llvm-mc -filetype=obj -triple=x86_64-apple-darwin -o %t/libresolution.o
+# RUN: rm -rf %t; split-file %s %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/libresolution.s -o %t/libresolution.o
 # RUN: %lld -dylib -install_name \
 # RUN:   @executable_path/libresolution.dylib %t/libresolution.o -o %t/libresolution.dylib
 # RUN: %lld -dylib -install_name \
 # RUN:   @executable_path/libresolution2.dylib %t/libresolution.o -o %t/libresolution2.dylib
-# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t/resolution.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/resolution.s -o %t/resolution.o
 
 ## Check that we select the symbol defined in the first dylib passed on the
 ## command line.
 # RUN: %lld -o %t/dylib-first -L%t -lresolution -lresolution2 %t/resolution.o
 # RUN: llvm-objdump --macho --bind %t/dylib-first | FileCheck %s --check-prefix=DYLIB-FIRST
-# DYLIB-FIRST:     libresolution _foo
+# DYLIB-FIRST: libresolution _foo
 
 # RUN: %lld -o %t/dylib2-first -L%t -lresolution2 -lresolution %t/resolution.o
 # RUN: llvm-objdump --macho --bind %t/dylib2-first | FileCheck %s --check-prefix=DYLIB2-FIRST
@@ -31,6 +30,13 @@
 # OBJ-FIRST-NOT: libresolution _bar
 # OBJ-FIRST-NOT: libresolution _baz
 
+#--- libresolution.s
+.globl _foo, _bar, _baz
+_foo:
+_bar:
+_baz:
+
+#--- resolution.s
 .globl _main, _bar
 # Global defined symbol
 _bar:

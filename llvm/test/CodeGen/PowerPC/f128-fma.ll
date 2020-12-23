@@ -227,7 +227,7 @@ define void @qpFnmadd(fp128* nocapture readonly %a,
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    li r5, 1
 ; CHECK-P8-NEXT:    std r3, 0(r28)
-; CHECK-P8-NEXT:    sldi r5, r5, 63
+; CHECK-P8-NEXT:    rldic r5, r5, 63, 0
 ; CHECK-P8-NEXT:    xor r4, r4, r5
 ; CHECK-P8-NEXT:    std r4, 8(r28)
 ; CHECK-P8-NEXT:    addi r1, r1, 64
@@ -289,7 +289,7 @@ define void @qpFnmadd_02(fp128* nocapture readonly %a,
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    li r5, 1
 ; CHECK-P8-NEXT:    std r3, 0(r30)
-; CHECK-P8-NEXT:    sldi r5, r5, 63
+; CHECK-P8-NEXT:    rldic r5, r5, 63, 0
 ; CHECK-P8-NEXT:    xor r4, r4, r5
 ; CHECK-P8-NEXT:    std r4, 8(r30)
 ; CHECK-P8-NEXT:    addi r1, r1, 64
@@ -474,7 +474,7 @@ define void @qpFnmsub(fp128* nocapture readonly %a,
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    li r5, 1
 ; CHECK-P8-NEXT:    std r3, 0(r28)
-; CHECK-P8-NEXT:    sldi r5, r5, 63
+; CHECK-P8-NEXT:    rldic r5, r5, 63, 0
 ; CHECK-P8-NEXT:    xor r4, r4, r5
 ; CHECK-P8-NEXT:    std r4, 8(r28)
 ; CHECK-P8-NEXT:    addi r1, r1, 64
@@ -536,7 +536,7 @@ define void @qpFnmsub_02(fp128* nocapture readonly %a,
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    li r5, 1
 ; CHECK-P8-NEXT:    std r3, 0(r30)
-; CHECK-P8-NEXT:    sldi r5, r5, 63
+; CHECK-P8-NEXT:    rldic r5, r5, 63, 0
 ; CHECK-P8-NEXT:    xor r4, r4, r5
 ; CHECK-P8-NEXT:    std r4, 8(r30)
 ; CHECK-P8-NEXT:    addi r1, r1, 64

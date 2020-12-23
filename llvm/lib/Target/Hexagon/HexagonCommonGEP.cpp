@@ -472,10 +472,11 @@ static const NodeSet *node_class(GepNode *N, NodeSymRel &Rel) {
   // determining equality. The only purpose of the ordering is to eliminate
   // duplication due to the commutativity of equality/non-equality.
 static NodePair node_pair(GepNode *N1, GepNode *N2) {
-    uintptr_t P1 = uintptr_t(N1), P2 = uintptr_t(N2);
-    if (P1 <= P2)
-      return std::make_pair(N1, N2);
-    return std::make_pair(N2, N1);
+  uintptr_t P1 = reinterpret_cast<uintptr_t>(N1);
+  uintptr_t P2 = reinterpret_cast<uintptr_t>(N2);
+  if (P1 <= P2)
+    return std::make_pair(N1, N2);
+  return std::make_pair(N2, N1);
 }
 
 static unsigned node_hash(GepNode *N) {
@@ -650,8 +651,7 @@ void HexagonCommonGEP::common() {
     // Node for removal.
     Erase.insert(*I);
   }
-  NodeVect::iterator NewE = remove_if(Nodes, in_set(Erase));
-  Nodes.resize(std::distance(Nodes.begin(), NewE));
+  erase_if(Nodes, in_set(Erase));
 
   LLVM_DEBUG(dbgs() << "Gep nodes after post-commoning cleanup:\n" << Nodes);
 }

@@ -738,6 +738,66 @@ failure:
   unreachable
 }
 
+declare void @test14a-callee(i1 %cond)
+
+; Same as @test14 but with unwind exit.
+; Trunc instructions must be added below the landing pad.
+define i32 @test14a(i32 %start, i32* %p, i32* %q, i1 %c) personality i1 1 {
+; CHECK-LABEL: @test14a(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[START:%.*]] to i64
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[BACKEDGE:%.*]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[INDVARS_IV]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[INDVARS_IV]], -1
+; CHECK-NEXT:    br i1 [[COND]], label [[EXIT:%.*]], label [[BACKEDGE]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[STORE_ADDR:%.*]] = getelementptr i32, i32* [[P:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    store i32 1, i32* [[STORE_ADDR]], align 4
+; CHECK-NEXT:    [[STOP:%.*]] = load i32, i32* [[Q:%.*]], align 4
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp eq i32 [[STOP]], 0
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
+; CHECK-NEXT:    invoke void @test14a-callee(i1 [[LOOP_COND]])
+; CHECK-NEXT:    to label [[LOOP]] unwind label [[EXCEPTION:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 -1 to i32
+; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK:       exception:
+; CHECK-NEXT:    [[FOO_LCSSA1_WIDE:%.*]] = phi i64 [ [[TMP1]], [[BACKEDGE]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = landingpad i1
+; CHECK-NEXT:    cleanup
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[FOO_LCSSA1_WIDE]] to i32
+; CHECK-NEXT:    ret i32 [[TMP4]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next.1, %backedge]
+  %cond = icmp eq i32 %iv, 0
+  %foo = add i32 %iv, -1
+  br i1 %cond, label %exit, label %backedge
+
+backedge:
+  %index = zext i32 %foo to i64
+  %store.addr = getelementptr i32, i32* %p, i64 %index
+  store i32 1, i32* %store.addr
+  %load.addr = getelementptr i32, i32* %q, i64 %index
+  %stop = load i32, i32* %q
+  %loop.cond = icmp eq i32 %stop, 0
+  %iv.next.1 = add i32 %iv, -1
+  invoke void @test14a-callee(i1 %loop.cond) to label %loop unwind label %exception
+
+exit:
+  ret i32 %foo
+
+exception:
+  landingpad i1
+  cleanup
+  ret i32 %foo
+}
+
 declare void @use(i32 %arg)
 
 define i32 @test15(i32 %start, i32* %p, i32* %q) {

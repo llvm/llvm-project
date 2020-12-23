@@ -379,6 +379,8 @@ let RegAltNameIndices = [ABIRegAltName] in {
 
   def VTYPE  : RISCVReg<0, "vtype", ["vtype"]>;
   def VL     : RISCVReg<0, "vl", ["vl"]>;
+  def VXSAT  : RISCVReg<0, "vxsat", ["vxsat"]>;
+  def VXRM   : RISCVReg<0, "vxrm", ["vxrm"]>;
 }
 
 class RegisterTypes<list<ValueType> reg_types> {
@@ -394,9 +396,6 @@ class VReg<list<ValueType> regTypes, dag regList, int Vlmul>
   int VLMul = Vlmul;
   int Size = !mul(Vlmul, 64); // FIXME: assuming ELEN=64
 }
-
-// Dummy V register class.
-def NoVReg : VReg<[vint8m1_t], (add V0), 0>;
 
 def VR : VReg<[vint8mf2_t, vint8mf4_t, vint8mf8_t,
                vint16mf2_t, vint16mf4_t, vint32mf2_t,

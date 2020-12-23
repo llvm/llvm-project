@@ -27,7 +27,7 @@
 # RUN: llvm-objdump --macho --rebase %t/dylink-lazy-pie | FileCheck %s --check-prefix=PIE
 
 # CHECK-LABEL: SYMBOL TABLE:
-# CHECK:       {{0*}}[[#%x, IMGLOADER:]] {{.*}} __DATA,__data __dyld_private
+# CHECK:       {{0*}}[[#%x, IMGLOADER:]] l {{.*}} __DATA,__data __dyld_private
 
 # CHECK-LABEL: Disassembly of section __TEXT,__text:
 # CHECK:         callq 0x[[#%x, HELLO_STUB:]]

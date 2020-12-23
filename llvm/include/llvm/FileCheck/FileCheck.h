@@ -17,6 +17,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SourceMgr.h"
+#include <bitset>
 #include <string>
 #include <vector>
 
@@ -64,12 +65,23 @@ enum FileCheckKind {
   CheckBadCount
 };
 
+enum FileCheckKindModifier {
+  /// Modifies directive to perform literal match.
+  ModifierLiteral = 0,
+
+  // The number of modifier.
+  Size
+};
+
 class FileCheckType {
   FileCheckKind Kind;
   int Count; ///< optional Count for some checks
+  /// Modifers for the check directive.
+  std::bitset<FileCheckKindModifier::Size> Modifiers;
 
 public:
-  FileCheckType(FileCheckKind Kind = CheckNone) : Kind(Kind), Count(1) {}
+  FileCheckType(FileCheckKind Kind = CheckNone)
+      : Kind(Kind), Count(1), Modifiers() {}
   FileCheckType(const FileCheckType &) = default;
   FileCheckType &operator=(const FileCheckType &) = default;
 
@@ -78,8 +90,19 @@ public:
   int getCount() const { return Count; }
   FileCheckType &setCount(int C);
 
+  bool isLiteralMatch() const {
+    return Modifiers[FileCheckKindModifier::ModifierLiteral];
+  }
+  FileCheckType &setLiteralMatch(bool Literal = true) {
+    Modifiers.set(FileCheckKindModifier::ModifierLiteral, Literal);
+    return *this;
+  }
+
   // \returns a description of \p Prefix.
   std::string getDescription(StringRef Prefix) const;
+
+  // \returns a description of \p Modifiers.
+  std::string getModifiersDescription() const;
 };
 } // namespace Check
 

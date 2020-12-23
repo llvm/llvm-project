@@ -81,8 +81,7 @@ SymbolVendorELF::CreateInstance(const lldb::ModuleSP &module_sp,
   if (!fspec)
     fspec = obj_file->GetDebugLink().getValueOr(FileSpec());
 
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, "SymbolVendorELF::CreateInstance (module = %s)",
+  LLDB_SCOPED_TIMERF("SymbolVendorELF::CreateInstance (module = %s)",
                      module_sp->GetFileSpec().GetPath().c_str());
 
   ModuleSpec module_spec;

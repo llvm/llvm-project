@@ -27,7 +27,7 @@
 # REL-NEXT: }
 
 # REL:      Hex dump of section '.data':
-# REL-NEXT: 0x000042cc cc420000 2a000000
+# REL-NEXT: 0x000042d0 d0420000 2a000000
 
 # RUN: ld.lld -shared -z rel -z rela %t.o -o %t2.so
 # RUN: llvm-readobj -d -r %t2.so | FileCheck --check-prefix=RELA %s
@@ -41,9 +41,9 @@
 # RELA-NEXT: PLTGOT    {{.*}}
 # RELA-NEXT: PLTREL    RELA
 # RELA:      .rela.dyn {
-# RELA-NEXT:   R_386_RELATIVE - 0x42EC
+# RELA-NEXT:   R_386_RELATIVE - 0x42F0
 # RELA-NEXT:   R_386_GLOB_DAT func 0x0
-# RELA-NEXT:   R_386_TLS_TPOFF tls 0x2A
+# RELA-NEXT:   R_386_TLS_TPOFF tls 0x0
 # RELA-NEXT:   R_386_32 _start 0x2A
 # RELA-NEXT: }
 # RELA-NEXT: .rela.plt {
@@ -56,7 +56,7 @@ _start:
   movl func@GOT(%eax), %eax
 
 .section .text1,"awx"
-  movl %gs:tls@NTPOFF+42, %eax
+  movl tls@GOTNTPOFF(%eax), %eax
 
 .data
   .long .data

@@ -95,6 +95,7 @@ def TDL_DirA : Directive<"dira"> {
 // CHECK-NEXT:  bool isAllowedClauseForDirective(Directive D, Clause C, unsigned Version);
 // CHECK-EMPTY:
 // CHECK-NEXT:  AKind getAKind(StringRef);
+// CHECK-NEXT:  llvm::StringRef getTdlAKindName(AKind);
 // CHECK-EMPTY:
 // CHECK-NEXT:  } // namespace tdl
 // CHECK-NEXT:  } // namespace llvm
@@ -145,6 +146,18 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-NEXT:      .Case("valb",TDLCV_valb)
 // IMPL-NEXT:      .Case("valc",TDLCV_valc)
 // IMPL-NEXT:      .Default(TDLCV_valc);
+// IMPL-NEXT:  }
+// IMPL-EMPTY:
+// IMPL-NEXT:  llvm::StringRef llvm::tdl::getTdlAKindName(llvm::tdl::AKind x) {
+// IMPL-NEXT:    switch (x) {
+// IMPL-NEXT:      case TDLCV_vala:
+// IMPL-NEXT:        return "vala";
+// IMPL-NEXT:      case TDLCV_valb:
+// IMPL-NEXT:        return "valb";
+// IMPL-NEXT:      case TDLCV_valc:
+// IMPL-NEXT:        return "valc";
+// IMPL-NEXT:    }
+// IMPL-NEXT:    llvm_unreachable("Invalid Tdl AKind kind");
 // IMPL-NEXT:  }
 // IMPL-EMPTY:
 // IMPL-NEXT:  bool llvm::tdl::isAllowedClauseForDirective(Directive D, Clause C, unsigned Version) {

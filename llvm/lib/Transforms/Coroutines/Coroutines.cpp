@@ -131,6 +131,7 @@ static bool isCoroutineIntrinsicName(StringRef Name) {
       "llvm.coro.destroy",
       "llvm.coro.done",
       "llvm.coro.end",
+      "llvm.coro.end.async",
       "llvm.coro.frame",
       "llvm.coro.free",
       "llvm.coro.id",
@@ -316,11 +317,16 @@ void coro::Shape::buildFrom(Function &F) {
         CoroBegin = CB;
         break;
       }
+      case Intrinsic::coro_end_async:
       case Intrinsic::coro_end:
-        CoroEnds.push_back(cast<CoroEndInst>(II));
-        if (CoroEnds.back()->isFallthrough()) {
+        CoroEnds.push_back(cast<AnyCoroEndInst>(II));
+        if (auto *AsyncEnd = dyn_cast<CoroAsyncEndInst>(II)) {
+          AsyncEnd->checkWellFormed();
+        }
+        if (CoroEnds.back()->isFallthrough() && isa<CoroEndInst>(II)) {
           // Make sure that the fallthrough coro.end is the first element in the
           // CoroEnds vector.
+          // Note: I don't think this is neccessary anymore.
           if (CoroEnds.size() > 1) {
             if (CoroEnds.front()->isFallthrough())
               report_fatal_error(
@@ -353,7 +359,7 @@ void coro::Shape::buildFrom(Function &F) {
     }
 
     // Replace all coro.ends with unreachable instruction.
-    for (CoroEndInst *CE : CoroEnds)
+    for (AnyCoroEndInst *CE : CoroEnds)
       changeToUnreachable(CE, /*UseLLVMTrap=*/false);
 
     return;
@@ -711,6 +717,19 @@ static void checkAsyncContextProjectFunction(const Instruction *I,
 
 void CoroSuspendAsyncInst::checkWellFormed() const {
   checkAsyncContextProjectFunction(this, getAsyncContextProjectionFunction());
+}
+
+void CoroAsyncEndInst::checkWellFormed() const {
+  auto *MustTailCallFunc = getMustTailCallFunction();
+  if (!MustTailCallFunc)
+    return;
+  auto *FnTy =
+      cast<FunctionType>(MustTailCallFunc->getType()->getPointerElementType());
+  if (FnTy->getNumParams() != (getNumArgOperands() - 3))
+    fail(this,
+         "llvm.coro.end.async must tail call function argument type must "
+         "match the tail arguments",
+         MustTailCallFunc);
 }
 
 void LLVMAddCoroEarlyPass(LLVMPassManagerRef PM) {

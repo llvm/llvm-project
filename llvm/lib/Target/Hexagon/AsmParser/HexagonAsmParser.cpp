@@ -945,7 +945,7 @@ bool HexagonAsmParser::isLabel(AsmToken &Token) {
   StringRef Raw(String.data(), Third.getString().data() - String.data() +
                                    Third.getString().size());
   std::string Collapsed = std::string(Raw);
-  Collapsed.erase(llvm::remove_if(Collapsed, isSpace), Collapsed.end());
+  llvm::erase_if(Collapsed, isSpace);
   StringRef Whole = Collapsed;
   std::pair<StringRef, StringRef> DotSplit = Whole.split('.');
   if (!matchRegister(DotSplit.first.lower()))

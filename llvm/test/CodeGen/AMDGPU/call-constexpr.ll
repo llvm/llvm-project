@@ -100,7 +100,7 @@ define amdgpu_kernel void @test_bitcast_use_workitem_id_x() #0 {
 ; OPT-LABEL: @test_invoke(
 ; OPT: %1 = bitcast float 2.000000e+00 to i32
 ; OPT: %val = invoke i32 @ident_i32(i32 %1)
-; OPT-NEXT: to label %continue unwind label %broken
+; OPT-NEXT: to label %continue.split unwind label %broken
 ; OPT-LABEL: continue.split:
 ; OPT: bitcast i32 %val to float
 @_ZTIi = external global i8*

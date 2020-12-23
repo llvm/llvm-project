@@ -1400,9 +1400,7 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
   ClearModules(false);
 
   if (executable_sp) {
-    static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-    Timer scoped_timer(func_cat,
-                       "Target::SetExecutableModule (executable = '%s')",
+    LLDB_SCOPED_TIMERF("Target::SetExecutableModule (executable = '%s')",
                        executable_sp->GetFileSpec().GetPath().c_str());
 
     const bool notify = true;
@@ -3351,7 +3349,7 @@ Target::StopHookCommandLine::HandleStop(ExecutionContext &exc_ctx,
   // Force Async:
   bool old_async = debugger.GetAsyncExecution();
   debugger.SetAsyncExecution(true);
-  debugger.GetCommandInterpreter().HandleCommands(GetCommands(), exc_ctx,
+  debugger.GetCommandInterpreter().HandleCommands(GetCommands(), &exc_ctx,
                                                   options, result);
   debugger.SetAsyncExecution(old_async);
   lldb::ReturnStatus status = result.GetStatus();

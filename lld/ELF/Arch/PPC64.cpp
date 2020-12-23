@@ -1025,7 +1025,7 @@ RelExpr PPC64::getRelExpr(RelType type, const Symbol &s,
   case R_PPC64_TPREL16_HIGHEST:
   case R_PPC64_TPREL16_HIGHESTA:
   case R_PPC64_TPREL34:
-    return R_TLS;
+    return R_TPREL;
   case R_PPC64_DTPREL16:
   case R_PPC64_DTPREL16_DS:
   case R_PPC64_DTPREL16_HA:

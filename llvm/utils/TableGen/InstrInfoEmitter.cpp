@@ -182,11 +182,10 @@ InstrInfoEmitter::GetOperandInfo(const CodeGenInstruction &Inst) {
       if (Constraint.isNone())
         Res += "0";
       else if (Constraint.isEarlyClobber())
-        Res += "(1 << MCOI::EARLY_CLOBBER)";
+        Res += "MCOI_EARLY_CLOBBER";
       else {
         assert(Constraint.isTied());
-        Res += "((" + utostr(Constraint.getTiedOperand()) +
-                    " << 16) | (1 << MCOI::TIED_TO))";
+        Res += "MCOI_TIED_TO(" + utostr(Constraint.getTiedOperand()) + ")";
       }
 
       Result.push_back(Res);

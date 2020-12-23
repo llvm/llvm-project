@@ -806,19 +806,19 @@ public:
     bool IsASCII = DbgVariables == DVASCII;
     switch (C) {
     case LineChar::RangeStart:
-      return IsASCII ? "^" : u8"\u2548";
+      return IsASCII ? "^" : (const char *)u8"\u2548";
     case LineChar::RangeMid:
-      return IsASCII ? "|" : u8"\u2503";
+      return IsASCII ? "|" : (const char *)u8"\u2503";
     case LineChar::RangeEnd:
-      return IsASCII ? "v" : u8"\u253b";
+      return IsASCII ? "v" : (const char *)u8"\u253b";
     case LineChar::LabelVert:
-      return IsASCII ? "|" : u8"\u2502";
+      return IsASCII ? "|" : (const char *)u8"\u2502";
     case LineChar::LabelCornerNew:
-      return IsASCII ? "/" : u8"\u250c";
+      return IsASCII ? "/" : (const char *)u8"\u250c";
     case LineChar::LabelCornerActive:
-      return IsASCII ? "|" : u8"\u2520";
+      return IsASCII ? "|" : (const char *)u8"\u2520";
     case LineChar::LabelHoriz:
-      return IsASCII ? "-" : u8"\u2500";
+      return IsASCII ? "-" : (const char *)u8"\u2500";
     }
     llvm_unreachable("Unhandled LineChar enum");
   }

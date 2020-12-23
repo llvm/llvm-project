@@ -12,7 +12,10 @@ class TestGdbRemoteModuleInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def module_info(self):
+    @add_test_categories(["llgs"])
+    def test_module_info(self):
+        self.build()
+        self.set_inferior_startup_launch()
         procs = self.prep_debug_monitor_and_inferior()
         self.add_process_info_collection_packets()
         context = self.expect_gdbremote_sequence()
@@ -34,10 +37,3 @@ class TestGdbRemoteModuleInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertRegexpMatches(spec, '"file_size":\d+')
         self.assertRegexpMatches(spec, '"triple":"\w*-\w*-.*"')
         self.assertRegexpMatches(spec, '"uuid":"[A-Fa-f0-9]+"')
-
-    @llgs_test
-    def test_module_info(self):
-        self.init_llgs_test()
-        self.build()
-        self.set_inferior_startup_launch()
-        self.module_info()

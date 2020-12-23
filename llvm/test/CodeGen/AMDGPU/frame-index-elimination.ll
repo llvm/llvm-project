@@ -166,7 +166,7 @@ define void @void_func_byval_struct_i8_i32_ptr_value({ i8, i32 } addrspace(5)* b
 
 ; GFX9: v_add_u32_e32 [[GEP:v[0-9]+]], 4, [[SP]]
 ; GFX9-MUBUF:   buffer_load_dword v{{[0-9]+}}, off, s[0:3], s32 offset:4{{$}}
-; GFX9-FLATSCR: scratch_load_dword v{{[0-9]+}}, [[SP]], off offset:4{{$}}
+; GFX9-FLATSCR: scratch_load_dword v{{[0-9]+}}, off, s32 offset:4{{$}}
 
 ; GCN: ds_write_b32 v{{[0-9]+}}, [[GEP]]
 define void @void_func_byval_struct_i8_i32_ptr_nonentry_block({ i8, i32 } addrspace(5)* byval({ i8, i32 }) %arg0, i32 %arg2) #0 {

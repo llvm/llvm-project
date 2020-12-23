@@ -1062,7 +1062,7 @@ def LHA8: DForm_1<42, (outs g8rc:$rD), (ins memri:$src),
 def LWA  : DSForm_1<58, 2, (outs g8rc:$rD), (ins memrix:$src),
                     "lwa $rD, $src", IIC_LdStLWA,
                     [(set i64:$rD,
-                          (aligned4sextloadi32 iaddrX4:$src))]>, isPPC64,
+                          (DSFormSextLoadi32 iaddrX4:$src))]>, isPPC64,
                     PPC970_DGroup_Cracked;
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in
 def LHAX8: XForm_1_memOp<31, 343, (outs g8rc:$rD), (ins memrr:$src),
@@ -1173,7 +1173,7 @@ def LWZUX8 : XForm_1_memOp<31, 55, (outs g8rc:$rD, ptr_rc_nor0:$ea_result),
 let PPC970_Unit = 2 in {
 def LD   : DSForm_1<58, 0, (outs g8rc:$rD), (ins memrix:$src),
                     "ld $rD, $src", IIC_LdStLD,
-                    [(set i64:$rD, (aligned4load iaddrX4:$src))]>, isPPC64;
+                    [(set i64:$rD, (DSFormLoad iaddrX4:$src))]>, isPPC64;
 // The following four definitions are selected for small code model only.
 // Otherwise, we need to create two instructions to form a 32-bit offset,
 // so we have a custom matcher for TOC_ENTRY in PPCDAGToDAGIsel::Select().
@@ -1380,7 +1380,7 @@ def STWX8 : XForm_8_memOp<31, 151, (outs), (ins g8rc:$rS, memrr:$dst),
 // Normal 8-byte stores.
 def STD  : DSForm_1<62, 0, (outs), (ins g8rc:$rS, memrix:$dst),
                     "std $rS, $dst", IIC_LdStSTD,
-                    [(aligned4store i64:$rS, iaddrX4:$dst)]>, isPPC64;
+                    [(DSFormStore i64:$rS, iaddrX4:$dst)]>, isPPC64;
 def STDX  : XForm_8_memOp<31, 149, (outs), (ins g8rc:$rS, memrr:$dst),
                           "stdx $rS, $dst", IIC_LdStSTD,
                           [(store i64:$rS, xaddrX4:$dst)]>, isPPC64,
@@ -1447,7 +1447,7 @@ def : Pat<(pre_truncsti16 i64:$rS, iPTR:$ptrreg, iaddroff:$ptroff),
           (STHU8 $rS, iaddroff:$ptroff, $ptrreg)>;
 def : Pat<(pre_truncsti32 i64:$rS, iPTR:$ptrreg, iaddroff:$ptroff),
           (STWU8 $rS, iaddroff:$ptroff, $ptrreg)>;
-def : Pat<(aligned4pre_store i64:$rS, iPTR:$ptrreg, iaddroff:$ptroff),
+def : Pat<(DSFormPreStore i64:$rS, iPTR:$ptrreg, iaddroff:$ptroff),
           (STDU $rS, iaddroff:$ptroff, $ptrreg)>;
 
 def : Pat<(pre_truncsti8 i64:$rS, iPTR:$ptrreg, iPTR:$ptroff),
@@ -1591,11 +1591,11 @@ def : Pat<(add i64:$in, (PPChi tblockaddress:$g, 0)),
 
 // Patterns to match r+r indexed loads and stores for
 // addresses without at least 4-byte alignment.
-def : Pat<(i64 (unaligned4sextloadi32 xoaddr:$src)),
+def : Pat<(i64 (NonDSFormSextLoadi32 xoaddr:$src)),
           (LWAX xoaddr:$src)>;
-def : Pat<(i64 (unaligned4load xoaddr:$src)),
+def : Pat<(i64 (NonDSFormLoad xoaddr:$src)),
           (LDX xoaddr:$src)>;
-def : Pat<(unaligned4store i64:$rS, xoaddr:$dst),
+def : Pat<(NonDSFormStore i64:$rS, xoaddr:$dst),
           (STDX $rS, xoaddr:$dst)>;
 
 // 64-bits atomic loads and stores

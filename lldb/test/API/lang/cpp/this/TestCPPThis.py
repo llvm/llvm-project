@@ -21,7 +21,6 @@ class CPPThisTestCase(TestBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
-    @expectedFailureNetBSD
     def test_with_run_command(self):
         """Test that the appropriate member variables are available when stopped in C++ static, inline, and const methods"""
         self.build()

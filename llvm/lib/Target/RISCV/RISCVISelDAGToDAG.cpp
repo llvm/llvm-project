@@ -14,6 +14,7 @@
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "Utils/RISCVMatInt.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
@@ -138,6 +139,70 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
                              ShAmtVal);
         return;
       }
+    }
+    break;
+  }
+  case ISD::INTRINSIC_W_CHAIN: {
+    unsigned IntNo = cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue();
+    switch (IntNo) {
+      // By default we do not custom select any intrinsic.
+    default:
+      break;
+
+    case Intrinsic::riscv_vsetvli: {
+      if (!Subtarget->hasStdExtV())
+        break;
+
+      assert(Node->getNumOperands() == 5);
+
+      RISCVVSEW VSEW =
+          static_cast<RISCVVSEW>(Node->getConstantOperandVal(3) & 0x7);
+      RISCVVLMUL VLMul =
+          static_cast<RISCVVLMUL>(Node->getConstantOperandVal(4) & 0x7);
+
+      unsigned VTypeI = RISCVVType::encodeVTYPE(
+          VLMul, VSEW, /*TailAgnostic*/ true, /*MaskAgnostic*/ false);
+      SDValue VTypeIOp = CurDAG->getTargetConstant(VTypeI, DL, XLenVT);
+
+      SDValue VLOperand = Node->getOperand(2);
+      if (auto *C = dyn_cast<ConstantSDNode>(VLOperand)) {
+        if (C->isNullValue()) {
+          VLOperand = SDValue(
+              CurDAG->getMachineNode(RISCV::ADDI, DL, XLenVT,
+                                     CurDAG->getRegister(RISCV::X0, XLenVT),
+                                     CurDAG->getTargetConstant(0, DL, XLenVT)),
+              0);
+        }
+      }
+
+      ReplaceNode(Node,
+                  CurDAG->getMachineNode(RISCV::PseudoVSETVLI, DL, XLenVT,
+                                         MVT::Other, VLOperand, VTypeIOp,
+                                         /* Chain */ Node->getOperand(0)));
+      return;
+    }
+    case Intrinsic::riscv_vsetvlimax: {
+      if (!Subtarget->hasStdExtV())
+        break;
+
+      assert(Node->getNumOperands() == 4);
+
+      RISCVVSEW VSEW =
+          static_cast<RISCVVSEW>(Node->getConstantOperandVal(2) & 0x7);
+      RISCVVLMUL VLMul =
+          static_cast<RISCVVLMUL>(Node->getConstantOperandVal(3) & 0x7);
+
+      unsigned VTypeI = RISCVVType::encodeVTYPE(
+          VLMul, VSEW, /*TailAgnostic*/ true, /*MaskAgnostic*/ false);
+      SDValue VTypeIOp = CurDAG->getTargetConstant(VTypeI, DL, XLenVT);
+
+      SDValue VLOperand = CurDAG->getRegister(RISCV::X0, XLenVT);
+      ReplaceNode(Node,
+                  CurDAG->getMachineNode(RISCV::PseudoVSETVLI, DL, XLenVT,
+                                         MVT::Other, VLOperand, VTypeIOp,
+                                         /* Chain */ Node->getOperand(0)));
+      return;
+    }
     }
     break;
   }

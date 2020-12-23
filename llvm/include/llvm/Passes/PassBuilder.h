@@ -460,6 +460,9 @@ public:
 
   /// Build the default `AAManager` with the default alias analysis pipeline
   /// registered.
+  ///
+  /// This also adds target-specific alias analyses registered via
+  /// TargetMachine::registerAliasAnalyses().
   AAManager buildDefaultAAPipeline();
 
   /// Parse a textual pass pipeline description into a \c

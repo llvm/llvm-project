@@ -74,12 +74,12 @@ private:
   std::array<uint32_t, MaxRegSet + 1> m_xsave_offsets;
   std::array<size_t, MaxRegSet + 1> m_regset_offsets;
 
-  llvm::Optional<enum RegSetKind> GetSetForNativeRegNum(int reg_num) const;
+  llvm::Optional<RegSetKind> GetSetForNativeRegNum(uint32_t reg_num) const;
 
-  Status ReadRegisterSet(uint32_t set);
-  Status WriteRegisterSet(uint32_t set);
+  Status ReadRegisterSet(RegSetKind set);
+  Status WriteRegisterSet(RegSetKind set);
 
-  uint8_t *GetOffsetRegSetData(uint32_t set, size_t reg_offset);
+  uint8_t *GetOffsetRegSetData(RegSetKind set, size_t reg_offset);
 
   struct YMMSplitPtr {
     void *xmm;

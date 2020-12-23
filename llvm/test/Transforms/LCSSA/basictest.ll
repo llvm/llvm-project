@@ -20,7 +20,6 @@ post.if:		; preds = %if.false, %if.true
 loop.exit:		; preds = %post.if
 ; CHECK: %X3.lcssa = phi i32
 ; DEBUGIFY: %X3.lcssa = phi i32 {{.*}}, !dbg ![[DbgLoc:[0-9]+]]
-; DEBUGIFY-NEXT: call void @llvm.dbg.value(metadata i32 %X3.lcssa
 ; CHECK: %X4 = add i32 3, %X3.lcssa
 	%X4 = add i32 3, %X3		; <i32> [#uses=0]
 	ret void

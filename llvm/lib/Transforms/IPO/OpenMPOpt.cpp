@@ -1469,8 +1469,16 @@ Kernel OpenMPOpt::getUniqueKernelFor(Function &F) {
     }
 
     CachedKernel = nullptr;
-    if (!F.hasLocalLinkage())
+    if (!F.hasLocalLinkage()) {
+
+      // See https://openmp.llvm.org/remarks/OptimizationRemarks.html
+      auto Remark = [&](OptimizationRemark OR) {
+        return OR << "[OMP100] Potentially unknown OpenMP target region caller";
+      };
+      emitRemarkOnFunction(&F, "OMP100", Remark);
+
       return nullptr;
+    }
   }
 
   auto GetUniqueKernelForUse = [&](const Use &U) -> Kernel {

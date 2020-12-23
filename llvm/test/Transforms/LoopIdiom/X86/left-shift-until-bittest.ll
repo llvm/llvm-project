@@ -32,7 +32,6 @@ define i32 @p0_i32(i32 %x, i32 %bit) {
 ; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG22:!dbg !.*]]
 ; ALL:       end:
 ; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG18]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META11]], metadata !DIExpression()), [[DBG18]]
 ; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG23:!dbg !.*]]
 ;
 entry:
@@ -69,7 +68,6 @@ define i16 @p1_i16(i16 %x, i16 %bit) {
 ; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG38:!dbg !.*]]
 ; ALL:       end:
 ; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i16 [ [[X_CURR]], [[LOOP]] ], [[DBG34]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i16 [[X_CURR_LCSSA]], [[META28]], metadata !DIExpression()), [[DBG34]]
 ; ALL-NEXT:    ret i16 [[X_CURR_LCSSA]], [[DBG39:!dbg !.*]]
 ;
 entry:
@@ -103,7 +101,6 @@ define i32 @p2_constant_mask_24thbit(i32 %x) {
 ; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG51:!dbg !.*]]
 ; ALL:       end:
 ; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG47]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META42]], metadata !DIExpression()), [[DBG47]]
 ; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG52:!dbg !.*]]
 ;
 entry:
@@ -136,7 +133,6 @@ define i32 @p3_constant_mask_15thbit(i32 %x) {
 ; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG64:!dbg !.*]]
 ; ALL:       end:
 ; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG60]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META55]], metadata !DIExpression()), [[DBG60]]
 ; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG65:!dbg !.*]]
 ;
 entry:
@@ -208,7 +204,6 @@ define void @p5_both_liveout(i32 %x, i32 %bit, i32* %p0, i32* %p1) {
 ; ALL:       end:
 ; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG90]]
 ; ALL-NEXT:    [[X_NEXT_LCSSA:%.*]] = phi i32 [ [[X_NEXT]], [[LOOP]] ], [[DBG93]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META84]], metadata !DIExpression()), [[DBG90]]
 ; ALL-NEXT:    store i32 [[X_CURR_LCSSA]], i32* [[P0:%.*]], align 4, [[DBG95:!dbg !.*]]
 ; ALL-NEXT:    store i32 [[X_NEXT_LCSSA]], i32* [[P1:%.*]], align 4, [[DBG96:!dbg !.*]]
 ; ALL-NEXT:    ret void, [[DBG97:!dbg !.*]]
@@ -246,7 +241,6 @@ define i32 @p6_constant_mask_signbit_noncanonical(i32 %x) {
 ; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG109:!dbg !.*]]
 ; ALL:       end:
 ; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG105]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META100]], metadata !DIExpression()), [[DBG105]]
 ; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG110:!dbg !.*]]
 ;
 entry:
@@ -277,7 +271,6 @@ define i32 @p7_constant_mask_signbit_canonical(i32 %x) {
 ; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG120:!dbg !.*]]
 ; ALL:       end:
 ; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG117]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META113]], metadata !DIExpression()), [[DBG117]]
 ; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG121:!dbg !.*]]
 ;
 entry:
@@ -312,7 +305,6 @@ define i32 @p8(i32 %x, i32 %bit) {
 ; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[END:%.*]], label [[LOOP]], [[DBG135:!dbg !.*]]
 ; ALL:       end:
 ; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG131]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META125]], metadata !DIExpression()), [[DBG131]]
 ; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG136:!dbg !.*]]
 ;
 entry:
@@ -349,7 +341,6 @@ define i32 @p9(i32 %x, i32 %bit) {
 ; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG150:!dbg !.*]]
 ; ALL:       end:
 ; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG146]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META140]], metadata !DIExpression()), [[DBG146]]
 ; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG151:!dbg !.*]]
 ;
 entry:
@@ -387,7 +378,6 @@ define i32 @p10(i32 %x, i32 %bit) {
 ; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG165:!dbg !.*]]
 ; ALL:       end:
 ; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG161]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META155]], metadata !DIExpression()), [[DBG161]]
 ; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG166:!dbg !.*]]
 ;
 entry:
@@ -420,7 +410,6 @@ define i32 @p11(i32 %x) {
 ; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[END:%.*]], label [[LOOP]], [[DBG176:!dbg !.*]]
 ; ALL:       end:
 ; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG173]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META169]], metadata !DIExpression()), [[DBG173]]
 ; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG177:!dbg !.*]]
 ;
 entry:
@@ -458,7 +447,6 @@ define i32 @n12(i32 %x, i32 %bit) {
 ; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG191:!dbg !.*]]
 ; ALL:       end:
 ; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG186]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META180]], metadata !DIExpression()), [[DBG186]]
 ; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG192:!dbg !.*]]
 ;
 entry:
@@ -495,7 +483,6 @@ define i32 @n13(i32 %x, i32 %bit) {
 ; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG206:!dbg !.*]]
 ; ALL:       end:
 ; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG201]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META195]], metadata !DIExpression()), [[DBG201]]
 ; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG207:!dbg !.*]]
 ;
 entry:
@@ -532,7 +519,6 @@ define i32 @n14(i32 %x, i32 %bit) {
 ; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG221:!dbg !.*]]
 ; ALL:       end:
 ; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG217]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META211]], metadata !DIExpression()), [[DBG217]]
 ; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG222:!dbg !.*]]
 ;
 entry:
@@ -569,7 +555,6 @@ define i32 @n15(i32 %x, i32 %bit) {
 ; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG236:!dbg !.*]]
 ; ALL:       end:
 ; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG232]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META226]], metadata !DIExpression()), [[DBG232]]
 ; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG237:!dbg !.*]]
 ;
 entry:
@@ -606,7 +591,6 @@ define i32 @n16(i32 %x, i32 %bit) {
 ; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG251:!dbg !.*]]
 ; ALL:       end:
 ; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG247]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META241]], metadata !DIExpression()), [[DBG247]]
 ; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG252:!dbg !.*]]
 ;
 entry:
@@ -643,7 +627,6 @@ define i32 @n17(i32 %x, i32 %bit) {
 ; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[END:%.*]], label [[LOOP]], [[DBG266:!dbg !.*]]
 ; ALL:       end:
 ; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG262]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META256]], metadata !DIExpression()), [[DBG262]]
 ; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG267:!dbg !.*]]
 ;
 entry:
@@ -680,7 +663,6 @@ define i32 @n18(i32 %x, i32 %bit) {
 ; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG281:!dbg !.*]]
 ; ALL:       end:
 ; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG277]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META271]], metadata !DIExpression()), [[DBG277]]
 ; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG282:!dbg !.*]]
 ;
 entry:
@@ -751,7 +733,6 @@ define i32 @n20(i32 %x, i32 %bit) {
 ; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG311:!dbg !.*]]
 ; ALL:       end:
 ; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG307]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META301]], metadata !DIExpression()), [[DBG307]]
 ; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG312:!dbg !.*]]
 ;
 entry:
@@ -788,7 +769,6 @@ define i32 @n21(i32 %x, i32 %bit) {
 ; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG326:!dbg !.*]]
 ; ALL:       end:
 ; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG322]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META316]], metadata !DIExpression()), [[DBG322]]
 ; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG327:!dbg !.*]]
 ;
 entry:
@@ -825,7 +805,6 @@ define i32 @n22(i32 %x, i32 %bit) {
 ; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG341:!dbg !.*]]
 ; ALL:       end:
 ; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG337]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META331]], metadata !DIExpression()), [[DBG337]]
 ; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG342:!dbg !.*]]
 ;
 entry:
@@ -860,7 +839,6 @@ define i32 @n23(i32 %x) {
 ; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG354:!dbg !.*]]
 ; ALL:       end:
 ; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG350]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META345]], metadata !DIExpression()), [[DBG350]]
 ; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG355:!dbg !.*]]
 ;
 entry:
@@ -894,7 +872,6 @@ define i32 @n24(i32 %x) {
 ; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG367:!dbg !.*]]
 ; ALL:       end:
 ; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG363]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META358]], metadata !DIExpression()), [[DBG363]]
 ; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG368:!dbg !.*]]
 ;
 entry:
@@ -928,7 +905,6 @@ define i32 @n25(i32 %x) {
 ; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG380:!dbg !.*]]
 ; ALL:       end:
 ; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG376]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META371]], metadata !DIExpression()), [[DBG376]]
 ; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG381:!dbg !.*]]
 ;
 entry:
@@ -968,7 +944,6 @@ define i32 @n26(i32 %x, i32 %bit) {
 ; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG396:!dbg !.*]]
 ; ALL:       end:
 ; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG391]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META385]], metadata !DIExpression()), [[DBG391]]
 ; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG397:!dbg !.*]]
 ;
 entry:
@@ -1002,7 +977,6 @@ define i32 @n27(i32 %x) {
 ; ALL-NEXT:    br i1 [[X_CURR_ISBITUNSET]], label [[LOOP]], label [[END:%.*]], [[DBG408:!dbg !.*]]
 ; ALL:       end:
 ; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG404]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META400]], metadata !DIExpression()), [[DBG404]]
 ; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG409:!dbg !.*]]
 ;
 entry:
@@ -1039,7 +1013,6 @@ define i32 @n28(i32 %x, i32 %bit) {
 ; ALL:       end:
 ; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG419]]
 ; ALL-NEXT:    [[X_CURR_BITMASKED_LCSSA:%.*]] = phi i32 [ [[X_CURR_BITMASKED]], [[LOOP]] ], [[DBG420]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META413]], metadata !DIExpression()), [[DBG419]]
 ; ALL-NEXT:    call void @use32(i32 [[X_CURR_BITMASKED_LCSSA]]), [[DBG424:!dbg !.*]]
 ; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG425:!dbg !.*]]
 ;
@@ -1077,7 +1050,6 @@ define i32 @n29(i32 %x, i32 %bit) {
 ; ALL:       end:
 ; ALL-NEXT:    [[X_CURR_LCSSA:%.*]] = phi i32 [ [[X_CURR]], [[LOOP]] ], [[DBG435]]
 ; ALL-NEXT:    [[X_CURR_ISBITUNSET_LCSSA:%.*]] = phi i1 [ [[X_CURR_ISBITUNSET]], [[LOOP]] ], [[DBG437]]
-; ALL-NEXT:    call void @llvm.dbg.value(metadata i32 [[X_CURR_LCSSA]], [[META429]], metadata !DIExpression()), [[DBG435]]
 ; ALL-NEXT:    call void @use1(i1 [[X_CURR_ISBITUNSET_LCSSA]]), [[DBG440:!dbg !.*]]
 ; ALL-NEXT:    ret i32 [[X_CURR_LCSSA]], [[DBG441:!dbg !.*]]
 ;

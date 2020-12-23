@@ -1169,11 +1169,10 @@ bool MDAttachments::erase(unsigned ID) {
     return true;
   }
 
-  auto I = std::remove_if(Attachments.begin(), Attachments.end(),
-                          [ID](const Attachment &A) { return A.MDKind == ID; });
-  bool Changed = I != Attachments.end();
-  Attachments.erase(I, Attachments.end());
-  return Changed;
+  auto OldSize = Attachments.size();
+  llvm::erase_if(Attachments,
+                 [ID](const Attachment &A) { return A.MDKind == ID; });
+  return OldSize != Attachments.size();
 }
 
 MDNode *Value::getMetadata(unsigned KindID) const {

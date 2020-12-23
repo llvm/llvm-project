@@ -85,7 +85,6 @@ global_load_dwordx4 v[1:4], v[3:4], off dlc
 // GFX9-ERR: error: failed parsing operand
 // VI-ERR: error: instruction not supported on this GPU
 
-// FIXME: VI error should be instruction nto supported
 global_load_dword v1, v[3:4], off offset:0
 // GFX10: encoding: [0x00,0x80,0x30,0xdc,0x03,0x00,0x7d,0x01]
 // GFX9: global_load_dword v1, v[3:4], off    ; encoding: [0x00,0x80,0x50,0xdc,0x03,0x00,0x7f,0x01]

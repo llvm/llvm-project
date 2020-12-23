@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -simplifycfg | FileCheck %s
+; RUN: opt < %s -S -simplifycfg -simplifycfg-require-and-preserve-domtree=1 | FileCheck %s
 
 ; In 'simplifycfg', during the flattening of a 'br', the instructions for the
 ; 'true' and 'false' parts, are moved out from their respective basic blocks.

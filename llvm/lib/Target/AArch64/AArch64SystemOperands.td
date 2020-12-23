@@ -98,6 +98,21 @@ def : DB<"ld",    0xd>;
 def : DB<"st",    0xe>;
 def : DB<"sy",    0xf>;
 
+class DBnXS<string name, bits<4> encoding, bits<5> immValue> : SearchableTable {
+  let SearchableFields = ["Name", "Encoding", "ImmValue"];
+  let EnumValueField = "Encoding";
+
+  string Name = name;
+  bits<4> Encoding = encoding;
+  bits<5> ImmValue = immValue;
+  code Requires = [{ {AArch64::FeatureXS} }];
+}
+
+def : DBnXS<"oshnxs", 0x3, 0x10>;
+def : DBnXS<"nshnxs", 0x7, 0x14>;
+def : DBnXS<"ishnxs", 0xb, 0x18>;
+def : DBnXS<"synxs",  0xf, 0x1c>;
+
 //===----------------------------------------------------------------------===//
 // DC (data cache maintenance) instruction options.
 //===----------------------------------------------------------------------===//
@@ -389,11 +404,8 @@ def : BTI<"jc", 0b11>;
 // TLBI (translation lookaside buffer invalidate) instruction options.
 //===----------------------------------------------------------------------===//
 
-class TLBI<string name, bits<3> op1, bits<4> crn, bits<4> crm,
-             bits<3> op2, bit needsreg = 1> : SearchableTable {
-  let SearchableFields = ["Name", "Encoding"];
-  let EnumValueField = "Encoding";
-
+class TLBIEntry<string name, bits<3> op1, bits<4> crn, bits<4> crm,
+             bits<3> op2, bit needsreg> {
   string Name = name;
   bits<14> Encoding;
   let Encoding{13-11} = op1;
@@ -401,95 +413,122 @@ class TLBI<string name, bits<3> op1, bits<4> crn, bits<4> crm,
   let Encoding{6-3} = crm;
   let Encoding{2-0} = op2;
   bit NeedsReg = needsreg;
-  code Requires = [{ {} }];
+  list<string> Requires = [];
+  list<string> ExtraRequires = [];
+  code RequiresStr = [{ { }] # !interleave(Requires # ExtraRequires, [{, }]) # [{ } }];
 }
 
-def : TLBI<"IPAS2E1IS",    0b100, 0b1000, 0b0000, 0b001>;
-def : TLBI<"IPAS2LE1IS",   0b100, 0b1000, 0b0000, 0b101>;
-def : TLBI<"VMALLE1IS",    0b000, 0b1000, 0b0011, 0b000, 0>;
-def : TLBI<"ALLE2IS",      0b100, 0b1000, 0b0011, 0b000, 0>;
-def : TLBI<"ALLE3IS",      0b110, 0b1000, 0b0011, 0b000, 0>;
-def : TLBI<"VAE1IS",       0b000, 0b1000, 0b0011, 0b001>;
-def : TLBI<"VAE2IS",       0b100, 0b1000, 0b0011, 0b001>;
-def : TLBI<"VAE3IS",       0b110, 0b1000, 0b0011, 0b001>;
-def : TLBI<"ASIDE1IS",     0b000, 0b1000, 0b0011, 0b010>;
-def : TLBI<"VAAE1IS",      0b000, 0b1000, 0b0011, 0b011>;
-def : TLBI<"ALLE1IS",      0b100, 0b1000, 0b0011, 0b100, 0>;
-def : TLBI<"VALE1IS",      0b000, 0b1000, 0b0011, 0b101>;
-def : TLBI<"VALE2IS",      0b100, 0b1000, 0b0011, 0b101>;
-def : TLBI<"VALE3IS",      0b110, 0b1000, 0b0011, 0b101>;
-def : TLBI<"VMALLS12E1IS", 0b100, 0b1000, 0b0011, 0b110, 0>;
-def : TLBI<"VAALE1IS",     0b000, 0b1000, 0b0011, 0b111>;
-def : TLBI<"IPAS2E1",      0b100, 0b1000, 0b0100, 0b001>;
-def : TLBI<"IPAS2LE1",     0b100, 0b1000, 0b0100, 0b101>;
-def : TLBI<"VMALLE1",      0b000, 0b1000, 0b0111, 0b000, 0>;
-def : TLBI<"ALLE2",        0b100, 0b1000, 0b0111, 0b000, 0>;
-def : TLBI<"ALLE3",        0b110, 0b1000, 0b0111, 0b000, 0>;
-def : TLBI<"VAE1",         0b000, 0b1000, 0b0111, 0b001>;
-def : TLBI<"VAE2",         0b100, 0b1000, 0b0111, 0b001>;
-def : TLBI<"VAE3",         0b110, 0b1000, 0b0111, 0b001>;
-def : TLBI<"ASIDE1",       0b000, 0b1000, 0b0111, 0b010>;
-def : TLBI<"VAAE1",        0b000, 0b1000, 0b0111, 0b011>;
-def : TLBI<"ALLE1",        0b100, 0b1000, 0b0111, 0b100, 0>;
-def : TLBI<"VALE1",        0b000, 0b1000, 0b0111, 0b101>;
-def : TLBI<"VALE2",        0b100, 0b1000, 0b0111, 0b101>;
-def : TLBI<"VALE3",        0b110, 0b1000, 0b0111, 0b101>;
-def : TLBI<"VMALLS12E1",   0b100, 0b1000, 0b0111, 0b110, 0>;
-def : TLBI<"VAALE1",       0b000, 0b1000, 0b0111, 0b111>;
+def TLBITable : GenericTable {
+  let FilterClass = "TLBIEntry";
+  let CppTypeName = "TLBI";
+  let Fields = ["Name", "Encoding", "NeedsReg", "RequiresStr"];
+}
+
+def lookupTLBIByName : SearchIndex {
+  let Table = TLBITable;
+  let Key = ["Name"];
+}
+
+def lookupTLBIByEncoding : SearchIndex {
+  let Table = TLBITable;
+  let Key = ["Encoding"];
+}
+
+multiclass TLBI<string name, bits<3> op1, bits<4> crn, bits<4> crm,
+             bits<3> op2, bit needsreg = 1> {
+  def : TLBIEntry<name, op1, crn, crm, op2, needsreg>;
+  def : TLBIEntry<!strconcat(name, "nXS"), op1, crn, crm, op2, needsreg> {
+    let Encoding{7} = 1;
+    let ExtraRequires = ["AArch64::FeatureXS"];
+  }
+}
+
+defm : TLBI<"IPAS2E1IS",    0b100, 0b1000, 0b0000, 0b001>;
+defm : TLBI<"IPAS2LE1IS",   0b100, 0b1000, 0b0000, 0b101>;
+defm : TLBI<"VMALLE1IS",    0b000, 0b1000, 0b0011, 0b000, 0>;
+defm : TLBI<"ALLE2IS",      0b100, 0b1000, 0b0011, 0b000, 0>;
+defm : TLBI<"ALLE3IS",      0b110, 0b1000, 0b0011, 0b000, 0>;
+defm : TLBI<"VAE1IS",       0b000, 0b1000, 0b0011, 0b001>;
+defm : TLBI<"VAE2IS",       0b100, 0b1000, 0b0011, 0b001>;
+defm : TLBI<"VAE3IS",       0b110, 0b1000, 0b0011, 0b001>;
+defm : TLBI<"ASIDE1IS",     0b000, 0b1000, 0b0011, 0b010>;
+defm : TLBI<"VAAE1IS",      0b000, 0b1000, 0b0011, 0b011>;
+defm : TLBI<"ALLE1IS",      0b100, 0b1000, 0b0011, 0b100, 0>;
+defm : TLBI<"VALE1IS",      0b000, 0b1000, 0b0011, 0b101>;
+defm : TLBI<"VALE2IS",      0b100, 0b1000, 0b0011, 0b101>;
+defm : TLBI<"VALE3IS",      0b110, 0b1000, 0b0011, 0b101>;
+defm : TLBI<"VMALLS12E1IS", 0b100, 0b1000, 0b0011, 0b110, 0>;
+defm : TLBI<"VAALE1IS",     0b000, 0b1000, 0b0011, 0b111>;
+defm : TLBI<"IPAS2E1",      0b100, 0b1000, 0b0100, 0b001>;
+defm : TLBI<"IPAS2LE1",     0b100, 0b1000, 0b0100, 0b101>;
+defm : TLBI<"VMALLE1",      0b000, 0b1000, 0b0111, 0b000, 0>;
+defm : TLBI<"ALLE2",        0b100, 0b1000, 0b0111, 0b000, 0>;
+defm : TLBI<"ALLE3",        0b110, 0b1000, 0b0111, 0b000, 0>;
+defm : TLBI<"VAE1",         0b000, 0b1000, 0b0111, 0b001>;
+defm : TLBI<"VAE2",         0b100, 0b1000, 0b0111, 0b001>;
+defm : TLBI<"VAE3",         0b110, 0b1000, 0b0111, 0b001>;
+defm : TLBI<"ASIDE1",       0b000, 0b1000, 0b0111, 0b010>;
+defm : TLBI<"VAAE1",        0b000, 0b1000, 0b0111, 0b011>;
+defm : TLBI<"ALLE1",        0b100, 0b1000, 0b0111, 0b100, 0>;
+defm : TLBI<"VALE1",        0b000, 0b1000, 0b0111, 0b101>;
+defm : TLBI<"VALE2",        0b100, 0b1000, 0b0111, 0b101>;
+defm : TLBI<"VALE3",        0b110, 0b1000, 0b0111, 0b101>;
+defm : TLBI<"VMALLS12E1",   0b100, 0b1000, 0b0111, 0b110, 0>;
+defm : TLBI<"VAALE1",       0b000, 0b1000, 0b0111, 0b111>;
 
 // Armv8.4-A Translation Lookaside Buffer Instructions (TLBI)
-let Requires = [{ {AArch64::FeatureTLB_RMI} }] in {
+let Requires = ["AArch64::FeatureTLB_RMI"] in {
 // Armv8.4-A Outer Sharable TLB Maintenance instructions:
 //                         op1    CRn     CRm     op2
-def : TLBI<"VMALLE1OS",    0b000, 0b1000, 0b0001, 0b000, 0>;
-def : TLBI<"VAE1OS",       0b000, 0b1000, 0b0001, 0b001>;
-def : TLBI<"ASIDE1OS",     0b000, 0b1000, 0b0001, 0b010>;
-def : TLBI<"VAAE1OS",      0b000, 0b1000, 0b0001, 0b011>;
-def : TLBI<"VALE1OS",      0b000, 0b1000, 0b0001, 0b101>;
-def : TLBI<"VAALE1OS",     0b000, 0b1000, 0b0001, 0b111>;
-def : TLBI<"IPAS2E1OS",    0b100, 0b1000, 0b0100, 0b000>;
-def : TLBI<"IPAS2LE1OS",   0b100, 0b1000, 0b0100, 0b100>;
-def : TLBI<"VAE2OS",       0b100, 0b1000, 0b0001, 0b001>;
-def : TLBI<"VALE2OS",      0b100, 0b1000, 0b0001, 0b101>;
-def : TLBI<"VMALLS12E1OS", 0b100, 0b1000, 0b0001, 0b110, 0>;
-def : TLBI<"VAE3OS",       0b110, 0b1000, 0b0001, 0b001>;
-def : TLBI<"VALE3OS",      0b110, 0b1000, 0b0001, 0b101>;
-def : TLBI<"ALLE2OS",      0b100, 0b1000, 0b0001, 0b000, 0>;
-def : TLBI<"ALLE1OS",      0b100, 0b1000, 0b0001, 0b100, 0>;
-def : TLBI<"ALLE3OS",      0b110, 0b1000, 0b0001, 0b000, 0>;
+defm : TLBI<"VMALLE1OS",    0b000, 0b1000, 0b0001, 0b000, 0>;
+defm : TLBI<"VAE1OS",       0b000, 0b1000, 0b0001, 0b001>;
+defm : TLBI<"ASIDE1OS",     0b000, 0b1000, 0b0001, 0b010>;
+defm : TLBI<"VAAE1OS",      0b000, 0b1000, 0b0001, 0b011>;
+defm : TLBI<"VALE1OS",      0b000, 0b1000, 0b0001, 0b101>;
+defm : TLBI<"VAALE1OS",     0b000, 0b1000, 0b0001, 0b111>;
+defm : TLBI<"IPAS2E1OS",    0b100, 0b1000, 0b0100, 0b000>;
+defm : TLBI<"IPAS2LE1OS",   0b100, 0b1000, 0b0100, 0b100>;
+defm : TLBI<"VAE2OS",       0b100, 0b1000, 0b0001, 0b001>;
+defm : TLBI<"VALE2OS",      0b100, 0b1000, 0b0001, 0b101>;
+defm : TLBI<"VMALLS12E1OS", 0b100, 0b1000, 0b0001, 0b110, 0>;
+defm : TLBI<"VAE3OS",       0b110, 0b1000, 0b0001, 0b001>;
+defm : TLBI<"VALE3OS",      0b110, 0b1000, 0b0001, 0b101>;
+defm : TLBI<"ALLE2OS",      0b100, 0b1000, 0b0001, 0b000, 0>;
+defm : TLBI<"ALLE1OS",      0b100, 0b1000, 0b0001, 0b100, 0>;
+defm : TLBI<"ALLE3OS",      0b110, 0b1000, 0b0001, 0b000, 0>;
 
 // Armv8.4-A TLB Range Maintenance instructions:
 //                         op1    CRn     CRm     op2
-def : TLBI<"RVAE1",        0b000, 0b1000, 0b0110, 0b001>;
-def : TLBI<"RVAAE1",       0b000, 0b1000, 0b0110, 0b011>;
-def : TLBI<"RVALE1",       0b000, 0b1000, 0b0110, 0b101>;
-def : TLBI<"RVAALE1",      0b000, 0b1000, 0b0110, 0b111>;
-def : TLBI<"RVAE1IS",      0b000, 0b1000, 0b0010, 0b001>;
-def : TLBI<"RVAAE1IS",     0b000, 0b1000, 0b0010, 0b011>;
-def : TLBI<"RVALE1IS",     0b000, 0b1000, 0b0010, 0b101>;
-def : TLBI<"RVAALE1IS",    0b000, 0b1000, 0b0010, 0b111>;
-def : TLBI<"RVAE1OS",      0b000, 0b1000, 0b0101, 0b001>;
-def : TLBI<"RVAAE1OS",     0b000, 0b1000, 0b0101, 0b011>;
-def : TLBI<"RVALE1OS",     0b000, 0b1000, 0b0101, 0b101>;
-def : TLBI<"RVAALE1OS",    0b000, 0b1000, 0b0101, 0b111>;
-def : TLBI<"RIPAS2E1IS",   0b100, 0b1000, 0b0000, 0b010>;
-def : TLBI<"RIPAS2LE1IS",  0b100, 0b1000, 0b0000, 0b110>;
-def : TLBI<"RIPAS2E1",     0b100, 0b1000, 0b0100, 0b010>;
-def : TLBI<"RIPAS2LE1",    0b100, 0b1000, 0b0100, 0b110>;
-def : TLBI<"RIPAS2E1OS",   0b100, 0b1000, 0b0100, 0b011>;
-def : TLBI<"RIPAS2LE1OS",  0b100, 0b1000, 0b0100, 0b111>;
-def : TLBI<"RVAE2",        0b100, 0b1000, 0b0110, 0b001>;
-def : TLBI<"RVALE2",       0b100, 0b1000, 0b0110, 0b101>;
-def : TLBI<"RVAE2IS",      0b100, 0b1000, 0b0010, 0b001>;
-def : TLBI<"RVALE2IS",     0b100, 0b1000, 0b0010, 0b101>;
-def : TLBI<"RVAE2OS",      0b100, 0b1000, 0b0101, 0b001>;
-def : TLBI<"RVALE2OS",     0b100, 0b1000, 0b0101, 0b101>;
-def : TLBI<"RVAE3",        0b110, 0b1000, 0b0110, 0b001>;
-def : TLBI<"RVALE3",       0b110, 0b1000, 0b0110, 0b101>;
-def : TLBI<"RVAE3IS",      0b110, 0b1000, 0b0010, 0b001>;
-def : TLBI<"RVALE3IS",     0b110, 0b1000, 0b0010, 0b101>;
-def : TLBI<"RVAE3OS",      0b110, 0b1000, 0b0101, 0b001>;
-def : TLBI<"RVALE3OS",     0b110, 0b1000, 0b0101, 0b101>;
+defm : TLBI<"RVAE1",        0b000, 0b1000, 0b0110, 0b001>;
+defm : TLBI<"RVAAE1",       0b000, 0b1000, 0b0110, 0b011>;
+defm : TLBI<"RVALE1",       0b000, 0b1000, 0b0110, 0b101>;
+defm : TLBI<"RVAALE1",      0b000, 0b1000, 0b0110, 0b111>;
+defm : TLBI<"RVAE1IS",      0b000, 0b1000, 0b0010, 0b001>;
+defm : TLBI<"RVAAE1IS",     0b000, 0b1000, 0b0010, 0b011>;
+defm : TLBI<"RVALE1IS",     0b000, 0b1000, 0b0010, 0b101>;
+defm : TLBI<"RVAALE1IS",    0b000, 0b1000, 0b0010, 0b111>;
+defm : TLBI<"RVAE1OS",      0b000, 0b1000, 0b0101, 0b001>;
+defm : TLBI<"RVAAE1OS",     0b000, 0b1000, 0b0101, 0b011>;
+defm : TLBI<"RVALE1OS",     0b000, 0b1000, 0b0101, 0b101>;
+defm : TLBI<"RVAALE1OS",    0b000, 0b1000, 0b0101, 0b111>;
+defm : TLBI<"RIPAS2E1IS",   0b100, 0b1000, 0b0000, 0b010>;
+defm : TLBI<"RIPAS2LE1IS",  0b100, 0b1000, 0b0000, 0b110>;
+defm : TLBI<"RIPAS2E1",     0b100, 0b1000, 0b0100, 0b010>;
+defm : TLBI<"RIPAS2LE1",    0b100, 0b1000, 0b0100, 0b110>;
+defm : TLBI<"RIPAS2E1OS",   0b100, 0b1000, 0b0100, 0b011>;
+defm : TLBI<"RIPAS2LE1OS",  0b100, 0b1000, 0b0100, 0b111>;
+defm : TLBI<"RVAE2",        0b100, 0b1000, 0b0110, 0b001>;
+defm : TLBI<"RVALE2",       0b100, 0b1000, 0b0110, 0b101>;
+defm : TLBI<"RVAE2IS",      0b100, 0b1000, 0b0010, 0b001>;
+defm : TLBI<"RVALE2IS",     0b100, 0b1000, 0b0010, 0b101>;
+defm : TLBI<"RVAE2OS",      0b100, 0b1000, 0b0101, 0b001>;
+defm : TLBI<"RVALE2OS",     0b100, 0b1000, 0b0101, 0b101>;
+defm : TLBI<"RVAE3",        0b110, 0b1000, 0b0110, 0b001>;
+defm : TLBI<"RVALE3",       0b110, 0b1000, 0b0110, 0b101>;
+defm : TLBI<"RVAE3IS",      0b110, 0b1000, 0b0010, 0b001>;
+defm : TLBI<"RVALE3IS",     0b110, 0b1000, 0b0010, 0b101>;
+defm : TLBI<"RVAE3OS",      0b110, 0b1000, 0b0101, 0b001>;
+defm : TLBI<"RVALE3OS",     0b110, 0b1000, 0b0101, 0b101>;
 } //FeatureTLB_RMI
 
 // Armv8.5-A Prediction Restriction by Context instruction options:
@@ -604,6 +643,7 @@ def : ROSysReg<"ID_AA64AFR0_EL1",     0b11, 0b000, 0b0000, 0b0101, 0b100>;
 def : ROSysReg<"ID_AA64AFR1_EL1",     0b11, 0b000, 0b0000, 0b0101, 0b101>;
 def : ROSysReg<"ID_AA64ISAR0_EL1",    0b11, 0b000, 0b0000, 0b0110, 0b000>;
 def : ROSysReg<"ID_AA64ISAR1_EL1",    0b11, 0b000, 0b0000, 0b0110, 0b001>;
+def : ROSysReg<"ID_AA64ISAR2_EL1",    0b11, 0b000, 0b0000, 0b0110, 0b010>;
 def : ROSysReg<"ID_AA64MMFR0_EL1",    0b11, 0b000, 0b0000, 0b0111, 0b000>;
 def : ROSysReg<"ID_AA64MMFR1_EL1",    0b11, 0b000, 0b0000, 0b0111, 0b001>;
 def : ROSysReg<"ID_AA64MMFR2_EL1",    0b11, 0b000, 0b0000, 0b0111, 0b010>;
@@ -819,6 +859,9 @@ def : RWSysReg<"ACTLR_EL1",          0b11, 0b000, 0b0001, 0b0000, 0b001>;
 def : RWSysReg<"ACTLR_EL2",          0b11, 0b100, 0b0001, 0b0000, 0b001>;
 def : RWSysReg<"ACTLR_EL3",          0b11, 0b110, 0b0001, 0b0000, 0b001>;
 def : RWSysReg<"HCR_EL2",            0b11, 0b100, 0b0001, 0b0001, 0b000>;
+def : RWSysReg<"HCRX_EL2",           0b11, 0b100, 0b0001, 0b0010, 0b010> {
+  let Requires = [{ {AArch64::FeatureHCX} }];
+}
 def : RWSysReg<"SCR_EL3",            0b11, 0b110, 0b0001, 0b0001, 0b000>;
 def : RWSysReg<"MDCR_EL2",           0b11, 0b100, 0b0001, 0b0001, 0b001>;
 def : RWSysReg<"SDER32_EL3",         0b11, 0b110, 0b0001, 0b0001, 0b001>;
@@ -1526,6 +1569,33 @@ def : RWSysReg<"CNTVFRQ_EL2",      0b11, 0b100, 0b1110, 0b0000, 0b111>;
 def : RWSysReg<"CNTPCTSS_EL0",     0b11, 0b011, 0b1110, 0b0000, 0b101>;
 def : RWSysReg<"CNTVCTSS_EL0",     0b11, 0b011, 0b1110, 0b0000, 0b110>;
 }
+
+// v8.7a LD64B/ST64B Accelerator Extension system register
+let Requires = [{ {AArch64::FeatureLS64} }] in
+def : RWSysReg<"ACCDATA_EL1",       0b11, 0b000, 0b1101, 0b0000, 0b101>;
+
+// Branch Record Buffer system registers
+let Requires = [{ {AArch64::FeatureBRBE} }] in {
+def : RWSysReg<"BRBCR_EL1",         0b10, 0b001, 0b1001, 0b0000, 0b000>;
+def : RWSysReg<"BRBCR_EL12",        0b10, 0b101, 0b1001, 0b0000, 0b000>;
+def : RWSysReg<"BRBCR_EL2",         0b10, 0b100, 0b1001, 0b0000, 0b000>;
+def : RWSysReg<"BRBFCR_EL1",        0b10, 0b001, 0b1001, 0b0000, 0b001>;
+def : ROSysReg<"BRBIDR0_EL1",       0b10, 0b001, 0b1001, 0b0010, 0b000>;
+def : RWSysReg<"BRBINFINJ_EL1",     0b10, 0b001, 0b1001, 0b0001, 0b000>;
+def : RWSysReg<"BRBSRCINJ_EL1",     0b10, 0b001, 0b1001, 0b0001, 0b001>;
+def : RWSysReg<"BRBTGTINJ_EL1",     0b10, 0b001, 0b1001, 0b0001, 0b010>;
+def : RWSysReg<"BRBTS_EL1",         0b10, 0b001, 0b1001, 0b0000, 0b010>;
+foreach n = 0-31 in {
+  defvar nb = !cast<bits<5>>(n);
+  def : ROSysReg<"BRBINF"#n#"_EL1", 0b10, 0b001, 0b1000, nb{3-0}, {nb{4},0b00}>;
+  def : ROSysReg<"BRBSRC"#n#"_EL1", 0b10, 0b001, 0b1000, nb{3-0}, {nb{4},0b01}>;
+  def : ROSysReg<"BRBTGT"#n#"_EL1", 0b10, 0b001, 0b1000, nb{3-0}, {nb{4},0b10}>;
+}
+}
+
+// Statistical Profiling Extension system register
+let Requires = [{ {AArch64::FeatureSPE_EEF} }] in
+def : RWSysReg<"PMSNEVFR_EL1",      0b11, 0b000, 0b1001, 0b1001, 0b001>;
 
 // Cyclone specific system registers
 //                                 Op0    Op1     CRn     CRm    Op2

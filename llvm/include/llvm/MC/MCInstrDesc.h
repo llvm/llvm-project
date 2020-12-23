@@ -27,11 +27,21 @@ class MCInst;
 //===----------------------------------------------------------------------===//
 
 namespace MCOI {
-// Operand constraints
+/// Operand constraints. These are encoded in 16 bits with one of the
+/// low-order 3 bits specifying that a constraint is present and the
+/// corresponding high-order hex digit specifying the constraint value.
+/// This allows for a maximum of 3 constraints.
 enum OperandConstraint {
-  TIED_TO = 0,  // Must be allocated the same register as.
-  EARLY_CLOBBER // Operand is an early clobber register operand
+  TIED_TO = 0,  // Must be allocated the same register as specified value.
+  EARLY_CLOBBER // If present, operand is an early clobber register.
 };
+
+// Define a macro to produce each constraint value.
+#define MCOI_TIED_TO(op) \
+  ((1 << MCOI::TIED_TO) | ((op) << (4 + MCOI::TIED_TO * 4)))
+
+#define MCOI_EARLY_CLOBBER \
+  (1 << MCOI::EARLY_CLOBBER)
 
 /// These are flags set on operands, but should be considered
 /// private, all access should go through the MCOperandInfo accessors.
@@ -84,10 +94,9 @@ public:
 
   /// Information about the type of the operand.
   uint8_t OperandType;
-  /// The lower 16 bits are used to specify which constraints are set.
-  /// The higher 16 bits are used to specify the value of constraints (4 bits
-  /// each).
-  uint32_t Constraints;
+
+  /// Operand constraints (see OperandConstraint enum).
+  uint16_t Constraints;
 
   /// Set if this operand is a pointer value and it requires a callback
   /// to look up its register class.
@@ -197,14 +206,14 @@ public:
   const MCPhysReg *ImplicitDefs; // Registers implicitly defined by this instr
   const MCOperandInfo *OpInfo;   // 'NumOperands' entries about operands
 
-  /// Returns the value of the specific constraint if
-  /// it is set. Returns -1 if it is not set.
+  /// Returns the value of the specified operand constraint if
+  /// it is present. Returns -1 if it is not present.
   int getOperandConstraint(unsigned OpNum,
                            MCOI::OperandConstraint Constraint) const {
     if (OpNum < NumOperands &&
         (OpInfo[OpNum].Constraints & (1 << Constraint))) {
-      unsigned Pos = 16 + Constraint * 4;
-      return (int)(OpInfo[OpNum].Constraints >> Pos) & 0xf;
+      unsigned ValuePos = 4 + Constraint * 4;
+      return (int)(OpInfo[OpNum].Constraints >> ValuePos) & 0x0f;
     }
     return -1;
   }

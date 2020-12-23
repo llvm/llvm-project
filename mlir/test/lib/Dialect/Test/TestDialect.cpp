@@ -414,8 +414,8 @@ static void printCustomDirectiveAttributes(OpAsmPrinter &printer, Operation *,
 }
 
 static void printCustomDirectiveAttrDict(OpAsmPrinter &printer, Operation *op,
-                                         MutableDictionaryAttr attrs) {
-  printer.printOptionalAttrDict(attrs.getAttrs());
+                                         DictionaryAttr attrs) {
+  printer.printOptionalAttrDict(attrs.getValue());
 }
 //===----------------------------------------------------------------------===//
 // Test IsolatedRegionOp - parse passthrough region arguments.
@@ -653,7 +653,7 @@ LogicalResult OpWithShapedTypeInferTypeInterfaceOp::inferReturnTypeComponents(
   }
   int64_t dim =
       sval.hasRank() ? sval.getShape().front() : ShapedType::kDynamicSize;
-  auto type = IntegerType::get(17, context);
+  auto type = IntegerType::get(context, 17);
   inferredReturnShapes.push_back(ShapedTypeComponents({dim}, type));
   return success();
 }

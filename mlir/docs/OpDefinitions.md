@@ -761,7 +761,7 @@ declarative parameter to `print` method argument is detailed below:
     -   Single: `Type`
     -   Optional: `Type`
     -   Variadic: `TypeRange`
-*   `attr-dict` Directive: `const MutableDictionaryAttr&`
+*   `attr-dict` Directive: `DictionaryAttr`
 
 When a variable is optional, the provided value may be null.
 

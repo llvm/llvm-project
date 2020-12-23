@@ -43,7 +43,7 @@ void mlir::impl::eraseFunctionArguments(Operation *op,
   SmallString<8> nameBuf;
 
   // Collect arg attrs to set.
-  SmallVector<MutableDictionaryAttr, 4> newArgAttrs;
+  SmallVector<DictionaryAttr, 4> newArgAttrs;
   iterateIndicesExcept(originalNumArgs, argIndices, [&](unsigned i) {
     newArgAttrs.emplace_back(getArgAttrDict(op, i));
   });
@@ -58,11 +58,10 @@ void mlir::impl::eraseFunctionArguments(Operation *op,
   // Set the new arg attrs, or remove them if empty.
   for (unsigned i = 0, e = newArgAttrs.size(); i != e; ++i) {
     auto nameAttr = getArgAttrName(i, nameBuf);
-    auto argAttr = newArgAttrs[i];
-    if (argAttr.empty())
-      op->removeAttr(nameAttr);
+    if (newArgAttrs[i] && !newArgAttrs[i].empty())
+      op->setAttr(nameAttr, newArgAttrs[i]);
     else
-      op->setAttr(nameAttr, argAttr.getDictionary(op->getContext()));
+      op->removeAttr(nameAttr);
   }
 
   // Update the entry block's arguments.
@@ -79,7 +78,7 @@ void mlir::impl::eraseFunctionResults(Operation *op,
   SmallString<8> nameBuf;
 
   // Collect result attrs to set.
-  SmallVector<MutableDictionaryAttr, 4> newResultAttrs;
+  SmallVector<DictionaryAttr, 4> newResultAttrs;
   iterateIndicesExcept(originalNumResults, resultIndices, [&](unsigned i) {
     newResultAttrs.emplace_back(getResultAttrDict(op, i));
   });
@@ -94,10 +93,9 @@ void mlir::impl::eraseFunctionResults(Operation *op,
   // Set the new result attrs, or remove them if empty.
   for (unsigned i = 0, e = newResultAttrs.size(); i != e; ++i) {
     auto nameAttr = getResultAttrName(i, nameBuf);
-    auto resultAttr = newResultAttrs[i];
-    if (resultAttr.empty())
-      op->removeAttr(nameAttr);
+    if (newResultAttrs[i] && !newResultAttrs[i].empty())
+      op->setAttr(nameAttr, newResultAttrs[i]);
     else
-      op->setAttr(nameAttr, resultAttr.getDictionary(op->getContext()));
+      op->removeAttr(nameAttr);
   }
 }

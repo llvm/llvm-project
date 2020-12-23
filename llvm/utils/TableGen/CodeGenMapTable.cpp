@@ -144,25 +144,15 @@ public:
     }
   }
 
-  std::string getName() const {
-    return Name;
-  }
+  const std::string &getName() const { return Name; }
 
-  std::string getFilterClass() {
-    return FilterClass;
-  }
+  const std::string &getFilterClass() const { return FilterClass; }
 
-  ListInit *getRowFields() const {
-    return RowFields;
-  }
+  ListInit *getRowFields() const { return RowFields; }
 
-  ListInit *getColFields() const {
-    return ColFields;
-  }
+  ListInit *getColFields() const { return ColFields; }
 
-  ListInit *getKeyCol() const {
-    return KeyCol;
-  }
+  ListInit *getKeyCol() const { return KeyCol; }
 
   const std::vector<ListInit*> &getValueCols() const {
     return ValueCols;
@@ -200,7 +190,7 @@ private:
 public:
   MapTableEmitter(CodeGenTarget &Target, RecordKeeper &Records, Record *IMRec):
                   Target(Target), InstrMapDesc(IMRec) {
-    const std::string FilterClass = InstrMapDesc.getFilterClass();
+    const std::string &FilterClass = InstrMapDesc.getFilterClass();
     InstrDefs = Records.getAllDerivedDefinitions(FilterClass);
   }
 

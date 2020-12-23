@@ -14,9 +14,9 @@
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/SPIRV/LayoutUtils.h"
-#include "mlir/Dialect/SPIRV/SPIRVDialect.h"
-#include "mlir/Dialect/SPIRV/SPIRVOps.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
+#include "mlir/Dialect/SPIRV/Utils/LayoutUtils.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
@@ -66,8 +66,10 @@ static unsigned getBitWidth(Type type) {
 
 /// Returns the bit width of LLVMType integer or vector.
 static unsigned getLLVMTypeBitWidth(LLVM::LLVMType type) {
-  return type.isVectorTy() ? type.getVectorElementType().getIntegerBitWidth()
-                           : type.getIntegerBitWidth();
+  auto vectorType = type.dyn_cast<LLVM::LLVMVectorType>();
+  return (vectorType ? vectorType.getElementType() : type)
+      .cast<LLVM::LLVMIntegerType>()
+      .getBitWidth();
 }
 
 /// Creates `IntegerAttribute` with all bits set for given type
@@ -265,7 +267,7 @@ static Type convertPointerType(spirv::PointerType type,
                                TypeConverter &converter) {
   auto pointeeType =
       converter.convertType(type.getPointeeType()).cast<LLVM::LLVMType>();
-  return pointeeType.getPointerTo();
+  return LLVM::LLVMPointerType::get(pointeeType);
 }
 
 /// Converts SPIR-V runtime array to LLVM array. Since LLVM allows indexing over
@@ -407,8 +409,7 @@ public:
     // cover all possible corner cases.
     if (isSignedIntegerOrVector(srcType) ||
         isUnsignedIntegerOrVector(srcType)) {
-      auto *context = rewriter.getContext();
-      auto signlessType = IntegerType::get(getBitWidth(srcType), context);
+      auto signlessType = rewriter.getIntegerType(getBitWidth(srcType));
 
       if (srcType.isa<VectorType>()) {
         auto dstElementsAttr = constOp.value().cast<DenseIntElementsAttr>();

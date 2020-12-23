@@ -1129,9 +1129,9 @@ public:
       for (auto &KeyValuePair : OuterAnalysisInvalidationMap) {
         AnalysisKey *OuterID = KeyValuePair.first;
         auto &InnerIDs = KeyValuePair.second;
-        InnerIDs.erase(llvm::remove_if(InnerIDs, [&](AnalysisKey *InnerID) {
-          return Inv.invalidate(InnerID, IRUnit, PA); }),
-                       InnerIDs.end());
+        llvm::erase_if(InnerIDs, [&](AnalysisKey *InnerID) {
+          return Inv.invalidate(InnerID, IRUnit, PA);
+        });
         if (InnerIDs.empty())
           DeadKeys.push_back(OuterID);
       }

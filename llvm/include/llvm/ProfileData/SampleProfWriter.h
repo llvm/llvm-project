@@ -278,9 +278,9 @@ private:
     // profile because FuncOffsetTable needs to be populated while section
     // SecLBRProfile is written.
     SectionHdrLayout = {
-        {SecProfSummary, 0, 0, 0},       {SecNameTable, 0, 0, 0},
-        {SecFuncOffsetTable, 0, 0, 0},   {SecLBRProfile, 0, 0, 0},
-        {SecProfileSymbolList, 0, 0, 0}, {SecFuncMetadata, 0, 0, 0}};
+        {SecProfSummary, 0, 0, 0, 0},       {SecNameTable, 0, 0, 0, 0},
+        {SecFuncOffsetTable, 0, 0, 0, 0},   {SecLBRProfile, 0, 0, 0, 0},
+        {SecProfileSymbolList, 0, 0, 0, 0}, {SecFuncMetadata, 0, 0, 0, 0}};
   };
   virtual std::error_code
   writeSections(const StringMap<FunctionSamples> &ProfileMap) override;

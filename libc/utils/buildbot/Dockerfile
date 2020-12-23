@@ -2,10 +2,9 @@ FROM debian:10
 
 # Installing dependencies.
 RUN dpkg --add-architecture i386
-RUN apt-get update
-RUN apt-get install -y build-essential clang subversion git vim \
-  zip libstdc++6:i386 file binutils-dev binutils-gold cmake python-pip \
-  ninja-build
+RUN apt-get update && apt-get install -y build-essential clang subversion git \
+  vim zip libstdc++6:i386 file binutils-dev binutils-gold cmake python-pip \
+  ninja-build python3
 RUN python -m pip install buildbot-worker==2.8.4
 
 # Temporary dependencies for AOR tests.

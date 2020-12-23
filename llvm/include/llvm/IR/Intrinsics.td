@@ -1213,6 +1213,8 @@ def int_coro_free : Intrinsic<[llvm_ptr_ty], [llvm_token_ty, llvm_ptr_ty],
                                ReadOnly<ArgIndex<1>>,
                                NoCapture<ArgIndex<1>>]>;
 def int_coro_end : Intrinsic<[llvm_i1_ty], [llvm_ptr_ty, llvm_i1_ty], []>;
+def int_coro_end_async
+    : Intrinsic<[llvm_i1_ty], [llvm_ptr_ty, llvm_i1_ty, llvm_vararg_ty], []>;
 
 def int_coro_frame : Intrinsic<[llvm_ptr_ty], [], [IntrNoMem]>;
 def int_coro_noop : Intrinsic<[llvm_ptr_ty], [], [IntrNoMem]>;
@@ -1291,6 +1293,12 @@ def int_pseudoprobe : Intrinsic<[], [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty],
 let IntrProperties = [IntrNoMem, IntrWillReturn] in {
 def int_convert_to_fp16   : DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_anyfloat_ty]>;
 def int_convert_from_fp16 : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_i16_ty]>;
+}
+
+// Saturating floating point to integer intrinsics
+let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrWillReturn] in {
+def int_fptoui_sat : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty]>;
+def int_fptosi_sat : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty]>;
 }
 
 // Clear cache intrinsic, default to ignore (ie. emit nothing)

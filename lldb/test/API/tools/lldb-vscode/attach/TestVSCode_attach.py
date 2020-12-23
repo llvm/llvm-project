@@ -145,7 +145,7 @@ class TestVSCode_attach(lldbvscode_testcase.VSCodeTestCaseBase):
         # and use it for debugging
         attachCommands = [
             'target create -d "%s"' % (program),
-            'process launch'
+            'process launch --stop-at-entry'
         ]
         initCommands = ['target list', 'platform list']
         preRunCommands = ['image list a.out', 'image dump sections a.out']

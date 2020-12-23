@@ -38,27 +38,27 @@ public:
 
     y = T(1.0);
     x = inf;
-    EXPECT_NE(isnan(func(x, y, &quotient)), 0);
+    EXPECT_FP_EQ(nan, func(x, y, &quotient));
     x = negInf;
-    EXPECT_NE(isnan(func(x, y, &quotient)), 0);
+    EXPECT_FP_EQ(nan, func(x, y, &quotient));
 
     x = T(1.0);
     y = zero;
-    EXPECT_NE(isnan(func(x, y, &quotient)), 0);
+    EXPECT_FP_EQ(nan, func(x, y, &quotient));
     y = negZero;
-    EXPECT_NE(isnan(func(x, y, &quotient)), 0);
+    EXPECT_FP_EQ(nan, func(x, y, &quotient));
 
     y = nan;
     x = T(1.0);
-    EXPECT_NE(isnan(func(x, y, &quotient)), 0);
+    EXPECT_FP_EQ(nan, func(x, y, &quotient));
 
     y = T(1.0);
     x = nan;
-    EXPECT_NE(isnan(func(x, y, &quotient)), 0);
+    EXPECT_FP_EQ(nan, func(x, y, &quotient));
 
     x = nan;
     y = nan;
-    EXPECT_NE(isnan(func(x, y, &quotient)), 0);
+    EXPECT_FP_EQ(nan, func(x, y, &quotient));
 
     x = zero;
     y = T(1.0);

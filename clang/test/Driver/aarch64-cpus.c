@@ -738,6 +738,28 @@
 // NO-F64MM-NOT: "-target-feature" "+f64mm"
 // F64MM: "-target-feature" "+f64mm"
 
+// RUN: %clang -target aarch64 -march=armv8.7a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV87A %s
+// RUN: %clang -target aarch64 -march=armv8.7-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV87A %s
+// RUN: %clang -target aarch64 -mlittle-endian -march=armv8.7a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV87A %s
+// RUN: %clang -target aarch64 -mlittle-endian -march=armv8.7-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV87A %s
+// RUN: %clang -target aarch64_be -mlittle-endian -march=armv8.7a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV87A %s
+// RUN: %clang -target aarch64_be -mlittle-endian -march=armv8.7-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV87A %s
+// GENERICV87A: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+neon" "-target-feature" "+v8.7a"
+
+// RUN: %clang -target aarch64_be -march=armv8.7a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV87A-BE %s
+// RUN: %clang -target aarch64_be -march=armv8.7-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV87A-BE %s
+// RUN: %clang -target aarch64 -mbig-endian -march=armv8.7a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV87A-BE %s
+// RUN: %clang -target aarch64 -mbig-endian -march=armv8.7-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV87A-BE %s
+// RUN: %clang -target aarch64_be -mbig-endian -march=armv8.7a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV87A-BE %s
+// RUN: %clang -target aarch64_be -mbig-endian -march=armv8.7-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV87A-BE %s
+// GENERICV87A-BE: "-cc1"{{.*}} "-triple" "aarch64_be{{.*}}" "-target-cpu" "generic" "-target-feature" "+neon" "-target-feature" "+v8.7a"
+
+// Tha LD64B/ST64B accelerator extension is disabled by default.
+// RUN: %clang -target aarch64 -march=armv8.7a       -### -c %s 2>&1 | FileCheck -check-prefix=NO-LS64 %s
+// RUN: %clang -target aarch64 -march=armv8.7a+ls64 -### -c %s 2>&1 | FileCheck -check-prefix=LS64 %s
+// NO-LS64-NOT: "-target-feature" "+ls64"
+// LS64: "-target-feature" "+ls64"
+
 // fullfp16 is off by default for v8a, feature must not be mentioned
 // RUN: %clang -target aarch64 -march=armv8a  -### -c %s 2>&1 | FileCheck -check-prefix=V82ANOFP16 -check-prefix=GENERIC %s
 // RUN: %clang -target aarch64 -march=armv8-a -### -c %s 2>&1 | FileCheck -check-prefix=V82ANOFP16 -check-prefix=GENERIC %s

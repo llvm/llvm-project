@@ -5860,24 +5860,24 @@ let Predicates = [HasMVEInt] in {
                                              rGPR:$srcB, (i32 1)),
                                   rGPR:$srcC, (i32 2)),
                        rGPR:$srcD, (i32 3)),
-            (MVE_VMOV_q_rr (MVE_VMOV_q_rr MQPR:$src1, rGPR:$srcC, rGPR:$srcA, (i32 2), (i32 0)),
-                           rGPR:$srcD, rGPR:$srcB, (i32 3), (i32 1))>;
+            (MVE_VMOV_q_rr (MVE_VMOV_q_rr MQPR:$src1, rGPR:$srcA, rGPR:$srcC, (i32 2), (i32 0)),
+                           rGPR:$srcB, rGPR:$srcD, (i32 3), (i32 1))>;
   def : Pat<(insertelt (insertelt (insertelt (v4i32 MQPR:$src1),
                                              rGPR:$srcB, (i32 1)),
                                   rGPR:$srcC, (i32 2)),
                        rGPR:$srcD, (i32 3)),
             (MVE_VMOV_q_rr (MVE_VMOV_to_lane_32 MQPR:$src1, rGPR:$srcC, (i32 2)),
-                           rGPR:$srcD, rGPR:$srcB, (i32 3), (i32 1))>;
+                           rGPR:$srcB, rGPR:$srcD, (i32 3), (i32 1))>;
   def : Pat<(insertelt (insertelt (v4i32 MQPR:$src1), rGPR:$srcA, (i32 1)), rGPR:$srcB, (i32 3)),
-            (MVE_VMOV_q_rr MQPR:$src1, rGPR:$srcB, rGPR:$srcA, (i32 3), (i32 1))>;
+            (MVE_VMOV_q_rr MQPR:$src1, rGPR:$srcA, rGPR:$srcB, (i32 3), (i32 1))>;
   def : Pat<(insertelt (insertelt (insertelt (v4i32 MQPR:$src1),
                                              rGPR:$srcB, (i32 0)),
                                   rGPR:$srcC, (i32 1)),
                        rGPR:$srcD, (i32 2)),
             (MVE_VMOV_q_rr (MVE_VMOV_to_lane_32 MQPR:$src1, rGPR:$srcC, (i32 1)),
-                           rGPR:$srcD, rGPR:$srcB, (i32 2), (i32 0))>;
+                           rGPR:$srcB, rGPR:$srcD, (i32 2), (i32 0))>;
   def : Pat<(insertelt (insertelt (v4i32 MQPR:$src1), rGPR:$srcA, (i32 0)), rGPR:$srcB, (i32 2)),
-            (MVE_VMOV_q_rr MQPR:$src1, rGPR:$srcB, rGPR:$srcA, (i32 2), (i32 0))>;
+            (MVE_VMOV_q_rr MQPR:$src1, rGPR:$srcA, rGPR:$srcB, (i32 2), (i32 0))>;
 }
 
 // end of coproc mov

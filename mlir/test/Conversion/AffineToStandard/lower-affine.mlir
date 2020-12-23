@@ -26,6 +26,30 @@ func @simple_loop() {
 
 /////////////////////////////////////////////////////////////////////
 
+func @for_with_yield(%buffer: memref<1024xf32>) -> (f32) {
+  %sum_0 = constant 0.0 : f32
+  %sum = affine.for %i = 0 to 10 step 2 iter_args(%sum_iter = %sum_0) -> (f32) {
+    %t = affine.load %buffer[%i] : memref<1024xf32>
+    %sum_next = addf %sum_iter, %t : f32
+    affine.yield %sum_next : f32
+  }
+  return %sum : f32
+}
+
+// CHECK-LABEL: func @for_with_yield
+// CHECK:         %[[INIT_SUM:.*]] = constant 0.000000e+00 : f32
+// CHECK-NEXT:    %[[LOWER:.*]] = constant 0 : index
+// CHECK-NEXT:    %[[UPPER:.*]] = constant 10 : index
+// CHECK-NEXT:    %[[STEP:.*]] = constant 2 : index
+// CHECK-NEXT:    %[[SUM:.*]] = scf.for %[[IV:.*]] = %[[LOWER]] to %[[UPPER]] step %[[STEP]] iter_args(%[[SUM_ITER:.*]] = %[[INIT_SUM]]) -> (f32) {
+// CHECK-NEXT:      load
+// CHECK-NEXT:      %[[SUM_NEXT:.*]] = addf
+// CHECK-NEXT:      scf.yield %[[SUM_NEXT]] : f32
+// CHECK-NEXT:    }
+// CHECK-NEXT:    return %[[SUM]] : f32
+
+/////////////////////////////////////////////////////////////////////
+
 func private @pre(index) -> ()
 func private @body2(index, index) -> ()
 func private @post(index) -> ()
@@ -674,3 +698,104 @@ func @affine_parallel_tiled(%o: memref<100x100xf32>, %a: memref<100x100xf32>, %b
 // CHECK:             %[[A4:.*]] = load %[[ARG2]][%[[arg8]], %[[arg7]]] : memref<100x100xf32>
 // CHECK:             mulf %[[A3]], %[[A4]] : f32
 // CHECK:             scf.yield
+
+/////////////////////////////////////////////////////////////////////
+
+func @affine_parallel_simple(%arg0: memref<3x3xf32>, %arg1: memref<3x3xf32>) -> (memref<3x3xf32>) {
+  %O = alloc() : memref<3x3xf32>
+  affine.parallel (%kx, %ky) = (0, 0) to (2, 2) {
+      %1 = affine.load %arg0[%kx, %ky] : memref<3x3xf32>
+      %2 = affine.load %arg1[%kx, %ky] : memref<3x3xf32>
+      %3 = mulf %1, %2 : f32
+      affine.store %3, %O[%kx, %ky] : memref<3x3xf32>
+  }
+  return %O : memref<3x3xf32>
+}
+// CHECK-LABEL: func @affine_parallel_simple
+// CHECK:         %[[LOWER_1:.*]] = constant 0 : index
+// CHECK-NEXT:    %[[LOWER_2:.*]] = constant 0 : index
+// CHECK-NEXT:    %[[UPPER_1:.*]] = constant 2 : index
+// CHECK-NEXT:    %[[UPPER_2:.*]] = constant 2 : index
+// CHECK-NEXT:    %[[STEP_1:.*]] = constant 1 : index
+// CHECK-NEXT:    %[[STEP_2:.*]] = constant 1 : index
+// CHECK-NEXT:    scf.parallel (%[[I:.*]], %[[J:.*]]) = (%[[LOWER_1]], %[[LOWER_2]]) to (%[[UPPER_1]], %[[UPPER_2]]) step (%[[STEP_1]], %[[STEP_2]]) {
+// CHECK-NEXT:      %[[VAL_1:.*]] = load
+// CHECK-NEXT:      %[[VAL_2:.*]] = load
+// CHECK-NEXT:      %[[PRODUCT:.*]] = mulf
+// CHECK-NEXT:      store
+// CHECK-NEXT:      scf.yield
+// CHECK-NEXT:    }
+// CHECK-NEXT:    return
+// CHECK-NEXT:  }
+
+/////////////////////////////////////////////////////////////////////
+
+func @affine_parallel_simple_dynamic_bounds(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x?xf32>) {
+  %c_0 = constant 0 : index
+  %output_dim = dim %arg0, %c_0 : memref<?x?xf32>
+  affine.parallel (%kx, %ky) = (%c_0, %c_0) to (%output_dim, %output_dim) {
+      %1 = affine.load %arg0[%kx, %ky] : memref<?x?xf32>
+      %2 = affine.load %arg1[%kx, %ky] : memref<?x?xf32>
+      %3 = mulf %1, %2 : f32
+      affine.store %3, %arg2[%kx, %ky] : memref<?x?xf32>
+  }
+  return
+}
+// CHECK-LABEL: func @affine_parallel_simple_dynamic_bounds
+// CHECK-SAME:  %[[ARG_0:.*]]: memref<?x?xf32>, %[[ARG_1:.*]]: memref<?x?xf32>, %[[ARG_2:.*]]: memref<?x?xf32>
+// CHECK:         %[[DIM_INDEX:.*]] = constant 0 : index
+// CHECK-NEXT:    %[[UPPER:.*]] = dim %[[ARG_0]], %[[DIM_INDEX]] : memref<?x?xf32>
+// CHECK-NEXT:    %[[LOWER_1:.*]] = constant 0 : index
+// CHECK-NEXT:    %[[LOWER_2:.*]] = constant 0 : index
+// CHECK-NEXT:    %[[STEP_1:.*]] = constant 1 : index
+// CHECK-NEXT:    %[[STEP_2:.*]] = constant 1 : index
+// CHECK-NEXT:    scf.parallel (%[[I:.*]], %[[J:.*]]) = (%[[LOWER_1]], %[[LOWER_2]]) to (%[[UPPER]], %[[UPPER]]) step (%[[STEP_1]], %[[STEP_2]]) {
+// CHECK-NEXT:      %[[VAL_1:.*]] = load
+// CHECK-NEXT:      %[[VAL_2:.*]] = load
+// CHECK-NEXT:      %[[PRODUCT:.*]] = mulf
+// CHECK-NEXT:      store
+// CHECK-NEXT:      scf.yield
+// CHECK-NEXT:    }
+// CHECK-NEXT:    return
+// CHECK-NEXT:  }
+
+/////////////////////////////////////////////////////////////////////
+
+func @affine_parallel_with_reductions(%arg0: memref<3x3xf32>, %arg1: memref<3x3xf32>) -> (f32, f32) {
+  %0:2 = affine.parallel (%kx, %ky) = (0, 0) to (2, 2) reduce ("addf", "mulf") -> (f32, f32) {
+            %1 = affine.load %arg0[%kx, %ky] : memref<3x3xf32>
+            %2 = affine.load %arg1[%kx, %ky] : memref<3x3xf32>
+            %3 = mulf %1, %2 : f32
+            %4 = addf %1, %2 : f32
+            affine.yield %3, %4 : f32, f32
+          }
+  return %0#0, %0#1 : f32, f32
+}
+// CHECK-LABEL: func @affine_parallel_with_reductions
+// CHECK:         %[[LOWER_1:.*]] = constant 0 : index
+// CHECK-NEXT:    %[[LOWER_2:.*]] = constant 0 : index
+// CHECK-NEXT:    %[[UPPER_1:.*]] = constant 2 : index
+// CHECK-NEXT:    %[[UPPER_2:.*]] = constant 2 : index
+// CHECK-NEXT:    %[[STEP_1:.*]] = constant 1 : index
+// CHECK-NEXT:    %[[STEP_2:.*]] = constant 1 : index
+// CHECK-NEXT:    %[[INIT_1:.*]] = constant 0.000000e+00 : f32
+// CHECK-NEXT:    %[[INIT_2:.*]] = constant 1.000000e+00 : f32
+// CHECK-NEXT:    %[[RES:.*]] = scf.parallel (%[[I:.*]], %[[J:.*]]) = (%[[LOWER_1]], %[[LOWER_2]]) to (%[[UPPER_1]], %[[UPPER_2]]) step (%[[STEP_1]], %[[STEP_2]]) init (%[[INIT_1]], %[[INIT_2]]) -> (f32, f32) {
+// CHECK-NEXT:      %[[VAL_1:.*]] = load
+// CHECK-NEXT:      %[[VAL_2:.*]] = load
+// CHECK-NEXT:      %[[PRODUCT:.*]] = mulf
+// CHECK-NEXT:      %[[SUM:.*]] = addf
+// CHECK-NEXT:      scf.reduce(%[[PRODUCT]]) : f32 {
+// CHECK-NEXT:      ^bb0(%[[LHS:.*]]: f32, %[[RHS:.*]]: f32):
+// CHECK-NEXT:        %[[RES:.*]] = addf
+// CHECK-NEXT:        scf.reduce.return %[[RES]] : f32
+// CHECK-NEXT:      }
+// CHECK-NEXT:      scf.reduce(%[[SUM]]) : f32 {
+// CHECK-NEXT:      ^bb0(%[[LHS:.*]]: f32, %[[RHS:.*]]: f32):
+// CHECK-NEXT:        %[[RES:.*]] = mulf
+// CHECK-NEXT:        scf.reduce.return %[[RES]] : f32
+// CHECK-NEXT:      }
+// CHECK-NEXT:      scf.yield
+// CHECK-NEXT:    }
+// CHECK-NEXT:    return
+// CHECK-NEXT:  }

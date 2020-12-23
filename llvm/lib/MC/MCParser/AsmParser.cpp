@@ -3008,13 +3008,20 @@ bool AsmParser::parseAngleBracketString(std::string &Data) {
 }
 
 /// parseDirectiveAscii:
-///   ::= ( .ascii | .asciz | .string ) [ "string" ( , "string" )* ]
+//    ::= .ascii [ "string"+ ( , "string"+ )* ]
+///   ::= ( .asciz | .string ) [ "string" ( , "string" )* ]
 bool AsmParser::parseDirectiveAscii(StringRef IDVal, bool ZeroTerminated) {
   auto parseOp = [&]() -> bool {
     std::string Data;
-    if (checkForValidSection() || parseEscapedString(Data))
+    if (checkForValidSection())
       return true;
-    getStreamer().emitBytes(Data);
+    // Only support spaces as separators for .ascii directive for now. See the
+    // discusssion at https://reviews.llvm.org/D91460 for more details
+    do {
+      if (parseEscapedString(Data))
+        return true;
+      getStreamer().emitBytes(Data);
+    } while (!ZeroTerminated && getTok().is(AsmToken::String));
     if (ZeroTerminated)
       getStreamer().emitBytes(StringRef("\0", 1));
     return false;
@@ -3342,6 +3349,8 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, unsigned ValueSize) {
       Alignment = 1;
     if (!isPowerOf2_64(Alignment))
       ReturnVal |= Error(AlignmentLoc, "alignment must be a power of 2");
+    if (!isUInt<32>(Alignment))
+      ReturnVal |= Error(AlignmentLoc, "alignment must be smaller than 2**32");
   }
 
   // Diagnose non-sensical max bytes to align.

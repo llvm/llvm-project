@@ -1822,15 +1822,27 @@ StmtResult Sema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
       // C99 6.8.5p3: The declaration part of a 'for' statement shall only
       // declare identifiers for objects having storage class 'auto' or
       // 'register'.
+      const Decl *NonVarSeen = nullptr;
+      bool VarDeclSeen = false;
       for (auto *DI : DS->decls()) {
-        VarDecl *VD = dyn_cast<VarDecl>(DI);
-        if (VD && VD->isLocalVarDecl() && !VD->hasLocalStorage())
-          VD = nullptr;
-        if (!VD) {
-          Diag(DI->getLocation(), diag::err_non_local_variable_decl_in_for);
-          DI->setInvalidDecl();
+        if (VarDecl *VD = dyn_cast<VarDecl>(DI)) {
+          VarDeclSeen = true;
+          if (VD->isLocalVarDecl() && !VD->hasLocalStorage()) {
+            Diag(DI->getLocation(), diag::err_non_local_variable_decl_in_for);
+            DI->setInvalidDecl();
+          }
+        } else if (!NonVarSeen) {
+          // Keep track of the first non-variable declaration we saw so that
+          // we can diagnose if we don't see any variable declarations. This
+          // covers a case like declaring a typedef, function, or structure
+          // type rather than a variable.
+          NonVarSeen = DI;
         }
       }
+      // Diagnose if we saw a non-variable declaration but no variable
+      // declarations.
+      if (NonVarSeen && !VarDeclSeen)
+        Diag(NonVarSeen->getLocation(), diag::err_non_variable_decl_in_for);
     }
   }
 

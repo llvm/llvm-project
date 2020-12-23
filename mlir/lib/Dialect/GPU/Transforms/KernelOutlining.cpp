@@ -155,7 +155,7 @@ static gpu::GPUFuncOp outlineKernelFuncImpl(gpu::LaunchOp launchOp,
     kernelOperandTypes.push_back(operand.getType());
   }
   FunctionType type =
-      FunctionType::get(kernelOperandTypes, {}, launchOp.getContext());
+      FunctionType::get(launchOp.getContext(), kernelOperandTypes, {});
   auto outlinedFunc = builder.create<gpu::GPUFuncOp>(loc, kernelFnName, type);
   outlinedFunc->setAttr(gpu::GPUDialect::getKernelFuncAttrName(),
                         builder.getUnitAttr());

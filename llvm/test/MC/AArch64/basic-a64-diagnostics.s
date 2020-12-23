@@ -3334,16 +3334,16 @@
 // CHECK-ERROR-NEXT:               ^
 
         dsb #-1
-        dsb #16
+        dsb #17
         dsb foo
         dmb #-1
-        dmb #16
+        dmb #17
         dmb foo
 // CHECK-ERROR-NEXT: error: {{Invalid immediate for instruction|barrier operand out of range}}
 // CHECK-ERROR-NEXT:         dsb #-1
 // CHECK-ERROR-NEXT:             ^
 // CHECK-ERROR-NEXT: error: {{Invalid immediate for instruction|barrier operand out of range}}
-// CHECK-ERROR-NEXT:         dsb #16
+// CHECK-ERROR-NEXT:         dsb #17
 // CHECK-ERROR-NEXT:             ^
 // CHECK-ERROR-NEXT: error: invalid barrier option name
 // CHECK-ERROR-NEXT:         dsb foo
@@ -3352,7 +3352,7 @@
 // CHECK-ERROR-NEXT:         dmb #-1
 // CHECK-ERROR-NEXT:             ^
 // CHECK-ERROR-NEXT: error: {{Invalid immediate for instruction|barrier operand out of range}}
-// CHECK-ERROR-NEXT:         dmb #16
+// CHECK-ERROR-NEXT:         dmb #17
 // CHECK-ERROR-NEXT:             ^
 // CHECK-ERROR-NEXT: error: invalid barrier option name
 // CHECK-ERROR-NEXT:         dmb foo

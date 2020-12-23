@@ -220,6 +220,9 @@ public:
     bool
     IsAnonymousType ();
 
+    bool
+    IsScopedEnumerationType ();
+
     lldb::SBType
     GetPointerType();
 
@@ -240,6 +243,9 @@ public:
 
     lldb::SBType
     GetCanonicalType();
+
+    lldb::SBType
+    GetEnumerationIntegerType();
 
     lldb::SBType
     GetArrayElementType ();

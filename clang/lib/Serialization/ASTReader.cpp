@@ -11819,9 +11819,9 @@ class OMPClauseReader : public OMPClauseVisitor<OMPClauseReader> {
 public:
   OMPClauseReader(ASTRecordReader &Record)
       : Record(Record), Context(Record.getContext()) {}
-
-#define OMP_CLAUSE_CLASS(Enum, Str, Class) void Visit##Class(Class *C);
-#include "llvm/Frontend/OpenMP/OMPKinds.def"
+#define GEN_CLANG_CLAUSE_CLASS
+#define CLAUSE_CLASS(Enum, Str, Class) void Visit##Class(Class *C);
+#include "llvm/Frontend/OpenMP/OMP.inc"
   OMPClause *readClause();
   void VisitOMPClauseWithPreInit(OMPClauseWithPreInit *C);
   void VisitOMPClauseWithPostUpdate(OMPClauseWithPostUpdate *C);

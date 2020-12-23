@@ -1714,6 +1714,16 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses10) {
   MPM.run(*M, MAM);
 }
 
+// Returns a vector containing the SCC's nodes. Useful for not iterating over an
+// SCC while mutating it.
+static SmallVector<LazyCallGraph::Node *> SCCNodes(LazyCallGraph::SCC &C) {
+  SmallVector<LazyCallGraph::Node *> Nodes;
+  for (auto &N : C)
+    Nodes.push_back(&N);
+
+  return Nodes;
+}
+
 // Start with call recursive f, create f -> g and ref recursive f.
 TEST_F(CGSCCPassManagerTest, TestInsertionOfNewFunctions1) {
   std::unique_ptr<Module> M = parseIR("define void @f() {\n"
@@ -1734,12 +1744,7 @@ TEST_F(CGSCCPassManagerTest, TestInsertionOfNewFunctions1) {
         auto &FAM =
             AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
 
-        // Don't iterate over SCC while changing it.
-        SmallVector<LazyCallGraph::Node *> Nodes;
-        for (auto &N : C)
-          Nodes.push_back(&N);
-
-        for (LazyCallGraph::Node *N : Nodes) {
+        for (LazyCallGraph::Node *N : SCCNodes(C)) {
           Function &F = N->getFunction();
           if (F.getName() != "f")
             continue;
@@ -1801,12 +1806,7 @@ TEST_F(CGSCCPassManagerTest, TestInsertionOfNewFunctions2) {
     auto &FAM =
         AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
 
-    // Don't iterate over SCC while changing it.
-    SmallVector<LazyCallGraph::Node *> Nodes;
-    for (auto &N : C)
-      Nodes.push_back(&N);
-
-    for (LazyCallGraph::Node *N : Nodes) {
+    for (LazyCallGraph::Node *N : SCCNodes(C)) {
       Function &F = N->getFunction();
       if (F.getName() != "f")
         continue;
@@ -1908,12 +1908,7 @@ TEST_F(CGSCCPassManagerTest, TestInsertionOfNewNonTrivialCallEdge) {
     auto &FAM =
         AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
 
-    // Don't iterate over SCC while changing it.
-    SmallVector<LazyCallGraph::Node *> Nodes;
-    for (auto &N : C)
-      Nodes.push_back(&N);
-
-    for (LazyCallGraph::Node *N : Nodes) {
+    for (LazyCallGraph::Node *N : SCCNodes(C)) {
       Function &F = N->getFunction();
       if (F.getName() != "f1")
         continue;

@@ -8,15 +8,13 @@
 ! RUN: %flang-new -E %s  2>&1 | FileCheck %s
 
 !-----------------------------------------
-!   FRONTEND FLANG DRIVER (flang-new -fc1)
+! FRONTEND FLANG DRIVER (flang-new -fc1)
 !-----------------------------------------
 ! RUN: %flang-new -fc1 -E %s  2>&1 | FileCheck %s
-
 
 !-----------------------
 ! EXPECTED OUTPUT
 !-----------------------
-! flang-new -E  %s
 ! CHECK:program a
 ! CHECK-NOT:program b
 ! CHECK-NEXT:x = 1

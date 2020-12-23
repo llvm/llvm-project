@@ -43,10 +43,10 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @foo_int32_float(<4 x float> %src) {
 ; CHECK-MVE-LABEL: foo_int32_float:
 ; CHECK-MVE:       @ %bb.0: @ %entry
-; CHECK-MVE-NEXT:    vcvt.s32.f32 s4, s0
-; CHECK-MVE-NEXT:    vcvt.s32.f32 s6, s2
-; CHECK-MVE-NEXT:    vcvt.s32.f32 s8, s1
-; CHECK-MVE-NEXT:    vcvt.s32.f32 s10, s3
+; CHECK-MVE-NEXT:    vcvt.s32.f32 s4, s2
+; CHECK-MVE-NEXT:    vcvt.s32.f32 s6, s0
+; CHECK-MVE-NEXT:    vcvt.s32.f32 s8, s3
+; CHECK-MVE-NEXT:    vcvt.s32.f32 s10, s1
 ; CHECK-MVE-NEXT:    vmov r0, s4
 ; CHECK-MVE-NEXT:    vmov r1, s6
 ; CHECK-MVE-NEXT:    vmov q0[2], q0[0], r1, r0
@@ -67,10 +67,10 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @foo_uint32_float(<4 x float> %src) {
 ; CHECK-MVE-LABEL: foo_uint32_float:
 ; CHECK-MVE:       @ %bb.0: @ %entry
-; CHECK-MVE-NEXT:    vcvt.u32.f32 s4, s0
-; CHECK-MVE-NEXT:    vcvt.u32.f32 s6, s2
-; CHECK-MVE-NEXT:    vcvt.u32.f32 s8, s1
-; CHECK-MVE-NEXT:    vcvt.u32.f32 s10, s3
+; CHECK-MVE-NEXT:    vcvt.u32.f32 s4, s2
+; CHECK-MVE-NEXT:    vcvt.u32.f32 s6, s0
+; CHECK-MVE-NEXT:    vcvt.u32.f32 s8, s3
+; CHECK-MVE-NEXT:    vcvt.u32.f32 s10, s1
 ; CHECK-MVE-NEXT:    vmov r0, s4
 ; CHECK-MVE-NEXT:    vmov r1, s6
 ; CHECK-MVE-NEXT:    vmov q0[2], q0[0], r1, r0
@@ -350,11 +350,11 @@ define arm_aapcs_vfpcc <2 x i64> @foo_int64_float(<2 x double> %src) {
 ; CHECK-NEXT:    .vsave {d8, d9}
 ; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    vmov q4, q0
-; CHECK-NEXT:    vmov r0, r1, d8
+; CHECK-NEXT:    vmov r0, r1, d9
 ; CHECK-NEXT:    bl __aeabi_d2lz
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    vmov r0, r1, d9
+; CHECK-NEXT:    vmov r0, r1, d8
 ; CHECK-NEXT:    bl __aeabi_d2lz
 ; CHECK-NEXT:    vmov q0[2], q0[0], r0, r4
 ; CHECK-NEXT:    vmov q0[3], q0[1], r1, r5
@@ -373,11 +373,11 @@ define arm_aapcs_vfpcc <2 x i64> @foo_uint64_float(<2 x double> %src) {
 ; CHECK-NEXT:    .vsave {d8, d9}
 ; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    vmov q4, q0
-; CHECK-NEXT:    vmov r0, r1, d8
+; CHECK-NEXT:    vmov r0, r1, d9
 ; CHECK-NEXT:    bl __aeabi_d2ulz
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    vmov r0, r1, d9
+; CHECK-NEXT:    vmov r0, r1, d8
 ; CHECK-NEXT:    bl __aeabi_d2ulz
 ; CHECK-NEXT:    vmov q0[2], q0[0], r0, r4
 ; CHECK-NEXT:    vmov q0[3], q0[1], r1, r5

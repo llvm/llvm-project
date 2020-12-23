@@ -597,9 +597,7 @@ TEST_UNINIT(empty, empty);
 // PATTERN-O1: store i8 [[I8]], {{.*}} align 1, !annotation [[AUTO_INIT]]
 // ZERO-LABEL: @test_empty_uninit()
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0,{{.+}}), !annotation [[AUTO_INIT]]
-// ZERO-O1: store i8 0, {{.*}} align 1
-// FIXME: !annotation dropped by optimizations
-// ZERO-O1-NOT: !annotation
+// ZERO-O1: store i8 0, {{.*}} align 1, !annotation [[AUTO_INIT]]
 
 TEST_BRACES(empty, empty);
 // CHECK-LABEL: @test_empty_braces()
@@ -618,9 +616,7 @@ TEST_UNINIT(small, small);
 // PATTERN-O1: store i8 [[I8]], {{.*}} align 1, !annotation [[AUTO_INIT]]
 // ZERO-LABEL: @test_small_uninit()
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0,{{.+}}), !annotation [[AUTO_INIT]]
-// ZERO-O1: store i8 0, {{.*}} align 1
-// FIXME: !annotation dropped by optimizations
-// ZERO-O1-NOT: !annotation
+// ZERO-O1: store i8 0, {{.*}} align 1, !annotation [[AUTO_INIT]]
 
 TEST_BRACES(small, small);
 // CHECK-LABEL: @test_small_braces()
@@ -671,10 +667,8 @@ TEST_UNINIT(smallpartinit, smallpartinit);
 // PATTERN-O1: store i8 42, {{.*}} align 1
 // ZERO-LABEL: @test_smallpartinit_uninit()
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0,{{.+}}), !annotation [[AUTO_INIT]]
-// ZERO-O1-LEGACY: store i16 0, i16* %uninit, align 2
-// ZERO-O1-NEWPM: store i16 0, i16* %uninit, align 2
-// FIXME: !annotation dropped by optimizations
-// ZERO-O1-NOT: !annotation
+// ZERO-O1-LEGACY: store i16 0, i16* %uninit, align 2, !annotation [[AUTO_INIT]]
+// ZERO-O1-NEWPM: store i16 0, i16* %uninit, align 2, !annotation [[AUTO_INIT]]
 
 TEST_BRACES(smallpartinit, smallpartinit);
 // CHECK-LABEL: @test_smallpartinit_braces()
@@ -726,14 +720,10 @@ TEST_UNINIT(padded, padded);
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%uninit)
 // PATTERN-LABEL: @test_padded_uninit()
 // PATTERN-O0: call void @llvm.memcpy{{.*}} @__const.test_padded_uninit.uninit{{.+}}), !annotation [[AUTO_INIT]]
-// PATTERN-O1: store i64 [[I64]], i64* %uninit, align 8
-// FIXME: !annotation dropped by optimizations
-// PATTERN-O1-NOT: !annotation
+// PATTERN-O1: store i64 [[I64]], i64* %uninit, align 8, !annotation [[AUTO_INIT]]
 // ZERO-LABEL: @test_padded_uninit()
-// ZERO-O0: call void @llvm.memset{{.*}}, i8 0,{{.+}})
-// ZERO-O1: store i64 0, i64* %uninit, align 8
-// FIXME: !annotation dropped by optimizations
-// ZERO-O1-NOT: !annotation
+// ZERO-O0: call void @llvm.memset{{.*}}, i8 0,{{.+}}), !annotation [[AUTO_INIT]]
+// ZERO-O1: store i64 0, i64* %uninit, align 8, !annotation [[AUTO_INIT]]
 
 TEST_BRACES(padded, padded);
 // CHECK-LABEL: @test_padded_braces()
@@ -758,15 +748,16 @@ TEST_UNINIT(paddednullinit, paddednullinit);
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%uninit)
 // PATTERN-LABEL: @test_paddednullinit_uninit()
 // PATTERN-O0: call void @llvm.memcpy{{.*}} @__const.test_paddednullinit_uninit.uninit{{.+}}), !annotation [[AUTO_INIT]]
-// PATTERN-O1-LEGACY: store i64 [[I64]], i64* %uninit, align 8
-// PATTERN-O1-NEWPM: store i64 [[I64]], i64* %uninit, align 8
-// FIXME: !annotation dropped by optimizations
-// PATTERN-O1-NOT: !annotation
+// PATTERN-O1-LEGACY: store i64 [[I64]], i64* %uninit, align 8, !annotation [[AUTO_INIT]]
+// PATTERN-O1-NEWPM: store i64 [[I64]], i64* %uninit, align 8, !annotation [[AUTO_INIT]]
 // ZERO-LABEL: @test_paddednullinit_uninit()
-// ZERO-O0: call void @llvm.memset{{.*}}, i8 0,
-// ZERO-O1: store i64 0, i64* %uninit, align 8
+// ZERO-O0: call void @llvm.memset{{.*}}, i8 0, {{.*}}, !annotation [[AUTO_INIT]]
+// ZERO-O1-LEGACY: store i64 0, i64* %uninit, align 8, !annotation [[AUTO_INIT]]
+// ZERO-O1-NEWPM: store i64 0, i64* %uninit, align 8
 // FIXME: !annotation dropped by optimizations
-// ZERO-O1-NOT: !annotation
+// ZERO-O1-NEWPM-NOT: !annotation
+// ZERO: ret
+
 
 TEST_BRACES(paddednullinit, paddednullinit);
 // CHECK-LABEL: @test_paddednullinit_braces()
@@ -922,9 +913,7 @@ TEST_UNINIT(bitfield, bitfield);
 // PATTERN-O1-NOT: !annotation
 // ZERO-LABEL: @test_bitfield_uninit()
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0{{.+}}), !annotation [[AUTO_INIT]]
-// ZERO-O1: store i32 0, i32* %uninit, align 4
-// FIXME: !annotation dropped by optimizations
-// ZERO-O1-NOT: !annotation
+// ZERO-O1: store i32 0, i32* %uninit, align 4, !annotation [[AUTO_INIT]]
 
 TEST_BRACES(bitfield, bitfield);
 // CHECK-LABEL: @test_bitfield_braces()
@@ -953,9 +942,7 @@ TEST_UNINIT(bitfieldaligned, bitfieldaligned);
 // PATTERN-O1-NOT: !annotation
 // ZERO-LABEL: @test_bitfieldaligned_uninit()
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0,{{.+}}), !annotation [[AUTO_INIT]]
-// ZERO-O1: store i64 0, i64* %uninit, align 8
-// FIXME: !annotation dropped by optimizations
-// ZERO-O1-NOT: !annotation
+// ZERO-O1: store i64 0, i64* %uninit, align 8, !annotation [[AUTO_INIT]]
 
 TEST_BRACES(bitfieldaligned, bitfieldaligned);
 // CHECK-LABEL: @test_bitfieldaligned_braces()
@@ -1007,9 +994,7 @@ TEST_UNINIT(arraytail, arraytail);
 // PATTERN-O1: store i32 [[I32]], {{.*}} align 4, !annotation [[AUTO_INIT]]
 // ZERO-LABEL: @test_arraytail_uninit()
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0,{{.+}}), !annotation [[AUTO_INIT]]
-// ZERO-O1: store i32 0, {{.*}} align 4
-// FIXME: !annotation dropped by optimizations
-// ZERO-O1-NOT: !annotation
+// ZERO-O1: store i32 0, {{.*}} align 4, !annotation [[AUTO_INIT]]
 
 TEST_BRACES(arraytail, arraytail);
 // CHECK-LABEL: @test_arraytail_braces()
@@ -1053,9 +1038,7 @@ TEST_UNINIT(int1, int[1]);
 // PATTERN-O1: store i32 [[I32]], {{.*}} align 4, !annotation [[AUTO_INIT]]
 // ZERO-LABEL: @test_int1_uninit()
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0,{{.+}}), !annotation [[AUTO_INIT]]
-// ZERO-O1: store i32 0, {{.*}} align 4
-// FIXME: !annotation dropped by optimizations
-// ZERO-O1-NOT: !annotation
+// ZERO-O1: store i32 0, {{.*}} align 4, !annotation [[AUTO_INIT]]
 
 TEST_BRACES(int1, int[1]);
 // CHECK-LABEL: @test_int1_braces()
@@ -1109,9 +1092,7 @@ TEST_UNINIT(bool4, bool[4]);
 // PATTERN-O1-NOT: !annotation
 // ZERO-LABEL: @test_bool4_uninit()
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0,{{.+}}), !annotation [[AUTO_INIT]]
-// ZERO-O1: store i32 0, i32* %uninit, align 4
-// FIXME: !annotation dropped by optimizations
-// ZERO-O1-NOT: !annotation
+// ZERO-O1: store i32 0, i32* %uninit, align 4, !annotation [[AUTO_INIT]]
 
 TEST_BRACES(bool4, bool[4]);
 // CHECK-LABEL: @test_bool4_braces()
@@ -1244,7 +1225,7 @@ TEST_UNINIT(atomicnotlockfree, _Atomic(notlockfree));
 // PATTERN-LABEL: @test_atomicnotlockfree_uninit()
 // PATTERN-O0: call void @llvm.memcpy{{.*}} @__const.test_atomicnotlockfree_uninit.uninit{{.+}}), !annotation [[AUTO_INIT]]
 // PATTERN-O1: bitcast
-// PATTERN-O1: call void @llvm.memset{{.*}}({{.*}}, i8 [[I8]], i64 32
+// PATTERN-O1: call void @llvm.memset{{.*}}({{.*}}, i8 [[I8]], i64 32{{.*}}
 // FIXME: !annotation dropped by optimizations
 // PATTERN-O1-NOT: !annotation
 // ZERO-LABEL: @test_atomicnotlockfree_uninit()
@@ -1256,14 +1237,10 @@ TEST_UNINIT(atomicpadded, _Atomic(padded));
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%uninit)
 // PATTERN-LABEL: @test_atomicpadded_uninit()
 // PATTERN-O0: call void @llvm.memcpy{{.*}} @__const.test_atomicpadded_uninit.uninit{{.+}}), !annotation [[AUTO_INIT]]
-// PATTERN-O1: store i64 [[IPTR]], i64* %uninit, align 8
-// FIXME: !annotation dropped by optimizations
-// PATTERN-O1-NOT: !annotation
+// PATTERN-O1: store i64 [[IPTR]], i64* %uninit, align 8, !annotation [[AUTO_INIT]]
 // ZERO-LABEL: @test_atomicpadded_uninit()
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0, {{.+}}), !annotation [[AUTO_INIT]]
-// ZERO-O1: store i64 0, i64* %uninit, align 8
-// FIXME: !annotation dropped by optimizations
-// ZERO-O1-NOT: !annotation
+// ZERO-O1: store i64 0, i64* %uninit, align 8, !annotation [[AUTO_INIT]]
 
 TEST_UNINIT(atomictailpad, _Atomic(tailpad));
 // CHECK-LABEL: @test_atomictailpad_uninit()
@@ -1273,9 +1250,7 @@ TEST_UNINIT(atomictailpad, _Atomic(tailpad));
 // PATTERN-O0: call void @llvm.memcpy{{.*}} @__const.test_atomictailpad_uninit.uninit{{.+}}), !annotation [[AUTO_INIT]]
 // ZERO-LABEL: @test_atomictailpad_uninit()
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0,{{.+}}), !annotation [[AUTO_INIT]]
-// ZERO-O1: store i32 0, i32* %uninit, align 4
-// FIXME: !annotation dropped by optimizations
-// ZERO-O1-NOT: !annotation
+// ZERO-O1: store i32 0, i32* %uninit, align 4, !annotation [[AUTO_INIT]]
 
 TEST_UNINIT(complexfloat, _Complex float);
 // CHECK-LABEL: @test_complexfloat_uninit()
@@ -1291,9 +1266,7 @@ TEST_UNINIT(complexfloat, _Complex float);
 
 // ZERO-LABEL: @test_complexfloat_uninit()
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0, {{.+}}), !annotation [[AUTO_INIT]]
-// ZERO-O1: store i64 0, i64* %uninit, align 8
-// FIXME: !annotation dropped by optimizations
-// ZERO-O1-NOT: !annotation
+// ZERO-O1: store i64 0, i64* %uninit, align 8, !annotation [[AUTO_INIT]]
 
 TEST_BRACES(complexfloat, _Complex float);
 // CHECK-LABEL: @test_complexfloat_braces()
@@ -1372,9 +1345,7 @@ TEST_UNINIT(semivolatile, semivolatile);
 // PATTERN-O0: call void @llvm.memcpy{{.*}} @__const.test_semivolatile_uninit.uninit{{.+}}), !annotation [[AUTO_INIT]]
 // ZERO-LABEL: @test_semivolatile_uninit()
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0, {{.+}}), !annotation [[AUTO_INIT]]
-// ZERO-O1: store i64 0, i64* %uninit, align 8
-// FIXME: !annotation dropped by optimizations
-// ZERO-O1-NOT: !annotation
+// ZERO-O1: store i64 0, i64* %uninit, align 8, !annotation [[AUTO_INIT]]
 
 TEST_BRACES(semivolatile, semivolatile);
 // CHECK-LABEL: @test_semivolatile_braces()
@@ -1433,8 +1404,7 @@ TEST_UNINIT(base, base);
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0,{{.+}}), !annotation [[AUTO_INIT]]
 // ZERO-O1-LEGACY: store i64 0, {{.*}} align 8
 // ZERO-O1-NEWPM: store i32 (...)** bitcast (i8** getelementptr inbounds ({ [4 x i8*] }, { [4 x i8*] }* @_ZTV4base, i64 0, inrange i32 0, i64 2) to i32 (...)**), {{.*}}, align 8
-// FIXME: !annotation dropped by optimizations
-// ZERO-O1-NOT: !annotation
+// ZERO-O1-NOT-NEWPM: !annotation
 
 TEST_BRACES(base, base);
 // CHECK-LABEL: @test_base_braces()
@@ -1454,10 +1424,8 @@ TEST_UNINIT(derived, derived);
 // PATTERN-O0: call void @llvm.memcpy{{.*}} @__const.test_derived_uninit.uninit{{.+}}), !annotation [[AUTO_INIT]]
 // ZERO-LABEL: @test_derived_uninit()
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0, {{.+}}), !annotation [[AUTO_INIT]]
-// ZERO-O1-LEGACY: store i64 0, {{.*}} align 8
+// ZERO-O1: store i64 0, {{.*}} align 8, !annotation [[AUTO_INIT]]
 // ZERO-O1-NEWPM: store i32 (...)** bitcast (i8** getelementptr inbounds ({ [4 x i8*] }, { [4 x i8*] }* @_ZTV7derived, i64 0, inrange i32 0, i64 2) to i32 (...)**), {{.*}} align 8
-// FIXME: !annotation dropped by optimizations
-// ZERO-O1-NOT: !annotation
 
 TEST_BRACES(derived, derived);
 // CHECK-LABEL: @test_derived_braces()
@@ -1497,9 +1465,7 @@ TEST_UNINIT(matching, matching);
 // PATTERN-O0: call void @llvm.memcpy{{.*}} @__const.test_matching_uninit.uninit{{.+}}), !annotation [[AUTO_INIT]]
 // ZERO-LABEL: @test_matching_uninit()
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0, {{.+}}), !annotation [[AUTO_INIT]]
-// ZERO-O1: store i32 0, {{.*}} align 4
-// FIXME: !annotation dropped by optimizations
-// ZERO-O1-NOT: !annotation
+// ZERO-O1: store i32 0, {{.*}} align 4, !annotation [[AUTO_INIT]]
 
 TEST_BRACES(matching, matching);
 // CHECK-LABEL: @test_matching_braces()
@@ -1529,9 +1495,7 @@ TEST_UNINIT(matchingreverse, matchingreverse);
 // PATTERN-O1: store float 0xFFFFFFFFE0000000, {{.+}}, !annotation [[AUTO_INIT]]
 // ZERO-LABEL: @test_matchingreverse_uninit()
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0,{{.+}}), !annotation [[AUTO_INIT]]
-// ZERO-O1: store i32 0, {{.*}} align 4
-// FIXME: !annotation dropped by optimizations
-// ZERO-O1-NOT: !annotation
+// ZERO-O1: store i32 0, {{.*}} align 4, !annotation [[AUTO_INIT]]
 
 TEST_BRACES(matchingreverse, matchingreverse);
 // CHECK-LABEL: @test_matchingreverse_braces()
@@ -1559,9 +1523,7 @@ TEST_UNINIT(unmatched, unmatched);
 // PATTERN-O0: call void @llvm.memcpy{{.*}} @__const.test_unmatched_uninit.uninit{{.+}}), !annotation [[AUTO_INIT]]
 // ZERO-LABEL: @test_unmatched_uninit()
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0, {{.+}}), !annotation [[AUTO_INIT]]
-// ZERO-O1: store i32 0, {{.*}} align 4
-// FIXME: !annotation dropped by optimizations
-// ZERO-O1-NOT: !annotation
+// ZERO-O1: store i32 0, {{.*}} align 4, !annotation [[AUTO_INIT]]
 
 TEST_BRACES(unmatched, unmatched);
 // CHECK-LABEL: @test_unmatched_braces()
@@ -1589,9 +1551,7 @@ TEST_UNINIT(unmatchedreverse, unmatchedreverse);
 // PATTERN-O0: call void @llvm.memcpy{{.*}} @__const.test_unmatchedreverse_uninit.uninit{{.+}}), !annotation [[AUTO_INIT]]
 // ZERO-LABEL: @test_unmatchedreverse_uninit()
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0, {{.+}}), !annotation [[AUTO_INIT]]
-// ZERO-O1:  store i32 0, {{.*}} align 4
-// FIXME: !annotation dropped by optimizations
-// ZERO-O1-NOT: !annotation
+// ZERO-O1:  store i32 0, {{.*}} align 4, !annotation [[AUTO_INIT]]
 
 TEST_BRACES(unmatchedreverse, unmatchedreverse);
 // CHECK-LABEL: @test_unmatchedreverse_braces()
@@ -1619,9 +1579,7 @@ TEST_UNINIT(unmatchedfp, unmatchedfp);
 // PATTERN-O0: call void @llvm.memcpy{{.*}} @__const.test_unmatchedfp_uninit.uninit{{.+}}), !annotation [[AUTO_INIT]]
 // ZERO-LABEL: @test_unmatchedfp_uninit()
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0, {{.+}}), !annotation [[AUTO_INIT]]
-// ZERO-O1: store i64 0, {{.*}} align 8
-// FIXME: !annotation dropped by optimizations
-// ZERO-O1-NOT: !annotation
+// ZERO-O1: store i64 0, {{.*}} align 8, !annotation [[AUTO_INIT]]
 
 TEST_BRACES(unmatchedfp, unmatchedfp);
 // CHECK-LABEL: @test_unmatchedfp_braces()

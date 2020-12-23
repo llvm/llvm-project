@@ -1346,9 +1346,6 @@ def VOP3OpSelMods  : ComplexPattern<untyped, 2, "SelectVOP3OpSelMods">;
 
 def VOP3PMadMixMods  : ComplexPattern<untyped, 2, "SelectVOP3PMadMixMods">;
 
-
-def Hi16Elt  : ComplexPattern<untyped, 1, "SelectHi16Elt">;
-
 //===----------------------------------------------------------------------===//
 // SI assembler operands
 //===----------------------------------------------------------------------===//
@@ -2545,6 +2542,13 @@ def getFlatScratchInstSTfromSS : InstrMapping {
   let ValueCols = [["ST"]];
 }
 
+def getFlatScratchInstSSfromSV : InstrMapping {
+  let FilterClass = "FlatScratchInst";
+  let RowFields = ["SVOp"];
+  let ColFields = ["Mode"];
+  let KeyCol = ["SV"];
+  let ValueCols = [["SS"]];
+}
 
 include "SIInstructions.td"
 

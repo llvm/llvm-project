@@ -59,6 +59,20 @@ define float @test6(<4 x float> %X) {
   ret float %r
 }
 
+define float @testvscale6(<vscale x 4 x float> %X) {
+; CHECK-LABEL: @testvscale6(
+; CHECK-NEXT:    [[T:%.*]] = shufflevector <vscale x 4 x float> [[X:%.*]], <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = extractelement <vscale x 4 x float> [[T]], i32 0
+; CHECK-NEXT:    ret float [[R]]
+;
+  %X1 = bitcast <vscale x 4 x float> %X to <vscale x 4 x i32>
+  %t = shufflevector <vscale x 4 x i32> %X1, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %t2 = bitcast <vscale x 4 x i32> %t to <vscale x 4 x float>
+  %r = extractelement <vscale x 4 x float> %t2, i32 0
+  ret float %r
+}
+
+
 define <4 x float> @test7(<4 x float> %x) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>

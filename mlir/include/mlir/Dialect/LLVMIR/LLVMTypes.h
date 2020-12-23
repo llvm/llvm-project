@@ -80,58 +80,6 @@ public:
 
   LLVMDialect &getDialect();
 
-  /// Returns the size of a primitive type (including vectors) in bits, for
-  /// example, the size of !llvm.i16 is 16 and the size of !llvm.vec<4 x i16>
-  /// is 64. Returns 0 for non-primitive (aggregates such as struct) or types
-  /// that don't have a size (such as void).
-  llvm::TypeSize getPrimitiveSizeInBits();
-
-  /// Floating-point type utilities.
-  bool isBFloatTy() { return isa<LLVMBFloatType>(); }
-  bool isHalfTy() { return isa<LLVMHalfType>(); }
-  bool isFloatTy() { return isa<LLVMFloatType>(); }
-  bool isDoubleTy() { return isa<LLVMDoubleType>(); }
-  bool isFP128Ty() { return isa<LLVMFP128Type>(); }
-  bool isX86_FP80Ty() { return isa<LLVMX86FP80Type>(); }
-  bool isFloatingPointTy() {
-    return isa<LLVMHalfType>() || isa<LLVMBFloatType>() ||
-           isa<LLVMFloatType>() || isa<LLVMDoubleType>() ||
-           isa<LLVMFP128Type>() || isa<LLVMX86FP80Type>();
-  }
-
-  /// Array type utilities.
-  LLVMType getArrayElementType();
-  unsigned getArrayNumElements();
-  bool isArrayTy();
-
-  /// Integer type utilities.
-  bool isIntegerTy() { return isa<LLVMIntegerType>(); }
-  bool isIntegerTy(unsigned bitwidth);
-  unsigned getIntegerBitWidth();
-
-  /// Vector type utilities.
-  LLVMType getVectorElementType();
-  unsigned getVectorNumElements();
-  llvm::ElementCount getVectorElementCount();
-  bool isVectorTy();
-
-  /// Function type utilities.
-  LLVMType getFunctionParamType(unsigned argIdx);
-  unsigned getFunctionNumParams();
-  LLVMType getFunctionResultType();
-  bool isFunctionTy();
-  bool isFunctionVarArg();
-
-  /// Pointer type utilities.
-  LLVMType getPointerTo(unsigned addrSpace = 0);
-  LLVMType getPointerElementTy();
-  bool isPointerTy();
-
-  /// Struct type utilities.
-  LLVMType getStructElementType(unsigned i);
-  unsigned getStructNumElements();
-  bool isStructTy();
-
   /// Utilities used to generate floating point types.
   static LLVMType getDoubleTy(MLIRContext *context);
   static LLVMType getFloatTy(MLIRContext *context);
@@ -148,9 +96,7 @@ public:
   static LLVMType getInt8Ty(MLIRContext *context) {
     return getIntNTy(context, /*numBits=*/8);
   }
-  static LLVMType getInt8PtrTy(MLIRContext *context) {
-    return getInt8Ty(context).getPointerTo();
-  }
+  static LLVMType getInt8PtrTy(MLIRContext *context);
   static LLVMType getInt16Ty(MLIRContext *context) {
     return getIntNTy(context, /*numBits=*/16);
   }
@@ -184,7 +130,6 @@ public:
 
   /// Void type utilities.
   static LLVMType getVoidTy(MLIRContext *context);
-  bool isVoidTy();
 
   // Creation and setting of LLVM's identified struct types
   static LLVMType createStructTy(MLIRContext *context,
@@ -584,6 +529,24 @@ LLVMType parseType(DialectAsmParser &parser);
 /// Prints an LLVM Dialect type.
 void printType(LLVMType type, DialectAsmPrinter &printer);
 } // namespace detail
+
+//===----------------------------------------------------------------------===//
+// Utility functions.
+//===----------------------------------------------------------------------===//
+
+/// Returns `true` if the given type is compatible with the LLVM dialect.
+inline bool isCompatibleType(Type type) { return type.isa<LLVMType>(); }
+
+inline bool isCompatibleFloatingPointType(Type type) {
+  return type.isa<LLVMHalfType, LLVMBFloatType, LLVMFloatType, LLVMDoubleType,
+                  LLVMFP128Type, LLVMX86FP80Type>();
+}
+
+/// Returns the size of the given primitive LLVM dialect-compatible type
+/// (including vectors) in bits, for example, the size of !llvm.i16 is 16 and
+/// the size of !llvm.vec<4 x i16> is 64. Returns 0 for non-primitive
+/// (aggregates such as struct) or types that don't have a size (such as void).
+llvm::TypeSize getPrimitiveTypeSizeInBits(Type type);
 
 } // namespace LLVM
 } // namespace mlir

@@ -55,7 +55,16 @@ DEFAULT_FEATURES = [
             #include <atomic>
             struct Large { int storage[100]; };
             std::atomic<Large> x;
-            int main(int, char**) { return x.load(), x.is_lock_free(); }
+            int main(int, char**) { (void)x.load(); return 0; }
+          """)),
+  # TODO: Remove this feature once compiler-rt includes __atomic_is_lockfree()
+  # on all supported platforms.
+  Feature(name='is-lockfree-runtime-function',
+          when=lambda cfg: sourceBuilds(cfg, """
+            #include <atomic>
+            struct Large { int storage[100]; };
+            std::atomic<Large> x;
+            int main(int, char**) { return x.is_lock_free(); }
           """)),
 
   Feature(name='apple-clang',                                                                                                      when=_isAppleClang),

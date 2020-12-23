@@ -626,6 +626,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_IN_ALLOCA;
   case Attribute::Cold:
     return bitc::ATTR_KIND_COLD;
+  case Attribute::Hot:
+    return bitc::ATTR_KIND_HOT;
   case Attribute::InaccessibleMemOnly:
     return bitc::ATTR_KIND_INACCESSIBLEMEM_ONLY;
   case Attribute::InaccessibleMemOrArgMemOnly:
@@ -1866,6 +1868,7 @@ void ModuleBitcodeWriter::writeDIModule(const DIModule *N,
   for (auto &I : N->operands())
     Record.push_back(VE.getMetadataOrNullID(I));
   Record.push_back(N->getLineNo());
+  Record.push_back(N->getIsDecl());
 
   Stream.EmitRecord(bitc::METADATA_MODULE, Record, Abbrev);
   Record.clear();

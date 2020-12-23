@@ -7691,7 +7691,8 @@ ExprResult Sema::BuildCXXNoexceptExpr(SourceLocation KeyLoc, Expr *Operand,
 
   Operand = R.get();
 
-  if (!inTemplateInstantiation() && Operand->HasSideEffects(Context, false)) {
+  if (!inTemplateInstantiation() && !Operand->isInstantiationDependent() &&
+      Operand->HasSideEffects(Context, false)) {
     // The expression operand for noexcept is in an unevaluated expression
     // context, so side effects could result in unintended consequences.
     Diag(Operand->getExprLoc(), diag::warn_side_effects_unevaluated_context);

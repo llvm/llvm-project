@@ -224,6 +224,20 @@ TEST(MemIndexTest, Lookup) {
   EXPECT_THAT(lookup(*I, SymbolID("ns::nonono")), UnorderedElementsAre());
 }
 
+TEST(MemIndexTest, IndexedFiles) {
+  SymbolSlab Symbols;
+  RefSlab Refs;
+  auto Size = Symbols.bytes() + Refs.bytes();
+  auto Data = std::make_pair(std::move(Symbols), std::move(Refs));
+  llvm::StringSet<> Files = {testPath("foo.cc"), testPath("bar.cc")};
+  MemIndex I(std::move(Data.first), std::move(Data.second), RelationSlab(),
+             std::move(Files), std::move(Data), Size);
+  auto ContainsFile = I.indexedFiles();
+  EXPECT_TRUE(ContainsFile("unittest:///foo.cc"));
+  EXPECT_TRUE(ContainsFile("unittest:///bar.cc"));
+  EXPECT_FALSE(ContainsFile("unittest:///foobar.cc"));
+}
+
 TEST(MemIndexTest, TemplateSpecialization) {
   SymbolSlab::Builder B;
 
@@ -367,7 +381,7 @@ TEST(MergeIndexTest, Refs) {
   Test.Code = std::string(Test1Code.code());
   Test.Filename = "test.cc";
   auto AST = Test.build();
-  Dyn.updateMain(Test.Filename, AST);
+  Dyn.updateMain(testPath(Test.Filename), AST);
 
   // Build static index for test.cc.
   Test.HeaderCode = HeaderCode;
@@ -375,7 +389,7 @@ TEST(MergeIndexTest, Refs) {
   Test.Filename = "test.cc";
   auto StaticAST = Test.build();
   // Add stale refs for test.cc.
-  StaticIndex.updateMain(Test.Filename, StaticAST);
+  StaticIndex.updateMain(testPath(Test.Filename), StaticAST);
 
   // Add refs for test2.cc
   Annotations Test2Code(R"(class $Foo[[Foo]] {};)");
@@ -384,7 +398,7 @@ TEST(MergeIndexTest, Refs) {
   Test2.Code = std::string(Test2Code.code());
   Test2.Filename = "test2.cc";
   StaticAST = Test2.build();
-  StaticIndex.updateMain(Test2.Filename, StaticAST);
+  StaticIndex.updateMain(testPath(Test2.Filename), StaticAST);
 
   RefsRequest Request;
   Request.IDs = {Foo.ID};
@@ -403,10 +417,47 @@ TEST(MergeIndexTest, Refs) {
   RefSlab::Builder Results2;
   EXPECT_TRUE(
       Merge.refs(Request, [&](const Ref &O) { Results2.insert(Foo.ID, O); }));
-  EXPECT_THAT(std::move(Results2).build(),
-              ElementsAre(Pair(
-                  _, ElementsAre(AnyOf(FileURI("unittest:///test.cc"),
-                                       FileURI("unittest:///test2.cc"))))));
+
+  // Remove all refs for test.cc from dynamic index,
+  // merged index should not return results from static index for test.cc.
+  Test.Code = "";
+  AST = Test.build();
+  Dyn.updateMain(testPath(Test.Filename), AST);
+
+  Request.Limit = llvm::None;
+  RefSlab::Builder Results3;
+  EXPECT_FALSE(
+      Merge.refs(Request, [&](const Ref &O) { Results3.insert(Foo.ID, O); }));
+  EXPECT_THAT(std::move(Results3).build(),
+              ElementsAre(Pair(_, UnorderedElementsAre(AllOf(
+                                      RefRange(Test2Code.range("Foo")),
+                                      FileURI("unittest:///test2.cc"))))));
+}
+
+TEST(MergeIndexTest, IndexedFiles) {
+  SymbolSlab DynSymbols;
+  RefSlab DynRefs;
+  auto DynSize = DynSymbols.bytes() + DynRefs.bytes();
+  auto DynData = std::make_pair(std::move(DynSymbols), std::move(DynRefs));
+  llvm::StringSet<> DynFiles = {testPath("foo.cc")};
+  MemIndex DynIndex(std::move(DynData.first), std::move(DynData.second),
+                    RelationSlab(), std::move(DynFiles), std::move(DynData),
+                    DynSize);
+  SymbolSlab StaticSymbols;
+  RefSlab StaticRefs;
+  auto StaticData =
+      std::make_pair(std::move(StaticSymbols), std::move(StaticRefs));
+  llvm::StringSet<> StaticFiles = {testPath("bar.cc")};
+  MemIndex StaticIndex(std::move(StaticData.first),
+                       std::move(StaticData.second), RelationSlab(),
+                       std::move(StaticFiles), std::move(StaticData),
+                       StaticSymbols.bytes() + StaticRefs.bytes());
+  MergedIndex Merge(&DynIndex, &StaticIndex);
+
+  auto ContainsFile = Merge.indexedFiles();
+  EXPECT_TRUE(ContainsFile("unittest:///foo.cc"));
+  EXPECT_TRUE(ContainsFile("unittest:///bar.cc"));
+  EXPECT_FALSE(ContainsFile("unittest:///foobar.cc"));
 }
 
 TEST(MergeIndexTest, NonDocumentation) {

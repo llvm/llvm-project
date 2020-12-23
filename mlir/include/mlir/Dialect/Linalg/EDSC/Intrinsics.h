@@ -18,6 +18,7 @@ namespace intrinsics {
 using linalg_copy = OperationBuilder<linalg::CopyOp>;
 using linalg_dot = OperationBuilder<linalg::DotOp>;
 using linalg_fill = OperationBuilder<linalg::FillOp>;
+using linalg_init_tensor = ValueBuilder<linalg::InitTensorOp>;
 using linalg_matmul = OperationBuilder<linalg::MatmulOp>;
 using linalg_matvec = OperationBuilder<linalg::MatvecOp>;
 using linalg_vecmat = OperationBuilder<linalg::VecmatOp>;

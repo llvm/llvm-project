@@ -3086,13 +3086,12 @@ public:
   };
 
   struct SectionInfo {
-    DeclaratorDecl *Decl;
+    NamedDecl *Decl;
     SourceLocation PragmaSectionLocation;
     int SectionFlags;
 
     SectionInfo() = default;
-    SectionInfo(DeclaratorDecl *Decl,
-                SourceLocation PragmaSectionLocation,
+    SectionInfo(NamedDecl *Decl, SourceLocation PragmaSectionLocation,
                 int SectionFlags)
         : Decl(Decl), PragmaSectionLocation(PragmaSectionLocation),
           SectionFlags(SectionFlags) {}

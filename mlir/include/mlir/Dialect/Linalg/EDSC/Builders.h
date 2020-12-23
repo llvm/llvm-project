@@ -30,8 +30,8 @@ class ParallelOp;
 namespace edsc {
 inline void defaultRegionBuilder(ValueRange args) {}
 
-/// Build a `linalg.generic` op with the specified `inputs`, `outputBuffers`,
-/// `initTensors`, `resultTensorsTypes` and `region`.
+/// Build a `linalg.generic` op with the specified `inputs`, `outputs`,
+/// `resultTensorsTypes` and `region`.
 ///
 /// `otherValues` and `otherAttributes` may be passed and will be appended as
 /// operands and attributes respectively.
@@ -41,15 +41,12 @@ inline void defaultRegionBuilder(ValueRange args) {}
 ///
 /// 1. `inputs` may contain StructuredIndexed that capture either buffer or
 /// tensor values.
-/// 2. `outputsBuffers` may contain StructuredIndexed that capture buffer
-/// values.
-/// 3. `initTensors` contain tensor values, without indexing maps.
-/// 4. `resultTensorTypes` may contain StructuredIndexed that capture return
-/// tensor types.
+/// 2. `outputs` may contain StructuredIndexed that capture either buffer or
+/// tensor values. In the future this will be extended with ranked shape values.
+/// 4. `resultTensorTypes` may contain return tensor types.
 Operation *makeGenericLinalgOp(
     ArrayRef<IteratorType> iteratorTypes, ArrayRef<StructuredIndexed> inputs,
-    ArrayRef<StructuredIndexed> outputBuffers, ArrayRef<Value> initTensors,
-    ArrayRef<StructuredIndexed> resultTensorTypes,
+    ArrayRef<StructuredIndexed> outputs, TypeRange resultTensorTypes,
     function_ref<void(ValueRange)> regionBuilder = defaultRegionBuilder,
     ArrayRef<Value> otherValues = {}, ArrayRef<Attribute> otherAttributes = {});
 

@@ -3806,23 +3806,17 @@ InstructionCost BoUpSLP::getEntryCost(TreeEntry *E) {
       if (NeedToShuffleReuses) {
         for (unsigned Idx : E->ReuseShuffleIndices) {
           Instruction *I = cast<Instruction>(VL[Idx]);
-          InstructionCost Cost = TTI->getInstructionCost(I, CostKind);
-          assert(Cost.isValid() && "Invalid instruction cost");
-          ReuseShuffleCost -= *(Cost.getValue());
+          ReuseShuffleCost -= TTI->getInstructionCost(I, CostKind);
         }
         for (Value *V : VL) {
           Instruction *I = cast<Instruction>(V);
-          InstructionCost Cost = TTI->getInstructionCost(I, CostKind);
-          assert(Cost.isValid() && "Invalid instruction cost");
-          ReuseShuffleCost += *(Cost.getValue());
+          ReuseShuffleCost += TTI->getInstructionCost(I, CostKind);
         }
       }
       for (Value *V : VL) {
         Instruction *I = cast<Instruction>(V);
         assert(E->isOpcodeOrAlt(I) && "Unexpected main/alternate opcode");
-        InstructionCost Cost = TTI->getInstructionCost(I, CostKind);
-        assert(Cost.isValid() && "Invalid instruction cost");
-        ScalarCost += *(Cost.getValue());
+        ScalarCost += TTI->getInstructionCost(I, CostKind);
       }
       // VecCost is equal to sum of the cost of creating 2 vectors
       // and the cost of creating shuffle.
@@ -6778,7 +6772,8 @@ class HorizontalReduction {
       // in this case.
       // Do not perform analysis of remaining operands of ParentStackElem.first
       // instruction, this whole instruction is an extra argument.
-      ParentStackElem.second = ParentStackElem.first->getNumOperands();
+      OperationData OpData = getOperationData(ParentStackElem.first);
+      ParentStackElem.second = OpData.getNumberOfOperands();
     } else {
       // We ran into something like:
       // ParentStackElem.first += ... + ExtraArg + ...
@@ -6911,12 +6906,12 @@ public:
     ReductionData.initReductionOps(ReductionOps);
     while (!Stack.empty()) {
       Instruction *TreeN = Stack.back().first;
-      unsigned EdgeToVist = Stack.back().second++;
+      unsigned EdgeToVisit = Stack.back().second++;
       OperationData OpData = getOperationData(TreeN);
       bool IsReducedValue = OpData != ReductionData;
 
       // Postorder vist.
-      if (IsReducedValue || EdgeToVist == OpData.getNumberOfOperands()) {
+      if (IsReducedValue || EdgeToVisit == OpData.getNumberOfOperands()) {
         if (IsReducedValue)
           ReducedVals.push_back(TreeN);
         else {
@@ -6942,7 +6937,7 @@ public:
       }
 
       // Visit left or right.
-      Value *NextV = TreeN->getOperand(EdgeToVist);
+      Value *NextV = TreeN->getOperand(EdgeToVisit);
       if (NextV != Phi) {
         auto *I = dyn_cast<Instruction>(NextV);
         OpData = getOperationData(I);

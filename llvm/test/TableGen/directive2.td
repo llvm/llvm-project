@@ -23,9 +23,14 @@ def TDLC_ClauseB : Clause<"clauseb"> {
   let isValueList = 1;
 }
 def TDLC_ClauseC : Clause<"clausec"> {
+  let clangClass = "ClauseC";
   let flangClassValue = "Name";
   let defaultValue = "*";
   let isValueOptional = 1;
+}
+def TDLC_ClauseD : Clause<"claused"> {
+  let clangClass = "ClauseD";
+  let isImplicit = 1;
 }
 
 def TDL_DirA : Directive<"dira"> {
@@ -53,9 +58,10 @@ def TDL_DirA : Directive<"dira"> {
 // CHECK-NEXT:    TDLC_clausea,
 // CHECK-NEXT:    TDLC_clauseb,
 // CHECK-NEXT:    TDLC_clausec,
+// CHECK-NEXT:    TDLC_claused,
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
-// CHECK-NEXT:  static constexpr std::size_t Clause_enumSize = 3;
+// CHECK-NEXT:  static constexpr std::size_t Clause_enumSize = 4;
 // CHECK-EMPTY:
 // CHECK-NEXT:  // Enumeration helper functions
 // CHECK-NEXT:  Directive getTdlDirectiveKind(llvm::StringRef Str);
@@ -101,6 +107,7 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-NEXT:      .Case("clausea",TDLC_clauseb)
 // IMPL-NEXT:      .Case("clauseb",TDLC_clauseb)
 // IMPL-NEXT:      .Case("clausec",TDLC_clausec)
+// IMPL-NEXT:      .Case("claused",TDLC_clauseb)
 // IMPL-NEXT:      .Default(TDLC_clauseb);
 // IMPL-NEXT:  }
 // IMPL-EMPTY:
@@ -112,6 +119,8 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-NEXT:        return "clauseb";
 // IMPL-NEXT:      case TDLC_clausec:
 // IMPL-NEXT:        return "clausec";
+// IMPL-NEXT:      case TDLC_claused:
+// IMPL-NEXT:        return "claused";
 // IMPL-NEXT:    }
 // IMPL-NEXT:    llvm_unreachable("Invalid Tdl Clause kind");
 // IMPL-NEXT:  }
@@ -183,6 +192,7 @@ def TDL_DirA : Directive<"dira"> {
 // GEN-NEXT:  EMPTY_CLASS(Clausea);
 // GEN-NEXT:  WRAPPER_CLASS(Clauseb, std::list<IntExpr>);
 // GEN-NEXT:  WRAPPER_CLASS(Clausec, std::optional<Name>);
+// GEN-NEXT:  EMPTY_CLASS(Claused);
 // GEN-EMPTY:
 // GEN-NEXT:  #endif // GEN_FLANG_CLAUSE_PARSER_CLASSES
 // GEN-EMPTY:
@@ -192,6 +202,7 @@ def TDL_DirA : Directive<"dira"> {
 // GEN-NEXT:  Clausea
 // GEN-NEXT:  , Clauseb
 // GEN-NEXT:  , Clausec
+// GEN-NEXT:  , Claused
 // GEN-EMPTY:
 // GEN-NEXT:  #endif // GEN_FLANG_CLAUSE_PARSER_CLASSES_LIST
 // GEN-EMPTY:
@@ -201,6 +212,7 @@ def TDL_DirA : Directive<"dira"> {
 // GEN-NEXT:  NODE(TdlClause, Clausea)
 // GEN-NEXT:  NODE(TdlClause, Clauseb)
 // GEN-NEXT:  NODE(TdlClause, Clausec)
+// GEN-NEXT:  NODE(TdlClause, Claused)
 // GEN-EMPTY:
 // GEN-NEXT:  #endif // GEN_FLANG_DUMP_PARSE_TREE_CLAUSES
 // GEN-EMPTY:
@@ -223,5 +235,47 @@ def TDL_DirA : Directive<"dira"> {
 // GEN-NEXT:    Put("*");
 // GEN-NEXT:    Put(")");
 // GEN-NEXT:  }
+// GEN-NEXT:  void Before(const TdlClause::Claused &) { Word("CLAUSED"); }
 // GEN-EMPTY:
 // GEN-NEXT:  #endif // GEN_FLANG_CLAUSE_UNPARSE
+
+// GEN:       #ifdef GEN_CLANG_CLAUSE_CLASS
+// GEN-NEXT:  #undef GEN_CLANG_CLAUSE_CLASS
+// GEN-EMPTY:
+// GEN-NEXT:  #ifndef CLAUSE
+// GEN-NEXT:  #define CLAUSE(Enum, Str, Implicit)
+// GEN-NEXT:  #endif
+// GEN-NEXT:  #ifndef CLAUSE_CLASS
+// GEN-NEXT:  #define CLAUSE_CLASS(Enum, Str, Class)
+// GEN-NEXT:  #endif
+// GEN-NEXT:  #ifndef CLAUSE_NO_CLASS
+// GEN-NEXT:  #define CLAUSE_NO_CLASS(Enum, Str)
+// GEN-NEXT:  #endif
+// GEN-EMPTY:
+// GEN-NEXT:  #define __CLAUSE(Name, Class)                      \
+// GEN-NEXT:    CLAUSE(TDLC_##Name, #Name, /* Implicit */ false) \
+// GEN-NEXT:    CLAUSE_CLASS(TDLC_##Name, #Name, Class)
+// GEN-NEXT:  #define __CLAUSE_NO_CLASS(Name)                    \
+// GEN-NEXT:    CLAUSE(TDLC_##Name, #Name, /* Implicit */ false) \
+// GEN-NEXT:    CLAUSE_NO_CLASS(TDLC_##Name, #Name)
+// GEN-NEXT:  #define __IMPLICIT_CLAUSE_CLASS(Name, Str, Class)  \
+// GEN-NEXT:    CLAUSE(TDLC_##Name, Str, /* Implicit */ true)    \
+// GEN-NEXT:  CLAUSE_CLASS(TDLC_##Name, Str, Class)
+// GEN-NEXT:  #define __IMPLICIT_CLAUSE_NO_CLASS(Name, Str)      \
+// GEN-NEXT:    CLAUSE(TDLC_##Name, Str, /* Implicit */ true)    \
+// GEN-NEXT:  CLAUSE_NO_CLASS(TDLC_##Name, Str)
+// GEN-EMPTY:
+// GEN-NEXT:  __IMPLICIT_CLAUSE_NO_CLASS(clausea, "clausea")
+// GEN-NEXT:  __CLAUSE_NO_CLASS(clauseb)
+// GEN-NEXT:  __CLAUSE(clausec, ClauseC)
+// GEN-NEXT:  __IMPLICIT_CLAUSE_CLASS(claused, "claused", ClauseD)
+// GEN-EMPTY:
+// GEN-NEXT:  #undef __IMPLICIT_CLAUSE_NO_CLASS
+// GEN-NEXT:  #undef __IMPLICIT_CLAUSE_CLASS
+// GEN-NEXT:  #undef __CLAUSE
+// GEN-NEXT:  #undef CLAUSE_NO_CLASS
+// GEN-NEXT:  #undef CLAUSE_CLASS
+// GEN-NEXT:  #undef CLAUSE
+// GEN-EMPTY:
+// GEN-NEXT:  #endif // GEN_CLANG_CLAUSE_CLASS
+
