@@ -448,16 +448,25 @@ bool RISCVDAGToDAGISel::selectVSplatSimm5(SDValue N, SDValue &SplatVal) {
 
   int64_t SplatImm = cast<ConstantSDNode>(N.getOperand(0))->getSExtValue();
 
-  // TODO: First truncate the constant to the vector element type since the
-  // bits will be implicitly truncated anyway. This would catch cases where the
-  // immediate was zero-extended instead of sign-extended: we would still want
-  // to match (i8 -1) -> (XLenVT 255) as a simm5, for example
+  // Both ISD::SPLAT_VECTOR and RISCVISD::SPLAT_VECTOR_I64 share semantics when
+  // the operand type is wider than the resulting vector element type: an
+  // implicit truncation first takes place. Therefore, perform a manual
+  // truncation/sign-extension in order to ignore any truncated bits and catch
+  // any zero-extended immediate.
+  // For example, we wish to match (i8 -1) -> (XLenVT 255) as a simm5 by first
+  // sign-extending to (XLenVT -1).
+  auto XLenVT = Subtarget->getXLenVT();
+  assert(XLenVT == N.getOperand(0).getSimpleValueType() &&
+         "Unexpected splat operand type");
+  auto EltVT = N.getValueType().getVectorElementType();
+  if (EltVT.bitsLT(XLenVT)) {
+    SplatImm = SignExtend64(SplatImm, EltVT.getSizeInBits());
+  }
+
   if (!isInt<5>(SplatImm))
     return false;
 
-  SplatVal =
-      CurDAG->getTargetConstant(SplatImm, SDLoc(N), Subtarget->getXLenVT());
-
+  SplatVal = CurDAG->getTargetConstant(SplatImm, SDLoc(N), XLenVT);
   return true;
 }
 
