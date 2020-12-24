@@ -60,7 +60,7 @@ LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD
 ``LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD`` sets the threshold size for which the
 ``libomptarget`` memory manager will handle the allocation. Any allocations
 larger than this threshold will not use the memory manager and be freed after
-the device kernel exits The default threshold value is ``8Kb``. If
+the device kernel exits. The default threshold value is ``8KB``. If
 ``LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD`` is set to ``0`` the memory manager
 will be completely disabled.
 
