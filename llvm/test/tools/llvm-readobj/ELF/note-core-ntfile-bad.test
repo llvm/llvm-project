@@ -11,7 +11,7 @@
 # RUN: llvm-readelf -n %t1.o 2>&1 | FileCheck -DFILE=%t1.o %s --check-prefix=ERR-HEADER-SHORT
 # RUN: llvm-readobj -n %t1.o 2>&1 | FileCheck -DFILE=%t1.o %s --check-prefix=ERR-HEADER-SHORT
 
-# ERR-HEADER-SHORT: warning: '[[FILE]]': unable to read note with index 0 from the PT_NOTE segment with index 1: the note of size 0x8 is too short, expected at least 0x10
+# ERR-HEADER-SHORT: warning: '[[FILE]]': unable to read note with index 0 from the PT_NOTE segment with index 0: the note of size 0x8 is too short, expected at least 0x10
 
 # .section ".note.foo", "a"
 #       .align 4
@@ -42,7 +42,7 @@ ProgramHeaders:
 # RUN: llvm-readelf -n %t2.o 2>&1 | FileCheck -DFILE=%t2.o %s --check-prefix=ERR-NULL-TERM
 # RUN: llvm-readobj -n %t2.o 2>&1 | FileCheck -DFILE=%t2.o %s --check-prefix=ERR-NULL-TERM
 
-# ERR-NULL-TERM: warning: '[[FILE]]': unable to read note with index 0 from the PT_NOTE segment with index 1: the note is not NUL terminated
+# ERR-NULL-TERM: warning: '[[FILE]]': unable to read note with index 0 from the PT_NOTE segment with index 0: the note is not NUL terminated
 
 # .section ".note.foo", "a"
 #       .align 4
@@ -78,7 +78,7 @@ ProgramHeaders:
 # RUN: llvm-readelf -n %t3.o 2>&1 | FileCheck -DFILE=%t3.o %s --check-prefix=ERR-FILE-COUNT
 # RUN: llvm-readobj -n %t3.o 2>&1 | FileCheck -DFILE=%t3.o %s --check-prefix=ERR-FILE-COUNT
 
-# ERR-FILE-COUNT: warning: '[[FILE]]': unable to read note with index 0 from the PT_NOTE segment with index 1: unable to read file mappings (found 2): the note of size 0x2c is too short
+# ERR-FILE-COUNT: warning: '[[FILE]]': unable to read note with index 0 from the PT_NOTE segment with index 0: unable to read file mappings (found 2): the note of size 0x2c is too short
 
 # .section ".note.foo", "a"
 #       .align 4
@@ -114,7 +114,7 @@ ProgramHeaders:
 # RUN: llvm-readelf -n %t4.o 2>&1 | FileCheck -DFILE=%t4.o %s --check-prefix=ERR-FILE-END-EARLY
 # RUN: llvm-readobj -n %t4.o 2>&1 | FileCheck -DFILE=%t4.o %s --check-prefix=ERR-FILE-END-EARLY
 
-# ERR-FILE-END-EARLY: warning: '[[FILE]]': unable to read note with index 0 from the PT_NOTE segment with index 1: unable to read the file name for the mapping with index 2: the note of size 0x44 is truncated
+# ERR-FILE-END-EARLY: warning: '[[FILE]]': unable to read note with index 0 from the PT_NOTE segment with index 0: unable to read the file name for the mapping with index 2: the note of size 0x44 is truncated
 
 # .section ".note.foo", "a"
 #       .align 4
