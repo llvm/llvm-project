@@ -1224,8 +1224,8 @@ ELFDumper<ELFT>::dumpHashSection(const Elf_Shdr *Shdr) {
 
   DataExtractor::Cursor Cur(0);
   DataExtractor Data(Content, Obj.isLE(), /*AddressSize=*/0);
-  uint32_t NBucket = Data.getU32(Cur);
-  uint32_t NChain = Data.getU32(Cur);
+  uint64_t NBucket = Data.getU32(Cur);
+  uint64_t NChain = Data.getU32(Cur);
   if (Content.size() != (2 + NBucket + NChain) * 4) {
     S->Content = yaml::BinaryRef(Content);
     if (Cur)
