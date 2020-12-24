@@ -57,6 +57,7 @@ public:
     CortexA76,
     CortexA77,
     CortexA78,
+    CortexA78C,
     CortexR82,
     CortexX1,
     ExynosM3,
