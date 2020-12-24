@@ -6422,17 +6422,16 @@ namespace {
 
 /// Model horizontal reductions.
 ///
-/// A horizontal reduction is a tree of reduction operations (currently add and
-/// fadd) that has operations that can be put into a vector as its leaf.
-/// For example, this tree:
+/// A horizontal reduction is a tree of reduction instructions that has values
+/// that can be put into a vector as its leaves. For example:
 ///
 /// mul mul mul mul
 ///  \  /    \  /
 ///   +       +
 ///    \     /
 ///       +
-/// This tree has "mul" as its reduced values and "+" as its reduction
-/// operations. A reduction might be feeding into a store or a binary operation
+/// This tree has "mul" as its leaf values and "+" as its reduction
+/// instructions. A reduction can feed into a store or a binary operation
 /// feeding a phi.
 ///    ...
 ///    \  /
@@ -6756,10 +6755,10 @@ class HorizontalReduction {
   WeakTrackingVH ReductionRoot;
 
   /// The operation data of the reduction operation.
-  OperationData ReductionData;
+  OperationData RdxTreeInst;
 
-  /// The operation data of the values we perform a reduction on.
-  OperationData ReducedValueData;
+  /// The operation data for the leaf values that we perform a reduction on.
+  OperationData RdxLeafVal;
 
   /// Should we model this reduction as a pairwise reduction tree or a tree that
   /// splits the vector in halves and adds those halves.
@@ -6875,24 +6874,24 @@ public:
     assert((!Phi || is_contained(Phi->operands(), B)) &&
            "Thi phi needs to use the binary operator");
 
-    ReductionData = getOperationData(B);
+    RdxTreeInst = getOperationData(B);
 
     // We could have a initial reductions that is not an add.
     //  r *= v1 + v2 + v3 + v4
     // In such a case start looking for a tree rooted in the first '+'.
     if (Phi) {
-      if (ReductionData.getLHS(B) == Phi) {
+      if (RdxTreeInst.getLHS(B) == Phi) {
         Phi = nullptr;
-        B = dyn_cast<Instruction>(ReductionData.getRHS(B));
-        ReductionData = getOperationData(B);
-      } else if (ReductionData.getRHS(B) == Phi) {
+        B = dyn_cast<Instruction>(RdxTreeInst.getRHS(B));
+        RdxTreeInst = getOperationData(B);
+      } else if (RdxTreeInst.getRHS(B) == Phi) {
         Phi = nullptr;
-        B = dyn_cast<Instruction>(ReductionData.getLHS(B));
-        ReductionData = getOperationData(B);
+        B = dyn_cast<Instruction>(RdxTreeInst.getLHS(B));
+        RdxTreeInst = getOperationData(B);
       }
     }
 
-    if (!ReductionData.isVectorizable(B))
+    if (!RdxTreeInst.isVectorizable(B))
       return false;
 
     Type *Ty = B->getType();
@@ -6901,19 +6900,19 @@ public:
     if (!Ty->isIntOrIntVectorTy() && !Ty->isFPOrFPVectorTy())
       return false;
 
-    ReducedValueData.clear();
+    RdxLeafVal.clear();
     ReductionRoot = B;
 
     // Post order traverse the reduction tree starting at B. We only handle true
     // trees containing only binary operators.
     SmallVector<std::pair<Instruction *, unsigned>, 32> Stack;
-    Stack.push_back(std::make_pair(B, ReductionData.getFirstOperandIndex()));
-    ReductionData.initReductionOps(ReductionOps);
+    Stack.push_back(std::make_pair(B, RdxTreeInst.getFirstOperandIndex()));
+    RdxTreeInst.initReductionOps(ReductionOps);
     while (!Stack.empty()) {
       Instruction *TreeN = Stack.back().first;
       unsigned EdgeToVisit = Stack.back().second++;
       OperationData OpData = getOperationData(TreeN);
-      bool IsReducedValue = OpData != ReductionData;
+      bool IsReducedValue = OpData != RdxTreeInst;
 
       // Postorder vist.
       if (IsReducedValue || EdgeToVisit == OpData.getNumberOfOperands()) {
@@ -6934,7 +6933,7 @@ public:
             markExtraArg(Stack[Stack.size() - 2], TreeN);
             ExtraArgs.erase(TreeN);
           } else
-            ReductionData.addReductionOps(TreeN, ReductionOps);
+            RdxTreeInst.addReductionOps(TreeN, ReductionOps);
         }
         // Retract.
         Stack.pop_back();
@@ -6950,12 +6949,10 @@ public:
         // (possibly) a reduced value. If the reduced value opcode is not set,
         // the first met operation != reduction operation is considered as the
         // reduced value class.
-        if (I && (!ReducedValueData || OpData == ReducedValueData ||
-                  OpData == ReductionData)) {
-          const bool IsReductionOperation = OpData == ReductionData;
+        const bool IsRdxInst = OpData == RdxTreeInst;
+        if (I && (!RdxLeafVal || OpData == RdxLeafVal || IsRdxInst)) {
           // Only handle trees in the current basic block.
-          if (!ReductionData.hasSameParent(I, B->getParent(),
-                                           IsReductionOperation)) {
+          if (!RdxTreeInst.hasSameParent(I, B->getParent(), IsRdxInst)) {
             // I is an extra argument for TreeN (its parent operation).
             markExtraArg(Stack.back(), I);
             continue;
@@ -6963,31 +6960,28 @@ public:
 
           // Each tree node needs to have minimal number of users except for the
           // ultimate reduction.
-          if (!ReductionData.hasRequiredNumberOfUses(I,
-                                                     OpData == ReductionData) &&
-              I != B) {
+          if (!RdxTreeInst.hasRequiredNumberOfUses(I, IsRdxInst) && I != B) {
             // I is an extra argument for TreeN (its parent operation).
             markExtraArg(Stack.back(), I);
             continue;
           }
 
-          if (IsReductionOperation) {
+          if (IsRdxInst) {
             // We need to be able to reassociate the reduction operations.
             if (!OpData.isAssociative(I)) {
               // I is an extra argument for TreeN (its parent operation).
               markExtraArg(Stack.back(), I);
               continue;
             }
-          } else if (ReducedValueData &&
-                     ReducedValueData != OpData) {
+          } else if (RdxLeafVal && RdxLeafVal != OpData) {
             // Make sure that the opcodes of the operations that we are going to
             // reduce match.
             // I is an extra argument for TreeN (its parent operation).
             markExtraArg(Stack.back(), I);
             continue;
-          } else if (!ReducedValueData)
-            ReducedValueData = OpData;
-
+          } else if (!RdxLeafVal) {
+            RdxLeafVal = OpData;
+          }
           Stack.push_back(std::make_pair(I, OpData.getFirstOperandIndex()));
           continue;
         }
@@ -7087,7 +7081,7 @@ public:
       }
       if (V.isTreeTinyAndNotFullyVectorizable())
         break;
-      if (V.isLoadCombineReductionCandidate(ReductionData.getOpcode()))
+      if (V.isLoadCombineReductionCandidate(RdxTreeInst.getOpcode()))
         break;
 
       V.computeMinimumValueSizes();
@@ -7130,7 +7124,7 @@ public:
       // Emit a reduction. For min/max, the root is a select, but the insertion
       // point is the compare condition of that select.
       Instruction *RdxRootInst = cast<Instruction>(ReductionRoot);
-      if (ReductionData.isMinMax())
+      if (RdxTreeInst.isMinMax())
         Builder.SetInsertPoint(getCmpForMinMaxReduction(RdxRootInst));
       else
         Builder.SetInsertPoint(RdxRootInst);
@@ -7144,7 +7138,7 @@ public:
       } else {
         // Update the final value in the reduction.
         Builder.SetCurrentDebugLocation(Loc);
-        VectorizedTree = ReductionData.createOp(
+        VectorizedTree = RdxTreeInst.createOp(
             Builder, VectorizedTree, ReducedSubTree, "op.rdx", ReductionOps);
       }
       i += ReduxWidth;
@@ -7156,15 +7150,15 @@ public:
       for (; i < NumReducedVals; ++i) {
         auto *I = cast<Instruction>(ReducedVals[i]);
         Builder.SetCurrentDebugLocation(I->getDebugLoc());
-        VectorizedTree = ReductionData.createOp(Builder, VectorizedTree, I, "",
-                                                ReductionOps);
+        VectorizedTree = RdxTreeInst.createOp(Builder, VectorizedTree, I, "",
+                                              ReductionOps);
       }
       for (auto &Pair : ExternallyUsedValues) {
         // Add each externally used value to the final reduction.
         for (auto *I : Pair.second) {
           Builder.SetCurrentDebugLocation(I->getDebugLoc());
-          VectorizedTree = ReductionData.createOp(Builder, VectorizedTree,
-                                                  Pair.first, "op.extra", I);
+          VectorizedTree = RdxTreeInst.createOp(Builder, VectorizedTree,
+                                                Pair.first, "op.extra", I);
         }
       }
 
@@ -7172,7 +7166,7 @@ public:
       // select, we also have to RAUW for the compare instruction feeding the
       // reduction root. That's because the original compare may have extra uses
       // besides the final select of the reduction.
-      if (ReductionData.isMinMax()) {
+      if (RdxTreeInst.isMinMax()) {
         if (auto *VecSelect = dyn_cast<SelectInst>(VectorizedTree)) {
           Instruction *ScalarCmp =
               getCmpForMinMaxReduction(cast<Instruction>(ReductionRoot));
@@ -7201,13 +7195,13 @@ private:
 
     int PairwiseRdxCost;
     int SplittingRdxCost;
-    switch (ReductionData.getKind()) {
+    switch (RdxTreeInst.getKind()) {
     case RK_Arithmetic:
       PairwiseRdxCost =
-          TTI->getArithmeticReductionCost(ReductionData.getOpcode(), VecTy,
+          TTI->getArithmeticReductionCost(RdxTreeInst.getOpcode(), VecTy,
                                           /*IsPairwiseForm=*/true);
       SplittingRdxCost =
-          TTI->getArithmeticReductionCost(ReductionData.getOpcode(), VecTy,
+          TTI->getArithmeticReductionCost(RdxTreeInst.getOpcode(), VecTy,
                                           /*IsPairwiseForm=*/false);
       break;
     case RK_SMin:
@@ -7215,8 +7209,8 @@ private:
     case RK_UMin:
     case RK_UMax: {
       auto *VecCondTy = cast<VectorType>(CmpInst::makeCmpResultType(VecTy));
-      bool IsUnsigned = ReductionData.getKind() == RK_UMin ||
-                        ReductionData.getKind() == RK_UMax;
+      bool IsUnsigned = RdxTreeInst.getKind() == RK_UMin ||
+                        RdxTreeInst.getKind() == RK_UMax;
       PairwiseRdxCost =
           TTI->getMinMaxReductionCost(VecTy, VecCondTy,
                                       /*IsPairwiseForm=*/true, IsUnsigned);
@@ -7233,17 +7227,17 @@ private:
     int VecReduxCost = IsPairwiseReduction ? PairwiseRdxCost : SplittingRdxCost;
 
     int ScalarReduxCost = 0;
-    switch (ReductionData.getKind()) {
+    switch (RdxTreeInst.getKind()) {
     case RK_Arithmetic:
       ScalarReduxCost =
-          TTI->getArithmeticInstrCost(ReductionData.getOpcode(), ScalarTy);
+          TTI->getArithmeticInstrCost(RdxTreeInst.getOpcode(), ScalarTy);
       break;
     case RK_SMin:
     case RK_SMax:
     case RK_UMin:
     case RK_UMax:
       ScalarReduxCost =
-          TTI->getCmpSelInstrCost(ReductionData.getOpcode(), ScalarTy) +
+          TTI->getCmpSelInstrCost(RdxTreeInst.getOpcode(), ScalarTy) +
           TTI->getCmpSelInstrCost(Instruction::Select, ScalarTy,
                                   CmpInst::makeCmpResultType(ScalarTy));
       break;
@@ -7273,8 +7267,8 @@ private:
       //        to 'fast'.
       assert(Builder.getFastMathFlags().isFast() && "Expected 'fast' FMF");
       return createSimpleTargetReduction(
-          Builder, TTI, ReductionData.getOpcode(), VectorizedValue,
-          ReductionData.getFlags(), ReductionOps.back());
+          Builder, TTI, RdxTreeInst.getOpcode(), VectorizedValue,
+          RdxTreeInst.getFlags(), ReductionOps.back());
     }
 
     Value *TmpVec = VectorizedValue;
@@ -7286,8 +7280,8 @@ private:
           Builder.CreateShuffleVector(TmpVec, LeftMask, "rdx.shuf.l");
       Value *RightShuf =
           Builder.CreateShuffleVector(TmpVec, RightMask, "rdx.shuf.r");
-      TmpVec = ReductionData.createOp(Builder, LeftShuf, RightShuf, "op.rdx",
-                                      ReductionOps);
+      TmpVec = RdxTreeInst.createOp(Builder, LeftShuf, RightShuf, "op.rdx",
+                                    ReductionOps);
     }
 
     // The result is in the first element of the vector.
