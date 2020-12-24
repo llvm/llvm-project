@@ -329,11 +329,11 @@ void test_isa_name(char *name, const char *features) {
   strncpy(isa_name, name, MAX_ISA_NAME_SIZE);
   strncat(isa_name, features, MAX_ISA_NAME_SIZE);
 
-  const char *v2_options[] = {"-mllvm", "--amdhsa-code-object-version=2"};
+  const char *v2_options[] = {"-mcode-object-version=2"};
   size_t v2_options_count = sizeof(v2_options) / sizeof(v2_options[0]);
-  const char *v3_options[] = {"-mllvm", "--amdhsa-code-object-version=3"};
+  const char *v3_options[] = {"-mcode-object-version=3"};
   size_t v3_options_count = sizeof(v3_options) / sizeof(v3_options[0]);
-  const char *v4_options[] = {"-mllvm", "--amdhsa-code-object-version=4"};
+  const char *v4_options[] = {"-mcode-object-version=4"};
   size_t v4_options_count = sizeof(v4_options) / sizeof(v4_options[0]);
 
   // Test object code v2.
