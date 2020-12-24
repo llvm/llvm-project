@@ -442,11 +442,13 @@ Symbols:
 ## ends in a byte with the high bit set.
 
 # RUN: yaml2obj --docnum=6 %s -o %t06
-# RUN: llvm-readelf --stack-sizes %t06 2>&1 | FileCheck %s --check-prefix=BADSIZE -DFILE=%t06
-# RUN: llvm-readobj --stack-sizes %t06 2>&1 | FileCheck %s --check-prefix=BADSIZE -DFILE=%t06
+# RUN: llvm-readelf --stack-sizes %t06 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=BADSIZE -DFILE=%t06 --implicit-check-not=warning:
+# RUN: llvm-readobj --stack-sizes %t06 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=BADSIZE -DFILE=%t06 --implicit-check-not=warning:
 
-# BADSIZE: warning: '[[FILE]]': could not extract a valid stack size from SHT_PROGBITS section with index 2
-# BADSIZE: warning: '[[FILE]]': could not extract a valid stack size from SHT_PROGBITS section with index 3
+# BADSIZE: warning: '[[FILE]]': could not extract a valid stack size from SHT_PROGBITS section with index 2: unable to decode LEB128 at offset 0x00000008: malformed uleb128, extends past end
+# BADSIZE: warning: '[[FILE]]': could not extract a valid stack size from SHT_PROGBITS section with index 3: unable to decode LEB128 at offset 0x00000008: malformed uleb128, extends past end
 
 --- !ELF
 FileHeader:

@@ -759,7 +759,7 @@ public:
   virtual void printStackSizes() = 0;
   void printNonRelocatableStackSizes(std::function<void()> PrintHeader);
   void printRelocatableStackSizes(std::function<void()> PrintHeader);
-  void printFunctionStackSize(uint64_t SymValue,
+  bool printFunctionStackSize(uint64_t SymValue,
                               Optional<const Elf_Shdr *> FunctionSec,
                               const Elf_Shdr &StackSizeSec, DataExtractor Data,
                               uint64_t *Offset);
@@ -5833,7 +5833,7 @@ template <class ELFT> void GNUStyle<ELFT>::printDependentLibs() {
 }
 
 template <class ELFT>
-void DumpStyle<ELFT>::printFunctionStackSize(
+bool DumpStyle<ELFT>::printFunctionStackSize(
     uint64_t SymValue, Optional<const Elf_Shdr *> FunctionSec,
     const Elf_Shdr &StackSizeSec, DataExtractor Data, uint64_t *Offset) {
   uint32_t FuncSymIndex = 0;
@@ -5893,16 +5893,16 @@ void DumpStyle<ELFT>::printFunctionStackSize(
 
   // Extract the size. The expectation is that Offset is pointing to the right
   // place, i.e. past the function address.
-  uint64_t PrevOffset = *Offset;
-  uint64_t StackSize = Data.getULEB128(Offset);
-  // getULEB128() does not advance Offset if it is not able to extract a valid
-  // integer.
-  if (*Offset == PrevOffset) {
+  Error Err = Error::success();
+  uint64_t StackSize = Data.getULEB128(Offset, &Err);
+  if (Err) {
     reportUniqueWarning("could not extract a valid stack size from " +
-                        describe(Obj, StackSizeSec));
-    return;
+                        describe(Obj, StackSizeSec) + ": " +
+                        toString(std::move(Err)));
+    return false;
   }
   printStackSizeEntry(StackSize, FuncName);
+  return true;
 }
 
 template <class ELFT>
@@ -5991,8 +5991,9 @@ void DumpStyle<ELFT>::printNonRelocatableStackSizes(
         break;
       }
       uint64_t SymValue = Data.getAddress(&Offset);
-      printFunctionStackSize(SymValue, /*FunctionSec=*/None, Sec, Data,
-                             &Offset);
+      if (!printFunctionStackSize(SymValue, /*FunctionSec=*/None, Sec, Data,
+                                  &Offset))
+        break;
     }
   }
 }
