@@ -61,8 +61,8 @@ define float @test6(<4 x float> %X) {
 
 define float @testvscale6(<vscale x 4 x float> %X) {
 ; CHECK-LABEL: @testvscale6(
-; CHECK-NEXT:    [[T:%.*]] = shufflevector <vscale x 4 x float> [[X:%.*]], <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = extractelement <vscale x 4 x float> [[T]], i32 0
+; CHECK-NEXT:    [[T2:%.*]] = shufflevector <vscale x 4 x float> [[X:%.*]], <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = extractelement <vscale x 4 x float> [[T2]], i32 0
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %X1 = bitcast <vscale x 4 x float> %X to <vscale x 4 x i32>
@@ -749,8 +749,8 @@ define <8 x i8> @pr19730(<16 x i8> %in0) {
 
 define i32 @pr19737(<4 x i32> %in0) {
 ; CHECK-LABEL: @pr19737(
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[IN0:%.*]], i32 0
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[RV:%.*]] = extractelement <4 x i32> [[IN0:%.*]], i32 0
+; CHECK-NEXT:    ret i32 [[RV]]
 ;
   %shuffle.i = shufflevector <4 x i32> zeroinitializer, <4 x i32> %in0, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
   %neg.i = xor <4 x i32> %shuffle.i, <i32 -1, i32 -1, i32 -1, i32 -1>
