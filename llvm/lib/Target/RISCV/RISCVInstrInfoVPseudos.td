@@ -178,6 +178,16 @@ defset list<VTypeInfo> AllVectors = {
   }
 }
 
+// This functor is used to obtain the int vector type that has the same SEW and
+// multiplier as the input parameter type
+class GetIntVTypeInfo<VTypeInfo vti>
+{
+  // Equivalent integer vector type. Eg.
+  //   VI8M1 → VI8M1 (identity)
+  //   VF64M4 → VI64M4
+  VTypeInfo Vti = !cast<VTypeInfo>(!subst("VF", "VI", !cast<string>(vti)));
+}
+
 class VTypeInfoToWide<VTypeInfo vti, VTypeInfo wti>
 {
   VTypeInfo Vti = vti;
@@ -671,9 +681,9 @@ multiclass VPseudoBinary<VReg RetClass,
   }
 }
 
-multiclass VPseudoBinaryV_VV {
+multiclass VPseudoBinaryV_VV<string Constraint = ""> {
   foreach m = MxList.m in
-    defm _VV : VPseudoBinary<m.vrclass, m.vrclass, m.vrclass, m>;
+    defm _VV : VPseudoBinary<m.vrclass, m.vrclass, m.vrclass, m, Constraint>;
 }
 
 multiclass VPseudoBinaryV_VX<bit IsFloat, string Constraint = ""> {
@@ -682,9 +692,9 @@ multiclass VPseudoBinaryV_VX<bit IsFloat, string Constraint = ""> {
                              !if(IsFloat, FPR32, GPR), m, Constraint>;
 }
 
-multiclass VPseudoBinaryV_VI<Operand ImmType = simm5> {
+multiclass VPseudoBinaryV_VI<Operand ImmType = simm5, string Constraint = ""> {
   foreach m = MxList.m in
-    defm _VI : VPseudoBinary<m.vrclass, m.vrclass, ImmType, m>;
+    defm _VI : VPseudoBinary<m.vrclass, m.vrclass, ImmType, m, Constraint>;
 }
 
 // We use earlyclobber here due to
@@ -811,10 +821,10 @@ multiclass VPseudoBinaryM_VI {
     defm _VI : VPseudoBinary<VR, m.vrclass, simm5, m, "@earlyclobber $rd">;
 }
 
-multiclass VPseudoBinaryV_VV_VX_VI<Operand ImmType = simm5> {
-  defm "" : VPseudoBinaryV_VV;
-  defm "" : VPseudoBinaryV_VX</*IsFloat=*/0>;
-  defm "" : VPseudoBinaryV_VI<ImmType>;
+multiclass VPseudoBinaryV_VV_VX_VI<Operand ImmType = simm5, string Constraint = ""> {
+  defm "" : VPseudoBinaryV_VV<Constraint>;
+  defm "" : VPseudoBinaryV_VX</*IsFloat=*/false, Constraint>;
+  defm "" : VPseudoBinaryV_VI<ImmType, Constraint>;
 }
 
 multiclass VPseudoBinaryV_VV_VX<bit IsFloat = 0> {
@@ -1248,6 +1258,17 @@ multiclass VPatBinaryV_VV<string intrinsic, string instruction,
                       vti.RegClass, vti.RegClass>;
 }
 
+multiclass VPatBinaryV_VV_INT<string intrinsic, string instruction,
+                          list<VTypeInfo> vtilist> {
+  foreach vti = vtilist in {
+    defvar ivti = GetIntVTypeInfo<vti>.Vti;
+    defm : VPatBinary<intrinsic, instruction, "VV",
+                      vti.Vector, vti.Vector, ivti.Vector, vti.Mask,
+                      vti.SEW, vti.LMul, vti.RegClass,
+                      vti.RegClass, vti.RegClass>;
+  }
+}
+
 multiclass VPatBinaryV_VX<string intrinsic, string instruction,
                           list<VTypeInfo> vtilist> {
   foreach vti = vtilist in
@@ -1256,6 +1277,15 @@ multiclass VPatBinaryV_VX<string intrinsic, string instruction,
                       vti.Vector, vti.Vector, vti.Scalar, vti.Mask,
                       vti.SEW, vti.LMul, vti.RegClass,
                       vti.RegClass, vti.ScalarRegClass>;
+}
+
+multiclass VPatBinaryV_VX_INT<string intrinsic, string instruction,
+                          list<VTypeInfo> vtilist> {
+  foreach vti = vtilist in
+    defm : VPatBinary<intrinsic, instruction, "VX",
+                      vti.Vector, vti.Vector, XLenVT, vti.Mask,
+                      vti.SEW, vti.LMul, vti.RegClass,
+                      vti.RegClass, GPR>;
 }
 
 multiclass VPatBinaryV_VI<string intrinsic, string instruction,
@@ -1642,6 +1672,14 @@ multiclass VPatBinaryM_VX_VI<string intrinsic, string instruction,
 {
   defm "" : VPatBinaryM_VX<intrinsic, instruction, vtilist>;
   defm "" : VPatBinaryM_VI<intrinsic, instruction, vtilist>;
+}
+
+multiclass VPatBinaryV_VV_VX_VI_INT<string intrinsic, string instruction,
+                                    list<VTypeInfo> vtilist, Operand ImmType = simm5>
+{
+  defm "" : VPatBinaryV_VV_INT<intrinsic, instruction, vtilist>;
+  defm "" : VPatBinaryV_VX_INT<intrinsic, instruction, vtilist>;
+  defm "" : VPatBinaryV_VI<intrinsic, instruction, vtilist, ImmType>;
 }
 
 multiclass VPatReductionV_VS<string intrinsic, string instruction, bit IsFloat = 0> {
@@ -2078,6 +2116,11 @@ let Predicates = [HasStdExtV, HasStdExtF] in {
   defm PseudoVFSLIDE1UP  : VPseudoBinaryV_VX</*IsFloat*/true, "@earlyclobber $rd">;
   defm PseudoVFSLIDE1DOWN : VPseudoBinaryV_VX</*IsFloat*/true>;
 } // Predicates = [HasStdExtV, HasStdExtF]
+
+//===----------------------------------------------------------------------===//
+// 17.4. Vector Register Gather Instructions
+//===----------------------------------------------------------------------===//
+defm PseudoVRGATHER    : VPseudoBinaryV_VV_VX_VI<uimm5, "@earlyclobber $rd">;
 
 //===----------------------------------------------------------------------===//
 // Patterns.
@@ -2534,6 +2577,19 @@ let Predicates = [HasStdExtV, HasStdExtF] in {
   defm "" : VPatTernaryV_VX_VI<"int_riscv_vslidedown", "PseudoVSLIDEDOWN", AllFloatVectors, uimm5>;
   defm "" : VPatBinaryV_VX<"int_riscv_vfslide1up", "PseudoVFSLIDE1UP", AllFloatVectors>;
   defm "" : VPatBinaryV_VX<"int_riscv_vfslide1down", "PseudoVFSLIDE1DOWN", AllFloatVectors>;
+} // Predicates = [HasStdExtV, HasStdExtF]
+
+//===----------------------------------------------------------------------===//
+// 17.4. Vector Register Gather Instructions
+//===----------------------------------------------------------------------===//
+let Predicates = [HasStdExtV] in {
+  defm "" : VPatBinaryV_VV_VX_VI_INT<"int_riscv_vrgather", "PseudoVRGATHER",
+                                     AllIntegerVectors, uimm5>;
+} // Predicates = [HasStdExtV]
+
+let Predicates = [HasStdExtV, HasStdExtF] in {
+  defm "" : VPatBinaryV_VV_VX_VI_INT<"int_riscv_vrgather", "PseudoVRGATHER",
+                                     AllFloatVectors, uimm5>;
 } // Predicates = [HasStdExtV, HasStdExtF]
 
 // Include the non-intrinsic ISel patterns
