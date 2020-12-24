@@ -119,10 +119,30 @@ public:
     return One;
   }
 
+  /// Return the minimal signed value possible given these KnownBits.
+  APInt getSignedMinValue() const {
+    // Assume that all bits that aren't known-ones are zeros.
+    APInt Min = One;
+    // Sign bit is unknown.
+    if (Zero.isSignBitClear() && One.isSignBitClear())
+      Min.setSignBit();
+    return Min;
+  }
+
   /// Return the maximal unsigned value possible given these KnownBits.
   APInt getMaxValue() const {
     // Assume that all bits that aren't known-zeros are ones.
     return ~Zero;
+  }
+
+  /// Return the maximal signed value possible given these KnownBits.
+  APInt getSignedMaxValue() const {
+    // Assume that all bits that aren't known-zeros are ones.
+    APInt Max = ~Zero;
+    // Sign bit is unknown.
+    if (Zero.isSignBitClear() && One.isSignBitClear())
+      Max.clearSignBit();
+    return Max;
   }
 
   /// Return known bits for a truncation of the value we're tracking.
