@@ -1963,7 +1963,7 @@ inline match_LoopInvariant<Ty> m_LoopInvariant(const Ty &M, const Loop *L) {
 /// \endcode
 static bool detectShiftUntilBitTestIdiom(Loop *CurLoop, Value *&BaseX,
                                          Value *&BitMask, Value *&BitPos,
-                                         Value *&CurrX, Value *&NextX) {
+                                         Value *&CurrX, Instruction *&NextX) {
   LLVM_DEBUG(dbgs() << DEBUG_TYPE
              " Performing shift-until-bittest idiom detection.\n");
 
@@ -2030,9 +2030,10 @@ static bool detectShiftUntilBitTestIdiom(Loop *CurLoop, Value *&BaseX,
   }
 
   BaseX = CurrXPN->getIncomingValueForBlock(LoopPreheaderBB);
-  NextX = CurrXPN->getIncomingValueForBlock(LoopHeaderBB);
+  NextX =
+      dyn_cast<Instruction>(CurrXPN->getIncomingValueForBlock(LoopHeaderBB));
 
-  if (!match(NextX, m_Shl(m_Specific(CurrX), m_One()))) {
+  if (!NextX || !match(NextX, m_Shl(m_Specific(CurrX), m_One()))) {
     // FIXME: support right-shift?
     LLVM_DEBUG(dbgs() << DEBUG_TYPE " Bad recurrence.\n");
     return false;
@@ -2113,7 +2114,8 @@ static bool detectShiftUntilBitTestIdiom(Loop *CurLoop, Value *&BaseX,
 bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
   bool MadeChange = false;
 
-  Value *X, *BitMask, *BitPos, *XCurr, *XNext;
+  Value *X, *BitMask, *BitPos, *XCurr;
+  Instruction *XNext;
   if (!detectShiftUntilBitTestIdiom(CurLoop, X, BitMask, BitPos, XCurr,
                                     XNext)) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE
@@ -2163,9 +2165,8 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
 
   // Step 1: Compute the loop trip count.
 
-  Value *LowBitMask =
-      Builder.CreateAdd(BitMask, Constant::getAllOnesValue(BitMask->getType()),
-                        BitPos->getName() + ".lowbitmask");
+  Value *LowBitMask = Builder.CreateAdd(BitMask, Constant::getAllOnesValue(Ty),
+                                        BitPos->getName() + ".lowbitmask");
   Value *Mask =
       Builder.CreateOr(LowBitMask, BitMask, BitPos->getName() + ".mask");
   Value *XMasked = Builder.CreateAnd(X, Mask, X->getName() + ".masked");
@@ -2173,11 +2174,11 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
       IntrID, Ty, {XMasked, /*is_zero_undef=*/Builder.getTrue()},
       /*FMFSource=*/nullptr, XMasked->getName() + ".numleadingzeros");
   Value *XMaskedNumActiveBits = Builder.CreateSub(
-      ConstantInt::get(X->getType(), X->getType()->getScalarSizeInBits()),
-      XMaskedNumLeadingZeros, XMasked->getName() + ".numactivebits");
-  Value *XMaskedLeadingOnePos = Builder.CreateAdd(
-      XMaskedNumActiveBits, Constant::getAllOnesValue(BitMask->getType()),
-      XMasked->getName() + ".leadingonepos");
+      ConstantInt::get(Ty, Ty->getScalarSizeInBits()), XMaskedNumLeadingZeros,
+      XMasked->getName() + ".numactivebits");
+  Value *XMaskedLeadingOnePos =
+      Builder.CreateAdd(XMaskedNumActiveBits, Constant::getAllOnesValue(Ty),
+                        XMasked->getName() + ".leadingonepos");
 
   Value *LoopBackedgeTakenCount = Builder.CreateSub(
       BitPos, XMaskedLeadingOnePos, CurLoop->getName() + ".backedgetakencount");
@@ -2189,11 +2190,34 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
 
   // Step 2: Compute the recurrence's final value without a loop.
 
+  // NewX is always safe to compute, because `LoopBackedgeTakenCount`
+  // will always be smaller than `bitwidth(X)`, i.e. we never get poison.
   Value *NewX = Builder.CreateShl(X, LoopBackedgeTakenCount);
   NewX->takeName(XCurr);
+  if (auto *I = dyn_cast<Instruction>(NewX))
+    I->copyIRFlags(XNext, /*IncludeWrapFlags=*/true);
 
-  Value *NewXNext = Builder.CreateShl(X, LoopTripCount);
+  Value *NewXNext;
+  // Rewriting XNext is more complicated, however, because `X << LoopTripCount`
+  // will be poison iff `LoopTripCount == bitwidth(X)` (which will happen
+  // iff `BitPos` is `bitwidth(x) - 1` and `X` is `1`). So unless we know
+  // that isn't the case, we'll need to emit an alternative, safe IR.
+  if (XNext->hasNoSignedWrap() || XNext->hasNoUnsignedWrap() ||
+      PatternMatch::match(
+          BitPos, PatternMatch::m_SpecificInt_ICMP(
+                      ICmpInst::ICMP_NE, APInt(Ty->getScalarSizeInBits(),
+                                               Ty->getScalarSizeInBits() - 1))))
+    NewXNext = Builder.CreateShl(X, LoopTripCount);
+  else {
+    // Otherwise, just additionally shift by one. It's the smallest solution,
+    // alternatively, we could check that NewX is INT_MIN (or BitPos is )
+    // and select 0 instead.
+    NewXNext = Builder.CreateShl(NewX, ConstantInt::get(Ty, 1));
+  }
+
   NewXNext->takeName(XNext);
+  if (auto *I = dyn_cast<Instruction>(NewXNext))
+    I->copyIRFlags(XNext, /*IncludeWrapFlags=*/true);
 
   // Step 3: Adjust the successor basic block to recieve the computed
   //         recurrence's final value instead of the recurrence itself.
