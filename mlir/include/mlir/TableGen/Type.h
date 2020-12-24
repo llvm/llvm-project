@@ -47,6 +47,9 @@ public:
   // Returns the builder call for this constraint if this is a buildable type,
   // returns None otherwise.
   Optional<StringRef> getBuilderCall() const;
+
+  // Return the C++ class name for this type (which may just be ::mlir::Type).
+  StringRef getCPPClassName() const;
 };
 
 // Wrapper class with helper methods for accessing Types defined in TableGen.
