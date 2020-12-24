@@ -56,5 +56,5 @@ define i32 @main() nounwind {
 ; CHECK:   %.load = load float, float* getelementptr inbounds ([1024 x float], [1024 x float]* @A, i32 0, i32 0)
 
 ; CHECK: polly.stmt.:                                      ; preds = %polly.start
-; CHECK:   %_p.splatinsert = insertelement <4 x float> undef, float %.load, i32 0
-; CHECK:   %_p.splat = shufflevector <4 x float> %_p.splatinsert, <4 x float> undef, <4 x i32> zeroinitializer
+; CHECK:   %_p.splatinsert = insertelement <4 x float> poison, float %.load, i32 0
+; CHECK:   %_p.splat = shufflevector <4 x float> %_p.splatinsert, <4 x float> poison, <4 x i32> zeroinitializer

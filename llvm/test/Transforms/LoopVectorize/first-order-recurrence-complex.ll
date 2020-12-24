@@ -8,8 +8,8 @@
 
 define void @can_sink_after_store(i32 %x, i32* %ptr, i64 %tc) local_unnamed_addr #0 {
 ; CHECK-LABEL: vector.ph:
-; CHECK:        %broadcast.splatinsert = insertelement <4 x i32> undef, i32 %x, i32 0
-; CHECK-NEXT:   %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK:        %broadcast.splatinsert = insertelement <4 x i32> poison, i32 %x, i32 0
+; CHECK-NEXT:   %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:   %vector.recur.init = insertelement <4 x i32> undef, i32 %.pre, i32 3
 ; CHECK-NEXT:    br label %vector.body
 
@@ -62,8 +62,8 @@ exit:
 ; and not introduce traps on additional paths.
 define void @sink_sdiv(i32 %x, i32* %ptr, i64 %tc) local_unnamed_addr #0 {
 ; CHECK-LABEL: vector.ph:
-; CHECK:        %broadcast.splatinsert = insertelement <4 x i32> undef, i32 %x, i32 0
-; CHECK-NEXT:   %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK:        %broadcast.splatinsert = insertelement <4 x i32> poison, i32 %x, i32 0
+; CHECK-NEXT:   %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:   %vector.recur.init = insertelement <4 x i32> undef, i32 %.pre, i32 3
 ; CHECK-NEXT:    br label %vector.body
 

@@ -84,7 +84,7 @@ define <4 x float> @PR16739_byref_alt(<4 x float>* nocapture readonly dereferenc
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds <4 x float>, <4 x float>* [[X]], i64 0, i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[GEP0]] to <2 x float>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, <2 x float>* [[TMP1]], align 4
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> undef, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[SHUFFLE]], i32 0
 ; CHECK-NEXT:    [[I0:%.*]] = insertelement <4 x float> undef, float [[TMP3]], i32 0
 ; CHECK-NEXT:    [[I1:%.*]] = insertelement <4 x float> [[I0]], float [[TMP3]], i32 1
