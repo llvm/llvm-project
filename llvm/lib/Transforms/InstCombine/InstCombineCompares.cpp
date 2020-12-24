@@ -96,45 +96,6 @@ static bool isSignTest(ICmpInst::Predicate &Pred, const APInt &C) {
   return false;
 }
 
-/// Given a signed integer type and a set of known zero and one bits, compute
-/// the maximum and minimum values that could have the specified known zero and
-/// known one bits, returning them in Min/Max.
-/// TODO: Move to method on KnownBits struct?
-static void computeSignedMinMaxValuesFromKnownBits(const KnownBits &Known,
-                                                   APInt &Min, APInt &Max) {
-  assert(Known.getBitWidth() == Min.getBitWidth() &&
-         Known.getBitWidth() == Max.getBitWidth() &&
-         "KnownZero, KnownOne and Min, Max must have equal bitwidth.");
-  APInt UnknownBits = ~(Known.Zero|Known.One);
-
-  // The minimum value is when all unknown bits are zeros, EXCEPT for the sign
-  // bit if it is unknown.
-  Min = Known.One;
-  Max = Known.One|UnknownBits;
-
-  if (UnknownBits.isNegative()) { // Sign bit is unknown
-    Min.setSignBit();
-    Max.clearSignBit();
-  }
-}
-
-/// Given an unsigned integer type and a set of known zero and one bits, compute
-/// the maximum and minimum values that could have the specified known zero and
-/// known one bits, returning them in Min/Max.
-/// TODO: Move to method on KnownBits struct?
-static void computeUnsignedMinMaxValuesFromKnownBits(const KnownBits &Known,
-                                                     APInt &Min, APInt &Max) {
-  assert(Known.getBitWidth() == Min.getBitWidth() &&
-         Known.getBitWidth() == Max.getBitWidth() &&
-         "Ty, KnownZero, KnownOne and Min, Max must have equal bitwidth.");
-  APInt UnknownBits = ~(Known.Zero|Known.One);
-
-  // The minimum value is when the unknown bits are all zeros.
-  Min = Known.One;
-  // The maximum value is when the unknown bits are all ones.
-  Max = Known.One|UnknownBits;
-}
-
 /// This is called when we see this pattern:
 ///   cmp pred (load (gep GV, ...)), cmpcst
 /// where GV is a global variable with a constant initializer. Try to simplify
@@ -5050,11 +5011,15 @@ Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
   APInt Op0Min(BitWidth, 0), Op0Max(BitWidth, 0);
   APInt Op1Min(BitWidth, 0), Op1Max(BitWidth, 0);
   if (I.isSigned()) {
-    computeSignedMinMaxValuesFromKnownBits(Op0Known, Op0Min, Op0Max);
-    computeSignedMinMaxValuesFromKnownBits(Op1Known, Op1Min, Op1Max);
+    Op0Min = Op0Known.getSignedMinValue();
+    Op0Max = Op0Known.getSignedMaxValue();
+    Op1Min = Op1Known.getSignedMinValue();
+    Op1Max = Op1Known.getSignedMaxValue();
   } else {
-    computeUnsignedMinMaxValuesFromKnownBits(Op0Known, Op0Min, Op0Max);
-    computeUnsignedMinMaxValuesFromKnownBits(Op1Known, Op1Min, Op1Max);
+    Op0Min = Op0Known.getMinValue();
+    Op0Max = Op0Known.getMaxValue();
+    Op1Min = Op1Known.getMinValue();
+    Op1Max = Op1Known.getMaxValue();
   }
 
   // If Min and Max are known to be the same, then SimplifyDemandedBits figured
