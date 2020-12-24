@@ -47,10 +47,9 @@
 
                                                                                                 ----LDS--- ----CU---    WG ------SGPR----- ------VGPR-----
            TARGET_TRIPLE         PROCESSOR SRAMECC  XNACK  ELF_MACHINE                    TRAP   Size Bnks EUs Waves   Max Alloc  Max Addr Alloc  Max Addr */
-// FIXME: Re-enable when compiler supports gfx60x.
-// HANDLE_ISA("amdgcn-amd--",       "gfx600",   false, false, EF_AMDGPU_MACH_AMDGCN_GFX600,  true, 65536,  32,  4,   40, 1024,    8, 512, 104,    4, 256, 256)
-// HANDLE_ISA("amdgcn-amd--",       "gfx601",   false, false, EF_AMDGPU_MACH_AMDGCN_GFX601,  true, 65536,  32,  4,   40, 1024,    8, 512, 104,    4, 256, 256)
-// HANDLE_ISA("amdgcn-amd--",       "gfx602",   false, false, EF_AMDGPU_MACH_AMDGCN_GFX602,  true, 65536,  32,  4,   40, 1024,    8, 512, 104,    4, 256, 256)
+HANDLE_ISA("amdgcn-amd-amdhsa-", "gfx600",   false, false, EF_AMDGPU_MACH_AMDGCN_GFX600,  true, 65536,  32,  4,   40, 1024,    8, 512, 104,    4, 256, 256)
+HANDLE_ISA("amdgcn-amd-amdhsa-", "gfx601",   false, false, EF_AMDGPU_MACH_AMDGCN_GFX601,  true, 65536,  32,  4,   40, 1024,    8, 512, 104,    4, 256, 256)
+HANDLE_ISA("amdgcn-amd-amdhsa-", "gfx602",   false, false, EF_AMDGPU_MACH_AMDGCN_GFX602,  true, 65536,  32,  4,   40, 1024,    8, 512, 104,    4, 256, 256)
 HANDLE_ISA("amdgcn-amd-amdhsa-", "gfx700",   false, false, EF_AMDGPU_MACH_AMDGCN_GFX700,  true, 65536,  32,  4,   40, 1024,    8, 512, 104,    4, 256, 256)
 HANDLE_ISA("amdgcn-amd-amdhsa-", "gfx701",   false, false, EF_AMDGPU_MACH_AMDGCN_GFX701,  true, 65536,  32,  4,   40, 1024,    8, 512, 104,    4, 256, 256)
 HANDLE_ISA("amdgcn-amd-amdhsa-", "gfx702",   false, false, EF_AMDGPU_MACH_AMDGCN_GFX702,  true, 65536,  16,  4,   40, 1024,    8, 512, 104,    4, 256, 256)

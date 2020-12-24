@@ -56,10 +56,9 @@ typedef struct {
 static isa_features_t isa_features[] = {
   //        ISA Name             V2         ------ SRAMECC ------  ------- XNACK -------
   //                             Supported  Supported  V2          Supported  V2
-// FIXME: Re-enable when compiler supports gfx60x.
-//  {"amdgcn-amd---gfx600",        true,      false,     none,       false,     none},
-//  {"amdgcn-amd---gfx601",        true,      false,     none,       false,     none},
-//  {"amdgcn-amd---gfx602",        true,      false,     none,       false,     none},
+  {"amdgcn-amd-amdhsa--gfx600",  true,      false,     none,       false,     none},
+  {"amdgcn-amd-amdhsa--gfx601",  true,      false,     none,       false,     none},
+  {"amdgcn-amd-amdhsa--gfx602",  true,      false,     none,       false,     none},
   {"amdgcn-amd-amdhsa--gfx700",  true,      false,     none,       false,     none},
   {"amdgcn-amd-amdhsa--gfx701",  true,      false,     none,       false,     none},
   {"amdgcn-amd-amdhsa--gfx702",  true,      false,     none,       false,     none},
