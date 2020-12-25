@@ -13,18 +13,20 @@
 
 #include "AMDGPUSubtarget.h"
 #include "AMDGPU.h"
-#include "AMDGPUTargetMachine.h"
 #include "AMDGPUCallLowering.h"
 #include "AMDGPUInstructionSelector.h"
 #include "AMDGPULegalizerInfo.h"
 #include "AMDGPURegisterBankInfo.h"
+#include "AMDGPUTargetMachine.h"
 #include "SIMachineFunctionInfo.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
 #include "llvm/CodeGen/MachineScheduler.h"
-#include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/IR/MDBuilder.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/IntrinsicsR600.h"
+#include "llvm/IR/MDBuilder.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include <algorithm>
 
 using namespace llvm;
@@ -481,6 +483,10 @@ static unsigned getReqdWorkGroupSize(const Function &Kernel, unsigned Dim) {
   return std::numeric_limits<unsigned>::max();
 }
 
+bool AMDGPUSubtarget::isMesaKernel(const Function &F) const {
+  return isMesa3DOS() && !AMDGPU::isShader(F.getCallingConv());
+}
+
 unsigned AMDGPUSubtarget::getMaxWorkitemID(const Function &Kernel,
                                            unsigned Dimension) const {
   unsigned ReqdSize = getReqdWorkGroupSize(Kernel, Dimension);
@@ -549,6 +555,12 @@ bool AMDGPUSubtarget::makeLIDRangeMetadata(Instruction *I) const {
                                                   APInt(32, MaxSize));
   I->setMetadata(LLVMContext::MD_range, MaxWorkGroupSizeRange);
   return true;
+}
+
+unsigned AMDGPUSubtarget::getImplicitArgNumBytes(const Function &F) const {
+  if (isMesaKernel(F))
+    return 16;
+  return AMDGPU::getIntegerAttribute(F, "amdgpu-implicitarg-num-bytes", 0);
 }
 
 uint64_t AMDGPUSubtarget::getExplicitKernArgSize(const Function &F,

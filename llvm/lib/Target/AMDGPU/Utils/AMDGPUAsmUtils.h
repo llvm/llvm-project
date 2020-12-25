@@ -9,9 +9,10 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUASMUTILS_H
 #define LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUASMUTILS_H
 
-#include "llvm/ADT/StringRef.h"
-
 namespace llvm {
+
+class StringLiteral;
+
 namespace AMDGPU {
 
 namespace SendMsg { // Symbolic names for the sendmsg(...) syntax.

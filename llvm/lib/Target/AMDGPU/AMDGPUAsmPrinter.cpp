@@ -17,37 +17,27 @@
 
 #include "AMDGPUAsmPrinter.h"
 #include "AMDGPU.h"
+#include "AMDGPUHSAMetadataStreamer.h"
 #include "AMDGPUSubtarget.h"
-#include "AMDGPUTargetMachine.h"
+#include "AMDKernelCodeT.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "MCTargetDesc/AMDGPUTargetStreamer.h"
 #include "R600AsmPrinter.h"
-#include "R600Defines.h"
-#include "R600MachineFunctionInfo.h"
-#include "R600RegisterInfo.h"
-#include "SIDefines.h"
-#include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
-#include "SIRegisterInfo.h"
 #include "TargetInfo/AMDGPUTargetInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/BinaryFormat/ELF.h"
-#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/Support/AMDGPUMetadata.h"
-#include "llvm/Support/MathExtras.h"
-#include "llvm/Support/TargetParser.h"
+#include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
-using namespace llvm::AMDGPU::HSAMD;
 
 // We need to tell the runtime some amount ahead of time if we don't know the
 // true stack size. Assume a smaller number if this is only due to dynamic /
@@ -110,9 +100,9 @@ AMDGPUAsmPrinter::AMDGPUAsmPrinter(TargetMachine &TM,
   : AsmPrinter(TM, std::move(Streamer)) {
   if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
     if (isHsaAbiVersion2(getGlobalSTI())) {
-      HSAMetadataStream.reset(new MetadataStreamerV2());
+      HSAMetadataStream.reset(new HSAMD::MetadataStreamerV2());
     } else {
-      HSAMetadataStream.reset(new MetadataStreamerV3());
+      HSAMetadataStream.reset(new HSAMD::MetadataStreamerV3());
     }
   }
 }

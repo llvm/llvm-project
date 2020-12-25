@@ -16,9 +16,16 @@
 
 #include "AMDGPUISelLowering.h"
 #include "AMDGPUArgumentUsageInfo.h"
-#include "SIInstrInfo.h"
 
 namespace llvm {
+
+class GCNSubtarget;
+class SIMachineFunctionInfo;
+class SIRegisterInfo;
+
+namespace AMDGPU {
+struct ImageDimIntrinsicInfo;
+}
 
 class SITargetLowering final : public AMDGPUTargetLowering {
 private:
@@ -285,10 +292,7 @@ public:
   bool isMemOpUniform(const SDNode *N) const;
   bool isMemOpHasNoClobberedMemOperand(const SDNode *N) const;
 
-  static bool isNonGlobalAddrSpace(unsigned AS) {
-    return AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::REGION_ADDRESS ||
-           AS == AMDGPUAS::PRIVATE_ADDRESS;
-  }
+  static bool isNonGlobalAddrSpace(unsigned AS);
 
   bool isFreeAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override;
 

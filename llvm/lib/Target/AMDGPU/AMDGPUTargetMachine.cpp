@@ -15,16 +15,12 @@
 #include "AMDGPUTargetMachine.h"
 #include "AMDGPU.h"
 #include "AMDGPUAliasAnalysis.h"
-#include "AMDGPUCallLowering.h"
 #include "AMDGPUExportClustering.h"
-#include "AMDGPUInstructionSelector.h"
-#include "AMDGPULegalizerInfo.h"
 #include "AMDGPUMacroFusion.h"
 #include "AMDGPUTargetObjectFile.h"
 #include "AMDGPUTargetTransformInfo.h"
 #include "GCNIterativeScheduler.h"
 #include "GCNSchedStrategy.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "R600MachineScheduler.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIMachineScheduler.h"
@@ -36,19 +32,12 @@
 #include "llvm/CodeGen/GlobalISel/Localizer.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/MIRParser/MIParser.h"
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/IR/Attributes.h"
-#include "llvm/IR/Function.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/TargetRegistry.h"
-#include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/IPO/GlobalDCE.h"
@@ -60,7 +49,6 @@
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/SimplifyLibCalls.h"
 #include "llvm/Transforms/Vectorize.h"
-#include <memory>
 
 using namespace llvm;
 
@@ -650,6 +638,14 @@ const R600Subtarget *R600TargetMachine::getSubtargetImpl(
   }
 
   return I.get();
+}
+
+int64_t AMDGPUTargetMachine::getNullPointerValue(unsigned AddrSpace) {
+  return (AddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
+          AddrSpace == AMDGPUAS::PRIVATE_ADDRESS ||
+          AddrSpace == AMDGPUAS::REGION_ADDRESS)
+             ? -1
+             : 0;
 }
 
 bool AMDGPUTargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,

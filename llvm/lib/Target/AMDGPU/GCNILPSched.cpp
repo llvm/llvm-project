@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ScheduleDAG.h"
-#include "llvm/Support/Debug.h"
 
 using namespace llvm;
 

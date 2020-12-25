@@ -14,19 +14,14 @@
 
 #include "AMDGPUCallLowering.h"
 #include "AMDGPU.h"
-#include "AMDGPUISelLowering.h"
 #include "AMDGPULegalizerInfo.h"
 #include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "SIISelLowering.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
 #include "llvm/CodeGen/Analysis.h"
-#include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/Support/LowLevelTypeImpl.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 
 #define DEBUG_TYPE "amdgpu-call-lowering"
 

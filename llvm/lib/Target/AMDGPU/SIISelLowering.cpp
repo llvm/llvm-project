@@ -13,73 +13,22 @@
 
 #include "SIISelLowering.h"
 #include "AMDGPU.h"
+#include "AMDGPUInstrInfo.h"
 #include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "SIDefines.h"
-#include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
-#include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/APInt.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/CodeGen/Analysis.h"
-#include "llvm/CodeGen/CallingConvLower.h"
-#include "llvm/CodeGen/DAGCombine.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
-#include "llvm/CodeGen/ISDOpcodes.h"
-#include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
-#include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/SelectionDAG.h"
-#include "llvm/CodeGen/SelectionDAGNodes.h"
-#include "llvm/CodeGen/TargetCallingConv.h"
-#include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/CodeGen/ValueTypes.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DebugLoc.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/GlobalValue.h"
-#include "llvm/IR/InstrTypes.h"
-#include "llvm/IR/Instruction.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Type.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/CodeGen.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
-#include "llvm/Support/MachineValueType.h"
-#include "llvm/Support/MathExtras.h"
-#include "llvm/Target/TargetOptions.h"
-#include <cassert>
-#include <cmath>
-#include <cstdint>
-#include <iterator>
-#include <tuple>
-#include <utility>
-#include <vector>
 
 using namespace llvm;
 
@@ -1563,6 +1512,11 @@ bool SITargetLowering::isMemOpHasNoClobberedMemOperand(const SDNode *N) const {
   const Value *Ptr = MemNode->getMemOperand()->getValue();
   const Instruction *I = dyn_cast_or_null<Instruction>(Ptr);
   return I && I->getMetadata("amdgpu.noclobber");
+}
+
+bool SITargetLowering::isNonGlobalAddrSpace(unsigned AS) {
+  return AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::REGION_ADDRESS ||
+         AS == AMDGPUAS::PRIVATE_ADDRESS;
 }
 
 bool SITargetLowering::isFreeAddrSpaceCast(unsigned SrcAS,
