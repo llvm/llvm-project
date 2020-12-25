@@ -15,7 +15,6 @@
 
 /*  Constant                       Value
     __cpp_lib_as_const             201510L [C++17]
-    __cpp_lib_constexpr_misc       201811L [C++2a]
     __cpp_lib_constexpr_utility    201811L [C++2a]
     __cpp_lib_exchange_function    201304L [C++14]
     __cpp_lib_integer_sequence     201304L [C++14]
@@ -30,10 +29,6 @@
 
 # ifdef __cpp_lib_as_const
 #   error "__cpp_lib_as_const should not be defined before c++17"
-# endif
-
-# ifdef __cpp_lib_constexpr_misc
-#   error "__cpp_lib_constexpr_misc should not be defined before c++2a"
 # endif
 
 # ifdef __cpp_lib_constexpr_utility
@@ -60,10 +55,6 @@
 
 # ifdef __cpp_lib_as_const
 #   error "__cpp_lib_as_const should not be defined before c++17"
-# endif
-
-# ifdef __cpp_lib_constexpr_misc
-#   error "__cpp_lib_constexpr_misc should not be defined before c++2a"
 # endif
 
 # ifdef __cpp_lib_constexpr_utility
@@ -102,10 +93,6 @@
 # endif
 # if __cpp_lib_as_const != 201510L
 #   error "__cpp_lib_as_const should have the value 201510L in c++17"
-# endif
-
-# ifdef __cpp_lib_constexpr_misc
-#   error "__cpp_lib_constexpr_misc should not be defined before c++2a"
 # endif
 
 # ifdef __cpp_lib_constexpr_utility
@@ -153,19 +140,6 @@
 # endif
 # if __cpp_lib_as_const != 201510L
 #   error "__cpp_lib_as_const should have the value 201510L in c++2a"
-# endif
-
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_constexpr_misc
-#     error "__cpp_lib_constexpr_misc should be defined in c++2a"
-#   endif
-#   if __cpp_lib_constexpr_misc != 201811L
-#     error "__cpp_lib_constexpr_misc should have the value 201811L in c++2a"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_constexpr_misc
-#     error "__cpp_lib_constexpr_misc should not be defined because it is unimplemented in libc++!"
-#   endif
 # endif
 
 # ifndef __cpp_lib_constexpr_utility
