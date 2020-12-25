@@ -110,6 +110,17 @@ define void @add_non_zero_with_offset(i32* %p, i32 %addend, i32* %q) {
   ret void
 }
 
+; CHECK-LABEL: Function: add_non_zero_assume
+; CHECK: NoAlias: i32* %gep1, i32* %gep2
+define void @add_non_zero_assume(i32* %p, i32 %addend, i32 %knownnonzero) {
+  %cmp = icmp ne i32 %knownnonzero, 0
+  call void @llvm.assume(i1 %cmp)
+  %add = add i32 %addend, %knownnonzero
+  %gep1 = getelementptr i32, i32* %p, i32 %addend
+  %gep2 = getelementptr i32, i32* %p, i32 %add
+  ret void
+}
+
 ; CHECK-LABEL: non_zero_index_simple
 ; CHECK: NoAlias: i32* %gep, i32* %p
 ; CHECK: NoAlias: i16* %gep.16, i32* %p

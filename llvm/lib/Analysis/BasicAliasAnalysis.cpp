@@ -1291,7 +1291,7 @@ AliasResult BasicAAResult::aliasGEP(
         const VariableGEPIndex &Var1 = DecompGEP1.VarIndices[1];
         if (Var0.Scale == -Var1.Scale && Var0.ZExtBits == Var1.ZExtBits &&
             Var0.SExtBits == Var1.SExtBits && VisitedPhiBBs.empty() &&
-            isKnownNonEqual(Var0.V, Var1.V, DL))
+            isKnownNonEqual(Var0.V, Var1.V, DL, &AC, /* CxtI */ nullptr, DT))
           MinAbsVarIndex = Var0.Scale.abs();
       }
 
