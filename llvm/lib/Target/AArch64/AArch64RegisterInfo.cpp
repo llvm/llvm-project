@@ -333,9 +333,9 @@ bool AArch64RegisterInfo::isReservedReg(const MachineFunction &MF,
 }
 
 bool AArch64RegisterInfo::isAnyArgRegReserved(const MachineFunction &MF) const {
-  return std::any_of(std::begin(*AArch64::GPR64argRegClass.MC),
-                     std::end(*AArch64::GPR64argRegClass.MC),
-                     [this, &MF](MCPhysReg r){return isReservedReg(MF, r);});
+  return llvm::any_of(*AArch64::GPR64argRegClass.MC, [this, &MF](MCPhysReg r) {
+    return isReservedReg(MF, r);
+  });
 }
 
 void AArch64RegisterInfo::emitReservedArgRegCallError(

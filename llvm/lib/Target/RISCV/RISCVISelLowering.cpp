@@ -3434,7 +3434,7 @@ void RISCVTargetLowering::validateCCReservedRegs(
   const Function &F = MF.getFunction();
   const RISCVSubtarget &STI = MF.getSubtarget<RISCVSubtarget>();
 
-  if (std::any_of(std::begin(Regs), std::end(Regs), [&STI](auto Reg) {
+  if (llvm::any_of(Regs, [&STI](auto Reg) {
         return STI.isRegisterReservedByUser(Reg.first);
       }))
     F.getContext().diagnose(DiagnosticInfoUnsupported{
