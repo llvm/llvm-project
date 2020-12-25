@@ -896,7 +896,8 @@ private:
       } else if (CurrentToken && CurrentToken->is(tok::numeric_constant)) {
         Tok->setType(TT_BitFieldColon);
       } else if (Contexts.size() == 1 &&
-                 !Line.First->isOneOf(tok::kw_enum, tok::kw_case)) {
+                 !Line.First->isOneOf(tok::kw_enum, tok::kw_case,
+                                      tok::kw_default)) {
         FormatToken *Prev = Tok->getPreviousNonComment();
         if (Prev->isOneOf(tok::r_paren, tok::kw_noexcept))
           Tok->setType(TT_CtorInitializerColon);
@@ -1915,6 +1916,13 @@ private:
     if (Tok.Next->isOneOf(tok::identifier, tok::kw_this))
       return true;
 
+    if (Tok.Next->is(tok::l_paren) &&
+        !(Tok.Previous && Tok.Previous->is(tok::identifier) &&
+          Tok.Previous->Previous &&
+          Tok.Previous->Previous->isOneOf(tok::arrowstar, tok::arrow,
+                                          tok::star)))
+      return true;
+
     if (!Tok.Next->Next)
       return false;
 
@@ -1964,9 +1972,9 @@ private:
 
     if (PrevToken->isOneOf(tok::l_paren, tok::l_square, tok::l_brace,
                            tok::comma, tok::semi, tok::kw_return, tok::colon,
-                           tok::kw_co_return, tok::kw_co_await, tok::kw_co_yield,
-                           tok::equal, tok::kw_delete, tok::kw_sizeof,
-                           tok::kw_throw) ||
+                           tok::kw_co_return, tok::kw_co_await,
+                           tok::kw_co_yield, tok::equal, tok::kw_delete,
+                           tok::kw_sizeof, tok::kw_throw) ||
         PrevToken->isOneOf(TT_BinaryOperator, TT_ConditionalExpr,
                            TT_UnaryOperator, TT_CastRParen))
       return TT_UnaryOperator;
@@ -3340,8 +3348,9 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     return Style.BitFieldColonSpacing == FormatStyle::BFCS_Both ||
            Style.BitFieldColonSpacing == FormatStyle::BFCS_After;
   if (Right.is(tok::colon)) {
-    if (Line.First->isOneOf(tok::kw_case, tok::kw_default) ||
-        !Right.getNextNonComment() || Right.getNextNonComment()->is(tok::semi))
+    if (Line.First->isOneOf(tok::kw_default, tok::kw_case))
+      return Style.SpaceBeforeCaseColon;
+    if (!Right.getNextNonComment() || Right.getNextNonComment()->is(tok::semi))
       return false;
     if (Right.is(TT_ObjCMethodExpr))
       return false;

@@ -14,6 +14,10 @@
 # RUN: llvm-objdump --macho --rebase %t-pie | FileCheck %s --check-prefix=PIE
 # RUN: %lld -platform_version macos 10.5.0 11.0 -o %t-no-pie %t.o
 # RUN: llvm-objdump --macho --rebase %t-no-pie | FileCheck %s --check-prefix=NO-PIE
+# RUN: %lld -platform_version ios-simulator 11.0.0 14.2 -o %t-pie %t.o
+# RUN: llvm-objdump --macho --rebase %t-pie | FileCheck %s --check-prefix=PIE
+# RUN: %lld -platform_version driverkit 19.0 20.0 -o %t-pie %t.o
+# RUN: llvm-objdump --macho --rebase %t-pie | FileCheck %s --check-prefix=PIE
 
 # CHECK:       Contents of section __DATA,foo:
 # CHECK-NEXT:  100001000 08100000 01000000

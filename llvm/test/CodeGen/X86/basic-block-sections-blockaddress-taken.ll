@@ -18,7 +18,7 @@ bb1:                                                ; preds = %entry
   ret void
 ; CHECK:         .section .text,"ax",@progbits,unique,1
 ; CHECK-NEXT:  .Ltmp0:
-; CHECK-NEXT:  foo.1
+; CHECK-NEXT:  foo.__part.1
 ; CHECK-NEXT:    callq   bar
 ;
 
@@ -27,7 +27,7 @@ bb2:                                                ; preds = %entry
   ret void
 ; CHECK:         .section .text,"ax",@progbits,unique,2
 ; CHECK-NEXT:  .Ltmp1:
-; CHECK-NEXT:  foo.2
+; CHECK-NEXT:  foo.__part.2
 ; CHECK-NEXT:    callq   baz
 }
 

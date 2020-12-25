@@ -78,9 +78,9 @@ public:
     auto toLLVMTy = [&](Type t) {
       return this->getTypeConverter()->convertType(t);
     };
-    LLVM::LLVMType vecTy =
-        toLLVMTy(xferOp.getVectorType()).template cast<LLVM::LLVMType>();
-    unsigned vecWidth = vecTy.getVectorNumElements();
+    auto vecTy = toLLVMTy(xferOp.getVectorType())
+                     .template cast<LLVM::LLVMFixedVectorType>();
+    unsigned vecWidth = vecTy.getNumElements();
     Location loc = xferOp->getLoc();
 
     // The backend result vector scalarization have trouble scalarize
@@ -121,7 +121,7 @@ public:
     Type i64Ty = rewriter.getIntegerType(64);
     Value i64x2Ty = rewriter.create<LLVM::BitcastOp>(
         loc,
-        LLVM::LLVMType::getVectorTy(
+        LLVM::LLVMFixedVectorType::get(
             toLLVMTy(i64Ty).template cast<LLVM::LLVMType>(), 2),
         constConfig);
     Value dataPtrAsI64 = rewriter.create<LLVM::PtrToIntOp>(
@@ -129,7 +129,7 @@ public:
     Value zero = this->createIndexConstant(rewriter, loc, 0);
     Value dwordConfig = rewriter.create<LLVM::InsertElementOp>(
         loc,
-        LLVM::LLVMType::getVectorTy(
+        LLVM::LLVMFixedVectorType::get(
             toLLVMTy(i64Ty).template cast<LLVM::LLVMType>(), 2),
         i64x2Ty, dataPtrAsI64, zero);
     dwordConfig =

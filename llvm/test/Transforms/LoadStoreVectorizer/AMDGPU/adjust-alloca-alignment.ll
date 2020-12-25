@@ -9,9 +9,6 @@ target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:3
 ; ALL-LABEL: @load_unknown_offset_align1_i8(
 ; ALL: alloca [128 x i8], align 1
 ; UNALIGNED: load <2 x i8>, <2 x i8> addrspace(5)* %{{[0-9]+}}, align 1{{$}}
-
-; ALIGNED: load i8, i8 addrspace(5)* %ptr0, align 1{{$}}
-; ALIGNED: load i8, i8 addrspace(5)* %ptr1, align 1{{$}}
 define amdgpu_kernel void @load_unknown_offset_align1_i8(i8 addrspace(1)* noalias %out, i32 %offset) #0 {
   %alloca = alloca [128 x i8], align 1, addrspace(5)
   %ptr0 = getelementptr inbounds [128 x i8], [128 x i8] addrspace(5)* %alloca, i32 0, i32 %offset
@@ -60,13 +57,11 @@ define amdgpu_kernel void @load_unknown_offset_align1_i32(i32 addrspace(1)* noal
   ret void
 }
 
-; FIXME: Should always increase alignment of the load
 ; Make sure alloca alignment isn't decreased
 ; ALL-LABEL: @load_alloca16_unknown_offset_align1_i32(
 ; ALL: alloca [128 x i32], align 16
 
-; UNALIGNED: load <2 x i32>, <2 x i32> addrspace(5)* %{{[0-9]+}}, align 1{{$}}
-; ALIGNED: load <2 x i32>, <2 x i32> addrspace(5)* %{{[0-9]+}}, align 4{{$}}
+; ALL: load <2 x i32>, <2 x i32> addrspace(5)* %{{[0-9]+}}, align 4{{$}}
 define amdgpu_kernel void @load_alloca16_unknown_offset_align1_i32(i32 addrspace(1)* noalias %out, i32 %offset) #0 {
   %alloca = alloca [128 x i32], align 16, addrspace(5)
   %ptr0 = getelementptr inbounds [128 x i32], [128 x i32] addrspace(5)* %alloca, i32 0, i32 %offset
@@ -128,11 +123,8 @@ define amdgpu_kernel void @store_unknown_offset_align1_i32(i32 addrspace(1)* noa
 }
 
 ; ALL-LABEL: @merge_private_store_4_vector_elts_loads_v4i32(
-; ALIGNED: %alloca = alloca [8 x i32], align 4, addrspace(5)
-; ALIGNED: store <4 x i32> <i32 9, i32 1, i32 23, i32 19>, <4 x i32> addrspace(5)* %1, align 4
-
-; UNALIGNED: %alloca = alloca [8 x i32], align 1, addrspace(5)
-; UNALIGNED: store <4 x i32> <i32 9, i32 1, i32 23, i32 19>, <4 x i32> addrspace(5)* %1, align 1
+; ALL: %alloca = alloca [8 x i32], align 4, addrspace(5)
+; ALL: store <4 x i32> <i32 9, i32 1, i32 23, i32 19>, <4 x i32> addrspace(5)* %1, align 4
 define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v4i32() {
   %alloca = alloca [8 x i32], align 1, addrspace(5)
   %out = bitcast [8 x i32] addrspace(5)* %alloca to i32 addrspace(5)*
@@ -148,11 +140,8 @@ define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v4i32() {
 }
 
 ; ALL-LABEL: @merge_private_store_4_vector_elts_loads_v4i8(
-; ALIGNED: %alloca = alloca [8 x i8], align 4, addrspace(5)
-; ALIGNED: store <4 x i8> <i8 9, i8 1, i8 23, i8 19>, <4 x i8> addrspace(5)* %1, align 4
-
-; UNALIGNED: %alloca = alloca [8 x i8], align 1, addrspace(5)
-; UNALIGNED: store <4 x i8> <i8 9, i8 1, i8 23, i8 19>, <4 x i8> addrspace(5)* %1, align 1
+; ALL: %alloca = alloca [8 x i8], align 4, addrspace(5)
+; ALL: store <4 x i8> <i8 9, i8 1, i8 23, i8 19>, <4 x i8> addrspace(5)* %1, align 4
 define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v4i8() {
   %alloca = alloca [8 x i8], align 1, addrspace(5)
   %out = bitcast [8 x i8] addrspace(5)* %alloca to i8 addrspace(5)*
@@ -168,11 +157,8 @@ define amdgpu_kernel void @merge_private_store_4_vector_elts_loads_v4i8() {
 }
 
 ; ALL-LABEL: @merge_private_load_4_vector_elts_loads_v4i32(
-; ALIGNED: %alloca = alloca [8 x i32], align 4, addrspace(5)
-; ALIGNED: load <4 x i32>, <4 x i32> addrspace(5)* %1, align 4
-
-; UNALIGNED: %alloca = alloca [8 x i32], align 1, addrspace(5)
-; UNALIGNED: load <4 x i32>, <4 x i32> addrspace(5)* %1, align 1
+; ALL: %alloca = alloca [8 x i32], align 4, addrspace(5)
+; ALL: load <4 x i32>, <4 x i32> addrspace(5)* %1, align 4
 define amdgpu_kernel void @merge_private_load_4_vector_elts_loads_v4i32() {
   %alloca = alloca [8 x i32], align 1, addrspace(5)
   %out = bitcast [8 x i32] addrspace(5)* %alloca to i32 addrspace(5)*
@@ -188,11 +174,8 @@ define amdgpu_kernel void @merge_private_load_4_vector_elts_loads_v4i32() {
 }
 
 ; ALL-LABEL: @merge_private_load_4_vector_elts_loads_v4i8(
-; ALIGNED: %alloca = alloca [8 x i8], align 4, addrspace(5)
-; ALIGNED: load <4 x i8>, <4 x i8> addrspace(5)* %1, align 4
-
-; UNALIGNED: %alloca = alloca [8 x i8], align 1, addrspace(5)
-; UNALIGNED: load <4 x i8>, <4 x i8> addrspace(5)* %1, align 1
+; ALL: %alloca = alloca [8 x i8], align 4, addrspace(5)
+; ALL: load <4 x i8>, <4 x i8> addrspace(5)* %1, align 4
 define amdgpu_kernel void @merge_private_load_4_vector_elts_loads_v4i8() {
   %alloca = alloca [8 x i8], align 1, addrspace(5)
   %out = bitcast [8 x i8] addrspace(5)* %alloca to i8 addrspace(5)*

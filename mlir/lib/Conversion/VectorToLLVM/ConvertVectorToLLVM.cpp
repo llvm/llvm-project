@@ -193,7 +193,7 @@ static LogicalResult getBasePtr(ConversionPatternRewriter &rewriter,
   Value base;
   if (failed(getBase(rewriter, loc, memref, memRefType, base)))
     return failure();
-  auto pType = type.template cast<LLVM::LLVMType>().getPointerTo();
+  auto pType = LLVM::LLVMPointerType::get(type.template cast<LLVM::LLVMType>());
   base = rewriter.create<LLVM::BitcastOp>(loc, pType, base);
   ptr = rewriter.create<LLVM::GEPOp>(loc, pType, base);
   return success();
@@ -209,7 +209,7 @@ static LogicalResult getIndexedPtrs(ConversionPatternRewriter &rewriter,
   if (failed(getBase(rewriter, loc, memref, memRefType, base)))
     return failure();
   auto pType = MemRefDescriptor(memref).getElementPtrType();
-  auto ptrsType = LLVM::LLVMType::getVectorTy(pType, vType.getDimSize(0));
+  auto ptrsType = LLVM::LLVMFixedVectorType::get(pType, vType.getDimSize(0));
   ptrs = rewriter.create<LLVM::GEPOp>(loc, ptrsType, base, indices);
   return success();
 }
@@ -748,7 +748,7 @@ public:
 
     // Remaining extraction of element from 1-D LLVM vector
     auto position = positionAttrs.back().cast<IntegerAttr>();
-    auto i64Type = LLVM::LLVMType::getInt64Ty(rewriter.getContext());
+    auto i64Type = LLVM::LLVMIntegerType::get(rewriter.getContext(), 64);
     auto constant = rewriter.create<LLVM::ConstantOp>(loc, i64Type, position);
     extracted =
         rewriter.create<LLVM::ExtractElementOp>(loc, extracted, constant);
@@ -856,7 +856,7 @@ public:
     }
 
     // Insertion of an element into a 1-D LLVM vector.
-    auto i64Type = LLVM::LLVMType::getInt64Ty(rewriter.getContext());
+    auto i64Type = LLVM::LLVMIntegerType::get(rewriter.getContext(), 64);
     auto constant = rewriter.create<LLVM::ConstantOp>(loc, i64Type, position);
     Value inserted = rewriter.create<LLVM::InsertElementOp>(
         loc, typeConverter->convertType(oneDVectorType), extracted,
@@ -1100,14 +1100,14 @@ public:
       return failure();
 
     auto llvmSourceDescriptorTy =
-        operands[0].getType().dyn_cast<LLVM::LLVMType>();
-    if (!llvmSourceDescriptorTy || !llvmSourceDescriptorTy.isStructTy())
+        operands[0].getType().dyn_cast<LLVM::LLVMStructType>();
+    if (!llvmSourceDescriptorTy)
       return failure();
     MemRefDescriptor sourceMemRef(operands[0]);
 
     auto llvmTargetDescriptorTy = typeConverter->convertType(targetMemRefType)
-                                      .dyn_cast_or_null<LLVM::LLVMType>();
-    if (!llvmTargetDescriptorTy || !llvmTargetDescriptorTy.isStructTy())
+                                      .dyn_cast_or_null<LLVM::LLVMStructType>();
+    if (!llvmTargetDescriptorTy)
       return failure();
 
     // Only contiguous source buffers supported atm.
@@ -1123,7 +1123,7 @@ public:
         }))
       return failure();
 
-    auto int64Ty = LLVM::LLVMType::getInt64Ty(rewriter.getContext());
+    auto int64Ty = LLVM::LLVMIntegerType::get(rewriter.getContext(), 64);
 
     // Create descriptor.
     auto desc = MemRefDescriptor::undef(rewriter, loc, llvmTargetDescriptorTy);
@@ -1231,15 +1231,15 @@ public:
     // TODO: support alignment when possible.
     Value dataPtr = this->getStridedElementPtr(
         loc, memRefType, adaptor.source(), adaptor.indices(), rewriter);
-    auto vecTy =
-        toLLVMTy(xferOp.getVectorType()).template cast<LLVM::LLVMType>();
+    auto vecTy = toLLVMTy(xferOp.getVectorType())
+                     .template cast<LLVM::LLVMFixedVectorType>();
     Value vectorDataPtr;
     if (memRefType.getMemorySpace() == 0)
-      vectorDataPtr =
-          rewriter.create<LLVM::BitcastOp>(loc, vecTy.getPointerTo(), dataPtr);
+      vectorDataPtr = rewriter.create<LLVM::BitcastOp>(
+          loc, LLVM::LLVMPointerType::get(vecTy), dataPtr);
     else
       vectorDataPtr = rewriter.create<LLVM::AddrSpaceCastOp>(
-          loc, vecTy.getPointerTo(), dataPtr);
+          loc, LLVM::LLVMPointerType::get(vecTy), dataPtr);
 
     if (!xferOp.isMaskedDim(0))
       return replaceTransferOpWithLoadOrStore(rewriter,
@@ -1253,7 +1253,7 @@ public:
     //
     // TODO: when the leaf transfer rank is k > 1, we need the last `k`
     //       dimensions here.
-    unsigned vecWidth = vecTy.getVectorNumElements();
+    unsigned vecWidth = vecTy.getNumElements();
     unsigned lastIndex = llvm::size(xferOp.indices()) - 1;
     Value off = xferOp.indices()[lastIndex];
     Value dim = rewriter.create<DimOp>(loc, xferOp.source(), lastIndex);
@@ -1362,11 +1362,11 @@ private:
       switch (conversion) {
       case PrintConversion::ZeroExt64:
         value = rewriter.create<ZeroExtendIOp>(
-            loc, value, LLVM::LLVMType::getInt64Ty(rewriter.getContext()));
+            loc, value, LLVM::LLVMIntegerType::get(rewriter.getContext(), 64));
         break;
       case PrintConversion::SignExt64:
         value = rewriter.create<SignExtendIOp>(
-            loc, value, LLVM::LLVMType::getInt64Ty(rewriter.getContext()));
+            loc, value, LLVM::LLVMIntegerType::get(rewriter.getContext(), 64));
         break;
       case PrintConversion::None:
         break;
@@ -1410,27 +1410,25 @@ private:
     OpBuilder moduleBuilder(module.getBodyRegion());
     return moduleBuilder.create<LLVM::LLVMFuncOp>(
         op->getLoc(), name,
-        LLVM::LLVMType::getFunctionTy(
-            LLVM::LLVMType::getVoidTy(op->getContext()), params,
-            /*isVarArg=*/false));
+        LLVM::LLVMFunctionType::get(LLVM::LLVMVoidType::get(op->getContext()),
+                                    params));
   }
 
   // Helpers for method names.
   Operation *getPrintI64(Operation *op) const {
     return getPrint(op, "printI64",
-                    LLVM::LLVMType::getInt64Ty(op->getContext()));
+                    LLVM::LLVMIntegerType::get(op->getContext(), 64));
   }
   Operation *getPrintU64(Operation *op) const {
     return getPrint(op, "printU64",
-                    LLVM::LLVMType::getInt64Ty(op->getContext()));
+                    LLVM::LLVMIntegerType::get(op->getContext(), 64));
   }
   Operation *getPrintFloat(Operation *op) const {
-    return getPrint(op, "printF32",
-                    LLVM::LLVMType::getFloatTy(op->getContext()));
+    return getPrint(op, "printF32", LLVM::LLVMFloatType::get(op->getContext()));
   }
   Operation *getPrintDouble(Operation *op) const {
     return getPrint(op, "printF64",
-                    LLVM::LLVMType::getDoubleTy(op->getContext()));
+                    LLVM::LLVMDoubleType::get(op->getContext()));
   }
   Operation *getPrintOpen(Operation *op) const {
     return getPrint(op, "printOpen", {});

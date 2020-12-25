@@ -1237,4 +1237,40 @@ define i32* @PR45084_extra_use(i1 %cond, %struct.f** %p) {
   ret i32* %gep
 }
 
+define i8* @gep_null_inbounds(i64 %idx) {
+; CHECK-LABEL: @gep_null_inbounds(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, i8* null, i64 [[IDX:%.*]]
+; CHECK-NEXT:    ret i8* [[GEP]]
+;
+  %gep = getelementptr inbounds i8, i8* null, i64 %idx
+  ret i8* %gep
+}
+
+define i8* @gep_null_not_inbounds(i64 %idx) {
+; CHECK-LABEL: @gep_null_not_inbounds(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, i8* null, i64 [[IDX:%.*]]
+; CHECK-NEXT:    ret i8* [[GEP]]
+;
+  %gep = getelementptr i8, i8* null, i64 %idx
+  ret i8* %gep
+}
+
+define i8* @gep_null_defined(i64 %idx) null_pointer_is_valid {
+; CHECK-LABEL: @gep_null_defined(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, i8* null, i64 [[IDX:%.*]]
+; CHECK-NEXT:    ret i8* [[GEP]]
+;
+  %gep = getelementptr inbounds i8, i8* null, i64 %idx
+  ret i8* %gep
+}
+
+define i8* @gep_null_inbounds_different_type(i64 %idx1, i64 %idx2) {
+; CHECK-LABEL: @gep_null_inbounds_different_type(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [0 x i8], [0 x i8]* null, i64 0, i64 [[IDX2:%.*]]
+; CHECK-NEXT:    ret i8* [[GEP]]
+;
+  %gep = getelementptr inbounds [0 x i8], [0 x i8]* null, i64 %idx1, i64 %idx2
+  ret i8* %gep
+}
+
 !0 = !{!"branch_weights", i32 2, i32 10}

@@ -86,17 +86,19 @@
 # CHECK-NEXT:   iundefsym: 5
 # CHECK-NEXT:   nundefsym: 2
 
-## Verify that the first entry in the StringTable is a space.
+## Verify that the first entry in the StringTable is a space, and that
+## unreferenced symbols aren't emitted.
 # RUN: obj2yaml %t/test | FileCheck %s --check-prefix=YAML
 # YAML:      StringTable:
 # YAML-NEXT: ' '
+# YAML-NOT: _unreferenced
 
 #--- libfoo.s
 .globl _dynamic
 _dynamic:
 
 #--- test.s
-.globl _main, _external, _external_weak
+.globl _main, _external, _external_weak, _unreferenced
 
 .data
 _external:

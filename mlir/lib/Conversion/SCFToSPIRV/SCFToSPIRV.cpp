@@ -1,4 +1,4 @@
-//===- SCFToSPIRV.cpp - Convert SCF ops to SPIR-V dialect -----------------===//
+//===- SCFToSPIRV.cpp - SCF to SPIR-V Patterns ----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the conversion patterns from SCF ops to SPIR-V dialect.
+// This file implements patterns to convert SCF dialect to SPIR-V dialect.
 //
 //===----------------------------------------------------------------------===//
+
 #include "mlir/Conversion/SCFToSPIRV/SCFToSPIRV.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"

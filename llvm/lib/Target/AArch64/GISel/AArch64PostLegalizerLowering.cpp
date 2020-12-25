@@ -438,7 +438,7 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
   auto ValAndVReg = getConstantVRegValWithLookThrough(RHS, MRI);
   if (!ValAndVReg)
     return None;
-  uint64_t C = ValAndVReg->Value;
+  uint64_t C = ValAndVReg->Value.getZExtValue();
   if (isLegalArithImmed(C))
     return None;
 

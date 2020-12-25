@@ -11,7 +11,7 @@ declare i32 @hoge(...)
 define void @pluto() align 2 personality i8* bitcast (i32 (...)* @hoge to i8*) {
 ; CHECK-LABEL: @pluto
 ; CHECK: bb.1.bb
-; CHECK: successors: %bb.2(0x7ffff800), %bb.3(0x00000800)
+; CHECK: successors: %bb.2(0x00000000), %bb.3(0x80000000)
 ; CHECK: EH_LABEL <mcsymbol >
 ; CHECK: G_BR %bb.2
 

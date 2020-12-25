@@ -81,6 +81,12 @@ struct OutlinableRegion {
   DenseMap<unsigned, unsigned> ExtractedArgToAgg;
   DenseMap<unsigned, unsigned> AggArgToExtracted;
 
+  /// Mapping of the argument number in the deduplicated function
+  /// to a given constant, which is used when creating the arguments to the call
+  /// to the newly created deduplicated function.  This is handled separately
+  /// since the CodeExtractor does not recognize constants.
+  DenseMap<unsigned, Constant *> AggArgToConstant;
+
   /// Used to create an outlined function.
   CodeExtractor *CE = nullptr;
 
@@ -180,8 +186,11 @@ private:
   /// function if needed.
   ///
   /// \param [in] M - The module to outline from.
-  /// \param [in,out] Region - The region to be extracted
-  void findAddInputsOutputs(Module &M, OutlinableRegion &Region);
+  /// \param [in,out] Region - The region to be extracted.
+  /// \param [in] NotSame - The global value numbers of the Values in the region
+  /// that do not have the same Constant in each strucutrally similar region.
+  void findAddInputsOutputs(Module &M, OutlinableRegion &Region,
+                            DenseSet<unsigned> &NotSame);
 
   /// Extract \p Region into its own function.
   ///

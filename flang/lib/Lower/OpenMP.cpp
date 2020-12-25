@@ -191,8 +191,9 @@ genOMP(Fortran::lower::AbstractConverter &converter,
     // Handle attribute based clauses.
     for (const auto &clause : parallelOpClauseList.v) {
       if (const auto &defaultClause =
-              std::get_if<Fortran::parser::OmpDefaultClause>(&clause.u)) {
-        switch (defaultClause->v) {
+              std::get_if<Fortran::parser::OmpClause::Default>(&clause.u)) {
+        const auto &ompDefaultClause{defaultClause->v};
+        switch (ompDefaultClause.v) {
         case Fortran::parser::OmpDefaultClause::Type::Private:
           parallelOp.default_valAttr(firOpBuilder.getStringAttr(
               omp::stringifyClauseDefault(omp::ClauseDefault::defprivate)));
@@ -213,8 +214,9 @@ genOMP(Fortran::lower::AbstractConverter &converter,
         }
       }
       if (const auto &procBindClause =
-              std::get_if<Fortran::parser::OmpProcBindClause>(&clause.u)) {
-        switch (procBindClause->v) {
+              std::get_if<Fortran::parser::OmpClause::ProcBind>(&clause.u)) {
+        const auto &ompProcBindClause{procBindClause->v};
+        switch (ompProcBindClause.v) {
         case Fortran::parser::OmpProcBindClause::Type::Master:
           parallelOp.proc_bind_valAttr(
               firOpBuilder.getStringAttr(omp::stringifyClauseProcBindKind(

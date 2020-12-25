@@ -51,7 +51,7 @@ def LLVM_VoidResultTypeOpBuilder :
   [{
     auto llvmType = resultType.dyn_cast<LLVMType>(); (void)llvmType;
     assert(llvmType && "result must be an LLVM type");
-    assert(llvmType.isVoidTy() &&
+    assert(llvmType.isa<LLVMVoidType>() &&
            "for zero-result operands, only 'void' is accepted as result type");
     build($_builder, $_state, operands, attributes);
   }]>;
@@ -150,7 +150,7 @@ def LLVM_ICmpOp : LLVM_Op<"icmp", [NoSideEffect]> {
   let builders = [
     OpBuilderDAG<(ins "ICmpPredicate":$predicate, "Value":$lhs, "Value":$rhs),
     [{
-      build($_builder, $_state, LLVMType::getInt1Ty(lhs.getType().getContext()),
+      build($_builder, $_state, LLVMIntegerType::get(lhs.getType().getContext(), 1),
             $_builder.getI64IntegerAttr(static_cast<int64_t>(predicate)), lhs, rhs);
     }]>];
   let parser = [{ return parseCmpOp<ICmpPredicate>(parser, result); }];
@@ -198,7 +198,7 @@ def LLVM_FCmpOp : LLVM_Op<"fcmp", [NoSideEffect]> {
   let builders = [
     OpBuilderDAG<(ins "FCmpPredicate":$predicate, "Value":$lhs, "Value":$rhs),
     [{
-      build($_builder, $_state, LLVMType::getInt1Ty(lhs.getType().getContext()),
+      build($_builder, $_state, LLVMIntegerType::get(lhs.getType().getContext(), 1),
             $_builder.getI64IntegerAttr(static_cast<int64_t>(predicate)), lhs, rhs);
     }]>];
   let parser = [{ return parseCmpOp<FCmpPredicate>(parser, result); }];
@@ -288,7 +288,7 @@ def LLVM_LoadOp : LLVM_Op<"load">, MemoryOpWithAlignmentAndAttributes {
     OpBuilderDAG<(ins "Value":$addr, CArg<"unsigned", "0">:$alignment,
       CArg<"bool", "false">:$isVolatile, CArg<"bool", "false">:$isNonTemporal),
     [{
-      auto type = addr.getType().cast<LLVMType>().getPointerElementTy();
+      auto type = addr.getType().cast<LLVMPointerType>().getElementType();
       build($_builder, $_state, type, addr, alignment, isVolatile, isNonTemporal);
     }]>,
     OpBuilderDAG<(ins "Type":$t, "Value":$addr,
@@ -443,8 +443,8 @@ def LLVM_CallOp : LLVM_Op<"call"> {
     OpBuilderDAG<(ins "LLVMFuncOp":$func, "ValueRange":$operands,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
     [{
-      LLVMType resultType = func.getType().getFunctionResultType();
-      if (!resultType.isVoidTy())
+      LLVMType resultType = func.getType().getReturnType();
+      if (!resultType.isa<LLVM::LLVMVoidType>())
         $_state.addTypes(resultType);
       $_state.addAttribute("callee", $_builder.getSymbolRefAttr(func));
       $_state.addAttributes(attributes);
@@ -515,12 +515,10 @@ def LLVM_ShuffleVectorOp : LLVM_Op<"shufflevector", [NoSideEffect]> {
     OpBuilderDAG<(ins "Value":$v1, "Value":$v2, "ArrayAttr":$mask,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>];
   let verifier = [{
-    auto wrappedVectorType1 = v1().getType().cast<LLVMType>();
-    auto wrappedVectorType2 = v2().getType().cast<LLVMType>();
-    if (!wrappedVectorType2.isVectorTy())
-      return emitOpError("expected LLVM IR Dialect vector type for operand #2");
-    if (wrappedVectorType1.getVectorElementType() !=
-        wrappedVectorType2.getVectorElementType())
+    auto wrappedVectorType1 = v1().getType().cast<LLVMVectorType>();
+    auto wrappedVectorType2 = v2().getType().cast<LLVMVectorType>();
+    if (wrappedVectorType1.getElementType() !=
+        wrappedVectorType2.getElementType())
       return emitOpError("expected matching LLVM IR Dialect element types");
     return success();
   }];
@@ -768,13 +766,13 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof"> {
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
     [{
       build($_builder, $_state,
-            global.getType().getPointerTo(global.addr_space()),
+            LLVM::LLVMPointerType::get(global.getType(), global.addr_space()),
             global.sym_name(), attrs);}]>,
     OpBuilderDAG<(ins "LLVMFuncOp":$func,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
     [{
       build($_builder, $_state,
-            func.getType().getPointerTo(), func.getName(), attrs);}]>
+            LLVM::LLVMPointerType::get(func.getType()), func.getName(), attrs);}]>
   ];
 
   let extraClassDeclaration = [{
@@ -970,12 +968,12 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func",
     // to match the signature of the function.
     Block *addEntryBlock();
 
-    LLVMType getType() {
+    LLVMFunctionType getType() {
       return (*this)->getAttrOfType<TypeAttr>(getTypeAttrName())
-          .getValue().cast<LLVMType>();
+          .getValue().cast<LLVMFunctionType>();
     }
     bool isVarArg() {
-      return getType().isFunctionVarArg();
+      return getType().isVarArg();
     }
 
     // Hook for OpTrait::FunctionLike, returns the number of function arguments`.

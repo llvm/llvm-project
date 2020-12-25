@@ -57,7 +57,8 @@ public:
     LLVMType resultType =
         castedOperands.front().getType().cast<LLVM::LLVMType>();
     LLVMType funcType = getFunctionType(resultType, castedOperands);
-    StringRef funcName = getFunctionName(funcType.getFunctionResultType());
+    StringRef funcName = getFunctionName(
+        funcType.cast<LLVM::LLVMFunctionType>().getReturnType());
     if (funcName.empty())
       return failure();
 
@@ -80,11 +81,11 @@ public:
 private:
   Value maybeCast(Value operand, PatternRewriter &rewriter) const {
     LLVM::LLVMType type = operand.getType().cast<LLVM::LLVMType>();
-    if (!type.isHalfTy())
+    if (!type.isa<LLVM::LLVMHalfType>())
       return operand;
 
     return rewriter.create<LLVM::FPExtOp>(
-        operand.getLoc(), LLVM::LLVMType::getFloatTy(rewriter.getContext()),
+        operand.getLoc(), LLVM::LLVMFloatType::get(rewriter.getContext()),
         operand);
   }
 
@@ -95,14 +96,13 @@ private:
     for (Value operand : operands) {
       operandTypes.push_back(operand.getType().cast<LLVMType>());
     }
-    return LLVMType::getFunctionTy(resultType, operandTypes,
-                                   /*isVarArg=*/false);
+    return LLVM::LLVMFunctionType::get(resultType, operandTypes);
   }
 
   StringRef getFunctionName(LLVM::LLVMType type) const {
-    if (type.isFloatTy())
+    if (type.isa<LLVM::LLVMFloatType>())
       return f32Func;
-    if (type.isDoubleTy())
+    if (type.isa<LLVM::LLVMDoubleType>())
       return f64Func;
     return "";
   }

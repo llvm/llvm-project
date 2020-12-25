@@ -15,6 +15,7 @@
 #include "llvm/Analysis/IRSimilarityIdentifier.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/User.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/SuffixTree.h"
@@ -25,15 +26,84 @@ using namespace IRSimilarity;
 IRInstructionData::IRInstructionData(Instruction &I, bool Legality,
                                      IRInstructionDataList &IDList)
     : Inst(&I), Legal(Legality), IDL(&IDList) {
-  // Here we collect the operands to be used to determine whether two
-  // instructions are similar to one another.
-  for (Use &OI : I.operands())
+  // We check for whether we have a comparison instruction.  If it is, we
+  // find the "less than" version of the predicate for consistency for
+  // comparison instructions throught the program.
+  if (CmpInst *C = dyn_cast<CmpInst>(&I)) {
+    CmpInst::Predicate Predicate = predicateForConsistency(C);
+    if (Predicate != C->getPredicate())
+      RevisedPredicate = Predicate;
+  }
+
+  // Here we collect the operands and their types for determining whether
+  // the structure of the operand use matches between two different candidates.
+  for (Use &OI : I.operands()) {
+    if (isa<CmpInst>(I) && RevisedPredicate.hasValue()) {
+      // If we have a CmpInst where the predicate is reversed, it means the
+      // operands must be reversed as well.
+      OperVals.insert(OperVals.begin(), OI.get());
+      continue;
+    }
+
     OperVals.push_back(OI.get());
+  }
+}
+
+CmpInst::Predicate IRInstructionData::predicateForConsistency(CmpInst *CI) {
+  switch (CI->getPredicate()) {
+  case CmpInst::FCMP_OGT:
+  case CmpInst::FCMP_UGT:
+  case CmpInst::FCMP_OGE:
+  case CmpInst::FCMP_UGE:
+  case CmpInst::ICMP_SGT:
+  case CmpInst::ICMP_UGT:
+  case CmpInst::ICMP_SGE:
+  case CmpInst::ICMP_UGE:
+    return CI->getSwappedPredicate();
+  default:
+    return CI->getPredicate();
+  }
+}
+
+CmpInst::Predicate IRInstructionData::getPredicate() const {
+  assert(isa<CmpInst>(Inst) &&
+         "Can only get a predicate from a compare instruction");
+
+  if (RevisedPredicate.hasValue())
+    return RevisedPredicate.getValue();
+  
+  return cast<CmpInst>(Inst)->getPredicate();
 }
 
 bool IRSimilarity::isClose(const IRInstructionData &A,
                            const IRInstructionData &B) {
-  return A.Legal && A.Inst->isSameOperationAs(B.Inst);
+
+  if (!A.Legal || !B.Legal)
+    return false;
+
+  // Check if we are performing the same sort of operation on the same types
+  // but not on the same values.
+  if (A.Inst->isSameOperationAs(B.Inst))
+    return true;
+
+  // If there is a predicate, this means that either there is a swapped
+  // predicate, or that the types are different, we want to make sure that
+  // the predicates are equivalent via swapping.
+  if (isa<CmpInst>(A.Inst) && isa<CmpInst>(B.Inst)) {
+
+    if (A.getPredicate() != B.getPredicate())
+      return false;
+
+    // If the predicates are the same via swap, make sure that the types are
+    // still the same.
+    auto ZippedTypes = zip(A.OperVals, B.OperVals);
+
+    return all_of(ZippedTypes, [](std::tuple<llvm::Value *, llvm::Value *> R) {
+      return std::get<0>(R)->getType() == std::get<1>(R)->getType();
+    });
+  }
+
+  return false;
 }
 
 // TODO: This is the same as the MachineOutliner, and should be consolidated
@@ -241,6 +311,96 @@ bool IRSimilarityCandidate::isSimilar(const IRSimilarityCandidate &A,
                 });
 }
 
+/// Determine if one or more of the assigned global value numbers for the
+/// operands in \p TargetValueNumbers is in the current mapping set for operand
+/// numbers in \p SourceOperands.  The set of possible corresponding global
+/// value numbers are replaced with the most recent version of compatible
+/// values.
+///
+/// \param [in] SourceValueToNumberMapping - The mapping of a Value to global
+/// value number for the source IRInstructionCandidate.
+/// \param [in, out] CurrentSrcTgtNumberMapping - The current mapping of source
+/// IRSimilarityCandidate global value numbers to a set of possible numbers in
+/// the target.
+/// \param [in] SourceOperands - The operands in the original
+/// IRSimilarityCandidate in the current instruction.
+/// \param [in] TargetValueNumbers - The global value numbers of the operands in
+/// the corresponding Instruction in the other IRSimilarityCandidate.
+/// \returns true if there exists a possible mapping between the source
+/// Instruction operands and the target Instruction operands, and false if not.
+static bool checkNumberingAndReplaceCommutative(
+  const DenseMap<Value *, unsigned> &SourceValueToNumberMapping,
+  DenseMap<unsigned, DenseSet<unsigned>> &CurrentSrcTgtNumberMapping,
+  ArrayRef<Value *> &SourceOperands,
+  DenseSet<unsigned> &TargetValueNumbers){
+
+  DenseMap<unsigned, DenseSet<unsigned>>::iterator ValueMappingIt;
+
+  unsigned ArgVal;
+  bool WasInserted;
+
+  // Iterate over the operands in the source IRSimilarityCandidate to determine
+  // whether there exists an operand in the other IRSimilarityCandidate that
+  // creates a valid mapping of Value to Value between the
+  // IRSimilarityCaniddates.
+  for (Value *V : SourceOperands) {
+    ArgVal = SourceValueToNumberMapping.find(V)->second;
+
+    std::tie(ValueMappingIt, WasInserted) = CurrentSrcTgtNumberMapping.insert(
+        std::make_pair(ArgVal, TargetValueNumbers));
+
+    // Instead of finding a current mapping, we inserted a set.  This means a
+    // mapping did not exist for the source Instruction operand, it has no
+    // current constraints we need to check.
+    if (WasInserted)
+      continue;
+
+    // If a mapping already exists for the source operand to the values in the
+    // other IRSimilarityCandidate we need to iterate over the items in other
+    // IRSimilarityCandidate's Instruction to determine whether there is a valid
+    // mapping of Value to Value.
+    DenseSet<unsigned> NewSet;
+    for (unsigned &Curr : ValueMappingIt->second)
+      // If we can find the value in the mapping, we add it to the new set.
+      if (TargetValueNumbers.find(Curr) != TargetValueNumbers.end())
+        NewSet.insert(Curr);
+
+    // If we could not find a Value, return 0.
+    if (NewSet.empty())
+      return false;
+    
+    // Otherwise replace the old mapping with the newly constructed one.
+    if (NewSet.size() != ValueMappingIt->second.size())
+      ValueMappingIt->second.swap(NewSet);
+
+    // We have reached no conclusions about the mapping, and cannot remove
+    // any items from the other operands, so we move to check the next operand.
+    if (ValueMappingIt->second.size() != 1)
+      continue;
+
+
+    unsigned ValToRemove = *ValueMappingIt->second.begin();
+    // When there is only one item left in the mapping for and operand, remove
+    // the value from the other operands.  If it results in there being no
+    // mapping, return false, it means the mapping is wrong
+    for (Value *InnerV : SourceOperands) {
+      if (V == InnerV)
+        continue;
+
+      unsigned InnerVal = SourceValueToNumberMapping.find(InnerV)->second;
+      ValueMappingIt = CurrentSrcTgtNumberMapping.find(InnerVal);
+      if (ValueMappingIt == CurrentSrcTgtNumberMapping.end())
+        continue;
+
+      ValueMappingIt->second.erase(ValToRemove);
+      if (ValueMappingIt->second.empty())
+        return false;
+    }
+  }
+
+  return true;
+}
+
 /// Determine if operand number \p TargetArgVal is in the current mapping set
 /// for operand number \p SourceArgVal.
 ///
@@ -296,8 +456,8 @@ bool checkNumberingAndReplace(
   return TargetSet.contains(TargetArgVal);
 }
 
-bool IRSimilarityCandidate::compareOperandMapping(OperandMapping A,
-                                                  OperandMapping B) {
+bool IRSimilarityCandidate::compareNonCommutativeOperandMapping(
+    OperandMapping A, OperandMapping B) {
   // Iterators to keep track of where we are in the operands for each
   // Instruction.
   ArrayRef<Value *>::iterator VItA = A.OperVals.begin();
@@ -327,6 +487,41 @@ bool IRSimilarityCandidate::compareOperandMapping(OperandMapping A,
     if (!checkNumberingAndReplace(B.ValueNumberMapping, OperValB, OperValA))
       return false;
   }
+  return true;
+}
+
+bool IRSimilarityCandidate::compareCommutativeOperandMapping(
+    OperandMapping A, OperandMapping B) {
+  DenseSet<unsigned> ValueNumbersA;      
+  DenseSet<unsigned> ValueNumbersB;
+
+  ArrayRef<Value *>::iterator VItA = A.OperVals.begin();
+  ArrayRef<Value *>::iterator VItB = B.OperVals.begin();
+  unsigned OperandLength = A.OperVals.size();
+
+  // Find the value number sets for the operands.
+  for (unsigned Idx = 0; Idx < OperandLength;
+       Idx++, VItA++, VItB++) {
+    ValueNumbersA.insert(A.IRSC.ValueToNumber.find(*VItA)->second);
+    ValueNumbersB.insert(B.IRSC.ValueToNumber.find(*VItB)->second);
+  }
+
+  // Iterate over the operands in the first IRSimilarityCandidate and make sure
+  // there exists a possible mapping with the operands in the second
+  // IRSimilarityCandidate.
+  if (!checkNumberingAndReplaceCommutative(A.IRSC.ValueToNumber,
+                                           A.ValueNumberMapping, A.OperVals,
+                                           ValueNumbersB))
+    return false;
+
+  // Iterate over the operands in the second IRSimilarityCandidate and make sure
+  // there exists a possible mapping with the operands in the first
+  // IRSimilarityCandidate.
+  if (!checkNumberingAndReplaceCommutative(B.IRSC.ValueToNumber,
+                                           B.ValueNumberMapping, B.OperVals,
+                                           ValueNumbersA))
+    return false;
+
   return true;
 }
 
@@ -383,10 +578,21 @@ bool IRSimilarityCandidate::compareStructure(const IRSimilarityCandidate &A,
     if (!WasInserted && !ValueMappingIt->second.contains(InstValA))
       return false;
 
-    // TODO: Handle commutative instructions by mapping one operand to many
-    // operands instead only mapping a single operand to a single operand.
-    if (!compareOperandMapping({A, OperValsA, ValueNumberMappingA},
-                               {B, OperValsB, ValueNumberMappingB}))
+    // We have different paths for commutative instructions and non-commutative
+    // instructions since commutative instructions could allow multiple mappings
+    // to certain values.
+    if (IA->isCommutative() && !isa<FPMathOperator>(IA)) {
+      if (!compareCommutativeOperandMapping(
+              {A, OperValsA, ValueNumberMappingA},
+              {B, OperValsB, ValueNumberMappingB}))
+        return false;
+      continue;
+    }
+
+    // Handle the non-commutative cases.
+    if (!compareNonCommutativeOperandMapping(
+            {A, OperValsA, ValueNumberMappingA},
+            {B, OperValsB, ValueNumberMappingB}))
       return false;
   }
   return true;

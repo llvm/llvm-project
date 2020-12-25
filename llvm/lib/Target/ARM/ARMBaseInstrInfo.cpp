@@ -134,6 +134,31 @@ ARMBaseInstrInfo::CreateTargetHazardRecognizer(const TargetSubtargetInfo *STI,
   return TargetInstrInfo::CreateTargetHazardRecognizer(STI, DAG);
 }
 
+// Called during:
+// - pre-RA scheduling
+// - post-RA scheduling when FeatureUseMISched is set
+ScheduleHazardRecognizer *ARMBaseInstrInfo::CreateTargetMIHazardRecognizer(
+    const InstrItineraryData *II, const ScheduleDAGMI *DAG) const {
+  MultiHazardRecognizer *MHR = new MultiHazardRecognizer();
+
+  // We would like to restrict this hazard recognizer to only
+  // post-RA scheduling; we can tell that we're post-RA because we don't
+  // track VRegLiveness.
+  // Cortex-M7: TRM indicates that there is a single ITCM bank and two DTCM
+  //            banks banked on bit 2.  Assume that TCMs are in use.
+  if (Subtarget.isCortexM7() && !DAG->hasVRegLiveness())
+    MHR->AddHazardRecognizer(
+        std::make_unique<ARMBankConflictHazardRecognizer>(DAG, 0x4, true));
+
+  // Not inserting ARMHazardRecognizerFPMLx because that would change
+  // legacy behavior
+
+  auto BHR = TargetInstrInfo::CreateTargetMIHazardRecognizer(II, DAG);
+  MHR->AddHazardRecognizer(std::unique_ptr<ScheduleHazardRecognizer>(BHR));
+  return MHR;
+}
+
+// Called during post-RA scheduling when FeatureUseMISched is not set
 ScheduleHazardRecognizer *ARMBaseInstrInfo::
 CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
                                    const ScheduleDAG *DAG) const {

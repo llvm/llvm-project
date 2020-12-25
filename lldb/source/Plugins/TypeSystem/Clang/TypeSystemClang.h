@@ -600,6 +600,8 @@ public:
   bool IsEnumerationType(lldb::opaque_compiler_type_t type,
                          bool &is_signed) override;
 
+  bool IsScopedEnumerationType(lldb::opaque_compiler_type_t type) override;
+
   static bool IsObjCClassType(const CompilerType &type);
 
   static bool IsObjCClassTypeAndHasIVars(const CompilerType &type,
@@ -675,6 +677,9 @@ public:
 
   CompilerType
   GetFullyUnqualifiedType(lldb::opaque_compiler_type_t type) override;
+
+  CompilerType
+  GetEnumerationIntegerType(lldb::opaque_compiler_type_t type) override;
 
   // Returns -1 if this isn't a function of if the function doesn't have a
   // prototype Returns a value >= 0 if there is a prototype.

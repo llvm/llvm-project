@@ -485,7 +485,6 @@ public:
   NODE_ENUM(OmpDependenceType, Type)
   NODE(parser, OmpDependSinkVec)
   NODE(parser, OmpDependSinkVecLength)
-  NODE(parser, OmpDistScheduleClause)
   NODE(parser, OmpEndAtomic)
   NODE(parser, OmpEndBlockDirective)
   NODE(parser, OmpEndCriticalDirective)
@@ -508,7 +507,6 @@ public:
         "llvm::omp::Clause = ", llvm::omp::getOpenMPClauseName(x))
         .str();
   }
-  NODE(parser, OmpNowait)
   NODE(parser, OmpObject)
   NODE(parser, OmpObjectList)
   NODE(parser, OmpProcBindClause)

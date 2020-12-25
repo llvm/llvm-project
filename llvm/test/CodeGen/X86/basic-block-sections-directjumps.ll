@@ -29,10 +29,10 @@ declare i32 @_Z3foov() #1
 
 ; LINUX-SECTIONS: .section        .text._Z3bazb,"ax",@progbits
 ; LINUX-SECTIONS: _Z3bazb:
-; LINUX-SECTIONS: jmp _Z3bazb.1
-; LINUX-SECTIONS: .section        .text._Z3bazb._Z3bazb.1,"ax",@progbits
-; LINUX-SECTIONS: _Z3bazb.1:
-; LINUX-SECTIONS: jmp _Z3bazb.2
-; LINUX-SECTIONS: .section        .text._Z3bazb._Z3bazb.2,"ax",@progbits
-; LINUX-SECTIONS: _Z3bazb.2:
-; LINUX-SECTIONS: jmp _Z3bazb.3
+; LINUX-SECTIONS: jmp _Z3bazb.__part.1
+; LINUX-SECTIONS: .section        .text._Z3bazb._Z3bazb.__part.1,"ax",@progbits
+; LINUX-SECTIONS: _Z3bazb.__part.1:
+; LINUX-SECTIONS: jmp _Z3bazb.__part.2
+; LINUX-SECTIONS: .section        .text._Z3bazb._Z3bazb.__part.2,"ax",@progbits
+; LINUX-SECTIONS: _Z3bazb.__part.2:
+; LINUX-SECTIONS: jmp _Z3bazb.__part.3

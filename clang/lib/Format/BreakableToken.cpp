@@ -41,8 +41,8 @@ static bool IsBlank(char C) {
 
 static StringRef getLineCommentIndentPrefix(StringRef Comment,
                                             const FormatStyle &Style) {
-  static const char *const KnownCStylePrefixes[] = {"///<", "//!<", "///", "//",
-                                                    "//!"};
+  static const char *const KnownCStylePrefixes[] = {"///<", "//!<", "///",
+                                                    "//",   "//!",  "//:"};
   static const char *const KnownTextProtoPrefixes[] = {"//", "#", "##", "###",
                                                        "####"};
   ArrayRef<const char *> KnownPrefixes(KnownCStylePrefixes);
@@ -789,9 +789,14 @@ BreakableLineCommentSection::BreakableLineCommentSection(
           Prefix[i] = "///< ";
         else if (Prefix[i] == "//!<")
           Prefix[i] = "//!< ";
-        else if (Prefix[i] == "#" &&
-                 Style.Language == FormatStyle::LK_TextProto)
+        else if (Prefix[i] == "#")
           Prefix[i] = "# ";
+        else if (Prefix[i] == "##")
+          Prefix[i] = "## ";
+        else if (Prefix[i] == "###")
+          Prefix[i] = "### ";
+        else if (Prefix[i] == "####")
+          Prefix[i] = "#### ";
       }
 
       Tokens[i] = LineTok;

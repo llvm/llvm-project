@@ -16,13 +16,7 @@ define void @global_atomic_fadd_f32_off_2048(float addrspace(1)* %ptr, float %da
 ; GFX908-LABEL: global_atomic_fadd_f32_off_2048:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX908-NEXT:    s_movk_i32 s4, 0x800
-; GFX908-NEXT:    s_mov_b32 s5, 0
-; GFX908-NEXT:    v_mov_b32_e32 v3, s4
-; GFX908-NEXT:    v_mov_b32_e32 v4, s5
-; GFX908-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v3
-; GFX908-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v4, vcc
-; GFX908-NEXT:    global_atomic_add_f32 v[0:1], v2, off
+; GFX908-NEXT:    global_atomic_add_f32 v[0:1], v2, off offset:2048
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr float, float addrspace(1)* %ptr, i64 512
@@ -34,13 +28,7 @@ define void @global_atomic_fadd_f32_off_neg2047(float addrspace(1)* %ptr, float 
 ; GFX908-LABEL: global_atomic_fadd_f32_off_neg2047:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX908-NEXT:    s_mov_b32 s4, 0xfffff804
-; GFX908-NEXT:    s_mov_b32 s5, -1
-; GFX908-NEXT:    v_mov_b32_e32 v3, s4
-; GFX908-NEXT:    v_mov_b32_e32 v4, s5
-; GFX908-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v3
-; GFX908-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v4, vcc
-; GFX908-NEXT:    global_atomic_add_f32 v[0:1], v2, off
+; GFX908-NEXT:    global_atomic_add_f32 v[0:1], v2, off offset:-2044
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr float, float addrspace(1)* %ptr, i64 -511
@@ -54,12 +42,10 @@ define amdgpu_kernel void @global_atomic_fadd_f32_off_ss(float addrspace(1)* %pt
 ; GFX908-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX908-NEXT:    s_load_dword s2, s[4:5], 0x8
 ; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX908-NEXT:    s_add_u32 s0, s0, 0x800
-; GFX908-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX908-NEXT:    v_mov_b32_e32 v0, s0
-; GFX908-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX908-NEXT:    v_mov_b32_e32 v2, s2
-; GFX908-NEXT:    global_atomic_add_f32 v[0:1], v2, off
+; GFX908-NEXT:    v_mov_b32_e32 v1, s1
+; GFX908-NEXT:    global_atomic_add_f32 v[0:1], v2, off offset:2048
 ; GFX908-NEXT:    s_endpgm
   %gep = getelementptr float, float addrspace(1)* %ptr, i64 512
   %ret = call float @llvm.amdgcn.global.atomic.fadd.f32.p1f32.f32(float addrspace(1)* %gep, float %data)
@@ -81,13 +67,7 @@ define void @global_atomic_fadd_v2f16_off_neg2047(<2 x half> addrspace(1)* %ptr,
 ; GFX908-LABEL: global_atomic_fadd_v2f16_off_neg2047:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX908-NEXT:    s_mov_b32 s4, 0xfffff804
-; GFX908-NEXT:    s_mov_b32 s5, -1
-; GFX908-NEXT:    v_mov_b32_e32 v3, s4
-; GFX908-NEXT:    v_mov_b32_e32 v4, s5
-; GFX908-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v3
-; GFX908-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v4, vcc
-; GFX908-NEXT:    global_atomic_pk_add_f16 v[0:1], v2, off
+; GFX908-NEXT:    global_atomic_pk_add_f16 v[0:1], v2, off offset:-2044
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr <2 x half>, <2 x half> addrspace(1)* %ptr, i64 -511

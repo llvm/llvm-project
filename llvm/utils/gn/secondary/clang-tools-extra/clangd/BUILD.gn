@@ -11,13 +11,15 @@ config("features_config") {
 write_cmake_config("features") {
   input = "Features.inc.in"
   output = "$target_gen_dir/Features.inc"
-  values = []
+  values = [
+    "CLANGD_ENABLE_REMOTE=0",
+    "CLANGD_MALLOC_TRIM=1",
+  ]
   if (clangd_build_xpc) {
     values += [ "CLANGD_BUILD_XPC=1" ]
   } else {
     values += [ "CLANGD_BUILD_XPC=0" ]
   }
-  values += [ "CLANGD_ENABLE_REMOTE=0" ]
   public_configs = [ ":features_config" ]
 }
 

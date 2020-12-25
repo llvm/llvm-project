@@ -505,7 +505,9 @@ Expected<ArrayRef<typename ELFT::Versym>>
 ELFDumper<ELFT>::getVersionTable(const Elf_Shdr &Sec, ArrayRef<Elf_Sym> *SymTab,
                                  StringRef *StrTab) const {
   assert((!SymTab && !StrTab) || (SymTab && StrTab));
-  if (uintptr_t(Obj.base() + Sec.sh_offset) % sizeof(uint16_t) != 0)
+  if (reinterpret_cast<uintptr_t>(Obj.base() + Sec.sh_offset) %
+          sizeof(uint16_t) !=
+      0)
     return createError("the " + describe(Sec) + " is misaligned");
 
   Expected<ArrayRef<Elf_Versym>> VersionsOrErr =
@@ -576,7 +578,7 @@ ELFDumper<ELFT>::getVersionDefinitions(const Elf_Shdr &Sec) const {
       return createError("invalid " + describe(Sec) + ": version definition " +
                          Twine(I) + " goes past the end of the section");
 
-    if (uintptr_t(VerdefBuf) % sizeof(uint32_t) != 0)
+    if (reinterpret_cast<uintptr_t>(VerdefBuf) % sizeof(uint32_t) != 0)
       return createError(
           "invalid " + describe(Sec) +
           ": found a misaligned version definition entry at offset 0x" +
@@ -598,7 +600,7 @@ ELFDumper<ELFT>::getVersionDefinitions(const Elf_Shdr &Sec) const {
 
     const uint8_t *VerdauxBuf = VerdefBuf + D->vd_aux;
     for (unsigned J = 0; J < D->vd_cnt; ++J) {
-      if (uintptr_t(VerdauxBuf) % sizeof(uint32_t) != 0)
+      if (reinterpret_cast<uintptr_t>(VerdauxBuf) % sizeof(uint32_t) != 0)
         return createError("invalid " + describe(Sec) +
                            ": found a misaligned auxiliary entry at offset 0x" +
                            Twine::utohexstr(VerdauxBuf - Start));
@@ -644,7 +646,7 @@ ELFDumper<ELFT>::getVersionDependencies(const Elf_Shdr &Sec) const {
       return createError("invalid " + describe(Sec) + ": version dependency " +
                          Twine(I) + " goes past the end of the section");
 
-    if (uintptr_t(VerneedBuf) % sizeof(uint32_t) != 0)
+    if (reinterpret_cast<uintptr_t>(VerneedBuf) % sizeof(uint32_t) != 0)
       return createError(
           "invalid " + describe(Sec) +
           ": found a misaligned version dependency entry at offset 0x" +
@@ -670,7 +672,7 @@ ELFDumper<ELFT>::getVersionDependencies(const Elf_Shdr &Sec) const {
 
     const uint8_t *VernauxBuf = VerneedBuf + Verneed->vn_aux;
     for (unsigned J = 0; J < Verneed->vn_cnt; ++J) {
-      if (uintptr_t(VernauxBuf) % sizeof(uint32_t) != 0)
+      if (reinterpret_cast<uintptr_t>(VernauxBuf) % sizeof(uint32_t) != 0)
         return createError("invalid " + describe(Sec) +
                            ": found a misaligned auxiliary entry at offset 0x" +
                            Twine::utohexstr(VernauxBuf - Start));
@@ -3563,6 +3565,15 @@ static std::string getSectionHeaderTableIndexString(const ELFFile<ELFT> &Obj,
          to_string((*ArrOrErr)[0].sh_link) + ")";
 }
 
+static const EnumEntry<unsigned> *getObjectFileEnumEntry(unsigned Type) {
+  auto It = llvm::find_if(ElfObjectFileType, [&](const EnumEntry<unsigned> &E) {
+    return E.Value == Type;
+  });
+  if (It != makeArrayRef(ElfObjectFileType).end())
+    return It;
+  return nullptr;
+}
+
 template <class ELFT> void GNUStyle<ELFT>::printFileHeaders() {
   const Elf_Ehdr &e = this->Obj.getHeader();
   OS << "ELF Header:\n";
@@ -3587,17 +3598,15 @@ template <class ELFT> void GNUStyle<ELFT>::printFileHeaders() {
   printFields(OS,
               "ABI Version:", std::to_string(e.e_ident[ELF::EI_ABIVERSION]));
 
-  Str = printEnum(e.e_type, makeArrayRef(ElfObjectFileType));
-  if (makeArrayRef(ElfObjectFileType).end() ==
-      llvm::find_if(ElfObjectFileType, [&](const EnumEntry<unsigned> &E) {
-        return E.Value == e.e_type;
-      })) {
+  if (const EnumEntry<unsigned> *E = getObjectFileEnumEntry(e.e_type)) {
+    Str = E->AltName.str();
+  } else {
     if (e.e_type >= ET_LOPROC)
-      Str = "Processor Specific: (" + Str + ")";
+      Str = "Processor Specific: (" + to_hexString(e.e_type, false) + ")";
     else if (e.e_type >= ET_LOOS)
-      Str = "OS Specific: (" + Str + ")";
+      Str = "OS Specific: (" + to_hexString(e.e_type, false) + ")";
     else
-      Str = "<unknown>: " + Str;
+      Str = "<unknown>: " + to_hexString(e.e_type, false);
   }
   printFields(OS, "Type:", Str);
 
@@ -6474,7 +6483,19 @@ template <class ELFT> void LLVMStyle<ELFT>::printFileHeaders() {
       W.printBinary("Unused", makeArrayRef(E.e_ident).slice(ELF::EI_PAD));
     }
 
-    W.printEnum("Type", E.e_type, makeArrayRef(ElfObjectFileType));
+    std::string TypeStr;
+    if (const EnumEntry<unsigned> *Ent = getObjectFileEnumEntry(E.e_type)) {
+      TypeStr = Ent->Name.str();
+    } else {
+      if (E.e_type >= ET_LOPROC)
+        TypeStr = "Processor Specific";
+      else if (E.e_type >= ET_LOOS)
+        TypeStr = "OS Specific";
+      else
+        TypeStr = "Unknown";
+    }
+    W.printString("Type", TypeStr + " (0x" + to_hexString(E.e_type) + ")");
+
     W.printEnum("Machine", E.e_machine, makeArrayRef(ElfMachineType));
     W.printNumber("Version", E.e_version);
     W.printHex("Entry", E.e_entry);

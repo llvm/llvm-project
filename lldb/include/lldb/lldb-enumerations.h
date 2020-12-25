@@ -816,7 +816,6 @@ enum TemplateArgumentKind {
   eTemplateArgumentKindExpression,
   eTemplateArgumentKindPack,
   eTemplateArgumentKindNullPtr,
-  eTemplateArgumentKindUncommonValue,
 };
 
 /// Options that can be set for a formatter to alter its behavior. Not

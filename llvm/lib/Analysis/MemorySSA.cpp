@@ -2017,8 +2017,7 @@ void MemorySSA::verifyOrderingDominationAndDefUses(Function &F) const {
              "Incomplete MemoryPhi Node");
       for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I) {
         verifyUseInDefs(Phi->getIncomingValue(I), Phi);
-        assert(find(predecessors(&B), Phi->getIncomingBlock(I)) !=
-                   pred_end(&B) &&
+        assert(is_contained(predecessors(&B), Phi->getIncomingBlock(I)) &&
                "Incoming phi block not a block predecessor");
       }
 #endif

@@ -323,6 +323,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::GlobalAddress, XLenVT, Custom);
   setOperationAction(ISD::BlockAddress, XLenVT, Custom);
   setOperationAction(ISD::ConstantPool, XLenVT, Custom);
+  setOperationAction(ISD::JumpTable, XLenVT, Custom);
 
   setOperationAction(ISD::GlobalTLSAddress, XLenVT, Custom);
 
@@ -360,6 +361,13 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i64, Custom);
       setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i64, Custom);
     }
+
+    for (auto VT : MVT::integer_scalable_vector_valuetypes())
+      setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
+
+    // We must custom-lower SPLAT_VECTOR vXi64 on RV32
+    if (!Subtarget.is64Bit())
+      setOperationAction(ISD::SPLAT_VECTOR, MVT::i64, Custom);
   }
 
   // Function alignments.
@@ -367,8 +375,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setMinFunctionAlignment(FunctionAlignment);
   setPrefFunctionAlignment(FunctionAlignment);
 
-  // Effectively disable jump table generation.
-  setMinimumJumpTableEntries(INT_MAX);
+  setMinimumJumpTableEntries(5);
 
   // Jumps are expensive, compared to logic
   setJumpIsExpensive();
@@ -565,6 +572,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerBlockAddress(Op, DAG);
   case ISD::ConstantPool:
     return lowerConstantPool(Op, DAG);
+  case ISD::JumpTable:
+    return lowerJumpTable(Op, DAG);
   case ISD::GlobalTLSAddress:
     return lowerGlobalTLSAddress(Op, DAG);
   case ISD::SELECT:
@@ -623,6 +632,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return DAG.getNode(RISCVISD::GREVI, DL, VT, Op.getOperand(0),
                        DAG.getTargetConstant(Imm, DL, Subtarget.getXLenVT()));
   }
+  case ISD::SPLAT_VECTOR:
+    return lowerSPLATVECTOR(Op, DAG);
   }
 }
 
@@ -641,6 +652,11 @@ static SDValue getTargetNode(ConstantPoolSDNode *N, SDLoc DL, EVT Ty,
                              SelectionDAG &DAG, unsigned Flags) {
   return DAG.getTargetConstantPool(N->getConstVal(), Ty, N->getAlign(),
                                    N->getOffset(), Flags);
+}
+
+static SDValue getTargetNode(JumpTableSDNode *N, SDLoc DL, EVT Ty,
+                             SelectionDAG &DAG, unsigned Flags) {
+  return DAG.getTargetJumpTable(N->getIndex(), Ty, Flags);
 }
 
 template <class NodeTy>
@@ -716,6 +732,13 @@ SDValue RISCVTargetLowering::lowerBlockAddress(SDValue Op,
 SDValue RISCVTargetLowering::lowerConstantPool(SDValue Op,
                                                SelectionDAG &DAG) const {
   ConstantPoolSDNode *N = cast<ConstantPoolSDNode>(Op);
+
+  return getAddr(N, DAG);
+}
+
+SDValue RISCVTargetLowering::lowerJumpTable(SDValue Op,
+                                            SelectionDAG &DAG) const {
+  JumpTableSDNode *N = cast<JumpTableSDNode>(Op);
 
   return getAddr(N, DAG);
 }
@@ -1026,6 +1049,53 @@ SDValue RISCVTargetLowering::lowerShiftRightParts(SDValue Op, SelectionDAG &DAG,
 
   SDValue Parts[2] = {Lo, Hi};
   return DAG.getMergeValues(Parts, DL);
+}
+
+// Custom-lower a SPLAT_VECTOR where XLEN<SEW, as the SEW element type is
+// illegal (currently only vXi64 RV32).
+// FIXME: We could also catch non-constant sign-extended i32 values and lower
+// them to SPLAT_VECTOR_I64
+SDValue RISCVTargetLowering::lowerSPLATVECTOR(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  EVT VecVT = Op.getValueType();
+  assert(!Subtarget.is64Bit() && VecVT.getVectorElementType() == MVT::i64 &&
+         "Unexpected SPLAT_VECTOR lowering");
+  SDValue SplatVal = Op.getOperand(0);
+
+  // If we can prove that the value is a sign-extended 32-bit value, lower this
+  // as a custom node in order to try and match RVV vector/scalar instructions.
+  if (auto *CVal = dyn_cast<ConstantSDNode>(SplatVal)) {
+    if (isInt<32>(CVal->getSExtValue()))
+      return DAG.getNode(RISCVISD::SPLAT_VECTOR_I64, DL, VecVT,
+                         DAG.getConstant(CVal->getSExtValue(), DL, MVT::i32));
+  }
+
+  // Else, on RV32 we lower an i64-element SPLAT_VECTOR thus, being careful not
+  // to accidentally sign-extend the 32-bit halves to the e64 SEW:
+  // vmv.v.x vX, hi
+  // vsll.vx vX, vX, /*32*/
+  // vmv.v.x vY, lo
+  // vsll.vx vY, vY, /*32*/
+  // vsrl.vx vY, vY, /*32*/
+  // vor.vv vX, vX, vY
+  SDValue One = DAG.getConstant(1, DL, MVT::i32);
+  SDValue Zero = DAG.getConstant(0, DL, MVT::i32);
+  SDValue ThirtyTwoV = DAG.getConstant(32, DL, VecVT);
+  SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, SplatVal, Zero);
+  SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, SplatVal, One);
+
+  Lo = DAG.getNode(RISCVISD::SPLAT_VECTOR_I64, DL, VecVT, Lo);
+  Lo = DAG.getNode(ISD::SHL, DL, VecVT, Lo, ThirtyTwoV);
+  Lo = DAG.getNode(ISD::SRL, DL, VecVT, Lo, ThirtyTwoV);
+
+  if (isNullConstant(Hi))
+    return Lo;
+
+  Hi = DAG.getNode(RISCVISD::SPLAT_VECTOR_I64, DL, VecVT, Hi);
+  Hi = DAG.getNode(ISD::SHL, DL, VecVT, Hi, ThirtyTwoV);
+
+  return DAG.getNode(ISD::OR, DL, VecVT, Lo, Hi);
 }
 
 SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
@@ -3412,6 +3482,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(GORCI)
   NODE_NAME_CASE(GORCIW)
   NODE_NAME_CASE(VMV_X_S)
+  NODE_NAME_CASE(SPLAT_VECTOR_I64)
   }
   // clang-format on
   return nullptr;

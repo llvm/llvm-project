@@ -1145,7 +1145,7 @@ in a few places:
     are at [lib/Conversion/StandardToSPIRV][MlirStdToSpirvLibs].
 
 These dialect to dialect conversions have their dedicated libraries,
-`MLIRGPUToSPIRVTransforms` and `MLIRStandardToSPIRVTransforms`, respectively.
+`MLIRGPUToSPIRV` and `MLIRStandardToSPIRV`, respectively.
 
 There are also common utilities when targeting SPIR-V from any dialect:
 

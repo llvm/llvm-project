@@ -255,8 +255,8 @@ void llvm::reportGISelFailure(MachineFunction &MF, const TargetPassConfig &TPC,
   reportGISelFailure(MF, TPC, MORE, R);
 }
 
-Optional<int64_t> llvm::getConstantVRegVal(Register VReg,
-                                           const MachineRegisterInfo &MRI) {
+Optional<APInt> llvm::getConstantVRegVal(Register VReg,
+                                         const MachineRegisterInfo &MRI) {
   Optional<ValueAndVReg> ValAndVReg =
       getConstantVRegValWithLookThrough(VReg, MRI, /*LookThroughInstrs*/ false);
   assert((!ValAndVReg || ValAndVReg->VReg == VReg) &&
@@ -264,6 +264,14 @@ Optional<int64_t> llvm::getConstantVRegVal(Register VReg,
   if (!ValAndVReg)
     return None;
   return ValAndVReg->Value;
+}
+
+Optional<int64_t> llvm::getConstantVRegSExtVal(Register VReg,
+                                               const MachineRegisterInfo &MRI) {
+  Optional<APInt> Val = getConstantVRegVal(VReg, MRI);
+  if (Val && Val->getBitWidth() <= 64)
+    return Val->getSExtValue();
+  return None;
 }
 
 Optional<ValueAndVReg> llvm::getConstantVRegValWithLookThrough(
@@ -337,10 +345,7 @@ Optional<ValueAndVReg> llvm::getConstantVRegValWithLookThrough(
     }
   }
 
-  if (Val.getBitWidth() > 64)
-    return None;
-
-  return ValueAndVReg{Val.getSExtValue(), VReg};
+  return ValueAndVReg{Val, VReg};
 }
 
 const ConstantFP *
@@ -413,9 +418,8 @@ Optional<APInt> llvm::ConstantFoldBinOp(unsigned Opcode, const Register Op1,
   if (!MaybeOp1Cst)
     return None;
 
-  LLT Ty = MRI.getType(Op1);
-  APInt C1(Ty.getSizeInBits(), *MaybeOp1Cst, true);
-  APInt C2(Ty.getSizeInBits(), *MaybeOp2Cst, true);
+  const APInt &C1 = *MaybeOp1Cst;
+  const APInt &C2 = *MaybeOp2Cst;
   switch (Opcode) {
   default:
     break;
@@ -535,13 +539,13 @@ Optional<APInt> llvm::ConstantFoldExtOp(unsigned Opcode, const Register Op1,
                                         const MachineRegisterInfo &MRI) {
   auto MaybeOp1Cst = getConstantVRegVal(Op1, MRI);
   if (MaybeOp1Cst) {
-    LLT Ty = MRI.getType(Op1);
-    APInt C1(Ty.getSizeInBits(), *MaybeOp1Cst, true);
     switch (Opcode) {
     default:
       break;
-    case TargetOpcode::G_SEXT_INREG:
-      return C1.trunc(Imm).sext(C1.getBitWidth());
+    case TargetOpcode::G_SEXT_INREG: {
+      LLT Ty = MRI.getType(Op1);
+      return MaybeOp1Cst->trunc(Imm).sext(Ty.getScalarSizeInBits());
+    }
     }
   }
   return None;

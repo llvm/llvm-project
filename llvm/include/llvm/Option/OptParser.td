@@ -173,12 +173,6 @@ class MarshallingInfoFlag<code keypath, code defaultvalue = "false">
   code Denormalizer = "denormalizeSimpleFlag";
 }
 
-class MarshallingInfoNegativeFlag<code keypath, code defaultvalue = "true">
-  : MarshallingInfo<keypath, defaultvalue> {
-  code Normalizer = "normalizeSimpleNegativeFlag";
-  code Denormalizer = "denormalizeSimpleFlag";
-}
-
 class MarshallingInfoBitfieldFlag<code keypath, code value>
   : MarshallingInfoFlag<keypath, "0u"> {
   code Normalizer = "makeFlagToValueNormalizer("#value#")";
@@ -196,6 +190,9 @@ class MarshallingInfoBooleanFlag<code keypath, code defaultvalue, code value, co
 
 // Mixins for additional marshalling attributes.
 
+class IsNegative {
+  code Normalizer = "normalizeSimpleNegativeFlag";
+}
 class AlwaysEmit { bit ShouldAlwaysEmit = true; }
 class Normalizer<code normalizer> { code Normalizer = normalizer; }
 class Denormalizer<code denormalizer> { code Denormalizer = denormalizer; }
@@ -204,6 +201,9 @@ class NormalizedValues<list<code> definitions> { list<code> NormalizedValues = d
 class AutoNormalizeEnum {
   code Normalizer = "normalizeSimpleEnum";
   code Denormalizer = "denormalizeSimpleEnum";
+}
+class AutoNormalizeEnumJoined : AutoNormalizeEnum {
+  code Denormalizer = "denormalizeSimpleEnumJoined";
 }
 class ValueMerger<code merger> { code ValueMerger = merger; }
 class ValueExtractor<code extractor> { code ValueExtractor = extractor; }

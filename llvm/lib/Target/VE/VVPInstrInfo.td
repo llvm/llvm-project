@@ -40,4 +40,7 @@ class vvp_commutative<SDNode RootOp> :
 def vvp_add    : SDNode<"VEISD::VVP_ADD",  SDTIntBinOpVVP>;
 def c_vvp_add  : vvp_commutative<vvp_add>;
 
+def vvp_and    : SDNode<"VEISD::VVP_AND",  SDTIntBinOpVVP>;
+def c_vvp_and  : vvp_commutative<vvp_and>;
+
 // } Binary Operators

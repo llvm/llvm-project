@@ -355,35 +355,32 @@ bool llvm::isSafeToMoveBefore(Instruction &I, Instruction &InsertPoint,
   // Check if there exists instructions which may throw, may synchonize, or may
   // never return, from I to InsertPoint.
   if (!isSafeToSpeculativelyExecute(&I))
-    if (std::any_of(InstsToCheck.begin(), InstsToCheck.end(),
-                    [](Instruction *I) {
-                      if (I->mayThrow())
-                        return true;
+    if (llvm::any_of(InstsToCheck, [](Instruction *I) {
+          if (I->mayThrow())
+            return true;
 
-                      const CallBase *CB = dyn_cast<CallBase>(I);
-                      if (!CB)
-                        return false;
-                      if (!CB->hasFnAttr(Attribute::WillReturn))
-                        return true;
-                      if (!CB->hasFnAttr(Attribute::NoSync))
-                        return true;
+          const CallBase *CB = dyn_cast<CallBase>(I);
+          if (!CB)
+            return false;
+          if (!CB->hasFnAttr(Attribute::WillReturn))
+            return true;
+          if (!CB->hasFnAttr(Attribute::NoSync))
+            return true;
 
-                      return false;
-                    })) {
+          return false;
+        })) {
       return reportInvalidCandidate(I, MayThrowException);
     }
 
   // Check if I has any output/flow/anti dependences with instructions from \p
   // StartInst to \p EndInst.
-  if (std::any_of(InstsToCheck.begin(), InstsToCheck.end(),
-                  [&DI, &I](Instruction *CurInst) {
-                    auto DepResult = DI->depends(&I, CurInst, true);
-                    if (DepResult &&
-                        (DepResult->isOutput() || DepResult->isFlow() ||
-                         DepResult->isAnti()))
-                      return true;
-                    return false;
-                  }))
+  if (llvm::any_of(InstsToCheck, [&DI, &I](Instruction *CurInst) {
+        auto DepResult = DI->depends(&I, CurInst, true);
+        if (DepResult && (DepResult->isOutput() || DepResult->isFlow() ||
+                          DepResult->isAnti()))
+          return true;
+        return false;
+      }))
     return reportInvalidCandidate(I, HasDependences);
 
   return true;

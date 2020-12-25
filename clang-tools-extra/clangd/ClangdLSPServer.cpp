@@ -178,6 +178,7 @@ public:
     } else if (auto Handler = Notifications.lookup(Method)) {
       Handler(std::move(Params));
       Server.maybeExportMemoryProfile();
+      Server.maybeCleanupMemory();
     } else {
       log("unhandled notification {0}", Method);
     }
@@ -453,6 +454,7 @@ void ClangdLSPServer::callRaw(StringRef Method, llvm::json::Value Params,
 
 void ClangdLSPServer::notify(llvm::StringRef Method, llvm::json::Value Params) {
   log("--> {0}", Method);
+  maybeCleanupMemory();
   std::lock_guard<std::mutex> Lock(TranspWriter);
   Transp.notify(Method, std::move(Params));
 }
@@ -1283,13 +1285,7 @@ void ClangdLSPServer::publishDiagnostics(
 }
 
 void ClangdLSPServer::maybeExportMemoryProfile() {
-  if (!trace::enabled())
-    return;
-  // Profiling might be expensive, so we throttle it to happen once every 5
-  // minutes.
-  static constexpr auto ProfileInterval = std::chrono::minutes(5);
-  auto Now = std::chrono::steady_clock::now();
-  if (Now < NextProfileTime)
+  if (!trace::enabled() || !ShouldProfile())
     return;
 
   static constexpr trace::Metric MemoryUsage(
@@ -1298,7 +1294,12 @@ void ClangdLSPServer::maybeExportMemoryProfile() {
   MemoryTree MT;
   profile(MT);
   record(MT, "clangd_lsp_server", MemoryUsage);
-  NextProfileTime = Now + ProfileInterval;
+}
+
+void ClangdLSPServer::maybeCleanupMemory() {
+  if (!Opts.MemoryCleanup || !ShouldCleanupMemory())
+    return;
+  Opts.MemoryCleanup();
 }
 
 // FIXME: This function needs to be properly tested.
@@ -1458,10 +1459,15 @@ void ClangdLSPServer::onAST(const ASTParams &Params,
 ClangdLSPServer::ClangdLSPServer(class Transport &Transp,
                                  const ThreadsafeFS &TFS,
                                  const ClangdLSPServer::Options &Opts)
-    : BackgroundContext(Context::current().clone()), Transp(Transp),
+    : ShouldProfile(/*Period=*/std::chrono::minutes(5),
+                    /*Delay=*/std::chrono::minutes(1)),
+      ShouldCleanupMemory(/*Period=*/std::chrono::minutes(1),
+                          /*Delay=*/std::chrono::minutes(1)),
+      BackgroundContext(Context::current().clone()), Transp(Transp),
       MsgHandler(new MessageHandler(*this)), TFS(TFS),
       SupportedSymbolKinds(defaultSymbolKinds()),
       SupportedCompletionItemKinds(defaultCompletionItemKinds()), Opts(Opts) {
+
   // clang-format off
   MsgHandler->bind("initialize", &ClangdLSPServer::onInitialize);
   MsgHandler->bind("initialized", &ClangdLSPServer::onInitialized);
@@ -1506,9 +1512,6 @@ ClangdLSPServer::ClangdLSPServer(class Transport &Transp,
   if (Opts.FoldingRanges)
     MsgHandler->bind("textDocument/foldingRange", &ClangdLSPServer::onFoldingRange);
   // clang-format on
-
-  // Delay first profile until we've finished warming up.
-  NextProfileTime = std::chrono::steady_clock::now() + std::chrono::minutes(1);
 }
 
 ClangdLSPServer::~ClangdLSPServer() {
@@ -1621,6 +1624,10 @@ void ClangdLSPServer::onDiagnosticsReady(PathRef File, llvm::StringRef Version,
 void ClangdLSPServer::onBackgroundIndexProgress(
     const BackgroundQueue::Stats &Stats) {
   static const char ProgressToken[] = "backgroundIndexProgress";
+
+  // The background index did some work, maybe we need to cleanup
+  maybeCleanupMemory();
+
   std::lock_guard<std::mutex> Lock(BackgroundIndexProgressMutex);
 
   auto NotifyProgress = [this](const BackgroundQueue::Stats &Stats) {

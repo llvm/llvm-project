@@ -231,6 +231,23 @@ def ConvertSCFToOpenMP : FunctionPass<"convert-scf-to-openmp"> {
 }
 
 //===----------------------------------------------------------------------===//
+// SCFToSPIRV
+//===----------------------------------------------------------------------===//
+
+def SCFToSPIRV : Pass<"convert-scf-to-spirv", "ModuleOp"> {
+  let summary = "Convert SCF dialect to SPIR-V dialect.";
+  let description = [{
+    This pass converts SCF ops into SPIR-V structured control flow ops.
+    SPIR-V structured control flow ops does not support yielding values.
+    So for SCF ops yielding values, SPIR-V variables are created for
+    holding the values and load/store operations are emitted for updating
+    them.
+  }];
+  let constructor = "mlir::createConvertSCFToSPIRVPass()";
+  let dependentDialects = ["spirv::SPIRVDialect"];
+}
+
+//===----------------------------------------------------------------------===//
 // SCFToStandard
 //===----------------------------------------------------------------------===//
 

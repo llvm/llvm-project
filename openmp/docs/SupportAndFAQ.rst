@@ -52,22 +52,11 @@ All patches go through the regular `LLVM review process
 Q: How to build an OpenMP offload capable compiler?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-To build an *effective* OpenMP offload capable compiler we recommend a two
-stage build. The first stage Clang does not require to be offload capable but
-all backends that are targeted by OpenMP need to be enabled. By default, Clang
-will be build with all backends enabled. This initial (stage 1) Clang is used
-to create a second Clang compiler that is offload capable as well as the
-:ref:`device runtime libraries <device_runtime>` that will be linked into the
-offloaded code to provide OpenMP runtime support on the device.
-
-Generic information about building LLVM is available `here
-<https://llvm.org/docs/GettingStarted.html>`__. The CMake options for the
-second stage Clang should include:
-
-- `LIBOMPTARGET_NVPTX_CUDA_COMPILER=$STAGE1/bin/clang` to use the stage one
-  compiler for the device runtime compilation.
-- `LIBOMPTARGET_NVPTX_ENABLE_BCLIB=ON` to enable efficient device runtimes in
-  bitcode format.
+To build an *effective* OpenMP offload capable compiler, only one extra CMake
+option, `LLVM_ENABLE_RUNTIMES="openmp"`, is needed when building LLVM (Generic
+information about building LLVM is available `here <https://llvm.org/docs/GettingStarted.html>`__.).
+Make sure all backends that are targeted by OpenMP to be enabled. By default,
+Clang will be build with all backends enabled.
 
 If your build machine is not the target machine or automatic detection of the
 available GPUs failed, you should also set:
@@ -91,3 +80,32 @@ For now, the answer is most likely *no*. Please see :ref:`build_offload_capable_
 Q: Does OpenMP offloading support work in packages distributed as part of my OS?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 For now, the answer is most likely *no*. Please see :ref:`build_offload_capable_compiler`.
+
+
+.. _math_and_complex_in_target_regions:
+
+Q: Does Clang support `<math.h>` and `<complex.h>` operations in OpenMP target on GPUs?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Yes, LLVM/Clang allows math functions and complex arithmetic inside of OpenMP target regions
+that are compiled for GPUs.
+
+Clang provides a set of wrapper headers that are found first when `math.h` and
+`complex.h`, for C, `cmath` and `complex`, for C++, or similar headers are
+included by the application. These wrappers will eventually include the system
+version of the corresponding header file after setting up a target device
+specific environment. The fact that the system header is included is important
+because they differ based on the architecture and operating system and may
+contain preprocessor, variable, and function definitions that need to be
+available in the target region regardless of the targeted device architecture.
+However, various functions may require specialized device versions, e.g.,
+`sin`, and others are only available on certain devices, e.g., `__umul64hi`. To
+provide "native" support for math and complex on the respective architecture,
+Clang will wrap the "native" math functions, e.g., as provided by the device
+vendor, in an OpenMP begin/end declare variant. These functions will then be
+picked up instead of the host versions while host only variables and function
+definitions are still available. Complex arithmetic and functions are support
+through a similar mechanism. It is worth noting that this support requires
+`extensions to the OpenMP begin/end declare variant context selector
+<https://clang.llvm.org/docs/AttributeReference.html#pragma-omp-declare-variant>`__
+that are exposed through LLVM/Clang to the user as well.

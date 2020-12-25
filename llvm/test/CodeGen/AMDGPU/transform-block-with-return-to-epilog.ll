@@ -16,7 +16,7 @@ entry:
 define amdgpu_ps float @test_return_to_epilog_into_end_block(i32 inreg %a, float %b) #0 {
   ; GCN-LABEL: name: test_return_to_epilog_into_end_block
   ; GCN: bb.0.entry:
-  ; GCN:   successors: %bb.1(0x7fffffff), %bb.2(0x00000001)
+  ; GCN:   successors: %bb.1(0x80000000), %bb.2(0x00000000)
   ; GCN:   liveins: $sgpr2, $vgpr0
   ; GCN:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x03, 0x30, 0x36, 0xe1
   ; GCN:   frame-setup CFI_INSTRUCTION undefined $pc_reg
@@ -55,7 +55,7 @@ define amdgpu_ps float @test_unify_return_to_epilog_into_end_block(i32 inreg %a,
   ; GCN:   liveins: $vgpr0
   ; GCN:   S_BRANCH %bb.5
   ; GCN: bb.2.else.if.cond:
-  ; GCN:   successors: %bb.3(0x7fffffff), %bb.4(0x00000001)
+  ; GCN:   successors: %bb.3(0x80000000), %bb.4(0x00000000)
   ; GCN:   liveins: $sgpr3, $vgpr1
   ; GCN:   S_CMP_LT_I32 killed renamable $sgpr3, 1, implicit-def $scc
   ; GCN:   S_CBRANCH_SCC1 %bb.4, implicit killed $scc

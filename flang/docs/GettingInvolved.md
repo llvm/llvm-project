@@ -45,9 +45,11 @@ To understand the status of various developments in Flang please join the respec
 ### Flang Community Biweekly Call
 
 -   General updates on the Flang Project, both LLVM Flang and current Flang.
--   Join [Flang Community Biweekly Call](https://nvmeet.webex.com/nvmeet/j.php?MTID=mb4edb8c799f69ec2dc0554acc969a162)
+-   Join [Flang Community Biweekly Call](https://lanl-us.webex.com/lanl-us/j.php?MTID=m44f29d1fa15eab5cbedc54a5df6c12ae)
 -   Time: On Wednesdays 8:30 Pacific Time, on the weeks alternating with regular Flang Community Technical Biweekly Call.
--   Minutes: They are sent to [flang-dev](http://lists.llvm.org/mailman/listinfo/flang-dev). Search for `Flang Biweekly Sync - Notes`.
+-   Meeting minutes are available in this [Google Doc](https://docs.google.com/document/d/10T-S2J3GrahpG4Ooif93NSTz2zBW0MQc_RlwHi0-afY/edit?usp=sharing).
+    If you can not access the Google Doc, please send an email to Alexis Perry-Holby at aperry@lanl.gov requesting to be added to the access list.
+-   Minutes from older meetings were sent to [flang-dev](http://lists.llvm.org/mailman/listinfo/flang-dev). Search for `Flang Biweekly Sync - Notes`.
 
 ### Flang Community Technical Biweekly Call
 

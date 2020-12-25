@@ -69,9 +69,6 @@ llvm::Error SystemInitializerFull::Initialize() {
 }
 
 void SystemInitializerFull::Terminate() {
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
-
   Debugger::SettingsTerminate();
 
   // Terminate plug-ins in core LLDB

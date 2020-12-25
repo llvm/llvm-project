@@ -338,3 +338,91 @@ if.end:
 if.end2:
   ret i32 1
 }
+
+define i32 @multiple_latch1(i16* %p) {
+; CHECK-LABEL: @multiple_latch1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_02:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY_BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_02]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC]], 16
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY_BACKEDGE]], label [[FOR_SECOND:%.*]]
+; CHECK:       for.second:
+; CHECK-NEXT:    [[IPROM:%.*]] = sext i32 [[I_02]] to i64
+; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[IPROM]]
+; CHECK-NEXT:    store i16 0, i16* [[B]], align 4
+; CHECK-NEXT:    [[CMPS:%.*]] = icmp sgt i32 [[INC]], 16
+; CHECK-NEXT:    br i1 [[CMPS]], label [[FOR_BODY_BACKEDGE]], label [[FOR_END:%.*]]
+; CHECK:       for.body.backedge:
+; CHECK-NEXT:    br label [[FOR_BODY]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br label %for.body
+
+for.body:
+  %i.02 = phi i32 [ 0, %entry ], [ %inc, %for.body.backedge]
+  %inc = add nsw i32 %i.02, 1
+  %cmp = icmp slt i32 %inc, 16
+  br i1 %cmp, label %for.body.backedge, label %for.second
+
+for.second:
+  %iprom = sext i32 %i.02 to i64
+  %b = getelementptr inbounds i16, i16* %p, i64 %iprom
+  store i16 0, i16* %b, align 4
+  %cmps = icmp sgt i32 %inc, 16
+  br i1 %cmps, label %for.body.backedge, label %for.end
+
+for.body.backedge:
+  br label %for.body
+
+for.end:
+  ret i32 0
+}
+
+
+; two back branches - loop simplify with convert this to the same form
+; as previous before vectorizer sees it, but show that.
+define i32 @multiple_latch2(i16* %p) {
+; CHECK-LABEL: @multiple_latch2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_02:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY_BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_02]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC]], 16
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY_BACKEDGE]], label [[FOR_SECOND:%.*]]
+; CHECK:       for.body.backedge:
+; CHECK-NEXT:    br label [[FOR_BODY]]
+; CHECK:       for.second:
+; CHECK-NEXT:    [[IPROM:%.*]] = sext i32 [[I_02]] to i64
+; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[IPROM]]
+; CHECK-NEXT:    store i16 0, i16* [[B]], align 4
+; CHECK-NEXT:    [[CMPS:%.*]] = icmp sgt i32 [[INC]], 16
+; CHECK-NEXT:    br i1 [[CMPS]], label [[FOR_BODY_BACKEDGE]], label [[FOR_END:%.*]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br label %for.body
+
+for.body:
+  %i.02 = phi i32 [ 0, %entry ], [ %inc, %for.body ], [%inc, %for.second]
+  %inc = add nsw i32 %i.02, 1
+  %cmp = icmp slt i32 %inc, 16
+  br i1 %cmp, label %for.body, label %for.second
+
+for.second:
+  %iprom = sext i32 %i.02 to i64
+  %b = getelementptr inbounds i16, i16* %p, i64 %iprom
+  store i16 0, i16* %b, align 4
+  %cmps = icmp sgt i32 %inc, 16
+  br i1 %cmps, label %for.body, label %for.end
+
+for.end:
+  ret i32 0
+}
+
+declare void @foo()

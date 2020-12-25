@@ -265,7 +265,7 @@ public:
                       bool can_replace);
 
   lldb::CommandObjectSP GetCommandSPExact(llvm::StringRef cmd,
-                                          bool include_aliases) const;
+                                          bool include_aliases = false) const;
 
   CommandObject *GetCommandObject(llvm::StringRef cmd,
                                   StringList *matches = nullptr,

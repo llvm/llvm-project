@@ -57,13 +57,23 @@ define i32 @test5(i1 %C) {
   ret i32 %Z
 }
 
-define i32 @test7(i32 %X) {
-; CHECK-LABEL: @test7(
+define i32 @load_gep_null_inbounds(i64 %X) {
+; CHECK-LABEL: @load_gep_null_inbounds(
 ; CHECK-NEXT:    store i32 undef, i32* null, align 536870912
 ; CHECK-NEXT:    ret i32 undef
 ;
-  %V = getelementptr i32, i32* null, i32 %X		; <i32*> [#uses=1]
-  %R = load i32, i32* %V		; <i32> [#uses=1]
+  %V = getelementptr inbounds i32, i32* null, i64 %X
+  %R = load i32, i32* %V
+  ret i32 %R
+}
+
+define i32 @load_gep_null_not_inbounds(i64 %X) {
+; CHECK-LABEL: @load_gep_null_not_inbounds(
+; CHECK-NEXT:    store i32 undef, i32* null, align 536870912
+; CHECK-NEXT:    ret i32 undef
+;
+  %V = getelementptr i32, i32* null, i64 %X
+  %R = load i32, i32* %V
   ret i32 %R
 }
 
