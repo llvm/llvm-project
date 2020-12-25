@@ -188,6 +188,25 @@ class GetIntVTypeInfo<VTypeInfo vti>
   VTypeInfo Vti = !cast<VTypeInfo>(!subst("VF", "VI", !cast<string>(vti)));
 }
 
+class MTypeInfo<ValueType Mas, LMULInfo M> {
+  ValueType Mask = Mas;
+  // {SEW, VLMul} values set a valid VType to deal with this mask type.
+  // we assume SEW=8 and set corresponding LMUL.
+  int SEW = 8;
+  LMULInfo LMul = M;
+}
+
+defset list<MTypeInfo> AllMasks = {
+  // vbool<n>_t, <n> = SEW/LMUL, we assume SEW=8 and corresponding LMUL.
+  def : MTypeInfo<vbool64_t, V_MF8>;
+  def : MTypeInfo<vbool32_t, V_MF4>;
+  def : MTypeInfo<vbool16_t, V_MF2>;
+  def : MTypeInfo<vbool8_t, V_M1>;
+  def : MTypeInfo<vbool4_t, V_M2>;
+  def : MTypeInfo<vbool2_t, V_M4>;
+  def : MTypeInfo<vbool1_t, V_M8>;
+}
+
 class VTypeInfoToWide<VTypeInfo vti, VTypeInfo wti>
 {
   VTypeInfo Vti = vti;
@@ -695,6 +714,13 @@ multiclass VPseudoBinaryV_VX<bit IsFloat, string Constraint = ""> {
 multiclass VPseudoBinaryV_VI<Operand ImmType = simm5, string Constraint = ""> {
   foreach m = MxList.m in
     defm _VI : VPseudoBinary<m.vrclass, m.vrclass, ImmType, m, Constraint>;
+}
+
+multiclass VPseudoBinaryM_MM {
+  foreach m = MxList.m in
+    let VLMul = m.value in {
+      def "_MM_" # m.MX : VPseudoBinaryNoMask<VR, VR, VR, "">;
+    }
 }
 
 // We use earlyclobber here due to
@@ -1295,6 +1321,13 @@ multiclass VPatBinaryV_VI<string intrinsic, string instruction,
                       vti.Vector, vti.Vector, XLenVT, vti.Mask,
                       vti.SEW, vti.LMul, vti.RegClass,
                       vti.RegClass, imm_type>;
+}
+
+multiclass VPatBinaryM_MM<string intrinsic, string instruction> {
+  foreach mti = AllMasks in
+    def : VPatBinaryNoMask<intrinsic, instruction, "MM",
+                           mti.Mask, mti.Mask, mti.Mask,
+                           mti.SEW, mti.LMul, VR, VR>;
 }
 
 multiclass VPatBinaryW_VV<string intrinsic, string instruction,
@@ -2054,6 +2087,27 @@ defm PseudoVFREDMAX    : VPseudoReductionV_VS;
 } // Predicates = [HasStdExtV, HasStdExtF]
 
 //===----------------------------------------------------------------------===//
+// 16. Vector Mask Instructions
+//===----------------------------------------------------------------------===//
+
+//===----------------------------------------------------------------------===//
+// 16.1 Vector Mask-Register Logical Instructions
+//===----------------------------------------------------------------------===//
+
+defm PseudoVMAND: VPseudoBinaryM_MM;
+defm PseudoVMNAND: VPseudoBinaryM_MM;
+defm PseudoVMANDNOT: VPseudoBinaryM_MM;
+defm PseudoVMXOR: VPseudoBinaryM_MM;
+defm PseudoVMOR: VPseudoBinaryM_MM;
+defm PseudoVMNOR: VPseudoBinaryM_MM;
+defm PseudoVMORNOT: VPseudoBinaryM_MM;
+defm PseudoVMXNOR: VPseudoBinaryM_MM;
+
+//===----------------------------------------------------------------------===//
+// 17. Vector Permutation Instructions
+//===----------------------------------------------------------------------===//
+
+//===----------------------------------------------------------------------===//
 // 17.1. Integer Scalar Move Instructions
 //===----------------------------------------------------------------------===//
 
@@ -2511,6 +2565,24 @@ defm "" : VPatReductionV_VS<"int_riscv_vfredsum", "PseudoVFREDSUM", /*IsFloat=*/
 defm "" : VPatReductionV_VS<"int_riscv_vfredmin", "PseudoVFREDMIN", /*IsFloat=*/1>;
 defm "" : VPatReductionV_VS<"int_riscv_vfredmax", "PseudoVFREDMAX", /*IsFloat=*/1>;
 } // Predicates = [HasStdExtV, HasStdExtF]
+
+//===----------------------------------------------------------------------===//
+// 16. Vector Mask Instructions
+//===----------------------------------------------------------------------===//
+
+//===----------------------------------------------------------------------===//
+// 16.1 Vector Mask-Register Logical Instructions
+//===----------------------------------------------------------------------===//
+let Predicates = [HasStdExtV] in {
+  defm "" : VPatBinaryM_MM<"int_riscv_vmand", "PseudoVMAND">;
+  defm "" : VPatBinaryM_MM<"int_riscv_vmnand", "PseudoVMNAND">;
+  defm "" : VPatBinaryM_MM<"int_riscv_vmandnot", "PseudoVMANDNOT">;
+  defm "" : VPatBinaryM_MM<"int_riscv_vmxor", "PseudoVMXOR">;
+  defm "" : VPatBinaryM_MM<"int_riscv_vmor", "PseudoVMOR">;
+  defm "" : VPatBinaryM_MM<"int_riscv_vmnor", "PseudoVMNOR">;
+  defm "" : VPatBinaryM_MM<"int_riscv_vmornot", "PseudoVMORNOT">;
+  defm "" : VPatBinaryM_MM<"int_riscv_vmxnor", "PseudoVMXNOR">;
+} // Predicates = [HasStdExtV]
 
 //===----------------------------------------------------------------------===//
 // 17. Vector Permutation Instructions
