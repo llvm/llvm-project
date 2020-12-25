@@ -77,6 +77,15 @@ def Rec6 {
   code OperatorList = !interleave(!listconcat(Operators, [[{;}]]), ", ");
 }
 
+// CHECK: def Rec7
+// CHECK:   str = "foo/bar/zoo";
+
+def Rec7 {
+  string foo = "foo";
+  string zoo = "oops, not zoo";
+  string str = !interleave([foo, "bar", zoo], "/");
+  let zoo = "zoo";
+}
 
 #ifdef ERROR1
 def op;
