@@ -137,9 +137,14 @@ Visual Studio:</p>
   </li>
   <li>Run CMake to generate the Visual Studio solution and project files:
   <ul>
-    <li><tt>cd ..\..</tt>  (back to where you started)</li>
+    <li><tt>cd llvm-project</tt></li>
     <li><tt>mkdir build</tt> (for building without polluting the source dir)</li>
     <li><tt>cd build</tt></li>
+    <li>
+      If you are using Visual Studio 2019:
+      <tt>cmake -DLLVM_ENABLE_PROJECTS=clang -G "Visual Studio 16 2019" -A x64 -Thost=x64 ..\llvm</tt><br/>
+      <tt>-A x64</tt> and <tt>-Thost=x64</tt> can be omitted, since they are the defaults.
+    </li>
     <li>
       If you are using Visual Studio 2017:
       <tt>cmake -DLLVM_ENABLE_PROJECTS=clang -G "Visual Studio 15 2017" -A x64 -Thost=x64 ..\llvm</tt><br/>
@@ -195,7 +200,7 @@ second build directory next to it for running the tests with these steps:</p>
   <li><tt>set CC=cl</tt> (necessary to force CMake to choose MSVC over mingw GCC
     if you have it installed)</li>
   <li><tt>set CXX=cl</tt></li>
-  <li><tt>cmake -GNinja ..\llvm</tt></li>
+  <li><tt>cmake -DLLVM_ENABLE_PROJECTS=clang -GNinja ..\llvm</tt></li>
   <li><tt>ninja clang</tt> This will build just clang.</li>
   <li><tt>ninja check-clang</tt> This will run the clang tests.</li>
 </ol>
