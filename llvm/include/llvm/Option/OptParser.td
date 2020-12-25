@@ -146,7 +146,7 @@ class ValuesCode<code valuecode> { code ValuesCode = valuecode; }
 
 class ImpliedByAnyOf<list<Option> options, code value = "true"> {
   code ImpliedCheck = !foldl("false", options, accumulator, option,
-                             !strconcat(accumulator, " || ", !cast<string>(option.KeyPath)));
+                             !strconcat(accumulator, " || ", option.KeyPath));
   code ImpliedValue = value;
 }
 

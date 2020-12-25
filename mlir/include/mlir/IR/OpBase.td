@@ -38,16 +38,6 @@ class StrFunc<string r> {
   string result = r;
 }
 
-// TODO: Use !interleave() directly rather than through StrJoin/StrJoinInt.
-
-// Concatenates a list of strings with a separator (default ", ")
-class StrJoin<list<string> strings, string sep = ", "> :
-    StrFunc<!interleave(strings, sep)>;
-
-// Concatenates a list of integers into a string with a separator (default ", ")
-class StrJoinInt<list<int> integers, string sep = ", "> :
-    StrFunc<!interleave(integers, sep)>;
-
 //===----------------------------------------------------------------------===//
 // Predicate definitions
 //===----------------------------------------------------------------------===//
@@ -354,7 +344,7 @@ class AnyTypeOf<list<Type> allowedTypes, string description = "",
     // Satisfy any of the allowed type's condition
     Or<!foreach(allowedtype, allowedTypes, allowedtype.predicate)>,
     !if(!eq(description, ""),
-        StrJoin<!foreach(t, allowedTypes, t.description), " or ">.result,
+        !interleave(!foreach(t, allowedTypes, t.description), " or "),
         description)>;
 
 // Integer types.
@@ -371,7 +361,7 @@ class AnyI<int width>
 
 class AnyIntOfWidths<list<int> widths> :
     AnyTypeOf<!foreach(w, widths, AnyI<w>),
-              StrJoinInt<widths, "/">.result # "-bit integer",
+              !interleave(widths, "/") # "-bit integer",
               "::mlir::IntegerType">;
 
 def AnyI1  : AnyI<1>;
@@ -395,7 +385,7 @@ class I<int width>
 
 class SignlessIntOfWidths<list<int> widths> :
     AnyTypeOf<!foreach(w, widths, I<w>),
-              StrJoinInt<widths, "/">.result # "-bit signless integer">;
+              !interleave(widths, "/") # "-bit signless integer">;
 
 def I1  : I<1>;
 def I8  : I<8>;
@@ -418,7 +408,7 @@ class SI<int width>
 
 class SignedIntOfWidths<list<int> widths> :
     AnyTypeOf<!foreach(w, widths, SI<w>),
-              StrJoinInt<widths, "/">.result # "-bit signed integer">;
+              !interleave(widths, "/") # "-bit signed integer">;
 
 def SI1  : SI<1>;
 def SI8  : SI<8>;
@@ -441,7 +431,7 @@ class UI<int width>
 
 class UnsignedIntOfWidths<list<int> widths> :
     AnyTypeOf<!foreach(w, widths, UI<w>),
-              StrJoinInt<widths, "/">.result # "-bit unsigned integer">;
+              !interleave(widths, "/") # "-bit unsigned integer">;
 
 def UI1  : UI<1>;
 def UI8  : UI<8>;
@@ -470,7 +460,7 @@ class F<int width>
 
 class FloatOfWidths<list<int> widths> :
     AnyTypeOf<!foreach(w, widths, F<w>),
-              StrJoinInt<widths, "/">.result # "-bit float">;
+              !interleave(widths, "/") # "-bit float">;
 
 def F16 : F<16>;
 def F32 : F<32>;
@@ -560,7 +550,7 @@ class IsVectorOfRankPred<list<int> allowedRanks> :
 // Any vector where the rank is from the given `allowedRanks` list
 class VectorOfRank<list<int> allowedRanks> : Type<
   IsVectorOfRankPred<allowedRanks>,
-  " of ranks " # StrJoinInt<allowedRanks, "/">.result, "::mlir::VectorType">;
+  " of ranks " # !interleave(allowedRanks, "/"), "::mlir::VectorType">;
 
 // Any vector where the rank is from the given `allowedRanks` list and the type
 // is from the given `allowedTypes` list
@@ -585,9 +575,8 @@ class IsVectorOfLengthPred<list<int> allowedLengths> :
 // `allowedLengths` list
 class VectorOfLength<list<int> allowedLengths> : Type<
   IsVectorOfLengthPred<allowedLengths>,
-  " of length " # StrJoinInt<allowedLengths, "/">.result,
+  " of length " # !interleave(allowedLengths, "/"),
   "::mlir::VectorType">;
-
 
 // Any vector where the number of elements is from the given
 // `allowedLengths` list and the type is from the given `allowedTypes`
@@ -643,7 +632,7 @@ def F64Tensor  : TensorOf<[F64]>;
 // Ranked tensor type with one of the specified types and ranks.
 class TensorRankOf<list<Type> allowedTypes, list<int> ranks> :
     Type<And<[TensorOf<allowedTypes>.predicate, HasAnyRankOfPred<ranks>]>,
-         StrJoin<!foreach(rank, ranks, rank # "D"), "/">.result # " " #
+         !interleave(!foreach(rank, ranks, rank # "D"), "/") # " " #
          TensorOf<allowedTypes>.description, "::mlir::TensorType">;
 
 class 0DTensorOf<list<Type> allowedTypes> : TensorRankOf<allowedTypes, [0]>;
@@ -684,7 +673,7 @@ def F64MemRef  : MemRefOf<[F64]>;
 // TODO: Have an easy way to add another constraint to a type.
 class MemRefRankOf<list<Type> allowedTypes, list<int> ranks> :
     Type<And<[MemRefOf<allowedTypes>.predicate, HasAnyRankOfPred<ranks>]>,
-         StrJoin<!foreach(rank, ranks, rank # "D"), "/">.result # " " #
+         !interleave(!foreach(rank, ranks, rank # "D"), "/") # " " #
          MemRefOf<allowedTypes>.description>;
 
 class StaticShapeMemRefOf<list<Type> allowedTypes>
@@ -709,7 +698,7 @@ class AnyStridedMemRefOfRank<int rank> :
 
 class StridedMemRefRankOf<list<Type> allowedTypes, list<int> ranks> :
     Type<And<[MemRefOf<allowedTypes>.predicate, HasAnyRankOfPred<ranks>]>,
-         StrJoin<!foreach(rank, ranks, rank # "D"), "/">.result # " " #
+         !interleave(!foreach(rank, ranks, rank # "D"), "/") # " " #
          MemRefOf<allowedTypes>.description>;
 
 // This represents a generic tuple without any constraints on element type.
@@ -1205,7 +1194,7 @@ class StrEnumAttr<string name, string description,
     StringBasedAttr<
       And<[StrAttr.predicate, Or<!foreach(case, cases, case.predicate)>]>,
       !if(!empty(description), "allowed string cases: " #
-          StrJoin<!foreach(case, cases, "'" # case.symbol # "'")>.result,
+          !interleave(!foreach(case, cases, "'" # case.symbol # "'"), ", "),
           description)>;
 
 // An enum attribute backed by IntegerAttr.
@@ -1218,7 +1207,7 @@ class IntEnumAttr<I intType, string name, string description,
     EnumAttrInfo<name, cases>,
     SignlessIntegerAttrBase<intType,
       !if(!empty(description), "allowed " # intType.description # " cases: " #
-          StrJoinInt<!foreach(case, cases, case.value)>.result, description)> {
+          !interleave(!foreach(case, cases, case.value), ", "), description)> {
   let predicate = And<[
     SignlessIntegerAttrBase<intType, "">.predicate,
     Or<!foreach(case, cases, case.predicate)>]>;
@@ -1256,7 +1245,7 @@ class BitEnumAttr<string name, string description,
     I32Attr.predicate,
     // Make sure we don't have unknown bit set.
     CPred<"!($_self.cast<::mlir::IntegerAttr>().getValue().getZExtValue() & (~("
-          # StrJoin<!foreach(case, cases, case.value # "u"), "|">.result #
+          # !interleave(!foreach(case, cases, case.value # "u"), "|") #
           ")))">
   ]>;
 
@@ -1347,13 +1336,13 @@ class RankedSignlessIntElementsAttr<int width, list<int> dims> :
   let predicate = And<[
     SignlessIntElementsAttr<width>.predicate,
     CPred<"$_self.cast<::mlir::DenseIntElementsAttr>().getType().getShape() == "
-        "::mlir::ArrayRef<int64_t>({" # StrJoinInt<dims>.result # "})">]>;
+        "::mlir::ArrayRef<int64_t>({" # !interleave(dims, ", ") # "})">]>;
 
   let description = width # "-bit signless int elements attribute of shape [" #
-                    StrJoinInt<dims>.result # "]";
+                    !interleave(dims, ", ") # "]";
 
   let constBuilderCall = "::mlir::DenseIntElementsAttr::get("
-    "::mlir::RankedTensorType::get({" # StrJoinInt<dims>.result #
+    "::mlir::RankedTensorType::get({" # !interleave(dims, ", ") #
     "}, $_builder.getIntegerType(" # width # ")), ::llvm::makeArrayRef($0))";
 }
 
@@ -1389,15 +1378,15 @@ class RankedFloatElementsAttr<int width, list<int> dims> : ElementsAttrBase<
       // Check that this is ranked and has the specified shape.
       "$_self.cast<::mlir::DenseFPElementsAttr>().getType().hasRank() && "
       "$_self.cast<::mlir::DenseFPElementsAttr>().getType().getShape() == "
-      "::mlir::ArrayRef<int64_t>({" # StrJoinInt<dims>.result # "})">,
+      "::mlir::ArrayRef<int64_t>({" # !interleave(dims, ", ") # "})">,
   width # "-bit float elements attribute of shape [" #
-  StrJoinInt<dims>.result # "]"> {
+  !interleave(dims, ", ") # "]"> {
 
   let storageType = [{ ::mlir::DenseFPElementsAttr }];
   let returnType = [{ ::mlir::DenseFPElementsAttr }];
 
   let constBuilderCall = "::mlir::DenseElementsAttr::get("
-    "::mlir::RankedTensorType::get({" # StrJoinInt<dims>.result #
+    "::mlir::RankedTensorType::get({" # !interleave(dims, ", ") #
     "}, $_builder.getF" # width # "Type()), "
     "::llvm::makeArrayRef($0)).cast<::mlir::DenseFPElementsAttr>()";
   let convertFromStorage = "$_self";
@@ -1501,7 +1490,7 @@ class StructAttr<string name, Dialect d,
     DictionaryAttrBase<CPred<"$_self.isa<" # d.cppNamespace
                                            # "::" # name # ">()">,
         "DictionaryAttr with field(s): " #
-        StrJoin<!foreach(a, attributes, "'" # a.name # "'"), ", ">.result #
+        !interleave(!foreach(a, attributes, "'" # a.name # "'"), ", ") #
         " (each field having its own constraints)"> {
   // Name for this StructAttr.
   string className = name;
@@ -1803,7 +1792,7 @@ class HasParent<string op>
     : ParamNativeOpTrait<"HasParent", op>;
 
 class ParentOneOf<list<string> ops>
-    : ParamNativeOpTrait<"HasParent", StrJoin<ops>.result>;
+    : ParamNativeOpTrait<"HasParent", !interleave(ops, ", ")>;
 
 // Op result type is derived from the first attribute. If the attribute is an
 // subclass of `TypeAttrBase`, its value is used, otherwise, the type of the
@@ -2170,7 +2159,7 @@ class ElementType<string name> : StrFunc<"getElementTypeOrSelf($" # name # ")">;
 
 class AllMatchPred<list<string> values> :
     CPred<"::llvm::is_splat(::llvm::makeArrayRef({"
-          # StrJoin<values>.result #"}))">;
+          # !interleave(values, ", ") #"}))">;
 
 class AllMatch<list<string> values, string description> :
     PredOpTrait<description, AllMatchPred<values>>;
@@ -2182,7 +2171,7 @@ class AllMatchSameOperatorPred<list<string> names, string operator> :
 class AllMatchSameOperatorTrait<list<string> names, string operator,
                                 string description> :
     PredOpTrait<
-        "all of {" # StrJoin<names>.result # "} have same " # description,
+        "all of {" # !interleave(names, ", ") # "} have same " # description,
         AllMatchSameOperatorPred<names, operator>> {
   list<string> values = names;
 }
@@ -2299,7 +2288,7 @@ class TCOpIsBroadcastableToRes<int opId, int resId> : And<[
 // 2) the indices are not out of range.
 class TCopVTEtAreSameAt<list<int> indices> : CPred<
   "::llvm::is_splat(::llvm::map_range("
-      "::mlir::ArrayRef<unsigned>({" # StrJoinInt<indices>.result # "}), "
+      "::mlir::ArrayRef<unsigned>({" # !interleave(indices, ", ") # "}), "
       "[this](unsigned i) { return getElementTypeOrSelf(this->getOperand(i)); "
       "}))">;
 

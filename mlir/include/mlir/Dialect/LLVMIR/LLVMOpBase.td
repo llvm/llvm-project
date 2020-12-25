@@ -258,10 +258,10 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
     llvm::Function *fn = llvm::Intrinsic::getDeclaration(
         module,
         llvm::Intrinsic::}] # enumName # [{,
-        { }] # StrJoin<!listconcat(
+        { }] # !interleave(!listconcat(
             ListIntSubst<resultPattern, overloadedResults>.lst,
             ListIntSubst<LLVM_IntrPatterns.operand,
-                         overloadedOperands>.lst)>.result # [{
+                         overloadedOperands>.lst), ", ") # [{
         });
     auto operands = lookupValues(opInst.getOperands());
     }] # !if(!gt(numResults, 0), "$res = ", "")
@@ -326,7 +326,8 @@ class LLVM_VectorReductionAcc<string mnem>
     llvm::Function *fn = llvm::Intrinsic::getDeclaration(
         module,
         llvm::Intrinsic::vector_reduce_}] # mnem # [{,
-        { }] # StrJoin<ListIntSubst<LLVM_IntrPatterns.operand, [1]>.lst>.result # [{
+        { }] # !interleave(ListIntSubst<LLVM_IntrPatterns.operand, [1]>.lst,
+                           ", ") # [{
         });
     auto operands = lookupValues(opInst.getOperands());
     llvm::FastMathFlags origFM = builder.getFastMathFlags();
