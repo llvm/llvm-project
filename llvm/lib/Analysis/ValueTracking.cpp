@@ -590,40 +590,29 @@ bool llvm::isValidAssumeForContext(const Instruction *Inv,
   return false;
 }
 
+static bool cmpExcludesZero(CmpInst::Predicate Pred, const Value *RHS) {
+  // v u> y implies v != 0.
+  if (Pred == ICmpInst::ICMP_UGT)
+    return true;
+
+  // Special-case v != 0 to also handle v != null.
+  if (Pred == ICmpInst::ICMP_NE)
+    return match(RHS, m_Zero());
+
+  // All other predicates - rely on generic ConstantRange handling.
+  const APInt *C;
+  if (!match(RHS, m_APInt(C)))
+    return false;
+
+  ConstantRange TrueValues = ConstantRange::makeExactICmpRegion(Pred, *C);
+  return !TrueValues.contains(APInt::getNullValue(C->getBitWidth()));
+}
+
 static bool isKnownNonZeroFromAssume(const Value *V, const Query &Q) {
   // Use of assumptions is context-sensitive. If we don't have a context, we
   // cannot use them!
   if (!Q.AC || !Q.CxtI)
     return false;
-
-  // Note that the patterns below need to be kept in sync with the code
-  // in AssumptionCache::updateAffectedValues.
-
-  auto CmpExcludesZero = [V](ICmpInst *Cmp) {
-    auto m_V = m_CombineOr(m_Specific(V), m_PtrToInt(m_Specific(V)));
-
-    Value *RHS;
-    CmpInst::Predicate Pred;
-    if (!match(Cmp, m_c_ICmp(Pred, m_V, m_Value(RHS))))
-      return false;
-    // assume(v u> y) -> assume(v != 0)
-    if (Pred == ICmpInst::ICMP_UGT)
-      return true;
-
-    // assume(v != 0)
-    // We special-case this one to ensure that we handle `assume(v != null)`.
-    if (Pred == ICmpInst::ICMP_NE)
-      return match(RHS, m_Zero());
-
-    // All other predicates - rely on generic ConstantRange handling.
-    ConstantInt *CI;
-    if (!match(RHS, m_ConstantInt(CI)))
-      return false;
-    ConstantRange RHSRange(CI->getValue());
-    ConstantRange TrueValues =
-        ConstantRange::makeAllowedICmpRegion(Pred, RHSRange);
-    return !TrueValues.contains(APInt::getNullValue(CI->getBitWidth()));
-  };
 
   if (Q.CxtI && V->getType()->isPointerTy()) {
     SmallVector<Attribute::AttrKind, 2> AttrKinds{Attribute::NonNull};
@@ -651,12 +640,13 @@ static bool isKnownNonZeroFromAssume(const Value *V, const Query &Q) {
     assert(I->getCalledFunction()->getIntrinsicID() == Intrinsic::assume &&
            "must be an assume intrinsic");
 
-    Value *Arg = I->getArgOperand(0);
-    ICmpInst *Cmp = dyn_cast<ICmpInst>(Arg);
-    if (!Cmp)
-      continue;
+    Value *RHS;
+    CmpInst::Predicate Pred;
+    auto m_V = m_CombineOr(m_Specific(V), m_PtrToInt(m_Specific(V)));
+    if (!match(I->getArgOperand(0), m_c_ICmp(Pred, m_V, m_Value(RHS))))
+      return false;
 
-    if (CmpExcludesZero(Cmp) && isValidAssumeForContext(I, Q.CxtI, Q.DT))
+    if (cmpExcludesZero(Pred, RHS) && isValidAssumeForContext(I, Q.CxtI, Q.DT))
       return true;
   }
 
@@ -2113,10 +2103,17 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
     }
 
     // Consider only compare instructions uniquely controlling a branch
+    Value *RHS;
     CmpInst::Predicate Pred;
-    if (!match(const_cast<User *>(U),
-               m_c_ICmp(Pred, m_Specific(V), m_Zero())) ||
-        (Pred != ICmpInst::ICMP_EQ && Pred != ICmpInst::ICMP_NE))
+    if (!match(U, m_c_ICmp(Pred, m_Specific(V), m_Value(RHS))))
+      continue;
+
+    bool NonNullIfTrue;
+    if (cmpExcludesZero(Pred, RHS))
+      NonNullIfTrue = true;
+    else if (Pred == ICmpInst::ICMP_EQ && match(RHS, m_Zero()))
+      NonNullIfTrue = false;
+    else
       continue;
 
     SmallVector<const User *, 4> WorkList;
@@ -2133,7 +2130,7 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
         // propagate "pred != null" condition through AND because it is only
         // correct to assume that all conditions of AND are met in true branch.
         // TODO: Support similar logic of OR and EQ predicate?
-        if (Pred == ICmpInst::ICMP_NE)
+        if (NonNullIfTrue)
           if (auto *BO = dyn_cast<BinaryOperator>(Curr))
             if (BO->getOpcode() == Instruction::And) {
               for (auto *BOU : BO->users())
@@ -2146,11 +2143,11 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
           assert(BI->isConditional() && "uses a comparison!");
 
           BasicBlock *NonNullSuccessor =
-              BI->getSuccessor(Pred == ICmpInst::ICMP_EQ ? 1 : 0);
+              BI->getSuccessor(NonNullIfTrue ? 0 : 1);
           BasicBlockEdge Edge(BI->getParent(), NonNullSuccessor);
           if (Edge.isSingleEdge() && DT->dominates(Edge, CtxI->getParent()))
             return true;
-        } else if (Pred == ICmpInst::ICMP_NE && isGuard(Curr) &&
+        } else if (NonNullIfTrue && isGuard(Curr) &&
                    DT->dominates(cast<Instruction>(Curr), CtxI)) {
           return true;
         }
