@@ -1799,6 +1799,22 @@ multiclass VPatReductionV_VS<string intrinsic, string instruction, bit IsFloat =
   }
 }
 
+multiclass VPatReductionW_VS<string intrinsic, string instruction, bit IsFloat = 0> {
+  foreach vti = !if(IsFloat, AllFloatVectors, AllIntegerVectors) in
+  {
+    defvar wtiSEW = !mul(vti.SEW, 2);
+    if !le(wtiSEW, 64) then {
+      defvar wtiM1 = !cast<VTypeInfo>(!if(IsFloat, "VF", "VI") # wtiSEW # "M1");
+      defm : VPatTernary<intrinsic, instruction, "VS",
+                         wtiM1.Vector, vti.Vector,
+                         wtiM1.Vector, vti.Mask,
+                         vti.SEW, vti.LMul,
+                         wtiM1.RegClass, vti.RegClass,
+                         wtiM1.RegClass>;
+    }
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Pseudo instructions and patterns.
 //===----------------------------------------------------------------------===//
@@ -2138,6 +2154,12 @@ defm PseudoVREDMINU    : VPseudoReductionV_VS;
 defm PseudoVREDMIN     : VPseudoReductionV_VS;
 defm PseudoVREDMAXU    : VPseudoReductionV_VS;
 defm PseudoVREDMAX     : VPseudoReductionV_VS;
+
+//===----------------------------------------------------------------------===//
+// 15.2. Vector Widening Integer Reduction Instructions
+//===----------------------------------------------------------------------===//
+defm PseudoVWREDSUMU   : VPseudoReductionV_VS;
+defm PseudoVWREDSUM    : VPseudoReductionV_VS;
 } // Predicates = [HasStdExtV]
 
 let Predicates = [HasStdExtV, HasStdExtF] in {
@@ -2148,6 +2170,12 @@ defm PseudoVFREDOSUM   : VPseudoReductionV_VS;
 defm PseudoVFREDSUM    : VPseudoReductionV_VS;
 defm PseudoVFREDMIN    : VPseudoReductionV_VS;
 defm PseudoVFREDMAX    : VPseudoReductionV_VS;
+
+//===----------------------------------------------------------------------===//
+// 15.4. Vector Widening Floating-Point Reduction Instructions
+//===----------------------------------------------------------------------===//
+defm PseudoVFWREDSUM   : VPseudoReductionV_VS;
+defm PseudoVFWREDOSUM  : VPseudoReductionV_VS;
 } // Predicates = [HasStdExtV, HasStdExtF]
 
 //===----------------------------------------------------------------------===//
@@ -2630,6 +2658,12 @@ defm "" : VPatReductionV_VS<"int_riscv_vredminu", "PseudoVREDMINU">;
 defm "" : VPatReductionV_VS<"int_riscv_vredmin", "PseudoVREDMIN">;
 defm "" : VPatReductionV_VS<"int_riscv_vredmaxu", "PseudoVREDMAXU">;
 defm "" : VPatReductionV_VS<"int_riscv_vredmax", "PseudoVREDMAX">;
+
+//===----------------------------------------------------------------------===//
+// 15.2. Vector Widening Integer Reduction Instructions
+//===----------------------------------------------------------------------===//
+defm "" : VPatReductionW_VS<"int_riscv_vwredsumu", "PseudoVWREDSUMU">;
+defm "" : VPatReductionW_VS<"int_riscv_vwredsum", "PseudoVWREDSUM">;
 } // Predicates = [HasStdExtV]
 
 let Predicates = [HasStdExtV, HasStdExtF] in {
@@ -2640,6 +2674,12 @@ defm "" : VPatReductionV_VS<"int_riscv_vfredosum", "PseudoVFREDOSUM", /*IsFloat=
 defm "" : VPatReductionV_VS<"int_riscv_vfredsum", "PseudoVFREDSUM", /*IsFloat=*/1>;
 defm "" : VPatReductionV_VS<"int_riscv_vfredmin", "PseudoVFREDMIN", /*IsFloat=*/1>;
 defm "" : VPatReductionV_VS<"int_riscv_vfredmax", "PseudoVFREDMAX", /*IsFloat=*/1>;
+
+//===----------------------------------------------------------------------===//
+// 15.4. Vector Widening Floating-Point Reduction Instructions
+//===----------------------------------------------------------------------===//
+defm "" : VPatReductionW_VS<"int_riscv_vfwredsum", "PseudoVFWREDSUM", /*IsFloat=*/1>;
+defm "" : VPatReductionW_VS<"int_riscv_vfwredosum", "PseudoVFWREDOSUM", /*IsFloat=*/1>;
 } // Predicates = [HasStdExtV, HasStdExtF]
 
 //===----------------------------------------------------------------------===//
