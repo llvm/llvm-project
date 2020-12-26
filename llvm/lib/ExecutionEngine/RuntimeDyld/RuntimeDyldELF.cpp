@@ -57,13 +57,6 @@ namespace {
 template <class ELFT> class DyldELFObject : public ELFObjectFile<ELFT> {
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
 
-  typedef Elf_Shdr_Impl<ELFT> Elf_Shdr;
-  typedef Elf_Sym_Impl<ELFT> Elf_Sym;
-  typedef Elf_Rel_Impl<ELFT, false> Elf_Rel;
-  typedef Elf_Rel_Impl<ELFT, true> Elf_Rela;
-
-  typedef Elf_Ehdr_Impl<ELFT> Elf_Ehdr;
-
   typedef typename ELFT::uint addr_type;
 
   DyldELFObject(ELFObjectFile<ELFT> &&Obj);

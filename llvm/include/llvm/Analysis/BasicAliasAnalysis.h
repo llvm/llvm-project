@@ -117,6 +117,9 @@ private:
 
     APInt Scale;
 
+    // Context instruction to use when querying information about this index.
+    const Instruction *CxtI;
+
     bool operator==(const VariableGEPIndex &Other) const {
       return V == Other.V && ZExtBits == Other.ZExtBits &&
              SExtBits == Other.SExtBits && Scale == Other.Scale;

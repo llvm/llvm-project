@@ -80,35 +80,6 @@ using namespace ELF;
 #define ENUM_ENT_1(enum)                                                       \
   { #enum, #enum, ELF::enum }
 
-#define TYPEDEF_ELF_TYPES(ELFT)                                                \
-  using ELFO = ELFFile<ELFT>;                                                  \
-  using Elf_Addr = typename ELFT::Addr;                                        \
-  using Elf_Shdr = typename ELFT::Shdr;                                        \
-  using Elf_Sym = typename ELFT::Sym;                                          \
-  using Elf_Dyn = typename ELFT::Dyn;                                          \
-  using Elf_Dyn_Range = typename ELFT::DynRange;                               \
-  using Elf_Rel = typename ELFT::Rel;                                          \
-  using Elf_Rela = typename ELFT::Rela;                                        \
-  using Elf_Relr = typename ELFT::Relr;                                        \
-  using Elf_Rel_Range = typename ELFT::RelRange;                               \
-  using Elf_Rela_Range = typename ELFT::RelaRange;                             \
-  using Elf_Relr_Range = typename ELFT::RelrRange;                             \
-  using Elf_Phdr = typename ELFT::Phdr;                                        \
-  using Elf_Half = typename ELFT::Half;                                        \
-  using Elf_Ehdr = typename ELFT::Ehdr;                                        \
-  using Elf_Word = typename ELFT::Word;                                        \
-  using Elf_Hash = typename ELFT::Hash;                                        \
-  using Elf_GnuHash = typename ELFT::GnuHash;                                  \
-  using Elf_Note  = typename ELFT::Note;                                       \
-  using Elf_Sym_Range = typename ELFT::SymRange;                               \
-  using Elf_Versym = typename ELFT::Versym;                                    \
-  using Elf_Verneed = typename ELFT::Verneed;                                  \
-  using Elf_Vernaux = typename ELFT::Vernaux;                                  \
-  using Elf_Verdef = typename ELFT::Verdef;                                    \
-  using Elf_Verdaux = typename ELFT::Verdaux;                                  \
-  using Elf_CGProfile = typename ELFT::CGProfile;                              \
-  using uintX_t = typename ELFT::uint;
-
 namespace {
 
 template <class ELFT> class DumpStyle;
@@ -304,7 +275,7 @@ public:
 private:
   std::unique_ptr<DumpStyle<ELFT>> ELFDumperStyle;
 
-  TYPEDEF_ELF_TYPES(ELFT)
+  LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
 
   Expected<DynRegionInfo> createDRI(uint64_t Offset, uint64_t Size,
                                     uint64_t EntSize) {
@@ -750,7 +721,7 @@ template <class ELFT> class MipsGOTParser;
 
 template <typename ELFT> class DumpStyle {
 public:
-  TYPEDEF_ELF_TYPES(ELFT)
+  LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
 
   DumpStyle(const ELFDumper<ELFT> &Dumper)
       : Obj(Dumper.getElfObject().getELFFile()), ElfObj(Dumper.getElfObject()),
@@ -788,7 +759,7 @@ public:
   virtual void printStackSizes() = 0;
   void printNonRelocatableStackSizes(std::function<void()> PrintHeader);
   void printRelocatableStackSizes(std::function<void()> PrintHeader);
-  void printFunctionStackSize(uint64_t SymValue,
+  bool printFunctionStackSize(uint64_t SymValue,
                               Optional<const Elf_Shdr *> FunctionSec,
                               const Elf_Shdr &StackSizeSec, DataExtractor Data,
                               uint64_t *Offset);
@@ -840,7 +811,7 @@ template <typename ELFT> class GNUStyle : public DumpStyle<ELFT> {
   formatted_raw_ostream &OS;
 
 public:
-  TYPEDEF_ELF_TYPES(ELFT)
+  LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
 
   GNUStyle(ScopedPrinter &W, const ELFDumper<ELFT> &Dumper)
       : DumpStyle<ELFT>(Dumper),
@@ -967,7 +938,7 @@ void DumpStyle<ELFT>::reportUniqueWarning(const Twine &Msg) const {
 
 template <typename ELFT> class LLVMStyle : public DumpStyle<ELFT> {
 public:
-  TYPEDEF_ELF_TYPES(ELFT)
+  LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
 
   LLVMStyle(ScopedPrinter &W, const ELFDumper<ELFT> &Dumper)
       : DumpStyle<ELFT>(Dumper), W(W) {}
@@ -2990,12 +2961,12 @@ namespace {
 
 template <class ELFT> class MipsGOTParser {
 public:
-  TYPEDEF_ELF_TYPES(ELFT)
-  using Entry = typename ELFO::Elf_Addr;
+  LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
+  using Entry = typename ELFT::Addr;
   using Entries = ArrayRef<Entry>;
 
   const bool IsStatic;
-  const ELFO &Obj;
+  const ELFFile<ELFT> &Obj;
   const ELFDumper<ELFT> &Dumper;
 
   MipsGOTParser(const ELFDumper<ELFT> &D);
@@ -5995,7 +5966,7 @@ template <class ELFT> void GNUStyle<ELFT>::printDependentLibs() {
 }
 
 template <class ELFT>
-void DumpStyle<ELFT>::printFunctionStackSize(
+bool DumpStyle<ELFT>::printFunctionStackSize(
     uint64_t SymValue, Optional<const Elf_Shdr *> FunctionSec,
     const Elf_Shdr &StackSizeSec, DataExtractor Data, uint64_t *Offset) {
   uint32_t FuncSymIndex = 0;
@@ -6055,16 +6026,16 @@ void DumpStyle<ELFT>::printFunctionStackSize(
 
   // Extract the size. The expectation is that Offset is pointing to the right
   // place, i.e. past the function address.
-  uint64_t PrevOffset = *Offset;
-  uint64_t StackSize = Data.getULEB128(Offset);
-  // getULEB128() does not advance Offset if it is not able to extract a valid
-  // integer.
-  if (*Offset == PrevOffset) {
+  Error Err = Error::success();
+  uint64_t StackSize = Data.getULEB128(Offset, &Err);
+  if (Err) {
     reportUniqueWarning("could not extract a valid stack size from " +
-                        describe(Obj, StackSizeSec));
-    return;
+                        describe(Obj, StackSizeSec) + ": " +
+                        toString(std::move(Err)));
+    return false;
   }
   printStackSizeEntry(StackSize, FuncName);
+  return true;
 }
 
 template <class ELFT>
@@ -6153,8 +6124,9 @@ void DumpStyle<ELFT>::printNonRelocatableStackSizes(
         break;
       }
       uint64_t SymValue = Data.getAddress(&Offset);
-      printFunctionStackSize(SymValue, /*FunctionSec=*/None, Sec, Data,
-                             &Offset);
+      if (!printFunctionStackSize(SymValue, /*FunctionSec=*/None, Sec, Data,
+                                  &Offset))
+        break;
     }
   }
 }

@@ -40,17 +40,14 @@ const Symbol *Object::findSymbol(size_t UniqueId) const {
 Error Object::removeSymbols(
     function_ref<Expected<bool>(const Symbol &)> ToRemove) {
   Error Errs = Error::success();
-  Symbols.erase(std::remove_if(std::begin(Symbols), std::end(Symbols),
-                               [ToRemove, &Errs](const Symbol &Sym) {
-                                 Expected<bool> ShouldRemove = ToRemove(Sym);
-                                 if (!ShouldRemove) {
-                                   Errs = joinErrors(std::move(Errs),
-                                                     ShouldRemove.takeError());
-                                   return false;
-                                 }
-                                 return *ShouldRemove;
-                               }),
-                std::end(Symbols));
+  llvm::erase_if(Symbols, [ToRemove, &Errs](const Symbol &Sym) {
+    Expected<bool> ShouldRemove = ToRemove(Sym);
+    if (!ShouldRemove) {
+      Errs = joinErrors(std::move(Errs), ShouldRemove.takeError());
+      return false;
+    }
+    return *ShouldRemove;
+  });
 
   updateSymbols();
   return Errs;

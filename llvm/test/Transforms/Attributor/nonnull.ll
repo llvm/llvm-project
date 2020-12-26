@@ -1404,24 +1404,40 @@ hd2:
 ; Original from PR43833
 declare void @sink(i32*)
 
-; FIXME: the sink argument should be marked nonnull as in @PR43833_simple.
 define void @PR43833(i32* %0, i32 %1) {
-; CHECK-LABEL: define {{[^@]+}}@PR43833
-; CHECK-SAME: (i32* [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[TMP1]], 1
-; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP7:%.*]]
-; CHECK:       4:
-; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[TMP0]], i64 [[TMP5]]
-; CHECK-NEXT:    br label [[TMP8:%.*]]
-; CHECK:       7:
-; CHECK-NEXT:    ret void
-; CHECK:       8:
-; CHECK-NEXT:    [[TMP9:%.*]] = phi i32 [ 1, [[TMP4]] ], [ [[TMP10:%.*]], [[TMP8]] ]
-; CHECK-NEXT:    tail call void @sink(i32* [[TMP6]])
-; CHECK-NEXT:    [[TMP10]] = add nuw nsw i32 [[TMP9]], 1
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[TMP10]], [[TMP1]]
-; CHECK-NEXT:    br i1 [[TMP11]], label [[TMP7]], label [[TMP8]]
+; IS________OPM-LABEL: define {{[^@]+}}@PR43833
+; IS________OPM-SAME: (i32* [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
+; IS________OPM-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[TMP1]], 1
+; IS________OPM-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP7:%.*]]
+; IS________OPM:       4:
+; IS________OPM-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP1]] to i64
+; IS________OPM-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[TMP0]], i64 [[TMP5]]
+; IS________OPM-NEXT:    br label [[TMP8:%.*]]
+; IS________OPM:       7:
+; IS________OPM-NEXT:    ret void
+; IS________OPM:       8:
+; IS________OPM-NEXT:    [[TMP9:%.*]] = phi i32 [ 1, [[TMP4]] ], [ [[TMP10:%.*]], [[TMP8]] ]
+; IS________OPM-NEXT:    tail call void @sink(i32* [[TMP6]])
+; IS________OPM-NEXT:    [[TMP10]] = add nuw nsw i32 [[TMP9]], 1
+; IS________OPM-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[TMP10]], [[TMP1]]
+; IS________OPM-NEXT:    br i1 [[TMP11]], label [[TMP7]], label [[TMP8]]
+;
+; IS________NPM-LABEL: define {{[^@]+}}@PR43833
+; IS________NPM-SAME: (i32* [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
+; IS________NPM-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[TMP1]], 1
+; IS________NPM-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP7:%.*]]
+; IS________NPM:       4:
+; IS________NPM-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP1]] to i64
+; IS________NPM-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[TMP0]], i64 [[TMP5]]
+; IS________NPM-NEXT:    br label [[TMP8:%.*]]
+; IS________NPM:       7:
+; IS________NPM-NEXT:    ret void
+; IS________NPM:       8:
+; IS________NPM-NEXT:    [[TMP9:%.*]] = phi i32 [ 1, [[TMP4]] ], [ [[TMP10:%.*]], [[TMP8]] ]
+; IS________NPM-NEXT:    tail call void @sink(i32* nonnull [[TMP6]])
+; IS________NPM-NEXT:    [[TMP10]] = add nuw nsw i32 [[TMP9]], 1
+; IS________NPM-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[TMP10]], [[TMP1]]
+; IS________NPM-NEXT:    br i1 [[TMP11]], label [[TMP7]], label [[TMP8]]
 ;
   %3 = icmp sgt i32 %1, 1
   br i1 %3, label %4, label %7
