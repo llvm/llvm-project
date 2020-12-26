@@ -117,9 +117,6 @@ static bool maybeRewriteToFallthrough(MachineInstr &MI, MachineBasicBlock &MBB,
       case WebAssembly::EXTERNREFRegClassID:
         CopyLocalOpc = WebAssembly::COPY_EXTERNREF;
         break;
-      case WebAssembly::EXNREFRegClassID:
-        CopyLocalOpc = WebAssembly::COPY_EXNREF;
-        break;
       default:
         llvm_unreachable("Unexpected register class for return operand");
       }

@@ -9,7 +9,7 @@ test0:
 
 test1:
     .functype   test1 (i32, i64) -> (i32)
-    .local      i32, i64, exnref
+    .local      i32, i64, funcref
     local.get   3
     end_function
 
@@ -21,6 +21,6 @@ test1:
 # CHECK-NEXT:       9:       20 02  local.get	2
 # CHECK-NEXT:       b:       0b     end
 # CHECK-LABEL: <test1>:
-# CHECK-NEXT:        .local  i32, i64, exnref
+# CHECK-NEXT:        .local  i32, i64, funcref
 # CHECK-NEXT:      14:       20 03  local.get	3
 # CHECK-NEXT:      16:       0b     end

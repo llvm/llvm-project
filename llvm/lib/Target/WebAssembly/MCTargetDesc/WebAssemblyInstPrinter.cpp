@@ -345,8 +345,6 @@ const char *WebAssembly::anyTypeToString(unsigned Ty) {
     return "externref";
   case wasm::WASM_TYPE_FUNC:
     return "func";
-  case wasm::WASM_TYPE_EXNREF:
-    return "exnref";
   case wasm::WASM_TYPE_NORESULT:
     return "void";
   default:

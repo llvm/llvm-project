@@ -145,7 +145,7 @@ defm END_TRY : NRI<(outs), (ins), [], "end_try", 0x0b>;
 
 // Catching an exception: catch / catch_all
 let hasCtrlDep = 1, hasSideEffects = 1 in {
-// TODO Currently 'catch' can only extract an i32, which is sufficient for C++
+// Currently 'catch' can only extract an i32, which is sufficient for C++
 // support, but according to the spec 'catch' can extract any number of values
 // based on the event type.
 defm CATCH : I<(outs I32:$dst), (ins event_op:$tag),
@@ -155,21 +155,6 @@ defm CATCH : I<(outs I32:$dst), (ins event_op:$tag),
                "catch   \t$dst, $tag", "catch   \t$tag", 0x07>;
 defm CATCH_ALL : NRI<(outs), (ins), [], "catch_all", 0x05>;
 }
-
-// Querying / extracing exception: br_on_exn
-// br_on_exn queries an exnref to see if it matches the corresponding exception
-// tag index. If true it branches to the given label and pushes the
-// corresponding argument values of the exception onto the stack.
-let isBranch = 1, isTerminator = 1, hasCtrlDep = 1 in
-defm BR_ON_EXN : I<(outs), (ins bb_op:$dst, event_op:$tag, EXNREF:$exn),
-                   (outs), (ins bb_op:$dst, event_op:$tag), [],
-                   "br_on_exn \t$dst, $tag, $exn", "br_on_exn \t$dst, $tag",
-                   0x0a>;
-// This is a pseudo instruction that simulates popping a value from stack, which
-// has been pushed by br_on_exn
-let isCodeGenOnly = 1, hasSideEffects = 1 in
-defm EXTRACT_EXCEPTION_I32 : NRI<(outs I32:$dst), (ins), [],
-                                 "extract_exception\t$dst">;
 
 // Pseudo instructions: cleanupret / catchret
 let isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,
