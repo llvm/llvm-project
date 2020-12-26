@@ -34,11 +34,10 @@ body: |
   bb.1 (landing-pad):
   ; predecessors: %bb.0
     successors: %bb.2
-    ; CATCH should be after an EH_LABEL at the beginning of an EH pad
+    ; CATCH_ALL should be after an EH_LABEL at the beginning of an EH pad
     ; CHECK:      EH_LABEL
-    ; CHECK-NEXT: CATCH
+    ; CHECK-NEXT: CATCH_ALL
     EH_LABEL <mcsymbol .Ltmp2>
-    dead %0:i32 = EXTRACT_EXCEPTION_I32 implicit-def dead $arguments
     CATCHRET %bb.2, %bb.0, implicit-def dead $arguments
 
   bb.2:
