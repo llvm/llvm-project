@@ -225,3 +225,95 @@ non_zero:
 exit:
   ret i64 -1
 }
+
+define i64 @test_sle_zero(i64 %x) {
+; CHECK-LABEL: @test_sle_zero(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[X:%.*]], 1
+; CHECK-NEXT:    br i1 [[C]], label [[EXIT:%.*]], label [[NON_ZERO:%.*]]
+; CHECK:       non_zero:
+; CHECK-NEXT:    [[CTZ:%.*]] = call i64 @llvm.ctlz.i64(i64 [[X]], i1 false), [[RNG0]]
+; CHECK-NEXT:    ret i64 [[CTZ]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i64 -1
+;
+start:
+  %c = icmp sle i64 %x, 0
+  br i1 %c, label %exit, label %non_zero
+
+non_zero:
+  %ctz = call i64 @llvm.ctlz.i64(i64 %x, i1 false)
+  ret i64 %ctz
+
+exit:
+  ret i64 -1
+}
+
+define i64 @test_sge_neg_ten(i64 %x) {
+; CHECK-LABEL: @test_sge_neg_ten(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i64 [[X:%.*]], -11
+; CHECK-NEXT:    br i1 [[C]], label [[EXIT:%.*]], label [[NON_ZERO:%.*]]
+; CHECK:       non_zero:
+; CHECK-NEXT:    [[CTZ:%.*]] = call i64 @llvm.ctlz.i64(i64 [[X]], i1 false), [[RNG0]]
+; CHECK-NEXT:    ret i64 [[CTZ]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i64 -1
+;
+start:
+  %c = icmp sge i64 %x, -10
+  br i1 %c, label %exit, label %non_zero
+
+non_zero:
+  %ctz = call i64 @llvm.ctlz.i64(i64 %x, i1 false)
+  ret i64 %ctz
+
+exit:
+  ret i64 -1
+}
+
+define i64 @test_sge_ten(i64 %x) {
+; CHECK-LABEL: @test_sge_ten(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i64 [[X:%.*]], 9
+; CHECK-NEXT:    br i1 [[C]], label [[EXIT:%.*]], label [[MAYBE_ZERO:%.*]]
+; CHECK:       maybe_zero:
+; CHECK-NEXT:    [[CTZ:%.*]] = call i64 @llvm.ctlz.i64(i64 [[X]], i1 false), [[RNG0]]
+; CHECK-NEXT:    ret i64 [[CTZ]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i64 -1
+;
+start:
+  %c = icmp sge i64 %x, 10
+  br i1 %c, label %exit, label %maybe_zero
+
+maybe_zero:
+  %ctz = call i64 @llvm.ctlz.i64(i64 %x, i1 false)
+  ret i64 %ctz
+
+exit:
+  ret i64 -1
+}
+
+define i64 @test_ule_unknown(i64 %x, i64 %y) {
+; CHECK-LABEL: @test_ule_unknown(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[C_NOT:%.*]] = icmp ugt i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[C_NOT]], label [[NON_ZERO:%.*]], label [[EXIT:%.*]]
+; CHECK:       non_zero:
+; CHECK-NEXT:    [[CTZ:%.*]] = call i64 @llvm.ctlz.i64(i64 [[X]], i1 true), [[RNG0]]
+; CHECK-NEXT:    ret i64 [[CTZ]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i64 -1
+;
+start:
+  %c = icmp ule i64 %x, %y
+  br i1 %c, label %exit, label %non_zero
+
+non_zero:
+  %ctz = call i64 @llvm.ctlz.i64(i64 %x, i1 false)
+  ret i64 %ctz
+
+exit:
+  ret i64 -1
+}
