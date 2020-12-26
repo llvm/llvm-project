@@ -750,7 +750,7 @@ private:
       }
 
       assert(OutlinedFn != OriginalFn && "Outlining failed");
-      CGUpdater.registerOutlinedFunction(*OutlinedFn);
+      CGUpdater.registerOutlinedFunction(*OriginalFn, *OutlinedFn);
       CGUpdater.reanalyzeFunction(*OriginalFn);
 
       NumOpenMPParallelRegionsMerged += MergableCIs.size();
