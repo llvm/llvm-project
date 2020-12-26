@@ -2111,7 +2111,7 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
     bool NonNullIfTrue;
     if (cmpExcludesZero(Pred, RHS))
       NonNullIfTrue = true;
-    else if (Pred == ICmpInst::ICMP_EQ && match(RHS, m_Zero()))
+    else if (cmpExcludesZero(CmpInst::getInversePredicate(Pred), RHS))
       NonNullIfTrue = false;
     else
       continue;
