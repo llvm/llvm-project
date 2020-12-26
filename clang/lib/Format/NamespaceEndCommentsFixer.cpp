@@ -66,8 +66,10 @@ std::string computeName(const FormatToken *NamespaceTok) {
 }
 
 std::string computeEndCommentText(StringRef NamespaceName, bool AddNewline,
-                                  const FormatToken *NamespaceTok) {
-  std::string text = "// ";
+                                  const FormatToken *NamespaceTok,
+                                  unsigned SpacesToAdd) {
+  std::string text = "//";
+  text.append(SpacesToAdd, ' ');
   text += NamespaceTok->TokenText;
   if (NamespaceTok->is(TT_NamespaceMacro))
     text += "(";
@@ -278,7 +280,8 @@ std::pair<tooling::Replacements, unsigned> NamespaceEndCommentsFixer::analyze(
                       EndCommentNextTok->NewlinesBefore == 0 &&
                       EndCommentNextTok->isNot(tok::eof);
     const std::string EndCommentText =
-        computeEndCommentText(NamespaceName, AddNewline, NamespaceTok);
+        computeEndCommentText(NamespaceName, AddNewline, NamespaceTok,
+                              Style.SpacesInLineCommentPrefix.Minimum);
     if (!hasEndComment(EndCommentPrevTok)) {
       bool isShort = I - StartLineIndex <= kShortNamespaceMaxLines + 1;
       if (!isShort)
