@@ -414,6 +414,7 @@ ContentCache &SourceManager::getOrCreateContentCache(const FileEntry *FileEnt,
 
   Entry->IsFileVolatile = UserFilesAreVolatile && !isSystemFile;
   Entry->IsTransient = FilesAreTransient;
+  Entry->BufferOverridden |= FileEnt->isNamedPipe();
 
   return *Entry;
 }
