@@ -908,7 +908,8 @@ static bool canSimplifyNullStoreOrGEP(StoreInst &SI) {
 
   auto *Ptr = SI.getPointerOperand();
   if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(Ptr))
-    Ptr = GEPI->getOperand(0);
+    if (GEPI->isInBounds())
+      Ptr = GEPI->getOperand(0);
   return (isa<ConstantPointerNull>(Ptr) &&
           !NullPointerIsDefined(SI.getFunction(), SI.getPointerAddressSpace()));
 }
@@ -916,7 +917,7 @@ static bool canSimplifyNullStoreOrGEP(StoreInst &SI) {
 static bool canSimplifyNullLoadOrGEP(LoadInst &LI, Value *Op) {
   if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(Op)) {
     const Value *GEPI0 = GEPI->getOperand(0);
-    if (isa<ConstantPointerNull>(GEPI0) &&
+    if (isa<ConstantPointerNull>(GEPI0) && GEPI->isInBounds() &&
         !NullPointerIsDefined(LI.getFunction(), GEPI->getPointerAddressSpace()))
       return true;
   }
