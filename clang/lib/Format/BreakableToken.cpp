@@ -789,9 +789,14 @@ BreakableLineCommentSection::BreakableLineCommentSection(
           Prefix[i] = "///< ";
         else if (Prefix[i] == "//!<")
           Prefix[i] = "//!< ";
-        else if (Prefix[i] == "#" &&
-                 Style.Language == FormatStyle::LK_TextProto)
+        else if (Prefix[i] == "#")
           Prefix[i] = "# ";
+        else if (Prefix[i] == "##")
+          Prefix[i] = "## ";
+        else if (Prefix[i] == "###")
+          Prefix[i] = "### ";
+        else if (Prefix[i] == "####")
+          Prefix[i] = "#### ";
       }
 
       Tokens[i] = LineTok;
