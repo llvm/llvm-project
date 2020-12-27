@@ -200,6 +200,16 @@ define <vscale x 8 x half> @shufflevector(half %val) {
   ret <vscale x 8 x half> %r
 }
 
+define <vscale x 8 x half> @shufflevector2(half %val) {
+; CHECK-LABEL: @shufflevector
+; CHECK: %insvec = insertelement <vscale x 8 x half> poison, half %val, i32 0
+; CHECK-NEXT: %r = shufflevector <vscale x 8 x half> %insvec, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
+; CHECK-NEXT: ret <vscale x 8 x half> %r
+  %insvec = insertelement <vscale x 8 x half> poison, half %val, i32 0
+  %r = shufflevector <vscale x 8 x half> %insvec, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
+  ret <vscale x 8 x half> %r
+}
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Memory Access and Addressing Operations
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
