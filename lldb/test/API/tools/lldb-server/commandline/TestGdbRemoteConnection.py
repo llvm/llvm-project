@@ -12,8 +12,6 @@ class TestGdbRemoteConnection(gdbremote_testcase.GdbRemoteTestCaseBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @debugserver_test
-    # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    @skipIfDarwinEmbedded
     def test_reverse_connect_debugserver(self):
         self._reverse_connect()
 

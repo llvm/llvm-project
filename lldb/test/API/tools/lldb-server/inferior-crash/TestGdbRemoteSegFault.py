@@ -11,7 +11,6 @@ class TestGdbRemoteSegFault(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     GDB_REMOTE_STOP_CODE_BAD_ACCESS = 0x91
 
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def inferior_seg_fault_received(self, expected_signo):
         procs = self.prep_debug_monitor_and_inferior(
             inferior_args=["segfault"])

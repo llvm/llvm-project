@@ -25,10 +25,8 @@ class TestGdbRemoteExitCode(GdbRemoteTestCaseBase):
 
         self.expect_gdbremote_sequence()
 
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_inferior_exit_0(self):
         self._test_inferior_exit(0)
 
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_inferior_exit_42(self):
         self._test_inferior_exit(42)
