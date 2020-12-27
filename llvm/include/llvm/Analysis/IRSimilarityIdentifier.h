@@ -122,28 +122,12 @@ struct IRInstructionData : ilist_node<IRInstructionData> {
   /// considered similar.
   bool Legal;
 
-  /// This is only relevant if we are wrapping a CmpInst where we needed to
-  /// change the predicate of a compare instruction from a greater than form
-  /// to a less than form.  It is None otherwise.
-  Optional<CmpInst::Predicate> RevisedPredicate;
-
   /// Gather the information that is difficult to gather for an Instruction, or
   /// is changed. i.e. the operands of an Instruction and the Types of those
   /// operands. This extra information allows for similarity matching to make
   /// assertions that allow for more flexibility when checking for whether an
   /// Instruction performs the same operation.
   IRInstructionData(Instruction &I, bool Legality, IRInstructionDataList &IDL);
-
-  /// Get the predicate that the compare instruction is using for hashing the
-  /// instruction. the IRInstructionData must be wrapping a CmpInst.
-  CmpInst::Predicate getPredicate() const;
-
-  /// A function that swaps the predicates to their less than form if they are
-  /// in a greater than form. Otherwise, the predicate is unchanged.
-  ///
-  /// \param CI - The comparison operation to find a consistent preidcate for.
-  /// \return the consistent comparison predicate. 
-  static CmpInst::Predicate predicateForConsistency(CmpInst *CI);
 
   /// Hashes \p Value based on its opcode, types, and operand types.
   /// Two IRInstructionData instances produce the same hash when they perform
@@ -177,12 +161,6 @@ struct IRInstructionData : ilist_node<IRInstructionData> {
     for (Value *V : ID.OperVals)
       OperTypes.push_back(V->getType());
 
-    if (isa<CmpInst>(ID.Inst))
-      return llvm::hash_combine(
-          llvm::hash_value(ID.Inst->getOpcode()),
-          llvm::hash_value(ID.Inst->getType()),
-          llvm::hash_value(ID.getPredicate()),
-          llvm::hash_combine_range(OperTypes.begin(), OperTypes.end()));
     return llvm::hash_combine(
         llvm::hash_value(ID.Inst->getOpcode()),
         llvm::hash_value(ID.Inst->getType()),
