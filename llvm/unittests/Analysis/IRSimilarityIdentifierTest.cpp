@@ -1688,8 +1688,8 @@ TEST(IRSimilarityIdentifier, InstructionDifference) {
   ASSERT_TRUE(SimilarityCandidates.empty());
 }
 
-// This test checks to see whether we can detect similarity for commutativen
-// instructions where the operands have been reversed.  Right now, we cannot.
+// This test checks to see whether we can detect similarity for commutative
+// instructions where the operands have been reversed.
 TEST(IRSimilarityIdentifier, CommutativeSimilarity) {
   StringRef ModuleString = R"(
                           define i32 @f(i32 %a, i32 %b) {
@@ -1708,13 +1708,45 @@ TEST(IRSimilarityIdentifier, CommutativeSimilarity) {
   std::vector<std::vector<IRSimilarityCandidate>> SimilarityCandidates;
   getSimilarities(*M, SimilarityCandidates);
 
-  ASSERT_TRUE(SimilarityCandidates.empty());
+  ASSERT_TRUE(SimilarityCandidates.size() == 1);
+  for (std::vector<IRSimilarityCandidate> &Cands : SimilarityCandidates) {
+    ASSERT_TRUE(Cands.size() == 2);
+    unsigned InstIdx = 0;
+    for (IRSimilarityCandidate &Cand : Cands) {
+      ASSERT_TRUE(Cand.getStartIdx() == InstIdx);
+      InstIdx += 3;
+    }
+  }
 }
 
-// Check that we are not finding commutative similarity in non commutative
+// This test checks to see whether we can detect different structure in
+// commutative instructions.  In this case, the second operand in the second
+// add is different.
+TEST(IRSimilarityIdentifier, NoCommutativeSimilarity) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = add i32 %a, %b
+                             %1 = add i32 %1, %b
+                             br label %bb1
+                          bb1:
+                             %2 = add i32 %a, %b
+                             %3 = add i32 %2, %a
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<std::vector<IRSimilarityCandidate>> SimilarityCandidates;
+  getSimilarities(*M, SimilarityCandidates);
+
+  ASSERT_TRUE(SimilarityCandidates.size() == 0);
+}
+
+// Check that we are not finding similarity in non commutative
 // instructions.  That is, while the instruction and operands used are the same
-// in the two subtraction sequences, they cannot be counted as the same since
-// a subtraction is not commutative.
+// in the two subtraction sequences, they are in a different order, and cannot
+// be counted as the same since a subtraction is not commutative.
 TEST(IRSimilarityIdentifier, NonCommutativeDifference) {
   StringRef ModuleString = R"(
                           define i32 @f(i32 %a, i32 %b) {
