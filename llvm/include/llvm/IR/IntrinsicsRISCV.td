@@ -189,6 +189,12 @@ let TargetPrefix = "riscv" in {
                      LLVMPointerType<LLVMMatchType<0>>, llvm_anyvector_ty,
                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty],
                     [NoCapture<ArgIndex<1>>, IntrWriteMem]>, RISCVVIntrinsic;
+  // For destination vector type is the same as first and second source vector.
+  // Input: (vector_in, vector_in, vl)
+  class RISCVBinaryAAANoMask
+        : Intrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyint_ty],
+                    [IntrNoMem]>, RISCVVIntrinsic;
   // For destination vector type is the same as first source vector.
   // Input: (vector_in, vector_in/scalar_in, vl)
   class RISCVBinaryAAXNoMask
@@ -643,4 +649,13 @@ let TargetPrefix = "riscv" in {
   defm vfredsum : RISCVReduction;
   defm vfredmin : RISCVReduction;
   defm vfredmax : RISCVReduction;
+
+  def int_riscv_vmand: RISCVBinaryAAANoMask;
+  def int_riscv_vmnand: RISCVBinaryAAANoMask;
+  def int_riscv_vmandnot: RISCVBinaryAAANoMask;
+  def int_riscv_vmxor: RISCVBinaryAAANoMask;
+  def int_riscv_vmor: RISCVBinaryAAANoMask;
+  def int_riscv_vmnor: RISCVBinaryAAANoMask;
+  def int_riscv_vmornot: RISCVBinaryAAANoMask;
+  def int_riscv_vmxnor: RISCVBinaryAAANoMask;
 } // TargetPrefix = "riscv"
