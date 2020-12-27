@@ -3311,6 +3311,16 @@ Loop *InnerLoopVectorizer::createVectorLoopSkeleton(StringRef Prefix) {
   LoopScalarPreHeader =
       SplitBlock(LoopMiddleBlock, LoopMiddleBlock->getTerminator(), DT, LI,
                  nullptr, Twine(Prefix) + "scalar.ph");
+
+  // Set up branch from middle block to the exit and scalar preheader blocks.
+  // completeLoopSkeleton will update the condition to use an iteration check,
+  // if required to decide whether to execute the remainder.
+  BranchInst *BrInst =
+      BranchInst::Create(LoopExitBlock, LoopScalarPreHeader, Builder.getTrue());
+  auto *ScalarLatchTerm = OrigLoop->getLoopLatch()->getTerminator();
+  BrInst->setDebugLoc(ScalarLatchTerm->getDebugLoc());
+  ReplaceInstWithInst(LoopMiddleBlock->getTerminator(), BrInst);
+
   // We intentionally don't let SplitBlock to update LoopInfo since
   // LoopVectorBody should belong to another loop than LoopVectorPreHeader.
   // LoopVectorBody is explicitly added to the correct place few lines later.
@@ -3419,23 +3429,18 @@ BasicBlock *InnerLoopVectorizer::completeLoopSkeleton(Loop *L,
   // all of the iterations in the first vector loop.
   // If (N - N%VF) == N, then we *don't* need to run the remainder.
   // If tail is to be folded, we know we don't need to run the remainder.
-  Value *CmpN = Builder.getTrue();
   if (!Cost->foldTailByMasking()) {
-    CmpN = CmpInst::Create(Instruction::ICmp, CmpInst::ICMP_EQ, Count,
-                           VectorTripCount, "cmp.n",
-                           LoopMiddleBlock->getTerminator());
+    Instruction *CmpN = CmpInst::Create(Instruction::ICmp, CmpInst::ICMP_EQ,
+                                        Count, VectorTripCount, "cmp.n",
+                                        LoopMiddleBlock->getTerminator());
 
     // Here we use the same DebugLoc as the scalar loop latch terminator instead
     // of the corresponding compare because they may have ended up with
     // different line numbers and we want to avoid awkward line stepping while
     // debugging. Eg. if the compare has got a line number inside the loop.
-    cast<Instruction>(CmpN)->setDebugLoc(ScalarLatchTerm->getDebugLoc());
+    CmpN->setDebugLoc(ScalarLatchTerm->getDebugLoc());
+    cast<BranchInst>(LoopMiddleBlock->getTerminator())->setCondition(CmpN);
   }
-
-  BranchInst *BrInst =
-      BranchInst::Create(LoopExitBlock, LoopScalarPreHeader, CmpN);
-  BrInst->setDebugLoc(ScalarLatchTerm->getDebugLoc());
-  ReplaceInstWithInst(LoopMiddleBlock->getTerminator(), BrInst);
 
   // Get ready to start creating new instructions into the vectorized body.
   assert(LoopVectorPreHeader == L->getLoopPreheader() &&
