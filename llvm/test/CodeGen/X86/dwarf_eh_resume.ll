@@ -1,4 +1,4 @@
-; RUN: llc %s -stop-after=irtranslator -o - | FileCheck %s
+; RUN: opt -mtriple=x86_64-linux-gnu -dwarfehprepare -S %s | FileCheck %s
 
 declare i32 @hoge(...)
 
