@@ -24,8 +24,7 @@ test_annotation:
   block
   try
   br        0
-  catch     __cpp_exception
-  local.set 0
+  catch_all
   end_try
   end_block
   rethrow   0
@@ -45,13 +44,12 @@ test_annotation:
 # CHECK-NEXT:   end_loop
 # CHECK-NEXT:   end_block                 # label1:
 # CHECK-NEXT:   try
-# CHECK-NEXT:   rethrow   0               # down to catch1
-# CHECK-NEXT:   catch     __cpp_exception # catch1:
+# CHECK-NEXT:   rethrow   0               # down to catch3
+# CHECK-NEXT:   catch     __cpp_exception # catch3:
 # CHECK-NEXT:   block
 # CHECK-NEXT:   try
 # CHECK-NEXT:   br        0               # 0: down to label5
-# CHECK-NEXT:   catch     __cpp_exception # catch2:
-# CHECK-NEXT:   local.set 0
+# CHECK-NEXT:   catch_all                 # catch5:
 # CHECK-NEXT:   end_try                   # label5:
 # CHECK-NEXT:   end_block                 # label4:
 # CHECK-NEXT:   rethrow   0               # to caller
