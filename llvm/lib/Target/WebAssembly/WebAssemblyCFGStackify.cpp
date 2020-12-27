@@ -178,27 +178,6 @@ getLatestInsertPos(MachineBasicBlock *MBB,
   return InsertPos;
 }
 
-// Find a catch instruction and its destination register within an EH pad.
-static MachineInstr *findCatch(MachineBasicBlock *EHPad, Register &ExnReg) {
-  assert(EHPad->isEHPad());
-  MachineInstr *Catch = nullptr;
-  for (auto &MI : *EHPad) {
-    if (WebAssembly::isCatch(MI.getOpcode())) {
-      Catch = &MI;
-      ExnReg = Catch->getOperand(0).getReg();
-      break;
-    }
-  }
-  assert(Catch && "EH pad does not have a catch");
-  assert(ExnReg != 0 && "Invalid register");
-  return Catch;
-}
-
-static MachineInstr *findCatch(MachineBasicBlock *EHPad) {
-  Register Dummy;
-  return findCatch(EHPad, Dummy);
-}
-
 void WebAssemblyCFGStackify::registerScope(MachineInstr *Begin,
                                            MachineInstr *End) {
   BeginToEnd[Begin] = End;
@@ -874,7 +853,10 @@ void WebAssemblyCFGStackify::fixEndsAtEndOfFunction(MachineFunction &MF) {
         // instructions before its corresponding 'catch' too.
         auto *EHPad = TryToEHPad.lookup(EndToBegin[&MI]);
         assert(EHPad);
-        Worklist.push_back(std::next(findCatch(EHPad)->getReverseIterator()));
+        auto NextIt =
+            std::next(WebAssembly::findCatch(EHPad)->getReverseIterator());
+        if (NextIt != EHPad->rend())
+          Worklist.push_back(NextIt);
         LLVM_FALLTHROUGH;
       }
       case WebAssembly::END_BLOCK:
