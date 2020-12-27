@@ -841,7 +841,9 @@ bool AArch64LegalizerInfo::legalizeShlAshrLshr(
   if (Amount > 31)
     return true; // This will have to remain a register variant.
   auto ExtCst = MIRBuilder.buildConstant(LLT::scalar(64), Amount);
+  Observer.changingInstr(MI);
   MI.getOperand(2).setReg(ExtCst.getReg(0));
+  Observer.changedInstr(MI);
   return true;
 }
 
