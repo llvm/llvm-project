@@ -11,7 +11,6 @@ class TestGdbRemoteAttach(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def attach_with_vAttach(self):
         # Start the inferior, start the debug monitor, nothing is attached yet.
         procs = self.prep_debug_monitor_and_inferior(

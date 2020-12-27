@@ -9,7 +9,6 @@ from lldbsuite.test import lldbutil
 class TestGdbRemoteAbort(gdbremote_testcase.GdbRemoteTestCaseBase):
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def inferior_abort_received(self):
         procs = self.prep_debug_monitor_and_inferior(inferior_args=["abort"])
         self.assertIsNotNone(procs)

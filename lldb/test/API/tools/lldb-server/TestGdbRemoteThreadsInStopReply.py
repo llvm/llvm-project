@@ -166,7 +166,6 @@ class TestGdbRemoteThreadsInStopReply(
         return thread_pcs
 
 
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_QListThreadsInStopReply_supported(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -183,7 +182,6 @@ class TestGdbRemoteThreadsInStopReply(
     # delegate, e.g. llgs.  So tests below to assert the stop threads number will all fail.
     @expectedFailureAll(oslist=["windows"])
     @skipIfNetBSD
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_stop_reply_reports_multiple_threads(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -193,7 +191,6 @@ class TestGdbRemoteThreadsInStopReply(
             self.ENABLE_THREADS_IN_STOP_REPLY_ENTRIES, 5)
         self.assertEqual(len(stop_reply_threads), 5)
 
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     @expectedFailureAll(oslist=["windows"])
     @skipIfNetBSD
     def test_no_QListThreadsInStopReply_supplies_no_threads(self):
@@ -206,7 +203,6 @@ class TestGdbRemoteThreadsInStopReply(
 
     @expectedFailureAll(oslist=["windows"])
     @skipIfNetBSD
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_stop_reply_reports_correct_threads(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -234,7 +230,6 @@ class TestGdbRemoteThreadsInStopReply(
 
     @expectedFailureAll(oslist=["windows"])
     @skipIfNetBSD
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_stop_reply_contains_thread_pcs(self):
         self.build()
         self.set_inferior_startup_launch()

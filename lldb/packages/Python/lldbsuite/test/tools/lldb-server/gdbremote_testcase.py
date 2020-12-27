@@ -199,9 +199,7 @@ class GdbRemoteTestCaseBase(Base):
             # Reverse connections may be tricky due to firewalls/NATs.
             reverse_connect = False
 
-            triple = self.dbg.GetSelectedPlatform().GetTriple()
-            if re.match(".*-.*-windows", triple):
-                self.skipTest("Remotely testing is not supported on Windows yet.")
+            # FIXME: This is extremely linux-oriented
 
             # Grab the ppid from /proc/[shell pid]/stat
             err, retcode, shell_stat = self.run_platform_command(

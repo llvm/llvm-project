@@ -10,7 +10,6 @@ class TestGdbRemoteSingleStep(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @skipIfWindows # No pty support to test any inferior std -i/e/o
     @skipIf(triple='^mips')
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_single_step_only_steps_one_instruction_with_s(self):
         self.build()
         self.set_inferior_startup_launch()
