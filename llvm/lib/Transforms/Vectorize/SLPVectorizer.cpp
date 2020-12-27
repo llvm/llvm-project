@@ -2472,9 +2472,9 @@ template <> struct DOTGraphTraits<BoUpSLP *> : public DefaultDOTGraphTraits {
     }
     for (auto V : Entry->Scalars) {
       OS << *V;
-      if (std::any_of(
-              R->ExternalUses.begin(), R->ExternalUses.end(),
-              [&](const BoUpSLP::ExternalUser &EU) { return EU.Scalar == V; }))
+      if (llvm::any_of(R->ExternalUses, [&](const BoUpSLP::ExternalUser &EU) {
+            return EU.Scalar == V;
+          }))
         OS << " <extract>";
       OS << "\n";
     }
