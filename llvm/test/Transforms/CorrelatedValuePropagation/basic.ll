@@ -1069,10 +1069,8 @@ define void @select_and(i32 %a, i1* %p) {
 ; CHECK-NEXT:    [[AND:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 false
 ; CHECK-NEXT:    br i1 [[AND]], label [[GUARD:%.*]], label [[EXIT:%.*]]
 ; CHECK:       guard:
-; CHECK-NEXT:    [[C1:%.*]] = icmp sgt i32 [[A]], 20
-; CHECK-NEXT:    store i1 [[C1]], i1* [[P:%.*]], align 1
-; CHECK-NEXT:    [[C2:%.*]] = icmp slt i32 [[A]], -20
-; CHECK-NEXT:    store i1 [[C2]], i1* [[P]], align 1
+; CHECK-NEXT:    store i1 false, i1* [[P:%.*]], align 1
+; CHECK-NEXT:    store i1 false, i1* [[P]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -1168,10 +1166,8 @@ define void @select_or(i32 %a, i1* %p) {
 ; CHECK-NEXT:    [[OR:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP2]]
 ; CHECK-NEXT:    br i1 [[OR]], label [[EXIT:%.*]], label [[GUARD:%.*]]
 ; CHECK:       guard:
-; CHECK-NEXT:    [[C1:%.*]] = icmp sgt i32 [[A]], 20
-; CHECK-NEXT:    store i1 [[C1]], i1* [[P:%.*]], align 1
-; CHECK-NEXT:    [[C2:%.*]] = icmp slt i32 [[A]], -20
-; CHECK-NEXT:    store i1 [[C2]], i1* [[P]], align 1
+; CHECK-NEXT:    store i1 false, i1* [[P:%.*]], align 1
+; CHECK-NEXT:    store i1 false, i1* [[P]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
