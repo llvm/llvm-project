@@ -49,33 +49,61 @@ def InstFormatCB     : InstFormat<15>;
 def InstFormatCJ     : InstFormat<16>;
 def InstFormatOther  : InstFormat<17>;
 
-class RISCVVConstraint<bits<4> val> {
-  bits<4> Value = val;
+class RISCVVConstraint<bits<3> val> {
+  bits<3> Value = val;
 }
-def NoConstraint  : RISCVVConstraint<0b0000>;
-def VS2Constraint : RISCVVConstraint<0b0001>;
-def VS1Constraint : RISCVVConstraint<0b0010>;
-def VMConstraint  : RISCVVConstraint<0b0100>;
-def OneInput      : RISCVVConstraint<0b1000>;
+def NoConstraint  : RISCVVConstraint<0b000>;
+def VS2Constraint : RISCVVConstraint<0b001>;
+def VS1Constraint : RISCVVConstraint<0b010>;
+def VMConstraint  : RISCVVConstraint<0b100>;
 
+// Illegal instructions:
+//
+// * The destination vector register group for a masked vector instruction
+// cannot overlap the source mask register (v0), unless the destination vector
+// register is being written with a mask value (e.g., comparisons) or the
+// scalar result of a reduction.
+//
+// * Widening: The destination vector register group cannot overlap a source
+// vector register group of a different EEW
+//
+// * Narrowing: The destination vector register group cannot overlap the
+// first source vector register group
+//
+// * For vadc and vsbc, an illegal instruction exception is raised if the
+// destination vector register is v0.
+//
+// * For vmadc and vmsbc, an illegal instruction exception is raised if the
+// destination vector register overlaps a source vector register group.
+//
+// * viota: An illegal instruction exception is raised if the destination
+// vector register group overlaps the source vector mask register. If the
+// instruction is masked, an illegal instruction exception is issued if the
+// destination vector register group overlaps v0.
+//
+// * v[f]slide[1]up: The destination vector register group for vslideup cannot
+// overlap the source vector register group.
+//
+// * vrgather: The destination vector register group cannot overlap with the
+// source vector register groups.
+//
+// * vcompress: The destination vector register group cannot overlap the
+// source vector register group or the source mask register
 def WidenV       : RISCVVConstraint<!or(VS2Constraint.Value,
                                         VS1Constraint.Value,
                                         VMConstraint.Value)>;
 def WidenW       : RISCVVConstraint<!or(VS1Constraint.Value,
                                         VMConstraint.Value)>;
 def WidenCvt     : RISCVVConstraint<!or(VS2Constraint.Value,
-                                        VMConstraint.Value,
-                                        OneInput.Value)>;
+                                        VMConstraint.Value)>;
 def Narrow       : RISCVVConstraint<!or(VS2Constraint.Value,
                                         VMConstraint.Value)>;
 def NarrowCvt    : RISCVVConstraint<!or(VS2Constraint.Value,
-                                        VMConstraint.Value,
-                                        OneInput.Value)>;
+                                        VMConstraint.Value)>;
 def Vmadc        : RISCVVConstraint<!or(VS2Constraint.Value,
                                         VS1Constraint.Value)>;
 def Iota         : RISCVVConstraint<!or(VS2Constraint.Value,
-                                        VMConstraint.Value,
-                                        OneInput.Value)>;
+                                        VMConstraint.Value)>;
 def SlideUp      : RISCVVConstraint<!or(VS2Constraint.Value,
                                         VMConstraint.Value)>;
 def Vrgather     : RISCVVConstraint<!or(VS2Constraint.Value,
@@ -138,7 +166,7 @@ class RVInst<dag outs, dag ins, string opcodestr, string argstr,
 
   // Defaults
   RISCVVConstraint RVVConstraint = NoConstraint;
-  let TSFlags{8-5} = RVVConstraint.Value;
+  let TSFlags{7-5} = RVVConstraint.Value;
 }
 
 // Pseudo instructions
