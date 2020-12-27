@@ -1850,11 +1850,8 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
           MergedDeoptArgs.reserve(ParentDeopt->Inputs.size() +
                                   ChildOB.Inputs.size());
 
-          MergedDeoptArgs.insert(MergedDeoptArgs.end(),
-                                 ParentDeopt->Inputs.begin(),
-                                 ParentDeopt->Inputs.end());
-          MergedDeoptArgs.insert(MergedDeoptArgs.end(), ChildOB.Inputs.begin(),
-                                 ChildOB.Inputs.end());
+          llvm::append_range(MergedDeoptArgs, ParentDeopt->Inputs);
+          llvm::append_range(MergedDeoptArgs, ChildOB.Inputs);
 
           OpDefs.emplace_back("deopt", std::move(MergedDeoptArgs));
         }
