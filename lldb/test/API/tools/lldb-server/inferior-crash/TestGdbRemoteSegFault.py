@@ -1,10 +1,7 @@
-
-
 import gdbremote_testcase
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
-
 
 class TestGdbRemoteSegFault(gdbremote_testcase.GdbRemoteTestCaseBase):
     mydir = TestBase.compute_mydir(__file__)
@@ -30,13 +27,10 @@ class TestGdbRemoteSegFault(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertIsNotNone(hex_exit_code)
         self.assertEqual(int(hex_exit_code, 16), expected_signo)
 
-    @debugserver_test
-    def test_inferior_seg_fault_received_debugserver(self):
-        self.build()
-        self.inferior_seg_fault_received(self.GDB_REMOTE_STOP_CODE_BAD_ACCESS)
-
     @skipIfWindows # No signal is sent on Windows.
-    @llgs_test
-    def test_inferior_seg_fault_received_llgs(self):
+    def test_inferior_seg_fault_received(self):
         self.build()
-        self.inferior_seg_fault_received(lldbutil.get_signal_number('SIGSEGV'))
+        if self.platformIsDarwin():
+            self.inferior_seg_fault_received(self.GDB_REMOTE_STOP_CODE_BAD_ACCESS)
+        else:
+            self.inferior_seg_fault_received(lldbutil.get_signal_number('SIGSEGV'))
