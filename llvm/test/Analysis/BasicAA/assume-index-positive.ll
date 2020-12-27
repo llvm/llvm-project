@@ -113,4 +113,20 @@ define void @test4(double* %ptr, i32 %skip) {
   ret void
 }
 
+define void @symmetry([0 x i8]* %ptr, i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: Function: symmetry
+; CHECK: NoAlias: i8* %gep1, i8* %gep2
+;
+  %b.cmp = icmp slt i32 %b, 0
+  call void @llvm.assume(i1 %b.cmp)
+  %gep1 = getelementptr [0 x i8], [0 x i8]* %ptr, i32 %a, i32 %b
+  call void @barrier()
+  %c.cmp = icmp sgt i32 %c, -1
+  call void @llvm.assume(i1 %c.cmp)
+  %c.off = add nuw nsw i32 %c, 1
+  %gep2 = getelementptr [0 x i8], [0 x i8]* %ptr, i32 %a, i32 %c.off
+  ret void
+}
+
 declare void @llvm.assume(i1 %cond)
+declare void @barrier()

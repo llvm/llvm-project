@@ -422,6 +422,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
   // Limit recursion depth to limit compile time in crazy cases.
   unsigned MaxLookup = MaxLookupSearchDepth;
   SearchTimes++;
+  const Instruction *CxtI = dyn_cast<Instruction>(V);
 
   unsigned MaxPointerSize = getMaxPointerSize(DL);
   DecomposedGEP Decomposed;
@@ -584,7 +585,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
       Scale = adjustToPointerSize(Scale, PointerSize);
 
       if (!!Scale) {
-        VariableGEPIndex Entry = {Index, ZExtBits, SExtBits, Scale};
+        VariableGEPIndex Entry = {Index, ZExtBits, SExtBits, Scale, CxtI};
         Decomposed.VarIndices.push_back(Entry);
       }
     }
@@ -1225,9 +1226,9 @@ AliasResult BasicAAResult::aliasGEP(
         // the Value this cycle may not hold in the next cycle. We'll just
         // give up if we can't determine conditions that hold for every cycle:
         const Value *V = DecompGEP1.VarIndices[i].V;
+        const Instruction *CxtI = DecompGEP1.VarIndices[i].CxtI;
 
-        KnownBits Known =
-            computeKnownBits(V, DL, 0, &AC, dyn_cast<Instruction>(GEP1), DT);
+        KnownBits Known = computeKnownBits(V, DL, 0, &AC, CxtI, DT);
         bool SignKnownZero = Known.isNonNegative();
         bool SignKnownOne = Known.isNegative();
 
@@ -1755,7 +1756,7 @@ void BasicAAResult::GetIndexDifference(
 
     // If we didn't consume this entry, add it to the end of the Dest list.
     if (!!Scale) {
-      VariableGEPIndex Entry = {V, ZExtBits, SExtBits, -Scale};
+      VariableGEPIndex Entry = {V, ZExtBits, SExtBits, -Scale, Src[i].CxtI};
       Dest.push_back(Entry);
     }
   }
