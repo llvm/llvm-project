@@ -1263,4 +1263,12 @@ define i8* @gep_null_defined(i64 %idx) null_pointer_is_valid {
   ret i8* %gep
 }
 
+define i8* @gep_null_inbounds_different_type(i64 %idx1, i64 %idx2) {
+; CHECK-LABEL: @gep_null_inbounds_different_type(
+; CHECK-NEXT:    ret i8* null
+;
+  %gep = getelementptr inbounds [0 x i8], [0 x i8]* null, i64 %idx1, i64 %idx2
+  ret i8* %gep
+}
+
 !0 = !{!"branch_weights", i32 2, i32 10}

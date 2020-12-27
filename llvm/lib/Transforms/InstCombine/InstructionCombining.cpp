@@ -1859,7 +1859,8 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   if (isa<ConstantPointerNull>(PtrOp) && GEP.isInBounds() &&
       !NullPointerIsDefined(GEP.getFunction(),
                             PtrOp->getType()->getPointerAddressSpace()))
-    return replaceInstUsesWith(GEP, PtrOp);
+    if (auto *PtrTy = dyn_cast<PointerType>(GEPType))
+      return replaceInstUsesWith(GEP, ConstantPointerNull::get(PtrTy));
 
   // Eliminate unneeded casts for indices, and replace indices which displace
   // by multiples of a zero size type with zero.
