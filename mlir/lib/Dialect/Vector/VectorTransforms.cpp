@@ -999,8 +999,7 @@ struct ShapeCastOpFolder : public OpRewritePattern<vector::ShapeCastOp> {
       return failure();
     auto operandSourceVectorType =
         sourceShapeCastOp.source().getType().cast<VectorType>();
-    auto operandResultVectorType =
-        sourceShapeCastOp.result().getType().cast<VectorType>();
+    auto operandResultVectorType = sourceShapeCastOp.getType();
 
     // Check if shape cast operations invert each other.
     if (operandSourceVectorType != resultVectorType ||
@@ -1397,7 +1396,7 @@ public:
   LogicalResult matchAndRewrite(vector::ConstantMaskOp op,
                                 PatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
-    auto dstType = op.getResult().getType().cast<VectorType>();
+    auto dstType = op.getType();
     auto eltType = dstType.getElementType();
     auto dimSizes = op.mask_dim_sizes();
     int64_t rank = dimSizes.size();
