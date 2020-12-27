@@ -54,9 +54,12 @@ Sections:
 # INVALID-NEXT: - Name:        .gnu.hash.broken.maskwords
 # INVALID-NEXT:   Type:        SHT_GNU_HASH
 # INVALID-NEXT:   Content:     '00000000000000000100000000000000'
-# INVALID-NEXT: - Name:        .gnu.hash.broken.nbuckets
+# INVALID-NEXT: - Name:        .gnu.hash.broken.nbuckets.a
 # INVALID-NEXT:   Type:        SHT_GNU_HASH
 # INVALID-NEXT:   Content:     '01000000000000000000000000000000'
+# INVALID-NEXT: - Name:        .gnu.hash.broken.nbuckets.b
+# INVALID-NEXT:   Type:        SHT_GNU_HASH
+# INVALID-NEXT:   Content:     FFFFFFFF000000000100000000000000{{$}}
 # INVALID-NEXT: - Name:        .gnu.hash.hashvalues.ok
 # INVALID-NEXT:   Type:        SHT_GNU_HASH
 # INVALID-NEXT:   Header:
@@ -108,15 +111,27 @@ Sections:
     BloomFilter: []
     HashBuckets: []
     HashValues:  []
-## Case 4: NBuckets field is broken, it says that the number of entries
+## Case 4(a): NBuckets field is broken, it says that the number of entries
 ## in the hash buckets is 1, but it is empty.
-  - Name:  .gnu.hash.broken.nbuckets
+  - Name:  .gnu.hash.broken.nbuckets.a
     Type:  SHT_GNU_HASH
     Header:
       SymNdx: 0x0
       Shift2: 0x0
       MaskWords: 0x0
       NBuckets:  0x1
+    BloomFilter: []
+    HashBuckets: []
+    HashValues:  []
+## Case 4(b): NBuckets = 0xFFFFFFFF is incorrect. The result will cause 32-bit
+## unsigned overflows if we keep intermediate expressions uint32_t.
+  - Name:  .gnu.hash.broken.nbuckets.b
+    Type:  SHT_GNU_HASH
+    Header:
+      SymNdx: 0x0
+      Shift2: 0x0
+      MaskWords: 0x1
+      NBuckets:  0xFFFFFFFF
     BloomFilter: []
     HashBuckets: []
     HashValues:  []

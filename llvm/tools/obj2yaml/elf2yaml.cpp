@@ -1271,9 +1271,9 @@ ELFDumper<ELFT>::dumpGnuHashSection(const Elf_Shdr *Shdr) {
 
   ELFYAML::GnuHashHeader Header;
   DataExtractor::Cursor Cur(0);
-  uint32_t NBuckets = Data.getU32(Cur);
+  uint64_t NBuckets = Data.getU32(Cur);
   Header.SymNdx = Data.getU32(Cur);
-  uint32_t MaskWords = Data.getU32(Cur);
+  uint64_t MaskWords = Data.getU32(Cur);
   Header.Shift2 = Data.getU32(Cur);
 
   // Set just the raw binary content if we were unable to read the header
