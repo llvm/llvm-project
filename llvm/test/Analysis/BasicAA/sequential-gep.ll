@@ -135,4 +135,15 @@ define void @non_zero_index_with_offset(i32* %p, i32* %q) {
   ret void
 }
 
+; CHECK-LABEL: non_zero_index_assume
+; CHECK: NoAlias: i32* %gep, i32* %p
+define void @non_zero_index_assume(i32* %p, i32 %knownnonzero) {
+  %cmp = icmp ne i32 %knownnonzero, 0
+  call void @llvm.assume(i1 %cmp)
+  %gep = getelementptr i32, i32* %p, i32 %knownnonzero
+  ret void
+}
+
+declare void @llvm.assume(i1)
+
 !0 = !{ i32 1, i32 5 }

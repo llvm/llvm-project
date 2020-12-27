@@ -1280,7 +1280,7 @@ AliasResult BasicAAResult::aliasGEP(
       if (DecompGEP1.VarIndices.size() == 1) {
         // VarIndex = Scale*V. If V != 0 then abs(VarIndex) >= abs(Scale).
         const VariableGEPIndex &Var = DecompGEP1.VarIndices[0];
-        if (isKnownNonZero(Var.V, DL))
+        if (isKnownNonZero(Var.V, DL, 0, &AC, Var.CxtI, DT))
           MinAbsVarIndex = Var.Scale.abs();
       } else if (DecompGEP1.VarIndices.size() == 2) {
         // VarIndex = Scale*V0 + (-Scale)*V1.
