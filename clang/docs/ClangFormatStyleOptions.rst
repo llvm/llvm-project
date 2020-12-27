@@ -2839,6 +2839,16 @@ the configuration (without a prefix: ``Auto``).
      int a = 5;                     vs.     int a= 5;
      a += 42;                               a+= 42;
 
+**SpaceBeforeCaseColon** (``bool``)
+  If ``false``, spaces will be removed before case colon.
+
+  .. code-block:: c++
+
+    true:                                   false
+    switch (x) {                    vs.     switch (x) {
+      case 1 : break;                         case 1: break;
+    }                                       }
+
 **SpaceBeforeCpp11BracedList** (``bool``)
   If ``true``, a space will be inserted before a C++11 braced list
   used to initialize an object (after the preceding identifier or type).
