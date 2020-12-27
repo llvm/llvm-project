@@ -57,7 +57,7 @@ struct RefMaps {
 
 TEST(FileEntryTest, Constructor) {
   FileEntry FE;
-  EXPECT_EQ(0U, FE.getSize());
+  EXPECT_EQ(0, FE.getSize());
   EXPECT_EQ(0, FE.getModificationTime());
   EXPECT_EQ(nullptr, FE.getDir());
   EXPECT_EQ(0U, FE.getUniqueID().getDevice());
