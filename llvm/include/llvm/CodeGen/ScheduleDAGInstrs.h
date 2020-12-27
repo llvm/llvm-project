@@ -388,10 +388,7 @@ namespace llvm {
 
   /// Returns an existing SUnit for this MI, or nullptr.
   inline SUnit *ScheduleDAGInstrs::getSUnit(MachineInstr *MI) const {
-    DenseMap<MachineInstr*, SUnit*>::const_iterator I = MISUnitMap.find(MI);
-    if (I == MISUnitMap.end())
-      return nullptr;
-    return I->second;
+    return MISUnitMap.lookup(MI);
   }
 
 } // end namespace llvm

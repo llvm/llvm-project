@@ -369,10 +369,7 @@ static void initSlots2Values(const Function &F,
 const Value* PerFunctionMIParsingState::getIRValue(unsigned Slot) {
   if (Slots2Values.empty())
     initSlots2Values(MF.getFunction(), Slots2Values);
-  auto ValueInfo = Slots2Values.find(Slot);
-  if (ValueInfo == Slots2Values.end())
-    return nullptr;
-  return ValueInfo->second;
+  return Slots2Values.lookup(Slot);
 }
 
 namespace {
@@ -3169,10 +3166,7 @@ static void initSlots2BasicBlocks(
 static const BasicBlock *getIRBlockFromSlot(
     unsigned Slot,
     const DenseMap<unsigned, const BasicBlock *> &Slots2BasicBlocks) {
-  auto BlockInfo = Slots2BasicBlocks.find(Slot);
-  if (BlockInfo == Slots2BasicBlocks.end())
-    return nullptr;
-  return BlockInfo->second;
+  return Slots2BasicBlocks.lookup(Slot);
 }
 
 const BasicBlock *MIParser::getIRBlock(unsigned Slot) {
