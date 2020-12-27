@@ -2284,17 +2284,16 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
     return false;
 
   unsigned DestReg = Inst.getOperand(0).getReg();
-  unsigned CheckReg;
   // Operands[1] will be the first operand, DestReg.
   SMLoc Loc = Operands[1]->getStartLoc();
   if (TargetFlags & RISCVII::VS2Constraint) {
-    CheckReg = Inst.getOperand(1).getReg();
+    unsigned CheckReg = Inst.getOperand(1).getReg();
     if (DestReg == CheckReg)
       return Error(Loc, "The destination vector register group cannot overlap"
                         " the source vector register group.");
   }
   if ((TargetFlags & RISCVII::VS1Constraint) && (Inst.getOperand(2).isReg())) {
-    CheckReg = Inst.getOperand(2).getReg();
+    unsigned CheckReg = Inst.getOperand(2).getReg();
     if (DestReg == CheckReg)
       return Error(Loc, "The destination vector register group cannot overlap"
                         " the source vector register group.");
@@ -2314,10 +2313,10 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
     // same. For example, "viota.m v0, v2" is "viota.m v0, v2, NoRegister"
     // actually. We need to check the last operand to ensure whether it is
     // masked or not.
-    if ((TargetFlags & RISCVII::OneInput) && (Inst.getNumOperands() == 3))
-      CheckReg = Inst.getOperand(2).getReg();
-    else if (Inst.getNumOperands() == 4)
-      CheckReg = Inst.getOperand(3).getReg();
+    unsigned CheckReg = Inst.getOperand(Inst.getNumOperands() - 1).getReg();
+    assert((CheckReg == RISCV::V0 || CheckReg == RISCV::NoRegister) &&
+           "Unexpected register for mask operand");
+
     if (DestReg == CheckReg)
       return Error(Loc, "The destination vector register group cannot overlap"
                         " the mask register.");
