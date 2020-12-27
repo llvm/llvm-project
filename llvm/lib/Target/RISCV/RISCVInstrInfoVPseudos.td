@@ -779,6 +779,14 @@ multiclass VPseudoUnaryV_V_X_I_NoDummyMask {
   }
 }
 
+multiclass VPseudoUnaryV_F_NoDummyMask {
+  foreach m = MxList.m in {
+    let VLMul = m.value in {
+      def "_F_" # m.MX : VPseudoUnaryNoDummyMask<m.vrclass, FPR32>;
+    }
+  }
+}
+
 // The destination EEW is 1.
 // The source EEW is 8, 16, 32, or 64.
 // When the destination EEW is different from source EEW, we need to use
@@ -1996,11 +2004,15 @@ defm PseudoVMFGT       : VPseudoBinaryM_VX</*IsFloat=*/1>;
 defm PseudoVMFGE       : VPseudoBinaryM_VX</*IsFloat=*/1>;
 
 //===----------------------------------------------------------------------===//
+// 14.14. Vector Floating-Point Move Instruction
+//===----------------------------------------------------------------------===//
+defm PseudoVFMV_V      : VPseudoUnaryV_F_NoDummyMask;
+
+//===----------------------------------------------------------------------===//
 // 14.15. Vector Floating-Point Merge Instruction
 //===----------------------------------------------------------------------===//
 defm PseudoVFMERGE     : VPseudoBinaryV_XM</*CarryOut =*/0,/*CarryIn =*/true,
                                            /*Constraint =*/"", /*IsFloat=*/true>;
-
 } // Predicates = [HasStdExtV, HasStdExtF]
 
 //===----------------------------------------------------------------------===//
@@ -2413,6 +2425,23 @@ defm "" : VPatBinaryM_VV_VX<"int_riscv_vmflt", "PseudoVMFLT", AllFloatVectors>;
 defm "" : VPatBinaryM_VV_VX<"int_riscv_vmfne", "PseudoVMFNE", AllFloatVectors>;
 defm "" : VPatBinaryM_VX<"int_riscv_vmfgt", "PseudoVMFGT", AllFloatVectors>;
 defm "" : VPatBinaryM_VX<"int_riscv_vmfge", "PseudoVMFGE", AllFloatVectors>;
+
+//===----------------------------------------------------------------------===//
+// 14.14. Vector Floating-Point Move Instruction
+//===----------------------------------------------------------------------===//
+foreach fvti = AllFloatVectors in {
+  // If we're splatting fpimm0, use vmv.v.x vd, x0.
+  def : Pat<(fvti.Vector (int_riscv_vfmv_v_f
+                         (fvti.Scalar (fpimm0)), GPR:$vl)),
+            (!cast<Instruction>("PseudoVMV_V_X_"#fvti.LMul.MX)
+             X0, (NoX0 GPR:$vl), fvti.SEW)>;
+
+  def : Pat<(fvti.Vector (int_riscv_vfmv_v_f
+                         (fvti.Scalar fvti.ScalarRegClass:$rs2), GPR:$vl)),
+            (!cast<Instruction>("PseudoVFMV_V_F_"#fvti.LMul.MX)
+             ToFPR32<fvti.Scalar, fvti.ScalarRegClass, "rs2">.ret,
+             (NoX0 GPR:$vl), fvti.SEW)>;
+}
 
 //===----------------------------------------------------------------------===//
 // 14.15. Vector Floating-Point Merge Instruction
