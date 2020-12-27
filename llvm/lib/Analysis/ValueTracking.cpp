@@ -2131,13 +2131,12 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
         // correct to assume that all conditions of AND are met in true branch.
         // TODO: Support similar logic of OR and EQ predicate?
         if (NonNullIfTrue)
-          if (auto *BO = dyn_cast<BinaryOperator>(Curr))
-            if (BO->getOpcode() == Instruction::And) {
-              for (auto *BOU : BO->users())
-                if (Visited.insert(BOU).second)
-                  WorkList.push_back(BOU);
-              continue;
-            }
+          if (match(Curr, m_LogicalAnd(m_Value(), m_Value()))) {
+            for (auto *CurrU : Curr->users())
+              if (Visited.insert(CurrU).second)
+                WorkList.push_back(CurrU);
+            continue;
+          }
 
         if (const BranchInst *BI = dyn_cast<BranchInst>(Curr)) {
           assert(BI->isConditional() && "uses a comparison!");
@@ -6156,25 +6155,25 @@ static Optional<bool> isImpliedCondICmps(const ICmpInst *LHS,
 
 /// Return true if LHS implies RHS is true.  Return false if LHS implies RHS is
 /// false.  Otherwise, return None if we can't infer anything.  We expect the
-/// RHS to be an icmp and the LHS to be an 'and' or an 'or' instruction.
+/// RHS to be an icmp and the LHS to be an 'and', 'or', or a 'select' instruction.
 static Optional<bool>
-isImpliedCondAndOr(const BinaryOperator *LHS, CmpInst::Predicate RHSPred,
+isImpliedCondAndOr(const Instruction *LHS, CmpInst::Predicate RHSPred,
                    const Value *RHSOp0, const Value *RHSOp1,
-
                    const DataLayout &DL, bool LHSIsTrue, unsigned Depth) {
-  // The LHS must be an 'or' or an 'and' instruction.
+  // The LHS must be an 'or', 'and', or a 'select' instruction.
   assert((LHS->getOpcode() == Instruction::And ||
-          LHS->getOpcode() == Instruction::Or) &&
-         "Expected LHS to be 'and' or 'or'.");
+          LHS->getOpcode() == Instruction::Or ||
+          LHS->getOpcode() == Instruction::Select) &&
+         "Expected LHS to be 'and', 'or', or 'select'.");
 
   assert(Depth <= MaxAnalysisRecursionDepth && "Hit recursion limit");
 
   // If the result of an 'or' is false, then we know both legs of the 'or' are
   // false.  Similarly, if the result of an 'and' is true, then we know both
   // legs of the 'and' are true.
-  Value *ALHS, *ARHS;
-  if ((!LHSIsTrue && match(LHS, m_Or(m_Value(ALHS), m_Value(ARHS)))) ||
-      (LHSIsTrue && match(LHS, m_And(m_Value(ALHS), m_Value(ARHS))))) {
+  const Value *ALHS, *ARHS;
+  if ((!LHSIsTrue && match(LHS, m_LogicalOr(m_Value(ALHS), m_Value(ARHS)))) ||
+      (LHSIsTrue && match(LHS, m_LogicalAnd(m_Value(ALHS), m_Value(ARHS))))) {
     // FIXME: Make this non-recursion.
     if (Optional<bool> Implication = isImpliedCondition(
             ALHS, RHSPred, RHSOp0, RHSOp1, DL, LHSIsTrue, Depth + 1))
@@ -6215,13 +6214,14 @@ llvm::isImpliedCondition(const Value *LHS, CmpInst::Predicate RHSPred,
     return isImpliedCondICmps(LHSCmp, RHSPred, RHSOp0, RHSOp1, DL, LHSIsTrue,
                               Depth);
 
-  /// The LHS should be an 'or' or an 'and' instruction.  We expect the RHS to
-  /// be / an icmp. FIXME: Add support for and/or on the RHS.
-  const BinaryOperator *LHSBO = dyn_cast<BinaryOperator>(LHS);
-  if (LHSBO) {
-    if ((LHSBO->getOpcode() == Instruction::And ||
-         LHSBO->getOpcode() == Instruction::Or))
-      return isImpliedCondAndOr(LHSBO, RHSPred, RHSOp0, RHSOp1, DL, LHSIsTrue,
+  /// The LHS should be an 'or', 'and', or a 'select' instruction.  We expect
+  /// the RHS to be an icmp.
+  /// FIXME: Add support for and/or/select on the RHS.
+  if (const Instruction *LHSI = dyn_cast<Instruction>(LHS)) {
+    if ((LHSI->getOpcode() == Instruction::And ||
+         LHSI->getOpcode() == Instruction::Or ||
+         LHSI->getOpcode() == Instruction::Select))
+      return isImpliedCondAndOr(LHSI, RHSPred, RHSOp0, RHSOp1, DL, LHSIsTrue,
                                 Depth);
   }
   return None;
