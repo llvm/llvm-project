@@ -3457,5 +3457,13 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   if (Instruction *NewXor = sinkNotIntoXor(I, Builder))
     return NewXor;
 
+  // Otherwise, if all else failed, try to hoist the xor-by-constant:
+  // (X ^ C) ^ Y --> (X ^ Y) ^ C
+  // FIXME: does this need hardening against ConstantExpr's
+  //        to prevent infinite combine loops?
+  if (match(&I,
+            m_c_Xor(m_OneUse(m_Xor(m_Value(X), m_Constant(C1))), m_Value(Y))))
+    return BinaryOperator::CreateXor(Builder.CreateXor(X, Y), C1);
+
   return nullptr;
 }

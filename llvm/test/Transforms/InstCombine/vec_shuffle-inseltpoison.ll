@@ -1749,8 +1749,8 @@ define <3 x i32> @splat_assoc_and(<4 x i32> %x, <3 x i32> %y) {
 define <5 x i32> @splat_assoc_xor(<4 x i32> %x, <5 x i32> %y) {
 ; CHECK-LABEL: @splat_assoc_xor(
 ; CHECK-NEXT:    [[SPLATX:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> undef, <5 x i32> zeroinitializer
-; CHECK-NEXT:    [[A:%.*]] = xor <5 x i32> [[Y:%.*]], <i32 42, i32 42, i32 42, i32 42, i32 42>
-; CHECK-NEXT:    [[R:%.*]] = xor <5 x i32> [[SPLATX]], [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <5 x i32> [[SPLATX]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor <5 x i32> [[TMP1]], <i32 42, i32 42, i32 42, i32 42, i32 42>
 ; CHECK-NEXT:    ret <5 x i32> [[R]]
 ;
   %splatx = shufflevector <4 x i32> %x, <4 x i32> undef, <5 x i32> zeroinitializer
