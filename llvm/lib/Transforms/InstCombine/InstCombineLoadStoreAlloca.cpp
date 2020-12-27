@@ -903,29 +903,14 @@ static Instruction *replaceGEPIdxWithZero(InstCombinerImpl &IC, Value *Ptr,
 }
 
 static bool canSimplifyNullStoreOrGEP(StoreInst &SI) {
-  if (NullPointerIsDefined(SI.getFunction(), SI.getPointerAddressSpace()))
-    return false;
-
-  auto *Ptr = SI.getPointerOperand();
-  if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(Ptr))
-    if (GEPI->isInBounds())
-      Ptr = GEPI->getOperand(0);
-  return (isa<ConstantPointerNull>(Ptr) &&
-          !NullPointerIsDefined(SI.getFunction(), SI.getPointerAddressSpace()));
+  return isa<ConstantPointerNull>(SI.getPointerOperand()) &&
+         !NullPointerIsDefined(SI.getFunction(), SI.getPointerAddressSpace());
 }
 
 static bool canSimplifyNullLoadOrGEP(LoadInst &LI, Value *Op) {
-  if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(Op)) {
-    const Value *GEPI0 = GEPI->getOperand(0);
-    if (isa<ConstantPointerNull>(GEPI0) && GEPI->isInBounds() &&
-        !NullPointerIsDefined(LI.getFunction(), GEPI->getPointerAddressSpace()))
-      return true;
-  }
-  if (isa<UndefValue>(Op) ||
-      (isa<ConstantPointerNull>(Op) &&
-       !NullPointerIsDefined(LI.getFunction(), LI.getPointerAddressSpace())))
-    return true;
-  return false;
+  return isa<UndefValue>(Op) ||
+         (isa<ConstantPointerNull>(Op) &&
+          !NullPointerIsDefined(LI.getFunction(), LI.getPointerAddressSpace()));
 }
 
 Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {

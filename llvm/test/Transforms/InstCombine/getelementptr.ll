@@ -1239,8 +1239,7 @@ define i32* @PR45084_extra_use(i1 %cond, %struct.f** %p) {
 
 define i8* @gep_null_inbounds(i64 %idx) {
 ; CHECK-LABEL: @gep_null_inbounds(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, i8* null, i64 [[IDX:%.*]]
-; CHECK-NEXT:    ret i8* [[GEP]]
+; CHECK-NEXT:    ret i8* null
 ;
   %gep = getelementptr inbounds i8, i8* null, i64 %idx
   ret i8* %gep
