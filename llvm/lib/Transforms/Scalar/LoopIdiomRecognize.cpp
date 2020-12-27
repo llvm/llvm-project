@@ -2000,9 +2000,14 @@ static bool detectShiftUntilBitTestIdiom(Loop *CurLoop, Value *&BaseX,
                              m_LoopInvariant(m_Shl(m_One(), m_Value(BitPos)),
                                              CurLoop))));
   };
+  auto MatchConstantBitMask = [&]() {
+    return ICmpInst::isEquality(Pred) && match(CmpRHS, m_Zero()) &&
+           match(CmpLHS, m_And(m_Value(CurrX),
+                               m_CombineAnd(m_Value(BitMask), m_Power2()))) &&
+           (BitPos = ConstantExpr::getExactLogBase2(cast<Constant>(BitMask)));
+  };
 
-  if (!MatchVariableBitMask()) {
-    // FIXME: support constant bit mask.
+  if (!MatchVariableBitMask() && !MatchConstantBitMask()) {
     // FIXME: support sign bit test (use llvm::decomposeBitTestICmp()).
     LLVM_DEBUG(dbgs() << DEBUG_TYPE " Bad backedge comparison.\n");
     return false;
