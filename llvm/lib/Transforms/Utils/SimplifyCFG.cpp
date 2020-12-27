@@ -4632,6 +4632,7 @@ bool SimplifyCFGOpt::simplifyUnreachable(UnreachableInst *UI) {
         Changed = true;
       }
     } else if (auto *CRI = dyn_cast<CleanupReturnInst>(TI)) {
+      (void)CRI;
       assert(CRI->hasUnwindDest() && CRI->getUnwindDest() == BB &&
              "Expected to always have an unwind to BB.");
       Updates.push_back({DominatorTree::Delete, Predecessor, BB});
