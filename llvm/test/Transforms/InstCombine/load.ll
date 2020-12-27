@@ -69,9 +69,8 @@ define i32 @load_gep_null_inbounds(i64 %X) {
 
 define i32 @load_gep_null_not_inbounds(i64 %X) {
 ; CHECK-LABEL: @load_gep_null_not_inbounds(
-; CHECK-NEXT:    [[V:%.*]] = getelementptr i32, i32* null, i64 [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = load i32, i32* [[V]], align 4
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    store i32 undef, i32* null, align 536870912
+; CHECK-NEXT:    ret i32 undef
 ;
   %V = getelementptr i32, i32* null, i64 %X
   %R = load i32, i32* %V
