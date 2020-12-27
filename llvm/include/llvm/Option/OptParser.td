@@ -167,12 +167,6 @@ class MarshallingInfoStringInt<code keypath, code defaultvalue="0", code type="u
   code Denormalizer = "denormalizeString";
 }
 
-class MarshallingInfoStringVector<code keypath>
-  : MarshallingInfo<keypath, "std::vector<std::string>({})"> {
-  code Normalizer = "normalizeStringVector";
-  code Denormalizer = "denormalizeStringVector";
-}
-
 class MarshallingInfoFlag<code keypath, code defaultvalue = "false">
   : MarshallingInfo<keypath, defaultvalue> {
   code Normalizer = "normalizeSimpleFlag";
@@ -207,6 +201,9 @@ class NormalizedValues<list<code> definitions> { list<code> NormalizedValues = d
 class AutoNormalizeEnum {
   code Normalizer = "normalizeSimpleEnum";
   code Denormalizer = "denormalizeSimpleEnum";
+}
+class AutoNormalizeEnumJoined : AutoNormalizeEnum {
+  code Denormalizer = "denormalizeSimpleEnumJoined";
 }
 class ValueMerger<code merger> { code ValueMerger = merger; }
 class ValueExtractor<code extractor> { code ValueExtractor = extractor; }
