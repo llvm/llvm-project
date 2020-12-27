@@ -67,7 +67,7 @@ static MaskFormat get1DMaskFormat(Value mask) {
     ArrayAttr masks = m.mask_dim_sizes();
     assert(masks.size() == 1);
     int64_t i = masks[0].cast<IntegerAttr>().getInt();
-    int64_t u = m.getType().cast<VectorType>().getDimSize(0);
+    int64_t u = m.getType().getDimSize(0);
     if (i >= u)
       return MaskFormat::AllTrue;
     if (i <= 0)
@@ -849,7 +849,7 @@ static Value foldExtractFromShapeCast(ExtractOp extractOp) {
     return Value();
   // Get the nth dimension size starting from lowest dimension.
   auto getDimReverse = [](VectorType type, int64_t n) {
-    return type.getShape().take_back(n+1).front();
+    return type.getShape().take_back(n + 1).front();
   };
   int64_t destinationRank =
       extractOp.getType().isa<VectorType>()
@@ -1870,9 +1870,8 @@ public:
     auto dense = constantOp.value().dyn_cast<SplatElementsAttr>();
     if (!dense)
       return failure();
-    auto newAttr = DenseElementsAttr::get(
-        extractStridedSliceOp.getType().cast<VectorType>(),
-        dense.getSplatValue());
+    auto newAttr = DenseElementsAttr::get(extractStridedSliceOp.getType(),
+                                          dense.getSplatValue());
     rewriter.replaceOpWithNewOp<ConstantOp>(extractStridedSliceOp, newAttr);
     return success();
   }
