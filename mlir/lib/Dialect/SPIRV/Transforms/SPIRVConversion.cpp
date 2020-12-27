@@ -473,23 +473,27 @@ LogicalResult
 FuncOpConversion::matchAndRewrite(FuncOp funcOp, ArrayRef<Value> operands,
                                   ConversionPatternRewriter &rewriter) const {
   auto fnType = funcOp.getType();
-  // TODO: support converting functions with one result.
-  if (fnType.getNumResults())
+  if (fnType.getNumResults() > 1)
     return failure();
 
   TypeConverter::SignatureConversion signatureConverter(fnType.getNumInputs());
-  for (auto argType : enumerate(funcOp.getType().getInputs())) {
+  for (auto argType : enumerate(fnType.getInputs())) {
     auto convertedType = typeConverter.convertType(argType.value());
     if (!convertedType)
       return failure();
     signatureConverter.addInputs(argType.index(), convertedType);
   }
 
+  Type resultType;
+  if (fnType.getNumResults() == 1)
+    resultType = typeConverter.convertType(fnType.getResult(0));
+
   // Create the converted spv.func op.
   auto newFuncOp = rewriter.create<spirv::FuncOp>(
       funcOp.getLoc(), funcOp.getName(),
       rewriter.getFunctionType(signatureConverter.getConvertedTypes(),
-                               llvm::None));
+                               resultType ? TypeRange(resultType)
+                                          : TypeRange()));
 
   // Copy over all attributes other than the function name and type.
   for (const auto &namedAttr : funcOp.getAttrs()) {
