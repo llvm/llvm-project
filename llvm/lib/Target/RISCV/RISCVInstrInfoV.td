@@ -111,6 +111,7 @@ class VWholeLoad<bits<3> nf, string opcodestr>
                 opcodestr, "$vd, (${rs1})"> {
   let vm = 1;
   let Uses = [];
+  let RVVConstraint = NoConstraint;
 }
 
 // segment load vd, (rs1), vm
@@ -700,7 +701,8 @@ defm VWMACCUS_V : VALUr_MV_X<"vwmaccus", 0b111110>;
 defm VMERGE_V : VALUm_IV_V_X_I<"vmerge", 0b010111>;
 
 // Vector Integer Move Instructions
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, vs2 = 0, vm = 1 in {
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, vs2 = 0, vm = 1,
+    RVVConstraint = NoConstraint  in {
 // op vd, vs1
 def VMV_V_V : RVInstVV<0b010111, OPIVV, (outs VR:$vd),
                        (ins VR:$vs1), "vmv.v.v", "$vd, $vs1">;
@@ -827,6 +829,7 @@ def VFMERGE_VFM : RVInstVX<0b010111, OPFVF, (outs VR:$vd),
 }
 
 // Vector Floating-Point Move Instruction
+let RVVConstraint = NoConstraint in
 def VFMV_V_F : RVInstVX<0b010111, OPFVF, (outs VR:$vd),
                        (ins FPR32:$rs1), "vfmv.v.f", "$vd, $rs1"> {
   let vs2 = 0;
@@ -912,6 +915,7 @@ defm VFWREDSUM : VALU_FV_V<"vfwredsum", 0b110001>;
 
 let Predicates = [HasStdExtV] in {
 // Vector Mask-Register Logical Instructions
+let RVVConstraint = NoConstraint in {
 defm VMAND_M : VALU_MV_Mask<"vmand", 0b011001, "m">;
 defm VMNAND_M : VALU_MV_Mask<"vmnand", 0b011101, "m">;
 defm VMANDNOT_M : VALU_MV_Mask<"vmandnot", 0b011000, "m">;
@@ -920,6 +924,7 @@ defm VMOR_M : VALU_MV_Mask<"vmor", 0b011010, "m">;
 defm VMNOR_M : VALU_MV_Mask<"vmnor", 0b011110, "m">;
 defm VMORNOT_M : VALU_MV_Mask<"vmornot", 0b011100, "m">;
 defm VMXNOR_M : VALU_MV_Mask<"vmxnor", 0b011111, "m">;
+}
 
 def : InstAlias<"vmmv.m $vd, $vs",
                 (VMAND_MM VR:$vd, VR:$vs, VR:$vs)>;
@@ -930,7 +935,8 @@ def : InstAlias<"vmset.m $vd",
 def : InstAlias<"vmnot.m $vd, $vs",
                 (VMNAND_MM VR:$vd, VR:$vs, VR:$vs)>;
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0,
+    RVVConstraint = NoConstraint  in {
 // Vector mask population count vpopc
 def VPOPC_M : RVInstV<0b010000, 0b10000, OPMVV, (outs GPR:$vd),
                         (ins VR:$vs2, VMaskOp:$vm),
@@ -964,7 +970,7 @@ def VID_V : RVInstV<0b010100, 0b10001, OPMVV, (outs VR:$vd),
 }
 
 // Integer Scalar Move Instructions
-let vm = 1 in {
+let vm = 1, RVVConstraint = NoConstraint in {
 def VMV_X_S : RVInstV<0b010000, 0b00000, OPMVV, (outs GPR:$vd),
                       (ins VR:$vs2), "vmv.x.s", "$vd, $vs2">;
 let Constraints = "$vd = $vd_wb" in
@@ -976,7 +982,8 @@ def VMV_S_X : RVInstV2<0b010000, 0b00000, OPMVX, (outs VR:$vd_wb),
 } // Predicates = [HasStdExtV]
 
 let Predicates = [HasStdExtV, HasStdExtF] in {
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, vm = 1 in {
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, vm = 1,
+    RVVConstraint = NoConstraint  in {
 // Floating-Point Scalar Move Instructions
 def VFMV_F_S : RVInstV<0b010000, 0b00000, OPFVV, (outs FPR32:$vd),
                       (ins VR:$vs2), "vfmv.f.s", "$vd, $vs2">;
@@ -1018,7 +1025,8 @@ let Constraints = "@earlyclobber $vd", RVVConstraint = Vcompress in {
 defm VCOMPRESS_V : VALU_MV_Mask<"vcompress", 0b010111>;
 } // Constraints = "@earlyclobber $vd", RVVConstraint = Vcompress
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0,
+    RVVConstraint = NoConstraint in {
 foreach nf = [1, 2, 4, 8] in {
   def VMV#nf#R_V  : RVInstV<0b100111, !add(nf, -1), OPIVI, (outs VR:$vd),
                             (ins VR:$vs2), "vmv" # nf # "r.v",
