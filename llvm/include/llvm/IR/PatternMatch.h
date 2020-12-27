@@ -88,11 +88,6 @@ inline class_match<BinaryOperator> m_BinOp() {
 /// Matches any compare instruction and ignore it.
 inline class_match<CmpInst> m_Cmp() { return class_match<CmpInst>(); }
 
-/// Match an arbitrary ConstantInt and ignore it.
-inline class_match<ConstantInt> m_ConstantInt() {
-  return class_match<ConstantInt>();
-}
-
 /// Match an arbitrary undef constant.
 inline class_match<UndefValue> m_Undef() { return class_match<UndefValue>(); }
 
@@ -101,6 +96,21 @@ inline class_match<PoisonValue> m_Poison() { return class_match<PoisonValue>(); 
 
 /// Match an arbitrary Constant and ignore it.
 inline class_match<Constant> m_Constant() { return class_match<Constant>(); }
+
+/// Match an arbitrary ConstantInt and ignore it.
+inline class_match<ConstantInt> m_ConstantInt() {
+  return class_match<ConstantInt>();
+}
+
+/// Match an arbitrary ConstantFP and ignore it.
+inline class_match<ConstantFP> m_ConstantFP() {
+  return class_match<ConstantFP>();
+}
+
+/// Match an arbitrary ConstantExpr and ignore it.
+inline class_match<ConstantExpr> m_ConstantExpr() {
+  return class_match<ConstantExpr>();
+}
 
 /// Match an arbitrary basic block value and ignore it.
 inline class_match<BasicBlock> m_BasicBlock() {
@@ -699,19 +709,36 @@ inline bind_ty<BinaryOperator> m_BinOp(BinaryOperator *&I) { return I; }
 /// Match a with overflow intrinsic, capturing it if we match.
 inline bind_ty<WithOverflowInst> m_WithOverflowInst(WithOverflowInst *&I) { return I; }
 
-/// Match a ConstantInt, capturing the value if we match.
-inline bind_ty<ConstantInt> m_ConstantInt(ConstantInt *&CI) { return CI; }
-
 /// Match a Constant, capturing the value if we match.
 inline bind_ty<Constant> m_Constant(Constant *&C) { return C; }
 
+/// Match a ConstantInt, capturing the value if we match.
+inline bind_ty<ConstantInt> m_ConstantInt(ConstantInt *&CI) { return CI; }
+
 /// Match a ConstantFP, capturing the value if we match.
 inline bind_ty<ConstantFP> m_ConstantFP(ConstantFP *&C) { return C; }
+
+/// Match a ConstantExpr, capturing the value if we match.
+inline bind_ty<ConstantExpr> m_ConstantExpr(ConstantExpr *&C) { return C; }
 
 /// Match a basic block value, capturing it if we match.
 inline bind_ty<BasicBlock> m_BasicBlock(BasicBlock *&V) { return V; }
 inline bind_ty<const BasicBlock> m_BasicBlock(const BasicBlock *&V) {
   return V;
+}
+
+/// Match an arbitrary immediate Constant and ignore it.
+inline match_combine_and<class_match<Constant>,
+                         match_unless<class_match<ConstantExpr>>>
+m_ImmConstant() {
+  return m_CombineAnd(m_Constant(), m_Unless(m_ConstantExpr()));
+}
+
+/// Match an immediate Constant, capturing the value if we match.
+inline match_combine_and<bind_ty<Constant>,
+                         match_unless<class_match<ConstantExpr>>>
+m_ImmConstant(Constant *&C) {
+  return m_CombineAnd(m_Constant(C), m_Unless(m_ConstantExpr()));
 }
 
 /// Match a specified Value*.
