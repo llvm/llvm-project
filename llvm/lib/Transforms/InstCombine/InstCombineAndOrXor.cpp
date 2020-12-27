@@ -1883,6 +1883,13 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
     if (match(Op0, m_OneUse(m_c_Xor(m_Specific(Op1), m_Value(B)))))
       return BinaryOperator::CreateAnd(Op1, Builder.CreateNot(B));
 
+    // A & ~(A ^ B) --> A & B
+    if (match(Op1, m_Not(m_c_Xor(m_Specific(Op0), m_Value(B)))))
+      return BinaryOperator::CreateAnd(Op0, B);
+    // ~(A ^ B) & A --> A & B
+    if (match(Op0, m_Not(m_c_Xor(m_Specific(Op1), m_Value(B)))))
+      return BinaryOperator::CreateAnd(Op1, B);
+
     // (A ^ B) & ((B ^ C) ^ A) -> (A ^ B) & ~C
     if (match(Op0, m_Xor(m_Value(A), m_Value(B))))
       if (match(Op1, m_Xor(m_Xor(m_Specific(B), m_Value(C)), m_Specific(A))))

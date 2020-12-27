@@ -116,9 +116,7 @@ define i32 @and_xor_not_common_op_extrause(i32 %a, i32 %b, i32* %dst) {
 
 define i32 @and_not_xor_common_op(i32 %a, i32 %b) {
 ; CHECK-LABEL: @and_not_xor_common_op(
-; CHECK-NEXT:    [[B2:%.*]] = xor i32 [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = xor i32 [[B2]], -1
-; CHECK-NEXT:    [[T4:%.*]] = and i32 [[T2]], [[A]]
+; CHECK-NEXT:    [[T4:%.*]] = and i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret i32 [[T4]]
 ;
   %b2 = xor i32 %b, %a
@@ -131,9 +129,7 @@ declare i32 @gen32()
 define i32 @and_not_xor_common_op_commutative(i32 %b) {
 ; CHECK-LABEL: @and_not_xor_common_op_commutative(
 ; CHECK-NEXT:    [[A:%.*]] = call i32 @gen32()
-; CHECK-NEXT:    [[B2:%.*]] = xor i32 [[A]], [[B:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = xor i32 [[B2]], -1
-; CHECK-NEXT:    [[T4:%.*]] = and i32 [[A]], [[T2]]
+; CHECK-NEXT:    [[T4:%.*]] = and i32 [[A]], [[B:%.*]]
 ; CHECK-NEXT:    ret i32 [[T4]]
 ;
   %a = call i32 @gen32()
