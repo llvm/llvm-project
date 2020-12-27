@@ -144,7 +144,7 @@ def read_options(header):
         comment += clean_comment_line(line)
       elif line.startswith('enum'):
         state = State.InEnum
-        name = re.sub(r'enum\s+(\w+)\s*\{', '\\1', line)
+        name = re.sub(r'enum\s+(\w+)\s*(:((\s*\w+)+)\s*)?\{', '\\1', line)
         enum = Enum(name, comment)
       elif line.startswith('struct'):
         state = State.InNestedStruct
