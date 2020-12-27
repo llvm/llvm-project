@@ -210,11 +210,7 @@ static Constant *getInitializer(Constant *C) {
 Constant *Evaluator::ComputeLoadResult(Constant *P) {
   // If this memory location has been recently stored, use the stored value: it
   // is the most up-to-date.
-  auto findMemLoc = [this](Constant *Ptr) {
-    DenseMap<Constant *, Constant *>::const_iterator I =
-        MutatedMemory.find(Ptr);
-    return I != MutatedMemory.end() ? I->second : nullptr;
-  };
+  auto findMemLoc = [this](Constant *Ptr) { return MutatedMemory.lookup(Ptr); };
 
   if (Constant *Val = findMemLoc(P))
     return Val;
