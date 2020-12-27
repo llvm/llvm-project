@@ -33,7 +33,7 @@ VESubtarget &VESubtarget::initializeSubtargetDependencies(StringRef CPU,
   // Determine default and user specified characteristics
   std::string CPUName = std::string(CPU);
   if (CPUName.empty())
-    CPUName = "ve";
+    CPUName = "generic";
 
   // Parse features string.
   ParseSubtargetFeatures(CPUName, /*TuneCPU=*/CPU, FS);
