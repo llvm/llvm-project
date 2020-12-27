@@ -2438,6 +2438,15 @@ struct FormatStyle {
   /// \endcode
   bool SpaceBeforeAssignmentOperators;
 
+  /// If ``false``, spaces will be removed before case colon.
+  /// \code
+  ///   true:                                   false
+  ///   switch (x) {                    vs.     switch (x) {
+  ///     case 1 : break;                         case 1: break;
+  ///   }                                       }
+  /// \endcode
+  bool SpaceBeforeCaseColon;
+
   /// If ``true``, a space will be inserted before a C++11 braced list
   /// used to initialize an object (after the preceding identifier or type).
   /// \code
@@ -2820,6 +2829,7 @@ struct FormatStyle {
            SpaceAfterLogicalNot == R.SpaceAfterLogicalNot &&
            SpaceAfterTemplateKeyword == R.SpaceAfterTemplateKeyword &&
            SpaceBeforeAssignmentOperators == R.SpaceBeforeAssignmentOperators &&
+           SpaceBeforeCaseColon == R.SpaceBeforeCaseColon &&
            SpaceBeforeCpp11BracedList == R.SpaceBeforeCpp11BracedList &&
            SpaceBeforeCtorInitializerColon ==
                R.SpaceBeforeCtorInitializerColon &&

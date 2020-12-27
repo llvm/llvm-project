@@ -293,6 +293,9 @@ clang-format
 
 - Option ``IndentPragmas`` has been added to allow #pragma to indented with the current scope level. This is especially useful when using #pragma to mark OpenMP sections of code.
 
+- Option ``SpaceBeforeCaseColon`` has been added to add a space before the
+  colon in a case or default statement.
+
 
 libclang
 --------
