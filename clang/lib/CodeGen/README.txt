@@ -16,6 +16,7 @@ extension. For example, if the bitfield width is 8 and it is
 appropriately aligned then is is a lot shorter to just load the char
 directly.
 
+
 //===---------------------------------------------------------------------===//
 
 It may be worth avoiding creation of alloca's for formal arguments
