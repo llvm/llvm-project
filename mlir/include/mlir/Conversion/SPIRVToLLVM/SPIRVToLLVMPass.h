@@ -1,4 +1,4 @@
-//===- ConvertSPIRVToLLVMPass.h - SPIR-V dialect to LLVM pass ---*- C++ -*-===//
+//===- SPIRVToLLVMPass.h - SPIR-V to LLVM Passes ----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Provides a pass to lower from SPIR-V dialect to LLVM dialect.
+// Provides passes to convert SPIR-V dialect to LLVM dialect.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_CONVERSION_SPIRVTOLLVM_CONVERTSPIRVTOLLVMPASS_H
-#define MLIR_CONVERSION_SPIRVTOLLVM_CONVERTSPIRVTOLLVMPASS_H
+#ifndef MLIR_CONVERSION_SPIRVTOLLVM_SPIRVTOLLVMPASS_H
+#define MLIR_CONVERSION_SPIRVTOLLVM_SPIRVTOLLVMPASS_H
 
 #include <memory>
 
@@ -35,4 +35,4 @@ std::unique_ptr<OperationPass<ModuleOp>> createConvertSPIRVToLLVMPass();
 
 } // namespace mlir
 
-#endif // MLIR_CONVERSION_SPIRVTOLLVM_CONVERTSPIRVTOLLVMPASS_H_
+#endif // MLIR_CONVERSION_SPIRVTOLLVM_SPIRVTOLLVMPASS_H

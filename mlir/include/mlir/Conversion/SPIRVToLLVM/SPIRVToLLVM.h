@@ -1,4 +1,4 @@
-//===- ConvertSPIRVToLLVM.h - Convert SPIR-V to LLVM dialect ----*- C++ -*-===//
+//===- SPIRVToLLVM.h - SPIR-V to LLVM Patterns ------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_CONVERSION_SPIRVTOLLVM_CONVERTSPIRVTOLLVM_H
-#define MLIR_CONVERSION_SPIRVTOLLVM_CONVERTSPIRVTOLLVM_H
+#ifndef MLIR_CONVERSION_SPIRVTOLLVM_SPIRVTOLLVM_H
+#define MLIR_CONVERSION_SPIRVTOLLVM_SPIRVTOLLVM_H
 
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -57,4 +57,4 @@ void populateSPIRVToLLVMModuleConversionPatterns(
 
 } // namespace mlir
 
-#endif // MLIR_CONVERSION_SPIRVTOLLVM_CONVERTSPIRVTOLLVM_H
+#endif // MLIR_CONVERSION_SPIRVTOLLVM_SPIRVTOLLVM_H

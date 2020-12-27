@@ -1,4 +1,4 @@
-//===- SCFToSPIRVPass.cpp - SCF to SPIR-V Passes --------------------------===//
+//===- VectorToSPIRVPass.cpp - Vector to SPIR-V Passes --------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,28 +6,29 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements a pass to convert SCF dialect into SPIR-V dialect.
+// This file implements a pass to convert Vector dialect to SPIRV dialect.
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/SCFToSPIRV/SCFToSPIRVPass.h"
+#include "mlir/Conversion/VectorToSPIRV/VectorToSPIRVPass.h"
 
 #include "../PassDetail.h"
-#include "mlir/Conversion/SCFToSPIRV/SCFToSPIRV.h"
-#include "mlir/Conversion/StandardToSPIRV/StandardToSPIRV.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Conversion/VectorToSPIRV/VectorToSPIRV.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
+#include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
 
 namespace {
-struct SCFToSPIRVPass : public SCFToSPIRVBase<SCFToSPIRVPass> {
+struct LowerVectorToSPIRVPass
+    : public ConvertVectorToSPIRVBase<LowerVectorToSPIRVPass> {
   void runOnOperation() override;
 };
 } // namespace
 
-void SCFToSPIRVPass::runOnOperation() {
+void LowerVectorToSPIRVPass::runOnOperation() {
   MLIRContext *context = &getContext();
   ModuleOp module = getOperation();
 
@@ -36,16 +37,17 @@ void SCFToSPIRVPass::runOnOperation() {
       spirv::SPIRVConversionTarget::get(targetAttr);
 
   SPIRVTypeConverter typeConverter(targetAttr);
-  ScfToSPIRVContext scfContext;
   OwningRewritePatternList patterns;
-  populateSCFToSPIRVPatterns(context, typeConverter, scfContext, patterns);
-  populateStandardToSPIRVPatterns(context, typeConverter, patterns);
-  populateBuiltinFuncToSPIRVPatterns(context, typeConverter, patterns);
+  populateVectorToSPIRVPatterns(context, typeConverter, patterns);
 
-  if (failed(applyPartialConversion(module, *target, std::move(patterns))))
+  target->addLegalOp<ModuleOp, ModuleTerminatorOp>();
+  target->addLegalOp<FuncOp>();
+
+  if (failed(applyFullConversion(module, *target, std::move(patterns))))
     return signalPassFailure();
 }
 
-std::unique_ptr<OperationPass<ModuleOp>> mlir::createConvertSCFToSPIRVPass() {
-  return std::make_unique<SCFToSPIRVPass>();
+std::unique_ptr<OperationPass<ModuleOp>>
+mlir::createConvertVectorToSPIRVPass() {
+  return std::make_unique<LowerVectorToSPIRVPass>();
 }
