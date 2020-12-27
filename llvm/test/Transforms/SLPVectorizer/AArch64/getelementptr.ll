@@ -46,7 +46,7 @@ define i32 @getelementptr_4x32(i32* nocapture readonly %g, i32 %n, i32 %x, i32 %
 ; CHECK-NEXT:    [[CMP31:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP31]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>, i32 [[X:%.*]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>, i32 [[X:%.*]], i32 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[TMP0]], i32 [[Y:%.*]], i32 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[Z:%.*]], i32 3
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -84,7 +84,7 @@ define i32 @getelementptr_4x32(i32* nocapture readonly %g, i32 %n, i32 %x, i32 %
 ; CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i32, i32* [[G]], i64 [[TMP17]]
 ; CHECK-NEXT:    [[T12:%.*]] = load i32, i32* [[ARRAYIDX15]], align 4
 ; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <2 x i32> [[TMP4]], i32 [[ADD11]], i32 1
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x i32> <i32 1, i32 undef>, i32 [[T12]], i32 1
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x i32> <i32 1, i32 poison>, i32 [[T12]], i32 1
 ; CHECK-NEXT:    [[TMP20]] = add nsw <2 x i32> [[TMP18]], [[TMP19]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <2 x i32> [[TMP20]], i32 0
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[TMP21]], [[N]]
@@ -188,7 +188,7 @@ define i32 @getelementptr_2x32(i32* nocapture readonly %g, i32 %n, i32 %x, i32 %
 ; CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i32, i32* [[G]], i64 [[TMP14]]
 ; CHECK-NEXT:    [[T12:%.*]] = load i32, i32* [[ARRAYIDX15]], align 4
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[ADD11]], i32 1
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <2 x i32> <i32 1, i32 undef>, i32 [[T12]], i32 1
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <2 x i32> <i32 1, i32 poison>, i32 [[T12]], i32 1
 ; CHECK-NEXT:    [[TMP17]] = add nsw <2 x i32> [[TMP15]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <2 x i32> [[TMP17]], i32 0
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[TMP18]], [[N]]

@@ -13,7 +13,7 @@ define <2 x double> @test_vfrcz_sd(<2 x double> %a) {
 
 define double @test_vfrcz_sd_0(double %a) {
 ; CHECK-LABEL: @test_vfrcz_sd_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> undef, double [[A:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[A:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call <2 x double> @llvm.x86.xop.vfrcz.sd(<2 x double> [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP2]], i32 0
 ; CHECK-NEXT:    ret double [[TMP3]]
@@ -50,7 +50,7 @@ define <4 x float> @test_vfrcz_ss(<4 x float> %a) {
 
 define float @test_vfrcz_ss_0(float %a) {
 ; CHECK-LABEL: @test_vfrcz_ss_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> undef, float [[A:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x float> @llvm.x86.xop.vfrcz.ss(<4 x float> [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP2]], i32 0
 ; CHECK-NEXT:    ret float [[TMP3]]

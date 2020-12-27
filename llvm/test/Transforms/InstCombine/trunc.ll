@@ -908,7 +908,7 @@ define <8 x i16> @trunc_shl_v8i16_v8i32_4(<8 x i32> %a) {
 
 define <4 x i8> @wide_shuf(<4 x i32> %x) {
 ; CHECK-LABEL: @wide_shuf(
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> <i32 undef, i32 3634, i32 90, i32 undef>, <4 x i32> <i32 1, i32 5, i32 6, i32 2>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> <i32 poison, i32 3634, i32 90, i32 poison>, <4 x i32> <i32 1, i32 5, i32 6, i32 2>
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <4 x i32> [[SHUF]] to <4 x i8>
 ; CHECK-NEXT:    ret <4 x i8> [[TRUNC]]
 ;
