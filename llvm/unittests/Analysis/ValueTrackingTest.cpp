@@ -1033,6 +1033,30 @@ TEST_F(ValueTrackingTest, KnownNonZeroFromDomCond) {
   EXPECT_EQ(isKnownNonZero(A, DL, 0, &AC, CxtI2, &DT), false);
 }
 
+TEST_F(ValueTrackingTest, KnownNonZeroFromDomCond2) {
+  parseAssembly(R"(
+    declare i8* @f_i8()
+    define void @test(i1 %c) {
+      %A = call i8* @f_i8()
+      %B = call i8* @f_i8()
+      %c1 = icmp ne i8* %A, null
+      %cond = select i1 %c, i1 %c1, i1 false
+      br i1 %cond, label %T, label %Q
+    T:
+      %CxtI = add i32 0, 0
+      ret void
+    Q:
+      %CxtI2 = add i32 0, 0
+      ret void
+    }
+  )");
+  AssumptionCache AC(*F);
+  DominatorTree DT(*F);
+  DataLayout DL = M->getDataLayout();
+  EXPECT_EQ(isKnownNonZero(A, DL, 0, &AC, CxtI, &DT), true);
+  EXPECT_EQ(isKnownNonZero(A, DL, 0, &AC, CxtI2, &DT), false);
+}
+
 TEST_F(ValueTrackingTest, IsImpliedConditionAnd) {
   parseAssembly(R"(
     define void @test(i32 %x, i32 %y) {
@@ -1052,12 +1076,50 @@ TEST_F(ValueTrackingTest, IsImpliedConditionAnd) {
   EXPECT_EQ(isImpliedCondition(A, A4, DL), None);
 }
 
+TEST_F(ValueTrackingTest, IsImpliedConditionAnd2) {
+  parseAssembly(R"(
+    define void @test(i32 %x, i32 %y) {
+      %c1 = icmp ult i32 %x, 10
+      %c2 = icmp ult i32 %y, 15
+      %A = select i1 %c1, i1 %c2, i1 false
+      ; x < 10 /\ y < 15
+      %A2 = icmp ult i32 %x, 20
+      %A3 = icmp uge i32 %y, 20
+      %A4 = icmp ult i32 %x, 5
+      ret void
+    }
+  )");
+  DataLayout DL = M->getDataLayout();
+  EXPECT_EQ(isImpliedCondition(A, A2, DL), true);
+  EXPECT_EQ(isImpliedCondition(A, A3, DL), false);
+  EXPECT_EQ(isImpliedCondition(A, A4, DL), None);
+}
+
 TEST_F(ValueTrackingTest, IsImpliedConditionOr) {
   parseAssembly(R"(
     define void @test(i32 %x, i32 %y) {
       %c1 = icmp ult i32 %x, 10
       %c2 = icmp ult i32 %y, 15
       %A = or i1 %c1, %c2 ; negated
+      ; x >= 10 /\ y >= 15
+      %A2 = icmp ult i32 %x, 5
+      %A3 = icmp uge i32 %y, 10
+      %A4 = icmp ult i32 %x, 15
+      ret void
+    }
+  )");
+  DataLayout DL = M->getDataLayout();
+  EXPECT_EQ(isImpliedCondition(A, A2, DL, false), false);
+  EXPECT_EQ(isImpliedCondition(A, A3, DL, false), true);
+  EXPECT_EQ(isImpliedCondition(A, A4, DL, false), None);
+}
+
+TEST_F(ValueTrackingTest, IsImpliedConditionOr2) {
+  parseAssembly(R"(
+    define void @test(i32 %x, i32 %y) {
+      %c1 = icmp ult i32 %x, 10
+      %c2 = icmp ult i32 %y, 15
+      %A = select i1 %c1, i1 true, i1 %c2 ; negated
       ; x >= 10 /\ y >= 15
       %A2 = icmp ult i32 %x, 5
       %A3 = icmp uge i32 %y, 10
