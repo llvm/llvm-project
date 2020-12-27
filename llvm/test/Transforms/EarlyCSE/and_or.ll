@@ -62,8 +62,7 @@ define i32 @test_02_select(i32 %a, i32 %b, i1 %c) {
 ; CHECK-NEXT:    [[AND_COND:%.*]] = select i1 [[COND]], i1 [[C:%.*]], i1 false
 ; CHECK-NEXT:    br i1 [[AND_COND]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    [[X:%.*]] = select i1 [[COND]], i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 [[A]]
 ; CHECK:       if.false:
 ; CHECK-NEXT:    [[Y:%.*]] = select i1 [[COND]], i32 [[A]], i32 [[B]]
 ; CHECK-NEXT:    ret i32 [[Y]]
@@ -122,8 +121,7 @@ define i32 @test_03_select(i32 %a, i32 %b, i1 %c) {
 ; CHECK-NEXT:    [[X:%.*]] = select i1 [[COND]], i32 [[A]], i32 [[B]]
 ; CHECK-NEXT:    ret i32 [[X]]
 ; CHECK:       if.false:
-; CHECK-NEXT:    [[Y:%.*]] = select i1 [[COND]], i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    ret i32 [[Y]]
+; CHECK-NEXT:    ret i32 [[B]]
 ;
 entry:
   %cond = icmp slt i32 %a, %b
@@ -179,8 +177,7 @@ define i32 @test_04_select(i32 %a, i32 %b, i1 %c1, i1 %c2) {
 ; CHECK-NEXT:    [[AND_COND2:%.*]] = select i1 [[AND_COND1]], i1 [[C2:%.*]], i1 false
 ; CHECK-NEXT:    br i1 [[AND_COND2]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    [[X:%.*]] = select i1 [[COND]], i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 [[A]]
 ; CHECK:       if.false:
 ; CHECK-NEXT:    [[Y:%.*]] = select i1 [[COND]], i32 [[A]], i32 [[B]]
 ; CHECK-NEXT:    ret i32 [[Y]]
@@ -243,8 +240,7 @@ define i32 @test_05_select(i32 %a, i32 %b, i1 %c1, i1 %c2) {
 ; CHECK-NEXT:    [[X:%.*]] = select i1 [[COND]], i32 [[A]], i32 [[B]]
 ; CHECK-NEXT:    ret i32 [[X]]
 ; CHECK:       if.false:
-; CHECK-NEXT:    [[Y:%.*]] = select i1 [[COND]], i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    ret i32 [[Y]]
+; CHECK-NEXT:    ret i32 [[B]]
 ;
 entry:
   %cond = icmp slt i32 %a, %b
