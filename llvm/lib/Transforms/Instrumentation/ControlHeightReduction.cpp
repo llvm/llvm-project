@@ -260,10 +260,9 @@ class CHRScope {
           if (TailRegionSet.count(Parent))
             return false;
 
-          assert(llvm::find_if(RegInfos,
-                               [&Parent](const RegInfo &RI) {
-                                 return Parent == RI.R;
-                               }) != RegInfos.end() &&
+          assert(llvm::any_of(
+                     RegInfos,
+                     [&Parent](const RegInfo &RI) { return Parent == RI.R; }) &&
                  "Must be in head");
           return true;
         });
