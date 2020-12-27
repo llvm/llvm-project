@@ -1,4 +1,4 @@
-//===- ConvertSPIRVToLLVM.cpp - SPIR-V dialect to LLVM dialect conversion -===//
+//===- SPIRVToLLVM.cpp - SPIR-V to LLVM Patterns --------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/SPIRVToLLVM/ConvertSPIRVToLLVM.h"
+#include "mlir/Conversion/SPIRVToLLVM/SPIRVToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -894,7 +894,7 @@ public:
 
     if (!op.memory_access().hasValue()) {
       replaceWithLoadOrStore(op, rewriter, this->typeConverter, /*alignment=*/0,
-                             /*isVolatile=*/false, /*isNonTemporal=*/ false);
+                             /*isVolatile=*/false, /*isNonTemporal=*/false);
       return success();
     }
     auto memoryAccess = op.memory_access().getValue();

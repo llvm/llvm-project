@@ -1,4 +1,4 @@
-//===- ConvertStandardToSPIRVPass.h - StdOps to SPIR-V pass -----*- C++ -*-===//
+//===- StandardToSPIRVPass.h - Standard to SPIR-V Passes --------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,23 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Provides a pass to lower from StandardOps to SPIR-V dialect.
+// Provides passes to convert Standard dialect to SPIR-V dialect.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_CONVERSION_STANDARDTOSPIRV_CONVERTSTANDARDTOSPIRVPASS_H
-#define MLIR_CONVERSION_STANDARDTOSPIRV_CONVERTSTANDARDTOSPIRVPASS_H
+#ifndef MLIR_CONVERSION_STANDARDTOSPIRV_STANDARDTOSPIRVPASS_H
+#define MLIR_CONVERSION_STANDARDTOSPIRV_STANDARDTOSPIRVPASS_H
 
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
 
-/// Pass to convert StandardOps to SPIR-V ops.
+/// Creates a pass to convert standard ops to SPIR-V ops.
 std::unique_ptr<OperationPass<ModuleOp>> createConvertStandardToSPIRVPass();
 
-/// Pass to legalize ops that are not directly lowered to SPIR-V.
+/// Creates a pass to legalize ops that are not directly lowered to SPIR-V.
 std::unique_ptr<Pass> createLegalizeStdOpsForSPIRVLoweringPass();
 
 } // namespace mlir
 
-#endif // MLIR_CONVERSION_STANDARDTOSPIRV_CONVERTSTANDARDTOSPIRVPASS_H
+#endif // MLIR_CONVERSION_STANDARDTOSPIRV_STANDARDTOSPIRVPASS_H

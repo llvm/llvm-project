@@ -1,4 +1,4 @@
-//===- ConvertStandardToSPIRVPass.cpp - Convert Std Ops to SPIR-V Ops -----===//
+//===- StandardToSPIRVPass.cpp - Standard to SPIR-V Passes ----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements a pass to convert MLIR standard ops into the SPIR-V
-// ops.
+// This file implements a pass to convert standard dialect to SPIR-V dialect.
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/StandardToSPIRV/ConvertStandardToSPIRVPass.h"
+#include "mlir/Conversion/StandardToSPIRV/StandardToSPIRVPass.h"
 #include "../PassDetail.h"
-#include "mlir/Conversion/StandardToSPIRV/ConvertStandardToSPIRV.h"
+#include "mlir/Conversion/StandardToSPIRV/StandardToSPIRV.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 

@@ -1,4 +1,4 @@
-//===- ConvertGPUToSPIRV.cpp - Convert GPU ops to SPIR-V dialect ----------===//
+//===- GPUToSPIRV.cpp - GPU to SPIR-V Patterns ----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the conversion patterns from GPU ops to SPIR-V dialect.
+// This file implements patterns to convert GPU dialect to SPIR-V dialect.
 //
 //===----------------------------------------------------------------------===//
-#include "mlir/Conversion/GPUToSPIRV/ConvertGPUToSPIRV.h"
+
+#include "mlir/Conversion/GPUToSPIRV/GPUToSPIRV.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"

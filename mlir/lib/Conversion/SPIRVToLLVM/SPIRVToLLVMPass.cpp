@@ -1,4 +1,4 @@
-//===- ConvertSPIRVToLLVMPass.cpp - Convert SPIR-V ops to LLVM ops --------===//
+//===- SPIRVToLLVMPass.cpp - SPIR-V to LLVM Passes ------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/SPIRVToLLVM/ConvertSPIRVToLLVMPass.h"
+#include "mlir/Conversion/SPIRVToLLVM/SPIRVToLLVMPass.h"
 #include "../PassDetail.h"
-#include "mlir/Conversion/SPIRVToLLVM/ConvertSPIRVToLLVM.h"
+#include "mlir/Conversion/SPIRVToLLVM/SPIRVToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
