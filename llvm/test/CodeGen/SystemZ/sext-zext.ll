@@ -28,6 +28,25 @@ define i32 @sext_of_not_cmp(i32 %x) {
   ret i32 %sext
 }
 
+;; fold (sext (not (setcc a, b, cc))) -> (sext (setcc a, b, !cc))
+;; make sure we don't crash if the not gets replaced in-visit
+define i32 @sext_of_not_fsetccs(double %x) {
+; CHECK-LABEL: sext_of_not_fsetccs:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ltdbr %f0, %f0
+; CHECK-NEXT:    ipm %r0
+; CHECK-NEXT:    afi %r0, 1879048192
+; CHECK-NEXT:    srl %r0, 31
+; CHECK-NEXT:    lcr %r2, %r0
+; CHECK-NEXT:    br %r14
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f64(double %x, double 0.000000e+00, metadata !"oeq", metadata !"fpexcept.ignore")
+  %xor = xor i1 %cmp, 1
+  %sext = sext i1 %xor to i32
+  ret i32 %sext
+}
+
+declare i1 @llvm.experimental.constrained.fcmp.f64(double, double, metadata, metadata)
+
 ;; TODO: fold (add (zext (setcc a, b, cc)), -1) -> (sext (setcc a, b, !cc))
 define i32 @dec_of_zexted_cmp(i32 %x) {
 ; CHECK-LABEL: dec_of_zexted_cmp:
