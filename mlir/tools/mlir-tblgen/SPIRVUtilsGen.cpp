@@ -914,16 +914,28 @@ static void emitDeserializationFunction(const Record *attrClass,
                                         const Record *record,
                                         const Operator &op, raw_ostream &os) {
   // If the record has 'autogenSerialization' set to 0, nothing to do
-  if (!record->getValueAsBit("autogenSerialization")) {
+  if (!record->getValueAsBit("autogenSerialization"))
     return;
-  }
+
   StringRef resultTypes("resultTypes"), valueID("valueID"), words("words"),
       wordIndex("wordIndex"), opVar("op"), operands("operands"),
       attributes("attributes");
+
+  // Method declaration
   os << formatv("template <> "
                 "LogicalResult\nDeserializer::processOp<{0}>(ArrayRef<"
                 "uint32_t> {1}) {{\n",
                 op.getQualCppClassName(), words);
+
+  // Special case for ops without attributes in TableGen definitions
+  if (op.getNumAttributes() == 0 && op.getNumVariableLengthOperands() == 0) {
+    os << formatv("  return processOpWithoutGrammarAttr("
+                  "{0}, \"{1}\", {2}, {3});\n}\n\n",
+                  words, op.getOperationName(),
+                  op.getNumResults() ? "true" : "false", op.getNumOperands());
+    return;
+  }
+
   os << formatv("  SmallVector<Type, 1> {0};\n", resultTypes);
   os << formatv("  size_t {0} = 0; (void){0};\n", wordIndex);
   os << formatv("  uint32_t {0} = 0; (void){0};\n", valueID);
@@ -937,6 +949,9 @@ static void emitDeserializationFunction(const Record *attrClass,
   // Operand deserialization
   emitOperandDeserialization(op, record->getLoc(), "  ", words, wordIndex,
                              operands, attributes, os);
+
+  // Decorations
+  emitDecorationDeserialization(op, "  ", valueID, attributes, os);
 
   os << formatv("  Location loc = createFileLineColLoc(opBuilder);\n");
   os << formatv("  auto {1} = opBuilder.create<{0}>(loc, {2}, {3}, {4}); "
@@ -953,9 +968,6 @@ static void emitDeserializationFunction(const Record *attrClass,
   // next end of block.
   os << formatv("  if ({0}.hasTrait<OpTrait::IsTerminator>())\n", opVar);
   os << formatv("    clearDebugLine();\n");
-
-  // Decorations
-  emitDecorationDeserialization(op, "  ", valueID, attributes, os);
   os << "  return success();\n";
   os << "}\n\n";
 }
