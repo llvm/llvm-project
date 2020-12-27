@@ -97,10 +97,8 @@ define <3 x i4> @in_constant_varx_14_undef(<3 x i4> %x, <3 x i4> %mask) {
 
 define <2 x i4> @in_constant_mone_vary(<2 x i4> %y, <2 x i4> %mask) {
 ; CHECK-LABEL: @in_constant_mone_vary(
-; CHECK-NEXT:    [[N0:%.*]] = and <2 x i4> [[Y:%.*]], <i4 1, i4 1>
-; CHECK-NEXT:    [[N1:%.*]] = xor <2 x i4> [[N0]], <i4 1, i4 1>
-; CHECK-NEXT:    [[R:%.*]] = xor <2 x i4> [[N1]], [[Y]]
-; CHECK-NEXT:    ret <2 x i4> [[R]]
+; CHECK-NEXT:    [[R1:%.*]] = or <2 x i4> [[Y:%.*]], <i4 1, i4 1>
+; CHECK-NEXT:    ret <2 x i4> [[R1]]
 ;
   %n0 = xor <2 x i4> %y, <i4 -1, i4 -1> ; %x
   %n1 = and <2 x i4> %n0, <i4 1, i4 1>
