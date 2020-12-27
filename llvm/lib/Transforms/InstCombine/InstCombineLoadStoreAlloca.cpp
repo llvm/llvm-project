@@ -273,12 +273,7 @@ bool PointerReplacer::collectUsers(Instruction &I) {
   return true;
 }
 
-Value *PointerReplacer::getReplacement(Value *V) {
-  auto Loc = WorkMap.find(V);
-  if (Loc != WorkMap.end())
-    return Loc->second;
-  return nullptr;
-}
+Value *PointerReplacer::getReplacement(Value *V) { return WorkMap.lookup(V); }
 
 void PointerReplacer::replace(Instruction *I) {
   if (getReplacement(I))
