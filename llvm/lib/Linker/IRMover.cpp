@@ -905,7 +905,7 @@ IRLinker::linkAppendingVarProto(GlobalVariable *DstGV,
   getArrayElements(SrcGV->getInitializer(), SrcElements);
 
   if (IsNewStructor) {
-    auto It = remove_if(SrcElements, [this](Constant *E) {
+    erase_if(SrcElements, [this](Constant *E) {
       auto *Key =
           dyn_cast<GlobalValue>(E->getAggregateElement(2)->stripPointerCasts());
       if (!Key)
@@ -913,7 +913,6 @@ IRLinker::linkAppendingVarProto(GlobalVariable *DstGV,
       GlobalValue *DGV = getLinkedToGlobal(Key);
       return !shouldLink(DGV, *Key);
     });
-    SrcElements.erase(It, SrcElements.end());
   }
   uint64_t NewSize = DstNumElements + SrcElements.size();
   ArrayType *NewType = ArrayType::get(EltTy, NewSize);
