@@ -174,27 +174,6 @@ GlobalValue *llvm::ExtractTypeInfo(Value *V) {
   return GV;
 }
 
-/// hasInlineAsmMemConstraint - Return true if the inline asm instruction being
-/// processed uses a memory 'm' constraint.
-bool
-llvm::hasInlineAsmMemConstraint(InlineAsm::ConstraintInfoVector &CInfos,
-                                const TargetLowering &TLI) {
-  for (unsigned i = 0, e = CInfos.size(); i != e; ++i) {
-    InlineAsm::ConstraintInfo &CI = CInfos[i];
-    for (unsigned j = 0, ee = CI.Codes.size(); j != ee; ++j) {
-      TargetLowering::ConstraintType CType = TLI.getConstraintType(CI.Codes[j]);
-      if (CType == TargetLowering::C_Memory)
-        return true;
-    }
-
-    // Indirect operand accesses access memory.
-    if (CI.isIndirect)
-      return true;
-  }
-
-  return false;
-}
-
 /// getFCmpCondCode - Return the ISD condition code corresponding to
 /// the given LLVM IR floating-point condition code.  This includes
 /// consideration of global floating-point math flags.
