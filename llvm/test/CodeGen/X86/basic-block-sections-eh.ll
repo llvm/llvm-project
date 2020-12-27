@@ -80,6 +80,6 @@ declare void @__cxa_end_catch()
 
 ;LINUX-SECTIONS: .section	.text._Z3foob,"ax",@progbits
 ;LINUX-SECTIONS: _Z3foob:
-;LINUX-SECTIONS: .section       .text._Z3foob._Z3foob.{{[0-9]+}},"ax",@progbits
-;LINUX-SECTIONS-LABEL: _Z3foob.{{[0-9]+}}:
+;LINUX-SECTIONS: .section       .text._Z3foob._Z3foob.__part.{{[0-9]+}},"ax",@progbits
+;LINUX-SECTIONS-LABEL: _Z3foob.__part.{{[0-9]+}}:
 ;LINUX-SECTIONS:        calll   __cxa_begin_catch
