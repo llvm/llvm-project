@@ -1,5 +1,5 @@
 # RUN: %lld --version | FileCheck -check-prefix=VERSION %s
-VERSION: {{LLD [0-9]+\.[0-9]+}}
+VERSION: LLD
 
 # RUN: not %lld ---help 2>&1 | FileCheck -check-prefix=SPELLHELP %s
 SPELLHELP: error: unknown argument '---help', did you mean '--help'
