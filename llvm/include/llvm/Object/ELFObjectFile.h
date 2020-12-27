@@ -233,15 +233,6 @@ template <class ELFT> class ELFObjectFile : public ELFObjectFileBase {
 public:
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
 
-  using uintX_t = typename ELFT::uint;
-
-  using Elf_Sym = typename ELFT::Sym;
-  using Elf_Shdr = typename ELFT::Shdr;
-  using Elf_Ehdr = typename ELFT::Ehdr;
-  using Elf_Rel = typename ELFT::Rel;
-  using Elf_Rela = typename ELFT::Rela;
-  using Elf_Dyn = typename ELFT::Dyn;
-
   SectionRef toSectionRef(const Elf_Shdr *Sec) const {
     return SectionRef(toDRI(Sec), this);
   }

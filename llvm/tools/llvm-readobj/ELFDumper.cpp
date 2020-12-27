@@ -80,35 +80,6 @@ using namespace ELF;
 #define ENUM_ENT_1(enum)                                                       \
   { #enum, #enum, ELF::enum }
 
-#define TYPEDEF_ELF_TYPES(ELFT)                                                \
-  using ELFO = ELFFile<ELFT>;                                                  \
-  using Elf_Addr = typename ELFT::Addr;                                        \
-  using Elf_Shdr = typename ELFT::Shdr;                                        \
-  using Elf_Sym = typename ELFT::Sym;                                          \
-  using Elf_Dyn = typename ELFT::Dyn;                                          \
-  using Elf_Dyn_Range = typename ELFT::DynRange;                               \
-  using Elf_Rel = typename ELFT::Rel;                                          \
-  using Elf_Rela = typename ELFT::Rela;                                        \
-  using Elf_Relr = typename ELFT::Relr;                                        \
-  using Elf_Rel_Range = typename ELFT::RelRange;                               \
-  using Elf_Rela_Range = typename ELFT::RelaRange;                             \
-  using Elf_Relr_Range = typename ELFT::RelrRange;                             \
-  using Elf_Phdr = typename ELFT::Phdr;                                        \
-  using Elf_Half = typename ELFT::Half;                                        \
-  using Elf_Ehdr = typename ELFT::Ehdr;                                        \
-  using Elf_Word = typename ELFT::Word;                                        \
-  using Elf_Hash = typename ELFT::Hash;                                        \
-  using Elf_GnuHash = typename ELFT::GnuHash;                                  \
-  using Elf_Note  = typename ELFT::Note;                                       \
-  using Elf_Sym_Range = typename ELFT::SymRange;                               \
-  using Elf_Versym = typename ELFT::Versym;                                    \
-  using Elf_Verneed = typename ELFT::Verneed;                                  \
-  using Elf_Vernaux = typename ELFT::Vernaux;                                  \
-  using Elf_Verdef = typename ELFT::Verdef;                                    \
-  using Elf_Verdaux = typename ELFT::Verdaux;                                  \
-  using Elf_CGProfile = typename ELFT::CGProfile;                              \
-  using uintX_t = typename ELFT::uint;
-
 namespace {
 
 template <class ELFT> class DumpStyle;
@@ -304,7 +275,7 @@ public:
 private:
   std::unique_ptr<DumpStyle<ELFT>> ELFDumperStyle;
 
-  TYPEDEF_ELF_TYPES(ELFT)
+  LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
 
   Expected<DynRegionInfo> createDRI(uint64_t Offset, uint64_t Size,
                                     uint64_t EntSize) {
@@ -750,7 +721,7 @@ template <class ELFT> class MipsGOTParser;
 
 template <typename ELFT> class DumpStyle {
 public:
-  TYPEDEF_ELF_TYPES(ELFT)
+  LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
 
   DumpStyle(const ELFDumper<ELFT> &Dumper)
       : Obj(Dumper.getElfObject().getELFFile()), ElfObj(Dumper.getElfObject()),
@@ -840,7 +811,7 @@ template <typename ELFT> class GNUStyle : public DumpStyle<ELFT> {
   formatted_raw_ostream &OS;
 
 public:
-  TYPEDEF_ELF_TYPES(ELFT)
+  LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
 
   GNUStyle(ScopedPrinter &W, const ELFDumper<ELFT> &Dumper)
       : DumpStyle<ELFT>(Dumper),
@@ -967,7 +938,7 @@ void DumpStyle<ELFT>::reportUniqueWarning(const Twine &Msg) const {
 
 template <typename ELFT> class LLVMStyle : public DumpStyle<ELFT> {
 public:
-  TYPEDEF_ELF_TYPES(ELFT)
+  LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
 
   LLVMStyle(ScopedPrinter &W, const ELFDumper<ELFT> &Dumper)
       : DumpStyle<ELFT>(Dumper), W(W) {}
@@ -2940,12 +2911,12 @@ namespace {
 
 template <class ELFT> class MipsGOTParser {
 public:
-  TYPEDEF_ELF_TYPES(ELFT)
-  using Entry = typename ELFO::Elf_Addr;
+  LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
+  using Entry = typename ELFT::Addr;
   using Entries = ArrayRef<Entry>;
 
   const bool IsStatic;
-  const ELFO &Obj;
+  const ELFFile<ELFT> &Obj;
   const ELFDumper<ELFT> &Dumper;
 
   MipsGOTParser(const ELFDumper<ELFT> &D);
