@@ -586,7 +586,7 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
   // Collect all outlined function inputs.
   llvm::SetVector<mlir::Value> functionInputs(execute.dependencies().begin(),
                                               execute.dependencies().end());
-  assert(execute.operands().empty() && "operands are not supported");
+  functionInputs.insert(execute.operands().begin(), execute.operands().end());
   getUsedValuesDefinedAbove(execute.body(), functionInputs);
 
   // Collect types for the outlined function inputs and outputs.
@@ -636,15 +636,26 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
   addSuspensionPoint(coro, coroSave.getResult(0), terminatorOp, suspended,
                      resume, builder);
 
+  size_t numDependencies = execute.dependencies().size();
+  size_t numOperands = execute.operands().size();
+
   // Await on all dependencies before starting to execute the body region.
   builder.setInsertionPointToStart(resume);
-  for (size_t i = 0; i < execute.dependencies().size(); ++i)
+  for (size_t i = 0; i < numDependencies; ++i)
     builder.create<AwaitOp>(func.getArgument(i));
+
+  // Await on all async value operands and unwrap the payload.
+  SmallVector<Value, 4> unwrappedOperands(numOperands);
+  for (size_t i = 0; i < numOperands; ++i) {
+    Value operand = func.getArgument(numDependencies + i);
+    unwrappedOperands[i] = builder.create<AwaitOp>(loc, operand).result();
+  }
 
   // Map from function inputs defined above the execute op to the function
   // arguments.
   BlockAndValueMapping valueMapping;
   valueMapping.map(functionInputs, func.getArguments());
+  valueMapping.map(execute.body().getArguments(), unwrappedOperands);
 
   // Clone all operations from the execute operation body into the outlined
   // function body.
@@ -1066,14 +1077,6 @@ void ConvertAsyncToLLVMPass::runOnOperation() {
     }
     if (!llvm::all_of(execute.results().getTypes(), isConvertibleToLlvm)) {
       execute.emitOpError("results payload must be convertible to LLVM type");
-      return WalkResult::interrupt();
-    }
-
-    // We currently do not support execute operations that have async value
-    // operands or produce async results.
-    if (!execute.operands().empty()) {
-      execute.emitOpError(
-          "can't outline async.execute op with async value operands");
       return WalkResult::interrupt();
     }
 
