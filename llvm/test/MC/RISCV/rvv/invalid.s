@@ -632,3 +632,23 @@ vmerge.vxm v0, v1, x1, v0
 vfmerge.vfm v0, v1, f1, v0
 # CHECK-ERROR: The destination vector register group cannot be V0.
 # CHECK-ERROR-LABEL: vfmerge.vfm v0, v1, f1, v0
+
+vle8.v v0, (a0), v0.t
+# CHECK-ERROR: The destination vector register group cannot overlap the mask register.
+# CHECK-ERROR-LABEL: vle8.v v0, (a0), v0.t
+
+vfclass.v v0, v1, v0.t
+# CHECK-ERROR: The destination vector register group cannot overlap the mask register.
+# CHECK-ERROR-LABEL: vfclass.v v0, v1, v0.t
+
+vfsqrt.v v0, v1, v0.t
+# CHECK-ERROR: The destination vector register group cannot overlap the mask register.
+# CHECK-ERROR-LABEL: vfsqrt.v v0, v1, v0.t
+
+vzext.vf2 v0, v1, v0.t
+# CHECK-ERROR: The destination vector register group cannot overlap the mask register.
+# CHECK-ERROR-LABEL: vzext.vf2 v0, v1, v0.t
+
+vid.v v0, v0.t
+# CHECK-ERROR: The destination vector register group cannot overlap the mask register.
+# CHECK-ERROR-LABEL: vid.v v0, v0.t

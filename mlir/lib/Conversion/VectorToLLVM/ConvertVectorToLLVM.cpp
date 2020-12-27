@@ -612,7 +612,7 @@ public:
   LogicalResult
   matchAndRewrite(vector::CreateMaskOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    auto dstType = op->getResult(0).getType().cast<VectorType>();
+    auto dstType = op.getType();
     int64_t rank = dstType.getRank();
     if (rank == 1) {
       rewriter.replaceOp(
@@ -1091,8 +1091,7 @@ public:
     auto loc = castOp->getLoc();
     MemRefType sourceMemRefType =
         castOp.getOperand().getType().cast<MemRefType>();
-    MemRefType targetMemRefType =
-        castOp.getResult().getType().cast<MemRefType>();
+    MemRefType targetMemRefType = castOp.getType();
 
     // Only static shape casts supported atm.
     if (!sourceMemRefType.hasStaticShape() ||
@@ -1459,7 +1458,7 @@ public:
 
   LogicalResult matchAndRewrite(ExtractStridedSliceOp op,
                                 PatternRewriter &rewriter) const override {
-    auto dstType = op.getResult().getType().cast<VectorType>();
+    auto dstType = op.getType();
 
     assert(!op.offsets().getValue().empty() && "Unexpected empty offsets");
 
