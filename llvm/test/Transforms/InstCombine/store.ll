@@ -37,7 +37,7 @@ define void @store_at_gep_off_null_inbounds(i64 %offset) {
 define void @store_at_gep_off_null_not_inbounds(i64 %offset) {
 ; CHECK-LABEL: @store_at_gep_off_null_not_inbounds(
 ; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i32, i32* null, i64 [[OFFSET:%.*]]
-; CHECK-NEXT:    store i32 24, i32* [[PTR]], align 4
+; CHECK-NEXT:    store i32 undef, i32* [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %ptr = getelementptr i32, i32 *null, i64 %offset
