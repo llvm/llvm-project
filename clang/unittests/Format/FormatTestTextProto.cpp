@@ -380,25 +380,29 @@ TEST_F(FormatTestTextProto, KeepsCommentsIndentedInList) {
                "cccccccccccccccccccccccc: 3849");
 }
 
-TEST_F(FormatTestTextProto, UnderstandsHashHashComments) {
+TEST_F(FormatTestTextProto, UnderstandsHashComments) {
   FormatStyle Style = getGoogleStyle(FormatStyle::LK_TextProto);
   Style.ColumnLimit = 60; // To make writing tests easier.
   EXPECT_EQ("aaa: 100\n"
-            "##this is a double-hash comment.\n"
+            "## this is a double-hash comment.\n"
             "bb: 100\n"
             "## another double-hash comment.\n"
             "### a triple-hash comment\n"
             "cc: 200\n"
+            "### another triple-hash comment\n"
             "#### a quadriple-hash comment\n"
-            "dd: 100\n",
+            "dd: 100\n"
+            "#### another quadriple-hash comment\n",
             format("aaa: 100\n"
                    "##this is a double-hash comment.\n"
                    "bb: 100\n"
                    "## another double-hash comment.\n"
-                   "### a triple-hash comment\n"
+                   "###a triple-hash comment\n"
                    "cc: 200\n"
-                   "#### a quadriple-hash comment\n"
-                   "dd: 100\n",
+                   "### another triple-hash comment\n"
+                   "####a quadriple-hash comment\n"
+                   "dd: 100\n"
+                   "#### another quadriple-hash comment\n",
                    Style));
 }
 
