@@ -26,84 +26,15 @@ using namespace IRSimilarity;
 IRInstructionData::IRInstructionData(Instruction &I, bool Legality,
                                      IRInstructionDataList &IDList)
     : Inst(&I), Legal(Legality), IDL(&IDList) {
-  // We check for whether we have a comparison instruction.  If it is, we
-  // find the "less than" version of the predicate for consistency for
-  // comparison instructions throught the program.
-  if (CmpInst *C = dyn_cast<CmpInst>(&I)) {
-    CmpInst::Predicate Predicate = predicateForConsistency(C);
-    if (Predicate != C->getPredicate())
-      RevisedPredicate = Predicate;
-  }
-
-  // Here we collect the operands and their types for determining whether
-  // the structure of the operand use matches between two different candidates.
-  for (Use &OI : I.operands()) {
-    if (isa<CmpInst>(I) && RevisedPredicate.hasValue()) {
-      // If we have a CmpInst where the predicate is reversed, it means the
-      // operands must be reversed as well.
-      OperVals.insert(OperVals.begin(), OI.get());
-      continue;
-    }
-
+  // Here we collect the operands to be used to determine whether two
+  // instructions are similar to one another.
+  for (Use &OI : I.operands())
     OperVals.push_back(OI.get());
-  }
-}
-
-CmpInst::Predicate IRInstructionData::predicateForConsistency(CmpInst *CI) {
-  switch (CI->getPredicate()) {
-  case CmpInst::FCMP_OGT:
-  case CmpInst::FCMP_UGT:
-  case CmpInst::FCMP_OGE:
-  case CmpInst::FCMP_UGE:
-  case CmpInst::ICMP_SGT:
-  case CmpInst::ICMP_UGT:
-  case CmpInst::ICMP_SGE:
-  case CmpInst::ICMP_UGE:
-    return CI->getSwappedPredicate();
-  default:
-    return CI->getPredicate();
-  }
-}
-
-CmpInst::Predicate IRInstructionData::getPredicate() const {
-  assert(isa<CmpInst>(Inst) &&
-         "Can only get a predicate from a compare instruction");
-
-  if (RevisedPredicate.hasValue())
-    return RevisedPredicate.getValue();
-  
-  return cast<CmpInst>(Inst)->getPredicate();
 }
 
 bool IRSimilarity::isClose(const IRInstructionData &A,
                            const IRInstructionData &B) {
-
-  if (!A.Legal || !B.Legal)
-    return false;
-
-  // Check if we are performing the same sort of operation on the same types
-  // but not on the same values.
-  if (A.Inst->isSameOperationAs(B.Inst))
-    return true;
-
-  // If there is a predicate, this means that either there is a swapped
-  // predicate, or that the types are different, we want to make sure that
-  // the predicates are equivalent via swapping.
-  if (isa<CmpInst>(A.Inst) && isa<CmpInst>(B.Inst)) {
-
-    if (A.getPredicate() != B.getPredicate())
-      return false;
-
-    // If the predicates are the same via swap, make sure that the types are
-    // still the same.
-    auto ZippedTypes = zip(A.OperVals, B.OperVals);
-
-    return all_of(ZippedTypes, [](std::tuple<llvm::Value *, llvm::Value *> R) {
-      return std::get<0>(R)->getType() == std::get<1>(R)->getType();
-    });
-  }
-
-  return false;
+  return A.Legal && A.Inst->isSameOperationAs(B.Inst);
 }
 
 // TODO: This is the same as the MachineOutliner, and should be consolidated
