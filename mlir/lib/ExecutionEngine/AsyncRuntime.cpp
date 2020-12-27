@@ -114,6 +114,7 @@ static AsyncRuntime *getDefaultAsyncRuntimeInstance() {
   return runtime.get();
 }
 
+// Async token provides a mechanism to signal asynchronous operation completion.
 struct AsyncToken : public RefCounted {
   // AsyncToken created with a reference count of 2 because it will be returned
   // to the `async.execute` caller and also will be later on emplaced by the
@@ -130,6 +131,28 @@ struct AsyncToken : public RefCounted {
   std::vector<std::function<void()>> awaiters;
 };
 
+// Async value provides a mechanism to access the result of asynchronous
+// operations. It owns the storage that is used to store/load the value of the
+// underlying type, and a flag to signal if the value is ready or not.
+struct AsyncValue : public RefCounted {
+  // AsyncValue similar to an AsyncToken created with a reference count of 2.
+  AsyncValue(AsyncRuntime *runtime, int32_t size)
+      : RefCounted(runtime, /*count=*/2), storage(size) {}
+
+  // Internal state below guarded by a mutex.
+  std::mutex mu;
+  std::condition_variable cv;
+
+  bool ready = false;
+  std::vector<std::function<void()>> awaiters;
+
+  // Use vector of bytes to store async value payload.
+  std::vector<int8_t> storage;
+};
+
+// Async group provides a mechanism to group together multiple async tokens or
+// values to await on all of them together (wait for the completion of all
+// tokens or values added to the group).
 struct AsyncGroup : public RefCounted {
   AsyncGroup(AsyncRuntime *runtime)
       : RefCounted(runtime), pendingTokens(0), rank(0) {}
@@ -159,10 +182,16 @@ extern "C" void mlirAsyncRuntimeDropRef(RefCountedObjPtr ptr, int32_t count) {
   refCounted->dropRef(count);
 }
 
-// Create a new `async.token` in not-ready state.
+// Creates a new `async.token` in not-ready state.
 extern "C" AsyncToken *mlirAsyncRuntimeCreateToken() {
   AsyncToken *token = new AsyncToken(getDefaultAsyncRuntimeInstance());
   return token;
+}
+
+// Creates a new `async.value` in not-ready state.
+extern "C" AsyncValue *mlirAsyncRuntimeCreateValue(int32_t size) {
+  AsyncValue *value = new AsyncValue(getDefaultAsyncRuntimeInstance(), size);
+  return value;
 }
 
 // Create a new `async.group` in empty state.
@@ -228,16 +257,43 @@ extern "C" void mlirAsyncRuntimeEmplaceToken(AsyncToken *token) {
   token->dropRef();
 }
 
+// Switches `async.value` to ready state and runs all awaiters.
+extern "C" void mlirAsyncRuntimeEmplaceValue(AsyncValue *value) {
+  // Make sure that `dropRef` does not destroy the mutex owned by the lock.
+  {
+    std::unique_lock<std::mutex> lock(value->mu);
+    value->ready = true;
+    value->cv.notify_all();
+    for (auto &awaiter : value->awaiters)
+      awaiter();
+  }
+
+  // Async values created with a ref count `2` to keep value alive until the
+  // async task completes. Drop this reference explicitly when value emplaced.
+  value->dropRef();
+}
+
 extern "C" void mlirAsyncRuntimeAwaitToken(AsyncToken *token) {
   std::unique_lock<std::mutex> lock(token->mu);
   if (!token->ready)
     token->cv.wait(lock, [token] { return token->ready; });
 }
 
+extern "C" void mlirAsyncRuntimeAwaitValue(AsyncValue *value) {
+  std::unique_lock<std::mutex> lock(value->mu);
+  if (!value->ready)
+    value->cv.wait(lock, [value] { return value->ready; });
+}
+
 extern "C" void mlirAsyncRuntimeAwaitAllInGroup(AsyncGroup *group) {
   std::unique_lock<std::mutex> lock(group->mu);
   if (group->pendingTokens != 0)
     group->cv.wait(lock, [group] { return group->pendingTokens == 0; });
+}
+
+// Returns a pointer to the storage owned by the async value.
+extern "C" ValueStorage mlirAsyncRuntimeGetValueStorage(AsyncValue *value) {
+  return value->storage.data();
 }
 
 extern "C" void mlirAsyncRuntimeExecute(CoroHandle handle, CoroResume resume) {
@@ -253,6 +309,17 @@ extern "C" void mlirAsyncRuntimeAwaitTokenAndExecute(AsyncToken *token,
     execute();
   else
     token->awaiters.push_back([execute]() { execute(); });
+}
+
+extern "C" void mlirAsyncRuntimeAwaitValueAndExecute(AsyncValue *value,
+                                                     CoroHandle handle,
+                                                     CoroResume resume) {
+  std::unique_lock<std::mutex> lock(value->mu);
+  auto execute = [handle, resume]() { (*resume)(handle); };
+  if (value->ready)
+    execute();
+  else
+    value->awaiters.push_back([execute]() { execute(); });
 }
 
 extern "C" void mlirAsyncRuntimeAwaitAllInGroupAndExecute(AsyncGroup *group,
