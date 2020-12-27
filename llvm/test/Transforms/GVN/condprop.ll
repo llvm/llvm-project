@@ -87,13 +87,13 @@ define void @test3_select(i32 %x, i32 %y) {
   br i1 %z, label %both_zero, label %nope
 both_zero:
   call void @foo(i1 %xz)
-; CHECK: call void @foo(i1 %xz)
+; CHECK: call void @foo(i1 true)
   call void @foo(i1 %yz)
-; CHECK: call void @foo(i1 %yz)
+; CHECK: call void @foo(i1 true)
   call void @bar(i32 %x)
-; CHECK: call void @bar(i32 %x)
+; CHECK: call void @bar(i32 0)
   call void @bar(i32 %y)
-; CHECK: call void @bar(i32 %y)
+; CHECK: call void @bar(i32 0)
   ret void
 nope:
   call void @foo(i1 %z)
@@ -131,13 +131,13 @@ define void @test3_or_select(i32 %x, i32 %y) {
   br i1 %z, label %nope, label %both_zero
 both_zero:
   call void @foo(i1 %xz)
-; CHECK: call void @foo(i1 %xz)
+; CHECK: call void @foo(i1 false)
   call void @foo(i1 %yz)
-; CHECK: call void @foo(i1 %yz)
+; CHECK: call void @foo(i1 false)
   call void @bar(i32 %x)
-; CHECK: call void @bar(i32 %x)
+; CHECK: call void @bar(i32 0)
   call void @bar(i32 %y)
-; CHECK: call void @bar(i32 %y)
+; CHECK: call void @bar(i32 0)
   ret void
 nope:
   call void @foo(i1 %z)
