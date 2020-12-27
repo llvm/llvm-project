@@ -950,58 +950,6 @@ multiclass VPseudoBinaryM_VX_VI {
 }
 
 //===----------------------------------------------------------------------===//
-// Helpers to define the SDNode patterns.
-//===----------------------------------------------------------------------===//
-
-multiclass VPatUSLoadStoreSDNode<LLVMType type,
-                                 LLVMType mask_type,
-                                 int sew,
-                                 LMULInfo vlmul,
-                                 RegisterClass reg_rs1,
-                                 VReg reg_class>
-{
-  defvar load_instr = !cast<Instruction>("PseudoVLE"#sew#"_V_"#vlmul.MX);
-  defvar store_instr = !cast<Instruction>("PseudoVSE"#sew#"_V_"#vlmul.MX);
-  // Load
-  def : Pat<(type (load reg_rs1:$rs1)),
-            (load_instr reg_rs1:$rs1, VLMax, sew)>;
-  // Store
-  def : Pat<(store type:$rs2, reg_rs1:$rs1),
-            (store_instr reg_class:$rs2, reg_rs1:$rs1, VLMax, sew)>;
-}
-
-multiclass VPatUSLoadStoreSDNodes<RegisterClass reg_rs1> {
-  foreach vti = AllVectors in
-    defm "" : VPatUSLoadStoreSDNode<vti.Vector, vti.Mask, vti.SEW, vti.LMul,
-                                    reg_rs1, vti.RegClass>;
-}
-
-class VPatBinarySDNode<SDNode vop,
-                       string instruction_name,
-                       ValueType result_type,
-                       ValueType op_type,
-                       ValueType mask_type,
-                       int sew,
-                       LMULInfo vlmul,
-                       VReg RetClass,
-                       VReg op_reg_class> :
-    Pat<(result_type (vop
-                     (op_type op_reg_class:$rs1),
-                     (op_type op_reg_class:$rs2))),
-                     (!cast<Instruction>(instruction_name#"_VV_"# vlmul.MX)
-                     op_reg_class:$rs1,
-                     op_reg_class:$rs2,
-                     VLMax, sew)>;
-
-multiclass VPatBinarySDNode<SDNode vop, string instruction_name>
-{
-  foreach vti = AllIntegerVectors in
-    def : VPatBinarySDNode<vop, instruction_name,
-                           vti.Vector, vti.Vector, vti.Mask, vti.SEW,
-                           vti.LMul, vti.RegClass, vti.RegClass>;
-}
-
-//===----------------------------------------------------------------------===//
 // Helpers to define the intrinsic patterns.
 //===----------------------------------------------------------------------===//
 class VPatBinaryNoMask<string intrinsic_name,
@@ -2084,15 +2032,6 @@ let Predicates = [HasStdExtV, HasStdExtF] in {
 //===----------------------------------------------------------------------===//
 let Predicates = [HasStdExtV] in {
 
-// Whole-register vector patterns.
-
-// 7.4. Vector Unit-Stride Instructions
-defm "" : VPatUSLoadStoreSDNodes<GPR>;
-defm "" : VPatUSLoadStoreSDNodes<AddrFI>;
-
-// 12.1. Vector Single-Width Integer Add and Subtract
-defm "" : VPatBinarySDNode<add, "PseudoVADD">;
-
 //===----------------------------------------------------------------------===//
 // 7. Vector Loads and Stores
 //===----------------------------------------------------------------------===//
@@ -2520,3 +2459,6 @@ let Predicates = [HasStdExtV, HasStdExtF] in {
   defm "" : VPatBinaryV_VX<"int_riscv_vfslide1up", "PseudoVFSLIDE1UP", AllFloatVectors>;
   defm "" : VPatBinaryV_VX<"int_riscv_vfslide1down", "PseudoVFSLIDE1DOWN", AllFloatVectors>;
 } // Predicates = [HasStdExtV, HasStdExtF]
+
+// Include the non-intrinsic ISel patterns
+include "RISCVInstrInfoVSDPatterns.td"
