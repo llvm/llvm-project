@@ -220,8 +220,7 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
   }
 
   if (I->getOpcode() == Instruction::Sub &&
-      (I->hasOneUse() || (isa<Constant>(I->getOperand(0)) &&
-                          !isa<ConstantExpr>(I->getOperand(0))))) {
+      (I->hasOneUse() || match(I->getOperand(0), m_ImmConstant()))) {
     // `sub` is always negatible.
     // However, only do this either if the old `sub` doesn't stick around, or
     // it was subtracting from a constant. Otherwise, this isn't profitable.
