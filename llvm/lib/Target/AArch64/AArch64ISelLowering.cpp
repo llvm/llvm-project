@@ -16095,7 +16095,8 @@ void AArch64TargetLowering::ReplaceNodeResults(
     return;
 
   case ISD::CTPOP:
-    Results.push_back(LowerCTPOP(SDValue(N, 0), DAG));
+    if (SDValue Result = LowerCTPOP(SDValue(N, 0), DAG))
+      Results.push_back(Result);
     return;
   case AArch64ISD::SADDV:
     ReplaceReductionResults(N, Results, DAG, ISD::ADD, AArch64ISD::SADDV);
