@@ -542,9 +542,7 @@ static bool checkMachOAndArchFlags(ObjectFile *O, StringRef Filename) {
     H = MachO->MachOObjectFile::getHeader();
     T = MachOObjectFile::getArchTriple(H.cputype, H.cpusubtype);
   }
-  if (none_of(ArchFlags, [&](const std::string &Name) {
-        return Name == T.getArchName();
-      })) {
+  if (!is_contained(ArchFlags, T.getArchName())) {
     error("no architecture specified", Filename);
     return false;
   }
