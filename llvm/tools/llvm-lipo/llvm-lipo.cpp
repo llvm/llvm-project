@@ -538,9 +538,8 @@ static void updateAlignments(Range &Slices,
 static void checkUnusedAlignments(ArrayRef<Slice> Slices,
                                   const StringMap<const uint32_t> &Alignments) {
   auto HasArch = [&](StringRef Arch) {
-    return llvm::find_if(Slices, [Arch](Slice S) {
-             return S.getArchString() == Arch;
-           }) != Slices.end();
+    return llvm::any_of(Slices,
+                        [Arch](Slice S) { return S.getArchString() == Arch; });
   };
   for (StringRef Arch : Alignments.keys())
     if (!HasArch(Arch))
