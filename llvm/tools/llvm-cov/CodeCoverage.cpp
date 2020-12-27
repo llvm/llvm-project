@@ -436,16 +436,11 @@ void CodeCoverageTool::remapPathNames(const CoverageMapping &Coverage) {
 void CodeCoverageTool::removeUnmappedInputs(const CoverageMapping &Coverage) {
   std::vector<StringRef> CoveredFiles = Coverage.getUniqueSourceFiles();
 
-  auto UncoveredFilesIt = SourceFiles.end();
   // The user may have specified source files which aren't in the coverage
   // mapping. Filter these files away.
-  UncoveredFilesIt = std::remove_if(
-      SourceFiles.begin(), SourceFiles.end(), [&](const std::string &SF) {
-        return !std::binary_search(CoveredFiles.begin(), CoveredFiles.end(),
-                                   SF);
-      });
-
-  SourceFiles.erase(UncoveredFilesIt, SourceFiles.end());
+  llvm::erase_if(SourceFiles, [&](const std::string &SF) {
+    return !std::binary_search(CoveredFiles.begin(), CoveredFiles.end(), SF);
+  });
 }
 
 void CodeCoverageTool::demangleSymbols(const CoverageMapping &Coverage) {
