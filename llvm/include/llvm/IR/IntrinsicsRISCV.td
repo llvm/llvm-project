@@ -352,6 +352,23 @@ let TargetPrefix = "riscv" in {
                      [IntrNoMem]>, RISCVVIntrinsic {
     let ExtendOperand = 2;
   }
+  // For Reduction ternary operations.
+  // For destination vector type is the same as first and third source vector.
+  // Input: (vector_in, vector_in, vector_in, vl)
+  class RISCVReductionNoMask
+        : Intrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<0>,
+                     llvm_anyint_ty],
+                    [IntrNoMem]>, RISCVVIntrinsic;
+  // For Reduction ternary operations with mask.
+  // For destination vector type is the same as first and third source vector.
+  // The mask type come from second source vector.
+  // Input: (maskedoff, vector_in, vector_in, vector_in, mask, vl)
+  class RISCVReductionMask
+        : Intrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<0>,
+                     LLVMScalarOrSameVectorWidth<1, llvm_i1_ty>, llvm_anyint_ty],
+                    [IntrNoMem]>, RISCVVIntrinsic;
 
   multiclass RISCVUSLoad {
     def "int_riscv_" # NAME : RISCVUSLoad;
@@ -423,6 +440,10 @@ let TargetPrefix = "riscv" in {
   multiclass RISCVTernaryWide {
     def "int_riscv_" # NAME : RISCVTernaryWideNoMask;
     def "int_riscv_" # NAME # "_mask" : RISCVTernaryWideMask;
+  }
+  multiclass RISCVReduction {
+    def "int_riscv_" # NAME : RISCVReductionNoMask;
+    def "int_riscv_" # NAME # "_mask" : RISCVReductionMask;
   }
 
   defm vle : RISCVUSLoad;
@@ -606,4 +627,18 @@ let TargetPrefix = "riscv" in {
   defm vmfle : RISCVCompare;
   defm vmfgt : RISCVCompare;
   defm vmfge : RISCVCompare;
+
+  defm vredsum : RISCVReduction;
+  defm vredand : RISCVReduction;
+  defm vredor : RISCVReduction;
+  defm vredxor : RISCVReduction;
+  defm vredminu : RISCVReduction;
+  defm vredmin : RISCVReduction;
+  defm vredmaxu : RISCVReduction;
+  defm vredmax : RISCVReduction;
+
+  defm vfredosum : RISCVReduction;
+  defm vfredsum : RISCVReduction;
+  defm vfredmin : RISCVReduction;
+  defm vfredmax : RISCVReduction;
 } // TargetPrefix = "riscv"
