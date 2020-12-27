@@ -27,7 +27,7 @@ define i32 @main() uwtable optsize ssp personality i8* bitcast (i32 (...)* @__gx
 
 ; CHECK-NOT:            .cfi_lsda
 
-; CHECK-LABEL:        main.1:
+; CHECK-LABEL:        main.__part.1:
 ; CHECK-NEXT:           .cfi_startproc
 
 ; CHECK-NON-PIC-NEXT:   .cfi_personality 3, __gxx_personality_v0
@@ -38,7 +38,7 @@ define i32 @main() uwtable optsize ssp personality i8* bitcast (i32 (...)* @__gx
 
 ; CHECK-NOT:            .cfi_lsda
 
-; CHECK-LABEL:        main.2:
+; CHECK-LABEL:        main.__part.2:
 ; CHECK-NEXT:           .cfi_startproc
 
 ; CHECK-NON-PIC-NEXT:   .cfi_personality 3, __gxx_personality_v0
@@ -82,12 +82,12 @@ declare i32 @__gxx_personality_v0(...)
 
 ;; Verify @LPStart encoding for NON-PIC mode.
 ; CHECK-NON-PIC-NEXT:   .byte	0                       # @LPStart Encoding = absptr
-; CHECK-NON-PIC-NEXT:   .quad	main.2
+; CHECK-NON-PIC-NEXT:   .quad	main.__part.2
 
 ;; Verify @LPStart encoding for PIC mode.
 ; CHECK-PIC-NEXT:       .byte	16                      # @LPStart Encoding = pcrel
 ; CHECK-PIC-NEXT:     [[DOT:\.Ltmp[0-9]+]]:
-; CHECK-PIC-NEXT:       .quad	main.2-[[DOT]]
+; CHECK-PIC-NEXT:       .quad	main.__part.2-[[DOT]]
 
 ;; Verify @TType encoding for NON-PIC mode.
 ; CHECK-NON-PIC-NEXT:   .byte	3                       # @TType Encoding = udata4
@@ -102,17 +102,17 @@ declare i32 @__gxx_personality_v0(...)
 ; CHECK-NEXT:         .Lcst_begin0:
 ; CHECK-NEXT:           .uleb128 .Ltmp0-.Lfunc_begin0   # >> Call Site 1 <<
 ; CHECK-NEXT:           .uleb128 .Ltmp1-.Ltmp0          #   Call between .Ltmp0 and .Ltmp1
-; CHECK-NEXT:           .uleb128 .Ltmp2-main.2          #     jumps to .Ltmp2
+; CHECK-NEXT:           .uleb128 .Ltmp2-main.__part.2          #     jumps to .Ltmp2
 ; CHECK-NEXT:           .byte	3                       #   On action: 2
 ; CHECK-NEXT:           .p2align	2
 ; CHECK-NEXT:         .Lexception1:
 
 ; CHECK-NON-PIC-NEXT:   .byte	0                       # @LPStart Encoding = absptr
-; CHECK-NON-PIC-NEXT:   .quad	main.2
+; CHECK-NON-PIC-NEXT:   .quad	main.__part.2
 
 ; CHECK-PIC-NEXT:       .byte	16                      # @LPStart Encoding = pcrel
 ; CHECK-PIC-NEXT:     [[DOT:\.Ltmp[0-9]+]]:
-; CHECK-PIC-NEXT:       .quad	main.2-[[DOT]]
+; CHECK-PIC-NEXT:       .quad	main.__part.2-[[DOT]]
 
 ; CHECK-NON-PIC-NEXT:   .byte	3                       # @TType Encoding = udata4
 
@@ -127,11 +127,11 @@ declare i32 @__gxx_personality_v0(...)
 ; CHECK-NEXT:         .Lexception2:
 
 ; CHECK-NON-PIC-NEXT:   .byte	0                       # @LPStart Encoding = absptr
-; CHECK-NON-PIC-NEXT:   .quad	main.2
+; CHECK-NON-PIC-NEXT:   .quad	main.__part.2
 
 ; CHECK-PIC-NEXT:       .byte	16                      # @LPStart Encoding = pcrel
 ; CHECK-PIC-NEXT:     [[DOT:\.Ltmp[0-9]+]]:
-; CHECK-PIC-NEXT:       .quad	main.2-[[DOT]]
+; CHECK-PIC-NEXT:       .quad	main.__part.2-[[DOT]]
 
 ; CHECK-NON-PIC-NEXT:   .byte	3                       # @TType Encoding = udata4
 
@@ -142,8 +142,8 @@ declare i32 @__gxx_personality_v0(...)
 ; CHECK-NEXT:           .byte	1                       # Call site Encoding = uleb128
 ; CHECK-NEXT:           .uleb128 .Laction_table_base0-.Lcst_begin2
 ; CHECK-NEXT:         .Lcst_begin2:
-; CHECK-NEXT:           .uleb128 main.2-main.2          # >> Call Site 2 <<
-; CHECK-NEXT:           .uleb128 .LBB_END0_2-main.2     #   Call between main.2 and .LBB_END0_2
+; CHECK-NEXT:           .uleb128 main.__part.2-main.__part.2          # >> Call Site 2 <<
+; CHECK-NEXT:           .uleb128 .LBB_END0_2-main.__part.2     #   Call between main.__part.2 and .LBB_END0_2
 ; CHECK-NEXT:           .byte	0                       #     has no landing pad
 ; CHECK-NEXT:           .byte	0                       #   On action: cleanup
 ; CHECK-NEXT:         .Laction_table_base0:

@@ -14,5 +14,5 @@ default:
   unreachable
 ; CHECK-NOSECTIONS:     # %bb.2:     # %default
 ; CHECK-SECTIONS:       .section .text,"ax",@progbits,unique,2
-; CHECK-SECTIONS-NEXT:  foo.2:       # %default
+; CHECK-SECTIONS-NEXT:  foo.__part.2:       # %default
 }

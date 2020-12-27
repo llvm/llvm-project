@@ -124,8 +124,8 @@ body:             |
 
 # CHECK: _Z3foob:
 # CHECK: .section	.text,"ax",@progbits,unique
-# CHECK: _Z3foob.1:
+# CHECK: _Z3foob.__part.1:
 # CHECK: .section	.text,"ax",@progbits,unique
-# CHECK: _Z3foob.2:
+# CHECK: _Z3foob.__part.2:
 # CHECK: .section	.text,"ax",@progbits,unique
-# CHECK: _Z3foob.3:
+# CHECK: _Z3foob.__part.3:
