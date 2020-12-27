@@ -234,48 +234,48 @@ void CommandInterpreter::Initialize() {
   OptionArgVectorSP alias_arguments_vector_sp(new OptionArgVector);
 
   // Set up some initial aliases.
-  CommandObjectSP cmd_obj_sp = GetCommandSPExact("quit", false);
+  CommandObjectSP cmd_obj_sp = GetCommandSPExact("quit");
   if (cmd_obj_sp) {
     AddAlias("q", cmd_obj_sp);
     AddAlias("exit", cmd_obj_sp);
   }
 
-  cmd_obj_sp = GetCommandSPExact("_regexp-attach", false);
+  cmd_obj_sp = GetCommandSPExact("_regexp-attach");
   if (cmd_obj_sp)
     AddAlias("attach", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
 
-  cmd_obj_sp = GetCommandSPExact("process detach", false);
+  cmd_obj_sp = GetCommandSPExact("process detach");
   if (cmd_obj_sp) {
     AddAlias("detach", cmd_obj_sp);
   }
 
-  cmd_obj_sp = GetCommandSPExact("process continue", false);
+  cmd_obj_sp = GetCommandSPExact("process continue");
   if (cmd_obj_sp) {
     AddAlias("c", cmd_obj_sp);
     AddAlias("continue", cmd_obj_sp);
   }
 
-  cmd_obj_sp = GetCommandSPExact("_regexp-break", false);
+  cmd_obj_sp = GetCommandSPExact("_regexp-break");
   if (cmd_obj_sp)
     AddAlias("b", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
 
-  cmd_obj_sp = GetCommandSPExact("_regexp-tbreak", false);
+  cmd_obj_sp = GetCommandSPExact("_regexp-tbreak");
   if (cmd_obj_sp)
     AddAlias("tbreak", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
 
-  cmd_obj_sp = GetCommandSPExact("thread step-inst", false);
+  cmd_obj_sp = GetCommandSPExact("thread step-inst");
   if (cmd_obj_sp) {
     AddAlias("stepi", cmd_obj_sp);
     AddAlias("si", cmd_obj_sp);
   }
 
-  cmd_obj_sp = GetCommandSPExact("thread step-inst-over", false);
+  cmd_obj_sp = GetCommandSPExact("thread step-inst-over");
   if (cmd_obj_sp) {
     AddAlias("nexti", cmd_obj_sp);
     AddAlias("ni", cmd_obj_sp);
   }
 
-  cmd_obj_sp = GetCommandSPExact("thread step-in", false);
+  cmd_obj_sp = GetCommandSPExact("thread step-in");
   if (cmd_obj_sp) {
     AddAlias("s", cmd_obj_sp);
     AddAlias("step", cmd_obj_sp);
@@ -289,86 +289,86 @@ void CommandInterpreter::Initialize() {
     }
   }
 
-  cmd_obj_sp = GetCommandSPExact("thread step-over", false);
+  cmd_obj_sp = GetCommandSPExact("thread step-over");
   if (cmd_obj_sp) {
     AddAlias("n", cmd_obj_sp);
     AddAlias("next", cmd_obj_sp);
   }
 
-  cmd_obj_sp = GetCommandSPExact("thread step-out", false);
+  cmd_obj_sp = GetCommandSPExact("thread step-out");
   if (cmd_obj_sp) {
     AddAlias("finish", cmd_obj_sp);
   }
 
-  cmd_obj_sp = GetCommandSPExact("frame select", false);
+  cmd_obj_sp = GetCommandSPExact("frame select");
   if (cmd_obj_sp) {
     AddAlias("f", cmd_obj_sp);
   }
 
-  cmd_obj_sp = GetCommandSPExact("thread select", false);
+  cmd_obj_sp = GetCommandSPExact("thread select");
   if (cmd_obj_sp) {
     AddAlias("t", cmd_obj_sp);
   }
 
-  cmd_obj_sp = GetCommandSPExact("_regexp-jump", false);
+  cmd_obj_sp = GetCommandSPExact("_regexp-jump");
   if (cmd_obj_sp) {
     AddAlias("j", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
     AddAlias("jump", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
   }
 
-  cmd_obj_sp = GetCommandSPExact("_regexp-list", false);
+  cmd_obj_sp = GetCommandSPExact("_regexp-list");
   if (cmd_obj_sp) {
     AddAlias("l", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
     AddAlias("list", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
   }
 
-  cmd_obj_sp = GetCommandSPExact("_regexp-env", false);
+  cmd_obj_sp = GetCommandSPExact("_regexp-env");
   if (cmd_obj_sp)
     AddAlias("env", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
 
-  cmd_obj_sp = GetCommandSPExact("memory read", false);
+  cmd_obj_sp = GetCommandSPExact("memory read");
   if (cmd_obj_sp)
     AddAlias("x", cmd_obj_sp);
 
-  cmd_obj_sp = GetCommandSPExact("_regexp-up", false);
+  cmd_obj_sp = GetCommandSPExact("_regexp-up");
   if (cmd_obj_sp)
     AddAlias("up", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
 
-  cmd_obj_sp = GetCommandSPExact("_regexp-down", false);
+  cmd_obj_sp = GetCommandSPExact("_regexp-down");
   if (cmd_obj_sp)
     AddAlias("down", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
 
-  cmd_obj_sp = GetCommandSPExact("_regexp-display", false);
+  cmd_obj_sp = GetCommandSPExact("_regexp-display");
   if (cmd_obj_sp)
     AddAlias("display", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
 
-  cmd_obj_sp = GetCommandSPExact("disassemble", false);
+  cmd_obj_sp = GetCommandSPExact("disassemble");
   if (cmd_obj_sp)
     AddAlias("dis", cmd_obj_sp);
 
-  cmd_obj_sp = GetCommandSPExact("disassemble", false);
+  cmd_obj_sp = GetCommandSPExact("disassemble");
   if (cmd_obj_sp)
     AddAlias("di", cmd_obj_sp);
 
-  cmd_obj_sp = GetCommandSPExact("_regexp-undisplay", false);
+  cmd_obj_sp = GetCommandSPExact("_regexp-undisplay");
   if (cmd_obj_sp)
     AddAlias("undisplay", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
 
-  cmd_obj_sp = GetCommandSPExact("_regexp-bt", false);
+  cmd_obj_sp = GetCommandSPExact("_regexp-bt");
   if (cmd_obj_sp)
     AddAlias("bt", cmd_obj_sp)->SetSyntax(cmd_obj_sp->GetSyntax());
 
-  cmd_obj_sp = GetCommandSPExact("target create", false);
+  cmd_obj_sp = GetCommandSPExact("target create");
   if (cmd_obj_sp)
     AddAlias("file", cmd_obj_sp);
 
-  cmd_obj_sp = GetCommandSPExact("target modules", false);
+  cmd_obj_sp = GetCommandSPExact("target modules");
   if (cmd_obj_sp)
     AddAlias("image", cmd_obj_sp);
 
   alias_arguments_vector_sp = std::make_shared<OptionArgVector>();
 
-  cmd_obj_sp = GetCommandSPExact("expression", false);
+  cmd_obj_sp = GetCommandSPExact("expression");
   if (cmd_obj_sp) {
     AddAlias("p", cmd_obj_sp, "--")->SetHelpLong("");
     AddAlias("print", cmd_obj_sp, "--")->SetHelpLong("");
@@ -398,7 +398,7 @@ void CommandInterpreter::Initialize() {
     }
   }
 
-  cmd_obj_sp = GetCommandSPExact("platform shell", false);
+  cmd_obj_sp = GetCommandSPExact("platform shell");
   if (cmd_obj_sp) {
     CommandAlias *shell_alias = AddAlias("shell", cmd_obj_sp, " --host --");
     if (shell_alias) {
@@ -408,12 +408,12 @@ void CommandInterpreter::Initialize() {
     }
   }
 
-  cmd_obj_sp = GetCommandSPExact("process kill", false);
+  cmd_obj_sp = GetCommandSPExact("process kill");
   if (cmd_obj_sp) {
     AddAlias("kill", cmd_obj_sp);
   }
 
-  cmd_obj_sp = GetCommandSPExact("process launch", false);
+  cmd_obj_sp = GetCommandSPExact("process launch");
   if (cmd_obj_sp) {
     alias_arguments_vector_sp = std::make_shared<OptionArgVector>();
 #if defined(__arm__) || defined(__arm64__) || defined(__aarch64__)
@@ -437,29 +437,29 @@ void CommandInterpreter::Initialize() {
 #endif
   }
 
-  cmd_obj_sp = GetCommandSPExact("target symbols add", false);
+  cmd_obj_sp = GetCommandSPExact("target symbols add");
   if (cmd_obj_sp) {
     AddAlias("add-dsym", cmd_obj_sp);
   }
 
-  cmd_obj_sp = GetCommandSPExact("breakpoint set", false);
+  cmd_obj_sp = GetCommandSPExact("breakpoint set");
   if (cmd_obj_sp) {
     AddAlias("rbreak", cmd_obj_sp, "--func-regex %1");
   }
 
-  cmd_obj_sp = GetCommandSPExact("frame variable", false);
+  cmd_obj_sp = GetCommandSPExact("frame variable");
   if (cmd_obj_sp) {
     AddAlias("v", cmd_obj_sp);
     AddAlias("var", cmd_obj_sp);
     AddAlias("vo", cmd_obj_sp, "--object-description");
   }
 
-  cmd_obj_sp = GetCommandSPExact("register", false);
+  cmd_obj_sp = GetCommandSPExact("register");
   if (cmd_obj_sp) {
     AddAlias("re", cmd_obj_sp);
   }
 
-  cmd_obj_sp = GetCommandSPExact("session history", false);
+  cmd_obj_sp = GetCommandSPExact("session history");
   if (cmd_obj_sp) {
     AddAlias("history", cmd_obj_sp);
   }
@@ -1037,47 +1037,46 @@ bool CommandInterpreter::AddUserCommand(llvm::StringRef name,
   return false;
 }
 
-CommandObjectSP CommandInterpreter::GetCommandSPExact(llvm::StringRef cmd_str,
-                                                      bool include_aliases) const {
-  Args cmd_words(cmd_str);  // Break up the command string into words, in case
-                            // it's a multi-word command.
-  CommandObjectSP ret_val;  // Possibly empty return value.
+CommandObjectSP
+CommandInterpreter::GetCommandSPExact(llvm::StringRef cmd_str,
+                                      bool include_aliases) const {
+  // Break up the command string into words, in case it's a multi-word command.
+  Args cmd_words(cmd_str);
 
   if (cmd_str.empty())
-    return ret_val;
+    return {};
 
   if (cmd_words.GetArgumentCount() == 1)
-    return GetCommandSP(cmd_str, include_aliases, true, nullptr);
-  else {
-    // We have a multi-word command (seemingly), so we need to do more work.
-    // First, get the cmd_obj_sp for the first word in the command.
-    CommandObjectSP cmd_obj_sp = GetCommandSP(llvm::StringRef(cmd_words.GetArgumentAtIndex(0)),
-                                              include_aliases, true, nullptr);
-    if (cmd_obj_sp.get() != nullptr) {
-      // Loop through the rest of the words in the command (everything passed
-      // in was supposed to be part of a command name), and find the
-      // appropriate sub-command SP for each command word....
-      size_t end = cmd_words.GetArgumentCount();
-      for (size_t j = 1; j < end; ++j) {
-        if (cmd_obj_sp->IsMultiwordObject()) {
-          cmd_obj_sp =
-              cmd_obj_sp->GetSubcommandSP(cmd_words.GetArgumentAtIndex(j));
-          if (cmd_obj_sp.get() == nullptr)
-            // The sub-command name was invalid.  Fail and return the empty
-            // 'ret_val'.
-            return ret_val;
-        } else
-          // We have more words in the command name, but we don't have a
-          // multiword object. Fail and return empty 'ret_val'.
-          return ret_val;
-      }
-      // We successfully looped through all the command words and got valid
-      // command objects for them.  Assign the last object retrieved to
-      // 'ret_val'.
-      ret_val = cmd_obj_sp;
+    return GetCommandSP(cmd_str, include_aliases, true);
+
+  // We have a multi-word command (seemingly), so we need to do more work.
+  // First, get the cmd_obj_sp for the first word in the command.
+  CommandObjectSP cmd_obj_sp =
+      GetCommandSP(cmd_words.GetArgumentAtIndex(0), include_aliases, true);
+  if (!cmd_obj_sp)
+    return {};
+
+  // Loop through the rest of the words in the command (everything passed in
+  // was supposed to be part of a command name), and find the appropriate
+  // sub-command SP for each command word....
+  size_t end = cmd_words.GetArgumentCount();
+  for (size_t i = 1; i < end; ++i) {
+    if (!cmd_obj_sp->IsMultiwordObject()) {
+      // We have more words in the command name, but we don't have a
+      // multiword object. Fail and return.
+      return {};
+    }
+
+    cmd_obj_sp = cmd_obj_sp->GetSubcommandSP(cmd_words.GetArgumentAtIndex(i));
+    if (!cmd_obj_sp) {
+      // The sub-command name was invalid.  Fail and return.
+      return {};
     }
   }
-  return ret_val;
+
+  // We successfully looped through all the command words and got valid
+  // command objects for them.
+  return cmd_obj_sp;
 }
 
 CommandObject *
