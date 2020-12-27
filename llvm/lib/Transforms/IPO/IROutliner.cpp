@@ -297,7 +297,7 @@ static BasicBlock *moveFunctionData(Function &Old, Function &New) {
     CurrBB->removeFromParent();
     CurrBB->insertInto(&New);
     Instruction *I = CurrBB->getTerminator();
-    if (ReturnInst *RI = dyn_cast<ReturnInst>(I))
+    if (isa<ReturnInst>(I))
       NewEnd = &(*CurrBB);
   }
 
@@ -325,7 +325,7 @@ static void findConstants(IRSimilarityCandidate &C, DenseSet<unsigned> &NotSame,
       // Since these are stored before any outlining, they will be in the
       // global value numbering.
       unsigned GVN = C.getGVN(V).getValue();
-      if (Constant *CST = dyn_cast<Constant>(V))
+      if (isa<Constant>(V))
         if (NotSame.find(GVN) != NotSame.end() &&
             Seen.find(GVN) == Seen.end()) {
           Inputs.push_back(GVN);
