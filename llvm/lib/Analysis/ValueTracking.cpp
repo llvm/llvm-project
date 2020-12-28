@@ -2529,14 +2529,14 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2, unsigned Depth,
         return isKnownNonEqual(O1->getOperand(0), O2->getOperand(0),
                                Depth + 1, Q);
       break;
-    case Instruction::Mul:
+    case Instruction::Mul: {
       // invertible if A * B == (A * B) mod 2^N where A, and B are integers
       // and N is the bitwdith.  The nsw case is non-obvious, but proven by
       // alive2: https://alive2.llvm.org/ce/z/Z6D5qK
-      if ((!cast<BinaryOperator>(O1)->hasNoUnsignedWrap() ||
-           !cast<BinaryOperator>(O2)->hasNoUnsignedWrap()) &&
-          (!cast<BinaryOperator>(O1)->hasNoSignedWrap() ||
-           !cast<BinaryOperator>(O2)->hasNoSignedWrap()))
+      auto *OBO1 = cast<OverflowingBinaryOperator>(O1);
+      auto *OBO2 = cast<OverflowingBinaryOperator>(O2);
+      if ((!OBO1->hasNoUnsignedWrap() || !OBO2->hasNoUnsignedWrap()) &&
+          (!OBO1->hasNoSignedWrap() || !OBO2->hasNoSignedWrap()))
         break;
 
       // Assume operand order has been canonicalized
@@ -2546,6 +2546,7 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2, unsigned Depth,
         return isKnownNonEqual(O1->getOperand(0), O2->getOperand(0),
                                Depth + 1, Q);
       break;
+    }
     case Instruction::SExt:
     case Instruction::ZExt:
       if (O1->getOperand(0)->getType() == O2->getOperand(0)->getType())
