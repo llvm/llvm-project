@@ -21,7 +21,7 @@ struct A
 };
 
 template <class F>
-void
+TEST_CONSTEXPR_CXX20 bool
 test(F f)
 {
     {
@@ -36,11 +36,16 @@ test(F f)
     const F& cf = f;
     assert(cf(ap) == f(ap));
     }
+    return true;
 }
 
 int main(int, char**)
 {
     test(std::mem_fn(&A::data_));
 
-  return 0;
+#if TEST_STD_VER >= 20
+    static_assert(test(std::mem_fn(&A::data_)));
+#endif
+
+    return 0;
 }
