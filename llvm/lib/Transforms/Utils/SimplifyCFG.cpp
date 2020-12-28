@@ -2986,6 +2986,13 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
                      "Non-external users are never PHI instructions.");
               return false;
             }
+            if (User->getParent() == PredBlock) {
+              // The "exteral" use is in the block into which we just cloned the
+              // bonus instruction. This means two things: 1. we are in an
+              // unreachable block 2. the instruction is self-referencing.
+              // So let's just rewrite it...
+              return true;
+            }
             (void)BI;
             assert(isa<PHINode>(User) && "All external users must be PHI's.");
             auto *PN = cast<PHINode>(User);
