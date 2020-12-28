@@ -25,7 +25,7 @@ TEST_CONSTEXPR_CXX20 bool
 test(F f)
 {
     {
-    A a;
+    A a = {0.0};
     f(a) = 5;
     assert(a.data_ == 5);
     A* ap = &a;
