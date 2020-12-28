@@ -31,7 +31,7 @@ define <1 x i64> @c(double %y) {
 
 define <1 x i64> @d(i64 %y) {
 ; CHECK-LABEL: @d(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <1 x i64> undef, i64 [[Y:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <1 x i64> poison, i64 [[Y:%.*]], i32 0
 ; CHECK-NEXT:    ret <1 x i64> [[TMP1]]
 ;
   %c = bitcast i64 %y to <1 x i64>

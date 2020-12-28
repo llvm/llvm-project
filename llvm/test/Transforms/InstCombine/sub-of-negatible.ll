@@ -831,7 +831,7 @@ define <2 x i4> @negate_shufflevector_oneinput_second_lane_is_undef(<2 x i4> %x,
 define <2 x i4> @negate_shufflevector_twoinputs(<2 x i4> %x, <2 x i4> %y, <2 x i4> %z) {
 ; CHECK-LABEL: @negate_shufflevector_twoinputs(
 ; CHECK-NEXT:    [[T0_NEG:%.*]] = shl <2 x i4> <i4 6, i4 -5>, [[X:%.*]]
-; CHECK-NEXT:    [[T1_NEG:%.*]] = add <2 x i4> [[Y:%.*]], <i4 undef, i4 1>
+; CHECK-NEXT:    [[T1_NEG:%.*]] = add <2 x i4> [[Y:%.*]], <i4 poison, i4 1>
 ; CHECK-NEXT:    [[T2_NEG:%.*]] = shufflevector <2 x i4> [[T0_NEG]], <2 x i4> [[T1_NEG]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    [[T3:%.*]] = add <2 x i4> [[T2_NEG]], [[Z:%.*]]
 ; CHECK-NEXT:    ret <2 x i4> [[T3]]

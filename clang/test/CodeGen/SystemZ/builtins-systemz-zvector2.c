@@ -109,10 +109,10 @@ void test_core(void) {
   // CHECK-ASM: vlvgg
 
   vf = vec_insert_and_zero(cptrf);
-  // CHECK: insertelement <4 x float> <float 0.000000e+00, float undef, float 0.000000e+00, float 0.000000e+00>, float %{{.*}}, i32 1
+  // CHECK: insertelement <4 x float> <float 0.000000e+00, float poison, float 0.000000e+00, float 0.000000e+00>, float %{{.*}}, i32 1
   // CHECK-ASM: vllezf
   vd = vec_insert_and_zero(cptrd);
-  // CHECK: insertelement <2 x double> <double undef, double 0.000000e+00>, double %{{.*}}, i32 0
+  // CHECK: insertelement <2 x double> <double poison, double 0.000000e+00>, double %{{.*}}, i32 0
   // CHECK-ASM: vllezg
 
   vf = vec_perm(vf, vf, vuc);
