@@ -3458,11 +3458,11 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
     return NewXor;
 
   // Otherwise, if all else failed, try to hoist the xor-by-constant:
-  // (X ^ C) ^ Y --> (X ^ Y) ^ C
-  // FIXME: does this need hardening against ConstantExpr's
-  //        to prevent infinite combine loops?
-  if (match(&I,
-            m_c_Xor(m_OneUse(m_Xor(m_Value(X), m_Constant(C1))), m_Value(Y))))
+  //   (X ^ C) ^ Y --> (X ^ Y) ^ C
+  // Just like we do in other places, we avoid the fold for constantexprs,
+  // at least to avoid endless combine loop.
+  if (match(&I, m_c_Xor(m_OneUse(m_Xor(m_Value(X), m_ImmConstant(C1))),
+                        m_Value(Y))))
     return BinaryOperator::CreateXor(Builder.CreateXor(X, Y), C1);
 
   return nullptr;
