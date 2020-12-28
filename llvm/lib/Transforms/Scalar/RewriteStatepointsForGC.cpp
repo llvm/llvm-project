@@ -2735,10 +2735,8 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F, DominatorTree &DT,
   // of liveness sets for no good reason.  It may be harder to do this post
   // insertion since relocations and base phis can confuse things.
   for (BasicBlock &BB : F)
-    if (BB.getUniquePredecessor()) {
-      MadeChange = true;
-      FoldSingleEntryPHINodes(&BB);
-    }
+    if (BB.getUniquePredecessor())
+      MadeChange |= FoldSingleEntryPHINodes(&BB);
 
   // Before we start introducing relocations, we want to tweak the IR a bit to
   // avoid unfortunate code generation effects.  The main example is that we
