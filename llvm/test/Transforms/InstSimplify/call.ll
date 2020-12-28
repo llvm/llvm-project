@@ -1287,6 +1287,8 @@ define i32 @call_undef_musttail() {
 
 ; This is not the builtin fmax, so we don't know anything about its behavior.
 
+declare float @fmaxf(float, float)
+
 define float @nobuiltin_fmax() {
 ; CHECK-LABEL: @nobuiltin_fmax(
 ; CHECK-NEXT:    [[M:%.*]] = call float @fmaxf(float 0.000000e+00, float 1.000000e+00) [[ATTR3:#.*]]
@@ -1298,6 +1300,62 @@ define float @nobuiltin_fmax() {
   ret float %r
 }
 
-declare float @fmaxf(float, float)
+
+declare i32 @llvm.ctpop.i32(i32)
+declare <3 x i33> @llvm.ctpop.v3i33(<3 x i33>)
+declare i1 @llvm.ctpop.i1(i1)
+
+define i32 @ctpop_lowbit(i32 %x) {
+; CHECK-LABEL: @ctpop_lowbit(
+; CHECK-NEXT:    [[B:%.*]] = and i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.ctpop.i32(i32 [[B]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %b = and i32 %x, 1
+  %r = call i32 @llvm.ctpop.i32(i32 %b)
+  ret i32 %r
+}
+
+define i32 @ctpop_pow2(i32 %x) {
+; CHECK-LABEL: @ctpop_pow2(
+; CHECK-NEXT:    [[B:%.*]] = and i32 [[X:%.*]], 4
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.ctpop.i32(i32 [[B]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %b = and i32 %x, 4
+  %r = call i32 @llvm.ctpop.i32(i32 %b)
+  ret i32 %r
+}
+
+define <3 x i33> @ctpop_signbit(<3 x i33> %x) {
+; CHECK-LABEL: @ctpop_signbit(
+; CHECK-NEXT:    [[B:%.*]] = lshr <3 x i33> [[X:%.*]], <i33 32, i33 32, i33 32>
+; CHECK-NEXT:    [[R:%.*]] = tail call <3 x i33> @llvm.ctpop.v3i33(<3 x i33> [[B]])
+; CHECK-NEXT:    ret <3 x i33> [[R]]
+;
+  %b = lshr <3 x i33> %x, <i33 32, i33 32, i33 32>
+  %r = tail call <3 x i33> @llvm.ctpop.v3i33(<3 x i33> %b)
+  ret <3 x i33> %r
+}
+
+define <3 x i33> @ctpop_notsignbit(<3 x i33> %x) {
+; CHECK-LABEL: @ctpop_notsignbit(
+; CHECK-NEXT:    [[B:%.*]] = lshr <3 x i33> [[X:%.*]], <i33 31, i33 31, i33 31>
+; CHECK-NEXT:    [[R:%.*]] = tail call <3 x i33> @llvm.ctpop.v3i33(<3 x i33> [[B]])
+; CHECK-NEXT:    ret <3 x i33> [[R]]
+;
+  %b = lshr <3 x i33> %x, <i33 31, i33 31, i33 31>
+  %r = tail call <3 x i33> @llvm.ctpop.v3i33(<3 x i33> %b)
+  ret <3 x i33> %r
+}
+
+define i1 @ctpop_bool(i1 %x) {
+; CHECK-LABEL: @ctpop_bool(
+; CHECK-NEXT:    [[R:%.*]] = tail call i1 @llvm.ctpop.i1(i1 [[X:%.*]])
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %r = tail call i1 @llvm.ctpop.i1(i1 %x)
+  ret i1 %r
+}
 
 attributes #0 = { nobuiltin readnone }
