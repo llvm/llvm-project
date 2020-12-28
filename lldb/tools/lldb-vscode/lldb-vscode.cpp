@@ -384,12 +384,7 @@ void EventThreadFunction() {
             break;
           case lldb::eStateSuspended:
             break;
-          case lldb::eStateStopped: {
-            if (g_vsc.waiting_for_run_in_terminal) {
-              g_vsc.waiting_for_run_in_terminal = false;
-              g_vsc.request_in_terminal_cv.notify_one();
-            }
-          }
+          case lldb::eStateStopped:
             // Only report a stopped event if the process was not restarted.
             if (!lldb::SBProcess::GetRestartedFromEvent(event)) {
               SendStdOutStdErr(process);
@@ -1457,47 +1452,64 @@ void request_initialize(const llvm::json::Object &request) {
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
 }
 
-void request_runInTerminal(const llvm::json::Object &launch_request,
-                           llvm::json::Object &launch_response) {
-  // We have already created a target that has a valid "program" path to the
-  // executable. We will attach to the next process whose name matches that
-  // of the target's.
+llvm::Error request_runInTerminal(const llvm::json::Object &launch_request) {
   g_vsc.is_attach = true;
   lldb::SBAttachInfo attach_info;
-  lldb::SBError error;
-  attach_info.SetWaitForLaunch(true, /*async*/ true);
-  g_vsc.target.Attach(attach_info, error);
 
-  llvm::json::Object reverse_request =
-      CreateRunInTerminalReverseRequest(launch_request);
+  llvm::Expected<std::shared_ptr<FifoFile>> comm_file_or_err =
+      CreateRunInTerminalCommFile();
+  if (!comm_file_or_err)
+    return comm_file_or_err.takeError();
+  FifoFile &comm_file = *comm_file_or_err.get();
+
+  RunInTerminalDebugAdapterCommChannel comm_channel(comm_file.m_path);
+
+  llvm::json::Object reverse_request = CreateRunInTerminalReverseRequest(
+      launch_request, g_vsc.debug_adaptor_path, comm_file.m_path);
   llvm::json::Object reverse_response;
   lldb_vscode::PacketStatus status =
       g_vsc.SendReverseRequest(reverse_request, reverse_response);
   if (status != lldb_vscode::PacketStatus::Success)
-    error.SetErrorString("Process cannot be launched by IDE.");
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Process cannot be launched by the IDE. %s",
+                                   comm_channel.GetLauncherError().c_str());
 
-  if (error.Success()) {
-    // Wait for the attach stop event to happen or for a timeout.
-    g_vsc.waiting_for_run_in_terminal = true;
-    static std::mutex mutex;
-    std::unique_lock<std::mutex> locker(mutex);
-    g_vsc.request_in_terminal_cv.wait_for(locker, std::chrono::seconds(10));
+  if (llvm::Expected<lldb::pid_t> pid = comm_channel.GetLauncherPid())
+    attach_info.SetProcessID(*pid);
+  else
+    return pid.takeError();
 
-    auto attached_pid = g_vsc.target.GetProcess().GetProcessID();
-    if (attached_pid == LLDB_INVALID_PROCESS_ID)
-      error.SetErrorString("Failed to attach to a process");
-    else
-      SendProcessEvent(Attach);
-  }
+  g_vsc.debugger.SetAsync(false);
+  lldb::SBError error;
+  g_vsc.target.Attach(attach_info, error);
 
-  if (error.Fail()) {
-    launch_response["success"] = llvm::json::Value(false);
-    EmplaceSafeString(launch_response, "message",
-                      std::string(error.GetCString()));
-  } else {
-    launch_response["success"] = llvm::json::Value(true);
-    g_vsc.SendJSON(CreateEventObject("initialized"));
-  }
+  if (error.Fail())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Failed to attach to the target process. %s",
+                                   comm_channel.GetLauncherError().c_str());
+  // This will notify the runInTerminal launcher that we attached.
+  // We have to make this async, as the function won't return until the launcher
+  // resumes and reads the data.
+  std::future<llvm::Error> did_attach_message_success =
+      comm_channel.NotifyDidAttach();
+
+  // We just attached to the runInTerminal launcher, which was waiting to be
+  // attached. We now resume it, so it can receive the didAttach notification
+  // and then perform the exec. Upon continuing, the debugger will stop the
+  // process right in the middle of the exec. To the user, what we are doing is
+  // transparent, as they will only be able to see the process since the exec,
+  // completely unaware of the preparatory work.
+  g_vsc.target.GetProcess().Continue();
+
+  // Now that the actual target is just starting (i.e. exec was just invoked),
+  // we return the debugger to its async state.
+  g_vsc.debugger.SetAsync(true);
+
+  // If sending the notification failed, the launcher should be dead by now and
+  // the async didAttach notification should have an error message, so we
+  // return it. Otherwise, everything was a success.
+  did_attach_message_success.wait();
+  return did_attach_message_success.get();
 }
 
 // "LaunchRequest": {
@@ -1572,12 +1584,6 @@ void request_launch(const llvm::json::Object &request) {
     return;
   }
 
-  if (GetBoolean(arguments, "runInTerminal", false)) {
-    request_runInTerminal(request, response);
-    g_vsc.SendJSON(llvm::json::Value(std::move(response)));
-    return;
-  }
-
   // Instantiate a launch info instance for the target.
   auto launch_info = g_vsc.target.GetLaunchInfo();
 
@@ -1613,7 +1619,11 @@ void request_launch(const llvm::json::Object &request) {
 
   // Run any pre run LLDB commands the user specified in the launch.json
   g_vsc.RunPreRunCommands();
-  if (launchCommands.empty()) {
+
+  if (GetBoolean(arguments, "runInTerminal", false)) {
+    if (llvm::Error err = request_runInTerminal(request))
+      error.SetErrorString(llvm::toString(std::move(err)).c_str());
+  } else if (launchCommands.empty()) {
     // Disable async events so the launch will be successful when we return from
     // the launch call and the launch will happen synchronously
     g_vsc.debugger.SetAsync(false);
@@ -1632,10 +1642,11 @@ void request_launch(const llvm::json::Object &request) {
   }
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
 
-  SendProcessEvent(Launch);
+  if (g_vsc.is_attach)
+    SendProcessEvent(Attach); // this happens when doing runInTerminal
+  else
+    SendProcessEvent(Launch);
   g_vsc.SendJSON(llvm::json::Value(CreateEventObject("initialized")));
-  // Reenable async events and start the event thread to catch async events.
-  // g_vsc.debugger.SetAsync(true);
 }
 
 // "NextRequest": {
@@ -2966,7 +2977,86 @@ EXAMPLES:
   llvm::outs() << examples;
 }
 
+// If --launch-target is provided, this instance of lldb-vscode becomes a
+// runInTerminal launcher. It will ultimately launch the program specified in
+// the --launch-target argument, which is the original program the user wanted
+// to debug. This is done in such a way that the actual debug adaptor can
+// place breakpoints at the beginning of the program.
+//
+// The launcher will communicate with the debug adaptor using a fifo file in the
+// directory specified in the --comm-file argument.
+//
+// Regarding the actual flow, this launcher will first notify the debug adaptor
+// of its pid. Then, the launcher will be in a pending state waiting to be
+// attached by the adaptor.
+//
+// Once attached and resumed, the launcher will exec and become the program
+// specified by --launch-target, which is the original target the
+// user wanted to run.
+//
+// In case of errors launching the target, a suitable error message will be
+// emitted to the debug adaptor.
+void LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
+                               llvm::StringRef comm_file, char *argv[]) {
+#if defined(WIN_32)
+  llvm::errs() << "runInTerminal is not supported on Windows\n";
+  exit(EXIT_FAILURE);
+#else
+  RunInTerminalLauncherCommChannel comm_channel(comm_file);
+  if (llvm::Error err = comm_channel.NotifyPid()) {
+    llvm::errs() << llvm::toString(std::move(err)) << "\n";
+    exit(EXIT_FAILURE);
+  }
+
+  // We will wait to be attached with a timeout. We don't wait indefinitely
+  // using a signal to prevent being paused forever.
+
+  // This env var should be used only for tests.
+  const char *timeout_env_var = getenv("LLDB_VSCODE_RIT_TIMEOUT_IN_MS");
+  int timeout_in_ms =
+      timeout_env_var != nullptr ? atoi(timeout_env_var) : 20000;
+  if (llvm::Error err = comm_channel.WaitUntilDebugAdaptorAttaches(
+          std::chrono::milliseconds(timeout_in_ms))) {
+    llvm::errs() << llvm::toString(std::move(err)) << "\n";
+    exit(EXIT_FAILURE);
+  }
+
+  const char *target = target_arg.getValue();
+  execvp(target, argv);
+
+  std::string error = std::strerror(errno);
+  comm_channel.NotifyError(error);
+  llvm::errs() << error << "\n";
+  exit(EXIT_FAILURE);
+#endif
+}
+
 int main(int argc, char *argv[]) {
+  llvm::SmallString<256> program_path(argv[0]);
+  llvm::sys::fs::make_absolute(program_path);
+  g_vsc.debug_adaptor_path = program_path.str().str();
+
+  LLDBVSCodeOptTable T;
+  unsigned MAI, MAC;
+  llvm::ArrayRef<const char *> ArgsArr = llvm::makeArrayRef(argv + 1, argc);
+  llvm::opt::InputArgList input_args = T.ParseArgs(ArgsArr, MAI, MAC);
+
+  if (llvm::opt::Arg *target_arg = input_args.getLastArg(OPT_launch_target)) {
+    if (llvm::opt::Arg *comm_file = input_args.getLastArg(OPT_comm_file)) {
+      int target_args_pos = argc;
+      for (int i = 0; i < argc; i++)
+        if (strcmp(argv[i], "--launch-target") == 0) {
+          target_args_pos = i + 1;
+          break;
+        }
+      LaunchRunInTerminalTarget(*target_arg, comm_file->getValue(),
+                                argv + target_args_pos);
+    } else {
+      llvm::errs() << "\"--launch-target\" requires \"--comm-file\" to be "
+                      "specified\n";
+      exit(EXIT_FAILURE);
+    }
+  }
 
   // Initialize LLDB first before we do anything.
   lldb::SBDebugger::Initialize();
@@ -2974,11 +3064,6 @@ int main(int argc, char *argv[]) {
   RegisterRequestCallbacks();
 
   int portno = -1;
-
-  LLDBVSCodeOptTable T;
-  unsigned MAI, MAC;
-  llvm::ArrayRef<const char *> ArgsArr = llvm::makeArrayRef(argv + 1, argc);
-  llvm::opt::InputArgList input_args = T.ParseArgs(ArgsArr, MAI, MAC);
 
   if (input_args.hasArg(OPT_help)) {
     printHelp(T, llvm::sys::path::filename(argv[0]));
