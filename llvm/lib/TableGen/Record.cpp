@@ -856,14 +856,19 @@ static StringInit *interleaveStringList(const ListInit *List,
                                         const StringInit *Delim) {
   if (List->size() == 0)
     return StringInit::get("");
-  SmallString<80> Result(cast<StringInit>(List->getElement(0))->getValue());
+  StringInit *Element = dyn_cast<StringInit>(List->getElement(0));
+  if (!Element)
+    return nullptr;
+  SmallString<80> Result(Element->getValue());
   StringInit::StringFormat Fmt = StringInit::SF_String;
 
   for (unsigned I = 1, E = List->size(); I < E; ++I) {
     Result.append(Delim->getValue());
-    auto *StrInit = cast<StringInit>(List->getElement(I));
-    Result.append(StrInit->getValue());
-    Fmt = StringInit::determineFormat(Fmt, StrInit->getFormat());
+    StringInit *Element = dyn_cast<StringInit>(List->getElement(I));
+    if (!Element)
+      return nullptr;
+    Result.append(Element->getValue());
+    Fmt = StringInit::determineFormat(Fmt, Element->getFormat());
   }
   return StringInit::get(Result, Fmt);
 }
@@ -872,14 +877,21 @@ static StringInit *interleaveIntList(const ListInit *List,
                                      const StringInit *Delim) {
   if (List->size() == 0)
     return StringInit::get("");
-  SmallString<80> Result(
-      cast<IntInit>(List->getElement(0)->getCastTo(IntRecTy::get()))
-          ->getAsString());
+  IntInit *Element =
+      dyn_cast_or_null<IntInit>(List->getElement(0)
+                                    ->convertInitializerTo(IntRecTy::get()));
+  if (!Element)
+    return nullptr;
+  SmallString<80> Result(Element->getAsString());
 
   for (unsigned I = 1, E = List->size(); I < E; ++I) {
     Result.append(Delim->getValue());
-    Result.append(cast<IntInit>(List->getElement(I)->getCastTo(IntRecTy::get()))
-                      ->getAsString());
+    IntInit *Element =
+        dyn_cast_or_null<IntInit>(List->getElement(I)
+                                      ->convertInitializerTo(IntRecTy::get()));
+    if (!Element)
+      return nullptr;
+    Result.append(Element->getAsString());
   }
   return StringInit::get(Result);
 }
@@ -975,10 +987,13 @@ Init *BinOpInit::Fold(Record *CurRec) const {
     ListInit *List = dyn_cast<ListInit>(LHS);
     StringInit *Delim = dyn_cast<StringInit>(RHS);
     if (List && Delim) {
+      StringInit *Result;
       if (isa<StringRecTy>(List->getElementType()))
-        return interleaveStringList(List, Delim);
+        Result = interleaveStringList(List, Delim);
       else
-        return interleaveIntList(List, Delim);
+        Result = interleaveIntList(List, Delim);
+      if (Result)
+        return Result;
     }
     break;
   }
