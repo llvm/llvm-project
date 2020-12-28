@@ -2561,13 +2561,13 @@ let AddedComplexity = 400, Predicates = [IsISA3_1, IsLittleEndian] in {
   def : Pat<(truncstorei16 (i32 (vector_extract v8i16:$src, 0)), xoaddr:$dst),
             (STXVRHX (COPY_TO_REGCLASS v8i16:$src, VSRC), xoaddr:$dst)>;
   def : Pat<(store (i32 (extractelt v4i32:$src, 0)), xoaddr:$dst),
-            (STXVRWX (COPY_TO_REGCLASS v4i32:$src, VSRC), xoaddr:$dst)>;
+            (STXVRWX $src, xoaddr:$dst)>;
   def : Pat<(store (f32 (extractelt v4f32:$src, 0)), xoaddr:$dst),
-            (STXVRWX (COPY_TO_REGCLASS v4f32:$src, VSRC), xoaddr:$dst)>;
+            (STXVRWX $src, xoaddr:$dst)>;
   def : Pat<(store (i64 (extractelt v2i64:$src, 0)), xoaddr:$dst),
-            (STXVRDX (COPY_TO_REGCLASS v2i64:$src, VSRC), xoaddr:$dst)>;
+            (STXVRDX $src, xoaddr:$dst)>;
   def : Pat<(store (f64 (extractelt v2f64:$src, 0)), xoaddr:$dst),
-            (STXVRDX (COPY_TO_REGCLASS v2f64:$src, VSRC), xoaddr:$dst)>;
+            (STXVRDX $src, xoaddr:$dst)>;
  }
 
 class xxevalPattern <dag pattern, bits<8> imm> :
