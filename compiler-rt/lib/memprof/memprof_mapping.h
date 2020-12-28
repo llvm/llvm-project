@@ -37,7 +37,7 @@ extern uptr kHighMemEnd; // Initialized in __memprof_init.
 #define SHADOW_MASK ~(MEM_GRANULARITY - 1)
 
 #define MEM_TO_SHADOW(mem)                                                     \
-  (((mem & SHADOW_MASK) >> SHADOW_SCALE) + (SHADOW_OFFSET))
+  ((((mem) & SHADOW_MASK) >> SHADOW_SCALE) + (SHADOW_OFFSET))
 
 #define kLowMemBeg 0
 #define kLowMemEnd (SHADOW_OFFSET ? SHADOW_OFFSET - 1 : 0)
