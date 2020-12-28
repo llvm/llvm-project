@@ -79,6 +79,18 @@ static cl::opt<unsigned> SplitEdgeProbabilityThreshold(
         "splitted critical edge"),
     cl::init(40), cl::Hidden);
 
+static cl::opt<unsigned> SinkLoadInstsPerBlockThreshold(
+    "machine-sink-load-instrs-threshold",
+    cl::desc("Do not try to find alias store for a load if there is a in-path "
+             "block whose instruction number is higher than this threshold."),
+    cl::init(2000), cl::Hidden);
+
+static cl::opt<unsigned> SinkLoadBlocksThreshold(
+    "machine-sink-load-blocks-threshold",
+    cl::desc("Do not try to find alias store for a load if the block number in "
+             "the straight line is higher than this threshold."),
+    cl::init(20), cl::Hidden);
+
 STATISTIC(NumSunk,      "Number of machine instructions sunk");
 STATISTIC(NumSplit,     "Number of critical edges split");
 STATISTIC(NumCoalesces, "Number of copies coalesced");
@@ -1020,6 +1032,7 @@ bool MachineSinking::hasStoreBetween(MachineBasicBlock *From,
   bool SawStore = false;
   bool HasAliasedStore = false;
   DenseSet<MachineBasicBlock *> HandledBlocks;
+  DenseSet<MachineBasicBlock *> HandledDomBlocks;
   // Go through all reachable blocks from From.
   for (MachineBasicBlock *BB : depth_first(From)) {
     // We insert the instruction at the start of block To, so no need to worry
@@ -1036,10 +1049,33 @@ bool MachineSinking::hasStoreBetween(MachineBasicBlock *From,
     HandledBlocks.insert(BB);
     // To post dominates BB, it must be a path from block From.
     if (PDT->dominates(To, BB)) {
+      if (!HandledDomBlocks.count(BB))
+        HandledDomBlocks.insert(BB);
+
+      // If this BB is too big or the block number in straight line between From
+      // and To is too big, stop searching to save compiling time.
+      if (BB->size() > SinkLoadInstsPerBlockThreshold ||
+          HandledDomBlocks.size() > SinkLoadBlocksThreshold) {
+        for (auto *DomBB : HandledDomBlocks) {
+          if (DomBB != BB && DT->dominates(DomBB, BB))
+            HasStoreCache[std::make_pair(DomBB, To)] = true;
+          else if(DomBB != BB && DT->dominates(BB, DomBB))
+            HasStoreCache[std::make_pair(From, DomBB)] = true;
+        }
+        HasStoreCache[BlockPair] = true;
+        return true;
+      }
+
       for (MachineInstr &I : *BB) {
         // Treat as alias conservatively for a call or an ordered memory
         // operation.
         if (I.isCall() || I.hasOrderedMemoryRef()) {
+          for (auto *DomBB : HandledDomBlocks) {
+            if (DomBB != BB && DT->dominates(DomBB, BB))
+              HasStoreCache[std::make_pair(DomBB, To)] = true;
+            else if(DomBB != BB && DT->dominates(BB, DomBB))
+              HasStoreCache[std::make_pair(From, DomBB)] = true;
+          }
           HasStoreCache[BlockPair] = true;
           return true;
         }
