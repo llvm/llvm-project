@@ -156,6 +156,10 @@ defm CATCH : I<(outs I32:$dst), (ins event_op:$tag),
 defm CATCH_ALL : NRI<(outs), (ins), [], "catch_all", 0x05>;
 }
 
+// Delegating an exception: delegate
+let isTerminator = 1, hasCtrlDep = 1, hasSideEffects = 1 in
+defm DELEGATE : NRI<(outs), (ins bb_op:$dst), [], "delegate \t $dst", 0x18>;
+
 // Pseudo instructions: cleanupret / catchret
 let isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,
     isPseudo = 1, isEHScopeReturn = 1 in {
