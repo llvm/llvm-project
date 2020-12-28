@@ -16,6 +16,8 @@
 #define LLVM_OBJECTYAML_ELFYAML_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/ELF.h"
+#include "llvm/Object/ELFTypes.h"
 #include "llvm/ObjectYAML/DWARFYAML.h"
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -68,6 +70,38 @@ LLVM_YAML_STRONG_TYPEDEF(uint32_t, MIPS_ISA)
 
 LLVM_YAML_STRONG_TYPEDEF(StringRef, YAMLFlowString)
 LLVM_YAML_STRONG_TYPEDEF(int64_t, YAMLIntUInt)
+
+template <class ELFT>
+unsigned getDefaultShEntSize(unsigned EMachine, ELF_SHT SecType,
+                             StringRef SecName) {
+  if (EMachine == ELF::EM_MIPS && SecType == ELF::SHT_MIPS_ABIFLAGS)
+    return sizeof(object::Elf_Mips_ABIFlags<ELFT>);
+
+  switch (SecType) {
+  case ELF::SHT_GROUP:
+    return sizeof(typename ELFT::Word);
+  case ELF::SHT_REL:
+    return sizeof(typename ELFT::Rel);
+  case ELF::SHT_RELA:
+    return sizeof(typename ELFT::Rela);
+  case ELF::SHT_RELR:
+    return sizeof(typename ELFT::Relr);
+  case ELF::SHT_DYNAMIC:
+    return sizeof(typename ELFT::Dyn);
+  case ELF::SHT_HASH:
+    return sizeof(typename ELFT::Word);
+  case ELF::SHT_SYMTAB_SHNDX:
+    return sizeof(typename ELFT::Word);
+  case ELF::SHT_GNU_versym:
+    return sizeof(typename ELFT::Half);
+  case ELF::SHT_LLVM_CALL_GRAPH_PROFILE:
+    return sizeof(object::Elf_CGProfile_Impl<ELFT>);
+  default:
+    if (SecName == ".debug_str")
+      return 1;
+    return 0;
+  }
+}
 
 // For now, hardcode 64 bits everywhere that 32 or 64 would be needed
 // since 64-bit can hold 32-bit values too.
