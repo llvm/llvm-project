@@ -42,6 +42,10 @@ void calleeWeak(Weak);
 // ARM64: %[[V3:.*]] = bitcast i8* %[[V2]] to i8**
 // ARM64: call void @llvm.objc.destroyWeak(i8** %[[V3]])
 
+@interface C
+- (void)m:(Weak)a;
+@end
+
 void test_constructor_destructor_Weak(void) {
   Weak t;
 }
@@ -190,4 +194,19 @@ void test_argument_Weak(Weak *a) {
 
 Weak test_return_Weak(Weak *a) {
   return *a;
+}
+
+// COMMON-LABEL: define void @test_null_receiver(
+// COMMON: %[[AGG_TMP:.*]] = alloca %[[STRUCT_WEAK]]
+// COMMON: br i1
+
+// COMMON: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, %[[STRUCT_WEAK]]*)*)({{.*}}, %[[STRUCT_WEAK]]* %[[AGG_TMP]])
+// COMMON: br
+
+// COMMON: %[[V6:.*]] = bitcast %[[STRUCT_WEAK]]* %[[AGG_TMP]] to i8**
+// COMMON: call void @__destructor_{{.*}}(i8** %[[V6]])
+// COMMON: br
+
+void test_null_receiver(C *c) {
+  [c m:getWeak()];
 }
