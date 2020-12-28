@@ -73,6 +73,10 @@ struct OutlinableRegion {
   /// The number of extracted inputs from the CodeExtractor.
   unsigned NumExtractedInputs;
 
+  /// The corresponding BasicBlock with the appropriate stores for this
+  /// OutlinableRegion in the overall function.
+  unsigned OutputBlockNum;
+
   /// Mapping the extracted argument number to the argument number in the
   /// overall function.  Since there will be inputs, such as elevated constants
   /// that are not the same in each region in a SimilarityGroup, or values that
@@ -86,6 +90,11 @@ struct OutlinableRegion {
   /// to the newly created deduplicated function.  This is handled separately
   /// since the CodeExtractor does not recognize constants.
   DenseMap<unsigned, Constant *> AggArgToConstant;
+
+  /// The global value numbers that are used as outputs for this section. Once
+  /// extracted, each output will be stored to an output register.  This
+  /// documents the global value numbers that are used in this pattern.
+  SmallVector<unsigned, 4> GVNStores;
 
   /// Used to create an outlined function.
   CodeExtractor *CE = nullptr;
@@ -192,6 +201,15 @@ private:
   void findAddInputsOutputs(Module &M, OutlinableRegion &Region,
                             DenseSet<unsigned> &NotSame);
 
+  /// Update the output mapping based on the load instruction, and the outputs
+  /// of the extracted function.
+  ///
+  /// \param Region - The region extracted
+  /// \param Outputs - The outputs from the extracted function.
+  /// \param LI - The load instruction used to update the mapping.
+  void updateOutputMapping(OutlinableRegion &Region,
+                           ArrayRef<Value *> Outputs, LoadInst *LI);
+
   /// Extract \p Region into its own function.
   ///
   /// \param [in] Region - The region to be extracted into its own function.
@@ -217,6 +235,11 @@ private:
 
   /// TargetTransformInfo lambda for target specific information.
   function_ref<TargetTransformInfo &(Function &)> getTTI;
+
+  /// A mapping from newly created reloaded output values to the original value.
+  /// If an value is replace by an output from an outlined region, this maps
+  /// that Value, back to its original Value.
+  DenseMap<Value *, Value *> OutputMappings;
 
   /// IRSimilarityIdentifier lambda to retrieve IRSimilarityIdentifier.
   function_ref<IRSimilarityIdentifier &(Module &)> getIRSI;
