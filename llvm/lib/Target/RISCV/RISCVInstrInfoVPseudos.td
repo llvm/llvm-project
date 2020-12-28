@@ -538,6 +538,23 @@ class VPseudoNullaryMask<VReg RegClass>:
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
+// Nullary for pseudo instructions. They are expanded in
+// RISCVExpandPseudoInsts pass.
+class VPseudoNullaryPseudoM<string BaseInst>
+       : Pseudo<(outs VR:$rd), (ins GPR:$vl, ixlenimm:$sew), []>,
+       RISCVVPseudo {
+  let mayLoad = 0;
+  let mayStore = 0;
+  let hasSideEffects = 0;
+  let usesCustomInserter = 1;
+  let Uses = [VL, VTYPE];
+  let VLIndex = 1;
+  let SEWIndex = 2;
+  // BaseInstr is not used in RISCVExpandPseudoInsts pass.
+  // Just fill a corresponding real v-inst to pass tablegen check.
+  let BaseInstr = !cast<Instruction>(BaseInst);
+}
+
 // RetClass could be GPR or VReg.
 class VPseudoUnaryNoMask<DAGOperand RetClass, VReg OpClass, string Constraint = ""> :
         Pseudo<(outs RetClass:$rd),
@@ -817,6 +834,14 @@ multiclass VPseudoMaskNullaryV {
     let VLMul = m.value in {
       def "_V_" # m.MX : VPseudoNullaryNoMask<m.vrclass>;
       def "_V_" # m.MX # "_MASK" : VPseudoNullaryMask<m.vrclass>;
+    }
+  }
+}
+
+multiclass VPseudoNullaryPseudoM <string BaseInst> {
+  foreach mti = AllMasks in {
+    let VLMul = mti.LMul.value in {
+      def "_M_" # mti.BX : VPseudoNullaryPseudoM<BaseInst # "_MM">;
     }
   }
 }
@@ -1463,6 +1488,15 @@ multiclass VPatNullaryV<string intrinsic, string instruction>
                           (NoX0 GPR:$vl), vti.SEW)>;
   }
 }
+
+multiclass VPatNullaryM<string intrinsic, string inst> {
+  foreach mti = AllMasks in
+    def : Pat<(mti.Mask (!cast<Intrinsic>(intrinsic)
+                        (XLenVT GPR:$vl))),
+                        (!cast<Instruction>(inst#"_M_"#mti.BX)
+                        (NoX0 GPR:$vl), mti.SEW)>;
+}
+
 
 multiclass VPatBinary<string intrinsic,
                       string inst,
@@ -2384,6 +2418,10 @@ defm PseudoVMNOR: VPseudoBinaryM_MM;
 defm PseudoVMORNOT: VPseudoBinaryM_MM;
 defm PseudoVMXNOR: VPseudoBinaryM_MM;
 
+// Pseudo insturctions
+defm PseudoVMCLR : VPseudoNullaryPseudoM<"VMXOR">;
+defm PseudoVMSET : VPseudoNullaryPseudoM<"VMXNOR">;
+
 //===----------------------------------------------------------------------===//
 // 16.2. Vector mask population count vpopc
 //===----------------------------------------------------------------------===//
@@ -2912,6 +2950,10 @@ defm "" : VPatBinaryM_MM<"int_riscv_vmor", "PseudoVMOR">;
 defm "" : VPatBinaryM_MM<"int_riscv_vmnor", "PseudoVMNOR">;
 defm "" : VPatBinaryM_MM<"int_riscv_vmornot", "PseudoVMORNOT">;
 defm "" : VPatBinaryM_MM<"int_riscv_vmxnor", "PseudoVMXNOR">;
+
+// pseudo instructions
+defm "" : VPatNullaryM<"int_riscv_vmclr", "PseudoVMCLR">;
+defm "" : VPatNullaryM<"int_riscv_vmset", "PseudoVMSET">;
 
 //===----------------------------------------------------------------------===//
 // 16.2. Vector mask population count vpopc
