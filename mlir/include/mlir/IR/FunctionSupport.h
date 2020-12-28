@@ -333,11 +333,7 @@ public:
   /// Set the attributes held by the argument at 'index'. `attributes` may be
   /// null, in which case any existing argument attributes are removed.
   void setArgAttrs(unsigned index, DictionaryAttr attributes);
-  void setAllArgAttrs(ArrayRef<DictionaryAttr> attributes) {
-    assert(attributes.size() == getNumArguments());
-    for (unsigned i = 0, e = attributes.size(); i != e; ++i)
-      setArgAttrs(i, attributes[i]);
-  }
+  void setAllArgAttrs(ArrayRef<DictionaryAttr> attributes);
 
   /// If the an attribute exists with the specified name, change it to the new
   /// value. Otherwise, add a new attribute with the specified name/value.
@@ -400,11 +396,7 @@ public:
   /// Set the attributes held by the result at 'index'. `attributes` may be
   /// null, in which case any existing argument attributes are removed.
   void setResultAttrs(unsigned index, DictionaryAttr attributes);
-  void setAllResultAttrs(ArrayRef<DictionaryAttr> attributes) {
-    assert(attributes.size() == getNumResults());
-    for (unsigned i = 0, e = attributes.size(); i != e; ++i)
-      setResultAttrs(i, attributes[i]);
-  }
+  void setAllResultAttrs(ArrayRef<DictionaryAttr> attributes);
 
   /// If the an attribute exists with the specified name, change it to the new
   /// value. Otherwise, add a new attribute with the specified name/value.
@@ -591,6 +583,26 @@ void FunctionLike<ConcreteType>::setArgAttrs(unsigned index,
                                          attributes);
 }
 
+template <typename ConcreteType>
+void FunctionLike<ConcreteType>::setAllArgAttrs(
+    ArrayRef<DictionaryAttr> attributes) {
+  assert(attributes.size() == getNumArguments());
+  NamedAttrList attrs = this->getOperation()->getAttrs();
+
+  // Instead of calling setArgAttrs() multiple times, which rebuild the
+  // attribute dictionary every time, build a new list of attributes for the
+  // operation so that we rebuild the attribute dictionary in one shot.
+  SmallString<8> argAttrName;
+  for (unsigned i = 0, e = attributes.size(); i != e; ++i) {
+    StringRef attrName = getArgAttrName(i, argAttrName);
+    if (!attributes[i] || attributes[i].empty())
+      attrs.erase(attrName);
+    else
+      attrs.set(attrName, attributes[i]);
+  }
+  this->getOperation()->setAttrs(attrs);
+}
+
 /// If the an attribute exists with the specified name, change it to the new
 /// value. Otherwise, add a new attribute with the specified name/value.
 template <typename ConcreteType>
@@ -646,6 +658,26 @@ void FunctionLike<ConcreteType>::setResultAttrs(unsigned index,
   else
     this->getOperation()->setAttr(getResultAttrName(index, nameOut),
                                   attributes);
+}
+
+template <typename ConcreteType>
+void FunctionLike<ConcreteType>::setAllResultAttrs(
+    ArrayRef<DictionaryAttr> attributes) {
+  assert(attributes.size() == getNumResults());
+  NamedAttrList attrs = this->getOperation()->getAttrs();
+
+  // Instead of calling setResultAttrs() multiple times, which rebuild the
+  // attribute dictionary every time, build a new list of attributes for the
+  // operation so that we rebuild the attribute dictionary in one shot.
+  SmallString<8> resultAttrName;
+  for (unsigned i = 0, e = attributes.size(); i != e; ++i) {
+    StringRef attrName = getResultAttrName(i, resultAttrName);
+    if (!attributes[i] || attributes[i].empty())
+      attrs.erase(attrName);
+    else
+      attrs.set(attrName, attributes[i]);
+  }
+  this->getOperation()->setAttrs(attrs);
 }
 
 /// If the an attribute exists with the specified name, change it to the new
