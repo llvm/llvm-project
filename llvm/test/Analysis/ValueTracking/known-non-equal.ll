@@ -201,5 +201,17 @@ define i1 @mul5(i8 %B, i8 %C) {
   ret i1 %cmp
 }
 
+@g = external global i16, align 1
+
+define i1 @mul_constantexpr(i16 %a) {
+; CHECK-LABEL: @mul_constantexpr(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i16 [[A:%.*]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 mul nsw (i16 ptrtoint (i16* @g to i16), i16 -1), [[MUL]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = mul nsw i16 %a, 3
+  %cmp = icmp eq i16 mul nsw (i16 ptrtoint (i16* @g to i16), i16 -1), %mul
+  ret i1 %cmp
+}
 
 !0 = !{ i8 1, i8 5 }
