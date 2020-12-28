@@ -90,3 +90,40 @@ end module
 !  subroutine test()
 !  end
 !end
+
+! Ensure the type is emitted before its use
+module m2
+  private s
+  type :: t
+  contains
+    procedure :: foo
+  end type
+  abstract interface
+    subroutine s(x)
+      import
+      type(t) :: x
+    end subroutine
+  end interface
+contains
+  subroutine foo(x)
+    class(t) :: x
+  end subroutine
+end module
+!Expect: m2.mod
+!module m2
+!  type::t
+!  contains
+!    procedure::foo
+!  end type
+!  private::s
+!  abstract interface
+!    subroutine s(x)
+!      import::t
+!      type(t)::x
+!    end
+!  end interface
+!contains
+!  subroutine foo(x)
+!    class(t)::x
+!  end
+!end
