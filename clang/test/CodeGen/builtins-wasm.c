@@ -603,6 +603,34 @@ u64x2 extmul_high_i32x4_u_i64x2(u32x4 x, u32x4 y) {
   // WEBASSEMBLY-NEXT: ret
 }
 
+i16x8 extadd_pairwise_i8x16_s_i16x8(i8x16 v) {
+  return __builtin_wasm_extadd_pairwise_i8x16_s_i16x8(v);
+  // WEBASSEMBLY: call <8 x i16> @llvm.wasm.extadd.pairwise.signed.v8i16(
+  // WEBASSEMBLY-SAME: <16 x i8> %v)
+  // WEBASSEMBLY-NEXT: ret
+}
+
+u16x8 extadd_pairwise_i8x16_u_i16x8(u8x16 v) {
+  return __builtin_wasm_extadd_pairwise_i8x16_u_i16x8(v);
+  // WEBASSEMBLY: call <8 x i16> @llvm.wasm.extadd.pairwise.unsigned.v8i16(
+  // WEBASSEMBLY-SAME: <16 x i8> %v)
+  // WEBASSEMBLY-NEXT: ret
+}
+
+i32x4 extadd_pairwise_i16x8_s_i32x4(i16x8 v) {
+  return __builtin_wasm_extadd_pairwise_i16x8_s_i32x4(v);
+  // WEBASSEMBLY: call <4 x i32> @llvm.wasm.extadd.pairwise.signed.v4i32(
+  // WEBASSEMBLY-SAME: <8 x i16> %v)
+  // WEBASSEMBLY-NEXT: ret
+}
+
+u32x4 extadd_pairwise_i16x8_u_i32x4(u16x8 v) {
+  return __builtin_wasm_extadd_pairwise_i16x8_u_i32x4(v);
+  // WEBASSEMBLY: call <4 x i32> @llvm.wasm.extadd.pairwise.unsigned.v4i32(
+  // WEBASSEMBLY-SAME: <8 x i16> %v)
+  // WEBASSEMBLY-NEXT: ret
+}
+
 i32x4 dot_i16x8_s(i16x8 x, i16x8 y) {
   return __builtin_wasm_dot_s_i32x4_i16x8(x, y);
   // WEBASSEMBLY: call <4 x i32> @llvm.wasm.dot(<8 x i16> %x, <8 x i16> %y)
