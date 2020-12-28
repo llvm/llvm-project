@@ -1246,6 +1246,17 @@ foreach t2 = !foldl(
 ) in
 def : Pat<(t1 (bitconvert (t2 V128:$v))), (t1 V128:$v)>;
 
+// Extended pairwise addition
+defm "" : SIMDConvert<I16x8, I8x16, int_wasm_extadd_pairwise_signed,
+                      "extadd_pairwise_i8x16_s", 0xc2>;
+defm "" : SIMDConvert<I16x8, I8x16, int_wasm_extadd_pairwise_unsigned,
+                      "extadd_pairwise_i8x16_u", 0xc3>;
+defm "" : SIMDConvert<I32x4, I16x8, int_wasm_extadd_pairwise_signed,
+                      "extadd_pairwise_i16x8_s", 0xa5>;
+defm "" : SIMDConvert<I32x4, I16x8, int_wasm_extadd_pairwise_unsigned,
+                      "extadd_pairwise_i16x8_u", 0xa6>;
+
+
 //===----------------------------------------------------------------------===//
 // Quasi-Fused Multiply- Add and Subtract (QFMA/QFMS)
 //===----------------------------------------------------------------------===//

@@ -16932,6 +16932,28 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Function *Callee = CGM.getIntrinsic(IntNo, ConvertType(E->getType()));
     return Builder.CreateCall(Callee, {LHS, RHS});
   }
+  case WebAssembly::BI__builtin_wasm_extadd_pairwise_i8x16_s_i16x8:
+  case WebAssembly::BI__builtin_wasm_extadd_pairwise_i8x16_u_i16x8:
+  case WebAssembly::BI__builtin_wasm_extadd_pairwise_i16x8_s_i32x4:
+  case WebAssembly::BI__builtin_wasm_extadd_pairwise_i16x8_u_i32x4: {
+    Value *Vec = EmitScalarExpr(E->getArg(0));
+    unsigned IntNo;
+    switch (BuiltinID) {
+    case WebAssembly::BI__builtin_wasm_extadd_pairwise_i8x16_s_i16x8:
+    case WebAssembly::BI__builtin_wasm_extadd_pairwise_i16x8_s_i32x4:
+      IntNo = Intrinsic::wasm_extadd_pairwise_signed;
+      break;
+    case WebAssembly::BI__builtin_wasm_extadd_pairwise_i8x16_u_i16x8:
+    case WebAssembly::BI__builtin_wasm_extadd_pairwise_i16x8_u_i32x4:
+      IntNo = Intrinsic::wasm_extadd_pairwise_unsigned;
+      break;
+    default:
+      llvm_unreachable("unexptected builtin ID");
+    }
+
+    Function *Callee = CGM.getIntrinsic(IntNo, ConvertType(E->getType()));
+    return Builder.CreateCall(Callee, Vec);
+  }
   case WebAssembly::BI__builtin_wasm_bitselect: {
     Value *V1 = EmitScalarExpr(E->getArg(0));
     Value *V2 = EmitScalarExpr(E->getArg(1));
