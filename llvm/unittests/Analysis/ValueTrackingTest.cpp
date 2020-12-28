@@ -695,6 +695,59 @@ TEST_F(ValueTrackingTest, ComputeNumSignBits_Shuffle2) {
   EXPECT_EQ(ComputeNumSignBits(A, M->getDataLayout()), 1u);
 }
 
+TEST_F(ValueTrackingTest, impliesPoisonTest_Identity) {
+  parseAssembly("define void @test(i32 %x, i32 %y) {\n"
+                "  %A = add i32 %x, %y\n"
+                "  ret void\n"
+                "}");
+  EXPECT_TRUE(impliesPoison(A, A));
+}
+
+TEST_F(ValueTrackingTest, impliesPoisonTest_ICmp) {
+  parseAssembly("define void @test(i32 %x) {\n"
+                "  %A2 = icmp eq i32 %x, 0\n"
+                "  %A = icmp eq i32 %x, 1\n"
+                "  ret void\n"
+                "}");
+  EXPECT_TRUE(impliesPoison(A2, A));
+}
+
+TEST_F(ValueTrackingTest, impliesPoisonTest_ICmpUnknown) {
+  parseAssembly("define void @test(i32 %x, i32 %y) {\n"
+                "  %A2 = icmp eq i32 %x, %y\n"
+                "  %A = icmp eq i32 %x, 1\n"
+                "  ret void\n"
+                "}");
+  EXPECT_FALSE(impliesPoison(A2, A));
+}
+
+TEST_F(ValueTrackingTest, impliesPoisonTest_AddNswOkay) {
+  parseAssembly("define void @test(i32 %x) {\n"
+                "  %A2 = add nsw i32 %x, 1\n"
+                "  %A = add i32 %A2, 1\n"
+                "  ret void\n"
+                "}");
+  EXPECT_TRUE(impliesPoison(A2, A));
+}
+
+TEST_F(ValueTrackingTest, impliesPoisonTest_AddNswOkay2) {
+  parseAssembly("define void @test(i32 %x) {\n"
+                "  %A2 = add i32 %x, 1\n"
+                "  %A = add nsw i32 %A2, 1\n"
+                "  ret void\n"
+                "}");
+  EXPECT_TRUE(impliesPoison(A2, A));
+}
+
+TEST_F(ValueTrackingTest, impliesPoisonTest_AddNsw) {
+  parseAssembly("define void @test(i32 %x) {\n"
+                "  %A2 = add nsw i32 %x, 1\n"
+                "  %A = add i32 %x, 1\n"
+                "  ret void\n"
+                "}");
+  EXPECT_FALSE(impliesPoison(A2, A));
+}
+
 TEST_F(ValueTrackingTest, ComputeNumSignBits_Shuffle_Pointers) {
   parseAssembly(
       "define <2 x i32*> @test(<2 x i32*> %x) {\n"
