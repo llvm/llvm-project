@@ -87,7 +87,7 @@ define <8 x float> @widen_extract4(<8 x float> %ins, <2 x float> %ext) {
 define <8 x i16> @pr26015(<4 x i16> %t0) {
 ; CHECK-LABEL: @pr26015(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i16> [[T0:%.*]], <4 x i16> undef, <8 x i32> <i32 undef, i32 undef, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[T5:%.*]] = shufflevector <8 x i16> <i16 0, i16 0, i16 0, i16 undef, i16 0, i16 0, i16 0, i16 undef>, <8 x i16> [[TMP1]], <8 x i32> <i32 0, i32 1, i32 2, i32 10, i32 4, i32 5, i32 6, i32 11>
+; CHECK-NEXT:    [[T5:%.*]] = shufflevector <8 x i16> <i16 0, i16 0, i16 0, i16 poison, i16 0, i16 0, i16 0, i16 poison>, <8 x i16> [[TMP1]], <8 x i32> <i32 0, i32 1, i32 2, i32 10, i32 4, i32 5, i32 6, i32 11>
 ; CHECK-NEXT:    ret <8 x i16> [[T5]]
 ;
   %t1 = extractelement <4 x i16> %t0, i32 2
@@ -107,12 +107,12 @@ define <8 x i16> @pr25999(<4 x i16> %t0, i1 %b) {
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[IF:%.*]], label [[END:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i16> [[T0]], <4 x i16> undef, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[T3:%.*]] = insertelement <8 x i16> <i16 0, i16 0, i16 0, i16 undef, i16 0, i16 0, i16 0, i16 undef>, i16 [[T1]], i32 3
+; CHECK-NEXT:    [[T3:%.*]] = insertelement <8 x i16> <i16 0, i16 0, i16 0, i16 poison, i16 0, i16 0, i16 0, i16 poison>, i16 [[T1]], i32 3
 ; CHECK-NEXT:    [[T5:%.*]] = shufflevector <8 x i16> [[T3]], <8 x i16> [[TMP1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 11>
 ; CHECK-NEXT:    ret <8 x i16> [[T5]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[A1:%.*]] = add i16 [[T1]], 4
-; CHECK-NEXT:    [[T6:%.*]] = insertelement <8 x i16> <i16 undef, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>, i16 [[A1]], i32 0
+; CHECK-NEXT:    [[T6:%.*]] = insertelement <8 x i16> <i16 poison, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>, i16 [[A1]], i32 0
 ; CHECK-NEXT:    ret <8 x i16> [[T6]]
 ;
 
@@ -206,7 +206,7 @@ define double @pr26354(<2 x double>* %tmp, i1 %B) {
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[IF:%.*]], label [[END:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[E2:%.*]] = extractelement <2 x double> [[LD]], i32 1
-; CHECK-NEXT:    [[I1:%.*]] = insertelement <4 x double> <double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double undef>, double [[E2]], i32 3
+; CHECK-NEXT:    [[I1:%.*]] = insertelement <4 x double> <double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double poison>, double [[E2]], i32 3
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[PH:%.*]] = phi <4 x double> [ undef, [[ENTRY:%.*]] ], [ [[I1]], [[IF]] ]
@@ -244,7 +244,7 @@ define <4 x float> @PR30923(<2 x float> %x) {
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[EXT2:%.*]] = extractelement <2 x float> [[X]], i32 0
-; CHECK-NEXT:    [[INS1:%.*]] = insertelement <4 x float> <float 0.000000e+00, float 0.000000e+00, float undef, float undef>, float [[EXT2]], i32 2
+; CHECK-NEXT:    [[INS1:%.*]] = insertelement <4 x float> <float 0.000000e+00, float 0.000000e+00, float poison, float poison>, float [[EXT2]], i32 2
 ; CHECK-NEXT:    [[INS2:%.*]] = insertelement <4 x float> [[INS1]], float [[EXT1]], i32 3
 ; CHECK-NEXT:    ret <4 x float> [[INS2]]
 ;
@@ -267,7 +267,7 @@ define <4 x i32> @extractelt_insertion(<2 x i32> %x, i32 %y) {
 ; CHECK-LABEL: @extractelt_insertion(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <2 x i32> [[X:%.*]], <2 x i32> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-; CHECK-NEXT:    [[B:%.*]] = shufflevector <4 x i32> <i32 0, i32 0, i32 0, i32 undef>, <4 x i32> [[TMP0]], <4 x i32> <i32 0, i32 1, i32 2, i32 5>
+; CHECK-NEXT:    [[B:%.*]] = shufflevector <4 x i32> <i32 0, i32 0, i32 0, i32 poison>, <4 x i32> [[TMP0]], <4 x i32> <i32 0, i32 1, i32 2, i32 5>
 ; CHECK-NEXT:    [[C:%.*]] = add i32 [[Y:%.*]], 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[TMP0]], i32 [[C]]
 ; CHECK-NEXT:    [[E:%.*]] = icmp eq i32 [[TMP1]], 0
@@ -416,7 +416,7 @@ define <4 x float> @insert_not_undef_shuffle_translate_commute_uses(float %x, <4
 
 define <5 x float> @insert_not_undef_shuffle_translate_commute_lengthen(float %x, <4 x float> %y, <4 x float> %q) {
 ; CHECK-LABEL: @insert_not_undef_shuffle_translate_commute_lengthen(
-; CHECK-NEXT:    [[XV:%.*]] = insertelement <4 x float> undef, float [[X:%.*]], i32 2
+; CHECK-NEXT:    [[XV:%.*]] = insertelement <4 x float> poison, float [[X:%.*]], i32 2
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[Y:%.*]], <4 x float> [[XV]], <5 x i32> <i32 0, i32 6, i32 2, i32 undef, i32 undef>
 ; CHECK-NEXT:    ret <5 x float> [[R]]
 ;

@@ -59,7 +59,7 @@ define <4 x i8> @h_undef(<4 x i8> %x, <4 x i8> %y) {
 ; CHECK-NEXT:    [[X3X3:%.*]] = mul i8 [[X3]], [[X3]]
 ; CHECK-NEXT:    [[Y1Y1:%.*]] = mul i8 [[Y1]], [[Y1]]
 ; CHECK-NEXT:    [[Y2Y2:%.*]] = mul i8 [[Y2]], [[Y2]]
-; CHECK-NEXT:    [[INS2:%.*]] = insertelement <4 x i8> undef, i8 [[X3X3]], i32 1
+; CHECK-NEXT:    [[INS2:%.*]] = insertelement <4 x i8> <i8 undef, i8 poison, i8 poison, i8 poison>, i8 [[X3X3]], i32 1
 ; CHECK-NEXT:    [[INS3:%.*]] = insertelement <4 x i8> [[INS2]], i8 [[Y1Y1]], i32 2
 ; CHECK-NEXT:    [[INS4:%.*]] = insertelement <4 x i8> [[INS3]], i8 [[Y2Y2]], i32 3
 ; CHECK-NEXT:    ret <4 x i8> [[INS4]]
