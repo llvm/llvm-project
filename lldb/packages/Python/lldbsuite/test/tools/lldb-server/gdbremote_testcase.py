@@ -126,7 +126,7 @@ class GdbRemoteTestCaseBase(Base):
         if self.isVerboseLoggingRequested():
             # If requested, full logs go to a log file
             self._verbose_log_handler = logging.FileHandler(
-                self.log_basename + "-host.log")
+                self.getLogBasenameForCurrentTest() + "-host.log")
             self._verbose_log_handler.setFormatter(self._log_formatter)
             self._verbose_log_handler.setLevel(logging.DEBUG)
             self.logger.addHandler(self._verbose_log_handler)
@@ -166,7 +166,7 @@ class GdbRemoteTestCaseBase(Base):
         self.buildDefault(*args, **kwargs)
 
     def getLocalServerLogFile(self):
-        return self.log_basename + "-server.log"
+        return self.getLogBasenameForCurrentTest() + "-server.log"
 
     def setUpServerLogging(self, is_llgs):
         if len(lldbtest_config.channels) == 0:
