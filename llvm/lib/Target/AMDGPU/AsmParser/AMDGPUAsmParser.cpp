@@ -5831,33 +5831,39 @@ bool AMDGPUOperand::isSendMsg() const {
 //===----------------------------------------------------------------------===//
 
 OperandMatchResultTy AMDGPUAsmParser::parseInterpSlot(OperandVector &Operands) {
-  if (!isToken(AsmToken::Identifier))
+  StringRef Str;
+  SMLoc S = getLoc();
+
+  if (!parseId(Str))
     return MatchOperand_NoMatch;
 
-  StringRef Str = getTokenStr();
   int Slot = StringSwitch<int>(Str)
     .Case("p10", 0)
     .Case("p20", 1)
     .Case("p0", 2)
     .Default(-1);
 
-  SMLoc S = getLoc();
-  if (Slot == -1)
+  if (Slot == -1) {
+    Error(S, "invalid interpolation slot");
     return MatchOperand_ParseFail;
+  }
 
-  Parser.Lex();
   Operands.push_back(AMDGPUOperand::CreateImm(this, Slot, S,
                                               AMDGPUOperand::ImmTyInterpSlot));
   return MatchOperand_Success;
 }
 
 OperandMatchResultTy AMDGPUAsmParser::parseInterpAttr(OperandVector &Operands) {
-  if (!isToken(AsmToken::Identifier))
+  StringRef Str;
+  SMLoc S = getLoc();
+
+  if (!parseId(Str))
     return MatchOperand_NoMatch;
 
-  StringRef Str = getTokenStr();
-  if (!Str.startswith("attr"))
-    return MatchOperand_NoMatch;
+  if (!Str.startswith("attr")) {
+    Error(S, "invalid interpolation attribute");
+    return MatchOperand_ParseFail;
+  }
 
   StringRef Chan = Str.take_back(2);
   int AttrChan = StringSwitch<int>(Chan)
@@ -5866,19 +5872,21 @@ OperandMatchResultTy AMDGPUAsmParser::parseInterpAttr(OperandVector &Operands) {
     .Case(".z", 2)
     .Case(".w", 3)
     .Default(-1);
-  if (AttrChan == -1)
+  if (AttrChan == -1) {
+    Error(S, "invalid or missing interpolation attribute channel");
     return MatchOperand_ParseFail;
+  }
 
   Str = Str.drop_back(2).drop_front(4);
 
   uint8_t Attr;
-  if (Str.getAsInteger(10, Attr))
+  if (Str.getAsInteger(10, Attr)) {
+    Error(S, "invalid or missing interpolation attribute number");
     return MatchOperand_ParseFail;
+  }
 
-  SMLoc S = getLoc();
-  Parser.Lex();
   if (Attr > 63) {
-    Error(S, "out of bounds attr");
+    Error(S, "out of bounds interpolation attribute number");
     return MatchOperand_ParseFail;
   }
 
