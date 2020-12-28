@@ -1095,9 +1095,15 @@ bool LoopVectorizationLegality::canVectorizeLoopCFG(Loop *Lp,
       return false;
   }
 
-  // We must have a single exiting block.
-  if (!Lp->getExitingBlock()) {
-    reportVectorizationFailure("The loop must have an exiting block",
+  // We currently must have a single "exit block" after the loop. Note that
+  // multiple "exiting blocks" inside the loop are allowed, provided they all
+  // reach the single exit block.
+  // TODO: This restriction can be relaxed in the near future, it's here solely
+  // to allow separation of changes for review. We need to generalize the phi
+  // update logic in a number of places.
+  BasicBlock *ExitBB = Lp->getUniqueExitBlock();
+  if (!ExitBB) {
+    reportVectorizationFailure("The loop must have a unique exit block",
         "loop control flow is not understood by vectorizer",
         "CFGNotUnderstood", ORE, TheLoop);
     if (DoExtraAnalysis)
@@ -1106,11 +1112,14 @@ bool LoopVectorizationLegality::canVectorizeLoopCFG(Loop *Lp,
       return false;
   }
 
-  // We only handle bottom-tested loops, i.e. loop in which the condition is
-  // checked at the end of each iteration. With that we can assume that all
-  // instructions in the loop are executed the same number of times.
-  if (Lp->getExitingBlock() != Lp->getLoopLatch()) {
-    reportVectorizationFailure("The exiting block is not the loop latch",
+  // The existing code assumes that LCSSA implies that phis are single entry
+  // (which was true when we had at most a single exiting edge from the latch).
+  // In general, there's nothing which prevents an LCSSA phi in exit block from
+  // having two or more values if there are multiple exiting edges leading to
+  // the exit block.  (TODO: implement general case)
+  if (!llvm::empty(ExitBB->phis()) && !ExitBB->getSinglePredecessor()) {
+    reportVectorizationFailure("The loop must have no live-out values if "
+                               "it has more than one exiting block",
         "loop control flow is not understood by vectorizer",
         "CFGNotUnderstood", ORE, TheLoop);
     if (DoExtraAnalysis)
