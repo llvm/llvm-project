@@ -2,7 +2,8 @@
 
 // CHECK: func
 void func() {                // CHECK-NEXT: File 0, [[@LINE]]:13 -> {{[0-9]+}}:2 = #0
-  int i = 0;                 // CHECK-NEXT: File 0, [[@LINE+2]]:14 -> [[@LINE+2]]:20 = (#0 + #3)
+  int i = 0;                 // CHECK-NEXT: File 0, [[@LINE+3]]:14 -> [[@LINE+3]]:20 = (#0 + #3)
+                             // CHECK-NEXT: Branch,File 0, [[@LINE+2]]:14 -> [[@LINE+2]]:20 = #1, ((#0 + #3) - #1)
                              // CHECK-NEXT: File 0, [[@LINE+1]]:22 -> [[@LINE+1]]:25 = #3
   for(i = 0; i < 10; ++i) {  // CHECK: File 0, [[@LINE]]:27 -> [[@LINE+11]]:4 = #1
                              // CHECK-NEXT: File 0, [[@LINE+1]]:8 -> [[@LINE+1]]:13 = #1

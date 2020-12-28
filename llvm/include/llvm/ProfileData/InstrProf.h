@@ -983,7 +983,9 @@ enum ProfVersion {
   // In this version, the frontend PGO stable hash algorithm got fixed and
   // may produce hashes different from Version5.
   Version6 = 6,
-  // The current version is 5.
+  // An additional counter is added around logical operators.
+  Version7 = 7,
+  // The current version is 7.
   CurrentVersion = INSTR_PROF_INDEX_VERSION
 };
 const uint64_t Version = ProfVersion::CurrentVersion;

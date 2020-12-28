@@ -160,10 +160,13 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
   PGOHash Hash;
   /// The map of statements to counters.
   llvm::DenseMap<const Stmt *, unsigned> &CounterMap;
+  /// The profile version.
+  uint64_t ProfileVersion;
 
-  MapRegionCounters(PGOHashVersion HashVersion,
+  MapRegionCounters(PGOHashVersion HashVersion, uint64_t ProfileVersion,
                     llvm::DenseMap<const Stmt *, unsigned> &CounterMap)
-      : NextCounter(0), Hash(HashVersion), CounterMap(CounterMap) {}
+      : NextCounter(0), Hash(HashVersion), CounterMap(CounterMap),
+        ProfileVersion(ProfileVersion) {}
 
   // Blocks and lambdas are handled as separate functions, so we need not
   // traverse them in the parent context.
@@ -201,6 +204,18 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     if (Type != PGOHash::None)
       CounterMap[S] = NextCounter++;
     return Type;
+  }
+
+  /// The RHS of all logical operators gets a fresh counter in order to count
+  /// how many times the RHS evaluates to true or false, depending on the
+  /// semantics of the operator. This is only valid for ">= v7" of the profile
+  /// version so that we facilitate backward compatibility.
+  bool VisitBinaryOperator(BinaryOperator *S) {
+    if (ProfileVersion >= llvm::IndexedInstrProf::Version7)
+      if (S->isLogicalOp() &&
+          CodeGenFunction::isInstrumentedCondition(S->getRHS()))
+        CounterMap[S->getRHS()] = NextCounter++;
+    return Base::VisitBinaryOperator(S);
   }
 
   /// Include \p S in the function hash.
@@ -814,11 +829,14 @@ void CodeGenPGO::mapRegionCounters(const Decl *D) {
   // Use the latest hash version when inserting instrumentation, but use the
   // version in the indexed profile if we're reading PGO data.
   PGOHashVersion HashVersion = PGO_HASH_LATEST;
-  if (auto *PGOReader = CGM.getPGOReader())
+  uint64_t ProfileVersion = llvm::IndexedInstrProf::Version;
+  if (auto *PGOReader = CGM.getPGOReader()) {
     HashVersion = getPGOHashVersion(PGOReader, CGM);
+    ProfileVersion = PGOReader->getVersion();
+  }
 
   RegionCounterMap.reset(new llvm::DenseMap<const Stmt *, unsigned>);
-  MapRegionCounters Walker(HashVersion, *RegionCounterMap);
+  MapRegionCounters Walker(HashVersion, ProfileVersion, *RegionCounterMap);
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D))
     Walker.TraverseDecl(const_cast<FunctionDecl *>(FD));
   else if (const ObjCMethodDecl *MD = dyn_cast_or_null<ObjCMethodDecl>(D))
