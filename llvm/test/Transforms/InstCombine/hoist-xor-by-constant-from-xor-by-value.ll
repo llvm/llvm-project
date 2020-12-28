@@ -73,3 +73,17 @@ define i8 @t5_commutativity(i8 %x) {
   %r = xor i8 %y, %i0
   ret i8 %r
 }
+
+@global_constant = internal global i32 0, align 4
+@global_constant2 = internal global i32 0, align 4
+
+define i8 @constantexpr(i8 %or) local_unnamed_addr #0 {
+; CHECK-LABEL: @constantexpr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[OR:%.*]], xor (i8 ptrtoint (i32* @global_constant to i8), i8 ptrtoint (i32* @global_constant2 to i8))
+; CHECK-NEXT:    ret i8 [[R]]
+;
+entry:
+  %r = xor i8 %or, xor (i8 xor (i8 ptrtoint (i32* @global_constant to i8), i8 -1), i8 xor (i8 ptrtoint (i32* @global_constant2 to i8), i8 -1))
+  ret i8 %r
+}
