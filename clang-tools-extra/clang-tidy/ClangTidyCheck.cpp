@@ -10,9 +10,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/WithColor.h"
 #include "llvm/Support/YAMLParser.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace clang {
 namespace tidy {
