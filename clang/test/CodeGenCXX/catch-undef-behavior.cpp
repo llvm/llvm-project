@@ -430,8 +430,8 @@ namespace VBaseObjectSize {
   // Note: C is laid out such that offsetof(C, B) + sizeof(B) extends outside
   // the C object.
   struct alignas(16) A { void *a1, *a2; };
-  struct B : virtual A { void *b; };
-  struct C : virtual A, virtual B {};
+  struct B : virtual A { void *b; void* g(); };
+  struct C : virtual A, virtual B { };
   // CHECK-LABEL: define {{.*}} @_ZN15VBaseObjectSize1fERNS_1BE(
   B &f(B &b) {
     // Size check: check for nvsize(B) == 16 (do not require size(B) == 32)
@@ -442,6 +442,15 @@ namespace VBaseObjectSize {
     // CHECK: [[PTRTOINT:%.+]] = ptrtoint {{.*}} to i64,
     // CHECK: and i64 [[PTRTOINT]], 7,
     return b;
+  }
+
+  // CHECK-LABEL: define {{.*}} @_ZN15VBaseObjectSize1B1gEv(
+  void *B::g() {
+    // Ensure that the check on the "this" pointer also uses the proper
+    // alignment. We should be using nvalign(B) == 8, not 16.
+    // CHECK: [[PTRTOINT:%.+]] = ptrtoint {{.*}} to i64,
+    // CHECK: and i64 [[PTRTOINT]], 7
+    return nullptr;
   }
 }
 
