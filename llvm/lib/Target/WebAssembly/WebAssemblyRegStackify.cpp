@@ -123,7 +123,7 @@ static void convertImplicitDefToConstZero(MachineInstr *MI,
   } else if (RegClass == &WebAssembly::V128RegClass) {
     // TODO: Replace this with v128.const 0 once that is supported in V8
     Register TempReg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
-    MI->setDesc(TII->get(WebAssembly::SPLAT_v4i32));
+    MI->setDesc(TII->get(WebAssembly::SPLAT_I32x4));
     MI->addOperand(MachineOperand::CreateReg(TempReg, false));
     MachineInstr *Const = BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
                                   TII->get(WebAssembly::CONST_I32), TempReg)
