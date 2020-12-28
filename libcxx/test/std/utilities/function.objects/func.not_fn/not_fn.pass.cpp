@@ -135,58 +135,59 @@ inline constexpr CallType operator|(CallType LHS, CallType RHS) {
 }
 
 struct ForwardingCallObject {
+  struct State {
+    CallType      last_call_type = CT_None;
+    TypeID const& (*last_call_args)() = nullptr;
+
+    template <class ...Args>
+    constexpr void set_call(CallType type) {
+      assert(last_call_type == CT_None);
+      assert(last_call_args == nullptr);
+      last_call_type = type;
+      last_call_args = &makeArgumentID<Args...>;
+    }
+
+    template <class ...Args>
+    constexpr bool check_call(CallType type) {
+      bool result =
+           last_call_type == type
+        && last_call_args
+        && *last_call_args == &makeArgumentID<Args...>;
+      last_call_type = CT_None;
+      last_call_args = nullptr;
+      return result;
+    }
+  };
+
+  State *st_;
+
+  explicit constexpr ForwardingCallObject(State& st) : st_(&st) {}
 
   template <class ...Args>
-  bool operator()(Args&&...) & {
-      set_call<Args&&...>(CT_NonConst | CT_LValue);
+  constexpr bool operator()(Args&&...) & {
+      st_->set_call<Args&&...>(CT_NonConst | CT_LValue);
       return true;
   }
 
   template <class ...Args>
-  bool operator()(Args&&...) const & {
-      set_call<Args&&...>(CT_Const | CT_LValue);
+  constexpr bool operator()(Args&&...) const & {
+      st_->set_call<Args&&...>(CT_Const | CT_LValue);
       return true;
   }
 
   // Don't allow the call operator to be invoked as an rvalue.
   template <class ...Args>
-  bool operator()(Args&&...) && {
-      set_call<Args&&...>(CT_NonConst | CT_RValue);
+  constexpr bool operator()(Args&&...) && {
+      st_->set_call<Args&&...>(CT_NonConst | CT_RValue);
       return true;
   }
 
   template <class ...Args>
-  bool operator()(Args&&...) const && {
-      set_call<Args&&...>(CT_Const | CT_RValue);
+  constexpr bool operator()(Args&&...) const && {
+      st_->set_call<Args&&...>(CT_Const | CT_RValue);
       return true;
   }
-
-  template <class ...Args>
-  static void set_call(CallType type) {
-      assert(last_call_type == CT_None);
-      assert(last_call_args == nullptr);
-      last_call_type = type;
-      last_call_args = &makeArgumentID<Args...>();
-  }
-
-  template <class ...Args>
-  static bool check_call(CallType type) {
-      bool result =
-           last_call_type == type
-        && last_call_args
-        && *last_call_args == makeArgumentID<Args...>();
-      last_call_type = CT_None;
-      last_call_args = nullptr;
-      return result;
-  }
-
-  static CallType      last_call_type;
-  static TypeID const* last_call_args;
 };
-
-CallType ForwardingCallObject::last_call_type = CT_None;
-TypeID const* ForwardingCallObject::last_call_args = nullptr;
-
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -467,85 +468,86 @@ void call_operator_sfinae_test() {
 void call_operator_forwarding_test()
 {
     using Fn = ForwardingCallObject;
-    auto obj = std::not_fn(Fn{});
+    Fn::State st;
+    auto obj = std::not_fn(Fn{st});
     const auto& c_obj = obj;
     { // test zero args
         obj();
-        assert(Fn::check_call<>(CT_NonConst | CT_LValue));
+        assert(st.check_call<>(CT_NonConst | CT_LValue));
         std::move(obj)();
-        assert(Fn::check_call<>(CT_NonConst | CT_RValue));
+        assert(st.check_call<>(CT_NonConst | CT_RValue));
         c_obj();
-        assert(Fn::check_call<>(CT_Const | CT_LValue));
+        assert(st.check_call<>(CT_Const | CT_LValue));
         std::move(c_obj)();
-        assert(Fn::check_call<>(CT_Const | CT_RValue));
+        assert(st.check_call<>(CT_Const | CT_RValue));
     }
     { // test value categories
         int x = 42;
         const int cx = 42;
         obj(x);
-        assert(Fn::check_call<int&>(CT_NonConst | CT_LValue));
+        assert(st.check_call<int&>(CT_NonConst | CT_LValue));
         obj(cx);
-        assert(Fn::check_call<const int&>(CT_NonConst | CT_LValue));
+        assert(st.check_call<const int&>(CT_NonConst | CT_LValue));
         obj(std::move(x));
-        assert(Fn::check_call<int&&>(CT_NonConst | CT_LValue));
+        assert(st.check_call<int&&>(CT_NonConst | CT_LValue));
         obj(std::move(cx));
-        assert(Fn::check_call<const int&&>(CT_NonConst | CT_LValue));
+        assert(st.check_call<const int&&>(CT_NonConst | CT_LValue));
         obj(42);
-        assert(Fn::check_call<int&&>(CT_NonConst | CT_LValue));
+        assert(st.check_call<int&&>(CT_NonConst | CT_LValue));
     }
     { // test value categories - rvalue
         int x = 42;
         const int cx = 42;
         std::move(obj)(x);
-        assert(Fn::check_call<int&>(CT_NonConst | CT_RValue));
+        assert(st.check_call<int&>(CT_NonConst | CT_RValue));
         std::move(obj)(cx);
-        assert(Fn::check_call<const int&>(CT_NonConst | CT_RValue));
+        assert(st.check_call<const int&>(CT_NonConst | CT_RValue));
         std::move(obj)(std::move(x));
-        assert(Fn::check_call<int&&>(CT_NonConst | CT_RValue));
+        assert(st.check_call<int&&>(CT_NonConst | CT_RValue));
         std::move(obj)(std::move(cx));
-        assert(Fn::check_call<const int&&>(CT_NonConst | CT_RValue));
+        assert(st.check_call<const int&&>(CT_NonConst | CT_RValue));
         std::move(obj)(42);
-        assert(Fn::check_call<int&&>(CT_NonConst | CT_RValue));
+        assert(st.check_call<int&&>(CT_NonConst | CT_RValue));
     }
     { // test value categories - const call
         int x = 42;
         const int cx = 42;
         c_obj(x);
-        assert(Fn::check_call<int&>(CT_Const | CT_LValue));
+        assert(st.check_call<int&>(CT_Const | CT_LValue));
         c_obj(cx);
-        assert(Fn::check_call<const int&>(CT_Const | CT_LValue));
+        assert(st.check_call<const int&>(CT_Const | CT_LValue));
         c_obj(std::move(x));
-        assert(Fn::check_call<int&&>(CT_Const | CT_LValue));
+        assert(st.check_call<int&&>(CT_Const | CT_LValue));
         c_obj(std::move(cx));
-        assert(Fn::check_call<const int&&>(CT_Const | CT_LValue));
+        assert(st.check_call<const int&&>(CT_Const | CT_LValue));
         c_obj(42);
-        assert(Fn::check_call<int&&>(CT_Const | CT_LValue));
+        assert(st.check_call<int&&>(CT_Const | CT_LValue));
     }
     { // test value categories - const call rvalue
         int x = 42;
         const int cx = 42;
         std::move(c_obj)(x);
-        assert(Fn::check_call<int&>(CT_Const | CT_RValue));
+        assert(st.check_call<int&>(CT_Const | CT_RValue));
         std::move(c_obj)(cx);
-        assert(Fn::check_call<const int&>(CT_Const | CT_RValue));
+        assert(st.check_call<const int&>(CT_Const | CT_RValue));
         std::move(c_obj)(std::move(x));
-        assert(Fn::check_call<int&&>(CT_Const | CT_RValue));
+        assert(st.check_call<int&&>(CT_Const | CT_RValue));
         std::move(c_obj)(std::move(cx));
-        assert(Fn::check_call<const int&&>(CT_Const | CT_RValue));
+        assert(st.check_call<const int&&>(CT_Const | CT_RValue));
         std::move(c_obj)(42);
-        assert(Fn::check_call<int&&>(CT_Const | CT_RValue));
+        assert(st.check_call<int&&>(CT_Const | CT_RValue));
     }
     { // test multi arg
         const double y = 3.14;
         std::string s = "abc";
         obj(42, std::move(y), s, std::string{"foo"});
-        Fn::check_call<int&&, const double&&, std::string&, std::string&&>(CT_NonConst | CT_LValue);
+        assert((st.check_call<int&&, const double&&, std::string&, std::string&&>(CT_NonConst | CT_LValue)));
         std::move(obj)(42, std::move(y), s, std::string{"foo"});
-        Fn::check_call<int&&, const double&&, std::string&, std::string&&>(CT_NonConst | CT_RValue);
+        assert((st.check_call<int&&, const double&&, std::string&, std::string&&>(CT_NonConst | CT_RValue)));
         c_obj(42, std::move(y), s, std::string{"foo"});
-        Fn::check_call<int&&, const double&&, std::string&, std::string&&>(CT_Const  | CT_LValue);
+        assert((st.check_call<int&&, const double&&, std::string&, std::string&&>(CT_Const  | CT_LValue)));
         std::move(c_obj)(42, std::move(y), s, std::string{"foo"});
-        Fn::check_call<int&&, const double&&, std::string&, std::string&&>(CT_Const  | CT_RValue);
+        assert((st.check_call<int&&, const double&&, std::string&, std::string&&>(CT_Const  | CT_RValue)));
     }
 }
 
