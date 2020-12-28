@@ -443,21 +443,6 @@ v_ceil_f16 v0, abs(neg(1))
 // CHECK-NEXT:{{^}}v_ceil_f16 v0, abs(neg(1))
 // CHECK-NEXT:{{^}}                   ^
 
-v_interp_mov_f32 v11, invalid_param_3, attr0.y
-// CHECK: error: failed parsing operand.
-// CHECK-NEXT:{{^}}v_interp_mov_f32 v11, invalid_param_3, attr0.y
-// CHECK-NEXT:{{^}}                      ^
-
-v_interp_mov_f32 v8, foo, attr0.x
-// CHECK: error: failed parsing operand.
-// CHECK-NEXT:{{^}}v_interp_mov_f32 v8, foo, attr0.x
-// CHECK-NEXT:{{^}}                     ^
-
-v_interp_p2_f32 v0, v1, attr
-// CHECK: error: failed parsing operand.
-// CHECK-NEXT:{{^}}v_interp_p2_f32 v0, v1, attr
-// CHECK-NEXT:{{^}}                        ^
-
 //==============================================================================
 // first register index should not exceed second index
 
@@ -589,6 +574,22 @@ v_dot_f32_f16 v0, v1, v2
 // CHECK-NEXT:{{^}}^
 
 //==============================================================================
+// invalid interpolation attribute
+
+v_interp_p2_f32 v0, v1, att
+// CHECK: error: invalid interpolation attribute
+// CHECK-NEXT:{{^}}v_interp_p2_f32 v0, v1, att
+// CHECK-NEXT:{{^}}                        ^
+
+//==============================================================================
+// invalid interpolation slot
+
+v_interp_mov_f32 v8, p1, attr0.x
+// CHECK: error: invalid interpolation slot
+// CHECK-NEXT:{{^}}v_interp_mov_f32 v8, p1, attr0.x
+// CHECK-NEXT:{{^}}                     ^
+
+//==============================================================================
 // invalid mask
 
 ds_swizzle_b32 v8, v2 offset:swizzle(BITMASK_PERM, "pppi2")
@@ -624,6 +625,22 @@ v_cvt_f64_i32 v[5:6], s1 mul:3
 // CHECK: error: invalid mul value.
 // CHECK-NEXT:{{^}}v_cvt_f64_i32 v[5:6], s1 mul:3
 // CHECK-NEXT:{{^}}                         ^
+
+//==============================================================================
+// invalid or missing interpolation attribute channel
+
+v_interp_p2_f32 v0, v1, attr0.q
+// CHECK: error: invalid or missing interpolation attribute channel
+// CHECK-NEXT:{{^}}v_interp_p2_f32 v0, v1, attr0.q
+// CHECK-NEXT:{{^}}                        ^
+
+//==============================================================================
+// invalid or missing interpolation attribute number
+
+v_interp_p2_f32 v7, v1, attr.x
+// CHECK: error: invalid or missing interpolation attribute number
+// CHECK-NEXT:{{^}}v_interp_p2_f32 v7, v1, attr.x
+// CHECK-NEXT:{{^}}                        ^
 
 //==============================================================================
 // invalid op_sel operand
@@ -870,10 +887,10 @@ v_bfe_u32 v0, v2, undef, 123
 // CHECK-NEXT:{{^}}                         ^
 
 //==============================================================================
-// out of bounds attr
+// out of bounds interpolation attribute number
 
 v_interp_p1_f32 v0, v1, attr64.w
-// CHECK: error: out of bounds attr
+// CHECK: error: out of bounds interpolation attribute number
 // CHECK-NEXT:{{^}}v_interp_p1_f32 v0, v1, attr64.w
 // CHECK-NEXT:{{^}}                        ^
 
