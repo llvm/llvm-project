@@ -1664,6 +1664,9 @@ public:
     return ParmVarDeclBits.IsObjCMethodParam;
   }
 
+  /// Determines whether this parameter is destroyed in the callee function.
+  bool isDestroyedInCallee() const;
+
   unsigned getFunctionScopeDepth() const {
     if (ParmVarDeclBits.IsObjCMethodParam) return 0;
     return ParmVarDeclBits.ScopeDepthOrObjCQuals;

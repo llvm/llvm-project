@@ -2738,6 +2738,17 @@ SourceRange ParmVarDecl::getSourceRange() const {
   return DeclaratorDecl::getSourceRange();
 }
 
+bool ParmVarDecl::isDestroyedInCallee() const {
+  if (hasAttr<NSConsumedAttr>())
+    return true;
+
+  auto *RT = getType()->getAs<RecordType>();
+  if (RT && RT->getDecl()->isParamDestroyedInCallee())
+    return true;
+
+  return false;
+}
+
 Expr *ParmVarDecl::getDefaultArg() {
   assert(!hasUnparsedDefaultArg() && "Default argument is not yet parsed!");
   assert(!hasUninstantiatedDefaultArg() &&
