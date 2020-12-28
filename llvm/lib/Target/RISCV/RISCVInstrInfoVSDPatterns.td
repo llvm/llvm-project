@@ -96,6 +96,19 @@ class VPatBinarySDNode_XI<SDNode vop,
                      xop_kind:$rs2,
                      VLMax, sew)>;
 
+multiclass VPatBinarySDNode_VV_VX<SDNode vop, string instruction_name>
+{
+  foreach vti = AllIntegerVectors in {
+    def : VPatBinarySDNode_VV<vop, instruction_name,
+                              vti.Vector, vti.Vector, vti.Mask, vti.SEW,
+                              vti.LMul, vti.RegClass, vti.RegClass>;
+    def : VPatBinarySDNode_XI<vop, instruction_name, "VX",
+                              vti.Vector, vti.Vector, XLenVT, vti.Mask, vti.SEW,
+                              vti.LMul, vti.RegClass, vti.RegClass,
+                              SplatPat, GPR>;
+  }
+}
+
 multiclass VPatBinarySDNode_VV_VX_VI<SDNode vop, string instruction_name,
                                      Operand ImmType = simm5>
 {
@@ -127,13 +140,29 @@ defm "" : VPatUSLoadStoreSDNodes<AddrFI>;
 
 // 12.1. Vector Single-Width Integer Add and Subtract
 defm "" : VPatBinarySDNode_VV_VX_VI<add, "PseudoVADD">;
+defm "" : VPatBinarySDNode_VV_VX<sub, "PseudoVSUB">;
+// Handle VRSUB specially since it's the only integer binary op with reversed
+// pattern operands
+foreach vti = AllIntegerVectors in {
+  def : Pat<(sub (vti.Vector (SplatPat XLenVT:$rs2)),
+                 (vti.Vector vti.RegClass:$rs1)),
+            (!cast<Instruction>("PseudoVRSUB_VX_"# vti.LMul.MX)
+                 vti.RegClass:$rs1, GPR:$rs2, VLMax, vti.SEW)>;
+  def : Pat<(sub (vti.Vector (SplatPat_simm5 XLenVT:$rs2)),
+                 (vti.Vector vti.RegClass:$rs1)),
+            (!cast<Instruction>("PseudoVRSUB_VI_"# vti.LMul.MX)
+                 vti.RegClass:$rs1, simm5:$rs2, VLMax, vti.SEW)>;
+}
 
 // 12.5. Vector Bitwise Logical Instructions
+defm "" : VPatBinarySDNode_VV_VX_VI<and, "PseudoVAND">;
 defm "" : VPatBinarySDNode_VV_VX_VI<or, "PseudoVOR">;
+defm "" : VPatBinarySDNode_VV_VX_VI<xor, "PseudoVXOR">;
 
 // 12.6. Vector Single-Width Bit Shift Instructions
 defm "" : VPatBinarySDNode_VV_VX_VI<shl, "PseudoVSLL", uimm5>;
 defm "" : VPatBinarySDNode_VV_VX_VI<srl, "PseudoVSRL", uimm5>;
+defm "" : VPatBinarySDNode_VV_VX_VI<sra, "PseudoVSRA", uimm5>;
 
 } // Predicates = [HasStdExtV]
 
