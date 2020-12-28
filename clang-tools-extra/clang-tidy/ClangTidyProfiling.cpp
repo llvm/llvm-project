@@ -7,11 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "ClangTidyProfiling.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <system_error>
 #include <utility>
