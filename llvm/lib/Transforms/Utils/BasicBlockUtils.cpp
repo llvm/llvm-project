@@ -136,9 +136,10 @@ bool llvm::EliminateUnreachableBlocks(Function &F, DomTreeUpdater *DTU,
   return !DeadBlocks.empty();
 }
 
-void llvm::FoldSingleEntryPHINodes(BasicBlock *BB,
+bool llvm::FoldSingleEntryPHINodes(BasicBlock *BB,
                                    MemoryDependenceResults *MemDep) {
-  if (!isa<PHINode>(BB->begin())) return;
+  if (!isa<PHINode>(BB->begin()))
+    return false;
 
   while (PHINode *PN = dyn_cast<PHINode>(BB->begin())) {
     if (PN->getIncomingValue(0) != PN)
@@ -151,6 +152,7 @@ void llvm::FoldSingleEntryPHINodes(BasicBlock *BB,
 
     PN->eraseFromParent();
   }
+  return true;
 }
 
 bool llvm::DeleteDeadPHIs(BasicBlock *BB, const TargetLibraryInfo *TLI,
