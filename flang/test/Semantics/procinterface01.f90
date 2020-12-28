@@ -5,7 +5,7 @@
 !DEF: /module1 Module
 module module1
  abstract interface
-  !DEF: /module1/abstract1 PUBLIC (Function) Subprogram REAL(4)
+  !DEF: /module1/abstract1 ABSTRACT, PUBLIC (Function) Subprogram REAL(4)
   !DEF: /module1/abstract1/x INTENT(IN) ObjectEntity REAL(4)
   real function abstract1(x)
    !REF: /module1/abstract1/x
