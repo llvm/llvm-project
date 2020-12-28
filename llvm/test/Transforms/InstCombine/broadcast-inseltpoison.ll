@@ -29,7 +29,7 @@ define <4 x float> @good2(float %arg) {
 
 define <4 x float> @good3(float %arg) {
 ; CHECK-LABEL: @good3(
-; CHECK-NEXT:    [[T:%.*]] = insertelement <4 x float> undef, float [[ARG:%.*]], i32 0
+; CHECK-NEXT:    [[T:%.*]] = insertelement <4 x float> poison, float [[ARG:%.*]], i32 0
 ; CHECK-NEXT:    [[T6:%.*]] = shufflevector <4 x float> [[T]], <4 x float> undef, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <4 x float> [[T6]]
 ;
@@ -42,7 +42,7 @@ define <4 x float> @good3(float %arg) {
 
 define <4 x float> @good4(float %arg) {
 ; CHECK-LABEL: @good4(
-; CHECK-NEXT:    [[T:%.*]] = insertelement <4 x float> undef, float [[ARG:%.*]], i32 0
+; CHECK-NEXT:    [[T:%.*]] = insertelement <4 x float> poison, float [[ARG:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd <4 x float> [[T]], [[T]]
 ; CHECK-NEXT:    [[T7:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> undef, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <4 x float> [[T7]]

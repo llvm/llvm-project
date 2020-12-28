@@ -322,7 +322,7 @@ define <2 x float> @fptrunc_inselt_undef(double %x, i32 %index) {
 
 define <3 x i16> @trunc_inselt1(i32 %x) {
 ; CHECK-LABEL: @trunc_inselt1(
-; CHECK-NEXT:    [[VEC:%.*]] = insertelement <3 x i32> <i32 3, i32 undef, i32 65536>, i32 [[X:%.*]], i32 1
+; CHECK-NEXT:    [[VEC:%.*]] = insertelement <3 x i32> <i32 3, i32 poison, i32 65536>, i32 [[X:%.*]], i32 1
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <3 x i32> [[VEC]] to <3 x i16>
 ; CHECK-NEXT:    ret <3 x i16> [[TRUNC]]
 ;

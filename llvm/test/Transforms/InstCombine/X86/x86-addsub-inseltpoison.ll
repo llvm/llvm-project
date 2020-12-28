@@ -167,7 +167,7 @@ define void @PR46277(float %0, float %1, float %2, float %3, <4 x float> %4, flo
 
 define double @PR48476_fsub(<2 x double> %x) {
 ; CHECK-LABEL: @PR48476_fsub(
-; CHECK-NEXT:    [[TMP1:%.*]] = fsub <2 x double> <double 0.000000e+00, double undef>, [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub <2 x double> <double 0.000000e+00, double poison>, [[X:%.*]]
 ; CHECK-NEXT:    [[T2:%.*]] = call <2 x double> @llvm.x86.sse2.cmp.sd(<2 x double> [[TMP1]], <2 x double> [[X]], i8 6)
 ; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <2 x double> [[T2]], i32 0
 ; CHECK-NEXT:    ret double [[VECEXT]]
@@ -180,7 +180,7 @@ define double @PR48476_fsub(<2 x double> %x) {
 
 define double @PR48476_fadd_fsub(<2 x double> %x) {
 ; CHECK-LABEL: @PR48476_fadd_fsub(
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x double> [[X:%.*]], <double undef, double 0.000000e+00>
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x double> [[X:%.*]], <double poison, double 0.000000e+00>
 ; CHECK-NEXT:    [[S:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> undef, <2 x i32> <i32 1, i32 undef>
 ; CHECK-NEXT:    [[TMP2:%.*]] = fsub <2 x double> [[S]], [[X]]
 ; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <2 x double> [[TMP2]], i32 0

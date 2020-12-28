@@ -1570,7 +1570,8 @@ bool CombinerHelper::matchShiftImmedChain(MachineInstr &MI,
     return false;
 
   // Pass the combined immediate to the apply function.
-  MatchInfo.Imm = (MaybeImmVal->Value + MaybeImm2Val->Value).getSExtValue();
+  MatchInfo.Imm =
+      (MaybeImmVal->Value.getSExtValue() + MaybeImm2Val->Value).getSExtValue();
   MatchInfo.Reg = Base;
 
   // There is no simple replacement for a saturating unsigned left shift that

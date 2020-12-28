@@ -5,9 +5,9 @@ define i16 @test1(float %f) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[TMP281:%.*]] = fadd float %f, -1.000000e+00
 ; CHECK-NEXT:    [[TMP373:%.*]] = fmul float [[TMP281]], 5.000000e-01
-; CHECK-NEXT:    [[TMP374:%.*]] = insertelement <4 x float> undef, float [[TMP373]], i32 0
-; CHECK-NEXT:    [[TMP48:%.*]] = tail call <4 x float> @llvm.x86.sse.min.ss(<4 x float> [[TMP374]], <4 x float> <float 6.553500e+04, float undef, float undef, float undef>)
-; CHECK-NEXT:    [[TMP59:%.*]] = tail call <4 x float> @llvm.x86.sse.max.ss(<4 x float> [[TMP48]], <4 x float> <float 0.000000e+00, float undef, float undef, float undef>)
+; CHECK-NEXT:    [[TMP374:%.*]] = insertelement <4 x float> poison, float [[TMP373]], i32 0
+; CHECK-NEXT:    [[TMP48:%.*]] = tail call <4 x float> @llvm.x86.sse.min.ss(<4 x float> [[TMP374]], <4 x float> <float 6.553500e+04, float poison, float poison, float poison>)
+; CHECK-NEXT:    [[TMP59:%.*]] = tail call <4 x float> @llvm.x86.sse.max.ss(<4 x float> [[TMP48]], <4 x float> <float 0.000000e+00, float poison, float poison, float poison>)
 ; CHECK-NEXT:    [[TMP_UPGRD_1:%.*]] = tail call i32 @llvm.x86.sse.cvttss2si(<4 x float> [[TMP59]])
 ; CHECK-NEXT:    [[TMP69:%.*]] = trunc i32 [[TMP_UPGRD_1]] to i16
 ; CHECK-NEXT:    ret i16 [[TMP69]]
@@ -27,21 +27,21 @@ define i16 @test1(float %f) {
 
 define i64 @test3(float %f, double %d) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[V00:%.*]] = insertelement <4 x float> undef, float %f, i32 0
+; CHECK-NEXT:    [[V00:%.*]] = insertelement <4 x float> poison, float %f, i32 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.x86.sse.cvtss2si(<4 x float> [[V00]])
-; CHECK-NEXT:    [[V10:%.*]] = insertelement <4 x float> undef, float %f, i32 0
+; CHECK-NEXT:    [[V10:%.*]] = insertelement <4 x float> poison, float %f, i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.x86.sse.cvtss2si64(<4 x float> [[V10]])
-; CHECK-NEXT:    [[V20:%.*]] = insertelement <4 x float> undef, float %f, i32 0
+; CHECK-NEXT:    [[V20:%.*]] = insertelement <4 x float> poison, float %f, i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.x86.sse.cvttss2si(<4 x float> [[V20]])
-; CHECK-NEXT:    [[V30:%.*]] = insertelement <4 x float> undef, float %f, i32 0
+; CHECK-NEXT:    [[V30:%.*]] = insertelement <4 x float> poison, float %f, i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i64 @llvm.x86.sse.cvttss2si64(<4 x float> [[V30]])
-; CHECK-NEXT:    [[V40:%.*]] = insertelement <2 x double> undef, double %d, i32 0
+; CHECK-NEXT:    [[V40:%.*]] = insertelement <2 x double> poison, double %d, i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call i32 @llvm.x86.sse2.cvtsd2si(<2 x double> [[V40]])
-; CHECK-NEXT:    [[V50:%.*]] = insertelement <2 x double> undef, double %d, i32 0
+; CHECK-NEXT:    [[V50:%.*]] = insertelement <2 x double> poison, double %d, i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = tail call i64 @llvm.x86.sse2.cvtsd2si64(<2 x double> [[V50]])
-; CHECK-NEXT:    [[V60:%.*]] = insertelement <2 x double> undef, double %d, i32 0
+; CHECK-NEXT:    [[V60:%.*]] = insertelement <2 x double> poison, double %d, i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = tail call i32 @llvm.x86.sse2.cvttsd2si(<2 x double> [[V60]])
-; CHECK-NEXT:    [[V70:%.*]] = insertelement <2 x double> undef, double %d, i32 0
+; CHECK-NEXT:    [[V70:%.*]] = insertelement <2 x double> poison, double %d, i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = tail call i64 @llvm.x86.sse2.cvttsd2si64(<2 x double> [[V70]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i32 [[TMP4]], [[TMP6]]

@@ -9,7 +9,6 @@ class TestGdbRemoteProcessInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_qProcessInfo_returns_running_process(self):
         self.build()
         procs = self.prep_debug_monitor_and_inferior()
@@ -32,7 +31,6 @@ class TestGdbRemoteProcessInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
         # If possible, verify that the process is running.
         self.assertTrue(lldbgdbserverutils.process_is_running(pid, True))
 
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_attach_commandline_qProcessInfo_reports_correct_pid(self):
         self.build()
         self.set_inferior_startup_attach()
@@ -54,7 +52,6 @@ class TestGdbRemoteProcessInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
         reported_pid = int(pid_text, base=16)
         self.assertEqual(reported_pid, procs["inferior"].pid)
 
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_qProcessInfo_reports_valid_endian(self):
         self.build()
         procs = self.prep_debug_monitor_and_inferior()
@@ -121,7 +118,6 @@ class TestGdbRemoteProcessInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
             "the listed keys were present but unexpected in qProcessInfo result")
 
     @add_test_categories(["debugserver"])
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_qProcessInfo_contains_cputype_cpusubtype(self):
         self.build()
         self.qProcessInfo_contains_keys(set(['cputype', 'cpusubtype']))
@@ -132,7 +128,6 @@ class TestGdbRemoteProcessInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.qProcessInfo_contains_keys(set(['triple', 'parent-pid']))
 
     @add_test_categories(["debugserver"])
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_qProcessInfo_does_not_contain_triple(self):
         self.build()
         # We don't expect to see triple on darwin.  If we do, we'll prefer triple

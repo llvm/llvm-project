@@ -198,7 +198,7 @@ void GlobalLayoutBuilder::addFragment(const std::set<uint64_t> &F) {
       // indices from the old fragment in this fragment do not insert any more
       // indices.
       std::vector<uint64_t> &OldFragment = Fragments[OldFragmentIndex];
-      Fragment.insert(Fragment.end(), OldFragment.begin(), OldFragment.end());
+      llvm::append_range(Fragment, OldFragment);
       OldFragment.clear();
     }
   }

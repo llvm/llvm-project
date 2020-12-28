@@ -1472,13 +1472,14 @@ bool GVN::processNonLocalLoad(LoadInst *LI) {
     return false;
   }
 
+  bool Changed = false;
   // If this load follows a GEP, see if we can PRE the indices before analyzing.
   if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(LI->getOperand(0))) {
     for (GetElementPtrInst::op_iterator OI = GEP->idx_begin(),
                                         OE = GEP->idx_end();
          OI != OE; ++OI)
       if (Instruction *I = dyn_cast<Instruction>(OI->get()))
-        performScalarPRE(I);
+        Changed |= performScalarPRE(I);
   }
 
   // Step 2: Analyze the availability of the load
@@ -1489,7 +1490,7 @@ bool GVN::processNonLocalLoad(LoadInst *LI) {
   // If we have no predecessors that produce a known value for this load, exit
   // early.
   if (ValuesPerBlock.empty())
-    return false;
+    return Changed;
 
   // Step 3: Eliminate fully redundancy.
   //
@@ -1521,12 +1522,12 @@ bool GVN::processNonLocalLoad(LoadInst *LI) {
 
   // Step 4: Eliminate partial redundancy.
   if (!isPREEnabled() || !isLoadPREEnabled())
-    return false;
+    return Changed;
   if (!isLoadInLoopPREEnabled() && this->LI &&
       this->LI->getLoopFor(LI->getParent()))
-    return false;
+    return Changed;
 
-  return PerformLoadPRE(LI, ValuesPerBlock, UnavailableBlocks);
+  return Changed || PerformLoadPRE(LI, ValuesPerBlock, UnavailableBlocks);
 }
 
 static bool impliesEquivalanceIfTrue(CmpInst* Cmp) {
@@ -2087,8 +2088,8 @@ bool GVN::propagateEquality(Value *LHS, Value *RHS, const BasicBlockEdge &Root,
     // If "A && B" is known true then both A and B are known true.  If "A || B"
     // is known false then both A and B are known false.
     Value *A, *B;
-    if ((isKnownTrue && match(LHS, m_And(m_Value(A), m_Value(B)))) ||
-        (isKnownFalse && match(LHS, m_Or(m_Value(A), m_Value(B))))) {
+    if ((isKnownTrue && match(LHS, m_LogicalAnd(m_Value(A), m_Value(B)))) ||
+        (isKnownFalse && match(LHS, m_LogicalOr(m_Value(A), m_Value(B))))) {
       Worklist.push_back(std::make_pair(A, RHS));
       Worklist.push_back(std::make_pair(B, RHS));
       continue;

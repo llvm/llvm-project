@@ -1840,18 +1840,10 @@ private:
   }
 #endif
 
-  TreeEntry *getTreeEntry(Value *V) {
-    auto I = ScalarToTreeEntry.find(V);
-    if (I != ScalarToTreeEntry.end())
-      return I->second;
-    return nullptr;
-  }
+  TreeEntry *getTreeEntry(Value *V) { return ScalarToTreeEntry.lookup(V); }
 
   const TreeEntry *getTreeEntry(Value *V) const {
-    auto I = ScalarToTreeEntry.find(V);
-    if (I != ScalarToTreeEntry.end())
-      return I->second;
-    return nullptr;
+    return ScalarToTreeEntry.lookup(V);
   }
 
   /// Maps a specific scalar to its tree entry.

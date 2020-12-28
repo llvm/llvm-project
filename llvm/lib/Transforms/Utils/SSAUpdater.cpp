@@ -64,8 +64,7 @@ bool SSAUpdater::HasValueForBlock(BasicBlock *BB) const {
 }
 
 Value *SSAUpdater::FindValueForBlock(BasicBlock *BB) const {
-  AvailableValsTy::iterator AVI = getAvailableVals(AV).find(BB);
-  return (AVI != getAvailableVals(AV).end()) ? AVI->second : nullptr;
+  return getAvailableVals(AV).lookup(BB);
 }
 
 void SSAUpdater::AddAvailableValue(BasicBlock *BB, Value *V) {

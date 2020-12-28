@@ -66,7 +66,7 @@ define <4 x float> @mload_real_ones(i8* %f) {
 define <4 x float> @mload_one_one(i8* %f) {
 ; CHECK-LABEL: @mload_one_one(
 ; CHECK-NEXT:    [[CASTVEC:%.*]] = bitcast i8* [[F:%.*]] to <4 x float>*
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* [[CASTVEC]], i32 1, <4 x i1> <i1 false, i1 false, i1 false, i1 true>, <4 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float undef>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* [[CASTVEC]], i32 1, <4 x i1> <i1 false, i1 false, i1 false, i1 true>, <4 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float poison>)
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %ld = tail call <4 x float> @llvm.x86.avx.maskload.ps(i8* %f, <4 x i32> <i32 0, i32 0, i32 0, i32 -1>)
@@ -78,7 +78,7 @@ define <4 x float> @mload_one_one(i8* %f) {
 define <2 x double> @mload_one_one_double(i8* %f) {
 ; CHECK-LABEL: @mload_one_one_double(
 ; CHECK-NEXT:    [[CASTVEC:%.*]] = bitcast i8* [[F:%.*]] to <2 x double>*
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>* [[CASTVEC]], i32 1, <2 x i1> <i1 true, i1 false>, <2 x double> <double undef, double 0.000000e+00>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>* [[CASTVEC]], i32 1, <2 x i1> <i1 true, i1 false>, <2 x double> <double poison, double 0.000000e+00>)
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %ld = tail call <2 x double> @llvm.x86.avx.maskload.pd(i8* %f, <2 x i64> <i64 -1, i64 0>)
@@ -90,7 +90,7 @@ define <2 x double> @mload_one_one_double(i8* %f) {
 define <8 x float> @mload_v8f32(i8* %f) {
 ; CHECK-LABEL: @mload_v8f32(
 ; CHECK-NEXT:    [[CASTVEC:%.*]] = bitcast i8* [[F:%.*]] to <8 x float>*
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x float> @llvm.masked.load.v8f32.p0v8f32(<8 x float>* [[CASTVEC]], i32 1, <8 x i1> <i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false>, <8 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float undef, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x float> @llvm.masked.load.v8f32.p0v8f32(<8 x float>* [[CASTVEC]], i32 1, <8 x i1> <i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false>, <8 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float poison, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>)
 ; CHECK-NEXT:    ret <8 x float> [[TMP1]]
 ;
   %ld = tail call <8 x float> @llvm.x86.avx.maskload.ps.256(i8* %f, <8 x i32> <i32 0, i32 0, i32 0, i32 -1, i32 0, i32 0, i32 0, i32 0>)
@@ -118,7 +118,7 @@ define <8 x float> @mload_v8f32_cmp(i8* %f, <8 x float> %src0, <8 x float> %src1
 define <4 x double> @mload_v4f64(i8* %f) {
 ; CHECK-LABEL: @mload_v4f64(
 ; CHECK-NEXT:    [[CASTVEC:%.*]] = bitcast i8* [[F:%.*]] to <4 x double>*
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x double> @llvm.masked.load.v4f64.p0v4f64(<4 x double>* [[CASTVEC]], i32 1, <4 x i1> <i1 true, i1 false, i1 false, i1 false>, <4 x double> <double undef, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x double> @llvm.masked.load.v4f64.p0v4f64(<4 x double>* [[CASTVEC]], i32 1, <4 x i1> <i1 true, i1 false, i1 false, i1 false>, <4 x double> <double poison, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00>)
 ; CHECK-NEXT:    ret <4 x double> [[TMP1]]
 ;
   %ld = tail call <4 x double> @llvm.x86.avx.maskload.pd.256(i8* %f, <4 x i64> <i64 -1, i64 0, i64 0, i64 0>)
@@ -130,7 +130,7 @@ define <4 x double> @mload_v4f64(i8* %f) {
 define <4 x i32> @mload_v4i32(i8* %f) {
 ; CHECK-LABEL: @mload_v4i32(
 ; CHECK-NEXT:    [[CASTVEC:%.*]] = bitcast i8* [[F:%.*]] to <4 x i32>*
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* [[CASTVEC]], i32 1, <4 x i1> <i1 false, i1 false, i1 false, i1 true>, <4 x i32> <i32 0, i32 0, i32 0, i32 undef>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* [[CASTVEC]], i32 1, <4 x i1> <i1 false, i1 false, i1 false, i1 true>, <4 x i32> <i32 0, i32 0, i32 0, i32 poison>)
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %ld = tail call <4 x i32> @llvm.x86.avx2.maskload.d(i8* %f, <4 x i32> <i32 0, i32 0, i32 0, i32 -1>)
@@ -140,7 +140,7 @@ define <4 x i32> @mload_v4i32(i8* %f) {
 define <2 x i64> @mload_v2i64(i8* %f) {
 ; CHECK-LABEL: @mload_v2i64(
 ; CHECK-NEXT:    [[CASTVEC:%.*]] = bitcast i8* [[F:%.*]] to <2 x i64>*
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i64> @llvm.masked.load.v2i64.p0v2i64(<2 x i64>* [[CASTVEC]], i32 1, <2 x i1> <i1 true, i1 false>, <2 x i64> <i64 undef, i64 0>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i64> @llvm.masked.load.v2i64.p0v2i64(<2 x i64>* [[CASTVEC]], i32 1, <2 x i1> <i1 true, i1 false>, <2 x i64> <i64 poison, i64 0>)
 ; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %ld = tail call <2 x i64> @llvm.x86.avx2.maskload.q(i8* %f, <2 x i64> <i64 -1, i64 0>)
@@ -150,7 +150,7 @@ define <2 x i64> @mload_v2i64(i8* %f) {
 define <8 x i32> @mload_v8i32(i8* %f) {
 ; CHECK-LABEL: @mload_v8i32(
 ; CHECK-NEXT:    [[CASTVEC:%.*]] = bitcast i8* [[F:%.*]] to <8 x i32>*
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0v8i32(<8 x i32>* [[CASTVEC]], i32 1, <8 x i1> <i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false>, <8 x i32> <i32 0, i32 0, i32 0, i32 undef, i32 0, i32 0, i32 0, i32 0>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0v8i32(<8 x i32>* [[CASTVEC]], i32 1, <8 x i1> <i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false>, <8 x i32> <i32 0, i32 0, i32 0, i32 poison, i32 0, i32 0, i32 0, i32 0>)
 ; CHECK-NEXT:    ret <8 x i32> [[TMP1]]
 ;
   %ld = tail call <8 x i32> @llvm.x86.avx2.maskload.d.256(i8* %f, <8 x i32> <i32 0, i32 0, i32 0, i32 -1, i32 0, i32 0, i32 0, i32 0>)
@@ -160,7 +160,7 @@ define <8 x i32> @mload_v8i32(i8* %f) {
 define <4 x i64> @mload_v4i64(i8* %f) {
 ; CHECK-LABEL: @mload_v4i64(
 ; CHECK-NEXT:    [[CASTVEC:%.*]] = bitcast i8* [[F:%.*]] to <4 x i64>*
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i64> @llvm.masked.load.v4i64.p0v4i64(<4 x i64>* [[CASTVEC]], i32 1, <4 x i1> <i1 true, i1 false, i1 false, i1 false>, <4 x i64> <i64 undef, i64 0, i64 0, i64 0>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i64> @llvm.masked.load.v4i64.p0v4i64(<4 x i64>* [[CASTVEC]], i32 1, <4 x i1> <i1 true, i1 false, i1 false, i1 false>, <4 x i64> <i64 poison, i64 0, i64 0, i64 0>)
 ; CHECK-NEXT:    ret <4 x i64> [[TMP1]]
 ;
   %ld = tail call <4 x i64> @llvm.x86.avx2.maskload.q.256(i8* %f, <4 x i64> <i64 -1, i64 0, i64 0, i64 0>)

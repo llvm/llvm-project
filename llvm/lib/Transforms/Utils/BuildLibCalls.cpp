@@ -1159,7 +1159,7 @@ Value *llvm::emitSNPrintf(Value *Dest, Value *Size, Value *Fmt,
                           ArrayRef<Value *> VariadicArgs, IRBuilderBase &B,
                           const TargetLibraryInfo *TLI) {
   SmallVector<Value *, 8> Args{castToCStr(Dest, B), Size, castToCStr(Fmt, B)};
-  Args.insert(Args.end(), VariadicArgs.begin(), VariadicArgs.end());
+  llvm::append_range(Args, VariadicArgs);
   return emitLibCall(LibFunc_snprintf, B.getInt32Ty(),
                      {B.getInt8PtrTy(), Size->getType(), B.getInt8PtrTy()},
                      Args, B, TLI, /*IsVaArgs=*/true);
@@ -1169,7 +1169,7 @@ Value *llvm::emitSPrintf(Value *Dest, Value *Fmt,
                          ArrayRef<Value *> VariadicArgs, IRBuilderBase &B,
                          const TargetLibraryInfo *TLI) {
   SmallVector<Value *, 8> Args{castToCStr(Dest, B), castToCStr(Fmt, B)};
-  Args.insert(Args.end(), VariadicArgs.begin(), VariadicArgs.end());
+  llvm::append_range(Args, VariadicArgs);
   return emitLibCall(LibFunc_sprintf, B.getInt32Ty(),
                      {B.getInt8PtrTy(), B.getInt8PtrTy()}, Args, B, TLI,
                      /*IsVaArgs=*/true);
