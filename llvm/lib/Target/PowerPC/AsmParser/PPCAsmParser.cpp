@@ -1656,11 +1656,7 @@ bool PPCAsmParser::ParseDirectiveMachine(SMLoc L) {
 
   // FIXME: Right now, the parser always allows any available
   // instruction, so the .machine directive is not useful.
-  // Implement ".machine any" (by doing nothing) for the benefit
-  // of existing assembler code.  Likewise, we can then implement
-  // ".machine push" and ".machine pop" as no-op.
-  if (CPU != "any" && CPU != "push" && CPU != "pop" && CPU != "ppc64")
-    return TokError("unrecognized machine type");
+  // In the wild, any/push/pop/ppc64/altivec/power[4-9] are seen.
 
   Parser.Lex();
 
