@@ -5246,6 +5246,15 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
     // bitreverse(bitreverse(x)) -> x
     if (match(Op0, m_BitReverse(m_Value(X)))) return X;
     break;
+  case Intrinsic::ctpop: {
+    // If everything but the lowest bit is zero, that bit is the pop-count. Ex:
+    // ctpop(and X, 1) --> and X, 1
+    unsigned BitWidth = Op0->getType()->getScalarSizeInBits();
+    if (MaskedValueIsZero(Op0, APInt::getHighBitsSet(BitWidth, BitWidth - 1),
+                          Q.DL, 0, Q.AC, Q.CxtI, Q.DT))
+      return Op0;
+    break;
+  }
   case Intrinsic::exp:
     // exp(log(x)) -> x
     if (Q.CxtI->hasAllowReassoc() &&

@@ -1308,13 +1308,15 @@ declare i1 @llvm.ctpop.i1(i1)
 define i32 @ctpop_lowbit(i32 %x) {
 ; CHECK-LABEL: @ctpop_lowbit(
 ; CHECK-NEXT:    [[B:%.*]] = and i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.ctpop.i32(i32 [[B]])
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 [[B]]
 ;
   %b = and i32 %x, 1
   %r = call i32 @llvm.ctpop.i32(i32 %b)
   ret i32 %r
 }
+
+; Negative test - only low bit allowed
+; This could be reduced by instcombine to and+shift.
 
 define i32 @ctpop_pow2(i32 %x) {
 ; CHECK-LABEL: @ctpop_pow2(
@@ -1330,13 +1332,14 @@ define i32 @ctpop_pow2(i32 %x) {
 define <3 x i33> @ctpop_signbit(<3 x i33> %x) {
 ; CHECK-LABEL: @ctpop_signbit(
 ; CHECK-NEXT:    [[B:%.*]] = lshr <3 x i33> [[X:%.*]], <i33 32, i33 32, i33 32>
-; CHECK-NEXT:    [[R:%.*]] = tail call <3 x i33> @llvm.ctpop.v3i33(<3 x i33> [[B]])
-; CHECK-NEXT:    ret <3 x i33> [[R]]
+; CHECK-NEXT:    ret <3 x i33> [[B]]
 ;
   %b = lshr <3 x i33> %x, <i33 32, i33 32, i33 32>
   %r = tail call <3 x i33> @llvm.ctpop.v3i33(<3 x i33> %b)
   ret <3 x i33> %r
 }
+
+; Negative test - only 1 bit allowed
 
 define <3 x i33> @ctpop_notsignbit(<3 x i33> %x) {
 ; CHECK-LABEL: @ctpop_notsignbit(
@@ -1351,8 +1354,7 @@ define <3 x i33> @ctpop_notsignbit(<3 x i33> %x) {
 
 define i1 @ctpop_bool(i1 %x) {
 ; CHECK-LABEL: @ctpop_bool(
-; CHECK-NEXT:    [[R:%.*]] = tail call i1 @llvm.ctpop.i1(i1 [[X:%.*]])
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[X:%.*]]
 ;
   %r = tail call i1 @llvm.ctpop.i1(i1 %x)
   ret i1 %r
