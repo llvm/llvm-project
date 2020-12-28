@@ -26,6 +26,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
@@ -1750,6 +1751,40 @@ bool AMDGPUSimplifyLibCalls::runOnFunction(Function &F) {
   return Changed;
 }
 
+PreservedAnalyses AMDGPUSimplifyLibCallsPass::run(Function &F,
+                                                  FunctionAnalysisManager &AM) {
+  AMDGPULibCalls Simplifier;
+  Simplifier.initNativeFuncs();
+
+  bool Changed = false;
+  auto AA = &AM.getResult<AAManager>(F);
+
+  LLVM_DEBUG(dbgs() << "AMDIC: process function ";
+             F.printAsOperand(dbgs(), false, F.getParent()); dbgs() << '\n';);
+
+  for (auto &BB : F) {
+    for (BasicBlock::iterator I = BB.begin(), E = BB.end(); I != E;) {
+      // Ignore non-calls.
+      CallInst *CI = dyn_cast<CallInst>(I);
+      ++I;
+      // Ignore intrinsics that do not become real instructions.
+      if (!CI || isa<DbgInfoIntrinsic>(CI) || CI->isLifetimeStartOrEnd())
+        continue;
+
+      // Ignore indirect calls.
+      Function *Callee = CI->getCalledFunction();
+      if (Callee == 0)
+        continue;
+
+      LLVM_DEBUG(dbgs() << "AMDIC: try folding " << *CI << "\n";
+                 dbgs().flush());
+      if (Simplifier.fold(CI, AA))
+        Changed = true;
+    }
+  }
+  return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
+}
+
 bool AMDGPUUseNativeCalls::runOnFunction(Function &F) {
   if (skipFunction(F) || UseNative.empty())
     return false;
@@ -1771,4 +1806,33 @@ bool AMDGPUUseNativeCalls::runOnFunction(Function &F) {
     }
   }
   return Changed;
+}
+
+PreservedAnalyses AMDGPUUseNativeCallsPass::run(Function &F,
+                                                FunctionAnalysisManager &AM) {
+  if (UseNative.empty())
+    return PreservedAnalyses::all();
+
+  AMDGPULibCalls Simplifier;
+  Simplifier.initNativeFuncs();
+
+  bool Changed = false;
+  for (auto &BB : F) {
+    for (BasicBlock::iterator I = BB.begin(), E = BB.end(); I != E;) {
+      // Ignore non-calls.
+      CallInst *CI = dyn_cast<CallInst>(I);
+      ++I;
+      if (!CI)
+        continue;
+
+      // Ignore indirect calls.
+      Function *Callee = CI->getCalledFunction();
+      if (Callee == 0)
+        continue;
+
+      if (Simplifier.useNative(CI))
+        Changed = true;
+    }
+  }
+  return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }

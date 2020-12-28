@@ -40,8 +40,10 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -52,6 +54,7 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Utils.h"
+#include "llvm/Transforms/Utils/SimplifyLibCalls.h"
 #include "llvm/Transforms/Vectorize.h"
 #include <memory>
 
@@ -479,6 +482,33 @@ void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
       // to eliminate allocas before unroll we may choose to unroll less.
       if (EnableOpt)
         PM.add(createAMDGPUPromoteAllocaToVector());
+  });
+}
+
+void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
+                                                       bool DebugPassManager) {
+  PB.registerPipelineParsingCallback(
+      [](StringRef PassName, FunctionPassManager &PM,
+         ArrayRef<PassBuilder::PipelineElement>) {
+        if (PassName == "amdgpu-simplifylib") {
+          PM.addPass(AMDGPUSimplifyLibCallsPass());
+          return true;
+        }
+        if (PassName == "amdgpu-usenative") {
+          PM.addPass(AMDGPUUseNativeCallsPass());
+          return true;
+        }
+        return false;
+      });
+
+  PB.registerPipelineStartEPCallback([DebugPassManager](
+                                         ModulePassManager &PM,
+                                         PassBuilder::OptimizationLevel Level) {
+    FunctionPassManager FPM(DebugPassManager);
+    FPM.addPass(AMDGPUUseNativeCallsPass());
+    if (EnableLibCallSimplify && Level != PassBuilder::OptimizationLevel::O0)
+      FPM.addPass(AMDGPUSimplifyLibCallsPass());
+    PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
   });
 }
 
