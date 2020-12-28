@@ -182,12 +182,18 @@ struct CompletionCandidate {
     // strings (literal or URI) mapping to the same file. We still want to
     // bundle those, so we must resolve the header to be included here.
     std::string HeaderForHash;
-    if (Inserter)
-      if (auto Header = headerToInsertIfAllowed(Opts))
-        if (auto HeaderFile = toHeaderFile(*Header, FileName))
+    if (Inserter) {
+      if (auto Header = headerToInsertIfAllowed(Opts)) {
+        if (auto HeaderFile = toHeaderFile(*Header, FileName)) {
           if (auto Spelled =
                   Inserter->calculateIncludePath(*HeaderFile, FileName))
             HeaderForHash = *Spelled;
+        } else {
+          vlog("Code completion header path manipulation failed {0}",
+               HeaderFile.takeError());
+        }
+      }
+    }
 
     llvm::SmallString<256> Scratch;
     if (IndexResult) {
