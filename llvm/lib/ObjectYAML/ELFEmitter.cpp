@@ -1275,7 +1275,10 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
       SN2I.lookup(".symtab", Link))
     SHeader.sh_link = Link;
 
-  SHeader.sh_entsize = 4;
+  if (Section.EntSize)
+    SHeader.sh_entsize = *Section.EntSize;
+  else
+    SHeader.sh_entsize = sizeof(typename ELFT::Word);
 
   if (Section.Signature)
     SHeader.sh_info =
