@@ -29,6 +29,7 @@
 #include "SIMachineFunctionInfo.h"
 #include "SIMachineScheduler.h"
 #include "TargetInfo/AMDGPUTargetInfo.h"
+#include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
@@ -488,14 +489,22 @@ void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
 void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
                                                        bool DebugPassManager) {
   PB.registerPipelineParsingCallback(
-      [](StringRef PassName, FunctionPassManager &PM,
-         ArrayRef<PassBuilder::PipelineElement>) {
+      [this](StringRef PassName, FunctionPassManager &PM,
+             ArrayRef<PassBuilder::PipelineElement>) {
         if (PassName == "amdgpu-simplifylib") {
           PM.addPass(AMDGPUSimplifyLibCallsPass());
           return true;
         }
         if (PassName == "amdgpu-usenative") {
           PM.addPass(AMDGPUUseNativeCallsPass());
+          return true;
+        }
+        if (PassName == "amdgpu-promote-alloca") {
+          PM.addPass(AMDGPUPromoteAllocaPass(*this));
+          return true;
+        }
+        if (PassName == "amdgpu-promote-alloca-to-vector") {
+          PM.addPass(AMDGPUPromoteAllocaToVectorPass(*this));
           return true;
         }
         return false;
@@ -510,6 +519,18 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
       FPM.addPass(AMDGPUSimplifyLibCallsPass());
     PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
   });
+
+  PB.registerCGSCCOptimizerLateEPCallback(
+      [this, DebugPassManager](CGSCCPassManager &PM,
+                               PassBuilder::OptimizationLevel Level) {
+        if (Level != PassBuilder::OptimizationLevel::O0) {
+          FunctionPassManager FPM(DebugPassManager);
+          // Promote alloca to vector before SROA and loop unroll. If we manage
+          // to eliminate allocas before unroll we may choose to unroll less.
+          FPM.addPass(AMDGPUPromoteAllocaToVectorPass(*this));
+          PM.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM)));
+        }
+      });
 }
 
 //===----------------------------------------------------------------------===//
