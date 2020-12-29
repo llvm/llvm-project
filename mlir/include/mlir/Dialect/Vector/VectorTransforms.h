@@ -71,7 +71,8 @@ SmallVector<Value, 1> unrollSingleResultVectorOp(OpBuilder &builder,
 
 /// Unroll a transfer_write op. Break up the vector source into a tuple of
 /// vectors matching the given shape. Then store each element with its own
-/// transfer_write.
+/// transfer_write. If the transfer_write takes a tensor source, return the
+/// unrolled Value in result.
 ///
 /// Example:
 /// vector.transfer_write %A, %M[%c0, %c0] : vector<4x4xf32>, memref<4x4xf32>
@@ -83,7 +84,8 @@ SmallVector<Value, 1> unrollSingleResultVectorOp(OpBuilder &builder,
 /// %2 = vector.tuple_get %0, 1 : tuple<vector<2x4xf32>, vector<2x4xf32>>
 /// vector.transfer_write %2, %M[%c2, %c0] : vector<2x4xf32>, memref<4x4xf32>
 LogicalResult unrollTransferWriteOp(OpBuilder &builder, Operation *op,
-                                    ArrayRef<int64_t> targetShape);
+                                    ArrayRef<int64_t> targetShape,
+                                    SmallVector<Value, 1> &result);
 
 /// Options that control the vector unrolling.
 struct UnrollVectorOptions {
@@ -143,9 +145,10 @@ struct UnrollVectorPattern : public RewritePattern {
         llvm::all_of(*maybeShapeRatio, [](int64_t v) { return v == 1; }))
       return failure();
     if (isa<TransferWriteOp>(op)) {
-      if (failed(unrollTransferWriteOp(rewriter, op, *targetShape)))
+      SmallVector<Value, 1> result;
+      if (failed(unrollTransferWriteOp(rewriter, op, *targetShape, result)))
         return failure();
-      rewriter.eraseOp(op);
+      rewriter.replaceOp(op, result);
       return success();
     }
     if (op->getNumResults() != 1)
