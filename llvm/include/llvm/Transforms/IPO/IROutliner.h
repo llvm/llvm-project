@@ -162,8 +162,9 @@ struct OutlinableRegion {
 class IROutliner {
 public:
   IROutliner(function_ref<TargetTransformInfo &(Function &)> GTTI,
-             function_ref<IRSimilarityIdentifier &(Module &)> GIRSI)
-      : getTTI(GTTI), getIRSI(GIRSI) {}
+             function_ref<IRSimilarityIdentifier &(Module &)> GIRSI,
+             function_ref<OptimizationRemarkEmitter &(Function &)> GORE)
+      : getTTI(GTTI), getIRSI(GIRSI), getORE(GORE) {}
   bool run(Module &M);
 
 private:
@@ -276,6 +277,9 @@ private:
 
   /// IRSimilarityIdentifier lambda to retrieve IRSimilarityIdentifier.
   function_ref<IRSimilarityIdentifier &(Module &)> getIRSI;
+
+  /// The optimization remark emitter for the pass.
+  function_ref<OptimizationRemarkEmitter &(Function &)> getORE;
 
   /// The memory allocator used to allocate the CodeExtractors.
   SpecificBumpPtrAllocator<CodeExtractor> ExtractorAllocator;
