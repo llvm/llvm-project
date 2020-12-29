@@ -489,6 +489,10 @@ void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
   });
 }
 
+void AMDGPUTargetMachine::registerAliasAnalyses(AAManager &AAM) {
+  AAM.registerFunctionAnalysis<AMDGPUAA>();
+}
+
 void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
                                                        bool DebugPassManager) {
   PB.registerPipelineParsingCallback(
@@ -542,6 +546,18 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
 
         return false;
       });
+
+  PB.registerAnalysisRegistrationCallback([](FunctionAnalysisManager &FAM) {
+    FAM.registerPass([&] { return AMDGPUAA(); });
+  });
+
+  PB.registerParseAACallback([](StringRef AAName, AAManager &AAM) {
+    if (AAName == "amdgpu-aa") {
+      AAM.registerFunctionAnalysis<AMDGPUAA>();
+      return true;
+    }
+    return false;
+  });
 
   PB.registerPipelineStartEPCallback([this, DebugPassManager](
                                          ModulePassManager &PM,
