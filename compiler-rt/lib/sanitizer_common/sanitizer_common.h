@@ -682,6 +682,27 @@ enum ModuleArch {
   kModuleArchRISCV64
 };
 
+// Sorts and removes duplicates from the container.
+template <class Container,
+          class Compare = CompareLess<typename Container::value_type>>
+void SortAndDedup(Container &v, Compare comp = {}) {
+  Sort(v.data(), v.size(), comp);
+  uptr size = v.size();
+  if (size < 2)
+    return;
+  uptr last = 0;
+  for (uptr i = 1; i < size; ++i) {
+    if (comp(v[last], v[i])) {
+      ++last;
+      if (last != i)
+        v[last] = v[i];
+    } else {
+      CHECK(!comp(v[i], v[last]));
+    }
+  }
+  v.resize(last + 1);
+}
+
 // Opens the file 'file_name" and reads up to 'max_len' bytes.
 // The resulting buffer is mmaped and stored in '*buff'.
 // Returns true if file was successfully opened and read.
