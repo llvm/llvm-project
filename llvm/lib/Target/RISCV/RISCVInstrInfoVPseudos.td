@@ -820,11 +820,12 @@ multiclass VPseudoUnaryS_M {
 }
 
 multiclass VPseudoUnaryM_M {
+  defvar constraint = "@earlyclobber $rd";
   foreach mti = AllMasks in
   {
     let VLMul = mti.LMul.value in {
-      def "_M_" # mti.BX : VPseudoUnaryNoMask<VR, VR>;
-      def "_M_" # mti.BX # "_MASK" : VPseudoUnaryMask<VR, VR>;
+      def "_M_" # mti.BX : VPseudoUnaryNoMask<VR, VR, constraint>;
+      def "_M_" # mti.BX # "_MASK" : VPseudoUnaryMask<VR, VR, constraint>;
     }
   }
 }
