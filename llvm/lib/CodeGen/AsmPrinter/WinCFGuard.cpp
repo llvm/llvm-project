@@ -38,8 +38,7 @@ void WinCFGuard::endFunction(const MachineFunction *MF) {
     return;
 
   // Copy the function's longjmp targets to a module-level list.
-  LongjmpTargets.insert(LongjmpTargets.end(), MF->getLongjmpTargets().begin(),
-                        MF->getLongjmpTargets().end());
+  llvm::append_range(LongjmpTargets, MF->getLongjmpTargets());
 }
 
 /// Returns true if this function's address is escaped in a way that might make

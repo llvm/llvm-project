@@ -842,7 +842,7 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
   pushStackMapConstant(Ops, *this, Flags);
 
   // Insert all vmstate and gcstate arguments
-  Ops.insert(Ops.end(), LoweredMetaArgs.begin(), LoweredMetaArgs.end());
+  llvm::append_range(Ops, LoweredMetaArgs);
 
   // Add register mask from call node
   Ops.push_back(*RegMaskIt);

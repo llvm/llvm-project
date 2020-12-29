@@ -144,8 +144,7 @@ void MMIAddrLabelMap::UpdateForRAUWBlock(BasicBlock *Old, BasicBlock *New) {
   BBCallbacks[OldEntry.Index] = nullptr;    // Update the callback.
 
   // Otherwise, we need to add the old symbols to the new block's set.
-  NewEntry.Symbols.insert(NewEntry.Symbols.end(), OldEntry.Symbols.begin(),
-                          OldEntry.Symbols.end());
+  llvm::append_range(NewEntry.Symbols, OldEntry.Symbols);
 }
 
 void MMIAddrLabelMapCallbackPtr::deleted() {
