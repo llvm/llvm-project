@@ -81,6 +81,29 @@ struct FooT {
 };
 FooT<int> f(1);
 
+template <class T>
+struct BingT {
+  BingT(const T i);
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: parameter 'i'
+  // CHECK-FIXES: BingT(T i);
+
+  void operator()(const T i);
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: parameter 'i'
+  // CHECK-FIXES: void operator()(T i);
+};
+BingT<int> f2(1);
+
+template <class T>
+struct NeverInstantiatedT {
+  NeverInstantiatedT(const T i);
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: parameter 'i'
+  // CHECK-FIXES: NeverInstantiatedT(T i);
+
+  void operator()(const T i);
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: parameter 'i'
+  // CHECK-FIXES: void operator()(T i);
+};
+
 // Do not match on definitions
 void NF1(const int i) {}
 void NF2(const int *const i) {}
@@ -109,6 +132,13 @@ struct BarT {
   void operator()(const int i) {}
 };
 BarT<int> b(1);
+template <class T>
+struct BatT {
+  BatT(const T i) {}
+
+  void operator()(const T i) {}
+};
+BatT<int> b2(1);
 
 // Do not match on other stuff
 void NF(const alias_type& i);

@@ -1,9 +1,8 @@
-// RUN: %check_clang_tidy -std=c++11,c++14 %s readability-redundant-string-init %t \
+// RUN: %check_clang_tidy %s readability-redundant-string-init %t \
 // RUN:   -config="{CheckOptions: \
 // RUN:             [{key: readability-redundant-string-init.StringNames, \
 // RUN:               value: '::std::basic_string;::std::basic_string_view;our::TestString'}] \
 // RUN:             }"
-// FIXME: Fix the checker to work in C++17 mode.
 
 namespace std {
 template <typename T>
