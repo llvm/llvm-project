@@ -8,7 +8,7 @@ typedef float float4 __attribute((ext_vector_type(4)));
 // Check for optimized vec3 load/store which treats vec3 as vec4.
 void foo(char3 *P, char3 *Q) {
   *P = *Q;
-  // CHECK: %{{.*}} = shufflevector <4 x i8> %{{.*}}, <4 x i8> undef, <3 x i32> <i32 0, i32 1, i32 2>
+  // CHECK: %{{.*}} = shufflevector <4 x i8> %{{.*}}, <4 x i8> poison, <3 x i32> <i32 0, i32 1, i32 2>
 }
 
 // CHECK: define spir_func void @alignment()

@@ -398,9 +398,9 @@ for.end:                                          ; preds = %for.body
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi <4 x i32> [ [[TMP5]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[DOTLCSSA]], <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[DOTLCSSA]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[DOTLCSSA]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF5:%.*]] = shufflevector <4 x i32> [[BIN_RDX]], <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[RDX_SHUF5:%.*]] = shufflevector <4 x i32> [[BIN_RDX]], <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX6:%.*]] = add <4 x i32> [[BIN_RDX]], [[RDX_SHUF5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[BIN_RDX6]], i32 0
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[SMAX]], [[N_VEC]]

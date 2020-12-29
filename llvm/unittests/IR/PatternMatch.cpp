@@ -950,11 +950,14 @@ TEST_F(PatternMatchTest, VectorOps) {
   Value *EX2 = IRB.CreateExtractElement(VI4, (uint64_t)0);
   Value *EX3 = IRB.CreateExtractElement(IdxVec, (uint64_t)1);
 
-  Value *Zero = ConstantAggregateZero::get(i32VecTy);
-  Value *SI1 = IRB.CreateShuffleVector(VI1, UndefVec, Zero);
+  Constant *Zero = ConstantAggregateZero::get(i32VecTy);
+  SmallVector<int, 16> ZeroMask;
+  ShuffleVectorInst::getShuffleMask(Zero, ZeroMask);
+
+  Value *SI1 = IRB.CreateShuffleVector(VI1, ZeroMask);
   Value *SI2 = IRB.CreateShuffleVector(VI3, VI4, IdxVec);
-  Value *SI3 = IRB.CreateShuffleVector(VI3, UndefVec, Zero);
-  Value *SI4 = IRB.CreateShuffleVector(VI4, UndefVec, Zero);
+  Value *SI3 = IRB.CreateShuffleVector(VI3, ZeroMask);
+  Value *SI4 = IRB.CreateShuffleVector(VI4, ZeroMask);
 
   Value *SP1 = IRB.CreateVectorSplat(2, IRB.getInt8(2));
   Value *SP2 = IRB.CreateVectorSplat(2, Val);

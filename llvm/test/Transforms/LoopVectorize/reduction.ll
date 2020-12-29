@@ -6,9 +6,9 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ;CHECK: phi <4 x i32>
 ;CHECK: load <4 x i32>
 ;CHECK: add <4 x i32>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ;CHECK: add <4 x i32>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ;CHECK: add <4 x i32>
 ;CHECK: extractelement <4 x i32> %{{.*}}, i32 0
 ;CHECK: ret i32
@@ -41,9 +41,9 @@ define i32 @reduction_sum(i32 %n, i32* noalias nocapture %A, i32* noalias nocapt
 ;CHECK: phi <4 x i32>
 ;CHECK: load <4 x i32>
 ;CHECK: mul <4 x i32>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ;CHECK: mul <4 x i32>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ;CHECK: mul <4 x i32>
 ;CHECK: extractelement <4 x i32> %{{.*}}, i32 0
 ;CHECK: ret i32
@@ -76,9 +76,9 @@ define i32 @reduction_prod(i32 %n, i32* noalias nocapture %A, i32* noalias nocap
 ;CHECK: phi <4 x i32>
 ;CHECK: load <4 x i32>
 ;CHECK: mul nsw <4 x i32>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ;CHECK: add <4 x i32>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ;CHECK: add <4 x i32>
 ;CHECK: extractelement <4 x i32> %{{.*}}, i32 0
 ;CHECK: ret i32
@@ -109,9 +109,9 @@ define i32 @reduction_mix(i32 %n, i32* noalias nocapture %A, i32* noalias nocapt
 
 ;CHECK-LABEL: @reduction_mul(
 ;CHECK: mul <4 x i32>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ;CHECK: mul <4 x i32>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ;CHECK: mul <4 x i32>
 ;CHECK: extractelement <4 x i32> %{{.*}}, i32 0
 ;CHECK: ret i32
@@ -143,9 +143,9 @@ define i32 @reduction_mul(i32 %n, i32* noalias nocapture %A, i32* noalias nocapt
 ;CHECK-LABEL: @start_at_non_zero(
 ;CHECK: phi <4 x i32>
 ;CHECK: <i32 120, i32 0, i32 0, i32 0>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ;CHECK: add <4 x i32>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ;CHECK: add <4 x i32>
 ;CHECK: extractelement <4 x i32> %{{.*}}, i32 0
 ;CHECK: ret i32
@@ -176,9 +176,9 @@ for.end:                                          ; preds = %for.body, %entry
 ;CHECK-LABEL: @reduction_and(
 ;CHECK: <i32 -1, i32 -1, i32 -1, i32 -1>
 ;CHECK: and <4 x i32>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ;CHECK: and <4 x i32>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ;CHECK: and <4 x i32>
 ;CHECK: extractelement <4 x i32> %{{.*}}, i32 0
 ;CHECK: ret i32
@@ -208,9 +208,9 @@ for.end:                                          ; preds = %for.body, %entry
 
 ;CHECK-LABEL: @reduction_or(
 ;CHECK: or <4 x i32>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ;CHECK: or <4 x i32>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ;CHECK: or <4 x i32>
 ;CHECK: extractelement <4 x i32> %{{.*}}, i32 0
 ;CHECK: ret i32
@@ -240,9 +240,9 @@ for.end:                                          ; preds = %for.body, %entry
 
 ;CHECK-LABEL: @reduction_xor(
 ;CHECK: xor <4 x i32>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ;CHECK: xor <4 x i32>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ;CHECK: xor <4 x i32>
 ;CHECK: extractelement <4 x i32> %{{.*}}, i32 0
 ;CHECK: ret i32
@@ -498,9 +498,9 @@ exit:
 ;CHECK: phi <4 x i32>
 ;CHECK: load <4 x i32>
 ;CHECK: add <4 x i32>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ;CHECK: add <4 x i32>
-;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+;CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ;CHECK: add <4 x i32>
 ;CHECK: extractelement <4 x i32> %{{.*}}, i32 0
 ;CHECK: %sum.copy = phi i32 [ %[[SCALAR:.*]], %.lr.ph ], [ %[[VECTOR:.*]], %middle.block ]

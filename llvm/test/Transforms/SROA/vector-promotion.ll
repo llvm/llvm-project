@@ -57,7 +57,7 @@ entry:
 ; CHECK-NOT: load
 ; CHECK:      %[[extract1:.*]] = extractelement <4 x i32> %x, i32 2
 ; CHECK-NEXT: %[[extract2:.*]] = extractelement <4 x i32> %y, i32 3
-; CHECK-NEXT: %[[extract3:.*]] = shufflevector <4 x i32> %y, <4 x i32> undef, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT: %[[extract3:.*]] = shufflevector <4 x i32> %y, <4 x i32> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT: %[[extract4:.*]] = extractelement <2 x i32> %[[extract3]], i32 0
 
   %tmp4 = add i32 %tmp1, %tmp2
@@ -305,17 +305,17 @@ entry:
   %a.cast0 = bitcast i32* %a.gep0 to <2 x i32>*
   %first = load <2 x i32>, <2 x i32>* %a.cast0
 ; CHECK-NOT: load
-; CHECK:      %[[extract1:.*]] = shufflevector <4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> undef, <2 x i32> <i32 0, i32 1>
+; CHECK:      %[[extract1:.*]] = shufflevector <4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> poison, <2 x i32> <i32 0, i32 1>
 
   %a.gep1 = getelementptr <4 x i32>, <4 x i32>* %a, i32 0, i32 1
   %a.cast1 = bitcast i32* %a.gep1 to <2 x i32>*
   %second = load <2 x i32>, <2 x i32>* %a.cast1
-; CHECK-NEXT: %[[extract2:.*]] = shufflevector <4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> undef, <2 x i32> <i32 1, i32 2>
+; CHECK-NEXT: %[[extract2:.*]] = shufflevector <4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> poison, <2 x i32> <i32 1, i32 2>
 
   %a.gep2 = getelementptr <4 x i32>, <4 x i32>* %a, i32 0, i32 2
   %a.cast2 = bitcast i32* %a.gep2 to <2 x i32>*
   %third = load <2 x i32>, <2 x i32>* %a.cast2
-; CHECK-NEXT: %[[extract3:.*]] = shufflevector <4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT: %[[extract3:.*]] = shufflevector <4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> poison, <2 x i32> <i32 2, i32 3>
 
   %tmp = shufflevector <2 x i32> %first, <2 x i32> %second, <2 x i32> <i32 0, i32 2>
   %ret = shufflevector <2 x i32> %tmp, <2 x i32> %third, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -372,7 +372,7 @@ entry:
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a.cast0, i8* %x, i32 8, i1 false)
 ; CHECK:      %[[xptr:.*]] = bitcast i8* %x to <2 x float>*
 ; CHECK-NEXT: %[[x:.*]] = load <2 x float>, <2 x float>* %[[xptr]]
-; CHECK-NEXT: %[[expand_x:.*]] = shufflevector <2 x float> %[[x]], <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT: %[[expand_x:.*]] = shufflevector <2 x float> %[[x]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; CHECK-NEXT: select <4 x i1> <i1 true, i1 true, i1 false, i1 false>  
 
   %a.gep1 = getelementptr <4 x float>, <4 x float>* %a, i32 0, i32 1
@@ -380,7 +380,7 @@ entry:
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a.cast1, i8* %y, i32 8, i1 false)
 ; CHECK-NEXT: %[[yptr:.*]] = bitcast i8* %y to <2 x float>*
 ; CHECK-NEXT: %[[y:.*]] = load <2 x float>, <2 x float>* %[[yptr]]
-; CHECK-NEXT: %[[expand_y:.*]] = shufflevector <2 x float> %[[y]], <2 x float> undef, <4 x i32> <i32 undef, i32 0, i32 1, i32 undef>
+; CHECK-NEXT: %[[expand_y:.*]] = shufflevector <2 x float> %[[y]], <2 x float> poison, <4 x i32> <i32 undef, i32 0, i32 1, i32 undef>
 ; CHECK-NEXT: select <4 x i1> <i1 false, i1 true, i1 true, i1 false>
 
   %a.gep2 = getelementptr <4 x float>, <4 x float>* %a, i32 0, i32 2
@@ -388,7 +388,7 @@ entry:
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a.cast2, i8* %z, i32 8, i1 false)
 ; CHECK-NEXT: %[[zptr:.*]] = bitcast i8* %z to <2 x float>*
 ; CHECK-NEXT: %[[z:.*]] = load <2 x float>, <2 x float>* %[[zptr]]
-; CHECK-NEXT: %[[expand_z:.*]] = shufflevector <2 x float> %[[z]], <2 x float> undef, <4 x i32> <i32 undef, i32 undef, i32 0, i32 1>
+; CHECK-NEXT: %[[expand_z:.*]] = shufflevector <2 x float> %[[z]], <2 x float> poison, <4 x i32> <i32 undef, i32 undef, i32 0, i32 1>
 ; CHECK-NEXT: select <4 x i1> <i1 false, i1 false, i1 true, i1 true>
 
   %a.gep3 = getelementptr <4 x float>, <4 x float>* %a, i32 0, i32 3
@@ -400,7 +400,7 @@ entry:
 
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %out, i8* %a.cast2, i32 8, i1 false)
 ; CHECK-NEXT: %[[outptr:.*]] = bitcast i8* %out to <2 x float>*
-; CHECK-NEXT: %[[extract_out:.*]] = shufflevector <4 x float> %[[insert_f]], <4 x float> undef, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT: %[[extract_out:.*]] = shufflevector <4 x float> %[[insert_f]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT: store <2 x float> %[[extract_out]], <2 x float>* %[[outptr]]
 
   %ret = load <4 x float>, <4 x float>* %a
@@ -594,7 +594,7 @@ entry:
   store i32 %y, i32* %a.tmp2
 ; CHECK-NOT: store
 ; CHECK:      %[[V1:.*]] = bitcast i32 %y to <2 x i16>
-; CHECK-NEXT: %[[V2:.*]] = shufflevector <2 x i16> %[[V1]], <2 x i16> undef, <4 x i32> <i32 undef, i32 undef, i32 0, i32 1>
+; CHECK-NEXT: %[[V2:.*]] = shufflevector <2 x i16> %[[V1]], <2 x i16> poison, <4 x i32> <i32 undef, i32 undef, i32 0, i32 1>
 ; CHECK-NEXT: %[[V3:.*]] = select <4 x i1> <i1 false, i1 false, i1 true, i1 true>, <4 x i16> %[[V2]], <4 x i16> %x
 ; CHECK-NEXT: %[[V4:.*]] = bitcast <4 x i16> %[[V3]] to <2 x float>
 
