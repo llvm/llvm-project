@@ -35,7 +35,7 @@ define i64 @test2(i64 %in) {
 ; ANY-NEXT:    ret i64 [[IN:%.*]]
 ;
   %vec = insertelement <8 x i64> poison, i64 %in, i32 0
-  %splat = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> zeroinitializer
+  %splat = shufflevector <8 x i64> %vec, <8 x i64> poison, <8 x i32> zeroinitializer
   %add = add <8 x i64> %splat, <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
   %r = extractelement <8 x i64> %add, i32 0
   ret i64 %r

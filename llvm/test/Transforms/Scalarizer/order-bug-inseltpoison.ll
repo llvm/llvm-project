@@ -14,7 +14,7 @@ y:
 ; CHECK: %f.upto1 = insertelement <4 x i32> %f.upto0, i32 %b.i0, i32 1
 ; CHECK: %f.upto2 = insertelement <4 x i32> %f.upto1, i32 %b.i0, i32 2
 ; CHECK: %f = insertelement <4 x i32> %f.upto2, i32 %b.i0, i32 3
-  %f = shufflevector <4 x i32> %b, <4 x i32> undef, <4 x i32> zeroinitializer
+  %f = shufflevector <4 x i32> %b, <4 x i32> poison, <4 x i32> zeroinitializer
   ret <4 x i32> %f
 
 z:
