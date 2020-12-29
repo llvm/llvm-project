@@ -121,6 +121,24 @@ bool LLVMTargetMachine::addAsmPrinter(PassManagerBase &PM,
                                       raw_pwrite_stream *DwoOut,
                                       CodeGenFileType FileType,
                                       MCContext &Context) {
+  Expected<std::unique_ptr<MCStreamer>> MCStreamerOrErr =
+      createMCStreamer(Out, DwoOut, FileType, Context);
+  if (auto Err = MCStreamerOrErr.takeError())
+    return true;
+
+  // Create the AsmPrinter, which takes ownership of AsmStreamer if successful.
+  FunctionPass *Printer =
+      getTarget().createAsmPrinter(*this, std::move(*MCStreamerOrErr));
+  if (!Printer)
+    return true;
+
+  PM.add(Printer);
+  return false;
+}
+
+Expected<std::unique_ptr<MCStreamer>> LLVMTargetMachine::createMCStreamer(
+    raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut, CodeGenFileType FileType,
+    MCContext &Context) {
   if (Options.MCOptions.MCSaveTempLabels)
     Context.setAllowTemporaryLabels(false);
 
@@ -155,10 +173,14 @@ bool LLVMTargetMachine::addAsmPrinter(PassManagerBase &PM,
     // Create the code emitter for the target if it exists.  If not, .o file
     // emission fails.
     MCCodeEmitter *MCE = getTarget().createMCCodeEmitter(MII, MRI, Context);
+    if (!MCE)
+      return make_error<StringError>("createMCCodeEmitter failed",
+                                     inconvertibleErrorCode());
     MCAsmBackend *MAB =
         getTarget().createMCAsmBackend(STI, MRI, Options.MCOptions);
-    if (!MCE || !MAB)
-      return true;
+    if (!MAB)
+      return make_error<StringError>("createMCAsmBackend failed",
+                                     inconvertibleErrorCode());
 
     Triple T(getTargetTriple().str());
     AsmStreamer.reset(getTarget().createMCObjectStreamer(
@@ -177,14 +199,7 @@ bool LLVMTargetMachine::addAsmPrinter(PassManagerBase &PM,
     break;
   }
 
-  // Create the AsmPrinter, which takes ownership of AsmStreamer if successful.
-  FunctionPass *Printer =
-      getTarget().createAsmPrinter(*this, std::move(AsmStreamer));
-  if (!Printer)
-    return true;
-
-  PM.add(Printer);
-  return false;
+  return AsmStreamer;
 }
 
 bool LLVMTargetMachine::addPassesToEmitFile(

@@ -25,6 +25,7 @@ struct MachineSchedContext;
 class PassConfigImpl;
 class ScheduleDAGInstrs;
 class CSEConfigBase;
+class PassInstrumentationCallbacks;
 
 // The old pass manager infrastructure is hidden in a legacy namespace now.
 namespace legacy {
@@ -464,6 +465,9 @@ protected:
   virtual bool addRegAssignmentFast();
   virtual bool addRegAssignmentOptimized();
 };
+
+void registerCodeGenCallback(PassInstrumentationCallbacks &PIC,
+                             LLVMTargetMachine &);
 
 } // end namespace llvm
 
