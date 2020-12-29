@@ -3668,6 +3668,8 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
   LLVM_DEBUG(dbgs() << "FOLDING BRs:" << *PBI->getParent()
                     << "AND: " << *BI->getParent());
 
+  SmallVector<DominatorTree::UpdateType, 5> Updates;
+
   // If OtherDest *is* BB, then BB is a basic block with a single conditional
   // branch in it, where one edge (OtherDest) goes back to itself but the other
   // exits.  We don't *know* that the program avoids the infinite loop
@@ -3681,6 +3683,7 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
     BasicBlock *InfLoopBlock =
         BasicBlock::Create(BB->getContext(), "infloop", BB->getParent());
     BranchInst::Create(InfLoopBlock, InfLoopBlock);
+    Updates.push_back({DominatorTree::Insert, InfLoopBlock, InfLoopBlock});
     OtherDest = InfLoopBlock;
   }
 
@@ -3702,10 +3705,19 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
   // Merge the conditions.
   Value *Cond = Builder.CreateOr(PBICond, BICond, "brmerge");
 
+  for (auto *Successor : successors(PBI->getParent()))
+    Updates.push_back({DominatorTree::Delete, PBI->getParent(), Successor});
+
   // Modify PBI to branch on the new condition to the new dests.
   PBI->setCondition(Cond);
   PBI->setSuccessor(0, CommonDest);
   PBI->setSuccessor(1, OtherDest);
+
+  for (auto *Successor : successors(PBI->getParent()))
+    Updates.push_back({DominatorTree::Insert, PBI->getParent(), Successor});
+
+  if (DTU)
+    DTU->applyUpdatesPermissive(Updates);
 
   // Update branch weight for PBI.
   uint64_t PredTrueWeight, PredFalseWeight, SuccTrueWeight, SuccFalseWeight;
