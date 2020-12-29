@@ -551,8 +551,7 @@ static void ReportIfNotSuspended(ThreadContextBase *tctx, void *arg) {
   const InternalMmapVector<tid_t> &suspended_threads =
       *(const InternalMmapVector<tid_t> *)arg;
   if (tctx->status == ThreadStatusRunning) {
-    uptr i = InternalLowerBound(suspended_threads, 0, suspended_threads.size(),
-                                tctx->os_id, CompareLess<int>());
+    uptr i = InternalLowerBound(suspended_threads, tctx->os_id);
     if (i >= suspended_threads.size() || suspended_threads[i] != tctx->os_id)
       Report("Running thread %d was not suspended. False leaks are possible.\n",
              tctx->os_id);
