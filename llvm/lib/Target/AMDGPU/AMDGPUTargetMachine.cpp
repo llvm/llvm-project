@@ -54,6 +54,7 @@
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
+#include "llvm/Transforms/Scalar/InferAddressSpaces.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/SimplifyLibCalls.h"
 #include "llvm/Transforms/Vectorize.h"
@@ -523,13 +524,20 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
   PB.registerCGSCCOptimizerLateEPCallback(
       [this, DebugPassManager](CGSCCPassManager &PM,
                                PassBuilder::OptimizationLevel Level) {
-        if (Level != PassBuilder::OptimizationLevel::O0) {
           FunctionPassManager FPM(DebugPassManager);
-          // Promote alloca to vector before SROA and loop unroll. If we manage
-          // to eliminate allocas before unroll we may choose to unroll less.
-          FPM.addPass(AMDGPUPromoteAllocaToVectorPass(*this));
+
+          // Add infer address spaces pass to the opt pipeline after inlining
+          // but before SROA to increase SROA opportunities.
+          FPM.addPass(InferAddressSpacesPass());
+
+          if (Level != PassBuilder::OptimizationLevel::O0) {
+            // Promote alloca to vector before SROA and loop unroll. If we
+            // manage to eliminate allocas before unroll we may choose to unroll
+            // less.
+            FPM.addPass(AMDGPUPromoteAllocaToVectorPass(*this));
+          }
+
           PM.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM)));
-        }
       });
 }
 
