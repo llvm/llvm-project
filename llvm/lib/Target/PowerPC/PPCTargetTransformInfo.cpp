@@ -629,6 +629,10 @@ bool PPCTTIImpl::mightUseCTR(BasicBlock *BB, TargetLibraryInfo *LibInfo,
           isLargeIntegerTy(!TM.isPPC64(), CI->getSrcTy()->getScalarType()) ||
           isLargeIntegerTy(!TM.isPPC64(), CI->getDestTy()->getScalarType()))
         return true;
+      if (!ST->isISA3_0() &&
+          (CI->getSrcTy()->getScalarType()->isHalfTy() ||
+           CI->getDestTy()->getScalarType()->isHalfTy()))
+        return true;
     } else if (isLargeIntegerTy(!TM.isPPC64(),
                                 J->getType()->getScalarType()) &&
                (J->getOpcode() == Instruction::UDiv ||
