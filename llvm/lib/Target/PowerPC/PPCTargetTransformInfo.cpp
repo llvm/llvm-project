@@ -335,6 +335,29 @@ PPCTTIImpl::getUserCost(const User *U, ArrayRef<const Value *> Operands,
   return BaseT::getUserCost(U, Operands, CostKind);
 }
 
+// Determining the address of a TLS variable results in a function call in
+// certain TLS models.
+static bool memAddrUsesCTR(const Value *MemAddr, const PPCTargetMachine &TM,
+                           SmallPtrSetImpl<const Value *> &Visited) {
+  // No need to traverse again if we already checked this operand.
+  if (!Visited.insert(MemAddr).second)
+    return false;
+  const auto *GV = dyn_cast<GlobalValue>(MemAddr);
+  if (!GV) {
+    // Recurse to check for constants that refer to TLS global variables.
+    if (const auto *CV = dyn_cast<Constant>(MemAddr))
+      for (const auto &CO : CV->operands())
+        if (memAddrUsesCTR(CO, TM, Visited))
+          return true;
+    return false;
+  }
+
+  if (!GV->isThreadLocal())
+    return false;
+  TLSModel::Model Model = TM.getTLSModel(GV);
+  return Model == TLSModel::GeneralDynamic || Model == TLSModel::LocalDynamic;
+}
+
 bool PPCTTIImpl::mightUseCTR(BasicBlock *BB, TargetLibraryInfo *LibInfo,
                              SmallPtrSetImpl<const Value *> &Visited) {
   const PPCTargetMachine &TM = ST->getTargetMachine();
@@ -351,31 +374,6 @@ bool PPCTTIImpl::mightUseCTR(BasicBlock *BB, TargetLibraryInfo *LibInfo,
             return true;
     }
     return false;
-  };
-
-  // Determining the address of a TLS variable results in a function call in
-  // certain TLS models.
-  std::function<bool(const Value *)> memAddrUsesCTR =
-      [&memAddrUsesCTR, &TM, &Visited](const Value *MemAddr) -> bool {
-    // No need to traverse again if we already checked this operand.
-    if (!Visited.insert(MemAddr).second)
-      return false;
-    const auto *GV = dyn_cast<GlobalValue>(MemAddr);
-    if (!GV) {
-      // Recurse to check for constants that refer to TLS global variables.
-      if (const auto *CV = dyn_cast<Constant>(MemAddr))
-        for (const auto &CO : CV->operands())
-          if (memAddrUsesCTR(CO))
-            return true;
-
-      return false;
-    }
-
-    if (!GV->isThreadLocal())
-      return false;
-    TLSModel::Model Model = TM.getTLSModel(GV);
-    return Model == TLSModel::GeneralDynamic ||
-      Model == TLSModel::LocalDynamic;
   };
 
   auto isLargeIntegerTy = [](bool Is32Bit, Type *Ty) {
@@ -676,7 +674,7 @@ bool PPCTTIImpl::mightUseCTR(BasicBlock *BB, TargetLibraryInfo *LibInfo,
     }
 
     for (Value *Operand : J->operands())
-      if (memAddrUsesCTR(Operand))
+      if (memAddrUsesCTR(Operand, TM, Visited))
         return true;
   }
 
@@ -733,6 +731,24 @@ bool PPCTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
       if (( TrueIsExit && FalseWeight < TrueWeight) ||
           (!TrueIsExit && FalseWeight > TrueWeight))
         return false;
+    }
+  }
+
+  // If an exit block has a PHI that accesses a TLS variable as one of the
+  // incoming values from the loop, we cannot produce a CTR loop because the
+  // address for that value will be computed in the loop.
+  SmallVector<BasicBlock *, 4> ExitBlocks;
+  L->getExitBlocks(ExitBlocks);
+  for (auto &BB : ExitBlocks) {
+    for (auto &PHI : BB->phis()) {
+      for (int Idx = 0, EndIdx = PHI.getNumIncomingValues(); Idx < EndIdx;
+           Idx++) {
+        const BasicBlock *IncomingBB = PHI.getIncomingBlock(Idx);
+        const Value *IncomingValue = PHI.getIncomingValue(Idx);
+        if (L->contains(IncomingBB) &&
+            memAddrUsesCTR(IncomingValue, TM, Visited))
+          return false;
+      }
     }
   }
 
