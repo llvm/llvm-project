@@ -16,7 +16,7 @@ define <4 x i32> @splat_base(i32* %base, <4 x i64> %index) {
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
   %broadcast.splatinsert = insertelement <4 x i32*> poison, i32* %base, i32 0
-  %broadcast.splat = shufflevector <4 x i32*> %broadcast.splatinsert, <4 x i32*> undef, <4 x i32> zeroinitializer
+  %broadcast.splat = shufflevector <4 x i32*> %broadcast.splatinsert, <4 x i32*> poison, <4 x i32> zeroinitializer
   %gep = getelementptr i32, <4 x i32*> %broadcast.splat, <4 x i64> %index
   %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %gep, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
   ret <4 x i32> %res
@@ -42,7 +42,7 @@ define <4 x i32> @scalar_index(i32* %base, i64 %index) {
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
   %broadcast.splatinsert = insertelement <4 x i32*> poison, i32* %base, i32 0
-  %broadcast.splat = shufflevector <4 x i32*> %broadcast.splatinsert, <4 x i32*> undef, <4 x i32> zeroinitializer
+  %broadcast.splat = shufflevector <4 x i32*> %broadcast.splatinsert, <4 x i32*> poison, <4 x i32> zeroinitializer
   %gep = getelementptr i32, <4 x i32*> %broadcast.splat, i64 %index
   %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %gep, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
   ret <4 x i32> %res
@@ -56,7 +56,7 @@ define <4 x i32> @splat_index(i32* %base, i64 %index) {
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
   %broadcast.splatinsert = insertelement <4 x i64> poison, i64 %index, i32 0
-  %broadcast.splat = shufflevector <4 x i64> %broadcast.splatinsert, <4 x i64> undef, <4 x i32> zeroinitializer
+  %broadcast.splat = shufflevector <4 x i64> %broadcast.splatinsert, <4 x i64> poison, <4 x i32> zeroinitializer
   %gep = getelementptr i32, i32* %base, <4 x i64> %broadcast.splat
   %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %gep, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
   ret <4 x i32> %res
@@ -79,7 +79,7 @@ define <4 x i32> @global_struct_splat() {
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %1 = insertelement <4 x %struct.a*> poison, %struct.a* @c, i32 0
-  %2 = shufflevector <4 x %struct.a*> %1, <4 x %struct.a*> undef, <4 x i32> zeroinitializer
+  %2 = shufflevector <4 x %struct.a*> %1, <4 x %struct.a*> poison, <4 x i32> zeroinitializer
   %3 = getelementptr %struct.a, <4 x %struct.a*> %2, <4 x i64> zeroinitializer, i32 1
   %4 = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %3, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
   ret <4 x i32> %4
@@ -92,7 +92,7 @@ define <4 x i32> @splat_ptr_gather(i32* %ptr, <4 x i1> %mask, <4 x i32> %passthr
 ; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %1 = insertelement <4 x i32*> poison, i32* %ptr, i32 0
-  %2 = shufflevector <4 x i32*> %1, <4 x i32*> undef, <4 x i32> zeroinitializer
+  %2 = shufflevector <4 x i32*> %1, <4 x i32*> poison, <4 x i32> zeroinitializer
   %3 = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %2, i32 4, <4 x i1> %mask, <4 x i32> %passthru)
   ret <4 x i32> %3
 }
@@ -104,7 +104,7 @@ define void @splat_ptr_scatter(i32* %ptr, <4 x i1> %mask, <4 x i32> %val) {
 ; CHECK-NEXT:    ret void
 ;
   %1 = insertelement <4 x i32*> poison, i32* %ptr, i32 0
-  %2 = shufflevector <4 x i32*> %1, <4 x i32*> undef, <4 x i32> zeroinitializer
+  %2 = shufflevector <4 x i32*> %1, <4 x i32*> poison, <4 x i32> zeroinitializer
   call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> %val, <4 x i32*> %2, i32 4, <4 x i1> %mask)
   ret void
 }

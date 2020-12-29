@@ -77,13 +77,13 @@ define <4 x i32> @shl_C1_add_A_C2_v4i32_splat(i16 %I) {
 ; CHECK-LABEL: @shl_C1_add_A_C2_v4i32_splat(
 ; CHECK-NEXT:    [[A:%.*]] = zext i16 [[I:%.*]] to i32
 ; CHECK-NEXT:    [[B:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i32 0
-; CHECK-NEXT:    [[C:%.*]] = shufflevector <4 x i32> [[B]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[C:%.*]] = shufflevector <4 x i32> [[B]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[E:%.*]] = shl <4 x i32> <i32 6, i32 4, i32 poison, i32 -458752>, [[C]]
 ; CHECK-NEXT:    ret <4 x i32> [[E]]
 ;
   %A = zext i16 %I to i32
   %B = insertelement <4 x i32> poison, i32 %A, i32 0
-  %C = shufflevector <4 x i32> %B, <4 x i32> undef, <4 x i32> zeroinitializer
+  %C = shufflevector <4 x i32> %B, <4 x i32> poison, <4 x i32> zeroinitializer
   %D = add <4 x i32> %C, <i32 0, i32 1, i32 50, i32 16>
   %E = shl <4 x i32> <i32 6, i32 2, i32 1, i32 -7>, %D
   ret <4 x i32> %E
@@ -93,13 +93,13 @@ define <4 x i32> @ashr_C1_add_A_C2_v4i32_splat(i16 %I) {
 ; CHECK-LABEL: @ashr_C1_add_A_C2_v4i32_splat(
 ; CHECK-NEXT:    [[A:%.*]] = zext i16 [[I:%.*]] to i32
 ; CHECK-NEXT:    [[B:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i32 0
-; CHECK-NEXT:    [[C:%.*]] = shufflevector <4 x i32> [[B]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[C:%.*]] = shufflevector <4 x i32> [[B]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[E:%.*]] = ashr <4 x i32> <i32 6, i32 1, i32 poison, i32 -1>, [[C]]
 ; CHECK-NEXT:    ret <4 x i32> [[E]]
 ;
   %A = zext i16 %I to i32
   %B = insertelement <4 x i32> poison, i32 %A, i32 0
-  %C = shufflevector <4 x i32> %B, <4 x i32> undef, <4 x i32> zeroinitializer
+  %C = shufflevector <4 x i32> %B, <4 x i32> poison, <4 x i32> zeroinitializer
   %D = add <4 x i32> %C, <i32 0, i32 1, i32 50, i32 16>
   %E = ashr <4 x i32> <i32 6, i32 2, i32 1, i32 -7>, %D
   ret <4 x i32> %E
@@ -109,13 +109,13 @@ define <4 x i32> @lshr_C1_add_A_C2_v4i32_splat(i16 %I) {
 ; CHECK-LABEL: @lshr_C1_add_A_C2_v4i32_splat(
 ; CHECK-NEXT:    [[A:%.*]] = zext i16 [[I:%.*]] to i32
 ; CHECK-NEXT:    [[B:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i32 0
-; CHECK-NEXT:    [[C:%.*]] = shufflevector <4 x i32> [[B]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[C:%.*]] = shufflevector <4 x i32> [[B]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[E:%.*]] = lshr <4 x i32> <i32 6, i32 1, i32 poison, i32 65535>, [[C]]
 ; CHECK-NEXT:    ret <4 x i32> [[E]]
 ;
   %A = zext i16 %I to i32
   %B = insertelement <4 x i32> poison, i32 %A, i32 0
-  %C = shufflevector <4 x i32> %B, <4 x i32> undef, <4 x i32> zeroinitializer
+  %C = shufflevector <4 x i32> %B, <4 x i32> poison, <4 x i32> zeroinitializer
   %D = add <4 x i32> %C, <i32 0, i32 1, i32 50, i32 16>
   %E = lshr <4 x i32> <i32 6, i32 2, i32 1, i32 -7>, %D
   ret <4 x i32> %E
