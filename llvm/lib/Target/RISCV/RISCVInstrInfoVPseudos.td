@@ -263,6 +263,7 @@ class RISCVVPseudo {
   bits<8> MergeOpIndex = InvalidIndex.V;
   bits<3> VLMul;
   bit HasDummyMask = 0;
+  bit WritesElement0 = 0;
 }
 
 // The actual table.
@@ -270,7 +271,7 @@ def RISCVVPseudosTable : GenericTable {
   let FilterClass = "RISCVVPseudo";
   let CppTypeName = "PseudoInfo";
   let Fields = [ "Pseudo", "BaseInstr", "VLIndex", "SEWIndex", "MergeOpIndex",
-                 "VLMul", "HasDummyMask" ];
+                 "VLMul", "HasDummyMask", "WritesElement0" ];
   let PrimaryKey = [ "Pseudo" ];
   let PrimaryKeyName = "getPseudoInfo";
 }
@@ -1159,8 +1160,10 @@ multiclass VPseudoBinaryM_VX_VI {
 }
 
 multiclass VPseudoReductionV_VS {
-  foreach m = MxList.m in
+  foreach m = MxList.m in {
+    let WritesElement0 = 1 in
     defm _VS : VPseudoTernary<V_M1.vrclass, m.vrclass, V_M1.vrclass, m>;
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -2477,7 +2480,7 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0, usesCustomInserter = 1,
       def PseudoVMV_X_S # "_" # m.MX: Pseudo<(outs GPR:$rd),
                                              (ins m.vrclass:$rs2, ixlenimm:$sew),
                                              []>, RISCVVPseudo;
-      let VLIndex = 3, SEWIndex = 4, BaseInstr = VMV_S_X,
+      let VLIndex = 3, SEWIndex = 4, BaseInstr = VMV_S_X, WritesElement0 = 1,
           Constraints = "$rd = $rs1" in
       def PseudoVMV_S_X # "_" # m.MX: Pseudo<(outs m.vrclass:$rd),
                                              (ins m.vrclass:$rs1, GPR:$rs2,
@@ -2502,7 +2505,7 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0, usesCustomInserter = 1,
                                                (ins m.vrclass:$rs2,
                                                     ixlenimm:$sew),
                                                []>, RISCVVPseudo;
-      let VLIndex = 3, SEWIndex = 4, BaseInstr = VFMV_S_F,
+      let VLIndex = 3, SEWIndex = 4, BaseInstr = VFMV_S_F, WritesElement0 = 1,
           Constraints = "$rd = $rs1" in
       def PseudoVFMV_S_F # "_" # m.MX : Pseudo<(outs m.vrclass:$rd),
                                                (ins m.vrclass:$rs1, FPR32:$rs2,
