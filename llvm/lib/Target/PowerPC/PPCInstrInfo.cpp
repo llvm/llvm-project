@@ -2141,6 +2141,14 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   if (NewOpC == -1)
     return false;
 
+  // This transformation should not be performed if `nsw` is missing and is not
+  // `equalityOnly` comparison. Since if there is overflow, sub_lt, sub_gt in
+  // CRReg do not reflect correct order. If `equalityOnly` is true, sub_eq in
+  // CRReg can reflect if compared values are equal, this optz is still valid.
+  if (!equalityOnly && (NewOpC == PPC::SUBF_rec || NewOpC == PPC::SUBF8_rec) &&
+      Sub && !Sub->getFlag(MachineInstr::NoSWrap))
+    return false;
+
   // If we have SUB(r1, r2) and CMP(r2, r1), the condition code based on CMP
   // needs to be updated to be based on SUB.  Push the condition code
   // operands to OperandsToUpdate.  If it is safe to remove CmpInstr, the
