@@ -691,6 +691,25 @@ def ProcA78 : SubtargetFeature<"cortex-a78", "ARMProcFamily",
                                FeatureSSBS,
                                FeatureDotProd]>;
 
+def ProcA78C : SubtargetFeature<"cortex-a78c", "ARMProcFamily",
+                                "CortexA78C",
+                                "Cortex-A78C ARM processors", [
+                                HasV8_2aOps,
+                                FeatureCrypto,
+                                FeatureDotProd,
+                                FeatureFMI,
+                                FeatureFP16FML,
+                                FeatureFPARMv8,
+                                FeatureFullFP16,
+                                FeatureFuseAES,
+                                FeatureNEON,
+                                FeaturePA,
+                                FeaturePerfMon,
+                                FeaturePostRAScheduler,
+                                FeatureRCPC,
+                                FeatureSPE,
+                                FeatureSSBS]>;
+
 def ProcR82 : SubtargetFeature<"cortex-r82", "ARMProcFamily",
                                "CortexR82",
                                "Cortex-R82 ARM Processors", [
@@ -1089,6 +1108,7 @@ def : ProcessorModel<"cortex-a76", CortexA57Model, [ProcA76]>;
 def : ProcessorModel<"cortex-a76ae", CortexA57Model, [ProcA76]>;
 def : ProcessorModel<"cortex-a77", CortexA57Model, [ProcA77]>;
 def : ProcessorModel<"cortex-a78", CortexA57Model, [ProcA78]>;
+def : ProcessorModel<"cortex-a78c", CortexA57Model, [ProcA78C]>;
 def : ProcessorModel<"cortex-r82", CortexA55Model, [ProcR82]>;
 def : ProcessorModel<"cortex-x1", CortexA57Model, [ProcX1]>;
 def : ProcessorModel<"neoverse-e1", CortexA53Model, [ProcNeoverseE1]>;
