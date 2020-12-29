@@ -42,6 +42,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -83,8 +84,26 @@ static cl::opt<unsigned> PromoteAllocaToVectorLimit(
 
 // FIXME: This can create globals so should be a module pass.
 class AMDGPUPromoteAlloca : public FunctionPass {
+public:
+  static char ID;
+
+  AMDGPUPromoteAlloca() : FunctionPass(ID) {}
+
+  bool runOnFunction(Function &F) override;
+
+  StringRef getPassName() const override { return "AMDGPU Promote Alloca"; }
+
+  bool handleAlloca(AllocaInst &I, bool SufficientLDS);
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    FunctionPass::getAnalysisUsage(AU);
+  }
+};
+
+class AMDGPUPromoteAllocaImpl {
 private:
-  const TargetMachine *TM;
+  const TargetMachine &TM;
   Module *Mod = nullptr;
   const DataLayout *DL = nullptr;
 
@@ -116,28 +135,14 @@ private:
   /// Check whether we have enough local memory for promotion.
   bool hasSufficientLocalMem(const Function &F);
 
-public:
-  static char ID;
-
-  AMDGPUPromoteAlloca() : FunctionPass(ID) {}
-
-  bool doInitialization(Module &M) override;
-  bool runOnFunction(Function &F) override;
-
-  StringRef getPassName() const override { return "AMDGPU Promote Alloca"; }
-
   bool handleAlloca(AllocaInst &I, bool SufficientLDS);
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    FunctionPass::getAnalysisUsage(AU);
-  }
+public:
+  AMDGPUPromoteAllocaImpl(TargetMachine &TM) : TM(TM) {}
+  bool run(Function &F);
 };
 
 class AMDGPUPromoteAllocaToVector : public FunctionPass {
-private:
-  unsigned MaxVGPRs;
-
 public:
   static char ID;
 
@@ -148,8 +153,6 @@ public:
   StringRef getPassName() const override {
     return "AMDGPU Promote Alloca to vector";
   }
-
-  bool handleAlloca(AllocaInst &I);
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -171,32 +174,41 @@ INITIALIZE_PASS(AMDGPUPromoteAllocaToVector, DEBUG_TYPE "-to-vector",
 char &llvm::AMDGPUPromoteAllocaID = AMDGPUPromoteAlloca::ID;
 char &llvm::AMDGPUPromoteAllocaToVectorID = AMDGPUPromoteAllocaToVector::ID;
 
-bool AMDGPUPromoteAlloca::doInitialization(Module &M) {
-  Mod = &M;
-  DL = &Mod->getDataLayout();
-
-  return false;
-}
-
 bool AMDGPUPromoteAlloca::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
 
-  if (auto *TPC = getAnalysisIfAvailable<TargetPassConfig>())
-    TM = &TPC->getTM<TargetMachine>();
-  else
-    return false;
+  if (auto *TPC = getAnalysisIfAvailable<TargetPassConfig>()) {
+    return AMDGPUPromoteAllocaImpl(TPC->getTM<TargetMachine>()).run(F);
+  }
+  return false;
+}
 
-  const Triple &TT = TM->getTargetTriple();
+PreservedAnalyses AMDGPUPromoteAllocaPass::run(Function &F,
+                                               FunctionAnalysisManager &AM) {
+  bool Changed = AMDGPUPromoteAllocaImpl(TM).run(F);
+  if (Changed) {
+    PreservedAnalyses PA;
+    PA.preserveSet<CFGAnalyses>();
+    return PA;
+  }
+  return PreservedAnalyses::all();
+}
+
+bool AMDGPUPromoteAllocaImpl::run(Function &F) {
+  Mod = F.getParent();
+  DL = &Mod->getDataLayout();
+
+  const Triple &TT = TM.getTargetTriple();
   IsAMDGCN = TT.getArch() == Triple::amdgcn;
   IsAMDHSA = TT.getOS() == Triple::AMDHSA;
 
-  const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(*TM, F);
+  const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, F);
   if (!ST.isPromoteAllocaEnabled())
     return false;
 
   if (IsAMDGCN) {
-    const GCNSubtarget &ST = TM->getSubtarget<GCNSubtarget>(F);
+    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
     MaxVGPRs = ST.getMaxNumVGPRs(ST.getWavesPerEU(F).first);
   } else {
     MaxVGPRs = 128;
@@ -221,9 +233,9 @@ bool AMDGPUPromoteAlloca::runOnFunction(Function &F) {
 }
 
 std::pair<Value *, Value *>
-AMDGPUPromoteAlloca::getLocalSizeYZ(IRBuilder<> &Builder) {
+AMDGPUPromoteAllocaImpl::getLocalSizeYZ(IRBuilder<> &Builder) {
   const Function &F = *Builder.GetInsertBlock()->getParent();
-  const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(*TM, F);
+  const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, F);
 
   if (!IsAMDHSA) {
     Function *LocalSizeYFn
@@ -308,9 +320,10 @@ AMDGPUPromoteAlloca::getLocalSizeYZ(IRBuilder<> &Builder) {
   return std::make_pair(Y, LoadZU);
 }
 
-Value *AMDGPUPromoteAlloca::getWorkitemID(IRBuilder<> &Builder, unsigned N) {
+Value *AMDGPUPromoteAllocaImpl::getWorkitemID(IRBuilder<> &Builder,
+                                              unsigned N) {
   const AMDGPUSubtarget &ST =
-      AMDGPUSubtarget::get(*TM, *Builder.GetInsertBlock()->getParent());
+      AMDGPUSubtarget::get(TM, *Builder.GetInsertBlock()->getParent());
   Intrinsic::ID IntrID = Intrinsic::not_intrinsic;
 
   switch (N) {
@@ -592,11 +605,9 @@ static bool isCallPromotable(CallInst *CI) {
   }
 }
 
-bool AMDGPUPromoteAlloca::binaryOpIsDerivedFromSameAlloca(Value *BaseAlloca,
-                                                          Value *Val,
-                                                          Instruction *Inst,
-                                                          int OpIdx0,
-                                                          int OpIdx1) const {
+bool AMDGPUPromoteAllocaImpl::binaryOpIsDerivedFromSameAlloca(
+    Value *BaseAlloca, Value *Val, Instruction *Inst, int OpIdx0,
+    int OpIdx1) const {
   // Figure out which operand is the one we might not be promoting.
   Value *OtherOp = Inst->getOperand(OpIdx0);
   if (Val == OtherOp)
@@ -624,10 +635,8 @@ bool AMDGPUPromoteAlloca::binaryOpIsDerivedFromSameAlloca(Value *BaseAlloca,
   return true;
 }
 
-bool AMDGPUPromoteAlloca::collectUsesWithPtrTypes(
-  Value *BaseAlloca,
-  Value *Val,
-  std::vector<Value*> &WorkList) const {
+bool AMDGPUPromoteAllocaImpl::collectUsesWithPtrTypes(
+    Value *BaseAlloca, Value *Val, std::vector<Value *> &WorkList) const {
 
   for (User *User : Val->users()) {
     if (is_contained(WorkList, User))
@@ -727,10 +736,10 @@ bool AMDGPUPromoteAlloca::collectUsesWithPtrTypes(
   return true;
 }
 
-bool AMDGPUPromoteAlloca::hasSufficientLocalMem(const Function &F) {
+bool AMDGPUPromoteAllocaImpl::hasSufficientLocalMem(const Function &F) {
 
   FunctionType *FTy = F.getFunctionType();
-  const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(*TM, F);
+  const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, F);
 
   // If the function has any arguments in the local address space, then it's
   // possible these arguments require the entire local memory space, so
@@ -863,7 +872,7 @@ bool AMDGPUPromoteAlloca::hasSufficientLocalMem(const Function &F) {
 }
 
 // FIXME: Should try to pick the most likely to be profitable allocas first.
-bool AMDGPUPromoteAlloca::handleAlloca(AllocaInst &I, bool SufficientLDS) {
+bool AMDGPUPromoteAllocaImpl::handleAlloca(AllocaInst &I, bool SufficientLDS) {
   // Array allocations are probably not worth handling, since an allocation of
   // the array type is the canonical form.
   if (!I.isStaticAlloca() || I.isArrayAllocation())
@@ -904,7 +913,7 @@ bool AMDGPUPromoteAlloca::handleAlloca(AllocaInst &I, bool SufficientLDS) {
   if (!SufficientLDS)
     return false;
 
-  const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(*TM, ContainingFunction);
+  const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, ContainingFunction);
   unsigned WorkGroupSize = ST.getFlatWorkGroupSizes(ContainingFunction).second;
 
   Align Alignment =
@@ -1083,22 +1092,29 @@ bool AMDGPUPromoteAlloca::handleAlloca(AllocaInst &I, bool SufficientLDS) {
   return true;
 }
 
-bool AMDGPUPromoteAllocaToVector::runOnFunction(Function &F) {
-  if (skipFunction(F) || DisablePromoteAllocaToVector)
+bool handlePromoteAllocaToVector(AllocaInst &I, unsigned MaxVGPRs) {
+  // Array allocations are probably not worth handling, since an allocation of
+  // the array type is the canonical form.
+  if (!I.isStaticAlloca() || I.isArrayAllocation())
     return false;
 
-  const TargetMachine *TM;
-  if (auto *TPC = getAnalysisIfAvailable<TargetPassConfig>())
-    TM = &TPC->getTM<TargetMachine>();
-  else
+  LLVM_DEBUG(dbgs() << "Trying to promote " << I << '\n');
+
+  Module *Mod = I.getParent()->getParent()->getParent();
+  return tryPromoteAllocaToVector(&I, Mod->getDataLayout(), MaxVGPRs);
+}
+
+bool promoteAllocasToVector(Function &F, TargetMachine &TM) {
+  if (DisablePromoteAllocaToVector)
     return false;
 
-  const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(*TM, F);
+  const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, F);
   if (!ST.isPromoteAllocaEnabled())
     return false;
 
-  if (TM->getTargetTriple().getArch() == Triple::amdgcn) {
-    const GCNSubtarget &ST = TM->getSubtarget<GCNSubtarget>(F);
+  unsigned MaxVGPRs;
+  if (TM.getTargetTriple().getArch() == Triple::amdgcn) {
+    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
     MaxVGPRs = ST.getMaxNumVGPRs(ST.getWavesPerEU(F).first);
   } else {
     MaxVGPRs = 128;
@@ -1114,23 +1130,31 @@ bool AMDGPUPromoteAllocaToVector::runOnFunction(Function &F) {
   }
 
   for (AllocaInst *AI : Allocas) {
-    if (handleAlloca(*AI))
+    if (handlePromoteAllocaToVector(*AI, MaxVGPRs))
       Changed = true;
   }
 
   return Changed;
 }
 
-bool AMDGPUPromoteAllocaToVector::handleAlloca(AllocaInst &I) {
-  // Array allocations are probably not worth handling, since an allocation of
-  // the array type is the canonical form.
-  if (!I.isStaticAlloca() || I.isArrayAllocation())
+bool AMDGPUPromoteAllocaToVector::runOnFunction(Function &F) {
+  if (skipFunction(F))
     return false;
+  if (auto *TPC = getAnalysisIfAvailable<TargetPassConfig>()) {
+    return promoteAllocasToVector(F, TPC->getTM<TargetMachine>());
+  }
+  return false;
+}
 
-  LLVM_DEBUG(dbgs() << "Trying to promote " << I << '\n');
-
-  Module *Mod = I.getParent()->getParent()->getParent();
-  return tryPromoteAllocaToVector(&I, Mod->getDataLayout(), MaxVGPRs);
+PreservedAnalyses
+AMDGPUPromoteAllocaToVectorPass::run(Function &F, FunctionAnalysisManager &AM) {
+  bool Changed = promoteAllocasToVector(F, TM);
+  if (Changed) {
+    PreservedAnalyses PA;
+    PA.preserveSet<CFGAnalyses>();
+    return PA;
+  }
+  return PreservedAnalyses::all();
 }
 
 FunctionPass *llvm::createAMDGPUPromoteAlloca() {

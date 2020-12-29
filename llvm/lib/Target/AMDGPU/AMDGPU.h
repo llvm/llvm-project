@@ -208,6 +208,23 @@ FunctionPass *createAMDGPUPromoteAllocaToVector();
 void initializeAMDGPUPromoteAllocaToVectorPass(PassRegistry&);
 extern char &AMDGPUPromoteAllocaToVectorID;
 
+struct AMDGPUPromoteAllocaPass : PassInfoMixin<AMDGPUPromoteAllocaPass> {
+  AMDGPUPromoteAllocaPass(TargetMachine &TM) : TM(TM) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+private:
+  TargetMachine &TM;
+};
+
+struct AMDGPUPromoteAllocaToVectorPass
+    : PassInfoMixin<AMDGPUPromoteAllocaToVectorPass> {
+  AMDGPUPromoteAllocaToVectorPass(TargetMachine &TM) : TM(TM) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+private:
+  TargetMachine &TM;
+};
+
 Pass *createAMDGPUStructurizeCFGPass();
 FunctionPass *createAMDGPUISelDag(
   TargetMachine *TM = nullptr,
