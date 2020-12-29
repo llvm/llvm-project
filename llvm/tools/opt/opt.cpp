@@ -462,6 +462,13 @@ struct TimeTracerRAII {
 // TODO: use a codegen version of PassRegistry.def/PassBuilder::is*Pass() once
 // it exists.
 static bool shouldPinPassToLegacyPM(StringRef Pass) {
+  std::vector<StringRef> PassNameExactToIgnore = {
+      "amdgpu-simplifylib", "amdgpu-usenative", "amdgpu-promote-alloca",
+      "amdgpu-promote-alloca-to-vector"};
+  for (const auto &P : PassNameExactToIgnore)
+    if (Pass == P)
+      return false;
+
   std::vector<StringRef> PassNamePrefix = {
       "x86-",  "xcore-", "wasm-",    "systemz-", "ppc-",   "nvvm-",   "nvptx-",
       "mips-", "lanai-", "hexagon-", "bpf-",     "avr-",   "thumb2-", "arm-",
