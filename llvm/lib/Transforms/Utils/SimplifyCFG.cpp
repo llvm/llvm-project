@@ -1508,11 +1508,19 @@ HoistTerminator:
     }
   }
 
+  SmallVector<DominatorTree::UpdateType, 4> Updates;
+
   // Update any PHI nodes in our new successors.
-  for (BasicBlock *Succ : successors(BB1))
+  for (BasicBlock *Succ : successors(BB1)) {
     AddPredecessorToBlock(Succ, BIParent, BB1);
+    Updates.push_back({DominatorTree::Insert, BIParent, Succ});
+  }
+  for (BasicBlock *Succ : successors(BI))
+    Updates.push_back({DominatorTree::Delete, BIParent, Succ});
 
   EraseTerminatorAndDCECond(BI);
+  if (DTU)
+    DTU->applyUpdatesPermissive(Updates);
   return Changed;
 }
 
