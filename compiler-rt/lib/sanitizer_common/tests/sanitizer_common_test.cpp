@@ -269,6 +269,35 @@ TEST(SanitizerCommon, InternalLowerBoundVsStdLowerBound) {
   }
 }
 
+class SortAndDedupTest : public ::testing::TestWithParam<std::vector<int>> {};
+
+TEST_P(SortAndDedupTest, SortAndDedup) {
+  std::vector<int> v_std = GetParam();
+  std::sort(v_std.begin(), v_std.end());
+  v_std.erase(std::unique(v_std.begin(), v_std.end()), v_std.end());
+
+  std::vector<int> v = GetParam();
+  SortAndDedup(v);
+
+  EXPECT_EQ(v_std, v);
+}
+
+const std::vector<int> kSortAndDedupTests[] = {
+    {},
+    {1},
+    {1, 1},
+    {1, 1, 1},
+    {1, 2, 3},
+    {3, 2, 1},
+    {1, 2, 2, 3},
+    {3, 3, 2, 1, 2},
+    {3, 3, 2, 1, 2},
+    {1, 2, 1, 1, 2, 1, 1, 1, 2, 2},
+    {1, 3, 3, 2, 3, 1, 3, 1, 4, 4, 2, 1, 4, 1, 1, 2, 2},
+};
+INSTANTIATE_TEST_CASE_P(SortAndDedupTest, SortAndDedupTest,
+                        ::testing::ValuesIn(kSortAndDedupTests));
+
 #if SANITIZER_LINUX && !SANITIZER_ANDROID
 TEST(SanitizerCommon, FindPathToBinary) {
   char *true_path = FindPathToBinary("true");
