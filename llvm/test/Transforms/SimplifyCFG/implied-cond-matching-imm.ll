@@ -1,4 +1,4 @@
-; RUN: opt %s -S -simplifycfg | FileCheck %s
+; RUN: opt %s -S -simplifycfg -simplifycfg-require-and-preserve-domtree=1 | FileCheck %s
 
 ; cmp1 implies cmp2 is false
 ; CHECK-LABEL: @test1
