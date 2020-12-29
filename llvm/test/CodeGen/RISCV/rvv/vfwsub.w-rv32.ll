@@ -28,7 +28,7 @@ declare <vscale x 1 x float> @llvm.riscv.vfwsub.w.mask.nxv1f16(
 define <vscale x 1 x float> @intrinsic_vfwsub.w_mask_wv_nxv1f32_nxv1f16(<vscale x 1 x float> %0, <vscale x 1 x float> %1, <vscale x 1 x half> %2, <vscale x 1 x i1> %3, i32 %4) nounwind {
 entry:
 ; CHECK-LABEL: intrinsic_vfwsub.w_mask_wv_nxv1f32_nxv1f16
-; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e16,mf4,ta,mu
+; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e16,mf4,tu,mu
 ; CHECK:       vfwsub.wv {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}, v0.t
   %a = call <vscale x 1 x float> @llvm.riscv.vfwsub.w.mask.nxv1f16(
     <vscale x 1 x float> %0,
@@ -68,7 +68,7 @@ declare <vscale x 2 x float> @llvm.riscv.vfwsub.w.mask.nxv2f16(
 define <vscale x 2 x float> @intrinsic_vfwsub.w_mask_wv_nxv2f32_nxv2f16(<vscale x 2 x float> %0, <vscale x 2 x float> %1, <vscale x 2 x half> %2, <vscale x 2 x i1> %3, i32 %4) nounwind {
 entry:
 ; CHECK-LABEL: intrinsic_vfwsub.w_mask_wv_nxv2f32_nxv2f16
-; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e16,mf2,ta,mu
+; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e16,mf2,tu,mu
 ; CHECK:       vfwsub.wv {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}, v0.t
   %a = call <vscale x 2 x float> @llvm.riscv.vfwsub.w.mask.nxv2f16(
     <vscale x 2 x float> %0,
@@ -108,7 +108,7 @@ declare <vscale x 4 x float> @llvm.riscv.vfwsub.w.mask.nxv4f16(
 define <vscale x 4 x float> @intrinsic_vfwsub.w_mask_wv_nxv4f32_nxv4f16(<vscale x 4 x float> %0, <vscale x 4 x float> %1, <vscale x 4 x half> %2, <vscale x 4 x i1> %3, i32 %4) nounwind {
 entry:
 ; CHECK-LABEL: intrinsic_vfwsub.w_mask_wv_nxv4f32_nxv4f16
-; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e16,m1,ta,mu
+; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e16,m1,tu,mu
 ; CHECK:       vfwsub.wv {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}, v0.t
   %a = call <vscale x 4 x float> @llvm.riscv.vfwsub.w.mask.nxv4f16(
     <vscale x 4 x float> %0,
@@ -148,7 +148,7 @@ declare <vscale x 8 x float> @llvm.riscv.vfwsub.w.mask.nxv8f16(
 define <vscale x 8 x float> @intrinsic_vfwsub.w_mask_wv_nxv8f32_nxv8f16(<vscale x 8 x float> %0, <vscale x 8 x float> %1, <vscale x 8 x half> %2, <vscale x 8 x i1> %3, i32 %4) nounwind {
 entry:
 ; CHECK-LABEL: intrinsic_vfwsub.w_mask_wv_nxv8f32_nxv8f16
-; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e16,m2,ta,mu
+; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e16,m2,tu,mu
 ; CHECK:       vfwsub.wv {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}, v0.t
   %a = call <vscale x 8 x float> @llvm.riscv.vfwsub.w.mask.nxv8f16(
     <vscale x 8 x float> %0,
@@ -188,7 +188,7 @@ declare <vscale x 16 x float> @llvm.riscv.vfwsub.w.mask.nxv16f16(
 define <vscale x 16 x float> @intrinsic_vfwsub.w_mask_wv_nxv16f32_nxv16f16(<vscale x 16 x float> %0, <vscale x 16 x float> %1, <vscale x 16 x half> %2, <vscale x 16 x i1> %3, i32 %4) nounwind {
 entry:
 ; CHECK-LABEL: intrinsic_vfwsub.w_mask_wv_nxv16f32_nxv16f16
-; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e16,m4,ta,mu
+; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e16,m4,tu,mu
 ; CHECK:       vfwsub.wv {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}, v0.t
   %a = call <vscale x 16 x float> @llvm.riscv.vfwsub.w.mask.nxv16f16(
     <vscale x 16 x float> %0,
@@ -228,7 +228,7 @@ declare <vscale x 1 x float> @llvm.riscv.vfwsub.w.mask.nxv1f32.f16(
 define <vscale x 1 x float> @intrinsic_vfwsub.w_mask_wf_nxv1f32_f16(<vscale x 1 x float> %0, <vscale x 1 x float> %1, half %2, <vscale x 1 x i1> %3, i32 %4) nounwind {
 entry:
 ; CHECK-LABEL: intrinsic_vfwsub.w_mask_wf_nxv1f32_f16
-; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e16,mf4,ta,mu
+; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e16,mf4,tu,mu
 ; CHECK:       vfwsub.wf {{v[0-9]+}}, {{v[0-9]+}}, {{ft[0-9]+}}, v0.t
   %a = call <vscale x 1 x float> @llvm.riscv.vfwsub.w.mask.nxv1f32.f16(
     <vscale x 1 x float> %0,
@@ -268,7 +268,7 @@ declare <vscale x 2 x float> @llvm.riscv.vfwsub.w.mask.nxv2f32.f16(
 define <vscale x 2 x float> @intrinsic_vfwsub.w_mask_wf_nxv2f32_f16(<vscale x 2 x float> %0, <vscale x 2 x float> %1, half %2, <vscale x 2 x i1> %3, i32 %4) nounwind {
 entry:
 ; CHECK-LABEL: intrinsic_vfwsub.w_mask_wf_nxv2f32_f16
-; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e16,mf2,ta,mu
+; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e16,mf2,tu,mu
 ; CHECK:       vfwsub.wf {{v[0-9]+}}, {{v[0-9]+}}, {{ft[0-9]+}}, v0.t
   %a = call <vscale x 2 x float> @llvm.riscv.vfwsub.w.mask.nxv2f32.f16(
     <vscale x 2 x float> %0,
@@ -308,7 +308,7 @@ declare <vscale x 4 x float> @llvm.riscv.vfwsub.w.mask.nxv4f32.f16(
 define <vscale x 4 x float> @intrinsic_vfwsub.w_mask_wf_nxv4f32_f16(<vscale x 4 x float> %0, <vscale x 4 x float> %1, half %2, <vscale x 4 x i1> %3, i32 %4) nounwind {
 entry:
 ; CHECK-LABEL: intrinsic_vfwsub.w_mask_wf_nxv4f32_f16
-; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e16,m1,ta,mu
+; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e16,m1,tu,mu
 ; CHECK:       vfwsub.wf {{v[0-9]+}}, {{v[0-9]+}}, {{ft[0-9]+}}, v0.t
   %a = call <vscale x 4 x float> @llvm.riscv.vfwsub.w.mask.nxv4f32.f16(
     <vscale x 4 x float> %0,
@@ -348,7 +348,7 @@ declare <vscale x 8 x float> @llvm.riscv.vfwsub.w.mask.nxv8f32.f16(
 define <vscale x 8 x float> @intrinsic_vfwsub.w_mask_wf_nxv8f32_f16(<vscale x 8 x float> %0, <vscale x 8 x float> %1, half %2, <vscale x 8 x i1> %3, i32 %4) nounwind {
 entry:
 ; CHECK-LABEL: intrinsic_vfwsub.w_mask_wf_nxv8f32_f16
-; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e16,m2,ta,mu
+; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e16,m2,tu,mu
 ; CHECK:       vfwsub.wf {{v[0-9]+}}, {{v[0-9]+}}, {{ft[0-9]+}}, v0.t
   %a = call <vscale x 8 x float> @llvm.riscv.vfwsub.w.mask.nxv8f32.f16(
     <vscale x 8 x float> %0,
@@ -388,7 +388,7 @@ declare <vscale x 16 x float> @llvm.riscv.vfwsub.w.mask.nxv16f32.f16(
 define <vscale x 16 x float> @intrinsic_vfwsub.w_mask_wf_nxv16f32_f16(<vscale x 16 x float> %0, <vscale x 16 x float> %1, half %2, <vscale x 16 x i1> %3, i32 %4) nounwind {
 entry:
 ; CHECK-LABEL: intrinsic_vfwsub.w_mask_wf_nxv16f32_f16
-; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e16,m4,ta,mu
+; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e16,m4,tu,mu
 ; CHECK:       vfwsub.wf {{v[0-9]+}}, {{v[0-9]+}}, {{ft[0-9]+}}, v0.t
   %a = call <vscale x 16 x float> @llvm.riscv.vfwsub.w.mask.nxv16f32.f16(
     <vscale x 16 x float> %0,
