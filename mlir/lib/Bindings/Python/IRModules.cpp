@@ -1643,6 +1643,33 @@ public:
   }
 };
 
+class PyFlatSymbolRefAttribute
+    : public PyConcreteAttribute<PyFlatSymbolRefAttribute> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAttributeIsAFlatSymbolRef;
+  static constexpr const char *pyClassName = "FlatSymbolRefAttr";
+  using PyConcreteAttribute::PyConcreteAttribute;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](std::string value, DefaultingPyMlirContext context) {
+          MlirAttribute attr =
+              mlirFlatSymbolRefAttrGet(context->get(), toMlirStringRef(value));
+          return PyFlatSymbolRefAttribute(context->getRef(), attr);
+        },
+        py::arg("value"), py::arg("context") = py::none(),
+        "Gets a uniqued FlatSymbolRef attribute");
+    c.def_property_readonly(
+        "value",
+        [](PyFlatSymbolRefAttribute &self) {
+          MlirStringRef stringRef = mlirFlatSymbolRefAttrGetValue(self);
+          return py::str(stringRef.data, stringRef.length);
+        },
+        "Returns the value of the FlatSymbolRef attribute as a string");
+  }
+};
+
 class PyStringAttribute : public PyConcreteAttribute<PyStringAttribute> {
 public:
   static constexpr IsAFunctionTy isaFunction = mlirAttributeIsAString;
@@ -3229,6 +3256,7 @@ void mlir::python::populateIRSubmodule(py::module &m) {
   PyArrayAttribute::PyArrayAttributeIterator::bind(m);
   PyIntegerAttribute::bind(m);
   PyBoolAttribute::bind(m);
+  PyFlatSymbolRefAttribute::bind(m);
   PyStringAttribute::bind(m);
   PyDenseElementsAttribute::bind(m);
   PyDenseIntElementsAttribute::bind(m);
