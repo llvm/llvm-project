@@ -44,8 +44,8 @@ bb:
 ;CHECK: %[[I2:.i[0-9]*]] = extractelement <4 x i16*> %0, i32 2
 ;CHECK: %[[I3:.i[0-9]*]] = extractelement <4 x i16*> %0, i32 3
 ;CHECK: %index = load i16, i16* @index
-;CHECK: %.splatinsert = insertelement <4 x i16> undef, i16 %index, i32 0
-;CHECK: %.splat = shufflevector <4 x i16> %.splatinsert, <4 x i16> undef, <4 x i32> zeroinitializer
+;CHECK: %.splatinsert = insertelement <4 x i16> poison, i16 %index, i32 0
+;CHECK: %.splat = shufflevector <4 x i16> %.splatinsert, <4 x i16> poison, <4 x i32> zeroinitializer
 ;CHECK: %.splat[[I0]] = extractelement <4 x i16> %.splat, i32 0
 ;CHECK: getelementptr i16, i16* %[[I0]], i16 %.splat[[I0]]
 ;CHECK: %.splat[[I1]] = extractelement <4 x i16> %.splat, i32 1
@@ -69,8 +69,8 @@ bb:
 
 ;CHECK-LABEL: @test3
 ;CHECK: %0 = bitcast [4 x i16]* @ptr to i16*
-;CHECK: %.splatinsert = insertelement <4 x i16*> undef, i16* %0, i32 0
-;CHECK: %.splat = shufflevector <4 x i16*> %.splatinsert, <4 x i16*> undef, <4 x i32> zeroinitializer
+;CHECK: %.splatinsert = insertelement <4 x i16*> poison, i16* %0, i32 0
+;CHECK: %.splat = shufflevector <4 x i16*> %.splatinsert, <4 x i16*> poison, <4 x i32> zeroinitializer
 ;CHECK: %.splat[[I0:.i[0-9]*]] = extractelement <4 x i16*> %.splat, i32 0
 ;CHECK: getelementptr i16, i16* %.splat[[I0]], i16 0
 ;CHECK: %.splat[[I1:.i[0-9]*]] = extractelement <4 x i16*> %.splat, i32 1
@@ -91,8 +91,8 @@ bb:
 
 ;CHECK-LABEL: @test4
 ;CHECK: %0 = load i16*, i16** @ptrptr
-;CHECK: %.splatinsert = insertelement <4 x i16*> undef, i16* %0, i32 0
-;CHECK: %.splat = shufflevector <4 x i16*> %.splatinsert, <4 x i16*> undef, <4 x i32> zeroinitializer
+;CHECK: %.splatinsert = insertelement <4 x i16*> poison, i16* %0, i32 0
+;CHECK: %.splat = shufflevector <4 x i16*> %.splatinsert, <4 x i16*> poison, <4 x i32> zeroinitializer
 ;CHECK: %.splat[[I0:.i[0-9]*]] = extractelement <4 x i16*> %.splat, i32 0
 ;CHECK: getelementptr i16, i16* %.splat[[I0]], i16 0
 ;CHECK: %.splat[[I1:.i[0-9]*]] = extractelement <4 x i16*> %.splat, i32 1

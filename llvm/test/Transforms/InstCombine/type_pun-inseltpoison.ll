@@ -42,7 +42,7 @@ define i32 @type_pun_first(<16 x i8> %in) {
 ; Extracting an i32 that isn't aligned to any natural boundary.
 define i32 @type_pun_misaligned(<16 x i8> %in) {
 ; CHECK-LABEL: @type_pun_misaligned(
-; CHECK-NEXT:    [[SROA_EXTRACT:%.*]] = shufflevector <16 x i8> [[IN:%.*]], <16 x i8> undef, <16 x i32> <i32 6, i32 7, i32 8, i32 9, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[SROA_EXTRACT:%.*]] = shufflevector <16 x i8> [[IN:%.*]], <16 x i8> poison, <16 x i32> <i32 6, i32 7, i32 8, i32 9, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[SROA_BC:%.*]] = bitcast <16 x i8> [[SROA_EXTRACT]] to <4 x i32>
 ; CHECK-NEXT:    [[SROA_EXTRACT1:%.*]] = extractelement <4 x i32> [[SROA_BC]], i32 0
 ; CHECK-NEXT:    ret i32 [[SROA_EXTRACT1]]

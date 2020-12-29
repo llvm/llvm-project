@@ -18,8 +18,8 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 
 ; CHECK-LABEL: @test_array_load2_store2(
 ; CHECK: %wide.vec = load <8 x i32>, <8 x i32>* %{{.*}}, align 4
-; CHECK: shufflevector <8 x i32> %wide.vec, <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK: shufflevector <8 x i32> %wide.vec, <8 x i32> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; CHECK: shufflevector <8 x i32> %wide.vec, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK: shufflevector <8 x i32> %wide.vec, <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 ; CHECK: add nsw <4 x i32>
 ; CHECK: mul nsw <4 x i32>
 ; CHECK: %interleaved.vec = shufflevector <4 x i32> {{.*}}, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
@@ -69,9 +69,9 @@ for.end:                                          ; preds = %for.body
 
 ; CHECK-LABEL: @test_struct_array_load3_store3(
 ; CHECK: %wide.vec = load <12 x i32>, <12 x i32>* {{.*}}, align 4
-; CHECK: shufflevector <12 x i32> %wide.vec, <12 x i32> undef, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
-; CHECK: shufflevector <12 x i32> %wide.vec, <12 x i32> undef, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
-; CHECK: shufflevector <12 x i32> %wide.vec, <12 x i32> undef, <4 x i32> <i32 2, i32 5, i32 8, i32 11>
+; CHECK: shufflevector <12 x i32> %wide.vec, <12 x i32> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
+; CHECK: shufflevector <12 x i32> %wide.vec, <12 x i32> poison, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
+; CHECK: shufflevector <12 x i32> %wide.vec, <12 x i32> poison, <4 x i32> <i32 2, i32 5, i32 8, i32 11>
 ; CHECK: add nsw <4 x i32> {{.*}}, <i32 1, i32 1, i32 1, i32 1>
 ; CHECK: add nsw <4 x i32> {{.*}}, <i32 2, i32 2, i32 2, i32 2>
 ; CHECK: add nsw <4 x i32> {{.*}}, <i32 3, i32 3, i32 3, i32 3>
@@ -147,10 +147,10 @@ define i32 @test_struct_load4(%struct.ST4* nocapture readonly %S) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_ST4:%.*]], %struct.ST4* [[S:%.*]], i64 [[INDEX]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[TMP0]] to <16 x i32>*
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x i32>, <16 x i32>* [[TMP1]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> undef, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
-; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> undef, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
-; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> undef, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
-; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> undef, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> poison, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
+; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> poison, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
+; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> poison, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[STRIDED_VEC]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i32> [[TMP2]], [[STRIDED_VEC2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[STRIDED_VEC1]], [[STRIDED_VEC3]]
@@ -274,9 +274,9 @@ for.body:                                         ; preds = %for.body, %entry
 ; CHECK: %[[G1:.+]] = getelementptr inbounds i32, i32* %[[G0]], i64 -6
 ; CHECK: %[[B0:.+]] = bitcast i32* %[[G1]] to <8 x i32>*
 ; CHECK: %wide.vec = load <8 x i32>, <8 x i32>* %[[B0]], align 4
-; CHECK: shufflevector <8 x i32> %wide.vec, <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK: shufflevector <8 x i32> %wide.vec, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK: shufflevector <4 x i32> {{.*}}, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK: shufflevector <8 x i32> %wide.vec, <8 x i32> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; CHECK: shufflevector <8 x i32> %wide.vec, <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 ; CHECK: shufflevector <4 x i32> {{.*}}, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK: add nsw <4 x i32>
 ; CHECK: sub nsw <4 x i32>
@@ -328,7 +328,7 @@ for.body:                                         ; preds = %for.body, %entry
 ; CHECK-LABEL: @even_load_static_tc(
 ; CHECK: vector.body:
 ; CHECK:   %wide.vec = load <8 x i32>, <8 x i32>* %{{.*}}, align 4
-; CHECK:   %strided.vec = shufflevector <8 x i32> %wide.vec, <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK:   %strided.vec = shufflevector <8 x i32> %wide.vec, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK:   icmp eq i64 %index.next, 508
 ; CHECK: middle.block:
 ; CHECK:   br i1 false, label %for.cond.cleanup, label %scalar.ph
@@ -371,7 +371,7 @@ for.body:                                         ; preds = %for.body, %entry
 ; CHECK:   %n.vec = sub i64 %[[N]], %[[R]]
 ; CHECK: vector.body:
 ; CHECK:   %wide.vec = load <8 x i32>, <8 x i32>* %{{.*}}, align 4
-; CHECK:   %strided.vec = shufflevector <8 x i32> %wide.vec, <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK:   %strided.vec = shufflevector <8 x i32> %wide.vec, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK:   icmp eq i64 %index.next, %n.vec
 ; CHECK: middle.block:
 ; CHECK:   br i1 false, label %for.cond.cleanup, label %scalar.ph
@@ -416,7 +416,7 @@ for.body:                                         ; preds = %for.body, %entry
 
 ; CHECK-LABEL: @load_gap_reverse(
 ; CHECK-NOT: %wide.vec = load <8 x i64>, <8 x i64>* %{{.*}}, align 8
-; CHECK-NOT: %strided.vec = shufflevector <8 x i64> %wide.vec, <8 x i64> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NOT: %strided.vec = shufflevector <8 x i64> %wide.vec, <8 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 
 %pair = type { i64, i64 }
 define void @load_gap_reverse(%pair* noalias nocapture readonly %P1, %pair* noalias nocapture readonly %P2, i64 %X) {
@@ -451,8 +451,8 @@ for.exit:
 
 ; CHECK-LABEL: @mixed_load2_store2(
 ; CHECK: %wide.vec = load <8 x i32>, <8 x i32>* {{.*}}, align 4
-; CHECK: shufflevector <8 x i32> %wide.vec, <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK: shufflevector <8 x i32> %wide.vec, <8 x i32> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; CHECK: shufflevector <8 x i32> %wide.vec, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK: shufflevector <8 x i32> %wide.vec, <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 ; CHECK: %interleaved.vec = shufflevector <4 x i32> %{{.*}}, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
 ; CHECK: store <8 x i32> %interleaved.vec
 
@@ -495,9 +495,9 @@ for.body:                                         ; preds = %for.body, %entry
 
 ; CHECK-LABEL: @mixed_load3_store3(
 ; CHECK: %wide.vec = load <12 x i32>, <12 x i32>* {{.*}}, align 4
-; CHECK: shufflevector <12 x i32> %wide.vec, <12 x i32> undef, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
-; CHECK: shufflevector <12 x i32> %wide.vec, <12 x i32> undef, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
-; CHECK: shufflevector <12 x i32> %wide.vec, <12 x i32> undef, <4 x i32> <i32 2, i32 5, i32 8, i32 11>
+; CHECK: shufflevector <12 x i32> %wide.vec, <12 x i32> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
+; CHECK: shufflevector <12 x i32> %wide.vec, <12 x i32> poison, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
+; CHECK: shufflevector <12 x i32> %wide.vec, <12 x i32> poison, <4 x i32> <i32 2, i32 5, i32 8, i32 11>
 ; CHECK: %interleaved.vec = shufflevector <8 x i32> %{{.*}}, <12 x i32> <i32 0, i32 4, i32 8, i32 1, i32 5, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11>
 ; CHECK: store <12 x i32> %interleaved.vec, <12 x i32>* %{{.*}}, align 4
 
@@ -552,8 +552,8 @@ for.body:                                         ; preds = %for.body, %entry
 
 ; CHECK-LABEL: @int_float_struct(
 ; CHECK: %wide.vec = load <8 x i32>, <8 x i32>* %{{.*}}, align 4
-; CHECK: %[[V0:.*]] = shufflevector <8 x i32> %wide.vec, <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK: %[[V1:.*]] = shufflevector <8 x i32> %wide.vec, <8 x i32> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; CHECK: %[[V0:.*]] = shufflevector <8 x i32> %wide.vec, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK: %[[V1:.*]] = shufflevector <8 x i32> %wide.vec, <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 ; CHECK: bitcast <4 x i32> %[[V1]] to <4 x float>
 ; CHECK: add <4 x i32>
 ; CHECK: fadd fast <4 x float>
@@ -670,7 +670,7 @@ for.end:
 ; CHECK:   %[[X4:.+]] = extractelement <8 x i32> %[[L1:.+]], i32 6
 ; CHECK:   store i32 %[[X4:.+]], {{.*}}
 ; CHECK:   %[[L2:.+]] = load <8 x i32>, <8 x i32>* {{.*}}
-; CHECK:   %[[S1:.+]] = shufflevector <8 x i32> %[[L2]], <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK:   %[[S1:.+]] = shufflevector <8 x i32> %[[L2]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK:   add <4 x i32> %[[S1]], %[[Phi]]
 
 define i32 @PR27626_1(%pair.i32 *%p, i64 %n) {
@@ -771,7 +771,7 @@ for.end:
 ; CHECK:   %[[X4:.+]] = extractelement <8 x i32> %[[L1:.+]], i32 6
 ; CHECK:   store i32 %[[X4:.+]], {{.*}}
 ; CHECK:   %[[L2:.+]] = load <8 x i32>, <8 x i32>* {{.*}}
-; CHECK:   %[[S1:.+]] = shufflevector <8 x i32> %[[L2]], <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK:   %[[S1:.+]] = shufflevector <8 x i32> %[[L2]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK:   add <4 x i32> %[[S1]], %[[Phi]]
 
 define i32 @PR27626_3(%pair.i32 *%p, i64 %n, i32 %z) {
@@ -812,10 +812,10 @@ for.end:
 
 ; CHECK-LABEL: @PR27626_4(
 ; CHECK: vector.ph:
-; CHECK:   %[[INS_Y:.+]] = insertelement <4 x i32> undef, i32 %y, i32 0
-; CHECK:   %[[SPLAT_Y:.+]] = shufflevector <4 x i32> %[[INS_Y]], <4 x i32> undef, <4 x i32> zeroinitializer
-; CHECK:   %[[INS_Z:.+]] = insertelement <4 x i32> undef, i32 %z, i32 0
-; CHECK:   %[[SPLAT_Z:.+]] = shufflevector <4 x i32> %[[INS_Z]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK:   %[[INS_Y:.+]] = insertelement <4 x i32> poison, i32 %y, i32 0
+; CHECK:   %[[SPLAT_Y:.+]] = shufflevector <4 x i32> %[[INS_Y]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK:   %[[INS_Z:.+]] = insertelement <4 x i32> poison, i32 %z, i32 0
+; CHECK:   %[[SPLAT_Z:.+]] = shufflevector <4 x i32> %[[INS_Z]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK: vector.body:
 ; CHECK:   store i32 %x, {{.*}}
 ; CHECK:   store i32 %x, {{.*}}
@@ -905,8 +905,8 @@ for.end:
 ; CHECK: vector.body:
 ; CHECK:   %vector.recur = phi <4 x i16> [ %vector.recur.init, %vector.ph ], [ %[[VSHUF1:.+]], %vector.body ]
 ; CHECK:   %wide.vec = load <8 x i16>
-; CHECK:   %[[VSHUF0:.+]] = shufflevector <8 x i16> %wide.vec, <8 x i16> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK:   %[[VSHUF1:.+]] = shufflevector <8 x i16> %wide.vec, <8 x i16> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; CHECK:   %[[VSHUF0:.+]] = shufflevector <8 x i16> %wide.vec, <8 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK:   %[[VSHUF1:.+]] = shufflevector <8 x i16> %wide.vec, <8 x i16> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 ; CHECK:   %[[VSHUF:.+]] = shufflevector <4 x i16> %vector.recur, <4 x i16> %[[VSHUF1]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK:   sext <4 x i16> %[[VSHUF0]] to <4 x i32>
 ; CHECK:   sext <4 x i16> %[[VSHUF]] to <4 x i32>

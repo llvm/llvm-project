@@ -20,8 +20,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK-NOT:   LV: Found uniform instruction: %i = phi i64 [ %i.next, %for.body ], [ 0, %entry ]
 ; CHECK-NOT:   LV: Found uniform instruction: %i.next = add nuw nsw i64 %i, 5
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x float> undef, float %x, i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x float> [[BROADCAST_SPLATINSERT]], <16 x float> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x float> poison, float %x, i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x float> [[BROADCAST_SPLATINSERT]], <16 x float> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %vector.body
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
@@ -30,13 +30,13 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds %data, %data* %d, i64 0, i32 3, i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[TMP0]] to <80 x float>*
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <80 x float>, <80 x float>* [[TMP1]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <80 x float> [[WIDE_VEC]], <80 x float> undef, <16 x i32> <i32 0, i32 5, i32 10, i32 15, i32 20, i32 25, i32 30, i32 35, i32 40, i32 45, i32 50, i32 55, i32 60, i32 65, i32 70, i32 75>
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <80 x float> [[WIDE_VEC]], <80 x float> poison, <16 x i32> <i32 0, i32 5, i32 10, i32 15, i32 20, i32 25, i32 30, i32 35, i32 40, i32 45, i32 50, i32 55, i32 60, i32 65, i32 70, i32 75>
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul <16 x float> [[BROADCAST_SPLAT]], [[STRIDED_VEC]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds %data, %data* %d, i64 0, i32 0, <16 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[BC:%.*]] = bitcast <16 x float*> [[TMP3]] to <16 x <80 x float>*>
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <16 x <80 x float>*> [[BC]], i32 0
 ; CHECK-NEXT:    [[WIDE_VEC1:%.*]] = load <80 x float>, <80 x float>* [[TMP4]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <80 x float> [[WIDE_VEC1]], <80 x float> undef, <16 x i32> <i32 0, i32 5, i32 10, i32 15, i32 20, i32 25, i32 30, i32 35, i32 40, i32 45, i32 50, i32 55, i32 60, i32 65, i32 70, i32 75>
+; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <80 x float> [[WIDE_VEC1]], <80 x float> poison, <16 x i32> <i32 0, i32 5, i32 10, i32 15, i32 20, i32 25, i32 30, i32 35, i32 40, i32 45, i32 50, i32 55, i32 60, i32 65, i32 70, i32 75>
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <16 x float> [[STRIDED_VEC2]], [[TMP2]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v16f32.v16p0f32(<16 x float> [[TMP5]], <16 x float*> [[TMP3]], i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16

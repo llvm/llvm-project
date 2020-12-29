@@ -460,8 +460,8 @@ for.end:
 ; INTER-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, i64* %A, i64 [[INDEX]]
 ; INTER-NEXT:    [[TMP5:%.*]] = bitcast i64* [[TMP4]] to <32 x i8>*
 ; INTER-NEXT:    [[WIDE_VEC:%.*]] = load <32 x i8>, <32 x i8>* [[TMP5]], align 1
-; INTER-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <32 x i8> [[WIDE_VEC]], <32 x i8> undef, <4 x i32> <i32 0, i32 8, i32 16, i32 24>
-; INTER-NEXT:    [[STRIDED_VEC5:%.*]] = shufflevector <32 x i8> [[WIDE_VEC]], <32 x i8> undef, <4 x i32> <i32 3, i32 11, i32 19, i32 27>
+; INTER-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <32 x i8> [[WIDE_VEC]], <32 x i8> poison, <4 x i32> <i32 0, i32 8, i32 16, i32 24>
+; INTER-NEXT:    [[STRIDED_VEC5:%.*]] = shufflevector <32 x i8> [[WIDE_VEC]], <32 x i8> poison, <4 x i32> <i32 3, i32 11, i32 19, i32 27>
 ; INTER-NEXT:    [[TMP6:%.*]] = xor <4 x i8> [[STRIDED_VEC5]], [[STRIDED_VEC]]
 ; INTER-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, i8* %B, i64 [[INDEX]]
 ; INTER-NEXT:    [[TMP8:%.*]] = bitcast i8* [[TMP7]] to <4 x i8>*

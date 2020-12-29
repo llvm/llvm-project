@@ -37,8 +37,8 @@ define void @foo(i32* noalias nocapture %a, i32* noalias nocapture readonly %b) 
 ; AVX-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 [[TMP0]]
 ; AVX-NEXT:    [[TMP2:%.*]] = bitcast i32* [[TMP1]] to <8 x i32>*
 ; AVX-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, <8 x i32>* [[TMP2]], align 4
-; AVX-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; AVX-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; AVX-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; AVX-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 ; AVX-NEXT:    [[TMP3:%.*]] = add nsw <4 x i32> [[STRIDED_VEC1]], [[STRIDED_VEC]]
 ; AVX-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[INDEX]]
 ; AVX-NEXT:    [[TMP5:%.*]] = bitcast i32* [[TMP4]] to <4 x i32>*

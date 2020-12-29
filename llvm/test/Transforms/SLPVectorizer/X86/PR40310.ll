@@ -8,7 +8,7 @@ define void @mainTest(i32 %param, i32 * %vals, i32 %len) {
 ; CHECK-NEXT:    br label [[BCI_15:%.*]]
 ; CHECK:       bci_15:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ [[TMP7:%.*]], [[BCI_15]] ], [ [[TMP0]], [[BCI_15_PREHEADER:%.*]] ]
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <16 x i32> [[SHUFFLE]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <16 x i32> [[SHUFFLE]], i32 15
 ; CHECK-NEXT:    store atomic i32 [[TMP3]], i32* [[VALS:%.*]] unordered, align 4
