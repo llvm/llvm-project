@@ -115,6 +115,11 @@ ModulePass *createAMDGPULowerKernelAttributesPass();
 void initializeAMDGPULowerKernelAttributesPass(PassRegistry &);
 extern char &AMDGPULowerKernelAttributesID;
 
+struct AMDGPULowerKernelAttributesPass
+    : PassInfoMixin<AMDGPULowerKernelAttributesPass> {
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
 void initializeAMDGPUPropagateAttributesEarlyPass(PassRegistry &);
 extern char &AMDGPUPropagateAttributesEarlyID;
 

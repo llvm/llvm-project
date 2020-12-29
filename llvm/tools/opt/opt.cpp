@@ -464,7 +464,7 @@ struct TimeTracerRAII {
 static bool shouldPinPassToLegacyPM(StringRef Pass) {
   std::vector<StringRef> PassNameExactToIgnore = {
       "amdgpu-simplifylib", "amdgpu-usenative", "amdgpu-promote-alloca",
-      "amdgpu-promote-alloca-to-vector"};
+      "amdgpu-promote-alloca-to-vector", "amdgpu-lower-kernel-attributes"};
   for (const auto &P : PassNameExactToIgnore)
     if (Pass == P)
       return false;

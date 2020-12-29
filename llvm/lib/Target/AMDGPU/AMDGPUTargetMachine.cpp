@@ -508,6 +508,10 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
           PM.addPass(AMDGPUPromoteAllocaToVectorPass(*this));
           return true;
         }
+        if (PassName == "amdgpu-lower-kernel-attributes") {
+          PM.addPass(AMDGPULowerKernelAttributesPass());
+          return true;
+        }
         return false;
       });
 
@@ -529,6 +533,10 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
           // Add infer address spaces pass to the opt pipeline after inlining
           // but before SROA to increase SROA opportunities.
           FPM.addPass(InferAddressSpacesPass());
+
+          // This should run after inlining to have any chance of doing
+          // anything, and before other cleanup optimizations.
+          FPM.addPass(AMDGPULowerKernelAttributesPass());
 
           if (Level != PassBuilder::OptimizationLevel::O0) {
             // Promote alloca to vector before SROA and loop unroll. If we
