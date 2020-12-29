@@ -68,9 +68,11 @@ void RegisterLsanFlags(FlagParser *parser, Flags *f) {
 class LeakSuppressionContext {
   bool parsed = false;
   SuppressionContext context;
+  bool suppressed_stacks_sorted = true;
+  InternalMmapVector<u32> suppressed_stacks;
 
   Suppression *GetSuppressionForAddr(uptr addr);
-  void LazyParse();
+  void LazyInit();
 
  public:
   LeakSuppressionContext(const char *supprression_types[],
@@ -78,6 +80,14 @@ class LeakSuppressionContext {
       : context(supprression_types, suppression_types_num) {}
 
   Suppression *GetSuppressionForStack(u32 stack_trace_id);
+
+  const InternalMmapVector<u32> &GetSortedSuppressedStacks() {
+    if (!suppressed_stacks_sorted) {
+      suppressed_stacks_sorted = true;
+      SortAndDedup(suppressed_stacks);
+    }
+    return suppressed_stacks;
+  }
   void PrintMatchedSuppressions();
 };
 
@@ -105,7 +115,7 @@ void InitializeSuppressions() {
       LeakSuppressionContext(kSuppressionTypes, ARRAY_SIZE(kSuppressionTypes));
 }
 
-void LeakSuppressionContext::LazyParse() {
+void LeakSuppressionContext::LazyInit() {
   if (!parsed) {
     parsed = true;
     context.ParseFromFile(flags()->suppressions);
@@ -412,6 +422,24 @@ static void MarkIndirectlyLeakedCb(uptr chunk, void *arg) {
   }
 }
 
+static void IgnoredSuppressedCb(uptr chunk, void *arg) {
+  CHECK(arg);
+  chunk = GetUserBegin(chunk);
+  LsanMetadata m(chunk);
+  if (!m.allocated() || m.tag() == kIgnored)
+    return;
+
+  const InternalMmapVector<u32> &suppressed =
+      *static_cast<const InternalMmapVector<u32> *>(arg);
+  uptr idx = InternalLowerBound(suppressed, m.stack_trace_id());
+  if (idx >= suppressed.size() || m.stack_trace_id() != suppressed[idx])
+    return;
+
+  LOG_POINTERS("Suppressed: chunk %p-%p of size %zu.\n", chunk,
+               chunk + m.requested_size(), m.requested_size());
+  m.set_tag(kIgnored);
+}
+
 // ForEachChunk callback. If chunk is marked as ignored, adds its address to
 // frontier.
 static void CollectIgnoredCb(uptr chunk, void *arg) {
@@ -495,6 +523,12 @@ void ProcessPC(Frontier *frontier) {
 // Sets the appropriate tag on each chunk.
 static void ClassifyAllChunks(SuspendedThreadsList const &suspended_threads,
                               Frontier *frontier) {
+  const InternalMmapVector<u32> &suppressed_stacks =
+      GetSuppressionContext()->GetSortedSuppressedStacks();
+  if (!suppressed_stacks.empty()) {
+    ForEachChunk(IgnoredSuppressedCb,
+                 const_cast<InternalMmapVector<u32> *>(&suppressed_stacks));
+  }
   ForEachChunk(CollectIgnoredCb, frontier);
   ProcessGlobalRegions(frontier);
   ProcessThreads(suspended_threads, frontier);
@@ -643,21 +677,41 @@ static bool PrintResults(LeakReport &report) {
 static bool CheckForLeaks() {
   if (&__lsan_is_turned_off && __lsan_is_turned_off())
     return false;
-  EnsureMainThreadIDIsCorrect();
-  CheckForLeaksParam param;
-  LockStuffAndStopTheWorld(CheckForLeaksCallback, &param);
+  // Inside LockStuffAndStopTheWorld we can't run symbolizer, so we can't match
+  // suppressions. However if a stack id was previously suppressed, it should be
+  // suppressed in future checks as well.
+  for (int i = 0;; ++i) {
+    EnsureMainThreadIDIsCorrect();
+    CheckForLeaksParam param;
+    LockStuffAndStopTheWorld(CheckForLeaksCallback, &param);
+    if (!param.success) {
+      Report("LeakSanitizer has encountered a fatal error.\n");
+      Report(
+          "HINT: For debugging, try setting environment variable "
+          "LSAN_OPTIONS=verbosity=1:log_threads=1\n");
+      Report(
+          "HINT: LeakSanitizer does not work under ptrace (strace, gdb, "
+          "etc)\n");
+      Die();
+    }
+    // No new suppressions stacks, so rerun will not help and we can report.
+    if (!param.leak_report.ApplySuppressions())
+      return PrintResults(param.leak_report);
 
-  if (!param.success) {
-    Report("LeakSanitizer has encountered a fatal error.\n");
-    Report(
-        "HINT: For debugging, try setting environment variable "
-        "LSAN_OPTIONS=verbosity=1:log_threads=1\n");
-    Report(
-        "HINT: LeakSanitizer does not work under ptrace (strace, gdb, etc)\n");
-    Die();
+    // No indirect leaks to report, so we are done here.
+    if (!param.leak_report.IndirectUnsuppressedLeakCount())
+      return PrintResults(param.leak_report);
+
+    if (i >= 8) {
+      Report("WARNING: LeakSanitizer gave up on indirect leaks suppression.\n");
+      return PrintResults(param.leak_report);
+    }
+
+    // We found a new previously unseen suppressed call stack. Rerun to make
+    // sure it does not hold indirect leaks.
+    VReport(1, "Rerun with %zu suppressed stacks.",
+            GetSuppressionContext()->GetSortedSuppressedStacks().size());
   }
-  param.leak_report.ApplySuppressions();
-  return PrintResults(param.leak_report);
 }
 
 static bool has_reported_leaks = false;
@@ -703,13 +757,16 @@ Suppression *LeakSuppressionContext::GetSuppressionForAddr(uptr addr) {
 
 Suppression *LeakSuppressionContext::GetSuppressionForStack(
     u32 stack_trace_id) {
-  LazyParse();
+  LazyInit();
   StackTrace stack = StackDepotGet(stack_trace_id);
   for (uptr i = 0; i < stack.size; i++) {
     Suppression *s = GetSuppressionForAddr(
         StackTrace::GetPreviousInstructionPc(stack.trace[i]));
-    if (s)
+    if (s) {
+      suppressed_stacks_sorted = false;
+      suppressed_stacks.push_back(stack_trace_id);
       return s;
+    }
   }
   return nullptr;
 }
@@ -820,8 +877,9 @@ void LeakReport::PrintSummary() {
   ReportErrorSummary(summary.data());
 }
 
-void LeakReport::ApplySuppressions() {
+uptr LeakReport::ApplySuppressions() {
   LeakSuppressionContext *suppressions = GetSuppressionContext();
+  uptr new_suppressions = false;
   for (uptr i = 0; i < leaks_.size(); i++) {
     Suppression *s =
         suppressions->GetSuppressionForStack(leaks_[i].stack_trace_id);
@@ -830,14 +888,24 @@ void LeakReport::ApplySuppressions() {
       atomic_store_relaxed(&s->hit_count, atomic_load_relaxed(&s->hit_count) +
           leaks_[i].hit_count);
       leaks_[i].is_suppressed = true;
+      ++new_suppressions;
     }
   }
+  return new_suppressions;
 }
 
 uptr LeakReport::UnsuppressedLeakCount() {
   uptr result = 0;
   for (uptr i = 0; i < leaks_.size(); i++)
     if (!leaks_[i].is_suppressed) result++;
+  return result;
+}
+
+uptr LeakReport::IndirectUnsuppressedLeakCount() {
+  uptr result = 0;
+  for (uptr i = 0; i < leaks_.size(); i++)
+    if (!leaks_[i].is_suppressed && !leaks_[i].is_directly_leaked)
+      result++;
   return result;
 }
 
