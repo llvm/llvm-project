@@ -307,10 +307,8 @@ struct InstructionMapper {
       // repeated substring.
       mapToIllegalUnsigned(It, CanOutlineWithPrevInstr, UnsignedVecForMBB,
                            InstrListForMBB);
-      InstrList.insert(InstrList.end(), InstrListForMBB.begin(),
-                       InstrListForMBB.end());
-      UnsignedVec.insert(UnsignedVec.end(), UnsignedVecForMBB.begin(),
-                         UnsignedVecForMBB.end());
+      llvm::append_range(InstrList, InstrListForMBB);
+      llvm::append_range(UnsignedVec, UnsignedVecForMBB);
     }
   }
 

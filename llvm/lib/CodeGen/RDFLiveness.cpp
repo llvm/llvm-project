@@ -286,7 +286,7 @@ NodeList Liveness::getAllReachingDefs(RegisterRef RefRR,
       if (FullChain || IsPhi || !RRs.hasCoverOf(QR))
         Ds.push_back(DA);
     }
-    RDefs.insert(RDefs.end(), Ds.begin(), Ds.end());
+    llvm::append_range(RDefs, Ds);
     for (NodeAddr<DefNode*> DA : Ds) {
       // When collecting a full chain of definitions, do not consider phi
       // defs to actually define a register.
@@ -470,7 +470,7 @@ void Liveness::computePhiInfo() {
   NodeList Blocks = FA.Addr->members(DFG);
   for (NodeAddr<BlockNode*> BA : Blocks) {
     auto Ps = BA.Addr->members_if(DFG.IsCode<NodeAttrs::Phi>, DFG);
-    Phis.insert(Phis.end(), Ps.begin(), Ps.end());
+    llvm::append_range(Phis, Ps);
   }
 
   // phi use -> (map: reaching phi -> set of registers defined in between)
