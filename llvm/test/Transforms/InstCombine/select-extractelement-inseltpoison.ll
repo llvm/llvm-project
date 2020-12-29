@@ -157,11 +157,11 @@ define <4 x i32> @extract_cond(<4 x i32> %x, <4 x i32> %y, <4 x i1> %condv) {
 
 define <4 x i32> @splat_cond(<4 x i32> %x, <4 x i32> %y, <4 x i1> %condv) {
 ; CHECK-LABEL: @splat_cond(
-; CHECK-NEXT:    [[SPLATCOND:%.*]] = shufflevector <4 x i1> [[CONDV:%.*]], <4 x i1> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+; CHECK-NEXT:    [[SPLATCOND:%.*]] = shufflevector <4 x i1> [[CONDV:%.*]], <4 x i1> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
 ; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[SPLATCOND]], <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
-  %splatcond = shufflevector <4 x i1> %condv, <4 x i1> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+  %splatcond = shufflevector <4 x i1> %condv, <4 x i1> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
   %r = select <4 x i1> %splatcond, <4 x i32> %x, <4 x i32> %y
   ret <4 x i32> %r
 }

@@ -15,7 +15,7 @@ define signext i8 @dead(i16* noalias nocapture readonly %s1, i16 zeroext %x, i8*
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, <8 x i16>* [[L7]], align 2
 ; CHECK-NEXT:    [[L8:%.*]] = trunc <8 x i16> [[WIDE_LOAD]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i8> poison, i8 [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[L9:%.*]] = mul <8 x i8> [[TMP2]], [[L8]]
 ; CHECK-NEXT:    [[L13:%.*]] = getelementptr inbounds i8, i8* [[D:%.*]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[L14:%.*]] = bitcast i8* [[L13]] to <8 x i8>*
@@ -30,7 +30,7 @@ entry:
   %n.vec = and i32 %n, -8
   %l0 = trunc i16 %x to i8
   %l1 = insertelement <8 x i8> poison, i8 %l0, i32 0
-  %broadcast.splat26 = shufflevector <8 x i8> %l1, <8 x i8> undef, <8 x i32> zeroinitializer
+  %broadcast.splat26 = shufflevector <8 x i8> %l1, <8 x i8> poison, <8 x i32> zeroinitializer
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %entry
@@ -58,7 +58,7 @@ define signext i8 @alive(i16* noalias nocapture readonly %s1, i16 zeroext %x, i8
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N:%.*]], -8
 ; CHECK-NEXT:    [[L0:%.*]] = trunc i16 [[X:%.*]] to i8
 ; CHECK-NEXT:    [[L1:%.*]] = insertelement <8 x i8> poison, i8 [[L0]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT26:%.*]] = shufflevector <8 x i8> [[L1]], <8 x i8> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLAT26:%.*]] = shufflevector <8 x i8> [[L1]], <8 x i8> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[L2:%.*]] = sub <8 x i8> zeroinitializer, [[BROADCAST_SPLAT26]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -69,7 +69,7 @@ define signext i8 @alive(i16* noalias nocapture readonly %s1, i16 zeroext %x, i8
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, <8 x i16>* [[L7]], align 2
 ; CHECK-NEXT:    [[L8:%.*]] = trunc <8 x i16> [[WIDE_LOAD]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i8> poison, i8 [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[L9:%.*]] = mul <8 x i8> [[TMP2]], [[L8]]
 ; CHECK-NEXT:    [[L13:%.*]] = getelementptr inbounds i8, i8* [[D:%.*]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[L14:%.*]] = bitcast i8* [[L13]] to <8 x i8>*
@@ -84,7 +84,7 @@ entry:
   %n.vec = and i32 %n, -8
   %l0 = trunc i16 %x to i8
   %l1 = insertelement <8 x i8> poison, i8 %l0, i32 0
-  %broadcast.splat26 = shufflevector <8 x i8> %l1, <8 x i8> undef, <8 x i32> zeroinitializer
+  %broadcast.splat26 = shufflevector <8 x i8> %l1, <8 x i8> poison, <8 x i32> zeroinitializer
   %l2 = sub <8 x i8> zeroinitializer, %broadcast.splat26
   br label %vector.body
 

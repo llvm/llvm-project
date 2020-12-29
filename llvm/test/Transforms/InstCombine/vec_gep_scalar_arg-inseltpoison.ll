@@ -8,7 +8,7 @@ define <4 x i16*> @PR41270([4 x i16]* %x) {
 ; CHECK-NEXT:    ret <4 x i16*> [[TMP2]]
 ;
   %ins = insertelement <4 x [4 x i16]*> poison, [4 x i16]* %x, i32 0
-  %splat = shufflevector <4 x [4 x i16]*> %ins, <4 x [4 x i16]*> undef, <4 x i32> zeroinitializer
+  %splat = shufflevector <4 x [4 x i16]*> %ins, <4 x [4 x i16]*> poison, <4 x i32> zeroinitializer
   %t2 = getelementptr inbounds [4 x i16], <4 x [4 x i16]*> %splat, i32 0, i32 3
   %t3 = extractelement <4 x i16*> %t2, i32 3
   %ins2 = insertelement <4 x i16*> poison, i16* %t3, i32 0

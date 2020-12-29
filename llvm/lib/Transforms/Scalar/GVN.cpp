@@ -2800,7 +2800,7 @@ void GVN::addDeadBlock(BasicBlock *BB) {
 
     // First, split the critical edges. This might also create additional blocks
     // to preserve LoopSimplify form and adjust edges accordingly.
-    SmallVector<BasicBlock *, 4> Preds(pred_begin(B), pred_end(B));
+    SmallVector<BasicBlock *, 4> Preds(predecessors(B));
     for (BasicBlock *P : Preds) {
       if (!DeadBlocks.count(P))
         continue;

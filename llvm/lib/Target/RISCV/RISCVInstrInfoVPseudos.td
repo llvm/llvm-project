@@ -263,6 +263,7 @@ class RISCVVPseudo {
   bits<8> MergeOpIndex = InvalidIndex.V;
   bits<3> VLMul;
   bit HasDummyMask = 0;
+  bit WritesElement0 = 0;
 }
 
 // The actual table.
@@ -270,7 +271,7 @@ def RISCVVPseudosTable : GenericTable {
   let FilterClass = "RISCVVPseudo";
   let CppTypeName = "PseudoInfo";
   let Fields = [ "Pseudo", "BaseInstr", "VLIndex", "SEWIndex", "MergeOpIndex",
-                 "VLMul", "HasDummyMask" ];
+                 "VLMul", "HasDummyMask", "WritesElement0" ];
   let PrimaryKey = [ "Pseudo" ];
   let PrimaryKeyName = "getPseudoInfo";
 }
@@ -538,6 +539,23 @@ class VPseudoNullaryMask<VReg RegClass>:
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
+// Nullary for pseudo instructions. They are expanded in
+// RISCVExpandPseudoInsts pass.
+class VPseudoNullaryPseudoM<string BaseInst>
+       : Pseudo<(outs VR:$rd), (ins GPR:$vl, ixlenimm:$sew), []>,
+       RISCVVPseudo {
+  let mayLoad = 0;
+  let mayStore = 0;
+  let hasSideEffects = 0;
+  let usesCustomInserter = 1;
+  let Uses = [VL, VTYPE];
+  let VLIndex = 1;
+  let SEWIndex = 2;
+  // BaseInstr is not used in RISCVExpandPseudoInsts pass.
+  // Just fill a corresponding real v-inst to pass tablegen check.
+  let BaseInstr = !cast<Instruction>(BaseInst);
+}
+
 // RetClass could be GPR or VReg.
 class VPseudoUnaryNoMask<DAGOperand RetClass, VReg OpClass, string Constraint = ""> :
         Pseudo<(outs RetClass:$rd),
@@ -803,11 +821,12 @@ multiclass VPseudoUnaryS_M {
 }
 
 multiclass VPseudoUnaryM_M {
+  defvar constraint = "@earlyclobber $rd";
   foreach mti = AllMasks in
   {
     let VLMul = mti.LMul.value in {
-      def "_M_" # mti.BX : VPseudoUnaryNoMask<VR, VR>;
-      def "_M_" # mti.BX # "_MASK" : VPseudoUnaryMask<VR, VR>;
+      def "_M_" # mti.BX : VPseudoUnaryNoMask<VR, VR, constraint>;
+      def "_M_" # mti.BX # "_MASK" : VPseudoUnaryMask<VR, VR, constraint>;
     }
   }
 }
@@ -817,6 +836,14 @@ multiclass VPseudoMaskNullaryV {
     let VLMul = m.value in {
       def "_V_" # m.MX : VPseudoNullaryNoMask<m.vrclass>;
       def "_V_" # m.MX # "_MASK" : VPseudoNullaryMask<m.vrclass>;
+    }
+  }
+}
+
+multiclass VPseudoNullaryPseudoM <string BaseInst> {
+  foreach mti = AllMasks in {
+    let VLMul = mti.LMul.value in {
+      def "_M_" # mti.BX : VPseudoNullaryPseudoM<BaseInst # "_MM">;
     }
   }
 }
@@ -1133,8 +1160,10 @@ multiclass VPseudoBinaryM_VX_VI {
 }
 
 multiclass VPseudoReductionV_VS {
-  foreach m = MxList.m in
+  foreach m = MxList.m in {
+    let WritesElement0 = 1 in
     defm _VS : VPseudoTernary<V_M1.vrclass, m.vrclass, V_M1.vrclass, m>;
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -1463,6 +1492,15 @@ multiclass VPatNullaryV<string intrinsic, string instruction>
                           (NoX0 GPR:$vl), vti.SEW)>;
   }
 }
+
+multiclass VPatNullaryM<string intrinsic, string inst> {
+  foreach mti = AllMasks in
+    def : Pat<(mti.Mask (!cast<Intrinsic>(intrinsic)
+                        (XLenVT GPR:$vl))),
+                        (!cast<Instruction>(inst#"_M_"#mti.BX)
+                        (NoX0 GPR:$vl), mti.SEW)>;
+}
+
 
 multiclass VPatBinary<string intrinsic,
                       string inst,
@@ -2384,6 +2422,10 @@ defm PseudoVMNOR: VPseudoBinaryM_MM;
 defm PseudoVMORNOT: VPseudoBinaryM_MM;
 defm PseudoVMXNOR: VPseudoBinaryM_MM;
 
+// Pseudo insturctions
+defm PseudoVMCLR : VPseudoNullaryPseudoM<"VMXOR">;
+defm PseudoVMSET : VPseudoNullaryPseudoM<"VMXNOR">;
+
 //===----------------------------------------------------------------------===//
 // 16.2. Vector mask population count vpopc
 //===----------------------------------------------------------------------===//
@@ -2438,7 +2480,7 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0, usesCustomInserter = 1,
       def PseudoVMV_X_S # "_" # m.MX: Pseudo<(outs GPR:$rd),
                                              (ins m.vrclass:$rs2, ixlenimm:$sew),
                                              []>, RISCVVPseudo;
-      let VLIndex = 3, SEWIndex = 4, BaseInstr = VMV_S_X,
+      let VLIndex = 3, SEWIndex = 4, BaseInstr = VMV_S_X, WritesElement0 = 1,
           Constraints = "$rd = $rs1" in
       def PseudoVMV_S_X # "_" # m.MX: Pseudo<(outs m.vrclass:$rd),
                                              (ins m.vrclass:$rs1, GPR:$rs2,
@@ -2463,7 +2505,7 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0, usesCustomInserter = 1,
                                                (ins m.vrclass:$rs2,
                                                     ixlenimm:$sew),
                                                []>, RISCVVPseudo;
-      let VLIndex = 3, SEWIndex = 4, BaseInstr = VFMV_S_F,
+      let VLIndex = 3, SEWIndex = 4, BaseInstr = VFMV_S_F, WritesElement0 = 1,
           Constraints = "$rd = $rs1" in
       def PseudoVFMV_S_F # "_" # m.MX : Pseudo<(outs m.vrclass:$rd),
                                                (ins m.vrclass:$rs1, FPR32:$rs2,
@@ -2912,6 +2954,10 @@ defm "" : VPatBinaryM_MM<"int_riscv_vmor", "PseudoVMOR">;
 defm "" : VPatBinaryM_MM<"int_riscv_vmnor", "PseudoVMNOR">;
 defm "" : VPatBinaryM_MM<"int_riscv_vmornot", "PseudoVMORNOT">;
 defm "" : VPatBinaryM_MM<"int_riscv_vmxnor", "PseudoVMXNOR">;
+
+// pseudo instructions
+defm "" : VPatNullaryM<"int_riscv_vmclr", "PseudoVMCLR">;
+defm "" : VPatNullaryM<"int_riscv_vmset", "PseudoVMSET">;
 
 //===----------------------------------------------------------------------===//
 // 16.2. Vector mask population count vpopc

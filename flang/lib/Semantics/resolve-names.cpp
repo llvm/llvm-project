@@ -5879,7 +5879,10 @@ void ResolveNamesVisitor::HandleProcedureName(
       return; // reported error
     }
     CheckImplicitNoneExternal(name.source, *symbol);
-    if (IsProcedure(*symbol) || symbol->has<DerivedTypeDetails>() ||
+    if (symbol->has<SubprogramDetails>() &&
+        symbol->attrs().test(Attr::ABSTRACT)) {
+      Say(name, "Abstract interface '%s' may not be called"_err_en_US);
+    } else if (IsProcedure(*symbol) || symbol->has<DerivedTypeDetails>() ||
         symbol->has<ObjectEntityDetails>() ||
         symbol->has<AssocEntityDetails>()) {
       // Symbols with DerivedTypeDetails, ObjectEntityDetails and

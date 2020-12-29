@@ -1,4 +1,5 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -S -amdgpu-lower-kernel-attributes -instcombine %s | FileCheck -enable-var-scope %s
+; RUN: opt -mtriple=amdgcn-amd-amdhsa -S -passes=amdgpu-lower-kernel-attributes,instcombine %s | FileCheck -enable-var-scope %s
 
 target datalayout = "n32"
 

@@ -1993,7 +1993,7 @@ Value *ReassociatePass::OptimizeExpression(BinaryOperator *I,
 void ReassociatePass::RecursivelyEraseDeadInsts(Instruction *I,
                                                 OrderedSet &Insts) {
   assert(isInstructionTriviallyDead(I) && "Trivially dead instructions only!");
-  SmallVector<Value *, 4> Ops(I->op_begin(), I->op_end());
+  SmallVector<Value *, 4> Ops(I->operands());
   ValueRankMap.erase(I);
   Insts.remove(I);
   RedoInsts.remove(I);
@@ -2010,7 +2010,7 @@ void ReassociatePass::EraseInst(Instruction *I) {
   assert(isInstructionTriviallyDead(I) && "Trivially dead instructions only!");
   LLVM_DEBUG(dbgs() << "Erasing dead inst: "; I->dump());
 
-  SmallVector<Value*, 8> Ops(I->op_begin(), I->op_end());
+  SmallVector<Value *, 8> Ops(I->operands());
   // Erase the dead instruction.
   ValueRankMap.erase(I);
   RedoInsts.remove(I);

@@ -9,7 +9,7 @@ define void @ifThen_shuffle() {
   br i1 true, label %a, label %b
 
 a:
-  %x = shufflevector <2 x float> undef, <2 x float> undef, <2 x i32> zeroinitializer
+  %x = shufflevector <2 x float> undef, <2 x float> poison, <2 x i32> zeroinitializer
   br label %b
 
 b:

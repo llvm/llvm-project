@@ -59,12 +59,12 @@ define i8 @extractelement_bitcast_wrong_insert(<vscale x 2 x i32> %a, i32 %x) {
 define i32 @extractelement_shuffle_in_range(i32 %v) {
 ; CHECK-LABEL: @extractelement_shuffle_in_range(
 ; CHECK-NEXT:    [[IN:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[V:%.*]], i32 0
-; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[IN]], <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[IN]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[R:%.*]] = extractelement <vscale x 4 x i32> [[SPLAT]], i32 1
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %in = insertelement <vscale x 4 x i32> poison, i32 %v, i32 0
-  %splat = shufflevector <vscale x 4 x i32> %in, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %splat = shufflevector <vscale x 4 x i32> %in, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
   %r = extractelement <vscale x 4 x i32> %splat, i32 1
   ret i32 %r
 }
@@ -72,12 +72,12 @@ define i32 @extractelement_shuffle_in_range(i32 %v) {
 define i32 @extractelement_shuffle_maybe_out_of_range(i32 %v) {
 ; CHECK-LABEL: @extractelement_shuffle_maybe_out_of_range(
 ; CHECK-NEXT:    [[IN:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[V:%.*]], i32 0
-; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[IN]], <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[IN]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[R:%.*]] = extractelement <vscale x 4 x i32> [[SPLAT]], i32 4
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %in = insertelement <vscale x 4 x i32> poison, i32 %v, i32 0
-  %splat = shufflevector <vscale x 4 x i32> %in, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %splat = shufflevector <vscale x 4 x i32> %in, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
   %r = extractelement <vscale x 4 x i32> %splat, i32 4
   ret i32 %r
 }
@@ -85,12 +85,12 @@ define i32 @extractelement_shuffle_maybe_out_of_range(i32 %v) {
 define i32 @extractelement_shuffle_invalid_index(i32 %v) {
 ; CHECK-LABEL: @extractelement_shuffle_invalid_index(
 ; CHECK-NEXT:    [[IN:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[V:%.*]], i32 0
-; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[IN]], <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[IN]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[R:%.*]] = extractelement <vscale x 4 x i32> [[SPLAT]], i32 -1
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %in = insertelement <vscale x 4 x i32> poison, i32 %v, i32 0
-  %splat = shufflevector <vscale x 4 x i32> %in, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %splat = shufflevector <vscale x 4 x i32> %in, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
   %r = extractelement <vscale x 4 x i32> %splat, i32 -1
   ret i32 %r
 }
@@ -99,12 +99,12 @@ define i32 @extractelement_shuffle_invalid_index(i32 %v) {
 define i32 @extractelement_shuffle_symbolic_index(i32 %v, i32 %idx) {
 ; CHECK-LABEL: @extractelement_shuffle_symbolic_index(
 ; CHECK-NEXT:    [[IN:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[V:%.*]], i32 0
-; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[IN]], <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[IN]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[R:%.*]] = extractelement <vscale x 4 x i32> [[SPLAT]], i32 [[IDX:%.*]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %in = insertelement <vscale x 4 x i32> poison, i32 %v, i32 0
-  %splat = shufflevector <vscale x 4 x i32> %in, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %splat = shufflevector <vscale x 4 x i32> %in, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
   %r = extractelement <vscale x 4 x i32> %splat, i32 %idx
   ret i32 %r
 }

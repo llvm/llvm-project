@@ -18,7 +18,7 @@ define i8* @f(i8* returned %s, i32 zeroext %x, i32 signext %k) local_unnamed_add
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 4294967280
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i32> poison, i32 [[X:%.*]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i32> [[BROADCAST_SPLATINSERT]], <16 x i32> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i32> [[BROADCAST_SPLATINSERT]], <16 x i32> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[N_VEC]], -16
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
@@ -208,7 +208,7 @@ for.body.lr.ph:                                   ; preds = %entry
 vector.ph:                                        ; preds = %for.body.lr.ph
   %n.vec = and i64 %wide.trip.count, 4294967280
   %broadcast.splatinsert = insertelement <16 x i32> poison, i32 %x, i32 0
-  %broadcast.splat = shufflevector <16 x i32> %broadcast.splatinsert, <16 x i32> undef, <16 x i32> zeroinitializer
+  %broadcast.splat = shufflevector <16 x i32> %broadcast.splatinsert, <16 x i32> poison, <16 x i32> zeroinitializer
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph

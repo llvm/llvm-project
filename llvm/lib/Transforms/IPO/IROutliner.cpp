@@ -29,6 +29,13 @@
 using namespace llvm;
 using namespace IRSimilarity;
 
+// This is a debug option to test small pieces of code to ensure that outlining
+// works correctly.
+static cl::opt<bool> NoCostModel(
+    "ir-outlining-no-cost", cl::init(false), cl::ReallyHidden,
+    cl::desc("Debug option to outline greedily, without restriction that "
+             "calculated benefit outweighs cost"));
+
 /// The OutlinableGroup holds all the overarching information for outlining
 /// a set of regions that are structurally similar to one another, such as the
 /// types of the overall function, the output blocks, the sets of stores needed
@@ -53,6 +60,11 @@ struct OutlinableGroup {
   /// The return block for the overall function.
   BasicBlock *EndBB = nullptr;
 
+  /// A set containing the different GVN store sets needed. Each array contains
+  /// a sorted list of the different values that need to be stored into output
+  /// registers.
+  DenseSet<ArrayRef<unsigned>> OutputGVNCombinations;
+
   /// Flag for whether the \ref ArgumentTypes have been defined after the
   /// extraction of the first region.
   bool InputTypesSet = false;
@@ -61,12 +73,26 @@ struct OutlinableGroup {
   /// index in ArgumentTypes is an output argument.
   unsigned NumAggregateInputs = 0;
 
+  /// The number of instructions that will be outlined by extracting \ref
+  /// Regions.
+  unsigned Benefit = 0;
+  /// The number of added instructions needed for the outlining of the \ref
+  /// Regions.
+  unsigned Cost = 0;
+
   /// For the \ref Regions, we look at every Value.  If it is a constant,
   /// we check whether it is the same in Region.
   ///
   /// \param [in,out] NotSame contains the global value numbers where the
   /// constant is not always the same, and must be passed in as an argument.
   void findSameConstants(DenseSet<unsigned> &NotSame);
+
+  /// For the regions, look at each set of GVN stores needed and account for
+  /// each combination.  Add an argument to the argument types if there is
+  /// more than one combination.
+  ///
+  /// \param [in] M - The module we are outlining from.
+  void collectGVNStoreSets(Module &M);
 };
 
 /// Move the contents of \p SourceBB to before the last instruction of \p
@@ -201,6 +227,40 @@ constantMatches(Value *V, unsigned GVN,
   return false;
 }
 
+unsigned OutlinableRegion::getBenefit(TargetTransformInfo &TTI) {
+  InstructionCost Benefit(0);
+
+  // Estimate the benefit of outlining a specific sections of the program.  We
+  // delegate mostly this task to the TargetTransformInfo so that if the target
+  // has specific changes, we can have a more accurate estimate.
+
+  // However, getInstructionCost delegates the code size calculation for
+  // arithmetic instructions to getArithmeticInstrCost in
+  // include/Analysis/TargetTransformImpl.h, where it always estimates that the
+  // code size for a division and remainder instruction to be equal to 4, and
+  // everything else to 1.  This is not an accurate representation of the
+  // division instruction for targets that have a native division instruction.
+  // To be overly conservative, we only add 1 to the number of instructions for
+  // each division instruction.
+  for (Instruction &I : *StartBB) {
+    switch (I.getOpcode()) {
+    case Instruction::FDiv:
+    case Instruction::FRem:
+    case Instruction::SDiv:
+    case Instruction::SRem:
+    case Instruction::UDiv:
+    case Instruction::URem:
+      Benefit += 1;
+      break;
+    default:
+      Benefit += TTI.getInstructionCost(&I, TargetTransformInfo::TCK_CodeSize);
+      break;
+    }
+  }
+
+  return *Benefit.getValue();
+}
+
 /// Find whether \p Region matches the global value numbering to Constant
 /// mapping found so far.
 ///
@@ -264,6 +324,17 @@ void OutlinableGroup::findSameConstants(DenseSet<unsigned> &NotSame) {
 
   for (OutlinableRegion *Region : Regions)
     collectRegionsConstants(*Region, GVNToConstant, NotSame);
+}
+
+void OutlinableGroup::collectGVNStoreSets(Module &M) {
+  for (OutlinableRegion *OS : Regions)
+    OutputGVNCombinations.insert(OS->GVNStores);
+
+  // We are adding an extracted argument to decide between which output path
+  // to use in the basic block.  It is used in a switch statement and only
+  // needs to be an integer.
+  if (OutputGVNCombinations.size() > 1)
+    ArgumentTypes.push_back(Type::getInt32Ty(M.getContext()));
 }
 
 Function *IROutliner::createFunction(Module &M, OutlinableGroup &Group,
@@ -655,7 +726,7 @@ CallInst *replaceCalledFunction(Module &M, OutlinableRegion &Region) {
   for (unsigned AggArgIdx = 0; AggArgIdx < AggFunc->arg_size(); AggArgIdx++) {
 
     if (AggArgIdx == AggFunc->arg_size() - 1 &&
-        Group.ArgumentTypes.size() > Group.NumAggregateInputs) {
+        Group.OutputGVNCombinations.size() > 1) {
       // If we are on the last argument, and we need to differentiate between
       // output blocks, add an integer to the argument list to determine
       // what block to take
@@ -703,9 +774,9 @@ CallInst *replaceCalledFunction(Module &M, OutlinableRegion &Region) {
                           Call);
 
   // It is possible that the call to the outlined function is either the first
-  // instruction in the new block, the last instruction, or both.  If either of
-  // these is the case, we need to make sure that we replace the instruction in
-  // the IRInstructionData struct with the new call.
+  // instruction is in the new block, the last instruction, or both.  If either
+  // of these is the case, we need to make sure that we replace the instruction
+  // in the IRInstructionData struct with the new call.
   CallInst *OldCall = Region.Call;
   if (Region.NewFront->Inst == OldCall)
     Region.NewFront->Inst = Call;
@@ -831,8 +902,51 @@ collectRelevantInstructions(Function &F,
   return RelevantInstructions;
 }
 
+/// It is possible that there is a basic block that already performs the same
+/// stores. This returns a duplicate block, if it exists
+///
+/// \param OutputBB [in] the block we are looking for a duplicate of.
+/// \param OutputStoreBBs [in] The existing output blocks.
+/// \returns an optional value with the number output block if there is a match.
+Optional<unsigned>
+findDuplicateOutputBlock(BasicBlock *OutputBB,
+                         ArrayRef<BasicBlock *> OutputStoreBBs) {
+
+  bool WrongInst = false;
+  bool WrongSize = false;
+  unsigned MatchingNum = 0;
+  for (BasicBlock *CompBB : OutputStoreBBs) {
+    WrongInst = false;
+    if (CompBB->size() - 1 != OutputBB->size()) {
+      WrongSize = true;
+      MatchingNum++;
+      continue;
+    }
+
+    WrongSize = false;
+    BasicBlock::iterator NIt = OutputBB->begin();
+    for (Instruction &I : *CompBB) {
+      if (isa<BranchInst>(&I))
+        continue;
+
+      if (!I.isIdenticalTo(&(*NIt))) {
+        WrongInst = true;
+        break;
+      }
+
+      NIt++;
+    }
+    if (!WrongInst && !WrongSize)
+      return MatchingNum;
+
+    MatchingNum++;
+  }
+
+  return None;
+}
+
 /// For the outlined section, move needed the StoreInsts for the output
-/// registers into their own block.  Then, determine if there is a duplicate
+/// registers into their own block. Then, determine if there is a duplicate
 /// output block already created.
 ///
 /// \param [in] OG - The OutlinableGroup of regions to be outlined.
@@ -856,9 +970,9 @@ alignOutputBlockWithAggFunc(OutlinableGroup &OG, OutlinableRegion &Region,
   // be contained in a store, we replace the uses of the value with the value
   // from the overall function, so that the store is storing the correct
   // value from the overall function.
-
   DenseSet<BasicBlock *> ExcludeBBs(OutputStoreBBs.begin(),
                                     OutputStoreBBs.end());
+  ExcludeBBs.insert(OutputBB);
   std::vector<Instruction *> ExtractedFunctionInsts =
       collectRelevantInstructions(*(Region.ExtractedFunction), ExcludeBBs);
   std::vector<Instruction *> OverallFunctionInsts =
@@ -890,6 +1004,38 @@ alignOutputBlockWithAggFunc(OutlinableGroup &OG, OutlinableRegion &Region,
   }
 
   assert(ValuesToFind.size() == 0 && "Not all store values were handled!");
+
+  // If the size of the block is 0, then there are no stores, and we do not
+  // need to save this block.
+  if (OutputBB->size() == 0) {
+    Region.OutputBlockNum = -1;
+    OutputBB->eraseFromParent();
+    return;
+  }
+
+  // Determine is there is a duplicate block.
+  Optional<unsigned> MatchingBB =
+      findDuplicateOutputBlock(OutputBB, OutputStoreBBs);
+
+  // If there is, we remove the new output block.  If it does not,
+  // we add it to our list of output blocks.
+  if (MatchingBB.hasValue()) {
+    LLVM_DEBUG(dbgs() << "Set output block for region in function"
+                      << Region.ExtractedFunction << " to "
+                      << MatchingBB.getValue());
+
+    Region.OutputBlockNum = MatchingBB.getValue();
+    OutputBB->eraseFromParent();
+    return;
+  }
+
+  Region.OutputBlockNum = OutputStoreBBs.size();
+
+  LLVM_DEBUG(dbgs() << "Create output block for region in"
+                    << Region.ExtractedFunction << " to "
+                    << *OutputBB);
+  OutputStoreBBs.push_back(OutputBB);
+  BranchInst::Create(EndBB, OutputBB);
 }
 
 /// Create the switch statement for outlined function to differentiate between
@@ -904,27 +1050,46 @@ alignOutputBlockWithAggFunc(OutlinableGroup &OG, OutlinableRegion &Region,
 /// \param [in,out] OutputStoreBBs - The existing output blocks.
 void createSwitchStatement(Module &M, OutlinableGroup &OG, BasicBlock *EndBB,
                            ArrayRef<BasicBlock *> OutputStoreBBs) {
-  Function *AggFunc = OG.OutlinedFunction;
-  // Create a final block
-  BasicBlock *ReturnBlock =
-      BasicBlock::Create(M.getContext(), "final_block", AggFunc);
-  Instruction *Term = EndBB->getTerminator();
-  Term->moveBefore(*ReturnBlock, ReturnBlock->end());
-  // Put the switch statement in the old end basic block for the function with
-  // a fall through to the new return block
-  LLVM_DEBUG(dbgs() << "Create switch statement in " << *AggFunc << " for "
-                    << OutputStoreBBs.size() << "\n");
-  SwitchInst *SwitchI =
-      SwitchInst::Create(AggFunc->getArg(AggFunc->arg_size() - 1), ReturnBlock,
-                         OutputStoreBBs.size(), EndBB);
+  // We only need the switch statement if there is more than one store
+  // combination.
+  if (OG.OutputGVNCombinations.size() > 1) {
+    Function *AggFunc = OG.OutlinedFunction;
+    // Create a final block
+    BasicBlock *ReturnBlock =
+        BasicBlock::Create(M.getContext(), "final_block", AggFunc);
+    Instruction *Term = EndBB->getTerminator();
+    Term->moveBefore(*ReturnBlock, ReturnBlock->end());
+    // Put the switch statement in the old end basic block for the function with
+    // a fall through to the new return block
+    LLVM_DEBUG(dbgs() << "Create switch statement in " << *AggFunc << " for "
+                      << OutputStoreBBs.size() << "\n");
+    SwitchInst *SwitchI =
+        SwitchInst::Create(AggFunc->getArg(AggFunc->arg_size() - 1),
+                           ReturnBlock, OutputStoreBBs.size(), EndBB);
 
-  unsigned Idx = 0;
-  for (BasicBlock *BB : OutputStoreBBs) {
-    SwitchI->addCase(ConstantInt::get(Type::getInt32Ty(M.getContext()), Idx),
-                     BB);
-    Term = BB->getTerminator();
-    Term->setSuccessor(0, ReturnBlock);
-    Idx++;
+    unsigned Idx = 0;
+    for (BasicBlock *BB : OutputStoreBBs) {
+      SwitchI->addCase(ConstantInt::get(Type::getInt32Ty(M.getContext()), Idx),
+                       BB);
+      Term = BB->getTerminator();
+      Term->setSuccessor(0, ReturnBlock);
+      Idx++;
+    }
+    return;
+  }
+
+  // If there needs to be stores, move them from the output block to the end
+  // block to save on branching instructions.
+  if (OutputStoreBBs.size() == 1) {
+    LLVM_DEBUG(dbgs() << "Move store instructions to the end block in "
+                      << *OG.OutlinedFunction << "\n");
+    BasicBlock *OutputBlock = OutputStoreBBs[0];
+    Instruction *Term = OutputBlock->getTerminator();
+    Term->eraseFromParent();
+    Term = EndBB->getTerminator();
+    moveBBContents(*OutputBlock, *EndBB);
+    Term->moveBefore(*EndBB, EndBB->end());
+    OutputBlock->eraseFromParent();
   }
 
   return;
@@ -968,11 +1133,16 @@ static void fillOverallFunction(Module &M, OutlinableGroup &CurrentGroup,
   replaceArgumentUses(*CurrentOS, NewBB);
   replaceConstants(*CurrentOS);
 
-  if (CurrentGroup.ArgumentTypes.size() > CurrentGroup.NumAggregateInputs) {
+  // If the new basic block has no new stores, we can erase it from the module.
+  // It it does, we create a branch instruction to the last basic block from the
+  // new one.
+  if (NewBB->size() == 0) {
+    CurrentOS->OutputBlockNum = -1;
+    NewBB->eraseFromParent();
+  } else {
     BranchInst::Create(CurrentGroup.EndBB, NewBB);
     OutputStoreBBs.push_back(NewBB);
-  } else
-    NewBB->eraseFromParent();
+  }
 
   // Replace the call to the extracted function with the outlined function.
   CurrentOS->Call = replaceCalledFunction(M, *CurrentOS);
@@ -1002,23 +1172,16 @@ void IROutliner::deduplicateExtractedSections(
         CurrentGroup.OutlinedFunction);
     replaceArgumentUses(*CurrentOS, NewBB);
 
-    if (CurrentGroup.ArgumentTypes.size() > CurrentGroup.NumAggregateInputs) {
-      BranchInst::Create(CurrentGroup.EndBB, NewBB);
-      CurrentOS->OutputBlockNum = OutputStoreBBs.size();
-      OutputStoreBBs.push_back(NewBB);
-      alignOutputBlockWithAggFunc(CurrentGroup, *CurrentOS, NewBB,
-                                  CurrentGroup.EndBB, OutputMappings,
-                                  OutputStoreBBs);
-    } else
-      NewBB->eraseFromParent();
+    alignOutputBlockWithAggFunc(CurrentGroup, *CurrentOS, NewBB,
+                                CurrentGroup.EndBB, OutputMappings,
+                                OutputStoreBBs);
 
     CurrentOS->Call = replaceCalledFunction(M, *CurrentOS);
     FuncsToRemove.push_back(CurrentOS->ExtractedFunction);
   }
 
   // Create a switch statement to handle the different output schemes.
-  if (CurrentGroup.ArgumentTypes.size() > CurrentGroup.NumAggregateInputs)
-    createSwitchStatement(M, CurrentGroup, CurrentGroup.EndBB, OutputStoreBBs);
+  createSwitchStatement(M, CurrentGroup, CurrentGroup.EndBB, OutputStoreBBs);
 
   OutlinedFunctionNum++;
 }
@@ -1072,6 +1235,152 @@ void IROutliner::pruneIncompatibleRegions(
 
     CurrentEndIdx = EndIdx;
   }
+}
+
+unsigned IROutliner::findBenefitFromAllRegions(OutlinableGroup &CurrentGroup) {
+  unsigned RegionBenefit = 0;
+  for (OutlinableRegion *Region : CurrentGroup.Regions) {
+    TargetTransformInfo &TTI = getTTI(*Region->StartBB->getParent());
+    // We add the number of instructions in the region to the benefit as an
+    // estimate as to how much will be removed.
+    RegionBenefit += Region->getBenefit(TTI);
+    LLVM_DEBUG(dbgs() << "Adding: " << RegionBenefit
+                      << " saved instructions to overfall benefit.\n");
+    CurrentGroup.Benefit += RegionBenefit;
+  }
+
+  return RegionBenefit;
+}
+
+unsigned IROutliner::findCostOutputReloads(OutlinableGroup &CurrentGroup) {
+  unsigned OverallCost = 0;
+  for (OutlinableRegion *Region : CurrentGroup.Regions) {
+    TargetTransformInfo &TTI = getTTI(*Region->StartBB->getParent());
+
+    // Each output incurs a load after the call, so we add that to the cost.
+    for (unsigned OutputGVN : Region->GVNStores) {
+      Optional<Value *> OV = Region->Candidate->fromGVN(OutputGVN);
+      assert(OV.hasValue() && "Could not find value for GVN?");
+      Value *V = OV.getValue();
+      unsigned LoadCost =
+          TTI.getMemoryOpCost(Instruction::Load, V->getType(), Align(1), 0,
+                              TargetTransformInfo::TCK_CodeSize);
+
+      LLVM_DEBUG(dbgs() << "Adding: " << LoadCost
+                        << " instructions to cost for output of type "
+                        << *V->getType() << "\n");
+      OverallCost += LoadCost;
+    }
+  }
+
+  return OverallCost;
+}
+
+/// Find the extra instructions needed to handle any output values for the
+/// region.
+///
+/// \param [in] M - The Module to outline from.
+/// \param [in] CurrentGroup - The collection of OutlinableRegions to analyze.
+/// \param [in] TTI - The TargetTransformInfo used to collect information for
+/// new instruction costs.
+/// \returns the additional cost to handle the outputs.
+static unsigned findCostForOutputBlocks(Module &M,
+                                        OutlinableGroup &CurrentGroup,
+                                        TargetTransformInfo &TTI) {
+  unsigned OutputCost = 0;
+
+  for (const ArrayRef<unsigned> &OutputUse :
+       CurrentGroup.OutputGVNCombinations) {
+    IRSimilarityCandidate &Candidate = *CurrentGroup.Regions[0]->Candidate;
+    for (unsigned GVN : OutputUse) {
+      Optional<Value *> OV = Candidate.fromGVN(GVN);
+      assert(OV.hasValue() && "Could not find value for GVN?");
+      Value *V = OV.getValue();
+      unsigned StoreCost =
+          TTI.getMemoryOpCost(Instruction::Load, V->getType(), Align(1), 0,
+                              TargetTransformInfo::TCK_CodeSize);
+
+      // An instruction cost is added for each store set that needs to occur for
+      // various output combinations inside the function, plus a branch to
+      // return to the exit block.
+      LLVM_DEBUG(dbgs() << "Adding: " << StoreCost
+                        << " instructions to cost for output of type "
+                        << *V->getType() << "\n");
+      OutputCost += StoreCost;
+    }
+
+    unsigned BranchCost =
+        TTI.getCFInstrCost(Instruction::Br, TargetTransformInfo::TCK_CodeSize);
+    LLVM_DEBUG(dbgs() << "Adding " << BranchCost << " to the current cost for"
+                      << " a branch instruction\n");
+    OutputCost += BranchCost;
+  }
+
+  // If there is more than one output scheme, we must have a comparison and
+  // branch for each different item in the switch statement.
+  if (CurrentGroup.OutputGVNCombinations.size() > 1) {
+    unsigned ComparisonCost = TTI.getCmpSelInstrCost(
+        Instruction::ICmp, Type::getInt32Ty(M.getContext()),
+        Type::getInt32Ty(M.getContext()), CmpInst::BAD_ICMP_PREDICATE,
+        TargetTransformInfo::TCK_CodeSize);
+    unsigned BranchCost =
+        TTI.getCFInstrCost(Instruction::Br, TargetTransformInfo::TCK_CodeSize);
+
+    unsigned DifferentBlocks = CurrentGroup.OutputGVNCombinations.size();
+    unsigned TotalCost = ComparisonCost * BranchCost * DifferentBlocks;
+
+    LLVM_DEBUG(dbgs() << "Adding: " << TotalCost
+                      << " instructions for each switch case for each different"
+                      << " output path in a function\n");
+    OutputCost += TotalCost;
+  }
+
+  return OutputCost;
+}
+
+void IROutliner::findCostBenefit(Module &M, OutlinableGroup &CurrentGroup) {
+  unsigned RegionBenefit = findBenefitFromAllRegions(CurrentGroup);
+  CurrentGroup.Benefit += RegionBenefit;
+  LLVM_DEBUG(dbgs() << "Current Benefit: " << CurrentGroup.Benefit << "\n");
+
+  unsigned OutputReloadCost = findCostOutputReloads(CurrentGroup);
+  CurrentGroup.Cost += OutputReloadCost;
+  LLVM_DEBUG(dbgs() << "Current Cost: " << CurrentGroup.Cost << "\n");
+
+  unsigned AverageRegionBenefit = RegionBenefit / CurrentGroup.Regions.size();
+  unsigned OverallArgumentNum = CurrentGroup.ArgumentTypes.size();
+  unsigned NumRegions = CurrentGroup.Regions.size();
+  TargetTransformInfo &TTI =
+      getTTI(*CurrentGroup.Regions[0]->Candidate->getFunction());
+
+  // We add one region to the cost once, to account for the instructions added
+  // inside of the newly created function.
+  LLVM_DEBUG(dbgs() << "Adding: " << AverageRegionBenefit
+                    << " instructions to cost for body of new function.\n");
+  CurrentGroup.Cost += AverageRegionBenefit;
+  LLVM_DEBUG(dbgs() << "Current Cost: " << CurrentGroup.Cost << "\n");
+
+  // For each argument, we must add an instruction for loading the argument
+  // out of the register and into a value inside of the newly outlined function.
+  LLVM_DEBUG(dbgs() << "Adding: " << OverallArgumentNum
+                    << " instructions to cost for each argument in the new"
+                    << " function.\n");
+  CurrentGroup.Cost += 2 * OverallArgumentNum * TargetTransformInfo::TCC_Basic;
+  LLVM_DEBUG(dbgs() << "Current Cost: " << CurrentGroup.Cost << "\n");
+
+  // Each argument needs to either be loaded into a register or onto the stack.
+  // Some arguments will only be loaded into the stack once the argument
+  // registers are filled.
+  LLVM_DEBUG(dbgs() << "Adding: " << OverallArgumentNum
+                    << " instructions to cost for each argument in the new"
+                    << " function " << NumRegions << " times for the "
+                    << "needed argument handling at the call site.\n");
+  CurrentGroup.Cost +=
+      2 * OverallArgumentNum * TargetTransformInfo::TCC_Basic * NumRegions;
+  LLVM_DEBUG(dbgs() << "Current Cost: " << CurrentGroup.Cost << "\n");
+
+  CurrentGroup.Cost += findCostForOutputBlocks(M, CurrentGroup, TTI);
+  LLVM_DEBUG(dbgs() << "Current Cost: " << CurrentGroup.Cost << "\n");
 }
 
 void IROutliner::updateOutputMapping(OutlinableRegion &Region,
@@ -1231,11 +1540,20 @@ unsigned IROutliner::doOutline(Module &M) {
     if (CurrentGroup.Regions.empty())
       continue;
 
-    // We are adding an extracted argument to decide between which output path
-    // to use in the basic block.  It is used in a switch statement and only
-    // needs to be an integer.
-    if (CurrentGroup.ArgumentTypes.size() > CurrentGroup.NumAggregateInputs)
-      CurrentGroup.ArgumentTypes.push_back(Type::getInt32Ty(M.getContext()));
+    CurrentGroup.collectGVNStoreSets(M);
+
+    if (CostModel)
+      findCostBenefit(M, CurrentGroup);
+
+    // If we are adhering to the cost model, reattach all the candidates
+    if (CurrentGroup.Cost >= CurrentGroup.Benefit && CostModel) {
+      for (OutlinableRegion *OS : CurrentGroup.Regions)
+        OS->reattachCandidate();
+      continue;
+    }
+
+    LLVM_DEBUG(dbgs() << "Outlining regions with cost " << CurrentGroup.Cost
+                      << " and benefit " << CurrentGroup.Benefit << "\n");
 
     // Create functions out of all the sections, and mark them as outlined.
     OutlinedRegions.clear();
@@ -1266,7 +1584,11 @@ unsigned IROutliner::doOutline(Module &M) {
   return OutlinedFunctionNum;
 }
 
-bool IROutliner::run(Module &M) { return doOutline(M) > 0; }
+bool IROutliner::run(Module &M) {
+  CostModel = !NoCostModel;
+
+  return doOutline(M) > 0;
+}
 
 // Pass Manager Boilerplate
 class IROutlinerLegacyPass : public ModulePass {

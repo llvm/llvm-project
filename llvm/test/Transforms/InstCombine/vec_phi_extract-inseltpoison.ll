@@ -6,7 +6,7 @@ define void @f(i64 %val, i32  %limit, i32 *%ptr) {
 ; CHECK: %1 = phi i32 [ %0, %entry ], [ {{.*}}, %loop ]
 entry:
   %tempvector = insertelement <16 x i64> poison, i64 %val, i32 0
-  %vector = shufflevector <16 x i64> %tempvector, <16 x i64> undef, <16 x i32> zeroinitializer
+  %vector = shufflevector <16 x i64> %tempvector, <16 x i64> poison, <16 x i32> zeroinitializer
   %0 = add <16 x i64> %vector, <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>
   %1 = trunc <16 x i64> %0 to <16 x i32>
   br label %loop
@@ -32,7 +32,7 @@ define void @copy(i64 %val, i32  %limit, i32 *%ptr) {
 ; CHECK: %1 = phi i32 [ %0, %entry ], [ {{.*}}, %loop ]
 entry:
   %tempvector = insertelement <16 x i64> poison, i64 %val, i32 0
-  %vector = shufflevector <16 x i64> %tempvector, <16 x i64> undef, <16 x i32> zeroinitializer
+  %vector = shufflevector <16 x i64> %tempvector, <16 x i64> poison, <16 x i32> zeroinitializer
   %0 = add <16 x i64> %vector, <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>
   %1 = trunc <16 x i64> %0 to <16 x i32>
   br label %loop
@@ -59,7 +59,7 @@ define void @nocopy(i64 %val, i32  %limit, i32 *%ptr) {
 ; CHECK: phi <16 x i32> [ %3, %entry ], [ %inc, %loop ]
 entry:
   %tempvector = insertelement <16 x i64> poison, i64 %val, i32 0
-  %vector = shufflevector <16 x i64> %tempvector, <16 x i64> undef, <16 x i32> zeroinitializer
+  %vector = shufflevector <16 x i64> %tempvector, <16 x i64> poison, <16 x i32> zeroinitializer
   %0 = add <16 x i64> %vector, <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>
   %1 = trunc <16 x i64> %0 to <16 x i32>
   br label %loop

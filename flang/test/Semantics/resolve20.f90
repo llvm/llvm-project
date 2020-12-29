@@ -61,7 +61,18 @@ module m
     procedure(proc), deferred :: p1
   end type t1
 
+  abstract interface
+    function f()
+    end function
+  end interface
+
 contains
   subroutine bar
+  end subroutine
+  subroutine test
+    !ERROR: Abstract interface 'foo' may not be called
+    call foo()
+    !ERROR: Abstract interface 'f' may not be called
+    x = f()
   end subroutine
 end module

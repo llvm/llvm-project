@@ -387,8 +387,7 @@ void ReachingDefAnalysis::getGlobalUses(MachineInstr *MI, MCRegister PhysReg,
       if (Visited.count(MBB) || !MBB->isLiveIn(PhysReg))
         continue;
       if (getLiveInUses(MBB, PhysReg, Uses))
-        ToVisit.insert(ToVisit.end(), MBB->successors().begin(),
-                       MBB->successors().end());
+        llvm::append_range(ToVisit, MBB->successors());
       Visited.insert(MBB);
     }
   }

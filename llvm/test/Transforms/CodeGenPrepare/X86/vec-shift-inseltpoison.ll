@@ -8,8 +8,8 @@
 
 define <4 x i32> @vector_variable_shift_right_v4i32(<4 x i1> %cond, <4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 ; AVX1-LABEL: @vector_variable_shift_right_v4i32(
-; AVX1-NEXT:    [[SPLAT1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> undef, <4 x i32> zeroinitializer
-; AVX1-NEXT:    [[SPLAT2:%.*]] = shufflevector <4 x i32> [[Y:%.*]], <4 x i32> undef, <4 x i32> zeroinitializer
+; AVX1-NEXT:    [[SPLAT1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> zeroinitializer
+; AVX1-NEXT:    [[SPLAT2:%.*]] = shufflevector <4 x i32> [[Y:%.*]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; AVX1-NEXT:    [[SEL:%.*]] = select <4 x i1> [[COND:%.*]], <4 x i32> [[SPLAT1]], <4 x i32> [[SPLAT2]]
 ; AVX1-NEXT:    [[TMP1:%.*]] = lshr <4 x i32> [[Z:%.*]], [[SPLAT1]]
 ; AVX1-NEXT:    [[TMP2:%.*]] = lshr <4 x i32> [[Z]], [[SPLAT2]]
@@ -17,28 +17,29 @@ define <4 x i32> @vector_variable_shift_right_v4i32(<4 x i1> %cond, <4 x i32> %x
 ; AVX1-NEXT:    ret <4 x i32> [[TMP3]]
 ;
 ; AVX2-LABEL: @vector_variable_shift_right_v4i32(
-; AVX2-NEXT:    [[SPLAT1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> undef, <4 x i32> zeroinitializer
-; AVX2-NEXT:    [[SPLAT2:%.*]] = shufflevector <4 x i32> [[Y:%.*]], <4 x i32> undef, <4 x i32> zeroinitializer
+; AVX2-NEXT:    [[SPLAT1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> zeroinitializer
+; AVX2-NEXT:    [[SPLAT2:%.*]] = shufflevector <4 x i32> [[Y:%.*]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; AVX2-NEXT:    [[SEL:%.*]] = select <4 x i1> [[COND:%.*]], <4 x i32> [[SPLAT1]], <4 x i32> [[SPLAT2]]
 ; AVX2-NEXT:    [[SH:%.*]] = lshr <4 x i32> [[Z:%.*]], [[SEL]]
 ; AVX2-NEXT:    ret <4 x i32> [[SH]]
 ;
 ; AVX512BW-LABEL: @vector_variable_shift_right_v4i32(
-; AVX512BW-NEXT:    [[SPLAT1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> undef, <4 x i32> zeroinitializer
-; AVX512BW-NEXT:    [[SPLAT2:%.*]] = shufflevector <4 x i32> [[Y:%.*]], <4 x i32> undef, <4 x i32> zeroinitializer
+; AVX512BW-NEXT:    [[SPLAT1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> zeroinitializer
+; AVX512BW-NEXT:    [[SPLAT2:%.*]] = shufflevector <4 x i32> [[Y:%.*]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; AVX512BW-NEXT:    [[SEL:%.*]] = select <4 x i1> [[COND:%.*]], <4 x i32> [[SPLAT1]], <4 x i32> [[SPLAT2]]
 ; AVX512BW-NEXT:    [[SH:%.*]] = lshr <4 x i32> [[Z:%.*]], [[SEL]]
 ; AVX512BW-NEXT:    ret <4 x i32> [[SH]]
 ;
 ; XOP-LABEL: @vector_variable_shift_right_v4i32(
-; XOP-NEXT:    [[SPLAT1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> undef, <4 x i32> zeroinitializer
-; XOP-NEXT:    [[SPLAT2:%.*]] = shufflevector <4 x i32> [[Y:%.*]], <4 x i32> undef, <4 x i32> zeroinitializer
+; XOP-NEXT:    [[SPLAT1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> zeroinitializer
+; XOP-NEXT:    [[SPLAT2:%.*]] = shufflevector <4 x i32> [[Y:%.*]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; XOP-NEXT:    [[SEL:%.*]] = select <4 x i1> [[COND:%.*]], <4 x i32> [[SPLAT1]], <4 x i32> [[SPLAT2]]
 ; XOP-NEXT:    [[SH:%.*]] = lshr <4 x i32> [[Z:%.*]], [[SEL]]
 ; XOP-NEXT:    ret <4 x i32> [[SH]]
 ;
-  %splat1 = shufflevector <4 x i32> %x, <4 x i32> undef, <4 x i32> zeroinitializer
-  %splat2 = shufflevector <4 x i32> %y, <4 x i32> undef, <4 x i32> zeroinitializer
+
+  %splat1 = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> zeroinitializer
+  %splat2 = shufflevector <4 x i32> %y, <4 x i32> poison, <4 x i32> zeroinitializer
   %sel = select <4 x i1> %cond, <4 x i32> %splat1, <4 x i32> %splat2
   %sh = lshr <4 x i32> %z, %sel
   ret <4 x i32> %sh
@@ -46,8 +47,8 @@ define <4 x i32> @vector_variable_shift_right_v4i32(<4 x i1> %cond, <4 x i32> %x
 
 define <16 x i16> @vector_variable_shift_right_v16i16(<16 x i1> %cond, <16 x i16> %x, <16 x i16> %y, <16 x i16> %z) {
 ; AVX1-LABEL: @vector_variable_shift_right_v16i16(
-; AVX1-NEXT:    [[SPLAT1:%.*]] = shufflevector <16 x i16> [[X:%.*]], <16 x i16> undef, <16 x i32> zeroinitializer
-; AVX1-NEXT:    [[SPLAT2:%.*]] = shufflevector <16 x i16> [[Y:%.*]], <16 x i16> undef, <16 x i32> zeroinitializer
+; AVX1-NEXT:    [[SPLAT1:%.*]] = shufflevector <16 x i16> [[X:%.*]], <16 x i16> poison, <16 x i32> zeroinitializer
+; AVX1-NEXT:    [[SPLAT2:%.*]] = shufflevector <16 x i16> [[Y:%.*]], <16 x i16> poison, <16 x i32> zeroinitializer
 ; AVX1-NEXT:    [[SEL:%.*]] = select <16 x i1> [[COND:%.*]], <16 x i16> [[SPLAT1]], <16 x i16> [[SPLAT2]]
 ; AVX1-NEXT:    [[TMP1:%.*]] = lshr <16 x i16> [[Z:%.*]], [[SPLAT1]]
 ; AVX1-NEXT:    [[TMP2:%.*]] = lshr <16 x i16> [[Z]], [[SPLAT2]]
@@ -55,8 +56,8 @@ define <16 x i16> @vector_variable_shift_right_v16i16(<16 x i1> %cond, <16 x i16
 ; AVX1-NEXT:    ret <16 x i16> [[TMP3]]
 ;
 ; AVX2-LABEL: @vector_variable_shift_right_v16i16(
-; AVX2-NEXT:    [[SPLAT1:%.*]] = shufflevector <16 x i16> [[X:%.*]], <16 x i16> undef, <16 x i32> zeroinitializer
-; AVX2-NEXT:    [[SPLAT2:%.*]] = shufflevector <16 x i16> [[Y:%.*]], <16 x i16> undef, <16 x i32> zeroinitializer
+; AVX2-NEXT:    [[SPLAT1:%.*]] = shufflevector <16 x i16> [[X:%.*]], <16 x i16> poison, <16 x i32> zeroinitializer
+; AVX2-NEXT:    [[SPLAT2:%.*]] = shufflevector <16 x i16> [[Y:%.*]], <16 x i16> poison, <16 x i32> zeroinitializer
 ; AVX2-NEXT:    [[SEL:%.*]] = select <16 x i1> [[COND:%.*]], <16 x i16> [[SPLAT1]], <16 x i16> [[SPLAT2]]
 ; AVX2-NEXT:    [[TMP1:%.*]] = lshr <16 x i16> [[Z:%.*]], [[SPLAT1]]
 ; AVX2-NEXT:    [[TMP2:%.*]] = lshr <16 x i16> [[Z]], [[SPLAT2]]
@@ -64,21 +65,22 @@ define <16 x i16> @vector_variable_shift_right_v16i16(<16 x i1> %cond, <16 x i16
 ; AVX2-NEXT:    ret <16 x i16> [[TMP3]]
 ;
 ; AVX512BW-LABEL: @vector_variable_shift_right_v16i16(
-; AVX512BW-NEXT:    [[SPLAT1:%.*]] = shufflevector <16 x i16> [[X:%.*]], <16 x i16> undef, <16 x i32> zeroinitializer
-; AVX512BW-NEXT:    [[SPLAT2:%.*]] = shufflevector <16 x i16> [[Y:%.*]], <16 x i16> undef, <16 x i32> zeroinitializer
+; AVX512BW-NEXT:    [[SPLAT1:%.*]] = shufflevector <16 x i16> [[X:%.*]], <16 x i16> poison, <16 x i32> zeroinitializer
+; AVX512BW-NEXT:    [[SPLAT2:%.*]] = shufflevector <16 x i16> [[Y:%.*]], <16 x i16> poison, <16 x i32> zeroinitializer
 ; AVX512BW-NEXT:    [[SEL:%.*]] = select <16 x i1> [[COND:%.*]], <16 x i16> [[SPLAT1]], <16 x i16> [[SPLAT2]]
 ; AVX512BW-NEXT:    [[SH:%.*]] = lshr <16 x i16> [[Z:%.*]], [[SEL]]
 ; AVX512BW-NEXT:    ret <16 x i16> [[SH]]
 ;
 ; XOP-LABEL: @vector_variable_shift_right_v16i16(
-; XOP-NEXT:    [[SPLAT1:%.*]] = shufflevector <16 x i16> [[X:%.*]], <16 x i16> undef, <16 x i32> zeroinitializer
-; XOP-NEXT:    [[SPLAT2:%.*]] = shufflevector <16 x i16> [[Y:%.*]], <16 x i16> undef, <16 x i32> zeroinitializer
+; XOP-NEXT:    [[SPLAT1:%.*]] = shufflevector <16 x i16> [[X:%.*]], <16 x i16> poison, <16 x i32> zeroinitializer
+; XOP-NEXT:    [[SPLAT2:%.*]] = shufflevector <16 x i16> [[Y:%.*]], <16 x i16> poison, <16 x i32> zeroinitializer
 ; XOP-NEXT:    [[SEL:%.*]] = select <16 x i1> [[COND:%.*]], <16 x i16> [[SPLAT1]], <16 x i16> [[SPLAT2]]
 ; XOP-NEXT:    [[SH:%.*]] = lshr <16 x i16> [[Z:%.*]], [[SEL]]
 ; XOP-NEXT:    ret <16 x i16> [[SH]]
 ;
-  %splat1 = shufflevector <16 x i16> %x, <16 x i16> undef, <16 x i32> zeroinitializer
-  %splat2 = shufflevector <16 x i16> %y, <16 x i16> undef, <16 x i32> zeroinitializer
+
+  %splat1 = shufflevector <16 x i16> %x, <16 x i16> poison, <16 x i32> zeroinitializer
+  %splat2 = shufflevector <16 x i16> %y, <16 x i16> poison, <16 x i32> zeroinitializer
   %sel = select <16 x i1> %cond, <16 x i16> %splat1, <16 x i16> %splat2
   %sh = lshr <16 x i16> %z, %sel
   ret <16 x i16> %sh
@@ -86,14 +88,15 @@ define <16 x i16> @vector_variable_shift_right_v16i16(<16 x i1> %cond, <16 x i16
 
 define <32 x i8> @vector_variable_shift_right_v32i8(<32 x i1> %cond, <32 x i8> %x, <32 x i8> %y, <32 x i8> %z) {
 ; ALL-LABEL: @vector_variable_shift_right_v32i8(
-; ALL-NEXT:    [[SPLAT1:%.*]] = shufflevector <32 x i8> [[X:%.*]], <32 x i8> undef, <32 x i32> zeroinitializer
-; ALL-NEXT:    [[SPLAT2:%.*]] = shufflevector <32 x i8> [[Y:%.*]], <32 x i8> undef, <32 x i32> zeroinitializer
+; ALL-NEXT:    [[SPLAT1:%.*]] = shufflevector <32 x i8> [[X:%.*]], <32 x i8> poison, <32 x i32> zeroinitializer
+; ALL-NEXT:    [[SPLAT2:%.*]] = shufflevector <32 x i8> [[Y:%.*]], <32 x i8> poison, <32 x i32> zeroinitializer
 ; ALL-NEXT:    [[SEL:%.*]] = select <32 x i1> [[COND:%.*]], <32 x i8> [[SPLAT1]], <32 x i8> [[SPLAT2]]
 ; ALL-NEXT:    [[SH:%.*]] = lshr <32 x i8> [[Z:%.*]], [[SEL]]
 ; ALL-NEXT:    ret <32 x i8> [[SH]]
 ;
-  %splat1 = shufflevector <32 x i8> %x, <32 x i8> undef, <32 x i32> zeroinitializer
-  %splat2 = shufflevector <32 x i8> %y, <32 x i8> undef, <32 x i32> zeroinitializer
+
+  %splat1 = shufflevector <32 x i8> %x, <32 x i8> poison, <32 x i32> zeroinitializer
+  %splat2 = shufflevector <32 x i8> %y, <32 x i8> poison, <32 x i32> zeroinitializer
   %sel = select <32 x i1> %cond, <32 x i8> %splat1, <32 x i8> %splat2
   %sh = lshr <32 x i8> %z, %sel
   ret <32 x i8> %sh
@@ -110,11 +113,11 @@ define void @vector_variable_shift_left_loop(i32* nocapture %arr, i8* nocapture 
 ; AVX1:       vector.ph:
 ; AVX1-NEXT:    [[N_VEC:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 4294967292
 ; AVX1-NEXT:    [[SPLATINSERT18:%.*]] = insertelement <4 x i32> poison, i32 [[AMT0:%.*]], i32 0
-; AVX1-NEXT:    [[SPLAT1:%.*]] = shufflevector <4 x i32> [[SPLATINSERT18]], <4 x i32> undef, <4 x i32> zeroinitializer
+; AVX1-NEXT:    [[SPLAT1:%.*]] = shufflevector <4 x i32> [[SPLATINSERT18]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; AVX1-NEXT:    [[SPLATINSERT20:%.*]] = insertelement <4 x i32> poison, i32 [[AMT1:%.*]], i32 0
-; AVX1-NEXT:    [[SPLAT2:%.*]] = shufflevector <4 x i32> [[SPLATINSERT20]], <4 x i32> undef, <4 x i32> zeroinitializer
+; AVX1-NEXT:    [[SPLAT2:%.*]] = shufflevector <4 x i32> [[SPLATINSERT20]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; AVX1-NEXT:    [[SPLATINSERT22:%.*]] = insertelement <4 x i32> poison, i32 [[X:%.*]], i32 0
-; AVX1-NEXT:    [[SPLAT3:%.*]] = shufflevector <4 x i32> [[SPLATINSERT22]], <4 x i32> undef, <4 x i32> zeroinitializer
+; AVX1-NEXT:    [[SPLAT3:%.*]] = shufflevector <4 x i32> [[SPLATINSERT22]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; AVX1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX1:       vector.body:
 ; AVX1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -123,9 +126,9 @@ define void @vector_variable_shift_left_loop(i32* nocapture %arr, i8* nocapture 
 ; AVX1-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, <4 x i8>* [[TMP1]], align 1
 ; AVX1-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i8> [[WIDE_LOAD]], zeroinitializer
 ; AVX1-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[SPLAT1]], <4 x i32> [[SPLAT2]]
-; AVX1-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[SPLATINSERT18]], <4 x i32> undef, <4 x i32> zeroinitializer
+; AVX1-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[SPLATINSERT18]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; AVX1-NEXT:    [[TMP5:%.*]] = shl <4 x i32> [[SPLAT3]], [[TMP4]]
-; AVX1-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[SPLATINSERT20]], <4 x i32> undef, <4 x i32> zeroinitializer
+; AVX1-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[SPLATINSERT20]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; AVX1-NEXT:    [[TMP7:%.*]] = shl <4 x i32> [[SPLAT3]], [[TMP6]]
 ; AVX1-NEXT:    [[TMP8:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[TMP5]], <4 x i32> [[TMP7]]
 ; AVX1-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, i32* [[ARR:%.*]], i64 [[INDEX]]
@@ -145,11 +148,11 @@ define void @vector_variable_shift_left_loop(i32* nocapture %arr, i8* nocapture 
 ; AVX2:       vector.ph:
 ; AVX2-NEXT:    [[N_VEC:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 4294967292
 ; AVX2-NEXT:    [[SPLATINSERT18:%.*]] = insertelement <4 x i32> poison, i32 [[AMT0:%.*]], i32 0
-; AVX2-NEXT:    [[SPLAT1:%.*]] = shufflevector <4 x i32> [[SPLATINSERT18]], <4 x i32> undef, <4 x i32> zeroinitializer
+; AVX2-NEXT:    [[SPLAT1:%.*]] = shufflevector <4 x i32> [[SPLATINSERT18]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; AVX2-NEXT:    [[SPLATINSERT20:%.*]] = insertelement <4 x i32> poison, i32 [[AMT1:%.*]], i32 0
-; AVX2-NEXT:    [[SPLAT2:%.*]] = shufflevector <4 x i32> [[SPLATINSERT20]], <4 x i32> undef, <4 x i32> zeroinitializer
+; AVX2-NEXT:    [[SPLAT2:%.*]] = shufflevector <4 x i32> [[SPLATINSERT20]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; AVX2-NEXT:    [[SPLATINSERT22:%.*]] = insertelement <4 x i32> poison, i32 [[X:%.*]], i32 0
-; AVX2-NEXT:    [[SPLAT3:%.*]] = shufflevector <4 x i32> [[SPLATINSERT22]], <4 x i32> undef, <4 x i32> zeroinitializer
+; AVX2-NEXT:    [[SPLAT3:%.*]] = shufflevector <4 x i32> [[SPLATINSERT22]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; AVX2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX2:       vector.body:
 ; AVX2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -176,11 +179,11 @@ define void @vector_variable_shift_left_loop(i32* nocapture %arr, i8* nocapture 
 ; AVX512BW:       vector.ph:
 ; AVX512BW-NEXT:    [[N_VEC:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 4294967292
 ; AVX512BW-NEXT:    [[SPLATINSERT18:%.*]] = insertelement <4 x i32> poison, i32 [[AMT0:%.*]], i32 0
-; AVX512BW-NEXT:    [[SPLAT1:%.*]] = shufflevector <4 x i32> [[SPLATINSERT18]], <4 x i32> undef, <4 x i32> zeroinitializer
+; AVX512BW-NEXT:    [[SPLAT1:%.*]] = shufflevector <4 x i32> [[SPLATINSERT18]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; AVX512BW-NEXT:    [[SPLATINSERT20:%.*]] = insertelement <4 x i32> poison, i32 [[AMT1:%.*]], i32 0
-; AVX512BW-NEXT:    [[SPLAT2:%.*]] = shufflevector <4 x i32> [[SPLATINSERT20]], <4 x i32> undef, <4 x i32> zeroinitializer
+; AVX512BW-NEXT:    [[SPLAT2:%.*]] = shufflevector <4 x i32> [[SPLATINSERT20]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; AVX512BW-NEXT:    [[SPLATINSERT22:%.*]] = insertelement <4 x i32> poison, i32 [[X:%.*]], i32 0
-; AVX512BW-NEXT:    [[SPLAT3:%.*]] = shufflevector <4 x i32> [[SPLATINSERT22]], <4 x i32> undef, <4 x i32> zeroinitializer
+; AVX512BW-NEXT:    [[SPLAT3:%.*]] = shufflevector <4 x i32> [[SPLATINSERT22]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; AVX512BW-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX512BW:       vector.body:
 ; AVX512BW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -207,11 +210,11 @@ define void @vector_variable_shift_left_loop(i32* nocapture %arr, i8* nocapture 
 ; XOP:       vector.ph:
 ; XOP-NEXT:    [[N_VEC:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 4294967292
 ; XOP-NEXT:    [[SPLATINSERT18:%.*]] = insertelement <4 x i32> poison, i32 [[AMT0:%.*]], i32 0
-; XOP-NEXT:    [[SPLAT1:%.*]] = shufflevector <4 x i32> [[SPLATINSERT18]], <4 x i32> undef, <4 x i32> zeroinitializer
+; XOP-NEXT:    [[SPLAT1:%.*]] = shufflevector <4 x i32> [[SPLATINSERT18]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; XOP-NEXT:    [[SPLATINSERT20:%.*]] = insertelement <4 x i32> poison, i32 [[AMT1:%.*]], i32 0
-; XOP-NEXT:    [[SPLAT2:%.*]] = shufflevector <4 x i32> [[SPLATINSERT20]], <4 x i32> undef, <4 x i32> zeroinitializer
+; XOP-NEXT:    [[SPLAT2:%.*]] = shufflevector <4 x i32> [[SPLATINSERT20]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; XOP-NEXT:    [[SPLATINSERT22:%.*]] = insertelement <4 x i32> poison, i32 [[X:%.*]], i32 0
-; XOP-NEXT:    [[SPLAT3:%.*]] = shufflevector <4 x i32> [[SPLATINSERT22]], <4 x i32> undef, <4 x i32> zeroinitializer
+; XOP-NEXT:    [[SPLAT3:%.*]] = shufflevector <4 x i32> [[SPLATINSERT22]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; XOP-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; XOP:       vector.body:
 ; XOP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -230,6 +233,7 @@ define void @vector_variable_shift_left_loop(i32* nocapture %arr, i8* nocapture 
 ; XOP:       exit:
 ; XOP-NEXT:    ret void
 ;
+
 entry:
   %cmp16 = icmp sgt i32 %count, 0
   %wide.trip.count = zext i32 %count to i64
@@ -238,11 +242,11 @@ entry:
 vector.ph:
   %n.vec = and i64 %wide.trip.count, 4294967292
   %splatinsert18 = insertelement <4 x i32> poison, i32 %amt0, i32 0
-  %splat1 = shufflevector <4 x i32> %splatinsert18, <4 x i32> undef, <4 x i32> zeroinitializer
+  %splat1 = shufflevector <4 x i32> %splatinsert18, <4 x i32> poison, <4 x i32> zeroinitializer
   %splatinsert20 = insertelement <4 x i32> poison, i32 %amt1, i32 0
-  %splat2 = shufflevector <4 x i32> %splatinsert20, <4 x i32> undef, <4 x i32> zeroinitializer
+  %splat2 = shufflevector <4 x i32> %splatinsert20, <4 x i32> poison, <4 x i32> zeroinitializer
   %splatinsert22 = insertelement <4 x i32> poison, i32 %x, i32 0
-  %splat3 = shufflevector <4 x i32> %splatinsert22, <4 x i32> undef, <4 x i32> zeroinitializer
+  %splat3 = shufflevector <4 x i32> %splatinsert22, <4 x i32> poison, <4 x i32> zeroinitializer
   br label %vector.body
 
 vector.body:
@@ -272,9 +276,9 @@ define void @fancierRotate2(i32* %arr, i8* %control, i32 %rot0, i32 %rot1) {
 ; AVX1-LABEL: @fancierRotate2(
 ; AVX1-NEXT:  entry:
 ; AVX1-NEXT:    [[I0:%.*]] = insertelement <8 x i32> poison, i32 [[ROT0:%.*]], i32 0
-; AVX1-NEXT:    [[S0:%.*]] = shufflevector <8 x i32> [[I0]], <8 x i32> undef, <8 x i32> zeroinitializer
+; AVX1-NEXT:    [[S0:%.*]] = shufflevector <8 x i32> [[I0]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; AVX1-NEXT:    [[I1:%.*]] = insertelement <8 x i32> poison, i32 [[ROT1:%.*]], i32 0
-; AVX1-NEXT:    [[S1:%.*]] = shufflevector <8 x i32> [[I1]], <8 x i32> undef, <8 x i32> zeroinitializer
+; AVX1-NEXT:    [[S1:%.*]] = shufflevector <8 x i32> [[I1]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; AVX1-NEXT:    br label [[LOOP:%.*]]
 ; AVX1:       loop:
 ; AVX1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[LOOP]] ]
@@ -286,9 +290,9 @@ define void @fancierRotate2(i32* %arr, i8* %control, i32 %rot0, i32 %rot1) {
 ; AVX1-NEXT:    [[T4:%.*]] = getelementptr inbounds i32, i32* [[ARR:%.*]], i64 [[INDEX]]
 ; AVX1-NEXT:    [[T5:%.*]] = bitcast i32* [[T4]] to <8 x i32>*
 ; AVX1-NEXT:    [[WIDE_LOAD21:%.*]] = load <8 x i32>, <8 x i32>* [[T5]], align 4
-; AVX1-NEXT:    [[TMP0:%.*]] = shufflevector <8 x i32> [[I0]], <8 x i32> undef, <8 x i32> zeroinitializer
+; AVX1-NEXT:    [[TMP0:%.*]] = shufflevector <8 x i32> [[I0]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; AVX1-NEXT:    [[TMP1:%.*]] = call <8 x i32> @llvm.fshl.v8i32(<8 x i32> [[WIDE_LOAD21]], <8 x i32> [[WIDE_LOAD21]], <8 x i32> [[TMP0]])
-; AVX1-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[I1]], <8 x i32> undef, <8 x i32> zeroinitializer
+; AVX1-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[I1]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; AVX1-NEXT:    [[TMP3:%.*]] = call <8 x i32> @llvm.fshl.v8i32(<8 x i32> [[WIDE_LOAD21]], <8 x i32> [[WIDE_LOAD21]], <8 x i32> [[TMP2]])
 ; AVX1-NEXT:    [[TMP4:%.*]] = select <8 x i1> [[T2]], <8 x i32> [[TMP1]], <8 x i32> [[TMP3]]
 ; AVX1-NEXT:    store <8 x i32> [[TMP4]], <8 x i32>* [[T5]], align 4
@@ -301,9 +305,9 @@ define void @fancierRotate2(i32* %arr, i8* %control, i32 %rot0, i32 %rot1) {
 ; AVX2-LABEL: @fancierRotate2(
 ; AVX2-NEXT:  entry:
 ; AVX2-NEXT:    [[I0:%.*]] = insertelement <8 x i32> poison, i32 [[ROT0:%.*]], i32 0
-; AVX2-NEXT:    [[S0:%.*]] = shufflevector <8 x i32> [[I0]], <8 x i32> undef, <8 x i32> zeroinitializer
+; AVX2-NEXT:    [[S0:%.*]] = shufflevector <8 x i32> [[I0]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; AVX2-NEXT:    [[I1:%.*]] = insertelement <8 x i32> poison, i32 [[ROT1:%.*]], i32 0
-; AVX2-NEXT:    [[S1:%.*]] = shufflevector <8 x i32> [[I1]], <8 x i32> undef, <8 x i32> zeroinitializer
+; AVX2-NEXT:    [[S1:%.*]] = shufflevector <8 x i32> [[I1]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; AVX2-NEXT:    br label [[LOOP:%.*]]
 ; AVX2:       loop:
 ; AVX2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[LOOP]] ]
@@ -326,9 +330,9 @@ define void @fancierRotate2(i32* %arr, i8* %control, i32 %rot0, i32 %rot1) {
 ; AVX512BW-LABEL: @fancierRotate2(
 ; AVX512BW-NEXT:  entry:
 ; AVX512BW-NEXT:    [[I0:%.*]] = insertelement <8 x i32> poison, i32 [[ROT0:%.*]], i32 0
-; AVX512BW-NEXT:    [[S0:%.*]] = shufflevector <8 x i32> [[I0]], <8 x i32> undef, <8 x i32> zeroinitializer
+; AVX512BW-NEXT:    [[S0:%.*]] = shufflevector <8 x i32> [[I0]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; AVX512BW-NEXT:    [[I1:%.*]] = insertelement <8 x i32> poison, i32 [[ROT1:%.*]], i32 0
-; AVX512BW-NEXT:    [[S1:%.*]] = shufflevector <8 x i32> [[I1]], <8 x i32> undef, <8 x i32> zeroinitializer
+; AVX512BW-NEXT:    [[S1:%.*]] = shufflevector <8 x i32> [[I1]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; AVX512BW-NEXT:    br label [[LOOP:%.*]]
 ; AVX512BW:       loop:
 ; AVX512BW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[LOOP]] ]
@@ -351,9 +355,9 @@ define void @fancierRotate2(i32* %arr, i8* %control, i32 %rot0, i32 %rot1) {
 ; XOP-LABEL: @fancierRotate2(
 ; XOP-NEXT:  entry:
 ; XOP-NEXT:    [[I0:%.*]] = insertelement <8 x i32> poison, i32 [[ROT0:%.*]], i32 0
-; XOP-NEXT:    [[S0:%.*]] = shufflevector <8 x i32> [[I0]], <8 x i32> undef, <8 x i32> zeroinitializer
+; XOP-NEXT:    [[S0:%.*]] = shufflevector <8 x i32> [[I0]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; XOP-NEXT:    [[I1:%.*]] = insertelement <8 x i32> poison, i32 [[ROT1:%.*]], i32 0
-; XOP-NEXT:    [[S1:%.*]] = shufflevector <8 x i32> [[I1]], <8 x i32> undef, <8 x i32> zeroinitializer
+; XOP-NEXT:    [[S1:%.*]] = shufflevector <8 x i32> [[I1]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; XOP-NEXT:    br label [[LOOP:%.*]]
 ; XOP:       loop:
 ; XOP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[LOOP]] ]
@@ -373,11 +377,12 @@ define void @fancierRotate2(i32* %arr, i8* %control, i32 %rot0, i32 %rot1) {
 ; XOP:       exit:
 ; XOP-NEXT:    ret void
 ;
+
 entry:
   %i0 = insertelement <8 x i32> poison, i32 %rot0, i32 0
-  %s0 = shufflevector <8 x i32> %i0, <8 x i32> undef, <8 x i32> zeroinitializer
+  %s0 = shufflevector <8 x i32> %i0, <8 x i32> poison, <8 x i32> zeroinitializer
   %i1 = insertelement <8 x i32> poison, i32 %rot1, i32 0
-  %s1 = shufflevector <8 x i32> %i1, <8 x i32> undef, <8 x i32> zeroinitializer
+  %s1 = shufflevector <8 x i32> %i1, <8 x i32> poison, <8 x i32> zeroinitializer
   br label %loop
 
 loop:

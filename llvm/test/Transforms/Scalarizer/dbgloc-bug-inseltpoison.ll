@@ -13,7 +13,7 @@ bb1:
   %_tmp7 = tail call i16 @f1(), !dbg !13
 ; CHECK: call i16 @f1(), !dbg !13
   %broadcast.splatinsert5 = insertelement <4 x i16> poison, i16 %_tmp7, i32 0
-  %broadcast.splat6 = shufflevector <4 x i16> %broadcast.splatinsert5, <4 x i16> undef, <4 x i32> zeroinitializer
+  %broadcast.splat6 = shufflevector <4 x i16> %broadcast.splatinsert5, <4 x i16> poison, <4 x i32> zeroinitializer
   br label %vector.body
 
 vector.body:

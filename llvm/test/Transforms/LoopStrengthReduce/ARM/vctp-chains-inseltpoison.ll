@@ -11,7 +11,7 @@ define float @vctp8(float* %0, i32 %1) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint float* [[TMP0:%.*]] to i32
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> poison, i32 [[TMP6]], i32 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i32> [[TMP7]], <i32 -32, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP10:%.*]] = add <4 x i32> [[TMP4]], [[TMP9]]
 ; CHECK-NEXT:    br label [[TMP11:%.*]]
 ; CHECK:       11:
@@ -39,7 +39,7 @@ define float @vctp8(float* %0, i32 %1) {
   %6 = ptrtoint float* %0 to i32
   %7 = insertelement <4 x i32> poison, i32 %6, i32 0
   %8 = add <4 x i32> %7, <i32 -32, i32 undef, i32 undef, i32 undef>
-  %9 = shufflevector <4 x i32> %8, <4 x i32> undef, <4 x i32> zeroinitializer
+  %9 = shufflevector <4 x i32> %8, <4 x i32> poison, <4 x i32> zeroinitializer
   %10 = add <4 x i32> %4, %9
   br label %11
 
@@ -72,7 +72,7 @@ define float @vctp16(float* %0, i32 %1) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint float* [[TMP0:%.*]] to i32
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> poison, i32 [[TMP6]], i32 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i32> [[TMP7]], <i32 -32, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP10:%.*]] = add <4 x i32> [[TMP4]], [[TMP9]]
 ; CHECK-NEXT:    br label [[TMP11:%.*]]
 ; CHECK:       11:
@@ -100,7 +100,7 @@ define float @vctp16(float* %0, i32 %1) {
   %6 = ptrtoint float* %0 to i32
   %7 = insertelement <4 x i32> poison, i32 %6, i32 0
   %8 = add <4 x i32> %7, <i32 -32, i32 undef, i32 undef, i32 undef>
-  %9 = shufflevector <4 x i32> %8, <4 x i32> undef, <4 x i32> zeroinitializer
+  %9 = shufflevector <4 x i32> %8, <4 x i32> poison, <4 x i32> zeroinitializer
   %10 = add <4 x i32> %4, %9
   br label %11
 
@@ -133,7 +133,7 @@ define float @vctpi32(float* %0, i32 %1) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint float* [[TMP0:%.*]] to i32
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> poison, i32 [[TMP6]], i32 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i32> [[TMP7]], <i32 -32, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP10:%.*]] = add <4 x i32> [[TMP4]], [[TMP9]]
 ; CHECK-NEXT:    br label [[TMP11:%.*]]
 ; CHECK:       11:
@@ -160,7 +160,7 @@ define float @vctpi32(float* %0, i32 %1) {
   %6 = ptrtoint float* %0 to i32
   %7 = insertelement <4 x i32> poison, i32 %6, i32 0
   %8 = add <4 x i32> %7, <i32 -32, i32 undef, i32 undef, i32 undef>
-  %9 = shufflevector <4 x i32> %8, <4 x i32> undef, <4 x i32> zeroinitializer
+  %9 = shufflevector <4 x i32> %8, <4 x i32> poison, <4 x i32> zeroinitializer
   %10 = add <4 x i32> %4, %9
   br label %11
 
@@ -193,7 +193,7 @@ define float @vctpi64(float* %0, i32 %1) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint float* [[TMP0:%.*]] to i32
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> poison, i32 [[TMP6]], i32 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i32> [[TMP7]], <i32 -32, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP10:%.*]] = add <4 x i32> [[TMP4]], [[TMP9]]
 ; CHECK-NEXT:    br label [[TMP11:%.*]]
 ; CHECK:       11:
@@ -220,7 +220,7 @@ define float @vctpi64(float* %0, i32 %1) {
   %6 = ptrtoint float* %0 to i32
   %7 = insertelement <4 x i32> poison, i32 %6, i32 0
   %8 = add <4 x i32> %7, <i32 -32, i32 undef, i32 undef, i32 undef>
-  %9 = shufflevector <4 x i32> %8, <4 x i32> undef, <4 x i32> zeroinitializer
+  %9 = shufflevector <4 x i32> %8, <4 x i32> poison, <4 x i32> zeroinitializer
   %10 = add <4 x i32> %4, %9
   br label %11
 
