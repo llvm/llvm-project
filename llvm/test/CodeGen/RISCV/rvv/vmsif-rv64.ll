@@ -29,7 +29,7 @@ define <vscale x 1 x i1> @intrinsic_vmsif_mask_m_nxv1i1_nxv1i1(<vscale x 1 x i1>
 ; CHECK-LABEL: intrinsic_vmsif_mask_m_nxv1i1_nxv1i1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v25, v0
-; CHECK-NEXT:    vsetvli a0, a0, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e8,mf8,tu,mu
 ; CHECK-NEXT:    vmv1r.v v0, v17
 ; CHECK-NEXT:    vmsif.m v25, v16, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v25
@@ -71,7 +71,7 @@ define <vscale x 2 x i1> @intrinsic_vmsif_mask_m_nxv2i1_nxv2i1(<vscale x 2 x i1>
 ; CHECK-LABEL: intrinsic_vmsif_mask_m_nxv2i1_nxv2i1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v25, v0
-; CHECK-NEXT:    vsetvli a0, a0, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e8,mf4,tu,mu
 ; CHECK-NEXT:    vmv1r.v v0, v17
 ; CHECK-NEXT:    vmsif.m v25, v16, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v25
@@ -113,7 +113,7 @@ define <vscale x 4 x i1> @intrinsic_vmsif_mask_m_nxv4i1_nxv4i1(<vscale x 4 x i1>
 ; CHECK-LABEL: intrinsic_vmsif_mask_m_nxv4i1_nxv4i1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v25, v0
-; CHECK-NEXT:    vsetvli a0, a0, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e8,mf2,tu,mu
 ; CHECK-NEXT:    vmv1r.v v0, v17
 ; CHECK-NEXT:    vmsif.m v25, v16, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v25
@@ -155,7 +155,7 @@ define <vscale x 8 x i1> @intrinsic_vmsif_mask_m_nxv8i1_nxv8i1(<vscale x 8 x i1>
 ; CHECK-LABEL: intrinsic_vmsif_mask_m_nxv8i1_nxv8i1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v25, v0
-; CHECK-NEXT:    vsetvli a0, a0, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e8,m1,tu,mu
 ; CHECK-NEXT:    vmv1r.v v0, v17
 ; CHECK-NEXT:    vmsif.m v25, v16, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v25
@@ -197,7 +197,7 @@ define <vscale x 16 x i1> @intrinsic_vmsif_mask_m_nxv16i1_nxv16i1(<vscale x 16 x
 ; CHECK-LABEL: intrinsic_vmsif_mask_m_nxv16i1_nxv16i1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v25, v0
-; CHECK-NEXT:    vsetvli a0, a0, e8,m2,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e8,m2,tu,mu
 ; CHECK-NEXT:    vmv1r.v v0, v17
 ; CHECK-NEXT:    vmsif.m v25, v16, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v25
@@ -239,7 +239,7 @@ define <vscale x 32 x i1> @intrinsic_vmsif_mask_m_nxv32i1_nxv32i1(<vscale x 32 x
 ; CHECK-LABEL: intrinsic_vmsif_mask_m_nxv32i1_nxv32i1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v25, v0
-; CHECK-NEXT:    vsetvli a0, a0, e8,m4,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e8,m4,tu,mu
 ; CHECK-NEXT:    vmv1r.v v0, v17
 ; CHECK-NEXT:    vmsif.m v25, v16, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v25
@@ -281,7 +281,7 @@ define <vscale x 64 x i1> @intrinsic_vmsif_mask_m_nxv64i1_nxv64i1(<vscale x 64 x
 ; CHECK-LABEL: intrinsic_vmsif_mask_m_nxv64i1_nxv64i1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v25, v0
-; CHECK-NEXT:    vsetvli a0, a0, e8,m8,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e8,m8,tu,mu
 ; CHECK-NEXT:    vmv1r.v v0, v17
 ; CHECK-NEXT:    vmsif.m v25, v16, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v25
