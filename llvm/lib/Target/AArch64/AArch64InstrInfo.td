@@ -813,7 +813,21 @@ def WFET : RegInputSystemI<0b0000, 0b000, "wfet">;
 def WFIT : RegInputSystemI<0b0000, 0b001, "wfit">;
 }
 
+// Branch Record Buffer two-word mnemonic instructions
+class BRBEI<bits<3> op2, string keyword>
+    : SimpleSystemI<0, (ins), "brb", keyword>, Sched<[WriteSys]> {
+  let Inst{31-8} = 0b110101010000100101110010;
+  let Inst{7-5} = op2;
+  let Predicates = [HasBRBE];
 }
+def BRB_IALL: BRBEI<0b100, "\tiall">;
+def BRB_INJ:  BRBEI<0b101, "\tinj">;
+
+}
+
+// Allow uppercase and lowercase keyword arguments for BRB IALL and BRB INJ
+def : TokenAlias<"INJ", "inj">;
+def : TokenAlias<"IALL", "iall">;
 
 // ARMv8.2-A Dot Product
 let Predicates = [HasDotProd] in {
