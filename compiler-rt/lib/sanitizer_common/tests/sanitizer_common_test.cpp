@@ -226,27 +226,21 @@ bool UptrLess(uptr a, uptr b) {
 }
 
 TEST(SanitizerCommon, InternalLowerBound) {
-  static const uptr kSize = 5;
-  int arr[kSize];
-  arr[0] = 1;
-  arr[1] = 3;
-  arr[2] = 5;
-  arr[3] = 7;
-  arr[4] = 11;
+  std::vector<int> arr = {1, 3, 5, 7, 11};
 
-  EXPECT_EQ(0u, InternalLowerBound(arr, 0, kSize, 0, UptrLess));
-  EXPECT_EQ(0u, InternalLowerBound(arr, 0, kSize, 1, UptrLess));
-  EXPECT_EQ(1u, InternalLowerBound(arr, 0, kSize, 2, UptrLess));
-  EXPECT_EQ(1u, InternalLowerBound(arr, 0, kSize, 3, UptrLess));
-  EXPECT_EQ(2u, InternalLowerBound(arr, 0, kSize, 4, UptrLess));
-  EXPECT_EQ(2u, InternalLowerBound(arr, 0, kSize, 5, UptrLess));
-  EXPECT_EQ(3u, InternalLowerBound(arr, 0, kSize, 6, UptrLess));
-  EXPECT_EQ(3u, InternalLowerBound(arr, 0, kSize, 7, UptrLess));
-  EXPECT_EQ(4u, InternalLowerBound(arr, 0, kSize, 8, UptrLess));
-  EXPECT_EQ(4u, InternalLowerBound(arr, 0, kSize, 9, UptrLess));
-  EXPECT_EQ(4u, InternalLowerBound(arr, 0, kSize, 10, UptrLess));
-  EXPECT_EQ(4u, InternalLowerBound(arr, 0, kSize, 11, UptrLess));
-  EXPECT_EQ(5u, InternalLowerBound(arr, 0, kSize, 12, UptrLess));
+  EXPECT_EQ(0u, InternalLowerBound(arr, 0));
+  EXPECT_EQ(0u, InternalLowerBound(arr, 1));
+  EXPECT_EQ(1u, InternalLowerBound(arr, 2));
+  EXPECT_EQ(1u, InternalLowerBound(arr, 3));
+  EXPECT_EQ(2u, InternalLowerBound(arr, 4));
+  EXPECT_EQ(2u, InternalLowerBound(arr, 5));
+  EXPECT_EQ(3u, InternalLowerBound(arr, 6));
+  EXPECT_EQ(3u, InternalLowerBound(arr, 7));
+  EXPECT_EQ(4u, InternalLowerBound(arr, 8));
+  EXPECT_EQ(4u, InternalLowerBound(arr, 9));
+  EXPECT_EQ(4u, InternalLowerBound(arr, 10));
+  EXPECT_EQ(4u, InternalLowerBound(arr, 11));
+  EXPECT_EQ(5u, InternalLowerBound(arr, 12));
 }
 
 TEST(SanitizerCommon, InternalLowerBoundVsStdLowerBound) {
@@ -268,8 +262,8 @@ TEST(SanitizerCommon, InternalLowerBoundVsStdLowerBound) {
       for (auto to_find : {val - 1, val, val + 1}) {
         uptr expected =
             std::lower_bound(data.begin(), data.end(), to_find) - data.begin();
-        EXPECT_EQ(expected, InternalLowerBound(data.data(), 0, data.size(),
-                                               to_find, std::less<int>()));
+        EXPECT_EQ(expected,
+                  InternalLowerBound(data, to_find, std::less<int>()));
       }
     }
   }
