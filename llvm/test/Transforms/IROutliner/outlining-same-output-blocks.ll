@@ -18,7 +18,7 @@ define void @outline_outputs1() #0 {
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 -1, i8* [[LT_CAST]])
 ; CHECK-NEXT:    [[LT_CAST1:%.*]] = bitcast i32* [[DOTLOC]] to i8*
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 -1, i8* [[LT_CAST1]])
-; CHECK-NEXT:    call void @outlined_ir_func_0(i32* [[A]], i32* [[B]], i32* [[OUTPUT]], i32* [[ADD_LOC]], i32* [[DOTLOC]], i32 0)
+; CHECK-NEXT:    call void @outlined_ir_func_0(i32* [[A]], i32* [[B]], i32* [[OUTPUT]], i32* [[ADD_LOC]], i32* [[DOTLOC]])
 ; CHECK-NEXT:    [[ADD_RELOAD:%.*]] = load i32, i32* [[ADD_LOC]], align 4
 ; CHECK-NEXT:    [[DOTRELOAD:%.*]] = load i32, i32* [[DOTLOC]], align 4
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 -1, i8* [[LT_CAST]])
@@ -58,7 +58,7 @@ define void @outline_outputs2() #0 {
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 -1, i8* [[LT_CAST]])
 ; CHECK-NEXT:    [[LT_CAST1:%.*]] = bitcast i32* [[DOTLOC]] to i8*
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 -1, i8* [[LT_CAST1]])
-; CHECK-NEXT:    call void @outlined_ir_func_0(i32* [[A]], i32* [[B]], i32* [[OUTPUT]], i32* [[ADD_LOC]], i32* [[DOTLOC]], i32 1)
+; CHECK-NEXT:    call void @outlined_ir_func_0(i32* [[A]], i32* [[B]], i32* [[OUTPUT]], i32* [[ADD_LOC]], i32* [[DOTLOC]])
 ; CHECK-NEXT:    [[ADD_RELOAD:%.*]] = load i32, i32* [[ADD_LOC]], align 4
 ; CHECK-NEXT:    [[DOTRELOAD:%.*]] = load i32, i32* [[DOTLOC]], align 4
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 -1, i8* [[LT_CAST]])
@@ -83,25 +83,16 @@ entry:
   ret void
 }
 
-; CHECK: define internal void @outlined_ir_func_0(i32* [[ARG0:%.*]], i32* [[ARG1:%.*]], i32* [[ARG2:%.*]], i32* [[ARG3:%.*]], i32* [[ARG4:%.*]], i32 [[ARG5:%.*]]) #1 {
+; CHECK: define internal void @outlined_ir_func_0(i32* [[ARG0:%.*]], i32* [[ARG1:%.*]], i32* [[ARG2:%.*]], i32* [[ARG3:%.*]], i32* [[ARG4:%.*]]) #1 {
 ; CHECK: entry_after_outline.exitStub:
-; CHECK-NEXT:    switch i32 [[ARG5]], label [[BLOCK:%.*]] [
-; CHECK-NEXT:      i32 0, label %[[BLOCK_0:.*]]
-; CHECK-NEXT:      i32 1, label %[[BLOCK_1:.*]]
+; CHECK-NEXT:    store i32 [[ADD:%.*]], i32* [[ARG3]], align 4
+; CHECK-NEXT:    store i32 [[TMP2:%.*]], i32* [[ARG4]], align 4
 
 ; CHECK: entry_to_outline:
 ; CHECK-NEXT:    store i32 2, i32* [[ARG0]], align 4
 ; CHECK-NEXT:    store i32 3, i32* [[ARG1]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARG0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARG1]], align 4
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[ADD]] = add i32 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    store i32 [[ADD]], i32* [[ARG2]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARG2]], align 4
-
-; CHECK: [[BLOCK_0]]:
-; CHECK-NEXT:    store i32 [[ADD]], i32* [[ARG3]], align 4
-; CHECK-NEXT:    store i32 [[TMP2]], i32* [[ARG4]], align 4
-
-; CHECK: [[BLOCK_1]]:
-; CHECK-NEXT:    store i32 [[ADD]], i32* [[ARG3]], align 4
-; CHECK-NEXT:    store i32 [[TMP2]], i32* [[ARG4]], align 4
+; CHECK-NEXT:    [[TMP2]] = load i32, i32* [[ARG2]], align 4

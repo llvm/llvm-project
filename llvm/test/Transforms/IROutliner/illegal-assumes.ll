@@ -14,7 +14,7 @@ define void @outline_assumes() {
 ; CHECK-NEXT:    [[D:%.*]] = alloca i1, align 4
 ; CHECK-NEXT:    [[LT_CAST:%.*]] = bitcast i1* [[DL_LOC]] to i8*
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 -1, i8* [[LT_CAST]])
-; CHECK-NEXT:    call void @outlined_ir_func_3(i1 true, i1* [[D]], i1* [[DL_LOC]], i32 0)
+; CHECK-NEXT:    call void @outlined_ir_func_3(i1 true, i1* [[D]], i1* [[DL_LOC]])
 ; CHECK-NEXT:    [[DL_RELOAD:%.*]] = load i1, i1* [[DL_LOC]], align 1
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 -1, i8* [[LT_CAST]])
 ; CHECK-NEXT:    [[SPLIT_INST:%.*]] = sub i1 [[DL_RELOAD]], [[DL_RELOAD]]
@@ -51,7 +51,7 @@ define void @outline_assumes2() {
 ; CHECK-NEXT:    [[D:%.*]] = alloca i1, align 4
 ; CHECK-NEXT:    [[LT_CAST:%.*]] = bitcast i1* [[DL_LOC]] to i8*
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 -1, i8* [[LT_CAST]])
-; CHECK-NEXT:    call void @outlined_ir_func_3(i1 false, i1* [[D]], i1* [[DL_LOC]], i32 1)
+; CHECK-NEXT:    call void @outlined_ir_func_3(i1 false, i1* [[D]], i1* [[DL_LOC]])
 ; CHECK-NEXT:    [[DL_RELOAD:%.*]] = load i1, i1* [[DL_LOC]], align 1
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 -1, i8* [[LT_CAST]])
 ; CHECK-NEXT:    call void @outlined_ir_func_0(i32* [[A]], i32* [[B]], i32* [[C]])
