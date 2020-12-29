@@ -452,12 +452,15 @@ LogicalResult TextualPipeline::addToPipeline(
     function_ref<LogicalResult(const Twine &)> errorHandler) const {
   for (auto &elt : elements) {
     if (elt.registryEntry) {
-      if (failed(
-              elt.registryEntry->addToPipeline(pm, elt.options, errorHandler)))
-        return failure();
+      if (failed(elt.registryEntry->addToPipeline(pm, elt.options,
+                                                  errorHandler))) {
+        return errorHandler("failed to add `" + elt.name + "` with options `" +
+                            elt.options + "`");
+      }
     } else if (failed(addToPipeline(elt.innerPipeline, pm.nest(elt.name),
                                     errorHandler))) {
-      return failure();
+      return errorHandler("failed to add `" + elt.name + "` with options `" +
+                          elt.options + "` to inner pipeline");
     }
   }
   return success();
