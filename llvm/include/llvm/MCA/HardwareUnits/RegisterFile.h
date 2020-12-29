@@ -172,11 +172,6 @@ class RegisterFile : public HardwareUnit {
   void freePhysRegs(const RegisterRenamingInfo &Entry,
                     MutableArrayRef<unsigned> FreedPhysRegs);
 
-  // Collects writes that are in a RAW dependency with RS.
-  // This method is called from `addRegisterRead()`.
-  void collectWrites(const ReadState &RS,
-                     SmallVectorImpl<WriteRef> &Writes) const;
-
   // Create an instance of RegisterMappingTracker for every register file
   // specified by the processor model.
   // If no register file is specified, then this method creates a default
@@ -186,6 +181,10 @@ class RegisterFile : public HardwareUnit {
 public:
   RegisterFile(const MCSchedModel &SM, const MCRegisterInfo &mri,
                unsigned NumRegs = 0);
+
+  // Collects writes that are in a RAW dependency with RS.
+  void collectWrites(const ReadState &RS,
+                     SmallVectorImpl<WriteRef> &Writes) const;
 
   // This method updates the register mappings inserting a new register
   // definition. This method is also responsible for updating the number of

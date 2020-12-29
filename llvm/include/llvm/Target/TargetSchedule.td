@@ -262,6 +262,10 @@ class ProcWriteResources<list<ProcResourceKind> resources> {
   // Allow a processor to mark some scheduling classes as single-issue.
   // SingleIssue is an alias for Begin/End Group.
   bit SingleIssue = false;
+  // An instruction is allowed to retire out-of-order if RetireOOO is
+  // true for at least one of its writes. This field is only used by
+  // MCA for in-order subtargets, and is ignored for other targets.
+  bit RetireOOO = false;
   SchedMachineModel SchedModel = ?;
 }
 
