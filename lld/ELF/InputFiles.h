@@ -189,12 +189,7 @@ protected:
 
 // .o file.
 template <class ELFT> class ObjFile : public ELFFileBase {
-  using Elf_Rel = typename ELFT::Rel;
-  using Elf_Rela = typename ELFT::Rela;
-  using Elf_Sym = typename ELFT::Sym;
-  using Elf_Shdr = typename ELFT::Shdr;
-  using Elf_Word = typename ELFT::Word;
-  using Elf_CGProfile = typename ELFT::CGProfile;
+  LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
 
 public:
   static bool classof(const InputFile *f) { return f->kind() == ObjKind; }
