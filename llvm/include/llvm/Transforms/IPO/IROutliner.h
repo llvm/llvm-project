@@ -145,6 +145,12 @@ struct OutlinableRegion {
   /// function has been extracted, the start and end of the BasicBlock
   /// containing the called function.
   void reattachCandidate();
+
+  /// Get the size of the code removed from the region.
+  ///
+  /// \param [in] TTI - The TargetTransformInfo for the parent function.
+  /// \returns the code size of the region
+  unsigned getBenefit(TargetTransformInfo &TTI);
 };
 
 /// This class is a pass that identifies similarity in a Module, extracts
@@ -201,6 +207,28 @@ private:
   void findAddInputsOutputs(Module &M, OutlinableRegion &Region,
                             DenseSet<unsigned> &NotSame);
 
+  /// Find the number of instructions that will be removed by extracting the
+  /// OutlinableRegions in \p CurrentGroup.
+  ///
+  /// \param [in] CurrentGroup - The collection of OutlinableRegions to be
+  /// analyzed.
+  /// \returns the number of outlined instructions across all regions.
+  unsigned findBenefitFromAllRegions(OutlinableGroup &CurrentGroup);
+
+  /// Find the number of instructions that will be added by reloading arguments.
+  ///
+  /// \param [in] CurrentGroup - The collection of OutlinableRegions to be
+  /// analyzed.
+  /// \returns the number of added reload instructions across all regions.
+  unsigned findCostOutputReloads(OutlinableGroup &CurrentGroup);
+
+  /// Find the cost and the benefit of \p CurrentGroup and save it back to
+  /// \p CurrentGroup.
+  ///
+  /// \param [in] M - The module being analyzed
+  /// \param [in,out] CurrentGroup - The overall outlined section
+  void findCostBenefit(Module &M, OutlinableGroup &CurrentGroup);
+
   /// Update the output mapping based on the load instruction, and the outputs
   /// of the extracted function.
   ///
@@ -228,6 +256,11 @@ private:
   void deduplicateExtractedSections(Module &M, OutlinableGroup &CurrentGroup,
                                     std::vector<Function *> &FuncsToRemove,
                                     unsigned &OutlinedFunctionNum);
+
+  /// If false, we do not worry if the cost is greater than the benefit.  This
+  /// is for debugging and testing, so that we can test small cases to ensure
+  /// that the outlining is being done correctly.
+  bool CostModel = true;
 
   /// The set of outlined Instructions, identified by their location in the
   /// sequential ordering of instructions in a Module.
