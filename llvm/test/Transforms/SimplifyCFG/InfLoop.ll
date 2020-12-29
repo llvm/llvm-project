@@ -1,4 +1,4 @@
-; RUN: opt < %s -simplifycfg -disable-output
+; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -disable-output
 ; END.
 
 target datalayout = "e-m:o-p:32:32-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32"
