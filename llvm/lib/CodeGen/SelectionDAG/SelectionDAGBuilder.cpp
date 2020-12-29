@@ -8461,7 +8461,7 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call) {
           InlineAsm::getFlagWord(InlineAsm::Kind_Imm, Ops.size());
         AsmNodeOperands.push_back(DAG.getTargetConstant(
             ResOpType, getCurSDLoc(), TLI.getPointerTy(DAG.getDataLayout())));
-        AsmNodeOperands.insert(AsmNodeOperands.end(), Ops.begin(), Ops.end());
+        llvm::append_range(AsmNodeOperands, Ops);
         break;
       }
 
