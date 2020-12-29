@@ -118,30 +118,28 @@ void SuspiciousEnumUsageCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 
 void SuspiciousEnumUsageCheck::registerMatchers(MatchFinder *Finder) {
   const auto EnumExpr = [](StringRef RefName, StringRef DeclName) {
-    return expr(ignoringImpCasts(expr().bind(RefName)),
-                ignoringImpCasts(hasType(enumDecl().bind(DeclName))));
+    return expr(hasType(enumDecl().bind(DeclName))).bind(RefName);
   };
 
   Finder->addMatcher(
-      binaryOperator(hasOperatorName("|"), hasLHS(EnumExpr("", "enumDecl")),
-                     hasRHS(expr(EnumExpr("", "otherEnumDecl"),
-                                 ignoringImpCasts(hasType(enumDecl(
-                                     unless(equalsBoundNode("enumDecl"))))))))
+      binaryOperator(
+          hasOperatorName("|"), hasLHS(hasType(enumDecl().bind("enumDecl"))),
+          hasRHS(hasType(enumDecl(unless(equalsBoundNode("enumDecl")))
+                             .bind("otherEnumDecl"))))
           .bind("diffEnumOp"),
       this);
 
   Finder->addMatcher(
       binaryOperator(hasAnyOperatorName("+", "|"),
                      hasLHS(EnumExpr("lhsExpr", "enumDecl")),
-                     hasRHS(expr(EnumExpr("rhsExpr", ""),
-                                 ignoringImpCasts(hasType(
-                                     enumDecl(equalsBoundNode("enumDecl"))))))),
+                     hasRHS(expr(hasType(enumDecl(equalsBoundNode("enumDecl"))))
+                                .bind("rhsExpr"))),
       this);
 
   Finder->addMatcher(
       binaryOperator(
           hasAnyOperatorName("+", "|"),
-          hasOperands(expr(hasType(isInteger()), unless(EnumExpr("", ""))),
+          hasOperands(expr(hasType(isInteger()), unless(hasType(enumDecl()))),
                       EnumExpr("enumExpr", "enumDecl"))),
       this);
 
