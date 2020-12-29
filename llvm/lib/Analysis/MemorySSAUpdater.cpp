@@ -431,10 +431,11 @@ void MemorySSAUpdater::insertDef(MemoryDef *MD, bool RenameUses) {
   if (NewPhiSize)
     tryRemoveTrivialPhis(ArrayRef<WeakVH>(&InsertedPHIs[NewPhiIndex], NewPhiSize));
 
-  // Now that all fixups are done, rename all uses if we are asked.
-  if (RenameUses) {
+  // Now that all fixups are done, rename all uses if we are asked. Skip
+  // renaming for defs in unreachable blocks.
+  BasicBlock *StartBlock = MD->getBlock();
+  if (RenameUses && MSSA->getDomTree().getNode(StartBlock)) {
     SmallPtrSet<BasicBlock *, 16> Visited;
-    BasicBlock *StartBlock = MD->getBlock();
     // We are guaranteed there is a def in the block, because we just got it
     // handed to us in this function.
     MemoryAccess *FirstDef = &*MSSA->getWritableBlockDefs(StartBlock)->begin();
