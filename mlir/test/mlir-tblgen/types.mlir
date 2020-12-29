@@ -58,7 +58,7 @@ func @complex_f64_tensor_success() {
 // -----
 
 func @complex_f64_failure() {
-  // expected-error@+1 {{must be complex type with 64-bit float elements}}
+  // expected-error@+1 {{op inferred type incompatible with return type of operation}}
   "test.complex_f64"() : () -> (f64)
   return
 }

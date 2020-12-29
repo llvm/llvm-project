@@ -333,6 +333,13 @@ class BuildableType<code builder> {
   code builderCall = builder;
 }
 
+// A type that's buildable iff the type passed as an argument is buildable.
+// This is intended for use by types like container types, which are only
+// buildable if the type of their elements is buildable.
+class SameBuildabilityAs<Type type, code builder> {
+  code builderCall = !if(!empty(type.builderCall), "", builder);
+}
+
 // Any type at all.
 def AnyType : Type<CPred<"true">, "any type">;
 
@@ -479,7 +486,9 @@ class Complex<Type type>
                       "$_self.cast<::mlir::ComplexType>().getElementType()",
            type.predicate>]>,
            "complex type with " # type.description # " elements",
-           "::mlir::ComplexType"> {
+           "::mlir::ComplexType">,
+      SameBuildabilityAs<type, "::mlir::ComplexType::get($_builder.get" # type #
+                               "Type())"> {
   Type elementType = type;
 }
 
