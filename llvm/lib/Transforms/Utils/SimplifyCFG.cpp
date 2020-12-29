@@ -3805,6 +3805,8 @@ bool SimplifyCFGOpt::SimplifyTerminatorOnSelect(Instruction *OldTerm,
   BasicBlock *KeepEdge1 = TrueBB;
   BasicBlock *KeepEdge2 = TrueBB != FalseBB ? FalseBB : nullptr;
 
+  SmallVector<DominatorTree::UpdateType, 4> Updates;
+
   // Then remove the rest.
   for (BasicBlock *Succ : successors(OldTerm)) {
     // Make sure only to keep exactly one copy of each edge.
@@ -3812,9 +3814,11 @@ bool SimplifyCFGOpt::SimplifyTerminatorOnSelect(Instruction *OldTerm,
       KeepEdge1 = nullptr;
     else if (Succ == KeepEdge2)
       KeepEdge2 = nullptr;
-    else
+    else {
       Succ->removePredecessor(OldTerm->getParent(),
                               /*KeepOneInputPHIs=*/true);
+      Updates.push_back({DominatorTree::Delete, OldTerm->getParent(), Succ});
+    }
   }
 
   IRBuilder<> Builder(OldTerm);
@@ -3822,14 +3826,17 @@ bool SimplifyCFGOpt::SimplifyTerminatorOnSelect(Instruction *OldTerm,
 
   // Insert an appropriate new terminator.
   if (!KeepEdge1 && !KeepEdge2) {
-    if (TrueBB == FalseBB)
+    if (TrueBB == FalseBB) {
       // We were only looking for one successor, and it was present.
       // Create an unconditional branch to it.
       Builder.CreateBr(TrueBB);
-    else {
+      Updates.push_back({DominatorTree::Insert, OldTerm->getParent(), TrueBB});
+    } else {
       // We found both of the successors we were looking for.
       // Create a conditional branch sharing the condition of the select.
       BranchInst *NewBI = Builder.CreateCondBr(Cond, TrueBB, FalseBB);
+      Updates.push_back({DominatorTree::Insert, OldTerm->getParent(), TrueBB});
+      Updates.push_back({DominatorTree::Insert, OldTerm->getParent(), FalseBB});
       if (TrueWeight != FalseWeight)
         setBranchWeights(NewBI, TrueWeight, FalseWeight);
     }
@@ -3841,15 +3848,20 @@ bool SimplifyCFGOpt::SimplifyTerminatorOnSelect(Instruction *OldTerm,
     // One of the selected values was a successor, but the other wasn't.
     // Insert an unconditional branch to the one that was found;
     // the edge to the one that wasn't must be unreachable.
-    if (!KeepEdge1)
+    if (!KeepEdge1) {
       // Only TrueBB was found.
       Builder.CreateBr(TrueBB);
-    else
+      Updates.push_back({DominatorTree::Insert, OldTerm->getParent(), TrueBB});
+    } else {
       // Only FalseBB was found.
       Builder.CreateBr(FalseBB);
+      Updates.push_back({DominatorTree::Insert, OldTerm->getParent(), FalseBB});
+    }
   }
 
   EraseTerminatorAndDCECond(OldTerm);
+  if (DTU)
+    DTU->applyUpdatesPermissive(Updates);
   return true;
 }
 
