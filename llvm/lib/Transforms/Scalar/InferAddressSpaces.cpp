@@ -597,7 +597,7 @@ Value *InferAddressSpaces::cloneInstructionWithNewAddressSpace(
     GetElementPtrInst *GEP = cast<GetElementPtrInst>(I);
     GetElementPtrInst *NewGEP = GetElementPtrInst::Create(
         GEP->getSourceElementType(), NewPointerOperands[0],
-        SmallVector<Value *, 4>(GEP->idx_begin(), GEP->idx_end()));
+        SmallVector<Value *, 4>(GEP->indices()));
     NewGEP->setIsInBounds(GEP->isInBounds());
     return NewGEP;
   }
