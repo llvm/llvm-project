@@ -16,7 +16,6 @@
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/YAMLTraits.h"
-#include "llvm/Support/raw_ostream.h"
 #include <utility>
 
 #define DEBUG_TYPE "clang-tidy-options"

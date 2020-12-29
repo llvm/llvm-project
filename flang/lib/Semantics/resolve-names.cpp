@@ -3085,11 +3085,14 @@ Symbol &SubprogramVisitor::PushSubprogramScope(
     symbol = &MakeSymbol(name, SubprogramDetails{});
   }
   symbol->set(subpFlag);
+  symbol->ReplaceName(name.source);
   PushScope(Scope::Kind::Subprogram, symbol);
   auto &details{symbol->get<SubprogramDetails>()};
   if (inInterfaceBlock()) {
     details.set_isInterface();
-    if (!isAbstract()) {
+    if (isAbstract()) {
+      symbol->attrs().set(Attr::ABSTRACT);
+    } else {
       MakeExternal(*symbol);
     }
     if (isGeneric()) {

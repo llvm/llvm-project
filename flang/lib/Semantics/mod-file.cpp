@@ -319,6 +319,10 @@ void ModFileWriter::PutSubprogram(const Symbol &symbol) {
     bindAttrs.set(Attr::BIND_C, true);
     attrs.set(Attr::BIND_C, false);
   }
+  bool isAbstract{attrs.test(Attr::ABSTRACT)};
+  if (isAbstract) {
+    attrs.set(Attr::ABSTRACT, false);
+  }
   Attrs prefixAttrs{subprogramPrefixAttrs & attrs};
   // emit any non-prefix attributes in an attribute statement
   attrs &= ~subprogramPrefixAttrs;
@@ -331,7 +335,7 @@ void ModFileWriter::PutSubprogram(const Symbol &symbol) {
   bool isInterface{details.isInterface()};
   llvm::raw_ostream &os{isInterface ? decls_ : contains_};
   if (isInterface) {
-    os << "interface\n";
+    os << (isAbstract ? "abstract " : "") << "interface\n";
   }
   PutAttrs(os, prefixAttrs, std::nullopt, ""s, " "s);
   os << (details.isFunction() ? "function " : "subroutine ");
@@ -457,6 +461,11 @@ void CollectSymbols(
       }
     }
   }
+  // Sort most symbols by name: use of Symbol::ReplaceName ensures the source
+  // location of a symbol's name is the first "real" use.
+  std::sort(sorted.begin(), sorted.end(), [](SymbolRef x, SymbolRef y) {
+    return x->name().begin() < y->name().begin();
+  });
   sorted.insert(sorted.end(), namelist.begin(), namelist.end());
   for (const auto &pair : scope.commonBlocks()) {
     sorted.push_back(*pair.second);

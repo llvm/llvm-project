@@ -32,6 +32,11 @@ Value::Value(Operation *op, unsigned resultNo) {
 
 /// Return the type of this value.
 Type Value::getType() const {
+  // Support a null Value so the asmprinter doesn't crash on invalid IR (e.g.
+  // operations that have dropAllReferences() called on them).
+  if (!*this)
+    return Type();
+
   if (BlockArgument arg = dyn_cast<BlockArgument>())
     return arg.getType();
 

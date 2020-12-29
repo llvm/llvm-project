@@ -241,6 +241,26 @@ global_atomic_cmpswap v1, v3, v[5:6], s[2:3] glc
 // GFX9: global_atomic_cmpswap v1, v3, v[5:6], s[2:3] glc ; encoding: [0x00,0x80,0x05,0xdd,0x03,0x05,0x02,0x01]
 // VI-ERR: error: instruction not supported on this GPU
 
+global_atomic_cmpswap v1, v[2:3], v[4:5], off offset:-1 glc
+// GCN: global_atomic_cmpswap v1, v[2:3], v[4:5], off offset:-1 glc ; encoding: [0xff,0x9f,0x05,0xdd,0x02,0x04,0x7f,0x01]
+// GFX10: global_atomic_cmpswap v1, v[2:3], v[4:5], off offset:-1 glc ; encoding: [0xff,0x8f,0xc5,0xdc,0x02,0x04,0x7d,0x01]
+// VI-ERR: error: instruction not supported on this GPU
+
+global_atomic_cmpswap v1, v[2:3], v[254:255], off offset:-1 glc
+// GCN: global_atomic_cmpswap v1, v[2:3], v[254:255], off offset:-1 glc ; encoding: [0xff,0x9f,0x05,0xdd,0x02,0xfe,0x7f,0x01]
+// GFX10: global_atomic_cmpswap v1, v[2:3], v[254:255], off offset:-1 glc ; encoding: [0xff,0x8f,0xc5,0xdc,0x02,0xfe,0x7d,0x01]
+// VI-ERR: error: instruction not supported on this GPU
+
+global_atomic_cmpswap v1, v2, v[4:5], s[2:3] offset:-1 glc
+// GCN: global_atomic_cmpswap v1, v2, v[4:5], s[2:3] offset:-1 glc ; encoding: [0xff,0x9f,0x05,0xdd,0x02,0x04,0x02,0x01]
+// GFX10: global_atomic_cmpswap v1, v2, v[4:5], s[2:3] offset:-1 glc ; encoding: [0xff,0x8f,0xc5,0xdc,0x02,0x04,0x02,0x01]
+// VI-ERR: error: instruction not supported on this GPU
+
+global_atomic_cmpswap v1, v[2:3], v[4:5], off glc
+// GCN: global_atomic_cmpswap v1, v[2:3], v[4:5], off glc ; encoding: [0x00,0x80,0x05,0xdd,0x02,0x04,0x7f,0x01]
+// GFX10: global_atomic_cmpswap v1, v[2:3], v[4:5], off glc ; encoding: [0x00,0x80,0xc5,0xdc,0x02,0x04,0x7d,0x01]
+// VI-ERR: error: instruction not supported on this GPU
+
 global_atomic_cmpswap_x2 v[5:6], v[7:10], off
 // GFX10: encoding: [0x00,0x80,0x44,0xdd,0x05,0x07,0x7d,0x00]
 // GFX9: global_atomic_cmpswap_x2 v[5:6], v[7:10], off ; encoding: [0x00,0x80,0x84,0xdd,0x05,0x07,0x7f,0x00]
@@ -254,6 +274,26 @@ global_atomic_cmpswap_x2 v[1:2], v[5:6], v[7:10], off glc
 global_atomic_cmpswap_x2 v[1:2], v5, v[7:10], s[2:3] glc
 // GFX10: encoding: [0x00,0x80,0x45,0xdd,0x05,0x07,0x02,0x01]
 // GFX9: global_atomic_cmpswap_x2 v[1:2], v5, v[7:10], s[2:3] glc ; encoding: [0x00,0x80,0x85,0xdd,0x05,0x07,0x02,0x01]
+// VI-ERR: error: instruction not supported on this GPU
+
+global_atomic_cmpswap_x2 v[1:2], v[5:6], v[7:10], off offset:-1 glc
+// GCN: global_atomic_cmpswap_x2 v[1:2], v[5:6], v[7:10], off offset:-1 glc ; encoding: [0xff,0x9f,0x85,0xdd,0x05,0x07,0x7f,0x01]
+// GFX10: global_atomic_cmpswap_x2 v[1:2], v[5:6], v[7:10], off offset:-1 glc ; encoding: [0xff,0x8f,0x45,0xdd,0x05,0x07,0x7d,0x01]
+// VI-ERR: error: instruction not supported on this GPU
+
+global_atomic_cmpswap_x2 v[1:2], v[5:6], v[252:255], off offset:-1 glc
+// GCN: global_atomic_cmpswap_x2 v[1:2], v[5:6], v[252:255], off offset:-1 glc ; encoding: [0xff,0x9f,0x85,0xdd,0x05,0xfc,0x7f,0x01]
+// GFX10: global_atomic_cmpswap_x2 v[1:2], v[5:6], v[252:255], off offset:-1 glc ; encoding: [0xff,0x8f,0x45,0xdd,0x05,0xfc,0x7d,0x01]
+// VI-ERR: error: instruction not supported on this GPU
+
+global_atomic_cmpswap_x2 v[1:2], v5, v[252:255], s[2:3] offset:-1 glc
+// GCN: global_atomic_cmpswap_x2 v[1:2], v5, v[252:255], s[2:3] offset:-1 glc ; encoding: [0xff,0x9f,0x85,0xdd,0x05,0xfc,0x02,0x01]
+// GFX10: global_atomic_cmpswap_x2 v[1:2], v5, v[252:255], s[2:3] offset:-1 glc ; encoding: [0xff,0x8f,0x45,0xdd,0x05,0xfc,0x02,0x01]
+// VI-ERR: error: instruction not supported on this GPU
+
+global_atomic_cmpswap_x2 v[1:2], v[5:6], v[7:10], off glc
+// GCN: global_atomic_cmpswap_x2 v[1:2], v[5:6], v[7:10], off glc ; encoding: [0x00,0x80,0x85,0xdd,0x05,0x07,0x7f,0x01]
+// GFX10: global_atomic_cmpswap_x2 v[1:2], v[5:6], v[7:10], off glc ; encoding: [0x00,0x80,0x45,0xdd,0x05,0x07,0x7d,0x01]
 // VI-ERR: error: instruction not supported on this GPU
 
 global_atomic_swap v[3:4], v5, off

@@ -34,7 +34,7 @@ class GdbRemoteCompletionTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
     def generate_hex_path(self, target):
         return str(os.path.join(self.getBuildDir(), target)).encode().hex()
 
-    @llgs_test
+    @add_test_categories(["llgs"])
     def test_autocomplete_path(self):
         self.build()
         self.init_lldb_server()

@@ -369,10 +369,9 @@ feature_test_macros = sorted([ add_version_header(x) for x in [
     "headers": ["algorithm"],
     "unimplemented": True,
   }, {
-    "name": "__cpp_lib_constexpr_misc",
-    "values": { "c++2a": int(201811) },
-    "headers": ["array", "functional", "iterator", "string_view", "tuple", "utility"],
-    "unimplemented": True,
+    "name": "__cpp_lib_constexpr_functional",
+    "values": { "c++2a": int(201907) },
+    "headers": ["functional"],
   }, {
     "name": "__cpp_lib_constexpr_numeric",
     "values": { "c++2a": int(201911) },

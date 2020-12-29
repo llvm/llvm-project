@@ -91,6 +91,7 @@ void func(Strong *);
 
 @interface C
 - (StrongSmall)getStrongSmall;
+- (void)m:(StrongSmall)s;
 + (StrongSmall)getStrongSmallClass;
 @end
 
@@ -942,6 +943,23 @@ id test_assignment0(void) {
 
 id test_assignment1(void) {
   calleeStrongSmall(g2 = g1);
+}
+
+// CHECK-LABEL: define void @test_null_reveiver(
+// CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_STRONGSMALL]], align 8
+// CHECK: br i1
+
+// CHECK: %[[V7:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[AGG_TMP]] to [2 x i64]*
+// CHECK: %[[V8:.*]] = load [2 x i64], [2 x i64]* %[[V7]], align 8
+// CHECK: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void ({{.*}}, [2 x i64] %[[V8]])
+// CHECK: br
+
+// CHECK: %[[V9:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[AGG_TMP]] to i8**
+// CHECK: call void @__destructor_8_s8(i8** %[[V9]]) #4
+// CHECK: br
+
+void test_null_reveiver(C *c) {
+  [c m:getStrongSmall()];
 }
 
 #endif /* USESTRUCT */
