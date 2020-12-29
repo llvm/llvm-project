@@ -157,7 +157,7 @@ loop:
   %add = add <4 x i32> %ext, %acc
   %cmp = icmp slt <4 x i32> %add, <i32 -10, i32 -11, i32 -12, i32 -13>
   %single = insertelement <4 x i32> poison, i32 %i, i32 0
-  %limit = shufflevector <4 x i32> %single, <4 x i32> undef,
+  %limit = shufflevector <4 x i32> %single, <4 x i32> poison,
                          <4 x i32> zeroinitializer
   %sel = select <4 x i1> %cmp, <4 x i32> %add, <4 x i32> %limit
   %trunc = trunc <4 x i32> %sel to <4 x i8>

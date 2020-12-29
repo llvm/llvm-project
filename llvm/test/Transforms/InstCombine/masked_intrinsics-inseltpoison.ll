@@ -202,13 +202,13 @@ define <4 x double> @gather_lane2(double* %base, double %pt)  {
 ; CHECK-LABEL: @gather_lane2(
 ; CHECK-NEXT:    [[PTRS:%.*]] = getelementptr double, double* [[BASE:%.*]], <4 x i64> <i64 poison, i64 poison, i64 2, i64 poison>
 ; CHECK-NEXT:    [[PT_V1:%.*]] = insertelement <4 x double> poison, double [[PT:%.*]], i64 0
-; CHECK-NEXT:    [[PT_V2:%.*]] = shufflevector <4 x double> [[PT_V1]], <4 x double> undef, <4 x i32> <i32 0, i32 0, i32 undef, i32 0>
+; CHECK-NEXT:    [[PT_V2:%.*]] = shufflevector <4 x double> [[PT_V1]], <4 x double> poison, <4 x i32> <i32 0, i32 0, i32 undef, i32 0>
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x double> @llvm.masked.gather.v4f64.v4p0f64(<4 x double*> [[PTRS]], i32 4, <4 x i1> <i1 false, i1 false, i1 true, i1 false>, <4 x double> [[PT_V2]])
 ; CHECK-NEXT:    ret <4 x double> [[RES]]
 ;
   %ptrs = getelementptr double, double *%base, <4 x i64> <i64 0, i64 1, i64 2, i64 3>
   %pt_v1 = insertelement <4 x double> poison, double %pt, i64 0
-  %pt_v2 = shufflevector <4 x double> %pt_v1, <4 x double> undef, <4 x i32> zeroinitializer
+  %pt_v2 = shufflevector <4 x double> %pt_v1, <4 x double> poison, <4 x i32> zeroinitializer
   %res = call <4 x double> @llvm.masked.gather.v4f64.v4p0f64(<4 x double*> %ptrs, i32 4, <4 x i1> <i1 false, i1 false, i1 true, i1 false>, <4 x double> %pt_v2)
   ret <4 x double> %res
 }
