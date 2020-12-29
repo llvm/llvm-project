@@ -60,6 +60,8 @@ private:
                               MachineBasicBlock::iterator MBBI,
                               MachineBasicBlock::iterator &NextMBBI);
   bool expandVSetVL(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
+  bool expandVMSET_VMCLR(MachineBasicBlock &MBB,
+                         MachineBasicBlock::iterator MBBI, unsigned Opcode);
 };
 
 char RISCVExpandPseudo::ID = 0;
@@ -102,6 +104,24 @@ bool RISCVExpandPseudo::expandMI(MachineBasicBlock &MBB,
     return expandLoadTLSGDAddress(MBB, MBBI, NextMBBI);
   case RISCV::PseudoVSETVLI:
     return expandVSetVL(MBB, MBBI);
+  case RISCV::PseudoVMCLR_M_B1:
+  case RISCV::PseudoVMCLR_M_B2:
+  case RISCV::PseudoVMCLR_M_B4:
+  case RISCV::PseudoVMCLR_M_B8:
+  case RISCV::PseudoVMCLR_M_B16:
+  case RISCV::PseudoVMCLR_M_B32:
+  case RISCV::PseudoVMCLR_M_B64:
+    // vmclr.m vd => vmxor.mm vd, vd, vd
+    return expandVMSET_VMCLR(MBB, MBBI, RISCV::VMXOR_MM);
+  case RISCV::PseudoVMSET_M_B1:
+  case RISCV::PseudoVMSET_M_B2:
+  case RISCV::PseudoVMSET_M_B4:
+  case RISCV::PseudoVMSET_M_B8:
+  case RISCV::PseudoVMSET_M_B16:
+  case RISCV::PseudoVMSET_M_B32:
+  case RISCV::PseudoVMSET_M_B64:
+    // vmset.m vd => vmxnor.mm vd, vd, vd
+    return expandVMSET_VMCLR(MBB, MBBI, RISCV::VMXNOR_MM);
   }
 
   return false;
@@ -209,6 +229,19 @@ bool RISCVExpandPseudo::expandVSetVL(MachineBasicBlock &MBB,
       .add(MBBI->getOperand(1))  // VL
       .add(MBBI->getOperand(2)); // VType
 
+  MBBI->eraseFromParent(); // The pseudo instruction is gone now.
+  return true;
+}
+
+bool RISCVExpandPseudo::expandVMSET_VMCLR(MachineBasicBlock &MBB,
+                                          MachineBasicBlock::iterator MBBI,
+                                          unsigned Opcode) {
+  DebugLoc DL = MBBI->getDebugLoc();
+  Register DstReg = MBBI->getOperand(0).getReg();
+  const MCInstrDesc &Desc = TII->get(Opcode);
+  BuildMI(MBB, MBBI, DL, Desc, DstReg)
+      .addReg(DstReg, RegState::Undef)
+      .addReg(DstReg, RegState::Undef);
   MBBI->eraseFromParent(); // The pseudo instruction is gone now.
   return true;
 }
