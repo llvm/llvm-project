@@ -3042,6 +3042,13 @@ void mlir::python::populateIRSubmodule(py::module &m) {
                   py::arg("successors") = py::none(), py::arg("regions") = 0,
                   py::arg("loc") = py::none(), py::arg("ip") = py::none(),
                   kOperationCreateDocstring)
+      .def_property_readonly("name",
+                             [](PyOperation &self) {
+                               MlirOperation operation = self.get();
+                               MlirStringRef name = mlirIdentifierStr(
+                                   mlirOperationGetName(operation));
+                               return py::str(name.data, name.length);
+                             })
       .def_property_readonly(
           "context",
           [](PyOperation &self) { return self.getContext().getObject(); },
