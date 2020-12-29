@@ -584,3 +584,22 @@ def testCreateWithInvalidAttributes():
       # CHECK: Found an invalid (`None`?) attribute value for the key "some_key" when attempting to create the operation "module"
       print(e)
 run(testCreateWithInvalidAttributes)
+
+
+# CHECK-LABEL: TEST: testOperationName
+def testOperationName():
+  ctx = Context()
+  ctx.allow_unregistered_dialects = True
+  module = Module.parse(r"""
+    %0 = "custom.op1"() : () -> f32
+    %1 = "custom.op2"() : () -> i32
+    %2 = "custom.op1"() : () -> f32
+  """, ctx)
+
+  # CHECK: custom.op1
+  # CHECK: custom.op2
+  # CHECK: custom.op1
+  for op in module.body.operations:
+    print(op.operation.name)
+
+run(testOperationName)
