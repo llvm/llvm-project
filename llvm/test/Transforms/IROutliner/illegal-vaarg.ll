@@ -18,7 +18,7 @@ define i32 @func1(i32 %a, double %b, i8* %v, ...) nounwind {
 ; CHECK-NEXT:    [[C:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[LT_CAST:%.*]] = bitcast i8** [[AP1_LOC]] to i8*
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 -1, i8* [[LT_CAST]])
-; CHECK-NEXT:    call void @outlined_ir_func_0(i32 [[A:%.*]], i32* [[A_ADDR]], double [[B:%.*]], double* [[B_ADDR]], i8** [[AP]], i8** [[AP1_LOC]], i32 0)
+; CHECK-NEXT:    call void @outlined_ir_func_0(i32 [[A:%.*]], i32* [[A_ADDR]], double [[B:%.*]], double* [[B_ADDR]], i8** [[AP]], i8** [[AP1_LOC]])
 ; CHECK-NEXT:    [[AP1_RELOAD:%.*]] = load i8*, i8** [[AP1_LOC]], align 8
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 -1, i8* [[LT_CAST]])
 ; CHECK-NEXT:    call void @llvm.va_start(i8* [[AP1_RELOAD]])
@@ -56,7 +56,7 @@ define i32 @func2(i32 %a, double %b, i8* %v, ...) nounwind {
 ; CHECK-NEXT:    [[C:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[LT_CAST:%.*]] = bitcast i8** [[AP1_LOC]] to i8*
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 -1, i8* [[LT_CAST]])
-; CHECK-NEXT:    call void @outlined_ir_func_0(i32 [[A:%.*]], i32* [[A_ADDR]], double [[B:%.*]], double* [[B_ADDR]], i8** [[AP]], i8** [[AP1_LOC]], i32 1)
+; CHECK-NEXT:    call void @outlined_ir_func_0(i32 [[A:%.*]], i32* [[A_ADDR]], double [[B:%.*]], double* [[B_ADDR]], i8** [[AP]], i8** [[AP1_LOC]])
 ; CHECK-NEXT:    [[AP1_RELOAD:%.*]] = load i8*, i8** [[AP1_LOC]], align 8
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 -1, i8* [[LT_CAST]])
 ; CHECK-NEXT:    call void @llvm.va_start(i8* [[AP1_RELOAD]])

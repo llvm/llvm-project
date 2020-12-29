@@ -21,7 +21,7 @@ define void @outline_outputs1() #0 {
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 -1, i8* [[LT_CAST]])
 ; CHECK-NEXT:    [[LT_CAST1:%.*]] = bitcast i32* [[DOTLOC]] to i8*
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 -1, i8* [[LT_CAST1]])
-; CHECK-NEXT:    call void @outlined_ir_func_0(i32 2, i32* [[A]], i32* [[B]], i32* [[OUTPUT]], i32* [[ADD_LOC]], i32* [[DOTLOC]], i32 0)
+; CHECK-NEXT:    call void @outlined_ir_func_0(i32 2, i32* [[A]], i32* [[B]], i32* [[OUTPUT]], i32* [[ADD_LOC]], i32* [[DOTLOC]])
 ; CHECK-NEXT:    [[ADD_RELOAD:%.*]] = load i32, i32* [[ADD_LOC]], align 4
 ; CHECK-NEXT:    [[DOTRELOAD:%.*]] = load i32, i32* [[DOTLOC]], align 4
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 -1, i8* [[LT_CAST]])
@@ -34,7 +34,7 @@ define void @outline_outputs1() #0 {
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 -1, i8* [[LT_CAST4]])
 ; CHECK-NEXT:    [[LT_CAST5:%.*]] = bitcast i32* [[DOTLOC2]] to i8*
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 -1, i8* [[LT_CAST5]])
-; CHECK-NEXT:    call void @outlined_ir_func_0(i32 [[ADD_RELOAD]], i32* [[OUTPUT]], i32* [[RESULT]], i32* [[OUTPUT2]], i32* [[ADD2_LOC]], i32* [[DOTLOC2]], i32 1)
+; CHECK-NEXT:    call void @outlined_ir_func_0(i32 [[ADD_RELOAD]], i32* [[OUTPUT]], i32* [[RESULT]], i32* [[OUTPUT2]], i32* [[ADD2_LOC]], i32* [[DOTLOC2]])
 ; CHECK-NEXT:    [[ADD2_RELOAD:%.*]] = load i32, i32* [[ADD2_LOC]], align 4
 ; CHECK-NEXT:    [[DOTRELOAD3:%.*]] = load i32, i32* [[DOTLOC2]], align 4
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 -1, i8* [[LT_CAST4]])
