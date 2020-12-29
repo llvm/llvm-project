@@ -3025,7 +3025,14 @@ void mlir::python::populateIRSubmodule(py::module &m) {
            py::arg("enable_debug_info") = false,
            py::arg("pretty_debug_info") = false,
            py::arg("print_generic_op_form") = false,
-           py::arg("use_local_scope") = false, kOperationGetAsmDocstring);
+           py::arg("use_local_scope") = false, kOperationGetAsmDocstring)
+      .def(
+          "verify",
+          [](PyOperationBase &self) {
+            return mlirOperationVerify(self.getOperation());
+          },
+          "Verify the operation and return true if it passes, false if it "
+          "fails.");
 
   py::class_<PyOperation, PyOperationBase>(m, "Operation")
       .def_static("create", &PyOperation::create, py::arg("name"),
