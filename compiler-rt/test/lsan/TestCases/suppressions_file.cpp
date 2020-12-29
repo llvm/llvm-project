@@ -17,19 +17,27 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-void LSanTestLeakingFunc() {
+void* LSanTestLeakingFunc() {
   void *p = malloc(666);
   fprintf(stderr, "Test alloc: %p.\n", p);
+  return p;
+}
+
+void LSanTestUnsuppressedLeakingFunc() {
+  void** p = (void**)LSanTestLeakingFunc();
+  // FIXME: This must be suppressed as well.
+  *p = malloc(777);
+  fprintf(stderr, "Test alloc: %p.\n", *p);
 }
 
 int main() {
-  LSanTestLeakingFunc();
+  LSanTestUnsuppressedLeakingFunc();
   void *q = malloc(1337);
   fprintf(stderr, "Test alloc: %p.\n", q);
   return 0;
 }
 // CHECK: Suppressions used:
 // CHECK: 1 666 *LSanTestLeakingFunc*
-// CHECK: SUMMARY: {{(Leak|Address)}}Sanitizer: 1337 byte(s) leaked in 1 allocation(s)
+// CHECK: SUMMARY: {{(Leak|Address)}}Sanitizer: 2114 byte(s) leaked in 2 allocation(s)
 
-// NOSUPP: SUMMARY: {{(Leak|Address)}}Sanitizer: 2003 byte(s) leaked in 2 allocation(s).
+// NOSUPP: SUMMARY: {{(Leak|Address)}}Sanitizer: 2780 byte(s) leaked in 3 allocation(s).
