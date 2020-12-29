@@ -910,13 +910,18 @@ bool SimplifyCFGOpt::SimplifyEqualityComparisonWithOnlyPredecessor(
       (void)NI;
 
       // Remove PHI node entries for the dead edge.
-      ThisCases[0].Dest->removePredecessor(TI->getParent());
+      ThisCases[0].Dest->removePredecessor(PredDef);
 
       LLVM_DEBUG(dbgs() << "Threading pred instr: " << *Pred->getTerminator()
                         << "Through successor TI: " << *TI << "Leaving: " << *NI
                         << "\n");
 
       EraseTerminatorAndDCECond(TI);
+
+      if (DTU)
+        DTU->applyUpdatesPermissive(
+            {{DominatorTree::Delete, PredDef, ThisCases[0].Dest}});
+
       return true;
     }
 
