@@ -54,7 +54,7 @@ namespace remote {
 /// OrcRemoteTargetServer class) via an RPC system (see RPCUtils.h) to carry out
 /// its actions.
 class OrcRemoteTargetClient
-    : public rpc::SingleThreadedRPCEndpoint<rpc::RawByteChannel> {
+    : public shared::SingleThreadedRPCEndpoint<shared::RawByteChannel> {
 public:
   /// Remote-mapped RuntimeDyld-compatible memory manager.
   class RemoteRTDyldMemoryManager : public RuntimeDyld::MemoryManager {
@@ -703,7 +703,7 @@ public:
   /// Channel is the ChannelT instance to communicate on. It is assumed that
   /// the channel is ready to be read from and written to.
   static Expected<std::unique_ptr<OrcRemoteTargetClient>>
-  Create(rpc::RawByteChannel &Channel, ExecutionSession &ES) {
+  Create(shared::RawByteChannel &Channel, ExecutionSession &ES) {
     Error Err = Error::success();
     auto Client = std::unique_ptr<OrcRemoteTargetClient>(
         new OrcRemoteTargetClient(Channel, ES, Err));
@@ -805,9 +805,10 @@ public:
   Error terminateSession() { return callB<utils::TerminateSession>(); }
 
 private:
-  OrcRemoteTargetClient(rpc::RawByteChannel &Channel, ExecutionSession &ES,
+  OrcRemoteTargetClient(shared::RawByteChannel &Channel, ExecutionSession &ES,
                         Error &Err)
-      : rpc::SingleThreadedRPCEndpoint<rpc::RawByteChannel>(Channel, true),
+      : shared::SingleThreadedRPCEndpoint<shared::RawByteChannel>(Channel,
+                                                                  true),
         ES(ES) {
     ErrorAsOutParameter EAO(&Err);
 

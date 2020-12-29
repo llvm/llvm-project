@@ -670,7 +670,7 @@ int main(int argc, char **argv, char * const *envp) {
     // MCJIT itself. FIXME.
 
     // Lanch the remote process and get a channel to it.
-    std::unique_ptr<orc::rpc::FDRawByteChannel> C = launchRemote();
+    std::unique_ptr<orc::shared::FDRawByteChannel> C = launchRemote();
     if (!C) {
       WithColor::error(errs(), argv[0]) << "failed to launch remote JIT.\n";
       exit(1);
@@ -1015,7 +1015,7 @@ void disallowOrcOptions() {
   }
 }
 
-std::unique_ptr<orc::rpc::FDRawByteChannel> launchRemote() {
+std::unique_ptr<orc::shared::FDRawByteChannel> launchRemote() {
 #ifndef LLVM_ON_UNIX
   llvm_unreachable("launchRemote not supported on non-Unix platforms");
 #else
@@ -1065,7 +1065,7 @@ std::unique_ptr<orc::rpc::FDRawByteChannel> launchRemote() {
   close(PipeFD[1][1]);
 
   // Return an RPC channel connected to our end of the pipes.
-  return std::make_unique<orc::rpc::FDRawByteChannel>(PipeFD[1][0],
-                                                      PipeFD[0][1]);
+  return std::make_unique<orc::shared::FDRawByteChannel>(PipeFD[1][0],
+                                                         PipeFD[0][1]);
 #endif
 }
