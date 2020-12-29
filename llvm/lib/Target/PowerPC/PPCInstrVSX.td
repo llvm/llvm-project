@@ -2412,6 +2412,7 @@ def MrgWords {
 // [HasVSX, IsBigEndian]
 // [HasVSX, IsLittleEndian]
 // [HasVSX, NoP9Vector]
+// [HasVSX, NoP9Vector, IsLittleEndian]
 // [HasVSX, HasOnlySwappingMemOps]
 // [HasVSX, HasOnlySwappingMemOps, IsBigEndian]
 // [HasVSX, HasP8Vector]
@@ -3004,6 +3005,19 @@ defm : ScalToVecWPermute<
   (SUBREG_TO_REG (i64 1), (XSCVDPUXDS (COPY_TO_REGCLASS (XFLOADf32 xoaddr:$A),
                                                         VSFRC)), sub_64)>;
 } // HasVSX, NoP9Vector
+
+// Any little endian pre-Power9 VSX subtarget.
+let Predicates = [HasVSX, NoP9Vector, IsLittleEndian] in {
+// Load-and-splat using only X-Form VSX loads.
+defm : ScalToVecWPermute<
+  v2i64, (i64 (load xoaddr:$src)),
+  (XXPERMDIs (XFLOADf64 xoaddr:$src), 2),
+  (SUBREG_TO_REG (i64 1), (XFLOADf64 xoaddr:$src), sub_64)>;
+defm : ScalToVecWPermute<
+  v2f64, (f64 (load xoaddr:$src)),
+  (XXPERMDIs (XFLOADf64 xoaddr:$src), 2),
+  (SUBREG_TO_REG (i64 1), (XFLOADf64 xoaddr:$src), sub_64)>;
+} // HasVSX, NoP9Vector, IsLittleEndian
 
 // Any VSX subtarget that only has loads and stores that load in big endian
 // order regardless of endianness. This is really pre-Power9 subtargets.
