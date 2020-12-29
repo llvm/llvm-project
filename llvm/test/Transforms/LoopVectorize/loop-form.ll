@@ -55,8 +55,8 @@ define void @bottom_tested(i16* %p, i32 %n) {
 ; TAILFOLD-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 2
 ; TAILFOLD-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; TAILFOLD-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i32 [[TMP1]], 1
-; TAILFOLD-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> undef, i32 [[TRIP_COUNT_MINUS_1]], i32 0
-; TAILFOLD-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> undef, <2 x i32> zeroinitializer
+; TAILFOLD-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i32 0
+; TAILFOLD-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; TAILFOLD-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; TAILFOLD:       vector.body:
 ; TAILFOLD-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE2:%.*]] ]

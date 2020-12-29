@@ -68,8 +68,8 @@ define void @Test(%struct.s* nocapture %obj, i64 %z) #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32* [[TMP4]] to <4 x i32>*
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP5]], align 4, !alias.scope !0
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP1]], align 4, !alias.scope !3
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> undef, i32 [[TMP6]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP6]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = add nsw <4 x i32> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.s* [[OBJ]], i64 0, i32 2, i64 [[I]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, i32* [[TMP8]], i32 0

@@ -16,10 +16,10 @@
 ; RUN: opt -S -loop-vectorize -enable-vplan-native-path < %s | FileCheck %s
 ; CHECK: %[[ZeroTripChk:.*]] = icmp sgt i32 %jCount, 0
 ; CHECK-LABEL: vector.ph:
-; CHECK: %[[CVal0:.*]] = insertelement <4 x i32> undef, i32 %c, i32 0
-; CHECK-NEXT: %[[CSplat:.*]] = shufflevector <4 x i32> %[[CVal0]], <4 x i32> undef, <4 x i32> zeroinitializer
-; CHECK: %[[ZVal0:.*]] = insertelement <4 x i1> undef, i1 %[[ZeroTripChk]], i32 0
-; CHECK-NEXT: %[[ZSplat:.*]] = shufflevector <4 x i1> %[[ZVal0]], <4 x i1> undef, <4 x i32> zeroinitializer
+; CHECK: %[[CVal0:.*]] = insertelement <4 x i32> poison, i32 %c, i32 0
+; CHECK-NEXT: %[[CSplat:.*]] = shufflevector <4 x i32> %[[CVal0]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK: %[[ZVal0:.*]] = insertelement <4 x i1> poison, i1 %[[ZeroTripChk]], i32 0
+; CHECK-NEXT: %[[ZSplat:.*]] = shufflevector <4 x i1> %[[ZVal0]], <4 x i1> poison, <4 x i32> zeroinitializer
 
 ; CHECK-LABEL: vector.body:
 ; CHECK: %[[Ind:.*]] = phi i64 [ 0, %vector.ph ], [ %[[IndNext:.*]], %[[ForInc:.*]] ]

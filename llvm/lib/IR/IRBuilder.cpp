@@ -1009,15 +1009,16 @@ Value *IRBuilderBase::CreateVectorSplat(ElementCount EC, Value *V,
                                         const Twine &Name) {
   assert(EC.isNonZero() && "Cannot splat to an empty vector!");
 
-  // First insert it into an undef vector so we can shuffle it.
+  // First insert it into a poison vector so we can shuffle it.
   Type *I32Ty = getInt32Ty();
-  Value *Undef = UndefValue::get(VectorType::get(V->getType(), EC));
-  V = CreateInsertElement(Undef, V, ConstantInt::get(I32Ty, 0),
+  Value *Poison = PoisonValue::get(VectorType::get(V->getType(), EC));
+  V = CreateInsertElement(Poison, V, ConstantInt::get(I32Ty, 0),
                           Name + ".splatinsert");
 
   // Shuffle the value across the desired number of elements.
-  Value *Zeros = ConstantAggregateZero::get(VectorType::get(I32Ty, EC));
-  return CreateShuffleVector(V, Undef, Zeros, Name + ".splat");
+  SmallVector<int, 16> Zeros;
+  Zeros.resize(EC.getKnownMinValue());
+  return CreateShuffleVector(V, Zeros, Name + ".splat");
 }
 
 Value *IRBuilderBase::CreateExtractInteger(

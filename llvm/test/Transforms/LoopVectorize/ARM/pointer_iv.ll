@@ -7,8 +7,8 @@ target triple = "thumbv8.1m.main-none-none-eabi"
 define hidden void @pointer_phi_v4i32_add1(i32* noalias nocapture readonly %A, i32* noalias nocapture %B, i32 %s, i32%y) {
 ; CHECK-LABEL: @pointer_phi_v4i32_add1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> undef, i32 [[Y:%.*]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[Y:%.*]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -48,8 +48,8 @@ define hidden void @pointer_phi_v4i32_add2(i32* noalias nocapture readonly %A, i
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i32, i32* [[A:%.*]], i32 1992
 ; CHECK-NEXT:    [[IND_END3:%.*]] = getelementptr i32, i32* [[B:%.*]], i32 996
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> undef, i32 [[Y:%.*]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[Y:%.*]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -58,7 +58,7 @@ define hidden void @pointer_phi_v4i32_add2(i32* noalias nocapture readonly %A, i
 ; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i32, i32* [[B]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[NEXT_GEP]] to <8 x i32>*
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, <8 x i32>* [[TMP1]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[STRIDED_VEC]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[NEXT_GEP4]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[TMP2]], <4 x i32>* [[TMP3]], align 4
@@ -103,8 +103,8 @@ define hidden void @pointer_phi_v4i32_add3(i32* noalias nocapture readonly %A, i
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i32, i32* [[A:%.*]], i32 2988
 ; CHECK-NEXT:    [[IND_END3:%.*]] = getelementptr i32, i32* [[B:%.*]], i32 996
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> undef, i32 [[Y:%.*]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[Y:%.*]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi i32* [ [[A]], [[ENTRY:%.*]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
@@ -156,8 +156,8 @@ define hidden void @pointer_phi_v8i16_add1(i16* noalias nocapture readonly %A, i
 ; CHECK-LABEL: @pointer_phi_v8i16_add1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[Y:%.*]] to i16
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i16> undef, i16 [[TMP0]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT]], <8 x i16> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i16> poison, i16 [[TMP0]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT]], <8 x i16> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -199,8 +199,8 @@ define hidden void @pointer_phi_v8i16_add2(i16* noalias nocapture readonly %A, i
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[Y:%.*]] to i16
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i16, i16* [[A:%.*]], i32 1984
 ; CHECK-NEXT:    [[IND_END3:%.*]] = getelementptr i16, i16* [[B:%.*]], i32 992
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i16> undef, i16 [[TMP0]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT]], <8 x i16> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i16> poison, i16 [[TMP0]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT]], <8 x i16> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -209,7 +209,7 @@ define hidden void @pointer_phi_v8i16_add2(i16* noalias nocapture readonly %A, i
 ; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i16, i16* [[B]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16* [[NEXT_GEP]] to <16 x i16>*
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x i16>, <16 x i16>* [[TMP2]], align 2
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i16> [[WIDE_VEC]], <16 x i16> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i16> [[WIDE_VEC]], <16 x i16> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <8 x i16> [[STRIDED_VEC]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i16* [[NEXT_GEP4]] to <8 x i16>*
 ; CHECK-NEXT:    store <8 x i16> [[TMP3]], <8 x i16>* [[TMP4]], align 2
@@ -295,8 +295,8 @@ define hidden void @pointer_phi_v16i8_add1(i8* noalias nocapture readonly %A, i8
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[Y:%.*]] to i8
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, i8* [[A:%.*]], i32 992
 ; CHECK-NEXT:    [[IND_END3:%.*]] = getelementptr i8, i8* [[B:%.*]], i32 992
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i8> undef, i8 [[TMP0]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i8> [[BROADCAST_SPLATINSERT]], <16 x i8> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i8> poison, i8 [[TMP0]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i8> [[BROADCAST_SPLATINSERT]], <16 x i8> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -351,8 +351,8 @@ define hidden void @pointer_phi_v16i8_add2(i8* noalias nocapture readonly %A, i8
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[Y:%.*]] to i8
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, i8* [[A:%.*]], i32 1984
 ; CHECK-NEXT:    [[IND_END3:%.*]] = getelementptr i8, i8* [[B:%.*]], i32 992
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i8> undef, i8 [[TMP0]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i8> [[BROADCAST_SPLATINSERT]], <16 x i8> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i8> poison, i8 [[TMP0]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i8> [[BROADCAST_SPLATINSERT]], <16 x i8> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -361,7 +361,7 @@ define hidden void @pointer_phi_v16i8_add2(i8* noalias nocapture readonly %A, i8
 ; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, i8* [[B]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[NEXT_GEP]] to <32 x i8>*
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <32 x i8>, <32 x i8>* [[TMP2]], align 1
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <32 x i8> [[WIDE_VEC]], <32 x i8> undef, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <32 x i8> [[WIDE_VEC]], <32 x i8> poison, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <16 x i8> [[STRIDED_VEC]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i8* [[NEXT_GEP4]] to <16 x i8>*
 ; CHECK-NEXT:    store <16 x i8> [[TMP3]], <16 x i8>* [[TMP4]], align 1
@@ -446,8 +446,8 @@ end:
 define hidden void @pointer_phi_v4f32_add1(float* noalias nocapture readonly %A, float* noalias nocapture %B, float %y) {
 ; CHECK-LABEL: @pointer_phi_v4f32_add1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> undef, float [[Y:%.*]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[Y:%.*]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -487,8 +487,8 @@ define hidden void @pointer_phi_v4f32_add2(float* noalias nocapture readonly %A,
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr float, float* [[A:%.*]], i32 1992
 ; CHECK-NEXT:    [[IND_END3:%.*]] = getelementptr float, float* [[B:%.*]], i32 996
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> undef, float [[Y:%.*]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[Y:%.*]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -497,7 +497,7 @@ define hidden void @pointer_phi_v4f32_add2(float* noalias nocapture readonly %A,
 ; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr float, float* [[B]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[NEXT_GEP]] to <8 x float>*
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x float>, <8 x float>* [[TMP1]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x float> [[WIDE_VEC]], <8 x float> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x float> [[WIDE_VEC]], <8 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd fast <4 x float> [[STRIDED_VEC]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[NEXT_GEP4]] to <4 x float>*
 ; CHECK-NEXT:    store <4 x float> [[TMP2]], <4 x float>* [[TMP3]], align 4
@@ -542,8 +542,8 @@ define hidden void @pointer_phi_v4f32_add3(float* noalias nocapture readonly %A,
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr float, float* [[A:%.*]], i32 2988
 ; CHECK-NEXT:    [[IND_END3:%.*]] = getelementptr float, float* [[B:%.*]], i32 996
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> undef, float [[Y:%.*]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[Y:%.*]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi float* [ [[A]], [[ENTRY:%.*]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
@@ -594,8 +594,8 @@ end:
 define hidden void @pointer_phi_v4half_add1(half* noalias nocapture readonly %A, half* noalias nocapture %B, half %y) {
 ; CHECK-LABEL: @pointer_phi_v4half_add1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x half> undef, half [[Y:%.*]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x half> [[BROADCAST_SPLATINSERT]], <8 x half> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x half> poison, half [[Y:%.*]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x half> [[BROADCAST_SPLATINSERT]], <8 x half> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -635,8 +635,8 @@ define hidden void @pointer_phi_v4half_add2(half* noalias nocapture readonly %A,
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr half, half* [[A:%.*]], i32 1984
 ; CHECK-NEXT:    [[IND_END3:%.*]] = getelementptr half, half* [[B:%.*]], i32 992
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x half> undef, half [[Y:%.*]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x half> [[BROADCAST_SPLATINSERT]], <8 x half> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x half> poison, half [[Y:%.*]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x half> [[BROADCAST_SPLATINSERT]], <8 x half> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -645,7 +645,7 @@ define hidden void @pointer_phi_v4half_add2(half* noalias nocapture readonly %A,
 ; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr half, half* [[B]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast half* [[NEXT_GEP]] to <16 x half>*
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x half>, <16 x half>* [[TMP1]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x half> [[WIDE_VEC]], <16 x half> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x half> [[WIDE_VEC]], <16 x half> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd fast <8 x half> [[STRIDED_VEC]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast half* [[NEXT_GEP4]] to <8 x half>*
 ; CHECK-NEXT:    store <8 x half> [[TMP2]], <8 x half>* [[TMP3]], align 4
@@ -730,10 +730,10 @@ define hidden void @pointer_phi_v4i32_uf2(i32* noalias nocapture readonly %A, i3
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i32, i32* [[A:%.*]], i32 59952
 ; CHECK-NEXT:    [[IND_END3:%.*]] = getelementptr i32, i32* [[B:%.*]], i32 9992
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> undef, i32 [[Y:%.*]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> undef, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT6:%.*]] = insertelement <4 x i32> undef, i32 [[Y]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT7:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT6]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[Y:%.*]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT6:%.*]] = insertelement <4 x i32> poison, i32 [[Y]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT7:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT6]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi i32* [ [[A]], [[ENTRY:%.*]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
@@ -798,14 +798,14 @@ define hidden void @pointer_phi_v4i32_uf4(i32* noalias nocapture readonly %A, i3
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i32, i32* [[A:%.*]], i32 59904
 ; CHECK-NEXT:    [[IND_END3:%.*]] = getelementptr i32, i32* [[B:%.*]], i32 9984
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> undef, i32 [[Y:%.*]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> undef, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT10:%.*]] = insertelement <4 x i32> undef, i32 [[Y]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT11:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT10]], <4 x i32> undef, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT12:%.*]] = insertelement <4 x i32> undef, i32 [[Y]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT13:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT12]], <4 x i32> undef, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT14:%.*]] = insertelement <4 x i32> undef, i32 [[Y]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT15:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT14]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[Y:%.*]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT10:%.*]] = insertelement <4 x i32> poison, i32 [[Y]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT11:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT10]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT12:%.*]] = insertelement <4 x i32> poison, i32 [[Y]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT13:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT12]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT14:%.*]] = insertelement <4 x i32> poison, i32 [[Y]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT15:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT14]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi i32* [ [[A]], [[ENTRY:%.*]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]

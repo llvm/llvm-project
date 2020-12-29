@@ -137,7 +137,7 @@ define void @phi_float32(half %hval, float %fval) {
 ; MAX256-NEXT:    [[TMP2:%.*]] = insertelement <4 x half> [[TMP1]], half [[HVAL]], i32 2
 ; MAX256-NEXT:    [[TMP3:%.*]] = insertelement <4 x half> [[TMP2]], half [[HVAL]], i32 3
 ; MAX256-NEXT:    [[TMP4:%.*]] = fpext <4 x half> [[TMP3]] to <4 x float>
-; MAX256-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+; MAX256-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
 ; MAX256-NEXT:    [[TMP5:%.*]] = insertelement <8 x float> undef, float [[FVAL:%.*]], i32 0
 ; MAX256-NEXT:    [[TMP6:%.*]] = insertelement <8 x float> [[TMP5]], float [[FVAL]], i32 1
 ; MAX256-NEXT:    [[TMP7:%.*]] = insertelement <8 x float> [[TMP6]], float [[FVAL]], i32 2
@@ -315,7 +315,7 @@ define void @phi_float32(half %hval, float %fval) {
 ; MAX1024-NEXT:    [[TMP2:%.*]] = insertelement <4 x half> [[TMP1]], half [[HVAL]], i32 2
 ; MAX1024-NEXT:    [[TMP3:%.*]] = insertelement <4 x half> [[TMP2]], half [[HVAL]], i32 3
 ; MAX1024-NEXT:    [[TMP4:%.*]] = fpext <4 x half> [[TMP3]] to <4 x float>
-; MAX1024-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 3, i32 2, i32 1, i32 0, i32 3, i32 2, i32 1, i32 0, i32 3, i32 2, i32 1, i32 0, i32 3, i32 2, i32 1, i32 0, i32 3, i32 2, i32 1, i32 0, i32 3, i32 2, i32 1, i32 0>
+; MAX1024-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 3, i32 2, i32 1, i32 0, i32 3, i32 2, i32 1, i32 0, i32 3, i32 2, i32 1, i32 0, i32 3, i32 2, i32 1, i32 0, i32 3, i32 2, i32 1, i32 0, i32 3, i32 2, i32 1, i32 0>
 ; MAX1024-NEXT:    [[TMP5:%.*]] = insertelement <32 x float> undef, float [[FVAL:%.*]], i32 0
 ; MAX1024-NEXT:    [[TMP6:%.*]] = insertelement <32 x float> [[TMP5]], float [[FVAL]], i32 1
 ; MAX1024-NEXT:    [[TMP7:%.*]] = insertelement <32 x float> [[TMP6]], float [[FVAL]], i32 2

@@ -60,8 +60,8 @@ int4 vectorVectorTest(int4 a,int4 b) {
 
 //NOOPT-LABEL: @vectorScalarTest
 int4 vectorScalarTest(int4 a,int b) {
-  //NOOPT: [[SP0:%.+]] = insertelement <4 x i32> undef
-  //NOOPT: [[SP1:%.+]] = shufflevector <4 x i32> [[SP0]], <4 x i32> undef, <4 x i32> zeroinitializer
+  //NOOPT: [[SP0:%.+]] = insertelement <4 x i32> poison
+  //NOOPT: [[SP1:%.+]] = shufflevector <4 x i32> [[SP0]], <4 x i32> poison, <4 x i32> zeroinitializer
   //NOOPT: [[VSM:%.+]] = and <4 x i32> [[SP1]], <i32 31, i32 31, i32 31, i32 31>
   //NOOPT: [[VSC:%.+]] = shl <4 x i32> [[VSS:%.+]], [[VSM]]
   int4 c = a << b;
