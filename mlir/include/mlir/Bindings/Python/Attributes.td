@@ -22,13 +22,13 @@ class PythonAttr<string c, string p> {
 }
 
 // Mappings between supported builtin attribtues and Python types.
-def : PythonAttr<"::mlir::Attribute", "_ir.Attribute">;
-def : PythonAttr<"::mlir::BoolAttr", "_ir.BoolAttr">;
-def : PythonAttr<"::mlir::IntegerAttr", "_ir.IntegerAttr">;
-def : PythonAttr<"::mlir::FloatAttr", "_ir.FloatAttr">;
-def : PythonAttr<"::mlir::StringAttr", "_ir.StringAttr">;
-def : PythonAttr<"::mlir::DenseElementsAttr", "_ir.DenseElementsAttr">;
-def : PythonAttr<"::mlir::DenseIntElementsAttr", "_ir.DenseIntElementsAttr">;
-def : PythonAttr<"::mlir::DenseFPElementsAttr", "_ir.DenseFPElementsAttr">;
+def : PythonAttr<"::mlir::Attribute", "_ods_ir.Attribute">;
+def : PythonAttr<"::mlir::BoolAttr", "_ods_ir.BoolAttr">;
+def : PythonAttr<"::mlir::IntegerAttr", "_ods_ir.IntegerAttr">;
+def : PythonAttr<"::mlir::FloatAttr", "_ods_ir.FloatAttr">;
+def : PythonAttr<"::mlir::StringAttr", "_ods_ir.StringAttr">;
+def : PythonAttr<"::mlir::DenseElementsAttr", "_ods_ir.DenseElementsAttr">;
+def : PythonAttr<"::mlir::DenseIntElementsAttr", "_ods_ir.DenseIntElementsAttr">;
+def : PythonAttr<"::mlir::DenseFPElementsAttr", "_ods_ir.DenseFPElementsAttr">;
 
 #endif
