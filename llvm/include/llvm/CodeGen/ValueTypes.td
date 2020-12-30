@@ -196,6 +196,7 @@ def untyped: ValueType<8  , 160>;   // Produces an untyped value
 def exnref : ValueType<0  , 161>;   // WebAssembly's exnref type
 def funcref : ValueType<0  , 162>;   // WebAssembly's funcref type
 def externref : ValueType<0  , 163>;   // WebAssembly's externref type
+def x86amx : ValueType<8192, 164>;   // X86 AMX value
 
 
 def token  : ValueType<0  , 248>;   // TokenTy

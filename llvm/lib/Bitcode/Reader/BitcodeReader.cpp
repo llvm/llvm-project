@@ -1763,6 +1763,9 @@ Error BitcodeReader::parseTypeTableBody() {
     case bitc::TYPE_CODE_X86_MMX:   // X86_MMX
       ResultTy = Type::getX86_MMXTy(Context);
       break;
+    case bitc::TYPE_CODE_X86_AMX:   // X86_AMX
+      ResultTy = Type::getX86_AMXTy(Context);
+      break;
     case bitc::TYPE_CODE_TOKEN:     // TOKEN
       ResultTy = Type::getTokenTy(Context);
       break;
