@@ -20,7 +20,7 @@ entry:
   ret <vscale x 2 x float> %a
 }
 
-declare <vscale x 2 x float> @llvm.riscv.vfwredsum.mask.nxv2f32.nxv32f16.nxv32i1(
+declare <vscale x 2 x float> @llvm.riscv.vfwredsum.mask.nxv2f32.nxv32f16(
   <vscale x 2 x float>,
   <vscale x 32 x half>,
   <vscale x 2 x float>,
@@ -32,7 +32,7 @@ entry:
 ; CHECK-LABEL: intrinsic_vfwredsum_mask_vs_nxv2f32_nxv32f16_nxv2f32
 ; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e16,m8,ta,mu
 ; CHECK:       vfwredsum.vs {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}, v0.t
-  %a = call <vscale x 2 x float> @llvm.riscv.vfwredsum.mask.nxv2f32.nxv32f16.nxv32i1(
+  %a = call <vscale x 2 x float> @llvm.riscv.vfwredsum.mask.nxv2f32.nxv32f16(
     <vscale x 2 x float> %0,
     <vscale x 32 x half> %1,
     <vscale x 2 x float> %2,
