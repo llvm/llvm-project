@@ -1039,10 +1039,10 @@ Value *llvm::createSimpleTargetReduction(
   case Instruction::FCmp:
     if (Flags.IsMaxOp) {
       MinMaxKind = RD::MRK_FloatMax;
-      BuildFunc = [&]() { return Builder.CreateFPMaxReduce(Src, Flags.NoNaN); };
+      BuildFunc = [&]() { return Builder.CreateFPMaxReduce(Src); };
     } else {
       MinMaxKind = RD::MRK_FloatMin;
-      BuildFunc = [&]() { return Builder.CreateFPMinReduce(Src, Flags.NoNaN); };
+      BuildFunc = [&]() { return Builder.CreateFPMinReduce(Src); };
     }
     break;
   default:

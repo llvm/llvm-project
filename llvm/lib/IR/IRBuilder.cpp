@@ -380,24 +380,12 @@ CallInst *IRBuilderBase::CreateIntMinReduce(Value *Src, bool IsSigned) {
   return getReductionIntrinsic(this, ID, Src);
 }
 
-CallInst *IRBuilderBase::CreateFPMaxReduce(Value *Src, bool NoNaN) {
-  auto Rdx = getReductionIntrinsic(this, Intrinsic::vector_reduce_fmax, Src);
-  if (NoNaN) {
-    FastMathFlags FMF;
-    FMF.setNoNaNs();
-    Rdx->setFastMathFlags(FMF);
-  }
-  return Rdx;
+CallInst *IRBuilderBase::CreateFPMaxReduce(Value *Src) {
+  return getReductionIntrinsic(this, Intrinsic::vector_reduce_fmax, Src);
 }
 
-CallInst *IRBuilderBase::CreateFPMinReduce(Value *Src, bool NoNaN) {
-  auto Rdx = getReductionIntrinsic(this, Intrinsic::vector_reduce_fmin, Src);
-  if (NoNaN) {
-    FastMathFlags FMF;
-    FMF.setNoNaNs();
-    Rdx->setFastMathFlags(FMF);
-  }
-  return Rdx;
+CallInst *IRBuilderBase::CreateFPMinReduce(Value *Src) {
+  return getReductionIntrinsic(this, Intrinsic::vector_reduce_fmin, Src);
 }
 
 CallInst *IRBuilderBase::CreateLifetimeStart(Value *Ptr, ConstantInt *Size) {
