@@ -163,14 +163,6 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
     // If the symbol is defined, it cannot be preempted.
     if (!GV->isDeclarationForLinker())
       return true;
-  } else if (TT.isOSBinFormatELF()) {
-    // If dso_local allows AsmPrinter::getSymbolPreferLocal to use a local
-    // alias, set the flag. We cannot set dso_local for other global values,
-    // because otherwise direct accesses to a probably interposable symbol (even
-    // if the codegen assumes not) will be rejected by the linker.
-    if (!GV->canBenefitFromLocalAlias())
-      return false;
-    return TT.isX86() && M.noSemanticInterposition();
   }
 
   // ELF & wasm support preemption of other symbols.
