@@ -81,10 +81,6 @@ struct OutlinableGroup {
   /// Regions.
   unsigned Cost = 0;
 
-  /// The argument that needs to be marked with the swifterr attribute.  If not
-  /// needed, there is no value.
-  Optional<unsigned> SwiftErrorArgument;
-
   /// For the \ref Regions, we look at every Value.  If it is a constant,
   /// we check whether it is the same in Region.
   ///
@@ -356,11 +352,6 @@ Function *IROutliner::createFunction(Module &M, OutlinableGroup &Group,
       Group.OutlinedFunctionType, GlobalValue::InternalLinkage,
       "outlined_ir_func_" + std::to_string(FunctionNameSuffix), M);
 
-  // Transfer the swifterr attribute to the correct function parameter.
-  if (Group.SwiftErrorArgument.hasValue())
-    Group.OutlinedFunction->addParamAttr(Group.SwiftErrorArgument.getValue(),
-                                         Attribute::SwiftError);
-
   Group.OutlinedFunction->addFnAttr(Attribute::OptimizeForSize);
   Group.OutlinedFunction->addFnAttr(Attribute::MinSize);
 
@@ -579,17 +570,8 @@ findExtractedInputToOverallInputMapping(OutlinableRegion &Region,
     assert(InputOpt.hasValue() && "Global value number not found?");
     Value *Input = InputOpt.getValue();
 
-    if (!Group.InputTypesSet) {
+    if (!Group.InputTypesSet)
       Group.ArgumentTypes.push_back(Input->getType());
-      // If the input value has a swifterr attribute, make sure to mark the
-      // argument in the overall function.
-      if (Input->isSwiftError()) {
-        assert(
-            !Group.SwiftErrorArgument.hasValue() &&
-            "Argument already marked with swifterr for this OutlinableGroup!");
-        Group.SwiftErrorArgument = TypeIndex;
-      }
-    }
 
     // Check if we have a constant. If we do add it to the overall argument
     // number to Constant map for the region, and continue to the next input.
@@ -809,12 +791,6 @@ CallInst *replaceCalledFunction(Module &M, OutlinableRegion &Region) {
   // Remove the old instruction.
   OldCall->eraseFromParent();
   Region.Call = Call;
-
-  // Make sure that the argument in the new function has the SwiftError
-  // argument.
-  if (Group.SwiftErrorArgument.hasValue())
-    Call->addParamAttr(Group.SwiftErrorArgument.getValue(),
-                       Attribute::SwiftError);
 
   return Call;
 }
