@@ -20,7 +20,7 @@ entry:
   ret <vscale x 2 x float> %a
 }
 
-declare <vscale x 2 x float> @llvm.riscv.vfwredosum.mask.nxv2f32.nxv32f16.nxv32i1(
+declare <vscale x 2 x float> @llvm.riscv.vfwredosum.mask.nxv2f32.nxv32f16(
   <vscale x 2 x float>,
   <vscale x 32 x half>,
   <vscale x 2 x float>,
@@ -32,7 +32,7 @@ entry:
 ; CHECK-LABEL: intrinsic_vfwredosum_mask_vs_nxv2f32_nxv32f16_nxv2f32
 ; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e16,m8,ta,mu
 ; CHECK:       vfwredosum.vs {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}, v0.t
-  %a = call <vscale x 2 x float> @llvm.riscv.vfwredosum.mask.nxv2f32.nxv32f16.nxv32i1(
+  %a = call <vscale x 2 x float> @llvm.riscv.vfwredosum.mask.nxv2f32.nxv32f16(
     <vscale x 2 x float> %0,
     <vscale x 32 x half> %1,
     <vscale x 2 x float> %2,
@@ -62,7 +62,7 @@ entry:
   ret <vscale x 1 x double> %a
 }
 
-declare <vscale x 1 x double> @llvm.riscv.vfwredosum.mask.nxv1f64.nxv16f32.nxv16i1(
+declare <vscale x 1 x double> @llvm.riscv.vfwredosum.mask.nxv1f64.nxv16f32(
   <vscale x 1 x double>,
   <vscale x 16 x float>,
   <vscale x 1 x double>,
@@ -74,7 +74,7 @@ entry:
 ; CHECK-LABEL: intrinsic_vfwredosum_mask_vs_nxv1f64_nxv16f32_nxv1f64
 ; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e32,m8,ta,mu
 ; CHECK:       vfwredosum.vs {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}, v0.t
-  %a = call <vscale x 1 x double> @llvm.riscv.vfwredosum.mask.nxv1f64.nxv16f32.nxv16i1(
+  %a = call <vscale x 1 x double> @llvm.riscv.vfwredosum.mask.nxv1f64.nxv16f32(
     <vscale x 1 x double> %0,
     <vscale x 16 x float> %1,
     <vscale x 1 x double> %2,
