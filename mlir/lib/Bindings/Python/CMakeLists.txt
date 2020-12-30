@@ -2,15 +2,6 @@ include(AddMLIRPythonExtension)
 add_custom_target(MLIRBindingsPythonExtension)
 
 ################################################################################
-# Generate dialect-specific bindings.
-################################################################################
-
-add_mlir_dialect_python_bindings(MLIRBindingsPythonStandardOps
-  StandardOps.td
-  std)
-add_dependencies(MLIRBindingsPythonExtension MLIRBindingsPythonStandardOps)
-
-################################################################################
 # Copy python source tree.
 ################################################################################
 
@@ -39,6 +30,15 @@ foreach(PY_SRC_FILE ${PY_SRC_FILES})
         "${CMAKE_CURRENT_SOURCE_DIR}/${PY_SRC_FILE}" "${PY_DEST_FILE}"
   )
 endforeach()
+
+################################################################################
+# Generate dialect-specific bindings.
+################################################################################
+
+add_mlir_dialect_python_bindings(MLIRBindingsPythonStandardOps
+  StandardOps.td
+  std)
+add_dependencies(MLIRBindingsPythonSources MLIRBindingsPythonStandardOps)
 
 ################################################################################
 # Build core python extension
