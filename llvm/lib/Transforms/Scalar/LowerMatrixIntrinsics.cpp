@@ -336,7 +336,7 @@ class LowerMatrixIntrinsics {
       Value *Vec = isColumnMajor() ? getColumn(J) : getRow(I);
       Value *Undef = UndefValue::get(Vec->getType());
       return Builder.CreateShuffleVector(
-          Vec, Undef, createSequentialMask(isColumnMajor() ? I : J, NumElts, 0),
+          Vec, createSequentialMask(isColumnMajor() ? I : J, NumElts, 0),
           "block");
     }
   };
@@ -452,7 +452,7 @@ public:
          MaskStart < cast<FixedVectorType>(VType)->getNumElements();
          MaskStart += SI.getStride()) {
       Value *V = Builder.CreateShuffleVector(
-          MatrixVal, Undef, createSequentialMask(MaskStart, SI.getStride(), 0),
+          MatrixVal, createSequentialMask(MaskStart, SI.getStride(), 0),
           "split");
       SplitVecs.push_back(V);
     }
@@ -943,8 +943,7 @@ public:
 
     Value *Undef = UndefValue::get(Block->getType());
     Block = Builder.CreateShuffleVector(
-        Block, Undef,
-        createSequentialMask(0, BlockNumElts, NumElts - BlockNumElts));
+        Block, createSequentialMask(0, BlockNumElts, NumElts - BlockNumElts));
 
     // If Col is 7 long and I is 2 and BlockNumElts is 2 the mask is: 0, 1, 7,
     // 8, 4, 5, 6

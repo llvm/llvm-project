@@ -829,8 +829,7 @@ static Value *concatenateTwoVectors(IRBuilderBase &Builder, Value *V1,
   if (NumElts1 > NumElts2) {
     // Extend with UNDEFs.
     V2 = Builder.CreateShuffleVector(
-        V2, UndefValue::get(VecTy2),
-        createSequentialMask(0, NumElts2, NumElts1 - NumElts2));
+        V2, createSequentialMask(0, NumElts2, NumElts1 - NumElts2));
   }
 
   return Builder.CreateShuffleVector(

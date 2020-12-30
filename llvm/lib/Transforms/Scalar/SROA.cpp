@@ -2207,8 +2207,7 @@ static Value *extractVector(IRBuilderTy &IRB, Value *V, unsigned BeginIndex,
   Mask.reserve(NumElements);
   for (unsigned i = BeginIndex; i != EndIndex; ++i)
     Mask.push_back(i);
-  V = IRB.CreateShuffleVector(V, UndefValue::get(V->getType()), Mask,
-                              Name + ".extract");
+  V = IRB.CreateShuffleVector(V, Mask, Name + ".extract");
   LLVM_DEBUG(dbgs() << "     shuffle: " << *V << "\n");
   return V;
 }
@@ -2241,22 +2240,22 @@ static Value *insertVector(IRBuilderTy &IRB, Value *Old, Value *V,
   // use a shuffle vector to widen it with undef elements, and then
   // a second shuffle vector to select between the loaded vector and the
   // incoming vector.
-  SmallVector<Constant *, 8> Mask;
+  SmallVector<int, 8> Mask;
   Mask.reserve(cast<FixedVectorType>(VecTy)->getNumElements());
   for (unsigned i = 0; i != cast<FixedVectorType>(VecTy)->getNumElements(); ++i)
     if (i >= BeginIndex && i < EndIndex)
-      Mask.push_back(IRB.getInt32(i - BeginIndex));
+      Mask.push_back(i - BeginIndex);
     else
-      Mask.push_back(UndefValue::get(IRB.getInt32Ty()));
-  V = IRB.CreateShuffleVector(V, UndefValue::get(V->getType()),
-                              ConstantVector::get(Mask), Name + ".expand");
+      Mask.push_back(-1);
+  V = IRB.CreateShuffleVector(V, Mask, Name + ".expand");
   LLVM_DEBUG(dbgs() << "    shuffle: " << *V << "\n");
 
-  Mask.clear();
+  SmallVector<Constant *, 8> Mask2;
+  Mask2.reserve(cast<FixedVectorType>(VecTy)->getNumElements());
   for (unsigned i = 0; i != cast<FixedVectorType>(VecTy)->getNumElements(); ++i)
-    Mask.push_back(IRB.getInt1(i >= BeginIndex && i < EndIndex));
+    Mask2.push_back(IRB.getInt1(i >= BeginIndex && i < EndIndex));
 
-  V = IRB.CreateSelect(ConstantVector::get(Mask), V, Old, Name + "blend");
+  V = IRB.CreateSelect(ConstantVector::get(Mask2), V, Old, Name + "blend");
 
   LLVM_DEBUG(dbgs() << "    blend: " << *V << "\n");
   return V;

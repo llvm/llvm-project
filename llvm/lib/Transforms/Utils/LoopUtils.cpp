@@ -958,8 +958,7 @@ llvm::getShuffleReduction(IRBuilderBase &Builder, Value *Src, unsigned Op,
     // Fill the rest of the mask with undef.
     std::fill(&ShuffleMask[i / 2], ShuffleMask.end(), -1);
 
-    Value *Shuf = Builder.CreateShuffleVector(
-        TmpVec, UndefValue::get(TmpVec->getType()), ShuffleMask, "rdx.shuf");
+    Value *Shuf = Builder.CreateShuffleVector(TmpVec, ShuffleMask, "rdx.shuf");
 
     if (Op != Instruction::ICmp && Op != Instruction::FCmp) {
       // The builder propagates its fast-math-flags setting.

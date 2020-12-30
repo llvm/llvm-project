@@ -4,8 +4,8 @@
 define <8 x i32> @transpose(<8 x i32> %a) {
 ; RM-LABEL: @transpose(
 ; RM-NEXT:  entry:
-; RM-NEXT:    [[SPLIT:%.*]] = shufflevector <8 x i32> [[A:%.*]], <8 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; RM-NEXT:    [[SPLIT1:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; RM-NEXT:    [[SPLIT:%.*]] = shufflevector <8 x i32> [[A:%.*]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; RM-NEXT:    [[SPLIT1:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 ; RM-NEXT:    [[TMP0:%.*]] = extractelement <4 x i32> [[SPLIT]], i64 0
 ; RM-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> undef, i32 [[TMP0]], i64 0
 ; RM-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[SPLIT1]], i64 0
@@ -37,14 +37,14 @@ declare <8 x i32> @llvm.matrix.transpose(<8 x i32>, i32, i32)
 define <8 x i32> @transpose_single_column(<8 x i32> %a) {
 ; RM-LABEL: @transpose_single_column(
 ; RM-NEXT:  entry:
-; RM-NEXT:    [[SPLIT:%.*]] = shufflevector <8 x i32> [[A:%.*]], <8 x i32> undef, <1 x i32> zeroinitializer
-; RM-NEXT:    [[SPLIT1:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> undef, <1 x i32> <i32 1>
-; RM-NEXT:    [[SPLIT2:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> undef, <1 x i32> <i32 2>
-; RM-NEXT:    [[SPLIT3:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> undef, <1 x i32> <i32 3>
-; RM-NEXT:    [[SPLIT4:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> undef, <1 x i32> <i32 4>
-; RM-NEXT:    [[SPLIT5:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> undef, <1 x i32> <i32 5>
-; RM-NEXT:    [[SPLIT6:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> undef, <1 x i32> <i32 6>
-; RM-NEXT:    [[SPLIT7:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> undef, <1 x i32> <i32 7>
+; RM-NEXT:    [[SPLIT:%.*]] = shufflevector <8 x i32> [[A:%.*]], <8 x i32> poison, <1 x i32> zeroinitializer
+; RM-NEXT:    [[SPLIT1:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> poison, <1 x i32> <i32 1>
+; RM-NEXT:    [[SPLIT2:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> poison, <1 x i32> <i32 2>
+; RM-NEXT:    [[SPLIT3:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> poison, <1 x i32> <i32 3>
+; RM-NEXT:    [[SPLIT4:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> poison, <1 x i32> <i32 4>
+; RM-NEXT:    [[SPLIT5:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> poison, <1 x i32> <i32 5>
+; RM-NEXT:    [[SPLIT6:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> poison, <1 x i32> <i32 6>
+; RM-NEXT:    [[SPLIT7:%.*]] = shufflevector <8 x i32> [[A]], <8 x i32> poison, <1 x i32> <i32 7>
 ; RM-NEXT:    [[TMP0:%.*]] = extractelement <1 x i32> [[SPLIT]], i64 0
 ; RM-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> undef, i32 [[TMP0]], i64 0
 ; RM-NEXT:    [[TMP2:%.*]] = extractelement <1 x i32> [[SPLIT1]], i64 0
@@ -73,9 +73,9 @@ declare <12 x i32> @llvm.matrix.transpose.v12i32(<12 x i32>, i32, i32)
 define <12 x i32> @transpose_i32_3x4(<12 x i32> %a) {
 ; RM-LABEL: @transpose_i32_3x4(
 ; RM-NEXT:  entry:
-; RM-NEXT:    [[SPLIT:%.*]] = shufflevector <12 x i32> [[A:%.*]], <12 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; RM-NEXT:    [[SPLIT1:%.*]] = shufflevector <12 x i32> [[A]], <12 x i32> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; RM-NEXT:    [[SPLIT2:%.*]] = shufflevector <12 x i32> [[A]], <12 x i32> undef, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+; RM-NEXT:    [[SPLIT:%.*]] = shufflevector <12 x i32> [[A:%.*]], <12 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; RM-NEXT:    [[SPLIT1:%.*]] = shufflevector <12 x i32> [[A]], <12 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; RM-NEXT:    [[SPLIT2:%.*]] = shufflevector <12 x i32> [[A]], <12 x i32> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
 ; RM-NEXT:    [[TMP0:%.*]] = extractelement <4 x i32> [[SPLIT]], i64 0
 ; RM-NEXT:    [[TMP1:%.*]] = insertelement <3 x i32> undef, i32 [[TMP0]], i64 0
 ; RM-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[SPLIT1]], i64 0

@@ -8,7 +8,7 @@
 
 // LE-LABEL: @test_vmovnbq_s16(
 // LE-NEXT:  entry:
-// LE-NEXT:    [[TMP0:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> undef, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
+// LE-NEXT:    [[TMP0:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> poison, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
 // LE-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
 // LE-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i16> [[B:%.*]], <8 x i16> [[TMP1]], <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
 // LE-NEXT:    [[TMP3:%.*]] = trunc <16 x i16> [[TMP2]] to <16 x i8>
@@ -16,7 +16,7 @@
 //
 // BE-LABEL: @test_vmovnbq_s16(
 // BE-NEXT:  entry:
-// BE-NEXT:    [[TMP0:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> undef, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
+// BE-NEXT:    [[TMP0:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> poison, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
 // BE-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.arm.mve.vreinterpretq.v8i16.v16i8(<16 x i8> [[TMP0]])
 // BE-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i16> [[B:%.*]], <8 x i16> [[TMP1]], <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
 // BE-NEXT:    [[TMP3:%.*]] = trunc <16 x i16> [[TMP2]] to <16 x i8>
@@ -33,7 +33,7 @@ int8x16_t test_vmovnbq_s16(int8x16_t a, int16x8_t b)
 
 // LE-LABEL: @test_vmovnbq_s32(
 // LE-NEXT:  entry:
-// LE-NEXT:    [[TMP0:%.*]] = shufflevector <8 x i16> [[A:%.*]], <8 x i16> undef, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
+// LE-NEXT:    [[TMP0:%.*]] = shufflevector <8 x i16> [[A:%.*]], <8 x i16> poison, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
 // LE-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[TMP0]] to <4 x i32>
 // LE-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[B:%.*]], <4 x i32> [[TMP1]], <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
 // LE-NEXT:    [[TMP3:%.*]] = trunc <8 x i32> [[TMP2]] to <8 x i16>
@@ -41,7 +41,7 @@ int8x16_t test_vmovnbq_s16(int8x16_t a, int16x8_t b)
 //
 // BE-LABEL: @test_vmovnbq_s32(
 // BE-NEXT:  entry:
-// BE-NEXT:    [[TMP0:%.*]] = shufflevector <8 x i16> [[A:%.*]], <8 x i16> undef, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
+// BE-NEXT:    [[TMP0:%.*]] = shufflevector <8 x i16> [[A:%.*]], <8 x i16> poison, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
 // BE-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.arm.mve.vreinterpretq.v4i32.v8i16(<8 x i16> [[TMP0]])
 // BE-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[B:%.*]], <4 x i32> [[TMP1]], <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
 // BE-NEXT:    [[TMP3:%.*]] = trunc <8 x i32> [[TMP2]] to <8 x i16>
@@ -58,7 +58,7 @@ int16x8_t test_vmovnbq_s32(int16x8_t a, int32x4_t b)
 
 // LE-LABEL: @test_vmovnbq_u16(
 // LE-NEXT:  entry:
-// LE-NEXT:    [[TMP0:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> undef, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
+// LE-NEXT:    [[TMP0:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> poison, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
 // LE-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
 // LE-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i16> [[B:%.*]], <8 x i16> [[TMP1]], <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
 // LE-NEXT:    [[TMP3:%.*]] = trunc <16 x i16> [[TMP2]] to <16 x i8>
@@ -66,7 +66,7 @@ int16x8_t test_vmovnbq_s32(int16x8_t a, int32x4_t b)
 //
 // BE-LABEL: @test_vmovnbq_u16(
 // BE-NEXT:  entry:
-// BE-NEXT:    [[TMP0:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> undef, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
+// BE-NEXT:    [[TMP0:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> poison, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
 // BE-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.arm.mve.vreinterpretq.v8i16.v16i8(<16 x i8> [[TMP0]])
 // BE-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i16> [[B:%.*]], <8 x i16> [[TMP1]], <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
 // BE-NEXT:    [[TMP3:%.*]] = trunc <16 x i16> [[TMP2]] to <16 x i8>
@@ -83,7 +83,7 @@ uint8x16_t test_vmovnbq_u16(uint8x16_t a, uint16x8_t b)
 
 // LE-LABEL: @test_vmovnbq_u32(
 // LE-NEXT:  entry:
-// LE-NEXT:    [[TMP0:%.*]] = shufflevector <8 x i16> [[A:%.*]], <8 x i16> undef, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
+// LE-NEXT:    [[TMP0:%.*]] = shufflevector <8 x i16> [[A:%.*]], <8 x i16> poison, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
 // LE-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[TMP0]] to <4 x i32>
 // LE-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[B:%.*]], <4 x i32> [[TMP1]], <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
 // LE-NEXT:    [[TMP3:%.*]] = trunc <8 x i32> [[TMP2]] to <8 x i16>
@@ -91,7 +91,7 @@ uint8x16_t test_vmovnbq_u16(uint8x16_t a, uint16x8_t b)
 //
 // BE-LABEL: @test_vmovnbq_u32(
 // BE-NEXT:  entry:
-// BE-NEXT:    [[TMP0:%.*]] = shufflevector <8 x i16> [[A:%.*]], <8 x i16> undef, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
+// BE-NEXT:    [[TMP0:%.*]] = shufflevector <8 x i16> [[A:%.*]], <8 x i16> poison, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
 // BE-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.arm.mve.vreinterpretq.v4i32.v8i16(<8 x i16> [[TMP0]])
 // BE-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[B:%.*]], <4 x i32> [[TMP1]], <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
 // BE-NEXT:    [[TMP3:%.*]] = trunc <8 x i32> [[TMP2]] to <8 x i16>

@@ -295,8 +295,7 @@ static void reorderSubVector(MVT VT, SmallVectorImpl<Value *> &TransposedMatrix,
 
   if (VecElems == 16) {
     for (unsigned i = 0; i < Stride; i++)
-      TransposedMatrix[i] = Builder.CreateShuffleVector(
-          Vec[i], UndefValue::get(Vec[i]->getType()), VPShuf);
+      TransposedMatrix[i] = Builder.CreateShuffleVector(Vec[i], VPShuf);
     return;
   }
 

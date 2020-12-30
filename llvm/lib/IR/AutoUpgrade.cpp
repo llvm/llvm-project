@@ -2397,7 +2397,6 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                          Name.startswith("avx2.pmovzx") ||
                          Name.startswith("avx512.mask.pmovsx") ||
                          Name.startswith("avx512.mask.pmovzx"))) {
-      auto *SrcTy = cast<FixedVectorType>(CI->getArgOperand(0)->getType());
       auto *DstTy = cast<FixedVectorType>(CI->getType());
       unsigned NumDstElts = DstTy->getNumElements();
 
@@ -2406,8 +2405,8 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       for (unsigned i = 0; i != NumDstElts; ++i)
         ShuffleMask[i] = i;
 
-      Value *SV = Builder.CreateShuffleVector(
-          CI->getArgOperand(0), UndefValue::get(SrcTy), ShuffleMask);
+      Value *SV = Builder.CreateShuffleVector(CI->getArgOperand(0),
+                                              ShuffleMask);
 
       bool DoSext = (StringRef::npos != Name.find("pmovsx"));
       Rep = DoSext ? Builder.CreateSExt(SV, DstTy)
@@ -2434,11 +2433,10 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                                             PointerType::getUnqual(VT));
       Value *Load = Builder.CreateAlignedLoad(VT, Op, Align(1));
       if (NumSrcElts == 2)
-        Rep = Builder.CreateShuffleVector(
-            Load, UndefValue::get(Load->getType()), ArrayRef<int>{0, 1, 0, 1});
+        Rep = Builder.CreateShuffleVector(Load, ArrayRef<int>{0, 1, 0, 1});
       else
         Rep =
-            Builder.CreateShuffleVector(Load, UndefValue::get(Load->getType()),
+            Builder.CreateShuffleVector(Load,
                                         ArrayRef<int>{0, 1, 2, 3, 0, 1, 2, 3});
     } else if (IsX86 && (Name.startswith("avx512.mask.shuf.i") ||
                          Name.startswith("avx512.mask.shuf.f"))) {
@@ -2487,8 +2485,9 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Value *Op = CI->getArgOperand(0);
       ElementCount EC = cast<VectorType>(CI->getType())->getElementCount();
       Type *MaskTy = VectorType::get(Type::getInt32Ty(C), EC);
-      Rep = Builder.CreateShuffleVector(Op, UndefValue::get(Op->getType()),
-                                        Constant::getNullValue(MaskTy));
+      SmallVector<int, 8> M;
+      ShuffleVectorInst::getShuffleMask(Constant::getNullValue(MaskTy), M);
+      Rep = Builder.CreateShuffleVector(Op, M);
 
       if (CI->getNumArgOperands() == 3)
         Rep = EmitX86Select(Builder, CI->getArgOperand(2), Rep,
@@ -2581,13 +2580,12 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Imm = Imm % Scale;
 
       // Extend the second operand into a vector the size of the destination.
-      Value *UndefV = UndefValue::get(Op1->getType());
       SmallVector<int, 8> Idxs(DstNumElts);
       for (unsigned i = 0; i != SrcNumElts; ++i)
         Idxs[i] = i;
       for (unsigned i = SrcNumElts; i != DstNumElts; ++i)
         Idxs[i] = SrcNumElts;
-      Rep = Builder.CreateShuffleVector(Op1, UndefV, Idxs);
+      Rep = Builder.CreateShuffleVector(Op1, Idxs);
 
       // Insert the second operand into the first operand.
 

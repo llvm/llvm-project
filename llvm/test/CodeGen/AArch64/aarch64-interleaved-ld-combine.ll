@@ -14,10 +14,10 @@ entry:
 ; CHECK-DAG: [[GEP:%.+]] = getelementptr inbounds <4 x float>, <4 x float>* %ptr, i64 2
 ; CHECK-DAG: [[CAST:%.+]] = bitcast <4 x float>* [[GEP]] to <16 x float>*
 ; CHECK-DAG: [[LOAD:%.+]] = load <16 x float>, <16 x float>* [[CAST]], align 16
-; CHECK-DAG: %{{.* }}= shufflevector <16 x float> [[LOAD]], <16 x float> undef, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
-; CHECK-DAG: %{{.* }}= shufflevector <16 x float> [[LOAD]], <16 x float> undef, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
-; CHECK-DAG: %{{.* }}= shufflevector <16 x float> [[LOAD]], <16 x float> undef, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
-; CHECK-DAG: %{{.* }}= shufflevector <16 x float> [[LOAD]], <16 x float> undef, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
+; CHECK-DAG: %{{.* }}= shufflevector <16 x float> [[LOAD]], <16 x float> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
+; CHECK-DAG: %{{.* }}= shufflevector <16 x float> [[LOAD]], <16 x float> poison, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
+; CHECK-DAG: %{{.* }}= shufflevector <16 x float> [[LOAD]], <16 x float> poison, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
+; CHECK-DAG: %{{.* }}= shufflevector <16 x float> [[LOAD]], <16 x float> poison, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
 ; CHECK: ret void
 
 ;;; Check if it gets lowerd
@@ -60,10 +60,10 @@ entry:
 ; CHECK-DAG: [[GEP:%.+]] = getelementptr inbounds <4 x float>, <4 x float>* %ptr, i64 [[LSHR]]
 ; CHECK-DAG: [[CAST:%.+]] = bitcast <4 x float>* [[GEP]] to <16 x float>*
 ; CHECK-DAG: [[LOAD:%.+]] = load <16 x float>, <16 x float>* [[CAST]], align 16
-; CHECK-DAG: %{{.* }}= shufflevector <16 x float> [[LOAD]], <16 x float> undef, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
-; CHECK-DAG: %{{.* }}= shufflevector <16 x float> [[LOAD]], <16 x float> undef, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
-; CHECK-DAG: %{{.* }}= shufflevector <16 x float> [[LOAD]], <16 x float> undef, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
-; CHECK-DAG: %{{.* }}= shufflevector <16 x float> [[LOAD]], <16 x float> undef, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
+; CHECK-DAG: %{{.* }}= shufflevector <16 x float> [[LOAD]], <16 x float> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
+; CHECK-DAG: %{{.* }}= shufflevector <16 x float> [[LOAD]], <16 x float> poison, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
+; CHECK-DAG: %{{.* }}= shufflevector <16 x float> [[LOAD]], <16 x float> poison, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
+; CHECK-DAG: %{{.* }}= shufflevector <16 x float> [[LOAD]], <16 x float> poison, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
 ; CHECK: ret void
 
 ; AS-LABEL: aarch64_ilc_idx
@@ -122,10 +122,10 @@ entry:
 ; CHECK-DAG: [[GEP:%.+]] = getelementptr %struct.ilc, %struct.ilc* %ptr, i32 0, i32 1, i64 [[LSHR]]
 ; CHECK-DAG: [[CAST:%.+]] = bitcast <4 x float>* [[GEP]] to <16 x float>*
 ; CHECK-DAG: [[LOAD:%.+]] = load <16 x float>, <16 x float>* [[CAST]], align 4
-; CHECK-DAG: %{{.* }}= shufflevector <16 x float> [[LOAD]], <16 x float> undef, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
-; CHECK-DAG: %{{.* }}= shufflevector <16 x float> [[LOAD]], <16 x float> undef, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
-; CHECK-DAG: %{{.* }}= shufflevector <16 x float> [[LOAD]], <16 x float> undef, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
-; CHECK-DAG: %{{.* }}= shufflevector <16 x float> [[LOAD]], <16 x float> undef, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
+; CHECK-DAG: %{{.* }}= shufflevector <16 x float> [[LOAD]], <16 x float> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
+; CHECK-DAG: %{{.* }}= shufflevector <16 x float> [[LOAD]], <16 x float> poison, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
+; CHECK-DAG: %{{.* }}= shufflevector <16 x float> [[LOAD]], <16 x float> poison, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
+; CHECK-DAG: %{{.* }}= shufflevector <16 x float> [[LOAD]], <16 x float> poison, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
 ; CHECK: ret void
 
 ; AS-LABEL: aarch64_ilc_struct
@@ -180,8 +180,8 @@ entry:
 ; CHECK-DAG: [[GEP:%.+]] = getelementptr inbounds <4 x float>, <4 x float>* %ptr, i64 [[LSHR]]
 ; CHECK-DAG: [[CAST:%.+]] = bitcast <4 x float>* [[GEP]] to <8 x float>*
 ; CHECK-DAG: [[LOAD:%.+]] = load <8 x float>, <8 x float>* [[CAST]], align 16
-; CHECK: %{{.* }}= shufflevector <8 x float> [[LOAD]], <8 x float> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK: %{{.* }}= shufflevector <8 x float> [[LOAD]], <8 x float> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; CHECK: %{{.* }}= shufflevector <8 x float> [[LOAD]], <8 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK: %{{.* }}= shufflevector <8 x float> [[LOAD]], <8 x float> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 ; CHECK-DAG: ret void
 
 ; AS-LABEL: aarch64_ilc_idx_ld2
@@ -212,9 +212,9 @@ entry:
 ; CHECK-DAG: [[GEP:%.+]] = getelementptr inbounds <4 x float>, <4 x float>* %ptr, i64 [[LSHR]]
 ; CHECK-DAG: [[CAST:%.+]] = bitcast <4 x float>* [[GEP]] to <12 x float>*
 ; CHECK-DAG: [[LOAD:%.+]] = load <12 x float>, <12 x float>* [[CAST]], align 16
-; CHECK: %{{.* }}= shufflevector <12 x float> [[LOAD]], <12 x float> undef, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
-; CHECK: %{{.* }}= shufflevector <12 x float> [[LOAD]], <12 x float> undef, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
-; CHECK: %{{.* }}= shufflevector <12 x float> [[LOAD]], <12 x float> undef, <4 x i32> <i32 2, i32 5, i32 8, i32 11>
+; CHECK: %{{.* }}= shufflevector <12 x float> [[LOAD]], <12 x float> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
+; CHECK: %{{.* }}= shufflevector <12 x float> [[LOAD]], <12 x float> poison, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
+; CHECK: %{{.* }}= shufflevector <12 x float> [[LOAD]], <12 x float> poison, <4 x i32> <i32 2, i32 5, i32 8, i32 11>
 ; CHECK-DAG: ret void
 
 ; AS-LABEL: aarch64_ilc_idx_ld3
@@ -390,17 +390,17 @@ entry:
 ; CHECK-NEXT: %b0 = bitcast float* %p0 to <7 x float>*
 ; CHECK-NEXT: %b1 = bitcast float* %p1 to <7 x float>*
 ; CHECK-NEXT: %l1 = load <7 x float>, <7 x float>* %b1
-; CHECK-NEXT: %s1 = shufflevector <7 x float> %l1, <7 x float> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT: %s1 = shufflevector <7 x float> %l1, <7 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-NEXT: %l0 = load <7 x float>, <7 x float>* %b0
-; CHECK-NEXT: %s0 = shufflevector <7 x float> %l0, <7 x float> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT: %s0 = shufflevector <7 x float> %l0, <7 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-NEXT: ret void
   %p0 = getelementptr inbounds float, float* %ptr, i32 0
   %p1 = getelementptr inbounds float, float* %ptr, i32 1
   %b0 = bitcast float* %p0 to <7 x float>*
   %b1 = bitcast float* %p1 to <7 x float>*
   %l1 = load <7 x float>, <7 x float>* %b1
-  %s1 = shufflevector <7 x float> %l1, <7 x float> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %s1 = shufflevector <7 x float> %l1, <7 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   %l0 = load <7 x float>, <7 x float>* %b0
-  %s0 = shufflevector <7 x float> %l0, <7 x float> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %s0 = shufflevector <7 x float> %l0, <7 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   ret void
 }

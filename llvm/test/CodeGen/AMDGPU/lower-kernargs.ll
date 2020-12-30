@@ -310,7 +310,7 @@ define amdgpu_kernel void @kern_v3i32(<3 x i32> %arg0) {
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_V3I32_KERNARG_SEGMENT]], i64 0
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG0_KERNARG_OFFSET]] to <4 x i32> addrspace(4)*
 ; HSA-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32> addrspace(4)* [[ARG0_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
-; HSA-NEXT:    [[ARG0_LOAD:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> undef, <3 x i32> <i32 0, i32 1, i32 2>
+; HSA-NEXT:    [[ARG0_LOAD:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <3 x i32> <i32 0, i32 1, i32 2>
 ; HSA-NEXT:    store <3 x i32> [[ARG0_LOAD]], <3 x i32> addrspace(1)* undef, align 4
 ; HSA-NEXT:    ret void
 ;
@@ -319,7 +319,7 @@ define amdgpu_kernel void @kern_v3i32(<3 x i32> %arg0) {
 ; MESA-NEXT:    [[ARG0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_V3I32_KERNARG_SEGMENT]], i64 36
 ; MESA-NEXT:    [[ARG0_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG0_KERNARG_OFFSET]] to <4 x i32> addrspace(4)*
 ; MESA-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32> addrspace(4)* [[ARG0_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
-; MESA-NEXT:    [[ARG0_LOAD:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> undef, <3 x i32> <i32 0, i32 1, i32 2>
+; MESA-NEXT:    [[ARG0_LOAD:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <3 x i32> <i32 0, i32 1, i32 2>
 ; MESA-NEXT:    store <3 x i32> [[ARG0_LOAD]], <3 x i32> addrspace(1)* undef, align 4
 ; MESA-NEXT:    ret void
 ;
@@ -399,7 +399,7 @@ define amdgpu_kernel void @kern_i32_v3i32(i32 %arg0, <3 x i32> %arg1) {
 ; HSA-NEXT:    [[ARG1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_I32_V3I32_KERNARG_SEGMENT]], i64 16
 ; HSA-NEXT:    [[ARG1_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG1_KERNARG_OFFSET]] to <4 x i32> addrspace(4)*
 ; HSA-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32> addrspace(4)* [[ARG1_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
-; HSA-NEXT:    [[ARG1_LOAD:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> undef, <3 x i32> <i32 0, i32 1, i32 2>
+; HSA-NEXT:    [[ARG1_LOAD:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <3 x i32> <i32 0, i32 1, i32 2>
 ; HSA-NEXT:    store i32 [[ARG0_LOAD]], i32 addrspace(1)* undef, align 4
 ; HSA-NEXT:    store <3 x i32> [[ARG1_LOAD]], <3 x i32> addrspace(1)* undef, align 4
 ; HSA-NEXT:    ret void
@@ -412,7 +412,7 @@ define amdgpu_kernel void @kern_i32_v3i32(i32 %arg0, <3 x i32> %arg1) {
 ; MESA-NEXT:    [[ARG1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_I32_V3I32_KERNARG_SEGMENT]], i64 52
 ; MESA-NEXT:    [[ARG1_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG1_KERNARG_OFFSET]] to <4 x i32> addrspace(4)*
 ; MESA-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32> addrspace(4)* [[ARG1_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
-; MESA-NEXT:    [[ARG1_LOAD:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> undef, <3 x i32> <i32 0, i32 1, i32 2>
+; MESA-NEXT:    [[ARG1_LOAD:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <3 x i32> <i32 0, i32 1, i32 2>
 ; MESA-NEXT:    store i32 [[ARG0_LOAD]], i32 addrspace(1)* undef, align 4
 ; MESA-NEXT:    store <3 x i32> [[ARG1_LOAD]], <3 x i32> addrspace(1)* undef, align 4
 ; MESA-NEXT:    ret void
@@ -431,7 +431,7 @@ define amdgpu_kernel void @kern_struct_a(%struct.a %arg0) {
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_STRUCT_A_KERNARG_SEGMENT]], i64 0
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG0_KERNARG_OFFSET]] to [[STRUCT_A:%.*]] addrspace(4)*
 ; HSA-NEXT:    [[ARG0_LOAD:%.*]] = load [[STRUCT_A]], [[STRUCT_A]] addrspace(4)* [[ARG0_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
-; HSA-NEXT:    store [[STRUCT_A]] %arg0.load, [[STRUCT_A]] addrspace(1)* undef, align 4
+; HSA-NEXT:    store [[STRUCT_A]] [[ARG0_LOAD]], [[STRUCT_A]] addrspace(1)* undef, align 4
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_struct_a(
@@ -439,7 +439,7 @@ define amdgpu_kernel void @kern_struct_a(%struct.a %arg0) {
 ; MESA-NEXT:    [[ARG0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_STRUCT_A_KERNARG_SEGMENT]], i64 36
 ; MESA-NEXT:    [[ARG0_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG0_KERNARG_OFFSET]] to [[STRUCT_A:%.*]] addrspace(4)*
 ; MESA-NEXT:    [[ARG0_LOAD:%.*]] = load [[STRUCT_A]], [[STRUCT_A]] addrspace(4)* [[ARG0_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
-; MESA-NEXT:    store [[STRUCT_A]] %arg0.load, [[STRUCT_A]] addrspace(1)* undef, align 4
+; MESA-NEXT:    store [[STRUCT_A]] [[ARG0_LOAD]], [[STRUCT_A]] addrspace(1)* undef, align 4
 ; MESA-NEXT:    ret void
 ;
   store %struct.a %arg0, %struct.a addrspace(1)* undef
@@ -452,7 +452,7 @@ define amdgpu_kernel void @kern_struct_b_packed(%struct.b.packed %arg0) #0 {
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_STRUCT_B_PACKED_KERNARG_SEGMENT]], i64 0
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG0_KERNARG_OFFSET]] to [[STRUCT_B_PACKED:%.*]] addrspace(4)*
 ; HSA-NEXT:    [[ARG0_LOAD:%.*]] = load [[STRUCT_B_PACKED]], [[STRUCT_B_PACKED]] addrspace(4)* [[ARG0_KERNARG_OFFSET_CAST]], align 16, !invariant.load !0
-; HSA-NEXT:    store [[STRUCT_B_PACKED]] %arg0.load, [[STRUCT_B_PACKED]] addrspace(1)* undef, align 16
+; HSA-NEXT:    store [[STRUCT_B_PACKED]] [[ARG0_LOAD]], [[STRUCT_B_PACKED]] addrspace(1)* undef, align 16
 ; HSA-NEXT:    ret void
 ;
 ; MESA-LABEL: @kern_struct_b_packed(
@@ -460,7 +460,7 @@ define amdgpu_kernel void @kern_struct_b_packed(%struct.b.packed %arg0) #0 {
 ; MESA-NEXT:    [[ARG0_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, i8 addrspace(4)* [[KERN_STRUCT_B_PACKED_KERNARG_SEGMENT]], i64 36
 ; MESA-NEXT:    [[ARG0_KERNARG_OFFSET_CAST:%.*]] = bitcast i8 addrspace(4)* [[ARG0_KERNARG_OFFSET]] to [[STRUCT_B_PACKED:%.*]] addrspace(4)*
 ; MESA-NEXT:    [[ARG0_LOAD:%.*]] = load [[STRUCT_B_PACKED]], [[STRUCT_B_PACKED]] addrspace(4)* [[ARG0_KERNARG_OFFSET_CAST]], align 4, !invariant.load !0
-; MESA-NEXT:    store [[STRUCT_B_PACKED]] %arg0.load, [[STRUCT_B_PACKED]] addrspace(1)* undef, align 16
+; MESA-NEXT:    store [[STRUCT_B_PACKED]] [[ARG0_LOAD]], [[STRUCT_B_PACKED]] addrspace(1)* undef, align 16
 ; MESA-NEXT:    ret void
 ;
   store %struct.b.packed %arg0, %struct.b.packed addrspace(1)* undef

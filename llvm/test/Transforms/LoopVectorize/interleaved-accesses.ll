@@ -76,7 +76,7 @@ for.end:                                          ; preds = %for.body
 ; CHECK: add nsw <4 x i32> {{.*}}, <i32 2, i32 2, i32 2, i32 2>
 ; CHECK: add nsw <4 x i32> {{.*}}, <i32 3, i32 3, i32 3, i32 3>
 ; CHECK: shufflevector <4 x i32> {{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK: shufflevector <4 x i32> {{.*}}, <4 x i32> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK: shufflevector <4 x i32> {{.*}}, <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK: %interleaved.vec = shufflevector <8 x i32> {{.*}}, <12 x i32> <i32 0, i32 4, i32 8, i32 1, i32 5, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11>
 ; CHECK: store <12 x i32> %interleaved.vec, <12 x i32>* {{.*}}, align 4
 
@@ -159,9 +159,9 @@ define i32 @test_struct_load4(%struct.ST4* nocapture readonly %S) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !6
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP5]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF4:%.*]] = shufflevector <4 x i32> [[BIN_RDX]], <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[RDX_SHUF4:%.*]] = shufflevector <4 x i32> [[BIN_RDX]], <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX5:%.*]] = add <4 x i32> [[BIN_RDX]], [[RDX_SHUF4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[BIN_RDX5]], i32 0
 ; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
