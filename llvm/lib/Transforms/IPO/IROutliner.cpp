@@ -30,6 +30,16 @@
 using namespace llvm;
 using namespace IRSimilarity;
 
+// Set to true if the user wants the ir outliner to run on linkonceodr linkage
+// functions. This is false by default because the linker can dedupe linkonceodr
+// functions. Since the outliner is confined to a single module (modulo LTO),
+// this is off by default. It should, however, be the default behavior in
+// LTO.
+static cl::opt<bool> EnableLinkOnceODRIROutlining(
+    "enable-linkonceodr-ir-outlining", cl::Hidden,
+    cl::desc("Enable the IR outliner on linkonceodr functions"),
+    cl::init(false));
+
 // This is a debug option to test small pieces of code to ensure that outlining
 // works correctly.
 static cl::opt<bool> NoCostModel(
@@ -1243,6 +1253,10 @@ void IROutliner::pruneIncompatibleRegions(
     if (IRSC.getStartBB()->hasAddressTaken())
       continue;
 
+    if (IRSC.front()->Inst->getFunction()->hasLinkOnceODRLinkage() &&
+        !OutlineFromLinkODRs)
+      continue;
+
     // Greedily prune out any regions that will overlap with already chosen
     // regions.
     if (CurrentEndIdx != 0 && StartIdx <= CurrentEndIdx)
@@ -1659,6 +1673,7 @@ unsigned IROutliner::doOutline(Module &M) {
 
 bool IROutliner::run(Module &M) {
   CostModel = !NoCostModel;
+  OutlineFromLinkODRs = EnableLinkOnceODRIROutlining;
 
   return doOutline(M) > 0;
 }
