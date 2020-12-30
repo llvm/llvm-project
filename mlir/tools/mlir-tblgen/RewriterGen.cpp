@@ -998,7 +998,7 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
   // First go through all the child nodes who are nested DAG constructs to
   // create ops for them and remember the symbol names for them, so that we can
   // use the results in the current node. This happens in a recursive manner.
-  for (int i = 0, e = resultOp.getNumOperands(); i != e; ++i) {
+  for (int i = 0, e = tree.getNumArgs() - hasLocationDirective; i != e; ++i) {
     if (auto child = tree.getArgAsNestedDag(i))
       childNodeNames[i] = handleResultPattern(child, i, depth + 1);
   }
