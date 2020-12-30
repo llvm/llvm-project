@@ -1,6 +1,6 @@
 #include "llvm/ExecutionEngine/Orc/OrcABISupport.h"
 #include "llvm/ExecutionEngine/Orc/OrcRemoteTargetServer.h"
-#include "llvm/ExecutionEngine/Orc/RPC/FDRawByteChannel.h"
+#include "llvm/ExecutionEngine/Orc/Shared/FDRawByteChannel.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Process.h"
@@ -54,8 +54,8 @@ int main(int argc, char *argv[]) {
     RTDyldMemoryManager::deregisterEHFramesInProcess(Addr, Size);
   };
 
-  rpc::FDRawByteChannel Channel(InFD, OutFD);
-  typedef remote::OrcRemoteTargetServer<rpc::FDRawByteChannel, HostOrcArch>
+  shared::FDRawByteChannel Channel(InFD, OutFD);
+  typedef remote::OrcRemoteTargetServer<shared::FDRawByteChannel, HostOrcArch>
       JITServer;
   JITServer Server(Channel, SymbolLookup, RegisterEHFrames, DeregisterEHFrames);
 
