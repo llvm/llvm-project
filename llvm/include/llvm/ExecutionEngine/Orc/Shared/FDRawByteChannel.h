@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_ORC_RPC_FDRAWBYTECHANNEL_H
-#define LLVM_EXECUTIONENGINE_ORC_RPC_FDRAWBYTECHANNEL_H
+#ifndef LLVM_EXECUTIONENGINE_ORC_SHARED_FDRAWBYTECHANNEL_H
+#define LLVM_EXECUTIONENGINE_ORC_SHARED_FDRAWBYTECHANNEL_H
 
-#include "llvm/ExecutionEngine/Orc/RPC/RawByteChannel.h"
+#include "llvm/ExecutionEngine/Orc/Shared/RawByteChannel.h"
 
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
@@ -26,9 +26,9 @@
 
 namespace llvm {
 namespace orc {
-namespace rpc {
+namespace shared {
 
-/// RPC channel that reads from and writes from file descriptors.
+/// Serialization channel that reads from and writes from file descriptors.
 class FDRawByteChannel final : public RawByteChannel {
 public:
   FDRawByteChannel(int InFD, int OutFD) : InFD(InFD), OutFD(OutFD) {}
@@ -85,8 +85,8 @@ private:
   int InFD, OutFD;
 };
 
-} // namespace rpc
+} // namespace shared
 } // namespace orc
 } // namespace llvm
 
-#endif // LLVM_EXECUTIONENGINE_ORC_RPC_FDRAWBYTECHANNEL_H
+#endif // LLVM_EXECUTIONENGINE_ORC_SHARED_FDRAWBYTECHANNEL_H

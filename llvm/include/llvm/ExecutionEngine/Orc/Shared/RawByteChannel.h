@@ -1,4 +1,4 @@
-//===- llvm/ExecutionEngine/Orc/RPC/RawByteChannel.h ----------------*- C++ -*-===//
+//===- RawByteChannel.h -----------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_ORC_RPC_RAWBYTECHANNEL_H
-#define LLVM_EXECUTIONENGINE_ORC_RPC_RAWBYTECHANNEL_H
+#ifndef LLVM_EXECUTIONENGINE_ORC_SHARED_RAWBYTECHANNEL_H
+#define LLVM_EXECUTIONENGINE_ORC_SHARED_RAWBYTECHANNEL_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ExecutionEngine/Orc/RPC/RPCSerialization.h"
+#include "llvm/ExecutionEngine/Orc/Shared/Serialization.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
@@ -20,9 +20,9 @@
 
 namespace llvm {
 namespace orc {
-namespace rpc {
+namespace shared {
 
-/// Interface for byte-streams to be used with RPC.
+/// Interface for byte-streams to be used with ORC Serialization.
 class RawByteChannel {
 public:
   virtual ~RawByteChannel() = default;
@@ -115,8 +115,7 @@ class SerializationTraits<
 public:
   static Error serialize(ChannelT &C, bool V) {
     uint8_t Tmp = V ? 1 : 0;
-    if (auto Err =
-          C.appendBytes(reinterpret_cast<const char *>(&Tmp), 1))
+    if (auto Err = C.appendBytes(reinterpret_cast<const char *>(&Tmp), 1))
       return Err;
     return Error::success();
   }
@@ -135,7 +134,7 @@ class SerializationTraits<
     ChannelT, std::string, StringRef,
     std::enable_if_t<std::is_base_of<RawByteChannel, ChannelT>::value>> {
 public:
-  /// RPC channel serialization for std::strings.
+  /// Serialization channel serialization for std::strings.
   static Error serialize(RawByteChannel &C, StringRef S) {
     if (auto Err = serializeSeq(C, static_cast<uint64_t>(S.size())))
       return Err;
@@ -161,13 +160,13 @@ class SerializationTraits<
     ChannelT, std::string, std::string,
     std::enable_if_t<std::is_base_of<RawByteChannel, ChannelT>::value>> {
 public:
-  /// RPC channel serialization for std::strings.
+  /// Serialization channel serialization for std::strings.
   static Error serialize(RawByteChannel &C, const std::string &S) {
     return SerializationTraits<ChannelT, std::string, StringRef>::serialize(C,
                                                                             S);
   }
 
-  /// RPC channel deserialization for std::strings.
+  /// Serialization channel deserialization for std::strings.
   static Error deserialize(RawByteChannel &C, std::string &S) {
     uint64_t Count = 0;
     if (auto Err = deserializeSeq(C, Count))
@@ -177,8 +176,8 @@ public:
   }
 };
 
-} // end namespace rpc
+} // end namespace shared
 } // end namespace orc
 } // end namespace llvm
 
-#endif // LLVM_EXECUTIONENGINE_ORC_RPC_RAWBYTECHANNEL_H
+#endif // LLVM_EXECUTIONENGINE_ORC_SHARED_RAWBYTECHANNEL_H
