@@ -656,7 +656,7 @@ class 4DTensorOf<list<Type> allowedTypes> : TensorRankOf<allowedTypes, [4]>;
 def AnyUnrankedMemRef :
     ShapedContainerType<[AnyType],
                         IsUnrankedMemRefTypePred, "unranked.memref",
-                        "::mlir::MemRefType">;
+                        "::mlir::UnrankedMemRefType">;
 // Memref type.
 
 // Memrefs are blocks of data with fixed type and rank.
