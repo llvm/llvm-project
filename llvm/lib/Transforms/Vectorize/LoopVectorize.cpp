@@ -4325,9 +4325,8 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
   // Create the reduction after the loop. Note that inloop reductions create the
   // target reduction in the loop using a Reduction recipe.
   if (VF.isVector() && !IsInLoopReductionPhi) {
-    bool NoNaN = Legal->hasFunNoNaNAttr();
     ReducedPartRdx =
-        createTargetReduction(Builder, TTI, RdxDesc, ReducedPartRdx, NoNaN);
+        createTargetReduction(Builder, TTI, RdxDesc, ReducedPartRdx);
     // If the reduction can be performed in a smaller type, we need to extend
     // the reduction to the wider type before we branch to the original loop.
     if (Phi->getType() != RdxDesc.getRecurrenceType())
@@ -8783,7 +8782,7 @@ void VPReductionRecipe::execute(VPTransformState &State) {
       NewVecOp = Select;
     }
     Value *NewRed =
-        createTargetReduction(State.Builder, TTI, *RdxDesc, NewVecOp, NoNaN);
+        createTargetReduction(State.Builder, TTI, *RdxDesc, NewVecOp);
     Value *PrevInChain = State.get(getChainOp(), Part);
     Value *NextInChain;
     if (Kind == RecurrenceDescriptor::RK_IntegerMinMax ||

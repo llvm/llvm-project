@@ -365,24 +365,21 @@ Value *getShuffleReduction(IRBuilderBase &Builder, Value *Src, unsigned Op,
 
 /// Create a target reduction of the given vector. The reduction operation
 /// is described by the \p Opcode parameter. min/max reductions require
-/// additional information supplied in \p Flags.
+/// additional information supplied in \p MinMaxKind.
 /// The target is queried to determine if intrinsics or shuffle sequences are
 /// required to implement the reduction.
 /// Fast-math-flags are propagated using the IRBuilder's setting.
-Value *createSimpleTargetReduction(IRBuilderBase &B,
-                                   const TargetTransformInfo *TTI,
-                                   unsigned Opcode, Value *Src,
-                                   TargetTransformInfo::ReductionFlags Flags =
-                                       TargetTransformInfo::ReductionFlags(),
-                                   ArrayRef<Value *> RedOps = None);
+Value *createSimpleTargetReduction(
+    IRBuilderBase &B, const TargetTransformInfo *TTI, unsigned Opcode,
+    Value *Src, RecurrenceDescriptor::MinMaxRecurrenceKind MinMaxKind,
+    ArrayRef<Value *> RedOps = None);
 
 /// Create a generic target reduction using a recurrence descriptor \p Desc
 /// The target is queried to determine if intrinsics or shuffle sequences are
 /// required to implement the reduction.
 /// Fast-math-flags are propagated using the RecurrenceDescriptor.
 Value *createTargetReduction(IRBuilderBase &B, const TargetTransformInfo *TTI,
-                             RecurrenceDescriptor &Desc, Value *Src,
-                             bool NoNaN = false);
+                             RecurrenceDescriptor &Desc, Value *Src);
 
 /// Get the intersection (logical and) of all of the potential IR flags
 /// of each scalar operation (VL) that will be converted into a vector (I).
