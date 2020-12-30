@@ -2177,6 +2177,10 @@ def MemRefReinterpretCastOp:
       unsigned resultRank = getResult().getType().cast<ShapedType>().getRank();
       return {1, resultRank, resultRank};
     }
+
+    /// Return the number of leading operands before the `offsets`, `sizes` and
+    /// and `strides` operands.
+    static unsigned getOffsetSizeAndStrideStartOperandIndex() { return 1; }
   }];
 }
 
@@ -3031,7 +3035,8 @@ def SubIOp : IntArithmeticOp<"subi"> {
 //===----------------------------------------------------------------------===//
 
 def SubViewOp : BaseOpWithOffsetSizesAndStrides<
-    "subview", [DeclareOpInterfaceMethods<ViewLikeOpInterface>, OffsetSizeAndStrideOpInterface] >  {
+    "subview", [DeclareOpInterfaceMethods<ViewLikeOpInterface>,
+                OffsetSizeAndStrideOpInterface] >  {
   let summary = "memref subview operation";
   let description = [{
     The "subview" operation converts a memref type to another memref type
@@ -3217,6 +3222,10 @@ def SubViewOp : BaseOpWithOffsetSizesAndStrides<
       unsigned rank = getSourceType().getRank();
       return {rank, rank, rank};
     }
+
+    /// Return the number of leading operands before the `offsets`, `sizes` and
+    /// and `strides` operands.
+    static unsigned getOffsetSizeAndStrideStartOperandIndex() { return 1; }
   }];
 
   let hasCanonicalizer = 1;
@@ -3227,7 +3236,8 @@ def SubViewOp : BaseOpWithOffsetSizesAndStrides<
 // SubTensorOp
 //===----------------------------------------------------------------------===//
 
-def SubTensorOp : BaseOpWithOffsetSizesAndStrides<"subtensor", [OffsetSizeAndStrideOpInterface]> {
+def SubTensorOp : BaseOpWithOffsetSizesAndStrides<
+    "subtensor", [OffsetSizeAndStrideOpInterface]> {
   let summary = "subtensor operation";
   let description = [{
     The "subtensor" operation extract a tensor from another tensor as
@@ -3279,12 +3289,12 @@ def SubTensorOp : BaseOpWithOffsetSizesAndStrides<"subtensor", [OffsetSizeAndStr
   let results = (outs AnyRankedTensor:$result);
 
   let builders = [
-    // Build a SubViewOp with mixed static and dynamic entries.
+    // Build a SubTensorOp with mixed static and dynamic entries.
     OpBuilderDAG<(ins "Value":$source, "ArrayRef<int64_t>":$staticOffsets,
       "ArrayRef<int64_t>":$staticSizes, "ArrayRef<int64_t>":$staticStrides,
       "ValueRange":$offsets, "ValueRange":$sizes, "ValueRange":$strides,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
-    // Build a SubViewOp with all dynamic entries.
+    // Build a SubTensorOp with all dynamic entries.
     OpBuilderDAG<(ins "Value":$source, "ValueRange":$offsets,
       "ValueRange":$sizes, "ValueRange":$strides,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
@@ -3315,6 +3325,10 @@ def SubTensorOp : BaseOpWithOffsetSizesAndStrides<"subtensor", [OffsetSizeAndStr
       unsigned rank = getSourceType().getRank();
       return {rank, rank, rank};
     }
+
+    /// Return the number of leading operands before the `offsets`, `sizes` and
+    /// and `strides` operands.
+    static unsigned getOffsetSizeAndStrideStartOperandIndex() { return 1; }
   }];
 
   let hasCanonicalizer = 1;
@@ -3324,7 +3338,8 @@ def SubTensorOp : BaseOpWithOffsetSizesAndStrides<"subtensor", [OffsetSizeAndStr
 // SubTensorInsertOp
 //===----------------------------------------------------------------------===//
 
-def SubTensorInsertOp : BaseOpWithOffsetSizesAndStrides<"subtensor_insert", [OffsetSizeAndStrideOpInterface]> {
+def SubTensorInsertOp : BaseOpWithOffsetSizesAndStrides<
+    "subtensor_insert", [OffsetSizeAndStrideOpInterface]> {
   let summary = "subtensor_insert operation";
   let description = [{
     The "subtensor_insert" operation insert a tensor `source` into another
@@ -3369,13 +3384,13 @@ def SubTensorInsertOp : BaseOpWithOffsetSizesAndStrides<"subtensor_insert", [Off
   let results = (outs AnyRankedTensor:$result);
 
   let builders = [
-    // Build a SubViewOp with mixed static and dynamic entries.
+    // Build a SubTensorInsertOp with mixed static and dynamic entries.
     OpBuilderDAG<(ins "Value":$source, "Value":$dest,
       "ArrayRef<int64_t>":$staticOffsets, "ArrayRef<int64_t>":$staticSizes,
       "ArrayRef<int64_t>":$staticStrides, "ValueRange":$offsets,
       "ValueRange":$sizes, "ValueRange":$strides,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
-    // Build a SubViewOp with all dynamic entries.
+    // Build a SubTensorInsertOp with all dynamic entries.
     OpBuilderDAG<(ins "Value":$source, "Value":$dest, "ValueRange":$offsets,
       "ValueRange":$sizes, "ValueRange":$strides,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
@@ -3398,6 +3413,10 @@ def SubTensorInsertOp : BaseOpWithOffsetSizesAndStrides<"subtensor_insert", [Off
       unsigned rank = getSourceType().getRank();
       return {rank, rank, rank};
     }
+
+    /// Return the number of leading operands before the `offsets`, `sizes` and
+    /// and `strides` operands.
+    static unsigned getOffsetSizeAndStrideStartOperandIndex() { return 2; }
   }];
 }
 
