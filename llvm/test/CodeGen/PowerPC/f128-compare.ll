@@ -5,11 +5,11 @@
 ; RUN:   -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | FileCheck %s \
 ; RUN:   -check-prefix=CHECK-P8
 
-@a_qp = common global fp128 0xL00000000000000000000000000000000, align 16
-@b_qp = common global fp128 0xL00000000000000000000000000000000, align 16
+@a_qp = common dso_local global fp128 0xL00000000000000000000000000000000, align 16
+@b_qp = common dso_local global fp128 0xL00000000000000000000000000000000, align 16
 
 ; Function Attrs: noinline nounwind optnone
-define signext i32 @greater_qp() {
+define dso_local signext i32 @greater_qp() {
 ; CHECK-LABEL: greater_qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r3, r2, a_qp@toc@ha
@@ -57,7 +57,7 @@ entry:
 }
 
 ; Function Attrs: noinline nounwind optnone
-define signext i32 @less_qp() {
+define dso_local signext i32 @less_qp() {
 ; CHECK-LABEL: less_qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r3, r2, a_qp@toc@ha
@@ -103,7 +103,7 @@ entry:
 }
 
 ; Function Attrs: noinline nounwind optnone
-define signext i32 @greater_eq_qp() {
+define dso_local signext i32 @greater_eq_qp() {
 ; CHECK-LABEL: greater_eq_qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r3, r2, a_qp@toc@ha
@@ -150,7 +150,7 @@ entry:
 }
 
 ; Function Attrs: noinline nounwind optnone
-define signext i32 @less_eq_qp() {
+define dso_local signext i32 @less_eq_qp() {
 ; CHECK-LABEL: less_eq_qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r3, r2, a_qp@toc@ha
@@ -199,7 +199,7 @@ entry:
 }
 
 ; Function Attrs: noinline nounwind optnone
-define signext i32 @equal_qp() {
+define dso_local signext i32 @equal_qp() {
 ; CHECK-LABEL: equal_qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r3, r2, a_qp@toc@ha
@@ -246,7 +246,7 @@ entry:
 }
 
 ; Function Attrs: noinline nounwind optnone
-define signext i32 @not_greater_qp() {
+define dso_local signext i32 @not_greater_qp() {
 ; CHECK-LABEL: not_greater_qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r3, r2, a_qp@toc@ha
@@ -295,7 +295,7 @@ entry:
 }
 
 ; Function Attrs: noinline nounwind optnone
-define signext i32 @not_less_qp() {
+define dso_local signext i32 @not_less_qp() {
 ; CHECK-LABEL: not_less_qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r3, r2, a_qp@toc@ha
@@ -342,7 +342,7 @@ entry:
 }
 
 ; Function Attrs: noinline nounwind optnone
-define signext i32 @not_greater_eq_qp() {
+define dso_local signext i32 @not_greater_eq_qp() {
 ; CHECK-LABEL: not_greater_eq_qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r3, r2, a_qp@toc@ha
@@ -389,7 +389,7 @@ entry:
 }
 
 ; Function Attrs: noinline nounwind optnone
-define signext i32 @not_less_eq_qp() {
+define dso_local signext i32 @not_less_eq_qp() {
 ; CHECK-LABEL: not_less_eq_qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r3, r2, a_qp@toc@ha
@@ -438,7 +438,7 @@ entry:
 }
 
 ; Function Attrs: noinline nounwind optnone
-define signext i32 @not_equal_qp() {
+define dso_local signext i32 @not_equal_qp() {
 ; CHECK-LABEL: not_equal_qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r3, r2, a_qp@toc@ha
