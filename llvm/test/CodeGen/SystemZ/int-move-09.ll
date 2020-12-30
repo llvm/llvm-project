@@ -2,21 +2,21 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 
-@gsrc16 = global i16 1
-@gsrc32 = global i32 1
-@gsrc64 = global i64 1
-@gdst16 = global i16 2
-@gdst32 = global i32 2
-@gdst64 = global i64 2
-@gsrc16u = global i16 1, align 1, section "foo"
-@gsrc32u = global i32 1, align 2, section "foo"
-@gsrc64u = global i64 1, align 4, section "foo"
-@gdst16u = global i16 2, align 1, section "foo"
-@gdst32u = global i32 2, align 2, section "foo"
-@gdst64u = global i64 2, align 4, section "foo"
+@gsrc16 = dso_local global i16 1
+@gsrc32 = dso_local global i32 1
+@gsrc64 = dso_local global i64 1
+@gdst16 = dso_local global i16 2
+@gdst32 = dso_local global i32 2
+@gdst64 = dso_local global i64 2
+@gsrc16u = dso_local global i16 1, align 1, section "foo"
+@gsrc32u = dso_local global i32 1, align 2, section "foo"
+@gsrc64u = dso_local global i64 1, align 4, section "foo"
+@gdst16u = dso_local global i16 2, align 1, section "foo"
+@gdst32u = dso_local global i32 2, align 2, section "foo"
+@gdst64u = dso_local global i64 2, align 4, section "foo"
 
 ; Check sign-extending loads from i16.
-define i64 @f1() {
+define dso_local i64 @f1() {
 ; CHECK-LABEL: f1:
 ; CHECK: lghrl %r2, gsrc16
 ; CHECK: br %r14
@@ -26,7 +26,7 @@ define i64 @f1() {
 }
 
 ; Check zero-extending loads from i16.
-define i64 @f2() {
+define dso_local i64 @f2() {
 ; CHECK-LABEL: f2:
 ; CHECK: llghrl %r2, gsrc16
 ; CHECK: br %r14
@@ -36,7 +36,7 @@ define i64 @f2() {
 }
 
 ; Check sign-extending loads from i32.
-define i64 @f3() {
+define dso_local i64 @f3() {
 ; CHECK-LABEL: f3:
 ; CHECK: lgfrl %r2, gsrc32
 ; CHECK: br %r14
@@ -46,7 +46,7 @@ define i64 @f3() {
 }
 
 ; Check zero-extending loads from i32.
-define i64 @f4() {
+define dso_local i64 @f4() {
 ; CHECK-LABEL: f4:
 ; CHECK: llgfrl %r2, gsrc32
 ; CHECK: br %r14
@@ -56,7 +56,7 @@ define i64 @f4() {
 }
 
 ; Check truncating 16-bit stores.
-define void @f5(i64 %val) {
+define dso_local void @f5(i64 %val) {
 ; CHECK-LABEL: f5:
 ; CHECK: sthrl %r2, gdst16
 ; CHECK: br %r14
@@ -66,7 +66,7 @@ define void @f5(i64 %val) {
 }
 
 ; Check truncating 32-bit stores.
-define void @f6(i64 %val) {
+define dso_local void @f6(i64 %val) {
 ; CHECK-LABEL: f6:
 ; CHECK: strl %r2, gdst32
 ; CHECK: br %r14
@@ -76,7 +76,7 @@ define void @f6(i64 %val) {
 }
 
 ; Check plain loads and stores.
-define void @f7() {
+define dso_local void @f7() {
 ; CHECK-LABEL: f7:
 ; CHECK: lgrl %r0, gsrc64
 ; CHECK: stgrl %r0, gdst64
@@ -87,7 +87,7 @@ define void @f7() {
 }
 
 ; Repeat f1 with an unaligned variable.
-define i64 @f8() {
+define dso_local i64 @f8() {
 ; CHECK-LABEL: f8:
 ; CHECK: lgrl [[REG:%r[0-5]]], gsrc16u@GOT
 ; CHECK: lgh %r2, 0([[REG]])
@@ -98,7 +98,7 @@ define i64 @f8() {
 }
 
 ; Repeat f2 with an unaligned variable.
-define i64 @f9() {
+define dso_local i64 @f9() {
 ; CHECK-LABEL: f9:
 ; CHECK: lgrl [[REG:%r[0-5]]], gsrc16u@GOT
 ; CHECK: llgh %r2, 0([[REG]])
@@ -109,7 +109,7 @@ define i64 @f9() {
 }
 
 ; Repeat f3 with an unaligned variable.
-define i64 @f10() {
+define dso_local i64 @f10() {
 ; CHECK-LABEL: f10:
 ; CHECK: larl [[REG:%r[0-5]]], gsrc32u
 ; CHECK: lgf %r2, 0([[REG]])
@@ -120,7 +120,7 @@ define i64 @f10() {
 }
 
 ; Repeat f4 with an unaligned variable.
-define i64 @f11() {
+define dso_local i64 @f11() {
 ; CHECK-LABEL: f11:
 ; CHECK: larl [[REG:%r[0-5]]], gsrc32u
 ; CHECK: llgf %r2, 0([[REG]])
@@ -131,7 +131,7 @@ define i64 @f11() {
 }
 
 ; Repeat f5 with an unaligned variable.
-define void @f12(i64 %val) {
+define dso_local void @f12(i64 %val) {
 ; CHECK-LABEL: f12:
 ; CHECK: lgrl [[REG:%r[0-5]]], gdst16u@GOT
 ; CHECK: sth %r2, 0([[REG]])
@@ -142,7 +142,7 @@ define void @f12(i64 %val) {
 }
 
 ; Repeat f6 with an unaligned variable.
-define void @f13(i64 %val) {
+define dso_local void @f13(i64 %val) {
 ; CHECK-LABEL: f13:
 ; CHECK: larl [[REG:%r[0-5]]], gdst32u
 ; CHECK: st %r2, 0([[REG]])
@@ -153,7 +153,7 @@ define void @f13(i64 %val) {
 }
 
 ; Repeat f7 with unaligned variables.
-define void @f14() {
+define dso_local void @f14() {
 ; CHECK-LABEL: f14:
 ; CHECK: larl [[REG:%r[0-5]]], gsrc64u
 ; CHECK: lg [[VAL:%r[0-5]]], 0([[REG]])
