@@ -4,9 +4,9 @@
 
 ; TODO: lbu and lhu should be selected to avoid the unnecessary masking.
 
-@bytes = global [5 x i8] zeroinitializer, align 1
+@bytes = dso_local global [5 x i8] zeroinitializer, align 1
 
-define i32 @test_zext_i8() nounwind {
+define dso_local i32 @test_zext_i8() nounwind {
 ; RV32I-LABEL: test_zext_i8:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a0, %hi(bytes)
@@ -38,9 +38,9 @@ if.end:
   ret i32 0
 }
 
-@shorts = global [5 x i16] zeroinitializer, align 2
+@shorts = dso_local global [5 x i16] zeroinitializer, align 2
 
-define i32 @test_zext_i16() nounwind {
+define dso_local i32 @test_zext_i16() nounwind {
 ; RV32I-LABEL: test_zext_i16:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a0, %hi(shorts)
