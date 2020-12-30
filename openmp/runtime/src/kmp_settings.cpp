@@ -397,7 +397,7 @@ static void __kmp_stg_parse_int(
     KMP_INFORM(Using_uint64_Value, name, buf.str);
     __kmp_str_buf_free(&buf);
   }
-  *out = uint;
+  __kmp_type_convert(uint, out);
 } // __kmp_stg_parse_int
 
 #if KMP_DEBUG_ADAPTIVE_LOCKS
@@ -549,7 +549,6 @@ static void __kmp_stg_print_int(kmp_str_buf_t *buffer, char const *name,
   }
 } // __kmp_stg_print_int
 
-#if USE_ITT_BUILD && USE_ITT_NOTIFY
 static void __kmp_stg_print_uint64(kmp_str_buf_t *buffer, char const *name,
                                    kmp_uint64 value) {
   if (__kmp_env_format) {
@@ -558,7 +557,6 @@ static void __kmp_stg_print_uint64(kmp_str_buf_t *buffer, char const *name,
     __kmp_str_buf_print(buffer, "   %s=%" KMP_UINT64_SPEC "\n", name, value);
   }
 } // __kmp_stg_print_uint64
-#endif
 
 static void __kmp_stg_print_str(kmp_str_buf_t *buffer, char const *name,
                                 char const *value) {
@@ -1225,7 +1223,7 @@ static void __kmp_stg_parse_max_active_levels(char const *name,
       msg = KMP_I18N_STR(ValueTooLarge);
       KMP_WARNING(ParseSizeIntWarn, name, value, msg);
     } else { // valid setting
-      __kmp_dflt_max_active_levels = tmp_dflt;
+      __kmp_type_convert(tmp_dflt, &(__kmp_dflt_max_active_levels));
       __kmp_dflt_max_active_levels_set = true;
     }
   }
@@ -1315,7 +1313,7 @@ static void __kmp_stg_parse_taskloop_min_tasks(char const *name,
 
 static void __kmp_stg_print_taskloop_min_tasks(kmp_str_buf_t *buffer,
                                                char const *name, void *data) {
-  __kmp_stg_print_int(buffer, name, __kmp_taskloop_min_tasks);
+  __kmp_stg_print_uint64(buffer, name, __kmp_taskloop_min_tasks);
 } // __kmp_stg_print_taskloop_min_tasks
 
 // -----------------------------------------------------------------------------
@@ -1986,7 +1984,7 @@ static int __kmp_parse_affinity_proc_id_list(const char *var, const char *env,
   *nextEnv = next;
 
   {
-    int len = next - env;
+    ptrdiff_t len = next - env;
     char *retlist = (char *)__kmp_allocate((len + 1) * sizeof(char));
     KMP_MEMCPY_S(retlist, (len + 1) * sizeof(char), env, len * sizeof(char));
     retlist[len] = '\0';
@@ -2769,7 +2767,7 @@ static int __kmp_parse_place_list(const char *var, const char *env,
   }
 
   {
-    int len = scan - env;
+    ptrdiff_t len = scan - env;
     char *retlist = (char *)__kmp_allocate((len + 1) * sizeof(char));
     KMP_MEMCPY_S(retlist, (len + 1) * sizeof(char), env, len * sizeof(char));
     retlist[len] = '\0';
@@ -4438,7 +4436,7 @@ static void __kmp_stg_parse_hw_subset(char const *name, char const *value,
       if (len == 0 && *pos == ':') {
         __kmp_hws_abs_flag = 1; // if the first symbol is ":", skip it
       } else {
-        input[len] = toupper(*pos);
+        input[len] = (char)(toupper(*pos));
         if (input[len] == 'X')
           input[len] = ','; // unify delimiters of levels
         if (input[len] == 'O' && strchr(digits, *(pos + 1)))
