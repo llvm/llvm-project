@@ -4,7 +4,7 @@ declare void @callee_stack0()
 declare void @callee_stack8([8 x i64], i64)
 declare void @callee_stack16([8 x i64], i64, i64)
 
-define void @caller_to0_from0() nounwind {
+define dso_local void @caller_to0_from0() nounwind {
 ; CHECK-LABEL: caller_to0_from0:
 ; CHECK-NEXT: // %bb.
   tail call void @callee_stack0()
@@ -12,7 +12,7 @@ define void @caller_to0_from0() nounwind {
 ; CHECK-NEXT: b callee_stack0
 }
 
-define void @caller_to0_from8([8 x i64], i64) nounwind{
+define dso_local void @caller_to0_from8([8 x i64], i64) nounwind{
 ; CHECK-LABEL: caller_to0_from8:
 ; CHECK-NEXT: // %bb.
 
@@ -21,7 +21,7 @@ define void @caller_to0_from8([8 x i64], i64) nounwind{
 ; CHECK-NEXT: b callee_stack0
 }
 
-define void @caller_to8_from0() {
+define dso_local void @caller_to8_from0() {
 ; CHECK-LABEL: caller_to8_from0:
 
 ; Caller isn't going to clean up any extra stack we allocate, so it
@@ -31,7 +31,7 @@ define void @caller_to8_from0() {
 ; CHECK: bl callee_stack8
 }
 
-define void @caller_to8_from8([8 x i64], i64 %a) {
+define dso_local void @caller_to8_from8([8 x i64], i64 %a) {
 ; CHECK-LABEL: caller_to8_from8:
 ; CHECK-NOT: sub sp, sp,
 
@@ -42,7 +42,7 @@ define void @caller_to8_from8([8 x i64], i64 %a) {
 ; CHECK-NEXT: b callee_stack8
 }
 
-define void @caller_to16_from8([8 x i64], i64 %a) {
+define dso_local void @caller_to16_from8([8 x i64], i64 %a) {
 ; CHECK-LABEL: caller_to16_from8:
 
 ; Shouldn't be a tail call: we can't use SP+8 because our caller might
@@ -53,7 +53,7 @@ define void @caller_to16_from8([8 x i64], i64 %a) {
   ret void
 }
 
-define void @caller_to8_from24([8 x i64], i64 %a, i64 %b, i64 %c) {
+define dso_local void @caller_to8_from24([8 x i64], i64 %a, i64 %b, i64 %c) {
 ; CHECK-LABEL: caller_to8_from24:
 ; CHECK-NOT: sub sp, sp
 
@@ -64,7 +64,7 @@ define void @caller_to8_from24([8 x i64], i64 %a, i64 %b, i64 %c) {
 ; CHECK-NEXT: b callee_stack8
 }
 
-define void @caller_to16_from16([8 x i64], i64 %a, i64 %b) {
+define dso_local void @caller_to16_from16([8 x i64], i64 %a, i64 %b) {
 ; CHECK-LABEL: caller_to16_from16:
 ; CHECK-NOT: sub sp, sp,
 
@@ -82,9 +82,9 @@ define void @caller_to16_from16([8 x i64], i64 %a, i64 %b) {
 ; CHECK: b callee_stack16
 }
 
-@func = global void(i32)* null
+@func = dso_local global void(i32)* null
 
-define void @indirect_tail() {
+define dso_local void @indirect_tail() {
 ; CHECK-LABEL: indirect_tail:
 ; CHECK-NOT: sub sp, sp
 

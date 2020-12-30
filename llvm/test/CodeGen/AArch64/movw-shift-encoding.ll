@@ -1,11 +1,11 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu < %s -show-mc-encoding -code-model=large | FileCheck %s
 
-@var = global i32 0
+@var = dso_local global i32 0
 
 ; CodeGen should ensure that the correct shift bits are set, because the linker
 ; isn't going to!
 
-define i32* @get_var() {
+define dso_local i32* @get_var() {
   ret i32* @var
 
 ; CHECK: movz    x0, #:abs_g0_nc:var // encoding: [0bAAA00000,A,0b100AAAAA,0xd2]

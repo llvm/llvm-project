@@ -90,7 +90,7 @@ define { i128, i1 } @test_cmpxchg_128(i128* %addr, i128 %desired, i128 %new) nou
 ; Original implementation assumed the desired & new arguments had already been
 ; type-legalized into some kind of BUILD_PAIR operation and crashed when this
 ; was false.
-@var128 = global i128 0
+@var128 = dso_local global i128 0
 define {i128, i1} @test_cmpxchg_128_unsplit(i128* %addr) {
 ; OUTLINE-ATOMICS: bl __aarch64_cas16_acq_rel
 ; CHECK-LABEL: test_cmpxchg_128_unsplit:
