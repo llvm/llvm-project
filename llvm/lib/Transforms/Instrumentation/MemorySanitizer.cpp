@@ -3197,10 +3197,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
            "pclmul 3rd operand must be a constant");
     unsigned Imm = cast<ConstantInt>(I.getArgOperand(2))->getZExtValue();
     Value *Shuf0 =
-        IRB.CreateShuffleVector(getShadow(&I, 0), UndefValue::get(ShadowTy),
+        IRB.CreateShuffleVector(getShadow(&I, 0),
                                 getPclmulMask(Width, Imm & 0x01));
     Value *Shuf1 =
-        IRB.CreateShuffleVector(getShadow(&I, 1), UndefValue::get(ShadowTy),
+        IRB.CreateShuffleVector(getShadow(&I, 1),
                                 getPclmulMask(Width, Imm & 0x10));
     ShadowAndOriginCombiner SOC(this, IRB);
     SOC.Add(Shuf0, getOrigin(&I, 0));

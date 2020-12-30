@@ -1104,8 +1104,7 @@ auto HexagonVectorCombine::concat(IRBuilder<> &Builder,
   SMask.resize(Vecs.size() * getSizeOf(Vecs.front()->getType()));
   std::iota(SMask.begin(), SMask.end(), 0);
   Value *Total = Work[OtherW].front();
-  return Builder.CreateShuffleVector(Total, UndefValue::get(Total->getType()),
-                                     SMask);
+  return Builder.CreateShuffleVector(Total, SMask);
 }
 
 auto HexagonVectorCombine::vresize(IRBuilder<> &Builder, Value *Val,

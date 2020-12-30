@@ -1333,80 +1333,80 @@ __m512i test_mm512_maskz_broadcast_i64x2(__mmask8 __M, __m128i const* __A) {
 
 __m256 test_mm512_extractf32x8_ps(__m512 __A) {
   // CHECK-LABEL: @test_mm512_extractf32x8_ps
-  // CHECK: shufflevector <16 x float> %{{.*}}, <16 x float> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  // CHECK: shufflevector <16 x float> %{{.*}}, <16 x float> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   return _mm512_extractf32x8_ps(__A, 1); 
 }
 
 __m256 test_mm512_mask_extractf32x8_ps(__m256 __W, __mmask8 __U, __m512 __A) {
   // CHECK-LABEL: @test_mm512_mask_extractf32x8_ps
-  // CHECK: shufflevector <16 x float> %{{.*}}, <16 x float> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  // CHECK: shufflevector <16 x float> %{{.*}}, <16 x float> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   // CHECK: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   return _mm512_mask_extractf32x8_ps(__W, __U, __A, 1); 
 }
 
 __m256 test_mm512_maskz_extractf32x8_ps(__mmask8 __U, __m512 __A) {
   // CHECK-LABEL: @test_mm512_maskz_extractf32x8_ps
-  // CHECK: shufflevector <16 x float> %{{.*}}, <16 x float> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  // CHECK: shufflevector <16 x float> %{{.*}}, <16 x float> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   // CHECK: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   return _mm512_maskz_extractf32x8_ps(__U, __A, 1); 
 }
 
 __m128d test_mm512_extractf64x2_pd(__m512d __A) {
   // CHECK-LABEL: @test_mm512_extractf64x2_pd
-  // CHECK: shufflevector <8 x double> %{{.*}}, <8 x double> undef, <2 x i32> <i32 6, i32 7>
+  // CHECK: shufflevector <8 x double> %{{.*}}, <8 x double> poison, <2 x i32> <i32 6, i32 7>
   return _mm512_extractf64x2_pd(__A, 3); 
 }
 
 __m128d test_mm512_mask_extractf64x2_pd(__m128d __W, __mmask8 __U, __m512d __A) {
   // CHECK-LABEL: @test_mm512_mask_extractf64x2_pd
-  // CHECK: shufflevector <8 x double> %{{.*}}, <8 x double> undef, <2 x i32> <i32 6, i32 7>
+  // CHECK: shufflevector <8 x double> %{{.*}}, <8 x double> poison, <2 x i32> <i32 6, i32 7>
   // CHECK: select <2 x i1> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}}
   return _mm512_mask_extractf64x2_pd(__W, __U, __A, 3); 
 }
 
 __m128d test_mm512_maskz_extractf64x2_pd(__mmask8 __U, __m512d __A) {
   // CHECK-LABEL: @test_mm512_maskz_extractf64x2_pd
-  // CHECK: shufflevector <8 x double> %{{.*}}, <8 x double> undef, <2 x i32> <i32 6, i32 7>
+  // CHECK: shufflevector <8 x double> %{{.*}}, <8 x double> poison, <2 x i32> <i32 6, i32 7>
   // CHECK: select <2 x i1> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}}
   return _mm512_maskz_extractf64x2_pd(__U, __A, 3); 
 }
 
 __m256i test_mm512_extracti32x8_epi32(__m512i __A) {
   // CHECK-LABEL: @test_mm512_extracti32x8_epi32
-  // CHECK: shufflevector <16 x i32> %{{.*}}, <16 x i32> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  // CHECK: shufflevector <16 x i32> %{{.*}}, <16 x i32> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   return _mm512_extracti32x8_epi32(__A, 1); 
 }
 
 __m256i test_mm512_mask_extracti32x8_epi32(__m256i __W, __mmask8 __U, __m512i __A) {
   // CHECK-LABEL: @test_mm512_mask_extracti32x8_epi32
-  // CHECK: shufflevector <16 x i32> %{{.*}}, <16 x i32> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  // CHECK: shufflevector <16 x i32> %{{.*}}, <16 x i32> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
   return _mm512_mask_extracti32x8_epi32(__W, __U, __A, 1); 
 }
 
 __m256i test_mm512_maskz_extracti32x8_epi32(__mmask8 __U, __m512i __A) {
   // CHECK-LABEL: @test_mm512_maskz_extracti32x8_epi32
-  // CHECK: shufflevector <16 x i32> %{{.*}}, <16 x i32> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  // CHECK: shufflevector <16 x i32> %{{.*}}, <16 x i32> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
   return _mm512_maskz_extracti32x8_epi32(__U, __A, 1); 
 }
 
 __m128i test_mm512_extracti64x2_epi64(__m512i __A) {
   // CHECK-LABEL: @test_mm512_extracti64x2_epi64
-  // CHECK: shufflevector <8 x i64> %{{.*}}, <8 x i64> undef, <2 x i32> <i32 6, i32 7>
+  // CHECK: shufflevector <8 x i64> %{{.*}}, <8 x i64> poison, <2 x i32> <i32 6, i32 7>
   return _mm512_extracti64x2_epi64(__A, 3); 
 }
 
 __m128i test_mm512_mask_extracti64x2_epi64(__m128i __W, __mmask8 __U, __m512i __A) {
   // CHECK-LABEL: @test_mm512_mask_extracti64x2_epi64
-  // CHECK: shufflevector <8 x i64> %{{.*}}, <8 x i64> undef, <2 x i32> <i32 6, i32 7>
+  // CHECK: shufflevector <8 x i64> %{{.*}}, <8 x i64> poison, <2 x i32> <i32 6, i32 7>
   // CHECK: select <2 x i1> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}
   return _mm512_mask_extracti64x2_epi64(__W, __U, __A, 3); 
 }
 
 __m128i test_mm512_maskz_extracti64x2_epi64(__mmask8 __U, __m512i __A) {
   // CHECK-LABEL: @test_mm512_maskz_extracti64x2_epi64
-  // CHECK: shufflevector <8 x i64> %{{.*}}, <8 x i64> undef, <2 x i32> <i32 6, i32 7>
+  // CHECK: shufflevector <8 x i64> %{{.*}}, <8 x i64> poison, <2 x i32> <i32 6, i32 7>
   // CHECK: select <2 x i1> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}
   return _mm512_maskz_extracti64x2_epi64(__U, __A, 3); 
 }
