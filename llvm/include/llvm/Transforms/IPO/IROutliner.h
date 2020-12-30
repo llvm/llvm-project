@@ -162,8 +162,9 @@ struct OutlinableRegion {
 class IROutliner {
 public:
   IROutliner(function_ref<TargetTransformInfo &(Function &)> GTTI,
-             function_ref<IRSimilarityIdentifier &(Module &)> GIRSI)
-      : getTTI(GTTI), getIRSI(GIRSI) {}
+             function_ref<IRSimilarityIdentifier &(Module &)> GIRSI,
+             function_ref<OptimizationRemarkEmitter &(Function &)> GORE)
+      : getTTI(GTTI), getIRSI(GIRSI), getORE(GORE) {}
   bool run(Module &M);
 
 private:
@@ -257,6 +258,10 @@ private:
                                     std::vector<Function *> &FuncsToRemove,
                                     unsigned &OutlinedFunctionNum);
 
+  /// If true, enables us to outline from functions that have LinkOnceFromODR
+  /// linkages.
+  bool OutlineFromLinkODRs = false;
+
   /// If false, we do not worry if the cost is greater than the benefit.  This
   /// is for debugging and testing, so that we can test small cases to ensure
   /// that the outlining is being done correctly.
@@ -276,6 +281,9 @@ private:
 
   /// IRSimilarityIdentifier lambda to retrieve IRSimilarityIdentifier.
   function_ref<IRSimilarityIdentifier &(Module &)> getIRSI;
+
+  /// The optimization remark emitter for the pass.
+  function_ref<OptimizationRemarkEmitter &(Function &)> getORE;
 
   /// The memory allocator used to allocate the CodeExtractors.
   SpecificBumpPtrAllocator<CodeExtractor> ExtractorAllocator;

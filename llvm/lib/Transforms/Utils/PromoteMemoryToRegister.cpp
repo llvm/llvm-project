@@ -740,7 +740,7 @@ void PromoteMem2Reg::run() {
       continue;
 
     // Get the preds for BB.
-    SmallVector<BasicBlock *, 16> Preds(pred_begin(BB), pred_end(BB));
+    SmallVector<BasicBlock *, 16> Preds(predecessors(BB));
 
     // Ok, now we know that all of the PHI nodes are missing entries for some
     // basic blocks.  Start by sorting the incoming predecessors for efficient

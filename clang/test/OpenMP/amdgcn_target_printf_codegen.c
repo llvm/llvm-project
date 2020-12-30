@@ -24,7 +24,7 @@ int CheckZeroArg() {
     // CHECK: store i32 1, i32 addrspace(1)* [[NUM_ARG]]
 
     // CHECK: [[PTR1:%[0-9]+]] = getelementptr inbounds [[CHECK_ZERO_ARG_TY]], [[CHECK_ZERO_ARG_TY]] addrspace(1)* [[ARGS_CAST]], i32 0, i32 2
-    // CHECK: store i32 917505, i32 addrspace(1)* [[PTR1]]
+    // CHECK: store i32 {{[0-9]+}}, i32 addrspace(1)* [[PTR1]]
 
     // CHECK: [[PTR2:%[0-9]+]] = getelementptr inbounds [[CHECK_ZERO_ARG_TY]], [[CHECK_ZERO_ARG_TY]] addrspace(1)* [[ARGS_CAST]], i32 0, i32
     // CHECK: store i32 13, i32 addrspace(1)* [[PTR2]], align 4

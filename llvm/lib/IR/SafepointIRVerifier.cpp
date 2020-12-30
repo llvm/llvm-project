@@ -561,8 +561,7 @@ GCPtrTracker::GCPtrTracker(const Function &F, const DominatorTree &DT,
 }
 
 BasicBlockState *GCPtrTracker::getBasicBlockState(const BasicBlock *BB) {
-  auto it = BlockMap.find(BB);
-  return it != BlockMap.end() ? it->second : nullptr;
+  return BlockMap.lookup(BB);
 }
 
 const BasicBlockState *GCPtrTracker::getBasicBlockState(

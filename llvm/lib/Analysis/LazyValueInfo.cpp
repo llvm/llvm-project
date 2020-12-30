@@ -333,7 +333,7 @@ void LazyValueInfoCache::threadEdgeImpl(BasicBlock *OldSucc,
 
     if (!changed) continue;
 
-    worklist.insert(worklist.end(), succ_begin(ToUpdate), succ_end(ToUpdate));
+    llvm::append_range(worklist, successors(ToUpdate));
   }
 }
 

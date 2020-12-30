@@ -68,3 +68,70 @@ exit:
 
   ret i32 20
 }
+
+; The result of test_and_ule and test_and_select_ule should be same
+define i32 @test_and_select_ule(i32 %x, i32 %y, i32 %z, i32 %a) {
+; CHECK-LABEL: @test_and_select_ule(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ule i32 [[Y]], [[Z:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[C_1]], i1 [[C_2]], i1 false
+; CHECK-NEXT:    br i1 [[AND]], label [[BB1:%.*]], label [[EXIT:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i32 [[X]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i32 [[X]], [[Y]]
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[T_3:%.*]] = icmp ule i32 [[Y]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ule i32 [[X]], [[A:%.*]]
+; CHECK-NEXT:    call void @use(i1 [[C_3]])
+; CHECK-NEXT:    ret i32 10
+; CHECK:       exit:
+; CHECK-NEXT:    [[C_4:%.*]] = icmp ule i32 [[X]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[C_4]])
+; CHECK-NEXT:    [[C_5:%.*]] = icmp ule i32 [[X]], [[A]]
+; CHECK-NEXT:    call void @use(i1 [[C_5]])
+; CHECK-NEXT:    [[C_6:%.*]] = icmp ule i32 [[X]], [[Y]]
+; CHECK-NEXT:    call void @use(i1 [[C_6]])
+; CHECK-NEXT:    [[C_7:%.*]] = icmp ule i32 [[Y]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[C_7]])
+; CHECK-NEXT:    ret i32 20
+;
+entry:
+  %c.1 = icmp ule i32 %x, %y
+  %c.2 = icmp ule i32 %y, %z
+  %and = select i1 %c.1, i1 %c.2, i1 false
+  br i1 %and, label %bb1, label %exit
+
+bb1:
+  %t.1 = icmp ule i32 %x, %z
+  call void @use(i1 %t.1)
+
+  %t.2 = icmp ule i32 %x, %y
+  call void @use(i1 %t.2)
+
+  %t.3 = icmp ule i32 %y, %z
+  call void @use(i1 %t.3)
+
+
+  %c.3 = icmp ule i32 %x, %a
+  call void @use(i1 %c.3)
+
+  ret i32 10
+
+exit:
+  %c.4 = icmp ule i32 %x, %z
+  call void @use(i1 %c.4)
+
+  %c.5 = icmp ule i32 %x, %a
+  call void @use(i1 %c.5)
+
+  %c.6 = icmp ule i32 %x, %y
+  call void @use(i1 %c.6)
+
+  %c.7 = icmp ule i32 %y, %z
+  call void @use(i1 %c.7)
+
+  ret i32 20
+}

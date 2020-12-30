@@ -17,7 +17,7 @@ body:
   %indvar = phi i64 [ 0, %entry ], [ %indvar_next, %body ]
   %scevgep = getelementptr [1024 x i32], [1024 x i32]* @B, i64 0, i64 %indvar
 ; CHECK: [[T2:%.load]] = load i32, i32* getelementptr inbounds ([1024 x i32], [1024 x i32]* @A, i32 0, i32 0), align 4
-; CHECK: %value_p.splatinsert = insertelement <4 x i32> undef, i32 [[T2]], i32 0
+; CHECK: %value_p.splatinsert = insertelement <4 x i32> poison, i32 [[T2]], i32 0
   %value = load i32, i32* getelementptr inbounds ([1024 x i32], [1024 x i32]* @A, i64 0, i64 0), align 4
   %result = tail call i32 @foo(i32 %value) nounwind
   store i32 %result, i32* %scevgep, align 4

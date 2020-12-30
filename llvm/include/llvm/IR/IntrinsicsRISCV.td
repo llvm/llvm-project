@@ -189,6 +189,13 @@ let TargetPrefix = "riscv" in {
                      LLVMPointerType<LLVMMatchType<0>>, llvm_anyvector_ty,
                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty],
                     [NoCapture<ArgIndex<1>>, IntrWriteMem]>, RISCVVIntrinsic;
+  // For destination vector type is the same as first source vector (with mask).
+  // Input: (maskedoff, vector_in, mask, vl)
+  class RISCVUnaryAAMask
+        : Intrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, LLVMMatchType<0>,
+                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty],
+                    [IntrNoMem]>, RISCVVIntrinsic;
   // For destination vector type is the same as first and second source vector.
   // Input: (vector_in, vector_in, vl)
   class RISCVBinaryAAANoMask
@@ -389,10 +396,24 @@ let TargetPrefix = "riscv" in {
         : Intrinsic<[llvm_anyint_ty],
                     [llvm_anyvector_ty, LLVMMatchType<1>, LLVMMatchType<0>],
                     [IntrNoMem]>, RISCVVIntrinsic;
-  // For mask unary operations with mask type in/out without mask
-  // Output: (mask type output)
-  // Input: (mask type vector_in, vl)
-  class RISCVMaskUnaryMOutNoMask
+  // For destination vector type is NOT the same as source vector.
+  // Input: (vector_in, vl)
+  class RISCVUnaryABNoMask
+        : Intrinsic<[llvm_anyvector_ty],
+                    [llvm_anyvector_ty, llvm_anyint_ty],
+                    [IntrNoMem]>, RISCVVIntrinsic;
+  // For destination vector type is NOT the same as source vector (with mask).
+  // Input: (maskedoff, vector_in, mask, vl)
+  class RISCVUnaryABMask
+        : Intrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, llvm_anyvector_ty,
+                     LLVMScalarOrSameVectorWidth<1, llvm_i1_ty>,
+                     llvm_anyint_ty],
+                    [IntrNoMem]>, RISCVVIntrinsic;
+  // For unary operations with the same vector type in/out without mask
+  // Output: (vector)
+  // Input: (vector_in, vl)
+  class RISCVUnaryNoMask
         : Intrinsic<[llvm_anyvector_ty],
                     [LLVMMatchType<0>, llvm_anyint_ty],
                     [IntrNoMem]>, RISCVVIntrinsic;
@@ -490,8 +511,12 @@ let TargetPrefix = "riscv" in {
     def "int_riscv_" # NAME : RISCVMaskUnarySOutNoMask;
     def "int_riscv_" # NAME # "_mask" : RISCVMaskUnarySOutMask;
   }
+  multiclass RISCVUnaryAB {
+    def "int_riscv_" # NAME : RISCVUnaryABNoMask;
+    def "int_riscv_" # NAME # "_mask" : RISCVUnaryABMask;
+  }
   multiclass RISCVMaskUnaryMOut {
-    def "int_riscv_" # NAME : RISCVMaskUnaryMOutNoMask;
+    def "int_riscv_" # NAME : RISCVUnaryNoMask;
     def "int_riscv_" # NAME # "_mask" : RISCVMaskUnaryMOutMask;
   }
 
@@ -516,6 +541,9 @@ let TargetPrefix = "riscv" in {
   defm vwsub : RISCVBinaryABX;
   defm vwsubu_w : RISCVBinaryAAX;
   defm vwsub_w : RISCVBinaryAAX;
+
+  defm vzext : RISCVUnaryAB;
+  defm vsext : RISCVUnaryAB;
 
   defm vadc : RISCVBinaryWithV0;
   defm vmadc_carry_in : RISCVBinaryMaskOutWithV0;
@@ -658,6 +686,8 @@ let TargetPrefix = "riscv" in {
   defm vfslide1down : RISCVBinaryAAX;
 
   defm vrgather : RISCVBinaryAAX;
+
+  def "int_riscv_vcompress_mask" : RISCVUnaryAAMask;
 
   defm vaaddu : RISCVSaturatingBinaryAAX;
   defm vaadd : RISCVSaturatingBinaryAAX;

@@ -31,6 +31,10 @@ def testTraverseOpRegionBlockIterators():
   # CHECK: MODULE REGIONS=1 BLOCKS=1
   print(f"MODULE REGIONS={len(regions)} BLOCKS={len(blocks)}")
 
+  # Should verify.
+  # CHECK: .verify = True
+  print(f".verify = {module.operation.verify()}")
+
   # Get the regions and blocks from the default collections.
   default_regions = list(op)
   default_blocks = list(default_regions[0])
@@ -546,10 +550,12 @@ def testPrintInvalidOperation():
     # This block does not have a terminator, it may crash the custom printer.
     # Verify that we fallback to the generic printer for safety.
     block = module.regions[0].blocks.append()
-    print(module)
     # CHECK: // Verification failed, printing generic form
     # CHECK: "module"() ( {
     # CHECK: }) : () -> ()
+    print(module)
+    # CHECK: .verify = False
+    print(f".verify = {module.operation.verify()}")
 run(testPrintInvalidOperation)
 
 
@@ -578,3 +584,22 @@ def testCreateWithInvalidAttributes():
       # CHECK: Found an invalid (`None`?) attribute value for the key "some_key" when attempting to create the operation "module"
       print(e)
 run(testCreateWithInvalidAttributes)
+
+
+# CHECK-LABEL: TEST: testOperationName
+def testOperationName():
+  ctx = Context()
+  ctx.allow_unregistered_dialects = True
+  module = Module.parse(r"""
+    %0 = "custom.op1"() : () -> f32
+    %1 = "custom.op2"() : () -> i32
+    %2 = "custom.op1"() : () -> f32
+  """, ctx)
+
+  # CHECK: custom.op1
+  # CHECK: custom.op2
+  # CHECK: custom.op1
+  for op in module.body.operations:
+    print(op.operation.name)
+
+run(testOperationName)

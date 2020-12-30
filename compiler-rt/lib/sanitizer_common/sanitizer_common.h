@@ -467,6 +467,7 @@ inline int ToLower(int c) {
 template<typename T>
 class InternalMmapVectorNoCtor {
  public:
+  using value_type = T;
   void Initialize(uptr initial_capacity) {
     capacity_bytes_ = 0;
     size_ = 0;
@@ -651,9 +652,13 @@ void Sort(T *v, uptr size, Compare comp = {}) {
 
 // Works like std::lower_bound: finds the first element that is not less
 // than the val.
-template <class Container, class Value, class Compare>
-uptr InternalLowerBound(const Container &v, uptr first, uptr last,
-                        const Value &val, Compare comp) {
+template <class Container,
+          class Compare = CompareLess<typename Container::value_type>>
+uptr InternalLowerBound(const Container &v,
+                        const typename Container::value_type &val,
+                        Compare comp = {}) {
+  uptr first = 0;
+  uptr last = v.size();
   while (last > first) {
     uptr mid = (first + last) / 2;
     if (comp(v[mid], val))
@@ -676,6 +681,27 @@ enum ModuleArch {
   kModuleArchARM64,
   kModuleArchRISCV64
 };
+
+// Sorts and removes duplicates from the container.
+template <class Container,
+          class Compare = CompareLess<typename Container::value_type>>
+void SortAndDedup(Container &v, Compare comp = {}) {
+  Sort(v.data(), v.size(), comp);
+  uptr size = v.size();
+  if (size < 2)
+    return;
+  uptr last = 0;
+  for (uptr i = 1; i < size; ++i) {
+    if (comp(v[last], v[i])) {
+      ++last;
+      if (last != i)
+        v[last] = v[i];
+    } else {
+      CHECK(!comp(v[i], v[last]));
+    }
+  }
+  v.resize(last + 1);
+}
 
 // Opens the file 'file_name" and reads up to 'max_len' bytes.
 // The resulting buffer is mmaped and stored in '*buff'.

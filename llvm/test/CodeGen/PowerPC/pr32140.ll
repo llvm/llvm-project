@@ -2,12 +2,12 @@
 ; RUN: llc -mtriple=powerpc64le-linux-gnu -mcpu=pwr8 < %s | FileCheck %s --check-prefix CHECK-LE
 ; RUN: llc -mtriple=powerpc64-linux-gnu -mcpu=pwr8 < %s | FileCheck %s --check-prefix CHECK-BE
 
-@as = local_unnamed_addr global i16 0, align 2
-@bs = local_unnamed_addr global i16 0, align 2
-@ai = local_unnamed_addr global i32 0, align 4
-@bi = local_unnamed_addr global i32 0, align 4
+@as = dso_local local_unnamed_addr global i16 0, align 2
+@bs = dso_local local_unnamed_addr global i16 0, align 2
+@ai = dso_local local_unnamed_addr global i32 0, align 4
+@bi = dso_local local_unnamed_addr global i32 0, align 4
 
-define void @bswapStorei64Toi32() {
+define dso_local void @bswapStorei64Toi32() {
 ; CHECK-LABEL: bswapStorei64Toi32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis 3, 2, ai@toc@ha
@@ -29,11 +29,10 @@ define void @bswapStorei64Toi32() {
 ;
 ; CHECK-BE-LABEL: bswapStorei64Toi32:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis 3, 2, .LC0@toc@ha
-; CHECK-BE-NEXT:    addis 4, 2, .LC1@toc@ha
-; CHECK-BE-NEXT:    ld 3, .LC0@toc@l(3)
-; CHECK-BE-NEXT:    ld 4, .LC1@toc@l(4)
-; CHECK-BE-NEXT:    lwa 3, 0(3)
+; CHECK-BE-NEXT:    addis 3, 2, ai@toc@ha
+; CHECK-BE-NEXT:    addis 4, 2, bi@toc@ha
+; CHECK-BE-NEXT:    lwa 3, ai@toc@l(3)
+; CHECK-BE-NEXT:    addi 4, 4, bi@toc@l
 ; CHECK-BE-NEXT:    rldicl 3, 3, 32, 32
 ; CHECK-BE-NEXT:    stwbrx 3, 0, 4
 ; CHECK-BE-NEXT:    blr
@@ -46,7 +45,7 @@ entry:
   ret void
 }
 
-define void @bswapStorei32Toi16() {
+define dso_local void @bswapStorei32Toi16() {
 ; CHECK-LABEL: bswapStorei32Toi16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis 3, 2, as@toc@ha
@@ -68,11 +67,10 @@ define void @bswapStorei32Toi16() {
 ;
 ; CHECK-BE-LABEL: bswapStorei32Toi16:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis 3, 2, .LC2@toc@ha
-; CHECK-BE-NEXT:    addis 4, 2, .LC3@toc@ha
-; CHECK-BE-NEXT:    ld 3, .LC2@toc@l(3)
-; CHECK-BE-NEXT:    ld 4, .LC3@toc@l(4)
-; CHECK-BE-NEXT:    lha 3, 0(3)
+; CHECK-BE-NEXT:    addis 3, 2, as@toc@ha
+; CHECK-BE-NEXT:    addis 4, 2, bs@toc@ha
+; CHECK-BE-NEXT:    lha 3, as@toc@l(3)
+; CHECK-BE-NEXT:    addi 4, 4, bs@toc@l
 ; CHECK-BE-NEXT:    srwi 3, 3, 16
 ; CHECK-BE-NEXT:    sthbrx 3, 0, 4
 ; CHECK-BE-NEXT:    blr
@@ -85,7 +83,7 @@ entry:
   ret void
 }
 
-define void @bswapStorei64Toi16() {
+define dso_local void @bswapStorei64Toi16() {
 ; CHECK-LABEL: bswapStorei64Toi16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis 3, 2, as@toc@ha
@@ -107,11 +105,10 @@ define void @bswapStorei64Toi16() {
 ;
 ; CHECK-BE-LABEL: bswapStorei64Toi16:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis 3, 2, .LC2@toc@ha
-; CHECK-BE-NEXT:    addis 4, 2, .LC3@toc@ha
-; CHECK-BE-NEXT:    ld 3, .LC2@toc@l(3)
-; CHECK-BE-NEXT:    ld 4, .LC3@toc@l(4)
-; CHECK-BE-NEXT:    lha 3, 0(3)
+; CHECK-BE-NEXT:    addis 3, 2, as@toc@ha
+; CHECK-BE-NEXT:    addis 4, 2, bs@toc@ha
+; CHECK-BE-NEXT:    lha 3, as@toc@l(3)
+; CHECK-BE-NEXT:    addi 4, 4, bs@toc@l
 ; CHECK-BE-NEXT:    rldicl 3, 3, 16, 48
 ; CHECK-BE-NEXT:    sthbrx 3, 0, 4
 ; CHECK-BE-NEXT:    blr

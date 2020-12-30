@@ -105,7 +105,7 @@ define amdgpu_ps <2 x float> @extract_elt0_elt1_buffer_load_v4f32(<4 x i32> inre
 
 ; CHECK-LABEL: @extract_elt1_elt2_buffer_load_v4f32(
 ; CHECK-NEXT: %data = call <3 x float> @llvm.amdgcn.buffer.load.v3f32(<4 x i32> %rsrc, i32 %idx, i32 %ofs, i1 false, i1 false)
-; CHECK-NEXT: %shuf = shufflevector <3 x float> %data, <3 x float> undef, <2 x i32> <i32 1, i32 2>
+; CHECK-NEXT: %shuf = shufflevector <3 x float> %data, <3 x float> poison, <2 x i32> <i32 1, i32 2>
 ; CHECK-NEXT: ret <2 x float> %shuf
 define amdgpu_ps <2 x float> @extract_elt1_elt2_buffer_load_v4f32(<4 x i32> inreg %rsrc, i32 %idx, i32 %ofs) #0 {
   %data = call <4 x float> @llvm.amdgcn.buffer.load.v4f32(<4 x i32> %rsrc, i32 %idx, i32 %ofs, i1 false, i1 false)
@@ -191,7 +191,7 @@ define amdgpu_ps { float, float, float } @extract_elt0_elt1_elt2_buffer_load_v4f
 ; CHECK-LABEL: @extract_elt0_elt1_elt2_buffer_load_v4f32_3(
 ; CHECK-NEXT: %data = call <3 x float> @llvm.amdgcn.buffer.load.v3f32(<4 x i32> %rsrc, i32 %idx, i32 %ofs, i1 false, i1 false)
 ; CHECK-NEXT: %ins1 = shufflevector <3 x float> %data, <3 x float> undef, <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT: %shuf = shufflevector <3 x float> %data, <3 x float> undef, <2 x i32> <i32 undef, i32 1>
+; CHECK-NEXT: %shuf = shufflevector <3 x float> %data, <3 x float> poison, <2 x i32> <i32 undef, i32 1>
 ; CHECK-NEXT: %ret = fadd <2 x float> %ins1, %shuf
 define amdgpu_ps <2 x float> @extract_elt0_elt1_elt2_buffer_load_v4f32_3(<4 x i32> inreg %rsrc, i32 %idx, i32 %ofs) #0 {
   %data = call <4 x float> @llvm.amdgcn.buffer.load.v4f32(<4 x i32> %rsrc, i32 %idx, i32 %ofs, i1 false, i1 false)
@@ -207,7 +207,7 @@ define amdgpu_ps <2 x float> @extract_elt0_elt1_elt2_buffer_load_v4f32_3(<4 x i3
 ; CHECK-LABEL: @extract_elt0_elt1_elt2_buffer_load_v4f32_4(
 ; CHECK-NEXT: %data = call <3 x float> @llvm.amdgcn.buffer.load.v3f32(<4 x i32> %rsrc, i32 %idx, i32 %ofs, i1 false, i1 false)
 ; CHECK-NEXT: %ins1 = shufflevector <3 x float> %data, <3 x float> undef, <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT: %shuf = shufflevector <3 x float> %data, <3 x float> undef, <2 x i32> <i32 1, i32 undef>
+; CHECK-NEXT: %shuf = shufflevector <3 x float> %data, <3 x float> poison, <2 x i32> <i32 1, i32 undef>
 ; CHECK-NEXT: %ret = fadd <2 x float> %ins1, %shuf
 ; CHECK-NEXT: ret <2 x float> %ret
 define amdgpu_ps <2 x float> @extract_elt0_elt1_elt2_buffer_load_v4f32_4(<4 x i32> inreg %rsrc, i32 %idx, i32 %ofs) #0 {
@@ -224,7 +224,7 @@ define amdgpu_ps <2 x float> @extract_elt0_elt1_elt2_buffer_load_v4f32_4(<4 x i3
 ; CHECK-LABEL: @extract_elt0_elt1_elt2_buffer_load_v4f32_5(
 ; CHECK-NEXT: %data = call <3 x float> @llvm.amdgcn.buffer.load.v3f32(<4 x i32> %rsrc, i32 %idx, i32 %ofs, i1 false, i1 false)
 ; CHECK-NEXT: %ins1 = shufflevector <3 x float> %data, <3 x float> undef, <2 x i32> <i32 2, i32 2>
-; CHECK-NEXT: %shuf = shufflevector <3 x float> %data, <3 x float> undef, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT: %shuf = shufflevector <3 x float> %data, <3 x float> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT: %ret = fadd <2 x float> %ins1, %shuf
 define amdgpu_ps <2 x float> @extract_elt0_elt1_elt2_buffer_load_v4f32_5(<4 x i32> inreg %rsrc, i32 %idx, i32 %ofs) #0 {
   %data = call <4 x float> @llvm.amdgcn.buffer.load.v4f32(<4 x i32> %rsrc, i32 %idx, i32 %ofs, i1 false, i1 false)
@@ -341,7 +341,7 @@ define amdgpu_ps <2 x float> @extract_elt0_elt1_buffer_load_format_v4f32(<4 x i3
 ; The initial insertion point is at the extractelement
 ; CHECK-LABEL: @extract01_bitcast_buffer_load_format_v4f32(
 ; CHECK-NEXT: %tmp = call <2 x float> @llvm.amdgcn.buffer.load.format.v2f32(<4 x i32> undef, i32 %arg, i32 16, i1 false, i1 false)
-; CHECK-NEXT: %1 = shufflevector <2 x float> %tmp, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT: %1 = shufflevector <2 x float> %tmp, <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; CHECK-NEXT: %tmp1 = bitcast <4 x float> %1 to <2 x double>
 ; CHECK-NEXT: %tmp2 = extractelement <2 x double> %tmp1, i32 0
 ; CHECK-NEXT: ret double %tmp2
@@ -1209,7 +1209,7 @@ define amdgpu_ps <2 x float> @extract_elt0_elt1_raw_buffer_load_format_v4f32(<4 
 
 ; CHECK-LABEL: @extract_elt1_elt2_raw_buffer_load_format_v4f32(
 ; CHECK-NEXT: %data = call <3 x float> @llvm.amdgcn.raw.buffer.load.format.v3f32(<4 x i32> %rsrc, i32 %ofs, i32 %sofs, i32 0)
-; CHECK-NEXT: %shuf = shufflevector <3 x float> %data, <3 x float> undef, <2 x i32> <i32 1, i32 2>
+; CHECK-NEXT: %shuf = shufflevector <3 x float> %data, <3 x float> poison, <2 x i32> <i32 1, i32 2>
 ; CHECK-NEXT: ret <2 x float> %shuf
 define amdgpu_ps <2 x float> @extract_elt1_elt2_raw_buffer_load_format_v4f32(<4 x i32> inreg %rsrc, i32 %ofs, i32 %sofs) #0 {
   %data = call <4 x float> @llvm.amdgcn.raw.buffer.load.format.v4f32(<4 x i32> %rsrc, i32 %ofs, i32 %sofs, i32 0)
@@ -1809,7 +1809,7 @@ define amdgpu_ps <2 x float> @extract_elt0_elt1_struct_buffer_load_format_v4f32(
 
 ; CHECK-LABEL: @extract_elt1_elt2_struct_buffer_load_format_v4f32(
 ; CHECK-NEXT: %data = call <3 x float> @llvm.amdgcn.struct.buffer.load.format.v3f32(<4 x i32> %rsrc, i32 %idx, i32 %ofs, i32 %sofs, i32 0)
-; CHECK-NEXT: %shuf = shufflevector <3 x float> %data, <3 x float> undef, <2 x i32> <i32 1, i32 2>
+; CHECK-NEXT: %shuf = shufflevector <3 x float> %data, <3 x float> poison, <2 x i32> <i32 1, i32 2>
 ; CHECK-NEXT: ret <2 x float> %shuf
 define amdgpu_ps <2 x float> @extract_elt1_elt2_struct_buffer_load_format_v4f32(<4 x i32> inreg %rsrc, i32 %idx, i32 %ofs, i32 %sofs) #0 {
   %data = call <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32> %rsrc, i32 %idx, i32 %ofs, i32 %sofs, i32 0)
@@ -2029,7 +2029,7 @@ define amdgpu_ps <2 x float> @extract_elt0_elt1_raw_tbuffer_load_v4f32(<4 x i32>
 
 ; CHECK-LABEL: @extract_elt1_elt2_raw_tbuffer_load_v4f32(
 ; CHECK-NEXT: %data = call <3 x float> @llvm.amdgcn.raw.tbuffer.load.v3f32(<4 x i32> %rsrc, i32 %arg0, i32 %arg1, i32 78, i32 0)
-; CHECK-NEXT: %shuf = shufflevector <3 x float> %data, <3 x float> undef, <2 x i32> <i32 1, i32 2>
+; CHECK-NEXT: %shuf = shufflevector <3 x float> %data, <3 x float> poison, <2 x i32> <i32 1, i32 2>
 ; CHECK-NEXT: ret <2 x float> %shuf
 define amdgpu_ps <2 x float> @extract_elt1_elt2_raw_tbuffer_load_v4f32(<4 x i32> inreg %rsrc, i32 %arg0, i32 inreg %arg1) #0 {
   %data = call <4 x float> @llvm.amdgcn.raw.tbuffer.load.v4f32(<4 x i32> %rsrc, i32 %arg0, i32 %arg1, i32 78, i32 0)
@@ -2292,7 +2292,7 @@ define amdgpu_ps <2 x float> @extract_elt0_elt1_struct_tbuffer_load_v4f32(<4 x i
 
 ; CHECK-LABEL: @extract_elt1_elt2_struct_tbuffer_load_v4f32(
 ; CHECK-NEXT: %data = call <3 x float> @llvm.amdgcn.struct.tbuffer.load.v3f32(<4 x i32> %rsrc, i32 %arg0, i32 %arg1, i32 %arg2, i32 78, i32 0)
-; CHECK-NEXT: %shuf = shufflevector <3 x float> %data, <3 x float> undef, <2 x i32> <i32 1, i32 2>
+; CHECK-NEXT: %shuf = shufflevector <3 x float> %data, <3 x float> poison, <2 x i32> <i32 1, i32 2>
 ; CHECK-NEXT: ret <2 x float> %shuf
 define amdgpu_ps <2 x float> @extract_elt1_elt2_struct_tbuffer_load_v4f32(<4 x i32> inreg %rsrc, i32 %arg0, i32 %arg1, i32 inreg %arg2) #0 {
   %data = call <4 x float> @llvm.amdgcn.struct.tbuffer.load.v4f32(<4 x i32> %rsrc, i32 %arg0, i32 %arg1, i32 %arg2, i32 78, i32 0)
@@ -2511,7 +2511,7 @@ define amdgpu_ps <2 x float> @extract_elt0_elt1_tbuffer_load_v4f32(<4 x i32> inr
 
 ; CHECK-LABEL: @extract_elt1_elt2_tbuffer_load_v4f32(
 ; CHECK-NEXT: %data = call <3 x float> @llvm.amdgcn.tbuffer.load.v3f32(<4 x i32> %rsrc, i32 %arg0, i32 %arg1, i32 0, i32 0, i32 14, i32 4, i1 false, i1 false)
-; CHECK-NEXT: %shuf = shufflevector <3 x float> %data, <3 x float> undef, <2 x i32> <i32 1, i32 2>
+; CHECK-NEXT: %shuf = shufflevector <3 x float> %data, <3 x float> poison, <2 x i32> <i32 1, i32 2>
 ; CHECK-NEXT: ret <2 x float> %shuf
 define amdgpu_ps <2 x float> @extract_elt1_elt2_tbuffer_load_v4f32(<4 x i32> inreg %rsrc, i32 %arg0, i32 %arg1) #0 {
   %data = call <4 x float> @llvm.amdgcn.tbuffer.load.v4f32(<4 x i32> %rsrc, i32 %arg0, i32 %arg1, i32 0, i32 0, i32 14, i32 4, i1 false, i1 false)
@@ -2798,7 +2798,7 @@ define amdgpu_ps <3 x float> @extract_elt0_elt1_elt2_dmask_0001_image_sample_1d_
 
 ; CHECK-LABEL: @extract_elt0_elt1_elt2_dmask_0011_image_sample_1d_v4f32_f32(
 ; CHECK-NEXT: %data = call <2 x float> @llvm.amdgcn.image.sample.1d.v2f32.f32(i32 3, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
-; CHECK-NEXT: %shuf = shufflevector <2 x float> %data, <2 x float> undef, <3 x i32> <i32 0, i32 1, i32 undef>
+; CHECK-NEXT: %shuf = shufflevector <2 x float> %data, <2 x float> poison, <3 x i32> <i32 0, i32 1, i32 undef>
 ; CHECK-NEXT: ret <3 x float> %shuf
 define amdgpu_ps <3 x float> @extract_elt0_elt1_elt2_dmask_0011_image_sample_1d_v4f32_f32(float %s, <8 x i32> inreg %sampler, <4 x i32> inreg %rsrc) #0 {
   %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 3, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
@@ -2808,7 +2808,7 @@ define amdgpu_ps <3 x float> @extract_elt0_elt1_elt2_dmask_0011_image_sample_1d_
 
 ; CHECK-LABEL: @extract_elt0_elt1_elt2_dmask_0101_image_sample_1d_v4f32_f32(
 ; CHECK-NEXT: %data = call <2 x float> @llvm.amdgcn.image.sample.1d.v2f32.f32(i32 5, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
-; CHECK-NEXT: %shuf = shufflevector <2 x float> %data, <2 x float> undef, <3 x i32> <i32 0, i32 1, i32 undef>
+; CHECK-NEXT: %shuf = shufflevector <2 x float> %data, <2 x float> poison, <3 x i32> <i32 0, i32 1, i32 undef>
 ; CHECK-NEXT: ret <3 x float> %shuf
 define amdgpu_ps <3 x float> @extract_elt0_elt1_elt2_dmask_0101_image_sample_1d_v4f32_f32(float %s, <8 x i32> inreg %sampler, <4 x i32> inreg %rsrc) #0 {
   %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 5, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
@@ -2993,7 +2993,7 @@ define amdgpu_ps half @extract_elt1_image_sample_cd_cl_1d_v4f16_f32_f32(float %d
 
 ; CHECK-LABEL: @extract_elt_to3_image_sample_cd_cl_1d_v4f16_f32_f32(
 ; CHECK-NEXT: %data = call <3 x half> @llvm.amdgcn.image.sample.cd.cl.1d.v3f16.f32.f32(i32 7, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
-; CHECK-NEXT: %res = shufflevector <3 x half> %data, <3 x half> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
+; CHECK-NEXT: %res = shufflevector <3 x half> %data, <3 x half> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
 ; CHECK-NEXT: ret <4 x half> %res
 define amdgpu_ps <4 x half> @extract_elt_to3_image_sample_cd_cl_1d_v4f16_f32_f32(float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> inreg %sampler, <4 x i32> inreg %rsrc) #0 {
   %data = call <4 x half> @llvm.amdgcn.image.sample.cd.cl.1d.v4f16.f32.f32(i32 15, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
@@ -3003,7 +3003,7 @@ define amdgpu_ps <4 x half> @extract_elt_to3_image_sample_cd_cl_1d_v4f16_f32_f32
 
 ; CHECK-LABEL: @extract_elt_to2_image_sample_cd_cl_1d_v4f16_f32_f32(
 ; CHECK-NEXT: %data = call <2 x half> @llvm.amdgcn.image.sample.cd.cl.1d.v2f16.f32.f32(i32 3, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
-; CHECK-NEXT: %res = shufflevector <2 x half> %data, <2 x half> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT: %res = shufflevector <2 x half> %data, <2 x half> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; CHECK-NEXT: ret <4 x half> %res
 define amdgpu_ps <4 x half> @extract_elt_to2_image_sample_cd_cl_1d_v4f16_f32_f32(float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> inreg %sampler, <4 x i32> inreg %rsrc) #0 {
   %data = call <4 x half> @llvm.amdgcn.image.sample.cd.cl.1d.v4f16.f32.f32(i32 15, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)

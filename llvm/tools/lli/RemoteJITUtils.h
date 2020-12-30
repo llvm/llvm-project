@@ -13,7 +13,7 @@
 #ifndef LLVM_TOOLS_LLI_REMOTEJITUTILS_H
 #define LLVM_TOOLS_LLI_REMOTEJITUTILS_H
 
-#include "llvm/ExecutionEngine/Orc/RPC/FDRawByteChannel.h"
+#include "llvm/ExecutionEngine/Orc/Shared/FDRawByteChannel.h"
 #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
 #include <mutex>
 
@@ -24,7 +24,7 @@
 #endif
 
 // launch the remote process (see lli.cpp) and return a channel to it.
-std::unique_ptr<llvm::orc::rpc::FDRawByteChannel> launchRemote();
+std::unique_ptr<llvm::orc::shared::FDRawByteChannel> launchRemote();
 
 namespace llvm {
 

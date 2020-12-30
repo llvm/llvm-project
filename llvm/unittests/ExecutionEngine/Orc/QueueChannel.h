@@ -9,7 +9,7 @@
 #ifndef LLVM_UNITTESTS_EXECUTIONENGINE_ORC_QUEUECHANNEL_H
 #define LLVM_UNITTESTS_EXECUTIONENGINE_ORC_QUEUECHANNEL_H
 
-#include "llvm/ExecutionEngine/Orc/RPC/RawByteChannel.h"
+#include "llvm/ExecutionEngine/Orc/Shared/RawByteChannel.h"
 #include "llvm/Support/Error.h"
 
 #include <atomic>
@@ -70,7 +70,7 @@ private:
   std::function<Error()> ReadError, WriteError;
 };
 
-class QueueChannel : public orc::rpc::RawByteChannel {
+class QueueChannel : public orc::shared::RawByteChannel {
 public:
   QueueChannel(std::shared_ptr<Queue> InQueue,
                std::shared_ptr<Queue> OutQueue)
@@ -84,25 +84,25 @@ public:
   template <typename FunctionIdT, typename SequenceIdT>
   Error startSendMessage(const FunctionIdT &FnId, const SequenceIdT &SeqNo) {
     ++InFlightOutgoingMessages;
-    return orc::rpc::RawByteChannel::startSendMessage(FnId, SeqNo);
+    return orc::shared::RawByteChannel::startSendMessage(FnId, SeqNo);
   }
 
   Error endSendMessage() {
     --InFlightOutgoingMessages;
     ++CompletedOutgoingMessages;
-    return orc::rpc::RawByteChannel::endSendMessage();
+    return orc::shared::RawByteChannel::endSendMessage();
   }
 
   template <typename FunctionIdT, typename SequenceNumberT>
   Error startReceiveMessage(FunctionIdT &FnId, SequenceNumberT &SeqNo) {
     ++InFlightIncomingMessages;
-    return orc::rpc::RawByteChannel::startReceiveMessage(FnId, SeqNo);
+    return orc::shared::RawByteChannel::startReceiveMessage(FnId, SeqNo);
   }
 
   Error endReceiveMessage() {
     --InFlightIncomingMessages;
     ++CompletedIncomingMessages;
-    return orc::rpc::RawByteChannel::endReceiveMessage();
+    return orc::shared::RawByteChannel::endReceiveMessage();
   }
 
   Error readBytes(char *Dst, unsigned Size) override {

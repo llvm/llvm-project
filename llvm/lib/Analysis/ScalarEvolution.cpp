@@ -11961,7 +11961,7 @@ void ScalarEvolution::SCEVCallbackVH::allUsesReplacedWith(Value *V) {
     if (PHINode *PN = dyn_cast<PHINode>(U))
       SE->ConstantEvolutionLoopExitValue.erase(PN);
     SE->eraseValueFromMap(U);
-    Worklist.insert(Worklist.end(), U->user_begin(), U->user_end());
+    llvm::append_range(Worklist, U->users());
   }
   // Delete the Old value.
   if (PHINode *PN = dyn_cast<PHINode>(Old))
@@ -12526,7 +12526,7 @@ void ScalarEvolution::verify() const {
 
   while (!LoopStack.empty()) {
     auto *L = LoopStack.pop_back_val();
-    LoopStack.insert(LoopStack.end(), L->begin(), L->end());
+    llvm::append_range(LoopStack, *L);
 
     auto *CurBECount = SCM.visit(
         const_cast<ScalarEvolution *>(this)->getBackedgeTakenCount(L));

@@ -1857,8 +1857,7 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
       for (unsigned j = 0; j != InitElts; ++j)
         Args.push_back(j);
       Args.resize(ResElts, -1);
-      Init = Builder.CreateShuffleVector(Init, llvm::UndefValue::get(VVT), Args,
-                                         "vext");
+      Init = Builder.CreateShuffleVector(Init, Args, "vext");
 
       Args.clear();
       for (unsigned j = 0; j != CurIdx; ++j)
@@ -4556,9 +4555,8 @@ Value *ScalarExprEmitter::VisitBlockExpr(const BlockExpr *block) {
 // Convert a vec3 to vec4, or vice versa.
 static Value *ConvertVec3AndVec4(CGBuilderTy &Builder, CodeGenFunction &CGF,
                                  Value *Src, unsigned NumElementsDst) {
-  llvm::Value *UnV = llvm::UndefValue::get(Src->getType());
   static constexpr int Mask[] = {0, 1, 2, -1};
-  return Builder.CreateShuffleVector(Src, UnV,
+  return Builder.CreateShuffleVector(Src,
                                      llvm::makeArrayRef(Mask, NumElementsDst));
 }
 

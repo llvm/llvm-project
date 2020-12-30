@@ -31,13 +31,13 @@ int CheckMultipleArgs(int a) {
     // CHECK: [[CMA_ARG_NUM:%[a-zA-Z0-9_]+]] = getelementptr inbounds [[CMA_PRINTF_ARG_TY]], [[CMA_PRINTF_ARG_TY]] addrspace(1)* [[CMA_PRINTF_ARGS_CASTED]], i32 0, i32 1
     // CHECK: store i32 4, i32 addrspace(1)* [[CMA_ARG_NUM]], align 4
     // CHECK: [[CMA_ARGT1:%[a-zA-Z0-9_]+]] = getelementptr inbounds [[CMA_PRINTF_ARG_TY]], [[CMA_PRINTF_ARG_TY]] addrspace(1)* [[CMA_PRINTF_ARGS_CASTED]], i32 0, i32 2
-    // CHECK: store i32 917505, i32 addrspace(1)* [[CMA_ARGT1]], align 4
+    // CHECK: store i32 {{[0-9]+}}, i32 addrspace(1)* [[CMA_ARGT1]], align 4
     // CHECK: [[CMA_ARGT2:%[a-zA-Z0-9_]+]] = getelementptr inbounds [[CMA_PRINTF_ARG_TY]], [[CMA_PRINTF_ARG_TY]] addrspace(1)* [[CMA_PRINTF_ARGS_CASTED]], i32 0, i32 3
-    // CHECK: store i32 917505, i32 addrspace(1)* [[CMA_ARGT2]], align 4
+    // CHECK: store i32 {{[0-9]+}}, i32 addrspace(1)* [[CMA_ARGT2]], align 4
     // CHECK: [[CMA_ARGT3:%[a-zA-Z0-9_]+]] = getelementptr inbounds [[CMA_PRINTF_ARG_TY]], [[CMA_PRINTF_ARG_TY]] addrspace(1)* [[CMA_PRINTF_ARGS_CASTED]], i32 0, i32 4
-    // CHECK: store i32 786464, i32 addrspace(1)* [[CMA_ARGT3]], align 4
+    // CHECK: store i32 {{[0-9]+}}, i32 addrspace(1)* [[CMA_ARGT3]], align 4
     // CHECK: [[CMA_ARGT4:%[a-zA-Z0-9_]+]] = getelementptr inbounds [[CMA_PRINTF_ARG_TY]], [[CMA_PRINTF_ARG_TY]] addrspace(1)* [[CMA_PRINTF_ARGS_CASTED]], i32 0, i32 5
-    // CHECK: store i32 917505, i32 addrspace(1)* [[CMA_ARGT4]], align 4
+    // CHECK: store i32 {{[0-9]+}}, i32 addrspace(1)* [[CMA_ARGT4]], align 4
     // CHECK: [[CMA_ARG1:%[a-zA-Z0-9_]+]] = getelementptr inbounds [[CMA_PRINTF_ARG_TY]], [[CMA_PRINTF_ARG_TY]] addrspace(1)* [[CMA_PRINTF_ARGS_CASTED]], i32 0, i32 6
 
     // CHECK: store i32 9, i32 addrspace(1)* [[CMA_ARG1]], align 4

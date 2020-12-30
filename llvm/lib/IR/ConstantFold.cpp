@@ -535,7 +535,7 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
     return UndefValue::get(DestTy);
   }
 
-  if (V->isNullValue() && !DestTy->isX86_MMXTy() &&
+  if (V->isNullValue() && !DestTy->isX86_MMXTy() && !DestTy->isX86_AMXTy() &&
       opc != Instruction::AddrSpaceCast)
     return Constant::getNullValue(DestTy);
 

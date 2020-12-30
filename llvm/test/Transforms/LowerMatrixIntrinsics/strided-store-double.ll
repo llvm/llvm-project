@@ -4,8 +4,8 @@
 
 define void @strided_store_3x2(<6 x double> %in, double* %out) {
 ; CHECK-LABEL: @strided_store_3x2(
-; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <6 x double> [[IN:%.*]], <6 x double> undef, <3 x i32> <i32 0, i32 1, i32 2>
-; CHECK-NEXT:    [[SPLIT1:%.*]] = shufflevector <6 x double> [[IN]], <6 x double> undef, <3 x i32> <i32 3, i32 4, i32 5>
+; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <6 x double> [[IN:%.*]], <6 x double> poison, <3 x i32> <i32 0, i32 1, i32 2>
+; CHECK-NEXT:    [[SPLIT1:%.*]] = shufflevector <6 x double> [[IN]], <6 x double> poison, <3 x i32> <i32 3, i32 4, i32 5>
 ; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast double* [[OUT:%.*]] to <3 x double>*
 ; CHECK-NEXT:    store <3 x double> [[SPLIT]], <3 x double>* [[VEC_CAST]], align 8
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, double* [[OUT]], i64 5
@@ -19,8 +19,8 @@ define void @strided_store_3x2(<6 x double> %in, double* %out) {
 
 define void @strided_store_3x2_nonconst_stride(<6 x double> %in, i64 %stride, double* %out) {
 ; CHECK-LABEL: @strided_store_3x2_nonconst_stride(
-; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <6 x double> [[IN:%.*]], <6 x double> undef, <3 x i32> <i32 0, i32 1, i32 2>
-; CHECK-NEXT:    [[SPLIT1:%.*]] = shufflevector <6 x double> [[IN]], <6 x double> undef, <3 x i32> <i32 3, i32 4, i32 5>
+; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <6 x double> [[IN:%.*]], <6 x double> poison, <3 x i32> <i32 0, i32 1, i32 2>
+; CHECK-NEXT:    [[SPLIT1:%.*]] = shufflevector <6 x double> [[IN]], <6 x double> poison, <3 x i32> <i32 3, i32 4, i32 5>
 ; CHECK-NEXT:    [[VEC_START:%.*]] = mul i64 0, [[STRIDE:%.*]]
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, double* [[OUT:%.*]], i64 [[VEC_START]]
 ; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast double* [[VEC_GEP]] to <3 x double>*
@@ -37,11 +37,11 @@ define void @strided_store_3x2_nonconst_stride(<6 x double> %in, i64 %stride, do
 
 define void @strided_store_2x3(<10 x double> %in, double* %out) {
 ; CHECK-LABEL: @strided_store_2x3(
-; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <10 x double> [[IN:%.*]], <10 x double> undef, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[SPLIT1:%.*]] = shufflevector <10 x double> [[IN]], <10 x double> undef, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[SPLIT2:%.*]] = shufflevector <10 x double> [[IN]], <10 x double> undef, <2 x i32> <i32 4, i32 5>
-; CHECK-NEXT:    [[SPLIT3:%.*]] = shufflevector <10 x double> [[IN]], <10 x double> undef, <2 x i32> <i32 6, i32 7>
-; CHECK-NEXT:    [[SPLIT4:%.*]] = shufflevector <10 x double> [[IN]], <10 x double> undef, <2 x i32> <i32 8, i32 9>
+; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <10 x double> [[IN:%.*]], <10 x double> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[SPLIT1:%.*]] = shufflevector <10 x double> [[IN]], <10 x double> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[SPLIT2:%.*]] = shufflevector <10 x double> [[IN]], <10 x double> poison, <2 x i32> <i32 4, i32 5>
+; CHECK-NEXT:    [[SPLIT3:%.*]] = shufflevector <10 x double> [[IN]], <10 x double> poison, <2 x i32> <i32 6, i32 7>
+; CHECK-NEXT:    [[SPLIT4:%.*]] = shufflevector <10 x double> [[IN]], <10 x double> poison, <2 x i32> <i32 8, i32 9>
 ; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast double* [[OUT:%.*]] to <2 x double>*
 ; CHECK-NEXT:    store <2 x double> [[SPLIT]], <2 x double>* [[VEC_CAST]], align 8
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, double* [[OUT]], i64 4

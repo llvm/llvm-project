@@ -6723,8 +6723,7 @@ bool CodeGenPrepare::optimizeShuffleVectorInst(ShuffleVectorInst *SVI) {
       cast<Instruction>(SVI->getOperand(0))->getOperand(1), NewType);
   Value *Insert = Builder.CreateInsertElement(UndefValue::get(NewVecType), BC1,
                                               (uint64_t)0);
-  Value *Shuffle = Builder.CreateShuffleVector(
-      Insert, UndefValue::get(NewVecType), SVI->getShuffleMask());
+  Value *Shuffle = Builder.CreateShuffleVector(Insert, SVI->getShuffleMask());
   Value *BC2 = Builder.CreateBitCast(Shuffle, SVIVecType);
 
   SVI->replaceAllUsesWith(BC2);

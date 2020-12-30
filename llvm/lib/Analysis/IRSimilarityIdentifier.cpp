@@ -138,10 +138,8 @@ void IRInstructionMapper::convertToUnsignedVec(
     mapToIllegalUnsigned(It, IntegerMappingForBB, InstrListForBB, true);
     for_each(InstrListForBB,
              [this](IRInstructionData *ID) { this->IDL->push_back(*ID); });
-    InstrList.insert(InstrList.end(), InstrListForBB.begin(),
-                     InstrListForBB.end());
-    IntegerMapping.insert(IntegerMapping.end(), IntegerMappingForBB.begin(),
-                          IntegerMappingForBB.end());
+    llvm::append_range(InstrList, InstrListForBB);
+    llvm::append_range(IntegerMapping, IntegerMappingForBB);
   }
 }
 
@@ -639,11 +637,9 @@ void IRSimilarityIdentifier::populateMapper(
 
   // Insert the InstrListForModule at the end of the overall InstrList so that
   // we can have a long InstrList for the entire set of Modules being analyzed.
-  InstrList.insert(InstrList.end(), InstrListForModule.begin(),
-                   InstrListForModule.end());
+  llvm::append_range(InstrList, InstrListForModule);
   // Do the same as above, but for IntegerMapping.
-  IntegerMapping.insert(IntegerMapping.end(), IntegerMappingForModule.begin(),
-                     IntegerMappingForModule.end());
+  llvm::append_range(IntegerMapping, IntegerMappingForModule);
 }
 
 void IRSimilarityIdentifier::populateMapper(

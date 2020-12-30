@@ -409,8 +409,7 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
         if (DL->getTypeSizeInBits(EffectiveEltTy) !=
             DL->getTypeSizeInBits(Val->getType())) {
           assert(isVec3ToVec4Shuffle(EffectiveEltTy, Val->getType()));
-          Val = B.CreateShuffleVector(Val, UndefValue::get(Val->getType()),
-                                      ArrayRef<int>{0, 1, 2});
+          Val = B.CreateShuffleVector(Val, ArrayRef<int>{0, 1, 2});
         }
 
         Val = B.CreateBitCast(Val, EffectiveEltTy);

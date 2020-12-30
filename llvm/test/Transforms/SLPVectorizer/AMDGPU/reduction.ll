@@ -5,9 +5,9 @@
 define half @reduction_half4(<4 x half> %a) {
 ; GFX9-LABEL: @reduction_half4(
 ; GFX9-NEXT:  entry:
-; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x half> [[A:%.*]], <4 x half> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x half> [[A:%.*]], <4 x half> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ; GFX9-NEXT:    [[BIN_RDX:%.*]] = fadd fast <4 x half> [[A]], [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x half> [[BIN_RDX]], <4 x half> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x half> [[BIN_RDX]], <4 x half> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; GFX9-NEXT:    [[BIN_RDX2:%.*]] = fadd fast <4 x half> [[BIN_RDX]], [[RDX_SHUF1]]
 ; GFX9-NEXT:    [[TMP0:%.*]] = extractelement <4 x half> [[BIN_RDX2]], i32 0
 ; GFX9-NEXT:    ret half [[TMP0]]
@@ -39,11 +39,11 @@ entry:
 define half @reduction_half8(<8 x half> %vec8) {
 ; GFX9-LABEL: @reduction_half8(
 ; GFX9-NEXT:  entry:
-; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x half> [[VEC8:%.*]], <8 x half> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
+; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x half> [[VEC8:%.*]], <8 x half> poison, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
 ; GFX9-NEXT:    [[BIN_RDX:%.*]] = fadd fast <8 x half> [[VEC8]], [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x half> [[BIN_RDX]], <8 x half> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x half> [[BIN_RDX]], <8 x half> poison, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; GFX9-NEXT:    [[BIN_RDX2:%.*]] = fadd fast <8 x half> [[BIN_RDX]], [[RDX_SHUF1]]
-; GFX9-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x half> [[BIN_RDX2]], <8 x half> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; GFX9-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x half> [[BIN_RDX2]], <8 x half> poison, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; GFX9-NEXT:    [[BIN_RDX4:%.*]] = fadd fast <8 x half> [[BIN_RDX2]], [[RDX_SHUF3]]
 ; GFX9-NEXT:    [[TMP0:%.*]] = extractelement <8 x half> [[BIN_RDX4]], i32 0
 ; GFX9-NEXT:    ret half [[TMP0]]
@@ -91,13 +91,13 @@ entry:
 define half @reduction_half16(<16 x half> %vec16) {
 ; GFX9-LABEL: @reduction_half16(
 ; GFX9-NEXT:  entry:
-; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <16 x half> [[VEC16:%.*]], <16 x half> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <16 x half> [[VEC16:%.*]], <16 x half> poison, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; GFX9-NEXT:    [[BIN_RDX:%.*]] = fadd fast <16 x half> [[VEC16]], [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <16 x half> [[BIN_RDX]], <16 x half> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <16 x half> [[BIN_RDX]], <16 x half> poison, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; GFX9-NEXT:    [[BIN_RDX2:%.*]] = fadd fast <16 x half> [[BIN_RDX]], [[RDX_SHUF1]]
-; GFX9-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <16 x half> [[BIN_RDX2]], <16 x half> undef, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; GFX9-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <16 x half> [[BIN_RDX2]], <16 x half> poison, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; GFX9-NEXT:    [[BIN_RDX4:%.*]] = fadd fast <16 x half> [[BIN_RDX2]], [[RDX_SHUF3]]
-; GFX9-NEXT:    [[RDX_SHUF5:%.*]] = shufflevector <16 x half> [[BIN_RDX4]], <16 x half> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; GFX9-NEXT:    [[RDX_SHUF5:%.*]] = shufflevector <16 x half> [[BIN_RDX4]], <16 x half> poison, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; GFX9-NEXT:    [[BIN_RDX6:%.*]] = fadd fast <16 x half> [[BIN_RDX4]], [[RDX_SHUF5]]
 ; GFX9-NEXT:    [[TMP0:%.*]] = extractelement <16 x half> [[BIN_RDX6]], i32 0
 ; GFX9-NEXT:    ret half [[TMP0]]
@@ -203,9 +203,9 @@ entry:
 define i16 @reduction_v4i16(<4 x i16> %a) {
 ; GFX9-LABEL: @reduction_v4i16(
 ; GFX9-NEXT:  entry:
-; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i16> [[A:%.*]], <4 x i16> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i16> [[A:%.*]], <4 x i16> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ; GFX9-NEXT:    [[BIN_RDX:%.*]] = add <4 x i16> [[A]], [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x i16> [[BIN_RDX]], <4 x i16> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x i16> [[BIN_RDX]], <4 x i16> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; GFX9-NEXT:    [[BIN_RDX2:%.*]] = add <4 x i16> [[BIN_RDX]], [[RDX_SHUF1]]
 ; GFX9-NEXT:    [[TMP0:%.*]] = extractelement <4 x i16> [[BIN_RDX2]], i32 0
 ; GFX9-NEXT:    ret i16 [[TMP0]]
@@ -237,11 +237,11 @@ entry:
 define i16 @reduction_v8i16(<8 x i16> %vec8) {
 ; GFX9-LABEL: @reduction_v8i16(
 ; GFX9-NEXT:  entry:
-; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x i16> [[VEC8:%.*]], <8 x i16> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
+; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x i16> [[VEC8:%.*]], <8 x i16> poison, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
 ; GFX9-NEXT:    [[BIN_RDX:%.*]] = add <8 x i16> [[VEC8]], [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x i16> [[BIN_RDX]], <8 x i16> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x i16> [[BIN_RDX]], <8 x i16> poison, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; GFX9-NEXT:    [[BIN_RDX2:%.*]] = add <8 x i16> [[BIN_RDX]], [[RDX_SHUF1]]
-; GFX9-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x i16> [[BIN_RDX2]], <8 x i16> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; GFX9-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x i16> [[BIN_RDX2]], <8 x i16> poison, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; GFX9-NEXT:    [[BIN_RDX4:%.*]] = add <8 x i16> [[BIN_RDX2]], [[RDX_SHUF3]]
 ; GFX9-NEXT:    [[TMP0:%.*]] = extractelement <8 x i16> [[BIN_RDX4]], i32 0
 ; GFX9-NEXT:    ret i16 [[TMP0]]
@@ -289,10 +289,10 @@ entry:
 define i16 @reduction_umin_v4i16(<4 x i16> %vec4) {
 ; GFX9-LABEL: @reduction_umin_v4i16(
 ; GFX9-NEXT:  entry:
-; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i16> [[VEC4:%.*]], <4 x i16> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i16> [[VEC4:%.*]], <4 x i16> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ; GFX9-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp ult <4 x i16> [[VEC4]], [[RDX_SHUF]]
 ; GFX9-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP]], <4 x i16> [[VEC4]], <4 x i16> [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x i16> [[RDX_MINMAX_SELECT]], <4 x i16> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x i16> [[RDX_MINMAX_SELECT]], <4 x i16> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; GFX9-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = icmp ult <4 x i16> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
 ; GFX9-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP2]], <4 x i16> [[RDX_MINMAX_SELECT]], <4 x i16> [[RDX_SHUF1]]
 ; GFX9-NEXT:    [[TMP0:%.*]] = extractelement <4 x i16> [[RDX_MINMAX_SELECT3]], i32 0
@@ -331,13 +331,13 @@ entry:
 define i16 @reduction_icmp_v8i16(<8 x i16> %vec8) {
 ; GFX9-LABEL: @reduction_icmp_v8i16(
 ; GFX9-NEXT:  entry:
-; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x i16> [[VEC8:%.*]], <8 x i16> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
+; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x i16> [[VEC8:%.*]], <8 x i16> poison, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
 ; GFX9-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp ult <8 x i16> [[VEC8]], [[RDX_SHUF]]
 ; GFX9-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <8 x i1> [[RDX_MINMAX_CMP]], <8 x i16> [[VEC8]], <8 x i16> [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x i16> [[RDX_MINMAX_SELECT]], <8 x i16> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x i16> [[RDX_MINMAX_SELECT]], <8 x i16> poison, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; GFX9-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = icmp ult <8 x i16> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
 ; GFX9-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select <8 x i1> [[RDX_MINMAX_CMP2]], <8 x i16> [[RDX_MINMAX_SELECT]], <8 x i16> [[RDX_SHUF1]]
-; GFX9-NEXT:    [[RDX_SHUF4:%.*]] = shufflevector <8 x i16> [[RDX_MINMAX_SELECT3]], <8 x i16> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; GFX9-NEXT:    [[RDX_SHUF4:%.*]] = shufflevector <8 x i16> [[RDX_MINMAX_SELECT3]], <8 x i16> poison, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; GFX9-NEXT:    [[RDX_MINMAX_CMP5:%.*]] = icmp ult <8 x i16> [[RDX_MINMAX_SELECT3]], [[RDX_SHUF4]]
 ; GFX9-NEXT:    [[RDX_MINMAX_SELECT6:%.*]] = select <8 x i1> [[RDX_MINMAX_CMP5]], <8 x i16> [[RDX_MINMAX_SELECT3]], <8 x i16> [[RDX_SHUF4]]
 ; GFX9-NEXT:    [[TMP0:%.*]] = extractelement <8 x i16> [[RDX_MINMAX_SELECT6]], i32 0
@@ -402,16 +402,16 @@ entry:
 define i16 @reduction_smin_v16i16(<16 x i16> %vec16) {
 ; GFX9-LABEL: @reduction_smin_v16i16(
 ; GFX9-NEXT:  entry:
-; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <16 x i16> [[VEC16:%.*]], <16 x i16> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <16 x i16> [[VEC16:%.*]], <16 x i16> poison, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; GFX9-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp slt <16 x i16> [[VEC16]], [[RDX_SHUF]]
 ; GFX9-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <16 x i1> [[RDX_MINMAX_CMP]], <16 x i16> [[VEC16]], <16 x i16> [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <16 x i16> [[RDX_MINMAX_SELECT]], <16 x i16> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <16 x i16> [[RDX_MINMAX_SELECT]], <16 x i16> poison, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; GFX9-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = icmp slt <16 x i16> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
 ; GFX9-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select <16 x i1> [[RDX_MINMAX_CMP2]], <16 x i16> [[RDX_MINMAX_SELECT]], <16 x i16> [[RDX_SHUF1]]
-; GFX9-NEXT:    [[RDX_SHUF4:%.*]] = shufflevector <16 x i16> [[RDX_MINMAX_SELECT3]], <16 x i16> undef, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; GFX9-NEXT:    [[RDX_SHUF4:%.*]] = shufflevector <16 x i16> [[RDX_MINMAX_SELECT3]], <16 x i16> poison, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; GFX9-NEXT:    [[RDX_MINMAX_CMP5:%.*]] = icmp slt <16 x i16> [[RDX_MINMAX_SELECT3]], [[RDX_SHUF4]]
 ; GFX9-NEXT:    [[RDX_MINMAX_SELECT6:%.*]] = select <16 x i1> [[RDX_MINMAX_CMP5]], <16 x i16> [[RDX_MINMAX_SELECT3]], <16 x i16> [[RDX_SHUF4]]
-; GFX9-NEXT:    [[RDX_SHUF7:%.*]] = shufflevector <16 x i16> [[RDX_MINMAX_SELECT6]], <16 x i16> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; GFX9-NEXT:    [[RDX_SHUF7:%.*]] = shufflevector <16 x i16> [[RDX_MINMAX_SELECT6]], <16 x i16> poison, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; GFX9-NEXT:    [[RDX_MINMAX_CMP8:%.*]] = icmp slt <16 x i16> [[RDX_MINMAX_SELECT6]], [[RDX_SHUF7]]
 ; GFX9-NEXT:    [[RDX_MINMAX_SELECT9:%.*]] = select <16 x i1> [[RDX_MINMAX_CMP8]], <16 x i16> [[RDX_MINMAX_SELECT6]], <16 x i16> [[RDX_SHUF7]]
 ; GFX9-NEXT:    [[TMP0:%.*]] = extractelement <16 x i16> [[RDX_MINMAX_SELECT9]], i32 0
@@ -530,10 +530,10 @@ entry:
 define i16 @reduction_umax_v4i16(<4 x i16> %vec4) {
 ; GFX9-LABEL: @reduction_umax_v4i16(
 ; GFX9-NEXT:  entry:
-; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i16> [[VEC4:%.*]], <4 x i16> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i16> [[VEC4:%.*]], <4 x i16> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ; GFX9-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp ugt <4 x i16> [[VEC4]], [[RDX_SHUF]]
 ; GFX9-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP]], <4 x i16> [[VEC4]], <4 x i16> [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x i16> [[RDX_MINMAX_SELECT]], <4 x i16> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x i16> [[RDX_MINMAX_SELECT]], <4 x i16> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; GFX9-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = icmp ugt <4 x i16> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
 ; GFX9-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP2]], <4 x i16> [[RDX_MINMAX_SELECT]], <4 x i16> [[RDX_SHUF1]]
 ; GFX9-NEXT:    [[TMP0:%.*]] = extractelement <4 x i16> [[RDX_MINMAX_SELECT3]], i32 0
@@ -572,10 +572,10 @@ entry:
 define i16 @reduction_smax_v4i16(<4 x i16> %vec4) {
 ; GFX9-LABEL: @reduction_smax_v4i16(
 ; GFX9-NEXT:  entry:
-; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i16> [[VEC4:%.*]], <4 x i16> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i16> [[VEC4:%.*]], <4 x i16> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ; GFX9-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp sgt <4 x i16> [[VEC4]], [[RDX_SHUF]]
 ; GFX9-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP]], <4 x i16> [[VEC4]], <4 x i16> [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x i16> [[RDX_MINMAX_SELECT]], <4 x i16> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x i16> [[RDX_MINMAX_SELECT]], <4 x i16> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; GFX9-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = icmp sgt <4 x i16> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
 ; GFX9-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP2]], <4 x i16> [[RDX_MINMAX_SELECT]], <4 x i16> [[RDX_SHUF1]]
 ; GFX9-NEXT:    [[TMP0:%.*]] = extractelement <4 x i16> [[RDX_MINMAX_SELECT3]], i32 0

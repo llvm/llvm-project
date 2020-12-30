@@ -28,10 +28,10 @@ define i32 @inv_load_conditional(i32* %a, i64 %n, i32* %b, i32 %k) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK5]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], 9223372036854775792
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i32*> undef, i32* [[A]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i32*> [[BROADCAST_SPLATINSERT]], <16 x i32*> undef, <16 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT6:%.*]] = insertelement <16 x i32> undef, i32 [[NTRUNC]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT7:%.*]] = shufflevector <16 x i32> [[BROADCAST_SPLATINSERT6]], <16 x i32> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i32*> poison, i32* [[A]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i32*> [[BROADCAST_SPLATINSERT]], <16 x i32*> poison, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT6:%.*]] = insertelement <16 x i32> poison, i32 [[NTRUNC]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT7:%.*]] = shufflevector <16 x i32> [[BROADCAST_SPLATINSERT6]], <16 x i32> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -57,10 +57,10 @@ define i32 @inv_load_conditional(i32* %a, i64 %n, i32* %b, i32 %k) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp sgt i64 [[N]], 1
 ; CHECK-NEXT:    [[SMAX9:%.*]] = select i1 [[TMP7]], i64 [[N]], i64 1
 ; CHECK-NEXT:    [[N_VEC11:%.*]] = and i64 [[SMAX9]], 9223372036854775800
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT16:%.*]] = insertelement <8 x i32*> undef, i32* [[A]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT17:%.*]] = shufflevector <8 x i32*> [[BROADCAST_SPLATINSERT16]], <8 x i32*> undef, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT18:%.*]] = insertelement <8 x i32> undef, i32 [[NTRUNC]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT19:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT18]], <8 x i32> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT16:%.*]] = insertelement <8 x i32*> poison, i32* [[A]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT17:%.*]] = shufflevector <8 x i32*> [[BROADCAST_SPLATINSERT16]], <8 x i32*> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT18:%.*]] = insertelement <8 x i32> poison, i32 [[NTRUNC]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT19:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT18]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
 ; CHECK-NEXT:    [[INDEX12:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT13:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]

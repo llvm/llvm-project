@@ -810,6 +810,8 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
     Alignment = PowerOf2Ceil(Alignment);
     return Align(Alignment);
   }
+  case Type::X86_AMXTyID:
+    return Align(64);
   default:
     llvm_unreachable("Bad type for getAlignment!!!");
   }

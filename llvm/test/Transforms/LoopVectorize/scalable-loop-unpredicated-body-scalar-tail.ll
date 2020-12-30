@@ -18,7 +18,7 @@
 ; CHECKUF1: %[[IDXB:.*]] = getelementptr inbounds double, double* %b, i64 %index
 ; CHECKUF1: %[[IDXB_CAST:.*]] = bitcast double* %[[IDXB]] to <vscale x 4 x double>*
 ; CHECKUF1: %wide.load = load <vscale x 4 x double>, <vscale x 4 x double>* %[[IDXB_CAST]], align 8, !alias.scope !0
-; CHECKUF1: %[[FADD:.*]] = fadd <vscale x 4 x double> %wide.load, shufflevector (<vscale x 4 x double> insertelement (<vscale x 4 x double> undef, double 1.000000e+00, i32 0), <vscale x 4 x double> undef, <vscale x 4 x i32> zeroinitializer)
+; CHECKUF1: %[[FADD:.*]] = fadd <vscale x 4 x double> %wide.load, shufflevector (<vscale x 4 x double> insertelement (<vscale x 4 x double> poison, double 1.000000e+00, i32 0), <vscale x 4 x double> poison, <vscale x 4 x i32> zeroinitializer)
 ; CHECKUF1: %[[IDXA:.*]] = getelementptr inbounds double, double* %a, i64 %index
 ; CHECKUF1: %[[IDXA_CAST:.*]] = bitcast double* %[[IDXA]] to <vscale x 4 x double>*
 ; CHECKUF1: store <vscale x 4 x double> %[[FADD]], <vscale x 4 x double>* %[[IDXA_CAST]], align 8, !alias.scope !3, !noalias !0
@@ -55,8 +55,8 @@
 ; CHECKUF2: %[[IDXB_NEXT:.*]] = getelementptr inbounds double, double* %[[IDXB]], i64 %[[VSCALE2_EXT]]
 ; CHECKUF2: %[[IDXB_NEXT_CAST:.*]] = bitcast double* %[[IDXB_NEXT]] to <vscale x 4 x double>*
 ; CHECKUF2: %wide.load{{[0-9]+}} = load <vscale x 4 x double>, <vscale x 4 x double>* %[[IDXB_NEXT_CAST]], align 8, !alias.scope !0
-; CHECKUF2: %[[FADD:.*]] = fadd <vscale x 4 x double> %wide.load, shufflevector (<vscale x 4 x double> insertelement (<vscale x 4 x double> undef, double 1.000000e+00, i32 0), <vscale x 4 x double> undef, <vscale x 4 x i32> zeroinitializer)
-; CHECKUF2: %[[FADD_NEXT:.*]] = fadd <vscale x 4 x double> %wide.load{{[0-9]+}}, shufflevector (<vscale x 4 x double> insertelement (<vscale x 4 x double> undef, double 1.000000e+00, i32 0), <vscale x 4 x double> undef, <vscale x 4 x i32> zeroinitializer)
+; CHECKUF2: %[[FADD:.*]] = fadd <vscale x 4 x double> %wide.load, shufflevector (<vscale x 4 x double> insertelement (<vscale x 4 x double> poison, double 1.000000e+00, i32 0), <vscale x 4 x double> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECKUF2: %[[FADD_NEXT:.*]] = fadd <vscale x 4 x double> %wide.load{{[0-9]+}}, shufflevector (<vscale x 4 x double> insertelement (<vscale x 4 x double> poison, double 1.000000e+00, i32 0), <vscale x 4 x double> poison, <vscale x 4 x i32> zeroinitializer)
 ; CHECKUF2: %[[IDXA:.*]] = getelementptr inbounds double, double* %a, i64 %index
 ; CHECKUF2: %[[IDXA_CAST:.*]] = bitcast double* %[[IDXA]] to <vscale x 4 x double>*
 ; CHECKUF2: store <vscale x 4 x double> %[[FADD]], <vscale x 4 x double>* %[[IDXA_CAST]], align 8, !alias.scope !3, !noalias !0

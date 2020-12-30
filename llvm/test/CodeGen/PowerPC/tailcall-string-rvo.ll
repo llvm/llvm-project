@@ -18,13 +18,13 @@ target triple = "powerpc64le-linux-gnu"
 
 declare void @TestBaz(%class.basic_string.11.42.73* noalias sret(%class.basic_string.11.42.73) %arg)
 
-define void @TestBar(%class.basic_string.11.42.73* noalias sret(%class.basic_string.11.42.73) %arg) {
+define dso_local void @TestBar(%class.basic_string.11.42.73* noalias sret(%class.basic_string.11.42.73) %arg) {
 bb:
   call void @TestBaz(%class.basic_string.11.42.73* noalias sret(%class.basic_string.11.42.73) %arg)
   ret void
 }
 
-define void @TestFoo(%class.basic_string.11.42.73* noalias sret(%class.basic_string.11.42.73) %arg) {
+define dso_local void @TestFoo(%class.basic_string.11.42.73* noalias sret(%class.basic_string.11.42.73) %arg) {
 ; CHECK-LABEL: TestFoo:
 ; CHECK: #TC_RETURNd8 TestBar 0
 bb:

@@ -10,21 +10,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ExecutionEngine/Orc/RPC/RPCUtils.h"
+#include "llvm/ExecutionEngine/Orc/Shared/RPCUtils.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <string>
 #include <system_error>
 
-char llvm::orc::rpc::RPCFatalError::ID = 0;
-char llvm::orc::rpc::ConnectionClosed::ID = 0;
-char llvm::orc::rpc::ResponseAbandoned::ID = 0;
-char llvm::orc::rpc::CouldNotNegotiate::ID = 0;
+char llvm::orc::shared::RPCFatalError::ID = 0;
+char llvm::orc::shared::ConnectionClosed::ID = 0;
+char llvm::orc::shared::ResponseAbandoned::ID = 0;
+char llvm::orc::shared::CouldNotNegotiate::ID = 0;
 
 namespace llvm {
 namespace orc {
-namespace rpc {
+namespace shared {
 
 std::error_code ConnectionClosed::convertToErrorCode() const {
   return orcError(OrcErrorCode::RPCConnectionClosed);
@@ -53,6 +53,6 @@ void CouldNotNegotiate::log(raw_ostream &OS) const {
   OS << "Could not negotiate RPC function " << Signature;
 }
 
-} // end namespace rpc
+} // end namespace shared
 } // end namespace orc
 } // end namespace llvm

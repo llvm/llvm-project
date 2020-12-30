@@ -5041,6 +5041,22 @@ let TargetPrefix = "x86" in {
               Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
                         [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
                          ImmArg<ArgIndex<2>>]>;
+  // AMX - internal intrinsics
+  def int_x86_tileloadd64_internal :
+              GCCBuiltin<"__builtin_ia32_tileloadd64_internal">,
+              Intrinsic<[llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_ptr_ty, llvm_i64_ty],
+                        []>;
+  def int_x86_tdpbssd_internal :
+              GCCBuiltin<"__builtin_ia32_tdpbssd_internal">,
+              Intrinsic<[llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty,
+                         llvm_x86amx_ty, llvm_x86amx_ty,
+                         llvm_x86amx_ty], []>;
+  def int_x86_tilestored64_internal :
+              GCCBuiltin<"__builtin_ia32_tilestored64_internal">,
+              Intrinsic<[], [llvm_i16_ty, llvm_i16_ty, llvm_ptr_ty,
+                             llvm_i64_ty, llvm_x86amx_ty], []>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -5055,20 +5071,4 @@ let TargetPrefix = "x86" in {
               Intrinsic<[llvm_i8_ty], [], []>;
   def int_x86_senduipi : GCCBuiltin<"__builtin_ia32_senduipi">,
               Intrinsic<[], [llvm_i64_ty], []>;
-// AMX - internal intrinsics
-  def int_x86_tileloadd64_internal :
-              GCCBuiltin<"__builtin_ia32_tileloadd64_internal">,
-              Intrinsic<[llvm_v256i32_ty],
-                        [llvm_i16_ty, llvm_i16_ty, llvm_ptr_ty, llvm_i64_ty],
-                        []>;
-  def int_x86_tdpbssd_internal :
-              GCCBuiltin<"__builtin_ia32_tdpbssd_internal">,
-              Intrinsic<[llvm_v256i32_ty],
-                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty,
-                         llvm_v256i32_ty, llvm_v256i32_ty,
-                         llvm_v256i32_ty], []>;
-  def int_x86_tilestored64_internal :
-              GCCBuiltin<"__builtin_ia32_tilestored64_internal">,
-              Intrinsic<[], [llvm_i16_ty, llvm_i16_ty, llvm_ptr_ty,
-                             llvm_i64_ty, llvm_v256i32_ty], []>;
 }

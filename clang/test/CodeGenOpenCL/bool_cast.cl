@@ -11,8 +11,8 @@ void kernel ker() {
 // CHECK: {{%.*}} = load i8, i8* %t, align 1
 // CHECK: {{%.*}} = trunc i8 {{%.*}} to i1
 // CHECK: {{%.*}} = sext i1 {{%.*}} to i32
-// CHECK: {{%.*}} = insertelement <4 x i32> undef, i32 {{%.*}}, i32 0
-// CHECK: {{%.*}} = shufflevector <4 x i32> {{%.*}}, <4 x i32> undef, <4 x i32> zeroinitializer
+// CHECK: {{%.*}} = insertelement <4 x i32> poison, i32 {{%.*}}, i32 0
+// CHECK: {{%.*}} = shufflevector <4 x i32> {{%.*}}, <4 x i32> poison, <4 x i32> zeroinitializer
 // CHECK: store <4 x i32> {{%.*}}, <4 x i32>* %vec4, align 16
   int i = (int)t;
 // CHECK: {{%.*}} = load i8, i8* %t, align 1

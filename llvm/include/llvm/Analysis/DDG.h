@@ -152,7 +152,7 @@ private:
     setKind((InstList.size() == 0 && Input.size() == 1)
                 ? NodeKind::SingleInstruction
                 : NodeKind::MultiInstruction);
-    InstList.insert(InstList.end(), Input.begin(), Input.end());
+    llvm::append_range(InstList, Input);
   }
   void appendInstructions(const SimpleDDGNode &Input) {
     appendInstructions(Input.getInstructions());

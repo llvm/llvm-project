@@ -87,7 +87,7 @@ define dso_local double @speculatable_callee_intermediate_instructions (double* 
 }
 
 
-define double @callee(double) #1 {
+define dso_local double @callee(double) #1 {
   ret double 4.5
 }
 

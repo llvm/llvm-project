@@ -3053,7 +3053,7 @@ static void print(OpAsmPrinter &p, SubViewOp op) {
   p << op->getName().getStringRef().drop_front(stdDotLen) << ' ';
   p << op.source();
   printOffsetsSizesAndStrides(p, op);
-  p << " : " << op.getSourceType() << " to " << op.getType();
+  p << " : " << op.source().getType() << " to " << op.getType();
 }
 
 /// Parse a subview op of the form:

@@ -81,7 +81,7 @@ inline void addNodeToInterval(Interval *Int, BasicBlock *BB) {
 // BasicBlocks are added to the interval.
 inline void addNodeToInterval(Interval *Int, Interval *I) {
   // Add all of the nodes in I as new nodes in Int.
-  Int->Nodes.insert(Int->Nodes.end(), I->Nodes.begin(), I->Nodes.end());
+  llvm::append_range(Int->Nodes, I->Nodes);
 }
 
 template<class NodeTy, class OrigContainer_t, class GT = GraphTraits<NodeTy *>,

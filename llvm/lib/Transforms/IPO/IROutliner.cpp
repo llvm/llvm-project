@@ -13,6 +13,7 @@
 
 #include "llvm/Transforms/IPO/IROutliner.h"
 #include "llvm/Analysis/IRSimilarityIdentifier.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/PassManager.h"
@@ -28,6 +29,16 @@
 
 using namespace llvm;
 using namespace IRSimilarity;
+
+// Set to true if the user wants the ir outliner to run on linkonceodr linkage
+// functions. This is false by default because the linker can dedupe linkonceodr
+// functions. Since the outliner is confined to a single module (modulo LTO),
+// this is off by default. It should, however, be the default behavior in
+// LTO.
+static cl::opt<bool> EnableLinkOnceODRIROutlining(
+    "enable-linkonceodr-ir-outlining", cl::Hidden,
+    cl::desc("Enable the IR outliner on linkonceodr functions"),
+    cl::init(false));
 
 // This is a debug option to test small pieces of code to ensure that outlining
 // works correctly.
@@ -79,6 +90,10 @@ struct OutlinableGroup {
   /// The number of added instructions needed for the outlining of the \ref
   /// Regions.
   unsigned Cost = 0;
+
+  /// The argument that needs to be marked with the swifterr attribute.  If not
+  /// needed, there is no value.
+  Optional<unsigned> SwiftErrorArgument;
 
   /// For the \ref Regions, we look at every Value.  If it is a constant,
   /// we check whether it is the same in Region.
@@ -216,6 +231,7 @@ constantMatches(Value *V, unsigned GVN,
   DenseMap<unsigned, Constant *>::iterator GVNToConstantIt;
   bool Inserted;
 
+
   // If we have a constant, try to make a new entry in the GVNToConstant.
   std::tie(GVNToConstantIt, Inserted) =
       GVNToConstant.insert(std::make_pair(GVN, CST));
@@ -349,6 +365,11 @@ Function *IROutliner::createFunction(Module &M, OutlinableGroup &Group,
   Group.OutlinedFunction = Function::Create(
       Group.OutlinedFunctionType, GlobalValue::InternalLinkage,
       "outlined_ir_func_" + std::to_string(FunctionNameSuffix), M);
+
+  // Transfer the swifterr attribute to the correct function parameter.
+  if (Group.SwiftErrorArgument.hasValue())
+    Group.OutlinedFunction->addParamAttr(Group.SwiftErrorArgument.getValue(),
+                                         Attribute::SwiftError);
 
   Group.OutlinedFunction->addFnAttr(Attribute::OptimizeForSize);
   Group.OutlinedFunction->addFnAttr(Attribute::MinSize);
@@ -568,8 +589,17 @@ findExtractedInputToOverallInputMapping(OutlinableRegion &Region,
     assert(InputOpt.hasValue() && "Global value number not found?");
     Value *Input = InputOpt.getValue();
 
-    if (!Group.InputTypesSet)
+    if (!Group.InputTypesSet) {
       Group.ArgumentTypes.push_back(Input->getType());
+      // If the input value has a swifterr attribute, make sure to mark the
+      // argument in the overall function.
+      if (Input->isSwiftError()) {
+        assert(
+            !Group.SwiftErrorArgument.hasValue() &&
+            "Argument already marked with swifterr for this OutlinableGroup!");
+        Group.SwiftErrorArgument = TypeIndex;
+      }
+    }
 
     // Check if we have a constant. If we do add it to the overall argument
     // number to Constant map for the region, and continue to the next input.
@@ -789,6 +819,12 @@ CallInst *replaceCalledFunction(Module &M, OutlinableRegion &Region) {
   // Remove the old instruction.
   OldCall->eraseFromParent();
   Region.Call = Call;
+
+  // Make sure that the argument in the new function has the SwiftError
+  // argument.
+  if (Group.SwiftErrorArgument.hasValue())
+    Call->addParamAttr(Group.SwiftErrorArgument.getValue(),
+                       Attribute::SwiftError);
 
   return Call;
 }
@@ -1217,6 +1253,10 @@ void IROutliner::pruneIncompatibleRegions(
     if (IRSC.getStartBB()->hasAddressTaken())
       continue;
 
+    if (IRSC.front()->Inst->getFunction()->hasLinkOnceODRLinkage() &&
+        !OutlineFromLinkODRs)
+      continue;
+
     // Greedily prune out any regions that will overlap with already chosen
     // regions.
     if (CurrentEndIdx != 0 && StartIdx <= CurrentEndIdx)
@@ -1549,6 +1589,29 @@ unsigned IROutliner::doOutline(Module &M) {
     if (CurrentGroup.Cost >= CurrentGroup.Benefit && CostModel) {
       for (OutlinableRegion *OS : CurrentGroup.Regions)
         OS->reattachCandidate();
+      OptimizationRemarkEmitter &ORE = getORE(
+          *CurrentGroup.Regions[0]->Candidate->getFunction());
+      ORE.emit([&]() {
+        IRSimilarityCandidate *C = CurrentGroup.Regions[0]->Candidate;
+        OptimizationRemarkMissed R(DEBUG_TYPE, "WouldNotDecreaseSize",
+                                   C->frontInstruction());
+        R << "did not outline "
+          << ore::NV(std::to_string(CurrentGroup.Regions.size()))
+          << " regions due to estimated increase of "
+          << ore::NV("InstructionIncrease",
+                     std::to_string(static_cast<int>(CurrentGroup.Cost -
+                                                     CurrentGroup.Benefit)))
+          << " instructions at locations ";
+        interleave(
+            CurrentGroup.Regions.begin(), CurrentGroup.Regions.end(),
+            [&R](OutlinableRegion *Region) {
+              R << ore::NV(
+                  "DebugLoc",
+                  Region->Candidate->frontInstruction()->getDebugLoc());
+            },
+            [&R]() { R << " "; });
+        return R;
+      });
       continue;
     }
 
@@ -1569,10 +1632,34 @@ unsigned IROutliner::doOutline(Module &M) {
       }
     }
 
+    LLVM_DEBUG(dbgs() << "Outlined " << OutlinedRegions.size()
+                      << " with benefit " << CurrentGroup.Benefit
+                      << " and cost " << CurrentGroup.Cost << "\n");
+
     CurrentGroup.Regions = std::move(OutlinedRegions);
 
     if (CurrentGroup.Regions.empty())
       continue;
+
+    OptimizationRemarkEmitter &ORE =
+        getORE(*CurrentGroup.Regions[0]->Call->getFunction());
+    ORE.emit([&]() {
+      IRSimilarityCandidate *C = CurrentGroup.Regions[0]->Candidate;
+      OptimizationRemark R(DEBUG_TYPE, "Outlined", C->front()->Inst);
+      R << "outlined " << ore::NV(std::to_string(CurrentGroup.Regions.size()))
+        << " regions with decrease of "
+        << ore::NV("Benefit", std::to_string(static_cast<int>(
+                                  CurrentGroup.Benefit - CurrentGroup.Cost)))
+        << " instructions at locations ";
+      interleave(
+          CurrentGroup.Regions.begin(), CurrentGroup.Regions.end(),
+          [&R](OutlinableRegion *Region) {
+            R << ore::NV("DebugLoc",
+                         Region->Candidate->frontInstruction()->getDebugLoc());
+          },
+          [&R]() { R << " "; });
+      return R;
+    });
 
     deduplicateExtractedSections(M, CurrentGroup, FuncsToRemove,
                                  OutlinedFunctionNum);
@@ -1586,6 +1673,7 @@ unsigned IROutliner::doOutline(Module &M) {
 
 bool IROutliner::run(Module &M) {
   CostModel = !NoCostModel;
+  OutlineFromLinkODRs = EnableLinkOnceODRIROutlining;
 
   return doOutline(M) > 0;
 }
@@ -1599,6 +1687,7 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addRequired<IRSimilarityIdentifierWrapperPass>();
   }
@@ -1610,6 +1699,12 @@ bool IROutlinerLegacyPass::runOnModule(Module &M) {
   if (skipModule(M))
     return false;
 
+  std::unique_ptr<OptimizationRemarkEmitter> ORE;
+  auto GORE = [&ORE](Function &F) -> OptimizationRemarkEmitter & {
+    ORE.reset(new OptimizationRemarkEmitter(&F));
+    return *ORE.get();
+  };
+
   auto GTTI = [this](Function &F) -> TargetTransformInfo & {
     return this->getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
   };
@@ -1618,7 +1713,7 @@ bool IROutlinerLegacyPass::runOnModule(Module &M) {
     return this->getAnalysis<IRSimilarityIdentifierWrapperPass>().getIRSI();
   };
 
-  return IROutliner(GTTI, GIRSI).run(M);
+  return IROutliner(GTTI, GIRSI, GORE).run(M);
 }
 
 PreservedAnalyses IROutlinerPass::run(Module &M, ModuleAnalysisManager &AM) {
@@ -1634,7 +1729,14 @@ PreservedAnalyses IROutlinerPass::run(Module &M, ModuleAnalysisManager &AM) {
     return AM.getResult<IRSimilarityAnalysis>(M);
   };
 
-  if (IROutliner(GTTI, GIRSI).run(M))
+  std::unique_ptr<OptimizationRemarkEmitter> ORE;
+  std::function<OptimizationRemarkEmitter &(Function &)> GORE =
+      [&ORE](Function &F) -> OptimizationRemarkEmitter & {
+    ORE.reset(new OptimizationRemarkEmitter(&F));
+    return *ORE.get();
+  };
+
+  if (IROutliner(GTTI, GIRSI, GORE).run(M))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
 }
@@ -1643,6 +1745,7 @@ char IROutlinerLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(IROutlinerLegacyPass, "iroutliner", "IR Outliner", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(IRSimilarityIdentifierWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(IROutlinerLegacyPass, "iroutliner", "IR Outliner", false,
                     false)

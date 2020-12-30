@@ -83,7 +83,7 @@ void AliasSet::mergeSetIn(AliasSet &AS, AliasSetTracker &AST) {
       addRef();
     }
   } else if (ASHadUnknownInsts) {
-    UnknownInsts.insert(UnknownInsts.end(), AS.UnknownInsts.begin(), AS.UnknownInsts.end());
+    llvm::append_range(UnknownInsts, AS.UnknownInsts);
     AS.UnknownInsts.clear();
   }
 
