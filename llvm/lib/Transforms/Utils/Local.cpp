@@ -2050,7 +2050,7 @@ unsigned llvm::changeToUnreachable(Instruction *I, bool UseLLVMTrap,
 }
 
 CallInst *llvm::createCallMatchingInvoke(InvokeInst *II) {
-  SmallVector<Value *, 8> Args(II->arg_begin(), II->arg_end());
+  SmallVector<Value *, 8> Args(II->args());
   SmallVector<OperandBundleDef, 1> OpBundles;
   II->getOperandBundlesAsDefs(OpBundles);
   CallInst *NewCall = CallInst::Create(II->getFunctionType(),
@@ -2107,7 +2107,7 @@ BasicBlock *llvm::changeToInvokeAndSplitBasicBlock(CallInst *CI,
   BB->getInstList().pop_back();
 
   // Create the new invoke instruction.
-  SmallVector<Value *, 8> InvokeArgs(CI->arg_begin(), CI->arg_end());
+  SmallVector<Value *, 8> InvokeArgs(CI->args());
   SmallVector<OperandBundleDef, 1> OpBundles;
 
   CI->getOperandBundlesAsDefs(OpBundles);

@@ -309,7 +309,7 @@ static bool FactorOutConstant(const SCEV *&S, const SCEV *&Remainder,
     if (const SCEVConstant *FC = dyn_cast<SCEVConstant>(Factor))
       if (const SCEVConstant *C = dyn_cast<SCEVConstant>(M->getOperand(0)))
         if (!C->getAPInt().srem(FC->getAPInt())) {
-          SmallVector<const SCEV *, 4> NewMulOps(M->op_begin(), M->op_end());
+          SmallVector<const SCEV *, 4> NewMulOps(M->operands());
           NewMulOps[0] = SE.getConstant(C->getAPInt().sdiv(FC->getAPInt()));
           S = SE.getMulExpr(NewMulOps);
           return true;
@@ -911,7 +911,7 @@ static void ExposePointerBase(const SCEV *&Base, const SCEV *&Rest,
   }
   if (const SCEVAddExpr *A = dyn_cast<SCEVAddExpr>(Base)) {
     Base = A->getOperand(A->getNumOperands()-1);
-    SmallVector<const SCEV *, 8> NewAddOps(A->op_begin(), A->op_end());
+    SmallVector<const SCEV *, 8> NewAddOps(A->operands());
     NewAddOps.back() = Rest;
     Rest = SE.getAddExpr(NewAddOps);
     ExposePointerBase(Base, Rest, SE);
@@ -1556,7 +1556,7 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
 
   // {X,+,F} --> X + {0,+,F}
   if (!S->getStart()->isZero()) {
-    SmallVector<const SCEV *, 4> NewOps(S->op_begin(), S->op_end());
+    SmallVector<const SCEV *, 4> NewOps(S->operands());
     NewOps[0] = SE.getConstant(Ty, 0);
     const SCEV *Rest = SE.getAddRecExpr(NewOps, L,
                                         S->getNoWrapFlags(SCEV::FlagNW));
