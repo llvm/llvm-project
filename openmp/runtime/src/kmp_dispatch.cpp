@@ -494,7 +494,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
         // when remaining iters become less than parm2 - switch to dynamic
         pr->u.p.parm2 = guided_int_param * nproc * (chunk + 1);
         *(double *)&pr->u.p.parm3 =
-            guided_flt_param / nproc; // may occupy parm3 and parm4
+            guided_flt_param / (double)nproc; // may occupy parm3 and parm4
       }
     } else {
       KD_TRACE(100, ("__kmp_dispatch_init_algorithm: T#%d falling-through to "
@@ -544,7 +544,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
         UT cross;
 
         /* commonly used term: (2 nproc - 1)/(2 nproc) */
-        x = (long double)1.0 - (long double)0.5 / nproc;
+        x = 1.0 - 0.5 / (double)nproc;
 
 #ifdef KMP_DEBUG
         { // test natural alignment
@@ -1158,7 +1158,7 @@ int __kmp_dispatch_next_algorithm(int gtid,
   typedef typename traits_t<T>::signed_t ST;
   typedef typename traits_t<T>::floating_t DBL;
   int status = 0;
-  kmp_int32 last = 0;
+  bool last = false;
   T start;
   ST incr;
   UT limit, trip, init;
@@ -1219,8 +1219,8 @@ int __kmp_dispatch_next_algorithm(int gtid,
       }
       if (!status) { // try to steal
         kmp_info_t **other_threads = team->t.t_threads;
-        int while_limit = pr->u.p.parm3;
-        int while_index = 0;
+        T while_limit = pr->u.p.parm3;
+        T while_index = 0;
         T id = pr->u.p.static_steal_counter; // loop id
         int idx = (th->th.th_dispatch->th_disp_index - 1) %
                   __kmp_dispatch_num_buffers; // current loop index
@@ -1318,8 +1318,8 @@ int __kmp_dispatch_next_algorithm(int gtid,
 
       if (!status) {
         kmp_info_t **other_threads = team->t.t_threads;
-        int while_limit = pr->u.p.parm3;
-        int while_index = 0;
+        T while_limit = pr->u.p.parm3;
+        T while_index = 0;
         T id = pr->u.p.static_steal_counter; // loop id
         int idx = (th->th.th_dispatch->th_disp_index - 1) %
                   __kmp_dispatch_num_buffers; // current loop index
@@ -1329,7 +1329,7 @@ int __kmp_dispatch_next_algorithm(int gtid,
         while ((!status) && (while_limit != ++while_index)) {
           dispatch_private_info_template<T> *victim;
           union_i4 vold, vnew;
-          kmp_int32 remaining;
+          T remaining;
           T victimIdx = pr->u.p.parm4;
           T oldVictimIdx = victimIdx ? victimIdx - 1 : nproc - 1;
           victim = reinterpret_cast<dispatch_private_info_template<T> *>(
@@ -1359,7 +1359,8 @@ int __kmp_dispatch_next_algorithm(int gtid,
               break; // not enough chunks to steal, goto next victim
             }
             if (remaining > 3) {
-              vnew.p.ub -= (remaining >> 2); // try to steal 1/4 of remaining
+              // try to steal 1/4 of remaining
+              vnew.p.ub -= remaining >> 2;
             } else {
               vnew.p.ub -= 1; // steal 1 chunk of 2 or 3 remaining
             }
@@ -1433,7 +1434,7 @@ int __kmp_dispatch_next_algorithm(int gtid,
       pr->u.p.count = 1;
       *p_lb = pr->u.p.lb;
       *p_ub = pr->u.p.ub;
-      last = pr->u.p.parm1;
+      last = (pr->u.p.parm1 != 0);
       if (p_st != NULL)
         *p_st = pr->u.p.st;
     } else { /* no iterations to do */
@@ -1557,14 +1558,14 @@ int __kmp_dispatch_next_algorithm(int gtid,
           if ((T)remaining > chunkspec) {
             limit = init + chunkspec - 1;
           } else {
-            last = 1; // the last chunk
+            last = true; // the last chunk
             limit = init + remaining - 1;
           } // if
         } // if
         break;
       } // if
-      limit = init +
-              (UT)(remaining * *(double *)&pr->u.p.parm3); // divide by K*nproc
+      limit = init + (UT)((double)remaining *
+                          *(double *)&pr->u.p.parm3); // divide by K*nproc
       if (compare_and_swap<ST>(RCAST(volatile ST *, &sh->u.s.iteration),
                                (ST)init, (ST)limit)) {
         // CAS was successful, chunk obtained
@@ -1626,14 +1627,16 @@ int __kmp_dispatch_next_algorithm(int gtid,
           if ((T)remaining > chunk) {
             limit = init + chunk - 1;
           } else {
-            last = 1; // the last chunk
+            last = true; // the last chunk
             limit = init + remaining - 1;
           } // if
         } // if
         break;
       } // if
       // divide by K*nproc
-      UT span = remaining * (*(double *)&pr->u.p.parm3);
+      UT span;
+      __kmp_type_convert((double)remaining * (*(double *)&pr->u.p.parm3),
+                         &span);
       UT rem = span % chunk;
       if (rem) // adjust so that span%chunk == 0
         span += chunk - rem;

@@ -103,7 +103,7 @@ struct kmp_msg {
   kmp_msg_type_t type;
   int num;
   char *str;
-  int len;
+  size_t len;
 }; // struct kmp_message
 typedef struct kmp_msg kmp_msg_t;
 
