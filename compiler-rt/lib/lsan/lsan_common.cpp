@@ -618,6 +618,28 @@ static void CheckForLeaksCallback(const SuspendedThreadsList &suspended_threads,
   param->success = true;
 }
 
+static bool PrintResults(LeakReport &report) {
+  uptr unsuppressed_count = report.UnsuppressedLeakCount();
+  if (unsuppressed_count) {
+    Decorator d;
+    Printf(
+        "\n"
+        "================================================================="
+        "\n");
+    Printf("%s", d.Error());
+    Report("ERROR: LeakSanitizer: detected memory leaks\n");
+    Printf("%s", d.Default());
+    report.ReportTopLeaks(flags()->max_leaks);
+  }
+  if (common_flags()->print_suppressions)
+    GetSuppressionContext()->PrintMatchedSuppressions();
+  if (unsuppressed_count > 0) {
+    report.PrintSummary();
+    return true;
+  }
+  return false;
+}
+
 static bool CheckForLeaks() {
   if (&__lsan_is_turned_off && __lsan_is_turned_off())
     return false;
@@ -635,24 +657,7 @@ static bool CheckForLeaks() {
     Die();
   }
   param.leak_report.ApplySuppressions();
-  uptr unsuppressed_count = param.leak_report.UnsuppressedLeakCount();
-  if (unsuppressed_count > 0) {
-    Decorator d;
-    Printf("\n"
-           "================================================================="
-           "\n");
-    Printf("%s", d.Error());
-    Report("ERROR: LeakSanitizer: detected memory leaks\n");
-    Printf("%s", d.Default());
-    param.leak_report.ReportTopLeaks(flags()->max_leaks);
-  }
-  if (common_flags()->print_suppressions)
-    GetSuppressionContext()->PrintMatchedSuppressions();
-  if (unsuppressed_count > 0) {
-    param.leak_report.PrintSummary();
-    return true;
-  }
-  return false;
+  return PrintResults(param.leak_report);
 }
 
 static bool has_reported_leaks = false;
