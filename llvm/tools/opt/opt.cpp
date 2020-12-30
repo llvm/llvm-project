@@ -654,7 +654,8 @@ int main(int argc, char **argv) {
   // specified by an internal option. This is normally done during LTO which is
   // not performed via opt.
   updateVCallVisibilityInModule(*M,
-                                /* WholeProgramVisibilityEnabledInLTO */ false);
+                                /* WholeProgramVisibilityEnabledInLTO */ false,
+                                /* DynamicExportSymbols */ {});
 
   // Figure out what stream we are supposed to write to...
   std::unique_ptr<ToolOutputFile> Out;

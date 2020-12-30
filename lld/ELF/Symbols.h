@@ -223,13 +223,13 @@ public:
   // non-lazy object causes a runtime error.
   void fetch() const;
 
-private:
   static bool isExportDynamic(Kind k, uint8_t visibility) {
     if (k == SharedKind)
       return visibility == llvm::ELF::STV_DEFAULT;
     return config->shared || config->exportDynamic;
   }
 
+private:
   void resolveUndefined(const Undefined &other);
   void resolveCommon(const CommonSymbol &other);
   void resolveDefined(const Defined &other);

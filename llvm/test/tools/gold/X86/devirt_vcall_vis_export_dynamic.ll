@@ -1,4 +1,6 @@
-;; Test that plugin option whole-program-visibility enables devirtualization.
+;; Test that --export-dynamic[-symbol] and --dynamic-list prevents devirtualization.
+
+;; First check that we get devirtualization without any export dynamic options.
 
 ;; Index based WPD
 ;; Generate unsplit module with summary for ThinLTO index-based WPD.
@@ -32,32 +34,97 @@
 ; REMARK-DAG: single-impl: devirtualized a call to _ZN1A1nEi
 ; REMARK-DAG: single-impl: devirtualized a call to _ZN1D1mEi
 
-;; Try everything again but without -whole-program-visibility to confirm
-;; WPD fails
+;; Check that all WPD fails with --export-dynamic.
 
 ;; Index based WPD
 ; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN:   --plugin-opt=whole-program-visibility \
 ; RUN:   --plugin-opt=save-temps \
 ; RUN:   --plugin-opt=-pass-remarks=. \
 ; RUN:   %t2.o -o %t3 \
-; RUN:   2>&1 | FileCheck /dev/null --implicit-check-not single-impl --allow-empty
+; RUN:   --export-dynamic 2>&1 | FileCheck /dev/null --implicit-check-not single-impl --allow-empty
 ; RUN: llvm-dis %t2.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-NODEVIRT-IR
 
 ;; Hybrid WPD
 ; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN:   --plugin-opt=whole-program-visibility \
 ; RUN:   --plugin-opt=save-temps \
 ; RUN:   --plugin-opt=-pass-remarks=. \
 ; RUN:   %t.o -o %t3 \
-; RUN:   2>&1 | FileCheck /dev/null --implicit-check-not single-impl --allow-empty
+; RUN:   --export-dynamic 2>&1 | FileCheck /dev/null --implicit-check-not single-impl --allow-empty
 ; RUN: llvm-dis %t.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-NODEVIRT-IR
 
 ;; Regular LTO WPD
 ; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN:   --plugin-opt=whole-program-visibility \
 ; RUN:   --plugin-opt=save-temps \
 ; RUN:   --plugin-opt=-pass-remarks=. \
 ; RUN:   %t4.o -o %t3 \
-; RUN:   2>&1 | FileCheck /dev/null --implicit-check-not single-impl --allow-empty
+; RUN:   --export-dynamic 2>&1 | FileCheck /dev/null --implicit-check-not single-impl --allow-empty
 ; RUN: llvm-dis %t3.0.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-NODEVIRT-IR
+
+;; Check that WPD fails for target _ZN1D1mEi with --export-dynamic-symbol=_ZTV1D.
+
+;; Index based WPD
+; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN:   --plugin-opt=whole-program-visibility \
+; RUN:   --plugin-opt=save-temps \
+; RUN:   --plugin-opt=-pass-remarks=. \
+; RUN:   %t2.o -o %t3 \
+; RUN:   --export-dynamic-symbol=_ZTV1D 2>&1 | FileCheck %s --check-prefix=REMARK-AONLY
+; RUN: llvm-dis %t2.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-AONLY-IR
+
+;; Hybrid WPD
+; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN:   --plugin-opt=whole-program-visibility \
+; RUN:   --plugin-opt=save-temps \
+; RUN:   --plugin-opt=-pass-remarks=. \
+; RUN:   %t.o -o %t3 \
+; RUN:   --export-dynamic-symbol=_ZTV1D 2>&1 | FileCheck %s --check-prefix=REMARK-AONLY
+; RUN: llvm-dis %t.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-AONLY-IR
+
+;; Regular LTO WPD
+; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN:   --plugin-opt=whole-program-visibility \
+; RUN:   --plugin-opt=save-temps \
+; RUN:   --plugin-opt=-pass-remarks=. \
+; RUN:   %t4.o -o %t3 \
+; RUN:   --export-dynamic-symbol=_ZTV1D 2>&1 | FileCheck %s --check-prefix=REMARK-AONLY
+; RUN: llvm-dis %t3.0.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-AONLY-IR
+
+; REMARK-AONLY-NOT: single-impl:
+; REMARK-AONLY: single-impl: devirtualized a call to _ZN1A1nEi
+; REMARK-AONLY-NOT: single-impl:
+
+;; Check that WPD fails for target _ZN1D1mEi with _ZTV1D in --dynamic-list.
+; RUN: echo "{ _ZTV1D; };" > %t.list
+
+;; Index based WPD
+; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN:   --plugin-opt=whole-program-visibility \
+; RUN:   --plugin-opt=save-temps \
+; RUN:   --plugin-opt=-pass-remarks=. \
+; RUN:   %t2.o -o %t3 \
+; RUN:   --dynamic-list=%t.list 2>&1 | FileCheck %s --check-prefix=REMARK-AONLY
+; RUN: llvm-dis %t2.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-AONLY-IR
+
+;; Hybrid WPD
+; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN:   --plugin-opt=whole-program-visibility \
+; RUN:   --plugin-opt=save-temps \
+; RUN:   --plugin-opt=-pass-remarks=. \
+; RUN:   %t.o -o %t3 \
+; RUN:   --dynamic-list=%t.list 2>&1 | FileCheck %s --check-prefix=REMARK-AONLY
+; RUN: llvm-dis %t.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-AONLY-IR
+
+;; Regular LTO WPD
+; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN:   --plugin-opt=whole-program-visibility \
+; RUN:   --plugin-opt=save-temps \
+; RUN:   --plugin-opt=-pass-remarks=. \
+; RUN:   %t4.o -o %t3 \
+; RUN:   --dynamic-list=%t.list 2>&1 | FileCheck %s --check-prefix=REMARK-AONLY
+; RUN: llvm-dis %t3.0.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-AONLY-IR
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-grtev4-linux-gnu"
@@ -67,11 +134,11 @@ target triple = "x86_64-grtev4-linux-gnu"
 %struct.C = type { %struct.A }
 %struct.D = type { i32 (...)** }
 
-@_ZTV1B = constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* undef, i8* bitcast (i32 (%struct.B*, i32)* @_ZN1B1fEi to i8*), i8* bitcast (i32 (%struct.A*, i32)* @_ZN1A1nEi to i8*)] }, !type !0, !type !1, !vcall_visibility !5
-@_ZTV1C = constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* undef, i8* bitcast (i32 (%struct.C*, i32)* @_ZN1C1fEi to i8*), i8* bitcast (i32 (%struct.A*, i32)* @_ZN1A1nEi to i8*)] }, !type !0, !type !2, !vcall_visibility !5
-@_ZTV1D = constant { [3 x i8*] } { [3 x i8*] [i8* null, i8* undef, i8* bitcast (i32 (%struct.D*, i32)* @_ZN1D1mEi to i8*)] }, !type !3, !vcall_visibility !5
+@_ZTV1B = linkonce_odr unnamed_addr constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* undef, i8* bitcast (i32 (%struct.B*, i32)* @_ZN1B1fEi to i8*), i8* bitcast (i32 (%struct.A*, i32)* @_ZN1A1nEi to i8*)] }, !type !0, !type !1, !vcall_visibility !5
+@_ZTV1C = linkonce_odr unnamed_addr constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* undef, i8* bitcast (i32 (%struct.C*, i32)* @_ZN1C1fEi to i8*), i8* bitcast (i32 (%struct.A*, i32)* @_ZN1A1nEi to i8*)] }, !type !0, !type !2, !vcall_visibility !5
+@_ZTV1D = linkonce_odr unnamed_addr constant { [3 x i8*] } { [3 x i8*] [i8* null, i8* undef, i8* bitcast (i32 (%struct.D*, i32)* @_ZN1D1mEi to i8*)] }, !type !3, !vcall_visibility !5
 
-; Prevent the vtables from being dead code eliminated.
+;; Prevent the vtables from being dead code eliminated.
 @llvm.used = appending global [3 x i8*] [ i8* bitcast ( { [4 x i8*] }* @_ZTV1B to i8*), i8* bitcast ( { [4 x i8*] }* @_ZTV1C to i8*), i8* bitcast ( { [3 x i8*] }* @_ZTV1D to i8*)]
 
 ; CHECK-IR-LABEL: define dso_local i32 @_start
@@ -88,6 +155,7 @@ entry:
 
   ;; Check that the call was devirtualized.
   ; CHECK-IR: %call = tail call i32 @_ZN1A1nEi
+  ; CHECK-AONLY-IR: %call = tail call i32 @_ZN1A1nEi
   ; CHECK-NODEVIRT-IR: %call = tail call i32 %fptr1
   %call = tail call i32 %fptr1(%struct.A* nonnull %obj, i32 %a)
 
@@ -96,6 +164,7 @@ entry:
 
   ;; We still have to call it as virtual.
   ; CHECK-IR: %call3 = tail call i32 %fptr22
+  ; CHECK-AONLY-IR: %call3 = tail call i32 %fptr22
   ; CHECK-NODEVIRT-IR: %call3 = tail call i32 %fptr22
   %call3 = tail call i32 %fptr22(%struct.A* nonnull %obj, i32 %call)
 
@@ -110,6 +179,7 @@ entry:
 
   ;; Check that the call was devirtualized.
   ; CHECK-IR: %call4 = tail call i32 @_ZN1D1mEi
+  ; CHECK-AONLY-IR: %call4 = tail call i32 %fptr33
   ; CHECK-NODEVIRT-IR: %call4 = tail call i32 %fptr33
   %call4 = tail call i32 %fptr33(%struct.D* nonnull %obj2, i32 %call3)
   ret i32 %call4
