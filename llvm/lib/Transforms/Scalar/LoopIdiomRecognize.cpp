@@ -2024,8 +2024,8 @@ static bool detectShiftUntilBitTestIdiom(Loop *CurLoop, Value *&BaseX,
 
   // Step 3: Check if the recurrence is in desirable form.
   auto *CurrXPN = dyn_cast<PHINode>(CurrX);
-  if (!CurrXPN) {
-    LLVM_DEBUG(dbgs() << DEBUG_TYPE " Not a PHI node.\n");
+  if (!CurrXPN || CurrXPN->getParent() != LoopHeaderBB) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE " Not an expected PHI node.\n");
     return false;
   }
 
