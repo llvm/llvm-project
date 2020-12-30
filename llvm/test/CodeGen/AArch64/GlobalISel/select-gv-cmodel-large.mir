@@ -3,10 +3,10 @@
 --- |
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
-  @foo1 = common global [1073741824 x i32] zeroinitializer, align 4
-  @foo2 = common global [1073741824 x i32] zeroinitializer, align 4
+  @foo1 = common dso_local global [1073741824 x i32] zeroinitializer, align 4
+  @foo2 = common dso_local global [1073741824 x i32] zeroinitializer, align 4
 
-  define i32 @gv_large() {
+  define dso_local i32 @gv_large() {
   entry:
     %retval = alloca i32, align 4
     store i32 0, i32* %retval, align 4

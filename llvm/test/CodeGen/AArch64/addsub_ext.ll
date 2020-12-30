@@ -5,12 +5,12 @@
 ; G_SEXT is lowered to anything else, it won't fold in a stx*.
 ; FIXME: GISel doesn't currently handle folding the addressing mode into a cmp.
 
-@var8 = global i8 0
-@var16 = global i16 0
-@var32 = global i32 0
-@var64 = global i64 0
+@var8 = dso_local global i8 0
+@var16 = dso_local global i16 0
+@var32 = dso_local global i32 0
+@var64 = dso_local global i64 0
 
-define void @addsub_i8rhs() minsize {
+define dso_local void @addsub_i8rhs() minsize {
 ; CHECK-LABEL: addsub_i8rhs:
 ; GISEL-LABEL: addsub_i8rhs:
     %val8_tmp = load i8, i8* @var8
@@ -89,7 +89,7 @@ end:
     ret void
 }
 
-define void @sub_i8rhs() minsize {
+define dso_local void @sub_i8rhs() minsize {
 ; CHECK-LABEL: sub_i8rhs:
     %val8_tmp = load i8, i8* @var8
     %lhs32 = load i32, i32* @var32
@@ -150,7 +150,7 @@ define void @sub_i8rhs() minsize {
     ret void
 }
 
-define void @addsub_i16rhs() minsize {
+define dso_local void @addsub_i16rhs() minsize {
 ; CHECK-LABEL: addsub_i16rhs:
 ; GISEL-LABEL: addsub_i16rhs:
     %val16_tmp = load i16, i16* @var16
@@ -229,7 +229,7 @@ end:
     ret void
 }
 
-define void @sub_i16rhs() minsize {
+define dso_local void @sub_i16rhs() minsize {
 ; CHECK-LABEL: sub_i16rhs:
 ; GISEL-LABEL: sub_i16rhs:
     %val16_tmp = load i16, i16* @var16
@@ -294,7 +294,7 @@ define void @sub_i16rhs() minsize {
 ; N.b. we could probably check more here ("add w2, w3, w1, uxtw" for
 ; example), but the remaining instructions are probably not idiomatic
 ; in the face of "add/sub (shifted register)" so I don't intend to.
-define void @addsub_i32rhs(i32 %in32) minsize {
+define dso_local void @addsub_i32rhs(i32 %in32) minsize {
 ; CHECK-LABEL: addsub_i32rhs:
 ; GISEL-LABEL: addsub_i32rhs:
     %val32_tmp = load i32, i32* @var32
@@ -330,7 +330,7 @@ define void @addsub_i32rhs(i32 %in32) minsize {
     ret void
 }
 
-define void @sub_i32rhs(i32 %in32) minsize {
+define dso_local void @sub_i32rhs(i32 %in32) minsize {
 ; CHECK-LABEL: sub_i32rhs:
     %val32_tmp = load i32, i32* @var32
     %lhs64 = load i64, i64* @var64
@@ -364,7 +364,7 @@ define void @sub_i32rhs(i32 %in32) minsize {
 }
 
 ; Check that implicit zext from w reg write is used instead of uxtw form of add.
-define i64 @add_fold_uxtw(i32 %x, i64 %y) {
+define dso_local i64 @add_fold_uxtw(i32 %x, i64 %y) {
 ; CHECK-LABEL: add_fold_uxtw:
 ; GISEL-LABEL: add_fold_uxtw:
 entry:
@@ -381,7 +381,7 @@ entry:
 
 ; Check that implicit zext from w reg write is used instead of uxtw
 ; form of sub and that mov WZR is folded to form a neg instruction.
-define i64 @sub_fold_uxtw_xzr(i32 %x)  {
+define dso_local i64 @sub_fold_uxtw_xzr(i32 %x)  {
 ; CHECK-LABEL: sub_fold_uxtw_xzr:
 ; GISEL-LABEL: sub_fold_uxtw_xzr:
 entry:
@@ -396,7 +396,7 @@ entry:
 }
 
 ; Check that implicit zext from w reg write is used instead of uxtw form of subs/cmp.
-define i1 @cmp_fold_uxtw(i32 %x, i64 %y) {
+define dso_local i1 @cmp_fold_uxtw(i32 %x, i64 %y) {
 ; CHECK-LABEL: cmp_fold_uxtw:
 entry:
 ; CHECK: and w[[TMP:[0-9]+]], w0, #0x3
@@ -410,7 +410,7 @@ entry:
 
 ; Check that implicit zext from w reg write is used instead of uxtw
 ; form of add, leading to madd selection.
-define i64 @madd_fold_uxtw(i32 %x, i64 %y) {
+define dso_local i64 @madd_fold_uxtw(i32 %x, i64 %y) {
 ; CHECK-LABEL: madd_fold_uxtw:
 ; GISEL-LABEL: madd_fold_uxtw:
 entry:
@@ -428,7 +428,7 @@ entry:
 ; Check that implicit zext from w reg write is used instead of uxtw
 ; form of sub, leading to sub/cmp folding.
 ; Check that implicit zext from w reg write is used instead of uxtw form of subs/cmp.
-define i1 @cmp_sub_fold_uxtw(i32 %x, i64 %y, i64 %z) {
+define dso_local i1 @cmp_sub_fold_uxtw(i32 %x, i64 %y, i64 %z) {
 ; CHECK-LABEL: cmp_sub_fold_uxtw:
 entry:
 ; CHECK: and w[[TMP:[0-9]+]], w0, #0x3
@@ -443,7 +443,7 @@ entry:
 
 ; Check that implicit zext from w reg write is used instead of uxtw
 ; form of add and add of -1 gets selected as sub.
-define i64 @add_imm_fold_uxtw(i32 %x) {
+define dso_local i64 @add_imm_fold_uxtw(i32 %x) {
 ; CHECK-LABEL: add_imm_fold_uxtw:
 ; GISEL-LABEL: add_imm_fold_uxtw:
 entry:
@@ -459,7 +459,7 @@ entry:
 
 ; Check that implicit zext from w reg write is used instead of uxtw
 ; form of add and add lsl form gets selected.
-define i64 @add_lsl_fold_uxtw(i32 %x, i64 %y) {
+define dso_local i64 @add_lsl_fold_uxtw(i32 %x, i64 %y) {
 ; CHECK-LABEL: add_lsl_fold_uxtw:
 ; GISEL-LABEL: add_lsl_fold_uxtw:
 entry:

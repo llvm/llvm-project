@@ -1,15 +1,15 @@
 ; RUN: llc -verify-machineinstrs -o - %s -mtriple=aarch64-none-linux-gnu | FileCheck %s
 ; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu -mattr=-fp-armv8 | FileCheck --check-prefix=CHECK-NOFP %s
 
-@var_8bit = global i8 0
-@var_16bit = global i16 0
-@var_32bit = global i32 0
-@var_64bit = global i64 0
+@var_8bit = dso_local global i8 0
+@var_16bit = dso_local global i16 0
+@var_32bit = dso_local global i32 0
+@var_64bit = dso_local global i64 0
 
-@var_float = global float 0.0
-@var_double = global double 0.0
+@var_float = dso_local global float 0.0
+@var_double = dso_local global double 0.0
 
-define void @ldst_8bit() {
+define dso_local void @ldst_8bit() {
 ; CHECK-LABEL: ldst_8bit:
 
 ; No architectural support for loads to 16-bit or 8-bit since we
@@ -63,7 +63,7 @@ define void @ldst_8bit() {
    ret void
 }
 
-define void @ldst_16bit() {
+define dso_local void @ldst_16bit() {
 ; CHECK-LABEL: ldst_16bit:
 
 ; No architectural support for load volatiles to 16-bit promote i16 during
@@ -117,7 +117,7 @@ define void @ldst_16bit() {
   ret void
 }
 
-define void @ldst_32bit() {
+define dso_local void @ldst_32bit() {
 ; CHECK-LABEL: ldst_32bit:
 
 ; Straight 32-bit load/store
@@ -151,17 +151,17 @@ define void @ldst_32bit() {
   ret void
 }
 
-@arr8 = global i8* null
-@arr16 = global i16* null
-@arr32 = global i32* null
-@arr64 = global i64* null
+@arr8 = dso_local global i8* null
+@arr16 = dso_local global i16* null
+@arr32 = dso_local global i32* null
+@arr64 = dso_local global i64* null
 
 ; Now check that our selection copes with accesses more complex than a
 ; single symbol. Permitted offsets should be folded into the loads and
 ; stores. Since all forms use the same Operand it's only necessary to
 ; check the various access-sizes involved.
 
-define void @ldst_complex_offsets() {
+define dso_local void @ldst_complex_offsets() {
 ; CHECK: ldst_complex_offsets
   %arr8_addr = load volatile i8*, i8** @arr8
 ; CHECK: adrp {{x[0-9]+}}, arr8
@@ -225,7 +225,7 @@ define void @ldst_complex_offsets() {
   ret void
 }
 
-define void @ldst_float() {
+define dso_local void @ldst_float() {
 ; CHECK-LABEL: ldst_float:
 
    %valfp = load volatile float, float* @var_float
@@ -240,7 +240,7 @@ define void @ldst_float() {
    ret void
 }
 
-define void @ldst_double() {
+define dso_local void @ldst_double() {
 ; CHECK-LABEL: ldst_double:
 
    %valfp = load volatile double, double* @var_double
