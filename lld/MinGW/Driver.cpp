@@ -320,6 +320,11 @@ bool mingw::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   else
     add("-opt:noref");
 
+  if (args.hasFlag(OPT_demangle, OPT_no_demangle, true))
+    add("-demangle");
+  else
+    add("-demangle:no");
+
   if (args.hasFlag(OPT_enable_auto_import, OPT_disable_auto_import, true))
     add("-auto-import");
   else
