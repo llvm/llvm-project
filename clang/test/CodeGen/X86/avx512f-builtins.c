@@ -2398,7 +2398,7 @@ __m128 test_mm512_maskz_extractf32x4_ps( __mmask8  __U,__m512 __A){
   // CHECK-LABEL:@test_mm512_maskz_extractf32x4_ps
   // CHECK: shufflevector <16 x float> %{{.*}}, <16 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   // CHECK: select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
- return _mm512_maskz_extractf32x4_ps(  __U, __A, 1);
+  return _mm512_maskz_extractf32x4_ps(__U, __A, 1);
 }
 
 __mmask16 test_mm512_cmpeq_epu32_mask(__m512i __a, __m512i __b) {
