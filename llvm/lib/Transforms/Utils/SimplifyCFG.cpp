@@ -5282,13 +5282,16 @@ static Value *ConvertTwoCaseSwitch(const SwitchCaseResultVectorTy &ResultVector,
 // a select, fixing up PHI nodes and basic blocks.
 static void RemoveSwitchAfterSelectConversion(SwitchInst *SI, PHINode *PHI,
                                               Value *SelectValue,
-                                              IRBuilder<> &Builder) {
+                                              IRBuilder<> &Builder,
+                                              DomTreeUpdater *DTU) {
   BasicBlock *SelectBB = SI->getParent();
   while (PHI->getBasicBlockIndex(SelectBB) >= 0)
     PHI->removeIncomingValue(SelectBB);
   PHI->addIncoming(SelectValue, SelectBB);
 
   Builder.CreateBr(PHI->getParent());
+
+  std::vector<DominatorTree::UpdateType> Updates;
 
   // Remove the switch.
   for (unsigned i = 0, e = SI->getNumSuccessors(); i < e; ++i) {
@@ -5297,15 +5300,18 @@ static void RemoveSwitchAfterSelectConversion(SwitchInst *SI, PHINode *PHI,
     if (Succ == PHI->getParent())
       continue;
     Succ->removePredecessor(SelectBB);
+    Updates.push_back({DominatorTree::Delete, SelectBB, Succ});
   }
   SI->eraseFromParent();
+  if (DTU)
+    DTU->applyUpdatesPermissive(Updates);
 }
 
 /// If the switch is only used to initialize one or more
 /// phi nodes in a common successor block with only two different
 /// constant values, replace the switch with select.
 static bool switchToSelect(SwitchInst *SI, IRBuilder<> &Builder,
-                           const DataLayout &DL,
+                           DomTreeUpdater *DTU, const DataLayout &DL,
                            const TargetTransformInfo &TTI) {
   Value *const Cond = SI->getCondition();
   PHINode *PHI = nullptr;
@@ -5325,7 +5331,7 @@ static bool switchToSelect(SwitchInst *SI, IRBuilder<> &Builder,
   Value *SelectValue =
       ConvertTwoCaseSwitch(UniqueResults, DefaultResult, Cond, Builder);
   if (SelectValue) {
-    RemoveSwitchAfterSelectConversion(SI, PHI, SelectValue, Builder);
+    RemoveSwitchAfterSelectConversion(SI, PHI, SelectValue, Builder, DTU);
     return true;
   }
   // The switch couldn't be converted into a select.
@@ -6081,7 +6087,7 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
   if (eliminateDeadSwitchCases(SI, Options.AC, DL))
     return requestResimplify();
 
-  if (switchToSelect(SI, Builder, DL, TTI))
+  if (switchToSelect(SI, Builder, DTU, DL, TTI))
     return requestResimplify();
 
   if (Options.ForwardSwitchCondToPhi && ForwardSwitchConditionToPHI(SI))
