@@ -5716,7 +5716,7 @@ static void reuseTableCompare(
 /// successor block with different constant values, replace the switch with
 /// lookup tables.
 static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
-                                const DataLayout &DL,
+                                DomTreeUpdater *DTU, const DataLayout &DL,
                                 const TargetTransformInfo &TTI) {
   assert(SI->getNumCases() > 1 && "Degenerate switch?");
 
@@ -5814,6 +5814,8 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   if (!ShouldBuildLookupTable(SI, TableSize, TTI, DL, ResultTypes))
     return false;
 
+  std::vector<DominatorTree::UpdateType> Updates;
+
   // Create the BB that does the lookups.
   Module &Mod = *CommonDest->getParent()->getParent();
   BasicBlock *LookupBB = BasicBlock::Create(
@@ -5846,6 +5848,7 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
 
   if (!DefaultIsReachable || GeneratingCoveredLookupTable) {
     Builder.CreateBr(LookupBB);
+    Updates.push_back({DominatorTree::Insert, SI->getParent(), LookupBB});
     // Note: We call removeProdecessor later since we need to be able to get the
     // PHI value for the default case in case we're using a bit mask.
   } else {
@@ -5853,6 +5856,9 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
         TableIndex, ConstantInt::get(MinCaseVal->getType(), TableSize));
     RangeCheckBranch =
         Builder.CreateCondBr(Cmp, LookupBB, SI->getDefaultDest());
+    Updates.push_back({DominatorTree::Insert, SI->getParent(), LookupBB});
+    Updates.push_back(
+        {DominatorTree::Insert, SI->getParent(), SI->getDefaultDest()});
   }
 
   // Populate the BB that does the lookups.
@@ -5890,7 +5896,8 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
     Value *LoBit = Builder.CreateTrunc(
         Shifted, Type::getInt1Ty(Mod.getContext()), "switch.lobit");
     Builder.CreateCondBr(LoBit, LookupBB, SI->getDefaultDest());
-
+    Updates.push_back({DominatorTree::Insert, MaskBB, LookupBB});
+    Updates.push_back({DominatorTree::Insert, MaskBB, SI->getDefaultDest()});
     Builder.SetInsertPoint(LookupBB);
     AddPredecessorToBlock(SI->getDefaultDest(), MaskBB, SI->getParent());
   }
@@ -5900,6 +5907,8 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
     // do not delete PHINodes here.
     SI->getDefaultDest()->removePredecessor(SI->getParent(),
                                             /*KeepOneInputPHIs=*/true);
+    Updates.push_back(
+        {DominatorTree::Delete, SI->getParent(), SI->getDefaultDest()});
   }
 
   bool ReturnedEarly = false;
@@ -5936,8 +5945,10 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
     PHI->addIncoming(Result, LookupBB);
   }
 
-  if (!ReturnedEarly)
+  if (!ReturnedEarly) {
     Builder.CreateBr(CommonDest);
+    Updates.push_back({DominatorTree::Insert, LookupBB, CommonDest});
+  }
 
   // Remove the switch.
   for (unsigned i = 0, e = SI->getNumSuccessors(); i < e; ++i) {
@@ -5946,8 +5957,11 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
     if (Succ == SI->getDefaultDest())
       continue;
     Succ->removePredecessor(SI->getParent());
+    Updates.push_back({DominatorTree::Delete, SI->getParent(), Succ});
   }
   SI->eraseFromParent();
+  if (DTU)
+    DTU->applyUpdatesPermissive(Updates);
 
   ++NumLookupTables;
   if (NeedMask)
@@ -6099,7 +6113,7 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
   // CVP. Therefore, only apply this transformation during late stages of the
   // optimisation pipeline.
   if (Options.ConvertSwitchToLookupTable &&
-      SwitchToLookupTable(SI, Builder, DL, TTI))
+      SwitchToLookupTable(SI, Builder, DTU, DL, TTI))
     return requestResimplify();
 
   if (ReduceSwitchRange(SI, Builder, DL, TTI))
