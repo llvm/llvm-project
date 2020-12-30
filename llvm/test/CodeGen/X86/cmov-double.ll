@@ -5,7 +5,7 @@ target triple = "x86_64-unknown-unknown"
 ; select with and i1/or i1 condition should be implemented as a series of 2
 ; cmovs, not by producing two conditions and using and on them.
 
-define i32 @select_and(i32 %a0, i32 %a1, float %a2, float %a3, i32 %a4, i32 %a5) {
+define dso_local i32 @select_and(i32 %a0, i32 %a1, float %a2, float %a3, i32 %a4, i32 %a5) {
 ; CHECK-LABEL: select_and:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edx, %eax
@@ -24,7 +24,7 @@ define i32 @select_and(i32 %a0, i32 %a1, float %a2, float %a3, i32 %a4, i32 %a5)
 ; select with and i1 condition should be implemented as a series of 2 cmovs, not
 ; by producing two conditions and using and on them.
 
-define i32 @select_or(i32 %a0, i32 %a1, float %a2, float %a3, i32 %a4, i32 %a5) {
+define dso_local i32 @select_or(i32 %a0, i32 %a1, float %a2, float %a3, i32 %a4, i32 %a5) {
 ; CHECK-LABEL: select_or:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %ecx, %eax
@@ -43,8 +43,8 @@ define i32 @select_or(i32 %a0, i32 %a1, float %a2, float %a3, i32 %a4, i32 %a5) 
 ; If one of the conditions is materialized as a 0/1 value anyway, then the
 ; sequence of 2 cmovs should not be used.
 
-@var32 = global i32 0
-define i32 @select_noopt(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32 %a4) {
+@var32 = dso_local global i32 0
+define dso_local i32 @select_noopt(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32 %a4) {
 ; CHECK-LABEL: select_noopt:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %ecx, %eax

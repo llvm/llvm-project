@@ -8,13 +8,13 @@ declare dso_local void @ear(i32)
 declare dso_local void @far(i32)
 declare i1 @qux()
 
-@GHJK = global i32 0
-@HABC = global i32 0
+@GHJK = dso_local global i32 0
+@HABC = dso_local global i32 0
 
 ; BranchFolding should tail-merge the stores since they all precede
 ; direct branches to the same place.
 
-define void @tail_merge_me() nounwind {
+define dso_local void @tail_merge_me() nounwind {
 ; CHECK-LABEL: tail_merge_me:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
@@ -92,7 +92,7 @@ declare i8* @choose(i8*, i8*)
 ; BranchFolding should tail-duplicate the indirect jump to avoid
 ; redundant branching.
 
-define void @tail_duplicate_me() nounwind {
+define dso_local void @tail_duplicate_me() nounwind {
 ; CHECK-LABEL: tail_duplicate_me:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %r14
@@ -401,7 +401,7 @@ declare fastcc %union.tree_node* @default_conversion(%union.tree_node*) nounwind
 ; instructions are involved. This function should have only
 ; one ret instruction.
 
-define void @foo(i1* %V) nounwind {
+define dso_local void @foo(i1* %V) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testq %rdi, %rdi
@@ -432,7 +432,7 @@ declare dso_local void @func()
 
 declare dso_local void @tail_call_me()
 
-define void @one(i32 %v) nounwind optsize {
+define dso_local void @one(i32 %v) nounwind optsize {
 ; CHECK-LABEL: one:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testl %edi, %edi
@@ -473,7 +473,7 @@ return:
   ret void
 }
 
-define void @one_pgso(i32 %v) nounwind !prof !14 {
+define dso_local void @one_pgso(i32 %v) nounwind !prof !14 {
 ; CHECK-LABEL: one_pgso:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testl %edi, %edi
@@ -518,7 +518,7 @@ return:
 ; tail instead of one. This is too much to be merged, given
 ; the optsize attribute.
 
-define void @two() nounwind optsize {
+define dso_local void @two() nounwind optsize {
 ; CHECK-LABEL: two:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -559,7 +559,7 @@ return:
   ret void
 }
 
-define void @two_pgso() nounwind !prof !14 {
+define dso_local void @two_pgso() nounwind !prof !14 {
 ; CHECK-LABEL: two_pgso:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -602,7 +602,7 @@ return:
 
 ; two_minsize - Same as two, but with minsize instead of optsize.
 
-define void @two_minsize() nounwind minsize {
+define dso_local void @two_minsize() nounwind minsize {
 ; CHECK-LABEL: two_minsize:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -646,7 +646,7 @@ return:
 ; two_nosize - Same as two, but without the optsize attribute.
 ; Now two instructions are enough to be tail-duplicated.
 
-define void @two_nosize(i32 %x, i32 %y, i32 %z) nounwind {
+define dso_local void @two_nosize(i32 %x, i32 %y, i32 %z) nounwind {
 ; CHECK-LABEL: two_nosize:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testl %edi, %edi
@@ -729,7 +729,7 @@ for.end:                                          ; preds = %entry
 ; them as possible.
 
 declare dso_local void @abort()
-define void @merge_aborts() {
+define dso_local void @merge_aborts() {
 ; CHECK-LABEL: merge_aborts:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
@@ -789,7 +789,7 @@ cont4:
 
 declare dso_local void @alt_abort()
 
-define void @merge_alternating_aborts() {
+define dso_local void @merge_alternating_aborts() {
 ; CHECK-LABEL: merge_alternating_aborts:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
@@ -848,8 +848,8 @@ cont4:
 
 ; This triggers a situation where a new block (bb4 is split) is created and then
 ; would be passed to the PGSO interface llvm::shouldOptimizeForSize().
-@GV = global i32 0
-define void @bfi_new_block_pgso(i32 %c) nounwind {
+@GV = dso_local global i32 0
+define dso_local void @bfi_new_block_pgso(i32 %c) nounwind {
 ; CHECK-LABEL: bfi_new_block_pgso:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testl %edi, %edi

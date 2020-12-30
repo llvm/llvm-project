@@ -25,7 +25,7 @@ define i16 @W(i16 %A) {
         ret i16 %Z
 }
 
-define i32 @X(i32 %A) {
+define dso_local i32 @X(i32 %A) {
 ; CHECK-LABEL: X:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -66,7 +66,7 @@ define i64 @Y(i64 %A) {
 ; when the other ops have other uses (and it might not be safe
 ; either due to unconstrained instruction count growth).
 
-define i32 @bswap_multiuse(i32 %x, i32 %y, i32* %p1, i32* %p2) nounwind {
+define dso_local i32 @bswap_multiuse(i32 %x, i32 %y, i32* %p1, i32* %p2) nounwind {
 ; CHECK-LABEL: bswap_multiuse:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushl %esi
@@ -100,7 +100,7 @@ define i32 @bswap_multiuse(i32 %x, i32 %y, i32* %p1, i32* %p2) nounwind {
 }
 
 ; rdar://9164521
-define i32 @test1(i32 %a) nounwind readnone {
+define dso_local i32 @test1(i32 %a) nounwind readnone {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -122,7 +122,7 @@ define i32 @test1(i32 %a) nounwind readnone {
   ret i32 %or
 }
 
-define i32 @test2(i32 %a) nounwind readnone {
+define dso_local i32 @test2(i32 %a) nounwind readnone {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -145,8 +145,8 @@ define i32 @test2(i32 %a) nounwind readnone {
   ret i32 %conv3
 }
 
-@var8 = global i8 0
-@var16 = global i16 0
+@var8 = dso_local global i8 0
+@var16 = dso_local global i16 0
 
 ; The "shl" below can move bits into the high parts of the value, so the
 ; operation is not a "bswap, shr" pair.

@@ -3,11 +3,11 @@
 
 %struct.S = type <{ i16, i24, [5 x i8], i8, i16, [2 x i8] }>
 
-@z = global { i16, i8, i8, i8, i8, i8, i8, i8, i8, i8, [5 x i8] } { i16 -724, i8 94, i8 -18, i8 5, i8 undef, i8 96, i8 104, i8 -24, i8 10, i8 0, [5 x i8] undef }, align 8
-@tf_3_var_136 = global i64 0, align 8
+@z = dso_local global { i16, i8, i8, i8, i8, i8, i8, i8, i8, i8, [5 x i8] } { i16 -724, i8 94, i8 -18, i8 5, i8 undef, i8 96, i8 104, i8 -24, i8 10, i8 0, [5 x i8] undef }, align 8
+@tf_3_var_136 = dso_local global i64 0, align 8
 @.str = private unnamed_addr constant [6 x i8] c"%llu\0A\00", align 1
 
-define void @PR35763() {
+define dso_local void @PR35763() {
 ; CHECK-LABEL: PR35763:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{.*}}(%rip), %eax

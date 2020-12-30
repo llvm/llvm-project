@@ -5,12 +5,12 @@
 ; nodes with multiple result values. In both tests, the stored
 ; 32-bit value should be masked to an 8-bit number (and 255).
 
-@b = local_unnamed_addr global i32 918, align 4
-@d = local_unnamed_addr global i32 8089, align 4
-@c = common local_unnamed_addr global i32 0, align 4
-@a = common local_unnamed_addr global i32 0, align 4
+@b = dso_local local_unnamed_addr global i32 918, align 4
+@d = dso_local local_unnamed_addr global i32 8089, align 4
+@c = common dso_local local_unnamed_addr global i32 0, align 4
+@a = common dso_local local_unnamed_addr global i32 0, align 4
 
-define void @PR37667() {
+define dso_local void @PR37667() {
 ; CHECK-LABEL: PR37667:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{.*}}(%rip), %eax
@@ -30,7 +30,7 @@ define void @PR37667() {
   ret void
 }
 
-define void @PR37060() {
+define dso_local void @PR37060() {
 ; CHECK-LABEL: PR37060:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl $-1, %eax
