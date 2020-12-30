@@ -74,12 +74,12 @@ static Optional<std::string> getLinkerScriptLocation(const Symbol &sym) {
 }
 
 static std::string getDefinedLocation(const Symbol &sym) {
-  std::string msg = "\n>>> defined in ";
+  const char msg[] = "\n>>> defined in ";
   if (sym.file)
-    msg += toString(sym.file);
-  else if (Optional<std::string> loc = getLinkerScriptLocation(sym))
-    msg += *loc;
-  return msg;
+    return msg + toString(sym.file);
+  if (Optional<std::string> loc = getLinkerScriptLocation(sym))
+    return msg + *loc;
+  return "";
 }
 
 // Construct a message in the following format.
