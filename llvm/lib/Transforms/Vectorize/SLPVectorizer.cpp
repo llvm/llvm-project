@@ -6455,7 +6455,7 @@ class HorizontalReduction {
 
     /// Kind of the reduction operation.
     RD::RecurrenceKind Kind = RD::RK_NoRecurrence;
-    TargetTransformInfo::ReductionFlags RdxFlags;
+    RD::MinMaxRecurrenceKind MMKind = RD::MRK_Invalid;
 
     /// Checks if the reduction operation can be vectorized.
     bool isVectorizable() const {
@@ -6499,10 +6499,13 @@ class HorizontalReduction {
       case RD::RK_IntegerMinMax: {
         assert(Opcode == Instruction::ICmp && "Expected integer types.");
         ICmpInst::Predicate Pred;
-        if (RdxFlags.IsMaxOp)
-          Pred = RdxFlags.IsSigned ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT;
-        else
-          Pred = RdxFlags.IsSigned ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT;
+        switch (MMKind) {
+        case RD::MRK_SIntMax: Pred = ICmpInst::ICMP_SGT; break;
+        case RD::MRK_SIntMin: Pred = ICmpInst::ICMP_SLT; break;
+        case RD::MRK_UIntMax: Pred = ICmpInst::ICMP_UGT; break;
+        case RD::MRK_UIntMin: Pred = ICmpInst::ICMP_ULT; break;
+        default: llvm_unreachable("Unexpected min/max value");
+        }
         Value *Cmp = Builder.CreateICmp(Pred, LHS, RHS, Name);
         return Builder.CreateSelect(Cmp, LHS, RHS, Name);
       }
@@ -6521,9 +6524,9 @@ class HorizontalReduction {
     }
 
     /// Constructor for reduction operations with opcode and type.
-    OperationData(unsigned Opcode, RD::RecurrenceKind Kind,
-                  TargetTransformInfo::ReductionFlags Flags)
-        : Opcode(Opcode), Kind(Kind), RdxFlags(Flags) {
+    OperationData(unsigned Opcode, RD::RecurrenceKind RdxKind,
+                  RD::MinMaxRecurrenceKind MinMaxKind)
+        : Opcode(Opcode), Kind(RdxKind), MMKind(MinMaxKind) {
       assert(Kind != RD::RK_NoRecurrence && "Expected reduction operation.");
     }
 
@@ -6640,6 +6643,7 @@ class HorizontalReduction {
 
     /// Get kind of reduction data.
     RD::RecurrenceKind getKind() const { return Kind; }
+    RD::MinMaxRecurrenceKind getMinMaxKind() const { return MMKind; }
     Value *getLHS(Instruction *I) const {
       if (Kind == RD::RK_NoRecurrence)
         return nullptr;
@@ -6706,8 +6710,6 @@ class HorizontalReduction {
         llvm_unreachable("Unknown reduction operation.");
       }
     }
-
-    TargetTransformInfo::ReductionFlags getFlags() const { return RdxFlags; }
   };
 
   WeakTrackingVH ReductionRoot;
@@ -6749,28 +6751,32 @@ class HorizontalReduction {
 
     TargetTransformInfo::ReductionFlags RdxFlags;
     if (match(I, m_Add(m_Value(), m_Value())))
-      return OperationData(I->getOpcode(), RD::RK_IntegerAdd, RdxFlags);
+      return OperationData(I->getOpcode(), RD::RK_IntegerAdd, RD::MRK_Invalid);
     if (match(I, m_Mul(m_Value(), m_Value())))
-      return OperationData(I->getOpcode(), RD::RK_IntegerMult, RdxFlags);
+      return OperationData(I->getOpcode(), RD::RK_IntegerMult, RD::MRK_Invalid);
     if (match(I, m_And(m_Value(), m_Value())))
-      return OperationData(I->getOpcode(), RD::RK_IntegerAnd, RdxFlags);
+      return OperationData(I->getOpcode(), RD::RK_IntegerAnd, RD::MRK_Invalid);
     if (match(I, m_Or(m_Value(), m_Value())))
-      return OperationData(I->getOpcode(), RD::RK_IntegerOr, RdxFlags);
+      return OperationData(I->getOpcode(), RD::RK_IntegerOr, RD::MRK_Invalid);
     if (match(I, m_Xor(m_Value(), m_Value())))
-      return OperationData(I->getOpcode(), RD::RK_IntegerXor, RdxFlags);
+      return OperationData(I->getOpcode(), RD::RK_IntegerXor, RD::MRK_Invalid);
     if (match(I, m_FAdd(m_Value(), m_Value())))
-      return OperationData(I->getOpcode(), RD::RK_FloatAdd, RdxFlags);
+      return OperationData(I->getOpcode(), RD::RK_FloatAdd, RD::MRK_Invalid);
     if (match(I, m_FMul(m_Value(), m_Value())))
-      return OperationData(I->getOpcode(), RD::RK_FloatMult, RdxFlags);
+      return OperationData(I->getOpcode(), RD::RK_FloatMult, RD::MRK_Invalid);
 
-    if (match(I, m_MaxOrMin(m_Value(), m_Value()))) {
-      RdxFlags.IsMaxOp = match(I, m_UMax(m_Value(), m_Value())) ||
-                         match(I, m_SMax(m_Value(), m_Value()));
-      RdxFlags.IsSigned = match(I, m_SMin(m_Value(), m_Value())) ||
-                          match(I, m_SMax(m_Value(), m_Value()));
-      return OperationData(Instruction::ICmp, RD::RK_IntegerMinMax, RdxFlags);
-    }
-
+    if (match(I, m_SMax(m_Value(), m_Value())))
+      return OperationData(Instruction::ICmp, RD::RK_IntegerMinMax,
+                           RD::MRK_SIntMax);
+    if (match(I, m_SMin(m_Value(), m_Value())))
+      return OperationData(Instruction::ICmp, RD::RK_IntegerMinMax,
+                           RD::MRK_SIntMin);
+    if (match(I, m_UMax(m_Value(), m_Value())))
+      return OperationData(Instruction::ICmp, RD::RK_IntegerMinMax,
+                           RD::MRK_UIntMax);
+    if (match(I, m_UMin(m_Value(), m_Value())))
+      return OperationData(Instruction::ICmp, RD::RK_IntegerMinMax,
+                           RD::MRK_UIntMin);
 
     if (auto *Select = dyn_cast<SelectInst>(I)) {
       // Try harder: look for min/max pattern based on instructions producing
@@ -6814,28 +6820,23 @@ class HorizontalReduction {
       switch (Pred) {
       default:
         return OperationData(*I);
-      case CmpInst::ICMP_ULT:
-      case CmpInst::ICMP_ULE:
-        RdxFlags.IsMaxOp = false;
-        RdxFlags.IsSigned = false;
-        break;
-      case CmpInst::ICMP_SLT:
-      case CmpInst::ICMP_SLE:
-        RdxFlags.IsMaxOp = false;
-        RdxFlags.IsSigned = true;
-        break;
-      case CmpInst::ICMP_UGT:
-      case CmpInst::ICMP_UGE:
-        RdxFlags.IsMaxOp = true;
-        RdxFlags.IsSigned = false;
-        break;
       case CmpInst::ICMP_SGT:
       case CmpInst::ICMP_SGE:
-        RdxFlags.IsMaxOp = true;
-        RdxFlags.IsSigned = true;
-        break;
+        return OperationData(Instruction::ICmp, RD::RK_IntegerMinMax,
+                             RD::MRK_SIntMax);
+      case CmpInst::ICMP_SLT:
+      case CmpInst::ICMP_SLE:
+        return OperationData(Instruction::ICmp, RD::RK_IntegerMinMax,
+                             RD::MRK_SIntMin);
+      case CmpInst::ICMP_UGT:
+      case CmpInst::ICMP_UGE:
+        return OperationData(Instruction::ICmp, RD::RK_IntegerMinMax,
+                             RD::MRK_UIntMax);
+      case CmpInst::ICMP_ULT:
+      case CmpInst::ICMP_ULE:
+        return OperationData(Instruction::ICmp, RD::RK_IntegerMinMax,
+                             RD::MRK_UIntMin);
       }
-      return OperationData(Instruction::ICmp, RD::RK_IntegerMinMax, RdxFlags);
     }
     return OperationData(*I);
   }
@@ -7186,8 +7187,8 @@ private:
       break;
     case RD::RK_IntegerMinMax: {
       auto *VecCondTy = cast<VectorType>(CmpInst::makeCmpResultType(VecTy));
-      bool IsUnsigned = !RdxTreeInst.getFlags().IsSigned;
-
+      RD::MinMaxRecurrenceKind MMKind = RdxTreeInst.getMinMaxKind();
+      bool IsUnsigned = MMKind == RD::MRK_UIntMax || MMKind == RD::MRK_UIntMin;
       PairwiseRdxCost =
           TTI->getMinMaxReductionCost(VecTy, VecCondTy,
                                       /*IsPairwiseForm=*/true, IsUnsigned);
@@ -7248,7 +7249,7 @@ private:
       assert(Builder.getFastMathFlags().isFast() && "Expected 'fast' FMF");
       return createSimpleTargetReduction(
           Builder, TTI, RdxTreeInst.getOpcode(), VectorizedValue,
-          RdxTreeInst.getFlags(), ReductionOps.back());
+          RdxTreeInst.getMinMaxKind(), ReductionOps.back());
     }
 
     Value *TmpVec = VectorizedValue;
