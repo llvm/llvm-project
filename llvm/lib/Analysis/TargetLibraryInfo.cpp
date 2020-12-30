@@ -1543,10 +1543,10 @@ static bool compareWithVectorFnName(const VecDesc &LHS, StringRef S) {
 }
 
 void TargetLibraryInfoImpl::addVectorizableFunctions(ArrayRef<VecDesc> Fns) {
-  VectorDescs.insert(VectorDescs.end(), Fns.begin(), Fns.end());
+  llvm::append_range(VectorDescs, Fns);
   llvm::sort(VectorDescs, compareByScalarFnName);
 
-  ScalarDescs.insert(ScalarDescs.end(), Fns.begin(), Fns.end());
+  llvm::append_range(ScalarDescs, Fns);
   llvm::sort(ScalarDescs, compareByVectorFnName);
 }
 

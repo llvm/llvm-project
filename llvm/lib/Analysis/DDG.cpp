@@ -49,7 +49,7 @@ bool DDGNode::collectInstructions(
       assert(!isa<PiBlockDDGNode>(PN) && "Nested PiBlocks are not supported.");
       SmallVector<Instruction *, 8> TmpIList;
       PN->collectInstructions(Pred, TmpIList);
-      IList.insert(IList.end(), TmpIList.begin(), TmpIList.end());
+      llvm::append_range(IList, TmpIList);
     }
   } else
     llvm_unreachable("unimplemented type of node");
