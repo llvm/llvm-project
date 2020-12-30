@@ -40,22 +40,26 @@ def NoX0 : SDNodeXForm<undef,
 //===----------------------------------------------------------------------===//
 
 // This class describes information associated to the LMUL.
-class LMULInfo<int lmul, VReg regclass, VReg wregclass, string mx> {
+class LMULInfo<int lmul, VReg regclass, VReg wregclass,
+               VReg f2regclass, VReg f4regclass, VReg f8regclass, string mx> {
   bits<3> value = lmul; // This is encoded as the vlmul field of vtype.
   VReg vrclass = regclass;
   VReg wvrclass = wregclass;
+  VReg f8vrclass = f8regclass;
+  VReg f4vrclass = f4regclass;
+  VReg f2vrclass = f2regclass;
   string MX = mx;
 }
 
 // Associate LMUL with tablegen records of register classes.
-def V_M1  : LMULInfo<0b000,   VR,   VRM2, "M1">;
-def V_M2  : LMULInfo<0b001, VRM2,   VRM4, "M2">;
-def V_M4  : LMULInfo<0b010, VRM4,   VRM8, "M4">;
-def V_M8  : LMULInfo<0b011, VRM8,     VR, "M8">;
+def V_M1  : LMULInfo<0b000,   VR,        VRM2,   VR,   VR, VR, "M1">;
+def V_M2  : LMULInfo<0b001, VRM2,        VRM4,   VR,   VR, VR, "M2">;
+def V_M4  : LMULInfo<0b010, VRM4,        VRM8, VRM2,   VR, VR, "M4">;
+def V_M8  : LMULInfo<0b011, VRM8,/*NoVReg*/VR, VRM4, VRM2, VR, "M8">;
 
-def V_MF8 : LMULInfo<0b101,   VR, VR, "MF8">;
-def V_MF4 : LMULInfo<0b110,   VR, VR, "MF4">;
-def V_MF2 : LMULInfo<0b111,   VR, VR, "MF2">;
+def V_MF8 : LMULInfo<0b101, VR, VR,/*NoVReg*/VR,/*NoVReg*/VR,/*NoVReg*/VR, "MF8">;
+def V_MF4 : LMULInfo<0b110, VR, VR,          VR,/*NoVReg*/VR,/*NoVReg*/VR, "MF4">;
+def V_MF2 : LMULInfo<0b111, VR, VR,          VR,          VR,/*NoVReg*/VR, "MF2">;
 
 // Used to iterate over all possible LMULs.
 def MxList {
@@ -214,6 +218,12 @@ class VTypeInfoToWide<VTypeInfo vti, VTypeInfo wti>
   VTypeInfo Wti = wti;
 }
 
+class VTypeInfoToFraction<VTypeInfo vti, VTypeInfo fti>
+{
+  VTypeInfo Vti = vti;
+  VTypeInfo Fti = fti;
+}
+
 defset list<VTypeInfoToWide> AllWidenableIntVectors = {
   def : VTypeInfoToWide<VI8MF8,  VI16MF4>;
   def : VTypeInfoToWide<VI8MF4,  VI16MF2>;
@@ -245,6 +255,43 @@ defset list<VTypeInfoToWide> AllWidenableFloatVectors = {
   def : VTypeInfoToWide<VF32M1, VF64M2>;
   def : VTypeInfoToWide<VF32M2, VF64M4>;
   def : VTypeInfoToWide<VF32M4, VF64M8>;
+}
+
+defset list<VTypeInfoToFraction> AllFractionableVF2IntVectors = {
+  def : VTypeInfoToFraction<VI16MF4, VI8MF8>;
+  def : VTypeInfoToFraction<VI16MF2, VI8MF4>;
+  def : VTypeInfoToFraction<VI16M1, VI8MF2>;
+  def : VTypeInfoToFraction<VI16M2, VI8M1>;
+  def : VTypeInfoToFraction<VI16M4, VI8M2>;
+  def : VTypeInfoToFraction<VI16M8, VI8M4>;
+  def : VTypeInfoToFraction<VI32MF2, VI16MF4>;
+  def : VTypeInfoToFraction<VI32M1, VI16MF2>;
+  def : VTypeInfoToFraction<VI32M2, VI16M1>;
+  def : VTypeInfoToFraction<VI32M4, VI16M2>;
+  def : VTypeInfoToFraction<VI32M8, VI16M4>;
+  def : VTypeInfoToFraction<VI64M1, VI32MF2>;
+  def : VTypeInfoToFraction<VI64M2, VI32M1>;
+  def : VTypeInfoToFraction<VI64M4, VI32M2>;
+  def : VTypeInfoToFraction<VI64M8, VI32M4>;
+}
+
+defset list<VTypeInfoToFraction> AllFractionableVF4IntVectors = {
+  def : VTypeInfoToFraction<VI32MF2, VI8MF8>;
+  def : VTypeInfoToFraction<VI32M1, VI8MF4>;
+  def : VTypeInfoToFraction<VI32M2, VI8MF2>;
+  def : VTypeInfoToFraction<VI32M4, VI8M1>;
+  def : VTypeInfoToFraction<VI32M8, VI8M2>;
+  def : VTypeInfoToFraction<VI64M1, VI16MF4>;
+  def : VTypeInfoToFraction<VI64M2, VI16MF2>;
+  def : VTypeInfoToFraction<VI64M4, VI16M1>;
+  def : VTypeInfoToFraction<VI64M8, VI16M2>;
+}
+
+defset list<VTypeInfoToFraction> AllFractionableVF8IntVectors = {
+  def : VTypeInfoToFraction<VI64M1, VI8MF8>;
+  def : VTypeInfoToFraction<VI64M2, VI8MF4>;
+  def : VTypeInfoToFraction<VI64M4, VI8MF2>;
+  def : VTypeInfoToFraction<VI64M8, VI8M1>;
 }
 
 // This class holds the record of the RISCVVPseudoTable below.
@@ -997,6 +1044,42 @@ multiclass VPseudoUnaryV_F_NoDummyMask {
   }
 }
 
+multiclass PseudoUnaryV_VF2 {
+  defvar constraints = "@earlyclobber $rd";
+  foreach m = MxList.m[1-6] in
+  {
+    let VLMul = m.value in {
+      def "_" # m.MX : VPseudoUnaryNoMask<m.vrclass, m.f2vrclass, constraints>;
+      def "_" # m.MX # "_MASK" : VPseudoUnaryMask<m.vrclass, m.f2vrclass,
+                                                  constraints>;
+    }
+  }
+}
+
+multiclass PseudoUnaryV_VF4 {
+  defvar constraints = "@earlyclobber $rd";
+  foreach m = MxList.m[2-6] in
+  {
+    let VLMul = m.value in {
+      def "_" # m.MX : VPseudoUnaryNoMask<m.vrclass, m.f4vrclass, constraints>;
+      def "_" # m.MX # "_MASK" : VPseudoUnaryMask<m.vrclass, m.f4vrclass,
+                                                  constraints>;
+    }
+  }
+}
+
+multiclass PseudoUnaryV_VF8 {
+  defvar constraints = "@earlyclobber $rd";
+  foreach m = MxList.m[3-6] in
+  {
+    let VLMul = m.value in {
+      def "_" # m.MX : VPseudoUnaryNoMask<m.vrclass, m.f8vrclass, constraints>;
+      def "_" # m.MX # "_MASK" : VPseudoUnaryMask<m.vrclass, m.f8vrclass,
+                                                  constraints>;
+    }
+  }
+}
+
 // The destination EEW is 1.
 // The source EEW is 8, 16, 32, or 64.
 // When the destination EEW is different from source EEW, we need to use
@@ -1475,6 +1558,22 @@ multiclass VPatUnaryV_M<string intrinsic, string instruction>
     def : VPatUnaryMask<intrinsic, instruction, "M", vti.Vector, vti.Mask,
                         vti.Mask, vti.SEW, vti.LMul, vti.RegClass, VR>;
   }
+}
+
+multiclass VPatUnaryV_VF<string intrinsic, string instruction, string suffix,
+                         list<VTypeInfoToFraction> fractionList>
+{
+  foreach vtiTofti = fractionList in
+  {
+      defvar vti = vtiTofti.Vti;
+      defvar fti = vtiTofti.Fti;
+      def : VPatUnaryNoMask<intrinsic, instruction, suffix,
+                            vti.Vector, fti.Vector,
+                            vti.SEW, vti.LMul, fti.RegClass>;
+      def : VPatUnaryMask<intrinsic, instruction, suffix,
+                          vti.Vector, fti.Vector, vti.Mask,
+                          vti.SEW, vti.LMul, vti.RegClass, fti.RegClass>;
+   }
 }
 
 multiclass VPatNullaryV<string intrinsic, string instruction>
@@ -2141,6 +2240,16 @@ defm PseudoVWADD     : VPseudoBinaryW_WV_WX;
 defm PseudoVWSUB     : VPseudoBinaryW_WV_WX;
 
 //===----------------------------------------------------------------------===//
+// 12.3. Vector Integer Extension
+//===----------------------------------------------------------------------===//
+defm PseudoVZEXT_VF2 : PseudoUnaryV_VF2;
+defm PseudoVZEXT_VF4 : PseudoUnaryV_VF4;
+defm PseudoVZEXT_VF8 : PseudoUnaryV_VF8;
+defm PseudoVSEXT_VF2 : PseudoUnaryV_VF2;
+defm PseudoVSEXT_VF4 : PseudoUnaryV_VF4;
+defm PseudoVSEXT_VF8 : PseudoUnaryV_VF8;
+
+//===----------------------------------------------------------------------===//
 // 12.4. Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
 //===----------------------------------------------------------------------===//
 defm PseudoVADC        : VPseudoBinaryV_VM_XM_IM;
@@ -2647,6 +2756,22 @@ defm "" : VPatBinaryW_WV_WX<"int_riscv_vwaddu_w", "PseudoVWADDU", AllWidenableIn
 defm "" : VPatBinaryW_WV_WX<"int_riscv_vwsubu_w", "PseudoVWSUBU", AllWidenableIntVectors>;
 defm "" : VPatBinaryW_WV_WX<"int_riscv_vwadd_w", "PseudoVWADD", AllWidenableIntVectors>;
 defm "" : VPatBinaryW_WV_WX<"int_riscv_vwsub_w", "PseudoVWSUB", AllWidenableIntVectors>;
+
+//===----------------------------------------------------------------------===//
+// 12.3. Vector Integer Extension
+//===----------------------------------------------------------------------===//
+defm "" : VPatUnaryV_VF<"int_riscv_vzext", "PseudoVZEXT", "VF2",
+                        AllFractionableVF2IntVectors>;
+defm "" : VPatUnaryV_VF<"int_riscv_vzext", "PseudoVZEXT", "VF4",
+                        AllFractionableVF4IntVectors>;
+defm "" : VPatUnaryV_VF<"int_riscv_vzext", "PseudoVZEXT", "VF8",
+                        AllFractionableVF8IntVectors>;
+defm "" : VPatUnaryV_VF<"int_riscv_vsext", "PseudoVSEXT", "VF2",
+                        AllFractionableVF2IntVectors>;
+defm "" : VPatUnaryV_VF<"int_riscv_vsext", "PseudoVSEXT", "VF4",
+                        AllFractionableVF4IntVectors>;
+defm "" : VPatUnaryV_VF<"int_riscv_vsext", "PseudoVSEXT", "VF8",
+                        AllFractionableVF8IntVectors>;
 
 //===----------------------------------------------------------------------===//
 // 12.4. Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
