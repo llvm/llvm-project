@@ -65,8 +65,24 @@ void RegisterLsanFlags(FlagParser *parser, Flags *f) {
     if (flags()->log_threads) Report(__VA_ARGS__); \
   } while (0)
 
-ALIGNED(64) static char suppression_placeholder[sizeof(SuppressionContext)];
-static SuppressionContext *suppression_ctx = nullptr;
+class LeakSuppressionContext {
+  bool parsed = false;
+  SuppressionContext context;
+
+  Suppression *GetSuppressionForAddr(uptr addr);
+  void LazyParse();
+
+ public:
+  LeakSuppressionContext(const char *supprression_types[],
+                         int suppression_types_num)
+      : context(supprression_types, suppression_types_num) {}
+
+  Suppression *GetSuppressionForStack(u32 stack_trace_id);
+  void PrintMatchedSuppressions();
+};
+
+ALIGNED(64) static char suppression_placeholder[sizeof(LeakSuppressionContext)];
+static LeakSuppressionContext *suppression_ctx = nullptr;
 static const char kSuppressionLeak[] = "leak";
 static const char *kSuppressionTypes[] = { kSuppressionLeak };
 static const char kStdSuppressions[] =
@@ -86,14 +102,20 @@ static const char kStdSuppressions[] =
 void InitializeSuppressions() {
   CHECK_EQ(nullptr, suppression_ctx);
   suppression_ctx = new (suppression_placeholder)
-      SuppressionContext(kSuppressionTypes, ARRAY_SIZE(kSuppressionTypes));
-  suppression_ctx->ParseFromFile(flags()->suppressions);
-  if (&__lsan_default_suppressions)
-    suppression_ctx->Parse(__lsan_default_suppressions());
-  suppression_ctx->Parse(kStdSuppressions);
+      LeakSuppressionContext(kSuppressionTypes, ARRAY_SIZE(kSuppressionTypes));
 }
 
-static SuppressionContext *GetSuppressionContext() {
+void LeakSuppressionContext::LazyParse() {
+  if (!parsed) {
+    parsed = true;
+    context.ParseFromFile(flags()->suppressions);
+    if (&__lsan_default_suppressions)
+      context.Parse(__lsan_default_suppressions());
+    context.Parse(kStdSuppressions);
+  }
+}
+
+static LeakSuppressionContext *GetSuppressionContext() {
   CHECK(suppression_ctx);
   return suppression_ctx;
 }
@@ -532,18 +554,20 @@ static void CollectLeaksCb(uptr chunk, void *arg) {
   }
 }
 
-static void PrintMatchedSuppressions() {
+void LeakSuppressionContext::PrintMatchedSuppressions() {
   InternalMmapVector<Suppression *> matched;
-  GetSuppressionContext()->GetMatched(&matched);
+  context.GetMatched(&matched);
   if (!matched.size())
     return;
   const char *line = "-----------------------------------------------------";
   Printf("%s\n", line);
   Printf("Suppressions used:\n");
   Printf("  count      bytes template\n");
-  for (uptr i = 0; i < matched.size(); i++)
-    Printf("%7zu %10zu %s\n", static_cast<uptr>(atomic_load_relaxed(
-        &matched[i]->hit_count)), matched[i]->weight, matched[i]->templ);
+  for (uptr i = 0; i < matched.size(); i++) {
+    Printf("%7zu %10zu %s\n",
+           static_cast<uptr>(atomic_load_relaxed(&matched[i]->hit_count)),
+           matched[i]->weight, matched[i]->templ);
+  }
   Printf("%s\n\n", line);
 }
 
@@ -623,7 +647,7 @@ static bool CheckForLeaks() {
     param.leak_report.ReportTopLeaks(flags()->max_leaks);
   }
   if (common_flags()->print_suppressions)
-    PrintMatchedSuppressions();
+    GetSuppressionContext()->PrintMatchedSuppressions();
   if (unsuppressed_count > 0) {
     param.leak_report.PrintSummary();
     return true;
@@ -651,21 +675,20 @@ static int DoRecoverableLeakCheck() {
 
 void DoRecoverableLeakCheckVoid() { DoRecoverableLeakCheck(); }
 
-static Suppression *GetSuppressionForAddr(uptr addr) {
+Suppression *LeakSuppressionContext::GetSuppressionForAddr(uptr addr) {
   Suppression *s = nullptr;
 
   // Suppress by module name.
-  SuppressionContext *suppressions = GetSuppressionContext();
   if (const char *module_name =
           Symbolizer::GetOrInit()->GetModuleNameForPc(addr))
-    if (suppressions->Match(module_name, kSuppressionLeak, &s))
+    if (context.Match(module_name, kSuppressionLeak, &s))
       return s;
 
   // Suppress by file or function name.
   SymbolizedStack *frames = Symbolizer::GetOrInit()->SymbolizePC(addr);
   for (SymbolizedStack *cur = frames; cur; cur = cur->next) {
-    if (suppressions->Match(cur->info.function, kSuppressionLeak, &s) ||
-        suppressions->Match(cur->info.file, kSuppressionLeak, &s)) {
+    if (context.Match(cur->info.function, kSuppressionLeak, &s) ||
+        context.Match(cur->info.file, kSuppressionLeak, &s)) {
       break;
     }
   }
@@ -673,12 +696,15 @@ static Suppression *GetSuppressionForAddr(uptr addr) {
   return s;
 }
 
-static Suppression *GetSuppressionForStack(u32 stack_trace_id) {
+Suppression *LeakSuppressionContext::GetSuppressionForStack(
+    u32 stack_trace_id) {
+  LazyParse();
   StackTrace stack = StackDepotGet(stack_trace_id);
   for (uptr i = 0; i < stack.size; i++) {
     Suppression *s = GetSuppressionForAddr(
         StackTrace::GetPreviousInstructionPc(stack.trace[i]));
-    if (s) return s;
+    if (s)
+      return s;
   }
   return nullptr;
 }
@@ -790,8 +816,10 @@ void LeakReport::PrintSummary() {
 }
 
 void LeakReport::ApplySuppressions() {
+  LeakSuppressionContext *suppressions = GetSuppressionContext();
   for (uptr i = 0; i < leaks_.size(); i++) {
-    Suppression *s = GetSuppressionForStack(leaks_[i].stack_trace_id);
+    Suppression *s =
+        suppressions->GetSuppressionForStack(leaks_[i].stack_trace_id);
     if (s) {
       s->weight += leaks_[i].total_size;
       atomic_store_relaxed(&s->hit_count, atomic_load_relaxed(&s->hit_count) +
