@@ -669,6 +669,27 @@ class VPseudoUnaryMOutMask:
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
+// Mask can be V0~V31
+class VPseudoUnaryAnyMask<VReg RetClass,
+                          VReg Op1Class> :
+      Pseudo<(outs RetClass:$rd),
+             (ins RetClass:$merge,
+                  Op1Class:$rs2,
+                  VR:$vm, GPR:$vl, ixlenimm:$sew),
+             []>,
+      RISCVVPseudo {
+  let mayLoad = 0;
+  let mayStore = 0;
+  let hasSideEffects = 0;
+  let usesCustomInserter = 1;
+  let Constraints = "@earlyclobber $rd, $rd = $merge";
+  let Uses = [VL, VTYPE];
+  let VLIndex = 4;
+  let SEWIndex = 5;
+  let MergeOpIndex = 1;
+  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
+}
+
 class VPseudoBinaryNoMask<VReg RetClass,
                           VReg Op1Class,
                           DAGOperand Op2Class,
@@ -902,6 +923,13 @@ multiclass VPseudoUnaryV_M {
       def "_" # m.MX : VPseudoUnaryNoMask<m.vrclass, VR, constraint>;
       def "_" # m.MX # "_MASK" : VPseudoUnaryMask<m.vrclass, VR, constraint>;
     }
+  }
+}
+
+multiclass VPseudoUnaryV_V_AnyMask {
+  foreach m = MxList.m in {
+    let VLMul = m.value in
+      def _VM # "_" # m.MX # "_MASK" : VPseudoUnaryAnyMask<m.vrclass, m.vrclass>;
   }
 }
 
@@ -1311,6 +1339,27 @@ class VPatMaskUnaryMask<string intrinsic_name,
                 (mti.Mask VR:$rs2),
                 (mti.Mask V0), (NoX0 GPR:$vl), mti.SEW)>;
 
+class VPatUnaryAnyMask<string intrinsic,
+                       string inst,
+                       string kind,
+                       ValueType result_type,
+                       ValueType op1_type,
+                       ValueType mask_type,
+                       int sew,
+                       LMULInfo vlmul,
+                       VReg result_reg_class,
+                       VReg op1_reg_class> :
+  Pat<(result_type (!cast<Intrinsic>(intrinsic#"_mask")
+                   (result_type result_reg_class:$merge),
+                   (op1_type op1_reg_class:$rs1),
+                   (mask_type VR:$rs2),
+                   (XLenVT GPR:$vl))),
+                   (!cast<Instruction>(inst#"_"#kind#"_"#vlmul.MX#"_MASK")
+                   (result_type result_reg_class:$merge),
+                   (op1_type op1_reg_class:$rs1),
+                   (mask_type VR:$rs2),
+                   (NoX0 GPR:$vl), sew)>;
+
 class VPatBinaryNoMask<string intrinsic_name,
                        string inst,
                        string kind,
@@ -1538,6 +1587,16 @@ multiclass VPatUnaryS_M<string intrinsic_name,
                       (mti.Mask VR:$rs1), (mti.Mask V0), GPR:$vl)),
                       (!cast<Instruction>(inst#"_M_"#mti.BX#"_MASK") $rs1,
                       (mti.Mask V0), (NoX0 GPR:$vl), mti.SEW)>;
+  }
+}
+
+multiclass VPatUnaryV_V_AnyMask<string intrinsic, string instruction,
+                                list<VTypeInfo> vtilist> {
+  foreach vti = vtilist in {
+    def : VPatUnaryAnyMask<intrinsic, instruction, "VM",
+                           vti.Vector, vti.Vector, vti.Mask,
+                           vti.SEW, vti.LMul, vti.RegClass,
+                           vti.RegClass>;
   }
 }
 
@@ -2646,6 +2705,11 @@ let Predicates = [HasStdExtV, HasStdExtF] in {
 defm PseudoVRGATHER    : VPseudoBinaryV_VV_VX_VI<uimm5, "@earlyclobber $rd">;
 
 //===----------------------------------------------------------------------===//
+// 17.5. Vector Compress Instruction
+//===----------------------------------------------------------------------===//
+defm PseudoVCOMPRESS : VPseudoUnaryV_V_AnyMask;
+
+//===----------------------------------------------------------------------===//
 // Patterns.
 //===----------------------------------------------------------------------===//
 let Predicates = [HasStdExtV] in {
@@ -3199,6 +3263,17 @@ let Predicates = [HasStdExtV] in {
 let Predicates = [HasStdExtV, HasStdExtF] in {
   defm "" : VPatBinaryV_VV_VX_VI_INT<"int_riscv_vrgather", "PseudoVRGATHER",
                                      AllFloatVectors, uimm5>;
+} // Predicates = [HasStdExtV, HasStdExtF]
+
+//===----------------------------------------------------------------------===//
+// 17.5. Vector Compress Instruction
+//===----------------------------------------------------------------------===//
+let Predicates = [HasStdExtV] in {
+  defm "" : VPatUnaryV_V_AnyMask<"int_riscv_vcompress", "PseudoVCOMPRESS", AllIntegerVectors>;
+} // Predicates = [HasStdExtV]
+
+let Predicates = [HasStdExtV, HasStdExtF] in {
+  defm "" : VPatUnaryV_V_AnyMask<"int_riscv_vcompress", "PseudoVCOMPRESS", AllFloatVectors>;
 } // Predicates = [HasStdExtV, HasStdExtF]
 
 // Include the non-intrinsic ISel patterns

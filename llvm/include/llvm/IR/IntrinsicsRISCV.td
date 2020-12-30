@@ -189,6 +189,13 @@ let TargetPrefix = "riscv" in {
                      LLVMPointerType<LLVMMatchType<0>>, llvm_anyvector_ty,
                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty],
                     [NoCapture<ArgIndex<1>>, IntrWriteMem]>, RISCVVIntrinsic;
+  // For destination vector type is the same as first source vector (with mask).
+  // Input: (maskedoff, vector_in, mask, vl)
+  class RISCVUnaryAAMask
+        : Intrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, LLVMMatchType<0>,
+                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty],
+                    [IntrNoMem]>, RISCVVIntrinsic;
   // For destination vector type is the same as first and second source vector.
   // Input: (vector_in, vector_in, vl)
   class RISCVBinaryAAANoMask
@@ -679,6 +686,8 @@ let TargetPrefix = "riscv" in {
   defm vfslide1down : RISCVBinaryAAX;
 
   defm vrgather : RISCVBinaryAAX;
+
+  def "int_riscv_vcompress_mask" : RISCVUnaryAAMask;
 
   defm vaaddu : RISCVSaturatingBinaryAAX;
   defm vaadd : RISCVSaturatingBinaryAAX;
