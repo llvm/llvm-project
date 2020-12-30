@@ -11,14 +11,14 @@
 ; Check if we do the fold under various conditions. If off1 is (the low part of)
 ; an address the fold's safety depends on the variable's alignment.
 
-@g_0 = global i64 0
-@g_1 = global i64 0, align 1
-@g_2 = global i64 0, align 2
-@g_4 = global i64 0, align 4
-@g_8 = global i64 0, align 8
-@g_16 = global i64 0, align 16
+@g_0 = dso_local global i64 0
+@g_1 = dso_local global i64 0, align 1
+@g_2 = dso_local global i64 0, align 2
+@g_4 = dso_local global i64 0, align 4
+@g_8 = dso_local global i64 0, align 8
+@g_16 = dso_local global i64 0, align 16
 
-define i64 @load_g_0() nounwind {
+define dso_local i64 @load_g_0() nounwind {
 ; RV32I-LABEL: load_g_0:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a1, %hi(g_0)
@@ -36,7 +36,7 @@ entry:
   ret i64 %0
 }
 
-define i64 @load_g_1() nounwind {
+define dso_local i64 @load_g_1() nounwind {
 ; RV32I-LABEL: load_g_1:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a1, %hi(g_1)
@@ -55,7 +55,7 @@ entry:
   ret i64 %0
 }
 
-define i64 @load_g_2() nounwind {
+define dso_local i64 @load_g_2() nounwind {
 ; RV32I-LABEL: load_g_2:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a1, %hi(g_2)
@@ -74,7 +74,7 @@ entry:
   ret i64 %0
 }
 
-define i64 @load_g_4() nounwind {
+define dso_local i64 @load_g_4() nounwind {
 ; RV32I-LABEL: load_g_4:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a1, %hi(g_4)
@@ -93,7 +93,7 @@ entry:
   ret i64 %0
 }
 
-define i64 @load_g_8() nounwind {
+define dso_local i64 @load_g_8() nounwind {
 ; RV32I-LABEL: load_g_8:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a1, %hi(g_8)
@@ -111,7 +111,7 @@ entry:
   ret i64 %0
 }
 
-define i64 @load_g_16() nounwind {
+define dso_local i64 @load_g_16() nounwind {
 ; RV32I-LABEL: load_g_16:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a1, %hi(g_16)
@@ -129,7 +129,7 @@ entry:
   ret i64 %0
 }
 
-define void @store_g_4() nounwind {
+define dso_local void @store_g_4() nounwind {
 ; RV32I-LABEL: store_g_4:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a0, %hi(g_4)
@@ -148,7 +148,7 @@ entry:
    ret void
 }
 
-define void @store_g_8() nounwind {
+define dso_local void @store_g_8() nounwind {
 ; RV32I-LABEL: store_g_8:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a0, %hi(g_8)
@@ -171,7 +171,7 @@ entry:
 @ga_8 = dso_local local_unnamed_addr global [2 x i64] zeroinitializer, align 8
 @ga_16 = dso_local local_unnamed_addr global [2 x i64] zeroinitializer, align 16
 
-define i64 @load_ga_8() nounwind {
+define dso_local i64 @load_ga_8() nounwind {
 ; RV32I-LABEL: load_ga_8:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a0, %hi(ga_8)
@@ -190,7 +190,7 @@ entry:
   ret i64 %0
 }
 
-define i64 @load_ga_16() nounwind {
+define dso_local i64 @load_ga_16() nounwind {
 ; RV32I-LABEL: load_ga_16:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a1, %hi(ga_16)
@@ -210,10 +210,10 @@ entry:
 
 ; Check for folds in accesses to thread-local variables.
 
-@tl_4 = thread_local global i64 0, align 4
-@tl_8 = thread_local global i64 0, align 8
+@tl_4 = dso_local thread_local global i64 0, align 4
+@tl_8 = dso_local thread_local global i64 0, align 8
 
-define i64 @load_tl_4() nounwind {
+define dso_local i64 @load_tl_4() nounwind {
 ; RV32I-LABEL: load_tl_4:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a0, %tprel_hi(tl_4)
@@ -234,7 +234,7 @@ entry:
   ret i64 %0
 }
 
-define i64 @load_tl_8() nounwind {
+define dso_local i64 @load_tl_8() nounwind {
 ; RV32I-LABEL: load_tl_8:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a0, %tprel_hi(tl_8)
@@ -254,7 +254,7 @@ entry:
   ret i64 %0
 }
 
-define i64 @load_const_ok() nounwind {
+define dso_local i64 @load_const_ok() nounwind {
 ; RV32I-LABEL: load_const_ok:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lw a0, 2040(zero)
@@ -270,7 +270,7 @@ entry:
   ret i64 %0
 }
 
-define i64 @load_cost_overflow() nounwind {
+define dso_local i64 @load_cost_overflow() nounwind {
 ; RV32I-LABEL: load_cost_overflow:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    lui a0, 1
