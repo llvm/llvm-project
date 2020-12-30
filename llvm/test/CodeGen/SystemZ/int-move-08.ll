@@ -2,19 +2,19 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 
-@gsrc16 = global i16 1
-@gsrc32 = global i32 1
-@gdst16 = global i16 2
-@gdst32 = global i32 2
-@gsrc16u = global i16 1, align 1, section "foo"
-@gsrc32u = global i32 1, align 2, section "foo"
-@gdst16u = global i16 2, align 1, section "foo"
-@gdst32u = global i32 2, align 2, section "foo"
-@garray8 = global [2 x i8] [i8 100, i8 101]
-@garray16 = global [2 x i16] [i16 102, i16 103]
+@gsrc16 = dso_local global i16 1
+@gsrc32 = dso_local global i32 1
+@gdst16 = dso_local global i16 2
+@gdst32 = dso_local global i32 2
+@gsrc16u = dso_local global i16 1, align 1, section "foo"
+@gsrc32u = dso_local global i32 1, align 2, section "foo"
+@gdst16u = dso_local global i16 2, align 1, section "foo"
+@gdst32u = dso_local global i32 2, align 2, section "foo"
+@garray8 = dso_local global [2 x i8] [i8 100, i8 101]
+@garray16 = dso_local global [2 x i16] [i16 102, i16 103]
 
 ; Check sign-extending loads from i16.
-define i32 @f1() {
+define dso_local i32 @f1() {
 ; CHECK-LABEL: f1:
 ; CHECK: lhrl %r2, gsrc16
 ; CHECK: br %r14
@@ -24,7 +24,7 @@ define i32 @f1() {
 }
 
 ; Check zero-extending loads from i16.
-define i32 @f2() {
+define dso_local i32 @f2() {
 ; CHECK-LABEL: f2:
 ; CHECK: llhrl %r2, gsrc16
 ; CHECK: br %r14
@@ -34,7 +34,7 @@ define i32 @f2() {
 }
 
 ; Check truncating 16-bit stores.
-define void @f3(i32 %val) {
+define dso_local void @f3(i32 %val) {
 ; CHECK-LABEL: f3:
 ; CHECK: sthrl %r2, gdst16
 ; CHECK: br %r14
@@ -44,7 +44,7 @@ define void @f3(i32 %val) {
 }
 
 ; Check plain loads and stores.
-define void @f4() {
+define dso_local void @f4() {
 ; CHECK-LABEL: f4:
 ; CHECK: lrl %r0, gsrc32
 ; CHECK: strl %r0, gdst32
@@ -55,7 +55,7 @@ define void @f4() {
 }
 
 ; Repeat f1 with an unaligned variable.
-define i32 @f5() {
+define dso_local i32 @f5() {
 ; CHECK-LABEL: f5:
 ; CHECK: lgrl [[REG:%r[0-5]]], gsrc16u
 ; CHECK: lh %r2, 0([[REG]])
@@ -66,7 +66,7 @@ define i32 @f5() {
 }
 
 ; Repeat f2 with an unaligned variable.
-define i32 @f6() {
+define dso_local i32 @f6() {
 ; CHECK-LABEL: f6:
 ; CHECK: lgrl [[REG:%r[0-5]]], gsrc16u
 ; CHECK: llh %r2, 0([[REG]])
@@ -77,7 +77,7 @@ define i32 @f6() {
 }
 
 ; Repeat f3 with an unaligned variable.
-define void @f7(i32 %val) {
+define dso_local void @f7(i32 %val) {
 ; CHECK-LABEL: f7:
 ; CHECK: lgrl [[REG:%r[0-5]]], gdst16u
 ; CHECK: sth %r2, 0([[REG]])
@@ -88,7 +88,7 @@ define void @f7(i32 %val) {
 }
 
 ; Repeat f4 with unaligned variables.
-define void @f8() {
+define dso_local void @f8() {
 ; CHECK-LABEL: f8:
 ; CHECK: larl [[REG:%r[0-5]]], gsrc32u
 ; CHECK: l [[VAL:%r[0-5]]], 0([[REG]])
@@ -102,7 +102,7 @@ define void @f8() {
 
 ; Test a case where we want to use one LARL for accesses to two different
 ; parts of a variable.
-define void @f9() {
+define dso_local void @f9() {
 ; CHECK-LABEL: f9:
 ; CHECK: larl [[REG:%r[0-5]]], garray8
 ; CHECK: llc [[VAL:%r[0-5]]], 0([[REG]])
@@ -119,7 +119,7 @@ define void @f9() {
 
 ; Test a case where we want to use separate relative-long addresses for
 ; two different parts of a variable.
-define void @f10() {
+define dso_local void @f10() {
 ; CHECK-LABEL: f10:
 ; CHECK: llhrl [[VAL:%r[0-5]]], garray16
 ; CHECK: srl [[VAL]], 1

@@ -3,9 +3,9 @@
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 
 declare i32 @foo()
-@g1 = global i16 0
+@g1 = dso_local global i16 0
 
-define void @f1(i32 %target) {
+define dso_local void @f1(i32 %target) {
 ; CHECK-LABEL: f1:
 ; CHECK: .cfi_def_cfa_offset
 ; CHECK: .L[[LABEL:.*]]:
@@ -19,7 +19,7 @@ exit:
   ret void
 }
 
-define void @f2(i32 %target) {
+define dso_local void @f2(i32 %target) {
 ; CHECK-LABEL: f2:
 ; CHECK: .cfi_def_cfa_offset
 ; CHECK: .L[[LABEL:.*]]:
@@ -33,7 +33,7 @@ exit:
   ret void
 }
 
-define void @f3(i32 %target) {
+define dso_local void @f3(i32 %target) {
 ; CHECK-LABEL: f3:
 ; CHECK: .cfi_def_cfa_offset
 ; CHECK: .L[[LABEL:.*]]:
@@ -47,7 +47,7 @@ exit:
   ret void
 }
 
-define void @f4(i32 %target) {
+define dso_local void @f4(i32 %target) {
 ; CHECK-LABEL: f4:
 ; CHECK: .cfi_def_cfa_offset
 ; CHECK: .L[[LABEL:.*]]:
@@ -61,7 +61,7 @@ exit:
   ret void
 }
 
-define void @f5(i32 %target) {
+define dso_local void @f5(i32 %target) {
 ; CHECK-LABEL: f5:
 ; CHECK: .cfi_def_cfa_offset
 ; CHECK: .L[[LABEL:.*]]:
@@ -75,7 +75,7 @@ exit:
   ret void
 }
 
-define void @f6(i32 %target) {
+define dso_local void @f6(i32 %target) {
 ; CHECK-LABEL: f6:
 ; CHECK: .cfi_def_cfa_offset
 ; CHECK: .L[[LABEL:.*]]:
@@ -91,7 +91,7 @@ exit:
 
 ; Check that CRJ is used for checking equality with a zero-extending
 ; character load.
-define void @f7(i8 *%targetptr) {
+define dso_local void @f7(i8 *%targetptr) {
 ; CHECK-LABEL: f7:
 ; CHECK: .cfi_def_cfa_offset
 ; CHECK: .L[[LABEL:.*]]:
@@ -109,7 +109,7 @@ exit:
 }
 
 ; ...and zero-extending i16 loads.
-define void @f8(i16 *%targetptr) {
+define dso_local void @f8(i16 *%targetptr) {
 ; CHECK-LABEL: f8:
 ; CHECK: .cfi_def_cfa_offset
 ; CHECK: .L[[LABEL:.*]]:
@@ -127,7 +127,7 @@ exit:
 }
 
 ; ...unless the address is a global.
-define void @f9(i16 *%targetptr) {
+define dso_local void @f9(i16 *%targetptr) {
 ; CHECK-LABEL: f9:
 ; CHECK: .cfi_def_cfa_offset
 ; CHECK: .L[[LABEL:.*]]:
@@ -146,7 +146,7 @@ exit:
 
 ; Check that CRJ is used for checking order between two zero-extending
 ; byte loads, even if the original comparison was unsigned.
-define void @f10(i8 *%targetptr1) {
+define dso_local void @f10(i8 *%targetptr1) {
 ; CHECK-LABEL: f10:
 ; CHECK: .cfi_def_cfa_offset
 ; CHECK: .L[[LABEL:.*]]:
@@ -168,7 +168,7 @@ exit:
 }
 
 ; ...likewise halfword loads.
-define void @f11(i16 *%targetptr1) {
+define dso_local void @f11(i16 *%targetptr1) {
 ; CHECK-LABEL: f11:
 ; CHECK: .cfi_def_cfa_offset
 ; CHECK: .L[[LABEL:.*]]:
