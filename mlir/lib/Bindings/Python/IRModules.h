@@ -13,6 +13,7 @@
 
 #include "PybindUtils.h"
 
+#include "mlir-c/AffineMap.h"
 #include "mlir-c/IR.h"
 #include "llvm/ADT/DenseMap.h"
 
@@ -665,6 +666,27 @@ public:
 private:
   PyOperationRef parentOperation;
   MlirValue value;
+};
+
+class PyAffineMap : public BaseContextObject {
+public:
+  PyAffineMap(PyMlirContextRef contextRef, MlirAffineMap affineMap)
+      : BaseContextObject(std::move(contextRef)), affineMap(affineMap) {}
+  bool operator==(const PyAffineMap &other);
+  operator MlirAffineMap() const { return affineMap; }
+  MlirAffineMap get() const { return affineMap; }
+
+  /// Gets a capsule wrapping the void* within the MlirAffineMap.
+  pybind11::object getCapsule();
+
+  /// Creates a PyAffineMap from the MlirAffineMap wrapped by a capsule.
+  /// Note that PyAffineMap instances are uniqued, so the returned object
+  /// may be a pre-existing object. Ownership of the underlying MlirAffineMap
+  /// is taken by calling this function.
+  static PyAffineMap createFromCapsule(pybind11::object capsule);
+
+private:
+  MlirAffineMap affineMap;
 };
 
 void populateIRSubmodule(pybind11::module &m);
