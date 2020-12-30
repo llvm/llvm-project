@@ -9,10 +9,10 @@
 ; fixed, the test commands above will need to be updated to expect fewer
 ; lea instructions.
 
-@g0 = weak global [1000 x i32] zeroinitializer, align 32		; <[1000 x i32]*> [#uses=8]
-@g1 = weak global [1000 x i32] zeroinitializer, align 32		; <[1000 x i32]*> [#uses=7]
+@g0 = weak dso_local global [1000 x i32] zeroinitializer, align 32		; <[1000 x i32]*> [#uses=8]
+@g1 = weak dso_local global [1000 x i32] zeroinitializer, align 32		; <[1000 x i32]*> [#uses=7]
 
-define void @foo() {
+define dso_local void @foo() {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{.*}}(%rip), %eax

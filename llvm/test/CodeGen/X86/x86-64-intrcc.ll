@@ -3,8 +3,8 @@
 
 %struct.interrupt_frame = type { i64, i64, i64, i64, i64 }
 
-@sink_address = global i64* null
-@sink_i32 = global i64 0
+@sink_address = dso_local global i64* null
+@sink_i32 = dso_local global i64 0
 
 ; Spills rax, putting original esp at +8.
 ; No stack adjustment if declared with no error code
@@ -90,7 +90,7 @@ define x86_intrcc void @test_isr_clobbers(%struct.interrupt_frame* byval(%struct
   ret void
 }
 
-@f80 = common global x86_fp80 0xK00000000000000000000, align 4
+@f80 = common dso_local global x86_fp80 0xK00000000000000000000, align 4
 
 ; Test that the presence of x87 does not crash the FP stackifier
 define x86_intrcc void @test_isr_x87(%struct.interrupt_frame* byval(%struct.interrupt_frame) %frame) {

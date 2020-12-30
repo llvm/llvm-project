@@ -9,8 +9,8 @@ declare dso_local i32 @foo()
 declare dso_local <4 x float> @do_sse(<4 x float>)
 declare dso_local <8 x float> @do_avx(<8 x float>)
 declare dso_local <4 x float> @llvm.x86.avx.vextractf128.ps.256(<8 x float>, i8) nounwind readnone
-@x = common global <4 x float> zeroinitializer, align 16
-@g = common global <8 x float> zeroinitializer, align 32
+@x = common dso_local global <4 x float> zeroinitializer, align 16
+@g = common dso_local global <8 x float> zeroinitializer, align 32
 
 ;; Basic checking - don't emit any vzeroupper instruction
 

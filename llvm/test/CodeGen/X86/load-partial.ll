@@ -301,8 +301,8 @@ define <4 x double> @load_double4_0u2u(double* nocapture readonly dereferenceabl
 }
 
 ; Test case identified in rL366501
-@h = local_unnamed_addr global i8 0, align 1
-define i32 @load_partial_illegal_type() {
+@h = dso_local local_unnamed_addr global i8 0, align 1
+define dso_local i32 @load_partial_illegal_type() {
 ; SSE2-LABEL: load_partial_illegal_type:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movzwl {{.*}}(%rip), %eax
@@ -345,7 +345,7 @@ define i32 @load_partial_illegal_type() {
   ret i32 %4
 }
 
-define void @PR43227(i32* %explicit_0, <8 x i32>* %explicit_1) {
+define dso_local void @PR43227(i32* %explicit_0, <8 x i32>* %explicit_1) {
 ; SSE-LABEL: PR43227:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero

@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -x86-seses-enable-without-lvi-cfi -x86-seses-omit-branch-lfences %s -o - | FileCheck %s --check-prefix=X86-OMIT-BR
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -x86-seses-enable-without-lvi-cfi -x86-seses-only-lfence-non-const %s -o - | FileCheck %s --check-prefix=X86-NON-CONST
 
-define void @_Z4buzzv() {
+define dso_local void @_Z4buzzv() {
 ; CHECK-LABEL: _Z4buzzv:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfence
@@ -34,7 +34,7 @@ entry:
   ret void
 }
 
-define i32 @_Z3barPi(i32* %p) {
+define dso_local i32 @_Z3barPi(i32* %p) {
 ; CHECK-LABEL: _Z3barPi:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfence
@@ -173,7 +173,7 @@ return:                                           ; preds = %if.else, %if.then
   ret i32 %7
 }
 
-define i32 (i32*)* @_Z3bazv() {
+define dso_local i32 (i32*)* @_Z3bazv() {
 ; CHECK-LABEL: _Z3bazv:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfence
@@ -223,7 +223,7 @@ entry:
   ret i32 (i32*)* %0
 }
 
-define void @_Z3fooPi(i32* %p) {
+define dso_local void @_Z3fooPi(i32* %p) {
 ; CHECK-LABEL: _Z3fooPi:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp

@@ -3,10 +3,10 @@
 
 %struct.anon = type { i32, i32 }
 
-@c = common  global %struct.anon zeroinitializer, align 4
-@d =  local_unnamed_addr global %struct.anon* @c, align 8
-@a = common  local_unnamed_addr global i32 0, align 4
-@b = common  local_unnamed_addr global i32 0, align 4
+@c = common dso_local global %struct.anon zeroinitializer, align 4
+@d = dso_local local_unnamed_addr global %struct.anon* @c, align 8
+@a = common dso_local local_unnamed_addr global i32 0, align 4
+@b = common dso_local local_unnamed_addr global i32 0, align 4
 
 ; Function Attrs: norecurse nounwind uwtable
 define  void @g() local_unnamed_addr #0 {
