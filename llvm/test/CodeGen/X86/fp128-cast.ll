@@ -9,19 +9,19 @@
 
 ; Check soft floating point conversion function calls.
 
-@vi16 = common global i16 0, align 2
-@vi32 = common global i32 0, align 4
-@vi64 = common global i64 0, align 8
-@vi128 = common global i128 0, align 16
-@vu32 = common global i32 0, align 4
-@vu64 = common global i64 0, align 8
-@vu128 = common global i128 0, align 16
-@vf32 = common global float 0.000000e+00, align 4
-@vf64 = common global double 0.000000e+00, align 8
-@vf80 = common global x86_fp80 0xK00000000000000000000, align 8
-@vf128 = common global fp128 0xL00000000000000000000000000000000, align 16
+@vi16 = common dso_local global i16 0, align 2
+@vi32 = common dso_local global i32 0, align 4
+@vi64 = common dso_local global i64 0, align 8
+@vi128 = common dso_local global i128 0, align 16
+@vu32 = common dso_local global i32 0, align 4
+@vu64 = common dso_local global i64 0, align 8
+@vu128 = common dso_local global i128 0, align 16
+@vf32 = common dso_local global float 0.000000e+00, align 4
+@vf64 = common dso_local global double 0.000000e+00, align 8
+@vf80 = common dso_local global x86_fp80 0xK00000000000000000000, align 8
+@vf128 = common dso_local global fp128 0xL00000000000000000000000000000000, align 16
 
-define void @TestFPExtF32_F128() nounwind {
+define dso_local void @TestFPExtF32_F128() nounwind {
 ; X64-SSE-LABEL: TestFPExtF32_F128:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
@@ -68,7 +68,7 @@ entry:
   ret void
 }
 
-define void @TestFPExtF64_F128() nounwind {
+define dso_local void @TestFPExtF64_F128() nounwind {
 ; X64-SSE-LABEL: TestFPExtF64_F128:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
@@ -115,7 +115,7 @@ entry:
   ret void
 }
 
-define void @TestFPExtF80_F128() nounwind {
+define dso_local void @TestFPExtF80_F128() nounwind {
 ; X64-SSE-LABEL: TestFPExtF80_F128:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    subq $24, %rsp
@@ -164,7 +164,7 @@ entry:
   ret void
 }
 
-define void @TestFPToSIF128_I16() nounwind {
+define dso_local void @TestFPToSIF128_I16() nounwind {
 ; X64-SSE-LABEL: TestFPToSIF128_I16:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
@@ -202,7 +202,7 @@ entry:
   ret void
 }
 
-define void @TestFPToUIF128_I16() nounwind {
+define dso_local void @TestFPToUIF128_I16() nounwind {
 ; X64-SSE-LABEL: TestFPToUIF128_I16:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
@@ -240,7 +240,7 @@ entry:
   ret void
 }
 
-define void @TestFPToSIF128_I32() nounwind {
+define dso_local void @TestFPToSIF128_I32() nounwind {
 ; X64-SSE-LABEL: TestFPToSIF128_I32:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
@@ -278,7 +278,7 @@ entry:
   ret void
 }
 
-define void @TestFPToUIF128_U32() nounwind {
+define dso_local void @TestFPToUIF128_U32() nounwind {
 ; X64-SSE-LABEL: TestFPToUIF128_U32:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
@@ -316,7 +316,7 @@ entry:
   ret void
 }
 
-define void @TestFPToSIF128_I64() nounwind {
+define dso_local void @TestFPToSIF128_I64() nounwind {
 ; X64-SSE-LABEL: TestFPToSIF128_I64:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
@@ -359,7 +359,7 @@ entry:
   ret void
 }
 
-define void @TestFPToUIF128_U64() nounwind {
+define dso_local void @TestFPToUIF128_U64() nounwind {
 ; X64-SSE-LABEL: TestFPToUIF128_U64:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
@@ -401,7 +401,7 @@ entry:
   ret void
 }
 
-define void @TestFPToSIF128_I128() nounwind {
+define dso_local void @TestFPToSIF128_I128() nounwind {
 ; X64-SSE-LABEL: TestFPToSIF128_I128:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
@@ -452,7 +452,7 @@ entry:
   ret void
 }
 
-define void @TestFPToUIF128_U128() nounwind {
+define dso_local void @TestFPToUIF128_U128() nounwind {
 ; X64-SSE-LABEL: TestFPToUIF128_U128:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
@@ -503,7 +503,7 @@ entry:
   ret void
 }
 
-define void @TestFPTruncF128_F32() nounwind {
+define dso_local void @TestFPTruncF128_F32() nounwind {
 ; X64-SSE-LABEL: TestFPTruncF128_F32:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
@@ -541,7 +541,7 @@ entry:
   ret void
 }
 
-define void @TestFPTruncF128_F64() nounwind {
+define dso_local void @TestFPTruncF128_F64() nounwind {
 ; X64-SSE-LABEL: TestFPTruncF128_F64:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
@@ -579,7 +579,7 @@ entry:
   ret void
 }
 
-define void @TestFPTruncF128_F80() nounwind {
+define dso_local void @TestFPTruncF128_F80() nounwind {
 ; X64-SSE-LABEL: TestFPTruncF128_F80:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
@@ -617,7 +617,7 @@ entry:
   ret void
 }
 
-define void @TestSIToFPI16_F128() nounwind {
+define dso_local void @TestSIToFPI16_F128() nounwind {
 ; X64-SSE-LABEL: TestSIToFPI16_F128:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
@@ -665,7 +665,7 @@ entry:
   ret void
 }
 
-define void @TestSIToFPU16_F128() nounwind {
+define dso_local void @TestSIToFPU16_F128() nounwind {
 ; X64-SSE-LABEL: TestSIToFPU16_F128:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
@@ -713,7 +713,7 @@ entry:
   ret void
 }
 
-define void @TestSIToFPI32_F128() nounwind {
+define dso_local void @TestSIToFPI32_F128() nounwind {
 ; X64-SSE-LABEL: TestSIToFPI32_F128:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
@@ -759,7 +759,7 @@ entry:
   ret void
 }
 
-define void @TestUIToFPU32_F128() #2 {
+define dso_local void @TestUIToFPU32_F128() #2 {
 ; X64-SSE-LABEL: TestUIToFPU32_F128:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
@@ -805,7 +805,7 @@ entry:
   ret void
 }
 
-define void @TestSIToFPI64_F128() nounwind {
+define dso_local void @TestSIToFPI64_F128() nounwind {
 ; X64-SSE-LABEL: TestSIToFPI64_F128:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
@@ -852,7 +852,7 @@ entry:
   ret void
 }
 
-define void @TestUIToFPU64_F128() #2 {
+define dso_local void @TestUIToFPU64_F128() #2 {
 ; X64-SSE-LABEL: TestUIToFPU64_F128:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
@@ -899,7 +899,7 @@ entry:
   ret void
 }
 
-define void @TestSIToFPI128_F128() nounwind {
+define dso_local void @TestSIToFPI128_F128() nounwind {
 ; X64-SSE-LABEL: TestSIToFPI128_F128:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
@@ -950,7 +950,7 @@ entry:
   ret void
 }
 
-define void @TestUIToFPU128_F128() #2 {
+define dso_local void @TestUIToFPU128_F128() #2 {
 ; X64-SSE-LABEL: TestUIToFPU128_F128:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
@@ -1001,7 +1001,7 @@ entry:
   ret void
 }
 
-define i32 @TestConst128(fp128 %v) nounwind {
+define dso_local i32 @TestConst128(fp128 %v) nounwind {
 ; X64-SSE-LABEL: TestConst128:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
@@ -1052,7 +1052,7 @@ entry:
 }
 
 
-define i32 @TestConst128Zero(fp128 %v) nounwind {
+define dso_local i32 @TestConst128Zero(fp128 %v) nounwind {
 ; X64-SSE-LABEL: TestConst128Zero:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
@@ -1116,7 +1116,7 @@ entry:
 ;   u.ld = ld * ld;
 ;   return ((u.bits.v1 | u.bits.v2)  == 0);
 ; }
-define i32 @TestBits128(fp128 %ld) nounwind {
+define dso_local i32 @TestBits128(fp128 %ld) nounwind {
 ; X64-SSE-LABEL: TestBits128:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    subq $24, %rsp
