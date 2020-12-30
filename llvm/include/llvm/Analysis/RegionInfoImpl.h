@@ -815,8 +815,7 @@ void RegionInfoBase<Tr>::verifyAnalysis() const {
 // Region pass manager support.
 template <class Tr>
 typename Tr::RegionT *RegionInfoBase<Tr>::getRegionFor(BlockT *BB) const {
-  typename BBtoRegionMap::const_iterator I = BBtoRegion.find(BB);
-  return I != BBtoRegion.end() ? I->second : nullptr;
+  return BBtoRegion.lookup(BB);
 }
 
 template <class Tr>
