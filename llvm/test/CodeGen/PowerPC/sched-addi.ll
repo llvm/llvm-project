@@ -7,9 +7,9 @@
 %_elem_type_of_x = type <{ double }>
 %_elem_type_of_a = type <{ double }>
 
-@scalars = common local_unnamed_addr global %_type_of_scalars zeroinitializer, align 16
+@scalars = common dso_local local_unnamed_addr global %_type_of_scalars zeroinitializer, align 16
 
-define void @test([0 x %_elem_type_of_x]* noalias %.x, [0 x %_elem_type_of_a]* %.a, i64* noalias %.n) {
+define dso_local void @test([0 x %_elem_type_of_x]* noalias %.x, [0 x %_elem_type_of_a]* %.a, i64* noalias %.n) {
 ; CHECK-P9-LABEL: test:
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    ld 5, 0(5)

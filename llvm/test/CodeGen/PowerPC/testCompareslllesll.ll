@@ -5,7 +5,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -O2 \
 ; RUN:   -ppc-gpr-icmps=all -ppc-asm-full-reg-names -mcpu=pwr8 < %s | FileCheck %s --check-prefix=CHECK-LE \
 ; RUN:  --implicit-check-not cmpw --implicit-check-not cmpd --implicit-check-not cmpl
-@glob = local_unnamed_addr global i64 0, align 8
+@glob = dso_local local_unnamed_addr global i64 0, align 8
 
 ; Function Attrs: norecurse nounwind readnone
 define i64 @test_lllesll(i64 %a, i64 %b)  {
@@ -125,7 +125,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @test_lllesll_store(i64 %a, i64 %b) {
+define dso_local void @test_lllesll_store(i64 %a, i64 %b) {
 ; CHECK-LABEL: test_lllesll_store:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sradi r6, r4, 63
@@ -137,13 +137,12 @@ define void @test_lllesll_store(i64 %a, i64 %b) {
 ; CHECK-NEXT:    blr
 ; CHECK-BE-LABEL: test_lllesll_store:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis r5, r2, .LC0@toc@ha
 ; CHECK-BE-NEXT:    sradi r6, r4, 63
-; CHECK-BE-NEXT:    ld r5, .LC0@toc@l(r5)
+; CHECK-BE-NEXT:    addis r5, r2, glob@toc@ha
 ; CHECK-BE-NEXT:    subc r4, r4, r3
 ; CHECK-BE-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-BE-NEXT:    adde r3, r6, r3
-; CHECK-BE-NEXT:    std r3, 0(r5)
+; CHECK-BE-NEXT:    std r3, glob@toc@l(r5)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_lllesll_store:
@@ -163,7 +162,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @test_lllesll_sext_store(i64 %a, i64 %b) {
+define dso_local void @test_lllesll_sext_store(i64 %a, i64 %b) {
 ; CHECK-LABEL: test_lllesll_sext_store:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sradi r6, r4, 63
@@ -177,13 +176,12 @@ define void @test_lllesll_sext_store(i64 %a, i64 %b) {
 ; CHECK-BE-LABEL: test_lllesll_sext_store:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    sradi r6, r4, 63
-; CHECK-BE-NEXT:    addis r5, r2, .LC0@toc@ha
+; CHECK-BE-NEXT:    addis r5, r2, glob@toc@ha
 ; CHECK-BE-NEXT:    subc r4, r4, r3
 ; CHECK-BE-NEXT:    rldicl r3, r3, 1, 63
-; CHECK-BE-NEXT:    ld r4, .LC0@toc@l(r5)
 ; CHECK-BE-NEXT:    adde r3, r6, r3
 ; CHECK-BE-NEXT:    neg r3, r3
-; CHECK-BE-NEXT:    std r3, 0(r4)
+; CHECK-BE-NEXT:    std r3, glob@toc@l(r5)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_lllesll_sext_store:
@@ -204,7 +202,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @test_lllesll_z_store(i64 %a) {
+define dso_local void @test_lllesll_z_store(i64 %a) {
 ; CHECK-LABEL: test_lllesll_z_store:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi r5, r3, -1
@@ -215,12 +213,11 @@ define void @test_lllesll_z_store(i64 %a) {
 ; CHECK-NEXT:    blr
 ; CHECK-BE-LABEL: test_lllesll_z_store:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis r4, r2, .LC0@toc@ha
 ; CHECK-BE-NEXT:    addi r5, r3, -1
-; CHECK-BE-NEXT:    ld r4, .LC0@toc@l(r4)
+; CHECK-BE-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-BE-NEXT:    or r3, r5, r3
 ; CHECK-BE-NEXT:    rldicl r3, r3, 1, 63
-; CHECK-BE-NEXT:    std r3, 0(r4)
+; CHECK-BE-NEXT:    std r3, glob@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_lllesll_z_store:
@@ -239,7 +236,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @test_lllesll_sext_z_store(i64 %a) {
+define dso_local void @test_lllesll_sext_z_store(i64 %a) {
 ; CHECK-LABEL: test_lllesll_sext_z_store:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi r5, r3, -1
@@ -250,12 +247,11 @@ define void @test_lllesll_sext_z_store(i64 %a) {
 ; CHECK-NEXT:    blr
 ; CHECK-BE-LABEL: test_lllesll_sext_z_store:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis r4, r2, .LC0@toc@ha
 ; CHECK-BE-NEXT:    addi r5, r3, -1
-; CHECK-BE-NEXT:    ld r4, .LC0@toc@l(r4)
+; CHECK-BE-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-BE-NEXT:    or r3, r5, r3
 ; CHECK-BE-NEXT:    sradi r3, r3, 63
-; CHECK-BE-NEXT:    std r3, 0(r4)
+; CHECK-BE-NEXT:    std r3, glob@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_lllesll_sext_z_store:

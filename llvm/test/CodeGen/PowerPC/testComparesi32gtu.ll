@@ -26,19 +26,18 @@
 declare signext i32 @fn2(...) local_unnamed_addr #1
 
 ; Function Attrs: nounwind
-define i32 @testCompare1(%struct.tree_common* nocapture readonly %arg1) nounwind {
+define dso_local i32 @testCompare1(%struct.tree_common* nocapture readonly %arg1) nounwind {
 ; BE-LABEL: testCompare1:
 ; BE:       # %bb.0: # %entry
 ; BE-NEXT:    mflr r0
 ; BE-NEXT:    std r0, 16(r1)
 ; BE-NEXT:    stdu r1, -112(r1)
-; BE-NEXT:    addis r4, r2, .LC0@toc@ha
+; BE-NEXT:    addis r4, r2, testCompare1@toc@ha
 ; BE-NEXT:    lbz r3, 0(r3)
-; BE-NEXT:    ld r4, .LC0@toc@l(r4)
+; BE-NEXT:    lbz r4, testCompare1@toc@l(r4)
 ; BE-NEXT:    clrlwi r3, r3, 31
-; BE-NEXT:    clrldi r3, r3, 32
-; BE-NEXT:    lbz r4, 0(r4)
 ; BE-NEXT:    clrlwi r4, r4, 31
+; BE-NEXT:    clrldi r3, r3, 32
 ; BE-NEXT:    clrldi r4, r4, 32
 ; BE-NEXT:    sub r3, r3, r4
 ; BE-NEXT:    rldicl r3, r3, 1, 63
@@ -54,13 +53,12 @@ define i32 @testCompare1(%struct.tree_common* nocapture readonly %arg1) nounwind
 ; LE-NEXT:    mflr r0
 ; LE-NEXT:    std r0, 16(r1)
 ; LE-NEXT:    stdu r1, -32(r1)
-; LE-NEXT:    addis r4, r2, .LC0@toc@ha
+; LE-NEXT:    addis r4, r2, testCompare1@toc@ha
 ; LE-NEXT:    lbz r3, 0(r3)
-; LE-NEXT:    ld r4, .LC0@toc@l(r4)
+; LE-NEXT:    lbz r4, testCompare1@toc@l(r4)
 ; LE-NEXT:    clrlwi r3, r3, 31
-; LE-NEXT:    clrldi r3, r3, 32
-; LE-NEXT:    lbz r4, 0(r4)
 ; LE-NEXT:    clrlwi r4, r4, 31
+; LE-NEXT:    clrldi r3, r3, 32
 ; LE-NEXT:    clrldi r4, r4, 32
 ; LE-NEXT:    sub r3, r3, r4
 ; LE-NEXT:    rldicl r3, r3, 1, 63
@@ -88,11 +86,10 @@ define i32 @testCompare1(%struct.tree_common* nocapture readonly %arg1) nounwind
 ; CHECK-P10-BE-NEXT:    mflr r0
 ; CHECK-P10-BE-NEXT:    std r0, 16(r1)
 ; CHECK-P10-BE-NEXT:    stdu r1, -112(r1)
-; CHECK-P10-BE-NEXT:    addis r4, r2, .LC0@toc@ha
+; CHECK-P10-BE-NEXT:    addis r4, r2, testCompare1@toc@ha
 ; CHECK-P10-BE-NEXT:    lbz r3, 0(r3)
-; CHECK-P10-BE-NEXT:    ld r4, .LC0@toc@l(r4)
+; CHECK-P10-BE-NEXT:    lbz r4, testCompare1@toc@l(r4)
 ; CHECK-P10-BE-NEXT:    clrlwi r3, r3, 31
-; CHECK-P10-BE-NEXT:    lbz r4, 0(r4)
 ; CHECK-P10-BE-NEXT:    clrlwi r4, r4, 31
 ; CHECK-P10-BE-NEXT:    cmplw r4, r3
 ; CHECK-P10-BE-NEXT:    setbc r3, gt
@@ -108,13 +105,12 @@ define i32 @testCompare1(%struct.tree_common* nocapture readonly %arg1) nounwind
 ; CHECK-P10-CMP-LE-NEXT:    mflr r0
 ; CHECK-P10-CMP-LE-NEXT:    std r0, 16(r1)
 ; CHECK-P10-CMP-LE-NEXT:    stdu r1, -112(r1)
-; CHECK-P10-CMP-LE-NEXT:    addis r4, r2, .LC0@toc@ha
+; CHECK-P10-CMP-LE-NEXT:    addis r4, r2, testCompare1@toc@ha
 ; CHECK-P10-CMP-LE-NEXT:    lbz r3, 0(r3)
-; CHECK-P10-CMP-LE-NEXT:    ld r4, .LC0@toc@l(r4)
+; CHECK-P10-CMP-LE-NEXT:    lbz r4, testCompare1@toc@l(r4)
 ; CHECK-P10-CMP-LE-NEXT:    clrlwi r3, r3, 31
-; CHECK-P10-CMP-LE-NEXT:    clrldi r3, r3, 32
-; CHECK-P10-CMP-LE-NEXT:    lbz r4, 0(r4)
 ; CHECK-P10-CMP-LE-NEXT:    clrlwi r4, r4, 31
+; CHECK-P10-CMP-LE-NEXT:    clrldi r3, r3, 32
 ; CHECK-P10-CMP-LE-NEXT:    clrldi r4, r4, 32
 ; CHECK-P10-CMP-LE-NEXT:    sub r3, r3, r4
 ; CHECK-P10-CMP-LE-NEXT:    rldicl r3, r3, 1, 63
@@ -152,7 +148,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readnone
-define signext i32 @testCompare2(i32 zeroext %a, i32 zeroext %b) {
+define dso_local signext i32 @testCompare2(i32 zeroext %a, i32 zeroext %b) {
 ; CHECK-LABEL: testCompare2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    clrlwi r3, r3, 31
