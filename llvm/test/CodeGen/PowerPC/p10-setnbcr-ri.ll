@@ -12,12 +12,12 @@
 ; This codegen will be re-evaluated at a later time on whether or not it should
 ; be emitted on P10.
 
-@globalVal = common local_unnamed_addr global i8 0, align 1
-@globalVal2 = common local_unnamed_addr global i32 0, align 4
-@globalVal3 = common local_unnamed_addr global i64 0, align 8
-@globalVal4 = common local_unnamed_addr global i16 0, align 2
+@globalVal = common dso_local local_unnamed_addr global i8 0, align 1
+@globalVal2 = common dso_local local_unnamed_addr global i32 0, align 4
+@globalVal3 = common dso_local local_unnamed_addr global i64 0, align 8
+@globalVal4 = common dso_local local_unnamed_addr global i16 0, align 2
 
-define signext i32 @setnbcr1(i8 %a) {
+define dso_local signext i32 @setnbcr1(i8 %a) {
 ; CHECK-LABEL: setnbcr1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi. r3, r3, 255
@@ -29,7 +29,7 @@ entry:
   ret i32 %conv
 }
 
-define signext i32 @setnbcr2(i32 %a) {
+define dso_local signext i32 @setnbcr2(i32 %a) {
 ; CHECK-LABEL: setnbcr2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpwi r3, 0
@@ -41,7 +41,7 @@ entry:
   ret i32 %conv
 }
 
-define signext i32 @setnbcr3(i64 %a) {
+define dso_local signext i32 @setnbcr3(i64 %a) {
 ; CHECK-LABEL: setnbcr3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpdi r3, 0
@@ -53,7 +53,7 @@ entry:
   ret i32 %conv
 }
 
-define signext i32 @setnbcr4(i16 %a) {
+define dso_local signext i32 @setnbcr4(i16 %a) {
 ; CHECK-LABEL: setnbcr4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi. r3, r3, 65535
@@ -113,7 +113,7 @@ entry:
   ret i64 %conv
 }
 
-define void @setnbcr9(i8 %a) {
+define dso_local void @setnbcr9(i8 %a) {
 ; CHECK-LE-LABEL: setnbcr9:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    andi. r3, r3, 255
@@ -123,11 +123,10 @@ define void @setnbcr9(i8 %a) {
 ;
 ; CHECK-BE-LABEL: setnbcr9:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis r4, r2, .LC0@toc@ha
 ; CHECK-BE-NEXT:    andi. r3, r3, 255
+; CHECK-BE-NEXT:    addis r4, r2, globalVal@toc@ha
 ; CHECK-BE-NEXT:    setnbcr r3, eq
-; CHECK-BE-NEXT:    ld r4, .LC0@toc@l(r4)
-; CHECK-BE-NEXT:    stb r3, 0(r4)
+; CHECK-BE-NEXT:    stb r3, globalVal@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 entry:
   %cmp = icmp uge i8 %a, 1
@@ -136,7 +135,7 @@ entry:
   ret void
 }
 
-define void @setnbcr10(i32 %a) {
+define dso_local void @setnbcr10(i32 %a) {
 ; CHECK-LE-LABEL: setnbcr10:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    cmpwi r3, 0
@@ -146,11 +145,10 @@ define void @setnbcr10(i32 %a) {
 ;
 ; CHECK-BE-LABEL: setnbcr10:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis r4, r2, .LC1@toc@ha
 ; CHECK-BE-NEXT:    cmpwi r3, 0
-; CHECK-BE-NEXT:    ld r4, .LC1@toc@l(r4)
+; CHECK-BE-NEXT:    addis r4, r2, globalVal2@toc@ha
 ; CHECK-BE-NEXT:    setnbcr r3, eq
-; CHECK-BE-NEXT:    stw r3, 0(r4)
+; CHECK-BE-NEXT:    stw r3, globalVal2@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 entry:
   %cmp = icmp uge i32 %a, 1
@@ -159,7 +157,7 @@ entry:
   ret void
 }
 
-define void @setnbcr11(i64 %a) {
+define dso_local void @setnbcr11(i64 %a) {
 ; CHECK-LE-LABEL: setnbcr11:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    cmpdi r3, 0
@@ -169,11 +167,10 @@ define void @setnbcr11(i64 %a) {
 ;
 ; CHECK-BE-LABEL: setnbcr11:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis r4, r2, .LC2@toc@ha
 ; CHECK-BE-NEXT:    cmpdi r3, 0
-; CHECK-BE-NEXT:    ld r4, .LC2@toc@l(r4)
+; CHECK-BE-NEXT:    addis r4, r2, globalVal3@toc@ha
 ; CHECK-BE-NEXT:    setnbcr r3, eq
-; CHECK-BE-NEXT:    std r3, 0(r4)
+; CHECK-BE-NEXT:    std r3, globalVal3@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 entry:
   %cmp = icmp uge i64 %a, 1
@@ -182,7 +179,7 @@ entry:
   ret void
 }
 
-define void @setnbcr12(i16 %a) {
+define dso_local void @setnbcr12(i16 %a) {
 ; CHECK-LE-LABEL: setnbcr12:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    andi. r3, r3, 65535
@@ -192,11 +189,10 @@ define void @setnbcr12(i16 %a) {
 ;
 ; CHECK-BE-LABEL: setnbcr12:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis r4, r2, .LC3@toc@ha
 ; CHECK-BE-NEXT:    andi. r3, r3, 65535
+; CHECK-BE-NEXT:    addis r4, r2, globalVal4@toc@ha
 ; CHECK-BE-NEXT:    setnbcr r3, eq
-; CHECK-BE-NEXT:    ld r4, .LC3@toc@l(r4)
-; CHECK-BE-NEXT:    sth r3, 0(r4)
+; CHECK-BE-NEXT:    sth r3, globalVal4@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 entry:
   %cmp = icmp uge i16 %a, 1
@@ -205,7 +201,7 @@ entry:
   ret void
 }
 
-define signext i32 @setnbcr13(i8 %a) {
+define dso_local signext i32 @setnbcr13(i8 %a) {
 ; CHECK-LABEL: setnbcr13:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    clrlwi r3, r3, 24
@@ -218,7 +214,7 @@ entry:
   ret i32 %conv
 }
 
-define signext i32 @setnbcr14(i32 %a) {
+define dso_local signext i32 @setnbcr14(i32 %a) {
 ; CHECK-LABEL: setnbcr14:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpwi r3, 1
@@ -230,7 +226,7 @@ entry:
   ret i32 %conv
 }
 
-define signext i32 @setnbcr15(i64 %a) {
+define dso_local signext i32 @setnbcr15(i64 %a) {
 ; CHECK-LABEL: setnbcr15:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpdi r3, 1
@@ -242,7 +238,7 @@ entry:
   ret i32 %conv
 }
 
-define signext i32 @setnbcr16(i16 %a) {
+define dso_local signext i32 @setnbcr16(i16 %a) {
 ; CHECK-LABEL: setnbcr16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    clrlwi r3, r3, 16
@@ -305,7 +301,7 @@ entry:
   ret i64 %conv
 }
 
-define void @setnbcr21(i8 %a) {
+define dso_local void @setnbcr21(i8 %a) {
 ; CHECK-LE-LABEL: setnbcr21:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    clrlwi r3, r3, 24
@@ -316,12 +312,11 @@ define void @setnbcr21(i8 %a) {
 ;
 ; CHECK-BE-LABEL: setnbcr21:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis r4, r2, .LC0@toc@ha
 ; CHECK-BE-NEXT:    clrlwi r3, r3, 24
-; CHECK-BE-NEXT:    ld r4, .LC0@toc@l(r4)
+; CHECK-BE-NEXT:    addis r4, r2, globalVal@toc@ha
 ; CHECK-BE-NEXT:    cmpwi r3, 1
 ; CHECK-BE-NEXT:    setnbcr r3, eq
-; CHECK-BE-NEXT:    stb r3, 0(r4)
+; CHECK-BE-NEXT:    stb r3, globalVal@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 entry:
   %cmp = icmp ne i8 %a, 1
@@ -330,7 +325,7 @@ entry:
   ret void
 }
 
-define void @setnbcr22(i32 %a) {
+define dso_local void @setnbcr22(i32 %a) {
 ; CHECK-LE-LABEL: setnbcr22:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    cmpwi r3, 1
@@ -340,11 +335,10 @@ define void @setnbcr22(i32 %a) {
 ;
 ; CHECK-BE-LABEL: setnbcr22:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis r4, r2, .LC1@toc@ha
 ; CHECK-BE-NEXT:    cmpwi r3, 1
-; CHECK-BE-NEXT:    ld r4, .LC1@toc@l(r4)
+; CHECK-BE-NEXT:    addis r4, r2, globalVal2@toc@ha
 ; CHECK-BE-NEXT:    setnbcr r3, eq
-; CHECK-BE-NEXT:    stw r3, 0(r4)
+; CHECK-BE-NEXT:    stw r3, globalVal2@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 entry:
   %cmp = icmp ne i32 %a, 1
@@ -353,7 +347,7 @@ entry:
   ret void
 }
 
-define void @setnbcr23(i64 %a) {
+define dso_local void @setnbcr23(i64 %a) {
 ; CHECK-LE-LABEL: setnbcr23:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    cmpdi r3, 1
@@ -363,11 +357,10 @@ define void @setnbcr23(i64 %a) {
 ;
 ; CHECK-BE-LABEL: setnbcr23:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis r4, r2, .LC2@toc@ha
 ; CHECK-BE-NEXT:    cmpdi r3, 1
-; CHECK-BE-NEXT:    ld r4, .LC2@toc@l(r4)
+; CHECK-BE-NEXT:    addis r4, r2, globalVal3@toc@ha
 ; CHECK-BE-NEXT:    setnbcr r3, eq
-; CHECK-BE-NEXT:    std r3, 0(r4)
+; CHECK-BE-NEXT:    std r3, globalVal3@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 entry:
   %cmp = icmp ne i64 %a, 1
@@ -376,7 +369,7 @@ entry:
   ret void
 }
 
-define void @setnbcr24(i16 %a) {
+define dso_local void @setnbcr24(i16 %a) {
 ; CHECK-LE-LABEL: setnbcr24:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    clrlwi r3, r3, 16
@@ -387,12 +380,11 @@ define void @setnbcr24(i16 %a) {
 ;
 ; CHECK-BE-LABEL: setnbcr24:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis r4, r2, .LC3@toc@ha
 ; CHECK-BE-NEXT:    clrlwi r3, r3, 16
-; CHECK-BE-NEXT:    ld r4, .LC3@toc@l(r4)
+; CHECK-BE-NEXT:    addis r4, r2, globalVal4@toc@ha
 ; CHECK-BE-NEXT:    cmpwi r3, 1
 ; CHECK-BE-NEXT:    setnbcr r3, eq
-; CHECK-BE-NEXT:    sth r3, 0(r4)
+; CHECK-BE-NEXT:    sth r3, globalVal4@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 entry:
   %cmp = icmp ne i16 %a, 1

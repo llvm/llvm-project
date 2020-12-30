@@ -12,12 +12,12 @@
 ; This codegen will be re-evaluated at a later time on whether or not it should
 ; be emitted on P10.
 
-@globalVal = common local_unnamed_addr global i8 0, align 1
-@globalVal2 = common local_unnamed_addr global i32 0, align 4
-@globalVal3 = common local_unnamed_addr global i64 0, align 8
-@globalVal4 = common local_unnamed_addr global i16 0, align 2
+@globalVal = common dso_local local_unnamed_addr global i8 0, align 1
+@globalVal2 = common dso_local local_unnamed_addr global i32 0, align 4
+@globalVal3 = common dso_local local_unnamed_addr global i64 0, align 8
+@globalVal4 = common dso_local local_unnamed_addr global i16 0, align 2
 
-define signext i32 @setbc1(i8 %a) {
+define dso_local signext i32 @setbc1(i8 %a) {
 ; CHECK-LABEL: setbc1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    extsb r3, r3
@@ -30,7 +30,7 @@ entry:
   ret i32 %conv
 }
 
-define signext i32 @setbc2(i32 %a) {
+define dso_local signext i32 @setbc2(i32 %a) {
 ; CHECK-LABEL: setbc2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpwi r3, 1
@@ -42,7 +42,7 @@ entry:
   ret i32 %conv
 }
 
-define signext i32 @setbc3(i64 %a) {
+define dso_local signext i32 @setbc3(i64 %a) {
 ; CHECK-LABEL: setbc3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpdi r3, 1
@@ -54,7 +54,7 @@ entry:
   ret i32 %conv
 }
 
-define signext i32 @setbc4(i16 %a) {
+define dso_local signext i32 @setbc4(i16 %a) {
 ; CHECK-LABEL: setbc4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    extsh r3, r3
@@ -117,7 +117,7 @@ entry:
   ret i64 %conv
 }
 
-define void @setbc9(i8 %a) {
+define dso_local void @setbc9(i8 %a) {
 ; CHECK-LE-LABEL: setbc9:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    extsb r3, r3
@@ -128,12 +128,11 @@ define void @setbc9(i8 %a) {
 ;
 ; CHECK-BE-LABEL: setbc9:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis r4, r2, .LC0@toc@ha
 ; CHECK-BE-NEXT:    extsb r3, r3
-; CHECK-BE-NEXT:    ld r4, .LC0@toc@l(r4)
+; CHECK-BE-NEXT:    addis r4, r2, globalVal@toc@ha
 ; CHECK-BE-NEXT:    cmpwi r3, 1
 ; CHECK-BE-NEXT:    setbc r3, lt
-; CHECK-BE-NEXT:    stb r3, 0(r4)
+; CHECK-BE-NEXT:    stb r3, globalVal@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 entry:
   %cmp = icmp slt i8 %a, 1
@@ -142,7 +141,7 @@ entry:
   ret void
 }
 
-define void @setbc10(i32 %a) {
+define dso_local void @setbc10(i32 %a) {
 ; CHECK-LE-LABEL: setbc10:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    cmpwi r3, 1
@@ -152,11 +151,10 @@ define void @setbc10(i32 %a) {
 ;
 ; CHECK-BE-LABEL: setbc10:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis r4, r2, .LC1@toc@ha
 ; CHECK-BE-NEXT:    cmpwi r3, 1
-; CHECK-BE-NEXT:    ld r4, .LC1@toc@l(r4)
+; CHECK-BE-NEXT:    addis r4, r2, globalVal2@toc@ha
 ; CHECK-BE-NEXT:    setbc r3, lt
-; CHECK-BE-NEXT:    stw r3, 0(r4)
+; CHECK-BE-NEXT:    stw r3, globalVal2@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 entry:
   %cmp = icmp slt i32 %a, 1
@@ -165,7 +163,7 @@ entry:
   ret void
 }
 
-define void @setbc11(i64 %a) {
+define dso_local void @setbc11(i64 %a) {
 ; CHECK-LE-LABEL: setbc11:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    cmpdi r3, 1
@@ -175,11 +173,10 @@ define void @setbc11(i64 %a) {
 ;
 ; CHECK-BE-LABEL: setbc11:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis r4, r2, .LC2@toc@ha
 ; CHECK-BE-NEXT:    cmpdi r3, 1
-; CHECK-BE-NEXT:    ld r4, .LC2@toc@l(r4)
+; CHECK-BE-NEXT:    addis r4, r2, globalVal3@toc@ha
 ; CHECK-BE-NEXT:    setbc r3, lt
-; CHECK-BE-NEXT:    std r3, 0(r4)
+; CHECK-BE-NEXT:    std r3, globalVal3@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 entry:
   %cmp = icmp slt i64 %a, 1
@@ -188,7 +185,7 @@ entry:
   ret void
 }
 
-define void @setbc12(i16 %a) {
+define dso_local void @setbc12(i16 %a) {
 ; CHECK-LE-LABEL: setbc12:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    extsh r3, r3
@@ -199,12 +196,11 @@ define void @setbc12(i16 %a) {
 ;
 ; CHECK-BE-LABEL: setbc12:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis r4, r2, .LC3@toc@ha
 ; CHECK-BE-NEXT:    extsh r3, r3
-; CHECK-BE-NEXT:    ld r4, .LC3@toc@l(r4)
+; CHECK-BE-NEXT:    addis r4, r2, globalVal4@toc@ha
 ; CHECK-BE-NEXT:    cmpwi r3, 1
 ; CHECK-BE-NEXT:    setbc r3, lt
-; CHECK-BE-NEXT:    sth r3, 0(r4)
+; CHECK-BE-NEXT:    sth r3, globalVal4@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 entry:
   %cmp = icmp slt i16 %a, 1
@@ -213,7 +209,7 @@ entry:
   ret void
 }
 
-define signext i32 @setbc13(i8 %a) {
+define dso_local signext i32 @setbc13(i8 %a) {
 ; CHECK-LABEL: setbc13:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    extsb r3, r3
@@ -226,7 +222,7 @@ entry:
   ret i32 %conv
 }
 
-define signext i32 @setbc14(i32 %a) {
+define dso_local signext i32 @setbc14(i32 %a) {
 ; CHECK-LABEL: setbc14:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpwi r3, 1
@@ -238,7 +234,7 @@ entry:
   ret i32 %conv
 }
 
-define signext i32 @setbc15(i64 %a) {
+define dso_local signext i32 @setbc15(i64 %a) {
 ; CHECK-LABEL: setbc15:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpdi r3, 1
@@ -250,7 +246,7 @@ entry:
   ret i32 %conv
 }
 
-define signext i32 @setbc16(i16 %a) {
+define dso_local signext i32 @setbc16(i16 %a) {
 ; CHECK-LABEL: setbc16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    extsh r3, r3
@@ -313,7 +309,7 @@ entry:
   ret i64 %conv
 }
 
-define void @setbc21(i8 %a) {
+define dso_local void @setbc21(i8 %a) {
 ; CHECK-LE-LABEL: setbc21:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    extsb r3, r3
@@ -324,12 +320,11 @@ define void @setbc21(i8 %a) {
 ;
 ; CHECK-BE-LABEL: setbc21:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis r4, r2, .LC0@toc@ha
 ; CHECK-BE-NEXT:    extsb r3, r3
-; CHECK-BE-NEXT:    ld r4, .LC0@toc@l(r4)
+; CHECK-BE-NEXT:    addis r4, r2, globalVal@toc@ha
 ; CHECK-BE-NEXT:    cmpwi r3, 1
 ; CHECK-BE-NEXT:    setbc r3, gt
-; CHECK-BE-NEXT:    stb r3, 0(r4)
+; CHECK-BE-NEXT:    stb r3, globalVal@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 entry:
   %cmp = icmp sgt i8 %a, 1
@@ -338,7 +333,7 @@ entry:
   ret void
 }
 
-define void @setbc22(i32 %a) {
+define dso_local void @setbc22(i32 %a) {
 ; CHECK-LE-LABEL: setbc22:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    cmpwi r3, 1
@@ -348,11 +343,10 @@ define void @setbc22(i32 %a) {
 ;
 ; CHECK-BE-LABEL: setbc22:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis r4, r2, .LC1@toc@ha
 ; CHECK-BE-NEXT:    cmpwi r3, 1
-; CHECK-BE-NEXT:    ld r4, .LC1@toc@l(r4)
+; CHECK-BE-NEXT:    addis r4, r2, globalVal2@toc@ha
 ; CHECK-BE-NEXT:    setbc r3, gt
-; CHECK-BE-NEXT:    stw r3, 0(r4)
+; CHECK-BE-NEXT:    stw r3, globalVal2@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 entry:
   %cmp = icmp sgt i32 %a, 1
@@ -361,7 +355,7 @@ entry:
   ret void
 }
 
-define void @setbc23(i64 %a) {
+define dso_local void @setbc23(i64 %a) {
 ; CHECK-LE-LABEL: setbc23:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    cmpdi r3, 1
@@ -371,11 +365,10 @@ define void @setbc23(i64 %a) {
 ;
 ; CHECK-BE-LABEL: setbc23:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis r4, r2, .LC2@toc@ha
 ; CHECK-BE-NEXT:    cmpdi r3, 1
-; CHECK-BE-NEXT:    ld r4, .LC2@toc@l(r4)
+; CHECK-BE-NEXT:    addis r4, r2, globalVal3@toc@ha
 ; CHECK-BE-NEXT:    setbc r3, gt
-; CHECK-BE-NEXT:    std r3, 0(r4)
+; CHECK-BE-NEXT:    std r3, globalVal3@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 entry:
   %cmp = icmp sgt i64 %a, 1
@@ -384,7 +377,7 @@ entry:
   ret void
 }
 
-define void @setbc24(i16 %a) {
+define dso_local void @setbc24(i16 %a) {
 ; CHECK-LE-LABEL: setbc24:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    extsh r3, r3
@@ -395,12 +388,11 @@ define void @setbc24(i16 %a) {
 ;
 ; CHECK-BE-LABEL: setbc24:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis r4, r2, .LC3@toc@ha
 ; CHECK-BE-NEXT:    extsh r3, r3
-; CHECK-BE-NEXT:    ld r4, .LC3@toc@l(r4)
+; CHECK-BE-NEXT:    addis r4, r2, globalVal4@toc@ha
 ; CHECK-BE-NEXT:    cmpwi r3, 1
 ; CHECK-BE-NEXT:    setbc r3, gt
-; CHECK-BE-NEXT:    sth r3, 0(r4)
+; CHECK-BE-NEXT:    sth r3, globalVal4@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 entry:
   %cmp = icmp sgt i16 %a, 1
@@ -409,7 +401,7 @@ entry:
   ret void
 }
 
-define signext i32 @setbc25(i8 %a) {
+define dso_local signext i32 @setbc25(i8 %a) {
 ; CHECK-LABEL: setbc25:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    clrlwi r3, r3, 24
@@ -422,7 +414,7 @@ entry:
   ret i32 %conv
 }
 
-define signext i32 @setbc26(i32 %a) {
+define dso_local signext i32 @setbc26(i32 %a) {
 ; CHECK-LABEL: setbc26:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpwi r3, 1
@@ -434,7 +426,7 @@ entry:
   ret i32 %conv
 }
 
-define signext i32 @setbc27(i64 %a) {
+define dso_local signext i32 @setbc27(i64 %a) {
 ; CHECK-LABEL: setbc27:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpdi r3, 1
@@ -446,7 +438,7 @@ entry:
   ret i32 %conv
 }
 
-define signext i32 @setbc28(i16 %a) {
+define dso_local signext i32 @setbc28(i16 %a) {
 ; CHECK-LABEL: setbc28:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    clrlwi r3, r3, 16
@@ -509,7 +501,7 @@ entry:
   ret i64 %conv
 }
 
-define void @setbc33(i8 %a) {
+define dso_local void @setbc33(i8 %a) {
 ; CHECK-LE-LABEL: setbc33:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    clrlwi r3, r3, 24
@@ -520,12 +512,11 @@ define void @setbc33(i8 %a) {
 ;
 ; CHECK-BE-LABEL: setbc33:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis r4, r2, .LC0@toc@ha
 ; CHECK-BE-NEXT:    clrlwi r3, r3, 24
-; CHECK-BE-NEXT:    ld r4, .LC0@toc@l(r4)
+; CHECK-BE-NEXT:    addis r4, r2, globalVal@toc@ha
 ; CHECK-BE-NEXT:    cmpwi r3, 1
 ; CHECK-BE-NEXT:    setbc r3, eq
-; CHECK-BE-NEXT:    stb r3, 0(r4)
+; CHECK-BE-NEXT:    stb r3, globalVal@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 entry:
   %cmp = icmp eq i8 %a, 1
@@ -534,7 +525,7 @@ entry:
   ret void
 }
 
-define void @setbc34(i32 %a) {
+define dso_local void @setbc34(i32 %a) {
 ; CHECK-LE-LABEL: setbc34:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    cmpwi r3, 1
@@ -544,11 +535,10 @@ define void @setbc34(i32 %a) {
 ;
 ; CHECK-BE-LABEL: setbc34:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis r4, r2, .LC1@toc@ha
 ; CHECK-BE-NEXT:    cmpwi r3, 1
-; CHECK-BE-NEXT:    ld r4, .LC1@toc@l(r4)
+; CHECK-BE-NEXT:    addis r4, r2, globalVal2@toc@ha
 ; CHECK-BE-NEXT:    setbc r3, eq
-; CHECK-BE-NEXT:    stw r3, 0(r4)
+; CHECK-BE-NEXT:    stw r3, globalVal2@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 entry:
   %cmp = icmp eq i32 %a, 1
@@ -557,7 +547,7 @@ entry:
   ret void
 }
 
-define void @setbc35(i64 %a) {
+define dso_local void @setbc35(i64 %a) {
 ; CHECK-LE-LABEL: setbc35:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    cmpdi r3, 1
@@ -567,11 +557,10 @@ define void @setbc35(i64 %a) {
 ;
 ; CHECK-BE-LABEL: setbc35:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis r4, r2, .LC2@toc@ha
 ; CHECK-BE-NEXT:    cmpdi r3, 1
-; CHECK-BE-NEXT:    ld r4, .LC2@toc@l(r4)
+; CHECK-BE-NEXT:    addis r4, r2, globalVal3@toc@ha
 ; CHECK-BE-NEXT:    setbc r3, eq
-; CHECK-BE-NEXT:    std r3, 0(r4)
+; CHECK-BE-NEXT:    std r3, globalVal3@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 entry:
   %cmp = icmp eq i64 %a, 1
@@ -580,7 +569,7 @@ entry:
   ret void
 }
 
-define void @setbc36(i16 %a) {
+define dso_local void @setbc36(i16 %a) {
 ; CHECK-LE-LABEL: setbc36:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    clrlwi r3, r3, 16
@@ -591,12 +580,11 @@ define void @setbc36(i16 %a) {
 ;
 ; CHECK-BE-LABEL: setbc36:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis r4, r2, .LC3@toc@ha
 ; CHECK-BE-NEXT:    clrlwi r3, r3, 16
-; CHECK-BE-NEXT:    ld r4, .LC3@toc@l(r4)
+; CHECK-BE-NEXT:    addis r4, r2, globalVal4@toc@ha
 ; CHECK-BE-NEXT:    cmpwi r3, 1
 ; CHECK-BE-NEXT:    setbc r3, eq
-; CHECK-BE-NEXT:    sth r3, 0(r4)
+; CHECK-BE-NEXT:    sth r3, globalVal4@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 entry:
   %cmp = icmp eq i16 %a, 1
@@ -605,7 +593,7 @@ entry:
   ret void
 }
 
-define signext i32 @setbc37(i64 %a) {
+define dso_local signext i32 @setbc37(i64 %a) {
 ; CHECK-LABEL: setbc37:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpldi r3, 1
@@ -629,7 +617,7 @@ entry:
   ret i64 %conv
 }
 
-define void @setbc39(i64 %a) {
+define dso_local void @setbc39(i64 %a) {
 ; CHECK-LE-LABEL: setbc39:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    cmpldi r3, 1
@@ -639,11 +627,10 @@ define void @setbc39(i64 %a) {
 ;
 ; CHECK-BE-LABEL: setbc39:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis r4, r2, .LC2@toc@ha
 ; CHECK-BE-NEXT:    cmpldi r3, 1
-; CHECK-BE-NEXT:    ld r4, .LC2@toc@l(r4)
+; CHECK-BE-NEXT:    addis r4, r2, globalVal3@toc@ha
 ; CHECK-BE-NEXT:    setbc r3, gt
-; CHECK-BE-NEXT:    std r3, 0(r4)
+; CHECK-BE-NEXT:    std r3, globalVal3@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 entry:
   %cmp = icmp ugt i64 %a, 1

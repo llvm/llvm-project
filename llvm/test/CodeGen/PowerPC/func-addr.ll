@@ -1,7 +1,7 @@
 ; RUN: llc -relocation-model=static -verify-machineinstrs -mtriple powerpc64-linux < %s | FileCheck %s
 ; RUN: llc -relocation-model=static -verify-machineinstrs -O0 -mtriple powerpc64-linux < %s | FileCheck %s
 
-define void @foo()  {
+define dso_local void @foo()  {
   ret void
 }
 declare i32 @bar(i8*)

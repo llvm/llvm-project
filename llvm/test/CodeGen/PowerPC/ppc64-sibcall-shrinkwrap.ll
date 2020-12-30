@@ -6,7 +6,7 @@
 %"class.clang::NamedDecl" = type { i32 }
 declare void @__assert_fail();
 
-define i8 @_ZNK5clang9NamedDecl23getLinkageAndVisibilityEv(
+define dso_local i8 @_ZNK5clang9NamedDecl23getLinkageAndVisibilityEv(
     %"class.clang::NamedDecl"* %this) {
 entry:
   %tobool = icmp eq %"class.clang::NamedDecl"* %this, null
@@ -39,7 +39,7 @@ exit:
 ; CHECK-SCO-ONLY: bl __assert_fail
 }
 
-define fastcc i8 @LVComputationKind(
+define dso_local fastcc i8 @LVComputationKind(
     %"class.clang::NamedDecl"* %D,
     i32 %computation) {
   ret i8 0
