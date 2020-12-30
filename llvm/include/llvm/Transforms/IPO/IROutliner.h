@@ -258,6 +258,10 @@ private:
                                     std::vector<Function *> &FuncsToRemove,
                                     unsigned &OutlinedFunctionNum);
 
+  /// If true, enables us to outline from functions that have LinkOnceFromODR
+  /// linkages.
+  bool OutlineFromLinkODRs = false;
+
   /// If false, we do not worry if the cost is greater than the benefit.  This
   /// is for debugging and testing, so that we can test small cases to ensure
   /// that the outlining is being done correctly.
