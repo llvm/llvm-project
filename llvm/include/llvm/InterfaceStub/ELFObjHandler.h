@@ -16,7 +16,6 @@
 #include "llvm/InterfaceStub/ELFStub.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ELFTypes.h"
-#include "llvm/Support/FileSystem.h"
 
 namespace llvm {
 
@@ -36,10 +35,8 @@ Expected<std::unique_ptr<ELFStub>> readELFFile(MemoryBufferRef Buf);
 /// @param FilePath File path for writing the ELF binary.
 /// @param Stub Source ELFStub to generate a binary ELF stub from.
 /// @param OutputFormat Target ELFType to write binary as.
-/// @param WriteIfChanged Whether or not to preserve timestamp if
-///        the output stays the same.
 Error writeBinaryStub(StringRef FilePath, const ELFStub &Stub,
-                      ELFTarget OutputFormat, bool WriteIfChanged = false);
+                      ELFTarget OutputFormat);
 
 } // end namespace elfabi
 } // end namespace llvm
