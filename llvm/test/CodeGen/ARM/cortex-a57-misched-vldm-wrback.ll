@@ -2,9 +2,9 @@
 ; RUN: llc < %s -mtriple=armv8r-eabi -mcpu=cortex-a57 -mattr=use-misched -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s
 ; 
 
-@a = global double 0.0, align 4
-@b = global double 0.0, align 4
-@c = global double 0.0, align 4
+@a = dso_local global double 0.0, align 4
+@b = dso_local global double 0.0, align 4
+@c = dso_local global double 0.0, align 4
 
 ; CHECK:       ********** MI Scheduling **********
 ; We need second, post-ra scheduling to have VLDM instruction combined from single-loads
@@ -23,7 +23,7 @@
 ; CHECK-SAME:  Latency=0
 ; CHECK-NEXT:  Data
 ; CHECK-SAME:  Latency=0
-define i32 @bar(i32* %iptr) minsize optsize {
+define dso_local i32 @bar(i32* %iptr) minsize optsize {
   %1 = load double, double* @a, align 8
   %2 = load double, double* @b, align 8
   %3 = load double, double* @c, align 8

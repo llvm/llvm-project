@@ -3,9 +3,9 @@
 ; RUN: llc -mtriple armv7---eabi -mattr=+long-calls -filetype asm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-LONG
 ; RUN: llc -mtriple thumbv7---eabi -mattr=+long-calls -filetype asm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-LONG
 
-@i = thread_local local_unnamed_addr global i32 0, align 4
+@i = dso_local thread_local local_unnamed_addr global i32 0, align 4
 
-define i32 @f() local_unnamed_addr {
+define dso_local i32 @f() local_unnamed_addr {
 entry:
   %0 = load i32, i32* @i, align 4
   ret i32 %0
