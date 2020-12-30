@@ -505,8 +505,6 @@ private:
   void verifySwiftErrorCall(CallBase &Call, const Value *SwiftErrorVal);
   void verifySwiftErrorValue(const Value *SwiftErrorVal);
   void verifyMustTailCall(CallInst &CI);
-  bool performTypeCheck(Intrinsic::ID ID, Function *F, Type *Ty, int VT,
-                        unsigned ArgNo, std::string &Suffix);
   bool verifyAttributeCount(AttributeList Attrs, unsigned Params);
   void verifyAttributeTypes(AttributeSet Attrs, bool IsFunction,
                             const Value *V);
