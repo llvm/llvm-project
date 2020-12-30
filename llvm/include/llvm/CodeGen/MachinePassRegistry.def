@@ -44,6 +44,7 @@ FUNCTION_PASS("ee-instrument", EntryExitInstrumenterPass, (false))
 FUNCTION_PASS("post-inline-ee-instrument", EntryExitInstrumenterPass, (true))
 FUNCTION_PASS("expand-reductions", ExpandReductionsPass, ())
 FUNCTION_PASS("lowerinvoke", LowerInvokePass, ())
+FUNCTION_PASS("scalarize-masked-mem-intrin", ScalarizeMaskedMemIntrinPass, ())
 FUNCTION_PASS("verify", VerifierPass, ())
 #undef FUNCTION_PASS
 
@@ -103,7 +104,6 @@ MACHINE_FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis, (
 DUMMY_FUNCTION_PASS("expandmemcmp", ExpandMemCmpPass, ())
 DUMMY_FUNCTION_PASS("gc-lowering", GCLoweringPass, ())
 DUMMY_FUNCTION_PASS("shadow-stack-gc-lowering", ShadowStackGCLoweringPass, ())
-DUMMY_FUNCTION_PASS("scalarize-masked-mem-intrin", ScalarizeMaskedMemIntrinPass, ())
 DUMMY_FUNCTION_PASS("sjljehprepare", SjLjEHPreparePass, ())
 DUMMY_FUNCTION_PASS("dwarfehprepare", DwarfEHPass, ())
 DUMMY_FUNCTION_PASS("winehprepare", WinEHPass, ())
