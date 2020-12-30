@@ -334,7 +334,6 @@ class LowerMatrixIntrinsics {
     Value *extractVector(unsigned I, unsigned J, unsigned NumElts,
                          IRBuilder<> &Builder) const {
       Value *Vec = isColumnMajor() ? getColumn(J) : getRow(I);
-      Value *Undef = UndefValue::get(Vec->getType());
       return Builder.CreateShuffleVector(
           Vec, createSequentialMask(isColumnMajor() ? I : J, NumElts, 0),
           "block");
@@ -447,7 +446,6 @@ public:
 
     // Otherwise split MatrixVal.
     SmallVector<Value *, 16> SplitVecs;
-    Value *Undef = UndefValue::get(VType);
     for (unsigned MaskStart = 0;
          MaskStart < cast<FixedVectorType>(VType)->getNumElements();
          MaskStart += SI.getStride()) {
@@ -941,7 +939,6 @@ public:
     unsigned NumElts = cast<FixedVectorType>(Col->getType())->getNumElements();
     assert(NumElts >= BlockNumElts && "Too few elements for current block");
 
-    Value *Undef = UndefValue::get(Block->getType());
     Block = Builder.CreateShuffleVector(
         Block, createSequentialMask(0, BlockNumElts, NumElts - BlockNumElts));
 
