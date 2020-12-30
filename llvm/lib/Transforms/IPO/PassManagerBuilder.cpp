@@ -73,15 +73,15 @@ cl::opt<bool> RunNewGVN("enable-newgvn", cl::init(false), cl::Hidden,
 
 // Experimental option to use CFL-AA
 enum class CFLAAType { None, Steensgaard, Andersen, Both };
-static cl::opt<CFLAAType>
-    UseCFLAA("use-cfl-aa", cl::init(CFLAAType::None), cl::Hidden,
+static cl::opt<::CFLAAType>
+    UseCFLAA("use-cfl-aa", cl::init(::CFLAAType::None), cl::Hidden,
              cl::desc("Enable the new, experimental CFL alias analysis"),
-             cl::values(clEnumValN(CFLAAType::None, "none", "Disable CFL-AA"),
-                        clEnumValN(CFLAAType::Steensgaard, "steens",
+             cl::values(clEnumValN(::CFLAAType::None, "none", "Disable CFL-AA"),
+                        clEnumValN(::CFLAAType::Steensgaard, "steens",
                                    "Enable unification-based CFL-AA"),
-                        clEnumValN(CFLAAType::Andersen, "anders",
+                        clEnumValN(::CFLAAType::Andersen, "anders",
                                    "Enable inclusion-based CFL-AA"),
-                        clEnumValN(CFLAAType::Both, "both",
+                        clEnumValN(::CFLAAType::Both, "both",
                                    "Enable both variants of CFL-AA")));
 
 static cl::opt<bool> EnableLoopInterchange(
@@ -276,13 +276,13 @@ void PassManagerBuilder::addExtensionsToPM(ExtensionPointTy ETy,
 void PassManagerBuilder::addInitialAliasAnalysisPasses(
     legacy::PassManagerBase &PM) const {
   switch (UseCFLAA) {
-  case CFLAAType::Steensgaard:
+  case ::CFLAAType::Steensgaard:
     PM.add(createCFLSteensAAWrapperPass());
     break;
-  case CFLAAType::Andersen:
+  case ::CFLAAType::Andersen:
     PM.add(createCFLAndersAAWrapperPass());
     break;
-  case CFLAAType::Both:
+  case ::CFLAAType::Both:
     PM.add(createCFLSteensAAWrapperPass());
     PM.add(createCFLAndersAAWrapperPass());
     break;
