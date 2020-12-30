@@ -499,8 +499,9 @@ void *__kmp_itt_barrier_object(int gtid, int bt, int set_name,
     // More strong condition: make sure we have room at least for for two
     // different ids (for each barrier type).
     object = reinterpret_cast<void *>(
-        kmp_uintptr_t(team) +
-        counter % (sizeof(kmp_team_t) / bs_last_barrier) * bs_last_barrier +
+        (kmp_uintptr_t)(team) +
+        (kmp_uintptr_t)counter % (sizeof(kmp_team_t) / bs_last_barrier) *
+            bs_last_barrier +
         bt);
     KMP_ITT_DEBUG_LOCK();
     KMP_ITT_DEBUG_PRINT("[bar obj] type=%d, counter=%lld, object=%p\n", bt,

@@ -77,7 +77,7 @@ void __kmp_str_buf_clear(kmp_str_buf_t *buffer) {
   KMP_STR_BUF_INVARIANT(buffer);
 } // __kmp_str_buf_clear
 
-void __kmp_str_buf_reserve(kmp_str_buf_t *buffer, int size) {
+void __kmp_str_buf_reserve(kmp_str_buf_t *buffer, size_t size) {
   KMP_STR_BUF_INVARIANT(buffer);
   KMP_DEBUG_ASSERT(size >= 0);
 
@@ -131,14 +131,15 @@ void __kmp_str_buf_free(kmp_str_buf_t *buffer) {
   KMP_STR_BUF_INVARIANT(buffer);
 } // __kmp_str_buf_free
 
-void __kmp_str_buf_cat(kmp_str_buf_t *buffer, char const *str, int len) {
+void __kmp_str_buf_cat(kmp_str_buf_t *buffer, char const *str, size_t len) {
   KMP_STR_BUF_INVARIANT(buffer);
   KMP_DEBUG_ASSERT(str != NULL);
   KMP_DEBUG_ASSERT(len >= 0);
+
   __kmp_str_buf_reserve(buffer, buffer->used + len + 1);
   KMP_MEMCPY(buffer->str + buffer->used, str, len);
   buffer->str[buffer->used + len] = 0;
-  buffer->used += len;
+  __kmp_type_convert(buffer->used + len, &(buffer->used));
   KMP_STR_BUF_INVARIANT(buffer);
 } // __kmp_str_buf_cat
 
@@ -260,7 +261,7 @@ void __kmp_str_fname_init(kmp_str_fname_t *fname, char const *path) {
     slash = strrchr(fname->dir, '/');
     if (KMP_OS_WINDOWS &&
         slash == NULL) { // On Windows* OS, if slash not found,
-      char first = TOLOWER(fname->dir[0]); // look for drive.
+      char first = (char)TOLOWER(fname->dir[0]); // look for drive.
       if ('a' <= first && first <= 'z' && fname->dir[1] == ':') {
         slash = &fname->dir[1];
       }

@@ -40,7 +40,8 @@ void __kmp_get_hierarchy(kmp_uint32 nproc, kmp_bstate_t *thr_bar) {
   KMP_DEBUG_ASSERT(depth > 0);
 
   thr_bar->depth = depth;
-  thr_bar->base_leaf_kids = (kmp_uint8)machine_hierarchy.numPerLevel[0] - 1;
+  __kmp_type_convert(machine_hierarchy.numPerLevel[0] - 1,
+                     &(thr_bar->base_leaf_kids));
   thr_bar->skip_per_level = machine_hierarchy.skipPerLevel;
 }
 
@@ -130,14 +131,13 @@ char *__kmp_affinity_print_mask(char *buf, int buf_len,
     }
     // Range with three or more contiguous bits in the affinity mask
     if (previous - start > 1) {
-      KMP_SNPRINTF(scan, end - scan + 1, "%d-%d", static_cast<int>(start),
-                   static_cast<int>(previous));
+      KMP_SNPRINTF(scan, end - scan + 1, "%u-%u", start, previous);
     } else {
       // Range with one or two contiguous bits in the affinity mask
-      KMP_SNPRINTF(scan, end - scan + 1, "%d", static_cast<int>(start));
+      KMP_SNPRINTF(scan, end - scan + 1, "%u", start);
       KMP_ADVANCE_SCAN(scan);
       if (previous - start > 0) {
-        KMP_SNPRINTF(scan, end - scan + 1, ",%d", static_cast<int>(previous));
+        KMP_SNPRINTF(scan, end - scan + 1, ",%u", previous);
       }
     }
     KMP_ADVANCE_SCAN(scan);
@@ -195,13 +195,12 @@ kmp_str_buf_t *__kmp_affinity_str_buf_mask(kmp_str_buf_t *buf,
     }
     // Range with three or more contiguous bits in the affinity mask
     if (previous - start > 1) {
-      __kmp_str_buf_print(buf, "%d-%d", static_cast<int>(start),
-                          static_cast<int>(previous));
+      __kmp_str_buf_print(buf, "%u-%u", start, previous);
     } else {
       // Range with one or two contiguous bits in the affinity mask
-      __kmp_str_buf_print(buf, "%d", static_cast<int>(start));
+      __kmp_str_buf_print(buf, "%u", start);
       if (previous - start > 0) {
-        __kmp_str_buf_print(buf, ",%d", static_cast<int>(previous));
+        __kmp_str_buf_print(buf, ",%u", previous);
       }
     }
     // Start over with new start point

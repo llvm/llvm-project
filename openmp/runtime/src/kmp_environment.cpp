@@ -380,16 +380,13 @@ static void
 ___kmp_env_blk_parse_unix(kmp_env_blk_t *block, // M: Env block to fill.
                           char **env // I: Unix environment to parse.
                           ) {
-
   char *bulk = NULL;
   kmp_env_var_t *vars = NULL;
   int count = 0;
-  int size = 0; // Size of bulk.
+  size_t size = 0; // Size of bulk.
 
   // Count number of variables and length of required bulk.
   {
-    count = 0;
-    size = 0;
     while (env[count] != NULL) {
       size += KMP_STRLEN(env[count]) + 1;
       ++count;
@@ -405,7 +402,7 @@ ___kmp_env_blk_parse_unix(kmp_env_blk_t *block, // M: Env block to fill.
     char *var; // Pointer to beginning of var.
     char *name; // Pointer to name of variable.
     char *value; // Pointer to value.
-    int len; // Length of variable.
+    size_t len; // Length of variable.
     int i;
     var = bulk;
     for (i = 0; i < count; ++i) {
