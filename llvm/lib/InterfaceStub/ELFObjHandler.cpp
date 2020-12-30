@@ -17,7 +17,6 @@
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Process.h"
 
 using llvm::MemoryBufferRef;
 using llvm::object::ELFObjectFile;
@@ -664,25 +663,8 @@ buildStub(const ELFObjectFile<ELFT> &ElfObj) {
 /// @param FilePath File path for writing the ELF binary.
 /// @param Stub Source ELFStub to generate a binary ELF stub from.
 template <class ELFT>
-static Error writeELFBinaryToFile(StringRef FilePath, const ELFStub &Stub,
-                                  bool WriteIfChanged) {
+static Error writeELFBinaryToFile(StringRef FilePath, const ELFStub &Stub) {
   ELFStubBuilder<ELFT> Builder{Stub};
-  // Write Stub to memory first.
-  std::vector<uint8_t> Buf(Builder.getSize());
-  Builder.write(Buf.data());
-
-  if (WriteIfChanged) {
-    if (ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrError =
-            MemoryBuffer::getFile(FilePath)) {
-      // Compare Stub output with existing Stub file.
-      // If Stub file unchanged, abort updating.
-      if ((*BufOrError)->getBufferSize() == Builder.getSize() &&
-          !memcmp((*BufOrError)->getBufferStart(), Buf.data(),
-                  Builder.getSize()))
-        return Error::success();
-    }
-  }
-
   Expected<std::unique_ptr<FileOutputBuffer>> BufOrError =
       FileOutputBuffer::create(FilePath, Builder.getSize());
   if (!BufOrError)
@@ -692,10 +674,13 @@ static Error writeELFBinaryToFile(StringRef FilePath, const ELFStub &Stub,
                                  "` for writing");
 
   // Write binary to file.
-  std::unique_ptr<FileOutputBuffer> FileBuf = std::move(*BufOrError);
-  memcpy(FileBuf->getBufferStart(), Buf.data(), Buf.size());
+  std::unique_ptr<FileOutputBuffer> Buf = std::move(*BufOrError);
+  Builder.write(Buf->getBufferStart());
 
-  return FileBuf->commit();
+  if (Error E = Buf->commit())
+    return E;
+
+  return Error::success();
 }
 
 Expected<std::unique_ptr<ELFStub>> readELFFile(MemoryBufferRef Buf) {
@@ -720,15 +705,15 @@ Expected<std::unique_ptr<ELFStub>> readELFFile(MemoryBufferRef Buf) {
 // This function wraps the ELFT writeELFBinaryToFile() so writeBinaryStub()
 // can be called without having to use ELFType templates directly.
 Error writeBinaryStub(StringRef FilePath, const ELFStub &Stub,
-                      ELFTarget OutputFormat, bool WriteIfChanged) {
+                      ELFTarget OutputFormat) {
   if (OutputFormat == ELFTarget::ELF32LE)
-    return writeELFBinaryToFile<ELF32LE>(FilePath, Stub, WriteIfChanged);
+    return writeELFBinaryToFile<ELF32LE>(FilePath, Stub);
   if (OutputFormat == ELFTarget::ELF32BE)
-    return writeELFBinaryToFile<ELF32BE>(FilePath, Stub, WriteIfChanged);
+    return writeELFBinaryToFile<ELF32BE>(FilePath, Stub);
   if (OutputFormat == ELFTarget::ELF64LE)
-    return writeELFBinaryToFile<ELF64LE>(FilePath, Stub, WriteIfChanged);
+    return writeELFBinaryToFile<ELF64LE>(FilePath, Stub);
   if (OutputFormat == ELFTarget::ELF64BE)
-    return writeELFBinaryToFile<ELF64BE>(FilePath, Stub, WriteIfChanged);
+    return writeELFBinaryToFile<ELF64BE>(FilePath, Stub);
   llvm_unreachable("invalid binary output target");
 }
 

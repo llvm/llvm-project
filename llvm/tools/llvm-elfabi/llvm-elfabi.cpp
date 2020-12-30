@@ -57,37 +57,22 @@ cl::opt<ELFTarget> BinaryOutputTarget(
                clEnumValN(ELFTarget::ELF64BE, "elf64-big",
                           "64-bit big-endian ELF stub")));
 cl::opt<std::string> BinaryOutputFilePath(cl::Positional, cl::desc("output"));
-cl::opt<bool> WriteIfChanged(
-    "write-if-changed",
-    cl::desc("Write the output file only if it is new or has changed."));
 
 /// writeTBE() writes a Text-Based ELF stub to a file using the latest version
 /// of the YAML parser.
 static Error writeTBE(StringRef FilePath, ELFStub &Stub) {
-  // Write TBE to memory first.
-  std::string TBEStr;
-  raw_string_ostream OutStr(TBEStr);
-  Error YAMLErr = writeTBEToOutputStream(OutStr, Stub);
-  if (YAMLErr)
-    return YAMLErr;
-  OutStr.flush();
-
-  if (WriteIfChanged) {
-    if (ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrError =
-            MemoryBuffer::getFile(FilePath)) {
-      // Compare TBE output with existing TBE file.
-      // If TBE file unchanged, abort updating.
-      if ((*BufOrError)->getBuffer() == TBEStr)
-        return Error::success();
-    }
-  }
-  // Open TBE file for writing.
   std::error_code SysErr;
+
+  // Open file for writing.
   raw_fd_ostream Out(FilePath, SysErr);
   if (SysErr)
     return createStringError(SysErr, "Couldn't open `%s` for writing",
                              FilePath.data());
-  Out << TBEStr;
+  // Write file.
+  Error YAMLErr = writeTBEToOutputStream(Out, Stub);
+  if (YAMLErr)
+    return YAMLErr;
+
   return Error::success();
 }
 
@@ -168,8 +153,8 @@ int main(int argc, char *argv[]) {
     if (BinaryOutputTarget.getNumOccurrences() == 0)
       fatalError(createStringError(errc::not_supported,
                                    "no binary output target specified."));
-    Error BinaryWriteError = writeBinaryStub(
-        BinaryOutputFilePath, *TargetStub, BinaryOutputTarget, WriteIfChanged);
+    Error BinaryWriteError =
+        writeBinaryStub(BinaryOutputFilePath, *TargetStub, BinaryOutputTarget);
     if (BinaryWriteError)
       fatalError(std::move(BinaryWriteError));
   }
