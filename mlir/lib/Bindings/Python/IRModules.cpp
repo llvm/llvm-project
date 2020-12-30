@@ -2711,6 +2711,27 @@ public:
 } // namespace
 
 //------------------------------------------------------------------------------
+// PyAffineMap.
+//------------------------------------------------------------------------------
+
+bool PyAffineMap::operator==(const PyAffineMap &other) {
+  return mlirAffineMapEqual(affineMap, other.affineMap);
+}
+
+py::object PyAffineMap::getCapsule() {
+  return py::reinterpret_steal<py::object>(mlirPythonAffineMapToCapsule(*this));
+}
+
+PyAffineMap PyAffineMap::createFromCapsule(py::object capsule) {
+  MlirAffineMap rawAffineMap = mlirPythonCapsuleToAffineMap(capsule.ptr());
+  if (mlirAffineMapIsNull(rawAffineMap))
+    throw py::error_already_set();
+  return PyAffineMap(
+      PyMlirContext::forContext(mlirAffineMapGetContext(rawAffineMap)),
+      rawAffineMap);
+}
+
+//------------------------------------------------------------------------------
 // Populates the pybind11 IR submodule.
 //------------------------------------------------------------------------------
 
@@ -3392,4 +3413,29 @@ void mlir::python::populateIRSubmodule(py::module &m) {
   PyOpResultList::bind(m);
   PyRegionIterator::bind(m);
   PyRegionList::bind(m);
+
+  //----------------------------------------------------------------------------
+  // Mapping of PyAffineMap.
+  //----------------------------------------------------------------------------
+  py::class_<PyAffineMap>(m, "AffineMap")
+      .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR,
+                             &PyAffineMap::getCapsule)
+      .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyAffineMap::createFromCapsule)
+      .def_static(
+          "get_empty",
+          [](DefaultingPyMlirContext context) {
+            MlirAffineMap affineMap = mlirAffineMapEmptyGet(context->get());
+            return PyAffineMap(context->getRef(), affineMap);
+          },
+          py::arg("context") = py::none(), "Gets an empty affine map.")
+      .def_property_readonly(
+          "context",
+          [](PyAffineMap &self) { return self.getContext().getObject(); },
+          "Context that owns the Affine Map")
+      .def("__eq__",
+           [](PyAffineMap &self, PyAffineMap &other) { return self == other; })
+      .def("__eq__", [](PyAffineMap &self, py::object &other) { return false; })
+      .def(
+          "dump", [](PyAffineMap &self) { mlirAffineMapDump(self); },
+          kDumpDocstring);
 }
