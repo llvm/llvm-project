@@ -27,7 +27,7 @@ define half @flh(half *%a) nounwind {
   ret half %4
 }
 
-define void @fsh(half *%a, half %b, half %c) nounwind {
+define dso_local void @fsh(half *%a, half %b, half %c) nounwind {
 ; Use %b and %c in an FP op to ensure half precision floating point registers
 ; are used, even for the soft half ABI
 ; RV32IZFH-LABEL: fsh:
@@ -51,7 +51,7 @@ define void @fsh(half *%a, half %b, half %c) nounwind {
 }
 
 ; Check load and store to a global
-@G = global half 0.0
+@G = dso_local global half 0.0
 
 define half @flh_fsh_global(half %a, half %b) nounwind {
 ; Use %a and %b in an FP op to ensure half precision floating point registers
@@ -152,7 +152,7 @@ define half @flh_stack(half %a) nounwind {
   ret half %4
 }
 
-define void @fsh_stack(half %a, half %b) nounwind {
+define dso_local void @fsh_stack(half %a, half %b) nounwind {
 ; RV32IZFH-LABEL: fsh_stack:
 ; RV32IZFH:       # %bb.0:
 ; RV32IZFH-NEXT:    addi sp, sp, -16
