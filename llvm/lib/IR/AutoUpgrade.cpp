@@ -2405,8 +2405,8 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       for (unsigned i = 0; i != NumDstElts; ++i)
         ShuffleMask[i] = i;
 
-      Value *SV = Builder.CreateShuffleVector(CI->getArgOperand(0),
-                                              ShuffleMask);
+      Value *SV =
+          Builder.CreateShuffleVector(CI->getArgOperand(0), ShuffleMask);
 
       bool DoSext = (StringRef::npos != Name.find("pmovsx"));
       Rep = DoSext ? Builder.CreateSExt(SV, DstTy)
@@ -2435,9 +2435,8 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       if (NumSrcElts == 2)
         Rep = Builder.CreateShuffleVector(Load, ArrayRef<int>{0, 1, 0, 1});
       else
-        Rep =
-            Builder.CreateShuffleVector(Load,
-                                        ArrayRef<int>{0, 1, 2, 3, 0, 1, 2, 3});
+        Rep = Builder.CreateShuffleVector(
+            Load, ArrayRef<int>{0, 1, 2, 3, 0, 1, 2, 3});
     } else if (IsX86 && (Name.startswith("avx512.mask.shuf.i") ||
                          Name.startswith("avx512.mask.shuf.f"))) {
       unsigned Imm = cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
