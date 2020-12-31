@@ -1,4 +1,5 @@
-// RUN: %clang -O1 -fno-unroll-loops -S -o - %s -emit-llvm | FileCheck %s
+// This relies on %clang_cc1, %clang does not emit the block names in Release mode.
+// RUN: %clang_cc1 -O1 -fno-unroll-loops -S -o - %s -emit-llvm | FileCheck %s
 
 extern int a[16];
 int b = 0;
