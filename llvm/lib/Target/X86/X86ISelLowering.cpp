@@ -19102,9 +19102,12 @@ SDValue X86TargetLowering::LowerGlobalOrExternal(SDValue Op, SelectionDAG &DAG,
   if (GV) {
     // Create a target global address if this is a global. If possible, fold the
     // offset into the global address reference. Otherwise, ADD it on later.
+    // Suppress the folding if Offset is negative: movl foo-1, %eax is not
+    // allowed because if the address of foo is 0, the ELF R_X86_64_32
+    // relocation will compute to a negative value, which is invalid.
     int64_t GlobalOffset = 0;
-    if (OpFlags == X86II::MO_NO_FLAG &&
-        X86::isOffsetSuitableForCodeModel(Offset, M)) {
+    if (OpFlags == X86II::MO_NO_FLAG && Offset >= 0 &&
+        X86::isOffsetSuitableForCodeModel(Offset, M, true)) {
       std::swap(GlobalOffset, Offset);
     }
     Result = DAG.getTargetGlobalAddress(GV, dl, PtrVT, GlobalOffset, OpFlags);
