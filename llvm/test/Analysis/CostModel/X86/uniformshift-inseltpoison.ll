@@ -8,7 +8,7 @@ entry:
   ; SSE2-CODEGEN: movd  %edi, %xmm1
   ; SSE2-CODEGEN: pslld %xmm1, %xmm0
   %insert = insertelement <4 x i32> poison, i32 %scalar, i32 0
-  %splat = shufflevector <4 x i32> %insert, <4 x i32> undef, <4 x i32> zeroinitializer
+  %splat = shufflevector <4 x i32> %insert, <4 x i32> poison, <4 x i32> zeroinitializer
   %ret = shl <4 x i32> %vector , %splat
   ret <4 x i32> %ret
 }
@@ -20,7 +20,7 @@ entry:
   ; SSE2-CODEGEN: movd  %edi, %xmm1
   ; SSE2-CODEGEN: psrad %xmm1, %xmm0
   %insert = insertelement <4 x i32> poison, i32 %scalar, i32 0
-  %splat = shufflevector <4 x i32> %insert, <4 x i32> undef, <4 x i32> zeroinitializer
+  %splat = shufflevector <4 x i32> %insert, <4 x i32> poison, <4 x i32> zeroinitializer
   %ret = ashr <4 x i32> %vector , %splat
   ret <4 x i32> %ret
 }
@@ -32,7 +32,7 @@ entry:
   ; SSE2-CODEGEN: movd  %edi, %xmm1
   ; SSE2-CODEGEN: psrld %xmm1, %xmm0
   %insert = insertelement <4 x i32> poison, i32 %scalar, i32 0
-  %splat = shufflevector <4 x i32> %insert, <4 x i32> undef, <4 x i32> zeroinitializer
+  %splat = shufflevector <4 x i32> %insert, <4 x i32> poison, <4 x i32> zeroinitializer
   %ret = lshr <4 x i32> %vector , %splat
   ret <4 x i32> %ret
 }
