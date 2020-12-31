@@ -322,7 +322,8 @@ ENUM_LANGOPT(ExternDeclDLLImportVisibility, Visibility, 3, DefaultVisibility,
 ENUM_LANGOPT(ExternDeclNoDLLStorageClassVisibility, Visibility, 3, HiddenVisibility,
              "visibility for external declarations without an explicit DLL storage class [-fvisibility-from-dllstorageclass]")
 BENIGN_LANGOPT(SemanticInterposition        , 1, 0, "semantic interposition")
-BENIGN_LANGOPT(ExplicitNoSemanticInterposition, 1, 0, "explicitly no semantic interposition")
+BENIGN_LANGOPT(HalfNoSemanticInterposition, 1, 0,
+               "Like -fno-semantic-interposition but don't use local aliases")
 ENUM_LANGOPT(StackProtector, StackProtectorMode, 2, SSPOff,
              "stack protector mode")
 ENUM_LANGOPT(TrivialAutoVarInit, TrivialAutoVarInitKind, 2, TrivialAutoVarInitKind::Uninitialized,

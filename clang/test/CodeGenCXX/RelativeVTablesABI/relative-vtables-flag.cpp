@@ -3,7 +3,7 @@
 // of a soft incremental rollout. This ABI should only be used if the flag for
 // it is passed on Fuchsia.
 
-// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -S -o - -emit-llvm -fexperimental-relative-c++-abi-vtables | FileCheck --check-prefix=RELATIVE-ABI %s
+// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -S -o - -emit-llvm -fexperimental-relative-c++-abi-vtables -fhalf-no-semantic-interposition | FileCheck --check-prefix=RELATIVE-ABI %s
 // RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -S -o - -emit-llvm -fno-experimental-relative-c++-abi-vtables | FileCheck --check-prefix=DEFAULT-ABI %s
 // RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -S -o - -emit-llvm | FileCheck --check-prefix=DEFAULT-ABI %s
 

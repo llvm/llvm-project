@@ -4561,12 +4561,31 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(A->getValue());
   }
 
-  // The default is -fno-semantic-interposition. We render it just because we
-  // require explicit -fno-semantic-interposition to infer dso_local.
-  if (Arg *A = Args.getLastArg(options::OPT_fsemantic_interposition,
-                               options::OPT_fno_semantic_interposition))
-    if (RelocationModel != llvm::Reloc::Static && !IsPIE)
-      A->render(Args, CmdArgs);
+  // -fsemantic-interposition is forwarded to CC1: set the
+  // "SemanticInterposition" metadata to 1 (make some linkages interposable) and
+  // make default visibility external linkage definitions dso_preemptable.
+  //
+  // -fno-semantic-interposition: if the target supports .Lfoo$local local
+  // aliases (make default visibility external linkage definitions dso_local).
+  // This is the CC1 default for ELF to match COFF/Mach-O.
+  //
+  // Otherwise use Clang's traditional behavior: like
+  // -fno-semantic-interposition but local aliases are not used. So references
+  // can be interposed if not optimized out.
+  if (Triple.isOSBinFormatELF()) {
+    Arg *A = Args.getLastArg(options::OPT_fsemantic_interposition,
+                             options::OPT_fno_semantic_interposition);
+    if (RelocationModel != llvm::Reloc::Static && !IsPIE) {
+      // The supported targets need to call AsmPrinter::getSymbolPreferLocal.
+      bool SupportsLocalAlias = Triple.isX86();
+      if (!A)
+        CmdArgs.push_back("-fhalf-no-semantic-interposition");
+      else if (A->getOption().matches(options::OPT_fsemantic_interposition))
+        A->render(Args, CmdArgs);
+      else if (!SupportsLocalAlias)
+        CmdArgs.push_back("-fhalf-no-semantic-interposition");
+    }
+  }
 
   {
     std::string Model;

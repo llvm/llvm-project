@@ -534,9 +534,6 @@ void CodeGenModule::Release() {
   if (Context.getLangOpts().SemanticInterposition)
     // Require various optimization to respect semantic interposition.
     getModule().setSemanticInterposition(1);
-  else if (Context.getLangOpts().ExplicitNoSemanticInterposition)
-    // Allow dso_local on applicable targets.
-    getModule().setSemanticInterposition(0);
 
   if (CodeGenOpts.EmitCodeView) {
     // Indicate that we want CodeView in the metadata.
@@ -961,15 +958,15 @@ static bool shouldAssumeDSOLocal(const CodeGenModule &CGM,
     return false;
 
   if (RM != llvm::Reloc::Static && !LOpts.PIE) {
-    // On ELF, if -fno-semantic-interposition is specified, we can set dso_local
-    // if using a local alias is preferable (can avoid GOT indirection).
-    // Currently only x86 supports local alias.
-    if (!TT.isOSBinFormatELF() ||
-        !CGM.getLangOpts().ExplicitNoSemanticInterposition ||
-        !GV->canBenefitFromLocalAlias())
+    // On ELF, if -fno-semantic-interposition is specified and the target
+    // supports local aliases, there will be neither CC1
+    // -fsemantic-interposition nor -fhalf-no-semantic-interposition. Set
+    // dso_local if using a local alias is preferable (can avoid GOT
+    // indirection).
+    if (!GV->canBenefitFromLocalAlias())
       return false;
-    // The allowed targets need to match AsmPrinter::getSymbolPreferLocal.
-    return TT.isX86();
+    return !(CGM.getLangOpts().SemanticInterposition ||
+             CGM.getLangOpts().HalfNoSemanticInterposition);
   }
 
   // A definition cannot be preempted from an executable.

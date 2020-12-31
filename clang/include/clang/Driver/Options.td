@@ -3793,7 +3793,7 @@ defm ipa_cp : BooleanFFlag<"ipa-cp">,
     Group<clang_ignored_gcc_optimization_f_Group>;
 defm ivopts : BooleanFFlag<"ivopts">, Group<clang_ignored_gcc_optimization_f_Group>;
 def fsemantic_interposition : Flag<["-"], "fsemantic-interposition">, Group<f_Group>, Flags<[CC1Option]>;
-def fno_semantic_interposition: Flag<["-"], "fno-semantic-interposition">, Group<f_Group>, Flags<[CC1Option]>;
+def fno_semantic_interposition: Flag<["-"], "fno-semantic-interposition">, Group<f_Group>;
 defm non_call_exceptions : BooleanFFlag<"non-call-exceptions">, Group<clang_ignored_f_Group>;
 defm peel_loops : BooleanFFlag<"peel-loops">, Group<clang_ignored_gcc_optimization_f_Group>;
 defm permissive : BooleanFFlag<"permissive">, Group<clang_ignored_f_Group>;
@@ -4722,6 +4722,8 @@ def pic_level : Separate<["-"], "pic-level">,
   HelpText<"Value for __PIC__">;
 def pic_is_pie : Flag<["-"], "pic-is-pie">,
   HelpText<"File is for a position independent executable">;
+def fhalf_no_semantic_interposition : Flag<["-"], "fhalf-no-semantic-interposition">,
+  HelpText<"Like -fno-semantic-interposition but don't use local aliases">;
 def fno_validate_pch : Flag<["-"], "fno-validate-pch">,
   HelpText<"Disable validation of precompiled headers">,
   MarshallingInfoFlag<"PreprocessorOpts->DisablePCHValidation">;
