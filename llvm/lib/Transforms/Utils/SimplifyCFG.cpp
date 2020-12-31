@@ -13,6 +13,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -934,13 +935,25 @@ bool SimplifyCFGOpt::SimplifyEqualityComparisonWithOnlyPredecessor(
     LLVM_DEBUG(dbgs() << "Threading pred instr: " << *Pred->getTerminator()
                       << "Through successor TI: " << *TI);
 
+    SmallMapVector<BasicBlock *, int, 8> NumPerSuccessorCases;
     for (SwitchInst::CaseIt i = SI->case_end(), e = SI->case_begin(); i != e;) {
       --i;
+      auto *Successor = i->getCaseSuccessor();
+      ++NumPerSuccessorCases[Successor];
       if (DeadCases.count(i->getCaseValue())) {
-        i->getCaseSuccessor()->removePredecessor(TI->getParent());
+        Successor->removePredecessor(PredDef);
         SI.removeCase(i);
+        --NumPerSuccessorCases[Successor];
       }
     }
+
+    std::vector<DominatorTree::UpdateType> Updates;
+    for (const std::pair<BasicBlock *, int> &I : NumPerSuccessorCases)
+      if (I.second == 0)
+        Updates.push_back({DominatorTree::Delete, PredDef, I.first});
+    if (DTU)
+      DTU->applyUpdatesPermissive(Updates);
+
     LLVM_DEBUG(dbgs() << "Leaving: " << *TI << "\n");
     return true;
   }
