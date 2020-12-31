@@ -512,6 +512,13 @@ def grp_rare : OptionGroup<"rare">, HelpText<"RARELY USED">;
 def v : Flag<["-"], "v">,
      HelpText<"Print the linker version and search paths and exit">,
      Group<grp_rare>;
+def adhoc_codesign : Flag<["-"], "adhoc_codesign">,
+     HelpText<"Write an ad-hocd code signature to the output file.">,
+     Flags<[HelpHidden]>,
+     Group<grp_rare>;
+def no_adhoc_codesign : Flag<["-"], "no_adhoc_codesign">,
+     HelpText<"Do not write an ad-hocd code signature to the output file.">,
+     Group<grp_rare>;
 def version_details : Flag<["-"], "version_details">,
      HelpText<"Print the linker version in JSON form">,
      Flags<[HelpHidden]>,
