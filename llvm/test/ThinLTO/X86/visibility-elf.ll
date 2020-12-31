@@ -3,7 +3,7 @@
 ; RUN: opt -module-summary %t/b.ll -o %tb.bc
 
 ;; Test visibility propagation. The prevailing definitions are all from %tb.bc.
-; RUN: llvm-lto2 run -save-temps -o %t1.bc %ta.bc %tb.bc \
+; RUN: llvm-lto2 run -save-temps -enable-import-metadata -o %t1.bc %ta.bc %tb.bc \
 ; RUN:   -r=%ta.bc,var1,l -r=%ta.bc,var2,l \
 ; RUN:   -r=%ta.bc,hidden_def_weak_def,l -r=%ta.bc,protected_def_weak_def,l -r=%ta.bc,protected_def_weak_hidden_def,l \
 ; RUN:   -r=%ta.bc,protected_def_hidden_ref,l -r=%ta.bc,not_imported,l -r=%ta.bc,hidden_def_ref,l \
