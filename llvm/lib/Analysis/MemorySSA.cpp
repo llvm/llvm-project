@@ -1779,8 +1779,8 @@ MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I,
 
   bool Def, Use;
   if (Template) {
-    Def = dyn_cast_or_null<MemoryDef>(Template) != nullptr;
-    Use = dyn_cast_or_null<MemoryUse>(Template) != nullptr;
+    Def = isa<MemoryDef>(Template);
+    Use = isa<MemoryUse>(Template);
 #if !defined(NDEBUG)
     ModRefInfo ModRef = AAP->getModRefInfo(I, None);
     bool DefCheck, UseCheck;
