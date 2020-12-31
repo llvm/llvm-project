@@ -396,10 +396,6 @@ struct IRInstructionMapper {
     // analyzed for similarity as it has no bearing on the outcome of the
     // program.
     InstrType visitDbgInfoIntrinsic(DbgInfoIntrinsic &DII) { return Invisible; }
-    // TODO: Handle GetElementPtrInsts
-    InstrType visitGetElementPtrInst(GetElementPtrInst &GEPI) {
-      return Illegal;
-    }
     // TODO: Handle specific intrinsics.
     InstrType visitIntrinsicInst(IntrinsicInst &II) { return Illegal; }
     // TODO: Handle CallInsts.
