@@ -1,5 +1,4 @@
-// UNSUPPORTED: system-windows
-// RUN: %clang_cc1 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple=x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s
 
 // CHECK: @defn = global i32 undef
 int defn  [[clang::loader_uninitialized]];
