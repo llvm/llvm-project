@@ -103,8 +103,9 @@ class LeakReport {
                       ChunkTag tag);
   void ReportTopLeaks(uptr max_leaks);
   void PrintSummary();
-  void ApplySuppressions();
+  uptr ApplySuppressions();
   uptr UnsuppressedLeakCount();
+  uptr IndirectUnsuppressedLeakCount();
 
  private:
   void PrintReportForLeak(uptr index);
