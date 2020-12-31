@@ -221,7 +221,7 @@ bool BPFAdjustOptImpl::avoidSpeculation(Instruction &I) {
     }
   }
 
-  if (!dyn_cast<LoadInst>(&I) && !dyn_cast<CallInst>(&I))
+  if (!isa<LoadInst>(&I) && !isa<CallInst>(&I))
     return false;
 
   // For:
