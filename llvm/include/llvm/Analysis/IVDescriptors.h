@@ -96,15 +96,15 @@ public:
         : IsRecurrence(true), PatternLastInst(I), MinMaxKind(K),
           UnsafeAlgebraInst(UAI) {}
 
-    bool isRecurrence() { return IsRecurrence; }
+    bool isRecurrence() const { return IsRecurrence; }
 
-    bool hasUnsafeAlgebra() { return UnsafeAlgebraInst != nullptr; }
+    bool hasUnsafeAlgebra() const { return UnsafeAlgebraInst != nullptr; }
 
-    Instruction *getUnsafeAlgebraInst() { return UnsafeAlgebraInst; }
+    Instruction *getUnsafeAlgebraInst() const { return UnsafeAlgebraInst; }
 
-    MinMaxRecurrenceKind getMinMaxKind() { return MinMaxKind; }
+    MinMaxRecurrenceKind getMinMaxKind() const { return MinMaxKind; }
 
-    Instruction *getPatternInst() { return PatternLastInst; }
+    Instruction *getPatternInst() const { return PatternLastInst; }
 
   private:
     // Is this instruction a recurrence candidate.
@@ -134,10 +134,11 @@ public:
   /// Returns true if all uses of the instruction I is within the Set.
   static bool areAllUsesIn(Instruction *I, SmallPtrSetImpl<Instruction *> &Set);
 
-  /// Returns a struct describing if the instruction if the instruction is a
+  /// Returns a struct describing if the instruction is a
   /// Select(ICmp(X, Y), X, Y) instruction pattern corresponding to a min(X, Y)
-  /// or max(X, Y).
-  static InstDesc isMinMaxSelectCmpPattern(Instruction *I, InstDesc &Prev);
+  /// or max(X, Y). \p Prev is specifies the description of an already processed
+  /// select instruction, so its corresponding cmp can be matched to it.
+  static InstDesc isMinMaxSelectCmpPattern(Instruction *I, const InstDesc &Prev);
 
   /// Returns a struct describing if the instruction is a
   /// Select(FCmp(X, Y), (Z = X op PHINode), PHINode) instruction pattern.
