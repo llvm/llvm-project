@@ -56,12 +56,14 @@ define void @t2() nounwind ssp {
 ; ARM-MACHO: {{(movw r0, :lower16:L_temp\$non_lazy_ptr)|(ldr r0, .LCPI)}}
 ; ARM-MACHO: {{(movt r0, :upper16:L_temp\$non_lazy_ptr)?}}
 ; ARM-MACHO: ldr [[REG1:r[0-9]+]], [r0]
+; ARM-MACHO:      add r0, [[REG1]], #4
+; ARM-MACHO-NEXT: add r1, [[REG1]], #16
 
 ; ARM-ELF: movw [[REG1:r[0-9]+]], :lower16:temp
 ; ARM-ELF: movt [[REG1]], :upper16:temp
+; ARM-ELF:      add r0, [[REG1]], #4
+; ARM-ELF-NEXT: add r1, [[REG1]], #16
 
-; ARM: add r0, [[REG1]], #4
-; ARM: add r1, [[REG1]], #16
 ; ARM: movw r2, #17
 ; ARM: bl {{_?}}memcpy
 ; ARM-LONG-LABEL: t2:
@@ -99,13 +101,14 @@ define void @t3() nounwind ssp {
 ; ARM-MACHO: {{(movw r0, :lower16:L_temp\$non_lazy_ptr)|(ldr r0, .LCPI)}}
 ; ARM-MACHO: {{(movt r0, :upper16:L_temp\$non_lazy_ptr)?}}
 ; ARM-MACHO: ldr [[REG0:r[0-9]+]], [r0]
+; ARM-MACHO:      add r0, [[REG0]], #4
+; ARM-MACHO-NEXT: add r1, [[REG0]], #16
 
 ; ARM-ELF: movw [[REG0:r[0-9]+]], :lower16:temp
 ; ARM-ELF: movt [[REG0]], :upper16:temp
+; ARM-ELF:      add r0, [[REG0]], #4
+; ARM-ELF-NEXT: add r1, r1, #16
 
-
-; ARM: add r0, [[REG0]], #4
-; ARM: add r1, [[REG0]], #16
 ; ARM: movw r2, #10
 ; ARM: bl {{_?}}memmove
 ; ARM-LONG-LABEL: t3:
@@ -140,17 +143,17 @@ define void @t4() nounwind ssp {
 
 ; ARM-MACHO: {{(movw r0, :lower16:L_temp\$non_lazy_ptr)|(ldr r0, .LCPI)}}
 ; ARM-MACHO: {{(movt r0, :upper16:L_temp\$non_lazy_ptr)?}}
-; ARM-MACHO: ldr [[REG0:r[0-9]+]], [r0]
+; ARM-MACHO:      ldr [[REG0:r[0-9]+]], [r0]
+; ARM-MACHO-NEXT: ldr [[REG1:r[0-9]+]], {{\[}}[[REG0]], #16]
+; ARM-MACHO-NEXT: str [[REG1]], {{\[}}[[REG0]], #4]
+; ARM-MACHO-NEXT: ldr [[REG2:r[0-9]+]], {{\[}}[[REG0]], #20]
+; ARM-MACHO-NEXT: str [[REG2]], {{\[}}[[REG0]], #8]
+; ARM-MACHO-NEXT: ldrh [[REG3:r[0-9]+]], {{\[}}[[REG0]], #24]
+; ARM-MACHO-NEXT: strh [[REG3]], {{\[}}[[REG0]], #12]
 
 ; ARM-ELF: movw [[REG0:r[0-9]+]], :lower16:temp
 ; ARM-ELF: movt [[REG0]], :upper16:temp
 
-; ARM: ldr [[REG1:r[0-9]+]], {{\[}}[[REG0]], #16]
-; ARM: str [[REG1]], {{\[}}[[REG0]], #4]
-; ARM: ldr [[REG2:r[0-9]+]], {{\[}}[[REG0]], #20]
-; ARM: str [[REG2]], {{\[}}[[REG0]], #8]
-; ARM: ldrh [[REG3:r[0-9]+]], {{\[}}[[REG0]], #24]
-; ARM: strh [[REG3]], {{\[}}[[REG0]], #12]
 ; ARM: bx lr
 ; THUMB-LABEL: t4:
 ; THUMB: {{(movw r0, :lower16:L_temp\$non_lazy_ptr)|(ldr.n r0, .LCPI)}}
@@ -175,20 +178,20 @@ define void @t5() nounwind ssp {
 ; ARM-MACHO: {{(movw r0, :lower16:L_temp\$non_lazy_ptr)|(ldr r0, .LCPI)}}
 ; ARM-MACHO: {{(movt r0, :upper16:L_temp\$non_lazy_ptr)?}}
 ; ARM-MACHO: ldr [[REG0:r[0-9]+]], [r0]
+; ARM-MACHO: ldrh [[REG1:r[0-9]+]], {{\[}}[[REG0]], #16]
+; ARM-MACHO-NEXT: strh [[REG1]], {{\[}}[[REG0]], #4]
+; ARM-MACHO-NEXT: ldrh [[REG2:r[0-9]+]], {{\[}}[[REG0]], #18]
+; ARM-MACHO-NEXT: strh [[REG2]], {{\[}}[[REG0]], #6]
+; ARM-MACHO-NEXT: ldrh [[REG3:r[0-9]+]], {{\[}}[[REG0]], #20]
+; ARM-MACHO-NEXT: strh [[REG3]], {{\[}}[[REG0]], #8]
+; ARM-MACHO-NEXT: ldrh [[REG4:r[0-9]+]], {{\[}}[[REG0]], #22]
+; ARM-MACHO-NEXT: strh [[REG4]], {{\[}}[[REG0]], #10]
+; ARM-MACHO-NEXT: ldrh [[REG5:r[0-9]+]], {{\[}}[[REG0]], #24]
+; ARM-MACHO-NEXT: strh [[REG5]], {{\[}}[[REG0]], #12]
 
 ; ARM-ELF: movw [[REG0:r[0-9]+]], :lower16:temp
 ; ARM-ELF: movt [[REG0]], :upper16:temp
 
-; ARM: ldrh [[REG1:r[0-9]+]], {{\[}}[[REG0]], #16]
-; ARM: strh [[REG1]], {{\[}}[[REG0]], #4]
-; ARM: ldrh [[REG2:r[0-9]+]], {{\[}}[[REG0]], #18]
-; ARM: strh [[REG2]], {{\[}}[[REG0]], #6]
-; ARM: ldrh [[REG3:r[0-9]+]], {{\[}}[[REG0]], #20]
-; ARM: strh [[REG3]], {{\[}}[[REG0]], #8]
-; ARM: ldrh [[REG4:r[0-9]+]], {{\[}}[[REG0]], #22]
-; ARM: strh [[REG4]], {{\[}}[[REG0]], #10]
-; ARM: ldrh [[REG5:r[0-9]+]], {{\[}}[[REG0]], #24]
-; ARM: strh [[REG5]], {{\[}}[[REG0]], #12]
 ; ARM: bx lr
 ; THUMB-LABEL: t5:
 ; THUMB: {{(movw r0, :lower16:L_temp\$non_lazy_ptr)|(ldr.n r0, .LCPI)}}
@@ -215,30 +218,30 @@ define void @t6() nounwind ssp {
 ; ARM-MACHO: {{(movw r0, :lower16:L_temp\$non_lazy_ptr)|(ldr r0, .LCPI)}}
 ; ARM-MACHO: {{(movt r0, :upper16:L_temp\$non_lazy_ptr)?}}
 ; ARM-MACHO: ldr [[REG0:r[0-9]+]], [r0]
+; ARM-MACHO: ldrb [[REG1:r[0-9]+]], {{\[}}[[REG0]], #16]
+; ARM-MACHO-NEXT: strb [[REG1]], {{\[}}[[REG0]], #4]
+; ARM-MACHO-NEXT: ldrb [[REG2:r[0-9]+]], {{\[}}[[REG0]], #17]
+; ARM-MACHO-NEXT: strb [[REG2]], {{\[}}[[REG0]], #5]
+; ARM-MACHO-NEXT: ldrb [[REG3:r[0-9]+]], {{\[}}[[REG0]], #18]
+; ARM-MACHO-NEXT: strb [[REG3]], {{\[}}[[REG0]], #6]
+; ARM-MACHO-NEXT: ldrb [[REG4:r[0-9]+]], {{\[}}[[REG0]], #19]
+; ARM-MACHO-NEXT: strb [[REG4]], {{\[}}[[REG0]], #7]
+; ARM-MACHO-NEXT: ldrb [[REG5:r[0-9]+]], {{\[}}[[REG0]], #20]
+; ARM-MACHO-NEXT: strb [[REG5]], {{\[}}[[REG0]], #8]
+; ARM-MACHO-NEXT: ldrb [[REG6:r[0-9]+]], {{\[}}[[REG0]], #21]
+; ARM-MACHO-NEXT: strb [[REG6]], {{\[}}[[REG0]], #9]
+; ARM-MACHO-NEXT: ldrb [[REG7:r[0-9]+]], {{\[}}[[REG0]], #22]
+; ARM-MACHO-NEXT: strb [[REG7]], {{\[}}[[REG0]], #10]
+; ARM-MACHO-NEXT: ldrb [[REG8:r[0-9]+]], {{\[}}[[REG0]], #23]
+; ARM-MACHO-NEXT: strb [[REG8]], {{\[}}[[REG0]], #11]
+; ARM-MACHO-NEXT: ldrb [[REG9:r[0-9]+]], {{\[}}[[REG0]], #24]
+; ARM-MACHO-NEXT: strb [[REG9]], {{\[}}[[REG0]], #12]
+; ARM-MACHO-NEXT: ldrb [[REG10:r[0-9]+]], {{\[}}[[REG0]], #25]
+; ARM-MACHO-NEXT: strb [[REG10]], {{\[}}[[REG0]], #13]
 
 ; ARM-ELF: movw [[REG0:r[0-9]+]], :lower16:temp
 ; ARM-ELF: movt [[REG0]], :upper16:temp
 
-; ARM: ldrb [[REG1:r[0-9]+]], {{\[}}[[REG0]], #16]
-; ARM: strb [[REG1]], {{\[}}[[REG0]], #4]
-; ARM: ldrb [[REG2:r[0-9]+]], {{\[}}[[REG0]], #17]
-; ARM: strb [[REG2]], {{\[}}[[REG0]], #5]
-; ARM: ldrb [[REG3:r[0-9]+]], {{\[}}[[REG0]], #18]
-; ARM: strb [[REG3]], {{\[}}[[REG0]], #6]
-; ARM: ldrb [[REG4:r[0-9]+]], {{\[}}[[REG0]], #19]
-; ARM: strb [[REG4]], {{\[}}[[REG0]], #7]
-; ARM: ldrb [[REG5:r[0-9]+]], {{\[}}[[REG0]], #20]
-; ARM: strb [[REG5]], {{\[}}[[REG0]], #8]
-; ARM: ldrb [[REG6:r[0-9]+]], {{\[}}[[REG0]], #21]
-; ARM: strb [[REG6]], {{\[}}[[REG0]], #9]
-; ARM: ldrb [[REG7:r[0-9]+]], {{\[}}[[REG0]], #22]
-; ARM: strb [[REG7]], {{\[}}[[REG0]], #10]
-; ARM: ldrb [[REG8:r[0-9]+]], {{\[}}[[REG0]], #23]
-; ARM: strb [[REG8]], {{\[}}[[REG0]], #11]
-; ARM: ldrb [[REG9:r[0-9]+]], {{\[}}[[REG0]], #24]
-; ARM: strb [[REG9]], {{\[}}[[REG0]], #12]
-; ARM: ldrb [[REG10:r[0-9]+]], {{\[}}[[REG0]], #25]
-; ARM: strb [[REG10]], {{\[}}[[REG0]], #13]
 ; ARM: bx lr
 ; THUMB-LABEL: t6:
 ; THUMB: {{(movw r0, :lower16:L_temp\$non_lazy_ptr)|(ldr.n r0, .LCPI)}}

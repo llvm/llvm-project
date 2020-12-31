@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=ppc64le -relocation-model=static < %s | FileCheck %s
 
-@default = dso_local global i32 55
+@default = global i32 55
 define dso_local i32* @get_default_global() {
 ; CHECK-LABEL: get_default_global:
 ; CHECK:         addis 3, 2, default@toc@ha
