@@ -18,7 +18,7 @@
 // DEVICE-DAG: [[C_ADDR:.+]] = internal global i32 0,
 // DEVICE-DAG: [[CD_ADDR:@.+]] ={{ hidden | }}global %struct.S zeroinitializer,
 // HOST-DAG: @[[C_ADDR:.+]] = internal global i32 0,
-// HOST-DAG: @[[CD_ADDR:.+]] ={{ hidden | }}global %struct.S zeroinitializer,
+// HOST-DAG: @[[CD_ADDR:.+]] ={{( hidden | dso_local)?}} global %struct.S zeroinitializer,
 
 #pragma omp declare target
 int foo() { return 0; }
