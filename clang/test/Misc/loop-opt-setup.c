@@ -1,5 +1,4 @@
 // RUN: %clang -O1 -fno-unroll-loops -S -o - %s -emit-llvm | FileCheck %s
-// RUN: %clang -std=c99 -O1 -fno-unroll-loops -S -o - %s -emit-llvm | FileCheck %s --check-prefix C99
 
 extern int a[16];
 int b = 0;
@@ -25,12 +24,7 @@ void Helper() {
 }
 
 // Check br i1 to make sure the loop is gone, there will still be a label branch for the infinite loop.
-// In C99, there was no forward progress requirement, so we expect the infinite loop to still exist,
-// but for C11 and onwards, the infinite loop can be deleted.
 // CHECK-LABEL: Helper
-// C99: br label
-// C99-NOT: br i1
-// C99: br label
-// CHECK: entry:
-// CHECK-NOT: br i1
-// CHECK-NEXT: ret void
+// CHECK:         br label
+// CHECK-NOT:     br i1
+// CHECK:         br label
