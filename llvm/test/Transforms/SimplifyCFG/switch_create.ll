@@ -469,6 +469,29 @@ define i32 @test10_select(i32 %mode, i1 %Cond) {
 ; CHECK-NEXT:    [[A:%.*]] = icmp ne i32 [[MODE:%.*]], 0
 ; CHECK-NEXT:    [[B:%.*]] = icmp ne i32 [[MODE]], 51
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i1 [[B]], i1 false
+; CHECK-NEXT:    [[D:%.*]] = select i1 [[C]], i1 [[COND:%.*]], i1 false
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[D]], i32 123, i32 324
+; CHECK-NEXT:    ret i32 [[SPEC_SELECT]]
+;
+  %A = icmp ne i32 %mode, 0
+  %B = icmp ne i32 %mode, 51
+  %C = select i1 %A, i1 %B, i1 false
+  %D = select i1 %C, i1 %Cond, i1 false
+  br i1 %D, label %T, label %F
+T:
+  ret i32 123
+F:
+  ret i32 324
+
+}
+
+; TODO: %Cond doesn't need freeze
+define i32 @test10_select_and(i32 %mode, i1 %Cond) {
+; CHECK-LABEL: @test10_select_and(
+; CHECK-NEXT:  T:
+; CHECK-NEXT:    [[A:%.*]] = icmp ne i32 [[MODE:%.*]], 0
+; CHECK-NEXT:    [[B:%.*]] = icmp ne i32 [[MODE]], 51
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i1 [[B]], i1 false
 ; CHECK-NEXT:    [[D:%.*]] = and i1 [[C]], [[COND:%.*]]
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[D]], i32 123, i32 324
 ; CHECK-NEXT:    ret i32 [[SPEC_SELECT]]
@@ -477,6 +500,28 @@ define i32 @test10_select(i32 %mode, i1 %Cond) {
   %B = icmp ne i32 %mode, 51
   %C = select i1 %A, i1 %B, i1 false
   %D = and i1 %C, %Cond
+  br i1 %D, label %T, label %F
+T:
+  ret i32 123
+F:
+  ret i32 324
+
+}
+
+define i32 @test10_select_nofreeze(i32 %mode, i1 noundef %Cond) {
+; CHECK-LABEL: @test10_select_nofreeze(
+; CHECK-NEXT:  T:
+; CHECK-NEXT:    [[A:%.*]] = icmp ne i32 [[MODE:%.*]], 0
+; CHECK-NEXT:    [[B:%.*]] = icmp ne i32 [[MODE]], 51
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i1 [[B]], i1 false
+; CHECK-NEXT:    [[D:%.*]] = select i1 [[C]], i1 [[COND:%.*]], i1 false
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[D]], i32 123, i32 324
+; CHECK-NEXT:    ret i32 [[SPEC_SELECT]]
+;
+  %A = icmp ne i32 %mode, 0
+  %B = icmp ne i32 %mode, 51
+  %C = select i1 %A, i1 %B, i1 false
+  %D = select i1 %C, i1 %Cond, i1 false
   br i1 %D, label %T, label %F
 T:
   ret i32 123
