@@ -31,8 +31,9 @@
 // RUN:   -fPIE \
 // RUN:   2>&1 | FileCheck -check-prefixes=DEV,HOST-PIE %s
 
-// DEV-DAG: {{".*clang.*".* "-triple" "amdgcn-amd-amdhsa".* "-mrelocation-model" "pic" "-pic-level" "[1|2]" "-mframe-pointer=all"}}
+// DEV-DAG: {{".*clang.*".* "-triple" "amdgcn-amd-amdhsa".* "-mrelocation-model" "pic" "-pic-level" "[1|2]".* "-mframe-pointer=all"}}
 // HOST-STATIC-DAG: {{".*clang.*".* "-triple" "x86_64-unknown-linux-gnu".* "-mrelocation-model" "static"}}
-// HOST-PIC-DAG: {{".*clang.*".* "-triple" "x86_64-unknown-linux-gnu".* "-mrelocation-model" "pic" "-pic-level" "2" "-mframe-pointer=all"}}
+// HOST-PIC-DAG: {{".*clang.*".* "-triple" "x86_64-unknown-linux-gnu".* "-mrelocation-model" "pic" "-pic-level" "2"}}
+// HOST-PIC-NOT: "-pic-is-pie"
 // HOST-PIE-DAG: {{".*clang.*".* "-triple" "x86_64-unknown-linux-gnu".* "-mrelocation-model" "pic" "-pic-level" "2" "-pic-is-pie"}}
 // DEV-NOT: {{".*clang.*".* "-triple" "amdgcn-amd-amdhsa".* "-pic-is-pie"}}
