@@ -2,13 +2,13 @@
 
 declare void @foo()
 
-define i64 @check_lines_1() {
+define dso_local i64 @check_lines_1() {
   ret i64 1
 }
 
 ; UTC_ARGS: --disable
 
-define i64 @no_check_lines() {
+define dso_local i64 @no_check_lines() {
 ; A check line that would not be auto-generated (should not be removed!).
 ; CHECK: manual check line
   ret i64 2
@@ -16,7 +16,7 @@ define i64 @no_check_lines() {
 
 ; UTC_ARGS: --enable --no_x86_scrub_rip
 
-define i64 @check_lines_2() {
+define dso_local i64 @check_lines_2() {
   %result = call i64 @no_check_lines()
   ret i64 %result
 }

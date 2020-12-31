@@ -490,7 +490,7 @@ define dso_local x86_regcallcc double @test_CallargRetDouble(double %a)  {
 }
 
 ; Test regcall when receiving/returning long double
-define x86_regcallcc x86_fp80 @test_argRetf80(x86_fp80 %a0) nounwind {
+define dso_local x86_regcallcc x86_fp80 @test_argRetf80(x86_fp80 %a0) nounwind {
 ; X32-LABEL: test_argRetf80:
 ; X32:       # %bb.0:
 ; X32-NEXT:    fadd %st, %st(0)
@@ -620,7 +620,7 @@ define dso_local x86_regcallcc double @test_CallargParamf80(x86_fp80 %a)  {
 }
 
 ; Test regcall when receiving/returning pointer
-define x86_regcallcc [4 x i32]* @test_argRetPointer([4 x i32]* %a)  {
+define dso_local x86_regcallcc [4 x i32]* @test_argRetPointer([4 x i32]* %a)  {
 ; X32-LABEL: test_argRetPointer:
 ; X32:       # %bb.0:
 ; X32-NEXT:    incl %eax
@@ -642,7 +642,7 @@ define x86_regcallcc [4 x i32]* @test_argRetPointer([4 x i32]* %a)  {
 }
 
 ; Test regcall when passing/retrieving pointer
-define x86_regcallcc [4 x i32]* @test_CallargRetPointer([4 x i32]* %a)  {
+define dso_local x86_regcallcc [4 x i32]* @test_CallargRetPointer([4 x i32]* %a)  {
 ; X32-LABEL: test_CallargRetPointer:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %esp
