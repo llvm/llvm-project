@@ -2,17 +2,17 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -std=c++98 -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -std=c++11 -o - %s | FileCheck %s
 
-// CHECK: @a = global i32 10
+// CHECK: @a = dso_local global i32 10
 int a = 10;
-// CHECK: @ar = constant i32* @a
+// CHECK: @ar = dso_local constant i32* @a
 int &ar = a;
 
 void f();
-// CHECK: @fr = constant void ()* @_Z1fv
+// CHECK: @fr = dso_local constant void ()* @_Z1fv
 void (&fr)() = f;
 
 struct S { int& a; };
-// CHECK: @s = global %struct.S { i32* @a }
+// CHECK: @s = dso_local global %struct.S { i32* @a }
 S s = { a };
 
 // PR5581
@@ -23,7 +23,7 @@ public:
   unsigned f;
 };
 
-// CHECK: @_ZN6PR55812g0E = global %"class.PR5581::C" { i32 1 }
+// CHECK: @_ZN6PR55812g0E = dso_local global %"class.PR5581::C" { i32 1 }
 C g0 = { C::e1 };
 }
 
@@ -39,10 +39,10 @@ namespace test2 {
     static int g();
   } a;
 
-  // CHECK: @_ZN5test22t0E = global double {{1\.0+e\+0+}}, align 8
-  // CHECK: @_ZN5test22t1E = global [2 x double] [double {{1\.0+e\+0+}}, double {{5\.0+e-0*}}1], align 16
-  // CHECK: @_ZN5test22t2E = global double* @_ZN5test21A1d
-  // CHECK: @_ZN5test22t3E = global {{.*}} @_ZN5test21A1g
+  // CHECK: @_ZN5test22t0E = dso_local global double {{1\.0+e\+0+}}, align 8
+  // CHECK: @_ZN5test22t1E = dso_local global [2 x double] [double {{1\.0+e\+0+}}, double {{5\.0+e-0*}}1], align 16
+  // CHECK: @_ZN5test22t2E = dso_local global double* @_ZN5test21A1d
+  // CHECK: @_ZN5test22t3E = dso_local global {{.*}} @_ZN5test21A1g
   double t0 = A::d;
   double t1[] = { A::d, A::f };
   const double *t2 = &a.d;
@@ -50,7 +50,7 @@ namespace test2 {
 }
 
 // We don't expect to fold this in the frontend, but make sure it doesn't crash.
-// CHECK: @PR9558 = global float 0.000000e+0
+// CHECK: @PR9558 = dso_local global float 0.000000e+0
 float PR9558 = reinterpret_cast<const float&>("asd");
 
 // An initialized const automatic variable cannot be promoted to a constant
@@ -66,7 +66,7 @@ int writeToMutable() {
 
 // Make sure we don't try to fold this in the frontend; the backend can't
 // handle it.
-// CHECK: @PR11705 = global i128 0
+// CHECK: @PR11705 = dso_local global i128 0
 __int128_t PR11705 = (__int128_t)&PR11705;
 
 // Make sure we don't try to fold this either.
@@ -77,11 +77,11 @@ void UnfoldableAddrLabelDiff() { static __int128_t x = (long)&&a-(long)&&b; a:b:
 // CHECK: @_ZZ21FoldableAddrLabelDiffvE1x = internal global i64 sub (i64 ptrtoint (i8* blockaddress(@_Z21FoldableAddrLabelDiffv
 void FoldableAddrLabelDiff() { static long x = (long)&&a-(long)&&b; a:b:return;}
 
-// CHECK: @i = constant i32* bitcast (float* @PR9558 to i32*)
+// CHECK: @i = dso_local constant i32* bitcast (float* @PR9558 to i32*)
 int &i = reinterpret_cast<int&>(PR9558);
 
 int arr[2];
-// CHECK: @pastEnd = constant i32* bitcast (i8* getelementptr (i8, i8* bitcast ([2 x i32]* @arr to i8*), i64 8) to i32*)
+// CHECK: @pastEnd = dso_local constant i32* bitcast (i8* getelementptr (i8, i8* bitcast ([2 x i32]* @arr to i8*), i64 8) to i32*)
 int &pastEnd = arr[2];
 
 struct X {
