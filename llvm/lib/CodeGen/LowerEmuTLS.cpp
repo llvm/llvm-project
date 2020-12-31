@@ -44,6 +44,7 @@ private:
                                     GlobalVariable *to) {
     to->setLinkage(from->getLinkage());
     to->setVisibility(from->getVisibility());
+    to->setDSOLocal(from->isDSOLocal());
     if (from->hasComdat()) {
       to->setComdat(M.getOrInsertComdat(to->getName()));
       to->getComdat()->setSelectionKind(from->getComdat()->getSelectionKind());
