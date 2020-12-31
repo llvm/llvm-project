@@ -26,14 +26,14 @@ int f(void) {
 int f2(void) { return 43; }
 #else
 
-// CHECK-NO-BC-LABEL: define i32 @g
+// CHECK-NO-BC-LABEL: define{{.*}} i32 @g
 // CHECK-NO-BC: ret i32 42
 int g(void) {
   return f();
 }
 
-// CHECK-NO-BC-LABEL: define i32 @f
-// CHECK-NO-BC2-LABEL: define i32 @f2
+// CHECK-NO-BC-LABEL: define{{.*}} i32 @f
+// CHECK-NO-BC2-LABEL: define{{.*}} i32 @f2
 
 #endif
 

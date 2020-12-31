@@ -34,7 +34,7 @@ struct C : A, B {
   virtual void f();
 };
 
-// CHECK-LABEL: define void @_ZThn8_N5Test11C1fEv(
+// CHECK-LABEL: define{{.*}} void @_ZThn8_N5Test11C1fEv(
 // CHECK-DBG-NOT: dbg.declare
 // CHECK: ret void
 //
@@ -59,7 +59,7 @@ struct B : virtual A {
   virtual void f();
 };
 
-// CHECK-LABEL: define void @_ZTv0_n24_N5Test21B1fEv(
+// CHECK-LABEL: define{{.*}} void @_ZTv0_n24_N5Test21B1fEv(
 // CHECK-DBG-NOT: dbg.declare
 // CHECK: ret void
 void B::f() { }
@@ -87,7 +87,7 @@ struct B : A {
   virtual V2 *f();
 };
 
-// CHECK: define %{{.*}}* @_ZTch0_v0_n24_N5Test31B1fEv(
+// CHECK: define{{.*}} %{{.*}}* @_ZTch0_v0_n24_N5Test31B1fEv(
 // WIN64: define weak_odr dso_local %{{.*}} @"?f@B@Test3@@QEAAPEAUV1@2@XZ"(
 V2 *B::f() { return 0; }
 
@@ -203,7 +203,7 @@ namespace Test6 {
     virtual X f();
   };
 
-  // CHECK-LABEL: define void @_ZThn16_N5Test66Thunks1fEv
+  // CHECK-LABEL: define{{.*}} void @_ZThn16_N5Test66Thunks1fEv
 	// CHECK-DBG-NOT: dbg.declare
   // CHECK-NOT: memcpy
   // CHECK: {{call void @_ZN5Test66Thunks1fEv.*sret(.+) align 1}}
@@ -254,7 +254,7 @@ namespace Test7 {
 
   void D::baz(X, X&, _Complex float, Small, Small&, Large) { }
 
-  // CHECK-LABEL: define void @_ZThn8_N5Test71D3bazENS_1XERS1_CfNS_5SmallERS4_NS_5LargeE(
+  // CHECK-LABEL: define{{.*}} void @_ZThn8_N5Test71D3bazENS_1XERS1_CfNS_5SmallERS4_NS_5LargeE(
   // CHECK-DBG-NOT: dbg.declare
   // CHECK-NOT: memcpy
   // CHECK: ret void
@@ -269,10 +269,10 @@ namespace Test8 {
   struct B { virtual void bar(NonPOD); };
   struct C : A, B { virtual void bar(NonPOD); static void helper(NonPOD); };
 
-  // CHECK: define void @_ZN5Test81C6helperENS_6NonPODE([[NONPODTYPE:%.*]]*
+  // CHECK: define{{.*}} void @_ZN5Test81C6helperENS_6NonPODE([[NONPODTYPE:%.*]]*
   void C::helper(NonPOD var) {}
 
-  // CHECK-LABEL: define void @_ZThn8_N5Test81C3barENS_6NonPODE(
+  // CHECK-LABEL: define{{.*}} void @_ZThn8_N5Test81C3barENS_6NonPODE(
   // CHECK-DBG-NOT: dbg.declare
   // CHECK-NOT: load [[NONPODTYPE]], [[NONPODTYPE]]*
   // CHECK-NOT: memcpy
@@ -436,7 +436,7 @@ namespace Test14 {
   };
   void C::f() {
   }
-  // CHECK: define void @_ZThn8_N6Test141C1fEv({{.*}}) unnamed_addr [[NUW:#[0-9]+]]
+  // CHECK: define{{.*}} void @_ZThn8_N6Test141C1fEv({{.*}}) unnamed_addr [[NUW:#[0-9]+]]
   // CHECK-DBG-NOT: dbg.declare
   // CHECK: ret void
 }

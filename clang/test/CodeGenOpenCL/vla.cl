@@ -2,13 +2,13 @@
 // RUN: %clang_cc1 -emit-llvm -triple amdgcn-amd-amdhsa -O0 -cl-std=CL2.0 -o - %s | FileCheck -check-prefixes=CHECK,AMDGCN %s
 
 constant int sz0 = 5;
-// SPIR: @sz0 = addrspace(2) constant i32 5
-// AMDGCN: @sz0 = addrspace(4) constant i32 5
+// SPIR: @sz0 ={{.*}} addrspace(2) constant i32 5
+// AMDGCN: @sz0 ={{.*}} addrspace(4) constant i32 5
 const global int sz1 = 16;
-// CHECK: @sz1 = addrspace(1) constant i32 16
+// CHECK: @sz1 ={{.*}} addrspace(1) constant i32 16
 const constant int sz2 = 8;
-// SPIR: @sz2 = addrspace(2) constant i32 8
-// AMDGCN: @sz2 = addrspace(4) constant i32 8
+// SPIR: @sz2 ={{.*}} addrspace(2) constant i32 8
+// AMDGCN: @sz2 ={{.*}} addrspace(4) constant i32 8
 // CHECK: @testvla.vla2 = internal addrspace(3) global [8 x i16] undef
 
 kernel void testvla()

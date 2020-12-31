@@ -48,7 +48,7 @@ inline char test4_i(const char *x) {
 }
 
 int test4() {
-  // CHECK: define i32 @test4
+  // CHECK: define{{.*}} i32 @test4
   // CHECK: ret i32 0
   return __builtin_constant_p(test4_i(test3_c));
 }
@@ -144,7 +144,7 @@ void test14() {
 }
 
 int test15_f();
-// CHECK-LABEL: define void @test15
+// CHECK-LABEL: define{{.*}} void @test15
 // CHECK-NOT: call {{.*}}test15_f
 void test15() {
   int a, b;

@@ -6,7 +6,7 @@
 // RUN: %clang_cc1 -fcuda-is-device -triple nvptx64-nvidia-cuda \
 // RUN:   -emit-llvm -o - %s | FileCheck %s --check-prefixes=DEVICE,BOTH
 
-// BOTH-LABEL: define float @logf(float
+// BOTH-LABEL: define{{.*}} float @logf(float
 
 // logf() should be calling itself recursively as we don't have any standard
 // library on device side.

@@ -10,7 +10,7 @@ extern "C" __inline__ __attribute__((__gnu_inline__)) void *memcpy(void *a, cons
 }
 void *memcpy(void *, const void *, unsigned);
 
-// CHECK-LABEL: define void @_Z1av
+// CHECK-LABEL: define{{.*}} void @_Z1av
 void a() { (void)memcpy; }
 
 // CHECK-NOT: nobuiltin

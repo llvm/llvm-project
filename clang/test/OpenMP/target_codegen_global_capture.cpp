@@ -17,10 +17,10 @@
 #define HEADER
 
 
-// CHECK-DAG: [[GA:@.+]] = global double 1.000000e+00
-// CHECK-DAG: [[GB:@.+]] = global double 2.000000e+00
-// CHECK-DAG: [[GC:@.+]] = global double 3.000000e+00
-// CHECK-DAG: [[GD:@.+]] = global double 4.000000e+00
+// CHECK-DAG: [[GA:@.+]] ={{.*}} global double 1.000000e+00
+// CHECK-DAG: [[GB:@.+]] ={{.*}} global double 2.000000e+00
+// CHECK-DAG: [[GC:@.+]] ={{.*}} global double 3.000000e+00
+// CHECK-DAG: [[GD:@.+]] ={{.*}} global double 4.000000e+00
 // CHECK-DAG: [[FA:@.+]] = internal global float 5.000000e+00
 // CHECK-DAG: [[FB:@.+]] = internal global float 6.000000e+00
 // CHECK-DAG: [[FC:@.+]] = internal global float 7.000000e+00

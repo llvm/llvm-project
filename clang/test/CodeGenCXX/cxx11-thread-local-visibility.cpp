@@ -3,7 +3,7 @@
 
 // Regression test for PR40327
 
-// LINUX: @default_tls = thread_local global i32
+// LINUX: @default_tls ={{.*}} thread_local global i32
 // LINUX: @hidden_tls = hidden thread_local global i32
 // LINUX: define weak_odr hidden i32* @_ZTW11default_tls()
 // LINUX: define weak_odr hidden i32* @_ZTW10hidden_tls()

@@ -10,13 +10,13 @@ auto &ti_noexcept_ptr = typeid(void (A::*)() noexcept);
 // CHECK-DAG: @_ZTIM1ADoFvvE = linkonce_odr constant { i8*, i8*, i32, i8*, i8* } { i8* bitcast (i8** getelementptr inbounds (i8*, i8** @_ZTVN10__cxxabiv129__pointer_to_member_type_infoE, i64 2) to i8*), i8* getelementptr inbounds ([10 x i8], [10 x i8]* @_ZTSM1ADoFvvE, i32 0, i32 0), i32 64, i8* bitcast ({ i8*, i8* }* @_ZTIFvvE to i8*), i8* bitcast ({ i8*, i8* }* @_ZTI1A to i8*) }, comdat
 auto &ti_noexcept_memptr = typeid(void (A::*)() noexcept);
 
-// CHECK-LABEL: define void @_Z1fv(
+// CHECK-LABEL: define{{.*}} void @_Z1fv(
 __attribute__((noreturn)) void f() noexcept {
   // CHECK: call void @__cxa_throw({{.*}}@_ZTIPDoFvvE
   throw f;
 }
 
-// CHECK-LABEL: define void @_Z1gM1ADoFvvE(
+// CHECK-LABEL: define{{.*}} void @_Z1gM1ADoFvvE(
 void g(__attribute__((noreturn)) void (A::*p)() noexcept) {
   // CHECK: call void @__cxa_throw({{.*}}@_ZTIM1ADoFvvE
   throw p;

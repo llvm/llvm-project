@@ -4,8 +4,8 @@
 
 #include "Inputs/cuda.h"
 
-// CHECK-DEFAULT: @c = addrspace(4) externally_initialized global
-// CHECK-DEFAULT: @g = addrspace(1) externally_initialized global
+// CHECK-DEFAULT: @c ={{.*}} addrspace(4) externally_initialized global
+// CHECK-DEFAULT: @g ={{.*}} addrspace(1) externally_initialized global
 // CHECK-PROTECTED: @c = protected addrspace(4) externally_initialized global
 // CHECK-PROTECTED: @g = protected addrspace(1) externally_initialized global
 // CHECK-HIDDEN: @c = protected addrspace(4) externally_initialized global
@@ -23,7 +23,7 @@ __device__ int f() {
   return e;
 }
 
-// CHECK-DEFAULT: define amdgpu_kernel void @_Z3foov()
+// CHECK-DEFAULT: define{{.*}} amdgpu_kernel void @_Z3foov()
 // CHECK-PROTECTED: define protected amdgpu_kernel void @_Z3foov()
 // CHECK-HIDDEN: define protected amdgpu_kernel void @_Z3foov()
 __global__ void foo() {

@@ -70,7 +70,7 @@ int main (int argc, char **argv) {
 // ALL-NEXT:  [[RET:%.+]] = call {{[a-z\_\b]*[ ]?i32}} [[TMAIN:@.+tmain.+]](i8** [[ARGV]])
 // ALL:       ret i32
 // ALL-NEXT:  }
-// ALL-DEBUG-LABEL: define i32 @main(i32 %argc, i8** %argv)
+// ALL-DEBUG-LABEL: define{{.*}} i32 @main(i32 %argc, i8** %argv)
 
 // ALL-DEBUG:       store i32 %argc, i32* [[ARGC_ADDR:%.+]],
 // ALL-DEBUG:       [[VLA:%.+]] = alloca i32, i64 [[VLA_SIZE:%[^,]+]],

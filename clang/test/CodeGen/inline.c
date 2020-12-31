@@ -3,53 +3,53 @@
 // RUN: echo "GNU89 tests:"
 // RUN: %clang_cc1 %s -triple i386-unknown-unknown -O1 -disable-llvm-passes -emit-llvm -o - -std=gnu89 | FileCheck %s --check-prefix=CHECK1
 // RUN: %clang_cc1 %s -triple i386-unknown-unknown -fexperimental-new-pass-manager -O1 -disable-llvm-passes -emit-llvm -o - -std=gnu89 | FileCheck %s --check-prefix=CHECK1
-// CHECK1-LABEL: define i32 @foo()
-// CHECK1-LABEL: define i32 @bar()
-// CHECK1-LABEL: define void @unreferenced1()
+// CHECK1-LABEL: define{{.*}} i32 @foo()
+// CHECK1-LABEL: define{{.*}} i32 @bar()
+// CHECK1-LABEL: define{{.*}} void @unreferenced1()
 // CHECK1-NOT: unreferenced2
-// CHECK1-LABEL: define void @gnu_inline()
-// CHECK1-LABEL: define i32 @test1
-// CHECK1-LABEL: define i32 @test2
-// CHECK1-LABEL: define void @test3()
+// CHECK1-LABEL: define{{.*}} void @gnu_inline()
+// CHECK1-LABEL: define{{.*}} i32 @test1
+// CHECK1-LABEL: define{{.*}} i32 @test2
+// CHECK1-LABEL: define{{.*}} void @test3()
 // CHECK1-LABEL: define available_externally i32 @test4
 // CHECK1-LABEL: define available_externally i32 @test5
-// CHECK1-LABEL: define i32 @test6
-// CHECK1-LABEL: define void @test7
-// CHECK1: define i{{..}} @strlcpy
+// CHECK1-LABEL: define{{.*}} i32 @test6
+// CHECK1-LABEL: define{{.*}} void @test7
+// CHECK1: define{{.*}} i{{..}} @strlcpy
 // CHECK1-NOT: test9
-// CHECK1-LABEL: define void @testA
-// CHECK1-LABEL: define void @testB
-// CHECK1-LABEL: define void @testC
+// CHECK1-LABEL: define{{.*}} void @testA
+// CHECK1-LABEL: define{{.*}} void @testB
+// CHECK1-LABEL: define{{.*}} void @testC
 // CHECK1-LABEL: define available_externally i32 @ei()
 // CHECK1-LABEL: define available_externally void @gnu_ei_inline()
 
 // RUN: echo "C99 tests:"
 // RUN: %clang_cc1 %s -triple i386-unknown-unknown -O1 -disable-llvm-passes -emit-llvm -o - -std=gnu99 | FileCheck %s --check-prefix=CHECK2
 // RUN: %clang_cc1 %s -triple i386-unknown-unknown -fexperimental-new-pass-manager -O1 -disable-llvm-passes -emit-llvm -o - -std=gnu99 | FileCheck %s --check-prefix=CHECK2
-// CHECK2-LABEL: define i32 @ei()
-// CHECK2-LABEL: define i32 @bar()
+// CHECK2-LABEL: define{{.*}} i32 @ei()
+// CHECK2-LABEL: define{{.*}} i32 @bar()
 // CHECK2-NOT: unreferenced1
-// CHECK2-LABEL: define void @unreferenced2()
-// CHECK2-LABEL: define void @gnu_inline()
-// CHECK2-LABEL: define i32 @test1
-// CHECK2-LABEL: define i32 @test2
-// CHECK2-LABEL: define void @test3
+// CHECK2-LABEL: define{{.*}} void @unreferenced2()
+// CHECK2-LABEL: define{{.*}} void @gnu_inline()
+// CHECK2-LABEL: define{{.*}} i32 @test1
+// CHECK2-LABEL: define{{.*}} i32 @test2
+// CHECK2-LABEL: define{{.*}} void @test3
 // CHECK2-LABEL: define available_externally i32 @test4
 // CHECK2-LABEL: define available_externally i32 @test5
-// CHECK2-LABEL: define i32 @test6
-// CHECK2-LABEL: define void @test7
+// CHECK2-LABEL: define{{.*}} i32 @test6
+// CHECK2-LABEL: define{{.*}} void @test7
 // CHECK2: define available_externally i{{..}} @strlcpy
-// CHECK2-LABEL: define void @test9
-// CHECK2-LABEL: define void @testA
-// CHECK2-LABEL: define void @testB
-// CHECK2-LABEL: define void @testC
+// CHECK2-LABEL: define{{.*}} void @test9
+// CHECK2-LABEL: define{{.*}} void @testA
+// CHECK2-LABEL: define{{.*}} void @testB
+// CHECK2-LABEL: define{{.*}} void @testC
 // CHECK2-LABEL: define available_externally i32 @foo()
 // CHECK2-LABEL: define available_externally void @gnu_ei_inline()
 
 // RUN: echo "C++ tests:"
 // RUN: %clang_cc1 -x c++ %s -triple i386-unknown-unknown -O1 -disable-llvm-passes -emit-llvm -o - -std=c++98 | FileCheck %s --check-prefix=CHECK3
 // RUN: %clang_cc1 -x c++ %s -triple i386-unknown-unknown -fexperimental-new-pass-manager -O1 -disable-llvm-passes -emit-llvm -o - -std=c++98 | FileCheck %s --check-prefix=CHECK3
-// CHECK3-LABEL: define i32 @_Z3barv()
+// CHECK3-LABEL: define{{.*}} i32 @_Z3barv()
 // CHECK3-LABEL: define linkonce_odr i32 @_Z3foov()
 // CHECK3-NOT: unreferenced
 // CHECK3-LABEL: define available_externally void @_Z10gnu_inlinev()

@@ -80,7 +80,7 @@ Task bar() {
   }
 }
 
-// CHECK-LABEL: define void @_Z3barv
+// CHECK-LABEL: define{{.*}} void @_Z3barv
 // CHECK:         %[[MODE:.+]] = load i32, i32* %mode
 // CHECK-NEXT:    switch i32 %[[MODE]], label %{{.+}} [
 // CHECK-NEXT:      i32 1, label %[[CASE1:.+]]

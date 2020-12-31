@@ -16,7 +16,7 @@
 
 void h1(float *c, float *a, double b[], int size)
 {
-// CHECK-LABEL: define void @h1
+// CHECK-LABEL: define{{.*}} void @h1
   int t = 0;
 #pragma omp simd safelen(16) linear(t) aligned(c:32) aligned(a,b)
   // CHECK:         call void @llvm.assume(i1 true) [ "align"(float* [[PTR4:%.*]], {{i64|i32}} 32) ]
@@ -81,7 +81,7 @@ void h1(float *c, float *a, double b[], int size)
 
 void h2(float *c, float *a, float *b, int size)
 {
-// CHECK-LABEL: define void @h2
+// CHECK-LABEL: define{{.*}} void @h2
   int t = 0;
 #pragma omp simd linear(t)
   for (int i = 0; i < size; ++i) {
@@ -94,7 +94,7 @@ void h2(float *c, float *a, float *b, int size)
 
 void h3(float *c, float *a, float *b, int size)
 {
-// CHECK-LABEL: define void @h3
+// CHECK-LABEL: define{{.*}} void @h3
 #pragma omp simd
   for (int i = 0; i < size; ++i) {
     for (int j = 0; j < size; ++j) {

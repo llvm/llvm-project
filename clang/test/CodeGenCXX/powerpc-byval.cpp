@@ -9,4 +9,4 @@ void byval(S one, S two) {
   one = two;
 }
 
-// CHECK: define void @_Z5byval1SS_(%struct.S* %one, %struct.S* %two)
+// CHECK: define{{.*}} void @_Z5byval1SS_(%struct.S* %one, %struct.S* %two)

@@ -102,7 +102,7 @@ extern "C" int call_deduced_return_operator() {
   return *decltype(deduced_return())()();
 }
 
-// CHECK-LABEL: define i32 @call_deduced_return_operator()
+// CHECK-LABEL: define{{.*}} i32 @call_deduced_return_operator()
 // CHECK: call i32* @_ZZL14deduced_returnvEN1SclEv(
 // CHECK: load i32, i32* %
 // CHECK: ret i32 %
@@ -122,7 +122,7 @@ extern "C" int call_block_deduced_return() {
   return *decltype(block_deduced_return())()();
 }
 
-// CHECK-LABEL: define i32 @call_block_deduced_return()
+// CHECK-LABEL: define{{.*}} i32 @call_block_deduced_return()
 // CHECK: call i32* @_ZZZL20block_deduced_returnvEUb_EN1SclEv(
 // CHECK: load i32, i32* %
 // CHECK: ret i32 %
@@ -153,7 +153,7 @@ auto global_lambda = []() {
 extern "C" int use_global_lambda() {
   return *decltype(global_lambda())::get();
 }
-// CHECK-LABEL: define i32 @use_global_lambda()
+// CHECK-LABEL: define{{.*}} i32 @use_global_lambda()
 // CHECK: call i32* @"_ZZNK3$_2clEvEN1S3getEv"()
 
 // CHECK-LABEL: define internal i32* @"_ZZNK3$_2clEvEN1S3getEv"()

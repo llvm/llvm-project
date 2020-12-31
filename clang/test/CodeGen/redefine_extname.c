@@ -22,7 +22,7 @@ int f() {
   return foo;
 }
 extern int foo() { return 1; }
-// CHECK: define i32 @bar()
+// CHECK: define{{.*}} i32 @bar()
 
 // Check that pragma redefine_extname applies to external declarations only.
 #pragma redefine_extname foo_static bar_static

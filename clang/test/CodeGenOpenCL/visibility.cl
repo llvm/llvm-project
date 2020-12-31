@@ -4,7 +4,7 @@
 
 // REQUIRES: amdgpu-registered-target
 
-// FVIS-DEFAULT:  @glob = local_unnamed_addr
+// FVIS-DEFAULT:  @glob ={{.*}} local_unnamed_addr addrspace(1) global i32 0
 // FVIS-PROTECTED: @glob = protected local_unnamed_addr
 // FVIS-HIDDEN: @glob = hidden local_unnamed_addr
 int glob = 0;
@@ -16,9 +16,9 @@ __attribute__((visibility("hidden"))) int glob_hidden = 0;
 // FVIS-PROTECTED: @glob_protected = protected local_unnamed_addr
 // FVIS-HIDDEN: @glob_protected = protected local_unnamed_addr
 __attribute__((visibility("protected"))) int glob_protected = 0;
-// FVIS-DEFAULT:  @glob_default = local_unnamed_addr
-// FVIS-PROTECTED: @glob_default = local_unnamed_addr
-// FVIS-HIDDEN: @glob_default = local_unnamed_addr
+// FVIS-DEFAULT:  @glob_default ={{( dso_local)?}} local_unnamed_addr
+// FVIS-PROTECTED: @glob_default ={{( dso_local)?}} local_unnamed_addr
+// FVIS-HIDDEN: @glob_default ={{( dso_local)?}} local_unnamed_addr
 __attribute__((visibility("default"))) int glob_default = 0;
 
 // FVIS-DEFAULT:  @ext = external local_unnamed_addr
@@ -38,7 +38,7 @@ __attribute__((visibility("protected"))) extern int ext_protected;
 // FVIS-HIDDEN: @ext_default = external local_unnamed_addr
 __attribute__((visibility("default"))) extern int ext_default;
 
-// FVIS-DEFAULT: define amdgpu_kernel void @kern()
+// FVIS-DEFAULT: define{{.*}} amdgpu_kernel void @kern()
 // FVIS-PROTECTED: define protected amdgpu_kernel void @kern()
 // FVIS-HIDDEN: define protected amdgpu_kernel void @kern()
 kernel void kern() {}
@@ -50,12 +50,12 @@ __attribute__((visibility("hidden"))) kernel void kern_hidden() {}
 // FVIS-PROTECTED: define protected amdgpu_kernel void @kern_protected()
 // FVIS-HIDDEN: define protected amdgpu_kernel void @kern_protected()
 __attribute__((visibility("protected"))) kernel void kern_protected() {}
-// FVIS-DEFAULT: define amdgpu_kernel void @kern_default()
-// FVIS-PROTECTED: define amdgpu_kernel void @kern_default()
-// FVIS-HIDDEN: define amdgpu_kernel void @kern_default()
+// FVIS-DEFAULT: define{{.*}} amdgpu_kernel void @kern_default()
+// FVIS-PROTECTED: define{{.*}} amdgpu_kernel void @kern_default()
+// FVIS-HIDDEN: define{{.*}} amdgpu_kernel void @kern_default()
 __attribute__((visibility("default"))) kernel void kern_default() {}
 
-// FVIS-DEFAULT: define void @func()
+// FVIS-DEFAULT: define{{.*}} void @func()
 // FVIS-PROTECTED: define protected void @func()
 // FVIS-HIDDEN: define hidden void @func()
 void func() {}
@@ -67,9 +67,9 @@ __attribute__((visibility("hidden"))) void func_hidden() {}
 // FVIS-PROTECTED: define protected void @func_protected()
 // FVIS-HIDDEN: define protected void @func_protected()
 __attribute__((visibility("protected"))) void func_protected() {}
-// FVIS-DEFAULT: define void @func_default()
-// FVIS-PROTECTED: define void @func_default()
-// FVIS-HIDDEN: define void @func_default()
+// FVIS-DEFAULT: define{{.*}} void @func_default()
+// FVIS-PROTECTED: define{{.*}} void @func_default()
+// FVIS-HIDDEN: define{{.*}} void @func_default()
 __attribute__((visibility("default"))) void func_default() {}
 
 extern kernel void ext_kern();

@@ -89,7 +89,7 @@ namespace PR14588 {
     virtual void squawk() { other(); }
   };
 
-  // CHECK-LABEL: define void @_ZN7PR145883FooC1Ev(%"class.PR14588::Foo"*
+  // CHECK-LABEL: define{{.*}} void @_ZN7PR145883FooC1Ev(%"class.PR14588::Foo"*
   // CHECK: call void @_ZN7PR145883FooC1EPKv(
   // CHECK: invoke void @_ZN7PR145885otherEv()
   // CHECK: call void @_ZN7PR145883FooD1Ev

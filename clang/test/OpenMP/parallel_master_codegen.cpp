@@ -25,7 +25,7 @@ void parallel_master() {
   foo();
 }
 
-// CK1-LABEL: define void @{{.+}}parallel_master{{.+}}
+// CK1-LABEL: define{{.*}} void @{{.+}}parallel_master{{.+}}
 // CK1:       call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* [[OMP_OUTLINED:@.+]] to void (i32*, i32*, ...)*))
 
 // CK1:       define internal {{.*}}void [[OMP_OUTLINED]](i32* noalias [[GTID:%.+]], i32* noalias [[BTID:%.+]])
@@ -60,7 +60,7 @@ void parallel_master_private() {
   a++;
 }
 
-// CK2-LABEL: define void @{{.+}}parallel_master_private{{.+}}
+// CK2-LABEL: define{{.*}} void @{{.+}}parallel_master_private{{.+}}
 // CK2:       [[A_PRIV:%.+]] = alloca i32
 // CK2:       call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* [[OMP_OUTLINED:@.+]] to void (i32*, i32*, ...)*))
 
@@ -96,7 +96,7 @@ void parallel_master_private() {
   a++;
 }
 
-// CK3-LABEL: define void @{{.+}}parallel_master{{.+}}
+// CK3-LABEL: define{{.*}} void @{{.+}}parallel_master{{.+}}
 // CK3:       [[A_VAL:%.+]] = alloca i32
 // CK3:       call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* {{.+}}, i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*)* [[OMP_OUTLINED:@.+]] to void
 
@@ -138,7 +138,7 @@ void parallel_master_default_firstprivate() {
   a++;
 }
 
-// CK31-LABEL: define void @{{.+}}parallel_master{{.+}}
+// CK31-LABEL: define{{.*}} void @{{.+}}parallel_master{{.+}}
 // CK31:       [[A_VAL:%.+]] = alloca i32{{.+}}
 // CK31:       [[A_CASTED:%.+]] = alloca i64
 // CK31:       [[ZERO_VAL:%.+]] = load i32, i32* [[A_VAL]]
@@ -295,7 +295,7 @@ void parallel_master_firstprivate() {
   a++;
 }
 
-// CK4-LABEL: define void @{{.+}}parallel_master_firstprivate{{.+}}
+// CK4-LABEL: define{{.*}} void @{{.+}}parallel_master_firstprivate{{.+}}
 // CK4:       [[A_VAL:%.+]] = alloca i32
 // CK4:       [[A_CASTED:%.+]] = alloca i64
 // CK4:       [[ZERO:%.+]] = load i32, i32* [[A_VAL]]
@@ -346,10 +346,10 @@ void parallel_master_firstprivate() {
 // CK5-DAG: [[A:@.+]] = {{.+}} i32 0
 // CK5-DAG: [[STR:@.+]] = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00"
 // CK5-DAG: [[DEF_LOC_1:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
-// CK5-DAG: [[A_CACHE:@.+]] = common global i8** null
+// CK5-DAG: [[A_CACHE:@.+]] = common{{.*}} global i8** null
 // CK5-DAG: [[DEF_LOC_2:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 66, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
 // TLS-CHECK-DAG: %struct.ident_t = type { i32, i32, i32, i32, i8* }
-// TLS-CHECK-DAG: [[A:@.+]] = thread_local global i32 0
+// TLS-CHECK-DAG: [[A:@.+]] ={{.*}} thread_local global i32 0
 // TLS-CHECK-DAG: [[STR:@.+]] = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00"
 // TLS-CHECK-DAG: [[DEF_LOC_1:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 66, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
 // TLS-CHECK-DAG: [[DEF_LOC_2:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
@@ -362,10 +362,10 @@ void parallel_master_copyin() {
   a++;
 }
 
-// CK5-LABEL: define void @{{.+}}parallel_master_copyin{{.+}}
+// CK5-LABEL: define{{.*}} void @{{.+}}parallel_master_copyin{{.+}}
 // CK5:       call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC_1]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* [[OMP_OUTLINED:@.+]] to void (i32*, i32*, ...)*))
 // CK5: ret void
-// TLS-CHECK-LABEL: define void @{{.+}}parallel_master_copyin{{.+}}
+// TLS-CHECK-LABEL: define{{.*}} void @{{.+}}parallel_master_copyin{{.+}}
 // TLS-CHECK:       call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC_2]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*)* [[OMP_OUTLINED:@.+]] to void (i32*, i32*, ...)*)
 // TLS-CHECK: ret void
 
@@ -444,7 +444,7 @@ void parallel_master_copyin() {
 // CK6-DAG: %struct.ident_t = type { i32, i32, i32, i32, i8* }
 // CK6-DAG: [[STR:@.+]] = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00"
 // CK6-DAG: [[DEF_LOC_1:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
-// CK6-DAG: [[GOMP:@.+]] = common global [8 x i32] zeroinitializer
+// CK6-DAG: [[GOMP:@.+]] = common{{.*}} global [8 x i32] zeroinitializer
 // CK6-DAG: [[DEF_LOC_2:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 18, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
 
 void parallel_master_reduction() {
@@ -453,7 +453,7 @@ void parallel_master_reduction() {
   g = 1;
 }
 
-// CK6-LABEL: define void @{{.+}}parallel_master_reduction{{.+}}
+// CK6-LABEL: define{{.*}} void @{{.+}}parallel_master_reduction{{.+}}
 // CK6:       [[G_VAR:%.+]] = alloca i32
 // CK6:       call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC_1]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*)* [[OMP_OUTLINED:@.+]] to void (i32*, i32*, ...)*), i32* [[G_VAR]])
 // CK6: ret void
@@ -619,7 +619,7 @@ void parallel_master_allocate() {
   a++;
 }
 
-// CK9-LABEL: define void @{{.+}}parallel_master_allocate{{.+}}
+// CK9-LABEL: define{{.*}} void @{{.+}}parallel_master_allocate{{.+}}
 // CK9:       [[A_VAL:%.+]] = alloca i32,
 // CK9:       [[A_CASTED:%.+]] = alloca i64
 // CK9:       [[ZERO:%.+]] = load i32, i32* [[A_VAL]]

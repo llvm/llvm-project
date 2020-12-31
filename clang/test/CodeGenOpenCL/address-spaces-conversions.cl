@@ -5,7 +5,7 @@
 // test that we generate address space casts everywhere we need conversions of
 // pointers to different address spaces
 
-// CHECK: define void @test
+// CHECK: define{{.*}} void @test
 void test(global int *arg_glob, generic int *arg_gen,
           __attribute__((opencl_global_device)) int *arg_device,
           __attribute__((opencl_global_host)) int *arg_host) {
@@ -68,7 +68,7 @@ void test(global int *arg_glob, generic int *arg_gen,
 }
 
 // Test ternary operator.
-// CHECK: define void @test_ternary
+// CHECK: define{{.*}} void @test_ternary
 void test_ternary(void) {
   global int *var_glob;
   generic int *var_gen;
