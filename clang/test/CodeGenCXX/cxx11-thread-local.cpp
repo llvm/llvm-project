@@ -13,17 +13,17 @@
 int f();
 int g();
 
-// LINUX-DAG: @a = thread_local global i32 0
+// LINUX-DAG: @a ={{.*}} thread_local global i32 0
 // DARWIN-DAG: @a = internal thread_local global i32 0
 thread_local int a = f();
 extern thread_local int b;
-// CHECK-DAG: @c = global i32 0
+// CHECK-DAG: @c ={{.*}} global i32 0
 int c = b;
 // CHECK-DAG: @_ZL1d = internal thread_local global i32 0
 static thread_local int d = g();
 
 struct U { static thread_local int m; };
-// LINUX-DAG: @_ZN1U1mE = thread_local global i32 0
+// LINUX-DAG: @_ZN1U1mE ={{.*}} thread_local global i32 0
 // DARWIN-DAG: @_ZN1U1mE = internal thread_local global i32 0
 thread_local int U::m = f();
 
@@ -49,7 +49,7 @@ struct Dtor { ~Dtor(); };
 template<typename T> struct X { static thread_local Dtor m; };
 template<typename T> thread_local Dtor X<T>::m;
 
-// CHECK-DAG: @e = global
+// CHECK-DAG: @e ={{.*}} global
 void *e = V<int>::m + W<int>::m + &X<int>::m;
 
 template thread_local int V<float>::m;
@@ -89,9 +89,9 @@ void *e2 = V<char>::m + W<char>::m + &X<char>::m;
 
 // CHECK-DAG: @llvm.global_ctors = appending global {{.*}} @[[GLOBAL_INIT:[^ ]*]]
 
-// LINUX-DAG: @_ZTH1a = alias void (), void ()* @__tls_init
+// LINUX-DAG: @_ZTH1a ={{.*}} alias void (), void ()* @__tls_init
 // DARWIN-DAG: @_ZTH1a = internal alias void (), void ()* @__tls_init
-// LINUX-DAG: @_ZTHN1U1mE = alias void (), void ()* @__tls_init
+// LINUX-DAG: @_ZTHN1U1mE ={{.*}} alias void (), void ()* @__tls_init
 // DARWIN-DAG: @_ZTHN1U1mE = internal alias void (), void ()* @__tls_init
 // CHECK-DAG: @_ZTHN1VIiE1mE = linkonce_odr alias void (), void ()* @[[V_M_INIT:[^, ]*]]
 // CHECK-DAG: @_ZTHN1XIiE1mE = linkonce_odr alias void (), void ()* @[[X_M_INIT:[^, ]*]]
@@ -109,7 +109,7 @@ void *e2 = V<char>::m + W<char>::m + &X<char>::m;
 // CHECK: call i32 @_Z1fv()
 // CHECK-NEXT: store i32 {{.*}}, i32* @a, align 4
 
-// CHECK-LABEL: define i32 @_Z1fv()
+// CHECK-LABEL: define{{.*}} i32 @_Z1fv()
 int f() {
   // CHECK: %[[GUARD:.*]] = load i8, i8* @_ZGVZ1fvE1n, align 1
   // CHECK: %[[NEED_INIT:.*]] = icmp eq i8 %[[GUARD]], 0
@@ -224,7 +224,7 @@ int f() {
 struct S { S(); ~S(); };
 struct T { ~T(); };
 
-// CHECK-LABEL: define void @_Z8tls_dtorv()
+// CHECK-LABEL: define{{.*}} void @_Z8tls_dtorv()
 void tls_dtor() {
   // CHECK: load i8, i8* @_ZGVZ8tls_dtorvE1s
   // CHECK: call void @_ZN1SC1Ev(%struct.S* {{[^,]*}} @_ZZ8tls_dtorvE1s)

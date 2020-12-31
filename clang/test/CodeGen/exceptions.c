@@ -5,8 +5,8 @@
 void test1() {
   extern void test1_helper(void (^)(int));
 
-  // CHECK-LABEL:     define void @test1() {{.*}} personality i8* bitcast (i32 (...)* @__gcc_personality_v0 to i8*)
-  // CHECK-ARM-LABEL: define arm_aapcscc void @test1() {{.*}} personality i8* bitcast (i32 (...)* @__gcc_personality_sj0 to i8*)
+  // CHECK-LABEL:     define{{.*}} void @test1() {{.*}} personality i8* bitcast (i32 (...)* @__gcc_personality_v0 to i8*)
+  // CHECK-ARM-LABEL: define{{.*}} arm_aapcscc void @test1() {{.*}} personality i8* bitcast (i32 (...)* @__gcc_personality_sj0 to i8*)
 
   __block int x = 10;
 

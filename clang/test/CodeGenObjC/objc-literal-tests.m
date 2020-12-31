@@ -53,7 +53,7 @@ typedef signed char BOOL;
 
 id NSUserName();
 
-// CHECK: define i32 @main() [[NUW:#[0-9]+]]
+// CHECK: define{{.*}} i32 @main() [[NUW:#[0-9]+]]
 int main() {
   // CHECK: call{{.*}}@objc_msgSend{{.*}}i8 signext 97
   NSNumber *aNumber = @'a';

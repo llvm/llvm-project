@@ -9,7 +9,7 @@ namespace test0 {
   };
   A::A() : x(test0::x) {}
 
-// CHECK-LABEL:    define void @_ZN5test01AC2Ev(
+// CHECK-LABEL:    define{{.*}} void @_ZN5test01AC2Ev(
 // CHECK:      [[THIS:%.*]] = alloca [[TEST0:%.*]]*, align 8
 // CHECK-NEXT: store 
 // CHECK-NEXT: [[T0:%.*]] = load [[TEST0]]*, [[TEST0]]** [[THIS]]

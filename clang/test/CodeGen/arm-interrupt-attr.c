@@ -2,30 +2,30 @@
 // RUN: %clang_cc1 -triple arm-apple-darwin -target-abi apcs-gnu -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-APCS
 
 __attribute__((interrupt)) void test_generic_interrupt() {
-  // CHECK: define arm_aapcscc void @test_generic_interrupt() [[GENERIC_ATTR:#[0-9]+]]
+  // CHECK: define{{.*}} arm_aapcscc void @test_generic_interrupt() [[GENERIC_ATTR:#[0-9]+]]
 
-  // CHECK-APCS: define void @test_generic_interrupt() [[GENERIC_ATTR:#[0-9]+]]
+  // CHECK-APCS: define{{.*}} void @test_generic_interrupt() [[GENERIC_ATTR:#[0-9]+]]
 }
 
 __attribute__((interrupt("IRQ"))) void test_irq_interrupt() {
-  // CHECK: define arm_aapcscc void @test_irq_interrupt() [[IRQ_ATTR:#[0-9]+]]
+  // CHECK: define{{.*}} arm_aapcscc void @test_irq_interrupt() [[IRQ_ATTR:#[0-9]+]]
 }
 
 __attribute__((interrupt("FIQ"))) void test_fiq_interrupt() {
-  // CHECK: define arm_aapcscc void @test_fiq_interrupt() [[FIQ_ATTR:#[0-9]+]]
+  // CHECK: define{{.*}} arm_aapcscc void @test_fiq_interrupt() [[FIQ_ATTR:#[0-9]+]]
 }
 
 __attribute__((interrupt("SWI"))) void test_swi_interrupt() {
-  // CHECK: define arm_aapcscc void @test_swi_interrupt() [[SWI_ATTR:#[0-9]+]]
+  // CHECK: define{{.*}} arm_aapcscc void @test_swi_interrupt() [[SWI_ATTR:#[0-9]+]]
 }
 
 __attribute__((interrupt("ABORT"))) void test_abort_interrupt() {
-  // CHECK: define arm_aapcscc void @test_abort_interrupt() [[ABORT_ATTR:#[0-9]+]]
+  // CHECK: define{{.*}} arm_aapcscc void @test_abort_interrupt() [[ABORT_ATTR:#[0-9]+]]
 }
 
 
 __attribute__((interrupt("UNDEF"))) void test_undef_interrupt() {
-  // CHECK: define arm_aapcscc void @test_undef_interrupt() [[UNDEF_ATTR:#[0-9]+]]
+  // CHECK: define{{.*}} arm_aapcscc void @test_undef_interrupt() [[UNDEF_ATTR:#[0-9]+]]
 }
 
 // CHECK: attributes [[GENERIC_ATTR]] = { {{.*}} {{"interrupt"[^=]}}

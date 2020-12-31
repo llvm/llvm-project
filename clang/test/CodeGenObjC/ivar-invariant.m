@@ -40,7 +40,7 @@ void * variant_load_1(int i) {
     return ptr;
 }
 
-// CHECK-LABEL: define i8* @variant_load_1(i32 %i)
+// CHECK-LABEL: define{{.*}} i8* @variant_load_1(i32 %i)
 // CHECK: [[IVAR:%.*]] = load i64, i64* @"OBJC_IVAR_$_Derived.member", align 8{{$}}
 
 @interface Container : Derived @end

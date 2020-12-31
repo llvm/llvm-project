@@ -26,7 +26,7 @@
 
 @end
 
-// CHECK-LABEL: define void @call_A
+// CHECK-LABEL: define{{.*}} void @call_A
 void call_A(A *a, int *p) {
   // CHECK: [[ICMP:%.*]] = icmp ne i32* [[P1:%.*]], null, !nosanitize
   // CHECK: br i1 [[ICMP]], {{.*}}, !nosanitize

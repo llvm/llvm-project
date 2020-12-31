@@ -6,27 +6,27 @@ namespace PR16263 {
   const unsigned int n = 1234;
   extern const int &r = (const int&)n;
   // CHECK: @_ZGRN7PR162631rE_ = internal constant i32 1234,
-  // CHECK: @_ZN7PR162631rE = constant i32* @_ZGRN7PR162631rE_,
+  // CHECK: @_ZN7PR162631rE ={{.*}} constant i32* @_ZGRN7PR162631rE_,
 
   extern const int &s = reinterpret_cast<const int&>(n);
   // CHECK: @_ZN7PR16263L1nE = internal constant i32 1234, align 4
-  // CHECK: @_ZN7PR162631sE = constant i32* @_ZN7PR16263L1nE, align 8
+  // CHECK: @_ZN7PR162631sE ={{.*}} constant i32* @_ZN7PR16263L1nE, align 8
 
   struct A { int n; };
   struct B { int n; };
   struct C : A, B {};
   extern const A &&a = (A&&)(A&&)(C&&)(C{});
   // CHECK: @_ZGRN7PR162631aE_ = internal global {{.*}} zeroinitializer,
-  // CHECK: @_ZN7PR162631aE = constant {{.*}} bitcast ({{.*}}* @_ZGRN7PR162631aE_ to
+  // CHECK: @_ZN7PR162631aE ={{.*}} constant {{.*}} bitcast ({{.*}}* @_ZGRN7PR162631aE_ to
 
   extern const int &&t = ((B&&)C{}).n;
   // CHECK: @_ZGRN7PR162631tE_ = internal global {{.*}} zeroinitializer,
-  // CHECK: @_ZN7PR162631tE = constant i32* {{.*}}* @_ZGRN7PR162631tE_ {{.*}} 4
+  // CHECK: @_ZN7PR162631tE ={{.*}} constant i32* {{.*}}* @_ZGRN7PR162631tE_ {{.*}} 4
 
   struct D { double d; C c; };
   extern const int &&u = (123, static_cast<B&&>(0, ((D&&)D{}).*&D::c).n);
   // CHECK: @_ZGRN7PR162631uE_ = internal global {{.*}} zeroinitializer
-  // CHECK: @_ZN7PR162631uE = constant i32* {{.*}} @_ZGRN7PR162631uE_ {{.*}} 12
+  // CHECK: @_ZN7PR162631uE ={{.*}} constant i32* {{.*}} @_ZGRN7PR162631uE_ {{.*}} 12
 }
 
 namespace PR20227 {
@@ -50,7 +50,7 @@ namespace BraceInit {
   // CHECK-CXX11: @_ZGRN9BraceInit1xE_ = internal constant i32 3
   // FIXME: This should still be emitted as 'constant' in C++17.
   // CHECK-CXX17: @_ZGRN9BraceInit1xE_ = internal global i32 3
-  // CHECK: @_ZN9BraceInit1xE = constant i32* @_ZGRN9BraceInit1xE_
+  // CHECK: @_ZN9BraceInit1xE ={{.*}} constant i32* @_ZGRN9BraceInit1xE_
 }
 
 struct A {
@@ -266,7 +266,7 @@ namespace PR5867 {
   };
 
   void f(S, int);
-  // CHECK-LABEL: define void @_ZN6PR58671gEv
+  // CHECK-LABEL: define{{.*}} void @_ZN6PR58671gEv
   void g() {
     // CHECK: call void @_ZN6PR58671SC1Ev
     // CHECK-NEXT: call void @_ZN6PR58671fENS_1SEi
@@ -318,7 +318,7 @@ struct A {
 
 int& f(int);
 
-// CHECK-LABEL: define void @_ZN3T121gEv
+// CHECK-LABEL: define{{.*}} void @_ZN3T121gEv
 void g() {
   // CHECK: call void @_ZN3T121AC1Ev
   // CHECK-NEXT: call i32 @_ZN3T121A1fEv(
@@ -366,7 +366,7 @@ namespace PR7556 {
   struct A { ~A(); };
   struct B { int i; ~B(); };
   struct C { int C::*pm; ~C(); };
-  // CHECK-LABEL: define void @_ZN6PR75563fooEv()
+  // CHECK-LABEL: define{{.*}} void @_ZN6PR75563fooEv()
   void foo() {
     // CHECK: call void @_ZN6PR75561AD1Ev
     A();
@@ -391,7 +391,7 @@ namespace Elision {
   A fooA();
   void takeA(A a);
 
-  // CHECK-LABEL: define void @_ZN7Elision5test0Ev()
+  // CHECK-LABEL: define{{.*}} void @_ZN7Elision5test0Ev()
   void test0() {
     // CHECK:      [[I:%.*]] = alloca [[A:%.*]], align 8
     // CHECK-NEXT: [[J:%.*]] = alloca [[A]], align 8
@@ -419,7 +419,7 @@ namespace Elision {
   }
 
 
-  // CHECK-LABEL: define void @_ZN7Elision5test1EbNS_1AE(
+  // CHECK-LABEL: define{{.*}} void @_ZN7Elision5test1EbNS_1AE(
   void test1(bool c, A x) {
     // CHECK:      [[I:%.*]] = alloca [[A]], align 8
     // CHECK-NEXT: [[J:%.*]] = alloca [[A]], align 8
@@ -436,7 +436,7 @@ namespace Elision {
     // CHECK-NEXT: call void @_ZN7Elision1AD1Ev([[A]]* {{[^,]*}} [[I]])
   }
 
-  // CHECK: define void @_ZN7Elision5test2Ev([[A]]* noalias sret([[A]]) align 8
+  // CHECK: define{{.*}} void @_ZN7Elision5test2Ev([[A]]* noalias sret([[A]]) align 8
   A test2() {
     // CHECK:      call void @_ZN7Elision3fooEv()
     // CHECK-NEXT: call void @_ZN7Elision1AC1Ev([[A]]* {{[^,]*}} [[RET:%.*]])
@@ -444,7 +444,7 @@ namespace Elision {
     return (foo(), A());
   }
 
-  // CHECK: define void @_ZN7Elision5test3EiNS_1AE([[A]]* noalias sret([[A]]) align 8
+  // CHECK: define{{.*}} void @_ZN7Elision5test3EiNS_1AE([[A]]* noalias sret([[A]]) align 8
   A test3(int v, A x) {
     if (v < 5)
     // CHECK:      call void @_ZN7Elision1AC1Ev([[A]]* {{[^,]*}} [[RET:%.*]])
@@ -458,7 +458,7 @@ namespace Elision {
     // CHECK:      ret void
   }
 
-  // CHECK-LABEL: define void @_ZN7Elision5test4Ev()
+  // CHECK-LABEL: define{{.*}} void @_ZN7Elision5test4Ev()
   void test4() {
     // CHECK:      [[X:%.*]] = alloca [[A]], align 8
     // CHECK-NEXT: [[XS:%.*]] = alloca [2 x [[A]]], align 16
@@ -485,7 +485,7 @@ namespace Elision {
   }
 
   // rdar://problem/8433352
-  // CHECK: define void @_ZN7Elision5test5Ev([[A]]* noalias sret([[A]]) align 8
+  // CHECK: define{{.*}} void @_ZN7Elision5test5Ev([[A]]* noalias sret([[A]]) align 8
   struct B { A a; B(); };
   A test5() {
     // CHECK:      [[AT0:%.*]] = alloca [[A]], align 8
@@ -518,7 +518,7 @@ namespace Elision {
   }
 
   // Reduced from webkit.
-  // CHECK: define void @_ZN7Elision5test6EPKNS_1CE([[C:%.*]]*
+  // CHECK: define{{.*}} void @_ZN7Elision5test6EPKNS_1CE([[C:%.*]]*
   struct C { operator A() const; };
   void test6(const C *x) {
     // CHECK:      [[T0:%.*]] = alloca [[A]], align 8
@@ -534,7 +534,7 @@ namespace Elision {
 namespace PR8623 {
   struct A { A(int); ~A(); };
 
-  // CHECK-LABEL: define void @_ZN6PR86233fooEb(
+  // CHECK-LABEL: define{{.*}} void @_ZN6PR86233fooEb(
   void foo(bool b) {
     // CHECK:      [[TMP:%.*]] = alloca [[A:%.*]], align 1
     // CHECK-NEXT: [[LCONS:%.*]] = alloca i1
@@ -564,7 +564,7 @@ namespace PR8623 {
 namespace PR11365 {
   struct A { A(); ~A(); };
 
-  // CHECK-LABEL: define void @_ZN7PR113653fooEv(
+  // CHECK-LABEL: define{{.*}} void @_ZN7PR113653fooEv(
   void foo() {
     // CHECK: [[BEGIN:%.*]] = getelementptr inbounds [3 x [[A:%.*]]], [3 x [[A:%.*]]]* {{.*}}, i32 0, i32 0
     // CHECK-NEXT: [[END:%.*]] = getelementptr inbounds [[A]], [[A]]* [[BEGIN]], i64 3
@@ -583,7 +583,7 @@ namespace AssignmentOp {
   struct A { ~A(); };
   struct B { A operator=(const B&); };
   struct C : B { B b1, b2; };
-  // CHECK-LABEL: define void @_ZN12AssignmentOp1fE
+  // CHECK-LABEL: define{{.*}} void @_ZN12AssignmentOp1fE
   void f(C &c1, const C &c2) {
     // CHECK: call {{.*}} @_ZN12AssignmentOp1CaSERKS0_(
     c1 = c2;
@@ -682,7 +682,7 @@ namespace ImplicitTemporaryCleanup {
   struct A { A(int); ~A(); };
   void g();
 
-  // CHECK-LABEL: define void @_ZN24ImplicitTemporaryCleanup1fEv(
+  // CHECK-LABEL: define{{.*}} void @_ZN24ImplicitTemporaryCleanup1fEv(
   void f() {
     // CHECK: call {{.*}} @_ZN24ImplicitTemporaryCleanup1AC1Ei(
     A &&a = 0;
@@ -730,7 +730,7 @@ namespace MultipleExtension {
 
 
   void g();
-  // CHECK: define void @[[NS:_ZN17MultipleExtension]]1fEv(
+  // CHECK: define{{.*}} void @[[NS:_ZN17MultipleExtension]]1fEv(
   void f() {
     E &&e1 = { A(), B(), D().c };
     // CHECK: %[[TEMPE1_A:.*]] = getelementptr inbounds {{.*}} %[[TEMPE1:.*]], i32 0, i32 0

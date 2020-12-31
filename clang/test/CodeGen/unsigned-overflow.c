@@ -8,7 +8,7 @@ unsigned int ii, ij, ik;
 extern void opaquelong(unsigned long);
 extern void opaqueint(unsigned int);
 
-// CHECK-LABEL: define void @testlongadd()
+// CHECK-LABEL: define{{.*}} void @testlongadd()
 void testlongadd() {
 
   // CHECK:      [[T1:%.*]] = load i64, i64* @lj
@@ -20,7 +20,7 @@ void testlongadd() {
   li = lj + lk;
 }
 
-// CHECK-LABEL: define void @testlongsub()
+// CHECK-LABEL: define{{.*}} void @testlongsub()
 void testlongsub() {
 
   // CHECK:      [[T1:%.*]] = load i64, i64* @lj
@@ -32,7 +32,7 @@ void testlongsub() {
   li = lj - lk;
 }
 
-// CHECK-LABEL: define void @testlongmul()
+// CHECK-LABEL: define{{.*}} void @testlongmul()
 void testlongmul() {
 
   // CHECK:      [[T1:%.*]] = load i64, i64* @lj
@@ -44,7 +44,7 @@ void testlongmul() {
   li = lj * lk;
 }
 
-// CHECK-LABEL: define void @testlongpostinc()
+// CHECK-LABEL: define{{.*}} void @testlongpostinc()
 void testlongpostinc() {
   opaquelong(li++);
 
@@ -55,7 +55,7 @@ void testlongpostinc() {
   // CHECK:      call void @__ubsan_handle_add_overflow
 }
 
-// CHECK-LABEL: define void @testlongpreinc()
+// CHECK-LABEL: define{{.*}} void @testlongpreinc()
 void testlongpreinc() {
   opaquelong(++li);
 
@@ -66,7 +66,7 @@ void testlongpreinc() {
   // CHECK:      call void @__ubsan_handle_add_overflow
 }
 
-// CHECK-LABEL: define void @testintadd()
+// CHECK-LABEL: define{{.*}} void @testintadd()
 void testintadd() {
 
   // CHECK:      [[T1:%.*]] = load i32, i32* @ij
@@ -78,7 +78,7 @@ void testintadd() {
   ii = ij + ik;
 }
 
-// CHECK-LABEL: define void @testintsub()
+// CHECK-LABEL: define{{.*}} void @testintsub()
 void testintsub() {
 
   // CHECK:      [[T1:%.*]] = load i32, i32* @ij
@@ -90,7 +90,7 @@ void testintsub() {
   ii = ij - ik;
 }
 
-// CHECK-LABEL: define void @testintmul()
+// CHECK-LABEL: define{{.*}} void @testintmul()
 void testintmul() {
 
   // CHECK:      [[T1:%.*]] = load i32, i32* @ij
@@ -102,7 +102,7 @@ void testintmul() {
   ii = ij * ik;
 }
 
-// CHECK-LABEL: define void @testintpostinc()
+// CHECK-LABEL: define{{.*}} void @testintpostinc()
 void testintpostinc() {
   opaqueint(ii++);
 
@@ -113,7 +113,7 @@ void testintpostinc() {
   // CHECK:      call void @__ubsan_handle_add_overflow
 }
 
-// CHECK-LABEL: define void @testintpreinc()
+// CHECK-LABEL: define{{.*}} void @testintpreinc()
 void testintpreinc() {
   opaqueint(++ii);
 

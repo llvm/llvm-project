@@ -12,7 +12,7 @@ struct derived : public base {
 void test1() {
   derived d1;
 }
-// CHECK-LABEL: define void @_Z5test1v()
+// CHECK-LABEL: define{{.*}} void @_Z5test1v()
 // CHECK: call void @_ZN7derivedC1Ev
 // CHECK: call void @_ZN7derivedD1Ev
 
@@ -20,7 +20,7 @@ void test2() {
   derived *d2 = new derived;
   delete d2;
 }
-// CHECK-LABEL: define void @_Z5test2v()
+// CHECK-LABEL: define{{.*}} void @_Z5test2v()
 // CHECK:   call void @_ZN7derivedC1Ev
 // CHECK:   call void @_ZN7derivedD1Ev
 
@@ -31,7 +31,7 @@ struct tderived : public base {
 void test3() {
   tderived<int> d1;
 }
-// CHECK-LABEL: define void @_Z5test3v()
+// CHECK-LABEL: define{{.*}} void @_Z5test3v()
 // CHECK: call void @_ZN8tderivedIiEC1Ev
 // CHECK: call void @_ZN8tderivedIiED1Ev
 
@@ -39,7 +39,7 @@ void test4() {
   tderived<int> *d2 = new tderived<int>;
   delete d2;
 }
-// CHECK-LABEL: define void @_Z5test4v()
+// CHECK-LABEL: define{{.*}} void @_Z5test4v()
 // CHECK: call void @_ZN8tderivedIiEC1Ev
 // CHECK: call void @_ZN8tderivedIiED1Ev
 

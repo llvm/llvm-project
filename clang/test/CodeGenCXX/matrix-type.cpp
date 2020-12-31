@@ -6,7 +6,7 @@ typedef float fx3x4_t __attribute__((matrix_type(3, 4)));
 // CHECK: %struct.Matrix = type { i8, [12 x float], float }
 
 void load_store(dx5x5_t *a, dx5x5_t *b) {
-  // CHECK-LABEL:  define void @_Z10load_storePu11matrix_typeILm5ELm5EdES0_(
+  // CHECK-LABEL:  define{{.*}} void @_Z10load_storePu11matrix_typeILm5ELm5EdES0_(
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    %a.addr = alloca [25 x double]*, align 8
   // CHECK-NEXT:    %b.addr = alloca [25 x double]*, align 8
@@ -26,7 +26,7 @@ void load_store(dx5x5_t *a, dx5x5_t *b) {
 typedef float fx3x3_t __attribute__((matrix_type(3, 3)));
 
 void parameter_passing(fx3x3_t a, fx3x3_t *b) {
-  // CHECK-LABEL: define void @_Z17parameter_passingu11matrix_typeILm3ELm3EfEPS_(
+  // CHECK-LABEL: define{{.*}} void @_Z17parameter_passingu11matrix_typeILm3ELm3EfEPS_(
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    %a.addr = alloca [9 x float], align 4
   // CHECK-NEXT:    %b.addr = alloca [9 x float]*, align 8
@@ -42,7 +42,7 @@ void parameter_passing(fx3x3_t a, fx3x3_t *b) {
 }
 
 fx3x3_t return_matrix(fx3x3_t *a) {
-  // CHECK-LABEL: define <9 x float> @_Z13return_matrixPu11matrix_typeILm3ELm3EfE(
+  // CHECK-LABEL: define{{.*}} <9 x float> @_Z13return_matrixPu11matrix_typeILm3ELm3EfE(
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    %a.addr = alloca [9 x float]*, align 8
   // CHECK-NEXT:    store [9 x float]* %a, [9 x float]** %a.addr, align 8
@@ -60,7 +60,7 @@ struct Matrix {
 };
 
 void matrix_struct_pointers(Matrix *a, Matrix *b) {
-  // CHECK-LABEL: define void @_Z22matrix_struct_pointersP6MatrixS0_(
+  // CHECK-LABEL: define{{.*}} void @_Z22matrix_struct_pointersP6MatrixS0_(
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    %a.addr = alloca %struct.Matrix*, align 8
   // CHECK-NEXT:    %b.addr = alloca %struct.Matrix*, align 8
@@ -79,7 +79,7 @@ void matrix_struct_pointers(Matrix *a, Matrix *b) {
 }
 
 void matrix_struct_reference(Matrix &a, Matrix &b) {
-  // CHECK-LABEL: define void @_Z23matrix_struct_referenceR6MatrixS0_(
+  // CHECK-LABEL: define{{.*}} void @_Z23matrix_struct_referenceR6MatrixS0_(
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    %a.addr = alloca %struct.Matrix*, align 8
   // CHECK-NEXT:    %b.addr = alloca %struct.Matrix*, align 8
@@ -105,7 +105,7 @@ public:
 };
 
 void matrix_class_reference(MatrixClass &a, MatrixClass &b) {
-  // CHECK-LABEL: define void @_Z22matrix_class_referenceR11MatrixClassS0_(
+  // CHECK-LABEL: define{{.*}} void @_Z22matrix_class_referenceR11MatrixClassS0_(
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    %a.addr = alloca %class.MatrixClass*, align 8
   // CHECK-NEXT:    %b.addr = alloca %class.MatrixClass*, align 8
@@ -138,7 +138,7 @@ void matrix_template_reference(MatrixClassTemplate<Ty, Rows, Cols> &a, MatrixCla
 }
 
 MatrixClassTemplate<float, 10, 15> matrix_template_reference_caller(float *Data) {
-  // CHECK-LABEL: define void @_Z32matrix_template_reference_callerPf(%class.MatrixClassTemplate* noalias sret(%class.MatrixClassTemplate) align 8 %agg.result, float* %Data
+  // CHECK-LABEL: define{{.*}} void @_Z32matrix_template_reference_callerPf(%class.MatrixClassTemplate* noalias sret(%class.MatrixClassTemplate) align 8 %agg.result, float* %Data
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    %Data.addr = alloca float*, align 8
   // CHECK-NEXT:    %Arg = alloca %class.MatrixClassTemplate, align 8
@@ -198,7 +198,7 @@ selector<4> use_matrix(matrix<float, R, C> &m) {}
 
 void test_template_deduction() {
 
-  // CHECK-LABEL: define void @_Z23test_template_deductionv()
+  // CHECK-LABEL: define{{.*}} void @_Z23test_template_deductionv()
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    %m0 = alloca [120 x i32], align 4
   // CHECK-NEXT:    %w = alloca %struct.selector, align 1
@@ -274,7 +274,7 @@ void foo(matrix<int, R, 10> &m) {
 }
 
 void test_auto_t() {
-  // CHECK-LABEL: define void @_Z11test_auto_tv()
+  // CHECK-LABEL: define{{.*}} void @_Z11test_auto_tv()
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    %m = alloca [130 x i32], align 4
   // CHECK-NEXT:    call void @_Z3fooILm13EEvRu11matrix_typeIXT_EXLm10EEiE([130 x i32]* nonnull align 4 dereferenceable(520) %m)
@@ -306,7 +306,7 @@ template <unsigned long R>
 selector<2> use_matrix_3(matrix<int, R - 2, R> &m) {}
 
 void test_use_matrix_2() {
-  // CHECK-LABEL: define void @_Z17test_use_matrix_2v()
+  // CHECK-LABEL: define{{.*}} void @_Z17test_use_matrix_2v()
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    %m1 = alloca [24 x i32], align 4
   // CHECK-NEXT:    %r1 = alloca [40 x float], align 4

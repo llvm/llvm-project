@@ -65,7 +65,7 @@ namespace test2 {
     struct C;
   }
 
-  // CHECK-2-LABEL: define void @_ZN5test24testEv()
+  // CHECK-2-LABEL: define{{.*}} void @_ZN5test24testEv()
   // CHECK-2:   call void @_ZN5test21A1BINS_12_GLOBAL__N_11CEE3fooEv()
   void test() {
     A::B<C>::foo();

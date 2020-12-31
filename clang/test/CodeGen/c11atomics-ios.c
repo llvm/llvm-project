@@ -6,7 +6,7 @@
 
 // This work was done in pursuit of <rdar://13338582>.
 
-// CHECK-LABEL: define void @testFloat(float*
+// CHECK-LABEL: define{{.*}} void @testFloat(float*
 void testFloat(_Atomic(float) *fp) {
 // CHECK:      [[FP:%.*]] = alloca float*
 // CHECK-NEXT: [[X:%.*]] = alloca float
@@ -37,7 +37,7 @@ void testFloat(_Atomic(float) *fp) {
 // CHECK-NEXT: ret void
 }
 
-// CHECK: define void @testComplexFloat([[CF:{ float, float }]]*
+// CHECK: define{{.*}} void @testComplexFloat([[CF:{ float, float }]]*
 void testComplexFloat(_Atomic(_Complex float) *fp) {
 // CHECK:      [[FP:%.*]] = alloca [[CF]]*, align 4
 // CHECK-NEXT: [[X:%.*]] = alloca [[CF]], align 8
@@ -93,7 +93,7 @@ void testComplexFloat(_Atomic(_Complex float) *fp) {
 }
 
 typedef struct { short x, y, z, w; } S;
-// CHECK: define void @testStruct([[S:.*]]*
+// CHECK: define{{.*}} void @testStruct([[S:.*]]*
 void testStruct(_Atomic(S) *fp) {
 // CHECK:      [[FP:%.*]] = alloca [[S]]*, align 4
 // CHECK-NEXT: [[X:%.*]] = alloca [[S]], align 8
@@ -143,7 +143,7 @@ void testStruct(_Atomic(S) *fp) {
 }
 
 typedef struct { short x, y, z; } PS;
-// CHECK: define void @testPromotedStruct([[APS:.*]]*
+// CHECK: define{{.*}} void @testPromotedStruct([[APS:.*]]*
 void testPromotedStruct(_Atomic(PS) *fp) {
 // CHECK:      [[FP:%.*]] = alloca [[APS]]*, align 4
 // CHECK-NEXT: [[X:%.*]] = alloca [[APS]], align 8
@@ -275,7 +275,7 @@ PS test_promoted_exchange(_Atomic(PS) *addr, PS *val) {
 }
 
 _Bool test_promoted_cmpxchg(_Atomic(PS) *addr, PS *desired, PS *new) {
-  // CHECK:   define zeroext i1 @test_promoted_cmpxchg({ %struct.PS, [2 x i8] }* %addr, %struct.PS* %desired, %struct.PS* %new) #0 {
+  // CHECK:   define{{.*}} zeroext i1 @test_promoted_cmpxchg({ %struct.PS, [2 x i8] }* %addr, %struct.PS* %desired, %struct.PS* %new) #0 {
   // CHECK:   [[ADDR_ARG:%.*]] = alloca { %struct.PS, [2 x i8] }*, align 4
   // CHECK:   [[DESIRED_ARG:%.*]] = alloca %struct.PS*, align 4
   // CHECK:   [[NEW_ARG:%.*]] = alloca %struct.PS*, align 4
