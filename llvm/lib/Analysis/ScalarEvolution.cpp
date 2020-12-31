@@ -135,6 +135,7 @@
 #include <vector>
 
 using namespace llvm;
+using namespace PatternMatch;
 
 #define DEBUG_TYPE "scalar-evolution"
 
@@ -7578,47 +7579,64 @@ ScalarEvolution::computeExitLimitFromCondFromBinOp(
     ExitLimitCacheTy &Cache, const Loop *L, Value *ExitCond, bool ExitIfTrue,
     bool ControlsExit, bool AllowPredicates) {
   // Check if the controlling expression for this loop is an And or Or.
-  if (auto *BO = dyn_cast<BinaryOperator>(ExitCond)) {
-    if (BO->getOpcode() == Instruction::And)
-      return computeExitLimitFromCondFromBinOpHelper(
-          Cache, L, BO, !ExitIfTrue, ExitIfTrue, ControlsExit, AllowPredicates,
-          ConstantInt::get(BO->getType(), 1));
-    if (BO->getOpcode() == Instruction::Or)
-      return computeExitLimitFromCondFromBinOpHelper(
-          Cache, L, BO, ExitIfTrue, ExitIfTrue, ControlsExit, AllowPredicates,
-          ConstantInt::get(BO->getType(), 0));
-  }
-  return None;
-}
+  Value *Op0, *Op1;
+  bool IsAnd = false;
+  if (match(ExitCond, m_LogicalAnd(m_Value(Op0), m_Value(Op1))))
+    IsAnd = true;
+  else if (match(ExitCond, m_LogicalOr(m_Value(Op0), m_Value(Op1))))
+    IsAnd = false;
+  else
+    return None;
 
-ScalarEvolution::ExitLimit
-ScalarEvolution::computeExitLimitFromCondFromBinOpHelper(
-    ExitLimitCacheTy &Cache, const Loop *L, BinaryOperator *BO,
-    bool EitherMayExit, bool ExitIfTrue, bool ControlsExit,
-    bool AllowPredicates, const Constant *NeutralElement) {
-  ExitLimit EL0 = computeExitLimitFromCondCached(
-      Cache, L, BO->getOperand(0), ExitIfTrue, ControlsExit && !EitherMayExit,
-      AllowPredicates);
-  ExitLimit EL1 = computeExitLimitFromCondCached(
-      Cache, L, BO->getOperand(1), ExitIfTrue, ControlsExit && !EitherMayExit,
-      AllowPredicates);
-  // Be robust against unsimplified IR for the form "op i1 X,
-  // NeutralElement"
-  if (ConstantInt *CI = dyn_cast<ConstantInt>(BO->getOperand(1)))
-    return CI == NeutralElement ? EL0 : EL1;
-  if (ConstantInt *CI = dyn_cast<ConstantInt>(BO->getOperand(0)))
-    return CI == NeutralElement ? EL1 : EL0;
+  // EitherMayExit is true in these two cases:
+  //   br (and Op0 Op1), loop, exit
+  //   br (or  Op0 Op1), exit, loop
+  bool EitherMayExit = IsAnd ^ ExitIfTrue;
+  ExitLimit EL0 = computeExitLimitFromCondCached(Cache, L, Op0, ExitIfTrue,
+                                                 ControlsExit && !EitherMayExit,
+                                                 AllowPredicates);
+  ExitLimit EL1 = computeExitLimitFromCondCached(Cache, L, Op1, ExitIfTrue,
+                                                 ControlsExit && !EitherMayExit,
+                                                 AllowPredicates);
+
+  // Be robust against unsimplified IR for the form "op i1 X, NeutralElement"
+  const Constant *NeutralElement = ConstantInt::get(ExitCond->getType(), IsAnd);
+  if (isa<ConstantInt>(Op1))
+    return Op1 == NeutralElement ? EL0 : EL1;
+  if (isa<ConstantInt>(Op0))
+    return Op0 == NeutralElement ? EL1 : EL0;
+
   const SCEV *BECount = getCouldNotCompute();
   const SCEV *MaxBECount = getCouldNotCompute();
   if (EitherMayExit) {
     // Both conditions must be same for the loop to continue executing.
     // Choose the less conservative count.
-    if (EL0.ExactNotTaken == getCouldNotCompute() ||
-        EL1.ExactNotTaken == getCouldNotCompute())
-      BECount = getCouldNotCompute();
-    else
+    // If ExitCond is a short-circuit form (select), using
+    // umin(EL0.ExactNotTaken, EL1.ExactNotTaken) is unsafe in general.
+    // To see the detailed examples, please see
+    // test/Analysis/ScalarEvolution/exit-count-select.ll
+    bool PoisonSafe = isa<BinaryOperator>(ExitCond);
+    if (!PoisonSafe)
+      // Even if ExitCond is select, we can safely derive BECount using both
+      // EL0 and EL1 in these cases:
+      // (1) EL0.ExactNotTaken is non-zero
+      // (2) EL1.ExactNotTaken is non-poison
+      // (3) EL0.ExactNotTaken is zero (BECount should be simply zero and
+      //     it cannot be umin(0, ..))
+      // The PoisonSafe assignment below is simplified and the assertion after
+      // BECount calculation fully guarantees the condition (3).
+      PoisonSafe = isa<SCEVConstant>(EL0.ExactNotTaken) ||
+                   isa<SCEVConstant>(EL1.ExactNotTaken);
+    if (EL0.ExactNotTaken != getCouldNotCompute() &&
+        EL1.ExactNotTaken != getCouldNotCompute() && PoisonSafe) {
       BECount =
           getUMinFromMismatchedTypes(EL0.ExactNotTaken, EL1.ExactNotTaken);
+
+      // If EL0.ExactNotTaken was zero and ExitCond was a short-circuit form,
+      // it should have been simplified to zero (see the condition (3) above)
+      assert(!isa<BinaryOperator>(ExitCond) || !EL0.ExactNotTaken->isZero() ||
+             BECount->isZero());
+    }
     if (EL0.MaxNotTaken == getCouldNotCompute())
       MaxBECount = EL1.MaxNotTaken;
     else if (EL1.MaxNotTaken == getCouldNotCompute())
