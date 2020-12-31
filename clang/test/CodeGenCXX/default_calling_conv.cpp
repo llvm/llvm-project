@@ -29,7 +29,7 @@ void __attribute__((fastcall)) test3() {}
 // ALL: define{{.*}} x86_stdcallcc void @_Z5test4v
 void __attribute__((stdcall)) test4() {}
 
-// ALL: define  x86_vectorcallcc void @_Z5test5v
+// ALL: define{{.*}} x86_vectorcallcc void @_Z5test5v
 void __attribute__((vectorcall)) test5() {}
 
 // ALL: define{{.*}} x86_regcallcc void @_Z17__regcall3__test6v
