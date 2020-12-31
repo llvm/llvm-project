@@ -124,14 +124,8 @@ static cl::opt<bool> ComputeDead("compute-dead", cl::init(true), cl::Hidden,
                                  cl::desc("Compute dead symbols"));
 
 static cl::opt<bool> EnableImportMetadata(
-    "enable-import-metadata", cl::init(
-#if !defined(NDEBUG)
-                                  true /*Enabled with asserts.*/
-#else
-                                  false
-#endif
-                                  ),
-    cl::Hidden, cl::desc("Enable import metadata like 'thinlto_src_module'"));
+    "enable-import-metadata", cl::init(false), cl::Hidden,
+    cl::desc("Enable import metadata like 'thinlto_src_module'"));
 
 /// Summary file to use for function importing when using -function-import from
 /// the command line.
