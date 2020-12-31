@@ -18,6 +18,24 @@ bb4:
   ret i64 %2
 }
 
+; CHECK-LABEL: test_or_select
+; CHECK:       cbnz w0, {{LBB[0-9]+_2}}
+; CHECK:       cbz w1, {{LBB[0-9]+_1}}
+define i64 @test_or_select(i32 %a, i32 %b) {
+bb1:
+  %0 = icmp eq i32 %a, 0
+  %1 = icmp eq i32 %b, 0
+  %or.cond = select i1 %0, i1 true, i1 %1
+  br i1 %or.cond, label %bb3, label %bb4, !prof !0
+
+bb3:
+  ret i64 0
+
+bb4:
+  %2 = call i64 @bar()
+  ret i64 %2
+}
+
 ; CHECK-LABEL: test_and
 ; CHECK:       cbnz w0, {{LBB[0-9]+_2}}
 ; CHECK:       cbz w1, {{LBB[0-9]+_1}}
@@ -26,6 +44,24 @@ bb1:
   %0 = icmp ne i32 %a, 0
   %1 = icmp ne i32 %b, 0
   %or.cond = and i1 %0, %1
+  br i1 %or.cond, label %bb4, label %bb3, !prof !1
+
+bb3:
+  ret i64 0
+
+bb4:
+  %2 = call i64 @bar()
+  ret i64 %2
+}
+
+; CHECK-LABEL: test_and_select
+; CHECK:       cbnz w0, {{LBB[0-9]+_2}}
+; CHECK:       cbz w1, {{LBB[0-9]+_1}}
+define i64 @test_and_select(i32 %a, i32 %b) {
+bb1:
+  %0 = icmp ne i32 %a, 0
+  %1 = icmp ne i32 %b, 0
+  %or.cond = select i1 %0, i1 %1, i1 false
   br i1 %or.cond, label %bb4, label %bb3, !prof !1
 
 bb3:
