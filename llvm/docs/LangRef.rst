@@ -3070,7 +3070,7 @@ Floating-Point Types
      - 64-bit floating-point value
 
    * - ``fp128``
-     - 128-bit floating-point value (112-bit significand)
+     - 128-bit floating-point value (113-bit significand)
 
    * - ``x86_fp80``
      -  80-bit floating-point value (X87)
