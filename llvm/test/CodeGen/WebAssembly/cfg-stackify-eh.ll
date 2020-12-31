@@ -379,22 +379,33 @@ try.cont:                                         ; preds = %catch.start, %loop
 ; destination mismatches. And we use -wasm-disable-ehpad-sort to create maximum
 ; number of mismatches in several tests below.
 
+; - Call unwind mismatch
 ; 'call bar''s original unwind destination was 'C0', but after control flow
 ; linearization, its unwind destination incorrectly becomes 'C1'. We fix this by
 ; wrapping the call with a nested try-delegate that targets 'C0'.
+; - Catch unwind mismatch
+; If 'call foo' throws a foreign exception, it will not be caught by C1, and
+; should be rethrown to the caller. But after control flow linearization, it
+; will instead unwind to C0, an incorrect next EH pad. We wrap the whole
+; try-catch with try-delegate that rethrows an exception to the caller to fix
+; this.
 
 ; NOSORT-LABEL: test5
 ; NOSORT: try
-; NOSORT:   try
-; NOSORT:     call  foo
-; --- try-delegate starts (call unwind mismatch)
+; --- try-delegate starts (catch unwind mismatch)
+; NOSORT    try
 ; NOSORT:     try
-; NOSORT:       call  bar
-; NOSORT:     delegate    1     # label/catch{{[0-9]+}}: down to catch[[C0:[0-9]+]]
+; NOSORT:       call  foo
+; --- try-delegate starts (call unwind mismatch)
+; NOSORT:       try
+; NOSORT:         call  bar
+; NOSORT:       delegate    2     # label/catch{{[0-9]+}}: down to catch[[C0:[0-9]+]]
 ; --- try-delegate ends (call unwind mismatch)
-; NOSORT:   catch   {{.*}}      # catch[[C1:[0-9]+]]:
-; NOSORT:   end_try
-; NOSORT: catch   {{.*}}        # catch[[C0]]:
+; NOSORT:     catch   {{.*}}      # catch[[C1:[0-9]+]]:
+; NOSORT:     end_try
+; NOSORT:   delegate    1         # label/catch{{[0-9]+}}: to caller
+; --- try-delegate ends (catch unwind mismatch)
+; NOSORT: catch   {{.*}}          # catch[[C0]]:
 ; NOSORT: end_try
 ; NOSORT: return
 
@@ -483,20 +494,24 @@ try.cont:                                         ; preds = %catch.start0
 
 ; NOSORT-LABEL: test7
 ; NOSORT: try
-; NOSORT:   try
-; NOSORT:     call  foo
-; --- try-delegate starts (call unwind mismatch)
+; --- try-delegate starts (catch unwind mismatch)
+; NOSORT    try
 ; NOSORT:     try
 ; NOSORT:       call  foo
-; NOSORT:     delegate    2     # label/catch{{[0-9]+}}: to caller
+; --- try-delegate starts (call unwind mismatch)
+; NOSORT:       try
+; NOSORT:         call  foo
+; NOSORT:       delegate    3     # label/catch{{[0-9]+}}: to caller
 ; --- try-delegate ends (call unwind mismatch)
 ; --- try-delegate starts (call unwind mismatch)
-; NOSORT:     try
-; NOSORT:       call  bar
-; NOSORT:     delegate    1     # label/catch{{[0-9]+}}: down to catch[[C0:[0-9]+]]
+; NOSORT:       try
+; NOSORT:         call  bar
+; NOSORT:       delegate    2     # label/catch{{[0-9]+}}: down to catch[[C0:[0-9]+]]
 ; --- try-delegate ends (call unwind mismatch)
-; NOSORT:   catch   {{.*}}      # catch[[C1:[0-9]+]]:
-; NOSORT:   end_try
+; NOSORT:     catch   {{.*}}      # catch[[C1:[0-9]+]]:
+; NOSORT:     end_try
+; NOSORT:   delegate    1         # label/catch{{[0-9]+}}: to caller
+; --- try-delegate ends (catch unwind mismatch)
 ; NOSORT: catch   {{.*}}        # catch[[C0]]:
 ; NOSORT: end_try
 ; NOSORT: return
@@ -618,30 +633,37 @@ try.cont:                                         ; preds = %catch.start0
   ret void
 }
 
-; When we have both kinds of EH pad unwind mismatches:
+; We have two call unwind unwind mismatches:
 ; - A may-throw instruction unwinds to an incorrect EH pad after linearizing the
 ;   CFG, when it is supposed to unwind to another EH pad.
 ; - A may-throw instruction unwinds to an incorrect EH pad after linearizing the
 ;   CFG, when it is supposed to unwind to the caller.
+; We also have a catch unwind mismatch: If an exception is not caught by the
+; first catch because it is a non-C++ exception, it shouldn't unwind to the next
+; catch, but it should unwind to the caller.
 
 ; NOSORT-LABEL: test10
 ; NOSORT: try
+; --- try-delegate starts (catch unwind mismatch)
 ; NOSORT:   try
-; NOSORT:     call  foo
-; --- try-delegate starts (call unwind mismatch)
 ; NOSORT:     try
-; NOSORT:       call  bar
-; NOSORT:     delegate    1            # label/catch{{[0-9]+}}: down to catch[[C0:[0-9]+]]
-; --- try-delegate ends (call unwind mismatch)
-; NOSORT:   catch
-; NOSORT:     call  {{.*}} __cxa_begin_catch
+; NOSORT:       call  foo
 ; --- try-delegate starts (call unwind mismatch)
-; NOSORT:     try
-; NOSORT:       call  __cxa_end_catch
-; NOSORT:     delegate    1            # label/catch{{[0-9]+}}: to caller
+; NOSORT:       try
+; NOSORT:         call  bar
+; NOSORT:       delegate    2            # label/catch{{[0-9]+}}: down to catch[[C0:[0-9]+]]
 ; --- try-delegate ends (call unwind mismatch)
-; NOSORT:   end_try
-; NOSORT: catch  {{.*}}                # catch[[C0]]:
+; NOSORT:     catch
+; NOSORT:       call  {{.*}} __cxa_begin_catch
+; --- try-delegate starts (call unwind mismatch)
+; NOSORT:       try
+; NOSORT:         call  __cxa_end_catch
+; NOSORT:       delegate    2            # label/catch{{[0-9]+}}: to caller
+; --- try-delegate ends (call unwind mismatch)
+; NOSORT:     end_try
+; NOSORT:   delegate    1                # label/catch{{[0-9]+}}: to caller
+; --- try-delegate ends (catch unwind mismatch)
+; NOSORT: catch  {{.*}}                  # catch[[C0]]:
 ; NOSORT:   call  {{.*}} __cxa_begin_catch
 ; NOSORT:   call  __cxa_end_catch
 ; NOSORT: end_try
@@ -1079,6 +1101,7 @@ ehcleanup:                                        ; preds = %if.then
 
 ; Check if the unwind destination mismatch stats are correct
 ; NOSORT: 18 wasm-cfg-stackify    - Number of call unwind mismatches found
+; NOSORT:  3 wasm-cfg-stackify    - Number of catch unwind mismatches found
 
 declare void @foo()
 declare void @bar()
