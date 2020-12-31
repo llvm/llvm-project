@@ -96,7 +96,7 @@ static bool lowerObjCCall(Function &F, const char *NewFn,
     ++I;
 
     IRBuilder<> Builder(CI->getParent(), CI->getIterator());
-    SmallVector<Value *, 8> Args(CI->arg_begin(), CI->arg_end());
+    SmallVector<Value *, 8> Args(CI->args());
     CallInst *NewCI = Builder.CreateCall(FCache, Args);
     NewCI->setName(CI->getName());
 

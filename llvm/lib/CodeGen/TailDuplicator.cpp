@@ -720,8 +720,7 @@ bool TailDuplicator::duplicateSimpleBB(
     SmallVectorImpl<MachineInstr *> &Copies) {
   SmallPtrSet<MachineBasicBlock *, 8> Succs(TailBB->succ_begin(),
                                             TailBB->succ_end());
-  SmallVector<MachineBasicBlock *, 8> Preds(TailBB->pred_begin(),
-                                            TailBB->pred_end());
+  SmallVector<MachineBasicBlock *, 8> Preds(TailBB->predecessors());
   bool Changed = false;
   for (MachineBasicBlock *PredBB : Preds) {
     if (PredBB->hasEHPadSuccessor() || PredBB->mayHaveInlineAsmBr())

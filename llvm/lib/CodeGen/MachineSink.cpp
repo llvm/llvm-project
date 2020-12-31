@@ -745,8 +745,7 @@ MachineSinking::GetAllSortedSuccessors(MachineInstr &MI, MachineBasicBlock *MBB,
   if (Succs != AllSuccessors.end())
     return Succs->second;
 
-  SmallVector<MachineBasicBlock *, 4> AllSuccs(MBB->succ_begin(),
-                                               MBB->succ_end());
+  SmallVector<MachineBasicBlock *, 4> AllSuccs(MBB->successors());
 
   // Handle cases where sinking can happen but where the sink point isn't a
   // successor. For example:
