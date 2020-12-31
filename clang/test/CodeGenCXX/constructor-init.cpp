@@ -70,7 +70,7 @@ template <class T> struct A {
   operator int() {return 0;}
 };
 
-// CHECK-LABEL: define void @_Z1fv()
+// CHECK-LABEL: define{{.*}} void @_Z1fv()
 void f() {
   // CHECK: call void @_ZN1AIsEC1Ei
   A<short> a4 = 97;
@@ -93,7 +93,7 @@ namespace InitVTable {
     B(int);
   };
 
-  // CHECK-LABEL: define void @_ZN10InitVTable1BC2Ev(%"struct.InitVTable::B"* {{[^,]*}} %this) unnamed_addr
+  // CHECK-LABEL: define{{.*}} void @_ZN10InitVTable1BC2Ev(%"struct.InitVTable::B"* {{[^,]*}} %this) unnamed_addr
   // CHECK:      [[T0:%.*]] = bitcast [[B:%.*]]* [[THIS:%.*]] to i32 (...)***
   // CHECK-NEXT: store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTVN10InitVTable1BE, i32 0, inrange i32 0, i32 2) to i32 (...)**), i32 (...)*** [[T0]]
   // CHECK:      [[VTBL:%.*]] = load i32 ([[B]]*)**, i32 ([[B]]*)*** {{%.*}}
@@ -106,7 +106,7 @@ namespace InitVTable {
   // CHECK-NEXT: ret void
   B::B() : A(foo()) {}
 
-  // CHECK-LABEL: define void @_ZN10InitVTable1BC2Ei(%"struct.InitVTable::B"* {{[^,]*}} %this, i32 %x) unnamed_addr
+  // CHECK-LABEL: define{{.*}} void @_ZN10InitVTable1BC2Ei(%"struct.InitVTable::B"* {{[^,]*}} %this, i32 %x) unnamed_addr
   // CHECK:      [[ARG:%.*]] = add nsw i32 {{%.*}}, 5
   // CHECK-NEXT: call void @_ZN10InitVTable1AC2Ei({{.*}}* {{[^,]*}} {{%.*}}, i32 [[ARG]])
   // CHECK-NEXT: [[T0:%.*]] = bitcast [[B]]* {{%.*}} to i32 (...)***
@@ -120,7 +120,7 @@ namespace rdar9694300 {
     int x;
   };
 
-  // CHECK-LABEL: define void @_ZN11rdar96943001fEv
+  // CHECK-LABEL: define{{.*}} void @_ZN11rdar96943001fEv
   void f() {
     // CHECK: alloca
     X x;

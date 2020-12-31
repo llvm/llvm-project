@@ -7,7 +7,7 @@
 void test0(Test0 *t0, id value) {
   t0.value = value;
 }
-// CHECK-LABEL: define void @test0(
+// CHECK-LABEL: define{{.*}} void @test0(
 // CHECK: call void @llvm.objc.storeStrong
 // CHECK: call void @llvm.objc.storeStrong
 // CHECK: @objc_msgSend
@@ -95,7 +95,7 @@ void test3(Test3 *t) {
   id x = t.copyMachine;
   x = [t copyMachine];
 }
-// CHECK:    define void @test3([[TEST3:%.*]]*
+// CHECK:    define{{.*}} void @test3([[TEST3:%.*]]*
 //   Prologue.
 // CHECK:      [[T:%.*]] = alloca [[TEST3]]*,
 // CHECK-NEXT: [[X:%.*]] = alloca i8*,

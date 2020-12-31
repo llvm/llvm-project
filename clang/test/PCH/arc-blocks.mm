@@ -35,7 +35,7 @@ namespace test_block_retain {
     initialization(a);
   }
 
-// CHECK-LABEL: define void @_ZN17test_block_retain26test_assignmentConditionalEP11objc_objectb(
+// CHECK-LABEL: define{{.*}} void @_ZN17test_block_retain26test_assignmentConditionalEP11objc_objectb(
 // CHECK: %[[BLOCK:.*]] = alloca <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>, align 8
 // CHECK: %[[V4:.*]] = bitcast <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>* %[[BLOCK]] to void ()*
 // CHECK: %[[V5:.*]] = bitcast void ()* %[[V4]] to i8*

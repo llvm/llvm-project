@@ -26,7 +26,7 @@ struct Inheritor : public NonTrivialDtor, public Base {
 
 void f() {
   Inheritor(S1(), S2(), "foo");
-  // CHECK-LABEL: define void @_Z1fv
+  // CHECK-LABEL: define{{.*}} void @_Z1fv
   // CHECK: %[[TMP1:.*]] = alloca %struct.S1
   // CHECK: %[[TMP2:.*]] = alloca %struct.S2
   // CHECK: call void (%struct.Base*, %struct.S1*, %struct.S2*, i8*, ...) @_ZN4BaseC2ERK2S1RK2S2PKcz(%struct.Base* {{.*}}, %struct.S1* nonnull align 1 dereferenceable(1) %[[TMP1]], %struct.S2* nonnull align 1 dereferenceable(1) %[[TMP2]], i8* {{.*}})
@@ -34,7 +34,7 @@ void f() {
   // CHECK-NEXT: call void @_ZN2S2D1Ev(%struct.S2* {{[^,]*}} %[[TMP2]])
   // CHECK-NEXT: call void @_ZN2S1D1Ev(%struct.S1* {{[^,]*}} %[[TMP1]])
 
-  // EXCEPTIONS-LABEL: define void @_Z1fv
+  // EXCEPTIONS-LABEL: define{{.*}} void @_Z1fv
   // EXCEPTIONS: %[[TMP1:.*]] = alloca %struct.S1
   // EXCEPTIONS: %[[TMP2:.*]] = alloca %struct.S2
   // EXCEPTIONS: invoke void (%struct.Base*, %struct.S1*, %struct.S2*, i8*, ...) @_ZN4BaseC2ERK2S1RK2S2PKcz(%struct.Base* {{.*}}, %struct.S1* nonnull align 1 dereferenceable(1) %[[TMP1]], %struct.S2* nonnull align 1 dereferenceable(1) %[[TMP2]], i8* {{.*}})

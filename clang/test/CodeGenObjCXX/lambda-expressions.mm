@@ -8,7 +8,7 @@ fp f() { auto x = []{ return 3; }; return x; }
 
 // MRC: @OBJC_METH_VAR_NAME{{.*}} = private unnamed_addr constant [5 x i8] c"copy\00"
 // MRC: @OBJC_METH_VAR_NAME{{.*}} = private unnamed_addr constant [12 x i8] c"autorelease\00"
-// MRC-LABEL: define i32 ()* @_Z1fv(
+// MRC-LABEL: define{{.*}} i32 ()* @_Z1fv(
 // MRC-LABEL: define internal i32 ()* @"_ZZ1fvENK3$_0cvU13block_pointerFivEEv"
 // MRC: store i8* bitcast (i8** @_NSConcreteStackBlock to i8*)
 // MRC: store i8* bitcast (i32 (i8*)* @"___ZZ1fvENK3$_0cvU13block_pointerFivEEv_block_invoke" to i8*)
@@ -16,7 +16,7 @@ fp f() { auto x = []{ return 3; }; return x; }
 // MRC: call i32 ()* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i32 ()* (i8*, i8*)*)
 // MRC: ret i32 ()*
 
-// ARC-LABEL: define i32 ()* @_Z1fv(
+// ARC-LABEL: define{{.*}} i32 ()* @_Z1fv(
 // ARC-LABEL: define internal i32 ()* @"_ZZ1fvENK3$_0cvU13block_pointerFivEEv"
 // ARC: store i8* bitcast (i8** @_NSConcreteStackBlock to i8*)
 // ARC: store i8* bitcast (i32 (i8*)* @"___ZZ1fvENK3$_0cvU13block_pointerFivEEv_block_invoke" to i8*)
@@ -27,13 +27,13 @@ typedef int (^fp)();
 fp global;
 void f2() { global = []{ return 3; }; }
 
-// MRC: define void @_Z2f2v() [[NUW:#[0-9]+]] {
+// MRC: define{{.*}} void @_Z2f2v() [[NUW:#[0-9]+]] {
 // MRC: store i8* bitcast (i32 (i8*)* @___Z2f2v_block_invoke to i8*),
 // MRC-NOT: call
 // MRC: ret void
 // ("global" contains a dangling pointer after this function runs.)
 
-// ARC: define void @_Z2f2v() [[NUW:#[0-9]+]] {
+// ARC: define{{.*}} void @_Z2f2v() [[NUW:#[0-9]+]] {
 // ARC: store i8* bitcast (i32 (i8*)* @___Z2f2v_block_invoke to i8*),
 // ARC: call i8* @llvm.objc.retainBlock
 // ARC: call void @llvm.objc.release
@@ -62,7 +62,7 @@ void take_block(void (^block)()) { block(); }
 }
 @end
 
-// ARC: define void @_ZN13LambdaCapture4foo1ERi(i32* nonnull align 4 dereferenceable(4) %{{.*}})
+// ARC: define{{.*}} void @_ZN13LambdaCapture4foo1ERi(i32* nonnull align 4 dereferenceable(4) %{{.*}})
 // ARC:   %[[CAPTURE0:.*]] = getelementptr inbounds %[[LAMBDACLASS]], %[[LAMBDACLASS]]* %{{.*}}, i32 0, i32 0
 // ARC:   store i32 %{{.*}}, i32* %[[CAPTURE0]]
 

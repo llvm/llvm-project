@@ -13,7 +13,7 @@ public:
         X(const X&, const T& t = T());
 };
 
-// CHECK-LABEL: define void @_Z1gv()
+// CHECK-LABEL: define{{.*}} void @_Z1gv()
 void g() {
   // CHECK:      call void @_ZN1TC1Ev([[T:%.*]]* {{[^,]*}} [[AGG1:%.*]])
   // CHECK-NEXT: call void @_Z1fRK1T([[T]]* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[AGG1]])
@@ -41,7 +41,7 @@ void g() {
 
 
 class obj{ int a; float b; double d; };
-// CHECK-LABEL: define void @_Z1hv()
+// CHECK-LABEL: define{{.*}} void @_Z1hv()
 void h() {
   // CHECK: call void @llvm.memset.p0i8.i64(
   obj o = obj();

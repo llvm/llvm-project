@@ -2,7 +2,7 @@
 
 void f(void);
 void g(void) {
-  // CHECK: define void @g() [[NUW:#[0-9]+]]
+  // CHECK: define{{.*}} void @g() [[NUW:#[0-9]+]]
   // CHECK-NOT: call void @f() nounwind
   f();
 }

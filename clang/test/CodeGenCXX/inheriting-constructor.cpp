@@ -15,9 +15,9 @@ struct C { template<typename T> C(T); };
 struct D : C { using C::C; };
 D d(123);
 
-// ITANIUM-LABEL: define void @_ZN1BD2Ev
-// ITANIUM-LABEL: define void @_ZN1BD1Ev
-// ITANIUM-LABEL: define void @_ZN1BD0Ev
+// ITANIUM-LABEL: define{{.*}} void @_ZN1BD2Ev
+// ITANIUM-LABEL: define{{.*}} void @_ZN1BD1Ev
+// ITANIUM-LABEL: define{{.*}} void @_ZN1BD0Ev
 // WIN32-LABEL: define {{.*}}void @"??1B@@UAE@XZ"
 // WIN64-LABEL: define {{.*}}void @"??1B@@UEAA@XZ"
 

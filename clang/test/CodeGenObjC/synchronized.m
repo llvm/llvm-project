@@ -20,7 +20,7 @@
 
 @end
 
-// CHECK-LABEL: define void @foo(
+// CHECK-LABEL: define{{.*}} void @foo(
 void foo(id a) {
   // CHECK: [[A:%.*]] = alloca i8*
   // CHECK: [[SYNC:%.*]] = alloca i8*
@@ -47,7 +47,7 @@ void foo(id a) {
 
 }
 
-// CHECK-LABEL: define i32 @f0(
+// CHECK-LABEL: define{{.*}} i32 @f0(
 int f0(id a) {
   // TODO: we can optimize the ret to a constant if we can figure out
   // either that x isn't stored to within the synchronized block or
@@ -64,7 +64,7 @@ int f0(id a) {
   return x;
 }
 
-// CHECK-LABEL: define void @f1(
+// CHECK-LABEL: define{{.*}} void @f1(
 void f1(id a) {
   // Check that the return doesn't go through the cleanup.
   extern void opaque(void);

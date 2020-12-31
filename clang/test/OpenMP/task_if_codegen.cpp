@@ -33,7 +33,7 @@ void fn10();
 
 int Arg;
 
-// CHECK-LABEL: define void @{{.+}}gtid_test
+// CHECK-LABEL: define{{.*}} void @{{.+}}gtid_test
 void gtid_test() {
 // CHECK:  call void {{.+}} @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{.+}} 0, {{.+}}* [[GTID_TEST_REGION1:@.+]] to void
 #pragma omp parallel

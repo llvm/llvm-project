@@ -16,4 +16,4 @@ void foo() {
   }
 }
 
-// CHECK: define void @_Z3foov() {{#[0-9]+}} personality i8* bitcast (i32 ()* @__objc_personality_v0 to i8*)
+// CHECK: define{{.*}} void @_Z3foov() {{#[0-9]+}} personality i8* bitcast (i32 ()* @__objc_personality_v0 to i8*)

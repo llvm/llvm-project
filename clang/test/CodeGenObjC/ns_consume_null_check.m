@@ -16,7 +16,7 @@ void test0(void) {
   id obj = [NSObject new];
   [x isEqual : obj];
 }
-// CHECK-LABEL:     define void @test0()
+// CHECK-LABEL:     define{{.*}} void @test0()
 // CHECK:       [[FIVE:%.*]] = call i8* @llvm.objc.retain
 // CHECK-NEXT:  [[SIX:%.*]] = bitcast
 // CHECK-NEXT:  [[SEVEN:%.*]]  = icmp eq i8* [[SIX]], null
@@ -36,7 +36,7 @@ void test1(void) {
   __weak id weakObj = obj;
   _Complex float result = [x asComplexWithArg: obj];
 }
-// CHECK-LABEL:    define void @test1()
+// CHECK-LABEL:    define{{.*}} void @test1()
 // CHECK:      [[OBJ:%.*]] = alloca i8*, align 8
 // CHECK-NEXT: [[WEAKOBJ:%.*]] = alloca i8*, align 8
 // CHECK-NEXT: [[RESULT:%.*]] = alloca { float, float }, align 4

@@ -584,7 +584,7 @@ void f() {
 //===----------------------------------------------------------------------===//
 // ILP32 ABI
 //===----------------------------------------------------------------------===//
-// CHECK-ILP32: @global_i32 = global <16 x i32> zeroinitializer, align 16
-// CHECK-ILP32: @global_i64 = global <8 x i64> zeroinitializer, align 16
-// CHECK-ILP32: @global_u32 = global <16 x i32> zeroinitializer, align 16
-// CHECK-ILP32: @global_u64 = global <8 x i64> zeroinitializer, align 16
+// CHECK-ILP32: @global_i32 ={{.*}} global <16 x i32> zeroinitializer, align 16
+// CHECK-ILP32: @global_i64 ={{.*}} global <8 x i64> zeroinitializer, align 16
+// CHECK-ILP32: @global_u32 ={{.*}} global <16 x i32> zeroinitializer, align 16
+// CHECK-ILP32: @global_u64 ={{.*}} global <8 x i64> zeroinitializer, align 16

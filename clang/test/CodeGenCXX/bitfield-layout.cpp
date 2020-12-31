@@ -28,7 +28,7 @@ Test4 t4;
 
 #define CHECK(x) if (!(x)) return __LINE__
 
-// CHECK: define i32 @_Z11test_assignv()
+// CHECK: define{{.*}} i32 @_Z11test_assignv()
 int test_assign() {
   struct {
     int a;
@@ -59,7 +59,7 @@ int test_assign() {
   return 0;
 }
 
-// CHECK: define i32 @_Z9test_initv()
+// CHECK: define{{.*}} i32 @_Z9test_initv()
 int test_init() {
   struct S {
     int a;

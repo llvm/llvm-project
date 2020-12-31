@@ -12,7 +12,7 @@ Strong getStrong(void);
 - (void)passStrong:(Strong)a;
 @end
 
-// CHECK-LABEL: define void @test0(
+// CHECK-LABEL: define{{.*}} void @test0(
 // CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_STRONG]], align 8
 // CHECK: %[[CALL:.*]] = call i8* @getStrong()
 // CHECK-NEXT: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_STRONG]], %[[STRUCT_STRONG]]* %[[AGG_TMP]], i32 0, i32 0

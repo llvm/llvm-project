@@ -24,7 +24,7 @@ void test_assign() {
   __unsafe_unretained id x;
   x = makeA();
 }
-// CHECK-LABEL:        define void @test_assign()
+// CHECK-LABEL:        define{{.*}} void @test_assign()
 // CHECK:                [[X:%.*]] = alloca i8*
 // CHECK:                [[T0:%.*]] = call [[A:.*]]* @makeA()
 // CHECK-MARKED-NEXT:    call void asm sideeffect
@@ -38,7 +38,7 @@ void test_assign() {
 // CHECK-OPTIMIZED-NEXT: lifetime.end
 // CHECK-NEXT:           ret void
 
-// DISABLED-LABEL:     define void @test_assign()
+// DISABLED-LABEL:     define{{.*}} void @test_assign()
 // DISABLED:             [[T0:%.*]] = call [[A:.*]]* @makeA()
 // DISABLED-MARKED-NEXT: call void asm sideeffect
 // DISABLED-NEXT:        [[T1:%.*]] = bitcast [[A]]* [[T0]] to i8*
@@ -48,7 +48,7 @@ void test_assign_assign() {
   __unsafe_unretained id x, y;
   x = y = makeA();
 }
-// CHECK-LABEL:        define void @test_assign_assign()
+// CHECK-LABEL:        define{{.*}} void @test_assign_assign()
 // CHECK:                [[X:%.*]] = alloca i8*
 // CHECK:                [[Y:%.*]] = alloca i8*
 // CHECK:                [[T0:%.*]] = call [[A]]* @makeA()
@@ -71,7 +71,7 @@ void test_strong_assign_assign() {
   __unsafe_unretained id y;
   x = y = makeA();
 }
-// CHECK-LABEL:        define void @test_strong_assign_assign()
+// CHECK-LABEL:        define{{.*}} void @test_strong_assign_assign()
 // CHECK:                [[X:%.*]] = alloca i8*
 // CHECK:                [[Y:%.*]] = alloca i8*
 // CHECK:                [[T0:%.*]] = call [[A]]* @makeA()
@@ -98,7 +98,7 @@ void test_assign_strong_assign() {
   __strong id y;
   x = y = makeA();
 }
-// CHECK-LABEL:        define void @test_assign_strong_assign()
+// CHECK-LABEL:        define{{.*}} void @test_assign_strong_assign()
 // CHECK:                [[X:%.*]] = alloca i8*
 // CHECK:                [[Y:%.*]] = alloca i8*
 // CHECK:                [[T0:%.*]] = call [[A]]* @makeA()
@@ -123,7 +123,7 @@ void test_assign_strong_assign() {
 void test_init() {
   __unsafe_unretained id x = makeA();
 }
-// CHECK-LABEL:        define void @test_init()
+// CHECK-LABEL:        define{{.*}} void @test_init()
 // CHECK:                [[X:%.*]] = alloca i8*
 // CHECK:                [[T0:%.*]] = call [[A]]* @makeA()
 // CHECK-MARKED-NEXT:    call void asm sideeffect
@@ -141,7 +141,7 @@ void test_init_assignment() {
   __unsafe_unretained id x;
   __unsafe_unretained id y = x = makeA();
 }
-// CHECK-LABEL:        define void @test_init_assignment()
+// CHECK-LABEL:        define{{.*}} void @test_init_assignment()
 // CHECK:                [[X:%.*]] = alloca i8*
 // CHECK:                [[Y:%.*]] = alloca i8*
 // CHECK:                [[T0:%.*]] = call [[A]]* @makeA()
@@ -163,7 +163,7 @@ void test_strong_init_assignment() {
   __unsafe_unretained id x;
   __strong id y = x = makeA();
 }
-// CHECK-LABEL:        define void @test_strong_init_assignment()
+// CHECK-LABEL:        define{{.*}} void @test_strong_init_assignment()
 // CHECK:                [[X:%.*]] = alloca i8*
 // CHECK:                [[Y:%.*]] = alloca i8*
 // CHECK:                [[T0:%.*]] = call [[A]]* @makeA()
@@ -187,7 +187,7 @@ void test_init_strong_assignment() {
   __strong id x;
   __unsafe_unretained id y = x = makeA();
 }
-// CHECK-LABEL:        define void @test_init_strong_assignment()
+// CHECK-LABEL:        define{{.*}} void @test_init_strong_assignment()
 // CHECK:                [[X:%.*]] = alloca i8*
 // CHECK:                [[Y:%.*]] = alloca i8*
 // CHECK:                [[T0:%.*]] = call [[A]]* @makeA()
@@ -212,7 +212,7 @@ void test_init_strong_assignment() {
 void test_ignored() {
   makeA();
 }
-// CHECK-LABEL:     define void @test_ignored()
+// CHECK-LABEL:     define{{.*}} void @test_ignored()
 // CHECK:             [[T0:%.*]] = call [[A]]* @makeA()
 // CHECK-MARKED-NEXT: call void asm sideeffect
 // CHECK-NEXT:        [[T1:%.*]] = bitcast [[A]]* [[T0]] to i8*
@@ -224,7 +224,7 @@ void test_ignored() {
 void test_cast_to_void() {
   (void) makeA();
 }
-// CHECK-LABEL:     define void @test_cast_to_void()
+// CHECK-LABEL:     define{{.*}} void @test_cast_to_void()
 // CHECK:             [[T0:%.*]] = call [[A]]* @makeA()
 // CHECK-MARKED-NEXT: call void asm sideeffect
 // CHECK-NEXT:        [[T1:%.*]] = bitcast [[A]]* [[T0]] to i8*

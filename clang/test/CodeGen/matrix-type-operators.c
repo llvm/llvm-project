@@ -8,7 +8,7 @@ typedef unsigned long long ullx4x2_t __attribute__((matrix_type(4, 2)));
 // Floating point matrix/scalar additions.
 
 void add_matrix_matrix_double(dx5x5_t a, dx5x5_t b, dx5x5_t c) {
-  // CHECK-LABEL: define void @add_matrix_matrix_double(<25 x double> %a, <25 x double> %b, <25 x double> %c)
+  // CHECK-LABEL: define{{.*}} void @add_matrix_matrix_double(<25 x double> %a, <25 x double> %b, <25 x double> %c)
   // CHECK:       [[B:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 8
   // CHECK-NEXT:  [[C:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 8
   // CHECK-NEXT:  [[RES:%.*]] = fadd <25 x double> [[B]], [[C]]
@@ -18,7 +18,7 @@ void add_matrix_matrix_double(dx5x5_t a, dx5x5_t b, dx5x5_t c) {
 }
 
 void add_matrix_matrix_float(fx2x3_t a, fx2x3_t b, fx2x3_t c) {
-  // CHECK-LABEL: define void @add_matrix_matrix_float(<6 x float> %a, <6 x float> %b, <6 x float> %c)
+  // CHECK-LABEL: define{{.*}} void @add_matrix_matrix_float(<6 x float> %a, <6 x float> %b, <6 x float> %c)
   // CHECK:       [[B:%.*]] = load <6 x float>, <6 x float>* {{.*}}, align 4
   // CHECK-NEXT:  [[C:%.*]] = load <6 x float>, <6 x float>* {{.*}}, align 4
   // CHECK-NEXT:  [[RES:%.*]] = fadd <6 x float> [[B]], [[C]]
@@ -28,7 +28,7 @@ void add_matrix_matrix_float(fx2x3_t a, fx2x3_t b, fx2x3_t c) {
 }
 
 void add_matrix_scalar_double_float(dx5x5_t a, float vf) {
-  // CHECK-LABEL: define void @add_matrix_scalar_double_float(<25 x double> %a, float %vf)
+  // CHECK-LABEL: define{{.*}} void @add_matrix_scalar_double_float(<25 x double> %a, float %vf)
   // CHECK:       [[MATRIX:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 8
   // CHECK-NEXT:  [[SCALAR:%.*]] = load float, float* %vf.addr, align 4
   // CHECK-NEXT:  [[SCALAR_EXT:%.*]] = fpext float [[SCALAR]] to double
@@ -41,7 +41,7 @@ void add_matrix_scalar_double_float(dx5x5_t a, float vf) {
 }
 
 void add_matrix_scalar_double_double(dx5x5_t a, double vd) {
-  // CHECK-LABEL: define void @add_matrix_scalar_double_double(<25 x double> %a, double %vd)
+  // CHECK-LABEL: define{{.*}} void @add_matrix_scalar_double_double(<25 x double> %a, double %vd)
   // CHECK:       [[MATRIX:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 8
   // CHECK-NEXT:  [[SCALAR:%.*]] = load double, double* %vd.addr, align 8
   // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <25 x double> poison, double [[SCALAR]], i32 0
@@ -53,7 +53,7 @@ void add_matrix_scalar_double_double(dx5x5_t a, double vd) {
 }
 
 void add_matrix_scalar_float_float(fx2x3_t b, float vf) {
-  // CHECK-LABEL: define void @add_matrix_scalar_float_float(<6 x float> %b, float %vf)
+  // CHECK-LABEL: define{{.*}} void @add_matrix_scalar_float_float(<6 x float> %b, float %vf)
   // CHECK:       [[MATRIX:%.*]] = load <6 x float>, <6 x float>* {{.*}}, align 4
   // CHECK-NEXT:  [[SCALAR:%.*]] = load float, float* %vf.addr, align 4
   // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <6 x float> poison, float [[SCALAR]], i32 0
@@ -65,7 +65,7 @@ void add_matrix_scalar_float_float(fx2x3_t b, float vf) {
 }
 
 void add_matrix_scalar_float_double(fx2x3_t b, double vd) {
-  // CHECK-LABEL: define void @add_matrix_scalar_float_double(<6 x float> %b, double %vd)
+  // CHECK-LABEL: define{{.*}} void @add_matrix_scalar_float_double(<6 x float> %b, double %vd)
   // CHECK:       [[MATRIX:%.*]] = load <6 x float>, <6 x float>* {{.*}}, align 4
   // CHECK-NEXT:  [[SCALAR:%.*]] = load double, double* %vd.addr, align 8
   // CHECK-NEXT:  [[SCALAR_TRUNC:%.*]] = fptrunc double [[SCALAR]] to float
@@ -80,7 +80,7 @@ void add_matrix_scalar_float_double(fx2x3_t b, double vd) {
 // Integer matrix/scalar additions
 
 void add_matrix_matrix_int(ix9x3_t a, ix9x3_t b, ix9x3_t c) {
-  // CHECK-LABEL: define void @add_matrix_matrix_int(<27 x i32> %a, <27 x i32> %b, <27 x i32> %c)
+  // CHECK-LABEL: define{{.*}} void @add_matrix_matrix_int(<27 x i32> %a, <27 x i32> %b, <27 x i32> %c)
   // CHECK:       [[B:%.*]] = load <27 x i32>, <27 x i32>* {{.*}}, align 4
   // CHECK-NEXT:  [[C:%.*]] = load <27 x i32>, <27 x i32>* {{.*}}, align 4
   // CHECK-NEXT:  [[RES:%.*]] = add <27 x i32> [[B]], [[C]]
@@ -89,7 +89,7 @@ void add_matrix_matrix_int(ix9x3_t a, ix9x3_t b, ix9x3_t c) {
 }
 
 void add_matrix_matrix_unsigned_long_long(ullx4x2_t a, ullx4x2_t b, ullx4x2_t c) {
-  // CHECK-LABEL: define void @add_matrix_matrix_unsigned_long_long(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c)
+  // CHECK-LABEL: define{{.*}} void @add_matrix_matrix_unsigned_long_long(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c)
   // CHECK:       [[B:%.*]] = load <8 x i64>, <8 x i64>* {{.*}}, align 8
   // CHECK-NEXT:  [[C:%.*]] = load <8 x i64>, <8 x i64>* {{.*}}, align 8
   // CHECK-NEXT:  [[RES:%.*]] = add <8 x i64> [[B]], [[C]]
@@ -99,7 +99,7 @@ void add_matrix_matrix_unsigned_long_long(ullx4x2_t a, ullx4x2_t b, ullx4x2_t c)
 }
 
 void add_matrix_scalar_int_short(ix9x3_t a, short vs) {
-  // CHECK-LABEL: define void @add_matrix_scalar_int_short(<27 x i32> %a, i16 signext %vs)
+  // CHECK-LABEL: define{{.*}} void @add_matrix_scalar_int_short(<27 x i32> %a, i16 signext %vs)
   // CHECK:        [[MATRIX:%.*]] = load <27 x i32>, <27 x i32>* [[MAT_ADDR:%.*]], align 4
   // CHECK-NEXT:   [[SCALAR:%.*]] = load i16, i16* %vs.addr, align 2
   // CHECK-NEXT:   [[SCALAR_EXT:%.*]] = sext i16 [[SCALAR]] to i32
@@ -112,7 +112,7 @@ void add_matrix_scalar_int_short(ix9x3_t a, short vs) {
 }
 
 void add_matrix_scalar_int_long_int(ix9x3_t a, long int vli) {
-  // CHECK-LABEL: define void @add_matrix_scalar_int_long_int(<27 x i32> %a, i64 %vli)
+  // CHECK-LABEL: define{{.*}} void @add_matrix_scalar_int_long_int(<27 x i32> %a, i64 %vli)
   // CHECK:        [[MATRIX:%.*]] = load <27 x i32>, <27 x i32>* [[MAT_ADDR:%.*]], align 4
   // CHECK-NEXT:   [[SCALAR:%.*]] = load i64, i64* %vli.addr, align 8
   // CHECK-NEXT:   [[SCALAR_TRUNC:%.*]] = trunc i64 [[SCALAR]] to i32
@@ -125,7 +125,7 @@ void add_matrix_scalar_int_long_int(ix9x3_t a, long int vli) {
 }
 
 void add_matrix_scalar_int_unsigned_long_long(ix9x3_t a, unsigned long long int vulli) {
-  // CHECK-LABEL: define void @add_matrix_scalar_int_unsigned_long_long(<27 x i32> %a, i64 %vulli)
+  // CHECK-LABEL: define{{.*}} void @add_matrix_scalar_int_unsigned_long_long(<27 x i32> %a, i64 %vulli)
   // CHECK:        [[MATRIX:%.*]] = load <27 x i32>, <27 x i32>* [[MAT_ADDR:%.*]], align 4
   // CHECK-NEXT:   [[SCALAR:%.*]] = load i64, i64* %vulli.addr, align 8
   // CHECK-NEXT:   [[SCALAR_TRUNC:%.*]] = trunc i64 [[SCALAR]] to i32
@@ -138,7 +138,7 @@ void add_matrix_scalar_int_unsigned_long_long(ix9x3_t a, unsigned long long int 
 }
 
 void add_matrix_scalar_long_long_int_short(ullx4x2_t b, short vs) {
-  // CHECK-LABEL: define void @add_matrix_scalar_long_long_int_short(<8 x i64> %b, i16 signext %vs)
+  // CHECK-LABEL: define{{.*}} void @add_matrix_scalar_long_long_int_short(<8 x i64> %b, i16 signext %vs)
   // CHECK:         [[SCALAR:%.*]] = load i16, i16* %vs.addr, align 2
   // CHECK-NEXT:    [[SCALAR_EXT:%.*]] = sext i16 [[SCALAR]] to i64
   // CHECK-NEXT:    [[MATRIX:%.*]] = load <8 x i64>, <8 x i64>* {{.*}}, align 8
@@ -151,7 +151,7 @@ void add_matrix_scalar_long_long_int_short(ullx4x2_t b, short vs) {
 }
 
 void add_matrix_scalar_long_long_int_int(ullx4x2_t b, long int vli) {
-  // CHECK-LABEL: define void @add_matrix_scalar_long_long_int_int(<8 x i64> %b, i64 %vli)
+  // CHECK-LABEL: define{{.*}} void @add_matrix_scalar_long_long_int_int(<8 x i64> %b, i64 %vli)
   // CHECK:         [[SCALAR:%.*]] = load i64, i64* %vli.addr, align 8
   // CHECK-NEXT:    [[MATRIX:%.*]] = load <8 x i64>, <8 x i64>* {{.*}}, align 8
   // CHECK-NEXT:    [[SCALAR_EMBED:%.*]] = insertelement <8 x i64> poison, i64 [[SCALAR]], i32 0
@@ -163,7 +163,7 @@ void add_matrix_scalar_long_long_int_int(ullx4x2_t b, long int vli) {
 }
 
 void add_matrix_scalar_long_long_int_unsigned_long_long(ullx4x2_t b, unsigned long long int vulli) {
-  // CHECK-LABEL: define void @add_matrix_scalar_long_long_int_unsigned_long_long
+  // CHECK-LABEL: define{{.*}} void @add_matrix_scalar_long_long_int_unsigned_long_long
   // CHECK:        [[SCALAR:%.*]] = load i64, i64* %vulli.addr, align 8
   // CHECK-NEXT:   [[MATRIX:%.*]] = load <8 x i64>, <8 x i64>* %0, align 8
   // CHECK-NEXT:   [[SCALAR_EMBED:%.*]] = insertelement <8 x i64> poison, i64 [[SCALAR]], i32 0
@@ -519,7 +519,7 @@ void insert_extract(dx5x5_t a, fx3x3_t b, unsigned long j, short k) {
 }
 
 void insert_compound_stmt(dx5x5_t a) {
-  // CHECK-LABEL: define void @insert_compound_stmt(<25 x double> %a)
+  // CHECK-LABEL: define{{.*}} void @insert_compound_stmt(<25 x double> %a)
   // CHECK:        [[A:%.*]] = load <25 x double>, <25 x double>* [[A_PTR:%.*]], align 8
   // CHECK-NEXT:   [[EXT:%.*]] = extractelement <25 x double> [[A]], i64 17
   // CHECK-NEXT:   [[SUB:%.*]] = fsub double [[EXT]], 1.000000e+00
@@ -536,7 +536,7 @@ struct Foo {
 };
 
 void insert_compound_stmt_field(struct Foo *a, float f, unsigned i, unsigned j) {
-  // CHECK-LABEL: define void @insert_compound_stmt_field(%struct.Foo* %a, float %f, i32 %i, i32 %j)
+  // CHECK-LABEL: define{{.*}} void @insert_compound_stmt_field(%struct.Foo* %a, float %f, i32 %i, i32 %j)
   // CHECK:         [[I:%.*]] = load i32, i32* %i.addr, align 4
   // CHECK-NEXT:    [[I_EXT:%.*]] = zext i32 [[I]] to i64
   // CHECK-NEXT:    [[J:%.*]] = load i32, i32* %j.addr, align 4
@@ -556,7 +556,7 @@ void insert_compound_stmt_field(struct Foo *a, float f, unsigned i, unsigned j) 
 }
 
 void matrix_as_idx(ix9x3_t a, int i, int j, dx5x5_t b) {
-  // CHECK-LABEL: define void @matrix_as_idx(<27 x i32> %a, i32 %i, i32 %j, <25 x double> %b)
+  // CHECK-LABEL: define{{.*}} void @matrix_as_idx(<27 x i32> %a, i32 %i, i32 %j, <25 x double> %b)
   // CHECK:       [[I1:%.*]] = load i32, i32* %i.addr, align 4
   // CHECK-NEXT:  [[I1_EXT:%.*]] = sext i32 [[I1]] to i64
   // CHECK-NEXT:  [[J1:%.*]] = load i32, i32* %j.addr, align 4

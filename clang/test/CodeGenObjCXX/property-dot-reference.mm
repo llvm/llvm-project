@@ -50,7 +50,7 @@ void test2() {
     void(obj.myProperty);
     void(obj.myGetter);
 }
-// CHECK-LABEL: define void @_Z5test2v()
+// CHECK-LABEL: define{{.*}} void @_Z5test2v()
 // CHECK: call i32 bitcast
 // CHECK: call double bitcast
 // CHECK: call i32 bitcast

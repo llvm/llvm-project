@@ -3,7 +3,7 @@
 enum MyEnum : char;
 void bar(MyEnum value) { }
 
-// CHECK-LABEL: define void @_Z3foo6MyEnum
+// CHECK-LABEL: define{{.*}} void @_Z3foo6MyEnum
 void foo(MyEnum value)
 {
   // CHECK: call void @_Z3bar6MyEnum(i8 signext

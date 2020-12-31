@@ -9,7 +9,7 @@ void test0(void) {
   void *ptr __attribute__((cleanup(destroy)));
   test0_helper();
 
-  // CHECK-WITH-LABEL:       define void @test0()
+  // CHECK-WITH-LABEL:       define{{.*}} void @test0()
   // CHECK-WITH-SAME:    personality i8* bitcast (i32 (...)* @__gcc_personality_v0 to i8*)
   // CHECK-WITH:         [[PTR:%.*]] = alloca i8*,
   // CHECK-WITH:         call void @destroy(i8** [[PTR]])
@@ -19,7 +19,7 @@ void test0(void) {
   // CHECK-WITH-NEXT:      catch i8* null
   // CHECK-WITH-NEXT:    call void @objc_terminate()
 
-  // CHECK-WITHOUT-LABEL:    define void @test0()
+  // CHECK-WITHOUT-LABEL:    define{{.*}} void @test0()
   // CHECK-WITHOUT-SAME: personality i8* bitcast (i32 (...)* @__gcc_personality_v0 to i8*)
   // CHECK-WITHOUT:      [[PTR:%.*]] = alloca i8*,
   // CHECK-WITHOUT:      call void @destroy(i8** [[PTR]])
