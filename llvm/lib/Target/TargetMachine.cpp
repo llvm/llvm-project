@@ -156,16 +156,6 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
 
   assert(TT.isOSBinFormatELF() || TT.isOSBinFormatWasm());
   assert(RM != Reloc::DynamicNoPIC);
-
-  bool IsExecutable =
-      RM == Reloc::Static || M.getPIELevel() != PIELevel::Default;
-  if (IsExecutable) {
-    // If the symbol is defined, it cannot be preempted.
-    if (!GV->isDeclarationForLinker())
-      return true;
-  }
-
-  // ELF & wasm support preemption of other symbols.
   return false;
 }
 
