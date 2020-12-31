@@ -1109,6 +1109,8 @@ bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(Instruction *TI,
 
       std::vector<DominatorTree::UpdateType> Updates;
 
+      Updates.push_back({DominatorTree::Delete, Pred, BB});
+
       // Figure out which 'cases' to copy from SI to PSI.
       std::vector<ValueEqualityComparisonCase> BBCases;
       BasicBlock *BBDefault = GetValueEqualityComparisonCases(TI, BBCases);
