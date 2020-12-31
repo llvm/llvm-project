@@ -269,7 +269,7 @@ public:
     // FIXME: add other heuristics to detect long running loops.
     if (SkipRetExitBlock) {
       for (auto BB : ExitBlocks)
-        if (dyn_cast<ReturnInst>(BB->getTerminator()) != nullptr)
+        if (isa<ReturnInst>(BB->getTerminator()))
           return false;
     }
 
