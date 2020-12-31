@@ -456,53 +456,42 @@ bool RecurrenceDescriptor::AddReductionVar(PHINode *Phi, RecurrenceKind Kind,
   return true;
 }
 
-/// Returns true if the instruction is a Select(ICmp(X, Y), X, Y) instruction
-/// pattern corresponding to a min(X, Y) or max(X, Y).
 RecurrenceDescriptor::InstDesc
-RecurrenceDescriptor::isMinMaxSelectCmpPattern(Instruction *I, InstDesc &Prev) {
-
-  assert((isa<ICmpInst>(I) || isa<FCmpInst>(I) || isa<SelectInst>(I)) &&
-         "Expect a select instruction");
-  Instruction *Cmp = nullptr;
-  SelectInst *Select = nullptr;
+RecurrenceDescriptor::isMinMaxSelectCmpPattern(Instruction *I,
+                                               const InstDesc &Prev) {
+  assert((isa<CmpInst>(I) || isa<SelectInst>(I)) &&
+         "Expected a cmp or select instruction");
 
   // We must handle the select(cmp()) as a single instruction. Advance to the
   // select.
-  if ((Cmp = dyn_cast<ICmpInst>(I)) || (Cmp = dyn_cast<FCmpInst>(I))) {
-    if (!Cmp->hasOneUse() || !(Select = dyn_cast<SelectInst>(*I->user_begin())))
-      return InstDesc(false, I);
-    return InstDesc(Select, Prev.getMinMaxKind());
+  CmpInst::Predicate Pred;
+  if (match(I, m_OneUse(m_Cmp(Pred, m_Value(), m_Value())))) {
+    if (auto *Select = dyn_cast<SelectInst>(*I->user_begin()))
+      return InstDesc(Select, Prev.getMinMaxKind());
   }
 
-  // Only handle single use cases for now.
-  if (!(Select = dyn_cast<SelectInst>(I)))
+  // Only match select with single use cmp condition.
+  if (!match(I, m_Select(m_OneUse(m_Cmp(Pred, m_Value(), m_Value())), m_Value(),
+                         m_Value())))
     return InstDesc(false, I);
-  if (!(Cmp = dyn_cast<ICmpInst>(I->getOperand(0))) &&
-      !(Cmp = dyn_cast<FCmpInst>(I->getOperand(0))))
-    return InstDesc(false, I);
-  if (!Cmp->hasOneUse())
-    return InstDesc(false, I);
-
-  Value *CmpLeft;
-  Value *CmpRight;
 
   // Look for a min/max pattern.
-  if (m_UMin(m_Value(CmpLeft), m_Value(CmpRight)).match(Select))
-    return InstDesc(Select, MRK_UIntMin);
-  else if (m_UMax(m_Value(CmpLeft), m_Value(CmpRight)).match(Select))
-    return InstDesc(Select, MRK_UIntMax);
-  else if (m_SMax(m_Value(CmpLeft), m_Value(CmpRight)).match(Select))
-    return InstDesc(Select, MRK_SIntMax);
-  else if (m_SMin(m_Value(CmpLeft), m_Value(CmpRight)).match(Select))
-    return InstDesc(Select, MRK_SIntMin);
-  else if (m_OrdFMin(m_Value(CmpLeft), m_Value(CmpRight)).match(Select))
-    return InstDesc(Select, MRK_FloatMin);
-  else if (m_OrdFMax(m_Value(CmpLeft), m_Value(CmpRight)).match(Select))
-    return InstDesc(Select, MRK_FloatMax);
-  else if (m_UnordFMin(m_Value(CmpLeft), m_Value(CmpRight)).match(Select))
-    return InstDesc(Select, MRK_FloatMin);
-  else if (m_UnordFMax(m_Value(CmpLeft), m_Value(CmpRight)).match(Select))
-    return InstDesc(Select, MRK_FloatMax);
+  if (match(I, m_UMin(m_Value(), m_Value())))
+    return InstDesc(I, MRK_UIntMin);
+  if (match(I, m_UMax(m_Value(), m_Value())))
+    return InstDesc(I, MRK_UIntMax);
+  if (match(I, m_SMax(m_Value(), m_Value())))
+    return InstDesc(I, MRK_SIntMax);
+  if (match(I, m_SMin(m_Value(), m_Value())))
+    return InstDesc(I, MRK_SIntMin);
+  if (match(I, m_OrdFMin(m_Value(), m_Value())))
+    return InstDesc(I, MRK_FloatMin);
+  if (match(I, m_OrdFMax(m_Value(), m_Value())))
+    return InstDesc(I, MRK_FloatMax);
+  if (match(I, m_UnordFMin(m_Value(), m_Value())))
+    return InstDesc(I, MRK_FloatMin);
+  if (match(I, m_UnordFMax(m_Value(), m_Value())))
+    return InstDesc(I, MRK_FloatMax);
 
   return InstDesc(false, I);
 }
