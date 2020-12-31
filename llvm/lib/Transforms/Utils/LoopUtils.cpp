@@ -63,7 +63,6 @@ static cl::opt<bool> ForceReductionIntrinsic(
 
 static const char *LLVMLoopDisableNonforced = "llvm.loop.disable_nonforced";
 static const char *LLVMLoopDisableLICM = "llvm.licm.disable";
-static const char *LLVMLoopMustProgress = "llvm.loop.mustprogress";
 
 bool llvm::formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
                                    MemorySSAUpdater *MSSAU,
@@ -420,10 +419,6 @@ bool llvm::hasDisableLICMTransformsHint(const Loop *L) {
   return getBooleanLoopAttribute(L, LLVMLoopDisableLICM);
 }
 
-bool llvm::hasMustProgress(const Loop *L) {
-  return getBooleanLoopAttribute(L, LLVMLoopMustProgress);
-}
-
 TransformationMode llvm::hasUnrollTransformation(Loop *L) {
   if (getBooleanLoopAttribute(L, "llvm.loop.unroll.disable"))
     return TM_SuppressedByUser;
@@ -594,7 +589,6 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
   IRBuilder<> Builder(OldBr);
 
   auto *ExitBlock = L->getUniqueExitBlock();
-  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
   if (ExitBlock) {
     assert(ExitBlock && "Should have a unique exit block!");
     assert(L->hasDedicatedExits() && "Loop should have dedicated exits!");
@@ -626,6 +620,7 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
              "Should have exactly one value and that's from the preheader!");
     }
 
+    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
     if (DT) {
       DTU.applyUpdates({{DominatorTree::Insert, Preheader, ExitBlock}});
       if (MSSA) {
@@ -641,26 +636,25 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
     Builder.CreateBr(ExitBlock);
     // Remove the old branch.
     Preheader->getTerminator()->eraseFromParent();
+
+    if (DT) {
+      DTU.applyUpdates({{DominatorTree::Delete, Preheader, L->getHeader()}});
+      if (MSSA) {
+        MSSAU->applyUpdates(
+            {{DominatorTree::Delete, Preheader, L->getHeader()}}, *DT);
+        SmallSetVector<BasicBlock *, 8> DeadBlockSet(L->block_begin(),
+                                                     L->block_end());
+        MSSAU->removeBlocks(DeadBlockSet);
+        if (VerifyMemorySSA)
+          MSSA->verifyMemorySSA();
+      }
+    }
   } else {
     assert(L->hasNoExitBlocks() &&
            "Loop should have either zero or one exit blocks.");
-
     Builder.SetInsertPoint(OldBr);
     Builder.CreateUnreachable();
     Preheader->getTerminator()->eraseFromParent();
-  }
-
-  if (DT) {
-    DTU.applyUpdates({{DominatorTree::Delete, Preheader, L->getHeader()}});
-    if (MSSA) {
-      MSSAU->applyUpdates({{DominatorTree::Delete, Preheader, L->getHeader()}},
-                          *DT);
-      SmallSetVector<BasicBlock *, 8> DeadBlockSet(L->block_begin(),
-                                                   L->block_end());
-      MSSAU->removeBlocks(DeadBlockSet);
-      if (VerifyMemorySSA)
-        MSSA->verifyMemorySSA();
-    }
   }
 
   // Use a map to unique and a vector to guarantee deterministic ordering.
