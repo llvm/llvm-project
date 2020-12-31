@@ -763,6 +763,13 @@ let TargetPrefix = "riscv" in {
   defm vmsof : RISCVMaskUnaryMOut;
   defm vmsif : RISCVMaskUnaryMOut;
 
+  defm vfcvt_xu_f_v : RISCVConversion;
+  defm vfcvt_x_f_v : RISCVConversion;
+  defm vfcvt_rtz_xu_f_v : RISCVConversion;
+  defm vfcvt_rtz_x_f_v : RISCVConversion;
+  defm vfcvt_f_xu_v : RISCVConversion;
+  defm vfcvt_f_x_v : RISCVConversion;
+
   defm vfwcvt_f_xu_v : RISCVConversion;
   defm vfwcvt_f_x_v : RISCVConversion;
   defm vfwcvt_xu_f_v : RISCVConversion;
