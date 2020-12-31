@@ -40,11 +40,11 @@ source_filename = "test/DebugInfo/X86/live-debug-values.ll"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@m = common global i32 0, align 4, !dbg !0
+@m = common dso_local global i32 0, align 4, !dbg !0
 @.str = private unnamed_addr constant [13 x i8] c"m(main): %d\0A\00", align 1
 
 ; Function Attrs: nounwind uwtable
-define i32 @main(i32 %argc, i8** nocapture readonly %argv) #0 !dbg !10 {
+define dso_local i32 @main(i32 %argc, i8** nocapture readonly %argv) #0 !dbg !10 {
 entry:
   tail call void @llvm.dbg.value(metadata i32 %argc, metadata !17, metadata !20), !dbg !21
   tail call void @llvm.dbg.value(metadata i8** %argv, metadata !18, metadata !20), !dbg !22
