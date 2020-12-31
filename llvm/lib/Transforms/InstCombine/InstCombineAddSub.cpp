@@ -1881,6 +1881,14 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
       return BinaryOperator::CreateAnd(A, B);
   }
 
+  // (sub (add A, B) (and A, B)) --> (or A, B)
+  {
+    Value *A, *B;
+    if (match(Op0, m_Add(m_Value(A), m_Value(B))) &&
+        match(Op1, m_c_And(m_Specific(A), m_Specific(B))))
+      return BinaryOperator::CreateOr(A, B);
+  }
+
   // (sub (and A, B) (or A, B)) --> neg (xor A, B)
   {
     Value *A, *B;

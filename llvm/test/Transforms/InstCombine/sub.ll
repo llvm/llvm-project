@@ -1621,9 +1621,7 @@ define <2 x i8> @and_vec(<2 x i8> %X, <2 x i8> %Y) {
 
 define i32 @or_test(i32 %x, i32 %y) {
 ; CHECK-LABEL: @or_test(
-; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = and i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = sub i32 [[A]], [[B]]
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add i32 %x, %y
@@ -1634,9 +1632,7 @@ define i32 @or_test(i32 %x, i32 %y) {
 
 define i32 @or_test2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @or_test2(
-; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = and i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = sub i32 [[A]], [[B]]
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add i32 %x, %y
@@ -1647,9 +1643,7 @@ define i32 @or_test2(i32 %x, i32 %y) {
 
 define i32 @or_test3(i32 %x, i32 %y) {
 ; CHECK-LABEL: @or_test3(
-; CHECK-NEXT:    [[A:%.*]] = add i32 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = and i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = sub i32 [[A]], [[B]]
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add i32 %y, %x
@@ -1660,9 +1654,7 @@ define i32 @or_test3(i32 %x, i32 %y) {
 
 define <2 x i8> @or_vec(<2 x i8> %X, <2 x i8> %Y) {
 ; CHECK-LABEL: @or_vec(
-; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = and <2 x i8> [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = sub <2 x i8> [[A]], [[B]]
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i8> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a = add <2 x i8> %X, %Y
