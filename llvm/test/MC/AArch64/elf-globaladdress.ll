@@ -6,12 +6,12 @@
 ;; RUN:     llvm-mc -triple=arm64-none-linux-gnu -filetype=obj -o - | \
 ;; RUN:     llvm-readobj -h -r - | FileCheck -check-prefix=OBJ %s
 
-@var8 = global i8 0
-@var16 = global i16 0
-@var32 = global i32 0
-@var64 = global i64 0
+@var8 = dso_local global i8 0
+@var16 = dso_local global i16 0
+@var32 = dso_local global i32 0
+@var64 = dso_local global i64 0
 
-define void @loadstore() {
+define dso_local void @loadstore() {
     %val8 = load i8, i8* @var8
     store volatile i8 %val8, i8* @var8
 
@@ -27,9 +27,9 @@ define void @loadstore() {
     ret void
 }
 
-@globaddr = global i64* null
+@globaddr = dso_local global i64* null
 
-define void @address() {
+define dso_local void @address() {
     store i64* @var64, i64** @globaddr
     ret void
 }
