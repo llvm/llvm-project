@@ -159,6 +159,8 @@ typedef struct user_fpregs elf_fpregset_t;
 #include <sys/vfs.h>
 #include <sys/epoll.h>
 #include <linux/capability.h>
+#else
+#include <fstab.h>
 #endif // SANITIZER_LINUX
 
 #if SANITIZER_MAC
@@ -205,9 +207,9 @@ namespace __sanitizer {
   unsigned struct_statfs64_sz = sizeof(struct statfs64);
 #endif // (SANITIZER_MAC && !TARGET_CPU_ARM64) && !SANITIZER_IOS
 
-#if SANITIZER_GLIBC
+#if SANITIZER_GLIBC || SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_MAC
   unsigned struct_fstab_sz = sizeof(struct fstab);
-#endif  // SANITIZER_GLIBC
+#endif  // SANITIZER_GLIBC || SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_MAC
 #if !SANITIZER_ANDROID
   unsigned struct_statfs_sz = sizeof(struct statfs);
   unsigned struct_sockaddr_sz = sizeof(struct sockaddr);
