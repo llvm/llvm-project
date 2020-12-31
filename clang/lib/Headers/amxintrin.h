@@ -251,7 +251,7 @@ typedef struct __tile1024i_str {
   _tile1024i tile;
 } __tile1024i;
 
-__DEFAULT_FN_ATTRS_INT8
+__DEFAULT_FN_ATTRS_TILE
 static void __tile_loadd(__tile1024i *dst, const void *base,
                          __SIZE_TYPE__ stride) {
   dst->tile = _tile_loadd_internal(dst->row, dst->col, base, stride);
@@ -264,9 +264,14 @@ static void __tile_dpbsud(__tile1024i *dst, __tile1024i src1,
                                     src1.tile, src2.tile);
 }
 
-__DEFAULT_FN_ATTRS_INT8
+__DEFAULT_FN_ATTRS_TILE
 static void __tile_stored(void *base, __SIZE_TYPE__ stride, __tile1024i src) {
   _tile_stored_internal(src.row, src.col, base, stride, src.tile);
+}
+
+__DEFAULT_FN_ATTRS_TILE
+static void __tile_zero(__tile1024i *dst) {
+  dst->tile = __builtin_ia32_tilezero_internal(dst->row, dst->col);
 }
 
 #endif /* __x86_64__ */
