@@ -1221,9 +1221,7 @@ define <2 x i8> @flip_masked_bit_nonuniform(<2 x i8> %A) {
 
 define i32 @and_test(i32 %x, i32 %y) {
 ; CHECK-LABEL: @and_test(
-; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[O:%.*]] = or i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = sub i32 [[A]], [[O]]
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add i32 %x, %y
@@ -1234,9 +1232,7 @@ define i32 @and_test(i32 %x, i32 %y) {
 
 define i32 @and_test2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @and_test2(
-; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[O:%.*]] = or i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = sub i32 [[A]], [[O]]
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add i32 %x, %y
@@ -1247,9 +1243,7 @@ define i32 @and_test2(i32 %x, i32 %y) {
 
 define i32 @and_test3(i32 %x, i32 %y) {
 ; CHECK-LABEL: @and_test3(
-; CHECK-NEXT:    [[A:%.*]] = add i32 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[O:%.*]] = or i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = sub i32 [[A]], [[O]]
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add i32 %y, %x
@@ -1261,9 +1255,7 @@ define i32 @and_test3(i32 %x, i32 %y) {
 
 define <2 x i8> @and_vec(<2 x i8> %X, <2 x i8> %Y) {
 ; CHECK-LABEL: @and_vec(
-; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[O:%.*]] = or <2 x i8> [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = sub <2 x i8> [[A]], [[O]]
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a = add <2 x i8> %X, %Y
