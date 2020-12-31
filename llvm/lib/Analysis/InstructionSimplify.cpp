@@ -5951,13 +5951,6 @@ static bool replaceAndRecursivelySimplifyImpl(
   return Simplified;
 }
 
-bool llvm::recursivelySimplifyInstruction(Instruction *I,
-                                          const TargetLibraryInfo *TLI,
-                                          const DominatorTree *DT,
-                                          AssumptionCache *AC) {
-  return replaceAndRecursivelySimplifyImpl(I, nullptr, TLI, DT, AC, nullptr);
-}
-
 bool llvm::replaceAndRecursivelySimplify(
     Instruction *I, Value *SimpleV, const TargetLibraryInfo *TLI,
     const DominatorTree *DT, AssumptionCache *AC,

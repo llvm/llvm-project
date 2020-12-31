@@ -313,17 +313,6 @@ bool replaceAndRecursivelySimplify(
     const DominatorTree *DT = nullptr, AssumptionCache *AC = nullptr,
     SmallSetVector<Instruction *, 8> *UnsimplifiedUsers = nullptr);
 
-/// Recursively attempt to simplify an instruction.
-///
-/// This routine uses SimplifyInstruction to simplify 'I', and if successful
-/// replaces uses of 'I' with the simplified value. It then recurses on each
-/// of the users impacted. It returns true if any simplifications were
-/// performed.
-bool recursivelySimplifyInstruction(Instruction *I,
-                                    const TargetLibraryInfo *TLI = nullptr,
-                                    const DominatorTree *DT = nullptr,
-                                    AssumptionCache *AC = nullptr);
-
 // These helper functions return a SimplifyQuery structure that contains as
 // many of the optional analysis we use as are currently valid.  This is the
 // strongly preferred way of constructing SimplifyQuery in passes.
