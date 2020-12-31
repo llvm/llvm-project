@@ -12,11 +12,11 @@
 // DARWIN-APCS: call void @g
 // DARWIN-AAPCS-LABEL: define{{.*}} arm_aapcscc void @f()
 // DARWIN-AAPCS: call arm_aapcscc void @g
-// LINUX-APCS-LABEL: define arm_apcscc void @f()
+// LINUX-APCS-LABEL: define{{.*}} arm_apcscc void @f()
 // LINUX-APCS: call arm_apcscc void @g
-// LINUX-AAPCS-LABEL: define void @f()
+// LINUX-AAPCS-LABEL: define{{.*}} void @f()
 // LINUX-AAPCS: call void @g
-// BAREMETAL-AAPCS_VFP-LABEL: define void @f()
+// BAREMETAL-AAPCS_VFP-LABEL: define{{.*}} void @f()
 // BAREMETAL-AAPCS_VFP: call void @g
 // BAREMETAL-AAPCS_VFP: declare void @g()
 void g(void);

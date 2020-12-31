@@ -30,19 +30,19 @@ using E = _Complex int;
 
 template<typename T> T &make();
 
-// CHECK: @_ZDC2a12a2E = global {{.*}} zeroinitializer, align 4
+// CHECK: @_ZDC2a12a2E ={{.*}} global {{.*}} zeroinitializer, align 4
 auto [a1, a2] = make<A>();
-// CHECK: @_ZDC2b12b2E = global {{.*}} zeroinitializer, align 1
-// CHECK: @b1 = global {{.*}}* null, align 8
+// CHECK: @_ZDC2b12b2E ={{.*}} global {{.*}} zeroinitializer, align 1
+// CHECK: @b1 ={{.*}} global {{.*}}* null, align 8
 // CHECK: @_ZGR2b1_ = internal global {{.*}} zeroinitializer, align 1
-// CHECK: @b2 = global i32* null, align 8
+// CHECK: @b2 ={{.*}} global i32* null, align 8
 // CHECK: @_ZGR2b2_ = internal global i32 0, align 4
 auto [b1, b2] = make<B>();
-// CHECK: @_ZDC2c12c2E = global [2 x i32]* null, align 8
+// CHECK: @_ZDC2c12c2E ={{.*}} global [2 x i32]* null, align 8
 auto &[c1, c2] = make<C>();
-// CHECK: @_ZDC2d12d2E = global <2 x i32> zeroinitializer, align 8
+// CHECK: @_ZDC2d12d2E ={{.*}} global <2 x i32> zeroinitializer, align 8
 auto [d1, d2] = make<D>();
-// CHECK: @_ZDC2e12e2E = global { i32, i32 } zeroinitializer, align 4
+// CHECK: @_ZDC2e12e2E ={{.*}} global { i32, i32 } zeroinitializer, align 4
 auto [e1, e2] = make<E>();
 
 // CHECK: call {{.*}}* @_Z4makeI1AERT_v()
@@ -69,7 +69,7 @@ auto [e1, e2] = make<E>();
 // CHECK: store i32 %{{.*}}, i32* getelementptr inbounds ({ i32, i32 }, { i32, i32 }* @_ZDC2e12e2E, i32 0, i32 0)
 // CHECK: store i32 %{{.*}}, i32* getelementptr inbounds ({ i32, i32 }, { i32, i32 }* @_ZDC2e12e2E, i32 0, i32 1)
 
-// CHECK: define i32 @_Z12test_globalsv()
+// CHECK: define{{.*}} i32 @_Z12test_globalsv()
 int test_globals() {
   return a2 + b2 + c2 + d2 + e2;
   // CHECK: load i8, i8* getelementptr inbounds (%struct.A, %struct.A* @_ZDC2a12a2E, i32 0, i32 1)
@@ -87,7 +87,7 @@ int test_globals() {
   // CHECK: load i32, i32* getelementptr inbounds ({ i32, i32 }, { i32, i32 }* @_ZDC2e12e2E, i32 0, i32 1)
 }
 
-// CHECK: define i32 @_Z11test_localsv()
+// CHECK: define{{.*}} i32 @_Z11test_localsv()
 int test_locals() {
   auto [b1, b2] = make<B>();
 
@@ -107,7 +107,7 @@ int test_locals() {
   // CHECK: call {{.*}}@_ZN1XD1Ev({{.*}}%[[b1]])
 }
 
-// CHECK: define void @_Z13test_bitfieldR1A(
+// CHECK: define{{.*}} void @_Z13test_bitfieldR1A(
 void test_bitfield(A &a) {
   auto &[a1, a2] = a;
   a1 = 5;

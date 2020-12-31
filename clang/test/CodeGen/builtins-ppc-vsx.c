@@ -65,8 +65,8 @@ unsigned int res_aui[4];
 void dummy() { }
 
 void test1() {
-// CHECK-LABEL: define void @test1
-// CHECK-LE-LABEL: define void @test1
+// CHECK-LABEL: define{{.*}} void @test1
+// CHECK-LE-LABEL: define{{.*}} void @test1
 
   res_vf = vec_abs(vf);
 // CHECK: call <4 x float> @llvm.fabs.v4f32(<4 x float> %{{[0-9]*}})

@@ -47,7 +47,7 @@
 // RUN:     -std=c++11 -triple x86_64-unknown-unknown -emit-llvm -o - %s \
 // RUN:     | FileCheck --check-prefixes CHECK,FUNCTION,NOCUSTOM,NOTYPED %s
 
-// CHECK: define void @_Z16alwaysInstrumentv() #[[ALWAYSATTR:[0-9]+]] {
+// CHECK: define{{.*}} void @_Z16alwaysInstrumentv() #[[ALWAYSATTR:[0-9]+]] {
 [[clang::xray_always_instrument]] void alwaysInstrument() {
   static constexpr char kPhase[] = "always";
   __xray_customevent(kPhase, 6);

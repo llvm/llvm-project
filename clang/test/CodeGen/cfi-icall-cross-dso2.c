@@ -2,7 +2,7 @@
 // RUN:   -fsanitize=cfi-icall -fsanitize-cfi-cross-dso \
 // RUN:   -emit-llvm -o - %s | FileCheck %s
 
-// CHECK: define void @f() {{.*}} !type !{{.*}} !type !{{.*}}
+// CHECK: define{{.*}} void @f() {{.*}} !type !{{.*}} !type !{{.*}}
 void f(void);
 void (*pf)(void) = f;
 void f(void) { }

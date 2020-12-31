@@ -28,8 +28,8 @@ void usage() {
 }
 
 // void usage function, calls conversion operator.
-// LIN64: define void @_Z5usagev()
-// VECCALL: define void @_Z5usagev()
+// LIN64: define{{.*}} void @_Z5usagev()
+// VECCALL: define{{.*}} void @_Z5usagev()
 // WIN32: define dso_local void @"?usage@@YAXXZ"()
 // CHECK: call double (i32, float, double)* @"_ZZ5usagevENK3$_0cvPFdifdEEv"
 // WIN32: call x86_thiscallcc double (i32, float, double)* @"??B<lambda_0>@?0??usage@@YAXXZ@QBEP6A?A?<auto>@@HMN@ZXZ"

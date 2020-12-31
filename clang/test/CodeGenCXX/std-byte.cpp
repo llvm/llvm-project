@@ -6,7 +6,7 @@ namespace std {
 enum byte : unsigned char {};
 }
 
-// CHECK-LABEL: define void @test0(
+// CHECK-LABEL: define{{.*}} void @test0(
 extern "C" void test0(std::byte *sb, int *i) {
   // CHECK: store i8 0, i8* %{{.*}} !tbaa [[TAG_CHAR:!.*]]
   *sb = std::byte{0};
@@ -25,7 +25,7 @@ enum byte : unsigned char {};
 
 // Make sure we don't get confused with other enums named 'byte'.
 
-// CHECK-LABEL: define void @test1(
+// CHECK-LABEL: define{{.*}} void @test1(
 extern "C" void test1(::byte *b, ::my::byte *mb, ::my::std::byte *msb) {
   *b = ::byte{0};
   *mb = ::my::byte{0};

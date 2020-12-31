@@ -3,13 +3,13 @@
 
 // Test float returns and params.
 
-// CHECK: define float @func_p1(float %x)
+// CHECK: define{{.*}} float @func_p1(float %x)
 float func_p1(float x) { return x; }
 
-// CHECK: define double @func_p2(double %x)
+// CHECK: define{{.*}} double @func_p2(double %x)
 double func_p2(double x) { return x; }
 
-// CHECK: define ppc_fp128 @func_p3(ppc_fp128 %x)
+// CHECK: define{{.*}} ppc_fp128 @func_p3(ppc_fp128 %x)
 long double func_p3(long double x) { return x; }
 
 // Test homogeneous float aggregate passing and returning.
@@ -29,47 +29,47 @@ struct fabc { float a; float b; float c; };
 
 struct f2a2b { float a[2]; float b[2]; };
 
-// CHECK-LE: define i32 @func_f1(float inreg %x.coerce)
-// CHECK-BE: define void @func_f1(%struct.f1* noalias sret(%struct.f1) align 4 %agg.result, float inreg %x.coerce)
+// CHECK-LE: define{{.*}} i32 @func_f1(float inreg %x.coerce)
+// CHECK-BE: define{{.*}} void @func_f1(%struct.f1* noalias sret(%struct.f1) align 4 %agg.result, float inreg %x.coerce)
 struct f1 func_f1(struct f1 x) { return x; }
 
-// CHECK-LE: define i64 @func_f2(i64 %x.coerce)
-// CHECK-BE: define void @func_f2(%struct.f2* noalias sret(%struct.f2) align 4 %agg.result, i64 %x.coerce)
+// CHECK-LE: define{{.*}} i64 @func_f2(i64 %x.coerce)
+// CHECK-BE: define{{.*}} void @func_f2(%struct.f2* noalias sret(%struct.f2) align 4 %agg.result, i64 %x.coerce)
 struct f2 func_f2(struct f2 x) { return x; }
 
-// CHECK-LE: define { i64, i64 } @func_f3([2 x i64] %x.coerce)
-// CHECK-BE: define void @func_f3(%struct.f3* noalias sret(%struct.f3) align 4 %agg.result, [2 x i64] %x.coerce)
+// CHECK-LE: define{{.*}} { i64, i64 } @func_f3([2 x i64] %x.coerce)
+// CHECK-BE: define{{.*}} void @func_f3(%struct.f3* noalias sret(%struct.f3) align 4 %agg.result, [2 x i64] %x.coerce)
 struct f3 func_f3(struct f3 x) { return x; }
 
-// CHECK-LE: define { i64, i64 } @func_f4([2 x i64] %x.coerce)
-// CHECK-BE: define void @func_f4(%struct.f4* noalias sret(%struct.f4) align 4 %agg.result, [2 x i64] %x.coerce)
+// CHECK-LE: define{{.*}} { i64, i64 } @func_f4([2 x i64] %x.coerce)
+// CHECK-BE: define{{.*}} void @func_f4(%struct.f4* noalias sret(%struct.f4) align 4 %agg.result, [2 x i64] %x.coerce)
 struct f4 func_f4(struct f4 x) { return x; }
 
-// CHECK: define void @func_f5(%struct.f5* noalias sret(%struct.f5) align 4 %agg.result, [3 x i64] %x.coerce)
+// CHECK: define{{.*}} void @func_f5(%struct.f5* noalias sret(%struct.f5) align 4 %agg.result, [3 x i64] %x.coerce)
 struct f5 func_f5(struct f5 x) { return x; }
 
-// CHECK: define void @func_f6(%struct.f6* noalias sret(%struct.f6) align 4 %agg.result, [3 x i64] %x.coerce)
+// CHECK: define{{.*}} void @func_f6(%struct.f6* noalias sret(%struct.f6) align 4 %agg.result, [3 x i64] %x.coerce)
 struct f6 func_f6(struct f6 x) { return x; }
 
-// CHECK: define void @func_f7(%struct.f7* noalias sret(%struct.f7) align 4 %agg.result, [4 x i64] %x.coerce)
+// CHECK: define{{.*}} void @func_f7(%struct.f7* noalias sret(%struct.f7) align 4 %agg.result, [4 x i64] %x.coerce)
 struct f7 func_f7(struct f7 x) { return x; }
 
-// CHECK: define void @func_f8(%struct.f8* noalias sret(%struct.f8) align 4 %agg.result, [4 x i64] %x.coerce)
+// CHECK: define{{.*}} void @func_f8(%struct.f8* noalias sret(%struct.f8) align 4 %agg.result, [4 x i64] %x.coerce)
 struct f8 func_f8(struct f8 x) { return x; }
 
-// CHECK: define void @func_f9(%struct.f9* noalias sret(%struct.f9) align 4 %agg.result, [5 x i64] %x.coerce)
+// CHECK: define{{.*}} void @func_f9(%struct.f9* noalias sret(%struct.f9) align 4 %agg.result, [5 x i64] %x.coerce)
 struct f9 func_f9(struct f9 x) { return x; }
 
-// CHECK-LE: define i64 @func_fab(i64 %x.coerce)
-// CHECK-BE: define void @func_fab(%struct.fab* noalias sret(%struct.fab) align 4 %agg.result, i64 %x.coerce)
+// CHECK-LE: define{{.*}} i64 @func_fab(i64 %x.coerce)
+// CHECK-BE: define{{.*}} void @func_fab(%struct.fab* noalias sret(%struct.fab) align 4 %agg.result, i64 %x.coerce)
 struct fab func_fab(struct fab x) { return x; }
 
-// CHECK-LE: define { i64, i64 } @func_fabc([2 x i64] %x.coerce)
-// CHECK-BE: define void @func_fabc(%struct.fabc* noalias sret(%struct.fabc) align 4 %agg.result, [2 x i64] %x.coerce)
+// CHECK-LE: define{{.*}} { i64, i64 } @func_fabc([2 x i64] %x.coerce)
+// CHECK-BE: define{{.*}} void @func_fabc(%struct.fabc* noalias sret(%struct.fabc) align 4 %agg.result, [2 x i64] %x.coerce)
 struct fabc func_fabc(struct fabc x) { return x; }
 
-// CHECK-LE: define { i64, i64 } @func_f2a2b([2 x i64] %x.coerce)
-// CHECK-BE: define void @func_f2a2b(%struct.f2a2b* noalias sret(%struct.f2a2b) align 4 %agg.result, [2 x i64] %x.coerce)
+// CHECK-LE: define{{.*}} { i64, i64 } @func_f2a2b([2 x i64] %x.coerce)
+// CHECK-BE: define{{.*}} void @func_f2a2b(%struct.f2a2b* noalias sret(%struct.f2a2b) align 4 %agg.result, [2 x i64] %x.coerce)
 struct f2a2b func_f2a2b(struct f2a2b x) { return x; }
 
 // CHECK-LABEL: @call_f1

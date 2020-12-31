@@ -84,7 +84,7 @@ void something_else_again() {
 // CHECK-DAG: declare void @_ZN1AC2Ev{{.*}} #[[ATTR2]]
 // CHECK-DAG: declare void @_ZN1AD1Ev{{.*}} #[[ATTR3:[0-9]+]]
 // CHECK-DAG: declare void @_ZN1AD2Ev{{.*}} #[[ATTR3]]
-// CHECK-DAG: define i32 @_Z1gi(i32 %i) #[[ATTR4:[0-9]+]] {
+// CHECK-DAG: define{{.*}} i32 @_Z1gi(i32 %i) #[[ATTR4:[0-9]+]] {
 
 // CHECK-DAG: attributes #[[ATTR0]] = {{{.*}}nomerge{{.*}}}
 // CHECK-DAG: attributes #[[ATTR1]] = {{{.*}}nomerge{{.*}}}

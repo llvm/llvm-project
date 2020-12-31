@@ -6,7 +6,7 @@
 void foo(int m) __attribute__((overloadable, enable_if(m > 0, "")));
 void foo(int m) __attribute__((overloadable));
 
-// CHECK-LABEL: define void @test1
+// CHECK-LABEL: define{{.*}} void @test1
 void test1() {
   // CHECK: store void (i32)* @_Z3fooi
   void (*p)(int) = foo;
@@ -29,7 +29,7 @@ void test1() {
 
 void bar(int m) __attribute__((overloadable, enable_if(m > 0, "")));
 void bar(int m) __attribute__((overloadable, enable_if(1, "")));
-// CHECK-LABEL: define void @test2
+// CHECK-LABEL: define{{.*}} void @test2
 void test2() {
   // CHECK: store void (i32)* @_Z3barUa9enable_ifIXLi1EEEi
   void (*p)(int) = bar;
@@ -52,7 +52,7 @@ void test2() {
 
 void baz(int m) __attribute__((overloadable, enable_if(1, "")));
 void baz(int m) __attribute__((overloadable));
-// CHECK-LABEL: define void @test3
+// CHECK-LABEL: define{{.*}} void @test3
 void test3() {
   // CHECK: store void (i32)* @_Z3bazUa9enable_ifIXLi1EEEi
   void (*p)(int) = baz;
@@ -69,7 +69,7 @@ enum { TRUEFACTS = 1 };
 void qux(int m) __attribute__((overloadable, enable_if(1, ""),
                                enable_if(TRUEFACTS, "")));
 void qux(int m) __attribute__((overloadable, enable_if(1, "")));
-// CHECK-LABEL: define void @test4
+// CHECK-LABEL: define{{.*}} void @test4
 void test4() {
   // CHECK: store void (i32)* @_Z3quxUa9enable_ifIXLi1EEXLi1EEEi
   void (*p)(int) = qux;
@@ -84,7 +84,7 @@ void test4() {
 // There was a bug where, when enable_if was present, overload resolution
 // wouldn't pay attention to lower-priority attributes.
 // (N.B. `foo` with pass_object_size should always be preferred)
-// CHECK-LABEL: define void @test5
+// CHECK-LABEL: define{{.*}} void @test5
 void test5() {
   int foo(char *i) __attribute__((enable_if(1, ""), overloadable));
   int foo(char *i __attribute__((pass_object_size(0))))

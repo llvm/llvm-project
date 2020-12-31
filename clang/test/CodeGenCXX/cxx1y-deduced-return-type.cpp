@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -std=c++1y -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s
 
-// CHECK: @x = global {{.*}} zeroinitializer
+// CHECK: @x ={{.*}} global {{.*}} zeroinitializer
 
 // CHECK: define {{.*}} @_Z1fv
 inline auto f() {

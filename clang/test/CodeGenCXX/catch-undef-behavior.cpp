@@ -367,7 +367,7 @@ class C : public A, public B // align=16
 // offset. The pointer before subtraction doesn't need to be aligned for
 // the destination type.
 
-// CHECK-LABEL: define void @_Z16downcast_pointerP1B(%class.B* %b)
+// CHECK-LABEL: define{{.*}} void @_Z16downcast_pointerP1B(%class.B* %b)
 void downcast_pointer(B *b) {
   (void) static_cast<C*>(b);
   // Alignment check from EmitTypeCheck(TCK_DowncastPointer, ...)
@@ -384,7 +384,7 @@ void downcast_pointer(B *b) {
   // CHECK-NEXT: br i1 [[AND]]
 }
 
-// CHECK-LABEL: define void @_Z18downcast_referenceR1B(%class.B* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %b)
+// CHECK-LABEL: define{{.*}} void @_Z18downcast_referenceR1B(%class.B* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %b)
 void downcast_reference(B &b) {
   (void) static_cast<C&>(b);
   // Alignment check from EmitTypeCheck(TCK_DowncastReference, ...)
@@ -482,13 +482,13 @@ void force_irgen() {
   B::q();
 }
 
-// CHECK-LABEL: define void @_ZN29FunctionSanitizerVirtualCalls1B1fEv
+// CHECK-LABEL: define{{.*}} void @_ZN29FunctionSanitizerVirtualCalls1B1fEv
 // CHECK-NOT: prologue
 //
-// CHECK-LABEL: define void @_ZTv0_n24_N29FunctionSanitizerVirtualCalls1B1fEv
+// CHECK-LABEL: define{{.*}} void @_ZTv0_n24_N29FunctionSanitizerVirtualCalls1B1fEv
 // CHECK-NOT: prologue
 //
-// CHECK-LABEL: define void @_ZN29FunctionSanitizerVirtualCalls11force_irgenEv()
+// CHECK-LABEL: define{{.*}} void @_ZN29FunctionSanitizerVirtualCalls11force_irgenEv()
 // CHECK: prologue
 //
 // CHECK-LABEL: define linkonce_odr void @_ZN29FunctionSanitizerVirtualCalls1AC1Ev

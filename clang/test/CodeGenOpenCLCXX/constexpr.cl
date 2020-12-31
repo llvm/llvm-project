@@ -22,14 +22,14 @@ constexpr float compute() {
 
 constexpr float FloatConstant = compute();
 
-// CHECK-LABEL: define spir_kernel void @foo
+// CHECK-LABEL: define{{.*}} spir_kernel void @foo
 // CHECK: store float 2.000000e+00
 kernel void foo(global float *x) {
   *x = FloatConstant;
 }
 
 // Test evaluation of constant vectors.
-// CHECK-LABEL: define spir_kernel void @vecEval
+// CHECK-LABEL: define{{.*}} spir_kernel void @vecEval
 // CHECK: store i32 3
 // CHECK: store <2 x i32> <i32 22, i32 33>, <2 x i32>
 
@@ -42,7 +42,7 @@ kernel void vecEval(global int *x, global int2 *y) {
 }
 
 // Test evaluation of vectors initialized through a constexpr function.
-// CHECK-LABEL: define spir_kernel void @vecEval2
+// CHECK-LABEL: define{{.*}} spir_kernel void @vecEval2
 // CHECK: store <2 x i32>
 constexpr int2 addOne(int2 x) {
   return (int2)(x.x + 1, x.y + 1);
@@ -54,7 +54,7 @@ kernel void vecEval2(global int2 *x) {
 }
 
 // Test evaluation of vec_step
-// CHECK-LABEL: define spir_kernel void @vec_step_test
+// CHECK-LABEL: define{{.*}} spir_kernel void @vec_step_test
 // CHECK: store i32 6
 constexpr int vsize1 = vec_step(fromConstexprFunc);
 constexpr int vsize2 = vec_step(int4);

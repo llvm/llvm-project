@@ -7,6 +7,6 @@ void func() {
 }
 
 // Test that we did not crash, by checking whether function was created.
-// CHECK-LABEL: define void @_Z4funcv() #0 {
+// CHECK-LABEL: define{{.*}} void @_Z4funcv() #0 {
 // CHECK: ret void
 // CHECK: }

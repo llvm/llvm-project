@@ -104,7 +104,7 @@ void test_indirect_arg_globl(void) {
 }
 #endif
 
-// AMDGCN-LABEL: define amdgpu_kernel void @test_indirect_arg_local()
+// AMDGCN-LABEL: define{{.*}} amdgpu_kernel void @test_indirect_arg_local()
 // AMDGCN: %[[byval_temp:.*]] = alloca %struct.LargeStructOneMember, align 8, addrspace(5)
 // AMDGCN: %[[r0:.*]] = bitcast %struct.LargeStructOneMember addrspace(5)* %[[byval_temp]] to i8 addrspace(5)*
 // AMDGCN: call void @llvm.memcpy.p5i8.p3i8.i64(i8 addrspace(5)* align 8 %[[r0]], i8 addrspace(3)* align 8 bitcast (%struct.LargeStructOneMember addrspace(3)* @test_indirect_arg_local.l_s to i8 addrspace(3)*), i64 800, i1 false)
@@ -123,7 +123,7 @@ void test_indirect_arg_private(void) {
   FuncOneLargeMember(p_s);
 }
 
-// AMDGCN-LABEL: define amdgpu_kernel void @KernelOneMember
+// AMDGCN-LABEL: define{{.*}} amdgpu_kernel void @KernelOneMember
 // AMDGCN-SAME:  (<2 x i32> %[[u_coerce:.*]])
 // AMDGCN:  %[[u:.*]] = alloca %struct.StructOneMember, align 8, addrspace(5)
 // AMDGCN:  %[[coerce_dive:.*]] = getelementptr inbounds %struct.StructOneMember, %struct.StructOneMember addrspace(5)* %[[u]], i32 0, i32 0
@@ -139,7 +139,7 @@ kernel void KernelOneMemberSpir(global struct StructOneMember* u) {
   FuncOneMember(*u);
 }
 
-// AMDGCN-LABEL: define amdgpu_kernel void @KernelLargeOneMember(
+// AMDGCN-LABEL: define{{.*}} amdgpu_kernel void @KernelLargeOneMember(
 // AMDGCN:  %[[U:.*]] = alloca %struct.LargeStructOneMember, align 8, addrspace(5)
 // AMDGCN:  store %struct.LargeStructOneMember %u.coerce, %struct.LargeStructOneMember addrspace(5)* %[[U]], align 8
 // AMDGCN:  call void @FuncOneLargeMember(%struct.LargeStructOneMember addrspace(5)* byval(%struct.LargeStructOneMember) align 8 %[[U]])
@@ -157,7 +157,7 @@ void FuncLargeTwoMember(struct LargeStructTwoMember u) {
   u.y[0] = (int2)(0, 0);
 }
 
-// AMDGCN-LABEL: define amdgpu_kernel void @KernelTwoMember
+// AMDGCN-LABEL: define{{.*}} amdgpu_kernel void @KernelTwoMember
 // AMDGCN-SAME:  (%struct.StructTwoMember %[[u_coerce:.*]])
 // AMDGCN:  %[[u:.*]] = alloca %struct.StructTwoMember, align 8, addrspace(5)
 // AMDGCN: %[[LD0:.*]] = load <2 x i32>, <2 x i32> addrspace(5)*
@@ -167,7 +167,7 @@ kernel void KernelTwoMember(struct StructTwoMember u) {
   FuncTwoMember(u);
 }
 
-// AMDGCN-LABEL: define amdgpu_kernel void @KernelLargeTwoMember
+// AMDGCN-LABEL: define{{.*}} amdgpu_kernel void @KernelLargeTwoMember
 // AMDGCN-SAME:  (%struct.LargeStructTwoMember %[[u_coerce:.*]])
 // AMDGCN:  %[[u:.*]] = alloca %struct.LargeStructTwoMember, align 8, addrspace(5)
 // AMDGCN:  store %struct.LargeStructTwoMember %[[u_coerce]], %struct.LargeStructTwoMember addrspace(5)* %[[u]]

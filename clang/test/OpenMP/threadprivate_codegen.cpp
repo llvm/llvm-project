@@ -132,30 +132,30 @@ struct S5 {
 };
 
 // CHECK-DAG:  [[GS1:@.+]] = internal global [[S1]] zeroinitializer
-// CHECK-DAG:  [[GS1]].cache. = common global i8** null
+// CHECK-DAG:  [[GS1]].cache. = common{{.*}} global i8** null
 // CHECK-DAG:  [[DEFAULT_LOC:@.+]] = private unnamed_addr constant [[IDENT]] { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([{{[0-9]+}} x i8], [{{[0-9]+}} x i8]* {{@.+}}, i32 0, i32 0) }
 // CHECK-DAG:  [[GS2:@.+]] = internal global [[S2]] zeroinitializer
-// CHECK-DAG:  [[ARR_X:@.+]] = global [2 x [3 x [[S1]]]] zeroinitializer
-// CHECK-DAG:  [[ARR_X]].cache. = common global i8** null
+// CHECK-DAG:  [[ARR_X:@.+]] ={{.*}} global [2 x [3 x [[S1]]]] zeroinitializer
+// CHECK-DAG:  [[ARR_X]].cache. = common{{.*}} global i8** null
 // CHECK-DAG:  [[SM:@.+]] = internal global [[SMAIN]] zeroinitializer
-// CHECK-DAG:  [[SM]].cache. = common global i8** null
+// CHECK-DAG:  [[SM]].cache. = common{{.*}} global i8** null
 // CHECK-DAG:  [[STATIC_S:@.+]] = external global [[S3]]
-// CHECK-DAG:  [[STATIC_S]].cache. = common global i8** null
+// CHECK-DAG:  [[STATIC_S]].cache. = common{{.*}} global i8** null
 // CHECK-DAG:  [[GS3:@.+]] = external global [[S5]]
-// CHECK-DAG:  [[GS3]].cache. = common global i8** null
+// CHECK-DAG:  [[GS3]].cache. = common{{.*}} global i8** null
 // CHECK-DAG:  [[ST_INT_ST:@.+]] = linkonce_odr global i32 23
-// CHECK-DAG:  [[ST_INT_ST]].cache. = common global i8** null
+// CHECK-DAG:  [[ST_INT_ST]].cache. = common{{.*}} global i8** null
 // CHECK-DAG:  [[ST_FLOAT_ST:@.+]] = linkonce_odr global float 2.300000e+01
-// CHECK-DAG:  [[ST_FLOAT_ST]].cache. = common global i8** null
+// CHECK-DAG:  [[ST_FLOAT_ST]].cache. = common{{.*}} global i8** null
 // CHECK-DAG:  [[ST_S4_ST:@.+]] = linkonce_odr global %struct.S4 zeroinitializer
-// CHECK-DAG:  [[ST_S4_ST]].cache. = common global i8** null
-// CHECK-NOT:  .cache. = common global i8** null
+// CHECK-DAG:  [[ST_S4_ST]].cache. = common{{.*}} global i8** null
+// CHECK-NOT:  .cache. = common{{.*}} global i8** null
 // There is no cache for gs2 - it is not threadprivate. Check that there is only
 // 8 caches created (for Static::s, gs1, gs3, arr_x, main::sm, ST<int>::st,
 // ST<float>::st, ST<S4>::st)
 // CHECK-DEBUG-DAG: [[GS1:@.+]] = internal global [[S1]] zeroinitializer
 // CHECK-DEBUG-DAG: [[GS2:@.+]] = internal global [[S2]] zeroinitializer
-// CHECK-DEBUG-DAG: [[ARR_X:@.+]] = global [2 x [3 x [[S1]]]] zeroinitializer
+// CHECK-DEBUG-DAG: [[ARR_X:@.+]] ={{.*}} global [2 x [3 x [[S1]]]] zeroinitializer
 // CHECK-DEBUG-DAG: [[SM:@.+]] = internal global [[SMAIN]] zeroinitializer
 // CHECK-DEBUG-DAG: [[STATIC_S:@.+]] = external global [[S3]]
 // CHECK-DEBUG-DAG: [[GS3:@.+]] = external global [[S5]]
@@ -188,7 +188,7 @@ struct S5 {
 
 // CHECK-TLS-DAG:  [[GS1:@.+]] = internal thread_local global [[S1]] zeroinitializer
 // CHECK-TLS-DAG:  [[GS2:@.+]] = internal global [[S2]] zeroinitializer
-// CHECK-TLS-DAG:  [[ARR_X:@.+]] = thread_local global [2 x [3 x [[S1]]]] zeroinitializer
+// CHECK-TLS-DAG:  [[ARR_X:@.+]] ={{.*}} thread_local global [2 x [3 x [[S1]]]] zeroinitializer
 // CHECK-TLS-DAG:  [[SM:@.+]] = internal thread_local global [[SMAIN]] zeroinitializer
 // CHECK-TLS-DAG:  [[SM_GUARD:@_ZGVZ4mainE2sm]] = internal thread_local global i8 0
 // CHECK-TLS-DAG:  [[STATIC_S:@.+]] = external thread_local global [[S3]]
@@ -200,7 +200,7 @@ struct S5 {
 // CHECK-TLS-DAG:  @__tls_guard = internal thread_local global i8 0
 // CHECK-TLS-DAG:  @__dso_handle = external hidden global i8
 // CHECK-TLS-DAG:  [[GS1_TLS_INIT:@_ZTHL3gs1]] = internal alias void (), void ()* @__tls_init
-// CHECK-TLS-DAG:  [[ARR_X_TLS_INIT:@_ZTH5arr_x]] = alias void (), void ()* @__tls_init
+// CHECK-TLS-DAG:  [[ARR_X_TLS_INIT:@_ZTH5arr_x]] ={{.*}} alias void (), void ()* @__tls_init
 // CHECK-TLS-DAG:  [[ST_S4_ST_TLS_INIT:@_ZTHN2STI2S4E2stE]] = linkonce_odr alias void (), void ()* [[ST_S4_ST_CXX_INIT:@[^, ]*]]
 
 // OMP50-TLS: define internal void [[GS1_CXX_INIT:@.*]]()

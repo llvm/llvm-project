@@ -8,11 +8,11 @@
 // RUN: llvm-dis %t.bc -o - | FileCheck %s --check-prefix=CHECK-BC
 // RUN: llvm-objcopy --dump-section=.llvmcmd=- %t.o /dev/null | FileCheck %s --check-prefix=CHECK-CMD
 
-// CHECK-BC-LABEL: define void @bar() #0 {
+// CHECK-BC-LABEL: define{{.*}} void @bar() #0 {
 // CHECK-BC-NEXT: entry:
 // CHECK-BC-NEXT: ret void
 // CHECK-BC-NEXT: }
-// CHECK-BC-LABEL: define void @foo() #1 {
+// CHECK-BC-LABEL: define{{.*}} void @foo() #1 {
 // CHECK-BC-NEXT: entry:
 // CHECK-BC-NEXT: call void @bar()
 // CHECK-BC-NEXT: ret void

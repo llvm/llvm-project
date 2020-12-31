@@ -130,7 +130,7 @@ long test_retAgg() {
   return b;
 }
 
-// EVAL-STATIC: @A = global %struct.Agg { i32 13, i64 17 }, align 8
+// EVAL-STATIC: @A ={{.*}} global %struct.Agg { i32 13, i64 17 }, align 8
 Agg A = retAgg();
 
 // EVAL-NOT: @_Z9retRefAggv()

@@ -8,7 +8,7 @@ void test_eh_return_data_regno()
   res = __builtin_eh_return_data_regno(1);  // CHECK: store volatile i32 4
 }
 
-// CHECK-LABEL: define i64 @test_builtin_ppc_get_timebase
+// CHECK-LABEL: define{{.*}} i64 @test_builtin_ppc_get_timebase
 long long test_builtin_ppc_get_timebase() {
   // CHECK: call i64 @llvm.readcyclecounter()
   return __builtin_ppc_get_timebase();

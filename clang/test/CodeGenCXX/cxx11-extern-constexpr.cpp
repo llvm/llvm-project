@@ -6,8 +6,8 @@
 struct A {
   static const int Foo = 123;
 };
-// X86: @_ZN1A3FooE = constant i32 123, align 4
-// AMD: @_ZN1A3FooE = addrspace(4) constant i32 123, align 4
+// X86: @_ZN1A3FooE ={{.*}} constant i32 123, align 4
+// AMD: @_ZN1A3FooE ={{.*}} addrspace(4) constant i32 123, align 4
 const int *p = &A::Foo; // emit available_externally
 const int A::Foo;       // convert to full definition
 

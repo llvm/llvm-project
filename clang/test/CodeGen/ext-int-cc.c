@@ -43,8 +43,8 @@ void ParamPassing(_ExtInt(129) a, _ExtInt(128) b, _ExtInt(64) c) {}
 // SPARC: define{{.*}} void @ParamPassing(i129* byval(i129) align 8 %{{.+}}, i128* byval(i128) align 8 %{{.+}}, i64 %{{.+}})
 // MIPS64: define{{.*}} void @ParamPassing(i129* byval(i129) align 8 %{{.+}}, i128 signext  %{{.+}}, i64 signext %{{.+}})
 // MIPS: define{{.*}} void @ParamPassing(i129* byval(i129) align 8 %{{.+}}, i128* byval(i128) align 8 %{{.+}}, i64 signext %{{.+}})
-// SPIR64: define spir_func void @ParamPassing(i129* byval(i129) align 8 %{{.+}}, i128* byval(i128) align 8 %{{.+}}, i64 %{{.+}})
-// SPIR: define spir_func void @ParamPassing(i129* byval(i129) align 8 %{{.+}}, i128* byval(i128) align 8 %{{.+}}, i64 %{{.+}})
+// SPIR64: define{{.*}} spir_func void @ParamPassing(i129* byval(i129) align 8 %{{.+}}, i128* byval(i128) align 8 %{{.+}}, i64 %{{.+}})
+// SPIR: define{{.*}} spir_func void @ParamPassing(i129* byval(i129) align 8 %{{.+}}, i128* byval(i128) align 8 %{{.+}}, i64 %{{.+}})
 // HEX: define{{.*}} void @ParamPassing(i129* byval(i129) align 8 %{{.+}}, i128* byval(i128) align 8 %{{.+}}, i64 %{{.+}})
 // LANAI: define{{.*}} void @ParamPassing(i129* byval(i129) align 4 %{{.+}}, i128* byval(i128) align 4 %{{.+}}, i64 %{{.+}})
 // R600: define{{.*}} void @ParamPassing(i129 addrspace(5)* byval(i129) align 8 %{{.+}}, i128 addrspace(5)* byval(i128) align 8 %{{.+}}, i64 %{{.+}})
@@ -72,8 +72,8 @@ void ParamPassing2(_ExtInt(129) a, _ExtInt(127) b, _ExtInt(63) c) {}
 // SPARC: define{{.*}} void @ParamPassing2(i129* byval(i129) align 8 %{{.+}}, i127* byval(i127) align 8 %{{.+}}, i63 %{{.+}})
 // MIPS64: define{{.*}} void @ParamPassing2(i129* byval(i129) align 8 %{{.+}}, i127 signext  %{{.+}}, i63 signext %{{.+}})
 // MIPS: define{{.*}} void @ParamPassing2(i129* byval(i129) align 8 %{{.+}}, i127* byval(i127) align 8 %{{.+}}, i63 signext %{{.+}})
-// SPIR64: define spir_func void @ParamPassing2(i129* byval(i129) align 8 %{{.+}}, i127* byval(i127) align 8 %{{.+}}, i63 %{{.+}})
-// SPIR: define spir_func void @ParamPassing2(i129* byval(i129) align 8 %{{.+}}, i127* byval(i127) align 8 %{{.+}}, i63 %{{.+}})
+// SPIR64: define{{.*}} spir_func void @ParamPassing2(i129* byval(i129) align 8 %{{.+}}, i127* byval(i127) align 8 %{{.+}}, i63 %{{.+}})
+// SPIR: define{{.*}} spir_func void @ParamPassing2(i129* byval(i129) align 8 %{{.+}}, i127* byval(i127) align 8 %{{.+}}, i63 %{{.+}})
 // HEX: define{{.*}} void @ParamPassing2(i129* byval(i129) align 8 %{{.+}}, i127* byval(i127) align 8 %{{.+}}, i63 %{{.+}})
 // LANAI: define{{.*}} void @ParamPassing2(i129* byval(i129) align 4 %{{.+}}, i127* byval(i127) align 4 %{{.+}}, i63 %{{.+}})
 // R600: define{{.*}} void @ParamPassing2(i129 addrspace(5)* byval(i129) align 8 %{{.+}}, i127 addrspace(5)* byval(i127) align 8 %{{.+}}, i63 %{{.+}})
@@ -102,8 +102,8 @@ void ParamPassing3(_ExtInt(15) a, _ExtInt(31) b) {}
 // SPARC: define{{.*}} void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
 // MIPS64: define{{.*}} void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
 // MIPS: define{{.*}} void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
-// SPIR64: define spir_func void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
-// SPIR: define spir_func void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
+// SPIR64: define{{.*}} spir_func void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
+// SPIR: define{{.*}} spir_func void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
 // HEX: define{{.*}} void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
 // LANAI: define{{.*}} void @ParamPassing3(i15 inreg %{{.+}}, i31 inreg %{{.+}})
 // R600: define{{.*}} void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
@@ -131,8 +131,8 @@ _ExtInt(63) ReturnPassing(){}
 // SPARC: define{{.*}} i63 @ReturnPassing(
 // MIPS64: define{{.*}} i63 @ReturnPassing(
 // MIPS: define{{.*}} i63 @ReturnPassing(
-// SPIR64: define spir_func i63 @ReturnPassing(
-// SPIR: define spir_func i63 @ReturnPassing(
+// SPIR64: define{{.*}} spir_func i63 @ReturnPassing(
+// SPIR: define{{.*}} spir_func i63 @ReturnPassing(
 // HEX: define{{.*}} i63 @ReturnPassing(
 // LANAI: define{{.*}} i63 @ReturnPassing(
 // R600: define{{.*}} i63 @ReturnPassing(
@@ -160,8 +160,8 @@ _ExtInt(64) ReturnPassing2(){}
 // SPARC: define{{.*}} i64 @ReturnPassing2(
 // MIPS64: define{{.*}} i64 @ReturnPassing2(
 // MIPS: define{{.*}} i64 @ReturnPassing2(
-// SPIR64: define spir_func i64 @ReturnPassing2(
-// SPIR: define spir_func i64 @ReturnPassing2(
+// SPIR64: define{{.*}} spir_func i64 @ReturnPassing2(
+// SPIR: define{{.*}} spir_func i64 @ReturnPassing2(
 // HEX: define{{.*}} i64 @ReturnPassing2(
 // LANAI: define{{.*}} i64 @ReturnPassing2(
 // R600: define{{.*}} i64 @ReturnPassing2(
@@ -191,8 +191,8 @@ _ExtInt(127) ReturnPassing3(){}
 // SPARC: define{{.*}} void @ReturnPassing3(i127* noalias sret
 // MIPS64: define{{.*}} i127 @ReturnPassing3(
 // MIPS: define{{.*}} void @ReturnPassing3(i127* noalias sret
-// SPIR64: define spir_func void @ReturnPassing3(i127* noalias sret
-// SPIR: define spir_func void @ReturnPassing3(i127* noalias sret
+// SPIR64: define{{.*}} spir_func void @ReturnPassing3(i127* noalias sret
+// SPIR: define{{.*}} spir_func void @ReturnPassing3(i127* noalias sret
 // HEX: define{{.*}} void @ReturnPassing3(i127* noalias sret
 // LANAI: define{{.*}} void @ReturnPassing3(i127* noalias sret
 // R600: define{{.*}} void @ReturnPassing3(i127 addrspace(5)* noalias sret
@@ -220,8 +220,8 @@ _ExtInt(128) ReturnPassing4(){}
 // SPARC: define{{.*}} void @ReturnPassing4(i128* noalias sret
 // MIPS64: define{{.*}} i128 @ReturnPassing4(
 // MIPS: define{{.*}} void @ReturnPassing4(i128* noalias sret
-// SPIR64: define spir_func void @ReturnPassing4(i128* noalias sret
-// SPIR: define spir_func void @ReturnPassing4(i128* noalias sret
+// SPIR64: define{{.*}} spir_func void @ReturnPassing4(i128* noalias sret
+// SPIR: define{{.*}} spir_func void @ReturnPassing4(i128* noalias sret
 // HEX: define{{.*}} void @ReturnPassing4(i128* noalias sret
 // LANAI: define{{.*}} void @ReturnPassing4(i128* noalias sret
 // R600: define{{.*}} void @ReturnPassing4(i128 addrspace(5)* noalias sret
@@ -249,8 +249,8 @@ _ExtInt(129) ReturnPassing5(){}
 // SPARC: define{{.*}} void @ReturnPassing5(i129* noalias sret
 // MIPS64: define{{.*}} void @ReturnPassing5(i129* noalias sret
 // MIPS: define{{.*}} void @ReturnPassing5(i129* noalias sret
-// SPIR64: define spir_func void @ReturnPassing5(i129* noalias sret
-// SPIR: define spir_func void @ReturnPassing5(i129* noalias sret
+// SPIR64: define{{.*}} spir_func void @ReturnPassing5(i129* noalias sret
+// SPIR: define{{.*}} spir_func void @ReturnPassing5(i129* noalias sret
 // HEX: define{{.*}} void @ReturnPassing5(i129* noalias sret
 // LANAI: define{{.*}} void @ReturnPassing5(i129* noalias sret
 // R600: define{{.*}} void @ReturnPassing5(i129 addrspace(5)* noalias sret

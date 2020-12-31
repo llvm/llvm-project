@@ -18,11 +18,11 @@ int bar() {
 }
 
 // LINUX: @foo.ifunc = weak_odr ifunc i32 (i32), i32 (i32)* ()* @foo.resolver
-// LINUX: define i32 @foo.sse4.2(
+// LINUX: define{{.*}} i32 @foo.sse4.2(
 // LINUX: ret i32 0
-// LINUX: define i32 @foo.arch_ivybridge(
+// LINUX: define{{.*}} i32 @foo.arch_ivybridge(
 // LINUX: ret i32 1
-// LINUX: define i32 @foo(
+// LINUX: define{{.*}} i32 @foo(
 // LINUX: ret i32 2
 
 // WINDOWS: define dso_local i32 @foo.sse4.2(
@@ -32,7 +32,7 @@ int bar() {
 // WINDOWS: define dso_local i32 @foo(
 // WINDOWS: ret i32 2
 
-// LINUX: define i32 @bar()
+// LINUX: define{{.*}} i32 @bar()
 // LINUX: call void @func(i32 (i32)* @foo.ifunc)
 // LINUX: store i32 (i32)* @foo.ifunc
 // LINUX: store i32 (i32)* @foo.ifunc
