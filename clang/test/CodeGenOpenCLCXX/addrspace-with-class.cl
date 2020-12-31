@@ -16,18 +16,18 @@ struct MyType {
   int i;
 };
 
-// CHECK: @const1 = addrspace(2) global %struct.MyType zeroinitializer
+// CHECK: @const1 ={{.*}} addrspace(2) global %struct.MyType zeroinitializer
 __constant MyType const1 = 1;
-// CHECK: @const2 = addrspace(2) global %struct.MyType zeroinitializer
+// CHECK: @const2 ={{.*}} addrspace(2) global %struct.MyType zeroinitializer
 __constant MyType const2(2);
-// CHECK: @glob = addrspace(1) global %struct.MyType zeroinitializer
+// CHECK: @glob ={{.*}} addrspace(1) global %struct.MyType zeroinitializer
 MyType glob(1);
 
 // CHECK: call spir_func void @_ZNU3AS26MyTypeC1Ei(%struct.MyType addrspace(2)* {{[^,]*}} @const1, i32 1)
 // CHECK: call spir_func void @_ZNU3AS26MyTypeC1Ei(%struct.MyType addrspace(2)* {{[^,]*}} @const2, i32 2)
 // CHECK: call spir_func void @_ZNU3AS46MyTypeC1Ei(%struct.MyType addrspace(4)* {{[^,]*}} addrspacecast (%struct.MyType addrspace(1)* @glob to %struct.MyType addrspace(4)*), i32 1)
 
-// CHECK-LABEL: define spir_kernel void @fooGlobal()
+// CHECK-LABEL: define{{.*}} spir_kernel void @fooGlobal()
 kernel void fooGlobal() {
   // CHECK: call spir_func i32 @_ZNU3AS46MyType3barEv(%struct.MyType addrspace(4)* {{[^,]*}} addrspacecast (%struct.MyType addrspace(1)* @glob to %struct.MyType addrspace(4)*))
   glob.bar();
@@ -37,16 +37,16 @@ kernel void fooGlobal() {
   const1.~MyType();
 }
 
-// CHECK-LABEL: define spir_kernel void @fooLocal()
+// CHECK-LABEL: define{{.*}} spir_kernel void @fooLocal()
 kernel void fooLocal() {
   // CHECK: [[VAR:%.*]] = alloca %struct.MyType
-  // CHECK: [[REG:%.*]] = addrspacecast %struct.MyType* [[VAR]] to %struct.MyType addrspace(4)*
+  // CHECK: [[REG:%.*]] ={{.*}} addrspacecast %struct.MyType* [[VAR]] to %struct.MyType addrspace(4)*
   // CHECK: call spir_func void @_ZNU3AS46MyTypeC1Ei(%struct.MyType addrspace(4)* {{[^,]*}} [[REG]], i32 3)
   MyType myLocal(3);
-  // CHECK: [[REG:%.*]] = addrspacecast %struct.MyType* [[VAR]] to %struct.MyType addrspace(4)*
+  // CHECK: [[REG:%.*]] ={{.*}} addrspacecast %struct.MyType* [[VAR]] to %struct.MyType addrspace(4)*
   // CHECK: call spir_func i32 @_ZNU3AS46MyType3barEv(%struct.MyType addrspace(4)* {{[^,]*}} [[REG]])
   myLocal.bar();
-  // CHECK: [[REG:%.*]] = addrspacecast %struct.MyType* [[VAR]] to %struct.MyType addrspace(4)*
+  // CHECK: [[REG:%.*]] ={{.*}} addrspacecast %struct.MyType* [[VAR]] to %struct.MyType addrspace(4)*
   // CHECK: call spir_func void @_ZNU3AS46MyTypeD1Ev(%struct.MyType addrspace(4)* {{[^,]*}} [[REG]])
 }
 

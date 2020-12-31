@@ -16,7 +16,7 @@ U::~U() {}
 
 // CHECK-VPTR-MS: @__ubsan_vptr_type_cache = external dso_local
 
-// ITANIUM: define i32 @_Z5get_vP1T
+// ITANIUM: define{{.*}} i32 @_Z5get_vP1T
 // MSABI: define dso_local i32 @"?get_v
 int get_v(T* t) {
   // First, we check that vtable is not loaded before a type check.
@@ -29,7 +29,7 @@ int get_v(T* t) {
   return t->v();
 }
 
-// ITANIUM: define void @_Z9delete_itP1T
+// ITANIUM: define{{.*}} void @_Z9delete_itP1T
 // MSABI: define dso_local void @"?delete_it
 void delete_it(T *t) {
   // First, we check that vtable is not loaded before a type check.
@@ -41,7 +41,7 @@ void delete_it(T *t) {
   delete t;
 }
 
-// ITANIUM: define %struct.U* @_Z7dyncastP1T
+// ITANIUM: define{{.*}} %struct.U* @_Z7dyncastP1T
 // MSABI: define dso_local %struct.U* @"?dyncast
 U* dyncast(T *t) {
   // First, we check that dynamic_cast is not called before a type check.

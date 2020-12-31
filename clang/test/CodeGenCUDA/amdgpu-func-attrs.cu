@@ -12,7 +12,7 @@
 #include "Inputs/cuda.h"
 
 __device__ void test() {
-// UNSAFE-FP-ATOMICS: define void @_Z4testv() [[ATTR:#[0-9]+]]
+// UNSAFE-FP-ATOMICS: define{{.*}} void @_Z4testv() [[ATTR:#[0-9]+]]
 }
 
 

@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -O0 -triple amdgcn---amdgiz -emit-llvm %s -o - | FileCheck %s
 
-// CHECK-LABEL: define void @_Z5func1Pi(i32* %x)
+// CHECK-LABEL: define{{.*}} void @_Z5func1Pi(i32* %x)
 void func1(int *x) {
   // CHECK: %[[x_addr:.*]] = alloca i32*{{.*}}addrspace(5)
   // CHECK: %[[r0:.*]] = addrspacecast i32* addrspace(5)* %[[x_addr]] to i32**
@@ -10,7 +10,7 @@ void func1(int *x) {
   *x = 1;
 }
 
-// CHECK-LABEL: define void @_Z5func2v()
+// CHECK-LABEL: define{{.*}} void @_Z5func2v()
 void func2(void) {
   // CHECK: %lv1 = alloca i32, align 4, addrspace(5)
   // CHECK: %[[r0:.*]] = addrspacecast i32 addrspace(5)* %lv1 to i32*
@@ -63,7 +63,7 @@ public:
   }
 };
 
-// CHECK-LABEL: define void @_Z5func3v
+// CHECK-LABEL: define{{.*}} void @_Z5func3v
 void func3() {
   // CHECK: %[[a:.*]] = alloca %class.A, align 4, addrspace(5)
   // CHECK: %[[r0:.*]] = addrspacecast %class.A addrspace(5)* %[[a]] to %class.A*
@@ -72,7 +72,7 @@ void func3() {
   A a;
 }
 
-// CHECK-LABEL: define void @_Z5func4i
+// CHECK-LABEL: define{{.*}} void @_Z5func4i
 void func4(int x) {
   // CHECK: %[[x_addr:.*]] = alloca i32, align 4, addrspace(5)
   // CHECK: %[[r0:.*]] = addrspacecast i32 addrspace(5)* %[[x_addr]] to i32*
@@ -81,19 +81,19 @@ void func4(int x) {
   func1(&x);
 }
 
-// CHECK-LABEL: define void @_Z5func5v
+// CHECK-LABEL: define{{.*}} void @_Z5func5v
 void func5() {
   return;
   int x = 0;
 }
 
-// CHECK-LABEL: define void @_Z5func6v
+// CHECK-LABEL: define{{.*}} void @_Z5func6v
 void func6() {
   return;
   int x;
 }
 
-// CHECK-LABEL: define void @_Z5func7v
+// CHECK-LABEL: define{{.*}} void @_Z5func7v
 extern void use(int *);
 void func7() {
   goto later;

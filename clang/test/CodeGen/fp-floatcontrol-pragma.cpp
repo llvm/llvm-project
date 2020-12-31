@@ -65,7 +65,7 @@ float fp_precise_5(float a, float b, float c) {
 #pragma float_control(pop)
 
 float fff(float x, float y) {
-// CHECK-LABEL: define float @_Z3fffff{{.*}}
+// CHECK-LABEL: define{{.*}} float @_Z3fffff{{.*}}
 // CHECK: entry
 #pragma float_control(except, on)
   float z;
@@ -87,7 +87,7 @@ float fff(float x, float y) {
   return z;
 }
 float check_precise(float x, float y) {
-  // CHECK-LABEL: define float @_Z13check_preciseff{{.*}}
+  // CHECK-LABEL: define{{.*}} float @_Z13check_preciseff{{.*}}
   float z;
   {
 #pragma float_control(precise, on)
@@ -104,7 +104,7 @@ float check_precise(float x, float y) {
 }
 
 float fma_test2(float a, float b, float c) {
-// CHECK-LABEL define float @_Z9fma_test2fff{{.*}}
+// CHECK-LABEL define{{.*}} float @_Z9fma_test2fff{{.*}}
 #pragma float_control(precise, off)
   float x = a * b + c;
   //CHECK: fmuladd
@@ -112,7 +112,7 @@ float fma_test2(float a, float b, float c) {
 }
 
 float fma_test1(float a, float b, float c) {
-// CHECK-LABEL define float @_Z9fma_test1fff{{.*}}
+// CHECK-LABEL define{{.*}} float @_Z9fma_test1fff{{.*}}
 #pragma float_control(precise, on)
   float x = a * b + c;
   //CHECK: fmuladd
@@ -135,7 +135,7 @@ float test_OperatorCall() {
   return add(1.0f, 2.0f);
   //CHECK: llvm.experimental.constrained.fadd{{.*}}fpexcept.strict
 }
-// CHECK-LABEL define float  {{.*}}test_OperatorCall{{.*}}
+// CHECK-LABEL define{{.*}} float  {{.*}}test_OperatorCall{{.*}}
 
 #if FENV_ON
 #pragma STDC FENV_ACCESS ON

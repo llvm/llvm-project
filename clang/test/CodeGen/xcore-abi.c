@@ -13,9 +13,9 @@ _Static_assert(_Alignof(double) == 4, "alignof double is wrong");
 // CHECK: @cgx = external constant i32, section ".cp.rodata"
 extern const int cgx;
 int fcgx() { return cgx;}
-// CHECK: @g1 = global i32 0, align 4
+// CHECK: @g1 ={{.*}} global i32 0, align 4
 int g1;
-// CHECK: @cg1 = constant i32 0, section ".cp.rodata", align 4
+// CHECK: @cg1 ={{.*}} constant i32 0, section ".cp.rodata", align 4
 const int cg1;
 
 #include <stdarg.h>
@@ -132,7 +132,7 @@ void testbuiltin (void) {
   res = __builtin_eh_return_data_regno(2);
 }
 
-// CHECK-LABEL: define zeroext i8 @testchar()
+// CHECK-LABEL: define{{.*}} zeroext i8 @testchar()
 // CHECK: ret i8 -1
 char testchar (void) {
   return (char)-1;

@@ -10,26 +10,26 @@
 
 __host__ __device__ void f();
 
-// HOST: define void @_Z7host_fnv() [[HOST_ATTR:#[0-9]+]]
+// HOST: define{{.*}} void @_Z7host_fnv() [[HOST_ATTR:#[0-9]+]]
 void host_fn() { f(); }
 
-// DEVICE: define void @_Z3foov() [[DEVICE_ATTR:#[0-9]+]]
+// DEVICE: define{{.*}} void @_Z3foov() [[DEVICE_ATTR:#[0-9]+]]
 __device__ void foo() {
   // DEVICE: call void @_Z1fv
   f();
 }
 
-// DEVICE: define void @_Z12foo_noexceptv() [[DEVICE_ATTR:#[0-9]+]]
+// DEVICE: define{{.*}} void @_Z12foo_noexceptv() [[DEVICE_ATTR:#[0-9]+]]
 __device__ void foo_noexcept() noexcept {
   // DEVICE: call void @_Z1fv
   f();
 }
 
 // This is nounwind only on the device side.
-// CHECK: define void @_Z3foov() [[DEVICE_ATTR:#[0-9]+]]
+// CHECK: define{{.*}} void @_Z3foov() [[DEVICE_ATTR:#[0-9]+]]
 __host__ __device__ void bar() { f(); }
 
-// DEVICE: define void @_Z3bazv() [[DEVICE_ATTR:#[0-9]+]]
+// DEVICE: define{{.*}} void @_Z3bazv() [[DEVICE_ATTR:#[0-9]+]]
 __global__ void baz() { f(); }
 
 // DEVICE: attributes [[DEVICE_ATTR]] = {

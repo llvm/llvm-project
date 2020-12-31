@@ -44,7 +44,7 @@ int main(int argc, const char * argv[])
     return 0;
 }
 
-// CHECK: define i32 @main
+// CHECK: define{{.*}} i32 @main
 // CHECK: call void @_ZN8UUIDTestI10TestStructL_Z42_GUID_eafa1952_66f8_438b_8fba_af1bbae42191EEC1Ev
 // CHECK: call void @_ZN11UUIDTestTwoIL_Z42_GUID_eafa1952_66f8_438b_8fba_af1bbae42191EEC1Ev
 // CHECK: call void @_ZN11UUIDTestTwoIL_Z42_GUID_eafa1952_66f8_438b_8fba_af1bbae42191EEC1Ev

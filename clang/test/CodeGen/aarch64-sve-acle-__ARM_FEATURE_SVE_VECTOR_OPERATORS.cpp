@@ -44,7 +44,7 @@ void test02() {
 // Page 27, item 1.
 #if __ARM_FEATURE_SVE_BITS && __ARM_FEATURE_SVE_VECTOR_OPERATORS
 #define N __ARM_FEATURE_SVE_BITS
-// CHECK-LABEL: define <vscale x 4 x i32> @_Z1f9__SVE_VLSIu11__SVInt32_tLj
+// CHECK-LABEL: define{{.*}} <vscale x 4 x i32> @_Z1f9__SVE_VLSIu11__SVInt32_tLj
 // CHECK-SAME:    [[#VBITS]]
 // CHECK-SAME:    EES_(<vscale x 4 x i32> %x.coerce, <vscale x 4 x i32> %y.coerce)
 // CHECK-NEXT: entry:
@@ -72,7 +72,7 @@ auto f(vec x, vec y) { return x + y; } // Returns a vec.
 typedef int16_t vec1 __attribute__((vector_size(N / 8)));
 void f(vec1);
 typedef svint16_t vec2 __attribute__((arm_sve_vector_bits(N)));
-// CHECK-LABEL: define void @_Z1g9__SVE_VLSIu11__SVInt16_tLj
+// CHECK-LABEL: define{{.*}} void @_Z1g9__SVE_VLSIu11__SVInt16_tLj
 // CHECK-SAME:    [[#VBITS]]
 // CHECK-SAME:    EE(<vscale x 8 x i16> %x.coerce)
 // CHECK-NEXT: entry:

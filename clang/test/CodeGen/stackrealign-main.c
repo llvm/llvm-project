@@ -1,11 +1,11 @@
 // RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm -o - -mstack-alignment=64 %s | FileCheck %s
 
-// CHECK-LABEL: define void @other()
+// CHECK-LABEL: define{{.*}} void @other()
 // CHECK: [[OTHER:#[0-9]+]]
 // CHECK: {
 void other(void) {}
 
-// CHECK-LABEL: define i32 @main(
+// CHECK-LABEL: define{{.*}} i32 @main(
 // CHECK: [[MAIN:#[0-9]+]]
 // CHECK: {
 int main(int argc, char **argv) {

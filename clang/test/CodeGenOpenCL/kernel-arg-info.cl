@@ -20,7 +20,7 @@ kernel void foo(global int * globalintp, global int * restrict globalintrestrict
                 volatile int volatileint) {
   *globalintrestrictp = constint + volatileint;
 }
-// CHECK: define spir_kernel void @foo{{[^!]+}}
+// CHECK: define{{.*}} spir_kernel void @foo{{[^!]+}}
 // CHECK: !kernel_arg_addr_space ![[MD11:[0-9]+]]
 // CHECK: !kernel_arg_access_qual ![[MD12:[0-9]+]]
 // CHECK: !kernel_arg_type ![[MD13:[0-9]+]]
@@ -31,7 +31,7 @@ kernel void foo(global int * globalintp, global int * restrict globalintrestrict
 
 kernel void foo2(read_only image1d_t img1, image2d_t img2, write_only image2d_array_t img3, read_write image1d_t img4) {
 }
-// CHECK: define spir_kernel void @foo2{{[^!]+}}
+// CHECK: define{{.*}} spir_kernel void @foo2{{[^!]+}}
 // CHECK: !kernel_arg_addr_space ![[MD21:[0-9]+]]
 // CHECK: !kernel_arg_access_qual ![[MD22:[0-9]+]]
 // CHECK: !kernel_arg_type ![[MD23:[0-9]+]]
@@ -42,7 +42,7 @@ kernel void foo2(read_only image1d_t img1, image2d_t img2, write_only image2d_ar
 
 kernel void foo3(__global half * X) {
 }
-// CHECK: define spir_kernel void @foo3{{[^!]+}}
+// CHECK: define{{.*}} spir_kernel void @foo3{{[^!]+}}
 // CHECK: !kernel_arg_addr_space ![[MD31:[0-9]+]]
 // CHECK: !kernel_arg_access_qual ![[MD32:[0-9]+]]
 // CHECK: !kernel_arg_type ![[MD33:[0-9]+]]
@@ -54,7 +54,7 @@ kernel void foo3(__global half * X) {
 typedef unsigned int myunsignedint;
 kernel void foo4(__global unsigned int * X, __global myunsignedint * Y) {
 }
-// CHECK: define spir_kernel void @foo4{{[^!]+}}
+// CHECK: define{{.*}} spir_kernel void @foo4{{[^!]+}}
 // CHECK: !kernel_arg_addr_space ![[MD41:[0-9]+]]
 // CHECK: !kernel_arg_access_qual ![[MD42:[0-9]+]]
 // CHECK: !kernel_arg_type ![[MD43:[0-9]+]]
@@ -66,7 +66,7 @@ kernel void foo4(__global unsigned int * X, __global myunsignedint * Y) {
 typedef image1d_t myImage;
 kernel void foo5(myImage img1, write_only image1d_t img2) {
 }
-// CHECK: define spir_kernel void @foo5{{[^!]+}}
+// CHECK: define{{.*}} spir_kernel void @foo5{{[^!]+}}
 // CHECK: !kernel_arg_addr_space ![[MD41:[0-9]+]]
 // CHECK: !kernel_arg_access_qual ![[MD51:[0-9]+]]
 // CHECK: !kernel_arg_type ![[MD52:[0-9]+]]
@@ -85,7 +85,7 @@ typedef write_only image1d_t WOImage;
 typedef read_write image1d_t RWImage;
 kernel void foo7(ROImage ro, WOImage wo, RWImage rw) {
 }
-// CHECK: define spir_kernel void @foo7{{[^!]+}}
+// CHECK: define{{.*}} spir_kernel void @foo7{{[^!]+}}
 // CHECK: !kernel_arg_addr_space ![[MD71:[0-9]+]]
 // CHECK: !kernel_arg_access_qual ![[MD72:[0-9]+]]
 // CHECK: !kernel_arg_type ![[MD73:[0-9]+]]

@@ -84,26 +84,26 @@ void call_bools_and_chars() {
 
 // Returning structs that fit into a register.
 Small small_return() { return Small(); }
-// LINUX-LABEL: define void @_Z12small_returnv(%struct.Small* noalias sret(%struct.Small) align 4 %agg.result)
+// LINUX-LABEL: define{{.*}} void @_Z12small_returnv(%struct.Small* noalias sret(%struct.Small) align 4 %agg.result)
 // WIN32: define dso_local i32 @"?small_return@@YA?AUSmall@@XZ"()
 // WIN64: define dso_local i32 @"?small_return@@YA?AUSmall@@XZ"()
 // WOA64: define dso_local i64 @"?small_return@@YA?AUSmall@@XZ"()
 
 Medium medium_return() { return Medium(); }
-// LINUX-LABEL: define void @_Z13medium_returnv(%struct.Medium* noalias sret(%struct.Medium) align 4 %agg.result)
+// LINUX-LABEL: define{{.*}} void @_Z13medium_returnv(%struct.Medium* noalias sret(%struct.Medium) align 4 %agg.result)
 // WIN32: define dso_local i64 @"?medium_return@@YA?AUMedium@@XZ"()
 // WIN64: define dso_local i64 @"?medium_return@@YA?AUMedium@@XZ"()
 // WOA64: define dso_local i64 @"?medium_return@@YA?AUMedium@@XZ"()
 
 // Returning structs that fit into a register but are not POD.
 SmallCpp11NotCpp03Pod small_non_pod_return() { return SmallCpp11NotCpp03Pod(); }
-// LINUX-LABEL: define void @_Z20small_non_pod_returnv(%struct.SmallCpp11NotCpp03Pod* noalias sret(%struct.SmallCpp11NotCpp03Pod) align 4 %agg.result)
+// LINUX-LABEL: define{{.*}} void @_Z20small_non_pod_returnv(%struct.SmallCpp11NotCpp03Pod* noalias sret(%struct.SmallCpp11NotCpp03Pod) align 4 %agg.result)
 // WIN32: define dso_local void @"?small_non_pod_return@@YA?AUSmallCpp11NotCpp03Pod@@XZ"(%struct.SmallCpp11NotCpp03Pod* noalias sret(%struct.SmallCpp11NotCpp03Pod) align 4 %agg.result)
 // WIN64: define dso_local void @"?small_non_pod_return@@YA?AUSmallCpp11NotCpp03Pod@@XZ"(%struct.SmallCpp11NotCpp03Pod* noalias sret(%struct.SmallCpp11NotCpp03Pod) align 4 %agg.result)
 // WOA64: define dso_local void @"?small_non_pod_return@@YA?AUSmallCpp11NotCpp03Pod@@XZ"(%struct.SmallCpp11NotCpp03Pod* inreg noalias sret(%struct.SmallCpp11NotCpp03Pod) align 4 %agg.result)
 
 SmallWithCtor small_with_ctor_return() { return SmallWithCtor(); }
-// LINUX-LABEL: define void @_Z22small_with_ctor_returnv(%struct.SmallWithCtor* noalias sret(%struct.SmallWithCtor) align 4 %agg.result)
+// LINUX-LABEL: define{{.*}} void @_Z22small_with_ctor_returnv(%struct.SmallWithCtor* noalias sret(%struct.SmallWithCtor) align 4 %agg.result)
 // WIN32: define dso_local void @"?small_with_ctor_return@@YA?AUSmallWithCtor@@XZ"(%struct.SmallWithCtor* noalias sret(%struct.SmallWithCtor) align 4 %agg.result)
 // WIN64: define dso_local void @"?small_with_ctor_return@@YA?AUSmallWithCtor@@XZ"(%struct.SmallWithCtor* noalias sret(%struct.SmallWithCtor) align 4 %agg.result)
 // FIXME: The 'sret' mark here doesn't seem to be enough to convince LLVM to
@@ -112,19 +112,19 @@ SmallWithCtor small_with_ctor_return() { return SmallWithCtor(); }
 // WOA64: define dso_local void @"?small_with_ctor_return@@YA?AUSmallWithCtor@@XZ"(%struct.SmallWithCtor* inreg noalias sret(%struct.SmallWithCtor) align 4 %agg.result)
 
 SmallWithDtor small_with_dtor_return() { return SmallWithDtor(); }
-// LINUX-LABEL: define void @_Z22small_with_dtor_returnv(%struct.SmallWithDtor* noalias sret(%struct.SmallWithDtor) align 4 %agg.result)
+// LINUX-LABEL: define{{.*}} void @_Z22small_with_dtor_returnv(%struct.SmallWithDtor* noalias sret(%struct.SmallWithDtor) align 4 %agg.result)
 // WIN32: define dso_local void @"?small_with_dtor_return@@YA?AUSmallWithDtor@@XZ"(%struct.SmallWithDtor* noalias sret(%struct.SmallWithDtor) align 4 %agg.result)
 // WIN64: define dso_local void @"?small_with_dtor_return@@YA?AUSmallWithDtor@@XZ"(%struct.SmallWithDtor* noalias sret(%struct.SmallWithDtor) align 4 %agg.result)
 // WOA64: define dso_local void @"?small_with_dtor_return@@YA?AUSmallWithDtor@@XZ"(%struct.SmallWithDtor* inreg noalias sret(%struct.SmallWithDtor) align 4 %agg.result)
 
 SmallWithVftable small_with_vftable_return() { return SmallWithVftable(); }
-// LINUX-LABEL: define void @_Z25small_with_vftable_returnv(%struct.SmallWithVftable* noalias sret(%struct.SmallWithVftable) align 4 %agg.result)
+// LINUX-LABEL: define{{.*}} void @_Z25small_with_vftable_returnv(%struct.SmallWithVftable* noalias sret(%struct.SmallWithVftable) align 4 %agg.result)
 // WIN32: define dso_local void @"?small_with_vftable_return@@YA?AUSmallWithVftable@@XZ"(%struct.SmallWithVftable* noalias sret(%struct.SmallWithVftable) align 4 %agg.result)
 // WIN64: define dso_local void @"?small_with_vftable_return@@YA?AUSmallWithVftable@@XZ"(%struct.SmallWithVftable* noalias sret(%struct.SmallWithVftable) align 8 %agg.result)
 // WOA64: define dso_local void @"?small_with_vftable_return@@YA?AUSmallWithVftable@@XZ"(%struct.SmallWithVftable* inreg noalias sret(%struct.SmallWithVftable) align 8 %agg.result)
 
 MediumWithCopyCtor medium_with_copy_ctor_return() { return MediumWithCopyCtor(); }
-// LINUX-LABEL: define void @_Z28medium_with_copy_ctor_returnv(%struct.MediumWithCopyCtor* noalias sret(%struct.MediumWithCopyCtor) align 4 %agg.result)
+// LINUX-LABEL: define{{.*}} void @_Z28medium_with_copy_ctor_returnv(%struct.MediumWithCopyCtor* noalias sret(%struct.MediumWithCopyCtor) align 4 %agg.result)
 // WIN32: define dso_local void @"?medium_with_copy_ctor_return@@YA?AUMediumWithCopyCtor@@XZ"(%struct.MediumWithCopyCtor* noalias sret(%struct.MediumWithCopyCtor) align 4 %agg.result)
 // WIN64: define dso_local void @"?medium_with_copy_ctor_return@@YA?AUMediumWithCopyCtor@@XZ"(%struct.MediumWithCopyCtor* noalias sret(%struct.MediumWithCopyCtor) align 4 %agg.result)
 // WOA: define dso_local arm_aapcs_vfpcc void @"?medium_with_copy_ctor_return@@YA?AUMediumWithCopyCtor@@XZ"(%struct.MediumWithCopyCtor* noalias sret(%struct.MediumWithCopyCtor) align 4 %agg.result)
@@ -132,45 +132,45 @@ MediumWithCopyCtor medium_with_copy_ctor_return() { return MediumWithCopyCtor();
 
 // Returning a large struct that doesn't fit into a register.
 Big big_return() { return Big(); }
-// LINUX-LABEL: define void @_Z10big_returnv(%struct.Big* noalias sret(%struct.Big) align 4 %agg.result)
+// LINUX-LABEL: define{{.*}} void @_Z10big_returnv(%struct.Big* noalias sret(%struct.Big) align 4 %agg.result)
 // WIN32: define dso_local void @"?big_return@@YA?AUBig@@XZ"(%struct.Big* noalias sret(%struct.Big) align 4 %agg.result)
 // WIN64: define dso_local void @"?big_return@@YA?AUBig@@XZ"(%struct.Big* noalias sret(%struct.Big) align 4 %agg.result)
 // WOA64: define dso_local void @"?big_return@@YA?AUBig@@XZ"(%struct.Big* noalias sret(%struct.Big) align 4 %agg.result)
 
 
 void small_arg(Small s) {}
-// LINUX-LABEL: define void @_Z9small_arg5Small(i32 %s.0)
+// LINUX-LABEL: define{{.*}} void @_Z9small_arg5Small(i32 %s.0)
 // WIN32: define dso_local void @"?small_arg@@YAXUSmall@@@Z"(i32 %s.0)
 // WIN64: define dso_local void @"?small_arg@@YAXUSmall@@@Z"(i32 %s.coerce)
 // WOA: define dso_local arm_aapcs_vfpcc void @"?small_arg@@YAXUSmall@@@Z"([1 x i32] %s.coerce)
 
 void medium_arg(Medium s) {}
-// LINUX-LABEL: define void @_Z10medium_arg6Medium(i32 %s.0, i32 %s.1)
+// LINUX-LABEL: define{{.*}} void @_Z10medium_arg6Medium(i32 %s.0, i32 %s.1)
 // WIN32: define dso_local void @"?medium_arg@@YAXUMedium@@@Z"(i32 %s.0, i32 %s.1)
 // WIN64: define dso_local void @"?medium_arg@@YAXUMedium@@@Z"(i64 %s.coerce)
 // WOA: define dso_local arm_aapcs_vfpcc void @"?medium_arg@@YAXUMedium@@@Z"([2 x i32] %s.coerce)
 
 void base_no_byval_arg(BaseNoByval s) {}
-// LINUX-LABEL: define void @_Z17base_no_byval_arg11BaseNoByval(%struct.BaseNoByval* byval(%struct.BaseNoByval) align 4 %s)
+// LINUX-LABEL: define{{.*}} void @_Z17base_no_byval_arg11BaseNoByval(%struct.BaseNoByval* byval(%struct.BaseNoByval) align 4 %s)
 // WIN32: define dso_local void @"?base_no_byval_arg@@YAXUBaseNoByval@@@Z"(i32 %s.0, i32 %s.1)
 // WIN64: define dso_local void @"?base_no_byval_arg@@YAXUBaseNoByval@@@Z"(i64 %s.coerce)
 // WOA: define dso_local arm_aapcs_vfpcc void @"?base_no_byval_arg@@YAXUBaseNoByval@@@Z"([2 x i32] %s.coerce)
 
 void small_arg_with_ctor(SmallWithCtor s) {}
-// LINUX-LABEL: define void @_Z19small_arg_with_ctor13SmallWithCtor(%struct.SmallWithCtor* byval(%struct.SmallWithCtor) align 4 %s)
+// LINUX-LABEL: define{{.*}} void @_Z19small_arg_with_ctor13SmallWithCtor(%struct.SmallWithCtor* byval(%struct.SmallWithCtor) align 4 %s)
 // WIN32: define dso_local void @"?small_arg_with_ctor@@YAXUSmallWithCtor@@@Z"(i32 %s.0)
 // WIN64: define dso_local void @"?small_arg_with_ctor@@YAXUSmallWithCtor@@@Z"(i32 %s.coerce)
 // WOA: define dso_local arm_aapcs_vfpcc void @"?small_arg_with_ctor@@YAXUSmallWithCtor@@@Z"([1 x i32] %s.coerce)
 
 // FIXME: We could coerce to a series of i32s here if we wanted to.
 void multibyte_arg(Multibyte s) {}
-// LINUX-LABEL: define void @_Z13multibyte_arg9Multibyte(%struct.Multibyte* byval(%struct.Multibyte) align 4 %s)
+// LINUX-LABEL: define{{.*}} void @_Z13multibyte_arg9Multibyte(%struct.Multibyte* byval(%struct.Multibyte) align 4 %s)
 // WIN32: define dso_local void @"?multibyte_arg@@YAXUMultibyte@@@Z"(%struct.Multibyte* byval(%struct.Multibyte) align 4 %s)
 // WIN64: define dso_local void @"?multibyte_arg@@YAXUMultibyte@@@Z"(i32 %s.coerce)
 // WOA: define dso_local arm_aapcs_vfpcc void @"?multibyte_arg@@YAXUMultibyte@@@Z"([1 x i32] %s.coerce)
 
 void packed_arg(Packed s) {}
-// LINUX-LABEL: define void @_Z10packed_arg6Packed(%struct.Packed* byval(%struct.Packed) align 4 %s)
+// LINUX-LABEL: define{{.*}} void @_Z10packed_arg6Packed(%struct.Packed* byval(%struct.Packed) align 4 %s)
 // WIN32: define dso_local void @"?packed_arg@@YAXUPacked@@@Z"(%struct.Packed* byval(%struct.Packed) align 4 %s)
 // WIN64: define dso_local void @"?packed_arg@@YAXUPacked@@@Z"(%struct.Packed* %s)
 
@@ -252,20 +252,20 @@ void eh_cleanup_arg_with_dtor() {
 // WIN32: }
 
 void small_arg_with_vftable(SmallWithVftable s) {}
-// LINUX-LABEL: define void @_Z22small_arg_with_vftable16SmallWithVftable(%struct.SmallWithVftable* %s)
+// LINUX-LABEL: define{{.*}} void @_Z22small_arg_with_vftable16SmallWithVftable(%struct.SmallWithVftable* %s)
 // WIN32: define dso_local void @"?small_arg_with_vftable@@YAXUSmallWithVftable@@@Z"(<{ %struct.SmallWithVftable }>* inalloca %0)
 // WIN64: define dso_local void @"?small_arg_with_vftable@@YAXUSmallWithVftable@@@Z"(%struct.SmallWithVftable* %s)
 // WOA64: define dso_local void @"?small_arg_with_vftable@@YAXUSmallWithVftable@@@Z"(%struct.SmallWithVftable* %s)
 
 void medium_arg_with_copy_ctor(MediumWithCopyCtor s) {}
-// LINUX-LABEL: define void @_Z25medium_arg_with_copy_ctor18MediumWithCopyCtor(%struct.MediumWithCopyCtor* %s)
+// LINUX-LABEL: define{{.*}} void @_Z25medium_arg_with_copy_ctor18MediumWithCopyCtor(%struct.MediumWithCopyCtor* %s)
 // WIN32: define dso_local void @"?medium_arg_with_copy_ctor@@YAXUMediumWithCopyCtor@@@Z"(<{ %struct.MediumWithCopyCtor }>* inalloca %0)
 // WIN64: define dso_local void @"?medium_arg_with_copy_ctor@@YAXUMediumWithCopyCtor@@@Z"(%struct.MediumWithCopyCtor* %s)
 // WOA: define dso_local arm_aapcs_vfpcc void @"?medium_arg_with_copy_ctor@@YAXUMediumWithCopyCtor@@@Z"(%struct.MediumWithCopyCtor* %s)
 // WOA64: define dso_local void @"?medium_arg_with_copy_ctor@@YAXUMediumWithCopyCtor@@@Z"(%struct.MediumWithCopyCtor* %s)
 
 void big_arg(Big s) {}
-// LINUX-LABEL: define void @_Z7big_arg3Big(%struct.Big* byval(%struct.Big) align 4 %s)
+// LINUX-LABEL: define{{.*}} void @_Z7big_arg3Big(%struct.Big* byval(%struct.Big) align 4 %s)
 // WIN32: define dso_local void @"?big_arg@@YAXUBig@@@Z"(%struct.Big* byval(%struct.Big) align 4 %s)
 // WIN64: define dso_local void @"?big_arg@@YAXUBig@@@Z"(%struct.Big* %s)
 
@@ -276,7 +276,7 @@ struct RefField {
   int &x;
 };
 void takes_ref_field(RefField s) {}
-// LINUX-LABEL: define void @_Z15takes_ref_field8RefField(%struct.RefField* byval(%struct.RefField) align 4 %s)
+// LINUX-LABEL: define{{.*}} void @_Z15takes_ref_field8RefField(%struct.RefField* byval(%struct.RefField) align 4 %s)
 // WIN32: define dso_local void @"?takes_ref_field@@YAXURefField@@@Z"(i32* %s.0)
 // WIN64: define dso_local void @"?takes_ref_field@@YAXURefField@@@Z"(i64 %s.coerce)
 
@@ -284,7 +284,7 @@ void pass_ref_field() {
   int x;
   takes_ref_field(RefField(x));
 }
-// LINUX-LABEL: define void @_Z14pass_ref_fieldv()
+// LINUX-LABEL: define{{.*}} void @_Z14pass_ref_fieldv()
 // LINUX: call void @_Z15takes_ref_field8RefField(%struct.RefField* byval(%struct.RefField) align 4 %{{.*}})
 // WIN32-LABEL: define dso_local void @"?pass_ref_field@@YAXXZ"()
 // WIN32: call void @"?takes_ref_field@@YAXURefField@@@Z"(i32* %{{.*}})

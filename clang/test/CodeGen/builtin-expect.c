@@ -5,7 +5,7 @@
 // If optimizations are on, generate the correct expect and preserve other necessary operations.
 
 int expect_taken(int x) {
-// ALL-LABEL: define i32 @expect_taken
+// ALL-LABEL: define{{.*}} i32 @expect_taken
 // O1:        call i64 @llvm.expect.i64(i64 {{%.*}}, i64 1)
 // O0-NOT:    @llvm.expect
 
@@ -16,7 +16,7 @@ int expect_taken(int x) {
 
 
 int expect_not_taken(int x) {
-// ALL-LABEL: define i32 @expect_not_taken
+// ALL-LABEL: define{{.*}} i32 @expect_not_taken
 // O1:        call i64 @llvm.expect.i64(i64 {{%.*}}, i64 0)
 // O0-NOT:    @llvm.expect
 
@@ -31,7 +31,7 @@ int y(void);
 void foo();
 
 void expect_value_side_effects() {
-// ALL-LABEL: define void @expect_value_side_effects()
+// ALL-LABEL: define{{.*}} void @expect_value_side_effects()
 // ALL:       [[CALL:%.*]] = call i32 @y
 // O1:        [[SEXT:%.*]] = sext i32 [[CALL]] to i64
 // O1:        call i64 @llvm.expect.i64(i64 {{%.*}}, i64 [[SEXT]])
@@ -49,7 +49,7 @@ void isigprocmask(void);
 long bar();
 
 int main() {
-// ALL-LABEL: define i32 @main()
+// ALL-LABEL: define{{.*}} i32 @main()
 // ALL:       call void @isigprocmask()
 // ALL:       [[CALL:%.*]] = call i64 (...) @bar()
 // O1:        call i64 @llvm.expect.i64(i64 0, i64 [[CALL]])
@@ -60,7 +60,7 @@ int main() {
 
 
 int switch_cond(int x) {
-// ALL-LABEL: define i32 @switch_cond
+// ALL-LABEL: define{{.*}} i32 @switch_cond
 // O1:        call i64 @llvm.expect.i64(i64 {{%.*}}, i64 5)
 // O0-NOT:    @llvm.expect
 
@@ -79,7 +79,7 @@ int switch_cond(int x) {
 }
 
 int variable_expected(int stuff) {
-// ALL-LABEL: define i32 @variable_expected(
+// ALL-LABEL: define{{.*}} i32 @variable_expected(
 // O1: call i64 @llvm.expect.i64(i64 {{%.*}}, i64 {{%.*}})
 // O0-NOT: @llvm.expect
 

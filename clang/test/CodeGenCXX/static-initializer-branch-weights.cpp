@@ -52,7 +52,7 @@ struct A {
   static thread_local inline S thread_local_inline_member;
 };
 
-// CHECK-LABEL: define void @_Z1fv()
+// CHECK-LABEL: define{{.*}} void @_Z1fv()
 void f() {
   // CHECK: load atomic i8, i8* bitcast (i64* @_ZGVZ1fvE12static_local to i8*) acquire,
   // CHECK: icmp eq i8 {{.*}}, 0

@@ -5,7 +5,7 @@
 // RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -S -o - -emit-llvm -fexperimental-relative-c++-abi-vtables -fvisibility hidden | FileCheck %s --check-prefix=HIDDEN-VIS
 
 // DEFAULT-VIS: @_ZTV1A.local = private unnamed_addr constant
-// DEFAULT-VIS: @_ZTV1A = unnamed_addr alias { [3 x i32] }, { [3 x i32] }* @_ZTV1A.local
+// DEFAULT-VIS: @_ZTV1A ={{.*}} unnamed_addr alias { [3 x i32] }, { [3 x i32] }* @_ZTV1A.local
 // HIDDEN-VIS-NOT: @_ZTV1A.local
 // HIDDEN-VIS: @_ZTV1A = hidden unnamed_addr constant
 class A {

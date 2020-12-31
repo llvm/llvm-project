@@ -21,7 +21,7 @@
 
 double *g;
 
-// CK1: @g = global double*
+// CK1: @g ={{.*}} global double*
 // CK1: [[SIZES00:@.+]] = {{.+}}constant [1 x i[[sz:64|32]]] [i{{64|32}} {{8|4}}]
 // CK1: [[TYPES00:@.+]] = {{.+}}constant [1 x i64] [i64 288]
 
@@ -206,17 +206,17 @@ void bar(float *&a, int *&b) {
 
 // CK2: [[ST:%.+]] = type { double*, double** }
 
-// CK2-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l244.region_id = weak constant i8 0
+// CK2-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l244.region_id = weak{{.*}} constant i8 0
 
 // CK2: [[SIZE00:@.+]] = {{.+}}constant [1 x i[[sz:64|32]]] [i{{64|32}} {{8|4}}]
 // CK2: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 288]
 
-// CK2-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l259.region_id = weak constant i8 0
+// CK2-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l259.region_id = weak{{.*}} constant i8 0
 
 // CK2: [[SIZE01:@.+]] = {{.+}}constant [1 x i[[sz]]] [i[[sz]] {{8|4}}]
 // CK2: [[MTYPE01:@.+]] = {{.+}}constant [1 x i64] [i64 288]
 
-// CK2-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l274.region_id = weak constant i8 0
+// CK2-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l274.region_id = weak{{.*}} constant i8 0
 
 // CK2: [[SIZE02:@.+]] = {{.+}}constant [1 x i[[sz]]] [i[[sz]] {{8|4}}]
 // CK2: [[MTYPE02:@.+]] = {{.+}}constant [1 x i64] [i64 288]

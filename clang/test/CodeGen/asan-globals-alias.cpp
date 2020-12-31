@@ -30,10 +30,10 @@ extern struct input_device_id __attribute__((alias("joydev_ids"))) __mod_joydev_
 // KASAN: @joydev_ids{{.*}} global [1 x {{.*}}i64 1234 }], align 16
 
 // Check the aliases exist:
-// CHECK: @__global_alias = alias
-// CHECK: @global_alias_2 = alias
-// CHECK: @__global_alias_2_alias = alias
-// CHECK: @__mod_joydev_ids_device_table = alias
+// CHECK: @__global_alias ={{.*}} alias
+// CHECK: @global_alias_2 ={{.*}} alias
+// CHECK: @__global_alias_2_alias ={{.*}} alias
+// CHECK: @__mod_joydev_ids_device_table ={{.*}} alias
 
 // CHECK-LABEL: define internal void @asan.module_ctor
 // ASAN: call void @__asan_register_globals({{.*}}, i{{32|64}} 4)

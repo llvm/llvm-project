@@ -25,7 +25,7 @@ volatile double d0;
 short s0;
 
 void foo(void) {
-  // CHECK-LABEL: define void @foo()
+  // CHECK-LABEL: define{{.*}} void @foo()
 
   // Check unary ops
 
@@ -725,7 +725,7 @@ void foo(void) {
   h0 = s0;
 }
 
-// CHECK-LABEL: define void @testTypeDef(
+// CHECK-LABEL: define{{.*}} void @testTypeDef(
 // NATIVE-HALF: call <4 x half> @llvm.experimental.constrained.fadd.v4f16(<4 x half> %{{.*}}, <4 x half> %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // NOTNATIVE: %[[CONV:.*]] = call <4 x float> @llvm.experimental.constrained.fpext.v4f32.v4f16(<4 x half> %{{.*}}, metadata !"fpexcept.strict")
 // NOTNATIVE: %[[CONV1:.*]] = call <4 x float> @llvm.experimental.constrained.fpext.v4f32.v4f16(<4 x half> %{{.*}}, metadata !"fpexcept.strict")

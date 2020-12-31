@@ -35,33 +35,33 @@ void side_effect();
 #ifdef DEFINE_GUID
 // Make sure we can properly generate code when the UUID has curly braces on it.
 GUID thing = (side_effect(), __uuidof(Curly));
-// CHECK-DEFINE-GUID: @thing = global %struct._GUID zeroinitializer, align 4
-// CHECK-DEFINE-WRONG-GUID: @thing = global %struct._GUID zeroinitializer, align 4
+// CHECK-DEFINE-GUID: @thing ={{.*}} global %struct._GUID zeroinitializer, align 4
+// CHECK-DEFINE-WRONG-GUID: @thing ={{.*}} global %struct._GUID zeroinitializer, align 4
 
 // This gets initialized in a static initializer.
-// CHECK-DEFINE-GUID: @g = global %struct._GUID zeroinitializer, align 4
-// CHECK-DEFINE-WRONG-GUID: @g = global %struct._GUID zeroinitializer, align 4
+// CHECK-DEFINE-GUID: @g ={{.*}} global %struct._GUID zeroinitializer, align 4
+// CHECK-DEFINE-WRONG-GUID: @g ={{.*}} global %struct._GUID zeroinitializer, align 4
 GUID g = (side_effect(), __uuidof(S1));
 
-// CHECK-DEFINE-GUID: @const_init = global %struct._GUID { i32 305419896, i16 4660, i16 4660, [8 x i8] c"\124\124Vx\90\AC" }
-// CHECK-DEFINE-WRONG-GUID: @const_init = global %struct._GUID zeroinitializer
+// CHECK-DEFINE-GUID: @const_init ={{.*}} global %struct._GUID { i32 305419896, i16 4660, i16 4660, [8 x i8] c"\124\124Vx\90\AC" }
+// CHECK-DEFINE-WRONG-GUID: @const_init ={{.*}} global %struct._GUID zeroinitializer
 GUID const_init = __uuidof(Curly);
 #endif
 
 // First global use of __uuidof(S1) forces the creation of the global.
 // CHECK: @_GUID_12345678_1234_1234_1234_1234567890ab = linkonce_odr constant { i32, i16, i16, [8 x i8] } { i32 305419896, i16 4660, i16 4660, [8 x i8] c"\124\124Vx\90\AB" }, comdat
-// CHECK: @gr = constant %struct._GUID* bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ab to %struct._GUID*), align 4
-// CHECK-64: @gr = constant %struct._GUID* bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ab to %struct._GUID*), align 8
+// CHECK: @gr ={{.*}} constant %struct._GUID* bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ab to %struct._GUID*), align 4
+// CHECK-64: @gr ={{.*}} constant %struct._GUID* bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ab to %struct._GUID*), align 8
 const GUID& gr = __uuidof(S1);
 
-// CHECK: @gp = global %struct._GUID* bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ab to %struct._GUID*), align 4
+// CHECK: @gp ={{.*}} global %struct._GUID* bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ab to %struct._GUID*), align 4
 const GUID* gp = &__uuidof(S1);
 
-// CHECK: @cp = global %struct._GUID* bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ac to %struct._GUID*), align 4
+// CHECK: @cp ={{.*}} global %struct._GUID* bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_12345678_1234_1234_1234_1234567890ac to %struct._GUID*), align 4
 const GUID* cp = &__uuidof(Curly);
 
 // Special case: _uuidof(0)
-// CHECK: @zeroiid = constant %struct._GUID* bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_00000000_0000_0000_0000_000000000000 to %struct._GUID*), align 4
+// CHECK: @zeroiid ={{.*}} constant %struct._GUID* bitcast ({ i32, i16, i16, [8 x i8] }* @_GUID_00000000_0000_0000_0000_000000000000 to %struct._GUID*), align 4
 const GUID& zeroiid = __uuidof(0);
 
 // __uuidof(S2) hasn't been used globally yet, so it's emitted when it's used

@@ -16,25 +16,25 @@
 
 // Page 27, item 1
 #if __ARM_FEATURE_SVE_BITS == 256 && __ARM_FEATURE_SVE_VECTOR_OPERATORS
-// CHECK256-LABEL: @x256 = local_unnamed_addr global <4 x i64> <i64 0, i64 1, i64 2, i64 3>, align 16
+// CHECK256-LABEL: @x256 ={{.*}} local_unnamed_addr global <4 x i64> <i64 0, i64 1, i64 2, i64 3>, align 16
 typedef svint64_t vec256 __attribute__((arm_sve_vector_bits(256)));
 vec256 x256 = {0, 1, 2, 3};
 #endif
 
 #if __ARM_FEATURE_SVE_BITS == 512 && __ARM_FEATURE_SVE_VECTOR_OPERATORS
-// CHECK512-LABEL: @x512 = local_unnamed_addr global <8 x i64> <i64 0, i64 1, i64 2, i64 3, i64 3, i64 2, i64 1, i64 0>, align 16
+// CHECK512-LABEL: @x512 ={{.*}} local_unnamed_addr global <8 x i64> <i64 0, i64 1, i64 2, i64 3, i64 3, i64 2, i64 1, i64 0>, align 16
 typedef svint64_t vec512 __attribute__((arm_sve_vector_bits(512)));
 vec512 x512 = {0, 1, 2, 3, 3 , 2 , 1, 0};
 #endif
 
 #if __ARM_FEATURE_SVE_BITS == 1024 && __ARM_FEATURE_SVE_VECTOR_OPERATORS
-// CHECK1024-LABEL: @x1024 = local_unnamed_addr global <16 x i64> <i64 0, i64 1, i64 2, i64 3, i64 3, i64 2, i64 1, i64 0, i64 0, i64 1, i64 2, i64 3, i64 3, i64 2, i64 1, i64 0>, align 16
+// CHECK1024-LABEL: @x1024 ={{.*}} local_unnamed_addr global <16 x i64> <i64 0, i64 1, i64 2, i64 3, i64 3, i64 2, i64 1, i64 0, i64 0, i64 1, i64 2, i64 3, i64 3, i64 2, i64 1, i64 0>, align 16
 typedef svint64_t vec1024 __attribute__((arm_sve_vector_bits(1024)));
 vec1024 x1024 = {0, 1, 2, 3, 3 , 2 , 1, 0, 0, 1, 2, 3, 3 , 2 , 1, 0};
 #endif
 
 #if __ARM_FEATURE_SVE_BITS == 2048 && __ARM_FEATURE_SVE_VECTOR_OPERATORS
-// CHECK2048-LABEL: @x2048 = local_unnamed_addr global <32 x i64> <i64 0, i64 1, i64 2, i64 3, i64 3, i64 2, i64 1, i64 0, i64 0, i64 1, i64 2, i64 3, i64 3, i64 2, i64 1, i64 0, i64 0, i64 1, i64 2, i64 3, i64 3, i64 2, i64 1, i64 0, i64 0, i64 1, i64 2, i64 3, i64 3, i64 2, i64 1, i64 0>, align 16
+// CHECK2048-LABEL: @x2048 ={{.*}} local_unnamed_addr global <32 x i64> <i64 0, i64 1, i64 2, i64 3, i64 3, i64 2, i64 1, i64 0, i64 0, i64 1, i64 2, i64 3, i64 3, i64 2, i64 1, i64 0, i64 0, i64 1, i64 2, i64 3, i64 3, i64 2, i64 1, i64 0, i64 0, i64 1, i64 2, i64 3, i64 3, i64 2, i64 1, i64 0>, align 16
 typedef svint64_t vec2048 __attribute__((arm_sve_vector_bits(2048)));
 vec2048 x2048 = {0, 1, 2, 3, 3 , 2 , 1, 0, 0, 1, 2, 3, 3 , 2 , 1, 0,
                  0, 1, 2, 3, 3 , 2 , 1, 0, 0, 1, 2, 3, 3 , 2 , 1, 0};
@@ -49,7 +49,7 @@ vec2048 x2048 = {0, 1, 2, 3, 3 , 2 , 1, 0, 0, 1, 2, 3, 3 , 2 , 1, 0,
 #if __ARM_FEATURE_SVE_BITS && __ARM_FEATURE_SVE_VECTOR_OPERATORS
 #define N __ARM_FEATURE_SVE_BITS
 typedef int8_t vec_int8 __attribute__((vector_size(N / 8)));
-// CHECK128-LABEL: define <16 x i8> @f2(<16 x i8> %x)
+// CHECK128-LABEL: define{{.*}} <16 x i8> @f2(<16 x i8> %x)
 // CHECK128-NEXT:  entry:
 // CHECK128-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
 // CHECK128-NEXT:    [[CASTSCALABLESVE:%.*]] = call <vscale x 16 x i8> @llvm.experimental.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> undef, <16 x i8> [[X:%.*]], i64 0)
@@ -57,7 +57,7 @@ typedef int8_t vec_int8 __attribute__((vector_size(N / 8)));
 // CHECK128-NEXT:    [[CASTFIXEDSVE:%.*]] = call <16 x i8> @llvm.experimental.vector.extract.v16i8.nxv16i8(<vscale x 16 x i8> [[TMP1]], i64 0)
 // CHECK128-NEXT:    ret <16 x i8> [[CASTFIXEDSVE]]
 
-// CHECK-LABEL: define void @f2(
+// CHECK-LABEL: define{{.*}} void @f2(
 // CHECK-SAME:   <[[#div(VBITS,8)]] x i8>* noalias nocapture sret(<[[#div(VBITS,8)]] x i8>) align 16 %agg.result, <[[#div(VBITS,8)]] x i8>* nocapture readonly %0)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[X:%.*]] = load <[[#div(VBITS,8)]] x i8>, <[[#div(VBITS,8)]] x i8>* [[TMP0:%.*]], align 16, [[TBAA6:!tbaa !.*]]
@@ -77,7 +77,7 @@ typedef int8_t vec1 __attribute__((vector_size(N / 8)));
 void f3(vec1);
 typedef svint8_t vec2 __attribute__((arm_sve_vector_bits(N)));
 
-// CHECK128-LABEL: define void @g(<vscale x 16 x i8> %x.coerce)
+// CHECK128-LABEL: define{{.*}} void @g(<vscale x 16 x i8> %x.coerce)
 // CHECK128-NEXT:  entry:
 // CHECK128-NEXT:    [[X:%.*]] = alloca <16 x i8>, align 16
 // CHECK128-NEXT:    [[TMP0:%.*]] = bitcast <16 x i8>* [[X]] to <vscale x 16 x i8>*
@@ -86,7 +86,7 @@ typedef svint8_t vec2 __attribute__((arm_sve_vector_bits(N)));
 // CHECK128-NEXT:    call void @f3(<16 x i8> [[X1]]) [[ATTR5:#.*]]
 // CHECK128-NEXT:    ret void
 
-// CHECK-LABEL: define void @g(<vscale x 16 x i8> %x.coerce)
+// CHECK-LABEL: define{{.*}} void @g(<vscale x 16 x i8> %x.coerce)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[X:%.*]] = alloca <[[#div(VBITS,8)]] x i8>, align 16
 // CHECK-NEXT:    [[INDIRECT_ARG_TEMP:%.*]] = alloca <[[#div(VBITS,8)]] x i8>, align 16

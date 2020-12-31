@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-none-linux-gnu -emit-llvm -debug-info-kind=limited %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=BOTH
 // RUN: %clang_cc1 -triple i686-pc-windows-msvc -emit-llvm -debug-info-kind=limited %s -o - | FileCheck %s --check-prefix=MSVC --check-prefix=BOTH
 
-// CHECK: @_ZN6pr96081xE = global [3 x i8]* null, align 8, !dbg [[X:![0-9]+]]
+// CHECK: @_ZN6pr96081xE ={{.*}} global [3 x i8]* null, align 8, !dbg [[X:![0-9]+]]
 
-// CHECK: define void @_ZN7pr147634funcENS_3fooE
+// CHECK: define{{.*}} void @_ZN7pr147634funcENS_3fooE
 // CHECK: call void @llvm.dbg.declare({{.*}}, metadata ![[F:[0-9]+]], metadata !DIExpression())
 
 // !llvm.dbg.cu pulls in globals and their types first.

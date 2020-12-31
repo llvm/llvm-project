@@ -59,7 +59,7 @@ static const int &foo() {
 
 
 #if !__has_feature(cxx_exceptions) // File A
-// CHECKA-DAG: define nonnull align 4 dereferenceable(4) i32* @_Z3barv(
+// CHECKA-DAG: define{{.*}} nonnull align 4 dereferenceable(4) i32* @_Z3barv(
 const int &bar() {
 	// CHECKA-DAG: call nonnull align 4 dereferenceable(4) i32* @_ZL3foov()
 	return foo();

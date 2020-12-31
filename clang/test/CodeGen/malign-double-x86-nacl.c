@@ -5,7 +5,7 @@
 int checksize[sizeof(long double) == 8 ? 1 : -1];
 int checkalign[__alignof(long double) == 8 ? 1 : -1];
 
-// CHECK-LABEL: define void @s1(double %a)
+// CHECK-LABEL: define{{.*}} void @s1(double %a)
 void s1(long double a) {}
 
 struct st_ld {
@@ -18,7 +18,7 @@ int checkalign2[__alignof(struct st_ld) == 8 ? 1 : -1];
 int checksize3[sizeof(double) == 8 ? 1 : -1];
 int checkalign3[__alignof(double) == 8 ? 1 : -1];
 
-// CHECK-LABEL: define void @s2(double %a)
+// CHECK-LABEL: define{{.*}} void @s2(double %a)
 void s2(double a) {}
 
 struct st_d {
@@ -32,7 +32,7 @@ int checkalign4[__alignof(struct st_d) == 8 ? 1 : -1];
 int checksize5[sizeof(long long) == 8 ? 1 : -1];
 int checkalign5[__alignof(long long) == 8 ? 1 : -1];
 
-// CHECK-LABEL: define void @s3(i64 %a)
+// CHECK-LABEL: define{{.*}} void @s3(i64 %a)
 void s3(long long a) {}
 
 struct st_ll {

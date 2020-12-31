@@ -89,9 +89,9 @@ struct Test2a {
 
 // V-table should be defined with strong linkage.
 Test2a::Test2a() { use(typeid(Test2a)); }
-// CHECK:      @_ZTV6Test2a = unnamed_addr constant
-// CHECK-LATE: @_ZTS6Test2a = constant
-// CHECK-LATE: @_ZTI6Test2a = constant
+// CHECK:      @_ZTV6Test2a ={{.*}} unnamed_addr constant
+// CHECK-LATE: @_ZTS6Test2a ={{.*}} constant
+// CHECK-LATE: @_ZTI6Test2a ={{.*}} constant
 
 // 'bar' becomes the key function when 'foo' is defined inline.
 void Test2a::bar() {}
@@ -110,9 +110,9 @@ void Test2b::bar() {}
 
 // V-table should be defined with strong linkage.
 Test2b::Test2b() { use(typeid(Test2b)); }
-// CHECK:      @_ZTV6Test2b = unnamed_addr constant
-// CHECK-LATE: @_ZTS6Test2b = constant
-// CHECK-LATE: @_ZTI6Test2b = constant
+// CHECK:      @_ZTV6Test2b ={{.*}} unnamed_addr constant
+// CHECK-LATE: @_ZTS6Test2b ={{.*}} constant
+// CHECK-LATE: @_ZTI6Test2b ={{.*}} constant
 
 inline void Test2b::foo() {}
 
@@ -130,9 +130,9 @@ inline void Test2c::foo() {}
 
 // V-table should be defined with strong linkage.
 Test2c::Test2c() { use(typeid(Test2c)); }
-// CHECK: @_ZTV6Test2c = unnamed_addr constant
-// CHECK: @_ZTS6Test2c = constant
-// CHECK: @_ZTI6Test2c = constant
+// CHECK: @_ZTV6Test2c ={{.*}} unnamed_addr constant
+// CHECK: @_ZTS6Test2c ={{.*}} constant
+// CHECK: @_ZTI6Test2c ={{.*}} constant
 
 /*** Test3a ******************************************************************/
 

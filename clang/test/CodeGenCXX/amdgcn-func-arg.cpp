@@ -17,7 +17,7 @@ B g_b;
 void func_with_ref_arg(A &a);
 void func_with_ref_arg(B &b);
 
-// CHECK-LABEL: define void @_Z22func_with_indirect_arg1A(%class.A addrspace(5)* %a)
+// CHECK-LABEL: define{{.*}} void @_Z22func_with_indirect_arg1A(%class.A addrspace(5)* %a)
 // CHECK:  %p = alloca %class.A*, align 8, addrspace(5)
 // CHECK:  %[[r1:.+]] = addrspacecast %class.A* addrspace(5)* %p to %class.A**
 // CHECK:  %[[r0:.+]] = addrspacecast %class.A addrspace(5)* %a to %class.A*
@@ -26,7 +26,7 @@ void func_with_indirect_arg(A a) {
   A *p = &a;
 }
 
-// CHECK-LABEL: define void @_Z22test_indirect_arg_autov()
+// CHECK-LABEL: define{{.*}} void @_Z22test_indirect_arg_autov()
 // CHECK:  %a = alloca %class.A, align 4, addrspace(5)
 // CHECK:  %[[r0:.+]] = addrspacecast %class.A addrspace(5)* %a to %class.A*
 // CHECK:  %agg.tmp = alloca %class.A, align 4, addrspace(5)
@@ -44,7 +44,7 @@ void test_indirect_arg_auto() {
   func_with_ref_arg(a);
 }
 
-// CHECK: define void @_Z24test_indirect_arg_globalv()
+// CHECK: define{{.*}} void @_Z24test_indirect_arg_globalv()
 // CHECK:  %agg.tmp = alloca %class.A, align 4, addrspace(5)
 // CHECK:  %[[r0:.+]] = addrspacecast %class.A addrspace(5)* %agg.tmp to %class.A*
 // CHECK:  call void @llvm.memcpy.p0i8.p0i8.i64
@@ -57,7 +57,7 @@ void test_indirect_arg_global() {
   func_with_ref_arg(g_a);
 }
 
-// CHECK-LABEL: define void @_Z19func_with_byval_arg1B(%class.B addrspace(5)* byval(%class.B) align 4 %b)
+// CHECK-LABEL: define{{.*}} void @_Z19func_with_byval_arg1B(%class.B addrspace(5)* byval(%class.B) align 4 %b)
 // CHECK:  %p = alloca %class.B*, align 8, addrspace(5)
 // CHECK:  %[[r1:.+]] = addrspacecast %class.B* addrspace(5)* %p to %class.B**
 // CHECK:  %[[r0:.+]] = addrspacecast %class.B addrspace(5)* %b to %class.B*
@@ -66,7 +66,7 @@ void func_with_byval_arg(B b) {
   B *p = &b;
 }
 
-// CHECK-LABEL: define void @_Z19test_byval_arg_autov()
+// CHECK-LABEL: define{{.*}} void @_Z19test_byval_arg_autov()
 // CHECK:  %b = alloca %class.B, align 4, addrspace(5)
 // CHECK:  %[[r0:.+]] = addrspacecast %class.B addrspace(5)* %b to %class.B*
 // CHECK:  %agg.tmp = alloca %class.B, align 4, addrspace(5)
@@ -81,7 +81,7 @@ void test_byval_arg_auto() {
   func_with_ref_arg(b);
 }
 
-// CHECK-LABEL: define void @_Z21test_byval_arg_globalv()
+// CHECK-LABEL: define{{.*}} void @_Z21test_byval_arg_globalv()
 // CHECK:  %agg.tmp = alloca %class.B, align 4, addrspace(5)
 // CHECK:  %[[r0:.+]] = addrspacecast %class.B addrspace(5)* %agg.tmp to %class.B*
 // CHECK:  call void @llvm.memcpy.p0i8.p0i8.i64

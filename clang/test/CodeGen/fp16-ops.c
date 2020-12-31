@@ -21,7 +21,7 @@ volatile double d0;
 short s0;
 
 void foo(void) {
-  // CHECK-LABEL: define void @foo()
+  // CHECK-LABEL: define{{.*}} void @foo()
 
   // Check unary ops
 
@@ -543,7 +543,7 @@ void foo(void) {
   h0 = s0;
 }
 
-// CHECK-LABEL: define void @testTypeDef(
+// CHECK-LABEL: define{{.*}} void @testTypeDef(
 // CHECK: %[[CONV:.*]] = fpext <4 x half> %{{.*}} to <4 x float>
 // CHECK: %[[CONV1:.*]] = fpext <4 x half> %{{.*}} to <4 x float>
 // CHECK: %[[ADD:.*]] = fadd <4 x float> %[[CONV]], %[[CONV1]]

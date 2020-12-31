@@ -2,9 +2,9 @@
 // RUN: %clang_cc1 -emit-llvm -o - %s -triple i386-unknown-unknown | FileCheck -check-prefix CHECK-NO %s
 // RUN: %clang_cc1 -menable-unsafe-fp-math -emit-llvm -o - %s -triple i386-unknown-unknown | FileCheck -check-prefix CHECK-FAST %s
 
-// CHECK-YES-LABEL: define void @test_sqrt
-// CHECK-NO-LABEL: define void @test_sqrt
-// CHECK-FAST-LABEL: define void @test_sqrt
+// CHECK-YES-LABEL: define{{.*}} void @test_sqrt
+// CHECK-NO-LABEL: define{{.*}} void @test_sqrt
+// CHECK-FAST-LABEL: define{{.*}} void @test_sqrt
 void test_sqrt(float a0, double a1, long double a2) {
   // CHECK-YES: call float @sqrtf
   // CHECK-NO: call float @llvm.sqrt.f32(float
@@ -32,8 +32,8 @@ void test_sqrt(float a0, double a1, long double a2) {
 // CHECK-FAST: declare double @llvm.sqrt.f64(double)
 // CHECK-FAST: declare x86_fp80 @llvm.sqrt.f80(x86_fp80)
 
-// CHECK-YES-LABEL: define void @test_pow
-// CHECK-NO-LABEL: define void @test_pow
+// CHECK-YES-LABEL: define{{.*}} void @test_pow
+// CHECK-NO-LABEL: define{{.*}} void @test_pow
 void test_pow(float a0, double a1, long double a2) {
   // CHECK-YES: call float @powf
   // CHECK-NO: call float @llvm.pow.f32
@@ -55,8 +55,8 @@ void test_pow(float a0, double a1, long double a2) {
 // CHECK-NO: declare double @llvm.pow.f64(double, double) [[NUW_RNI]]
 // CHECK-NO: declare x86_fp80 @llvm.pow.f80(x86_fp80, x86_fp80) [[NUW_RNI]]
 
-// CHECK-YES-LABEL: define void @test_fma
-// CHECK-NO-LABEL: define void @test_fma
+// CHECK-YES-LABEL: define{{.*}} void @test_fma
+// CHECK-NO-LABEL: define{{.*}} void @test_fma
 void test_fma(float a0, double a1, long double a2) {
     // CHECK-YES: call float @fmaf
     // CHECK-NO: call float @llvm.fma.f32

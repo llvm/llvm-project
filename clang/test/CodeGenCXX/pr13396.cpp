@@ -7,13 +7,13 @@ struct foo {
 };
 
 foo::foo() {
-  // CHECK-LABEL: define void @_ZN3fooC2Ev(%struct.foo* inreg %this)
-  // CHECK-LABEL: define void @_ZN3fooC1Ev(%struct.foo* inreg %this)
+  // CHECK-LABEL: define{{.*}} void @_ZN3fooC2Ev(%struct.foo* inreg %this)
+  // CHECK-LABEL: define{{.*}} void @_ZN3fooC1Ev(%struct.foo* inreg %this)
 }
 
 foo::~foo() {
-  // CHECK-LABEL: define void @_ZN3fooD2Ev(%struct.foo* inreg %this)
-  // CHECK-LABEL: define void @_ZN3fooD1Ev(%struct.foo* inreg %this)
+  // CHECK-LABEL: define{{.*}} void @_ZN3fooD2Ev(%struct.foo* inreg %this)
+  // CHECK-LABEL: define{{.*}} void @_ZN3fooD1Ev(%struct.foo* inreg %this)
 }
 
 void dummy() {

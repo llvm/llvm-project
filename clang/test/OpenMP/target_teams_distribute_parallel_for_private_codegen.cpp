@@ -103,7 +103,7 @@ S<float> var(3);
 int main() {
   static int sivar;
 #ifdef LAMBDA
-  // HLAMBDA: [[G:@.+]] = global i{{[0-9]+}} 1212,
+  // HLAMBDA: [[G:@.+]] ={{.*}} global i{{[0-9]+}} 1212,
   // HLAMBDA-LABEL: @main
   // HLAMBDA: call void [[OUTER_LAMBDA:@.+]](
   [&]() {
@@ -282,7 +282,7 @@ int main() {
 // HCHECK: ret
 
 // HCHECK: define {{.*}}void @[[TOFFL1]]()
-// TCHECK: define weak void @[[TOFFL1:.+]]()
+// TCHECK: define weak{{.*}} void @[[TOFFL1:.+]]()
 // CHECK: call void {{.+}} @__kmpc_fork_teams({{.+}}, i32 0, {{.+}} @[[TOUTL1:.+]] to {{.+}})
 // CHECK: ret void
 

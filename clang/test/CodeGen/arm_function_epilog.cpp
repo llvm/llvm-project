@@ -7,7 +7,7 @@ struct Vec2 {
     };
 };
 
-// CHECK: define arm_aapcs_vfpcc %struct.Vec2 @_Z7getVec2v()
+// CHECK: define{{.*}} arm_aapcs_vfpcc %struct.Vec2 @_Z7getVec2v()
 // CHECK: ret %struct.Vec2
 Vec2 getVec2() {
     Vec2 out;
