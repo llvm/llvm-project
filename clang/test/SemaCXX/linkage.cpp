@@ -62,12 +62,12 @@ namespace test3 {
   void test(A a) {}
   void force() { test(A()); }
 
-  // CHECK: define void @test3(
+  // CHECK: define{{.*}} void @test3(
   extern "C" void test3(A a) {}
 }
 
 namespace {
-  // CHECK: define void @test4(
+  // CHECK: define{{.*}} void @test4(
   extern "C" void test4(void) {}
 }
 

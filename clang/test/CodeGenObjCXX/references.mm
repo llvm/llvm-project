@@ -17,7 +17,7 @@ struct A { ~A(); };
 
 @end
 
-// CHECK-LABEL: define void @_Z1fP1B
+// CHECK-LABEL: define{{.*}} void @_Z1fP1B
 // CHECK: objc_msgSend to
 // CHECK-NOT: call void @_ZN1AD1Ev
 // CHECK: ret void

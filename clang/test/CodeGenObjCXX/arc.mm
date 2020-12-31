@@ -7,7 +7,7 @@ struct NSFastEnumerationState;
                   count: (unsigned long) bufferSize;
 @end;
 NSArray *nsarray() { return 0; }
-// CHECK: define [[NSARRAY:%.*]]* @_Z7nsarrayv()
+// CHECK: define{{.*}} [[NSARRAY:%.*]]* @_Z7nsarrayv()
 
 void use(id);
 
@@ -55,7 +55,7 @@ void test34(int cond) {
   test34_sink(cond ? &strong : 0);
   test34_sink(cond ? &weak : 0);
 
-  // CHECK-LABEL:    define void @_Z6test34i(
+  // CHECK-LABEL:    define{{.*}} void @_Z6test34i(
   // CHECK:      [[COND:%.*]] = alloca i32
   // CHECK-NEXT: [[STRONG:%.*]] = alloca i8*
   // CHECK-NEXT: [[WEAK:%.*]] = alloca i8*
@@ -122,7 +122,7 @@ struct Test35_Helper {
   id makeObject4();
 };
 
-// CHECK-LABEL: define void @_Z6test3513Test35_HelperPS_
+// CHECK-LABEL: define{{.*}} void @_Z6test3513Test35_HelperPS_
 void test35(Test35_Helper x0, Test35_Helper *x0p) {
   // CHECK: call void @llvm.lifetime.start
   // CHECK: call i8* @_ZN13Test35_Helper11makeObject1Ev
@@ -160,7 +160,7 @@ void test35(Test35_Helper x0, Test35_Helper *x0p) {
   // CHECK-NEXT: ret void
 }
 
-// CHECK-LABEL: define void @_Z7test35b13Test35_HelperPS_
+// CHECK-LABEL: define{{.*}} void @_Z7test35b13Test35_HelperPS_
 void test35b(Test35_Helper x0, Test35_Helper *x0p) {
   // CHECK: call void @llvm.lifetime.start
   // CHECK: call i8* @_ZN13Test35_Helper11makeObject3Ev
@@ -199,7 +199,7 @@ void test35b(Test35_Helper x0, Test35_Helper *x0p) {
 }
 
 // rdar://problem/9603128
-// CHECK-LABEL: define i8* @_Z6test36P11objc_object(
+// CHECK-LABEL: define{{.*}} i8* @_Z6test36P11objc_object(
 id test36(id z) {
   // CHECK: llvm.objc.retain
   // CHECK: llvm.objc.retain
@@ -297,7 +297,7 @@ class Test39 : Test39_base1, Test39_base2 { // base2 is at non-zero offset
 };
 id Test39::bar() { return 0; }
 // Note lack of autorelease.
-// CHECK-LABEL:    define i8* @_ZThn8_N6Test393barEv(
+// CHECK-LABEL:    define{{.*}} i8* @_ZThn8_N6Test393barEv(
 // CHECK:      call i8* @_ZN6Test393barEv(
 // CHECK-NEXT: ret i8*
 
@@ -328,7 +328,7 @@ template void test40_helper<int>();
 void test41(__weak id &&x) {
   __weak id y = static_cast<__weak id &&>(x);
 }
-// CHECK-LABEL: define void @_Z6test41OU6__weakP11objc_object
+// CHECK-LABEL: define{{.*}} void @_Z6test41OU6__weakP11objc_object
 // CHECK:      [[X:%.*]] = alloca i8**
 // CHECK:      [[Y:%.*]] = alloca i8*
 // CHECK:      [[T0:%.*]] = load i8**, i8*** [[X]]

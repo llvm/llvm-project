@@ -14,7 +14,7 @@ struct Y {
   operator id() const;
 };
 
-// CHECK-LABEL: define void @_Z10test_arrayv
+// CHECK-LABEL: define{{.*}} void @_Z10test_arrayv
 void test_array() {
   // CHECK: [[ARR:%[a-zA-Z0-9.]+]] = alloca i8*
   // CHECK: [[OBJECTS:%[a-zA-Z0-9.]+]] = alloca [2 x i8*]

@@ -30,7 +30,7 @@ void foo() {
 
 // CHECK: @J = hidden constant
 // CHECK: @K = hidden constant
-// CHECK: @L = constant
+// CHECK: @L ={{.*}} constant
 // CHECK: @M = hidden global
 // CHECK: @O = hidden global
 // CHECK: @I = external hidden

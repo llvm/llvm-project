@@ -32,7 +32,7 @@ B *end(C&);
 
 extern B array[5];
 
-// CHECK-LABEL: define void @_Z9for_arrayv(
+// CHECK-LABEL: define{{.*}} void @_Z9for_arrayv(
 void for_array() {
   // CHECK: call void @_ZN1AC1Ev(%struct.A* [[A:.*]])
   A a;
@@ -61,7 +61,7 @@ void for_array() {
   // CHECK: ret void
 }
 
-// CHECK-LABEL: define void @_Z9for_rangev(
+// CHECK-LABEL: define{{.*}} void @_Z9for_rangev(
 void for_range() {
   // CHECK: call void @_ZN1AC1Ev(%struct.A* [[A:.*]])
   A a;
@@ -93,7 +93,7 @@ void for_range() {
   // CHECK: ret void
 }
 
-// CHECK-LABEL: define void @_Z16for_member_rangev(
+// CHECK-LABEL: define{{.*}} void @_Z16for_member_rangev(
 void for_member_range() {
   // CHECK: call void @_ZN1AC1Ev(%struct.A* [[A:.*]])
   A a;

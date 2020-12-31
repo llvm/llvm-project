@@ -403,7 +403,7 @@ void foobar() {
   }
 }
 
-// UNTIEDRT: define void @{{.+}}xxxx{{.+}}()
+// UNTIEDRT: define{{.*}} void @{{.+}}xxxx{{.+}}()
 void xxxx() {
   // UNTIEDRT: call void @{{.+}}foobar{{.+}}()
   foobar();

@@ -11,7 +11,7 @@ template<typename T> int A<T>::a = foo();
 // ALLK-NOT: @_ZN1AIcE1aE
 template<> int A<char>::a;
 
-// ALL: @_ZN1AIbE1aE = global i32 10
+// ALL: @_ZN1AIbE1aE ={{.*}} global i32 10
 template<> int A<bool>::a = 10;
 
 // ALL: @llvm.global_ctors = appending global [8 x { i32, void ()*, i8* }]

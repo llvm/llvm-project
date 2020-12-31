@@ -24,7 +24,7 @@ struct ATTR Derived : Base {
 // CHECK: [[BASE]] = type { [[VBASE:%.*]] }
 // CHECK: [[VBASE]] = type { i32 (...)** }
 
-// CHECK: define void @_ZN7DerivedC2Ev
+// CHECK: define{{.*}} void @_ZN7DerivedC2Ev
 // CHECK:   [[SELF:%.*]] = load [[DERIVED]]*
 // CHECK:   [[T0:%.*]] = bitcast [[DERIVED]]* [[SELF]] to [[BASE]]*
 // CHECK:   call void @_ZN4BaseC2Ev([[BASE]]* {{[^,]*}} [[T0]], i8**

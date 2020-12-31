@@ -8,7 +8,7 @@ struct A {
 };
 
 void foo(A *a, __m128 v) {
-  // CHECK-LABEL: define void @_Z3fooP1ADv4_f
+  // CHECK-LABEL: define{{.*}} void @_Z3fooP1ADv4_f
   a->a = v;
   // CHECK: store <4 x float> %v, <4 x float>* %{{.*}}, align 16, !tbaa [[TAG_char:!.*]]
   // CHECK: store <4 x float> %{{.*}}, <4 x float>* %{{.*}}, align 16, !tbaa [[TAG_char]]

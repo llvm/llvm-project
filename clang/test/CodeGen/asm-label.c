@@ -11,11 +11,11 @@ int *test(void) {
 }
 
 // LINUX: @bar = internal global i32 0
-// LINUX: @foo = global i32 0
+// LINUX: @foo ={{.*}} global i32 0
 // LINUX: declare i8* @alias(i32)
 
 // DARWIN: @"\01bar" = internal global i32 0
-// DARWIN: @"\01foo" = global i32 0
+// DARWIN: @"\01foo" ={{.*}} global i32 0
 // DARWIN: declare i8* @"\01alias"(i32)
 
 extern void *memcpy(void *__restrict, const void *__restrict, unsigned long);

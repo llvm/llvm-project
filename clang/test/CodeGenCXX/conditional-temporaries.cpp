@@ -42,19 +42,19 @@ Checker c;
 
 }
 
-// CHECK-OPT-LABEL: define i32 @_Z12getCtorCallsv()
+// CHECK-OPT-LABEL: define{{.*}} i32 @_Z12getCtorCallsv()
 int getCtorCalls() {
   // CHECK-OPT: ret i32 5
   return ctorcalls;
 }
 
-// CHECK-OPT-LABEL: define i32 @_Z12getDtorCallsv()
+// CHECK-OPT-LABEL: define{{.*}} i32 @_Z12getDtorCallsv()
 int getDtorCalls() {
   // CHECK-OPT: ret i32 5
   return dtorcalls;
 }
 
-// CHECK-OPT-LABEL: define zeroext i1 @_Z7successv()
+// CHECK-OPT-LABEL: define{{.*}} zeroext i1 @_Z7successv()
 bool success() {
   // CHECK-OPT: ret i1 true
   return ctorcalls == dtorcalls;

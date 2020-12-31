@@ -54,7 +54,7 @@ struct S {
 void S::g(int i = []{return 1;}(),
           int j = []{return 2; }()) {}
 
-// CHECK-LABEL: define void @_Z6test_S1S
+// CHECK-LABEL: define{{.*}} void @_Z6test_S1S
 void test_S(S s) {
   // CHECK: call i32 @_ZZN1S1fEiiEd0_NKUlvE_clEv
   // CHECK-NEXT: call i32 @_ZZN1S1fEiiEd0_NKUlvE0_clEv
@@ -94,7 +94,7 @@ struct ST {
          T = []{return T(3);}());
 };
 
-// CHECK-LABEL: define void @_Z7test_ST2STIdE
+// CHECK-LABEL: define{{.*}} void @_Z7test_ST2STIdE
 void test_ST(ST<double> st) {
   // CHECK: call double @_ZZN2STIdE1fEddEd0_NKUlvE_clEv
   // CHECK-NEXT: call double @_ZZN2STIdE1fEddEd0_NKUlvE0_clEv
@@ -171,7 +171,7 @@ template<> double StaticMembers<double>::z = []{return 42; }();
 template<typename T>
 void func_template(T = []{ return T(); }());
 
-// CHECK-LABEL: define void @_Z17use_func_templatev()
+// CHECK-LABEL: define{{.*}} void @_Z17use_func_templatev()
 void use_func_template() {
   // CHECK: call i32 @"_ZZ13func_templateIiEvT_ENK3$_3clEv"
   func_template<int>();

@@ -2,7 +2,7 @@
 // RUN:   -w -fsanitize=signed-integer-overflow,unsigned-integer-overflow,integer-divide-by-zero,float-divide-by-zero \
 // RUN:   | FileCheck %s
 
-// CHECK-LABEL: define void @foo
+// CHECK-LABEL: define{{.*}} void @foo
 // CHECK-NOT: !nosanitize
 void foo(const int *p) {
   // __builtin_prefetch expects its optional arguments to be constant integers.
@@ -23,7 +23,7 @@ void foo(const int *p) {
   __builtin_prefetch(p, 3U % 2U, 3U % 1U);
 }
 
-// CHECK-LABEL: define void @ub_constant_arithmetic
+// CHECK-LABEL: define{{.*}} void @ub_constant_arithmetic
 void ub_constant_arithmetic() {
   // Check that we still instrument unsafe arithmetic, even if it is known to
   // be unsafe at compile time.

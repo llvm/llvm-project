@@ -55,9 +55,9 @@ id Test16877359() {
     return [SLREarth alloc];
 }
 
-// CHECK: @"OBJC_IVAR_$_MySecretNamespace.Message.MyIVAR" = global i64 0
-// CHECK: @"OBJC_CLASS_$_MySecretNamespace.Message" = global %struct._class_t
-// CHECK: @"OBJC_METACLASS_$_MySecretNamespace.Message" = global %struct._class_t
+// CHECK: @"OBJC_IVAR_$_MySecretNamespace.Message.MyIVAR" ={{.*}} global i64 0
+// CHECK: @"OBJC_CLASS_$_MySecretNamespace.Message" ={{.*}} global %struct._class_t
+// CHECK: @"OBJC_METACLASS_$_MySecretNamespace.Message" ={{.*}} global %struct._class_t
 
 // CHECK: private unnamed_addr constant [42 x i8] c"T@\22MySecretNamespace.Message\22,&,V_msgProp\00"
 // CHECK: private unnamed_addr constant [76 x i8] c"T@\22MySecretNamespace.Message<MySecretNamespace.Protocol3>\22,&,V_msgProtoProp\00"
