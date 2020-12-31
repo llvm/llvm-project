@@ -1308,6 +1308,11 @@ multiclass VPseudoConversion<VReg RetClass,
   }
 }
 
+multiclass VPseudoConversionV_V {
+  foreach m = MxList.m in
+    defm _V : VPseudoConversion<m.vrclass, m.vrclass, m>;
+}
+
 multiclass VPseudoConversionW_V {
   defvar constraint = "@earlyclobber $rd";
   foreach m = MxList.m[0-5] in
@@ -2260,6 +2265,32 @@ multiclass VPatReductionW_VS<string intrinsic, string instruction, bit IsFloat =
   }
 }
 
+multiclass VPatConversionVI_VF<string intrinsic,
+                               string instruction>
+{
+  foreach fvti = AllFloatVectors in
+  {
+    defvar ivti = GetIntVTypeInfo<fvti>.Vti;
+
+    defm : VPatConversion<intrinsic, instruction, "V",
+                          ivti.Vector, fvti.Vector, ivti.Mask, fvti.SEW,
+                          fvti.LMul, ivti.RegClass, fvti.RegClass>;
+  }
+}
+
+multiclass VPatConversionVF_VI<string intrinsic,
+                               string instruction>
+{
+  foreach fvti = AllFloatVectors in
+  {
+    defvar ivti = GetIntVTypeInfo<fvti>.Vti;
+
+    defm : VPatConversion<intrinsic, instruction, "V",
+                          fvti.Vector, ivti.Vector, fvti.Mask, ivti.SEW,
+                          ivti.LMul, fvti.RegClass, ivti.RegClass>;
+  }
+}
+
 multiclass VPatConversionWI_VF<string intrinsic, string instruction> {
   foreach fvtiToFWti = AllWidenableFloatVectors in
   {
@@ -2667,6 +2698,16 @@ defm PseudoVFMV_V      : VPseudoUnaryV_F_NoDummyMask;
 //===----------------------------------------------------------------------===//
 defm PseudoVFMERGE     : VPseudoBinaryV_XM</*CarryOut =*/0,/*CarryIn =*/true,
                                            /*Constraint =*/"", /*IsFloat=*/true>;
+
+//===----------------------------------------------------------------------===//
+// 14.17. Single-Width Floating-Point/Integer Type-Convert Instructions
+//===----------------------------------------------------------------------===//
+defm PseudoVFCVT_XU_F : VPseudoConversionV_V;
+defm PseudoVFCVT_X_F : VPseudoConversionV_V;
+defm PseudoVFCVT_RTZ_XU_F : VPseudoConversionV_V;
+defm PseudoVFCVT_RTZ_X_F : VPseudoConversionV_V;
+defm PseudoVFCVT_F_XU : VPseudoConversionV_V;
+defm PseudoVFCVT_F_X : VPseudoConversionV_V;
 
 //===----------------------------------------------------------------------===//
 // 14.18. Widening Floating-Point/Integer Type-Convert Instructions
@@ -3243,6 +3284,16 @@ defm "" : VPatBinaryV_VM<"int_riscv_vfmerge", "PseudoVMERGE",
                          /*CarryOut = */0, /*vtilist=*/AllFloatVectors>;
 defm "" : VPatBinaryV_XM<"int_riscv_vfmerge", "PseudoVFMERGE",
                          /*CarryOut = */0, /*vtilist=*/AllFloatVectors>;
+
+//===----------------------------------------------------------------------===//
+// 14.17. Single-Width Floating-Point/Integer Type-Convert Instructions
+//===----------------------------------------------------------------------===//
+defm "" : VPatConversionVI_VF<"int_riscv_vfcvt_xu_f_v", "PseudoVFCVT_XU_F">;
+defm "" : VPatConversionVI_VF<"int_riscv_vfcvt_rtz_xu_f_v", "PseudoVFCVT_RTZ_XU_F">;
+defm "" : VPatConversionVI_VF<"int_riscv_vfcvt_x_f_v", "PseudoVFCVT_X_F">;
+defm "" : VPatConversionVI_VF<"int_riscv_vfcvt_rtz_x_f_v", "PseudoVFCVT_RTZ_X_F">;
+defm "" : VPatConversionVF_VI<"int_riscv_vfcvt_f_x_v", "PseudoVFCVT_F_X">;
+defm "" : VPatConversionVF_VI<"int_riscv_vfcvt_f_xu_v", "PseudoVFCVT_F_XU">;
 
 //===----------------------------------------------------------------------===//
 // 14.18. Widening Floating-Point/Integer Type-Convert Instructions
