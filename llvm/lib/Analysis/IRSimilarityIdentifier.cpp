@@ -83,27 +83,53 @@ bool IRSimilarity::isClose(const IRInstructionData &A,
 
   // Check if we are performing the same sort of operation on the same types
   // but not on the same values.
-  if (A.Inst->isSameOperationAs(B.Inst))
-    return true;
+  if (!A.Inst->isSameOperationAs(B.Inst)) {
+    // If there is a predicate, this means that either there is a swapped
+    // predicate, or that the types are different, we want to make sure that
+    // the predicates are equivalent via swapping.
+    if (isa<CmpInst>(A.Inst) && isa<CmpInst>(B.Inst)) {
 
-  // If there is a predicate, this means that either there is a swapped
-  // predicate, or that the types are different, we want to make sure that
-  // the predicates are equivalent via swapping.
-  if (isa<CmpInst>(A.Inst) && isa<CmpInst>(B.Inst)) {
+      if (A.getPredicate() != B.getPredicate())
+        return false;
 
-    if (A.getPredicate() != B.getPredicate())
-      return false;
+      // If the predicates are the same via swap, make sure that the types are
+      // still the same.
+      auto ZippedTypes = zip(A.OperVals, B.OperVals);
 
-    // If the predicates are the same via swap, make sure that the types are
-    // still the same.
-    auto ZippedTypes = zip(A.OperVals, B.OperVals);
+      return all_of(
+          ZippedTypes, [](std::tuple<llvm::Value *, llvm::Value *> R) {
+            return std::get<0>(R)->getType() == std::get<1>(R)->getType();
+          });
+    }
 
-    return all_of(ZippedTypes, [](std::tuple<llvm::Value *, llvm::Value *> R) {
-      return std::get<0>(R)->getType() == std::get<1>(R)->getType();
-    });
+    return false;
   }
 
-  return false;
+  // Since any GEP Instruction operands after the first operand cannot be
+  // defined by a register, we must make sure that the operands after the first
+  // are the same in the two instructions
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(A.Inst)) {
+    auto *OtherGEP = cast<GetElementPtrInst>(B.Inst);
+
+    // If the instructions do not have the same inbounds restrictions, we do
+    // not consider them the same.
+    if (GEP->isInBounds() != OtherGEP->isInBounds())
+      return false;
+
+    auto ZippedOperands = zip(GEP->indices(), OtherGEP->indices());
+
+    auto ZIt = ZippedOperands.begin();
+
+    // We increment here since we do not care about the first instruction,
+    // we only care about the following operands since they must be the
+    // exact same to be considered similar.
+    return std::all_of(++ZIt, ZippedOperands.end(),
+                       [](std::tuple<llvm::Use &, llvm::Use &> R) {
+                         return std::get<0>(R) == std::get<1>(R);
+                       });
+  }
+
+  return true;
 }
 
 // TODO: This is the same as the MachineOutliner, and should be consolidated

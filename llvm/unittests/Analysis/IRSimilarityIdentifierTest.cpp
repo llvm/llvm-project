@@ -815,16 +815,17 @@ TEST(IRInstructionMapper, AllocaIllegal) {
   ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(0));
 }
 
-// Checks that an getelementptr instruction is mapped to be illegal.  There is
-// extra checking required for the parameters if a getelementptr has more than
-// two operands.
-TEST(IRInstructionMapper, GetElementPtrIllegal) {
+// Checks that an getelementptr instruction is mapped to be legal.  And that
+// the operands in getelementpointer instructions are the exact same after the
+// first element operand, which only requires the same type.
+TEST(IRInstructionMapper, GetElementPtrSameEndOperands) {
   StringRef ModuleString = R"(
     %struct.RT = type { i8, [10 x [20 x i32]], i8 }
     %struct.ST = type { i32, double, %struct.RT }
-    define i32 @f(%struct.ST* %s, i32 %a, i32 %b) {
+    define i32 @f(%struct.ST* %s, i64 %a, i64 %b) {
     bb0:
-       %0 = getelementptr inbounds %struct.ST, %struct.ST* %s, i64 1
+       %0 = getelementptr inbounds %struct.ST, %struct.ST* %s, i64 %a, i32 0
+       %1 = getelementptr inbounds %struct.ST, %struct.ST* %s, i64 %b, i32 0
        ret i32 0
     })";
   LLVMContext Context;
@@ -839,7 +840,93 @@ TEST(IRInstructionMapper, GetElementPtrIllegal) {
   getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
-  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(0));
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(3));
+  ASSERT_EQ(UnsignedVec[0], UnsignedVec[1]);
+}
+
+// Check that when the operands in getelementpointer instructions are not the
+// exact same after the first element operand, the instructions are mapped to
+// different values.
+TEST(IRInstructionMapper, GetElementPtrDifferentEndOperands) {
+  StringRef ModuleString = R"(
+    %struct.RT = type { i8, [10 x [20 x i32]], i8 }
+    %struct.ST = type { i32, double, %struct.RT }
+    define i32 @f(%struct.ST* %s, i64 %a, i64 %b) {
+    bb0:
+       %0 = getelementptr inbounds %struct.ST, %struct.ST* %s, i64 %a, i32 0
+       %1 = getelementptr inbounds %struct.ST, %struct.ST* %s, i64 %b, i32 2
+       ret i32 0
+    })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(3));
+  ASSERT_NE(UnsignedVec[0], UnsignedVec[1]);
+}
+
+// Check that when the operands in getelementpointer instructions are not the
+// same initial base type, each instruction is mapped to a different value.
+TEST(IRInstructionMapper, GetElementPtrDifferentBaseType) {
+  StringRef ModuleString = R"(
+    %struct.RT = type { i8, [10 x [20 x i32]], i8 }
+    %struct.ST = type { i32, double, %struct.RT }
+    define i32 @f(%struct.ST* %s, %struct.RT* %r, i64 %a, i64 %b) {
+    bb0:
+       %0 = getelementptr inbounds %struct.ST, %struct.ST* %s, i64 %a
+       %1 = getelementptr inbounds %struct.RT, %struct.RT* %r, i64 %b
+       ret i32 0
+    })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(3));
+  ASSERT_NE(UnsignedVec[0], UnsignedVec[1]);
+}
+
+// Check that when the operands in getelementpointer instructions do not have
+// the same inbounds modifier, they are not counted as the same.
+TEST(IRInstructionMapper, GetElementPtrDifferentInBounds) {
+  StringRef ModuleString = R"(
+    %struct.RT = type { i8, [10 x [20 x i32]], i8 }
+    %struct.ST = type { i32, double, %struct.RT }
+    define i32 @f(%struct.ST* %s, %struct.RT* %r, i64 %a, i64 %b) {
+    bb0:
+       %0 = getelementptr inbounds %struct.ST, %struct.ST* %s, i64 %a, i32 0
+       %1 = getelementptr %struct.ST, %struct.ST* %s, i64 %b, i32 0
+       ret i32 0
+    })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(3));
+  ASSERT_NE(UnsignedVec[0], UnsignedVec[1]);
 }
 
 // Checks that a call instruction is mapped to be illegal.  We have to perform
