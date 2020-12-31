@@ -771,6 +771,15 @@ let TargetPrefix = "riscv" in {
   defm vfwcvt_rtz_x_f_v : RISCVConversion;
   defm vfwcvt_f_f_v : RISCVConversion;
 
+  defm vfncvt_f_xu_w : RISCVConversion;
+  defm vfncvt_f_x_w : RISCVConversion;
+  defm vfncvt_xu_f_w : RISCVConversion;
+  defm vfncvt_x_f_w : RISCVConversion;
+  defm vfncvt_rtz_xu_f_w : RISCVConversion;
+  defm vfncvt_rtz_x_f_w : RISCVConversion;
+  defm vfncvt_f_f_w : RISCVConversion;
+  defm vfncvt_rod_f_f_w : RISCVConversion;
+
   // Output: (vector)
   // Input: (mask type input, vl)
   def int_riscv_viota : Intrinsic<[llvm_anyvector_ty],
