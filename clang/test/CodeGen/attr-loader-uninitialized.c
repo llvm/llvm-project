@@ -1,5 +1,4 @@
-// UNSUPPORTED: system-windows
-// RUN: %clang_cc1 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple=x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s
 
 // CHECK: @tentative_attr_first = global i32 undef
 int tentative_attr_first __attribute__((loader_uninitialized));
