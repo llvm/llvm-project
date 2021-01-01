@@ -47,33 +47,36 @@ bool RecurrenceDescriptor::areAllUsesIn(Instruction *I,
   return true;
 }
 
-bool RecurrenceDescriptor::isIntegerRecurrenceKind(RecurrenceKind Kind) {
+bool RecurrenceDescriptor::isIntegerRecurrenceKind(RecurKind Kind) {
   switch (Kind) {
   default:
     break;
-  case RK_IntegerAdd:
-  case RK_IntegerMult:
-  case RK_IntegerOr:
-  case RK_IntegerAnd:
-  case RK_IntegerXor:
-  case RK_IntegerMinMax:
+  case RecurKind::Add:
+  case RecurKind::Mul:
+  case RecurKind::Or:
+  case RecurKind::And:
+  case RecurKind::Xor:
+  case RecurKind::SMax:
+  case RecurKind::SMin:
+  case RecurKind::UMax:
+  case RecurKind::UMin:
     return true;
   }
   return false;
 }
 
-bool RecurrenceDescriptor::isFloatingPointRecurrenceKind(RecurrenceKind Kind) {
-  return (Kind != RK_NoRecurrence) && !isIntegerRecurrenceKind(Kind);
+bool RecurrenceDescriptor::isFloatingPointRecurrenceKind(RecurKind Kind) {
+  return (Kind != RecurKind::None) && !isIntegerRecurrenceKind(Kind);
 }
 
-bool RecurrenceDescriptor::isArithmeticRecurrenceKind(RecurrenceKind Kind) {
+bool RecurrenceDescriptor::isArithmeticRecurrenceKind(RecurKind Kind) {
   switch (Kind) {
   default:
     break;
-  case RK_IntegerAdd:
-  case RK_IntegerMult:
-  case RK_FloatAdd:
-  case RK_FloatMult:
+  case RecurKind::Add:
+  case RecurKind::Mul:
+  case RecurKind::FAdd:
+  case RecurKind::FMul:
     return true;
   }
   return false;
@@ -186,7 +189,7 @@ static void collectCastsToIgnore(Loop *TheLoop, Instruction *Exit,
   }
 }
 
-bool RecurrenceDescriptor::AddReductionVar(PHINode *Phi, RecurrenceKind Kind,
+bool RecurrenceDescriptor::AddReductionVar(PHINode *Phi, RecurKind Kind,
                                            Loop *TheLoop, bool HasFunNoNaNAttr,
                                            RecurrenceDescriptor &RedDes,
                                            DemandedBits *DB,
@@ -302,29 +305,35 @@ bool RecurrenceDescriptor::AddReductionVar(PHINode *Phi, RecurrenceKind Kind,
       // FIXME: FMF is allowed on phi, but propagation is not handled correctly.
       if (isa<FPMathOperator>(ReduxDesc.getPatternInst()) && !IsAPhi)
         FMF &= ReduxDesc.getPatternInst()->getFastMathFlags();
+      // Update this reduction kind if we matched a new instruction.
+      // TODO: Can we eliminate the need for a 2nd InstDesc by keeping 'Kind'
+      //       state accurate while processing the worklist?
+      if (ReduxDesc.getRecKind() != RecurKind::None)
+        Kind = ReduxDesc.getRecKind();
     }
 
     bool IsASelect = isa<SelectInst>(Cur);
 
     // A conditional reduction operation must only have 2 or less uses in
     // VisitedInsts.
-    if (IsASelect && (Kind == RK_FloatAdd || Kind == RK_FloatMult) &&
+    if (IsASelect && (Kind == RecurKind::FAdd || Kind == RecurKind::FMul) &&
         hasMultipleUsesOf(Cur, VisitedInsts, 2))
       return false;
 
     // A reduction operation must only have one use of the reduction value.
-    if (!IsAPhi && !IsASelect && Kind != RK_IntegerMinMax &&
-        Kind != RK_FloatMinMax && hasMultipleUsesOf(Cur, VisitedInsts, 1))
+    if (!IsAPhi && !IsASelect && !isMinMaxRecurrenceKind(Kind) &&
+        hasMultipleUsesOf(Cur, VisitedInsts, 1))
       return false;
 
     // All inputs to a PHI node must be a reduction value.
     if (IsAPhi && Cur != Phi && !areAllUsesIn(Cur, VisitedInsts))
       return false;
 
-    if (Kind == RK_IntegerMinMax &&
+    if (isIntMinMaxRecurrenceKind(Kind) &&
         (isa<ICmpInst>(Cur) || isa<SelectInst>(Cur)))
       ++NumCmpSelectPatternInst;
-    if (Kind == RK_FloatMinMax && (isa<FCmpInst>(Cur) || isa<SelectInst>(Cur)))
+    if (isFPMinMaxRecurrenceKind(Kind) &&
+        (isa<FCmpInst>(Cur) || isa<SelectInst>(Cur)))
       ++NumCmpSelectPatternInst;
 
     // Check  whether we found a reduction operator.
@@ -389,8 +398,7 @@ bool RecurrenceDescriptor::AddReductionVar(PHINode *Phi, RecurrenceKind Kind,
 
   // This means we have seen one but not the other instruction of the
   // pattern or more than just a select and cmp.
-  if ((Kind == RK_IntegerMinMax || Kind == RK_FloatMinMax) &&
-      NumCmpSelectPatternInst != 2)
+  if (isMinMaxRecurrenceKind(Kind) && NumCmpSelectPatternInst != 2)
     return false;
 
   if (!FoundStartPHI || !FoundReduxOp || !ExitInstruction)
@@ -408,7 +416,7 @@ bool RecurrenceDescriptor::AddReductionVar(PHINode *Phi, RecurrenceKind Kind,
     // can be ignore in the cost model. If we compute a different type than we
     // did when evaluating the 'and', the 'and' will not be eliminated, and we
     // will end up with different kinds of operations in the recurrence
-    // expression (e.g., RK_IntegerAND, RK_IntegerADD). We give up if this is
+    // expression (e.g., IntegerAND, IntegerADD). We give up if this is
     // the case.
     //
     // The vectorizer relies on InstCombine to perform the actual
@@ -448,9 +456,9 @@ bool RecurrenceDescriptor::AddReductionVar(PHINode *Phi, RecurrenceKind Kind,
   // is saved as part of the RecurrenceDescriptor.
 
   // Save the description of this reduction variable.
-  RecurrenceDescriptor RD(
-      RdxStart, ExitInstruction, Kind, FMF, ReduxDesc.getMinMaxKind(),
-      ReduxDesc.getUnsafeAlgebraInst(), RecurrenceType, IsSigned, CastInsts);
+  RecurrenceDescriptor RD(RdxStart, ExitInstruction, Kind, FMF,
+                          ReduxDesc.getUnsafeAlgebraInst(), RecurrenceType,
+                          IsSigned, CastInsts);
   RedDes = RD;
 
   return true;
@@ -467,7 +475,7 @@ RecurrenceDescriptor::isMinMaxSelectCmpPattern(Instruction *I,
   CmpInst::Predicate Pred;
   if (match(I, m_OneUse(m_Cmp(Pred, m_Value(), m_Value())))) {
     if (auto *Select = dyn_cast<SelectInst>(*I->user_begin()))
-      return InstDesc(Select, Prev.getMinMaxKind());
+      return InstDesc(Select, Prev.getRecKind());
   }
 
   // Only match select with single use cmp condition.
@@ -477,21 +485,21 @@ RecurrenceDescriptor::isMinMaxSelectCmpPattern(Instruction *I,
 
   // Look for a min/max pattern.
   if (match(I, m_UMin(m_Value(), m_Value())))
-    return InstDesc(I, MRK_UIntMin);
+    return InstDesc(I, RecurKind::UMin);
   if (match(I, m_UMax(m_Value(), m_Value())))
-    return InstDesc(I, MRK_UIntMax);
+    return InstDesc(I, RecurKind::UMax);
   if (match(I, m_SMax(m_Value(), m_Value())))
-    return InstDesc(I, MRK_SIntMax);
+    return InstDesc(I, RecurKind::SMax);
   if (match(I, m_SMin(m_Value(), m_Value())))
-    return InstDesc(I, MRK_SIntMin);
+    return InstDesc(I, RecurKind::SMin);
   if (match(I, m_OrdFMin(m_Value(), m_Value())))
-    return InstDesc(I, MRK_FloatMin);
+    return InstDesc(I, RecurKind::FMin);
   if (match(I, m_OrdFMax(m_Value(), m_Value())))
-    return InstDesc(I, MRK_FloatMax);
+    return InstDesc(I, RecurKind::FMax);
   if (match(I, m_UnordFMin(m_Value(), m_Value())))
-    return InstDesc(I, MRK_FloatMin);
+    return InstDesc(I, RecurKind::FMin);
   if (match(I, m_UnordFMax(m_Value(), m_Value())))
-    return InstDesc(I, MRK_FloatMax);
+    return InstDesc(I, RecurKind::FMax);
 
   return InstDesc(false, I);
 }
@@ -506,8 +514,7 @@ RecurrenceDescriptor::isMinMaxSelectCmpPattern(Instruction *I,
 /// %add = fadd %0, %sum.1
 /// %sum.2 = select %cmp, %add, %sum.1
 RecurrenceDescriptor::InstDesc
-RecurrenceDescriptor::isConditionalRdxPattern(
-    RecurrenceKind Kind, Instruction *I) {
+RecurrenceDescriptor::isConditionalRdxPattern(RecurKind Kind, Instruction *I) {
   SelectInst *SI = dyn_cast<SelectInst>(I);
   if (!SI)
     return InstDesc(false, I);
@@ -535,16 +542,16 @@ RecurrenceDescriptor::isConditionalRdxPattern(
   if ((m_FAdd(m_Value(Op1), m_Value(Op2)).match(I1)  ||
        m_FSub(m_Value(Op1), m_Value(Op2)).match(I1)) &&
       I1->isFast())
-    return InstDesc(Kind == RK_FloatAdd, SI);
+    return InstDesc(Kind == RecurKind::FAdd, SI);
 
   if (m_FMul(m_Value(Op1), m_Value(Op2)).match(I1) && (I1->isFast()))
-    return InstDesc(Kind == RK_FloatMult, SI);
+    return InstDesc(Kind == RecurKind::FMul, SI);
 
   return InstDesc(false, I);
 }
 
 RecurrenceDescriptor::InstDesc
-RecurrenceDescriptor::isRecurrenceInstr(Instruction *I, RecurrenceKind Kind,
+RecurrenceDescriptor::isRecurrenceInstr(Instruction *I, RecurKind Kind,
                                         InstDesc &Prev, bool HasFunNoNaNAttr) {
   Instruction *UAI = Prev.getUnsafeAlgebraInst();
   if (!UAI && isa<FPMathOperator>(I) && !I->hasAllowReassoc())
@@ -554,32 +561,32 @@ RecurrenceDescriptor::isRecurrenceInstr(Instruction *I, RecurrenceKind Kind,
   default:
     return InstDesc(false, I);
   case Instruction::PHI:
-    return InstDesc(I, Prev.getMinMaxKind(), Prev.getUnsafeAlgebraInst());
+    return InstDesc(I, Prev.getRecKind(), Prev.getUnsafeAlgebraInst());
   case Instruction::Sub:
   case Instruction::Add:
-    return InstDesc(Kind == RK_IntegerAdd, I);
+    return InstDesc(Kind == RecurKind::Add, I);
   case Instruction::Mul:
-    return InstDesc(Kind == RK_IntegerMult, I);
+    return InstDesc(Kind == RecurKind::Mul, I);
   case Instruction::And:
-    return InstDesc(Kind == RK_IntegerAnd, I);
+    return InstDesc(Kind == RecurKind::And, I);
   case Instruction::Or:
-    return InstDesc(Kind == RK_IntegerOr, I);
+    return InstDesc(Kind == RecurKind::Or, I);
   case Instruction::Xor:
-    return InstDesc(Kind == RK_IntegerXor, I);
+    return InstDesc(Kind == RecurKind::Xor, I);
   case Instruction::FDiv:
   case Instruction::FMul:
-    return InstDesc(Kind == RK_FloatMult, I, UAI);
+    return InstDesc(Kind == RecurKind::FMul, I, UAI);
   case Instruction::FSub:
   case Instruction::FAdd:
-    return InstDesc(Kind == RK_FloatAdd, I, UAI);
+    return InstDesc(Kind == RecurKind::FAdd, I, UAI);
   case Instruction::Select:
-    if (Kind == RK_FloatAdd || Kind == RK_FloatMult)
+    if (Kind == RecurKind::FAdd || Kind == RecurKind::FMul)
       return isConditionalRdxPattern(Kind, I);
     LLVM_FALLTHROUGH;
   case Instruction::FCmp:
   case Instruction::ICmp:
-    if (Kind != RK_IntegerMinMax &&
-        (!HasFunNoNaNAttr || Kind != RK_FloatMinMax))
+    if (!isIntMinMaxRecurrenceKind(Kind) &&
+        (!HasFunNoNaNAttr || !isFPMinMaxRecurrenceKind(Kind)))
       return InstDesc(false, I);
     return isMinMaxSelectCmpPattern(I, Prev);
   }
@@ -609,50 +616,69 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
   bool HasFunNoNaNAttr =
       F.getFnAttribute("no-nans-fp-math").getValueAsString() == "true";
 
-  if (AddReductionVar(Phi, RK_IntegerAdd, TheLoop, HasFunNoNaNAttr, RedDes, DB,
+  if (AddReductionVar(Phi, RecurKind::Add, TheLoop, HasFunNoNaNAttr, RedDes, DB,
                       AC, DT)) {
     LLVM_DEBUG(dbgs() << "Found an ADD reduction PHI." << *Phi << "\n");
     return true;
   }
-  if (AddReductionVar(Phi, RK_IntegerMult, TheLoop, HasFunNoNaNAttr, RedDes, DB,
+  if (AddReductionVar(Phi, RecurKind::Mul, TheLoop, HasFunNoNaNAttr, RedDes, DB,
                       AC, DT)) {
     LLVM_DEBUG(dbgs() << "Found a MUL reduction PHI." << *Phi << "\n");
     return true;
   }
-  if (AddReductionVar(Phi, RK_IntegerOr, TheLoop, HasFunNoNaNAttr, RedDes, DB,
+  if (AddReductionVar(Phi, RecurKind::Or, TheLoop, HasFunNoNaNAttr, RedDes, DB,
                       AC, DT)) {
     LLVM_DEBUG(dbgs() << "Found an OR reduction PHI." << *Phi << "\n");
     return true;
   }
-  if (AddReductionVar(Phi, RK_IntegerAnd, TheLoop, HasFunNoNaNAttr, RedDes, DB,
+  if (AddReductionVar(Phi, RecurKind::And, TheLoop, HasFunNoNaNAttr, RedDes, DB,
                       AC, DT)) {
     LLVM_DEBUG(dbgs() << "Found an AND reduction PHI." << *Phi << "\n");
     return true;
   }
-  if (AddReductionVar(Phi, RK_IntegerXor, TheLoop, HasFunNoNaNAttr, RedDes, DB,
+  if (AddReductionVar(Phi, RecurKind::Xor, TheLoop, HasFunNoNaNAttr, RedDes, DB,
                       AC, DT)) {
     LLVM_DEBUG(dbgs() << "Found a XOR reduction PHI." << *Phi << "\n");
     return true;
   }
-  if (AddReductionVar(Phi, RK_IntegerMinMax, TheLoop, HasFunNoNaNAttr, RedDes,
+  if (AddReductionVar(Phi, RecurKind::SMax, TheLoop, HasFunNoNaNAttr, RedDes,
                       DB, AC, DT)) {
-    LLVM_DEBUG(dbgs() << "Found a MINMAX reduction PHI." << *Phi << "\n");
+    LLVM_DEBUG(dbgs() << "Found a SMAX reduction PHI." << *Phi << "\n");
     return true;
   }
-  if (AddReductionVar(Phi, RK_FloatMult, TheLoop, HasFunNoNaNAttr, RedDes, DB,
-                      AC, DT)) {
+  if (AddReductionVar(Phi, RecurKind::SMin, TheLoop, HasFunNoNaNAttr, RedDes,
+                      DB, AC, DT)) {
+    LLVM_DEBUG(dbgs() << "Found a SMIN reduction PHI." << *Phi << "\n");
+    return true;
+  }
+  if (AddReductionVar(Phi, RecurKind::UMax, TheLoop, HasFunNoNaNAttr, RedDes,
+                      DB, AC, DT)) {
+    LLVM_DEBUG(dbgs() << "Found a UMAX reduction PHI." << *Phi << "\n");
+    return true;
+  }
+  if (AddReductionVar(Phi, RecurKind::UMin, TheLoop, HasFunNoNaNAttr, RedDes,
+                      DB, AC, DT)) {
+    LLVM_DEBUG(dbgs() << "Found a UMIN reduction PHI." << *Phi << "\n");
+    return true;
+  }
+  if (AddReductionVar(Phi, RecurKind::FMul, TheLoop, HasFunNoNaNAttr, RedDes,
+                      DB, AC, DT)) {
     LLVM_DEBUG(dbgs() << "Found an FMult reduction PHI." << *Phi << "\n");
     return true;
   }
-  if (AddReductionVar(Phi, RK_FloatAdd, TheLoop, HasFunNoNaNAttr, RedDes, DB,
-                      AC, DT)) {
+  if (AddReductionVar(Phi, RecurKind::FAdd, TheLoop, HasFunNoNaNAttr, RedDes,
+                      DB, AC, DT)) {
     LLVM_DEBUG(dbgs() << "Found an FAdd reduction PHI." << *Phi << "\n");
     return true;
   }
-  if (AddReductionVar(Phi, RK_FloatMinMax, TheLoop, HasFunNoNaNAttr, RedDes, DB,
-                      AC, DT)) {
-    LLVM_DEBUG(dbgs() << "Found an float MINMAX reduction PHI." << *Phi
-                      << "\n");
+  if (AddReductionVar(Phi, RecurKind::FMax, TheLoop, HasFunNoNaNAttr, RedDes,
+                      DB, AC, DT)) {
+    LLVM_DEBUG(dbgs() << "Found a float MAX reduction PHI." << *Phi << "\n");
+    return true;
+  }
+  if (AddReductionVar(Phi, RecurKind::FMin, TheLoop, HasFunNoNaNAttr, RedDes,
+                      DB, AC, DT)) {
+    LLVM_DEBUG(dbgs() << "Found a float MIN reduction PHI." << *Phi << "\n");
     return true;
   }
   // Not a reduction of known type.
@@ -736,72 +762,68 @@ bool RecurrenceDescriptor::isFirstOrderRecurrence(
 
 /// This function returns the identity element (or neutral element) for
 /// the operation K.
-Constant *RecurrenceDescriptor::getRecurrenceIdentity(RecurrenceKind K,
-                                                      MinMaxRecurrenceKind MK,
-                                                      Type *Tp) {
+Constant *RecurrenceDescriptor::getRecurrenceIdentity(RecurKind K, Type *Tp) {
   switch (K) {
-  case RK_IntegerXor:
-  case RK_IntegerAdd:
-  case RK_IntegerOr:
+  case RecurKind::Xor:
+  case RecurKind::Add:
+  case RecurKind::Or:
     // Adding, Xoring, Oring zero to a number does not change it.
     return ConstantInt::get(Tp, 0);
-  case RK_IntegerMult:
+  case RecurKind::Mul:
     // Multiplying a number by 1 does not change it.
     return ConstantInt::get(Tp, 1);
-  case RK_IntegerAnd:
+  case RecurKind::And:
     // AND-ing a number with an all-1 value does not change it.
     return ConstantInt::get(Tp, -1, true);
-  case RK_FloatMult:
+  case RecurKind::FMul:
     // Multiplying a number by 1 does not change it.
     return ConstantFP::get(Tp, 1.0L);
-  case RK_FloatAdd:
+  case RecurKind::FAdd:
     // Adding zero to a number does not change it.
     return ConstantFP::get(Tp, 0.0L);
-  case RK_IntegerMinMax:
-  case RK_FloatMinMax:
-    switch (MK) {
-    case MRK_UIntMin:
-      return ConstantInt::get(Tp, -1);
-    case MRK_UIntMax:
-      return ConstantInt::get(Tp, 0);
-    case MRK_SIntMin:
-      return ConstantInt::get(
-          Tp, APInt::getSignedMaxValue(Tp->getIntegerBitWidth()));
-    case MRK_SIntMax:
-      return ConstantInt::get(
-          Tp, APInt::getSignedMinValue(Tp->getIntegerBitWidth()));
-    case MRK_FloatMin:
-      return ConstantFP::getInfinity(Tp, true);
-    case MRK_FloatMax:
-      return ConstantFP::getInfinity(Tp, false);
-    default:
-      llvm_unreachable("Unknown recurrence kind");
-    }
+  case RecurKind::UMin:
+    return ConstantInt::get(Tp, -1);
+  case RecurKind::UMax:
+    return ConstantInt::get(Tp, 0);
+  case RecurKind::SMin:
+    return ConstantInt::get(Tp,
+                            APInt::getSignedMaxValue(Tp->getIntegerBitWidth()));
+  case RecurKind::SMax:
+    return ConstantInt::get(Tp,
+                            APInt::getSignedMinValue(Tp->getIntegerBitWidth()));
+  case RecurKind::FMin:
+    return ConstantFP::getInfinity(Tp, true);
+  case RecurKind::FMax:
+    return ConstantFP::getInfinity(Tp, false);
   default:
     llvm_unreachable("Unknown recurrence kind");
   }
 }
 
 /// This function translates the recurrence kind to an LLVM binary operator.
-unsigned RecurrenceDescriptor::getRecurrenceBinOp(RecurrenceKind Kind) {
+unsigned RecurrenceDescriptor::getRecurrenceBinOp(RecurKind Kind) {
   switch (Kind) {
-  case RK_IntegerAdd:
+  case RecurKind::Add:
     return Instruction::Add;
-  case RK_IntegerMult:
+  case RecurKind::Mul:
     return Instruction::Mul;
-  case RK_IntegerOr:
+  case RecurKind::Or:
     return Instruction::Or;
-  case RK_IntegerAnd:
+  case RecurKind::And:
     return Instruction::And;
-  case RK_IntegerXor:
+  case RecurKind::Xor:
     return Instruction::Xor;
-  case RK_FloatMult:
+  case RecurKind::FMul:
     return Instruction::FMul;
-  case RK_FloatAdd:
+  case RecurKind::FAdd:
     return Instruction::FAdd;
-  case RK_IntegerMinMax:
+  case RecurKind::SMax:
+  case RecurKind::SMin:
+  case RecurKind::UMax:
+  case RecurKind::UMin:
     return Instruction::ICmp;
-  case RK_FloatMinMax:
+  case RecurKind::FMax:
+  case RecurKind::FMin:
     return Instruction::FCmp;
   default:
     llvm_unreachable("Unknown recurrence operation");

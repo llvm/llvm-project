@@ -6446,7 +6446,6 @@ class HorizontalReduction {
   SmallVector<Value *, 32> ReducedVals;
   // Use map vector to make stable output.
   MapVector<Instruction *, Value *> ExtraArgs;
-  using RD = RecurrenceDescriptor;
 
   /// Contains info about operation, like its opcode, left and right operands.
   class OperationData {
@@ -6454,27 +6453,29 @@ class HorizontalReduction {
     unsigned Opcode = 0;
 
     /// Kind of the reduction operation.
-    RD::RecurrenceKind Kind = RD::RK_NoRecurrence;
-    RD::MinMaxRecurrenceKind MMKind = RD::MRK_Invalid;
+    RecurKind Kind = RecurKind::None;
 
     /// Checks if the reduction operation can be vectorized.
     bool isVectorizable() const {
       switch (Kind) {
-      case RD::RK_IntegerAdd:
+      case RecurKind::Add:
         return Opcode == Instruction::Add;
-      case RD::RK_IntegerMult:
+      case RecurKind::Mul:
         return Opcode == Instruction::Mul;
-      case RD::RK_IntegerOr:
+      case RecurKind::Or:
         return Opcode == Instruction::Or;
-      case RD::RK_IntegerAnd:
+      case RecurKind::And:
         return Opcode == Instruction::And;
-      case RD::RK_IntegerXor:
+      case RecurKind::Xor:
         return Opcode == Instruction::Xor;
-      case RD::RK_FloatAdd:
+      case RecurKind::FAdd:
         return Opcode == Instruction::FAdd;
-      case RD::RK_FloatMult:
+      case RecurKind::FMul:
         return Opcode == Instruction::FMul;
-      case RD::RK_IntegerMinMax:
+      case RecurKind::SMax:
+      case RecurKind::SMin:
+      case RecurKind::UMax:
+      case RecurKind::UMin:
         return Opcode == Instruction::ICmp;
       default:
         return false;
@@ -6486,27 +6487,34 @@ class HorizontalReduction {
                     const Twine &Name) const {
       assert(isVectorizable() && "Unhandled reduction operation.");
       switch (Kind) {
-      case RD::RK_IntegerAdd:
-      case RD::RK_IntegerMult:
-      case RD::RK_IntegerOr:
-      case RD::RK_IntegerAnd:
-      case RD::RK_IntegerXor:
-      case RD::RK_FloatAdd:
-      case RD::RK_FloatMult:
+      case RecurKind::Add:
+      case RecurKind::Mul:
+      case RecurKind::Or:
+      case RecurKind::And:
+      case RecurKind::Xor:
+      case RecurKind::FAdd:
+      case RecurKind::FMul:
         return Builder.CreateBinOp((Instruction::BinaryOps)Opcode, LHS, RHS,
                                    Name);
 
-      case RD::RK_IntegerMinMax: {
+      case RecurKind::SMax: {
         assert(Opcode == Instruction::ICmp && "Expected integer types.");
-        ICmpInst::Predicate Pred;
-        switch (MMKind) {
-        case RD::MRK_SIntMax: Pred = ICmpInst::ICMP_SGT; break;
-        case RD::MRK_SIntMin: Pred = ICmpInst::ICMP_SLT; break;
-        case RD::MRK_UIntMax: Pred = ICmpInst::ICMP_UGT; break;
-        case RD::MRK_UIntMin: Pred = ICmpInst::ICMP_ULT; break;
-        default: llvm_unreachable("Unexpected min/max value");
-        }
-        Value *Cmp = Builder.CreateICmp(Pred, LHS, RHS, Name);
+        Value *Cmp = Builder.CreateICmpSGT(LHS, RHS, Name);
+        return Builder.CreateSelect(Cmp, LHS, RHS, Name);
+      }
+      case RecurKind::SMin: {
+        assert(Opcode == Instruction::ICmp && "Expected integer types.");
+        Value *Cmp = Builder.CreateICmpSLT(LHS, RHS, Name);
+        return Builder.CreateSelect(Cmp, LHS, RHS, Name);
+      }
+      case RecurKind::UMax: {
+        assert(Opcode == Instruction::ICmp && "Expected integer types.");
+        Value *Cmp = Builder.CreateICmpUGT(LHS, RHS, Name);
+        return Builder.CreateSelect(Cmp, LHS, RHS, Name);
+      }
+      case RecurKind::UMin: {
+        assert(Opcode == Instruction::ICmp && "Expected integer types.");
+        Value *Cmp = Builder.CreateICmpULT(LHS, RHS, Name);
         return Builder.CreateSelect(Cmp, LHS, RHS, Name);
       }
       default:
@@ -6524,32 +6532,31 @@ class HorizontalReduction {
     }
 
     /// Constructor for reduction operations with opcode and type.
-    OperationData(unsigned Opcode, RD::RecurrenceKind RdxKind,
-                  RD::MinMaxRecurrenceKind MinMaxKind)
-        : Opcode(Opcode), Kind(RdxKind), MMKind(MinMaxKind) {
-      assert(Kind != RD::RK_NoRecurrence && "Expected reduction operation.");
+    OperationData(unsigned Opcode, RecurKind RdxKind)
+        : Opcode(Opcode), Kind(RdxKind) {
+      assert(Kind != RecurKind::None && "Expected reduction operation.");
     }
 
     explicit operator bool() const { return Opcode; }
 
     /// Return true if this operation is any kind of minimum or maximum.
     bool isMinMax() const {
-      assert(Kind != RD::RK_NoRecurrence && "Expected reduction operation.");
-      return Kind == RD::RK_IntegerMinMax;
+      assert(Kind != RecurKind::None && "Expected reduction operation.");
+      return RecurrenceDescriptor::isIntMinMaxRecurrenceKind(Kind);
     }
 
     /// Get the index of the first operand.
     unsigned getFirstOperandIndex() const {
       assert(!!*this && "The opcode is not set.");
       // We allow calling this before 'Kind' is set, so handle that specially.
-      if (Kind == RD::RK_NoRecurrence)
+      if (Kind == RecurKind::None)
         return 0;
       return isMinMax() ? 1 : 0;
     }
 
     /// Total number of operands in the reduction operation.
     unsigned getNumberOfOperands() const {
-      assert(Kind != RD::RK_NoRecurrence && !!*this &&
+      assert(Kind != RecurKind::None && !!*this &&
              "Expected reduction operation.");
       return isMinMax() ? 3 : 2;
     }
@@ -6557,7 +6564,7 @@ class HorizontalReduction {
     /// Checks if the instruction is in basic block \p BB.
     /// For a min/max reduction check that both compare and select are in \p BB.
     bool hasSameParent(Instruction *I, BasicBlock *BB, bool IsRedOp) const {
-      assert(Kind != RD::RK_NoRecurrence && !!*this &&
+      assert(Kind != RecurKind::None && !!*this &&
              "Expected reduction operation.");
       if (IsRedOp && isMinMax()) {
         auto *Cmp = cast<Instruction>(cast<SelectInst>(I)->getCondition());
@@ -6568,7 +6575,7 @@ class HorizontalReduction {
 
     /// Expected number of uses for reduction operations/reduced values.
     bool hasRequiredNumberOfUses(Instruction *I, bool IsReductionOp) const {
-      assert(Kind != RD::RK_NoRecurrence && !!*this &&
+      assert(Kind != RecurKind::None && !!*this &&
              "Expected reduction operation.");
       // SelectInst must be used twice while the condition op must have single
       // use only.
@@ -6583,7 +6590,7 @@ class HorizontalReduction {
 
     /// Initializes the list of reduction operations.
     void initReductionOps(ReductionOpsListType &ReductionOps) {
-      assert(Kind != RD::RK_NoRecurrence && !!*this &&
+      assert(Kind != RecurKind::None && !!*this &&
              "Expected reduction operation.");
       if (isMinMax())
         ReductionOps.assign(2, ReductionOpsType());
@@ -6593,7 +6600,7 @@ class HorizontalReduction {
 
     /// Add all reduction operations for the reduction instruction \p I.
     void addReductionOps(Instruction *I, ReductionOpsListType &ReductionOps) {
-      assert(Kind != RD::RK_NoRecurrence && !!*this &&
+      assert(Kind != RecurKind::None && !!*this &&
              "Expected reduction operation.");
       if (isMinMax()) {
         ReductionOps[0].emplace_back(cast<SelectInst>(I)->getCondition());
@@ -6605,16 +6612,14 @@ class HorizontalReduction {
 
     /// Checks if instruction is associative and can be vectorized.
     bool isAssociative(Instruction *I) const {
-      assert(Kind != RD::RK_NoRecurrence && *this &&
+      assert(Kind != RecurKind::None && *this &&
              "Expected reduction operation.");
-      switch (Kind) {
-      case RD::RK_IntegerMinMax:
+      if (RecurrenceDescriptor::isIntMinMaxRecurrenceKind(Kind)) {
         assert(Opcode == Instruction::ICmp &&
                "Only integer compare operation is expected.");
         return true;
-      default:
-        return I->isAssociative();
       }
+      return I->isAssociative();
     }
 
     /// Checks if the reduction operation can be vectorized.
@@ -6632,7 +6637,7 @@ class HorizontalReduction {
     bool operator!=(const OperationData &OD) const { return !(*this == OD); }
     void clear() {
       Opcode = 0;
-      Kind = RD::RK_NoRecurrence;
+      Kind = RecurKind::None;
     }
 
     /// Get the opcode of the reduction operation.
@@ -6642,15 +6647,14 @@ class HorizontalReduction {
     }
 
     /// Get kind of reduction data.
-    RD::RecurrenceKind getKind() const { return Kind; }
-    RD::MinMaxRecurrenceKind getMinMaxKind() const { return MMKind; }
+    RecurKind getKind() const { return Kind; }
     Value *getLHS(Instruction *I) const {
-      if (Kind == RD::RK_NoRecurrence)
+      if (Kind == RecurKind::None)
         return nullptr;
       return I->getOperand(getFirstOperandIndex());
     }
     Value *getRHS(Instruction *I) const {
-      if (Kind == RD::RK_NoRecurrence)
+      if (Kind == RecurKind::None)
         return nullptr;
       return I->getOperand(getFirstOperandIndex() + 1);
     }
@@ -6664,16 +6668,19 @@ class HorizontalReduction {
              "Expected add|fadd or min/max reduction operation.");
       auto *Op = createOp(Builder, LHS, RHS, Name);
       switch (Kind) {
-      case RD::RK_IntegerAdd:
-      case RD::RK_IntegerMult:
-      case RD::RK_IntegerOr:
-      case RD::RK_IntegerAnd:
-      case RD::RK_IntegerXor:
-      case RD::RK_FloatAdd:
-      case RD::RK_FloatMult:
+      case RecurKind::Add:
+      case RecurKind::Mul:
+      case RecurKind::Or:
+      case RecurKind::And:
+      case RecurKind::Xor:
+      case RecurKind::FAdd:
+      case RecurKind::FMul:
         propagateIRFlags(Op, ReductionOps[0]);
         return Op;
-      case RD::RK_IntegerMinMax:
+      case RecurKind::SMax:
+      case RecurKind::SMin:
+      case RecurKind::UMax:
+      case RecurKind::UMin:
         if (auto *SI = dyn_cast<SelectInst>(Op))
           propagateIRFlags(SI->getCondition(), ReductionOps[0]);
         propagateIRFlags(Op, ReductionOps[1]);
@@ -6690,16 +6697,19 @@ class HorizontalReduction {
              "Expected add|fadd or min/max reduction operation.");
       auto *Op = createOp(Builder, LHS, RHS, Name);
       switch (Kind) {
-      case RD::RK_IntegerAdd:
-      case RD::RK_IntegerMult:
-      case RD::RK_IntegerOr:
-      case RD::RK_IntegerAnd:
-      case RD::RK_IntegerXor:
-      case RD::RK_FloatAdd:
-      case RD::RK_FloatMult:
+      case RecurKind::Add:
+      case RecurKind::Mul:
+      case RecurKind::Or:
+      case RecurKind::And:
+      case RecurKind::Xor:
+      case RecurKind::FAdd:
+      case RecurKind::FMul:
         propagateIRFlags(Op, I);
         return Op;
-      case RD::RK_IntegerMinMax:
+      case RecurKind::SMax:
+      case RecurKind::SMin:
+      case RecurKind::UMax:
+      case RecurKind::UMin:
         if (auto *SI = dyn_cast<SelectInst>(Op)) {
           propagateIRFlags(SI->getCondition(),
                            cast<SelectInst>(I)->getCondition());
@@ -6751,32 +6761,28 @@ class HorizontalReduction {
 
     TargetTransformInfo::ReductionFlags RdxFlags;
     if (match(I, m_Add(m_Value(), m_Value())))
-      return OperationData(I->getOpcode(), RD::RK_IntegerAdd, RD::MRK_Invalid);
+      return OperationData(I->getOpcode(), RecurKind::Add);
     if (match(I, m_Mul(m_Value(), m_Value())))
-      return OperationData(I->getOpcode(), RD::RK_IntegerMult, RD::MRK_Invalid);
+      return OperationData(I->getOpcode(), RecurKind::Mul);
     if (match(I, m_And(m_Value(), m_Value())))
-      return OperationData(I->getOpcode(), RD::RK_IntegerAnd, RD::MRK_Invalid);
+      return OperationData(I->getOpcode(), RecurKind::And);
     if (match(I, m_Or(m_Value(), m_Value())))
-      return OperationData(I->getOpcode(), RD::RK_IntegerOr, RD::MRK_Invalid);
+      return OperationData(I->getOpcode(), RecurKind::Or);
     if (match(I, m_Xor(m_Value(), m_Value())))
-      return OperationData(I->getOpcode(), RD::RK_IntegerXor, RD::MRK_Invalid);
+      return OperationData(I->getOpcode(), RecurKind::Xor);
     if (match(I, m_FAdd(m_Value(), m_Value())))
-      return OperationData(I->getOpcode(), RD::RK_FloatAdd, RD::MRK_Invalid);
+      return OperationData(I->getOpcode(), RecurKind::FAdd);
     if (match(I, m_FMul(m_Value(), m_Value())))
-      return OperationData(I->getOpcode(), RD::RK_FloatMult, RD::MRK_Invalid);
+      return OperationData(I->getOpcode(), RecurKind::FMul);
 
     if (match(I, m_SMax(m_Value(), m_Value())))
-      return OperationData(Instruction::ICmp, RD::RK_IntegerMinMax,
-                           RD::MRK_SIntMax);
+      return OperationData(Instruction::ICmp, RecurKind::SMax);
     if (match(I, m_SMin(m_Value(), m_Value())))
-      return OperationData(Instruction::ICmp, RD::RK_IntegerMinMax,
-                           RD::MRK_SIntMin);
+      return OperationData(Instruction::ICmp, RecurKind::SMin);
     if (match(I, m_UMax(m_Value(), m_Value())))
-      return OperationData(Instruction::ICmp, RD::RK_IntegerMinMax,
-                           RD::MRK_UIntMax);
+      return OperationData(Instruction::ICmp, RecurKind::UMax);
     if (match(I, m_UMin(m_Value(), m_Value())))
-      return OperationData(Instruction::ICmp, RD::RK_IntegerMinMax,
-                           RD::MRK_UIntMin);
+      return OperationData(Instruction::ICmp, RecurKind::UMin);
 
     if (auto *Select = dyn_cast<SelectInst>(I)) {
       // Try harder: look for min/max pattern based on instructions producing
@@ -6822,20 +6828,16 @@ class HorizontalReduction {
         return OperationData(*I);
       case CmpInst::ICMP_SGT:
       case CmpInst::ICMP_SGE:
-        return OperationData(Instruction::ICmp, RD::RK_IntegerMinMax,
-                             RD::MRK_SIntMax);
+        return OperationData(Instruction::ICmp, RecurKind::SMax);
       case CmpInst::ICMP_SLT:
       case CmpInst::ICMP_SLE:
-        return OperationData(Instruction::ICmp, RD::RK_IntegerMinMax,
-                             RD::MRK_SIntMin);
+        return OperationData(Instruction::ICmp, RecurKind::SMin);
       case CmpInst::ICMP_UGT:
       case CmpInst::ICMP_UGE:
-        return OperationData(Instruction::ICmp, RD::RK_IntegerMinMax,
-                             RD::MRK_UIntMax);
+        return OperationData(Instruction::ICmp, RecurKind::UMax);
       case CmpInst::ICMP_ULT:
       case CmpInst::ICMP_ULE:
-        return OperationData(Instruction::ICmp, RD::RK_IntegerMinMax,
-                             RD::MRK_UIntMin);
+        return OperationData(Instruction::ICmp, RecurKind::UMin);
       }
     }
     return OperationData(*I);
@@ -7171,13 +7173,13 @@ private:
     int PairwiseRdxCost;
     int SplittingRdxCost;
     switch (RdxTreeInst.getKind()) {
-    case RD::RK_IntegerAdd:
-    case RD::RK_IntegerMult:
-    case RD::RK_IntegerOr:
-    case RD::RK_IntegerAnd:
-    case RD::RK_IntegerXor:
-    case RD::RK_FloatAdd:
-    case RD::RK_FloatMult:
+    case RecurKind::Add:
+    case RecurKind::Mul:
+    case RecurKind::Or:
+    case RecurKind::And:
+    case RecurKind::Xor:
+    case RecurKind::FAdd:
+    case RecurKind::FMul:
       PairwiseRdxCost =
           TTI->getArithmeticReductionCost(RdxTreeInst.getOpcode(), VecTy,
                                           /*IsPairwiseForm=*/true);
@@ -7185,10 +7187,13 @@ private:
           TTI->getArithmeticReductionCost(RdxTreeInst.getOpcode(), VecTy,
                                           /*IsPairwiseForm=*/false);
       break;
-    case RD::RK_IntegerMinMax: {
+    case RecurKind::SMax:
+    case RecurKind::SMin:
+    case RecurKind::UMax:
+    case RecurKind::UMin: {
       auto *VecCondTy = cast<VectorType>(CmpInst::makeCmpResultType(VecTy));
-      RD::MinMaxRecurrenceKind MMKind = RdxTreeInst.getMinMaxKind();
-      bool IsUnsigned = MMKind == RD::MRK_UIntMax || MMKind == RD::MRK_UIntMin;
+      RecurKind Kind = RdxTreeInst.getKind();
+      bool IsUnsigned = Kind == RecurKind::UMax || Kind == RecurKind::UMin;
       PairwiseRdxCost =
           TTI->getMinMaxReductionCost(VecTy, VecCondTy,
                                       /*IsPairwiseForm=*/true, IsUnsigned);
@@ -7206,17 +7211,20 @@ private:
 
     int ScalarReduxCost = 0;
     switch (RdxTreeInst.getKind()) {
-    case RD::RK_IntegerAdd:
-    case RD::RK_IntegerMult:
-    case RD::RK_IntegerOr:
-    case RD::RK_IntegerAnd:
-    case RD::RK_IntegerXor:
-    case RD::RK_FloatAdd:
-    case RD::RK_FloatMult:
+    case RecurKind::Add:
+    case RecurKind::Mul:
+    case RecurKind::Or:
+    case RecurKind::And:
+    case RecurKind::Xor:
+    case RecurKind::FAdd:
+    case RecurKind::FMul:
       ScalarReduxCost =
           TTI->getArithmeticInstrCost(RdxTreeInst.getOpcode(), ScalarTy);
       break;
-    case RD::RK_IntegerMinMax:
+    case RecurKind::SMax:
+    case RecurKind::SMin:
+    case RecurKind::UMax:
+    case RecurKind::UMin:
       ScalarReduxCost =
           TTI->getCmpSelInstrCost(RdxTreeInst.getOpcode(), ScalarTy) +
           TTI->getCmpSelInstrCost(Instruction::Select, ScalarTy,
@@ -7249,7 +7257,7 @@ private:
       assert(Builder.getFastMathFlags().isFast() && "Expected 'fast' FMF");
       return createSimpleTargetReduction(
           Builder, TTI, RdxTreeInst.getOpcode(), VectorizedValue,
-          RdxTreeInst.getMinMaxKind(), ReductionOps.back());
+          RdxTreeInst.getKind(), ReductionOps.back());
     }
 
     Value *TmpVec = VectorizedValue;
