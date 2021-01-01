@@ -1,4 +1,4 @@
-; RUN: opt -simplifycfg -S -o - < %s | FileCheck %s
+; RUN: opt -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S -o - < %s | FileCheck %s
 
 declare void @func2(i32)
 declare void @func4(i32)

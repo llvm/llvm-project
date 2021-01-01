@@ -1088,10 +1088,13 @@ bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(Instruction *TI,
       SmallSetVector<BasicBlock*, 4> FailBlocks;
       if (!SafeToMergeTerminators(TI, PTI, &FailBlocks)) {
         for (auto *Succ : FailBlocks) {
-          if (!SplitBlockPredecessors(Succ, TI->getParent(), ".fold.split"))
+          if (!SplitBlockPredecessors(Succ, TI->getParent(), ".fold.split",
+                                      DTU ? &DTU->getDomTree() : nullptr))
             return false;
         }
       }
+
+      std::vector<DominatorTree::UpdateType> Updates;
 
       // Figure out which 'cases' to copy from SI to PSI.
       std::vector<ValueEqualityComparisonCase> BBCases;
@@ -1156,6 +1159,7 @@ bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(Instruction *TI,
         // Reconstruct the new switch statement we will be building.
         if (PredDefault != BBDefault) {
           PredDefault->removePredecessor(Pred);
+          Updates.push_back({DominatorTree::Delete, Pred, PredDefault});
           PredDefault = BBDefault;
           NewSuccessors.push_back(BBDefault);
         }
@@ -1232,8 +1236,10 @@ bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(Instruction *TI,
       // Okay, at this point, we know which new successor Pred will get.  Make
       // sure we update the number of entries in the PHI nodes for these
       // successors.
-      for (BasicBlock *NewSuccessor : NewSuccessors)
+      for (BasicBlock *NewSuccessor : NewSuccessors) {
         AddPredecessorToBlock(NewSuccessor, Pred, BB);
+        Updates.push_back({DominatorTree::Insert, Pred, NewSuccessor});
+      }
 
       Builder.SetInsertPoint(PTI);
       // Convert pointer to int before we switch.
@@ -1272,9 +1278,19 @@ bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(Instruction *TI,
             InfLoopBlock = BasicBlock::Create(BB->getContext(), "infloop",
                                               BB->getParent());
             BranchInst::Create(InfLoopBlock, InfLoopBlock);
+            Updates.push_back(
+                {DominatorTree::Insert, InfLoopBlock, InfLoopBlock});
           }
           NewSI->setSuccessor(i, InfLoopBlock);
         }
+
+      if (InfLoopBlock) {
+        Updates.push_back({DominatorTree::Delete, Pred, BB});
+        Updates.push_back({DominatorTree::Insert, Pred, InfLoopBlock});
+      }
+
+      if (DTU)
+        DTU->applyUpdatesPermissive(Updates);
 
       Changed = true;
     }
