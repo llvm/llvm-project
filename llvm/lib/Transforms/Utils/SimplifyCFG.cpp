@@ -4783,15 +4783,29 @@ static bool CasesAreContiguous(SmallVectorImpl<ConstantInt *> &Cases) {
   return true;
 }
 
-static void createUnreachableSwitchDefault(SwitchInst *Switch) {
+static void createUnreachableSwitchDefault(SwitchInst *Switch,
+                                           DomTreeUpdater *DTU) {
   LLVM_DEBUG(dbgs() << "SimplifyCFG: switch default is dead.\n");
+  auto *BB = Switch->getParent();
   BasicBlock *NewDefaultBlock =
-     SplitBlockPredecessors(Switch->getDefaultDest(), Switch->getParent(), "");
+      SplitBlockPredecessors(Switch->getDefaultDest(), Switch->getParent(), "",
+                             DTU ? &DTU->getDomTree() : nullptr);
+  auto *OrigDefaultBlock = Switch->getDefaultDest();
   Switch->setDefaultDest(&*NewDefaultBlock);
-  SplitBlock(&*NewDefaultBlock, &NewDefaultBlock->front());
+  if (DTU)
+    DTU->applyUpdatesPermissive(
+        {{DominatorTree::Delete, BB, OrigDefaultBlock},
+         {DominatorTree::Insert, BB, &*NewDefaultBlock}});
+  SplitBlock(&*NewDefaultBlock, &NewDefaultBlock->front(),
+             DTU ? &DTU->getDomTree() : nullptr);
+  SmallVector<DominatorTree::UpdateType, 2> Updates;
+  for (auto *Successor : successors(NewDefaultBlock))
+    Updates.push_back({DominatorTree::Delete, NewDefaultBlock, Successor});
   auto *NewTerminator = NewDefaultBlock->getTerminator();
   new UnreachableInst(Switch->getContext(), NewTerminator);
   EraseTerminatorAndDCECond(NewTerminator);
+  if (DTU)
+    DTU->applyUpdatesPermissive(Updates);
 }
 
 /// Turn a switch with two reachable destinations into an integer range
@@ -4802,6 +4816,8 @@ bool SimplifyCFGOpt::TurnSwitchRangeIntoICmp(SwitchInst *SI,
 
   bool HasDefault =
       !isa<UnreachableInst>(SI->getDefaultDest()->getFirstNonPHIOrDbg());
+
+  auto *BB = SI->getParent();
 
   // Partition the cases into two sets with different destinations.
   BasicBlock *DestA = HasDefault ? SI->getDefaultDest() : nullptr;
@@ -4906,10 +4922,16 @@ bool SimplifyCFGOpt::TurnSwitchRangeIntoICmp(SwitchInst *SI,
   // Clean up the default block - it may have phis or other instructions before
   // the unreachable terminator.
   if (!HasDefault)
-    createUnreachableSwitchDefault(SI);
+    createUnreachableSwitchDefault(SI, DTU);
+
+  auto *UnreachableDefault = SI->getDefaultDest();
 
   // Drop the switch.
   SI->eraseFromParent();
+
+  if (!HasDefault && DTU)
+    DTU->applyUpdatesPermissive(
+        {{DominatorTree::Delete, BB, UnreachableDefault}});
 
   return true;
 }
@@ -4957,7 +4979,7 @@ static bool eliminateDeadSwitchCases(SwitchInst *SI, DomTreeUpdater *DTU,
   if (HasDefault && DeadCases.empty() &&
       NumUnknownBits < 64 /* avoid overflow */ &&
       SI->getNumCases() == (1ULL << NumUnknownBits)) {
-    createUnreachableSwitchDefault(SI);
+    createUnreachableSwitchDefault(SI, /*DTU=*/nullptr);
     return true;
   }
 
