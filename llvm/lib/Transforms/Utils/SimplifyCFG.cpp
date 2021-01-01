@@ -4052,6 +4052,8 @@ bool SimplifyCFGOpt::tryToSimplifyUncondBranchWithICmpInIt(
   ICI->replaceAllUsesWith(DefaultCst);
   ICI->eraseFromParent();
 
+  SmallVector<DominatorTree::UpdateType, 2> Updates;
+
   // Okay, the switch goes to this block on a default value.  Add an edge from
   // the switch to the merge point on the compared value.
   BasicBlock *NewBB =
@@ -4065,13 +4067,17 @@ bool SimplifyCFGOpt::tryToSimplifyUncondBranchWithICmpInIt(
       SIW.setSuccessorWeight(0, *NewW);
     }
     SIW.addCase(Cst, NewBB, NewW);
+    Updates.push_back({DominatorTree::Insert, Pred, NewBB});
   }
 
   // NewBB branches to the phi block, add the uncond branch and the phi entry.
   Builder.SetInsertPoint(NewBB);
   Builder.SetCurrentDebugLocation(SI->getDebugLoc());
   Builder.CreateBr(SuccBlock);
+  Updates.push_back({DominatorTree::Insert, NewBB, SuccBlock});
   PHIUse->addIncoming(NewCst, NewBB);
+  if (DTU)
+    DTU->applyUpdatesPermissive(Updates);
   return true;
 }
 
