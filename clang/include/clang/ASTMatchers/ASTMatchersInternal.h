@@ -1987,6 +1987,68 @@ std::shared_ptr<llvm::Regex> createAndVerifyRegex(StringRef Regex,
                                                   llvm::Regex::RegexFlags Flags,
                                                   StringRef MatcherID);
 
+template <typename F, typename Tuple, std::size_t... I>
+constexpr auto applyMatcherImpl(F &&f, Tuple &&args,
+                                std::index_sequence<I...>) {
+  return std::forward<F>(f)(std::get<I>(std::forward<Tuple>(args))...);
+}
+
+template <typename F, typename Tuple>
+constexpr auto applyMatcher(F &&f, Tuple &&args) {
+  return applyMatcherImpl(
+      std::forward<F>(f), std::forward<Tuple>(args),
+      std::make_index_sequence<
+          std::tuple_size<typename std::decay<Tuple>::type>::value>());
+}
+
+template <typename T, bool IsBaseOf, typename Head, typename Tail>
+struct GetCladeImpl {
+  using Type = Head;
+};
+template <typename T, typename Head, typename Tail>
+struct GetCladeImpl<T, false, Head, Tail>
+    : GetCladeImpl<T, std::is_base_of<typename Tail::head, T>::value,
+                   typename Tail::head, typename Tail::tail> {};
+
+template <typename T, typename... U>
+struct GetClade : GetCladeImpl<T, false, T, AllNodeBaseTypes> {};
+
+template <typename CladeType, typename... MatcherTypes>
+struct MapAnyOfMatcherImpl {
+
+  template <typename... InnerMatchers>
+  BindableMatcher<CladeType>
+  operator()(InnerMatchers &&... InnerMatcher) const {
+    // TODO: Use std::apply from c++17
+    return VariadicAllOfMatcher<CladeType>()(applyMatcher(
+        internal::VariadicOperatorMatcherFunc<
+            0, std::numeric_limits<unsigned>::max()>{
+            internal::DynTypedMatcher::VO_AnyOf},
+        applyMatcher(
+            [&](auto... Matcher) {
+              return std::make_tuple(Matcher(
+                  std::forward<decltype(InnerMatcher)>(InnerMatcher)...)...);
+            },
+            std::tuple<
+                VariadicDynCastAllOfMatcher<CladeType, MatcherTypes>...>())));
+  }
+};
+
+template <typename... MatcherTypes>
+using MapAnyOfMatcher =
+    MapAnyOfMatcherImpl<typename GetClade<MatcherTypes...>::Type,
+                        MatcherTypes...>;
+
+template <typename... MatcherTypes> struct MapAnyOfHelper {
+  using CladeType = typename GetClade<MatcherTypes...>::Type;
+
+  MapAnyOfMatcher<MatcherTypes...> with;
+
+  operator BindableMatcher<CladeType>() const { return with(); }
+
+  Matcher<CladeType> bind(StringRef ID) const { return with().bind(ID); }
+};
+
 } // namespace internal
 
 } // namespace ast_matchers
