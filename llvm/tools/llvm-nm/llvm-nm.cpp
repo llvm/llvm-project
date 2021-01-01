@@ -1095,9 +1095,8 @@ static char getSymbolNMTypeChar(IRObjectFile &Obj, basic_symbol_iterator I) {
 }
 
 static bool isObject(SymbolicFile &Obj, basic_symbol_iterator I) {
-  return !dyn_cast<ELFObjectFileBase>(&Obj)
-             ? false
-             : elf_symbol_iterator(I)->getELFType() == ELF::STT_OBJECT;
+  return isa<ELFObjectFileBase>(&Obj) &&
+         elf_symbol_iterator(I)->getELFType() == ELF::STT_OBJECT;
 }
 
 // For ELF object files, Set TypeName to the symbol typename, to be printed
