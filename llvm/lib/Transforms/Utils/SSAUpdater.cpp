@@ -282,12 +282,6 @@ public:
     PHI->addIncoming(Val, Pred);
   }
 
-  /// InstrIsPHI - Check if an instruction is a PHI.
-  ///
-  static PHINode *InstrIsPHI(Instruction *I) {
-    return dyn_cast<PHINode>(I);
-  }
-
   /// ValueIsPHI - Check if a value is a PHI.
   static PHINode *ValueIsPHI(Value *Val, SSAUpdater *Updater) {
     return dyn_cast<PHINode>(Val);
