@@ -31,10 +31,7 @@ void Object::updateSymbols() {
 }
 
 const Symbol *Object::findSymbol(size_t UniqueId) const {
-  auto It = SymbolMap.find(UniqueId);
-  if (It == SymbolMap.end())
-    return nullptr;
-  return It->second;
+  return SymbolMap.lookup(UniqueId);
 }
 
 Error Object::removeSymbols(
@@ -86,10 +83,7 @@ void Object::updateSections() {
 }
 
 const Section *Object::findSection(ssize_t UniqueId) const {
-  auto It = SectionMap.find(UniqueId);
-  if (It == SectionMap.end())
-    return nullptr;
-  return It->second;
+  return SectionMap.lookup(UniqueId);
 }
 
 void Object::removeSections(function_ref<bool(const Section &)> ToRemove) {
