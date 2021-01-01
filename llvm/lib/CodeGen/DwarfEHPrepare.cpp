@@ -44,52 +44,51 @@ STATISTIC(NumResumesLowered, "Number of resume calls lowered");
 
 namespace {
 
-  class DwarfEHPrepare : public FunctionPass {
-    // RewindFunction - _Unwind_Resume or the target equivalent.
-    FunctionCallee RewindFunction = nullptr;
+class DwarfEHPrepare : public FunctionPass {
+  // RewindFunction - _Unwind_Resume or the target equivalent.
+  FunctionCallee RewindFunction = nullptr;
 
-    CodeGenOpt::Level OptLevel;
-    DominatorTree *DT = nullptr;
-    const TargetLowering *TLI = nullptr;
+  CodeGenOpt::Level OptLevel;
+  DominatorTree *DT = nullptr;
+  const TargetLowering *TLI = nullptr;
 
-    bool InsertUnwindResumeCalls(Function &Fn);
-    Value *GetExceptionObject(ResumeInst *RI);
-    size_t
-    pruneUnreachableResumes(Function &Fn,
-                            SmallVectorImpl<ResumeInst *> &Resumes,
-                            SmallVectorImpl<LandingPadInst *> &CleanupLPads);
+  bool InsertUnwindResumeCalls(Function &Fn);
+  Value *GetExceptionObject(ResumeInst *RI);
+  size_t
+  pruneUnreachableResumes(Function &Fn, SmallVectorImpl<ResumeInst *> &Resumes,
+                          SmallVectorImpl<LandingPadInst *> &CleanupLPads);
 
-  public:
-    static char ID; // Pass identification, replacement for typeid.
+public:
+  static char ID; // Pass identification, replacement for typeid.
 
-    DwarfEHPrepare(CodeGenOpt::Level OptLevel = CodeGenOpt::Default)
+  DwarfEHPrepare(CodeGenOpt::Level OptLevel = CodeGenOpt::Default)
       : FunctionPass(ID), OptLevel(OptLevel) {}
 
-    bool runOnFunction(Function &Fn) override;
+  bool runOnFunction(Function &Fn) override;
 
-    bool doFinalization(Module &M) override {
-      RewindFunction = nullptr;
-      return false;
-    }
+  bool doFinalization(Module &M) override {
+    RewindFunction = nullptr;
+    return false;
+  }
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
 
-    StringRef getPassName() const override {
-      return "Exception handling preparation";
-    }
-  };
+  StringRef getPassName() const override {
+    return "Exception handling preparation";
+  }
+};
 
 } // end anonymous namespace
 
 char DwarfEHPrepare::ID = 0;
 
-INITIALIZE_PASS_BEGIN(DwarfEHPrepare, DEBUG_TYPE,
-                      "Prepare DWARF exceptions", false, false)
+INITIALIZE_PASS_BEGIN(DwarfEHPrepare, DEBUG_TYPE, "Prepare DWARF exceptions",
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_END(DwarfEHPrepare, DEBUG_TYPE,
-                    "Prepare DWARF exceptions", false, false)
+INITIALIZE_PASS_END(DwarfEHPrepare, DEBUG_TYPE, "Prepare DWARF exceptions",
+                    false, false)
 
 FunctionPass *llvm::createDwarfEHPass(CodeGenOpt::Level OptLevel) {
   return new DwarfEHPrepare(OptLevel);
@@ -187,8 +186,8 @@ size_t DwarfEHPrepare::pruneUnreachableResumes(
 /// InsertUnwindResumeCalls - Convert the ResumeInsts that are still present
 /// into calls to the appropriate _Unwind_Resume function.
 bool DwarfEHPrepare::InsertUnwindResumeCalls(Function &Fn) {
-  SmallVector<ResumeInst*, 16> Resumes;
-  SmallVector<LandingPadInst*, 16> CleanupLPads;
+  SmallVector<ResumeInst *, 16> Resumes;
+  SmallVector<LandingPadInst *, 16> CleanupLPads;
   for (BasicBlock &BB : Fn) {
     if (auto *RI = dyn_cast<ResumeInst>(BB.getTerminator()))
       Resumes.push_back(RI);
@@ -216,8 +215,8 @@ bool DwarfEHPrepare::InsertUnwindResumeCalls(Function &Fn) {
 
   // Find the rewind function if we didn't already.
   if (!RewindFunction) {
-    FunctionType *FTy = FunctionType::get(Type::getVoidTy(Ctx),
-                                          Type::getInt8PtrTy(Ctx), false);
+    FunctionType *FTy =
+        FunctionType::get(Type::getVoidTy(Ctx), Type::getInt8PtrTy(Ctx), false);
     const char *RewindName = TLI->getLibcallName(RTLIB::UNWIND_RESUME);
     RewindFunction = Fn.getParent()->getOrInsertFunction(RewindName, FTy);
   }
@@ -241,8 +240,8 @@ bool DwarfEHPrepare::InsertUnwindResumeCalls(Function &Fn) {
   }
 
   BasicBlock *UnwindBB = BasicBlock::Create(Ctx, "unwind_resume", &Fn);
-  PHINode *PN = PHINode::Create(Type::getInt8PtrTy(Ctx), ResumesLeft,
-                                "exn.obj", UnwindBB);
+  PHINode *PN = PHINode::Create(Type::getInt8PtrTy(Ctx), ResumesLeft, "exn.obj",
+                                UnwindBB);
 
   // Extract the exception object from the ResumeInst and add it to the PHI node
   // that feeds the _Unwind_Resume call.
@@ -270,7 +269,8 @@ bool DwarfEHPrepare::runOnFunction(Function &Fn) {
   const TargetMachine &TM =
       getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
   DT = OptLevel != CodeGenOpt::None
-      ? &getAnalysis<DominatorTreeWrapperPass>().getDomTree() : nullptr;
+           ? &getAnalysis<DominatorTreeWrapperPass>().getDomTree()
+           : nullptr;
   TLI = TM.getSubtargetImpl(Fn)->getTargetLowering();
   bool Changed = InsertUnwindResumeCalls(Fn);
   DT = nullptr;
