@@ -3121,6 +3121,8 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
         assert(PBI_C->getType()->isIntegerTy(1));
         Instruction *MergedCond = nullptr;
         if (PBI->getSuccessor(0) == UniqueSucc) {
+          Updates.push_back(
+              {DominatorTree::Delete, PredBlock, PBI->getSuccessor(1)});
           // Create (PBI_Cond and PBI_C) or (!PBI_Cond and BI_Value)
           // PBI_C is true: PBI_Cond or (!PBI_Cond and BI_Value)
           //       is false: !PBI_Cond and BI_Value
@@ -3133,6 +3135,9 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
             MergedCond = cast<Instruction>(Builder.CreateBinOp(
                 Instruction::Or, PBI->getCondition(), MergedCond, "or.cond"));
         } else {
+          assert(PBI->getSuccessor(1) == UniqueSucc && "Unexpected branch");
+          Updates.push_back(
+              {DominatorTree::Delete, PredBlock, PBI->getSuccessor(0)});
           // Create (PBI_Cond and BI_Value) or (!PBI_Cond and PBI_C)
           // PBI_C is true: (PBI_Cond and BI_Value) or (!PBI_Cond)
           //       is false: PBI_Cond and BI_Value
