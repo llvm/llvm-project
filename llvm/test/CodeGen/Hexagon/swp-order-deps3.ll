@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 < %s
+; RUN: llc -march=hexagon -O2 -simplifycfg-require-and-preserve-domtree=0 < %s
 ; REQUIRES: asserts
 
 ; Function Attrs: noinline nounwind ssp
