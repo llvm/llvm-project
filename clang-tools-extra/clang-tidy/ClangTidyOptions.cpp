@@ -392,7 +392,7 @@ parseConfiguration(llvm::MemoryBufferRef Config) {
 
 static void diagHandlerImpl(const llvm::SMDiagnostic &Diag, void *Ctx) {
   (*reinterpret_cast<DiagCallback *>(Ctx))(Diag);
-};
+}
 
 llvm::ErrorOr<ClangTidyOptions>
 parseConfigurationWithDiags(llvm::MemoryBufferRef Config,
