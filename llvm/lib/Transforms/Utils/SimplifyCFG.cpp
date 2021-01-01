@@ -6563,14 +6563,16 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I) {
 
 /// If BB has an incoming value that will always trigger undefined behavior
 /// (eg. null pointer dereference), remove the branch leading here.
-static bool removeUndefIntroducingPredecessor(BasicBlock *BB) {
+static bool removeUndefIntroducingPredecessor(BasicBlock *BB,
+                                              DomTreeUpdater *DTU) {
   for (PHINode &PHI : BB->phis())
     for (unsigned i = 0, e = PHI.getNumIncomingValues(); i != e; ++i)
       if (passingValueIsAlwaysUndefined(PHI.getIncomingValue(i), &PHI)) {
-        Instruction *T = PHI.getIncomingBlock(i)->getTerminator();
+        BasicBlock *Predecessor = PHI.getIncomingBlock(i);
+        Instruction *T = Predecessor->getTerminator();
         IRBuilder<> Builder(T);
         if (BranchInst *BI = dyn_cast<BranchInst>(T)) {
-          BB->removePredecessor(PHI.getIncomingBlock(i));
+          BB->removePredecessor(Predecessor);
           // Turn uncoditional branches into unreachables and remove the dead
           // destination from conditional branches.
           if (BI->isUnconditional())
@@ -6579,6 +6581,9 @@ static bool removeUndefIntroducingPredecessor(BasicBlock *BB) {
             Builder.CreateBr(BI->getSuccessor(0) == BB ? BI->getSuccessor(1)
                                                        : BI->getSuccessor(0));
           BI->eraseFromParent();
+          if (DTU)
+            DTU->applyUpdatesPermissive(
+                {{DominatorTree::Delete, Predecessor, BB}});
           return true;
         }
         // TODO: SwitchInst.
@@ -6611,7 +6616,7 @@ bool SimplifyCFGOpt::simplifyOnceImpl(BasicBlock *BB) {
   Changed |= EliminateDuplicatePHINodes(BB);
 
   // Check for and remove branches that will always cause undefined behavior.
-  Changed |= removeUndefIntroducingPredecessor(BB);
+  Changed |= removeUndefIntroducingPredecessor(BB, DTU);
 
   // Merge basic blocks into their predecessor if there is only one distinct
   // pred, and if there is only one distinct successor of the predecessor, and
