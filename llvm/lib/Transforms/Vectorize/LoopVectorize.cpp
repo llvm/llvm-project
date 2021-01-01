@@ -4152,11 +4152,9 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
          "Unable to find the reduction variable");
   RecurrenceDescriptor RdxDesc = Legal->getReductionVars()[Phi];
 
-  RecurrenceDescriptor::RecurrenceKind RK = RdxDesc.getRecurrenceKind();
+  RecurKind RK = RdxDesc.getRecurrenceKind();
   TrackingVH<Value> ReductionStartValue = RdxDesc.getRecurrenceStartValue();
   Instruction *LoopExitInst = RdxDesc.getLoopExitInstr();
-  RecurrenceDescriptor::MinMaxRecurrenceKind MinMaxKind =
-    RdxDesc.getMinMaxRecurrenceKind();
   setDebugLocFromInst(Builder, ReductionStartValue);
   bool IsInLoopReductionPhi = Cost->isInLoopReduction(Phi);
 
@@ -4173,8 +4171,7 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
   // one for multiplication, -1 for And.
   Value *Identity;
   Value *VectorStart;
-  if (RK == RecurrenceDescriptor::RK_IntegerMinMax ||
-      RK == RecurrenceDescriptor::RK_FloatMinMax) {
+  if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RK)) {
     // MinMax reduction have the start value as their identify.
     if (VF.isScalar() || IsInLoopReductionPhi) {
       VectorStart = Identity = ReductionStartValue;
@@ -4185,7 +4182,7 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
   } else {
     // Handle other reduction kinds:
     Constant *Iden = RecurrenceDescriptor::getRecurrenceIdentity(
-        RK, MinMaxKind, VecTy->getScalarType());
+        RK, VecTy->getScalarType());
     if (VF.isScalar() || IsInLoopReductionPhi) {
       Identity = Iden;
       // This vector is the Identity vector where the first element is the
@@ -4318,8 +4315,7 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
                               ReducedPartRdx, "bin.rdx"),
           RdxDesc.getFastMathFlags());
     else
-      ReducedPartRdx = createMinMaxOp(Builder, MinMaxKind, ReducedPartRdx,
-                                      RdxPart);
+      ReducedPartRdx = createMinMaxOp(Builder, RK, ReducedPartRdx, RdxPart);
   }
 
   // Create the reduction after the loop. Note that inloop reductions create the
@@ -4372,9 +4368,8 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
 
 void InnerLoopVectorizer::clearReductionWrapFlags(
     RecurrenceDescriptor &RdxDesc) {
-  RecurrenceDescriptor::RecurrenceKind RK = RdxDesc.getRecurrenceKind();
-  if (RK != RecurrenceDescriptor::RK_IntegerAdd &&
-      RK != RecurrenceDescriptor::RK_IntegerMult)
+  RecurKind RK = RdxDesc.getRecurrenceKind();
+  if (RK != RecurKind::Add && RK != RecurKind::Mul)
     return;
 
   Instruction *LoopExitInstr = RdxDesc.getLoopExitInstr();
@@ -8395,8 +8390,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
   }
   for (auto &Reduction : CM.getInLoopReductionChains()) {
     PHINode *Phi = Reduction.first;
-    RecurrenceDescriptor::RecurrenceKind Kind =
-        Legal->getReductionVars()[Phi].getRecurrenceKind();
+    RecurKind Kind = Legal->getReductionVars()[Phi].getRecurrenceKind();
     const SmallVector<Instruction *, 4> &ReductionOperations = Reduction.second;
 
     RecipeBuilder.recordRecipeOf(Phi);
@@ -8404,10 +8398,8 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
       RecipeBuilder.recordRecipeOf(R);
       // For min/max reducitons, where we have a pair of icmp/select, we also
       // need to record the ICmp recipe, so it can be removed later.
-      if (Kind == RecurrenceDescriptor::RK_IntegerMinMax ||
-          Kind == RecurrenceDescriptor::RK_FloatMinMax) {
+      if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind))
         RecipeBuilder.recordRecipeOf(cast<Instruction>(R->getOperand(0)));
-      }
     }
   }
 
@@ -8621,12 +8613,11 @@ void LoopVectorizationPlanner::adjustRecipesForInLoopReductions(
     Instruction *Chain = Phi;
     for (Instruction *R : ReductionOperations) {
       VPRecipeBase *WidenRecipe = RecipeBuilder.getRecipe(R);
-      RecurrenceDescriptor::RecurrenceKind Kind = RdxDesc.getRecurrenceKind();
+      RecurKind Kind = RdxDesc.getRecurrenceKind();
 
       VPValue *ChainOp = Plan->getVPValue(Chain);
       unsigned FirstOpId;
-      if (Kind == RecurrenceDescriptor::RK_IntegerMinMax ||
-          Kind == RecurrenceDescriptor::RK_FloatMinMax) {
+      if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind)) {
         assert(isa<VPWidenSelectRecipe>(WidenRecipe) &&
                "Expected to replace a VPWidenSelectSC");
         FirstOpId = 1;
@@ -8651,8 +8642,7 @@ void LoopVectorizationPlanner::adjustRecipesForInLoopReductions(
       WidenRecipe->getVPValue()->replaceAllUsesWith(RedRecipe);
       WidenRecipe->eraseFromParent();
 
-      if (Kind == RecurrenceDescriptor::RK_IntegerMinMax ||
-          Kind == RecurrenceDescriptor::RK_FloatMinMax) {
+      if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind)) {
         VPRecipeBase *CompareRecipe =
             RecipeBuilder.getRecipe(cast<Instruction>(R->getOperand(0)));
         assert(isa<VPWidenRecipe>(CompareRecipe) &&
@@ -8769,13 +8759,13 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
 void VPReductionRecipe::execute(VPTransformState &State) {
   assert(!State.Instance && "Reduction being replicated.");
   for (unsigned Part = 0; Part < State.UF; ++Part) {
-    RecurrenceDescriptor::RecurrenceKind Kind = RdxDesc->getRecurrenceKind();
+    RecurKind Kind = RdxDesc->getRecurrenceKind();
     Value *NewVecOp = State.get(getVecOp(), Part);
     if (VPValue *Cond = getCondOp()) {
       Value *NewCond = State.get(Cond, Part);
       VectorType *VecTy = cast<VectorType>(NewVecOp->getType());
       Constant *Iden = RecurrenceDescriptor::getRecurrenceIdentity(
-          Kind, RdxDesc->getMinMaxRecurrenceKind(), VecTy->getElementType());
+          Kind, VecTy->getElementType());
       Constant *IdenVec =
           ConstantVector::getSplat(VecTy->getElementCount(), Iden);
       Value *Select = State.Builder.CreateSelect(NewCond, NewVecOp, IdenVec);
@@ -8785,10 +8775,9 @@ void VPReductionRecipe::execute(VPTransformState &State) {
         createTargetReduction(State.Builder, TTI, *RdxDesc, NewVecOp);
     Value *PrevInChain = State.get(getChainOp(), Part);
     Value *NextInChain;
-    if (Kind == RecurrenceDescriptor::RK_IntegerMinMax ||
-        Kind == RecurrenceDescriptor::RK_FloatMinMax) {
+    if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind)) {
       NextInChain =
-          createMinMaxOp(State.Builder, RdxDesc->getMinMaxRecurrenceKind(),
+          createMinMaxOp(State.Builder, RdxDesc->getRecurrenceKind(),
                          NewRed, PrevInChain);
     } else {
       NextInChain = State.Builder.CreateBinOp(
