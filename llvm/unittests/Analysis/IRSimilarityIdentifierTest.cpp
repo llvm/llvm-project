@@ -929,14 +929,13 @@ TEST(IRInstructionMapper, GetElementPtrDifferentInBounds) {
   ASSERT_NE(UnsignedVec[0], UnsignedVec[1]);
 }
 
-// Checks that a call instruction is mapped to be illegal.  We have to perform
-// extra checks to ensure that both the name and function type are the same.
-TEST(IRInstructionMapper, CallIllegal) {
+// Checks that indirect call instructions are mapped to be illegal since we
+// cannot guarantee the same function in two different cases.
+TEST(IRInstructionMapper, CallsIllegalIndirect) {
   StringRef ModuleString = R"(
-                          declare i32 @f1(i32, i32)
-                          define i32 @f(i32 %a, i32 %b) {
+                          define i32 @f(void()* %func) {
                           bb0:
-                             %0 = call i32 @f1(i32 %a, i32 %b)
+                             call void %func()
                              ret i32 0
                           })";
   LLVMContext Context;
@@ -952,6 +951,199 @@ TEST(IRInstructionMapper, CallIllegal) {
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
   ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(0));
+}
+
+// Checks that a call instruction is mapped to be legal.  Here we check that
+// a call with the same name, and same types are mapped to the same
+// value.
+TEST(IRInstructionMapper, CallsSameTypeSameName) {
+  StringRef ModuleString = R"(
+                          declare i32 @f1(i32, i32)
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = call i32 @f1(i32 %a, i32 %b)
+                             %1 = call i32 @f1(i32 %a, i32 %b)
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(3));
+  ASSERT_EQ(UnsignedVec[0], UnsignedVec[1]);
+}
+
+// Here we check that a calls with different names, but the same arguments types
+// are mapped to different value.
+TEST(IRInstructionMapper, CallsSameArgTypeDifferentName) {
+  StringRef ModuleString = R"(
+                          declare i32 @f1(i32, i32)
+                          declare i32 @f2(i32, i32)
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = call i32 @f1(i32 %a, i32 %b)
+                             %1 = call i32 @f2(i32 %a, i32 %b)
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(3));
+  ASSERT_NE(UnsignedVec[0], UnsignedVec[1]);
+}
+
+// Here we check that a calls with different names, and different arguments
+// types are mapped to different value.
+TEST(IRInstructionMapper, CallsDifferentArgTypeDifferentName) {
+  StringRef ModuleString = R"(
+                          declare i32 @f1(i32, i32)
+                          declare i32 @f2(i32)
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = call i32 @f1(i32 %a, i32 %b)
+                             %1 = call i32 @f2(i32 %a)
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(3));
+  ASSERT_NE(UnsignedVec[0], UnsignedVec[1]);
+}
+
+// Here we check that calls with different names, and different return
+// types are mapped to different value.
+TEST(IRInstructionMapper, CallsDifferentReturnTypeDifferentName) {
+  StringRef ModuleString = R"(
+                          declare i64 @f1(i32, i32)
+                          declare i32 @f2(i32, i32)
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = call i64 @f1(i32 %a, i32 %b)
+                             %1 = call i32 @f2(i32 %a, i32 %b)
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(3));
+  ASSERT_NE(UnsignedVec[0], UnsignedVec[1]);
+}
+
+// Here we check that calls with the same name, types, and parameters map to the
+// same unsigned integer.
+TEST(IRInstructionMapper, CallsSameParameters) {
+  StringRef ModuleString = R"(
+                          declare i32 @f1(i32, i32)
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = tail call fastcc i32 @f1(i32 %a, i32 %b)
+                             %1 = tail call fastcc i32 @f1(i32 %a, i32 %b)
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(3));
+  ASSERT_EQ(UnsignedVec[0], UnsignedVec[1]);
+}
+
+// Here we check that calls with different tail call settings are mapped to
+// different values.
+TEST(IRInstructionMapper, CallsDifferentTails) {
+  StringRef ModuleString = R"(
+                          declare i32 @f1(i32, i32)
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = tail call i32 @f1(i32 %a, i32 %b)
+                             %1 = call i32 @f1(i32 %a, i32 %b)
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(3));
+  ASSERT_NE(UnsignedVec[0], UnsignedVec[1]);
+}
+
+// Here we check that calls with different calling convention settings are
+// mapped to different values.
+TEST(IRInstructionMapper, CallsDifferentCallingConventions) {
+  StringRef ModuleString = R"(
+                          declare i32 @f1(i32, i32)
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = call fastcc i32 @f1(i32 %a, i32 %b)
+                             %1 = call i32 @f1(i32 %a, i32 %b)
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(3));
+  ASSERT_NE(UnsignedVec[0], UnsignedVec[1]);
 }
 
 // Checks that an invoke instruction is mapped to be illegal. Invoke
@@ -1378,8 +1570,8 @@ TEST(IRInstructionMapper, RepeatedIllegalLength) {
                           bb0:
                              %0 = add i32 %a, %b
                              %1 = mul i32 %a, %b
-                             %2 = call i32 @f(i32 %a, i32 %b)
-                             %3 = call i32 @f(i32 %a, i32 %b)
+                             %2 = alloca i32
+                             %3 = alloca i32
                              %4 = add i32 %a, %b
                              %5 = mul i32 %a, %b
                              ret i32 0

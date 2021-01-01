@@ -183,6 +183,12 @@ struct IRInstructionData : ilist_node<IRInstructionData> {
           llvm::hash_value(ID.Inst->getType()),
           llvm::hash_value(ID.getPredicate()),
           llvm::hash_combine_range(OperTypes.begin(), OperTypes.end()));
+    else if (CallInst *CI = dyn_cast<CallInst>(ID.Inst))
+      return llvm::hash_combine(
+          llvm::hash_value(ID.Inst->getOpcode()),
+          llvm::hash_value(ID.Inst->getType()),
+          llvm::hash_value(CI->getCalledFunction()->getName().str()),
+          llvm::hash_combine_range(OperTypes.begin(), OperTypes.end()));
     return llvm::hash_combine(
         llvm::hash_value(ID.Inst->getOpcode()),
         llvm::hash_value(ID.Inst->getType()),
@@ -398,8 +404,14 @@ struct IRInstructionMapper {
     InstrType visitDbgInfoIntrinsic(DbgInfoIntrinsic &DII) { return Invisible; }
     // TODO: Handle specific intrinsics.
     InstrType visitIntrinsicInst(IntrinsicInst &II) { return Illegal; }
-    // TODO: Handle CallInsts.
-    InstrType visitCallInst(CallInst &CI) { return Illegal; }
+    // We only allow call instructions where the function has a name and
+    // is not an indirect call.
+    InstrType visitCallInst(CallInst &CI) {
+      Function *F = CI.getCalledFunction();
+      if (!F || CI.isIndirectCall() || !F->hasName())
+        return Illegal;
+      return Legal;
+    }
     // TODO: We do not current handle similarity that changes the control flow.
     InstrType visitInvokeInst(InvokeInst &II) { return Illegal; }
     // TODO: We do not current handle similarity that changes the control flow.

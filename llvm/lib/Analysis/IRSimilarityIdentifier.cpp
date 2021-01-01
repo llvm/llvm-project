@@ -75,6 +75,12 @@ CmpInst::Predicate IRInstructionData::getPredicate() const {
   return cast<CmpInst>(Inst)->getPredicate();
 }
 
+static StringRef getCalledFunctionName(CallInst &CI) {
+  assert(CI.getCalledFunction() != nullptr && "Called Function is nullptr?");
+
+  return CI.getCalledFunction()->getName();
+}
+
 bool IRSimilarity::isClose(const IRInstructionData &A,
                            const IRInstructionData &B) {
 
@@ -127,6 +133,16 @@ bool IRSimilarity::isClose(const IRInstructionData &A,
                        [](std::tuple<llvm::Use &, llvm::Use &> R) {
                          return std::get<0>(R) == std::get<1>(R);
                        });
+  }
+
+  // If the instructions are functions, we make sure that the function name is
+  // the same.  We already know that the types are since is isSameOperationAs is
+  // true.
+  if (isa<CallInst>(A.Inst) && isa<CallInst>(B.Inst)) {
+    CallInst *CIA = cast<CallInst>(A.Inst);
+    CallInst *CIB = cast<CallInst>(B.Inst);
+    if (getCalledFunctionName(*CIA).compare(getCalledFunctionName(*CIB)) != 0)
+      return false;
   }
 
   return true;
