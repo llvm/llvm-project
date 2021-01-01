@@ -47,6 +47,17 @@ define %struct.A* @test4(%struct.A* %b) {
   %b_ptr = ptrtoint %struct.A* %b to i64
   %sub = sub i64 0, %b_ptr
   %sdiv = sdiv exact i64 %sub, 7
+  %gep = getelementptr %struct.A, %struct.A* %b, i64 %sdiv
+  ret %struct.A* %gep
+}
+
+define %struct.A* @test4_inbounds(%struct.A* %b) {
+; CHECK-LABEL: @test4_inbounds(
+; CHECK-NEXT:    ret %struct.A* null
+;
+  %b_ptr = ptrtoint %struct.A* %b to i64
+  %sub = sub i64 0, %b_ptr
+  %sdiv = sdiv exact i64 %sub, 7
   %gep = getelementptr inbounds %struct.A, %struct.A* %b, i64 %sdiv
   ret %struct.A* %gep
 }
@@ -57,12 +68,33 @@ define i8* @test5(i8* %b) {
 ;
   %b_ptr = ptrtoint i8* %b to i64
   %sub = sub i64 0, %b_ptr
+  %gep = getelementptr i8, i8* %b, i64 %sub
+  ret i8* %gep
+}
+
+define i8* @test5_inbounds(i8* %b) {
+; CHECK-LABEL: @test5_inbounds(
+; CHECK-NEXT:    ret i8* null
+;
+  %b_ptr = ptrtoint i8* %b to i64
+  %sub = sub i64 0, %b_ptr
   %gep = getelementptr inbounds i8, i8* %b, i64 %sub
   ret i8* %gep
 }
 
 define i64* @test6(i64* %b) {
 ; CHECK-LABEL: @test6(
+; CHECK-NEXT:    ret i64* null
+;
+  %b_ptr = ptrtoint i64* %b to i64
+  %sub = sub i64 0, %b_ptr
+  %ashr = ashr exact i64 %sub, 3
+  %gep = getelementptr i64, i64* %b, i64 %ashr
+  ret i64* %gep
+}
+
+define i64* @test6_inbounds(i64* %b) {
+; CHECK-LABEL: @test6_inbounds(
 ; CHECK-NEXT:    ret i64* null
 ;
   %b_ptr = ptrtoint i64* %b to i64
