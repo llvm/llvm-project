@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=0 < %s | FileCheck -enable-var-scope %s
+; RUN: llc -march=amdgcn -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -enable-var-scope %s
 
 ; Although it's modeled without any control flow in order to get better code
 ; out of the structurizer, @llvm.amdgcn.kill actually ends the thread that calls

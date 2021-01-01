@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=0 < %s | FileCheck %s
+; RUN: llc -march=amdgcn -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}test_kill_depth_0_imm_pos:
 ; CHECK-NEXT: ; %bb.0:
