@@ -136,9 +136,10 @@ public:
 
   /// Returns a struct describing if the instruction is a
   /// Select(ICmp(X, Y), X, Y) instruction pattern corresponding to a min(X, Y)
-  /// or max(X, Y). \p Prev is specifies the description of an already processed
+  /// or max(X, Y). \p Prev specifies the description of an already processed
   /// select instruction, so its corresponding cmp can be matched to it.
-  static InstDesc isMinMaxSelectCmpPattern(Instruction *I, const InstDesc &Prev);
+  static InstDesc isMinMaxSelectCmpPattern(Instruction *I,
+                                           const InstDesc &Prev);
 
   /// Returns a struct describing if the instruction is a
   /// Select(FCmp(X, Y), (Z = X op PHINode), PHINode) instruction pattern.
