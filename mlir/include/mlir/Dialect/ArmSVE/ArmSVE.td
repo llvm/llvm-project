@@ -113,7 +113,7 @@ class IsScalableVectorOfLengthPred<list<int> allowedLengths> :
 
 class ScalableVectorOfLength<list<int> allowedLengths> : Type<
   IsScalableVectorOfLengthPred<allowedLengths>,
-  " of length " # StrJoinInt<allowedLengths, "/">.result>;
+  " of length " # !interleave(allowedLengths, "/")>;
 
 class ScalableVectorOfLengthAndType<list<int> allowedLengths,
                                     list<Type> allowedTypes> : Type<

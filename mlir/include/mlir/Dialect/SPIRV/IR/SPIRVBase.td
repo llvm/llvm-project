@@ -176,8 +176,8 @@ class Extension<list<StrEnumAttrCase> extensions> : Availability {
   // Pack all extensions as a static array and get its reference.
   let instancePreparation = !if(!empty(extensions), "",
     "static const ::mlir::spirv::Extension exts[] = {" #
-    StrJoin<!foreach(ext, extensions,
-      "::mlir::spirv::Extension::" # ext.symbol)>.result #
+    !interleave(!foreach(ext, extensions,
+                         "::mlir::spirv::Extension::" # ext.symbol), ", ") #
     "}; " #
     // The following manual ArrayRef constructor call is to satisfy GCC 5.
     "ArrayRef<::mlir::spirv::Extension> " #
@@ -217,8 +217,8 @@ class Capability<list<I32EnumAttrCase> capabilities> : Availability {
   // Pack all capabilities as a static array and get its reference.
   let instancePreparation = !if(!empty(capabilities), "",
     "static const ::mlir::spirv::Capability caps[] = {" #
-    StrJoin<!foreach(cap, capabilities,
-      "::mlir::spirv::Capability::" # cap.symbol)>.result #
+    !interleave(!foreach(cap, capabilities,
+                         "::mlir::spirv::Capability::" # cap.symbol), ", ") #
     "}; " #
     // The following manual ArrayRef constructor call is to satisfy GCC 5.
     "ArrayRef<::mlir::spirv::Capability> " #
@@ -3025,7 +3025,7 @@ class IOrUI<int width>
 
 class SignlessOrUnsignedIntOfWidths<list<int> widths> :
     AnyTypeOf<!foreach(w, widths, IOrUI<w>),
-              StrJoinInt<widths, "/">.result # "-bit signless/unsigned integer">;
+              !interleave(widths, "/") # "-bit signless/unsigned integer">;
 
 def SPV_IsArrayType : CPred<"$_self.isa<::mlir::spirv::ArrayType>()">;
 def SPV_IsCooperativeMatrixType :

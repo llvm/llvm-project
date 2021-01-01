@@ -922,7 +922,7 @@ multiclass MVEPredicatedM<list<LLVMType> rets, list<LLVMType> params,
                           list<IntrinsicProperty> props = [IntrNoMem]> {
   def "": Intrinsic<rets, params, props>;
   def _predicated: Intrinsic<rets, params # [pred,
-      !if(!eq(!cast<string>(rets[0]), "llvm_anyvector_ty"),
+      !if(!eq(rets[0], llvm_anyvector_ty),
           LLVMMatchType<0>, rets[0])], props>;
 }
 
