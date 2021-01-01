@@ -3530,7 +3530,8 @@ static bool mergeConditionalStores(BranchInst *PBI, BranchInst *QBI,
 /// If the previous block ended with a widenable branch, determine if reusing
 /// the target block is profitable and legal.  This will have the effect of
 /// "widening" PBI, but doesn't require us to reason about hosting safety.
-static bool tryWidenCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI) {
+static bool tryWidenCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
+                                           DomTreeUpdater *DTU) {
   // TODO: This can be generalized in two important ways:
   // 1) We can allow phi nodes in IfFalseBB and simply reuse all the input
   //    values from the PBI edge.
@@ -3553,15 +3554,25 @@ static bool tryWidenCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI) {
   if (BI->getSuccessor(1) != IfFalseBB && // no inf looping
       BI->getSuccessor(1)->getTerminatingDeoptimizeCall() && // profitability
       NoSideEffects(*BI->getParent())) {
-    BI->getSuccessor(1)->removePredecessor(BI->getParent());
+    auto *OldSuccessor = BI->getSuccessor(1);
+    OldSuccessor->removePredecessor(BI->getParent());
     BI->setSuccessor(1, IfFalseBB);
+    if (DTU)
+      DTU->applyUpdatesPermissive(
+          {{DominatorTree::Delete, BI->getParent(), OldSuccessor},
+           {DominatorTree::Insert, BI->getParent(), IfFalseBB}});
     return true;
   }
   if (BI->getSuccessor(0) != IfFalseBB && // no inf looping
       BI->getSuccessor(0)->getTerminatingDeoptimizeCall() && // profitability
       NoSideEffects(*BI->getParent())) {
-    BI->getSuccessor(0)->removePredecessor(BI->getParent());
+    auto *OldSuccessor = BI->getSuccessor(0);
+    OldSuccessor->removePredecessor(BI->getParent());
     BI->setSuccessor(0, IfFalseBB);
+    if (DTU)
+      DTU->applyUpdatesPermissive(
+          {{DominatorTree::Delete, BI->getParent(), OldSuccessor},
+           {DominatorTree::Insert, BI->getParent(), IfFalseBB}});
     return true;
   }
   return false;
@@ -3626,7 +3637,7 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
   // If the previous block ended with a widenable branch, determine if reusing
   // the target block is profitable and legal.  This will have the effect of
   // "widening" PBI, but doesn't require us to reason about hosting safety.
-  if (tryWidenCondBranchToCondBranch(PBI, BI))
+  if (tryWidenCondBranchToCondBranch(PBI, BI, DTU))
     return true;
 
   if (auto *CE = dyn_cast<ConstantExpr>(BI->getCondition()))
