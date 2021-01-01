@@ -37,6 +37,7 @@ def ShapeDialect : Dialect {
   let cppNamespace = "::mlir::shape";
 
   let hasConstantMaterializer = 1;
+  let hasOperationAttrVerify = 1;
 }
 
 def Shape_ShapeType : DialectType<ShapeDialect,
