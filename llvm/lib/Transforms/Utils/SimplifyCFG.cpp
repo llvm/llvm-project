@@ -4990,7 +4990,7 @@ static bool eliminateDeadSwitchCases(SwitchInst *SI, DomTreeUpdater *DTU,
   if (HasDefault && DeadCases.empty() &&
       NumUnknownBits < 64 /* avoid overflow */ &&
       SI->getNumCases() == (1ULL << NumUnknownBits)) {
-    createUnreachableSwitchDefault(SI, /*DTU=*/nullptr);
+    createUnreachableSwitchDefault(SI, DTU);
     return true;
   }
 
