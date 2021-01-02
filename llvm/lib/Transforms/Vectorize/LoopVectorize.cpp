@@ -3012,7 +3012,7 @@ Value *InnerLoopVectorizer::getOrCreateVectorTripCount(Loop *L) {
   // does not evenly divide the trip count, no adjustment is necessary since
   // there will already be scalar iterations. Note that the minimum iterations
   // check ensures that N >= Step. The cases are:
-  // 1) If there is a non-reversed interleaved group that may speculatively 
+  // 1) If there is a non-reversed interleaved group that may speculatively
   //    access memory out-of-bounds.
   // 2) If any instruction may follow a conditionally taken exit. That is, if
   //    the loop contains multiple exiting blocks, or a single exiting block
@@ -5304,11 +5304,11 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
   auto isVectorizedMemAccessUse = [&](Instruction *I, Value *Ptr) -> bool {
     return getLoadStorePointerOperand(I) == Ptr && isUniformDecision(I, VF);
   };
-  
+
   // Holds a list of values which are known to have at least one uniform use.
   // Note that there may be other uses which aren't uniform.  A "uniform use"
   // here is something which only demands lane 0 of the unrolled iterations;
-  // it does not imply that all lanes produce the same value (e.g. this is not 
+  // it does not imply that all lanes produce the same value (e.g. this is not
   // the usual meaning of uniform)
   SmallPtrSet<Value *, 8> HasUniformUse;
 
@@ -5515,7 +5515,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   }
 
   // Now try the tail folding
-  
+
   // Invalidate interleave groups that require an epilogue if we can't mask
   // the interleave-group.
   if (!useMaskedInterleavedAccesses(TTI)) {
@@ -5568,7 +5568,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     LLVM_DEBUG(dbgs() << "LV: Can't fold tail by masking: don't vectorize\n");
     return None;
   }
-  
+
   if (TC == 0) {
     reportVectorizationFailure(
         "Unable to calculate the loop count due to complex control flow",
@@ -6276,7 +6276,7 @@ LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<ElementCount> VFs) {
           }
         }
       }
-    
+
       for (auto& pair : RegUsage) {
         if (MaxUsages[j].find(pair.first) != MaxUsages[j].end())
           MaxUsages[j][pair.first] = std::max(MaxUsages[j][pair.first], pair.second);
@@ -6294,7 +6294,7 @@ LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<ElementCount> VFs) {
 
   for (unsigned i = 0, e = VFs.size(); i < e; ++i) {
     SmallMapVector<unsigned, unsigned, 4> Invariant;
-  
+
     for (auto Inst : LoopInvariants) {
       unsigned Usage =
           VFs[i].isScalar() ? 1 : GetRegUsage(Inst->getType(), VFs[i]);
