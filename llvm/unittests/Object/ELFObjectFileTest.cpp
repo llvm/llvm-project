@@ -174,11 +174,15 @@ TEST(ELFObjectFileTest, MachineTestForPPC64) {
 }
 
 TEST(ELFObjectFileTest, MachineTestForPPC) {
-  std::array<StringRef, 4> Formats = {"elf32-powerpc", "elf32-powerpc",
+  std::array<StringRef, 4> Formats = {"elf32-powerpcle", "elf32-powerpc",
                                       "elf64-unknown", "elf64-unknown"};
+  std::array<Triple::ArchType, 4> Archs = {Triple::ppcle, Triple::ppc,
+                                           Triple::ppcle, Triple::ppc};
   size_t I = 0;
-  for (const DataForTest &D : generateData(ELF::EM_PPC))
-    checkFormatAndArch(D, Formats[I++], Triple::ppc);
+  for (const DataForTest &D : generateData(ELF::EM_PPC)) {
+    checkFormatAndArch(D, Formats[I], Archs[I]);
+    ++I;
+  }
 }
 
 TEST(ELFObjectFileTest, MachineTestForRISCV) {

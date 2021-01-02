@@ -34,24 +34,24 @@
 # RUN: llvm-readobj --file-headers %t.elf64_littleaarch64.dwo | FileCheck %s --check-prefixes=CHECK,LE,AARCH,64,SYSV
 
 # RUN: llvm-objcopy %t.o -O elf32-powerpc %t.elf32_powerpc.o --split-dwo=%t.elf32_powerpc.dwo
-# RUN: llvm-readobj --file-headers %t.elf32_powerpc.o | FileCheck %s --check-prefixes=CHECK,BE,PPC,32,SYSV
-# RUN: llvm-readobj --file-headers %t.elf32_powerpc.dwo | FileCheck %s --check-prefixes=CHECK,BE,PPC,32,SYSV
+# RUN: llvm-readobj --file-headers %t.elf32_powerpc.o | FileCheck %s --check-prefixes=CHECK,BE,PPC32,PPCBE,PPC32BE,32,SYSV
+# RUN: llvm-readobj --file-headers %t.elf32_powerpc.dwo | FileCheck %s --check-prefixes=CHECK,BE,PPC32,PPCBE,PPC32BE,32,SYSV
 
 # RUN: llvm-objcopy %t.o -O elf64-powerpc %t.elf64_powerpc.o --split-dwo=%t.elf64_powerpc.dwo
-# RUN: llvm-readobj --file-headers %t.elf64_powerpc.o | FileCheck %s --check-prefixes=CHECK,BE,PPC64BE,64,SYSV
-# RUN: llvm-readobj --file-headers %t.elf64_powerpc.dwo | FileCheck %s --check-prefixes=CHECK,BE,PPC64BE,64,SYSV
+# RUN: llvm-readobj --file-headers %t.elf64_powerpc.o | FileCheck %s --check-prefixes=CHECK,BE,PPC64,PPCBE,PPC64BE,64,SYSV
+# RUN: llvm-readobj --file-headers %t.elf64_powerpc.dwo | FileCheck %s --check-prefixes=CHECK,BE,PPC64,PPCBE,PPC64BE,64,SYSV
 
 # RUN: llvm-objcopy %t.o -O elf32-powerpcle %t.elf32_ppcle.o --split-dwo=%t.elf32_ppcle.dwo
-# RUN: llvm-readobj --file-headers %t.elf32_ppcle.o | FileCheck %s --check-prefixes=CHECK,LE,PPC,32,SYSV
-# RUN: llvm-readobj --file-headers %t.elf32_ppcle.dwo | FileCheck %s --check-prefixes=CHECK,LE,PPC,32,SYSV
+# RUN: llvm-readobj --file-headers %t.elf32_ppcle.o | FileCheck %s --check-prefixes=CHECK,LE,PPC32,PPCLE,PPC32LE,32,SYSV
+# RUN: llvm-readobj --file-headers %t.elf32_ppcle.dwo | FileCheck %s --check-prefixes=CHECK,LE,PPC32,PPCLE,PPC32LE,32,SYSV
+
+# RUN: llvm-objcopy %t.o -O elf64-powerpcle %t.elf64_ppcle.o --split-dwo=%t.elf64_ppcle.dwo
+# RUN: llvm-readobj --file-headers %t.elf64_ppcle.o | FileCheck %s --check-prefixes=CHECK,LE,PPC64,PPCLE,PPC64LE,64,SYSV
+# RUN: llvm-readobj --file-headers %t.elf64_ppcle.dwo | FileCheck %s --check-prefixes=CHECK,LE,PPC64,PPCLE,PPC64LE,64,SYSV
 
 # RUN: llvm-objcopy %t.o -O elf32-x86-64 %t.elf32_x86_64.o --split-dwo=%t.elf32_x86_64.dwo
 # RUN: llvm-readobj --file-headers %t.elf32_x86_64.o | FileCheck %s --check-prefixes=CHECK,LE,X86-64,32,SYSV
 # RUN: llvm-readobj --file-headers %t.elf32_x86_64.dwo | FileCheck %s --check-prefixes=CHECK,LE,X86-64,32,SYSV
-
-# RUN: llvm-objcopy %t.o -O elf64-powerpcle %t.elf64_ppcle.o --split-dwo=%t.elf64_ppcle.dwo
-# RUN: llvm-readobj --file-headers %t.elf64_ppcle.o | FileCheck %s --check-prefixes=CHECK,LE,PPC64LE,64,SYSV
-# RUN: llvm-readobj --file-headers %t.elf64_ppcle.dwo | FileCheck %s --check-prefixes=CHECK,LE,PPC64LE,64,SYSV
 
 # RUN: llvm-objcopy %t.o -O elf32-littleriscv %t.elf32_littleriscv.o --split-dwo=%t.elf32_littleriscv.dwo
 # RUN: llvm-readobj --file-headers %t.elf32_littleriscv.o | FileCheck %s --check-prefixes=CHECK,LE,RISCV32,32,SYSV
@@ -145,9 +145,8 @@ Symbols:
 # ARM-SAME:     littlearm
 # HEXAGON-SAME: hexagon
 # MIPS-SAME:    mips
-# PPC-SAME:     powerpc{{$}}
-# PPC64BE-SAME: powerpc{{$}}
-# PPC64LE-SAME: powerpcle{{$}}
+# PPCBE-SAME:   powerpc{{$}}
+# PPCLE-SAME:   powerpcle{{$}}
 # RISCV32-SAME: riscv{{$}}
 # RISCV64-SAME: riscv{{$}}
 # SPARC-SAME:   sparc
@@ -163,9 +162,10 @@ Symbols:
 # MIPSLE-NEXT:   Arch: mipsel{{$}}
 # MIPS64BE-NEXT: Arch: mips64{{$}}
 # MIPS64LE-NEXT: Arch: mips64el{{$}}
-# PPC-NEXT:      Arch: powerpc{{$}}
+# PPC32BE-NEXT:  Arch: powerpc{{$}}
+# PPC32LE-NEXT:  Arch: powerpcle{{$}}
 # PPC64BE-NEXT:  Arch: powerpc64{{$}}
-# PPC64LE-NEXT:  Arch: powerpc64le
+# PPC64LE-NEXT:  Arch: powerpc64le{{$}}
 # RISCV32-NEXT:  Arch: riscv32
 # RISCV64-NEXT:  Arch: riscv64
 # SPARC-NEXT:    Arch: sparc{{$}}
@@ -191,7 +191,7 @@ Symbols:
 # I386:    Machine: EM_386 (0x3)
 # IAMCU:   Machine: EM_IAMCU (0x6)
 # MIPS:    Machine: EM_MIPS (0x8)
-# PPC:     Machine: EM_PPC (0x14)
+# PPC32:   Machine: EM_PPC (0x14)
 # PPC64:   Machine: EM_PPC64 (0x15)
 # RISCV32: Machine: EM_RISCV (0xF3)
 # RISCV64: Machine: EM_RISCV (0xF3)
