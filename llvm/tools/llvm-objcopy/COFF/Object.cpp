@@ -31,10 +31,7 @@ void Object::updateSymbols() {
 }
 
 const Symbol *Object::findSymbol(size_t UniqueId) const {
-  auto It = SymbolMap.find(UniqueId);
-  if (It == SymbolMap.end())
-    return nullptr;
-  return It->second;
+  return SymbolMap.lookup(UniqueId);
 }
 
 Error Object::removeSymbols(
@@ -86,10 +83,7 @@ void Object::updateSections() {
 }
 
 const Section *Object::findSection(ssize_t UniqueId) const {
-  auto It = SectionMap.find(UniqueId);
-  if (It == SectionMap.end())
-    return nullptr;
-  return It->second;
+  return SectionMap.lookup(UniqueId);
 }
 
 void Object::removeSections(function_ref<bool(const Section &)> ToRemove) {
@@ -99,31 +93,24 @@ void Object::removeSections(function_ref<bool(const Section &)> ToRemove) {
   };
   do {
     DenseSet<ssize_t> RemovedSections;
-    Sections.erase(
-        std::remove_if(std::begin(Sections), std::end(Sections),
-                       [ToRemove, &RemovedSections](const Section &Sec) {
-                         bool Remove = ToRemove(Sec);
-                         if (Remove)
-                           RemovedSections.insert(Sec.UniqueId);
-                         return Remove;
-                       }),
-        std::end(Sections));
+    llvm::erase_if(Sections, [ToRemove, &RemovedSections](const Section &Sec) {
+      bool Remove = ToRemove(Sec);
+      if (Remove)
+        RemovedSections.insert(Sec.UniqueId);
+      return Remove;
+    });
     // Remove all symbols referring to the removed sections.
     AssociatedSections.clear();
-    Symbols.erase(
-        std::remove_if(
-            std::begin(Symbols), std::end(Symbols),
-            [&RemovedSections, &AssociatedSections](const Symbol &Sym) {
-              // If there are sections that are associative to a removed
-              // section,
-              // remove those as well as nothing will include them (and we can't
-              // leave them dangling).
-              if (RemovedSections.count(Sym.AssociativeComdatTargetSectionId) ==
-                  1)
-                AssociatedSections.insert(Sym.TargetSectionId);
-              return RemovedSections.count(Sym.TargetSectionId) == 1;
-            }),
-        std::end(Symbols));
+    llvm::erase_if(
+        Symbols, [&RemovedSections, &AssociatedSections](const Symbol &Sym) {
+          // If there are sections that are associative to a removed
+          // section,
+          // remove those as well as nothing will include them (and we can't
+          // leave them dangling).
+          if (RemovedSections.count(Sym.AssociativeComdatTargetSectionId) == 1)
+            AssociatedSections.insert(Sym.TargetSectionId);
+          return RemovedSections.count(Sym.TargetSectionId) == 1;
+        });
     ToRemove = RemoveAssociated;
   } while (!AssociatedSections.empty());
   updateSections();

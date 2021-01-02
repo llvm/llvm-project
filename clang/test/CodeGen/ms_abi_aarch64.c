@@ -4,7 +4,7 @@
 void __attribute__((ms_abi)) f1(void);
 void f2(void);
 void f3(void) {
-  // LINUX-LABEL: define void @f3()
+  // LINUX-LABEL: define{{.*}} void @f3()
   // WIN64-LABEL: define dso_local void @f3()
   f1();
   // LINUX: call win64cc void @f1()
@@ -20,7 +20,7 @@ void f3(void) {
 
 // Win64 ABI varargs
 void __attribute__((ms_abi)) f4(int a, ...) {
-  // LINUX-LABEL: define win64cc void @f4
+  // LINUX-LABEL: define{{.*}} win64cc void @f4
   // WIN64-LABEL: define dso_local void @f4
   __builtin_ms_va_list ap;
   __builtin_ms_va_start(ap, a);

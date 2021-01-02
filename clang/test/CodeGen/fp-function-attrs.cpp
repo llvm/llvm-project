@@ -7,7 +7,7 @@ float test_default(float a, float b, float c) {
   return tmp;
 }
 
-// CHECK: define float @_Z12test_defaultfff(float %a, float %b, float %c) [[FAST_ATTRS:#[0-9]+]]
+// CHECK: define{{.*}} float @_Z12test_defaultfff(float %a, float %b, float %c) [[FAST_ATTRS:#[0-9]+]]
 // CHECK: fadd fast float {{%.+}}, {{%.+}}
 // CHECK: fadd fast float {{%.+}}, {{%.+}}
 
@@ -21,7 +21,7 @@ float test_precise_on_pragma(float a, float b, float c) {
   return tmp;
 }
 
-// CHECK: define float @_Z22test_precise_on_pragmafff(float %a, float %b, float %c) [[PRECISE_ATTRS:#[0-9]+]]
+// CHECK: define{{.*}} float @_Z22test_precise_on_pragmafff(float %a, float %b, float %c) [[PRECISE_ATTRS:#[0-9]+]]
 // CHECK: fadd float {{%.+}}, {{%.+}}
 // CHECK: fadd fast float {{%.+}}, {{%.+}}
 
@@ -35,7 +35,7 @@ float test_reassociate_off_pragma(float a, float b, float c) {
   return tmp;
 }
 
-// CHECK: define float @_Z27test_reassociate_off_pragmafff(float %a, float %b, float %c) [[NOREASSOC_ATTRS:#[0-9]+]]
+// CHECK: define{{.*}} float @_Z27test_reassociate_off_pragmafff(float %a, float %b, float %c) [[NOREASSOC_ATTRS:#[0-9]+]]
 // CHECK: fadd nnan ninf nsz arcp contract afn float {{%.+}}, {{%.+}}
 // CHECK: fadd fast float {{%.+}}, {{%.+}}
 

@@ -4,9 +4,9 @@
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64"
 
-  @x = global i32 -32768, align 4
+  @x = dso_local global i32 -32768, align 4
 
-  define i32 @check_sext_not_lost(i32* %ptr) {
+  define dso_local i32 @check_sext_not_lost(i32* %ptr) {
   entry:
     %ptr.addr = alloca i32*, align 8
     store i32* %ptr, i32** %ptr.addr, align 8

@@ -9,9 +9,9 @@
 // CHECK: @cgx = external constant i32
 extern const int cgx;
 int fcgx() { return cgx;}
-// CHECK: @g1 = global i32 0, align 4
+// CHECK: @g1 ={{.*}} global i32 0, align 4
 int g1;
-// CHECK: @cg1 = constant i32 0, align 4
+// CHECK: @cg1 ={{.*}} constant i32 0, align 4
 extern const int cg1 = 0;
 
 // Regression test for a bug in lib/CodeGen/CodeGenModule.cpp which called

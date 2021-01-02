@@ -29,7 +29,7 @@ public:
   }
 };
 
-// CHECK-LABEL: define void @_Z4testv()
+// CHECK-LABEL: define{{.*}} void @_Z4testv()
 void test( void ) {
 // CHECK: call void @_ZN1CC1Ev(%class.C* {{[^,]*}} [[C:%.+]])
   C c;

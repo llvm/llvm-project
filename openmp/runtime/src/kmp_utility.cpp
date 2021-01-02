@@ -113,7 +113,7 @@ static kmp_uint64 __kmp_parse_frequency( // R: Frequency in Hz.
     } else { // Wrong unit.
       return result;
     }
-    result = value;
+    result = (kmp_uint64)value; // rounds down
   }
   return result;
 

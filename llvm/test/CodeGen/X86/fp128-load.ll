@@ -5,7 +5,7 @@
 ; RUN:     -enable-legalize-types-checking | FileCheck %s
 
 ; __float128 myFP128 = 1.0L;  // x86_64-linux-android
-@my_fp128 = global fp128 0xL00000000000000003FFF000000000000, align 16
+@my_fp128 = dso_local global fp128 0xL00000000000000003FFF000000000000, align 16
 
 define fp128 @get_fp128() {
 ; CHECK-LABEL: get_fp128:

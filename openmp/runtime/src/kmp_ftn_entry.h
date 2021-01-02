@@ -78,7 +78,7 @@ void FTN_STDCALL FTN_SET_STACKSIZE_S(size_t KMP_DEREF arg) {
 
 int FTN_STDCALL FTN_GET_STACKSIZE(void) {
 #ifdef KMP_STUB
-  return __kmps_get_stacksize();
+  return (int)__kmps_get_stacksize();
 #else
   if (!__kmp_init_serial) {
     __kmp_serial_initialize();
@@ -551,8 +551,8 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_THREAD_NUM)(void) {
   } else {
 #endif
     if (!__kmp_init_parallel ||
-        (gtid = (kmp_intptr_t)(
-             pthread_getspecific(__kmp_gtid_threadprivate_key))) == 0) {
+        (gtid = (int)((kmp_intptr_t)(
+             pthread_getspecific(__kmp_gtid_threadprivate_key)))) == 0) {
       return 0;
     }
     --gtid;
@@ -628,7 +628,7 @@ void FTN_STDCALL KMP_EXPAND_NAME(FTN_SET_DYNAMIC)(int KMP_DEREF flag) {
   thread = __kmp_entry_thread();
   // !!! What if foreign thread calls it?
   __kmp_save_internal_controls(thread);
-  set__dynamic(thread, KMP_DEREF flag ? TRUE : FALSE);
+  set__dynamic(thread, KMP_DEREF flag ? true : false);
 #endif
 }
 

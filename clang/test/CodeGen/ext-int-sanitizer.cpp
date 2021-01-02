@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-gnu-linux -fsanitize=array-bounds,enum,float-cast-overflow,integer-divide-by-zero,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation,implicit-integer-sign-change,unsigned-integer-overflow,signed-integer-overflow,shift-base,shift-exponent -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s
 
 
-// CHECK: define void @_Z6BoundsRA10_KiU7_ExtIntILi15EEi
+// CHECK: define{{.*}} void @_Z6BoundsRA10_KiU7_ExtIntILi15EEi
 void Bounds(const int (&Array)[10], _ExtInt(15) Index) {
   int I1 = Array[Index];
   // CHECK: %[[SEXT:.+]] = sext i15 %{{.+}} to i64
@@ -10,7 +10,7 @@ void Bounds(const int (&Array)[10], _ExtInt(15) Index) {
   // CHECK: call void @__ubsan_handle_out_of_bounds
 }
 
-// CHECK: define void @_Z4Enumv
+// CHECK: define{{.*}} void @_Z4Enumv
 void Enum() {
   enum E1 { e1a = 0, e1b = 127 }
   e1;
@@ -35,7 +35,7 @@ void Enum() {
   // CHECK: call void @__ubsan_handle_load_invalid_value_abort
 }
 
-// CHECK: define void @_Z13FloatOverflowfd
+// CHECK: define{{.*}} void @_Z13FloatOverflowfd
 void FloatOverflow(float f, double d) {
   _ExtInt(10) E = f;
   // CHECK: fcmp ogt float %{{.+}}, -5.130000e+02
@@ -51,7 +51,7 @@ void FloatOverflow(float f, double d) {
   // CHECK: fcmp olt double %{{.+}}, 6.400000e+01
 }
 
-// CHECK: define void @_Z14UIntTruncationU7_ExtIntILi35EEjjy
+// CHECK: define{{.*}} void @_Z14UIntTruncationU7_ExtIntILi35EEjjy
 void UIntTruncation(unsigned _ExtInt(35) E, unsigned int i, unsigned long long ll) {
 
   i = E;
@@ -73,7 +73,7 @@ void UIntTruncation(unsigned _ExtInt(35) E, unsigned int i, unsigned long long l
   // CHECK: call void @__ubsan_handle_implicit_conversion_abort
 }
 
-// CHECK: define void @_Z13IntTruncationU7_ExtIntILi35EEiU7_ExtIntILi42EEjij
+// CHECK: define{{.*}} void @_Z13IntTruncationU7_ExtIntILi35EEiU7_ExtIntILi42EEjij
 void IntTruncation(_ExtInt(35) E, unsigned _ExtInt(42) UE, int i, unsigned j) {
 
   j = E;
@@ -119,7 +119,7 @@ void IntTruncation(_ExtInt(35) E, unsigned _ExtInt(42) UE, int i, unsigned j) {
   // CHECK: call void @__ubsan_handle_implicit_conversion_abort
 }
 
-// CHECK: define void @_Z15SignChangeCheckU7_ExtIntILi39EEjU7_ExtIntILi39EEi
+// CHECK: define{{.*}} void @_Z15SignChangeCheckU7_ExtIntILi39EEjU7_ExtIntILi39EEi
 void SignChangeCheck(unsigned _ExtInt(39) UE, _ExtInt(39) E) {
   UE = E;
   // CHECK: %[[LOADEU:.+]] = load i39
@@ -140,7 +140,7 @@ void SignChangeCheck(unsigned _ExtInt(39) UE, _ExtInt(39) E) {
   // CHECK: call void @__ubsan_handle_implicit_conversion_abort
 }
 
-// CHECK: define void @_Z9DivByZeroU7_ExtIntILi11EEii
+// CHECK: define{{.*}} void @_Z9DivByZeroU7_ExtIntILi11EEii
 void DivByZero(_ExtInt(11) E, int i) {
 
   // Also triggers signed integer overflow.
@@ -159,7 +159,7 @@ void DivByZero(_ExtInt(11) E, int i) {
 
 // TODO:
 //-fsanitize=shift: (shift-base, shift-exponent) Shift operators where the amount shifted is greater or equal to the promoted bit-width of the left hand side or less than zero, or where the left hand side is negative. For a signed left shift, also checks for signed overflow in C, and for unsigned overflow in C++. You can use -fsanitize=shift-base or -fsanitize=shift-exponent to check only left-hand side or right-hand side of shift operation, respectively.
-// CHECK: define void @_Z6ShiftsU7_ExtIntILi9EEi
+// CHECK: define{{.*}} void @_Z6ShiftsU7_ExtIntILi9EEi
 void Shifts(_ExtInt(9) E) {
   E >> E;
   // CHECK: %[[EADDR:.+]] = alloca i9
@@ -183,7 +183,7 @@ void Shifts(_ExtInt(9) E) {
   // CHECK: call void @__ubsan_handle_shift_out_of_bounds_abort
 }
 
-// CHECK: define void @_Z21SignedIntegerOverflowU7_ExtIntILi93EEiU7_ExtIntILi4EEiU7_ExtIntILi31EEi
+// CHECK: define{{.*}} void @_Z21SignedIntegerOverflowU7_ExtIntILi93EEiU7_ExtIntILi4EEiU7_ExtIntILi31EEi
 void SignedIntegerOverflow(_ExtInt(93) BiggestE,
                            _ExtInt(4) SmallestE,
                            _ExtInt(31) JustRightE) {
@@ -220,7 +220,7 @@ void SignedIntegerOverflow(_ExtInt(93) BiggestE,
   // CHECK: call void @__ubsan_handle_mul_overflow_abort
 }
 
-// CHECK: define void @_Z23UnsignedIntegerOverflowjU7_ExtIntILi23EEjU7_ExtIntILi35EEj
+// CHECK: define{{.*}} void @_Z23UnsignedIntegerOverflowjU7_ExtIntILi23EEjU7_ExtIntILi35EEj
 void UnsignedIntegerOverflow(unsigned u,
                              unsigned _ExtInt(23) SmallE,
                              unsigned _ExtInt(35) BigE) {

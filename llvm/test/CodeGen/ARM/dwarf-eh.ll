@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=arm-netbsd-eabi -o - -filetype=asm %s | \
+; RUN: llc -mtriple=arm-netbsd-eabi -o - -filetype=asm -simplifycfg-require-and-preserve-domtree=1 %s | \
 ; RUN: FileCheck %s
-; RUN: llc -mtriple=arm-netbsd-eabi -o - -filetype=asm %s \
+; RUN: llc -mtriple=arm-netbsd-eabi -o - -filetype=asm -simplifycfg-require-and-preserve-domtree=1 %s \
 ; RUN: -relocation-model=pic | FileCheck -check-prefix=CHECK-PIC %s
 
 ; ModuleID = 'test.cc'

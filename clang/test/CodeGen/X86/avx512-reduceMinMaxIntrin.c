@@ -131,7 +131,7 @@ unsigned int test_mm512_reduce_max_epu32(__m512i __W){
 }
 
 float test_mm512_reduce_max_ps(__m512 __W){
-  // CHECK-LABEL: define float @test_mm512_reduce_max_ps(
+  // CHECK-LABEL: define{{.*}} float @test_mm512_reduce_max_ps(
   // CHECK:    shufflevector <8 x double> %{{.*}}, <8 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK:    shufflevector <8 x double> %{{.*}}, <8 x double> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   // CHECK:    call <8 x float> @llvm.x86.avx.max.ps.256(<8 x float> %{{.*}}, <8 x float> %{{.*}})
@@ -159,7 +159,7 @@ unsigned int test_mm512_reduce_min_epu32(__m512i __W){
 }
 
 float test_mm512_reduce_min_ps(__m512 __W){
-  // CHECK-LABEL: define float @test_mm512_reduce_min_ps(
+  // CHECK-LABEL: define{{.*}} float @test_mm512_reduce_min_ps(
   // CHECK:    shufflevector <8 x double> %{{.*}}, <8 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK:    shufflevector <8 x double> %{{.*}}, <8 x double> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   // CHECK:    call <8 x float> @llvm.x86.avx.min.ps.256(<8 x float> %{{.*}}, <8 x float> %{{.*}})
@@ -191,7 +191,7 @@ unsigned int test_mm512_mask_reduce_max_epu32(__mmask16 __M, __m512i __W){
 }
 
 float test_mm512_mask_reduce_max_ps(__mmask16 __M, __m512 __W){
-  // CHECK-LABEL: define float @test_mm512_mask_reduce_max_ps(
+  // CHECK-LABEL: define{{.*}} float @test_mm512_mask_reduce_max_ps(
   // CHECK:    bitcast i16 %{{.*}} to <16 x i1>
   // CHECK:    select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   // CHECK:    shufflevector <8 x double> %{{.*}}, <8 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -225,7 +225,7 @@ unsigned int test_mm512_mask_reduce_min_epu32(__mmask16 __M, __m512i __W){
 }
 
 float test_mm512_mask_reduce_min_ps(__mmask16 __M, __m512 __W){
-  // CHECK-LABEL: define float @test_mm512_mask_reduce_min_ps(
+  // CHECK-LABEL: define{{.*}} float @test_mm512_mask_reduce_min_ps(
   // CHECK:    bitcast i16 %{{.*}} to <16 x i1>
   // CHECK:    select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   // CHECK:    shufflevector <8 x double> %{{.*}}, <8 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>

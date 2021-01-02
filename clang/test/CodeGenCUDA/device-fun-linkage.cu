@@ -8,7 +8,7 @@
 #include "Inputs/cuda.h"
 
 // NORDC: define internal void @_Z4funcIiEvv()
-// NORDC: define void @_Z6kernelIiEvv()
+// NORDC: define{{.*}} void @_Z6kernelIiEvv()
 // RDC: define weak_odr void @_Z4funcIiEvv()
 // RDC: define weak_odr void @_Z6kernelIiEvv()
 

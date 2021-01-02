@@ -10,7 +10,7 @@ int f(A* a, int (A::*fp)()) {
   return (a->*fp)();
 }
 
-// CHECK-LABEL: define i32 @_Z2g1v()
+// CHECK-LABEL: define{{.*}} i32 @_Z2g1v()
 // CHECK-NOT: }
 // CHECK: ret i32 1
 // MINGW64-LABEL: define dso_local i32 @_Z2g1v()
@@ -20,7 +20,7 @@ int g1() {
   return f(&a, &A::vf1);
 }
 
-// CHECK-LABEL: define i32 @_Z2g2v()
+// CHECK-LABEL: define{{.*}} i32 @_Z2g2v()
 // CHECK-NOT: }
 // CHECK: ret i32 2
 // MINGW64-LABEL: define dso_local i32 @_Z2g2v()

@@ -4,7 +4,7 @@
 @interface OCType @end
 void opaque();
 
-// CHECK: define void @_Z3foov()
+// CHECK: define{{.*}} void @_Z3foov()
 // CHECK-DWARF-SAME: personality i8* bitcast (i32 (...)* @__gnu_objc_personality_v0 to i8*)
 // CHECK-SJLJ-SAME: personality i8* bitcast (i32 (...)* @__gnu_objc_personality_sj0 to i8*)
 void foo() {

@@ -63,7 +63,7 @@ static int foo4(int i) {
   return j;
 }
 
-// CHECK-LABEL: define i32 @foo4t()
+// CHECK-LABEL: define{{.*}} i32 @foo4t()
 // CHECK: ret i32 376
 // CHECK: }
 int foo4t() {
@@ -71,7 +71,7 @@ int foo4t() {
   return foo4(111) + foo4(99) + foo4(222) + foo4(601);
 }
 
-// CHECK-LABEL: define void @foo5()
+// CHECK-LABEL: define{{.*}} void @foo5()
 // CHECK-NOT: switch
 // CHECK: }
 void foo5(){
@@ -83,7 +83,7 @@ void foo5(){
     }
 }
 
-// CHECK-LABEL: define void @foo6()
+// CHECK-LABEL: define{{.*}} void @foo6()
 // CHECK-NOT: switch
 // CHECK: }
 void foo6(){
@@ -91,7 +91,7 @@ void foo6(){
     }
 }
 
-// CHECK-LABEL: define void @foo7()
+// CHECK-LABEL: define{{.*}} void @foo7()
 // CHECK-NOT: switch
 // CHECK: }
 void foo7(){
@@ -101,7 +101,7 @@ void foo7(){
 }
 
 
-// CHECK-LABEL: define i32 @f8(
+// CHECK-LABEL: define{{.*}} i32 @f8(
 // CHECK: ret i32 3
 // CHECK: }
 int f8(unsigned x) {
@@ -115,7 +115,7 @@ int f8(unsigned x) {
 
 // Ensure that default after a case range is not ignored.
 //
-// CHECK-LABEL: define i32 @f9()
+// CHECK-LABEL: define{{.*}} i32 @f9()
 // CHECK: ret i32 10
 // CHECK: }
 static int f9_0(unsigned x) {
@@ -134,7 +134,7 @@ int f9() {
 // miscompilation of fallthrough from default to a (tested) case
 // range.
 //
-// CHECK-LABEL: define i32 @f10()
+// CHECK-LABEL: define{{.*}} i32 @f10()
 // CHECK: ret i32 10
 // CHECK: }
 static int f10_0(unsigned x) {
@@ -153,7 +153,7 @@ int f10() {
 
 // This generated incorrect code because of poor switch chaining.
 //
-// CHECK-LABEL: define i32 @f11(
+// CHECK-LABEL: define{{.*}} i32 @f11(
 // CHECK: ret i32 3
 // CHECK: }
 int f11(int x) {
@@ -167,7 +167,7 @@ int f11(int x) {
 
 // This just asserted because of the way case ranges were calculated.
 //
-// CHECK-LABEL: define i32 @f12(
+// CHECK-LABEL: define{{.*}} i32 @f12(
 // CHECK: ret i32 3
 // CHECK: }
 int f12(int x) {
@@ -181,7 +181,7 @@ int f12(int x) {
 
 // Make sure return is not constant (if empty range is skipped or miscompiled)
 //
-// CHECK-LABEL: define i32 @f13(
+// CHECK-LABEL: define{{.*}} i32 @f13(
 // CHECK: ret i32 %
 // CHECK: }
 int f13(unsigned x) {

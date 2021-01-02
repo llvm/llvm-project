@@ -2,11 +2,11 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown | FileCheck %s
 ; PR7814
 
-@g_16 = global i64 -3738643449681751625, align 8
-@g_38 = global i32 0, align 4
+@g_16 = dso_local global i64 -3738643449681751625, align 8
+@g_38 = dso_local global i32 0, align 4
 @.str = private constant [4 x i8] c"%d\0A\00"
 
-define i32 @main() nounwind {
+define dso_local i32 @main() nounwind {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax

@@ -48,7 +48,7 @@ __global__ void kernel() { lib_fn(); }
 }
 
 // The kernel and lib function should have the same attributes.
-// CHECK: define void @kernel() [[kattr:#[0-9]+]]
+// CHECK: define{{.*}} void @kernel() [[kattr:#[0-9]+]]
 // CHECK: define internal void @lib_fn() [[fattr:#[0-9]+]]
 
 // FIXME: These -NOT checks do not work as intended and do not check on the same

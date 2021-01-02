@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s
 ; CHECK: .cfi_def_cfa r30
 ; CHECK: .cfi_offset r31
 ; CHECK: .cfi_offset r30

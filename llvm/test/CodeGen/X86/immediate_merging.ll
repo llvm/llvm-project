@@ -2,19 +2,19 @@
 ; RUN: llc < %s -mtriple=i386-unknown-linux-gnu | FileCheck %s --check-prefix=X86
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu | FileCheck %s --check-prefix=X64
 
-@a = common global i32 0, align 4
-@b = common global i32 0, align 4
-@c = common global i32 0, align 4
-@e = common global i32 0, align 4
-@x = common global i32 0, align 4
-@f = common global i32 0, align 4
-@h = common global i32 0, align 4
-@i = common global i32 0, align 4
+@a = common dso_local global i32 0, align 4
+@b = common dso_local global i32 0, align 4
+@c = common dso_local global i32 0, align 4
+@e = common dso_local global i32 0, align 4
+@x = common dso_local global i32 0, align 4
+@f = common dso_local global i32 0, align 4
+@h = common dso_local global i32 0, align 4
+@i = common dso_local global i32 0, align 4
 
 ; Test -Os to make sure immediates with multiple users don't get pulled in to
 ; instructions (8-bit immediates are exceptions).
 
-define i32 @foo() optsize {
+define dso_local i32 @foo() optsize {
 ; X86-LABEL: foo:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl $1234, %eax # imm = 0x4D2
@@ -75,7 +75,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; Test PGSO to make sure immediates with multiple users don't get pulled in to
 ; instructions (8-bit immediates are exceptions).
 
-define i32 @foo_pgso() !prof !14 {
+define dso_local i32 @foo_pgso() !prof !14 {
 ; X86-LABEL: foo_pgso:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl $1234, %eax # imm = 0x4D2
@@ -134,7 +134,7 @@ if.end:                                           ; preds = %if.then, %entry
 }
 
 ; Test -O2 to make sure that all immediates get pulled in to their users.
-define i32 @foo2() {
+define dso_local i32 @foo2() {
 ; X86-LABEL: foo2:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl $1234, a # imm = 0x4D2
@@ -156,12 +156,12 @@ entry:
 
 declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1) #1
 
-@AA = common global [100 x i8] zeroinitializer, align 1
+@AA = common dso_local global [100 x i8] zeroinitializer, align 1
 
 ; memset gets lowered in DAG. Constant merging should hoist all the
 ; immediates used to store to the individual memory locations. Make
 ; sure we don't directly store the immediates.
-define void @foomemset() optsize {
+define dso_local void @foomemset() optsize {
 ; X86-LABEL: foomemset:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl $555819297, %eax # imm = 0x21212121
@@ -188,7 +188,7 @@ entry:
 ; memset gets lowered in DAG. Constant merging should hoist all the
 ; immediates used to store to the individual memory locations. Make
 ; sure we don't directly store the immediates.
-define void @foomemset_pgso() !prof !14 {
+define dso_local void @foomemset_pgso() !prof !14 {
 ; X86-LABEL: foomemset_pgso:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl $555819297, %eax # imm = 0x21212121

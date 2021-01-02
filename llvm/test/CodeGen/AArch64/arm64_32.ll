@@ -701,6 +701,23 @@ false:
   ret void
 }
 
+define void @test_multiple_icmp_ptr_select(i8* %l, i8* %r) {
+; CHECK-LABEL: test_multiple_icmp_ptr_select:
+; CHECK: tbnz w0, #31, [[FALSEBB:LBB[0-9]+_[0-9]+]]
+; CHECK: tbnz w1, #31, [[FALSEBB]]
+  %tst1 = icmp sgt i8* %l, inttoptr (i32 -1 to i8*)
+  %tst2 = icmp sgt i8* %r, inttoptr (i32 -1 to i8*)
+  %tst = select i1 %tst1, i1 %tst2, i1 false
+  br i1 %tst, label %true, label %false
+
+true:
+  call void(...) @bar()
+  ret void
+
+false:
+  ret void
+}
+
 define { [18 x i8] }* @test_gep_nonpow2({ [18 x i8] }* %a0, i32 %a1) {
 ; CHECK-LABEL: test_gep_nonpow2:
 ; CHECK-OPT:      mov w[[SIZE:[0-9]+]], #18

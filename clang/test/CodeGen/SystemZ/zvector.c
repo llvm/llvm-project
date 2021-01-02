@@ -20,7 +20,7 @@ volatile vector double fd, fd2;
 
 volatile int cnt;
 
-// CHECK-LABEL: define void @test_assign() #0 {
+// CHECK-LABEL: define{{.*}} void @test_assign() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc2, align 8
 // CHECK:   store volatile <16 x i8> [[TMP0]], <16 x i8>* @sc, align 8
 // CHECK:   [[TMP1:%.*]] = load volatile <16 x i8>, <16 x i8>* @uc2, align 8
@@ -57,7 +57,7 @@ void test_assign(void) {
   fd = fd2;
 }
 
-// CHECK-LABEL: define void @test_pos() #0 {
+// CHECK-LABEL: define{{.*}} void @test_pos() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc2, align 8
 // CHECK:   store volatile <16 x i8> [[TMP0]], <16 x i8>* @sc, align 8
 // CHECK:   [[TMP1:%.*]] = load volatile <16 x i8>, <16 x i8>* @uc2, align 8
@@ -94,7 +94,7 @@ void test_pos(void) {
   fd = +fd2;
 }
 
-// CHECK-LABEL: define void @test_neg() #0 {
+// CHECK-LABEL: define{{.*}} void @test_neg() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc2, align 8
 // CHECK:   [[SUB:%.*]] = sub <16 x i8> zeroinitializer, [[TMP0]]
 // CHECK:   store volatile <16 x i8> [[SUB]], <16 x i8>* @sc, align 8
@@ -120,7 +120,7 @@ void test_neg(void) {
   fd = -fd2;
 }
 
-// CHECK-LABEL: define void @test_preinc() #0 {
+// CHECK-LABEL: define{{.*}} void @test_preinc() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc2, align 8
 // CHECK:   [[INC:%.*]] = add <16 x i8> [[TMP0]], <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
 // CHECK:   store volatile <16 x i8> [[INC]], <16 x i8>* @sc2, align 8
@@ -166,7 +166,7 @@ void test_preinc(void) {
   ++fd2;
 }
 
-// CHECK-LABEL: define void @test_postinc() #0 {
+// CHECK-LABEL: define{{.*}} void @test_postinc() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc2, align 8
 // CHECK:   [[INC:%.*]] = add <16 x i8> [[TMP0]], <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
 // CHECK:   store volatile <16 x i8> [[INC]], <16 x i8>* @sc2, align 8
@@ -212,7 +212,7 @@ void test_postinc(void) {
   fd2++;
 }
 
-// CHECK-LABEL: define void @test_predec() #0 {
+// CHECK-LABEL: define{{.*}} void @test_predec() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc2, align 8
 // CHECK:   [[DEC:%.*]] = add <16 x i8> [[TMP0]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
 // CHECK:   store volatile <16 x i8> [[DEC]], <16 x i8>* @sc2, align 8
@@ -258,7 +258,7 @@ void test_predec(void) {
   --fd2;
 }
 
-// CHECK-LABEL: define void @test_postdec() #0 {
+// CHECK-LABEL: define{{.*}} void @test_postdec() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc2, align 8
 // CHECK:   [[DEC:%.*]] = add <16 x i8> [[TMP0]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
 // CHECK:   store volatile <16 x i8> [[DEC]], <16 x i8>* @sc2, align 8
@@ -304,7 +304,7 @@ void test_postdec(void) {
   fd2--;
 }
 
-// CHECK-LABEL: define void @test_add() #0 {
+// CHECK-LABEL: define{{.*}} void @test_add() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc, align 8
 // CHECK:   [[TMP1:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc2, align 8
 // CHECK:   [[ADD:%.*]] = add <16 x i8> [[TMP0]], [[TMP1]]
@@ -439,7 +439,7 @@ void test_add(void) {
   fd = fd + fd2;
 }
 
-// CHECK-LABEL: define void @test_add_assign() #0 {
+// CHECK-LABEL: define{{.*}} void @test_add_assign() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc2, align 8
 // CHECK:   [[TMP1:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc, align 8
 // CHECK:   [[ADD:%.*]] = add <16 x i8> [[TMP1]], [[TMP0]]
@@ -534,7 +534,7 @@ void test_add_assign(void) {
   fd += fd2;
 }
 
-// CHECK-LABEL: define void @test_sub() #0 {
+// CHECK-LABEL: define{{.*}} void @test_sub() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc, align 8
 // CHECK:   [[TMP1:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc2, align 8
 // CHECK:   [[SUB:%.*]] = sub <16 x i8> [[TMP0]], [[TMP1]]
@@ -669,7 +669,7 @@ void test_sub(void) {
   fd = fd - fd2;
 }
 
-// CHECK-LABEL: define void @test_sub_assign() #0 {
+// CHECK-LABEL: define{{.*}} void @test_sub_assign() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc2, align 8
 // CHECK:   [[TMP1:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc, align 8
 // CHECK:   [[SUB:%.*]] = sub <16 x i8> [[TMP1]], [[TMP0]]
@@ -764,7 +764,7 @@ void test_sub_assign(void) {
   fd -= fd2;
 }
 
-// CHECK-LABEL: define void @test_mul() #0 {
+// CHECK-LABEL: define{{.*}} void @test_mul() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc, align 8
 // CHECK:   [[TMP1:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc2, align 8
 // CHECK:   [[MUL:%.*]] = mul <16 x i8> [[TMP0]], [[TMP1]]
@@ -819,7 +819,7 @@ void test_mul(void) {
   fd = fd * fd2;
 }
 
-// CHECK-LABEL: define void @test_mul_assign() #0 {
+// CHECK-LABEL: define{{.*}} void @test_mul_assign() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc2, align 8
 // CHECK:   [[TMP1:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc, align 8
 // CHECK:   [[MUL:%.*]] = mul <16 x i8> [[TMP1]], [[TMP0]]
@@ -874,7 +874,7 @@ void test_mul_assign(void) {
   fd *= fd2;
 }
 
-// CHECK-LABEL: define void @test_div() #0 {
+// CHECK-LABEL: define{{.*}} void @test_div() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc, align 8
 // CHECK:   [[TMP1:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc2, align 8
 // CHECK:   [[DIV:%.*]] = sdiv <16 x i8> [[TMP0]], [[TMP1]]
@@ -929,7 +929,7 @@ void test_div(void) {
   fd = fd / fd2;
 }
 
-// CHECK-LABEL: define void @test_div_assign() #0 {
+// CHECK-LABEL: define{{.*}} void @test_div_assign() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc2, align 8
 // CHECK:   [[TMP1:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc, align 8
 // CHECK:   [[DIV:%.*]] = sdiv <16 x i8> [[TMP1]], [[TMP0]]
@@ -984,7 +984,7 @@ void test_div_assign(void) {
   fd /= fd2;
 }
 
-// CHECK-LABEL: define void @test_rem() #0 {
+// CHECK-LABEL: define{{.*}} void @test_rem() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc, align 8
 // CHECK:   [[TMP1:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc2, align 8
 // CHECK:   [[REM:%.*]] = srem <16 x i8> [[TMP0]], [[TMP1]]
@@ -1033,7 +1033,7 @@ void test_rem(void) {
   ul = ul % ul2;
 }
 
-// CHECK-LABEL: define void @test_rem_assign() #0 {
+// CHECK-LABEL: define{{.*}} void @test_rem_assign() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc2, align 8
 // CHECK:   [[TMP1:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc, align 8
 // CHECK:   [[REM:%.*]] = srem <16 x i8> [[TMP1]], [[TMP0]]
@@ -1082,7 +1082,7 @@ void test_rem_assign(void) {
   ul %= ul2;
 }
 
-// CHECK-LABEL: define void @test_not() #0 {
+// CHECK-LABEL: define{{.*}} void @test_not() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc2, align 8
 // CHECK:   [[NEG:%.*]] = xor <16 x i8> [[TMP0]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
 // CHECK:   store volatile <16 x i8> [[NEG]], <16 x i8>* @sc, align 8
@@ -1139,7 +1139,7 @@ void test_not(void) {
   bl = ~bl2;
 }
 
-// CHECK-LABEL: define void @test_and() #0 {
+// CHECK-LABEL: define{{.*}} void @test_and() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc, align 8
 // CHECK:   [[TMP1:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc2, align 8
 // CHECK:   [[AND:%.*]] = and <16 x i8> [[TMP0]], [[TMP1]]
@@ -1288,7 +1288,7 @@ void test_and(void) {
   bl = bl & bl2;
 }
 
-// CHECK-LABEL: define void @test_and_assign() #0 {
+// CHECK-LABEL: define{{.*}} void @test_and_assign() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc2, align 8
 // CHECK:   [[TMP1:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc, align 8
 // CHECK:   [[AND:%.*]] = and <16 x i8> [[TMP1]], [[TMP0]]
@@ -1397,7 +1397,7 @@ void test_and_assign(void) {
   bl &= bl2;
 }
 
-// CHECK-LABEL: define void @test_or() #0 {
+// CHECK-LABEL: define{{.*}} void @test_or() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc, align 8
 // CHECK:   [[TMP1:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc2, align 8
 // CHECK:   [[OR:%.*]] = or <16 x i8> [[TMP0]], [[TMP1]]
@@ -1546,7 +1546,7 @@ void test_or(void) {
   bl = bl | bl2;
 }
 
-// CHECK-LABEL: define void @test_or_assign() #0 {
+// CHECK-LABEL: define{{.*}} void @test_or_assign() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc2, align 8
 // CHECK:   [[TMP1:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc, align 8
 // CHECK:   [[OR:%.*]] = or <16 x i8> [[TMP1]], [[TMP0]]
@@ -1655,7 +1655,7 @@ void test_or_assign(void) {
   bl |= bl2;
 }
 
-// CHECK-LABEL: define void @test_xor() #0 {
+// CHECK-LABEL: define{{.*}} void @test_xor() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc, align 8
 // CHECK:   [[TMP1:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc2, align 8
 // CHECK:   [[XOR:%.*]] = xor <16 x i8> [[TMP0]], [[TMP1]]
@@ -1804,7 +1804,7 @@ void test_xor(void) {
   bl = bl ^ bl2;
 }
 
-// CHECK-LABEL: define void @test_xor_assign() #0 {
+// CHECK-LABEL: define{{.*}} void @test_xor_assign() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc2, align 8
 // CHECK:   [[TMP1:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc, align 8
 // CHECK:   [[XOR:%.*]] = xor <16 x i8> [[TMP1]], [[TMP0]]
@@ -1913,7 +1913,7 @@ void test_xor_assign(void) {
   bl ^= bl2;
 }
 
-// CHECK-LABEL: define void @test_sl() #0 {
+// CHECK-LABEL: define{{.*}} void @test_sl() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc, align 8
 // CHECK:   [[TMP1:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc2, align 8
 // CHECK:   [[SHL:%.*]] = shl <16 x i8> [[TMP0]], [[TMP1]]
@@ -2096,7 +2096,7 @@ void test_sl(void) {
   ul = ul << 5;
 }
 
-// CHECK-LABEL: define void @test_sl_assign() #0 {
+// CHECK-LABEL: define{{.*}} void @test_sl_assign() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc2, align 8
 // CHECK:   [[TMP1:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc, align 8
 // CHECK:   [[SHL:%.*]] = shl <16 x i8> [[TMP1]], [[TMP0]]
@@ -2279,7 +2279,7 @@ void test_sl_assign(void) {
   ul <<= 5;
 }
 
-// CHECK-LABEL: define void @test_sr() #0 {
+// CHECK-LABEL: define{{.*}} void @test_sr() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc, align 8
 // CHECK:   [[TMP1:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc2, align 8
 // CHECK:   [[SHR:%.*]] = ashr <16 x i8> [[TMP0]], [[TMP1]]
@@ -2462,7 +2462,7 @@ void test_sr(void) {
   ul = ul >> 5;
 }
 
-// CHECK-LABEL: define void @test_sr_assign() #0 {
+// CHECK-LABEL: define{{.*}} void @test_sr_assign() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc2, align 8
 // CHECK:   [[TMP1:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc, align 8
 // CHECK:   [[SHR:%.*]] = ashr <16 x i8> [[TMP1]], [[TMP0]]
@@ -2646,7 +2646,7 @@ void test_sr_assign(void) {
 }
 
 
-// CHECK-LABEL: define void @test_cmpeq() #0 {
+// CHECK-LABEL: define{{.*}} void @test_cmpeq() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc, align 8
 // CHECK:   [[TMP1:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc2, align 8
 // CHECK:   [[CMP:%.*]] = icmp eq <16 x i8> [[TMP0]], [[TMP1]]
@@ -2830,7 +2830,7 @@ void test_cmpeq(void) {
   bl = fd == fd2;
 }
 
-// CHECK-LABEL: define void @test_cmpne() #0 {
+// CHECK-LABEL: define{{.*}} void @test_cmpne() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc, align 8
 // CHECK:   [[TMP1:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc2, align 8
 // CHECK:   [[CMP:%.*]] = icmp ne <16 x i8> [[TMP0]], [[TMP1]]
@@ -3014,7 +3014,7 @@ void test_cmpne(void) {
   bl = fd != fd2;
 }
 
-// CHECK-LABEL: define void @test_cmpge() #0 {
+// CHECK-LABEL: define{{.*}} void @test_cmpge() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc, align 8
 // CHECK:   [[TMP1:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc2, align 8
 // CHECK:   [[CMP:%.*]] = icmp sge <16 x i8> [[TMP0]], [[TMP1]]
@@ -3102,7 +3102,7 @@ void test_cmpge(void) {
   bl = fd >= fd2;
 }
 
-// CHECK-LABEL: define void @test_cmpgt() #0 {
+// CHECK-LABEL: define{{.*}} void @test_cmpgt() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc, align 8
 // CHECK:   [[TMP1:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc2, align 8
 // CHECK:   [[CMP:%.*]] = icmp sgt <16 x i8> [[TMP0]], [[TMP1]]
@@ -3190,7 +3190,7 @@ void test_cmpgt(void) {
   bl = fd > fd2;
 }
 
-// CHECK-LABEL: define void @test_cmple() #0 {
+// CHECK-LABEL: define{{.*}} void @test_cmple() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc, align 8
 // CHECK:   [[TMP1:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc2, align 8
 // CHECK:   [[CMP:%.*]] = icmp sle <16 x i8> [[TMP0]], [[TMP1]]
@@ -3278,7 +3278,7 @@ void test_cmple(void) {
   bl = fd <= fd2;
 }
 
-// CHECK-LABEL: define void @test_cmplt() #0 {
+// CHECK-LABEL: define{{.*}} void @test_cmplt() #0 {
 // CHECK:   [[TMP0:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc, align 8
 // CHECK:   [[TMP1:%.*]] = load volatile <16 x i8>, <16 x i8>* @sc2, align 8
 // CHECK:   [[CMP:%.*]] = icmp slt <16 x i8> [[TMP0]], [[TMP1]]

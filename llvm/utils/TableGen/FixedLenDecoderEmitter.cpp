@@ -1193,7 +1193,7 @@ bool FilterChooser::emitPredicateMatch(raw_ostream &o, unsigned &Indentation,
     if (!Pred->getValue("AssemblerMatcherPredicate"))
       continue;
 
-    if (!dyn_cast<DagInit>(Pred->getValue("AssemblerCondDag")->getValue()))
+    if (!isa<DagInit>(Pred->getValue("AssemblerCondDag")->getValue()))
       continue;
 
     const DagInit *D = Pred->getValueAsDag("AssemblerCondDag");

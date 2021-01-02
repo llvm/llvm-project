@@ -140,7 +140,7 @@ namespace test3 {
   struct D : public B {
   };
   void f(D d) {
-    // CHECK-LABEL: define void @_ZN5test31fENS_1DE
+    // CHECK-LABEL: define{{.*}} void @_ZN5test31fENS_1DE
     d.B::~B();
   }
 }

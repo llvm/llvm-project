@@ -20,7 +20,7 @@ ptrdiff_t useThem() {
 // CHECK-WIN:   call i64 @_Z11func_as_intIU8sysv_abiFiiEExPT_(i32 (i32)* @_Z9f_sysvabii)
 // CHECK-WIN:   call i64 @_Z11func_as_intIFiiEExPT_(i32 (i32)* @_Z7f_msabii)
 
-// CHECK-LIN: define i64 @_Z7useThemv()
+// CHECK-LIN: define{{.*}} i64 @_Z7useThemv()
 // CHECK-LIN:   call i64 @_Z11func_as_intIFiiEElPT_(i32 (i32)* @_Z7f_plaini)
 // CHECK-LIN:   call i64 @_Z11func_as_intIFiiEElPT_(i32 (i32)* @_Z9f_sysvabii)
 // CHECK-LIN:   call i64 @_Z11func_as_intIU6ms_abiFiiEElPT_(i32 (i32)* @_Z7f_msabii)

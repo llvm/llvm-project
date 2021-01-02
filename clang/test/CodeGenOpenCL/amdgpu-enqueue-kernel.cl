@@ -6,7 +6,7 @@ void callee(long id, global long *out) {
   out[id] = id;
 }
 
-// CHECK-LABEL: define amdgpu_kernel void @test
+// CHECK-LABEL: define{{.*}} amdgpu_kernel void @test
 kernel void test(global char *a, char b, global long *c, long d) {
   queue_t default_queue;
   unsigned flags = 0;
@@ -41,7 +41,7 @@ kernel void test(global char *a, char b, global long *c, long d) {
 // CHECK: entry:
 // CHECK:  %1 = alloca <{ i32, i32, i8*, i8 addrspace(1)*, i8 }>, align 8, addrspace(5)
 // CHECK:  store <{ i32, i32, i8*, i8 addrspace(1)*, i8 }> %0, <{ i32, i32, i8*, i8 addrspace(1)*, i8 }> addrspace(5)* %1, align 8
-// CHECK:  %2 = addrspacecast <{ i32, i32, i8*, i8 addrspace(1)*, i8 }> addrspace(5)* %1 to i8*
+// CHECK:  %2 ={{.*}} addrspacecast <{ i32, i32, i8*, i8 addrspace(1)*, i8 }> addrspace(5)* %1 to i8*
 // CHECK:  call void @__test_block_invoke(i8* %2)
 // CHECK:  ret void
 // CHECK:}

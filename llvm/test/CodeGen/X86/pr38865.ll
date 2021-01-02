@@ -6,9 +6,9 @@ target triple = "x86_64-unknown-linux-gnux32"
 
 %struct.a = type { [65 x i32] }
 
-@c = global %struct.a zeroinitializer, align 4
+@c = dso_local global %struct.a zeroinitializer, align 4
 
-define void @e() nounwind {
+define dso_local void @e() nounwind {
 ; CHECK-LABEL: e:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbx # encoding: [0x53]

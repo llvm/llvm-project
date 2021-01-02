@@ -52,3 +52,10 @@ void test_tile_stored(__tile1024i c) {
   //CHECK-NEXT: call void @llvm.x86.tilestored64.internal
   __tile_stored(buf, STRIDE, c);
 }
+
+void test_tile_zero(__tile1024i c) {
+  //CHECK-LABEL: @test_tile_zero
+  //CHECK: call x86_amx @llvm.x86.tilezero.internal
+  //CHECK-NEXT bitcast x86_amx {{%.*}} to <256 x i32>
+  __tile_zero(&c);
+}

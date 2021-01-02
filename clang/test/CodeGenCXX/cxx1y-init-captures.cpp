@@ -10,7 +10,7 @@ void f() {
   (void) [s(S{})] {};
 }
 
-// CHECK-LABEL: define void @_Z1fv(
+// CHECK-LABEL: define{{.*}} void @_Z1fv(
 // CHECK: call void @_ZN1SC1Ev(
 // CHECK: call void @"_ZZ1fvEN3$_0D1Ev"(
 
@@ -23,7 +23,7 @@ void g() {
   [a(1), b(2)] { return a + b; } ();
 }
 
-// CHECK-LABEL: define void @_Z1gv(
+// CHECK-LABEL: define{{.*}} void @_Z1gv(
 // CHECK: getelementptr inbounds {{.*}}, i32 0, i32 0
 // CHECK: store i32 1, i32*
 // CHECK: getelementptr inbounds {{.*}}, i32 0, i32 1
@@ -38,7 +38,7 @@ void g() {
 
 // CHECK: add nsw i32
 
-// CHECK-LABEL: define void @_Z18init_capture_dtorsv
+// CHECK-LABEL: define{{.*}} void @_Z18init_capture_dtorsv
 void init_capture_dtors() {
   // Ensure that init-captures are not treated as separate full-expressions.
   struct HasDtor { ~HasDtor() {} };
@@ -52,7 +52,7 @@ void init_capture_dtors() {
 }
 
 int h(int a) {
-  // CHECK-LABEL: define i32 @_Z1hi(
+  // CHECK-LABEL: define{{.*}} i32 @_Z1hi(
   // CHECK: %[[A_ADDR:.*]] = alloca i32,
   // CHECK: %[[OUTER:.*]] = alloca
   // CHECK: store i32 {{.*}}, i32* %[[A_ADDR]],

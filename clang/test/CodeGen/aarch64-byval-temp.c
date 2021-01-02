@@ -17,7 +17,7 @@ void example() {
     pass_large(l);
     pass_large(l);
 }
-// CHECK-O0-LABEL: define void @example(
+// CHECK-O0-LABEL: define{{.*}} void @example(
 // The alloca for the struct on the stack.
 // CHECK-O0: %[[l:[0-9A-Za-z-]+]] = alloca %struct.large, align 8
 // The alloca for the temporary stack space that we use to pass the argument.
@@ -42,7 +42,7 @@ void example() {
 //
 // At O3, we should have lifetime markers to help the optimizer re-use the temporary allocas.
 //
-// CHECK-O3-LABEL: define void @example(
+// CHECK-O3-LABEL: define{{.*}} void @example(
 // The alloca for the struct on the stack.
 // CHECK-O3: %[[l:[0-9A-Za-z-]+]] = alloca %struct.large, align 8
 // The alloca for the temporary stack space that we use to pass the argument.

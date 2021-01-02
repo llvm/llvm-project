@@ -70,7 +70,8 @@ struct kmp_sys_timer {
 };
 
 // Convert timespec to nanoseconds.
-#define TS2NS(timespec) (((timespec).tv_sec * 1e9) + (timespec).tv_nsec)
+#define TS2NS(timespec)                                                        \
+  (((timespec).tv_sec * (long int)1e9) + (timespec).tv_nsec)
 
 static struct kmp_sys_timer __kmp_sys_timer_data;
 
@@ -133,13 +134,13 @@ void __kmp_affinity_determine_capable(const char *env_var) {
   // If Linux* OS:
   // If the syscall fails or returns a suggestion for the size,
   // then we don't have to search for an appropriate size.
-  int gCode;
-  int sCode;
+  long gCode;
+  long sCode;
   unsigned char *buf;
   buf = (unsigned char *)KMP_INTERNAL_MALLOC(KMP_CPU_SET_SIZE_LIMIT);
   gCode = syscall(__NR_sched_getaffinity, 0, KMP_CPU_SET_SIZE_LIMIT, buf);
   KA_TRACE(30, ("__kmp_affinity_determine_capable: "
-                "initial getaffinity call returned %d errno = %d\n",
+                "initial getaffinity call returned %ld errno = %d\n",
                 gCode, errno));
 
   // if ((gCode < 0) && (errno == ENOSYS))
@@ -168,7 +169,7 @@ void __kmp_affinity_determine_capable(const char *env_var) {
     // buffer with the same size fails with errno set to EFAULT.
     sCode = syscall(__NR_sched_setaffinity, 0, gCode, NULL);
     KA_TRACE(30, ("__kmp_affinity_determine_capable: "
-                  "setaffinity for mask size %d returned %d errno = %d\n",
+                  "setaffinity for mask size %ld returned %ld errno = %d\n",
                   gCode, sCode, errno));
     if (sCode < 0) {
       if (errno == ENOSYS) {
@@ -207,7 +208,7 @@ void __kmp_affinity_determine_capable(const char *env_var) {
   for (size = 1; size <= KMP_CPU_SET_SIZE_LIMIT; size *= 2) {
     gCode = syscall(__NR_sched_getaffinity, 0, size, buf);
     KA_TRACE(30, ("__kmp_affinity_determine_capable: "
-                  "getaffinity for mask size %d returned %d errno = %d\n",
+                  "getaffinity for mask size %ld returned %ld errno = %d\n",
                   size, gCode, errno));
 
     if (gCode < 0) {
@@ -239,7 +240,7 @@ void __kmp_affinity_determine_capable(const char *env_var) {
 
     sCode = syscall(__NR_sched_setaffinity, 0, gCode, NULL);
     KA_TRACE(30, ("__kmp_affinity_determine_capable: "
-                  "setaffinity for mask size %d returned %d errno = %d\n",
+                  "setaffinity for mask size %ld returned %ld errno = %d\n",
                   gCode, sCode, errno));
     if (sCode < 0) {
       if (errno == ENOSYS) { // Linux* OS only
@@ -276,7 +277,7 @@ void __kmp_affinity_determine_capable(const char *env_var) {
     }
   }
 #elif KMP_OS_FREEBSD
-  int gCode;
+  long gCode;
   unsigned char *buf;
   buf = (unsigned char *)KMP_INTERNAL_MALLOC(KMP_CPU_SET_SIZE_LIMIT);
   gCode = pthread_getaffinity_np(pthread_self(), KMP_CPU_SET_SIZE_LIMIT, reinterpret_cast<cpuset_t *>(buf));
@@ -316,7 +317,7 @@ void __kmp_affinity_determine_capable(const char *env_var) {
 
 int __kmp_futex_determine_capable() {
   int loc = 0;
-  int rc = syscall(__NR_futex, &loc, FUTEX_WAKE, 1, NULL, NULL, 0);
+  long rc = syscall(__NR_futex, &loc, FUTEX_WAKE, 1, NULL, NULL, 0);
   int retval = (rc == 0) || (errno != ENOSYS);
 
   KA_TRACE(10,
@@ -1746,7 +1747,8 @@ double __kmp_read_cpu_time(void) {
 
   /*t =*/times(&buffer);
 
-  return (buffer.tms_utime + buffer.tms_cutime) / (double)CLOCKS_PER_SEC;
+  return (double)(buffer.tms_utime + buffer.tms_cutime) /
+         (double)CLOCKS_PER_SEC;
 }
 
 int __kmp_read_system_info(struct kmp_sys_info *info) {
@@ -1787,7 +1789,7 @@ void __kmp_read_system_time(double *delta) {
   status = gettimeofday(&tval, NULL);
   KMP_CHECK_SYSFAIL_ERRNO("gettimeofday", status);
   TIMEVAL_TO_TIMESPEC(&tval, &stop);
-  t_ns = TS2NS(stop) - TS2NS(__kmp_sys_timer_data.start);
+  t_ns = (double)(TS2NS(stop) - TS2NS(__kmp_sys_timer_data.start));
   *delta = (t_ns * 1e-9);
 }
 
@@ -1806,7 +1808,7 @@ static int __kmp_get_xproc(void) {
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
         KMP_OS_OPENBSD || KMP_OS_HURD
 
-  r = sysconf(_SC_NPROCESSORS_ONLN);
+  __kmp_type_convert(sysconf(_SC_NPROCESSORS_ONLN), &(r));
 
 #elif KMP_OS_DARWIN
 
@@ -1881,7 +1883,7 @@ void __kmp_runtime_initialize(void) {
   if (sysconf(_SC_THREADS)) {
 
     /* Query the maximum number of threads */
-    __kmp_sys_max_nth = sysconf(_SC_THREAD_THREADS_MAX);
+    __kmp_type_convert(sysconf(_SC_THREAD_THREADS_MAX), &(__kmp_sys_max_nth));
     if (__kmp_sys_max_nth == -1) {
       /* Unlimited threads for NPTL */
       __kmp_sys_max_nth = INT_MAX;
@@ -1995,7 +1997,7 @@ void __kmp_initialize_system_tick() {
   nsec2 = __kmp_now_nsec();
   diff = nsec2 - nsec;
   if (diff > 0) {
-    kmp_uint64 tpms = (kmp_uint64)(1e6 * (delay + (now - goal)) / diff);
+    kmp_uint64 tpms = ((kmp_uint64)1e6 * (delay + (now - goal)) / diff);
     if (tpms > 0)
       __kmp_ticks_per_msec = tpms;
   }
@@ -2197,13 +2199,13 @@ int __kmp_get_load_balance(int max) {
   // getloadavg() may return the number of samples less than requested that is
   // less than 3.
   if (__kmp_load_balance_interval < 180 && (res >= 1)) {
-    ret_avg = averages[0]; // 1 min
+    ret_avg = (int)averages[0]; // 1 min
   } else if ((__kmp_load_balance_interval >= 180 &&
               __kmp_load_balance_interval < 600) &&
              (res >= 2)) {
-    ret_avg = averages[1]; // 5 min
+    ret_avg = (int)averages[1]; // 5 min
   } else if ((__kmp_load_balance_interval >= 600) && (res == 3)) {
-    ret_avg = averages[2]; // 15 min
+    ret_avg = (int)averages[2]; // 15 min
   } else { // Error occurred
     return -1;
   }
@@ -2370,7 +2372,7 @@ int __kmp_get_load_balance(int max) {
                   -- ln
               */
               char buffer[65];
-              int len;
+              ssize_t len;
               len = read(stat_file, buffer, sizeof(buffer) - 1);
               if (len >= 0) {
                 buffer[len] = 0;

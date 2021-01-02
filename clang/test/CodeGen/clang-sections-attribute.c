@@ -58,14 +58,14 @@ __attribute__((section(".int_zvar_attr"), used))
 static int int_zvar;
 #pragma clang section bss=""
 
-// CHECK: @ext_const = constant i32 1, section ".ext_const_attr", align 4{{$}}
+// CHECK: @ext_const ={{.*}} constant i32 1, section ".ext_const_attr", align 4{{$}}
 // CHECK: @int_const = internal constant i32 1, section ".int_const_attr", align 4{{$}}
-// CHECK: @ext_var = global i32 1, section ".ext_var_attr", align 4{{$}}
+// CHECK: @ext_var ={{.*}} global i32 1, section ".ext_var_attr", align 4{{$}}
 // CHECK: @int_var = internal global i32 1, section ".int_var_attr", align 4{{$}}
-// CHECK: @ext_zvar = global i32 0, section ".ext_zvar_attr", align 4{{$}}
+// CHECK: @ext_zvar ={{.*}} global i32 0, section ".ext_zvar_attr", align 4{{$}}
 // CHECK: @int_zvar = internal global i32 0, section ".int_zvar_attr", align 4{{$}}
-// CHECK: define void @ext_fun() #0 section ".ext_fun_attr"
-// CHECK: define void @ext_fun2() #0 section ".ext_fun2_attr"
+// CHECK: define{{.*}} void @ext_fun() #0 section ".ext_fun_attr"
+// CHECK: define{{.*}} void @ext_fun2() #0 section ".ext_fun2_attr"
 // CHECK: define internal void @int_fun() #0 section ".int_fun_attr"
 // CHECK: define internal void @int_fun2() #0 section ".int_fun2_attr"
 //

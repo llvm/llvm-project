@@ -54,7 +54,7 @@ int printf(const char *, ...);
 @end
 
 // Test that compound operations only compute the base once.
-// CHECK-LABEL: define void @test2
+// CHECK-LABEL: define{{.*}} void @test2
 A *test2_helper(void);
 void test2() {
   // CHECK:      [[BASE:%.*]] = call [[A:%.*]]* @test2_helper()
@@ -94,7 +94,7 @@ void test3(test3_object *p) {
 @interface Test4  {}
 @property float f;
 @end
-// CHECK-LABEL: define void @test4
+// CHECK-LABEL: define{{.*}} void @test4
 void test4(Test4 *t) {
   extern int test4_printf(const char *, ...);
   // CHECK: [[TMP:%.*]] = call float {{.*}} @objc_msgSend
@@ -132,7 +132,7 @@ void test7(Test7 *t) {
   t.x |= 5;
   t.x ^= 8;
 }
-// CHECK:    define void @test7([[TEST7:%.*]]*
+// CHECK:    define{{.*}} void @test7([[TEST7:%.*]]*
 // CHECK:      [[T:%.*]] = alloca [[TEST7]]*,
 // CHECK-NEXT: store
 // CHECK-NEXT: [[T0:%.*]] = load [[TEST7]]*, [[TEST7]]** [[T]], align

@@ -130,7 +130,7 @@ void D::h() {
 }
 
 // ITANIUM: define hidden void @_Z2afP1A
-// ITANIUM-DEFAULTVIS: define void @_Z2afP1A
+// ITANIUM-DEFAULTVIS: define{{.*}} void @_Z2afP1A
 // MS: define dso_local void @"?af@@YAXPEAUA@@@Z"
 void af(A *a) {
   // TT-ITANIUM: [[P:%[^ ]*]] = call i1 @llvm.type.test(i8* [[VT:%[^ ]*]], metadata !"_ZTS1A")
@@ -241,7 +241,7 @@ struct D : C {
 };
 
 // ITANIUM: define hidden void @_ZN5test21fEPNS_1DE
-// ITANIUM-DEFAULTVIS: define void @_ZN5test21fEPNS_1DE
+// ITANIUM-DEFAULTVIS: define{{.*}} void @_ZN5test21fEPNS_1DE
 // MS: define dso_local void @"?f@test2@@YAXPEAUD@1@@Z"
 void f(D *d) {
   // TT-ITANIUM: {{%[^ ]*}} = call i1 @llvm.type.test(i8* {{%[^ ]*}}, metadata !"_ZTSN5test21DE")

@@ -294,6 +294,26 @@ defset list<VTypeInfoToFraction> AllFractionableVF8IntVectors = {
   def : VTypeInfoToFraction<VI64M8, VI8M1>;
 }
 
+defset list<VTypeInfoToWide> AllWidenableIntToFloatVectors = {
+  def : VTypeInfoToWide<VI8MF8, VF16MF4>;
+  def : VTypeInfoToWide<VI8MF4, VF16MF2>;
+  def : VTypeInfoToWide<VI8MF2, VF16M1>;
+  def : VTypeInfoToWide<VI8M1, VF16M2>;
+  def : VTypeInfoToWide<VI8M2, VF16M4>;
+  def : VTypeInfoToWide<VI8M4, VF16M8>;
+
+  def : VTypeInfoToWide<VI16MF4, VF32MF2>;
+  def : VTypeInfoToWide<VI16MF2, VF32M1>;
+  def : VTypeInfoToWide<VI16M1, VF32M2>;
+  def : VTypeInfoToWide<VI16M2, VF32M4>;
+  def : VTypeInfoToWide<VI16M4, VF32M8>;
+
+  def : VTypeInfoToWide<VI32MF2, VF64M1>;
+  def : VTypeInfoToWide<VI32M1, VF64M2>;
+  def : VTypeInfoToWide<VI32M2, VF64M4>;
+  def : VTypeInfoToWide<VI32M4, VF64M8>;
+}
+
 // This class holds the record of the RISCVVPseudoTable below.
 // This represents the information we need in codegen for each pseudo.
 // The definition should be consistent with `struct PseudoInfo` in
@@ -1277,6 +1297,34 @@ multiclass VPseudoReductionV_VS {
   }
 }
 
+multiclass VPseudoConversion<VReg RetClass,
+                             VReg Op1Class,
+                             LMULInfo MInfo,
+                             string Constraint = ""> {
+  let VLMul = MInfo.value in {
+    def "_" # MInfo.MX : VPseudoUnaryNoMask<RetClass, Op1Class, Constraint>;
+    def "_" # MInfo.MX # "_MASK" : VPseudoUnaryMask<RetClass, Op1Class,
+                                                    Constraint>;
+  }
+}
+
+multiclass VPseudoConversionV_V {
+  foreach m = MxList.m in
+    defm _V : VPseudoConversion<m.vrclass, m.vrclass, m>;
+}
+
+multiclass VPseudoConversionW_V {
+  defvar constraint = "@earlyclobber $rd";
+  foreach m = MxList.m[0-5] in
+    defm _V : VPseudoConversion<m.wvrclass, m.vrclass, m, constraint>;
+}
+
+multiclass VPseudoConversionV_W {
+  defvar constraint = "@earlyclobber $rd";
+  foreach m = MxList.m[0-5] in
+    defm _W : VPseudoConversion<m.vrclass, m.wvrclass, m, constraint>;
+}
+
 //===----------------------------------------------------------------------===//
 // Helpers to define the intrinsic patterns.
 //===----------------------------------------------------------------------===//
@@ -1722,6 +1770,23 @@ multiclass VPatBinaryMaskOut<string intrinsic,
                          (op1_type op1_reg_class:$rs1),
                          ToFPR32<op2_type, op2_kind, "rs2">.ret,
                          (NoX0 GPR:$vl), sew)>;
+}
+
+multiclass VPatConversion<string intrinsic,
+                          string inst,
+                          string kind,
+                          ValueType result_type,
+                          ValueType op1_type,
+                          ValueType mask_type,
+                          int sew,
+                          LMULInfo vlmul,
+                          VReg result_reg_class,
+                          VReg op1_reg_class>
+{
+  def : VPatUnaryNoMask<intrinsic, inst, kind, result_type, op1_type,
+                        sew, vlmul, op1_reg_class>;
+  def : VPatUnaryMask<intrinsic, inst, kind, result_type, op1_type,
+                      mask_type, sew, vlmul, result_reg_class, op1_reg_class>;
 }
 
 multiclass VPatBinaryV_VV<string intrinsic, string instruction,
@@ -2200,6 +2265,104 @@ multiclass VPatReductionW_VS<string intrinsic, string instruction, bit IsFloat =
   }
 }
 
+multiclass VPatConversionVI_VF<string intrinsic,
+                               string instruction>
+{
+  foreach fvti = AllFloatVectors in
+  {
+    defvar ivti = GetIntVTypeInfo<fvti>.Vti;
+
+    defm : VPatConversion<intrinsic, instruction, "V",
+                          ivti.Vector, fvti.Vector, ivti.Mask, fvti.SEW,
+                          fvti.LMul, ivti.RegClass, fvti.RegClass>;
+  }
+}
+
+multiclass VPatConversionVF_VI<string intrinsic,
+                               string instruction>
+{
+  foreach fvti = AllFloatVectors in
+  {
+    defvar ivti = GetIntVTypeInfo<fvti>.Vti;
+
+    defm : VPatConversion<intrinsic, instruction, "V",
+                          fvti.Vector, ivti.Vector, fvti.Mask, ivti.SEW,
+                          ivti.LMul, fvti.RegClass, ivti.RegClass>;
+  }
+}
+
+multiclass VPatConversionWI_VF<string intrinsic, string instruction> {
+  foreach fvtiToFWti = AllWidenableFloatVectors in
+  {
+    defvar fvti = fvtiToFWti.Vti;
+    defvar iwti = GetIntVTypeInfo<fvtiToFWti.Wti>.Vti;
+
+    defm : VPatConversion<intrinsic, instruction, "V",
+                          iwti.Vector, fvti.Vector, iwti.Mask, fvti.SEW,
+                          fvti.LMul, iwti.RegClass, fvti.RegClass>;
+  }
+}
+
+multiclass VPatConversionWF_VI<string intrinsic, string instruction> {
+  foreach vtiToWti = AllWidenableIntToFloatVectors in
+  {
+    defvar vti = vtiToWti.Vti;
+    defvar fwti = vtiToWti.Wti;
+
+    defm : VPatConversion<intrinsic, instruction, "V",
+                          fwti.Vector, vti.Vector, fwti.Mask, vti.SEW,
+                          vti.LMul, fwti.RegClass, vti.RegClass>;
+  }
+}
+
+multiclass VPatConversionWF_VF <string intrinsic, string instruction> {
+  foreach fvtiToFWti = AllWidenableFloatVectors in
+  {
+    defvar fvti = fvtiToFWti.Vti;
+    defvar fwti = fvtiToFWti.Wti;
+
+    defm : VPatConversion<intrinsic, instruction, "V",
+                          fwti.Vector, fvti.Vector, fwti.Mask, fvti.SEW,
+                          fvti.LMul, fwti.RegClass, fvti.RegClass>;
+  }
+}
+
+multiclass VPatConversionVI_WF <string intrinsic, string instruction> {
+  foreach vtiToWti = AllWidenableIntToFloatVectors in
+  {
+    defvar vti = vtiToWti.Vti;
+    defvar fwti = vtiToWti.Wti;
+
+    defm : VPatConversion<intrinsic, instruction, "W",
+                          vti.Vector, fwti.Vector, vti.Mask, vti.SEW,
+                          vti.LMul, vti.RegClass, fwti.RegClass>;
+  }
+}
+
+multiclass VPatConversionVF_WI <string intrinsic, string instruction> {
+  foreach fvtiToFWti = AllWidenableFloatVectors in
+  {
+    defvar fvti = fvtiToFWti.Vti;
+    defvar iwti = GetIntVTypeInfo<fvtiToFWti.Wti>.Vti;
+
+    defm : VPatConversion<intrinsic, instruction, "W",
+                          fvti.Vector, iwti.Vector, fvti.Mask, fvti.SEW,
+                          fvti.LMul, fvti.RegClass, iwti.RegClass>;
+  }
+}
+
+multiclass VPatConversionVF_WF <string intrinsic, string instruction> {
+  foreach fvtiToFWti = AllWidenableFloatVectors in
+  {
+    defvar fvti = fvtiToFWti.Vti;
+    defvar fwti = fvtiToFWti.Wti;
+
+    defm : VPatConversion<intrinsic, instruction, "W",
+                          fvti.Vector, fwti.Vector, fvti.Mask, fvti.SEW,
+                          fvti.LMul, fvti.RegClass, fwti.RegClass>;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Pseudo instructions and patterns.
 //===----------------------------------------------------------------------===//
@@ -2535,6 +2698,39 @@ defm PseudoVFMV_V      : VPseudoUnaryV_F_NoDummyMask;
 //===----------------------------------------------------------------------===//
 defm PseudoVFMERGE     : VPseudoBinaryV_XM</*CarryOut =*/0,/*CarryIn =*/true,
                                            /*Constraint =*/"", /*IsFloat=*/true>;
+
+//===----------------------------------------------------------------------===//
+// 14.17. Single-Width Floating-Point/Integer Type-Convert Instructions
+//===----------------------------------------------------------------------===//
+defm PseudoVFCVT_XU_F : VPseudoConversionV_V;
+defm PseudoVFCVT_X_F : VPseudoConversionV_V;
+defm PseudoVFCVT_RTZ_XU_F : VPseudoConversionV_V;
+defm PseudoVFCVT_RTZ_X_F : VPseudoConversionV_V;
+defm PseudoVFCVT_F_XU : VPseudoConversionV_V;
+defm PseudoVFCVT_F_X : VPseudoConversionV_V;
+
+//===----------------------------------------------------------------------===//
+// 14.18. Widening Floating-Point/Integer Type-Convert Instructions
+//===----------------------------------------------------------------------===//
+defm PseudoVFWCVT_XU_F : VPseudoConversionW_V;
+defm PseudoVFWCVT_X_F : VPseudoConversionW_V;
+defm PseudoVFWCVT_RTZ_XU_F : VPseudoConversionW_V;
+defm PseudoVFWCVT_RTZ_X_F : VPseudoConversionW_V;
+defm PseudoVFWCVT_F_XU : VPseudoConversionW_V;
+defm PseudoVFWCVT_F_X : VPseudoConversionW_V;
+defm PseudoVFWCVT_F_F : VPseudoConversionW_V;
+
+//===----------------------------------------------------------------------===//
+// 14.19. Narrowing Floating-Point/Integer Type-Convert Instructions
+//===----------------------------------------------------------------------===//
+defm PseudoVFNCVT_XU_F : VPseudoConversionV_W;
+defm PseudoVFNCVT_X_F : VPseudoConversionV_W;
+defm PseudoVFNCVT_RTZ_XU_F : VPseudoConversionV_W;
+defm PseudoVFNCVT_RTZ_X_F : VPseudoConversionV_W;
+defm PseudoVFNCVT_F_XU : VPseudoConversionV_W;
+defm PseudoVFNCVT_F_X : VPseudoConversionV_W;
+defm PseudoVFNCVT_F_F : VPseudoConversionV_W;
+defm PseudoVFNCVT_ROD_F_F : VPseudoConversionV_W;
 } // Predicates = [HasStdExtV, HasStdExtF]
 
 let Predicates = [HasStdExtV] in {
@@ -3089,6 +3285,38 @@ defm "" : VPatBinaryV_VM<"int_riscv_vfmerge", "PseudoVMERGE",
 defm "" : VPatBinaryV_XM<"int_riscv_vfmerge", "PseudoVFMERGE",
                          /*CarryOut = */0, /*vtilist=*/AllFloatVectors>;
 
+//===----------------------------------------------------------------------===//
+// 14.17. Single-Width Floating-Point/Integer Type-Convert Instructions
+//===----------------------------------------------------------------------===//
+defm "" : VPatConversionVI_VF<"int_riscv_vfcvt_xu_f_v", "PseudoVFCVT_XU_F">;
+defm "" : VPatConversionVI_VF<"int_riscv_vfcvt_rtz_xu_f_v", "PseudoVFCVT_RTZ_XU_F">;
+defm "" : VPatConversionVI_VF<"int_riscv_vfcvt_x_f_v", "PseudoVFCVT_X_F">;
+defm "" : VPatConversionVI_VF<"int_riscv_vfcvt_rtz_x_f_v", "PseudoVFCVT_RTZ_X_F">;
+defm "" : VPatConversionVF_VI<"int_riscv_vfcvt_f_x_v", "PseudoVFCVT_F_X">;
+defm "" : VPatConversionVF_VI<"int_riscv_vfcvt_f_xu_v", "PseudoVFCVT_F_XU">;
+
+//===----------------------------------------------------------------------===//
+// 14.18. Widening Floating-Point/Integer Type-Convert Instructions
+//===----------------------------------------------------------------------===//
+defm "" : VPatConversionWI_VF<"int_riscv_vfwcvt_xu_f_v", "PseudoVFWCVT_XU_F">;
+defm "" : VPatConversionWI_VF<"int_riscv_vfwcvt_x_f_v", "PseudoVFWCVT_X_F">;
+defm "" : VPatConversionWI_VF<"int_riscv_vfwcvt_rtz_xu_f_v", "PseudoVFWCVT_RTZ_XU_F">;
+defm "" : VPatConversionWI_VF<"int_riscv_vfwcvt_rtz_x_f_v", "PseudoVFWCVT_RTZ_X_F">;
+defm "" : VPatConversionWF_VI<"int_riscv_vfwcvt_f_xu_v", "PseudoVFWCVT_F_XU">;
+defm "" : VPatConversionWF_VI<"int_riscv_vfwcvt_f_x_v", "PseudoVFWCVT_F_X">;
+defm "" : VPatConversionWF_VF<"int_riscv_vfwcvt_f_f_v", "PseudoVFWCVT_F_F">;
+
+//===----------------------------------------------------------------------===//
+// 14.19. Narrowing Floating-Point/Integer Type-Convert Instructions
+//===----------------------------------------------------------------------===//
+defm "" : VPatConversionVI_WF<"int_riscv_vfncvt_xu_f_w", "PseudoVFNCVT_XU_F">;
+defm "" : VPatConversionVI_WF<"int_riscv_vfncvt_x_f_w", "PseudoVFNCVT_X_F">;
+defm "" : VPatConversionVI_WF<"int_riscv_vfncvt_rtz_xu_f_w", "PseudoVFNCVT_RTZ_XU_F">;
+defm "" : VPatConversionVI_WF<"int_riscv_vfncvt_rtz_x_f_w", "PseudoVFNCVT_RTZ_X_F">;
+defm "" : VPatConversionVF_WI <"int_riscv_vfncvt_f_xu_w", "PseudoVFNCVT_F_XU">;
+defm "" : VPatConversionVF_WI <"int_riscv_vfncvt_f_x_w", "PseudoVFNCVT_F_X">;
+defm "" : VPatConversionVF_WF<"int_riscv_vfncvt_f_f_w", "PseudoVFNCVT_F_F">;
+defm "" : VPatConversionVF_WF<"int_riscv_vfncvt_rod_f_f_w", "PseudoVFNCVT_ROD_F_F">;
 } // Predicates = [HasStdExtV, HasStdExtF]
 
 let Predicates = [HasStdExtV] in {

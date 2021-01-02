@@ -57,22 +57,22 @@ unsigned getOpcode(Intrinsic::ID ID) {
   }
 }
 
-RecurrenceDescriptor::MinMaxRecurrenceKind getMRK(Intrinsic::ID ID) {
+RecurKind getRK(Intrinsic::ID ID) {
   switch (ID) {
   case Intrinsic::vector_reduce_smax:
-    return RecurrenceDescriptor::MRK_SIntMax;
+    return RecurKind::SMax;
   case Intrinsic::vector_reduce_smin:
-    return RecurrenceDescriptor::MRK_SIntMin;
+    return RecurKind::SMin;
   case Intrinsic::vector_reduce_umax:
-    return RecurrenceDescriptor::MRK_UIntMax;
+    return RecurKind::UMax;
   case Intrinsic::vector_reduce_umin:
-    return RecurrenceDescriptor::MRK_UIntMin;
+    return RecurKind::UMin;
   case Intrinsic::vector_reduce_fmax:
-    return RecurrenceDescriptor::MRK_FloatMax;
+    return RecurKind::FMax;
   case Intrinsic::vector_reduce_fmin:
-    return RecurrenceDescriptor::MRK_FloatMin;
+    return RecurKind::FMin;
   default:
-    return RecurrenceDescriptor::MRK_Invalid;
+    return RecurKind::None;
   }
 }
 
@@ -108,7 +108,7 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
     FastMathFlags FMF =
         isa<FPMathOperator>(II) ? II->getFastMathFlags() : FastMathFlags{};
     Intrinsic::ID ID = II->getIntrinsicID();
-    RecurrenceDescriptor::MinMaxRecurrenceKind MRK = getMRK(ID);
+    RecurKind RK = getRK(ID);
 
     Value *Rdx = nullptr;
     IRBuilder<> Builder(II);
@@ -123,13 +123,13 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
       Value *Acc = II->getArgOperand(0);
       Value *Vec = II->getArgOperand(1);
       if (!FMF.allowReassoc())
-        Rdx = getOrderedReduction(Builder, Acc, Vec, getOpcode(ID), MRK);
+        Rdx = getOrderedReduction(Builder, Acc, Vec, getOpcode(ID), RK);
       else {
         if (!isPowerOf2_32(
                 cast<FixedVectorType>(Vec->getType())->getNumElements()))
           continue;
 
-        Rdx = getShuffleReduction(Builder, Vec, getOpcode(ID), MRK);
+        Rdx = getShuffleReduction(Builder, Vec, getOpcode(ID), RK);
         Rdx = Builder.CreateBinOp((Instruction::BinaryOps)getOpcode(ID),
                                   Acc, Rdx, "bin.rdx");
       }
@@ -149,7 +149,7 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
               cast<FixedVectorType>(Vec->getType())->getNumElements()))
         continue;
 
-      Rdx = getShuffleReduction(Builder, Vec, getOpcode(ID), MRK);
+      Rdx = getShuffleReduction(Builder, Vec, getOpcode(ID), RK);
       break;
     }
     case Intrinsic::vector_reduce_fmax:
@@ -163,7 +163,7 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
           !FMF.isFast())
         continue;
 
-      Rdx = getShuffleReduction(Builder, Vec, getOpcode(ID), MRK);
+      Rdx = getShuffleReduction(Builder, Vec, getOpcode(ID), RK);
       break;
     }
     }

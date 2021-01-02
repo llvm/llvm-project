@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O3 -debug-only=isel 2>&1 < %s | FileCheck %s
+; RUN: llc -march=hexagon -O3 -debug-only=isel 2>&1 -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s
 ; REQUIRES: asserts
 
 ; DAGCombiner converts the two vector stores to a double vector store,

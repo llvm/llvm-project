@@ -5,7 +5,7 @@ typedef __attribute__((__ext_vector_type__(8))) float vector_float8;
 typedef vector_float8 float8;
 
 // rdar://20000762
-// CHECK-LABEL: define void @_Z23MandelbrotPolyCalcSIMD8v
+// CHECK-LABEL: define{{.*}} void @_Z23MandelbrotPolyCalcSIMD8v
 void MandelbrotPolyCalcSIMD8() {
   constexpr float8 v4 = 4.0;  // value to compare against abs(z)^2, to see if bounded
   float8 vABS;
@@ -21,7 +21,7 @@ typedef __attribute__((__ext_vector_type__(4))) int int4;
 typedef __attribute__((__ext_vector_type__(4))) float float4;
 typedef __attribute__((__ext_vector_type__(4))) __int128 bigint4;
 
-// CHECK-LABEL: define void @_Z14BoolConversionv
+// CHECK-LABEL: define{{.*}} void @_Z14BoolConversionv
 void BoolConversion() {
   // CHECK: store <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>
   int4 intsT = (int4)true;

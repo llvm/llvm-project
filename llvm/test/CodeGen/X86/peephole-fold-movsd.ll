@@ -7,11 +7,11 @@
 
 %struct.S1 = type { double, double }
 
-@g = common global %struct.S1 zeroinitializer, align 8
+@g = common dso_local global %struct.S1 zeroinitializer, align 8
 
 declare void @foo3(%struct.S1*)
 
-define void @foo1(double %a.coerce0, double %a.coerce1, double %b.coerce0, double %b.coerce1) nounwind {
+define dso_local void @foo1(double %a.coerce0, double %a.coerce1, double %b.coerce0, double %b.coerce1) nounwind {
 ; CHECK-LABEL: foo1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subq $24, %rsp

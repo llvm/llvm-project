@@ -7,15 +7,15 @@
 // WITHATEXIT: @llvm.global_ctors = appending global [5 x { i32, void ()*, i8* }]{{.*}}i32 65535, void ()* @A,{{.*}}i32 65535, void ()* @C,{{.*}}i32 123, void ()* @__GLOBAL_init_123,{{.*}}i32 789, void ()* @[[GLOBAL_INIT_789:__GLOBAL_init_789.[0-9]+]],{{.*}}i32 65535, void ()* @__GLOBAL_init_65535,
 // WITHATEXIT-NOT: global_dtors
 
-// CHECK: define void @A()
-// CHECK: define void @B()
+// CHECK: define{{.*}} void @A()
+// CHECK: define{{.*}} void @B()
 // CHECK: define internal void @E()
 // CHECK: define internal void @F()
 // CHECK: define internal void @G()
-// CHECK: define i32 @__GLOBAL_init_789(i32 %{{.*}})
+// CHECK: define{{.*}} i32 @__GLOBAL_init_789(i32 %{{.*}})
 // CHECK: define internal void @C()
 // CHECK: define internal void @D()
-// CHECK: define i32 @main()
+// CHECK: define{{.*}} i32 @main()
 // CHECK: define internal i32 @foo()
 // WITHOUTATEXIT-NOT: define
 

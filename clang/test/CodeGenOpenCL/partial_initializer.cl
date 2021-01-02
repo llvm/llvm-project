@@ -5,7 +5,7 @@ typedef __attribute__(( ext_vector_type(4) ))  int int4;
 
 // CHECK: %struct.StrucTy = type { i32, i32, i32 }
 
-// CHECK: @GA = addrspace(1) global [6 x [6 x float]] {{[[][[]}}6 x float] [float 1.000000e+00, float 2.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00],
+// CHECK: @GA ={{.*}} addrspace(1) global [6 x [6 x float]] {{[[][[]}}6 x float] [float 1.000000e+00, float 2.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00],
 // CHECK:        [6 x float] zeroinitializer, [6 x float] zeroinitializer, [6 x float] zeroinitializer, [6 x float] zeroinitializer, [6 x float] zeroinitializer], align 4 
 float GA[6][6]  = {1.0f, 2.0f};
 
@@ -15,18 +15,18 @@ typedef struct {
   int z;
 } StrucTy;
 
-// CHECK: @GS = addrspace(1) global %struct.StrucTy { i32 1, i32 2, i32 0 }, align 4
+// CHECK: @GS ={{.*}} addrspace(1) global %struct.StrucTy { i32 1, i32 2, i32 0 }, align 4
 StrucTy GS = {1, 2};
 
-// CHECK: @GV1 = addrspace(1) global <4 x i32> <i32 1, i32 2, i32 3, i32 4>, align 16
+// CHECK: @GV1 ={{.*}} addrspace(1) global <4 x i32> <i32 1, i32 2, i32 3, i32 4>, align 16
 int4 GV1 = (int4)((int2)(1,2),3,4);
 
-// CHECK: @GV2 = addrspace(1) global <4 x i32> <i32 1, i32 1, i32 1, i32 1>, align 16
+// CHECK: @GV2 ={{.*}} addrspace(1) global <4 x i32> <i32 1, i32 1, i32 1, i32 1>, align 16
 int4 GV2 = (int4)(1);
 
 // CHECK: @__const.f.S = private unnamed_addr addrspace(2) constant %struct.StrucTy { i32 1, i32 2, i32 0 }, align 4
 
-// CHECK-LABEL: define spir_func void @f()
+// CHECK-LABEL: define{{.*}} spir_func void @f()
 void f(void) {
   // CHECK: %[[A:.*]] = alloca [6 x [6 x float]], align 4
   // CHECK: %[[S:.*]] = alloca %struct.StrucTy, align 4

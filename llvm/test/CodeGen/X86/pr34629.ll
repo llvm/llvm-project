@@ -4,11 +4,11 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@b = common local_unnamed_addr global i64 0, align 8
-@a = common local_unnamed_addr global i8 0, align 1
+@b = common dso_local local_unnamed_addr global i64 0, align 8
+@a = common dso_local local_unnamed_addr global i8 0, align 1
 
 ; Function Attrs: norecurse nounwind uwtable
-define void @c() local_unnamed_addr #0 {
+define dso_local void @c() local_unnamed_addr #0 {
 ; CHECK-LABEL: c:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq {{.*}}(%rip), %rax

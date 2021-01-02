@@ -33,7 +33,7 @@ namespace test1 {
   int test() {
     return sizeof(B);
   }
-  // CHECK: define i32 @_ZN5test14testEv()
+  // CHECK: define{{.*}} i32 @_ZN5test14testEv()
   // CHECK: ret i32 12
 }
 
@@ -67,5 +67,5 @@ namespace test2 {
 
 // va_list should be based on "char *" rather than "void *".
 
-// CHECK: define void @_Z11whatsVaListPc
+// CHECK: define{{.*}} void @_Z11whatsVaListPc
 void whatsVaList(__builtin_va_list l) {}

@@ -2,11 +2,11 @@
 ; RUN: llc %s -mtriple=aarch64-linux-gnuabi -aarch64-enable-global-merge -global-merge-on-external -disable-post-ra -o - | FileCheck %s
 ; RUN: llc %s -mtriple=aarch64-apple-ios -aarch64-enable-global-merge -global-merge-on-external -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-APPLE-IOS
 
-@x = global [100 x i32] zeroinitializer, align 1
-@y = global [100 x i32] zeroinitializer, align 1
+@x = dso_local global [100 x i32] zeroinitializer, align 1
+@y = dso_local global [100 x i32] zeroinitializer, align 1
 @z = internal global i32 1, align 4
 
-define void @f1(i32 %a1, i32 %a2, i32 %a3) {
+define dso_local void @f1(i32 %a1, i32 %a2, i32 %a3) {
 ;CHECK-APPLE-IOS: adrp    x8, __MergedGlobals_x@PAGE+12
 ;CHECK-APPLE-IOS-NOT: adrp
 ;CHECK-APPLE-IOS: add   x8, x8, __MergedGlobals_x@PAGEOFF+12

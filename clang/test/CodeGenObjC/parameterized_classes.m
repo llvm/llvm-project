@@ -58,7 +58,7 @@ void getObjectsTest(NSMutableArray<NSString *> *array) {
 
 void printMe(NSString *name) { }
 
-// CHECK-LABEL: define void @blockTest
+// CHECK-LABEL: define{{.*}} void @blockTest
 void blockTest(NSMutableArray<void (^)(void)> *array, NSString *name) {
   // CHECK-NOT: ret void
   // CHECK: call i8* @llvm.objc.retainBlock

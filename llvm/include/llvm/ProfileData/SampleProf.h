@@ -796,10 +796,7 @@ public:
       return Name;
 
     assert(GUIDToFuncNameMap && "GUIDToFuncNameMap needs to be popluated first");
-    auto iter = GUIDToFuncNameMap->find(std::stoull(Name.data()));
-    if (iter == GUIDToFuncNameMap->end())
-      return StringRef();
-    return iter->second;
+    return GUIDToFuncNameMap->lookup(std::stoull(Name.data()));
   }
 
   /// Returns the line offset to the start line of the subprogram.

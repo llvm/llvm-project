@@ -17,12 +17,12 @@ struct C { void *field; };
 struct D { ~D(); };
 
 // CHECK: @__dso_handle = external hidden global i8
-// CHECK: @c = global %struct.C zeroinitializer, align 8
+// CHECK: @c ={{.*}} global %struct.C zeroinitializer, align 8
 
 // PR6205: The casts should not require global initializers
 // CHECK: @_ZN6PR59741cE = external global %"struct.PR5974::C"
-// CHECK: @_ZN6PR59741aE = global %"struct.PR5974::A"* getelementptr inbounds (%"struct.PR5974::C", %"struct.PR5974::C"* @_ZN6PR59741cE, i32 0, i32 0)
-// CHECK: @_ZN6PR59741bE = global %"struct.PR5974::B"* bitcast (i8* getelementptr (i8, i8* bitcast (%"struct.PR5974::C"* @_ZN6PR59741cE to i8*), i64 4) to %"struct.PR5974::B"*), align 8
+// CHECK: @_ZN6PR59741aE ={{.*}} global %"struct.PR5974::A"* getelementptr inbounds (%"struct.PR5974::C", %"struct.PR5974::C"* @_ZN6PR59741cE, i32 0, i32 0)
+// CHECK: @_ZN6PR59741bE ={{.*}} global %"struct.PR5974::B"* bitcast (i8* getelementptr (i8, i8* bitcast (%"struct.PR5974::C"* @_ZN6PR59741cE to i8*), i64 4) to %"struct.PR5974::B"*), align 8
 
 // CHECK: call void @_ZN1AC1Ev(%struct.A* {{[^,]*}} @a)
 // CHECK: call i32 @__cxa_atexit(void (i8*)* bitcast (void (%struct.A*)* @_ZN1AD1Ev to void (i8*)*), i8* getelementptr inbounds (%struct.A, %struct.A* @a, i32 0, i32 0), i8* @__dso_handle)
@@ -46,7 +46,7 @@ namespace test1 {
   const int y = x - 1; // This gets deferred.
   const int z = ~y;    // This also gets deferred, but gets "undeferred" before y.
   int test() { return z; }
-// CHECK-LABEL:      define i32 @_ZN5test14testEv()
+// CHECK-LABEL:      define{{.*}} i32 @_ZN5test14testEv()
 
   // All of these initializers end up delayed, so we check them later.
 }

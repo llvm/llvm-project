@@ -12,7 +12,7 @@ struct foo {
 void __attribute__((ms_abi)) f1(void);
 void __attribute__((sysv_abi)) f2(void);
 void f3(void) {
-  // FREEBSD-LABEL: define void @f3()
+  // FREEBSD-LABEL: define{{.*}} void @f3()
   // WIN64-LABEL: define dso_local void @f3()
   f1();
   // FREEBSD: call win64cc void @f1()
@@ -28,7 +28,7 @@ void f3(void) {
 
 // Win64 ABI varargs
 void __attribute__((ms_abi)) f4(int a, ...) {
-  // FREEBSD-LABEL: define win64cc void @f4
+  // FREEBSD-LABEL: define{{.*}} win64cc void @f4
   // WIN64-LABEL: define dso_local void @f4
   __builtin_ms_va_list ap;
   __builtin_ms_va_start(ap, a);
@@ -108,7 +108,7 @@ void f5(int a, ...) {
 
 // Verify that using a Win64 va_list from a System V function works.
 void __attribute__((sysv_abi)) f6(__builtin_ms_va_list ap) {
-  // FREEBSD-LABEL: define void @f6
+  // FREEBSD-LABEL: define{{.*}} void @f6
   // FREEBSD: store i8* %ap, i8** %[[AP:.*]]
   // WIN64-LABEL: define dso_local x86_64_sysvcc void @f6
   // WIN64: store i8* %ap, i8** %[[AP:.*]]
@@ -156,6 +156,6 @@ struct i128 {
 
 __attribute__((ms_abi)) struct i128 f7(struct i128 a) {
   // WIN64: define dso_local void @f7(%struct.i128* noalias sret(%struct.i128) align 8 %agg.result, %struct.i128* %a)
-  // FREEBSD: define win64cc void @f7(%struct.i128* noalias sret(%struct.i128) align 8 %agg.result, %struct.i128* %a)
+  // FREEBSD: define{{.*}} win64cc void @f7(%struct.i128* noalias sret(%struct.i128) align 8 %agg.result, %struct.i128* %a)
   return a;
 }

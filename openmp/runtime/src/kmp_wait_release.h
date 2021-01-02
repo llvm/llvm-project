@@ -57,7 +57,7 @@ template <typename P> class kmp_flag_native {
 public:
   typedef P flag_t;
   kmp_flag_native(volatile P *p, flag_type ft)
-      : loc(p), t({(unsigned int)ft, 0U}) {}
+      : loc(p), t({(short unsigned int)ft, 0U}) {}
   volatile P *get() { return loc; }
   void *get_void_p() { return RCAST(void *, CCAST(P *, loc)); }
   void set(volatile P *new_loc) { loc = new_loc; }
@@ -77,7 +77,7 @@ template <typename P> class kmp_flag {
 public:
   typedef P flag_t;
   kmp_flag(std::atomic<P> *p, flag_type ft)
-      : loc(p), t({(unsigned int)ft, 0U}) {}
+      : loc(p), t({(short unsigned int)ft, 0U}) {}
   /*!
    * @result the pointer to the actual flag
    */
@@ -509,7 +509,7 @@ static inline void __kmp_mwait_template(int th_gtid, C *flag) {
   __kmp_lock_suspend_mx(th);
 
   volatile void *spin = flag->get();
-  void *cacheline = (void *)(kmp_uint64(spin) & ~(CACHE_LINE - 1));
+  void *cacheline = (void *)(kmp_uintptr_t(spin) & ~(CACHE_LINE - 1));
 
   if (!flag->done_check()) {
     // Mark thread as no longer active

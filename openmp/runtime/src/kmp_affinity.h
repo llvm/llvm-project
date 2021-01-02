@@ -54,7 +54,7 @@ public:
     int get_system_affinity(bool abort_on_error) override {
       KMP_ASSERT2(KMP_AFFINITY_CAPABLE(),
                   "Illegal get affinity operation when not capable");
-      int retval =
+      long retval =
           hwloc_get_cpubind(__kmp_hwloc_topology, mask, HWLOC_CPUBIND_THREAD);
       if (retval >= 0) {
         return 0;
@@ -68,7 +68,7 @@ public:
     int set_system_affinity(bool abort_on_error) const override {
       KMP_ASSERT2(KMP_AFFINITY_CAPABLE(),
                   "Illegal set affinity operation when not capable");
-      int retval =
+      long retval =
           hwloc_set_cpubind(__kmp_hwloc_topology, mask, HWLOC_CPUBIND_THREAD);
       if (retval >= 0) {
         return 0;
@@ -261,8 +261,13 @@ public:
 #endif
 class KMPNativeAffinity : public KMPAffinity {
   class Mask : public KMPAffinity::Mask {
-    typedef unsigned char mask_t;
-    static const int BITS_PER_MASK_T = sizeof(mask_t) * CHAR_BIT;
+    typedef unsigned long mask_t;
+    typedef decltype(__kmp_affin_mask_size) mask_size_type;
+    static const unsigned int BITS_PER_MASK_T = sizeof(mask_t) * CHAR_BIT;
+    static const mask_t ONE = 1;
+    mask_size_type get_num_mask_types() const {
+      return __kmp_affin_mask_size / sizeof(mask_t);
+    }
 
   public:
     mask_t *mask;
@@ -272,35 +277,40 @@ class KMPNativeAffinity : public KMPAffinity {
         __kmp_free(mask);
     }
     void set(int i) override {
-      mask[i / BITS_PER_MASK_T] |= ((mask_t)1 << (i % BITS_PER_MASK_T));
+      mask[i / BITS_PER_MASK_T] |= (ONE << (i % BITS_PER_MASK_T));
     }
     bool is_set(int i) const override {
-      return (mask[i / BITS_PER_MASK_T] & ((mask_t)1 << (i % BITS_PER_MASK_T)));
+      return (mask[i / BITS_PER_MASK_T] & (ONE << (i % BITS_PER_MASK_T)));
     }
     void clear(int i) override {
-      mask[i / BITS_PER_MASK_T] &= ~((mask_t)1 << (i % BITS_PER_MASK_T));
+      mask[i / BITS_PER_MASK_T] &= ~(ONE << (i % BITS_PER_MASK_T));
     }
     void zero() override {
-      for (size_t i = 0; i < __kmp_affin_mask_size; ++i)
-        mask[i] = 0;
+      mask_size_type e = get_num_mask_types();
+      for (mask_size_type i = 0; i < e; ++i)
+        mask[i] = (mask_t)0;
     }
     void copy(const KMPAffinity::Mask *src) override {
       const Mask *convert = static_cast<const Mask *>(src);
-      for (size_t i = 0; i < __kmp_affin_mask_size; ++i)
+      mask_size_type e = get_num_mask_types();
+      for (mask_size_type i = 0; i < e; ++i)
         mask[i] = convert->mask[i];
     }
     void bitwise_and(const KMPAffinity::Mask *rhs) override {
       const Mask *convert = static_cast<const Mask *>(rhs);
-      for (size_t i = 0; i < __kmp_affin_mask_size; ++i)
+      mask_size_type e = get_num_mask_types();
+      for (mask_size_type i = 0; i < e; ++i)
         mask[i] &= convert->mask[i];
     }
     void bitwise_or(const KMPAffinity::Mask *rhs) override {
       const Mask *convert = static_cast<const Mask *>(rhs);
-      for (size_t i = 0; i < __kmp_affin_mask_size; ++i)
+      mask_size_type e = get_num_mask_types();
+      for (mask_size_type i = 0; i < e; ++i)
         mask[i] |= convert->mask[i];
     }
     void bitwise_not() override {
-      for (size_t i = 0; i < __kmp_affin_mask_size; ++i)
+      mask_size_type e = get_num_mask_types();
+      for (mask_size_type i = 0; i < e; ++i)
         mask[i] = ~(mask[i]);
     }
     int begin() const override {
@@ -309,7 +319,11 @@ class KMPNativeAffinity : public KMPAffinity {
         ++retval;
       return retval;
     }
-    int end() const override { return __kmp_affin_mask_size * BITS_PER_MASK_T; }
+    int end() const override {
+      int e;
+      __kmp_type_convert(get_num_mask_types() * BITS_PER_MASK_T, &e);
+      return e;
+    }
     int next(int previous) const override {
       int retval = previous + 1;
       while (retval < end() && !is_set(retval))
@@ -320,7 +334,7 @@ class KMPNativeAffinity : public KMPAffinity {
       KMP_ASSERT2(KMP_AFFINITY_CAPABLE(),
                   "Illegal get affinity operation when not capable");
 #if KMP_OS_LINUX
-      int retval =
+      long retval =
           syscall(__NR_sched_getaffinity, 0, __kmp_affin_mask_size, mask);
 #elif KMP_OS_FREEBSD
       int r =
@@ -340,7 +354,7 @@ class KMPNativeAffinity : public KMPAffinity {
       KMP_ASSERT2(KMP_AFFINITY_CAPABLE(),
                   "Illegal set affinity operation when not capable");
 #if KMP_OS_LINUX
-      int retval =
+      long retval =
           syscall(__NR_sched_setaffinity, 0, __kmp_affin_mask_size, mask);
 #elif KMP_OS_FREEBSD
       int r =
@@ -849,15 +863,15 @@ public:
       skipPerLevel = &(numPerLevel[maxLevels]);
 
       // Copy old elements from old arrays
-      for (kmp_uint32 i = 0; i < old_maxLevels;
-           ++i) { // init numPerLevel[*] to 1 item per level
+      for (kmp_uint32 i = 0; i < old_maxLevels; ++i) {
+        // init numPerLevel[*] to 1 item per level
         numPerLevel[i] = old_numPerLevel[i];
         skipPerLevel[i] = old_skipPerLevel[i];
       }
 
       // Init new elements in arrays to 1
-      for (kmp_uint32 i = old_maxLevels; i < maxLevels;
-           ++i) { // init numPerLevel[*] to 1 item per level
+      for (kmp_uint32 i = old_maxLevels; i < maxLevels; ++i) {
+        // init numPerLevel[*] to 1 item per level
         numPerLevel[i] = 1;
         skipPerLevel[i] = 1;
       }

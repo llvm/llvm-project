@@ -3,8 +3,8 @@
 @default = global i32 55
 define dso_local i32* @get_default_global() {
 ; CHECK-LABEL: get_default_global:
-; CHECK:         addis 3, 2, default@toc@ha
-; CHECK-NEXT:    addi 3, 3, default@toc@l
+; CHECK:         addis 3, 2, .LC{{.*}}@toc@ha
+; CHECK-NEXT:    ld 3, .LC{{.*}}@toc@l(3)
 ; CHECK-NEXT:    blr
   ret i32* @default
 }
@@ -21,8 +21,8 @@ define dso_local i32* @get_local_global() {
 @preemptable_global = dso_preemptable global i32 42
 define dso_local i32* @get_preemptable_global() {
 ; CHECK-LABEL: get_preemptable_global:
-; CHECK:         addis 3, 2, preemptable_global@toc@ha
-; CHECK-NEXT:    addi 3, 3, preemptable_global@toc@l
+; CHECK:         addis 3, 2, .LC{{.*}}@toc@ha
+; CHECK-NEXT:    ld 3, .LC{{.*}}@toc@l(3)
 ; CHECK-NEXT:    blr
   ret i32* @preemptable_global
 }
@@ -63,8 +63,7 @@ define signext i32 @default_function(i32 %i) {
 define dso_local signext i32 @default_function_caller(i32 %i) {
 ; CHECK-LABEL: default_function_caller:
 ; CHECK:         bl default_function
-; CHECK-NOT:     nop
-; CHECK:         blr
+; CHECK-NEXT:    nop
   %call = notail call signext i32 @default_function(i32 signext %i)
   ret i32 %call
 }
@@ -87,8 +86,7 @@ define dso_preemptable signext i32 @preemptable_function(i32 %i) {
 define dso_local signext i32 @preemptable_function_caller(i32 %i) {
 ; CHECK-LABEL: preemptable_function_caller:
 ; CHECK:         bl preemptable_function
-; CHECK-NOT:     nop
-; CHECK:         blr
+; CHECK-NEXT:    nop
   %call = notail call signext i32 @preemptable_function(i32 signext %i)
   ret i32 %call
 }

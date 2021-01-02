@@ -154,3 +154,95 @@ func @broadcast(%arg0 : !shape.shape, %arg1 : tensor<?xindex>) -> tensor<?xindex
       : !shape.shape, tensor<?xindex> -> tensor<?xindex>
   return %result : tensor<?xindex>
 }
+
+// -----
+
+// Test using an unsupported shape.lib attribute type.
+
+// expected-error@+1 {{only SymbolRefAttr allowed in shape.lib attribute array}}
+module attributes {shape.lib = [@shape_lib, "shape_lib"]} {
+
+shape.function_library @shape_lib {
+  // Test shape function that returns the shape of input arg as result shape.
+  func @same_result_shape(%arg: !shape.value_shape) -> !shape.shape {
+    %0 = shape.shape_of %arg : !shape.value_shape -> !shape.shape
+    return %0 : !shape.shape
+  }
+} mapping {
+  test.same_operand_result_type = @same_result_shape
+}
+
+}
+
+// -----
+
+// Test that duplicate op to shape function mappings are flagged, this uses
+// the same library twice for easy overlap.
+
+// expected-error@+1 {{only one op to shape mapping allowed}}
+module attributes {shape.lib = [@shape_lib, @shape_lib]} {
+
+shape.function_library @shape_lib {
+  // Test shape function that returns the shape of input arg as result shape.
+  func @same_result_shape(%arg: !shape.value_shape) -> !shape.shape {
+    %0 = shape.shape_of %arg : !shape.value_shape -> !shape.shape
+    return %0 : !shape.shape
+  }
+} mapping {
+  test.same_operand_result_type = @same_result_shape
+}
+
+}
+
+// -----
+
+// Test that duplicate op to shape function mappings are flagged (this is
+// more an invariant of using the dictionary attribute here than anything
+// specific to function library op).
+
+module attributes {shape.lib = [@shape_lib]} {
+
+shape.function_library @shape_lib {
+  // Test shape function that returns the shape of input arg as result shape.
+  func @same_result_shape(%arg: !shape.value_shape) -> !shape.shape {
+    %0 = shape.shape_of %arg : !shape.value_shape -> !shape.shape
+    return %0 : !shape.shape
+  }
+} mapping {
+  // expected-error @+2 {{duplicate key}}
+  test.same_operand_result_type = @same_result_shape,
+  test.same_operand_result_type = @same_result_shape
+}
+
+}
+
+// -----
+
+// Test that op referred to by shape lib is a shape function library.
+
+// expected-error@+1 {{required to be shape function library}}
+module attributes {shape.lib = @fn} {
+
+func @fn(%arg: !shape.value_shape) -> !shape.shape {
+  %0 = shape.shape_of %arg : !shape.value_shape -> !shape.shape
+  return %0 : !shape.shape
+}
+
+}
+
+// -----
+
+// Test that op referred to by shape lib is a shape function library.
+
+func @fn(%arg: !shape.value_shape) -> !shape.shape {
+  // expected-error@+1 {{SymbolTable}}
+  %0 = shape.shape_of %arg {shape.lib = @fn} : !shape.value_shape -> !shape.shape
+  return %0 : !shape.shape
+}
+
+// -----
+
+// Test that shape function library is defined.
+
+// expected-error@+1 {{@fn not found}}
+module attributes {shape.lib = @fn} { }

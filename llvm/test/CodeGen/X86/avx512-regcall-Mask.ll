@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu    -mattr=+avx512bw  | FileCheck %s --check-prefix=CHECK64 --check-prefix=LINUXOSX64
 
 ; Test regcall when receiving arguments of v64i1 type
-define x86_regcallcc i64 @test_argv64i1(<64 x i1> %x0, <64 x i1> %x1, <64 x i1> %x2, <64 x i1> %x3, <64 x i1> %x4, <64 x i1> %x5, <64 x i1> %x6, <64 x i1> %x7, <64 x i1> %x8, <64 x i1> %x9, <64 x i1> %x10, <64 x i1> %x11, <64 x i1> %x12)  {
+define dso_local x86_regcallcc i64 @test_argv64i1(<64 x i1> %x0, <64 x i1> %x1, <64 x i1> %x2, <64 x i1> %x3, <64 x i1> %x4, <64 x i1> %x5, <64 x i1> %x6, <64 x i1> %x7, <64 x i1> %x8, <64 x i1> %x9, <64 x i1> %x10, <64 x i1> %x11, <64 x i1> %x12)  {
 ; X32-LABEL: test_argv64i1:
 ; X32:       # %bb.0:
 ; X32-NEXT:    addl %edx, %eax
@@ -93,7 +93,7 @@ define x86_regcallcc i64 @test_argv64i1(<64 x i1> %x0, <64 x i1> %x1, <64 x i1> 
 }
 
 ; Test regcall when passing arguments of v64i1 type
-define i64 @caller_argv64i1() #0 {
+define dso_local i64 @caller_argv64i1() #0 {
 ; X32-LABEL: caller_argv64i1:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    pushl %edi
@@ -213,7 +213,7 @@ entry:
 }
 
 ; Test regcall when returning v64i1 type
-define x86_regcallcc <64 x i1> @test_retv64i1()  {
+define dso_local x86_regcallcc <64 x i1> @test_retv64i1()  {
 ; X32-LABEL: test_retv64i1:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl $2, %eax
@@ -229,7 +229,7 @@ define x86_regcallcc <64 x i1> @test_retv64i1()  {
 }
 
 ; Test regcall when processing result of v64i1 type
-define <64 x i1> @caller_retv64i1() #0 {
+define dso_local <64 x i1> @caller_retv64i1() #0 {
 ; X32-LABEL: caller_retv64i1:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    calll _test_retv64i1
@@ -280,7 +280,7 @@ entry:
 
 ; Test regcall when receiving arguments of v32i1 type
 declare i32 @test_argv32i1helper(<32 x i1> %x0, <32 x i1> %x1, <32 x i1> %x2)
-define x86_regcallcc i32 @test_argv32i1(<32 x i1> %x0, <32 x i1> %x1, <32 x i1> %x2)  {
+define dso_local x86_regcallcc i32 @test_argv32i1(<32 x i1> %x0, <32 x i1> %x1, <32 x i1> %x2)  {
 ; X32-LABEL: test_argv32i1:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    pushl %esp
@@ -379,7 +379,7 @@ define x86_regcallcc i32 @test_argv32i1(<32 x i1> %x0, <32 x i1> %x1, <32 x i1> 
 ; LINUXOSX64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; LINUXOSX64-NEXT:    # kill: def $ymm1 killed $ymm1 killed $zmm1
 ; LINUXOSX64-NEXT:    # kill: def $ymm2 killed $ymm2 killed $zmm2
-; LINUXOSX64-NEXT:    callq test_argv32i1helper
+; LINUXOSX64-NEXT:    callq test_argv32i1helper@PLT
 ; LINUXOSX64-NEXT:    vmovaps (%rsp), %xmm8 # 16-byte Reload
 ; LINUXOSX64-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm9 # 16-byte Reload
 ; LINUXOSX64-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm10 # 16-byte Reload
@@ -400,7 +400,7 @@ entry:
 }
 
 ; Test regcall when passing arguments of v32i1 type
-define i32 @caller_argv32i1() #0 {
+define dso_local i32 @caller_argv32i1() #0 {
 ; X32-LABEL: caller_argv32i1:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl $1, %eax
@@ -452,7 +452,7 @@ entry:
 }
 
 ; Test regcall when returning v32i1 type
-define x86_regcallcc <32 x i1> @test_retv32i1()  {
+define dso_local x86_regcallcc <32 x i1> @test_retv32i1()  {
 ; X32-LABEL: test_retv32i1:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl $1, %eax
@@ -467,7 +467,7 @@ define x86_regcallcc <32 x i1> @test_retv32i1()  {
 }
 
 ; Test regcall when processing result of v32i1 type
-define i32 @caller_retv32i1() #0 {
+define dso_local i32 @caller_retv32i1() #0 {
 ; X32-LABEL: caller_retv32i1:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    calll _test_retv32i1
@@ -515,7 +515,7 @@ entry:
 
 ; Test regcall when receiving arguments of v16i1 type
 declare i16 @test_argv16i1helper(<16 x i1> %x0, <16 x i1> %x1, <16 x i1> %x2)
-define x86_regcallcc i16 @test_argv16i1(<16 x i1> %x0, <16 x i1> %x1, <16 x i1> %x2)  {
+define dso_local x86_regcallcc i16 @test_argv16i1(<16 x i1> %x0, <16 x i1> %x1, <16 x i1> %x2)  {
 ; X32-LABEL: test_argv16i1:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %esp
@@ -609,7 +609,7 @@ define x86_regcallcc i16 @test_argv16i1(<16 x i1> %x0, <16 x i1> %x1, <16 x i1> 
 ; LINUXOSX64-NEXT:    # kill: def $xmm1 killed $xmm1 killed $zmm1
 ; LINUXOSX64-NEXT:    # kill: def $xmm2 killed $xmm2 killed $zmm2
 ; LINUXOSX64-NEXT:    vzeroupper
-; LINUXOSX64-NEXT:    callq test_argv16i1helper
+; LINUXOSX64-NEXT:    callq test_argv16i1helper@PLT
 ; LINUXOSX64-NEXT:    vmovaps (%rsp), %xmm8 # 16-byte Reload
 ; LINUXOSX64-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm9 # 16-byte Reload
 ; LINUXOSX64-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm10 # 16-byte Reload
@@ -628,7 +628,7 @@ define x86_regcallcc i16 @test_argv16i1(<16 x i1> %x0, <16 x i1> %x1, <16 x i1> 
 }
 
 ; Test regcall when passing arguments of v16i1 type
-define i16 @caller_argv16i1() #0 {
+define dso_local i16 @caller_argv16i1() #0 {
 ; X32-LABEL: caller_argv16i1:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl $1, %eax
@@ -680,7 +680,7 @@ entry:
 }
 
 ; Test regcall when returning v16i1 type
-define x86_regcallcc <16 x i1> @test_retv16i1()  {
+define dso_local x86_regcallcc <16 x i1> @test_retv16i1()  {
 ; X32-LABEL: test_retv16i1:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movw $1, %ax
@@ -695,7 +695,7 @@ define x86_regcallcc <16 x i1> @test_retv16i1()  {
 }
 
 ; Test regcall when processing result of v16i1 type
-define i16 @caller_retv16i1() #0 {
+define dso_local i16 @caller_retv16i1() #0 {
 ; X32-LABEL: caller_retv16i1:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    calll _test_retv16i1
@@ -749,7 +749,7 @@ entry:
 
 ; Test regcall when receiving arguments of v8i1 type
 declare i8 @test_argv8i1helper(<8 x i1> %x0, <8 x i1> %x1, <8 x i1> %x2)
-define x86_regcallcc i8 @test_argv8i1(<8 x i1> %x0, <8 x i1> %x1, <8 x i1> %x2)  {
+define dso_local x86_regcallcc i8 @test_argv8i1(<8 x i1> %x0, <8 x i1> %x1, <8 x i1> %x2)  {
 ; X32-LABEL: test_argv8i1:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %esp
@@ -843,7 +843,7 @@ define x86_regcallcc i8 @test_argv8i1(<8 x i1> %x0, <8 x i1> %x1, <8 x i1> %x2) 
 ; LINUXOSX64-NEXT:    # kill: def $xmm1 killed $xmm1 killed $zmm1
 ; LINUXOSX64-NEXT:    # kill: def $xmm2 killed $xmm2 killed $zmm2
 ; LINUXOSX64-NEXT:    vzeroupper
-; LINUXOSX64-NEXT:    callq test_argv8i1helper
+; LINUXOSX64-NEXT:    callq test_argv8i1helper@PLT
 ; LINUXOSX64-NEXT:    vmovaps (%rsp), %xmm8 # 16-byte Reload
 ; LINUXOSX64-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm9 # 16-byte Reload
 ; LINUXOSX64-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm10 # 16-byte Reload
@@ -862,7 +862,7 @@ define x86_regcallcc i8 @test_argv8i1(<8 x i1> %x0, <8 x i1> %x1, <8 x i1> %x2) 
 }
 
 ; Test regcall when passing arguments of v8i1 type
-define i8 @caller_argv8i1() #0 {
+define dso_local i8 @caller_argv8i1() #0 {
 ; X32-LABEL: caller_argv8i1:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl $1, %eax
@@ -914,7 +914,7 @@ entry:
 }
 
 ; Test regcall when returning v8i1 type
-define x86_regcallcc <8 x i1> @test_retv8i1()  {
+define dso_local x86_regcallcc <8 x i1> @test_retv8i1()  {
 ; X32-LABEL: test_retv8i1:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movb $1, %al
@@ -929,7 +929,7 @@ define x86_regcallcc <8 x i1> @test_retv8i1()  {
 }
 
 ; Test regcall when processing result of v8i1 type
-define <8 x i1> @caller_retv8i1() #0 {
+define dso_local <8 x i1> @caller_retv8i1() #0 {
 ; X32-LABEL: caller_retv8i1:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    calll _test_retv8i1

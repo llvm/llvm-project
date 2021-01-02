@@ -11,7 +11,7 @@ struct S {
 
 // POD types.
 
-// CHECK-LABEL: define void @_Z2t3P1S
+// CHECK-LABEL: define{{.*}} void @_Z2t3P1S
 void t3(S *s) {
   // CHECK: icmp {{.*}} null
   // CHECK: br i1
@@ -32,7 +32,7 @@ struct T {
   int a;
 };
 
-// CHECK-LABEL: define void @_Z2t4P1T
+// CHECK-LABEL: define{{.*}} void @_Z2t4P1T
 void t4(T *t) {
   // CHECK: call void @_ZN1TD1Ev
   // CHECK-NOSIZE-NEXT: bitcast
@@ -61,7 +61,7 @@ namespace test0 {
     ~A() {}
   };
 
-  // CHECK-LABEL: define void @_ZN5test04testEPNS_1AE(
+  // CHECK-LABEL: define{{.*}} void @_ZN5test04testEPNS_1AE(
   void test(A *a) {
     // CHECK: call void @_ZN5test01AD1Ev
     // CHECK-NOSIZE-NEXT: bitcast
@@ -81,7 +81,7 @@ namespace test1 {
     ~A();
   };
 
-  // CHECK-LABEL: define void @_ZN5test14testEPA10_A20_NS_1AE(
+  // CHECK-LABEL: define{{.*}} void @_ZN5test14testEPA10_A20_NS_1AE(
   void test(A (*arr)[10][20]) {
     delete [] arr;
     // CHECK:      icmp eq [10 x [20 x [[A:%.*]]]]* [[PTR:%.*]], null
@@ -105,7 +105,7 @@ namespace test1 {
 }
 
 namespace test2 {
-  // CHECK-LABEL: define void @_ZN5test21fEPb
+  // CHECK-LABEL: define{{.*}} void @_ZN5test21fEPb
   void f(bool *b) {
     // CHECK: call void @_ZdlPv(i8*
     delete b;
@@ -128,7 +128,7 @@ namespace test4 {
     void operator delete (void *);
   };
 
-  // CHECK-LABEL: define void @_ZN5test421global_delete_virtualEPNS_1XE
+  // CHECK-LABEL: define{{.*}} void @_ZN5test421global_delete_virtualEPNS_1XE
   void global_delete_virtual(X *xp) {
     //   Load the offset-to-top from the vtable and apply it.
     //   This has to be done first because the dtor can mess it up.
@@ -153,7 +153,7 @@ namespace test4 {
 
 namespace test5 {
   struct Incomplete;
-  // CHECK-LABEL: define void @_ZN5test523array_delete_incompleteEPNS_10IncompleteES1_
+  // CHECK-LABEL: define{{.*}} void @_ZN5test523array_delete_incompleteEPNS_10IncompleteES1_
   void array_delete_incomplete(Incomplete *p1, Incomplete *p2) {
     // CHECK: call void @_ZdlPv
     delete p1;

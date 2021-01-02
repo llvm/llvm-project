@@ -18,7 +18,7 @@ struct S1 {
 @implementation C
 @end
 
-// CHECK-LABEL: define void @_Z5test0P1C(
+// CHECK-LABEL: define{{.*}} void @_Z5test0P1C(
 // CHECK: %{{.*}} = alloca %
 // CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_S1:.*]], align
 // CHECK: %[[AGG_TMP_1:.*]] = alloca %[[STRUCT_S0:.*]], align
@@ -30,7 +30,7 @@ void test0(C *c) {
   c.f = S0();
 }
 
-// CHECK: define void @_Z5test1P1C(
+// CHECK: define{{.*}} void @_Z5test1P1C(
 // CHECK: %{{.*}} = alloca %
 // CHECK: %[[TEMP_LVALUE:.*]] = alloca %[[STRUCT_S1:.*]], align
 // CHECK: call void @_ZN2S1C1Ev(%[[STRUCT_S1]]* {{[^,]*}} %[[TEMP_LVALUE]])

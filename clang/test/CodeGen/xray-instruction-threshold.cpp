@@ -8,7 +8,7 @@ int foo() {
   return 2;
 }
 
-// CHECK: define i32 @_Z3foov() #[[THRESHOLD:[0-9]+]] {
-// CHECK: define i32 @_Z3barv() #[[NEVERATTR:[0-9]+]] {
+// CHECK: define{{.*}} i32 @_Z3foov() #[[THRESHOLD:[0-9]+]] {
+// CHECK: define{{.*}} i32 @_Z3barv() #[[NEVERATTR:[0-9]+]] {
 // CHECK-DAG: attributes #[[THRESHOLD]] = {{.*}} "xray-instruction-threshold"="1" {{.*}}
 // CHECK-DAG: attributes #[[NEVERATTR]] = {{.*}} "function-instrument"="xray-never" {{.*}}

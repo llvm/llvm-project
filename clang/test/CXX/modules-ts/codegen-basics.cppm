@@ -4,14 +4,14 @@
 export module FooBar;
 
 export {
-  // CHECK-DAG: define i32 @_Z1fv(
+  // CHECK-DAG: define{{.*}} i32 @_Z1fv(
   int f() { return 0; }
 }
 
 // CHECK-DAG: define weak_odr void @_ZW6FooBarE2f2v(
 inline void f2() { }
 
-// CHECK-DAG: define void @_ZW6FooBarE2f3v(
+// CHECK-DAG: define{{.*}} void @_ZW6FooBarE2f3v(
 static void f3() {}
 export void use_f3() { f3(); }
 

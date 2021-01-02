@@ -393,11 +393,7 @@ void CodeGenTarget::ReadRegAltNameIndices() const {
 /// getRegisterByName - If there is a register with the specific AsmName,
 /// return it.
 const CodeGenRegister *CodeGenTarget::getRegisterByName(StringRef Name) const {
-  const StringMap<CodeGenRegister*> &Regs = getRegBank().getRegistersByName();
-  StringMap<CodeGenRegister*>::const_iterator I = Regs.find(Name);
-  if (I == Regs.end())
-    return nullptr;
-  return I->second;
+  return getRegBank().getRegistersByName().lookup(Name);
 }
 
 std::vector<ValueTypeByHwMode> CodeGenTarget::getRegisterVTs(Record *R)

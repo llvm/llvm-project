@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=armv7-none-linux-gnueabi < %s | FileCheck %s
+; RUN: llc -mtriple=armv7-none-linux-gnueabi -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s
 
 @_ZTVN10__cxxabiv117__class_type_infoE = external global i8*
 @_ZTS3Foo = linkonce_odr constant [5 x i8] c"3Foo\00"

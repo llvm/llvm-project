@@ -13,24 +13,24 @@
 #include "Inputs/cuda.h"
 
 __global__ void flat_work_group_size_default() {
-// CHECK: define amdgpu_kernel void @_Z28flat_work_group_size_defaultv() [[FLAT_WORK_GROUP_SIZE_DEFAULT:#[0-9]+]]
+// CHECK: define{{.*}} amdgpu_kernel void @_Z28flat_work_group_size_defaultv() [[FLAT_WORK_GROUP_SIZE_DEFAULT:#[0-9]+]]
 }
 
 __attribute__((amdgpu_flat_work_group_size(32, 64))) // expected-no-diagnostics
 __global__ void flat_work_group_size_32_64() {
-// CHECK: define amdgpu_kernel void @_Z26flat_work_group_size_32_64v() [[FLAT_WORK_GROUP_SIZE_32_64:#[0-9]+]]
+// CHECK: define{{.*}} amdgpu_kernel void @_Z26flat_work_group_size_32_64v() [[FLAT_WORK_GROUP_SIZE_32_64:#[0-9]+]]
 }
 __attribute__((amdgpu_waves_per_eu(2))) // expected-no-diagnostics
 __global__ void waves_per_eu_2() {
-// CHECK: define amdgpu_kernel void @_Z14waves_per_eu_2v() [[WAVES_PER_EU_2:#[0-9]+]]
+// CHECK: define{{.*}} amdgpu_kernel void @_Z14waves_per_eu_2v() [[WAVES_PER_EU_2:#[0-9]+]]
 }
 __attribute__((amdgpu_num_sgpr(32))) // expected-no-diagnostics
 __global__ void num_sgpr_32() {
-// CHECK: define amdgpu_kernel void @_Z11num_sgpr_32v() [[NUM_SGPR_32:#[0-9]+]]
+// CHECK: define{{.*}} amdgpu_kernel void @_Z11num_sgpr_32v() [[NUM_SGPR_32:#[0-9]+]]
 }
 __attribute__((amdgpu_num_vgpr(64))) // expected-no-diagnostics
 __global__ void num_vgpr_64() {
-// CHECK: define amdgpu_kernel void @_Z11num_vgpr_64v() [[NUM_VGPR_64:#[0-9]+]]
+// CHECK: define{{.*}} amdgpu_kernel void @_Z11num_vgpr_64v() [[NUM_VGPR_64:#[0-9]+]]
 }
 
 // Make sure this is silently accepted on other targets.

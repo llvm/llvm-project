@@ -3,7 +3,7 @@
 unsigned int ui, uj, uk;
 int i, j, k;
 
-// CHECK-LABEL: define void @test0()
+// CHECK-LABEL: define{{.*}} void @test0()
 void test0() {
   // -ftrapv doesn't affect unsigned arithmetic.
   // CHECK:      [[T1:%.*]] = load i32, i32* @uj
@@ -23,7 +23,7 @@ void test0() {
   i = j + k;
 }
 
-// CHECK-LABEL: define void @test1()
+// CHECK-LABEL: define{{.*}} void @test1()
 void test1() {
   extern void opaque(int);
   opaque(i++);
@@ -37,7 +37,7 @@ void test1() {
   // CHECK:      call void @llvm.ubsantrap(i8 0)
 }
 
-// CHECK-LABEL: define void @test2()
+// CHECK-LABEL: define{{.*}} void @test2()
 void test2() {
   extern void opaque(int);
   opaque(++i);
@@ -51,7 +51,7 @@ void test2() {
   // CHECK:      call void @llvm.ubsantrap(i8 0)
 }
 
-// CHECK-LABEL: define void @test3(
+// CHECK-LABEL: define{{.*}} void @test3(
 void test3(int a, int b, float c, float d) {
   // CHECK-NOT:  @llvm.trap
   (void)(a / b);

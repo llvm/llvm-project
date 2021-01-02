@@ -8,7 +8,7 @@ struct B : A {
 };
 
 A::A(int i, ...) {}
-// CHECK: define void @{{.*}}foo
+// CHECK: define{{.*}} void @{{.*}}foo
 // CHECK-NOT: ret void
 // CHECK: call void @llvm.dbg.declare
 // CHECK-NOT: ret void

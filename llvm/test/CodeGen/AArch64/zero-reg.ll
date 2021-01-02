@@ -1,9 +1,9 @@
 ; RUN: llc -verify-machineinstrs -o - %s -mtriple=aarch64-linux-gnu | FileCheck %s
 
-@var32 = global i32 0
-@var64 = global i64 0
+@var32 = dso_local global i32 0
+@var64 = dso_local global i64 0
 
-define void @test_zr() {
+define dso_local void @test_zr() {
 ; CHECK-LABEL: test_zr:
 
   store i32 0, i32* @var32
@@ -15,7 +15,7 @@ define void @test_zr() {
 ; CHECK: ret
 }
 
-define void @test_sp(i32 %val) {
+define dso_local void @test_sp(i32 %val) {
 ; CHECK-LABEL: test_sp:
 
 ; Important correctness point here is that LLVM doesn't try to use xzr

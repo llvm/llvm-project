@@ -45,7 +45,7 @@
 ;      w = u.e;
 ;      foo(w);
 ; }
-define void @TestUnionLD1(fp128 %s, i64 %n) #0 {
+define dso_local void @TestUnionLD1(fp128 %s, i64 %n) #0 {
 ; SSE-LABEL: TestUnionLD1:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
@@ -334,15 +334,15 @@ entry:
   ret fp128 %add
 }
 
-@v128 = common global i128 0, align 16
-@v128_2 = common global i128 0, align 16
+@v128 = common dso_local global i128 0, align 16
+@v128_2 = common dso_local global i128 0, align 16
 
 ; C code:
 ; unsigned __int128 v128, v128_2;
 ; void TestShift128_2() {
 ;   v128 = ((v128 << 96) | v128_2);
 ; }
-define void @TestShift128_2() #2 {
+define dso_local void @TestShift128_2() #2 {
 ; CHECK-LABEL: TestShift128_2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq {{.*}}(%rip), %rax
@@ -440,7 +440,7 @@ declare fp128 @fabsl(fp128) #1
 declare fp128 @copysignl(fp128, fp128) #1
 
 ; Test more complicated logical operations generated from copysignl.
-define void @TestCopySign({ fp128, fp128 }* noalias nocapture sret({ fp128, fp128 }) %agg.result, { fp128, fp128 }* byval({ fp128, fp128 }) nocapture readonly align 16 %z) #0 {
+define dso_local void @TestCopySign({ fp128, fp128 }* noalias nocapture sret({ fp128, fp128 }) %agg.result, { fp128, fp128 }* byval({ fp128, fp128 }) nocapture readonly align 16 %z) #0 {
 ; SSE-LABEL: TestCopySign:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    pushq %rbp

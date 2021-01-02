@@ -25,17 +25,19 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Type.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -71,16 +73,24 @@ char &llvm::AMDGPUUnifyDivergentExitNodesID = AMDGPUUnifyDivergentExitNodes::ID;
 
 INITIALIZE_PASS_BEGIN(AMDGPUUnifyDivergentExitNodes, DEBUG_TYPE,
                      "Unify divergent function exit nodes", false, false)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LegacyDivergenceAnalysis)
 INITIALIZE_PASS_END(AMDGPUUnifyDivergentExitNodes, DEBUG_TYPE,
                     "Unify divergent function exit nodes", false, false)
 
 void AMDGPUUnifyDivergentExitNodes::getAnalysisUsage(AnalysisUsage &AU) const{
-  // TODO: Preserve dominator tree.
+  if (RequireAndPreserveDomTree)
+    AU.addRequired<DominatorTreeWrapperPass>();
+
   AU.addRequired<PostDominatorTreeWrapperPass>();
 
   AU.addRequired<LegacyDivergenceAnalysis>();
+
+  if (RequireAndPreserveDomTree) {
+    AU.addPreserved<DominatorTreeWrapperPass>();
+    AU.addPreserved<PostDominatorTreeWrapperPass>();
+  }
 
   // No divergent values are changed, only blocks and branch edges.
   AU.addPreserved<LegacyDivergenceAnalysis>();
@@ -134,7 +144,7 @@ static void removeDoneExport(Function &F) {
   }
 }
 
-static BasicBlock *unifyReturnBlockSet(Function &F,
+static BasicBlock *unifyReturnBlockSet(Function &F, DomTreeUpdater &DTU,
                                        ArrayRef<BasicBlock *> ReturningBlocks,
                                        bool InsertExport,
                                        const TargetTransformInfo &TTI,
@@ -175,6 +185,8 @@ static BasicBlock *unifyReturnBlockSet(Function &F,
 
   // Loop over all of the blocks, replacing the return instruction with an
   // unconditional branch.
+  std::vector<DominatorTree::UpdateType> Updates;
+  Updates.reserve(ReturningBlocks.size());
   for (BasicBlock *BB : ReturningBlocks) {
     // Add an incoming element to the PHI node for every return instruction that
     // is merging into this new block...
@@ -184,11 +196,16 @@ static BasicBlock *unifyReturnBlockSet(Function &F,
     // Remove and delete the return inst.
     BB->getTerminator()->eraseFromParent();
     BranchInst::Create(NewRetBlock, BB);
+    Updates.push_back({DominatorTree::Insert, BB, NewRetBlock});
   }
+
+  if (RequireAndPreserveDomTree)
+    DTU.applyUpdates(Updates);
+  Updates.clear();
 
   for (BasicBlock *BB : ReturningBlocks) {
     // Cleanup possible branch to unconditional branch to the return.
-    simplifyCFG(BB, TTI, /*DTU=*/nullptr,
+    simplifyCFG(BB, TTI, RequireAndPreserveDomTree ? &DTU : nullptr,
                 SimplifyCFGOptions().bonusInstThreshold(2));
   }
 
@@ -196,6 +213,10 @@ static BasicBlock *unifyReturnBlockSet(Function &F,
 }
 
 bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
+  DominatorTree *DT = nullptr;
+  if (RequireAndPreserveDomTree)
+    DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+
   auto &PDT = getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
 
   // If there's only one exit, we don't need to do anything, unless this is a
@@ -218,6 +239,8 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
   bool InsertExport = false;
 
   bool Changed = false;
+  std::vector<DominatorTree::UpdateType> Updates;
+
   for (BasicBlock *BB : PDT.roots()) {
     if (isa<ReturnInst>(BB->getTerminator())) {
       if (!isUniformlyReached(DA, *BB))
@@ -274,14 +297,28 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
         BI->eraseFromParent(); // Delete the unconditional branch.
         // Add a new conditional branch with a dummy edge to the return block.
         BranchInst::Create(LoopHeaderBB, DummyReturnBB, BoolTrue, BB);
+        Updates.push_back({DominatorTree::Insert, BB, DummyReturnBB});
       } else { // Conditional branch.
+        SmallVector<BasicBlock *, 2> Successors(succ_begin(BB), succ_end(BB));
+
         // Create a new transition block to hold the conditional branch.
         BasicBlock *TransitionBB = BB->splitBasicBlock(BI, "TransitionBlock");
+
+        Updates.reserve(Updates.size() + 2 * Successors.size() + 2);
+
+        // 'Successors' become successors of TransitionBB instead of BB,
+        // and TransitionBB becomes a single successor of BB.
+        Updates.push_back({DominatorTree::Insert, BB, TransitionBB});
+        for (BasicBlock *Successor : Successors) {
+          Updates.push_back({DominatorTree::Insert, TransitionBB, Successor});
+          Updates.push_back({DominatorTree::Delete, BB, Successor});
+        }
 
         // Create a branch that will always branch to the transition block and
         // references DummyReturnBB.
         BB->getTerminator()->eraseFromParent();
         BranchInst::Create(TransitionBB, DummyReturnBB, BoolTrue, BB);
+        Updates.push_back({DominatorTree::Insert, BB, DummyReturnBB});
       }
       Changed = true;
     }
@@ -297,10 +334,12 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
                                             "UnifiedUnreachableBlock", &F);
       new UnreachableInst(F.getContext(), UnreachableBlock);
 
+      Updates.reserve(Updates.size() + UnreachableBlocks.size());
       for (BasicBlock *BB : UnreachableBlocks) {
         // Remove and delete the unreachable inst.
         BB->getTerminator()->eraseFromParent();
         BranchInst::Create(UnreachableBlock, BB);
+        Updates.push_back({DominatorTree::Insert, BB, UnreachableBlock});
       }
       Changed = true;
     }
@@ -330,6 +369,11 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
     }
   }
 
+  DomTreeUpdater DTU(DT, &PDT, DomTreeUpdater::UpdateStrategy::Eager);
+  if (RequireAndPreserveDomTree)
+    DTU.applyUpdates(Updates);
+  Updates.clear();
+
   // Now handle return blocks.
   if (ReturningBlocks.empty())
     return Changed; // No blocks return
@@ -351,7 +395,7 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
                          UniformlyReachedRetBlocks.end());
   }
 
-  unifyReturnBlockSet(F, BlocksToUnify, InsertExport, TTI,
+  unifyReturnBlockSet(F, DTU, BlocksToUnify, InsertExport, TTI,
                       "UnifiedReturnBlock");
   return true;
 }

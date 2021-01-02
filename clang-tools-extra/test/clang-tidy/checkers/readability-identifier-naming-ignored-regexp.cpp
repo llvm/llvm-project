@@ -1,3 +1,6 @@
+// FIXME: PR48646
+// UNSUPPORTED: system-windows
+
 // RUN: %check_clang_tidy %s readability-identifier-naming %t -- \
 // RUN:   -config='{CheckOptions: [ \
 // RUN:     {key: readability-identifier-naming.ParameterCase, value: CamelCase}, \

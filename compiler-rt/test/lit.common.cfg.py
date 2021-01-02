@@ -383,6 +383,7 @@ if config.host_os == 'Linux':
   # NB: 'ldd' is just one of the tools commonly installed as part of glibc/musl
   ldd_ver_cmd = subprocess.Popen(['ldd', '--version'],
                                  stdout=subprocess.PIPE,
+                                 stderr=subprocess.DEVNULL,
                                  env={'LANG': 'C'})
   sout, _ = ldd_ver_cmd.communicate()
   ver_lines = sout.splitlines()

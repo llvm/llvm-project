@@ -7,7 +7,7 @@ declare <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*>, i32, <4 x i1>, <
 
 define <4 x i32> @foov(<4 x %struct.S*> %s, i64 %base){
   %temp = insertelement <4 x i64> poison, i64 %base, i32 0
-  %vector = shufflevector <4 x i64> %temp, <4 x i64> undef, <4 x i32> zeroinitializer
+  %vector = shufflevector <4 x i64> %temp, <4 x i64> poison, <4 x i32> zeroinitializer
 ;CHECK: cost of 0 for instruction: {{.*}} getelementptr inbounds %struct.S
   %B = getelementptr inbounds %struct.S, <4 x %struct.S*> %s, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer
 ;CHECK: cost of 0 for instruction: {{.*}} getelementptr inbounds [1000 x i32]

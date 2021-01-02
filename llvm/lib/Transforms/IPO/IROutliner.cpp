@@ -1201,6 +1201,8 @@ void IROutliner::deduplicateExtractedSections(
 
   for (unsigned Idx = 1; Idx < CurrentGroup.Regions.size(); Idx++) {
     CurrentOS = CurrentGroup.Regions[Idx];
+    AttributeFuncs::mergeAttributesForOutlining(*CurrentGroup.OutlinedFunction,
+                                               *CurrentOS->ExtractedFunction);
 
     // Create a new BasicBlock to hold the needed store instructions.
     BasicBlock *NewBB = BasicBlock::Create(

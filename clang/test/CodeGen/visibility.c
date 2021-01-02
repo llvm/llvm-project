@@ -2,8 +2,8 @@
 // RUN: %clang_cc1 %s -triple i386-unknown-unknown -fvisibility protected -emit-llvm -o - | FileCheck %s -check-prefix=CHECK-PROTECTED
 // RUN: %clang_cc1 %s -triple i386-unknown-unknown -fvisibility hidden -emit-llvm -o - | FileCheck %s -check-prefix=CHECK-HIDDEN
 
-// CHECK-DEFAULT: @g_def = global i32 0
-// CHECK-DEFAULT: @g_com = global i32 0
+// CHECK-DEFAULT: @g_def ={{.*}} global i32 0
+// CHECK-DEFAULT: @g_com ={{.*}} global i32 0
 // CHECK-DEFAULT: @g_ext = external global i32
 // CHECK-DEFAULT: @g_deferred = internal global
 // CHECK-PROTECTED: @g_def = protected global i32 0
@@ -23,7 +23,7 @@ static char g_deferred[] = "hello";
 // CHECK-PROTECTED: @test4 = hidden global i32 10
 // CHECK-HIDDEN: @test4 = hidden global i32 10
 
-// CHECK-DEFAULT-LABEL: define i32 @f_def()
+// CHECK-DEFAULT-LABEL: define{{.*}} i32 @f_def()
 // CHECK-DEFAULT: declare void @f_ext()
 // CHECK-DEFAULT-LABEL: define internal void @f_deferred()
 // CHECK-PROTECTED-LABEL: define protected i32 @f_def()
@@ -45,16 +45,16 @@ int f_def(void) {
 }
 
 // PR8457
-// CHECK-DEFAULT-LABEL: define void @test1(
-// CHECK-PROTECTED-LABEL: define void @test1(
-// CHECK-HIDDEN-LABEL: define void @test1(
+// CHECK-DEFAULT-LABEL: define{{.*}} void @test1(
+// CHECK-PROTECTED-LABEL: define{{.*}} void @test1(
+// CHECK-HIDDEN-LABEL: define{{.*}} void @test1(
 struct Test1 { int field; };
 void  __attribute__((visibility("default"))) test1(struct Test1 *v) { }
 
 // rdar://problem/8595231
-// CHECK-DEFAULT-LABEL: define void @test2()
-// CHECK-PROTECTED-LABEL: define void @test2()
-// CHECK-HIDDEN-LABEL: define void @test2()
+// CHECK-DEFAULT-LABEL: define{{.*}} void @test2()
+// CHECK-PROTECTED-LABEL: define{{.*}} void @test2()
+// CHECK-HIDDEN-LABEL: define{{.*}} void @test2()
 void test2(void);
 void __attribute__((visibility("default"))) test2(void) {}
 

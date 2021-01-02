@@ -372,11 +372,11 @@ __kmp_acquire_futex_lock_timed_template(kmp_futex_lock_t *lck, kmp_int32 gtid) {
         ("__kmp_acquire_futex_lock: lck:%p, T#%d before futex_wait(0x%x)\n",
          lck, gtid, poll_val));
 
-    kmp_int32 rc;
+    long rc;
     if ((rc = syscall(__NR_futex, &(lck->lk.poll), FUTEX_WAIT, poll_val, NULL,
                       NULL, 0)) != 0) {
       KA_TRACE(1000, ("__kmp_acquire_futex_lock: lck:%p, T#%d futex_wait(0x%x) "
-                      "failed (rc=%d errno=%d)\n",
+                      "failed (rc=%ld errno=%d)\n",
                       lck, gtid, poll_val, rc, errno));
       continue;
     }

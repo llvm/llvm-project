@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 < %s
+; RUN: llc -march=hexagon -O2 -simplifycfg-require-and-preserve-domtree=1 < %s
 ; REQUIRES: asserts
 
 ; Test that we generate the correct Phi names in the epilog when we need
