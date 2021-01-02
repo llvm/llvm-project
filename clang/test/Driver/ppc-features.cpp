@@ -1,9 +1,15 @@
 /// Check default CC1 and linker options for ppc32.
-// RUN: %clang -### -target powerpc-unknown-linux-gnu %s 2>&1 | FileCheck --check-prefix=PPC32 %s
+// RUN: %clang -### -target powerpcle-unknown-linux-gnu %s 2>&1 | FileCheck --check-prefixes=PPC32,PPC32LELNX %s
+// RUN: %clang -### -target powerpc-unknown-linux-gnu %s 2>&1 | FileCheck --check-prefixes=PPC32,PPC32BELNX %s
+// RUN: %clang -### -target powerpcle-unknown-freebsd13.0 %s 2>&1 | FileCheck --check-prefixes=PPC32,PPC32LEFBSD %s
+// RUN: %clang -### -target powerpc-unknown-freebsd13.0 %s 2>&1 | FileCheck --check-prefixes=PPC32,PPC32BEFBSD %s
 // PPC32:      "-munwind-tables"
 // PPC32-SAME: "-mfloat-abi" "hard"
 
-// PPC32: "-m" "elf32ppclinux"
+// PPC32LELNX-NEXT: "-m" "elf32lppclinux"
+// PPC32BELNX-NEXT: "-m" "elf32ppclinux"
+// PPC32LEFBSD-NEXT: "-m" "elf32lppc"
+// PPC32BEFBSD-NEXT: "-m" "elf32ppc_fbsd"
 
 // check -msoft-float option for ppc32
 // RUN: %clang -target powerpc-unknown-linux-gnu %s -msoft-float -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-SOFTFLOAT %s

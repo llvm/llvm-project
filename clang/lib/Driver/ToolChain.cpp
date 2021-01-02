@@ -241,6 +241,8 @@ StringRef ToolChain::getDefaultUniversalArchName() const {
     return "arm64_32";
   case llvm::Triple::ppc:
     return "ppc";
+  case llvm::Triple::ppcle:
+    return "ppcle";
   case llvm::Triple::ppc64:
     return "ppc64";
   case llvm::Triple::ppc64le:
