@@ -403,7 +403,7 @@ std::vector<ValueTypeByHwMode> CodeGenTarget::getRegisterVTs(Record *R)
   for (const auto &RC : getRegBank().getRegClasses()) {
     if (RC.contains(Reg)) {
       ArrayRef<ValueTypeByHwMode> InVTs = RC.getValueTypes();
-      Result.insert(Result.end(), InVTs.begin(), InVTs.end());
+      llvm::append_range(Result, InVTs);
     }
   }
 
@@ -416,7 +416,7 @@ std::vector<ValueTypeByHwMode> CodeGenTarget::getRegisterVTs(Record *R)
 
 void CodeGenTarget::ReadLegalValueTypes() const {
   for (const auto &RC : getRegBank().getRegClasses())
-    LegalValueTypes.insert(LegalValueTypes.end(), RC.VTs.begin(), RC.VTs.end());
+    llvm::append_range(LegalValueTypes, RC.VTs);
 
   // Remove duplicates.
   llvm::sort(LegalValueTypes);
