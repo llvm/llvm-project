@@ -198,8 +198,7 @@ static StringRef getOSLibDir(const llvm::Triple &Triple, const ArgList &Args) {
   // FIXME: This is a bit of a hack. We should really unify this code for
   // reasoning about oslibdir spellings with the lib dir spellings in the
   // GCCInstallationDetector, but that is a more significant refactoring.
-  if (Triple.getArch() == llvm::Triple::x86 ||
-      Triple.isPPC32() ||
+  if (Triple.getArch() == llvm::Triple::x86 || Triple.isPPC32() ||
       Triple.getArch() == llvm::Triple::sparc)
     return "lib32";
 
