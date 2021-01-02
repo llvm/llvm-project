@@ -505,26 +505,26 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             post_handle_thread_id = int(post_handle_thread_id, 16)
             self.assertEqual(post_handle_thread_id, print_thread_id)
 
-    @expectedFailure
-    @debugserver_test
-    def test_Hc_then_Csignal_signals_correct_thread_launch_debugserver(self):
-        self.build()
-        self.set_inferior_startup_launch()
-        # Darwin debugserver translates some signals like SIGSEGV into some gdb
-        # expectations about fixed signal numbers.
-        self.Hc_then_Csignal_signals_correct_thread(self.TARGET_EXC_BAD_ACCESS)
-
+    @expectedFailureDarwin
     @skipIfWindows # no SIGSEGV support
     @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr48419")
     @expectedFailureNetBSD
-    @llgs_test
-    def test_Hc_then_Csignal_signals_correct_thread_launch_llgs(self):
+    def test_Hc_then_Csignal_signals_correct_thread_launch(self):
         self.build()
         self.set_inferior_startup_launch()
-        self.Hc_then_Csignal_signals_correct_thread(
-            lldbutil.get_signal_number('SIGSEGV'))
 
-    def m_packet_reads_memory(self):
+        if self.platformIsDarwin():
+            # Darwin debugserver translates some signals like SIGSEGV into some gdb
+            # expectations about fixed signal numbers.
+            self.Hc_then_Csignal_signals_correct_thread(self.TARGET_EXC_BAD_ACCESS)
+        else:
+            self.Hc_then_Csignal_signals_correct_thread(
+                lldbutil.get_signal_number('SIGSEGV'))
+
+    @skipIfWindows # No pty support to test any inferior output
+    def test_m_packet_reads_memory(self):
+        self.build()
+        self.set_inferior_startup_launch()
         # This is the memory we will write into the inferior and then ensure we
         # can read back with $m.
         MEMORY_CONTENTS = "Test contents 0123456789 ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz"
@@ -576,20 +576,9 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         read_contents = seven.unhexlify(context.get("read_contents"))
         self.assertEqual(read_contents, MEMORY_CONTENTS)
 
-    @debugserver_test
-    def test_m_packet_reads_memory_debugserver(self):
+    def test_qMemoryRegionInfo_is_supported(self):
         self.build()
         self.set_inferior_startup_launch()
-        self.m_packet_reads_memory()
-
-    @skipIfWindows # No pty support to test any inferior output
-    @llgs_test
-    def test_m_packet_reads_memory_llgs(self):
-        self.build()
-        self.set_inferior_startup_launch()
-        self.m_packet_reads_memory()
-
-    def qMemoryRegionInfo_is_supported(self):
         # Start up the inferior.
         procs = self.prep_debug_monitor_and_inferior()
 
@@ -600,19 +589,11 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
              ], True)
         self.expect_gdbremote_sequence()
 
-    @debugserver_test
-    def test_qMemoryRegionInfo_is_supported_debugserver(self):
+    @skipIfWindows # No pty support to test any inferior output
+    def test_qMemoryRegionInfo_reports_code_address_as_executable(self):
         self.build()
         self.set_inferior_startup_launch()
-        self.qMemoryRegionInfo_is_supported()
 
-    @llgs_test
-    def test_qMemoryRegionInfo_is_supported_llgs(self):
-        self.build()
-        self.set_inferior_startup_launch()
-        self.qMemoryRegionInfo_is_supported()
-
-    def qMemoryRegionInfo_reports_code_address_as_executable(self):
         # Start up the inferior.
         procs = self.prep_debug_monitor_and_inferior(
             inferior_args=["get-code-address-hex:hello", "sleep:5"])
@@ -660,21 +641,11 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         # Ensure the start address and size encompass the address we queried.
         self.assert_address_within_memory_region(code_address, mem_region_dict)
 
-    @debugserver_test
-    def test_qMemoryRegionInfo_reports_code_address_as_executable_debugserver(
-            self):
-        self.build()
-        self.set_inferior_startup_launch()
-        self.qMemoryRegionInfo_reports_code_address_as_executable()
-
     @skipIfWindows # No pty support to test any inferior output
-    @llgs_test
-    def test_qMemoryRegionInfo_reports_code_address_as_executable_llgs(self):
+    def test_qMemoryRegionInfo_reports_stack_address_as_rw(self):
         self.build()
         self.set_inferior_startup_launch()
-        self.qMemoryRegionInfo_reports_code_address_as_executable()
 
-    def qMemoryRegionInfo_reports_stack_address_as_readable_writeable(self):
         # Start up the inferior.
         procs = self.prep_debug_monitor_and_inferior(
             inferior_args=["get-stack-address-hex:", "sleep:5"])
@@ -723,22 +694,11 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.assert_address_within_memory_region(
             stack_address, mem_region_dict)
 
-    @debugserver_test
-    def test_qMemoryRegionInfo_reports_stack_address_as_readable_writeable_debugserver(
-            self):
-        self.build()
-        self.set_inferior_startup_launch()
-        self.qMemoryRegionInfo_reports_stack_address_as_readable_writeable()
-
     @skipIfWindows # No pty support to test any inferior output
-    @llgs_test
-    def test_qMemoryRegionInfo_reports_stack_address_as_readable_writeable_llgs(
-            self):
+    def test_qMemoryRegionInfo_reports_heap_address_as_rw(self):
         self.build()
         self.set_inferior_startup_launch()
-        self.qMemoryRegionInfo_reports_stack_address_as_readable_writeable()
 
-    def qMemoryRegionInfo_reports_heap_address_as_readable_writeable(self):
         # Start up the inferior.
         procs = self.prep_debug_monitor_and_inferior(
             inferior_args=["get-heap-address-hex:", "sleep:5"])
@@ -786,22 +746,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         # Ensure the start address and size encompass the address we queried.
         self.assert_address_within_memory_region(heap_address, mem_region_dict)
 
-    @debugserver_test
-    def test_qMemoryRegionInfo_reports_heap_address_as_readable_writeable_debugserver(
-            self):
-        self.build()
-        self.set_inferior_startup_launch()
-        self.qMemoryRegionInfo_reports_heap_address_as_readable_writeable()
-
-    @skipIfWindows # No pty support to test any inferior output
-    @llgs_test
-    def test_qMemoryRegionInfo_reports_heap_address_as_readable_writeable_llgs(
-            self):
-        self.build()
-        self.set_inferior_startup_launch()
-        self.qMemoryRegionInfo_reports_heap_address_as_readable_writeable()
-
-    def breakpoint_set_and_remove_work(self, want_hardware=False):
+    def breakpoint_set_and_remove_work(self, want_hardware):
         # Start up the inferior.
         procs = self.prep_debug_monitor_and_inferior(
             inferior_args=[
@@ -933,20 +878,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         context = self.expect_gdbremote_sequence()
         self.assertIsNotNone(context)
 
-    @debugserver_test
-    def test_software_breakpoint_set_and_remove_work_debugserver(self):
-        if self.getArchitecture() == "arm":
-            # TODO: Handle case when setting breakpoint in thumb code
-            self.build(dictionary={'CFLAGS_EXTRAS': '-marm'})
-        else:
-            self.build()
-        self.set_inferior_startup_launch()
-        self.breakpoint_set_and_remove_work(want_hardware=False)
-
     @skipIfWindows # No pty support to test any inferior output
-    @llgs_test
-    @expectedFlakeyLinux("llvm.org/pr25652")
-    def test_software_breakpoint_set_and_remove_work_llgs(self):
+    def test_software_breakpoint_set_and_remove_work(self):
         if self.getArchitecture() == "arm":
             # TODO: Handle case when setting breakpoint in thumb code
             self.build(dictionary={'CFLAGS_EXTRAS': '-marm'})
@@ -955,11 +888,9 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.set_inferior_startup_launch()
         self.breakpoint_set_and_remove_work(want_hardware=False)
 
-    @debugserver_test
     @skipUnlessPlatform(oslist=['linux'])
-    @expectedFailureAndroid
     @skipIf(archs=no_match(['arm', 'aarch64']))
-    def test_hardware_breakpoint_set_and_remove_work_debugserver(self):
+    def test_hardware_breakpoint_set_and_remove_work(self):
         if self.getArchitecture() == "arm":
             # TODO: Handle case when setting breakpoint in thumb code
             self.build(dictionary={'CFLAGS_EXTRAS': '-marm'})
@@ -968,19 +899,10 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.set_inferior_startup_launch()
         self.breakpoint_set_and_remove_work(want_hardware=True)
 
-    @llgs_test
-    @skipUnlessPlatform(oslist=['linux'])
-    @skipIf(archs=no_match(['arm', 'aarch64']))
-    def test_hardware_breakpoint_set_and_remove_work_llgs(self):
-        if self.getArchitecture() == "arm":
-            # TODO: Handle case when setting breakpoint in thumb code
-            self.build(dictionary={'CFLAGS_EXTRAS': '-marm'})
-        else:
-            self.build()
+    def test_qSupported_returns_known_stub_features(self):
+        self.build()
         self.set_inferior_startup_launch()
-        self.breakpoint_set_and_remove_work(want_hardware=True)
 
-    def qSupported_returns_known_stub_features(self):
         # Start up the stub and start/prep the inferior.
         procs = self.prep_debug_monitor_and_inferior()
         self.add_qSupported_packets()
@@ -994,19 +916,11 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.assertIsNotNone(supported_dict)
         self.assertTrue(len(supported_dict) > 0)
 
-    @debugserver_test
-    def test_qSupported_returns_known_stub_features_debugserver(self):
+    @skipIfWindows # No pty support to test any inferior output
+    def test_written_M_content_reads_back_correctly(self):
         self.build()
         self.set_inferior_startup_launch()
-        self.qSupported_returns_known_stub_features()
 
-    @llgs_test
-    def test_qSupported_returns_known_stub_features_llgs(self):
-        self.build()
-        self.set_inferior_startup_launch()
-        self.qSupported_returns_known_stub_features()
-
-    def written_M_content_reads_back_correctly(self):
         TEST_MESSAGE = "Hello, memory"
 
         # Start up the stub and start/prep the inferior.
@@ -1065,21 +979,13 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.assertIsNotNone(printed_message)
         self.assertEqual(printed_message, TEST_MESSAGE + "X")
 
-    @debugserver_test
-    def test_written_M_content_reads_back_correctly_debugserver(self):
+    # Note: as of this moment, a hefty number of the GPR writes are failing with E32 (everything except rax-rdx, rdi, rsi, rbp).
+    # Come back to this.  I have the test rigged to verify that at least some
+    # of the bit-flip writes work.
+    def test_P_writes_all_gpr_registers(self):
         self.build()
         self.set_inferior_startup_launch()
-        self.written_M_content_reads_back_correctly()
 
-    @skipIfWindows # No pty support to test any inferior output
-    @llgs_test
-    @expectedFlakeyLinux("llvm.org/pr25652")
-    def test_written_M_content_reads_back_correctly_llgs(self):
-        self.build()
-        self.set_inferior_startup_launch()
-        self.written_M_content_reads_back_correctly()
-
-    def P_writes_all_gpr_registers(self):
         # Start inferior debug session, grab all register info.
         procs = self.prep_debug_monitor_and_inferior(inferior_args=["sleep:2"])
         self.add_register_info_collection_packets()
@@ -1110,22 +1016,13 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.trace("successful writes: {}, failed writes: {}".format(successful_writes, failed_writes))
         self.assertTrue(successful_writes > 0)
 
-    # Note: as of this moment, a hefty number of the GPR writes are failing with E32 (everything except rax-rdx, rdi, rsi, rbp).
-    # Come back to this.  I have the test rigged to verify that at least some
-    # of the bit-flip writes work.
-    @debugserver_test
-    def test_P_writes_all_gpr_registers_debugserver(self):
+    # Note: as of this moment, a hefty number of the GPR writes are failing
+    # with E32 (everything except rax-rdx, rdi, rsi, rbp).
+    @skipIfWindows
+    def test_P_and_p_thread_suffix_work(self):
         self.build()
         self.set_inferior_startup_launch()
-        self.P_writes_all_gpr_registers()
 
-    @llgs_test
-    def test_P_writes_all_gpr_registers_llgs(self):
-        self.build()
-        self.set_inferior_startup_launch()
-        self.P_writes_all_gpr_registers()
-
-    def P_and_p_thread_suffix_work(self):
         # Startup the inferior with three threads.
         procs = self.prep_debug_monitor_and_inferior(
             inferior_args=["thread:new", "thread:new"])
@@ -1232,18 +1129,3 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             # Make sure we read back what we wrote.
             self.assertEqual(read_value, expected_reg_values[thread_index])
             thread_index += 1
-
-    # Note: as of this moment, a hefty number of the GPR writes are failing
-    # with E32 (everything except rax-rdx, rdi, rsi, rbp).
-    @debugserver_test
-    def test_P_and_p_thread_suffix_work_debugserver(self):
-        self.build()
-        self.set_inferior_startup_launch()
-        self.P_and_p_thread_suffix_work()
-
-    @skipIfWindows
-    @llgs_test
-    def test_P_and_p_thread_suffix_work_llgs(self):
-        self.build()
-        self.set_inferior_startup_launch()
-        self.P_and_p_thread_suffix_work()
