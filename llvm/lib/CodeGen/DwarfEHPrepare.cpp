@@ -273,7 +273,7 @@ static bool prepareDwarfEH(CodeGenOpt::Level OptLevel,
   return DwarfEHPrepare(OptLevel, RewindFunction, F, TLI, DT ? &DTU : nullptr,
                         TTI)
       .run();
-};
+}
 
 namespace {
 
