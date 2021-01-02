@@ -20,19 +20,19 @@
 # CHECK-NEXT: address            index name
 # CHECK-NEXT: _bar_fn
 # CHECK-NEXT: _foo_fn
-# CHECK-NEXT: Indirect symbols for (__DATA,__thread_ptrs) 2 entries
-# CHECK-NEXT: address            index name
-# CHECK-NEXT: _bar_tlv
-# CHECK-NEXT: _foo_tlv
-# CHECK-NEXT: Indirect symbols for (__DATA,__la_symbol_ptr) 2 entries
-# CHECK-NEXT: address            index name
-# CHECK-NEXT: _bar_fn
-# CHECK-NEXT: _foo_fn
 # CHECK-NEXT: Indirect symbols for (__DATA_CONST,__got) 3 entries
 # CHECK-NEXT: address            index name
 # CHECK-NEXT: _bar
 # CHECK-NEXT: _foo
 # CHECK-NEXT: _stub_binder
+# CHECK-NEXT: Indirect symbols for (__DATA,__la_symbol_ptr) 2 entries
+# CHECK-NEXT: address            index name
+# CHECK-NEXT: _bar_fn
+# CHECK-NEXT: _foo_fn
+# CHECK-NEXT: Indirect symbols for (__DATA,__thread_ptrs) 2 entries
+# CHECK-NEXT: address            index name
+# CHECK-NEXT: _bar_tlv
+# CHECK-NEXT: _foo_tlv
 
 #--- libfoo.s
 

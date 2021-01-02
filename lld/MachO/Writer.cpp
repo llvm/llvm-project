@@ -463,6 +463,12 @@ void Writer::scanSymbols() {
 }
 
 void Writer::createLoadCommands() {
+  uint8_t segIndex = 0;
+  for (OutputSegment *seg : outputSegments) {
+    in.header->addLoadCommand(make<LCSegment>(seg->name, seg));
+    seg->index = segIndex++;
+  }
+
   in.header->addLoadCommand(make<LCDyldInfo>(
       in.rebase, in.binding, in.weakBinding, in.lazyBinding, in.exports));
   in.header->addLoadCommand(make<LCSymtab>(symtabSection, stringTableSection));
@@ -473,8 +479,8 @@ void Writer::createLoadCommands() {
 
   switch (config->outputType) {
   case MH_EXECUTE:
-    in.header->addLoadCommand(make<LCMain>());
     in.header->addLoadCommand(make<LCLoadDylinker>());
+    in.header->addLoadCommand(make<LCMain>());
     break;
   case MH_DYLIB:
     in.header->addLoadCommand(make<LCDylib>(LC_ID_DYLIB, config->installName,
@@ -487,16 +493,10 @@ void Writer::createLoadCommands() {
     llvm_unreachable("unhandled output file type");
   }
 
-  in.header->addLoadCommand(make<LCBuildVersion>(config->platform));
-
   uuidCommand = make<LCUuid>();
   in.header->addLoadCommand(uuidCommand);
 
-  uint8_t segIndex = 0;
-  for (OutputSegment *seg : outputSegments) {
-    in.header->addLoadCommand(make<LCSegment>(seg->name, seg));
-    seg->index = segIndex++;
-  }
+  in.header->addLoadCommand(make<LCBuildVersion>(config->platform));
 
   uint64_t dylibOrdinal = 1;
   for (InputFile *file : inputFiles) {
@@ -566,8 +566,10 @@ static DenseMap<const InputSection *, size_t> buildInputSectionPriorities() {
 
 static int segmentOrder(OutputSegment *seg) {
   return StringSwitch<int>(seg->name)
-      .Case(segment_names::pageZero, -2)
-      .Case(segment_names::text, -1)
+      .Case(segment_names::pageZero, -4)
+      .Case(segment_names::text, -3)
+      .Case(segment_names::dataConst, -2)
+      .Case(segment_names::data, -1)
       // Make sure __LINKEDIT is the last segment (i.e. all its hidden
       // sections must be ordered after other sections).
       .Case(segment_names::linkEdit, std::numeric_limits<int>::max())
@@ -579,12 +581,14 @@ static int sectionOrder(OutputSection *osec) {
   // Sections are uniquely identified by their segment + section name.
   if (segname == segment_names::text) {
     return StringSwitch<int>(osec->name)
-        .Case(section_names::header, -1)
+        .Case(section_names::header, -4)
+        .Case(section_names::text, -3)
+        .Case(section_names::stubs, -2)
+        .Case(section_names::stubHelper, -1)
         .Case(section_names::unwindInfo, std::numeric_limits<int>::max() - 1)
         .Case(section_names::ehFrame, std::numeric_limits<int>::max())
         .Default(0);
-  }
-  if (segname == segment_names::data) {
+  } else if (segname == segment_names::data) {
     // For each thread spawned, dyld will initialize its TLVs by copying the
     // address range from the start of the first thread-local data section to
     // the end of the last one. We therefore arrange these sections contiguously
@@ -600,10 +604,12 @@ static int sectionOrder(OutputSection *osec) {
     case S_ZEROFILL:
       return std::numeric_limits<int>::max();
     default:
-      return 0;
+      return StringSwitch<int>(osec->name)
+          .Case(section_names::laSymbolPtr, -2)
+          .Case(section_names::data, -1)
+          .Default(0);
     }
-  }
-  if (segname == segment_names::linkEdit) {
+  } else if (segname == segment_names::linkEdit) {
     return StringSwitch<int>(osec->name)
         .Case(section_names::rebase, -8)
         .Case(section_names::binding, -7)

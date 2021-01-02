@@ -8,16 +8,16 @@
 # RUN: llvm-objdump --macho --all-headers --syms %t/not-main | FileCheck %s
 # CHECK-LABEL: SYMBOL TABLE
 # CHECK-NEXT: {{0*}}[[#%x, ENTRY_ADDR:]] {{.*}} __TEXT,__text _not_main
-# CHECK:      cmd  LC_MAIN
-# CHECK-NEXT: cmdsize  24
-# CHECK-NEXT: entryoff [[#ENTRYOFF:]]
 # CHECK:      sectname __text
 # CHECK-NEXT: segname __TEXT
 ## Note: the following checks assume that the entry symbol is right at the
 ## beginning of __text.
 # CHECK-NEXT: addr 0x{{0*}}[[#ENTRY_ADDR]]
 # CHECK-NEXT: size
-# CHECK-NEXT: offset [[#ENTRYOFF]]
+# CHECK-NEXT: offset [[#ENTRYOFF:]]
+# CHECK:      cmd  LC_MAIN
+# CHECK-NEXT: cmdsize  24
+# CHECK-NEXT: entryoff [[#ENTRYOFF]]
 
 # RUN: %lld -lSystem -o %t/dysym-main %t/not-main.o %t/libfoo.dylib -e _dysym_main
 # RUN: llvm-objdump --macho --all-headers --indirect-symbols --lazy-bind %t/dysym-main | FileCheck %s --check-prefix=DYSYM
