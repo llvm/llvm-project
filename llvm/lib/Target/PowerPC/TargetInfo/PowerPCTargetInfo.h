@@ -14,6 +14,7 @@ namespace llvm {
 class Target;
 
 Target &getThePPC32Target();
+Target &getThePPC32LETarget();
 Target &getThePPC64Target();
 Target &getThePPC64LETarget();
 

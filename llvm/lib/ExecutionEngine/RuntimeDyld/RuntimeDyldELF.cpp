@@ -954,7 +954,8 @@ void RuntimeDyldELF::resolveRelocation(const SectionEntry &Section,
     resolveARMRelocation(Section, Offset, (uint32_t)(Value & 0xffffffffL), Type,
                          (uint32_t)(Addend & 0xffffffffL));
     break;
-  case Triple::ppc:
+  case Triple::ppc: // Fall through.
+  case Triple::ppcle:
     resolvePPC32Relocation(Section, Offset, Value, Type, Addend);
     break;
   case Triple::ppc64: // Fall through.
