@@ -208,7 +208,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         return " avx " in cpuinfo
 
     @expectedFailureAll(oslist=["windows"]) # no avx for now.
-    @expectedFailureAll(oslist=["netbsd"])
     @add_test_categories(["llgs"])
     def test_qRegisterInfo_contains_avx_registers(self):
         self.build()
@@ -294,7 +293,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.set_inferior_startup_attach()
         self.qThreadInfo_matches_qC()
 
-    @expectedFailureAll(oslist=["netbsd"])
     def test_p_returns_correct_data_size_for_each_qRegisterInfo_launch(self):
         self.build()
         self.set_inferior_startup_launch()
