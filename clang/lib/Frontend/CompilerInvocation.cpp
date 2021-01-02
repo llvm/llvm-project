@@ -3292,10 +3292,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       llvm::Triple TT(A->getValue(i));
 
       if (TT.getArch() == llvm::Triple::UnknownArch ||
-          !(TT.getArch() == llvm::Triple::aarch64 ||
-            TT.getArch() == llvm::Triple::ppc ||
-            TT.getArch() == llvm::Triple::ppc64 ||
-            TT.getArch() == llvm::Triple::ppc64le ||
+          !(TT.getArch() == llvm::Triple::aarch64 || TT.isPPC() ||
             TT.getArch() == llvm::Triple::nvptx ||
             TT.getArch() == llvm::Triple::nvptx64 ||
             TT.getArch() == llvm::Triple::amdgcn ||

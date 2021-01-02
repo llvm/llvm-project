@@ -5041,6 +5041,7 @@ static Value *EmitTargetArchBuiltinExpr(CodeGenFunction *CGF,
   case llvm::Triple::x86_64:
     return CGF->EmitX86BuiltinExpr(BuiltinID, E);
   case llvm::Triple::ppc:
+  case llvm::Triple::ppcle:
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
     return CGF->EmitPPCBuiltinExpr(BuiltinID, E);

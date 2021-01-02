@@ -5111,9 +5111,7 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
                !Target.hasEnvironment())
         TC = std::make_unique<toolchains::MipsLLVMToolChain>(*this, Target,
                                                               Args);
-      else if (Target.getArch() == llvm::Triple::ppc ||
-               Target.getArch() == llvm::Triple::ppc64 ||
-               Target.getArch() == llvm::Triple::ppc64le)
+      else if (Target.isPPC())
         TC = std::make_unique<toolchains::PPCLinuxToolChain>(*this, Target,
                                                               Args);
       else if (Target.getArch() == llvm::Triple::ve)
