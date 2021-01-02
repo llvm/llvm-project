@@ -232,7 +232,7 @@ Error TypeRecordMapping::visitMemberBegin(CVMemberRecord &Record) {
 
   // The largest possible subrecord is one in which there is a record prefix,
   // followed by the subrecord, followed by a continuation, and that entire
-  // sequence spaws `MaxRecordLength` bytes.  So the record's length is
+  // sequence spawns `MaxRecordLength` bytes.  So the record's length is
   // calculated as follows.
 
   constexpr uint32_t ContinuationLength = 8;

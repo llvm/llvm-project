@@ -38,7 +38,7 @@ namespace {
 /// 0x1000.
 ///
 /// Type records are only allowed to use type indices smaller than their own, so
-/// a type stream is effectively a topologically sorted DAG. Cycles occuring in
+/// a type stream is effectively a topologically sorted DAG. Cycles occurring in
 /// the type graph of the source program are resolved with forward declarations
 /// of composite types. This class implements the following type stream merging
 /// algorithm, which relies on this DAG structure:
