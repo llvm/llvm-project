@@ -15,8 +15,17 @@
 # RUN: llvm-objcopy -I binary -O elf32-bigmips %t.txt %t.mips.o
 # RUN: llvm-readobj --file-headers %t.mips.o | FileCheck %s --check-prefixes=CHECK,BE,MIPS,32
 
+# RUN: llvm-objcopy -I binary -O elf32-powerpc %t.txt %t.ppc32be.o
+# RUN: llvm-readobj --file-headers %t.ppc32be.o | FileCheck %s --check-prefixes=CHECK,BE,PPC32,PPC32BE,32
+
+# RUN: llvm-objcopy -I binary -O elf32-powerpcle %t.txt %t.ppc32le.o
+# RUN: llvm-readobj --file-headers %t.ppc32le.o | FileCheck %s --check-prefixes=CHECK,LE,PPC32,PPC32LE,32
+
+# RUN: llvm-objcopy -I binary -O elf64-powerpc %t.txt %t.ppc64be.o
+# RUN: llvm-readobj --file-headers %t.ppc64be.o | FileCheck %s --check-prefixes=CHECK,BE,PPC64,PPC64BE,64
+
 # RUN: llvm-objcopy -I binary -O elf64-powerpcle %t.txt %t.ppc64le.o
-# RUN: llvm-readobj --file-headers %t.ppc64le.o | FileCheck %s --check-prefixes=CHECK,LE,PPC64,64
+# RUN: llvm-readobj --file-headers %t.ppc64le.o | FileCheck %s --check-prefixes=CHECK,LE,PPC64,PPC64LE,64
 
 # RUN: llvm-objcopy -I binary -O elf32-littleriscv %t.txt %t.rv32.o
 # RUN: llvm-readobj --file-headers %t.rv32.o | FileCheck %s --check-prefixes=CHECK,LE,RISCV32,32
@@ -43,8 +52,8 @@
 # MIPS-SAME:    mips{{$}}
 # RISCV32-SAME: riscv{{$}}
 # RISCV64-SAME: riscv{{$}}
-# PPC-SAME:     powerpc{{$}}
-# PPC64le-SAME: powerpc{{$}}
+# PPCBE-SAME:   powerpc{{$}}
+# PPCLE-SAME:   powerpcle{{$}}
 # SPARC-SAME:   sparc
 # SPARCEL-SAME: sparc
 # X86-64-SAME:  x86-64
@@ -54,8 +63,10 @@
 # HEXAGON-NEXT: Arch: hexagon
 # I386-NEXT:    Arch: i386
 # MIPS-NEXT:    Arch: mips{{$}}
-# PPC-NEXT:     Arch: powerpc{{$}}
-# PPC64-NEXT:   Arch: powerpc64le
+# PPC32BE-NEXT: Arch: powerpc{{$}}
+# PPC32LE-NEXT: Arch: powerpcle{{$}}
+# PPC64BE-NEXT: Arch: powerpc64{{$}}
+# PPC64LE-NEXT: Arch: powerpc64le{{$}}
 # RISCV32-NEXT: Arch: riscv32
 # RISCV64-NEXT: Arch: riscv64
 # SPARC-NEXT:   Arch: sparc{{$}}
@@ -87,7 +98,7 @@
 # HEXAGON-NEXT:   Machine: EM_HEXAGON (0xA4)
 # I386-NEXT:      Machine: EM_386 (0x3)
 # MIPS-NEXT:      Machine: EM_MIPS (0x8)
-# PPC-NEXT:       Machine: EM_PPC (0x14)
+# PPC32-NEXT:     Machine: EM_PPC (0x14)
 # PPC64-NEXT:     Machine: EM_PPC64 (0x15)
 # RISCV32-NEXT:   Machine: EM_RISCV (0xF3)
 # RISCV64-NEXT:   Machine: EM_RISCV (0xF3)
