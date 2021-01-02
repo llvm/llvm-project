@@ -1111,7 +1111,7 @@ TEST(TripleTest, EndianArchVariants) {
 
   T.setArch(Triple::ppc);
   EXPECT_EQ(Triple::ppc, T.getBigEndianArchVariant().getArch());
-  EXPECT_EQ(Triple::UnknownArch, T.getLittleEndianArchVariant().getArch());
+  EXPECT_EQ(Triple::ppcle, T.getLittleEndianArchVariant().getArch());
 
   T.setArch(Triple::ppc64);
   EXPECT_EQ(Triple::ppc64, T.getBigEndianArchVariant().getArch());

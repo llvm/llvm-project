@@ -128,6 +128,7 @@ void TargetLoweringObjectFileELF::Initialize(MCContext &Ctx,
     // Fallthrough if not using EHABI
     LLVM_FALLTHROUGH;
   case Triple::ppc:
+  case Triple::ppcle:
   case Triple::x86:
     PersonalityEncoding = isPositionIndependent()
                               ? dwarf::DW_EH_PE_indirect |

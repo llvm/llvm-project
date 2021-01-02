@@ -336,8 +336,8 @@ static MCInstPrinter *createPPCMCInstPrinter(const Triple &T,
 }
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTargetMC() {
-  for (Target *T :
-       {&getThePPC32Target(), &getThePPC64Target(), &getThePPC64LETarget()}) {
+  for (Target *T : {&getThePPC32Target(), &getThePPC32LETarget(),
+                    &getThePPC64Target(), &getThePPC64LETarget()}) {
     // Register the MC asm info.
     RegisterMCAsmInfoFn C(*T, createPPCMCAsmInfo);
 

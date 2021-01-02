@@ -135,7 +135,7 @@ void TargetLoweringBase::InitLibcalls(const Triple &TT) {
     setLibcallCallingConv((RTLIB::Libcall)LC, CallingConv::C);
 
   // For IEEE quad-precision libcall names, PPC uses "kf" instead of "tf".
-  if (TT.getArch() == Triple::ppc || TT.isPPC64()) {
+  if (TT.isPPC()) {
     setLibcallName(RTLIB::ADD_F128, "__addkf3");
     setLibcallName(RTLIB::SUB_F128, "__subkf3");
     setLibcallName(RTLIB::MUL_F128, "__mulkf3");
