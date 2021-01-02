@@ -1,6 +1,10 @@
 # REQUIRES: ppc
-# RUN: llvm-mc -filetype=obj -triple=powerpc %s -o %t.o
-# RUN: ld.lld %t.o -o %t
+# RUN: llvm-mc -filetype=obj -triple=powerpc %s -o %t.be.o
+# RUN: ld.lld %t.be.o -o %t
+# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
+
+# RUN: llvm-mc -filetype=obj -triple=powerpcle %s -o %t.le.o
+# RUN: ld.lld %t.le.o -o %t
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
 .section .R_PPC_REL14,"ax",@progbits
