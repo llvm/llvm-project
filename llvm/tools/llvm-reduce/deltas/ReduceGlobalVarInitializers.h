@@ -1,4 +1,5 @@
-//===- ReduceGlobalVars.h - Specialized Delta Pass ------------------------===//
+//===- reduceGlobalsInitializersDeltaPass.h - Specialized Delta Pass
+//-------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements a function which calls the Generic Delta pass in order
-// to reduce Global Variables in the provided Module.
+// to reduce initializers of Global Variables in the provided Module.
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,5 +17,5 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 
 namespace llvm {
-void reduceGlobalsDeltaPass(TestRunner &Test);
+void reduceGlobalsInitializersDeltaPass(TestRunner &Test);
 } // namespace llvm
