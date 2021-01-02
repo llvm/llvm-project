@@ -2217,8 +2217,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
         auto *CurBB = RI->getParent();
         RI->eraseFromParent();
 
-        SmallVector<Value *, 4> CallArgs(DeoptCall->arg_begin(),
-                                         DeoptCall->arg_end());
+        SmallVector<Value *, 4> CallArgs(DeoptCall->args());
 
         SmallVector<OperandBundleDef, 1> OpBundles;
         DeoptCall->getOperandBundlesAsDefs(OpBundles);

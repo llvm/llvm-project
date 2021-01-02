@@ -1522,7 +1522,7 @@ static void rewritePHIs(BasicBlock &BB) {
   // so we need to create an additional "dispatcher" block.
   if (auto *CleanupPad =
           dyn_cast_or_null<CleanupPadInst>(BB.getFirstNonPHI())) {
-    SmallVector<BasicBlock *, 8> Preds(pred_begin(&BB), pred_end(&BB));
+    SmallVector<BasicBlock *, 8> Preds(predecessors(&BB));
     for (BasicBlock *Pred : Preds) {
       if (CatchSwitchInst *CS =
               dyn_cast<CatchSwitchInst>(Pred->getTerminator())) {
@@ -1548,7 +1548,7 @@ static void rewritePHIs(BasicBlock &BB) {
     // ehAwareSplitEdge cloned it in the transition blocks.
   }
 
-  SmallVector<BasicBlock *, 8> Preds(pred_begin(&BB), pred_end(&BB));
+  SmallVector<BasicBlock *, 8> Preds(predecessors(&BB));
   for (BasicBlock *Pred : Preds) {
     auto *IncomingBB = ehAwareSplitEdge(Pred, &BB, LandingPad, ReplPHI);
     IncomingBB->setName(BB.getName() + Twine(".from.") + Pred->getName());

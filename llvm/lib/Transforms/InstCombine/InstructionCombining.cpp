@@ -1816,7 +1816,7 @@ static Instruction *foldSelectGEP(GetElementPtrInst &GEP,
   // gep (select Cond, TrueC, FalseC), IndexC --> select Cond, TrueC', FalseC'
   // Propagate 'inbounds' and metadata from existing instructions.
   // Note: using IRBuilder to create the constants for efficiency.
-  SmallVector<Value *, 4> IndexC(GEP.idx_begin(), GEP.idx_end());
+  SmallVector<Value *, 4> IndexC(GEP.indices());
   bool IsInBounds = GEP.isInBounds();
   Value *NewTrueC = IsInBounds ? Builder.CreateInBoundsGEP(TrueC, IndexC)
                                : Builder.CreateGEP(TrueC, IndexC);
@@ -1826,7 +1826,7 @@ static Instruction *foldSelectGEP(GetElementPtrInst &GEP,
 }
 
 Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
-  SmallVector<Value*, 8> Ops(GEP.op_begin(), GEP.op_end());
+  SmallVector<Value *, 8> Ops(GEP.operands());
   Type *GEPType = GEP.getType();
   Type *GEPEltType = GEP.getSourceElementType();
   bool IsGEPSrcEleScalable = isa<ScalableVectorType>(GEPEltType);
@@ -2232,7 +2232,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
             // ->
             // %0 = GEP [10 x i8] addrspace(1)* X, ...
             // addrspacecast i8 addrspace(1)* %0 to i8*
-            SmallVector<Value*, 8> Idx(GEP.idx_begin(), GEP.idx_end());
+            SmallVector<Value *, 8> Idx(GEP.indices());
             Value *NewGEP =
                 GEP.isInBounds()
                     ? Builder.CreateInBoundsGEP(StrippedPtrEltTy, StrippedPtr,
