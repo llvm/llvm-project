@@ -4293,7 +4293,7 @@ void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
 
     std::vector<Predicate> Preds = P.Predicates;
     const std::vector<Predicate> &MC = ModeChecks[Mode];
-    Preds.insert(Preds.end(), MC.begin(), MC.end());
+    llvm::append_range(Preds, MC);
     PatternsToMatch.emplace_back(P.getSrcRecord(), Preds, std::move(NewSrc),
                                  std::move(NewDst), P.getDstRegs(),
                                  P.getAddedComplexity(), Record::getNewUID(),
