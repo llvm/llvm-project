@@ -6700,7 +6700,7 @@ bool SimplifyCFGOpt::run(BasicBlock *BB) {
 bool llvm::simplifyCFG(BasicBlock *BB, const TargetTransformInfo &TTI,
                        DomTreeUpdater *DTU, const SimplifyCFGOptions &Options,
                        SmallPtrSetImpl<BasicBlock *> *LoopHeaders) {
-  return SimplifyCFGOpt(TTI, DTU, BB->getModule()->getDataLayout(), LoopHeaders,
-                        Options)
+  return SimplifyCFGOpt(TTI, RequireAndPreserveDomTree ? DTU : nullptr,
+                        BB->getModule()->getDataLayout(), LoopHeaders, Options)
       .run(BB);
 }
