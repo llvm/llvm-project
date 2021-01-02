@@ -19,21 +19,10 @@
 # error "This operating system is not supported"
 #endif
 
-// Get __GLIBC__ on a glibc platform.
-#if __has_include(<features.h>)
-#include <features.h>
-#endif
-
 #if defined(__linux__)
 # define SANITIZER_LINUX   1
 #else
 # define SANITIZER_LINUX   0
-#endif
-
-#if defined(__GLIBC__)
-# define SANITIZER_GLIBC   1
-#else
-# define SANITIZER_GLIBC   0
 #endif
 
 #if defined(__FreeBSD__)
