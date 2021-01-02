@@ -178,7 +178,7 @@
 //
 // Test Ubuntu/Debian's Ubuntu 14.04 for powerpc64le
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
-// RUN:     -target powerpc64le-unknown-linux-gnu -m32 -stdlib=libstdc++ \
+// RUN:     -target powerpc64le-unknown-linux-gnu -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/ubuntu_14.04_multiarch_tree \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-UBUNTU-14-04-PPC64LE %s

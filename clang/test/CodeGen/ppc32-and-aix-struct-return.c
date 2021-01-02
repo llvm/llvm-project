@@ -1,6 +1,8 @@
 // REQUIRES: powerpc-registered-target
 // RUN: %clang_cc1 -triple powerpc-unknown-freebsd \
 // RUN:   -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-SVR4
+// RUN: %clang_cc1 -triple powerpcle-unknown-freebsd \
+// RUN:   -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-SVR4
 // RUN: %clang_cc1 -triple powerpc-unknown-aix \
 // RUN:   -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-AIX
 // RUN: %clang_cc1 -triple powerpc64-unknown-aix \
@@ -10,6 +12,12 @@
 // RUN: %clang_cc1 -triple powerpc-unknown-linux -maix-struct-return \
 // RUN:   -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-AIX
 // RUN: %clang_cc1 -triple powerpc-unknown-linux -msvr4-struct-return \
+// RUN:   -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-SVR4
+// RUN: %clang_cc1 -triple powerpcle-unknown-linux \
+// RUN:   -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-AIX
+// RUN: %clang_cc1 -triple powerpcle-unknown-linux -maix-struct-return \
+// RUN:   -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-AIX
+// RUN: %clang_cc1 -triple powerpcle-unknown-linux -msvr4-struct-return \
 // RUN:   -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-SVR4
 // RUN: %clang_cc1 -triple powerpc-unknown-netbsd \
 // RUN:   -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-SVR4
