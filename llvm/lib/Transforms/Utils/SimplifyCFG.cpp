@@ -263,7 +263,11 @@ public:
                  const DataLayout &DL,
                  SmallPtrSetImpl<BasicBlock *> *LoopHeaders,
                  const SimplifyCFGOptions &Opts)
-      : TTI(TTI), DTU(DTU), DL(DL), LoopHeaders(LoopHeaders), Options(Opts) {}
+      : TTI(TTI), DTU(DTU), DL(DL), LoopHeaders(LoopHeaders), Options(Opts) {
+    assert((!DTU || !DTU->hasPostDomTree()) &&
+           "SimplifyCFG is not yet capable of maintaining validity of a "
+           "PostDomTree, so don't ask for it.");
+  }
 
   bool simplifyOnce(BasicBlock *BB);
   bool simplifyOnceImpl(BasicBlock *BB);
@@ -1109,8 +1113,6 @@ bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(Instruction *TI,
 
       std::vector<DominatorTree::UpdateType> Updates;
 
-      Updates.push_back({DominatorTree::Delete, Pred, BB});
-
       // Figure out which 'cases' to copy from SI to PSI.
       std::vector<ValueEqualityComparisonCase> BBCases;
       BasicBlock *BBDefault = GetValueEqualityComparisonCases(TI, BBCases);
@@ -1174,7 +1176,8 @@ bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(Instruction *TI,
         // Reconstruct the new switch statement we will be building.
         if (PredDefault != BBDefault) {
           PredDefault->removePredecessor(Pred);
-          Updates.push_back({DominatorTree::Delete, Pred, PredDefault});
+          if (PredDefault != BB)
+            Updates.push_back({DominatorTree::Delete, Pred, PredDefault});
           PredDefault = BBDefault;
           NewSuccessors.push_back(BBDefault);
         }
@@ -1299,10 +1302,10 @@ bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(Instruction *TI,
           NewSI->setSuccessor(i, InfLoopBlock);
         }
 
-      if (InfLoopBlock) {
-        Updates.push_back({DominatorTree::Delete, Pred, BB});
+      if (InfLoopBlock)
         Updates.push_back({DominatorTree::Insert, Pred, InfLoopBlock});
-      }
+
+      Updates.push_back({DominatorTree::Delete, Pred, BB});
 
       if (DTU)
         DTU->applyUpdatesPermissive(Updates);

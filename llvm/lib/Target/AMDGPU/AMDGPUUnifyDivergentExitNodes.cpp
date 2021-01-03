@@ -89,7 +89,7 @@ void AMDGPUUnifyDivergentExitNodes::getAnalysisUsage(AnalysisUsage &AU) const{
 
   if (RequireAndPreserveDomTree) {
     AU.addPreserved<DominatorTreeWrapperPass>();
-    AU.addPreserved<PostDominatorTreeWrapperPass>();
+    // FIXME: preserve PostDominatorTreeWrapperPass
   }
 
   // No divergent values are changed, only blocks and branch edges.
@@ -369,7 +369,8 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
     }
   }
 
-  DomTreeUpdater DTU(DT, &PDT, DomTreeUpdater::UpdateStrategy::Eager);
+  // FIXME: add PDT here once simplifycfg is ready.
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
   if (RequireAndPreserveDomTree)
     DTU.applyUpdates(Updates);
   Updates.clear();

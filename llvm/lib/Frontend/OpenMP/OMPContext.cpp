@@ -40,6 +40,7 @@ OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple) {
   case Triple::mips64:
   case Triple::mips64el:
   case Triple::ppc:
+  case Triple::ppcle:
   case Triple::ppc64:
   case Triple::ppc64le:
   case Triple::x86:

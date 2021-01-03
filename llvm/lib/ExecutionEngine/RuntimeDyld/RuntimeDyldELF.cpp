@@ -954,7 +954,8 @@ void RuntimeDyldELF::resolveRelocation(const SectionEntry &Section,
     resolveARMRelocation(Section, Offset, (uint32_t)(Value & 0xffffffffL), Type,
                          (uint32_t)(Addend & 0xffffffffL));
     break;
-  case Triple::ppc:
+  case Triple::ppc: // Fall through.
+  case Triple::ppcle:
     resolvePPC32Relocation(Section, Offset, Value, Type, Addend);
     break;
   case Triple::ppc64: // Fall through.
@@ -1669,30 +1670,33 @@ RuntimeDyldELF::processRelocationRef(
       if (Value.SymbolName) {
         // This is a call to an external function.
         // Look for an existing stub.
-        SectionEntry &Section = Sections[SectionID];
+        SectionEntry *Section = &Sections[SectionID];
         StubMap::const_iterator i = Stubs.find(Value);
         uintptr_t StubAddress;
         if (i != Stubs.end()) {
-          StubAddress = uintptr_t(Section.getAddress()) + i->second;
+          StubAddress = uintptr_t(Section->getAddress()) + i->second;
           LLVM_DEBUG(dbgs() << " Stub function found\n");
         } else {
           // Create a new stub function (equivalent to a PLT entry).
           LLVM_DEBUG(dbgs() << " Create a new stub function\n");
 
-          uintptr_t BaseAddress = uintptr_t(Section.getAddress());
+          uintptr_t BaseAddress = uintptr_t(Section->getAddress());
           uintptr_t StubAlignment = getStubAlignment();
           StubAddress =
-              (BaseAddress + Section.getStubOffset() + StubAlignment - 1) &
+              (BaseAddress + Section->getStubOffset() + StubAlignment - 1) &
               -StubAlignment;
           unsigned StubOffset = StubAddress - BaseAddress;
           Stubs[Value] = StubOffset;
           createStubFunction((uint8_t *)StubAddress);
 
           // Bump our stub offset counter
-          Section.advanceStubOffset(getMaxStubSize());
+          Section->advanceStubOffset(getMaxStubSize());
 
           // Allocate a GOT Entry
           uint64_t GOTOffset = allocateGOTEntries(1);
+          // This potentially creates a new Section which potentially
+          // invalidates the Section pointer, so reload it.
+          Section = &Sections[SectionID];
 
           // The load of the GOT address has an addend of -4
           resolveGOTOffsetRelocation(SectionID, StubOffset + 2, GOTOffset - 4,
@@ -1705,7 +1709,7 @@ RuntimeDyldELF::processRelocationRef(
         }
 
         // Make the target call a call into the stub table.
-        resolveRelocation(Section, Offset, StubAddress, ELF::R_X86_64_PC32,
+        resolveRelocation(*Section, Offset, StubAddress, ELF::R_X86_64_PC32,
                           Addend);
       } else {
         RelocationEntry RE(SectionID, Offset, ELF::R_X86_64_PC32, Value.Addend,

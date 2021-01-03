@@ -722,7 +722,7 @@ void Filter::emitTableEntry(DecoderTableInfo &TableInfo) const {
   assert(TableInfo.FixupStack.size() > 1 && "fixup stack underflow!");
   FixupScopeList::iterator Source = TableInfo.FixupStack.end() - 1;
   FixupScopeList::iterator Dest = Source - 1;
-  Dest->insert(Dest->end(), Source->begin(), Source->end());
+  llvm::append_range(*Dest, *Source);
   TableInfo.FixupStack.pop_back();
 
   // If there is no fallthrough, then the final filter should get fixed
@@ -2010,9 +2010,8 @@ populateInstruction(CodeGenTarget &Target, const Record &EncodingDef,
   // For each operand, see if we can figure out where it is encoded.
   for (const auto &Op : InOutOperands) {
     if (!NumberedInsnOperands[std::string(Op.second)].empty()) {
-      InsnOperands.insert(InsnOperands.end(),
-                          NumberedInsnOperands[std::string(Op.second)].begin(),
-                          NumberedInsnOperands[std::string(Op.second)].end());
+      llvm::append_range(InsnOperands,
+                         NumberedInsnOperands[std::string(Op.second)]);
       continue;
     }
     if (!NumberedInsnOperands[TiedNames[std::string(Op.second)]].empty()) {

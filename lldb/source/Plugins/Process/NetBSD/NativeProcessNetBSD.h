@@ -69,9 +69,13 @@ public:
   Status SetBreakpoint(lldb::addr_t addr, uint32_t size,
                        bool hardware) override;
 
+  // The two following methods are probably not necessary and probably
+  // will never be called.  Nevertheless, we implement them right now
+  // to reduce the differences between different platforms and reduce
+  // the risk of the lack of implementation actually breaking something,
+  // at least for the time being.
   Status GetLoadedModuleFileSpec(const char *module_path,
                                  FileSpec &file_spec) override;
-
   Status GetFileLoadAddress(const llvm::StringRef &file_name,
                             lldb::addr_t &load_addr) override;
 

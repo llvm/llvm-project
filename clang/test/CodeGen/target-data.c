@@ -126,6 +126,10 @@
 // RUN: FileCheck %s -check-prefix=PPC
 // PPC: target datalayout = "E-m:e-p:32:32-i64:64-n32"
 
+// RUN: %clang_cc1 -triple powerpcle-unknown -o - -emit-llvm %s | \
+// RUN: FileCheck %s -check-prefix=PPCLE
+// PPCLE: target datalayout = "e-m:e-p:32:32-i64:64-n32"
+
 // RUN: %clang_cc1 -triple powerpc64-freebsd -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=PPC64-FREEBSD
 // PPC64-FREEBSD: target datalayout = "E-m:e-i64:64-n32:64"

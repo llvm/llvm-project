@@ -1549,8 +1549,7 @@ pushVariant(const TransVariant &VInfo, bool IsRead) {
         ExpandedRWs.push_back(*RWI);
       else
         SchedModels.expandRWSequence(*RWI, ExpandedRWs, IsRead);
-      RWSequences[OperIdx].insert(RWSequences[OperIdx].end(),
-                                  ExpandedRWs.begin(), ExpandedRWs.end());
+      llvm::append_range(RWSequences[OperIdx], ExpandedRWs);
     }
     assert(OperIdx == RWSequences.size() && "missed a sequence");
   }
@@ -1566,7 +1565,7 @@ pushVariant(const TransVariant &VInfo, bool IsRead) {
       else
         SchedModels.expandRWSequence(*RWI, ExpandedRWs, IsRead);
     }
-    Seq.insert(Seq.end(), ExpandedRWs.begin(), ExpandedRWs.end());
+    llvm::append_range(Seq, ExpandedRWs);
   }
 }
 
@@ -1826,8 +1825,7 @@ void CodeGenSchedModels::verifyProcResourceGroups(CodeGenProcModel &PM) {
                              OtherUnits.begin(), OtherUnits.end())
           != CheckUnits.end()) {
         // CheckUnits and OtherUnits overlap
-        OtherUnits.insert(OtherUnits.end(), CheckUnits.begin(),
-                          CheckUnits.end());
+        llvm::append_range(OtherUnits, CheckUnits);
         if (!hasSuperGroup(OtherUnits, PM)) {
           PrintFatalError((PM.ProcResourceDefs[i])->getLoc(),
                           "proc resource group overlaps with "

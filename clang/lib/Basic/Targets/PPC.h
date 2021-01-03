@@ -355,6 +355,8 @@ public:
       : PPCTargetInfo(Triple, Opts) {
     if (Triple.isOSAIX())
       resetDataLayout("E-m:a-p:32:32-i64:64-n32");
+    else if (Triple.getArch() == llvm::Triple::ppcle)
+      resetDataLayout("e-m:e-p:32:32-i64:64-n32");
     else
       resetDataLayout("E-m:e-p:32:32-i64:64-n32");
 
