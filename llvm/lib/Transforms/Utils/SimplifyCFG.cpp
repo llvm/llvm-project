@@ -1176,7 +1176,8 @@ bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(Instruction *TI,
         // Reconstruct the new switch statement we will be building.
         if (PredDefault != BBDefault) {
           PredDefault->removePredecessor(Pred);
-          Updates.push_back({DominatorTree::Delete, Pred, PredDefault});
+          if (PredDefault != BB)
+            Updates.push_back({DominatorTree::Delete, Pred, PredDefault});
           PredDefault = BBDefault;
           NewSuccessors.push_back(BBDefault);
         }
