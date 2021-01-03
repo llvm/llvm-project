@@ -467,7 +467,6 @@ private:
   bool registerModuleReference(DWARFDie CUDie, const DWARFUnit &Unit,
                                const DWARFFile &File,
                                OffsetsStringPool &OffsetsStringPool,
-                               UniquingStringPool &UniquingStringPoolStringPool,
                                DeclContextTree &ODRContexts,
                                uint64_t ModulesEndOffset, unsigned &UnitID,
                                bool IsLittleEndian, unsigned Indent = 0,
@@ -480,7 +479,6 @@ private:
                         StringRef ModuleName, uint64_t DwoId,
                         const DWARFFile &File,
                         OffsetsStringPool &OffsetsStringPool,
-                        UniquingStringPool &UniquingStringPool,
                         DeclContextTree &ODRContexts, uint64_t ModulesEndOffset,
                         unsigned &UnitID, bool IsLittleEndian,
                         unsigned Indent = 0, bool Quiet = false);
