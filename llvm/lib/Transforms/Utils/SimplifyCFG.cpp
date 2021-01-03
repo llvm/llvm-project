@@ -3848,6 +3848,8 @@ bool SimplifyCFGOpt::SimplifyTerminatorOnSelect(Instruction *OldTerm,
                                                 BasicBlock *FalseBB,
                                                 uint32_t TrueWeight,
                                                 uint32_t FalseWeight) {
+  auto *BB = OldTerm->getParent();
+
   // Remove any superfluous successor edges from the CFG.
   // First, figure out which successors to preserve.
   // If TrueBB and FalseBB are equal, only try to preserve one copy of that
@@ -3865,9 +3867,9 @@ bool SimplifyCFGOpt::SimplifyTerminatorOnSelect(Instruction *OldTerm,
     else if (Succ == KeepEdge2)
       KeepEdge2 = nullptr;
     else {
-      Succ->removePredecessor(OldTerm->getParent(),
+      Succ->removePredecessor(BB,
                               /*KeepOneInputPHIs=*/true);
-      Updates.push_back({DominatorTree::Delete, OldTerm->getParent(), Succ});
+      Updates.push_back({DominatorTree::Delete, BB, Succ});
     }
   }
 
@@ -3880,13 +3882,13 @@ bool SimplifyCFGOpt::SimplifyTerminatorOnSelect(Instruction *OldTerm,
       // We were only looking for one successor, and it was present.
       // Create an unconditional branch to it.
       Builder.CreateBr(TrueBB);
-      Updates.push_back({DominatorTree::Insert, OldTerm->getParent(), TrueBB});
+      Updates.push_back({DominatorTree::Insert, BB, TrueBB});
     } else {
       // We found both of the successors we were looking for.
       // Create a conditional branch sharing the condition of the select.
       BranchInst *NewBI = Builder.CreateCondBr(Cond, TrueBB, FalseBB);
-      Updates.push_back({DominatorTree::Insert, OldTerm->getParent(), TrueBB});
-      Updates.push_back({DominatorTree::Insert, OldTerm->getParent(), FalseBB});
+      Updates.push_back({DominatorTree::Insert, BB, TrueBB});
+      Updates.push_back({DominatorTree::Insert, BB, FalseBB});
       if (TrueWeight != FalseWeight)
         setBranchWeights(NewBI, TrueWeight, FalseWeight);
     }
@@ -3901,11 +3903,11 @@ bool SimplifyCFGOpt::SimplifyTerminatorOnSelect(Instruction *OldTerm,
     if (!KeepEdge1) {
       // Only TrueBB was found.
       Builder.CreateBr(TrueBB);
-      Updates.push_back({DominatorTree::Insert, OldTerm->getParent(), TrueBB});
+      Updates.push_back({DominatorTree::Insert, BB, TrueBB});
     } else {
       // Only FalseBB was found.
       Builder.CreateBr(FalseBB);
-      Updates.push_back({DominatorTree::Insert, OldTerm->getParent(), FalseBB});
+      Updates.push_back({DominatorTree::Insert, BB, FalseBB});
     }
   }
 
