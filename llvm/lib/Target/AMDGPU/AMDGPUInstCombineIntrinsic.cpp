@@ -920,7 +920,7 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
   IC.Builder.SetInsertPoint(&II);
 
   // Assume the arguments are unchanged and later override them, if needed.
-  SmallVector<Value *, 16> Args(II.arg_begin(), II.arg_end());
+  SmallVector<Value *, 16> Args(II.args());
 
   if (DMaskIdx < 0) {
     // Buffer case.
