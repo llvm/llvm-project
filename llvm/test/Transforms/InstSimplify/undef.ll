@@ -188,7 +188,7 @@ define <4 x i8> @test19(<4 x i8> %a) {
 
 define i32 @test20(i32 %a) {
 ; CHECK-LABEL: @test20(
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
   %b = udiv i32 %a, 0
   ret i32 %b
@@ -196,7 +196,7 @@ define i32 @test20(i32 %a) {
 
 define <2 x i32> @test20vec(<2 x i32> %a) {
 ; CHECK-LABEL: @test20vec(
-; CHECK-NEXT:    ret <2 x i32> undef
+; CHECK-NEXT:    ret <2 x i32> poison
 ;
   %b = udiv <2 x i32> %a, zeroinitializer
   ret <2 x i32> %b
@@ -204,7 +204,7 @@ define <2 x i32> @test20vec(<2 x i32> %a) {
 
 define i32 @test21(i32 %a) {
 ; CHECK-LABEL: @test21(
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
   %b = sdiv i32 %a, 0
   ret i32 %b
@@ -212,7 +212,7 @@ define i32 @test21(i32 %a) {
 
 define <2 x i32> @test21vec(<2 x i32> %a) {
 ; CHECK-LABEL: @test21vec(
-; CHECK-NEXT:    ret <2 x i32> undef
+; CHECK-NEXT:    ret <2 x i32> poison
 ;
   %b = sdiv <2 x i32> %a, zeroinitializer
   ret <2 x i32> %b
@@ -348,7 +348,7 @@ define i32 @test37() {
 
 define i32 @test38(i32 %a) {
 ; CHECK-LABEL: @test38(
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
   %b = udiv i32 %a, undef
   ret i32 %b
