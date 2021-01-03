@@ -17,6 +17,7 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
 using namespace llvm;
@@ -32,8 +33,6 @@ static cl::opt<bool> StressCalls(
 class AMDGPUAlwaysInline : public ModulePass {
   bool GlobalOpt;
 
-  void recursivelyVisitUsers(GlobalValue &GV,
-                             SmallPtrSetImpl<Function *> &FuncsToAlwaysInline);
 public:
   static char ID;
 
@@ -53,9 +52,9 @@ INITIALIZE_PASS(AMDGPUAlwaysInline, "amdgpu-always-inline",
 
 char AMDGPUAlwaysInline::ID = 0;
 
-void AMDGPUAlwaysInline::recursivelyVisitUsers(
-  GlobalValue &GV,
-  SmallPtrSetImpl<Function *> &FuncsToAlwaysInline) {
+static void
+recursivelyVisitUsers(GlobalValue &GV,
+                      SmallPtrSetImpl<Function *> &FuncsToAlwaysInline) {
   SmallVector<User *, 16> Stack;
 
   SmallPtrSet<const Value *, 8> Visited;
@@ -91,7 +90,7 @@ void AMDGPUAlwaysInline::recursivelyVisitUsers(
   }
 }
 
-bool AMDGPUAlwaysInline::runOnModule(Module &M) {
+static bool alwaysInlineImpl(Module &M, bool GlobalOpt) {
   std::vector<GlobalAlias*> AliasesToRemove;
 
   SmallPtrSet<Function *, 8> FuncsToAlwaysInline;
@@ -157,7 +156,16 @@ bool AMDGPUAlwaysInline::runOnModule(Module &M) {
   return !FuncsToAlwaysInline.empty() || !FuncsToNoInline.empty();
 }
 
+bool AMDGPUAlwaysInline::runOnModule(Module &M) {
+  return alwaysInlineImpl(M, GlobalOpt);
+}
+
 ModulePass *llvm::createAMDGPUAlwaysInlinePass(bool GlobalOpt) {
   return new AMDGPUAlwaysInline(GlobalOpt);
 }
 
+PreservedAnalyses AMDGPUAlwaysInlinePass::run(Module &M,
+                                              ModuleAnalysisManager &AM) {
+  alwaysInlineImpl(M, GlobalOpt);
+  return PreservedAnalyses::all();
+}
