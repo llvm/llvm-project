@@ -4464,15 +4464,15 @@ static Value *SimplifyExtractElementInst(Value *Vec, Value *Idx,
     // For fixed-length vector, fold into undef if index is out of bounds.
     if (isa<FixedVectorType>(VecVTy) &&
         IdxC->getValue().uge(cast<FixedVectorType>(VecVTy)->getNumElements()))
-      return UndefValue::get(VecVTy->getElementType());
+      return PoisonValue::get(VecVTy->getElementType());
     if (Value *Elt = findScalarElement(Vec, IdxC->getZExtValue()))
       return Elt;
   }
 
   // An undef extract index can be arbitrarily chosen to be an out-of-range
-  // index value, which would result in the instruction being undef.
+  // index value, which would result in the instruction being poison.
   if (Q.isUndefValue(Idx))
-    return UndefValue::get(VecVTy->getElementType());
+    return PoisonValue::get(VecVTy->getElementType());
 
   return nullptr;
 }
