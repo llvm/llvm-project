@@ -469,7 +469,8 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "amdgpu-promote-alloca-to-vector",
       "amdgpu-lower-kernel-attributes",
       "amdgpu-propagate-attributes-early",
-      "amdgpu-propagate-attributes-late"};
+      "amdgpu-propagate-attributes-late",
+      "amdgpu-unify-metadata"};
   for (const auto &P : PassNameExactToIgnore)
     if (Pass == P)
       return false;
