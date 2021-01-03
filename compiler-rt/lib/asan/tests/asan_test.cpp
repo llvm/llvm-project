@@ -804,7 +804,7 @@ char* MallocAndMemsetString(size_t size) {
   return MallocAndMemsetString(size, 'z');
 }
 
-#if SANITIZER_GLIBC
+#if defined(__linux__) && !defined(__ANDROID__)
 #define READ_TEST(READ_N_BYTES)                                          \
   char *x = new char[10];                                                \
   int fd = open("/proc/self/stat", O_RDONLY);                            \
@@ -827,7 +827,7 @@ TEST(AddressSanitizer, pread64) {
 TEST(AddressSanitizer, read) {
   READ_TEST(read(fd, x, 15));
 }
-#endif  // SANITIZER_GLIBC
+#endif  // defined(__linux__) && !defined(__ANDROID__)
 
 // This test case fails
 // Clang optimizes memcpy/memset calls which lead to unaligned access
