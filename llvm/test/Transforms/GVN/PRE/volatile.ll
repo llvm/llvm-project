@@ -204,7 +204,7 @@ define i32 @test9(i32* %V) {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LOAD:%.*]] = call i32 undef()
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
 entry:
   %load = call i32 undef()
