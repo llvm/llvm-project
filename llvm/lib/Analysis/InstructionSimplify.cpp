@@ -4385,16 +4385,16 @@ Value *llvm::SimplifyInsertElementInst(Value *Vec, Value *Val, Value *Idx,
   if (VecC && ValC && IdxC)
     return ConstantExpr::getInsertElement(VecC, ValC, IdxC);
 
-  // For fixed-length vector, fold into undef if index is out of bounds.
+  // For fixed-length vector, fold into poison if index is out of bounds.
   if (auto *CI = dyn_cast<ConstantInt>(Idx)) {
     if (isa<FixedVectorType>(Vec->getType()) &&
         CI->uge(cast<FixedVectorType>(Vec->getType())->getNumElements()))
-      return UndefValue::get(Vec->getType());
+      return PoisonValue::get(Vec->getType());
   }
 
   // If index is undef, it might be out of bounds (see above case)
   if (Q.isUndefValue(Idx))
-    return UndefValue::get(Vec->getType());
+    return PoisonValue::get(Vec->getType());
 
   // If the scalar is undef, and there is no risk of propagating poison from the
   // vector value, simplify to the vector value.
