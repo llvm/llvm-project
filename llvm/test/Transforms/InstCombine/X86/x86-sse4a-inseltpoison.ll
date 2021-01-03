@@ -50,11 +50,11 @@ define <2 x i64> @test_extrq_constant(<2 x i64> %x, <16 x i8> %y) {
   ret <2 x i64> %1
 }
 
-define <2 x i64> @test_extrq_constant_undef(<2 x i64> %x, <16 x i8> %y) {
-; CHECK-LABEL: @test_extrq_constant_undef(
+define <2 x i64> @test_extrq_constant_poison(<2 x i64> %x, <16 x i8> %y) {
+; CHECK-LABEL: @test_extrq_constant_poison(
 ; CHECK-NEXT:    ret <2 x i64> <i64 65535, i64 undef>
 ;
-  %1 = tail call <2 x i64> @llvm.x86.sse4a.extrq(<2 x i64> <i64 -1, i64 undef>, <16 x i8> <i8 16, i8 15, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>) nounwind
+  %1 = tail call <2 x i64> @llvm.x86.sse4a.extrq(<2 x i64> <i64 -1, i64 poison>, <16 x i8> <i8 16, i8 15, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>) nounwind
   ret <2 x i64> %1
 }
 
@@ -65,7 +65,7 @@ define <2 x i64> @test_extrq_call_constexpr(<2 x i64> %x) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[TMP3]]
 ;
-  %1 = call <2 x i64> @llvm.x86.sse4a.extrq(<2 x i64> %x, <16 x i8> bitcast (<2 x i64> <i64 0, i64 undef> to <16 x i8>))
+  %1 = call <2 x i64> @llvm.x86.sse4a.extrq(<2 x i64> %x, <16 x i8> bitcast (<2 x i64> <i64 0, i64 poison> to <16 x i8>))
   ret <2 x i64> %1
 }
 
@@ -104,8 +104,8 @@ define <2 x i64> @test_extrqi_shuffle_2zzzzzzzuuuuuuuu(<2 x i64> %x) {
   ret <2 x i64> %1
 }
 
-define <2 x i64> @test_extrqi_undef(<2 x i64> %x) {
-; CHECK-LABEL: @test_extrqi_undef(
+define <2 x i64> @test_extrqi_poison(<2 x i64> %x) {
+; CHECK-LABEL: @test_extrqi_poison(
 ; CHECK-NEXT:    ret <2 x i64> undef
 ;
   %1 = tail call <2 x i64> @llvm.x86.sse4a.extrqi(<2 x i64> zeroinitializer, i8 32, i8 33)
@@ -128,11 +128,11 @@ define <2 x i64> @test_extrqi_constant(<2 x i64> %x) {
   ret <2 x i64> %1
 }
 
-define <2 x i64> @test_extrqi_constant_undef(<2 x i64> %x) {
-; CHECK-LABEL: @test_extrqi_constant_undef(
+define <2 x i64> @test_extrqi_constant_poison(<2 x i64> %x) {
+; CHECK-LABEL: @test_extrqi_constant_poison(
 ; CHECK-NEXT:    ret <2 x i64> <i64 15, i64 undef>
 ;
-  %1 = tail call <2 x i64> @llvm.x86.sse4a.extrqi(<2 x i64> <i64 -1, i64 undef>, i8 4, i8 18)
+  %1 = tail call <2 x i64> @llvm.x86.sse4a.extrqi(<2 x i64> <i64 -1, i64 poison>, i8 4, i8 18)
   ret <2 x i64> %1
 }
 
@@ -140,7 +140,7 @@ define <2 x i64> @test_extrqi_call_constexpr() {
 ; CHECK-LABEL: @test_extrqi_call_constexpr(
 ; CHECK-NEXT:    ret <2 x i64> zeroinitializer
 ;
-  %1 = tail call <2 x i64> @llvm.x86.sse4a.extrqi(<2 x i64> bitcast (<16 x i8> trunc (<16 x i16> bitcast (<4 x i64> <i64 0, i64 undef, i64 2, i64 undef> to <16 x i16>) to <16 x i8>) to <2 x i64>), i8 8, i8 16)
+  %1 = tail call <2 x i64> @llvm.x86.sse4a.extrqi(<2 x i64> bitcast (<16 x i8> trunc (<16 x i16> bitcast (<4 x i64> <i64 0, i64 poison, i64 2, i64 poison> to <16 x i16>) to <16 x i8>) to <2 x i64>), i8 8, i8 16)
   ret <2 x i64> %1
 }
 
@@ -174,11 +174,11 @@ define <2 x i64> @test_insertq_constant(<2 x i64> %x, <2 x i64> %y) {
   ret <2 x i64> %1
 }
 
-define <2 x i64> @test_insertq_constant_undef(<2 x i64> %x, <2 x i64> %y) {
-; CHECK-LABEL: @test_insertq_constant_undef(
+define <2 x i64> @test_insertq_constant_poison(<2 x i64> %x, <2 x i64> %y) {
+; CHECK-LABEL: @test_insertq_constant_poison(
 ; CHECK-NEXT:    ret <2 x i64> <i64 33, i64 undef>
 ;
-  %1 = tail call <2 x i64> @llvm.x86.sse4a.insertq(<2 x i64> <i64 1, i64 undef>, <2 x i64> <i64 8, i64 658>) nounwind
+  %1 = tail call <2 x i64> @llvm.x86.sse4a.insertq(<2 x i64> <i64 1, i64 poison>, <2 x i64> <i64 8, i64 658>) nounwind
   ret <2 x i64> %1
 }
 
@@ -187,7 +187,7 @@ define <2 x i64> @test_insertq_call_constexpr(<2 x i64> %x) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i64> @llvm.x86.sse4a.insertqi(<2 x i64> [[X:%.*]], <2 x i64> <i64 0, i64 poison>, i8 2, i8 0)
 ; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
-  %1 = tail call <2 x i64> @llvm.x86.sse4a.insertq(<2 x i64> %x, <2 x i64> bitcast (<16 x i8> trunc (<16 x i16> bitcast (<4 x i64> <i64 0, i64 undef, i64 2, i64 undef> to <16 x i16>) to <16 x i8>) to <2 x i64>))
+  %1 = tail call <2 x i64> @llvm.x86.sse4a.insertq(<2 x i64> %x, <2 x i64> bitcast (<16 x i8> trunc (<16 x i16> bitcast (<4 x i64> <i64 0, i64 poison, i64 2, i64 poison> to <16 x i16>) to <16 x i8>) to <2 x i64>))
   ret <2 x i64> %1
 }
 
@@ -232,12 +232,12 @@ define <2 x i64> @test_insertqi_call_constexpr(<2 x i64> %x) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x i64> @llvm.x86.sse4a.insertqi(<2 x i64> [[X:%.*]], <2 x i64> <i64 0, i64 poison>, i8 48, i8 3)
 ; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
-  %1 = tail call <2 x i64> @llvm.x86.sse4a.insertqi(<2 x i64> %x, <2 x i64> bitcast (<16 x i8> trunc (<16 x i16> bitcast (<4 x i64> <i64 0, i64 undef, i64 2, i64 undef> to <16 x i16>) to <16 x i8>) to <2 x i64>), i8 48, i8 3)
+  %1 = tail call <2 x i64> @llvm.x86.sse4a.insertqi(<2 x i64> %x, <2 x i64> bitcast (<16 x i8> trunc (<16 x i16> bitcast (<4 x i64> <i64 0, i64 poison, i64 2, i64 poison> to <16 x i16>) to <16 x i8>) to <2 x i64>), i8 48, i8 3)
   ret <2 x i64> %1
 }
 
 ; The result of this insert is the second arg, since the top 64 bits of
-; the result are undefined, and we copy the bottom 64 bits from the
+; the result are poisonined, and we copy the bottom 64 bits from the
 ; second arg
 define <2 x i64> @testInsert64Bits(<2 x i64> %v, <2 x i64> %i) {
 ; CHECK-LABEL: @testInsert64Bits(
