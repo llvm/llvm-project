@@ -61,7 +61,7 @@ define i8 @uaddtest3(i8 %A, i8 %B, i1* %overflowPtr) {
 define i8 @uaddtest4(i8 %A, i1* %overflowPtr) {
 ; CHECK-LABEL: @uaddtest4(
 ; CHECK-NEXT:    store i1 false, i1* [[OVERFLOWPTR:%.*]], align 1
-; CHECK-NEXT:    ret i8 undef
+; CHECK-NEXT:    ret i8 -1
 ;
   %x = call { i8, i1 } @llvm.uadd.with.overflow.i8(i8 undef, i8 %A)
   %y = extractvalue { i8, i1 } %x, 0

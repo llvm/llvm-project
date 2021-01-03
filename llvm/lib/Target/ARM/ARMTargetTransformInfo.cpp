@@ -2000,8 +2000,7 @@ void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
         return;
       }
 
-      SmallVector<const Value*, 4> Operands(I.value_op_begin(),
-                                            I.value_op_end());
+      SmallVector<const Value*, 4> Operands(I.operand_values());
       Cost +=
         getUserCost(&I, Operands, TargetTransformInfo::TCK_SizeAndLatency);
     }

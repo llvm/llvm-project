@@ -181,8 +181,7 @@ char &llvm::SILowerControlFlowID = SILowerControlFlow::ID;
 static bool hasKill(const MachineBasicBlock *Begin,
                     const MachineBasicBlock *End, const SIInstrInfo *TII) {
   DenseSet<const MachineBasicBlock*> Visited;
-  SmallVector<MachineBasicBlock *, 4> Worklist(Begin->succ_begin(),
-                                               Begin->succ_end());
+  SmallVector<MachineBasicBlock *, 4> Worklist(Begin->successors());
 
   while (!Worklist.empty()) {
     MachineBasicBlock *MBB = Worklist.pop_back_val();

@@ -364,8 +364,7 @@ bool searchPredecessors(const MachineBasicBlock *MBB,
     return false;
 
   DenseSet<const MachineBasicBlock *> Visited;
-  SmallVector<MachineBasicBlock *, 4> Worklist(MBB->pred_begin(),
-                                               MBB->pred_end());
+  SmallVector<MachineBasicBlock *, 4> Worklist(MBB->predecessors());
 
   while (!Worklist.empty()) {
     MachineBasicBlock *MBB = Worklist.pop_back_val();

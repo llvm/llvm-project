@@ -9,7 +9,7 @@
 
 define <vscale x 4 x i32> @insertelement_idx_undef(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: @insertelement_idx_undef(
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    ret <vscale x 4 x i32> poison
 ;
   %r = insertelement <vscale x 4 x i32> %a, i32 5, i64 undef
   ret <vscale x 4 x i32> %r
@@ -72,7 +72,7 @@ define <vscale x 4 x i32> @insertelement_shufflevector_inline_to_ret() {
 
 define i32 @extractelement_idx_undef(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: @extractelement_idx_undef(
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
   %r = extractelement <vscale x 4 x i32> %a, i64 undef
   ret i32 %r

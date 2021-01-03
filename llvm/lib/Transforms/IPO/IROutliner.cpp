@@ -1027,9 +1027,7 @@ alignOutputBlockWithAggFunc(OutlinableGroup &OG, OutlinableRegion &Region,
 
     // If we have found one of the stored values for output, replace the value
     // with the corresponding one from the overall function.
-    if (GVN.hasValue() &&
-        ValuesToFind.find(GVN.getValue()) != ValuesToFind.end()) {
-      ValuesToFind.erase(GVN.getValue());
+    if (GVN.hasValue() && ValuesToFind.erase(GVN.getValue())) {
       V->replaceAllUsesWith(OverallFunctionInsts[Idx]);
       if (ValuesToFind.size() == 0)
         break;

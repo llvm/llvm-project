@@ -20,7 +20,7 @@ define <4 x i32> @f1(<4 x i32> %src, i32 %val, i32 %index) {
 ; DEFAULT-NEXT:    [[INDEX_IS_3:%.*]] = icmp eq i32 [[INDEX]], 3
 ; DEFAULT-NEXT:    [[SRC_I3:%.*]] = extractelement <4 x i32> [[SRC]], i32 3
 ; DEFAULT-NEXT:    [[RES_I3:%.*]] = select i1 [[INDEX_IS_3]], i32 [[VAL]], i32 [[SRC_I3]]
-; DEFAULT-NEXT:    [[RES_UPTO0:%.*]] = insertelement <4 x i32> undef, i32 [[RES_I0]], i32 0
+; DEFAULT-NEXT:    [[RES_UPTO0:%.*]] = insertelement <4 x i32> poison, i32 [[RES_I0]], i32 0
 ; DEFAULT-NEXT:    [[RES_UPTO1:%.*]] = insertelement <4 x i32> [[RES_UPTO0]], i32 [[RES_I1]], i32 1
 ; DEFAULT-NEXT:    [[RES_UPTO2:%.*]] = insertelement <4 x i32> [[RES_UPTO1]], i32 [[RES_I2]], i32 2
 ; DEFAULT-NEXT:    [[RES:%.*]] = insertelement <4 x i32> [[RES_UPTO2]], i32 [[RES_I3]], i32 3
@@ -53,7 +53,7 @@ define void @f2(<4 x i32> *%dest, <4 x i32> *%src, i32 %index) {
 ; DEFAULT-NEXT:    [[VAL2_I1:%.*]] = shl i32 2, [[VAL1_I1]]
 ; DEFAULT-NEXT:    [[VAL2_I2:%.*]] = shl i32 3, [[VAL1_I2]]
 ; DEFAULT-NEXT:    [[VAL2_I3:%.*]] = shl i32 4, [[VAL1_I3]]
-; DEFAULT-NEXT:    [[VAL2_UPTO0:%.*]] = insertelement <4 x i32> undef, i32 [[VAL2_I0]], i32 0
+; DEFAULT-NEXT:    [[VAL2_UPTO0:%.*]] = insertelement <4 x i32> poison, i32 [[VAL2_I0]], i32 0
 ; DEFAULT-NEXT:    [[VAL2_UPTO1:%.*]] = insertelement <4 x i32> [[VAL2_UPTO0]], i32 [[VAL2_I1]], i32 1
 ; DEFAULT-NEXT:    [[VAL2_UPTO2:%.*]] = insertelement <4 x i32> [[VAL2_UPTO1]], i32 [[VAL2_I2]], i32 2
 ; DEFAULT-NEXT:    [[VAL2:%.*]] = insertelement <4 x i32> [[VAL2_UPTO2]], i32 [[VAL2_I3]], i32 3
@@ -71,7 +71,7 @@ define void @f2(<4 x i32> *%dest, <4 x i32> *%src, i32 %index) {
 ; OFF-NEXT:    [[VAL2_I2:%.*]] = shl i32 3, [[VAL1_I2]]
 ; OFF-NEXT:    [[VAL1_I3:%.*]] = extractelement <4 x i32> [[VAL1]], i32 3
 ; OFF-NEXT:    [[VAL2_I3:%.*]] = shl i32 4, [[VAL1_I3]]
-; OFF-NEXT:    [[VAL2_UPTO0:%.*]] = insertelement <4 x i32> undef, i32 [[VAL2_I0]], i32 0
+; OFF-NEXT:    [[VAL2_UPTO0:%.*]] = insertelement <4 x i32> poison, i32 [[VAL2_I0]], i32 0
 ; OFF-NEXT:    [[VAL2_UPTO1:%.*]] = insertelement <4 x i32> [[VAL2_UPTO0]], i32 [[VAL2_I1]], i32 1
 ; OFF-NEXT:    [[VAL2_UPTO2:%.*]] = insertelement <4 x i32> [[VAL2_UPTO1]], i32 [[VAL2_I2]], i32 2
 ; OFF-NEXT:    [[VAL2:%.*]] = insertelement <4 x i32> [[VAL2_UPTO2]], i32 [[VAL2_I3]], i32 3

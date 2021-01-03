@@ -4385,16 +4385,16 @@ Value *llvm::SimplifyInsertElementInst(Value *Vec, Value *Val, Value *Idx,
   if (VecC && ValC && IdxC)
     return ConstantExpr::getInsertElement(VecC, ValC, IdxC);
 
-  // For fixed-length vector, fold into undef if index is out of bounds.
+  // For fixed-length vector, fold into poison if index is out of bounds.
   if (auto *CI = dyn_cast<ConstantInt>(Idx)) {
     if (isa<FixedVectorType>(Vec->getType()) &&
         CI->uge(cast<FixedVectorType>(Vec->getType())->getNumElements()))
-      return UndefValue::get(Vec->getType());
+      return PoisonValue::get(Vec->getType());
   }
 
   // If index is undef, it might be out of bounds (see above case)
   if (Q.isUndefValue(Idx))
-    return UndefValue::get(Vec->getType());
+    return PoisonValue::get(Vec->getType());
 
   // If the scalar is undef, and there is no risk of propagating poison from the
   // vector value, simplify to the vector value.
@@ -4464,15 +4464,15 @@ static Value *SimplifyExtractElementInst(Value *Vec, Value *Idx,
     // For fixed-length vector, fold into undef if index is out of bounds.
     if (isa<FixedVectorType>(VecVTy) &&
         IdxC->getValue().uge(cast<FixedVectorType>(VecVTy)->getNumElements()))
-      return UndefValue::get(VecVTy->getElementType());
+      return PoisonValue::get(VecVTy->getElementType());
     if (Value *Elt = findScalarElement(Vec, IdxC->getZExtValue()))
       return Elt;
   }
 
   // An undef extract index can be arbitrarily chosen to be an out-of-range
-  // index value, which would result in the instruction being undef.
+  // index value, which would result in the instruction being poison.
   if (Q.isUndefValue(Idx))
-    return UndefValue::get(VecVTy->getElementType());
+    return PoisonValue::get(VecVTy->getElementType());
 
   return nullptr;
 }
@@ -5444,19 +5444,19 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
   case Intrinsic::usub_with_overflow:
   case Intrinsic::ssub_with_overflow:
     // X - X -> { 0, false }
-    if (Op0 == Op1)
+    // X - undef -> { 0, false }
+    // undef - X -> { 0, false }
+    if (Op0 == Op1 || Q.isUndefValue(Op0) || Q.isUndefValue(Op1))
       return Constant::getNullValue(ReturnType);
-    LLVM_FALLTHROUGH;
+    break;
   case Intrinsic::uadd_with_overflow:
   case Intrinsic::sadd_with_overflow:
-    // X - undef -> { undef, false }
-    // undef - X -> { undef, false }
-    // X + undef -> { undef, false }
-    // undef + x -> { undef, false }
+    // X + undef -> { -1, false }
+    // undef + x -> { -1, false }
     if (Q.isUndefValue(Op0) || Q.isUndefValue(Op1)) {
       return ConstantStruct::get(
           cast<StructType>(ReturnType),
-          {UndefValue::get(ReturnType->getStructElementType(0)),
+          {Constant::getAllOnesValue(ReturnType->getStructElementType(0)),
            Constant::getNullValue(ReturnType->getStructElementType(1))});
     }
     break;
