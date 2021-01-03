@@ -1920,11 +1920,8 @@ uint32_t GVN::ValueTable::phiTranslateImpl(const BasicBlock *Pred,
 /// again.
 void GVN::ValueTable::eraseTranslateCacheEntry(uint32_t Num,
                                                const BasicBlock &CurrBlock) {
-  for (const BasicBlock *Pred : predecessors(&CurrBlock)) {
-    auto FindRes = PhiTranslateTable.find({Num, Pred});
-    if (FindRes != PhiTranslateTable.end())
-      PhiTranslateTable.erase(FindRes);
-  }
+  for (const BasicBlock *Pred : predecessors(&CurrBlock))
+    PhiTranslateTable.erase({Num, Pred});
 }
 
 // In order to find a leader for a given value number at a
