@@ -6,7 +6,7 @@
 
 define i32 @shl_amount_is_known_bogus(i32 %a, i32 %b) {
 ; CHECK-LABEL: @shl_amount_is_known_bogus(
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
   %or = or i32 %b, 32
   %shl = shl i32 %a, %or
@@ -17,7 +17,7 @@ define i32 @shl_amount_is_known_bogus(i32 %a, i32 %b) {
 
 define i31 @lshr_amount_is_known_bogus(i31 %a, i31 %b) {
 ; CHECK-LABEL: @lshr_amount_is_known_bogus(
-; CHECK-NEXT:    ret i31 undef
+; CHECK-NEXT:    ret i31 poison
 ;
   %or = or i31 %b, 31
   %shr = lshr i31 %a, %or
@@ -26,7 +26,7 @@ define i31 @lshr_amount_is_known_bogus(i31 %a, i31 %b) {
 
 define i33 @ashr_amount_is_known_bogus(i33 %a, i33 %b) {
 ; CHECK-LABEL: @ashr_amount_is_known_bogus(
-; CHECK-NEXT:    ret i33 undef
+; CHECK-NEXT:    ret i33 poison
 ;
   %or = or i33 %b, 33
   %shr = ashr i33 %a, %or
@@ -84,7 +84,7 @@ define i9 @shl_amount_is_not_known_zero(i9 %a, i9 %b) {
 
 define <2 x i32> @ashr_vector_bogus(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: @ashr_vector_bogus(
-; CHECK-NEXT:    ret <2 x i32> undef
+; CHECK-NEXT:    ret <2 x i32> poison
 ;
   %or = or <2 x i32> %b, <i32 32, i32 32>
   %shr = ashr <2 x i32> %a, %or
