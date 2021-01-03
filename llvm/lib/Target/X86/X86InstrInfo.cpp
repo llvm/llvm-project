@@ -6464,7 +6464,7 @@ X86InstrInfo::unfoldMemoryOperand(SelectionDAG &DAG, SDNode *N,
   }
   if (Load)
     BeforeOps.push_back(SDValue(Load, 0));
-  BeforeOps.insert(BeforeOps.end(), AfterOps.begin(), AfterOps.end());
+  llvm::append_range(BeforeOps, AfterOps);
   // Change CMP32ri r, 0 back to TEST32rr r, r, etc.
   switch (Opc) {
     default: break;

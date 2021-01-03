@@ -585,7 +585,7 @@ auto AlignVectors::createLoadGroups(const AddrList &Group) const -> MoveList {
     if (llvm::any_of(Deps, inAddrMap))
       return false;
     Move.Main.push_back(Info.Inst);
-    Move.Deps.insert(Move.Deps.end(), Deps.begin(), Deps.end());
+    llvm::append_range(Move.Deps, Deps);
     return true;
   };
 
