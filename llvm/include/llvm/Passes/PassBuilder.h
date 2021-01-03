@@ -465,7 +465,7 @@ public:
   /// registered.
   ///
   /// This also adds target-specific alias analyses registered via
-  /// TargetMachine::registerAliasAnalyses().
+  /// TargetMachine::registerDefaultAliasAnalyses().
   AAManager buildDefaultAAPipeline();
 
   /// Parse a textual pass pipeline description into a \c
