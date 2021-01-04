@@ -1431,6 +1431,7 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
                               {"rng", "norng", "+rand", "-rand"},
                               {"memtag", "nomemtag", "+mte", "-mte"},
                               {"tme", "notme", "+tme", "-tme"},
+                              {"pauth", "nopauth", "+pauth", "-pauth"},
                               {"ssbs", "nossbs", "+ssbs", "-ssbs"},
                               {"sb", "nosb", "+sb", "-sb"},
                               {"predres", "nopredres", "+predres", "-predres"},

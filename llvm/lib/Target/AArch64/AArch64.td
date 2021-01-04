@@ -261,8 +261,8 @@ def FeatureDotProd : SubtargetFeature<
     "dotprod", "HasDotProd", "true",
     "Enable dot product support">;
 
-def FeaturePA : SubtargetFeature<
-    "pa", "HasPA", "true",
+def FeaturePAuth : SubtargetFeature<
+    "pauth", "HasPAuth", "true",
     "Enable v8.3-A Pointer Authentication extension">;
 
 def FeatureJS : SubtargetFeature<
@@ -438,7 +438,7 @@ def HasV8_2aOps : SubtargetFeature<"v8.2a", "HasV8_2aOps", "true",
   FeaturePAN_RWV, FeatureRAS, FeatureCCPP]>;
 
 def HasV8_3aOps : SubtargetFeature<"v8.3a", "HasV8_3aOps", "true",
-  "Support ARM v8.3a instructions", [HasV8_2aOps, FeatureRCPC, FeaturePA,
+  "Support ARM v8.3a instructions", [HasV8_2aOps, FeatureRCPC, FeaturePAuth,
   FeatureJS, FeatureCCIDX, FeatureComplxNum]>;
 
 def HasV8_4aOps : SubtargetFeature<"v8.4a", "HasV8_4aOps", "true",
@@ -471,7 +471,7 @@ def HasV8_0rOps : SubtargetFeature<
   FeatureSHA3, FeatureCCPP, FeatureFullFP16, FeaturePAN_RWV,
   //v8.3
   FeatureComplxNum, FeatureCCIDX, FeatureJS,
-  FeaturePA, FeatureRCPC,
+  FeaturePAuth, FeatureRCPC,
   //v8.4
   FeatureDotProd, FeatureFP16FML, FeatureTRACEV8_4,
   FeatureTLB_RMI, FeatureFMI, FeatureDIT, FeatureSEL2, FeatureRCPC_IMMO,
@@ -539,7 +539,7 @@ def SVEUnsupported : AArch64Unsupported {
 }
 
 def PAUnsupported : AArch64Unsupported {
-  let F = [HasPA];
+  let F = [HasPAuth];
 }
 
 include "AArch64SchedA53.td"
@@ -703,7 +703,7 @@ def ProcA78C : SubtargetFeature<"cortex-a78c", "ARMProcFamily",
                                 FeatureFullFP16,
                                 FeatureFuseAES,
                                 FeatureNEON,
-                                FeaturePA,
+                                FeaturePAuth,
                                 FeaturePerfMon,
                                 FeaturePostRAScheduler,
                                 FeatureRCPC,
@@ -1015,7 +1015,7 @@ def ProcThunderX3T110  : SubtargetFeature<"thunderx3t110", "ARMProcFamily",
                                           FeaturePostRAScheduler,
                                           FeaturePredictableSelectIsExpensive,
                                           FeatureLSE,
-                                          FeaturePA,
+                                          FeaturePAuth,
                                           FeatureUseAA,
                                           FeatureBalanceFPOps,
                                           FeaturePerfMon,

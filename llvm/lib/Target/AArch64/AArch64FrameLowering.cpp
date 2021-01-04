@@ -1511,7 +1511,7 @@ static void InsertReturnAddressAuth(MachineFunction &MF,
   // this instruction can safely used for any v8a architecture.
   // From v8.3a onwards there are optimised authenticate LR and return
   // instructions, namely RETA{A,B}, that can be used instead.
-  if (Subtarget.hasV8_3aOps() && MBBI != MBB.end() &&
+  if (Subtarget.hasPAuth() && MBBI != MBB.end() &&
       MBBI->getOpcode() == AArch64::RET_ReallyLR) {
     BuildMI(MBB, MBBI, DL,
             TII->get(MFI.shouldSignWithBKey() ? AArch64::RETAB : AArch64::RETAA))

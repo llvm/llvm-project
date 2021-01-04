@@ -33,8 +33,8 @@ def HasVH            : Predicate<"Subtarget->hasVH()">,
 def HasLOR           : Predicate<"Subtarget->hasLOR()">,
                        AssemblerPredicate<(all_of FeatureLOR), "lor">;
 
-def HasPA            : Predicate<"Subtarget->hasPA()">,
-                       AssemblerPredicate<(all_of FeaturePA), "pa">;
+def HasPAuth         : Predicate<"Subtarget->hasPAuth()">,
+                       AssemblerPredicate<(all_of FeaturePAuth), "pauth">;
 
 def HasJS            : Predicate<"Subtarget->hasJS()">,
                        AssemblerPredicate<(all_of FeatureJS), "jsconv">;
@@ -1073,7 +1073,7 @@ def : InstAlias<"autib1716", (AUTIB1716), 0>;
 def : InstAlias<"xpaclri", (XPACLRI), 0>;
 
 // These pointer authentication instructions require armv8.3a
-let Predicates = [HasPA] in {
+let Predicates = [HasPAuth] in {
 
   // When PA is enabled, a better mnemonic should be emitted.
   def : InstAlias<"paciaz", (PACIAZ), 1>;

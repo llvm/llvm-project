@@ -64,6 +64,7 @@ enum ArchExtKind : uint64_t {
   AEK_F64MM =       1ULL << 32,
   AEK_LS64 =        1ULL << 33,
   AEK_BRBE =        1ULL << 34,
+  AEK_PAUTH =       1ULL << 35,
 };
 
 enum class ArchKind {

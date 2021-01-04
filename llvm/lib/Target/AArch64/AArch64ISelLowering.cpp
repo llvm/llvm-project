@@ -7252,7 +7252,7 @@ SDValue AArch64TargetLowering::LowerRETURNADDR(SDValue Op,
   // Armv8.3-A architectures. On Armv8.3-A and onwards XPACI is available so use
   // that instead.
   SDNode *St;
-  if (Subtarget->hasV8_3aOps()) {
+  if (Subtarget->hasPAuth()) {
     St = DAG.getMachineNode(AArch64::XPACI, DL, VT, ReturnAddress);
   } else {
     // XPACLRI operates on LR therefore we must move the operand accordingly.

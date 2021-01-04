@@ -510,6 +510,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasMTE = true;
     if (Feature == "+tme")
       HasTME = true;
+    if (Feature == "+pauth")
+      HasPAuth = true;
     if (Feature == "+i8mm")
       HasMatMul = true;
     if (Feature == "+bf16")
