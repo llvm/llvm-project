@@ -506,6 +506,10 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
           PM.addPass(AMDGPUPrintfRuntimeBindingPass());
           return true;
         }
+        if (PassName == "amdgpu-always-inline") {
+          PM.addPass(AMDGPUAlwaysInlinePass());
+          return true;
+        }
         return false;
       });
   PB.registerPipelineParsingCallback(
@@ -565,6 +569,8 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
         if (InternalizeSymbols) {
           PM.addPass(GlobalDCEPass());
         }
+        if (EarlyInlineAll && !EnableFunctionCalls)
+          PM.addPass(AMDGPUAlwaysInlinePass());
       });
 
   PB.registerCGSCCOptimizerLateEPCallback(
