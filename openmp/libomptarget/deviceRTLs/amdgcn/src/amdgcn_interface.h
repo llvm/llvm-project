@@ -15,4 +15,6 @@
 typedef uint64_t __kmpc_impl_lanemask_t;
 typedef uint32_t omp_lock_t; /* arbitrary type of the right length */
 
+EXTERN uint32_t __kmpc_amdgcn_gpu_num_threads();
+
 #endif
