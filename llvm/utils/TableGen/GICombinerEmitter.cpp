@@ -432,9 +432,9 @@ bool CombineRule::parseInstructionMatcher(
       }
 
       if (InstrOperand.isDef()) {
-        if (find_if(Roots, [&](const RootInfo &X) {
+        if (any_of(Roots, [&](const RootInfo &X) {
               return X.getPatternSymbol() == Name;
-            }) != Roots.end()) {
+            })) {
           N->setMatchRoot();
         }
       }
@@ -460,9 +460,9 @@ bool CombineRule::parseWipMatchOpcodeMatcher(const CodeGenTarget &Target,
         MatchDag.addInstrNode(makeDebugName(*this, Name), insertStrTab(Name),
                               MatchDag.getContext().makeEmptyOperandList());
 
-    if (find_if(Roots, [&](const RootInfo &X) {
+    if (any_of(Roots, [&](const RootInfo &X) {
           return ArgName && X.getPatternSymbol() == ArgName->getValue();
-        }) != Roots.end()) {
+        })) {
       N->setMatchRoot();
     }
 

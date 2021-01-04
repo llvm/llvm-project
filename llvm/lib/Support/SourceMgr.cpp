@@ -522,7 +522,7 @@ void SMDiagnostic::print(const char *ProgName, raw_ostream &OS, bool ShowColors,
   // map like Clang's TextDiagnostic. For now, we'll just handle tabs by
   // expanding them later, and bail out rather than show incorrect ranges and
   // misaligned fixits for any other odd characters.
-  if (find_if(LineContents, isNonASCII) != LineContents.end()) {
+  if (any_of(LineContents, isNonASCII)) {
     printSourceLine(OS, LineContents);
     return;
   }

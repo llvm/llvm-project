@@ -6256,7 +6256,7 @@ void ARMBaseInstrInfo::buildOutlinedFrame(
   auto IsNonTailCall = [](MachineInstr &MI) {
     return MI.isCall() && !MI.isReturn();
   };
-  if (std::any_of(MBB.instr_begin(), MBB.instr_end(), IsNonTailCall)) {
+  if (llvm::any_of(MBB.instrs(), IsNonTailCall)) {
     MachineBasicBlock::iterator It = MBB.begin();
     MachineBasicBlock::iterator Et = MBB.end();
 
