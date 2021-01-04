@@ -324,7 +324,7 @@ define i32 @test34(i32 %a) {
 
 define i32 @test35(<4 x i32> %V) {
 ; CHECK-LABEL: @test35(
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
   %b = extractelement <4 x i32> %V, i32 4
   ret i32 %b
