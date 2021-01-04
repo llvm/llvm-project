@@ -9,7 +9,7 @@
 
 define <vscale x 4 x i32> @insertelement_idx_undef(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: @insertelement_idx_undef(
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    ret <vscale x 4 x i32> poison
 ;
   %r = insertelement <vscale x 4 x i32> %a, i32 5, i64 undef
   ret <vscale x 4 x i32> %r
