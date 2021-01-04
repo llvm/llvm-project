@@ -5,8 +5,9 @@
 define i64 @f(i64 %a, i64 %b) {
 ; CHECK-LABEL: f:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sub. r3, r3, r4
-; CHECK-NEXT:    isellt r3, 0, r3
+; CHECK-NEXT:    sub r5, r3, r4
+; CHECK-NEXT:    cmpd r3, r4
+; CHECK-NEXT:    isellt r3, 0, r5
 ; CHECK-NEXT:    blr
   %c = icmp slt i64 %a, %b
   %d = sub i64 %a, %b
