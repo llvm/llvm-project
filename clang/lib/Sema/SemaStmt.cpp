@@ -3118,12 +3118,7 @@ bool Sema::isCopyElisionCandidate(QualType ReturnType, const VarDecl *VD,
 /// If move-initialization is not possible, such that we must fall back to
 /// treating the operand as an lvalue, we will leave Res in its original
 /// invalid state.
-///
-/// \returns Whether we need to do the second overload resolution. If the first
-/// overload resolution fails, or if the first overload resolution succeeds but
-/// the selected constructor/operator doesn't match the additional criteria, we
-/// need to do the second overload resolution.
-static bool TryMoveInitialization(Sema &S, const InitializedEntity &Entity,
+static void TryMoveInitialization(Sema &S, const InitializedEntity &Entity,
                                   const VarDecl *NRVOCandidate,
                                   QualType ResultType, Expr *&Value,
                                   bool ConvertingConstructorsOnly,
@@ -3138,10 +3133,8 @@ static bool TryMoveInitialization(Sema &S, const InitializedEntity &Entity,
 
   InitializationSequence Seq(S, Entity, Kind, InitExpr);
 
-  bool NeedSecondOverloadResolution = true;
-  if (!Seq && Seq.getFailedOverloadResult() != OR_Deleted) {
-    return NeedSecondOverloadResolution;
-  }
+  if (!Seq)
+    return;
 
   for (const InitializationSequence::Step &Step : Seq.steps()) {
     if (Step.Kind != InitializationSequence::SK_ConstructorInitialization &&
@@ -3184,7 +3177,6 @@ static bool TryMoveInitialization(Sema &S, const InitializedEntity &Entity,
       }
     }
 
-    NeedSecondOverloadResolution = false;
     // Promote "AsRvalue" to the heap, since we now need this
     // expression node to persist.
     Value =
@@ -3195,8 +3187,6 @@ static bool TryMoveInitialization(Sema &S, const InitializedEntity &Entity,
     // using the constructor we found.
     Res = Seq.Perform(S, Entity, Kind, Value);
   }
-
-  return NeedSecondOverloadResolution;
 }
 
 /// Perform the initialization of a potentially-movable value, which
@@ -3221,7 +3211,6 @@ Sema::PerformMoveOrCopyInitialization(const InitializedEntity &Entity,
   // select the constructor for the copy is first performed as if the object
   // were designated by an rvalue.
   ExprResult Res = ExprError();
-  bool NeedSecondOverloadResolution = true;
 
   if (AllowNRVO) {
     bool AffectedByCWG1579 = false;
@@ -3238,15 +3227,14 @@ Sema::PerformMoveOrCopyInitialization(const InitializedEntity &Entity,
     }
 
     if (NRVOCandidate) {
-      NeedSecondOverloadResolution = TryMoveInitialization(
-          *this, Entity, NRVOCandidate, ResultType, Value, true, Res);
+      TryMoveInitialization(*this, Entity, NRVOCandidate, ResultType, Value,
+                            true, Res);
     }
 
-    if (!NeedSecondOverloadResolution && AffectedByCWG1579) {
+    if (!Res.isInvalid() && AffectedByCWG1579) {
       QualType QT = NRVOCandidate->getType();
-      if (QT.getNonReferenceType()
-                     .getUnqualifiedType()
-                     .isTriviallyCopyableType(Context)) {
+      if (QT.getNonReferenceType().getUnqualifiedType().isTriviallyCopyableType(
+              Context)) {
         // Adding 'std::move' around a trivially copyable variable is probably
         // pointless. Don't suggest it.
       } else {
@@ -3260,12 +3248,12 @@ Sema::PerformMoveOrCopyInitialization(const InitializedEntity &Entity,
         Str += NRVOCandidate->getDeclName().getAsString();
         Str += ")";
         Diag(Value->getExprLoc(), diag::warn_return_std_move_in_cxx11)
-            << Value->getSourceRange()
-            << NRVOCandidate->getDeclName() << ResultType << QT;
+            << Value->getSourceRange() << NRVOCandidate->getDeclName()
+            << ResultType << QT;
         Diag(Value->getExprLoc(), diag::note_add_std_move_in_cxx11)
             << FixItHint::CreateReplacement(Value->getSourceRange(), Str);
       }
-    } else if (NeedSecondOverloadResolution &&
+    } else if (Res.isInvalid() &&
                !getDiagnostics().isIgnored(diag::warn_return_std_move,
                                            Value->getExprLoc())) {
       const VarDecl *FakeNRVOCandidate =
@@ -3306,7 +3294,7 @@ Sema::PerformMoveOrCopyInitialization(const InitializedEntity &Entity,
   // Either we didn't meet the criteria for treating an lvalue as an rvalue,
   // above, or overload resolution failed. Either way, we need to try
   // (again) now with the return value expression as written.
-  if (NeedSecondOverloadResolution)
+  if (Res.isInvalid())
     Res = PerformCopyInitialization(Entity, SourceLocation(), Value);
 
   return Res;
