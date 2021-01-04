@@ -1405,7 +1405,7 @@ void IROutliner::findCostBenefit(Module &M, OutlinableGroup &CurrentGroup) {
                     << " instructions to cost for each argument in the new"
                     << " function.\n");
   CurrentGroup.Cost +=
-      NumRegions * OverallArgumentNum * TargetTransformInfo::TCC_Basic;
+      OverallArgumentNum * TargetTransformInfo::TCC_Basic;
   LLVM_DEBUG(dbgs() << "Current Cost: " << CurrentGroup.Cost << "\n");
 
   // Each argument needs to either be loaded into a register or onto the stack.
@@ -1416,7 +1416,7 @@ void IROutliner::findCostBenefit(Module &M, OutlinableGroup &CurrentGroup) {
                     << " function " << NumRegions << " times for the "
                     << "needed argument handling at the call site.\n");
   CurrentGroup.Cost +=
-      OverallArgumentNum * TargetTransformInfo::TCC_Basic * NumRegions;
+      2 * OverallArgumentNum * TargetTransformInfo::TCC_Basic * NumRegions;
   LLVM_DEBUG(dbgs() << "Current Cost: " << CurrentGroup.Cost << "\n");
 
   CurrentGroup.Cost += findCostForOutputBlocks(M, CurrentGroup, TTI);

@@ -31,6 +31,10 @@ entry:
   %mul = mul i32 %0, %1
   %sub = sub i32 %0, %1
   %div = sdiv i32 %0, %1
+  %add1 = add i32 %0, %1
+  %mul1 = mul i32 %0, %1
+  %sub1 = sub i32 %0, %1
+  %div1 = sdiv i32 %0, %1
   %add2 = add i32 %0, %1
   %mul2 = mul i32 %0, %1
   %sub2 = sub i32 %0, %1
@@ -62,6 +66,10 @@ entry:
   %mul = mul i32 %0, %1
   %sub = sub i32 %0, %1
   %div = sdiv i32 %0, %1
+  %add1 = add i32 %0, %1
+  %mul1 = mul i32 %0, %1
+  %sub1 = sub i32 %0, %1
+  %div1 = sdiv i32 %0, %1
   %add2 = add i32 %0, %1
   %mul2 = mul i32 %0, %1
   %sub2 = sub i32 %0, %1
