@@ -520,7 +520,7 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
       [this](StringRef PassName, FunctionPassManager &PM,
              ArrayRef<PassBuilder::PipelineElement>) {
         if (PassName == "amdgpu-simplifylib") {
-          PM.addPass(AMDGPUSimplifyLibCallsPass());
+          PM.addPass(AMDGPUSimplifyLibCallsPass(*this));
           return true;
         }
         if (PassName == "amdgpu-usenative") {
@@ -566,7 +566,7 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
     FPM.addPass(AMDGPUPropagateAttributesEarlyPass(*this));
     FPM.addPass(AMDGPUUseNativeCallsPass());
     if (EnableLibCallSimplify && Level != PassBuilder::OptimizationLevel::O0)
-      FPM.addPass(AMDGPUSimplifyLibCallsPass());
+      FPM.addPass(AMDGPUSimplifyLibCallsPass(*this));
     PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
   });
 
