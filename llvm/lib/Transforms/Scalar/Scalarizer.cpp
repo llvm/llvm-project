@@ -733,7 +733,7 @@ bool ScalarizerVisitor::visitBitCastInst(BitCastInst &BCI) {
     auto *MidTy = FixedVectorType::get(SrcVT->getElementType(), FanIn);
     unsigned Op0I = 0;
     for (unsigned ResI = 0; ResI < DstNumElems; ++ResI) {
-      Value *V = UndefValue::get(MidTy);
+      Value *V = PoisonValue::get(MidTy);
       for (unsigned MidI = 0; MidI < FanIn; ++MidI)
         V = Builder.CreateInsertElement(V, Op0[Op0I++], Builder.getInt32(MidI),
                                         BCI.getName() + ".i" + Twine(ResI)
@@ -932,7 +932,7 @@ bool ScalarizerVisitor::finish() {
     if (!Op->use_empty()) {
       // The value is still needed, so recreate it using a series of
       // InsertElements.
-      Value *Res = UndefValue::get(Op->getType());
+      Value *Res = PoisonValue::get(Op->getType());
       if (auto *Ty = dyn_cast<VectorType>(Op->getType())) {
         BasicBlock *BB = Op->getParent();
         unsigned Count = cast<FixedVectorType>(Ty)->getNumElements();
