@@ -111,7 +111,7 @@ bool GCOVFile::readGCNO(GCOVBuffer &buf) {
     buf.getWord(); // hasUnexecutedBlocks
 
   uint32_t tag, length;
-  GCOVFunction *fn;
+  GCOVFunction *fn = nullptr;
   while ((tag = buf.getWord())) {
     if (!buf.readInt(length))
       return false;
