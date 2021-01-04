@@ -244,6 +244,12 @@ unsigned SplitAllCriticalEdges(Function &F,
                                const CriticalEdgeSplittingOptions &Options =
                                    CriticalEdgeSplittingOptions());
 
+/// Recursivelly traverse all empty 'single successor' basic blocks of \p From
+/// (if there are any). Return the last basic block found or \p End if it was
+/// reached during the search.
+const BasicBlock &skipEmptyBlockUntil(const BasicBlock *From,
+                                      const BasicBlock *End);
+
 /// Split the edge connecting the specified blocks, and return the newly created
 /// basic block between \p From and \p To.
 BasicBlock *SplitEdge(BasicBlock *From, BasicBlock *To,
