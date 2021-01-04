@@ -647,7 +647,7 @@ define amdgpu_kernel void @fma_neg_2.0_neg_a_b_f32(float addrspace(1)* %out, flo
   %r1 = load volatile float, float addrspace(1)* %gep.0
   %r2 = load volatile float, float addrspace(1)* %gep.1
 
-  %r1.fneg = fsub float -0.000000e+00, %r1
+  %r1.fneg = fneg float %r1
 
   %r3 = tail call float @llvm.fma.f32(float -2.0, float %r1.fneg, float %r2)
   store float %r3, float addrspace(1)* %gep.out
@@ -669,7 +669,7 @@ define amdgpu_kernel void @fma_2.0_neg_a_b_f32(float addrspace(1)* %out, float a
   %r1 = load volatile float, float addrspace(1)* %gep.0
   %r2 = load volatile float, float addrspace(1)* %gep.1
 
-  %r1.fneg = fsub float -0.000000e+00, %r1
+  %r1.fneg = fneg float %r1
 
   %r3 = tail call float @llvm.fma.f32(float 2.0, float %r1.fneg, float %r2)
   store float %r3, float addrspace(1)* %gep.out

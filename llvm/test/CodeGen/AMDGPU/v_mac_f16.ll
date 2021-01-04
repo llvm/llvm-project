@@ -83,7 +83,7 @@ entry:
   %b.val = load half, half addrspace(1)* %b
   %c.val = load half, half addrspace(1)* %c
 
-  %a.neg = fsub half -0.0, %a.val
+  %a.neg = fneg half %a.val
   %t.val = fmul half %a.neg, %b.val
   %r.val = fadd half %t.val, %c.val
 
@@ -110,7 +110,7 @@ entry:
   %b.val = load half, half addrspace(1)* %b
   %c.val = load half, half addrspace(1)* %c
 
-  %b.neg = fsub half -0.0, %b.val
+  %b.neg = fneg half %b.val
   %t.val = fmul half %a.val, %b.neg
   %r.val = fadd half %t.val, %c.val
 
@@ -137,7 +137,7 @@ entry:
   %b.val = load half, half addrspace(1)* %b
   %c.val = load half, half addrspace(1)* %c
 
-  %c.neg = fsub half -0.0, %c.val
+  %c.neg = fneg half %c.val
   %t.val = fmul half %a.val, %b.val
   %r.val = fadd half %t.val, %c.neg
 
@@ -410,7 +410,7 @@ entry:
   %b.val = load <2 x half>, <2 x half> addrspace(1)* %b
   %c.val = load <2 x half>, <2 x half> addrspace(1)* %c
 
-  %a.neg = fsub <2 x half> <half -0.0, half -0.0>, %a.val
+  %a.neg = fneg <2 x half> %a.val
   %t.val = fmul <2 x half> %a.neg, %b.val
   %r.val = fadd <2 x half> %t.val, %c.val
 
@@ -439,7 +439,7 @@ entry:
   %b.val = load <2 x half>, <2 x half> addrspace(1)* %b
   %c.val = load <2 x half>, <2 x half> addrspace(1)* %c
 
-  %b.neg = fsub <2 x half> <half -0.0, half -0.0>, %b.val
+  %b.neg = fneg <2 x half> %b.val
   %t.val = fmul <2 x half> %a.val, %b.neg
   %r.val = fadd <2 x half> %t.val, %c.val
 
@@ -472,7 +472,7 @@ entry:
   %b.val = load <2 x half>, <2 x half> addrspace(1)* %b
   %c.val = load <2 x half>, <2 x half> addrspace(1)* %c
 
-  %c.neg = fsub <2 x half> <half -0.0, half -0.0>, %c.val
+  %c.neg = fneg <2 x half> %c.val
   %t.val = fmul <2 x half> %a.val, %b.val
   %r.val = fadd <2 x half> %t.val, %c.neg
 
