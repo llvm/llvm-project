@@ -281,6 +281,93 @@ TEST(KnownBitsTest, UnaryExhaustive) {
   });
 }
 
+TEST(KnownBitsTest, ICmpExhaustive) {
+  unsigned Bits = 4;
+  ForeachKnownBits(Bits, [&](const KnownBits &Known1) {
+    ForeachKnownBits(Bits, [&](const KnownBits &Known2) {
+      bool AllEQ = true, NoneEQ = true;
+      bool AllNE = true, NoneNE = true;
+      bool AllUGT = true, NoneUGT = true;
+      bool AllUGE = true, NoneUGE = true;
+      bool AllULT = true, NoneULT = true;
+      bool AllULE = true, NoneULE = true;
+      bool AllSGT = true, NoneSGT = true;
+      bool AllSGE = true, NoneSGE = true;
+      bool AllSLT = true, NoneSLT = true;
+      bool AllSLE = true, NoneSLE = true;
+
+      ForeachNumInKnownBits(Known1, [&](const APInt &N1) {
+        ForeachNumInKnownBits(Known2, [&](const APInt &N2) {
+          AllEQ &= N1.eq(N2);
+          AllNE &= N1.ne(N2);
+          AllUGT &= N1.ugt(N2);
+          AllUGE &= N1.uge(N2);
+          AllULT &= N1.ult(N2);
+          AllULE &= N1.ule(N2);
+          AllSGT &= N1.sgt(N2);
+          AllSGE &= N1.sge(N2);
+          AllSLT &= N1.slt(N2);
+          AllSLE &= N1.sle(N2);
+          NoneEQ &= !N1.eq(N2);
+          NoneNE &= !N1.ne(N2);
+          NoneUGT &= !N1.ugt(N2);
+          NoneUGE &= !N1.uge(N2);
+          NoneULT &= !N1.ult(N2);
+          NoneULE &= !N1.ule(N2);
+          NoneSGT &= !N1.sgt(N2);
+          NoneSGE &= !N1.sge(N2);
+          NoneSLT &= !N1.slt(N2);
+          NoneSLE &= !N1.sle(N2);
+        });
+      });
+
+      Optional<bool> KnownEQ = KnownBits::eq(Known1, Known2);
+      Optional<bool> KnownNE = KnownBits::ne(Known1, Known2);
+      Optional<bool> KnownUGT = KnownBits::ugt(Known1, Known2);
+      Optional<bool> KnownUGE = KnownBits::uge(Known1, Known2);
+      Optional<bool> KnownULT = KnownBits::ult(Known1, Known2);
+      Optional<bool> KnownULE = KnownBits::ule(Known1, Known2);
+      Optional<bool> KnownSGT = KnownBits::sgt(Known1, Known2);
+      Optional<bool> KnownSGE = KnownBits::sge(Known1, Known2);
+      Optional<bool> KnownSLT = KnownBits::slt(Known1, Known2);
+      Optional<bool> KnownSLE = KnownBits::sle(Known1, Known2);
+
+      EXPECT_EQ(AllEQ || NoneEQ, KnownEQ.hasValue());
+      EXPECT_EQ(AllNE || NoneNE, KnownNE.hasValue());
+      EXPECT_EQ(AllUGT || NoneUGT, KnownUGT.hasValue());
+      EXPECT_EQ(AllUGE || NoneUGE, KnownUGE.hasValue());
+      EXPECT_EQ(AllULT || NoneULT, KnownULT.hasValue());
+      EXPECT_EQ(AllULE || NoneULE, KnownULE.hasValue());
+      EXPECT_EQ(AllSGT || NoneSGT, KnownSGT.hasValue());
+      EXPECT_EQ(AllSGE || NoneSGE, KnownSGE.hasValue());
+      EXPECT_EQ(AllSLT || NoneSLT, KnownSLT.hasValue());
+      EXPECT_EQ(AllSLE || NoneSLE, KnownSLE.hasValue());
+
+      EXPECT_EQ(AllEQ, KnownEQ.hasValue() && KnownEQ.getValue());
+      EXPECT_EQ(AllNE, KnownNE.hasValue() && KnownNE.getValue());
+      EXPECT_EQ(AllUGT, KnownUGT.hasValue() && KnownUGT.getValue());
+      EXPECT_EQ(AllUGE, KnownUGE.hasValue() && KnownUGE.getValue());
+      EXPECT_EQ(AllULT, KnownULT.hasValue() && KnownULT.getValue());
+      EXPECT_EQ(AllULE, KnownULE.hasValue() && KnownULE.getValue());
+      EXPECT_EQ(AllSGT, KnownSGT.hasValue() && KnownSGT.getValue());
+      EXPECT_EQ(AllSGE, KnownSGE.hasValue() && KnownSGE.getValue());
+      EXPECT_EQ(AllSLT, KnownSLT.hasValue() && KnownSLT.getValue());
+      EXPECT_EQ(AllSLE, KnownSLE.hasValue() && KnownSLE.getValue());
+
+      EXPECT_EQ(NoneEQ, KnownEQ.hasValue() && !KnownEQ.getValue());
+      EXPECT_EQ(NoneNE, KnownNE.hasValue() && !KnownNE.getValue());
+      EXPECT_EQ(NoneUGT, KnownUGT.hasValue() && !KnownUGT.getValue());
+      EXPECT_EQ(NoneUGE, KnownUGE.hasValue() && !KnownUGE.getValue());
+      EXPECT_EQ(NoneULT, KnownULT.hasValue() && !KnownULT.getValue());
+      EXPECT_EQ(NoneULE, KnownULE.hasValue() && !KnownULE.getValue());
+      EXPECT_EQ(NoneSGT, KnownSGT.hasValue() && !KnownSGT.getValue());
+      EXPECT_EQ(NoneSGE, KnownSGE.hasValue() && !KnownSGE.getValue());
+      EXPECT_EQ(NoneSLT, KnownSLT.hasValue() && !KnownSLT.getValue());
+      EXPECT_EQ(NoneSLE, KnownSLE.hasValue() && !KnownSLE.getValue());
+    });
+  });
+}
+
 TEST(KnownBitsTest, GetMinMaxVal) {
   unsigned Bits = 4;
   ForeachKnownBits(Bits, [&](const KnownBits &Known) {
