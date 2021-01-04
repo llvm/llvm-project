@@ -982,6 +982,15 @@ Value *llvm::createSimpleTargetReduction(IRBuilderBase &Builder,
                                          unsigned Opcode, Value *Src,
                                          RecurKind RdxKind,
                                          ArrayRef<Value *> RedOps) {
+  TargetTransformInfo::ReductionFlags RdxFlags;
+  RdxFlags.IsMaxOp = RdxKind == RecurKind::SMax ||
+                     RdxKind == RecurKind::UMax ||
+                     RdxKind == RecurKind::FMax;
+  RdxFlags.IsSigned = RdxKind == RecurKind::SMax || RdxKind == RecurKind::SMin;
+  if (!ForceReductionIntrinsic &&
+      !TTI->useReductionIntrinsic(Opcode, Src->getType(), RdxFlags))
+    return getShuffleReduction(Builder, Src, Opcode, RdxKind, RedOps);
+
   auto *SrcVTy = cast<VectorType>(Src->getType());
 
   std::function<Value *()> BuildFunc;
@@ -1044,15 +1053,7 @@ Value *llvm::createSimpleTargetReduction(IRBuilderBase &Builder,
   default:
     llvm_unreachable("Unhandled opcode");
   }
-  TargetTransformInfo::ReductionFlags RdxFlags;
-  RdxFlags.IsMaxOp = RdxKind == RecurKind::SMax ||
-                     RdxKind == RecurKind::UMax ||
-                     RdxKind == RecurKind::FMax;
-  RdxFlags.IsSigned = RdxKind == RecurKind::SMax || RdxKind == RecurKind::SMin;
-  if (ForceReductionIntrinsic ||
-      TTI->useReductionIntrinsic(Opcode, Src->getType(), RdxFlags))
-    return BuildFunc();
-  return getShuffleReduction(Builder, Src, Opcode, RdxKind, RedOps);
+  return BuildFunc();
 }
 
 Value *llvm::createTargetReduction(IRBuilderBase &B,
