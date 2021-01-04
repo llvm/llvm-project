@@ -498,6 +498,10 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
           PM.addPass(AMDGPUPropagateAttributesLatePass(*this));
           return true;
         }
+        if (PassName == "amdgpu-unify-metadata") {
+          PM.addPass(AMDGPUUnifyMetadataPass());
+          return true;
+        }
         return false;
       });
   PB.registerPipelineParsingCallback(
@@ -546,6 +550,8 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
       [this](ModulePassManager &PM, PassBuilder::OptimizationLevel Level) {
         if (Level == PassBuilder::OptimizationLevel::O0)
           return;
+
+        PM.addPass(AMDGPUUnifyMetadataPass());
 
         if (InternalizeSymbols) {
           PM.addPass(InternalizePass(mustPreserveGV));
