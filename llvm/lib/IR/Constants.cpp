@@ -3411,7 +3411,7 @@ Value *ConstantExpr::handleOperandChangeImpl(Value *From, Value *ToV) {
 }
 
 Instruction *ConstantExpr::getAsInstruction() const {
-  SmallVector<Value *, 4> ValueOperands(op_begin(), op_end());
+  SmallVector<Value *, 4> ValueOperands(operands());
   ArrayRef<Value*> Ops(ValueOperands);
 
   switch (getOpcode()) {

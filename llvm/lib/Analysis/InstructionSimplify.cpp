@@ -3599,7 +3599,7 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
         // expression GEP with the same indices and a null base pointer to see
         // what constant folding can make out of it.
         Constant *Null = Constant::getNullValue(GLHS->getPointerOperandType());
-        SmallVector<Value *, 4> IndicesLHS(GLHS->idx_begin(), GLHS->idx_end());
+        SmallVector<Value *, 4> IndicesLHS(GLHS->indices());
         Constant *NewLHS = ConstantExpr::getGetElementPtr(
             GLHS->getSourceElementType(), Null, IndicesLHS);
 
@@ -5814,7 +5814,7 @@ Value *llvm::SimplifyInstruction(Instruction *I, const SimplifyQuery &SQ,
                                 I->getOperand(2), Q);
     break;
   case Instruction::GetElementPtr: {
-    SmallVector<Value *, 8> Ops(I->op_begin(), I->op_end());
+    SmallVector<Value *, 8> Ops(I->operands());
     Result = SimplifyGEPInst(cast<GetElementPtrInst>(I)->getSourceElementType(),
                              Ops, Q);
     break;

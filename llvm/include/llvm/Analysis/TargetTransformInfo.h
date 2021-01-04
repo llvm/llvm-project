@@ -332,8 +332,7 @@ public:
   /// This is a helper function which calls the two-argument getUserCost
   /// with \p Operands which are the current operands U has.
   int getUserCost(const User *U, TargetCostKind CostKind) const {
-    SmallVector<const Value *, 4> Operands(U->value_op_begin(),
-                                           U->value_op_end());
+    SmallVector<const Value *, 4> Operands(U->operand_values());
     return getUserCost(U, Operands, CostKind);
   }
 
