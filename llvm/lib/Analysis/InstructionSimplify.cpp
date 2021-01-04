@@ -5444,19 +5444,19 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
   case Intrinsic::usub_with_overflow:
   case Intrinsic::ssub_with_overflow:
     // X - X -> { 0, false }
-    if (Op0 == Op1)
+    // X - undef -> { 0, false }
+    // undef - X -> { 0, false }
+    if (Op0 == Op1 || Q.isUndefValue(Op0) || Q.isUndefValue(Op1))
       return Constant::getNullValue(ReturnType);
-    LLVM_FALLTHROUGH;
+    break;
   case Intrinsic::uadd_with_overflow:
   case Intrinsic::sadd_with_overflow:
-    // X - undef -> { undef, false }
-    // undef - X -> { undef, false }
-    // X + undef -> { undef, false }
-    // undef + x -> { undef, false }
+    // X + undef -> { -1, false }
+    // undef + x -> { -1, false }
     if (Q.isUndefValue(Op0) || Q.isUndefValue(Op1)) {
       return ConstantStruct::get(
           cast<StructType>(ReturnType),
-          {UndefValue::get(ReturnType->getStructElementType(0)),
+          {Constant::getAllOnesValue(ReturnType->getStructElementType(0)),
            Constant::getNullValue(ReturnType->getStructElementType(1))});
     }
     break;
