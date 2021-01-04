@@ -51,6 +51,8 @@
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
+#include "llvm/Transforms/IPO/GlobalDCE.h"
+#include "llvm/Transforms/IPO/Internalize.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
@@ -524,6 +526,17 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
       FPM.addPass(AMDGPUSimplifyLibCallsPass());
     PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
   });
+
+  PB.registerPipelineEarlySimplificationEPCallback(
+      [](ModulePassManager &PM, PassBuilder::OptimizationLevel Level) {
+        if (Level == PassBuilder::OptimizationLevel::O0)
+          return;
+
+        if (InternalizeSymbols) {
+          PM.addPass(InternalizePass(mustPreserveGV));
+          PM.addPass(GlobalDCEPass());
+        }
+      });
 
   PB.registerCGSCCOptimizerLateEPCallback(
       [this, DebugPassManager](CGSCCPassManager &PM,
