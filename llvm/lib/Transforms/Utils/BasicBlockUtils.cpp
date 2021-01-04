@@ -494,31 +494,6 @@ void llvm::ReplaceInstWithInst(Instruction *From, Instruction *To) {
   ReplaceInstWithInst(From->getParent()->getInstList(), BI, To);
 }
 
-const BasicBlock &llvm::skipEmptyBlockUntil(const BasicBlock *From,
-                                            const BasicBlock *End) {
-  assert(From && "Expecting valid From");
-  assert(End && "Expecting valid End");
-
-  if (From == End || !From->getSingleSuccessor())
-    return *From;
-
-  auto IsEmpty = [](const BasicBlock *BB) {
-    return (BB->getInstList().size() == 1);
-  };
-
-  // Visited is used to avoid running into an infinite loop.
-  SmallPtrSet<const BasicBlock *, 4> Visited;
-  const BasicBlock *BB = From->getSingleSuccessor();
-  const BasicBlock *PredBB = BB;
-  while (BB && BB != End && IsEmpty(BB) && !Visited.count(BB)) {
-    Visited.insert(BB);
-    PredBB = BB;
-    BB = BB->getSingleSuccessor();
-  }
-
-  return (BB == End) ? *End : *PredBB;
-}
-
 BasicBlock *llvm::SplitEdge(BasicBlock *BB, BasicBlock *Succ, DominatorTree *DT,
                             LoopInfo *LI, MemorySSAUpdater *MSSAU) {
   unsigned SuccNum = GetSuccessorNumber(BB, Succ);

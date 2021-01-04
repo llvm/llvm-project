@@ -128,12 +128,6 @@ public:
                         [](const Loop *L) { return L->isLoopSimplifyForm(); });
   }
 
-  /// Return true if all loops in the loop nest are in rotated form.
-  bool areAllLoopsRotatedForm() const {
-    return std::all_of(Loops.begin(), Loops.end(),
-                       [](const Loop *L) { return L->isRotatedForm(); });
-  }
-
   StringRef getName() const { return Loops.front()->getName(); }
 
 protected:
