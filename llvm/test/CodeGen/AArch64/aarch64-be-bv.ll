@@ -1,9 +1,9 @@
 ; RUN: llc -mtriple=aarch64_be--linux-gnu < %s | FileCheck %s
 
-@vec_v8i16 = global <8 x i16> <i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8>
+@vec_v8i16 = dso_local global <8 x i16> <i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8>
 
 ; CHECK-LABEL: movi_modimm_t1:
-define void @movi_modimm_t1() nounwind {
+define dso_local void @movi_modimm_t1() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    movi	   v[[REG2:[0-9]+]].4s, #1
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
@@ -15,7 +15,7 @@ define void @movi_modimm_t1() nounwind {
 }
 
 ; CHECK-LABEL: movi_modimm_t2:
-define void @movi_modimm_t2() nounwind {
+define dso_local void @movi_modimm_t2() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    movi	   v[[REG2:[0-9]+]].4s, #1, lsl #8
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
@@ -27,7 +27,7 @@ define void @movi_modimm_t2() nounwind {
 }
 
 ; CHECK-LABEL: movi_modimm_t3:
-define void @movi_modimm_t3() nounwind {
+define dso_local void @movi_modimm_t3() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    movi	   v[[REG2:[0-9]+]].4s, #1, lsl #16
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
@@ -39,7 +39,7 @@ define void @movi_modimm_t3() nounwind {
 }
 
 ; CHECK-LABEL: movi_modimm_t4:
-define void @movi_modimm_t4() nounwind {
+define dso_local void @movi_modimm_t4() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    movi	   v[[REG2:[0-9]+]].4s, #1, lsl #24
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
@@ -51,7 +51,7 @@ define void @movi_modimm_t4() nounwind {
 }
 
 ; CHECK-LABEL: movi_modimm_t5:
-define void @movi_modimm_t5() nounwind {
+define dso_local void @movi_modimm_t5() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    movi	   v[[REG2:[0-9]+]].8h, #1
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
@@ -63,7 +63,7 @@ define void @movi_modimm_t5() nounwind {
 }
 
 ; CHECK-LABEL: movi_modimm_t6:
-define void @movi_modimm_t6() nounwind {
+define dso_local void @movi_modimm_t6() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    movi	   v[[REG2:[0-9]+]].8h, #1, lsl #8
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
@@ -75,7 +75,7 @@ define void @movi_modimm_t6() nounwind {
 }
 
 ; CHECK-LABEL: movi_modimm_t7:
-define void @movi_modimm_t7() nounwind {
+define dso_local void @movi_modimm_t7() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    movi	   v[[REG2:[0-9]+]].4s, #1, msl #8
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
@@ -87,7 +87,7 @@ define void @movi_modimm_t7() nounwind {
 }
 
 ; CHECK-LABEL: movi_modimm_t8:
-define void @movi_modimm_t8() nounwind {
+define dso_local void @movi_modimm_t8() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    movi	   v[[REG2:[0-9]+]].4s, #1, msl #16
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
@@ -99,7 +99,7 @@ define void @movi_modimm_t8() nounwind {
 }
 
 ; CHECK-LABEL: movi_modimm_t9:
-define void @movi_modimm_t9() nounwind {
+define dso_local void @movi_modimm_t9() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    movi	   v[[REG2:[0-9]+]].16b, #1
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
@@ -111,7 +111,7 @@ define void @movi_modimm_t9() nounwind {
 }
 
 ; CHECK-LABEL: movi_modimm_t10:
-define void @movi_modimm_t10() nounwind {
+define dso_local void @movi_modimm_t10() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    movi	   v[[REG2:[0-9]+]].2d, #0x00ffff0000ffff
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
@@ -123,7 +123,7 @@ define void @movi_modimm_t10() nounwind {
 }
 
 ; CHECK-LABEL: fmov_modimm_t11:
-define void @fmov_modimm_t11() nounwind {
+define dso_local void @fmov_modimm_t11() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    fmov    v[[REG2:[0-9]+]].4s, #3.00000000
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
@@ -135,7 +135,7 @@ define void @fmov_modimm_t11() nounwind {
 }
 
 ; CHECK-LABEL: fmov_modimm_t12:
-define void @fmov_modimm_t12() nounwind {
+define dso_local void @fmov_modimm_t12() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    fmov    v[[REG2:[0-9]+]].2d, #0.17968750
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
@@ -147,7 +147,7 @@ define void @fmov_modimm_t12() nounwind {
 }
 
 ; CHECK-LABEL: mvni_modimm_t1:
-define void @mvni_modimm_t1() nounwind {
+define dso_local void @mvni_modimm_t1() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    mvni	   v[[REG2:[0-9]+]].4s, #1
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
@@ -159,7 +159,7 @@ define void @mvni_modimm_t1() nounwind {
 }
 
 ; CHECK-LABEL: mvni_modimm_t2:
-define void @mvni_modimm_t2() nounwind {
+define dso_local void @mvni_modimm_t2() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    mvni	   v[[REG2:[0-9]+]].4s, #1, lsl #8
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
@@ -171,7 +171,7 @@ define void @mvni_modimm_t2() nounwind {
 }
 
 ; CHECK-LABEL: mvni_modimm_t3:
-define void @mvni_modimm_t3() nounwind {
+define dso_local void @mvni_modimm_t3() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    mvni	   v[[REG2:[0-9]+]].4s, #1, lsl #16
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
@@ -183,7 +183,7 @@ define void @mvni_modimm_t3() nounwind {
 }
 
 ; CHECK-LABEL: mvni_modimm_t4:
-define void @mvni_modimm_t4() nounwind {
+define dso_local void @mvni_modimm_t4() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    mvni	   v[[REG2:[0-9]+]].4s, #1, lsl #24
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
@@ -195,7 +195,7 @@ define void @mvni_modimm_t4() nounwind {
 }
 
 ; CHECK-LABEL: mvni_modimm_t5:
-define void @mvni_modimm_t5() nounwind {
+define dso_local void @mvni_modimm_t5() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    mvni	   v[[REG2:[0-9]+]].8h, #1
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
@@ -207,7 +207,7 @@ define void @mvni_modimm_t5() nounwind {
 }
 
 ; CHECK-LABEL: mvni_modimm_t6:
-define void @mvni_modimm_t6() nounwind {
+define dso_local void @mvni_modimm_t6() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    mvni	   v[[REG2:[0-9]+]].8h, #1, lsl #8
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
@@ -219,7 +219,7 @@ define void @mvni_modimm_t6() nounwind {
 }
 
 ; CHECK-LABEL: mvni_modimm_t7:
-define void @mvni_modimm_t7() nounwind {
+define dso_local void @mvni_modimm_t7() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    mvni	   v[[REG2:[0-9]+]].4s, #1, msl #8
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
@@ -231,7 +231,7 @@ define void @mvni_modimm_t7() nounwind {
 }
 
 ; CHECK-LABEL: mvni_modimm_t8:
-define void @mvni_modimm_t8() nounwind {
+define dso_local void @mvni_modimm_t8() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    mvni	   v[[REG2:[0-9]+]].4s, #1, msl #16
   ; CHECK-NEXT:    add	   v[[REG1]].8h, v[[REG1]].8h, v[[REG2]].8h
@@ -243,7 +243,7 @@ define void @mvni_modimm_t8() nounwind {
 }
 
 ; CHECK-LABEL: bic_modimm_t1:
-define void @bic_modimm_t1() nounwind {
+define dso_local void @bic_modimm_t1() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    bic	   v[[REG2:[0-9]+]].4s, #1
   ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
@@ -254,7 +254,7 @@ define void @bic_modimm_t1() nounwind {
 }
 
 ; CHECK-LABEL: bic_modimm_t2:
-define void @bic_modimm_t2() nounwind {
+define dso_local void @bic_modimm_t2() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    bic	   v[[REG2:[0-9]+]].4s, #1, lsl #8
   ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
@@ -265,7 +265,7 @@ define void @bic_modimm_t2() nounwind {
 }
 
 ; CHECK-LABEL: bic_modimm_t3:
-define void @bic_modimm_t3() nounwind {
+define dso_local void @bic_modimm_t3() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    bic	   v[[REG2:[0-9]+]].4s, #1, lsl #16
   ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
@@ -276,7 +276,7 @@ define void @bic_modimm_t3() nounwind {
 }
 
 ; CHECK-LABEL: bic_modimm_t4:
-define void @bic_modimm_t4() nounwind {
+define dso_local void @bic_modimm_t4() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    bic	   v[[REG2:[0-9]+]].4s, #1, lsl #24
   ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
@@ -287,7 +287,7 @@ define void @bic_modimm_t4() nounwind {
 }
 
 ; CHECK-LABEL: bic_modimm_t5:
-define void @bic_modimm_t5() nounwind {
+define dso_local void @bic_modimm_t5() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    bic	   v[[REG2:[0-9]+]].8h, #1
   ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
@@ -298,7 +298,7 @@ define void @bic_modimm_t5() nounwind {
 }
 
 ; CHECK-LABEL: bic_modimm_t6:
-define void @bic_modimm_t6() nounwind {
+define dso_local void @bic_modimm_t6() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    bic	   v[[REG2:[0-9]+]].8h, #1, lsl #8
   ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
@@ -309,7 +309,7 @@ define void @bic_modimm_t6() nounwind {
 }
 
 ; CHECK-LABEL: orr_modimm_t1:
-define void @orr_modimm_t1() nounwind {
+define dso_local void @orr_modimm_t1() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    orr	   v[[REG2:[0-9]+]].4s, #1
   ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
@@ -320,7 +320,7 @@ define void @orr_modimm_t1() nounwind {
 }
 
 ; CHECK-LABEL: orr_modimm_t2:
-define void @orr_modimm_t2() nounwind {
+define dso_local void @orr_modimm_t2() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    orr     v[[REG2:[0-9]+]].4s, #1, lsl #8
   ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
@@ -331,7 +331,7 @@ define void @orr_modimm_t2() nounwind {
 }
 
 ; CHECK-LABEL: orr_modimm_t3:
-define void @orr_modimm_t3() nounwind {
+define dso_local void @orr_modimm_t3() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    orr	   v[[REG2:[0-9]+]].4s, #1, lsl #16
   ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
@@ -342,7 +342,7 @@ define void @orr_modimm_t3() nounwind {
 }
 
 ; CHECK-LABEL: orr_modimm_t4:
-define void @orr_modimm_t4() nounwind {
+define dso_local void @orr_modimm_t4() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    orr	   v[[REG2:[0-9]+]].4s, #1, lsl #24
   ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
@@ -353,7 +353,7 @@ define void @orr_modimm_t4() nounwind {
 }
 
 ; CHECK-LABEL: orr_modimm_t5:
-define void @orr_modimm_t5() nounwind {
+define dso_local void @orr_modimm_t5() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    orr	   v[[REG2:[0-9]+]].8h, #1
   ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
@@ -364,7 +364,7 @@ define void @orr_modimm_t5() nounwind {
 }
 
 ; CHECK-LABEL: orr_modimm_t6:
-define void @orr_modimm_t6() nounwind {
+define dso_local void @orr_modimm_t6() nounwind {
   ; CHECK:         ld1     { v[[REG1:[0-9]+]].8h }, [x{{[0-9]+}}]
   ; CHECK-NEXT:    orr	   v[[REG2:[0-9]+]].8h, #1, lsl #8
   ; CHECK-NEXT:    st1	   { v[[REG1]].8h }, [x{{[0-9]+}}]
@@ -384,7 +384,7 @@ declare i32 @f_v4i32(<4 x i32> %arg)
 declare i64 @f_v2i64(<2 x i64> %arg)
 
 ; CHECK-LABEL: modimm_t1_call:
-define void @modimm_t1_call() {
+define dso_local void @modimm_t1_call() {
   ; CHECK:         movi    v[[REG1:[0-9]+]].2s, #8
   ; CHECK-NEXT:    rev64   v{{[0-9]+}}.8b, v[[REG1]].8b
   ; CHECK-NEXT:    bl      f_v8i8
@@ -424,7 +424,7 @@ define void @modimm_t1_call() {
 }
 
 ; CHECK-LABEL: modimm_t2_call:
-define void @modimm_t2_call() {
+define dso_local void @modimm_t2_call() {
   ; CHECK:         movi    v[[REG1:[0-9]+]].2s, #8, lsl #8
   ; CHECK-NEXT:    rev64   v{{[0-9]+}}.8b, v[[REG1]].8b
   ; CHECK-NEXT:    bl      f_v8i8
@@ -464,7 +464,7 @@ define void @modimm_t2_call() {
 }
 
 ; CHECK-LABEL: modimm_t3_call:
-define void @modimm_t3_call() {
+define dso_local void @modimm_t3_call() {
   ; CHECK:         movi    v[[REG1:[0-9]+]].2s, #8, lsl #16
   ; CHECK-NEXT:    rev64   v{{[0-9]+}}.8b, v[[REG1]].8b
   ; CHECK-NEXT:    bl      f_v8i8
@@ -504,7 +504,7 @@ define void @modimm_t3_call() {
 }
 
 ; CHECK-LABEL: modimm_t4_call:
-define void @modimm_t4_call() {
+define dso_local void @modimm_t4_call() {
   ; CHECK:         movi    v[[REG1:[0-9]+]].2s, #8, lsl #24
   ; CHECK-NEXT:    rev64   v{{[0-9]+}}.8b, v[[REG1]].8b
   ; CHECK-NEXT:    bl      f_v8i8
@@ -544,7 +544,7 @@ define void @modimm_t4_call() {
 }
 
 ; CHECK-LABEL: modimm_t5_call:
-define void @modimm_t5_call() {
+define dso_local void @modimm_t5_call() {
   ; CHECK:         movi    v[[REG1:[0-9]+]].4h, #8
   ; CHECK-NEXT:    rev64   v{{[0-9]+}}.8b, v[[REG1]].8b
   ; CHECK-NEXT:    bl      f_v8i8
@@ -584,7 +584,7 @@ define void @modimm_t5_call() {
 }
 
 ; CHECK-LABEL: modimm_t6_call:
-define void @modimm_t6_call() {
+define dso_local void @modimm_t6_call() {
   ; CHECK:         movi    v[[REG1:[0-9]+]].4h, #8, lsl #8
   ; CHECK-NEXT:    rev64   v{{[0-9]+}}.8b, v[[REG1]].8b
   ; CHECK-NEXT:    bl      f_v8i8
@@ -624,7 +624,7 @@ define void @modimm_t6_call() {
 }
 
 ; CHECK-LABEL: modimm_t7_call:
-define void @modimm_t7_call() {
+define dso_local void @modimm_t7_call() {
   ; CHECK:         movi    v[[REG1:[0-9]+]].2s, #8, msl #8
   ; CHECK-NEXT:    rev64   v{{[0-9]+}}.8b, v[[REG1]].8b
   ; CHECK-NEXT:    bl      f_v8i8
@@ -664,7 +664,7 @@ define void @modimm_t7_call() {
 }
 
 ; CHECK-LABEL: modimm_t8_call:
-define void @modimm_t8_call() {
+define dso_local void @modimm_t8_call() {
   ; CHECK:         movi    v[[REG1:[0-9]+]].2s, #8, msl #16
   ; CHECK-NEXT:    rev64   v{{[0-9]+}}.8b, v[[REG1]].8b
   ; CHECK-NEXT:    bl      f_v8i8
@@ -704,7 +704,7 @@ define void @modimm_t8_call() {
 }
 
 ; CHECK-LABEL: modimm_t9_call:
-define void @modimm_t9_call() {
+define dso_local void @modimm_t9_call() {
   ; CHECK:         movi    v[[REG1:[0-9]+]].8b, #8
   ; CHECK-NEXT:    rev64   v{{[0-9]+}}.8b, v[[REG1]].8b
   ; CHECK-NEXT:    bl      f_v8i8
@@ -737,7 +737,7 @@ define void @modimm_t9_call() {
 }
 
 ; CHECK-LABEL: modimm_t10_call:
-define void @modimm_t10_call() {
+define dso_local void @modimm_t10_call() {
   ; CHECK:         movi    d[[REG1:[0-9]+]], #0x0000ff000000ff
   ; CHECK-NEXT:    rev64   v{{[0-9]+}}.8b, v[[REG1]].8b
   ; CHECK-NEXT:    bl      f_v8i8
@@ -770,7 +770,7 @@ define void @modimm_t10_call() {
 }
 
 ; CHECK-LABEL: modimm_t11_call:
-define void @modimm_t11_call() {
+define dso_local void @modimm_t11_call() {
   ; CHECK:         fmov    v[[REG1:[0-9]+]].2s, #4.00000000
   ; CHECK-NEXT:    rev64   v{{[0-9]+}}.8b, v[[REG1]].8b
   ; CHECK-NEXT:    bl      f_v8i8
@@ -810,7 +810,7 @@ define void @modimm_t11_call() {
 }
 
 ; CHECK-LABEL: modimm_t12_call:
-define void @modimm_t12_call() {
+define dso_local void @modimm_t12_call() {
   ; CHECK:         fmov    v[[REG1:[0-9]+]].2d, #0.18750000
   ; CHECK-NEXT:    rev64   v[[REG2:[0-9]+]].16b, v[[REG1]].16b
   ; CHECK-NEXT:    ext     v[[REG2]].16b, v[[REG2]].16b, v[[REG2]].16b, #8

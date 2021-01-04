@@ -1,8 +1,8 @@
 ; RUN: llc  -mtriple=armv7-pc-linux-gnueabi -relocation-model=pic < %s | FileCheck %s
 
-@foo = global i32 42
+@foo = dso_local global i32 42
 
-define i32* @get_foo() {
+define dso_local i32* @get_foo() {
   ret i32* @foo
 }
 

@@ -8,7 +8,7 @@ define void @Test(i32) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ [[TMP15:%.*]], [[LOOP]] ], [ zeroinitializer, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> undef, <8 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x i32> [[SHUFFLE]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <8 x i32> [[SHUFFLE]], <i32 0, i32 55, i32 285, i32 1240, i32 1496, i32 8555, i32 12529, i32 13685>
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.and.v8i32(<8 x i32> [[TMP3]])
@@ -57,7 +57,7 @@ define void @Test(i32) {
 ; FORCE_REDUCTION-NEXT:    br label [[LOOP:%.*]]
 ; FORCE_REDUCTION:       loop:
 ; FORCE_REDUCTION-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ [[TMP13:%.*]], [[LOOP]] ], [ zeroinitializer, [[ENTRY:%.*]] ]
-; FORCE_REDUCTION-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> undef, <4 x i32> <i32 0, i32 1, i32 1, i32 1>
+; FORCE_REDUCTION-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 1>
 ; FORCE_REDUCTION-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[SHUFFLE]], i32 1
 ; FORCE_REDUCTION-NEXT:    [[TMP3:%.*]] = add <4 x i32> [[SHUFFLE]], <i32 0, i32 55, i32 285, i32 1240>
 ; FORCE_REDUCTION-NEXT:    [[VAL_20:%.*]] = add i32 [[TMP2]], 1496

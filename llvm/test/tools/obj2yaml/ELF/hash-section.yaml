@@ -49,6 +49,13 @@ Sections:
 # CONTENT-NEXT: - Name:    .oversized
 # CONTENT-NEXT:   Type:    SHT_HASH
 # CONTENT-NEXT:   Content: '0100000002000000030000000400000000'
+# CONTENT-NEXT: - Name:    .overflow1
+# CONTENT-NEXT:   Type:    SHT_HASH
+# CONTENT-NEXT:   Content: 01000000FFFFFFFF{{$}}
+# CONTENT-NEXT: - Name:    .overflow2
+# CONTENT-NEXT:   Type:    SHT_HASH
+# CONTENT-NEXT:   Content: FFFFFFFF01000000{{$}}
+# CONTENT-NEXT: ...
 
 --- !ELF
 FileHeader:
@@ -74,6 +81,20 @@ Sections:
   - Name:    .oversized
     Type:    SHT_HASH
     Content: '0100000002000000030000000400000000'
+## Case 5, 6: NChain/NBucket are incorrect and causing 32-bit
+##            unsigned overflows of intermediate expressions.
+  - Name:    .overflow1
+    Type:    SHT_HASH
+    Bucket:  [ ]
+    Chain:   [ ]
+    NBucket: 0x1
+    NChain:  0xffffffff
+  - Name:    .overflow2
+    Type:    SHT_HASH
+    Bucket:  [ ]
+    Chain:   [ ]
+    NBucket: 0xffffffff
+    NChain:  0x1
 
 ## Check how we dump the "EntSize" field. When the sh_entsize is 4,
 ## we don't print it, because it is the default value for the SHT_HASH section.

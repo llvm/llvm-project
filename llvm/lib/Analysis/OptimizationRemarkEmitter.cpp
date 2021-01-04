@@ -37,7 +37,7 @@ OptimizationRemarkEmitter::OptimizationRemarkEmitter(const Function *F)
   LI.analyze(DT);
 
   // Then compute BranchProbabilityInfo.
-  BranchProbabilityInfo BPI(*F, LI);
+  BranchProbabilityInfo BPI(*F, LI, nullptr, &DT, nullptr);
 
   // Finally compute BFI.
   OwnedBFI = std::make_unique<BlockFrequencyInfo>(*F, BPI, LI);

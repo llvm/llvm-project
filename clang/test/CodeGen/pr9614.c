@@ -30,7 +30,7 @@ void f(void) {
   memchr("", '.', 0);
 }
 
-// CHECK-LABEL: define void @f()
+// CHECK-LABEL: define{{.*}} void @f()
 // CHECK: call void @foo()
 // CHECK: call i32 @abs(i32 0)
 // CHECK: call i8* @strrchr(

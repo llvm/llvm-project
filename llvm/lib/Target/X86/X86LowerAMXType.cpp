@@ -6,20 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 //
-/// \file Pass to transform <256 x i32>
-/// <256 x i32> is mapped to AMX tile register on X86, AMX instruction set only
-/// provides simple operation on tile register. The basic elementwise operation
-/// is not supported by AMX. Since we define the AMX tile as vector <256 x i32>
+/// \file Pass to transform <256 x i32> load/store
+/// <256 x i32> is bitcasted to x86_amx on X86, and AMX instruction set only
+/// provides simple operation on x86_amx. The basic elementwise operation
+/// is not supported by AMX. Since x86_amx is bitcasted from vector <256 x i32>
 /// and only AMX intrinsics can operate on the type, we need transform
-/// load/store <256 x i32> instruction to AMX load/store. Besides, we split
-/// <256 x i32> to 2 <128 x i32> if the vector is not used or defined by AMX
-/// intrinsics, so that in instruction selection it can be lowered to proper
-/// size which HW can support.
+/// load/store <256 x i32> instruction to AMX load/store. If the bitcast can
+/// not be combined with load/store, we transform the bitcast to amx load/store
+/// and <256 x i32> store/load.
 //
 //===----------------------------------------------------------------------===//
 //
 #include "X86.h"
-#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
@@ -30,231 +30,288 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsX86.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 
 using namespace llvm;
+using namespace PatternMatch;
 
 #define DEBUG_TYPE "lower-amx-type"
+
+static AllocaInst *CreateAllocaInst(IRBuilder<> &Builder, BasicBlock *BB) {
+  Function &F = *BB->getParent();
+  Module *M = BB->getModule();
+  const DataLayout &DL = M->getDataLayout();
+
+  Type *V256I32Ty = VectorType::get(Builder.getInt32Ty(), 256, false);
+  LLVMContext &Ctx = Builder.getContext();
+  auto AllocaAlignment = DL.getPrefTypeAlign(Type::getX86_AMXTy(Ctx));
+  unsigned AllocaAS = DL.getAllocaAddrSpace();
+  AllocaInst *AllocaRes =
+      new AllocaInst(V256I32Ty, AllocaAS, "", &F.getEntryBlock().front());
+  AllocaRes->setAlignment(AllocaAlignment);
+  return AllocaRes;
+}
+
+static std::pair<Value *, Value *> getShape(IntrinsicInst *II, unsigned OpNo) {
+  Value *Row = nullptr, *Col = nullptr;
+  switch (II->getIntrinsicID()) {
+  default:
+    llvm_unreachable("Expect amx intrinsics");
+  case Intrinsic::x86_tileloadd64_internal:
+  case Intrinsic::x86_tilestored64_internal: {
+    Row = II->getArgOperand(0);
+    Col = II->getArgOperand(1);
+    break;
+  }
+  // a * b + c
+  // The shape depends on which operand.
+  case Intrinsic::x86_tdpbssd_internal: {
+    switch (OpNo) {
+    case 3:
+      Row = II->getArgOperand(0);
+      Col = II->getArgOperand(1);
+      break;
+    case 4:
+      Row = II->getArgOperand(0);
+      Col = II->getArgOperand(2);
+      break;
+    case 5:
+      Row = II->getArgOperand(2);
+      Col = II->getArgOperand(1);
+      break;
+    }
+    break;
+  }
+  }
+
+  return std::make_pair(Row, Col);
+}
+
+// %src = load <256 x i32>, <256 x i32>* %addr, align 64
+// %2 = bitcast <256 x i32> %src to x86_amx
+// -->
+// %2 = call x86_amx @llvm.x86.tileloadd64.internal(i16 %row, i16 %col,
+// i8* %addr, i64 %stride64)
+static void combineLoadBitcast(LoadInst *LD, BitCastInst *Bitcast) {
+  Value *Row = nullptr, *Col = nullptr;
+  Use &U = *(Bitcast->use_begin());
+  unsigned OpNo = U.getOperandNo();
+  auto *II = cast<IntrinsicInst>(U.getUser());
+  std::tie(Row, Col) = getShape(II, OpNo);
+  IRBuilder<> Builder(Bitcast);
+  // Use the maximun column as stride.
+  Value *Stride = Builder.getInt64(64);
+  Value *I8Ptr =
+      Builder.CreateBitCast(LD->getOperand(0), Builder.getInt8PtrTy());
+  std::array<Value *, 4> Args = {Row, Col, I8Ptr, Stride};
+
+  Value *NewInst =
+      Builder.CreateIntrinsic(Intrinsic::x86_tileloadd64_internal, None, Args);
+  Bitcast->replaceAllUsesWith(NewInst);
+}
+
+// %src = call x86_amx @llvm.x86.tileloadd64.internal(%row, %col, %addr,
+//                                                    %stride);
+// %13 = bitcast x86_amx %src to <256 x i32>
+// store <256 x i32> %13, <256 x i32>* %addr, align 64
+// -->
+// call void @llvm.x86.tilestored64.internal(%row, %col, %addr,
+//                                           %stride64, %13)
+static void combineBitcastStore(BitCastInst *Bitcast, StoreInst *ST) {
+
+  Value *Tile = Bitcast->getOperand(0);
+  auto *II = cast<IntrinsicInst>(Tile);
+  // Tile is output from AMX intrinsic. The first operand of the
+  // intrinsic is row, the second operand of the intrinsic is column.
+  Value *Row = II->getOperand(0);
+  Value *Col = II->getOperand(1);
+  IRBuilder<> Builder(ST);
+  // Use the maximum column as stride. It must be the same with load
+  // stride.
+  Value *Stride = Builder.getInt64(64);
+  Value *I8Ptr =
+      Builder.CreateBitCast(ST->getOperand(1), Builder.getInt8PtrTy());
+  std::array<Value *, 5> Args = {Row, Col, I8Ptr, Stride, Tile};
+  Builder.CreateIntrinsic(Intrinsic::x86_tilestored64_internal, None, Args);
+  if (Bitcast->hasOneUse())
+    return;
+  // %13 = bitcast x86_amx %src to <256 x i32>
+  // store <256 x i32> %13, <256 x i32>* %addr, align 64
+  // %add = <256 x i32> %13, <256 x i32> %src2
+  // -->
+  // %13 = bitcast x86_amx %src to <256 x i32>
+  // call void @llvm.x86.tilestored64.internal(%row, %col, %addr,
+  //                                           %stride64, %13)
+  // %14 = load <256 x i32>, %addr
+  // %add = <256 x i32> %14, <256 x i32> %src2
+  Value *Vec = Builder.CreateLoad(Bitcast->getType(), ST->getOperand(1));
+  Bitcast->replaceAllUsesWith(Vec);
+}
+
+// transform bitcast to <store, load> instructions.
+static bool transformBitcast(BitCastInst *Bitcast) {
+  IRBuilder<> Builder(Bitcast);
+  AllocaInst *AllocaAddr;
+  Value *I8Ptr, *Stride;
+  auto *Src = Bitcast->getOperand(0);
+
+  auto Prepare = [&]() {
+    AllocaAddr = CreateAllocaInst(Builder, Bitcast->getParent());
+    I8Ptr = Builder.CreateBitCast(AllocaAddr, Builder.getInt8PtrTy());
+    Stride = Builder.getInt64(64);
+  };
+
+  if (Bitcast->getType()->isX86_AMXTy()) {
+    // %2 = bitcast <256 x i32> %src to x86_amx
+    // -->
+    // %addr = alloca <256 x i32>, align 64
+    // store <256 x i32> %src, <256 x i32>* %addr, align 64
+    // %addr2 = bitcast <256 x i32>* to i8*
+    // %2 = call x86_amx @llvm.x86.tileloadd64.internal(i16 %row, i16 %col,
+    //                                                  i8* %addr2,
+    //                                                  i64 64)
+    Use &U = *(Bitcast->use_begin());
+    unsigned OpNo = U.getOperandNo();
+    auto *II = dyn_cast<IntrinsicInst>(U.getUser());
+    if (!II)
+      return false; // May be bitcast from x86amx to <256 x i32>.
+    Prepare();
+    Builder.CreateStore(Src, AllocaAddr);
+    // TODO we can pick an constant operand for the shape.
+    Value *Row = nullptr, *Col = nullptr;
+    std::tie(Row, Col) = getShape(II, OpNo);
+    std::array<Value *, 4> Args = {Row, Col, I8Ptr, Stride};
+    Value *NewInst = Builder.CreateIntrinsic(
+        Intrinsic::x86_tileloadd64_internal, None, Args);
+    Bitcast->replaceAllUsesWith(NewInst);
+  } else {
+    // %2 = bitcast x86_amx %src to <256 x i32>
+    // -->
+    // %addr = alloca <256 x i32>, align 64
+    // %addr2 = bitcast <256 x i32>* to i8*
+    // call void @llvm.x86.tilestored64.internal(i16 %row, i16 %col,
+    //                                           i8* %addr2, i64 %stride)
+    // %2 = load <256 x i32>, <256 x i32>* %addr, align 64
+    auto *II = dyn_cast<IntrinsicInst>(Src);
+    if (!II)
+      return false; // May be bitcast from <256 x i32> to x86amx.
+    Prepare();
+    Value *Row = II->getOperand(0);
+    Value *Col = II->getOperand(1);
+    std::array<Value *, 5> Args = {Row, Col, I8Ptr, Stride, Src};
+    Builder.CreateIntrinsic(Intrinsic::x86_tilestored64_internal, None, Args);
+    Value *NewInst = Builder.CreateLoad(Bitcast->getType(), AllocaAddr);
+    Bitcast->replaceAllUsesWith(NewInst);
+  }
+
+  return true;
+}
 
 namespace {
 class X86LowerAMXType {
   Function &Func;
-  const DataLayout &DL;
-  DenseSet<Instruction *> LDSet;
-  DenseSet<Instruction *> STSet;
-  DenseMap<Value *, std::pair<LoadInst *, LoadInst *>> LoadMap;
 
 public:
-  X86LowerAMXType(Function &F) : Func(F), DL(F.getParent()->getDataLayout()) {}
+  X86LowerAMXType(Function &F) : Func(F) {}
   bool visit();
-  bool visitLD();
-  bool visitST();
-  void splitST(Instruction *Inst);
-  void splitLD(Instruction *Inst);
 };
 
-// Split v256i32 load/store to 2 v128i32, so that ISel can
-// lower it to proper vector size.
-void X86LowerAMXType::splitST(Instruction *Inst) {
-  StoreInst *ST = dyn_cast<StoreInst>(Inst);
-  IRBuilder<> Builder(ST);
-  LLVMContext &Ctx = Builder.getContext();
-  Type *Ty = ST->getValueOperand()->getType();
-  EVT VT = EVT::getEVT(Ty);
-  EVT HalfVT = VT.getHalfNumVectorElementsVT(Ctx);
-  Type *HalfTy = HalfVT.getTypeForEVT(Ctx);
-
-  LoadInst *Lo, *Hi;
-  std::tie(Lo, Hi) = LoadMap[ST->getValueOperand()];
-  Value *Ptr = ST->getPointerOperand();
-  PointerType *HalfPtrTy = HalfTy->getPointerTo(ST->getPointerAddressSpace());
-  Value *HalfPtr = Builder.CreateBitCast(Ptr, HalfPtrTy);
-  // The HW require the alignment for AMX tile is 64, but front-end generate
-  // code for the vector alignment which is the vector size.
-  uint64_t HalfTySize = HalfTy->getPrimitiveSizeInBits().getFixedSize() / 8;
-  Align Alignment = std::min(Lo->getAlign(), Align(HalfTySize));
-  Builder.CreateAlignedStore(Lo, HalfPtr, Alignment, ST->isVolatile());
-
-  HalfPtr = Builder.CreateGEP(HalfTy, HalfPtr, Builder.getInt32(1));
-  Builder.CreateAlignedStore(Hi, HalfPtr, Alignment, ST->isVolatile());
-}
-
-bool X86LowerAMXType::visitST() {
-  if (STSet.empty())
-    return false;
-  for (auto *Inst : STSet) {
-    Value *Row, *Col;
-    const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst->getOperand(0));
-    if (!II)
-      Row = Col = nullptr;
-    else {
-      switch (II->getIntrinsicID()) {
-      default:
-        Row = Col = nullptr;
-        break;
-      case Intrinsic::x86_tileloadd64_internal:
-      case Intrinsic::x86_tdpbssd_internal: {
-        Row = II->getArgOperand(0);
-        Col = II->getArgOperand(1);
-        break;
-      }
-      }
-    }
-    if (!Row) {
-      splitST(Inst);
-      continue;
-    }
-    IRBuilder<> Builder(Inst);
-    LLVMContext &Ctx = Builder.getContext();
-    // Use the maximun column as stride. It must be the same with load stride.
-    Value *Stride = Builder.getInt64(64);
-    Value *I8Ptr =
-        Builder.CreateBitCast(Inst->getOperand(1), Type::getInt8PtrTy(Ctx));
-    std::array<Value *, 5> Args = {Row, Col, I8Ptr, Stride,
-                                   Inst->getOperand(0)};
-
-    Builder.CreateIntrinsic(Intrinsic::x86_tilestored64_internal, None, Args);
-  }
-  return true;
-}
-
-void X86LowerAMXType::splitLD(Instruction *Inst) {
-  LoadInst *LD = dyn_cast<LoadInst>(Inst);
-  IRBuilder<> Builder(LD);
-  LLVMContext &Ctx = Builder.getContext();
-  Type *Ty = LD->getType();
-  EVT VT = EVT::getEVT(Ty);
-  EVT HalfVT = VT.getHalfNumVectorElementsVT(Ctx);
-  Type *HalfTy = HalfVT.getTypeForEVT(Ctx);
-
-  Value *Ptr = LD->getPointerOperand();
-  PointerType *HalfPtrTy = HalfTy->getPointerTo(LD->getPointerAddressSpace());
-  Value *HalfPtr = Builder.CreateBitCast(Ptr, HalfPtrTy);
-  // The HW require the alignment for AMX tile is 64, but front-end generate
-  // code for the vector alignment which is the vector size.
-  uint64_t HalfTySize = HalfTy->getPrimitiveSizeInBits().getFixedSize() / 8;
-  Align Alignment = std::min(LD->getAlign(), Align(HalfTySize));
-  auto *Lo =
-      Builder.CreateAlignedLoad(HalfTy, HalfPtr, Alignment, LD->isVolatile());
-
-  HalfPtr = Builder.CreateGEP(HalfTy, HalfPtr, Builder.getInt32(1));
-  auto *Hi =
-      Builder.CreateAlignedLoad(HalfTy, HalfPtr, Alignment, LD->isVolatile());
-
-  LoadMap[Inst] = std::make_pair(Lo, Hi);
-}
-
-bool X86LowerAMXType::visitLD() {
-  if (LDSet.empty())
-    return false;
-  for (auto &Inst : LDSet) {
-    int Count = 0;
-    Value *NewInst = nullptr;
-    // The user should be all AMX intrinsics or all LLVM instruction.
-    // Don't support it is used by both AMX intrinsics and LLVM instructions.
-    for (auto I = Inst->use_begin(), E = Inst->use_end(); I != E;) {
-      Use &U = *I++;
-      const IntrinsicInst *II = dyn_cast<IntrinsicInst>(U.getUser());
-      if (!II) {
-        Count++;
-        continue;
-      }
-      if (NewInst)
-        continue;
-      Value *Row, *Col;
-      switch (II->getIntrinsicID()) {
-      default:
-        report_fatal_error("Non-AMX intrinsic use tile type.");
-        break;
-      case Intrinsic::x86_tdpbssd_internal: {
-        unsigned OpNo = U.getOperandNo();
-        switch (OpNo) {
-        case 3:
-          Row = II->getArgOperand(0);
-          Col = II->getArgOperand(1);
-          break;
-        case 4:
-          Row = II->getArgOperand(0);
-          Col = II->getArgOperand(2);
-          break;
-        case 5:
-          Row = II->getArgOperand(2);
-          Col = II->getArgOperand(1);
-          break;
-        }
-        break;
-      }
-      case Intrinsic::x86_tilestored64_internal: {
-        Row = II->getArgOperand(0);
-        Col = II->getArgOperand(1);
-        break;
-      }
-      }
-      assert(Count == 0 && "Can NOT mix amx intrinsic and LLVM instruction");
-      // FIXME: The shape def should be ahead of load.
-      IRBuilder<> Builder(Inst);
-      LLVMContext &Ctx = Builder.getContext();
-      // Use the maximun column as stride.
-      Value *Stride = Builder.getInt64(64);
-      Value *I8Ptr =
-          Builder.CreateBitCast(Inst->getOperand(0), Type::getInt8PtrTy(Ctx));
-      std::array<Value *, 4> Args = {Row, Col, I8Ptr, Stride};
-
-      NewInst = Builder.CreateIntrinsic(Intrinsic::x86_tileloadd64_internal,
-                                        None, Args);
-
-      Inst->replaceAllUsesWith(NewInst);
-    }
-    if (!NewInst)
-      splitLD(Inst);
-  }
-  return true;
-}
-
 bool X86LowerAMXType::visit() {
-  bool C;
-  auto IsAMXType = [](FixedVectorType *VTy) {
-    if (!VTy)
-      return false;
-    if (!VTy->getScalarType()->isIntegerTy(32))
-      return false;
-    if (VTy->getNumElements() != 256)
-      return false;
+  SmallVector<Instruction *, 8> DeadInsts;
 
-    return true;
-  };
+  for (BasicBlock *BB : post_order(&Func)) {
+    for (BasicBlock::reverse_iterator II = BB->rbegin(), IE = BB->rend();
+         II != IE;) {
+      Instruction &Inst = *II++;
+      auto *Bitcast = dyn_cast<BitCastInst>(&Inst);
+      if (!Bitcast)
+        continue;
 
-  for (BasicBlock &BB : Func) {
-    for (Instruction &Inst : BB) {
-      LoadInst *LD = dyn_cast<LoadInst>(&Inst);
-      // Check load instruction.
-      // %3 = load <256 x i32>, <256 x i32>* %1, align 64
-      if (LD) {
-        FixedVectorType *VTy = dyn_cast<FixedVectorType>(Inst.getType());
-        if (!IsAMXType(VTy))
+      Value *Src = Bitcast->getOperand(0);
+      if (Bitcast->getType()->isX86_AMXTy()) {
+        if (Bitcast->user_empty()) {
+          DeadInsts.push_back(Bitcast);
           continue;
-        LDSet.insert(&Inst);
-        continue;
+        }
+        LoadInst *LD = dyn_cast<LoadInst>(Src);
+        if (!LD) {
+          if (transformBitcast(Bitcast))
+            DeadInsts.push_back(Bitcast);
+          continue;
+        }
+        // If load has mutli-user, duplicate a vector load.
+        // %src = load <256 x i32>, <256 x i32>* %addr, align 64
+        // %2 = bitcast <256 x i32> %src to x86_amx
+        // %add = add <256 x i32> %src, <256 x i32> %src2
+        // -->
+        // %src = load <256 x i32>, <256 x i32>* %addr, align 64
+        // %2 = call x86_amx @llvm.x86.tileloadd64.internal(i16 %row, i16 %col,
+        //                                            i8* %addr, i64 %stride64)
+        // %add = add <256 x i32> %src, <256 x i32> %src2
+
+        // If load has one user, the load will be eliminated in DAG ISel.
+        // %src = load <256 x i32>, <256 x i32>* %addr, align 64
+        // %2 = bitcast <256 x i32> %src to x86_amx
+        // -->
+        // %2 = call x86_amx @llvm.x86.tileloadd64.internal(i16 %row, i16 %col,
+        //                                            i8* %addr, i64 %stride64)
+        combineLoadBitcast(LD, Bitcast);
+        DeadInsts.push_back(Bitcast);
+        if (LD->hasOneUse())
+          DeadInsts.push_back(LD);
+      } else if (Src->getType()->isX86_AMXTy()) {
+        if (Bitcast->user_empty()) {
+          DeadInsts.push_back(Bitcast);
+          continue;
+        }
+        StoreInst *ST = nullptr;
+        for (auto UI = Bitcast->use_begin(), UE = Bitcast->use_end();
+             UI != UE;) {
+          Value *I = (UI++)->getUser();
+          ST = dyn_cast<StoreInst>(I);
+          if (ST)
+            break;
+        }
+        if (!ST) {
+          if (transformBitcast(Bitcast))
+            DeadInsts.push_back(Bitcast);
+          continue;
+        }
+        // If bitcast (%13) has one use, combine bitcast and store to amx store.
+        // %src = call x86_amx @llvm.x86.tileloadd64.internal(%row, %col, %addr,
+        //                                                    %stride);
+        // %13 = bitcast x86_amx %src to <256 x i32>
+        // store <256 x i32> %13, <256 x i32>* %addr, align 64
+        // -->
+        // call void @llvm.x86.tilestored64.internal(%row, %col, %addr,
+        //                                           %stride64, %13)
+        //
+        // If bitcast (%13) has multi-use, transform as below.
+        // %13 = bitcast x86_amx %src to <256 x i32>
+        // store <256 x i32> %13, <256 x i32>* %addr, align 64
+        // %add = <256 x i32> %13, <256 x i32> %src2
+        // -->
+        // %13 = bitcast x86_amx %src to <256 x i32>
+        // call void @llvm.x86.tilestored64.internal(%row, %col, %addr,
+        //                                           %stride64, %13)
+        // %14 = load <256 x i32>, %addr
+        // %add = <256 x i32> %14, <256 x i32> %src2
+        //
+        combineBitcastStore(Bitcast, ST);
+        // Delete user first.
+        DeadInsts.push_back(ST);
+        DeadInsts.push_back(Bitcast);
       }
-      // Check store instruction.
-      // store <256 x i32> %3, <256 x i32>* %2, align 64
-      StoreInst *ST = dyn_cast<StoreInst>(&Inst);
-      if (!ST)
-        continue;
-      FixedVectorType *VTy =
-          dyn_cast<FixedVectorType>(ST->getOperand(0)->getType());
-      if (!IsAMXType(VTy))
-        continue;
-      STSet.insert(&Inst);
     }
   }
 
-  C = visitLD() | visitST();
-  for (auto *Inst : STSet)
+  bool C = !DeadInsts.empty();
+
+  for (auto *Inst : DeadInsts)
     Inst->eraseFromParent();
-  for (auto *Inst : LDSet)
-    Inst->eraseFromParent();
+
   return C;
 }
 } // anonymous namespace

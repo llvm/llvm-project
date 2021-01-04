@@ -35,7 +35,7 @@ void f(A* a) {
   a->f();
 };
 
-// CHECK-LABEL: define void @_ZN5Test11gEv
+// CHECK-LABEL: define{{.*}} void @_ZN5Test11gEv
 // CHECK: call void @_ZN5Test11A1fEv
 void g() {
   A a;
@@ -49,9 +49,9 @@ void g() {
 // This tests mainly that the typeinfo and typename constants have their linkage
 // updated correctly.
 
-// CHECK-TEST2: @_ZTSN5Test21AE = constant
-// CHECK-TEST2: @_ZTIN5Test21AE = constant
-// CHECK-TEST2: @_ZTVN5Test21AE = unnamed_addr constant
+// CHECK-TEST2: @_ZTSN5Test21AE ={{.*}} constant
+// CHECK-TEST2: @_ZTIN5Test21AE ={{.*}} constant
+// CHECK-TEST2: @_ZTVN5Test21AE ={{.*}} unnamed_addr constant
 namespace Test2 {
   struct A {
     virtual void f();
@@ -216,8 +216,8 @@ void g() {
 namespace Test10 {
 
 // because A's key function is defined here, vtable is generated in this TU
-// CHECK-TEST10-DAG: @_ZTVN6Test101AE = unnamed_addr constant
-// CHECK-FORCE-EMIT-DAG: @_ZTVN6Test101AE = unnamed_addr constant
+// CHECK-TEST10-DAG: @_ZTVN6Test101AE ={{.*}} unnamed_addr constant
+// CHECK-FORCE-EMIT-DAG: @_ZTVN6Test101AE ={{.*}} unnamed_addr constant
 struct A {
   virtual void foo();
   virtual void bar();

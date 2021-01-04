@@ -16,13 +16,13 @@
 ; SECTIONS_CFI: .cfi_def_cfa_register %rbp
 ; SECTIONS_CFI: .cfi_endproc
 
-; SECTIONS_CFI: _Z2f3b.1:
+; SECTIONS_CFI: _Z2f3b.__part.1:
 ; SECTIONS_CFI-NEXT: .cfi_startproc
 ; SECTIONS_CFI-NEXT: .cfi_def_cfa %rbp, 16
 ; SECTIONS_CFI-NEXT: .cfi_offset %rbp, -16
 ; SECTIONS_CFI: .cfi_endproc
 
-; SECTIONS_CFI: _Z2f3b.2:
+; SECTIONS_CFI: _Z2f3b.__part.2:
 ; SECTIONS_CFI-NEXT: .cfi_startproc
 ; SECTIONS_CFI-NEXT: .cfi_def_cfa %rbp, 16
 ; SECTIONS_CFI-NEXT: .cfi_offset %rbp, -16
@@ -35,12 +35,12 @@
 ; SECTIONS_NOFP_CFI: .cfi_def_cfa_offset 16
 ; SECTIONS_NOFP_CFI: .cfi_endproc
 
-; SECTIONS_NOFP_CFI: _Z2f3b.1:
+; SECTIONS_NOFP_CFI: _Z2f3b.__part.1:
 ; SECTIONS_NOFP_CFI-NEXT: .cfi_startproc
 ; SECTIONS_NOFP_CFI-NEXT: .cfi_def_cfa %rsp, 16
 ; SECTIONS_NOFP_CFI: .cfi_endproc
 
-; SECTIONS_NOFP_CFI: _Z2f3b.2:
+; SECTIONS_NOFP_CFI: _Z2f3b.__part.2:
 ; SECTIONS_NOFP_CFI-NEXT: .cfi_startproc
 ; SECTIONS_NOFP_CFI-NEXT: .cfi_def_cfa %rsp, 16
 ; SECTIONS_NOFP_CFI: .cfi_endproc

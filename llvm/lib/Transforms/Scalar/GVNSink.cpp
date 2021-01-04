@@ -692,10 +692,8 @@ Optional<SinkingInstructionCandidate> GVNSink::analyzeInstructionForSinking(
   ModelledPHI NewPHI(NewInsts, ActivePreds);
 
   // Does sinking this instruction render previous PHIs redundant?
-  if (NeededPHIs.find(NewPHI) != NeededPHIs.end()) {
-    NeededPHIs.erase(NewPHI);
+  if (NeededPHIs.erase(NewPHI))
     RecomputePHIContents = true;
-  }
 
   if (RecomputePHIContents) {
     // The needed PHIs have changed, so recompute the set of all needed

@@ -13,7 +13,7 @@ typedef struct {
   __weak id f1;
 } Weak;
 
-// CHECK: define void @testStrongException()
+// CHECK: define{{.*}} void @testStrongException()
 // CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_STRONG]], align 8
 // CHECK: %[[AGG_TMP1:.*]] = alloca %[[STRUCT_STRONG]], align 8
 // CHECK: %[[CALL:.*]] = call [2 x i64] @genStrong()
@@ -38,7 +38,7 @@ void testStrongException(void) {
   calleeStrong(genStrong(), genStrong());
 }
 
-// CHECK: define void @testWeakException()
+// CHECK: define{{.*}} void @testWeakException()
 // CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_WEAK]], align 8
 // CHECK: %[[AGG_TMP1:.*]] = alloca %[[STRUCT_WEAK]], align 8
 // CHECK: call void @genWeak(%[[STRUCT_WEAK]]* sret(%[[STRUCT_WEAK]]) align 8 %[[AGG_TMP]])

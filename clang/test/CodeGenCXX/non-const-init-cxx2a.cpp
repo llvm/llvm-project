@@ -12,7 +12,7 @@ struct B {
 // We emit a dynamic destructor here because b.n might have been modified
 // before b is destroyed.
 //
-// CHECK: @b = global {{.*}} i32 123
+// CHECK: @b ={{.*}} global {{.*}} i32 123
 B b = B();
 
 // CHECK: define {{.*}}cxx_global_var_init

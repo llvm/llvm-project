@@ -238,21 +238,6 @@ else()
   endforeach()
 endif()
 
-# Make sure that non-platform-specific files don't include any system headers.
-# FreeBSD/NetBSD do not install a number of Clang-provided headers for the
-# compiler in the base system due to incompatibilities between FreeBSD/NetBSD's
-# and Clang's versions. As a workaround do not use --sysroot=. on FreeBSD/NetBSD
-# until this is addressed.
-if(COMPILER_RT_HAS_SYSROOT_FLAG AND NOT CMAKE_SYSTEM_NAME MATCHES "FreeBSD"
-   AND NOT CMAKE_SYSTEM_NAME MATCHES "NetBSD")
-  file(GLOB _tsan_generic_sources rtl/tsan*)
-  file(GLOB _tsan_platform_sources rtl/tsan*posix* rtl/tsan*mac*
-                                   rtl/tsan*linux*)
-  list(REMOVE_ITEM _tsan_generic_sources ${_tsan_platform_sources})
-  set_source_files_properties(${_tsan_generic_sources}
-    PROPERTIES COMPILE_FLAGS "--sysroot=.")
-endif()
-
 # Build libcxx instrumented with TSan.
 if(COMPILER_RT_LIBCXX_PATH AND
    COMPILER_RT_LIBCXXABI_PATH AND

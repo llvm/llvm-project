@@ -8,7 +8,7 @@
 ; RUN:  --implicit-check-not cmpw --implicit-check-not cmpd --implicit-check-not cmpl \
 ; RUN:  --check-prefixes=CHECK,LE
 
-@glob = local_unnamed_addr global i64 0, align 8
+@glob = dso_local local_unnamed_addr global i64 0, align 8
 
 ; Function Attrs: norecurse nounwind readnone
 define i64 @test_llleull(i64 %a, i64 %b) {
@@ -65,25 +65,15 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @test_llleull_store(i64 %a, i64 %b) {
-; BE-LABEL: test_llleull_store:
-; BE:       # %bb.0: # %entry
-; BE-NEXT:    addis r5, r2, .LC0@toc@ha
-; BE-NEXT:    subc r4, r4, r3
-; BE-NEXT:    ld r4, .LC0@toc@l(r5)
-; BE-NEXT:    subfe r3, r3, r3
-; BE-NEXT:    addi r3, r3, 1
-; BE-NEXT:    std r3, 0(r4)
-; BE-NEXT:    blr
-;
-; LE-LABEL: test_llleull_store:
-; LE:       # %bb.0: # %entry
-; LE-NEXT:    subc r4, r4, r3
-; LE-NEXT:    addis r5, r2, glob@toc@ha
-; LE-NEXT:    subfe r3, r3, r3
-; LE-NEXT:    addi r3, r3, 1
-; LE-NEXT:    std r3, glob@toc@l(r5)
-; LE-NEXT:    blr
+define dso_local void @test_llleull_store(i64 %a, i64 %b) {
+; CHECK-LABEL: test_llleull_store:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    subc r4, r4, r3
+; CHECK-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-NEXT:    subfe r3, r3, r3
+; CHECK-NEXT:    addi r3, r3, 1
+; CHECK-NEXT:    std r3, glob@toc@l(r5)
+; CHECK-NEXT:    blr
 entry:
   %cmp = icmp ule i64 %a, %b
   %conv1 = zext i1 %cmp to i64
@@ -92,25 +82,15 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @test_llleull_sext_store(i64 %a, i64 %b) {
-; BE-LABEL: test_llleull_sext_store:
-; BE:       # %bb.0: # %entry
-; BE-NEXT:    addis r5, r2, .LC0@toc@ha
-; BE-NEXT:    subc r4, r4, r3
-; BE-NEXT:    ld r4, .LC0@toc@l(r5)
-; BE-NEXT:    subfe r3, r3, r3
-; BE-NEXT:    not r3, r3
-; BE-NEXT:    std r3, 0(r4)
-; BE-NEXT:    blr
-;
-; LE-LABEL: test_llleull_sext_store:
-; LE:       # %bb.0: # %entry
-; LE-NEXT:    subc r4, r4, r3
-; LE-NEXT:    addis r5, r2, glob@toc@ha
-; LE-NEXT:    subfe r3, r3, r3
-; LE-NEXT:    not r3, r3
-; LE-NEXT:    std r3, glob@toc@l(r5)
-; LE-NEXT:    blr
+define dso_local void @test_llleull_sext_store(i64 %a, i64 %b) {
+; CHECK-LABEL: test_llleull_sext_store:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    subc r4, r4, r3
+; CHECK-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-NEXT:    subfe r3, r3, r3
+; CHECK-NEXT:    not r3, r3
+; CHECK-NEXT:    std r3, glob@toc@l(r5)
+; CHECK-NEXT:    blr
 entry:
   %cmp = icmp ule i64 %a, %b
   %conv1 = sext i1 %cmp to i64
@@ -119,23 +99,14 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @test_llleull_z_store(i64 %a) {
-; BE-LABEL: test_llleull_z_store:
-; BE:       # %bb.0: # %entry
-; BE-NEXT:    addis r4, r2, .LC0@toc@ha
-; BE-NEXT:    cntlzd r3, r3
-; BE-NEXT:    ld r4, .LC0@toc@l(r4)
-; BE-NEXT:    rldicl r3, r3, 58, 63
-; BE-NEXT:    std r3, 0(r4)
-; BE-NEXT:    blr
-;
-; LE-LABEL: test_llleull_z_store:
-; LE:       # %bb.0: # %entry
-; LE-NEXT:    cntlzd r3, r3
-; LE-NEXT:    addis r4, r2, glob@toc@ha
-; LE-NEXT:    rldicl r3, r3, 58, 63
-; LE-NEXT:    std r3, glob@toc@l(r4)
-; LE-NEXT:    blr
+define dso_local void @test_llleull_z_store(i64 %a) {
+; CHECK-LABEL: test_llleull_z_store:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    cntlzd r3, r3
+; CHECK-NEXT:    addis r4, r2, glob@toc@ha
+; CHECK-NEXT:    rldicl r3, r3, 58, 63
+; CHECK-NEXT:    std r3, glob@toc@l(r4)
+; CHECK-NEXT:    blr
 entry:
   %cmp = icmp ule i64 %a, 0
   %conv1 = zext i1 %cmp to i64
@@ -144,23 +115,14 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @test_llleull_sext_z_store(i64 %a) {
-; BE-LABEL: test_llleull_sext_z_store:
-; BE:       # %bb.0: # %entry
-; BE-NEXT:    addis r4, r2, .LC0@toc@ha
-; BE-NEXT:    addic r3, r3, -1
-; BE-NEXT:    ld r4, .LC0@toc@l(r4)
-; BE-NEXT:    subfe r3, r3, r3
-; BE-NEXT:    std r3, 0(r4)
-; BE-NEXT:    blr
-;
-; LE-LABEL: test_llleull_sext_z_store:
-; LE:       # %bb.0: # %entry
-; LE-NEXT:    addic r3, r3, -1
-; LE-NEXT:    addis r4, r2, glob@toc@ha
-; LE-NEXT:    subfe r3, r3, r3
-; LE-NEXT:    std r3, glob@toc@l(r4)
-; LE-NEXT:    blr
+define dso_local void @test_llleull_sext_z_store(i64 %a) {
+; CHECK-LABEL: test_llleull_sext_z_store:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addic r3, r3, -1
+; CHECK-NEXT:    addis r4, r2, glob@toc@ha
+; CHECK-NEXT:    subfe r3, r3, r3
+; CHECK-NEXT:    std r3, glob@toc@l(r4)
+; CHECK-NEXT:    blr
 entry:
   %cmp = icmp ule i64 %a, 0
   %conv1 = sext i1 %cmp to i64

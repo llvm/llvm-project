@@ -2,11 +2,11 @@
 
 void __attribute__((micromips)) foo (void) {}
 
-// CHECK: define void @foo() [[MICROMIPS:#[0-9]+]]
+// CHECK: define{{.*}} void @foo() [[MICROMIPS:#[0-9]+]]
 
 void __attribute__((nomicromips)) nofoo (void) {}
 
-// CHECK: define void @nofoo() [[NOMICROMIPS:#[0-9]+]]
+// CHECK: define{{.*}} void @nofoo() [[NOMICROMIPS:#[0-9]+]]
 
 // CHECK: attributes [[MICROMIPS]] = { noinline nounwind {{.*}} "micromips" {{.*}} }
 // CHECK: attributes [[NOMICROMIPS]]  = { noinline nounwind {{.*}} "nomicromips" {{.*}} }

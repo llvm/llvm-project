@@ -35,7 +35,7 @@ void use(id);
 // Block copy/dispose helpers aren't needed because 'a' is captured by
 // reference.
 
-// CHECK-LABEL: define void @_ZN18CaptureByReference5test0Ev(
+// CHECK-LABEL: define{{.*}} void @_ZN18CaptureByReference5test0Ev(
 // CHECK-LABEL: define internal void @"_ZZN18CaptureByReference5test0EvENK3$_3clEv"(
 // CHECK: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8** }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8** }>* %{{.*}}, i32 0, i32 4
 // CHECK: store %[[STRUCT_BLOCK_DESCRIPTOR]]* bitcast ({ i64, i64, i8*, i64 }* @"__block_descriptor_40_e5_v8\01?0ls32l8" to %[[STRUCT_BLOCK_DESCRIPTOR]]*), %[[STRUCT_BLOCK_DESCRIPTOR]]** %[[BLOCK_DESCRIPTOR]], align 8
@@ -48,7 +48,7 @@ void test0() {
 // Block copy/dispose helpers shouldn't have to retain/release 'a' because it
 // is captured by reference.
 
-// CHECK-LABEL: define void @_ZN18CaptureByReference5test1Ev(
+// CHECK-LABEL: define{{.*}} void @_ZN18CaptureByReference5test1Ev(
 // CHECK-LABEL: define internal void @"_ZZN18CaptureByReference5test1EvENK3$_4clEv"(
 // CHECK: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8** }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8*, i8*, i8** }>* %{{.*}}, i32 0, i32 4
 // CHECK: store %[[STRUCT_BLOCK_DESCRIPTOR]]* bitcast ({ i64, i64, i8*, i8*, i8*, i64 }* @"__block_descriptor_56_8_32s40s_e5_v8\01?0l" to %[[STRUCT_BLOCK_DESCRIPTOR]]*), %[[STRUCT_BLOCK_DESCRIPTOR]]** %[[BLOCK_DESCRIPTOR]], align 8

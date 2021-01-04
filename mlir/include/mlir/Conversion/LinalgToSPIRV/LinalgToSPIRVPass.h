@@ -1,4 +1,4 @@
-//===- LinalgToSPIRVPass.h -  Linalg to SPIR-V conversion pass --*- C++ -*-===//
+//===- LinalgToSPIRVPass.h -  Linalg to SPIR-V Passes -----------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file provides a pass for Linalg to SPIR-V dialect conversion.
+// Provides passes to convert Linalg dialect to SPIR-V dialect.
 //
 //===----------------------------------------------------------------------===//
 

@@ -42,7 +42,7 @@ std::initializer_list<id> foo1() {
   return {@"str0", @"str1"};
 }
 
-// CHECK: define void @_Z4foo1v(%"class.std::initializer_list.0"* {{.*}} %[[AGG_RESULT:.*]])
+// CHECK: define{{.*}} void @_Z4foo1v(%"class.std::initializer_list.0"* {{.*}} %[[AGG_RESULT:.*]])
 // CHECK: %[[BEGIN:.*]] = getelementptr inbounds %"class.std::initializer_list.0", %"class.std::initializer_list.0"* %[[AGG_RESULT]], i32 0, i32 0
 // CHECK: store i8** getelementptr inbounds ([2 x i8*], [2 x i8*]* @[[REFTMP]], i32 0, i32 0), i8*** %[[BEGIN]]
 // CHECK: %[[SIZE:.*]] = getelementptr inbounds %"class.std::initializer_list.0", %"class.std::initializer_list.0"* %[[AGG_RESULT]], i32 0, i32 1

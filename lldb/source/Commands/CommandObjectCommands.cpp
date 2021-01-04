@@ -464,7 +464,7 @@ protected:
         OptionArgVectorSP(new OptionArgVector);
 
     if (CommandObjectSP cmd_obj_sp =
-            m_interpreter.GetCommandSPExact(cmd_obj.GetCommandName(), false)) {
+            m_interpreter.GetCommandSPExact(cmd_obj.GetCommandName())) {
       if (m_interpreter.AliasExists(alias_command) ||
           m_interpreter.UserCommandExists(alias_command)) {
         result.AppendWarningWithFormat(
@@ -558,10 +558,9 @@ protected:
 
     if (!args.empty()) {
       CommandObjectSP tmp_sp =
-          m_interpreter.GetCommandSPExact(cmd_obj->GetCommandName(), false);
+          m_interpreter.GetCommandSPExact(cmd_obj->GetCommandName());
       if (use_subcommand)
-        tmp_sp = m_interpreter.GetCommandSPExact(sub_cmd_obj->GetCommandName(),
-                                                 false);
+        tmp_sp = m_interpreter.GetCommandSPExact(sub_cmd_obj->GetCommandName());
 
       args.GetCommandString(args_string);
     }

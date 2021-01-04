@@ -9,6 +9,6 @@ void func1(bool b, A& a1)
 {
     if ((a1.m_sorted = b)) {}
 }
-// CHECK-LABEL: define void @_Z5func1bR1A
+// CHECK-LABEL: define{{.*}} void @_Z5func1bR1A
 // CHECK: br i1
 // CHECK: ret void

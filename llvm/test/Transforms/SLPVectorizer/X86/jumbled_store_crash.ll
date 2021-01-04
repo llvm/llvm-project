@@ -26,7 +26,7 @@ define dso_local void @j() local_unnamed_addr {
 ; CHECK-NEXT:    [[TMP6:%.*]] = sitofp <2 x i32> [[TMP5]] to <2 x float>
 ; CHECK-NEXT:    [[TMP7:%.*]] = fmul <2 x float> [[TMP6]], <float 1.000000e+01, float 1.000000e+01>
 ; CHECK-NEXT:    [[TMP8:%.*]] = fsub <2 x float> <float 1.000000e+00, float 0.000000e+00>, [[TMP7]]
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP8]], <2 x float> undef, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP8]], <2 x float> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x float> [[SHUFFLE]], i32 0
 ; CHECK-NEXT:    store float [[TMP9]], float* @g, align 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = fadd <4 x float> [[SHUFFLE]], <float -1.000000e+00, float 1.000000e+00, float -1.000000e+00, float 1.000000e+00>
@@ -49,9 +49,9 @@ define dso_local void @j() local_unnamed_addr {
 ; CHECK-NEXT:    [[TMP20:%.*]] = fsub <4 x float> [[TMP10]], [[TMP18]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <4 x float> [[TMP19]], <4 x float> [[TMP20]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP22:%.*]] = fptosi <4 x float> [[TMP21]] to <4 x i32>
-; CHECK-NEXT:    [[REORDER_SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP22]], <4 x i32> undef, <4 x i32> <i32 2, i32 0, i32 3, i32 1>
+; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <4 x i32> [[TMP22]], <4 x i32> poison, <4 x i32> <i32 2, i32 0, i32 3, i32 1>
 ; CHECK-NEXT:    [[TMP23:%.*]] = bitcast i32* [[ARRAYIDX1]] to <4 x i32>*
-; CHECK-NEXT:    store <4 x i32> [[REORDER_SHUFFLE]], <4 x i32>* [[TMP23]], align 4
+; CHECK-NEXT:    store <4 x i32> [[SHUFFLE1]], <4 x i32>* [[TMP23]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

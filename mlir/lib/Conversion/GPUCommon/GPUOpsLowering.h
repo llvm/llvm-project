@@ -39,7 +39,7 @@ struct GPUFuncOpLowering : ConvertOpToLLVMPattern<gpu::GPUFuncOp> {
 
       auto elementType = typeConverter->convertType(type.getElementType())
                              .template cast<LLVM::LLVMType>();
-      auto arrayType = LLVM::LLVMType::getArrayTy(elementType, numElements);
+      auto arrayType = LLVM::LLVMArrayType::get(elementType, numElements);
       std::string name = std::string(
           llvm::formatv("__wg_{0}_{1}", gpuFuncOp.getName(), en.index()));
       auto globalOp = rewriter.create<LLVM::GlobalOp>(
@@ -85,7 +85,7 @@ struct GPUFuncOpLowering : ConvertOpToLLVMPattern<gpu::GPUFuncOp> {
       // Rewrite workgroup memory attributions to addresses of global buffers.
       rewriter.setInsertionPointToStart(&gpuFuncOp.front());
       unsigned numProperArguments = gpuFuncOp.getNumArguments();
-      auto i32Type = LLVM::LLVMType::getInt32Ty(rewriter.getContext());
+      auto i32Type = LLVM::LLVMIntegerType::get(rewriter.getContext(), 32);
 
       Value zero = nullptr;
       if (!workgroupBuffers.empty())
@@ -114,7 +114,7 @@ struct GPUFuncOpLowering : ConvertOpToLLVMPattern<gpu::GPUFuncOp> {
       // Rewrite private memory attributions to alloca'ed buffers.
       unsigned numWorkgroupAttributions =
           gpuFuncOp.getNumWorkgroupAttributions();
-      auto int64Ty = LLVM::LLVMType::getInt64Ty(rewriter.getContext());
+      auto int64Ty = LLVM::LLVMIntegerType::get(rewriter.getContext(), 64);
       for (auto en : llvm::enumerate(gpuFuncOp.getPrivateAttributions())) {
         Value attribution = en.value();
         auto type = attribution.getType().cast<MemRefType>();

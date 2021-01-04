@@ -121,14 +121,19 @@ void reportGISelWarning(MachineFunction &MF, const TargetPassConfig &TPC,
                         MachineOptimizationRemarkEmitter &MORE,
                         MachineOptimizationRemarkMissed &R);
 
+/// If \p VReg is defined by a G_CONSTANT, return the corresponding value.
+Optional<APInt> getConstantVRegVal(Register VReg,
+                                   const MachineRegisterInfo &MRI);
+
 /// If \p VReg is defined by a G_CONSTANT fits in int64_t
 /// returns it.
-Optional<int64_t> getConstantVRegVal(Register VReg,
-                                     const MachineRegisterInfo &MRI);
+Optional<int64_t> getConstantVRegSExtVal(Register VReg,
+                                         const MachineRegisterInfo &MRI);
+
 /// Simple struct used to hold a constant integer value and a virtual
 /// register.
 struct ValueAndVReg {
-  int64_t Value;
+  APInt Value;
   Register VReg;
 };
 /// If \p VReg is defined by a statically evaluable chain of

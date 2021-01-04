@@ -9,10 +9,10 @@
 __m128 test_mm_mask_cvtph_ps(__m128 __W, __mmask8 __U, __m128i __A) {
   // COMMON-LABEL: @test_mm_mask_cvtph_ps
   // COMMONIR: bitcast <2 x i64> %{{.*}} to <8 x i16>
-  // COMMONIR: shufflevector <8 x i16> %{{.*}}, <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  // COMMONIR: shufflevector <8 x i16> %{{.*}}, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // COMMONIR: bitcast <4 x i16> %{{.*}} to <4 x half>
   // UNCONSTRAINED: fpext <4 x half> %{{.*}} to <4 x float>
-  // CONSTRAINED: call <4 x float> @llvm.experimental.constrained.fpext.v4f32.v4f16(<4 x half> %{{.*}}, metadata !"fpexcept.strict") 
+  // CONSTRAINED: call <4 x float> @llvm.experimental.constrained.fpext.v4f32.v4f16(<4 x half> %{{.*}}, metadata !"fpexcept.strict")
   // COMMONIR: select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
   return _mm_mask_cvtph_ps(__W, __U, __A);
 }
@@ -20,10 +20,10 @@ __m128 test_mm_mask_cvtph_ps(__m128 __W, __mmask8 __U, __m128i __A) {
 __m128 test_mm_maskz_cvtph_ps(__mmask8 __U, __m128i __A) {
   // COMMON-LABEL: @test_mm_maskz_cvtph_ps
   // COMMONIR: bitcast <2 x i64> %{{.*}} to <8 x i16>
-  // COMMONIR: shufflevector <8 x i16> %{{.*}}, <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  // COMMONIR: shufflevector <8 x i16> %{{.*}}, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // COMMONIR: bitcast <4 x i16> %{{.*}} to <4 x half>
   // UNCONSTRAINED: fpext <4 x half> %{{.*}} to <4 x float>
-  // CONSTRAINED: call <4 x float> @llvm.experimental.constrained.fpext.v4f32.v4f16(<4 x half> %{{.*}}, metadata !"fpexcept.strict") 
+  // CONSTRAINED: call <4 x float> @llvm.experimental.constrained.fpext.v4f32.v4f16(<4 x half> %{{.*}}, metadata !"fpexcept.strict")
   // COMMONIR: select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
   return _mm_maskz_cvtph_ps(__U, __A);
 }

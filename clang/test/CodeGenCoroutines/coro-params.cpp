@@ -62,7 +62,7 @@ struct MoveAndCopy {
 void consume(int,int,int) noexcept;
 
 // TODO: Add support for CopyOnly params
-// CHECK: define void @_Z1fi8MoveOnly11MoveAndCopy(i32 %val, %struct.MoveOnly* %[[MoParam:.+]], %struct.MoveAndCopy* %[[McParam:.+]]) #0 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*
+// CHECK: define{{.*}} void @_Z1fi8MoveOnly11MoveAndCopy(i32 %val, %struct.MoveOnly* %[[MoParam:.+]], %struct.MoveAndCopy* %[[McParam:.+]]) #0 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*
 void f(int val, MoveOnly moParam, MoveAndCopy mcParam) {
   // CHECK: %[[MoCopy:.+]] = alloca %struct.MoveOnly
   // CHECK: %[[McCopy:.+]] = alloca %struct.MoveAndCopy
@@ -176,7 +176,7 @@ struct some_class {
   method good_coroutine_calls_custom_constructor(float);
 };
 
-// CHECK-LABEL: define void @_ZN10some_class39good_coroutine_calls_custom_constructorEf(%struct.some_class*
+// CHECK-LABEL: define{{.*}} void @_ZN10some_class39good_coroutine_calls_custom_constructorEf(%struct.some_class*
 method some_class::good_coroutine_calls_custom_constructor(float) {
   // CHECK: invoke void @_ZNSt12experimental16coroutine_traitsIJ6methodR10some_classfEE12promise_typeC1ES3_f(%"struct.std::experimental::coroutine_traits<method, some_class &, float>::promise_type"* {{[^,]*}} %__promise, %struct.some_class* nonnull align 1 dereferenceable(1) %{{.+}}, float
   co_return;

@@ -33,8 +33,8 @@ static void extractFunctionsFromModule(const std::vector<Chunk> &ChunksToKeep,
           [&O](Function &F) {
             // Intrinsics don't have function bodies that are useful to
             // reduce. Additionally, intrinsics may have additional operand
-            // constraints.
-            return !F.isIntrinsic() && !O.shouldKeep();
+            // constraints. But, do drop intrinsics that are not referenced.
+            return (!F.isIntrinsic() || F.use_empty()) && !O.shouldKeep();
           });
 
   // Then, drop body of each of them. We want to batch this and do nothing else
@@ -51,7 +51,7 @@ static void extractFunctionsFromModule(const std::vector<Chunk> &ChunksToKeep,
   }
 }
 
-/// Counts the amount of non-declaration functions and prints their
+/// Counts the amount of functions and prints their
 /// respective name & index
 static int countFunctions(Module *Program) {
   // TODO: Silence index with --quiet flag
@@ -59,7 +59,7 @@ static int countFunctions(Module *Program) {
   errs() << "Function Index Reference:\n";
   int FunctionCount = 0;
   for (auto &F : *Program) {
-    if (F.isIntrinsic())
+    if (F.isIntrinsic() && !F.use_empty())
       continue;
 
     errs() << '\t' << ++FunctionCount << ": " << F.getName() << '\n';

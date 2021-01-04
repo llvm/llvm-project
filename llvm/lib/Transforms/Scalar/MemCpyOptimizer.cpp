@@ -924,8 +924,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   // guarantees that it holds only undefined values when passed in (so the final
   // memcpy can be dropped), that it is not read or written between the call and
   // the memcpy, and that writing beyond the end of it is undefined.
-  SmallVector<User*, 8> srcUseList(srcAlloca->user_begin(),
-                                   srcAlloca->user_end());
+  SmallVector<User *, 8> srcUseList(srcAlloca->users());
   while (!srcUseList.empty()) {
     User *U = srcUseList.pop_back_val();
 

@@ -36,7 +36,7 @@ define <4 x float> @insertps_0x0c(<4 x float> %v1, <4 x float> %v2) {
 
 define <4 x float> @insertps_0x15_single_input(<4 x float> %v1) {
 ; CHECK-LABEL: @insertps_0x15_single_input(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[V1:%.*]], <4 x float> <float 0.000000e+00, float undef, float 0.000000e+00, float undef>, <4 x i32> <i32 4, i32 0, i32 6, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[V1:%.*]], <4 x float> <float 0.000000e+00, float poison, float 0.000000e+00, float poison>, <4 x i32> <i32 4, i32 0, i32 6, i32 3>
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %res = call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %v1, <4 x float> %v1, i8 21)
@@ -47,7 +47,7 @@ define <4 x float> @insertps_0x15_single_input(<4 x float> %v1) {
 
 define <4 x float> @insertps_0x1a_single_input(<4 x float> %v1) {
 ; CHECK-LABEL: @insertps_0x1a_single_input(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[V1:%.*]], <4 x float> <float undef, float 0.000000e+00, float undef, float 0.000000e+00>, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[V1:%.*]], <4 x float> <float poison, float 0.000000e+00, float poison, float 0.000000e+00>, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %res = call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %v1, <4 x float> %v1, i8 26)

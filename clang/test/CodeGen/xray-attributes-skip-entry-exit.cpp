@@ -11,7 +11,7 @@
 // RUN:     -std=c++11 -triple x86_64-unknown-unknown -emit-llvm -o - %s \
 // RUN:     | FileCheck --check-prefixes CHECK,NOSKIPENTRY,NOSKIPEXIT %s
 
-// CHECK: define void @_Z13justAFunctionv() #[[ATTR:[0-9]+]] {
+// CHECK: define{{.*}} void @_Z13justAFunctionv() #[[ATTR:[0-9]+]] {
 void justAFunction() {
 }
 

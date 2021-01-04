@@ -273,7 +273,7 @@ void core_barrier_impl<T>::barrier(kmp_int32 id,
                 "next_index:%llu curr_wait:%llu next_wait:%llu\n",
                 __kmp_get_gtid(), current_index, next_index, current_wait_value,
                 next_wait_value));
-  char v = (current_wait_value ? 0x1 : 0x0);
+  char v = (current_wait_value ? '\1' : '\0');
   (RCAST(volatile char *, &(bdata->val[current_index])))[id] = v;
   __kmp_wait<kmp_uint64>(&(bdata->val[current_index]), current_wait_value,
                          __kmp_eq<kmp_uint64> USE_ITT_BUILD_ARG(NULL));
@@ -537,8 +537,10 @@ private:
       // When no iterations are found (status == 0) and this is not the last
       // layer, attempt to go up the hierarchy for more iterations
       if (status == 0 && !last_layer) {
+        kmp_int32 hid;
+        __kmp_type_convert(hier_id, &hid);
         status = next_recurse(loc, gtid, parent, &contains_last, &my_lb, &my_ub,
-                              &my_st, hier_id, hier_level + 1);
+                              &my_st, hid, hier_level + 1);
         KD_TRACE(
             10,
             ("kmp_hier_t.next_recurse(): T#%d (%d) hier_next() returned %d\n",
@@ -748,8 +750,10 @@ public:
           bool done = false;
           while (!done) {
             done = true;
+            kmp_int32 uid;
+            __kmp_type_convert(unit_id, &uid);
             status = next_recurse(loc, gtid, parent, &contains_last, p_lb, p_ub,
-                                  p_st, unit_id, 0);
+                                  p_st, uid, 0);
             if (status == 1) {
               __kmp_dispatch_init_algorithm(loc, gtid, pr, pr->schedule,
                                             parent->get_next_lb(tdata->index),
@@ -803,8 +807,10 @@ public:
         bool done = false;
         while (!done) {
           done = true;
+          kmp_int32 uid;
+          __kmp_type_convert(unit_id, &uid);
           status = next_recurse(loc, gtid, parent, &contains_last, p_lb, p_ub,
-                                p_st, unit_id, 0);
+                                p_st, uid, 0);
           if (status == 1) {
             sh = parent->get_curr_sh(tdata->index);
             __kmp_dispatch_init_algorithm(loc, gtid, pr, pr->schedule,

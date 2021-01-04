@@ -46,7 +46,7 @@ namespace remote {
 
 template <typename ChannelT, typename TargetT>
 class OrcRemoteTargetServer
-    : public rpc::SingleThreadedRPCEndpoint<rpc::RawByteChannel> {
+    : public shared::SingleThreadedRPCEndpoint<shared::RawByteChannel> {
 public:
   using SymbolLookupFtor =
       std::function<JITTargetAddress(const std::string &Name)>;
@@ -57,7 +57,8 @@ public:
   OrcRemoteTargetServer(ChannelT &Channel, SymbolLookupFtor SymbolLookup,
                         EHFrameRegistrationFtor EHFramesRegister,
                         EHFrameRegistrationFtor EHFramesDeregister)
-      : rpc::SingleThreadedRPCEndpoint<rpc::RawByteChannel>(Channel, true),
+      : shared::SingleThreadedRPCEndpoint<shared::RawByteChannel>(Channel,
+                                                                  true),
         SymbolLookup(std::move(SymbolLookup)),
         EHFramesRegister(std::move(EHFramesRegister)),
         EHFramesDeregister(std::move(EHFramesDeregister)) {

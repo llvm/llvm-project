@@ -5,7 +5,7 @@
 module m
  implicit none
  abstract interface
-  !DEF: /m/iface PUBLIC (Subroutine) Subprogram
+  !DEF: /m/iface ABSTRACT, PUBLIC (Subroutine) Subprogram
   subroutine iface
   end subroutine
  end interface

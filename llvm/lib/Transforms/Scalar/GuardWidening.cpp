@@ -671,8 +671,7 @@ bool GuardWideningImpl::combineRangeChecks(
     assert(CurrentChecks.size() != 0 && "We know we have at least one!");
 
     if (CurrentChecks.size() < 3) {
-      RangeChecksOut.insert(RangeChecksOut.end(), CurrentChecks.begin(),
-                            CurrentChecks.end());
+      llvm::append_range(RangeChecksOut, CurrentChecks);
       continue;
     }
 

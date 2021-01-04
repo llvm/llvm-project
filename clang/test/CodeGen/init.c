@@ -34,7 +34,7 @@ void f3() {
 }
 
 // Constants
-// CHECK-DAG: @g3 = constant i32 10
+// CHECK-DAG: @g3 ={{.*}} constant i32 10
 // CHECK-DAG: @f4.g4 = internal constant i32 12
 const int g3 = 10;
 int f4() {
@@ -62,7 +62,7 @@ void f6() {
 
 
 
-// CHECK-DAG: @test7 = global{{.*}}{ i32 0, [4 x i8] c"bar\00" }
+// CHECK-DAG: @test7 ={{.*}} global{{.*}}{ i32 0, [4 x i8] c"bar\00" }
 // PR8217
 struct a7 {
   int  b;
@@ -72,27 +72,27 @@ struct a7 {
 struct a7 test7 = { .b = 0, .v = "bar" };
 
 
-// CHECK-DAG: @huge_array = global {{.*}} <{ i32 1, i32 0, i32 2, i32 0, i32 3, [999999995 x i32] zeroinitializer }>
+// CHECK-DAG: @huge_array ={{.*}} global {{.*}} <{ i32 1, i32 0, i32 2, i32 0, i32 3, [999999995 x i32] zeroinitializer }>
 int huge_array[1000000000] = {1, 0, 2, 0, 3, 0, 0, 0};
 
-// CHECK-DAG: @huge_struct = global {{.*}} { i32 1, <{ i32, [999999999 x i32] }> <{ i32 2, [999999999 x i32] zeroinitializer }> }
+// CHECK-DAG: @huge_struct ={{.*}} global {{.*}} { i32 1, <{ i32, [999999999 x i32] }> <{ i32 2, [999999999 x i32] zeroinitializer }> }
 struct Huge {
   int a;
   int arr[1000 * 1000 * 1000];
 } huge_struct = {1, {2, 0, 0, 0}};
 
-// CHECK-DAG: @large_array_with_zeroes = constant <{ [21 x i8], [979 x i8] }> <{ [21 x i8] c"abc\01\02\03xyzzy\00\00\00\00\00\00\00\00\00q", [979 x i8] zeroinitializer }>
+// CHECK-DAG: @large_array_with_zeroes ={{.*}} constant <{ [21 x i8], [979 x i8] }> <{ [21 x i8] c"abc\01\02\03xyzzy\00\00\00\00\00\00\00\00\00q", [979 x i8] zeroinitializer }>
 const char large_array_with_zeroes[1000] = {
   'a', 'b', 'c', 1, 2, 3, 'x', 'y', 'z', 'z', 'y', [20] = 'q'
 };
 
 char global;
 
-// CHECK-DAG: @large_array_with_zeroes_2 = global <{ [10 x i8*], [90 x i8*] }> <{ [10 x i8*] [i8* null, i8* null, i8* null, i8* null, i8* null, i8* null, i8* null, i8* null, i8* null, i8* @global], [90 x i8*] zeroinitializer }>
+// CHECK-DAG: @large_array_with_zeroes_2 ={{.*}} global <{ [10 x i8*], [90 x i8*] }> <{ [10 x i8*] [i8* null, i8* null, i8* null, i8* null, i8* null, i8* null, i8* null, i8* null, i8* null, i8* @global], [90 x i8*] zeroinitializer }>
 const void *large_array_with_zeroes_2[100] = {
   [9] = &global
 };
-// CHECK-DAG: @large_array_with_zeroes_3 = global <{ [10 x i8*], [990 x i8*] }> <{ [10 x i8*] [i8* null, i8* null, i8* null, i8* null, i8* null, i8* null, i8* null, i8* null, i8* null, i8* @global], [990 x i8*] zeroinitializer }>
+// CHECK-DAG: @large_array_with_zeroes_3 ={{.*}} global <{ [10 x i8*], [990 x i8*] }> <{ [10 x i8*] [i8* null, i8* null, i8* null, i8* null, i8* null, i8* null, i8* null, i8* null, i8* null, i8* @global], [990 x i8*] zeroinitializer }>
 const void *large_array_with_zeroes_3[1000] = {
   [9] = &global
 };

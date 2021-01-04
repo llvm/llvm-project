@@ -1137,11 +1137,9 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
           MD->getParent()->getLambdaCaptureDefault() == LCD_None)
         SkippedChecks.set(SanitizerKind::Null, true);
 
-      EmitTypeCheck(isa<CXXConstructorDecl>(MD) ? TCK_ConstructorCall
-                                                : TCK_MemberCall,
-                    Loc, CXXABIThisValue, ThisTy,
-                    getContext().getTypeAlignInChars(ThisTy->getPointeeType()),
-                    SkippedChecks);
+      EmitTypeCheck(
+          isa<CXXConstructorDecl>(MD) ? TCK_ConstructorCall : TCK_MemberCall,
+          Loc, CXXABIThisValue, ThisTy, CXXABIThisAlignment, SkippedChecks);
     }
   }
 

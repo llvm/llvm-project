@@ -8,7 +8,7 @@ target triple = "powerpc64-unknown-linux-gnu"
 
 @test_fn_static.si = internal global i32 0, align 4
 
-define signext i32 @test_fn_static() nounwind {
+define dso_local signext i32 @test_fn_static() nounwind {
 entry:
   %0 = load i32, i32* @test_fn_static.si, align 4
   %inc = add nsw i32 %0, 1
@@ -25,9 +25,9 @@ entry:
 ; CHECK:     0x{{[0-9,A-F]+}} R_PPC64_TOC16_LO_DS [[SYM2]]
 ; CHECK:     0x{{[0-9,A-F]+}} R_PPC64_TOC16_LO [[SYM2]]
 
-@gi = global i32 5, align 4
+@gi = dso_local global i32 5, align 4
 
-define signext i32 @test_file_static() nounwind {
+define dso_local signext i32 @test_file_static() nounwind {
 entry:
   %0 = load i32, i32* @gi, align 4
   %inc = add nsw i32 %0, 1

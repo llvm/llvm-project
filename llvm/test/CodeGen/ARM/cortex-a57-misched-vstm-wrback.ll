@@ -12,11 +12,11 @@
 ; CHECK:       Data
 ; CHECK-SAME:  Latency=1
 
-@a = global double 0.0, align 4
-@b = global double 0.0, align 4
-@c = global double 0.0, align 4
+@a = dso_local global double 0.0, align 4
+@b = dso_local global double 0.0, align 4
+@c = dso_local global double 0.0, align 4
 
-define i32 @bar(double* %vptr, i32 %iv1, i32* %iptr) minsize {
+define dso_local i32 @bar(double* %vptr, i32 %iv1, i32* %iptr) minsize {
   
   %vp2 = getelementptr double, double* %vptr, i32 1
   %vp3 = getelementptr double, double* %vptr, i32 2

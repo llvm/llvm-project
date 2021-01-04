@@ -389,7 +389,7 @@ define double @bitcast_extelt4(i128 %A) {
 
 define <2 x i32> @test4(i32 %A, i32 %B){
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> undef, i32 [[A:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[A:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[B:%.*]], i32 1
 ; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
 ;
@@ -404,7 +404,7 @@ define <2 x i32> @test4(i32 %A, i32 %B){
 ; rdar://8360454
 define <2 x float> @test5(float %A, float %B) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> undef, float [[A:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[A:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[B:%.*]], i32 1
 ; CHECK-NEXT:    ret <2 x float> [[TMP2]]
 ;
@@ -420,7 +420,7 @@ define <2 x float> @test5(float %A, float %B) {
 
 define <2 x float> @test6(float %A){
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> <float 4.200000e+01, float undef>, float [[A:%.*]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> <float 4.200000e+01, float poison>, float [[A:%.*]], i32 1
 ; CHECK-NEXT:    ret <2 x float> [[TMP1]]
 ;
   %tmp23 = bitcast float %A to i32

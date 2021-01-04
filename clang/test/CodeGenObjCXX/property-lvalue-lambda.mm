@@ -14,7 +14,7 @@ blk_t operator+(blk_t lhs, T) { return lhs; }
 template <class T>
 fnptr_t operator+(fnptr_t lhs, T) { return lhs; }
 
-// CHECK-LABEL: define void @_Z2t1P1X
+// CHECK-LABEL: define{{.*}} void @_Z2t1P1X
 void t1(X *x) {
   // Check that we call lambda.operator blk_t(), and that we send that result to
   // the setter.
@@ -28,7 +28,7 @@ void t1(X *x) {
   x.fnptr = [] {};
 }
 
-// CHECK-LABEL: define void @_Z2t2P1X
+// CHECK-LABEL: define{{.*}} void @_Z2t2P1X
 void t2(X *x) {
   // Test the case when the lambda isn't unique. (see OpaqueValueExpr::isUnique)
   // FIXME: This asserts if the lambda isn't trivially copy/movable.

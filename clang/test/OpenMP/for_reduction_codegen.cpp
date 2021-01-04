@@ -32,7 +32,7 @@ struct S {
 // CHECK-DAG: [[ATOMIC_REDUCE_BARRIER_LOC:@.+]] = private unnamed_addr constant %{{.+}} { i32 0, i32 18, i32 0, i32 0, i8*
 // CHECK-DAG: [[IMPLICIT_BARRIER_LOC:@.+]] = private unnamed_addr constant %{{.+}} { i32 0, i32 66, i32 0, i32 0, i8*
 // CHECK-DAG: [[REDUCTION_LOC:@.+]] = private unnamed_addr constant %{{.+}} { i32 0, i32 18, i32 0, i32 0, i8*
-// CHECK-DAG: [[REDUCTION_LOCK:@.+]] = common global [8 x i32] zeroinitializer
+// CHECK-DAG: [[REDUCTION_LOCK:@.+]] = common{{.*}} global [8 x i32] zeroinitializer
 
 template <typename T, int length>
 T tmain() {
@@ -69,7 +69,7 @@ extern S<float> **foo();
 
 int main() {
 #ifdef LAMBDA
-  // LAMBDA: [[G:@.+]] = global double
+  // LAMBDA: [[G:@.+]] ={{.*}} global double
   // LAMBDA-LABEL: @main
   // LAMBDA: call void [[OUTER_LAMBDA:@.+]](
   [&]() {
@@ -130,7 +130,7 @@ int main() {
   }();
   return 0;
 #elif defined(BLOCKS)
-  // BLOCKS: [[G:@.+]] = global double
+  // BLOCKS: [[G:@.+]] ={{.*}} global double
   // BLOCKS-LABEL: @main
   // BLOCKS: call void {{%.+}}(i8
   ^{

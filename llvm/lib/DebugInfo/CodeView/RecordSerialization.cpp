@@ -34,7 +34,7 @@ StringRef llvm::codeview::getBytesAsCString(ArrayRef<uint8_t> LeafData) {
 }
 
 Error llvm::codeview::consume(BinaryStreamReader &Reader, APSInt &Num) {
-  // Used to avoid overload ambiguity on APInt construtor.
+  // Used to avoid overload ambiguity on APInt constructor.
   bool FalseVal = false;
   uint16_t Short;
   if (auto EC = Reader.readInteger(Short))

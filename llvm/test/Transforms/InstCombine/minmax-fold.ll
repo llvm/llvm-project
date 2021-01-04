@@ -1452,7 +1452,7 @@ define i8 @PR14613_smax(i8 %x) {
 define i8 @PR46271(<2 x i8> %x) {
 ; CHECK-LABEL: @PR46271(
 ; CHECK-NEXT:    [[A:%.*]] = icmp sgt <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[B:%.*]] = select <2 x i1> [[A]], <2 x i8> [[X]], <2 x i8> <i8 undef, i8 -1>
+; CHECK-NEXT:    [[B:%.*]] = select <2 x i1> [[A]], <2 x i8> [[X]], <2 x i8> <i8 poison, i8 -1>
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i8> [[B]], i32 1
 ; CHECK-NEXT:    [[R:%.*]] = xor i8 [[TMP1]], -1
 ; CHECK-NEXT:    ret i8 [[R]]

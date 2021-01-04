@@ -1056,7 +1056,7 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
   for (unsigned i = 0; i != NumPHIValues; ++i) {
     Value *InVal = PN->getIncomingValue(i);
     // If I is a freeze instruction, count undef as a non-constant.
-    if (isa<Constant>(InVal) && !isa<ConstantExpr>(InVal) &&
+    if (match(InVal, m_ImmConstant()) &&
         (!isa<FreezeInst>(I) || isGuaranteedNotToBeUndefOrPoison(InVal)))
       continue;
 
@@ -1118,7 +1118,7 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
       // FalseVInPred versus TrueVInPred. When we have individual nonzero
       // elements in the vector, we will incorrectly fold InC to
       // `TrueVInPred`.
-      if (InC && !isa<ConstantExpr>(InC) && isa<ConstantInt>(InC))
+      if (InC && isa<ConstantInt>(InC))
         InV = InC->isNullValue() ? FalseVInPred : TrueVInPred;
       else {
         // Generate the select in the same block as PN's current incoming block.
@@ -1608,8 +1608,7 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
   if (InstVTy &&
       match(&Inst,
             m_c_BinOp(m_OneUse(m_Shuffle(m_Value(V1), m_Undef(), m_Mask(Mask))),
-                      m_Constant(C))) &&
-      !isa<ConstantExpr>(C) &&
+                      m_ImmConstant(C))) &&
       cast<FixedVectorType>(V1->getType())->getNumElements() <=
           InstVTy->getNumElements()) {
     assert(InstVTy->getScalarType() == V1->getType()->getScalarType() &&
@@ -1817,7 +1816,7 @@ static Instruction *foldSelectGEP(GetElementPtrInst &GEP,
   // gep (select Cond, TrueC, FalseC), IndexC --> select Cond, TrueC', FalseC'
   // Propagate 'inbounds' and metadata from existing instructions.
   // Note: using IRBuilder to create the constants for efficiency.
-  SmallVector<Value *, 4> IndexC(GEP.idx_begin(), GEP.idx_end());
+  SmallVector<Value *, 4> IndexC(GEP.indices());
   bool IsInBounds = GEP.isInBounds();
   Value *NewTrueC = IsInBounds ? Builder.CreateInBoundsGEP(TrueC, IndexC)
                                : Builder.CreateGEP(TrueC, IndexC);
@@ -1827,7 +1826,7 @@ static Instruction *foldSelectGEP(GetElementPtrInst &GEP,
 }
 
 Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
-  SmallVector<Value*, 8> Ops(GEP.op_begin(), GEP.op_end());
+  SmallVector<Value *, 8> Ops(GEP.operands());
   Type *GEPType = GEP.getType();
   Type *GEPEltType = GEP.getSourceElementType();
   bool IsGEPSrcEleScalable = isa<ScalableVectorType>(GEPEltType);
@@ -2233,7 +2232,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
             // ->
             // %0 = GEP [10 x i8] addrspace(1)* X, ...
             // addrspacecast i8 addrspace(1)* %0 to i8*
-            SmallVector<Value*, 8> Idx(GEP.idx_begin(), GEP.idx_end());
+            SmallVector<Value *, 8> Idx(GEP.indices());
             Value *NewGEP =
                 GEP.isInBounds()
                     ? Builder.CreateInBoundsGEP(StrippedPtrEltTy, StrippedPtr,

@@ -73,7 +73,7 @@ int templ_use() {
 // LINUX: @_ZN5templIiE3fooEi.ifunc = weak_odr ifunc i32 (%struct.templ*, i32), i32 (%struct.templ*, i32)* ()* @_ZN5templIiE3fooEi.resolver
 // LINUX: @_ZN5templIdE3fooEi.ifunc = weak_odr ifunc i32 (%struct.templ.0*, i32), i32 (%struct.templ.0*, i32)* ()* @_ZN5templIdE3fooEi.resolver
 
-// LINUX: define i32 @_Z3barv()
+// LINUX: define{{.*}} i32 @_Z3barv()
 // LINUX: %s = alloca %struct.S, align 1
 // LINUX: %s2 = alloca %struct.S, align 1
 // LINUX: %C = alloca %struct.ConvertTo, align 1
@@ -119,7 +119,7 @@ int templ_use() {
 // WINDOWS: call i32 @"?foo@S@@QEAAHH@Z.sse4.2"
 // WINDOWS: call i32 @"?foo@S@@QEAAHH@Z"
 
-// LINUX: define i32 @_Z4bar2v()
+// LINUX: define{{.*}} i32 @_Z4bar2v()
 // LINUX: call i32 @_ZN2S23fooEi.ifunc
 
 // WINDOWS: define dso_local i32 @"?bar2@@YAHXZ"()
@@ -137,15 +137,15 @@ int templ_use() {
 // WINDOWS: call i32 @"?foo@S2@@QEAAHH@Z.sse4.2"
 // WINDOWS: call i32 @"?foo@S2@@QEAAHH@Z"
 
-// LINUX: define i32 @_ZN2S23fooEi.sse4.2(%struct.S2* {{[^,]*}} %this, i32 %0)
-// LINUX: define i32 @_ZN2S23fooEi.arch_ivybridge(%struct.S2* {{[^,]*}} %this, i32 %0)
-// LINUX: define i32 @_ZN2S23fooEi(%struct.S2* {{[^,]*}} %this, i32 %0)
+// LINUX: define{{.*}} i32 @_ZN2S23fooEi.sse4.2(%struct.S2* {{[^,]*}} %this, i32 %0)
+// LINUX: define{{.*}} i32 @_ZN2S23fooEi.arch_ivybridge(%struct.S2* {{[^,]*}} %this, i32 %0)
+// LINUX: define{{.*}} i32 @_ZN2S23fooEi(%struct.S2* {{[^,]*}} %this, i32 %0)
 
 // WINDOWS: define dso_local i32 @"?foo@S2@@QEAAHH@Z.sse4.2"(%struct.S2* {{[^,]*}} %this, i32 %0)
 // WINDOWS: define dso_local i32 @"?foo@S2@@QEAAHH@Z.arch_ivybridge"(%struct.S2* {{[^,]*}} %this, i32 %0)
 // WINDOWS: define dso_local i32 @"?foo@S2@@QEAAHH@Z"(%struct.S2* {{[^,]*}} %this, i32 %0)
 
-// LINUX: define i32 @_Z9templ_usev()
+// LINUX: define{{.*}} i32 @_Z9templ_usev()
 // LINUX: call i32 @_ZN5templIiE3fooEi.ifunc
 // LINUX: call i32 @_ZN5templIdE3fooEi.ifunc
 

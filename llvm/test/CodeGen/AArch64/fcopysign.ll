@@ -6,9 +6,9 @@ target triple = "aarch64--"
 
 declare fp128 @llvm.copysign.f128(fp128, fp128)
 
-@val_float = global float zeroinitializer, align 4
-@val_double = global double zeroinitializer, align 8
-@val_fp128 = global fp128 zeroinitializer, align 16
+@val_float = dso_local global float zeroinitializer, align 4
+@val_double = dso_local global double zeroinitializer, align 8
+@val_fp128 = dso_local global fp128 zeroinitializer, align 16
 
 define fp128 @copysign0() {
 ; CHECK-LABEL: copysign0:

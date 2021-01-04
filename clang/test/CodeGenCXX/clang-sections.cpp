@@ -45,32 +45,32 @@ int hoo(void) {
   return b + fptrs[f]();
 }
 }
-//CHECK: @a = global i32 0, align 4 #0
-//CHECK: @b = global i32 1, align 4 #0
-//CHECK: @c = global [4 x i32] zeroinitializer, align 4 #0
-//CHECK: @d = global [5 x i16] zeroinitializer, align 2 #0
-//CHECK: @e = global [6 x i16] [i16 0, i16 0, i16 1, i16 0, i16 0, i16 0], align 2 #0
-//CHECK: @f = constant i32 2, align 4 #0
+//CHECK: @a ={{.*}} global i32 0, align 4 #0
+//CHECK: @b ={{.*}} global i32 1, align 4 #0
+//CHECK: @c ={{.*}} global [4 x i32] zeroinitializer, align 4 #0
+//CHECK: @d ={{.*}} global [5 x i16] zeroinitializer, align 2 #0
+//CHECK: @e ={{.*}} global [6 x i16] [i16 0, i16 0, i16 1, i16 0, i16 0, i16 0], align 2 #0
+//CHECK: @f ={{.*}} constant i32 2, align 4 #0
 
-//CHECK: @h = global i32 0, align 4 #1
-//CHECK: @i = global i32 0, align 4 #2
-//CHECK: @j = constant i32 4, align 4 #2
-//CHECK: @k = global i32 0, align 4 #2
+//CHECK: @h ={{.*}} global i32 0, align 4 #1
+//CHECK: @i ={{.*}} global i32 0, align 4 #2
+//CHECK: @j ={{.*}} constant i32 4, align 4 #2
+//CHECK: @k ={{.*}} global i32 0, align 4 #2
 //CHECK: @_ZZ3gooE7lstat_h = internal global i32 0, align 4 #2
 //CHECK: @_ZL1g = internal global [2 x i32] zeroinitializer, align 4 #0
 
-//CHECK: @l = global i32 5, align 4 #3
-//CHECK: @m = constant i32 6, align 4 #3
+//CHECK: @l ={{.*}} global i32 5, align 4 #3
+//CHECK: @m ={{.*}} constant i32 6, align 4 #3
 
-//CHECK: @n = global i32 0, align 4
-//CHECK: @o = global i32 6, align 4
-//CHECK: @p = constant i32 7, align 4
+//CHECK: @n ={{.*}} global i32 0, align 4
+//CHECK: @o ={{.*}} global i32 6, align 4
+//CHECK: @p ={{.*}} constant i32 7, align 4
 //CHECK: @_ZL5fptrs = internal constant [2 x i32 ()*] [i32 ()* @foo, i32 ()* @goo], align 4 #3
 
-//CHECK: define i32 @foo() #5 {
-//CHECK: define i32 @goo() #6 {
+//CHECK: define{{.*}} i32 @foo() #5 {
+//CHECK: define{{.*}} i32 @goo() #6 {
 //CHECK: declare i32 @zoo(i32*, i32*) #7
-//CHECK: define i32 @hoo() #8 {
+//CHECK: define{{.*}} i32 @hoo() #8 {
 
 //CHECK: attributes #0 = { "bss-section"="my_bss.1" "data-section"="my_data.1" "rodata-section"="my_rodata.1" }
 //CHECK: attributes #1 = { "data-section"="my_data.1" "rodata-section"="my_rodata.1" }

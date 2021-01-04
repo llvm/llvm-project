@@ -1,6 +1,6 @@
-; RUN: llc %s -o - | FileCheck %s
-; RUN: llc -mtriple=armv7-linux -exception-model sjlj %s -o - | FileCheck %s -check-prefix CHECK-LINUX
-; RUN: llc -mtriple=thumbv7-win32 -exception-model sjlj %s -o - | FileCheck %s -check-prefix CHECK-WIN32
+; RUN: llc -simplifycfg-require-and-preserve-domtree=1 %s -o - | FileCheck %s
+; RUN: llc -mtriple=armv7-linux -exception-model sjlj -simplifycfg-require-and-preserve-domtree=1 %s -o - | FileCheck %s -check-prefix CHECK-LINUX
+; RUN: llc -mtriple=thumbv7-win32 -exception-model sjlj -simplifycfg-require-and-preserve-domtree=1 %s -o - | FileCheck %s -check-prefix CHECK-WIN32
 target triple = "armv7-apple-ios"
 
 declare i32 @llvm.eh.sjlj.setjmp(i8*)

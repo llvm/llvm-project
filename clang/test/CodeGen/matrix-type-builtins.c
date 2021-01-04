@@ -15,7 +15,7 @@ typedef unsigned ux1x6_t __attribute__((matrix_type(1, 6)));
 typedef unsigned ux6x1_t __attribute__((matrix_type(6, 1)));
 
 void transpose_double_5x5(dx5x5_t *a) {
-  // CHECK-LABEL: define void @transpose_double_5x5(
+  // CHECK-LABEL: define{{.*}} void @transpose_double_5x5(
   // CHECK:        [[A:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 8
   // CHECK-NEXT:   [[TRANS:%.*]] = call <25 x double> @llvm.matrix.transpose.v25f64(<25 x double> [[A]], i32 5, i32 5)
   // CHECK-NEXT:   [[AT_ADDR:%.*]] = bitcast [25 x double]* %a_t to <25 x double>*
@@ -24,7 +24,7 @@ void transpose_double_5x5(dx5x5_t *a) {
 }
 
 void transpose_float_3x2(fx3x2_t *a) {
-  // CHECK-LABEL: define void @transpose_float_3x2(
+  // CHECK-LABEL: define{{.*}} void @transpose_float_3x2(
   // CHECK:        [[A:%.*]] = load <6 x float>, <6 x float>* {{.*}}, align 4
   // CHECK-NEXT:   [[TRANS:%.*]] = call <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> [[A]], i32 3, i32 2)
   // CHECK-NEXT:   [[AT_ADDR:%.*]] = bitcast [6 x float]* %a_t to <6 x float>*
@@ -34,7 +34,7 @@ void transpose_float_3x2(fx3x2_t *a) {
 }
 
 void transpose_int_20x4(ix20x4_t *a) {
-  // CHECK-LABEL: define void @transpose_int_20x4(
+  // CHECK-LABEL: define{{.*}} void @transpose_int_20x4(
   // CHECK:         [[A:%.*]] = load <80 x i32>, <80 x i32>* {{.*}}, align 4
   // CHECK-NEXT:    [[TRANS:%.*]] = call <80 x i32> @llvm.matrix.transpose.v80i32(<80 x i32> [[A]], i32 20, i32 4)
   // CHECK-NEXT:    [[AT_ADDR:%.*]] = bitcast [80 x i32]* %a_t to <80 x i32>*
@@ -49,7 +49,7 @@ struct Foo {
 };
 
 void transpose_struct_member(struct Foo *F) {
-  // CHECK-LABEL: define void @transpose_struct_member(
+  // CHECK-LABEL: define{{.*}} void @transpose_struct_member(
   // CHECK:         [[M:%.*]] = load <6 x i32>, <6 x i32>* {{.*}}, align 4
   // CHECK-NEXT:    [[M_T:%.*]] = call <6 x i32> @llvm.matrix.transpose.v6i32(<6 x i32> [[M]], i32 1, i32 6)
   // CHECK-NEXT:    [[F_ADDR:%.*]] = load %struct.Foo*, %struct.Foo** %F.addr, align 8
@@ -61,7 +61,7 @@ void transpose_struct_member(struct Foo *F) {
 }
 
 void transpose_transpose_struct_member(struct Foo *F) {
-  // CHECK-LABEL: define void @transpose_transpose_struct_member(
+  // CHECK-LABEL: define{{.*}} void @transpose_transpose_struct_member(
   // CHECK:         [[M:%.*]] = load <6 x i32>, <6 x i32>* {{.*}}, align 4
   // CHECK-NEXT:    [[M_T:%.*]] = call <6 x i32> @llvm.matrix.transpose.v6i32(<6 x i32> [[M]], i32 1, i32 6)
   // CHECK-NEXT:    [[M_T2:%.*]] = call <6 x i32> @llvm.matrix.transpose.v6i32(<6 x i32> [[M_T]], i32 6, i32 1)
@@ -76,7 +76,7 @@ void transpose_transpose_struct_member(struct Foo *F) {
 dx5x5_t get_matrix();
 
 void transpose_rvalue() {
-  // CHECK-LABEL: define void @transpose_rvalue()
+  // CHECK-LABEL: define{{.*}} void @transpose_rvalue()
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    [[M_T_ADDR:%.*]] = alloca [25 x double], align 8
   // CHECK-NEXT:    [[CALL:%.*]] = call <25 x double> (...) @get_matrix()
@@ -90,7 +90,7 @@ void transpose_rvalue() {
 const dx5x5_t global_matrix;
 
 void transpose_global() {
-  // CHECK-LABEL: define void @transpose_global()
+  // CHECK-LABEL: define{{.*}} void @transpose_global()
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    [[M_T_ADDR:%.*]] = alloca [25 x double], align 8
   // CHECK-NEXT:    [[GLOBAL_MATRIX:%.*]] = load <25 x double>, <25 x double>* bitcast ([25 x double]* @global_matrix to <25 x double>*), align 8
@@ -102,7 +102,7 @@ void transpose_global() {
 }
 
 void column_major_load_with_const_stride_double(double *Ptr) {
-  // CHECK-LABEL: define void @column_major_load_with_const_stride_double(double* %Ptr)
+  // CHECK-LABEL: define{{.*}} void @column_major_load_with_const_stride_double(double* %Ptr)
   // CHECK:         [[PTR:%.*]] = load double*, double** %Ptr.addr, align 8
   // CHECK-NEXT:    call <25 x double> @llvm.matrix.column.major.load.v25f64(double* align 8 [[PTR]], i64 5, i1 false, i32 5, i32 5)
 
@@ -110,7 +110,7 @@ void column_major_load_with_const_stride_double(double *Ptr) {
 }
 
 void column_major_load_with_const_stride2_double(double *Ptr) {
-  // CHECK-LABEL: define void @column_major_load_with_const_stride2_double(double* %Ptr)
+  // CHECK-LABEL: define{{.*}} void @column_major_load_with_const_stride2_double(double* %Ptr)
   // CHECK:         [[PTR:%.*]] = load double*, double** %Ptr.addr, align 8
   // CHECK-NEXT:    call <25 x double> @llvm.matrix.column.major.load.v25f64(double* align 8 [[PTR]], i64 15, i1 false, i32 5, i32 5)
 
@@ -118,7 +118,7 @@ void column_major_load_with_const_stride2_double(double *Ptr) {
 }
 
 void column_major_load_with_variable_stride_ull_float(float *Ptr, unsigned long long S) {
-  // CHECK-LABEL: define void @column_major_load_with_variable_stride_ull_float(float* %Ptr, i64 %S)
+  // CHECK-LABEL: define{{.*}} void @column_major_load_with_variable_stride_ull_float(float* %Ptr, i64 %S)
   // CHECK:         [[S:%.*]] = load i64, i64* %S.addr, align 8
   // CHECK-NEXT:    [[PTR:%.*]] = load float*, float** %Ptr.addr, align 8
   // CHECK-NEXT:    call <6 x float> @llvm.matrix.column.major.load.v6f32(float* align 4 [[PTR]], i64 [[S]], i1 false, i32 2, i32 3)
@@ -127,7 +127,7 @@ void column_major_load_with_variable_stride_ull_float(float *Ptr, unsigned long 
 }
 
 void column_major_load_with_stride_math_int(int *Ptr, int S) {
-  // CHECK-LABEL: define void @column_major_load_with_stride_math_int(i32* %Ptr, i32 %S)
+  // CHECK-LABEL: define{{.*}} void @column_major_load_with_stride_math_int(i32* %Ptr, i32 %S)
   // CHECK:         [[S:%.*]] = load i32, i32* %S.addr, align 4
   // CHECK-NEXT:    [[STRIDE:%.*]] = add nsw i32 [[S]], 32
   // CHECK-NEXT:    [[STRIDE_EXT:%.*]] = sext i32 [[STRIDE]] to i64
@@ -138,7 +138,7 @@ void column_major_load_with_stride_math_int(int *Ptr, int S) {
 }
 
 void column_major_load_with_stride_math_s_int(int *Ptr, short S) {
-  // CHECK-LABEL:  define void @column_major_load_with_stride_math_s_int(i32* %Ptr, i16 signext %S)
+  // CHECK-LABEL:  define{{.*}} void @column_major_load_with_stride_math_s_int(i32* %Ptr, i16 signext %S)
   // CHECK:         [[S:%.*]] = load i16, i16* %S.addr, align 2
   // CHECK-NEXT:    [[S_EXT:%.*]] = sext i16 [[S]] to i32
   // CHECK-NEXT:    [[STRIDE:%.*]] = add nsw i32 [[S_EXT]], 32
@@ -150,7 +150,7 @@ void column_major_load_with_stride_math_s_int(int *Ptr, short S) {
 }
 
 void column_major_load_array1(double Ptr[25]) {
-  // CHECK-LABEL: define void @column_major_load_array1(double* %Ptr)
+  // CHECK-LABEL: define{{.*}} void @column_major_load_array1(double* %Ptr)
   // CHECK:         [[ADDR:%.*]] = load double*, double** %Ptr.addr, align 8
   // CHECK-NEXT:    call <25 x double> @llvm.matrix.column.major.load.v25f64(double* align 8 [[ADDR]], i64 5, i1 false, i32 5, i32 5)
 
@@ -158,7 +158,7 @@ void column_major_load_array1(double Ptr[25]) {
 }
 
 void column_major_load_array2() {
-  // CHECK-LABEL: define void @column_major_load_array2() #0 {
+  // CHECK-LABEL: define{{.*}} void @column_major_load_array2() #0 {
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    [[PTR:%.*]] = alloca [25 x double], align 16
   // CHECK:         [[ARRAY_DEC:%.*]] = getelementptr inbounds [25 x double], [25 x double]* [[PTR]], i64 0, i64 0
@@ -169,7 +169,7 @@ void column_major_load_array2() {
 }
 
 void column_major_load_const(const double *Ptr) {
-  // CHECK-LABEL: define void @column_major_load_const(double* %Ptr)
+  // CHECK-LABEL: define{{.*}} void @column_major_load_const(double* %Ptr)
   // CHECK:         [[PTR:%.*]] = load double*, double** %Ptr.addr, align 8
   // CHECK-NEXT:    call <25 x double> @llvm.matrix.column.major.load.v25f64(double* align 8 [[PTR]], i64 5, i1 false, i32 5, i32 5)
 
@@ -177,7 +177,7 @@ void column_major_load_const(const double *Ptr) {
 }
 
 void column_major_load_volatile(volatile double *Ptr) {
-  // CHECK-LABEL: define void @column_major_load_volatile(double* %Ptr)
+  // CHECK-LABEL: define{{.*}} void @column_major_load_volatile(double* %Ptr)
   // CHECK:         [[PTR:%.*]] = load double*, double** %Ptr.addr, align 8
   // CHECK-NEXT:    call <25 x double> @llvm.matrix.column.major.load.v25f64(double* align 8 [[PTR]], i64 5, i1 true, i32 5, i32 5)
 
@@ -185,7 +185,7 @@ void column_major_load_volatile(volatile double *Ptr) {
 }
 
 void column_major_store_with_const_stride_double(double *Ptr) {
-  // CHECK-LABEL: define void @column_major_store_with_const_stride_double(double* %Ptr)
+  // CHECK-LABEL: define{{.*}} void @column_major_store_with_const_stride_double(double* %Ptr)
   // CHECK:         [[M:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 8
   // CHECK-NEXT:    [[PTR:%.*]] = load double*, double** %Ptr.addr, align 8
   // CHECK-NEXT:    call void @llvm.matrix.column.major.store.v25f64(<25 x double> [[M]], double* align 8 [[PTR]], i64 5, i1 false, i32 5, i32 5)
@@ -195,7 +195,7 @@ void column_major_store_with_const_stride_double(double *Ptr) {
 }
 
 void column_major_store_with_const_stride2_double(double *Ptr) {
-  // CHECK-LABEL: define void @column_major_store_with_const_stride2_double(double* %Ptr)
+  // CHECK-LABEL: define{{.*}} void @column_major_store_with_const_stride2_double(double* %Ptr)
   // CHECK:         [[M:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 8
   // CHECK-NEXT:    [[PTR:%.*]] = load double*, double** %Ptr.addr, align 8
   // CHECK-NEXT:    call void @llvm.matrix.column.major.store.v25f64(<25 x double> [[M]], double* align 8 [[PTR]], i64 15, i1 false, i32 5, i32 5)
@@ -205,7 +205,7 @@ void column_major_store_with_const_stride2_double(double *Ptr) {
 }
 
 void column_major_store_with_stride_math_int(int *Ptr, int S) {
-  // CHECK-LABEL: define void @column_major_store_with_stride_math_int(i32* %Ptr, i32 %S)
+  // CHECK-LABEL: define{{.*}} void @column_major_store_with_stride_math_int(i32* %Ptr, i32 %S)
   // CHECK:         [[M:%.*]] = load <80 x i32>, <80 x i32>* {{.*}}, align 4
   // CHECK-NEXT:    [[PTR:%.*]] = load i32*, i32** %Ptr.addr, align 8
   // CHECK-NEXT:    [[S:%.*]] = load i32, i32* %S.addr, align 4
@@ -218,7 +218,7 @@ void column_major_store_with_stride_math_int(int *Ptr, int S) {
 }
 
 void column_major_store_with_stride_math_s_int(int *Ptr, short S) {
-  // CHECK-LABEL: define void @column_major_store_with_stride_math_s_int(i32* %Ptr, i16 signext %S)
+  // CHECK-LABEL: define{{.*}} void @column_major_store_with_stride_math_s_int(i32* %Ptr, i16 signext %S)
   // CHECK:         [[M:%.*]] = load <80 x i32>, <80 x i32>* {{.*}}, align 4
   // CHECK-NEXT:    [[PTR:%.*]] = load i32*, i32** %Ptr.addr, align 8
   // CHECK-NEXT:    [[S:%.*]] = load i16, i16* %S.addr, align 2
@@ -232,7 +232,7 @@ void column_major_store_with_stride_math_s_int(int *Ptr, short S) {
 }
 
 void column_major_store_array1(double Ptr[25]) {
-  // CHECK-LABEL: define void @column_major_store_array1(double* %Ptr)
+  // CHECK-LABEL: define{{.*}} void @column_major_store_array1(double* %Ptr)
   // CHECK:         [[M:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 8
   // CHECK-NEXT:    [[PTR:%.*]] = load double*, double** %Ptr.addr, align 8
   // CHECK-NEXT:    call void @llvm.matrix.column.major.store.v25f64(<25 x double> [[M]], double* align 8 [[PTR]], i64 5, i1 false, i32 5, i32 5)
@@ -242,7 +242,7 @@ void column_major_store_array1(double Ptr[25]) {
 }
 
 void column_major_store_array2() {
-  // CHECK-LABEL: define void @column_major_store_array2()
+  // CHECK-LABEL: define{{.*}} void @column_major_store_array2()
   // CHECK:         [[M:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 8
   // CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds [25 x double], [25 x double]* %Ptr, i64 0, i64 0
   // CHECK-NEXT:    call void @llvm.matrix.column.major.store.v25f64(<25 x double> [[M]], double* align 16 [[PTR]], i64 5, i1 false, i32 5, i32 5)
@@ -253,7 +253,7 @@ void column_major_store_array2() {
 }
 
 void column_major_store_volatile(volatile double *Ptr) {
-  // CHECK-LABEL: define void @column_major_store_volatile(double* %Ptr) #0 {
+  // CHECK-LABEL: define{{.*}} void @column_major_store_volatile(double* %Ptr) #0 {
   // CHECK:         [[M:%.*]] = load <25 x double>, <25 x double>* {{.*}}, align 8
   // CHECK-NEXT:    [[PTR:%.*]] = load double*, double** %Ptr.addr, align 8
   // CHECK-NEXT:    call void @llvm.matrix.column.major.store.v25f64(<25 x double> [[M]], double* align 8 [[PTR]], i64 5, i1 true, i32 5, i32 5)

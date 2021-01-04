@@ -231,6 +231,7 @@ def OMPC_IsDevicePtr : Clause<"is_device_ptr"> {
 }
 def OMPC_TaskReduction : Clause<"task_reduction"> {
   let clangClass = "OMPTaskReductionClause";
+  let flangClassValue = "OmpReductionClause";
 }
 def OMPC_InReduction : Clause<"in_reduction"> {
   let clangClass = "OMPInReductionClause";

@@ -5,10 +5,10 @@
 ; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu -code-model=large -mattr=-fp-armv8 | FileCheck --check-prefix=CHECK-NOFP-LARGE %s
 ; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-none-eabi -code-model=tiny -mattr=-fp-armv8 | FileCheck --check-prefix=CHECK-NOFP-TINY %s
 
-@varfloat = global float 0.0
-@vardouble = global double 0.0
+@varfloat = dso_local global float 0.0
+@vardouble = dso_local global double 0.0
 
-define void @floating_lits() {
+define dso_local void @floating_lits() {
 ; CHECK-LABEL: floating_lits:
 
   %floatval = load float, float* @varfloat

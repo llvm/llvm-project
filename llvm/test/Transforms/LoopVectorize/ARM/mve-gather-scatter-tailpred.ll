@@ -12,8 +12,8 @@ define void @test_stride1_4i32(i32* readonly %data, i32* noalias nocapture %dst,
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> undef, i32 [[INDEX]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[INDEX]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[TMP0]], i32 [[N]])
@@ -101,7 +101,7 @@ define void @test_stride-1_4i32(i32* readonly %data, i32* noalias nocapture %dst
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, i32* [[TMP12]], i32 -3
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast i32* [[TMP13]] to <4 x i32>*
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP14]], align 4
-; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i32> [[WIDE_LOAD]], <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i32> [[WIDE_LOAD]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP15:%.*]] = add nsw <4 x i32> <i32 5, i32 5, i32 5, i32 5>, [[REVERSE]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, i32* [[DST:%.*]], i32 [[TMP8]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, i32* [[TMP16]], i32 0
@@ -170,7 +170,7 @@ define void @test_stride2_4i32(i32* readonly %data, i32* noalias nocapture %dst,
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i32* [[TMP6]] to <8 x i32>*
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, <8 x i32>* [[TMP7]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nsw <4 x i32> <i32 5, i32 5, i32 5, i32 5>, [[STRIDED_VEC]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, i32* [[DST:%.*]], i32 [[TMP2]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, i32* [[TMP9]], i32 0
@@ -369,8 +369,8 @@ define void @test_stride_loopinvar_4i32(i32* readonly %data, i32* noalias nocapt
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> undef, i32 [[INDEX]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[INDEX]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 0
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[TMP1]], i32 [[N]])
@@ -554,13 +554,13 @@ define void @test_stride_noninvar3_4i32(i32* readonly %data, i32* noalias nocapt
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[N_VEC]], [[X:%.*]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i32 3, [[TMP0]]
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> undef, i32 [[X]], i32 0
-; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i32 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[DOTSPLAT]]
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> <i32 3, i32 3, i32 3, i32 3>, [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[X]], 4
-; CHECK-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <4 x i32> undef, i32 [[TMP2]], i32 0
-; CHECK-NEXT:    [[DOTSPLAT3:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT2]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <4 x i32> poison, i32 [[TMP2]], i32 0
+; CHECK-NEXT:    [[DOTSPLAT3:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT2]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

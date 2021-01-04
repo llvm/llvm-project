@@ -22,7 +22,7 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 ; CHECK:       middle.block:
 ; CHECK:         %vector.recur.extract = extractelement <4 x i32> [[L1]], i32 3
 ; CHECK:       scalar.ph:
-; CHECK:         %scalar.recur.init = phi i32 [ %vector.recur.extract, %middle.block ], [ %pre_load, %vector.memcheck ], [ %pre_load, %for.preheader ]
+; CHECK:         %scalar.recur.init = phi i32 [ %pre_load, %vector.memcheck ], [ %pre_load, %for.preheader ], [ %vector.recur.extract, %middle.block ]
 ; CHECK:       scalar.body:
 ; CHECK:         %scalar.recur = phi i32 [ %scalar.recur.init, %scalar.ph ], [ {{.*}}, %scalar.body ]
 ;
@@ -79,7 +79,7 @@ for.exit:
 ; CHECK:       middle.block:
 ; CHECK:         %vector.recur.extract = extractelement <4 x i32> [[L1]], i32 3
 ; CHECK:       scalar.ph:
-; CHECK:         %scalar.recur.init = phi i32 [ %vector.recur.extract, %middle.block ], [ %.pre, %for.preheader ]
+; CHECK:         %scalar.recur.init = phi i32 [ %.pre, %for.preheader ], [ %vector.recur.extract, %middle.block ]
 ; CHECK:       scalar.body:
 ; CHECK:         %scalar.recur = phi i32 [ %scalar.recur.init, %scalar.ph ], [ {{.*}}, %scalar.body ]
 ;
@@ -147,7 +147,7 @@ scalar.body:
 ; CHECK:       middle.block:
 ; CHECK:         %vector.recur.extract = extractelement <4 x i16> [[L1]], i32 3
 ; CHECK:       scalar.ph:
-; CHECK:         %scalar.recur.init = phi i16 [ %vector.recur.extract, %middle.block ], [ %0, %vector.memcheck ], [ %0, %for.preheader ]
+; CHECK:         %scalar.recur.init = phi i16 [ %0, %vector.memcheck ], [ %0, %for.preheader ], [ %vector.recur.extract, %middle.block ]
 ; CHECK:       scalar.body:
 ; CHECK:         %scalar.recur = phi i16 [ %scalar.recur.init, %scalar.ph ], [ {{.*}}, %scalar.body ]
 ;

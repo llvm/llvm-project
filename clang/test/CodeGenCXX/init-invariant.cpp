@@ -13,7 +13,7 @@ struct A {
   int n;
 };
 
-// CHECK: @a = global {{.*}} zeroinitializer
+// CHECK: @a ={{.*}} global {{.*}} zeroinitializer
 extern const A a = A();
 
 struct B {
@@ -21,7 +21,7 @@ struct B {
   mutable int n;
 };
 
-// CHECK: @b = global {{.*}} zeroinitializer
+// CHECK: @b ={{.*}} global {{.*}} zeroinitializer
 extern const B b = B();
 
 struct C {
@@ -30,11 +30,11 @@ struct C {
   int n;
 };
 
-// CHECK: @c = global {{.*}} zeroinitializer
+// CHECK: @c ={{.*}} global {{.*}} zeroinitializer
 extern const C c = C();
 
 int f();
-// CHECK: @d = global i32 0
+// CHECK: @d ={{.*}} global i32 0
 extern const int d = f();
 
 void e() {
@@ -54,7 +54,7 @@ void e() {
 // CHECK: store {{.*}}, i32* @d
 // CHECK: call {{.*}}@llvm.invariant.start.p0i8(i64 4, i8* bitcast ({{.*}} @d to i8*))
 
-// CHECK-LABEL: define void @_Z1ev(
+// CHECK-LABEL: define{{.*}} void @_Z1ev(
 // CHECK: call void @_ZN1AC1Ev(%struct.A* nonnull {{[^,]*}} @_ZZ1evE1a)
 // CHECK: call {{.*}}@llvm.invariant.start.p0i8(i64 4, i8* {{.*}}bitcast ({{.*}} @_ZZ1evE1a to i8*))
 // CHECK-NOT: llvm.invariant.end

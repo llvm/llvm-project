@@ -5,7 +5,7 @@
 ; RUN:     -enable-unsafe-fp-math -mattr=-vsx < %s | FileCheck -check-prefix=CHECK-FAST-NOVSX %s
 ; RUN: llc -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
 
-define double @fma_combine1(double %a, double %b, double %c) {
+define dso_local double @fma_combine1(double %a, double %b, double %c) {
 ; CHECK-FAST-LABEL: fma_combine1:
 ; CHECK-FAST:       # %bb.0: # %entry
 ; CHECK-FAST-NEXT:    xsnmaddadp 1, 3, 2
@@ -29,7 +29,7 @@ entry:
   ret double %add
 }
 
-define double @fma_combine2(double %a, double %b, double %c) {
+define dso_local double @fma_combine2(double %a, double %b, double %c) {
 ; CHECK-FAST-LABEL: fma_combine2:
 ; CHECK-FAST:       # %bb.0: # %entry
 ; CHECK-FAST-NEXT:    xsnmaddadp 1, 2, 3
@@ -53,9 +53,9 @@ entry:
   ret double %add
 }
 
-@v = common local_unnamed_addr global double 0.000000e+00, align 8
-@z = common local_unnamed_addr global double 0.000000e+00, align 8
-define double @fma_combine_two_uses(double %a, double %b, double %c) {
+@v = common dso_local local_unnamed_addr global double 0.000000e+00, align 8
+@z = common dso_local local_unnamed_addr global double 0.000000e+00, align 8
+define dso_local double @fma_combine_two_uses(double %a, double %b, double %c) {
 ; CHECK-FAST-LABEL: fma_combine_two_uses:
 ; CHECK-FAST:       # %bb.0: # %entry
 ; CHECK-FAST-NEXT:    xsnegdp 0, 1
@@ -101,7 +101,7 @@ entry:
   ret double %add
 }
 
-define double @fma_combine_one_use(double %a, double %b, double %c) {
+define dso_local double @fma_combine_one_use(double %a, double %b, double %c) {
 ; CHECK-FAST-LABEL: fma_combine_one_use:
 ; CHECK-FAST:       # %bb.0: # %entry
 ; CHECK-FAST-NEXT:    xsnegdp 0, 1
@@ -138,7 +138,7 @@ entry:
   ret double %add
 }
 
-define float @fma_combine_no_ice() {
+define dso_local float @fma_combine_no_ice() {
 ; CHECK-FAST-LABEL: fma_combine_no_ice:
 ; CHECK-FAST:       # %bb.0:
 ; CHECK-FAST-NEXT:    addis 3, 2, .LCPI4_0@toc@ha
@@ -198,7 +198,7 @@ define float @fma_combine_no_ice() {
 }
 
 ; This would crash while trying getNegatedExpression().
-define double @getNegatedExpression_crash(double %x, double %y) {
+define dso_local double @getNegatedExpression_crash(double %x, double %y) {
 ; CHECK-FAST-LABEL: getNegatedExpression_crash:
 ; CHECK-FAST:       # %bb.0:
 ; CHECK-FAST-NEXT:    addis 3, 2, .LCPI5_1@toc@ha
@@ -240,7 +240,7 @@ define double @getNegatedExpression_crash(double %x, double %y) {
   ret double %fma1
 }
 
-define double @fma_flag_propagation(double %a) {
+define dso_local double @fma_flag_propagation(double %a) {
 ; CHECK-FAST-LABEL: fma_flag_propagation:
 ; CHECK-FAST:       # %bb.0: # %entry
 ; CHECK-FAST-NEXT:    xxlxor 1, 1, 1
@@ -262,7 +262,7 @@ entry:
   ret double %1
 }
 
-define double @neg_fma_flag_propagation(double %a) {
+define dso_local double @neg_fma_flag_propagation(double %a) {
 ; CHECK-FAST-LABEL: neg_fma_flag_propagation:
 ; CHECK-FAST:       # %bb.0: # %entry
 ; CHECK-FAST-NEXT:    xxlxor 1, 1, 1
@@ -313,7 +313,7 @@ entry:
   ret <2 x double> %0
 }
 
-define double @fma_combine_const(double %a, double %b) {
+define dso_local double @fma_combine_const(double %a, double %b) {
 ; CHECK-FAST-LABEL: fma_combine_const:
 ; CHECK-FAST:       # %bb.0: # %entry
 ; CHECK-FAST-NEXT:    addis 3, 2, .LCPI9_0@toc@ha

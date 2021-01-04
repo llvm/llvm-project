@@ -28,7 +28,7 @@ struct throwing_task {
   };
 };
 
-// CHECK-LABEL: define void @_Z1fv()
+// CHECK-LABEL: define{{.*}} void @_Z1fv()
 throwing_task f() {
   // A variable RESUMETHREW is used to keep track of whether the body
   // of 'await_resume' threw an exception. Exceptions thrown in
@@ -96,7 +96,7 @@ struct noexcept_task {
   };
 };
 
-// CHECK-LABEL: define void @_Z1gv()
+// CHECK-LABEL: define{{.*}} void @_Z1gv()
 noexcept_task g() {
   // If the await_resume function is marked as noexcept, none of the additional
   // conditions that are present in f() above are added to the IR.

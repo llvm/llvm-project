@@ -215,9 +215,9 @@ define <2 x i1> @test13_vector(<2 x i64> %X, <2 x %S*> %P) nounwind {
 
 define <2 x i1> @test13_vector2(i64 %X, <2 x %S*> %P) nounwind {
 ; CHECK-LABEL: @test13_vector2(
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i64> undef, i64 [[X:%.*]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[X:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i64> [[DOTSPLATINSERT]], <i64 2, i64 0>
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i64> [[TMP1]], <i64 -4, i64 undef>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i64> [[TMP1]], <i64 -4, i64 poison>
 ; CHECK-NEXT:    [[C:%.*]] = shufflevector <2 x i1> [[TMP2]], <2 x i1> undef, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
@@ -230,9 +230,9 @@ define <2 x i1> @test13_vector2(i64 %X, <2 x %S*> %P) nounwind {
 ; This is a test of icmp + shl nuw in disguise - 4611... is 0x3fff...
 define <2 x i1> @test13_vector3(i64 %X, <2 x %S*> %P) nounwind {
 ; CHECK-LABEL: @test13_vector3(
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i64> undef, i64 [[X:%.*]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[X:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i64> [[DOTSPLATINSERT]], <i64 2, i64 0>
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i64> [[TMP1]], <i64 4, i64 undef>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i64> [[TMP1]], <i64 4, i64 poison>
 ; CHECK-NEXT:    [[C:%.*]] = shufflevector <2 x i1> [[TMP2]], <2 x i1> undef, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
@@ -1235,6 +1235,42 @@ define i32* @PR45084_extra_use(i1 %cond, %struct.f** %p) {
   store %struct.f* %sel, %struct.f** %p
   %gep = getelementptr %struct.f, %struct.f* %sel, i64 0, i32 0
   ret i32* %gep
+}
+
+define i8* @gep_null_inbounds(i64 %idx) {
+; CHECK-LABEL: @gep_null_inbounds(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, i8* null, i64 [[IDX:%.*]]
+; CHECK-NEXT:    ret i8* [[GEP]]
+;
+  %gep = getelementptr inbounds i8, i8* null, i64 %idx
+  ret i8* %gep
+}
+
+define i8* @gep_null_not_inbounds(i64 %idx) {
+; CHECK-LABEL: @gep_null_not_inbounds(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, i8* null, i64 [[IDX:%.*]]
+; CHECK-NEXT:    ret i8* [[GEP]]
+;
+  %gep = getelementptr i8, i8* null, i64 %idx
+  ret i8* %gep
+}
+
+define i8* @gep_null_defined(i64 %idx) null_pointer_is_valid {
+; CHECK-LABEL: @gep_null_defined(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, i8* null, i64 [[IDX:%.*]]
+; CHECK-NEXT:    ret i8* [[GEP]]
+;
+  %gep = getelementptr inbounds i8, i8* null, i64 %idx
+  ret i8* %gep
+}
+
+define i8* @gep_null_inbounds_different_type(i64 %idx1, i64 %idx2) {
+; CHECK-LABEL: @gep_null_inbounds_different_type(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [0 x i8], [0 x i8]* null, i64 0, i64 [[IDX2:%.*]]
+; CHECK-NEXT:    ret i8* [[GEP]]
+;
+  %gep = getelementptr inbounds [0 x i8], [0 x i8]* null, i64 %idx1, i64 %idx2
+  ret i8* %gep
 }
 
 !0 = !{!"branch_weights", i32 2, i32 10}

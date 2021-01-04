@@ -18,8 +18,8 @@
 
 ; CHECK-LABEL: @foo_i32(
 ; CHECK-LABEL: vector.ph:
-; CHECK: %[[SplatVal:.*]] = insertelement <4 x i32> undef, i32 %n, i32 0
-; CHECK: %[[Splat:.*]] = shufflevector <4 x i32> %[[SplatVal]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK: %[[SplatVal:.*]] = insertelement <4 x i32> poison, i32 %n, i32 0
+; CHECK: %[[Splat:.*]] = shufflevector <4 x i32> %[[SplatVal]], <4 x i32> poison, <4 x i32> zeroinitializer
 
 ; CHECK-LABEL: vector.body:
 ; CHECK: %[[Ind:.*]] = phi i64 [ 0, %vector.ph ], [ %[[IndNext:.*]], %[[ForInc:.*]] ]
@@ -85,8 +85,8 @@ for.end10:                                        ; preds = %for.inc8
 
 ; CHECK-LABEL: @foo_i64(
 ; CHECK-LABEL: vector.ph:
-; CHECK: %[[SplatVal:.*]] = insertelement <2 x i64> undef, i64 %n, i32 0
-; CHECK: %[[Splat:.*]] = shufflevector <2 x i64> %[[SplatVal]], <2 x i64> undef, <2 x i32> zeroinitializer
+; CHECK: %[[SplatVal:.*]] = insertelement <2 x i64> poison, i64 %n, i32 0
+; CHECK: %[[Splat:.*]] = shufflevector <2 x i64> %[[SplatVal]], <2 x i64> poison, <2 x i32> zeroinitializer
 
 ; CHECK-LABEL: vector.body:
 ; CHECK: %[[Ind:.*]] = phi i64 [ 0, %vector.ph ], [ %[[IndNext:.*]], %[[ForInc:.*]] ]

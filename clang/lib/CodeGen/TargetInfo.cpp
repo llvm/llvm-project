@@ -4858,7 +4858,7 @@ Address PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
 
 bool PPC32TargetCodeGenInfo::isStructReturnInRegABI(
     const llvm::Triple &Triple, const CodeGenOptions &Opts) {
-  assert(Triple.getArch() == llvm::Triple::ppc);
+  assert(Triple.isPPC32());
 
   switch (Opts.getStructReturnConvention()) {
   case CodeGenOptions::SRCK_Default:
@@ -10929,6 +10929,13 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
 
     bool IsSoftFloat =
         CodeGenOpts.FloatABI == "soft" || getTarget().hasFeature("spe");
+    bool RetSmallStructInRegABI =
+        PPC32TargetCodeGenInfo::isStructReturnInRegABI(Triple, CodeGenOpts);
+    return SetCGInfo(
+        new PPC32TargetCodeGenInfo(Types, IsSoftFloat, RetSmallStructInRegABI));
+  }
+  case llvm::Triple::ppcle: {
+    bool IsSoftFloat = CodeGenOpts.FloatABI == "soft";
     bool RetSmallStructInRegABI =
         PPC32TargetCodeGenInfo::isStructReturnInRegABI(Triple, CodeGenOpts);
     return SetCGInfo(

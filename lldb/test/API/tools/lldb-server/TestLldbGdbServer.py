@@ -24,16 +24,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    def test_exe_starts_debugserver(self):
-        server = self.connect_to_debug_monitor()
-
-    @llgs_test
-    def test_exe_starts_llgs(self):
-        server = self.connect_to_debug_monitor()
-
-    def thread_suffix_supported(self):
+    def test_thread_suffix_supported(self):
         server = self.connect_to_debug_monitor()
         self.assertIsNotNone(server)
 
@@ -45,16 +36,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
 
         self.expect_gdbremote_sequence()
 
-    @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    def test_thread_suffix_supported_debugserver(self):
-        self.thread_suffix_supported()
 
-    @llgs_test
-    def test_thread_suffix_supported_llgs(self):
-        self.thread_suffix_supported()
-
-    def list_threads_in_stop_reply_supported(self):
+    def test_list_threads_in_stop_reply_supported(self):
         server = self.connect_to_debug_monitor()
         self.assertIsNotNone(server)
 
@@ -65,16 +48,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             True)
         self.expect_gdbremote_sequence()
 
-    @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    def test_list_threads_in_stop_reply_supported_debugserver(self):
-        self.list_threads_in_stop_reply_supported()
-
-    @llgs_test
-    def test_list_threads_in_stop_reply_supported_llgs(self):
-        self.list_threads_in_stop_reply_supported()
-
-    def c_packet_works(self):
+    def test_c_packet_works(self):
+        self.build()
         procs = self.prep_debug_monitor_and_inferior()
         self.test_sequence.add_log_lines(
             ["read packet: $c#63",
@@ -83,18 +58,9 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
 
         self.expect_gdbremote_sequence()
 
-    @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    def test_c_packet_works_debugserver(self):
+    @skipIfWindows # No pty support to test any inferior output
+    def test_inferior_print_exit(self):
         self.build()
-        self.c_packet_works()
-
-    @llgs_test
-    def test_c_packet_works_llgs(self):
-        self.build()
-        self.c_packet_works()
-
-    def inferior_print_exit(self):
         procs = self.prep_debug_monitor_and_inferior(
                 inferior_args=["hello, world"])
         self.test_sequence.add_log_lines(
@@ -106,20 +72,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         context = self.expect_gdbremote_sequence()
         self.assertIsNotNone(context)
 
-    @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    def test_inferior_print_exit_debugserver(self):
+    def test_first_launch_stop_reply_thread_matches_first_qC(self):
         self.build()
-        self.inferior_print_exit()
-
-    @skipIfWindows # No pty support to test any inferior output
-    @llgs_test
-    @expectedFlakeyLinux("llvm.org/pr25652")
-    def test_inferior_print_exit_llgs(self):
-        self.build()
-        self.inferior_print_exit()
-
-    def first_launch_stop_reply_thread_matches_first_qC(self):
         procs = self.prep_debug_monitor_and_inferior()
         self.test_sequence.add_log_lines(["read packet: $qC#00",
                                           {"direction": "send",
@@ -132,18 +86,9 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
                                          True)
         self.expect_gdbremote_sequence()
 
-    @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    def test_first_launch_stop_reply_thread_matches_first_qC_debugserver(self):
+    def test_attach_commandline_continue_app_exits(self):
         self.build()
-        self.first_launch_stop_reply_thread_matches_first_qC()
-
-    @llgs_test
-    def test_first_launch_stop_reply_thread_matches_first_qC_llgs(self):
-        self.build()
-        self.first_launch_stop_reply_thread_matches_first_qC()
-
-    def attach_commandline_continue_app_exits(self):
+        self.set_inferior_startup_attach()
         procs = self.prep_debug_monitor_and_inferior()
         self.test_sequence.add_log_lines(
             ["read packet: $vCont;c#a8",
@@ -166,20 +111,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             lldbgdbserverutils.process_is_running(
                 procs["inferior"].pid, False))
 
-    @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    def test_attach_commandline_continue_app_exits_debugserver(self):
+    def test_qRegisterInfo_returns_one_valid_result(self):
         self.build()
-        self.set_inferior_startup_attach()
-        self.attach_commandline_continue_app_exits()
-
-    @llgs_test
-    def test_attach_commandline_continue_app_exits_llgs(self):
-        self.build()
-        self.set_inferior_startup_attach()
-        self.attach_commandline_continue_app_exits()
-
-    def qRegisterInfo_returns_one_valid_result(self):
         self.prep_debug_monitor_and_inferior()
         self.test_sequence.add_log_lines(
             ["read packet: $qRegisterInfo0#00",
@@ -195,18 +128,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.assert_valid_reg_info(
             lldbgdbserverutils.parse_reg_info_response(reg_info_packet))
 
-    @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    def test_qRegisterInfo_returns_one_valid_result_debugserver(self):
+    def test_qRegisterInfo_returns_all_valid_results(self):
         self.build()
-        self.qRegisterInfo_returns_one_valid_result()
-
-    @llgs_test
-    def test_qRegisterInfo_returns_one_valid_result_llgs(self):
-        self.build()
-        self.qRegisterInfo_returns_one_valid_result()
-
-    def qRegisterInfo_returns_all_valid_results(self):
         self.prep_debug_monitor_and_inferior()
         self.add_register_info_collection_packets()
 
@@ -218,18 +141,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         for reg_info in self.parse_register_info_packets(context):
             self.assert_valid_reg_info(reg_info)
 
-    @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    def test_qRegisterInfo_returns_all_valid_results_debugserver(self):
+    def test_qRegisterInfo_contains_required_generics_debugserver(self):
         self.build()
-        self.qRegisterInfo_returns_all_valid_results()
-
-    @llgs_test
-    def test_qRegisterInfo_returns_all_valid_results_llgs(self):
-        self.build()
-        self.qRegisterInfo_returns_all_valid_results()
-
-    def qRegisterInfo_contains_required_generics(self):
         self.prep_debug_monitor_and_inferior()
         self.add_register_info_collection_packets()
 
@@ -257,18 +170,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         # Ensure we have a flags register.
         self.assertTrue('flags' in generic_regs)
 
-    @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    def test_qRegisterInfo_contains_required_generics_debugserver(self):
+    def test_qRegisterInfo_contains_at_least_one_register_set(self):
         self.build()
-        self.qRegisterInfo_contains_required_generics()
-
-    @llgs_test
-    def test_qRegisterInfo_contains_required_generics_llgs(self):
-        self.build()
-        self.qRegisterInfo_contains_required_generics()
-
-    def qRegisterInfo_contains_at_least_one_register_set(self):
         self.prep_debug_monitor_and_inferior()
         self.add_register_info_collection_packets()
 
@@ -283,18 +186,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         register_sets = {
             reg_info['set']: 1 for reg_info in reg_infos if 'set' in reg_info}
         self.assertTrue(len(register_sets) >= 1)
-
-    @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    def test_qRegisterInfo_contains_at_least_one_register_set_debugserver(
-            self):
-        self.build()
-        self.qRegisterInfo_contains_at_least_one_register_set()
-
-    @llgs_test
-    def test_qRegisterInfo_contains_at_least_one_register_set_llgs(self):
-        self.build()
-        self.qRegisterInfo_contains_at_least_one_register_set()
 
     def targetHasAVX(self):
         triple = self.dbg.GetSelectedPlatform().GetTriple()
@@ -316,7 +207,10 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         f.close()
         return " avx " in cpuinfo
 
-    def qRegisterInfo_contains_avx_registers(self):
+    @expectedFailureAll(oslist=["windows"]) # no avx for now.
+    @add_test_categories(["llgs"])
+    def test_qRegisterInfo_contains_avx_registers(self):
+        self.build()
         self.prep_debug_monitor_and_inferior()
         self.add_register_info_collection_packets()
 
@@ -334,13 +228,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             self.targetHasAVX(),
             "Advanced Vector Extensions" in register_sets)
 
-    @expectedFailureAll(oslist=["windows"]) # no avx for now.
-    @expectedFailureAll(oslist=["netbsd"])
-    @llgs_test
-    def test_qRegisterInfo_contains_avx_registers_llgs(self):
-        self.build()
-        self.qRegisterInfo_contains_avx_registers()
-
     def qThreadInfo_contains_thread(self):
         procs = self.prep_debug_monitor_and_inferior()
         self.add_threadinfo_collection_packets()
@@ -356,29 +243,13 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         # We should have exactly one thread.
         self.assertEqual(len(threads), 1)
 
-    @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    def test_qThreadInfo_contains_thread_launch_debugserver(self):
+    def test_qThreadInfo_contains_thread_launch(self):
         self.build()
         self.set_inferior_startup_launch()
-        self.qThreadInfo_contains_thread()
-
-    @llgs_test
-    def test_qThreadInfo_contains_thread_launch_llgs(self):
-        self.build()
-        self.set_inferior_startup_launch()
-        self.qThreadInfo_contains_thread()
-
-    @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    def test_qThreadInfo_contains_thread_attach_debugserver(self):
-        self.build()
-        self.set_inferior_startup_attach()
         self.qThreadInfo_contains_thread()
 
     @expectedFailureAll(oslist=["windows"]) # expect one more thread stopped
-    @llgs_test
-    def test_qThreadInfo_contains_thread_attach_llgs(self):
+    def test_qThreadInfo_contains_thread_attach(self):
         self.build()
         self.set_inferior_startup_attach()
         self.qThreadInfo_contains_thread()
@@ -411,34 +282,20 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         # Those two should be the same.
         self.assertEqual(threads[0], QC_thread_id)
 
-    @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    def test_qThreadInfo_matches_qC_launch_debugserver(self):
+    def test_qThreadInfo_matches_qC_launch(self):
         self.build()
         self.set_inferior_startup_launch()
-        self.qThreadInfo_matches_qC()
-
-    @llgs_test
-    def test_qThreadInfo_matches_qC_launch_llgs(self):
-        self.build()
-        self.set_inferior_startup_launch()
-        self.qThreadInfo_matches_qC()
-
-    @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    def test_qThreadInfo_matches_qC_attach_debugserver(self):
-        self.build()
-        self.set_inferior_startup_attach()
         self.qThreadInfo_matches_qC()
 
     @expectedFailureAll(oslist=["windows"]) # expect one more thread stopped
-    @llgs_test
-    def test_qThreadInfo_matches_qC_attach_llgs(self):
+    def test_qThreadInfo_matches_qC_attach(self):
         self.build()
         self.set_inferior_startup_attach()
         self.qThreadInfo_matches_qC()
 
-    def p_returns_correct_data_size_for_each_qRegisterInfo(self):
+    def test_p_returns_correct_data_size_for_each_qRegisterInfo_launch(self):
+        self.build()
+        self.set_inferior_startup_launch()
         procs = self.prep_debug_monitor_and_inferior()
         self.add_register_info_collection_packets()
 
@@ -491,38 +348,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             # Increment loop
             reg_index += 1
 
-    @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    def test_p_returns_correct_data_size_for_each_qRegisterInfo_launch_debugserver(
-            self):
-        self.build()
-        self.set_inferior_startup_launch()
-        self.p_returns_correct_data_size_for_each_qRegisterInfo()
-
-    @expectedFailureAll(oslist=["netbsd"])
-    @llgs_test
-    def test_p_returns_correct_data_size_for_each_qRegisterInfo_launch_llgs(
-            self):
-        self.build()
-        self.set_inferior_startup_launch()
-        self.p_returns_correct_data_size_for_each_qRegisterInfo()
-
-    @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    def test_p_returns_correct_data_size_for_each_qRegisterInfo_attach_debugserver(
-            self):
-        self.build()
-        self.set_inferior_startup_attach()
-        self.p_returns_correct_data_size_for_each_qRegisterInfo()
-
-    @expectedFailureAll(oslist=["netbsd"])
-    @llgs_test
-    def test_p_returns_correct_data_size_for_each_qRegisterInfo_attach_llgs(
-            self):
-        self.build()
-        self.set_inferior_startup_attach()
-        self.p_returns_correct_data_size_for_each_qRegisterInfo()
-
     def Hg_switches_to_3_threads(self):
         # Startup the inferior with three threads (main + 2 new ones).
         procs = self.prep_debug_monitor_and_inferior(
@@ -555,30 +380,14 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             self.assertIsNotNone(context.get("thread_id"))
             self.assertEqual(int(context.get("thread_id"), 16), thread)
 
-    @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    def test_Hg_switches_to_3_threads_launch_debugserver(self):
-        self.build()
-        self.set_inferior_startup_launch()
-        self.Hg_switches_to_3_threads()
-
     @expectedFailureAll(oslist=["windows"]) # expect 4 threads
-    @llgs_test
-    def test_Hg_switches_to_3_threads_launch_llgs(self):
+    def test_Hg_switches_to_3_threads_launch(self):
         self.build()
         self.set_inferior_startup_launch()
-        self.Hg_switches_to_3_threads()
-
-    @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    def test_Hg_switches_to_3_threads_attach_debugserver(self):
-        self.build()
-        self.set_inferior_startup_attach()
         self.Hg_switches_to_3_threads()
 
     @expectedFailureAll(oslist=["windows"]) # expecting one more thread
-    @llgs_test
-    def test_Hg_switches_to_3_threads_attach_llgs(self):
+    def test_Hg_switches_to_3_threads_attach(self):
         self.build()
         self.set_inferior_startup_attach()
         self.Hg_switches_to_3_threads()
@@ -694,27 +503,26 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             post_handle_thread_id = int(post_handle_thread_id, 16)
             self.assertEqual(post_handle_thread_id, print_thread_id)
 
-    @expectedFailure
-    @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    def test_Hc_then_Csignal_signals_correct_thread_launch_debugserver(self):
-        self.build()
-        self.set_inferior_startup_launch()
-        # Darwin debugserver translates some signals like SIGSEGV into some gdb
-        # expectations about fixed signal numbers.
-        self.Hc_then_Csignal_signals_correct_thread(self.TARGET_EXC_BAD_ACCESS)
-
+    @expectedFailureDarwin
     @skipIfWindows # no SIGSEGV support
     @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr48419")
     @expectedFailureNetBSD
-    @llgs_test
-    def test_Hc_then_Csignal_signals_correct_thread_launch_llgs(self):
+    def test_Hc_then_Csignal_signals_correct_thread_launch(self):
         self.build()
         self.set_inferior_startup_launch()
-        self.Hc_then_Csignal_signals_correct_thread(
-            lldbutil.get_signal_number('SIGSEGV'))
 
-    def m_packet_reads_memory(self):
+        if self.platformIsDarwin():
+            # Darwin debugserver translates some signals like SIGSEGV into some gdb
+            # expectations about fixed signal numbers.
+            self.Hc_then_Csignal_signals_correct_thread(self.TARGET_EXC_BAD_ACCESS)
+        else:
+            self.Hc_then_Csignal_signals_correct_thread(
+                lldbutil.get_signal_number('SIGSEGV'))
+
+    @skipIfWindows # No pty support to test any inferior output
+    def test_m_packet_reads_memory(self):
+        self.build()
+        self.set_inferior_startup_launch()
         # This is the memory we will write into the inferior and then ensure we
         # can read back with $m.
         MEMORY_CONTENTS = "Test contents 0123456789 ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz"
@@ -766,21 +574,9 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         read_contents = seven.unhexlify(context.get("read_contents"))
         self.assertEqual(read_contents, MEMORY_CONTENTS)
 
-    @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    def test_m_packet_reads_memory_debugserver(self):
+    def test_qMemoryRegionInfo_is_supported(self):
         self.build()
         self.set_inferior_startup_launch()
-        self.m_packet_reads_memory()
-
-    @skipIfWindows # No pty support to test any inferior output
-    @llgs_test
-    def test_m_packet_reads_memory_llgs(self):
-        self.build()
-        self.set_inferior_startup_launch()
-        self.m_packet_reads_memory()
-
-    def qMemoryRegionInfo_is_supported(self):
         # Start up the inferior.
         procs = self.prep_debug_monitor_and_inferior()
 
@@ -791,20 +587,11 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
              ], True)
         self.expect_gdbremote_sequence()
 
-    @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    def test_qMemoryRegionInfo_is_supported_debugserver(self):
+    @skipIfWindows # No pty support to test any inferior output
+    def test_qMemoryRegionInfo_reports_code_address_as_executable(self):
         self.build()
         self.set_inferior_startup_launch()
-        self.qMemoryRegionInfo_is_supported()
 
-    @llgs_test
-    def test_qMemoryRegionInfo_is_supported_llgs(self):
-        self.build()
-        self.set_inferior_startup_launch()
-        self.qMemoryRegionInfo_is_supported()
-
-    def qMemoryRegionInfo_reports_code_address_as_executable(self):
         # Start up the inferior.
         procs = self.prep_debug_monitor_and_inferior(
             inferior_args=["get-code-address-hex:hello", "sleep:5"])
@@ -852,22 +639,11 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         # Ensure the start address and size encompass the address we queried.
         self.assert_address_within_memory_region(code_address, mem_region_dict)
 
-    @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    def test_qMemoryRegionInfo_reports_code_address_as_executable_debugserver(
-            self):
-        self.build()
-        self.set_inferior_startup_launch()
-        self.qMemoryRegionInfo_reports_code_address_as_executable()
-
     @skipIfWindows # No pty support to test any inferior output
-    @llgs_test
-    def test_qMemoryRegionInfo_reports_code_address_as_executable_llgs(self):
+    def test_qMemoryRegionInfo_reports_stack_address_as_rw(self):
         self.build()
         self.set_inferior_startup_launch()
-        self.qMemoryRegionInfo_reports_code_address_as_executable()
 
-    def qMemoryRegionInfo_reports_stack_address_as_readable_writeable(self):
         # Start up the inferior.
         procs = self.prep_debug_monitor_and_inferior(
             inferior_args=["get-stack-address-hex:", "sleep:5"])
@@ -916,23 +692,11 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.assert_address_within_memory_region(
             stack_address, mem_region_dict)
 
-    @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    def test_qMemoryRegionInfo_reports_stack_address_as_readable_writeable_debugserver(
-            self):
-        self.build()
-        self.set_inferior_startup_launch()
-        self.qMemoryRegionInfo_reports_stack_address_as_readable_writeable()
-
     @skipIfWindows # No pty support to test any inferior output
-    @llgs_test
-    def test_qMemoryRegionInfo_reports_stack_address_as_readable_writeable_llgs(
-            self):
+    def test_qMemoryRegionInfo_reports_heap_address_as_rw(self):
         self.build()
         self.set_inferior_startup_launch()
-        self.qMemoryRegionInfo_reports_stack_address_as_readable_writeable()
 
-    def qMemoryRegionInfo_reports_heap_address_as_readable_writeable(self):
         # Start up the inferior.
         procs = self.prep_debug_monitor_and_inferior(
             inferior_args=["get-heap-address-hex:", "sleep:5"])
@@ -980,23 +744,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         # Ensure the start address and size encompass the address we queried.
         self.assert_address_within_memory_region(heap_address, mem_region_dict)
 
-    @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    def test_qMemoryRegionInfo_reports_heap_address_as_readable_writeable_debugserver(
-            self):
-        self.build()
-        self.set_inferior_startup_launch()
-        self.qMemoryRegionInfo_reports_heap_address_as_readable_writeable()
-
-    @skipIfWindows # No pty support to test any inferior output
-    @llgs_test
-    def test_qMemoryRegionInfo_reports_heap_address_as_readable_writeable_llgs(
-            self):
-        self.build()
-        self.set_inferior_startup_launch()
-        self.qMemoryRegionInfo_reports_heap_address_as_readable_writeable()
-
-    def breakpoint_set_and_remove_work(self, want_hardware=False):
+    def breakpoint_set_and_remove_work(self, want_hardware):
         # Start up the inferior.
         procs = self.prep_debug_monitor_and_inferior(
             inferior_args=[
@@ -1128,21 +876,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         context = self.expect_gdbremote_sequence()
         self.assertIsNotNone(context)
 
-    @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    def test_software_breakpoint_set_and_remove_work_debugserver(self):
-        if self.getArchitecture() == "arm":
-            # TODO: Handle case when setting breakpoint in thumb code
-            self.build(dictionary={'CFLAGS_EXTRAS': '-marm'})
-        else:
-            self.build()
-        self.set_inferior_startup_launch()
-        self.breakpoint_set_and_remove_work(want_hardware=False)
-
     @skipIfWindows # No pty support to test any inferior output
-    @llgs_test
-    @expectedFlakeyLinux("llvm.org/pr25652")
-    def test_software_breakpoint_set_and_remove_work_llgs(self):
+    def test_software_breakpoint_set_and_remove_work(self):
         if self.getArchitecture() == "arm":
             # TODO: Handle case when setting breakpoint in thumb code
             self.build(dictionary={'CFLAGS_EXTRAS': '-marm'})
@@ -1151,12 +886,9 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.set_inferior_startup_launch()
         self.breakpoint_set_and_remove_work(want_hardware=False)
 
-    @debugserver_test
     @skipUnlessPlatform(oslist=['linux'])
-    @expectedFailureAndroid
     @skipIf(archs=no_match(['arm', 'aarch64']))
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    def test_hardware_breakpoint_set_and_remove_work_debugserver(self):
+    def test_hardware_breakpoint_set_and_remove_work(self):
         if self.getArchitecture() == "arm":
             # TODO: Handle case when setting breakpoint in thumb code
             self.build(dictionary={'CFLAGS_EXTRAS': '-marm'})
@@ -1165,19 +897,10 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.set_inferior_startup_launch()
         self.breakpoint_set_and_remove_work(want_hardware=True)
 
-    @llgs_test
-    @skipUnlessPlatform(oslist=['linux'])
-    @skipIf(archs=no_match(['arm', 'aarch64']))
-    def test_hardware_breakpoint_set_and_remove_work_llgs(self):
-        if self.getArchitecture() == "arm":
-            # TODO: Handle case when setting breakpoint in thumb code
-            self.build(dictionary={'CFLAGS_EXTRAS': '-marm'})
-        else:
-            self.build()
+    def test_qSupported_returns_known_stub_features(self):
+        self.build()
         self.set_inferior_startup_launch()
-        self.breakpoint_set_and_remove_work(want_hardware=True)
 
-    def qSupported_returns_known_stub_features(self):
         # Start up the stub and start/prep the inferior.
         procs = self.prep_debug_monitor_and_inferior()
         self.add_qSupported_packets()
@@ -1191,20 +914,11 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.assertIsNotNone(supported_dict)
         self.assertTrue(len(supported_dict) > 0)
 
-    @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    def test_qSupported_returns_known_stub_features_debugserver(self):
+    @skipIfWindows # No pty support to test any inferior output
+    def test_written_M_content_reads_back_correctly(self):
         self.build()
         self.set_inferior_startup_launch()
-        self.qSupported_returns_known_stub_features()
 
-    @llgs_test
-    def test_qSupported_returns_known_stub_features_llgs(self):
-        self.build()
-        self.set_inferior_startup_launch()
-        self.qSupported_returns_known_stub_features()
-
-    def written_M_content_reads_back_correctly(self):
         TEST_MESSAGE = "Hello, memory"
 
         # Start up the stub and start/prep the inferior.
@@ -1263,22 +977,13 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.assertIsNotNone(printed_message)
         self.assertEqual(printed_message, TEST_MESSAGE + "X")
 
-    @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    def test_written_M_content_reads_back_correctly_debugserver(self):
+    # Note: as of this moment, a hefty number of the GPR writes are failing with E32 (everything except rax-rdx, rdi, rsi, rbp).
+    # Come back to this.  I have the test rigged to verify that at least some
+    # of the bit-flip writes work.
+    def test_P_writes_all_gpr_registers(self):
         self.build()
         self.set_inferior_startup_launch()
-        self.written_M_content_reads_back_correctly()
 
-    @skipIfWindows # No pty support to test any inferior output
-    @llgs_test
-    @expectedFlakeyLinux("llvm.org/pr25652")
-    def test_written_M_content_reads_back_correctly_llgs(self):
-        self.build()
-        self.set_inferior_startup_launch()
-        self.written_M_content_reads_back_correctly()
-
-    def P_writes_all_gpr_registers(self):
         # Start inferior debug session, grab all register info.
         procs = self.prep_debug_monitor_and_inferior(inferior_args=["sleep:2"])
         self.add_register_info_collection_packets()
@@ -1309,23 +1014,13 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.trace("successful writes: {}, failed writes: {}".format(successful_writes, failed_writes))
         self.assertTrue(successful_writes > 0)
 
-    # Note: as of this moment, a hefty number of the GPR writes are failing with E32 (everything except rax-rdx, rdi, rsi, rbp).
-    # Come back to this.  I have the test rigged to verify that at least some
-    # of the bit-flip writes work.
-    @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    def test_P_writes_all_gpr_registers_debugserver(self):
+    # Note: as of this moment, a hefty number of the GPR writes are failing
+    # with E32 (everything except rax-rdx, rdi, rsi, rbp).
+    @skipIfWindows
+    def test_P_and_p_thread_suffix_work(self):
         self.build()
         self.set_inferior_startup_launch()
-        self.P_writes_all_gpr_registers()
 
-    @llgs_test
-    def test_P_writes_all_gpr_registers_llgs(self):
-        self.build()
-        self.set_inferior_startup_launch()
-        self.P_writes_all_gpr_registers()
-
-    def P_and_p_thread_suffix_work(self):
         # Startup the inferior with three threads.
         procs = self.prep_debug_monitor_and_inferior(
             inferior_args=["thread:new", "thread:new"])
@@ -1432,19 +1127,3 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             # Make sure we read back what we wrote.
             self.assertEqual(read_value, expected_reg_values[thread_index])
             thread_index += 1
-
-    # Note: as of this moment, a hefty number of the GPR writes are failing
-    # with E32 (everything except rax-rdx, rdi, rsi, rbp).
-    @debugserver_test
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    def test_P_and_p_thread_suffix_work_debugserver(self):
-        self.build()
-        self.set_inferior_startup_launch()
-        self.P_and_p_thread_suffix_work()
-
-    @skipIfWindows
-    @llgs_test
-    def test_P_and_p_thread_suffix_work_llgs(self):
-        self.build()
-        self.set_inferior_startup_launch()
-        self.P_and_p_thread_suffix_work()

@@ -25,6 +25,9 @@
 #include "llvm/Support/FileSystem/UniqueID.h"
 
 namespace llvm {
+
+class MemoryBuffer;
+
 namespace vfs {
 
 class File;
@@ -67,6 +70,7 @@ public:
   inline unsigned getUID() const;
   inline const llvm::sys::fs::UniqueID &getUniqueID() const;
   inline time_t getModificationTime() const;
+  inline bool isNamedPipe() const;
   inline void closeFile() const;
 
   /// Check if the underlying FileEntry is the same, intentially ignoring
@@ -339,6 +343,9 @@ class FileEntry {
   /// The open file, if it is owned by the \p FileEntry.
   mutable std::unique_ptr<llvm::vfs::File> File;
 
+  /// The file content, if it is owned by the \p FileEntry.
+  std::unique_ptr<llvm::MemoryBuffer> Content;
+
   // First access name for this FileEntry.
   //
   // This is Optional only to allow delayed construction (FileEntryRef has no
@@ -389,6 +396,8 @@ const llvm::sys::fs::UniqueID &FileEntryRef::getUniqueID() const {
 time_t FileEntryRef::getModificationTime() const {
   return getFileEntry().getModificationTime();
 }
+
+bool FileEntryRef::isNamedPipe() const { return getFileEntry().isNamedPipe(); }
 
 void FileEntryRef::closeFile() const { getFileEntry().closeFile(); }
 

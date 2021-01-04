@@ -3160,8 +3160,8 @@ void MachineBlockPlacement::findDuplicateCandidates(
   MachineBasicBlock *Fallthrough = nullptr;
   BranchProbability DefaultBranchProb = BranchProbability::getZero();
   BlockFrequency BBDupThreshold(scaleThreshold(BB));
-  SmallVector<MachineBasicBlock *, 8> Preds(BB->pred_begin(), BB->pred_end());
-  SmallVector<MachineBasicBlock *, 8> Succs(BB->succ_begin(), BB->succ_end());
+  SmallVector<MachineBasicBlock *, 8> Preds(BB->predecessors());
+  SmallVector<MachineBasicBlock *, 8> Succs(BB->successors());
 
   // Sort for highest frequency.
   auto CmpSucc = [&](MachineBasicBlock *A, MachineBasicBlock *B) {

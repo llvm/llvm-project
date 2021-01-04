@@ -18,40 +18,40 @@ struct fpabc { __float128 a; __float128 b; __float128 c; };
 
 struct fp2a2b { __float128 a[2]; __float128 b[2]; };
 
-// CHECK: define [1 x fp128] @func_f1(fp128 inreg %x.coerce)
+// CHECK: define{{.*}} [1 x fp128] @func_f1(fp128 inreg %x.coerce)
 struct fp1 func_f1(struct fp1 x) { return x; }
 
-// CHECK: define [2 x fp128] @func_f2([2 x fp128] %x.coerce)
+// CHECK: define{{.*}} [2 x fp128] @func_f2([2 x fp128] %x.coerce)
 struct fp2 func_f2(struct fp2 x) { return x; }
 
-// CHECK: define [3 x fp128] @func_f3([3 x fp128] %x.coerce)
+// CHECK: define{{.*}} [3 x fp128] @func_f3([3 x fp128] %x.coerce)
 struct fp3 func_f3(struct fp3 x) { return x; }
 
-// CHECK: define [4 x fp128] @func_f4([4 x fp128] %x.coerce)
+// CHECK: define{{.*}} [4 x fp128] @func_f4([4 x fp128] %x.coerce)
 struct fp4 func_f4(struct fp4 x) { return x; }
 
-// CHECK: define [5 x fp128] @func_f5([5 x fp128] %x.coerce)
+// CHECK: define{{.*}} [5 x fp128] @func_f5([5 x fp128] %x.coerce)
 struct fp5 func_f5(struct fp5 x) { return x; }
 
-// CHECK: define [6 x fp128] @func_f6([6 x fp128] %x.coerce)
+// CHECK: define{{.*}} [6 x fp128] @func_f6([6 x fp128] %x.coerce)
 struct fp6 func_f6(struct fp6 x) { return x; }
 
-// CHECK: define [7 x fp128] @func_f7([7 x fp128] %x.coerce)
+// CHECK: define{{.*}} [7 x fp128] @func_f7([7 x fp128] %x.coerce)
 struct fp7 func_f7(struct fp7 x) { return x; }
 
-// CHECK: define [8 x fp128] @func_f8([8 x fp128] %x.coerce)
+// CHECK: define{{.*}} [8 x fp128] @func_f8([8 x fp128] %x.coerce)
 struct fp8 func_f8(struct fp8 x) { return x; }
 
-// CHECK: define void @func_f9(%struct.fp9* noalias sret(%struct.fp9) align 16 %agg.result, %struct.fp9* byval(%struct.fp9) align 16 %x)
+// CHECK: define{{.*}} void @func_f9(%struct.fp9* noalias sret(%struct.fp9) align 16 %agg.result, %struct.fp9* byval(%struct.fp9) align 16 %x)
 struct fp9 func_f9(struct fp9 x) { return x; }
 
-// CHECK: define [2 x fp128] @func_fab([2 x fp128] %x.coerce)
+// CHECK: define{{.*}} [2 x fp128] @func_fab([2 x fp128] %x.coerce)
 struct fpab func_fab(struct fpab x) { return x; }
 
-// CHECK: define [3 x fp128] @func_fabc([3 x fp128] %x.coerce)
+// CHECK: define{{.*}} [3 x fp128] @func_fabc([3 x fp128] %x.coerce)
 struct fpabc func_fabc(struct fpabc x) { return x; }
 
-// CHECK: define [4 x fp128] @func_f2a2b([4 x fp128] %x.coerce)
+// CHECK: define{{.*}} [4 x fp128] @func_f2a2b([4 x fp128] %x.coerce)
 struct fp2a2b func_f2a2b(struct fp2a2b x) { return x; }
 
 // CHECK-LABEL: @call_fp1

@@ -129,6 +129,9 @@ class RISCVAsmParser : public MCTargetAsmParser {
   void emitPseudoExtend(MCInst &Inst, bool SignExtend, int64_t Width,
                         SMLoc IDLoc, MCStreamer &Out);
 
+  // Helper to emit pseudo vmsge{u}.vx instruction.
+  void emitVMSGE(MCInst &Inst, unsigned Opcode, SMLoc IDLoc, MCStreamer &Out);
+
   // Checks that a PseudoAddTPRel is using x4/tp in its second input operand.
   // Enforcing this using a restricted register class for the second input
   // operand of PseudoAddTPRel results in a poor diagnostic due to the fact
@@ -511,16 +514,6 @@ public:
     return IsConstantImm && isUInt<5>(Imm) && VK == RISCVMCExpr::VK_RISCV_None;
   }
 
-  bool isUImm5NonZero() const {
-    int64_t Imm;
-    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
-    if (!isImm())
-      return false;
-    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    return IsConstantImm && isUInt<5>(Imm) && (Imm != 0) &&
-           VK == RISCVMCExpr::VK_RISCV_None;
-  }
-
   bool isSImm5() const {
     if (!isImm())
       return false;
@@ -537,7 +530,7 @@ public:
     int64_t Imm;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
     return IsConstantImm && isInt<6>(Imm) &&
-	    VK == RISCVMCExpr::VK_RISCV_None;
+           VK == RISCVMCExpr::VK_RISCV_None;
   }
 
   bool isSImm6NonZero() const {
@@ -2257,6 +2250,59 @@ void RISCVAsmParser::emitPseudoExtend(MCInst &Inst, bool SignExtend,
                           .addImm(ShAmt));
 }
 
+void RISCVAsmParser::emitVMSGE(MCInst &Inst, unsigned Opcode, SMLoc IDLoc,
+                               MCStreamer &Out) {
+  if (Inst.getNumOperands() == 3) {
+    // unmasked va >= x
+    //
+    //  pseudoinstruction: vmsge{u}.vx vd, va, x
+    //  expansion: vmslt{u}.vx vd, va, x; vmnand.mm vd, vd, vd
+    emitToStreamer(Out, MCInstBuilder(Opcode)
+                            .addOperand(Inst.getOperand(0))
+                            .addOperand(Inst.getOperand(1))
+                            .addOperand(Inst.getOperand(2))
+                            .addReg(RISCV::NoRegister));
+    emitToStreamer(Out, MCInstBuilder(RISCV::VMNAND_MM)
+                            .addOperand(Inst.getOperand(0))
+                            .addOperand(Inst.getOperand(0))
+                            .addOperand(Inst.getOperand(0)));
+  } else if (Inst.getNumOperands() == 4) {
+    // masked va >= x, vd != v0
+    //
+    //  pseudoinstruction: vmsge{u}.vx vd, va, x, v0.t
+    //  expansion: vmslt{u}.vx vd, va, x, v0.t; vmxor.mm vd, vd, v0
+    assert(Inst.getOperand(0).getReg() != RISCV::V0 &&
+           "The destination register should not be V0.");
+    emitToStreamer(Out, MCInstBuilder(Opcode)
+                            .addOperand(Inst.getOperand(0))
+                            .addOperand(Inst.getOperand(1))
+                            .addOperand(Inst.getOperand(2))
+                            .addOperand(Inst.getOperand(3)));
+    emitToStreamer(Out, MCInstBuilder(RISCV::VMXOR_MM)
+                            .addOperand(Inst.getOperand(0))
+                            .addOperand(Inst.getOperand(0))
+                            .addReg(RISCV::V0));
+  } else if (Inst.getNumOperands() == 5) {
+    // masked va >= x, vd == v0
+    //
+    //  pseudoinstruction: vmsge{u}.vx vd, va, x, v0.t, vt
+    //  expansion: vmslt{u}.vx vt, va, x;  vmandnot.mm vd, vd, vt
+    assert(Inst.getOperand(0).getReg() == RISCV::V0 &&
+           "The destination register should be V0.");
+    assert(Inst.getOperand(1).getReg() != RISCV::V0 &&
+           "The temporary vector register should not be V0.");
+    emitToStreamer(Out, MCInstBuilder(Opcode)
+                            .addOperand(Inst.getOperand(1))
+                            .addOperand(Inst.getOperand(2))
+                            .addOperand(Inst.getOperand(3))
+                            .addOperand(Inst.getOperand(4)));
+    emitToStreamer(Out, MCInstBuilder(RISCV::VMANDNOT_MM)
+                            .addOperand(Inst.getOperand(0))
+                            .addOperand(Inst.getOperand(0))
+                            .addOperand(Inst.getOperand(1)));
+  }
+}
+
 bool RISCVAsmParser::checkPseudoAddTPRel(MCInst &Inst,
                                          OperandVector &Operands) {
   assert(Inst.getOpcode() == RISCV::PseudoAddTPRel && "Invalid instruction");
@@ -2284,17 +2330,16 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
     return false;
 
   unsigned DestReg = Inst.getOperand(0).getReg();
-  unsigned CheckReg;
   // Operands[1] will be the first operand, DestReg.
   SMLoc Loc = Operands[1]->getStartLoc();
   if (TargetFlags & RISCVII::VS2Constraint) {
-    CheckReg = Inst.getOperand(1).getReg();
+    unsigned CheckReg = Inst.getOperand(1).getReg();
     if (DestReg == CheckReg)
       return Error(Loc, "The destination vector register group cannot overlap"
                         " the source vector register group.");
   }
   if ((TargetFlags & RISCVII::VS1Constraint) && (Inst.getOperand(2).isReg())) {
-    CheckReg = Inst.getOperand(2).getReg();
+    unsigned CheckReg = Inst.getOperand(2).getReg();
     if (DestReg == CheckReg)
       return Error(Loc, "The destination vector register group cannot overlap"
                         " the source vector register group.");
@@ -2314,10 +2359,10 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
     // same. For example, "viota.m v0, v2" is "viota.m v0, v2, NoRegister"
     // actually. We need to check the last operand to ensure whether it is
     // masked or not.
-    if ((TargetFlags & RISCVII::OneInput) && (Inst.getNumOperands() == 3))
-      CheckReg = Inst.getOperand(2).getReg();
-    else if (Inst.getNumOperands() == 4)
-      CheckReg = Inst.getOperand(3).getReg();
+    unsigned CheckReg = Inst.getOperand(Inst.getNumOperands() - 1).getReg();
+    assert((CheckReg == RISCV::V0 || CheckReg == RISCV::NoRegister) &&
+           "Unexpected register for mask operand");
+
     if (DestReg == CheckReg)
       return Error(Loc, "The destination vector register group cannot overlap"
                         " the mask register.");
@@ -2432,6 +2477,16 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     return false;
   case RISCV::PseudoZEXT_W:
     emitPseudoExtend(Inst, /*SignExtend=*/false, /*Width=*/32, IDLoc, Out);
+    return false;
+  case RISCV::PseudoVMSGEU_VX:
+  case RISCV::PseudoVMSGEU_VX_M:
+  case RISCV::PseudoVMSGEU_VX_M_T:
+    emitVMSGE(Inst, RISCV::VMSLTU_VX, IDLoc, Out);
+    return false;
+  case RISCV::PseudoVMSGE_VX:
+  case RISCV::PseudoVMSGE_VX_M:
+  case RISCV::PseudoVMSGE_VX_M_T:
+    emitVMSGE(Inst, RISCV::VMSLT_VX, IDLoc, Out);
     return false;
   }
 

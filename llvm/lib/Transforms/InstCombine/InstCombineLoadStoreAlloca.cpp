@@ -273,12 +273,7 @@ bool PointerReplacer::collectUsers(Instruction &I) {
   return true;
 }
 
-Value *PointerReplacer::getReplacement(Value *V) {
-  auto Loc = WorkMap.find(V);
-  if (Loc != WorkMap.end())
-    return Loc->second;
-  return nullptr;
-}
+Value *PointerReplacer::getReplacement(Value *V) { return WorkMap.lookup(V); }
 
 void PointerReplacer::replace(Instruction *I) {
   if (getReplacement(I))
@@ -1120,6 +1115,10 @@ static bool combineStoreToValueType(InstCombinerImpl &IC, StoreInst &SI) {
   // Fold away bit casts of the stored value by storing the original type.
   if (auto *BC = dyn_cast<BitCastInst>(V)) {
     V = BC->getOperand(0);
+    // Don't transform when the type is x86_amx, it make the pass that lower
+    // x86_amx type happy.
+    if (BC->getType()->isX86_AMXTy() || V->getType()->isX86_AMXTy())
+      return false;
     if (!SI.isAtomic() || isSupportedAtomicType(V->getType())) {
       combineStoreToNewValue(IC, SI, V);
       return true;

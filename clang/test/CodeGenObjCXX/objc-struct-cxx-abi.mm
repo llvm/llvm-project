@@ -13,6 +13,7 @@
 // CHECK: %[[STRUCT_STRONG:.*]] = type { i8* }
 // CHECK: %[[STRUCT_S:.*]] = type { i8* }
 // CHECK: %[[STRUCT_CONTAINSNONTRIVIAL:.*]] = type { %{{.*}}, i8* }
+// CHECK: %[[STRUCT_NONTRIVIAL:.*]] = type { i32* }
 
 #ifdef TRIVIALABI
 struct __attribute__((trivial_abi)) StrongWeak {
@@ -69,14 +70,20 @@ struct ContainsNonTrivial {
   id f1;
 };
 
-// CHECK: define void @_Z19testParamStrongWeak10StrongWeak(%[[STRUCT_STRONGWEAK]]* %{{.*}})
+@interface C
+- (void)passStrong:(Strong)a;
+- (void)passStrongWeak:(StrongWeak)a;
+- (void)passNonTrivial:(NonTrivial)a;
+@end
+
+// CHECK: define{{.*}} void @_Z19testParamStrongWeak10StrongWeak(%[[STRUCT_STRONGWEAK]]* %{{.*}})
 // CHECK: call %struct.StrongWeak* @_ZN10StrongWeakD1Ev(
 // CHECK-NEXT: ret void
 
 void testParamStrongWeak(StrongWeak a) {
 }
 
-// CHECK: define void @_Z18testCallStrongWeakP10StrongWeak(%[[STRUCT_STRONGWEAK]]* %[[A:.*]])
+// CHECK: define{{.*}} void @_Z18testCallStrongWeakP10StrongWeak(%[[STRUCT_STRONGWEAK]]* %[[A:.*]])
 // CHECK: %[[A_ADDR:.*]] = alloca %[[STRUCT_STRONGWEAK]]*, align 8
 // CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_STRONGWEAK]], align 8
 // CHECK: store %[[STRUCT_STRONGWEAK]]* %[[A]], %[[STRUCT_STRONGWEAK]]** %[[A_ADDR]], align 8
@@ -90,7 +97,7 @@ void testCallStrongWeak(StrongWeak *a) {
   testParamStrongWeak(*a);
 }
 
-// CHECK: define void @_Z20testReturnStrongWeakP10StrongWeak(%[[STRUCT_STRONGWEAK:.*]]* noalias sret(%[[STRUCT_STRONGWEAK]]) align 8 %[[AGG_RESULT:.*]], %[[STRUCT_STRONGWEAK]]* %[[A:.*]])
+// CHECK: define{{.*}} void @_Z20testReturnStrongWeakP10StrongWeak(%[[STRUCT_STRONGWEAK:.*]]* noalias sret(%[[STRUCT_STRONGWEAK]]) align 8 %[[AGG_RESULT:.*]], %[[STRUCT_STRONGWEAK]]* %[[A:.*]])
 // CHECK: %[[A_ADDR:.*]] = alloca %[[STRUCT_STRONGWEAK]]*, align 8
 // CHECK: store %[[STRUCT_STRONGWEAK]]* %[[A]], %[[STRUCT_STRONGWEAK]]** %[[A_ADDR]], align 8
 // CHECK: %[[V0:.*]] = load %[[STRUCT_STRONGWEAK]]*, %[[STRUCT_STRONGWEAK]]** %[[A_ADDR]], align 8
@@ -101,19 +108,19 @@ StrongWeak testReturnStrongWeak(StrongWeak *a) {
   return *a;
 }
 
-// CHECK: define void @_Z27testParamContainsStrongWeak18ContainsStrongWeak(%[[STRUCT_CONTAINSSTRONGWEAK]]* %[[A:.*]])
+// CHECK: define{{.*}} void @_Z27testParamContainsStrongWeak18ContainsStrongWeak(%[[STRUCT_CONTAINSSTRONGWEAK]]* %[[A:.*]])
 // CHECK: call %[[STRUCT_CONTAINSSTRONGWEAK]]* @_ZN18ContainsStrongWeakD1Ev(%[[STRUCT_CONTAINSSTRONGWEAK]]* {{[^,]*}} %[[A]])
 
 void testParamContainsStrongWeak(ContainsStrongWeak a) {
 }
 
-// CHECK: define void @_Z26testParamDerivedStrongWeak17DerivedStrongWeak(%[[STRUCT_DERIVEDSTRONGWEAK]]* %[[A:.*]])
+// CHECK: define{{.*}} void @_Z26testParamDerivedStrongWeak17DerivedStrongWeak(%[[STRUCT_DERIVEDSTRONGWEAK]]* %[[A:.*]])
 // CHECK: call %[[STRUCT_DERIVEDSTRONGWEAK]]* @_ZN17DerivedStrongWeakD1Ev(%[[STRUCT_DERIVEDSTRONGWEAK]]* {{[^,]*}} %[[A]])
 
 void testParamDerivedStrongWeak(DerivedStrongWeak a) {
 }
 
-// CHECK: define void @_Z15testParamStrong6Strong(i64 %[[A_COERCE:.*]])
+// CHECK: define{{.*}} void @_Z15testParamStrong6Strong(i64 %[[A_COERCE:.*]])
 // CHECK: %[[A:.*]] = alloca %[[STRUCT_STRONG]], align 8
 // CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_STRONG]], %[[STRUCT_STRONG]]* %[[A]], i32 0, i32 0
 // CHECK: %[[COERCE_VAL_IP:.*]] = inttoptr i64 %[[A_COERCE]] to i8*
@@ -126,7 +133,7 @@ void testParamDerivedStrongWeak(DerivedStrongWeak a) {
 void testParamStrong(Strong a) {
 }
 
-// CHECK: define void @_Z14testCallStrongP6Strong(%[[STRUCT_STRONG]]* %[[A:.*]])
+// CHECK: define{{.*}} void @_Z14testCallStrongP6Strong(%[[STRUCT_STRONG]]* %[[A:.*]])
 // CHECK: %[[A_ADDR:.*]] = alloca %[[STRUCT_STRONG]]*, align 8
 // CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_STRONG]], align 8
 // CHECK: store %[[STRUCT_STRONG]]* %[[A]], %[[STRUCT_STRONG]]** %[[A_ADDR]], align 8
@@ -142,7 +149,7 @@ void testCallStrong(Strong *a) {
   testParamStrong(*a);
 }
 
-// CHECK: define i64 @_Z16testReturnStrongP6Strong(%[[STRUCT_STRONG]]* %[[A:.*]])
+// CHECK: define{{.*}} i64 @_Z16testReturnStrongP6Strong(%[[STRUCT_STRONG]]* %[[A:.*]])
 // CHECK: %[[RETVAL:.*]] = alloca %[[STRUCT_STRONG]], align 8
 // CHECK: %[[A_ADDR:.*]] = alloca %[[STRUCT_STRONG]]*, align 8
 // CHECK: store %[[STRUCT_STRONG]]* %[[A]], %[[STRUCT_STRONG]]** %[[A_ADDR]], align 8
@@ -157,21 +164,21 @@ Strong testReturnStrong(Strong *a) {
   return *a;
 }
 
-// CHECK: define void @_Z21testParamWeakTemplate1SIU6__weakP11objc_objectE(%[[STRUCT_S]]* %{{.*}})
+// CHECK: define{{.*}} void @_Z21testParamWeakTemplate1SIU6__weakP11objc_objectE(%[[STRUCT_S]]* %{{.*}})
 // CHECK: call %struct.S* @_ZN1SIU6__weakP11objc_objectED1Ev(
 // CHECK-NEXT: ret void
 
 void testParamWeakTemplate(S<__weak id> a) {
 }
 
-// CHECK: define void @_Z27testParamContainsNonTrivial18ContainsNonTrivial(%[[STRUCT_CONTAINSNONTRIVIAL]]* %{{.*}})
+// CHECK: define{{.*}} void @_Z27testParamContainsNonTrivial18ContainsNonTrivial(%[[STRUCT_CONTAINSNONTRIVIAL]]* %{{.*}})
 // CHECK-NOT: call
 // CHECK: ret void
 
 void testParamContainsNonTrivial(ContainsNonTrivial a) {
 }
 
-// CHECK: define void @_Z26testCallContainsNonTrivialP18ContainsNonTrivial(
+// CHECK: define{{.*}} void @_Z26testCallContainsNonTrivialP18ContainsNonTrivial(
 // CHECK: call void @_Z27testParamContainsNonTrivial18ContainsNonTrivial(%[[STRUCT_CONTAINSNONTRIVIAL]]* %{{.*}})
 // CHECK: call %struct.ContainsNonTrivial* @_ZN18ContainsNonTrivialD1Ev(%[[STRUCT_CONTAINSNONTRIVIAL]]* {{[^,]*}} %{{.*}})
 
@@ -181,7 +188,7 @@ void testCallContainsNonTrivial(ContainsNonTrivial *a) {
 
 namespace testThunk {
 
-// CHECK-LABEL: define i64 @_ZThn8_N9testThunk2D02m0Ev(
+// CHECK-LABEL: define{{.*}} i64 @_ZThn8_N9testThunk2D02m0Ev(
 // CHECK: %[[RETVAL:.*]] = alloca %[[STRUCT_STRONG]], align 8
 // CHECK: %[[CALL:.*]] = tail call i64 @_ZN9testThunk2D02m0Ev(
 // CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_STRONG]], %[[STRUCT_STRONG]]* %[[RETVAL]], i32 0, i32 0
@@ -205,5 +212,51 @@ struct D0 : B0, B1 {
 };
 
 Strong D0::m0() { return {}; }
+
+}
+
+namespace testNullReceiver {
+
+// CHECK-LABEL: define{{.*}} void @_ZN16testNullReceiver5test0EP1C(
+// CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_STRONG]], align 8
+// CHECK: br i1
+
+// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_STRONG]], %[[STRUCT_STRONG]]* %[[AGG_TMP]], i32 0, i32 0
+// CHECK: %[[V7:.*]] = load i8*, i8** %[[COERCE_DIVE]], align 8
+// CHECK: %[[COERCE_VAL_PI:.*]] = ptrtoint i8* %[[V7]] to i64
+// CHECK: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, i64)*)({{.*}}, i64 %[[COERCE_VAL_PI]])
+// CHECK: br
+
+// CHECK: %[[CALL1:.*]] = call %[[STRUCT_STRONG]]* @_ZN6StrongD1Ev(%[[STRUCT_STRONG]]* nonnull dereferenceable(8) %[[AGG_TMP]])
+// CHECK: br
+
+void test0(C *c) {
+  [c passStrong:Strong()];
+}
+
+// CHECK-LABEL: define{{.*}} void @_ZN16testNullReceiver5test1EP1C(
+// CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_STRONGWEAK]], align 8
+// CHECK: br i1
+
+// CHECK: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void ({{.*}}, %[[STRUCT_STRONGWEAK]]* %[[AGG_TMP]])
+// CHECK: br
+
+// CHECK: %[[CALL1:.*]] = call %[[STRUCT_STRONGWEAK]]* @_ZN10StrongWeakD1Ev(%[[STRUCT_STRONGWEAK]]* nonnull dereferenceable(16) %[[AGG_TMP]])
+// CHECK: br
+
+void test1(C *c) {
+  [c passStrongWeak:StrongWeak()];
+}
+
+// No null check needed.
+
+// CHECK-LABEL: define{{.*}} void @_ZN16testNullReceiver5test2EP1C(
+// CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_NONTRIVIAL]], align 8
+// CHECK: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, %[[STRUCT_NONTRIVIAL]]*)*)({{.*}}, %[[STRUCT_NONTRIVIAL]]* %[[AGG_TMP]])
+// CHECK-NEXT: call %[[STRUCT_NONTRIVIAL]]* @_ZN10NonTrivialD1Ev(%[[STRUCT_NONTRIVIAL]]* nonnull dereferenceable(8) %[[AGG_TMP]])
+
+void test2(C *c) {
+  [c passNonTrivial:NonTrivial()];
+}
 
 }

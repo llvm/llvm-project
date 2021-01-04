@@ -60,7 +60,7 @@ declare i32 @__gxx_personality_v0(...)
 ; LINUX-SECTIONS1-NOT: 		.section
 ; LINUX-SECTIONS1-LABEL:	.LBB0_6:
 ; LINUX-SECTIONS1: 		.section	.text.main,"ax",@progbits,unique,1
-; LINUX-SECTIONS1-LABEL:	main.0:
+; LINUX-SECTIONS1-LABEL:	main.__part.0:
 ; LINUX-SECTIONS1:		.section	.text.eh.main,"ax",@progbits
 ; LINUX-SECTIONS1-LABEL: 	main.eh:
 ; LINUX-SECTIONS1-NOT: 		.section
@@ -79,7 +79,7 @@ declare i32 @__gxx_personality_v0(...)
 ; LINUX-SECTIONS2-NOT: 		.section
 ; LINUX-SECTIONS2-LABEL:	.LBB0_6:
 ; LINUX-SECTIONS2: 		.section	.text.main,"ax",@progbits,unique,1
-; LINUX-SECTIONS2-LABEL: 	main.0:
+; LINUX-SECTIONS2-LABEL: 	main.__part.0:
 ; LINUX-SECTIONS2-NOT: 		.section
 ; LINUX-SECTIONS2-LABEL:	.LBB0_2:
 ; LINUX-SECTIONS2-NOT: 		.section

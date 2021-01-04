@@ -7,7 +7,7 @@
 
 @g = common local_unnamed_addr global i8* null, align 8
 
-define i8* @litp(i32 %a, i32 %b) {
+define dso_local i8* @litp(i32 %a, i32 %b) {
 entry:
   %add = add nsw i32 %b, %a
   %idx.ext = sext i32 %add to i64
@@ -21,7 +21,7 @@ entry:
 ; CHECKFUSE-NEXT: add {{x[0-9]+}}, [[R]], :lo12:litp
 }
 
-define i32 @liti(i32 %a, i32 %b) {
+define dso_local i32 @liti(i32 %a, i32 %b) {
 entry:
   %add = add i32 %a, -262095121
   %add1 = add i32 %add, %b
@@ -34,7 +34,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readnone
-define i64 @litl(i64 %a, i64 %b) {
+define dso_local i64 @litl(i64 %a, i64 %b) {
 entry:
   %add = add i64 %a, 2208998440489107183
   %add1 = add i64 %add, %b
@@ -49,7 +49,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readnone
-define double @litf() {
+define dso_local double @litf() {
 entry:
   ret double 0x400921FB54442D18
 

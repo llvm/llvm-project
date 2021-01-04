@@ -44,6 +44,10 @@ function(add_mlir_python_extension libname extname)
     "${pybind11_INCLUDE_DIR}"
   )
 
+  target_link_directories(${libname} PRIVATE
+    "${Python3_LIBRARY_DIRS}"
+  )
+
   # The extension itself must be compiled with RTTI and exceptions enabled.
   # Also, some warning classes triggered by pybind11 are disabled.
   target_compile_options(${libname} PRIVATE

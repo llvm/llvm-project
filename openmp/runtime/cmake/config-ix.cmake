@@ -59,6 +59,7 @@ check_cxx_compiler_flag(-Wno-stringop-truncation LIBOMP_HAVE_WNO_STRINGOP_TRUNCA
 check_cxx_compiler_flag(-Wno-switch LIBOMP_HAVE_WNO_SWITCH_FLAG)
 check_cxx_compiler_flag(-Wno-uninitialized LIBOMP_HAVE_WNO_UNINITIALIZED_FLAG)
 check_cxx_compiler_flag(-Wno-unused-but-set-variable LIBOMP_HAVE_WNO_UNUSED_BUT_SET_VARIABLE_FLAG)
+# check_cxx_compiler_flag(-Wconversion LIBOMP_HAVE_WCONVERSION_FLAG)
 check_cxx_compiler_flag(-msse2 LIBOMP_HAVE_MSSE2_FLAG)
 check_cxx_compiler_flag(-ftls-model=initial-exec LIBOMP_HAVE_FTLS_MODEL_FLAG)
 libomp_check_architecture_flag(-mmic LIBOMP_HAVE_MMIC_FLAG)

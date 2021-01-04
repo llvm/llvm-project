@@ -2,9 +2,9 @@
 ; RUN: llc -enable-machine-outliner -mtriple=s390x-unknown-linux < %s | FileCheck %s
 ;
 ; NOTE: Machine outliner doesn't run.
-@x = global i32 0, align 4
+@x = dso_local global i32 0, align 4
 
-define i32 @check_boundaries() #0 {
+define dso_local i32 @check_boundaries() #0 {
 ; CHECK-LABEL: check_boundaries:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    stmg %r11, %r15, 88(%r15)
@@ -77,7 +77,7 @@ define i32 @check_boundaries() #0 {
   ret i32 0
 }
 
-define i32 @main() #0 {
+define dso_local i32 @main() #0 {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    stmg %r11, %r15, 88(%r15)

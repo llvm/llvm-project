@@ -313,9 +313,8 @@ static void updateChildPruning(const DWARFDie &Die, CompileUnit &CU,
 /// (i.e., forward declarations that are children of a DW_TAG_module).
 static bool analyzeContextInfo(
     const DWARFDie &DIE, unsigned ParentIdx, CompileUnit &CU,
-    DeclContext *CurrentDeclContext, UniquingStringPool &StringPool,
-    DeclContextTree &Contexts, uint64_t ModulesEndOffset,
-    swiftInterfacesMap *ParseableSwiftInterfaces,
+    DeclContext *CurrentDeclContext, DeclContextTree &Contexts,
+    uint64_t ModulesEndOffset, swiftInterfacesMap *ParseableSwiftInterfaces,
     std::function<void(const Twine &, const DWARFDie &)> ReportWarning,
     bool InImportedModule = false) {
   // LIFO work list.
@@ -366,7 +365,7 @@ static bool analyzeContextInfo(
     if (CU.hasODR() || InClangModule) {
       if (Current.Context) {
         auto PtrInvalidPair = Contexts.getChildDeclContext(
-            *Current.Context, Current.Die, CU, StringPool, InClangModule);
+            *Current.Context, Current.Die, CU, InClangModule);
         Current.Context = PtrInvalidPair.getPointer();
         Info.Ctxt =
             PtrInvalidPair.getInt() ? nullptr : PtrInvalidPair.getPointer();
@@ -1977,11 +1976,13 @@ static std::string remapPath(StringRef Path,
   return p.str().str();
 }
 
-bool DWARFLinker::registerModuleReference(
-    DWARFDie CUDie, const DWARFUnit &Unit, const DWARFFile &File,
-    OffsetsStringPool &StringPool, UniquingStringPool &UniquingStringPool,
-    DeclContextTree &ODRContexts, uint64_t ModulesEndOffset, unsigned &UnitID,
-    bool IsLittleEndian, unsigned Indent, bool Quiet) {
+bool DWARFLinker::registerModuleReference(DWARFDie CUDie, const DWARFUnit &Unit,
+                                          const DWARFFile &File,
+                                          OffsetsStringPool &StringPool,
+                                          DeclContextTree &ODRContexts,
+                                          uint64_t ModulesEndOffset,
+                                          unsigned &UnitID, bool IsLittleEndian,
+                                          unsigned Indent, bool Quiet) {
   std::string PCMfile = dwarf::toString(
       CUDie.find({dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}), "");
   if (PCMfile.empty())
@@ -2025,10 +2026,9 @@ bool DWARFLinker::registerModuleReference(
   // shouldn't run into an infinite loop, so mark it as processed now.
   ClangModules.insert({PCMfile, DwoId});
 
-  if (Error E =
-          loadClangModule(CUDie, PCMfile, Name, DwoId, File, StringPool,
-                          UniquingStringPool, ODRContexts, ModulesEndOffset,
-                          UnitID, IsLittleEndian, Indent + 2, Quiet)) {
+  if (Error E = loadClangModule(CUDie, PCMfile, Name, DwoId, File, StringPool,
+                                ODRContexts, ModulesEndOffset, UnitID,
+                                IsLittleEndian, Indent + 2, Quiet)) {
     consumeError(std::move(E));
     return false;
   }
@@ -2038,9 +2038,8 @@ bool DWARFLinker::registerModuleReference(
 Error DWARFLinker::loadClangModule(
     DWARFDie CUDie, StringRef Filename, StringRef ModuleName, uint64_t DwoId,
     const DWARFFile &File, OffsetsStringPool &StringPool,
-    UniquingStringPool &UniquingStringPool, DeclContextTree &ODRContexts,
-    uint64_t ModulesEndOffset, unsigned &UnitID, bool IsLittleEndian,
-    unsigned Indent, bool Quiet) {
+    DeclContextTree &ODRContexts, uint64_t ModulesEndOffset, unsigned &UnitID,
+    bool IsLittleEndian, unsigned Indent, bool Quiet) {
   /// Using a SmallString<0> because loadClangModule() is recursive.
   SmallString<0> Path(Options.PrependPath);
   if (sys::path::is_relative(Filename))
@@ -2064,9 +2063,9 @@ Error DWARFLinker::loadClangModule(
     auto CUDie = CU->getUnitDIE(false);
     if (!CUDie)
       continue;
-    if (!registerModuleReference(
-            CUDie, *CU, File, StringPool, UniquingStringPool, ODRContexts,
-            ModulesEndOffset, UnitID, IsLittleEndian, Indent, Quiet)) {
+    if (!registerModuleReference(CUDie, *CU, File, StringPool, ODRContexts,
+                                 ModulesEndOffset, UnitID, IsLittleEndian,
+                                 Indent, Quiet)) {
       if (Unit) {
         std::string Err =
             (Filename +
@@ -2094,9 +2093,8 @@ Error DWARFLinker::loadClangModule(
       Unit = std::make_unique<CompileUnit>(*CU, UnitID++, !Options.NoODR,
                                            ModuleName);
       Unit->setHasInterestingContent();
-      analyzeContextInfo(CUDie, 0, *Unit, &ODRContexts.getRoot(),
-                         UniquingStringPool, ODRContexts, ModulesEndOffset,
-                         Options.ParseableSwiftInterfaces,
+      analyzeContextInfo(CUDie, 0, *Unit, &ODRContexts.getRoot(), ODRContexts,
+                         ModulesEndOffset, Options.ParseableSwiftInterfaces,
                          [&](const Twine &Warning, const DWARFDie &DIE) {
                            reportWarning(Warning, File, &DIE);
                          });
@@ -2310,10 +2308,6 @@ bool DWARFLinker::link() {
   // parallel loop.
   unsigned NumObjects = ObjectContexts.size();
 
-  // This Dwarf string pool which is only used for uniquing. This one should
-  // never be used for offsets as its not thread-safe or predictable.
-  UniquingStringPool UniquingStringPool(nullptr, true);
-
   // This Dwarf string pool which is used for emission. It must be used
   // serially as the order of calling getStringOffset matters for
   // reproducibility.
@@ -2383,7 +2377,7 @@ bool DWARFLinker::link() {
       }
       if (CUDie && !LLVM_UNLIKELY(Options.Update))
         registerModuleReference(CUDie, *CU, OptContext.File, OffsetsStringPool,
-                                UniquingStringPool, ODRContexts, 0, UnitID,
+                                ODRContexts, 0, UnitID,
                                 OptContext.File.Dwarf->isLittleEndian());
     }
   }
@@ -2425,8 +2419,8 @@ bool DWARFLinker::link() {
       auto CUDie = CU->getUnitDIE(false);
       if (!CUDie || LLVM_UNLIKELY(Options.Update) ||
           !registerModuleReference(CUDie, *CU, Context.File, OffsetsStringPool,
-                                   UniquingStringPool, ODRContexts,
-                                   ModulesEndOffset, UnitID, Quiet)) {
+                                   ODRContexts, ModulesEndOffset, UnitID,
+                                   Quiet)) {
         Context.CompileUnits.push_back(std::make_unique<CompileUnit>(
             *CU, UnitID++, !Options.NoODR && !Options.Update, ""));
       }
@@ -2438,9 +2432,8 @@ bool DWARFLinker::link() {
       if (!CUDie)
         continue;
       analyzeContextInfo(CurrentUnit->getOrigUnit().getUnitDIE(), 0,
-                         *CurrentUnit, &ODRContexts.getRoot(),
-                         UniquingStringPool, ODRContexts, ModulesEndOffset,
-                         Options.ParseableSwiftInterfaces,
+                         *CurrentUnit, &ODRContexts.getRoot(), ODRContexts,
+                         ModulesEndOffset, Options.ParseableSwiftInterfaces,
                          [&](const Twine &Warning, const DWARFDie &DIE) {
                            reportWarning(Warning, Context.File, &DIE);
                          });

@@ -54,6 +54,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCDisassembler() {
   // Register the disassembler for each target.
   TargetRegistry::RegisterMCDisassembler(getThePPC32Target(),
                                          createPPCDisassembler);
+  TargetRegistry::RegisterMCDisassembler(getThePPC32LETarget(),
+                                         createPPCLEDisassembler);
   TargetRegistry::RegisterMCDisassembler(getThePPC64Target(),
                                          createPPCDisassembler);
   TargetRegistry::RegisterMCDisassembler(getThePPC64LETarget(),

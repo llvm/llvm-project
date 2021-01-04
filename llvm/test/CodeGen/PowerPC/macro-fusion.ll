@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -verify-misched -debug-only=machine-scheduler \
 ; RUN:  -o - 2>&1 > /dev/null | FileCheck %s --check-prefix=CHECK-P8
 
-@m = local_unnamed_addr global i64 0, align 8
+@m = dso_local local_unnamed_addr global i64 0, align 8
 
 define i64 @fuse_addis_ld() {
 entry:

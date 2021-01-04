@@ -1,5 +1,7 @@
 // RUN: mlir-opt %s --test-shape-function-report -verify-diagnostics
 
+module attributes {shape.lib = [@shape_lib]} {
+
 // expected-remark@+1 {{associated shape function: same_result_shape}}
 func @tanh(%arg: tensor<10x20xf32>) -> tensor<10x20xf32>
     attributes {shape.function = @shape_lib::@same_result_shape} {
@@ -19,4 +21,6 @@ shape.function_library @shape_lib {
   }
 } mapping {
   test.same_operand_result_type = @same_result_shape
+}
+
 }

@@ -17,7 +17,7 @@
 @my_emutls_v_xyz = external global i8*, align 4
 declare i8* @my_emutls_get_address(i8*)
 
-define i32 @my_get_xyz() {
+define dso_local i32 @my_get_xyz() {
 ; X86-LABEL: my_get_xyz:
 ; X86:         movl $my_emutls_v_xyz, (%esp)
 ; X86-NEXT:    calll my_emutls_get_address
@@ -40,15 +40,15 @@ entry:
   ret i32 %1
 }
 
-@i1 = thread_local global i32 15
+@i1 = dso_local thread_local global i32 15
 @i2 = external thread_local global i32
 @i3 = internal thread_local global i32 15
 @i4 = hidden thread_local global i32 15
 @i5 = external hidden thread_local global i32
-@s1 = thread_local global i16 15
-@b1 = thread_local global i8 0
+@s1 = dso_local thread_local global i16 15
+@b1 = dso_local thread_local global i8 0
 
-define i32 @f1() {
+define dso_local i32 @f1() {
 ; X86-LABEL: f1:
 ; X86:         movl $__emutls_v.i1, (%esp)
 ; X86-NEXT:    calll __emutls_get_address
@@ -69,7 +69,7 @@ entry:
   ret i32 %tmp1
 }
 
-define i32* @f2() {
+define dso_local i32* @f2() {
 ; X86-LABEL: f2:
 ; X86:         movl $__emutls_v.i1, (%esp)
 ; X86-NEXT:    calll __emutls_get_address
@@ -87,7 +87,7 @@ entry:
   ret i32* @i1
 }
 
-define i32 @f3() nounwind {
+define dso_local i32 @f3() nounwind {
 ; X86-LABEL: f3:
 ; X86:         movl $__emutls_v.i2, (%esp)
 ; X86-NEXT:    calll __emutls_get_address
@@ -99,7 +99,7 @@ entry:
   ret i32 %tmp1
 }
 
-define i32* @f4() {
+define dso_local i32* @f4() {
 ; X86-LABEL: f4:
 ; X86:         movl $__emutls_v.i2, (%esp)
 ; X86-NEXT:    calll __emutls_get_address
@@ -110,7 +110,7 @@ entry:
   ret i32* @i2
 }
 
-define i32 @f5() nounwind {
+define dso_local i32 @f5() nounwind {
 ; X86-LABEL: f5:
 ; X86:         movl $__emutls_v.i3, (%esp)
 ; X86-NEXT:    calll __emutls_get_address
@@ -122,7 +122,7 @@ entry:
   ret i32 %tmp1
 }
 
-define i32* @f6() {
+define dso_local i32* @f6() {
 ; X86-LABEL: f6:
 ; X86:         movl $__emutls_v.i3, (%esp)
 ; X86-NEXT:    calll __emutls_get_address
@@ -133,7 +133,7 @@ entry:
   ret i32* @i3
 }
 
-define i32 @f7() {
+define dso_local i32 @f7() {
 ; X86-LABEL: f7:
 ; X86:         movl $__emutls_v.i4, (%esp)
 ; X86-NEXT:    calll __emutls_get_address
@@ -146,7 +146,7 @@ entry:
   ret i32 %tmp1
 }
 
-define i32* @f8() {
+define dso_local i32* @f8() {
 ; X86-LABEL: f8:
 ; X86:         movl $__emutls_v.i4, (%esp)
 ; X86-NEXT:    calll __emutls_get_address
@@ -157,7 +157,7 @@ entry:
   ret i32* @i4
 }
 
-define i32 @f9() {
+define dso_local i32 @f9() {
 ; X86-LABEL: f9:
 ; X86:         movl $__emutls_v.i5, (%esp)
 ; X86-NEXT:    calll __emutls_get_address
@@ -170,7 +170,7 @@ entry:
   ret i32 %tmp1
 }
 
-define i32* @f10() {
+define dso_local i32* @f10() {
 ; X86-LABEL: f10:
 ; X86:         movl $__emutls_v.i5, (%esp)
 ; X86-NEXT:    calll __emutls_get_address
@@ -181,7 +181,7 @@ entry:
   ret i32* @i5
 }
 
-define i16 @f11() {
+define dso_local i16 @f11() {
 ; X86-LABEL: f11:
 ; X86:         movl $__emutls_v.s1, (%esp)
 ; X86-NEXT:    calll __emutls_get_address
@@ -194,7 +194,7 @@ entry:
   ret i16 %tmp1
 }
 
-define i32 @f12() {
+define dso_local i32 @f12() {
 ; X86-LABEL: f12:
 ; X86:         movl $__emutls_v.s1, (%esp)
 ; X86-NEXT:    calll __emutls_get_address
@@ -208,7 +208,7 @@ entry:
   ret i32 %tmp2
 }
 
-define i8 @f13() {
+define dso_local i8 @f13() {
 ; X86-LABEL: f13:
 ; X86:         movl $__emutls_v.b1, (%esp)
 ; X86-NEXT:    calll __emutls_get_address
@@ -221,7 +221,7 @@ entry:
   ret i8 %tmp1
 }
 
-define i32 @f14() {
+define dso_local i32 @f14() {
 ; X86-LABEL: f14:
 ; X86:         movl $__emutls_v.b1, (%esp)
 ; X86-NEXT:    calll __emutls_get_address

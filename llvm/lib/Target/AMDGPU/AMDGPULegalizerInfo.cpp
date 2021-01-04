@@ -2087,10 +2087,11 @@ bool AMDGPULegalizerInfo::legalizeExtractVectorElt(
   // FIXME: Artifact combiner probably should have replaced the truncated
   // constant before this, so we shouldn't need
   // getConstantVRegValWithLookThrough.
-  Optional<ValueAndVReg> IdxVal = getConstantVRegValWithLookThrough(
-    MI.getOperand(2).getReg(), MRI);
-  if (!IdxVal) // Dynamic case will be selected to register indexing.
+  Optional<ValueAndVReg> MaybeIdxVal =
+      getConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
+  if (!MaybeIdxVal) // Dynamic case will be selected to register indexing.
     return true;
+  const int64_t IdxVal = MaybeIdxVal->Value.getSExtValue();
 
   Register Dst = MI.getOperand(0).getReg();
   Register Vec = MI.getOperand(1).getReg();
@@ -2099,8 +2100,8 @@ bool AMDGPULegalizerInfo::legalizeExtractVectorElt(
   LLT EltTy = VecTy.getElementType();
   assert(EltTy == MRI.getType(Dst));
 
-  if (IdxVal->Value < VecTy.getNumElements())
-    B.buildExtract(Dst, Vec, IdxVal->Value * EltTy.getSizeInBits());
+  if (IdxVal < VecTy.getNumElements())
+    B.buildExtract(Dst, Vec, IdxVal * EltTy.getSizeInBits());
   else
     B.buildUndef(Dst);
 
@@ -2118,11 +2119,12 @@ bool AMDGPULegalizerInfo::legalizeInsertVectorElt(
   // FIXME: Artifact combiner probably should have replaced the truncated
   // constant before this, so we shouldn't need
   // getConstantVRegValWithLookThrough.
-  Optional<ValueAndVReg> IdxVal = getConstantVRegValWithLookThrough(
-    MI.getOperand(3).getReg(), MRI);
-  if (!IdxVal) // Dynamic case will be selected to register indexing.
+  Optional<ValueAndVReg> MaybeIdxVal =
+      getConstantVRegValWithLookThrough(MI.getOperand(3).getReg(), MRI);
+  if (!MaybeIdxVal) // Dynamic case will be selected to register indexing.
     return true;
 
+  int64_t IdxVal = MaybeIdxVal->Value.getSExtValue();
   Register Dst = MI.getOperand(0).getReg();
   Register Vec = MI.getOperand(1).getReg();
   Register Ins = MI.getOperand(2).getReg();
@@ -2131,8 +2133,8 @@ bool AMDGPULegalizerInfo::legalizeInsertVectorElt(
   LLT EltTy = VecTy.getElementType();
   assert(EltTy == MRI.getType(Ins));
 
-  if (IdxVal->Value < VecTy.getNumElements())
-    B.buildInsert(Dst, Vec, Ins, IdxVal->Value * EltTy.getSizeInBits());
+  if (IdxVal < VecTy.getNumElements())
+    B.buildInsert(Dst, Vec, Ins, IdxVal * EltTy.getSizeInBits());
   else
     B.buildUndef(Dst);
 
@@ -2643,7 +2645,7 @@ bool AMDGPULegalizerInfo::legalizeBuildVector(
 static bool isNot(const MachineRegisterInfo &MRI, const MachineInstr &MI) {
   if (MI.getOpcode() != TargetOpcode::G_XOR)
     return false;
-  auto ConstVal = getConstantVRegVal(MI.getOperand(2).getReg(), MRI);
+  auto ConstVal = getConstantVRegSExtVal(MI.getOperand(2).getReg(), MRI);
   return ConstVal && *ConstVal == -1;
 }
 

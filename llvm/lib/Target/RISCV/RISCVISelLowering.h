@@ -82,6 +82,9 @@ enum NodeType : unsigned {
   // sign extended from the vector element size. NOTE: The result size will
   // never be less than the vector element size.
   VMV_X_S,
+  // Splats an i64 scalar to a vector type (with element type i64) where the
+  // scalar is a sign-extended i32.
+  SPLAT_VECTOR_I64,
 };
 } // namespace RISCVISD
 
@@ -265,6 +268,7 @@ private:
   SDValue lowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerShiftLeftParts(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerShiftRightParts(SDValue Op, SelectionDAG &DAG, bool IsSRA) const;
+  SDValue lowerSPLATVECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, SelectionDAG &DAG) const;
 

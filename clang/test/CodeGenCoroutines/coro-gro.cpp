@@ -43,7 +43,7 @@ template <> struct std::experimental::coroutine_traits<int> {
 struct Cleanup { ~Cleanup(); };
 void doSomething() noexcept;
 
-// CHECK: define i32 @_Z1fv(
+// CHECK: define{{.*}} i32 @_Z1fv(
 int f() {
   // CHECK: %[[RetVal:.+]] = alloca i32
   // CHECK: %[[GroActive:.+]] = alloca i1

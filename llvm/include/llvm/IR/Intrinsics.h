@@ -125,7 +125,8 @@ namespace Intrinsic {
       VecElementArgument,
       Subdivide2Argument,
       Subdivide4Argument,
-      VecOfBitcastsToInt
+      VecOfBitcastsToInt,
+      AMX
     } Kind;
 
     union {

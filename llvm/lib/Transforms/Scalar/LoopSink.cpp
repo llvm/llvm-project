@@ -222,8 +222,7 @@ static bool sinkInstruction(
   // of the loop block numbers as iterating the set doesn't give a useful
   // order. No need to stable sort as the block numbers are a total ordering.
   SmallVector<BasicBlock *, 2> SortedBBsToSinkInto;
-  SortedBBsToSinkInto.insert(SortedBBsToSinkInto.begin(), BBsToSinkInto.begin(),
-                             BBsToSinkInto.end());
+  llvm::append_range(SortedBBsToSinkInto, BBsToSinkInto);
   llvm::sort(SortedBBsToSinkInto, [&](BasicBlock *A, BasicBlock *B) {
     return LoopBlockNumber.find(A)->second < LoopBlockNumber.find(B)->second;
   });

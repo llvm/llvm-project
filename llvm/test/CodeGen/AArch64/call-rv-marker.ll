@@ -22,10 +22,10 @@ declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
 
 %struct.S = type { i8 }
 
-@g = global i8* null, align 8
-@fptr = global i8* ()* null, align 8
+@g = dso_local global i8* null, align 8
+@fptr = dso_local global i8* ()* null, align 8
 
-define i8* @rv_marker_1() {
+define dso_local i8* @rv_marker_1() {
 ; CHECK-LABEL:    rv_marker_1:
 ; CHECK:           .cfi_offset w30, -16
 ; CHECK-NEXT:      bl foo1
@@ -37,7 +37,7 @@ entry:
   ret i8* %call
 }
 
-define void @rv_marker_2_select(i32 %c) {
+define dso_local void @rv_marker_2_select(i32 %c) {
 ; CHECK-LABEL: rv_marker_2_select:
 ; SELDAG:        cinc  w0, w8, eq
 ; GISEL:         csinc w0, w8, wzr, eq
@@ -54,7 +54,7 @@ entry:
   ret void
 }
 
-define void @rv_marker_3() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define dso_local void @rv_marker_3() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 ; CHECK-LABEL: rv_marker_3
 ; CHECK:         .cfi_offset w30, -32
 ; CHECK-NEXT:    bl  foo1
@@ -76,7 +76,7 @@ lpad:                                             ; preds = %entry
   resume { i8*, i32 } %0
 }
 
-define void @rv_marker_4() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define dso_local void @rv_marker_4() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 ; CHECK-LABEL: rv_marker_4
 ; CHECK:       .Ltmp3:
 ; CHECK-NEXT:     bl  foo1
@@ -118,7 +118,7 @@ ehcleanup:                                        ; preds = %lpad1, %lpad
   resume { i8*, i32 } %.pn
 }
 
-define i8* @rv_marker_5_indirect_call() {
+define dso_local i8* @rv_marker_5_indirect_call() {
 ; CHECK-LABEL: rv_marker_5_indirect_call
 ; CHECK:         ldr [[ADDR:x[0-9]+]], [
 ; CHECK-NEXT:    blr [[ADDR]]
@@ -134,7 +134,7 @@ entry:
 
 declare void @foo(i64, i64, i64)
 
-define void @rv_marker_multiarg(i64 %a, i64 %b, i64 %c) {
+define dso_local void @rv_marker_multiarg(i64 %a, i64 %b, i64 %c) {
 ; CHECK-LABEL: rv_marker_multiarg
 ; CHECK:        mov [[TMP:x[0-9]+]], x0
 ; CHECK-NEXT:   mov x0, x2

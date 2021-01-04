@@ -29,6 +29,7 @@
 #include "SIMachineFunctionInfo.h"
 #include "SIMachineScheduler.h"
 #include "TargetInfo/AMDGPUTargetInfo.h"
+#include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
@@ -40,8 +41,10 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -51,7 +54,9 @@
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
+#include "llvm/Transforms/Scalar/InferAddressSpaces.h"
 #include "llvm/Transforms/Utils.h"
+#include "llvm/Transforms/Utils/SimplifyLibCalls.h"
 #include "llvm/Transforms/Vectorize.h"
 #include <memory>
 
@@ -486,6 +491,68 @@ void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
       if (EnableOpt)
         PM.add(createAMDGPUPromoteAllocaToVector());
   });
+}
+
+void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
+                                                       bool DebugPassManager) {
+  PB.registerPipelineParsingCallback(
+      [this](StringRef PassName, FunctionPassManager &PM,
+             ArrayRef<PassBuilder::PipelineElement>) {
+        if (PassName == "amdgpu-simplifylib") {
+          PM.addPass(AMDGPUSimplifyLibCallsPass());
+          return true;
+        }
+        if (PassName == "amdgpu-usenative") {
+          PM.addPass(AMDGPUUseNativeCallsPass());
+          return true;
+        }
+        if (PassName == "amdgpu-promote-alloca") {
+          PM.addPass(AMDGPUPromoteAllocaPass(*this));
+          return true;
+        }
+        if (PassName == "amdgpu-promote-alloca-to-vector") {
+          PM.addPass(AMDGPUPromoteAllocaToVectorPass(*this));
+          return true;
+        }
+        if (PassName == "amdgpu-lower-kernel-attributes") {
+          PM.addPass(AMDGPULowerKernelAttributesPass());
+          return true;
+        }
+        return false;
+      });
+
+  PB.registerPipelineStartEPCallback([DebugPassManager](
+                                         ModulePassManager &PM,
+                                         PassBuilder::OptimizationLevel Level) {
+    FunctionPassManager FPM(DebugPassManager);
+    FPM.addPass(AMDGPUUseNativeCallsPass());
+    if (EnableLibCallSimplify && Level != PassBuilder::OptimizationLevel::O0)
+      FPM.addPass(AMDGPUSimplifyLibCallsPass());
+    PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+  });
+
+  PB.registerCGSCCOptimizerLateEPCallback(
+      [this, DebugPassManager](CGSCCPassManager &PM,
+                               PassBuilder::OptimizationLevel Level) {
+          FunctionPassManager FPM(DebugPassManager);
+
+          // Add infer address spaces pass to the opt pipeline after inlining
+          // but before SROA to increase SROA opportunities.
+          FPM.addPass(InferAddressSpacesPass());
+
+          // This should run after inlining to have any chance of doing
+          // anything, and before other cleanup optimizations.
+          FPM.addPass(AMDGPULowerKernelAttributesPass());
+
+          if (Level != PassBuilder::OptimizationLevel::O0) {
+            // Promote alloca to vector before SROA and loop unroll. If we
+            // manage to eliminate allocas before unroll we may choose to unroll
+            // less.
+            FPM.addPass(AMDGPUPromoteAllocaToVectorPass(*this));
+          }
+
+          PM.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM)));
+      });
 }
 
 //===----------------------------------------------------------------------===//

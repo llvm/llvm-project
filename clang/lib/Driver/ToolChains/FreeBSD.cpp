@@ -42,6 +42,7 @@ void freebsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("--32");
     break;
   case llvm::Triple::ppc:
+  case llvm::Triple::ppcle:
     CmdArgs.push_back("-a32");
     break;
   case llvm::Triple::mips:
@@ -191,6 +192,11 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   case llvm::Triple::ppc:
     CmdArgs.push_back("-m");
     CmdArgs.push_back("elf32ppc_fbsd");
+    break;
+  case llvm::Triple::ppcle:
+    CmdArgs.push_back("-m");
+    // Use generic -- only usage is for freestanding.
+    CmdArgs.push_back("elf32lppc");
     break;
   case llvm::Triple::mips:
     CmdArgs.push_back("-m");
@@ -374,7 +380,7 @@ FreeBSD::FreeBSD(const Driver &D, const llvm::Triple &Triple,
   // When targeting 32-bit platforms, look for '/usr/lib32/crt1.o' and fall
   // back to '/usr/lib' if it doesn't exist.
   if ((Triple.getArch() == llvm::Triple::x86 || Triple.isMIPS32() ||
-       Triple.getArch() == llvm::Triple::ppc) &&
+       Triple.isPPC32()) &&
       D.getVFS().exists(getDriver().SysRoot + "/usr/lib32/crt1.o"))
     getFilePaths().push_back(getDriver().SysRoot + "/usr/lib32");
   else

@@ -2953,7 +2953,7 @@ void SMSchedule::finalizeSchedule(SwingSchedulerDAG *SSD) {
     }
     // Replace the old order with the new order.
     cycleInstrs.swap(newOrderPhi);
-    cycleInstrs.insert(cycleInstrs.end(), newOrderI.begin(), newOrderI.end());
+    llvm::append_range(cycleInstrs, newOrderI);
     SSD->fixupRegisterOverlaps(cycleInstrs);
   }
 

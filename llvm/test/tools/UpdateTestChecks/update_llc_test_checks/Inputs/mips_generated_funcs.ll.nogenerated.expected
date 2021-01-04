@@ -4,7 +4,7 @@
 ; NOTE: Machine outliner doesn't run.
 @x = global i32 0, align 4
 
-define i32 @check_boundaries() #0 {
+define dso_local i32 @check_boundaries() #0 {
 ; CHECK-LABEL: check_boundaries:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addiu $sp, $sp, -32
@@ -92,7 +92,7 @@ define i32 @check_boundaries() #0 {
   ret i32 0
 }
 
-define i32 @main() #0 {
+define dso_local i32 @main() #0 {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addiu $sp, $sp, -32

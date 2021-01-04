@@ -1240,8 +1240,7 @@ bool InterleavedLoadCombineImpl::combine(std::list<VectorInfo> &InterleavedLoad,
       Mask.push_back(i + j * Factor);
 
     Builder.SetInsertPoint(VI.SVI);
-    auto SVI = Builder.CreateShuffleVector(LI, UndefValue::get(LI->getType()),
-                                           Mask, "interleaved.shuffle");
+    auto SVI = Builder.CreateShuffleVector(LI, Mask, "interleaved.shuffle");
     VI.SVI->replaceAllUsesWith(SVI);
     i++;
   }

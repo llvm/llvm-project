@@ -3,7 +3,7 @@
 // PR32019: Clang can lower some ternary operator expressions to select
 // instructions. Make sure we only increment the profile counter for the
 // condition when the condition evaluates to true.
-// CHECK-LABEL: define i32 @f1
+// CHECK-LABEL: define{{.*}} i32 @f1
 int f1(int x) {
 // CHECK: [[TOBOOL:%.*]] = icmp ne i32 %{{.*}}, 0
 // CHECK-NEXT: [[STEP:%.*]] = zext i1 [[TOBOOL]] to i64

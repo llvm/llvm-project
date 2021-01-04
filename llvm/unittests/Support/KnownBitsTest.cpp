@@ -295,6 +295,20 @@ TEST(KnownBitsTest, GetMinMaxVal) {
   });
 }
 
+TEST(KnownBitsTest, GetSignedMinMaxVal) {
+  unsigned Bits = 4;
+  ForeachKnownBits(Bits, [&](const KnownBits &Known) {
+    APInt Min = APInt::getSignedMaxValue(Bits);
+    APInt Max = APInt::getSignedMinValue(Bits);
+    ForeachNumInKnownBits(Known, [&](const APInt &N) {
+      Min = APIntOps::smin(Min, N);
+      Max = APIntOps::smax(Max, N);
+    });
+    EXPECT_EQ(Min, Known.getSignedMinValue());
+    EXPECT_EQ(Max, Known.getSignedMaxValue());
+  });
+}
+
 TEST(KnownBitsTest, SExtOrTrunc) {
   const unsigned NarrowerSize = 4;
   const unsigned BaseSize = 6;

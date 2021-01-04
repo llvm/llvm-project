@@ -836,3 +836,57 @@ for.bodythread-pre-split.loopback:
 if.end.loopexit:
   ret void
 }
+
+@f.b = external global i16, align 1
+define void @pr48450_3() {
+; CHECK-LABEL: @pr48450_3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_COND1:%.*]]
+; CHECK:       for.cond1:
+; CHECK-NEXT:    [[V:%.*]] = load i16, i16* @f.b, align 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[V]], 1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    br label [[FOR_COND1]]
+;
+entry:
+  br label %for.cond1
+
+for.cond1:
+  %v = load i16, i16* @f.b, align 1
+  %cmp = icmp slt i16 %v, 1
+  br i1 %cmp, label %for.body, label %for.end
+
+for.body:
+  br label %for.cond1
+
+for.end:
+  %tobool = icmp ne i16 %v, 0
+  br i1 %tobool, label %if.then, label %if.end
+
+if.then:
+  unreachable
+
+if.end:
+  br label %for.cond2
+
+for.cond2:
+  %c.0 = phi i16 [ undef, %if.end ], [ %inc, %if.end7 ]
+  %cmp3 = icmp slt i16 %c.0, 1
+  br i1 %cmp3, label %for.body4, label %for.cond.cleanup
+
+for.cond.cleanup:
+  br label %cleanup
+
+for.body4:
+  br i1 undef, label %if.then6, label %if.end7
+
+if.then6:
+  br label %cleanup
+
+if.end7:
+  %inc = add nsw i16 %c.0, 1
+  br label %for.cond2
+
+cleanup:
+  unreachable
+}

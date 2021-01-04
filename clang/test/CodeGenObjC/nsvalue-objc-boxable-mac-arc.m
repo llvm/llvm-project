@@ -12,7 +12,7 @@
 // CHECK:      [[RECT_STR:.*]]      = {{.*}}_NSRect={_NSPoint=dd}{_NSSize=dd}}{{.*}}
 // CHECK:      [[EDGE_STR:.*]]      = {{.*}}NSEdgeInsets=dddd{{.*}}
 
-// CHECK-LABEL: define void @doRange()
+// CHECK-LABEL: define{{.*}} void @doRange()
 void doRange() {
   // CHECK:      [[LOCAL_VAR:%.*]]  = alloca %struct._NSRange{{.*}}
   // CHECK:      [[TEMP_VAR:%.*]]   = alloca %struct._NSRange{{.*}}
@@ -31,7 +31,7 @@ void doRange() {
   // CHECK:      ret void
 }
 
-// CHECK-LABEL: define void @doPoint()
+// CHECK-LABEL: define{{.*}} void @doPoint()
 void doPoint() {
   // CHECK:      [[LOCAL_VAR:%.*]]  = alloca %struct._NSPoint{{.*}}
   // CHECK:      [[TEMP_VAR:%.*]]   = alloca %struct._NSPoint{{.*}}
@@ -50,7 +50,7 @@ void doPoint() {
   // CHECK:      ret void
 }
 
-// CHECK-LABEL: define void @doSize()
+// CHECK-LABEL: define{{.*}} void @doSize()
 void doSize() {
   // CHECK:      [[LOCAL_VAR:%.*]]  = alloca %struct._NSSize{{.*}}
   // CHECK:      [[TEMP_VAR:%.*]]   = alloca %struct._NSSize{{.*}}
@@ -69,7 +69,7 @@ void doSize() {
   // CHECK:      ret void
 }
 
-// CHECK-LABEL: define void @doRect()
+// CHECK-LABEL: define{{.*}} void @doRect()
 void doRect() {
   // CHECK:      [[LOCAL_VAR:%.*]]  = alloca %struct._NSRect{{.*}}
   // CHECK:      [[TEMP_VAR:%.*]]   = alloca %struct._NSRect{{.*}}
@@ -90,7 +90,7 @@ void doRect() {
   // CHECK:      ret void
 }
 
-// CHECK-LABEL: define void @doNSEdgeInsets()
+// CHECK-LABEL: define{{.*}} void @doNSEdgeInsets()
 void doNSEdgeInsets() {
   // CHECK:      [[LOCAL_VAR:%.*]]  = alloca %struct.NSEdgeInsets{{.*}}
   // CHECK:      [[TEMP_VAR:%.*]]   = alloca %struct.NSEdgeInsets{{.*}}
@@ -109,7 +109,7 @@ void doNSEdgeInsets() {
   // CHECK:      ret void
 }
 
-// CHECK-LABEL: define void @doRangeRValue() 
+// CHECK-LABEL: define{{.*}} void @doRangeRValue() 
 void doRangeRValue() {
   // CHECK:     [[COERCE:%.*]]          = alloca %struct._NSRange{{.*}}
   // CHECK:     [[RECV_PTR:%.*]]        = load {{.*}} [[NSVALUE]]

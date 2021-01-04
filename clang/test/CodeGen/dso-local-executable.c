@@ -91,10 +91,10 @@
 // SHARED-DAG: @bar = external global i32
 // SHARED-DAG: @weak_bar = extern_weak global i32
 // SHARED-DAG: declare void @foo()
-// SHARED-DAG: @baz = global i32 42
-// SHARED-DAG: define i32* @zed()
+// SHARED-DAG: @baz ={{.*}} global i32 42
+// SHARED-DAG: define{{.*}} i32* @zed()
 // SHARED-DAG: @thread_var = external thread_local global i32
-// SHARED-DAG: @local_thread_var = thread_local global i32 42
+// SHARED-DAG: @local_thread_var ={{.*}} thread_local global i32 42
 
 int baz = 42;
 __attribute__((dllimport)) extern int import_var;

@@ -9,7 +9,7 @@
 // rounding-warning@* {{overriding currently unsupported rounding mode on this target}}
 // exception-warning@* {{overriding currently unsupported use of floating point exceptions on this target}}
 float fp_precise_1(float a, float b, float c) {
-// CHECK: define float @_Z12fp_precise_1fff
+// CHECK: define{{.*}} float @_Z12fp_precise_1fff
 // CHECK: %[[M:.+]] = fmul float{{.*}}
 // CHECK: fadd float %[[M]], %c
   return a * b + c;

@@ -92,11 +92,6 @@ void computeValueLLTs(const DataLayout &DL, Type &Ty,
 /// ExtractTypeInfo - Returns the type info, possibly bitcast, encoded in V.
 GlobalValue *ExtractTypeInfo(Value *V);
 
-/// hasInlineAsmMemConstraint - Return true if the inline asm instruction being
-/// processed uses a memory 'm' constraint.
-bool hasInlineAsmMemConstraint(InlineAsm::ConstraintInfoVector &CInfos,
-                               const TargetLowering &TLI);
-
 /// getFCmpCondCode - Return the ISD condition code corresponding to
 /// the given LLVM IR floating-point condition code.  This includes
 /// consideration of global floating-point math flags.

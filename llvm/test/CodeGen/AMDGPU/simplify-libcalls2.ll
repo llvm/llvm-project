@@ -1,5 +1,6 @@
 ; REQUIRES: asserts
 ; RUN: opt -S -amdgpu-simplifylib -debug-only=amdgpu-simplifylib -mtriple=amdgcn-unknown-amdhsa -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes=amdgpu-simplifylib -debug-only=amdgpu-simplifylib -mtriple=amdgcn-unknown-amdhsa -disable-output < %s 2>&1 | FileCheck %s
 
 ; CHECK-NOT: AMDIC: try folding   call void @llvm.lifetime.start.p0i8
 ; CHECK-NOT: AMDIC: try folding   call void @llvm.lifetime.end.p0i8

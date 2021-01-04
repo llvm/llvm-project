@@ -25,7 +25,7 @@ extern void foo1(union M256 A);
 extern void foo2(union M512 A);
 union M256 m1;
 union M512 m2;
-// CHECK-LABEL:   define void @test()
+// CHECK-LABEL:   define{{.*}} void @test()
 // CHECK:         call void @foo1(<4 x double>
 // CHECK-LEGACY:  call void @foo1(%union.M256* byval(%union.M256) align 32
 // AVX:           call void @foo2(%union.M512* byval(%union.M512) align 64

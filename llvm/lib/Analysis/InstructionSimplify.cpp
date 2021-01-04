@@ -924,19 +924,19 @@ static Value *simplifyDivRem(Value *Op0, Value *Op1, bool IsDiv,
                              const SimplifyQuery &Q) {
   Type *Ty = Op0->getType();
 
-  // X / undef -> undef
-  // X % undef -> undef
+  // X / undef -> poison
+  // X % undef -> poison
   if (Q.isUndefValue(Op1))
-    return Op1;
+    return PoisonValue::get(Ty);
 
-  // X / 0 -> undef
-  // X % 0 -> undef
+  // X / 0 -> poison
+  // X % 0 -> poison
   // We don't need to preserve faults!
   if (match(Op1, m_Zero()))
-    return UndefValue::get(Ty);
+    return PoisonValue::get(Ty);
 
-  // If any element of a constant divisor fixed width vector is zero or undef,
-  // the whole op is undef.
+  // If any element of a constant divisor fixed width vector is zero or undef
+  // the behavior is undefined and we can fold the whole op to poison.
   auto *Op1C = dyn_cast<Constant>(Op1);
   auto *VTy = dyn_cast<FixedVectorType>(Ty);
   if (Op1C && VTy) {
@@ -944,7 +944,7 @@ static Value *simplifyDivRem(Value *Op0, Value *Op1, bool IsDiv,
     for (unsigned i = 0; i != NumElts; ++i) {
       Constant *Elt = Op1C->getAggregateElement(i);
       if (Elt && (Elt->isNullValue() || Q.isUndefValue(Elt)))
-        return UndefValue::get(Ty);
+        return PoisonValue::get(Ty);
     }
   }
 
@@ -4385,16 +4385,16 @@ Value *llvm::SimplifyInsertElementInst(Value *Vec, Value *Val, Value *Idx,
   if (VecC && ValC && IdxC)
     return ConstantExpr::getInsertElement(VecC, ValC, IdxC);
 
-  // For fixed-length vector, fold into undef if index is out of bounds.
+  // For fixed-length vector, fold into poison if index is out of bounds.
   if (auto *CI = dyn_cast<ConstantInt>(Idx)) {
     if (isa<FixedVectorType>(Vec->getType()) &&
         CI->uge(cast<FixedVectorType>(Vec->getType())->getNumElements()))
-      return UndefValue::get(Vec->getType());
+      return PoisonValue::get(Vec->getType());
   }
 
   // If index is undef, it might be out of bounds (see above case)
   if (Q.isUndefValue(Idx))
-    return UndefValue::get(Vec->getType());
+    return PoisonValue::get(Vec->getType());
 
   // If the scalar is undef, and there is no risk of propagating poison from the
   // vector value, simplify to the vector value.
@@ -4464,15 +4464,15 @@ static Value *SimplifyExtractElementInst(Value *Vec, Value *Idx,
     // For fixed-length vector, fold into undef if index is out of bounds.
     if (isa<FixedVectorType>(VecVTy) &&
         IdxC->getValue().uge(cast<FixedVectorType>(VecVTy)->getNumElements()))
-      return UndefValue::get(VecVTy->getElementType());
+      return PoisonValue::get(VecVTy->getElementType());
     if (Value *Elt = findScalarElement(Vec, IdxC->getZExtValue()))
       return Elt;
   }
 
   // An undef extract index can be arbitrarily chosen to be an out-of-range
-  // index value, which would result in the instruction being undef.
+  // index value, which would result in the instruction being poison.
   if (Q.isUndefValue(Idx))
-    return UndefValue::get(VecVTy->getElementType());
+    return PoisonValue::get(VecVTy->getElementType());
 
   return nullptr;
 }
@@ -4781,11 +4781,11 @@ static Constant *simplifyFPOp(ArrayRef<Value *> Ops,
 
     // If this operation has 'nnan' or 'ninf' and at least 1 disallowed operand
     // (an undef operand can be chosen to be Nan/Inf), then the result of
-    // this operation is poison. That result can be relaxed to undef.
+    // this operation is poison.
     if (FMF.noNaNs() && (IsNan || IsUndef))
-      return UndefValue::get(V->getType());
+      return PoisonValue::get(V->getType());
     if (FMF.noInfs() && (IsInf || IsUndef))
-      return UndefValue::get(V->getType());
+      return PoisonValue::get(V->getType());
 
     if (IsUndef || IsNan)
       return propagateNaN(cast<Constant>(V));
@@ -5246,6 +5246,15 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
     // bitreverse(bitreverse(x)) -> x
     if (match(Op0, m_BitReverse(m_Value(X)))) return X;
     break;
+  case Intrinsic::ctpop: {
+    // If everything but the lowest bit is zero, that bit is the pop-count. Ex:
+    // ctpop(and X, 1) --> and X, 1
+    unsigned BitWidth = Op0->getType()->getScalarSizeInBits();
+    if (MaskedValueIsZero(Op0, APInt::getHighBitsSet(BitWidth, BitWidth - 1),
+                          Q.DL, 0, Q.AC, Q.CxtI, Q.DT))
+      return Op0;
+    break;
+  }
   case Intrinsic::exp:
     // exp(log(x)) -> x
     if (Q.CxtI->hasAllowReassoc() &&
@@ -5435,19 +5444,19 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
   case Intrinsic::usub_with_overflow:
   case Intrinsic::ssub_with_overflow:
     // X - X -> { 0, false }
-    if (Op0 == Op1)
+    // X - undef -> { 0, false }
+    // undef - X -> { 0, false }
+    if (Op0 == Op1 || Q.isUndefValue(Op0) || Q.isUndefValue(Op1))
       return Constant::getNullValue(ReturnType);
-    LLVM_FALLTHROUGH;
+    break;
   case Intrinsic::uadd_with_overflow:
   case Intrinsic::sadd_with_overflow:
-    // X - undef -> { undef, false }
-    // undef - X -> { undef, false }
-    // X + undef -> { undef, false }
-    // undef + x -> { undef, false }
+    // X + undef -> { -1, false }
+    // undef + x -> { -1, false }
     if (Q.isUndefValue(Op0) || Q.isUndefValue(Op1)) {
       return ConstantStruct::get(
           cast<StructType>(ReturnType),
-          {UndefValue::get(ReturnType->getStructElementType(0)),
+          {Constant::getAllOnesValue(ReturnType->getStructElementType(0)),
            Constant::getNullValue(ReturnType->getStructElementType(1))});
     }
     break;
@@ -5940,13 +5949,6 @@ static bool replaceAndRecursivelySimplifyImpl(
       I->eraseFromParent();
   }
   return Simplified;
-}
-
-bool llvm::recursivelySimplifyInstruction(Instruction *I,
-                                          const TargetLibraryInfo *TLI,
-                                          const DominatorTree *DT,
-                                          AssumptionCache *AC) {
-  return replaceAndRecursivelySimplifyImpl(I, nullptr, TLI, DT, AC, nullptr);
 }
 
 bool llvm::replaceAndRecursivelySimplify(

@@ -242,9 +242,8 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
         return "const";
       return "";
     }
-    if (isa<IntegerLiteral>(S) || isa<FloatingLiteral>(S) ||
-        isa<FixedPointLiteral>(S) || isa<CharacterLiteral>(S) ||
-        isa<ImaginaryLiteral>(S) || isa<CXXBoolLiteralExpr>(S))
+    if (isa<IntegerLiteral, FloatingLiteral, FixedPointLiteral,
+            CharacterLiteral, ImaginaryLiteral, CXXBoolLiteralExpr>(S))
       return toString([&](raw_ostream &OS) {
         S->printPretty(OS, nullptr, Ctx.getPrintingPolicy());
       });

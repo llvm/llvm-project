@@ -3,6 +3,6 @@
 #ifdef __ARM_FEATURE_MATMUL_INT8
 extern "C" void arm_feature_matmulint8_defined() {}
 #endif
-// CHECK: define void @arm_feature_matmulint8_defined()
+// CHECK: define{{.*}} void @arm_feature_matmulint8_defined()
 
 

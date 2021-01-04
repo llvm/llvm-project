@@ -14,7 +14,7 @@ AVAILABLE_EXTERNALLY void *memcpy(void *a, const void *b, size_t c) {
   return __builtin_memcpy(a, b, c);
 }
 
-// CHECK-LABEL: define void @foo
+// CHECK-LABEL: define{{.*}} void @foo
 void foo(void *a, const void *b, size_t c) {
   // Clang will always _emit_ this as memcpy. LLVM turns it into @llvm.memcpy
   // later on if optimizations are enabled.

@@ -1,4 +1,4 @@
-; RUN: opt < %s -simplifycfg -S | not grep bb17
+; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | not grep bb17
 ; PR1786
 
 define i32 @main() {

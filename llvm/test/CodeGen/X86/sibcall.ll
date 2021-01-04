@@ -3,7 +3,7 @@
 ; RUN: llc -verify-machineinstrs < %s -mtriple=x86_64-linux -mcpu=core2 -mattr=+sse2 | FileCheck %s --check-prefix=X64
 ; RUN: llc -verify-machineinstrs < %s -mtriple=x86_64-linux-gnux32 -mcpu=core2 -mattr=+sse2  | FileCheck %s --check-prefix=X32
 
-define void @t1(i32 %x) nounwind ssp {
+define dso_local void @t1(i32 %x) nounwind ssp {
 ; X86-LABEL: t1:
 ; X86:       # %bb.0:
 ; X86-NEXT:    jmp foo # TAILCALL
@@ -21,7 +21,7 @@ define void @t1(i32 %x) nounwind ssp {
 
 declare dso_local void @foo()
 
-define void @t2() nounwind ssp {
+define dso_local void @t2() nounwind ssp {
 ; X86-LABEL: t2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    jmp foo2 # TAILCALL
@@ -39,7 +39,7 @@ define void @t2() nounwind ssp {
 
 declare dso_local i32 @foo2()
 
-define void @t3() nounwind ssp {
+define dso_local void @t3() nounwind ssp {
 ; X86-LABEL: t3:
 ; X86:       # %bb.0:
 ; X86-NEXT:    jmp foo3 # TAILCALL
@@ -57,7 +57,7 @@ define void @t3() nounwind ssp {
 
 declare dso_local i32 @foo3()
 
-define void @t4(void (i32)* nocapture %x) nounwind ssp {
+define dso_local void @t4(void (i32)* nocapture %x) nounwind ssp {
 ; X86-LABEL: t4:
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $12, %esp
@@ -81,7 +81,7 @@ define void @t4(void (i32)* nocapture %x) nounwind ssp {
   ret void
 }
 
-define void @t5(void ()* nocapture %x) nounwind ssp {
+define dso_local void @t5(void ()* nocapture %x) nounwind ssp {
 ; X86-LABEL: t5:
 ; X86:       # %bb.0:
 ; X86-NEXT:    jmpl *{{[0-9]+}}(%esp) # TAILCALL
@@ -100,7 +100,7 @@ define void @t5(void ()* nocapture %x) nounwind ssp {
 ; Basically the same test as t5, except pass the function pointer on the stack
 ; for x86_64.
 
-define void @t5_x64(i32, i32, i32, i32, i32, i32, void ()* nocapture %x) nounwind ssp {
+define dso_local void @t5_x64(i32, i32, i32, i32, i32, i32, void ()* nocapture %x) nounwind ssp {
 ; X86-LABEL: t5_x64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    jmpl *{{[0-9]+}}(%esp) # TAILCALL
@@ -118,7 +118,7 @@ define void @t5_x64(i32, i32, i32, i32, i32, i32, void ()* nocapture %x) nounwin
 }
 
 
-define i32 @t6(i32 %x) nounwind ssp {
+define dso_local i32 @t6(i32 %x) nounwind ssp {
 ; X86-LABEL: t6:
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $12, %esp
@@ -169,7 +169,7 @@ bb1:
 
 declare dso_local i32 @bar(i32)
 
-define i32 @t7(i32 %a, i32 %b, i32 %c) nounwind ssp {
+define dso_local i32 @t7(i32 %a, i32 %b, i32 %c) nounwind ssp {
 ; X86-LABEL: t7:
 ; X86:       # %bb.0:
 ; X86-NEXT:    jmp bar2 # TAILCALL
@@ -232,7 +232,7 @@ entry:
   ret i16 %1
 }
 
-define void @t10() nounwind ssp {
+define dso_local void @t10() nounwind ssp {
 ; X86-LABEL: t10:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    subl $12, %esp
@@ -257,7 +257,7 @@ declare dso_local i32 @foo4()
 ; In 32-bit mode, it's emitting a bunch of dead loads that are not being
 ; eliminated currently.
 
-define i32 @t11(i32 %x, i32 %y, i32 %z.0, i32 %z.1, i32 %z.2) nounwind ssp {
+define dso_local i32 @t11(i32 %x, i32 %y, i32 %z.0, i32 %z.1, i32 %z.2) nounwind ssp {
 ; X86-LABEL: t11:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
@@ -303,7 +303,7 @@ declare dso_local i32 @foo5(i32, i32, i32, i32, i32)
 
 %struct.t = type { i32, i32, i32, i32, i32 }
 
-define i32 @t12(i32 %x, i32 %y, %struct.t* byval(%struct.t) align 4 %z) nounwind ssp {
+define dso_local i32 @t12(i32 %x, i32 %y, %struct.t* byval(%struct.t) align 4 %z) nounwind ssp {
 ; X86-LABEL: t12:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
@@ -413,7 +413,7 @@ declare dso_local fastcc %struct.ns* @foo7(%struct.cp* byval(%struct.cp) align 4
 %struct.__block_literal_1 = type { i8*, i32, i32, i8*, %struct.__block_descriptor* }
 %struct.__block_literal_2 = type { i8*, i32, i32, i8*, %struct.__block_descriptor_withcopydispose*, void ()* }
 
-define void @t14(%struct.__block_literal_2* nocapture %.block_descriptor) nounwind ssp {
+define dso_local void @t14(%struct.__block_literal_2* nocapture %.block_descriptor) nounwind ssp {
 ; X86-LABEL: t14:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    subl $12, %esp
@@ -449,7 +449,7 @@ entry:
 ; rdar://7726868
 %struct.foo = type { [4 x i32] }
 
-define void @t15(%struct.foo* noalias sret(%struct.foo) %agg.result) nounwind  {
+define dso_local void @t15(%struct.foo* noalias sret(%struct.foo) %agg.result) nounwind  {
 ; X86-LABEL: t15:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
@@ -485,7 +485,7 @@ define void @t15(%struct.foo* noalias sret(%struct.foo) %agg.result) nounwind  {
 
 declare dso_local void @f(%struct.foo* noalias sret(%struct.foo)) nounwind
 
-define void @t16() nounwind ssp {
+define dso_local void @t16() nounwind ssp {
 ; X86-LABEL: t16:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    subl $12, %esp
@@ -509,7 +509,7 @@ entry:
 declare dso_local double @bar4()
 
 ; rdar://6283267
-define void @t17() nounwind ssp {
+define dso_local void @t17() nounwind ssp {
 ; X86-LABEL: t17:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    jmp bar5 # TAILCALL
@@ -531,7 +531,7 @@ entry:
 declare dso_local void @bar5(...)
 
 ; rdar://7774847
-define void @t18() nounwind ssp {
+define dso_local void @t18() nounwind ssp {
 ; X86-LABEL: t18:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    subl $12, %esp
@@ -556,7 +556,7 @@ entry:
 
 declare dso_local double @bar6(...)
 
-define void @t19() alignstack(32) nounwind {
+define dso_local void @t19() alignstack(32) nounwind {
 ; X86-LABEL: t19:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
@@ -598,7 +598,7 @@ entry:
 ; values are returned in the same registers.
 ; rdar://7874780
 
-define double @t20(double %x) nounwind {
+define dso_local double @t20(double %x) nounwind {
 ; X86-LABEL: t20:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    subl $12, %esp

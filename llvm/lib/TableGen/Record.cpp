@@ -856,14 +856,19 @@ static StringInit *interleaveStringList(const ListInit *List,
                                         const StringInit *Delim) {
   if (List->size() == 0)
     return StringInit::get("");
-  SmallString<80> Result(cast<StringInit>(List->getElement(0))->getValue());
+  StringInit *Element = dyn_cast<StringInit>(List->getElement(0));
+  if (!Element)
+    return nullptr;
+  SmallString<80> Result(Element->getValue());
   StringInit::StringFormat Fmt = StringInit::SF_String;
 
   for (unsigned I = 1, E = List->size(); I < E; ++I) {
     Result.append(Delim->getValue());
-    auto *StrInit = cast<StringInit>(List->getElement(I));
-    Result.append(StrInit->getValue());
-    Fmt = StringInit::determineFormat(Fmt, StrInit->getFormat());
+    StringInit *Element = dyn_cast<StringInit>(List->getElement(I));
+    if (!Element)
+      return nullptr;
+    Result.append(Element->getValue());
+    Fmt = StringInit::determineFormat(Fmt, Element->getFormat());
   }
   return StringInit::get(Result, Fmt);
 }
@@ -872,14 +877,21 @@ static StringInit *interleaveIntList(const ListInit *List,
                                      const StringInit *Delim) {
   if (List->size() == 0)
     return StringInit::get("");
-  SmallString<80> Result(
-      cast<IntInit>(List->getElement(0)->getCastTo(IntRecTy::get()))
-          ->getAsString());
+  IntInit *Element =
+      dyn_cast_or_null<IntInit>(List->getElement(0)
+                                    ->convertInitializerTo(IntRecTy::get()));
+  if (!Element)
+    return nullptr;
+  SmallString<80> Result(Element->getAsString());
 
   for (unsigned I = 1, E = List->size(); I < E; ++I) {
     Result.append(Delim->getValue());
-    Result.append(cast<IntInit>(List->getElement(I)->getCastTo(IntRecTy::get()))
-                      ->getAsString());
+    IntInit *Element =
+        dyn_cast_or_null<IntInit>(List->getElement(I)
+                                      ->convertInitializerTo(IntRecTy::get()));
+    if (!Element)
+      return nullptr;
+    Result.append(Element->getAsString());
   }
   return StringInit::get(Result);
 }
@@ -975,10 +987,13 @@ Init *BinOpInit::Fold(Record *CurRec) const {
     ListInit *List = dyn_cast<ListInit>(LHS);
     StringInit *Delim = dyn_cast<StringInit>(RHS);
     if (List && Delim) {
+      StringInit *Result;
       if (isa<StringRecTy>(List->getElementType()))
-        return interleaveStringList(List, Delim);
+        Result = interleaveStringList(List, Delim);
       else
-        return interleaveIntList(List, Delim);
+        Result = interleaveIntList(List, Delim);
+      if (Result)
+        return Result;
     }
     break;
   }
@@ -1325,6 +1340,27 @@ Init *TernOpInit::Fold(Record *CurRec) const {
     }
     break;
   }
+
+  case SUBSTR: {
+    StringInit *LHSs = dyn_cast<StringInit>(LHS);
+    IntInit *MHSi = dyn_cast<IntInit>(MHS);
+    IntInit *RHSi = dyn_cast<IntInit>(RHS);
+    if (LHSs && MHSi && RHSi) {
+      int64_t StringSize = LHSs->getValue().size();
+      int64_t Start = MHSi->getValue();
+      int64_t Length = RHSi->getValue();
+      if (Start < 0 || Start > StringSize)
+        PrintError(CurRec->getLoc(),
+                   Twine("!substr start position is out of range 0...") +
+                       std::to_string(StringSize) + ": " +
+                       std::to_string(Start));
+      if (Length < 0)
+        PrintError(CurRec->getLoc(), "!substr length must be nonnegative");
+      return StringInit::get(LHSs->getValue().substr(Start, Length),
+                             LHSs->getFormat());
+    }
+    break;
+  }
   }
 
   return const_cast<TernOpInit *>(this);
@@ -1364,11 +1400,12 @@ std::string TernOpInit::getAsString() const {
   std::string Result;
   bool UnquotedLHS = false;
   switch (getOpcode()) {
-  case SUBST: Result = "!subst"; break;
-  case FOREACH: Result = "!foreach"; UnquotedLHS = true; break;
-  case FILTER: Result = "!filter"; UnquotedLHS = true; break;
-  case IF: Result = "!if"; break;
   case DAG: Result = "!dag"; break;
+  case FILTER: Result = "!filter"; UnquotedLHS = true; break;
+  case FOREACH: Result = "!foreach"; UnquotedLHS = true; break;
+  case IF: Result = "!if"; break;
+  case SUBST: Result = "!subst"; break;
+  case SUBSTR: Result = "!substr"; break;
   }
   return (Result + "(" +
           (UnquotedLHS ? LHS->getAsUnquotedString() : LHS->getAsString()) +

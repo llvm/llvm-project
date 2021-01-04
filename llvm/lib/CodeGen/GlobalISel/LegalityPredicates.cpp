@@ -57,11 +57,10 @@ LegalityPredicate LegalityPredicates::typePairAndMemDescInSet(
     TypePairAndMemDesc Match = {Query.Types[TypeIdx0], Query.Types[TypeIdx1],
                                 Query.MMODescrs[MMOIdx].SizeInBits,
                                 Query.MMODescrs[MMOIdx].AlignInBits};
-    return std::find_if(
-      TypesAndMemDesc.begin(), TypesAndMemDesc.end(),
-      [=](const TypePairAndMemDesc &Entry) ->bool {
-        return Match.isCompatible(Entry);
-      }) != TypesAndMemDesc.end();
+    return llvm::any_of(TypesAndMemDesc,
+                        [=](const TypePairAndMemDesc &Entry) -> bool {
+                          return Match.isCompatible(Entry);
+                        });
   };
 }
 

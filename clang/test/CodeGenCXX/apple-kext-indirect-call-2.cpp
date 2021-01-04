@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fapple-kext -fno-rtti -emit-llvm -o - %s | FileCheck %s
 
-// CHECK: @_ZTV1A = unnamed_addr constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* null, i8* bitcast (i8* (%struct.A*)* @_ZNK1A3abcEv to i8*), i8* null] }
-// CHECK: @_ZTV4Base = unnamed_addr constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* null, i8* bitcast (i8* (%struct.Base*)* @_ZNK4Base3abcEv to i8*), i8* null] }
-// CHECK: @_ZTV8Derived2 = unnamed_addr constant { [5 x i8*] } { [5 x i8*] [i8* null, i8* null, i8* null, i8* bitcast (i8* (%struct.Derived2*)* @_ZNK8Derived23efgEv to i8*), i8* null] }
-// CHECK: @_ZTV2D2 = unnamed_addr constant { [5 x i8*] } { [5 x i8*] [i8* null, i8* null, i8* null, i8* bitcast (i8* (%struct.D2*)* @_ZNK2D23abcEv to i8*), i8* null] }
+// CHECK: @_ZTV1A ={{.*}} unnamed_addr constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* null, i8* bitcast (i8* (%struct.A*)* @_ZNK1A3abcEv to i8*), i8* null] }
+// CHECK: @_ZTV4Base ={{.*}} unnamed_addr constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* null, i8* bitcast (i8* (%struct.Base*)* @_ZNK4Base3abcEv to i8*), i8* null] }
+// CHECK: @_ZTV8Derived2 ={{.*}} unnamed_addr constant { [5 x i8*] } { [5 x i8*] [i8* null, i8* null, i8* null, i8* bitcast (i8* (%struct.Derived2*)* @_ZNK8Derived23efgEv to i8*), i8* null] }
+// CHECK: @_ZTV2D2 ={{.*}} unnamed_addr constant { [5 x i8*] } { [5 x i8*] [i8* null, i8* null, i8* null, i8* bitcast (i8* (%struct.D2*)* @_ZNK2D23abcEv to i8*), i8* null] }
 
 struct A {
   virtual const char* abc(void) const;

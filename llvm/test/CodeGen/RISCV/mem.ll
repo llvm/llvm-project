@@ -4,7 +4,7 @@
 
 ; Check indexed and unindexed, sext, zext and anyext loads
 
-define i32 @lb(i8 *%a) nounwind {
+define dso_local i32 @lb(i8 *%a) nounwind {
 ; RV32I-LABEL: lb:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lb a1, 1(a0)
@@ -19,7 +19,7 @@ define i32 @lb(i8 *%a) nounwind {
   ret i32 %3
 }
 
-define i32 @lh(i16 *%a) nounwind {
+define dso_local i32 @lh(i16 *%a) nounwind {
 ; RV32I-LABEL: lh:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lh a1, 4(a0)
@@ -34,7 +34,7 @@ define i32 @lh(i16 *%a) nounwind {
   ret i32 %3
 }
 
-define i32 @lw(i32 *%a) nounwind {
+define dso_local i32 @lw(i32 *%a) nounwind {
 ; RV32I-LABEL: lw:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lw a1, 12(a0)
@@ -47,7 +47,7 @@ define i32 @lw(i32 *%a) nounwind {
   ret i32 %2
 }
 
-define i32 @lbu(i8 *%a) nounwind {
+define dso_local i32 @lbu(i8 *%a) nounwind {
 ; RV32I-LABEL: lbu:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lbu a1, 4(a0)
@@ -63,7 +63,7 @@ define i32 @lbu(i8 *%a) nounwind {
   ret i32 %6
 }
 
-define i32 @lhu(i16 *%a) nounwind {
+define dso_local i32 @lhu(i16 *%a) nounwind {
 ; RV32I-LABEL: lhu:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lhu a1, 10(a0)
@@ -81,7 +81,7 @@ define i32 @lhu(i16 *%a) nounwind {
 
 ; Check indexed and unindexed stores
 
-define void @sb(i8 *%a, i8 %b) nounwind {
+define dso_local void @sb(i8 *%a, i8 %b) nounwind {
 ; RV32I-LABEL: sb:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sb a1, 0(a0)
@@ -93,7 +93,7 @@ define void @sb(i8 *%a, i8 %b) nounwind {
   ret void
 }
 
-define void @sh(i16 *%a, i16 %b) nounwind {
+define dso_local void @sh(i16 *%a, i16 %b) nounwind {
 ; RV32I-LABEL: sh:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sh a1, 0(a0)
@@ -105,7 +105,7 @@ define void @sh(i16 *%a, i16 %b) nounwind {
   ret void
 }
 
-define void @sw(i32 *%a, i32 %b) nounwind {
+define dso_local void @sw(i32 *%a, i32 %b) nounwind {
 ; RV32I-LABEL: sw:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sw a1, 0(a0)
@@ -118,7 +118,7 @@ define void @sw(i32 *%a, i32 %b) nounwind {
 }
 
 ; Check load and store to an i1 location
-define i32 @load_sext_zext_anyext_i1(i1 *%a) nounwind {
+define dso_local i32 @load_sext_zext_anyext_i1(i1 *%a) nounwind {
 ; RV32I-LABEL: load_sext_zext_anyext_i1:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lbu a1, 1(a0)
@@ -140,7 +140,7 @@ define i32 @load_sext_zext_anyext_i1(i1 *%a) nounwind {
   ret i32 %7
 }
 
-define i16 @load_sext_zext_anyext_i1_i16(i1 *%a) nounwind {
+define dso_local i16 @load_sext_zext_anyext_i1_i16(i1 *%a) nounwind {
 ; RV32I-LABEL: load_sext_zext_anyext_i1_i16:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lbu a1, 1(a0)
@@ -163,9 +163,9 @@ define i16 @load_sext_zext_anyext_i1_i16(i1 *%a) nounwind {
 }
 
 ; Check load and store to a global
-@G = global i32 0
+@G = dso_local global i32 0
 
-define i32 @lw_sw_global(i32 %a) nounwind {
+define dso_local i32 @lw_sw_global(i32 %a) nounwind {
 ; RV32I-LABEL: lw_sw_global:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a2, %hi(G)
@@ -185,7 +185,7 @@ define i32 @lw_sw_global(i32 %a) nounwind {
 }
 
 ; Ensure that 1 is added to the high 20 bits if bit 11 of the low part is 1
-define i32 @lw_sw_constant(i32 %a) nounwind {
+define dso_local i32 @lw_sw_constant(i32 %a) nounwind {
 ; RV32I-LABEL: lw_sw_constant:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a2, 912092

@@ -338,6 +338,25 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
   return ReturnedRef;
 }
 
+llvm::Expected<FileEntryRef> FileManager::getSTDIN() {
+  // Only read stdin once.
+  if (STDIN)
+    return *STDIN;
+
+  std::unique_ptr<llvm::MemoryBuffer> Content;
+  if (auto ContentOrError = llvm::MemoryBuffer::getSTDIN())
+    Content = std::move(*ContentOrError);
+  else
+    return llvm::errorCodeToError(ContentOrError.getError());
+
+  STDIN = getVirtualFileRef(Content->getBufferIdentifier(),
+                            Content->getBufferSize(), 0);
+  FileEntry &FE = const_cast<FileEntry &>(STDIN->getFileEntry());
+  FE.Content = std::move(Content);
+  FE.IsNamedPipe = true;
+  return *STDIN;
+}
+
 const FileEntry *FileManager::getVirtualFile(StringRef Filename, off_t Size,
                                              time_t ModificationTime) {
   return &getVirtualFileRef(Filename, Size, ModificationTime).getFileEntry();
@@ -486,10 +505,14 @@ void FileManager::fillRealPathName(FileEntry *UFE, llvm::StringRef FileName) {
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
 FileManager::getBufferForFile(const FileEntry *Entry, bool isVolatile,
                               bool RequiresNullTerminator) {
+  // If the content is living on the file entry, return a reference to it.
+  if (Entry->Content)
+    return llvm::MemoryBuffer::getMemBuffer(Entry->Content->getMemBufferRef());
+
   uint64_t FileSize = Entry->getSize();
   // If there's a high enough chance that the file have changed since we
   // got its size, force a stat before opening it.
-  if (isVolatile)
+  if (isVolatile || Entry->isNamedPipe())
     FileSize = -1;
 
   StringRef Filename = Entry->getName();

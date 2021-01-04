@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=thumb-apple-darwin -arm-global-merge -global-merge-group-by-use=false -global-merge-on-const=true | FileCheck %s
+; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=thumb-apple-darwin -arm-global-merge -global-merge-group-by-use=false -global-merge-on-const=true | FileCheck %s
 ; Test the ARMGlobalMerge pass.  Use -mtriple=thumb because it has a small
 ; value for the maximum offset (127).
 

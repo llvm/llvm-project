@@ -104,7 +104,7 @@ define i16 @t7(i32 %a) {
 
 define i32 @abs_nabs_x01(i32 %x) {
 ; CHECK-LABEL: @abs_nabs_x01(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %cmp = icmp sgt i32 %x, -1
@@ -120,7 +120,7 @@ define i32 @abs_nabs_x01(i32 %x) {
 
 define <2 x i32> @abs_nabs_x01_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @abs_nabs_x01_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.abs.v2i32(<2 x i32> [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.abs.v2i32(<2 x i32> [[X:%.*]], i1 false)
 ; CHECK-NEXT:    ret <2 x i32> [[TMP1]]
 ;
   %cmp = icmp sgt <2 x i32> %x, <i32 -1, i32 -1>

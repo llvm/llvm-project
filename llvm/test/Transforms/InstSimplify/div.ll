@@ -43,10 +43,9 @@ define <2 x i8> @udiv_zero_elt_vec_constfold(<2 x i8> %x) {
   ret <2 x i8> %div
 }
 
-; TODO: instsimplify should fold these to poison
 define <2 x i8> @sdiv_zero_elt_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @sdiv_zero_elt_vec(
-; CHECK-NEXT:    ret <2 x i8> undef
+; CHECK-NEXT:    ret <2 x i8> poison
 ;
   %div = sdiv <2 x i8> %x, <i8 -42, i8 0>
   ret <2 x i8> %div
@@ -54,7 +53,7 @@ define <2 x i8> @sdiv_zero_elt_vec(<2 x i8> %x) {
 
 define <2 x i8> @udiv_zero_elt_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @udiv_zero_elt_vec(
-; CHECK-NEXT:    ret <2 x i8> undef
+; CHECK-NEXT:    ret <2 x i8> poison
 ;
   %div = udiv <2 x i8> %x, <i8 0, i8 42>
   ret <2 x i8> %div
@@ -62,7 +61,7 @@ define <2 x i8> @udiv_zero_elt_vec(<2 x i8> %x) {
 
 define <2 x i8> @sdiv_undef_elt_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @sdiv_undef_elt_vec(
-; CHECK-NEXT:    ret <2 x i8> undef
+; CHECK-NEXT:    ret <2 x i8> poison
 ;
   %div = sdiv <2 x i8> %x, <i8 -42, i8 undef>
   ret <2 x i8> %div
@@ -70,7 +69,7 @@ define <2 x i8> @sdiv_undef_elt_vec(<2 x i8> %x) {
 
 define <2 x i8> @udiv_undef_elt_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @udiv_undef_elt_vec(
-; CHECK-NEXT:    ret <2 x i8> undef
+; CHECK-NEXT:    ret <2 x i8> poison
 ;
   %div = udiv <2 x i8> %x, <i8 undef, i8 42>
   ret <2 x i8> %div
@@ -202,7 +201,6 @@ define i8 @sdiv_minusone_divisor() {
   ret i8 %v
 }
 
-; TODO: these should be poison
 define i32 @poison(i32 %x) {
 ; CHECK-LABEL: @poison(
 ; CHECK-NEXT:    ret i32 poison
@@ -211,6 +209,7 @@ define i32 @poison(i32 %x) {
   ret i32 %v
 }
 
+; TODO: this should be poison
 define i32 @poison2(i32 %x) {
 ; CHECK-LABEL: @poison2(
 ; CHECK-NEXT:    ret i32 0
@@ -221,7 +220,7 @@ define i32 @poison2(i32 %x) {
 
 define <2 x i32> @poison3(<2 x i32> %x) {
 ; CHECK-LABEL: @poison3(
-; CHECK-NEXT:    ret <2 x i32> undef
+; CHECK-NEXT:    ret <2 x i32> poison
 ;
   %v = udiv <2 x i32> %x, <i32 poison, i32 1>
   ret <2 x i32> %v

@@ -2,11 +2,11 @@
 
 template <bool B> struct S3 {};
 
-// CHECK-LABEL: define void @_Z1f2S3ILb1EE
+// CHECK-LABEL: define{{.*}} void @_Z1f2S3ILb1EE
 void f(S3<true>) {}
 
-// CHECK-LABEL: define void @_Z1f2S3ILb0EE
+// CHECK-LABEL: define{{.*}} void @_Z1f2S3ILb0EE
 void f(S3<false>) {}
 
-// CHECK-LABEL: define void @_Z2f22S3ILb1EE
+// CHECK-LABEL: define{{.*}} void @_Z2f22S3ILb1EE
 void f2(S3<100>) {}

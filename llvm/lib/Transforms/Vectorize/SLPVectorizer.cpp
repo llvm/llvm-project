@@ -35,6 +35,7 @@
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/DemandedBits.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryLocation.h"
@@ -1840,18 +1841,10 @@ private:
   }
 #endif
 
-  TreeEntry *getTreeEntry(Value *V) {
-    auto I = ScalarToTreeEntry.find(V);
-    if (I != ScalarToTreeEntry.end())
-      return I->second;
-    return nullptr;
-  }
+  TreeEntry *getTreeEntry(Value *V) { return ScalarToTreeEntry.lookup(V); }
 
   const TreeEntry *getTreeEntry(Value *V) const {
-    auto I = ScalarToTreeEntry.find(V);
-    if (I != ScalarToTreeEntry.end())
-      return I->second;
-    return nullptr;
+    return ScalarToTreeEntry.lookup(V);
   }
 
   /// Maps a specific scalar to its tree entry.
@@ -2472,9 +2465,9 @@ template <> struct DOTGraphTraits<BoUpSLP *> : public DefaultDOTGraphTraits {
     }
     for (auto V : Entry->Scalars) {
       OS << *V;
-      if (std::any_of(
-              R->ExternalUses.begin(), R->ExternalUses.end(),
-              [&](const BoUpSLP::ExternalUser &EU) { return EU.Scalar == V; }))
+      if (llvm::any_of(R->ExternalUses, [&](const BoUpSLP::ExternalUser &EU) {
+            return EU.Scalar == V;
+          }))
         OS << " <extract>";
       OS << "\n";
     }
@@ -6422,17 +6415,16 @@ namespace {
 
 /// Model horizontal reductions.
 ///
-/// A horizontal reduction is a tree of reduction operations (currently add and
-/// fadd) that has operations that can be put into a vector as its leaf.
-/// For example, this tree:
+/// A horizontal reduction is a tree of reduction instructions that has values
+/// that can be put into a vector as its leaves. For example:
 ///
 /// mul mul mul mul
 ///  \  /    \  /
 ///   +       +
 ///    \     /
 ///       +
-/// This tree has "mul" as its reduced values and "+" as its reduction
-/// operations. A reduction might be feeding into a store or a binary operation
+/// This tree has "mul" as its leaf values and "+" as its reduction
+/// instructions. A reduction can feed into a store or a binary operation
 /// feeding a phi.
 ///    ...
 ///    \  /
@@ -6455,67 +6447,79 @@ class HorizontalReduction {
   // Use map vector to make stable output.
   MapVector<Instruction *, Value *> ExtraArgs;
 
-  /// Kind of the reduction data.
-  enum ReductionKind {
-    RK_None,       /// Not a reduction.
-    RK_Arithmetic, /// Binary reduction data.
-    RK_SMin,       /// Signed minimum reduction data.
-    RK_UMin,       /// Unsigned minimum reduction data.
-    RK_SMax,       /// Signed maximum reduction data.
-    RK_UMax,       /// Unsigned maximum reduction data.
-  };
-
   /// Contains info about operation, like its opcode, left and right operands.
   class OperationData {
     /// Opcode of the instruction.
     unsigned Opcode = 0;
 
     /// Kind of the reduction operation.
-    ReductionKind Kind = RK_None;
+    RecurKind Kind = RecurKind::None;
 
     /// Checks if the reduction operation can be vectorized.
     bool isVectorizable() const {
-      // We currently only support add/mul/logical && min/max reductions.
-      return ((Kind == RK_Arithmetic &&
-               (Opcode == Instruction::Add || Opcode == Instruction::FAdd ||
-                Opcode == Instruction::Mul || Opcode == Instruction::FMul ||
-                Opcode == Instruction::And || Opcode == Instruction::Or ||
-                Opcode == Instruction::Xor)) ||
-              (Opcode == Instruction::ICmp &&
-               (Kind == RK_SMin || Kind == RK_SMax ||
-                Kind == RK_UMin || Kind == RK_UMax)));
+      switch (Kind) {
+      case RecurKind::Add:
+        return Opcode == Instruction::Add;
+      case RecurKind::Mul:
+        return Opcode == Instruction::Mul;
+      case RecurKind::Or:
+        return Opcode == Instruction::Or;
+      case RecurKind::And:
+        return Opcode == Instruction::And;
+      case RecurKind::Xor:
+        return Opcode == Instruction::Xor;
+      case RecurKind::FAdd:
+        return Opcode == Instruction::FAdd;
+      case RecurKind::FMul:
+        return Opcode == Instruction::FMul;
+      case RecurKind::SMax:
+      case RecurKind::SMin:
+      case RecurKind::UMax:
+      case RecurKind::UMin:
+        return Opcode == Instruction::ICmp;
+      default:
+        return false;
+      }
     }
 
     /// Creates reduction operation with the current opcode.
     Value *createOp(IRBuilder<> &Builder, Value *LHS, Value *RHS,
                     const Twine &Name) const {
-      assert(isVectorizable() &&
-             "Expected add|fadd or min/max reduction operation.");
-      Value *Cmp = nullptr;
+      assert(isVectorizable() && "Unhandled reduction operation.");
       switch (Kind) {
-      case RK_Arithmetic:
+      case RecurKind::Add:
+      case RecurKind::Mul:
+      case RecurKind::Or:
+      case RecurKind::And:
+      case RecurKind::Xor:
+      case RecurKind::FAdd:
+      case RecurKind::FMul:
         return Builder.CreateBinOp((Instruction::BinaryOps)Opcode, LHS, RHS,
                                    Name);
-      case RK_SMin:
+
+      case RecurKind::SMax: {
         assert(Opcode == Instruction::ICmp && "Expected integer types.");
-        Cmp = Builder.CreateICmpSLT(LHS, RHS);
+        Value *Cmp = Builder.CreateICmpSGT(LHS, RHS, Name);
         return Builder.CreateSelect(Cmp, LHS, RHS, Name);
-      case RK_SMax:
-        assert(Opcode == Instruction::ICmp && "Expected integer types.");
-        Cmp = Builder.CreateICmpSGT(LHS, RHS);
-        return Builder.CreateSelect(Cmp, LHS, RHS, Name);
-      case RK_UMin:
-        assert(Opcode == Instruction::ICmp && "Expected integer types.");
-        Cmp = Builder.CreateICmpULT(LHS, RHS);
-        return Builder.CreateSelect(Cmp, LHS, RHS, Name);
-      case RK_UMax:
-        assert(Opcode == Instruction::ICmp && "Expected integer types.");
-        Cmp = Builder.CreateICmpUGT(LHS, RHS);
-        return Builder.CreateSelect(Cmp, LHS, RHS, Name);
-      case RK_None:
-        break;
       }
-      llvm_unreachable("Unknown reduction operation.");
+      case RecurKind::SMin: {
+        assert(Opcode == Instruction::ICmp && "Expected integer types.");
+        Value *Cmp = Builder.CreateICmpSLT(LHS, RHS, Name);
+        return Builder.CreateSelect(Cmp, LHS, RHS, Name);
+      }
+      case RecurKind::UMax: {
+        assert(Opcode == Instruction::ICmp && "Expected integer types.");
+        Value *Cmp = Builder.CreateICmpUGT(LHS, RHS, Name);
+        return Builder.CreateSelect(Cmp, LHS, RHS, Name);
+      }
+      case RecurKind::UMin: {
+        assert(Opcode == Instruction::ICmp && "Expected integer types.");
+        Value *Cmp = Builder.CreateICmpULT(LHS, RHS, Name);
+        return Builder.CreateSelect(Cmp, LHS, RHS, Name);
+      }
+      default:
+        llvm_unreachable("Unknown reduction operation.");
+      }
     }
 
   public:
@@ -6527,50 +6531,41 @@ class HorizontalReduction {
       Opcode = I.getOpcode();
     }
 
-    /// Constructor for reduction operations with opcode and its left and
-    /// right operands.
-    OperationData(unsigned Opcode, ReductionKind Kind)
-        : Opcode(Opcode), Kind(Kind) {
-      assert(Kind != RK_None && "One of the reduction operations is expected.");
+    /// Constructor for reduction operations with opcode and type.
+    OperationData(unsigned Opcode, RecurKind RdxKind)
+        : Opcode(Opcode), Kind(RdxKind) {
+      assert(Kind != RecurKind::None && "Expected reduction operation.");
     }
 
     explicit operator bool() const { return Opcode; }
 
     /// Return true if this operation is any kind of minimum or maximum.
     bool isMinMax() const {
-      switch (Kind) {
-      case RK_Arithmetic:
-        return false;
-      case RK_SMin:
-      case RK_SMax:
-      case RK_UMin:
-      case RK_UMax:
-        return true;
-      case RK_None:
-        break;
-      }
-      llvm_unreachable("Reduction kind is not set");
+      assert(Kind != RecurKind::None && "Expected reduction operation.");
+      return RecurrenceDescriptor::isIntMinMaxRecurrenceKind(Kind);
     }
 
     /// Get the index of the first operand.
     unsigned getFirstOperandIndex() const {
       assert(!!*this && "The opcode is not set.");
       // We allow calling this before 'Kind' is set, so handle that specially.
-      if (Kind == RK_None)
+      if (Kind == RecurKind::None)
         return 0;
       return isMinMax() ? 1 : 0;
     }
 
     /// Total number of operands in the reduction operation.
     unsigned getNumberOfOperands() const {
-      assert(Kind != RK_None && !!*this && "Expected reduction operation.");
+      assert(Kind != RecurKind::None && !!*this &&
+             "Expected reduction operation.");
       return isMinMax() ? 3 : 2;
     }
 
     /// Checks if the instruction is in basic block \p BB.
     /// For a min/max reduction check that both compare and select are in \p BB.
     bool hasSameParent(Instruction *I, BasicBlock *BB, bool IsRedOp) const {
-      assert(Kind != RK_None && !!*this && "Expected reduction operation.");
+      assert(Kind != RecurKind::None && !!*this &&
+             "Expected reduction operation.");
       if (IsRedOp && isMinMax()) {
         auto *Cmp = cast<Instruction>(cast<SelectInst>(I)->getCondition());
         return I->getParent() == BB && Cmp && Cmp->getParent() == BB;
@@ -6580,7 +6575,8 @@ class HorizontalReduction {
 
     /// Expected number of uses for reduction operations/reduced values.
     bool hasRequiredNumberOfUses(Instruction *I, bool IsReductionOp) const {
-      assert(Kind != RK_None && !!*this && "Expected reduction operation.");
+      assert(Kind != RecurKind::None && !!*this &&
+             "Expected reduction operation.");
       // SelectInst must be used twice while the condition op must have single
       // use only.
       if (isMinMax())
@@ -6594,7 +6590,8 @@ class HorizontalReduction {
 
     /// Initializes the list of reduction operations.
     void initReductionOps(ReductionOpsListType &ReductionOps) {
-      assert(Kind != RK_None && !!*this && "Expected reduction operation.");
+      assert(Kind != RecurKind::None && !!*this &&
+             "Expected reduction operation.");
       if (isMinMax())
         ReductionOps.assign(2, ReductionOpsType());
       else
@@ -6603,7 +6600,8 @@ class HorizontalReduction {
 
     /// Add all reduction operations for the reduction instruction \p I.
     void addReductionOps(Instruction *I, ReductionOpsListType &ReductionOps) {
-      assert(Kind != RK_None && !!*this && "Expected reduction operation.");
+      assert(Kind != RecurKind::None && !!*this &&
+             "Expected reduction operation.");
       if (isMinMax()) {
         ReductionOps[0].emplace_back(cast<SelectInst>(I)->getCondition());
         ReductionOps[1].emplace_back(I);
@@ -6614,21 +6612,14 @@ class HorizontalReduction {
 
     /// Checks if instruction is associative and can be vectorized.
     bool isAssociative(Instruction *I) const {
-      assert(Kind != RK_None && *this && "Expected reduction operation.");
-      switch (Kind) {
-      case RK_Arithmetic:
-        return I->isAssociative();
-      case RK_SMin:
-      case RK_SMax:
-      case RK_UMin:
-      case RK_UMax:
+      assert(Kind != RecurKind::None && *this &&
+             "Expected reduction operation.");
+      if (RecurrenceDescriptor::isIntMinMaxRecurrenceKind(Kind)) {
         assert(Opcode == Instruction::ICmp &&
                "Only integer compare operation is expected.");
         return true;
-      case RK_None:
-        break;
       }
-      llvm_unreachable("Reduction kind is not set");
+      return I->isAssociative();
     }
 
     /// Checks if the reduction operation can be vectorized.
@@ -6646,7 +6637,7 @@ class HorizontalReduction {
     bool operator!=(const OperationData &OD) const { return !(*this == OD); }
     void clear() {
       Opcode = 0;
-      Kind = RK_None;
+      Kind = RecurKind::None;
     }
 
     /// Get the opcode of the reduction operation.
@@ -6656,14 +6647,14 @@ class HorizontalReduction {
     }
 
     /// Get kind of reduction data.
-    ReductionKind getKind() const { return Kind; }
+    RecurKind getKind() const { return Kind; }
     Value *getLHS(Instruction *I) const {
-      if (Kind == RK_None)
+      if (Kind == RecurKind::None)
         return nullptr;
       return I->getOperand(getFirstOperandIndex());
     }
     Value *getRHS(Instruction *I) const {
-      if (Kind == RK_None)
+      if (Kind == RecurKind::None)
         return nullptr;
       return I->getOperand(getFirstOperandIndex() + 1);
     }
@@ -6677,21 +6668,26 @@ class HorizontalReduction {
              "Expected add|fadd or min/max reduction operation.");
       auto *Op = createOp(Builder, LHS, RHS, Name);
       switch (Kind) {
-      case RK_Arithmetic:
+      case RecurKind::Add:
+      case RecurKind::Mul:
+      case RecurKind::Or:
+      case RecurKind::And:
+      case RecurKind::Xor:
+      case RecurKind::FAdd:
+      case RecurKind::FMul:
         propagateIRFlags(Op, ReductionOps[0]);
         return Op;
-      case RK_SMin:
-      case RK_SMax:
-      case RK_UMin:
-      case RK_UMax:
+      case RecurKind::SMax:
+      case RecurKind::SMin:
+      case RecurKind::UMax:
+      case RecurKind::UMin:
         if (auto *SI = dyn_cast<SelectInst>(Op))
           propagateIRFlags(SI->getCondition(), ReductionOps[0]);
         propagateIRFlags(Op, ReductionOps[1]);
         return Op;
-      case RK_None:
-        break;
+      default:
+        llvm_unreachable("Unknown reduction operation.");
       }
-      llvm_unreachable("Unknown reduction operation.");
     }
     /// Creates reduction operation with the current opcode with the IR flags
     /// from \p I.
@@ -6701,60 +6697,38 @@ class HorizontalReduction {
              "Expected add|fadd or min/max reduction operation.");
       auto *Op = createOp(Builder, LHS, RHS, Name);
       switch (Kind) {
-      case RK_Arithmetic:
+      case RecurKind::Add:
+      case RecurKind::Mul:
+      case RecurKind::Or:
+      case RecurKind::And:
+      case RecurKind::Xor:
+      case RecurKind::FAdd:
+      case RecurKind::FMul:
         propagateIRFlags(Op, I);
         return Op;
-      case RK_SMin:
-      case RK_SMax:
-      case RK_UMin:
-      case RK_UMax:
+      case RecurKind::SMax:
+      case RecurKind::SMin:
+      case RecurKind::UMax:
+      case RecurKind::UMin:
         if (auto *SI = dyn_cast<SelectInst>(Op)) {
           propagateIRFlags(SI->getCondition(),
                            cast<SelectInst>(I)->getCondition());
         }
         propagateIRFlags(Op, I);
         return Op;
-      case RK_None:
-        break;
+      default:
+        llvm_unreachable("Unknown reduction operation.");
       }
-      llvm_unreachable("Unknown reduction operation.");
-    }
-
-    TargetTransformInfo::ReductionFlags getFlags() const {
-      TargetTransformInfo::ReductionFlags Flags;
-      switch (Kind) {
-      case RK_Arithmetic:
-        break;
-      case RK_SMin:
-        Flags.IsSigned = true;
-        Flags.IsMaxOp = false;
-        break;
-      case RK_SMax:
-        Flags.IsSigned = true;
-        Flags.IsMaxOp = true;
-        break;
-      case RK_UMin:
-        Flags.IsSigned = false;
-        Flags.IsMaxOp = false;
-        break;
-      case RK_UMax:
-        Flags.IsSigned = false;
-        Flags.IsMaxOp = true;
-        break;
-      case RK_None:
-        llvm_unreachable("Reduction kind is not set");
-      }
-      return Flags;
     }
   };
 
   WeakTrackingVH ReductionRoot;
 
   /// The operation data of the reduction operation.
-  OperationData ReductionData;
+  OperationData RdxTreeInst;
 
-  /// The operation data of the values we perform a reduction on.
-  OperationData ReducedValueData;
+  /// The operation data for the leaf values that we perform a reduction on.
+  OperationData RdxLeafVal;
 
   /// Should we model this reduction as a pairwise reduction tree or a tree that
   /// splits the vector in halves and adds those halves.
@@ -6785,78 +6759,85 @@ class HorizontalReduction {
     if (!I)
       return OperationData();
 
-    Value *LHS;
-    Value *RHS;
-    if (m_BinOp(m_Value(LHS), m_Value(RHS)).match(I)) {
-      return OperationData(cast<BinaryOperator>(I)->getOpcode(), RK_Arithmetic);
-    }
+    TargetTransformInfo::ReductionFlags RdxFlags;
+    if (match(I, m_Add(m_Value(), m_Value())))
+      return OperationData(I->getOpcode(), RecurKind::Add);
+    if (match(I, m_Mul(m_Value(), m_Value())))
+      return OperationData(I->getOpcode(), RecurKind::Mul);
+    if (match(I, m_And(m_Value(), m_Value())))
+      return OperationData(I->getOpcode(), RecurKind::And);
+    if (match(I, m_Or(m_Value(), m_Value())))
+      return OperationData(I->getOpcode(), RecurKind::Or);
+    if (match(I, m_Xor(m_Value(), m_Value())))
+      return OperationData(I->getOpcode(), RecurKind::Xor);
+    if (match(I, m_FAdd(m_Value(), m_Value())))
+      return OperationData(I->getOpcode(), RecurKind::FAdd);
+    if (match(I, m_FMul(m_Value(), m_Value())))
+      return OperationData(I->getOpcode(), RecurKind::FMul);
+
+    if (match(I, m_SMax(m_Value(), m_Value())))
+      return OperationData(Instruction::ICmp, RecurKind::SMax);
+    if (match(I, m_SMin(m_Value(), m_Value())))
+      return OperationData(Instruction::ICmp, RecurKind::SMin);
+    if (match(I, m_UMax(m_Value(), m_Value())))
+      return OperationData(Instruction::ICmp, RecurKind::UMax);
+    if (match(I, m_UMin(m_Value(), m_Value())))
+      return OperationData(Instruction::ICmp, RecurKind::UMin);
+
     if (auto *Select = dyn_cast<SelectInst>(I)) {
-      // Look for a min/max pattern.
-      if (m_UMin(m_Value(LHS), m_Value(RHS)).match(Select)) {
-        return OperationData(Instruction::ICmp, RK_UMin);
-      } else if (m_SMin(m_Value(LHS), m_Value(RHS)).match(Select)) {
-        return OperationData(Instruction::ICmp, RK_SMin);
-      } else if (m_UMax(m_Value(LHS), m_Value(RHS)).match(Select)) {
-        return OperationData(Instruction::ICmp, RK_UMax);
-      } else if (m_SMax(m_Value(LHS), m_Value(RHS)).match(Select)) {
-        return OperationData(Instruction::ICmp, RK_SMax);
-      } else {
-        // Try harder: look for min/max pattern based on instructions producing
-        // same values such as: select ((cmp Inst1, Inst2), Inst1, Inst2).
-        // During the intermediate stages of SLP, it's very common to have
-        // pattern like this (since optimizeGatherSequence is run only once
-        // at the end):
-        // %1 = extractelement <2 x i32> %a, i32 0
-        // %2 = extractelement <2 x i32> %a, i32 1
-        // %cond = icmp sgt i32 %1, %2
-        // %3 = extractelement <2 x i32> %a, i32 0
-        // %4 = extractelement <2 x i32> %a, i32 1
-        // %select = select i1 %cond, i32 %3, i32 %4
-        CmpInst::Predicate Pred;
-        Instruction *L1;
-        Instruction *L2;
+      // Try harder: look for min/max pattern based on instructions producing
+      // same values such as: select ((cmp Inst1, Inst2), Inst1, Inst2).
+      // During the intermediate stages of SLP, it's very common to have
+      // pattern like this (since optimizeGatherSequence is run only once
+      // at the end):
+      // %1 = extractelement <2 x i32> %a, i32 0
+      // %2 = extractelement <2 x i32> %a, i32 1
+      // %cond = icmp sgt i32 %1, %2
+      // %3 = extractelement <2 x i32> %a, i32 0
+      // %4 = extractelement <2 x i32> %a, i32 1
+      // %select = select i1 %cond, i32 %3, i32 %4
+      CmpInst::Predicate Pred;
+      Instruction *L1;
+      Instruction *L2;
 
-        LHS = Select->getTrueValue();
-        RHS = Select->getFalseValue();
-        Value *Cond = Select->getCondition();
+      Value *LHS = Select->getTrueValue();
+      Value *RHS = Select->getFalseValue();
+      Value *Cond = Select->getCondition();
 
-        // TODO: Support inverse predicates.
-        if (match(Cond, m_Cmp(Pred, m_Specific(LHS), m_Instruction(L2)))) {
-          if (!isa<ExtractElementInst>(RHS) ||
-              !L2->isIdenticalTo(cast<Instruction>(RHS)))
-            return OperationData(*I);
-        } else if (match(Cond, m_Cmp(Pred, m_Instruction(L1), m_Specific(RHS)))) {
-          if (!isa<ExtractElementInst>(LHS) ||
-              !L1->isIdenticalTo(cast<Instruction>(LHS)))
-            return OperationData(*I);
-        } else {
-          if (!isa<ExtractElementInst>(LHS) || !isa<ExtractElementInst>(RHS))
-            return OperationData(*I);
-          if (!match(Cond, m_Cmp(Pred, m_Instruction(L1), m_Instruction(L2))) ||
-              !L1->isIdenticalTo(cast<Instruction>(LHS)) ||
-              !L2->isIdenticalTo(cast<Instruction>(RHS)))
-            return OperationData(*I);
-        }
-        switch (Pred) {
-        default:
+      // TODO: Support inverse predicates.
+      if (match(Cond, m_Cmp(Pred, m_Specific(LHS), m_Instruction(L2)))) {
+        if (!isa<ExtractElementInst>(RHS) ||
+            !L2->isIdenticalTo(cast<Instruction>(RHS)))
           return OperationData(*I);
+      } else if (match(Cond, m_Cmp(Pred, m_Instruction(L1), m_Specific(RHS)))) {
+        if (!isa<ExtractElementInst>(LHS) ||
+            !L1->isIdenticalTo(cast<Instruction>(LHS)))
+          return OperationData(*I);
+      } else {
+        if (!isa<ExtractElementInst>(LHS) || !isa<ExtractElementInst>(RHS))
+          return OperationData(*I);
+        if (!match(Cond, m_Cmp(Pred, m_Instruction(L1), m_Instruction(L2))) ||
+            !L1->isIdenticalTo(cast<Instruction>(LHS)) ||
+            !L2->isIdenticalTo(cast<Instruction>(RHS)))
+          return OperationData(*I);
+      }
 
-        case CmpInst::ICMP_ULT:
-        case CmpInst::ICMP_ULE:
-          return OperationData(Instruction::ICmp, RK_UMin);
-
-        case CmpInst::ICMP_SLT:
-        case CmpInst::ICMP_SLE:
-          return OperationData(Instruction::ICmp, RK_SMin);
-
-        case CmpInst::ICMP_UGT:
-        case CmpInst::ICMP_UGE:
-          return OperationData(Instruction::ICmp, RK_UMax);
-
-        case CmpInst::ICMP_SGT:
-        case CmpInst::ICMP_SGE:
-          return OperationData(Instruction::ICmp, RK_SMax);
-        }
+      TargetTransformInfo::ReductionFlags RdxFlags;
+      switch (Pred) {
+      default:
+        return OperationData(*I);
+      case CmpInst::ICMP_SGT:
+      case CmpInst::ICMP_SGE:
+        return OperationData(Instruction::ICmp, RecurKind::SMax);
+      case CmpInst::ICMP_SLT:
+      case CmpInst::ICMP_SLE:
+        return OperationData(Instruction::ICmp, RecurKind::SMin);
+      case CmpInst::ICMP_UGT:
+      case CmpInst::ICMP_UGE:
+        return OperationData(Instruction::ICmp, RecurKind::UMax);
+      case CmpInst::ICMP_ULT:
+      case CmpInst::ICMP_ULE:
+        return OperationData(Instruction::ICmp, RecurKind::UMin);
       }
     }
     return OperationData(*I);
@@ -6870,24 +6851,24 @@ public:
     assert((!Phi || is_contained(Phi->operands(), B)) &&
            "Thi phi needs to use the binary operator");
 
-    ReductionData = getOperationData(B);
+    RdxTreeInst = getOperationData(B);
 
     // We could have a initial reductions that is not an add.
     //  r *= v1 + v2 + v3 + v4
     // In such a case start looking for a tree rooted in the first '+'.
     if (Phi) {
-      if (ReductionData.getLHS(B) == Phi) {
+      if (RdxTreeInst.getLHS(B) == Phi) {
         Phi = nullptr;
-        B = dyn_cast<Instruction>(ReductionData.getRHS(B));
-        ReductionData = getOperationData(B);
-      } else if (ReductionData.getRHS(B) == Phi) {
+        B = dyn_cast<Instruction>(RdxTreeInst.getRHS(B));
+        RdxTreeInst = getOperationData(B);
+      } else if (RdxTreeInst.getRHS(B) == Phi) {
         Phi = nullptr;
-        B = dyn_cast<Instruction>(ReductionData.getLHS(B));
-        ReductionData = getOperationData(B);
+        B = dyn_cast<Instruction>(RdxTreeInst.getLHS(B));
+        RdxTreeInst = getOperationData(B);
       }
     }
 
-    if (!ReductionData.isVectorizable(B))
+    if (!RdxTreeInst.isVectorizable(B))
       return false;
 
     Type *Ty = B->getType();
@@ -6896,19 +6877,19 @@ public:
     if (!Ty->isIntOrIntVectorTy() && !Ty->isFPOrFPVectorTy())
       return false;
 
-    ReducedValueData.clear();
+    RdxLeafVal.clear();
     ReductionRoot = B;
 
     // Post order traverse the reduction tree starting at B. We only handle true
     // trees containing only binary operators.
     SmallVector<std::pair<Instruction *, unsigned>, 32> Stack;
-    Stack.push_back(std::make_pair(B, ReductionData.getFirstOperandIndex()));
-    ReductionData.initReductionOps(ReductionOps);
+    Stack.push_back(std::make_pair(B, RdxTreeInst.getFirstOperandIndex()));
+    RdxTreeInst.initReductionOps(ReductionOps);
     while (!Stack.empty()) {
       Instruction *TreeN = Stack.back().first;
       unsigned EdgeToVisit = Stack.back().second++;
       OperationData OpData = getOperationData(TreeN);
-      bool IsReducedValue = OpData != ReductionData;
+      bool IsReducedValue = OpData != RdxTreeInst;
 
       // Postorder vist.
       if (IsReducedValue || EdgeToVisit == OpData.getNumberOfOperands()) {
@@ -6929,7 +6910,7 @@ public:
             markExtraArg(Stack[Stack.size() - 2], TreeN);
             ExtraArgs.erase(TreeN);
           } else
-            ReductionData.addReductionOps(TreeN, ReductionOps);
+            RdxTreeInst.addReductionOps(TreeN, ReductionOps);
         }
         // Retract.
         Stack.pop_back();
@@ -6945,12 +6926,10 @@ public:
         // (possibly) a reduced value. If the reduced value opcode is not set,
         // the first met operation != reduction operation is considered as the
         // reduced value class.
-        if (I && (!ReducedValueData || OpData == ReducedValueData ||
-                  OpData == ReductionData)) {
-          const bool IsReductionOperation = OpData == ReductionData;
+        const bool IsRdxInst = OpData == RdxTreeInst;
+        if (I && (!RdxLeafVal || OpData == RdxLeafVal || IsRdxInst)) {
           // Only handle trees in the current basic block.
-          if (!ReductionData.hasSameParent(I, B->getParent(),
-                                           IsReductionOperation)) {
+          if (!RdxTreeInst.hasSameParent(I, B->getParent(), IsRdxInst)) {
             // I is an extra argument for TreeN (its parent operation).
             markExtraArg(Stack.back(), I);
             continue;
@@ -6958,31 +6937,28 @@ public:
 
           // Each tree node needs to have minimal number of users except for the
           // ultimate reduction.
-          if (!ReductionData.hasRequiredNumberOfUses(I,
-                                                     OpData == ReductionData) &&
-              I != B) {
+          if (!RdxTreeInst.hasRequiredNumberOfUses(I, IsRdxInst) && I != B) {
             // I is an extra argument for TreeN (its parent operation).
             markExtraArg(Stack.back(), I);
             continue;
           }
 
-          if (IsReductionOperation) {
+          if (IsRdxInst) {
             // We need to be able to reassociate the reduction operations.
             if (!OpData.isAssociative(I)) {
               // I is an extra argument for TreeN (its parent operation).
               markExtraArg(Stack.back(), I);
               continue;
             }
-          } else if (ReducedValueData &&
-                     ReducedValueData != OpData) {
+          } else if (RdxLeafVal && RdxLeafVal != OpData) {
             // Make sure that the opcodes of the operations that we are going to
             // reduce match.
             // I is an extra argument for TreeN (its parent operation).
             markExtraArg(Stack.back(), I);
             continue;
-          } else if (!ReducedValueData)
-            ReducedValueData = OpData;
-
+          } else if (!RdxLeafVal) {
+            RdxLeafVal = OpData;
+          }
           Stack.push_back(std::make_pair(I, OpData.getFirstOperandIndex()));
           continue;
         }
@@ -7082,7 +7058,7 @@ public:
       }
       if (V.isTreeTinyAndNotFullyVectorizable())
         break;
-      if (V.isLoadCombineReductionCandidate(ReductionData.getOpcode()))
+      if (V.isLoadCombineReductionCandidate(RdxTreeInst.getOpcode()))
         break;
 
       V.computeMinimumValueSizes();
@@ -7125,7 +7101,7 @@ public:
       // Emit a reduction. For min/max, the root is a select, but the insertion
       // point is the compare condition of that select.
       Instruction *RdxRootInst = cast<Instruction>(ReductionRoot);
-      if (ReductionData.isMinMax())
+      if (RdxTreeInst.isMinMax())
         Builder.SetInsertPoint(getCmpForMinMaxReduction(RdxRootInst));
       else
         Builder.SetInsertPoint(RdxRootInst);
@@ -7139,7 +7115,7 @@ public:
       } else {
         // Update the final value in the reduction.
         Builder.SetCurrentDebugLocation(Loc);
-        VectorizedTree = ReductionData.createOp(
+        VectorizedTree = RdxTreeInst.createOp(
             Builder, VectorizedTree, ReducedSubTree, "op.rdx", ReductionOps);
       }
       i += ReduxWidth;
@@ -7151,15 +7127,15 @@ public:
       for (; i < NumReducedVals; ++i) {
         auto *I = cast<Instruction>(ReducedVals[i]);
         Builder.SetCurrentDebugLocation(I->getDebugLoc());
-        VectorizedTree = ReductionData.createOp(Builder, VectorizedTree, I, "",
-                                                ReductionOps);
+        VectorizedTree = RdxTreeInst.createOp(Builder, VectorizedTree, I, "",
+                                              ReductionOps);
       }
       for (auto &Pair : ExternallyUsedValues) {
         // Add each externally used value to the final reduction.
         for (auto *I : Pair.second) {
           Builder.SetCurrentDebugLocation(I->getDebugLoc());
-          VectorizedTree = ReductionData.createOp(Builder, VectorizedTree,
-                                                  Pair.first, "op.extra", I);
+          VectorizedTree = RdxTreeInst.createOp(Builder, VectorizedTree,
+                                                Pair.first, "op.extra", I);
         }
       }
 
@@ -7167,7 +7143,7 @@ public:
       // select, we also have to RAUW for the compare instruction feeding the
       // reduction root. That's because the original compare may have extra uses
       // besides the final select of the reduction.
-      if (ReductionData.isMinMax()) {
+      if (RdxTreeInst.isMinMax()) {
         if (auto *VecSelect = dyn_cast<SelectInst>(VectorizedTree)) {
           Instruction *ScalarCmp =
               getCmpForMinMaxReduction(cast<Instruction>(ReductionRoot));
@@ -7196,22 +7172,28 @@ private:
 
     int PairwiseRdxCost;
     int SplittingRdxCost;
-    switch (ReductionData.getKind()) {
-    case RK_Arithmetic:
+    switch (RdxTreeInst.getKind()) {
+    case RecurKind::Add:
+    case RecurKind::Mul:
+    case RecurKind::Or:
+    case RecurKind::And:
+    case RecurKind::Xor:
+    case RecurKind::FAdd:
+    case RecurKind::FMul:
       PairwiseRdxCost =
-          TTI->getArithmeticReductionCost(ReductionData.getOpcode(), VecTy,
+          TTI->getArithmeticReductionCost(RdxTreeInst.getOpcode(), VecTy,
                                           /*IsPairwiseForm=*/true);
       SplittingRdxCost =
-          TTI->getArithmeticReductionCost(ReductionData.getOpcode(), VecTy,
+          TTI->getArithmeticReductionCost(RdxTreeInst.getOpcode(), VecTy,
                                           /*IsPairwiseForm=*/false);
       break;
-    case RK_SMin:
-    case RK_SMax:
-    case RK_UMin:
-    case RK_UMax: {
+    case RecurKind::SMax:
+    case RecurKind::SMin:
+    case RecurKind::UMax:
+    case RecurKind::UMin: {
       auto *VecCondTy = cast<VectorType>(CmpInst::makeCmpResultType(VecTy));
-      bool IsUnsigned = ReductionData.getKind() == RK_UMin ||
-                        ReductionData.getKind() == RK_UMax;
+      RecurKind Kind = RdxTreeInst.getKind();
+      bool IsUnsigned = Kind == RecurKind::UMax || Kind == RecurKind::UMin;
       PairwiseRdxCost =
           TTI->getMinMaxReductionCost(VecTy, VecCondTy,
                                       /*IsPairwiseForm=*/true, IsUnsigned);
@@ -7220,7 +7202,7 @@ private:
                                       /*IsPairwiseForm=*/false, IsUnsigned);
       break;
     }
-    case RK_None:
+    default:
       llvm_unreachable("Expected arithmetic or min/max reduction operation");
     }
 
@@ -7228,21 +7210,27 @@ private:
     int VecReduxCost = IsPairwiseReduction ? PairwiseRdxCost : SplittingRdxCost;
 
     int ScalarReduxCost = 0;
-    switch (ReductionData.getKind()) {
-    case RK_Arithmetic:
+    switch (RdxTreeInst.getKind()) {
+    case RecurKind::Add:
+    case RecurKind::Mul:
+    case RecurKind::Or:
+    case RecurKind::And:
+    case RecurKind::Xor:
+    case RecurKind::FAdd:
+    case RecurKind::FMul:
       ScalarReduxCost =
-          TTI->getArithmeticInstrCost(ReductionData.getOpcode(), ScalarTy);
+          TTI->getArithmeticInstrCost(RdxTreeInst.getOpcode(), ScalarTy);
       break;
-    case RK_SMin:
-    case RK_SMax:
-    case RK_UMin:
-    case RK_UMax:
+    case RecurKind::SMax:
+    case RecurKind::SMin:
+    case RecurKind::UMax:
+    case RecurKind::UMin:
       ScalarReduxCost =
-          TTI->getCmpSelInstrCost(ReductionData.getOpcode(), ScalarTy) +
+          TTI->getCmpSelInstrCost(RdxTreeInst.getOpcode(), ScalarTy) +
           TTI->getCmpSelInstrCost(Instruction::Select, ScalarTy,
                                   CmpInst::makeCmpResultType(ScalarTy));
       break;
-    case RK_None:
+    default:
       llvm_unreachable("Expected arithmetic or min/max reduction operation");
     }
     ScalarReduxCost *= (ReduxWidth - 1);
@@ -7268,8 +7256,8 @@ private:
       //        to 'fast'.
       assert(Builder.getFastMathFlags().isFast() && "Expected 'fast' FMF");
       return createSimpleTargetReduction(
-          Builder, TTI, ReductionData.getOpcode(), VectorizedValue,
-          ReductionData.getFlags(), ReductionOps.back());
+          Builder, TTI, RdxTreeInst.getOpcode(), VectorizedValue,
+          RdxTreeInst.getKind(), ReductionOps.back());
     }
 
     Value *TmpVec = VectorizedValue;
@@ -7281,8 +7269,8 @@ private:
           Builder.CreateShuffleVector(TmpVec, LeftMask, "rdx.shuf.l");
       Value *RightShuf =
           Builder.CreateShuffleVector(TmpVec, RightMask, "rdx.shuf.r");
-      TmpVec = ReductionData.createOp(Builder, LeftShuf, RightShuf, "op.rdx",
-                                      ReductionOps);
+      TmpVec = RdxTreeInst.createOp(Builder, LeftShuf, RightShuf, "op.rdx",
+                                    ReductionOps);
     }
 
     // The result is in the first element of the vector.

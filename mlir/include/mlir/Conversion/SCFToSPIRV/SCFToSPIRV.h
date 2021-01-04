@@ -1,4 +1,4 @@
-//===------------ SCFToSPIRV.h - Pass entrypoint ----------------*- C++ -*-===//
+//===- SCFToSPIRV.h - SCF to SPIR-V Patterns --------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Provides patterns for lowering SCF ops to SPIR-V dialect.
+// Provides patterns to convert SCF dialect to SPIR-V dialect.
 //
 //===----------------------------------------------------------------------===//
 #ifndef MLIR_CONVERSION_SCFTOSPIRV_SCFTOSPIRV_H_

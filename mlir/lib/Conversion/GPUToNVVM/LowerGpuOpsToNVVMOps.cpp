@@ -57,10 +57,10 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     gpu::ShuffleOpAdaptor adaptor(operands);
 
     auto valueTy = adaptor.value().getType().cast<LLVM::LLVMType>();
-    auto int32Type = LLVM::LLVMType::getInt32Ty(rewriter.getContext());
-    auto predTy = LLVM::LLVMType::getInt1Ty(rewriter.getContext());
-    auto resultTy =
-        LLVM::LLVMType::getStructTy(rewriter.getContext(), {valueTy, predTy});
+    auto int32Type = LLVM::LLVMIntegerType::get(rewriter.getContext(), 32);
+    auto predTy = LLVM::LLVMIntegerType::get(rewriter.getContext(), 1);
+    auto resultTy = LLVM::LLVMStructType::getLiteral(rewriter.getContext(),
+                                                     {valueTy, predTy});
 
     Value one = rewriter.create<LLVM::ConstantOp>(
         loc, int32Type, rewriter.getI32IntegerAttr(1));

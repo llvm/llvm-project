@@ -313,8 +313,15 @@ void SIAnnotateControlFlow::closeControlFlow(BasicBlock *BB) {
 
   Value *Exec = popSaved();
   Instruction *FirstInsertionPt = &*BB->getFirstInsertionPt();
-  if (!isa<UndefValue>(Exec) && !isa<UnreachableInst>(FirstInsertionPt))
+  if (!isa<UndefValue>(Exec) && !isa<UnreachableInst>(FirstInsertionPt)) {
+    Instruction *ExecDef = cast<Instruction>(Exec);
+    BasicBlock *DefBB = ExecDef->getParent();
+    if (!DT->dominates(DefBB, BB)) {
+      // Split edge to make Def dominate Use
+      FirstInsertionPt = &*SplitEdge(DefBB, BB, DT, LI)->getFirstInsertionPt();
+    }
     CallInst::Create(EndCf, Exec, "", FirstInsertionPt);
+  }
 }
 
 /// Annotate the control flow with intrinsics so the backend can
@@ -327,7 +334,6 @@ bool SIAnnotateControlFlow::runOnFunction(Function &F) {
   const TargetMachine &TM = TPC.getTM<TargetMachine>();
 
   initialize(*F.getParent(), TM.getSubtarget<GCNSubtarget>(F));
-
   for (df_iterator<BasicBlock *> I = df_begin(&F.getEntryBlock()),
        E = df_end(&F.getEntryBlock()); I != E; ++I) {
     BasicBlock *BB = *I;
@@ -344,7 +350,8 @@ bool SIAnnotateControlFlow::runOnFunction(Function &F) {
       if (isTopOfStack(BB))
         closeControlFlow(BB);
 
-      handleLoop(Term);
+      if (DT->dominates(Term->getSuccessor(1), BB))
+        handleLoop(Term);
       continue;
     }
 

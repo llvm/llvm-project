@@ -1889,9 +1889,7 @@ static bool checkMachOAndArchFlags(ObjectFile *O, StringRef Filename) {
                                        &McpuDefault, &ArchFlag);
   }
   const std::string ArchFlagName(ArchFlag);
-  if (none_of(ArchFlags, [&](const std::string &Name) {
-        return Name == ArchFlagName;
-      })) {
+  if (!llvm::is_contained(ArchFlags, ArchFlagName)) {
     WithColor::error(errs(), "llvm-objdump")
         << Filename << ": no architecture specified.\n";
     return false;

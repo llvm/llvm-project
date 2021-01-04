@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MultiHazardRecognizer.h"
+#include "llvm/ADT/STLExtras.h"
 #include <algorithm>
 #include <functional>
 #include <numeric>
@@ -25,8 +26,8 @@ void MultiHazardRecognizer::AddHazardRecognizer(
 }
 
 bool MultiHazardRecognizer::atIssueLimit() const {
-  return std::any_of(Recognizers.begin(), Recognizers.end(),
-                     std::mem_fn(&ScheduleHazardRecognizer::atIssueLimit));
+  return llvm::any_of(Recognizers,
+                      std::mem_fn(&ScheduleHazardRecognizer::atIssueLimit));
 }
 
 ScheduleHazardRecognizer::HazardType
@@ -72,7 +73,7 @@ bool MultiHazardRecognizer::ShouldPreferAnother(SUnit *SU) {
   auto SPA = [=](std::unique_ptr<ScheduleHazardRecognizer> &R) {
     return R->ShouldPreferAnother(SU);
   };
-  return std::any_of(Recognizers.begin(), Recognizers.end(), SPA);
+  return llvm::any_of(Recognizers, SPA);
 }
 
 void MultiHazardRecognizer::AdvanceCycle() {

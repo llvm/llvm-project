@@ -4,13 +4,13 @@
 ; When compiled and run this should print zero.
 
 
-@c = common local_unnamed_addr global i32 0, align 4
-@f = common local_unnamed_addr global i32 0, align 4
-@e = common local_unnamed_addr global i32 0, align 4
+@c = common dso_local local_unnamed_addr global i32 0, align 4
+@f = common dso_local local_unnamed_addr global i32 0, align 4
+@e = common dso_local local_unnamed_addr global i32 0, align 4
 @.str.1 = private unnamed_addr constant [4 x i8] c"%d\0A\00", align 1
 
 ; We should only see a single store to f (a bytes store to f+3).
-define void @k(i32 %l) {
+define dso_local void @k(i32 %l) {
 ; CHECK-LABEL: k:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{.*}}(%rip), %eax
@@ -38,7 +38,7 @@ define void @k(i32 %l) {
 
 declare i32 @printf(i8* nocapture readonly, ...)
 
-define i32 @main() {
+define dso_local i32 @main() {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rax

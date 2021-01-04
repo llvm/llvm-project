@@ -17,15 +17,15 @@ target triple = "powerpc64-unknown-linux-gnu"
 %struct.d2 = type<{ i64, i64 }>
 %struct.misalign = type<{ i8, i64 }>
 
-@b4v = global %struct.b4 <{ i8 1, i8 2, i8 3, i8 4 }>, align 4
-@h2v = global %struct.h2 <{ i16 1, i16 2 }>, align 4
+@b4v = dso_local global %struct.b4 <{ i8 1, i8 2, i8 3, i8 4 }>, align 4
+@h2v = dso_local global %struct.h2 <{ i16 1, i16 2 }>, align 4
 
-@b8v = global %struct.b8 <{ i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8 }>, align 8
-@h4v = global %struct.h4 <{ i16 1, i16 2, i16 3, i16 4 }>, align 8
-@w2v = global %struct.w2 <{ i32 1, i32 2 }>, align 8
+@b8v = dso_local global %struct.b8 <{ i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8 }>, align 8
+@h4v = dso_local global %struct.h4 <{ i16 1, i16 2, i16 3, i16 4 }>, align 8
+@w2v = dso_local global %struct.w2 <{ i32 1, i32 2 }>, align 8
 
-@d2v = global %struct.d2 <{ i64 1, i64 2 }>, align 16
-@misalign_v = global %struct.misalign <{ i8 1, i64 2 }>, align 16
+@d2v = dso_local global %struct.d2 <{ i64 1, i64 2 }>, align 16
+@misalign_v = dso_local global %struct.misalign <{ i8 1, i64 2 }>, align 16
 
 ; CHECK-LABEL: test_b4:
 ; CHECK: addis [[REGSTRUCT:[0-9]+]], 2, b4v@toc@ha
@@ -42,7 +42,7 @@ target triple = "powerpc64-unknown-linux-gnu"
 ; CHECK-DAG: stb [[REG2_1]], b4v@toc@l+2([[REGSTRUCT]])
 ; CHECK-DAG: stb [[REG3_1]], b4v@toc@l+3([[REGSTRUCT]])
 
-define void @test_b4() nounwind {
+define dso_local void @test_b4() nounwind {
 entry:
   %0 = load i8, i8* getelementptr inbounds (%struct.b4, %struct.b4* @b4v, i32 0, i32 0), align 1
   %inc0 = add nsw i8 %0, 1
@@ -68,7 +68,7 @@ entry:
 ; CHECK-DAG: sth [[REG0_1]], h2v@toc@l([[REGSTRUCT]])
 ; CHECK-DAG: sth [[REG1_1]], h2v@toc@l+2([[REGSTRUCT]])
 
-define void @test_h2() nounwind {
+define dso_local void @test_h2() nounwind {
 entry:
   %0 = load i16, i16* getelementptr inbounds (%struct.h2, %struct.h2* @h2v, i32 0, i32 0), align 2
   %inc0 = add nsw i16 %0, 1
@@ -87,7 +87,7 @@ entry:
 ; CHECK-DAG: addi [[REG1_1:[0-9]+]], [[REG1_0]], 2
 ; CHECK-DAG: sth [[REG0_1]], h2v@toc@l([[REGSTRUCT]])
 ; CHECK-DAG: sth [[REG1_1]], h2v@toc@l+2([[REGSTRUCT]])
-define void @test_h2_optsize() optsize nounwind {
+define dso_local void @test_h2_optsize() optsize nounwind {
 entry:
   %0 = load i16, i16* getelementptr inbounds (%struct.h2, %struct.h2* @h2v, i32 0, i32 0), align 2
   %inc0 = add nsw i16 %0, 1
@@ -125,7 +125,7 @@ entry:
 ; CHECK-DAG: stb [[REG6_1]], b8v@toc@l+6([[REGSTRUCT]])
 ; CHECK-DAG: stb [[REG7_1]], b8v@toc@l+7([[REGSTRUCT]])
 
-define void @test_b8() nounwind {
+define dso_local void @test_b8() nounwind {
 entry:
   %0 = load i8, i8* getelementptr inbounds (%struct.b8, %struct.b8* @b8v, i32 0, i32 0), align 1
   %inc0 = add nsw i8 %0, 1
@@ -169,7 +169,7 @@ entry:
 ; CHECK-DAG: sth [[REG2_1]], h4v@toc@l+4([[REGSTRUCT]])
 ; CHECK-DAG: sth [[REG3_1]], h4v@toc@l+6([[REGSTRUCT]])
 
-define void @test_h4() nounwind {
+define dso_local void @test_h4() nounwind {
 entry:
   %0 = load i16, i16* getelementptr inbounds (%struct.h4, %struct.h4* @h4v, i32 0, i32 0), align 2
   %inc0 = add nsw i16 %0, 1
@@ -195,7 +195,7 @@ entry:
 ; CHECK-DAG: stw [[REG0_1]], w2v@toc@l([[REGSTRUCT]])
 ; CHECK-DAG: stw [[REG1_1]], w2v@toc@l+4([[REGSTRUCT]])
 
-define void @test_w2() nounwind {
+define dso_local void @test_w2() nounwind {
 entry:
   %0 = load i32, i32* getelementptr inbounds (%struct.w2, %struct.w2* @w2v, i32 0, i32 0), align 4
   %inc0 = add nsw i32 %0, 1
@@ -216,7 +216,7 @@ entry:
 ; CHECK-DAG: std [[REG0_1]], d2v@toc@l([[REGSTRUCT]])
 ; CHECK-DAG: std [[REG1_1]], 8([[BASEV]])
 
-define void @test_d2() nounwind {
+define dso_local void @test_d2() nounwind {
 entry:
   %0 = load i64, i64* getelementptr inbounds (%struct.d2, %struct.d2* @d2v, i32 0, i32 0), align 8
   %inc0 = add nsw i64 %0, 1
@@ -244,7 +244,7 @@ entry:
 ; CHECK: ldx [[REG0_0:[0-9]+]], [[REGSTRUCT]], [[OFFSET_REG]]
 ; CHECK: addi [[REG0_1:[0-9]+]], [[REG0_0]], 1
 ; CHECK: stdx [[REG0_1]], [[REGSTRUCT]], [[OFFSET_REG]]
-define void @test_misalign() nounwind {
+define dso_local void @test_misalign() nounwind {
 entry:
   %0 = load i64, i64* getelementptr inbounds (%struct.misalign, %struct.misalign* @misalign_v, i32 0, i32 1), align 1
   %inc0 = add nsw i64 %0, 1

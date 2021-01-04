@@ -334,6 +334,16 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
       return new PPC32TargetInfo(Triple, Opts);
     }
 
+  case llvm::Triple::ppcle:
+    switch (os) {
+    case llvm::Triple::Linux:
+      return new LinuxTargetInfo<PPC32TargetInfo>(Triple, Opts);
+    case llvm::Triple::FreeBSD:
+      return new FreeBSDTargetInfo<PPC32TargetInfo>(Triple, Opts);
+    default:
+      return new PPC32TargetInfo(Triple, Opts);
+    }
+
   case llvm::Triple::ppc64:
     if (Triple.isOSDarwin())
       return new DarwinPPC64TargetInfo(Triple, Opts);

@@ -53,6 +53,11 @@ Optional<StringRef> TypeConstraint::getBuilderCall() const {
       .Default([](auto *) { return llvm::None; });
 }
 
+// Return the C++ class name for this type (which may just be ::mlir::Type).
+StringRef TypeConstraint::getCPPClassName() const {
+  return def->getValueAsString("cppClassName");
+}
+
 Type::Type(const llvm::Record *record) : TypeConstraint(record) {}
 
 StringRef Type::getTypeDescription() const {

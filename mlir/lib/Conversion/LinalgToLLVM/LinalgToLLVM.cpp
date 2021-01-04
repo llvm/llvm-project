@@ -86,7 +86,7 @@ static Type convertRangeType(RangeType t, LLVMTypeConverter &converter) {
   auto *context = t.getContext();
   auto int64Ty = converter.convertType(IntegerType::get(context, 64))
                      .cast<LLVM::LLVMType>();
-  return LLVMType::getStructTy(int64Ty, int64Ty, int64Ty);
+  return LLVMStructType::getLiteral(context, {int64Ty, int64Ty, int64Ty});
 }
 
 namespace {

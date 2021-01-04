@@ -62,6 +62,9 @@ let Predicates = [HasAMXTILE, In64BitMode] in {
     def PTILESTOREDV : PseudoI<(outs), (ins GR16:$src1,
                                             GR16:$src2, opaquemem:$src3,
                                             TILE:$src4, TILECFG:$cfg), []>;
+    def PTILEZEROV : PseudoI<(outs TILE: $dst), (ins GR16:$src1,
+                                                     GR16:$src2,
+                                                     TILECFG:$cfg), []>;
 
     let usesCustomInserter = 1 in {
       // Pseudo instructions, using immediates instead of tile registers.
