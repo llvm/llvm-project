@@ -232,9 +232,7 @@ bool RecordRecTy::typeIsA(const RecTy *RHS) const {
 
 static RecordRecTy *resolveRecordTypes(RecordRecTy *T1, RecordRecTy *T2) {
   SmallVector<Record *, 4> CommonSuperClasses;
-  SmallVector<Record *, 4> Stack;
-
-  Stack.insert(Stack.end(), T1->classes_begin(), T1->classes_end());
+  SmallVector<Record *, 4> Stack(T1->classes_begin(), T1->classes_end());
 
   while (!Stack.empty()) {
     Record *R = Stack.back();

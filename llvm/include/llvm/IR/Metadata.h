@@ -1128,8 +1128,7 @@ class MDTuple : public MDNode {
                           StorageType Storage, bool ShouldCreate = true);
 
   TempMDTuple cloneImpl() const {
-    return getTemporary(getContext(),
-                        SmallVector<Metadata *, 4>(op_begin(), op_end()));
+    return getTemporary(getContext(), SmallVector<Metadata *, 4>(operands()));
   }
 
 public:

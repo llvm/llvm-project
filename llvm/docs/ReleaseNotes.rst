@@ -169,6 +169,12 @@ Changes to the Debug Info
 
 During this release ...
 
+* The DIModule metadata is extended with a field to indicate if it is a
+  module declaration. This extension enables the emission of debug info
+  for a Fortran 'use <external module>' statement. For more information
+  on what the debug info entries should look like and how the debugger
+  can use them, please see test/DebugInfo/X86/dimodule-external-fortran.ll.
+
 Changes to the LLVM tools
 ---------------------------------
 

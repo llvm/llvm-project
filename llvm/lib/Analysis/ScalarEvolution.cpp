@@ -2602,8 +2602,7 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
       //  NLI + LI + {Start,+,Step}  -->  NLI + {LI+Start,+,Step}
       LIOps.push_back(AddRec->getStart());
 
-      SmallVector<const SCEV *, 4> AddRecOps(AddRec->op_begin(),
-                                             AddRec->op_end());
+      SmallVector<const SCEV *, 4> AddRecOps(AddRec->operands());
       // This follows from the fact that the no-wrap flags on the outer add
       // expression are applicable on the 0th iteration, when the add recurrence
       // will be equal to its start value.
@@ -2641,8 +2640,7 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
         "AddRecExprs are not sorted in reverse dominance order?");
       if (AddRecLoop == cast<SCEVAddRecExpr>(Ops[OtherIdx])->getLoop()) {
         // Other + {A,+,B}<L> + {C,+,D}<L>  -->  Other + {A+C,+,B+D}<L>
-        SmallVector<const SCEV *, 4> AddRecOps(AddRec->op_begin(),
-                                               AddRec->op_end());
+        SmallVector<const SCEV *, 4> AddRecOps(AddRec->operands());
         for (; OtherIdx != Ops.size() && isa<SCEVAddRecExpr>(Ops[OtherIdx]);
              ++OtherIdx) {
           const auto *OtherAddRec = cast<SCEVAddRecExpr>(Ops[OtherIdx]);
@@ -3182,8 +3180,7 @@ const SCEV *ScalarEvolution::getUDivExpr(const SCEV *LHS,
             const SCEV *Op = M->getOperand(i);
             const SCEV *Div = getUDivExpr(Op, RHSC);
             if (!isa<SCEVUDivExpr>(Div) && getMulExpr(Div, RHSC) == Op) {
-              Operands = SmallVector<const SCEV *, 4>(M->op_begin(),
-                                                      M->op_end());
+              Operands = SmallVector<const SCEV *, 4>(M->operands());
               Operands[i] = Div;
               return getMulExpr(Operands);
             }
@@ -3368,8 +3365,7 @@ ScalarEvolution::getAddRecExpr(SmallVectorImpl<const SCEV *> &Operands,
             ? (L->getLoopDepth() < NestedLoop->getLoopDepth())
             : (!NestedLoop->contains(L) &&
                DT.dominates(L->getHeader(), NestedLoop->getHeader()))) {
-      SmallVector<const SCEV *, 4> NestedOperands(NestedAR->op_begin(),
-                                                  NestedAR->op_end());
+      SmallVector<const SCEV *, 4> NestedOperands(NestedAR->operands());
       Operands[0] = NestedAR->getStart();
       // AddRecs require their operands be loop-invariant with respect to their
       // loops. Don't perform this transformation if it would break this
@@ -11360,7 +11356,7 @@ const SCEV *SCEVAddRecExpr::getNumIterationsInRange(const ConstantRange &Range,
   // If the start is a non-zero constant, shift the range to simplify things.
   if (const SCEVConstant *SC = dyn_cast<SCEVConstant>(getStart()))
     if (!SC->getValue()->isZero()) {
-      SmallVector<const SCEV *, 4> Operands(op_begin(), op_end());
+      SmallVector<const SCEV *, 4> Operands(operands());
       Operands[0] = SE.getZero(SC->getType());
       const SCEV *Shifted = SE.getAddRecExpr(Operands, getLoop(),
                                              getNoWrapFlags(FlagNW));
@@ -11971,7 +11967,7 @@ void ScalarEvolution::SCEVCallbackVH::allUsesReplacedWith(Value *V) {
   // so that future queries will recompute the expressions using the new
   // value.
   Value *Old = getValPtr();
-  SmallVector<User *, 16> Worklist(Old->user_begin(), Old->user_end());
+  SmallVector<User *, 16> Worklist(Old->users());
   SmallPtrSet<User *, 8> Visited;
   while (!Worklist.empty()) {
     User *U = Worklist.pop_back_val();

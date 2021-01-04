@@ -893,10 +893,10 @@ def PseudoAddTPRel : Pseudo<(outs GPR:$rd),
 
 /// FrameIndex calculations
 
-def : Pat<(add (i32 AddrFI:$Rs), simm12:$imm12),
-          (ADDI (i32 AddrFI:$Rs), simm12:$imm12)>;
-def : Pat<(IsOrAdd (i32 AddrFI:$Rs), simm12:$imm12),
-          (ADDI (i32 AddrFI:$Rs), simm12:$imm12)>;
+def : Pat<(add (XLenVT AddrFI:$Rs), simm12:$imm12),
+          (ADDI (XLenVT AddrFI:$Rs), simm12:$imm12)>;
+def : Pat<(IsOrAdd (XLenVT AddrFI:$Rs), simm12:$imm12),
+          (ADDI (XLenVT AddrFI:$Rs), simm12:$imm12)>;
 
 /// Setcc
 

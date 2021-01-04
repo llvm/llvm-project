@@ -152,8 +152,7 @@ DEVICE unsigned GetLaneId() {
   return __builtin_amdgcn_mbcnt_hi(~0u, __builtin_amdgcn_mbcnt_lo(~0u, 0u));
 }
 
-EXTERN uint32_t __kmpc_amdgcn_gpu_num_threads(void)
-{
+EXTERN uint32_t __kmpc_amdgcn_gpu_num_threads() {
   return GetNumberOfThreadsInBlock();
 }
 
@@ -167,3 +166,4 @@ EXTERN int global_free(void*);
 DEVICE void *__kmpc_impl_malloc(size_t t) { return global_allocate(t); }
 DEVICE void __kmpc_impl_free(void * ptr) {global_free(ptr);}
 #pragma omp end declare target
+

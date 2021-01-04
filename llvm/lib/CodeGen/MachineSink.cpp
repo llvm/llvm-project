@@ -1024,9 +1024,9 @@ bool MachineSinking::hasStoreBetween(MachineBasicBlock *From,
     return HasStoreCache[BlockPair];
 
   if (StoreInstrCache.find(BlockPair) != StoreInstrCache.end())
-    return std::any_of(
-        StoreInstrCache[BlockPair].begin(), StoreInstrCache[BlockPair].end(),
-        [&](MachineInstr *I) { return I->mayAlias(AA, MI, false); });
+    return llvm::any_of(StoreInstrCache[BlockPair], [&](MachineInstr *I) {
+      return I->mayAlias(AA, MI, false);
+    });
 
   bool SawStore = false;
   bool HasAliasedStore = false;

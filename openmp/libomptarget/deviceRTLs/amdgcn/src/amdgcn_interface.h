@@ -46,4 +46,6 @@ EXTERN unsigned long long omp_ext_get_active_threads_mask(void);
 typedef struct ident ident_t;
 typedef ident_t kmp_Ident;
 
+EXTERN uint32_t __kmpc_amdgcn_gpu_num_threads();
+
 #endif

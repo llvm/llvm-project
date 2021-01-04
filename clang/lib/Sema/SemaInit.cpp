@@ -4119,9 +4119,7 @@ static void TryConstructorInitialization(Sema &S,
                       InitializationSequence::FK_ListConstructorOverloadFailed :
                       InitializationSequence::FK_ConstructorOverloadFailed,
                                 Result);
-
-    if (Result != OR_Deleted)
-      return;
+    return;
   }
 
   bool HadMultipleCandidates = (CandidateSet.size() > 1);
@@ -4142,45 +4140,31 @@ static void TryConstructorInitialization(Sema &S,
     return;
   }
 
+  // C++11 [dcl.init]p6:
+  //   If a program calls for the default initialization of an object
+  //   of a const-qualified type T, T shall be a class type with a
+  //   user-provided default constructor.
+  // C++ core issue 253 proposal:
+  //   If the implicit default constructor initializes all subobjects, no
+  //   initializer should be required.
+  // The 253 proposal is for example needed to process libstdc++ headers in 5.x.
   CXXConstructorDecl *CtorDecl = cast<CXXConstructorDecl>(Best->Function);
-  if (Result != OR_Deleted) { // TODO: Support for more than one failure.
-    // C++11 [dcl.init]p6:
-    //   If a program calls for the default initialization of an object
-    //   of a const-qualified type T, T shall be a class type with a
-    //   user-provided default constructor.
-    // C++ core issue 253 proposal:
-    //   If the implicit default constructor initializes all subobjects, no
-    //   initializer should be required.
-    // The 253 proposal is for example needed to process libstdc++ headers
-    // in 5.x.
-    if (Kind.getKind() == InitializationKind::IK_Default &&
-        Entity.getType().isConstQualified()) {
-      if (!CtorDecl->getParent()->allowConstDefaultInit()) {
-        if (!maybeRecoverWithZeroInitialization(S, Sequence, Entity))
-          Sequence.SetFailed(InitializationSequence::FK_DefaultInitOfConst);
-        return;
-      }
-    }
-
-    // C++11 [over.match.list]p1:
-    //   In copy-list-initialization, if an explicit constructor is chosen, the
-    //   initializer is ill-formed.
-    if (IsListInit && !Kind.AllowExplicit() && CtorDecl->isExplicit()) {
-      Sequence.SetFailed(InitializationSequence::FK_ExplicitConstructor);
+  if (Kind.getKind() == InitializationKind::IK_Default &&
+      Entity.getType().isConstQualified()) {
+    if (!CtorDecl->getParent()->allowConstDefaultInit()) {
+      if (!maybeRecoverWithZeroInitialization(S, Sequence, Entity))
+        Sequence.SetFailed(InitializationSequence::FK_DefaultInitOfConst);
       return;
     }
   }
 
-  // [class.copy.elision]p3:
-  // In some copy-initialization contexts, a two-stage overload resolution
-  // is performed.
-  // If the first overload resolution selects a deleted function, we also
-  // need the initialization sequence to decide whether to perform the second
-  // overload resolution.
-  // For deleted functions in other contexts, there is no need to get the
-  // initialization sequence.
-  if (Result == OR_Deleted && Kind.getKind() != InitializationKind::IK_Copy)
+  // C++11 [over.match.list]p1:
+  //   In copy-list-initialization, if an explicit constructor is chosen, the
+  //   initializer is ill-formed.
+  if (IsListInit && !Kind.AllowExplicit() && CtorDecl->isExplicit()) {
+    Sequence.SetFailed(InitializationSequence::FK_ExplicitConstructor);
     return;
+  }
 
   // Add the constructor initialization step. Any cv-qualification conversion is
   // subsumed by the initialization.
@@ -5276,16 +5260,7 @@ static void TryUserDefinedConversion(Sema &S,
     Sequence.SetOverloadFailure(
                         InitializationSequence::FK_UserConversionOverloadFailed,
                                 Result);
-
-    // [class.copy.elision]p3:
-    // In some copy-initialization contexts, a two-stage overload resolution
-    // is performed.
-    // If the first overload resolution selects a deleted function, we also
-    // need the initialization sequence to decide whether to perform the second
-    // overload resolution.
-    if (!(Result == OR_Deleted &&
-          Kind.getKind() == InitializationKind::IK_Copy))
-      return;
+    return;
   }
 
   FunctionDecl *Function = Best->Function;

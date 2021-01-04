@@ -526,9 +526,12 @@ public:
       DeviceData[DeviceId].BlocksPerGrid = EnvTeamLimit;
     }
 
-    DP("Max number of CUDA blocks %d, threads %d & warp size %d\n",
-       DeviceData[DeviceId].BlocksPerGrid, DeviceData[DeviceId].ThreadsPerBlock,
-       DeviceData[DeviceId].WarpSize);
+    if (getDebugLevel() || (getInfoLevel() & OMP_INFOTYPE_PLUGIN_KERNEL))
+      INFO(DeviceId,
+           "Device supports up to %d CUDA blocks and %d threads with a "
+           "warp size of %d\n",
+           DeviceData[DeviceId].BlocksPerGrid,
+           DeviceData[DeviceId].ThreadsPerBlock, DeviceData[DeviceId].WarpSize);
 
     // Set default number of teams
     if (EnvNumTeams > 0) {
@@ -956,9 +959,15 @@ public:
       CudaBlocksPerGrid = TeamNum;
     }
 
-    // Run on the device.
-    DP("Launch kernel with %d blocks and %d threads\n", CudaBlocksPerGrid,
-       CudaThreadsPerBlock);
+    if (getDebugLevel() || (getInfoLevel() & OMP_INFOTYPE_PLUGIN_KERNEL))
+      INFO(DeviceId,
+           "Launching kernel %s with %d blocks and %d threads in %s "
+           "mode\n",
+           (getOffloadEntry(DeviceId, TgtEntryPtr))
+               ? getOffloadEntry(DeviceId, TgtEntryPtr)->name
+               : "(null)",
+           CudaBlocksPerGrid, CudaThreadsPerBlock,
+           (KernelInfo->ExecutionMode == SPMD) ? "SPMD" : "Generic");
 
     CUstream Stream = getStream(DeviceId, AsyncInfo);
     Err = cuLaunchKernel(KernelInfo->Func, CudaBlocksPerGrid, /* gridDimY */ 1,

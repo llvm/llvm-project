@@ -369,6 +369,8 @@ public:
 
   unsigned getMinVectorRegisterBitWidth() const { return 128; }
 
+  Optional<unsigned> getMaxVScale() const { return None; }
+
   bool shouldMaximizeVectorBandwidth(bool OptSize) const { return false; }
 
   unsigned getMinimumVF(unsigned ElemWidth) const { return 0; }
@@ -1069,8 +1071,7 @@ public:
   }
 
   int getInstructionLatency(const Instruction *I) {
-    SmallVector<const Value *, 4> Operands(I->value_op_begin(),
-                                           I->value_op_end());
+    SmallVector<const Value *, 4> Operands(I->operand_values());
     if (getUserCost(I, Operands, TTI::TCK_Latency) == TTI::TCC_Free)
       return 0;
 
