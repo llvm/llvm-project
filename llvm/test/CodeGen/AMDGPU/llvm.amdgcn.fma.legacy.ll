@@ -70,16 +70,10 @@ define amdgpu_ps <{ i32, i32, i32, i32, i32, float, float, float, float, float, 
 ; SDAG-NEXT:    v_interp_p2_f32_e32 v3, v1, attr0.y
 ; SDAG-NEXT:    s_and_b32 exec_lo, exec_lo, s16
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-NEXT:    image_sample v[7:10], v[2:3], s[8:15], s[0:3] dmask:0xf dim:SQ_RSRC_IMG_2D
-; SDAG-NEXT:    v_mov_b32_e32 v4, -1.0
-; SDAG-NEXT:    v_mov_b32_e32 v5, -1.0
+; SDAG-NEXT:    image_sample v[0:3], v[2:3], s[8:15], s[0:3] dmask:0xf dim:SQ_RSRC_IMG_2D
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
-; SDAG-NEXT:    v_fmac_legacy_f32_e64 v4, v7, 2.0
-; SDAG-NEXT:    v_fmac_legacy_f32_e64 v5, v8, 2.0
-; SDAG-NEXT:    v_mov_b32_e32 v2, v9
-; SDAG-NEXT:    v_mov_b32_e32 v3, v10
-; SDAG-NEXT:    v_mov_b32_e32 v0, v4
-; SDAG-NEXT:    v_mov_b32_e32 v1, v5
+; SDAG-NEXT:    v_fma_legacy_f32 v0, v0, 2.0, -1.0
+; SDAG-NEXT:    v_fma_legacy_f32 v1, v1, 2.0, -1.0
 ; SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-LABEL: main:
@@ -100,16 +94,10 @@ define amdgpu_ps <{ i32, i32, i32, i32, i32, float, float, float, float, float, 
 ; GISEL-NEXT:    v_interp_p2_f32_e32 v2, v1, attr0.x
 ; GISEL-NEXT:    s_and_b32 exec_lo, exec_lo, s16
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-NEXT:    image_sample v[7:10], v[2:3], s[8:15], s[0:3] dmask:0xf dim:SQ_RSRC_IMG_2D
-; GISEL-NEXT:    v_mov_b32_e32 v4, -1.0
-; GISEL-NEXT:    v_mov_b32_e32 v5, -1.0
+; GISEL-NEXT:    image_sample v[0:3], v[2:3], s[8:15], s[0:3] dmask:0xf dim:SQ_RSRC_IMG_2D
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GISEL-NEXT:    v_fmac_legacy_f32_e64 v4, v7, 2.0
-; GISEL-NEXT:    v_fmac_legacy_f32_e64 v5, v8, 2.0
-; GISEL-NEXT:    v_mov_b32_e32 v2, v9
-; GISEL-NEXT:    v_mov_b32_e32 v3, v10
-; GISEL-NEXT:    v_mov_b32_e32 v0, v4
-; GISEL-NEXT:    v_mov_b32_e32 v1, v5
+; GISEL-NEXT:    v_fma_legacy_f32 v0, v0, 2.0, -1.0
+; GISEL-NEXT:    v_fma_legacy_f32 v1, v1, 2.0, -1.0
 ; GISEL-NEXT:    ; return to shader part epilog
   %i = bitcast <2 x i32> %arg7 to <2 x float>
   %i22 = extractelement <2 x float> %i, i32 0

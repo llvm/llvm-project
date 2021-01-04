@@ -140,6 +140,8 @@ static unsigned macToMad(unsigned Opc) {
     return AMDGPU::V_FMA_F32;
   case AMDGPU::V_FMAC_F16_e64:
     return AMDGPU::V_FMA_F16_gfx9;
+  case AMDGPU::V_FMAC_LEGACY_F32_e64:
+    return AMDGPU::V_FMA_LEGACY_F32;
   }
   return AMDGPU::INSTRUCTION_LIST_END;
 }
