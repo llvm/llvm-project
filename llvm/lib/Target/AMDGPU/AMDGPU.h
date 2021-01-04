@@ -260,6 +260,11 @@ ModulePass *createAMDGPUPrintfRuntimeBinding();
 void initializeAMDGPUPrintfRuntimeBindingPass(PassRegistry&);
 extern char &AMDGPUPrintfRuntimeBindingID;
 
+struct AMDGPUPrintfRuntimeBindingPass
+    : PassInfoMixin<AMDGPUPrintfRuntimeBindingPass> {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
 ModulePass* createAMDGPUUnifyMetadataPass();
 void initializeAMDGPUUnifyMetadataPass(PassRegistry&);
 extern char &AMDGPUUnifyMetadataID;
