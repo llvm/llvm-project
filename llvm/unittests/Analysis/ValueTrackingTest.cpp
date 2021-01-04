@@ -884,6 +884,10 @@ TEST_F(ValueTrackingTest, isGuaranteedNotToBeUndefOrPoison) {
                 "  ret void\n"
                 "}\n");
   EXPECT_EQ(isGuaranteedNotToBeUndefOrPoison(A), true);
+  EXPECT_EQ(isGuaranteedNotToBeUndefOrPoison(UndefValue::get(IntegerType::get(Context, 8))), false);
+  EXPECT_EQ(isGuaranteedNotToBeUndefOrPoison(PoisonValue::get(IntegerType::get(Context, 8))), false);
+  EXPECT_EQ(isGuaranteedNotToBePoison(UndefValue::get(IntegerType::get(Context, 8))), true);
+  EXPECT_EQ(isGuaranteedNotToBePoison(PoisonValue::get(IntegerType::get(Context, 8))), false);
 }
 
 TEST_F(ValueTrackingTest, isGuaranteedNotToBeUndefOrPoison_assume) {
