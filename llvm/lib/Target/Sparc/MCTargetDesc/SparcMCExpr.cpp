@@ -43,6 +43,8 @@ bool SparcMCExpr::printVariantKind(raw_ostream &OS, VariantKind Kind)
 {
   bool closeParen = true;
   switch (Kind) {
+  default:
+    llvm_unreachable("Unhandled SparcMCExpr::VariantKind");
   case VK_Sparc_None:     closeParen = false; break;
   case VK_Sparc_LO:       OS << "%lo(";  break;
   case VK_Sparc_HI:       OS << "%hi(";  break;
@@ -59,6 +61,7 @@ bool SparcMCExpr::printVariantKind(raw_ostream &OS, VariantKind Kind)
   case VK_Sparc_GOT10:    OS << "%lo("; break;
   case VK_Sparc_GOT13:    closeParen = false; break;
   case VK_Sparc_13:       closeParen = false; break;
+  case VK_Sparc_WDISP30:  closeParen = false; break;
   case VK_Sparc_WPLT30:   closeParen = false; break;
   case VK_Sparc_R_DISP32: OS << "%r_disp32("; break;
   case VK_Sparc_TLS_GD_HI22:   OS << "%tgd_hi22(";   break;
@@ -137,6 +140,7 @@ Sparc::Fixups SparcMCExpr::getFixupKind(SparcMCExpr::VariantKind Kind) {
   case VK_Sparc_GOT13:    return Sparc::fixup_sparc_got13;
   case VK_Sparc_13:       return Sparc::fixup_sparc_13;
   case VK_Sparc_WPLT30:   return Sparc::fixup_sparc_wplt30;
+  case VK_Sparc_WDISP30:  return Sparc::fixup_sparc_call30;
   case VK_Sparc_TLS_GD_HI22:   return Sparc::fixup_sparc_tls_gd_hi22;
   case VK_Sparc_TLS_GD_LO10:   return Sparc::fixup_sparc_tls_gd_lo10;
   case VK_Sparc_TLS_GD_ADD:    return Sparc::fixup_sparc_tls_gd_add;
