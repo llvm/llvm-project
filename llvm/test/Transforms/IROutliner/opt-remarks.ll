@@ -5,13 +5,16 @@
 ; RUN:  -pass-remarks-output=%t < %s
 ; RUN: cat %t | FileCheck -check-prefix=YAML %s
 
-; CHECK: remark: <unknown>:0:0: outlined 2 regions with decrease of 31 instructions at locations <UNKNOWN LOCATION> <UNKNOWN LOCATION> 
-; CHECK-NEXT: remark: <unknown>:0:0: did not outline 2 regions due to estimated increase of 5 instructions at locations <UNKNOWN LOCATION> <UNKNOWN LOCATION>
-; CHECK-NEXT: remark: <unknown>:0:0: did not outline 2 regions due to estimated increase of 9 instructions at locations <UNKNOWN LOCATION> <UNKNOWN LOCATION>
-; CHECK-NEXT: remark: <unknown>:0:0: did not outline 2 regions due to estimated increase of 13 instructions at locations <UNKNOWN LOCATION> <UNKNOWN LOCATION>
-; CHECK-NEXT: remark: <unknown>:0:0: did not outline 2 regions due to estimated increase of 17 instructions at locations <UNKNOWN LOCATION> <UNKNOWN LOCATION>
-; CHECK-NEXT: remark: <unknown>:0:0: did not outline 2 regions due to estimated increase of 21 instructions at locations <UNKNOWN LOCATION> <UNKNOWN LOCATION>
+; CHECK: remark: <unknown>:0:0: outlined 2 regions with decrease of 2 instructions at locations <UNKNOWN LOCATION> <UNKNOWN LOCATION>
+; CHECK-NEXT: remark: <unknown>:0:0: did not outline 2 regions due to estimated increase of 6 instructions at locations <UNKNOWN LOCATION> <UNKNOWN LOCATION>
 ; CHECK-NEXT: remark: <unknown>:0:0: did not outline 2 regions due to estimated increase of 7 instructions at locations <UNKNOWN LOCATION> <UNKNOWN LOCATION>
+; CHECK-NEXT: remark: <unknown>:0:0: did not outline 2 regions due to estimated increase of 8 instructions at locations <UNKNOWN LOCATION> <UNKNOWN LOCATION>
+; CHECK-NEXT: remark: <unknown>:0:0: did not outline 2 regions due to estimated increase of 9 instructions at locations <UNKNOWN LOCATION> <UNKNOWN LOCATION>
+; CHECK-NEXT: remark: <unknown>:0:0: did not outline 2 regions due to estimated increase of 10 instructions at locations <UNKNOWN LOCATION> <UNKNOWN LOCATION>
+; CHECK-NEXT: remark: <unknown>:0:0: did not outline 2 regions due to estimated increase of 7 instructions at locations <UNKNOWN LOCATION> <UNKNOWN LOCATION>
+; CHECK-NEXT: remark: <unknown>:0:0: did not outline 2 regions due to estimated increase of 8 instructions at locations <UNKNOWN LOCATION> <UNKNOWN LOCATION>
+; CHECK-NEXT: remark: <unknown>:0:0: did not outline 2 regions due to estimated increase of 13 instructions at locations <UNKNOWN LOCATION> <UNKNOWN LOCATION>
+; CHECK-NEXT: remark: <unknown>:0:0: did not outline 2 regions due to estimated increase of 10 instructions at locations <UNKNOWN LOCATION> <UNKNOWN LOCATION>
 
 ; YAML: --- !Passed
 ; YAML-NEXT: Pass:            iroutliner
@@ -21,7 +24,7 @@
 ; YAML-NEXT:   - String:          'outlined '
 ; YAML-NEXT:   - String:          '2'
 ; YAML-NEXT:   - String:          ' regions with decrease of '
-; YAML-NEXT:   - Benefit:         '31'
+; YAML-NEXT:   - Benefit:         '2'
 ; YAML-NEXT:   - String:          ' instructions at locations '
 ; YAML-NEXT:   - DebugLoc:        '<UNKNOWN LOCATION>'
 ; YAML-NEXT:   - String:          ' '
@@ -35,7 +38,35 @@
 ; YAML-NEXT:   - String:          'did not outline '
 ; YAML-NEXT:   - String:          '2'
 ; YAML-NEXT:   - String:          ' regions due to estimated increase of '
-; YAML-NEXT:   - InstructionIncrease: '5'
+; YAML-NEXT:   - InstructionIncrease: '6'
+; YAML-NEXT:   - String:          ' instructions at locations '
+; YAML-NEXT:   - DebugLoc:        '<UNKNOWN LOCATION>'
+; YAML-NEXT:   - String:          ' '
+; YAML-NEXT:   - DebugLoc:        '<UNKNOWN LOCATION>'
+; YAML-NEXT: ...
+; YAML-NEXT: --- !Missed
+; YAML-NEXT: Pass:            iroutliner
+; YAML-NEXT: Name:            WouldNotDecreaseSize
+; YAML-NEXT: Function:        function1
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'did not outline '
+; YAML-NEXT:   - String:          '2'
+; YAML-NEXT:   - String:          ' regions due to estimated increase of '
+; YAML-NEXT:   - InstructionIncrease: '7'
+; YAML-NEXT:   - String:          ' instructions at locations '
+; YAML-NEXT:   - DebugLoc:        '<UNKNOWN LOCATION>'
+; YAML-NEXT:   - String:          ' '
+; YAML-NEXT:   - DebugLoc:        '<UNKNOWN LOCATION>'
+; YAML-NEXT: ...
+; YAML-NEXT: --- !Missed
+; YAML-NEXT: Pass:            iroutliner
+; YAML-NEXT: Name:            WouldNotDecreaseSize
+; YAML-NEXT: Function:        function1
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'did not outline '
+; YAML-NEXT:   - String:          '2'
+; YAML-NEXT:   - String:          ' regions due to estimated increase of '
+; YAML-NEXT:   - InstructionIncrease: '8'
 ; YAML-NEXT:   - String:          ' instructions at locations '
 ; YAML-NEXT:   - DebugLoc:        '<UNKNOWN LOCATION>'
 ; YAML-NEXT:   - String:          ' '
@@ -63,35 +94,7 @@
 ; YAML-NEXT:   - String:          'did not outline '
 ; YAML-NEXT:   - String:          '2'
 ; YAML-NEXT:   - String:          ' regions due to estimated increase of '
-; YAML-NEXT:   - InstructionIncrease: '13'
-; YAML-NEXT:   - String:          ' instructions at locations '
-; YAML-NEXT:   - DebugLoc:        '<UNKNOWN LOCATION>'
-; YAML-NEXT:   - String:          ' '
-; YAML-NEXT:   - DebugLoc:        '<UNKNOWN LOCATION>'
-; YAML-NEXT: ...
-; YAML-NEXT: --- !Missed
-; YAML-NEXT: Pass:            iroutliner
-; YAML-NEXT: Name:            WouldNotDecreaseSize
-; YAML-NEXT: Function:        function1
-; YAML-NEXT: Args:
-; YAML-NEXT:   - String:          'did not outline '
-; YAML-NEXT:   - String:          '2'
-; YAML-NEXT:   - String:          ' regions due to estimated increase of '
-; YAML-NEXT:   - InstructionIncrease: '17'
-; YAML-NEXT:   - String:          ' instructions at locations '
-; YAML-NEXT:   - DebugLoc:        '<UNKNOWN LOCATION>'
-; YAML-NEXT:   - String:          ' '
-; YAML-NEXT:   - DebugLoc:        '<UNKNOWN LOCATION>'
-; YAML-NEXT: ...
-; YAML-NEXT: --- !Missed
-; YAML-NEXT: Pass:            iroutliner
-; YAML-NEXT: Name:            WouldNotDecreaseSize
-; YAML-NEXT: Function:        function1
-; YAML-NEXT: Args:
-; YAML-NEXT:   - String:          'did not outline '
-; YAML-NEXT:   - String:          '2'
-; YAML-NEXT:   - String:          ' regions due to estimated increase of '
-; YAML-NEXT:   - InstructionIncrease: '21'
+; YAML-NEXT:   - InstructionIncrease: '10'
 ; YAML-NEXT:   - String:          ' instructions at locations '
 ; YAML-NEXT:   - DebugLoc:        '<UNKNOWN LOCATION>'
 ; YAML-NEXT:   - String:          ' '
@@ -106,6 +109,48 @@
 ; YAML-NEXT:   - String:          '2'
 ; YAML-NEXT:   - String:          ' regions due to estimated increase of '
 ; YAML-NEXT:   - InstructionIncrease: '7'
+; YAML-NEXT:   - String:          ' instructions at locations '
+; YAML-NEXT:   - DebugLoc:        '<UNKNOWN LOCATION>'
+; YAML-NEXT:   - String:          ' '
+; YAML-NEXT:   - DebugLoc:        '<UNKNOWN LOCATION>'
+; YAML-NEXT: ...
+; YAML-NEXT: --- !Missed
+; YAML-NEXT: Pass:            iroutliner
+; YAML-NEXT: Name:            WouldNotDecreaseSize
+; YAML-NEXT: Function:        function1
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'did not outline '
+; YAML-NEXT:   - String:          '2'
+; YAML-NEXT:   - String:          ' regions due to estimated increase of '
+; YAML-NEXT:   - InstructionIncrease: '8'
+; YAML-NEXT:   - String:          ' instructions at locations '
+; YAML-NEXT:   - DebugLoc:        '<UNKNOWN LOCATION>'
+; YAML-NEXT:   - String:          ' '
+; YAML-NEXT:   - DebugLoc:        '<UNKNOWN LOCATION>'
+; YAML-NEXT: ...
+; YAML-NEXT: --- !Missed
+; YAML-NEXT: Pass:            iroutliner
+; YAML-NEXT: Name:            WouldNotDecreaseSize
+; YAML-NEXT: Function:        function1
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'did not outline '
+; YAML-NEXT:   - String:          '2'
+; YAML-NEXT:   - String:          ' regions due to estimated increase of '
+; YAML-NEXT:   - InstructionIncrease: '13'
+; YAML-NEXT:   - String:          ' instructions at locations '
+; YAML-NEXT:   - DebugLoc:        '<UNKNOWN LOCATION>'
+; YAML-NEXT:   - String:          ' '
+; YAML-NEXT:   - DebugLoc:        '<UNKNOWN LOCATION>'
+; YAML-NEXT: ...
+; YAML-NEXT: --- !Missed
+; YAML-NEXT: Pass:            iroutliner
+; YAML-NEXT: Name:            WouldNotDecreaseSize
+; YAML-NEXT: Function:        function1
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'did not outline '
+; YAML-NEXT:   - String:          '2'
+; YAML-NEXT:   - String:          ' regions due to estimated increase of '
+; YAML-NEXT:   - InstructionIncrease: '10'
 ; YAML-NEXT:   - String:          ' instructions at locations '
 ; YAML-NEXT:   - DebugLoc:        '<UNKNOWN LOCATION>'
 ; YAML-NEXT:   - String:          ' '
@@ -144,6 +189,7 @@ entry:
   %add = add i32 %0, %1
   store i32 %add, i32* %output, align 4
   %2 = load i32, i32* %output, align 4
+  %3 = load i32, i32* %output, align 4
   %mul = mul i32 %2, %add
   store i32 %mul, i32* %result, align 4
   ret void
