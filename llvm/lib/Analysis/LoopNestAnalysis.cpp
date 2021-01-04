@@ -16,7 +16,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 using namespace llvm;
 
@@ -254,66 +253,49 @@ static bool checkLoopsStructure(const Loop &OuterLoop, const Loop &InnerLoop,
   // Ensure the only branch that may exist between the loops is the inner loop
   // guard.
   if (OuterLoopHeader != InnerLoopPreHeader) {
-    const BasicBlock &SingleSucc =
-        skipEmptyBlockUntil(OuterLoopHeader, InnerLoopPreHeader);
+    const BranchInst *BI =
+        dyn_cast<BranchInst>(OuterLoopHeader->getTerminator());
 
-    // no conditional branch present
-    if (&SingleSucc != InnerLoopPreHeader) {
-      const BranchInst *BI = dyn_cast<BranchInst>(SingleSucc.getTerminator());
+    if (!BI || BI != InnerLoop.getLoopGuardBranch())
+      return false;
 
-      if (!BI || BI != InnerLoop.getLoopGuardBranch())
-        return false;
+    bool InnerLoopExitContainsLCSSA = ContainsLCSSAPhi(*InnerLoopExit);
 
-      bool InnerLoopExitContainsLCSSA = ContainsLCSSAPhi(*InnerLoopExit);
+    // The successors of the inner loop guard should be the inner loop
+    // preheader and the outer loop latch.
+    for (const BasicBlock *Succ : BI->successors()) {
+      if (Succ == InnerLoopPreHeader)
+        continue;
+      if (Succ == OuterLoopLatch)
+        continue;
 
-      // The successors of the inner loop guard should be the inner loop
-      // preheader or the outer loop latch possibly through empty blocks.
-      for (const BasicBlock *Succ : BI->successors()) {
-        const BasicBlock *PotentialInnerPreHeader = Succ;
-        const BasicBlock *PotentialOuterLatch = Succ;
-
-        // Ensure the inner loop guard successor is empty before skipping
-        // blocks.
-        if (Succ->getInstList().size() == 1) {
-          PotentialInnerPreHeader =
-              &skipEmptyBlockUntil(Succ, InnerLoopPreHeader);
-          PotentialOuterLatch = &skipEmptyBlockUntil(Succ, OuterLoopLatch);
-        }
-
-        if (PotentialInnerPreHeader == InnerLoopPreHeader)
-          continue;
-        if (PotentialOuterLatch == OuterLoopLatch)
-          continue;
-
-        // If `InnerLoopExit` contains LCSSA Phi instructions, additional block
-        // may be inserted before the `OuterLoopLatch` to which `BI` jumps. The
-        // loops are still considered perfectly nested if the extra block only
-        // contains Phi instructions from InnerLoopExit and OuterLoopHeader.
-        if (InnerLoopExitContainsLCSSA && IsExtraPhiBlock(*Succ) &&
-            Succ->getSingleSuccessor() == OuterLoopLatch) {
-          // Points to the extra block so that we can reference it later in the
-          // final check. We can also conclude that the inner loop is
-          // guarded and there exists LCSSA Phi node in the exit block later if
-          // we see a non-null `ExtraPhiBlock`.
-          ExtraPhiBlock = Succ;
-          continue;
-        }
-
-        DEBUG_WITH_TYPE(VerboseDebug, {
-          dbgs() << "Inner loop guard successor " << Succ->getName()
-                 << " doesn't lead to inner loop preheader or "
-                    "outer loop latch.\n";
-        });
-        return false;
+      // If `InnerLoopExit` contains LCSSA Phi instructions, additional block
+      // may be inserted before the `OuterLoopLatch` to which `BI` jumps. The
+      // loops are still considered perfectly nested if the extra block only
+      // contains Phi instructions from InnerLoopExit and OuterLoopHeader.
+      if (InnerLoopExitContainsLCSSA && IsExtraPhiBlock(*Succ) &&
+          Succ->getSingleSuccessor() == OuterLoopLatch) {
+        // Points to the extra block so that we can reference it later in the
+        // final check. We can also conclude that the inner loop is
+        // guarded and there exists LCSSA Phi node in the exit block later if we
+        // see a non-null `ExtraPhiBlock`.
+        ExtraPhiBlock = Succ;
+        continue;
       }
+
+      DEBUG_WITH_TYPE(VerboseDebug, {
+        dbgs() << "Inner loop guard successor " << Succ->getName()
+               << " doesn't lead to inner loop preheader or "
+                  "outer loop latch.\n";
+      });
+      return false;
     }
   }
 
-  // Ensure the inner loop exit block lead to the outer loop latch possibly
-  // through empty blocks.
-  const BasicBlock &SuccInner =
-      skipEmptyBlockUntil(InnerLoop.getExitBlock(), OuterLoopLatch);
-  if (&SuccInner != OuterLoopLatch && &SuccInner != ExtraPhiBlock) {
+  // Ensure the inner loop exit block leads to the outer loop latch.
+  const BasicBlock *SuccInner = InnerLoopExit->getSingleSuccessor();
+  if (!SuccInner ||
+      (SuccInner != OuterLoopLatch && SuccInner != ExtraPhiBlock)) {
     DEBUG_WITH_TYPE(
         VerboseDebug,
         dbgs() << "Inner loop exit block " << *InnerLoopExit
