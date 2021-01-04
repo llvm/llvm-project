@@ -29,7 +29,7 @@ define i8 @test_uadd2() {
 
 define {i8, i1} @test_uadd3(i8 %v) {
 ; CHECK-LABEL: @test_uadd3(
-; CHECK-NEXT:    ret { i8, i1 } { i8 undef, i1 false }
+; CHECK-NEXT:    ret { i8, i1 } { i8 -1, i1 false }
 ;
   %result = call {i8, i1} @llvm.uadd.with.overflow.i8(i8 %v, i8 undef)
   ret {i8, i1} %result
@@ -37,7 +37,7 @@ define {i8, i1} @test_uadd3(i8 %v) {
 
 define {i8, i1} @test_uadd3_poison(i8 %v) {
 ; CHECK-LABEL: @test_uadd3_poison(
-; CHECK-NEXT:    ret { i8, i1 } { i8 undef, i1 false }
+; CHECK-NEXT:    ret { i8, i1 } { i8 -1, i1 false }
 ;
   %result = call {i8, i1} @llvm.uadd.with.overflow.i8(i8 %v, i8 poison)
   ret {i8, i1} %result
@@ -45,7 +45,7 @@ define {i8, i1} @test_uadd3_poison(i8 %v) {
 
 define {i8, i1} @test_uadd4(i8 %v) {
 ; CHECK-LABEL: @test_uadd4(
-; CHECK-NEXT:    ret { i8, i1 } { i8 undef, i1 false }
+; CHECK-NEXT:    ret { i8, i1 } { i8 -1, i1 false }
 ;
   %result = call {i8, i1} @llvm.uadd.with.overflow.i8(i8 undef, i8 %v)
   ret {i8, i1} %result
@@ -53,7 +53,7 @@ define {i8, i1} @test_uadd4(i8 %v) {
 
 define {i8, i1} @test_uadd4_poison(i8 %v) {
 ; CHECK-LABEL: @test_uadd4_poison(
-; CHECK-NEXT:    ret { i8, i1 } { i8 undef, i1 false }
+; CHECK-NEXT:    ret { i8, i1 } { i8 -1, i1 false }
 ;
   %result = call {i8, i1} @llvm.uadd.with.overflow.i8(i8 poison, i8 %v)
   ret {i8, i1} %result
@@ -79,7 +79,7 @@ define i8 @test_sadd2() {
 
 define {i8, i1} @test_sadd3(i8 %v) {
 ; CHECK-LABEL: @test_sadd3(
-; CHECK-NEXT:    ret { i8, i1 } { i8 undef, i1 false }
+; CHECK-NEXT:    ret { i8, i1 } { i8 -1, i1 false }
 ;
   %result = call {i8, i1} @llvm.sadd.with.overflow.i8(i8 %v, i8 undef)
   ret {i8, i1} %result
@@ -87,7 +87,7 @@ define {i8, i1} @test_sadd3(i8 %v) {
 
 define {i8, i1} @test_sadd3_poison(i8 %v) {
 ; CHECK-LABEL: @test_sadd3_poison(
-; CHECK-NEXT:    ret { i8, i1 } { i8 undef, i1 false }
+; CHECK-NEXT:    ret { i8, i1 } { i8 -1, i1 false }
 ;
   %result = call {i8, i1} @llvm.sadd.with.overflow.i8(i8 %v, i8 poison)
   ret {i8, i1} %result
@@ -95,7 +95,7 @@ define {i8, i1} @test_sadd3_poison(i8 %v) {
 
 define {i8, i1} @test_sadd4(i8 %v) {
 ; CHECK-LABEL: @test_sadd4(
-; CHECK-NEXT:    ret { i8, i1 } { i8 undef, i1 false }
+; CHECK-NEXT:    ret { i8, i1 } { i8 -1, i1 false }
 ;
   %result = call {i8, i1} @llvm.sadd.with.overflow.i8(i8 undef, i8 %v)
   ret {i8, i1} %result
@@ -103,7 +103,7 @@ define {i8, i1} @test_sadd4(i8 %v) {
 
 define {i8, i1} @test_sadd4_poison(i8 %v) {
 ; CHECK-LABEL: @test_sadd4_poison(
-; CHECK-NEXT:    ret { i8, i1 } { i8 undef, i1 false }
+; CHECK-NEXT:    ret { i8, i1 } { i8 -1, i1 false }
 ;
   %result = call {i8, i1} @llvm.sadd.with.overflow.i8(i8 poison, i8 %v)
   ret {i8, i1} %result
@@ -119,7 +119,7 @@ define {i8, i1} @test_usub1(i8 %V) {
 
 define {i8, i1} @test_usub2(i8 %V) {
 ; CHECK-LABEL: @test_usub2(
-; CHECK-NEXT:    ret { i8, i1 } { i8 undef, i1 false }
+; CHECK-NEXT:    ret { i8, i1 } zeroinitializer
 ;
   %x = call {i8, i1} @llvm.usub.with.overflow.i8(i8 %V, i8 undef)
   ret {i8, i1} %x
@@ -127,7 +127,7 @@ define {i8, i1} @test_usub2(i8 %V) {
 
 define {i8, i1} @test_usub2_poison(i8 %V) {
 ; CHECK-LABEL: @test_usub2_poison(
-; CHECK-NEXT:    ret { i8, i1 } { i8 undef, i1 false }
+; CHECK-NEXT:    ret { i8, i1 } zeroinitializer
 ;
   %x = call {i8, i1} @llvm.usub.with.overflow.i8(i8 %V, i8 poison)
   ret {i8, i1} %x
@@ -135,7 +135,7 @@ define {i8, i1} @test_usub2_poison(i8 %V) {
 
 define {i8, i1} @test_usub3(i8 %V) {
 ; CHECK-LABEL: @test_usub3(
-; CHECK-NEXT:    ret { i8, i1 } { i8 undef, i1 false }
+; CHECK-NEXT:    ret { i8, i1 } zeroinitializer
 ;
   %x = call {i8, i1} @llvm.usub.with.overflow.i8(i8 undef, i8 %V)
   ret {i8, i1} %x
@@ -143,7 +143,7 @@ define {i8, i1} @test_usub3(i8 %V) {
 
 define {i8, i1} @test_usub3_poison(i8 %V) {
 ; CHECK-LABEL: @test_usub3_poison(
-; CHECK-NEXT:    ret { i8, i1 } { i8 undef, i1 false }
+; CHECK-NEXT:    ret { i8, i1 } zeroinitializer
 ;
   %x = call {i8, i1} @llvm.usub.with.overflow.i8(i8 poison, i8 %V)
   ret {i8, i1} %x
@@ -159,7 +159,7 @@ define {i8, i1} @test_ssub1(i8 %V) {
 
 define {i8, i1} @test_ssub2(i8 %V) {
 ; CHECK-LABEL: @test_ssub2(
-; CHECK-NEXT:    ret { i8, i1 } { i8 undef, i1 false }
+; CHECK-NEXT:    ret { i8, i1 } zeroinitializer
 ;
   %x = call {i8, i1} @llvm.ssub.with.overflow.i8(i8 %V, i8 undef)
   ret {i8, i1} %x
@@ -167,7 +167,7 @@ define {i8, i1} @test_ssub2(i8 %V) {
 
 define {i8, i1} @test_ssub2_poison(i8 %V) {
 ; CHECK-LABEL: @test_ssub2_poison(
-; CHECK-NEXT:    ret { i8, i1 } { i8 undef, i1 false }
+; CHECK-NEXT:    ret { i8, i1 } zeroinitializer
 ;
   %x = call {i8, i1} @llvm.ssub.with.overflow.i8(i8 %V, i8 poison)
   ret {i8, i1} %x
@@ -175,7 +175,7 @@ define {i8, i1} @test_ssub2_poison(i8 %V) {
 
 define {i8, i1} @test_ssub3(i8 %V) {
 ; CHECK-LABEL: @test_ssub3(
-; CHECK-NEXT:    ret { i8, i1 } { i8 undef, i1 false }
+; CHECK-NEXT:    ret { i8, i1 } zeroinitializer
 ;
   %x = call {i8, i1} @llvm.ssub.with.overflow.i8(i8 undef, i8 %V)
   ret {i8, i1} %x
@@ -183,7 +183,7 @@ define {i8, i1} @test_ssub3(i8 %V) {
 
 define {i8, i1} @test_ssub3_poison(i8 %V) {
 ; CHECK-LABEL: @test_ssub3_poison(
-; CHECK-NEXT:    ret { i8, i1 } { i8 undef, i1 false }
+; CHECK-NEXT:    ret { i8, i1 } zeroinitializer
 ;
   %x = call {i8, i1} @llvm.ssub.with.overflow.i8(i8 poison, i8 %V)
   ret {i8, i1} %x
