@@ -141,24 +141,34 @@ void SparcInstPrinter::printOperand(const MCInst *MI, int opNum,
 void SparcInstPrinter::printMemOperand(const MCInst *MI, int opNum,
                                        const MCSubtargetInfo &STI,
                                        raw_ostream &O, const char *Modifier) {
-  printOperand(MI, opNum, STI, O);
-
   // If this is an ADD operand, emit it like normal operands.
   if (Modifier && !strcmp(Modifier, "arith")) {
+    printOperand(MI, opNum, STI, O);
     O << ", ";
-    printOperand(MI, opNum+1, STI, O);
+    printOperand(MI, opNum + 1, STI, O);
     return;
   }
-  const MCOperand &MO = MI->getOperand(opNum+1);
 
-  if (MO.isReg() && MO.getReg() == SP::G0)
-    return;   // don't print "+%g0"
-  if (MO.isImm() && MO.getImm() == 0)
-    return;   // don't print "+0"
+  const MCOperand &Op1 = MI->getOperand(opNum);
+  const MCOperand &Op2 = MI->getOperand(opNum + 1);
 
-  O << "+";
+  bool PrintedFirstOperand = false;
+  if (Op1.isReg() && Op1.getReg() != SP::G0) {
+    printOperand(MI, opNum, STI, O);
+    PrintedFirstOperand = true;
+  }
 
-  printOperand(MI, opNum+1, STI, O);
+  // Skip the second operand iff it adds nothing (literal 0 or %g0) and we've
+  // already printed the first one
+  const bool SkipSecondOperand =
+      PrintedFirstOperand && ((Op2.isReg() && Op2.getReg() == SP::G0) ||
+                              (Op2.isImm() && Op2.getImm() == 0));
+
+  if (!SkipSecondOperand) {
+    if (PrintedFirstOperand)
+      O << '+';
+    printOperand(MI, opNum + 1, STI, O);
+  }
 }
 
 void SparcInstPrinter::printCCOperand(const MCInst *MI, int opNum,

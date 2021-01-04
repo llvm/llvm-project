@@ -113,6 +113,18 @@ def SETHIimm_not : PatLeaf<(i32 imm), [{
 def ADDRrr : ComplexPattern<iPTR, 2, "SelectADDRrr", [], []>;
 def ADDRri : ComplexPattern<iPTR, 2, "SelectADDRri", [frameindex], []>;
 
+// Constrained operands for the shift operations.
+class ShiftAmtImmAsmOperand<int Bits> : AsmOperandClass {
+    let Name = "ShiftAmtImm" # Bits;
+    let ParserMethod = "parseShiftAmtImm<" # Bits # ">";
+}
+def shift_imm5 : Operand<i32> {
+  let ParserMatchClass = ShiftAmtImmAsmOperand<5>;
+}
+def shift_imm6 : Operand<i32> {
+  let ParserMatchClass = ShiftAmtImmAsmOperand<6>;
+}
+
 // Address operands
 def SparcMEMrrAsmOperand : AsmOperandClass {
   let Name = "MEMrr";
@@ -160,13 +172,20 @@ def bprtarget16 : Operand<OtherVT> {
   let EncoderMethod = "getBranchOnRegTargetOpValue";
 }
 
+def SparcCallTargetAsmOperand : AsmOperandClass {
+  let Name = "CallTarget";
+  let ParserMethod = "parseCallTarget";
+}
+
 def calltarget : Operand<i32> {
   let EncoderMethod = "getCallTargetOpValue";
   let DecoderMethod = "DecodeCall";
+  let ParserMatchClass = SparcCallTargetAsmOperand;
 }
 
 def simm13Op : Operand<i32> {
   let DecoderMethod = "DecodeSIMM13";
+  let EncoderMethod = "getSImm13OpValue";
 }
 
 // Operand for printing out a condition code.
@@ -691,9 +710,9 @@ let Defs = [ICC] in {
 }
 
 // Section B.12 - Shift Instructions, p. 107
-defm SLL : F3_12<"sll", 0b100101, shl, IntRegs, i32, simm13Op>;
-defm SRL : F3_12<"srl", 0b100110, srl, IntRegs, i32, simm13Op>;
-defm SRA : F3_12<"sra", 0b100111, sra, IntRegs, i32, simm13Op>;
+defm SLL : F3_S<"sll", 0b100101, 0, shl, i32, shift_imm5, IntRegs>;
+defm SRL : F3_S<"srl", 0b100110, 0, srl, i32, shift_imm5, IntRegs>;
+defm SRA : F3_S<"sra", 0b100111, 0, sra, i32, shift_imm5, IntRegs>;
 
 // Section B.13 - Add Instructions, p. 108
 defm ADD   : F3_12<"add", 0b000000, add, IntRegs, i32, simm13Op>;
