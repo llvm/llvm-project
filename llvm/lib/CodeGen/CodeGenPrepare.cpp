@@ -3160,9 +3160,7 @@ public:
   /// \returns whether the element is actually removed, i.e. was in the
   /// collection before the operation.
   bool erase(PHINode *Ptr) {
-    auto it = NodeMap.find(Ptr);
-    if (it != NodeMap.end()) {
-      NodeMap.erase(Ptr);
+    if (NodeMap.erase(Ptr)) {
       SkipRemovedElements(FirstValidElement);
       return true;
     }
