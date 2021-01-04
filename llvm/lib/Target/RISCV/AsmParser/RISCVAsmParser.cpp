@@ -514,16 +514,6 @@ public:
     return IsConstantImm && isUInt<5>(Imm) && VK == RISCVMCExpr::VK_RISCV_None;
   }
 
-  bool isUImm5NonZero() const {
-    int64_t Imm;
-    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
-    if (!isImm())
-      return false;
-    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    return IsConstantImm && isUInt<5>(Imm) && (Imm != 0) &&
-           VK == RISCVMCExpr::VK_RISCV_None;
-  }
-
   bool isSImm5() const {
     if (!isImm())
       return false;
@@ -540,7 +530,7 @@ public:
     int64_t Imm;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
     return IsConstantImm && isInt<6>(Imm) &&
-	    VK == RISCVMCExpr::VK_RISCV_None;
+           VK == RISCVMCExpr::VK_RISCV_None;
   }
 
   bool isSImm6NonZero() const {
