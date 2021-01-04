@@ -509,6 +509,103 @@
           end subroutine omp_display_env
 
 
+          function omp_target_alloc(size, device_num) bind(c)
+            use omp_lib_kinds
+            type(c_ptr) omp_target_alloc
+            integer (kind=kmp_size_t_kind), value :: size
+            integer (kind=omp_integer_kind), value :: device_num
+          end function omp_target_alloc
+
+          subroutine omp_target_free(device_ptr, device_num) bind(c)
+            use omp_lib_kinds
+            type(c_ptr), value :: device_ptr
+            integer (kind=omp_integer_kind), value :: device_num
+          end subroutine omp_target_free
+
+          function omp_target_is_present(ptr, device_num) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) omp_target_is_present
+            type(c_ptr), value :: ptr
+            integer (kind=omp_integer_kind), value :: device_num
+          end function omp_target_is_present
+
+          function omp_target_memcpy(dst, src, length, dst_offset, src_offset, &
+              dst_device_num, src_device_num) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) omp_target_memcpy
+            type(c_ptr), value :: dst, src
+            integer (kind=kmp_size_t_kind), value :: length, dst_offset,       &
+                src_offset
+            integer (kind=omp_integer_kind), value :: dst_device_num,          &
+                src_device_num
+          end function omp_target_memcpy
+
+          function omp_target_memcpy_rect(dst, src, element_size, num_dims,    &
+              volume, dst_offsets, src_offsets, dst_dimensions,                &
+              src_dimensions, dst_device_num, src_device_num) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) omp_target_memcpy_rect
+            type(c_ptr), value :: dst, src
+            integer (kind=kmp_size_t_kind), value :: element_size
+            integer (kind=omp_integer_kind), value :: num_dims,                &
+                dst_device_num, src_device_num
+            integer (kind=kmp_size_t_kind), intent(in) :: volume(*),           &
+                dst_offsets(*), src_offsets(*), dst_dimensions(*),             &
+                src_dimensions(*)
+          end function omp_target_memcpy_rect
+
+          function omp_target_memcpy_async(dst, src, length, dst_offset,       &
+              src_offset, dst_device_num, src_device_num, depobj_count,        &
+              depobj_list) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) omp_target_memcpy_async
+            type(c_ptr), value :: dst, src
+            integer (kind=kmp_size_t_kind), value :: length, dst_offset,       &
+                src_offset
+            integer (kind=omp_integer_kind), value :: dst_device_num,          &
+                src_device_num, depobj_count
+            integer (kind=omp_depend_kind), optional :: depobj_list(*)
+          end function omp_target_memcpy_async
+
+          function omp_target_memcpy_rect_async(dst, src, element_size,        &
+              num_dims, volume, dst_offsets, src_offsets, dst_dimensions,      &
+              src_dimensions, dst_device_num, src_device_num, depobj_count,    &
+              depobj_list) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) omp_target_memcpy_rect_async
+            type(c_ptr), value :: dst, src
+            integer (kind=kmp_size_t_kind), value :: element_size
+            integer (kind=omp_integer_kind), value :: num_dims,                &
+                dst_device_num, src_device_num, depobj_count
+            integer (kind=kmp_size_t_kind), intent(in) :: volume(*),           &
+                dst_offsets(*), src_offsets(*), dst_dimensions(*),             &
+                src_dimensions(*)
+            integer (kind=omp_depend_kind), optional :: depobj_list(*)
+          end function omp_target_memcpy_rect_async
+
+          function omp_target_associate_ptr(host_ptr, device_ptr, size,        &
+              device_offset, device_num) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) omp_target_associate_ptr
+            type(c_ptr), value :: host_ptr, device_ptr
+            integer (kind=kmp_size_t_kind), value :: size, device_offset
+            integer (kind=omp_integer_kind), value :: device_num
+          end function omp_target_associate_ptr
+
+          function omp_get_mapped_ptr(ptr, device_num) bind(c)
+            use omp_lib_kinds
+            type(c_ptr) omp_get_mapped_ptr
+            type(c_ptr), value :: ptr
+            integer (kind=omp_integer_kind), value :: device_num
+          end function omp_get_mapped_ptr
+
+          function omp_target_disassociate_ptr(ptr, device_num) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) omp_target_disassociate_ptr
+            type(c_ptr), value :: ptr
+            integer (kind=omp_integer_kind), value :: device_num
+          end function omp_target_disassociate_ptr
+
 !         ***
 !         *** kmp_* entry points
 !         ***
