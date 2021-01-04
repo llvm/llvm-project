@@ -6471,6 +6471,8 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
     OutlinedFnID = llvm::ConstantExpr::getBitCast(OutlinedFn, CGM.Int8PtrTy);
     OutlinedFn->setLinkage(llvm::GlobalValue::WeakAnyLinkage);
     OutlinedFn->setDSOLocal(false);
+    if (CGM.getTriple().isAMDGCN())
+      OutlinedFn->setCallingConv(llvm::CallingConv::AMDGPU_KERNEL);
   } else {
     std::string Name = getName({EntryFnName, "region_id"});
     OutlinedFnID = new llvm::GlobalVariable(
