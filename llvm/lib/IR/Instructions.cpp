@@ -400,7 +400,7 @@ CallBase::BundleOpInfo &CallBase::getBundleOpInfoForOperand(unsigned OpIdx) {
 
   bundle_op_iterator Begin = bundle_op_info_begin();
   bundle_op_iterator End = bundle_op_info_end();
-  bundle_op_iterator Current;
+  bundle_op_iterator Current = Begin;
 
   while (Begin != End) {
     unsigned ScaledOperandPerBundle =
