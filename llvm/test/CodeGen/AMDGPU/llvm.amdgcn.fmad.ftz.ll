@@ -74,7 +74,7 @@ define amdgpu_kernel void @mad_f32_neg_b(
   %a.val = load float, float addrspace(1)* %a
   %b.val = load float, float addrspace(1)* %b
   %c.val = load float, float addrspace(1)* %c
-  %neg.b = fsub float -0.0, %b.val
+  %neg.b = fneg float %b.val
   %r.val = call float @llvm.amdgcn.fmad.ftz.f32(float %a.val, float %neg.b, float %c.val)
   store float %r.val, float addrspace(1)* %r
   ret void
@@ -107,7 +107,7 @@ define amdgpu_kernel void @mad_f32_neg_abs_b(
   %b.val = load float, float addrspace(1)* %b
   %c.val = load float, float addrspace(1)* %c
   %abs.b = call float @llvm.fabs.f32(float %b.val)
-  %neg.abs.b = fsub float -0.0, %abs.b
+  %neg.abs.b = fneg float %abs.b
   %r.val = call float @llvm.amdgcn.fmad.ftz.f32(float %a.val, float %neg.abs.b, float %c.val)
   store float %r.val, float addrspace(1)* %r
   ret void

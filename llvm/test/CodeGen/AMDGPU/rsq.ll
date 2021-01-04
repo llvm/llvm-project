@@ -116,7 +116,7 @@ define amdgpu_kernel void @neg_rsq_f64(double addrspace(1)* noalias %out, double
 ; SI-UNSAFE: buffer_store_dword [[RSQ]]
 define amdgpu_kernel void @neg_rsq_neg_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) #0 {
   %val = load float, float addrspace(1)* %in, align 4
-  %val.fneg = fsub float -0.0, %val
+  %val.fneg = fneg float %val
   %sqrt = call float @llvm.sqrt.f32(float %val.fneg)
   %div = fdiv float -1.0, %sqrt, !fpmath !0
   store float %div, float addrspace(1)* %out, align 4

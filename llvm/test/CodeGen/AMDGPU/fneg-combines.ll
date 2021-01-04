@@ -482,7 +482,7 @@ define amdgpu_kernel void @v_fneg_self_minnum_f32_ieee(float addrspace(1)* %out,
   %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i64 %tid.ext
   %a = load volatile float, float addrspace(1)* %a.gep
   %min = call float @llvm.minnum.f32(float %a, float %a)
-  %min.fneg = fsub float -0.0, %min
+  %min.fneg = fneg float %min
   store float %min.fneg, float addrspace(1)* %out.gep
   ret void
 }
@@ -493,7 +493,7 @@ define amdgpu_kernel void @v_fneg_self_minnum_f32_ieee(float addrspace(1)* %out,
 ; GCN-NEXT: ; return
 define amdgpu_ps float @v_fneg_self_minnum_f32_no_ieee(float %a) #0 {
   %min = call float @llvm.minnum.f32(float %a, float %a)
-  %min.fneg = fsub float -0.0, %min
+  %min.fneg = fneg float %min
   ret float %min.fneg
 }
 
@@ -887,7 +887,7 @@ define amdgpu_kernel void @v_fneg_self_maxnum_f32_ieee(float addrspace(1)* %out,
   %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i64 %tid.ext
   %a = load volatile float, float addrspace(1)* %a.gep
   %max = call float @llvm.maxnum.f32(float %a, float %a)
-  %max.fneg = fsub float -0.0, %max
+  %max.fneg = fneg float %max
   store float %max.fneg, float addrspace(1)* %out.gep
   ret void
 }
@@ -898,7 +898,7 @@ define amdgpu_kernel void @v_fneg_self_maxnum_f32_ieee(float addrspace(1)* %out,
 ; GCN-NEXT: ; return
 define amdgpu_ps float @v_fneg_self_maxnum_f32_no_ieee(float %a) #0 {
   %max = call float @llvm.maxnum.f32(float %a, float %a)
-  %max.fneg = fsub float -0.0, %max
+  %max.fneg = fneg float %max
   ret float %max.fneg
 }
 
@@ -2039,7 +2039,7 @@ define amdgpu_kernel void @v_fneg_amdgcn_sin_f32(float addrspace(1)* %out, float
   %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i64 %tid.ext
   %a = load volatile float, float addrspace(1)* %a.gep
   %sin = call float @llvm.amdgcn.sin.f32(float %a)
-  %fneg = fsub float -0.0, %sin
+  %fneg = fneg float %sin
   store float %fneg, float addrspace(1)* %out.gep
   ret void
 }
@@ -2059,7 +2059,7 @@ define amdgpu_kernel void @v_fneg_trunc_f32(float addrspace(1)* %out, float addr
   %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i64 %tid.ext
   %a = load volatile float, float addrspace(1)* %a.gep
   %trunc = call float @llvm.trunc.f32(float %a)
-  %fneg = fsub float -0.0, %trunc
+  %fneg = fneg float %trunc
   store float %fneg, float addrspace(1)* %out.gep
   ret void
 }
@@ -2086,7 +2086,7 @@ define amdgpu_kernel void @v_fneg_round_f32(float addrspace(1)* %out, float addr
   %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i64 %tid.ext
   %a = load volatile float, float addrspace(1)* %a.gep
   %round = call float @llvm.round.f32(float %a)
-  %fneg = fsub float -0.0, %round
+  %fneg = fneg float %round
   store float %fneg, float addrspace(1)* %out.gep
   ret void
 }
@@ -2106,7 +2106,7 @@ define amdgpu_kernel void @v_fneg_rint_f32(float addrspace(1)* %out, float addrs
   %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i64 %tid.ext
   %a = load volatile float, float addrspace(1)* %a.gep
   %rint = call float @llvm.rint.f32(float %a)
-  %fneg = fsub float -0.0, %rint
+  %fneg = fneg float %rint
   store float %fneg, float addrspace(1)* %out.gep
   ret void
 }
@@ -2126,7 +2126,7 @@ define amdgpu_kernel void @v_fneg_nearbyint_f32(float addrspace(1)* %out, float 
   %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i64 %tid.ext
   %a = load volatile float, float addrspace(1)* %a.gep
   %nearbyint = call float @llvm.nearbyint.f32(float %a)
-  %fneg = fsub float -0.0, %nearbyint
+  %fneg = fneg float %nearbyint
   store float %fneg, float addrspace(1)* %out.gep
   ret void
 }
@@ -2146,7 +2146,7 @@ define amdgpu_kernel void @v_fneg_canonicalize_f32(float addrspace(1)* %out, flo
   %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i64 %tid.ext
   %a = load volatile float, float addrspace(1)* %a.gep
   %trunc = call float @llvm.canonicalize.f32(float %a)
-  %fneg = fsub float -0.0, %trunc
+  %fneg = fneg float %trunc
   store float %fneg, float addrspace(1)* %out.gep
   ret void
 }
@@ -2170,7 +2170,7 @@ define amdgpu_kernel void @v_fneg_interp_p1_f32(float addrspace(1)* %out, float 
   %a = load volatile float, float addrspace(1)* %a.gep
   %b = load volatile float, float addrspace(1)* %b.gep
   %mul = fmul float %a, %b
-  %fneg = fsub float -0.0, %mul
+  %fneg = fneg float %mul
   %intrp0 = call float @llvm.amdgcn.interp.p1(float %fneg, i32 0, i32 0, i32 0)
   %intrp1 = call float @llvm.amdgcn.interp.p1(float %fneg, i32 1, i32 0, i32 0)
   store volatile float %intrp0, float addrspace(1)* %out.gep
@@ -2193,7 +2193,7 @@ define amdgpu_kernel void @v_fneg_interp_p2_f32(float addrspace(1)* %out, float 
   %a = load volatile float, float addrspace(1)* %a.gep
   %b = load volatile float, float addrspace(1)* %b.gep
   %mul = fmul float %a, %b
-  %fneg = fsub float -0.0, %mul
+  %fneg = fneg float %mul
   %intrp0 = call float @llvm.amdgcn.interp.p2(float 4.0, float %fneg, i32 0, i32 0, i32 0)
   %intrp1 = call float @llvm.amdgcn.interp.p2(float 4.0, float %fneg, i32 1, i32 0, i32 0)
   store volatile float %intrp0, float addrspace(1)* %out.gep
@@ -2230,7 +2230,7 @@ define amdgpu_kernel void @v_fneg_copytoreg_f32(float addrspace(1)* %out, float 
   %b = load volatile float, float addrspace(1)* %b.gep
   %c = load volatile float, float addrspace(1)* %c.gep
   %mul = fmul float %a, %b
-  %fneg = fsub float -0.0, %mul
+  %fneg = fneg float %mul
   %cmp0 = icmp eq i32 %d, 0
   br i1 %cmp0, label %if, label %endif
 
@@ -2266,7 +2266,7 @@ define amdgpu_kernel void @v_fneg_inlineasm_f32(float addrspace(1)* %out, float 
   %b = load volatile float, float addrspace(1)* %b.gep
   %c = load volatile float, float addrspace(1)* %c.gep
   %mul = fmul float %a, %b
-  %fneg = fsub float -0.0, %mul
+  %fneg = fneg float %mul
   call void asm sideeffect "; use $0", "v"(float %fneg) #0
   store volatile float %fneg, float addrspace(1)* %out.gep
   ret void
@@ -2295,7 +2295,7 @@ define amdgpu_kernel void @v_fneg_inlineasm_multi_use_src_f32(float addrspace(1)
   %b = load volatile float, float addrspace(1)* %b.gep
   %c = load volatile float, float addrspace(1)* %c.gep
   %mul = fmul float %a, %b
-  %fneg = fsub float -0.0, %mul
+  %fneg = fneg float %mul
   call void asm sideeffect "; use $0", "v"(float %fneg) #0
   store volatile float %mul, float addrspace(1)* %out.gep
   ret void
@@ -2328,7 +2328,7 @@ define amdgpu_kernel void @multiuse_fneg_2_vop3_users_f32(float addrspace(1)* %o
   %b = load volatile float, float addrspace(1)* %b.gep
   %c = load volatile float, float addrspace(1)* %c.gep
 
-  %fneg.a = fsub float -0.0, %a
+  %fneg.a = fneg float %a
   %fma0 = call float @llvm.fma.f32(float %fneg.a, float %b, float %c)
   %fma1 = call float @llvm.fma.f32(float %fneg.a, float %c, float 2.0)
 
@@ -2360,7 +2360,7 @@ define amdgpu_kernel void @multiuse_fneg_2_vop2_users_f32(float addrspace(1)* %o
   %b = load volatile float, float addrspace(1)* %b.gep
   %c = load volatile float, float addrspace(1)* %c.gep
 
-  %fneg.a = fsub float -0.0, %a
+  %fneg.a = fneg float %a
   %mul0 = fmul float %fneg.a, %b
   %mul1 = fmul float %fneg.a, %c
 
@@ -2391,7 +2391,7 @@ define amdgpu_kernel void @multiuse_fneg_vop2_vop3_users_f32(float addrspace(1)*
   %b = load volatile float, float addrspace(1)* %b.gep
   %c = load volatile float, float addrspace(1)* %c.gep
 
-  %fneg.a = fsub float -0.0, %a
+  %fneg.a = fneg float %a
   %fma0 = call float @llvm.fma.f32(float %fneg.a, float %b, float 2.0)
   %mul1 = fmul float %fneg.a, %c
 
@@ -2433,7 +2433,7 @@ define amdgpu_kernel void @free_fold_src_code_size_cost_use_f32(float addrspace(
   %d = load volatile float, float addrspace(1)* %d.gep
 
   %fma0 = call float @llvm.fma.f32(float %a, float %b, float 2.0)
-  %fneg.fma0 = fsub float -0.0, %fma0
+  %fneg.fma0 = fneg float %fma0
   %mul1 = fmul float %fneg.fma0, %c
   %mul2 = fmul float %fneg.fma0, %d
 
@@ -2501,7 +2501,7 @@ define amdgpu_kernel void @one_use_cost_to_fold_into_src_f32(float addrspace(1)*
   %d = load volatile float, float addrspace(1)* %d.gep
 
   %trunc.a = call float @llvm.trunc.f32(float %a)
-  %trunc.fneg.a = fsub float -0.0, %trunc.a
+  %trunc.fneg.a = fneg float %trunc.a
   %fma0 = call float @llvm.fma.f32(float %trunc.fneg.a, float %b, float %c)
   store volatile float %fma0, float addrspace(1)* %out
   ret void
@@ -2531,7 +2531,7 @@ define amdgpu_kernel void @multi_use_cost_to_fold_into_src(float addrspace(1)* %
   %d = load volatile float, float addrspace(1)* %d.gep
 
   %trunc.a = call float @llvm.trunc.f32(float %a)
-  %trunc.fneg.a = fsub float -0.0, %trunc.a
+  %trunc.fneg.a = fneg float %trunc.a
   %fma0 = call float @llvm.fma.f32(float %trunc.fneg.a, float %b, float %c)
   %mul1 = fmul float %trunc.a, %d
   store volatile float %fma0, float addrspace(1)* %out
