@@ -647,7 +647,7 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
             CheckProcedureArg(arg, proc, dummyName, context);
           },
           [&](const characteristics::AlternateReturn &) {
-            // TODO check alternate return
+            // All semantic checking is done elsewhere
           },
       },
       dummy.u);
