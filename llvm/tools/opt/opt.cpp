@@ -470,7 +470,8 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "amdgpu-lower-kernel-attributes",
       "amdgpu-propagate-attributes-early",
       "amdgpu-propagate-attributes-late",
-      "amdgpu-unify-metadata"};
+      "amdgpu-unify-metadata",
+      "amdgpu-printf-runtime-binding"};
   for (const auto &P : PassNameExactToIgnore)
     if (Pass == P)
       return false;

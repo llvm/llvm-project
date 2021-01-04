@@ -502,6 +502,10 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
           PM.addPass(AMDGPUUnifyMetadataPass());
           return true;
         }
+        if (PassName == "amdgpu-printf-runtime-binding") {
+          PM.addPass(AMDGPUPrintfRuntimeBindingPass());
+          return true;
+        }
         return false;
       });
   PB.registerPipelineParsingCallback(
@@ -552,6 +556,7 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
           return;
 
         PM.addPass(AMDGPUUnifyMetadataPass());
+        PM.addPass(AMDGPUPrintfRuntimeBindingPass());
 
         if (InternalizeSymbols) {
           PM.addPass(InternalizePass(mustPreserveGV));
