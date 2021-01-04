@@ -129,6 +129,21 @@ char SIFoldOperands::ID = 0;
 
 char &llvm::SIFoldOperandsID = SIFoldOperands::ID;
 
+// Map multiply-accumulate opcode to corresponding multiply-add opcode if any.
+static unsigned macToMad(unsigned Opc) {
+  switch (Opc) {
+  case AMDGPU::V_MAC_F32_e64:
+    return AMDGPU::V_MAD_F32;
+  case AMDGPU::V_MAC_F16_e64:
+    return AMDGPU::V_MAD_F16;
+  case AMDGPU::V_FMAC_F32_e64:
+    return AMDGPU::V_FMA_F32;
+  case AMDGPU::V_FMAC_F16_e64:
+    return AMDGPU::V_FMA_F16_gfx9;
+  }
+  return AMDGPU::INSTRUCTION_LIST_END;
+}
+
 // Wrapper around isInlineConstant that understands special cases when
 // instruction types are replaced during operand folding.
 static bool isInlineConstantIfFolded(const SIInstrInfo *TII,
@@ -139,31 +154,18 @@ static bool isInlineConstantIfFolded(const SIInstrInfo *TII,
     return true;
 
   unsigned Opc = UseMI.getOpcode();
-  switch (Opc) {
-  case AMDGPU::V_MAC_F32_e64:
-  case AMDGPU::V_MAC_F16_e64:
-  case AMDGPU::V_FMAC_F32_e64:
-  case AMDGPU::V_FMAC_F16_e64: {
+  unsigned NewOpc = macToMad(Opc);
+  if (NewOpc != AMDGPU::INSTRUCTION_LIST_END) {
     // Special case for mac. Since this is replaced with mad when folded into
     // src2, we need to check the legality for the final instruction.
     int Src2Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2);
     if (static_cast<int>(OpNo) == Src2Idx) {
-      bool IsFMA = Opc == AMDGPU::V_FMAC_F32_e64 ||
-                   Opc == AMDGPU::V_FMAC_F16_e64;
-      bool IsF32 = Opc == AMDGPU::V_MAC_F32_e64 ||
-                   Opc == AMDGPU::V_FMAC_F32_e64;
-
-      unsigned Opc = IsFMA ?
-        (IsF32 ? AMDGPU::V_FMA_F32 : AMDGPU::V_FMA_F16_gfx9) :
-        (IsF32 ? AMDGPU::V_MAD_F32 : AMDGPU::V_MAD_F16);
-      const MCInstrDesc &MadDesc = TII->get(Opc);
+      const MCInstrDesc &MadDesc = TII->get(NewOpc);
       return TII->isInlineConstant(OpToFold, MadDesc.OpInfo[OpNo].OperandType);
     }
-    return false;
   }
-  default:
-    return false;
-  }
+
+  return false;
 }
 
 // TODO: Add heuristic that the frame index might not fit in the addressing mode
@@ -346,17 +348,8 @@ static bool tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
   if (!TII->isOperandLegal(*MI, OpNo, OpToFold)) {
     // Special case for v_mac_{f16, f32}_e64 if we are trying to fold into src2
     unsigned Opc = MI->getOpcode();
-    if ((Opc == AMDGPU::V_MAC_F32_e64 || Opc == AMDGPU::V_MAC_F16_e64 ||
-         Opc == AMDGPU::V_FMAC_F32_e64 || Opc == AMDGPU::V_FMAC_F16_e64) &&
-        (int)OpNo == AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2)) {
-      bool IsFMA = Opc == AMDGPU::V_FMAC_F32_e64 ||
-                   Opc == AMDGPU::V_FMAC_F16_e64;
-      bool IsF32 = Opc == AMDGPU::V_MAC_F32_e64 ||
-                   Opc == AMDGPU::V_FMAC_F32_e64;
-      unsigned NewOpc = IsFMA ?
-        (IsF32 ? AMDGPU::V_FMA_F32 : AMDGPU::V_FMA_F16_gfx9) :
-        (IsF32 ? AMDGPU::V_MAD_F32 : AMDGPU::V_MAD_F16);
-
+    unsigned NewOpc = macToMad(Opc);
+    if (NewOpc != AMDGPU::INSTRUCTION_LIST_END) {
       // Check if changing this to a v_mad_{f16, f32} instruction will allow us
       // to fold the operand.
       MI->setDesc(TII->get(NewOpc));
