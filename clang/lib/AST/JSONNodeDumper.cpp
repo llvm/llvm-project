@@ -765,7 +765,7 @@ void JSONNodeDumper::VisitVarDecl(const VarDecl *VD) {
   JOS.attribute("type", createQualType(VD->getType()));
 
   StorageClass SC = VD->getStorageClass();
-  if (SC != StorageClass::None)
+  if (SC != SC_None)
     JOS.attribute("storageClass", VarDecl::getStorageClassSpecifierString(SC));
   switch (VD->getTLSKind()) {
   case VarDecl::TLS_Dynamic: JOS.attribute("tls", "dynamic"); break;
@@ -799,7 +799,7 @@ void JSONNodeDumper::VisitFunctionDecl(const FunctionDecl *FD) {
   VisitNamedDecl(FD);
   JOS.attribute("type", createQualType(FD->getType()));
   StorageClass SC = FD->getStorageClass();
-  if (SC != StorageClass::None)
+  if (SC != SC_None)
     JOS.attribute("storageClass", VarDecl::getStorageClassSpecifierString(SC));
   attributeOnlyIfTrue("inline", FD->isInlineSpecified());
   attributeOnlyIfTrue("virtual", FD->isVirtualAsWritten());

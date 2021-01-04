@@ -1997,7 +1997,7 @@ AddVariableConstraints(const std::string &Constraint, const Expr &AsmExpr,
   const VarDecl *Variable = dyn_cast<VarDecl>(&Value);
   if (!Variable)
     return Constraint;
-  if (Variable->getStorageClass() != StorageClass::Register)
+  if (Variable->getStorageClass() != SC_Register)
     return Constraint;
   AsmLabelAttr *Attr = Variable->getAttr<AsmLabelAttr>();
   if (!Attr)

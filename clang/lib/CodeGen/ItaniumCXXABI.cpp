@@ -2546,10 +2546,9 @@ static FunctionDecl *
 createGlobalInitOrCleanupFnDecl(CodeGen::CodeGenModule &CGM, StringRef FnName) {
   ASTContext &Ctx = CGM.getContext();
   QualType FunctionTy = Ctx.getFunctionType(Ctx.VoidTy, llvm::None, {});
-  return FunctionDecl::Create(Ctx, Ctx.getTranslationUnitDecl(),
-                              SourceLocation(), SourceLocation(),
-                              &Ctx.Idents.get(FnName), FunctionTy, nullptr,
-                              StorageClass::Static, false, false);
+  return FunctionDecl::Create(
+      Ctx, Ctx.getTranslationUnitDecl(), SourceLocation(), SourceLocation(),
+      &Ctx.Idents.get(FnName), FunctionTy, nullptr, SC_Static, false, false);
 }
 
 void CodeGenModule::unregisterGlobalDtorsWithUnAtExit() {

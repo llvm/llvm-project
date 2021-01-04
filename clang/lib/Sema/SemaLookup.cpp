@@ -812,7 +812,7 @@ static void InsertOCLBuiltinDeclarationsFromTable(Sema &S, LookupResult &LR,
     for (unsigned Index = 0; Index < GenTypeMaxCnt; Index++) {
       NewOpenCLBuiltin = FunctionDecl::Create(
           Context, Parent, Loc, Loc, II, FunctionList[Index],
-          /*TInfo=*/nullptr, StorageClass::Extern, false,
+          /*TInfo=*/nullptr, SC_Extern, false,
           FunctionList[Index]->isFunctionProtoType());
       NewOpenCLBuiltin->setImplicit();
 
@@ -825,7 +825,7 @@ static void InsertOCLBuiltinDeclarationsFromTable(Sema &S, LookupResult &LR,
           ParmVarDecl *Parm = ParmVarDecl::Create(
               Context, NewOpenCLBuiltin, SourceLocation(), SourceLocation(),
               nullptr, FP->getParamType(IParm),
-              /*TInfo=*/nullptr, StorageClass::None, nullptr);
+              /*TInfo=*/nullptr, SC_None, nullptr);
           Parm->setScopeInfo(0, IParm);
           ParmList.push_back(Parm);
         }

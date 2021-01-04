@@ -476,7 +476,7 @@ template <class Derived> struct GenFuncBase {
     FunctionDecl *FD = FunctionDecl::Create(
         Ctx, Ctx.getTranslationUnitDecl(), SourceLocation(), SourceLocation(),
         II, Ctx.getFunctionType(Ctx.VoidTy, llvm::None, {}), nullptr,
-        StorageClass::PrivateExtern, false, false);
+        SC_PrivateExtern, false, false);
     CodeGenFunction NewCGF(CGM);
     setCGF(&NewCGF);
     CGF->StartFunction(FD, Ctx.VoidTy, F, FI, Args);

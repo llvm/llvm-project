@@ -1954,7 +1954,7 @@ CodeGenFunction::GenerateCopyHelperFunction(const CGBlockInfo &blockInfo) {
 
   FunctionDecl *FD = FunctionDecl::Create(
       C, C.getTranslationUnitDecl(), SourceLocation(), SourceLocation(), II,
-      FunctionTy, nullptr, StorageClass::Static, false, false);
+      FunctionTy, nullptr, SC_Static, false, false);
   setBlockHelperAttributesVisibility(blockInfo.CapturesNonExternalType, Fn, FI,
                                      CGM);
   // This is necessary to avoid inheriting the previous line number.
@@ -2148,7 +2148,7 @@ CodeGenFunction::GenerateDestroyHelperFunction(const CGBlockInfo &blockInfo) {
 
   FunctionDecl *FD = FunctionDecl::Create(
       C, C.getTranslationUnitDecl(), SourceLocation(), SourceLocation(), II,
-      FunctionTy, nullptr, StorageClass::Static, false, false);
+      FunctionTy, nullptr, SC_Static, false, false);
 
   setBlockHelperAttributesVisibility(blockInfo.CapturesNonExternalType, Fn, FI,
                                      CGM);
@@ -2400,10 +2400,9 @@ generateByrefCopyHelper(CodeGenFunction &CGF, const BlockByrefInfo &byrefInfo,
   ArgTys.push_back(Context.VoidPtrTy);
   QualType FunctionTy = Context.getFunctionType(ReturnTy, ArgTys, {});
 
-  FunctionDecl *FD =
-      FunctionDecl::Create(Context, Context.getTranslationUnitDecl(),
-                           SourceLocation(), SourceLocation(), II, FunctionTy,
-                           nullptr, StorageClass::Static, false, false);
+  FunctionDecl *FD = FunctionDecl::Create(
+      Context, Context.getTranslationUnitDecl(), SourceLocation(),
+      SourceLocation(), II, FunctionTy, nullptr, SC_Static, false, false);
 
   CGF.CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FI);
 
@@ -2476,10 +2475,9 @@ generateByrefDisposeHelper(CodeGenFunction &CGF,
   ArgTys.push_back(Context.VoidPtrTy);
   QualType FunctionTy = Context.getFunctionType(R, ArgTys, {});
 
-  FunctionDecl *FD =
-      FunctionDecl::Create(Context, Context.getTranslationUnitDecl(),
-                           SourceLocation(), SourceLocation(), II, FunctionTy,
-                           nullptr, StorageClass::Static, false, false);
+  FunctionDecl *FD = FunctionDecl::Create(
+      Context, Context.getTranslationUnitDecl(), SourceLocation(),
+      SourceLocation(), II, FunctionTy, nullptr, SC_Static, false, false);
 
   CGF.CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FI);
 

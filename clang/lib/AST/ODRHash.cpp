@@ -551,7 +551,7 @@ void ODRHash::AddFunctionDecl(const FunctionDecl *Function,
     AddBoolean(Method->isVolatile());
   }
 
-  ID.AddInteger(static_cast<int>(Function->getStorageClass()));
+  ID.AddInteger(Function->getStorageClass());
   AddBoolean(Function->isInlineSpecified());
   AddBoolean(Function->isVirtualAsWritten());
   AddBoolean(Function->isPure());

@@ -1700,7 +1700,7 @@ llvm::Function *CodeGenFunction::generateBuiltinOSLogHelperFunction(
   IdentifierInfo *II = &Ctx.Idents.get(Name);
   FunctionDecl *FD = FunctionDecl::Create(
       Ctx, Ctx.getTranslationUnitDecl(), SourceLocation(), SourceLocation(), II,
-      FuncionTy, nullptr, StorageClass::PrivateExtern, false, false);
+      FuncionTy, nullptr, SC_PrivateExtern, false, false);
   // Avoid generating debug location info for the function.
   FD->setImplicit();
 

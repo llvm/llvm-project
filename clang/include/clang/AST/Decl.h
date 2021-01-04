@@ -1057,7 +1057,7 @@ public:
   /// Returns true if a variable with function scope is a non-static local
   /// variable.
   bool hasLocalStorage() const {
-    if (getStorageClass() == StorageClass::None) {
+    if (getStorageClass() == SC_None) {
       // OpenCL v1.2 s6.5.3: The __constant or constant address space name is
       // used to describe variables allocated in global memory and which are
       // accessed inside a kernel(s) as read-only variables. As such, variables
@@ -1069,40 +1069,29 @@ public:
     }
 
     // Global Named Register (GNU extension)
-    if (getStorageClass() == StorageClass::Register && !isLocalVarDeclOrParm())
+    if (getStorageClass() == SC_Register && !isLocalVarDeclOrParm())
       return false;
 
     // Return true for:  Auto, Register.
     // Return false for: Extern, Static, PrivateExtern, OpenCLWorkGroupLocal.
 
-    switch (getStorageClass()) {
-    case StorageClass::Auto:
-    case StorageClass::Register:
-      return true;
-    case StorageClass::Extern:
-    case StorageClass::None:
-    case StorageClass::PrivateExtern:
-    case StorageClass::Static:
-      return false;
-    }
-    llvm_unreachable("unknown storage class");
+    return getStorageClass() >= SC_Auto;
   }
 
   /// Returns true if a variable with function scope is a static local
   /// variable.
   bool isStaticLocal() const {
-    return (getStorageClass() == StorageClass::Static ||
+    return (getStorageClass() == SC_Static ||
             // C++11 [dcl.stc]p4
-            (getStorageClass() == StorageClass::None &&
-             getTSCSpec() == TSCS_thread_local)) &&
-           !isFileVarDecl();
+            (getStorageClass() == SC_None && getTSCSpec() == TSCS_thread_local))
+      && !isFileVarDecl();
   }
 
   /// Returns true if a variable has extern or __private_extern__
   /// storage.
   bool hasExternalStorage() const {
-    return getStorageClass() == StorageClass::Extern ||
-           getStorageClass() == StorageClass::PrivateExtern;
+    return getStorageClass() == SC_Extern ||
+           getStorageClass() == SC_PrivateExtern;
   }
 
   /// Returns true for all variables that do not have local storage.
@@ -1604,7 +1593,7 @@ public:
                     IdentifierInfo *Id, QualType Type,
                     ImplicitParamKind ParamKind)
       : VarDecl(ImplicitParam, C, DC, IdLoc, IdLoc, Id, Type,
-                /*TInfo=*/nullptr, StorageClass::None) {
+                /*TInfo=*/nullptr, SC_None) {
     NonParmVarDeclBits.ImplicitParamKind = ParamKind;
     setImplicit();
   }
@@ -1612,7 +1601,7 @@ public:
   ImplicitParamDecl(ASTContext &C, QualType Type, ImplicitParamKind ParamKind)
       : VarDecl(ImplicitParam, C, /*DC=*/nullptr, SourceLocation(),
                 SourceLocation(), /*Id=*/nullptr, Type,
-                /*TInfo=*/nullptr, StorageClass::None) {
+                /*TInfo=*/nullptr, SC_None) {
     NonParmVarDeclBits.ImplicitParamKind = ParamKind;
     setImplicit();
   }
@@ -2549,7 +2538,7 @@ public:
 
   /// Sets the storage class as written in the source.
   void setStorageClass(StorageClass SClass) {
-    FunctionDeclBits.SClass = static_cast<uint64_t>(SClass);
+    FunctionDeclBits.SClass = SClass;
   }
 
   /// Determine whether the "inline" keyword was specified for this
@@ -2576,7 +2565,7 @@ public:
 
   bool doesDeclarationForceExternallyVisibleDefinition() const;
 
-  bool isStatic() const { return getStorageClass() == StorageClass::Static; }
+  bool isStatic() const { return getStorageClass() == SC_Static; }
 
   /// Whether this function declaration represents an C++ overloaded
   /// operator, e.g., "operator+".

@@ -1182,8 +1182,7 @@ DSAStackTy::DSAVarData DSAStackTy::getDSA(const_iterator &Iter,
   // Variables with automatic storage duration that are declared in a scope
   // inside the construct are private.
   if (VD && isOpenMPLocal(VD, Iter) && VD->isLocalVarDecl() &&
-      (VD->getStorageClass() == StorageClass::Auto ||
-       VD->getStorageClass() == StorageClass::None)) {
+      (VD->getStorageClass() == SC_Auto || VD->getStorageClass() == SC_None)) {
     DVar.CKind = OMPC_private;
     return DVar;
   }
@@ -1399,8 +1398,8 @@ static VarDecl *buildVarDecl(Sema &SemaRef, SourceLocation Loc, QualType Type,
   DeclContext *DC = SemaRef.CurContext;
   IdentifierInfo *II = &SemaRef.PP.getIdentifierTable().get(Name);
   TypeSourceInfo *TInfo = SemaRef.Context.getTrivialTypeSourceInfo(Type, Loc);
-  auto *Decl = VarDecl::Create(SemaRef.Context, DC, Loc, Loc, II, Type, TInfo,
-                               StorageClass::None);
+  auto *Decl =
+      VarDecl::Create(SemaRef.Context, DC, Loc, Loc, II, Type, TInfo, SC_None);
   if (Attrs) {
     for (specific_attr_iterator<AlignedAttr> I(Attrs->begin()), E(Attrs->end());
          I != E; ++I)
@@ -1624,7 +1623,7 @@ const DSAStackTy::DSAVarData DSAStackTy::getTopDSA(ValueDecl *D,
        !(VD->hasAttr<OMPThreadPrivateDeclAttr>() &&
          SemaRef.getLangOpts().OpenMPUseTLS &&
          SemaRef.getASTContext().getTargetInfo().isTLSSupported())) ||
-      (VD && VD->getStorageClass() == StorageClass::Register &&
+      (VD && VD->getStorageClass() == SC_Register &&
        VD->hasAttr<AsmLabelAttr>() && !VD->isLocalVarDecl())) {
     DVar.RefExpr = buildDeclRefExpr(
         SemaRef, VD, D->getType().getNonReferenceType(), D->getLocation());
@@ -2985,8 +2984,8 @@ Sema::CheckOMPThreadPrivateDecl(SourceLocation Loc, ArrayRef<Expr *> VarList) {
          !(VD->hasAttr<OMPThreadPrivateDeclAttr>() &&
            getLangOpts().OpenMPUseTLS &&
            getASTContext().getTargetInfo().isTLSSupported())) ||
-        (VD->getStorageClass() == StorageClass::Register &&
-         VD->hasAttr<AsmLabelAttr>() && !VD->isLocalVarDecl())) {
+        (VD->getStorageClass() == SC_Register && VD->hasAttr<AsmLabelAttr>() &&
+         !VD->isLocalVarDecl())) {
       Diag(ILoc, diag::err_omp_var_thread_local)
           << VD << ((VD->getTLSKind() != VarDecl::TLS_None) ? 0 : 1);
       bool IsDecl =
@@ -3139,8 +3138,8 @@ Sema::DeclGroupPtrTy Sema::ActOnOpenMPAllocateDirective(
     // Check if this is a TLS variable or global register.
     if (VD->getTLSKind() != VarDecl::TLS_None ||
         VD->hasAttr<OMPThreadPrivateDeclAttr>() ||
-        (VD->getStorageClass() == StorageClass::Register &&
-         VD->hasAttr<AsmLabelAttr>() && !VD->isLocalVarDecl()))
+        (VD->getStorageClass() == SC_Register && VD->hasAttr<AsmLabelAttr>() &&
+         !VD->isLocalVarDecl()))
       continue;
 
     // If the used several times in the allocate directive, the same allocator
@@ -5985,10 +5984,9 @@ static void setPrototype(Sema &S, FunctionDecl *FD, FunctionDecl *FDWithProto,
   FD->setType(NewType);
   SmallVector<ParmVarDecl *, 16> Params;
   for (const ParmVarDecl *P : FDWithProto->parameters()) {
-    auto *Param =
-        ParmVarDecl::Create(S.getASTContext(), FD, SourceLocation(),
-                            SourceLocation(), nullptr, P->getType(),
-                            /*TInfo=*/nullptr, StorageClass::None, nullptr);
+    auto *Param = ParmVarDecl::Create(S.getASTContext(), FD, SourceLocation(),
+                                      SourceLocation(), nullptr, P->getType(),
+                                      /*TInfo=*/nullptr, SC_None, nullptr);
     Param->setScopeInfo(0, Params.size());
     Param->setImplicit();
     Params.push_back(Param);
@@ -18380,7 +18378,7 @@ Sema::ActOnOpenMPDeclareMapperDirectiveVarDecl(Scope *S, QualType MapperType,
       Context.getTrivialTypeSourceInfo(MapperType, StartLoc);
   auto *VD = VarDecl::Create(Context, Context.getTranslationUnitDecl(),
                              StartLoc, StartLoc, VN.getAsIdentifierInfo(),
-                             MapperType, TInfo, StorageClass::None);
+                             MapperType, TInfo, SC_None);
   if (S)
     PushOnScopeChains(VD, S, /*AddToContext=*/false);
   Expr *E = buildDeclRefExpr(*this, VD, MapperType, StartLoc);

@@ -163,8 +163,7 @@ public:
           CurrentSema->getPreprocessor().getIdentifierInfo(CorrectTo);
       auto *NewFunction = FunctionDecl::Create(
           Context, DestContext, SourceLocation(), SourceLocation(), ToIdent,
-          Context.getFunctionType(Context.VoidTy, {}, {}), nullptr,
-          StorageClass::Static);
+          Context.getFunctionType(Context.VoidTy, {}, {}), nullptr, SC_Static);
       DestContext->addDecl(NewFunction);
       TypoCorrection Correction(ToIdent);
       Correction.addCorrectionDecl(NewFunction);

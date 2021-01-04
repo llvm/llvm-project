@@ -126,7 +126,7 @@ void Sema::NoteDeletedFunction(FunctionDecl *Decl) {
 /// explicit storage class.
 static bool hasAnyExplicitStorageClass(const FunctionDecl *D) {
   for (auto I : D->redecls()) {
-    if (I->getStorageClass() != StorageClass::None)
+    if (I->getStorageClass() != SC_None)
       return true;
   }
   return false;
@@ -5161,7 +5161,7 @@ ExprResult Sema::ActOnOMPIteratorExpr(Scope *S, SourceLocation IteratorKwLoc,
     // Always try to create iterator declarator to avoid extra error messages
     // about unknown declarations use.
     auto *VD = VarDecl::Create(Context, CurContext, StartLoc, D.DeclIdentLoc,
-                               D.DeclIdent, DeclTy, TInfo, StorageClass::None);
+                               D.DeclIdent, DeclTy, TInfo, SC_None);
     VD->setImplicit();
     if (S) {
       // Check for conflicting previous declaration.
@@ -5326,7 +5326,7 @@ ExprResult Sema::ActOnOMPIteratorExpr(Scope *S, SourceLocation IteratorKwLoc,
       auto *CounterVD =
           VarDecl::Create(Context, CurContext, D.IteratorDecl->getBeginLoc(),
                           D.IteratorDecl->getBeginLoc(), nullptr,
-                          Res.get()->getType(), nullptr, StorageClass::None);
+                          Res.get()->getType(), nullptr, SC_None);
       CounterVD->setImplicit();
       ExprResult RefRes =
           BuildDeclRefExpr(CounterVD, CounterVD->getType(), VK_LValue,
@@ -6177,19 +6177,22 @@ static FunctionDecl *rewriteBuiltinFunctionDecl(Sema *Sema, ASTContext &Context,
   QualType OverloadTy = Context.getFunctionType(FT->getReturnType(),
                                                 OverloadParams, EPI);
   DeclContext *Parent = FDecl->getParent();
-  FunctionDecl *OverloadDecl = FunctionDecl::Create(
-      Context, Parent, FDecl->getLocation(), FDecl->getLocation(),
-      FDecl->getIdentifier(), OverloadTy,
-      /*TInfo=*/nullptr, StorageClass::Extern, false,
-      /*hasPrototype=*/true);
+  FunctionDecl *OverloadDecl = FunctionDecl::Create(Context, Parent,
+                                                    FDecl->getLocation(),
+                                                    FDecl->getLocation(),
+                                                    FDecl->getIdentifier(),
+                                                    OverloadTy,
+                                                    /*TInfo=*/nullptr,
+                                                    SC_Extern, false,
+                                                    /*hasPrototype=*/true);
   SmallVector<ParmVarDecl*, 16> Params;
   FT = cast<FunctionProtoType>(OverloadTy);
   for (unsigned i = 0, e = FT->getNumParams(); i != e; ++i) {
     QualType ParamType = FT->getParamType(i);
     ParmVarDecl *Parm =
         ParmVarDecl::Create(Context, OverloadDecl, SourceLocation(),
-                            SourceLocation(), nullptr, ParamType,
-                            /*TInfo=*/nullptr, StorageClass::None, nullptr);
+                                SourceLocation(), nullptr, ParamType,
+                                /*TInfo=*/nullptr, SC_None, nullptr);
     Parm->setScopeInfo(0, i);
     Params.push_back(Parm);
   }
@@ -13458,7 +13461,7 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
     if (const VarDecl *vd = dyn_cast<VarDecl>(dcl)) {
       // in C++ it is not error to take address of a register
       // variable (c++03 7.1.1P3)
-      if (vd->getStorageClass() == StorageClass::Register &&
+      if (vd->getStorageClass() == SC_Register &&
           !getLangOpts().CPlusPlus) {
         AddressOfError = AO_Register_Variable;
       }
@@ -19086,7 +19089,7 @@ ExprResult RebuildUnknownAnyExpr::resolveDecl(Expr *E, ValueDecl *VD) {
         FunctionDecl *NewFD = FunctionDecl::Create(
             S.Context, FD->getDeclContext(), Loc, Loc,
             FD->getNameInfo().getName(), DestType, FD->getTypeSourceInfo(),
-            StorageClass::None, false /*isInlineSpecified*/, FD->hasPrototype(),
+            SC_None, false /*isInlineSpecified*/, FD->hasPrototype(),
             /*ConstexprKind*/ ConstexprSpecKind::Unspecified);
 
         if (FD->getQualifier())

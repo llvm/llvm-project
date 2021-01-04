@@ -10681,7 +10681,7 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
     if (!VD->isFileVarDecl())
       return false;
     // Global named register variables (GNU extension) are never emitted.
-    if (VD->getStorageClass() == StorageClass::Register)
+    if (VD->getStorageClass() == SC_Register)
       return false;
     if (VD->getDescribedVarTemplate() ||
         isa<VarTemplatePartialSpecializationDecl>(VD))
@@ -11441,7 +11441,7 @@ bool ASTContext::mayExternalizeStaticVar(const Decl *D) const {
           (D->hasAttr<CUDAConstantAttr>() &&
            !D->getAttr<CUDAConstantAttr>()->isImplicit())) &&
          isa<VarDecl>(D) && cast<VarDecl>(D)->isFileVarDecl() &&
-         cast<VarDecl>(D)->getStorageClass() == StorageClass::Static;
+         cast<VarDecl>(D)->getStorageClass() == SC_Static;
 }
 
 bool ASTContext::shouldExternalizeStaticVar(const Decl *D) const {

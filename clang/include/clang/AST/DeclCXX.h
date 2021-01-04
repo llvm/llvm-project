@@ -1843,7 +1843,7 @@ private:
                         const DeclarationNameInfo &NameInfo, QualType T,
                         TypeSourceInfo *TInfo, SourceLocation EndLocation)
       : FunctionDecl(CXXDeductionGuide, C, DC, StartLoc, NameInfo, T, TInfo,
-                     StorageClass::None, false, ConstexprSpecKind::Unspecified),
+                     SC_None, false, ConstexprSpecKind::Unspecified),
         ExplicitSpec(ES) {
     if (EndLocation.isValid())
       setRangeEnd(EndLocation);
@@ -2657,8 +2657,8 @@ class CXXDestructorDecl : public CXXMethodDecl {
                     bool isImplicitlyDeclared, ConstexprSpecKind ConstexprKind,
                     Expr *TrailingRequiresClause = nullptr)
       : CXXMethodDecl(CXXDestructor, C, RD, StartLoc, NameInfo, T, TInfo,
-                      StorageClass::None, isInline, ConstexprKind,
-                      SourceLocation(), TrailingRequiresClause) {
+                      SC_None, isInline, ConstexprKind, SourceLocation(),
+                      TrailingRequiresClause) {
     setImplicit(isImplicitlyDeclared);
   }
 
@@ -2713,7 +2713,7 @@ class CXXConversionDecl : public CXXMethodDecl {
                     ConstexprSpecKind ConstexprKind, SourceLocation EndLocation,
                     Expr *TrailingRequiresClause = nullptr)
       : CXXMethodDecl(CXXConversion, C, RD, StartLoc, NameInfo, T, TInfo,
-                      StorageClass::None, isInline, ConstexprKind, EndLocation,
+                      SC_None, isInline, ConstexprKind, EndLocation,
                       TrailingRequiresClause),
         ExplicitSpec(ES) {}
   void anchor() override;

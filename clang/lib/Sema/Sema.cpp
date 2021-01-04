@@ -1219,10 +1219,10 @@ void Sema::ActOnEndOfTranslationUnit() {
             Diag(DiagD->getLocation(), diag::warn_unneeded_member_function)
                 << DiagD;
           else {
-            if (FD->getStorageClass() == StorageClass::Static &&
+            if (FD->getStorageClass() == SC_Static &&
                 !FD->isInlineSpecified() &&
                 !SourceMgr.isInMainFile(
-                    SourceMgr.getExpansionLoc(FD->getLocation())))
+                   SourceMgr.getExpansionLoc(FD->getLocation())))
               Diag(DiagD->getLocation(),
                    diag::warn_unneeded_static_internal_decl)
                   << DiagD;

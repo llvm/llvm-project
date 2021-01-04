@@ -3919,7 +3919,7 @@ void Sema::AddAlignedAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E,
     if (isa<ParmVarDecl>(D)) {
       DiagKind = 0;
     } else if (const auto *VD = dyn_cast<VarDecl>(D)) {
-      if (VD->getStorageClass() == StorageClass::Register)
+      if (VD->getStorageClass() == SC_Register)
         DiagKind = 1;
       if (VD->isExceptionVariable())
         DiagKind = 2;
@@ -4559,7 +4559,7 @@ static void handleGNUInlineAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  if (S.LangOpts.CPlusPlus && Fn->getStorageClass() != StorageClass::Extern)
+  if (S.LangOpts.CPlusPlus && Fn->getStorageClass() != SC_Extern)
     S.Diag(AL.getLoc(), diag::warn_gnu_inline_cplusplus_without_extern);
 
   D->addAttr(::new (S.Context) GNUInlineAttr(S.Context, AL));
@@ -8350,8 +8350,8 @@ NamedDecl * Sema::DeclClonePragmaWeak(NamedDecl *ND, IdentifierInfo *II,
     // FIXME: Is the DeclContext correct?
     NewFD = FunctionDecl::Create(
         FD->getASTContext(), FD->getDeclContext(), Loc, Loc,
-        DeclarationName(II), FD->getType(), FD->getTypeSourceInfo(),
-        StorageClass::None, false /*isInlineSpecified*/, FD->hasPrototype(),
+        DeclarationName(II), FD->getType(), FD->getTypeSourceInfo(), SC_None,
+        false /*isInlineSpecified*/, FD->hasPrototype(),
         ConstexprSpecKind::Unspecified, FD->getTrailingRequiresClause());
     NewD = NewFD;
 

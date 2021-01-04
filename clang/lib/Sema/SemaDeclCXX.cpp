@@ -5889,7 +5889,7 @@ static void ReferenceDllExportedMembers(Sema &S, CXXRecordDecl *Class) {
     // class must be marked export too.
     auto *VD = dyn_cast<VarDecl>(Member);
     if (VD && Member->getAttr<DLLExportAttr>() &&
-        VD->getStorageClass() == StorageClass::Static &&
+        VD->getStorageClass() == SC_Static &&
         TSK == TSK_ImplicitInstantiation)
       S.MarkVariableReferenced(VD->getLocation(), VD);
 
@@ -6669,7 +6669,7 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
   // ...).
   auto CheckCompletedMemberFunction = [&](CXXMethodDecl *MD) {
     // A static function cannot override anything.
-    if (MD->getStorageClass() == StorageClass::Static) {
+    if (MD->getStorageClass() == SC_Static) {
       if (ReportOverrides(*this, diag::err_static_overrides_virtual, MD,
                           [](const CXXMethodDecl *) { return true; }))
         return;
@@ -8092,7 +8092,7 @@ private:
     }
     VarDecl *IterationVar = VarDecl::Create(
         S.Context, S.CurContext, Loc, Loc, IterationVarName, SizeType,
-        S.Context.getTrivialTypeSourceInfo(SizeType, Loc), StorageClass::None);
+        S.Context.getTrivialTypeSourceInfo(SizeType, Loc), SC_None);
     llvm::APInt Zero(S.Context.getTypeSize(SizeType), 0);
     IterationVar->setInit(
         IntegerLiteral::Create(S.Context, Zero, SizeType, Loc));
@@ -8191,9 +8191,9 @@ private:
 
       // R cmp = ...;
       IdentifierInfo *Name = &S.Context.Idents.get("cmp");
-      VarDecl *VD = VarDecl::Create(S.Context, S.CurContext, Loc, Loc, Name, R,
-                                    S.Context.getTrivialTypeSourceInfo(R, Loc),
-                                    StorageClass::None);
+      VarDecl *VD =
+          VarDecl::Create(S.Context, S.CurContext, Loc, Loc, Name, R,
+                          S.Context.getTrivialTypeSourceInfo(R, Loc), SC_None);
       S.AddInitializerToDecl(VD, Op.get(), /*DirectInit=*/false);
       Stmt *InitStmt = new (S.Context) DeclStmt(DeclGroupRef(VD), Loc, Loc);
 
@@ -10186,13 +10186,13 @@ QualType Sema::CheckConstructorDeclarator(Declarator &D, QualType R,
         << SourceRange(D.getIdentifierLoc());
     D.setInvalidType();
   }
-  if (SC == StorageClass::Static) {
+  if (SC == SC_Static) {
     if (!D.isInvalidType())
       Diag(D.getIdentifierLoc(), diag::err_constructor_cannot_be)
         << "static" << SourceRange(D.getDeclSpec().getStorageClassSpecLoc())
         << SourceRange(D.getIdentifierLoc());
     D.setInvalidType();
-    SC = StorageClass::None;
+    SC = SC_None;
   }
 
   if (unsigned TypeQuals = D.getDeclSpec().getTypeQualifiers()) {
@@ -10348,14 +10348,14 @@ QualType Sema::CheckDestructorDeclarator(Declarator &D, QualType R,
   //   destructor can be invoked for a const, volatile or const
   //   volatile object. A destructor shall not be declared const,
   //   volatile or const volatile (9.3.2).
-  if (SC == StorageClass::Static) {
+  if (SC == SC_Static) {
     if (!D.isInvalidType())
       Diag(D.getIdentifierLoc(), diag::err_destructor_cannot_be)
         << "static" << SourceRange(D.getDeclSpec().getStorageClassSpecLoc())
         << SourceRange(D.getIdentifierLoc())
         << FixItHint::CreateRemoval(D.getDeclSpec().getStorageClassSpecLoc());
 
-    SC = StorageClass::None;
+    SC = SC_None;
   }
   if (!D.isInvalidType()) {
     // Destructors don't have return types, but the parser will
@@ -10451,13 +10451,13 @@ void Sema::CheckConversionDeclarator(Declarator &D, QualType &R,
   //   Neither parameter types nor return type can be specified. The
   //   type of a conversion function (8.3.5) is "function taking no
   //   parameter returning conversion-type-id."
-  if (SC == StorageClass::Static) {
+  if (SC == SC_Static) {
     if (!D.isInvalidType())
       Diag(D.getIdentifierLoc(), diag::err_conv_function_not_member)
         << SourceRange(D.getDeclSpec().getStorageClassSpecLoc())
         << D.getName().getSourceRange();
     D.setInvalidType();
-    SC = StorageClass::None;
+    SC = SC_None;
   }
 
   TypeSourceInfo *ConvTSI = nullptr;
@@ -10714,7 +10714,7 @@ void Sema::CheckDeductionGuideDeclarator(Declarator &D, QualType &R,
 
     Diagnoser.check(DS.getStorageClassSpecLoc(), DS.getStorageClassSpec());
     DS.ClearStorageClassSpecs();
-    SC = StorageClass::None;
+    SC = SC_None;
 
     // 'explicit' is permitted.
     Diagnoser.check(DS.getInlineSpecLoc(), "inline");
@@ -13129,7 +13129,7 @@ Sema::findInheritingConstructor(SourceLocation Loc,
         Context.getTrivialTypeSourceInfo(FPT->getParamType(I), UsingLoc);
     ParmVarDecl *PD = ParmVarDecl::Create(
         Context, DerivedCtor, UsingLoc, UsingLoc, /*IdentifierInfo=*/nullptr,
-        FPT->getParamType(I), TInfo, StorageClass::None, /*DefArg=*/nullptr);
+        FPT->getParamType(I), TInfo, SC_None, /*DefArg=*/nullptr);
     PD->setScopeInfo(0, I);
     PD->setImplicit();
     // Ensure attributes are propagated onto parameters (this matters for
@@ -13788,9 +13788,10 @@ buildSingleCopyAssignRecursively(Sema &S, SourceLocation Loc, QualType T,
     OS << "__i" << Depth;
     IterationVarName = &S.Context.Idents.get(OS.str());
   }
-  VarDecl *IterationVar = VarDecl::Create(
-      S.Context, S.CurContext, Loc, Loc, IterationVarName, SizeType,
-      S.Context.getTrivialTypeSourceInfo(SizeType, Loc), StorageClass::None);
+  VarDecl *IterationVar = VarDecl::Create(S.Context, S.CurContext, Loc, Loc,
+                                          IterationVarName, SizeType,
+                            S.Context.getTrivialTypeSourceInfo(SizeType, Loc),
+                                          SC_None);
 
   // Initialize the iteration variable to zero.
   llvm::APInt Zero(S.Context.getTypeSize(SizeType), 0);
@@ -13899,7 +13900,7 @@ CXXMethodDecl *Sema::DeclareImplicitCopyAssignment(CXXRecordDecl *ClassDecl) {
   DeclarationNameInfo NameInfo(Name, ClassLoc);
   CXXMethodDecl *CopyAssignment = CXXMethodDecl::Create(
       Context, ClassDecl, ClassLoc, NameInfo, QualType(),
-      /*TInfo=*/nullptr, /*StorageClass=*/StorageClass::None,
+      /*TInfo=*/nullptr, /*StorageClass=*/SC_None,
       /*isInline=*/true,
       Constexpr ? ConstexprSpecKind::Constexpr : ConstexprSpecKind::Unspecified,
       SourceLocation());
@@ -13917,10 +13918,11 @@ CXXMethodDecl *Sema::DeclareImplicitCopyAssignment(CXXRecordDecl *ClassDecl) {
   setupImplicitSpecialMemberType(CopyAssignment, RetType, ArgType);
 
   // Add the parameter to the operator.
-  ParmVarDecl *FromParam =
-      ParmVarDecl::Create(Context, CopyAssignment, ClassLoc, ClassLoc,
-                          /*Id=*/nullptr, ArgType,
-                          /*TInfo=*/nullptr, StorageClass::None, nullptr);
+  ParmVarDecl *FromParam = ParmVarDecl::Create(Context, CopyAssignment,
+                                               ClassLoc, ClassLoc,
+                                               /*Id=*/nullptr, ArgType,
+                                               /*TInfo=*/nullptr, SC_None,
+                                               nullptr);
   CopyAssignment->setParams(FromParam);
 
   CopyAssignment->setTrivial(
@@ -14224,7 +14226,7 @@ CXXMethodDecl *Sema::DeclareImplicitMoveAssignment(CXXRecordDecl *ClassDecl) {
   DeclarationNameInfo NameInfo(Name, ClassLoc);
   CXXMethodDecl *MoveAssignment = CXXMethodDecl::Create(
       Context, ClassDecl, ClassLoc, NameInfo, QualType(),
-      /*TInfo=*/nullptr, /*StorageClass=*/StorageClass::None,
+      /*TInfo=*/nullptr, /*StorageClass=*/SC_None,
       /*isInline=*/true,
       Constexpr ? ConstexprSpecKind::Constexpr : ConstexprSpecKind::Unspecified,
       SourceLocation());
@@ -14245,10 +14247,11 @@ CXXMethodDecl *Sema::DeclareImplicitMoveAssignment(CXXRecordDecl *ClassDecl) {
   MoveAssignment->setType(Context.getFunctionType(RetType, ArgType, EPI));
 
   // Add the parameter to the operator.
-  ParmVarDecl *FromParam =
-      ParmVarDecl::Create(Context, MoveAssignment, ClassLoc, ClassLoc,
-                          /*Id=*/nullptr, ArgType,
-                          /*TInfo=*/nullptr, StorageClass::None, nullptr);
+  ParmVarDecl *FromParam = ParmVarDecl::Create(Context, MoveAssignment,
+                                               ClassLoc, ClassLoc,
+                                               /*Id=*/nullptr, ArgType,
+                                               /*TInfo=*/nullptr, SC_None,
+                                               nullptr);
   MoveAssignment->setParams(FromParam);
 
   MoveAssignment->setTrivial(
@@ -14624,10 +14627,11 @@ CXXConstructorDecl *Sema::DeclareImplicitCopyConstructor(
   setupImplicitSpecialMemberType(CopyConstructor, Context.VoidTy, ArgType);
 
   // Add the parameter to the constructor.
-  ParmVarDecl *FromParam =
-      ParmVarDecl::Create(Context, CopyConstructor, ClassLoc, ClassLoc,
-                          /*IdentifierInfo=*/nullptr, ArgType,
-                          /*TInfo=*/nullptr, StorageClass::None, nullptr);
+  ParmVarDecl *FromParam = ParmVarDecl::Create(Context, CopyConstructor,
+                                               ClassLoc, ClassLoc,
+                                               /*IdentifierInfo=*/nullptr,
+                                               ArgType, /*TInfo=*/nullptr,
+                                               SC_None, nullptr);
   CopyConstructor->setParams(FromParam);
 
   CopyConstructor->setTrivial(
@@ -14757,10 +14761,11 @@ CXXConstructorDecl *Sema::DeclareImplicitMoveConstructor(
   setupImplicitSpecialMemberType(MoveConstructor, Context.VoidTy, ArgType);
 
   // Add the parameter to the constructor.
-  ParmVarDecl *FromParam =
-      ParmVarDecl::Create(Context, MoveConstructor, ClassLoc, ClassLoc,
-                          /*IdentifierInfo=*/nullptr, ArgType,
-                          /*TInfo=*/nullptr, StorageClass::None, nullptr);
+  ParmVarDecl *FromParam = ParmVarDecl::Create(Context, MoveConstructor,
+                                               ClassLoc, ClassLoc,
+                                               /*IdentifierInfo=*/nullptr,
+                                               ArgType, /*TInfo=*/nullptr,
+                                               SC_None, nullptr);
   MoveConstructor->setParams(FromParam);
 
   MoveConstructor->setTrivial(
@@ -15244,7 +15249,7 @@ CheckOperatorNewDeleteDeclarationScope(Sema &SemaRef,
   }
 
   if (isa<TranslationUnitDecl>(DC) &&
-      FnDecl->getStorageClass() == StorageClass::Static) {
+      FnDecl->getStorageClass() == SC_Static) {
     return SemaRef.Diag(FnDecl->getLocation(),
                         diag::err_operator_new_delete_declared_static)
       << FnDecl->getDeclName();
@@ -15901,7 +15906,7 @@ VarDecl *Sema::BuildExceptionDeclaration(Scope *S,
   }
 
   VarDecl *ExDecl = VarDecl::Create(Context, CurContext, StartLoc, Loc, Name,
-                                    ExDeclType, TInfo, StorageClass::None);
+                                    ExDeclType, TInfo, SC_None);
   ExDecl->setExceptionVariable(true);
 
   // In ARC, infer 'retaining' for variables of retainable type.
@@ -16914,7 +16919,7 @@ bool Sema::CheckOverridingFunctionAttributes(const CXXMethodDecl *New,
   // suppress the calling convention mismatch error; the error about static
   // function override (err_static_overrides_virtual from
   // Sema::CheckFunctionDeclaration) is more clear.
-  if (New->getStorageClass() == StorageClass::Static)
+  if (New->getStorageClass() == SC_Static)
     return false;
 
   Diag(New->getLocation(),
