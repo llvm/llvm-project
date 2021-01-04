@@ -519,8 +519,7 @@ SymbolCache::findLineTable(uint16_t Modi) const {
               return LHS[0].Addr < RHS[0].Addr;
             });
   for (size_t I = 0; I < EntryList.size(); ++I)
-    ModuleLineTable.insert(ModuleLineTable.end(), EntryList[I].begin(),
-                           EntryList[I].end());
+    llvm::append_range(ModuleLineTable, EntryList[I]);
 
   return ModuleLineTable;
 }
