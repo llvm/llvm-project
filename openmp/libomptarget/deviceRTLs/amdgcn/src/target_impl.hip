@@ -144,6 +144,10 @@ DEVICE unsigned GetLaneId() {
   return __builtin_amdgcn_mbcnt_hi(~0u, __builtin_amdgcn_mbcnt_lo(~0u, 0u));
 }
 
+EXTERN uint32_t __kmpc_amdgcn_gpu_num_threads() {
+  return GetNumberOfThreadsInBlock();
+}
+
 // Stub implementations
-DEVICE void *__kmpc_impl_malloc(size_t ) { return nullptr }
+DEVICE void *__kmpc_impl_malloc(size_t) { return nullptr; }
 DEVICE void __kmpc_impl_free(void *) {}
