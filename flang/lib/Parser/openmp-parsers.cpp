@@ -102,7 +102,7 @@ TYPE_PARSER(construct<OmpReductionOperator>(Parser<DefinedOperator>{}) ||
     construct<OmpReductionOperator>(Parser<ProcedureDesignator>{}))
 
 TYPE_PARSER(construct<OmpReductionClause>(
-    Parser<OmpReductionOperator>{} / ":", nonemptyList(designator)))
+    Parser<OmpReductionOperator>{} / ":", Parser<OmpObjectList>{}))
 
 // OMP 5.0 2.11.4  ALLOCATE ([allocator:] variable-name-list)
 TYPE_PARSER(construct<OmpAllocateClause>(
@@ -220,6 +220,9 @@ TYPE_PARSER(
                        parenthesized(Parser<OmpProcBindClause>{}))) ||
     "REDUCTION" >>
         construct<OmpClause>(parenthesized(Parser<OmpReductionClause>{})) ||
+    "TASK_REDUCTION" >>
+        construct<OmpClause>(construct<OmpClause::TaskReduction>(
+            parenthesized(Parser<OmpReductionClause>{}))) ||
     "RELAXED" >> construct<OmpClause>(construct<OmpClause::Relaxed>()) ||
     "RELEASE" >> construct<OmpClause>(construct<OmpClause::Release>()) ||
     "SAFELEN" >> construct<OmpClause>(construct<OmpClause::Safelen>(
