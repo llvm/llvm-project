@@ -61,7 +61,7 @@ define i32 @f2(<4 x i32> *%src, i32 %index) {
 ; OFF-NEXT:    [[VAL1_I2:%.*]] = shl i32 3, [[VAL0_I2]]
 ; OFF-NEXT:    [[VAL0_I3:%.*]] = extractelement <4 x i32> [[VAL0]], i32 3
 ; OFF-NEXT:    [[VAL1_I3:%.*]] = shl i32 4, [[VAL0_I3]]
-; OFF-NEXT:    [[VAL1_UPTO0:%.*]] = insertelement <4 x i32> undef, i32 [[VAL1_I0]], i32 0
+; OFF-NEXT:    [[VAL1_UPTO0:%.*]] = insertelement <4 x i32> poison, i32 [[VAL1_I0]], i32 0
 ; OFF-NEXT:    [[VAL1_UPTO1:%.*]] = insertelement <4 x i32> [[VAL1_UPTO0]], i32 [[VAL1_I1]], i32 1
 ; OFF-NEXT:    [[VAL1_UPTO2:%.*]] = insertelement <4 x i32> [[VAL1_UPTO1]], i32 [[VAL1_I2]], i32 2
 ; OFF-NEXT:    [[VAL1:%.*]] = insertelement <4 x i32> [[VAL1_UPTO2]], i32 [[VAL1_I3]], i32 3
