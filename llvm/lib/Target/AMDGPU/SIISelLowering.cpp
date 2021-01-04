@@ -6001,8 +6001,8 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   unsigned IntrOpcode = Intr->BaseOpcode;
   bool IsGFX10Plus = AMDGPU::isGFX10Plus(*Subtarget);
 
-  SmallVector<EVT, 3> ResultTypes(Op->value_begin(), Op->value_end());
-  SmallVector<EVT, 3> OrigResultTypes(Op->value_begin(), Op->value_end());
+  SmallVector<EVT, 3> ResultTypes(Op->values());
+  SmallVector<EVT, 3> OrigResultTypes(Op->values());
   bool IsD16 = false;
   bool IsG16 = false;
   bool IsA16 = false;
