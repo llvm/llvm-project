@@ -4781,11 +4781,11 @@ static Constant *simplifyFPOp(ArrayRef<Value *> Ops,
 
     // If this operation has 'nnan' or 'ninf' and at least 1 disallowed operand
     // (an undef operand can be chosen to be Nan/Inf), then the result of
-    // this operation is poison. That result can be relaxed to undef.
+    // this operation is poison.
     if (FMF.noNaNs() && (IsNan || IsUndef))
-      return UndefValue::get(V->getType());
+      return PoisonValue::get(V->getType());
     if (FMF.noInfs() && (IsInf || IsUndef))
-      return UndefValue::get(V->getType());
+      return PoisonValue::get(V->getType());
 
     if (IsUndef || IsNan)
       return propagateNaN(cast<Constant>(V));
