@@ -13,6 +13,10 @@
 //   Prefix: A57Write
 //   Latency: #cyc
 //   MicroOp Count/Types: #(B|I|M|L|S|X|W|V)
+//   Postfix (optional): (XYZ)_Forward
+//
+//   The postfix is added to differentiate SchedWriteRes that are used in
+//   subsequent SchedReadAdvances.
 //
 // e.g. A57Write_6cyc_1I_6S_4V means the total latency is 6 and there are
 //      11 micro-ops to be issued down one I pipe, six S pipes and four V pipes.
@@ -25,7 +29,9 @@
 def A57Write_5cyc_1L  : SchedWriteRes<[A57UnitL]> { let Latency = 5;  }
 def A57Write_5cyc_1M  : SchedWriteRes<[A57UnitM]> { let Latency = 5;  }
 def A57Write_5cyc_1V  : SchedWriteRes<[A57UnitV]> { let Latency = 5;  }
+def A57Write_5cyc_1V_FP_Forward  : SchedWriteRes<[A57UnitV]> { let Latency = 5; }
 def A57Write_5cyc_1W  : SchedWriteRes<[A57UnitW]> { let Latency = 5;  }
+def A57Write_5cyc_1W_Mul_Forward  : SchedWriteRes<[A57UnitW]> { let Latency = 5;  }
 def A57Write_10cyc_1V : SchedWriteRes<[A57UnitV]> { let Latency = 10; }
 def A57Write_17cyc_1W : SchedWriteRes<[A57UnitW]> { let Latency = 17;
                                                     let ResourceCycles = [17]; }
@@ -45,6 +51,7 @@ def A57Write_3cyc_1W  : SchedWriteRes<[A57UnitW]> { let Latency = 3;  }
 def A57Write_3cyc_1X  : SchedWriteRes<[A57UnitX]> { let Latency = 3;  }
 def A57Write_4cyc_1L  : SchedWriteRes<[A57UnitL]> { let Latency = 4;  }
 def A57Write_4cyc_1X  : SchedWriteRes<[A57UnitX]> { let Latency = 4;  }
+def A57Write_4cyc_1X_NonMul_Forward  : SchedWriteRes<[A57UnitX]> { let Latency = 4;  }
 def A57Write_9cyc_1V  : SchedWriteRes<[A57UnitV]> { let Latency = 9;  }
 def A57Write_6cyc_1M  : SchedWriteRes<[A57UnitM]> { let Latency = 6;  }
 def A57Write_6cyc_1V  : SchedWriteRes<[A57UnitV]> { let Latency = 6;  }
@@ -93,6 +100,10 @@ def A57Write_6cyc_2W     : SchedWriteRes<[A57UnitW, A57UnitW]> {
   let Latency     = 6;
   let NumMicroOps = 2;
 }
+def A57Write_6cyc_2W_Mul_Forward     : SchedWriteRes<[A57UnitW, A57UnitW]> {
+  let Latency     = 6;
+  let NumMicroOps = 2;
+}
 def A57Write_5cyc_1I_1L  : SchedWriteRes<[A57UnitI,
                                           A57UnitL]> {
   let Latency     = 5;
@@ -102,7 +113,15 @@ def A57Write_5cyc_2V     : SchedWriteRes<[A57UnitV, A57UnitV]> {
   let Latency     = 5;
   let NumMicroOps = 2;
 }
+def A57Write_5cyc_2V_FP_Forward     : SchedWriteRes<[A57UnitV, A57UnitV]> {
+  let Latency     = 5;
+  let NumMicroOps = 2;
+}
 def A57Write_5cyc_2X     : SchedWriteRes<[A57UnitX, A57UnitX]> {
+  let Latency     = 5;
+  let NumMicroOps = 2;
+}
+def A57Write_5cyc_2X_NonMul_Forward     : SchedWriteRes<[A57UnitX, A57UnitX]> {
   let Latency     = 5;
   let NumMicroOps = 2;
 }
