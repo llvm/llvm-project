@@ -662,7 +662,7 @@ define <3 x i32> @test38_nonuniform(<3 x i32> %x) nounwind readnone {
 
 define <2 x i32> @test38_undef(<2 x i32> %x) nounwind readnone {
 ; CHECK-LABEL: @test38_undef(
-; CHECK-NEXT:    ret <2 x i32> undef
+; CHECK-NEXT:    ret <2 x i32> poison
 ;
   %rem = srem <2 x i32> %x, <i32 32, i32 undef>
   %shl = shl <2 x i32> <i32 1, i32 1>, %rem

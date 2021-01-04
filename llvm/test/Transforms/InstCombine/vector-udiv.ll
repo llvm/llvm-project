@@ -42,7 +42,7 @@ define <4 x i32> @test_v4i32_negconst(<4 x i32> %a0) {
 
 define <4 x i32> @test_v4i32_negconst_undef(<4 x i32> %a0) {
 ; CHECK-LABEL: @test_v4i32_negconst_undef(
-; CHECK-NEXT:    ret <4 x i32> undef
+; CHECK-NEXT:    ret <4 x i32> poison
 ;
   %1 = udiv <4 x i32> %a0, <i32 -3, i32 -5, i32 -7, i32 undef>
   ret <4 x i32> %1

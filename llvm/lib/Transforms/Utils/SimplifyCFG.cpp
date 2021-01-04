@@ -3848,6 +3848,7 @@ bool SimplifyCFGOpt::SimplifyTerminatorOnSelect(Instruction *OldTerm,
                                                 BasicBlock *FalseBB,
                                                 uint32_t TrueWeight,
                                                 uint32_t FalseWeight) {
+  auto *BB = OldTerm->getParent();
   // Remove any superfluous successor edges from the CFG.
   // First, figure out which successors to preserve.
   // If TrueBB and FalseBB are equal, only try to preserve one copy of that
@@ -3855,7 +3856,7 @@ bool SimplifyCFGOpt::SimplifyTerminatorOnSelect(Instruction *OldTerm,
   BasicBlock *KeepEdge1 = TrueBB;
   BasicBlock *KeepEdge2 = TrueBB != FalseBB ? FalseBB : nullptr;
 
-  SmallVector<DominatorTree::UpdateType, 4> Updates;
+  SmallSetVector<BasicBlock *, 2> RemovedSuccessors;
 
   // Then remove the rest.
   for (BasicBlock *Succ : successors(OldTerm)) {
@@ -3865,9 +3866,11 @@ bool SimplifyCFGOpt::SimplifyTerminatorOnSelect(Instruction *OldTerm,
     else if (Succ == KeepEdge2)
       KeepEdge2 = nullptr;
     else {
-      Succ->removePredecessor(OldTerm->getParent(),
+      Succ->removePredecessor(BB,
                               /*KeepOneInputPHIs=*/true);
-      Updates.push_back({DominatorTree::Delete, OldTerm->getParent(), Succ});
+
+      if (Succ != TrueBB && Succ != FalseBB)
+        RemovedSuccessors.insert(Succ);
     }
   }
 
@@ -3880,13 +3883,10 @@ bool SimplifyCFGOpt::SimplifyTerminatorOnSelect(Instruction *OldTerm,
       // We were only looking for one successor, and it was present.
       // Create an unconditional branch to it.
       Builder.CreateBr(TrueBB);
-      Updates.push_back({DominatorTree::Insert, OldTerm->getParent(), TrueBB});
     } else {
       // We found both of the successors we were looking for.
       // Create a conditional branch sharing the condition of the select.
       BranchInst *NewBI = Builder.CreateCondBr(Cond, TrueBB, FalseBB);
-      Updates.push_back({DominatorTree::Insert, OldTerm->getParent(), TrueBB});
-      Updates.push_back({DominatorTree::Insert, OldTerm->getParent(), FalseBB});
       if (TrueWeight != FalseWeight)
         setBranchWeights(NewBI, TrueWeight, FalseWeight);
     }
@@ -3901,17 +3901,22 @@ bool SimplifyCFGOpt::SimplifyTerminatorOnSelect(Instruction *OldTerm,
     if (!KeepEdge1) {
       // Only TrueBB was found.
       Builder.CreateBr(TrueBB);
-      Updates.push_back({DominatorTree::Insert, OldTerm->getParent(), TrueBB});
     } else {
       // Only FalseBB was found.
       Builder.CreateBr(FalseBB);
-      Updates.push_back({DominatorTree::Insert, OldTerm->getParent(), FalseBB});
     }
   }
 
   EraseTerminatorAndDCECond(OldTerm);
-  if (DTU)
-    DTU->applyUpdatesPermissive(Updates);
+
+  if (DTU) {
+    SmallVector<DominatorTree::UpdateType, 2> Updates;
+    Updates.reserve(RemovedSuccessors.size());
+    for (auto *RemovedSuccessor : RemovedSuccessors)
+      Updates.push_back({DominatorTree::Delete, BB, RemovedSuccessor});
+    DTU->applyUpdates(Updates);
+  }
+
   return true;
 }
 
@@ -6670,11 +6675,6 @@ bool SimplifyCFGOpt::simplifyOnceImpl(BasicBlock *BB) {
 }
 
 bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
-  assert((!RequireAndPreserveDomTree ||
-          (DTU &&
-           DTU->getDomTree().verify(DominatorTree::VerificationLevel::Full))) &&
-         "Original domtree is invalid?");
-
   bool Changed = simplifyOnceImpl(BB);
 
   assert((!RequireAndPreserveDomTree ||
@@ -6686,6 +6686,11 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
 }
 
 bool SimplifyCFGOpt::run(BasicBlock *BB) {
+  assert((!RequireAndPreserveDomTree ||
+          (DTU &&
+           DTU->getDomTree().verify(DominatorTree::VerificationLevel::Full))) &&
+         "Original domtree is invalid?");
+
   bool Changed = false;
 
   // Repeated simplify BB as long as resimplification is requested.
