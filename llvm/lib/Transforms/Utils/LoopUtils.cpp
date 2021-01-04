@@ -983,77 +983,53 @@ Value *llvm::createSimpleTargetReduction(IRBuilderBase &Builder,
                                          RecurKind RdxKind,
                                          ArrayRef<Value *> RedOps) {
   TargetTransformInfo::ReductionFlags RdxFlags;
-  RdxFlags.IsMaxOp = RdxKind == RecurKind::SMax ||
-                     RdxKind == RecurKind::UMax ||
+  RdxFlags.IsMaxOp = RdxKind == RecurKind::SMax || RdxKind == RecurKind::UMax ||
                      RdxKind == RecurKind::FMax;
   RdxFlags.IsSigned = RdxKind == RecurKind::SMax || RdxKind == RecurKind::SMin;
   if (!ForceReductionIntrinsic &&
       !TTI->useReductionIntrinsic(Opcode, Src->getType(), RdxFlags))
     return getShuffleReduction(Builder, Src, Opcode, RdxKind, RedOps);
 
-  auto *SrcVTy = cast<VectorType>(Src->getType());
-
-  std::function<Value *()> BuildFunc;
+  auto *SrcVecEltTy = cast<VectorType>(Src->getType())->getElementType();
   switch (Opcode) {
   case Instruction::Add:
-    BuildFunc = [&]() { return Builder.CreateAddReduce(Src); };
-    break;
+    return Builder.CreateAddReduce(Src);
   case Instruction::Mul:
-    BuildFunc = [&]() { return Builder.CreateMulReduce(Src); };
-    break;
+    return Builder.CreateMulReduce(Src);
   case Instruction::And:
-    BuildFunc = [&]() { return Builder.CreateAndReduce(Src); };
-    break;
+    return Builder.CreateAndReduce(Src);
   case Instruction::Or:
-    BuildFunc = [&]() { return Builder.CreateOrReduce(Src); };
-    break;
+    return Builder.CreateOrReduce(Src);
   case Instruction::Xor:
-    BuildFunc = [&]() { return Builder.CreateXorReduce(Src); };
-    break;
+    return Builder.CreateXorReduce(Src);
   case Instruction::FAdd:
-    BuildFunc = [&]() {
-      auto Rdx = Builder.CreateFAddReduce(
-          ConstantFP::getNegativeZero(SrcVTy->getElementType()), Src);
-      return Rdx;
-    };
-    break;
+    return Builder.CreateFAddReduce(ConstantFP::getNegativeZero(SrcVecEltTy),
+                                    Src);
   case Instruction::FMul:
-    BuildFunc = [&]() {
-      Type *Ty = SrcVTy->getElementType();
-      auto Rdx = Builder.CreateFMulReduce(ConstantFP::get(Ty, 1.0), Src);
-      return Rdx;
-    };
-    break;
+    return Builder.CreateFMulReduce(ConstantFP::get(SrcVecEltTy, 1.0), Src);
   case Instruction::ICmp:
     switch (RdxKind) {
     case RecurKind::SMax:
-      BuildFunc = [&]() { return Builder.CreateIntMaxReduce(Src, true); };
-      break;
+      return Builder.CreateIntMaxReduce(Src, true);
     case RecurKind::SMin:
-      BuildFunc = [&]() { return Builder.CreateIntMinReduce(Src, true); };
-      break;
+      return Builder.CreateIntMinReduce(Src, true);
     case RecurKind::UMax:
-      BuildFunc = [&]() { return Builder.CreateIntMaxReduce(Src, false); };
-      break;
+      return Builder.CreateIntMaxReduce(Src, false);
     case RecurKind::UMin:
-      BuildFunc = [&]() { return Builder.CreateIntMinReduce(Src, false); };
-      break;
+      return Builder.CreateIntMinReduce(Src, false);
     default:
       llvm_unreachable("Unexpected min/max reduction type");
     }
-    break;
   case Instruction::FCmp:
     assert((RdxKind == RecurKind::FMax || RdxKind == RecurKind::FMin) &&
            "Unexpected min/max reduction type");
     if (RdxKind == RecurKind::FMax)
-      BuildFunc = [&]() { return Builder.CreateFPMaxReduce(Src); };
+      return Builder.CreateFPMaxReduce(Src);
     else
-      BuildFunc = [&]() { return Builder.CreateFPMinReduce(Src); };
-    break;
+      return Builder.CreateFPMinReduce(Src);
   default:
     llvm_unreachable("Unhandled opcode");
   }
-  return BuildFunc();
 }
 
 Value *llvm::createTargetReduction(IRBuilderBase &B,
