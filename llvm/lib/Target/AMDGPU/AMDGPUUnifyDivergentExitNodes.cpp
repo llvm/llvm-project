@@ -392,8 +392,7 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
   // uniformly reached block with the "done" bit cleared.
   auto BlocksToUnify = std::move(ReturningBlocks);
   if (InsertExport) {
-    BlocksToUnify.insert(BlocksToUnify.end(), UniformlyReachedRetBlocks.begin(),
-                         UniformlyReachedRetBlocks.end());
+    llvm::append_range(BlocksToUnify, UniformlyReachedRetBlocks);
   }
 
   unifyReturnBlockSet(F, DTU, BlocksToUnify, InsertExport, TTI,

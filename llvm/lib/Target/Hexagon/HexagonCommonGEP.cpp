@@ -447,7 +447,7 @@ static void nodes_for_root(GepNode *Root, NodeChildrenMap &NCM,
       Work.erase(First);
       NodeChildrenMap::iterator CF = NCM.find(N);
       if (CF != NCM.end()) {
-        Work.insert(Work.end(), CF->second.begin(), CF->second.end());
+        llvm::append_range(Work, CF->second);
         Nodes.insert(CF->second.begin(), CF->second.end());
       }
     }
@@ -1145,7 +1145,7 @@ void HexagonCommonGEP::getAllUsersForNode(GepNode *Node, ValueVect &Values,
     NodeChildrenMap::iterator CF = NCM.find(N);
     if (CF != NCM.end()) {
       NodeVect &Cs = CF->second;
-      Work.insert(Work.end(), Cs.begin(), Cs.end());
+      llvm::append_range(Work, Cs);
     }
   }
 }
