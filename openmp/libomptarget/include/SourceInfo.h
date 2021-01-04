@@ -54,6 +54,13 @@ class SourceInfo {
       return std::string(reinterpret_cast<const char *>(name));
   }
 
+  std::string initStr(const ident_t *loc) {
+    if (!loc)
+      return ";unknown;unknown;0;0;;";
+    else
+      return std::string(reinterpret_cast<const char *>(loc->psource));
+  }
+
   /// Get n-th substring in an expression separated by ;.
   std::string getSubstring(const int n) const {
     std::size_t begin = sourceStr.find(';');
@@ -73,7 +80,7 @@ class SourceInfo {
 
 public:
   SourceInfo(const ident_t *loc)
-      : sourceStr(initStr(loc->psource)), name(getSubstring(1)),
+      : sourceStr(initStr(loc)), name(getSubstring(1)),
         filename(removePath(getSubstring(0))), line(std::stoi(getSubstring(2))),
         column(std::stoi(getSubstring(3))) {}
 

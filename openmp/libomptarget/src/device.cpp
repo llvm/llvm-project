@@ -49,10 +49,11 @@ DeviceTy::DeviceTy(RTLInfoTy *RTL)
       MemoryManager(nullptr) {}
 
 DeviceTy::~DeviceTy() {
-  if (DeviceID == -1 || getInfoLevel() < 1)
+  if (DeviceID == -1 || !(getInfoLevel() & OMP_INFOTYPE_DUMP_TABLE))
     return;
 
-  dumpTargetPointerMappings(*this);
+  ident_t loc = {0, 0, 0, 0, ";libomptarget;libomptarget;0;0;;"};
+  dumpTargetPointerMappings(&loc, *this);
 }
 
 int DeviceTy::associatePtr(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size) {
@@ -217,14 +218,16 @@ void *DeviceTy::getOrAllocTgtPtr(void *HstPtrBegin, void *HstPtrBase,
       HT.incRefCount();
 
     uintptr_t tp = HT.TgtPtrBegin + ((uintptr_t)HstPtrBegin - HT.HstPtrBegin);
-    INFO(DeviceID,
-         "Mapping exists%s with HstPtrBegin=" DPxMOD ", TgtPtrBegin=" DPxMOD
-         ", "
-         "Size=%" PRId64 ",%s RefCount=%s, Name=%s\n",
-         (IsImplicit ? " (implicit)" : ""), DPxPTR(HstPtrBegin), DPxPTR(tp),
-         Size, (UpdateRefCount ? " updated" : ""),
-         HT.isRefCountInf() ? "INF" : std::to_string(HT.getRefCount()).c_str(),
-         (HstPtrName) ? getNameFromMapping(HstPtrName).c_str() : "(null)");
+    if (getDebugLevel() || getInfoLevel() & OMP_INFOTYPE_MAPPING_EXISTS)
+      INFO(DeviceID,
+           "Mapping exists%s with HstPtrBegin=" DPxMOD ", TgtPtrBegin=" DPxMOD
+           ", "
+           "Size=%" PRId64 ",%s RefCount=%s, Name=%s\n",
+           (IsImplicit ? " (implicit)" : ""), DPxPTR(HstPtrBegin), DPxPTR(tp),
+           Size, (UpdateRefCount ? " updated" : ""),
+           HT.isRefCountInf() ? "INF"
+                              : std::to_string(HT.getRefCount()).c_str(),
+           (HstPtrName) ? getNameFromMapping(HstPtrName).c_str() : "unknown");
     rc = (void *)tp;
   } else if ((lr.Flags.ExtendsBefore || lr.Flags.ExtendsAfter) && !IsImplicit) {
     // Explicit extension of mapped data - not allowed.
