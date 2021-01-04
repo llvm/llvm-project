@@ -138,7 +138,7 @@ static int getLibCallID(const MachineFunction &MF,
     // RISCVRegisterInfo::hasReservedSpillSlot assigns negative frame indexes to
     // registers which can be saved by libcall.
     if (CS.getFrameIdx() < 0)
-      MaxReg = std::max(MaxReg.id(), CS.getReg());
+      MaxReg = std::max(MaxReg.id(), CS.getReg().id());
 
   if (MaxReg == RISCV::NoRegister)
     return -1;
