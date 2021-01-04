@@ -44,7 +44,8 @@ for.body6:                                        ; preds = %for.body6, %for.bod
   %conv10 = zext i1 %cmp9 to i32
   %and = and i32 %conv10, %g.138
   %inc = add i32 %h.039, 1
-  br i1 undef, label %for.inc11, label %for.body6
+  %exit = icmp eq i32 %inc, 20000
+  br i1 %exit, label %for.inc11, label %for.body6
 
 for.inc11:                                        ; preds = %for.body6
   %and.lcssa = phi i32 [ %and, %for.body6 ]

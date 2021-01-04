@@ -89,8 +89,10 @@ define i32 @zero_backedge_count_test(i32 %unknown_init, i32* %unknown_mem) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[UNKNOWN_NEXT:%.*]] = load volatile i32, i32* [[UNKNOWN_MEM:%.*]]
-; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[LEAVE:%.*]]
+; CHECK-NEXT:    [[UNKNOWN_NEXT:%.*]] = load volatile i32, i32* [[UNKNOWN_MEM:%.*]], align 4
+; CHECK-NEXT:    br i1 false, label [[LOOP_LOOP_CRIT_EDGE:%.*]], label [[LEAVE:%.*]]
+; CHECK:       loop.loop_crit_edge:
+; CHECK-NEXT:    unreachable
 ; CHECK:       leave:
 ; CHECK-NEXT:    ret i32 [[UNKNOWN_INIT:%.*]]
 ;
