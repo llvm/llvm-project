@@ -941,3 +941,40 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O2
 )
+
+add_entrypoint_object(
+  nextafter
+  SRCS
+    nextafter.cpp
+  HDRS
+    nextafter.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  nextafterf
+  SRCS
+    nextafterf.cpp
+  HDRS
+    nextafterf.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  nextafterl
+  SRCS
+    nextafterl.cpp
+  HDRS
+    nextafterl.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+

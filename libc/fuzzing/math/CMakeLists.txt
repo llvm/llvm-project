@@ -48,3 +48,15 @@ add_libc_fuzzer(
     libc.utils.FPUtil.fputil
     libc.utils.CPP.standalone_cpp
 )
+
+add_libc_fuzzer(
+  nextafter_differential_fuzz
+  SRCS
+    nextafter_differential_fuzz.cpp
+  HDRS
+    TwoInputSingleOutputDiff.h
+  DEPENDS
+    libc.src.math.nextafter
+    libc.src.math.nextafterf
+    libc.src.math.nextafterl
+)

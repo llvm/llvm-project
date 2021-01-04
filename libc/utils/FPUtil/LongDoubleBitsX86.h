@@ -36,7 +36,7 @@ template <> struct __attribute__((packed)) FPBits<long double> {
   static constexpr UIntType minSubnormal = UIntType(1);
   // Subnormal numbers include the implicit bit in x86 long double formats.
   static constexpr UIntType maxSubnormal =
-      (UIntType(1) << (MantissaWidth<long double>::value + 1)) - 1;
+      (UIntType(1) << (MantissaWidth<long double>::value)) - 1;
   static constexpr UIntType minNormal =
       (UIntType(3) << MantissaWidth<long double>::value);
   static constexpr UIntType maxNormal =
