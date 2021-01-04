@@ -62,7 +62,7 @@ define amdgpu_kernel void @v_clamp_add_neg_src_f32(float addrspace(1)* %out, flo
   %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
   %a = load float, float addrspace(1)* %gep0
   %floor = call float @llvm.floor.f32(float %a)
-  %neg.floor = fsub float -0.0, %floor
+  %neg.floor = fneg float %floor
   %max = call float @llvm.maxnum.f32(float %neg.floor, float 0.0)
   %clamp = call float @llvm.minnum.f32(float %max, float 1.0)
   store float %clamp, float addrspace(1)* %out.gep

@@ -296,7 +296,7 @@ define amdgpu_kernel void @combine_to_mad_fsub_2_f32(float addrspace(1)* noalias
   %c = load volatile float, float addrspace(1)* %gep.2
 
   %mul = fmul float %a, %b
-  %mul.neg = fsub float -0.0, %mul
+  %mul.neg = fneg float %mul
   %fma = fsub float %mul.neg, %c
 
   store float %fma, float addrspace(1)* %gep.out
@@ -338,7 +338,7 @@ define amdgpu_kernel void @combine_to_mad_fsub_2_f32_2uses_neg(float addrspace(1
   %d = load volatile float, float addrspace(1)* %gep.3
 
   %mul = fmul float %a, %b
-  %mul.neg = fsub float -0.0, %mul
+  %mul.neg = fneg float %mul
   %fma0 = fsub float %mul.neg, %c
   %fma1 = fsub float %mul.neg, %d
 
@@ -382,7 +382,7 @@ define amdgpu_kernel void @combine_to_mad_fsub_2_f32_2uses_mul(float addrspace(1
   %d = load volatile float, float addrspace(1)* %gep.3
 
   %mul = fmul float %a, %b
-  %mul.neg = fsub float -0.0, %mul
+  %mul.neg = fneg float %mul
   %fma0 = fsub float %mul.neg, %c
   %fma1 = fsub float %mul, %d
 
