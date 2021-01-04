@@ -492,12 +492,12 @@ m_Not(const SrcTy &&Src) {
 }
 
 template <typename Boundary1, typename Boundary2, typename Origin>
-struct MaxMin_match_helper {
+struct maxmin_match_helper {
   Boundary1 B1;
   Boundary2 B2;
   Origin O;
 
-  MaxMin_match_helper(const Boundary1 &FirstBoundary,
+  maxmin_match_helper(const Boundary1 &FirstBoundary,
                       const Boundary2 &SecondBoundary, const Origin &Or)
       : B1(FirstBoundary), B2(SecondBoundary), O(Or) {}
 
@@ -528,9 +528,9 @@ struct MaxMin_match_helper {
 };
 
 template <typename Boundary1, typename Boundary2, typename Origin>
-inline MaxMin_match_helper<Boundary1, Boundary2, Origin>
+inline maxmin_match_helper<Boundary1, Boundary2, Origin>
 m_MaxMin(const Boundary1 &B1, const Boundary2 &B2, const Origin &O) {
-  return MaxMin_match_helper<Boundary1, Boundary2, Origin>(B1, B2, O);
+  return maxmin_match_helper<Boundary1, Boundary2, Origin>(B1, B2, O);
 }
 
 } // namespace MIPatternMatch
