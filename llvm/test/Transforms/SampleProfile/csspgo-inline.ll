@@ -1,87 +1,38 @@
-; REQUIRES: asserts
-; Test for CSSPGO's SampleContextTracker to make sure context profile tree is promoted and merged properly
-; based on inline decision, so post inline counts are accurate.
+; Test for CSSPGO's new early inliner using priority queue
 
 ; Note that we need new pass manager to enable top-down processing for sample profile loader
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-inline-size -sample-profile-cold-inline-threshold=200 -debug-only=sample-context-tracker -o /dev/null 2>&1 | FileCheck %s --check-prefix=INLINE-ALL
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-prioritized-inline=0 -sample-profile-inline-size=0 -debug-only=sample-context-tracker -o /dev/null 2>&1 | FileCheck %s --check-prefix=INLINE-HOT
-
-
-; Test we inlined the following in top-down order and promot rest not inlined context profile into base profile
+; Test we inlined the following in top-down order with old inliner
 ;   main:3 @ _Z5funcAi
 ;   main:3 @ _Z5funcAi:1 @ _Z8funcLeafi
 ;   _Z5funcBi:1 @ _Z8funcLeafi
-; INLINE-ALL:      Getting base profile for function: main
-; INLINE-ALL-NEXT:   Merging context profile into base profile: main
-; INLINE-ALL-NEXT:   Found context tree root to promote: external:12 @ main
-; INLINE-ALL-NEXT:   Context promoted and merged to: main
-; INLINE-ALL-NEXT: Getting callee context for instr:   %call = tail call i32 @_Z5funcBi
-; INLINE-ALL-NEXT:   Callee context found: main:3.1 @ _Z5funcBi
-; INLINE-ALL-NEXT: Getting callee context for instr:   %call1 = tail call i32 @_Z5funcAi
-; INLINE-ALL-NEXT:   Callee context found: main:3 @ _Z5funcAi
-; INLINE-ALL-NEXT: Marking context profile as inlined: main:3 @ _Z5funcAi
-; INLINE-ALL-NEXT: Getting callee context for instr:   %call.i = tail call i32 @_Z8funcLeafi
-; INLINE-ALL-NEXT:   Callee context found: main:3 @ _Z5funcAi:1 @ _Z8funcLeafi
-; INLINE-ALL-NEXT: Marking context profile as inlined: main:3 @ _Z5funcAi:1 @ _Z8funcLeafi
-; INLINE-ALL-NEXT: Getting callee context for instr:   %call.i1 = tail call i32 @_Z3fibi
-; INLINE-ALL-NEXT: Getting callee context for instr:   %call5.i = tail call i32 @_Z3fibi
-; INLINE-ALL-NEXT: Getting base profile for function: _Z5funcAi
-; INLINE-ALL-NEXT:   Merging context profile into base profile: _Z5funcAi
-; INLINE-ALL-NEXT: Getting base profile for function: _Z5funcBi
-; INLINE-ALL-NEXT:   Merging context profile into base profile: _Z5funcBi
-; INLINE-ALL-NEXT:   Found context tree root to promote: external:10 @ _Z5funcBi
-; INLINE-ALL-NEXT:   Context promoted to: _Z5funcBi
-; INLINE-ALL-NEXT:   Found context tree root to promote: main:3.1 @ _Z5funcBi
-; INLINE-ALL-NEXT:   Context promoted and merged to: _Z5funcBi
-; INLINE-ALL-NEXT:   Context promoted to: _Z5funcBi:1 @ _Z8funcLeafi
-; INLINE-ALL-NEXT:   Found context tree root to promote: externalA:17 @ _Z5funcBi
-; INLINE-ALL-NEXT:   Context promoted and merged to: _Z5funcBi
-; INLINE-ALL-NEXT: Getting callee context for instr:   %call = tail call i32 @_Z8funcLeafi
-; INLINE-ALL-NEXT:   Callee context found: _Z5funcBi:1 @ _Z8funcLeafi
-; INLINE-ALL-NEXT: Marking context profile as inlined: _Z5funcBi:1 @ _Z8funcLeafi
-; INLINE-ALL-NEXT: Getting callee context for instr:   %call.i = tail call i32 @_Z3fibi
-; INLINE-ALL-NEXT: Getting callee context for instr:   %call5.i = tail call i32 @_Z3fibi
-; INLINE-ALL-NEXT: Getting base profile for function: _Z8funcLeafi
-; INLINE-ALL-NEXT:   Merging context profile into base profile: _Z8funcLeafi
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-inline-size -sample-profile-prioritized-inline=0 -profile-sample-accurate -S -pass-remarks=inline -o /dev/null 2>&1 | FileCheck %s --check-prefix=INLINE-BASE
+;
+; With new FDO early inliner, callee entry count is used to drive inlining instead of callee total samples, so we get less inlining for given profile
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-inline-size -profile-sample-accurate -S -pass-remarks=inline -o /dev/null 2>&1 | FileCheck %s --check-prefix=INLINE-NEW
+;
+; With new FDO early inliner, callee entry count is used to drive inlining instead of callee total samples, tuning hot cutoff can get us the same inlining
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-inline-size -profile-summary-cutoff-hot=999900 -profile-sample-accurate -S -pass-remarks=inline -o /dev/null 2>&1 | FileCheck %s --check-prefix=INLINE-BASE
+;
+; With new FDO early inliner, callee entry count is used to drive inlining instead of callee total samples, tuning cold sample profile inline threshold can get us the same inlining
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-inline-size -sample-profile-cold-inline-threshold=200 -profile-sample-accurate -S -pass-remarks=inline -o /dev/null 2>&1 | FileCheck %s --check-prefix=INLINE-BASE
+;
+; With new FDO early inliner and tuned cutoff, we can control inlining through size growth tuning knob.
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-inline-size -profile-summary-cutoff-hot=999900 -sample-profile-inline-limit-min=0 -sample-profile-inline-growth-limit=1 -profile-sample-accurate -S -pass-remarks=inline -o /dev/null 2>&1 | FileCheck %s --allow-empty --check-prefix=INLINE-NEW-LIMIT1
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-inline-size -profile-summary-cutoff-hot=999900 -sample-profile-inline-limit-min=10 -sample-profile-inline-growth-limit=1 -profile-sample-accurate -S -pass-remarks=inline -o /dev/null 2>&1 | FileCheck %s --check-prefix=INLINE-NEW-LIMIT2
 
-; Test we inlined the following in top-down order and promot rest not inlined context profile into base profile
-;   _Z5funcAi:1 @ _Z8funcLeafi
-;   _Z5funcBi:1 @ _Z8funcLeafi
-; INLINE-HOT:      Getting base profile for function: main
-; INLINE-HOT-NEXT:   Merging context profile into base profile: main
-; INLINE-HOT-NEXT:   Found context tree root to promote: external:12 @ main
-; INLINE-HOT-NEXT:   Context promoted and merged to: main
-; INLINE-HOT-NEXT: Getting callee context for instr:   %call = tail call i32 @_Z5funcBi
-; INLINE-HOT-NEXT:   Callee context found: main:3.1 @ _Z5funcBi
-; INLINE-HOT-NEXT: Getting callee context for instr:   %call1 = tail call i32 @_Z5funcAi
-; INLINE-HOT-NEXT:   Callee context found: main:3 @ _Z5funcAi
-; INLINE-HOT-NEXT: Getting base profile for function: _Z5funcAi
-; INLINE-HOT-NEXT:   Merging context profile into base profile: _Z5funcAi
-; INLINE-HOT-NEXT:   Found context tree root to promote: main:3 @ _Z5funcAi
-; INLINE-HOT-NEXT:   Context promoted to: _Z5funcAi
-; INLINE-HOT-NEXT:   Context promoted to: _Z5funcAi:1 @ _Z8funcLeafi
-; INLINE-HOT-NEXT:   Getting callee context for instr:   %call = tail call i32 @_Z8funcLeafi(i32 %add), !dbg !50
-; INLINE-HOT-NEXT:   Callee context found: _Z5funcAi:1 @ _Z8funcLeafi
-; INLINE-HOT-NEXT: Marking context profile as inlined: _Z5funcAi:1 @ _Z8funcLeafi
-; INLINE-HOT-NEXT: Getting callee context for instr:   %call.i = tail call i32 @_Z3fibi(i32 %tmp.i) #2, !dbg !62
-; INLINE-HOT-NEXT: Getting callee context for instr:   %call5.i = tail call i32 @_Z3fibi(i32 %tmp1.i) #2, !dbg !69
-; INLINE-HOT-NEXT: Getting base profile for function: _Z5funcBi
-; INLINE-HOT-NEXT:   Merging context profile into base profile: _Z5funcBi
-; INLINE-HOT-NEXT:   Found context tree root to promote: external:10 @ _Z5funcBi
-; INLINE-HOT-NEXT:   Context promoted to: _Z5funcBi
-; INLINE-HOT-NEXT:   Found context tree root to promote: main:3.1 @ _Z5funcBi
-; INLINE-HOT-NEXT:   Context promoted and merged to: _Z5funcBi
-; INLINE-HOT-NEXT:   Context promoted to: _Z5funcBi:1 @ _Z8funcLeafi
-; INLINE-HOT-NEXT:   Found context tree root to promote: externalA:17 @ _Z5funcBi
-; INLINE-HOT-NEXT:   Context promoted and merged to: _Z5funcBi
-; INLINE-HOT-NEXT: Getting callee context for instr:   %call = tail call i32 @_Z8funcLeafi
-; INLINE-HOT-NEXT:   Callee context found: _Z5funcBi:1 @ _Z8funcLeafi
-; INLINE-HOT-NEXT: Marking context profile as inlined: _Z5funcBi:1 @ _Z8funcLeafi
-; INLINE-HOT-NEXT: Getting callee context for instr:   %call.i = tail call i32 @_Z3fibi
-; INLINE-HOT-NEXT: Getting callee context for instr:   %call5.i = tail call i32 @_Z3fibi
-; INLINE-HOT-NEXT: Getting base profile for function: _Z8funcLeafi
-; INLINE-HOT-NEXT:   Merging context profile into base profile: _Z8funcLeafi
 
+; INLINE-BASE: remark: merged.cpp:14:10: _Z5funcAi inlined into main to match profiling context with (cost={{[0-9]+}}, threshold={{[0-9]+}}) at callsite main:3:10
+; INLINE-BASE: remark: merged.cpp:27:11: _Z8funcLeafi inlined into main to match profiling context with (cost={{[0-9]+}}, threshold={{[0-9]+}}) at callsite _Z5funcAi:1:11 @ main:3:10
+; INLINE-BASE: remark: merged.cpp:33:11: _Z8funcLeafi inlined into _Z5funcBi to match profiling context with (cost={{[0-9]+}}, threshold={{[0-9]+}}) at callsite _Z5funcBi:1:11
+
+; INLINE-NEW: remark: merged.cpp:14:10: _Z5funcAi inlined into main to match profiling context with (cost={{[0-9]+}}, threshold={{[0-9]+}}) at callsite main:3:10
+; INLINE-NEW-NOT: remark
+
+; INLINE-NEW-LIMIT1-NOT: remark
+
+; INLINE-NEW-LIMIT2: remark: merged.cpp:27:11: _Z8funcLeafi inlined into _Z5funcAi to match profiling context with (cost={{[0-9]+}}, threshold={{[0-9]+}}) at callsite _Z5funcAi:1:11
+; INLINE-NEW-LIMIT2: remark: merged.cpp:33:11: _Z8funcLeafi inlined into _Z5funcBi to match profiling context with (cost={{[0-9]+}}, threshold={{[0-9]+}}) at callsite _Z5funcBi:1:11
+; INLINE-NEW-LIMIT2-NOT: remark
 
 @factor = dso_local global i32 3, align 4, !dbg !0
 
