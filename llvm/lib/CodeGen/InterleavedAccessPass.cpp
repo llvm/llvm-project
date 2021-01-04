@@ -123,10 +123,11 @@ private:
   /// Given a number of shuffles of the form shuffle(binop(x,y)), convert them
   /// to binop(shuffle(x), shuffle(y)) to allow the formation of an
   /// interleaving load. Any newly created shuffles that operate on \p LI will
-  /// be added to \p Shuffles.
-  bool tryReplaceBinOpShuffles(ArrayRef<ShuffleVectorInst *> BinOpShuffles,
-                               SmallVectorImpl<ShuffleVectorInst *> &Shuffles,
-                               LoadInst *LI);
+  /// be added to \p Shuffles. Returns true, if any changes to the IR have been
+  /// made.
+  bool replaceBinOpShuffles(ArrayRef<ShuffleVectorInst *> BinOpShuffles,
+                            SmallVectorImpl<ShuffleVectorInst *> &Shuffles,
+                            LoadInst *LI);
 };
 
 } // end anonymous namespace.
@@ -369,14 +370,17 @@ bool InterleavedAccess::lowerInterleavedLoad(
   // use the shufflevector instructions instead of the load.
   if (!tryReplaceExtracts(Extracts, Shuffles))
     return false;
-  if (!tryReplaceBinOpShuffles(BinOpShuffles.getArrayRef(), Shuffles, LI))
-    return false;
+
+  bool BinOpShuffleChanged =
+      replaceBinOpShuffles(BinOpShuffles.getArrayRef(), Shuffles, LI);
 
   LLVM_DEBUG(dbgs() << "IA: Found an interleaved load: " << *LI << "\n");
 
   // Try to create target specific intrinsics to replace the load and shuffles.
-  if (!TLI->lowerInterleavedLoad(LI, Shuffles, Indices, Factor))
-    return false;
+  if (!TLI->lowerInterleavedLoad(LI, Shuffles, Indices, Factor)) {
+    // If Extracts is not empty, tryReplaceExtracts made changes earlier.
+    return !Extracts.empty() || BinOpShuffleChanged;
+  }
 
   for (auto SVI : Shuffles)
     DeadInsts.push_back(SVI);
@@ -385,7 +389,7 @@ bool InterleavedAccess::lowerInterleavedLoad(
   return true;
 }
 
-bool InterleavedAccess::tryReplaceBinOpShuffles(
+bool InterleavedAccess::replaceBinOpShuffles(
     ArrayRef<ShuffleVectorInst *> BinOpShuffles,
     SmallVectorImpl<ShuffleVectorInst *> &Shuffles, LoadInst *LI) {
   for (auto *SVI : BinOpShuffles) {
@@ -410,7 +414,8 @@ bool InterleavedAccess::tryReplaceBinOpShuffles(
     if (NewSVI2->getOperand(0) == LI)
       Shuffles.push_back(NewSVI2);
   }
-  return true;
+
+  return !BinOpShuffles.empty();
 }
 
 bool InterleavedAccess::tryReplaceExtracts(
