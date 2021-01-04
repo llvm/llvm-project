@@ -598,10 +598,9 @@ namespace llvm {
     /// @p End.
     bool isUndefIn(ArrayRef<SlotIndex> Undefs, SlotIndex Begin,
                    SlotIndex End) const {
-      return std::any_of(Undefs.begin(), Undefs.end(),
-                [Begin,End] (SlotIndex Idx) -> bool {
-                  return Begin <= Idx && Idx < End;
-                });
+      return llvm::any_of(Undefs, [Begin, End](SlotIndex Idx) -> bool {
+        return Begin <= Idx && Idx < End;
+      });
     }
 
     /// Flush segment set into the regular segment vector.
