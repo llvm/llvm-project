@@ -2688,6 +2688,27 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
         break;
       }
 
+      // VLST arguments are coerced to VLATs at the function boundary for
+      // ABI consistency. If this is a VLST that was coerced to
+      // a VLAT at the function boundary and the types match up, use
+      // llvm.experimental.vector.extract to convert back to the original
+      // VLST.
+      if (auto *VecTyTo = dyn_cast<llvm::FixedVectorType>(ConvertType(Ty))) {
+        auto *Coerced = Fn->getArg(FirstIRArg);
+        if (auto *VecTyFrom =
+                dyn_cast<llvm::ScalableVectorType>(Coerced->getType())) {
+          if (VecTyFrom->getElementType() == VecTyTo->getElementType()) {
+            llvm::Value *Zero = llvm::Constant::getNullValue(CGM.Int64Ty);
+
+            assert(NumIRArgs == 1);
+            Coerced->setName(Arg->getName() + ".coerce");
+            ArgVals.push_back(ParamValue::forDirect(Builder.CreateExtractVector(
+                VecTyTo, Coerced, Zero, "castFixedSve")));
+            break;
+          }
+        }
+      }
+
       Address Alloca = CreateMemTemp(Ty, getContext().getDeclAlign(Arg),
                                      Arg->getName());
 
