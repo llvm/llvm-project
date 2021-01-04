@@ -1,4 +1,5 @@
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -amdgpu-propagate-attributes-late %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-propagate-attributes-late %s | FileCheck %s
 
 ; CHECK: define internal void @max_flat_1_1024() #0 {
 define internal void @max_flat_1_1024() #0 {

@@ -492,6 +492,15 @@ void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
 void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
                                                        bool DebugPassManager) {
   PB.registerPipelineParsingCallback(
+      [this](StringRef PassName, ModulePassManager &PM,
+             ArrayRef<PassBuilder::PipelineElement>) {
+        if (PassName == "amdgpu-propagate-attributes-late") {
+          PM.addPass(AMDGPUPropagateAttributesLatePass(*this));
+          return true;
+        }
+        return false;
+      });
+  PB.registerPipelineParsingCallback(
       [this](StringRef PassName, FunctionPassManager &PM,
              ArrayRef<PassBuilder::PipelineElement>) {
         if (PassName == "amdgpu-simplifylib") {
@@ -514,13 +523,19 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
           PM.addPass(AMDGPULowerKernelAttributesPass());
           return true;
         }
+        if (PassName == "amdgpu-propagate-attributes-early") {
+          PM.addPass(AMDGPUPropagateAttributesEarlyPass(*this));
+          return true;
+        }
+
         return false;
       });
 
-  PB.registerPipelineStartEPCallback([DebugPassManager](
+  PB.registerPipelineStartEPCallback([this, DebugPassManager](
                                          ModulePassManager &PM,
                                          PassBuilder::OptimizationLevel Level) {
     FunctionPassManager FPM(DebugPassManager);
+    FPM.addPass(AMDGPUPropagateAttributesEarlyPass(*this));
     FPM.addPass(AMDGPUUseNativeCallsPass());
     if (EnableLibCallSimplify && Level != PassBuilder::OptimizationLevel::O0)
       FPM.addPass(AMDGPUSimplifyLibCallsPass());
@@ -528,12 +543,15 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
   });
 
   PB.registerPipelineEarlySimplificationEPCallback(
-      [](ModulePassManager &PM, PassBuilder::OptimizationLevel Level) {
+      [this](ModulePassManager &PM, PassBuilder::OptimizationLevel Level) {
         if (Level == PassBuilder::OptimizationLevel::O0)
           return;
 
         if (InternalizeSymbols) {
           PM.addPass(InternalizePass(mustPreserveGV));
+        }
+        PM.addPass(AMDGPUPropagateAttributesLatePass(*this));
+        if (InternalizeSymbols) {
           PM.addPass(GlobalDCEPass());
         }
       });
