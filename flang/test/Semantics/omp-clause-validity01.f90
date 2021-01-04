@@ -349,7 +349,8 @@ use omp_lib
 !                      collapse-clause
 
   a = 0.0
-  !$omp simd private(b) reduction(+:a)
+  !ERROR: TASK_REDUCTION clause is not allowed on the SIMD directive
+  !$omp simd private(b) reduction(+:a) task_reduction(+:a)
   do i = 1, N
      a = a + b + 3.14
   enddo
@@ -449,7 +450,8 @@ use omp_lib
   enddo
 
   !ERROR: At most one NUM_TASKS clause can appear on the TASKLOOP directive
-  !$omp taskloop num_tasks(3) num_tasks(2)
+  !ERROR: TASK_REDUCTION clause is not allowed on the TASKLOOP directive
+  !$omp taskloop num_tasks(3) num_tasks(2) task_reduction(*:a)
   do i = 1,N
     a = 3.14
   enddo
