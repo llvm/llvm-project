@@ -211,9 +211,9 @@ module LLVM_OrcSupport {
   requires cplusplus
 
   header "ExecutionEngine/Orc/OrcError.h"
-  header "ExecutionEngine/Orc/RPC/RPCUtils.h"
-  header "ExecutionEngine/Orc/RPC/RPCSerialization.h"
-  header "ExecutionEngine/Orc/RPC/RawByteChannel.h"
+  header "ExecutionEngine/Orc/Shared/RPCUtils.h"
+  header "ExecutionEngine/Orc/Shared/Serialization.h"
+  header "ExecutionEngine/Orc/Shared/RawByteChannel.h"
 
   export *
 }
