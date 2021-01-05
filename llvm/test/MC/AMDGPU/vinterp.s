@@ -1,3 +1,4 @@
+// XFAIL: *
 // RUN: llvm-mc -arch=amdgcn -mcpu=gfx1100 -show-encoding %s | FileCheck -check-prefix=GFX11 %s
 
 v_interp_p10_f32 v0, v1, v2, v3
