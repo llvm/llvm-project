@@ -377,6 +377,13 @@ class VirtRegMap;
     bool checkRegMaskInterference(LiveInterval &LI,
                                   BitVector &UsableRegs);
 
+    /// Get the interferenced slot index and its regmask for an live interval.
+    /// Return false if ther is no interference.
+    bool
+    getInterferenceRegMasks(LiveInterval &LI,
+                            SmallVectorImpl<SlotIndex> &RegSlots,
+                            SmallVectorImpl<const uint32_t *> &RegMaskBits);
+
     // Register unit functions.
     //
     // Fixed interference occurs when MachineInstrs use physregs directly
