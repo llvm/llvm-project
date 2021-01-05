@@ -147,6 +147,6 @@ declare i32 @__gxx_personality_v0(...)
 ; IS__CGSCC____: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind willreturn }
 ; IS__CGSCC____: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__CGSCC____: attributes #[[ATTR2]] = { nounwind willreturn }
-; IS__CGSCC____: attributes #[[ATTR3]] = { willreturn }
+; IS__CGSCC____: attributes #[[ATTR3]] = { readnone willreturn }
 ; IS__CGSCC____: attributes #[[ATTR4]] = { nounwind readnone willreturn }
 ;.

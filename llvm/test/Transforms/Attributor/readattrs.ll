@@ -518,7 +518,7 @@ define i32 @read_only_constant_mem() {
 ; IS__CGSCC____: attributes #[[ATTR8]] = { argmemonly nofree norecurse nounwind willreturn }
 ; IS__CGSCC____: attributes #[[ATTR9]] = { readnone }
 ; IS__CGSCC____: attributes #[[ATTR10]] = { nounwind readonly }
-; IS__CGSCC____: attributes #[[ATTR11]] = { willreturn }
+; IS__CGSCC____: attributes #[[ATTR11]] = { readnone willreturn }
 ; IS__CGSCC____: attributes #[[ATTR12]] = { willreturn writeonly }
 ; IS__CGSCC____: attributes #[[ATTR13]] = { readonly willreturn }
 ; IS__CGSCC____: attributes #[[ATTR14]] = { nounwind }

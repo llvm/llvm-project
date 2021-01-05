@@ -65,5 +65,5 @@ entry:
 ; IS__TUNIT____: attributes #[[ATTR0]] = { nofree nosync nounwind readnone willreturn }
 ;.
 ; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC____: attributes #[[ATTR1]] = { willreturn }
+; IS__CGSCC____: attributes #[[ATTR1]] = { readnone willreturn }
 ;.
