@@ -62,7 +62,7 @@ def simm5 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isInt<5>(Imm);}]> {
 
 def SImm5Plus1AsmOperand : AsmOperandClass {
   let Name = "SImm5Plus1";
-  let RenderMethod = "addSImm5Plus1Operands";
+  let RenderMethod = "addImmOperands";
   let DiagnosticType = "InvalidSImm5Plus1";
 }
 
@@ -604,18 +604,29 @@ def : InstAlias<"vmsgeu.vv $vd, $va, $vb$vm",
                 (VMSLEU_VV VR:$vd, VR:$vb, VR:$va, VMaskOp:$vm), 0>;
 def : InstAlias<"vmsge.vv $vd, $va, $vb$vm",
                 (VMSLE_VV VR:$vd, VR:$vb, VR:$va, VMaskOp:$vm), 0>;
-def : InstAlias<"vmsltu.vi $vd, $va, $imm$vm",
-                (VMSLEU_VI VR:$vd, VR:$va, simm5_plus1:$imm,
-                 VMaskOp:$vm), 0>;
-def : InstAlias<"vmslt.vi $vd, $va, $imm$vm",
-                (VMSLE_VI VR:$vd, VR:$va, simm5_plus1:$imm,
-                 VMaskOp:$vm), 0>;
-def : InstAlias<"vmsgeu.vi $vd, $va, $imm$vm",
-                (VMSGTU_VI VR:$vd, VR:$va, simm5_plus1:$imm,
-                 VMaskOp:$vm), 0>;
-def : InstAlias<"vmsge.vi $vd, $va, $imm$vm",
-                (VMSGT_VI VR:$vd, VR:$va, simm5_plus1:$imm,
-                 VMaskOp:$vm), 0>;
+
+let isCodeGenOnly = 0, isAsmParserOnly = 1, hasSideEffects = 0, mayLoad = 0,
+    mayStore = 0 in {
+// For unsigned comparisons we need to special case 0 immediate to maintain
+// the always true/false semantics we would invert if we just decremented the
+// immediate like we do for signed. To match the GNU assembler we will use
+// vmseq/vmsne.vv with the same register for both operands which we can't do
+// from an InstAlias.
+def PseudoVMSGEU_VI : Pseudo<(outs VR:$vd),
+                             (ins VR:$vs2, simm5_plus1:$imm, VMaskOp:$vm),
+                             [], "vmsgeu.vi", "$vd, $vs2, $imm$vm">;
+def PseudoVMSLTU_VI : Pseudo<(outs VR:$vd),
+                             (ins VR:$vs2, simm5_plus1:$imm, VMaskOp:$vm),
+                             [], "vmsltu.vi", "$vd, $vs2, $imm$vm">;
+// Handle signed with pseudos as well for more consistency in the
+// implementation.
+def PseudoVMSGE_VI : Pseudo<(outs VR:$vd),
+                            (ins VR:$vs2, simm5_plus1:$imm, VMaskOp:$vm),
+                            [], "vmsge.vi", "$vd, $vs2, $imm$vm">;
+def PseudoVMSLT_VI : Pseudo<(outs VR:$vd),
+                            (ins VR:$vs2, simm5_plus1:$imm, VMaskOp:$vm),
+                            [], "vmslt.vi", "$vd, $vs2, $imm$vm">;
+}
 
 let isAsmParserOnly = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 def PseudoVMSGEU_VX : Pseudo<(outs VR:$vd),
