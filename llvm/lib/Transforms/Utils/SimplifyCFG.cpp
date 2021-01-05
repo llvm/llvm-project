@@ -994,7 +994,8 @@ bool SimplifyCFGOpt::SimplifyEqualityComparisonWithOnlyPredecessor(
   BasicBlock *CheckEdge = TheRealDest;
   for (BasicBlock *Succ : successors(TIBB))
     if (Succ != CheckEdge) {
-      RemovedSuccs.insert(Succ);
+      if (Succ != TheRealDest)
+        RemovedSuccs.insert(Succ);
       Succ->removePredecessor(TIBB);
     } else
       CheckEdge = nullptr;
