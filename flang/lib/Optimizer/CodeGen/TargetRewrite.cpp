@@ -621,8 +621,8 @@ public:
   }
 
   inline bool functionArgIsSRet(unsigned index, mlir::FuncOp func) {
-    if (auto attr = func.getArgAttrOfType<mlir::BoolAttr>(index, "llvm.sret"))
-      return attr.getValue();
+    if (auto attr = func.getArgAttrOfType<mlir::UnitAttr>(index, "llvm.sret"))
+      return true;
     return false;
   }
 
@@ -645,7 +645,7 @@ public:
       bool argNo = newInTys.size();
       fixups.emplace_back(
           FixupTy::Codes::ReturnAsStore, argNo, [=](mlir::FuncOp func) {
-            func.setArgAttr(argNo, "llvm.sret", rewriter->getBoolAttr(true));
+            func.setArgAttr(argNo, "llvm.sret", rewriter->getUnitAttr());
           });
       newInTys.push_back(argTy);
       return;
@@ -676,8 +676,7 @@ public:
         if (auto align = attr.getAlignment())
           fixups.emplace_back(
               FixupTy::Codes::ArgumentAsLoad, argNo, [=](mlir::FuncOp func) {
-                func.setArgAttr(argNo, "llvm.byval",
-                                rewriter->getBoolAttr(true));
+                func.setArgAttr(argNo, "llvm.byval", rewriter->getUnitAttr());
                 func.setArgAttr(argNo, "llvm.align",
                                 rewriter->getIntegerAttr(
                                     rewriter->getIntegerType(32), align));
@@ -686,7 +685,7 @@ public:
           fixups.emplace_back(FixupTy::Codes::ArgumentAsLoad, newInTys.size(),
                               [=](mlir::FuncOp func) {
                                 func.setArgAttr(argNo, "llvm.byval",
-                                                rewriter->getBoolAttr(true));
+                                                rewriter->getUnitAttr());
                               });
       } else {
         if (auto align = attr.getAlignment())
