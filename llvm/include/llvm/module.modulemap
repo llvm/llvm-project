@@ -191,9 +191,9 @@ module LLVM_ExecutionEngine {
 
   // Exclude headers from LLVM_OrcSupport.
   exclude header "ExecutionEngine/Orc/OrcError.h"
-  exclude header "ExecutionEngine/Orc/RPC/RPCUtils.h"
-  exclude header "ExecutionEngine/Orc/RPC/RPCSerialization.h"
-  exclude header "ExecutionEngine/Orc/RPC/RawByteChannel.h"
+  exclude header "ExecutionEngine/Orc/Shared/RPCUtils.h"
+  exclude header "ExecutionEngine/Orc/Shared/Serialization.h"
+  exclude header "ExecutionEngine/Orc/Shared/RawByteChannel.h"
 
 }
 
@@ -211,9 +211,9 @@ module LLVM_OrcSupport {
   requires cplusplus
 
   header "ExecutionEngine/Orc/OrcError.h"
-  header "ExecutionEngine/Orc/RPC/RPCUtils.h"
-  header "ExecutionEngine/Orc/RPC/RPCSerialization.h"
-  header "ExecutionEngine/Orc/RPC/RawByteChannel.h"
+  header "ExecutionEngine/Orc/Shared/RPCUtils.h"
+  header "ExecutionEngine/Orc/Shared/Serialization.h"
+  header "ExecutionEngine/Orc/Shared/RawByteChannel.h"
 
   export *
 }
