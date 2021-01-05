@@ -184,7 +184,7 @@ class GPULaunchLowering : public ConvertOpToLLVMPattern<gpu::LaunchFuncOp> {
       kernelFunc = rewriter.create<LLVM::LLVMFuncOp>(
           rewriter.getUnknownLoc(), newKernelFuncName,
           LLVM::LLVMFunctionType::get(LLVM::LLVMVoidType::get(context),
-                                      ArrayRef<LLVM::LLVMType>()));
+                                      ArrayRef<Type>()));
       rewriter.setInsertionPoint(launchOp);
     }
 
@@ -234,7 +234,7 @@ class GPULaunchLowering : public ConvertOpToLLVMPattern<gpu::LaunchFuncOp> {
         OpBuilder::InsertionGuard guard(rewriter);
         rewriter.setInsertionPointToStart(module.getBody());
         dstGlobal = rewriter.create<LLVM::GlobalOp>(
-            loc, dstGlobalType.cast<LLVM::LLVMType>(),
+            loc, dstGlobalType,
             /*isConstant=*/false, LLVM::Linkage::Linkonce, name, Attribute());
         rewriter.setInsertionPoint(launchOp);
       }

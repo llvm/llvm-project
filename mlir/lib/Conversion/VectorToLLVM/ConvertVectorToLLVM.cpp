@@ -152,8 +152,7 @@ LogicalResult getMemRefAlignment(LLVMTypeConverter &typeConverter,
   // stop depending on translation.
   llvm::LLVMContext llvmContext;
   align = LLVM::TypeToLLVMIRTranslator(llvmContext)
-              .getPreferredAlignment(elementTy.cast<LLVM::LLVMType>(),
-                                     typeConverter.getDataLayout());
+              .getPreferredAlignment(elementTy, typeConverter.getDataLayout());
   return success();
 }
 
@@ -193,7 +192,7 @@ static LogicalResult getBasePtr(ConversionPatternRewriter &rewriter,
   Value base;
   if (failed(getBase(rewriter, loc, memref, memRefType, base)))
     return failure();
-  auto pType = LLVM::LLVMPointerType::get(type.template cast<LLVM::LLVMType>());
+  auto pType = LLVM::LLVMPointerType::get(type);
   base = rewriter.create<LLVM::BitcastOp>(loc, pType, base);
   ptr = rewriter.create<LLVM::GEPOp>(loc, pType, base);
   return success();
@@ -1401,7 +1400,7 @@ private:
 
   // Helper for printer method declaration (first hit) and lookup.
   static Operation *getPrint(Operation *op, StringRef name,
-                             ArrayRef<LLVM::LLVMType> params) {
+                             ArrayRef<Type> params) {
     auto module = op->getParentOfType<ModuleOp>();
     auto func = module.lookupSymbol<LLVM::LLVMFuncOp>(name);
     if (func)

@@ -67,11 +67,9 @@ using llvm_alloca = ValueBuilder<LLVM::AllocaOp>;
 using llvm_return = OperationBuilder<LLVM::ReturnOp>;
 
 template <typename T>
-static LLVMType getPtrToElementType(T containerType,
-                                    LLVMTypeConverter &lowering) {
-  return lowering.convertType(containerType.getElementType())
-      .template cast<LLVMType>()
-      .getPointerTo();
+static Type getPtrToElementType(T containerType, LLVMTypeConverter &lowering) {
+  return LLVMPointerType::get(
+      lowering.convertType(containerType.getElementType()));
 }
 
 /// Convert the given range descriptor type to the LLVMIR dialect.
@@ -84,8 +82,7 @@ static LLVMType getPtrToElementType(T containerType,
 /// };
 static Type convertRangeType(RangeType t, LLVMTypeConverter &converter) {
   auto *context = t.getContext();
-  auto int64Ty = converter.convertType(IntegerType::get(context, 64))
-                     .cast<LLVM::LLVMType>();
+  auto int64Ty = converter.convertType(IntegerType::get(context, 64));
   return LLVMStructType::getLiteral(context, {int64Ty, int64Ty, int64Ty});
 }
 
@@ -206,8 +203,7 @@ public:
     BaseViewConversionHelper baseDesc(adaptor.view());
 
     auto memRefType = sliceOp.getBaseViewType();
-    auto int64Ty = typeConverter->convertType(rewriter.getIntegerType(64))
-                       .cast<LLVM::LLVMType>();
+    auto int64Ty = typeConverter->convertType(rewriter.getIntegerType(64));
 
     BaseViewConversionHelper desc(
         typeConverter->convertType(sliceOp.getShapedType()));
