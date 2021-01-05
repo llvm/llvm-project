@@ -6382,35 +6382,6 @@ bool SLPVectorizerPass::tryToVectorize(Instruction *I, BoUpSLP &R) {
   return false;
 }
 
-/// Generate a shuffle mask to be used in a reduction tree.
-///
-/// \param VecLen The length of the vector to be reduced.
-/// \param NumEltsToRdx The number of elements that should be reduced in the
-///        vector.
-/// \param IsPairwise Whether the reduction is a pairwise or splitting
-///        reduction. A pairwise reduction will generate a mask of
-///        <0,2,...> or <1,3,..> while a splitting reduction will generate
-///        <2,3, undef,undef> for a vector of 4 and NumElts = 2.
-/// \param IsLeft True will generate a mask of even elements, odd otherwise.
-static SmallVector<int, 32> createRdxShuffleMask(unsigned VecLen,
-                                                 unsigned NumEltsToRdx,
-                                                 bool IsPairwise, bool IsLeft) {
-  assert((IsPairwise || !IsLeft) && "Don't support a <0,1,undef,...> mask");
-
-  SmallVector<int, 32> ShuffleMask(VecLen, -1);
-
-  if (IsPairwise)
-    // Build a mask of 0, 2, ... (left) or 1, 3, ... (right).
-    for (unsigned i = 0; i != NumEltsToRdx; ++i)
-      ShuffleMask[i] = 2 * i + !IsLeft;
-  else
-    // Move the upper half of the vector to the lower half.
-    for (unsigned i = 0; i != NumEltsToRdx; ++i)
-      ShuffleMask[i] = NumEltsToRdx + i;
-
-  return ShuffleMask;
-}
-
 namespace {
 
 /// Model horizontal reductions.
@@ -6729,10 +6700,6 @@ class HorizontalReduction {
 
   /// The operation data for the leaf values that we perform a reduction on.
   OperationData RdxLeafVal;
-
-  /// Should we model this reduction as a pairwise reduction tree or a tree that
-  /// splits the vector in halves and adds those halves.
-  bool IsPairwiseReduction = false;
 
   /// Checks if the ParentStackElem.first should be marked as a reduction
   /// operation with an extra argument or as extra argument itself.
@@ -7170,7 +7137,6 @@ private:
     Type *ScalarTy = FirstReducedVal->getType();
     auto *VecTy = FixedVectorType::get(ScalarTy, ReduxWidth);
 
-    int PairwiseRdxCost;
     int SplittingRdxCost;
     switch (RdxTreeInst.getKind()) {
     case RecurKind::Add:
@@ -7180,9 +7146,6 @@ private:
     case RecurKind::Xor:
     case RecurKind::FAdd:
     case RecurKind::FMul:
-      PairwiseRdxCost =
-          TTI->getArithmeticReductionCost(RdxTreeInst.getOpcode(), VecTy,
-                                          /*IsPairwiseForm=*/true);
       SplittingRdxCost =
           TTI->getArithmeticReductionCost(RdxTreeInst.getOpcode(), VecTy,
                                           /*IsPairwiseForm=*/false);
@@ -7194,9 +7157,6 @@ private:
       auto *VecCondTy = cast<VectorType>(CmpInst::makeCmpResultType(VecTy));
       RecurKind Kind = RdxTreeInst.getKind();
       bool IsUnsigned = Kind == RecurKind::UMax || Kind == RecurKind::UMin;
-      PairwiseRdxCost =
-          TTI->getMinMaxReductionCost(VecTy, VecCondTy,
-                                      /*IsPairwiseForm=*/true, IsUnsigned);
       SplittingRdxCost =
           TTI->getMinMaxReductionCost(VecTy, VecCondTy,
                                       /*IsPairwiseForm=*/false, IsUnsigned);
@@ -7205,9 +7165,6 @@ private:
     default:
       llvm_unreachable("Expected arithmetic or min/max reduction operation");
     }
-
-    IsPairwiseReduction = PairwiseRdxCost < SplittingRdxCost;
-    int VecReduxCost = IsPairwiseReduction ? PairwiseRdxCost : SplittingRdxCost;
 
     int ScalarReduxCost = 0;
     switch (RdxTreeInst.getKind()) {
@@ -7235,13 +7192,12 @@ private:
     }
     ScalarReduxCost *= (ReduxWidth - 1);
 
-    LLVM_DEBUG(dbgs() << "SLP: Adding cost " << VecReduxCost - ScalarReduxCost
+    LLVM_DEBUG(dbgs() << "SLP: Adding cost "
+                      << SplittingRdxCost - ScalarReduxCost
                       << " for reduction that starts with " << *FirstReducedVal
-                      << " (It is a "
-                      << (IsPairwiseReduction ? "pairwise" : "splitting")
-                      << " reduction)\n");
+                      << " (It is a splitting reduction)\n");
 
-    return VecReduxCost - ScalarReduxCost;
+    return SplittingRdxCost - ScalarReduxCost;
   }
 
   /// Emit a horizontal reduction of the vectorized value.
@@ -7251,30 +7207,12 @@ private:
     assert(isPowerOf2_32(ReduxWidth) &&
            "We only handle power-of-two reductions for now");
 
-    if (!IsPairwiseReduction) {
-      // FIXME: The builder should use an FMF guard. It should not be hard-coded
-      //        to 'fast'.
-      assert(Builder.getFastMathFlags().isFast() && "Expected 'fast' FMF");
-      return createSimpleTargetReduction(Builder, TTI, VectorizedValue,
-                                         RdxTreeInst.getKind(),
-                                         ReductionOps.back());
-    }
-
-    Value *TmpVec = VectorizedValue;
-    for (unsigned i = ReduxWidth / 2; i != 0; i >>= 1) {
-      auto LeftMask = createRdxShuffleMask(ReduxWidth, i, true, true);
-      auto RightMask = createRdxShuffleMask(ReduxWidth, i, true, false);
-
-      Value *LeftShuf =
-          Builder.CreateShuffleVector(TmpVec, LeftMask, "rdx.shuf.l");
-      Value *RightShuf =
-          Builder.CreateShuffleVector(TmpVec, RightMask, "rdx.shuf.r");
-      TmpVec = RdxTreeInst.createOp(Builder, LeftShuf, RightShuf, "op.rdx",
-                                    ReductionOps);
-    }
-
-    // The result is in the first element of the vector.
-    return Builder.CreateExtractElement(TmpVec, Builder.getInt32(0));
+    // FIXME: The builder should use an FMF guard. It should not be hard-coded
+    //        to 'fast'.
+    assert(Builder.getFastMathFlags().isFast() && "Expected 'fast' FMF");
+    return createSimpleTargetReduction(Builder, TTI, VectorizedValue,
+                                       RdxTreeInst.getKind(),
+                                       ReductionOps.back());
   }
 };
 

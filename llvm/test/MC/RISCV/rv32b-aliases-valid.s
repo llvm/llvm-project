@@ -16,7 +16,7 @@
 #                        aliases disabled
 
 # CHECK-S-OBJ-NOALIAS: andi t0, t1, 255
-# CHECK-S-OBJ: zext.b t0, t1
+# CHECK-S-OBJ: andi t0, t1, 255
 zext.b x5, x6
 
 # CHECK-S-OBJ-NOALIAS: pack t0, t1, zero

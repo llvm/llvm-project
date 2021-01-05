@@ -1158,6 +1158,8 @@ bool MatchASTVisitor::TraverseDecl(Decl *DeclNode) {
   } else if (const auto *FD = dyn_cast<FunctionDecl>(DeclNode)) {
     if (FD->isDefaulted())
       ScopedChildren = true;
+    if (FD->isTemplateInstantiation())
+      ScopedTraversal = true;
   }
 
   ASTNodeNotSpelledInSourceScope RAII1(this, ScopedTraversal);

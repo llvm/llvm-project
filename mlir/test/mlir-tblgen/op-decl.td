@@ -81,6 +81,7 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK:   uint32_t attr1();
 // CHECK:   ::mlir::FloatAttr attr2Attr()
 // CHECK:   ::llvm::Optional< ::llvm::APFloat > attr2();
+// CHECK:   Attribute removeAttr2Attr();
 // CHECK:   static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, Value val);
 // CHECK:   static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, int integer = 0);
 // CHECK:   static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::Type r, ::mlir::TypeRange s, ::mlir::Value a, ::mlir::ValueRange b, ::mlir::IntegerAttr attr1, /*optional*/::mlir::FloatAttr attr2, unsigned someRegionsCount)
