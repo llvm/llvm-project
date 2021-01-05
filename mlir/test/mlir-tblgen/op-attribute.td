@@ -77,6 +77,12 @@ def AOp : NS_Op<"a_op", []> {
 // DEF:      void AOp::cAttrAttr(some-attr-kind attr) {
 // DEF-NEXT:   (*this)->setAttr("cAttr", attr);
 
+// Test remove methods
+// ---
+
+// DEF: Attribute AOp::removeCAttrAttr() {
+// DEF-NEXT: return (*this)->removeAttr("cAttr");
+
 // Test build methods
 // ---
 
@@ -264,6 +270,9 @@ def UnitAttrOp : NS_Op<"unit_attr_op", []> {
 // DEF-LABEL: UnitAttrOp definitions
 // DEF: bool UnitAttrOp::attr() {
 // DEF:   return {{.*}} != nullptr
+
+// DEF: Attribute UnitAttrOp::removeAttrAttr() {
+// DEF-NEXT:   (*this)->removeAttr("attr");
 
 // DEF: build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, /*optional*/::mlir::UnitAttr attr)
 
