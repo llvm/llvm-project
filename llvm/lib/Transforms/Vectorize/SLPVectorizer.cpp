@@ -7255,9 +7255,9 @@ private:
       // FIXME: The builder should use an FMF guard. It should not be hard-coded
       //        to 'fast'.
       assert(Builder.getFastMathFlags().isFast() && "Expected 'fast' FMF");
-      return createSimpleTargetReduction(
-          Builder, TTI, RdxTreeInst.getOpcode(), VectorizedValue,
-          RdxTreeInst.getKind(), ReductionOps.back());
+      return createSimpleTargetReduction(Builder, TTI, VectorizedValue,
+                                         RdxTreeInst.getKind(),
+                                         ReductionOps.back());
     }
 
     Value *TmpVec = VectorizedValue;
