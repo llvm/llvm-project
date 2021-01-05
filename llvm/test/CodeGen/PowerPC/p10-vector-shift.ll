@@ -13,6 +13,7 @@
 define dso_local <1 x i128> @test_vec_vslq(<1 x i128> %a, <1 x i128> %b) {
 ; CHECK-LABEL: test_vec_vslq:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xxswapd v3, v3
 ; CHECK-NEXT:    vslq v2, v2, v3
 ; CHECK-NEXT:    blr
 entry:
@@ -24,6 +25,7 @@ entry:
 define dso_local <1 x i128> @test_vec_vsrq(<1 x i128> %a, <1 x i128> %b) {
 ; CHECK-LABEL: test_vec_vsrq:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xxswapd v3, v3
 ; CHECK-NEXT:    vsrq v2, v2, v3
 ; CHECK-NEXT:    blr
 entry:
@@ -35,6 +37,7 @@ entry:
 define dso_local <1 x i128> @test_vec_vsraq(<1 x i128> %a, <1 x i128> %b) {
 ; CHECK-LABEL: test_vec_vsraq:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xxswapd v3, v3
 ; CHECK-NEXT:    vsraq v2, v2, v3
 ; CHECK-NEXT:    blr
 entry:
@@ -46,6 +49,7 @@ entry:
 define dso_local <1 x i128> @test_vec_vslq2(<1 x i128> %a, <1 x i128> %b) {
 ; CHECK-LABEL: test_vec_vslq2:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xxswapd v3, v3
 ; CHECK-NEXT:    vslq v2, v2, v3
 ; CHECK-NEXT:    blr
 entry:
@@ -56,6 +60,7 @@ entry:
 define dso_local <1 x i128> @test_vec_vsrq2(<1 x i128> %a, <1 x i128> %b) {
 ; CHECK-LABEL: test_vec_vsrq2:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xxswapd v3, v3
 ; CHECK-NEXT:    vsrq v2, v2, v3
 ; CHECK-NEXT:    blr
 entry:
@@ -66,6 +71,7 @@ entry:
 define dso_local <1 x i128> @test_vec_vsraq2(<1 x i128> %a, <1 x i128> %b) {
 ; CHECK-LABEL: test_vec_vsraq2:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xxswapd v3, v3
 ; CHECK-NEXT:    vsraq v2, v2, v3
 ; CHECK-NEXT:    blr
 entry:
