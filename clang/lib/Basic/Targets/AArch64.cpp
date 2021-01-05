@@ -520,6 +520,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasLSE = true;
     if (Feature == "+ls64")
       HasLS64 = true;
+    if (Feature == "+flagm")
+      HasFlagM = true;
   }
 
   setDataLayout();
