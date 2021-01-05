@@ -379,6 +379,14 @@ Flags can be combined with '|' example \"IgnoreCase | BasicRegex\"
         add_matcher('*', name, 'Matcher<*>, ..., Matcher<*>', comment)
         return
 
+    m = re.match(
+        r"""^.*MapAnyOfMatcher<.*>\s*
+              ([a-zA-Z]*);$""",
+        declaration, flags=re.X)
+    if m:
+      name = m.groups()[0]
+      add_matcher('*', name, 'Matcher<*>...Matcher<*>', comment)
+      return
 
     # Parse free standing matcher functions, like:
     #   Matcher<ResultType> Name(Matcher<ArgumentType> InnerMatcher) {
