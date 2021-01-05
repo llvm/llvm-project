@@ -5,6 +5,7 @@
 ; RUN: opt -O3 -S < %s | FileCheck -check-prefixes=OPT,OPT-WXX %s
 ; RUN: opt -mtriple=amdgcn-- -O3 -S < %s | FileCheck -check-prefixes=OPT,OPT-WXX %s
 ; RUN: opt -mtriple=amdgcn-- -O3 -mattr=+wavefrontsize32 -S < %s | FileCheck -check-prefixes=OPT,OPT-W32 %s
+; RUN: opt -mtriple=amdgcn-- -passes='default<O3>' -mattr=+wavefrontsize32 -S < %s | FileCheck -check-prefixes=OPT,OPT-W32 %s
 ; RUN: opt -mtriple=amdgcn-- -O3 -mattr=+wavefrontsize64 -S < %s | FileCheck -check-prefixes=OPT,OPT-W64 %s
 ; RUN: opt -mtriple=amdgcn-- -mcpu=tonga -O3 -S < %s | FileCheck -check-prefixes=OPT,OPT-W64 %s
 ; RUN: opt -mtriple=amdgcn-- -mcpu=gfx1010 -O3 -mattr=+wavefrontsize32,-wavefrontsize64 -S < %s | FileCheck -check-prefixes=OPT,OPT-W32 %s

@@ -494,13 +494,38 @@ void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
   });
 }
 
+void AMDGPUTargetMachine::registerAliasAnalyses(AAManager &AAM) {
+  AAM.registerFunctionAnalysis<AMDGPUAA>();
+}
+
 void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
                                                        bool DebugPassManager) {
+  PB.registerPipelineParsingCallback(
+      [this](StringRef PassName, ModulePassManager &PM,
+             ArrayRef<PassBuilder::PipelineElement>) {
+        if (PassName == "amdgpu-propagate-attributes-late") {
+          PM.addPass(AMDGPUPropagateAttributesLatePass(*this));
+          return true;
+        }
+        if (PassName == "amdgpu-unify-metadata") {
+          PM.addPass(AMDGPUUnifyMetadataPass());
+          return true;
+        }
+        if (PassName == "amdgpu-printf-runtime-binding") {
+          PM.addPass(AMDGPUPrintfRuntimeBindingPass());
+          return true;
+        }
+        if (PassName == "amdgpu-always-inline") {
+          PM.addPass(AMDGPUAlwaysInlinePass());
+          return true;
+        }
+        return false;
+      });
   PB.registerPipelineParsingCallback(
       [this](StringRef PassName, FunctionPassManager &PM,
              ArrayRef<PassBuilder::PipelineElement>) {
         if (PassName == "amdgpu-simplifylib") {
-          PM.addPass(AMDGPUSimplifyLibCallsPass());
+          PM.addPass(AMDGPUSimplifyLibCallsPass(*this));
           return true;
         }
         if (PassName == "amdgpu-usenative") {
@@ -519,28 +544,54 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
           PM.addPass(AMDGPULowerKernelAttributesPass());
           return true;
         }
+        if (PassName == "amdgpu-propagate-attributes-early") {
+          PM.addPass(AMDGPUPropagateAttributesEarlyPass(*this));
+          return true;
+        }
+
         return false;
       });
 
-  PB.registerPipelineStartEPCallback([DebugPassManager](
+  PB.registerAnalysisRegistrationCallback([](FunctionAnalysisManager &FAM) {
+    FAM.registerPass([&] { return AMDGPUAA(); });
+  });
+
+  PB.registerParseAACallback([](StringRef AAName, AAManager &AAM) {
+    if (AAName == "amdgpu-aa") {
+      AAM.registerFunctionAnalysis<AMDGPUAA>();
+      return true;
+    }
+    return false;
+  });
+
+  PB.registerPipelineStartEPCallback([this, DebugPassManager](
                                          ModulePassManager &PM,
                                          PassBuilder::OptimizationLevel Level) {
     FunctionPassManager FPM(DebugPassManager);
+    FPM.addPass(AMDGPUPropagateAttributesEarlyPass(*this));
     FPM.addPass(AMDGPUUseNativeCallsPass());
     if (EnableLibCallSimplify && Level != PassBuilder::OptimizationLevel::O0)
-      FPM.addPass(AMDGPUSimplifyLibCallsPass());
+      FPM.addPass(AMDGPUSimplifyLibCallsPass(*this));
     PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
   });
 
   PB.registerPipelineEarlySimplificationEPCallback(
-      [](ModulePassManager &PM, PassBuilder::OptimizationLevel Level) {
+      [this](ModulePassManager &PM, PassBuilder::OptimizationLevel Level) {
         if (Level == PassBuilder::OptimizationLevel::O0)
           return;
 
+        PM.addPass(AMDGPUUnifyMetadataPass());
+        PM.addPass(AMDGPUPrintfRuntimeBindingPass());
+
         if (InternalizeSymbols) {
           PM.addPass(InternalizePass(mustPreserveGV));
+        }
+        PM.addPass(AMDGPUPropagateAttributesLatePass(*this));
+        if (InternalizeSymbols) {
           PM.addPass(GlobalDCEPass());
         }
+        if (EarlyInlineAll && !EnableFunctionCalls)
+          PM.addPass(AMDGPUAlwaysInlinePass());
       });
 
   PB.registerCGSCCOptimizerLateEPCallback(

@@ -1,5 +1,7 @@
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -O1 < %s | FileCheck -check-prefixes=OPT,OPT-EXT %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes='default<O1>' < %s | FileCheck -check-prefixes=OPT,OPT-EXT %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -O1 --amdgpu-internalize-symbols < %s | FileCheck -check-prefixes=OPT,OPT-INT %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes='default<O1>' --amdgpu-internalize-symbols < %s | FileCheck -check-prefixes=OPT,OPT-INT %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefix=LLC %s
 
 ; OPT: declare void @foo4() local_unnamed_addr #0

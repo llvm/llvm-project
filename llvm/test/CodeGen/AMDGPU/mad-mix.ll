@@ -109,7 +109,7 @@ define float @v_mad_mix_f32_negf16lo_f16lo_f16lo(half %src0, half %src1, half %s
   %src0.ext = fpext half %src0 to float
   %src1.ext = fpext half %src1 to float
   %src2.ext = fpext half %src2 to float
-  %src0.ext.neg = fsub float -0.0, %src0.ext
+  %src0.ext.neg = fneg float %src0.ext
   %result = tail call float @llvm.fmuladd.f32(float %src0.ext.neg, float %src1.ext, float %src2.ext)
   ret float %result
 }
@@ -143,7 +143,7 @@ define float @v_mad_mix_f32_negabsf16lo_f16lo_f16lo(half %src0, half %src1, half
   %src1.ext = fpext half %src1 to float
   %src2.ext = fpext half %src2 to float
   %src0.ext.abs = call float @llvm.fabs.f32(float %src0.ext)
-  %src0.ext.neg.abs = fsub float -0.0, %src0.ext.abs
+  %src0.ext.neg.abs = fneg float %src0.ext.abs
   %result = tail call float @llvm.fmuladd.f32(float %src0.ext.neg.abs, float %src1.ext, float %src2.ext)
   ret float %result
 }
@@ -172,7 +172,7 @@ define float @v_mad_mix_f32_f16lo_f16lo_f32(half %src0, half %src1, float %src2)
 define float @v_mad_mix_f32_f16lo_f16lo_negf32(half %src0, half %src1, float %src2) #0 {
   %src0.ext = fpext half %src0 to float
   %src1.ext = fpext half %src1 to float
-  %src2.neg = fsub float -0.0, %src2
+  %src2.neg = fneg float %src2
   %result = tail call float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2.neg)
   ret float %result
 }
@@ -203,7 +203,7 @@ define float @v_mad_mix_f32_f16lo_f16lo_negabsf32(half %src0, half %src1, float 
   %src0.ext = fpext half %src0 to float
   %src1.ext = fpext half %src1 to float
   %src2.abs = call float @llvm.fabs.f32(float %src2)
-  %src2.neg.abs = fsub float -0.0, %src2.abs
+  %src2.neg.abs = fneg float %src2.abs
   %result = tail call float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2.neg.abs)
   ret float %result
 }

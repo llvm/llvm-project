@@ -243,7 +243,7 @@ bool DwarfEHPrepare::InsertUnwindResumeCalls() {
   new UnreachableInst(Ctx, UnwindBB);
 
   if (DTU && RequireAndPreserveDomTree)
-    DTU->applyUpdatesPermissive(Updates);
+    DTU->applyUpdates(Updates);
 
   return true;
 }
