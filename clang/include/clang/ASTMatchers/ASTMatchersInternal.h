@@ -2089,6 +2089,9 @@ inline Optional<StringRef> getOpName(const UnaryOperator &Node) {
 inline Optional<StringRef> getOpName(const BinaryOperator &Node) {
   return Node.getOpcodeStr();
 }
+inline StringRef getOpName(const CXXRewrittenBinaryOperator &Node) {
+  return Node.getOpcodeStr();
+}
 inline Optional<StringRef> getOpName(const CXXOperatorCallExpr &Node) {
   auto optBinaryOpcode = equivalentBinaryOperator(Node);
   if (!optBinaryOpcode) {
@@ -2108,9 +2111,10 @@ template <typename T, typename ArgT = std::vector<std::string>>
 class HasAnyOperatorNameMatcher : public SingleNodeMatcherInterface<T> {
   static_assert(std::is_same<T, BinaryOperator>::value ||
                     std::is_same<T, CXXOperatorCallExpr>::value ||
+                    std::is_same<T, CXXRewrittenBinaryOperator>::value ||
                     std::is_same<T, UnaryOperator>::value,
-                "Matcher only supports `BinaryOperator`, `UnaryOperator` and "
-                "`CXXOperatorCallExpr`");
+                "Matcher only supports `BinaryOperator`, `UnaryOperator`, "
+                "`CXXOperatorCallExpr` and `CXXRewrittenBinaryOperator`");
   static_assert(std::is_same<ArgT, std::vector<std::string>>::value,
                 "Matcher ArgT must be std::vector<std::string>");
 
@@ -2128,12 +2132,33 @@ public:
   }
 
 private:
+  static Optional<StringRef> getOpName(const UnaryOperator &Node) {
+    return Node.getOpcodeStr(Node.getOpcode());
+  }
+  static Optional<StringRef> getOpName(const BinaryOperator &Node) {
+    return Node.getOpcodeStr();
+  }
+  static StringRef getOpName(const CXXRewrittenBinaryOperator &Node) {
+    return Node.getOpcodeStr();
+  }
+  static Optional<StringRef> getOpName(const CXXOperatorCallExpr &Node) {
+    auto optBinaryOpcode = equivalentBinaryOperator(Node);
+    if (!optBinaryOpcode) {
+      auto optUnaryOpcode = equivalentUnaryOperator(Node);
+      if (!optUnaryOpcode)
+        return None;
+      return UnaryOperator::getOpcodeStr(*optUnaryOpcode);
+    }
+    return BinaryOperator::getOpcodeStr(*optBinaryOpcode);
+  }
+
   const std::vector<std::string> Names;
 };
 
 using HasOpNameMatcher = PolymorphicMatcherWithParam1<
     HasAnyOperatorNameMatcher, std::vector<std::string>,
-    void(TypeList<BinaryOperator, CXXOperatorCallExpr, UnaryOperator>)>;
+    void(TypeList<BinaryOperator, CXXOperatorCallExpr,
+                  CXXRewrittenBinaryOperator, UnaryOperator>)>;
 
 HasOpNameMatcher hasAnyOperatorNameFunc(ArrayRef<const StringRef *> NameRefs);
 
