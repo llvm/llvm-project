@@ -288,7 +288,7 @@ define float @fsub_fneg_fpext_fmul_f16_to_f32(half %x, half %y, float %z) #0 {
 entry:
   %mul = fmul half %x, %y
   %mul.ext = fpext half %mul to float
-  %neg.mul.ext = fsub float -0.0, %mul.ext
+  %neg.mul.ext = fneg float %mul.ext
   %add = fsub float %neg.mul.ext, %z
   ret float %add
 }

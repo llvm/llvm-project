@@ -82,7 +82,7 @@ def OMPC_Shared : Clause<"shared"> {
 }
 def OMPC_Reduction : Clause<"reduction"> {
   let clangClass = "OMPReductionClause";
-  let flangClass = "OmpReductionClause";
+  let flangClassValue = "OmpReductionClause";
 }
 def OMPC_Linear : Clause<"linear"> {
   let clangClass = "OMPLinearClause";

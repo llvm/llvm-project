@@ -815,6 +815,10 @@ ConstantInt *ConstantInt::getFalse(LLVMContext &Context) {
   return pImpl->TheFalseVal;
 }
 
+ConstantInt *ConstantInt::getBool(LLVMContext &Context, bool V) {
+  return V ? getTrue(Context) : getFalse(Context);
+}
+
 Constant *ConstantInt::getTrue(Type *Ty) {
   assert(Ty->isIntOrIntVectorTy(1) && "Type not i1 or vector of i1.");
   ConstantInt *TrueC = ConstantInt::getTrue(Ty->getContext());
@@ -829,6 +833,10 @@ Constant *ConstantInt::getFalse(Type *Ty) {
   if (auto *VTy = dyn_cast<VectorType>(Ty))
     return ConstantVector::getSplat(VTy->getElementCount(), FalseC);
   return FalseC;
+}
+
+Constant *ConstantInt::getBool(Type *Ty, bool V) {
+  return V ? getTrue(Ty) : getFalse(Ty);
 }
 
 // Get a ConstantInt from an APInt.
@@ -3411,7 +3419,7 @@ Value *ConstantExpr::handleOperandChangeImpl(Value *From, Value *ToV) {
 }
 
 Instruction *ConstantExpr::getAsInstruction() const {
-  SmallVector<Value *, 4> ValueOperands(op_begin(), op_end());
+  SmallVector<Value *, 4> ValueOperands(operands());
   ArrayRef<Value*> Ops(ValueOperands);
 
   switch (getOpcode()) {

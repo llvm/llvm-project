@@ -479,8 +479,7 @@ void DWARFDie::collectChildrenAddressRanges(
     return;
   if (isSubprogramDIE()) {
     if (auto DIERangesOrError = getAddressRanges())
-      Ranges.insert(Ranges.end(), DIERangesOrError.get().begin(),
-                    DIERangesOrError.get().end());
+      llvm::append_range(Ranges, DIERangesOrError.get());
     else
       llvm::consumeError(DIERangesOrError.takeError());
   }

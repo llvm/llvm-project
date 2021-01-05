@@ -36,6 +36,11 @@ def SOME_INSN : I<(outs DRegs:$dst), (ins DOP:$src), []>;
 def SUBSOME_INSN : I<(outs SRegs:$dst), (ins SOP:$src), []>;
 def SUBSOME_INSN2 : I<(outs SRegs:$dst), (ins SOP:$src), []>;
 
+// Adding this enables the tests below to check that we are not using this class
+// for constraining the operand register classes, since it is unallocatable.
+let isAllocatable = 0 in
+def SuperDRegs : MyClass<32, [i32], (add DRegs, ERegs)>;
+
 // We should skip cases where we don't have a given register class for the
 // subregister source.
 // SKIPPED: def : Pat<(i32 (anyext i16:$src)), (INSERT_SUBREG (i32 (IMPLICIT_DEF)), i16:$src, sub0)>;

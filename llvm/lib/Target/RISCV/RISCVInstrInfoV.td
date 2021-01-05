@@ -69,7 +69,6 @@ def SImm5Plus1AsmOperand : AsmOperandClass {
 def simm5_plus1 : Operand<XLenVT>, ImmLeaf<XLenVT,
                                            [{return isInt<5>(Imm - 1);}]> {
   let ParserMatchClass = SImm5Plus1AsmOperand;
-  let PrintMethod = "printSImm5Plus1";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))

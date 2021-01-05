@@ -14,3 +14,9 @@
         ! V8: instruction requires a CPU feature not currently enabled
         ! V9: invalid membar mask number
         membar -127
+
+! Test the boundary checks on the shift amount
+        ! V8: immediate shift value out of range
+        sll %g1, 32, %g2
+        ! V9: immediate shift value out of range
+        slx %g1, 64, %g2

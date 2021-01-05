@@ -6484,7 +6484,7 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
            "should only occur in error-recovery path.");
     QualType ReturnType =
         llvm::isa_and_nonnull<FunctionDecl>(NDecl)
-            ? dyn_cast<FunctionDecl>(NDecl)->getCallResultType()
+            ? cast<FunctionDecl>(NDecl)->getCallResultType()
             : Context.DependentTy;
     return CallExpr::Create(Context, Fn, ArgExprs, ReturnType,
                             Expr::getValueKindForType(ReturnType), RParenLoc,

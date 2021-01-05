@@ -789,9 +789,8 @@ public:
   }
 
   bool hasOptionalOperands() const {
-    return find_if(Classes, [](const ClassInfo &Class) {
-             return Class.IsOptional;
-           }) != Classes.end();
+    return any_of(Classes,
+                  [](const ClassInfo &Class) { return Class.IsOptional; });
   }
 };
 

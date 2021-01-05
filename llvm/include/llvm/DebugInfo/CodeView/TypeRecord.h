@@ -697,7 +697,7 @@ public:
       : TypeRecord(TypeRecordKind::VFTable), CompleteClass(CompleteClass),
         OverriddenVFTable(OverriddenVFTable), VFPtrOffset(VFPtrOffset) {
     MethodNames.push_back(Name);
-    MethodNames.insert(MethodNames.end(), Methods.begin(), Methods.end());
+    llvm::append_range(MethodNames, Methods);
   }
 
   TypeIndex getCompleteClass() const { return CompleteClass; }

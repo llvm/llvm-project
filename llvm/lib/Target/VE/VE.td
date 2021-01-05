@@ -46,7 +46,7 @@ def VEAsmParser : AsmParser {
 class Proc<string Name, list<SubtargetFeature> Features>
  : Processor<Name, NoItineraries, Features>;
 
-def : Proc<"ve",             []>;
+def : Proc<"generic", []>;
 
 //===----------------------------------------------------------------------===//
 // Declare the target which we are implementing

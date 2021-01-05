@@ -6739,7 +6739,7 @@ void AArch64InstrInfo::buildOutlinedFrame(
     return MI.isCall() && !MI.isReturn();
   };
 
-  if (std::any_of(MBB.instr_begin(), MBB.instr_end(), IsNonTailCall)) {
+  if (llvm::any_of(MBB.instrs(), IsNonTailCall)) {
     // Fix up the instructions in the range, since we're going to modify the
     // stack.
 

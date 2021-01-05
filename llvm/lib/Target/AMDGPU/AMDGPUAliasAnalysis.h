@@ -42,7 +42,10 @@ public:
   /// Handle invalidation events from the new pass manager.
   ///
   /// By definition, this result is stateless and so remains valid.
-  bool invalidate(Function &, const PreservedAnalyses &) { return false; }
+  bool invalidate(Function &, const PreservedAnalyses &,
+                  FunctionAnalysisManager::Invalidator &Inv) {
+    return false;
+  }
 
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
                     AAQueryInfo &AAQI);
@@ -54,7 +57,7 @@ public:
 class AMDGPUAA : public AnalysisInfoMixin<AMDGPUAA> {
   friend AnalysisInfoMixin<AMDGPUAA>;
 
-  static char PassID;
+  static AnalysisKey Key;
 
 public:
   using Result = AMDGPUAAResult;

@@ -707,9 +707,8 @@ void ELFDumper<ELFT>::printSymbolsHelper(bool IsDynamic) const {
 
   // The st_other field has 2 logical parts. The first two bits hold the symbol
   // visibility (STV_*) and the remainder hold other platform-specific values.
-  bool NonVisibilityBitsUsed = llvm::find_if(Syms, [](const Elf_Sym &S) {
-                                 return S.st_other & ~0x3;
-                               }) != Syms.end();
+  bool NonVisibilityBitsUsed =
+      llvm::any_of(Syms, [](const Elf_Sym &S) { return S.st_other & ~0x3; });
 
   ELFDumperStyle->printSymtabMessage(SymtabSec, Entries, NonVisibilityBitsUsed);
   for (const Elf_Sym &Sym : Syms)
