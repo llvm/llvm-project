@@ -40,61 +40,62 @@ TypeBuilderFunc getModel();
 
 template <>
 TypeBuilderFunc getModel<void *>() {
-  return [](mlir::MLIRContext *context) {
-    return mlir::LLVM::LLVMType::getInt8PtrTy(context);
+  return [](mlir::MLIRContext *context) -> mlir::LLVM::LLVMType {
+    return mlir::LLVM::LLVMPointerType::get(
+        mlir::LLVM::LLVMIntegerType::get(context, 8));
   };
 }
 template <>
 TypeBuilderFunc getModel<unsigned>() {
-  return [](mlir::MLIRContext *context) {
-    return mlir::LLVM::LLVMType::getIntNTy(context, sizeof(unsigned) * 8);
+  return [](mlir::MLIRContext *context) -> mlir::LLVM::LLVMType {
+    return mlir::LLVM::LLVMIntegerType::get(context, sizeof(unsigned) * 8);
   };
 }
 template <>
 TypeBuilderFunc getModel<int>() {
-  return [](mlir::MLIRContext *context) {
-    return mlir::LLVM::LLVMType::getIntNTy(context, sizeof(int) * 8);
+  return [](mlir::MLIRContext *context) -> mlir::LLVM::LLVMType {
+    return mlir::LLVM::LLVMIntegerType::get(context, sizeof(int) * 8);
   };
 }
 template <>
 TypeBuilderFunc getModel<unsigned long>() {
-  return [](mlir::MLIRContext *context) {
-    return mlir::LLVM::LLVMType::getIntNTy(context, sizeof(unsigned long) * 8);
+  return [](mlir::MLIRContext *context) -> mlir::LLVM::LLVMType {
+    return mlir::LLVM::LLVMIntegerType::get(context, sizeof(unsigned long) * 8);
   };
 }
 template <>
 TypeBuilderFunc getModel<unsigned long long>() {
-  return [](mlir::MLIRContext *context) {
-    return mlir::LLVM::LLVMType::getIntNTy(context,
-                                           sizeof(unsigned long long) * 8);
+  return [](mlir::MLIRContext *context) -> mlir::LLVM::LLVMType {
+    return mlir::LLVM::LLVMIntegerType::get(context,
+                                            sizeof(unsigned long long) * 8);
   };
 }
 template <>
 TypeBuilderFunc getModel<Fortran::ISO::CFI_rank_t>() {
-  return [](mlir::MLIRContext *context) {
-    return mlir::LLVM::LLVMType::getIntNTy(
+  return [](mlir::MLIRContext *context) -> mlir::LLVM::LLVMType {
+    return mlir::LLVM::LLVMIntegerType::get(
         context, sizeof(Fortran::ISO::CFI_rank_t) * 8);
   };
 }
 template <>
 TypeBuilderFunc getModel<Fortran::ISO::CFI_type_t>() {
-  return [](mlir::MLIRContext *context) {
-    return mlir::LLVM::LLVMType::getIntNTy(
+  return [](mlir::MLIRContext *context) -> mlir::LLVM::LLVMType {
+    return mlir::LLVM::LLVMIntegerType::get(
         context, sizeof(Fortran::ISO::CFI_type_t) * 8);
   };
 }
 template <>
 TypeBuilderFunc getModel<Fortran::ISO::CFI_index_t>() {
-  return [](mlir::MLIRContext *context) {
-    return mlir::LLVM::LLVMType::getIntNTy(
+  return [](mlir::MLIRContext *context) -> mlir::LLVM::LLVMType {
+    return mlir::LLVM::LLVMIntegerType::get(
         context, sizeof(Fortran::ISO::CFI_index_t) * 8);
   };
 }
 template <>
 TypeBuilderFunc getModel<Fortran::ISO::CFI_dim_t>() {
-  return [](mlir::MLIRContext *context) {
+  return [](mlir::MLIRContext *context) -> mlir::LLVM::LLVMType {
     auto indexTy = getModel<Fortran::ISO::CFI_index_t>()(context);
-    return mlir::LLVM::LLVMType::getArrayTy(indexTy, 3);
+    return mlir::LLVM::LLVMArrayType::get(indexTy, 3);
   };
 }
 template <>
@@ -128,7 +129,7 @@ static constexpr TypeBuilderFunc getExtendedDescFieldTypeModel() {
   } else if constexpr (Field == 9) {
     return getModel<std::uint64_t>();
   } else if constexpr (Field == 10) {
-    return getModel<Fortran::runtime::TypeParameterValue>();
+    return getModel<Fortran::runtime::typeInfo::TypeParameterValue>();
   } else {
     llvm_unreachable("extended ISO descriptor only has 11 fields");
   }

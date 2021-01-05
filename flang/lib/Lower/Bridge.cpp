@@ -1942,7 +1942,7 @@ private:
       auto memTy = fir::SequenceType::get(len, i8Ty);
       members.push_back(memTy);
     }
-    return mlir::TupleType::get(members, builder->getContext());
+    return mlir::TupleType::get(builder->getContext(), members);
   }
   /// Define a GlobalOp for the storage of a global equivalence described
   /// by \p aggregate. The global is named \p aggName and is created with
@@ -2126,7 +2126,7 @@ private:
       auto memTy = fir::SequenceType::get(len, byteTy);
       members.push_back(memTy);
     }
-    return mlir::TupleType::get(members, builder->getContext());
+    return mlir::TupleType::get(builder->getContext(), members);
   }
 
   /// Common block members may have aliases. They are not in the common block
@@ -3062,7 +3062,7 @@ private:
     auto func = Fortran::lower::FirOpBuilder::createFunction(
         mlir::UnknownLoc::get(context), getModuleOp(),
         uniquer.doGenerated("Sham"),
-        mlir::FunctionType::get(llvm::None, llvm::None, context));
+        mlir::FunctionType::get(context, llvm::None, llvm::None));
 
     builder = new Fortran::lower::FirOpBuilder(func, bridge.getKindMap());
     AggregateStoreMap fakeMap;
@@ -3102,7 +3102,7 @@ private:
     auto func = Fortran::lower::FirOpBuilder::createFunction(
         mlir::UnknownLoc::get(context), getModuleOp(),
         uniquer.doGenerated("ModuleSham"),
-        mlir::FunctionType::get(llvm::None, llvm::None, context));
+        mlir::FunctionType::get(context, llvm::None, llvm::None));
     builder = new Fortran::lower::FirOpBuilder(func, bridge.getKindMap());
     // linkOnce linkage allows the definition to be kept by LLVM
     // even if it is unused and there is not init (other than undef).

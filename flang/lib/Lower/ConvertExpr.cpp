@@ -635,7 +635,7 @@ public:
         std::int64_t size = static_cast<std::int64_t>(value.size());
         auto shape = mlir::VectorType::get(
             llvm::ArrayRef<std::int64_t>{size},
-            mlir::IntegerType::get(sizeof(ET) * 8, builder.getContext()));
+            mlir::IntegerType::get(builder.getContext(), sizeof(ET) * 8));
         strAttr = mlir::DenseElementsAttr::get(
             shape, llvm::ArrayRef<ET>{value.data(), value.size()});
       }

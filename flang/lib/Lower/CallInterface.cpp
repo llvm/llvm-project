@@ -68,7 +68,7 @@ Fortran::lower::CallerInterface::characterize() const {
   auto &foldingContext = converter.getFoldingContext();
   auto characteristic =
       Fortran::evaluate::characteristics::Procedure::Characterize(
-          procRef.proc(), foldingContext.intrinsics());
+          procRef.proc(), foldingContext);
   assert(characteristic && "Failed to get characteristic from procRef");
   // The characteristic may not contain the argument characteristic if no
   // the ProcedureDesignator has no interface.
@@ -181,7 +181,7 @@ Fortran::lower::CalleeInterface::characterize() const {
   auto &foldingContext = converter.getFoldingContext();
   auto characteristic =
       Fortran::evaluate::characteristics::Procedure::Characterize(
-          funit.getSubprogramSymbol(), foldingContext.intrinsics());
+          funit.getSubprogramSymbol(), foldingContext);
   assert(characteristic && "Fail to get characteristic from symbol");
   return *characteristic;
 }
@@ -541,7 +541,8 @@ private:
     // how many arguments the dummy procedure accepts (e.g. if a procedure
     // pointer is only transiting through the current procedure without being
     // called), so a function type cast must always be inserted.
-    auto funcType = mlir::FunctionType::get({}, {}, &mlirContext);
+    auto funcType =
+        mlir::FunctionType::get(&mlirContext, llvm::None, llvm::None);
     addFirInput(funcType, nextPassedArgPosition(), Property::BaseAddress);
     addPassedArg(PassEntityBy::BaseAddress, entity);
   }
@@ -623,8 +624,8 @@ mlir::FunctionType Fortran::lower::CallInterface<T>::genFunctionType() const {
     returnTys.emplace_back(placeHolder.type);
   for (const auto &placeHolder : inputs)
     inputTys.emplace_back(placeHolder.type);
-  return mlir::FunctionType::get(inputTys, returnTys,
-                                 &converter.getMLIRContext());
+  return mlir::FunctionType::get(&converter.getMLIRContext(), inputTys,
+                                 returnTys);
 }
 
 template <typename T>
@@ -716,7 +717,7 @@ mlir::FunctionType Fortran::lower::translateSignature(
     Fortran::lower::AbstractConverter &converter) {
   auto characteristics =
       Fortran::evaluate::characteristics::Procedure::Characterize(
-          proc, converter.getFoldingContext().intrinsics());
+          proc, converter.getFoldingContext());
   // Most unrestricted intrinsic characteristic has the Elemental attribute
   // which triggers CanBeCalledViaImplicitInterface to return false. However,
   // using implicit interface rules is just fine here.
@@ -742,7 +743,7 @@ mlir::FuncOp Fortran::lower::getOrDeclareFunction(
   auto loc = converter.genLocation(symbol->name());
   auto characteristics =
       Fortran::evaluate::characteristics::Procedure::Characterize(
-          proc, converter.getFoldingContext().intrinsics());
+          proc, converter.getFoldingContext());
   auto ty = SignatureBuilder{characteristics.value(), converter,
                              /* forceImplicit */ false}
                 .getFunctionType();

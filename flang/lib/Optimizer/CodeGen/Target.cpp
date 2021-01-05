@@ -40,20 +40,20 @@ struct GenericTarget : public CodeGenSpecifics {
     assert(fir::isa_real(eleTy));
     // { t, t }   struct of 2 eleTy
     mlir::TypeRange range = {eleTy, eleTy};
-    return mlir::TupleType::get(range, eleTy.getContext());
+    return mlir::TupleType::get(eleTy.getContext(), range);
   }
 
   mlir::Type boxcharMemoryType(mlir::Type eleTy) const override {
-    auto idxTy = mlir::IntegerType::get(S::defaultWidth, eleTy.getContext());
+     auto idxTy = mlir::IntegerType::get(eleTy.getContext(), S::defaultWidth );
     auto ptrTy = fir::ReferenceType::get(eleTy);
     // { t*, index }
     mlir::TypeRange range = {ptrTy, idxTy};
-    return mlir::TupleType::get(range, eleTy.getContext());
+    return mlir::TupleType::get(eleTy.getContext(), range);
   }
 
   Marshalling boxcharArgumentType(mlir::Type eleTy, bool sret) const override {
     CodeGenSpecifics::Marshalling marshal;
-    auto idxTy = mlir::IntegerType::get(S::defaultWidth, eleTy.getContext());
+    auto idxTy = mlir::IntegerType::get(eleTy.getContext(), S::defaultWidth);
     auto ptrTy = fir::ReferenceType::get(eleTy);
     marshal.emplace_back(ptrTy, AT{});
     // Return value arguments are grouped as a pair. Others are passed in a
@@ -82,7 +82,7 @@ struct TargetI386 : public GenericTarget<TargetI386> {
     CodeGenSpecifics::Marshalling marshal;
     // { t, t }   struct of 2 eleTy, byval, align 4
     mlir::TypeRange range = {eleTy, eleTy};
-    auto structTy = mlir::TupleType::get(range, eleTy.getContext());
+    auto structTy = mlir::TupleType::get(eleTy.getContext(), range);
     marshal.emplace_back(fir::ReferenceType::get(structTy),
                          AT{4, /*byval=*/true, {}});
     return marshal;
@@ -95,12 +95,12 @@ struct TargetI386 : public GenericTarget<TargetI386> {
     const auto *sem = &floatToSemantics(kindMap, eleTy);
     if (sem == &llvm::APFloat::IEEEsingle()) {
       // i64   pack both floats in a 64-bit GPR
-      marshal.emplace_back(mlir::IntegerType::get(64, eleTy.getContext()),
+      marshal.emplace_back(mlir::IntegerType::get(eleTy.getContext(), 64),
                            AT{});
     } else if (sem == &llvm::APFloat::IEEEdouble()) {
       // { t, t }   struct of 2 eleTy, sret, align 4
       mlir::TypeRange range = {eleTy, eleTy};
-      auto structTy = mlir::TupleType::get(range, eleTy.getContext());
+      auto structTy = mlir::TupleType::get(eleTy.getContext(), range);
       marshal.emplace_back(fir::ReferenceType::get(structTy),
                            AT{4, {}, /*sret=*/true});
     } else {
@@ -148,7 +148,7 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
     } else if (sem == &llvm::APFloat::IEEEdouble()) {
       // { double, double }   struct of 2 double
       mlir::TypeRange range = {eleTy, eleTy};
-      marshal.emplace_back(mlir::TupleType::get(range, eleTy.getContext()),
+      marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(), range),
                            AT{});
     } else {
       llvm_unreachable("not implemented");
@@ -195,7 +195,7 @@ struct TargetAArch64 : public GenericTarget<TargetAArch64> {
     } else if (sem == &llvm::APFloat::IEEEdouble()) {
       // { double, double }   struct of 2 double
       mlir::TypeRange range = {eleTy, eleTy};
-      marshal.emplace_back(mlir::TupleType::get(range, eleTy.getContext()),
+      marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(), range),
                            AT{});
     } else {
       llvm_unreachable("not implemented");
