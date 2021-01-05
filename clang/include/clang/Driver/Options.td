@@ -1767,7 +1767,7 @@ def fmodules_search_all : Flag <["-"], "fmodules-search-all">, Group<f_Group>,
 def fbuild_session_timestamp : Joined<["-"], "fbuild-session-timestamp=">,
   Group<i_Group>, Flags<[CC1Option]>, MetaVarName<"<time since Epoch in seconds>">,
   HelpText<"Time when the current build session started">,
-  MarshallingInfoStringInt<"HeaderSearchOpts->BuildSessionTimestamp">;
+  MarshallingInfoStringInt<"HeaderSearchOpts->BuildSessionTimestamp", "0", "uint64_t">;
 def fbuild_session_file : Joined<["-"], "fbuild-session-file=">,
   Group<i_Group>, MetaVarName<"<file>">,
   HelpText<"Use the last modification time of <file> as the build session timestamp">;

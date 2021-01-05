@@ -1,6 +1,6 @@
 // Test that branch regions are not generated for constant-folded conditions.
 
-// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name branch-constfolded.cpp %s | FileCheck %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++11 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name branch-constfolded.cpp %s | FileCheck %s
 
 // CHECK-LABEL: _Z6fand_0b:
 bool fand_0(bool a) {

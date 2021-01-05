@@ -1,7 +1,7 @@
 // Test that branch regions are generated for conditions in nested macro
 // expansions.
 
-// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name branch-macros.cpp %s | FileCheck %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++11 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name branch-macros.cpp %s | FileCheck %s
 
 #define COND1 (a == b)
 #define COND2 (a != b)

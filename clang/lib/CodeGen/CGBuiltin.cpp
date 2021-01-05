@@ -17171,6 +17171,16 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_shuffle);
     return Builder.CreateCall(Callee, Ops);
   }
+  case WebAssembly::BI__builtin_wasm_prefetch_t: {
+    Value *Ptr = EmitScalarExpr(E->getArg(0));
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_prefetch_t);
+    return Builder.CreateCall(Callee, Ptr);
+  }
+  case WebAssembly::BI__builtin_wasm_prefetch_nt: {
+    Value *Ptr = EmitScalarExpr(E->getArg(0));
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_prefetch_nt);
+    return Builder.CreateCall(Callee, Ptr);
+  }
   default:
     return nullptr;
   }

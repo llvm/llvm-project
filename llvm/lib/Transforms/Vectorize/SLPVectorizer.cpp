@@ -7137,8 +7137,10 @@ private:
     Type *ScalarTy = FirstReducedVal->getType();
     auto *VecTy = FixedVectorType::get(ScalarTy, ReduxWidth);
 
+    RecurKind Kind = RdxTreeInst.getKind();
+    unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(Kind);
     int SplittingRdxCost;
-    switch (RdxTreeInst.getKind()) {
+    switch (Kind) {
     case RecurKind::Add:
     case RecurKind::Mul:
     case RecurKind::Or:
@@ -7146,16 +7148,14 @@ private:
     case RecurKind::Xor:
     case RecurKind::FAdd:
     case RecurKind::FMul:
-      SplittingRdxCost =
-          TTI->getArithmeticReductionCost(RdxTreeInst.getOpcode(), VecTy,
-                                          /*IsPairwiseForm=*/false);
+      SplittingRdxCost = TTI->getArithmeticReductionCost(
+          RdxOpcode, VecTy, /*IsPairwiseForm=*/false);
       break;
     case RecurKind::SMax:
     case RecurKind::SMin:
     case RecurKind::UMax:
     case RecurKind::UMin: {
       auto *VecCondTy = cast<VectorType>(CmpInst::makeCmpResultType(VecTy));
-      RecurKind Kind = RdxTreeInst.getKind();
       bool IsUnsigned = Kind == RecurKind::UMax || Kind == RecurKind::UMin;
       SplittingRdxCost =
           TTI->getMinMaxReductionCost(VecTy, VecCondTy,
@@ -7167,7 +7167,7 @@ private:
     }
 
     int ScalarReduxCost = 0;
-    switch (RdxTreeInst.getKind()) {
+    switch (Kind) {
     case RecurKind::Add:
     case RecurKind::Mul:
     case RecurKind::Or:
@@ -7175,15 +7175,14 @@ private:
     case RecurKind::Xor:
     case RecurKind::FAdd:
     case RecurKind::FMul:
-      ScalarReduxCost =
-          TTI->getArithmeticInstrCost(RdxTreeInst.getOpcode(), ScalarTy);
+      ScalarReduxCost = TTI->getArithmeticInstrCost(RdxOpcode, ScalarTy);
       break;
     case RecurKind::SMax:
     case RecurKind::SMin:
     case RecurKind::UMax:
     case RecurKind::UMin:
       ScalarReduxCost =
-          TTI->getCmpSelInstrCost(RdxTreeInst.getOpcode(), ScalarTy) +
+          TTI->getCmpSelInstrCost(RdxOpcode, ScalarTy) +
           TTI->getCmpSelInstrCost(Instruction::Select, ScalarTy,
                                   CmpInst::makeCmpResultType(ScalarTy));
       break;

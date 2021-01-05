@@ -427,7 +427,8 @@ public:
   bool checkForP2AlignIfLoadStore(OperandVector &Operands, StringRef InstName) {
     // FIXME: there is probably a cleaner way to do this.
     auto IsLoadStore = InstName.find(".load") != StringRef::npos ||
-                       InstName.find(".store") != StringRef::npos;
+                       InstName.find(".store") != StringRef::npos ||
+                       InstName.find("prefetch") != StringRef::npos;
     auto IsAtomic = InstName.find("atomic.") != StringRef::npos;
     if (IsLoadStore || IsAtomic) {
       // Parse load/store operands of the form: offset:p2align=align
