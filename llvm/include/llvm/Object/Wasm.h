@@ -35,7 +35,8 @@ namespace object {
 class WasmSymbol {
 public:
   WasmSymbol(const wasm::WasmSymbolInfo &Info,
-             const wasm::WasmGlobalType *GlobalType, const uint8_t TableType,
+             const wasm::WasmGlobalType *GlobalType,
+             const wasm::WasmTableType *TableType,
              const wasm::WasmEventType *EventType,
              const wasm::WasmSignature *Signature)
       : Info(Info), GlobalType(GlobalType), TableType(TableType),
@@ -43,7 +44,7 @@ public:
 
   const wasm::WasmSymbolInfo &Info;
   const wasm::WasmGlobalType *GlobalType;
-  const uint8_t TableType;
+  const wasm::WasmTableType *TableType;
   const wasm::WasmEventType *EventType;
   const wasm::WasmSignature *Signature;
 
