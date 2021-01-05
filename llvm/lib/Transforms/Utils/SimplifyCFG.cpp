@@ -5833,7 +5833,8 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
                                 const TargetTransformInfo &TTI) {
   assert(SI->getNumCases() > 1 && "Degenerate switch?");
 
-  Function *Fn = SI->getParent()->getParent();
+  BasicBlock *BB = SI->getParent();
+  Function *Fn = BB->getParent();
   // Only build lookup table when we have a target that supports it or the
   // attribute is not set.
   if (!TTI.shouldBuildLookupTables() ||
@@ -5961,7 +5962,7 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
 
   if (!DefaultIsReachable || GeneratingCoveredLookupTable) {
     Builder.CreateBr(LookupBB);
-    Updates.push_back({DominatorTree::Insert, SI->getParent(), LookupBB});
+    Updates.push_back({DominatorTree::Insert, BB, LookupBB});
     // Note: We call removeProdecessor later since we need to be able to get the
     // PHI value for the default case in case we're using a bit mask.
   } else {
@@ -5969,9 +5970,8 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
         TableIndex, ConstantInt::get(MinCaseVal->getType(), TableSize));
     RangeCheckBranch =
         Builder.CreateCondBr(Cmp, LookupBB, SI->getDefaultDest());
-    Updates.push_back({DominatorTree::Insert, SI->getParent(), LookupBB});
-    Updates.push_back(
-        {DominatorTree::Insert, SI->getParent(), SI->getDefaultDest()});
+    Updates.push_back({DominatorTree::Insert, BB, LookupBB});
+    Updates.push_back({DominatorTree::Insert, BB, SI->getDefaultDest()});
   }
 
   // Populate the BB that does the lookups.
@@ -6012,16 +6012,15 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
     Updates.push_back({DominatorTree::Insert, MaskBB, LookupBB});
     Updates.push_back({DominatorTree::Insert, MaskBB, SI->getDefaultDest()});
     Builder.SetInsertPoint(LookupBB);
-    AddPredecessorToBlock(SI->getDefaultDest(), MaskBB, SI->getParent());
+    AddPredecessorToBlock(SI->getDefaultDest(), MaskBB, BB);
   }
 
   if (!DefaultIsReachable || GeneratingCoveredLookupTable) {
     // We cached PHINodes in PHIs. To avoid accessing deleted PHINodes later,
     // do not delete PHINodes here.
-    SI->getDefaultDest()->removePredecessor(SI->getParent(),
+    SI->getDefaultDest()->removePredecessor(BB,
                                             /*KeepOneInputPHIs=*/true);
-    Updates.push_back(
-        {DominatorTree::Delete, SI->getParent(), SI->getDefaultDest()});
+    Updates.push_back({DominatorTree::Delete, BB, SI->getDefaultDest()});
   }
 
   bool ReturnedEarly = false;
@@ -6069,8 +6068,8 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
 
     if (Succ == SI->getDefaultDest())
       continue;
-    Succ->removePredecessor(SI->getParent());
-    Updates.push_back({DominatorTree::Delete, SI->getParent(), Succ});
+    Succ->removePredecessor(BB);
+    Updates.push_back({DominatorTree::Delete, BB, Succ});
   }
   SI->eraseFromParent();
   if (DTU)
