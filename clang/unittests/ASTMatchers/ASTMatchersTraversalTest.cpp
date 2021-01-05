@@ -2706,6 +2706,52 @@ void callDefaultArg()
     EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
     EXPECT_FALSE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
   }
+  Code = R"cpp(
+struct A
+{
+    ~A();
+private:
+    int i;
+};
+
+A::~A() = default;
+)cpp";
+  {
+    auto M = cxxDestructorDecl(isDefaulted(),
+                               ofClass(cxxRecordDecl(has(fieldDecl()))));
+    EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
+    EXPECT_TRUE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
+  }
+  Code = R"cpp(
+struct S
+{
+    static constexpr bool getTrue() { return true; }
+};
+
+struct A
+{
+    explicit(S::getTrue()) A();
+};
+
+A::A() = default;
+)cpp";
+  {
+    EXPECT_TRUE(matchesConditionally(
+        Code,
+        traverse(TK_AsIs,
+                 cxxConstructorDecl(
+                     isDefaulted(),
+                     hasExplicitSpecifier(expr(ignoringImplicit(
+                         callExpr(has(ignoringImplicit(declRefExpr())))))))),
+        true, {"-std=c++20"}));
+    EXPECT_TRUE(matchesConditionally(
+        Code,
+        traverse(TK_IgnoreUnlessSpelledInSource,
+                 cxxConstructorDecl(
+                     isDefaulted(),
+                     hasExplicitSpecifier(callExpr(has(declRefExpr()))))),
+        true, {"-std=c++20"}));
+  }
 }
 
 template <typename MatcherT>
@@ -3065,6 +3111,33 @@ void func14() {
       traverse(TK_IgnoreUnlessSpelledInSource,
                functionDecl(hasName("func14"), hasDescendant(floatLiteral()))),
       langCxx20OrLater()));
+
+  Code = R"cpp(
+void foo() {
+    int explicit_captured = 0;
+    int implicit_captured = 0;
+    auto l = [&, explicit_captured](int i) {
+        if (i || explicit_captured || implicit_captured) return;
+    };
+}
+)cpp";
+
+  EXPECT_TRUE(matches(Code, traverse(TK_AsIs, ifStmt())));
+  EXPECT_TRUE(
+      matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, ifStmt())));
+
+  auto lambdaExplicitCapture = declRefExpr(
+      to(varDecl(hasName("explicit_captured"))), unless(hasAncestor(ifStmt())));
+  auto lambdaImplicitCapture = declRefExpr(
+      to(varDecl(hasName("implicit_captured"))), unless(hasAncestor(ifStmt())));
+
+  EXPECT_TRUE(matches(Code, traverse(TK_AsIs, lambdaExplicitCapture)));
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource, lambdaExplicitCapture)));
+
+  EXPECT_TRUE(matches(Code, traverse(TK_AsIs, lambdaImplicitCapture)));
+  EXPECT_FALSE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource, lambdaImplicitCapture)));
 }
 
 TEST(IgnoringImpCasts, MatchesImpCasts) {

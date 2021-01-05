@@ -280,6 +280,7 @@ class sve_int_ptrue<bits<2> sz8_64, bits<3> opc, string asm, PPRRegOp pprty,
   let Inst{3-0}   = Pd;
 
   let Defs = !if(!eq (opc{0}, 1), [NZCV], []);
+  let ElementSize = pprty.ElementSize;
   let isReMaterializable = 1;
 }
 
@@ -532,6 +533,7 @@ class sve_int_ptest<bits<6> opc, string asm>
   let Inst{4-0}   = 0b00000;
 
   let Defs = [NZCV];
+  let isCompare = 1;
 }
 
 class sve_int_pfirst_next<bits<2> sz8_64, bits<5> opc, string asm,
@@ -4285,6 +4287,8 @@ class sve_int_cmp<bit cmp_1, bits<2> sz8_64, bits<3> opc, string asm,
   let Inst{3-0}   = Pd;
 
   let Defs = [NZCV];
+  let ElementSize = pprty.ElementSize;
+  let isPTestLike = 1;
 }
 
 multiclass SVE_SETCC_Pat<CondCode cc, CondCode invcc, ValueType predvt,
@@ -4357,6 +4361,7 @@ class sve_int_scmp_vi<bits<2> sz8_64, bits<3> opc, string asm, PPRRegOp pprty,
 
   let Defs = [NZCV];
   let ElementSize = pprty.ElementSize;
+  let isPTestLike = 1;
 }
 
 multiclass SVE_SETCC_Imm_Pat<CondCode cc, CondCode commuted_cc,
@@ -4416,6 +4421,8 @@ class sve_int_ucmp_vi<bits<2> sz8_64, bits<2> opc, string asm, PPRRegOp pprty,
   let Inst{3-0}   = Pd;
 
   let Defs = [NZCV];
+  let ElementSize = pprty.ElementSize;
+  let isPTestLike = 1;
 }
 
 multiclass sve_int_ucmp_vi<bits<2> opc, string asm, CondCode cc,
@@ -4478,6 +4485,8 @@ class sve_int_while_rr<bits<2> sz8_64, bits<4> opc, string asm,
   let Inst{3-0}   = Pd;
 
   let Defs = [NZCV];
+  let ElementSize = pprty.ElementSize;
+  let isWhile = 1;
 }
 
 multiclass sve_int_while4_rr<bits<3> opc, string asm, SDPatternOperator op> {
@@ -4522,6 +4531,8 @@ class sve2_int_while_rr<bits<2> sz8_64, bits<1> rw, string asm,
   let Inst{3-0}   = Pd;
 
   let Defs = [NZCV];
+  let ElementSize = pprty.ElementSize;
+  let isWhile = 1;
 }
 
 multiclass sve2_int_while_rr<bits<1> rw, string asm, string op> {

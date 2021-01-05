@@ -723,6 +723,8 @@ public:
 
   virtual bool IsMatchingInASTNodeNotSpelledInSource() const = 0;
 
+  virtual bool IsMatchingInASTNodeNotAsIs() const = 0;
+
   bool isTraversalIgnoringImplicitNodes() const;
 
 protected:
@@ -740,6 +742,24 @@ protected:
                                  const DynTypedMatcher &Matcher,
                                  BoundNodesTreeBuilder *Builder,
                                  AncestorMatchMode MatchMode) = 0;
+private:
+  friend struct ASTChildrenNotSpelledInSourceScope;
+  virtual bool isMatchingChildrenNotSpelledInSource() const = 0;
+  virtual void setMatchingChildrenNotSpelledInSource(bool Set) = 0;
+};
+
+struct ASTChildrenNotSpelledInSourceScope {
+  ASTChildrenNotSpelledInSourceScope(ASTMatchFinder *V, bool B)
+      : MV(V), MB(V->isMatchingChildrenNotSpelledInSource()) {
+    V->setMatchingChildrenNotSpelledInSource(B);
+  }
+  ~ASTChildrenNotSpelledInSourceScope() {
+    MV->setMatchingChildrenNotSpelledInSource(MB);
+  }
+
+private:
+  ASTMatchFinder *MV;
+  bool MB;
 };
 
 /// Specialization of the conversion functions for QualType.
