@@ -4989,6 +4989,26 @@ defm FMAXNMP : SIMDFPPairwiseScalar<0, 0b01100, "fmaxnmp">;
 defm FMAXP   : SIMDFPPairwiseScalar<0, 0b01111, "fmaxp">;
 defm FMINNMP : SIMDFPPairwiseScalar<1, 0b01100, "fminnmp">;
 defm FMINP   : SIMDFPPairwiseScalar<1, 0b01111, "fminp">;
+
+let Predicates = [HasFullFP16] in {
+def : Pat<(f16 (vecreduce_fadd (v8f16 V128:$Rn))),
+            (FADDPv2i16p
+              (EXTRACT_SUBREG
+                 (FADDPv8f16 (FADDPv8f16 V128:$Rn, (v8f16 (IMPLICIT_DEF))), (v8f16 (IMPLICIT_DEF))),
+               dsub))>;
+def : Pat<(f16 (vecreduce_fadd (v4f16 V64:$Rn))),
+          (FADDPv2i16p (FADDPv4f16 V64:$Rn, (v4f16 (IMPLICIT_DEF))))>;
+}
+def : Pat<(f32 (vecreduce_fadd (v4f32 V128:$Rn))),
+          (FADDPv2i32p
+            (EXTRACT_SUBREG
+              (FADDPv4f32 V128:$Rn, (v4f32 (IMPLICIT_DEF))),
+             dsub))>;
+def : Pat<(f32 (vecreduce_fadd (v2f32 V64:$Rn))),
+          (FADDPv2i32p V64:$Rn)>;
+def : Pat<(f64 (vecreduce_fadd (v2f64 V128:$Rn))),
+          (FADDPv2i64p V128:$Rn)>;
+
 def : Pat<(v2i64 (AArch64saddv V128:$Rn)),
           (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)), (ADDPv2i64p V128:$Rn), dsub)>;
 def : Pat<(v2i64 (AArch64uaddv V128:$Rn)),
