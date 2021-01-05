@@ -36,106 +36,9 @@ LLVMDialect &LLVMType::getDialect() {
   return static_cast<LLVMDialect &>(Type::getDialect());
 }
 
-//----------------------------------------------------------------------------//
-// Utilities used to generate floating point types.
-
-LLVMType LLVMType::getDoubleTy(MLIRContext *context) {
-  return LLVMDoubleType::get(context);
-}
-
-LLVMType LLVMType::getFloatTy(MLIRContext *context) {
-  return LLVMFloatType::get(context);
-}
-
-LLVMType LLVMType::getBFloatTy(MLIRContext *context) {
-  return LLVMBFloatType::get(context);
-}
-
-LLVMType LLVMType::getHalfTy(MLIRContext *context) {
-  return LLVMHalfType::get(context);
-}
-
-LLVMType LLVMType::getFP128Ty(MLIRContext *context) {
-  return LLVMFP128Type::get(context);
-}
-
-LLVMType LLVMType::getX86_FP80Ty(MLIRContext *context) {
-  return LLVMX86FP80Type::get(context);
-}
-
-//----------------------------------------------------------------------------//
-// Utilities used to generate integer types.
-
-LLVMType LLVMType::getIntNTy(MLIRContext *context, unsigned numBits) {
-  return LLVMIntegerType::get(context, numBits);
-}
-
-LLVMType LLVMType::getInt8PtrTy(MLIRContext *context) {
-  return LLVMPointerType::get(LLVMIntegerType::get(context, 8));
-}
-
-//----------------------------------------------------------------------------//
-// Utilities used to generate other miscellaneous types.
-
-LLVMType LLVMType::getArrayTy(LLVMType elementType, uint64_t numElements) {
-  return LLVMArrayType::get(elementType, numElements);
-}
-
-LLVMType LLVMType::getFunctionTy(LLVMType result, ArrayRef<LLVMType> params,
-                                 bool isVarArg) {
-  return LLVMFunctionType::get(result, params, isVarArg);
-}
-
-LLVMType LLVMType::getStructTy(MLIRContext *context,
-                               ArrayRef<LLVMType> elements, bool isPacked) {
-  return LLVMStructType::getLiteral(context, elements, isPacked);
-}
-
-LLVMType LLVMType::getVectorTy(LLVMType elementType, unsigned numElements) {
-  return LLVMFixedVectorType::get(elementType, numElements);
-}
-
-//----------------------------------------------------------------------------//
-// Void type utilities.
-
-LLVMType LLVMType::getVoidTy(MLIRContext *context) {
-  return LLVMVoidType::get(context);
-}
-
-//----------------------------------------------------------------------------//
-// Creation and setting of LLVM's identified struct types
-
-LLVMType LLVMType::createStructTy(MLIRContext *context,
-                                  ArrayRef<LLVMType> elements,
-                                  Optional<StringRef> name, bool isPacked) {
-  assert(name.hasValue() &&
-         "identified structs with no identifier not supported");
-  StringRef stringNameBase = name.getValueOr("");
-  std::string stringName = stringNameBase.str();
-  unsigned counter = 0;
-  do {
-    auto type = LLVMStructType::getIdentified(context, stringName);
-    if (type.isInitialized() || failed(type.setBody(elements, isPacked))) {
-      counter += 1;
-      stringName =
-          (Twine(stringNameBase) + "." + std::to_string(counter)).str();
-      continue;
-    }
-    return type;
-  } while (true);
-}
-
-LLVMType LLVMType::setStructTyBody(LLVMType structType,
-                                   ArrayRef<LLVMType> elements, bool isPacked) {
-  LogicalResult couldSet =
-      structType.cast<LLVMStructType>().setBody(elements, isPacked);
-  assert(succeeded(couldSet) && "failed to set the body");
-  (void)couldSet;
-  return structType;
-}
-
 //===----------------------------------------------------------------------===//
 // Array type.
+//===----------------------------------------------------------------------===//
 
 bool LLVMArrayType::isValidElementType(LLVMType type) {
   return !type.isa<LLVMVoidType, LLVMLabelType, LLVMMetadataType,
@@ -167,6 +70,7 @@ LLVMArrayType::verifyConstructionInvariants(Location loc, LLVMType elementType,
 
 //===----------------------------------------------------------------------===//
 // Function type.
+//===----------------------------------------------------------------------===//
 
 bool LLVMFunctionType::isValidArgumentType(LLVMType type) {
   return !type.isa<LLVMVoidType, LLVMFunctionType>();
@@ -222,6 +126,7 @@ LogicalResult LLVMFunctionType::verifyConstructionInvariants(
 
 //===----------------------------------------------------------------------===//
 // Integer type.
+//===----------------------------------------------------------------------===//
 
 LLVMIntegerType LLVMIntegerType::get(MLIRContext *ctx, unsigned bitwidth) {
   return Base::get(ctx, bitwidth);
@@ -243,6 +148,7 @@ LogicalResult LLVMIntegerType::verifyConstructionInvariants(Location loc,
 
 //===----------------------------------------------------------------------===//
 // Pointer type.
+//===----------------------------------------------------------------------===//
 
 bool LLVMPointerType::isValidElementType(LLVMType type) {
   return !type.isa<LLVMVoidType, LLVMTokenType, LLVMMetadataType,
@@ -273,6 +179,7 @@ LogicalResult LLVMPointerType::verifyConstructionInvariants(Location loc,
 
 //===----------------------------------------------------------------------===//
 // Struct type.
+//===----------------------------------------------------------------------===//
 
 bool LLVMStructType::isValidElementType(LLVMType type) {
   return !type.isa<LLVMVoidType, LLVMLabelType, LLVMMetadataType,
@@ -287,6 +194,23 @@ LLVMStructType LLVMStructType::getIdentified(MLIRContext *context,
 LLVMStructType LLVMStructType::getIdentifiedChecked(Location loc,
                                                     StringRef name) {
   return Base::getChecked(loc, name, /*opaque=*/false);
+}
+
+LLVMStructType LLVMStructType::getNewIdentified(MLIRContext *context,
+                                                StringRef name,
+                                                ArrayRef<LLVMType> elements,
+                                                bool isPacked) {
+  std::string stringName = name.str();
+  unsigned counter = 0;
+  do {
+    auto type = LLVMStructType::getIdentified(context, stringName);
+    if (type.isInitialized() || failed(type.setBody(elements, isPacked))) {
+      counter += 1;
+      stringName = (Twine(name) + "." + std::to_string(counter)).str();
+      continue;
+    }
+    return type;
+  } while (true);
 }
 
 LLVMStructType LLVMStructType::getLiteral(MLIRContext *context,
@@ -346,6 +270,7 @@ LLVMStructType::verifyConstructionInvariants(Location loc,
 
 //===----------------------------------------------------------------------===//
 // Vector types.
+//===----------------------------------------------------------------------===//
 
 bool LLVMVectorType::isValidElementType(LLVMType type) {
   return type.isa<LLVMIntegerType, LLVMPointerType>() ||

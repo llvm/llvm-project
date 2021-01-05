@@ -64,7 +64,7 @@ vector unsigned __int128 res_vux;
 vector float res_vf;
 vector double res_vd;
 
-// CHECK-LABEL: define void @test1
+// CHECK-LABEL: define{{.*}} void @test1
 void test1() {
 
   /* vec_abs */

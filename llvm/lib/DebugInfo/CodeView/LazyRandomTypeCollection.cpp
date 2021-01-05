@@ -185,7 +185,7 @@ Error LazyRandomTypeCollection::visitRangeForType(TypeIndex TI) {
     // They've asked us to fetch a type index, but the entry we found in the
     // partial offsets array has already been visited.  Since we visit an entire
     // block every time, that means this record should have been previously
-    // discovered.  Ultimately, this means this is a request for a non-existant
+    // discovered.  Ultimately, this means this is a request for a non-existent
     // type index.
     return make_error<CodeViewError>("Invalid type index");
   }

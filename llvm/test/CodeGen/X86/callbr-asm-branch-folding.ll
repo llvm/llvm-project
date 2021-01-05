@@ -3,10 +3,10 @@
 
 ; This test hung in the BranchFolding pass during asm-goto bring up
 
-@e = global i32 0
-@j = global i32 0
+@e = dso_local global i32 0
+@j = dso_local global i32 0
 
-define void @n(i32* %o, i32 %p, i32 %u) nounwind {
+define dso_local void @n(i32* %o, i32 %p, i32 %u) nounwind {
 ; CHECK-LABEL: n:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbp

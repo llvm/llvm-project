@@ -16,7 +16,7 @@ typename MyMatrix<EltTy0, R0, C0>::matrix_t add(MyMatrix<EltTy0, R0, C0> &A, MyM
 }
 
 void test_add_template() {
-  // CHECK-LABEL: define void @_Z17test_add_templatev()
+  // CHECK-LABEL: define{{.*}} void @_Z17test_add_templatev()
   // CHECK:       %call = call <10 x float> @_Z3addIfLj2ELj5EEN8MyMatrixIT_XT0_EXT1_EE8matrix_tERS2_S4_(%struct.MyMatrix* nonnull align 4 dereferenceable(40) %Mat1, %struct.MyMatrix* nonnull align 4 dereferenceable(40) %Mat2)
 
   // CHECK-LABEL: define linkonce_odr <10 x float> @_Z3addIfLj2ELj5EEN8MyMatrixIT_XT0_EXT1_EE8matrix_tERS2_S4_(
@@ -36,7 +36,7 @@ typename MyMatrix<EltTy0, R0, C0>::matrix_t subtract(MyMatrix<EltTy0, R0, C0> &A
 }
 
 void test_subtract_template() {
-  // CHECK-LABEL: define void @_Z22test_subtract_templatev()
+  // CHECK-LABEL: define{{.*}} void @_Z22test_subtract_templatev()
   // CHECK:       %call = call <10 x float> @_Z8subtractIfLj2ELj5EEN8MyMatrixIT_XT0_EXT1_EE8matrix_tERS2_S4_(%struct.MyMatrix* nonnull align 4 dereferenceable(40) %Mat1, %struct.MyMatrix* nonnull align 4 dereferenceable(40) %Mat2)
 
   // CHECK-LABEL: define linkonce_odr <10 x float> @_Z8subtractIfLj2ELj5EEN8MyMatrixIT_XT0_EXT1_EE8matrix_tERS2_S4_(
@@ -58,11 +58,11 @@ struct DoubleWrapper1 {
 };
 
 void test_DoubleWrapper1_Sub1(MyMatrix<double, 10, 9> &m) {
-  // CHECK-LABEL: define void @_Z24test_DoubleWrapper1_Sub1R8MyMatrixIdLj10ELj9EE(
+  // CHECK-LABEL: define{{.*}} void @_Z24test_DoubleWrapper1_Sub1R8MyMatrixIdLj10ELj9EE(
   // CHECK:       [[MATRIX:%.*]] = load <90 x double>, <90 x double>* {{.*}}, align 8
   // CHECK:       [[SCALAR:%.*]] = call double @_ZN14DoubleWrapper1cvdEv(%struct.DoubleWrapper1* {{[^,]*}} %w1)
-  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <90 x double> undef, double [[SCALAR]], i32 0
-  // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <90 x double> [[SCALAR_EMBED]], <90 x double> undef, <90 x i32> zeroinitializer
+  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <90 x double> poison, double [[SCALAR]], i32 0
+  // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <90 x double> [[SCALAR_EMBED]], <90 x double> poison, <90 x i32> zeroinitializer
   // CHECK-NEXT:  [[RES:%.*]] = fsub <90 x double> [[MATRIX]], [[SCALAR_EMBED1]]
   // CHECK:       store <90 x double> [[RES]], <90 x double>* {{.*}}, align 8
 
@@ -72,11 +72,11 @@ void test_DoubleWrapper1_Sub1(MyMatrix<double, 10, 9> &m) {
 }
 
 void test_DoubleWrapper1_Sub2(MyMatrix<double, 10, 9> &m) {
-  // CHECK-LABEL: define void @_Z24test_DoubleWrapper1_Sub2R8MyMatrixIdLj10ELj9EE(
+  // CHECK-LABEL: define{{.*}} void @_Z24test_DoubleWrapper1_Sub2R8MyMatrixIdLj10ELj9EE(
   // CHECK:       [[SCALAR:%.*]] = call double @_ZN14DoubleWrapper1cvdEv(%struct.DoubleWrapper1* {{[^,]*}} %w1)
   // CHECK:       [[MATRIX:%.*]] = load <90 x double>, <90 x double>* {{.*}}, align 8
-  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <90 x double> undef, double [[SCALAR]], i32 0
-  // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <90 x double> [[SCALAR_EMBED]], <90 x double> undef, <90 x i32> zeroinitializer
+  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <90 x double> poison, double [[SCALAR]], i32 0
+  // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <90 x double> [[SCALAR_EMBED]], <90 x double> poison, <90 x i32> zeroinitializer
   // CHECK-NEXT:  [[RES:%.*]] = fsub <90 x double> [[SCALAR_EMBED1]], [[MATRIX]]
   // CHECK:       store <90 x double> [[RES]], <90 x double>* {{.*}}, align 8
 
@@ -93,11 +93,11 @@ struct DoubleWrapper2 {
 };
 
 void test_DoubleWrapper2_Add1(MyMatrix<double, 10, 9> &m) {
-  // CHECK-LABEL: define void @_Z24test_DoubleWrapper2_Add1R8MyMatrixIdLj10ELj9EE(
+  // CHECK-LABEL: define{{.*}} void @_Z24test_DoubleWrapper2_Add1R8MyMatrixIdLj10ELj9EE(
   // CHECK:       [[MATRIX:%.*]] = load <90 x double>, <90 x double>* %1, align 8
   // CHECK:       [[SCALAR:%.*]] = call double @_ZN14DoubleWrapper2cvdEv(%struct.DoubleWrapper2* {{[^,]*}} %w2)
-  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <90 x double> undef, double [[SCALAR]], i32 0
-  // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <90 x double> [[SCALAR_EMBED]], <90 x double> undef, <90 x i32> zeroinitializer
+  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <90 x double> poison, double [[SCALAR]], i32 0
+  // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <90 x double> [[SCALAR_EMBED]], <90 x double> poison, <90 x i32> zeroinitializer
   // CHECK-NEXT:  [[RES:%.*]] = fadd <90 x double> [[MATRIX]], [[SCALAR_EMBED1]]
   // CHECK:       store <90 x double> [[RES]], <90 x double>* {{.*}}, align 8
 
@@ -107,11 +107,11 @@ void test_DoubleWrapper2_Add1(MyMatrix<double, 10, 9> &m) {
 }
 
 void test_DoubleWrapper2_Add2(MyMatrix<double, 10, 9> &m) {
-  // CHECK-LABEL: define void @_Z24test_DoubleWrapper2_Add2R8MyMatrixIdLj10ELj9EE(
+  // CHECK-LABEL: define{{.*}} void @_Z24test_DoubleWrapper2_Add2R8MyMatrixIdLj10ELj9EE(
   // CHECK:       [[SCALAR:%.*]] = call double @_ZN14DoubleWrapper2cvdEv(%struct.DoubleWrapper2* {{[^,]*}} %w2)
   // CHECK:       [[MATRIX:%.*]] = load <90 x double>, <90 x double>* %1, align 8
-  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <90 x double> undef, double [[SCALAR]], i32 0
-  // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <90 x double> [[SCALAR_EMBED]], <90 x double> undef, <90 x i32> zeroinitializer
+  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <90 x double> poison, double [[SCALAR]], i32 0
+  // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <90 x double> [[SCALAR_EMBED]], <90 x double> poison, <90 x i32> zeroinitializer
   // CHECK-NEXT:  [[RES:%.*]] = fadd <90 x double> [[SCALAR_EMBED1]], [[MATRIX]]
   // CHECK:       store <90 x double> [[RES]], <90 x double>* {{.*}}, align 8
 
@@ -128,12 +128,12 @@ struct IntWrapper {
 };
 
 void test_IntWrapper_Add(MyMatrix<double, 10, 9> &m) {
-  // CHECK-LABEL: define void @_Z19test_IntWrapper_AddR8MyMatrixIdLj10ELj9EE(
+  // CHECK-LABEL: define{{.*}} void @_Z19test_IntWrapper_AddR8MyMatrixIdLj10ELj9EE(
   // CHECK:       [[MATRIX:%.*]] = load <90 x double>, <90 x double>* {{.*}}, align 8
   // CHECK:       [[SCALAR:%.*]] = call i32 @_ZN10IntWrappercviEv(%struct.IntWrapper* {{[^,]*}} %w3)
   // CHECK:       [[SCALAR_FP:%.*]] = sitofp i32 %call to double
-  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <90 x double> undef, double [[SCALAR_FP]], i32 0
-  // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <90 x double> [[SCALAR_EMBED]], <90 x double> undef, <90 x i32> zeroinitializer
+  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <90 x double> poison, double [[SCALAR_FP]], i32 0
+  // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <90 x double> [[SCALAR_EMBED]], <90 x double> poison, <90 x i32> zeroinitializer
   // CHECK-NEXT:  [[RES:%.*]] = fadd <90 x double> [[MATRIX]], [[SCALAR_EMBED1]]
   // CHECK:       store <90 x double> [[RES]], <90 x double>* {{.*}}, align 8
 
@@ -143,12 +143,12 @@ void test_IntWrapper_Add(MyMatrix<double, 10, 9> &m) {
 }
 
 void test_IntWrapper_Sub(MyMatrix<double, 10, 9> &m) {
-  // CHECK-LABEL: define void @_Z19test_IntWrapper_SubR8MyMatrixIdLj10ELj9EE(
+  // CHECK-LABEL: define{{.*}} void @_Z19test_IntWrapper_SubR8MyMatrixIdLj10ELj9EE(
   // CHECK:       [[SCALAR:%.*]] = call i32 @_ZN10IntWrappercviEv(%struct.IntWrapper* {{[^,]*}} %w3)
   // CHECK-NEXT:  [[SCALAR_FP:%.*]] = sitofp i32 %call to double
   // CHECK:       [[MATRIX:%.*]] = load <90 x double>, <90 x double>* {{.*}}, align 8
-  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <90 x double> undef, double [[SCALAR_FP]], i32 0
-  // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <90 x double> [[SCALAR_EMBED]], <90 x double> undef, <90 x i32> zeroinitializer
+  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <90 x double> poison, double [[SCALAR_FP]], i32 0
+  // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <90 x double> [[SCALAR_EMBED]], <90 x double> poison, <90 x i32> zeroinitializer
   // CHECK-NEXT:  [[RES:%.*]] = fsub <90 x double> [[SCALAR_EMBED1]], [[MATRIX]]
   // CHECK:       store <90 x double> [[RES]], <90 x double>* {{.*}}, align 8
 
@@ -164,7 +164,7 @@ typename MyMatrix<EltTy0, R0, C1>::matrix_t multiply(MyMatrix<EltTy0, R0, C0> &A
 
 MyMatrix<float, 2, 2> test_multiply_template(MyMatrix<float, 2, 5> Mat1,
                                              MyMatrix<float, 5, 2> Mat2) {
-  // CHECK-LABEL: define void @_Z22test_multiply_template8MyMatrixIfLj2ELj5EES_IfLj5ELj2EE(
+  // CHECK-LABEL: define{{.*}} void @_Z22test_multiply_template8MyMatrixIfLj2ELj5EES_IfLj5ELj2EE(
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @_Z8multiplyIfLj2ELj5ELj2EEN8MyMatrixIT_XT0_EXT2_EE8matrix_tERS0_IS1_XT0_EXT1_EERS0_IS1_XT1_EXT2_EE(%struct.MyMatrix* nonnull align 4 dereferenceable(40) %Mat1, %struct.MyMatrix.2* nonnull align 4 dereferenceable(40) %Mat2)
   // CHECK-NEXT:    %value = getelementptr inbounds %struct.MyMatrix.1, %struct.MyMatrix.1* %agg.result, i32 0, i32 0
@@ -184,12 +184,12 @@ MyMatrix<float, 2, 2> test_multiply_template(MyMatrix<float, 2, 5> Mat1,
 }
 
 void test_IntWrapper_Multiply(MyMatrix<double, 10, 9> &m, IntWrapper &w3) {
-  // CHECK-LABEL: define void @_Z24test_IntWrapper_MultiplyR8MyMatrixIdLj10ELj9EER10IntWrapper(
+  // CHECK-LABEL: define{{.*}} void @_Z24test_IntWrapper_MultiplyR8MyMatrixIdLj10ELj9EER10IntWrapper(
   // CHECK:       [[SCALAR:%.*]] = call i32 @_ZN10IntWrappercviEv(%struct.IntWrapper* {{.*}})
   // CHECK-NEXT:  [[SCALAR_FP:%.*]] = sitofp i32 %call to double
   // CHECK:       [[MATRIX:%.*]] = load <90 x double>, <90 x double>* {{.*}}, align 8
-  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <90 x double> undef, double [[SCALAR_FP]], i32 0
-  // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <90 x double> [[SCALAR_EMBED]], <90 x double> undef, <90 x i32> zeroinitializer
+  // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <90 x double> poison, double [[SCALAR_FP]], i32 0
+  // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <90 x double> [[SCALAR_EMBED]], <90 x double> poison, <90 x i32> zeroinitializer
   // CHECK-NEXT:  [[RES:%.*]] = fmul <90 x double> [[SCALAR_EMBED1]], [[MATRIX]]
   // CHECK:       store <90 x double> [[RES]], <90 x double>* {{.*}}, align 8
   // CHECK:       ret void
@@ -308,7 +308,7 @@ struct UnsignedWrapper {
 };
 
 double extract_IntWrapper_idx(double4x4 &m, IntWrapper i, UnsignedWrapper j) {
-  // CHECK-LABEL: define double @_Z22extract_IntWrapper_idxRu11matrix_typeILm4ELm4EdE10IntWrapper15UnsignedWrapper(
+  // CHECK-LABEL: define{{.*}} double @_Z22extract_IntWrapper_idxRu11matrix_typeILm4ELm4EdE10IntWrapper15UnsignedWrapper(
   // CHECK:         [[I:%.*]] = call i32 @_ZN10IntWrappercviEv(%struct.IntWrapper* {{[^,]*}} %i)
   // CHECK-NEXT:    [[I_ADD:%.*]] = add nsw i32 [[I]], 1
   // CHECK-NEXT:    [[I_ADD_EXT:%.*]] = sext i32 [[I_ADD]] to i64
@@ -340,7 +340,7 @@ struct identmatrix_t {
 constexpr identmatrix_t identmatrix;
 
 void test_constexpr1(matrix_type<float, 4, 4> &m) {
-  // CHECK-LABEL: define void @_Z15test_constexpr1Ru11matrix_typeILm4ELm4EfE(
+  // CHECK-LABEL: define{{.*}} void @_Z15test_constexpr1Ru11matrix_typeILm4ELm4EfE(
   // CHECK:         [[MAT:%.*]] = load <16 x float>, <16 x float>* {{.*}}, align 4
   // CHECK-NEXT:    [[IM:%.*]] = call <16 x float> @_ZNK13identmatrix_tcvu11matrix_typeIXT0_EXT0_ET_EIfLj4EEEv(%struct.identmatrix_t* {{[^,]*}} @_ZL11identmatrix)
   // CHECK-NEXT:    [[ADD:%.*]] = fadd <16 x float> [[MAT]], [[IM]]
@@ -366,7 +366,7 @@ void test_constexpr1(matrix_type<float, 4, 4> &m) {
 }
 
 void test_constexpr2(matrix_type<int, 5, 5> &m) {
-  // CHECK-LABEL: define void @_Z15test_constexpr2Ru11matrix_typeILm5ELm5EiE(
+  // CHECK-LABEL: define{{.*}} void @_Z15test_constexpr2Ru11matrix_typeILm5ELm5EiE(
   // CHECK:         [[IM:%.*]] = call <25 x i32> @_ZNK13identmatrix_tcvu11matrix_typeIXT0_EXT0_ET_EIiLj5EEEv(%struct.identmatrix_t* {{[^,]*}} @_ZL11identmatrix)
   // CHECK:         [[MAT:%.*]] = load <25 x i32>, <25 x i32>* {{.*}}, align 4
   // CHECK-NEXT:    [[SUB:%.*]] = sub <25 x i32> [[IM]], [[MAT]]

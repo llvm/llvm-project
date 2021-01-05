@@ -5,9 +5,9 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -O2 \
 ; RUN:   -ppc-gpr-icmps=all -ppc-asm-full-reg-names -mcpu=pwr8 < %s | FileCheck %s --check-prefix=CHECK-LE \
 ; RUN:  --implicit-check-not cmpw --implicit-check-not cmpd --implicit-check-not cmpl
-@glob = local_unnamed_addr global i32 0, align 4
+@glob = dso_local local_unnamed_addr global i32 0, align 4
 
-define signext i32 @test_ilesi(i32 signext %a, i32 signext %b) {
+define dso_local signext i32 @test_ilesi(i32 signext %a, i32 signext %b) {
 ; CHECK-LABEL: test_ilesi:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sub r3, r4, r3
@@ -33,7 +33,7 @@ entry:
   ret i32 %conv
 }
 
-define signext i32 @test_ilesi_sext(i32 signext %a, i32 signext %b) {
+define dso_local signext i32 @test_ilesi_sext(i32 signext %a, i32 signext %b) {
 ; CHECK-LABEL: test_ilesi_sext:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sub r3, r4, r3
@@ -59,7 +59,7 @@ entry:
   ret i32 %sub
 }
 
-define void @test_ilesi_store(i32 signext %a, i32 signext %b) {
+define dso_local void @test_ilesi_store(i32 signext %a, i32 signext %b) {
 ; CHECK-LABEL: test_ilesi_store:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sub r3, r4, r3
@@ -70,12 +70,11 @@ define void @test_ilesi_store(i32 signext %a, i32 signext %b) {
 ; CHECK-NEXT:    blr
 ; CHECK-BE-LABEL: test_ilesi_store:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis r5, r2, .LC0@toc@ha
 ; CHECK-BE-NEXT:    sub r3, r4, r3
-; CHECK-BE-NEXT:    ld r4, .LC0@toc@l(r5)
+; CHECK-BE-NEXT:    addis r5, r2, glob@toc@ha
 ; CHECK-BE-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-BE-NEXT:    xori r3, r3, 1
-; CHECK-BE-NEXT:    stw r3, 0(r4)
+; CHECK-BE-NEXT:    stw r3, glob@toc@l(r5)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_ilesi_store:
@@ -93,7 +92,7 @@ entry:
   ret void
 }
 
-define void @test_ilesi_sext_store(i32 signext %a, i32 signext %b) {
+define dso_local void @test_ilesi_sext_store(i32 signext %a, i32 signext %b) {
 ; CHECK-LABEL: test_ilesi_sext_store:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sub r3, r4, r3
@@ -104,12 +103,11 @@ define void @test_ilesi_sext_store(i32 signext %a, i32 signext %b) {
 ; CHECK-NEXT:    blr
 ; CHECK-BE-LABEL: test_ilesi_sext_store:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis r5, r2, .LC0@toc@ha
 ; CHECK-BE-NEXT:    sub r3, r4, r3
-; CHECK-BE-NEXT:    ld r4, .LC0@toc@l(r5)
+; CHECK-BE-NEXT:    addis r5, r2, glob@toc@ha
 ; CHECK-BE-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-BE-NEXT:    addi r3, r3, -1
-; CHECK-BE-NEXT:    stw r3, 0(r4)
+; CHECK-BE-NEXT:    stw r3, glob@toc@l(r5)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_ilesi_sext_store:

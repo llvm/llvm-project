@@ -2,7 +2,7 @@
 ; RUN: llc -verify-machineinstrs < %s -mtriple=x86_64-unknown-unknown | FileCheck %s
 ; RUN: llc -verify-machineinstrs < %s -mtriple=x86_64-unknown-unknown -O0 | FileCheck --check-prefix=CHECK-O0 %s
 
-@var = global i32 0
+@var = dso_local global i32 0
 
 ; Test how llvm handles return type of {i16, i8}. The return value will be
 ; passed in %eax and %dl.
@@ -54,7 +54,7 @@ declare swiftcc { i16, i8 } @gen(i32)
 ; If we can't pass every return value in register, we will pass everything
 ; in memroy. The caller provides space for the return value and passes
 ; the address in %rax. The first input argument will be in %rdi.
-define i32 @test2(i32 %key) #0 {
+define dso_local i32 @test2(i32 %key) #0 {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
@@ -140,7 +140,7 @@ define swiftcc { i32, i32, i32, i32, i32 } @gen2(i32 %key) {
 
 ; The return value {i32, i32, i32, i32} will be returned via registers %eax,
 ; %edx, %ecx, %r8d.
-define i32 @test3(i32 %key) #0 {
+define dso_local i32 @test3(i32 %key) #0 {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
@@ -188,7 +188,7 @@ declare swiftcc { i32, i32, i32, i32 } @gen3(i32 %key)
 
 ; The return value {float, float, float, float} will be returned via registers
 ; %xmm0, %xmm1, %xmm2, %xmm3.
-define float @test4(float %key) #0 {
+define dso_local float @test4(float %key) #0 {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
@@ -234,7 +234,7 @@ entry:
 
 declare swiftcc { float, float, float, float } @gen4(float %key)
 
-define void @consume_i1_ret() {
+define dso_local void @consume_i1_ret() {
 ; CHECK-LABEL: consume_i1_ret:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rax

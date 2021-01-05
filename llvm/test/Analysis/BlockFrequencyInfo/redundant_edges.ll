@@ -9,7 +9,7 @@ define void @test1() {
 entry:
   br label %loop
 
-; CHECK-NEXT: loop: float = 32.0
+; CHECK-NEXT: loop: float = 16.5
 loop:
   switch i32 undef, label %loop [
     i32 0, label %return

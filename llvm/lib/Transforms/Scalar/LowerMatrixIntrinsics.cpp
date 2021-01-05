@@ -334,9 +334,8 @@ class LowerMatrixIntrinsics {
     Value *extractVector(unsigned I, unsigned J, unsigned NumElts,
                          IRBuilder<> &Builder) const {
       Value *Vec = isColumnMajor() ? getColumn(J) : getRow(I);
-      Value *Undef = UndefValue::get(Vec->getType());
       return Builder.CreateShuffleVector(
-          Vec, Undef, createSequentialMask(isColumnMajor() ? I : J, NumElts, 0),
+          Vec, createSequentialMask(isColumnMajor() ? I : J, NumElts, 0),
           "block");
     }
   };
@@ -447,12 +446,11 @@ public:
 
     // Otherwise split MatrixVal.
     SmallVector<Value *, 16> SplitVecs;
-    Value *Undef = UndefValue::get(VType);
     for (unsigned MaskStart = 0;
          MaskStart < cast<FixedVectorType>(VType)->getNumElements();
          MaskStart += SI.getStride()) {
       Value *V = Builder.CreateShuffleVector(
-          MatrixVal, Undef, createSequentialMask(MaskStart, SI.getStride(), 0),
+          MatrixVal, createSequentialMask(MaskStart, SI.getStride(), 0),
           "split");
       SplitVecs.push_back(V);
     }
@@ -941,10 +939,8 @@ public:
     unsigned NumElts = cast<FixedVectorType>(Col->getType())->getNumElements();
     assert(NumElts >= BlockNumElts && "Too few elements for current block");
 
-    Value *Undef = UndefValue::get(Block->getType());
     Block = Builder.CreateShuffleVector(
-        Block, Undef,
-        createSequentialMask(0, BlockNumElts, NumElts - BlockNumElts));
+        Block, createSequentialMask(0, BlockNumElts, NumElts - BlockNumElts));
 
     // If Col is 7 long and I is 2 and BlockNumElts is 2 the mask is: 0, 1, 7,
     // 8, 4, 5, 6

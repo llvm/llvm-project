@@ -1779,8 +1779,8 @@ MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I,
 
   bool Def, Use;
   if (Template) {
-    Def = dyn_cast_or_null<MemoryDef>(Template) != nullptr;
-    Use = dyn_cast_or_null<MemoryUse>(Template) != nullptr;
+    Def = isa<MemoryDef>(Template);
+    Use = isa<MemoryUse>(Template);
 #if !defined(NDEBUG)
     ModRefInfo ModRef = AAP->getModRefInfo(I, None);
     bool DefCheck, UseCheck;
@@ -2017,8 +2017,7 @@ void MemorySSA::verifyOrderingDominationAndDefUses(Function &F) const {
              "Incomplete MemoryPhi Node");
       for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I) {
         verifyUseInDefs(Phi->getIncomingValue(I), Phi);
-        assert(find(predecessors(&B), Phi->getIncomingBlock(I)) !=
-                   pred_end(&B) &&
+        assert(is_contained(predecessors(&B), Phi->getIncomingBlock(I)) &&
                "Incoming phi block not a block predecessor");
       }
 #endif

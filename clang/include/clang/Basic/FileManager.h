@@ -99,6 +99,9 @@ class FileManager : public RefCountedBase<FileManager> {
   std::unique_ptr<llvm::StringMap<llvm::ErrorOr<FileEntryRef::MapValue>>>
       SeenBypassFileEntries;
 
+  /// The file entry for stdin, if it has been accessed through the FileManager.
+  Optional<FileEntryRef> STDIN;
+
   /// The canonical names of files and directories .
   llvm::DenseMap<const void *, llvm::StringRef> CanonicalNames;
 
@@ -216,6 +219,14 @@ public:
   llvm::Expected<FileEntryRef> getFileRef(StringRef Filename,
                                           bool OpenFile = false,
                                           bool CacheFailure = true);
+
+  /// Get the FileEntryRef for stdin, returning an error if stdin cannot be
+  /// read.
+  ///
+  /// This reads and caches stdin before returning. Subsequent calls return the
+  /// same file entry, and a reference to the cached input is returned by calls
+  /// to getBufferForFile.
+  llvm::Expected<FileEntryRef> getSTDIN();
 
   /// Get a FileEntryRef if it exists, without doing anything on error.
   llvm::Optional<FileEntryRef> getOptionalFileRef(StringRef Filename,

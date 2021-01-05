@@ -59,7 +59,7 @@ int main (int argc, char **argv) {
   return tmain(argv);
 }
 
-// ALL-LABEL: define {{[a-z\_\b]*[ ]?i32}} @main({{i32[ ]?[a-z]*}} %argc, i8** %argv)
+// ALL-LABEL: define{{[ _a-z]*}} i32 @main({{i32[ ]?[a-z]*}} %argc, i8** %argv)
 // ALL: store i32 %argc, i32* [[ARGC_ADDR:%.+]],
 // ALL: [[VLA:%.+]] = alloca i32, i{{[0-9]+}} [[VLA_SIZE:%[^,]+]],
 // CHECK:  call {{.*}}void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC_2]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i{{[0-9]+}}, i32*)* [[OMP_OUTLINED:@.+]] to void (i32*, i32*, ...)*), i{{[0-9]+}} [[VLA_SIZE]], i32* [[VLA]])
@@ -70,7 +70,7 @@ int main (int argc, char **argv) {
 // ALL-NEXT:  [[RET:%.+]] = call {{[a-z\_\b]*[ ]?i32}} [[TMAIN:@.+tmain.+]](i8** [[ARGV]])
 // ALL:       ret i32
 // ALL-NEXT:  }
-// ALL-DEBUG-LABEL: define i32 @main(i32 %argc, i8** %argv)
+// ALL-DEBUG-LABEL: define{{.*}} i32 @main(i32 %argc, i8** %argv)
 
 // ALL-DEBUG:       store i32 %argc, i32* [[ARGC_ADDR:%.+]],
 // ALL-DEBUG:       [[VLA:%.+]] = alloca i32, i64 [[VLA_SIZE:%[^,]+]],

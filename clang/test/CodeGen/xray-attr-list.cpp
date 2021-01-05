@@ -11,9 +11,9 @@ void never() {}
 [[clang::xray_never_instrument]] void alwaysNever() {}
 [[clang::xray_always_instrument]] void neverAlways() {}
 
-// CHECK: define void @_Z6alwaysv() #[[ALWAYSATTR:[0-9]+]] {
-// CHECK: define void @_Z5neverv() #[[NEVERATTR:[0-9]+]] {
-// CHECK: define void @_Z11alwaysNeverv() #[[NEVERATTR]] {
-// CHECK: define void @_Z11neverAlwaysv() #[[ALWAYSATTR]] {
+// CHECK: define{{.*}} void @_Z6alwaysv() #[[ALWAYSATTR:[0-9]+]] {
+// CHECK: define{{.*}} void @_Z5neverv() #[[NEVERATTR:[0-9]+]] {
+// CHECK: define{{.*}} void @_Z11alwaysNeverv() #[[NEVERATTR]] {
+// CHECK: define{{.*}} void @_Z11neverAlwaysv() #[[ALWAYSATTR]] {
 // CHECK: attributes #[[ALWAYSATTR]] = {{.*}} "function-instrument"="xray-always" {{.*}}
 // CHECK: attributes #[[NEVERATTR]] = {{.*}} "function-instrument"="xray-never" {{.*}}

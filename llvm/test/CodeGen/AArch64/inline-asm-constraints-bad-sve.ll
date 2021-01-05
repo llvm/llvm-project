@@ -6,6 +6,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK: error: couldn't allocate input reg for constraint 'Upa'
 ; CHECK: error: couldn't allocate input reg for constraint 'r'
 ; CHECK: error: couldn't allocate output register for constraint 'w'
+; CHECK: error: unknown token in expression
 
 define <vscale x 16 x i1> @foo1(i32 *%in) {
 entry:
@@ -26,4 +27,12 @@ entry:
   %0 = load <vscale x 16 x i1>, <vscale x 16 x i1>* %in, align 2
   %1 = call <vscale x 16 x i1> asm sideeffect "mov $0.b, $1.b \0A", "=&w,w"(<vscale x 16 x i1> %0)
   ret <vscale x 16 x i1> %1
+}
+
+define half @foo4(<vscale x 16 x i1> *%inp, <vscale x 8 x half> *%inv) {
+entry:
+  %0 = load <vscale x 16 x i1>, <vscale x 16 x i1>* %inp, align 2
+  %1 = load <vscale x 8 x half>, <vscale x 8 x half>* %inv, align 16
+  %2 = call half asm "fminv ${0:h}, $1, $2.h", "=r,@3Upl,w"(<vscale x 16 x i1> %0, <vscale x 8 x half> %1)
+  ret half %2
 }

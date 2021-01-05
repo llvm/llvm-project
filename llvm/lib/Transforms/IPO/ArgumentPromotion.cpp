@@ -142,7 +142,7 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
       // Simple byval argument? Just add all the struct element types.
       Type *AgTy = cast<PointerType>(I->getType())->getElementType();
       StructType *STy = cast<StructType>(AgTy);
-      Params.insert(Params.end(), STy->element_begin(), STy->element_end());
+      llvm::append_range(Params, STy->elements());
       ArgAttrVec.insert(ArgAttrVec.end(), STy->getNumElements(),
                         AttributeSet());
       ++NumByValArgsPromoted;
@@ -825,7 +825,7 @@ static bool canPaddingBeAccessed(Argument *arg) {
     WorkList.pop_back();
     if (isa<GetElementPtrInst>(V) || isa<PHINode>(V)) {
       if (PtrValues.insert(V).second)
-        WorkList.insert(WorkList.end(), V->user_begin(), V->user_end());
+        llvm::append_range(WorkList, V->users());
     } else if (StoreInst *Store = dyn_cast<StoreInst>(V)) {
       Stores.push_back(Store);
     } else if (!isa<LoadInst>(V)) {

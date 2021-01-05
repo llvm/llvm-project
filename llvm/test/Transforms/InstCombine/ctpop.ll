@@ -84,11 +84,11 @@ define <2 x i1> @test5vec(<2 x i32> %arg) {
   ret <2 x i1> %res
 }
 
-; Make sure we don't add range metadata to i1 ctpop.
+; No intrinsic or range needed - ctpop of bool bit is the bit itself.
+
 define i1 @test6(i1 %arg) {
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    [[CNT:%.*]] = call i1 @llvm.ctpop.i1(i1 [[ARG:%.*]])
-; CHECK-NEXT:    ret i1 [[CNT]]
+; CHECK-NEXT:    ret i1 [[ARG:%.*]]
 ;
   %cnt = call i1 @llvm.ctpop.i1(i1 %arg)
   ret i1 %cnt

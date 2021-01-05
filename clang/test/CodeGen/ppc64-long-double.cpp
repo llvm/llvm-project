@@ -33,12 +33,12 @@
 long double x = 0;
 int size = sizeof(x);
 
-// FP64: @x = global double {{.*}}, align 8
-// FP64: @size = global i32 8
-// FP128: @x = global fp128 {{.*}}, align 16
-// FP128: @size = global i32 16
-// IBM128: @x = global ppc_fp128 {{.*}}, align 16
-// IBM128: @size = global i32 16
+// FP64: @x ={{.*}} global double {{.*}}, align 8
+// FP64: @size ={{.*}} global i32 8
+// FP128: @x ={{.*}} global fp128 {{.*}}, align 16
+// FP128: @size ={{.*}} global i32 16
+// IBM128: @x ={{.*}} global ppc_fp128 {{.*}}, align 16
+// IBM128: @size ={{.*}} global i32 16
 
 long double foo(long double d) { return d; }
 

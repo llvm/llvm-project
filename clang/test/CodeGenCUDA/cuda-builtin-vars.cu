@@ -2,7 +2,7 @@
 
 #include "__clang_cuda_builtin_vars.h"
 
-// CHECK: define void @_Z6kernelPi(i32* %out)
+// CHECK: define{{.*}} void @_Z6kernelPi(i32* %out)
 __attribute__((global))
 void kernel(int *out) {
   int i = 0;

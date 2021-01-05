@@ -18,7 +18,7 @@ define <2 x i32> @test1(i1 %b, <2 x i32> %i, <2 x i32> %j) {
 ; CHECK-NEXT:    [[I_I1:%.*]] = extractelement <2 x i32> [[I]], i32 1
 ; CHECK-NEXT:    [[J_I1:%.*]] = extractelement <2 x i32> [[J]], i32 1
 ; CHECK-NEXT:    [[RES_I1:%.*]] = select i1 [[B]], i32 [[I_I1]], i32 [[J_I1]]
-; CHECK-NEXT:    [[RES_UPTO0:%.*]] = insertelement <2 x i32> undef, i32 [[RES_I0]], i32 0
+; CHECK-NEXT:    [[RES_UPTO0:%.*]] = insertelement <2 x i32> poison, i32 [[RES_I0]], i32 0
 ; CHECK-NEXT:    [[RES:%.*]] = insertelement <2 x i32> [[RES_UPTO0]], i32 [[RES_I1]], i32 1
 ; CHECK-NEXT:    ret <2 x i32> [[RES]]
 ;
@@ -36,7 +36,7 @@ define <2 x i32> @test2(<2 x i1> %b, <2 x i32> %i, <2 x i32> %j) {
 ; CHECK-NEXT:    [[I_I1:%.*]] = extractelement <2 x i32> [[I]], i32 1
 ; CHECK-NEXT:    [[J_I1:%.*]] = extractelement <2 x i32> [[J]], i32 1
 ; CHECK-NEXT:    [[RES_I1:%.*]] = select i1 [[B_I1]], i32 [[I_I1]], i32 [[J_I1]]
-; CHECK-NEXT:    [[RES_UPTO0:%.*]] = insertelement <2 x i32> undef, i32 [[RES_I0]], i32 0
+; CHECK-NEXT:    [[RES_UPTO0:%.*]] = insertelement <2 x i32> poison, i32 [[RES_I0]], i32 0
 ; CHECK-NEXT:    [[RES:%.*]] = insertelement <2 x i32> [[RES_UPTO0]], i32 [[RES_I1]], i32 1
 ; CHECK-NEXT:    ret <2 x i32> [[RES]]
 ;
@@ -52,7 +52,7 @@ define <2 x i32> @test3(<2 x i32> %i, <2 x i32> %j) {
 ; CHECK-NEXT:    [[I_I1:%.*]] = extractelement <2 x i32> [[I]], i32 1
 ; CHECK-NEXT:    [[J_I1:%.*]] = extractelement <2 x i32> [[J]], i32 1
 ; CHECK-NEXT:    [[RES_I1:%.*]] = add nuw nsw i32 [[I_I1]], [[J_I1]]
-; CHECK-NEXT:    [[RES_UPTO0:%.*]] = insertelement <2 x i32> undef, i32 [[RES_I0]], i32 0
+; CHECK-NEXT:    [[RES_UPTO0:%.*]] = insertelement <2 x i32> poison, i32 [[RES_I0]], i32 0
 ; CHECK-NEXT:    [[RES:%.*]] = insertelement <2 x i32> [[RES_UPTO0]], i32 [[RES_I1]], i32 1
 ; CHECK-NEXT:    ret <2 x i32> [[RES]]
 ;

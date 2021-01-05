@@ -1,7 +1,7 @@
 // Diamond inheritance.
 // A more complicated multiple inheritance example that includes longer chain of inheritance and a common ancestor.
 
-// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -O1 -S -o - -emit-llvm -fexperimental-relative-c++-abi-vtables | FileCheck %s
+// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -O1 -S -o - -emit-llvm -fexperimental-relative-c++-abi-vtables -fhalf-no-semantic-interposition | FileCheck %s
 
 // CHECK-DAG: %class.B = type { %class.A }
 // CHECK-DAG: %class.A = type { i32 (...)** }
@@ -20,9 +20,9 @@
 // - 2nd table containing a thunk to D::foo() and C::barC().
 // CHECK: @_ZTV1D.local = private unnamed_addr constant { [5 x i32], [4 x i32] } { [5 x i32] [i32 0, i32 trunc (i64 sub (i64 ptrtoint ({ i8*, i8*, i32, i32, i8*, i64, i8*, i64 }** @_ZTI1D.rtti_proxy to i64), i64 ptrtoint (i32* getelementptr inbounds ({ [5 x i32], [4 x i32] }, { [5 x i32], [4 x i32] }* @_ZTV1D.local, i32 0, i32 0, i32 2) to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (void (%class.D*)* dso_local_equivalent @_ZN1D3fooEv to i64), i64 ptrtoint (i32* getelementptr inbounds ({ [5 x i32], [4 x i32] }, { [5 x i32], [4 x i32] }* @_ZTV1D.local, i32 0, i32 0, i32 2) to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (void (%class.B*)* dso_local_equivalent @_ZN1B4barBEv to i64), i64 ptrtoint (i32* getelementptr inbounds ({ [5 x i32], [4 x i32] }, { [5 x i32], [4 x i32] }* @_ZTV1D.local, i32 0, i32 0, i32 2) to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (void (%class.D*)* dso_local_equivalent @_ZN1D3bazEv to i64), i64 ptrtoint (i32* getelementptr inbounds ({ [5 x i32], [4 x i32] }, { [5 x i32], [4 x i32] }* @_ZTV1D.local, i32 0, i32 0, i32 2) to i64)) to i32)], [4 x i32] [i32 -8, i32 trunc (i64 sub (i64 ptrtoint ({ i8*, i8*, i32, i32, i8*, i64, i8*, i64 }** @_ZTI1D.rtti_proxy to i64), i64 ptrtoint (i32* getelementptr inbounds ({ [5 x i32], [4 x i32] }, { [5 x i32], [4 x i32] }* @_ZTV1D.local, i32 0, i32 1, i32 2) to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (void (%class.D*)* dso_local_equivalent @_ZThn8_N1D3fooEv to i64), i64 ptrtoint (i32* getelementptr inbounds ({ [5 x i32], [4 x i32] }, { [5 x i32], [4 x i32] }* @_ZTV1D.local, i32 0, i32 1, i32 2) to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (void (%class.C*)* dso_local_equivalent @_ZN1C4barCEv to i64), i64 ptrtoint (i32* getelementptr inbounds ({ [5 x i32], [4 x i32] }, { [5 x i32], [4 x i32] }* @_ZTV1D.local, i32 0, i32 1, i32 2) to i64)) to i32)] }, align 4
 
-// @_ZTV1B = unnamed_addr alias { [4 x i32] }, { [4 x i32] }* @_ZTV1B.local
-// @_ZTV1C = unnamed_addr alias { [4 x i32] }, { [4 x i32] }* @_ZTV1C.local
-// @_ZTV1D = unnamed_addr alias { [5 x i32], [4 x i32] }, { [5 x i32], [4 x i32] }* @_ZTV1D.local
+// @_ZTV1B ={{.*}} unnamed_addr alias { [4 x i32] }, { [4 x i32] }* @_ZTV1B.local
+// @_ZTV1C ={{.*}} unnamed_addr alias { [4 x i32] }, { [4 x i32] }* @_ZTV1C.local
+// @_ZTV1D ={{.*}} unnamed_addr alias { [5 x i32], [4 x i32] }, { [5 x i32], [4 x i32] }* @_ZTV1D.local
 
 class A {
 public:

@@ -382,7 +382,7 @@ define <32 x i8> @splat_v32i8_pgso(<32 x i8> %x) !prof !14 {
 ; due to a missing AVX pattern to select a v2i64 X86ISD::BROADCAST of a
 ; loadi64 with multiple uses.
 
-@A = common global <3 x i64> zeroinitializer, align 32
+@A = common dso_local global <3 x i64> zeroinitializer, align 32
 
 define <8 x i64> @pr23259() #1 {
 ; AVX-LABEL: pr23259:

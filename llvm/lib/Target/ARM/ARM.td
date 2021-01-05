@@ -616,6 +616,8 @@ def ProcA77     : SubtargetFeature<"a77", "ARMProcFamily", "CortexA77",
                                    "Cortex-A77 ARM processors", []>;
 def ProcA78     : SubtargetFeature<"cortex-a78", "ARMProcFamily", "CortexA78",
                                    "Cortex-A78 ARM processors", []>;
+def ProcA78C    : SubtargetFeature<"a78c", "ARMProcFamily", "CortexA78C",
+                                   "Cortex-A78C ARM processors", []>;
 def ProcX1      : SubtargetFeature<"cortex-x1", "ARMProcFamily", "CortexX1",
                                    "Cortex-X1 ARM processors", []>;
 
@@ -660,7 +662,8 @@ def ProcR52     : SubtargetFeature<"r52", "ARMProcFamily", "CortexR52",
 
 def ProcM3      : SubtargetFeature<"m3", "ARMProcFamily", "CortexM3",
                                    "Cortex-M3 ARM processors", []>;
-
+def ProcM7      : SubtargetFeature<"m7", "ARMProcFamily", "CortexM7",
+                                   "Cortex-M7 ARM processors", []>;
 
 //===----------------------------------------------------------------------===//
 // ARM Helper classes.
@@ -1191,6 +1194,7 @@ def : ProcessorModel<"cortex-m4", CortexM4Model,        [ARMv7em,
                                                          FeatureHasNoBranchPredictor]>;
 
 def : ProcessorModel<"cortex-m7", CortexM7Model,        [ARMv7em,
+                                                         ProcM7,
                                                          FeatureFPARMv8_D16,
                                                          FeatureUseMISched]>;
 
@@ -1305,6 +1309,14 @@ def : ProcNoItin<"cortex-a78",                          [ARMv82a, ProcA78,
                                                          FeatureCRC,
                                                          FeatureFullFP16,
                                                          FeatureDotProd]>;
+
+def : ProcNoItin<"cortex-a78c",                         [ARMv82a, ProcA78C,
+                                                         FeatureHWDivThumb,
+                                                         FeatureHWDivARM,
+                                                         FeatureCrypto,
+                                                         FeatureCRC,
+                                                         FeatureDotProd,
+                                                         FeatureFullFP16]>;
 
 def : ProcNoItin<"cortex-x1",                           [ARMv82a, ProcX1,
                                                          FeatureHWDivThumb,

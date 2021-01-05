@@ -8,7 +8,7 @@ __attribute((objc_root_class)) @interface A @end
 void test0(__weak B **src) {
   __weak A *dest = *src;
 }
-// CHECK-LABEL: define void @_Z5test0PU6__weakP1B(
+// CHECK-LABEL: define{{.*}} void @_Z5test0PU6__weakP1B(
 // CHECK:       [[SRC:%.*]] = alloca [[B:%.*]]**, align 8
 // CHECK:       [[DEST:%.*]] = alloca [[A:%.*]]*, align 8
 // CHECK:       [[T0:%.*]] = load [[B]]**, [[B]]*** [[SRC]], align 8
@@ -22,7 +22,7 @@ void test0(__weak B **src) {
 void test1(__weak B **src) {
   __weak A *dest = static_cast<__weak B*&&>(*src);
 }
-// CHECK-LABEL: define void @_Z5test1PU6__weakP1B(
+// CHECK-LABEL: define{{.*}} void @_Z5test1PU6__weakP1B(
 // CHECK:       [[SRC:%.*]] = alloca [[B:%.*]]**, align 8
 // CHECK:       [[DEST:%.*]] = alloca [[A:%.*]]*, align 8
 // CHECK:       [[T0:%.*]] = load [[B]]**, [[B]]*** [[SRC]], align 8

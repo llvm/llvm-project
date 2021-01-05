@@ -233,15 +233,6 @@ template <class ELFT> class ELFObjectFile : public ELFObjectFileBase {
 public:
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
 
-  using uintX_t = typename ELFT::uint;
-
-  using Elf_Sym = typename ELFT::Sym;
-  using Elf_Shdr = typename ELFT::Shdr;
-  using Elf_Ehdr = typename ELFT::Ehdr;
-  using Elf_Rel = typename ELFT::Rel;
-  using Elf_Rela = typename ELFT::Rela;
-  using Elf_Dyn = typename ELFT::Dyn;
-
   SectionRef toSectionRef(const Elf_Shdr *Sec) const {
     return SectionRef(toDRI(Sec), this);
   }
@@ -1169,7 +1160,7 @@ StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
     case ELF::EM_MSP430:
       return "elf32-msp430";
     case ELF::EM_PPC:
-      return "elf32-powerpc";
+      return (IsLittleEndian ? "elf32-powerpcle" : "elf32-powerpc");
     case ELF::EM_RISCV:
       return "elf32-littleriscv";
     case ELF::EM_CSKY:
@@ -1245,7 +1236,7 @@ template <class ELFT> Triple::ArchType ELFObjectFile<ELFT>::getArch() const {
   case ELF::EM_MSP430:
     return Triple::msp430;
   case ELF::EM_PPC:
-    return Triple::ppc;
+    return IsLittleEndian ? Triple::ppcle : Triple::ppc;
   case ELF::EM_PPC64:
     return IsLittleEndian ? Triple::ppc64le : Triple::ppc64;
   case ELF::EM_RISCV:

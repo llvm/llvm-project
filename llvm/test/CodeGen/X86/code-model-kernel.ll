@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -code-model=kernel %s -o - | FileCheck %s
+; RUN: llc -mtriple=x86_64-pc-linux-gnu -code-model=kernel -simplifycfg-require-and-preserve-domtree=1 %s -o - | FileCheck %s
 ; CHECK-LABEL: main
 ; CHECK: .cfi_startproc
 ; CHECK: .cfi_personality 0, __gxx_personality_v0

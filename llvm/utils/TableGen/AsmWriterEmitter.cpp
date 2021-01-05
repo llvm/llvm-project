@@ -522,10 +522,8 @@ void AsmWriterEmitter::EmitPrintInstruction(
   }
 
   // Okay, delete instructions with no operand info left.
-  auto I = llvm::remove_if(Instructions,
-                     [](AsmWriterInst &Inst) { return Inst.Operands.empty(); });
-  Instructions.erase(I, Instructions.end());
-
+  llvm::erase_if(Instructions,
+                 [](AsmWriterInst &Inst) { return Inst.Operands.empty(); });
 
   // Because this is a vector, we want to emit from the end.  Reverse all of the
   // elements in the vector.

@@ -126,7 +126,7 @@ class GdbRemoteTestCaseBase(Base):
         if self.isVerboseLoggingRequested():
             # If requested, full logs go to a log file
             self._verbose_log_handler = logging.FileHandler(
-                self.log_basename + "-host.log")
+                self.getLogBasenameForCurrentTest() + "-host.log")
             self._verbose_log_handler.setFormatter(self._log_formatter)
             self._verbose_log_handler.setLevel(logging.DEBUG)
             self.logger.addHandler(self._verbose_log_handler)
@@ -166,7 +166,7 @@ class GdbRemoteTestCaseBase(Base):
         self.buildDefault(*args, **kwargs)
 
     def getLocalServerLogFile(self):
-        return self.log_basename + "-server.log"
+        return self.getLogBasenameForCurrentTest() + "-server.log"
 
     def setUpServerLogging(self, is_llgs):
         if len(lldbtest_config.channels) == 0:
@@ -199,9 +199,7 @@ class GdbRemoteTestCaseBase(Base):
             # Reverse connections may be tricky due to firewalls/NATs.
             reverse_connect = False
 
-            triple = self.dbg.GetSelectedPlatform().GetTriple()
-            if re.match(".*-.*-windows", triple):
-                self.skipTest("Remotely testing is not supported on Windows yet.")
+            # FIXME: This is extremely linux-oriented
 
             # Grab the ppid from /proc/[shell pid]/stat
             err, retcode, shell_stat = self.run_platform_command(

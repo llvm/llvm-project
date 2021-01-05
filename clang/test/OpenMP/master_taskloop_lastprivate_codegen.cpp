@@ -60,7 +60,7 @@ T tmain() {
 int main() {
   static int sivar;
 #ifdef LAMBDA
-  // LAMBDA: [[G:@.+]] = global double
+  // LAMBDA: [[G:@.+]] ={{.*}} global double
   // LAMBDA: [[SIVAR:@.+]] = internal global i{{[0-9]+}} 0,
   // LAMBDA-LABEL: @main
   // LAMBDA: call{{( x86_thiscallcc)?}} void [[OUTER_LAMBDA:@.+]](
@@ -102,7 +102,7 @@ int main() {
   }();
   return 0;
 #elif defined(BLOCKS)
-  // BLOCKS: [[G:@.+]] = global double
+  // BLOCKS: [[G:@.+]] ={{.*}} global double
   // BLOCKS-LABEL: @main
   // BLOCKS: call void {{%.+}}(i8
   ^{
@@ -163,7 +163,7 @@ int main() {
 }
 
 // CHECK: [[SIVAR:.+]] = internal global i{{[0-9]+}} 0,
-// CHECK: define i{{[0-9]+}} @main()
+// CHECK: define{{.*}} i{{[0-9]+}} @main()
 // CHECK: alloca [[S_DOUBLE_TY]],
 // CHECK: [[TEST:%.+]] = alloca [[S_DOUBLE_TY]],
 // CHECK: [[T_VAR_ADDR:%.+]] = alloca i32,

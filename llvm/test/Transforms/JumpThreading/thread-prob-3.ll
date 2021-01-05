@@ -5,8 +5,8 @@
 ; call DuplicateCondBranchOnPHIIntoPred(bb3, {bb2}).
 ;
 ; CHECK-LABEL: ---- Branch Probability Info : foo
-; CHECK:      set edge bb2 -> 0 successor probability to 0x7fffffff / 0x80000000 = 100.00%
-; CHECK-NEXT: set edge bb2 -> 1 successor probability to 0x00000001 / 0x80000000 = 0.00%
+; CHECK:      set edge bb2 -> 0 successor probability to 0x80000000 / 0x80000000 = 100.00%
+; CHECK-NEXT: set edge bb2 -> 1 successor probability to 0x00000000 / 0x80000000 = 0.00%
 define void @foo(i1 %f0, i1 %f1, i1 %f2) !prof !{!"function_entry_count", i64 0} {
 ; CHECK-LABEL: @foo(
 bb1:

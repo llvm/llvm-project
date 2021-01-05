@@ -12,7 +12,7 @@
 
 ; This file primarily contains tests for specific places in X86ISelLowering.cpp that needed be made aware of the legalizer not allowing 512-bit vectors due to prefer-256-bit even though AVX512 is enabled.
 
-define void @add256(<16 x i32>* %a, <16 x i32>* %b, <16 x i32>* %c) "min-legal-vector-width"="256" {
+define dso_local void @add256(<16 x i32>* %a, <16 x i32>* %b, <16 x i32>* %c) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: add256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rdi), %ymm0
@@ -30,7 +30,7 @@ define void @add256(<16 x i32>* %a, <16 x i32>* %b, <16 x i32>* %c) "min-legal-v
   ret void
 }
 
-define void @add512(<16 x i32>* %a, <16 x i32>* %b, <16 x i32>* %c) "min-legal-vector-width"="512" {
+define dso_local void @add512(<16 x i32>* %a, <16 x i32>* %b, <16 x i32>* %c) "min-legal-vector-width"="512" {
 ; CHECK-LABEL: add512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm0
@@ -45,7 +45,7 @@ define void @add512(<16 x i32>* %a, <16 x i32>* %b, <16 x i32>* %c) "min-legal-v
   ret void
 }
 
-define void @avg_v64i8_256(<64 x i8>* %a, <64 x i8>* %b) "min-legal-vector-width"="256" {
+define dso_local void @avg_v64i8_256(<64 x i8>* %a, <64 x i8>* %b) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: avg_v64i8_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rsi), %ymm0
@@ -69,7 +69,7 @@ define void @avg_v64i8_256(<64 x i8>* %a, <64 x i8>* %b) "min-legal-vector-width
 }
 
 
-define void @avg_v64i8_512(<64 x i8>* %a, <64 x i8>* %b) "min-legal-vector-width"="512" {
+define dso_local void @avg_v64i8_512(<64 x i8>* %a, <64 x i8>* %b) "min-legal-vector-width"="512" {
 ; CHECK-LABEL: avg_v64i8_512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa64 (%rsi), %zmm0
@@ -89,7 +89,7 @@ define void @avg_v64i8_512(<64 x i8>* %a, <64 x i8>* %b) "min-legal-vector-width
   ret void
 }
 
-define void @pmaddwd_32_256(<32 x i16>* %APtr, <32 x i16>* %BPtr, <16 x i32>* %CPtr) "min-legal-vector-width"="256" {
+define dso_local void @pmaddwd_32_256(<32 x i16>* %APtr, <32 x i16>* %BPtr, <16 x i32>* %CPtr) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: pmaddwd_32_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rdi), %ymm0
@@ -112,7 +112,7 @@ define void @pmaddwd_32_256(<32 x i16>* %APtr, <32 x i16>* %BPtr, <16 x i32>* %C
    ret void
 }
 
-define void @pmaddwd_32_512(<32 x i16>* %APtr, <32 x i16>* %BPtr, <16 x i32>* %CPtr) "min-legal-vector-width"="512" {
+define dso_local void @pmaddwd_32_512(<32 x i16>* %APtr, <32 x i16>* %BPtr, <16 x i32>* %CPtr) "min-legal-vector-width"="512" {
 ; CHECK-LABEL: pmaddwd_32_512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm0
@@ -132,7 +132,7 @@ define void @pmaddwd_32_512(<32 x i16>* %APtr, <32 x i16>* %BPtr, <16 x i32>* %C
    ret void
 }
 
-define void @psubus_64i8_max_256(<64 x i8>* %xptr, <64 x i8>* %yptr, <64 x i8>* %zptr) "min-legal-vector-width"="256" {
+define dso_local void @psubus_64i8_max_256(<64 x i8>* %xptr, <64 x i8>* %yptr, <64 x i8>* %zptr) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: psubus_64i8_max_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rdi), %ymm0
@@ -152,7 +152,7 @@ define void @psubus_64i8_max_256(<64 x i8>* %xptr, <64 x i8>* %yptr, <64 x i8>* 
   ret void
 }
 
-define void @psubus_64i8_max_512(<64 x i8>* %xptr, <64 x i8>* %yptr, <64 x i8>* %zptr) "min-legal-vector-width"="512" {
+define dso_local void @psubus_64i8_max_512(<64 x i8>* %xptr, <64 x i8>* %yptr, <64 x i8>* %zptr) "min-legal-vector-width"="512" {
 ; CHECK-LABEL: psubus_64i8_max_512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm0
@@ -169,7 +169,7 @@ define void @psubus_64i8_max_512(<64 x i8>* %xptr, <64 x i8>* %yptr, <64 x i8>* 
   ret void
 }
 
-define i32 @_Z9test_charPcS_i_256(i8* nocapture readonly, i8* nocapture readonly, i32) "min-legal-vector-width"="256" {
+define dso_local i32 @_Z9test_charPcS_i_256(i8* nocapture readonly, i8* nocapture readonly, i32) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: _Z9test_charPcS_i_256:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %edx, %eax
@@ -240,7 +240,7 @@ middle.block:
   ret i32 %13
 }
 
-define i32 @_Z9test_charPcS_i_512(i8* nocapture readonly, i8* nocapture readonly, i32) "min-legal-vector-width"="512" {
+define dso_local i32 @_Z9test_charPcS_i_512(i8* nocapture readonly, i8* nocapture readonly, i32) "min-legal-vector-width"="512" {
 ; CHECK-LABEL: _Z9test_charPcS_i_512:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %edx, %eax
@@ -306,10 +306,10 @@ middle.block:
   ret i32 %13
 }
 
-@a = global [1024 x i8] zeroinitializer, align 16
-@b = global [1024 x i8] zeroinitializer, align 16
+@a = dso_local global [1024 x i8] zeroinitializer, align 16
+@b = dso_local global [1024 x i8] zeroinitializer, align 16
 
-define i32 @sad_16i8_256() "min-legal-vector-width"="256" {
+define dso_local i32 @sad_16i8_256() "min-legal-vector-width"="256" {
 ; CHECK-LABEL: sad_16i8_256:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0
@@ -370,7 +370,7 @@ middle.block:
   ret i32 %12
 }
 
-define i32 @sad_16i8_512() "min-legal-vector-width"="512" {
+define dso_local i32 @sad_16i8_512() "min-legal-vector-width"="512" {
 ; CHECK-LABEL: sad_16i8_512:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0
@@ -431,7 +431,7 @@ middle.block:
   ret i32 %12
 }
 
-define void @sbto16f32_256(<16 x i16> %a, <16 x float>* %res) "min-legal-vector-width"="256" {
+define dso_local void @sbto16f32_256(<16 x i16> %a, <16 x float>* %res) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: sbto16f32_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovw2m %ymm0, %k0
@@ -450,7 +450,7 @@ define void @sbto16f32_256(<16 x i16> %a, <16 x float>* %res) "min-legal-vector-
   ret void
 }
 
-define void @sbto16f32_512(<16 x i16> %a, <16 x float>* %res) "min-legal-vector-width"="512" {
+define dso_local void @sbto16f32_512(<16 x i16> %a, <16 x float>* %res) "min-legal-vector-width"="512" {
 ; CHECK-LABEL: sbto16f32_512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovw2m %ymm0, %k0
@@ -465,7 +465,7 @@ define void @sbto16f32_512(<16 x i16> %a, <16 x float>* %res) "min-legal-vector-
   ret void
 }
 
-define void @sbto16f64_256(<16 x i16> %a, <16 x double>* %res)  "min-legal-vector-width"="256" {
+define dso_local void @sbto16f64_256(<16 x i16> %a, <16 x double>* %res)  "min-legal-vector-width"="256" {
 ; CHECK-LABEL: sbto16f64_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovw2m %ymm0, %k0
@@ -490,7 +490,7 @@ define void @sbto16f64_256(<16 x i16> %a, <16 x double>* %res)  "min-legal-vecto
   ret void
 }
 
-define void @sbto16f64_512(<16 x i16> %a, <16 x double>* %res)  "min-legal-vector-width"="512" {
+define dso_local void @sbto16f64_512(<16 x i16> %a, <16 x double>* %res)  "min-legal-vector-width"="512" {
 ; CHECK-LABEL: sbto16f64_512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovw2m %ymm0, %k0
@@ -508,7 +508,7 @@ define void @sbto16f64_512(<16 x i16> %a, <16 x double>* %res)  "min-legal-vecto
   ret void
 }
 
-define void @ubto16f32_256(<16 x i16> %a, <16 x float>* %res) "min-legal-vector-width"="256" {
+define dso_local void @ubto16f32_256(<16 x i16> %a, <16 x float>* %res) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: ubto16f32_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovw2m %ymm0, %k0
@@ -529,7 +529,7 @@ define void @ubto16f32_256(<16 x i16> %a, <16 x float>* %res) "min-legal-vector-
   ret void
 }
 
-define void @ubto16f32_512(<16 x i16> %a, <16 x float>* %res) "min-legal-vector-width"="512" {
+define dso_local void @ubto16f32_512(<16 x i16> %a, <16 x float>* %res) "min-legal-vector-width"="512" {
 ; CHECK-LABEL: ubto16f32_512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovw2m %ymm0, %k0
@@ -545,7 +545,7 @@ define void @ubto16f32_512(<16 x i16> %a, <16 x float>* %res) "min-legal-vector-
   ret void
 }
 
-define void @ubto16f64_256(<16 x i16> %a, <16 x double>* %res) "min-legal-vector-width"="256" {
+define dso_local void @ubto16f64_256(<16 x i16> %a, <16 x double>* %res) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: ubto16f64_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovw2m %ymm0, %k0
@@ -572,7 +572,7 @@ define void @ubto16f64_256(<16 x i16> %a, <16 x double>* %res) "min-legal-vector
   ret void
 }
 
-define void @ubto16f64_512(<16 x i16> %a, <16 x double>* %res) "min-legal-vector-width"="512" {
+define dso_local void @ubto16f64_512(<16 x i16> %a, <16 x double>* %res) "min-legal-vector-width"="512" {
 ; CHECK-LABEL: ubto16f64_512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovw2m %ymm0, %k0
@@ -652,7 +652,7 @@ define <16 x i16> @test_16f32tosb_512(<16 x float>* %ptr, <16 x i16> %passthru) 
   ret <16 x i16> %select
 }
 
-define void @mul256(<64 x i8>* %a, <64 x i8>* %b, <64 x i8>* %c) "min-legal-vector-width"="256" {
+define dso_local void @mul256(<64 x i8>* %a, <64 x i8>* %b, <64 x i8>* %c) "min-legal-vector-width"="256" {
 ; CHECK-AVX512-LABEL: mul256:
 ; CHECK-AVX512:       # %bb.0:
 ; CHECK-AVX512-NEXT:    vmovdqa (%rdi), %ymm0
@@ -715,7 +715,7 @@ define void @mul256(<64 x i8>* %a, <64 x i8>* %b, <64 x i8>* %c) "min-legal-vect
   ret void
 }
 
-define void @mul512(<64 x i8>* %a, <64 x i8>* %b, <64 x i8>* %c) "min-legal-vector-width"="512" {
+define dso_local void @mul512(<64 x i8>* %a, <64 x i8>* %b, <64 x i8>* %c) "min-legal-vector-width"="512" {
 ; CHECK-AVX512-LABEL: mul512:
 ; CHECK-AVX512:       # %bb.0:
 ; CHECK-AVX512-NEXT:    vmovdqa64 (%rdi), %zmm0
@@ -945,7 +945,7 @@ define <32 x i8> @trunc_v32i16_v32i8_sign(<32 x i16>* %x) nounwind "min-legal-ve
   ret <32 x i8> %c
 }
 
-define void @zext_v16i8_v16i64(<16 x i8> %x, <16 x i64>* %y) nounwind "min-legal-vector-width"="256" {
+define dso_local void @zext_v16i8_v16i64(<16 x i8> %x, <16 x i64>* %y) nounwind "min-legal-vector-width"="256" {
 ; CHECK-LABEL: zext_v16i8_v16i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
@@ -967,7 +967,7 @@ define void @zext_v16i8_v16i64(<16 x i8> %x, <16 x i64>* %y) nounwind "min-legal
   ret void
 }
 
-define void @sext_v16i8_v16i64(<16 x i8> %x, <16 x i64>* %y) nounwind "min-legal-vector-width"="256" {
+define dso_local void @sext_v16i8_v16i64(<16 x i8> %x, <16 x i64>* %y) nounwind "min-legal-vector-width"="256" {
 ; CHECK-LABEL: sext_v16i8_v16i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovsxbw %xmm0, %ymm1
@@ -989,7 +989,7 @@ define void @sext_v16i8_v16i64(<16 x i8> %x, <16 x i64>* %y) nounwind "min-legal
   ret void
 }
 
-define void @vselect_split_v8i16_setcc(<8 x i16> %s, <8 x i16> %t, <8 x i64>* %p, <8 x i64>* %q, <8 x i64>* %r) "min-legal-vector-width"="256" {
+define dso_local void @vselect_split_v8i16_setcc(<8 x i16> %s, <8 x i16> %t, <8 x i64>* %p, <8 x i64>* %q, <8 x i64>* %r) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: vselect_split_v8i16_setcc:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rsi), %ymm2
@@ -1010,7 +1010,7 @@ define void @vselect_split_v8i16_setcc(<8 x i16> %s, <8 x i16> %t, <8 x i64>* %p
   ret void
 }
 
-define void @vselect_split_v8i32_setcc(<8 x i32> %s, <8 x i32> %t, <8 x i64>* %p, <8 x i64>* %q, <8 x i64>* %r) "min-legal-vector-width"="256" {
+define dso_local void @vselect_split_v8i32_setcc(<8 x i32> %s, <8 x i32> %t, <8 x i64>* %p, <8 x i64>* %q, <8 x i64>* %r) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: vselect_split_v8i32_setcc:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rsi), %ymm2
@@ -1031,7 +1031,7 @@ define void @vselect_split_v8i32_setcc(<8 x i32> %s, <8 x i32> %t, <8 x i64>* %p
   ret void
 }
 
-define void @vselect_split_v16i8_setcc(<16 x i8> %s, <16 x i8> %t, <16 x i32>* %p, <16 x i32>* %q, <16 x i32>* %r) "min-legal-vector-width"="256" {
+define dso_local void @vselect_split_v16i8_setcc(<16 x i8> %s, <16 x i8> %t, <16 x i32>* %p, <16 x i32>* %q, <16 x i32>* %r) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: vselect_split_v16i8_setcc:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rsi), %ymm2
@@ -1052,7 +1052,7 @@ define void @vselect_split_v16i8_setcc(<16 x i8> %s, <16 x i8> %t, <16 x i32>* %
   ret void
 }
 
-define void @vselect_split_v16i16_setcc(<16 x i16> %s, <16 x i16> %t, <16 x i32>* %p, <16 x i32>* %q, <16 x i32>* %r) "min-legal-vector-width"="256" {
+define dso_local void @vselect_split_v16i16_setcc(<16 x i16> %s, <16 x i16> %t, <16 x i32>* %p, <16 x i32>* %q, <16 x i32>* %r) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: vselect_split_v16i16_setcc:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rsi), %ymm2
@@ -1091,7 +1091,7 @@ define <16 x i8> @trunc_packus_v16i32_v16i8(<16 x i32>* %p) "min-legal-vector-wi
   ret <16 x i8> %f
 }
 
-define void @trunc_packus_v16i32_v16i8_store(<16 x i32>* %p, <16 x i8>* %q) "min-legal-vector-width"="256" {
+define dso_local void @trunc_packus_v16i32_v16i8_store(<16 x i32>* %p, <16 x i8>* %q) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: trunc_packus_v16i32_v16i8_store:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rdi), %ymm0
@@ -1117,7 +1117,7 @@ define <64 x i1> @v64i1_argument_return(<64 x i1> %x) "min-legal-vector-width"="
   ret <64 x i1> %x
 }
 
-define void @v64i1_shuffle(<64 x i8>* %x, <64 x i8>* %y) "min-legal-vector-width"="256" {
+define dso_local void @v64i1_shuffle(<64 x i8>* %x, <64 x i8>* %y) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: v64i1_shuffle:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmovdqa (%rdi), %ymm1
@@ -1575,9 +1575,9 @@ entry:
 }
 declare void @llvm.masked.store.v64i8.p0v64i8(<64 x i8>, <64 x i8>*, i32, <64 x i1>)
 
-@mem64_dst = global i64 0, align 8
-@mem64_src = global i64 0, align 8
-define i32 @v64i1_inline_asm() "min-legal-vector-width"="256" {
+@mem64_dst = dso_local global i64 0, align 8
+@mem64_src = dso_local global i64 0, align 8
+define dso_local i32 @v64i1_inline_asm() "min-legal-vector-width"="256" {
 ; CHECK-LABEL: v64i1_inline_asm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovq {{.*}}(%rip), %k0
@@ -1594,7 +1594,7 @@ define i32 @v64i1_inline_asm() "min-legal-vector-width"="256" {
   ret i32 %4
 }
 
-define void @cmp_v8i64_sext(<8 x i64>* %xptr, <8 x i64>* %yptr, <8 x i64>* %zptr) "min-legal-vector-width"="256" {
+define dso_local void @cmp_v8i64_sext(<8 x i64>* %xptr, <8 x i64>* %yptr, <8 x i64>* %zptr) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: cmp_v8i64_sext:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rsi), %ymm0
@@ -1613,7 +1613,7 @@ define void @cmp_v8i64_sext(<8 x i64>* %xptr, <8 x i64>* %yptr, <8 x i64>* %zptr
   ret void
 }
 
-define void @cmp_v8i64_zext(<8 x i64>* %xptr, <8 x i64>* %yptr, <8 x i64>* %zptr) "min-legal-vector-width"="256" {
+define dso_local void @cmp_v8i64_zext(<8 x i64>* %xptr, <8 x i64>* %yptr, <8 x i64>* %zptr) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: cmp_v8i64_zext:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rsi), %ymm0

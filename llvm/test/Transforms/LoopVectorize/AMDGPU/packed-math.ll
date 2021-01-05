@@ -62,7 +62,7 @@ define half @vectorize_v2f16_loop(half addrspace(1)* noalias %s) {
 ; GFX9-NEXT:    [[BIN_RDX18:%.*]] = fadd fast <2 x half> [[TMP21]], [[BIN_RDX17]]
 ; GFX9-NEXT:    [[BIN_RDX19:%.*]] = fadd fast <2 x half> [[TMP22]], [[BIN_RDX18]]
 ; GFX9-NEXT:    [[BIN_RDX20:%.*]] = fadd fast <2 x half> [[TMP23]], [[BIN_RDX19]]
-; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x half> [[BIN_RDX20]], <2 x half> undef, <2 x i32> <i32 1, i32 undef>
+; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x half> [[BIN_RDX20]], <2 x half> poison, <2 x i32> <i32 1, i32 undef>
 ; GFX9-NEXT:    [[BIN_RDX21:%.*]] = fadd fast <2 x half> [[BIN_RDX20]], [[RDX_SHUF]]
 ; GFX9-NEXT:    [[TMP25:%.*]] = extractelement <2 x half> [[BIN_RDX21]], i32 0
 ; GFX9-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
@@ -132,7 +132,7 @@ define half @vectorize_v2f16_loop(half addrspace(1)* noalias %s) {
 ; VI-NEXT:    [[BIN_RDX18:%.*]] = fadd fast <2 x half> [[TMP21]], [[BIN_RDX17]]
 ; VI-NEXT:    [[BIN_RDX19:%.*]] = fadd fast <2 x half> [[TMP22]], [[BIN_RDX18]]
 ; VI-NEXT:    [[BIN_RDX20:%.*]] = fadd fast <2 x half> [[TMP23]], [[BIN_RDX19]]
-; VI-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x half> [[BIN_RDX20]], <2 x half> undef, <2 x i32> <i32 1, i32 undef>
+; VI-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x half> [[BIN_RDX20]], <2 x half> poison, <2 x i32> <i32 1, i32 undef>
 ; VI-NEXT:    [[BIN_RDX21:%.*]] = fadd fast <2 x half> [[BIN_RDX20]], [[RDX_SHUF]]
 ; VI-NEXT:    [[TMP25:%.*]] = extractelement <2 x half> [[BIN_RDX21]], i32 0
 ; VI-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]

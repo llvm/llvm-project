@@ -19,10 +19,10 @@ define dso_local double @test(float* %Arr) {
 ; CHECK-NEXT:    [[TMP5]] = fadd fast <2 x double> [[TMP4]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 128
-; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !0
+; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi <2 x double> [ [[TMP5]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x double> [[DOTLCSSA]], <2 x double> undef, <2 x i32> <i32 1, i32 undef>
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x double> [[DOTLCSSA]], <2 x double> poison, <2 x i32> <i32 1, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd fast <2 x double> [[DOTLCSSA]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[BIN_RDX]], i32 0
 ; CHECK-NEXT:    ret double [[TMP7]]

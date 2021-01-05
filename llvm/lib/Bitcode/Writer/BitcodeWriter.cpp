@@ -913,6 +913,7 @@ void ModuleBitcodeWriter::writeTypeTable() {
     case Type::LabelTyID:     Code = bitc::TYPE_CODE_LABEL;     break;
     case Type::MetadataTyID:  Code = bitc::TYPE_CODE_METADATA;  break;
     case Type::X86_MMXTyID:   Code = bitc::TYPE_CODE_X86_MMX;   break;
+    case Type::X86_AMXTyID:   Code = bitc::TYPE_CODE_X86_AMX;   break;
     case Type::TokenTyID:     Code = bitc::TYPE_CODE_TOKEN;     break;
     case Type::IntegerTyID:
       // INTEGER: [width]

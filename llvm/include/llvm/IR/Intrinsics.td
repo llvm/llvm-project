@@ -255,6 +255,8 @@ def llvm_token_ty      : LLVMType<token>;                         // token
 def llvm_x86mmx_ty     : LLVMType<x86mmx>;
 def llvm_ptrx86mmx_ty  : LLVMPointerType<llvm_x86mmx_ty>;         // <1 x i64>*
 
+def llvm_x86amx_ty     : LLVMType<x86amx>;
+
 def llvm_v2i1_ty       : LLVMType<v2i1>;     //   2 x i1
 def llvm_v4i1_ty       : LLVMType<v4i1>;     //   4 x i1
 def llvm_v8i1_ty       : LLVMType<v8i1>;     //   8 x i1

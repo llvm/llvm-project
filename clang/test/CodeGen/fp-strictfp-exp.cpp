@@ -7,7 +7,7 @@
 // in this test will need to change.
 
 float fp_precise_1(float a, float b, float c) {
-// CHECK-LABEL: define float @_Z12fp_precise_1fff
+// CHECK-LABEL: define{{.*}} float @_Z12fp_precise_1fff
 // CHECK: %[[M:.+]] = tail call float @llvm.experimental.constrained.fmul.f32(float {{.*}}, float {{.*}}, metadata {{.*}})
 // CHECK: tail call float @llvm.experimental.constrained.fadd.f32(float %[[M]], float %c, metadata {{.*}})
   return a * b + c;

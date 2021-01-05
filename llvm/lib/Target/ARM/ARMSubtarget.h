@@ -63,9 +63,11 @@ protected:
     CortexA76,
     CortexA77,
     CortexA78,
+    CortexA78C,
     CortexA8,
     CortexA9,
     CortexM3,
+    CortexM7,
     CortexR4,
     CortexR4F,
     CortexR5,
@@ -625,6 +627,7 @@ public:
   bool isCortexA15() const { return ARMProcFamily == CortexA15; }
   bool isSwift()    const { return ARMProcFamily == Swift; }
   bool isCortexM3() const { return ARMProcFamily == CortexM3; }
+  bool isCortexM7() const { return ARMProcFamily == CortexM7; }
   bool isLikeA9() const { return isCortexA9() || isCortexA15() || isKrait(); }
   bool isCortexR5() const { return ARMProcFamily == CortexR5; }
   bool isKrait() const { return ARMProcFamily == Krait; }

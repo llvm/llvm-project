@@ -272,7 +272,7 @@ FunctionPass *llvm::createCFGOnlyPrinterLegacyPassPass() {
 
 void DOTGraphTraits<DOTFuncInfo *>::computeHiddenNodes(const Function *F) {
   auto evaluateBB = [&](const BasicBlock *Node) {
-    if (succ_begin(Node) == succ_end(Node)) {
+    if (succ_empty(Node)) {
       const Instruction *TI = Node->getTerminator();
       isHiddenBasicBlock[Node] =
           (HideUnreachablePaths && isa<UnreachableInst>(TI)) ||

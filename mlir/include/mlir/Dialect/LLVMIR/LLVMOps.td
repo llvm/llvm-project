@@ -150,7 +150,7 @@ def LLVM_ICmpOp : LLVM_Op<"icmp", [NoSideEffect]> {
   let builders = [
     OpBuilderDAG<(ins "ICmpPredicate":$predicate, "Value":$lhs, "Value":$rhs),
     [{
-      build($_builder, $_state, LLVMType::getInt1Ty(lhs.getType().getContext()),
+      build($_builder, $_state, LLVMIntegerType::get(lhs.getType().getContext(), 1),
             $_builder.getI64IntegerAttr(static_cast<int64_t>(predicate)), lhs, rhs);
     }]>];
   let parser = [{ return parseCmpOp<ICmpPredicate>(parser, result); }];
@@ -198,7 +198,7 @@ def LLVM_FCmpOp : LLVM_Op<"fcmp", [NoSideEffect]> {
   let builders = [
     OpBuilderDAG<(ins "FCmpPredicate":$predicate, "Value":$lhs, "Value":$rhs),
     [{
-      build($_builder, $_state, LLVMType::getInt1Ty(lhs.getType().getContext()),
+      build($_builder, $_state, LLVMIntegerType::get(lhs.getType().getContext(), 1),
             $_builder.getI64IntegerAttr(static_cast<int64_t>(predicate)), lhs, rhs);
     }]>];
   let parser = [{ return parseCmpOp<FCmpPredicate>(parser, result); }];

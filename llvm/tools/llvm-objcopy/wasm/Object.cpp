@@ -26,9 +26,7 @@ void Object::addSectionWithOwnedContents(
 
 void Object::removeSections(function_ref<bool(const Section &)> ToRemove) {
   // TODO: remove reloc sections for the removed section, handle symbols, etc.
-  Sections.erase(
-      std::remove_if(std::begin(Sections), std::end(Sections), ToRemove),
-      std::end(Sections));
+  llvm::erase_if(Sections, ToRemove);
 }
 
 } // end namespace wasm

@@ -154,8 +154,9 @@ TEST(IRInstructionMapper, PredicateDifferentiation) {
   ASSERT_TRUE(UnsignedVec[0] != UnsignedVec[1]);
 }
 
-// Checks that predicates with the same swapped predicate map to different
-// values.
+// Checks that predicates where that can be considered the same when the
+// operands are swapped, i.e. greater than to less than are mapped to the same
+// unsigned integer.
 TEST(IRInstructionMapper, PredicateIsomorphism) {
   StringRef ModuleString = R"(
                           define i32 @f(i32 %a, i32 %b) {
@@ -177,7 +178,7 @@ TEST(IRInstructionMapper, PredicateIsomorphism) {
 
   ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
   ASSERT_TRUE(UnsignedVec.size() == 3);
-  ASSERT_TRUE(UnsignedVec[0] != UnsignedVec[1]);
+  ASSERT_TRUE(UnsignedVec[0] == UnsignedVec[1]);
 }
 
 // Checks that the same predicate maps to the same value.
@@ -814,16 +815,17 @@ TEST(IRInstructionMapper, AllocaIllegal) {
   ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(0));
 }
 
-// Checks that an getelementptr instruction is mapped to be illegal.  There is
-// extra checking required for the parameters if a getelementptr has more than
-// two operands.
-TEST(IRInstructionMapper, GetElementPtrIllegal) {
+// Checks that an getelementptr instruction is mapped to be legal.  And that
+// the operands in getelementpointer instructions are the exact same after the
+// first element operand, which only requires the same type.
+TEST(IRInstructionMapper, GetElementPtrSameEndOperands) {
   StringRef ModuleString = R"(
     %struct.RT = type { i8, [10 x [20 x i32]], i8 }
     %struct.ST = type { i32, double, %struct.RT }
-    define i32 @f(%struct.ST* %s, i32 %a, i32 %b) {
+    define i32 @f(%struct.ST* %s, i64 %a, i64 %b) {
     bb0:
-       %0 = getelementptr inbounds %struct.ST, %struct.ST* %s, i64 1
+       %0 = getelementptr inbounds %struct.ST, %struct.ST* %s, i64 %a, i32 0
+       %1 = getelementptr inbounds %struct.ST, %struct.ST* %s, i64 %b, i32 0
        ret i32 0
     })";
   LLVMContext Context;
@@ -838,17 +840,102 @@ TEST(IRInstructionMapper, GetElementPtrIllegal) {
   getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
-  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(0));
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(3));
+  ASSERT_EQ(UnsignedVec[0], UnsignedVec[1]);
 }
 
-// Checks that a call instruction is mapped to be illegal.  We have to perform
-// extra checks to ensure that both the name and function type are the same.
-TEST(IRInstructionMapper, CallIllegal) {
+// Check that when the operands in getelementpointer instructions are not the
+// exact same after the first element operand, the instructions are mapped to
+// different values.
+TEST(IRInstructionMapper, GetElementPtrDifferentEndOperands) {
   StringRef ModuleString = R"(
-                          declare i32 @f1(i32, i32)
-                          define i32 @f(i32 %a, i32 %b) {
+    %struct.RT = type { i8, [10 x [20 x i32]], i8 }
+    %struct.ST = type { i32, double, %struct.RT }
+    define i32 @f(%struct.ST* %s, i64 %a, i64 %b) {
+    bb0:
+       %0 = getelementptr inbounds %struct.ST, %struct.ST* %s, i64 %a, i32 0
+       %1 = getelementptr inbounds %struct.ST, %struct.ST* %s, i64 %b, i32 2
+       ret i32 0
+    })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(3));
+  ASSERT_NE(UnsignedVec[0], UnsignedVec[1]);
+}
+
+// Check that when the operands in getelementpointer instructions are not the
+// same initial base type, each instruction is mapped to a different value.
+TEST(IRInstructionMapper, GetElementPtrDifferentBaseType) {
+  StringRef ModuleString = R"(
+    %struct.RT = type { i8, [10 x [20 x i32]], i8 }
+    %struct.ST = type { i32, double, %struct.RT }
+    define i32 @f(%struct.ST* %s, %struct.RT* %r, i64 %a, i64 %b) {
+    bb0:
+       %0 = getelementptr inbounds %struct.ST, %struct.ST* %s, i64 %a
+       %1 = getelementptr inbounds %struct.RT, %struct.RT* %r, i64 %b
+       ret i32 0
+    })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(3));
+  ASSERT_NE(UnsignedVec[0], UnsignedVec[1]);
+}
+
+// Check that when the operands in getelementpointer instructions do not have
+// the same inbounds modifier, they are not counted as the same.
+TEST(IRInstructionMapper, GetElementPtrDifferentInBounds) {
+  StringRef ModuleString = R"(
+    %struct.RT = type { i8, [10 x [20 x i32]], i8 }
+    %struct.ST = type { i32, double, %struct.RT }
+    define i32 @f(%struct.ST* %s, %struct.RT* %r, i64 %a, i64 %b) {
+    bb0:
+       %0 = getelementptr inbounds %struct.ST, %struct.ST* %s, i64 %a, i32 0
+       %1 = getelementptr %struct.ST, %struct.ST* %s, i64 %b, i32 0
+       ret i32 0
+    })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(3));
+  ASSERT_NE(UnsignedVec[0], UnsignedVec[1]);
+}
+
+// Checks that indirect call instructions are mapped to be illegal since we
+// cannot guarantee the same function in two different cases.
+TEST(IRInstructionMapper, CallsIllegalIndirect) {
+  StringRef ModuleString = R"(
+                          define i32 @f(void()* %func) {
                           bb0:
-                             %0 = call i32 @f1(i32 %a, i32 %b)
+                             call void %func()
                              ret i32 0
                           })";
   LLVMContext Context;
@@ -864,6 +951,199 @@ TEST(IRInstructionMapper, CallIllegal) {
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
   ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(0));
+}
+
+// Checks that a call instruction is mapped to be legal.  Here we check that
+// a call with the same name, and same types are mapped to the same
+// value.
+TEST(IRInstructionMapper, CallsSameTypeSameName) {
+  StringRef ModuleString = R"(
+                          declare i32 @f1(i32, i32)
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = call i32 @f1(i32 %a, i32 %b)
+                             %1 = call i32 @f1(i32 %a, i32 %b)
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(3));
+  ASSERT_EQ(UnsignedVec[0], UnsignedVec[1]);
+}
+
+// Here we check that a calls with different names, but the same arguments types
+// are mapped to different value.
+TEST(IRInstructionMapper, CallsSameArgTypeDifferentName) {
+  StringRef ModuleString = R"(
+                          declare i32 @f1(i32, i32)
+                          declare i32 @f2(i32, i32)
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = call i32 @f1(i32 %a, i32 %b)
+                             %1 = call i32 @f2(i32 %a, i32 %b)
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(3));
+  ASSERT_NE(UnsignedVec[0], UnsignedVec[1]);
+}
+
+// Here we check that a calls with different names, and different arguments
+// types are mapped to different value.
+TEST(IRInstructionMapper, CallsDifferentArgTypeDifferentName) {
+  StringRef ModuleString = R"(
+                          declare i32 @f1(i32, i32)
+                          declare i32 @f2(i32)
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = call i32 @f1(i32 %a, i32 %b)
+                             %1 = call i32 @f2(i32 %a)
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(3));
+  ASSERT_NE(UnsignedVec[0], UnsignedVec[1]);
+}
+
+// Here we check that calls with different names, and different return
+// types are mapped to different value.
+TEST(IRInstructionMapper, CallsDifferentReturnTypeDifferentName) {
+  StringRef ModuleString = R"(
+                          declare i64 @f1(i32, i32)
+                          declare i32 @f2(i32, i32)
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = call i64 @f1(i32 %a, i32 %b)
+                             %1 = call i32 @f2(i32 %a, i32 %b)
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(3));
+  ASSERT_NE(UnsignedVec[0], UnsignedVec[1]);
+}
+
+// Here we check that calls with the same name, types, and parameters map to the
+// same unsigned integer.
+TEST(IRInstructionMapper, CallsSameParameters) {
+  StringRef ModuleString = R"(
+                          declare i32 @f1(i32, i32)
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = tail call fastcc i32 @f1(i32 %a, i32 %b)
+                             %1 = tail call fastcc i32 @f1(i32 %a, i32 %b)
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(3));
+  ASSERT_EQ(UnsignedVec[0], UnsignedVec[1]);
+}
+
+// Here we check that calls with different tail call settings are mapped to
+// different values.
+TEST(IRInstructionMapper, CallsDifferentTails) {
+  StringRef ModuleString = R"(
+                          declare i32 @f1(i32, i32)
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = tail call i32 @f1(i32 %a, i32 %b)
+                             %1 = call i32 @f1(i32 %a, i32 %b)
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(3));
+  ASSERT_NE(UnsignedVec[0], UnsignedVec[1]);
+}
+
+// Here we check that calls with different calling convention settings are
+// mapped to different values.
+TEST(IRInstructionMapper, CallsDifferentCallingConventions) {
+  StringRef ModuleString = R"(
+                          declare i32 @f1(i32, i32)
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = call fastcc i32 @f1(i32 %a, i32 %b)
+                             %1 = call i32 @f1(i32 %a, i32 %b)
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(3));
+  ASSERT_NE(UnsignedVec[0], UnsignedVec[1]);
 }
 
 // Checks that an invoke instruction is mapped to be illegal. Invoke
@@ -1290,8 +1570,8 @@ TEST(IRInstructionMapper, RepeatedIllegalLength) {
                           bb0:
                              %0 = add i32 %a, %b
                              %1 = mul i32 %a, %b
-                             %2 = call i32 @f(i32 %a, i32 %b)
-                             %3 = call i32 @f(i32 %a, i32 %b)
+                             %2 = alloca i32
+                             %3 = alloca i32
                              %4 = add i32 %a, %b
                              %5 = mul i32 %a, %b
                              ret i32 0
@@ -1371,6 +1651,51 @@ TEST(IRSimilarityCandidate, CheckIdenticalInstructions) {
   std::advance(End, 1);
   IRSimilarityCandidate Cand1(0, 2, *Start, *End);
   IRSimilarityCandidate Cand2(0, 2, *Start, *End);
+
+  ASSERT_TRUE(IRSimilarityCandidate::isSimilar(Cand1, Cand2));
+}
+
+// Checks that comparison instructions are found to be similar instructions
+// when the operands are flipped and the predicate is also swapped.
+TEST(IRSimilarityCandidate, PredicateIsomorphism) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = icmp sgt i32 %a, %b
+                             %1 = add i32 %b, %a
+                             br label %bb1
+                          bb1:
+                             %2 = icmp slt i32 %a, %b
+                             %3 = add i32 %a, %b
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  ASSERT_TRUE(InstrList.size() > 5);
+  ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
+
+  std::vector<IRInstructionData *>::iterator Start, End;
+  Start = InstrList.begin();
+  End = InstrList.begin();
+  
+  std::advance(End, 1);
+  IRSimilarityCandidate Cand1(0, 2, *Start, *End);
+
+  Start = InstrList.begin();
+  End = InstrList.begin();
+  
+  std::advance(Start, 3);
+  std::advance(End, 4);
+  IRSimilarityCandidate Cand2(3, 2, *Start, *End);
 
   ASSERT_TRUE(IRSimilarityCandidate::isSimilar(Cand1, Cand2));
 }
@@ -1567,6 +1892,67 @@ TEST(IRSimilarityCandidate, DifferentStructure) {
   ASSERT_FALSE(longSimCandCompare(InstrList, true));
 }
 
+// Checks that comparison instructions are found to have the same structure
+// when the operands are flipped and the predicate is also swapped.
+TEST(IRSimilarityCandidate, PredicateIsomorphismStructure) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = icmp sgt i32 %a, %b
+                             %1 = add i32 %a, %b
+                             br label %bb1
+                          bb1:
+                             %2 = icmp slt i32 %b, %a
+                             %3 = add i32 %a, %b
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  ASSERT_TRUE(InstrList.size() > 5);
+  ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
+
+  ASSERT_TRUE(longSimCandCompare(InstrList, true));
+}
+
+// Checks that different predicates are counted as diferent.
+TEST(IRSimilarityCandidate, PredicateDifference) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = icmp sge i32 %a, %b
+                             %1 = add i32 %b, %a
+                             br label %bb1
+                          bb1:
+                             %2 = icmp slt i32 %b, %a
+                             %3 = add i32 %a, %b
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  ASSERT_TRUE(InstrList.size() > 5);
+  ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
+
+  ASSERT_FALSE(longSimCandCompare(InstrList));
+}
+
 // Checks that the same structure is recognized between two candidates. The
 // items %a and %b are used in the same way in both sets of instructions.
 TEST(IRSimilarityCandidate, SameStructure) {
@@ -1688,8 +2074,8 @@ TEST(IRSimilarityIdentifier, InstructionDifference) {
   ASSERT_TRUE(SimilarityCandidates.empty());
 }
 
-// This test checks to see whether we can detect similarity for commutativen
-// instructions where the operands have been reversed.  Right now, we cannot.
+// This test checks to see whether we can detect similarity for commutative
+// instructions where the operands have been reversed.
 TEST(IRSimilarityIdentifier, CommutativeSimilarity) {
   StringRef ModuleString = R"(
                           define i32 @f(i32 %a, i32 %b) {
@@ -1708,13 +2094,45 @@ TEST(IRSimilarityIdentifier, CommutativeSimilarity) {
   std::vector<std::vector<IRSimilarityCandidate>> SimilarityCandidates;
   getSimilarities(*M, SimilarityCandidates);
 
-  ASSERT_TRUE(SimilarityCandidates.empty());
+  ASSERT_TRUE(SimilarityCandidates.size() == 1);
+  for (std::vector<IRSimilarityCandidate> &Cands : SimilarityCandidates) {
+    ASSERT_TRUE(Cands.size() == 2);
+    unsigned InstIdx = 0;
+    for (IRSimilarityCandidate &Cand : Cands) {
+      ASSERT_TRUE(Cand.getStartIdx() == InstIdx);
+      InstIdx += 3;
+    }
+  }
 }
 
-// Check that we are not finding commutative similarity in non commutative
+// This test checks to see whether we can detect different structure in
+// commutative instructions.  In this case, the second operand in the second
+// add is different.
+TEST(IRSimilarityIdentifier, NoCommutativeSimilarity) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = add i32 %a, %b
+                             %1 = add i32 %1, %b
+                             br label %bb1
+                          bb1:
+                             %2 = add i32 %a, %b
+                             %3 = add i32 %2, %a
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<std::vector<IRSimilarityCandidate>> SimilarityCandidates;
+  getSimilarities(*M, SimilarityCandidates);
+
+  ASSERT_TRUE(SimilarityCandidates.size() == 0);
+}
+
+// Check that we are not finding similarity in non commutative
 // instructions.  That is, while the instruction and operands used are the same
-// in the two subtraction sequences, they cannot be counted as the same since
-// a subtraction is not commutative.
+// in the two subtraction sequences, they are in a different order, and cannot
+// be counted as the same since a subtraction is not commutative.
 TEST(IRSimilarityIdentifier, NonCommutativeDifference) {
   StringRef ModuleString = R"(
                           define i32 @f(i32 %a, i32 %b) {
@@ -1747,6 +2165,39 @@ TEST(IRSimilarityIdentifier, MappingSimilarity) {
                           bb1:
                              %2 = add i32 %c, %d
                              %3 = sub i32 %d, %c
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<std::vector<IRSimilarityCandidate>> SimilarityCandidates;
+  getSimilarities(*M, SimilarityCandidates);
+
+  ASSERT_TRUE(SimilarityCandidates.size() == 1);
+  for (std::vector<IRSimilarityCandidate> &Cands : SimilarityCandidates) {
+    ASSERT_TRUE(Cands.size() == 2);
+    unsigned InstIdx = 0;
+    for (IRSimilarityCandidate &Cand : Cands) {
+      ASSERT_TRUE(Cand.getStartIdx() == InstIdx);
+      InstIdx += 3;
+    }
+  }
+}
+
+// Check that we find instances of swapped predicate isomorphism.  That is,
+// for predicates that can be flipped, e.g. greater than to less than,
+// we can identify that instances of these different literal predicates, but are
+// the same within a single swap can be found.
+TEST(IRSimilarityIdentifier, PredicateIsomorphism) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = add i32 %a, %b
+                             %1 = icmp sgt i32 %b, %a
+                             br label %bb1
+                          bb1:
+                             %2 = add i32 %a, %b
+                             %3 = icmp slt i32 %a, %b
                              ret i32 0
                           })";
   LLVMContext Context;

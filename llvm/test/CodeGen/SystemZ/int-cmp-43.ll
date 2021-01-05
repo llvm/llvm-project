@@ -3,11 +3,11 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 
-@g = global i64 1
-@h = global i64 1, align 4, section "foo"
+@g = dso_local global i64 1
+@h = dso_local global i64 1, align 4, section "foo"
 
 ; Check signed comparisons.
-define i64 @f1(i64 %src1) {
+define dso_local i64 @f1(i64 %src1) {
 ; CHECK-LABEL: f1:
 ; CHECK: cgrl %r2, g
 ; CHECK-NEXT: blr %r14
@@ -25,7 +25,7 @@ exit:
 }
 
 ; Check unsigned comparisons.
-define i64 @f2(i64 %src1) {
+define dso_local i64 @f2(i64 %src1) {
 ; CHECK-LABEL: f2:
 ; CHECK: clgrl %r2, g
 ; CHECK-NEXT: blr %r14
@@ -43,7 +43,7 @@ exit:
 }
 
 ; Check equality, which can use CRL or CLRL.
-define i64 @f3(i64 %src1) {
+define dso_local i64 @f3(i64 %src1) {
 ; CHECK-LABEL: f3:
 ; CHECK: c{{l?}}grl %r2, g
 ; CHECK-NEXT: ber %r14
@@ -61,7 +61,7 @@ exit:
 }
 
 ; ...likewise inequality.
-define i64 @f4(i64 %src1) {
+define dso_local i64 @f4(i64 %src1) {
 ; CHECK-LABEL: f4:
 ; CHECK: c{{l?}}grl %r2, g
 ; CHECK-NEXT: blhr %r14
@@ -79,7 +79,7 @@ exit:
 }
 
 ; Repeat f1 with an unaligned address.
-define i64 @f5(i64 %src1) {
+define dso_local i64 @f5(i64 %src1) {
 ; CHECK-LABEL: f5:
 ; CHECK: larl [[REG:%r[0-5]]], h
 ; CHECK: cg %r2, 0([[REG]])
@@ -98,7 +98,7 @@ exit:
 }
 
 ; Check the comparison can be reversed if that allows CGRL to be used.
-define i64 @f6(i64 %src2) {
+define dso_local i64 @f6(i64 %src2) {
 ; CHECK-LABEL: f6:
 ; CHECK: cgrl %r2, g
 ; CHECK-NEXT: bhr %r14

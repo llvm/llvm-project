@@ -28,7 +28,7 @@ void foo_fq(__float128);
 // OMP-TARGET: %[[V3:[0-9a-zA-Z_.]+]] = load ppc_fp128, ppc_fp128* %[[V2]], align 8
 // OMP-TARGET: call void @foo_ld(ppc_fp128 %[[V3]])
 
-// OMP-HOST-LABEL: define void @omp(
+// OMP-HOST-LABEL: define{{.*}} void @omp(
 // OMP-HOST: %[[AP1:[0-9a-zA-Z_.]+]] = bitcast i8** %[[AP:[0-9a-zA-Z_.]+]] to i8*
 // OMP-HOST: call void @llvm.va_start(i8* %[[AP1]])
 // OMP-HOST: %[[CUR:[0-9a-zA-Z_.]+]] = load i8*, i8** %[[AP]], align 8
@@ -50,7 +50,7 @@ void omp(int n, ...) {
   va_end(ap);
 }
 
-// IEEE-LABEL: define void @f128
+// IEEE-LABEL: define{{.*}} void @f128
 // IEEE: %[[AP1:[0-9a-zA-Z_.]+]] = bitcast i8** %[[AP:[0-9a-zA-Z_.]+]] to i8*
 // IEEE: call void @llvm.va_start(i8* %[[AP1]])
 // IEEE: %[[CUR:[0-9a-zA-Z_.]+]] = load i8*, i8** %[[AP]]
@@ -70,7 +70,7 @@ void f128(int n, ...) {
   va_end(ap);
 }
 
-// IEEE-LABEL: define void @long_double
+// IEEE-LABEL: define{{.*}} void @long_double
 // IEEE: %[[AP1:[0-9a-zA-Z_.]+]] = bitcast i8** %[[AP:[0-9a-zA-Z_.]+]] to i8*
 // IEEE: call void @llvm.va_start(i8* %[[AP1]])
 // IEEE: %[[CUR:[0-9a-zA-Z_.]+]] = load i8*, i8** %[[AP]]
@@ -84,7 +84,7 @@ void f128(int n, ...) {
 // IEEE: %[[AP2:[0-9a-zA-Z_.]+]] = bitcast i8** %[[AP]] to i8*
 // IEEE: call void @llvm.va_end(i8* %[[AP2]])
 
-// IBM-LABEL: define void @long_double
+// IBM-LABEL: define{{.*}} void @long_double
 // IBM: %[[AP1:[0-9a-zA-Z_.]+]] = bitcast i8** %[[AP:[0-9a-zA-Z_.]+]] to i8*
 // IBM: call void @llvm.va_start(i8* %[[AP1]])
 // IBM: %[[CUR:[0-9a-zA-Z_.]+]] = load i8*, i8** %[[AP]]

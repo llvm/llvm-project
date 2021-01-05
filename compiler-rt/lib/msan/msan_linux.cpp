@@ -26,7 +26,6 @@
 #include <signal.h>
 #include <unistd.h>
 #include <unwind.h>
-#include <execinfo.h>
 #include <sys/time.h>
 #include <sys/resource.h>
 

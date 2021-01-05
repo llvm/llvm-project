@@ -18,7 +18,7 @@ void print(int n, int a, int b, int c, int d) {
 }
 
 void test(int n) {
-  // CHECK: define void {{.*test.*}}(i32 [[n:%.+]]) #
+  // CHECK: define{{.*}} void {{.*test.*}}(i32 [[n:%.+]]) #
   // CHECK: [[n_addr:%.+]] = alloca
   // CHECK-NEXT: [[saved_stack:%.+]] = alloca
   // CHECK-NEXT: [[vla_expr:%.+]] = alloca i64, align 8

@@ -10,7 +10,6 @@ class TestGdbRemoteAuxvSupport(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     AUXV_SUPPORT_FEATURE_NAME = "qXfer:auxv:read"
 
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def has_auxv_support(self):
         inferior_args = ["message:main entered", "sleep:5"]
         procs = self.prep_debug_monitor_and_inferior(

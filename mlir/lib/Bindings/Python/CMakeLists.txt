@@ -2,15 +2,6 @@ include(AddMLIRPythonExtension)
 add_custom_target(MLIRBindingsPythonExtension)
 
 ################################################################################
-# Generate dialect-specific bindings.
-################################################################################
-
-add_mlir_dialect_python_bindings(MLIRBindingsPythonStandardOps
-  StandardOps.td
-  std)
-add_dependencies(MLIRBindingsPythonExtension MLIRBindingsPythonStandardOps)
-
-################################################################################
 # Copy python source tree.
 ################################################################################
 
@@ -41,6 +32,15 @@ foreach(PY_SRC_FILE ${PY_SRC_FILES})
 endforeach()
 
 ################################################################################
+# Generate dialect-specific bindings.
+################################################################################
+
+add_mlir_dialect_python_bindings(MLIRBindingsPythonStandardOps
+  StandardOps.td
+  std)
+add_dependencies(MLIRBindingsPythonSources MLIRBindingsPythonStandardOps)
+
+################################################################################
 # Build core python extension
 ################################################################################
 add_mlir_python_extension(MLIRCoreBindingsPythonExtension _mlir
@@ -69,6 +69,25 @@ if (NOT LLVM_ENABLE_IDE)
     install-MLIRBindingsPythonSources
     DEPENDS MLIRBindingsPythonSources
     COMPONENT MLIRBindingsPythonSources)
+endif()
+
+# Dialect sources are generated. Install separately.
+# Note that __pycache__ directories may have been left by tests and other
+# executions. And __init__.py is handled as a regular source file.
+install(
+  DIRECTORY ${PROJECT_BINARY_DIR}/python/mlir/dialects
+  DESTINATION python/mlir
+  COMPONENT MLIRBindingsPythonDialects
+  FILES_MATCHING PATTERN "*.py"
+  PATTERN "__pycache__" EXCLUDE
+  PATTERN "__init__.py" EXCLUDE
+)
+
+if (NOT LLVM_ENABLE_IDE)
+  add_llvm_install_targets(
+    install-MLIRBindingsPythonDialects
+    DEPENDS MLIRBindingsPythonSources
+    COMPONENT MLIRBindingsPythonDialects)
 endif()
 
 add_subdirectory(Transforms)

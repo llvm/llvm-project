@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=thumbv7-apple-darwin -mcpu=cortex-a8 -relocation-model=pic -frame-pointer=all
+; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=thumbv7-apple-darwin -mcpu=cortex-a8 -relocation-model=pic -frame-pointer=all
 
 	%0 = type { %struct.GAP }		; type %0
 	%1 = type { i16, i8, i8 }		; type %1

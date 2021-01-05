@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -w -emit-llvm -o - %s -fsanitize=pointer-overflow | FileCheck %s
 
-// CHECK-LABEL: define void @variable_len_array_arith
+// CHECK-LABEL: define{{.*}} void @variable_len_array_arith
 void variable_len_array_arith(int n, int k) {
   int vla[n];
   int (*p)[n] = &vla;
@@ -18,7 +18,7 @@ void variable_len_array_arith(int n, int k) {
   p + k;
 }
 
-// CHECK-LABEL: define void @objc_id
+// CHECK-LABEL: define{{.*}} void @objc_id
 void objc_id(id *p) {
   // CHECK: add i64 {{.*}}, 8, !nosanitize
   // CHECK-NOT: select

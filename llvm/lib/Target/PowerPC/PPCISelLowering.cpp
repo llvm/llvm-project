@@ -13237,11 +13237,13 @@ SDValue PPCTargetLowering::DAGCombineTruncBoolExt(SDNode *N,
       KnownBits Op2Known = DAG.computeKnownBits(N->getOperand(1));
 
       // We don't really care about what is known about the first bit (if
-      // anything), so clear it in all masks prior to comparing them.
-      Op1Known.Zero.clearBit(0); Op1Known.One.clearBit(0);
-      Op2Known.Zero.clearBit(0); Op2Known.One.clearBit(0);
+      // anything), so pretend that it is known zero for both to ensure they can
+      // be compared as constants.
+      Op1Known.Zero.setBit(0); Op1Known.One.clearBit(0);
+      Op2Known.Zero.setBit(0); Op2Known.One.clearBit(0);
 
-      if (Op1Known.Zero != Op2Known.Zero || Op1Known.One != Op2Known.One)
+      if (!Op1Known.isConstant() || !Op2Known.isConstant() ||
+          Op1Known.getConstant() != Op2Known.getConstant())
         return SDValue();
     }
   }

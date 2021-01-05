@@ -1095,9 +1095,8 @@ static char getSymbolNMTypeChar(IRObjectFile &Obj, basic_symbol_iterator I) {
 }
 
 static bool isObject(SymbolicFile &Obj, basic_symbol_iterator I) {
-  return !dyn_cast<ELFObjectFileBase>(&Obj)
-             ? false
-             : elf_symbol_iterator(I)->getELFType() == ELF::STT_OBJECT;
+  return isa<ELFObjectFileBase>(&Obj) &&
+         elf_symbol_iterator(I)->getELFType() == ELF::STT_OBJECT;
 }
 
 // For ELF object files, Set TypeName to the symbol typename, to be printed
@@ -1811,9 +1810,7 @@ static bool checkMachOAndArchFlags(SymbolicFile *O, std::string &Filename) {
                                        &McpuDefault, &ArchFlag);
   }
   const std::string ArchFlagName(ArchFlag);
-  if (none_of(ArchFlags, [&](const std::string &Name) {
-        return Name == ArchFlagName;
-      })) {
+  if (!llvm::is_contained(ArchFlags, ArchFlagName)) {
     error("No architecture specified", Filename);
     return false;
   }
@@ -2115,8 +2112,7 @@ static void dumpSymbolNamesFromFile(std::string &Filename) {
     for (const TapiUniversal::ObjectForArch &I : TU->objects()) {
       StringRef ArchName = I.getArchFlagName();
       const bool ShowArch =
-          ArchFlags.empty() ||
-          any_of(ArchFlags, [&](StringRef Name) { return Name == ArchName; });
+          ArchFlags.empty() || llvm::is_contained(ArchFlags, ArchName);
       if (!ShowArch)
         continue;
       if (!AddInlinedInfo && !I.isTopLevelLib())

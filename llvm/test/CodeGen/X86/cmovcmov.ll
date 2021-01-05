@@ -8,7 +8,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ; One way to do that is with (select (fcmp une/oeq)), which gets
 ; legalized to setp/setne.
 
-define i32 @test_select_fcmp_oeq_i32(float %a, float %b, i32 %c, i32 %d) nounwind {
+define dso_local i32 @test_select_fcmp_oeq_i32(float %a, float %b, i32 %c, i32 %d) nounwind {
 ; CMOV-LABEL: test_select_fcmp_oeq_i32:
 ; CMOV:       # %bb.0: # %entry
 ; CMOV-NEXT:    movl %edi, %eax
@@ -106,7 +106,7 @@ entry:
   ret i64 %r
 }
 
-define double @test_select_fcmp_oeq_f64(float %a, float %b, double %c, double %d) nounwind {
+define dso_local double @test_select_fcmp_oeq_f64(float %a, float %b, double %c, double %d) nounwind {
 ; CMOV-LABEL: test_select_fcmp_oeq_f64:
 ; CMOV:       # %bb.0: # %entry
 ; CMOV-NEXT:    ucomiss %xmm1, %xmm0
@@ -213,7 +213,7 @@ entry:
 
 ; Also make sure we catch the original code-sequence of interest:
 
-define float @test_zext_fcmp_une(float %a, float %b) nounwind {
+define dso_local float @test_zext_fcmp_une(float %a, float %b) nounwind {
 ; CMOV-LABEL: test_zext_fcmp_une:
 ; CMOV:       # %bb.0: # %entry
 ; CMOV-NEXT:    cmpneqss %xmm1, %xmm0
@@ -251,7 +251,7 @@ entry:
   ret float %conv2
 }
 
-define float @test_zext_fcmp_oeq(float %a, float %b) nounwind {
+define dso_local float @test_zext_fcmp_oeq(float %a, float %b) nounwind {
 ; CMOV-LABEL: test_zext_fcmp_oeq:
 ; CMOV:       # %bb.0: # %entry
 ; CMOV-NEXT:    cmpeqss %xmm1, %xmm0
@@ -291,7 +291,7 @@ entry:
 
 attributes #0 = { nounwind }
 
-@g8 = global i8 0
+@g8 = dso_local global i8 0
 
 ; The following test failed because llvm had a bug where a structure like:
 ;
@@ -311,7 +311,7 @@ attributes #0 = { nounwind }
 ;   %13 = COPY %12
 ; Which was invalid as %12 is not the same value as %13
 
-define void @no_cascade_opt(i32 %v0, i32 %v1, i32 %v2, i32 %v3) nounwind {
+define dso_local void @no_cascade_opt(i32 %v0, i32 %v1, i32 %v2, i32 %v3) nounwind {
 ; CMOV-LABEL: no_cascade_opt:
 ; CMOV:       # %bb.0: # %entry
 ; CMOV-NEXT:    cmpl %edx, %esi

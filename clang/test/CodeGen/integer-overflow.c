@@ -8,9 +8,9 @@
 // Tests for signed integer overflow stuff.
 // rdar://7432000 rdar://7221421
 void test1() {
-  // DEFAULT-LABEL: define void @test1
-  // WRAPV-LABEL: define void @test1
-  // TRAPV-LABEL: define void @test1
+  // DEFAULT-LABEL: define{{.*}} void @test1
+  // WRAPV-LABEL: define{{.*}} void @test1
+  // TRAPV-LABEL: define{{.*}} void @test1
   extern volatile int f11G, a, b;
   
   // DEFAULT: add nsw i32

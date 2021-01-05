@@ -5,21 +5,21 @@
 
 %myStruct = type { i64 , i8, i32 }
 
-@var8 = global i8 0
-@var8_2 = global i8 0
-@var32 = global i32 0
-@var64 = global i64 0
-@var128 = global i128 0
-@varfloat = global float 0.0
-@varfloat_2 = global float 0.0
-@vardouble = global double 0.0
-@varstruct = global %myStruct zeroinitializer
-@varsmallstruct = global [2 x i64] zeroinitializer
+@var8 = dso_local global i8 0
+@var8_2 = dso_local global i8 0
+@var32 = dso_local global i32 0
+@var64 = dso_local global i64 0
+@var128 = dso_local global i128 0
+@varfloat = dso_local global float 0.0
+@varfloat_2 = dso_local global float 0.0
+@vardouble = dso_local global double 0.0
+@varstruct = dso_local global %myStruct zeroinitializer
+@varsmallstruct = dso_local global [2 x i64] zeroinitializer
 
 declare void @take_i8s(i8 %val1, i8 %val2)
 declare void @take_floats(float %val1, float %val2)
 
-define void @simple_args() {
+define dso_local void @simple_args() {
 ; CHECK-LABEL: simple_args:
   %char1 = load i8, i8* @var8
   %char2 = load i8, i8* @var8_2
@@ -45,7 +45,7 @@ declare double @return_double()
 declare [2 x i64] @return_smallstruct()
 declare void @return_large_struct(%myStruct* sret(%myStruct) %retval)
 
-define void @simple_rets() {
+define dso_local void @simple_rets() {
 ; CHECK-LABEL: simple_rets:
 
   %int = call i32 @return_int()
@@ -80,7 +80,7 @@ declare void @stacked_fpu(float %var0, double %var1, float %var2, float %var3,
                           float %var4, float %var5, float %var6, float %var7,
                           float %var8)
 
-define void @check_stack_args() {
+define dso_local void @check_stack_args() {
 ; CHECK-LABEL: check_stack_args:
   call i32 @struct_on_stack(i8 0, i16 12, i32 42, i64 99, i128 1,
                             i32* @var32, %myStruct* byval(%myStruct) @varstruct,
@@ -120,7 +120,7 @@ declare void @check_i128_stackalign(i32 %val0, i32 %val1, i32 %val2, i32 %val3,
 declare void @check_i128_regalign(i32 %val0, i128 %val1)
 
 
-define void @check_i128_align() {
+define dso_local void @check_i128_align() {
 ; CHECK-LABEL: check_i128_align:
   %val = load i128, i128* @var128
   call void @check_i128_stackalign(i32 0, i32 1, i32 2, i32 3,
@@ -146,9 +146,9 @@ define void @check_i128_align() {
   ret void
 }
 
-@fptr = global void()* null
+@fptr = dso_local global void()* null
 
-define void @check_indirect_call() {
+define dso_local void @check_indirect_call() {
 ; CHECK-LABEL: check_indirect_call:
   %func = load void()*, void()** @fptr
   call void %func()

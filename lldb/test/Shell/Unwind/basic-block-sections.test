@@ -12,22 +12,22 @@
 # RUN: %lldb %t -s %s -o exit | FileCheck  %s --check-prefix=BBSECTIONS
 
 # Reorder basic blocks so that main's basic blocks are discontiguous
-# RUN: echo "main.3" > %t.order
+# RUN: echo "main.__part.3" > %t.order
 # RUN: echo "bar" >> %t.order
 # RUN: echo "main" >> %t.order
-# RUN: echo "main.2" >> %t.order
+# RUN: echo "main.__part.2" >> %t.order
 # RUN: echo "foo" >> %t.order
-# RUN: echo "main.1" >> %t.order
+# RUN: echo "main.__part.1" >> %t.order
 # RUN: %clang_host %p/Inputs/basic-block-sections.c -o %t -fbasic-block-sections=all -fuse-ld=lld -Wl,--symbol-ordering-file,%t.order -Wl,--warn-symbol-ordering -Wl,--fatal-warnings
 # RUN: %lldb %t -s %s -o exit | FileCheck  %s --check-prefix=BBSECTIONS
 
 # Test the reverse permutation too.
-# RUN: echo "main.1" > %t.order
+# RUN: echo "main.__part.1" > %t.order
 # RUN: echo "foo" >> %t.order
-# RUN: echo "main.2" >> %t.order
+# RUN: echo "main.__part.2" >> %t.order
 # RUN: echo "main" >> %t.order
 # RUN: echo "bar" >> %t.order
-# RUN: echo "main.3" >> %t.order
+# RUN: echo "main.__part.3" >> %t.order
 # RUN: %clang_host %p/Inputs/basic-block-sections.c -o %t -fbasic-block-sections=all -fuse-ld=lld -Wl,--symbol-ordering-file,%t.order -Wl,--warn-symbol-ordering -Wl,--fatal-warnings
 # RUN: %lldb %t -s %s -o exit | FileCheck  %s --check-prefix=BBSECTIONS
 
@@ -46,4 +46,4 @@ thread backtrace
 
 # BBSECTIONS: frame #0: {{.*}}`bar
 # BBSECTIONS: frame #1: {{.*}}`foo
-# BBSECTIONS: frame #2: {{.*}}`main.1 +
+# BBSECTIONS: frame #2: {{.*}}`main.__part.1 +

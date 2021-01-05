@@ -797,10 +797,10 @@ define <16 x i32> @test_broadcast_4i32_16i32_chain(<4 x i32>* %p0, <4 x float>* 
 ; Fallback to the broadcast should be done
 ;
 
-@ga4 = global <4 x i64> zeroinitializer, align 8
-@gb4 = global <8 x i64> zeroinitializer, align 8
+@ga4 = dso_local global <4 x i64> zeroinitializer, align 8
+@gb4 = dso_local global <8 x i64> zeroinitializer, align 8
 
-define void @fallback_broadcast_v4i64_to_v8i64(<4 x i64> %a, <8 x i64> %b) {
+define dso_local void @fallback_broadcast_v4i64_to_v8i64(<4 x i64> %a, <8 x i64> %b) {
 ; X86-AVX1-LABEL: fallback_broadcast_v4i64_to_v8i64:
 ; X86-AVX1:       # %bb.0: # %entry
 ; X86-AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,0,2,0]
@@ -912,10 +912,10 @@ entry:
 }
 
 
-@ga2 = global <4 x double> zeroinitializer, align 8
-@gb2 = global <8 x double> zeroinitializer, align 8
+@ga2 = dso_local global <4 x double> zeroinitializer, align 8
+@gb2 = dso_local global <8 x double> zeroinitializer, align 8
 
-define void @fallback_broadcast_v4f64_to_v8f64(<4 x double> %a, <8 x double> %b) {
+define dso_local void @fallback_broadcast_v4f64_to_v8f64(<4 x double> %a, <8 x double> %b) {
 ; X86-AVX-LABEL: fallback_broadcast_v4f64_to_v8f64:
 ; X86-AVX:       # %bb.0: # %entry
 ; X86-AVX-NEXT:    vmovapd {{.*#+}} ymm3 = [1.0E+0,2.0E+0,3.0E+0,4.0E+0]
@@ -976,11 +976,11 @@ entry:
   ret void
 }
 
-@ha4 = global <4 x i32> zeroinitializer, align 8
-@hb4 = global <8 x i32> zeroinitializer, align 8
-@hc4 = global <16 x i32> zeroinitializer, align 8
+@ha4 = dso_local global <4 x i32> zeroinitializer, align 8
+@hb4 = dso_local global <8 x i32> zeroinitializer, align 8
+@hc4 = dso_local global <16 x i32> zeroinitializer, align 8
 
-define void @fallback_broadcast_v4i32_v8i32_v16i32(<4 x i32> %a, <8 x i32> %b, <16 x i32> %c) nounwind {
+define dso_local void @fallback_broadcast_v4i32_v8i32_v16i32(<4 x i32> %a, <8 x i32> %b, <16 x i32> %c) nounwind {
 ; X86-AVX1-LABEL: fallback_broadcast_v4i32_v8i32_v16i32:
 ; X86-AVX1:       # %bb.0: # %entry
 ; X86-AVX1-NEXT:    pushl %ebp

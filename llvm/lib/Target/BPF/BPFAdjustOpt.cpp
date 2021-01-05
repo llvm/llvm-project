@@ -221,7 +221,7 @@ bool BPFAdjustOptImpl::avoidSpeculation(Instruction &I) {
     }
   }
 
-  if (!dyn_cast<LoadInst>(&I) && !dyn_cast<CallInst>(&I))
+  if (!isa<LoadInst>(&I) && !isa<CallInst>(&I))
     return false;
 
   // For:
@@ -301,7 +301,7 @@ bool BPFAdjustOptImpl::avoidSpeculation(Instruction &I) {
   if (!isCandidate || Candidates.empty())
     return false;
 
-  PassThroughs.insert(PassThroughs.end(), Candidates.begin(), Candidates.end());
+  llvm::append_range(PassThroughs, Candidates);
   return true;
 }
 

@@ -240,7 +240,7 @@ def lto_obj_path : P<
     "lto-obj-path",
     "output native object for merged LTO unit to this path">;
 def dash_dash_version : Flag<["--"], "version">,
-  HelpText<"Print version information">;
+  HelpText<"Display the version number and exit">;
 def threads
     : P<"threads", "Number of threads. '1' disables multi-threading. By "
                    "default all available hardware threads are used">;

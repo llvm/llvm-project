@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s
 
 ; CHECK: GCC_except_table0:
 ; CHECK: Call site Encoding = uleb128

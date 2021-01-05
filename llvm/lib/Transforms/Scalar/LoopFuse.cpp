@@ -1474,8 +1474,7 @@ private:
     mergeLatch(FC0, FC1);
 
     // Merge the loops.
-    SmallVector<BasicBlock *, 8> Blocks(FC1.L->block_begin(),
-                                        FC1.L->block_end());
+    SmallVector<BasicBlock *, 8> Blocks(FC1.L->blocks());
     for (BasicBlock *BB : Blocks) {
       FC0.L->addBlockEntry(BB);
       FC1.L->removeBlockFromLoop(BB);
@@ -1765,8 +1764,7 @@ private:
     mergeLatch(FC0, FC1);
 
     // Merge the loops.
-    SmallVector<BasicBlock *, 8> Blocks(FC1.L->block_begin(),
-                                        FC1.L->block_end());
+    SmallVector<BasicBlock *, 8> Blocks(FC1.L->blocks());
     for (BasicBlock *BB : Blocks) {
       FC0.L->addBlockEntry(BB);
       FC1.L->removeBlockFromLoop(BB);

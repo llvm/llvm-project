@@ -300,7 +300,7 @@ define void @strides_different_direction(i32* noalias nocapture %A, i32* noalias
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, i32* [[TMP13]], i32 -3
 ; CHECK-NEXT:    [[TMP15:%.*]] = bitcast i32* [[TMP14]] to <4 x i32>*
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP15]], align 4
-; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i32> [[WIDE_LOAD1]], <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i32> [[WIDE_LOAD1]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP16:%.*]] = add nsw <4 x i32> [[REVERSE]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[TMP7]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, i32* [[TMP17]], i32 0

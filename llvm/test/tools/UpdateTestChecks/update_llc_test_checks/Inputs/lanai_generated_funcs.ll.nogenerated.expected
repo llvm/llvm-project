@@ -4,9 +4,11 @@
 ; NOTE: Machine outliner doesn't run.
 @x = global i32 0, align 4
 
-define i32 @check_boundaries() #0 {
+define dso_local i32 @check_boundaries() #0 {
 ; CHECK-LABEL: check_boundaries:
-; CHECK:       ! %bb.0:
+; CHECK:       .Lcheck_boundaries$local:
+; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:  ! %bb.0:
 ; CHECK-NEXT:    st %fp, [--%sp]
 ; CHECK-NEXT:    add %sp, 0x8, %fp
 ; CHECK-NEXT:    sub %sp, 0x20, %sp
@@ -85,9 +87,11 @@ define i32 @check_boundaries() #0 {
   ret i32 0
 }
 
-define i32 @main() #0 {
+define dso_local i32 @main() #0 {
 ; CHECK-LABEL: main:
-; CHECK:       ! %bb.0:
+; CHECK:       .Lmain$local:
+; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:  ! %bb.0:
 ; CHECK-NEXT:    st %fp, [--%sp]
 ; CHECK-NEXT:    add %sp, 0x8, %fp
 ; CHECK-NEXT:    sub %sp, 0x20, %sp

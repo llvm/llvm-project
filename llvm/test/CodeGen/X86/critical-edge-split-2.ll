@@ -4,8 +4,8 @@
 %0 = type <{ %1, %1 }>
 %1 = type { i8, i8, i8, i8 }
 
-@g_2 = global %0 zeroinitializer
-@g_4 = global %1 zeroinitializer, align 4
+@g_2 = dso_local global %0 zeroinitializer
+@g_4 = dso_local global %1 zeroinitializer, align 4
 
 ; PR8642
 define i16 @test1(i1 zeroext %C, i8** nocapture %argv) nounwind ssp {

@@ -260,10 +260,9 @@ class CHRScope {
           if (TailRegionSet.count(Parent))
             return false;
 
-          assert(llvm::find_if(RegInfos,
-                               [&Parent](const RegInfo &RI) {
-                                 return Parent == RI.R;
-                               }) != RegInfos.end() &&
+          assert(llvm::any_of(
+                     RegInfos,
+                     [&Parent](const RegInfo &RI) { return Parent == RI.R; }) &&
                  "Must be in head");
           return true;
         });
@@ -1248,7 +1247,7 @@ SmallVector<CHRScope *, 8> CHR::splitScope(
       SmallVector<CHRScope *, 8> SubSplits = splitScope(
           Sub, Split, &SplitConditionValues, SplitInsertPoint, Output,
           SplitUnhoistables);
-      NewSubs.insert(NewSubs.end(), SubSplits.begin(), SubSplits.end());
+      llvm::append_range(NewSubs, SubSplits);
     }
     Split->Subs = NewSubs;
   }

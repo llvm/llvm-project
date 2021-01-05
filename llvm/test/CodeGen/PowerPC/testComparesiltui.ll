@@ -8,10 +8,10 @@
 ; RUN:  --implicit-check-not cmpw --implicit-check-not cmpd --implicit-check-not cmpl \
 ; RUN:  --check-prefixes=CHECK,LE
 
-@glob = local_unnamed_addr global i32 0, align 4
+@glob = dso_local local_unnamed_addr global i32 0, align 4
 
 ; Function Attrs: norecurse nounwind readnone
-define signext i32 @test_iltui(i32 zeroext %a, i32 zeroext %b) {
+define dso_local signext i32 @test_iltui(i32 zeroext %a, i32 zeroext %b) {
 ; CHECK-LABEL: test_iltui:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sub r3, r3, r4
@@ -24,7 +24,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readnone
-define signext i32 @test_iltui_sext(i32 zeroext %a, i32 zeroext %b) {
+define dso_local signext i32 @test_iltui_sext(i32 zeroext %a, i32 zeroext %b) {
 ; CHECK-LABEL: test_iltui_sext:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sub r3, r3, r4
@@ -37,23 +37,14 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @test_iltui_store(i32 zeroext %a, i32 zeroext %b) {
-; BE-LABEL: test_iltui_store:
-; BE:       # %bb.0: # %entry
-; BE-NEXT:    addis r5, r2, .LC0@toc@ha
-; BE-NEXT:    sub r3, r3, r4
-; BE-NEXT:    ld r5, .LC0@toc@l(r5)
-; BE-NEXT:    rldicl r3, r3, 1, 63
-; BE-NEXT:    stw r3, 0(r5)
-; BE-NEXT:    blr
-;
-; LE-LABEL: test_iltui_store:
-; LE:       # %bb.0: # %entry
-; LE-NEXT:    sub r3, r3, r4
-; LE-NEXT:    addis r5, r2, glob@toc@ha
-; LE-NEXT:    rldicl r3, r3, 1, 63
-; LE-NEXT:    stw r3, glob@toc@l(r5)
-; LE-NEXT:    blr
+define dso_local void @test_iltui_store(i32 zeroext %a, i32 zeroext %b) {
+; CHECK-LABEL: test_iltui_store:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    sub r3, r3, r4
+; CHECK-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-NEXT:    rldicl r3, r3, 1, 63
+; CHECK-NEXT:    stw r3, glob@toc@l(r5)
+; CHECK-NEXT:    blr
 entry:
   %cmp = icmp ult i32 %a, %b
   %conv = zext i1 %cmp to i32
@@ -62,23 +53,14 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @test_iltui_sext_store(i32 zeroext %a, i32 zeroext %b) {
-; BE-LABEL: test_iltui_sext_store:
-; BE:       # %bb.0: # %entry
-; BE-NEXT:    addis r5, r2, .LC0@toc@ha
-; BE-NEXT:    sub r3, r3, r4
-; BE-NEXT:    ld r5, .LC0@toc@l(r5)
-; BE-NEXT:    sradi r3, r3, 63
-; BE-NEXT:    stw r3, 0(r5)
-; BE-NEXT:    blr
-;
-; LE-LABEL: test_iltui_sext_store:
-; LE:       # %bb.0: # %entry
-; LE-NEXT:    sub r3, r3, r4
-; LE-NEXT:    addis r5, r2, glob@toc@ha
-; LE-NEXT:    sradi r3, r3, 63
-; LE-NEXT:    stw r3, glob@toc@l(r5)
-; LE-NEXT:    blr
+define dso_local void @test_iltui_sext_store(i32 zeroext %a, i32 zeroext %b) {
+; CHECK-LABEL: test_iltui_sext_store:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    sub r3, r3, r4
+; CHECK-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-NEXT:    sradi r3, r3, 63
+; CHECK-NEXT:    stw r3, glob@toc@l(r5)
+; CHECK-NEXT:    blr
 entry:
   %cmp = icmp ult i32 %a, %b
   %sub = sext i1 %cmp to i32

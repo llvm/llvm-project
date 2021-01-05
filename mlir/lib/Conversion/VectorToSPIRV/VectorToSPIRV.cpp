@@ -1,4 +1,4 @@
-//===------- VectorToSPIRV.cpp - Vector to SPIRV lowering passes ----------===//
+//===- VectorToSPIRV.cpp - Vector to SPIR-V Patterns ----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,20 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements a pass to generate SPIRV operations for Vector
-// operations.
+// This file implements patterns to convert Vector dialect to SPIRV dialect.
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Conversion/VectorToSPIRV/VectorToSPIRV.h"
+
 #include "../PassDetail.h"
-#include "mlir/Conversion/VectorToSPIRV/ConvertVectorToSPIRV.h"
-#include "mlir/Conversion/VectorToSPIRV/ConvertVectorToSPIRVPass.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
@@ -68,7 +66,7 @@ struct VectorInsertOpConvert final : public SPIRVOpLowering<vector::InsertOp> {
   matchAndRewrite(vector::InsertOp insertOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     if (insertOp.getSourceType().isa<VectorType>() ||
-        !spirv::CompositeType::isValid(insertOp.getDestVectorType())) 
+        !spirv::CompositeType::isValid(insertOp.getDestVectorType()))
       return failure();
     vector::InsertOp::Adaptor adaptor(operands);
     int32_t id = insertOp.position().begin()->cast<IntegerAttr>().getInt();
@@ -123,35 +121,4 @@ void mlir::populateVectorToSPIRVPatterns(MLIRContext *context,
   patterns.insert<VectorBroadcastConvert, VectorExtractOpConvert,
                   VectorInsertOpConvert, VectorExtractElementOpConvert,
                   VectorInsertElementOpConvert>(context, typeConverter);
-}
-
-namespace {
-struct LowerVectorToSPIRVPass
-    : public ConvertVectorToSPIRVBase<LowerVectorToSPIRVPass> {
-  void runOnOperation() override;
-};
-} // namespace
-
-void LowerVectorToSPIRVPass::runOnOperation() {
-  MLIRContext *context = &getContext();
-  ModuleOp module = getOperation();
-
-  auto targetAttr = spirv::lookupTargetEnvOrDefault(module);
-  std::unique_ptr<ConversionTarget> target =
-      spirv::SPIRVConversionTarget::get(targetAttr);
-
-  SPIRVTypeConverter typeConverter(targetAttr);
-  OwningRewritePatternList patterns;
-  populateVectorToSPIRVPatterns(context, typeConverter, patterns);
-
-  target->addLegalOp<ModuleOp, ModuleTerminatorOp>();
-  target->addLegalOp<FuncOp>();
-
-  if (failed(applyFullConversion(module, *target, std::move(patterns))))
-    return signalPassFailure();
-}
-
-std::unique_ptr<OperationPass<ModuleOp>>
-mlir::createConvertVectorToSPIRVPass() {
-  return std::make_unique<LowerVectorToSPIRVPass>();
 }

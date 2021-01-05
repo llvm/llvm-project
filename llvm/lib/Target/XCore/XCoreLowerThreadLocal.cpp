@@ -80,7 +80,7 @@ createReplacementInstr(ConstantExpr *CE, Instruction *Instr) {
   unsigned OpCode = CE->getOpcode();
   switch (OpCode) {
     case Instruction::GetElementPtr: {
-      SmallVector<Value *,4> CEOpVec(CE->op_begin(), CE->op_end());
+      SmallVector<Value *, 4> CEOpVec(CE->operands());
       ArrayRef<Value *> CEOps(CEOpVec);
       return dyn_cast<Instruction>(Builder.CreateInBoundsGEP(
           cast<GEPOperator>(CE)->getSourceElementType(), CEOps[0],
@@ -128,7 +128,7 @@ createReplacementInstr(ConstantExpr *CE, Instruction *Instr) {
 
 static bool replaceConstantExprOp(ConstantExpr *CE, Pass *P) {
   do {
-    SmallVector<WeakTrackingVH, 8> WUsers(CE->user_begin(), CE->user_end());
+    SmallVector<WeakTrackingVH, 8> WUsers(CE->users());
     llvm::sort(WUsers);
     WUsers.erase(std::unique(WUsers.begin(), WUsers.end()), WUsers.end());
     while (!WUsers.empty())
@@ -201,7 +201,7 @@ bool XCoreLowerThreadLocal::lowerGlobal(GlobalVariable *GV) {
                        GV->isExternallyInitialized());
 
   // Update uses.
-  SmallVector<User *, 16> Users(GV->user_begin(), GV->user_end());
+  SmallVector<User *, 16> Users(GV->users());
   for (unsigned I = 0, E = Users.size(); I != E; ++I) {
     User *U = Users[I];
     Instruction *Inst = cast<Instruction>(U);

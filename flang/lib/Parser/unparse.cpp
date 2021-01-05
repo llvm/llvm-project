@@ -2016,7 +2016,7 @@ public:
     Word("REDUCTION(");
     Walk(std::get<OmpReductionOperator>(x.t));
     Put(":");
-    Walk(std::get<std::list<Designator>>(x.t), ",");
+    Walk(std::get<OmpObjectList>(x.t));
     Put(")");
   }
   void Unparse(const OmpAllocateClause &x) {

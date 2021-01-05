@@ -142,6 +142,10 @@ std::string Linux::getMultiarchTriple(const Driver &D,
     if (D.getVFS().exists(SysRoot + "/lib/powerpc-linux-gnu"))
       return "powerpc-linux-gnu";
     break;
+  case llvm::Triple::ppcle:
+    if (D.getVFS().exists(SysRoot + "/lib/powerpcle-linux-gnu"))
+      return "powerpcle-linux-gnu";
+    break;
   case llvm::Triple::ppc64:
     if (D.getVFS().exists(SysRoot + "/lib/powerpc64-linux-gnu"))
       return "powerpc64-linux-gnu";
@@ -194,8 +198,7 @@ static StringRef getOSLibDir(const llvm::Triple &Triple, const ArgList &Args) {
   // FIXME: This is a bit of a hack. We should really unify this code for
   // reasoning about oslibdir spellings with the lib dir spellings in the
   // GCCInstallationDetector, but that is a more significant refactoring.
-  if (Triple.getArch() == llvm::Triple::x86 ||
-      Triple.getArch() == llvm::Triple::ppc ||
+  if (Triple.getArch() == llvm::Triple::x86 || Triple.isPPC32() ||
       Triple.getArch() == llvm::Triple::sparc)
     return "lib32";
 
@@ -496,6 +499,10 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
     LibDir = "lib";
     Loader = "ld.so.1";
     break;
+  case llvm::Triple::ppcle:
+    LibDir = "lib";
+    Loader = "ld.so.1";
+    break;
   case llvm::Triple::ppc64:
     LibDir = "lib64";
     Loader =
@@ -643,6 +650,8 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   const StringRef PPCMultiarchIncludeDirs[] = {
       "/usr/include/powerpc-linux-gnu",
       "/usr/include/powerpc-linux-gnuspe"};
+  const StringRef PPCLEMultiarchIncludeDirs[] = {
+      "/usr/include/powerpcle-linux-gnu"};
   const StringRef PPC64MultiarchIncludeDirs[] = {
       "/usr/include/powerpc64-linux-gnu"};
   const StringRef PPC64LEMultiarchIncludeDirs[] = {
@@ -715,6 +724,9 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     break;
   case llvm::Triple::ppc:
     MultiarchIncludeDirs = PPCMultiarchIncludeDirs;
+    break;
+  case llvm::Triple::ppcle:
+    MultiarchIncludeDirs = PPCLEMultiarchIncludeDirs;
     break;
   case llvm::Triple::ppc64:
     MultiarchIncludeDirs = PPC64MultiarchIncludeDirs;

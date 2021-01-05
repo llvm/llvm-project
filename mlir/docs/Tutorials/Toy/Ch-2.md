@@ -210,7 +210,9 @@ class ConstantOp : public mlir::Op<ConstantOp,
                      /// The ConstantOp takes no inputs.
                      mlir::OpTrait::ZeroOperands,
                      /// The ConstantOp returns a single result.
-                     mlir::OpTrait::OneResult> {
+                     mlir::OpTrait::OneResult,
+                     /// The result of getType is `Type`.
+                     mlir::OpTraits::OneTypedResult<Type>::Impl> {
 
  public:
   /// Inherit the constructors from the base Op class.

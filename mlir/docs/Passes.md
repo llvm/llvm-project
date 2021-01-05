@@ -56,6 +56,10 @@ This document describes the available MLIR passes and their contracts.
 
 [include "StandardPasses.md"]
 
+## `tensor` Dialect Passes
+
+[include "TensorPasses.md"]
+
 ## TOSA Dialect Passes
 
 [include "TosaPasses.md"]

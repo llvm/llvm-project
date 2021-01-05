@@ -415,7 +415,7 @@ void MIRPrinter::convertStackObjects(yaml::MachineFunction &YMF,
     YamlObject.ID = ID;
     if (const auto *Alloca = MFI.getObjectAllocation(I))
       YamlObject.Name.Value = std::string(
-          Alloca->hasName() ? Alloca->getName() : "<unnamed alloca>");
+          Alloca->hasName() ? Alloca->getName() : "");
     YamlObject.Type = MFI.isSpillSlotObjectIndex(I)
                           ? yaml::MachineStackObject::SpillSlot
                           : MFI.isVariableSizedObjectIndex(I)

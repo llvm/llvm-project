@@ -1,14 +1,14 @@
 ; RUN: llc -relocation-model=static -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -code-model=medium| FileCheck --check-prefix=CHECK --check-prefix=MEDIUM %s
 ; RUN: llc -relocation-model=static -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -code-model=large | FileCheck --check-prefix=CHECK --check-prefix=LARGE %s
 
-@foo = global i32 42
-@fooa = alias i32, i32* @foo
+@foo = dso_local global i32 42
+@fooa = dso_local alias i32, i32* @foo
 
-@foo2 = global i64 42
-@foo2a = alias i64, i64* @foo2
+@foo2 = dso_local global i64 42
+@foo2a = dso_local alias i64, i64* @foo2
 
 ; CHECK-LABEL: bar:
-define i32 @bar() {
+define dso_local i32 @bar() {
 ; MEDIUM: addis 3, 2, fooa@toc@ha
 ; LARGE: addis 3, 2, .L[[L0:.*]]@toc@ha
   %a = load i32, i32* @fooa

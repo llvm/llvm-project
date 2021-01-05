@@ -787,8 +787,7 @@ public:
   }
 
   unsigned getStringTypeLoc(const DIStringType *ST) const {
-    auto I = StringTypeLocMap.find(ST);
-    return I != StringTypeLocMap.end() ? I->second : 0;
+    return StringTypeLocMap.lookup(ST);
   }
 
   void addStringTypeLoc(const DIStringType *ST, unsigned Loc) {

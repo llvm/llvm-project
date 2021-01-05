@@ -119,34 +119,38 @@ static bool isElementwise(Operation *op) {
   return hasOnlyScalarElementwiseOp(genericOp.getRegion());
 }
 
-static VectorType extractVectorTypeFromScalarView(Value v) {
-  MemRefType mt = v.getType().cast<MemRefType>();
-  return mt.getShape().empty()
-             ? VectorType()
-             : VectorType::get(mt.getShape(), mt.getElementType());
+static VectorType extractVectorTypeFromShapedValue(Value v) {
+  auto st = v.getType().cast<ShapedType>();
+  if (st.isa<MemRefType>() && st.getShape().empty())
+    return VectorType();
+  return VectorType::get(st.getShape(), st.getElementType());
 }
 
-static Value transferReadVector(OpBuilder &builder, Value memref) {
+static Value transferReadVector(OpBuilder &builder, Value source) {
   edsc::ScopedContext scope(builder);
-  auto memrefType = memref.getType().cast<MemRefType>();
-  if (VectorType vectorType = extractVectorTypeFromScalarView(memref)) {
-    SmallVector<Value, 4> indices(memrefType.getRank(), std_constant_index(0));
-    return vector_transfer_read(vectorType, memref, indices);
+  auto shapedType = source.getType().cast<ShapedType>();
+  if (VectorType vectorType = extractVectorTypeFromShapedValue(source)) {
+    SmallVector<Value, 4> indices(shapedType.getRank(), std_constant_index(0));
+    return vector_transfer_read(vectorType, source, indices);
   }
-  return std_load(memref);
+  return std_load(source);
 }
 
-static void transferWriteVector(OpBuilder &builder, Value value, Value memref) {
+static Value transferWriteVector(OpBuilder &builder, Value value, Value dest) {
   edsc::ScopedContext scope(builder);
-  auto memrefType = memref.getType().cast<MemRefType>();
-  if (VectorType vectorType = extractVectorTypeFromScalarView(memref)) {
-    SmallVector<Value, 4> indices(memrefType.getRank(), std_constant_index(0));
+  Operation *write;
+  auto shapedType = dest.getType().cast<ShapedType>();
+  if (VectorType vectorType = extractVectorTypeFromShapedValue(dest)) {
+    SmallVector<Value, 4> indices(shapedType.getRank(), std_constant_index(0));
     if (vectorType != value.getType())
       value = vector_broadcast(vectorType, value);
-    vector_transfer_write(value, memref, indices);
+    write = vector_transfer_write(value, dest, indices);
   } else {
-    std_store(value, memref);
+    write = std_store(value, dest);
   }
+  if (!write->getResults().empty())
+    return write->getResult(0);
+  return Value();
 }
 
 namespace {
@@ -167,10 +171,12 @@ public:
   void vectorize(Operation &scalarOp) {
     auto yieldOp = dyn_cast<linalg::YieldOp>(scalarOp);
     if (yieldOp) {
-      for (auto outputAndMemref :
-           llvm::zip(yieldOp.values(), generic.getOutputBuffers())) {
-        Value vectorValue = vectorize(std::get<0>(outputAndMemref));
-        transferWriteVector(builder, vectorValue, std::get<1>(outputAndMemref));
+      for (auto outputs : llvm::enumerate(yieldOp.values())) {
+        Value vectorValue = vectorize(outputs.value());
+        Value result = transferWriteVector(builder, vectorValue,
+                                           generic.getOutput(outputs.index()));
+        if (result)
+          results.push_back(result);
       }
       return;
     }
@@ -181,6 +187,8 @@ public:
       valueCache[std::get<0>(result)] = std::get<1>(result);
     }
   }
+
+  llvm::ArrayRef<Value> getResults() { return results; }
 
 private:
   // Transforms a scalar value into its vectorized counterpart, recursively
@@ -261,6 +269,7 @@ private:
   OpBuilder &builder;
   linalg::GenericOp generic;
   llvm::DenseMap<Value, Value> valueCache;
+  SmallVector<Value, 8> results;
 };
 } // namespace
 
@@ -271,6 +280,8 @@ static void vectorizeElementwise(linalg::GenericOp op, OpBuilder &builder) {
   for (Operation &scalarOp : op.region().front()) {
     vectorizer.vectorize(scalarOp);
   }
+  if (!op->getResults().empty())
+    op->replaceAllUsesWith(vectorizer.getResults());
 }
 
 LogicalResult mlir::linalg::vectorizeLinalgOpPrecondition(Operation *op) {
@@ -331,32 +342,14 @@ void mlir::linalg::vectorizeLinalgOp(OpBuilder &builder, Operation *op) {
   LLVM_DEBUG(dbgs() << dbgPref
                     << "Rewrite linalg op as vector.contract: " << *op);
   auto linalgOp = cast<linalg::LinalgOp>(op);
-  Value viewA = linalgOp.getInput(0);
-  Value viewB = linalgOp.getInput(1);
-  Value viewC = linalgOp.getOutputBuffer(0);
-  VectorType vtA = extractVectorTypeFromScalarView(viewA);
-  VectorType vtB = extractVectorTypeFromScalarView(viewB);
-  VectorType vtC = extractVectorTypeFromScalarView(viewC);
-  Value zero = std_constant_index(0);
-  SmallVector<Value, 4> indicesA, indicesB, indicesC;
-  if (vtA)
-    indicesA = SmallVector<Value, 4>(vtA.getRank(), zero);
-  if (vtB)
-    indicesB = SmallVector<Value, 4>(vtB.getRank(), zero);
-  if (vtC)
-    indicesC = SmallVector<Value, 4>(vtC.getRank(), zero);
-  Value a = vtA ? vector_transfer_read(vtA, viewA, indicesA).value
-                : std_load(viewA, indicesA).value;
-  Value b = vtB ? vector_transfer_read(vtB, viewB, indicesB).value
-                : std_load(viewB, indicesB).value;
-  Value c = vtC ? vector_transfer_read(vtC, viewC, indicesC).value
-                : std_load(viewC, indicesC).value;
+  Value a = transferReadVector(builder, linalgOp.getInput(0));
+  Value b = transferReadVector(builder, linalgOp.getInput(1));
+  Value c = transferReadVector(builder, linalgOp.getOutput(0));
   Value res = vector_contract(a, b, c, linalgOp.indexing_maps(),
                               linalgOp.iterator_types());
-  if (vtC)
-    vector_transfer_write(res, viewC, indicesC);
-  else
-    std_store(res, viewC, indicesC);
+  Value writeResult = transferWriteVector(builder, res, linalgOp.getOutput(0));
+  if (writeResult)
+    linalgOp->replaceAllUsesWith(ArrayRef<Value>(writeResult));
 }
 
 /// Check whether there is any interleaved use of any `values` between `firstOp`

@@ -145,6 +145,56 @@ void ShapeDialect::printType(Type type, DialectAsmPrinter &os) const {
       .Default([](Type) { llvm_unreachable("unexpected 'shape' type kind"); });
 }
 
+LogicalResult ShapeDialect::verifyOperationAttribute(Operation *op,
+                                                     NamedAttribute attribute) {
+  // Verify shape.lib attribute.
+  if (attribute.first == "shape.lib") {
+    if (!op->hasTrait<OpTrait::SymbolTable>())
+      return op->emitError(
+          "shape.lib attribute may only be on op implementing SymbolTable");
+
+    if (auto symbolRef = attribute.second.dyn_cast<SymbolRefAttr>()) {
+      auto *symbol = SymbolTable::lookupSymbolIn(op, symbolRef);
+      if (!symbol)
+        return op->emitError("shape function library ")
+               << symbolRef << " not found";
+      return isa<shape::FunctionLibraryOp>(symbol)
+                 ? success()
+                 : op->emitError()
+                       << symbolRef << " required to be shape function library";
+    }
+
+    if (auto arr = attribute.second.dyn_cast<ArrayAttr>()) {
+      // Verify all entries are function libraries and mappings in libraries
+      // refer to unique ops.
+      DenseSet<Identifier> key;
+      for (auto it : arr) {
+        if (!it.isa<SymbolRefAttr>())
+          return op->emitError(
+              "only SymbolRefAttr allowed in shape.lib attribute array");
+
+        auto shapeFnLib = dyn_cast<shape::FunctionLibraryOp>(
+            SymbolTable::lookupSymbolIn(op, it.cast<SymbolRefAttr>()));
+        if (!shapeFnLib)
+          return op->emitError()
+                 << it << " does not refer to FunctionLibraryOp";
+        for (auto mapping : shapeFnLib.mapping()) {
+          if (!key.insert(mapping.first).second) {
+            return op->emitError("only one op to shape mapping allowed, found "
+                                 "multiple for `")
+                   << mapping.first << "`";
+          }
+        }
+      }
+      return success();
+    }
+
+    return op->emitError("only SymbolRefAttr or array of SymbolRefAttrs "
+                         "allowed as shape.lib attribute");
+  }
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // AnyOp
 //===----------------------------------------------------------------------===//

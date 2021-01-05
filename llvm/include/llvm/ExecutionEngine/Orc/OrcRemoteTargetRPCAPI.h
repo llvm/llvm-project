@@ -16,8 +16,8 @@
 #define LLVM_EXECUTIONENGINE_ORC_ORCREMOTETARGETRPCAPI_H
 
 #include "llvm/ExecutionEngine/JITSymbol.h"
-#include "llvm/ExecutionEngine/Orc/RPC/RPCUtils.h"
-#include "llvm/ExecutionEngine/Orc/RPC/RawByteChannel.h"
+#include "llvm/ExecutionEngine/Orc/Shared/RPCUtils.h"
+#include "llvm/ExecutionEngine/Orc/Shared/RawByteChannel.h"
 
 namespace llvm {
 namespace orc {
@@ -73,10 +73,9 @@ private:
 
 } // end namespace remote
 
-namespace rpc {
+namespace shared {
 
-template <>
-class RPCTypeName<JITSymbolFlags> {
+template <> class SerializationTypeName<JITSymbolFlags> {
 public:
   static const char *getName() { return "JITSymbolFlags"; }
 };
@@ -100,7 +99,7 @@ public:
   }
 };
 
-template <> class RPCTypeName<remote::DirectBufferWriter> {
+template <> class SerializationTypeName<remote::DirectBufferWriter> {
 public:
   static const char *getName() { return "DirectBufferWriter"; }
 };
@@ -133,7 +132,7 @@ public:
   }
 };
 
-} // end namespace rpc
+} // end namespace shared
 
 namespace remote {
 
@@ -167,20 +166,20 @@ private:
 namespace eh {
 
   /// Registers EH frames on the remote.
-  class RegisterEHFrames
-      : public rpc::Function<RegisterEHFrames,
-                             void(JITTargetAddress Addr, uint32_t Size)> {
-  public:
-    static const char *getName() { return "RegisterEHFrames"; }
-  };
+class RegisterEHFrames
+    : public shared::RPCFunction<RegisterEHFrames,
+                                 void(JITTargetAddress Addr, uint32_t Size)> {
+public:
+  static const char *getName() { return "RegisterEHFrames"; }
+};
 
   /// Deregisters EH frames on the remote.
-  class DeregisterEHFrames
-      : public rpc::Function<DeregisterEHFrames,
-                             void(JITTargetAddress Addr, uint32_t Size)> {
-  public:
-    static const char *getName() { return "DeregisterEHFrames"; }
-  };
+class DeregisterEHFrames
+    : public shared::RPCFunction<DeregisterEHFrames,
+                                 void(JITTargetAddress Addr, uint32_t Size)> {
+public:
+  static const char *getName() { return "DeregisterEHFrames"; }
+};
 
 } // end namespace eh
 
@@ -189,36 +188,38 @@ namespace exec {
 
   /// Call an 'int32_t()'-type function on the remote, returns the called
   /// function's return value.
-  class CallIntVoid
-      : public rpc::Function<CallIntVoid, int32_t(JITTargetAddress Addr)> {
-  public:
-    static const char *getName() { return "CallIntVoid"; }
-  };
+class CallIntVoid
+    : public shared::RPCFunction<CallIntVoid, int32_t(JITTargetAddress Addr)> {
+public:
+  static const char *getName() { return "CallIntVoid"; }
+};
 
   /// Call an 'int32_t(int32_t)'-type function on the remote, returns the called
   /// function's return value.
-  class CallIntInt
-      : public rpc::Function<CallIntInt, int32_t(JITTargetAddress Addr, int)> {
-  public:
-    static const char *getName() { return "CallIntInt"; }
-  };
+class CallIntInt
+    : public shared::RPCFunction<CallIntInt,
+                                 int32_t(JITTargetAddress Addr, int)> {
+public:
+  static const char *getName() { return "CallIntInt"; }
+};
 
   /// Call an 'int32_t(int32_t, char**)'-type function on the remote, returns the
   /// called function's return value.
-  class CallMain
-      : public rpc::Function<CallMain, int32_t(JITTargetAddress Addr,
-                                               std::vector<std::string> Args)> {
-  public:
-    static const char *getName() { return "CallMain"; }
-  };
+class CallMain
+    : public shared::RPCFunction<CallMain,
+                                 int32_t(JITTargetAddress Addr,
+                                         std::vector<std::string> Args)> {
+public:
+  static const char *getName() { return "CallMain"; }
+};
 
   /// Calls a 'void()'-type function on the remote, returns when the called
   /// function completes.
-  class CallVoidVoid
-      : public rpc::Function<CallVoidVoid, void(JITTargetAddress FnAddr)> {
-  public:
-    static const char *getName() { return "CallVoidVoid"; }
-  };
+class CallVoidVoid
+    : public shared::RPCFunction<CallVoidVoid, void(JITTargetAddress FnAddr)> {
+public:
+  static const char *getName() { return "CallVoidVoid"; }
+};
 
 } // end namespace exec
 
@@ -226,60 +227,62 @@ namespace exec {
 namespace mem {
 
   /// Creates a memory allocator on the remote.
-  class CreateRemoteAllocator
-      : public rpc::Function<CreateRemoteAllocator,
-                             void(ResourceIdMgr::ResourceId AllocatorID)> {
-  public:
-    static const char *getName() { return "CreateRemoteAllocator"; }
-  };
+class CreateRemoteAllocator
+    : public shared::RPCFunction<CreateRemoteAllocator,
+                                 void(ResourceIdMgr::ResourceId AllocatorID)> {
+public:
+  static const char *getName() { return "CreateRemoteAllocator"; }
+};
 
   /// Destroys a remote allocator, freeing any memory allocated by it.
-  class DestroyRemoteAllocator
-      : public rpc::Function<DestroyRemoteAllocator,
-                             void(ResourceIdMgr::ResourceId AllocatorID)> {
-  public:
-    static const char *getName() { return "DestroyRemoteAllocator"; }
-  };
+class DestroyRemoteAllocator
+    : public shared::RPCFunction<DestroyRemoteAllocator,
+                                 void(ResourceIdMgr::ResourceId AllocatorID)> {
+public:
+  static const char *getName() { return "DestroyRemoteAllocator"; }
+};
 
   /// Read a remote memory block.
-  class ReadMem
-      : public rpc::Function<ReadMem, std::vector<uint8_t>(JITTargetAddress Src,
-                                                           uint64_t Size)> {
-  public:
-    static const char *getName() { return "ReadMem"; }
-  };
+class ReadMem
+    : public shared::RPCFunction<
+          ReadMem, std::vector<uint8_t>(JITTargetAddress Src, uint64_t Size)> {
+public:
+  static const char *getName() { return "ReadMem"; }
+};
 
   /// Reserve a block of memory on the remote via the given allocator.
-  class ReserveMem
-      : public rpc::Function<ReserveMem,
-                             JITTargetAddress(ResourceIdMgr::ResourceId AllocID,
-                                              uint64_t Size, uint32_t Align)> {
-  public:
-    static const char *getName() { return "ReserveMem"; }
-  };
+class ReserveMem
+    : public shared::RPCFunction<
+          ReserveMem, JITTargetAddress(ResourceIdMgr::ResourceId AllocID,
+                                       uint64_t Size, uint32_t Align)> {
+public:
+  static const char *getName() { return "ReserveMem"; }
+};
 
   /// Set the memory protection on a memory block.
-  class SetProtections
-      : public rpc::Function<SetProtections,
-                             void(ResourceIdMgr::ResourceId AllocID,
-                                  JITTargetAddress Dst, uint32_t ProtFlags)> {
-  public:
-    static const char *getName() { return "SetProtections"; }
-  };
+class SetProtections
+    : public shared::RPCFunction<
+          SetProtections, void(ResourceIdMgr::ResourceId AllocID,
+                               JITTargetAddress Dst, uint32_t ProtFlags)> {
+public:
+  static const char *getName() { return "SetProtections"; }
+};
 
   /// Write to a remote memory block.
-  class WriteMem
-      : public rpc::Function<WriteMem, void(remote::DirectBufferWriter DB)> {
-  public:
-    static const char *getName() { return "WriteMem"; }
-  };
+class WriteMem
+    : public shared::RPCFunction<WriteMem,
+                                 void(remote::DirectBufferWriter DB)> {
+public:
+  static const char *getName() { return "WriteMem"; }
+};
 
   /// Write to a remote pointer.
-  class WritePtr : public rpc::Function<WritePtr, void(JITTargetAddress Dst,
-                                                       JITTargetAddress Val)> {
-  public:
-    static const char *getName() { return "WritePtr"; }
-  };
+class WritePtr
+    : public shared::RPCFunction<WritePtr, void(JITTargetAddress Dst,
+                                                JITTargetAddress Val)> {
+public:
+  static const char *getName() { return "WritePtr"; }
+};
 
 } // end namespace mem
 
@@ -287,45 +290,46 @@ namespace mem {
 namespace stubs {
 
   /// Creates an indirect stub owner on the remote.
-  class CreateIndirectStubsOwner
-      : public rpc::Function<CreateIndirectStubsOwner,
-                             void(ResourceIdMgr::ResourceId StubOwnerID)> {
-  public:
-    static const char *getName() { return "CreateIndirectStubsOwner"; }
-  };
+class CreateIndirectStubsOwner
+    : public shared::RPCFunction<CreateIndirectStubsOwner,
+                                 void(ResourceIdMgr::ResourceId StubOwnerID)> {
+public:
+  static const char *getName() { return "CreateIndirectStubsOwner"; }
+};
 
   /// RPC function for destroying an indirect stubs owner.
-  class DestroyIndirectStubsOwner
-      : public rpc::Function<DestroyIndirectStubsOwner,
-                             void(ResourceIdMgr::ResourceId StubsOwnerID)> {
-  public:
-    static const char *getName() { return "DestroyIndirectStubsOwner"; }
-  };
+class DestroyIndirectStubsOwner
+    : public shared::RPCFunction<DestroyIndirectStubsOwner,
+                                 void(ResourceIdMgr::ResourceId StubsOwnerID)> {
+public:
+  static const char *getName() { return "DestroyIndirectStubsOwner"; }
+};
 
   /// EmitIndirectStubs result is (StubsBase, PtrsBase, NumStubsEmitted).
-  class EmitIndirectStubs
-      : public rpc::Function<
-            EmitIndirectStubs,
-            std::tuple<JITTargetAddress, JITTargetAddress, uint32_t>(
-                ResourceIdMgr::ResourceId StubsOwnerID,
-                uint32_t NumStubsRequired)> {
-  public:
-    static const char *getName() { return "EmitIndirectStubs"; }
-  };
+class EmitIndirectStubs
+    : public shared::RPCFunction<
+          EmitIndirectStubs,
+          std::tuple<JITTargetAddress, JITTargetAddress, uint32_t>(
+              ResourceIdMgr::ResourceId StubsOwnerID,
+              uint32_t NumStubsRequired)> {
+public:
+  static const char *getName() { return "EmitIndirectStubs"; }
+};
 
   /// RPC function to emit the resolver block and return its address.
-  class EmitResolverBlock : public rpc::Function<EmitResolverBlock, void()> {
-  public:
-    static const char *getName() { return "EmitResolverBlock"; }
-  };
+class EmitResolverBlock
+    : public shared::RPCFunction<EmitResolverBlock, void()> {
+public:
+  static const char *getName() { return "EmitResolverBlock"; }
+};
 
   /// EmitTrampolineBlock result is (BlockAddr, NumTrampolines).
-  class EmitTrampolineBlock
-      : public rpc::Function<EmitTrampolineBlock,
-                             std::tuple<JITTargetAddress, uint32_t>()> {
-  public:
-    static const char *getName() { return "EmitTrampolineBlock"; }
-  };
+class EmitTrampolineBlock
+    : public shared::RPCFunction<EmitTrampolineBlock,
+                                 std::tuple<JITTargetAddress, uint32_t>()> {
+public:
+  static const char *getName() { return "EmitTrampolineBlock"; }
+};
 
 } // end namespace stubs
 
@@ -334,44 +338,44 @@ namespace utils {
 
   /// GetRemoteInfo result is (Triple, PointerSize, PageSize, TrampolineSize,
   ///                          IndirectStubsSize).
-  class GetRemoteInfo
-      : public rpc::Function<
-            GetRemoteInfo,
-            std::tuple<std::string, uint32_t, uint32_t, uint32_t, uint32_t>()> {
-  public:
-    static const char *getName() { return "GetRemoteInfo"; }
-  };
+class GetRemoteInfo
+    : public shared::RPCFunction<
+          GetRemoteInfo,
+          std::tuple<std::string, uint32_t, uint32_t, uint32_t, uint32_t>()> {
+public:
+  static const char *getName() { return "GetRemoteInfo"; }
+};
 
   /// Get the address of a remote symbol.
-  class GetSymbolAddress
-      : public rpc::Function<GetSymbolAddress,
-                             JITTargetAddress(std::string SymbolName)> {
-  public:
-    static const char *getName() { return "GetSymbolAddress"; }
-  };
+class GetSymbolAddress
+    : public shared::RPCFunction<GetSymbolAddress,
+                                 JITTargetAddress(std::string SymbolName)> {
+public:
+  static const char *getName() { return "GetSymbolAddress"; }
+};
 
   /// Request that the host execute a compile callback.
-  class RequestCompile
-      : public rpc::Function<
-            RequestCompile, JITTargetAddress(JITTargetAddress TrampolineAddr)> {
-  public:
-    static const char *getName() { return "RequestCompile"; }
-  };
+class RequestCompile
+    : public shared::RPCFunction<
+          RequestCompile, JITTargetAddress(JITTargetAddress TrampolineAddr)> {
+public:
+  static const char *getName() { return "RequestCompile"; }
+};
 
   /// Notify the remote and terminate the session.
-  class TerminateSession : public rpc::Function<TerminateSession, void()> {
-  public:
-    static const char *getName() { return "TerminateSession"; }
-  };
+class TerminateSession : public shared::RPCFunction<TerminateSession, void()> {
+public:
+  static const char *getName() { return "TerminateSession"; }
+};
 
 } // namespace utils
 
 class OrcRemoteTargetRPCAPI
-    : public rpc::SingleThreadedRPCEndpoint<rpc::RawByteChannel> {
+    : public shared::SingleThreadedRPCEndpoint<shared::RawByteChannel> {
 public:
   // FIXME: Remove constructors once MSVC supports synthesizing move-ops.
-  OrcRemoteTargetRPCAPI(rpc::RawByteChannel &C)
-      : rpc::SingleThreadedRPCEndpoint<rpc::RawByteChannel>(C, true) {}
+  OrcRemoteTargetRPCAPI(shared::RawByteChannel &C)
+      : shared::SingleThreadedRPCEndpoint<shared::RawByteChannel>(C, true) {}
 };
 
 } // end namespace remote

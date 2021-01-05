@@ -1245,7 +1245,9 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_TASK)(void (*func)(void *), void *data,
       kmp_depend_info_t dep_list[ndeps];
       for (kmp_int32 i = 0; i < ndeps; i++)
         dep_list[i] = gomp_depends.get_kmp_depend(i);
-      __kmpc_omp_task_with_deps(&loc, gtid, task, ndeps, dep_list, 0, NULL);
+      kmp_int32 ndeps_cnv;
+      __kmp_type_convert(ndeps, &ndeps_cnv);
+      __kmpc_omp_task_with_deps(&loc, gtid, task, ndeps_cnv, dep_list, 0, NULL);
     } else {
       __kmpc_omp_task(&loc, gtid, task);
     }
@@ -1790,8 +1792,8 @@ template <> void __kmp_GOMP_doacross_post<long, true>(long *count) {
   kmp_info_t *th = __kmp_threads[gtid];
   MKLOC(loc, "GOMP_doacross_post");
   kmp_int64 num_dims = th->th.th_dispatch->th_doacross_info[0];
-  kmp_int64 *vec =
-      (kmp_int64 *)__kmp_thread_malloc(th, sizeof(kmp_int64) * num_dims);
+  kmp_int64 *vec = (kmp_int64 *)__kmp_thread_malloc(
+      th, (size_t)(sizeof(kmp_int64) * num_dims));
   for (kmp_int64 i = 0; i < num_dims; ++i) {
     vec[i] = (kmp_int64)count[i];
   }
@@ -1813,8 +1815,8 @@ template <typename T> void __kmp_GOMP_doacross_wait(T first, va_list args) {
   kmp_info_t *th = __kmp_threads[gtid];
   MKLOC(loc, "GOMP_doacross_wait");
   kmp_int64 num_dims = th->th.th_dispatch->th_doacross_info[0];
-  kmp_int64 *vec =
-      (kmp_int64 *)__kmp_thread_malloc(th, sizeof(kmp_int64) * num_dims);
+  kmp_int64 *vec = (kmp_int64 *)__kmp_thread_malloc(
+      th, (size_t)(sizeof(kmp_int64) * num_dims));
   vec[0] = (kmp_int64)first;
   for (kmp_int64 i = 1; i < num_dims; ++i) {
     T item = va_arg(args, T);

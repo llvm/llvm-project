@@ -432,6 +432,61 @@ bool RISCVDAGToDAGISel::SelectSROIW(SDValue N, SDValue &RS1, SDValue &Shamt) {
   return true;
 }
 
+bool RISCVDAGToDAGISel::selectVSplat(SDValue N, SDValue &SplatVal) {
+  if (N.getOpcode() != ISD::SPLAT_VECTOR &&
+      N.getOpcode() != RISCVISD::SPLAT_VECTOR_I64)
+    return false;
+  SplatVal = N.getOperand(0);
+  return true;
+}
+
+bool RISCVDAGToDAGISel::selectVSplatSimm5(SDValue N, SDValue &SplatVal) {
+  if ((N.getOpcode() != ISD::SPLAT_VECTOR &&
+       N.getOpcode() != RISCVISD::SPLAT_VECTOR_I64) ||
+      !isa<ConstantSDNode>(N.getOperand(0)))
+    return false;
+
+  int64_t SplatImm = cast<ConstantSDNode>(N.getOperand(0))->getSExtValue();
+
+  // Both ISD::SPLAT_VECTOR and RISCVISD::SPLAT_VECTOR_I64 share semantics when
+  // the operand type is wider than the resulting vector element type: an
+  // implicit truncation first takes place. Therefore, perform a manual
+  // truncation/sign-extension in order to ignore any truncated bits and catch
+  // any zero-extended immediate.
+  // For example, we wish to match (i8 -1) -> (XLenVT 255) as a simm5 by first
+  // sign-extending to (XLenVT -1).
+  auto XLenVT = Subtarget->getXLenVT();
+  assert(XLenVT == N.getOperand(0).getSimpleValueType() &&
+         "Unexpected splat operand type");
+  auto EltVT = N.getValueType().getVectorElementType();
+  if (EltVT.bitsLT(XLenVT)) {
+    SplatImm = SignExtend64(SplatImm, EltVT.getSizeInBits());
+  }
+
+  if (!isInt<5>(SplatImm))
+    return false;
+
+  SplatVal = CurDAG->getTargetConstant(SplatImm, SDLoc(N), XLenVT);
+  return true;
+}
+
+bool RISCVDAGToDAGISel::selectVSplatUimm5(SDValue N, SDValue &SplatVal) {
+  if ((N.getOpcode() != ISD::SPLAT_VECTOR &&
+       N.getOpcode() != RISCVISD::SPLAT_VECTOR_I64) ||
+      !isa<ConstantSDNode>(N.getOperand(0)))
+    return false;
+
+  int64_t SplatImm = cast<ConstantSDNode>(N.getOperand(0))->getSExtValue();
+
+  if (!isUInt<5>(SplatImm))
+    return false;
+
+  SplatVal =
+      CurDAG->getTargetConstant(SplatImm, SDLoc(N), Subtarget->getXLenVT());
+
+  return true;
+}
+
 // Merge an ADDI into the offset of a load/store instruction where possible.
 // (load (addi base, off1), off2) -> (load base, off1+off2)
 // (store val, (addi base, off1), off2) -> (store val, base, off1+off2)

@@ -45,10 +45,9 @@ namespace {
 // The writer writes a SymbolTable result to a file.
 template <class ELFT> class Writer {
 public:
+  LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
+
   Writer() : buffer(errorHandler().outputBuffer) {}
-  using Elf_Shdr = typename ELFT::Shdr;
-  using Elf_Ehdr = typename ELFT::Ehdr;
-  using Elf_Phdr = typename ELFT::Phdr;
 
   void run();
 

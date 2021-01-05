@@ -40,6 +40,8 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
       2. `offsets`, `sizes` and `strides` variadic operands.
       3. `static_offsets`, resp. `static_sizes` and `static_strides` integer
           array attributes.
+      4. `getOffsetSizeAndStrideStartOperandIndex` method that specifies the
+         starting index of the OffsetSizeAndStrideOpInterface operands
 
     The invariants of this interface are:
       1. `static_offsets`, `static_sizes` and `static_strides` have length
@@ -53,6 +55,8 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
          a dynamic offset (resp. size, stride).
       4. a variadic `offset` (resp. `sizes`, `strides`) operand  must be present
          for each dynamic offset (resp. size, stride).
+      5. `offsets`, `sizes` and `strides` operands are specified in this order
+         at operand index starting at `getOffsetSizeAndStrideStartOperandIndex`.
 
     This interface is useful to factor out common behavior and provide support
     for carrying or injecting static behavior through the use of the static
@@ -64,16 +68,21 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
   let methods = [
     InterfaceMethod<
       /*desc=*/[{
+        Return the number of leading operands before the `offsets`, `sizes` and
+        and `strides` operands.
+      }],
+      /*retTy=*/"unsigned",
+      /*methodName=*/"getOffsetSizeAndStrideStartOperandIndex",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
         Return the expected rank of each of the`static_offsets`, `static_sizes`
         and `static_strides` attributes.
       }],
       /*retTy=*/"std::array<unsigned, 3>",
       /*methodName=*/"getArrayAttrRanks",
-      /*args=*/(ins),
-      /*methodBody=*/"",
-      /*defaultImplementation=*/[{
-        return $_op.offsets();
-      }]
+      /*args=*/(ins)
     >,
     InterfaceMethod<
       /*desc=*/[{
@@ -250,9 +259,9 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
         assert($_op.isDynamicOffset(idx) && "expected dynamic offset");
         auto numDynamic = getNumDynamicEntriesUpToIdx(
           static_offsets().template cast<ArrayAttr>(),
-          ShapedType::isDynamicStrideOrOffset, 
+          ShapedType::isDynamicStrideOrOffset,
           idx);
-        return 1 + numDynamic;
+        return $_op.getOffsetSizeAndStrideStartOperandIndex() + numDynamic;
       }]
     >,
     InterfaceMethod<
@@ -268,7 +277,8 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
         assert($_op.isDynamicSize(idx) && "expected dynamic size");
         auto numDynamic = getNumDynamicEntriesUpToIdx(
           static_sizes().template cast<ArrayAttr>(), ShapedType::isDynamic, idx);
-        return 1 + offsets().size() + numDynamic;
+        return $_op.getOffsetSizeAndStrideStartOperandIndex() +
+          offsets().size() + numDynamic;
       }]
     >,
     InterfaceMethod<
@@ -284,9 +294,10 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
         assert($_op.isDynamicStride(idx) && "expected dynamic stride");
         auto numDynamic = getNumDynamicEntriesUpToIdx(
           static_strides().template cast<ArrayAttr>(),
-          ShapedType::isDynamicStrideOrOffset, 
+          ShapedType::isDynamicStrideOrOffset,
           idx);
-        return 1 + offsets().size() + sizes().size() + numDynamic;
+        return $_op.getOffsetSizeAndStrideStartOperandIndex() +
+          offsets().size() + sizes().size() + numDynamic;
       }]
     >,
     InterfaceMethod<

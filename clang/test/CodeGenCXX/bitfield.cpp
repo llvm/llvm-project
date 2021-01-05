@@ -20,13 +20,13 @@ namespace N0 {
     unsigned b71 : 2;
   };
   unsigned read00(S* s) {
-    // CHECK-X86-64-LABEL: define i32 @_ZN2N06read00
+    // CHECK-X86-64-LABEL: define{{.*}} i32 @_ZN2N06read00
     // CHECK-X86-64:   %[[ptr:.*]]   = bitcast %{{.*}}* %{{.*}} to i64*
     // CHECK-X86-64:   %[[val:.*]]   = load i64, i64* %[[ptr]]
     // CHECK-X86-64:   %[[and:.*]]   = and i64 %[[val]], 16383
     // CHECK-X86-64:   %[[trunc:.*]] = trunc i64 %[[and]] to i32
     // CHECK-X86-64:                   ret i32 %[[trunc]]
-    // CHECK-PPC64-LABEL: define zeroext i32 @_ZN2N06read00
+    // CHECK-PPC64-LABEL: define{{.*}} zeroext i32 @_ZN2N06read00
     // CHECK-PPC64:   %[[ptr:.*]]   = bitcast %{{.*}}* %{{.*}} to i64*
     // CHECK-PPC64:   %[[val:.*]]   = load i64, i64* %[[ptr]]
     // CHECK-PPC64:   %[[shr:.*]]   = lshr i64 %[[val]], 50
@@ -35,14 +35,14 @@ namespace N0 {
     return s->b00;
   }
   unsigned read01(S* s) {
-    // CHECK-X86-64-LABEL: define i32 @_ZN2N06read01
+    // CHECK-X86-64-LABEL: define{{.*}} i32 @_ZN2N06read01
     // CHECK-X86-64:   %[[ptr:.*]]   = bitcast %{{.*}}* %{{.*}} to i64*
     // CHECK-X86-64:   %[[val:.*]]   = load i64, i64* %[[ptr]]
     // CHECK-X86-64:   %[[shr:.*]]   = lshr i64 %[[val]], 14
     // CHECK-X86-64:   %[[and:.*]]   = and i64 %[[shr]], 3
     // CHECK-X86-64:   %[[trunc:.*]] = trunc i64 %[[and]] to i32
     // CHECK-X86-64:                   ret i32 %[[trunc]]
-    // CHECK-PPC64-LABEL: define zeroext i32 @_ZN2N06read01
+    // CHECK-PPC64-LABEL: define{{.*}} zeroext i32 @_ZN2N06read01
     // CHECK-PPC64:   %[[ptr:.*]]   = bitcast %{{.*}}* %{{.*}} to i64*
     // CHECK-PPC64:   %[[val:.*]]   = load i64, i64* %[[ptr]]
     // CHECK-PPC64:   %[[shr:.*]]   = lshr i64 %[[val]], 48
@@ -52,14 +52,14 @@ namespace N0 {
     return s->b01;
   }
   unsigned read20(S* s) {
-    // CHECK-X86-64-LABEL: define i32 @_ZN2N06read20
+    // CHECK-X86-64-LABEL: define{{.*}} i32 @_ZN2N06read20
     // CHECK-X86-64:   %[[ptr:.*]]   = bitcast %{{.*}}* %{{.*}} to i64*
     // CHECK-X86-64:   %[[val:.*]]   = load i64, i64* %[[ptr]]
     // CHECK-X86-64:   %[[shr:.*]]   = lshr i64 %[[val]], 16
     // CHECK-X86-64:   %[[and:.*]]   = and i64 %[[shr]], 63
     // CHECK-X86-64:   %[[trunc:.*]] = trunc i64 %[[and]] to i32
     // CHECK-X86-64:                   ret i32 %[[trunc]]
-    // CHECK-PPC64-LABEL: define zeroext i32 @_ZN2N06read20
+    // CHECK-PPC64-LABEL: define{{.*}} zeroext i32 @_ZN2N06read20
     // CHECK-PPC64:   %[[ptr:.*]]   = bitcast %{{.*}}* %{{.*}} to i64*
     // CHECK-PPC64:   %[[val:.*]]   = load i64, i64* %[[ptr]]
     // CHECK-PPC64:   %[[shr:.*]]   = lshr i64 %[[val]], 42
@@ -69,14 +69,14 @@ namespace N0 {
     return s->b20;
   }
   unsigned read21(S* s) {
-    // CHECK-X86-64-LABEL: define i32 @_ZN2N06read21
+    // CHECK-X86-64-LABEL: define{{.*}} i32 @_ZN2N06read21
     // CHECK-X86-64:   %[[ptr:.*]]   = bitcast %{{.*}}* %{{.*}} to i64*
     // CHECK-X86-64:   %[[val:.*]]   = load i64, i64* %[[ptr]]
     // CHECK-X86-64:   %[[shr:.*]]   = lshr i64 %[[val]], 22
     // CHECK-X86-64:   %[[and:.*]]   = and i64 %[[shr]], 3
     // CHECK-X86-64:   %[[trunc:.*]] = trunc i64 %[[and]] to i32
     // CHECK-X86-64:                   ret i32 %[[trunc]]
-    // CHECK-PPC64-LABEL: define zeroext i32 @_ZN2N06read21
+    // CHECK-PPC64-LABEL: define{{.*}} zeroext i32 @_ZN2N06read21
     // CHECK-PPC64:   %[[ptr:.*]]   = bitcast %{{.*}}* %{{.*}} to i64*
     // CHECK-PPC64:   %[[val:.*]]   = load i64, i64* %[[ptr]]
     // CHECK-PPC64:   %[[shr:.*]]   = lshr i64 %[[val]], 40
@@ -86,14 +86,14 @@ namespace N0 {
     return s->b21;
   }
   unsigned read30(S* s) {
-    // CHECK-X86-64-LABEL: define i32 @_ZN2N06read30
+    // CHECK-X86-64-LABEL: define{{.*}} i32 @_ZN2N06read30
     // CHECK-X86-64:   %[[ptr:.*]]   = bitcast %{{.*}}* %{{.*}} to i64*
     // CHECK-X86-64:   %[[val:.*]]   = load i64, i64* %[[ptr]]
     // CHECK-X86-64:   %[[shr:.*]]   = lshr i64 %[[val]], 24
     // CHECK-X86-64:   %[[and:.*]]   = and i64 %[[shr]], 1073741823
     // CHECK-X86-64:   %[[trunc:.*]] = trunc i64 %[[and]] to i32
     // CHECK-X86-64:                   ret i32 %[[trunc]]
-    // CHECK-PPC64-LABEL: define zeroext i32 @_ZN2N06read30
+    // CHECK-PPC64-LABEL: define{{.*}} zeroext i32 @_ZN2N06read30
     // CHECK-PPC64:   %[[ptr:.*]]   = bitcast %{{.*}}* %{{.*}} to i64*
     // CHECK-PPC64:   %[[val:.*]]   = load i64, i64* %[[ptr]]
     // CHECK-PPC64:   %[[shr:.*]]   = lshr i64 %[[val]], 10
@@ -103,14 +103,14 @@ namespace N0 {
     return s->b30;
   }
   unsigned read31(S* s) {
-    // CHECK-X86-64-LABEL: define i32 @_ZN2N06read31
+    // CHECK-X86-64-LABEL: define{{.*}} i32 @_ZN2N06read31
     // CHECK-X86-64:   %[[ptr:.*]]   = bitcast %{{.*}}* %{{.*}} to i64*
     // CHECK-X86-64:   %[[val:.*]]   = load i64, i64* %[[ptr]]
     // CHECK-X86-64:   %[[shr:.*]]   = lshr i64 %[[val]], 54
     // CHECK-X86-64:   %[[and:.*]]   = and i64 %[[shr]], 3
     // CHECK-X86-64:   %[[trunc:.*]] = trunc i64 %[[and]] to i32
     // CHECK-X86-64:                   ret i32 %[[trunc]]
-    // CHECK-PPC64-LABEL: define zeroext i32 @_ZN2N06read31
+    // CHECK-PPC64-LABEL: define{{.*}} zeroext i32 @_ZN2N06read31
     // CHECK-PPC64:   %[[ptr:.*]]   = bitcast %{{.*}}* %{{.*}} to i64*
     // CHECK-PPC64:   %[[val:.*]]   = load i64, i64* %[[ptr]]
     // CHECK-PPC64:   %[[shr:.*]]   = lshr i64 %[[val]], 8
@@ -120,14 +120,14 @@ namespace N0 {
     return s->b31;
   }
   unsigned read70(S* s) {
-    // CHECK-X86-64-LABEL: define i32 @_ZN2N06read70
+    // CHECK-X86-64-LABEL: define{{.*}} i32 @_ZN2N06read70
     // CHECK-X86-64:   %[[ptr:.*]]   = bitcast %{{.*}}* %{{.*}} to i64*
     // CHECK-X86-64:   %[[val:.*]]   = load i64, i64* %[[ptr]]
     // CHECK-X86-64:   %[[shr:.*]]   = lshr i64 %[[val]], 56
     // CHECK-X86-64:   %[[and:.*]]   = and i64 %[[shr]], 63
     // CHECK-X86-64:   %[[trunc:.*]] = trunc i64 %[[and]] to i32
     // CHECK-X86-64:                   ret i32 %[[trunc]]
-    // CHECK-PPC64-LABEL: define zeroext i32 @_ZN2N06read70
+    // CHECK-PPC64-LABEL: define{{.*}} zeroext i32 @_ZN2N06read70
     // CHECK-PPC64:   %[[ptr:.*]]   = bitcast %{{.*}}* %{{.*}} to i64*
     // CHECK-PPC64:   %[[val:.*]]   = load i64, i64* %[[ptr]]
     // CHECK-PPC64:   %[[shr:.*]]   = lshr i64 %[[val]], 2
@@ -137,13 +137,13 @@ namespace N0 {
     return s->b70;
   }
   unsigned read71(S* s) {
-    // CHECK-X86-64-LABEL: define i32 @_ZN2N06read71
+    // CHECK-X86-64-LABEL: define{{.*}} i32 @_ZN2N06read71
     // CHECK-X86-64:   %[[ptr:.*]]   = bitcast %{{.*}}* %{{.*}} to i64*
     // CHECK-X86-64:   %[[val:.*]]   = load i64, i64* %[[ptr]]
     // CHECK-X86-64:   %[[shr:.*]]   = lshr i64 %[[val]], 62
     // CHECK-X86-64:   %[[trunc:.*]] = trunc i64 %[[shr]] to i32
     // CHECK-X86-64:                   ret i32 %[[trunc]]
-    // CHECK-PPC64-LABEL: define zeroext i32 @_ZN2N06read71
+    // CHECK-PPC64-LABEL: define{{.*}} zeroext i32 @_ZN2N06read71
     // CHECK-PPC64:   %[[ptr:.*]]   = bitcast %{{.*}}* %{{.*}} to i64*
     // CHECK-PPC64:   %[[val:.*]]   = load i64, i64* %[[ptr]]
     // CHECK-PPC64:   %[[and:.*]]   = and i64 %[[val]], 3
@@ -166,13 +166,13 @@ namespace N1 {
     char c;
   };
   unsigned read(S* s) {
-    // CHECK-X86-64-LABEL: define i32 @_ZN2N14read
+    // CHECK-X86-64-LABEL: define{{.*}} i32 @_ZN2N14read
     // CHECK-X86-64:   %[[ptr:.*]] = getelementptr inbounds %{{.*}}, %{{.*}}* %{{.*}}, i32 0, i32 1
     // CHECK-X86-64:   %[[val:.*]] = load i8, i8* %[[ptr]]
     // CHECK-X86-64:   %[[and:.*]] = and i8 %[[val]], 1
     // CHECK-X86-64:   %[[ext:.*]] = zext i8 %[[and]] to i32
     // CHECK-X86-64:                 ret i32 %[[ext]]
-    // CHECK-PPC64-LABEL: define zeroext i32 @_ZN2N14read
+    // CHECK-PPC64-LABEL: define{{.*}} zeroext i32 @_ZN2N14read
     // CHECK-PPC64:   %[[ptr:.*]] = getelementptr inbounds %{{.*}}, %{{.*}}* %{{.*}}, i32 0, i32 1
     // CHECK-PPC64:   %[[val:.*]] = load i8, i8* %[[ptr]]
     // CHECK-PPC64:   %[[shr:.*]] = lshr i8 %[[val]], 7
@@ -181,7 +181,7 @@ namespace N1 {
     return s->b;
   }
   void write(S* s, unsigned x) {
-    // CHECK-X86-64-LABEL: define void @_ZN2N15write
+    // CHECK-X86-64-LABEL: define{{.*}} void @_ZN2N15write
     // CHECK-X86-64:   %[[ptr:.*]]     = getelementptr inbounds %{{.*}}, %{{.*}}* %{{.*}}, i32 0, i32 1
     // CHECK-X86-64:   %[[x_trunc:.*]] = trunc i32 %{{.*}} to i8
     // CHECK-X86-64:   %[[old:.*]]     = load i8, i8* %[[ptr]]
@@ -189,7 +189,7 @@ namespace N1 {
     // CHECK-X86-64:   %[[old_and:.*]] = and i8 %[[old]], -2
     // CHECK-X86-64:   %[[new:.*]]     = or i8 %[[old_and]], %[[x_and]]
     // CHECK-X86-64:                     store i8 %[[new]], i8* %[[ptr]]
-    // CHECK-PPC64-LABEL: define void @_ZN2N15write
+    // CHECK-PPC64-LABEL: define{{.*}} void @_ZN2N15write
     // CHECK-PPC64:   %[[ptr:.*]]     = getelementptr inbounds %{{.*}}, %{{.*}}* %{{.*}}, i32 0, i32 1
     // CHECK-PPC64:   %[[x_trunc:.*]] = trunc i32 %{{.*}} to i8
     // CHECK-PPC64:   %[[old:.*]]     = load i8, i8* %[[ptr]]
@@ -210,12 +210,12 @@ namespace N2 {
     void *p;
   };
   unsigned read(S* s) {
-    // CHECK-X86-64-LABEL: define i32 @_ZN2N24read
+    // CHECK-X86-64-LABEL: define{{.*}} i32 @_ZN2N24read
     // CHECK-X86-64:   %[[ptr:.*]] = bitcast %{{.*}}* %{{.*}} to i32*
     // CHECK-X86-64:   %[[val:.*]] = load i32, i32* %[[ptr]]
     // CHECK-X86-64:   %[[and:.*]] = and i32 %[[val]], 16777215
     // CHECK-X86-64:                 ret i32 %[[and]]
-    // CHECK-PPC64-LABEL: define zeroext i32 @_ZN2N24read
+    // CHECK-PPC64-LABEL: define{{.*}} zeroext i32 @_ZN2N24read
     // CHECK-PPC64:   %[[ptr:.*]] = bitcast %{{.*}}* %{{.*}} to i32*
     // CHECK-PPC64:   %[[val:.*]] = load i32, i32* %[[ptr]]
     // CHECK-PPC64:   %[[shr:.*]] = lshr i32 %[[val]], 8
@@ -223,14 +223,14 @@ namespace N2 {
     return s->b;
   }
   void write(S* s, unsigned x) {
-    // CHECK-X86-64-LABEL: define void @_ZN2N25write
+    // CHECK-X86-64-LABEL: define{{.*}} void @_ZN2N25write
     // CHECK-X86-64:   %[[ptr:.*]]     = bitcast %{{.*}}* %{{.*}} to i32*
     // CHECK-X86-64:   %[[old:.*]]     = load i32, i32* %[[ptr]]
     // CHECK-X86-64:   %[[x_and:.*]]   = and i32 %{{.*}}, 16777215
     // CHECK-X86-64:   %[[old_and:.*]] = and i32 %[[old]], -16777216
     // CHECK-X86-64:   %[[new:.*]]     = or i32 %[[old_and]], %[[x_and]]
     // CHECK-X86-64:                     store i32 %[[new]], i32* %[[ptr]]
-    // CHECK-PPC64-LABEL: define void @_ZN2N25write
+    // CHECK-PPC64-LABEL: define{{.*}} void @_ZN2N25write
     // CHECK-PPC64:   %[[ptr:.*]]     = bitcast %{{.*}}* %{{.*}} to i32*
     // CHECK-PPC64:   %[[old:.*]]     = load i32, i32* %[[ptr]]
     // CHECK-PPC64:   %[[x_and:.*]]   = and i32 %{{.*}}, 16777215
@@ -249,12 +249,12 @@ namespace N3 {
     unsigned b : 24;
   };
   unsigned read(S* s) {
-    // CHECK-X86-64-LABEL: define i32 @_ZN2N34read
+    // CHECK-X86-64-LABEL: define{{.*}} i32 @_ZN2N34read
     // CHECK-X86-64:   %[[ptr:.*]] = bitcast %{{.*}}* %{{.*}} to i32*
     // CHECK-X86-64:   %[[val:.*]] = load i32, i32* %[[ptr]]
     // CHECK-X86-64:   %[[and:.*]] = and i32 %[[val]], 16777215
     // CHECK-X86-64:                 ret i32 %[[and]]
-    // CHECK-PPC64-LABEL: define zeroext i32 @_ZN2N34read
+    // CHECK-PPC64-LABEL: define{{.*}} zeroext i32 @_ZN2N34read
     // CHECK-PPC64:   %[[ptr:.*]] = bitcast %{{.*}}* %{{.*}} to i32*
     // CHECK-PPC64:   %[[val:.*]] = load i32, i32* %[[ptr]]
     // CHECK-PPC64:   %[[shr:.*]] = lshr i32 %[[val]], 8
@@ -262,14 +262,14 @@ namespace N3 {
     return s->b;
   }
   void write(S* s, unsigned x) {
-    // CHECK-X86-64-LABEL: define void @_ZN2N35write
+    // CHECK-X86-64-LABEL: define{{.*}} void @_ZN2N35write
     // CHECK-X86-64:   %[[ptr:.*]]     = bitcast %{{.*}}* %{{.*}} to i32*
     // CHECK-X86-64:   %[[old:.*]]     = load i32, i32* %[[ptr]]
     // CHECK-X86-64:   %[[x_and:.*]]   = and i32 %{{.*}}, 16777215
     // CHECK-X86-64:   %[[old_and:.*]] = and i32 %[[old]], -16777216
     // CHECK-X86-64:   %[[new:.*]]     = or i32 %[[old_and]], %[[x_and]]
     // CHECK-X86-64:                     store i32 %[[new]], i32* %[[ptr]]
-    // CHECK-PPC64-LABEL: define void @_ZN2N35write
+    // CHECK-PPC64-LABEL: define{{.*}} void @_ZN2N35write
     // CHECK-PPC64:   %[[ptr:.*]]     = bitcast %{{.*}}* %{{.*}} to i32*
     // CHECK-PPC64:   %[[old:.*]]     = load i32, i32* %[[ptr]]
     // CHECK-PPC64:   %[[x_and:.*]]   = and i32 %{{.*}}, 16777215
@@ -300,13 +300,13 @@ namespace N4 {
     // FIXME: We should widen this load as long as the function isn't being
     // instrumented by ThreadSanitizer.
     //
-    // CHECK-X86-64-LABEL: define i32 @_ZN2N44read
+    // CHECK-X86-64-LABEL: define{{.*}} i32 @_ZN2N44read
     // CHECK-X86-64:   %[[gep:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %{{.*}}, i32 0, i32 1
     // CHECK-X86-64:   %[[ptr:.*]] = bitcast [3 x i8]* %[[gep]] to i24*
     // CHECK-X86-64:   %[[val:.*]] = load i24, i24* %[[ptr]]
     // CHECK-X86-64:   %[[ext:.*]] = zext i24 %[[val]] to i32
     // CHECK-X86-64:                 ret i32 %[[ext]]
-    // CHECK-PPC64-LABEL: define zeroext i32 @_ZN2N44read
+    // CHECK-PPC64-LABEL: define{{.*}} zeroext i32 @_ZN2N44read
     // CHECK-PPC64:   %[[gep:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %{{.*}}, i32 0, i32 1
     // CHECK-PPC64:   %[[ptr:.*]] = bitcast [3 x i8]* %[[gep]] to i24*
     // CHECK-PPC64:   %[[val:.*]] = load i24, i24* %[[ptr]]
@@ -315,12 +315,12 @@ namespace N4 {
     return s->b;
   }
   void write(Base* s, unsigned x) {
-    // CHECK-X86-64-LABEL: define void @_ZN2N45write
+    // CHECK-X86-64-LABEL: define{{.*}} void @_ZN2N45write
     // CHECK-X86-64:   %[[gep:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %{{.*}}, i32 0, i32 1
     // CHECK-X86-64:   %[[ptr:.*]] = bitcast [3 x i8]* %[[gep]] to i24*
     // CHECK-X86-64:   %[[new:.*]] = trunc i32 %{{.*}} to i24
     // CHECK-X86-64:                 store i24 %[[new]], i24* %[[ptr]]
-    // CHECK-PPC64-LABEL: define void @_ZN2N45write
+    // CHECK-PPC64-LABEL: define{{.*}} void @_ZN2N45write
     // CHECK-PPC64:   %[[gep:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %{{.*}}, i32 0, i32 1
     // CHECK-PPC64:   %[[ptr:.*]] = bitcast [3 x i8]* %[[gep]] to i24*
     // CHECK-PPC64:   %[[new:.*]] = trunc i32 %{{.*}} to i24
@@ -342,12 +342,12 @@ namespace N5 {
     struct Y { unsigned b : 24; } y;
   };
   unsigned read(U* u) {
-    // CHECK-X86-64-LABEL: define i32 @_ZN2N54read
+    // CHECK-X86-64-LABEL: define{{.*}} i32 @_ZN2N54read
     // CHECK-X86-64:   %[[ptr:.*]] = bitcast %{{.*}}* %{{.*}} to i32*
     // CHECK-X86-64:   %[[val:.*]] = load i32, i32* %[[ptr]]
     // CHECK-X86-64:   %[[and:.*]] = and i32 %[[val]], 16777215
     // CHECK-X86-64:                 ret i32 %[[and]]
-    // CHECK-PPC64-LABEL: define zeroext i32 @_ZN2N54read
+    // CHECK-PPC64-LABEL: define{{.*}} zeroext i32 @_ZN2N54read
     // CHECK-PPC64:   %[[ptr:.*]] = bitcast %{{.*}}* %{{.*}} to i32*
     // CHECK-PPC64:   %[[val:.*]] = load i32, i32* %[[ptr]]
     // CHECK-PPC64:   %[[shr:.*]] = lshr i32 %[[val]], 8
@@ -355,14 +355,14 @@ namespace N5 {
     return u->y.b;
   }
   void write(U* u, unsigned x) {
-    // CHECK-X86-64-LABEL: define void @_ZN2N55write
+    // CHECK-X86-64-LABEL: define{{.*}} void @_ZN2N55write
     // CHECK-X86-64:   %[[ptr:.*]]     = bitcast %{{.*}}* %{{.*}} to i32*
     // CHECK-X86-64:   %[[old:.*]]     = load i32, i32* %[[ptr]]
     // CHECK-X86-64:   %[[x_and:.*]]   = and i32 %{{.*}}, 16777215
     // CHECK-X86-64:   %[[old_and:.*]] = and i32 %[[old]], -16777216
     // CHECK-X86-64:   %[[new:.*]]     = or i32 %[[old_and]], %[[x_and]]
     // CHECK-X86-64:                     store i32 %[[new]], i32* %[[ptr]]
-    // CHECK-PPC64-LABEL: define void @_ZN2N55write
+    // CHECK-PPC64-LABEL: define{{.*}} void @_ZN2N55write
     // CHECK-PPC64:   %[[ptr:.*]]     = bitcast %{{.*}}* %{{.*}} to i32*
     // CHECK-PPC64:   %[[old:.*]]     = load i32, i32* %[[ptr]]
     // CHECK-PPC64:   %[[x_and:.*]]   = and i32 %{{.*}}, 16777215
@@ -387,7 +387,7 @@ namespace N6 {
     unsigned char b2 : 8;
   };
   unsigned read(S* s) {
-    // CHECK-X86-64-LABEL: define i32 @_ZN2N64read
+    // CHECK-X86-64-LABEL: define{{.*}} i32 @_ZN2N64read
     // CHECK-X86-64:   %[[ptr1:.*]] = bitcast {{.*}}* %{{.*}} to i24*
     // CHECK-X86-64:   %[[val1:.*]] = load i24, i24* %[[ptr1]]
     // CHECK-X86-64:   %[[ext1:.*]] = zext i24 %[[val1]] to i32
@@ -396,7 +396,7 @@ namespace N6 {
     // CHECK-X86-64:   %[[ext2:.*]] = zext i8 %[[val2]] to i32
     // CHECK-X86-64:   %[[add:.*]]  = add nsw i32 %[[ext1]], %[[ext2]]
     // CHECK-X86-64:                  ret i32 %[[add]]
-    // CHECK-PPC64-LABEL: define zeroext i32 @_ZN2N64read
+    // CHECK-PPC64-LABEL: define{{.*}} zeroext i32 @_ZN2N64read
     // CHECK-PPC64:   %[[ptr1:.*]] = bitcast {{.*}}* %{{.*}} to i24*
     // CHECK-PPC64:   %[[val1:.*]] = load i24, i24* %[[ptr1]]
     // CHECK-PPC64:   %[[ext1:.*]] = zext i24 %[[val1]] to i32
@@ -408,14 +408,14 @@ namespace N6 {
     return s->b1 + s->b2;
   }
   void write(S* s, unsigned x) {
-    // CHECK-X86-64-LABEL: define void @_ZN2N65write
+    // CHECK-X86-64-LABEL: define{{.*}} void @_ZN2N65write
     // CHECK-X86-64:   %[[ptr1:.*]] = bitcast {{.*}}* %{{.*}} to i24*
     // CHECK-X86-64:   %[[new1:.*]] = trunc i32 %{{.*}} to i24
     // CHECK-X86-64:                  store i24 %[[new1]], i24* %[[ptr1]]
     // CHECK-X86-64:   %[[new2:.*]] = trunc i32 %{{.*}} to i8
     // CHECK-X86-64:   %[[ptr2:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %{{.*}}, i32 0, i32 1
     // CHECK-X86-64:                  store i8 %[[new2]], i8* %[[ptr2]]
-    // CHECK-PPC64-LABEL: define void @_ZN2N65write
+    // CHECK-PPC64-LABEL: define{{.*}} void @_ZN2N65write
     // CHECK-PPC64:   %[[ptr1:.*]] = bitcast {{.*}}* %{{.*}} to i24*
     // CHECK-PPC64:   %[[new1:.*]] = trunc i32 %{{.*}} to i24
     // CHECK-PPC64:                  store i24 %[[new1]], i24* %[[ptr1]]
@@ -450,13 +450,13 @@ namespace N7 {
     // FIXME: We should widen this load as long as the function isn't being
     // instrumented by ThreadSanitizer.
     //
-    // CHECK-X86-64-LABEL: define i32 @_ZN2N74read
+    // CHECK-X86-64-LABEL: define{{.*}} i32 @_ZN2N74read
     // CHECK-X86-64:   %[[gep:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %{{.*}}, i32 0, i32 1
     // CHECK-X86-64:   %[[ptr:.*]] = bitcast [3 x i8]* %[[gep]] to i24*
     // CHECK-X86-64:   %[[val:.*]] = load i24, i24* %[[ptr]]
     // CHECK-X86-64:   %[[ext:.*]] = zext i24 %[[val]] to i32
     // CHECK-X86-64:                 ret i32 %[[ext]]
-    // CHECK-PPC64-LABEL: define zeroext i32 @_ZN2N74read
+    // CHECK-PPC64-LABEL: define{{.*}} zeroext i32 @_ZN2N74read
     // CHECK-PPC64:   %[[gep:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %{{.*}}, i32 0, i32 1
     // CHECK-PPC64:   %[[ptr:.*]] = bitcast [3 x i8]* %[[gep]] to i24*
     // CHECK-PPC64:   %[[val:.*]] = load i24, i24* %[[ptr]]
@@ -465,12 +465,12 @@ namespace N7 {
     return s->b;
   }
   void write(B2* s, unsigned x) {
-    // CHECK-X86-64-LABEL: define void @_ZN2N75write
+    // CHECK-X86-64-LABEL: define{{.*}} void @_ZN2N75write
     // CHECK-X86-64:   %[[gep:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %{{.*}}, i32 0, i32 1
     // CHECK-X86-64:   %[[ptr:.*]] = bitcast [3 x i8]* %[[gep]] to i24*
     // CHECK-X86-64:   %[[new:.*]] = trunc i32 %{{.*}} to i24
     // CHECK-X86-64:                 store i24 %[[new]], i24* %[[ptr]]
-    // CHECK-PPC64-LABEL: define void @_ZN2N75write
+    // CHECK-PPC64-LABEL: define{{.*}} void @_ZN2N75write
     // CHECK-PPC64:   %[[gep:.*]] = getelementptr inbounds {{.*}}, {{.*}}* %{{.*}}, i32 0, i32 1
     // CHECK-PPC64:   %[[ptr:.*]] = bitcast [3 x i8]* %[[gep]] to i24*
     // CHECK-PPC64:   %[[new:.*]] = trunc i32 %{{.*}} to i24

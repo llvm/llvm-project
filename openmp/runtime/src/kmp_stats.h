@@ -886,7 +886,7 @@ extern kmp_stats_output_module __kmp_stats_output;
  * @ingroup STATS_GATHERING
 */
 #define KMP_COUNT_VALUE(name, value)                                           \
-  __kmp_stats_thread_ptr->getTimer(TIMER_##name)->addSample(value)
+  __kmp_stats_thread_ptr->getTimer(TIMER_##name)->addSample((double)value)
 
 /*!
  * \brief Increments specified counter (name).

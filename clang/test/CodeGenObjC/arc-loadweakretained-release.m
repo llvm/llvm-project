@@ -42,7 +42,7 @@ void test1(int cond) {
   test34_sink(cond ? &weak : 0);
 }
 
-// CHECK-LABEL: define void @test1(
+// CHECK-LABEL: define{{.*}} void @test1(
 // CHECK: [[CONDADDR:%.*]] = alloca i32
 // CHECK-NEXT: [[WEAK:%.*]] = alloca i8*
 // CHECK-NEXT: [[INCRTEMP:%.*]] = alloca i8*

@@ -2,11 +2,11 @@
 ; RUN: llc < %s -mtriple=i386-apple-darwin10.0 | FileCheck %s --check-prefix=CHECK-X86
 ; RUN: llc < %s -mtriple=x86_64-grtev4-linux-gnu | FileCheck %s --check-prefix=CHECK-X64
 
-@g_14 = global i8 -6, align 1                     ; <i8*> [#uses=1]
+@g_14 = dso_local global i8 -6, align 1                     ; <i8*> [#uses=1]
 
 declare i32 @func_16(i8 signext %p_19, i32 %p_20) nounwind
 
-define i32 @func_35(i64 %p_38) nounwind ssp {
+define dso_local i32 @func_35(i64 %p_38) nounwind ssp {
 ; CHECK-X86-LABEL: func_35:
 ; CHECK-X86:       ## %bb.0: ## %entry
 ; CHECK-X86-NEXT:    subl $12, %esp
@@ -43,7 +43,7 @@ entry:
   ret i32 1
 }
 
-define void @fail(i16 %a, <2 x i8> %b) {
+define dso_local void @fail(i16 %a, <2 x i8> %b) {
 ; CHECK-X86-LABEL: fail:
 ; CHECK-X86:       ## %bb.0:
 ; CHECK-X86-NEXT:    subl $12, %esp

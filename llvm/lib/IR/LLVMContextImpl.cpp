@@ -35,6 +35,7 @@ LLVMContextImpl::LLVMContextImpl(LLVMContext &C)
     FP128Ty(C, Type::FP128TyID),
     PPC_FP128Ty(C, Type::PPC_FP128TyID),
     X86_MMXTy(C, Type::X86_MMXTyID),
+    X86_AMXTy(C, Type::X86_AMXTyID),
     Int1Ty(C, 1),
     Int8Ty(C, 8),
     Int16Ty(C, 16),

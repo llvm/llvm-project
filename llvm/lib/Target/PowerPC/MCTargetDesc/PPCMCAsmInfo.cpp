@@ -26,7 +26,8 @@ PPCELFMCAsmInfo::PPCELFMCAsmInfo(bool is64Bit, const Triple& T) {
   if (is64Bit) {
     CodePointerSize = CalleeSaveStackSlotSize = 8;
   }
-  IsLittleEndian = T.getArch() == Triple::ppc64le;
+  IsLittleEndian =
+      T.getArch() == Triple::ppc64le || T.getArch() == Triple::ppcle;
 
   // ".comm align is in bytes but .align is pow-2."
   AlignmentIsInBytes = false;
@@ -56,7 +57,7 @@ PPCELFMCAsmInfo::PPCELFMCAsmInfo(bool is64Bit, const Triple& T) {
 void PPCXCOFFMCAsmInfo::anchor() {}
 
 PPCXCOFFMCAsmInfo::PPCXCOFFMCAsmInfo(bool Is64Bit, const Triple &T) {
-  if (T.getArch() == Triple::ppc64le)
+  if (T.getArch() == Triple::ppc64le || T.getArch() == Triple::ppcle)
     report_fatal_error("XCOFF is not supported for little-endian targets");
   CodePointerSize = CalleeSaveStackSlotSize = Is64Bit ? 8 : 4;
 

@@ -7523,10 +7523,10 @@ defset list<WMMA_INSTR> MMA_LDSTs  = {
       foreach space = [".global", ".shared", ""] in {
         foreach addr = [imem, Int32Regs, Int64Regs, MEMri, MEMri64] in {
           foreach frag = NVVM_MMA_OPS.all_ld_ops in
-            foreach _ = NVVM_MMA_SUPPORTED<[frag], layout>.ret in
+            if NVVM_MMA_SUPPORTED<[frag], layout>.ret then
               def : WMMA_LOAD<WMMA_REGINFO<frag>, layout, space, stride, addr>;
           foreach frag = NVVM_MMA_OPS.all_st_ops in
-            foreach _ = NVVM_MMA_SUPPORTED<[frag], layout>.ret in
+            if NVVM_MMA_SUPPORTED<[frag], layout>.ret then
               def : WMMA_STORE_D<WMMA_REGINFO<frag>, layout, space, stride, addr>;
         } // addr
       } // space
@@ -7584,7 +7584,7 @@ defset list<WMMA_INSTR> MMAs  = {
     foreach layout_b = ["row", "col"] in {
       foreach satf = [0, 1] in {
         foreach op = NVVM_MMA_OPS.all_mma_ops in {
-          foreach _ = NVVM_MMA_SUPPORTED<op, layout_a, layout_b, satf>.ret in {
+          if NVVM_MMA_SUPPORTED<op, layout_a, layout_b, satf>.ret then {
             def : WMMA_MMA<WMMA_REGINFO<op[0]>,
                            WMMA_REGINFO<op[1]>,
                            WMMA_REGINFO<op[2]>,

@@ -5,6 +5,12 @@
 # RUN: llvm-readelf -S -s %t | FileCheck --check-prefixes=SEC,SYM %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
+# RUN: llvm-mc -filetype=obj -triple=powerpcle %s -o %t.o
+# RUN: ld.lld %t.o -o %t
+# RUN: llvm-readobj -r %t | FileCheck --check-prefix=RELOC %s
+# RUN: llvm-readelf -S -s %t | FileCheck --check-prefixes=SEC,SYM %s
+# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
+
 # RELOC:      .rela.dyn {
 # RELOC-NEXT:   0x10020118 R_PPC_IRELATIVE - 0x100100E0
 # RELOC-NEXT: }

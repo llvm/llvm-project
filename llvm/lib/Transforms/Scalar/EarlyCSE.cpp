@@ -1033,9 +1033,14 @@ bool EarlyCSE::handleBranchCondition(Instruction *CondInst,
   auto *TorF = (BI->getSuccessor(0) == BB)
                    ? ConstantInt::getTrue(BB->getContext())
                    : ConstantInt::getFalse(BB->getContext());
-  auto MatchBinOp = [](Instruction *I, unsigned Opcode) {
-    if (BinaryOperator *BOp = dyn_cast<BinaryOperator>(I))
-      return BOp->getOpcode() == Opcode;
+  auto MatchBinOp = [](Instruction *I, unsigned Opcode, Value *&LHS,
+                       Value *&RHS) {
+    if (Opcode == Instruction::And &&
+        match(I, m_LogicalAnd(m_Value(LHS), m_Value(RHS))))
+      return true;
+    else if (Opcode == Instruction::Or &&
+             match(I, m_LogicalOr(m_Value(LHS), m_Value(RHS))))
+      return true;
     return false;
   };
   // If the condition is AND operation, we can propagate its operands into the
@@ -1066,8 +1071,9 @@ bool EarlyCSE::handleBranchCondition(Instruction *CondInst,
       }
     }
 
-    if (MatchBinOp(Curr, PropagateOpcode))
-      for (auto &Op : cast<BinaryOperator>(Curr)->operands())
+    Value *LHS, *RHS;
+    if (MatchBinOp(Curr, PropagateOpcode, LHS, RHS))
+      for (auto &Op : { LHS, RHS })
         if (Instruction *OPI = dyn_cast<Instruction>(Op))
           if (SimpleValue::canHandle(OPI) && Visited.insert(OPI).second)
             WorkList.push_back(OPI);

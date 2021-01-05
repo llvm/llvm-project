@@ -2501,8 +2501,7 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
     // That Value* no longer exists and we need to use the new gc_result.
     // Thankfully, the live set is embedded in the statepoint (and updated), so
     // we just grab that.
-    Live.insert(Live.end(), Info.StatepointToken->gc_args_begin(),
-                Info.StatepointToken->gc_args_end());
+    llvm::append_range(Live, Info.StatepointToken->gc_args());
 #ifndef NDEBUG
     // Do some basic sanity checks on our liveness results before performing
     // relocation.  Relocation can and will turn mistakes in liveness results
@@ -2736,10 +2735,8 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F, DominatorTree &DT,
   // of liveness sets for no good reason.  It may be harder to do this post
   // insertion since relocations and base phis can confuse things.
   for (BasicBlock &BB : F)
-    if (BB.getUniquePredecessor()) {
-      MadeChange = true;
-      FoldSingleEntryPHINodes(&BB);
-    }
+    if (BB.getUniquePredecessor())
+      MadeChange |= FoldSingleEntryPHINodes(&BB);
 
   // Before we start introducing relocations, we want to tweak the IR a bit to
   // avoid unfortunate code generation effects.  The main example is that we

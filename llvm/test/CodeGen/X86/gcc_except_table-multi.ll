@@ -1,10 +1,10 @@
-; RUN: llc < %s -mtriple=x86_64 | FileCheck %s --check-prefixes=CHECK,NORMAL
-; RUN: llc < %s -mtriple=x86_64 -unique-section-names=false | FileCheck %s --check-prefixes=CHECK,NOUNIQUE
-; RUN: llc < %s -mtriple=x86_64 -function-sections | FileCheck %s --check-prefixes=CHECK,SEP
-; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=false | FileCheck %s --check-prefixes=CHECK,SEP_NOUNIQUE
+; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=x86_64 | FileCheck %s --check-prefixes=CHECK,NORMAL
+; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=x86_64 -unique-section-names=false | FileCheck %s --check-prefixes=CHECK,NOUNIQUE
+; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=x86_64 -function-sections | FileCheck %s --check-prefixes=CHECK,SEP
+; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=x86_64 -function-sections -unique-section-names=false | FileCheck %s --check-prefixes=CHECK,SEP_NOUNIQUE
 
 ;; Don't use `,unique` if GNU as<2.35.
-; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=false -no-integrated-as | FileCheck %s --check-prefixes=CHECK,SEP_NOUNIQUE_GAS
+; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=x86_64 -function-sections -unique-section-names=false -no-integrated-as | FileCheck %s --check-prefixes=CHECK,SEP_NOUNIQUE_GAS
 
 @_ZTIi = external constant i8*
 

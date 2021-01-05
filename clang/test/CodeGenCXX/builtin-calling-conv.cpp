@@ -26,7 +26,7 @@ void user() {
   foo();
 }
 
-// LINUX: define void @_Z4userv()
+// LINUX: define{{.*}} void @_Z4userv()
 // LINUX: call noalias nonnull i8* @_Znwm
 // LINUX: call float @atan2f
 // LINUX: call void @_Z3foov
@@ -34,7 +34,7 @@ void user() {
 // LINUX: declare float @atan2f(float, float)
 // LINUX: declare void @_Z3foov()
 
-// SPIR: define spir_func void @_Z4userv()
+// SPIR: define{{.*}} spir_func void @_Z4userv()
 // SPIR: call spir_func noalias nonnull i8* @_Znwj
 // SPIR: call spir_func float @atan2f
 // SPIR: call spir_func void @_Z3foov

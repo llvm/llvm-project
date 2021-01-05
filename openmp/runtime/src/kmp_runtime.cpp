@@ -3453,7 +3453,7 @@ static const unsigned __kmp_primes[] = {
 //  __kmp_get_random: Get a random number using a linear congruential method.
 unsigned short __kmp_get_random(kmp_info_t *thread) {
   unsigned x = thread->th.th_x;
-  unsigned short r = x >> 16;
+  unsigned short r = (unsigned short)(x >> 16);
 
   thread->th.th_x = x * thread->th.th_a + 1;
 
@@ -5199,7 +5199,7 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
           team->t.t_threads[f]->th.th_task_state =
               team->t.t_threads[0]->th.th_task_state_memo_stack[level];
       } else { // set th_task_state for new threads in non-nested hot team
-        int old_state =
+        kmp_uint8 old_state =
             team->t.t_threads[0]->th.th_task_state; // copy master's state
         for (f = old_nproc; f < team->t.t_nproc; ++f)
           team->t.t_threads[f]->th.th_task_state = old_state;
@@ -5807,16 +5807,9 @@ void *__kmp_launch_thread(kmp_info_t *this_thr) {
 /* ------------------------------------------------------------------------ */
 
 void __kmp_internal_end_dest(void *specific_gtid) {
-#if KMP_COMPILER_ICC
-#pragma warning(push)
-#pragma warning(disable : 810) // conversion from "void *" to "int" may lose
-// significant bits
-#endif
   // Make sure no significant bits are lost
-  int gtid = (kmp_intptr_t)specific_gtid - 1;
-#if KMP_COMPILER_ICC
-#pragma warning(pop)
-#endif
+  int gtid;
+  __kmp_type_convert((kmp_intptr_t)specific_gtid - 1, &gtid);
 
   KA_TRACE(30, ("__kmp_internal_end_dest: T#%d\n", gtid));
   /* NOTE: the gtid is stored as gitd+1 in the thread-local-storage
@@ -6629,7 +6622,7 @@ static void __kmp_user_level_mwait_init() {
 
 static void __kmp_do_serial_initialize(void) {
   int i, gtid;
-  int size;
+  size_t size;
 
   KA_TRACE(10, ("__kmp_do_serial_initialize: enter\n"));
 
@@ -8026,7 +8019,7 @@ static int __kmp_aux_capture_affinity_field(int gtid, const kmp_info_t *th,
     const char *long_name = __kmp_affinity_format_table[i].long_name;
     char field_format = __kmp_affinity_format_table[i].field_format;
     if (parse_long_name) {
-      int length = KMP_STRLEN(long_name);
+      size_t length = KMP_STRLEN(long_name);
       if (strncmp(*ptr, long_name, length) == 0) {
         found_valid_name = true;
         (*ptr) += length; // skip the long name
@@ -8176,7 +8169,7 @@ void __kmp_aux_set_blocktime(int arg, kmp_info_t *thread, int tid) {
 #if KMP_USE_MONITOR
   int bt_intervals;
 #endif
-  int bt_set;
+  kmp_int8 bt_set;
 
   __kmp_save_internal_controls(thread);
 
@@ -8215,7 +8208,7 @@ void __kmp_aux_set_blocktime(int arg, kmp_info_t *thread, int tid) {
 #endif
 }
 
-void __kmp_aux_set_defaults(char const *str, int len) {
+void __kmp_aux_set_defaults(char const *str, size_t len) {
   if (!__kmp_init_serial) {
     __kmp_serial_initialize();
   }

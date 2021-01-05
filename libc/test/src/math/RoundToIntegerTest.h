@@ -10,9 +10,6 @@
 #define LLVM_LIBC_TEST_SRC_MATH_ROUNDTOINTEGERTEST_H
 
 #include "src/errno/llvmlibc_errno.h"
-#include "src/fenv/feclearexcept.h"
-#include "src/fenv/feraiseexcept.h"
-#include "src/fenv/fetestexcept.h"
 #include "utils/FPUtil/FPBits.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 #include "utils/UnitTest/Test.h"
@@ -27,7 +24,10 @@
 
 namespace mpfr = __llvm_libc::testing::mpfr;
 
-template <typename F, typename I>
+static constexpr int roundingModes[4] = {FE_UPWARD, FE_DOWNWARD, FE_TOWARDZERO,
+                                         FE_TONEAREST};
+
+template <typename F, typename I, bool TestModes = false>
 class RoundToIntegerTestTemplate : public __llvm_libc::testing::Test {
 public:
   typedef I (*RoundToIntegerFunc)(F);
@@ -50,25 +50,40 @@ private:
     llvmlibc_errno = 0;
 #endif
 #if math_errhandling & MATH_ERREXCEPT
-    __llvm_libc::feclearexcept(FE_ALL_EXCEPT);
+    __llvm_libc::fputil::clearExcept(FE_ALL_EXCEPT);
 #endif
 
     ASSERT_EQ(func(input), expected);
 
     if (expectError) {
 #if math_errhandling & MATH_ERREXCEPT
-      ASSERT_EQ(__llvm_libc::fetestexcept(FE_ALL_EXCEPT), FE_INVALID);
+      ASSERT_EQ(__llvm_libc::fputil::testExcept(FE_ALL_EXCEPT), FE_INVALID);
 #endif
 #if math_errhandling & MATH_ERRNO
       ASSERT_EQ(llvmlibc_errno, EDOM);
 #endif
     } else {
 #if math_errhandling & MATH_ERREXCEPT
-      ASSERT_EQ(__llvm_libc::fetestexcept(FE_ALL_EXCEPT), 0);
+      ASSERT_EQ(__llvm_libc::fputil::testExcept(FE_ALL_EXCEPT), 0);
 #endif
 #if math_errhandling & MATH_ERRNO
       ASSERT_EQ(llvmlibc_errno, 0);
 #endif
+    }
+  }
+
+  static inline mpfr::RoundingMode toMPFRRoundingMode(int mode) {
+    switch (mode) {
+    case FE_UPWARD:
+      return mpfr::RoundingMode::Upward;
+    case FE_DOWNWARD:
+      return mpfr::RoundingMode::Downward;
+    case FE_TOWARDZERO:
+      return mpfr::RoundingMode::TowardZero;
+    case FE_TONEAREST:
+      return mpfr::RoundingMode::Nearest;
+    default:
+      __builtin_unreachable();
     }
   }
 
@@ -82,13 +97,24 @@ public:
 #endif
   }
 
-  void testInfinityAndNaN(RoundToIntegerFunc func) {
+  void doInfinityAndNaNTest(RoundToIntegerFunc func) {
     testOneInput(func, inf, IntegerMax, true);
     testOneInput(func, negInf, IntegerMin, true);
     testOneInput(func, nan, IntegerMax, true);
   }
 
-  void testRoundNumbers(RoundToIntegerFunc func) {
+  void testInfinityAndNaN(RoundToIntegerFunc func) {
+    if (TestModes) {
+      for (int mode : roundingModes) {
+        __llvm_libc::fputil::setRound(mode);
+        doInfinityAndNaNTest(func);
+      }
+    } else {
+      doInfinityAndNaNTest(func);
+    }
+  }
+
+  void doRoundNumbersTest(RoundToIntegerFunc func) {
     testOneInput(func, zero, I(0), false);
     testOneInput(func, negZero, I(0), false);
     testOneInput(func, F(1.0), I(1), false);
@@ -121,13 +147,44 @@ public:
     testOneInput(func, x, mpfrResult, false);
   }
 
+  void testRoundNumbers(RoundToIntegerFunc func) {
+    if (TestModes) {
+      for (int mode : roundingModes) {
+        __llvm_libc::fputil::setRound(mode);
+        doRoundNumbersTest(func);
+      }
+    } else {
+      doRoundNumbersTest(func);
+    }
+  }
+
+  void doFractionsTest(RoundToIntegerFunc func, int mode) {
+    constexpr F fractions[] = {0.5, -0.5, 0.115, -0.115, 0.715, -0.715};
+    for (F x : fractions) {
+      long mpfrLongResult;
+      bool erangeflag;
+      if (TestModes)
+        erangeflag =
+            mpfr::RoundToLong(x, toMPFRRoundingMode(mode), mpfrLongResult);
+      else
+        erangeflag = mpfr::RoundToLong(x, mpfrLongResult);
+      ASSERT_FALSE(erangeflag);
+      I mpfrResult = mpfrLongResult;
+      testOneInput(func, x, mpfrResult, false);
+    }
+  }
+
   void testFractions(RoundToIntegerFunc func) {
-    testOneInput(func, F(0.5), I(1), false);
-    testOneInput(func, F(-0.5), I(-1), false);
-    testOneInput(func, F(0.115), I(0), false);
-    testOneInput(func, F(-0.115), I(0), false);
-    testOneInput(func, F(0.715), I(1), false);
-    testOneInput(func, F(-0.715), I(-1), false);
+    if (TestModes) {
+      for (int mode : roundingModes) {
+        __llvm_libc::fputil::setRound(mode);
+        doFractionsTest(func, mode);
+      }
+    } else {
+      // Passing 0 for mode has no effect as it is not used in doFractionsTest
+      // when `TestModes` is false;
+      doFractionsTest(func, 0);
+    }
   }
 
   void testIntegerOverflow(RoundToIntegerFunc func) {
@@ -149,29 +206,56 @@ public:
                     << (__llvm_libc::fputil::MantissaWidth<F>::value - 1);
 
     F x = bits;
-    long mpfrResult;
-    bool erangeflag = mpfr::RoundToLong(x, mpfrResult);
-    ASSERT_TRUE(erangeflag);
-    testOneInput(func, x, IntegerMin, true);
+    if (TestModes) {
+      for (int m : roundingModes) {
+        __llvm_libc::fputil::setRound(m);
+        long mpfrLongResult;
+        bool erangeflag =
+            mpfr::RoundToLong(x, toMPFRRoundingMode(m), mpfrLongResult);
+        ASSERT_TRUE(erangeflag);
+        testOneInput(func, x, IntegerMin, true);
+      }
+    } else {
+      long mpfrLongResult;
+      bool erangeflag = mpfr::RoundToLong(x, mpfrLongResult);
+      ASSERT_TRUE(erangeflag);
+      testOneInput(func, x, IntegerMin, true);
+    }
   }
 
   void testSubnormalRange(RoundToIntegerFunc func) {
-    // This function compares with an equivalent MPFR function which rounds
-    // floating point numbers to long values. There is no MPFR function to
-    // round to long long or wider integer values. So, we will peform the
-    // comparisons in this function only if the width of I less than equal to
-    // that of long.
-    if (sizeof(I) > sizeof(long))
-      return;
-
     constexpr UIntType count = 1000001;
     constexpr UIntType step =
         (FPBits::maxSubnormal - FPBits::minSubnormal) / count;
     for (UIntType i = FPBits::minSubnormal; i <= FPBits::maxSubnormal;
          i += step) {
       F x = FPBits(i);
+      if (x == F(0.0))
+        continue;
       // All subnormal numbers should round to zero.
-      testOneInput(func, x, 0L, false);
+      if (TestModes) {
+        if (x > 0) {
+          __llvm_libc::fputil::setRound(FE_UPWARD);
+          testOneInput(func, x, I(1), false);
+          __llvm_libc::fputil::setRound(FE_DOWNWARD);
+          testOneInput(func, x, I(0), false);
+          __llvm_libc::fputil::setRound(FE_TOWARDZERO);
+          testOneInput(func, x, I(0), false);
+          __llvm_libc::fputil::setRound(FE_TONEAREST);
+          testOneInput(func, x, I(0), false);
+        } else {
+          __llvm_libc::fputil::setRound(FE_UPWARD);
+          testOneInput(func, x, I(0), false);
+          __llvm_libc::fputil::setRound(FE_DOWNWARD);
+          testOneInput(func, x, I(-1), false);
+          __llvm_libc::fputil::setRound(FE_TOWARDZERO);
+          testOneInput(func, x, I(0), false);
+          __llvm_libc::fputil::setRound(FE_TONEAREST);
+          testOneInput(func, x, I(0), false);
+        }
+      } else {
+        testOneInput(func, x, 0L, false);
+      }
     }
   }
 
@@ -194,23 +278,44 @@ public:
         continue;
       }
 
-      long mpfrResult;
-      bool erangeflag = mpfr::RoundToLong(x, mpfrResult);
-      if (erangeflag)
-        testOneInput(func, x, x > 0 ? IntegerMax : IntegerMin, true);
-      else
-        testOneInput(func, x, mpfrResult, false);
+      if (TestModes) {
+        for (int m : roundingModes) {
+          long mpfrLongResult;
+          bool erangeflag =
+              mpfr::RoundToLong(x, toMPFRRoundingMode(m), mpfrLongResult);
+          I mpfrResult = mpfrLongResult;
+          __llvm_libc::fputil::setRound(m);
+          if (erangeflag)
+            testOneInput(func, x, x > 0 ? IntegerMax : IntegerMin, true);
+          else
+            testOneInput(func, x, mpfrResult, false);
+        }
+      } else {
+        long mpfrLongResult;
+        bool erangeflag = mpfr::RoundToLong(x, mpfrLongResult);
+        I mpfrResult = mpfrLongResult;
+        if (erangeflag)
+          testOneInput(func, x, x > 0 ? IntegerMax : IntegerMin, true);
+        else
+          testOneInput(func, x, mpfrResult, false);
+      }
     }
   }
 };
 
-#define LIST_ROUND_TO_INTEGER_TESTS(F, I, func)                                \
-  using RoundToIntegerTest = RoundToIntegerTestTemplate<F, I>;                 \
+#define LIST_ROUND_TO_INTEGER_TESTS_HELPER(F, I, func, TestModes)              \
+  using RoundToIntegerTest = RoundToIntegerTestTemplate<F, I, TestModes>;      \
   TEST_F(RoundToIntegerTest, InfinityAndNaN) { testInfinityAndNaN(&func); }    \
   TEST_F(RoundToIntegerTest, RoundNumbers) { testRoundNumbers(&func); }        \
   TEST_F(RoundToIntegerTest, Fractions) { testFractions(&func); }              \
   TEST_F(RoundToIntegerTest, IntegerOverflow) { testIntegerOverflow(&func); }  \
   TEST_F(RoundToIntegerTest, SubnormalRange) { testSubnormalRange(&func); }    \
   TEST_F(RoundToIntegerTest, NormalRange) { testNormalRange(&func); }
+
+#define LIST_ROUND_TO_INTEGER_TESTS(F, I, func)                                \
+  LIST_ROUND_TO_INTEGER_TESTS_HELPER(F, I, func, false)
+
+#define LIST_ROUND_TO_INTEGER_TESTS_WITH_MODES(F, I, func)                     \
+  LIST_ROUND_TO_INTEGER_TESTS_HELPER(F, I, func, true)
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_ROUNDTOINTEGERTEST_H

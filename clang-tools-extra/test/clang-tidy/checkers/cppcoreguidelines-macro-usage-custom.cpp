@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s cppcoreguidelines-macro-usage %t \
-// RUN: -config='{CheckOptions: \
-// RUN:  [{key: cppcoreguidelines-macro-usage.AllowedRegexp, value: "DEBUG_*|TEST_*"}]}' --
+// RUN: -config="{CheckOptions: \
+// RUN:  [{key: cppcoreguidelines-macro-usage.AllowedRegexp, value: 'DEBUG_*|TEST_*'}]}" --
 
 #ifndef INCLUDE_GUARD
 #define INCLUDE_GUARD

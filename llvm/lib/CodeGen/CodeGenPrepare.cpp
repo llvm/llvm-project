@@ -562,7 +562,7 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
     // are removed.
     SmallSetVector<BasicBlock*, 8> WorkList;
     for (BasicBlock &BB : F) {
-      SmallVector<BasicBlock *, 2> Successors(succ_begin(&BB), succ_end(&BB));
+      SmallVector<BasicBlock *, 2> Successors(successors(&BB));
       MadeChange |= ConstantFoldTerminator(&BB, true);
       if (!MadeChange) continue;
 
@@ -576,7 +576,7 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
     MadeChange |= !WorkList.empty();
     while (!WorkList.empty()) {
       BasicBlock *BB = WorkList.pop_back_val();
-      SmallVector<BasicBlock*, 2> Successors(succ_begin(BB), succ_end(BB));
+      SmallVector<BasicBlock*, 2> Successors(successors(BB));
 
       DeleteDeadBlock(BB);
 
@@ -737,7 +737,7 @@ bool CodeGenPrepare::eliminateMostlyEmptyBlocks(Function &F) {
   SmallVector<Loop *, 16> LoopList(LI->begin(), LI->end());
   while (!LoopList.empty()) {
     Loop *L = LoopList.pop_back_val();
-    LoopList.insert(LoopList.end(), L->begin(), L->end());
+    llvm::append_range(LoopList, *L);
     if (BasicBlock *Preheader = L->getLoopPreheader())
       Preheaders.insert(Preheader);
   }
@@ -3160,9 +3160,7 @@ public:
   /// \returns whether the element is actually removed, i.e. was in the
   /// collection before the operation.
   bool erase(PHINode *Ptr) {
-    auto it = NodeMap.find(Ptr);
-    if (it != NodeMap.end()) {
-      NodeMap.erase(Ptr);
+    if (NodeMap.erase(Ptr)) {
       SkipRemovedElements(FirstValidElement);
       return true;
     }
@@ -5328,7 +5326,7 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
     if (MemoryInst->getParent() != GEP->getParent())
       return false;
 
-    SmallVector<Value *, 2> Ops(GEP->op_begin(), GEP->op_end());
+    SmallVector<Value *, 2> Ops(GEP->operands());
 
     bool RewriteGEP = false;
 
@@ -6723,8 +6721,7 @@ bool CodeGenPrepare::optimizeShuffleVectorInst(ShuffleVectorInst *SVI) {
       cast<Instruction>(SVI->getOperand(0))->getOperand(1), NewType);
   Value *Insert = Builder.CreateInsertElement(UndefValue::get(NewVecType), BC1,
                                               (uint64_t)0);
-  Value *Shuffle = Builder.CreateShuffleVector(
-      Insert, UndefValue::get(NewVecType), SVI->getShuffleMask());
+  Value *Shuffle = Builder.CreateShuffleVector(Insert, SVI->getShuffleMask());
   Value *BC2 = Builder.CreateBitCast(Shuffle, SVIVecType);
 
   SVI->replaceAllUsesWith(BC2);
@@ -7839,9 +7836,10 @@ bool CodeGenPrepare::splitBranchCondition(Function &F, bool &ModifiedDT) {
     //   %cond2 = icmp|fcmp|binary instruction ...
     //   %cond.or = or|and i1 %cond1, cond2
     //   br i1 %cond.or label %dest1, label %dest2"
-    BinaryOperator *LogicOp;
+    Instruction *LogicOp;
     BasicBlock *TBB, *FBB;
-    if (!match(BB.getTerminator(), m_Br(m_OneUse(m_BinOp(LogicOp)), TBB, FBB)))
+    if (!match(BB.getTerminator(),
+               m_Br(m_OneUse(m_Instruction(LogicOp)), TBB, FBB)))
       continue;
 
     auto *Br1 = cast<BranchInst>(BB.getTerminator());
@@ -7854,17 +7852,22 @@ bool CodeGenPrepare::splitBranchCondition(Function &F, bool &ModifiedDT) {
 
     unsigned Opc;
     Value *Cond1, *Cond2;
-    if (match(LogicOp, m_And(m_OneUse(m_Value(Cond1)),
-                             m_OneUse(m_Value(Cond2)))))
+    if (match(LogicOp,
+              m_LogicalAnd(m_OneUse(m_Value(Cond1)), m_OneUse(m_Value(Cond2)))))
       Opc = Instruction::And;
-    else if (match(LogicOp, m_Or(m_OneUse(m_Value(Cond1)),
-                                 m_OneUse(m_Value(Cond2)))))
+    else if (match(LogicOp, m_LogicalOr(m_OneUse(m_Value(Cond1)),
+                                        m_OneUse(m_Value(Cond2)))))
       Opc = Instruction::Or;
     else
       continue;
 
-    if (!match(Cond1, m_CombineOr(m_Cmp(), m_BinOp())) ||
-        !match(Cond2, m_CombineOr(m_Cmp(), m_BinOp()))   )
+    auto IsGoodCond = [](Value *Cond) {
+      return match(
+          Cond,
+          m_CombineOr(m_Cmp(), m_CombineOr(m_LogicalAnd(m_Value(), m_Value()),
+                                           m_LogicalOr(m_Value(), m_Value()))));
+    };
+    if (!IsGoodCond(Cond1) || !IsGoodCond(Cond2))
       continue;
 
     LLVM_DEBUG(dbgs() << "Before branch condition splitting\n"; BB.dump());

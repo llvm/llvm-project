@@ -10721,8 +10721,18 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
       (!LegalOperations || (TLI.isOperationLegal(ISD::ZERO_EXTEND, VT) &&
                             TLI.isOperationLegal(ISD::ADD, VT)))) {
     // If we can eliminate the 'not', the sext form should be better
-    if (SDValue NewXor = visitXOR(N0.getNode()))
-      return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, NewXor);
+    if (SDValue NewXor = visitXOR(N0.getNode())) {
+      // Returning N0 is a form of in-visit replacement that may have
+      // invalidated N0.
+      if (NewXor.getNode() == N0.getNode()) {
+        // Return SDValue here as the xor should have already been replaced in
+        // this sext.
+        return SDValue();
+      } else {
+        // Return a new sext with the new xor.
+        return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, NewXor);
+      }
+    }
 
     SDValue Zext = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, N0.getOperand(0));
     return DAG.getNode(ISD::ADD, DL, VT, Zext, DAG.getAllOnesConstant(DL, VT));

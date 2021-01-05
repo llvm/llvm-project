@@ -5,7 +5,7 @@ void opaque();
 
 namespace test0 {
 
-  // CHECK-LABEL: define void @_ZN5test03fooEv
+  // CHECK-LABEL: define{{.*}} void @_ZN5test03fooEv
   // CHECK-SAME:  personality i8* bitcast (i32 (...)* @__objc_personality_v0 to i8*)
   void foo() {
     try {

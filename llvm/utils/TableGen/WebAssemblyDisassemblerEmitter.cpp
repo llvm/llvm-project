@@ -139,8 +139,7 @@ void emitWebAssemblyDisassemblerTables(
         }
         // Store operands if no prior occurrence.
         if (OperandStart == OperandTable.size()) {
-          OperandTable.insert(OperandTable.end(), CurOperandList.begin(),
-                              CurOperandList.end());
+          llvm::append_range(OperandTable, CurOperandList);
         }
         OS << OperandStart;
       } else {

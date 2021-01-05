@@ -4,7 +4,7 @@ struct A {
   A(const char *);
 };
 
-// CHECK: @arr = global [3 x %struct.S] zeroinitializer
+// CHECK: @arr ={{.*}} global [3 x %struct.S] zeroinitializer
 // CHECK: @.str = {{.*}}constant [6 x i8] c"hello\00"
 // CHECK: @.str.1 = {{.*}}constant [6 x i8] c"world\00"
 // CHECK: @.str.2 = {{.*}}constant [8 x i8] c"goodbye\00"

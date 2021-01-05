@@ -848,55 +848,21 @@ bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input,
   StringRef InputFile = Input.getFile();
 
   // Figure out where to get and map in the main file.
-  if (InputFile != "-") {
-    auto FileOrErr = FileMgr.getFileRef(InputFile, /*OpenFile=*/true);
-    if (!FileOrErr) {
-      // FIXME: include the error in the diagnostic.
-      consumeError(FileOrErr.takeError());
+  auto FileOrErr = InputFile == "-"
+                       ? FileMgr.getSTDIN()
+                       : FileMgr.getFileRef(InputFile, /*OpenFile=*/true);
+  if (!FileOrErr) {
+    // FIXME: include the error in the diagnostic even when it's not stdin.
+    auto EC = llvm::errorToErrorCode(FileOrErr.takeError());
+    if (InputFile != "-")
       Diags.Report(diag::err_fe_error_reading) << InputFile;
-      return false;
-    }
-    FileEntryRef File = *FileOrErr;
-
-    // The natural SourceManager infrastructure can't currently handle named
-    // pipes, but we would at least like to accept them for the main
-    // file. Detect them here, read them with the volatile flag so FileMgr will
-    // pick up the correct size, and simply override their contents as we do for
-    // STDIN.
-    if (File.getFileEntry().isNamedPipe()) {
-      auto MB =
-          FileMgr.getBufferForFile(&File.getFileEntry(), /*isVolatile=*/true);
-      if (MB) {
-        // Create a new virtual file that will have the correct size.
-        FileEntryRef FE =
-            FileMgr.getVirtualFileRef(InputFile, (*MB)->getBufferSize(), 0);
-        SourceMgr.overrideFileContents(FE, std::move(*MB));
-        SourceMgr.setMainFileID(
-            SourceMgr.createFileID(FE, SourceLocation(), Kind));
-      } else {
-        Diags.Report(diag::err_cannot_open_file) << InputFile
-                                                 << MB.getError().message();
-        return false;
-      }
-    } else {
-      SourceMgr.setMainFileID(
-          SourceMgr.createFileID(File, SourceLocation(), Kind));
-    }
-  } else {
-    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> SBOrErr =
-        llvm::MemoryBuffer::getSTDIN();
-    if (std::error_code EC = SBOrErr.getError()) {
+    else
       Diags.Report(diag::err_fe_error_reading_stdin) << EC.message();
-      return false;
-    }
-    std::unique_ptr<llvm::MemoryBuffer> SB = std::move(SBOrErr.get());
-
-    FileEntryRef File = FileMgr.getVirtualFileRef(SB->getBufferIdentifier(),
-                                                  SB->getBufferSize(), 0);
-    SourceMgr.setMainFileID(
-        SourceMgr.createFileID(File, SourceLocation(), Kind));
-    SourceMgr.overrideFileContents(File, std::move(SB));
+    return false;
   }
+
+  SourceMgr.setMainFileID(
+      SourceMgr.createFileID(*FileOrErr, SourceLocation(), Kind));
 
   assert(SourceMgr.getMainFileID().isValid() &&
          "Couldn't establish MainFileID!");

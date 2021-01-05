@@ -47,6 +47,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/CmpInstAnalysis.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
@@ -79,6 +80,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -106,6 +108,9 @@ using namespace llvm;
 
 STATISTIC(NumMemSet, "Number of memset's formed from loop stores");
 STATISTIC(NumMemCpy, "Number of memcpy's formed from loop load+stores");
+STATISTIC(
+    NumShiftUntilBitTest,
+    "Number of uncountable loops recognized as 'shift until bitttest' idiom");
 
 bool DisableLIRP::All;
 static cl::opt<bool, true>
@@ -226,6 +231,8 @@ private:
                                 Value *Var, Instruction *DefX,
                                 const DebugLoc &DL, bool ZeroCheck,
                                 bool IsCntPhiUsedOutsideLoop);
+
+  bool recognizeShiftUntilBitTest();
 
   /// @}
 };
@@ -1228,7 +1235,8 @@ bool LoopIdiomRecognize::runOnNoncountableLoop() {
                     << "] Noncountable Loop %"
                     << CurLoop->getHeader()->getName() << "\n");
 
-  return recognizePopcount() || recognizeAndInsertFFS();
+  return recognizePopcount() || recognizeAndInsertFFS() ||
+         recognizeShiftUntilBitTest();
 }
 
 /// Check if the given conditional branch is based on the comparison between
@@ -1910,4 +1918,344 @@ void LoopIdiomRecognize::transformLoopToPopcount(BasicBlock *PreCondBB,
   // step 5: Forget the "non-computable" trip-count SCEV associated with the
   //   loop. The loop would otherwise not be deleted even if it becomes empty.
   SE->forgetLoop(CurLoop);
+}
+
+/// Match loop-invariant value.
+template <typename SubPattern_t> struct match_LoopInvariant {
+  SubPattern_t SubPattern;
+  const Loop *L;
+
+  match_LoopInvariant(const SubPattern_t &SP, const Loop *L)
+      : SubPattern(SP), L(L) {}
+
+  template <typename ITy> bool match(ITy *V) {
+    return L->isLoopInvariant(V) && SubPattern.match(V);
+  }
+};
+
+/// Matches if the value is loop-invariant.
+template <typename Ty>
+inline match_LoopInvariant<Ty> m_LoopInvariant(const Ty &M, const Loop *L) {
+  return match_LoopInvariant<Ty>(M, L);
+}
+
+/// Return true if the idiom is detected in the loop.
+///
+/// The core idiom we are trying to detect is:
+/// \code
+///   entry:
+///     <...>
+///     %bitmask = shl i32 1, %bitpos
+///     br label %loop
+///
+///   loop:
+///     %x.curr = phi i32 [ %x, %entry ], [ %x.next, %loop ]
+///     %x.curr.bitmasked = and i32 %x.curr, %bitmask
+///     %x.curr.isbitunset = icmp eq i32 %x.curr.bitmasked, 0
+///     %x.next = shl i32 %x.curr, 1
+///     <...>
+///     br i1 %x.curr.isbitunset, label %loop, label %end
+///
+///   end:
+///     %x.curr.res = phi i32 [ %x.curr, %loop ] <...>
+///     %x.next.res = phi i32 [ %x.next, %loop ] <...>
+///     <...>
+/// \endcode
+static bool detectShiftUntilBitTestIdiom(Loop *CurLoop, Value *&BaseX,
+                                         Value *&BitMask, Value *&BitPos,
+                                         Value *&CurrX, Instruction *&NextX) {
+  LLVM_DEBUG(dbgs() << DEBUG_TYPE
+             " Performing shift-until-bittest idiom detection.\n");
+
+  // Give up if the loop has multiple blocks or multiple backedges.
+  if (CurLoop->getNumBlocks() != 1 || CurLoop->getNumBackEdges() != 1) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE " Bad block/backedge count.\n");
+    return false;
+  }
+
+  BasicBlock *LoopHeaderBB = CurLoop->getHeader();
+  BasicBlock *LoopPreheaderBB = CurLoop->getLoopPreheader();
+  assert(LoopPreheaderBB && "There is always a loop preheader.");
+
+  using namespace PatternMatch;
+
+  // Step 1: Check if the loop backedge is in desirable form.
+
+  ICmpInst::Predicate Pred;
+  Value *CmpLHS, *CmpRHS;
+  BasicBlock *TrueBB, *FalseBB;
+  if (!match(LoopHeaderBB->getTerminator(),
+             m_Br(m_ICmp(Pred, m_Value(CmpLHS), m_Value(CmpRHS)),
+                  m_BasicBlock(TrueBB), m_BasicBlock(FalseBB)))) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE " Bad backedge structure.\n");
+    return false;
+  }
+
+  // Step 2: Check if the backedge's condition is in desirable form.
+
+  auto MatchVariableBitMask = [&]() {
+    return ICmpInst::isEquality(Pred) && match(CmpRHS, m_Zero()) &&
+           match(CmpLHS,
+                 m_c_And(m_Value(CurrX),
+                         m_CombineAnd(
+                             m_Value(BitMask),
+                             m_LoopInvariant(m_Shl(m_One(), m_Value(BitPos)),
+                                             CurLoop))));
+  };
+  auto MatchConstantBitMask = [&]() {
+    return ICmpInst::isEquality(Pred) && match(CmpRHS, m_Zero()) &&
+           match(CmpLHS, m_And(m_Value(CurrX),
+                               m_CombineAnd(m_Value(BitMask), m_Power2()))) &&
+           (BitPos = ConstantExpr::getExactLogBase2(cast<Constant>(BitMask)));
+  };
+  auto MatchDecomposableConstantBitMask = [&]() {
+    APInt Mask;
+    return llvm::decomposeBitTestICmp(CmpLHS, CmpRHS, Pred, CurrX, Mask) &&
+           ICmpInst::isEquality(Pred) && Mask.isPowerOf2() &&
+           (BitMask = ConstantInt::get(CurrX->getType(), Mask)) &&
+           (BitPos = ConstantInt::get(CurrX->getType(), Mask.logBase2()));
+  };
+
+  if (!MatchVariableBitMask() && !MatchConstantBitMask() &&
+      !MatchDecomposableConstantBitMask()) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE " Bad backedge comparison.\n");
+    return false;
+  }
+
+  // Step 3: Check if the recurrence is in desirable form.
+  auto *CurrXPN = dyn_cast<PHINode>(CurrX);
+  if (!CurrXPN || CurrXPN->getParent() != LoopHeaderBB) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE " Not an expected PHI node.\n");
+    return false;
+  }
+
+  BaseX = CurrXPN->getIncomingValueForBlock(LoopPreheaderBB);
+  NextX =
+      dyn_cast<Instruction>(CurrXPN->getIncomingValueForBlock(LoopHeaderBB));
+
+  if (!NextX || !match(NextX, m_Shl(m_Specific(CurrX), m_One()))) {
+    // FIXME: support right-shift?
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE " Bad recurrence.\n");
+    return false;
+  }
+
+  // Step 4: Check if the backedge's destinations are in desirable form.
+
+  assert(ICmpInst::isEquality(Pred) &&
+         "Should only get equality predicates here.");
+
+  // cmp-br is commutative, so canonicalize to a single variant.
+  if (Pred != ICmpInst::Predicate::ICMP_EQ) {
+    Pred = ICmpInst::getInversePredicate(Pred);
+    std::swap(TrueBB, FalseBB);
+  }
+
+  // We expect to exit loop when comparison yields false,
+  // so when it yields true we should branch back to loop header.
+  if (TrueBB != LoopHeaderBB) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE " Bad backedge flow.\n");
+    return false;
+  }
+
+  // Okay, idiom checks out.
+  return true;
+}
+
+/// Look for the following loop:
+/// \code
+///   entry:
+///     <...>
+///     %bitmask = shl i32 1, %bitpos
+///     br label %loop
+///
+///   loop:
+///     %x.curr = phi i32 [ %x, %entry ], [ %x.next, %loop ]
+///     %x.curr.bitmasked = and i32 %x.curr, %bitmask
+///     %x.curr.isbitunset = icmp eq i32 %x.curr.bitmasked, 0
+///     %x.next = shl i32 %x.curr, 1
+///     <...>
+///     br i1 %x.curr.isbitunset, label %loop, label %end
+///
+///   end:
+///     %x.curr.res = phi i32 [ %x.curr, %loop ] <...>
+///     %x.next.res = phi i32 [ %x.next, %loop ] <...>
+///     <...>
+/// \endcode
+///
+/// And transform it into:
+/// \code
+///   entry:
+///     %bitmask = shl i32 1, %bitpos
+///     %lowbitmask = add i32 %bitmask, -1
+///     %mask = or i32 %lowbitmask, %bitmask
+///     %x.masked = and i32 %x, %mask
+///     %x.masked.numleadingzeros = call i32 @llvm.ctlz.i32(i32 %x.masked,
+///                                                         i1 true)
+///     %x.masked.numactivebits = sub i32 32, %x.masked.numleadingzeros
+///     %x.masked.leadingonepos = add i32 %x.masked.numactivebits, -1
+///     %backedgetakencount = sub i32 %bitpos, %x.masked.leadingonepos
+///     %tripcount = add i32 %backedgetakencount, 1
+///     %x.curr = shl i32 %x, %backedgetakencount
+///     %x.next = shl i32 %x, %tripcount
+///     br label %loop
+///
+///   loop:
+///     %loop.iv = phi i32 [ 0, %entry ], [ %loop.iv.next, %loop ]
+///     %loop.iv.next = add nuw i32 %loop.iv, 1
+///     %loop.ivcheck = icmp eq i32 %loop.iv.next, %tripcount
+///     <...>
+///     br i1 %loop.ivcheck, label %end, label %loop
+///
+///   end:
+///     %x.curr.res = phi i32 [ %x.curr, %loop ] <...>
+///     %x.next.res = phi i32 [ %x.next, %loop ] <...>
+///     <...>
+/// \endcode
+bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
+  bool MadeChange = false;
+
+  Value *X, *BitMask, *BitPos, *XCurr;
+  Instruction *XNext;
+  if (!detectShiftUntilBitTestIdiom(CurLoop, X, BitMask, BitPos, XCurr,
+                                    XNext)) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE
+               " shift-until-bittest idiom detection failed.\n");
+    return MadeChange;
+  }
+  LLVM_DEBUG(dbgs() << DEBUG_TYPE " shift-until-bittest idiom detected!\n");
+
+  // Ok, it is the idiom we were looking for, we *could* transform this loop,
+  // but is it profitable to transform?
+
+  BasicBlock *LoopHeaderBB = CurLoop->getHeader();
+  BasicBlock *LoopPreheaderBB = CurLoop->getLoopPreheader();
+  assert(LoopPreheaderBB && "There is always a loop preheader.");
+
+  BasicBlock *SuccessorBB = CurLoop->getExitBlock();
+  assert(LoopPreheaderBB && "There is only a single successor.");
+
+  IRBuilder<> Builder(LoopPreheaderBB->getTerminator());
+  Builder.SetCurrentDebugLocation(cast<Instruction>(XCurr)->getDebugLoc());
+
+  Intrinsic::ID IntrID = Intrinsic::ctlz;
+  Type *Ty = X->getType();
+
+  TargetTransformInfo::TargetCostKind CostKind =
+      TargetTransformInfo::TCK_SizeAndLatency;
+
+  // The rewrite is considered to be unprofitable iff and only iff the
+  // intrinsic/shift we'll use are not cheap. Note that we are okay with *just*
+  // making the loop countable, even if nothing else changes.
+  IntrinsicCostAttributes Attrs(
+      IntrID, Ty, {UndefValue::get(Ty), /*is_zero_undef=*/Builder.getTrue()});
+  int Cost = TTI->getIntrinsicInstrCost(Attrs, CostKind);
+  if (Cost > TargetTransformInfo::TCC_Basic) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE
+               " Intrinsic is too costly, not beneficial\n");
+    return MadeChange;
+  }
+  if (TTI->getArithmeticInstrCost(Instruction::Shl, Ty, CostKind) >
+      TargetTransformInfo::TCC_Basic) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE " Shift is too costly, not beneficial\n");
+    return MadeChange;
+  }
+
+  // Ok, transform appears worthwhile.
+  MadeChange = true;
+
+  // Step 1: Compute the loop trip count.
+
+  Value *LowBitMask = Builder.CreateAdd(BitMask, Constant::getAllOnesValue(Ty),
+                                        BitPos->getName() + ".lowbitmask");
+  Value *Mask =
+      Builder.CreateOr(LowBitMask, BitMask, BitPos->getName() + ".mask");
+  Value *XMasked = Builder.CreateAnd(X, Mask, X->getName() + ".masked");
+  CallInst *XMaskedNumLeadingZeros = Builder.CreateIntrinsic(
+      IntrID, Ty, {XMasked, /*is_zero_undef=*/Builder.getTrue()},
+      /*FMFSource=*/nullptr, XMasked->getName() + ".numleadingzeros");
+  Value *XMaskedNumActiveBits = Builder.CreateSub(
+      ConstantInt::get(Ty, Ty->getScalarSizeInBits()), XMaskedNumLeadingZeros,
+      XMasked->getName() + ".numactivebits");
+  Value *XMaskedLeadingOnePos =
+      Builder.CreateAdd(XMaskedNumActiveBits, Constant::getAllOnesValue(Ty),
+                        XMasked->getName() + ".leadingonepos");
+
+  Value *LoopBackedgeTakenCount = Builder.CreateSub(
+      BitPos, XMaskedLeadingOnePos, CurLoop->getName() + ".backedgetakencount");
+  // We know loop's backedge-taken count, but what's loop's trip count?
+  // Note that while NUW is always safe, while NSW is only for bitwidths != 2.
+  Value *LoopTripCount =
+      Builder.CreateNUWAdd(LoopBackedgeTakenCount, ConstantInt::get(Ty, 1),
+                           CurLoop->getName() + ".tripcount");
+
+  // Step 2: Compute the recurrence's final value without a loop.
+
+  // NewX is always safe to compute, because `LoopBackedgeTakenCount`
+  // will always be smaller than `bitwidth(X)`, i.e. we never get poison.
+  Value *NewX = Builder.CreateShl(X, LoopBackedgeTakenCount);
+  NewX->takeName(XCurr);
+  if (auto *I = dyn_cast<Instruction>(NewX))
+    I->copyIRFlags(XNext, /*IncludeWrapFlags=*/true);
+
+  Value *NewXNext;
+  // Rewriting XNext is more complicated, however, because `X << LoopTripCount`
+  // will be poison iff `LoopTripCount == bitwidth(X)` (which will happen
+  // iff `BitPos` is `bitwidth(x) - 1` and `X` is `1`). So unless we know
+  // that isn't the case, we'll need to emit an alternative, safe IR.
+  if (XNext->hasNoSignedWrap() || XNext->hasNoUnsignedWrap() ||
+      PatternMatch::match(
+          BitPos, PatternMatch::m_SpecificInt_ICMP(
+                      ICmpInst::ICMP_NE, APInt(Ty->getScalarSizeInBits(),
+                                               Ty->getScalarSizeInBits() - 1))))
+    NewXNext = Builder.CreateShl(X, LoopTripCount);
+  else {
+    // Otherwise, just additionally shift by one. It's the smallest solution,
+    // alternatively, we could check that NewX is INT_MIN (or BitPos is )
+    // and select 0 instead.
+    NewXNext = Builder.CreateShl(NewX, ConstantInt::get(Ty, 1));
+  }
+
+  NewXNext->takeName(XNext);
+  if (auto *I = dyn_cast<Instruction>(NewXNext))
+    I->copyIRFlags(XNext, /*IncludeWrapFlags=*/true);
+
+  // Step 3: Adjust the successor basic block to recieve the computed
+  //         recurrence's final value instead of the recurrence itself.
+
+  XCurr->replaceUsesOutsideBlock(NewX, LoopHeaderBB);
+  XNext->replaceUsesOutsideBlock(NewXNext, LoopHeaderBB);
+
+  // Step 4: Rewrite the loop into a countable form, with canonical IV.
+
+  // The new canonical induction variable.
+  Builder.SetInsertPoint(&LoopHeaderBB->front());
+  auto *IV = Builder.CreatePHI(Ty, 2, CurLoop->getName() + ".iv");
+
+  // The induction itself.
+  // Note that while NUW is always safe, while NSW is only for bitwidths != 2.
+  Builder.SetInsertPoint(LoopHeaderBB->getTerminator());
+  auto *IVNext = Builder.CreateNUWAdd(IV, ConstantInt::get(Ty, 1),
+                                      IV->getName() + ".next");
+
+  // The loop trip count check.
+  auto *IVCheck = Builder.CreateICmpEQ(IVNext, LoopTripCount,
+                                       CurLoop->getName() + ".ivcheck");
+  Builder.CreateCondBr(IVCheck, SuccessorBB, LoopHeaderBB);
+  LoopHeaderBB->getTerminator()->eraseFromParent();
+
+  // Populate the IV PHI.
+  IV->addIncoming(ConstantInt::get(Ty, 0), LoopPreheaderBB);
+  IV->addIncoming(IVNext, LoopHeaderBB);
+
+  // Step 5: Forget the "non-computable" trip-count SCEV associated with the
+  //   loop. The loop would otherwise not be deleted even if it becomes empty.
+
+  SE->forgetLoop(CurLoop);
+
+  // Other passes will take care of actually deleting the loop if possible.
+
+  LLVM_DEBUG(dbgs() << DEBUG_TYPE " shift-until-bittest idiom optimized!\n");
+
+  ++NumShiftUntilBitTest;
+  return MadeChange;
 }

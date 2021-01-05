@@ -838,7 +838,7 @@ static bool __kmp_init_hierarchical_barrier_thread(enum barrier_type bt,
         ++d;
       }
     }
-    thr_bar->offset = 7 - (tid - thr_bar->parent_tid - 1);
+    __kmp_type_convert(7 - (tid - thr_bar->parent_tid - 1), &(thr_bar->offset));
     thr_bar->old_tid = tid;
     thr_bar->wait_flag = KMP_BARRIER_NOT_WAITING;
     thr_bar->team = team;
@@ -857,7 +857,7 @@ static bool __kmp_init_hierarchical_barrier_thread(enum barrier_type bt,
     if (thr_bar->my_level == 0)
       thr_bar->leaf_kids = 0;
     if (thr_bar->leaf_kids && (kmp_uint32)tid + thr_bar->leaf_kids + 1 > nproc)
-      thr_bar->leaf_kids = nproc - tid - 1;
+      __kmp_type_convert(nproc - tid - 1, &(thr_bar->leaf_kids));
     thr_bar->leaf_state = 0;
     for (int i = 0; i < thr_bar->leaf_kids; ++i)
       ((char *)&(thr_bar->leaf_state))[7 - i] = 1;

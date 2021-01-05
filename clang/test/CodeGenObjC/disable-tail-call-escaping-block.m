@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -fblocks -fno-escaping-block-tail-calls -emit-llvm -o - %s | FileCheck %s
 
-// CHECK-LABEL: define void @test(
+// CHECK-LABEL: define{{.*}} void @test(
 // CHECK: store i8* bitcast (void (i8*)* @[[TEST_BLOCK_INVOKE0:.*]] to i8*)
 // CHECK: store i8* bitcast (void (i8*)* @[[TEST_BLOCK_INVOKE1:.*]] to i8*)
 // CHECK: store i8* bitcast (void (i8*)* @[[TEST_BLOCK_INVOKE2:.*]] to i8*)

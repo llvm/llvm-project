@@ -4,7 +4,7 @@ id makeObject1() __attribute__((ns_returns_retained));
 id makeObject2() __attribute__((ns_returns_retained));
 void releaseObject(__attribute__((ns_consumed)) id);
 
-// CHECK-LABEL: define void @_Z10sanityTestv
+// CHECK-LABEL: define{{.*}} void @_Z10sanityTestv
 void sanityTest() {
   // CHECK: [[X:%.*]] = alloca i8*, align 8
   // CHECK-NEXT: [[OBJ1:%.*]] = call i8* @_Z11makeObject1v()
@@ -28,7 +28,7 @@ T makeObjectT2() __attribute__((ns_returns_retained));
 template <typename T>
 void releaseObjectT(__attribute__((ns_consumed)) T);  
 
-// CHECK-LABEL: define void @_Z12templateTestv
+// CHECK-LABEL: define{{.*}} void @_Z12templateTestv
 void templateTest() {
   // CHECK: [[X:%.*]] = alloca i8*, align 8
   // CHECK-NEXT: [[OBJ1:%.*]] = call i8* @_Z12makeObjectT1IU8__strongP11objc_objectET_v()
@@ -54,13 +54,13 @@ struct ForwardConsumed {
 
 ForwardConsumed::ForwardConsumed(__attribute__((ns_consumed)) id x) {}
 
-// CHECK: define void @_ZN15ForwardConsumedC2EP11objc_object(
+// CHECK: define{{.*}} void @_ZN15ForwardConsumedC2EP11objc_object(
 // CHECK-NOT:  objc_retain
 // CHECK:      store i8* {{.*}}, i8** [[X:%.*]],
 // CHECK-NOT:  [[X]]
 // CHECK:      call void @llvm.objc.storeStrong(i8** [[X]], i8* null)
 
-// CHECK: define void @_ZN15ForwardConsumedC1EP11objc_object(
+// CHECK: define{{.*}} void @_ZN15ForwardConsumedC1EP11objc_object(
 // CHECK-NOT:  objc_retain
 // CHECK:      store i8* {{.*}}, i8** [[X:%.*]],
 // CHECK:      [[T0:%.*]] = load i8*, i8** [[X]],

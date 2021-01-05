@@ -34,6 +34,10 @@ using namespace mlir;
 
 #define DEBUG_TYPE "spirv-deserialization"
 
+//===----------------------------------------------------------------------===//
+// Utility Functions
+//===----------------------------------------------------------------------===//
+
 /// Decodes a string literal in `words` starting at `wordIndex`. Update the
 /// latter to point to the position in words after the string literal.
 static inline StringRef decodeStringLiteral(ArrayRef<uint32_t> words,
@@ -55,6 +59,10 @@ static inline bool isFnEntryBlock(Block *block) {
 }
 
 namespace {
+//===----------------------------------------------------------------------===//
+// Utility Definitions
+//===----------------------------------------------------------------------===//
+
 /// A struct for containing a header block's merge and continue targets.
 ///
 /// This struct is used to track original structured control flow info from
@@ -123,6 +131,10 @@ struct DeferredStructTypeInfo {
   SmallVector<spirv::StructType::OffsetInfo, 0> offsetInfo;
   SmallVector<spirv::StructType::MemberDecorationInfo, 0> memberDecorationsInfo;
 };
+
+//===----------------------------------------------------------------------===//
+// Deserializer Declaration
+//===----------------------------------------------------------------------===//
 
 /// A SPIR-V module serializer.
 ///
@@ -423,6 +435,14 @@ private:
                                    ArrayRef<uint32_t> operands,
                                    bool deferInstructions = true);
 
+  /// Processes a SPIR-V instruction from the given `operands`. It should
+  /// deserialize into an op with the given `opName` and `numOperands`.
+  /// This method is a generic one for dispatching any SPIR-V ops without
+  /// variadic operands and attributes in TableGen definitions.
+  LogicalResult processOpWithoutGrammarAttr(ArrayRef<uint32_t> words,
+                                            StringRef opName, bool hasResult,
+                                            unsigned numOperands);
+
   /// Processes a OpUndef instruction. Adds a spv.Undef operation at the current
   /// insertion point.
   LogicalResult processUndef(ArrayRef<uint32_t> operands);
@@ -579,6 +599,10 @@ private:
   SmallVector<DeferredStructTypeInfo, 0> deferredStructTypesInfos;
 };
 } // namespace
+
+//===----------------------------------------------------------------------===//
+// Deserializer Method Definitions
+//===----------------------------------------------------------------------===//
 
 Deserializer::Deserializer(ArrayRef<uint32_t> binary, MLIRContext *context)
     : binary(binary), context(context), unknownLoc(UnknownLoc::get(context)),
@@ -2497,6 +2521,87 @@ LogicalResult Deserializer::processInstruction(spirv::Opcode opcode,
   return dispatchToAutogenDeserialization(opcode, operands);
 }
 
+LogicalResult
+Deserializer::processOpWithoutGrammarAttr(ArrayRef<uint32_t> words,
+                                          StringRef opName, bool hasResult,
+                                          unsigned numOperands) {
+  SmallVector<Type, 1> resultTypes;
+  uint32_t valueID = 0;
+
+  size_t wordIndex= 0;
+  if (hasResult) {
+    if (wordIndex >= words.size())
+      return emitError(unknownLoc,
+                       "expected result type <id> while deserializing for ")
+             << opName;
+
+    // Decode the type <id>
+    auto type = getType(words[wordIndex]);
+    if (!type)
+      return emitError(unknownLoc, "unknown type result <id>: ")
+             << words[wordIndex];
+    resultTypes.push_back(type);
+    ++wordIndex;
+
+    // Decode the result <id>
+    if (wordIndex >= words.size())
+      return emitError(unknownLoc,
+                       "expected result <id> while deserializing for ")
+             << opName;
+    valueID = words[wordIndex];
+    ++wordIndex;
+  }
+
+  SmallVector<Value, 4> operands;
+  SmallVector<NamedAttribute, 4> attributes;
+
+  // Decode operands
+  size_t operandIndex = 0;
+  for (; operandIndex < numOperands && wordIndex < words.size();
+       ++operandIndex, ++wordIndex) {
+    auto arg = getValue(words[wordIndex]);
+    if (!arg)
+      return emitError(unknownLoc, "unknown result <id>: ") << words[wordIndex];
+    operands.push_back(arg);
+  }
+  if (operandIndex != numOperands) {
+    return emitError(
+               unknownLoc,
+               "found less operands than expected when deserializing for ")
+           << opName << "; only " << operandIndex << " of " << numOperands
+           << " processed";
+  }
+  if (wordIndex != words.size()) {
+    return emitError(
+               unknownLoc,
+               "found more operands than expected when deserializing for ")
+           << opName << "; only " << wordIndex << " of " << words.size()
+           << " processed";
+  }
+
+  // Attach attributes from decorations
+  if (decorations.count(valueID)) {
+    auto attrs = decorations[valueID].getAttrs();
+    attributes.append(attrs.begin(), attrs.end());
+  }
+
+  // Create the op and update bookkeeping maps
+  Location loc = createFileLineColLoc(opBuilder);
+  OperationState opState(loc, opName);
+  opState.addOperands(operands);
+  if (hasResult)
+    opState.addTypes(resultTypes);
+  opState.addAttributes(attributes);
+  Operation *op = opBuilder.createOperation(opState);
+  if (hasResult)
+    valueMap[valueID] = op->getResult(0);
+
+  if (op->hasTrait<OpTrait::IsTerminator>())
+    clearDebugLine();
+
+  return success();
+}
+
 LogicalResult Deserializer::processUndef(ArrayRef<uint32_t> operands) {
   if (operands.size() != 2) {
     return emitError(unknownLoc, "OpUndef instruction must have two operands");
@@ -2779,6 +2884,7 @@ Deserializer::processOp<spirv::CopyMemoryOp>(ArrayRef<uint32_t> words) {
 // various Deserializer::processOp<...>() specializations.
 #define GET_DESERIALIZATION_FNS
 #include "mlir/Dialect/SPIRV/IR/SPIRVSerialization.inc"
+
 } // namespace
 
 namespace mlir {

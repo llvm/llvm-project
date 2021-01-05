@@ -143,7 +143,7 @@ namespace test2 {
   float baz(float(*)());
   void fred(float(*)(), float);
 
-  // CHECK-LABEL: define void @_ZN5test211instantiateEv
+  // CHECK-LABEL: define{{.*}} void @_ZN5test211instantiateEv
   void instantiate() {
     // CHECK: call void @_ZN5test21aIPFfvEEEvT_DTclfL0p_EE(
     a(foo, 0.0f);
@@ -175,7 +175,7 @@ namespace test3 {
     int *member;
   };
 
-  // CHECK-LABEL: define void @_ZN5test311instantiateEv
+  // CHECK-LABEL: define{{.*}} void @_ZN5test311instantiateEv
   void instantiate() {
     X x;
     int *ip;

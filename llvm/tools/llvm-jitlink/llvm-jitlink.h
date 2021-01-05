@@ -19,8 +19,8 @@
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/OrcRPCTargetProcessControl.h"
-#include "llvm/ExecutionEngine/Orc/RPC/FDRawByteChannel.h"
-#include "llvm/ExecutionEngine/Orc/RPC/RPCUtils.h"
+#include "llvm/ExecutionEngine/Orc/Shared/FDRawByteChannel.h"
+#include "llvm/ExecutionEngine/Orc/Shared/RPCUtils.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcessControl.h"
 #include "llvm/ExecutionEngine/RuntimeDyldChecker.h"
 #include "llvm/Support/Error.h"
@@ -48,9 +48,9 @@ private:
   Session &S;
 };
 
-using LLVMJITLinkChannel = orc::rpc::FDRawByteChannel;
+using LLVMJITLinkChannel = orc::shared::FDRawByteChannel;
 using LLVMJITLinkRPCEndpoint =
-    orc::rpc::MultiThreadedRPCEndpoint<LLVMJITLinkChannel>;
+    orc::shared::MultiThreadedRPCEndpoint<LLVMJITLinkChannel>;
 using LLVMJITLinkRemoteMemoryManager =
     orc::OrcRPCTPCJITLinkMemoryManager<LLVMJITLinkRPCEndpoint>;
 using LLVMJITLinkRemoteMemoryAccess =

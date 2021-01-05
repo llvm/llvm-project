@@ -319,7 +319,7 @@ AffineMap AffineMap::compose(AffineMap map) {
   for (unsigned idx = 0; idx < numDims; ++idx) {
     newDims[idx] = getAffineDimExpr(idx, getContext());
   }
-  SmallVector<AffineExpr, 8> newSymbols(numSymbols);
+  SmallVector<AffineExpr, 8> newSymbols(numSymbols - numSymbolsThisMap);
   for (unsigned idx = numSymbolsThisMap; idx < numSymbols; ++idx) {
     newSymbols[idx - numSymbolsThisMap] =
         getAffineSymbolExpr(idx, getContext());

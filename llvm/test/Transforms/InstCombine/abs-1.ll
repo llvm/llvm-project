@@ -226,8 +226,8 @@ define <2 x i8> @nabs_canonical_2_vec_undef_elts(<2 x i8> %x) {
 
 define i8 @nabs_canonical_3(i8 %x) {
 ; CHECK-LABEL: @nabs_canonical_3(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.abs.i8(i8 [[X:%.*]], i1 true)
-; CHECK-NEXT:    [[ABS:%.*]] = sub nsw i8 0, [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.abs.i8(i8 [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[ABS:%.*]] = sub i8 0, [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[ABS]]
 ;
   %cmp = icmp slt i8 %x, 0
@@ -251,7 +251,7 @@ define i8 @nabs_canonical_4(i8 %x) {
 define i32 @nabs_canonical_5(i8 %x) {
 ; CHECK-LABEL: @nabs_canonical_5(
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[X:%.*]] to i32
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.abs.i32(i32 [[CONV]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.abs.i32(i32 [[CONV]], i1 false)
 ; CHECK-NEXT:    [[ABS:%.*]] = sub nsw i32 0, [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[ABS]]
 ;

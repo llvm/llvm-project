@@ -6010,8 +6010,8 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   unsigned IntrOpcode = Intr->BaseOpcode;
   bool IsGFX10Plus = AMDGPU::isGFX10Plus(*Subtarget);
 
-  SmallVector<EVT, 3> ResultTypes(Op->value_begin(), Op->value_end());
-  SmallVector<EVT, 3> OrigResultTypes(Op->value_begin(), Op->value_end());
+  SmallVector<EVT, 3> ResultTypes(Op->values());
+  SmallVector<EVT, 3> OrigResultTypes(Op->values());
   bool IsD16 = false;
   bool IsG16 = false;
   bool IsA16 = false;
@@ -10898,7 +10898,7 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
 /// Helper function for adjustWritemask
 static unsigned SubIdx2Lane(unsigned Idx) {
   switch (Idx) {
-  default: return 0;
+  default: return ~0u;
   case AMDGPU::sub0: return 0;
   case AMDGPU::sub1: return 1;
   case AMDGPU::sub2: return 2;
@@ -10958,6 +10958,8 @@ SDNode *SITargetLowering::adjustWritemask(MachineSDNode *&Node,
     // in OldDmask, so it can be any of X,Y,Z,W; Lane==1 is the second bit
     // set, etc.
     Lane = SubIdx2Lane(I->getConstantOperandVal(1));
+    if (Lane == ~0u)
+      return Node;
 
     // Check if the use is for the TFE/LWE generated result at VGPRn+1.
     if (UsesTFC && Lane == TFCLane) {

@@ -8,7 +8,7 @@ typedef struct {
 
 // No realignment should be needed here: slot size is 4 bytes.
 int test_int(OneInt input, va_list *mylist) {
-// CHECK-LABEL: define i32 @test_int(i32 %input
+// CHECK-LABEL: define{{.*}} i32 @test_int(i32 %input
 // CHECK: [[START:%.*]] = load i8*, i8** %mylist
 // CHECK: [[NEXT:%.*]] = getelementptr inbounds i8, i8* [[START]], i32 4
 // CHECK: store i8* [[NEXT]], i8** %mylist
@@ -27,7 +27,7 @@ typedef struct {
 
 // Minimum slot size is 4 bytes, so address needs rounding up to multiple of 8.
 long long test_longlong(OneLongLong input, va_list *mylist) {
-  // CHECK-LABEL: define i64 @test_longlong(i64 %input
+  // CHECK-LABEL: define{{.*}} i64 @test_longlong(i64 %input
   // CHECK: [[STARTPTR:%.*]] = load i8*, i8** %mylist
   // CHECK: [[START:%.*]] = ptrtoint i8* [[STARTPTR]] to i32
 
@@ -52,7 +52,7 @@ typedef struct {
 
 // HFAs take priority over passing large structs indirectly.
 float test_hfa(va_list *mylist) {
-// CHECK-LABEL: define float @test_hfa
+// CHECK-LABEL: define{{.*}} float @test_hfa
 // CHECK: [[START:%.*]] = load i8*, i8** %mylist
 
 // CHECK: [[NEXT:%.*]] = getelementptr inbounds i8, i8* [[START]], i32 16
@@ -68,7 +68,7 @@ float test_hfa(va_list *mylist) {
 // armv7k does not return HFAs normally for variadic functions, so we must match
 // that.
 HFA test_hfa_return(int n, ...) {
-// CHECK-LABEL: define [2 x i64] @test_hfa_return
+// CHECK-LABEL: define{{.*}} [2 x i64] @test_hfa_return
   HFA h = {0};
   return h;
 }
@@ -81,7 +81,7 @@ typedef struct {
 // Structs bigger than 16 bytes are passed indirectly: a pointer is placed on
 // the stack.
 long long test_bigstruct(BigStruct input, va_list *mylist) {
-// CHECK-LABEL: define i64 @test_bigstruct(%struct.BigStruct*
+// CHECK-LABEL: define{{.*}} i64 @test_bigstruct(%struct.BigStruct*
 // CHECK: [[START:%.*]] = load i8*, i8** %mylist
 // CHECK: [[NEXT:%.*]] = getelementptr inbounds i8, i8* [[START]], i32 4
 // CHECK: store i8* [[NEXT]], i8** %mylist
@@ -103,7 +103,7 @@ typedef struct {
 // alignment must be passed via "[N x i32]" to be correctly allocated in the
 // backend.
 short test_threeshorts(ThreeShorts input, va_list *mylist) {
-// CHECK-LABEL: define signext i16 @test_threeshorts([2 x i32] %input
+// CHECK-LABEL: define{{.*}} signext i16 @test_threeshorts([2 x i32] %input
 
 // CHECK: [[START:%.*]] = load i8*, i8** %mylist
 // CHECK: [[NEXT:%.*]] = getelementptr inbounds i8, i8* [[START]], i32 8

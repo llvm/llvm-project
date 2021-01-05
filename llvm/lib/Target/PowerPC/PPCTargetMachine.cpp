@@ -100,8 +100,9 @@ static cl::opt<bool>
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTarget() {
   // Register the targets
   RegisterTargetMachine<PPCTargetMachine> A(getThePPC32Target());
-  RegisterTargetMachine<PPCTargetMachine> B(getThePPC64Target());
-  RegisterTargetMachine<PPCTargetMachine> C(getThePPC64LETarget());
+  RegisterTargetMachine<PPCTargetMachine> B(getThePPC32LETarget());
+  RegisterTargetMachine<PPCTargetMachine> C(getThePPC64Target());
+  RegisterTargetMachine<PPCTargetMachine> D(getThePPC64LETarget());
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
 #ifndef NDEBUG
@@ -130,8 +131,8 @@ static std::string getDataLayoutString(const Triple &T) {
   bool is64Bit = T.getArch() == Triple::ppc64 || T.getArch() == Triple::ppc64le;
   std::string Ret;
 
-  // Most PPC* platforms are big endian, PPC64LE is little endian.
-  if (T.getArch() == Triple::ppc64le)
+  // Most PPC* platforms are big endian, PPC(64)LE is little endian.
+  if (T.getArch() == Triple::ppc64le || T.getArch() == Triple::ppcle)
     Ret = "e";
   else
     Ret = "E";

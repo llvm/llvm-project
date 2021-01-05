@@ -10,6 +10,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -828,6 +829,7 @@ TEST_F(PassManagerTest, FunctionPassCFGChecker) {
   StandardInstrumentations SI(/*DebugLogging*/ true);
   SI.registerCallbacks(PIC);
   FAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
+  FAM.registerPass([&] { return DominatorTreeAnalysis(); });
   FAM.registerPass([&] { return AssumptionAnalysis(); });
   FAM.registerPass([&] { return TargetIRAnalysis(); });
 
@@ -873,6 +875,7 @@ TEST_F(PassManagerTest, FunctionPassCFGCheckerInvalidateAnalysis) {
   StandardInstrumentations SI(/*DebugLogging*/ true);
   SI.registerCallbacks(PIC);
   FAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
+  FAM.registerPass([&] { return DominatorTreeAnalysis(); });
   FAM.registerPass([&] { return AssumptionAnalysis(); });
   FAM.registerPass([&] { return TargetIRAnalysis(); });
 
@@ -937,6 +940,7 @@ TEST_F(PassManagerTest, FunctionPassCFGCheckerWrapped) {
   StandardInstrumentations SI(/*DebugLogging*/ true);
   SI.registerCallbacks(PIC);
   FAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
+  FAM.registerPass([&] { return DominatorTreeAnalysis(); });
   FAM.registerPass([&] { return AssumptionAnalysis(); });
   FAM.registerPass([&] { return TargetIRAnalysis(); });
 

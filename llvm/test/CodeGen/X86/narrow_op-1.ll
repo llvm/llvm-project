@@ -2,9 +2,9 @@
 ; RUN: llc < %s -mtriple=x86_64-- | FileCheck %s
 
 	%struct.bf = type { i64, i16, i16, i32 }
-@bfi = common global %struct.bf zeroinitializer, align 16
+@bfi = common dso_local global %struct.bf zeroinitializer, align 16
 
-define void @t1() nounwind optsize ssp {
+define dso_local void @t1() nounwind optsize ssp {
 ; CHECK-LABEL: t1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    orb $1, bfi+{{.*}}(%rip)
@@ -17,7 +17,7 @@ entry:
 
 }
 
-define void @t2() nounwind optsize ssp {
+define dso_local void @t2() nounwind optsize ssp {
 ; CHECK-LABEL: t2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    orl $16842752, bfi+{{.*}}(%rip) # imm = 0x1010000

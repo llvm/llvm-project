@@ -16,7 +16,7 @@ target triple = "powerpc64-unknown-linux-gnu"
 
 @ei = external global i32
 
-define signext i32 @test_external() nounwind {
+define dso_local signext i32 @test_external() nounwind {
 entry:
   %0 = load i32, i32* @ei, align 4
   %inc = add nsw i32 %0, 1
@@ -29,8 +29,8 @@ entry:
 ;
 ; MEDIUM:      Relocations [
 ; MEDIUM:        Section {{.*}} .rela.text {
-; MEDIUM-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TOC16_HA [[SYM1:[^ ]+]]
-; MEDIUM-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TOC16_LO_DS [[SYM1]]
+; MEDIUM-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TOC16_HA .toc 0x0
+; MEDIUM-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TOC16_LO_DS .toc 0x0
 ;
 ; LARGE:       Relocations [
 ; LARGE:         Section {{.*}} .rela.text {
@@ -39,7 +39,7 @@ entry:
 
 @test_fn_static.si = internal global i32 0, align 4
 
-define signext i32 @test_fn_static() nounwind {
+define dso_local signext i32 @test_fn_static() nounwind {
 entry:
   %0 = load i32, i32* @test_fn_static.si, align 4
   %inc = add nsw i32 %0, 1
@@ -50,8 +50,8 @@ entry:
 ; Verify generation of R_PPC64_TOC16_HA and R_PPC64_TOC16_LO for
 ; accessing function-scoped variable si.
 ;
-; MEDIUM-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TOC16_HA [[SYM2:[^ ]+]]
-; MEDIUM-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TOC16_LO [[SYM2]]
+; MEDIUM-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TOC16_HA .bss 0x0
+; MEDIUM-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TOC16_LO .bss 0x0
 ;
 ; Verify generation of R_PPC64_TOC16_HA and R_PPC64_TOC16_LO_DS for
 ; accessing function-scoped variable si.
@@ -59,9 +59,9 @@ entry:
 ; LARGE-NEXT:      0x{{[0-9,A-F]+}} R_PPC64_TOC16_HA [[SYM2:[^ ]+]]
 ; LARGE-NEXT:      0x{{[0-9,A-F]+}} R_PPC64_TOC16_LO_DS [[SYM2]]
 
-@gi = global i32 5, align 4
+@gi = dso_local global i32 5, align 4
 
-define signext i32 @test_file_static() nounwind {
+define dso_local signext i32 @test_file_static() nounwind {
 entry:
   %0 = load i32, i32* @gi, align 4
   %inc = add nsw i32 %0, 1
@@ -72,8 +72,8 @@ entry:
 ; Verify generation of R_PPC64_TOC16_HA and R_PPC64_TOC16_LO for
 ; accessing file-scope variable gi.
 ;
-; MEDIUM-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TOC16_HA [[SYM3:[^ ]+]]
-; MEDIUM-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TOC16_LO [[SYM3]]
+; MEDIUM-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TOC16_HA gi 0x0
+; MEDIUM-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TOC16_LO gi 0x0
 ;
 ; Verify generation of R_PPC64_TOC16_HA and R_PPC64_TOC16_LO_DS for
 ; accessing file-scope variable gi.
@@ -81,7 +81,7 @@ entry:
 ; LARGE-NEXT:      0x{{[0-9,A-F]+}} R_PPC64_TOC16_HA [[SYM3:[^ ]+]]
 ; LARGE-NEXT:      0x{{[0-9,A-F]+}} R_PPC64_TOC16_LO_DS [[SYM3]]
 
-define double @test_double_const() nounwind {
+define dso_local double @test_double_const() nounwind {
 entry:
   ret double 0x3F4FD4920B498CF0
 }
@@ -89,8 +89,8 @@ entry:
 ; Verify generation of R_PPC64_TOC16_HA and R_PPC64_TOC16_LO for
 ; accessing a constant.
 ;
-; MEDIUM-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TOC16_HA [[SYM4:[^ ]+]]
-; MEDIUM-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TOC16_LO [[SYM4]]
+; MEDIUM-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TOC16_HA .rodata.cst8
+; MEDIUM-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TOC16_LO .rodata.cst8
 ;
 ; Verify generation of R_PPC64_TOC16_HA and R_PPC64_TOC16_LO_DS for
 ; accessing a constant.
@@ -98,9 +98,9 @@ entry:
 ; LARGE-NEXT:      0x{{[0-9,A-F]+}} R_PPC64_TOC16_HA [[SYM4:[^ ]+]]
 ; LARGE-NEXT:      0x{{[0-9,A-F]+}} R_PPC64_TOC16_LO_DS [[SYM4]]
 
-@ti = common global i32 0, align 4
+@ti = common dso_local global i32 0, align 4
 
-define signext i32 @test_tentative() nounwind {
+define dso_local signext i32 @test_tentative() nounwind {
 entry:
   %0 = load i32, i32* @ti, align 4
   %inc = add nsw i32 %0, 1
@@ -110,8 +110,8 @@ entry:
 
 ; Verify generation of relocations foraccessing variable ti.
 ;
-; MEDIUM-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TOC16_HA [[SYM6:[^ ]+]]
-; MEDIUM-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TOC16_LO [[SYM6]]
+; MEDIUM-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TOC16_HA ti 0x0
+; MEDIUM-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TOC16_LO ti 0x0
 ;
 ; LARGE-NEXT:      0x{{[0-9,A-F]+}} R_PPC64_TOC16_HA [[SYM6:[^ ]+]]
 ; LARGE-NEXT:      0x{{[0-9,A-F]+}} R_PPC64_TOC16_LO_DS [[SYM6]]
@@ -130,14 +130,14 @@ declare signext i32 @foo(i32 signext)
 ; Verify generation of R_PPC64_TOC16_HA and R_PPC64_TOC16_LO_DS for
 ; accessing function address foo.
 ;
-; MEDIUM-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TOC16_HA [[SYM7:[^ ]+]]
-; MEDIUM-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TOC16_LO_DS [[SYM7]]
+; MEDIUM-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TOC16_HA .toc 0x8
+; MEDIUM-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TOC16_LO_DS .toc 0x8
 ;
 ; LARGE-NEXT:      0x{{[0-9,A-F]+}} R_PPC64_TOC16_HA [[SYM7:[^ ]+]]
 ; LARGE-NEXT:      0x{{[0-9,A-F]+}} R_PPC64_TOC16_LO_DS [[SYM7]]
 
 
-define signext i32 @test_jump_table(i32 signext %i) nounwind {
+define dso_local signext i32 @test_jump_table(i32 signext %i) nounwind {
 entry:
   %i.addr = alloca i32, align 4
   store i32 %i, i32* %i.addr, align 4

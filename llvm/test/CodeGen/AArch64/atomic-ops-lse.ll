@@ -10,13 +10,13 @@
 ; CHECK-REG-NOT: stlxrb w[[NEW:[0-9]+]], w[[NEW]], [x{{[0-9]+}}]
 ; CHECK-REG-NOT: stlxrb w[[NEW:[0-9]+]], x[[NEW]], [x{{[0-9]+}}]
 
-@var8 = global i8 0
-@var16 = global i16 0
-@var32 = global i32 0
-@var64 = global i64 0
-@var128 = global i128 0
+@var8 = dso_local global i8 0
+@var16 = dso_local global i16 0
+@var32 = dso_local global i32 0
+@var64 = dso_local global i64 0
+@var128 = dso_local global i128 0
 
-define i8 @test_atomic_load_add_i8(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_add_i8(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i8:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i8:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -37,7 +37,7 @@ define i8 @test_atomic_load_add_i8(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_add_i16(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_add_i16(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i16:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i16:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -58,7 +58,7 @@ define i16 @test_atomic_load_add_i16(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_add_i32(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_add_i32(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i32:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i32:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -79,7 +79,7 @@ define i32 @test_atomic_load_add_i32(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_add_i64(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_add_i64(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i64:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i64:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -100,7 +100,7 @@ define i64 @test_atomic_load_add_i64(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_add_i32_noret(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_add_i32_noret(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i32_noret:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i32_noret:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -120,7 +120,7 @@ define void @test_atomic_load_add_i32_noret(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_add_i64_noret(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_add_i64_noret(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i64_noret:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i64_noret:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -140,7 +140,7 @@ define void @test_atomic_load_add_i64_noret(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_or_i8(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_or_i8(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i8:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i8:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -161,7 +161,7 @@ define i8 @test_atomic_load_or_i8(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_or_i16(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_or_i16(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i16:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i16:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -182,7 +182,7 @@ define i16 @test_atomic_load_or_i16(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_or_i32(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_or_i32(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i32:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i32:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -203,7 +203,7 @@ define i32 @test_atomic_load_or_i32(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_or_i64(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_or_i64(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i64:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i64:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -224,7 +224,7 @@ define i64 @test_atomic_load_or_i64(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_or_i32_noret(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_or_i32_noret(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i32_noret:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i32_noret:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -244,7 +244,7 @@ define void @test_atomic_load_or_i32_noret(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_or_i64_noret(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_or_i64_noret(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i64_noret:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i64_noret:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -264,7 +264,7 @@ define void @test_atomic_load_or_i64_noret(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_xor_i8(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_xor_i8(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i8:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i8:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -285,7 +285,7 @@ define i8 @test_atomic_load_xor_i8(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_xor_i16(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_xor_i16(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i16:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i16:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -306,7 +306,7 @@ define i16 @test_atomic_load_xor_i16(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_xor_i32(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_xor_i32(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i32:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i32:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -327,7 +327,7 @@ define i32 @test_atomic_load_xor_i32(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_xor_i64(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_xor_i64(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i64:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i64:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -348,7 +348,7 @@ define i64 @test_atomic_load_xor_i64(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_xor_i32_noret(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_xor_i32_noret(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i32_noret:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i32_noret:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -368,7 +368,7 @@ define void @test_atomic_load_xor_i32_noret(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_xor_i64_noret(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_xor_i64_noret(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i64_noret:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i64_noret:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -388,7 +388,7 @@ define void @test_atomic_load_xor_i64_noret(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_min_i8(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_min_i8(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i8:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i8:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -416,7 +416,7 @@ define i8 @test_atomic_load_min_i8(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_min_i16(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_min_i16(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i16:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i16:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -444,7 +444,7 @@ define i16 @test_atomic_load_min_i16(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_min_i32(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_min_i32(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i32:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i32:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -471,7 +471,7 @@ define i32 @test_atomic_load_min_i32(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_min_i64(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_min_i64(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i64:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i64:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -498,7 +498,7 @@ define i64 @test_atomic_load_min_i64(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_min_i32_noret(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_min_i32_noret(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i32_noret:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i32_noret:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -523,7 +523,7 @@ define void @test_atomic_load_min_i32_noret(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_min_i64_noret(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_min_i64_noret(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i64_noret:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i64_noret:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -548,7 +548,7 @@ define void @test_atomic_load_min_i64_noret(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_umin_i8(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_umin_i8(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i8:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i8:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -575,7 +575,7 @@ define i8 @test_atomic_load_umin_i8(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_umin_i16(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_umin_i16(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i16:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i16:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -602,7 +602,7 @@ define i16 @test_atomic_load_umin_i16(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_umin_i32(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_umin_i32(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i32:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i32:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -629,7 +629,7 @@ define i32 @test_atomic_load_umin_i32(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_umin_i64(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_umin_i64(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i64:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i64:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -656,7 +656,7 @@ define i64 @test_atomic_load_umin_i64(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_umin_i32_noret(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_umin_i32_noret(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i32_noret:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i32_noret:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -681,7 +681,7 @@ define void @test_atomic_load_umin_i32_noret(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_umin_i64_noret(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_umin_i64_noret(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i64_noret:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i64_noret:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -706,7 +706,7 @@ define void @test_atomic_load_umin_i64_noret(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_max_i8(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_max_i8(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i8:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i8:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -734,7 +734,7 @@ define i8 @test_atomic_load_max_i8(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_max_i16(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_max_i16(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i16:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i16:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -762,7 +762,7 @@ define i16 @test_atomic_load_max_i16(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_max_i32(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_max_i32(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i32:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i32:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -789,7 +789,7 @@ define i32 @test_atomic_load_max_i32(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_max_i64(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_max_i64(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i64:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i64:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -816,7 +816,7 @@ define i64 @test_atomic_load_max_i64(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_max_i32_noret(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_max_i32_noret(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i32_noret:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i32_noret:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -841,7 +841,7 @@ define void @test_atomic_load_max_i32_noret(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_max_i64_noret(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_max_i64_noret(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i64_noret:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i64_noret:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -866,7 +866,7 @@ define void @test_atomic_load_max_i64_noret(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_umax_i8(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_umax_i8(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i8:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i8:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -893,7 +893,7 @@ define i8 @test_atomic_load_umax_i8(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_umax_i16(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_umax_i16(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i16:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i16:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -920,7 +920,7 @@ define i16 @test_atomic_load_umax_i16(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_umax_i32(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_umax_i32(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i32:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i32:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -947,7 +947,7 @@ define i32 @test_atomic_load_umax_i32(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_umax_i64(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_umax_i64(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i64:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i64:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -974,7 +974,7 @@ define i64 @test_atomic_load_umax_i64(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_umax_i32_noret(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_umax_i32_noret(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i32_noret:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i32_noret:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -999,7 +999,7 @@ define void @test_atomic_load_umax_i32_noret(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_umax_i64_noret(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_umax_i64_noret(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i64_noret:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i64_noret:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1024,7 +1024,7 @@ define void @test_atomic_load_umax_i64_noret(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_xchg_i8(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_xchg_i8(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i8:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i8:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1045,7 +1045,7 @@ define i8 @test_atomic_load_xchg_i8(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_xchg_i16(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_xchg_i16(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i16:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i16:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1066,7 +1066,7 @@ define i16 @test_atomic_load_xchg_i16(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_xchg_i32(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_xchg_i32(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i32:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i32:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1087,7 +1087,7 @@ define i32 @test_atomic_load_xchg_i32(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_xchg_i64(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_xchg_i64(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i64:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i64:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1108,7 +1108,7 @@ define i64 @test_atomic_load_xchg_i64(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_xchg_i32_noret(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_xchg_i32_noret(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i32_noret:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i32_noret:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1129,7 +1129,7 @@ define void @test_atomic_load_xchg_i32_noret(i32 %offset) nounwind {
    ret void
 }
 
-define void @test_atomic_load_xchg_i64_noret(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_xchg_i64_noret(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i64_noret:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i64_noret:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1150,7 +1150,7 @@ define void @test_atomic_load_xchg_i64_noret(i64 %offset) nounwind {
    ret void
 }
 
-define i8 @test_atomic_cmpxchg_i8(i8 %wanted, i8 %new) nounwind {
+define dso_local i8 @test_atomic_cmpxchg_i8(i8 %wanted, i8 %new) nounwind {
 ; CHECK-LABEL: test_atomic_cmpxchg_i8:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_cmpxchg_i8:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1172,7 +1172,7 @@ define i8 @test_atomic_cmpxchg_i8(i8 %wanted, i8 %new) nounwind {
    ret i8 %old
 }
 
-define i1 @test_atomic_cmpxchg_i8_1(i8 %wanted, i8 %new) nounwind {
+define dso_local i1 @test_atomic_cmpxchg_i8_1(i8 %wanted, i8 %new) nounwind {
 ; CHECK-LABEL: test_atomic_cmpxchg_i8_1:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_cmpxchg_i8_1:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1199,7 +1199,7 @@ define i1 @test_atomic_cmpxchg_i8_1(i8 %wanted, i8 %new) nounwind {
    ret i1 %success
 }
 
-define i16 @test_atomic_cmpxchg_i16(i16 %wanted, i16 %new) nounwind {
+define dso_local i16 @test_atomic_cmpxchg_i16(i16 %wanted, i16 %new) nounwind {
 ; CHECK-LABEL: test_atomic_cmpxchg_i16:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_cmpxchg_i16:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1221,7 +1221,7 @@ define i16 @test_atomic_cmpxchg_i16(i16 %wanted, i16 %new) nounwind {
    ret i16 %old
 }
 
-define i1 @test_atomic_cmpxchg_i16_1(i16 %wanted, i16 %new) nounwind {
+define dso_local i1 @test_atomic_cmpxchg_i16_1(i16 %wanted, i16 %new) nounwind {
 ; CHECK-LABEL: test_atomic_cmpxchg_i16_1:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_cmpxchg_i16_1:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1249,7 +1249,7 @@ define i1 @test_atomic_cmpxchg_i16_1(i16 %wanted, i16 %new) nounwind {
    ret i1 %success
 }
 
-define i32 @test_atomic_cmpxchg_i32(i32 %wanted, i32 %new) nounwind {
+define dso_local i32 @test_atomic_cmpxchg_i32(i32 %wanted, i32 %new) nounwind {
 ; CHECK-LABEL: test_atomic_cmpxchg_i32:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_cmpxchg_i32:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1272,7 +1272,7 @@ define i32 @test_atomic_cmpxchg_i32(i32 %wanted, i32 %new) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_cmpxchg_i64(i64 %wanted, i64 %new) nounwind {
+define dso_local i64 @test_atomic_cmpxchg_i64(i64 %wanted, i64 %new) nounwind {
 ; CHECK-LABEL: test_atomic_cmpxchg_i64:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_cmpxchg_i64:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1295,7 +1295,7 @@ define i64 @test_atomic_cmpxchg_i64(i64 %wanted, i64 %new) nounwind {
    ret i64 %old
 }
 
-define i128 @test_atomic_cmpxchg_i128(i128 %wanted, i128 %new) nounwind {
+define dso_local i128 @test_atomic_cmpxchg_i128(i128 %wanted, i128 %new) nounwind {
 ; CHECK-LABEL: test_atomic_cmpxchg_i128:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_cmpxchg_i128:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1318,7 +1318,7 @@ define i128 @test_atomic_cmpxchg_i128(i128 %wanted, i128 %new) nounwind {
    ret i128 %old
 }
 
-define i8 @test_atomic_load_sub_i8(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_sub_i8(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i8:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i8:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1341,7 +1341,7 @@ define i8 @test_atomic_load_sub_i8(i8 %offset) nounwind {
   ret i8 %old
 }
 
-define i16 @test_atomic_load_sub_i16(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_sub_i16(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i16:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i16:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1364,7 +1364,7 @@ define i16 @test_atomic_load_sub_i16(i16 %offset) nounwind {
   ret i16 %old
 }
 
-define i32 @test_atomic_load_sub_i32(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_sub_i32(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i32:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i32:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1387,7 +1387,7 @@ define i32 @test_atomic_load_sub_i32(i32 %offset) nounwind {
   ret i32 %old
 }
 
-define i64 @test_atomic_load_sub_i64(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_sub_i64(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i64:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i64:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1410,7 +1410,7 @@ define i64 @test_atomic_load_sub_i64(i64 %offset) nounwind {
   ret i64 %old
 }
 
-define void @test_atomic_load_sub_i32_noret(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_sub_i32_noret(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i32_noret:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i32_noret:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1433,7 +1433,7 @@ define void @test_atomic_load_sub_i32_noret(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_sub_i64_noret(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_sub_i64_noret(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i64_noret:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i64_noret:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1456,7 +1456,7 @@ define void @test_atomic_load_sub_i64_noret(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_sub_i8_neg_imm() nounwind {
+define dso_local i8 @test_atomic_load_sub_i8_neg_imm() nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i8_neg_imm:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i8_neg_imm:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1479,7 +1479,7 @@ define i8 @test_atomic_load_sub_i8_neg_imm() nounwind {
   ret i8 %old
 }
 
-define i16 @test_atomic_load_sub_i16_neg_imm() nounwind {
+define dso_local i16 @test_atomic_load_sub_i16_neg_imm() nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i16_neg_imm:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i16_neg_imm:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1502,7 +1502,7 @@ define i16 @test_atomic_load_sub_i16_neg_imm() nounwind {
   ret i16 %old
 }
 
-define i32 @test_atomic_load_sub_i32_neg_imm() nounwind {
+define dso_local i32 @test_atomic_load_sub_i32_neg_imm() nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i32_neg_imm:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i32_neg_imm:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1525,7 +1525,7 @@ define i32 @test_atomic_load_sub_i32_neg_imm() nounwind {
   ret i32 %old
 }
 
-define i64 @test_atomic_load_sub_i64_neg_imm() nounwind {
+define dso_local i64 @test_atomic_load_sub_i64_neg_imm() nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i64_neg_imm:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i64_neg_imm:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1548,7 +1548,7 @@ define i64 @test_atomic_load_sub_i64_neg_imm() nounwind {
   ret i64 %old
 }
 
-define i8 @test_atomic_load_sub_i8_neg_arg(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_sub_i8_neg_arg(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i8_neg_arg:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i8_neg_arg:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1570,7 +1570,7 @@ define i8 @test_atomic_load_sub_i8_neg_arg(i8 %offset) nounwind {
   ret i8 %old
 }
 
-define i16 @test_atomic_load_sub_i16_neg_arg(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_sub_i16_neg_arg(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i16_neg_arg:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i16_neg_arg:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1592,7 +1592,7 @@ define i16 @test_atomic_load_sub_i16_neg_arg(i16 %offset) nounwind {
   ret i16 %old
 }
 
-define i32 @test_atomic_load_sub_i32_neg_arg(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_sub_i32_neg_arg(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i32_neg_arg:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i32_neg_arg:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1614,7 +1614,7 @@ define i32 @test_atomic_load_sub_i32_neg_arg(i32 %offset) nounwind {
   ret i32 %old
 }
 
-define i64 @test_atomic_load_sub_i64_neg_arg(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_sub_i64_neg_arg(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i64_neg_arg:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i64_neg_arg:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1636,7 +1636,7 @@ define i64 @test_atomic_load_sub_i64_neg_arg(i64 %offset) nounwind {
   ret i64 %old
 }
 
-define i8 @test_atomic_load_and_i8(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_and_i8(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i8:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i8:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1658,7 +1658,7 @@ define i8 @test_atomic_load_and_i8(i8 %offset) nounwind {
   ret i8 %old
 }
 
-define i16 @test_atomic_load_and_i16(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_and_i16(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i16:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i16:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1680,7 +1680,7 @@ define i16 @test_atomic_load_and_i16(i16 %offset) nounwind {
   ret i16 %old
 }
 
-define i32 @test_atomic_load_and_i32(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_and_i32(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i32:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1702,7 +1702,7 @@ define i32 @test_atomic_load_and_i32(i32 %offset) nounwind {
   ret i32 %old
 }
 
-define i64 @test_atomic_load_and_i64(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_and_i64(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i64:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1724,7 +1724,7 @@ define i64 @test_atomic_load_and_i64(i64 %offset) nounwind {
   ret i64 %old
 }
 
-define i8 @test_atomic_load_and_i8_inv_imm() nounwind {
+define dso_local i8 @test_atomic_load_and_i8_inv_imm() nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i8_inv_imm:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i8_inv_imm:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1745,7 +1745,7 @@ define i8 @test_atomic_load_and_i8_inv_imm() nounwind {
   ret i8 %old
 }
 
-define i16 @test_atomic_load_and_i16_inv_imm() nounwind {
+define dso_local i16 @test_atomic_load_and_i16_inv_imm() nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i16_inv_imm:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i16_inv_imm:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1766,7 +1766,7 @@ define i16 @test_atomic_load_and_i16_inv_imm() nounwind {
   ret i16 %old
 }
 
-define i32 @test_atomic_load_and_i32_inv_imm() nounwind {
+define dso_local i32 @test_atomic_load_and_i32_inv_imm() nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i32_inv_imm:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_inv_imm:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1787,7 +1787,7 @@ define i32 @test_atomic_load_and_i32_inv_imm() nounwind {
   ret i32 %old
 }
 
-define i64 @test_atomic_load_and_i64_inv_imm() nounwind {
+define dso_local i64 @test_atomic_load_and_i64_inv_imm() nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i64_inv_imm:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_inv_imm:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1808,7 +1808,7 @@ define i64 @test_atomic_load_and_i64_inv_imm() nounwind {
   ret i64 %old
 }
 
-define i8 @test_atomic_load_and_i8_inv_arg(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_and_i8_inv_arg(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i8_inv_arg:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i8_inv_arg:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1828,7 +1828,7 @@ define i8 @test_atomic_load_and_i8_inv_arg(i8 %offset) nounwind {
   ret i8 %old
 }
 
-define i16 @test_atomic_load_and_i16_inv_arg(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_and_i16_inv_arg(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i16_inv_arg:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i16_inv_arg:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1848,7 +1848,7 @@ define i16 @test_atomic_load_and_i16_inv_arg(i16 %offset) nounwind {
   ret i16 %old
 }
 
-define i32 @test_atomic_load_and_i32_inv_arg(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_and_i32_inv_arg(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i32_inv_arg:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_inv_arg:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1868,7 +1868,7 @@ define i32 @test_atomic_load_and_i32_inv_arg(i32 %offset) nounwind {
   ret i32 %old
 }
 
-define i64 @test_atomic_load_and_i64_inv_arg(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_and_i64_inv_arg(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i64_inv_arg:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_inv_arg:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1888,7 +1888,7 @@ define i64 @test_atomic_load_and_i64_inv_arg(i64 %offset) nounwind {
   ret i64 %old
 }
 
-define void @test_atomic_load_and_i32_noret(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_and_i32_noret(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i32_noret:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_noret:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1910,7 +1910,7 @@ define void @test_atomic_load_and_i32_noret(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_and_i64_noret(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_and_i64_noret(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i64_noret:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_noret:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1932,7 +1932,7 @@ define void @test_atomic_load_and_i64_noret(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_add_i8_acq_rel(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_add_i8_acq_rel(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i8_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i8_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1953,7 +1953,7 @@ define i8 @test_atomic_load_add_i8_acq_rel(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_add_i16_acq_rel(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_add_i16_acq_rel(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i16_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i16_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1974,7 +1974,7 @@ define i16 @test_atomic_load_add_i16_acq_rel(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_add_i32_acq_rel(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_add_i32_acq_rel(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i32_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i32_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -1995,7 +1995,7 @@ define i32 @test_atomic_load_add_i32_acq_rel(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_add_i64_acq_rel(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_add_i64_acq_rel(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i64_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i64_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2016,7 +2016,7 @@ define i64 @test_atomic_load_add_i64_acq_rel(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_add_i32_noret_acq_rel(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_add_i32_noret_acq_rel(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i32_noret_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i32_noret_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2036,7 +2036,7 @@ define void @test_atomic_load_add_i32_noret_acq_rel(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_add_i64_noret_acq_rel(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_add_i64_noret_acq_rel(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i64_noret_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i64_noret_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2056,7 +2056,7 @@ define void @test_atomic_load_add_i64_noret_acq_rel(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_add_i8_acquire(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_add_i8_acquire(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i8_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i8_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2077,7 +2077,7 @@ define i8 @test_atomic_load_add_i8_acquire(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_add_i16_acquire(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_add_i16_acquire(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i16_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i16_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2098,7 +2098,7 @@ define i16 @test_atomic_load_add_i16_acquire(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_add_i32_acquire(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_add_i32_acquire(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i32_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i32_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2119,7 +2119,7 @@ define i32 @test_atomic_load_add_i32_acquire(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_add_i64_acquire(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_add_i64_acquire(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i64_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i64_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2140,7 +2140,7 @@ define i64 @test_atomic_load_add_i64_acquire(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_add_i32_noret_acquire(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_add_i32_noret_acquire(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i32_noret_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i32_noret_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2160,7 +2160,7 @@ define void @test_atomic_load_add_i32_noret_acquire(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_add_i64_noret_acquire(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_add_i64_noret_acquire(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i64_noret_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i64_noret_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2180,7 +2180,7 @@ define void @test_atomic_load_add_i64_noret_acquire(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_add_i8_monotonic(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_add_i8_monotonic(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i8_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i8_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2201,7 +2201,7 @@ define i8 @test_atomic_load_add_i8_monotonic(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_add_i16_monotonic(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_add_i16_monotonic(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i16_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i16_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2222,7 +2222,7 @@ define i16 @test_atomic_load_add_i16_monotonic(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_add_i32_monotonic(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_add_i32_monotonic(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i32_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i32_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2243,7 +2243,7 @@ define i32 @test_atomic_load_add_i32_monotonic(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_add_i64_monotonic(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_add_i64_monotonic(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i64_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i64_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2264,7 +2264,7 @@ define i64 @test_atomic_load_add_i64_monotonic(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_add_i32_noret_monotonic(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_add_i32_noret_monotonic(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i32_noret_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i32_noret_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2284,7 +2284,7 @@ define void @test_atomic_load_add_i32_noret_monotonic(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_add_i64_noret_monotonic(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_add_i64_noret_monotonic(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i64_noret_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i64_noret_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2304,7 +2304,7 @@ define void @test_atomic_load_add_i64_noret_monotonic(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_add_i8_release(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_add_i8_release(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i8_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i8_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2325,7 +2325,7 @@ define i8 @test_atomic_load_add_i8_release(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_add_i16_release(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_add_i16_release(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i16_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i16_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2346,7 +2346,7 @@ define i16 @test_atomic_load_add_i16_release(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_add_i32_release(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_add_i32_release(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i32_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i32_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2367,7 +2367,7 @@ define i32 @test_atomic_load_add_i32_release(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_add_i64_release(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_add_i64_release(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i64_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i64_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2388,7 +2388,7 @@ define i64 @test_atomic_load_add_i64_release(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_add_i32_noret_release(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_add_i32_noret_release(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i32_noret_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i32_noret_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2408,7 +2408,7 @@ define void @test_atomic_load_add_i32_noret_release(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_add_i64_noret_release(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_add_i64_noret_release(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i64_noret_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i64_noret_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2428,7 +2428,7 @@ define void @test_atomic_load_add_i64_noret_release(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_add_i8_seq_cst(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_add_i8_seq_cst(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i8_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i8_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2449,7 +2449,7 @@ define i8 @test_atomic_load_add_i8_seq_cst(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_add_i16_seq_cst(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_add_i16_seq_cst(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i16_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i16_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2470,7 +2470,7 @@ define i16 @test_atomic_load_add_i16_seq_cst(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_add_i32_seq_cst(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_add_i32_seq_cst(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i32_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i32_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2491,7 +2491,7 @@ define i32 @test_atomic_load_add_i32_seq_cst(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_add_i64_seq_cst(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_add_i64_seq_cst(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i64_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i64_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2512,7 +2512,7 @@ define i64 @test_atomic_load_add_i64_seq_cst(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_add_i32_noret_seq_cst(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_add_i32_noret_seq_cst(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i32_noret_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i32_noret_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2532,7 +2532,7 @@ define void @test_atomic_load_add_i32_noret_seq_cst(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_add_i64_noret_seq_cst(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_add_i64_noret_seq_cst(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_add_i64_noret_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_add_i64_noret_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2552,7 +2552,7 @@ define void @test_atomic_load_add_i64_noret_seq_cst(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_and_i8_acq_rel(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_and_i8_acq_rel(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i8_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i8_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2574,7 +2574,7 @@ define i8 @test_atomic_load_and_i8_acq_rel(i8 %offset) nounwind {
   ret i8 %old
 }
 
-define i16 @test_atomic_load_and_i16_acq_rel(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_and_i16_acq_rel(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i16_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i16_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2596,7 +2596,7 @@ define i16 @test_atomic_load_and_i16_acq_rel(i16 %offset) nounwind {
   ret i16 %old
 }
 
-define i32 @test_atomic_load_and_i32_acq_rel(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_and_i32_acq_rel(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i32_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2618,7 +2618,7 @@ define i32 @test_atomic_load_and_i32_acq_rel(i32 %offset) nounwind {
   ret i32 %old
 }
 
-define i64 @test_atomic_load_and_i64_acq_rel(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_and_i64_acq_rel(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i64_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2640,7 +2640,7 @@ define i64 @test_atomic_load_and_i64_acq_rel(i64 %offset) nounwind {
   ret i64 %old
 }
 
-define void @test_atomic_load_and_i32_noret_acq_rel(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_and_i32_noret_acq_rel(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i32_noret_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_noret_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2662,7 +2662,7 @@ define void @test_atomic_load_and_i32_noret_acq_rel(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_and_i64_noret_acq_rel(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_and_i64_noret_acq_rel(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i64_noret_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_noret_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2684,7 +2684,7 @@ define void @test_atomic_load_and_i64_noret_acq_rel(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_and_i8_acquire(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_and_i8_acquire(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i8_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i8_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2706,7 +2706,7 @@ define i8 @test_atomic_load_and_i8_acquire(i8 %offset) nounwind {
   ret i8 %old
 }
 
-define i16 @test_atomic_load_and_i16_acquire(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_and_i16_acquire(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i16_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i16_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2728,7 +2728,7 @@ define i16 @test_atomic_load_and_i16_acquire(i16 %offset) nounwind {
   ret i16 %old
 }
 
-define i32 @test_atomic_load_and_i32_acquire(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_and_i32_acquire(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i32_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2750,7 +2750,7 @@ define i32 @test_atomic_load_and_i32_acquire(i32 %offset) nounwind {
   ret i32 %old
 }
 
-define i64 @test_atomic_load_and_i64_acquire(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_and_i64_acquire(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i64_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2772,7 +2772,7 @@ define i64 @test_atomic_load_and_i64_acquire(i64 %offset) nounwind {
   ret i64 %old
 }
 
-define void @test_atomic_load_and_i32_noret_acquire(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_and_i32_noret_acquire(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i32_noret_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_noret_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2794,7 +2794,7 @@ define void @test_atomic_load_and_i32_noret_acquire(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_and_i64_noret_acquire(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_and_i64_noret_acquire(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i64_noret_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_noret_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2816,7 +2816,7 @@ define void @test_atomic_load_and_i64_noret_acquire(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_and_i8_monotonic(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_and_i8_monotonic(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i8_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i8_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2838,7 +2838,7 @@ define i8 @test_atomic_load_and_i8_monotonic(i8 %offset) nounwind {
   ret i8 %old
 }
 
-define i16 @test_atomic_load_and_i16_monotonic(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_and_i16_monotonic(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i16_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i16_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2860,7 +2860,7 @@ define i16 @test_atomic_load_and_i16_monotonic(i16 %offset) nounwind {
   ret i16 %old
 }
 
-define i32 @test_atomic_load_and_i32_monotonic(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_and_i32_monotonic(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i32_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2882,7 +2882,7 @@ define i32 @test_atomic_load_and_i32_monotonic(i32 %offset) nounwind {
   ret i32 %old
 }
 
-define i64 @test_atomic_load_and_i64_monotonic(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_and_i64_monotonic(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i64_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2904,7 +2904,7 @@ define i64 @test_atomic_load_and_i64_monotonic(i64 %offset) nounwind {
   ret i64 %old
 }
 
-define void @test_atomic_load_and_i32_noret_monotonic(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_and_i32_noret_monotonic(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i32_noret_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_noret_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2926,7 +2926,7 @@ define void @test_atomic_load_and_i32_noret_monotonic(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_and_i64_noret_monotonic(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_and_i64_noret_monotonic(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i64_noret_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_noret_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2948,7 +2948,7 @@ define void @test_atomic_load_and_i64_noret_monotonic(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_and_i8_release(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_and_i8_release(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i8_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i8_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2970,7 +2970,7 @@ define i8 @test_atomic_load_and_i8_release(i8 %offset) nounwind {
   ret i8 %old
 }
 
-define i16 @test_atomic_load_and_i16_release(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_and_i16_release(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i16_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i16_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -2992,7 +2992,7 @@ define i16 @test_atomic_load_and_i16_release(i16 %offset) nounwind {
   ret i16 %old
 }
 
-define i32 @test_atomic_load_and_i32_release(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_and_i32_release(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i32_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3014,7 +3014,7 @@ define i32 @test_atomic_load_and_i32_release(i32 %offset) nounwind {
   ret i32 %old
 }
 
-define i64 @test_atomic_load_and_i64_release(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_and_i64_release(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i64_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3036,7 +3036,7 @@ define i64 @test_atomic_load_and_i64_release(i64 %offset) nounwind {
   ret i64 %old
 }
 
-define void @test_atomic_load_and_i32_noret_release(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_and_i32_noret_release(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i32_noret_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_noret_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3058,7 +3058,7 @@ define void @test_atomic_load_and_i32_noret_release(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_and_i64_noret_release(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_and_i64_noret_release(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i64_noret_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_noret_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3080,7 +3080,7 @@ define void @test_atomic_load_and_i64_noret_release(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_and_i8_seq_cst(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_and_i8_seq_cst(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i8_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i8_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3102,7 +3102,7 @@ define i8 @test_atomic_load_and_i8_seq_cst(i8 %offset) nounwind {
   ret i8 %old
 }
 
-define i16 @test_atomic_load_and_i16_seq_cst(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_and_i16_seq_cst(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i16_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i16_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3124,7 +3124,7 @@ define i16 @test_atomic_load_and_i16_seq_cst(i16 %offset) nounwind {
   ret i16 %old
 }
 
-define i32 @test_atomic_load_and_i32_seq_cst(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_and_i32_seq_cst(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i32_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3146,7 +3146,7 @@ define i32 @test_atomic_load_and_i32_seq_cst(i32 %offset) nounwind {
   ret i32 %old
 }
 
-define i64 @test_atomic_load_and_i64_seq_cst(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_and_i64_seq_cst(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i64_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3168,7 +3168,7 @@ define i64 @test_atomic_load_and_i64_seq_cst(i64 %offset) nounwind {
   ret i64 %old
 }
 
-define void @test_atomic_load_and_i32_noret_seq_cst(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_and_i32_noret_seq_cst(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i32_noret_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i32_noret_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3190,7 +3190,7 @@ define void @test_atomic_load_and_i32_noret_seq_cst(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_and_i64_noret_seq_cst(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_and_i64_noret_seq_cst(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_and_i64_noret_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_and_i64_noret_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3212,7 +3212,7 @@ define void @test_atomic_load_and_i64_noret_seq_cst(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_cmpxchg_i8_acquire(i8 %wanted, i8 %new) nounwind {
+define dso_local i8 @test_atomic_cmpxchg_i8_acquire(i8 %wanted, i8 %new) nounwind {
 ; CHECK-LABEL: test_atomic_cmpxchg_i8_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_cmpxchg_i8_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3235,7 +3235,7 @@ define i8 @test_atomic_cmpxchg_i8_acquire(i8 %wanted, i8 %new) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_cmpxchg_i16_acquire(i16 %wanted, i16 %new) nounwind {
+define dso_local i16 @test_atomic_cmpxchg_i16_acquire(i16 %wanted, i16 %new) nounwind {
 ; CHECK-LABEL: test_atomic_cmpxchg_i16_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_cmpxchg_i16_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3258,7 +3258,7 @@ define i16 @test_atomic_cmpxchg_i16_acquire(i16 %wanted, i16 %new) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_cmpxchg_i32_acquire(i32 %wanted, i32 %new) nounwind {
+define dso_local i32 @test_atomic_cmpxchg_i32_acquire(i32 %wanted, i32 %new) nounwind {
 ; CHECK-LABEL: test_atomic_cmpxchg_i32_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_cmpxchg_i32_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3281,7 +3281,7 @@ define i32 @test_atomic_cmpxchg_i32_acquire(i32 %wanted, i32 %new) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_cmpxchg_i64_acquire(i64 %wanted, i64 %new) nounwind {
+define dso_local i64 @test_atomic_cmpxchg_i64_acquire(i64 %wanted, i64 %new) nounwind {
 ; CHECK-LABEL: test_atomic_cmpxchg_i64_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_cmpxchg_i64_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3304,7 +3304,7 @@ define i64 @test_atomic_cmpxchg_i64_acquire(i64 %wanted, i64 %new) nounwind {
    ret i64 %old
 }
 
-define i128 @test_atomic_cmpxchg_i128_acquire(i128 %wanted, i128 %new) nounwind {
+define dso_local i128 @test_atomic_cmpxchg_i128_acquire(i128 %wanted, i128 %new) nounwind {
 ; CHECK-LABEL: test_atomic_cmpxchg_i128_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_cmpxchg_i128_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3327,7 +3327,7 @@ define i128 @test_atomic_cmpxchg_i128_acquire(i128 %wanted, i128 %new) nounwind 
    ret i128 %old
 }
 
-define i8 @test_atomic_cmpxchg_i8_monotonic(i8 %wanted, i8 %new) nounwind {
+define dso_local i8 @test_atomic_cmpxchg_i8_monotonic(i8 %wanted, i8 %new) nounwind {
 ; CHECK-LABEL: test_atomic_cmpxchg_i8_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_cmpxchg_i8_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3350,7 +3350,7 @@ define i8 @test_atomic_cmpxchg_i8_monotonic(i8 %wanted, i8 %new) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_cmpxchg_i16_monotonic(i16 %wanted, i16 %new) nounwind {
+define dso_local i16 @test_atomic_cmpxchg_i16_monotonic(i16 %wanted, i16 %new) nounwind {
 ; CHECK-LABEL: test_atomic_cmpxchg_i16_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_cmpxchg_i16_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3373,7 +3373,7 @@ define i16 @test_atomic_cmpxchg_i16_monotonic(i16 %wanted, i16 %new) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_cmpxchg_i32_monotonic(i32 %wanted, i32 %new) nounwind {
+define dso_local i32 @test_atomic_cmpxchg_i32_monotonic(i32 %wanted, i32 %new) nounwind {
 ; CHECK-LABEL: test_atomic_cmpxchg_i32_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_cmpxchg_i32_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3396,7 +3396,7 @@ define i32 @test_atomic_cmpxchg_i32_monotonic(i32 %wanted, i32 %new) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_cmpxchg_i64_monotonic(i64 %wanted, i64 %new) nounwind {
+define dso_local i64 @test_atomic_cmpxchg_i64_monotonic(i64 %wanted, i64 %new) nounwind {
 ; CHECK-LABEL: test_atomic_cmpxchg_i64_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_cmpxchg_i64_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3419,7 +3419,7 @@ define i64 @test_atomic_cmpxchg_i64_monotonic(i64 %wanted, i64 %new) nounwind {
    ret i64 %old
 }
 
-define i128 @test_atomic_cmpxchg_i128_monotonic(i128 %wanted, i128 %new) nounwind {
+define dso_local i128 @test_atomic_cmpxchg_i128_monotonic(i128 %wanted, i128 %new) nounwind {
 ; CHECK-LABEL: test_atomic_cmpxchg_i128_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_cmpxchg_i128_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3442,7 +3442,7 @@ define i128 @test_atomic_cmpxchg_i128_monotonic(i128 %wanted, i128 %new) nounwin
    ret i128 %old
 }
 
-define i8 @test_atomic_cmpxchg_i8_seq_cst(i8 %wanted, i8 %new) nounwind {
+define dso_local i8 @test_atomic_cmpxchg_i8_seq_cst(i8 %wanted, i8 %new) nounwind {
 ; CHECK-LABEL: test_atomic_cmpxchg_i8_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_cmpxchg_i8_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3465,7 +3465,7 @@ define i8 @test_atomic_cmpxchg_i8_seq_cst(i8 %wanted, i8 %new) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_cmpxchg_i16_seq_cst(i16 %wanted, i16 %new) nounwind {
+define dso_local i16 @test_atomic_cmpxchg_i16_seq_cst(i16 %wanted, i16 %new) nounwind {
 ; CHECK-LABEL: test_atomic_cmpxchg_i16_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_cmpxchg_i16_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3488,7 +3488,7 @@ define i16 @test_atomic_cmpxchg_i16_seq_cst(i16 %wanted, i16 %new) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_cmpxchg_i32_seq_cst(i32 %wanted, i32 %new) nounwind {
+define dso_local i32 @test_atomic_cmpxchg_i32_seq_cst(i32 %wanted, i32 %new) nounwind {
 ; CHECK-LABEL: test_atomic_cmpxchg_i32_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_cmpxchg_i32_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3511,7 +3511,7 @@ define i32 @test_atomic_cmpxchg_i32_seq_cst(i32 %wanted, i32 %new) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_cmpxchg_i64_seq_cst(i64 %wanted, i64 %new) nounwind {
+define dso_local i64 @test_atomic_cmpxchg_i64_seq_cst(i64 %wanted, i64 %new) nounwind {
 ; CHECK-LABEL: test_atomic_cmpxchg_i64_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_cmpxchg_i64_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3534,7 +3534,7 @@ define i64 @test_atomic_cmpxchg_i64_seq_cst(i64 %wanted, i64 %new) nounwind {
    ret i64 %old
 }
 
-define i128 @test_atomic_cmpxchg_i128_seq_cst(i128 %wanted, i128 %new) nounwind {
+define dso_local i128 @test_atomic_cmpxchg_i128_seq_cst(i128 %wanted, i128 %new) nounwind {
 ; CHECK-LABEL: test_atomic_cmpxchg_i128_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_cmpxchg_i128_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3557,7 +3557,7 @@ define i128 @test_atomic_cmpxchg_i128_seq_cst(i128 %wanted, i128 %new) nounwind 
    ret i128 %old
 }
 
-define i8 @test_atomic_load_max_i8_acq_rel(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_max_i8_acq_rel(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i8_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i8_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3585,7 +3585,7 @@ define i8 @test_atomic_load_max_i8_acq_rel(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_max_i16_acq_rel(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_max_i16_acq_rel(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i16_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i16_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3613,7 +3613,7 @@ define i16 @test_atomic_load_max_i16_acq_rel(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_max_i32_acq_rel(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_max_i32_acq_rel(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i32_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i32_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3640,7 +3640,7 @@ define i32 @test_atomic_load_max_i32_acq_rel(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_max_i64_acq_rel(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_max_i64_acq_rel(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i64_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i64_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3667,7 +3667,7 @@ define i64 @test_atomic_load_max_i64_acq_rel(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_max_i32_noret_acq_rel(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_max_i32_noret_acq_rel(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i32_noret_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i32_noret_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3692,7 +3692,7 @@ define void @test_atomic_load_max_i32_noret_acq_rel(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_max_i64_noret_acq_rel(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_max_i64_noret_acq_rel(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i64_noret_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i64_noret_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3717,7 +3717,7 @@ define void @test_atomic_load_max_i64_noret_acq_rel(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_max_i8_acquire(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_max_i8_acquire(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i8_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i8_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3745,7 +3745,7 @@ define i8 @test_atomic_load_max_i8_acquire(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_max_i16_acquire(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_max_i16_acquire(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i16_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i16_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3773,7 +3773,7 @@ define i16 @test_atomic_load_max_i16_acquire(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_max_i32_acquire(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_max_i32_acquire(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i32_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i32_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3800,7 +3800,7 @@ define i32 @test_atomic_load_max_i32_acquire(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_max_i64_acquire(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_max_i64_acquire(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i64_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i64_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3827,7 +3827,7 @@ define i64 @test_atomic_load_max_i64_acquire(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_max_i32_noret_acquire(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_max_i32_noret_acquire(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i32_noret_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i32_noret_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3852,7 +3852,7 @@ define void @test_atomic_load_max_i32_noret_acquire(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_max_i64_noret_acquire(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_max_i64_noret_acquire(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i64_noret_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i64_noret_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3877,7 +3877,7 @@ define void @test_atomic_load_max_i64_noret_acquire(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_max_i8_monotonic(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_max_i8_monotonic(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i8_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i8_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3905,7 +3905,7 @@ define i8 @test_atomic_load_max_i8_monotonic(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_max_i16_monotonic(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_max_i16_monotonic(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i16_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i16_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3933,7 +3933,7 @@ define i16 @test_atomic_load_max_i16_monotonic(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_max_i32_monotonic(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_max_i32_monotonic(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i32_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i32_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3960,7 +3960,7 @@ define i32 @test_atomic_load_max_i32_monotonic(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_max_i64_monotonic(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_max_i64_monotonic(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i64_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i64_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -3987,7 +3987,7 @@ define i64 @test_atomic_load_max_i64_monotonic(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_max_i32_noret_monotonic(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_max_i32_noret_monotonic(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i32_noret_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i32_noret_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4012,7 +4012,7 @@ define void @test_atomic_load_max_i32_noret_monotonic(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_max_i64_noret_monotonic(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_max_i64_noret_monotonic(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i64_noret_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i64_noret_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4037,7 +4037,7 @@ define void @test_atomic_load_max_i64_noret_monotonic(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_max_i8_release(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_max_i8_release(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i8_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i8_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4065,7 +4065,7 @@ define i8 @test_atomic_load_max_i8_release(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_max_i16_release(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_max_i16_release(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i16_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i16_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4093,7 +4093,7 @@ define i16 @test_atomic_load_max_i16_release(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_max_i32_release(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_max_i32_release(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i32_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i32_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4120,7 +4120,7 @@ define i32 @test_atomic_load_max_i32_release(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_max_i64_release(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_max_i64_release(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i64_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i64_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4147,7 +4147,7 @@ define i64 @test_atomic_load_max_i64_release(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_max_i32_noret_release(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_max_i32_noret_release(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i32_noret_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i32_noret_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4172,7 +4172,7 @@ define void @test_atomic_load_max_i32_noret_release(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_max_i64_noret_release(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_max_i64_noret_release(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i64_noret_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i64_noret_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4197,7 +4197,7 @@ define void @test_atomic_load_max_i64_noret_release(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_max_i8_seq_cst(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_max_i8_seq_cst(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i8_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i8_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4225,7 +4225,7 @@ define i8 @test_atomic_load_max_i8_seq_cst(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_max_i16_seq_cst(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_max_i16_seq_cst(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i16_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i16_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4253,7 +4253,7 @@ define i16 @test_atomic_load_max_i16_seq_cst(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_max_i32_seq_cst(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_max_i32_seq_cst(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i32_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i32_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4280,7 +4280,7 @@ define i32 @test_atomic_load_max_i32_seq_cst(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_max_i64_seq_cst(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_max_i64_seq_cst(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i64_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i64_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4307,7 +4307,7 @@ define i64 @test_atomic_load_max_i64_seq_cst(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_max_i32_noret_seq_cst(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_max_i32_noret_seq_cst(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i32_noret_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i32_noret_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4332,7 +4332,7 @@ define void @test_atomic_load_max_i32_noret_seq_cst(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_max_i64_noret_seq_cst(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_max_i64_noret_seq_cst(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_max_i64_noret_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_max_i64_noret_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4357,7 +4357,7 @@ define void @test_atomic_load_max_i64_noret_seq_cst(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_min_i8_acq_rel(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_min_i8_acq_rel(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i8_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i8_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4385,7 +4385,7 @@ define i8 @test_atomic_load_min_i8_acq_rel(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_min_i16_acq_rel(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_min_i16_acq_rel(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i16_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i16_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4413,7 +4413,7 @@ define i16 @test_atomic_load_min_i16_acq_rel(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_min_i32_acq_rel(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_min_i32_acq_rel(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i32_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i32_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4440,7 +4440,7 @@ define i32 @test_atomic_load_min_i32_acq_rel(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_min_i64_acq_rel(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_min_i64_acq_rel(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i64_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i64_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4467,7 +4467,7 @@ define i64 @test_atomic_load_min_i64_acq_rel(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_min_i32_noret_acq_rel(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_min_i32_noret_acq_rel(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i32_noret_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i32_noret_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4492,7 +4492,7 @@ define void @test_atomic_load_min_i32_noret_acq_rel(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_min_i64_noret_acq_rel(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_min_i64_noret_acq_rel(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i64_noret_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i64_noret_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4517,7 +4517,7 @@ define void @test_atomic_load_min_i64_noret_acq_rel(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_min_i8_acquire(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_min_i8_acquire(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i8_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i8_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4545,7 +4545,7 @@ define i8 @test_atomic_load_min_i8_acquire(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_min_i16_acquire(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_min_i16_acquire(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i16_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i16_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4573,7 +4573,7 @@ define i16 @test_atomic_load_min_i16_acquire(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_min_i32_acquire(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_min_i32_acquire(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i32_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i32_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4600,7 +4600,7 @@ define i32 @test_atomic_load_min_i32_acquire(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_min_i64_acquire(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_min_i64_acquire(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i64_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i64_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4627,7 +4627,7 @@ define i64 @test_atomic_load_min_i64_acquire(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_min_i32_noret_acquire(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_min_i32_noret_acquire(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i32_noret_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i32_noret_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4652,7 +4652,7 @@ define void @test_atomic_load_min_i32_noret_acquire(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_min_i64_noret_acquire(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_min_i64_noret_acquire(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i64_noret_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i64_noret_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4677,7 +4677,7 @@ define void @test_atomic_load_min_i64_noret_acquire(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_min_i8_monotonic(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_min_i8_monotonic(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i8_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i8_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4705,7 +4705,7 @@ define i8 @test_atomic_load_min_i8_monotonic(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_min_i16_monotonic(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_min_i16_monotonic(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i16_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i16_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4733,7 +4733,7 @@ define i16 @test_atomic_load_min_i16_monotonic(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_min_i32_monotonic(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_min_i32_monotonic(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i32_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i32_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4760,7 +4760,7 @@ define i32 @test_atomic_load_min_i32_monotonic(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_min_i64_monotonic(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_min_i64_monotonic(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i64_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i64_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4787,7 +4787,7 @@ define i64 @test_atomic_load_min_i64_monotonic(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_min_i32_noret_monotonic(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_min_i32_noret_monotonic(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i32_noret_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i32_noret_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4812,7 +4812,7 @@ define void @test_atomic_load_min_i32_noret_monotonic(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_min_i64_noret_monotonic(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_min_i64_noret_monotonic(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i64_noret_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i64_noret_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4837,7 +4837,7 @@ define void @test_atomic_load_min_i64_noret_monotonic(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_min_i8_release(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_min_i8_release(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i8_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i8_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4865,7 +4865,7 @@ define i8 @test_atomic_load_min_i8_release(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_min_i16_release(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_min_i16_release(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i16_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i16_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4893,7 +4893,7 @@ define i16 @test_atomic_load_min_i16_release(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_min_i32_release(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_min_i32_release(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i32_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i32_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4920,7 +4920,7 @@ define i32 @test_atomic_load_min_i32_release(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_min_i64_release(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_min_i64_release(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i64_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i64_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4947,7 +4947,7 @@ define i64 @test_atomic_load_min_i64_release(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_min_i32_noret_release(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_min_i32_noret_release(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i32_noret_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i32_noret_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4972,7 +4972,7 @@ define void @test_atomic_load_min_i32_noret_release(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_min_i64_noret_release(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_min_i64_noret_release(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i64_noret_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i64_noret_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -4997,7 +4997,7 @@ define void @test_atomic_load_min_i64_noret_release(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_min_i8_seq_cst(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_min_i8_seq_cst(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i8_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i8_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5025,7 +5025,7 @@ define i8 @test_atomic_load_min_i8_seq_cst(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_min_i16_seq_cst(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_min_i16_seq_cst(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i16_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i16_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5053,7 +5053,7 @@ define i16 @test_atomic_load_min_i16_seq_cst(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_min_i32_seq_cst(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_min_i32_seq_cst(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i32_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i32_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5080,7 +5080,7 @@ define i32 @test_atomic_load_min_i32_seq_cst(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_min_i64_seq_cst(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_min_i64_seq_cst(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i64_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i64_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5107,7 +5107,7 @@ define i64 @test_atomic_load_min_i64_seq_cst(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_min_i32_noret_seq_cst(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_min_i32_noret_seq_cst(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i32_noret_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i32_noret_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5132,7 +5132,7 @@ define void @test_atomic_load_min_i32_noret_seq_cst(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_min_i64_noret_seq_cst(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_min_i64_noret_seq_cst(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_min_i64_noret_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_min_i64_noret_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5157,7 +5157,7 @@ define void @test_atomic_load_min_i64_noret_seq_cst(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_or_i8_acq_rel(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_or_i8_acq_rel(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i8_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i8_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5178,7 +5178,7 @@ define i8 @test_atomic_load_or_i8_acq_rel(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_or_i16_acq_rel(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_or_i16_acq_rel(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i16_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i16_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5199,7 +5199,7 @@ define i16 @test_atomic_load_or_i16_acq_rel(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_or_i32_acq_rel(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_or_i32_acq_rel(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i32_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i32_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5220,7 +5220,7 @@ define i32 @test_atomic_load_or_i32_acq_rel(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_or_i64_acq_rel(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_or_i64_acq_rel(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i64_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i64_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5241,7 +5241,7 @@ define i64 @test_atomic_load_or_i64_acq_rel(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_or_i32_noret_acq_rel(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_or_i32_noret_acq_rel(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i32_noret_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i32_noret_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5261,7 +5261,7 @@ define void @test_atomic_load_or_i32_noret_acq_rel(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_or_i64_noret_acq_rel(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_or_i64_noret_acq_rel(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i64_noret_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i64_noret_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5281,7 +5281,7 @@ define void @test_atomic_load_or_i64_noret_acq_rel(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_or_i8_acquire(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_or_i8_acquire(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i8_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i8_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5302,7 +5302,7 @@ define i8 @test_atomic_load_or_i8_acquire(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_or_i16_acquire(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_or_i16_acquire(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i16_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i16_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5323,7 +5323,7 @@ define i16 @test_atomic_load_or_i16_acquire(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_or_i32_acquire(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_or_i32_acquire(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i32_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i32_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5344,7 +5344,7 @@ define i32 @test_atomic_load_or_i32_acquire(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_or_i64_acquire(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_or_i64_acquire(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i64_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i64_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5365,7 +5365,7 @@ define i64 @test_atomic_load_or_i64_acquire(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_or_i32_noret_acquire(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_or_i32_noret_acquire(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i32_noret_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i32_noret_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5385,7 +5385,7 @@ define void @test_atomic_load_or_i32_noret_acquire(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_or_i64_noret_acquire(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_or_i64_noret_acquire(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i64_noret_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i64_noret_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5405,7 +5405,7 @@ define void @test_atomic_load_or_i64_noret_acquire(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_or_i8_monotonic(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_or_i8_monotonic(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i8_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i8_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5426,7 +5426,7 @@ define i8 @test_atomic_load_or_i8_monotonic(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_or_i16_monotonic(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_or_i16_monotonic(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i16_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i16_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5447,7 +5447,7 @@ define i16 @test_atomic_load_or_i16_monotonic(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_or_i32_monotonic(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_or_i32_monotonic(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i32_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i32_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5468,7 +5468,7 @@ define i32 @test_atomic_load_or_i32_monotonic(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_or_i64_monotonic(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_or_i64_monotonic(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i64_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i64_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5489,7 +5489,7 @@ define i64 @test_atomic_load_or_i64_monotonic(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_or_i32_noret_monotonic(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_or_i32_noret_monotonic(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i32_noret_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i32_noret_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5509,7 +5509,7 @@ define void @test_atomic_load_or_i32_noret_monotonic(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_or_i64_noret_monotonic(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_or_i64_noret_monotonic(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i64_noret_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i64_noret_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5529,7 +5529,7 @@ define void @test_atomic_load_or_i64_noret_monotonic(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_or_i8_release(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_or_i8_release(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i8_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i8_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5550,7 +5550,7 @@ define i8 @test_atomic_load_or_i8_release(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_or_i16_release(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_or_i16_release(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i16_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i16_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5571,7 +5571,7 @@ define i16 @test_atomic_load_or_i16_release(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_or_i32_release(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_or_i32_release(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i32_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i32_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5592,7 +5592,7 @@ define i32 @test_atomic_load_or_i32_release(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_or_i64_release(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_or_i64_release(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i64_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i64_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5613,7 +5613,7 @@ define i64 @test_atomic_load_or_i64_release(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_or_i32_noret_release(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_or_i32_noret_release(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i32_noret_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i32_noret_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5633,7 +5633,7 @@ define void @test_atomic_load_or_i32_noret_release(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_or_i64_noret_release(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_or_i64_noret_release(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i64_noret_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i64_noret_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5653,7 +5653,7 @@ define void @test_atomic_load_or_i64_noret_release(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_or_i8_seq_cst(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_or_i8_seq_cst(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i8_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i8_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5674,7 +5674,7 @@ define i8 @test_atomic_load_or_i8_seq_cst(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_or_i16_seq_cst(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_or_i16_seq_cst(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i16_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i16_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5695,7 +5695,7 @@ define i16 @test_atomic_load_or_i16_seq_cst(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_or_i32_seq_cst(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_or_i32_seq_cst(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i32_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i32_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5716,7 +5716,7 @@ define i32 @test_atomic_load_or_i32_seq_cst(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_or_i64_seq_cst(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_or_i64_seq_cst(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i64_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i64_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5737,7 +5737,7 @@ define i64 @test_atomic_load_or_i64_seq_cst(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_or_i32_noret_seq_cst(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_or_i32_noret_seq_cst(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i32_noret_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i32_noret_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5757,7 +5757,7 @@ define void @test_atomic_load_or_i32_noret_seq_cst(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_or_i64_noret_seq_cst(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_or_i64_noret_seq_cst(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_or_i64_noret_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_or_i64_noret_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5777,7 +5777,7 @@ define void @test_atomic_load_or_i64_noret_seq_cst(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_sub_i8_acq_rel(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_sub_i8_acq_rel(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i8_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i8_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5800,7 +5800,7 @@ define i8 @test_atomic_load_sub_i8_acq_rel(i8 %offset) nounwind {
   ret i8 %old
 }
 
-define i16 @test_atomic_load_sub_i16_acq_rel(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_sub_i16_acq_rel(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i16_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i16_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5823,7 +5823,7 @@ define i16 @test_atomic_load_sub_i16_acq_rel(i16 %offset) nounwind {
   ret i16 %old
 }
 
-define i32 @test_atomic_load_sub_i32_acq_rel(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_sub_i32_acq_rel(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i32_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i32_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5846,7 +5846,7 @@ define i32 @test_atomic_load_sub_i32_acq_rel(i32 %offset) nounwind {
   ret i32 %old
 }
 
-define i64 @test_atomic_load_sub_i64_acq_rel(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_sub_i64_acq_rel(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i64_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i64_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5869,7 +5869,7 @@ define i64 @test_atomic_load_sub_i64_acq_rel(i64 %offset) nounwind {
   ret i64 %old
 }
 
-define void @test_atomic_load_sub_i32_noret_acq_rel(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_sub_i32_noret_acq_rel(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i32_noret_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i32_noret_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5892,7 +5892,7 @@ define void @test_atomic_load_sub_i32_noret_acq_rel(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_sub_i64_noret_acq_rel(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_sub_i64_noret_acq_rel(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i64_noret_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i64_noret_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5915,7 +5915,7 @@ define void @test_atomic_load_sub_i64_noret_acq_rel(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_sub_i8_acquire(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_sub_i8_acquire(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i8_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i8_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5938,7 +5938,7 @@ define i8 @test_atomic_load_sub_i8_acquire(i8 %offset) nounwind {
   ret i8 %old
 }
 
-define i16 @test_atomic_load_sub_i16_acquire(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_sub_i16_acquire(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i16_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i16_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5961,7 +5961,7 @@ define i16 @test_atomic_load_sub_i16_acquire(i16 %offset) nounwind {
   ret i16 %old
 }
 
-define i32 @test_atomic_load_sub_i32_acquire(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_sub_i32_acquire(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i32_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i32_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -5984,7 +5984,7 @@ define i32 @test_atomic_load_sub_i32_acquire(i32 %offset) nounwind {
   ret i32 %old
 }
 
-define i64 @test_atomic_load_sub_i64_acquire(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_sub_i64_acquire(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i64_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i64_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6007,7 +6007,7 @@ define i64 @test_atomic_load_sub_i64_acquire(i64 %offset) nounwind {
   ret i64 %old
 }
 
-define void @test_atomic_load_sub_i32_noret_acquire(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_sub_i32_noret_acquire(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i32_noret_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i32_noret_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6030,7 +6030,7 @@ define void @test_atomic_load_sub_i32_noret_acquire(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_sub_i64_noret_acquire(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_sub_i64_noret_acquire(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i64_noret_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i64_noret_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6053,7 +6053,7 @@ define void @test_atomic_load_sub_i64_noret_acquire(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_sub_i8_monotonic(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_sub_i8_monotonic(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i8_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i8_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6076,7 +6076,7 @@ define i8 @test_atomic_load_sub_i8_monotonic(i8 %offset) nounwind {
   ret i8 %old
 }
 
-define i16 @test_atomic_load_sub_i16_monotonic(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_sub_i16_monotonic(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i16_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i16_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6099,7 +6099,7 @@ define i16 @test_atomic_load_sub_i16_monotonic(i16 %offset) nounwind {
   ret i16 %old
 }
 
-define i32 @test_atomic_load_sub_i32_monotonic(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_sub_i32_monotonic(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i32_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i32_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6122,7 +6122,7 @@ define i32 @test_atomic_load_sub_i32_monotonic(i32 %offset) nounwind {
   ret i32 %old
 }
 
-define i64 @test_atomic_load_sub_i64_monotonic(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_sub_i64_monotonic(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i64_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i64_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6145,7 +6145,7 @@ define i64 @test_atomic_load_sub_i64_monotonic(i64 %offset) nounwind {
   ret i64 %old
 }
 
-define void @test_atomic_load_sub_i32_noret_monotonic(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_sub_i32_noret_monotonic(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i32_noret_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i32_noret_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6168,7 +6168,7 @@ define void @test_atomic_load_sub_i32_noret_monotonic(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_sub_i64_noret_monotonic(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_sub_i64_noret_monotonic(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i64_noret_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i64_noret_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6191,7 +6191,7 @@ define void @test_atomic_load_sub_i64_noret_monotonic(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_sub_i8_release(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_sub_i8_release(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i8_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i8_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6214,7 +6214,7 @@ define i8 @test_atomic_load_sub_i8_release(i8 %offset) nounwind {
   ret i8 %old
 }
 
-define i16 @test_atomic_load_sub_i16_release(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_sub_i16_release(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i16_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i16_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6237,7 +6237,7 @@ define i16 @test_atomic_load_sub_i16_release(i16 %offset) nounwind {
   ret i16 %old
 }
 
-define i32 @test_atomic_load_sub_i32_release(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_sub_i32_release(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i32_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i32_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6260,7 +6260,7 @@ define i32 @test_atomic_load_sub_i32_release(i32 %offset) nounwind {
   ret i32 %old
 }
 
-define i64 @test_atomic_load_sub_i64_release(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_sub_i64_release(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i64_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i64_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6283,7 +6283,7 @@ define i64 @test_atomic_load_sub_i64_release(i64 %offset) nounwind {
   ret i64 %old
 }
 
-define void @test_atomic_load_sub_i32_noret_release(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_sub_i32_noret_release(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i32_noret_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i32_noret_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6306,7 +6306,7 @@ define void @test_atomic_load_sub_i32_noret_release(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_sub_i64_noret_release(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_sub_i64_noret_release(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i64_noret_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i64_noret_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6329,7 +6329,7 @@ define void @test_atomic_load_sub_i64_noret_release(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_sub_i8_seq_cst(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_sub_i8_seq_cst(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i8_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i8_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6352,7 +6352,7 @@ define i8 @test_atomic_load_sub_i8_seq_cst(i8 %offset) nounwind {
   ret i8 %old
 }
 
-define i16 @test_atomic_load_sub_i16_seq_cst(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_sub_i16_seq_cst(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i16_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i16_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6375,7 +6375,7 @@ define i16 @test_atomic_load_sub_i16_seq_cst(i16 %offset) nounwind {
   ret i16 %old
 }
 
-define i32 @test_atomic_load_sub_i32_seq_cst(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_sub_i32_seq_cst(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i32_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i32_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6398,7 +6398,7 @@ define i32 @test_atomic_load_sub_i32_seq_cst(i32 %offset) nounwind {
   ret i32 %old
 }
 
-define i64 @test_atomic_load_sub_i64_seq_cst(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_sub_i64_seq_cst(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i64_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i64_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6421,7 +6421,7 @@ define i64 @test_atomic_load_sub_i64_seq_cst(i64 %offset) nounwind {
   ret i64 %old
 }
 
-define void @test_atomic_load_sub_i32_noret_seq_cst(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_sub_i32_noret_seq_cst(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i32_noret_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i32_noret_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6444,7 +6444,7 @@ define void @test_atomic_load_sub_i32_noret_seq_cst(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_sub_i64_noret_seq_cst(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_sub_i64_noret_seq_cst(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_sub_i64_noret_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_sub_i64_noret_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6467,7 +6467,7 @@ define void @test_atomic_load_sub_i64_noret_seq_cst(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_xchg_i8_acq_rel(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_xchg_i8_acq_rel(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i8_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i8_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6488,7 +6488,7 @@ define i8 @test_atomic_load_xchg_i8_acq_rel(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_xchg_i16_acq_rel(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_xchg_i16_acq_rel(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i16_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i16_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6509,7 +6509,7 @@ define i16 @test_atomic_load_xchg_i16_acq_rel(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_xchg_i32_acq_rel(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_xchg_i32_acq_rel(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i32_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i32_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6530,7 +6530,7 @@ define i32 @test_atomic_load_xchg_i32_acq_rel(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_xchg_i64_acq_rel(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_xchg_i64_acq_rel(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i64_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i64_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6551,7 +6551,7 @@ define i64 @test_atomic_load_xchg_i64_acq_rel(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_xchg_i32_noret_acq_rel(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_xchg_i32_noret_acq_rel(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i32_noret_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i32_noret_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6572,7 +6572,7 @@ define void @test_atomic_load_xchg_i32_noret_acq_rel(i32 %offset) nounwind {
    ret void
 }
 
-define void @test_atomic_load_xchg_i64_noret_acq_rel(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_xchg_i64_noret_acq_rel(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i64_noret_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i64_noret_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6593,7 +6593,7 @@ define void @test_atomic_load_xchg_i64_noret_acq_rel(i64 %offset) nounwind {
    ret void
 }
 
-define i8 @test_atomic_load_xchg_i8_acquire(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_xchg_i8_acquire(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i8_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i8_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6614,7 +6614,7 @@ define i8 @test_atomic_load_xchg_i8_acquire(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_xchg_i16_acquire(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_xchg_i16_acquire(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i16_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i16_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6635,7 +6635,7 @@ define i16 @test_atomic_load_xchg_i16_acquire(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_xchg_i32_acquire(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_xchg_i32_acquire(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i32_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i32_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6656,7 +6656,7 @@ define i32 @test_atomic_load_xchg_i32_acquire(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_xchg_i64_acquire(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_xchg_i64_acquire(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i64_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i64_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6677,7 +6677,7 @@ define i64 @test_atomic_load_xchg_i64_acquire(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_xchg_i32_noret_acquire(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_xchg_i32_noret_acquire(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i32_noret_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i32_noret_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6698,7 +6698,7 @@ define void @test_atomic_load_xchg_i32_noret_acquire(i32 %offset) nounwind {
    ret void
 }
 
-define void @test_atomic_load_xchg_i64_noret_acquire(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_xchg_i64_noret_acquire(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i64_noret_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i64_noret_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6719,7 +6719,7 @@ define void @test_atomic_load_xchg_i64_noret_acquire(i64 %offset) nounwind {
    ret void
 }
 
-define i8 @test_atomic_load_xchg_i8_monotonic(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_xchg_i8_monotonic(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i8_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i8_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6740,7 +6740,7 @@ define i8 @test_atomic_load_xchg_i8_monotonic(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_xchg_i16_monotonic(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_xchg_i16_monotonic(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i16_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i16_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6761,7 +6761,7 @@ define i16 @test_atomic_load_xchg_i16_monotonic(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_xchg_i32_monotonic(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_xchg_i32_monotonic(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i32_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i32_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6782,7 +6782,7 @@ define i32 @test_atomic_load_xchg_i32_monotonic(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_xchg_i64_monotonic(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_xchg_i64_monotonic(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i64_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i64_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6803,7 +6803,7 @@ define i64 @test_atomic_load_xchg_i64_monotonic(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_xchg_i32_noret_monotonic(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_xchg_i32_noret_monotonic(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i32_noret_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i32_noret_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6824,7 +6824,7 @@ define void @test_atomic_load_xchg_i32_noret_monotonic(i32 %offset) nounwind {
    ret void
 }
 
-define void @test_atomic_load_xchg_i64_noret_monotonic(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_xchg_i64_noret_monotonic(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i64_noret_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i64_noret_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6845,7 +6845,7 @@ define void @test_atomic_load_xchg_i64_noret_monotonic(i64 %offset) nounwind {
    ret void
 }
 
-define i8 @test_atomic_load_xchg_i8_release(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_xchg_i8_release(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i8_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i8_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6866,7 +6866,7 @@ define i8 @test_atomic_load_xchg_i8_release(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_xchg_i16_release(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_xchg_i16_release(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i16_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i16_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6887,7 +6887,7 @@ define i16 @test_atomic_load_xchg_i16_release(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_xchg_i32_release(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_xchg_i32_release(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i32_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i32_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6908,7 +6908,7 @@ define i32 @test_atomic_load_xchg_i32_release(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_xchg_i64_release(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_xchg_i64_release(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i64_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i64_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6929,7 +6929,7 @@ define i64 @test_atomic_load_xchg_i64_release(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_xchg_i32_noret_release(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_xchg_i32_noret_release(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i32_noret_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i32_noret_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6950,7 +6950,7 @@ define void @test_atomic_load_xchg_i32_noret_release(i32 %offset) nounwind {
    ret void
 }
 
-define void @test_atomic_load_xchg_i64_noret_release(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_xchg_i64_noret_release(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i64_noret_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i64_noret_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6971,7 +6971,7 @@ define void @test_atomic_load_xchg_i64_noret_release(i64 %offset) nounwind {
    ret void
 }
 
-define i8 @test_atomic_load_xchg_i8_seq_cst(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_xchg_i8_seq_cst(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i8_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i8_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -6992,7 +6992,7 @@ define i8 @test_atomic_load_xchg_i8_seq_cst(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_xchg_i16_seq_cst(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_xchg_i16_seq_cst(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i16_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i16_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7013,7 +7013,7 @@ define i16 @test_atomic_load_xchg_i16_seq_cst(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_xchg_i32_seq_cst(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_xchg_i32_seq_cst(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i32_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i32_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7034,7 +7034,7 @@ define i32 @test_atomic_load_xchg_i32_seq_cst(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_xchg_i64_seq_cst(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_xchg_i64_seq_cst(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i64_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i64_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7055,7 +7055,7 @@ define i64 @test_atomic_load_xchg_i64_seq_cst(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_xchg_i32_noret_seq_cst(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_xchg_i32_noret_seq_cst(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i32_noret_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i32_noret_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7076,7 +7076,7 @@ define void @test_atomic_load_xchg_i32_noret_seq_cst(i32 %offset) nounwind {
    ret void
 }
 
-define void @test_atomic_load_xchg_i64_noret_seq_cst(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_xchg_i64_noret_seq_cst(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xchg_i64_noret_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xchg_i64_noret_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7097,7 +7097,7 @@ define void @test_atomic_load_xchg_i64_noret_seq_cst(i64 %offset) nounwind {
    ret void
 }
 
-define i8 @test_atomic_load_umax_i8_acq_rel(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_umax_i8_acq_rel(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i8_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i8_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7124,7 +7124,7 @@ define i8 @test_atomic_load_umax_i8_acq_rel(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_umax_i16_acq_rel(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_umax_i16_acq_rel(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i16_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i16_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7151,7 +7151,7 @@ define i16 @test_atomic_load_umax_i16_acq_rel(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_umax_i32_acq_rel(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_umax_i32_acq_rel(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i32_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i32_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7178,7 +7178,7 @@ define i32 @test_atomic_load_umax_i32_acq_rel(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_umax_i64_acq_rel(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_umax_i64_acq_rel(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i64_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i64_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7205,7 +7205,7 @@ define i64 @test_atomic_load_umax_i64_acq_rel(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_umax_i32_noret_acq_rel(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_umax_i32_noret_acq_rel(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i32_noret_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i32_noret_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7230,7 +7230,7 @@ define void @test_atomic_load_umax_i32_noret_acq_rel(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_umax_i64_noret_acq_rel(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_umax_i64_noret_acq_rel(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i64_noret_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i64_noret_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7255,7 +7255,7 @@ define void @test_atomic_load_umax_i64_noret_acq_rel(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_umax_i8_acquire(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_umax_i8_acquire(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i8_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i8_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7282,7 +7282,7 @@ define i8 @test_atomic_load_umax_i8_acquire(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_umax_i16_acquire(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_umax_i16_acquire(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i16_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i16_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7309,7 +7309,7 @@ define i16 @test_atomic_load_umax_i16_acquire(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_umax_i32_acquire(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_umax_i32_acquire(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i32_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i32_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7336,7 +7336,7 @@ define i32 @test_atomic_load_umax_i32_acquire(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_umax_i64_acquire(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_umax_i64_acquire(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i64_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i64_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7363,7 +7363,7 @@ define i64 @test_atomic_load_umax_i64_acquire(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_umax_i32_noret_acquire(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_umax_i32_noret_acquire(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i32_noret_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i32_noret_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7388,7 +7388,7 @@ define void @test_atomic_load_umax_i32_noret_acquire(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_umax_i64_noret_acquire(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_umax_i64_noret_acquire(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i64_noret_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i64_noret_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7413,7 +7413,7 @@ define void @test_atomic_load_umax_i64_noret_acquire(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_umax_i8_monotonic(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_umax_i8_monotonic(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i8_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i8_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7440,7 +7440,7 @@ define i8 @test_atomic_load_umax_i8_monotonic(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_umax_i16_monotonic(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_umax_i16_monotonic(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i16_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i16_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7467,7 +7467,7 @@ define i16 @test_atomic_load_umax_i16_monotonic(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_umax_i32_monotonic(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_umax_i32_monotonic(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i32_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i32_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7494,7 +7494,7 @@ define i32 @test_atomic_load_umax_i32_monotonic(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_umax_i64_monotonic(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_umax_i64_monotonic(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i64_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i64_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7521,7 +7521,7 @@ define i64 @test_atomic_load_umax_i64_monotonic(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_umax_i32_noret_monotonic(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_umax_i32_noret_monotonic(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i32_noret_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i32_noret_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7546,7 +7546,7 @@ define void @test_atomic_load_umax_i32_noret_monotonic(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_umax_i64_noret_monotonic(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_umax_i64_noret_monotonic(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i64_noret_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i64_noret_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7571,7 +7571,7 @@ define void @test_atomic_load_umax_i64_noret_monotonic(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_umax_i8_release(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_umax_i8_release(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i8_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i8_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7598,7 +7598,7 @@ define i8 @test_atomic_load_umax_i8_release(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_umax_i16_release(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_umax_i16_release(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i16_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i16_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7625,7 +7625,7 @@ define i16 @test_atomic_load_umax_i16_release(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_umax_i32_release(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_umax_i32_release(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i32_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i32_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7652,7 +7652,7 @@ define i32 @test_atomic_load_umax_i32_release(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_umax_i64_release(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_umax_i64_release(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i64_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i64_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7679,7 +7679,7 @@ define i64 @test_atomic_load_umax_i64_release(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_umax_i32_noret_release(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_umax_i32_noret_release(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i32_noret_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i32_noret_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7704,7 +7704,7 @@ define void @test_atomic_load_umax_i32_noret_release(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_umax_i64_noret_release(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_umax_i64_noret_release(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i64_noret_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i64_noret_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7729,7 +7729,7 @@ define void @test_atomic_load_umax_i64_noret_release(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_umax_i8_seq_cst(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_umax_i8_seq_cst(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i8_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i8_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7756,7 +7756,7 @@ define i8 @test_atomic_load_umax_i8_seq_cst(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_umax_i16_seq_cst(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_umax_i16_seq_cst(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i16_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i16_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7783,7 +7783,7 @@ define i16 @test_atomic_load_umax_i16_seq_cst(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_umax_i32_seq_cst(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_umax_i32_seq_cst(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i32_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i32_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7810,7 +7810,7 @@ define i32 @test_atomic_load_umax_i32_seq_cst(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_umax_i64_seq_cst(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_umax_i64_seq_cst(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i64_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i64_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7837,7 +7837,7 @@ define i64 @test_atomic_load_umax_i64_seq_cst(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_umax_i32_noret_seq_cst(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_umax_i32_noret_seq_cst(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i32_noret_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i32_noret_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7862,7 +7862,7 @@ define void @test_atomic_load_umax_i32_noret_seq_cst(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_umax_i64_noret_seq_cst(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_umax_i64_noret_seq_cst(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umax_i64_noret_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umax_i64_noret_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7887,7 +7887,7 @@ define void @test_atomic_load_umax_i64_noret_seq_cst(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_umin_i8_acq_rel(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_umin_i8_acq_rel(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i8_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i8_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7914,7 +7914,7 @@ define i8 @test_atomic_load_umin_i8_acq_rel(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_umin_i16_acq_rel(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_umin_i16_acq_rel(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i16_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i16_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7941,7 +7941,7 @@ define i16 @test_atomic_load_umin_i16_acq_rel(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_umin_i32_acq_rel(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_umin_i32_acq_rel(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i32_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i32_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7968,7 +7968,7 @@ define i32 @test_atomic_load_umin_i32_acq_rel(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_umin_i64_acq_rel(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_umin_i64_acq_rel(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i64_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i64_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -7995,7 +7995,7 @@ define i64 @test_atomic_load_umin_i64_acq_rel(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_umin_i32_noret_acq_rel(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_umin_i32_noret_acq_rel(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i32_noret_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i32_noret_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8020,7 +8020,7 @@ define void @test_atomic_load_umin_i32_noret_acq_rel(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_umin_i64_noret_acq_rel(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_umin_i64_noret_acq_rel(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i64_noret_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i64_noret_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8045,7 +8045,7 @@ define void @test_atomic_load_umin_i64_noret_acq_rel(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_umin_i8_acquire(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_umin_i8_acquire(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i8_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i8_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8072,7 +8072,7 @@ define i8 @test_atomic_load_umin_i8_acquire(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_umin_i16_acquire(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_umin_i16_acquire(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i16_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i16_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8099,7 +8099,7 @@ define i16 @test_atomic_load_umin_i16_acquire(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_umin_i32_acquire(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_umin_i32_acquire(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i32_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i32_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8126,7 +8126,7 @@ define i32 @test_atomic_load_umin_i32_acquire(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_umin_i64_acquire(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_umin_i64_acquire(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i64_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i64_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8153,7 +8153,7 @@ define i64 @test_atomic_load_umin_i64_acquire(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_umin_i32_noret_acquire(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_umin_i32_noret_acquire(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i32_noret_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i32_noret_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8178,7 +8178,7 @@ define void @test_atomic_load_umin_i32_noret_acquire(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_umin_i64_noret_acquire(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_umin_i64_noret_acquire(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i64_noret_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i64_noret_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8203,7 +8203,7 @@ define void @test_atomic_load_umin_i64_noret_acquire(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_umin_i8_monotonic(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_umin_i8_monotonic(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i8_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i8_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8230,7 +8230,7 @@ define i8 @test_atomic_load_umin_i8_monotonic(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_umin_i16_monotonic(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_umin_i16_monotonic(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i16_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i16_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8257,7 +8257,7 @@ define i16 @test_atomic_load_umin_i16_monotonic(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_umin_i32_monotonic(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_umin_i32_monotonic(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i32_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i32_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8284,7 +8284,7 @@ define i32 @test_atomic_load_umin_i32_monotonic(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_umin_i64_monotonic(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_umin_i64_monotonic(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i64_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i64_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8311,7 +8311,7 @@ define i64 @test_atomic_load_umin_i64_monotonic(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_umin_i32_noret_monotonic(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_umin_i32_noret_monotonic(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i32_noret_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i32_noret_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8336,7 +8336,7 @@ define void @test_atomic_load_umin_i32_noret_monotonic(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_umin_i64_noret_monotonic(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_umin_i64_noret_monotonic(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i64_noret_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i64_noret_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8361,7 +8361,7 @@ define void @test_atomic_load_umin_i64_noret_monotonic(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_umin_i8_release(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_umin_i8_release(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i8_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i8_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8388,7 +8388,7 @@ define i8 @test_atomic_load_umin_i8_release(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_umin_i16_release(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_umin_i16_release(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i16_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i16_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8415,7 +8415,7 @@ define i16 @test_atomic_load_umin_i16_release(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_umin_i32_release(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_umin_i32_release(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i32_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i32_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8442,7 +8442,7 @@ define i32 @test_atomic_load_umin_i32_release(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_umin_i64_release(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_umin_i64_release(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i64_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i64_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8469,7 +8469,7 @@ define i64 @test_atomic_load_umin_i64_release(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_umin_i32_noret_release(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_umin_i32_noret_release(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i32_noret_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i32_noret_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8494,7 +8494,7 @@ define void @test_atomic_load_umin_i32_noret_release(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_umin_i64_noret_release(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_umin_i64_noret_release(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i64_noret_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i64_noret_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8519,7 +8519,7 @@ define void @test_atomic_load_umin_i64_noret_release(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_umin_i8_seq_cst(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_umin_i8_seq_cst(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i8_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i8_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8546,7 +8546,7 @@ define i8 @test_atomic_load_umin_i8_seq_cst(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_umin_i16_seq_cst(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_umin_i16_seq_cst(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i16_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i16_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8573,7 +8573,7 @@ define i16 @test_atomic_load_umin_i16_seq_cst(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_umin_i32_seq_cst(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_umin_i32_seq_cst(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i32_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i32_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8600,7 +8600,7 @@ define i32 @test_atomic_load_umin_i32_seq_cst(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_umin_i64_seq_cst(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_umin_i64_seq_cst(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i64_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i64_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8627,7 +8627,7 @@ define i64 @test_atomic_load_umin_i64_seq_cst(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_umin_i32_noret_seq_cst(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_umin_i32_noret_seq_cst(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i32_noret_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i32_noret_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8652,7 +8652,7 @@ define void @test_atomic_load_umin_i32_noret_seq_cst(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_umin_i64_noret_seq_cst(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_umin_i64_noret_seq_cst(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_umin_i64_noret_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_umin_i64_noret_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8677,7 +8677,7 @@ define void @test_atomic_load_umin_i64_noret_seq_cst(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_xor_i8_acq_rel(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_xor_i8_acq_rel(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i8_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i8_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8698,7 +8698,7 @@ define i8 @test_atomic_load_xor_i8_acq_rel(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_xor_i16_acq_rel(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_xor_i16_acq_rel(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i16_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i16_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8719,7 +8719,7 @@ define i16 @test_atomic_load_xor_i16_acq_rel(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_xor_i32_acq_rel(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_xor_i32_acq_rel(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i32_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i32_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8740,7 +8740,7 @@ define i32 @test_atomic_load_xor_i32_acq_rel(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_xor_i64_acq_rel(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_xor_i64_acq_rel(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i64_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i64_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8761,7 +8761,7 @@ define i64 @test_atomic_load_xor_i64_acq_rel(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_xor_i32_noret_acq_rel(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_xor_i32_noret_acq_rel(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i32_noret_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i32_noret_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8781,7 +8781,7 @@ define void @test_atomic_load_xor_i32_noret_acq_rel(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_xor_i64_noret_acq_rel(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_xor_i64_noret_acq_rel(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i64_noret_acq_rel:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i64_noret_acq_rel:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8801,7 +8801,7 @@ define void @test_atomic_load_xor_i64_noret_acq_rel(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_xor_i8_acquire(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_xor_i8_acquire(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i8_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i8_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8822,7 +8822,7 @@ define i8 @test_atomic_load_xor_i8_acquire(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_xor_i16_acquire(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_xor_i16_acquire(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i16_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i16_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8843,7 +8843,7 @@ define i16 @test_atomic_load_xor_i16_acquire(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_xor_i32_acquire(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_xor_i32_acquire(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i32_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i32_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8864,7 +8864,7 @@ define i32 @test_atomic_load_xor_i32_acquire(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_xor_i64_acquire(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_xor_i64_acquire(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i64_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i64_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8885,7 +8885,7 @@ define i64 @test_atomic_load_xor_i64_acquire(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_xor_i32_noret_acquire(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_xor_i32_noret_acquire(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i32_noret_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i32_noret_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8905,7 +8905,7 @@ define void @test_atomic_load_xor_i32_noret_acquire(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_xor_i64_noret_acquire(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_xor_i64_noret_acquire(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i64_noret_acquire:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i64_noret_acquire:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8925,7 +8925,7 @@ define void @test_atomic_load_xor_i64_noret_acquire(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_xor_i8_monotonic(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_xor_i8_monotonic(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i8_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i8_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8946,7 +8946,7 @@ define i8 @test_atomic_load_xor_i8_monotonic(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_xor_i16_monotonic(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_xor_i16_monotonic(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i16_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i16_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8967,7 +8967,7 @@ define i16 @test_atomic_load_xor_i16_monotonic(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_xor_i32_monotonic(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_xor_i32_monotonic(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i32_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i32_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -8988,7 +8988,7 @@ define i32 @test_atomic_load_xor_i32_monotonic(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_xor_i64_monotonic(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_xor_i64_monotonic(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i64_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i64_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -9009,7 +9009,7 @@ define i64 @test_atomic_load_xor_i64_monotonic(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_xor_i32_noret_monotonic(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_xor_i32_noret_monotonic(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i32_noret_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i32_noret_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -9029,7 +9029,7 @@ define void @test_atomic_load_xor_i32_noret_monotonic(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_xor_i64_noret_monotonic(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_xor_i64_noret_monotonic(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i64_noret_monotonic:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i64_noret_monotonic:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -9049,7 +9049,7 @@ define void @test_atomic_load_xor_i64_noret_monotonic(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_xor_i8_release(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_xor_i8_release(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i8_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i8_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -9070,7 +9070,7 @@ define i8 @test_atomic_load_xor_i8_release(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_xor_i16_release(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_xor_i16_release(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i16_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i16_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -9091,7 +9091,7 @@ define i16 @test_atomic_load_xor_i16_release(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_xor_i32_release(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_xor_i32_release(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i32_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i32_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -9112,7 +9112,7 @@ define i32 @test_atomic_load_xor_i32_release(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_xor_i64_release(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_xor_i64_release(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i64_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i64_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -9133,7 +9133,7 @@ define i64 @test_atomic_load_xor_i64_release(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_xor_i32_noret_release(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_xor_i32_noret_release(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i32_noret_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i32_noret_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -9153,7 +9153,7 @@ define void @test_atomic_load_xor_i32_noret_release(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_xor_i64_noret_release(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_xor_i64_noret_release(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i64_noret_release:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i64_noret_release:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -9173,7 +9173,7 @@ define void @test_atomic_load_xor_i64_noret_release(i64 %offset) nounwind {
   ret void
 }
 
-define i8 @test_atomic_load_xor_i8_seq_cst(i8 %offset) nounwind {
+define dso_local i8 @test_atomic_load_xor_i8_seq_cst(i8 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i8_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i8_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -9194,7 +9194,7 @@ define i8 @test_atomic_load_xor_i8_seq_cst(i8 %offset) nounwind {
    ret i8 %old
 }
 
-define i16 @test_atomic_load_xor_i16_seq_cst(i16 %offset) nounwind {
+define dso_local i16 @test_atomic_load_xor_i16_seq_cst(i16 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i16_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i16_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -9215,7 +9215,7 @@ define i16 @test_atomic_load_xor_i16_seq_cst(i16 %offset) nounwind {
    ret i16 %old
 }
 
-define i32 @test_atomic_load_xor_i32_seq_cst(i32 %offset) nounwind {
+define dso_local i32 @test_atomic_load_xor_i32_seq_cst(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i32_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i32_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -9236,7 +9236,7 @@ define i32 @test_atomic_load_xor_i32_seq_cst(i32 %offset) nounwind {
    ret i32 %old
 }
 
-define i64 @test_atomic_load_xor_i64_seq_cst(i64 %offset) nounwind {
+define dso_local i64 @test_atomic_load_xor_i64_seq_cst(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i64_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i64_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -9257,7 +9257,7 @@ define i64 @test_atomic_load_xor_i64_seq_cst(i64 %offset) nounwind {
    ret i64 %old
 }
 
-define void @test_atomic_load_xor_i32_noret_seq_cst(i32 %offset) nounwind {
+define dso_local void @test_atomic_load_xor_i32_noret_seq_cst(i32 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i32_noret_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i32_noret_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:
@@ -9277,7 +9277,7 @@ define void @test_atomic_load_xor_i32_noret_seq_cst(i32 %offset) nounwind {
   ret void
 }
 
-define void @test_atomic_load_xor_i64_noret_seq_cst(i64 %offset) nounwind {
+define dso_local void @test_atomic_load_xor_i64_noret_seq_cst(i64 %offset) nounwind {
 ; CHECK-LABEL: test_atomic_load_xor_i64_noret_seq_cst:
 ; OUTLINE-ATOMICS-LABEL: test_atomic_load_xor_i64_noret_seq_cst:
 ; OUTLINE-ATOMICS:       // %bb.0:

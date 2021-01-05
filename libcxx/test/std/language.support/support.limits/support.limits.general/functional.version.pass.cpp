@@ -16,7 +16,7 @@
 /*  Constant                           Value
     __cpp_lib_bind_front               201811L [C++2a]
     __cpp_lib_boyer_moore_searcher     201603L [C++17]
-    __cpp_lib_constexpr_misc           201811L [C++2a]
+    __cpp_lib_constexpr_functional     201907L [C++2a]
     __cpp_lib_invoke                   201411L [C++17]
     __cpp_lib_not_fn                   201603L [C++17]
     __cpp_lib_ranges                   201811L [C++2a]
@@ -38,8 +38,8 @@
 #   error "__cpp_lib_boyer_moore_searcher should not be defined before c++17"
 # endif
 
-# ifdef __cpp_lib_constexpr_misc
-#   error "__cpp_lib_constexpr_misc should not be defined before c++2a"
+# ifdef __cpp_lib_constexpr_functional
+#   error "__cpp_lib_constexpr_functional should not be defined before c++2a"
 # endif
 
 # ifdef __cpp_lib_invoke
@@ -72,8 +72,8 @@
 #   error "__cpp_lib_boyer_moore_searcher should not be defined before c++17"
 # endif
 
-# ifdef __cpp_lib_constexpr_misc
-#   error "__cpp_lib_constexpr_misc should not be defined before c++2a"
+# ifdef __cpp_lib_constexpr_functional
+#   error "__cpp_lib_constexpr_functional should not be defined before c++2a"
 # endif
 
 # ifdef __cpp_lib_invoke
@@ -121,8 +121,8 @@
 #   endif
 # endif
 
-# ifdef __cpp_lib_constexpr_misc
-#   error "__cpp_lib_constexpr_misc should not be defined before c++2a"
+# ifdef __cpp_lib_constexpr_functional
+#   error "__cpp_lib_constexpr_functional should not be defined before c++2a"
 # endif
 
 # ifndef __cpp_lib_invoke
@@ -185,17 +185,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_constexpr_misc
-#     error "__cpp_lib_constexpr_misc should be defined in c++2a"
-#   endif
-#   if __cpp_lib_constexpr_misc != 201811L
-#     error "__cpp_lib_constexpr_misc should have the value 201811L in c++2a"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_constexpr_misc
-#     error "__cpp_lib_constexpr_misc should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_constexpr_functional
+#   error "__cpp_lib_constexpr_functional should be defined in c++2a"
+# endif
+# if __cpp_lib_constexpr_functional != 201907L
+#   error "__cpp_lib_constexpr_functional should have the value 201907L in c++2a"
 # endif
 
 # ifndef __cpp_lib_invoke

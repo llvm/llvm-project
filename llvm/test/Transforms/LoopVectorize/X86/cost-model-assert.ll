@@ -18,10 +18,10 @@ define void @cff_index_load_offsets(i1 %cond, i8 %x, i8* %p) #0 {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br i1 true, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i8> undef, i8 [[X:%.*]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT]], <4 x i8> undef, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <4 x i8> undef, i8 [[X]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT2]], <4 x i8> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i8> poison, i8 [[X:%.*]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT]], <4 x i8> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <4 x i8> poison, i8 [[X]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT2]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -36,11 +36,11 @@ define void @cff_index_load_offsets(i1 %cond, i8 %x, i8* %p) #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw <4 x i32> [[TMP4]], <i32 24, i32 24, i32 24, i32 24>
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw <4 x i32> [[TMP5]], <i32 24, i32 24, i32 24, i32 24>
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i8, i8* [[P:%.*]], align 1, [[TBAA1:!tbaa !.*]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <4 x i8> undef, i8 [[TMP8]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT4]], <4 x i8> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <4 x i8> poison, i8 [[TMP8]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT4]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i8, i8* [[P]], align 1, [[TBAA1]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT6:%.*]] = insertelement <4 x i8> undef, i8 [[TMP9]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT7:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT6]], <4 x i8> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT6:%.*]] = insertelement <4 x i8> poison, i8 [[TMP9]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT7:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT6]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP10:%.*]] = zext <4 x i8> [[BROADCAST_SPLAT5]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext <4 x i8> [[BROADCAST_SPLAT7]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP12:%.*]] = shl nuw nsw <4 x i32> [[TMP10]], <i32 16, i32 16, i32 16, i32 16>

@@ -7,7 +7,7 @@ namespace test0 {
   // though there is no way to do a va_begin.  Otherwise, the optimizer
   // will warn about 'dropped arguments' at the call site.
 
-  // CHECK-LABEL: define i32 @_ZN5test05test1Ez(...)
+  // CHECK-LABEL: define{{.*}} i32 @_ZN5test05test1Ez(...)
   int test1(...) {
     return -1;
   }
@@ -30,7 +30,7 @@ namespace test1 {
     A x;
     foo(x);
   }
-  // CHECK-LABEL:    define void @_ZN5test14testEv()
+  // CHECK-LABEL:    define{{.*}} void @_ZN5test14testEv()
   // CHECK:      [[X:%.*]] = alloca [[A:%.*]], align 4
   // CHECK-NEXT: [[TMP:%.*]] = alloca [[A]], align 4
   // CHECK-NEXT: [[T0:%.*]] = bitcast [[A]]* [[TMP]] to i8*

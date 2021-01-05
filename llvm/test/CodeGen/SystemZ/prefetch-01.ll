@@ -4,10 +4,10 @@
 
 declare void @llvm.prefetch(i8*, i32, i32, i32)
 
-@g = global [4096 x i8] zeroinitializer
+@g = dso_local global [4096 x i8] zeroinitializer
 
 ; Check that instruction read prefetches are ignored.
-define void @f1(i8 *%ptr) {
+define dso_local void @f1(i8 *%ptr) {
 ; CHECK-LABEL: f1:
 ; CHECK-NOT: %r2
 ; CHECK: br %r14
@@ -16,7 +16,7 @@ define void @f1(i8 *%ptr) {
 }
 
 ; Check that instruction write prefetches are ignored.
-define void @f2(i8 *%ptr) {
+define dso_local void @f2(i8 *%ptr) {
 ; CHECK-LABEL: f2:
 ; CHECK-NOT: %r2
 ; CHECK: br %r14
@@ -25,7 +25,7 @@ define void @f2(i8 *%ptr) {
 }
 
 ; Check data read prefetches.
-define void @f3(i8 *%ptr) {
+define dso_local void @f3(i8 *%ptr) {
 ; CHECK-LABEL: f3:
 ; CHECK: pfd 1, 0(%r2)
 ; CHECK: br %r14
@@ -34,7 +34,7 @@ define void @f3(i8 *%ptr) {
 }
 
 ; Check data write prefetches.
-define void @f4(i8 *%ptr) {
+define dso_local void @f4(i8 *%ptr) {
 ; CHECK-LABEL: f4:
 ; CHECK: pfd 2, 0(%r2)
 ; CHECK: br %r14
@@ -43,7 +43,7 @@ define void @f4(i8 *%ptr) {
 }
 
 ; Check an address at the negative end of the range.
-define void @f5(i8 *%base, i64 %index) {
+define dso_local void @f5(i8 *%base, i64 %index) {
 ; CHECK-LABEL: f5:
 ; CHECK: pfd 2, -524288({{%r2,%r3|%r3,%r2}})
 ; CHECK: br %r14
@@ -54,7 +54,7 @@ define void @f5(i8 *%base, i64 %index) {
 }
 
 ; Check an address at the positive end of the range.
-define void @f6(i8 *%base, i64 %index) {
+define dso_local void @f6(i8 *%base, i64 %index) {
 ; CHECK-LABEL: f6:
 ; CHECK: pfd 2, 524287({{%r2,%r3|%r3,%r2}})
 ; CHECK: br %r14
@@ -65,7 +65,7 @@ define void @f6(i8 *%base, i64 %index) {
 }
 
 ; Check that the next address up still compiles.
-define void @f7(i8 *%base, i64 %index) {
+define dso_local void @f7(i8 *%base, i64 %index) {
 ; CHECK-LABEL: f7:
 ; CHECK: 524288
 ; CHECK: pfd 2,
@@ -77,7 +77,7 @@ define void @f7(i8 *%base, i64 %index) {
 }
 
 ; Check pc-relative prefetches.
-define void @f8() {
+define dso_local void @f8() {
 ; CHECK-LABEL: f8:
 ; CHECK: pfdrl 2, g
 ; CHECK: br %r14

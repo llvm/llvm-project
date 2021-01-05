@@ -24,6 +24,9 @@
 // CHECK-DAG: [[$MAP13A:#map[0-9]+]] = affine_map<(d0) -> ((d0 + 6) ceildiv 8)>
 // CHECK-DAG: [[$MAP13B:#map[0-9]+]] = affine_map<(d0) -> ((d0 * 4 - 4) floordiv 3)>
 
+// Affine maps for test case: compose_affine_maps_multiple_symbols
+// CHECK-DAG: [[$MAP14:#map[0-9]+]] = affine_map<()[s0, s1] -> (((s1 + s0) * 4) floordiv s0)>
+
 // Affine maps for test case: partial_fold_map
 // CHECK-DAG: [[$MAP15:#map[0-9]+]] = affine_map<()[s0] -> (s0 - 42)>
 
@@ -216,6 +219,15 @@ func @compose_affine_maps_diamond_dependency(%arg0: f32, %arg1: memref<4x4xf32>)
   }
 
   return
+}
+
+// CHECK-LABEL: func @compose_affine_maps_multiple_symbols
+func @compose_affine_maps_multiple_symbols(%arg0: index, %arg1: index) -> index {
+  %a = affine.apply affine_map<(d0)[s0] -> (s0 + d0)> (%arg0)[%arg1]
+  %c = affine.apply affine_map<(d0) -> (d0 * 4)> (%a)
+  %e = affine.apply affine_map<(d0)[s0] -> (d0 floordiv s0)> (%c)[%arg1]
+  // CHECK: [[I0:%[0-9]+]] = affine.apply [[$MAP14]]()[%{{.*}}, %{{.*}}]
+  return %e : index
 }
 
 // CHECK-LABEL: func @arg_used_as_dim_and_symbol

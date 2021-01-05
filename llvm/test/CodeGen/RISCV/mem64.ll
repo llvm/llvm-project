@@ -4,7 +4,7 @@
 
 ; Check indexed and unindexed, sext, zext and anyext loads
 
-define i64 @lb(i8 *%a) nounwind {
+define dso_local i64 @lb(i8 *%a) nounwind {
 ; RV64I-LABEL: lb:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lb a1, 1(a0)
@@ -19,7 +19,7 @@ define i64 @lb(i8 *%a) nounwind {
   ret i64 %3
 }
 
-define i64 @lh(i16 *%a) nounwind {
+define dso_local i64 @lh(i16 *%a) nounwind {
 ; RV64I-LABEL: lh:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lh a1, 4(a0)
@@ -34,7 +34,7 @@ define i64 @lh(i16 *%a) nounwind {
   ret i64 %3
 }
 
-define i64 @lw(i32 *%a) nounwind {
+define dso_local i64 @lw(i32 *%a) nounwind {
 ; RV64I-LABEL: lw:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lw a1, 12(a0)
@@ -49,7 +49,7 @@ define i64 @lw(i32 *%a) nounwind {
   ret i64 %3
 }
 
-define i64 @lbu(i8 *%a) nounwind {
+define dso_local i64 @lbu(i8 *%a) nounwind {
 ; RV64I-LABEL: lbu:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lbu a1, 4(a0)
@@ -65,7 +65,7 @@ define i64 @lbu(i8 *%a) nounwind {
   ret i64 %6
 }
 
-define i64 @lhu(i16 *%a) nounwind {
+define dso_local i64 @lhu(i16 *%a) nounwind {
 ; RV64I-LABEL: lhu:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lhu a1, 10(a0)
@@ -81,7 +81,7 @@ define i64 @lhu(i16 *%a) nounwind {
   ret i64 %6
 }
 
-define i64 @lwu(i32 *%a) nounwind {
+define dso_local i64 @lwu(i32 *%a) nounwind {
 ; RV64I-LABEL: lwu:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lwu a1, 24(a0)
@@ -99,7 +99,7 @@ define i64 @lwu(i32 *%a) nounwind {
 
 ; Check indexed and unindexed stores
 
-define void @sb(i8 *%a, i8 %b) nounwind {
+define dso_local void @sb(i8 *%a, i8 %b) nounwind {
 ; RV64I-LABEL: sb:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sb a1, 0(a0)
@@ -111,7 +111,7 @@ define void @sb(i8 *%a, i8 %b) nounwind {
   ret void
 }
 
-define void @sh(i16 *%a, i16 %b) nounwind {
+define dso_local void @sh(i16 *%a, i16 %b) nounwind {
 ; RV64I-LABEL: sh:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sh a1, 0(a0)
@@ -123,7 +123,7 @@ define void @sh(i16 *%a, i16 %b) nounwind {
   ret void
 }
 
-define void @sw(i32 *%a, i32 %b) nounwind {
+define dso_local void @sw(i32 *%a, i32 %b) nounwind {
 ; RV64I-LABEL: sw:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sw a1, 0(a0)
@@ -137,7 +137,7 @@ define void @sw(i32 *%a, i32 %b) nounwind {
 
 ; 64-bit loads and stores
 
-define i64 @ld(i64 *%a) nounwind {
+define dso_local i64 @ld(i64 *%a) nounwind {
 ; RV64I-LABEL: ld:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    ld a1, 80(a0)
@@ -150,7 +150,7 @@ define i64 @ld(i64 *%a) nounwind {
   ret i64 %2
 }
 
-define void @sd(i64 *%a, i64 %b) nounwind {
+define dso_local void @sd(i64 *%a, i64 %b) nounwind {
 ; RV64I-LABEL: sd:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sd a1, 0(a0)
@@ -163,7 +163,7 @@ define void @sd(i64 *%a, i64 %b) nounwind {
 }
 
 ; Check load and store to an i1 location
-define i64 @load_sext_zext_anyext_i1(i1 *%a) nounwind {
+define dso_local i64 @load_sext_zext_anyext_i1(i1 *%a) nounwind {
 ; RV64I-LABEL: load_sext_zext_anyext_i1:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lbu a1, 1(a0)
@@ -185,7 +185,7 @@ define i64 @load_sext_zext_anyext_i1(i1 *%a) nounwind {
   ret i64 %7
 }
 
-define i16 @load_sext_zext_anyext_i1_i16(i1 *%a) nounwind {
+define dso_local i16 @load_sext_zext_anyext_i1_i16(i1 *%a) nounwind {
 ; RV64I-LABEL: load_sext_zext_anyext_i1_i16:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lbu a1, 1(a0)
@@ -208,9 +208,9 @@ define i16 @load_sext_zext_anyext_i1_i16(i1 *%a) nounwind {
 }
 
 ; Check load and store to a global
-@G = global i64 0
+@G = dso_local global i64 0
 
-define i64 @ld_sd_global(i64 %a) nounwind {
+define dso_local i64 @ld_sd_global(i64 %a) nounwind {
 ; RV64I-LABEL: ld_sd_global:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a2, %hi(G)

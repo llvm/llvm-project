@@ -58,6 +58,18 @@ CrashReason GetCrashReasonForSIGSEGV(const siginfo_t &info) {
 #endif
   case SEGV_BNDERR:
     return CrashReason::eBoundViolation;
+#ifdef __linux__
+#ifndef SEGV_MTEAERR
+#define SEGV_MTEAERR 8
+#endif
+  case SEGV_MTEAERR:
+    return CrashReason::eAsyncTagCheckFault;
+#ifndef SEGV_MTESERR
+#define SEGV_MTESERR 9
+#endif
+  case SEGV_MTESERR:
+    return CrashReason::eSyncTagCheckFault;
+#endif // __linux__
   }
 
   return CrashReason::eInvalidCrashReason;
@@ -166,6 +178,13 @@ std::string GetCrashReasonString(CrashReason reason, lldb::addr_t fault_addr) {
   case CrashReason::eBoundViolation:
     str = "signal SIGSEGV: bound violation";
     break;
+  case CrashReason::eAsyncTagCheckFault:
+    str = "signal SIGSEGV: async tag check fault";
+    break;
+  case CrashReason::eSyncTagCheckFault:
+    str = "signal SIGSEGV: sync tag check fault";
+    AppendFaultAddr(str, fault_addr);
+    break;
   case CrashReason::eIllegalOpcode:
     str = "signal SIGILL: illegal instruction";
     break;
@@ -245,6 +264,12 @@ const char *CrashReasonAsString(CrashReason reason) {
     break;
   case CrashReason::eBoundViolation:
     str = "eBoundViolation";
+    break;
+  case CrashReason::eAsyncTagCheckFault:
+    str = "eAsyncTagCheckFault";
+    break;
+  case CrashReason::eSyncTagCheckFault:
+    str = "eSyncTagCheckFault";
     break;
 
   // SIGILL crash reasons.

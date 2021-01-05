@@ -19,35 +19,35 @@ define void @splat(i8 %a, i8 %b, i8 %c) {
 ; SSE-NEXT:    [[TMP1:%.*]] = xor i8 [[C:%.*]], [[A:%.*]]
 ; SSE-NEXT:    store i8 [[TMP1]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @cle, i64 0, i64 0), align 16
 ; SSE-NEXT:    [[TMP2:%.*]] = xor i8 [[A]], [[C]]
-; SSE-NEXT:    store i8 [[TMP2]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @cle, i64 0, i64 1)
+; SSE-NEXT:    store i8 [[TMP2]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @cle, i64 0, i64 1), align 1
 ; SSE-NEXT:    [[TMP3:%.*]] = xor i8 [[A]], [[C]]
-; SSE-NEXT:    store i8 [[TMP3]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @cle, i64 0, i64 2)
+; SSE-NEXT:    store i8 [[TMP3]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @cle, i64 0, i64 2), align 1
 ; SSE-NEXT:    [[TMP4:%.*]] = xor i8 [[A]], [[C]]
-; SSE-NEXT:    store i8 [[TMP4]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @cle, i64 0, i64 3)
+; SSE-NEXT:    store i8 [[TMP4]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @cle, i64 0, i64 3), align 1
 ; SSE-NEXT:    [[TMP5:%.*]] = xor i8 [[C]], [[A]]
-; SSE-NEXT:    store i8 [[TMP5]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @cle, i64 0, i64 4)
+; SSE-NEXT:    store i8 [[TMP5]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @cle, i64 0, i64 4), align 1
 ; SSE-NEXT:    [[TMP6:%.*]] = xor i8 [[C]], [[B:%.*]]
-; SSE-NEXT:    store i8 [[TMP6]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @cle, i64 0, i64 5)
+; SSE-NEXT:    store i8 [[TMP6]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @cle, i64 0, i64 5), align 1
 ; SSE-NEXT:    [[TMP7:%.*]] = xor i8 [[C]], [[A]]
-; SSE-NEXT:    store i8 [[TMP7]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @cle, i64 0, i64 6)
+; SSE-NEXT:    store i8 [[TMP7]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @cle, i64 0, i64 6), align 1
 ; SSE-NEXT:    [[TMP8:%.*]] = xor i8 [[C]], [[B]]
-; SSE-NEXT:    store i8 [[TMP8]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @cle, i64 0, i64 7)
+; SSE-NEXT:    store i8 [[TMP8]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @cle, i64 0, i64 7), align 1
 ; SSE-NEXT:    [[TMP9:%.*]] = xor i8 [[A]], [[C]]
-; SSE-NEXT:    store i8 [[TMP9]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @cle, i64 0, i64 8)
+; SSE-NEXT:    store i8 [[TMP9]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @cle, i64 0, i64 8), align 1
 ; SSE-NEXT:    [[TMP10:%.*]] = xor i8 [[A]], [[C]]
-; SSE-NEXT:    store i8 [[TMP10]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @cle, i64 0, i64 9)
+; SSE-NEXT:    store i8 [[TMP10]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @cle, i64 0, i64 9), align 1
 ; SSE-NEXT:    [[TMP11:%.*]] = xor i8 [[A]], [[C]]
-; SSE-NEXT:    store i8 [[TMP11]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @cle, i64 0, i64 10)
+; SSE-NEXT:    store i8 [[TMP11]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @cle, i64 0, i64 10), align 1
 ; SSE-NEXT:    [[TMP12:%.*]] = xor i8 [[A]], [[C]]
-; SSE-NEXT:    store i8 [[TMP12]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @cle, i64 0, i64 11)
+; SSE-NEXT:    store i8 [[TMP12]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @cle, i64 0, i64 11), align 1
 ; SSE-NEXT:    [[TMP13:%.*]] = xor i8 [[A]], [[C]]
-; SSE-NEXT:    store i8 [[TMP13]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @cle, i64 0, i64 12)
+; SSE-NEXT:    store i8 [[TMP13]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @cle, i64 0, i64 12), align 1
 ; SSE-NEXT:    [[TMP14:%.*]] = xor i8 [[A]], [[C]]
-; SSE-NEXT:    store i8 [[TMP14]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @cle, i64 0, i64 13)
+; SSE-NEXT:    store i8 [[TMP14]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @cle, i64 0, i64 13), align 1
 ; SSE-NEXT:    [[TMP15:%.*]] = xor i8 [[A]], [[C]]
-; SSE-NEXT:    store i8 [[TMP15]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @cle, i64 0, i64 14)
+; SSE-NEXT:    store i8 [[TMP15]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @cle, i64 0, i64 14), align 1
 ; SSE-NEXT:    [[TMP16:%.*]] = xor i8 [[A]], [[C]]
-; SSE-NEXT:    store i8 [[TMP16]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @cle, i64 0, i64 15)
+; SSE-NEXT:    store i8 [[TMP16]], i8* getelementptr inbounds ([32 x i8], [32 x i8]* @cle, i64 0, i64 15), align 1
 ; SSE-NEXT:    ret void
 ;
 ; AVX-LABEL: @splat(
@@ -69,7 +69,7 @@ define void @splat(i8 %a, i8 %b, i8 %c) {
 ; AVX-NEXT:    [[TMP16:%.*]] = insertelement <16 x i8> [[TMP15]], i8 [[C]], i32 15
 ; AVX-NEXT:    [[TMP17:%.*]] = insertelement <2 x i8> undef, i8 [[A:%.*]], i32 0
 ; AVX-NEXT:    [[TMP18:%.*]] = insertelement <2 x i8> [[TMP17]], i8 [[B:%.*]], i32 1
-; AVX-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i8> [[TMP18]], <2 x i8> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 0, i32 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
+; AVX-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i8> [[TMP18]], <2 x i8> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 0, i32 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
 ; AVX-NEXT:    [[TMP19:%.*]] = xor <16 x i8> [[TMP16]], [[SHUFFLE]]
 ; AVX-NEXT:    store <16 x i8> [[TMP19]], <16 x i8>* bitcast ([32 x i8]* @cle to <16 x i8>*), align 16
 ; AVX-NEXT:    ret void
@@ -121,11 +121,11 @@ define void @same_opcode_on_one_side(i32 %a, i32 %b, i32 %c) {
 ; SSE-NEXT:    [[TMP1:%.*]] = xor i32 [[ADD1]], [[A]]
 ; SSE-NEXT:    store i32 [[TMP1]], i32* getelementptr inbounds ([32 x i32], [32 x i32]* @cle32, i64 0, i64 0), align 16
 ; SSE-NEXT:    [[TMP2:%.*]] = xor i32 [[B:%.*]], [[ADD2]]
-; SSE-NEXT:    store i32 [[TMP2]], i32* getelementptr inbounds ([32 x i32], [32 x i32]* @cle32, i64 0, i64 1)
+; SSE-NEXT:    store i32 [[TMP2]], i32* getelementptr inbounds ([32 x i32], [32 x i32]* @cle32, i64 0, i64 1), align 4
 ; SSE-NEXT:    [[TMP3:%.*]] = xor i32 [[C]], [[ADD3]]
-; SSE-NEXT:    store i32 [[TMP3]], i32* getelementptr inbounds ([32 x i32], [32 x i32]* @cle32, i64 0, i64 2)
+; SSE-NEXT:    store i32 [[TMP3]], i32* getelementptr inbounds ([32 x i32], [32 x i32]* @cle32, i64 0, i64 2), align 4
 ; SSE-NEXT:    [[TMP4:%.*]] = xor i32 [[A]], [[ADD4]]
-; SSE-NEXT:    store i32 [[TMP4]], i32* getelementptr inbounds ([32 x i32], [32 x i32]* @cle32, i64 0, i64 3)
+; SSE-NEXT:    store i32 [[TMP4]], i32* getelementptr inbounds ([32 x i32], [32 x i32]* @cle32, i64 0, i64 3), align 4
 ; SSE-NEXT:    ret void
 ;
 ; AVX-LABEL: @same_opcode_on_one_side(

@@ -270,13 +270,13 @@ define <4 x float> @fptrunc(<4 x float> %a, <4 x float> %b, <4 x double> %c, <4 
 ; These tests demonstrate the same issue as the simpler cases above,
 ; but also include multi-BB to show potentially larger transforms/codegen issues.
 
-@da = common global [1024 x float] zeroinitializer, align 32
-@db = common global [1024 x float] zeroinitializer, align 32
-@dc = common global [1024 x float] zeroinitializer, align 32
-@dd = common global [1024 x float] zeroinitializer, align 32
-@dj = common global [1024 x i32] zeroinitializer, align 32
+@da = common dso_local global [1024 x float] zeroinitializer, align 32
+@db = common dso_local global [1024 x float] zeroinitializer, align 32
+@dc = common dso_local global [1024 x float] zeroinitializer, align 32
+@dd = common dso_local global [1024 x float] zeroinitializer, align 32
+@dj = common dso_local global [1024 x i32] zeroinitializer, align 32
 
-define void @example25() nounwind {
+define dso_local void @example25() nounwind {
 ; SSE2-LABEL: example25:
 ; SSE2:       # %bb.0: # %vector.ph
 ; SSE2-NEXT:    movq $-4096, %rax # imm = 0xF000
@@ -408,7 +408,7 @@ for.end:
 
 ; TODO: AVX1 could have used 256-bit ops for a likely improvement.
 
-define void @example24(i16 signext %x, i16 signext %y) nounwind {
+define dso_local void @example24(i16 signext %x, i16 signext %y) nounwind {
 ; SSE2-LABEL: example24:
 ; SSE2:       # %bb.0: # %vector.ph
 ; SSE2-NEXT:    movd %edi, %xmm0

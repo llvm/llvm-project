@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=aarch64 -mattr=+mte | FileCheck %s
 
-define i8* @small_alloca() {
+define dso_local i8* @small_alloca() {
 entry:
 ; CHECK-LABEL: small_alloca:
 ; CHECK:      irg  x0, sp{{$}}
@@ -11,12 +11,12 @@ entry:
   ret i8* %q1
 }
 
-@sink = global i8* null, align 8
+@sink = dso_local global i8* null, align 8
 
 ; Check that IRG is pinned to %b because the store instruction needs
 ; the address in a non-fixed physical register and can benefit from it
 ; being equal to the base tagged pointer.
-define i8* @small_allocas() {
+define dso_local i8* @small_allocas() {
 entry:
 ; CHECK-LABEL: small_allocas:
 ; CHECK:      irg  [[R:x[0-9]+]], sp{{$}}
@@ -33,7 +33,7 @@ entry:
 }
 
 ; Two large allocas. One's offset overflows addg immediate.
-define void @huge_allocas() {
+define dso_local void @huge_allocas() {
 entry:
 ; CHECK-LABEL: huge_allocas:
 ; CHECK:      irg  x1, sp{{$}}
@@ -51,7 +51,7 @@ entry:
 
 ; Realigned stack frame. IRG uses value of SP after realignment,
 ; ADDG for the first stack allocation has offset 0.
-define void @realign() {
+define dso_local void @realign() {
 entry:
 ; CHECK-LABEL: realign:
 ; CHECK:      mov  x29, sp
@@ -67,7 +67,7 @@ entry:
 
 ; With a dynamic alloca, IRG has to use FP with non-zero offset.
 ; ADDG offset for the single static alloca is still zero.
-define void @dynamic_alloca(i64 %size) {
+define dso_local void @dynamic_alloca(i64 %size) {
 entry:
 ; CHECK-LABEL: dynamic_alloca:
 ; CHECK:      sub  x1, x29, #[[OFS:[0-9]+]]
@@ -86,7 +86,7 @@ entry:
 ; After initial realignment, generate the base pointer.
 ; IRG uses the base pointer w/o offset.
 ; Offsets for tagged and untagged pointers to the same alloca match.
-define void @dynamic_alloca_and_realign(i64 %size) {
+define dso_local void @dynamic_alloca_and_realign(i64 %size) {
 entryz:
 ; CHECK-LABEL: dynamic_alloca_and_realign:
 ; CHECK:      and  sp, x{{.*}}, #0xffffffffffffffc0

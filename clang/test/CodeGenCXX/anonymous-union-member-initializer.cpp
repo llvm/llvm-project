@@ -10,7 +10,7 @@ struct S {
   };
 };
 
-// CHECK: @_ZN11rdar88182363fooE = global i64 4
+// CHECK: @_ZN11rdar88182363fooE ={{.*}} global i64 4
 char S::*foo  = &S::c;
 }
 
@@ -31,7 +31,7 @@ namespace PR7021 {
     union { long l; };
   };
 
-  // CHECK-LABEL: define void @_ZN6PR70211fENS_1XES0_
+  // CHECK-LABEL: define{{.*}} void @_ZN6PR70211fENS_1XES0_
   void f(X x, X z) {
     X x1;
 
@@ -61,7 +61,7 @@ namespace test2 {
   };
 
   A::A() : b(10) { }
-  // CHECK-LABEL: define void @_ZN5test21AC2Ev(
+  // CHECK-LABEL: define{{.*}} void @_ZN5test21AC2Ev(
   // CHECK-NOT: }
   // CHECK: store i32 10
   // CHECK: }
@@ -79,14 +79,14 @@ namespace PR10512 {
     };
   };
 
-  // CHECK-LABEL: define void @_ZN7PR105121AC2Ev
+  // CHECK-LABEL: define{{.*}} void @_ZN7PR105121AC2Ev
   // CHECK: [[THISADDR:%[a-zA-Z0-9.]+]] = alloca [[A:%"struct[A-Za-z0-9:.]+"]]
   // CHECK-NEXT: store [[A]]* [[THIS:%[a-zA-Z0-9.]+]], [[A]]** [[THISADDR]]
   // CHECK-NEXT: [[THIS1:%[a-zA-Z0-9.]+]] = load [[A]]*, [[A]]** [[THISADDR]]
   // CHECK-NEXT: ret void
   A::A() {}
 
-  // CHECK-LABEL: define void @_ZN7PR105121AC2Ei
+  // CHECK-LABEL: define{{.*}} void @_ZN7PR105121AC2Ei
   // CHECK: [[THISADDR:%[a-zA-Z0-9.]+]] = alloca [[A:%"struct[A-Za-z0-9:.]+"]]
   // CHECK-NEXT: [[XADDR:%[a-zA-Z0-9.]+]] = alloca i32
   // CHECK-NEXT: store [[A]]* [[THIS:%[a-zA-Z0-9.]+]], [[A]]** [[THISADDR]]
@@ -100,7 +100,7 @@ namespace PR10512 {
   // CHECK-NEXT: ret void
   A::A(int x) : x(x) { }
 
-  // CHECK-LABEL: define void @_ZN7PR105121AC2El
+  // CHECK-LABEL: define{{.*}} void @_ZN7PR105121AC2El
   // CHECK: [[THISADDR:%[a-zA-Z0-9.]+]] = alloca [[A:%"struct[A-Za-z0-9:.]+"]]
   // CHECK-NEXT: [[XADDR:%[a-zA-Z0-9.]+]] = alloca i64
   // CHECK-NEXT: store [[A]]* [[THIS:%[a-zA-Z0-9.]+]], [[A]]** [[THISADDR]]
@@ -130,7 +130,7 @@ namespace test3 {
   };
 
   A::A() : callback(0), callback_value(0) {}
-  // CHECK-LABEL: define void @_ZN5test31AC2Ev(
+  // CHECK-LABEL: define{{.*}} void @_ZN5test31AC2Ev(
   // CHECK: [[THIS:%.*]] = load
   // CHECK-NEXT: [[UNION:%.*]] = getelementptr inbounds {{.*}} [[THIS]], i32 0, i32 0
   // CHECK-NEXT: [[STRUCT:%.*]] = bitcast {{.*}}* [[UNION]] to 
