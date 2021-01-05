@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefix=TOSGPR -check-prefix=ALL %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefix=ALL %s
 
 ; FIXME: Vectorization can increase required SGPR count beyond limit.
 
