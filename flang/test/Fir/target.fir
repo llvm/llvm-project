@@ -89,7 +89,7 @@ func @char1lensum(%arg0 : !fir.boxchar<1>, %arg1 : !fir.boxchar<1>) -> i64 {
 
 // I32-LABEL: define void @char1copy(i8* sret %0, i32 %1, i8* %2, i32 %3)
 // I64-LABEL: define void @char1copy(i8* sret %0, i64 %1, i8* %2, i64 %3)
-func @char1copy(%arg0 : !fir.boxchar<1> {llvm.sret = true}, %arg1 : !fir.boxchar<1>) {
+func @char1copy(%arg0 : !fir.boxchar<1> {llvm.sret}, %arg1 : !fir.boxchar<1>) {
   // I32-DAG: %[[p0:.*]] = insertvalue { i8*, i32 } undef, i8* %2, 0
   // I32-DAG: = insertvalue { i8*, i32 } %[[p0]], i32 %3, 1
   // I32-DAG: %[[p1:.*]] = insertvalue { i8*, i32 } undef, i8* %0, 0

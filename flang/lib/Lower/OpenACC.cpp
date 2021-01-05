@@ -400,8 +400,8 @@ createParallelOp(Fortran::lower::AbstractConverter &converter,
               std::get_if<std::optional<Fortran::parser::ScalarLogicalExpr>>(
                   &accSelfClause.u)) {
         if (*optCondition) {
-          Value cond = fir::getBase(converter.genExprValue(
-              *Fortran::semantics::GetExpr(*optCondition)));
+          auto cond = fir::getBase(converter.genExprValue(
+              *Fortran::semantics::GetExpr(*optCondition), stmtCtx));
           selfCond = firOpBuilder.createConvert(currentLocation,
                                                 firOpBuilder.getI1Type(), cond);
         } else {
@@ -492,7 +492,7 @@ createParallelOp(Fortran::lower::AbstractConverter &converter,
                         firOpBuilder.getUnitAttr());
   if (addSelfAttr)
     parallelOp->setAttr(mlir::acc::ParallelOp::getSelfAttrName(),
-                       firOpBuilder.getUnitAttr());
+                        firOpBuilder.getUnitAttr());
 
   return parallelOp;
 }

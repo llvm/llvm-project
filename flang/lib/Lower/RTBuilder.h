@@ -141,7 +141,6 @@ template <>
 constexpr TypeBuilderFunc getModel<unsigned long long>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     return mlir::IntegerType::get(context, 8 * sizeof(unsigned long long));
->>>>>>> f97c932814ff... make the distinction between "long" and "long long" explicit. fixes compilation on MacOS.
   };
 }
 template <>
@@ -227,8 +226,8 @@ constexpr TypeBuilderFunc getModel<Fortran::runtime::Descriptor *>() {
 template <>
 constexpr TypeBuilderFunc getModel<Fortran::common::TypeCategory>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
-    return mlir::IntegerType::get(sizeof(Fortran::common::TypeCategory) * 8,
-                                  context);
+    return mlir::IntegerType::get(context,
+                                  sizeof(Fortran::common::TypeCategory) * 8);
   };
 }
 template <>

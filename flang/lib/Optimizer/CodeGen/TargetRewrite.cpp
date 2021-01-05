@@ -278,8 +278,8 @@ public:
       } else {
         // Force new type on the input operand.
         newOpers[0].setType(mlir::FunctionType::get(
-            mlir::TypeRange{newInTys}.drop_front(dropFront), newResTys,
-            callOp.getContext()));
+            callOp.getContext(),
+            mlir::TypeRange{newInTys}.drop_front(dropFront), newResTys));
         newCall = rewriter->create<A>(loc, newResTys, newOpers);
       }
       LLVM_DEBUG(llvm::dbgs() << "replacing call with " << newCall << '\n');
@@ -611,7 +611,7 @@ public:
     // Set the new type and finalize the arguments, etc.
     newInTys.insert(newInTys.end(), trailingTys.begin(), trailingTys.end());
     auto newFuncTy =
-        mlir::FunctionType::get(newInTys, newResTys, func.getContext());
+        mlir::FunctionType::get(func.getContext(), newInTys, newResTys);
     LLVM_DEBUG(llvm::dbgs() << "new func: " << newFuncTy << '\n');
     func.setType(newFuncTy);
 
@@ -642,7 +642,7 @@ public:
     auto attr = std::get<CodeGenSpecifics::Attributes>(tup);
     auto argTy = std::get<mlir::Type>(tup);
     if (attr.isSRet()) {
-      bool argNo = newInTys.size();
+      unsigned argNo = newInTys.size();
       fixups.emplace_back(
           FixupTy::Codes::ReturnAsStore, argNo, [=](mlir::FuncOp func) {
             func.setArgAttr(argNo, "llvm.sret", rewriter->getUnitAttr());

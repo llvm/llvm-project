@@ -186,7 +186,9 @@ genOMP(Fortran::lower::AbstractConverter &converter,
                          &clause.u)) {
         const Fortran::parser::OmpObjectList &ompObjectList = copyinClause->v;
         genObjectList(ompObjectList, converter, copyinClauseOperands);
-      } else if (const auto &allocateClause =
+      }
+#if 0 // FIXME: hacked out due to compilation failures
+      else if (const auto &allocateClause =
                      std::get_if<Fortran::parser::OmpAllocateClause>(
                          &clause.u)) {
         mlir::Value allocatorOperand;
@@ -211,6 +213,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
         }
         genObjectList(ompObjectList, converter, allocateOperands);
       }
+#endif
     }
     // Create and insert the operation.
     auto parallelOp = firOpBuilder.create<mlir::omp::ParallelOp>(
