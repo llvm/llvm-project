@@ -24,11 +24,10 @@ class Type;
 
 namespace mlir {
 
+class Type;
 class MLIRContext;
 
 namespace LLVM {
-
-class LLVMType;
 
 namespace detail {
 class TypeToLLVMIRTranslatorImpl;
@@ -47,11 +46,10 @@ public:
   /// that this will perform type conversion and store its results for future
   /// uses.
   // TODO: this should be removed when MLIR has proper data layout.
-  unsigned getPreferredAlignment(LLVM::LLVMType type,
-                                 const llvm::DataLayout &layout);
+  unsigned getPreferredAlignment(Type type, const llvm::DataLayout &layout);
 
   /// Translates the given MLIR LLVM dialect type to LLVM IR.
-  llvm::Type *translateType(LLVM::LLVMType type);
+  llvm::Type *translateType(Type type);
 
 private:
   /// Private implementation.
@@ -67,7 +65,7 @@ public:
   ~TypeFromLLVMIRTranslator();
 
   /// Translates the given LLVM IR type to the MLIR LLVM dialect.
-  LLVM::LLVMType translateType(llvm::Type *type);
+  Type translateType(llvm::Type *type);
 
 private:
   /// Private implementation.

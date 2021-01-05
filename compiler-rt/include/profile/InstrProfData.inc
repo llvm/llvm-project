@@ -647,9 +647,9 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 /* Raw profile format version (start from 1). */
 #define INSTR_PROF_RAW_VERSION 5
 /* Indexed profile format version (start from 1). */
-#define INSTR_PROF_INDEX_VERSION 6
+#define INSTR_PROF_INDEX_VERSION 7
 /* Coverage mapping format version (start from 0). */
-#define INSTR_PROF_COVMAP_VERSION 3
+#define INSTR_PROF_COVMAP_VERSION 4
 
 /* Profile version is always of type uint64_t. Reserve the upper 8 bits in the
  * version for other variants of profile. We set the lowest bit of the upper 8

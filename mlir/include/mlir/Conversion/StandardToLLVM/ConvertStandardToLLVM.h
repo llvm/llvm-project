@@ -34,7 +34,6 @@ class UnrankedMemRefType;
 
 namespace LLVM {
 class LLVMDialect;
-class LLVMType;
 class LLVMPointerType;
 } // namespace LLVM
 
@@ -71,8 +70,8 @@ public:
   /// Convert a function type.  The arguments and results are converted one by
   /// one and results are packed into a wrapped LLVM IR structure type. `result`
   /// is populated with argument mapping.
-  LLVM::LLVMType convertFunctionSignature(FunctionType funcTy, bool isVariadic,
-                                          SignatureConversion &result);
+  Type convertFunctionSignature(FunctionType funcTy, bool isVariadic,
+                                SignatureConversion &result);
 
   /// Convert a non-empty list of types to be returned from a function into a
   /// supported LLVM IR type.  In particular, if more than one value is
@@ -118,14 +117,14 @@ public:
 
   /// Converts the function type to a C-compatible format, in particular using
   /// pointers to memref descriptors for arguments.
-  LLVM::LLVMType convertFunctionTypeCWrapper(FunctionType type);
+  Type convertFunctionTypeCWrapper(FunctionType type);
 
   /// Returns the data layout to use during and after conversion.
   const llvm::DataLayout &getDataLayout() { return options.dataLayout; }
 
   /// Gets the LLVM representation of the index type. The returned type is an
   /// integer type with the size configured for this type converter.
-  LLVM::LLVMType getIndexType();
+  Type getIndexType();
 
   /// Gets the bitwidth of the index type when converted to LLVM.
   unsigned getIndexTypeBitwidth() { return options.indexBitwidth; }
@@ -185,8 +184,8 @@ private:
   /// - `!llvm.i64`, `!llvm.i64` (sizes),
   /// - `!llvm.i64`, `!llvm.i64` (strides).
   /// These types can be recomposed to a memref descriptor struct.
-  SmallVector<LLVM::LLVMType, 5>
-  getMemRefDescriptorFields(MemRefType type, bool unpackAggregates);
+  SmallVector<Type, 5> getMemRefDescriptorFields(MemRefType type,
+                                                 bool unpackAggregates);
 
   /// Convert an unranked memref type into a list of non-aggregate LLVM IR types
   /// that will form the unranked memref descriptor. In particular, this list
@@ -197,7 +196,7 @@ private:
   /// !llvm.i64 (rank)
   /// !llvm<"i8*"> (type-erased pointer).
   /// These types can be recomposed to a unranked memref descriptor struct.
-  SmallVector<LLVM::LLVMType, 2> getUnrankedMemRefDescriptorFields();
+  SmallVector<Type, 2> getUnrankedMemRefDescriptorFields();
 
   // Convert an unranked memref type to an LLVM type that captures the
   // runtime rank and a pointer to the static ranked memref desc
@@ -417,31 +416,30 @@ public:
 
   /// Builds IR extracting the allocated pointer from the descriptor.
   static Value allocatedPtr(OpBuilder &builder, Location loc,
-                            Value memRefDescPtr, LLVM::LLVMType elemPtrPtrType);
+                            Value memRefDescPtr, Type elemPtrPtrType);
   /// Builds IR inserting the allocated pointer into the descriptor.
   static void setAllocatedPtr(OpBuilder &builder, Location loc,
-                              Value memRefDescPtr,
-                              LLVM::LLVMType elemPtrPtrType,
+                              Value memRefDescPtr, Type elemPtrPtrType,
                               Value allocatedPtr);
 
   /// Builds IR extracting the aligned pointer from the descriptor.
   static Value alignedPtr(OpBuilder &builder, Location loc,
                           LLVMTypeConverter &typeConverter, Value memRefDescPtr,
-                          LLVM::LLVMType elemPtrPtrType);
+                          Type elemPtrPtrType);
   /// Builds IR inserting the aligned pointer into the descriptor.
   static void setAlignedPtr(OpBuilder &builder, Location loc,
                             LLVMTypeConverter &typeConverter,
-                            Value memRefDescPtr, LLVM::LLVMType elemPtrPtrType,
+                            Value memRefDescPtr, Type elemPtrPtrType,
                             Value alignedPtr);
 
   /// Builds IR extracting the offset from the descriptor.
   static Value offset(OpBuilder &builder, Location loc,
                       LLVMTypeConverter &typeConverter, Value memRefDescPtr,
-                      LLVM::LLVMType elemPtrPtrType);
+                      Type elemPtrPtrType);
   /// Builds IR inserting the offset into the descriptor.
   static void setOffset(OpBuilder &builder, Location loc,
                         LLVMTypeConverter &typeConverter, Value memRefDescPtr,
-                        LLVM::LLVMType elemPtrPtrType, Value offset);
+                        Type elemPtrPtrType, Value offset);
 
   /// Builds IR extracting the pointer to the first element of the size array.
   static Value sizeBasePtr(OpBuilder &builder, Location loc,
@@ -490,17 +488,17 @@ protected:
 
   /// Gets the MLIR type wrapping the LLVM integer type whose bit width is
   /// defined by the used type converter.
-  LLVM::LLVMType getIndexType() const;
+  Type getIndexType() const;
 
   /// Gets the MLIR type wrapping the LLVM integer type whose bit width
   /// corresponds to that of a LLVM pointer type.
-  LLVM::LLVMType getIntPtrType(unsigned addressSpace = 0) const;
+  Type getIntPtrType(unsigned addressSpace = 0) const;
 
   /// Gets the MLIR type wrapping the LLVM void type.
-  LLVM::LLVMType getVoidType() const;
+  Type getVoidType() const;
 
   /// Get the MLIR type wrapping the LLVM i8* type.
-  LLVM::LLVMType getVoidPtrType() const;
+  Type getVoidPtrType() const;
 
   /// Create an LLVM dialect operation defining the given index constant.
   Value createIndexConstant(ConversionPatternRewriter &builder, Location loc,

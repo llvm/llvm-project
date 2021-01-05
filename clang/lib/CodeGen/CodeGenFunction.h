@@ -4394,6 +4394,21 @@ public:
   bool ConstantFoldsToSimpleInteger(const Expr *Cond, llvm::APSInt &Result,
                                     bool AllowLabels = false);
 
+  /// isInstrumentedCondition - Determine whether the given condition is an
+  /// instrumentable condition (i.e. no "&&" or "||").
+  static bool isInstrumentedCondition(const Expr *C);
+
+  /// EmitBranchToCounterBlock - Emit a conditional branch to a new block that
+  /// increments a profile counter based on the semantics of the given logical
+  /// operator opcode.  This is used to instrument branch condition coverage
+  /// for logical operators.
+  void EmitBranchToCounterBlock(const Expr *Cond, BinaryOperator::Opcode LOp,
+                                llvm::BasicBlock *TrueBlock,
+                                llvm::BasicBlock *FalseBlock,
+                                uint64_t TrueCount = 0,
+                                Stmt::Likelihood LH = Stmt::LH_None,
+                                const Expr *CntrIdx = nullptr);
+
   /// EmitBranchOnBoolExpr - Emit a branch on a boolean condition (e.g. for an
   /// if statement) to the specified blocks.  Based on the condition, this might
   /// try to simplify the codegen of the conditional based on the branch.

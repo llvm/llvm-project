@@ -762,17 +762,17 @@ LogicalResult ModuleTranslation::convertOperation(Operation &opInst,
   if (auto inlineAsmOp = dyn_cast<LLVM::InlineAsmOp>(opInst)) {
     // TODO: refactor function type creation which usually occurs in std-LLVM
     // conversion.
-    SmallVector<LLVM::LLVMType, 8> operandTypes;
+    SmallVector<Type, 8> operandTypes;
     operandTypes.reserve(inlineAsmOp.operands().size());
     for (auto t : inlineAsmOp.operands().getTypes())
-      operandTypes.push_back(t.cast<LLVM::LLVMType>());
+      operandTypes.push_back(t);
 
-    LLVM::LLVMType resultType;
+    Type resultType;
     if (inlineAsmOp.getNumResults() == 0) {
       resultType = LLVM::LLVMVoidType::get(mlirModule->getContext());
     } else {
       assert(inlineAsmOp.getNumResults() == 1);
-      resultType = inlineAsmOp.getResultTypes()[0].cast<LLVM::LLVMType>();
+      resultType = inlineAsmOp.getResultTypes()[0];
     }
     auto ft = LLVM::LLVMFunctionType::get(resultType, operandTypes);
     llvm::InlineAsm *inlineAsmInst =
@@ -813,7 +813,7 @@ LogicalResult ModuleTranslation::convertOperation(Operation &opInst,
   }
 
   if (auto lpOp = dyn_cast<LLVM::LandingpadOp>(opInst)) {
-    llvm::Type *ty = convertType(lpOp.getType().cast<LLVMType>());
+    llvm::Type *ty = convertType(lpOp.getType());
     llvm::LandingPadInst *lpi =
         builder.CreateLandingPad(ty, lpOp.getNumOperands());
 
@@ -872,8 +872,8 @@ LogicalResult ModuleTranslation::convertOperation(Operation &opInst,
                              blockMapping[switchOp.defaultDestination()],
                              switchOp.caseDestinations().size(), branchWeights);
 
-    auto *ty = llvm::cast<llvm::IntegerType>(
-        convertType(switchOp.value().getType().cast<LLVMType>()));
+    auto *ty =
+        llvm::cast<llvm::IntegerType>(convertType(switchOp.value().getType()));
     for (auto i :
          llvm::zip(switchOp.case_values()->cast<DenseIntElementsAttr>(),
                    switchOp.caseDestinations()))
@@ -927,8 +927,8 @@ LogicalResult ModuleTranslation::convertBlock(Block &bb, bool ignoreArguments) {
     unsigned numPredecessors =
         std::distance(predecessors.begin(), predecessors.end());
     for (auto arg : bb.getArguments()) {
-      auto wrappedType = arg.getType().dyn_cast<LLVM::LLVMType>();
-      if (!wrappedType)
+      auto wrappedType = arg.getType();
+      if (!isCompatibleType(wrappedType))
         return emitError(bb.front().getLoc(),
                          "block argument does not have an LLVM type");
       llvm::Type *type = convertType(wrappedType);
@@ -1094,7 +1094,7 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
             argIdx, LLVMDialect::getNoAliasAttrName())) {
       // NB: Attribute already verified to be boolean, so check if we can indeed
       // attach the attribute to this argument, based on its type.
-      auto argTy = mlirArg.getType().dyn_cast<LLVM::LLVMType>();
+      auto argTy = mlirArg.getType();
       if (!argTy.isa<LLVM::LLVMPointerType>())
         return func.emitError(
             "llvm.noalias attribute attached to LLVM non-pointer argument");
@@ -1106,7 +1106,7 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
             argIdx, LLVMDialect::getAlignAttrName())) {
       // NB: Attribute already verified to be int, so check if we can indeed
       // attach the attribute to this argument, based on its type.
-      auto argTy = mlirArg.getType().dyn_cast<LLVM::LLVMType>();
+      auto argTy = mlirArg.getType();
       if (!argTy.isa<LLVM::LLVMPointerType>())
         return func.emitError(
             "llvm.align attribute attached to LLVM non-pointer argument");
@@ -1190,7 +1190,7 @@ LogicalResult ModuleTranslation::convertFunctions() {
   return success();
 }
 
-llvm::Type *ModuleTranslation::convertType(LLVMType type) {
+llvm::Type *ModuleTranslation::convertType(Type type) {
   return typeTranslator.translateType(type);
 }
 

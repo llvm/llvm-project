@@ -1902,6 +1902,24 @@ let ArchGuard = "defined(__ARM_FEATURE_BF16_VECTOR_ARITHMETIC)" in {
 multiclass VCMLA_ROTS<string type, string lanety, string laneqty> {
   foreach ROT = ["", "_rot90", "_rot180", "_rot270" ] in {
     def   : SInst<"vcmla" # ROT, "....", type # "Q" # type>;
+
+    // vcmla{ROT}_lane
+    def : SOpInst<"vcmla" # ROT # "_lane", "...qI", type, Op<(call "vcmla" # ROT, $p0, $p1,
+           (bitcast $p0, (dup_typed lanety , (call "vget_lane", (bitcast lanety, $p2), $p3))))>>;
+
+    // vcmlaq{ROT}_lane
+    def : SOpInst<"vcmla" # ROT # "_lane", "...qI", "Q" # type, Op<(call "vcmla" # ROT, $p0, $p1,
+           (bitcast $p0, (dup_typed laneqty , (call "vget_lane", (bitcast lanety, $p2), $p3))))>>;
+
+    let isLaneQ = 1 in  {
+      // vcmla{ROT}_laneq
+      def : SOpInst<"vcmla" # ROT # "_laneq", "...QI", type,  Op<(call "vcmla" # ROT, $p0, $p1,
+              (bitcast $p0, (dup_typed lanety, (call "vget_lane", (bitcast laneqty, $p2), $p3))))>>;
+
+      // vcmlaq{ROT}_laneq
+      def : SOpInst<"vcmla" # ROT # "_laneq", "...QI", "Q" # type, Op<(call "vcmla" # ROT, $p0, $p1,
+             (bitcast $p0, (dup_typed laneqty , (call "vget_lane", (bitcast laneqty, $p2), $p3))))>>;
+    }
   }
 }
 
