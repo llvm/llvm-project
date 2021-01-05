@@ -14,6 +14,7 @@
 #ifndef LLVM_ANALYSIS_LOOPNESTANALYSIS_H
 #define LLVM_ANALYSIS_LOOPNESTANALYSIS_H
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
 
@@ -130,14 +131,12 @@ public:
 
   /// Return true if all loops in the loop nest are in simplify form.
   bool areAllLoopsSimplifyForm() const {
-    return llvm::all_of(Loops,
-                        [](const Loop *L) { return L->isLoopSimplifyForm(); });
+    return all_of(Loops, [](const Loop *L) { return L->isLoopSimplifyForm(); });
   }
 
   /// Return true if all loops in the loop nest are in rotated form.
   bool areAllLoopsRotatedForm() const {
-    return std::all_of(Loops.begin(), Loops.end(),
-                       [](const Loop *L) { return L->isRotatedForm(); });
+    return all_of(Loops, [](const Loop *L) { return L->isRotatedForm(); });
   }
 
   StringRef getName() const { return Loops.front()->getName(); }
