@@ -359,8 +359,9 @@ void UseTrailingReturnTypeCheck::keepSpecifiers(
   // inline int.
   const auto *M = dyn_cast<CXXMethodDecl>(&F);
   if (!F.isConstexpr() && !F.isInlineSpecified() &&
-      F.getStorageClass() != SC_Extern && F.getStorageClass() != SC_Static &&
-      !Fr && !(M && M->isVirtualAsWritten()))
+      F.getStorageClass() != StorageClass::Extern &&
+      F.getStorageClass() != StorageClass::Static && !Fr &&
+      !(M && M->isVirtualAsWritten()))
     return;
 
   // Tokenize return type. If it contains macros which contain a mix of

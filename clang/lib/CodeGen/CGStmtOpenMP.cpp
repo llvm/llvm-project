@@ -433,7 +433,7 @@ static llvm::Function *emitOutlinedFunctionPrologue(
     DebugFunctionDecl = FunctionDecl::Create(
         Ctx, Ctx.getTranslationUnitDecl(), FO.S->getBeginLoc(),
         SourceLocation(), DeclarationName(), FunctionTy,
-        Ctx.getTrivialTypeSourceInfo(FunctionTy), SC_Static,
+        Ctx.getTrivialTypeSourceInfo(FunctionTy), StorageClass::Static,
         /*isInlineSpecified=*/false, /*hasWrittenPrototype=*/false);
   }
   for (const FieldDecl *FD : RD->fields()) {
@@ -468,7 +468,7 @@ static llvm::Function *emitOutlinedFunctionPrologue(
           Ctx, DebugFunctionDecl,
           CapVar ? CapVar->getBeginLoc() : FD->getBeginLoc(),
           CapVar ? CapVar->getLocation() : FD->getLocation(), II, ArgType,
-          /*TInfo=*/nullptr, SC_None, /*DefArg=*/nullptr);
+          /*TInfo=*/nullptr, StorageClass::None, /*DefArg=*/nullptr);
     } else {
       Arg = ImplicitParamDecl::Create(Ctx, /*DC=*/nullptr, FD->getLocation(),
                                       II, ArgType, ImplicitParamDecl::Other);

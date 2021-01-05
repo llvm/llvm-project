@@ -220,21 +220,31 @@ namespace clang {
   };
 
   /// Storage classes.
-  enum StorageClass {
+  enum class StorageClass {
     // These are legal on both functions and variables.
-    SC_None,
-    SC_Extern,
-    SC_Static,
-    SC_PrivateExtern,
+    None,
+    Extern,
+    Static,
+    PrivateExtern,
 
     // These are only legal on variables.
-    SC_Auto,
-    SC_Register
+    Auto,
+    Register
   };
 
   /// Checks whether the given storage class is legal for functions.
   inline bool isLegalForFunction(StorageClass SC) {
-    return SC <= SC_PrivateExtern;
+    switch (SC) {
+    case StorageClass::None:
+    case StorageClass::Extern:
+    case StorageClass::Static:
+    case StorageClass::PrivateExtern:
+      return true;
+    case StorageClass::Auto:
+    case StorageClass::Register:
+      return false;
+    }
+    llvm_unreachable("unknown storage class");
   }
 
   /// Checks whether the given storage class is legal for variables.
