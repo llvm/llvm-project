@@ -164,7 +164,7 @@ define float @foo3(float* nocapture readonly %A) #0 {
 ; CHECK-NEXT:    [[TMP10:%.*]] = load <2 x float>, <2 x float>* [[TMP9]], align 4
 ; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <2 x float> [[TMP10]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP11]] = extractelement <2 x float> [[SHUFFLE1]], i32 0
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x float> undef, float [[TMP11]], i32 0
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x float> poison, float [[TMP11]], i32 0
 ; CHECK-NEXT:    [[TMP13]] = extractelement <2 x float> [[SHUFFLE1]], i32 1
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x float> [[TMP12]], float [[TMP13]], i32 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x float> [[TMP14]], float [[TMP8]], i32 2
@@ -247,7 +247,7 @@ define float @sort_phi_type(float* nocapture readonly %A) {
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x float> [ <float 1.000000e+01, float 1.000000e+01, float 1.000000e+01, float 1.000000e+01>, [[ENTRY]] ], [ [[TMP9:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> undef, float [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP2]], float [[TMP3]], i32 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP0]], i32 3

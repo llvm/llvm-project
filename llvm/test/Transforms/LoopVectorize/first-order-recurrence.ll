@@ -14,7 +14,7 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 ;
 ; CHECK-LABEL: @recurrence_1(
 ; CHECK:       vector.ph:
-; CHECK:         %vector.recur.init = insertelement <4 x i32> undef, i32 %pre_load, i32 3
+; CHECK:         %vector.recur.init = insertelement <4 x i32> poison, i32 %pre_load, i32 3
 ; CHECK:       vector.body:
 ; CHECK:         %vector.recur = phi <4 x i32> [ %vector.recur.init, %vector.ph ], [ [[L1:%[a-zA-Z0-9.]+]], %vector.body ]
 ; CHECK:         [[L1]] = load <4 x i32>
@@ -71,7 +71,7 @@ for.exit:
 ;
 ; CHECK-LABEL: @recurrence_2(
 ; CHECK:       vector.ph:
-; CHECK:         %vector.recur.init = insertelement <4 x i32> undef, i32 %.pre, i32 3
+; CHECK:         %vector.recur.init = insertelement <4 x i32> poison, i32 %.pre, i32 3
 ; CHECK:       vector.body:
 ; CHECK:         %vector.recur = phi <4 x i32> [ %vector.recur.init, %vector.ph ], [ [[L1:%[a-zA-Z0-9.]+]], %vector.body ]
 ; CHECK:         [[L1]] = load <4 x i32>
@@ -108,13 +108,13 @@ for.cond.cleanup.loopexit:
   br label %for.cond.cleanup
 
 for.cond.cleanup:
-  %minmax.0.lcssa = phi i32 [ undef, %entry ], [ %minmax.0.cond.lcssa, %for.cond.cleanup.loopexit ]
+  %minmax.0.lcssa = phi i32 [ poison, %entry ], [ %minmax.0.cond.lcssa, %for.cond.cleanup.loopexit ]
   ret i32 %minmax.0.lcssa
 
 scalar.body:
   %0 = phi i32 [ %.pre, %for.preheader ], [ %1, %scalar.body ]
   %indvars.iv = phi i64 [ 0, %for.preheader ], [ %indvars.iv.next, %scalar.body ]
-  %minmax.028 = phi i32 [ undef, %for.preheader ], [ %minmax.0.cond, %scalar.body ]
+  %minmax.028 = phi i32 [ poison, %for.preheader ], [ %minmax.0.cond, %scalar.body ]
   %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
   %1 = load i32, i32* %arrayidx, align 4
   %sub3 = sub nsw i32 %1, %0
@@ -136,7 +136,7 @@ scalar.body:
 ;
 ; CHECK-LABEL: @recurrence_3(
 ; CHECK:       vector.ph:
-; CHECK:         %vector.recur.init = insertelement <4 x i16> undef, i16 %0, i32 3
+; CHECK:         %vector.recur.init = insertelement <4 x i16> poison, i16 %0, i32 3
 ; CHECK:       vector.body:
 ; CHECK:         %vector.recur = phi <4 x i16> [ %vector.recur.init, %vector.ph ], [ [[L1:%[a-zA-Z0-9.]+]], %vector.body ]
 ; CHECK:         [[L1]] = load <4 x i16>
@@ -268,7 +268,7 @@ entry:
 
 for.cond1.preheader:
   %i.016 = phi i32 [ 1, %entry ], [ %inc, %for.cond.cleanup3 ]
-  %e.015 = phi i32 [ undef, %entry ], [ %e.1.lcssa, %for.cond.cleanup3 ]
+  %e.015 = phi i32 [ poison, %entry ], [ %e.1.lcssa, %for.cond.cleanup3 ]
   br label %for.cond1
 
 for.cond.cleanup:
@@ -291,7 +291,7 @@ for.cond.cleanup3:
 
 ; UNROLL-NO-IC-LABEL: @PR30183(
 ; UNROLL-NO-IC:       vector.ph:
-; UNROLL-NO-IC:         [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i32> undef, i32 [[PRE_LOAD:%.*]], i32 3
+; UNROLL-NO-IC:         [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i32> poison, i32 [[PRE_LOAD:%.*]], i32 3
 ; UNROLL-NO-IC-NEXT:    br label %vector.body
 ; UNROLL-NO-IC:       vector.body:
 ; UNROLL-NO-IC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
@@ -300,7 +300,7 @@ for.cond.cleanup3:
 ; UNROLL-NO-IC-NEXT:    [[TMP28:%.*]] = load i32, i32* {{.*}}
 ; UNROLL-NO-IC-NEXT:    [[TMP29:%.*]] = load i32, i32* {{.*}}
 ; UNROLL-NO-IC-NEXT:    [[TMP30:%.*]] = load i32, i32* {{.*}}
-; UNROLL-NO-IC-NEXT:    [[TMP35:%.*]] = insertelement <4 x i32> undef, i32 [[TMP27]], i32 0
+; UNROLL-NO-IC-NEXT:    [[TMP35:%.*]] = insertelement <4 x i32> poison, i32 [[TMP27]], i32 0
 ; UNROLL-NO-IC-NEXT:    [[TMP36:%.*]] = insertelement <4 x i32> [[TMP35]], i32 [[TMP28]], i32 1
 ; UNROLL-NO-IC-NEXT:    [[TMP37:%.*]] = insertelement <4 x i32> [[TMP36]], i32 [[TMP29]], i32 2
 ; UNROLL-NO-IC-NEXT:    [[TMP38:%.*]] = insertelement <4 x i32> [[TMP37]], i32 [[TMP30]], i32 3
@@ -308,7 +308,7 @@ for.cond.cleanup3:
 ; UNROLL-NO-IC-NEXT:    [[TMP32:%.*]] = load i32, i32* {{.*}}
 ; UNROLL-NO-IC-NEXT:    [[TMP33:%.*]] = load i32, i32* {{.*}}
 ; UNROLL-NO-IC-NEXT:    [[TMP34:%.*]] = load i32, i32* {{.*}}
-; UNROLL-NO-IC-NEXT:    [[TMP39:%.*]] = insertelement <4 x i32> undef, i32 [[TMP31]], i32 0
+; UNROLL-NO-IC-NEXT:    [[TMP39:%.*]] = insertelement <4 x i32> poison, i32 [[TMP31]], i32 0
 ; UNROLL-NO-IC-NEXT:    [[TMP40:%.*]] = insertelement <4 x i32> [[TMP39]], i32 [[TMP32]], i32 1
 ; UNROLL-NO-IC-NEXT:    [[TMP41:%.*]] = insertelement <4 x i32> [[TMP40]], i32 [[TMP33]], i32 2
 ; UNROLL-NO-IC-NEXT:    [[TMP42]] = insertelement <4 x i32> [[TMP41]], i32 [[TMP34]], i32 3
@@ -336,7 +336,7 @@ for.end:
 
 ; UNROLL-NO-IC-LABEL: @constant_folded_previous_value(
 ; UNROLL-NO-IC:       vector.body:
-; UNROLL-NO-IC:         [[VECTOR_RECUR:%.*]] = phi <4 x i64> [ <i64 undef, i64 undef, i64 undef, i64 0>, %vector.ph ], [ <i64 1, i64 1, i64 1, i64 1>, %vector.body ]
+; UNROLL-NO-IC:         [[VECTOR_RECUR:%.*]] = phi <4 x i64> [ <i64 poison, i64 poison, i64 poison, i64 0>, %vector.ph ], [ <i64 1, i64 1, i64 1, i64 1>, %vector.body ]
 ; UNROLL-NO-IC-NEXT:    [[TMP0:%.*]] = shufflevector <4 x i64> [[VECTOR_RECUR]], <4 x i64> <i64 1, i64 1, i64 1, i64 1>, <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; UNROLL-NO-IC:         br i1 {{.*}}, label %middle.block, label %vector.body
 ;
@@ -615,8 +615,8 @@ define void @sink_dead_inst() {
 ; SINK-AFTER-LABEL: vector.body:                                      ; preds = %vector.body, %vector.ph
 ; SINK-AFTER-NEXT:    %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; SINK-AFTER-NEXT:    %vec.ind = phi <4 x i16> [ <i16 -27, i16 -26, i16 -25, i16 -24>, %vector.ph ], [ %vec.ind.next, %vector.body ]
-; SINK-AFTER-NEXT:    %vector.recur = phi <4 x i16> [ <i16 undef, i16 undef, i16 undef, i16 0>, %vector.ph ], [ %3, %vector.body ]
-; SINK-AFTER-NEXT:    %vector.recur2 = phi <4 x i32> [ <i32 undef, i32 undef, i32 undef, i32 -27>, %vector.ph ], [ %1, %vector.body ]
+; SINK-AFTER-NEXT:    %vector.recur = phi <4 x i16> [ <i16 poison, i16 poison, i16 poison, i16 0>, %vector.ph ], [ %3, %vector.body ]
+; SINK-AFTER-NEXT:    %vector.recur2 = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 -27>, %vector.ph ], [ %1, %vector.body ]
 ; SINK-AFTER-NEXT:    %0 = add <4 x i16> %vec.ind, <i16 1, i16 1, i16 1, i16 1>
 ; SINK-AFTER-NEXT:    %1 = zext <4 x i16> %0 to <4 x i32>
 ; SINK-AFTER-NEXT:    %2 = shufflevector <4 x i32> %vector.recur2, <4 x i32> %1, <4 x i32> <i32 3, i32 4, i32 5, i32 6>
