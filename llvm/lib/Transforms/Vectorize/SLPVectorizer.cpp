@@ -7137,8 +7137,9 @@ private:
     Type *ScalarTy = FirstReducedVal->getType();
     auto *VecTy = FixedVectorType::get(ScalarTy, ReduxWidth);
 
+    RecurKind Kind = RdxTreeInst.getKind();
     int SplittingRdxCost;
-    switch (RdxTreeInst.getKind()) {
+    switch (Kind) {
     case RecurKind::Add:
     case RecurKind::Mul:
     case RecurKind::Or:
@@ -7155,7 +7156,6 @@ private:
     case RecurKind::UMax:
     case RecurKind::UMin: {
       auto *VecCondTy = cast<VectorType>(CmpInst::makeCmpResultType(VecTy));
-      RecurKind Kind = RdxTreeInst.getKind();
       bool IsUnsigned = Kind == RecurKind::UMax || Kind == RecurKind::UMin;
       SplittingRdxCost =
           TTI->getMinMaxReductionCost(VecTy, VecCondTy,
@@ -7167,7 +7167,7 @@ private:
     }
 
     int ScalarReduxCost = 0;
-    switch (RdxTreeInst.getKind()) {
+    switch (Kind) {
     case RecurKind::Add:
     case RecurKind::Mul:
     case RecurKind::Or:
