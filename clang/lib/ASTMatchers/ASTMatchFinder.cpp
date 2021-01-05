@@ -236,6 +236,20 @@ public:
     ScopedIncrement ScopedDepth(&CurrentDepth);
     return traverse(TAL);
   }
+  bool TraverseCXXForRangeStmt(CXXForRangeStmt *Node) {
+    if (!Finder->isTraversalIgnoringImplicitNodes())
+      return VisitorBase::TraverseCXXForRangeStmt(Node);
+    if (!Node)
+      return true;
+    ScopedIncrement ScopedDepth(&CurrentDepth);
+    if (auto *Init = Node->getInit())
+      if (!match(*Init))
+        return false;
+    if (!match(*Node->getLoopVariable()) || !match(*Node->getRangeInit()) ||
+        !match(*Node->getBody()))
+      return false;
+    return VisitorBase::TraverseStmt(Node->getBody());
+  }
   bool TraverseLambdaExpr(LambdaExpr *Node) {
     if (!Finder->isTraversalIgnoringImplicitNodes())
       return VisitorBase::TraverseLambdaExpr(Node);
@@ -575,8 +589,6 @@ public:
 
     if (isTraversalIgnoringImplicitNodes()) {
       IgnoreImplicitChildren = true;
-      if (Node.get<CXXForRangeStmt>())
-        ScopedTraversal = true;
     }
 
     ASTNodeNotSpelledInSourceScope RAII(this, ScopedTraversal);
