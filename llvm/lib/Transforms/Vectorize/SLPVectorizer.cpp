@@ -7138,6 +7138,7 @@ private:
     auto *VecTy = FixedVectorType::get(ScalarTy, ReduxWidth);
 
     RecurKind Kind = RdxTreeInst.getKind();
+    unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(Kind);
     int SplittingRdxCost;
     switch (Kind) {
     case RecurKind::Add:
@@ -7147,9 +7148,8 @@ private:
     case RecurKind::Xor:
     case RecurKind::FAdd:
     case RecurKind::FMul:
-      SplittingRdxCost =
-          TTI->getArithmeticReductionCost(RdxTreeInst.getOpcode(), VecTy,
-                                          /*IsPairwiseForm=*/false);
+      SplittingRdxCost = TTI->getArithmeticReductionCost(
+          RdxOpcode, VecTy, /*IsPairwiseForm=*/false);
       break;
     case RecurKind::SMax:
     case RecurKind::SMin:
@@ -7175,15 +7175,14 @@ private:
     case RecurKind::Xor:
     case RecurKind::FAdd:
     case RecurKind::FMul:
-      ScalarReduxCost =
-          TTI->getArithmeticInstrCost(RdxTreeInst.getOpcode(), ScalarTy);
+      ScalarReduxCost = TTI->getArithmeticInstrCost(RdxOpcode, ScalarTy);
       break;
     case RecurKind::SMax:
     case RecurKind::SMin:
     case RecurKind::UMax:
     case RecurKind::UMin:
       ScalarReduxCost =
-          TTI->getCmpSelInstrCost(RdxTreeInst.getOpcode(), ScalarTy) +
+          TTI->getCmpSelInstrCost(RdxOpcode, ScalarTy) +
           TTI->getCmpSelInstrCost(Instruction::Select, ScalarTy,
                                   CmpInst::makeCmpResultType(ScalarTy));
       break;
