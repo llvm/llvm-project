@@ -1958,14 +1958,33 @@ struct DeduplicateInputs : public RewritePattern {
     return success();
   }
 };
+
+/// Canonicalize a `linalgOp` -> `dim` pattern by replacing the `dim` arg
+/// with the corresponding output tensor argument of the linalg op.
+struct ReplaceDimOfLinalgResult : public OpRewritePattern<DimOp> {
+  using OpRewritePattern<DimOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(DimOp dimOp,
+                                PatternRewriter &rewriter) const override {
+    Value dimOpArg = dimOp.memrefOrTensor();
+    auto linalgOp = dimOpArg.getDefiningOp<LinalgOp>();
+    if (!linalgOp)
+      return failure();
+
+    auto results = linalgOp.getOperation()->getResults();
+    int64_t id = std::distance(results.begin(), llvm::find(results, dimOpArg));
+    auto outputTensors = linalgOp.getOutputTensors();
+    rewriter.replaceOpWithNewOp<DimOp>(dimOp, outputTensors[id], dimOp.index());
+    return success();
+  }
+};
 } // namespace
 
 #define CANONICALIZERS_AND_FOLDERS(XXX)                                        \
   void XXX::getCanonicalizationPatterns(OwningRewritePatternList &results,     \
                                         MLIRContext *context) {                \
-    results.insert<EraseDeadLinalgOp>();                                       \
-    results.insert<FoldTensorCastOp>();                                        \
-    results.insert<DeduplicateInputs>();                                       \
+    results.insert<DeduplicateInputs, EraseDeadLinalgOp, FoldTensorCastOp>();  \
+    results.insert<ReplaceDimOfLinalgResult>(context);                         \
   }                                                                            \
                                                                                \
   LogicalResult XXX::fold(ArrayRef<Attribute>,                                 \
