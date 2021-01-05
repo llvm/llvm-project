@@ -4089,13 +4089,23 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(Expr *E,
 
   bool IsUnevaluatedOperand =
       (ExprKind == UETT_SizeOf || ExprKind == UETT_AlignOf ||
-       ExprKind == UETT_PreferredAlignOf);
+       ExprKind == UETT_PreferredAlignOf || ExprKind == UETT_VecStep);
   if (IsUnevaluatedOperand) {
     ExprResult Result = CheckUnevaluatedOperand(E);
     if (Result.isInvalid())
       return true;
     E = Result.get();
   }
+
+  // The operand for sizeof and alignof is in an unevaluated expression context,
+  // so side effects could result in unintended consequences.
+  // Exclude instantiation-dependent expressions, because 'sizeof' is sometimes
+  // used to build SFINAE gadgets.
+  // FIXME: Should we consider instantiation-dependent operands to 'alignof'?
+  if (IsUnevaluatedOperand && !inTemplateInstantiation() &&
+      !E->isInstantiationDependent() &&
+      E->HasSideEffects(Context, false))
+    Diag(E->getExprLoc(), diag::warn_side_effects_unevaluated_context);
 
   if (ExprKind == UETT_VecStep)
     return CheckVecStepTraitOperandType(*this, ExprTy, E->getExprLoc(),
@@ -4132,16 +4142,6 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(Expr *E,
         << getTraitSpelling(ExprKind) << E->getSourceRange();
     return true;
   }
-
-  // The operand for sizeof and alignof is in an unevaluated expression context,
-  // so side effects could result in unintended consequences.
-  // Exclude instantiation-dependent expressions, because 'sizeof' is sometimes
-  // used to build SFINAE gadgets.
-  // FIXME: Should we consider instantiation-dependent operands to 'alignof'?
-  if (IsUnevaluatedOperand && !inTemplateInstantiation() &&
-      !E->isInstantiationDependent() &&
-      E->HasSideEffects(Context, false))
-    Diag(E->getExprLoc(), diag::warn_side_effects_unevaluated_context);
 
   if (CheckObjCTraitOperandConstraints(*this, ExprTy, E->getExprLoc(),
                                        E->getSourceRange(), ExprKind))
