@@ -291,7 +291,7 @@ bool AMDGPUPostLegalizerCombinerHelper::matchClampI64ToI16(
 
   CmpInst::Predicate Predicate2;
 
-  if (!mi_match(Base, MRI, m_GISelect(m_GICmp(m_Pred(Predicate2), m_Reg(), m_Reg()), m_Reg(MatchInfo.AssignValue), m_ICst(MatchInfo.Cmp2))))
+  if (!mi_match(Base, MRI, m_GISelect(m_GICmp(m_Pred(Predicate2), m_Reg(), m_Reg()), m_Reg(MatchInfo.Origin), m_ICst(MatchInfo.Cmp2))))
     return false;
     
   if ((Predicate1 == CmpInst::ICMP_SLT &&
