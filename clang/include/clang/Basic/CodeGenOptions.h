@@ -30,6 +30,8 @@ namespace clang {
 /// Bitfields of CodeGenOptions, split out from CodeGenOptions to ensure
 /// that this large collection of bitfields is a trivial class type.
 class CodeGenOptionsBase {
+  friend class CompilerInvocation;
+
 public:
 #define CODEGENOPT(Name, Bits, Default) unsigned Name : Bits;
 #define ENUM_CODEGENOPT(Name, Type, Bits, Default)
