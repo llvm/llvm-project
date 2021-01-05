@@ -59,6 +59,12 @@ public:
   /// getMaxPerfectDepth(Loop_i) would return 2.
   static unsigned getMaxPerfectDepth(const Loop &Root, ScalarEvolution &SE);
 
+  /// Recursivelly traverse all empty 'single successor' basic blocks of \p From
+  /// (if there are any). Return the last basic block found or \p End if it was
+  /// reached during the search.
+  static const BasicBlock &skipEmptyBlockUntil(const BasicBlock *From,
+                                               const BasicBlock *End);
+
   /// Return the outermost loop in the loop nest.
   Loop &getOutermostLoop() const { return *Loops.front(); }
 
@@ -126,6 +132,12 @@ public:
   bool areAllLoopsSimplifyForm() const {
     return llvm::all_of(Loops,
                         [](const Loop *L) { return L->isLoopSimplifyForm(); });
+  }
+
+  /// Return true if all loops in the loop nest are in rotated form.
+  bool areAllLoopsRotatedForm() const {
+    return std::all_of(Loops.begin(), Loops.end(),
+                       [](const Loop *L) { return L->isRotatedForm(); });
   }
 
   StringRef getName() const { return Loops.front()->getName(); }
