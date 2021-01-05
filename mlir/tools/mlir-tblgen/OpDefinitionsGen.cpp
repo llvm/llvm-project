@@ -788,7 +788,7 @@ void OpEmitter::genOptionalAttrRemovers() {
     auto upperInitial = name.take_front().upper();
     auto suffix = name.drop_front();
     auto *method = opClass.addMethodAndPrune(
-        "Attribute", ("remove" + upperInitial + suffix + "Attr").str());
+        "::mlir::Attribute", ("remove" + upperInitial + suffix + "Attr").str());
     if (!method)
       return;
     auto &body = method->body();
