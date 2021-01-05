@@ -15,11 +15,11 @@
 #ifndef HEADER_INCLUDED
 #define HEADER_INCLUDED
 
-// CHECK-DAG: @a = global i8 1,
-// CHECK-DAG: @b = constant i8 1,
-// CXX11-DAG: @c = constant i8 1,
-// CHECK-DAG: @d = global float 1.000000e+00
-// CHECK-DAG: @e = constant float 1.000000e+00
+// CHECK-DAG: @a ={{.*}} global i8 1,
+// CHECK-DAG: @b ={{.*}} constant i8 1,
+// CXX11-DAG: @c ={{.*}} constant i8 1,
+// CHECK-DAG: @d ={{.*}} global float 1.000000e+00
+// CHECK-DAG: @e ={{.*}} constant float 1.000000e+00
 
 bool a = __builtin_is_constant_evaluated();
 extern const bool b = __builtin_is_constant_evaluated();

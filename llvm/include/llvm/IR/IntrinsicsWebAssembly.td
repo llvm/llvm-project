@@ -290,6 +290,15 @@ def int_wasm_extmul_high_unsigned :
             [LLVMSubdivide2VectorType<0>, LLVMSubdivide2VectorType<0>],
             [IntrNoMem, IntrSpeculatable]>;
 
+def int_wasm_extadd_pairwise_signed :
+  Intrinsic<[llvm_anyvector_ty],
+            [LLVMSubdivide2VectorType<0>],
+            [IntrNoMem, IntrSpeculatable]>;
+def int_wasm_extadd_pairwise_unsigned :
+  Intrinsic<[llvm_anyvector_ty],
+            [LLVMSubdivide2VectorType<0>],
+            [IntrNoMem, IntrSpeculatable]>;
+
 def int_wasm_signselect :
   Intrinsic<[llvm_anyvector_ty],
             [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],

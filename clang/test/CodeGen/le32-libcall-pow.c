@@ -9,7 +9,7 @@ float powf(float, float);
 double pow(double, double);
 long double powl(long double, long double);
 
-// CHECK-LABEL: define void @test_pow
+// CHECK-LABEL: define{{.*}} void @test_pow
 void test_pow(float a0, double a1, long double a2) {
   // CHECK: call float @powf
   float l0 = powf(a0, a0);

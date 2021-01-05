@@ -637,7 +637,7 @@ def BNDR : RegisterClass<"X86", [v2i64], 128, (sequence "BND%u", 0, 3)>;
 
 // Tiles
 let CopyCost = -1 in // Don't allow copying of tile registers
-def TILE : RegisterClass<"X86", [v256i32], 8192,
+def TILE : RegisterClass<"X86", [x86amx], 8192,
                          (sequence "TMM%u", 0, 7)> {let Size = 8192;}
 def TILECFG : RegisterClass<"X86", [untyped], 512, (add TMMCFG)> {
   let CopyCost = -1;  // Don't allow copying of tile config registers.

@@ -49,8 +49,8 @@ declare signext i32 @do_something(double*)
 ; CHECK64-NEXT:       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 
 ; CHECK64-NEXT: stack:
-; CHECK64-NEXT:   - { id: 0, name: '<unnamed alloca>', type: variable-sized, offset: -8,
-; CHECK64-NEXT:       alignment: 1, stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+; CHECK64-NEXT:   - { id: 0, name: '', type: variable-sized, offset: -8, alignment: 1, 
+; CHECK64-NEXT:       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
 ; CHECK64-NEXT:       local-offset: 0, debug-info-variable: '', debug-info-expression: '',
 ; CHECK64-NEXT:       debug-info-location: '' }
 ; CHECK64-NEXT:   - { id: 1, name: '', type: default, offset: -16, size: 8, alignment: 8,
@@ -68,8 +68,8 @@ declare signext i32 @do_something(double*)
 ; CHECK32-NEXT:       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 
 ; CHECK32-NEXT: stack:
-; CHECK32-NEXT:   - { id: 0, name: '<unnamed alloca>', type: variable-sized, offset: -4,
-; CHECK32-NEXT:       alignment: 1, stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+; CHECK32-NEXT:   - { id: 0, name: '', type: variable-sized, offset: -4, alignment: 1, 
+; CHECK32-NEXT:       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
 ; CHECK32-NEXT:       local-offset: 0, debug-info-variable: '', debug-info-expression: '',
 ; CHECK32-NEXT:       debug-info-location: '' }
 ; CHECK32-NEXT:   - { id: 1, name: '', type: default, offset: -8, size: 4, alignment: 4,

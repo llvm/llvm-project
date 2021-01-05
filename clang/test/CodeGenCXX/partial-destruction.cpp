@@ -12,7 +12,7 @@ namespace test0 {
     A as[10] = { 5, 7 };
     opaque();
   }
-  // CHECK-LABEL:    define void @_ZN5test04testEv()
+  // CHECK-LABEL:    define{{.*}} void @_ZN5test04testEv()
   // CHECK-SAME: personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
   // CHECK:      [[AS:%.*]] = alloca [10 x [[A:%.*]]], align
   // CHECK-NEXT: [[ENDVAR:%.*]] = alloca [[A]]*
@@ -103,7 +103,7 @@ namespace test1 {
   void test() {
     B v = { 5, 6, 7, 8 };
   }
-  // CHECK-LABEL:    define void @_ZN5test14testEv()
+  // CHECK-LABEL:    define{{.*}} void @_ZN5test14testEv()
   // CHECK-SAME: personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
   // CHECK:      [[V:%.*]] = alloca [[B:%.*]], align 4
   // CHECK-NEXT: alloca i8*
@@ -136,7 +136,7 @@ namespace test2 {
   void test() {
     A v[4][7];
 
-    // CHECK-LABEL:    define void @_ZN5test24testEv()
+    // CHECK-LABEL:    define{{.*}} void @_ZN5test24testEv()
     // CHECK-SAME: personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
     // CHECK:      [[V:%.*]] = alloca [4 x [7 x [[A:%.*]]]], align 1
     // CHECK-NEXT: alloca i8*
@@ -187,7 +187,7 @@ namespace test4 {
     A v[2][3] = { { A(0), A(1), A(2) }, { A(3), A(4), A(5) } };
   }
 }
-// CHECK-LABEL: define void @_ZN5test44testEv()
+// CHECK-LABEL: define{{.*}} void @_ZN5test44testEv()
 // CHECK:       [[ARRAY:%.*]] = alloca [2 x [3 x [[A:%.*]]]], align
 // CHECK:       [[A0:%.*]] = getelementptr inbounds [2 x [3 x [[A]]]], [2 x [3 x [[A]]]]* [[ARRAY]], i64 0, i64 0
 // CHECK-NEXT:  store [3 x [[A]]]* [[A0]],

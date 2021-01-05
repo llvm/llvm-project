@@ -253,6 +253,7 @@ public:
     case llvm::Triple::mips:
     case llvm::Triple::mipsel:
     case llvm::Triple::ppc:
+    case llvm::Triple::ppcle:
     case llvm::Triple::ppc64:
     case llvm::Triple::ppc64le:
       this->MCountName = "_mcount";
@@ -413,6 +414,7 @@ public:
     case llvm::Triple::mips64:
     case llvm::Triple::mips64el:
     case llvm::Triple::ppc:
+    case llvm::Triple::ppcle:
     case llvm::Triple::ppc64:
     case llvm::Triple::ppc64le:
       this->MCountName = "_mcount";

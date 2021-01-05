@@ -1,17 +1,17 @@
 ; RUN: llc -verify-machineinstrs -o - %s -mtriple=aarch64-linux-gnu | FileCheck %s
 ; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu -mattr=-fp-armv8 | FileCheck --check-prefix=CHECK-NOFP %s
 
-@var_8bit = global i8 0
-@var_16bit = global i16 0
-@var_32bit = global i32 0
-@var_64bit = global i64 0
+@var_8bit = dso_local global i8 0
+@var_16bit = dso_local global i16 0
+@var_32bit = dso_local global i32 0
+@var_64bit = dso_local global i64 0
 
-@var_float = global float 0.0
-@var_double = global double 0.0
+@var_float = dso_local global float 0.0
+@var_double = dso_local global double 0.0
 
-@varptr = global i8* null
+@varptr = dso_local global i8* null
 
-define void @ldst_8bit() {
+define dso_local void @ldst_8bit() {
 ; CHECK-LABEL: ldst_8bit:
 
 ; No architectural support for loads to 16-bit or 8-bit since we
@@ -72,7 +72,7 @@ define void @ldst_8bit() {
    ret void
 }
 
-define void @ldst_16bit() {
+define dso_local void @ldst_16bit() {
 ; CHECK-LABEL: ldst_16bit:
 
 ; No architectural support for loads to 16-bit or 16-bit since we
@@ -140,7 +140,7 @@ define void @ldst_16bit() {
    ret void
 }
 
-define void @ldst_32bit() {
+define dso_local void @ldst_32bit() {
 ; CHECK-LABEL: ldst_32bit:
 
   %addr_8bit = load i8*, i8** @varptr
@@ -186,7 +186,7 @@ define void @ldst_32bit() {
   ret void
 }
 
-define void @ldst_float() {
+define dso_local void @ldst_float() {
 ; CHECK-LABEL: ldst_float:
 
   %addr_8bit = load i8*, i8** @varptr
@@ -204,7 +204,7 @@ define void @ldst_float() {
   ret void
 }
 
-define void @ldst_double() {
+define dso_local void @ldst_double() {
 ; CHECK-LABEL: ldst_double:
 
   %addr_8bit = load i8*, i8** @varptr

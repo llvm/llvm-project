@@ -1,22 +1,22 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -S -emit-llvm -o - %s | FileCheck %s
 // UNSUPPORTED: ppc64be
 
-// CHECK-LABEL: define void @foo_no_mempcy() #0
+// CHECK-LABEL: define{{.*}} void @foo_no_mempcy() #0
 extern "C" void foo_no_mempcy() __attribute__((no_builtin("memcpy"))) {}
 
-// CHECK-LABEL: define void @foo_no_mempcy_twice() #0
+// CHECK-LABEL: define{{.*}} void @foo_no_mempcy_twice() #0
 extern "C" void foo_no_mempcy_twice() __attribute__((no_builtin("memcpy"))) __attribute__((no_builtin("memcpy"))) {}
 
-// CHECK-LABEL: define void @foo_no_builtins() #1
+// CHECK-LABEL: define{{.*}} void @foo_no_builtins() #1
 extern "C" void foo_no_builtins() __attribute__((no_builtin)) {}
 
-// CHECK-LABEL: define void @foo_no_mempcy_memset() #2
+// CHECK-LABEL: define{{.*}} void @foo_no_mempcy_memset() #2
 extern "C" void foo_no_mempcy_memset() __attribute__((no_builtin("memset", "memcpy"))) {}
 
-// CHECK-LABEL: define void @separate_attrs() #2
+// CHECK-LABEL: define{{.*}} void @separate_attrs() #2
 extern "C" void separate_attrs() __attribute__((no_builtin("memset"))) __attribute__((no_builtin("memcpy"))) {}
 
-// CHECK-LABEL: define void @separate_attrs_ordering() #2
+// CHECK-LABEL: define{{.*}} void @separate_attrs_ordering() #2
 extern "C" void separate_attrs_ordering() __attribute__((no_builtin("memcpy"))) __attribute__((no_builtin("memset"))) {}
 
 struct A {
@@ -29,19 +29,19 @@ struct B : public A {
   virtual ~B();
 };
 
-// CHECK-LABEL: define void @call_a_foo(%struct.A* %a) #3
+// CHECK-LABEL: define{{.*}} void @call_a_foo(%struct.A* %a) #3
 extern "C" void call_a_foo(A *a) {
   // CHECK: %call = call i32 %2(%struct.A* {{[^,]*}} %0)
   a->foo(); // virtual call is not annotated
 }
 
-// CHECK-LABEL: define void @call_b_foo(%struct.B* %b) #3
+// CHECK-LABEL: define{{.*}} void @call_b_foo(%struct.B* %b) #3
 extern "C" void call_b_foo(B *b) {
   // CHECK: %call = call i32 %2(%struct.B* {{[^,]*}} %0)
   b->foo(); // virtual call is not annotated
 }
 
-// CHECK-LABEL: define void @call_foo_no_mempcy() #3
+// CHECK-LABEL: define{{.*}} void @call_foo_no_mempcy() #3
 extern "C" void call_foo_no_mempcy() {
   // CHECK: call void @foo_no_mempcy() #7
   foo_no_mempcy(); // call gets annotated with "no-builtin-memcpy"

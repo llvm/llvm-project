@@ -1347,7 +1347,7 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, const SDLoc &DL,
 
     SmallVector<SDValue, 8> Ops;
     for (unsigned i = 0, e = VT.getVectorNumElements(); i != e; ++i)
-      Ops.insert(Ops.end(), EltParts.begin(), EltParts.end());
+      llvm::append_range(Ops, EltParts);
 
     SDValue V = getNode(ISD::BITCAST, DL, VT, getBuildVector(ViaVecVT, DL, Ops));
     return V;
@@ -8767,7 +8767,7 @@ void SelectionDAG::updateDivergence(SDNode *N) {
     bool IsDivergent = calculateDivergence(N);
     if (N->SDNodeBits.IsDivergent != IsDivergent) {
       N->SDNodeBits.IsDivergent = IsDivergent;
-      Worklist.insert(Worklist.end(), N->use_begin(), N->use_end());
+      llvm::append_range(Worklist, N->uses());
     }
   } while (!Worklist.empty());
 }

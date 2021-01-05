@@ -12,7 +12,7 @@ extern "C" void followup_outer(int n, int *x) {
 }
 
 
-// CHECK-LABEL: define void @followup_outer
+// CHECK-LABEL: define{{.*}} void @followup_outer
 // CHECK: br label %for.cond, !llvm.loop ![[LOOP_3:[0-9]+]]
 
 // CHECK-DAG: ![[ACCESSGROUP_2:[0-9]+]] = distinct !{}

@@ -837,7 +837,8 @@ protected:
   /// Middle Block between the vector and the scalar.
   BasicBlock *LoopMiddleBlock;
 
-  /// The ExitBlock of the scalar loop.
+  /// The (unique) ExitBlock of the scalar loop.  Note that
+  /// there can be multiple exiting edges reaching this block.
   BasicBlock *LoopExitBlock;
 
   /// The vector loop body.
@@ -1548,11 +1549,16 @@ public:
     return InterleaveInfo.getInterleaveGroup(Instr);
   }
 
-  /// Returns true if an interleaved group requires a scalar iteration
-  /// to handle accesses with gaps, and there is nothing preventing us from
-  /// creating a scalar epilogue.
+  /// Returns true if we're required to use a scalar epilogue for at least
+  /// the final iteration of the original loop.
   bool requiresScalarEpilogue() const {
-    return isScalarEpilogueAllowed() && InterleaveInfo.requiresScalarEpilogue();
+    if (!isScalarEpilogueAllowed())
+      return false;
+    // If we might exit from anywhere but the latch, must run the exiting
+    // iteration in scalar form.
+    if (TheLoop->getExitingBlock() != TheLoop->getLoopLatch())
+      return true;
+    return InterleaveInfo.requiresScalarEpilogue();
   }
 
   /// Returns true if a scalar epilogue is not allowed due to optsize or a
@@ -2912,7 +2918,7 @@ PHINode *InnerLoopVectorizer::createInductionVariable(Loop *L, Value *Start,
   Induction->addIncoming(Next, Latch);
   // Create the compare.
   Value *ICmp = Builder.CreateICmpEQ(Next, End);
-  Builder.CreateCondBr(ICmp, L->getExitBlock(), Header);
+  Builder.CreateCondBr(ICmp, L->getUniqueExitBlock(), Header);
 
   // Now we have two terminators. Remove the old one from the block.
   Latch->getTerminator()->eraseFromParent();
@@ -3000,13 +3006,17 @@ Value *InnerLoopVectorizer::getOrCreateVectorTripCount(Loop *L) {
   // unroll factor (number of SIMD instructions).
   Value *R = Builder.CreateURem(TC, Step, "n.mod.vf");
 
-  // If there is a non-reversed interleaved group that may speculatively access
-  // memory out-of-bounds, we need to ensure that there will be at least one
-  // iteration of the scalar epilogue loop. Thus, if the step evenly divides
+  // There are two cases where we need to ensure (at least) the last iteration
+  // runs in the scalar remainder loop. Thus, if the step evenly divides
   // the trip count, we set the remainder to be equal to the step. If the step
   // does not evenly divide the trip count, no adjustment is necessary since
   // there will already be scalar iterations. Note that the minimum iterations
-  // check ensures that N >= Step.
+  // check ensures that N >= Step. The cases are:
+  // 1) If there is a non-reversed interleaved group that may speculatively
+  //    access memory out-of-bounds.
+  // 2) If any instruction may follow a conditionally taken exit. That is, if
+  //    the loop contains multiple exiting blocks, or a single exiting block
+  //    which is not the latch.
   if (VF.isVector() && Cost->requiresScalarEpilogue()) {
     auto *IsZero = Builder.CreateICmpEQ(R, ConstantInt::get(R->getType(), 0));
     R = Builder.CreateSelect(IsZero, Step, R);
@@ -3301,7 +3311,7 @@ Value *InnerLoopVectorizer::emitTransformedIndex(
 Loop *InnerLoopVectorizer::createVectorLoopSkeleton(StringRef Prefix) {
   LoopScalarBody = OrigLoop->getHeader();
   LoopVectorPreHeader = OrigLoop->getLoopPreheader();
-  LoopExitBlock = OrigLoop->getExitBlock();
+  LoopExitBlock = OrigLoop->getUniqueExitBlock();
   assert(LoopExitBlock && "Must have an exit block");
   assert(LoopVectorPreHeader && "Invalid loop structure");
 
@@ -3311,6 +3321,16 @@ Loop *InnerLoopVectorizer::createVectorLoopSkeleton(StringRef Prefix) {
   LoopScalarPreHeader =
       SplitBlock(LoopMiddleBlock, LoopMiddleBlock->getTerminator(), DT, LI,
                  nullptr, Twine(Prefix) + "scalar.ph");
+
+  // Set up branch from middle block to the exit and scalar preheader blocks.
+  // completeLoopSkeleton will update the condition to use an iteration check,
+  // if required to decide whether to execute the remainder.
+  BranchInst *BrInst =
+      BranchInst::Create(LoopExitBlock, LoopScalarPreHeader, Builder.getTrue());
+  auto *ScalarLatchTerm = OrigLoop->getLoopLatch()->getTerminator();
+  BrInst->setDebugLoc(ScalarLatchTerm->getDebugLoc());
+  ReplaceInstWithInst(LoopMiddleBlock->getTerminator(), BrInst);
+
   // We intentionally don't let SplitBlock to update LoopInfo since
   // LoopVectorBody should belong to another loop than LoopVectorPreHeader.
   // LoopVectorBody is explicitly added to the correct place few lines later.
@@ -3419,23 +3439,18 @@ BasicBlock *InnerLoopVectorizer::completeLoopSkeleton(Loop *L,
   // all of the iterations in the first vector loop.
   // If (N - N%VF) == N, then we *don't* need to run the remainder.
   // If tail is to be folded, we know we don't need to run the remainder.
-  Value *CmpN = Builder.getTrue();
   if (!Cost->foldTailByMasking()) {
-    CmpN = CmpInst::Create(Instruction::ICmp, CmpInst::ICMP_EQ, Count,
-                           VectorTripCount, "cmp.n",
-                           LoopMiddleBlock->getTerminator());
+    Instruction *CmpN = CmpInst::Create(Instruction::ICmp, CmpInst::ICMP_EQ,
+                                        Count, VectorTripCount, "cmp.n",
+                                        LoopMiddleBlock->getTerminator());
 
     // Here we use the same DebugLoc as the scalar loop latch terminator instead
     // of the corresponding compare because they may have ended up with
     // different line numbers and we want to avoid awkward line stepping while
     // debugging. Eg. if the compare has got a line number inside the loop.
-    cast<Instruction>(CmpN)->setDebugLoc(ScalarLatchTerm->getDebugLoc());
+    CmpN->setDebugLoc(ScalarLatchTerm->getDebugLoc());
+    cast<BranchInst>(LoopMiddleBlock->getTerminator())->setCondition(CmpN);
   }
-
-  BranchInst *BrInst =
-      BranchInst::Create(LoopExitBlock, LoopScalarPreHeader, CmpN);
-  BrInst->setDebugLoc(ScalarLatchTerm->getDebugLoc());
-  ReplaceInstWithInst(LoopMiddleBlock->getTerminator(), BrInst);
 
   // Get ready to start creating new instructions into the vectorized body.
   assert(LoopVectorPreHeader == L->getLoopPreheader() &&
@@ -3567,7 +3582,7 @@ void InnerLoopVectorizer::fixupIVUsers(PHINode *OrigPhi,
   // value (the value that feeds into the phi from the loop latch).
   // We allow both, but they, obviously, have different values.
 
-  assert(OrigLoop->getExitBlock() && "Expected a single exit block");
+  assert(OrigLoop->getUniqueExitBlock() && "Expected a single exit block");
 
   DenseMap<Value *, Value *> MissingVals;
 
@@ -4137,11 +4152,9 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
          "Unable to find the reduction variable");
   RecurrenceDescriptor RdxDesc = Legal->getReductionVars()[Phi];
 
-  RecurrenceDescriptor::RecurrenceKind RK = RdxDesc.getRecurrenceKind();
+  RecurKind RK = RdxDesc.getRecurrenceKind();
   TrackingVH<Value> ReductionStartValue = RdxDesc.getRecurrenceStartValue();
   Instruction *LoopExitInst = RdxDesc.getLoopExitInstr();
-  RecurrenceDescriptor::MinMaxRecurrenceKind MinMaxKind =
-    RdxDesc.getMinMaxRecurrenceKind();
   setDebugLocFromInst(Builder, ReductionStartValue);
   bool IsInLoopReductionPhi = Cost->isInLoopReduction(Phi);
 
@@ -4158,8 +4171,7 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
   // one for multiplication, -1 for And.
   Value *Identity;
   Value *VectorStart;
-  if (RK == RecurrenceDescriptor::RK_IntegerMinMax ||
-      RK == RecurrenceDescriptor::RK_FloatMinMax) {
+  if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RK)) {
     // MinMax reduction have the start value as their identify.
     if (VF.isScalar() || IsInLoopReductionPhi) {
       VectorStart = Identity = ReductionStartValue;
@@ -4170,7 +4182,7 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
   } else {
     // Handle other reduction kinds:
     Constant *Iden = RecurrenceDescriptor::getRecurrenceIdentity(
-        RK, MinMaxKind, VecTy->getScalarType());
+        RK, VecTy->getScalarType());
     if (VF.isScalar() || IsInLoopReductionPhi) {
       Identity = Iden;
       // This vector is the Identity vector where the first element is the
@@ -4303,16 +4315,14 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
                               ReducedPartRdx, "bin.rdx"),
           RdxDesc.getFastMathFlags());
     else
-      ReducedPartRdx = createMinMaxOp(Builder, MinMaxKind, ReducedPartRdx,
-                                      RdxPart);
+      ReducedPartRdx = createMinMaxOp(Builder, RK, ReducedPartRdx, RdxPart);
   }
 
   // Create the reduction after the loop. Note that inloop reductions create the
   // target reduction in the loop using a Reduction recipe.
   if (VF.isVector() && !IsInLoopReductionPhi) {
-    bool NoNaN = Legal->hasFunNoNaNAttr();
     ReducedPartRdx =
-        createTargetReduction(Builder, TTI, RdxDesc, ReducedPartRdx, NoNaN);
+        createTargetReduction(Builder, TTI, RdxDesc, ReducedPartRdx);
     // If the reduction can be performed in a smaller type, we need to extend
     // the reduction to the wider type before we branch to the original loop.
     if (Phi->getType() != RdxDesc.getRecurrenceType())
@@ -4358,9 +4368,8 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
 
 void InnerLoopVectorizer::clearReductionWrapFlags(
     RecurrenceDescriptor &RdxDesc) {
-  RecurrenceDescriptor::RecurrenceKind RK = RdxDesc.getRecurrenceKind();
-  if (RK != RecurrenceDescriptor::RK_IntegerAdd &&
-      RK != RecurrenceDescriptor::RK_IntegerMult)
+  RecurKind RK = RdxDesc.getRecurrenceKind();
+  if (RK != RecurKind::Add && RK != RecurKind::Mul)
     return;
 
   Instruction *LoopExitInstr = RdxDesc.getLoopExitInstr();
@@ -5295,11 +5304,11 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
   auto isVectorizedMemAccessUse = [&](Instruction *I, Value *Ptr) -> bool {
     return getLoadStorePointerOperand(I) == Ptr && isUniformDecision(I, VF);
   };
-  
+
   // Holds a list of values which are known to have at least one uniform use.
   // Note that there may be other uses which aren't uniform.  A "uniform use"
   // here is something which only demands lane 0 of the unrolled iterations;
-  // it does not imply that all lanes produce the same value (e.g. this is not 
+  // it does not imply that all lanes produce the same value (e.g. this is not
   // the usual meaning of uniform)
   SmallPtrSet<Value *, 8> HasUniformUse;
 
@@ -5485,7 +5494,24 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     // for size.
     if (runtimeChecksRequired())
       return None;
+
     break;
+  }
+
+  // The only loops we can vectorize without a scalar epilogue, are loops with
+  // a bottom-test and a single exiting block. We'd have to handle the fact
+  // that not every instruction executes on the last iteration.  This will
+  // require a lane mask which varies through the vector loop body.  (TODO)
+  if (TheLoop->getExitingBlock() != TheLoop->getLoopLatch()) {
+    // If there was a tail-folding hint/switch, but we can't fold the tail by
+    // masking, fallback to a vectorization with a scalar epilogue.
+    if (ScalarEpilogueStatus == CM_ScalarEpilogueNotNeededUsePredicate) {
+      LLVM_DEBUG(dbgs() << "LV: Cannot fold tail by masking: vectorize with a "
+                           "scalar epilogue instead.\n");
+      ScalarEpilogueStatus = CM_ScalarEpilogueAllowed;
+      return MaxVF;
+    }
+    return None;
   }
 
   // Now try the tail folding
@@ -5542,7 +5568,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     LLVM_DEBUG(dbgs() << "LV: Can't fold tail by masking: don't vectorize\n");
     return None;
   }
-  
+
   if (TC == 0) {
     reportVectorizationFailure(
         "Unable to calculate the loop count due to complex control flow",
@@ -6250,7 +6276,7 @@ LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<ElementCount> VFs) {
           }
         }
       }
-    
+
       for (auto& pair : RegUsage) {
         if (MaxUsages[j].find(pair.first) != MaxUsages[j].end())
           MaxUsages[j][pair.first] = std::max(MaxUsages[j][pair.first], pair.second);
@@ -6268,7 +6294,7 @@ LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<ElementCount> VFs) {
 
   for (unsigned i = 0, e = VFs.size(); i < e; ++i) {
     SmallMapVector<unsigned, unsigned, 4> Invariant;
-  
+
     for (auto Inst : LoopInvariants) {
       unsigned Usage =
           VFs[i].isScalar() ? 1 : GetRegUsage(Inst->getType(), VFs[i]);
@@ -7916,6 +7942,12 @@ VPValue *VPRecipeBuilder::createEdgeMask(BasicBlock *Src, BasicBlock *Dst,
   if (!BI->isConditional() || BI->getSuccessor(0) == BI->getSuccessor(1))
     return EdgeMaskCache[Edge] = SrcMask;
 
+  // If source is an exiting block, we know the exit edge is dynamically dead
+  // in the vector loop, and thus we don't need to restrict the mask.  Avoid
+  // adding uses of an otherwise potentially dead instruction.
+  if (OrigLoop->isLoopExiting(Src))
+    return EdgeMaskCache[Edge] = SrcMask;
+
   VPValue *EdgeMask = Plan->getOrAddVPValue(BI->getCondition());
   assert(EdgeMask && "No Edge Mask found for condition");
 
@@ -8358,8 +8390,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
   }
   for (auto &Reduction : CM.getInLoopReductionChains()) {
     PHINode *Phi = Reduction.first;
-    RecurrenceDescriptor::RecurrenceKind Kind =
-        Legal->getReductionVars()[Phi].getRecurrenceKind();
+    RecurKind Kind = Legal->getReductionVars()[Phi].getRecurrenceKind();
     const SmallVector<Instruction *, 4> &ReductionOperations = Reduction.second;
 
     RecipeBuilder.recordRecipeOf(Phi);
@@ -8367,10 +8398,8 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
       RecipeBuilder.recordRecipeOf(R);
       // For min/max reducitons, where we have a pair of icmp/select, we also
       // need to record the ICmp recipe, so it can be removed later.
-      if (Kind == RecurrenceDescriptor::RK_IntegerMinMax ||
-          Kind == RecurrenceDescriptor::RK_FloatMinMax) {
+      if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind))
         RecipeBuilder.recordRecipeOf(cast<Instruction>(R->getOperand(0)));
-      }
     }
   }
 
@@ -8584,12 +8613,11 @@ void LoopVectorizationPlanner::adjustRecipesForInLoopReductions(
     Instruction *Chain = Phi;
     for (Instruction *R : ReductionOperations) {
       VPRecipeBase *WidenRecipe = RecipeBuilder.getRecipe(R);
-      RecurrenceDescriptor::RecurrenceKind Kind = RdxDesc.getRecurrenceKind();
+      RecurKind Kind = RdxDesc.getRecurrenceKind();
 
       VPValue *ChainOp = Plan->getVPValue(Chain);
       unsigned FirstOpId;
-      if (Kind == RecurrenceDescriptor::RK_IntegerMinMax ||
-          Kind == RecurrenceDescriptor::RK_FloatMinMax) {
+      if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind)) {
         assert(isa<VPWidenSelectRecipe>(WidenRecipe) &&
                "Expected to replace a VPWidenSelectSC");
         FirstOpId = 1;
@@ -8614,8 +8642,7 @@ void LoopVectorizationPlanner::adjustRecipesForInLoopReductions(
       WidenRecipe->getVPValue()->replaceAllUsesWith(RedRecipe);
       WidenRecipe->eraseFromParent();
 
-      if (Kind == RecurrenceDescriptor::RK_IntegerMinMax ||
-          Kind == RecurrenceDescriptor::RK_FloatMinMax) {
+      if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind)) {
         VPRecipeBase *CompareRecipe =
             RecipeBuilder.getRecipe(cast<Instruction>(R->getOperand(0)));
         assert(isa<VPWidenRecipe>(CompareRecipe) &&
@@ -8732,26 +8759,25 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
 void VPReductionRecipe::execute(VPTransformState &State) {
   assert(!State.Instance && "Reduction being replicated.");
   for (unsigned Part = 0; Part < State.UF; ++Part) {
-    RecurrenceDescriptor::RecurrenceKind Kind = RdxDesc->getRecurrenceKind();
+    RecurKind Kind = RdxDesc->getRecurrenceKind();
     Value *NewVecOp = State.get(getVecOp(), Part);
     if (VPValue *Cond = getCondOp()) {
       Value *NewCond = State.get(Cond, Part);
       VectorType *VecTy = cast<VectorType>(NewVecOp->getType());
       Constant *Iden = RecurrenceDescriptor::getRecurrenceIdentity(
-          Kind, RdxDesc->getMinMaxRecurrenceKind(), VecTy->getElementType());
+          Kind, VecTy->getElementType());
       Constant *IdenVec =
           ConstantVector::getSplat(VecTy->getElementCount(), Iden);
       Value *Select = State.Builder.CreateSelect(NewCond, NewVecOp, IdenVec);
       NewVecOp = Select;
     }
     Value *NewRed =
-        createTargetReduction(State.Builder, TTI, *RdxDesc, NewVecOp, NoNaN);
+        createTargetReduction(State.Builder, TTI, *RdxDesc, NewVecOp);
     Value *PrevInChain = State.get(getChainOp(), Part);
     Value *NextInChain;
-    if (Kind == RecurrenceDescriptor::RK_IntegerMinMax ||
-        Kind == RecurrenceDescriptor::RK_FloatMinMax) {
+    if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind)) {
       NextInChain =
-          createMinMaxOp(State.Builder, RdxDesc->getMinMaxRecurrenceKind(),
+          createMinMaxOp(State.Builder, RdxDesc->getRecurrenceKind(),
                          NewRed, PrevInChain);
     } else {
       NextInChain = State.Builder.CreateBinOp(

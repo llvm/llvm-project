@@ -534,9 +534,6 @@ void CodeGenModule::Release() {
   if (Context.getLangOpts().SemanticInterposition)
     // Require various optimization to respect semantic interposition.
     getModule().setSemanticInterposition(1);
-  else if (Context.getLangOpts().ExplicitNoSemanticInterposition)
-    // Allow dso_local on applicable targets.
-    getModule().setSemanticInterposition(0);
 
   if (CodeGenOpts.EmitCodeView) {
     // Indicate that we want CodeView in the metadata.
@@ -946,16 +943,31 @@ static bool shouldAssumeDSOLocal(const CodeGenModule &CGM,
   if (TT.isOSBinFormatCOFF() || (TT.isOSWindows() && TT.isOSBinFormatMachO()))
     return true;
 
+  const auto &CGOpts = CGM.getCodeGenOpts();
+  llvm::Reloc::Model RM = CGOpts.RelocationModel;
+  const auto &LOpts = CGM.getLangOpts();
+
+  if (TT.isOSBinFormatMachO()) {
+    if (RM == llvm::Reloc::Static)
+      return true;
+    return GV->isStrongDefinitionForLinker();
+  }
+
   // Only handle COFF and ELF for now.
   if (!TT.isOSBinFormatELF())
     return false;
 
-  // If this is not an executable, don't assume anything is local.
-  const auto &CGOpts = CGM.getCodeGenOpts();
-  llvm::Reloc::Model RM = CGOpts.RelocationModel;
-  const auto &LOpts = CGM.getLangOpts();
-  if (RM != llvm::Reloc::Static && !LOpts.PIE)
-    return false;
+  if (RM != llvm::Reloc::Static && !LOpts.PIE) {
+    // On ELF, if -fno-semantic-interposition is specified and the target
+    // supports local aliases, there will be neither CC1
+    // -fsemantic-interposition nor -fhalf-no-semantic-interposition. Set
+    // dso_local if using a local alias is preferable (can avoid GOT
+    // indirection).
+    if (!GV->canBenefitFromLocalAlias())
+      return false;
+    return !(CGM.getLangOpts().SemanticInterposition ||
+             CGM.getLangOpts().HalfNoSemanticInterposition);
+  }
 
   // A definition cannot be preempted from an executable.
   if (!GV->isDeclarationForLinker())

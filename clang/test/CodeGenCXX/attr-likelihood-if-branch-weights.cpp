@@ -7,7 +7,7 @@ extern bool A();
 extern bool B();
 
 bool f() {
-  // CHECK-LABEL: define zeroext i1 @_Z1fv
+  // CHECK-LABEL: define{{.*}} zeroext i1 @_Z1fv
   // CHECK: br {{.*}} !prof !7
   if (b)
     [[likely]] {
@@ -17,7 +17,7 @@ bool f() {
 }
 
 bool g() {
-  // CHECK-LABEL: define zeroext i1 @_Z1gv
+  // CHECK-LABEL: define{{.*}} zeroext i1 @_Z1gv
   // CHECK: br {{.*}} !prof !8
   if (b)
     [[unlikely]] {
@@ -28,7 +28,7 @@ bool g() {
 }
 
 bool h() {
-  // CHECK-LABEL: define zeroext i1 @_Z1hv
+  // CHECK-LABEL: define{{.*}} zeroext i1 @_Z1hv
   // CHECK: br {{.*}} !prof !8
   if (b)
     [[unlikely]] return A();

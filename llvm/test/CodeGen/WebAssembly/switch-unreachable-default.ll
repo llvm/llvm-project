@@ -43,10 +43,10 @@ unreachable:
 ; CHECK:    br_if 0
 ; CHECK:    block
 ; CHECK:    block
-; CHECK:    br_table {1, 1, 1, 1, 1, 1, 1, 0}
+; CHECK:    br_table {1, 1, 0}
 ; CHECK: .LBB1_2
 ; CHECK:    end_block
-; CHECK:    br_table {0, 0, 0}
+; CHECK:    br_table {0, 0, 0, 0, 0, 0, 0, 0}
 ; CHECK: .LBB1_3
 ; CHECK:    end_block
 ; CHECK:    unreachable

@@ -22,6 +22,8 @@ enum class CrashReason {
   eInvalidAddress,
   ePrivilegedAddress,
   eBoundViolation,
+  eAsyncTagCheckFault,
+  eSyncTagCheckFault,
 
   // SIGILL crash reasons.
   eIllegalOpcode,

@@ -389,6 +389,7 @@ std::string tools::getCPUName(const ArgList &Args, const llvm::Triple &T,
     return "";
 
   case llvm::Triple::ppc:
+  case llvm::Triple::ppcle:
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le: {
     std::string TargetCPUName = ppc::getPPCTargetCPU(Args);

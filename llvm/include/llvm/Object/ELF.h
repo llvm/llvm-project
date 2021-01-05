@@ -90,32 +90,6 @@ template <class ELFT>
 class ELFFile {
 public:
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
-  using uintX_t = typename ELFT::uint;
-  using Elf_Ehdr = typename ELFT::Ehdr;
-  using Elf_Shdr = typename ELFT::Shdr;
-  using Elf_Sym = typename ELFT::Sym;
-  using Elf_Dyn = typename ELFT::Dyn;
-  using Elf_Phdr = typename ELFT::Phdr;
-  using Elf_Rel = typename ELFT::Rel;
-  using Elf_Rela = typename ELFT::Rela;
-  using Elf_Relr = typename ELFT::Relr;
-  using Elf_Verdef = typename ELFT::Verdef;
-  using Elf_Verdaux = typename ELFT::Verdaux;
-  using Elf_Verneed = typename ELFT::Verneed;
-  using Elf_Vernaux = typename ELFT::Vernaux;
-  using Elf_Versym = typename ELFT::Versym;
-  using Elf_Hash = typename ELFT::Hash;
-  using Elf_GnuHash = typename ELFT::GnuHash;
-  using Elf_Nhdr = typename ELFT::Nhdr;
-  using Elf_Note = typename ELFT::Note;
-  using Elf_Note_Iterator = typename ELFT::NoteIterator;
-  using Elf_Dyn_Range = typename ELFT::DynRange;
-  using Elf_Shdr_Range = typename ELFT::ShdrRange;
-  using Elf_Sym_Range = typename ELFT::SymRange;
-  using Elf_Rel_Range = typename ELFT::RelRange;
-  using Elf_Rela_Range = typename ELFT::RelaRange;
-  using Elf_Relr_Range = typename ELFT::RelrRange;
-  using Elf_Phdr_Range = typename ELFT::PhdrRange;
 
   // This is a callback that can be passed to a number of functions.
   // It can be used to ignore non-critical errors (warnings), which is

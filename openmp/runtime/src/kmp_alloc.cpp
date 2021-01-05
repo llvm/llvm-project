@@ -1353,7 +1353,7 @@ omp_allocator_handle_t __kmpc_init_allocator(int gtid, omp_memspace_handle_t ms,
     case omp_atk_pinned:
       break;
     case omp_atk_alignment:
-      al->alignment = traits[i].value;
+      __kmp_type_convert(traits[i].value, &(al->alignment));
       KMP_ASSERT(IS_POWER_OF_TWO(al->alignment));
       break;
     case omp_atk_pool_size:
@@ -1892,8 +1892,7 @@ void ___kmp_free(void *ptr KMP_SRC_LOC_DECL) {
 
 void *___kmp_fast_allocate(kmp_info_t *this_thr, size_t size KMP_SRC_LOC_DECL) {
   void *ptr;
-  int num_lines;
-  int idx;
+  size_t num_lines, idx;
   int index;
   void *alloc_ptr;
   size_t alloc_size;

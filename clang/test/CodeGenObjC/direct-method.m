@@ -204,7 +204,7 @@ __attribute__((objc_direct_members))
 @end
 
 int useRoot(Root *r) {
-  // CHECK-LABEL: define i32 @useRoot
+  // CHECK-LABEL: define{{.*}} i32 @useRoot
   // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[Root getInt]"
   // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[Root intProperty]"
   // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[Root intProperty2]"
@@ -212,7 +212,7 @@ int useRoot(Root *r) {
 }
 
 int useFoo(Foo *f) {
-  // CHECK-LABEL: define i32 @useFoo
+  // CHECK-LABEL: define{{.*}} i32 @useFoo
   // CHECK: call void bitcast {{.*}} @"\01-[Foo setGetDynamic_setDirect:]"
   // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[Foo getDirect_setDynamic]"
   // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[Foo directMethodInExtension]"
@@ -231,7 +231,7 @@ __attribute__((objc_root_class))
 @end
 
 int useRootDeclOnly(RootDeclOnly *r) {
-  // CHECK-LABEL: define i32 @useRootDeclOnly
+  // CHECK-LABEL: define{{.*}} i32 @useRootDeclOnly
   // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[RootDeclOnly intProperty]"
   return [r intProperty];
 }

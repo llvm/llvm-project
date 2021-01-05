@@ -1331,7 +1331,7 @@ static unsigned setBufferOffsets(MachineIRBuilder &B,
   const LLT S32 = LLT::scalar(32);
   MachineRegisterInfo *MRI = B.getMRI();
 
-  if (Optional<int64_t> Imm = getConstantVRegVal(CombinedOffset, *MRI)) {
+  if (Optional<int64_t> Imm = getConstantVRegSExtVal(CombinedOffset, *MRI)) {
     uint32_t SOffset, ImmOffset;
     if (AMDGPU::splitMUBUFOffset(*Imm, SOffset, ImmOffset, &RBI.Subtarget,
                                  Alignment)) {

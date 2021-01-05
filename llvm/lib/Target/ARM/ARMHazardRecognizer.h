@@ -13,9 +13,20 @@
 #ifndef LLVM_LIB_TARGET_ARM_ARMHAZARDRECOGNIZER_H
 #define LLVM_LIB_TARGET_ARM_ARMHAZARDRECOGNIZER_H
 
+#include "ARMBaseInstrInfo.h"
+#include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/ScheduleHazardRecognizer.h"
+#include "llvm/Support/DataTypes.h"
+#include <array>
+#include <initializer_list>
 
 namespace llvm {
+
+class DataLayout;
+class MachineFunction;
+class MachineInstr;
+class ScheduleDAG;
 
 // Hazards related to FP MLx instructions
 class ARMHazardRecognizerFPMLx : public ScheduleHazardRecognizer {
@@ -30,6 +41,27 @@ public:
   void EmitInstruction(SUnit *SU) override;
   void AdvanceCycle() override;
   void RecedeCycle() override;
+};
+
+// Hazards related to bank conflicts
+class ARMBankConflictHazardRecognizer : public ScheduleHazardRecognizer {
+  SmallVector<MachineInstr *, 8> Accesses;
+  const MachineFunction &MF;
+  const DataLayout &DL;
+  int64_t DataMask;
+  bool AssumeITCMBankConflict;
+
+public:
+  ARMBankConflictHazardRecognizer(const ScheduleDAG *DAG, int64_t DDM,
+                                  bool ABC);
+  HazardType getHazardType(SUnit *SU, int Stalls) override;
+  void Reset() override;
+  void EmitInstruction(SUnit *SU) override;
+  void AdvanceCycle() override;
+  void RecedeCycle() override;
+
+private:
+  inline HazardType CheckOffsets(unsigned O0, unsigned O1);
 };
 
 } // end namespace llvm

@@ -1,4 +1,4 @@
-; RUN: opt -simplifycfg -S < %s | FileCheck %s
+; RUN: opt -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S < %s | FileCheck %s
 
 ; Just checking for lack of crash here, but we should be able to check the IR?
 ; Earlier version using auto-generated checks from utils/update_test_checks.py

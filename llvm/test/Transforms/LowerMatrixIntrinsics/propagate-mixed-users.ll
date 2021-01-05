@@ -6,8 +6,8 @@
 ; matrix in a flat vector for function calls and returns.
 define <8 x double> @strided_load_4x4(<8 x double> %in, <8 x double>* %Ptr) {
 ; CHECK-LABEL: @strided_load_4x4(
-; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <8 x double> [[IN:%.*]], <8 x double> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[SPLIT1:%.*]] = shufflevector <8 x double> [[IN]], <8 x double> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <8 x double> [[IN:%.*]], <8 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[SPLIT1:%.*]] = shufflevector <8 x double> [[IN]], <8 x double> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x double> [[SPLIT]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> undef, double [[TMP1]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x double> [[SPLIT1]], i64 0

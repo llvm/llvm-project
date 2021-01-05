@@ -960,7 +960,7 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
     const auto &RUMasks = Reg.getRegUnitLaneMasks();
     MaskVec &LaneMaskVec = RegUnitLaneMasks[i];
     assert(LaneMaskVec.empty());
-    LaneMaskVec.insert(LaneMaskVec.begin(), RUMasks.begin(), RUMasks.end());
+    llvm::append_range(LaneMaskVec, RUMasks);
     // Terminator mask should not be used inside of the list.
 #ifndef NDEBUG
     for (LaneBitmask M : LaneMaskVec) {

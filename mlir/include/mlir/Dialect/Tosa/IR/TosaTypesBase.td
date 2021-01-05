@@ -29,8 +29,8 @@ class Tosa_QuantizedType<string n, list<int> params, bit signed>
                     ".getStorageTypeIntegralWidth() == " # !head(params)>]>,
     "Q" # !if (signed, "int", "uint") # !head(params) # " type"> {
   string name = n;
-  string asTraitArgsStr =
-    StrJoinInt<params>.result # !if(signed, ", true", ", false");
+  string asTraitArgsStr = !interleave(params, ", ") #
+                          !if(signed, ", true", ", false");
 }
 
 //===----------------------------------------------------------------------===//

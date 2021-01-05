@@ -1,9 +1,9 @@
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr4 \
-; RUN:     -mattr=-altivec < %s | \
+; RUN:     -mattr=-altivec -simplifycfg-require-and-preserve-domtree=1 < %s | \
 ; RUN:   FileCheck --check-prefixes=ASM,ASM32 %s
 
 ; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr4 \
-; RUN:     -mattr=-altivec < %s | \
+; RUN:     -mattr=-altivec -simplifycfg-require-and-preserve-domtree=1 < %s | \
 ; RUN:   FileCheck --check-prefixes=ASM,ASM64 %s
 
 @_ZTIi = external constant i8*

@@ -111,7 +111,7 @@ Expected<Tweak::Effect> ExpandAutoType::apply(const Selection& Inputs) {
 
   // if it's a lambda expression, return an error message
   if (isa<RecordType>(*DeducedType) &&
-      dyn_cast<RecordType>(*DeducedType)->getDecl()->isLambda()) {
+      cast<RecordType>(*DeducedType)->getDecl()->isLambda()) {
     return error("Could not expand type of lambda expression");
   }
 

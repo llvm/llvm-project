@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-pc-mingw32
+; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=i386-pc-mingw32
 
 define void @func() nounwind personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 invoke.cont:

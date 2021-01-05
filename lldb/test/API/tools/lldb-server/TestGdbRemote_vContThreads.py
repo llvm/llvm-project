@@ -1,4 +1,3 @@
-
 import json
 import re
 
@@ -32,7 +31,12 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.reset_test_sequence()
         return threads
 
-    def signal_one_thread(self):
+    @skipUnlessPlatform(["netbsd"])
+    @expectedFailureNetBSD
+    def test_signal_one_thread(self):
+        self.build()
+        self.set_inferior_startup_launch()
+
         threads = self.start_threads(1)
         # try sending a signal to one of the two threads
         self.test_sequence.add_log_lines([
@@ -45,21 +49,11 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertIsNotNone(context)
 
     @skipUnlessPlatform(["netbsd"])
-    @debugserver_test
-    def test_signal_one_thread_debugserver(self):
-        self.build()
-        self.set_inferior_startup_launch()
-        self.signal_one_thread()
-
-    @skipUnlessPlatform(["netbsd"])
     @expectedFailureNetBSD
-    @llgs_test
-    def test_signal_one_thread_llgs(self):
+    def test_signal_all_threads(self):
         self.build()
         self.set_inferior_startup_launch()
-        self.signal_one_thread()
 
-    def signal_all_threads(self):
         threads = self.start_threads(1)
         # try sending a signal to two threads (= the process)
         self.test_sequence.add_log_lines([
@@ -73,21 +67,10 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertIsNotNone(context)
 
     @skipUnlessPlatform(["netbsd"])
-    @debugserver_test
-    def test_signal_all_threads_debugserver(self):
+    def test_signal_two_of_three_threads(self):
         self.build()
         self.set_inferior_startup_launch()
-        self.signal_all_threads()
 
-    @skipUnlessPlatform(["netbsd"])
-    @expectedFailureNetBSD
-    @llgs_test
-    def test_signal_all_threads_llgs(self):
-        self.build()
-        self.set_inferior_startup_launch()
-        self.signal_all_threads()
-
-    def signal_two_of_three_threads(self):
         threads = self.start_threads(2)
         # try sending a signal to 2 out of 3 threads
         self.test_sequence.add_log_lines([
@@ -101,20 +84,10 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertIsNotNone(context)
 
     @skipUnlessPlatform(["netbsd"])
-    @debugserver_test
-    def test_signal_two_of_three_threads_debugserver(self):
+    def test_signal_two_signals(self):
         self.build()
         self.set_inferior_startup_launch()
-        self.signal_two_of_three_threads()
 
-    @skipUnlessPlatform(["netbsd"])
-    @llgs_test
-    def test_signal_two_of_three_threads_llgs(self):
-        self.build()
-        self.set_inferior_startup_launch()
-        self.signal_two_of_three_threads()
-
-    def signal_two_signals(self):
         threads = self.start_threads(1)
         # try sending two different signals to two threads
         self.test_sequence.add_log_lines([
@@ -126,17 +99,3 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
 
         context = self.expect_gdbremote_sequence()
         self.assertIsNotNone(context)
-
-    @skipUnlessPlatform(["netbsd"])
-    @debugserver_test
-    def test_signal_two_signals_debugserver(self):
-        self.build()
-        self.set_inferior_startup_launch()
-        self.signal_two_signals()
-
-    @skipUnlessPlatform(["netbsd"])
-    @llgs_test
-    def test_signal_two_signals_llgs(self):
-        self.build()
-        self.set_inferior_startup_launch()
-        self.signal_two_signals()

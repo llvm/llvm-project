@@ -39,14 +39,15 @@
 #include "test_iterators.h"
 
 template <typename Iter1, typename Iter2>
+TEST_CONSTEXPR_CXX20
 void do_search(Iter1 b1, Iter1 e1, Iter2 b2, Iter2 e2, Iter1 result) {
     std::default_searcher<Iter2> s{b2, e2};
     assert(result == std::search(b1, e1, s));
 }
 
 template <class Iter1, class Iter2>
-void
-test()
+TEST_CONSTEXPR_CXX20
+bool test()
 {
     int ia[] = {0, 1, 2, 3, 4, 5};
     const unsigned sa = sizeof(ia)/sizeof(ia[0]);
@@ -81,6 +82,8 @@ test()
     int ik[] = {0, 0, 0, 0, 1, 1, 1, 1, 0, 0};
     const unsigned sk = sizeof(ik)/sizeof(ik[0]);
     do_search(Iter1(ij), Iter1(ij+sj), Iter2(ik), Iter2(ik+sk), Iter1(ij+6));
+
+    return true;
 }
 
 int main(int, char**) {
@@ -94,5 +97,17 @@ int main(int, char**) {
     test<random_access_iterator<const int*>, bidirectional_iterator<const int*> >();
     test<random_access_iterator<const int*>, random_access_iterator<const int*> >();
 
-  return 0;
+#if TEST_STD_VER >= 20
+    static_assert(test<forward_iterator<const int*>, forward_iterator<const int*>>());
+    static_assert(test<forward_iterator<const int*>, bidirectional_iterator<const int*>>());
+    static_assert(test<forward_iterator<const int*>, random_access_iterator<const int*>>());
+    static_assert(test<bidirectional_iterator<const int*>, forward_iterator<const int*>>());
+    static_assert(test<bidirectional_iterator<const int*>, bidirectional_iterator<const int*>>());
+    static_assert(test<bidirectional_iterator<const int*>, random_access_iterator<const int*>>());
+    static_assert(test<random_access_iterator<const int*>, forward_iterator<const int*>>());
+    static_assert(test<random_access_iterator<const int*>, bidirectional_iterator<const int*>>());
+    static_assert(test<random_access_iterator<const int*>, random_access_iterator<const int*>>());
+#endif
+
+    return 0;
 }

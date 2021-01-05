@@ -13,14 +13,14 @@
 
 @global_fnptr = external global i32 ()*
 
-@global_blockaddrs = constant [4 x i8*] [
+@global_blockaddrs = dso_local constant [4 x i8*] [
   i8* blockaddress(@test_indirectbr_global, %bb0),
   i8* blockaddress(@test_indirectbr_global, %bb1),
   i8* blockaddress(@test_indirectbr_global, %bb2),
   i8* blockaddress(@test_indirectbr_global, %bb3)
 ]
 
-define i32 @test_indirect_call(i32 ()** %ptr) nounwind {
+define dso_local i32 @test_indirect_call(i32 ()** %ptr) nounwind {
 ; X64-LABEL: test_indirect_call:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rbx
@@ -93,7 +93,7 @@ entry:
   ret i32 %v
 }
 
-define i32 @test_indirect_tail_call(i32 ()** %ptr) nounwind {
+define dso_local i32 @test_indirect_tail_call(i32 ()** %ptr) nounwind {
 ; X64-LABEL: test_indirect_tail_call:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq %rsp, %rax
@@ -132,7 +132,7 @@ entry:
   ret i32 %v
 }
 
-define i32 @test_indirect_call_global() nounwind {
+define dso_local i32 @test_indirect_call_global() nounwind {
 ; X64-LABEL: test_indirect_call_global:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rbx
@@ -208,7 +208,7 @@ entry:
   ret i32 %v
 }
 
-define i32 @test_indirect_tail_call_global() nounwind {
+define dso_local i32 @test_indirect_tail_call_global() nounwind {
 ; X64-LABEL: test_indirect_tail_call_global:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq %rsp, %rax
@@ -250,7 +250,7 @@ entry:
   ret i32 %v
 }
 
-define i32 @test_indirectbr(i8** %ptr) nounwind {
+define dso_local i32 @test_indirectbr(i8** %ptr) nounwind {
 ; X64-LABEL: test_indirectbr:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq %rsp, %rcx
@@ -356,7 +356,7 @@ bb3:
   ret i32 42
 }
 
-define i32 @test_indirectbr_global(i32 %idx) nounwind {
+define dso_local i32 @test_indirectbr_global(i32 %idx) nounwind {
 ; X64-LABEL: test_indirectbr_global:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq %rsp, %rcx
@@ -405,7 +405,7 @@ define i32 @test_indirectbr_global(i32 %idx) nounwind {
 ; X64-PIC-NEXT:    movq $-1, %rax
 ; X64-PIC-NEXT:    sarq $63, %rcx
 ; X64-PIC-NEXT:    movslq %edi, %rdx
-; X64-PIC-NEXT:    movq global_blockaddrs@{{.*}}(%rip), %rsi
+; X64-PIC-NEXT:    leaq .Lglobal_blockaddrs$local(%rip), %rsi
 ; X64-PIC-NEXT:    movq (%rsi,%rdx,8), %rdx
 ; X64-PIC-NEXT:    orq %rcx, %rdx
 ; X64-PIC-NEXT:    jmpq *%rdx
@@ -512,7 +512,7 @@ bb3:
 
 ; This function's switch is crafted to trigger jump-table lowering in the x86
 ; backend so that we can test how the exact jump table lowering behaves.
-define i32 @test_switch_jumptable(i32 %idx) nounwind {
+define dso_local i32 @test_switch_jumptable(i32 %idx) nounwind {
 ; X64-LABEL: test_switch_jumptable:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq %rsp, %rcx
@@ -704,7 +704,7 @@ bb5:
 ; backend so that we can test how the exact jump table lowering behaves, but
 ; also arranges for fallthroughs from case to case to ensure that this pattern
 ; too can be handled.
-define i32 @test_switch_jumptable_fallthrough(i32 %idx, i32* %a.ptr, i32* %b.ptr, i32* %c.ptr, i32* %d.ptr) nounwind {
+define dso_local i32 @test_switch_jumptable_fallthrough(i32 %idx, i32* %a.ptr, i32* %b.ptr, i32* %c.ptr, i32* %d.ptr) nounwind {
 ; X64-LABEL: test_switch_jumptable_fallthrough:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq %rsp, %r9

@@ -25,8 +25,8 @@ void __kmps_set_library(int arg);
 int __kmps_get_library(void);
 void __kmps_set_nested(int arg);
 int __kmps_get_nested(void);
-void __kmps_set_stacksize(int arg);
-int __kmps_get_stacksize();
+void __kmps_set_stacksize(size_t arg);
+size_t __kmps_get_stacksize();
 
 #ifndef KMP_SCHED_TYPE_DEFINED
 #define KMP_SCHED_TYPE_DEFINED

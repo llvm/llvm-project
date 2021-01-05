@@ -47,7 +47,7 @@ __device__ void dev_capture_dev_ref_by_ref(int *out) {
   [&](){ ref++; *out = ref;}();
 }
 
-// DEV-LABEL: define void @_Z7dev_refPi(
+// DEV-LABEL: define{{.*}} void @_Z7dev_refPi(
 // DEV: %[[VAL:.*]] = load i32, i32* addrspacecast (i32 addrspace(1)* @global_device_var to i32*)
 // DEV: %[[VAL2:.*]] = add nsw i32 %[[VAL]], 1
 // DEV: store i32 %[[VAL2]], i32* addrspacecast (i32 addrspace(1)* @global_device_var to i32*)
@@ -94,7 +94,7 @@ void host_capture_host_ref_by_ref(int *out) {
   [&](){ ref++; *out = ref;}();
 }
 
-// HOST-LABEL: define void @_Z8host_refPi(
+// HOST-LABEL: define{{.*}} void @_Z8host_refPi(
 // HOST: %[[VAL:.*]] = load i32, i32* @global_host_var
 // HOST: %[[VAL2:.*]] = add nsw i32 %[[VAL]], 1
 // HOST: store i32 %[[VAL2]], i32* @global_host_var
@@ -120,7 +120,7 @@ void host_lambda_ref(int *out) {
   }();
 }
 
-// HOST-LABEL: define void @_Z28dev_capture_host_ref_by_copyPi(
+// HOST-LABEL: define{{.*}} void @_Z28dev_capture_host_ref_by_copyPi(
 // HOST: %[[CAP:.*]] = getelementptr inbounds %[[T3]], %[[T3]]* %{{.*}}, i32 0, i32 1
 // HOST: %[[VAL:.*]] = load i32, i32* @global_host_var
 // HOST: store i32 %[[VAL]], i32* %[[CAP]]

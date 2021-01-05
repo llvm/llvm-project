@@ -8,9 +8,9 @@ define i32 @fn1() {
 ; CHECK-LABEL: @fn1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([4 x i32]* @b to <4 x i32>*), align 4
-; CHECK-NEXT:    [[REORDER_SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> undef, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[REORDER_SHUFFLE]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[REORDER_SHUFFLE]], i32 0
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[SHUFFLE]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[SHUFFLE]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> undef, i32 [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 ptrtoint (i32 ()* @fn1 to i32), i32 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 ptrtoint (i32 ()* @fn1 to i32), i32 2

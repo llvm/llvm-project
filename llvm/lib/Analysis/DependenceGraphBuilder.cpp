@@ -492,8 +492,7 @@ void AbstractDependenceGraphBuilder<G>::sortNodesTopologically() {
       // Put members of the pi-block right after the pi-block itself, for
       // convenience.
       const NodeListType &PiBlockMembers = getNodesInPiBlock(*N);
-      NodesInPO.insert(NodesInPO.end(), PiBlockMembers.begin(),
-                       PiBlockMembers.end());
+      llvm::append_range(NodesInPO, PiBlockMembers);
     }
     NodesInPO.push_back(N);
   }

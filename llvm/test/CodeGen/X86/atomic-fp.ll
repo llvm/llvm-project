@@ -10,7 +10,7 @@
 
 ; ----- FADD -----
 
-define void @fadd_32r(float* %loc, float %val) nounwind {
+define dso_local void @fadd_32r(float* %loc, float %val) nounwind {
 ; X86-NOSSE-LABEL: fadd_32r:
 ; X86-NOSSE:       # %bb.0:
 ; X86-NOSSE-NEXT:    subl $8, %esp
@@ -75,7 +75,7 @@ define void @fadd_32r(float* %loc, float %val) nounwind {
   ret void
 }
 
-define void @fadd_64r(double* %loc, double %val) nounwind {
+define dso_local void @fadd_64r(double* %loc, double %val) nounwind {
 ; X86-NOSSE-LABEL: fadd_64r:
 ; X86-NOSSE:       # %bb.0:
 ; X86-NOSSE-NEXT:    pushl %ebp
@@ -176,11 +176,11 @@ define void @fadd_64r(double* %loc, double %val) nounwind {
   ret void
 }
 
-@glob32 = global float 0.000000e+00, align 4
-@glob64 = global double 0.000000e+00, align 8
+@glob32 = dso_local global float 0.000000e+00, align 4
+@glob64 = dso_local global double 0.000000e+00, align 8
 
 ; Floating-point add to a global using an immediate.
-define void @fadd_32g() nounwind {
+define dso_local void @fadd_32g() nounwind {
 ; X86-NOSSE-LABEL: fadd_32g:
 ; X86-NOSSE:       # %bb.0:
 ; X86-NOSSE-NEXT:    subl $8, %esp
@@ -242,7 +242,7 @@ define void @fadd_32g() nounwind {
   ret void
 }
 
-define void @fadd_64g() nounwind {
+define dso_local void @fadd_64g() nounwind {
 ; X86-NOSSE-LABEL: fadd_64g:
 ; X86-NOSSE:       # %bb.0:
 ; X86-NOSSE-NEXT:    pushl %ebp
@@ -341,7 +341,7 @@ define void @fadd_64g() nounwind {
 }
 
 ; Floating-point add to a hard-coded immediate location using an immediate.
-define void @fadd_32imm() nounwind {
+define dso_local void @fadd_32imm() nounwind {
 ; X86-NOSSE-LABEL: fadd_32imm:
 ; X86-NOSSE:       # %bb.0:
 ; X86-NOSSE-NEXT:    subl $8, %esp
@@ -405,7 +405,7 @@ define void @fadd_32imm() nounwind {
   ret void
 }
 
-define void @fadd_64imm() nounwind {
+define dso_local void @fadd_64imm() nounwind {
 ; X86-NOSSE-LABEL: fadd_64imm:
 ; X86-NOSSE:       # %bb.0:
 ; X86-NOSSE-NEXT:    pushl %ebp
@@ -506,7 +506,7 @@ define void @fadd_64imm() nounwind {
 }
 
 ; Floating-point add to a stack location.
-define void @fadd_32stack() nounwind {
+define dso_local void @fadd_32stack() nounwind {
 ; X86-NOSSE-LABEL: fadd_32stack:
 ; X86-NOSSE:       # %bb.0:
 ; X86-NOSSE-NEXT:    subl $12, %esp
@@ -574,7 +574,7 @@ define void @fadd_32stack() nounwind {
   ret void
 }
 
-define void @fadd_64stack() nounwind {
+define dso_local void @fadd_64stack() nounwind {
 ; X86-NOSSE-LABEL: fadd_64stack:
 ; X86-NOSSE:       # %bb.0:
 ; X86-NOSSE-NEXT:    pushl %ebp
@@ -674,7 +674,7 @@ define void @fadd_64stack() nounwind {
   ret void
 }
 
-define void @fadd_array(i64* %arg, double %arg1, i64 %arg2) nounwind {
+define dso_local void @fadd_array(i64* %arg, double %arg1, i64 %arg2) nounwind {
 ; X86-NOSSE-LABEL: fadd_array:
 ; X86-NOSSE:       # %bb.0: # %bb
 ; X86-NOSSE-NEXT:    pushl %ebp

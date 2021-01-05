@@ -14,8 +14,8 @@
 #define LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_ORCRPCTPCSERVER_H
 
 #include "llvm/ADT/BitmaskEnum.h"
-#include "llvm/ExecutionEngine/Orc/RPC/RPCUtils.h"
-#include "llvm/ExecutionEngine/Orc/RPC/RawByteChannel.h"
+#include "llvm/ExecutionEngine/Orc/Shared/RPCUtils.h"
+#include "llvm/ExecutionEngine/Orc/Shared/RawByteChannel.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/TargetExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcessControl.h"
@@ -93,49 +93,50 @@ using ReleaseOrFinalizeMemRequest =
 
 } // end namespace orcrpctpc
 
-namespace rpc {
+namespace shared {
 
-template <> class RPCTypeName<tpctypes::UInt8Write> {
+template <> class SerializationTypeName<tpctypes::UInt8Write> {
 public:
   static const char *getName() { return "UInt8Write"; }
 };
 
-template <> class RPCTypeName<tpctypes::UInt16Write> {
+template <> class SerializationTypeName<tpctypes::UInt16Write> {
 public:
   static const char *getName() { return "UInt16Write"; }
 };
 
-template <> class RPCTypeName<tpctypes::UInt32Write> {
+template <> class SerializationTypeName<tpctypes::UInt32Write> {
 public:
   static const char *getName() { return "UInt32Write"; }
 };
 
-template <> class RPCTypeName<tpctypes::UInt64Write> {
+template <> class SerializationTypeName<tpctypes::UInt64Write> {
 public:
   static const char *getName() { return "UInt64Write"; }
 };
 
-template <> class RPCTypeName<tpctypes::BufferWrite> {
+template <> class SerializationTypeName<tpctypes::BufferWrite> {
 public:
   static const char *getName() { return "BufferWrite"; }
 };
 
-template <> class RPCTypeName<orcrpctpc::ReserveMemRequestElement> {
+template <> class SerializationTypeName<orcrpctpc::ReserveMemRequestElement> {
 public:
   static const char *getName() { return "ReserveMemRequestElement"; }
 };
 
-template <> class RPCTypeName<orcrpctpc::ReserveMemResultElement> {
+template <> class SerializationTypeName<orcrpctpc::ReserveMemResultElement> {
 public:
   static const char *getName() { return "ReserveMemResultElement"; }
 };
 
-template <> class RPCTypeName<orcrpctpc::ReleaseOrFinalizeMemRequestElement> {
+template <>
+class SerializationTypeName<orcrpctpc::ReleaseOrFinalizeMemRequestElement> {
 public:
   static const char *getName() { return "ReleaseOrFinalizeMemRequestElement"; }
 };
 
-template <> class RPCTypeName<tpctypes::WrapperFunctionResult> {
+template <> class SerializationTypeName<tpctypes::WrapperFunctionResult> {
 public:
   static const char *getName() { return "WrapperFunctionResult"; }
 };
@@ -271,7 +272,7 @@ public:
   }
 };
 
-} // end namespace rpc
+} // end namespace shared
 
 namespace orcrpctpc {
 
@@ -279,100 +280,105 @@ using RemoteSymbolLookupSet = std::vector<std::pair<std::string, bool>>;
 using RemoteLookupRequest =
     std::pair<tpctypes::DylibHandle, RemoteSymbolLookupSet>;
 
-class GetTargetTriple : public rpc::Function<GetTargetTriple, std::string()> {
+class GetTargetTriple
+    : public shared::RPCFunction<GetTargetTriple, std::string()> {
 public:
   static const char *getName() { return "GetTargetTriple"; }
 };
 
-class GetPageSize : public rpc::Function<GetPageSize, uint64_t()> {
+class GetPageSize : public shared::RPCFunction<GetPageSize, uint64_t()> {
 public:
   static const char *getName() { return "GetPageSize"; }
 };
 
-class ReserveMem : public rpc::Function<ReserveMem, Expected<ReserveMemResult>(
-                                                        ReserveMemRequest)> {
+class ReserveMem
+    : public shared::RPCFunction<ReserveMem, Expected<ReserveMemResult>(
+                                                 ReserveMemRequest)> {
 public:
   static const char *getName() { return "ReserveMem"; }
 };
 
 class FinalizeMem
-    : public rpc::Function<FinalizeMem, Error(ReleaseOrFinalizeMemRequest)> {
+    : public shared::RPCFunction<FinalizeMem,
+                                 Error(ReleaseOrFinalizeMemRequest)> {
 public:
   static const char *getName() { return "FinalizeMem"; }
 };
 
 class ReleaseMem
-    : public rpc::Function<ReleaseMem, Error(ReleaseOrFinalizeMemRequest)> {
+    : public shared::RPCFunction<ReleaseMem,
+                                 Error(ReleaseOrFinalizeMemRequest)> {
 public:
   static const char *getName() { return "ReleaseMem"; }
 };
 
 class WriteUInt8s
-    : public rpc::Function<WriteUInt8s,
-                           Error(std::vector<tpctypes::UInt8Write>)> {
+    : public shared::RPCFunction<WriteUInt8s,
+                                 Error(std::vector<tpctypes::UInt8Write>)> {
 public:
   static const char *getName() { return "WriteUInt8s"; }
 };
 
 class WriteUInt16s
-    : public rpc::Function<WriteUInt16s,
-                           Error(std::vector<tpctypes::UInt16Write>)> {
+    : public shared::RPCFunction<WriteUInt16s,
+                                 Error(std::vector<tpctypes::UInt16Write>)> {
 public:
   static const char *getName() { return "WriteUInt16s"; }
 };
 
 class WriteUInt32s
-    : public rpc::Function<WriteUInt32s,
-                           Error(std::vector<tpctypes::UInt32Write>)> {
+    : public shared::RPCFunction<WriteUInt32s,
+                                 Error(std::vector<tpctypes::UInt32Write>)> {
 public:
   static const char *getName() { return "WriteUInt32s"; }
 };
 
 class WriteUInt64s
-    : public rpc::Function<WriteUInt64s,
-                           Error(std::vector<tpctypes::UInt64Write>)> {
+    : public shared::RPCFunction<WriteUInt64s,
+                                 Error(std::vector<tpctypes::UInt64Write>)> {
 public:
   static const char *getName() { return "WriteUInt64s"; }
 };
 
 class WriteBuffers
-    : public rpc::Function<WriteBuffers,
-                           Error(std::vector<tpctypes::BufferWrite>)> {
+    : public shared::RPCFunction<WriteBuffers,
+                                 Error(std::vector<tpctypes::BufferWrite>)> {
 public:
   static const char *getName() { return "WriteBuffers"; }
 };
 
 class LoadDylib
-    : public rpc::Function<LoadDylib, Expected<tpctypes::DylibHandle>(
-                                          std::string DylibPath)> {
+    : public shared::RPCFunction<LoadDylib, Expected<tpctypes::DylibHandle>(
+                                                std::string DylibPath)> {
 public:
   static const char *getName() { return "LoadDylib"; }
 };
 
 class LookupSymbols
-    : public rpc::Function<LookupSymbols,
-                           Expected<std::vector<tpctypes::LookupResult>>(
-                               std::vector<RemoteLookupRequest>)> {
+    : public shared::RPCFunction<LookupSymbols,
+                                 Expected<std::vector<tpctypes::LookupResult>>(
+                                     std::vector<RemoteLookupRequest>)> {
 public:
   static const char *getName() { return "LookupSymbols"; }
 };
 
 class RunMain
-    : public rpc::Function<RunMain, int32_t(JITTargetAddress MainAddr,
-                                            std::vector<std::string> Args)> {
+    : public shared::RPCFunction<RunMain,
+                                 int32_t(JITTargetAddress MainAddr,
+                                         std::vector<std::string> Args)> {
 public:
   static const char *getName() { return "RunMain"; }
 };
 
 class RunWrapper
-    : public rpc::Function<RunWrapper,
-                           tpctypes::WrapperFunctionResult(
-                               JITTargetAddress, std::vector<uint8_t>)> {
+    : public shared::RPCFunction<RunWrapper,
+                                 tpctypes::WrapperFunctionResult(
+                                     JITTargetAddress, std::vector<uint8_t>)> {
 public:
   static const char *getName() { return "RunWrapper"; }
 };
 
-class CloseConnection : public rpc::Function<CloseConnection, void()> {
+class CloseConnection : public shared::RPCFunction<CloseConnection, void()> {
 public:
   static const char *getName() { return "CloseConnection"; }
 };

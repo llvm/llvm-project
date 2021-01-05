@@ -59,14 +59,14 @@ define i32 @_Z3zipb(i1 zeroext %0) nounwind {
 
 ; LINUX-SECTIONS: .section        .text._Z3foob,"ax",@progbits
 ; LINUX-SECTIONS: _Z3foob:
-; LINUX-SECTIONS: .section        .text._Z3foob._Z3foob.1,"ax",@progbits
-; LINUX-SECTIONS: _Z3foob.1:
-; LINUX-SECTIONS: .section        .text._Z3foob._Z3foob.2,"ax",@progbits
-; LINUX-SECTIONS: _Z3foob.2:
-; LINUX-SECTIONS: .section        .text._Z3foob._Z3foob.3,"ax",@progbits
-; LINUX-SECTIONS: _Z3foob.3:
+; LINUX-SECTIONS: .section        .text._Z3foob._Z3foob.__part.1,"ax",@progbits
+; LINUX-SECTIONS: _Z3foob.__part.1:
+; LINUX-SECTIONS: .section        .text._Z3foob._Z3foob.__part.2,"ax",@progbits
+; LINUX-SECTIONS: _Z3foob.__part.2:
+; LINUX-SECTIONS: .section        .text._Z3foob._Z3foob.__part.3,"ax",@progbits
+; LINUX-SECTIONS: _Z3foob.__part.3:
 
 ; LINUX-SECTIONS: .section        .text._Z3zipb,"ax",@progbits
 ; LINUX-SECTIONS: _Z3zipb:
-; LINUX-SECTIONS-NOT: .section        .text._Z3zipb._Z3zipb.{{[0-9]+}},"ax",@progbits
-; LINUX-SECTIONS-NOT: _Z3zipb.{{[0-9]+}}:
+; LINUX-SECTIONS-NOT: .section        .text._Z3zipb._Z3zipb.__part.{{[0-9]+}},"ax",@progbits
+; LINUX-SECTIONS-NOT: _Z3zipb.__part.{{[0-9]+}}:

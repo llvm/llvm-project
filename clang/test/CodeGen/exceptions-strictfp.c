@@ -7,7 +7,7 @@
 void test1() {
   extern void test1_helper(void (^)(int));
 
-  // CHECK: define arm_aapcscc void @test1() [[STRICTFP0:#[0-9]+]] personality i8* bitcast (i32 (...)* @__gcc_personality_sj0 to i8*)
+  // CHECK: define{{.*}} arm_aapcscc void @test1() [[STRICTFP0:#[0-9]+]] personality i8* bitcast (i32 (...)* @__gcc_personality_sj0 to i8*)
 
   __block int x = 10;
 
@@ -20,7 +20,7 @@ void test1() {
 
 void test2_helper();
 void test2() {
-  // CHECK: define arm_aapcscc void @test2() [[STRICTFP0]] personality i8* bitcast (i32 (...)* @__gcc_personality_sj0 to i8*) {
+  // CHECK: define{{.*}} arm_aapcscc void @test2() [[STRICTFP0]] personality i8* bitcast (i32 (...)* @__gcc_personality_sj0 to i8*) {
   __block int x = 10;
   ^{ (void)x; };
 

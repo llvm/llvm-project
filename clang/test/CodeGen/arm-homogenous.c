@@ -223,7 +223,7 @@ struct_of_double_and_long_double g_dld;
 struct_of_double_and_long_double test_struct_of_double_and_long_double(void) {
   return g_dld;
 }
-// CHECK: define arm_aapcs_vfpcc %struct.struct_of_double_and_long_double @test_struct_of_double_and_long_double()
+// CHECK: define{{.*}} arm_aapcs_vfpcc %struct.struct_of_double_and_long_double @test_struct_of_double_and_long_double()
 
 // FIXME: Tests necessary:
 //         - Vectors

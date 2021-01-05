@@ -1,5 +1,7 @@
 ; RUN: opt -mtriple=amdgcn-- -O1 -S < %s | FileCheck %s --check-prefixes=FUNC,LOOP
+; RUN: opt -mtriple=amdgcn-- -passes='default<O1>' -S < %s | FileCheck %s --check-prefixes=FUNC,LOOP
 ; RUN: opt -mtriple=amdgcn-- -O1 -S -disable-promote-alloca-to-vector < %s | FileCheck %s --check-prefixes=FUNC,FULL-UNROLL
+; RUN: opt -mtriple=amdgcn-- -passes='default<O1>' -S -disable-promote-alloca-to-vector < %s | FileCheck %s --check-prefixes=FUNC,FULL-UNROLL
 
 target datalayout = "A5"
 

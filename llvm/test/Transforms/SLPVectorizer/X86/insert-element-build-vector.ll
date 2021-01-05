@@ -126,11 +126,11 @@ define <4 x float> @simple_select_eph(<4 x float> %a, <4 x float> %b, <4 x i32> 
 ; doesn't matter
 define <4 x float> @simple_select_insert_out_of_order(<4 x float> %a, <4 x float> %b, <4 x i32> %c) #0 {
 ; CHECK-LABEL: @simple_select_insert_out_of_order(
-; CHECK-NEXT:    [[REORDER_SHUFFLE:%.*]] = shufflevector <4 x i32> [[C:%.*]], <4 x i32> undef, <4 x i32> <i32 2, i32 1, i32 0, i32 3>
-; CHECK-NEXT:    [[REORDER_SHUFFLE1:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> undef, <4 x i32> <i32 2, i32 1, i32 0, i32 3>
-; CHECK-NEXT:    [[REORDER_SHUFFLE2:%.*]] = shufflevector <4 x float> [[B:%.*]], <4 x float> undef, <4 x i32> <i32 2, i32 1, i32 0, i32 3>
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <4 x i32> [[REORDER_SHUFFLE]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[REORDER_SHUFFLE1]], <4 x float> [[REORDER_SHUFFLE2]]
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[C:%.*]], <4 x i32> poison, <4 x i32> <i32 2, i32 1, i32 0, i32 3>
+; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> poison, <4 x i32> <i32 2, i32 1, i32 0, i32 3>
+; CHECK-NEXT:    [[SHUFFLE2:%.*]] = shufflevector <4 x float> [[B:%.*]], <4 x float> poison, <4 x i32> <i32 2, i32 1, i32 0, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <4 x i32> [[SHUFFLE]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[SHUFFLE1]], <4 x float> [[SHUFFLE2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP2]], i32 2
 ; CHECK-NEXT:    [[RA:%.*]] = insertelement <4 x float> undef, float [[TMP3]], i32 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP2]], i32 1
@@ -184,7 +184,7 @@ define <4 x float> @simple_select_users(<4 x float> %a, <4 x float> %b, <4 x i32
 ; CHECK-NEXT:    [[RC:%.*]] = insertelement <4 x float> [[RB]], float [[TMP5]], i32 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[TMP2]], i32 3
 ; CHECK-NEXT:    [[RD:%.*]] = insertelement <4 x float> [[RC]], float [[TMP6]], i32 3
-; CHECK-NEXT:    call void @v4f32_user(<4 x float> [[RD]]) #0
+; CHECK-NEXT:    call void @v4f32_user(<4 x float> [[RD]]) [[ATTR0:#.*]]
 ; CHECK-NEXT:    ret <4 x float> [[RD]]
 ;
   %c0 = extractelement <4 x i32> %c, i32 0

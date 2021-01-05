@@ -6,15 +6,15 @@ define void @test1(i64* %result.repack) personality i32 (...)* @__CxxFrameHandle
 bb:
   invoke void @may_throw(i32 1)
           to label %postinvoke unwind label %cleanuppad
+; CHECK:         movq    %rcx, [[SpillLoc:.*\(%rbp\)]]
 ; CHECK:        movl    $1, %ecx
 ; CHECK:        callq   may_throw
 
 postinvoke:                                       ; preds = %bb
   store i64 19, i64* %result.repack, align 8
-
-; CHECK:        movq    $19, (%rsi)
+; CHECK:        movq	[[SpillLoc]], [[R1:%r..]]
+; CHECK:        movq    $19, ([[R1]])
 ; CHECK:        movl    $2, %ecx
-; CHECK-NEXT:   movq    %rsi, -8(%rbp)
 ; CHECK-NEXT:   callq   may_throw
   invoke void @may_throw(i32 2)
           to label %assertFailed unwind label %catch.dispatch
@@ -38,8 +38,8 @@ try.success.or.caught:                            ; preds = %catchhandler
 
 postinvoke27:                                     ; preds = %try.success.or.caught
   store i64 42, i64* %result.repack, align 8
-; CHECK:        movq    -8(%rbp), %[[reload:r..]]
-; CHECK-NEXT:   movq    $42, (%[[reload]])
+; CHECK:        movq    [[SpillLoc]], [[R2:%r..]]
+; CHECK-NEXT:   movq    $42, ([[R2]])
   ret void
 
 cleanuppad24:                                     ; preds = %try.success.or.caught

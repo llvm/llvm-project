@@ -45,7 +45,7 @@ void R600SchedStrategy::initialize(ScheduleDAGMI *dag) {
 void R600SchedStrategy::MoveUnits(std::vector<SUnit *> &QSrc,
                                   std::vector<SUnit *> &QDst)
 {
-  QDst.insert(QDst.end(), QSrc.begin(), QSrc.end());
+  llvm::append_range(QDst, QSrc);
   QSrc.clear();
 }
 

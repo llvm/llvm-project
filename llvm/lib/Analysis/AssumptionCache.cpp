@@ -167,9 +167,7 @@ void AssumptionCache::unregisterAssumption(CallInst *CI) {
 }
 
 void AssumptionCache::AffectedValueCallbackVH::deleted() {
-  auto AVI = AC->AffectedValues.find(getValPtr());
-  if (AVI != AC->AffectedValues.end())
-    AC->AffectedValues.erase(AVI);
+  AC->AffectedValues.erase(getValPtr());
   // 'this' now dangles!
 }
 

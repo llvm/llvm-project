@@ -31,14 +31,14 @@ int another(int a) {
 // BB_WORLD: .section .text.world,"ax",@progbits{{$}}
 // BB_WORLD: world:
 // BB_WORLD: .section .text.world,"ax",@progbits,unique
-// BB_WORLD: world.1:
+// BB_WORLD: world.__part.1:
 // BB_WORLD: .section .text.another,"ax",@progbits
 // BB_ALL: .section .text.another,"ax",@progbits,unique
-// BB_ALL: another.1:
+// BB_ALL: another.__part.1:
 // BB_LIST-NOT: .section .text.another,"ax",@progbits,unique
 // BB_LIST: another:
-// BB_LIST-NOT: another.1:
+// BB_LIST-NOT: another.__part.1:
 //
-// UNIQUE: .section .text.world.world.1,
-// UNIQUE: .section .text.another.another.1,
+// UNIQUE: .section .text.world.world.__part.1,
+// UNIQUE: .section .text.another.another.__part.1,
 // ERROR: error:  unable to load basic block sections function list: '{{[Nn]}}o such file or directory'

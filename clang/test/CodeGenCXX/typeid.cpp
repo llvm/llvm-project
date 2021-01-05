@@ -6,31 +6,31 @@ namespace Test1 {
 // PR7400
 struct A { virtual void f(); };
 
-// CHECK: @_ZN5Test16int_tiE = constant %"class.std::type_info"* bitcast (i8** @_ZTIi to %"class.std::type_info"*), align 8
+// CHECK: @_ZN5Test16int_tiE ={{.*}} constant %"class.std::type_info"* bitcast (i8** @_ZTIi to %"class.std::type_info"*), align 8
 const std::type_info &int_ti = typeid(int);
 
-// CHECK: @_ZN5Test14A_tiE = constant %"class.std::type_info"* bitcast (i8** @_ZTIN5Test11AE to %"class.std::type_info"*), align 8
+// CHECK: @_ZN5Test14A_tiE ={{.*}} constant %"class.std::type_info"* bitcast (i8** @_ZTIN5Test11AE to %"class.std::type_info"*), align 8
 const std::type_info &A_ti = typeid(const volatile A &);
 
 volatile char c;
 
-// CHECK: @_ZN5Test14c_tiE = constant %"class.std::type_info"* bitcast (i8** @_ZTIc to %"class.std::type_info"*), align 8
+// CHECK: @_ZN5Test14c_tiE ={{.*}} constant %"class.std::type_info"* bitcast (i8** @_ZTIc to %"class.std::type_info"*), align 8
 const std::type_info &c_ti = typeid(c);
 
 extern const double &d;
 
-// CHECK: @_ZN5Test14d_tiE = constant %"class.std::type_info"* bitcast (i8** @_ZTId to %"class.std::type_info"*), align 8
+// CHECK: @_ZN5Test14d_tiE ={{.*}} constant %"class.std::type_info"* bitcast (i8** @_ZTId to %"class.std::type_info"*), align 8
 const std::type_info &d_ti = typeid(d);
 
 extern A &a;
 
-// CHECK: @_ZN5Test14a_tiE = global
+// CHECK: @_ZN5Test14a_tiE ={{.*}} global
 const std::type_info &a_ti = typeid(a);
 
-// CHECK: @_ZN5Test18A10_c_tiE = constant %"class.std::type_info"* bitcast ({ i8*, i8* }* @_ZTIA10_c to %"class.std::type_info"*), align 8
+// CHECK: @_ZN5Test18A10_c_tiE ={{.*}} constant %"class.std::type_info"* bitcast ({ i8*, i8* }* @_ZTIA10_c to %"class.std::type_info"*), align 8
 const std::type_info &A10_c_ti = typeid(char const[10]);
 
-// CHECK-LABEL: define i8* @_ZN5Test11fEv
+// CHECK-LABEL: define{{.*}} i8* @_ZN5Test11fEv
 // CHECK-SAME:  personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
 const char *f() {
   try {

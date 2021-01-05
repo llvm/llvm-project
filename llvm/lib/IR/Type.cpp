@@ -49,6 +49,7 @@ Type *Type::getPrimitiveType(LLVMContext &C, TypeID IDNumber) {
   case LabelTyID     : return getLabelTy(C);
   case MetadataTyID  : return getMetadataTy(C);
   case X86_MMXTyID   : return getX86_MMXTy(C);
+  case X86_AMXTyID   : return getX86_AMXTy(C);
   case TokenTyID     : return getTokenTy(C);
   default:
     return nullptr;
@@ -79,6 +80,14 @@ bool Type::canLosslesslyBitCastTo(Type *Ty) const {
     return true;
   if ((isX86_MMXTy() && isa<FixedVectorType>(Ty)) &&
       Ty->getPrimitiveSizeInBits().getFixedSize() == 64)
+    return true;
+
+  //  8192-bit fixed width vector types can be losslessly converted to x86amx.
+  if (((isa<FixedVectorType>(this)) && Ty->isX86_AMXTy()) &&
+      getPrimitiveSizeInBits().getFixedSize() == 8192)
+    return true;
+  if ((isX86_AMXTy() && isa<FixedVectorType>(Ty)) &&
+      Ty->getPrimitiveSizeInBits().getFixedSize() == 8192)
     return true;
 
   // At this point we have only various mismatches of the first class types
@@ -120,6 +129,7 @@ TypeSize Type::getPrimitiveSizeInBits() const {
   case Type::FP128TyID: return TypeSize::Fixed(128);
   case Type::PPC_FP128TyID: return TypeSize::Fixed(128);
   case Type::X86_MMXTyID: return TypeSize::Fixed(64);
+  case Type::X86_AMXTyID: return TypeSize::Fixed(8192);
   case Type::IntegerTyID:
     return TypeSize::Fixed(cast<IntegerType>(this)->getBitWidth());
   case Type::FixedVectorTyID:
@@ -179,6 +189,7 @@ Type *Type::getX86_FP80Ty(LLVMContext &C) { return &C.pImpl->X86_FP80Ty; }
 Type *Type::getFP128Ty(LLVMContext &C) { return &C.pImpl->FP128Ty; }
 Type *Type::getPPC_FP128Ty(LLVMContext &C) { return &C.pImpl->PPC_FP128Ty; }
 Type *Type::getX86_MMXTy(LLVMContext &C) { return &C.pImpl->X86_MMXTy; }
+Type *Type::getX86_AMXTy(LLVMContext &C) { return &C.pImpl->X86_AMXTy; }
 
 IntegerType *Type::getInt1Ty(LLVMContext &C) { return &C.pImpl->Int1Ty; }
 IntegerType *Type::getInt8Ty(LLVMContext &C) { return &C.pImpl->Int8Ty; }
@@ -221,6 +232,10 @@ PointerType *Type::getPPC_FP128PtrTy(LLVMContext &C, unsigned AS) {
 
 PointerType *Type::getX86_MMXPtrTy(LLVMContext &C, unsigned AS) {
   return getX86_MMXTy(C)->getPointerTo(AS);
+}
+
+PointerType *Type::getX86_AMXPtrTy(LLVMContext &C, unsigned AS) {
+  return getX86_AMXTy(C)->getPointerTo(AS);
 }
 
 PointerType *Type::getIntNPtrTy(LLVMContext &C, unsigned N, unsigned AS) {

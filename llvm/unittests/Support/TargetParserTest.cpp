@@ -308,6 +308,13 @@ INSTANTIATE_TEST_CASE_P(
                              ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP |
                              ARM::AEK_FP16 | ARM::AEK_RAS | ARM::AEK_DOTPROD,
                          "8.2-A"),
+        ARMCPUTestParams("cortex-a78c", "armv8.2-a", "crypto-neon-fp-armv8",
+                         ARM::AEK_SEC | ARM::AEK_MP |
+                             ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
+                             ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP |
+                             ARM::AEK_CRC | ARM::AEK_RAS |
+                             ARM::AEK_FP16 | ARM::AEK_DOTPROD,
+                         "8.2-A"),
         ARMCPUTestParams("cortex-a77", "armv8.2-a", "crypto-neon-fp-armv8",
                          ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP |
                              ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
@@ -385,7 +392,7 @@ INSTANTIATE_TEST_CASE_P(
                          ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                          "7-S")), );
 
-static constexpr unsigned NumARMCPUArchs = 91;
+static constexpr unsigned NumARMCPUArchs = 92;
 
 TEST(TargetParserTest, testARMCPUArchList) {
   SmallVector<StringRef, NumARMCPUArchs> List;
@@ -962,6 +969,14 @@ INSTANTIATE_TEST_CASE_P(
                              AArch64::AEK_DOTPROD | AArch64::AEK_RCPC |
                              AArch64::AEK_SSBS,
                          "8.2-A"),
+        ARMCPUTestParams("cortex-a78c", "armv8.2-a", "crypto-neon-fp-armv8",
+                         AArch64::AEK_RAS | AArch64::AEK_CRC |
+                             AArch64::AEK_CRYPTO | AArch64::AEK_FP |
+                             AArch64::AEK_SIMD | AArch64::AEK_RAS |
+                             AArch64::AEK_LSE | AArch64::AEK_RDM |
+                             AArch64::AEK_FP16 | AArch64::AEK_DOTPROD |
+                             AArch64::AEK_RCPC | AArch64::AEK_SSBS,
+                         "8.2-A"),
         ARMCPUTestParams(
             "neoverse-v1", "armv8.4-a", "crypto-neon-fp-armv8",
             AArch64::AEK_RAS | AArch64::AEK_SVE | AArch64::AEK_SSBS |
@@ -1151,7 +1166,7 @@ INSTANTIATE_TEST_CASE_P(
                              AArch64::AEK_LSE | AArch64::AEK_RDM,
                          "8.2-A")), );
 
-static constexpr unsigned NumAArch64CPUArchs = 45;
+static constexpr unsigned NumAArch64CPUArchs = 46;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;

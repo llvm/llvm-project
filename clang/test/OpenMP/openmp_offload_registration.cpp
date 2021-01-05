@@ -14,7 +14,7 @@ void foo() {
 // CHECK: appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 0, void ()* @.omp_offloading.requires_reg, i8* null }]
 
 // Check presence of foo() and the outlined target region
-// CHECK: define void [[FOO:@.+]]()
+// CHECK: define{{.*}} void [[FOO:@.+]]()
 // CHECK: define internal void [[OUTLINEDTARGET:@.+]]()
 
 // Check registration and unregistration code.

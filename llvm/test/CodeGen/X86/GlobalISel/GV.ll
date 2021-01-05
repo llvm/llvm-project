@@ -4,10 +4,10 @@
 ; RUN: llc -mtriple=i386-linux-gnu      -global-isel -verify-machineinstrs                       < %s -o - | FileCheck %s --check-prefix=X32
 ; RUN: llc -mtriple=x86_64-linux-gnux32 -global-isel -verify-machineinstrs                       < %s -o - | FileCheck %s --check-prefix=X32ABI
 
-@g_int = global i32 0, align 4
+@g_int = dso_local global i32 0, align 4
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define i32* @test_global_ptrv() #3 {
+define dso_local i32* @test_global_ptrv() #3 {
 ; X64-LABEL: test_global_ptrv:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    leaq g_int, %rax
@@ -32,7 +32,7 @@ entry:
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define i32 @test_global_valv() #3 {
+define dso_local i32 @test_global_valv() #3 {
 ; X64-LABEL: test_global_valv:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    leaq g_int, %rax

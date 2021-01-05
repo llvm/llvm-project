@@ -26,41 +26,57 @@ struct ReportShapeFnPass
 void ReportShapeFnPass::runOnOperation() {
   auto module = getOperation();
 
-  // Lookup shape function library.
-  shape::FunctionLibraryOp shapeFnLib = nullptr;
-  for (auto lib : module.getOps<shape::FunctionLibraryOp>()) {
-    if (shapeFnLib) {
-      lib.emitError("duplicate shape library op")
-              .attachNote(shapeFnLib.getLoc())
-          << "previous mapping";
-      return signalPassFailure();
-    }
-    shapeFnLib = lib;
-  };
-
   // Report the shape function available to refine the op.
   auto shapeFnId = Identifier::get("shape.function", &getContext());
-  auto remarkShapeFn = [&](Operation *op) {
+  auto remarkShapeFn = [&](shape::FunctionLibraryOp shapeFnLib, Operation *op) {
     if (op->isKnownTerminator())
-      return;
+      return true;
     if (auto typeInterface = dyn_cast<InferTypeOpInterface>(op)) {
       op->emitRemark() << "implements InferType op interface";
-    } else if (auto fn = shapeFnLib.getShapeFunction(op)) {
+      return true;
+    }
+    if (auto fn = shapeFnLib.getShapeFunction(op)) {
       op->emitRemark() << "associated shape function: " << fn.getName();
-    } else if (auto symbol = op->getAttrOfType<SymbolRefAttr>(shapeFnId)) {
+      return true;
+    }
+    if (auto symbol = op->getAttrOfType<SymbolRefAttr>(shapeFnId)) {
       auto fn = cast<FuncOp>(SymbolTable::lookupSymbolIn(module, symbol));
       op->emitRemark() << "associated shape function: " << fn.getName();
-    } else {
-      op->emitRemark() << "no associated way to refine shape";
+      return true;
     }
+    return false;
   };
+
+  // Lookup shape function library.
+  SmallVector<shape::FunctionLibraryOp, 4> libraries;
+  auto attr = module.getAttr("shape.lib");
+  if (attr) {
+    auto lookup = [&](Attribute attr) {
+      return cast<shape::FunctionLibraryOp>(
+          SymbolTable::lookupSymbolIn(module, attr.cast<SymbolRefAttr>()));
+    };
+    if (auto arrayAttr = attr.dyn_cast<ArrayAttr>()) {
+      libraries.reserve(arrayAttr.size());
+      for (auto attr : arrayAttr)
+        libraries.push_back(lookup(attr));
+    } else {
+      libraries.reserve(1);
+      libraries.push_back(lookup(attr));
+    }
+  }
 
   module.getBodyRegion().walk([&](FuncOp func) {
     // Skip ops in the shape function library.
     if (isa<shape::FunctionLibraryOp>(func->getParentOp()))
       return;
 
-    func.walk([&](Operation *op) { remarkShapeFn(op); });
+    func.walk([&](Operation *op) {
+      bool found = llvm::any_of(libraries, [&](shape::FunctionLibraryOp lib) {
+        return remarkShapeFn(lib, op);
+      });
+      if (!found)
+        op->emitRemark() << "no associated way to refine shape";
+    });
   });
 }
 

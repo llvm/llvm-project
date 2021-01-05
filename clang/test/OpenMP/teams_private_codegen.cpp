@@ -104,7 +104,7 @@ int main() {
   static int sivar;
   SS ss(sivar);
 #ifdef LAMBDA
-  // LAMBDA: [[G:@.+]] = global i{{[0-9]+}} 1212,
+  // LAMBDA: [[G:@.+]] ={{.*}} global i{{[0-9]+}} 1212,
   // LAMBDA: define {{.+}} @main()
   // LAMBDA: alloca [[SS_TY]],
   // LAMBDA: alloca [[CAP_TY:%.+]],

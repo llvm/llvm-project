@@ -1,12 +1,12 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -verify-machineinstrs < %s | FileCheck %s
 ; RUN: opt -S -codegenprepare -mtriple=aarch64-linux %s | FileCheck --check-prefix=CHECK-CGP %s
 
-@A = global i32 zeroinitializer
-@B = global i32 zeroinitializer
-@C = global i32 zeroinitializer
+@A = dso_local global i32 zeroinitializer
+@B = dso_local global i32 zeroinitializer
+@C = dso_local global i32 zeroinitializer
 
 ; Test that and is sunk into cmp block to form tbz.
-define i32 @and_sink1(i32 %a, i1 %c) {
+define dso_local i32 @and_sink1(i32 %a, i1 %c) {
 ; CHECK-LABEL: and_sink1:
 ; CHECK: tbz w1, #0
 ; CHECK: str wzr, [x{{[0-9]+}}, :lo12:A]
@@ -32,7 +32,7 @@ bb2:
 }
 
 ; Test that both 'and' and cmp get sunk to form tbz.
-define i32 @and_sink2(i32 %a, i1 %c, i1 %c2) {
+define dso_local i32 @and_sink2(i32 %a, i1 %c, i1 %c2) {
 ; CHECK-LABEL: and_sink2:
 ; CHECK: str wzr, [x{{[0-9]+}}, :lo12:A]
 ; CHECK: tbz w1, #0
@@ -68,7 +68,7 @@ bb3:
 }
 
 ; Test that 'and' is not sunk since cbz is a better alternative.
-define i32 @and_sink3(i32 %a) {
+define dso_local i32 @and_sink3(i32 %a) {
 ; CHECK-LABEL: and_sink3:
 ; CHECK: and [[REG:w[0-9]+]], w0, #0x3
 ; CHECK: [[LOOP:.L[A-Z0-9_]+]]:

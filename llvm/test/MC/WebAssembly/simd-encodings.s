@@ -724,4 +724,16 @@ main:
     # CHECK: i64x2.signselect # encoding: [0xfd,0x94,0x01]
     i64x2.signselect
 
+    # CHECK: i16x8.extadd_pairwise_i8x16_s # encoding: [0xfd,0xc2,0x01]
+    i16x8.extadd_pairwise_i8x16_s
+
+    # CHECK: i16x8.extadd_pairwise_i8x16_u # encoding: [0xfd,0xc3,0x01]
+    i16x8.extadd_pairwise_i8x16_u
+
+    # CHECK: i32x4.extadd_pairwise_i16x8_s # encoding: [0xfd,0xa5,0x01]
+    i32x4.extadd_pairwise_i16x8_s
+
+    # CHECK: i32x4.extadd_pairwise_i16x8_u # encoding: [0xfd,0xa6,0x01]
+    i32x4.extadd_pairwise_i16x8_u
+
     end_function

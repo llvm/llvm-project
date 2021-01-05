@@ -11,35 +11,16 @@ class TestGdbRemoteConnection(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @debugserver_test
-    # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    @skipIfDarwinEmbedded
-    def test_reverse_connect_debugserver(self):
-        self._reverse_connect()
-
-    @llgs_test
     @skipIfRemote  # reverse connect is not a supported use case for now
     def test_reverse_connect_llgs(self):
-        self._reverse_connect()
-
-    def _reverse_connect(self):
         # Reverse connect is the default connection method.
         self.connect_to_debug_monitor()
         # Verify we can do the handshake.  If that works, we'll call it good.
         self.do_handshake(self.sock)
 
-    @debugserver_test
-    @skipIfRemote
-    def test_named_pipe_debugserver(self):
-        self._named_pipe()
-
-    @llgs_test
     @skipIfRemote
     @skipIfWindows
     def test_named_pipe_llgs(self):
-        self._named_pipe()
-
-    def _named_pipe(self):
         family, type, proto, _, addr = socket.getaddrinfo(
             self.stub_hostname, 0, proto=socket.IPPROTO_TCP)[0]
         self.sock = socket.socket(family, type, proto)

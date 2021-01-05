@@ -2264,8 +2264,7 @@ void IfConverter::MergeBlocks(BBInfo &ToBBI, BBInfo &FromBBI, bool AddEdges) {
   if (ToBBI.IsBrAnalyzable)
     ToBBI.BB->normalizeSuccProbs();
 
-  SmallVector<MachineBasicBlock *, 4> FromSuccs(FromMBB.succ_begin(),
-                                                FromMBB.succ_end());
+  SmallVector<MachineBasicBlock *, 4> FromSuccs(FromMBB.successors());
   MachineBasicBlock *NBB = getNextBlock(FromMBB);
   MachineBasicBlock *FallThrough = FromBBI.HasFallThrough ? NBB : nullptr;
   // The edge probability from ToBBI.BB to FromMBB, which is only needed when

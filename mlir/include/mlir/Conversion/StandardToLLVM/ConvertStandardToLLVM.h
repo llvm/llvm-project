@@ -512,13 +512,9 @@ protected:
                              ValueRange indices,
                              ConversionPatternRewriter &rewriter) const;
 
-  // Forwards to getStridedElementPtr. TODO: remove.
-  Value getDataPtr(Location loc, MemRefType type, Value memRefDesc,
-                   ValueRange indices,
-                   ConversionPatternRewriter &rewriter) const;
-
-  /// Returns if the givem memref type is supported.
-  bool isSupportedMemRefType(MemRefType type) const;
+  /// Returns if the given memref has identity maps and the element type is
+  /// convertible to LLVM.
+  bool isConvertibleAndHasIdentityMaps(MemRefType type) const;
 
   /// Returns the type of a pointer to an element of the memref.
   Type getElementPtrType(MemRefType type) const;

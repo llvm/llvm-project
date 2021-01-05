@@ -5,10 +5,10 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f | FileCheck %s --check-prefixes=AVX,AVX512,AVX512F
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bw | FileCheck %s --check-prefixes=AVX,AVX512,AVX512BW
 
-@a = global [1024 x i8] zeroinitializer, align 16
-@b = global [1024 x i8] zeroinitializer, align 16
+@a = dso_local global [1024 x i8] zeroinitializer, align 16
+@b = dso_local global [1024 x i8] zeroinitializer, align 16
 
-define i32 @sad_16i8() nounwind {
+define dso_local i32 @sad_16i8() nounwind {
 ; SSE2-LABEL: sad_16i8:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    pxor %xmm0, %xmm0
@@ -147,7 +147,7 @@ middle.block:
   ret i32 %12
 }
 
-define i32 @sad_32i8() nounwind {
+define dso_local i32 @sad_32i8() nounwind {
 ; SSE2-LABEL: sad_32i8:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    pxor %xmm0, %xmm0
@@ -306,7 +306,7 @@ middle.block:
   ret i32 %12
 }
 
-define i32 @sad_avx64i8() nounwind {
+define dso_local i32 @sad_avx64i8() nounwind {
 ; SSE2-LABEL: sad_avx64i8:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    pxor %xmm4, %xmm4
@@ -539,7 +539,7 @@ middle.block:
   ret i32 %12
 }
 
-define i32 @sad_2i8() nounwind {
+define dso_local i32 @sad_2i8() nounwind {
 ; SSE2-LABEL: sad_2i8:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    pxor %xmm0, %xmm0
@@ -613,7 +613,7 @@ middle.block:
   ret i32 %12
 }
 
-define i32 @sad_4i8() nounwind {
+define dso_local i32 @sad_4i8() nounwind {
 ; SSE2-LABEL: sad_4i8:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    pxor %xmm0, %xmm0
@@ -688,7 +688,7 @@ middle.block:
 }
 
 
-define i32 @sad_nonloop_4i8(<4 x i8>* nocapture readonly %p, i64, <4 x i8>* nocapture readonly %q) local_unnamed_addr #0 {
+define dso_local i32 @sad_nonloop_4i8(<4 x i8>* nocapture readonly %p, i64, <4 x i8>* nocapture readonly %q) local_unnamed_addr #0 {
 ; SSE2-LABEL: sad_nonloop_4i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -720,7 +720,7 @@ define i32 @sad_nonloop_4i8(<4 x i8>* nocapture readonly %p, i64, <4 x i8>* noca
   ret i32 %sum
 }
 
-define i32 @sad_nonloop_8i8(<8 x i8>* nocapture readonly %p, i64, <8 x i8>* nocapture readonly %q) local_unnamed_addr #0 {
+define dso_local i32 @sad_nonloop_8i8(<8 x i8>* nocapture readonly %p, i64, <8 x i8>* nocapture readonly %q) local_unnamed_addr #0 {
 ; SSE2-LABEL: sad_nonloop_8i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -754,7 +754,7 @@ define i32 @sad_nonloop_8i8(<8 x i8>* nocapture readonly %p, i64, <8 x i8>* noca
   ret i32 %sum
 }
 
-define i32 @sad_nonloop_16i8(<16 x i8>* nocapture readonly %p, i64, <16 x i8>* nocapture readonly %q) local_unnamed_addr #0 {
+define dso_local i32 @sad_nonloop_16i8(<16 x i8>* nocapture readonly %p, i64, <16 x i8>* nocapture readonly %q) local_unnamed_addr #0 {
 ; SSE2-LABEL: sad_nonloop_16i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqu (%rdi), %xmm0
@@ -793,7 +793,7 @@ define i32 @sad_nonloop_16i8(<16 x i8>* nocapture readonly %p, i64, <16 x i8>* n
   ret i32 %sum
 }
 
-define i32 @sad_nonloop_32i8(<32 x i8>* nocapture readonly %p, i64, <32 x i8>* nocapture readonly %q) local_unnamed_addr #0 {
+define dso_local i32 @sad_nonloop_32i8(<32 x i8>* nocapture readonly %p, i64, <32 x i8>* nocapture readonly %q) local_unnamed_addr #0 {
 ; SSE2-LABEL: sad_nonloop_32i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqu (%rdx), %xmm0
@@ -865,7 +865,7 @@ define i32 @sad_nonloop_32i8(<32 x i8>* nocapture readonly %p, i64, <32 x i8>* n
   ret i32 %sum
 }
 
-define i32 @sad_nonloop_64i8(<64 x i8>* nocapture readonly %p, i64, <64 x i8>* nocapture readonly %q) local_unnamed_addr #0 {
+define dso_local i32 @sad_nonloop_64i8(<64 x i8>* nocapture readonly %p, i64, <64 x i8>* nocapture readonly %q) local_unnamed_addr #0 {
 ; SSE2-LABEL: sad_nonloop_64i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqu (%rdx), %xmm0
@@ -976,7 +976,7 @@ define i32 @sad_nonloop_64i8(<64 x i8>* nocapture readonly %p, i64, <64 x i8>* n
 
 ; This contains an unrolled sad loop with a non-zero initial value.
 ; DAGCombiner reassociation previously rewrote the adds to move the constant vector further down the tree. This resulted in the vector-reduction flag being lost.
-define i32 @sad_unroll_nonzero_initial(<16 x i8>* %arg, <16 x i8>* %arg1, <16 x i8>* %arg2, <16 x i8>* %arg3) {
+define dso_local i32 @sad_unroll_nonzero_initial(<16 x i8>* %arg, <16 x i8>* %arg1, <16 x i8>* %arg2, <16 x i8>* %arg3) {
 ; SSE2-LABEL: sad_unroll_nonzero_initial:
 ; SSE2:       # %bb.0: # %bb
 ; SSE2-NEXT:    movdqu (%rdi), %xmm0
@@ -1041,7 +1041,7 @@ bb:
 
 ; This test contains two absolute difference patterns joined by an add. The result of that add is then reduced to a single element.
 ; SelectionDAGBuilder should tag the joining add as a vector reduction. We neeed to recognize that both sides can use psadbw.
-define i32 @sad_double_reduction(<16 x i8>* %arg, <16 x i8>* %arg1, <16 x i8>* %arg2, <16 x i8>* %arg3) {
+define dso_local i32 @sad_double_reduction(<16 x i8>* %arg, <16 x i8>* %arg1, <16 x i8>* %arg2, <16 x i8>* %arg3) {
 ; SSE2-LABEL: sad_double_reduction:
 ; SSE2:       # %bb.0: # %bb
 ; SSE2-NEXT:    movdqu (%rdi), %xmm0

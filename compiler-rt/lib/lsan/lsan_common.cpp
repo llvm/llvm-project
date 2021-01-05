@@ -65,8 +65,34 @@ void RegisterLsanFlags(FlagParser *parser, Flags *f) {
     if (flags()->log_threads) Report(__VA_ARGS__); \
   } while (0)
 
-ALIGNED(64) static char suppression_placeholder[sizeof(SuppressionContext)];
-static SuppressionContext *suppression_ctx = nullptr;
+class LeakSuppressionContext {
+  bool parsed = false;
+  SuppressionContext context;
+  bool suppressed_stacks_sorted = true;
+  InternalMmapVector<u32> suppressed_stacks;
+
+  Suppression *GetSuppressionForAddr(uptr addr);
+  void LazyInit();
+
+ public:
+  LeakSuppressionContext(const char *supprression_types[],
+                         int suppression_types_num)
+      : context(supprression_types, suppression_types_num) {}
+
+  Suppression *GetSuppressionForStack(u32 stack_trace_id);
+
+  const InternalMmapVector<u32> &GetSortedSuppressedStacks() {
+    if (!suppressed_stacks_sorted) {
+      suppressed_stacks_sorted = true;
+      SortAndDedup(suppressed_stacks);
+    }
+    return suppressed_stacks;
+  }
+  void PrintMatchedSuppressions();
+};
+
+ALIGNED(64) static char suppression_placeholder[sizeof(LeakSuppressionContext)];
+static LeakSuppressionContext *suppression_ctx = nullptr;
 static const char kSuppressionLeak[] = "leak";
 static const char *kSuppressionTypes[] = { kSuppressionLeak };
 static const char kStdSuppressions[] =
@@ -86,14 +112,20 @@ static const char kStdSuppressions[] =
 void InitializeSuppressions() {
   CHECK_EQ(nullptr, suppression_ctx);
   suppression_ctx = new (suppression_placeholder)
-      SuppressionContext(kSuppressionTypes, ARRAY_SIZE(kSuppressionTypes));
-  suppression_ctx->ParseFromFile(flags()->suppressions);
-  if (&__lsan_default_suppressions)
-    suppression_ctx->Parse(__lsan_default_suppressions());
-  suppression_ctx->Parse(kStdSuppressions);
+      LeakSuppressionContext(kSuppressionTypes, ARRAY_SIZE(kSuppressionTypes));
 }
 
-static SuppressionContext *GetSuppressionContext() {
+void LeakSuppressionContext::LazyInit() {
+  if (!parsed) {
+    parsed = true;
+    context.ParseFromFile(flags()->suppressions);
+    if (&__lsan_default_suppressions)
+      context.Parse(__lsan_default_suppressions());
+    context.Parse(kStdSuppressions);
+  }
+}
+
+static LeakSuppressionContext *GetSuppressionContext() {
   CHECK(suppression_ctx);
   return suppression_ctx;
 }
@@ -390,6 +422,24 @@ static void MarkIndirectlyLeakedCb(uptr chunk, void *arg) {
   }
 }
 
+static void IgnoredSuppressedCb(uptr chunk, void *arg) {
+  CHECK(arg);
+  chunk = GetUserBegin(chunk);
+  LsanMetadata m(chunk);
+  if (!m.allocated() || m.tag() == kIgnored)
+    return;
+
+  const InternalMmapVector<u32> &suppressed =
+      *static_cast<const InternalMmapVector<u32> *>(arg);
+  uptr idx = InternalLowerBound(suppressed, m.stack_trace_id());
+  if (idx >= suppressed.size() || m.stack_trace_id() != suppressed[idx])
+    return;
+
+  LOG_POINTERS("Suppressed: chunk %p-%p of size %zu.\n", chunk,
+               chunk + m.requested_size(), m.requested_size());
+  m.set_tag(kIgnored);
+}
+
 // ForEachChunk callback. If chunk is marked as ignored, adds its address to
 // frontier.
 static void CollectIgnoredCb(uptr chunk, void *arg) {
@@ -473,6 +523,12 @@ void ProcessPC(Frontier *frontier) {
 // Sets the appropriate tag on each chunk.
 static void ClassifyAllChunks(SuspendedThreadsList const &suspended_threads,
                               Frontier *frontier) {
+  const InternalMmapVector<u32> &suppressed_stacks =
+      GetSuppressionContext()->GetSortedSuppressedStacks();
+  if (!suppressed_stacks.empty()) {
+    ForEachChunk(IgnoredSuppressedCb,
+                 const_cast<InternalMmapVector<u32> *>(&suppressed_stacks));
+  }
   ForEachChunk(CollectIgnoredCb, frontier);
   ProcessGlobalRegions(frontier);
   ProcessThreads(suspended_threads, frontier);
@@ -532,18 +588,20 @@ static void CollectLeaksCb(uptr chunk, void *arg) {
   }
 }
 
-static void PrintMatchedSuppressions() {
+void LeakSuppressionContext::PrintMatchedSuppressions() {
   InternalMmapVector<Suppression *> matched;
-  GetSuppressionContext()->GetMatched(&matched);
+  context.GetMatched(&matched);
   if (!matched.size())
     return;
   const char *line = "-----------------------------------------------------";
   Printf("%s\n", line);
   Printf("Suppressions used:\n");
   Printf("  count      bytes template\n");
-  for (uptr i = 0; i < matched.size(); i++)
-    Printf("%7zu %10zu %s\n", static_cast<uptr>(atomic_load_relaxed(
-        &matched[i]->hit_count)), matched[i]->weight, matched[i]->templ);
+  for (uptr i = 0; i < matched.size(); i++) {
+    Printf("%7zu %10zu %s\n",
+           static_cast<uptr>(atomic_load_relaxed(&matched[i]->hit_count)),
+           matched[i]->weight, matched[i]->templ);
+  }
   Printf("%s\n\n", line);
 }
 
@@ -551,8 +609,7 @@ static void ReportIfNotSuspended(ThreadContextBase *tctx, void *arg) {
   const InternalMmapVector<tid_t> &suspended_threads =
       *(const InternalMmapVector<tid_t> *)arg;
   if (tctx->status == ThreadStatusRunning) {
-    uptr i = InternalLowerBound(suspended_threads, 0, suspended_threads.size(),
-                                tctx->os_id, CompareLess<int>());
+    uptr i = InternalLowerBound(suspended_threads, tctx->os_id);
     if (i >= suspended_threads.size() || suspended_threads[i] != tctx->os_id)
       Report("Running thread %d was not suspended. False leaks are possible.\n",
              tctx->os_id);
@@ -595,41 +652,66 @@ static void CheckForLeaksCallback(const SuspendedThreadsList &suspended_threads,
   param->success = true;
 }
 
-static bool CheckForLeaks() {
-  if (&__lsan_is_turned_off && __lsan_is_turned_off())
-    return false;
-  EnsureMainThreadIDIsCorrect();
-  CheckForLeaksParam param;
-  LockStuffAndStopTheWorld(CheckForLeaksCallback, &param);
-
-  if (!param.success) {
-    Report("LeakSanitizer has encountered a fatal error.\n");
-    Report(
-        "HINT: For debugging, try setting environment variable "
-        "LSAN_OPTIONS=verbosity=1:log_threads=1\n");
-    Report(
-        "HINT: LeakSanitizer does not work under ptrace (strace, gdb, etc)\n");
-    Die();
-  }
-  param.leak_report.ApplySuppressions();
-  uptr unsuppressed_count = param.leak_report.UnsuppressedLeakCount();
-  if (unsuppressed_count > 0) {
+static bool PrintResults(LeakReport &report) {
+  uptr unsuppressed_count = report.UnsuppressedLeakCount();
+  if (unsuppressed_count) {
     Decorator d;
-    Printf("\n"
-           "================================================================="
-           "\n");
+    Printf(
+        "\n"
+        "================================================================="
+        "\n");
     Printf("%s", d.Error());
     Report("ERROR: LeakSanitizer: detected memory leaks\n");
     Printf("%s", d.Default());
-    param.leak_report.ReportTopLeaks(flags()->max_leaks);
+    report.ReportTopLeaks(flags()->max_leaks);
   }
   if (common_flags()->print_suppressions)
-    PrintMatchedSuppressions();
+    GetSuppressionContext()->PrintMatchedSuppressions();
   if (unsuppressed_count > 0) {
-    param.leak_report.PrintSummary();
+    report.PrintSummary();
     return true;
   }
   return false;
+}
+
+static bool CheckForLeaks() {
+  if (&__lsan_is_turned_off && __lsan_is_turned_off())
+    return false;
+  // Inside LockStuffAndStopTheWorld we can't run symbolizer, so we can't match
+  // suppressions. However if a stack id was previously suppressed, it should be
+  // suppressed in future checks as well.
+  for (int i = 0;; ++i) {
+    EnsureMainThreadIDIsCorrect();
+    CheckForLeaksParam param;
+    LockStuffAndStopTheWorld(CheckForLeaksCallback, &param);
+    if (!param.success) {
+      Report("LeakSanitizer has encountered a fatal error.\n");
+      Report(
+          "HINT: For debugging, try setting environment variable "
+          "LSAN_OPTIONS=verbosity=1:log_threads=1\n");
+      Report(
+          "HINT: LeakSanitizer does not work under ptrace (strace, gdb, "
+          "etc)\n");
+      Die();
+    }
+    // No new suppressions stacks, so rerun will not help and we can report.
+    if (!param.leak_report.ApplySuppressions())
+      return PrintResults(param.leak_report);
+
+    // No indirect leaks to report, so we are done here.
+    if (!param.leak_report.IndirectUnsuppressedLeakCount())
+      return PrintResults(param.leak_report);
+
+    if (i >= 8) {
+      Report("WARNING: LeakSanitizer gave up on indirect leaks suppression.\n");
+      return PrintResults(param.leak_report);
+    }
+
+    // We found a new previously unseen suppressed call stack. Rerun to make
+    // sure it does not hold indirect leaks.
+    VReport(1, "Rerun with %zu suppressed stacks.",
+            GetSuppressionContext()->GetSortedSuppressedStacks().size());
+  }
 }
 
 static bool has_reported_leaks = false;
@@ -652,21 +734,20 @@ static int DoRecoverableLeakCheck() {
 
 void DoRecoverableLeakCheckVoid() { DoRecoverableLeakCheck(); }
 
-static Suppression *GetSuppressionForAddr(uptr addr) {
+Suppression *LeakSuppressionContext::GetSuppressionForAddr(uptr addr) {
   Suppression *s = nullptr;
 
   // Suppress by module name.
-  SuppressionContext *suppressions = GetSuppressionContext();
   if (const char *module_name =
           Symbolizer::GetOrInit()->GetModuleNameForPc(addr))
-    if (suppressions->Match(module_name, kSuppressionLeak, &s))
+    if (context.Match(module_name, kSuppressionLeak, &s))
       return s;
 
   // Suppress by file or function name.
   SymbolizedStack *frames = Symbolizer::GetOrInit()->SymbolizePC(addr);
   for (SymbolizedStack *cur = frames; cur; cur = cur->next) {
-    if (suppressions->Match(cur->info.function, kSuppressionLeak, &s) ||
-        suppressions->Match(cur->info.file, kSuppressionLeak, &s)) {
+    if (context.Match(cur->info.function, kSuppressionLeak, &s) ||
+        context.Match(cur->info.file, kSuppressionLeak, &s)) {
       break;
     }
   }
@@ -674,12 +755,18 @@ static Suppression *GetSuppressionForAddr(uptr addr) {
   return s;
 }
 
-static Suppression *GetSuppressionForStack(u32 stack_trace_id) {
+Suppression *LeakSuppressionContext::GetSuppressionForStack(
+    u32 stack_trace_id) {
+  LazyInit();
   StackTrace stack = StackDepotGet(stack_trace_id);
   for (uptr i = 0; i < stack.size; i++) {
     Suppression *s = GetSuppressionForAddr(
         StackTrace::GetPreviousInstructionPc(stack.trace[i]));
-    if (s) return s;
+    if (s) {
+      suppressed_stacks_sorted = false;
+      suppressed_stacks.push_back(stack_trace_id);
+      return s;
+    }
   }
   return nullptr;
 }
@@ -790,22 +877,35 @@ void LeakReport::PrintSummary() {
   ReportErrorSummary(summary.data());
 }
 
-void LeakReport::ApplySuppressions() {
+uptr LeakReport::ApplySuppressions() {
+  LeakSuppressionContext *suppressions = GetSuppressionContext();
+  uptr new_suppressions = false;
   for (uptr i = 0; i < leaks_.size(); i++) {
-    Suppression *s = GetSuppressionForStack(leaks_[i].stack_trace_id);
+    Suppression *s =
+        suppressions->GetSuppressionForStack(leaks_[i].stack_trace_id);
     if (s) {
       s->weight += leaks_[i].total_size;
       atomic_store_relaxed(&s->hit_count, atomic_load_relaxed(&s->hit_count) +
           leaks_[i].hit_count);
       leaks_[i].is_suppressed = true;
+      ++new_suppressions;
     }
   }
+  return new_suppressions;
 }
 
 uptr LeakReport::UnsuppressedLeakCount() {
   uptr result = 0;
   for (uptr i = 0; i < leaks_.size(); i++)
     if (!leaks_[i].is_suppressed) result++;
+  return result;
+}
+
+uptr LeakReport::IndirectUnsuppressedLeakCount() {
+  uptr result = 0;
+  for (uptr i = 0; i < leaks_.size(); i++)
+    if (!leaks_[i].is_suppressed && !leaks_[i].is_directly_leaked)
+      result++;
   return result;
 }
 

@@ -2086,15 +2086,15 @@ void __kmp_assign_orig<kmp_taskred_input_t>(kmp_taskred_data_t &item,
   } // non-NULL reduce_orig means new interface used
 }
 
-template <typename T> void __kmp_call_init(kmp_taskred_data_t &item, int j);
+template <typename T> void __kmp_call_init(kmp_taskred_data_t &item, size_t j);
 template <>
 void __kmp_call_init<kmp_task_red_input_t>(kmp_taskred_data_t &item,
-                                           int offset) {
+                                           size_t offset) {
   ((void (*)(void *))item.reduce_init)((char *)(item.reduce_priv) + offset);
 }
 template <>
 void __kmp_call_init<kmp_taskred_input_t>(kmp_taskred_data_t &item,
-                                          int offset) {
+                                          size_t offset) {
   ((void (*)(void *, void *))item.reduce_init)(
       (char *)(item.reduce_priv) + offset, item.reduce_orig);
 }
@@ -2104,7 +2104,7 @@ void *__kmp_task_reduction_init(int gtid, int num, T *data) {
   __kmp_assert_valid_gtid(gtid);
   kmp_info_t *thread = __kmp_threads[gtid];
   kmp_taskgroup_t *tg = thread->th.th_current_task->td_taskgroup;
-  kmp_int32 nth = thread->th.th_team_nproc;
+  kmp_uint32 nth = thread->th.th_team_nproc;
   kmp_taskred_data_t *arr;
 
   // check input data just in case
@@ -2138,7 +2138,7 @@ void *__kmp_task_reduction_init(int gtid, int num, T *data) {
       arr[i].reduce_pend = (char *)(arr[i].reduce_priv) + nth * size;
       if (arr[i].reduce_init != NULL) {
         // initialize all thread-specific items
-        for (int j = 0; j < nth; ++j) {
+        for (size_t j = 0; j < nth; ++j) {
           __kmp_call_init<T>(arr[i], j * size);
         }
       }
@@ -3571,7 +3571,8 @@ void __kmp_task_team_sync(kmp_info_t *this_thr, kmp_team_t *team) {
 
   // Toggle the th_task_state field, to switch which task_team this thread
   // refers to
-  this_thr->th.th_task_state = 1 - this_thr->th.th_task_state;
+  this_thr->th.th_task_state = (kmp_uint8)(1 - this_thr->th.th_task_state);
+
   // It is now safe to propagate the task team pointer from the team struct to
   // the current thread.
   TCW_PTR(this_thr->th.th_task_team,

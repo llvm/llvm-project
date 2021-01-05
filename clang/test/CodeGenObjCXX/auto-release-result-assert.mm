@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -o - %s | FileCheck %s
 
-// CHECK-LABEL: define %struct.S1* @_Z4foo1i(
+// CHECK-LABEL: define{{.*}} %struct.S1* @_Z4foo1i(
 // CHECK: %[[CALL:[a-z0-9]+]] = call %struct.S1* @_Z4foo0i
 // CHECK: ret %struct.S1* %[[CALL]]
 
-// CHECK-LABEL: define %struct.S1* @_ZN2S22m1Ev(
+// CHECK-LABEL: define{{.*}} %struct.S1* @_ZN2S22m1Ev(
 // CHECK: %[[CALL:[a-z0-9]+]] = call %struct.S1* @_Z4foo0i
 // CHECK: ret %struct.S1* %[[CALL]]
 

@@ -54,14 +54,14 @@ bool SwapIfBranches::prepare(const Selection &Inputs) {
   for (const SelectionTree::Node *N = Inputs.ASTSelection.commonAncestor();
        N && !If; N = N->Parent) {
     // Stop once we hit a block, e.g. a lambda in the if condition.
-    if (dyn_cast_or_null<CompoundStmt>(N->ASTNode.get<Stmt>()))
+    if (llvm::isa_and_nonnull<CompoundStmt>(N->ASTNode.get<Stmt>()))
       return false;
     If = dyn_cast_or_null<IfStmt>(N->ASTNode.get<Stmt>());
   }
   // avoid dealing with single-statement brances, they require careful handling
   // to avoid changing semantics of the code (i.e. dangling else).
-  return If && dyn_cast_or_null<CompoundStmt>(If->getThen()) &&
-         dyn_cast_or_null<CompoundStmt>(If->getElse());
+  return If && isa_and_nonnull<CompoundStmt>(If->getThen()) &&
+         isa_and_nonnull<CompoundStmt>(If->getElse());
 }
 
 Expected<Tweak::Effect> SwapIfBranches::apply(const Selection &Inputs) {

@@ -27,7 +27,7 @@ vector signed __int128 res_vlll;
 vector unsigned __int128 res_vulll;
 
 
-// CHECK-LABEL: define void @test1
+// CHECK-LABEL: define{{.*}} void @test1
 void test1() {
 
   /* vec_add */

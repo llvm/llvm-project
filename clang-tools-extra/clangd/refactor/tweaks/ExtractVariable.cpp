@@ -79,7 +79,7 @@ computeReferencedDecls(const clang::Expr *Expr) {
     }
   };
   FindDeclRefsVisitor Visitor;
-  Visitor.TraverseStmt(const_cast<Stmt *>(dyn_cast<Stmt>(Expr)));
+  Visitor.TraverseStmt(const_cast<Stmt *>(cast<Stmt>(Expr)));
   return Visitor.ReferencedDecls;
 }
 

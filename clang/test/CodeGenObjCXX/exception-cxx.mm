@@ -9,5 +9,5 @@ namespace test0 {
       return;
     }
   }
-// CHECK: define void @_ZN5test03fooEv() #0 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
+// CHECK: define{{.*}} void @_ZN5test03fooEv() #0 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
 }

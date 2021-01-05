@@ -11,7 +11,7 @@ void f(void) {}
 __attribute__((noinline)) void ni(void) {}
 
 __attribute__((flatten))
-// CHECK: define void @g()
+// CHECK: define{{.*}} void @g()
 void g(void) {
   // CHECK-NOT: call {{.*}} @f
   f();

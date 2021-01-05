@@ -1,7 +1,7 @@
-; RUN: llc < %s -mtriple=i686-pc-linux-gnu -o -     | FileCheck %s  --check-prefix=LIN
-; RUN: llc < %s -mtriple=i386-pc-mingw32 -o -       | FileCheck %s  --check-prefix=WIN
-; RUN: llc < %s -mtriple=i686-pc-windows-gnu -o -   | FileCheck %s  --check-prefix=WIN
-; RUN: llc < %s -mtriple=x86_64-pc-windows-gnu -o - | FileCheck %s  --check-prefix=WIN64
+; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=i686-pc-linux-gnu -o -     | FileCheck %s  --check-prefix=LIN
+; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=i386-pc-mingw32 -o -       | FileCheck %s  --check-prefix=WIN
+; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=i686-pc-windows-gnu -o -   | FileCheck %s  --check-prefix=WIN
+; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -mtriple=x86_64-pc-windows-gnu -o - | FileCheck %s  --check-prefix=WIN64
 
 ; LIN: .cfi_personality 0, __gnat_eh_personality
 ; LIN: .cfi_lsda 0, .Lexception0

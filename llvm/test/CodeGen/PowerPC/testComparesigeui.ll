@@ -8,10 +8,10 @@
 ; RUN:  --implicit-check-not cmpw --implicit-check-not cmpd --implicit-check-not cmpl \
 ; RUN:  --check-prefixes=CHECK,LE
 
-@glob = local_unnamed_addr global i32 0, align 4
+@glob = dso_local local_unnamed_addr global i32 0, align 4
 
 ; Function Attrs: norecurse nounwind readnone
-define signext i32 @test_igeui(i32 zeroext %a, i32 zeroext %b) {
+define dso_local signext i32 @test_igeui(i32 zeroext %a, i32 zeroext %b) {
 ; CHECK-LABEL: test_igeui:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sub r3, r3, r4
@@ -25,7 +25,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readnone
-define signext i32 @test_igeui_sext(i32 zeroext %a, i32 zeroext %b) {
+define dso_local signext i32 @test_igeui_sext(i32 zeroext %a, i32 zeroext %b) {
 ; CHECK-LABEL: test_igeui_sext:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sub r3, r3, r4
@@ -39,7 +39,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readnone
-define signext i32 @test_igeui_z(i32 zeroext %a) {
+define dso_local signext i32 @test_igeui_z(i32 zeroext %a) {
 ; CHECK-LABEL: test_igeui_z:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li r3, 1
@@ -51,7 +51,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readnone
-define signext i32 @test_igeui_sext_z(i32 zeroext %a) {
+define dso_local signext i32 @test_igeui_sext_z(i32 zeroext %a) {
 ; CHECK-LABEL: test_igeui_sext_z:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li r3, -1
@@ -63,25 +63,15 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @test_igeui_store(i32 zeroext %a, i32 zeroext %b) {
-; BE-LABEL: test_igeui_store:
-; BE:       # %bb.0: # %entry
-; BE-NEXT:    addis r5, r2, .LC0@toc@ha
-; BE-NEXT:    sub r3, r3, r4
-; BE-NEXT:    ld r4, .LC0@toc@l(r5)
-; BE-NEXT:    not r3, r3
-; BE-NEXT:    rldicl r3, r3, 1, 63
-; BE-NEXT:    stw r3, 0(r4)
-; BE-NEXT:    blr
-;
-; LE-LABEL: test_igeui_store:
-; LE:       # %bb.0: # %entry
-; LE-NEXT:    sub r3, r3, r4
-; LE-NEXT:    addis r5, r2, glob@toc@ha
-; LE-NEXT:    not r3, r3
-; LE-NEXT:    rldicl r3, r3, 1, 63
-; LE-NEXT:    stw r3, glob@toc@l(r5)
-; LE-NEXT:    blr
+define dso_local void @test_igeui_store(i32 zeroext %a, i32 zeroext %b) {
+; CHECK-LABEL: test_igeui_store:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    sub r3, r3, r4
+; CHECK-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-NEXT:    not r3, r3
+; CHECK-NEXT:    rldicl r3, r3, 1, 63
+; CHECK-NEXT:    stw r3, glob@toc@l(r5)
+; CHECK-NEXT:    blr
 entry:
   %cmp = icmp uge i32 %a, %b
   %conv = zext i1 %cmp to i32
@@ -91,25 +81,15 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @test_igeui_sext_store(i32 zeroext %a, i32 zeroext %b) {
-; BE-LABEL: test_igeui_sext_store:
-; BE:       # %bb.0: # %entry
-; BE-NEXT:    addis r5, r2, .LC0@toc@ha
-; BE-NEXT:    sub r3, r3, r4
-; BE-NEXT:    ld r4, .LC0@toc@l(r5)
-; BE-NEXT:    rldicl r3, r3, 1, 63
-; BE-NEXT:    addi r3, r3, -1
-; BE-NEXT:    stw r3, 0(r4)
-; BE-NEXT:    blr
-;
-; LE-LABEL: test_igeui_sext_store:
-; LE:       # %bb.0: # %entry
-; LE-NEXT:    sub r3, r3, r4
-; LE-NEXT:    addis r5, r2, glob@toc@ha
-; LE-NEXT:    rldicl r3, r3, 1, 63
-; LE-NEXT:    addi r3, r3, -1
-; LE-NEXT:    stw r3, glob@toc@l(r5)
-; LE-NEXT:    blr
+define dso_local void @test_igeui_sext_store(i32 zeroext %a, i32 zeroext %b) {
+; CHECK-LABEL: test_igeui_sext_store:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    sub r3, r3, r4
+; CHECK-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-NEXT:    rldicl r3, r3, 1, 63
+; CHECK-NEXT:    addi r3, r3, -1
+; CHECK-NEXT:    stw r3, glob@toc@l(r5)
+; CHECK-NEXT:    blr
 entry:
   %cmp = icmp uge i32 %a, %b
   %sub = sext i1 %cmp to i32
@@ -118,21 +98,13 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @test_igeui_z_store(i32 zeroext %a) {
-; BE-LABEL: test_igeui_z_store:
-; BE:       # %bb.0: # %entry
-; BE-NEXT:    addis r3, r2, .LC0@toc@ha
-; BE-NEXT:    li r4, 1
-; BE-NEXT:    ld r3, .LC0@toc@l(r3)
-; BE-NEXT:    stw r4, 0(r3)
-; BE-NEXT:    blr
-;
-; LE-LABEL: test_igeui_z_store:
-; LE:       # %bb.0: # %entry
-; LE-NEXT:    addis r3, r2, glob@toc@ha
-; LE-NEXT:    li r4, 1
-; LE-NEXT:    stw r4, glob@toc@l(r3)
-; LE-NEXT:    blr
+define dso_local void @test_igeui_z_store(i32 zeroext %a) {
+; CHECK-LABEL: test_igeui_z_store:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addis r3, r2, glob@toc@ha
+; CHECK-NEXT:    li r4, 1
+; CHECK-NEXT:    stw r4, glob@toc@l(r3)
+; CHECK-NEXT:    blr
 entry:
   %cmp = icmp uge i32 %a, 0
   %conv1 = zext i1 %cmp to i32
@@ -141,21 +113,13 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @test_igeui_sext_z_store(i32 zeroext %a) {
-; BE-LABEL: test_igeui_sext_z_store:
-; BE:       # %bb.0: # %entry
-; BE-NEXT:    addis r3, r2, .LC0@toc@ha
-; BE-NEXT:    li r4, -1
-; BE-NEXT:    ld r3, .LC0@toc@l(r3)
-; BE-NEXT:    stw r4, 0(r3)
-; BE-NEXT:    blr
-;
-; LE-LABEL: test_igeui_sext_z_store:
-; LE:       # %bb.0: # %entry
-; LE-NEXT:    addis r3, r2, glob@toc@ha
-; LE-NEXT:    li r4, -1
-; LE-NEXT:    stw r4, glob@toc@l(r3)
-; LE-NEXT:    blr
+define dso_local void @test_igeui_sext_z_store(i32 zeroext %a) {
+; CHECK-LABEL: test_igeui_sext_z_store:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addis r3, r2, glob@toc@ha
+; CHECK-NEXT:    li r4, -1
+; CHECK-NEXT:    stw r4, glob@toc@l(r3)
+; CHECK-NEXT:    blr
 entry:
   %cmp = icmp uge i32 %a, 0
   %conv1 = sext i1 %cmp to i32

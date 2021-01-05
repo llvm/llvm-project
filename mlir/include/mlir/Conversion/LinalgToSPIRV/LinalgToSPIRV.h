@@ -1,4 +1,4 @@
-//===- LinalgToSPIRV.h - Linalg to SPIR-V dialect conversion ----*- C++ -*-===//
+//===- LinalgToSPIRV.h - Linalg to SPIR-V Patterns --------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file provides patterns for Linalg to SPIR-V dialect conversion.
+// Provides patterns to convert Linalg dialect to SPIR-V dialect.
 //
 //===----------------------------------------------------------------------===//
 

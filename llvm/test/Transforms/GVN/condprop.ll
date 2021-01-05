@@ -79,6 +79,72 @@ nope:
   ret void
 }
 
+; CHECK-LABEL: @test3_select(
+define void @test3_select(i32 %x, i32 %y) {
+  %xz = icmp eq i32 %x, 0
+  %yz = icmp eq i32 %y, 0
+  %z = select i1 %xz, i1 %yz, i1 false
+  br i1 %z, label %both_zero, label %nope
+both_zero:
+  call void @foo(i1 %xz)
+; CHECK: call void @foo(i1 true)
+  call void @foo(i1 %yz)
+; CHECK: call void @foo(i1 true)
+  call void @bar(i32 %x)
+; CHECK: call void @bar(i32 0)
+  call void @bar(i32 %y)
+; CHECK: call void @bar(i32 0)
+  ret void
+nope:
+  call void @foo(i1 %z)
+; CHECK: call void @foo(i1 false)
+  ret void
+}
+
+; CHECK-LABEL: @test3_or(
+define void @test3_or(i32 %x, i32 %y) {
+  %xz = icmp ne i32 %x, 0
+  %yz = icmp ne i32 %y, 0
+  %z = or i1 %xz, %yz
+  br i1 %z, label %nope, label %both_zero
+both_zero:
+  call void @foo(i1 %xz)
+; CHECK: call void @foo(i1 false)
+  call void @foo(i1 %yz)
+; CHECK: call void @foo(i1 false)
+  call void @bar(i32 %x)
+; CHECK: call void @bar(i32 0)
+  call void @bar(i32 %y)
+; CHECK: call void @bar(i32 0)
+  ret void
+nope:
+  call void @foo(i1 %z)
+; CHECK: call void @foo(i1 true)
+  ret void
+}
+
+; CHECK-LABEL: @test3_or_select(
+define void @test3_or_select(i32 %x, i32 %y) {
+  %xz = icmp ne i32 %x, 0
+  %yz = icmp ne i32 %y, 0
+  %z = select i1 %xz, i1 true, i1 %yz
+  br i1 %z, label %nope, label %both_zero
+both_zero:
+  call void @foo(i1 %xz)
+; CHECK: call void @foo(i1 false)
+  call void @foo(i1 %yz)
+; CHECK: call void @foo(i1 false)
+  call void @bar(i32 %x)
+; CHECK: call void @bar(i32 0)
+  call void @bar(i32 %y)
+; CHECK: call void @bar(i32 0)
+  ret void
+nope:
+  call void @foo(i1 %z)
+; CHECK: call void @foo(i1 true)
+  ret void
+}
+
 ; CHECK-LABEL: @test4(
 define void @test4(i1 %b, i32 %x) {
   br i1 %b, label %sw, label %case3

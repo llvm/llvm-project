@@ -655,11 +655,7 @@ public:
   /// \returns nullptr if contains no such member.
   InstTy *getMember(uint32_t Index) const {
     int32_t Key = SmallestKey + Index;
-    auto Member = Members.find(Key);
-    if (Member == Members.end())
-      return nullptr;
-
-    return Member->second;
+    return Members.lookup(Key);
   }
 
   /// Get the index for the given member. Unlike the key in the member
@@ -777,9 +773,7 @@ public:
   /// \returns nullptr if doesn't have such group.
   InterleaveGroup<Instruction> *
   getInterleaveGroup(const Instruction *Instr) const {
-    if (InterleaveGroupMap.count(Instr))
-      return InterleaveGroupMap.find(Instr)->second;
-    return nullptr;
+    return InterleaveGroupMap.lookup(Instr);
   }
 
   iterator_range<SmallPtrSetIterator<llvm::InterleaveGroup<Instruction> *>>

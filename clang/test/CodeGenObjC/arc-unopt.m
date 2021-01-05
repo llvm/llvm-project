@@ -55,7 +55,7 @@ void test5(void) {
   if ((x = y))
     y = 0;
 
-// CHECK-LABEL:    define void @test5()
+// CHECK-LABEL:    define{{.*}} void @test5()
 // CHECK:      [[X:%.*]] = alloca [[TEST5:%.*]]*,
 // CHECK-NEXT: [[Y:%.*]] = alloca [[TEST5:%.*]]*,
 // CHECK-NEXT: store [[TEST5]]* null, [[TEST5]]** [[X]],

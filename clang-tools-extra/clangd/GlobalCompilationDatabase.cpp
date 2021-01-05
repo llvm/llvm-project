@@ -511,11 +511,14 @@ void DirectoryBasedGlobalCompilationDatabase::broadcastCDB(
   // Given that we know that CDBs have been moved/generated, don't trust caches.
   // (This should be rare, so it's OK to add a little latency).
   constexpr auto IgnoreCache = std::chrono::steady_clock::time_point::max();
-  for (DirectoryCache *Dir : getDirectoryCaches(FileAncestors)) {
+  auto DirectoryCaches = getDirectoryCaches(FileAncestors);
+  assert(DirectoryCaches.size() == FileAncestors.size());
+  for (unsigned I = 0; I < DirectoryCaches.size(); ++I) {
     bool ShouldBroadcast = false;
-    if (Dir->get(Opts.TFS, ShouldBroadcast, /*FreshTime=*/IgnoreCache,
-                 /*FreshTimeMissing=*/IgnoreCache))
-      DirectoryHasCDB.find(Dir->Path)->setValue(true);
+    if (DirectoryCaches[I]->get(Opts.TFS, ShouldBroadcast,
+                                /*FreshTime=*/IgnoreCache,
+                                /*FreshTimeMissing=*/IgnoreCache))
+      DirectoryHasCDB.find(FileAncestors[I])->setValue(true);
   }
 
   std::vector<std::string> GovernedFiles;

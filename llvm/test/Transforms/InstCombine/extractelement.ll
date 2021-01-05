@@ -4,7 +4,7 @@
 
 define i32 @extractelement_out_of_range(<2 x i32> %x) {
 ; ANY-LABEL: @extractelement_out_of_range(
-; ANY-NEXT:    ret i32 undef
+; ANY-NEXT:    ret i32 poison
 ;
   %E1 = extractelement <2 x i32> %x, i8 16
   ret i32 %E1
@@ -319,7 +319,7 @@ define <4 x double> @invalid_extractelement(<2 x double> %a, <4 x double> %b, do
 ; ANY-NEXT:    [[T4:%.*]] = shufflevector <4 x double> [[B:%.*]], <4 x double> [[TMP1]], <4 x i32> <i32 undef, i32 1, i32 4, i32 3>
 ; ANY-NEXT:    [[E:%.*]] = extractelement <4 x double> [[B]], i32 1
 ; ANY-NEXT:    store double [[E]], double* [[P:%.*]], align 8
-; ANY-NEXT:    [[R:%.*]] = insertelement <4 x double> [[T4]], double undef, i64 0
+; ANY-NEXT:    [[R:%.*]] = insertelement <4 x double> [[T4]], double poison, i64 0
 ; ANY-NEXT:    ret <4 x double> [[R]]
 ;
   %t3 = extractelement <2 x double> %a, i32 0

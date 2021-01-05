@@ -64,8 +64,7 @@ bool SSAUpdater::HasValueForBlock(BasicBlock *BB) const {
 }
 
 Value *SSAUpdater::FindValueForBlock(BasicBlock *BB) const {
-  AvailableValsTy::iterator AVI = getAvailableVals(AV).find(BB);
-  return (AVI != getAvailableVals(AV).end()) ? AVI->second : nullptr;
+  return getAvailableVals(AV).lookup(BB);
 }
 
 void SSAUpdater::AddAvailableValue(BasicBlock *BB, Value *V) {
@@ -281,12 +280,6 @@ public:
   /// the specified predecessor block.
   static void AddPHIOperand(PHINode *PHI, Value *Val, BasicBlock *Pred) {
     PHI->addIncoming(Val, Pred);
-  }
-
-  /// InstrIsPHI - Check if an instruction is a PHI.
-  ///
-  static PHINode *InstrIsPHI(Instruction *I) {
-    return dyn_cast<PHINode>(I);
   }
 
   /// ValueIsPHI - Check if a value is a PHI.

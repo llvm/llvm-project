@@ -3118,11 +3118,9 @@ bool Sema::isCopyElisionCandidate(QualType ReturnType, const VarDecl *VD,
 /// If move-initialization is not possible, such that we must fall back to
 /// treating the operand as an lvalue, we will leave Res in its original
 /// invalid state.
-static void TryMoveInitialization(Sema& S,
-                                  const InitializedEntity &Entity,
+static void TryMoveInitialization(Sema &S, const InitializedEntity &Entity,
                                   const VarDecl *NRVOCandidate,
-                                  QualType ResultType,
-                                  Expr *&Value,
+                                  QualType ResultType, Expr *&Value,
                                   bool ConvertingConstructorsOnly,
                                   ExprResult &Res) {
   ImplicitCastExpr AsRvalue(ImplicitCastExpr::OnStack, Value->getType(),
@@ -3235,9 +3233,8 @@ Sema::PerformMoveOrCopyInitialization(const InitializedEntity &Entity,
 
     if (!Res.isInvalid() && AffectedByCWG1579) {
       QualType QT = NRVOCandidate->getType();
-      if (QT.getNonReferenceType()
-                     .getUnqualifiedType()
-                     .isTriviallyCopyableType(Context)) {
+      if (QT.getNonReferenceType().getUnqualifiedType().isTriviallyCopyableType(
+              Context)) {
         // Adding 'std::move' around a trivially copyable variable is probably
         // pointless. Don't suggest it.
       } else {
@@ -3251,8 +3248,8 @@ Sema::PerformMoveOrCopyInitialization(const InitializedEntity &Entity,
         Str += NRVOCandidate->getDeclName().getAsString();
         Str += ")";
         Diag(Value->getExprLoc(), diag::warn_return_std_move_in_cxx11)
-            << Value->getSourceRange()
-            << NRVOCandidate->getDeclName() << ResultType << QT;
+            << Value->getSourceRange() << NRVOCandidate->getDeclName()
+            << ResultType << QT;
         Diag(Value->getExprLoc(), diag::note_add_std_move_in_cxx11)
             << FixItHint::CreateReplacement(Value->getSourceRange(), Str);
       }

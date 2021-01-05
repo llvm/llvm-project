@@ -16,7 +16,7 @@
 #define INULL ((int *)NULL)
 #define INNULL ((int *_Nonnull)NULL)
 
-// CHECK-LABEL: define i32* @{{.*}}nonnull_retval1
+// CHECK-LABEL: define{{.*}} i32* @{{.*}}nonnull_retval1
 #line 100
 int *_Nonnull nonnull_retval1(int *p) {
   // CHECK: [[ICMP:%.*]] = icmp ne i32* {{.*}}, null, !nosanitize
@@ -29,7 +29,7 @@ int *_Nonnull nonnull_retval1(int *p) {
 #line 190
 void nonnull_arg(int *_Nonnull p) {}
 
-// CHECK-LABEL: define void @{{.*}}call_func_with_nonnull_arg
+// CHECK-LABEL: define{{.*}} void @{{.*}}call_func_with_nonnull_arg
 #line 200
 void call_func_with_nonnull_arg(int *_Nonnull p) {
   // CHECK: [[ICMP:%.*]] = icmp ne i32* {{.*}}, null, !nosanitize
@@ -38,7 +38,7 @@ void call_func_with_nonnull_arg(int *_Nonnull p) {
   nonnull_arg(p);
 }
 
-// CHECK-LABEL: define void @{{.*}}nonnull_assign1
+// CHECK-LABEL: define{{.*}} void @{{.*}}nonnull_assign1
 #line 300
 void nonnull_assign1(int *p) {
   // CHECK: [[ICMP:%.*]] = icmp ne i32* {{.*}}, null, !nosanitize
@@ -48,7 +48,7 @@ void nonnull_assign1(int *p) {
   local = p;
 }
 
-// CHECK-LABEL: define void @{{.*}}nonnull_assign2
+// CHECK-LABEL: define{{.*}} void @{{.*}}nonnull_assign2
 #line 400
 void nonnull_assign2(int *p) {
   // CHECK: [[ICMP:%.*]] = icmp ne i32* %{{.*}}, null, !nosanitize
@@ -62,7 +62,7 @@ struct S1 {
   int *_Nonnull mptr;
 };
 
-// CHECK-LABEL: define void @{{.*}}nonnull_assign3
+// CHECK-LABEL: define{{.*}} void @{{.*}}nonnull_assign3
 #line 500
 void nonnull_assign3(int *p) {
   // CHECK: [[ICMP:%.*]] = icmp ne i32* %{{.*}}, null, !nosanitize
@@ -73,7 +73,7 @@ void nonnull_assign3(int *p) {
   s.mptr = p;
 }
 
-// CHECK-LABEL: define void @{{.*}}nonnull_init1
+// CHECK-LABEL: define{{.*}} void @{{.*}}nonnull_init1
 #line 600
 void nonnull_init1(int *p) {
   // CHECK: [[ICMP:%.*]] = icmp ne i32* %{{.*}}, null, !nosanitize
@@ -82,7 +82,7 @@ void nonnull_init1(int *p) {
   int *_Nonnull local = p;
 }
 
-// CHECK-LABEL: define void @{{.*}}nonnull_init2
+// CHECK-LABEL: define{{.*}} void @{{.*}}nonnull_init2
 #line 700
 void nonnull_init2(int *p) {
   // CHECK: [[ICMP:%.*]] = icmp ne i32* %{{.*}}, null, !nosanitize
@@ -94,7 +94,7 @@ void nonnull_init2(int *p) {
   int *_Nonnull arr[] = {p, p};
 }
 
-// CHECK-LABEL: define i32* @{{.*}}nonnull_retval2
+// CHECK-LABEL: define{{.*}} i32* @{{.*}}nonnull_retval2
 #line 800
 int *_Nonnull nonnull_retval2(int *_Nonnull arg1,  //< Test this.
                               int *_Nonnull arg2,  //< Test this.
@@ -160,7 +160,7 @@ int *_Nonnull nonnull_retval2(int *_Nonnull arg1,  //< Test this.
 }
 @end
 
-// CHECK-LABEL: define void @{{.*}}call_A
+// CHECK-LABEL: define{{.*}} void @{{.*}}call_A
 void call_A(A *a, int *p) {
   // CHECK: [[ICMP:%.*]] = icmp ne i32* [[P1:%.*]], null, !nosanitize
   // CHECK-NEXT: br i1 [[ICMP]], {{.*}}, !nosanitize

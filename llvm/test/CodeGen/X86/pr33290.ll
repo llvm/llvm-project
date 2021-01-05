@@ -2,11 +2,11 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown | FileCheck %s --check-prefix=X86
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown | FileCheck %s --check-prefix=X64
 
-@a = common global i32 0, align 4
-@c = common local_unnamed_addr global i8 0, align 1
-@b = common local_unnamed_addr global i32* null, align 8
+@a = common dso_local global i32 0, align 4
+@c = common dso_local local_unnamed_addr global i8 0, align 1
+@b = common dso_local local_unnamed_addr global i32* null, align 8
 
-define void @e() {
+define dso_local void @e() {
 ; X86-LABEL: e:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl b, %eax

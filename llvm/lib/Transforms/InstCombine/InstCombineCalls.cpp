@@ -883,8 +883,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Type *Ty = II->getType();
     unsigned BitWidth = Ty->getScalarSizeInBits();
     Constant *ShAmtC;
-    if (match(II->getArgOperand(2), m_Constant(ShAmtC)) &&
-        !isa<ConstantExpr>(ShAmtC) && !ShAmtC->containsConstantExpression()) {
+    if (match(II->getArgOperand(2), m_ImmConstant(ShAmtC)) &&
+        !ShAmtC->containsConstantExpression()) {
       // Canonicalize a shift amount constant operand to modulo the bit-width.
       Constant *WidthC = ConstantInt::get(Ty, BitWidth);
       Constant *ModuloC = ConstantExpr::getURem(ShAmtC, WidthC);
@@ -1692,8 +1692,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       for (; i != VecNumElts; ++i)
         WidenMask.push_back(UndefMaskElem);
 
-      Value *WidenShuffle = Builder.CreateShuffleVector(
-          SubVec, llvm::UndefValue::get(SubVecTy), WidenMask);
+      Value *WidenShuffle = Builder.CreateShuffleVector(SubVec, WidenMask);
 
       SmallVector<int, 8> Mask;
       for (unsigned i = 0; i != IdxN; ++i)

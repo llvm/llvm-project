@@ -19,7 +19,7 @@ inline constexpr bool is_constant_evaluated() noexcept {
 }
 } // namespace std
 
-// CHECK-FN-CG-LABEL: define zeroext i1 @_Z3foov()
+// CHECK-FN-CG-LABEL: define{{.*}} zeroext i1 @_Z3foov()
 // CHECK-FN-CG: ret i1 false
 bool foo() {
   return __builtin_is_constant_evaluated();
@@ -38,9 +38,9 @@ constexpr int f() {
   return m + int(sizeof(arr));
 }
 
-// CHECK-STATIC-DAG: @p = global i32 26,
+// CHECK-STATIC-DAG: @p ={{.*}} global i32 26,
 CONSTINIT int p = f(); // f().m == 13; initialized to 26
-// CHECK-STATIC-DAG: @p2 = global i32 26,
+// CHECK-STATIC-DAG: @p2 ={{.*}} global i32 26,
 int p2 = f(); // same result without CONSTINIT
 
 // CHECK-DYN-LABEL: define internal void @__cxx_global_var_init()
@@ -53,7 +53,7 @@ int q = p + f(); // m == 17 for this call; initialized to 56
 
 int y;
 
-// CHECK-STATIC-DAG: @b = global i32 2,
+// CHECK-STATIC-DAG: @b ={{.*}} global i32 2,
 CONSTINIT int b = __builtin_is_constant_evaluated() ? 2 : y; // static initialization to 2
 
 // CHECK-DYN-LABEL: define internal void @__cxx_global_var_init.1()
@@ -69,7 +69,7 @@ int c = y + (__builtin_is_constant_evaluated() ? 2 : y); // dynamic initializati
 const int a = __builtin_is_constant_evaluated() ? y : 1; // dynamic initialization to 1
 const int *a_sink = &a;
 
-// CHECK-ARR-LABEL: define void @_Z13test_arr_exprv
+// CHECK-ARR-LABEL: define{{.*}} void @_Z13test_arr_exprv
 void test_arr_expr() {
   // CHECK-ARR: %x1 = alloca [101 x i8],
   char x1[std::is_constant_evaluated() && __builtin_is_constant_evaluated() ? 101 : 1];
@@ -82,7 +82,7 @@ void test_arr_expr() {
   char x3[std::is_constant_evaluated() || __builtin_is_constant_evaluated() ? RANDU() : 13];
 }
 
-// CHECK-ARR-LABEL: define void @_Z17test_new_arr_exprv
+// CHECK-ARR-LABEL: define{{.*}} void @_Z17test_new_arr_exprv
 void test_new_arr_expr() {
   // CHECK-ARR: call noalias nonnull i8* @_Znam(i64 17)
   new char[std::is_constant_evaluated() || __builtin_is_constant_evaluated() ? 1 : 17];
@@ -97,7 +97,7 @@ bool test_constant_initialized_local(int k) {
   return *p;
 }
 
-// CHECK-FOLD-LABEL: define void @_Z21test_ir_constant_foldv()
+// CHECK-FOLD-LABEL: define{{.*}} void @_Z21test_ir_constant_foldv()
 void test_ir_constant_fold() {
   // CHECK-FOLD-NEXT: entry:
   // CHECK-FOLD-NEXT: call void @OK()
@@ -111,7 +111,7 @@ void test_ir_constant_fold() {
   std::is_constant_evaluated() ? BOOM() : OK();
 }
 
-// CHECK-STATIC-DAG: @ir = constant i32* @i_constant,
+// CHECK-STATIC-DAG: @ir ={{.*}} constant i32* @i_constant,
 int i_constant;
 int i_not_constant;
 int &ir = __builtin_is_constant_evaluated() ? i_constant : i_not_constant;

@@ -137,7 +137,7 @@ void testBlockLayoutWeak(__weak id x) {
   useBlock(^{ (void) x; });
 }
 
-// CHECK-LABEL: define void @testCatch()
+// CHECK-LABEL: define{{.*}} void @testCatch()
 // CHECK: [[X:%.*]] = alloca [[A:%.*]]*, align 4
 // CHECK: [[Y:%.*]] = alloca i8*, align 4
 // CHECK: call void @objc_exception_try_enter

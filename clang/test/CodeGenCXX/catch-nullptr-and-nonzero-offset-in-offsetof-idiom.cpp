@@ -7,7 +7,7 @@ struct S {
   int x, y;
 };
 
-// CHECK-LABEL: define i64 @{{.*}}get_offset_of_y_naively{{.*}}(
+// CHECK-LABEL: define{{.*}} i64 @{{.*}}get_offset_of_y_naively{{.*}}(
 uintptr_t get_offset_of_y_naively() {
   // CHECK: [[ENTRY:.*]]:
   // CHECK-NEXT:   ret i64 ptrtoint (i32* getelementptr (i32, i32* null, i32 1) to i64)
@@ -15,7 +15,7 @@ uintptr_t get_offset_of_y_naively() {
   return ((uintptr_t)(&(((S *)nullptr)->y)));
 }
 
-// CHECK-LABEL: define i64 @{{.*}}get_offset_of_y_via_builtin{{.*}}(
+// CHECK-LABEL: define{{.*}} i64 @{{.*}}get_offset_of_y_via_builtin{{.*}}(
 uintptr_t get_offset_of_y_via_builtin() {
   // CHECK: [[ENTRY:.*]]:
   // CHECK-NEXT:   ret i64 4

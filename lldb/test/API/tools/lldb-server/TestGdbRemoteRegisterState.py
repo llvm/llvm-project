@@ -91,14 +91,12 @@ class TestGdbRemoteRegisterState(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertIsNotNone(final_reg_values)
         self.assertEqual(final_reg_values, initial_reg_values)
 
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_grp_register_save_restore_works_with_suffix(self):
         USE_THREAD_SUFFIX = True
         self.build()
         self.set_inferior_startup_launch()
         self.grp_register_save_restore_works(USE_THREAD_SUFFIX)
 
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_grp_register_save_restore_works_no_suffix(self):
         USE_THREAD_SUFFIX = False
         self.build()

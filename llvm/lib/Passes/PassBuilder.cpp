@@ -102,10 +102,10 @@
 #include "llvm/Transforms/IPO/GlobalOpt.h"
 #include "llvm/Transforms/IPO/GlobalSplit.h"
 #include "llvm/Transforms/IPO/HotColdSplitting.h"
+#include "llvm/Transforms/IPO/IROutliner.h"
 #include "llvm/Transforms/IPO/InferFunctionAttrs.h"
 #include "llvm/Transforms/IPO/Inliner.h"
 #include "llvm/Transforms/IPO/Internalize.h"
-#include "llvm/Transforms/IPO/IROutliner.h"
 #include "llvm/Transforms/IPO/LoopExtractor.h"
 #include "llvm/Transforms/IPO/LowerTypeTests.h"
 #include "llvm/Transforms/IPO/MergeFunctions.h"
@@ -154,6 +154,7 @@
 #include "llvm/Transforms/Scalar/IVUsersPrinter.h"
 #include "llvm/Transforms/Scalar/IndVarSimplify.h"
 #include "llvm/Transforms/Scalar/InductiveRangeCheckElimination.h"
+#include "llvm/Transforms/Scalar/InferAddressSpaces.h"
 #include "llvm/Transforms/Scalar/InstSimplifyPass.h"
 #include "llvm/Transforms/Scalar/JumpThreading.h"
 #include "llvm/Transforms/Scalar/LICM.h"
@@ -284,6 +285,7 @@ PipelineTuningOptions::PipelineTuningOptions() {
   LicmMssaNoAccForPromotionCap = SetLicmMssaNoAccForPromotionCap;
   CallGraphProfile = true;
   MergeFunctions = false;
+  UniqueLinkageNames = false;
 }
 
 extern cl::opt<bool> EnableConstraintElimination;
@@ -986,13 +988,13 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level, ThinLTOPhase Phase,
   if (Level == OptimizationLevel::O2 || Level == OptimizationLevel::O3)
     MainCGPipeline.addPass(OpenMPOptPass());
 
+  for (auto &C : CGSCCOptimizerLateEPCallbacks)
+    C(MainCGPipeline, Level);
+
   // Lastly, add the core function simplification pipeline nested inside the
   // CGSCC walk.
   MainCGPipeline.addPass(createCGSCCToFunctionPassAdaptor(
       buildFunctionSimplificationPipeline(Level, Phase)));
-
-  for (auto &C : CGSCCOptimizerLateEPCallbacks)
-    C(MainCGPipeline, Level);
 
   return MIWP;
 }
@@ -1001,6 +1003,11 @@ ModulePassManager
 PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
                                                ThinLTOPhase Phase) {
   ModulePassManager MPM(DebugLogging);
+
+  // Add UniqueInternalLinkageNames Pass which renames internal linkage
+  // symbols with unique names.
+  if (PTO.UniqueLinkageNames)
+    MPM.addPass(UniqueInternalLinkageNamesPass());
 
   // Place pseudo probe instrumentation as the first pass of the pipeline to
   // minimize the impact of optimization changes.
@@ -1772,6 +1779,11 @@ ModulePassManager PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
 
   ModulePassManager MPM(DebugLogging);
 
+  // Add UniqueInternalLinkageNames Pass which renames internal linkage
+  // symbols with unique names.
+  if (PTO.UniqueLinkageNames)
+    MPM.addPass(UniqueInternalLinkageNamesPass());
+
   if (PGOOpt && (PGOOpt->Action == PGOOptions::IRInstr ||
                  PGOOpt->Action == PGOOptions::IRUse))
     addPGOInstrPassesForO0(
@@ -1800,6 +1812,13 @@ ModulePassManager PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
     MPM.addPass(
         createModuleToFunctionPassAdaptor(LowerMatrixIntrinsicsPass(true)));
 
+  if (!CGSCCOptimizerLateEPCallbacks.empty()) {
+    CGSCCPassManager CGPM(DebugLogging);
+    for (auto &C : CGSCCOptimizerLateEPCallbacks)
+      C(CGPM, Level);
+    if (!CGPM.isEmpty())
+      MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
+  }
   if (!LateLoopOptimizationsEPCallbacks.empty()) {
     LoopPassManager LPM(DebugLogging);
     for (auto &C : LateLoopOptimizationsEPCallbacks)
@@ -1824,13 +1843,6 @@ ModulePassManager PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
       C(FPM, Level);
     if (!FPM.isEmpty())
       MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-  }
-  if (!CGSCCOptimizerLateEPCallbacks.empty()) {
-    CGSCCPassManager CGPM(DebugLogging);
-    for (auto &C : CGSCCOptimizerLateEPCallbacks)
-      C(CGPM, Level);
-    if (!CGPM.isEmpty())
-      MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
   }
   if (!VectorizerStartEPCallbacks.empty()) {
     FunctionPassManager FPM(DebugLogging);

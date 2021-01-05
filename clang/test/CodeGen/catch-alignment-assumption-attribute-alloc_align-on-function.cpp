@@ -8,7 +8,7 @@
 
 char **__attribute__((alloc_align(2)))
 passthrough(char **x, unsigned long alignment) {
-  // CHECK:      define i8** @[[PASSTHROUGH:.*]](i8** %[[X:.*]], i64 %[[ALIGNMENT:.*]])
+  // CHECK:      define{{.*}} i8** @[[PASSTHROUGH:.*]](i8** %[[X:.*]], i64 %[[ALIGNMENT:.*]])
   // CHECK-NEXT: entry:
   // CHECK-NEXT:   %[[X_ADDR:.*]] = alloca i8**, align 8
   // CHECK-NEXT:   %[[ALIGNMENT_ADDR:.*]] = alloca i64, align 8
@@ -21,7 +21,7 @@ passthrough(char **x, unsigned long alignment) {
 }
 
 char **caller(char **x) {
-  // CHECK:                           define i8** @{{.*}}(i8** %[[X:.*]])
+  // CHECK:                           define{{.*}} i8** @{{.*}}(i8** %[[X:.*]])
   // CHECK-NEXT:                      entry:
   // CHECK-NEXT:                        %[[X_ADDR:.*]] = alloca i8**, align 8
   // CHECK-NEXT:                        store i8** %[[X]], i8*** %[[X_ADDR]], align 8

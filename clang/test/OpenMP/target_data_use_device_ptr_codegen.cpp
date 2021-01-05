@@ -21,7 +21,7 @@
 
 double *g;
 
-// CK1: @g = global double*
+// CK1: @g ={{.*}} global double*
 // CK1: [[MTYPE00:@.+]] = {{.*}}constant [2 x i64] [i64 51, i64 96]
 // CK1: [[MTYPE01:@.+]] = {{.*}}constant [1 x i64] [i64 99]
 // CK1: [[MTYPE03:@.+]] = {{.*}}constant [1 x i64] [i64 99]

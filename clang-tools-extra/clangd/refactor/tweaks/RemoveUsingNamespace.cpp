@@ -112,7 +112,7 @@ bool RemoveUsingNamespace::prepare(const Selection &Inputs) {
   TargetDirective = CA->ASTNode.get<UsingDirectiveDecl>();
   if (!TargetDirective)
     return false;
-  if (!dyn_cast<Decl>(TargetDirective->getDeclContext()))
+  if (!isa<Decl>(TargetDirective->getDeclContext()))
     return false;
   // FIXME: Unavailable for namespaces containing using-namespace decl.
   // It is non-trivial to deal with cases where identifiers come from the inner

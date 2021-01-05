@@ -4,10 +4,10 @@
 ;
 ; Test patterns that require preserving and restoring flags.
 
-@b = common global i8 0, align 1
-@c = common global i32 0, align 4
-@a = common global i8 0, align 1
-@d = common global i8 0, align 1
+@b = common dso_local global i8 0, align 1
+@c = common dso_local global i32 0, align 4
+@a = common dso_local global i8 0, align 1
+@d = common dso_local global i8 0, align 1
 @.str = private unnamed_addr constant [4 x i8] c"%d\0A\00", align 1
 
 declare dso_local void @external(i32)
@@ -15,7 +15,7 @@ declare dso_local void @external(i32)
 ; A test that re-uses flags in interesting ways due to volatile accesses.
 ; Specifically, the first increment's flags are reused for the branch despite
 ; being clobbered by the second increment.
-define i32 @test1() nounwind {
+define dso_local i32 @test1() nounwind {
 ; X32-LABEL: test1:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movb b, %cl
@@ -89,7 +89,7 @@ if.end:
 }
 
 ; Preserve increment flags across a call.
-define i32 @test2(i32* %ptr) nounwind {
+define dso_local i32 @test2(i32* %ptr) nounwind {
 ; X32-LABEL: test2:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    pushl %ebx
@@ -150,7 +150,7 @@ declare dso_local void @external_b()
 ; use volatile stores similar to test1 to force the save and restore of
 ; a condition without calling another function. We then set up subsequent calls
 ; in tail position.
-define void @test_tail_call(i32* %ptr) nounwind optsize {
+define dso_local void @test_tail_call(i32* %ptr) nounwind optsize {
 ; X32-LABEL: test_tail_call:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -198,7 +198,7 @@ else:
 ; Test a function that gets special select lowering into CFG with copied EFLAGS
 ; threaded across the CFG. This requires our EFLAGS copy rewriting to handle
 ; cross-block rewrites in at least some narrow cases.
-define void @PR37100(i8 %arg1, i16 %arg2, i64 %arg3, i8 %arg4, i8* %ptr1, i32* %ptr2, i32 %x) nounwind {
+define dso_local void @PR37100(i8 %arg1, i16 %arg2, i64 %arg3, i8 %arg4, i8* %ptr1, i32* %ptr2, i32 %x) nounwind {
 ; X32-LABEL: PR37100:
 ; X32:       # %bb.0: # %bb
 ; X32-NEXT:    pushl %ebp
@@ -290,7 +290,7 @@ bb1:
 ; Use a particular instruction pattern in order to lower to the post-RA pseudo
 ; used to lower SETB into an SBB pattern in order to make sure that kind of
 ; usage of a copied EFLAGS continues to work.
-define void @PR37431(i32* %arg1, i8* %arg2, i8* %arg3, i32 %arg4, i64 %arg5) nounwind {
+define dso_local void @PR37431(i32* %arg1, i8* %arg2, i8* %arg3, i32 %arg4, i64 %arg5) nounwind {
 ; X32-LABEL: PR37431:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    pushl %ebx

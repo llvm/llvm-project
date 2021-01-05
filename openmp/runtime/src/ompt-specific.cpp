@@ -455,7 +455,7 @@ int __ompt_get_task_memory_internal(void **addr, size_t *size, int blocknum) {
     return 0;
 
   *addr = ret_addr;
-  *size = ret_size;
+  *size = (size_t)ret_size;
   return 1;
 }
 

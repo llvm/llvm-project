@@ -11,7 +11,6 @@ class TestGdbRemoteKill(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def test_attach_commandline_kill_after_initial_stop(self):
         self.build()
         self.set_inferior_startup_attach()

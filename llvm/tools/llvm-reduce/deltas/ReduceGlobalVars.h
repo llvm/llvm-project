@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements a function which calls the Generic Delta pass in order
-// to reduce initialized Global Variables in the provided Module.
+// to reduce Global Variables in the provided Module.
 //
 //===----------------------------------------------------------------------===//
 

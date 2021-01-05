@@ -6,7 +6,7 @@ target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 @x = external dso_local global [0 x i32]
-@y = global [50 x i32] zeroinitializer
+@y = dso_local global [50 x i32] zeroinitializer
 
 ; Test basic constant offsets of both defined and external symbols.
 
@@ -14,7 +14,7 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NEXT: .functype test0 () -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, x+188{{$}}
 ; CHECK=NEXT: return $pop0{{$}}
-define i32* @test0() {
+define dso_local i32* @test0() {
   ret i32* getelementptr ([0 x i32], [0 x i32]* @x, i32 0, i32 47)
 }
 
@@ -22,7 +22,7 @@ define i32* @test0() {
 ; CHECK-NEXT: .functype test1 () -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, y+188{{$}}
 ; CHECK=NEXT: return $pop0{{$}}
-define i32* @test1() {
+define dso_local i32* @test1() {
   ret i32* getelementptr ([50 x i32], [50 x i32]* @y, i32 0, i32 47)
 }
 
@@ -32,7 +32,7 @@ define i32* @test1() {
 ; CHECK-NEXT: .functype test2 () -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, x{{$}}
 ; CHECK=NEXT: return $pop0{{$}}
-define i32* @test2() {
+define dso_local i32* @test2() {
   ret i32* getelementptr ([0 x i32], [0 x i32]* @x, i32 0, i32 0)
 }
 
@@ -40,7 +40,7 @@ define i32* @test2() {
 ; CHECK-NEXT: .functype test3 () -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, y{{$}}
 ; CHECK=NEXT: return $pop0{{$}}
-define i32* @test3() {
+define dso_local i32* @test3() {
   ret i32* getelementptr ([50 x i32], [50 x i32]* @y, i32 0, i32 0)
 }
 
@@ -50,7 +50,7 @@ define i32* @test3() {
 ; CHECK-NEXT: .functype test4 () -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, x-188{{$}}
 ; CHECK=NEXT: return $pop0{{$}}
-define i32* @test4() {
+define dso_local i32* @test4() {
   ret i32* getelementptr ([0 x i32], [0 x i32]* @x, i32 0, i32 -47)
 }
 
@@ -58,6 +58,6 @@ define i32* @test4() {
 ; CHECK-NEXT: .functype test5 () -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, y-188{{$}}
 ; CHECK=NEXT: return $pop0{{$}}
-define i32* @test5() {
+define dso_local i32* @test5() {
   ret i32* getelementptr ([50 x i32], [50 x i32]* @y, i32 0, i32 -47)
 }

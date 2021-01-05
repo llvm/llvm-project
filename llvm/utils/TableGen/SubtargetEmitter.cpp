@@ -1220,11 +1220,8 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
     }
     else {
       SCDesc.WriteLatencyIdx = SchedTables.WriteLatencies.size();
-      SchedTables.WriteLatencies.insert(SchedTables.WriteLatencies.end(),
-                                        WriteLatencies.begin(),
-                                        WriteLatencies.end());
-      SchedTables.WriterNames.insert(SchedTables.WriterNames.end(),
-                                     WriterNames.begin(), WriterNames.end());
+      llvm::append_range(SchedTables.WriteLatencies, WriteLatencies);
+      llvm::append_range(SchedTables.WriterNames, WriterNames);
     }
     // ReadAdvanceEntries must remain in operand order.
     SCDesc.NumReadAdvanceEntries = ReadAdvanceEntries.size();
@@ -1236,8 +1233,7 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
       SCDesc.ReadAdvanceIdx = RAPos - SchedTables.ReadAdvanceEntries.begin();
     else {
       SCDesc.ReadAdvanceIdx = SchedTables.ReadAdvanceEntries.size();
-      SchedTables.ReadAdvanceEntries.insert(RAPos, ReadAdvanceEntries.begin(),
-                                            ReadAdvanceEntries.end());
+      llvm::append_range(SchedTables.ReadAdvanceEntries, ReadAdvanceEntries);
     }
   }
 }

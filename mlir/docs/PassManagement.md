@@ -1138,6 +1138,10 @@ module {
 }
 ```
 
+The configuration dumped can be passed to `mlir-opt` by specifying
+`-run-reproducer` flag. This will result in parsing the first line configuration
+of the reproducer and adding those to the command line options.
+
 ### Local Reproducer Generation
 
 An additional flag may be passed to

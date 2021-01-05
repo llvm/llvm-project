@@ -15,7 +15,7 @@ extern void FASTCALL reduced(char b, double c, foo* d, double e, int f);
 
 // PR7025
 void FASTCALL f1(int i, int j, int k);
-// CHECK-LABEL: define void @f1(i32 inreg %i, i32 inreg %j, i32 %k)
+// CHECK-LABEL: define{{.*}} void @f1(i32 inreg %i, i32 inreg %j, i32 %k)
 void f1(int i, int j, int k) { }
 
 int

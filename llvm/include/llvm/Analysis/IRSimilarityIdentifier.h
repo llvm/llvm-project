@@ -122,12 +122,28 @@ struct IRInstructionData : ilist_node<IRInstructionData> {
   /// considered similar.
   bool Legal;
 
+  /// This is only relevant if we are wrapping a CmpInst where we needed to
+  /// change the predicate of a compare instruction from a greater than form
+  /// to a less than form.  It is None otherwise.
+  Optional<CmpInst::Predicate> RevisedPredicate;
+
   /// Gather the information that is difficult to gather for an Instruction, or
   /// is changed. i.e. the operands of an Instruction and the Types of those
   /// operands. This extra information allows for similarity matching to make
   /// assertions that allow for more flexibility when checking for whether an
   /// Instruction performs the same operation.
   IRInstructionData(Instruction &I, bool Legality, IRInstructionDataList &IDL);
+
+  /// Get the predicate that the compare instruction is using for hashing the
+  /// instruction. the IRInstructionData must be wrapping a CmpInst.
+  CmpInst::Predicate getPredicate() const;
+
+  /// A function that swaps the predicates to their less than form if they are
+  /// in a greater than form. Otherwise, the predicate is unchanged.
+  ///
+  /// \param CI - The comparison operation to find a consistent preidcate for.
+  /// \return the consistent comparison predicate. 
+  static CmpInst::Predicate predicateForConsistency(CmpInst *CI);
 
   /// Hashes \p Value based on its opcode, types, and operand types.
   /// Two IRInstructionData instances produce the same hash when they perform
@@ -161,6 +177,18 @@ struct IRInstructionData : ilist_node<IRInstructionData> {
     for (Value *V : ID.OperVals)
       OperTypes.push_back(V->getType());
 
+    if (isa<CmpInst>(ID.Inst))
+      return llvm::hash_combine(
+          llvm::hash_value(ID.Inst->getOpcode()),
+          llvm::hash_value(ID.Inst->getType()),
+          llvm::hash_value(ID.getPredicate()),
+          llvm::hash_combine_range(OperTypes.begin(), OperTypes.end()));
+    else if (CallInst *CI = dyn_cast<CallInst>(ID.Inst))
+      return llvm::hash_combine(
+          llvm::hash_value(ID.Inst->getOpcode()),
+          llvm::hash_value(ID.Inst->getType()),
+          llvm::hash_value(CI->getCalledFunction()->getName().str()),
+          llvm::hash_combine_range(OperTypes.begin(), OperTypes.end()));
     return llvm::hash_combine(
         llvm::hash_value(ID.Inst->getOpcode()),
         llvm::hash_value(ID.Inst->getType()),
@@ -374,14 +402,16 @@ struct IRInstructionMapper {
     // analyzed for similarity as it has no bearing on the outcome of the
     // program.
     InstrType visitDbgInfoIntrinsic(DbgInfoIntrinsic &DII) { return Invisible; }
-    // TODO: Handle GetElementPtrInsts
-    InstrType visitGetElementPtrInst(GetElementPtrInst &GEPI) {
-      return Illegal;
-    }
     // TODO: Handle specific intrinsics.
     InstrType visitIntrinsicInst(IntrinsicInst &II) { return Illegal; }
-    // TODO: Handle CallInsts.
-    InstrType visitCallInst(CallInst &CI) { return Illegal; }
+    // We only allow call instructions where the function has a name and
+    // is not an indirect call.
+    InstrType visitCallInst(CallInst &CI) {
+      Function *F = CI.getCalledFunction();
+      if (!F || CI.isIndirectCall() || !F->hasName())
+        return Illegal;
+      return Legal;
+    }
     // TODO: We do not current handle similarity that changes the control flow.
     InstrType visitInvokeInst(InvokeInst &II) { return Illegal; }
     // TODO: We do not current handle similarity that changes the control flow.
@@ -504,7 +534,20 @@ public:
   /// \param B - The second IRInstructionCandidate, operand values, and current
   /// operand mappings to compare.
   /// \returns true if the IRSimilarityCandidates operands are compatible.
-  static bool compareOperandMapping(OperandMapping A, OperandMapping B);
+  static bool compareNonCommutativeOperandMapping(OperandMapping A,
+                                                  OperandMapping B);
+
+  /// Compare the operands in \p A and \p B and check that the current mapping
+  /// of global value numbers from \p A to \p B and \p B to \A is consistent
+  /// given that the operands are commutative.
+  ///
+  /// \param A - The first IRInstructionCandidate, operand values, and current
+  /// operand mappings to compare.
+  /// \param B - The second IRInstructionCandidate, operand values, and current
+  /// operand mappings to compare.
+  /// \returns true if the IRSimilarityCandidates operands are compatible.
+  static bool compareCommutativeOperandMapping(OperandMapping A,
+                                               OperandMapping B);
 
   /// Compare the start and end indices of the two IRSimilarityCandidates for
   /// whether they overlap. If the start instruction of one

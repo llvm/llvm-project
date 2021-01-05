@@ -104,6 +104,11 @@ specify the AMDGPU processor together with optional target features. See
 :ref:`amdgpu-target-id` and :ref:`amdgpu-target-features` for AMD GPU target
 specific information.
 
+Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following exceptions:
+
+* ``amdhsa`` is not supported in ``r600`` architecture (see :ref:`amdgpu-architecture-table`).
+
+
   .. table:: AMDGPU Processors
      :name: amdgpu-processor-table
 

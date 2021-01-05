@@ -3,25 +3,25 @@
 --- |
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
-  define void @frame_index() {
+  define dso_local void @frame_index() {
     %ptr0 = alloca i64
     ret void
   }
 
-  define i8* @ptr_mask(i8* %in) { ret i8* undef }
+  define dso_local i8* @ptr_mask(i8* %in) { ret i8* undef }
 
-  @var_local = global i8 0
-  define i8* @global_local() { ret i8* undef }
+  @var_local = dso_local global i8 0
+  define dso_local i8* @global_local() { ret i8* undef }
 
   @var_got = external dso_local global i8
-  define i8* @global_got() { ret i8* undef }
+  define dso_local i8* @global_got() { ret i8* undef }
 
-  define void @icmp() { ret void }
-  define void @fcmp() { ret void }
+  define dso_local void @icmp() { ret void }
+  define dso_local void @fcmp() { ret void }
 
-  define void @phi() { ret void }
+  define dso_local void @phi() { ret void }
 
-  define void @select() { ret void }
+  define dso_local void @select() { ret void }
 ...
 
 ---

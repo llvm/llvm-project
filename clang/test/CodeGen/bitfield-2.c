@@ -32,7 +32,7 @@ int f0_reload(struct s0 *a0) {
   return (a0->f0 += 1);
 }
 
-// CHECK-OPT-LABEL: define i64 @test_0()
+// CHECK-OPT-LABEL: define{{.*}} i64 @test_0()
 // CHECK-OPT:  ret i64 1
 // CHECK-OPT: }
 unsigned long long test_0() {
@@ -78,7 +78,7 @@ int f1_reload(struct s1 *a0) {
   return (a0->f1 += 1234);
 }
 
-// CHECK-OPT-LABEL: define i64 @test_1()
+// CHECK-OPT-LABEL: define{{.*}} i64 @test_1()
 // CHECK-OPT:  ret i64 210
 // CHECK-OPT: }
 unsigned long long test_1() {
@@ -120,7 +120,7 @@ int f2_reload(union u2 *a0) {
   return (a0->f0 += 1234);
 }
 
-// CHECK-OPT-LABEL: define i64 @test_2()
+// CHECK-OPT-LABEL: define{{.*}} i64 @test_2()
 // CHECK-OPT:  ret i64 2
 // CHECK-OPT: }
 unsigned long long test_2() {
@@ -156,7 +156,7 @@ int f3_reload(struct s3 *a0) {
   return (a0->f0 += 1234);
 }
 
-// CHECK-OPT-LABEL: define i64 @test_3()
+// CHECK-OPT-LABEL: define{{.*}} i64 @test_3()
 // CHECK-OPT:  ret i64 -559039940
 // CHECK-OPT: }
 unsigned long long test_3() {
@@ -190,7 +190,7 @@ int f4_reload(struct s4 *a0) {
   return (a0->f0 += 1234) ^ (a0->f1 += 5678);
 }
 
-// CHECK-OPT-LABEL: define i64 @test_4()
+// CHECK-OPT-LABEL: define{{.*}} i64 @test_4()
 // CHECK-OPT:  ret i64 4860
 // CHECK-OPT: }
 unsigned long long test_4() {
@@ -222,7 +222,7 @@ int f5_reload(struct s5 *a0) {
   return (a0->f0 += 0xF) ^ (a0->f1 += 0xF) ^ (a0->f2 += 0xF);
 }
 
-// CHECK-OPT-LABEL: define i64 @test_5()
+// CHECK-OPT-LABEL: define{{.*}} i64 @test_5()
 // CHECK-OPT:  ret i64 2
 // CHECK-OPT: }
 unsigned long long test_5() {
@@ -252,7 +252,7 @@ int f6_reload(struct s6 *a0) {
   return (a0->f0 += 0xF);
 }
 
-// CHECK-OPT-LABEL: define zeroext i1 @test_6()
+// CHECK-OPT-LABEL: define{{.*}} zeroext i1 @test_6()
 // CHECK-OPT:  ret i1 true
 // CHECK-OPT: }
 _Bool test_6() {
@@ -310,7 +310,7 @@ int f8_reload(struct s8 *a0) {
   return (a0->f0 += 0xFD) ^ (a0->f2 += 0xFD) ^ (a0->f3 += 0xFD);
 }
 
-// CHECK-OPT-LABEL: define i32 @test_8()
+// CHECK-OPT-LABEL: define{{.*}} i32 @test_8()
 // CHECK-OPT:  ret i32 -3
 // CHECK-OPT: }
 unsigned test_8() {

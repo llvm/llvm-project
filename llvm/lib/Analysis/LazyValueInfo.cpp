@@ -333,7 +333,7 @@ void LazyValueInfoCache::threadEdgeImpl(BasicBlock *OldSucc,
 
     if (!changed) continue;
 
-    worklist.insert(worklist.end(), succ_begin(ToUpdate), succ_end(ToUpdate));
+    llvm::append_range(worklist, successors(ToUpdate));
   }
 }
 
@@ -1201,26 +1201,36 @@ getValueFromConditionImpl(Value *Val, Value *Cond, bool isTrueDest,
       if (EVI->getNumIndices() == 1 && *EVI->idx_begin() == 1)
         return getValueFromOverflowCondition(Val, WO, isTrueDest);
 
-  // Handle conditions in the form of (cond1 && cond2), we know that on the
-  // true dest path both of the conditions hold. Similarly for conditions of
-  // the form (cond1 || cond2), we know that on the false dest path neither
-  // condition holds.
-  BinaryOperator *BO = dyn_cast<BinaryOperator>(Cond);
-  if (!BO || (isTrueDest && BO->getOpcode() != BinaryOperator::And) ||
-             (!isTrueDest && BO->getOpcode() != BinaryOperator::Or))
+  Value *L, *R;
+  bool IsAnd;
+  if (match(Cond, m_LogicalAnd(m_Value(L), m_Value(R))))
+    IsAnd = true;
+  else if (match(Cond, m_LogicalOr(m_Value(L), m_Value(R))))
+    IsAnd = false;
+  else
     return ValueLatticeElement::getOverdefined();
 
   // Prevent infinite recursion if Cond references itself as in this example:
   //  Cond: "%tmp4 = and i1 %tmp4, undef"
   //    BL: "%tmp4 = and i1 %tmp4, undef"
   //    BR: "i1 undef"
-  Value *BL = BO->getOperand(0);
-  Value *BR = BO->getOperand(1);
-  if (BL == Cond || BR == Cond)
+  if (L == Cond || R == Cond)
     return ValueLatticeElement::getOverdefined();
 
-  return intersect(getValueFromCondition(Val, BL, isTrueDest, Visited),
-                   getValueFromCondition(Val, BR, isTrueDest, Visited));
+  // if (L && R) -> intersect L and R
+  // if (!(L || R)) -> intersect L and R
+  // if (L || R) -> union L and R
+  // if (!(L && R)) -> union L and R
+  if (isTrueDest ^ IsAnd) {
+    ValueLatticeElement V = getValueFromCondition(Val, L, isTrueDest, Visited);
+    if (V.isOverdefined())
+      return V;
+    V.mergeIn(getValueFromCondition(Val, R, isTrueDest, Visited));
+    return V;
+  }
+
+  return intersect(getValueFromCondition(Val, L, isTrueDest, Visited),
+                   getValueFromCondition(Val, R, isTrueDest, Visited));
 }
 
 static ValueLatticeElement

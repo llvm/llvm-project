@@ -589,8 +589,7 @@ bool PlaceSafepoints::runOnFunction(Function &F) {
   for (Instruction *PollLocation : PollsNeeded) {
     std::vector<CallBase *> RuntimeCalls;
     InsertSafepointPoll(PollLocation, RuntimeCalls, TLI);
-    ParsePointNeeded.insert(ParsePointNeeded.end(), RuntimeCalls.begin(),
-                            RuntimeCalls.end());
+    llvm::append_range(ParsePointNeeded, RuntimeCalls);
   }
 
   return Modified;

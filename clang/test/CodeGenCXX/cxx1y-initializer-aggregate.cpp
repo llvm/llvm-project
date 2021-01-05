@@ -25,16 +25,16 @@ A b { 4, "bazquux", .x = 42, .c = 9 };
 A c { 1, 0, 'A', f(), { 3 } };
 
 // CHECK: @[[STR_A:.*]] = {{.*}} [7 x i8] c"foobar\00"
-// CHECK: @a = global {{.*}} zeroinitializer
+// CHECK: @a ={{.*}} global {{.*}} zeroinitializer
 
 // @b has a constant initializer
 // CHECK: @[[STR_B:.*]] = {{.*}} [8 x i8] c"bazquux\00"
-// CHECK: @b = global {{.*}} i32 4, {{.*}} @[[STR_B]], {{.*}} i8 117, i32 42, {{.*}} i8 9
+// CHECK: @b ={{.*}} global {{.*}} i32 4, {{.*}} @[[STR_B]], {{.*}} i8 117, i32 42, {{.*}} i8 9
 
 B x;
 B y {};
 B z { 1 };
-// CHECK: @z = global {{.*}} { i32 1 }
+// CHECK: @z ={{.*}} global {{.*}} { i32 1 }
 
 // Brace initialization should initialize the first field even though it is
 // unnamed.
@@ -45,7 +45,7 @@ union C {
 };
 
 C n{};
-// CHECK: @n = global %union.C { %struct.anon { i64 -1 } }, align 8
+// CHECK: @n ={{.*}} global %union.C { %struct.anon { i64 -1 } }, align 8
 
 // Initialization of 'a':
 

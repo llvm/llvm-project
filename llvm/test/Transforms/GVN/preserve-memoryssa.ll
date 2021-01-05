@@ -141,6 +141,38 @@ define i32 @test_assume_false_to_store_undef_3(i32* %ptr, i32* %ptr.2) {
   ret i32 %lv
 }
 
+; Test case for PR48616.
+define void @rename_unreachable_block(i1 %c) personality i32 (...)* undef {
+; CHECK-LABEL: @rename_unreachable_block(
+; CHECK-NEXT:    ret void
+; CHECK:       bb1:
+; CHECK-NEXT:    [[LP:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    cleanup
+; CHECK-NEXT:    ret void
+; CHECK:       bb2:
+; CHECK-NEXT:    invoke void @f()
+; CHECK-NEXT:    to label [[BB4:%.*]] unwind label [[BB1:%.*]]
+; CHECK:       bb4:
+; CHECK-NEXT:    unreachable
+;
+  ret void
+
+bb1:
+  %lp = landingpad { i8*, i32 }
+  cleanup
+  ret void
+
+bb2:
+  br i1 %c, label %bb3, label %bb3
+
+bb3:
+  invoke void @f()
+  to label %bb4 unwind label %bb1
+
+bb4:
+  unreachable
+}
+
 declare void @f()
 
 declare void @llvm.assume(i1 noundef) #0

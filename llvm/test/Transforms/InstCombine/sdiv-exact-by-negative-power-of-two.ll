@@ -55,7 +55,7 @@ define <2 x i8> @n4_vec_mixed(<2 x i8> %x) {
 
 define <2 x i8> @n4_vec_undef(<2 x i8> %x) {
 ; CHECK-LABEL: @n4_vec_undef(
-; CHECK-NEXT:    ret <2 x i8> undef
+; CHECK-NEXT:    ret <2 x i8> poison
 ;
   %div = sdiv exact <2 x i8> %x, <i8 -32, i8 undef>
   ret <2 x i8> %div

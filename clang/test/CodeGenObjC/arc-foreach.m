@@ -22,14 +22,14 @@ void test0(NSArray *array) {
   }
 }
 
-// CHECK-LP64-LABEL:    define void @test0(
+// CHECK-LP64-LABEL:    define{{.*}} void @test0(
 // CHECK-LP64:      [[ARRAY:%.*]] = alloca [[ARRAY_T:%.*]]*,
 // CHECK-LP64-NEXT: [[X:%.*]] = alloca i8*,
 // CHECK-LP64-NEXT: [[STATE:%.*]] = alloca [[STATE_T:%.*]],
 // CHECK-LP64-NEXT: [[BUFFER:%.*]] = alloca [16 x i8*], align 8
 // CHECK-LP64-NEXT: [[BLOCK:%.*]] = alloca [[BLOCK_T:<{.*}>]],
 
-// CHECK-LP64-OPT-LABEL: define void @test0
+// CHECK-LP64-OPT-LABEL: define{{.*}} void @test0
 // CHECK-LP64-OPT: [[STATE:%.*]] = alloca [[STATE_T:%.*]], align 8
 // CHECK-LP64-OPT-NEXT: [[BUFFER:%.*]] = alloca [16 x i8*], align 8
 // CHECK-LP64-OPT-NEXT: [[BLOCK:%.*]] = alloca [[BLOCK_T:<{.*}>]], align 8
@@ -104,7 +104,7 @@ void test1(NSArray *array) {
   }
 }
 
-// CHECK-LP64-LABEL:    define void @test1(
+// CHECK-LP64-LABEL:    define{{.*}} void @test1(
 // CHECK-LP64:      alloca [[ARRAY_T:%.*]]*,
 // CHECK-LP64-NEXT: [[X:%.*]] = alloca i8*,
 // CHECK-LP64-NEXT: [[STATE:%.*]] = alloca [[STATE_T:%.*]],
@@ -134,7 +134,7 @@ void test2(Test2 *a) {
   }
 }
 
-// CHECK-LP64-LABEL:    define void @test2(
+// CHECK-LP64-LABEL:    define{{.*}} void @test2(
 // CHECK-LP64:      [[T0:%.*]] = call [[ARRAY_T]]* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to [[ARRAY_T]]* (i8*, i8*)*)(
 // CHECK-LP64-NEXT: [[T1:%.*]] = bitcast [[ARRAY_T]]* [[T0]] to i8*
 // CHECK-LP64-NEXT: [[T2:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
@@ -166,7 +166,7 @@ void test3(NSArray *array) {
     use(x);
   }
 
-  // CHECK-LP64-LABEL:    define void @test3(
+  // CHECK-LP64-LABEL:    define{{.*}} void @test3(
   // CHECK-LP64:      [[ARRAY:%.*]] = alloca [[ARRAY_T]]*, align 8
   // CHECK-LP64-NEXT: [[X:%.*]] = alloca i8*, align 8
   // CHECK-LP64:      [[T0:%.*]] = load i8*, i8** [[X]], align 8

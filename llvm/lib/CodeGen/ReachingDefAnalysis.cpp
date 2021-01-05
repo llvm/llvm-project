@@ -377,9 +377,7 @@ void ReachingDefAnalysis::getGlobalUses(MachineInstr *MI, MCRegister PhysReg,
     if (LiveOut != MI)
       return;
 
-    SmallVector<MachineBasicBlock*, 4> ToVisit;
-    ToVisit.insert(ToVisit.begin(), MBB->successors().begin(),
-                   MBB->successors().end());
+    SmallVector<MachineBasicBlock *, 4> ToVisit(MBB->successors());
     SmallPtrSet<MachineBasicBlock*, 4>Visited;
     while (!ToVisit.empty()) {
       MachineBasicBlock *MBB = ToVisit.back();
@@ -387,8 +385,7 @@ void ReachingDefAnalysis::getGlobalUses(MachineInstr *MI, MCRegister PhysReg,
       if (Visited.count(MBB) || !MBB->isLiveIn(PhysReg))
         continue;
       if (getLiveInUses(MBB, PhysReg, Uses))
-        ToVisit.insert(ToVisit.end(), MBB->successors().begin(),
-                       MBB->successors().end());
+        llvm::append_range(ToVisit, MBB->successors());
       Visited.insert(MBB);
     }
   }

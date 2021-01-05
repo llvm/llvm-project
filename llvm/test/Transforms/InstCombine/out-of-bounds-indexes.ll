@@ -34,7 +34,7 @@ declare void @llvm.assume(i1)
 
 define <4 x double> @inselt_bad_index(<4 x double> %a) {
 ; CHECK-LABEL: @inselt_bad_index(
-; CHECK-NEXT:    ret <4 x double> undef
+; CHECK-NEXT:    ret <4 x double> poison
 ;
   %I = insertelement <4 x double> %a, double 0.0, i64 4294967296
   ret <4 x double> %I

@@ -294,8 +294,10 @@ uptr ThreadDescriptorSize() {
       val = FIRST_32_SECOND_64(1168, 2288);
     else if (minor <= 14)
       val = FIRST_32_SECOND_64(1168, 2304);
-    else
+    else if (minor < 32)  // Unknown version
       val = FIRST_32_SECOND_64(1216, 2304);
+    else  // minor == 32
+      val = FIRST_32_SECOND_64(1344, 2496);
   }
 #elif defined(__mips__)
   // TODO(sagarthakur): add more values as per different glibc versions.

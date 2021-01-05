@@ -165,7 +165,7 @@ void UnwindInfoSection::finalize() {
             });
 
   // Truncate the vector to 127 elements.
-  // Common encoding indexes are limited to 0..126, while enconding
+  // Common encoding indexes are limited to 0..126, while encoding
   // indexes 127..255 are local to each second-level page
   if (commonEncodings.size() > COMMON_ENCODINGS_MAX)
     commonEncodings.resize(COMMON_ENCODINGS_MAX);

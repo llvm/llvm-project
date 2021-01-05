@@ -20,7 +20,7 @@
 // RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY10 %s
 // SIMD-ONLY10-NOT: {{__kmpc|__tgt}}
 
-// CK1-LABEL: @.__omp_offloading_{{.*}}implicit_maps_double_complex{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK1-LABEL: @.__omp_offloading_{{.*}}implicit_maps_double_complex{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
 // CK1-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 16]
 // Map types: OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 544
@@ -70,7 +70,7 @@ void implicit_maps_double_complex (int a){
 // SIMD-ONLY10-NOT: {{__kmpc|__tgt}}
 #ifdef CK2
 
-// CK2-LABEL: @.__omp_offloading_{{.*}}implicit_maps_double_complex{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK2-LABEL: @.__omp_offloading_{{.*}}implicit_maps_double_complex{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
 // CK2-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 16]
 // Map types: OMP_MAP_TO  | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 545
@@ -120,7 +120,7 @@ void implicit_maps_double_complex (int a){
 // SIMD-ONLY10-NOT: {{__kmpc|__tgt}}
 #ifdef CK3
 
-// CK3-LABEL: @.__omp_offloading_{{.*}}implicit_maps_double_complex{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK3-LABEL: @.__omp_offloading_{{.*}}implicit_maps_double_complex{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
 // CK3-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 16]
 // Map types: OMP_MAP_FROM | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 546
@@ -173,7 +173,7 @@ void implicit_maps_double_complex (int a){
 // For a 32-bit targets, the value doesn't fit the size of the pointer,
 // therefore it is passed by reference with a map 'to' specification.
 
-// CK4-LABEL: @.__omp_offloading_{{.*}}implicit_maps_double{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK4-LABEL: @.__omp_offloading_{{.*}}implicit_maps_double{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
 // CK4-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 8]
 // Map types: OMP_MAP_PRIVATE_VAL | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 800
@@ -242,7 +242,7 @@ void implicit_maps_double (int a){
 // SIMD-ONLY8-NOT: {{__kmpc|__tgt}}
 #ifdef CK5
 
-// CK5-LABEL: @.__omp_offloading_{{.*}}implicit_maps_array{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK5-LABEL: @.__omp_offloading_{{.*}}implicit_maps_array{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
 // CK5-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 16]
 // Map types: OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 544
@@ -293,7 +293,7 @@ void implicit_maps_array (int a){
 // SIMD-ONLY8-NOT: {{__kmpc|__tgt}}
 #ifdef CK6
 
-// CK6-LABEL: @.__omp_offloading_{{.*}}implicit_maps_array{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK6-LABEL: @.__omp_offloading_{{.*}}implicit_maps_array{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
 // CK6-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 16]
 // Map types: OMP_MAP_TO | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 545
@@ -344,7 +344,7 @@ void implicit_maps_array (int a){
 // SIMD-ONLY8-NOT: {{__kmpc|__tgt}}
 #ifdef CK7
 
-// CK7-LABEL: @.__omp_offloading_{{.*}}implicit_maps_array{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK7-LABEL: @.__omp_offloading_{{.*}}implicit_maps_array{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
 // CK7-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 16]
 // Map types: OMP_MAP_FROM | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 546
@@ -395,7 +395,7 @@ void implicit_maps_array (int a){
 // SIMD-ONLY8-NOT: {{__kmpc|__tgt}}
 #ifdef CK8
 
-// CK8-LABEL: @.__omp_offloading_{{.*}}implicit_maps_array{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK8-LABEL: @.__omp_offloading_{{.*}}implicit_maps_array{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
 // CK8-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 16]
 // Map types: OMP_MAP_TO | OMP_MAP_FROM | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 547
@@ -449,7 +449,7 @@ void implicit_maps_array (int a){
 #ifdef CK9
 
 
-// CK9-LABEL: @.__omp_offloading_{{.*}}zero_size_section_and_private_maps{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK9-LABEL: @.__omp_offloading_{{.*}}zero_size_section_and_private_maps{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 // CK9: [[SIZE09:@.+]] = private {{.*}}constant [1 x i64] [i64 40]
 // CK9: [[MTYPE09:@.+]] = private {{.*}}constant [1 x i64] [i64 673]
 
@@ -498,7 +498,7 @@ void zero_size_section_and_private_maps (int ii){
 #ifdef CK10
 
 
-// CK10-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK10-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
 // CK10: [[SIZE:@.+]] = private {{.*}}constant [1 x i64] [i64 {{8|4}}]
 // Map types: OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 544
@@ -546,7 +546,7 @@ void explicit_maps_single (){
 #ifdef CK11
 
 
-// CK11-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK11-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
 // CK11: [[SIZE09:@.+]] = private {{.*}}constant [1 x i64] [i64 {{8|4}}]
 // Map types: OMP_MAP_TO | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 545
@@ -594,7 +594,7 @@ void explicit_maps_single (){
 #ifdef CK12
 
 
-// CK12-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK12-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
 // CK12: [[SIZE09:@.+]] = private {{.*}}constant [1 x i64] [i64 {{8|4}}]
 // Map types: OMP_MAP_FROM | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 546
@@ -642,7 +642,7 @@ void explicit_maps_single (){
 #ifdef CK13
 
 
-// CK13-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK13-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
 // CK13: [[SIZE09:@.+]] = private {{.*}}constant [1 x i64] [i64 {{8|4}}]
 // Map types: OMP_MAP_TO | OMP_MAP_FROM | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 547
@@ -690,7 +690,7 @@ void explicit_maps_single (){
 #ifdef CK14
 
 
-// CK14-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK14-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
 // CK14: [[SIZE09:@.+]] = private {{.*}}constant [1 x i64] zeroinitializer
 // Map types: OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 544
@@ -737,7 +737,7 @@ void explicit_maps_single (){
 // SIMD-ONLY12-NOT: {{__kmpc|__tgt}}
 #ifdef CK15
 
-// CK15-LABEL: @.__omp_offloading_{{.*}}implicit_maps_variable_length_array{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK15-LABEL: @.__omp_offloading_{{.*}}implicit_maps_variable_length_array{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
 // We don't have a constant map size for VLAs.
 // Map types:
@@ -820,7 +820,7 @@ void implicit_maps_variable_length_array (int a){
 #ifdef CK16
 
 // CK16-DAG: [[ST:%.+]] = type { i32, double }
-// CK16-LABEL: @.__omp_offloading_{{.*}}implicit_maps_struct{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK16-LABEL: @.__omp_offloading_{{.*}}implicit_maps_struct{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 // CK16-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 {{16|12}}]
 // Map types: OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 544
 // CK16-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 544]
@@ -877,7 +877,7 @@ void implicit_maps_struct (int a){
 #ifdef CK17
 
 // CK17-DAG: [[ST:%.+]] = type { i32, double }
-// CK17-LABEL: @.__omp_offloading_{{.*}}implicit_maps_struct{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK17-LABEL: @.__omp_offloading_{{.*}}implicit_maps_struct{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 // CK17-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 {{16|12}}]
 // Map types: OMP_MAP_TO | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 545
 // CK17-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 545]
@@ -934,7 +934,7 @@ void implicit_maps_struct (int a){
 #ifdef CK18
 
 // CK18-DAG: [[ST:%.+]] = type { i32, double }
-// CK18-LABEL: @.__omp_offloading_{{.*}}implicit_maps_struct{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK18-LABEL: @.__omp_offloading_{{.*}}implicit_maps_struct{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 // CK18-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 {{16|12}}]
 // Map types: OMP_MAP_FROM | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 546
 // CK18-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 546]
@@ -991,7 +991,7 @@ void implicit_maps_struct (int a){
 #ifdef CK19
 
 // CK19-DAG: [[ST:%.+]] = type { i32, double }
-// CK19-LABEL: @.__omp_offloading_{{.*}}implicit_maps_struct{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK19-LABEL: @.__omp_offloading_{{.*}}implicit_maps_struct{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 // CK19-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 {{16|12}}]
 // Map types: OMP_MAP_TO | OMP_MAP_FROM | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 547
 // CK19-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 547]
@@ -1050,7 +1050,7 @@ void implicit_maps_struct (int a){
 // For a 32-bit targets, the value doesn't fit the size of the pointer,
 // therefore it is passed by reference with a map 'to' specification.
 
-// CK20-LABEL: @.__omp_offloading_{{.*}}implicit_maps_double{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK20-LABEL: @.__omp_offloading_{{.*}}implicit_maps_double{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
 // CK20-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 8]
 // Map types: OMP_MAP_LITERAL | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 800
@@ -1120,7 +1120,7 @@ void implicit_maps_double (int a){
 #ifdef CK21
 
 // CK21-DAG: [[ST:%.+]] = type { i32, double }
-// CK21-LABEL: @.__omp_offloading_{{.*}}implicit_maps_struct{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK21-LABEL: @.__omp_offloading_{{.*}}implicit_maps_struct{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 // CK21-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 {{16|12}}]
 // Map types: OMP_MAP_TO + OMP_MAP_FROM + OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 547
 // CK21-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 547]
@@ -1176,7 +1176,7 @@ void implicit_maps_struct (int a){
 // SIMD-ONLY9-NOT: {{__kmpc|__tgt}}
 #ifdef CK22
 
-// CK22-LABEL: @.__omp_offloading_{{.*}}implicit_maps_pointer{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK22-LABEL: @.__omp_offloading_{{.*}}implicit_maps_pointer{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
 // CK22-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] zeroinitializer
 // Map types: OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 544
@@ -1230,7 +1230,7 @@ void implicit_maps_pointer (){
 
 double *g;
 
-// CK23: @g = global double*
+// CK23: @g ={{.*}} global double*
 // CK23: [[SIZES00:@.+]] = {{.+}}constant [1 x i[[sz:64|32]]] [i{{64|32}} {{8|4}}]
 // CK23: [[TYPES00:@.+]] = {{.+}}constant [1 x i64] [i64 288]
 
@@ -1413,11 +1413,11 @@ void bar(float *&a, int *&b) {
 // SIMD-ONLY18-NOT: {{__kmpc|__tgt}}
 #ifdef CK24
 
-// CK24-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK24-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 // CK24: [[SIZE00:@.+]] = private {{.*}}constant [1 x i[[Z:64|32]]] [i[[Z:64|32]] 4]
 // CK24: [[MTYPE00:@.+]] = private {{.*}}constant [1 x i64] [i64 1059]
 
-// CK24-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK24-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 // CK24: [[SIZE01:@.+]] = private {{.*}}constant [1 x i[[Z:64|32]]] [i[[Z:64|32]] 4]
 // CK24: [[MTYPE01:@.+]] = private {{.*}}constant [1 x i64] [i64 1063]
 
@@ -1488,7 +1488,7 @@ void explicit_maps_single (int ii){
 extern int x;
 #pragma omp declare target to(x)
 
-// CK25-LABEL: @.__omp_offloading_{{.*}}declare_target_to{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK25-LABEL: @.__omp_offloading_{{.*}}declare_target_to{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
 void declare_target_to()
 {

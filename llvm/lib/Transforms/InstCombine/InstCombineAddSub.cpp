@@ -1841,7 +1841,7 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     Constant *C2;
 
     // C-(C2-X) --> X+(C-C2)
-    if (match(Op1, m_Sub(m_Constant(C2), m_Value(X))) && !isa<ConstantExpr>(C2))
+    if (match(Op1, m_Sub(m_ImmConstant(C2), m_Value(X))))
       return BinaryOperator::CreateAdd(X, ConstantExpr::getSub(C, C2));
   }
 
@@ -1871,6 +1871,22 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     if (match(Op1, m_And(m_Value(A), m_Value(B))) &&
         match(Op0, m_c_Or(m_Specific(A), m_Specific(B))))
       return BinaryOperator::CreateXor(A, B);
+  }
+
+  // (sub (add A, B) (or A, B)) --> (and A, B)
+  {
+    Value *A, *B;
+    if (match(Op0, m_Add(m_Value(A), m_Value(B))) &&
+        match(Op1, m_c_Or(m_Specific(A), m_Specific(B))))
+      return BinaryOperator::CreateAnd(A, B);
+  }
+
+  // (sub (add A, B) (and A, B)) --> (or A, B)
+  {
+    Value *A, *B;
+    if (match(Op0, m_Add(m_Value(A), m_Value(B))) &&
+        match(Op1, m_c_And(m_Specific(A), m_Specific(B))))
+      return BinaryOperator::CreateOr(A, B);
   }
 
   // (sub (and A, B) (or A, B)) --> neg (xor A, B)
@@ -2198,7 +2214,7 @@ Instruction *InstCombinerImpl::visitFSub(BinaryOperator &I) {
   // X - C --> X + (-C)
   // But don't transform constant expressions because there's an inverse fold
   // for X + (-Y) --> X - Y.
-  if (match(Op1, m_Constant(C)) && !isa<ConstantExpr>(Op1))
+  if (match(Op1, m_ImmConstant(C)))
     return BinaryOperator::CreateFAddFMF(Op0, ConstantExpr::getFNeg(C), &I);
 
   // X - (-Y) --> X + Y

@@ -254,7 +254,7 @@ public:
     LibFunc Func;
     if (TLI.getLibFunc(CI, Func) &&
         (Func == LibFunc_memcmp || Func == LibFunc_bcmp) &&
-        !dyn_cast<ConstantInt>(CI.getArgOperand(2))) {
+        !isa<ConstantInt>(CI.getArgOperand(2))) {
       WorkList.push_back(MemOp(&CI));
     }
   }

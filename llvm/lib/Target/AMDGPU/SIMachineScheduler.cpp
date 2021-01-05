@@ -763,8 +763,7 @@ void SIScheduleBlockCreator::colorHighLatenciesGroups() {
           // depend (order dependency) on one of the
           // instruction in the block, and are required for the
           // high latency instruction we add.
-          AdditionalElements.insert(AdditionalElements.end(),
-                                    SubGraph.begin(), SubGraph.end());
+          llvm::append_range(AdditionalElements, SubGraph);
         }
       }
       if (CompatibleGroup) {

@@ -88,11 +88,6 @@ inline class_match<BinaryOperator> m_BinOp() {
 /// Matches any compare instruction and ignore it.
 inline class_match<CmpInst> m_Cmp() { return class_match<CmpInst>(); }
 
-/// Match an arbitrary ConstantInt and ignore it.
-inline class_match<ConstantInt> m_ConstantInt() {
-  return class_match<ConstantInt>();
-}
-
 /// Match an arbitrary undef constant.
 inline class_match<UndefValue> m_Undef() { return class_match<UndefValue>(); }
 
@@ -101,6 +96,21 @@ inline class_match<PoisonValue> m_Poison() { return class_match<PoisonValue>(); 
 
 /// Match an arbitrary Constant and ignore it.
 inline class_match<Constant> m_Constant() { return class_match<Constant>(); }
+
+/// Match an arbitrary ConstantInt and ignore it.
+inline class_match<ConstantInt> m_ConstantInt() {
+  return class_match<ConstantInt>();
+}
+
+/// Match an arbitrary ConstantFP and ignore it.
+inline class_match<ConstantFP> m_ConstantFP() {
+  return class_match<ConstantFP>();
+}
+
+/// Match an arbitrary ConstantExpr and ignore it.
+inline class_match<ConstantExpr> m_ConstantExpr() {
+  return class_match<ConstantExpr>();
+}
 
 /// Match an arbitrary basic block value and ignore it.
 inline class_match<BasicBlock> m_BasicBlock() {
@@ -699,19 +709,36 @@ inline bind_ty<BinaryOperator> m_BinOp(BinaryOperator *&I) { return I; }
 /// Match a with overflow intrinsic, capturing it if we match.
 inline bind_ty<WithOverflowInst> m_WithOverflowInst(WithOverflowInst *&I) { return I; }
 
-/// Match a ConstantInt, capturing the value if we match.
-inline bind_ty<ConstantInt> m_ConstantInt(ConstantInt *&CI) { return CI; }
-
 /// Match a Constant, capturing the value if we match.
 inline bind_ty<Constant> m_Constant(Constant *&C) { return C; }
 
+/// Match a ConstantInt, capturing the value if we match.
+inline bind_ty<ConstantInt> m_ConstantInt(ConstantInt *&CI) { return CI; }
+
 /// Match a ConstantFP, capturing the value if we match.
 inline bind_ty<ConstantFP> m_ConstantFP(ConstantFP *&C) { return C; }
+
+/// Match a ConstantExpr, capturing the value if we match.
+inline bind_ty<ConstantExpr> m_ConstantExpr(ConstantExpr *&C) { return C; }
 
 /// Match a basic block value, capturing it if we match.
 inline bind_ty<BasicBlock> m_BasicBlock(BasicBlock *&V) { return V; }
 inline bind_ty<const BasicBlock> m_BasicBlock(const BasicBlock *&V) {
   return V;
+}
+
+/// Match an arbitrary immediate Constant and ignore it.
+inline match_combine_and<class_match<Constant>,
+                         match_unless<class_match<ConstantExpr>>>
+m_ImmConstant() {
+  return m_CombineAnd(m_Constant(), m_Unless(m_ConstantExpr()));
+}
+
+/// Match an immediate Constant, capturing the value if we match.
+inline match_combine_and<bind_ty<Constant>,
+                         match_unless<class_match<ConstantExpr>>>
+m_ImmConstant(Constant *&C) {
+  return m_CombineAnd(m_Constant(C), m_Unless(m_ConstantExpr()));
 }
 
 /// Match a specified Value*.
@@ -2358,6 +2385,58 @@ public:
 
 inline VScaleVal_match m_VScale(const DataLayout &DL) {
   return VScaleVal_match(DL);
+}
+
+template <typename LHS, typename RHS, unsigned Opcode>
+struct LogicalOp_match {
+  LHS L;
+  RHS R;
+
+  LogicalOp_match(const LHS &L, const RHS &R) : L(L), R(R) {}
+
+  template <typename T> bool match(T *V) {
+    if (auto *I = dyn_cast<Instruction>(V)) {
+      if (!I->getType()->isIntOrIntVectorTy(1))
+        return false;
+
+      if (I->getOpcode() == Opcode && L.match(I->getOperand(0)) &&
+          R.match(I->getOperand(1)))
+        return true;
+
+      if (auto *SI = dyn_cast<SelectInst>(I)) {
+        if (Opcode == Instruction::And) {
+          if (const auto *C = dyn_cast<Constant>(SI->getFalseValue()))
+            if (C->isNullValue() && L.match(SI->getCondition()) &&
+                R.match(SI->getTrueValue()))
+              return true;
+        } else {
+          assert(Opcode == Instruction::Or);
+          if (const auto *C = dyn_cast<Constant>(SI->getTrueValue()))
+            if (C->isOneValue() && L.match(SI->getCondition()) &&
+                R.match(SI->getFalseValue()))
+              return true;
+        }
+      }
+    }
+
+    return false;
+  }
+};
+
+/// Matches L && R either in the form of L & R or L ? R : false.
+/// Note that the latter form is poison-blocking.
+template <typename LHS, typename RHS>
+inline LogicalOp_match<LHS, RHS, Instruction::And>
+m_LogicalAnd(const LHS &L, const RHS &R) {
+  return LogicalOp_match<LHS, RHS, Instruction::And>(L, R);
+}
+
+/// Matches L || R either in the form of L | R or L ? true : R.
+/// Note that the latter form is poison-blocking.
+template <typename LHS, typename RHS>
+inline LogicalOp_match<LHS, RHS, Instruction::Or>
+m_LogicalOr(const LHS &L, const RHS &R) {
+  return LogicalOp_match<LHS, RHS, Instruction::Or>(L, R);
 }
 
 } // end namespace PatternMatch

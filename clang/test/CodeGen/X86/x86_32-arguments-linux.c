@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -w -fblocks -triple i386-pc-linux-gnu -target-cpu pentium4 -emit-llvm -o %t %s
 // RUN: FileCheck < %t %s
 
-// CHECK-LABEL: define void @f56(
+// CHECK-LABEL: define{{.*}} void @f56(
 // CHECK: i8 signext %a0, %struct.s56_0* byval(%struct.s56_0) align 4 %a1,
 // CHECK: i64 %a2.coerce, %struct.s56_1* byval(%struct.s56_1) align 4 %0,
 // CHECK: <1 x double> %a4, %struct.s56_2* byval(%struct.s56_2) align 4 %1,

@@ -12,8 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "../PassDetail.h"
-#include "mlir/Conversion/StandardToSPIRV/ConvertStandardToSPIRV.h"
-#include "mlir/Conversion/StandardToSPIRV/ConvertStandardToSPIRVPass.h"
+#include "mlir/Conversion/StandardToSPIRV/StandardToSPIRV.h"
+#include "mlir/Conversion/StandardToSPIRV/StandardToSPIRVPass.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Vector/VectorOps.h"

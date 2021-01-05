@@ -702,6 +702,12 @@ TEST_F(FormatTestComments, SplitsLongCxxComments) {
                    "  // long 1 2 3 4 5 6\n"
                    "}",
                    getLLVMStyleWithColumns(20)));
+
+  EXPECT_EQ("//: A comment that\n"
+            "//: doesn't fit on\n"
+            "//: one line",
+            format("//: A comment that doesn't fit on one line",
+                   getLLVMStyleWithColumns(20)));
 }
 
 TEST_F(FormatTestComments, PreservesHangingIndentInCxxComments) {

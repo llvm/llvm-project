@@ -494,6 +494,12 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     MI.setDesc(TII->get(X86::TILESTORED));
     return true;
   }
+  case X86::PTILEZEROV: {
+    for (int i = 3; i > 0; --i) // Remove row, col, $tmmcfg
+      MI.RemoveOperand(i);
+    MI.setDesc(TII->get(X86::TILEZERO));
+    return true;
+  }
   }
   llvm_unreachable("Previous switch has a fallthrough?");
 }

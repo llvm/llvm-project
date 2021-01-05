@@ -15,8 +15,8 @@
 ;
 ; RUN: opt -S -loop-vectorize -enable-vplan-native-path < %s | FileCheck %s
 ; CHECK-LABEL: vector.ph:
-; CHECK: %[[SplatVal:.*]] = insertelement <4 x i32> undef, i32 %n, i32 0
-; CHECK: %[[Splat:.*]] = shufflevector <4 x i32> %[[SplatVal]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK: %[[SplatVal:.*]] = insertelement <4 x i32> poison, i32 %n, i32 0
+; CHECK: %[[Splat:.*]] = shufflevector <4 x i32> %[[SplatVal]], <4 x i32> poison, <4 x i32> zeroinitializer
 
 ; CHECK-LABEL: vector.body:
 ; CHECK: %[[Ind:.*]] = phi i64 [ 0, %vector.ph ], [ %[[IndNext:.*]], %[[ForInc:.*]] ]

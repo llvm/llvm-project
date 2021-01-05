@@ -22,13 +22,10 @@
 #include "ExpandModularHeadersPPCallbacks.h"
 #include "clang-tidy-config.h"
 #include "clang/AST/ASTConsumer.h"
-#include "clang/AST/ASTContext.h"
-#include "clang/AST/Decl.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Format/Format.h"
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
@@ -43,7 +40,6 @@
 #include "clang/Tooling/ReplacementsYaml.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/Process.h"
-#include "llvm/Support/Signals.h"
 #include <algorithm>
 #include <utility>
 

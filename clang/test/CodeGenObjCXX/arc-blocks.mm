@@ -22,7 +22,7 @@ namespace test0 {
     __block A v;
     ^{ (void)v; };
   }
-  // CHECK-LABEL:    define void @_ZN5test03fooEv() 
+  // CHECK-LABEL:    define{{.*}} void @_ZN5test03fooEv() 
   // CHECK:      [[V:%.*]] = alloca [[BYREF_A:%.*]], align 8
   // CHECK:      [[T0:%.*]] = getelementptr inbounds [[BYREF_A]], [[BYREF_A]]* [[V]], i32 0, i32 4
   // CHECK-NEXT: store i8* bitcast (void (i8*, i8*)* [[COPY_HELPER:@.*]] to i8*), i8** [[T0]]
@@ -209,7 +209,7 @@ namespace test_block_retain {
 
   void foo1(id);
 
-// CHECK-LABEL: define void @_ZN17test_block_retain14initializationEP11objc_object(
+// CHECK-LABEL: define{{.*}} void @_ZN17test_block_retain14initializationEP11objc_object(
 // CHECK-NOT: @llvm.objc.retainBlock(
   void initialization(id a) {
     BlockTy b0 = ^{ foo1(a); };
@@ -218,14 +218,14 @@ namespace test_block_retain {
     b1();
   }
 
-// CHECK-LABEL: define void @_ZN17test_block_retain20initializationStaticEP11objc_object(
+// CHECK-LABEL: define{{.*}} void @_ZN17test_block_retain20initializationStaticEP11objc_object(
 // CHECK: @llvm.objc.retainBlock(
   void initializationStatic(id a) {
     static BlockTy b0 = ^{ foo1(a); };
     b0();
   }
 
-// CHECK-LABEL: define void @_ZN17test_block_retain15initialization2EP11objc_object
+// CHECK-LABEL: define{{.*}} void @_ZN17test_block_retain15initialization2EP11objc_object
 // CHECK: %[[B0:.*]] = alloca void ()*, align 8
 // CHECK: %[[B1:.*]] = alloca void ()*, align 8
 // CHECK: load void ()*, void ()** %[[B0]], align 8
@@ -242,7 +242,7 @@ namespace test_block_retain {
     b1();
   }
 
-// CHECK-LABEL: define void @_ZN17test_block_retain10assignmentEP11objc_object(
+// CHECK-LABEL: define{{.*}} void @_ZN17test_block_retain10assignmentEP11objc_object(
 // CHECK-NOT: @llvm.objc.retainBlock(
   void assignment(id a) {
     BlockTy b0;
@@ -252,7 +252,7 @@ namespace test_block_retain {
     b0();
   }
 
-// CHECK-LABEL: define void @_ZN17test_block_retain16assignmentStaticEP11objc_object(
+// CHECK-LABEL: define{{.*}} void @_ZN17test_block_retain16assignmentStaticEP11objc_object(
 // CHECK: @llvm.objc.retainBlock(
   void assignmentStatic(id a) {
     static BlockTy b0;
@@ -260,7 +260,7 @@ namespace test_block_retain {
     b0();
   }
 
-// CHECK-LABEL: define void @_ZN17test_block_retain21assignmentConditionalEP11objc_objectb(
+// CHECK-LABEL: define{{.*}} void @_ZN17test_block_retain21assignmentConditionalEP11objc_objectb(
 // CHECK: @llvm.objc.retainBlock(
   void assignmentConditional(id a, bool c) {
     BlockTy b0;
@@ -270,7 +270,7 @@ namespace test_block_retain {
     b0();
   }
 
-// CHECK-LABEL: define void @_ZN17test_block_retain11assignment2EP11objc_object(
+// CHECK-LABEL: define{{.*}} void @_ZN17test_block_retain11assignment2EP11objc_object(
 // CHECK: %[[B0:.*]] = alloca void ()*, align 8
 // CHECK: %[[B1:.*]] = alloca void ()*, align 8
 // CHECK-NOT: @llvm.objc.retainBlock
@@ -290,7 +290,7 @@ namespace test_block_retain {
 
 // We cannot remove the call to @llvm.objc.retainBlock if the variable is of type id.
 
-// CHECK: define void @_ZN17test_block_retain21initializationObjCPtrEP11objc_object(
+// CHECK: define{{.*}} void @_ZN17test_block_retain21initializationObjCPtrEP11objc_object(
 // CHECK: alloca i8*, align 8
 // CHECK: %[[B0:.*]] = alloca i8*, align 8
 // CHECK: %[[BLOCK:.*]] = alloca <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>, align 8
@@ -305,7 +305,7 @@ namespace test_block_retain {
     ((BlockTy)b0)();
   }
 
-// CHECK: define void @_ZN17test_block_retain17assignmentObjCPtrEP11objc_object(
+// CHECK: define{{.*}} void @_ZN17test_block_retain17assignmentObjCPtrEP11objc_object(
 // CHECK: %[[B0:.*]] = alloca void ()*, align 8
 // CHECK: %[[B1:.*]] = alloca i8*, align 8
 // CHECK: %[[V4:.*]] = load void ()*, void ()** %[[B0]], align 8

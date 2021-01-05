@@ -247,7 +247,7 @@ define i32 @test5(i32 %X, i8 %B) {
 
 define i32 @test6(i32 %A) {
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
   %B = srem i32 %A, 0	;; undef
   ret i32 %B
