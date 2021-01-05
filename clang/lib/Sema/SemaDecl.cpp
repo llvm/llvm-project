@@ -6749,8 +6749,8 @@ static bool diagnoseOpenCLTypes(Scope *S, Sema &Se, Declarator &D,
 
   // OpenCL v1.0 s6.8.a.3: Pointers to functions are not allowed.
   QualType NR = R;
-  while (NR->isPointerType()) {
-    if (NR->isFunctionPointerType()) {
+  while (NR->isPointerType() || NR->isMemberFunctionPointerType()) {
+    if (NR->isFunctionPointerType() || NR->isMemberFunctionPointerType()) {
       Se.Diag(D.getIdentifierLoc(), diag::err_opencl_function_pointer);
       D.setInvalidType();
       return false;
