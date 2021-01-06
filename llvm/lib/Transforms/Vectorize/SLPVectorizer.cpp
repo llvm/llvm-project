@@ -6457,6 +6457,7 @@ class HorizontalReduction {
     Value *createOp(IRBuilder<> &Builder, Value *LHS, Value *RHS,
                     const Twine &Name) const {
       assert(isVectorizable() && "Unhandled reduction operation.");
+      unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(Kind);
       switch (Kind) {
       case RecurKind::Add:
       case RecurKind::Mul:
@@ -6465,26 +6466,22 @@ class HorizontalReduction {
       case RecurKind::Xor:
       case RecurKind::FAdd:
       case RecurKind::FMul:
-        return Builder.CreateBinOp((Instruction::BinaryOps)Opcode, LHS, RHS,
+        return Builder.CreateBinOp((Instruction::BinaryOps)RdxOpcode, LHS, RHS,
                                    Name);
 
       case RecurKind::SMax: {
-        assert(Opcode == Instruction::ICmp && "Expected integer types.");
         Value *Cmp = Builder.CreateICmpSGT(LHS, RHS, Name);
         return Builder.CreateSelect(Cmp, LHS, RHS, Name);
       }
       case RecurKind::SMin: {
-        assert(Opcode == Instruction::ICmp && "Expected integer types.");
         Value *Cmp = Builder.CreateICmpSLT(LHS, RHS, Name);
         return Builder.CreateSelect(Cmp, LHS, RHS, Name);
       }
       case RecurKind::UMax: {
-        assert(Opcode == Instruction::ICmp && "Expected integer types.");
         Value *Cmp = Builder.CreateICmpUGT(LHS, RHS, Name);
         return Builder.CreateSelect(Cmp, LHS, RHS, Name);
       }
       case RecurKind::UMin: {
-        assert(Opcode == Instruction::ICmp && "Expected integer types.");
         Value *Cmp = Builder.CreateICmpULT(LHS, RHS, Name);
         return Builder.CreateSelect(Cmp, LHS, RHS, Name);
       }
