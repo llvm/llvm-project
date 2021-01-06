@@ -1007,3 +1007,45 @@ add_fp_unittest(
     libc.src.math.hypot
     libc.utils.FPUtil.fputil
 )
+
+add_fp_unittest(
+  nextafter_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    nextafter_test.cpp
+  HDRS
+    NextAfterTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.nextafter
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  nextafterf_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    nextafterf_test.cpp
+  HDRS
+    NextAfterTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.nextafterf
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  nextafterl_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    nextafterl_test.cpp
+  HDRS
+    NextAfterTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.nextafterl
+    libc.utils.FPUtil.fputil
+)
