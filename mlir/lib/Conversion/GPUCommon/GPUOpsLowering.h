@@ -38,7 +38,7 @@ struct GPUFuncOpLowering : ConvertOpToLLVMPattern<gpu::GPUFuncOp> {
       uint64_t numElements = type.getNumElements();
 
       auto elementType = typeConverter->convertType(type.getElementType())
-                             .template cast<LLVM::LLVMType>();
+                             .template cast<Type>();
       auto arrayType = LLVM::LLVMArrayType::get(elementType, numElements);
       std::string name = std::string(
           llvm::formatv("__wg_{0}_{1}", gpuFuncOp.getName(), en.index()));
@@ -126,7 +126,7 @@ struct GPUFuncOpLowering : ConvertOpToLLVMPattern<gpu::GPUFuncOp> {
         // memory space and does not support `alloca`s with addrspace(5).
         auto ptrType = LLVM::LLVMPointerType::get(
             typeConverter->convertType(type.getElementType())
-                .template cast<LLVM::LLVMType>(),
+                .template cast<Type>(),
             AllocaAddrSpace);
         Value numElements = rewriter.create<LLVM::ConstantOp>(
             gpuFuncOp.getLoc(), int64Ty,
