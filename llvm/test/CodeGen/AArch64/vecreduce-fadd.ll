@@ -5,13 +5,11 @@
 define float @add_HalfS(<2 x float> %bin.rdx)  {
 ; CHECK-LABEL: add_HalfS:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    faddp s0, v0.2s
 ; CHECK-NEXT:    ret
 ;
 ; CHECKNOFP16-LABEL: add_HalfS:
 ; CHECKNOFP16:       // %bb.0:
-; CHECKNOFP16-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECKNOFP16-NEXT:    faddp s0, v0.2s
 ; CHECKNOFP16-NEXT:    ret
   %r = call fast float @llvm.vector.reduce.fadd.f32.v2f32(float -0.0, <2 x float> %bin.rdx)
@@ -21,12 +19,8 @@ define float @add_HalfS(<2 x float> %bin.rdx)  {
 define half @add_HalfH(<4 x half> %bin.rdx)  {
 ; CHECK-LABEL: add_HalfH:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov h1, v0.h[3]
-; CHECK-NEXT:    mov h2, v0.h[2]
+; CHECK-NEXT:    faddp v0.4h, v0.4h, v0.4h
 ; CHECK-NEXT:    faddp h0, v0.2h
-; CHECK-NEXT:    fadd h0, h0, h2
-; CHECK-NEXT:    fadd h0, h0, h1
 ; CHECK-NEXT:    ret
 ;
 ; CHECKNOFP16-LABEL: add_HalfH:
@@ -56,13 +50,9 @@ define half @add_HalfH(<4 x half> %bin.rdx)  {
 define half @add_H(<8 x half> %bin.rdx)  {
 ; CHECK-LABEL: add_H:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    fadd v0.4h, v0.4h, v1.4h
-; CHECK-NEXT:    mov h1, v0.h[2]
-; CHECK-NEXT:    faddp h2, v0.2h
-; CHECK-NEXT:    fadd h1, h2, h1
-; CHECK-NEXT:    mov h0, v0.h[3]
-; CHECK-NEXT:    fadd h0, h1, h0
+; CHECK-NEXT:    faddp v0.8h, v0.8h, v0.8h
+; CHECK-NEXT:    faddp v0.8h, v0.8h, v0.8h
+; CHECK-NEXT:    faddp h0, v0.2h
 ; CHECK-NEXT:    ret
 ;
 ; CHECKNOFP16-LABEL: add_H:
@@ -110,15 +100,13 @@ define half @add_H(<8 x half> %bin.rdx)  {
 define float @add_S(<4 x float> %bin.rdx)  {
 ; CHECK-LABEL: add_S:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    fadd v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    faddp v0.4s, v0.4s, v0.4s
 ; CHECK-NEXT:    faddp s0, v0.2s
 ; CHECK-NEXT:    ret
 ;
 ; CHECKNOFP16-LABEL: add_S:
 ; CHECKNOFP16:       // %bb.0:
-; CHECKNOFP16-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECKNOFP16-NEXT:    fadd v0.2s, v0.2s, v1.2s
+; CHECKNOFP16-NEXT:    faddp v0.4s, v0.4s, v0.4s
 ; CHECKNOFP16-NEXT:    faddp s0, v0.2s
 ; CHECKNOFP16-NEXT:    ret
   %r = call fast float @llvm.vector.reduce.fadd.f32.v4f32(float -0.0, <4 x float> %bin.rdx)
@@ -143,13 +131,9 @@ define half @add_2H(<16 x half> %bin.rdx)  {
 ; CHECK-LABEL: add_2H:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fadd v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    fadd v0.4h, v0.4h, v1.4h
-; CHECK-NEXT:    mov h1, v0.h[2]
-; CHECK-NEXT:    faddp h2, v0.2h
-; CHECK-NEXT:    fadd h1, h2, h1
-; CHECK-NEXT:    mov h0, v0.h[3]
-; CHECK-NEXT:    fadd h0, h1, h0
+; CHECK-NEXT:    faddp v0.8h, v0.8h, v0.8h
+; CHECK-NEXT:    faddp v0.8h, v0.8h, v0.8h
+; CHECK-NEXT:    faddp h0, v0.2h
 ; CHECK-NEXT:    ret
 ;
 ; CHECKNOFP16-LABEL: add_2H:
@@ -237,16 +221,14 @@ define float @add_2S(<8 x float> %bin.rdx)  {
 ; CHECK-LABEL: add_2S:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fadd v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    fadd v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    faddp v0.4s, v0.4s, v0.4s
 ; CHECK-NEXT:    faddp s0, v0.2s
 ; CHECK-NEXT:    ret
 ;
 ; CHECKNOFP16-LABEL: add_2S:
 ; CHECKNOFP16:       // %bb.0:
 ; CHECKNOFP16-NEXT:    fadd v0.4s, v0.4s, v1.4s
-; CHECKNOFP16-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECKNOFP16-NEXT:    fadd v0.2s, v0.2s, v1.2s
+; CHECKNOFP16-NEXT:    faddp v0.4s, v0.4s, v0.4s
 ; CHECKNOFP16-NEXT:    faddp s0, v0.2s
 ; CHECKNOFP16-NEXT:    ret
   %r = call fast float @llvm.vector.reduce.fadd.f32.v8f32(float -0.0, <8 x float> %bin.rdx)
@@ -267,6 +249,29 @@ define double @add_2D(<4 x double> %bin.rdx)  {
 ; CHECKNOFP16-NEXT:    ret
   %r = call fast double @llvm.vector.reduce.fadd.f64.v4f64(double -0.0, <4 x double> %bin.rdx)
   ret double %r
+}
+
+; Added at least one test where the start value is not -0.0.
+define float @add_S_init_42(<4 x float> %bin.rdx)  {
+; CHECK-LABEL: add_S_init_42:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    faddp v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    mov w8, #1109917696
+; CHECK-NEXT:    faddp s0, v0.2s
+; CHECK-NEXT:    fmov s1, w8
+; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-NEXT:    ret
+;
+; CHECKNOFP16-LABEL: add_S_init_42:
+; CHECKNOFP16:       // %bb.0:
+; CHECKNOFP16-NEXT:    faddp v0.4s, v0.4s, v0.4s
+; CHECKNOFP16-NEXT:    mov w8, #1109917696
+; CHECKNOFP16-NEXT:    faddp s0, v0.2s
+; CHECKNOFP16-NEXT:    fmov s1, w8
+; CHECKNOFP16-NEXT:    fadd s0, s0, s1
+; CHECKNOFP16-NEXT:    ret
+  %r = call fast float @llvm.vector.reduce.fadd.f32.v4f32(float 42.0, <4 x float> %bin.rdx)
+  ret float %r
 }
 
 ; Function Attrs: nounwind readnone
