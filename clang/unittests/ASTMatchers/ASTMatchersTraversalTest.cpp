@@ -2553,7 +2553,9 @@ struct CtorInitsNonTrivial : NonTrivial
     int arr[2];
     for (auto i : arr)
     {
-
+      if (true)
+      {
+      }
     }
   }
   )cpp";
@@ -2593,6 +2595,33 @@ struct CtorInitsNonTrivial : NonTrivial
   }
   {
     auto M = cxxForRangeStmt(hasBody(stmt()));
+    EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
+    EXPECT_TRUE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
+  }
+  {
+    auto M = cxxForRangeStmt(hasDescendant(ifStmt()));
+    EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
+    EXPECT_TRUE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
+  }
+  {
+    EXPECT_TRUE(matches(
+        Code, traverse(TK_AsIs, cxxForRangeStmt(has(declStmt(
+                                    hasSingleDecl(varDecl(hasName("i")))))))));
+    EXPECT_TRUE(
+        matches(Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                               cxxForRangeStmt(has(varDecl(hasName("i")))))));
+  }
+  {
+    EXPECT_TRUE(matches(
+        Code, traverse(TK_AsIs, cxxForRangeStmt(has(declStmt(hasSingleDecl(
+                                    varDecl(hasInitializer(declRefExpr(
+                                        to(varDecl(hasName("arr")))))))))))));
+    EXPECT_TRUE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                                       cxxForRangeStmt(has(declRefExpr(
+                                           to(varDecl(hasName("arr")))))))));
+  }
+  {
+    auto M = cxxForRangeStmt(has(compoundStmt()));
     EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
     EXPECT_TRUE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
   }
@@ -2659,7 +2688,8 @@ struct CtorInitsNonTrivial : NonTrivial
                              true, {"-std=c++20"}));
   }
   {
-    auto M = cxxForRangeStmt(has(declStmt()));
+    auto M =
+        cxxForRangeStmt(has(declStmt(hasSingleDecl(varDecl(hasName("i"))))));
     EXPECT_TRUE(
         matchesConditionally(Code, traverse(TK_AsIs, M), true, {"-std=c++20"}));
     EXPECT_FALSE(
@@ -2669,6 +2699,19 @@ struct CtorInitsNonTrivial : NonTrivial
   {
     auto M = cxxForRangeStmt(
         hasInitStatement(declStmt(hasSingleDecl(varDecl(
+            hasName("a"),
+            hasInitializer(declRefExpr(to(varDecl(hasName("arr"))))))))),
+        hasLoopVariable(varDecl(hasName("i"))),
+        hasRangeInit(declRefExpr(to(varDecl(hasName("a"))))));
+    EXPECT_TRUE(
+        matchesConditionally(Code, traverse(TK_AsIs, M), true, {"-std=c++20"}));
+    EXPECT_TRUE(
+        matchesConditionally(Code, traverse(TK_IgnoreUnlessSpelledInSource, M),
+                             true, {"-std=c++20"}));
+  }
+  {
+    auto M = cxxForRangeStmt(
+        has(declStmt(hasSingleDecl(varDecl(
             hasName("a"),
             hasInitializer(declRefExpr(to(varDecl(hasName("arr"))))))))),
         hasLoopVariable(varDecl(hasName("i"))),
