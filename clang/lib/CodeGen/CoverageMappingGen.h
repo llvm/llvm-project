@@ -122,6 +122,9 @@ public:
   /// Return the coverage mapping translation unit file id
   /// for the given file.
   unsigned getFileID(const FileEntry *File);
+
+  /// Return an interface into CodeGenModule.
+  CodeGenModule &getCodeGenModule() { return CGM; }
 };
 
 /// Organizes the per-function state that is used while generating

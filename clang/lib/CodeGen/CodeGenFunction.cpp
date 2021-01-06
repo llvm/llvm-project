@@ -1501,6 +1501,90 @@ bool CodeGenFunction::ConstantFoldsToSimpleInteger(const Expr *Cond,
   return true;
 }
 
+/// Determine whether the given condition is an instrumentable condition
+/// (i.e. no "&&" or "||").
+bool CodeGenFunction::isInstrumentedCondition(const Expr *C) {
+  // Bypass simplistic logical-NOT operator before determining whether the
+  // condition contains any other logical operator.
+  if (const UnaryOperator *UnOp = dyn_cast<UnaryOperator>(C->IgnoreParens()))
+    if (UnOp->getOpcode() == UO_LNot)
+      C = UnOp->getSubExpr();
+
+  const BinaryOperator *BOp = dyn_cast<BinaryOperator>(C->IgnoreParens());
+  return (!BOp || !BOp->isLogicalOp());
+}
+
+/// EmitBranchToCounterBlock - Emit a conditional branch to a new block that
+/// increments a profile counter based on the semantics of the given logical
+/// operator opcode.  This is used to instrument branch condition coverage for
+/// logical operators.
+void CodeGenFunction::EmitBranchToCounterBlock(
+    const Expr *Cond, BinaryOperator::Opcode LOp, llvm::BasicBlock *TrueBlock,
+    llvm::BasicBlock *FalseBlock, uint64_t TrueCount /* = 0 */,
+    Stmt::Likelihood LH /* =None */, const Expr *CntrIdx /* = nullptr */) {
+  // If not instrumenting, just emit a branch.
+  bool InstrumentRegions = CGM.getCodeGenOpts().hasProfileClangInstr();
+  if (!InstrumentRegions || !isInstrumentedCondition(Cond))
+    return EmitBranchOnBoolExpr(Cond, TrueBlock, FalseBlock, TrueCount, LH);
+
+  llvm::BasicBlock *ThenBlock = NULL;
+  llvm::BasicBlock *ElseBlock = NULL;
+  llvm::BasicBlock *NextBlock = NULL;
+
+  // Create the block we'll use to increment the appropriate counter.
+  llvm::BasicBlock *CounterIncrBlock = createBasicBlock("lop.rhscnt");
+
+  // Set block pointers according to Logical-AND (BO_LAnd) semantics. This
+  // means we need to evaluate the condition and increment the counter on TRUE:
+  //
+  // if (Cond)
+  //   goto CounterIncrBlock;
+  // else
+  //   goto FalseBlock;
+  //
+  // CounterIncrBlock:
+  //   Counter++;
+  //   goto TrueBlock;
+
+  if (LOp == BO_LAnd) {
+    ThenBlock = CounterIncrBlock;
+    ElseBlock = FalseBlock;
+    NextBlock = TrueBlock;
+  }
+
+  // Set block pointers according to Logical-OR (BO_LOr) semantics. This means
+  // we need to evaluate the condition and increment the counter on FALSE:
+  //
+  // if (Cond)
+  //   goto TrueBlock;
+  // else
+  //   goto CounterIncrBlock;
+  //
+  // CounterIncrBlock:
+  //   Counter++;
+  //   goto FalseBlock;
+
+  else if (LOp == BO_LOr) {
+    ThenBlock = TrueBlock;
+    ElseBlock = CounterIncrBlock;
+    NextBlock = FalseBlock;
+  } else {
+    llvm_unreachable("Expected Opcode must be that of a Logical Operator");
+  }
+
+  // Emit Branch based on condition.
+  EmitBranchOnBoolExpr(Cond, ThenBlock, ElseBlock, TrueCount, LH);
+
+  // Emit the block containing the counter increment(s).
+  EmitBlock(CounterIncrBlock);
+
+  // Increment corresponding counter; if index not provided, use Cond as index.
+  incrementProfileCounter(CntrIdx ? CntrIdx : Cond);
+
+  // Go to the next block.
+  EmitBranch(NextBlock);
+}
+
 /// EmitBranchOnBoolExpr - Emit a branch on a boolean condition (e.g. for an if
 /// statement) to the specified blocks.  Based on the condition, this might try
 /// to simplify the codegen of the conditional based on the branch.
@@ -1523,8 +1607,8 @@ void CodeGenFunction::EmitBranchOnBoolExpr(const Expr *Cond,
           ConstantBool) {
         // br(1 && X) -> br(X).
         incrementProfileCounter(CondBOp);
-        return EmitBranchOnBoolExpr(CondBOp->getRHS(), TrueBlock, FalseBlock,
-                                    TrueCount, LH);
+        return EmitBranchToCounterBlock(CondBOp->getRHS(), BO_LAnd, TrueBlock,
+                                        FalseBlock, TrueCount, LH);
       }
 
       // If we have "X && 1", simplify the code to use an uncond branch.
@@ -1532,8 +1616,8 @@ void CodeGenFunction::EmitBranchOnBoolExpr(const Expr *Cond,
       if (ConstantFoldsToSimpleInteger(CondBOp->getRHS(), ConstantBool) &&
           ConstantBool) {
         // br(X && 1) -> br(X).
-        return EmitBranchOnBoolExpr(CondBOp->getLHS(), TrueBlock, FalseBlock,
-                                    TrueCount, LH);
+        return EmitBranchToCounterBlock(CondBOp->getLHS(), BO_LAnd, TrueBlock,
+                                        FalseBlock, TrueCount, LH, CondBOp);
       }
 
       // Emit the LHS as a conditional.  If the LHS conditional is false, we
@@ -1559,8 +1643,8 @@ void CodeGenFunction::EmitBranchOnBoolExpr(const Expr *Cond,
 
       // Any temporaries created here are conditional.
       eval.begin(*this);
-      EmitBranchOnBoolExpr(CondBOp->getRHS(), TrueBlock, FalseBlock, TrueCount,
-                           LH);
+      EmitBranchToCounterBlock(CondBOp->getRHS(), BO_LAnd, TrueBlock,
+                               FalseBlock, TrueCount, LH);
       eval.end(*this);
 
       return;
@@ -1574,8 +1658,8 @@ void CodeGenFunction::EmitBranchOnBoolExpr(const Expr *Cond,
           !ConstantBool) {
         // br(0 || X) -> br(X).
         incrementProfileCounter(CondBOp);
-        return EmitBranchOnBoolExpr(CondBOp->getRHS(), TrueBlock, FalseBlock,
-                                    TrueCount, LH);
+        return EmitBranchToCounterBlock(CondBOp->getRHS(), BO_LOr, TrueBlock,
+                                        FalseBlock, TrueCount, LH);
       }
 
       // If we have "X || 0", simplify the code to use an uncond branch.
@@ -1583,8 +1667,8 @@ void CodeGenFunction::EmitBranchOnBoolExpr(const Expr *Cond,
       if (ConstantFoldsToSimpleInteger(CondBOp->getRHS(), ConstantBool) &&
           !ConstantBool) {
         // br(X || 0) -> br(X).
-        return EmitBranchOnBoolExpr(CondBOp->getLHS(), TrueBlock, FalseBlock,
-                                    TrueCount, LH);
+        return EmitBranchToCounterBlock(CondBOp->getLHS(), BO_LOr, TrueBlock,
+                                        FalseBlock, TrueCount, LH, CondBOp);
       }
 
       // Emit the LHS as a conditional.  If the LHS conditional is true, we
@@ -1613,8 +1697,8 @@ void CodeGenFunction::EmitBranchOnBoolExpr(const Expr *Cond,
 
       // Any temporaries created here are conditional.
       eval.begin(*this);
-      EmitBranchOnBoolExpr(CondBOp->getRHS(), TrueBlock, FalseBlock, RHSCount,
-                           LH);
+      EmitBranchToCounterBlock(CondBOp->getRHS(), BO_LOr, TrueBlock, FalseBlock,
+                               RHSCount, LH);
 
       eval.end(*this);
 

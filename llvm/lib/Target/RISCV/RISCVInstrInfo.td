@@ -809,7 +809,10 @@ def : MnemonicAlias<"move", "mv">;
 def : MnemonicAlias<"scall", "ecall">;
 def : MnemonicAlias<"sbreak", "ebreak">;
 
-def : InstAlias<"zext.b $rd, $rs", (ANDI GPR:$rd, GPR:$rs, 0xFF)>;
+// This alias was added to the spec in December 2020. Don't print it by default
+// to allow assembly we print to be compatible with versions of GNU assembler
+// that don't support this alias.
+def : InstAlias<"zext.b $rd, $rs", (ANDI GPR:$rd, GPR:$rs, 0xFF), 0>;
 
 //===----------------------------------------------------------------------===//
 // Pseudo-instructions and codegen patterns
@@ -846,6 +849,11 @@ def assertzexti32 : PatFrag<(ops node:$src), (assertzext node:$src), [{
 def zexti32 : PatFrags<(ops node:$src),
                        [(and node:$src, 0xffffffff),
                         (assertzexti32 node:$src)]>;
+
+def SRLIWPat : PatFrag<(ops node:$A, node:$B),
+                       (srl (and node:$A, imm), node:$B), [{
+  return MatchSRLIW(N);
+}]>;
 
 /// Immediates
 
@@ -1165,8 +1173,8 @@ def : Pat<(sext_inreg (sub GPR:$rs1, GPR:$rs2), i32),
           (SUBW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(sext_inreg (shl GPR:$rs1, uimm5:$shamt), i32),
           (SLLIW GPR:$rs1, uimm5:$shamt)>;
-// (srl (zexti32 ...), uimm5:$shamt) is matched with custom code due to the
-// need to undo manipulation of the mask value performed by DAGCombine.
+def : Pat<(SRLIWPat GPR:$rs1, uimm5:$shamt),
+          (SRLIW GPR:$rs1, uimm5:$shamt)>;
 def : Pat<(srl (shl GPR:$rs1, (i64 32)), uimm6gt32:$shamt),
           (SRLIW GPR:$rs1, (ImmSub32 uimm6gt32:$shamt))>;
 def : Pat<(sra (sext_inreg GPR:$rs1, i32), uimm5:$shamt),

@@ -190,9 +190,9 @@ private:
     auto protoArgs = funcAST.getProto()->getArgs();
 
     // Declare all the function arguments in the symbol table.
-    for (const auto &name_value :
+    for (const auto nameValue :
          llvm::zip(protoArgs, entryBlock.getArguments())) {
-      if (failed(declare(*std::get<0>(name_value), std::get<1>(name_value))))
+      if (failed(declare(*std::get<0>(nameValue), std::get<1>(nameValue))))
         return nullptr;
     }
 

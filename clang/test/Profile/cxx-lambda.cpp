@@ -11,7 +11,7 @@
 
 // PGOGEN: @[[LWC:__profc__Z7lambdasv]] = {{(private|internal)}} global [4 x i64] zeroinitializer
 // PGOGEN: @[[MAC:__profc_main]] = {{(private|internal)}} global [1 x i64] zeroinitializer
-// LMBGEN: @[[LFC:"__profc_cxx_lambda.cpp__ZZ7lambdasvENK3\$_0clEi"]] = {{(private|internal)}} global [3 x i64] zeroinitializer
+// LMBGEN: @[[LFC:"__profc_cxx_lambda.cpp__ZZ7lambdasvENK3\$_0clEi"]] = {{(private|internal)}} global [4 x i64] zeroinitializer
 
 // PGOGEN-LABEL: define {{.*}}void @_Z7lambdasv()
 // PGOUSE-LABEL: define {{.*}}void @_Z7lambdasv()

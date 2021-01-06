@@ -24,6 +24,7 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/Analyses/CFGReachabilityAnalysis.h"
+#include "clang/Analysis/Analyses/CalledOnceCheck.h"
 #include "clang/Analysis/Analyses/Consumed.h"
 #include "clang/Analysis/Analyses/ReachableCode.h"
 #include "clang/Analysis/Analyses/ThreadSafety.h"
@@ -36,6 +37,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaInternal.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallString.h"
@@ -1623,6 +1625,82 @@ private:
     });
   }
 };
+
+class CalledOnceCheckReporter : public CalledOnceCheckHandler {
+public:
+  CalledOnceCheckReporter(Sema &S) : S(S) {}
+  void handleDoubleCall(const ParmVarDecl *Parameter, const Expr *Call,
+                        const Expr *PrevCall, bool IsCompletionHandler,
+                        bool Poised) override {
+    auto DiagToReport = IsCompletionHandler
+                            ? diag::warn_completion_handler_called_twice
+                            : diag::warn_called_once_gets_called_twice;
+    S.Diag(Call->getBeginLoc(), DiagToReport) << Parameter;
+    S.Diag(PrevCall->getBeginLoc(), diag::note_called_once_gets_called_twice)
+        << Poised;
+  }
+
+  void handleNeverCalled(const ParmVarDecl *Parameter,
+                         bool IsCompletionHandler) override {
+    auto DiagToReport = IsCompletionHandler
+                            ? diag::warn_completion_handler_never_called
+                            : diag::warn_called_once_never_called;
+    S.Diag(Parameter->getBeginLoc(), DiagToReport)
+        << Parameter << /* Captured */ false;
+  }
+
+  void handleNeverCalled(const ParmVarDecl *Parameter, const Stmt *Where,
+                         NeverCalledReason Reason, bool IsCalledDirectly,
+                         bool IsCompletionHandler) override {
+    auto DiagToReport = IsCompletionHandler
+                            ? diag::warn_completion_handler_never_called_when
+                            : diag::warn_called_once_never_called_when;
+    S.Diag(Where->getBeginLoc(), DiagToReport)
+        << Parameter << IsCalledDirectly << (unsigned)Reason;
+  }
+
+  void handleCapturedNeverCalled(const ParmVarDecl *Parameter,
+                                 const Decl *Where,
+                                 bool IsCompletionHandler) override {
+    auto DiagToReport = IsCompletionHandler
+                            ? diag::warn_completion_handler_never_called
+                            : diag::warn_called_once_never_called;
+    S.Diag(Where->getBeginLoc(), DiagToReport)
+        << Parameter << /* Captured */ true;
+  }
+
+private:
+  Sema &S;
+};
+
+constexpr unsigned CalledOnceWarnings[] = {
+    diag::warn_called_once_never_called,
+    diag::warn_called_once_never_called_when,
+    diag::warn_called_once_gets_called_twice};
+
+constexpr unsigned CompletionHandlerWarnings[]{
+    diag::warn_completion_handler_never_called,
+    diag::warn_completion_handler_never_called_when,
+    diag::warn_completion_handler_called_twice};
+
+bool shouldAnalyzeCalledOnceImpl(llvm::ArrayRef<unsigned> DiagIDs,
+                                 const DiagnosticsEngine &Diags,
+                                 SourceLocation At) {
+  return llvm::any_of(DiagIDs, [&Diags, At](unsigned DiagID) {
+    return !Diags.isIgnored(DiagID, At);
+  });
+}
+
+bool shouldAnalyzeCalledOnceConventions(const DiagnosticsEngine &Diags,
+                                        SourceLocation At) {
+  return shouldAnalyzeCalledOnceImpl(CompletionHandlerWarnings, Diags, At);
+}
+
+bool shouldAnalyzeCalledOnceParameters(const DiagnosticsEngine &Diags,
+                                       SourceLocation At) {
+  return shouldAnalyzeCalledOnceImpl(CalledOnceWarnings, Diags, At) ||
+         shouldAnalyzeCalledOnceConventions(Diags, At);
+}
 } // anonymous namespace
 
 namespace clang {
@@ -2261,6 +2339,17 @@ AnalysisBasedWarnings::IssueWarnings(sema::AnalysisBasedWarnings::Policy P,
             std::max(MaxUninitAnalysisBlockVisitsPerFunction,
                      stats.NumBlockVisits);
       }
+    }
+  }
+
+  // Check for violations of "called once" parameter properties.
+  if (S.getLangOpts().ObjC &&
+      shouldAnalyzeCalledOnceParameters(Diags, D->getBeginLoc())) {
+    if (AC.getCFG()) {
+      CalledOnceCheckReporter Reporter(S);
+      checkCalledOnceParameters(
+          AC, Reporter,
+          shouldAnalyzeCalledOnceConventions(Diags, D->getBeginLoc()));
     }
   }
 

@@ -494,7 +494,7 @@ void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
   });
 }
 
-void AMDGPUTargetMachine::registerAliasAnalyses(AAManager &AAM) {
+void AMDGPUTargetMachine::registerDefaultAliasAnalyses(AAManager &AAM) {
   AAM.registerFunctionAnalysis<AMDGPUAA>();
 }
 

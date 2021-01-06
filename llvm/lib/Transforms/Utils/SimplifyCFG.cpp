@@ -17,6 +17,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -993,7 +994,8 @@ bool SimplifyCFGOpt::SimplifyEqualityComparisonWithOnlyPredecessor(
   BasicBlock *CheckEdge = TheRealDest;
   for (BasicBlock *Succ : successors(TIBB))
     if (Succ != CheckEdge) {
-      RemovedSuccs.insert(Succ);
+      if (Succ != TheRealDest)
+        RemovedSuccs.insert(Succ);
       Succ->removePredecessor(TIBB);
     } else
       CheckEdge = nullptr;
@@ -1085,7 +1087,6 @@ static void FitWeights(MutableArrayRef<uint64_t> Weights) {
 /// (either a switch or a branch on "X == c").
 /// See if any of the predecessors of the terminator block are value comparisons
 /// on the same value.  If so, and if safe to do so, fold them together.
-// FIXME: switch to non-permissive DomTreeUpdater::applyUpdates().
 bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(Instruction *TI,
                                                          IRBuilder<> &Builder) {
   BasicBlock *BB = TI->getParent();
@@ -1099,7 +1100,7 @@ bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(Instruction *TI,
       ++NumFoldValueComparisonIntoPredecessors;
   });
 
-  SmallVector<BasicBlock *, 16> Preds(predecessors(BB));
+  SmallSetVector<BasicBlock *, 16> Preds(pred_begin(BB), pred_end(BB));
   while (!Preds.empty()) {
     BasicBlock *Pred = Preds.pop_back_val();
 
@@ -1129,7 +1130,7 @@ bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(Instruction *TI,
       // Based on whether the default edge from PTI goes to BB or not, fill in
       // PredCases and PredDefault with the new switch cases we would like to
       // build.
-      SmallVector<BasicBlock *, 8> NewSuccessors;
+      SmallMapVector<BasicBlock *, int, 8> NewSuccessors;
 
       // Update the branch weight metadata along the way
       SmallVector<uint64_t, 8> Weights;
@@ -1185,7 +1186,7 @@ bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(Instruction *TI,
           if (PredDefault != BB)
             Updates.push_back({DominatorTree::Delete, Pred, PredDefault});
           PredDefault = BBDefault;
-          NewSuccessors.push_back(BBDefault);
+          ++NewSuccessors[BBDefault];
         }
 
         unsigned CasesFromPred = Weights.size();
@@ -1194,7 +1195,7 @@ bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(Instruction *TI,
           if (!PTIHandled.count(BBCases[i].Value) &&
               BBCases[i].Dest != BBDefault) {
             PredCases.push_back(BBCases[i]);
-            NewSuccessors.push_back(BBCases[i].Dest);
+            ++NewSuccessors[BBCases[i].Dest];
             if (SuccHasWeights || PredHasWeights) {
               // The default weight is at index 0, so weight for the ith case
               // should be at index i+1. Scale the cases from successor by
@@ -1242,7 +1243,7 @@ bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(Instruction *TI,
             if (PredHasWeights || SuccHasWeights)
               Weights.push_back(WeightsForHandled[BBCases[i].Value]);
             PredCases.push_back(BBCases[i]);
-            NewSuccessors.push_back(BBCases[i].Dest);
+            ++NewSuccessors[BBCases[i].Dest];
             PTIHandled.erase(
                 BBCases[i].Value); // This constant is taken care of
           }
@@ -1253,16 +1254,21 @@ bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(Instruction *TI,
           if (PredHasWeights || SuccHasWeights)
             Weights.push_back(WeightsForHandled[I]);
           PredCases.push_back(ValueEqualityComparisonCase(I, BBDefault));
-          NewSuccessors.push_back(BBDefault);
+          ++NewSuccessors[BBDefault];
         }
       }
 
       // Okay, at this point, we know which new successor Pred will get.  Make
       // sure we update the number of entries in the PHI nodes for these
       // successors.
-      for (BasicBlock *NewSuccessor : NewSuccessors) {
-        AddPredecessorToBlock(NewSuccessor, Pred, BB);
-        Updates.push_back({DominatorTree::Insert, Pred, NewSuccessor});
+      assert(!NewSuccessors.empty() && "Should be adding some new successors.");
+      for (const std::pair<BasicBlock *, int /*Num*/> &NewSuccessor :
+           NewSuccessors) {
+        for (auto I : seq(0, NewSuccessor.second)) {
+          (void)I;
+          AddPredecessorToBlock(NewSuccessor.first, Pred, BB);
+        }
+        Updates.push_back({DominatorTree::Insert, Pred, NewSuccessor.first});
       }
 
       Builder.SetInsertPoint(PTI);
@@ -1314,7 +1320,7 @@ bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(Instruction *TI,
       Updates.push_back({DominatorTree::Delete, Pred, BB});
 
       if (DTU)
-        DTU->applyUpdatesPermissive(Updates);
+        DTU->applyUpdates(Updates);
 
       Changed = true;
     }
@@ -4616,7 +4622,6 @@ bool SimplifyCFGOpt::simplifyReturn(ReturnInst *RI, IRBuilder<> &Builder) {
   return false;
 }
 
-// FIXME: switch to non-permissive DomTreeUpdater::applyUpdates().
 bool SimplifyCFGOpt::simplifyUnreachable(UnreachableInst *UI) {
   BasicBlock *BB = UI->getParent();
 
@@ -4678,22 +4683,24 @@ bool SimplifyCFGOpt::simplifyUnreachable(UnreachableInst *UI) {
 
   std::vector<DominatorTree::UpdateType> Updates;
 
-  SmallVector<BasicBlock *, 8> Preds(predecessors(BB));
+  SmallSetVector<BasicBlock *, 8> Preds(pred_begin(BB), pred_end(BB));
   for (unsigned i = 0, e = Preds.size(); i != e; ++i) {
     auto *Predecessor = Preds[i];
     Instruction *TI = Predecessor->getTerminator();
     IRBuilder<> Builder(TI);
     if (auto *BI = dyn_cast<BranchInst>(TI)) {
-      if (BI->isUnconditional()) {
-        assert(BI->getSuccessor(0) == BB && "Incorrect CFG");
+      // We could either have a proper unconditional branch,
+      // or a degenerate conditional branch with matching destinations.
+      if (all_of(BI->successors(),
+                 [BB](auto *Successor) { return Successor == BB; })) {
         new UnreachableInst(TI->getContext(), TI);
         TI->eraseFromParent();
         Changed = true;
       } else {
+        assert(BI->isConditional() && "Can't get here with an uncond branch.");
         Value* Cond = BI->getCondition();
         assert(BI->getSuccessor(0) != BI->getSuccessor(1) &&
-               "Same-destination conditional branch instruction was "
-               "already canonicalized into an unconditional branch.");
+               "The destinations are guaranteed to be different here.");
         if (BI->getSuccessor(0) == BB) {
           Builder.CreateAssumption(Builder.CreateNot(Cond));
           Builder.CreateBr(BI->getSuccessor(1));
@@ -4718,7 +4725,9 @@ bool SimplifyCFGOpt::simplifyUnreachable(UnreachableInst *UI) {
         e = SU->case_end();
         Changed = true;
       }
-      Updates.push_back({DominatorTree::Delete, Predecessor, BB});
+      // Note that the default destination can't be removed!
+      if (SI->getDefaultDest() != BB)
+        Updates.push_back({DominatorTree::Delete, Predecessor, BB});
     } else if (auto *II = dyn_cast<InvokeInst>(TI)) {
       if (II->getUnwindDest() == BB) {
         if (DTU)
@@ -4785,7 +4794,7 @@ bool SimplifyCFGOpt::simplifyUnreachable(UnreachableInst *UI) {
   }
 
   if (DTU)
-    DTU->applyUpdatesPermissive(Updates);
+    DTU->applyUpdates(Updates);
 
   // If this block is now dead, remove it.
   if (pred_empty(BB) && BB != &BB->getParent()->getEntryBlock()) {
@@ -5819,13 +5828,13 @@ static void reuseTableCompare(
 /// If the switch is only used to initialize one or more phi nodes in a common
 /// successor block with different constant values, replace the switch with
 /// lookup tables.
-// FIXME: switch to non-permissive DomTreeUpdater::applyUpdates().
 static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
                                 DomTreeUpdater *DTU, const DataLayout &DL,
                                 const TargetTransformInfo &TTI) {
   assert(SI->getNumCases() > 1 && "Degenerate switch?");
 
-  Function *Fn = SI->getParent()->getParent();
+  BasicBlock *BB = SI->getParent();
+  Function *Fn = BB->getParent();
   // Only build lookup table when we have a target that supports it or the
   // attribute is not set.
   if (!TTI.shouldBuildLookupTables() ||
@@ -5953,7 +5962,7 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
 
   if (!DefaultIsReachable || GeneratingCoveredLookupTable) {
     Builder.CreateBr(LookupBB);
-    Updates.push_back({DominatorTree::Insert, SI->getParent(), LookupBB});
+    Updates.push_back({DominatorTree::Insert, BB, LookupBB});
     // Note: We call removeProdecessor later since we need to be able to get the
     // PHI value for the default case in case we're using a bit mask.
   } else {
@@ -5961,9 +5970,8 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
         TableIndex, ConstantInt::get(MinCaseVal->getType(), TableSize));
     RangeCheckBranch =
         Builder.CreateCondBr(Cmp, LookupBB, SI->getDefaultDest());
-    Updates.push_back({DominatorTree::Insert, SI->getParent(), LookupBB});
-    Updates.push_back(
-        {DominatorTree::Insert, SI->getParent(), SI->getDefaultDest()});
+    Updates.push_back({DominatorTree::Insert, BB, LookupBB});
+    Updates.push_back({DominatorTree::Insert, BB, SI->getDefaultDest()});
   }
 
   // Populate the BB that does the lookups.
@@ -6004,16 +6012,15 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
     Updates.push_back({DominatorTree::Insert, MaskBB, LookupBB});
     Updates.push_back({DominatorTree::Insert, MaskBB, SI->getDefaultDest()});
     Builder.SetInsertPoint(LookupBB);
-    AddPredecessorToBlock(SI->getDefaultDest(), MaskBB, SI->getParent());
+    AddPredecessorToBlock(SI->getDefaultDest(), MaskBB, BB);
   }
 
   if (!DefaultIsReachable || GeneratingCoveredLookupTable) {
     // We cached PHINodes in PHIs. To avoid accessing deleted PHINodes later,
     // do not delete PHINodes here.
-    SI->getDefaultDest()->removePredecessor(SI->getParent(),
+    SI->getDefaultDest()->removePredecessor(BB,
                                             /*KeepOneInputPHIs=*/true);
-    Updates.push_back(
-        {DominatorTree::Delete, SI->getParent(), SI->getDefaultDest()});
+    Updates.push_back({DominatorTree::Delete, BB, SI->getDefaultDest()});
   }
 
   bool ReturnedEarly = false;
@@ -6056,17 +6063,22 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   }
 
   // Remove the switch.
+  SmallSetVector<BasicBlock *, 8> RemovedSuccessors;
   for (unsigned i = 0, e = SI->getNumSuccessors(); i < e; ++i) {
     BasicBlock *Succ = SI->getSuccessor(i);
 
     if (Succ == SI->getDefaultDest())
       continue;
-    Succ->removePredecessor(SI->getParent());
-    Updates.push_back({DominatorTree::Delete, SI->getParent(), Succ});
+    Succ->removePredecessor(BB);
+    RemovedSuccessors.insert(Succ);
   }
   SI->eraseFromParent();
-  if (DTU)
-    DTU->applyUpdatesPermissive(Updates);
+
+  if (DTU) {
+    for (BasicBlock *RemovedSuccessor : RemovedSuccessors)
+      Updates.push_back({DominatorTree::Delete, BB, RemovedSuccessor});
+    DTU->applyUpdates(Updates);
+  }
 
   ++NumLookupTables;
   if (NeedMask)

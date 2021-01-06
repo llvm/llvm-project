@@ -58,7 +58,7 @@ public:
 
   void registerPassBuilderCallbacks(PassBuilder &PB,
                                     bool DebugPassManager) override;
-  void registerAliasAnalyses(AAManager &) override;
+  void registerDefaultAliasAnalyses(AAManager &) override;
 
   /// Get the integer value of a null pointer in the given address space.
   static int64_t getNullPointerValue(unsigned AddrSpace) {

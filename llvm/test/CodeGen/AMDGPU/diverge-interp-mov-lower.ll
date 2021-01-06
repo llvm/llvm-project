@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=tonga -verify-machineinstrs | FileCheck -check-prefixes=GCN,VI,PREGFX9 %s
-; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx810 -verify-machineinstrs | FileCheck -check-prefixes=GCN,GFX81,PREGFX9 %s
+; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=tonga -verify-machineinstrs | FileCheck --check-prefix=GCN %s
+; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx810 -verify-machineinstrs | FileCheck --check-prefix=GCN %s
 ; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx900 -verify-machineinstrs | FileCheck -check-prefixes=GCN,GFX9 %s
 
 ; Testing for failures in divergence calculations when divergent intrinsic is lowered during instruction selection

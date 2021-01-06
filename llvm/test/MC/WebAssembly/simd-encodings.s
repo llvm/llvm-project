@@ -736,4 +736,10 @@ main:
     # CHECK: i32x4.extadd_pairwise_i16x8_u # encoding: [0xfd,0xa6,0x01]
     i32x4.extadd_pairwise_i16x8_u
 
+    # CHECK: prefetch.t 16 # encoding: [0xfd,0xc5,0x01,0x00,0x10]
+    prefetch.t 16
+
+    # CHECK: prefetch.nt 16 # encoding: [0xfd,0xc6,0x01,0x00,0x10]
+    prefetch.nt 16
+
     end_function

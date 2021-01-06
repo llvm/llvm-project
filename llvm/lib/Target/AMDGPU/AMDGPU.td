@@ -1106,6 +1106,11 @@ def isGFX10Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX10">,
   AssemblerPredicate<(all_of FeatureGFX10Insts)>;
 
+def isGFX10Before1030 :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX10 &&"
+            "!Subtarget->hasGFX10_3Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX10Insts,(not FeatureGFX10_3Insts))>;
+
 def HasFlatAddressSpace : Predicate<"Subtarget->hasFlatAddressSpace()">,
   AssemblerPredicate<(all_of FeatureFlatAddressSpace)>;
 

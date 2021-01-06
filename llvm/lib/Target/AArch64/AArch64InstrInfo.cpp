@@ -1119,6 +1119,13 @@ bool AArch64InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
   switch (MI.getOpcode()) {
   default:
     break;
+  case AArch64::PTEST_PP:
+    SrcReg = MI.getOperand(0).getReg();
+    SrcReg2 = MI.getOperand(1).getReg();
+    // Not sure about the mask and value for now...
+    CmpMask = ~0;
+    CmpValue = 0;
+    return true;
   case AArch64::SUBSWrr:
   case AArch64::SUBSWrs:
   case AArch64::SUBSWrx:
@@ -1290,6 +1297,127 @@ static bool areCFlagsAccessedBetweenInstrs(
   return false;
 }
 
+/// optimizePTestInstr - Attempt to remove a ptest of a predicate-generating
+/// operation which could set the flags in an identical manner
+bool AArch64InstrInfo::optimizePTestInstr(
+    MachineInstr *PTest, unsigned MaskReg, unsigned PredReg,
+    const MachineRegisterInfo *MRI) const {
+  auto *Mask = MRI->getUniqueVRegDef(MaskReg);
+  auto *Pred = MRI->getUniqueVRegDef(PredReg);
+  auto NewOp = Pred->getOpcode();
+  bool OpChanged = false;
+
+  unsigned MaskOpcode = Mask->getOpcode();
+  unsigned PredOpcode = Pred->getOpcode();
+  bool PredIsPTestLike = isPTestLikeOpcode(PredOpcode);
+  bool PredIsWhileLike = isWhileOpcode(PredOpcode);
+
+  if (isPTrueOpcode(MaskOpcode) && (PredIsPTestLike || PredIsWhileLike)) {
+    // For PTEST(PTRUE, OTHER_INST), PTEST is redundant when PTRUE doesn't
+    // deactivate any lanes OTHER_INST might set.
+    uint64_t MaskElementSize = getElementSizeForOpcode(MaskOpcode);
+    uint64_t PredElementSize = getElementSizeForOpcode(PredOpcode);
+
+    // Must be an all active predicate of matching element size.
+    if ((PredElementSize != MaskElementSize) ||
+        (Mask->getOperand(1).getImm() != 31))
+      return false;
+
+    // Fallthough to simply remove the PTEST.
+  } else if ((Mask == Pred) && (PredIsPTestLike || PredIsWhileLike)) {
+    // For PTEST(PG, PG), PTEST is redundant when PG is the result of an
+    // instruction that sets the flags as PTEST would.
+
+    // Fallthough to simply remove the PTEST.
+  } else if (PredIsPTestLike) {
+    // For PTEST(PG_1, PTEST_LIKE(PG2, ...)), PTEST is redundant when both
+    // instructions use the same predicate.
+    auto PTestLikeMask = MRI->getUniqueVRegDef(Pred->getOperand(1).getReg());
+    if (Mask != PTestLikeMask)
+      return false;
+
+    // Fallthough to simply remove the PTEST.
+  } else {
+    switch (Pred->getOpcode()) {
+    case AArch64::BRKB_PPzP:
+    case AArch64::BRKPB_PPzPP: {
+      // Op 0 is chain, 1 is the mask, 2 the previous predicate to
+      // propagate, 3 the new predicate.
+
+      // Check to see if our mask is the same as the brkpb's. If
+      // not the resulting flag bits may be different and we
+      // can't remove the ptest.
+      auto *PredMask = MRI->getUniqueVRegDef(Pred->getOperand(1).getReg());
+      if (Mask != PredMask)
+        return false;
+
+      // Switch to the new opcode
+      NewOp = Pred->getOpcode() == AArch64::BRKB_PPzP ? AArch64::BRKBS_PPzP
+                                                      : AArch64::BRKPBS_PPzPP;
+      OpChanged = true;
+      break;
+    }
+    case AArch64::BRKN_PPzP: {
+      auto *PredMask = MRI->getUniqueVRegDef(Pred->getOperand(1).getReg());
+      if (Mask != PredMask)
+        return false;
+
+      NewOp = AArch64::BRKNS_PPzP;
+      OpChanged = true;
+      break;
+    }
+    default:
+      // Bail out if we don't recognize the input
+      return false;
+    }
+  }
+
+  const TargetRegisterInfo *TRI = &getRegisterInfo();
+
+  // If the predicate is in a different block (possibly because its been
+  // hoisted out), then assume the flags are set in between statements.
+  if (Pred->getParent() != PTest->getParent())
+    return false;
+
+  // If another instruction between the propagation and test sets the
+  // flags, don't remove the ptest.
+  MachineBasicBlock::iterator I = Pred, E = PTest;
+  ++I; // Skip past the predicate op itself.
+  for (; I != E; ++I) {
+    const MachineInstr &Inst = *I;
+
+    // TODO: If the ptest flags are unused, we could still remove it.
+    if (Inst.modifiesRegister(AArch64::NZCV, TRI))
+      return false;
+  }
+
+  // If we pass all the checks, it's safe to remove the PTEST and use the flags
+  // as they are prior to PTEST. Sometimes this requires the tested PTEST
+  // operand to be replaced with an equivalent instruction that also sets the
+  // flags.
+  Pred->setDesc(get(NewOp));
+  PTest->eraseFromParent();
+  if (OpChanged) {
+    bool succeeded = UpdateOperandRegClass(*Pred);
+    (void)succeeded;
+    assert(succeeded && "Operands have incompatible register classes!");
+    Pred->addRegisterDefined(AArch64::NZCV, TRI);
+  }
+
+  // Ensure that the flags def is live.
+  if (Pred->registerDefIsDead(AArch64::NZCV, TRI)) {
+    unsigned i = 0, e = Pred->getNumOperands();
+    for (; i != e; ++i) {
+      MachineOperand &MO = Pred->getOperand(i);
+      if (MO.isReg() && MO.isDef() && MO.getReg() == AArch64::NZCV) {
+        MO.setIsDead(false);
+        break;
+      }
+    }
+  }
+  return true;
+}
+
 /// Try to optimize a compare instruction. A compare instruction is an
 /// instruction which produces AArch64::NZCV. It can be truly compare
 /// instruction
@@ -1327,6 +1455,9 @@ bool AArch64InstrInfo::optimizeCompareInstr(
     assert(succeeded && "Some operands reg class are incompatible!");
     return true;
   }
+
+  if (CmpInstr.getOpcode() == AArch64::PTEST_PP)
+    return optimizePTestInstr(&CmpInstr, SrcReg, SrcReg2, MRI);
 
   // Continue only if we have a "ri" where immediate is zero.
   // FIXME:CmpValue has already been converted to 0 or 1 in analyzeCompare
@@ -7040,6 +7171,14 @@ AArch64InstrInfo::describeLoadedValue(const MachineInstr &MI,
 
 uint64_t AArch64InstrInfo::getElementSizeForOpcode(unsigned Opc) const {
   return get(Opc).TSFlags & AArch64::ElementSizeMask;
+}
+
+bool AArch64InstrInfo::isPTestLikeOpcode(unsigned Opc) const {
+  return get(Opc).TSFlags & AArch64::InstrFlagIsPTestLike;
+}
+
+bool AArch64InstrInfo::isWhileOpcode(unsigned Opc) const {
+  return get(Opc).TSFlags & AArch64::InstrFlagIsWhile;
 }
 
 unsigned llvm::getBLRCallOpcode(const MachineFunction &MF) {

@@ -2201,9 +2201,17 @@ struct TemplStruct {
   TemplStruct() {}
   ~TemplStruct() {}
 
+  void outOfLine(T);
+
 private:
   T m_t;
 };
+
+template<typename T>
+void TemplStruct<T>::outOfLine(T)
+{
+
+}
 
 template<typename T>
 T timesTwo(T input)
@@ -2277,7 +2285,7 @@ template<> bool timesTwo<bool>(bool){
                      hasTemplateArgument(0, refersToType(asString("float"))));
     EXPECT_TRUE(matches(Code, traverse(TK_AsIs, MTempl)));
     // TODO: If we could match on explicit instantiations of function templates,
-    // this would be EXPECT_TRUE.
+    // this would be EXPECT_TRUE. See Sema::ActOnExplicitInstantiation.
     EXPECT_FALSE(
         matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, MTempl)));
   }
@@ -2321,6 +2329,14 @@ template<> bool timesTwo<bool>(bool){
         hasTemplateArgument(0,
                             templateArgument(refersToType(asString("long")))),
         has(cxxConstructorDecl(hasName("TemplStruct"))));
+    EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
+    EXPECT_FALSE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
+  }
+  {
+    // Instantiated, out-of-line methods are not matchable.
+    auto M =
+        cxxMethodDecl(hasName("outOfLine"), isDefinition(),
+                      hasParameter(0, parmVarDecl(hasType(asString("float")))));
     EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
     EXPECT_FALSE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
   }
@@ -2537,7 +2553,9 @@ struct CtorInitsNonTrivial : NonTrivial
     int arr[2];
     for (auto i : arr)
     {
-
+      if (true)
+      {
+      }
     }
   }
   )cpp";
@@ -2577,6 +2595,33 @@ struct CtorInitsNonTrivial : NonTrivial
   }
   {
     auto M = cxxForRangeStmt(hasBody(stmt()));
+    EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
+    EXPECT_TRUE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
+  }
+  {
+    auto M = cxxForRangeStmt(hasDescendant(ifStmt()));
+    EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
+    EXPECT_TRUE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
+  }
+  {
+    EXPECT_TRUE(matches(
+        Code, traverse(TK_AsIs, cxxForRangeStmt(has(declStmt(
+                                    hasSingleDecl(varDecl(hasName("i")))))))));
+    EXPECT_TRUE(
+        matches(Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                               cxxForRangeStmt(has(varDecl(hasName("i")))))));
+  }
+  {
+    EXPECT_TRUE(matches(
+        Code, traverse(TK_AsIs, cxxForRangeStmt(has(declStmt(hasSingleDecl(
+                                    varDecl(hasInitializer(declRefExpr(
+                                        to(varDecl(hasName("arr")))))))))))));
+    EXPECT_TRUE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                                       cxxForRangeStmt(has(declRefExpr(
+                                           to(varDecl(hasName("arr")))))))));
+  }
+  {
+    auto M = cxxForRangeStmt(has(compoundStmt()));
     EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
     EXPECT_TRUE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
   }
@@ -2643,7 +2688,8 @@ struct CtorInitsNonTrivial : NonTrivial
                              true, {"-std=c++20"}));
   }
   {
-    auto M = cxxForRangeStmt(has(declStmt()));
+    auto M =
+        cxxForRangeStmt(has(declStmt(hasSingleDecl(varDecl(hasName("i"))))));
     EXPECT_TRUE(
         matchesConditionally(Code, traverse(TK_AsIs, M), true, {"-std=c++20"}));
     EXPECT_FALSE(
@@ -2653,6 +2699,19 @@ struct CtorInitsNonTrivial : NonTrivial
   {
     auto M = cxxForRangeStmt(
         hasInitStatement(declStmt(hasSingleDecl(varDecl(
+            hasName("a"),
+            hasInitializer(declRefExpr(to(varDecl(hasName("arr"))))))))),
+        hasLoopVariable(varDecl(hasName("i"))),
+        hasRangeInit(declRefExpr(to(varDecl(hasName("a"))))));
+    EXPECT_TRUE(
+        matchesConditionally(Code, traverse(TK_AsIs, M), true, {"-std=c++20"}));
+    EXPECT_TRUE(
+        matchesConditionally(Code, traverse(TK_IgnoreUnlessSpelledInSource, M),
+                             true, {"-std=c++20"}));
+  }
+  {
+    auto M = cxxForRangeStmt(
+        has(declStmt(hasSingleDecl(varDecl(
             hasName("a"),
             hasInitializer(declRefExpr(to(varDecl(hasName("arr"))))))))),
         hasLoopVariable(varDecl(hasName("i"))),
@@ -2705,6 +2764,52 @@ void callDefaultArg()
     auto M = hasDefaultArgCall(hasAnyArgument(cxxDefaultArgExpr()));
     EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
     EXPECT_FALSE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
+  }
+  Code = R"cpp(
+struct A
+{
+    ~A();
+private:
+    int i;
+};
+
+A::~A() = default;
+)cpp";
+  {
+    auto M = cxxDestructorDecl(isDefaulted(),
+                               ofClass(cxxRecordDecl(has(fieldDecl()))));
+    EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
+    EXPECT_TRUE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
+  }
+  Code = R"cpp(
+struct S
+{
+    static constexpr bool getTrue() { return true; }
+};
+
+struct A
+{
+    explicit(S::getTrue()) A();
+};
+
+A::A() = default;
+)cpp";
+  {
+    EXPECT_TRUE(matchesConditionally(
+        Code,
+        traverse(TK_AsIs,
+                 cxxConstructorDecl(
+                     isDefaulted(),
+                     hasExplicitSpecifier(expr(ignoringImplicit(
+                         callExpr(has(ignoringImplicit(declRefExpr())))))))),
+        true, {"-std=c++20"}));
+    EXPECT_TRUE(matchesConditionally(
+        Code,
+        traverse(TK_IgnoreUnlessSpelledInSource,
+                 cxxConstructorDecl(
+                     isDefaulted(),
+                     hasExplicitSpecifier(callExpr(has(declRefExpr()))))),
+        true, {"-std=c++20"}));
   }
 }
 
@@ -3065,6 +3170,33 @@ void func14() {
       traverse(TK_IgnoreUnlessSpelledInSource,
                functionDecl(hasName("func14"), hasDescendant(floatLiteral()))),
       langCxx20OrLater()));
+
+  Code = R"cpp(
+void foo() {
+    int explicit_captured = 0;
+    int implicit_captured = 0;
+    auto l = [&, explicit_captured](int i) {
+        if (i || explicit_captured || implicit_captured) return;
+    };
+}
+)cpp";
+
+  EXPECT_TRUE(matches(Code, traverse(TK_AsIs, ifStmt())));
+  EXPECT_TRUE(
+      matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, ifStmt())));
+
+  auto lambdaExplicitCapture = declRefExpr(
+      to(varDecl(hasName("explicit_captured"))), unless(hasAncestor(ifStmt())));
+  auto lambdaImplicitCapture = declRefExpr(
+      to(varDecl(hasName("implicit_captured"))), unless(hasAncestor(ifStmt())));
+
+  EXPECT_TRUE(matches(Code, traverse(TK_AsIs, lambdaExplicitCapture)));
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource, lambdaExplicitCapture)));
+
+  EXPECT_TRUE(matches(Code, traverse(TK_AsIs, lambdaImplicitCapture)));
+  EXPECT_FALSE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource, lambdaImplicitCapture)));
 }
 
 TEST(IgnoringImpCasts, MatchesImpCasts) {

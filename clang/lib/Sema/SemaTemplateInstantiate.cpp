@@ -2846,8 +2846,6 @@ Sema::InstantiateClass(SourceLocation PointOfInstantiation,
   SavedContext.pop();
 
   if (!Instantiation->isInvalidDecl()) {
-    Consumer.HandleTagDeclDefinition(Instantiation);
-
     // Always emit the vtable for an explicit instantiation definition
     // of a polymorphic class template specialization. Otherwise, eagerly
     // instantiate only constexpr virtual functions in preparation for their use
@@ -2858,6 +2856,8 @@ Sema::InstantiateClass(SourceLocation PointOfInstantiation,
       MarkVirtualMembersReferenced(PointOfInstantiation, Instantiation,
                                    /*ConstexprOnly*/ true);
   }
+
+  Consumer.HandleTagDeclDefinition(Instantiation);
 
   return Instantiation->isInvalidDecl();
 }

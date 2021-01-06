@@ -179,6 +179,31 @@ region counts (even in macro expansions):
     |      4|    1|}
     ------------------
 
+If ``--show-branches=count`` and ``--show-expansions`` are also enabled, the
+sub-views will show detailed branch coverage information in addition to the
+region counts:
+
+.. code-block:: none
+
+    ------------------
+    | void foo<float>(int):
+    |      2|    1|template <typename T> void foo(T x) {
+    |      3|   11|  for (unsigned I = 0; I < 10; ++I) { BAR(I); }
+    |                                     ^11     ^10  ^10^10
+    |  ------------------
+    |  |  |    1|     10|#define BAR(x) ((x) || (x))
+    |  |  |                             ^10     ^1
+    |  |  |  ------------------
+    |  |  |  |  Branch (1:17): [True: 9, False: 1]
+    |  |  |  |  Branch (1:24): [True: 0, False: 1]
+    |  |  |  ------------------
+    |  ------------------
+    |  |  Branch (3:23): [True: 10, False: 1]
+    |  ------------------
+    |      4|    1|}
+    ------------------
+
+
 To generate a file-level summary of coverage statistics instead of a
 line-oriented report, try:
 
@@ -186,11 +211,11 @@ line-oriented report, try:
 
     # Step 3(c): Create a coverage summary.
     % llvm-cov report ./foo -instr-profile=foo.profdata
-    Filename           Regions    Missed Regions     Cover   Functions  Missed Functions  Executed       Lines      Missed Lines     Cover
-    --------------------------------------------------------------------------------------------------------------------------------------
-    /tmp/foo.cc             13                 0   100.00%           3                 0   100.00%          13                 0   100.00%
-    --------------------------------------------------------------------------------------------------------------------------------------
-    TOTAL                   13                 0   100.00%           3                 0   100.00%          13                 0   100.00%
+    Filename           Regions    Missed Regions     Cover   Functions  Missed Functions  Executed       Lines      Missed Lines     Cover     Branches    Missed Branches     Cover
+    --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    /tmp/foo.cc             13                 0   100.00%           3                 0   100.00%          13                 0   100.00%           12                  2    83.33%
+    --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    TOTAL                   13                 0   100.00%           3                 0   100.00%          13                 0   100.00%           12                  2    83.33%
 
 The ``llvm-cov`` tool supports specifying a custom demangler, writing out
 reports in a directory structure, and generating html reports. For the full
@@ -246,8 +271,17 @@ There are four statistics tracked in a coverage summary:
   body with no control flow). However, it's also possible for a single line to
   contain multiple code regions (e.g in "return x || y && z").
 
-Of these four statistics, function coverage is usually the least granular while
-region coverage is the most granular. The project-wide totals for each
+* Branch coverage is the percentage of "true" and "false" branches that have
+  been taken at least once. Each branch is tied to individual conditions in the
+  source code that may each evaluate to either "true" or "false".  These
+  conditions may comprise larger boolean expressions linked by boolean logical
+  operators. For example, "x = (y == 2) || (z < 10)" is a boolean expression
+  that is comprised of two individual conditions, each of which evaluates to
+  either true or false, producing four total branch outcomes.
+
+Of these five statistics, function coverage is usually the least granular while
+branch coverage is the most granular. 100% branch coverage for a function
+implies 100% region coverage for a function. The project-wide totals for each
 statistic are listed in the summary.
 
 Format compatibility guarantees
@@ -351,6 +385,25 @@ as red "unexecuted" highlights present at the end of an otherwise covered line,
 or blue "executed" highlights present at the start of a line that is otherwise
 not executed.
 
+Branch regions
+--------------
+When viewing branch coverage details in source-based file-level sub-views using
+``--show-branches``, it is recommended that users show all macro expansions
+(using option ``--show-expansions``) since macros may contain hidden branch
+conditions.  The coverage summary report will always include these macro-based
+boolean expressions in the overall branch coverage count for a function or
+source file.
+
+Branch coverage is not tracked for constant folded branch conditions since
+branches are not generated for these cases.  In the source-based file-level
+sub-view, these branches will simply be shown as ``[Folded - Ignored]`` so that
+users are informed about what happened.
+
+Branch coverage is tied directly to branch-generating conditions in the source
+code.  Users should not see hidden branches that aren't actually tied to the
+source code.
+
+
 Switch statements
 -----------------
 
@@ -366,3 +419,10 @@ which the switch body and the single case share a count.
 
 For switches with ``CompoundStmt`` bodies, a new region is created at the start
 of each switch case.
+
+Branch regions are also generated for each switch case, including the default
+case. If there is no explicitly defined default case in the source code, a
+branch region is generated to correspond to the implicit default case that is
+generated by the compiler.  The implicit branch region is tied to the line and
+column number of the switch statement condition since no source code for the
+implicit case exists.

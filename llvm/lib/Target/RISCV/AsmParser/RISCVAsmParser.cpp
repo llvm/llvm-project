@@ -832,16 +832,6 @@ public:
     addExpr(Inst, getImm());
   }
 
-  void addSImm5Plus1Operands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    int64_t Imm = 0;
-    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
-    bool IsConstant = evaluateConstantImm(getImm(), Imm, VK);
-    assert(IsConstant && "Expect constant value!");
-    (void)IsConstant;
-    Inst.addOperand(MCOperand::createImm(Imm - 1));
-  }
-
   void addFenceArgOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     // isFenceArg has validated the operand, meaning this cast is safe
@@ -2488,6 +2478,50 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   case RISCV::PseudoVMSGE_VX_M_T:
     emitVMSGE(Inst, RISCV::VMSLT_VX, IDLoc, Out);
     return false;
+  case RISCV::PseudoVMSGE_VI:
+  case RISCV::PseudoVMSLT_VI: {
+    // These instructions are signed and so is immediate so we can subtract one
+    // and change the opcode.
+    int64_t Imm = Inst.getOperand(2).getImm();
+    unsigned Opc = Inst.getOpcode() == RISCV::PseudoVMSGE_VI ? RISCV::VMSGT_VI
+                                                             : RISCV::VMSLE_VI;
+    emitToStreamer(Out, MCInstBuilder(Opc)
+                            .addOperand(Inst.getOperand(0))
+                            .addOperand(Inst.getOperand(1))
+                            .addImm(Imm - 1)
+                            .addOperand(Inst.getOperand(3)));
+    return false;
+  }
+  case RISCV::PseudoVMSGEU_VI:
+  case RISCV::PseudoVMSLTU_VI: {
+    int64_t Imm = Inst.getOperand(2).getImm();
+    // Unsigned comparisons are tricky because the immediate is signed. If the
+    // immediate is 0 we can't just subtract one. vmsltu.vi v0, v1, 0 is always
+    // false, but vmsle.vi v0, v1, -1 is always true. Instead we use
+    // vmsne v0, v1, v1 which is always false.
+    if (Imm == 0) {
+      unsigned Opc = Inst.getOpcode() == RISCV::PseudoVMSGEU_VI
+                         ? RISCV::VMSEQ_VV
+                         : RISCV::VMSNE_VV;
+      emitToStreamer(Out, MCInstBuilder(Opc)
+                              .addOperand(Inst.getOperand(0))
+                              .addOperand(Inst.getOperand(1))
+                              .addOperand(Inst.getOperand(1))
+                              .addOperand(Inst.getOperand(3)));
+    } else {
+      // Other immediate values can subtract one like signed.
+      unsigned Opc = Inst.getOpcode() == RISCV::PseudoVMSGEU_VI
+                         ? RISCV::VMSGTU_VI
+                         : RISCV::VMSLEU_VI;
+      emitToStreamer(Out, MCInstBuilder(Opc)
+                              .addOperand(Inst.getOperand(0))
+                              .addOperand(Inst.getOperand(1))
+                              .addImm(Imm - 1)
+                              .addOperand(Inst.getOperand(3)));
+    }
+
+    return false;
+  }
   }
 
   emitToStreamer(Out, Inst);

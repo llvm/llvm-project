@@ -528,6 +528,87 @@ TEST_F(AMDGPUGISelMITest, TestTargetKnownAlign) {
   EXPECT_EQ(Align(4), Info.computeKnownAlignment(CopyImplicitBufferPtr));
 }
 
+TEST_F(AMDGPUGISelMITest, TestIsKnownToBeAPowerOfTwo) {
+
+  StringRef MIRString = R"MIR(
+  %zero:_(s32) = G_CONSTANT i32 0
+  %one:_(s32) = G_CONSTANT i32 1
+  %two:_(s32) = G_CONSTANT i32 2
+  %three:_(s32) = G_CONSTANT i32 3
+  %five:_(s32) = G_CONSTANT i32 5
+  %copy_zero:_(s32) = COPY %zero
+  %copy_one:_(s32) = COPY %one
+  %copy_two:_(s32) = COPY %two
+  %copy_three:_(s32) = COPY %three
+
+  %trunc_two:_(s1) = G_TRUNC %two
+  %trunc_three:_(s1) = G_TRUNC %three
+  %trunc_five:_(s1) = G_TRUNC %five
+
+  %copy_trunc_two:_(s1) = COPY %trunc_two
+  %copy_trunc_three:_(s1) = COPY %trunc_three
+  %copy_trunc_five:_(s1) = COPY %trunc_five
+
+  %ptr:_(p1) = G_IMPLICIT_DEF
+  %shift_amt:_(s32) = G_LOAD %ptr :: (load 4, addrspace 1)
+
+  %shl_1:_(s32) = G_SHL %one, %shift_amt
+  %copy_shl_1:_(s32) = COPY %shl_1
+
+  %shl_2:_(s32) = G_SHL %two, %shift_amt
+  %copy_shl_2:_(s32) = COPY %shl_2
+
+  %not_sign_mask:_(s32) = G_LOAD %ptr :: (load 4, addrspace 1)
+  %sign_mask:_(s32) = G_CONSTANT i32 -2147483648
+
+  %lshr_not_sign_mask:_(s32) = G_LSHR %not_sign_mask, %shift_amt
+  %copy_lshr_not_sign_mask:_(s32) = COPY %lshr_not_sign_mask
+
+  %lshr_sign_mask:_(s32) = G_LSHR %sign_mask, %shift_amt
+  %copy_lshr_sign_mask:_(s32) = COPY %lshr_sign_mask
+
+  %or_pow2:_(s32) = G_OR %zero, %two
+  %copy_or_pow2:_(s32) = COPY %or_pow2
+
+)MIR";
+  setUp(MIRString);
+  if (!TM)
+    return;
+
+  GISelKnownBits KB(*MF);
+
+  Register CopyZero = Copies[Copies.size() - 12];
+  Register CopyOne = Copies[Copies.size() - 11];
+  Register CopyTwo = Copies[Copies.size() - 10];
+  Register CopyThree = Copies[Copies.size() - 9];
+  Register CopyTruncTwo = Copies[Copies.size() - 8];
+  Register CopyTruncThree = Copies[Copies.size() - 7];
+  Register CopyTruncFive = Copies[Copies.size() - 6];
+
+  Register CopyShl1 = Copies[Copies.size() - 5];
+  Register CopyShl2 = Copies[Copies.size() - 4];
+
+  Register CopyLShrNotSignMask = Copies[Copies.size() - 3];
+  Register CopyLShrSignMask = Copies[Copies.size() - 2];
+  Register CopyOrPow2 = Copies[Copies.size() - 1];
+
+  EXPECT_FALSE(isKnownToBeAPowerOfTwo(CopyZero, *MRI, &KB));
+  EXPECT_TRUE(isKnownToBeAPowerOfTwo(CopyOne, *MRI, &KB));
+  EXPECT_TRUE(isKnownToBeAPowerOfTwo(CopyTwo, *MRI, &KB));
+  EXPECT_FALSE(isKnownToBeAPowerOfTwo(CopyThree, *MRI, &KB));
+
+  EXPECT_FALSE(isKnownToBeAPowerOfTwo(CopyTruncTwo, *MRI, &KB));
+  EXPECT_TRUE(isKnownToBeAPowerOfTwo(CopyTruncThree, *MRI, &KB));
+  EXPECT_TRUE(isKnownToBeAPowerOfTwo(CopyTruncFive, *MRI, &KB));
+
+  EXPECT_TRUE(isKnownToBeAPowerOfTwo(CopyShl1, *MRI, &KB));
+  EXPECT_FALSE(isKnownToBeAPowerOfTwo(CopyShl2, *MRI, &KB));
+
+  EXPECT_FALSE(isKnownToBeAPowerOfTwo(CopyLShrNotSignMask, *MRI, &KB));
+  EXPECT_TRUE(isKnownToBeAPowerOfTwo(CopyLShrSignMask, *MRI, &KB));
+  EXPECT_TRUE(isKnownToBeAPowerOfTwo(CopyOrPow2, *MRI, &KB));
+}
+
 TEST_F(AArch64GISelMITest, TestMetadata) {
   StringRef MIRString = "  %imp:_(p0) = G_IMPLICIT_DEF\n"
                         "  %load:_(s8) = G_LOAD %imp(p0) :: (load 1)\n"

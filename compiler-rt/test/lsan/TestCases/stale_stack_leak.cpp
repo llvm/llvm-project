@@ -1,6 +1,15 @@
 // Test that out-of-scope local variables are ignored by LSan.
 // RUN: LSAN_BASE="report_objects=1:use_registers=0:use_stacks=1"
-// RUN: %clangxx_lsan %s -o %t
+
+// LSan-in-ASan fails at -O0 on aarch64, because the stack use-after-return
+// instrumentation stashes the argument to `PutPointerOnStaleStack` on the stack
+// in order to conditionally call __asan_stack_malloc. This subverts our
+// expectations for this test, where we assume the pointer is never stashed
+// except at the bottom of the dead frame. Building at -O1 or greater solves
+// this problem, because the compiler is smart enough to stash the argument in a
+// callee-saved register for rematerialization instead.
+// RUN: %clangxx_lsan -O1 %s -o %t
+
 // RUN: %env_lsan_opts=$LSAN_BASE not %run %t 2>&1 | FileCheck %s
 // RUN: %env_lsan_opts=$LSAN_BASE":exitcode=0" %run %t 2>&1 | FileCheck --check-prefix=CHECK-sanity %s
 //

@@ -368,6 +368,18 @@ TEST_F(CommandLineTest, CanGenerateCC1COmmandLineSeparateEnumDefault) {
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("pic"))));
 }
 
+// Wide integer option.
+
+TEST_F(CommandLineTest, WideIntegerHighValue) {
+  const char *Args[] = {"-fbuild-session-timestamp=1609827494445723662"};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_EQ(Invocation.getHeaderSearchOpts().BuildSessionTimestamp,
+            1609827494445723662ull);
+}
+
 // Tree of boolean options that can be (directly or transitively) implied by
 // their parent:
 //

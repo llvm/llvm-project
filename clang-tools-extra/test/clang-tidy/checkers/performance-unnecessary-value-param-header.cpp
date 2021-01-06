@@ -1,9 +1,8 @@
 // RUN: rm -rf %t
 // RUN: mkdir %t
 // RUN: cp %S/Inputs/performance-unnecessary-value-param/header.h %t/header.h
-// RUN: %check_clang_tidy -std=c++11 %s performance-unnecessary-value-param %t/temp -- -- -I %t
+// RUN: %check_clang_tidy %s performance-unnecessary-value-param %t/temp -- -- -I %t
 // RUN: diff %t/header.h %S/Inputs/performance-unnecessary-value-param/header-fixed.h
-// FIXME: Make the test work in all language modes.
 
 #include "header.h"
 

@@ -4242,6 +4242,11 @@ static Value *SimplifyGEPInst(Type *SrcTy, ArrayRef<Value *> Ops,
   else if (VectorType *VT = dyn_cast<VectorType>(Ops[1]->getType()))
     GEPTy = VectorType::get(GEPTy, VT->getElementCount());
 
+  // getelementptr poison, idx -> poison
+  // getelementptr baseptr, poison -> poison
+  if (any_of(Ops, [](const auto *V) { return isa<PoisonValue>(V); }))
+    return PoisonValue::get(GEPTy);
+
   if (Q.isUndefValue(Ops[0]))
     return UndefValue::get(GEPTy);
 

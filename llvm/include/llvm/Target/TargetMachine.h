@@ -335,7 +335,7 @@ public:
 
   /// Allow the target to register alias analyses with the AAManager for use
   /// with the new pass manager. Only affects the "default" AAManager.
-  virtual void registerAliasAnalyses(AAManager &) {}
+  virtual void registerDefaultAliasAnalyses(AAManager &) {}
 
   /// Add passes to the specified pass manager to get the specified file
   /// emitted.  Typically this will involve several steps of code generation.

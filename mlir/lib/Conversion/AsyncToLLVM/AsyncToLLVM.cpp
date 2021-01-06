@@ -149,7 +149,7 @@ struct AsyncAPI {
   }
 
   // Auxiliary coroutine resume intrinsic wrapper.
-  static LLVM::LLVMType resumeFunctionType(MLIRContext *ctx) {
+  static Type resumeFunctionType(MLIRContext *ctx) {
     auto voidTy = LLVM::LLVMVoidType::get(ctx);
     auto i8Ptr = opaquePointerType(ctx);
     return LLVM::LLVMFunctionType::get(voidTy, {i8Ptr}, false);
@@ -203,13 +203,11 @@ static constexpr const char *kCoroEnd = "llvm.coro.end";
 static constexpr const char *kCoroFree = "llvm.coro.free";
 static constexpr const char *kCoroResume = "llvm.coro.resume";
 
-/// Adds an LLVM function declaration to a module.
 static void addLLVMFuncDecl(ModuleOp module, ImplicitLocOpBuilder &builder,
-                            StringRef name, LLVM::LLVMType ret,
-                            ArrayRef<LLVM::LLVMType> params) {
+                            StringRef name, Type ret, ArrayRef<Type> params) {
   if (module.lookupSymbol(name))
     return;
-  LLVM::LLVMType type = LLVM::LLVMFunctionType::get(ret, params);
+  Type type = LLVM::LLVMFunctionType::get(ret, params);
   builder.create<LLVM::LLVMFuncOp>(name, type);
 }
 
@@ -386,8 +384,7 @@ static CoroMachinery setupCoroMachinery(FuncOp func) {
   // http://nondot.org/sabre/LLVMNotes/SizeOf-OffsetOf-VariableSizedStructs.txt
   auto sizeOf = [&](ValueType valueType) -> Value {
     auto storedType = converter.convertType(valueType.getValueType());
-    auto storagePtrType =
-        LLVM::LLVMPointerType::get(storedType.cast<LLVM::LLVMType>());
+    auto storagePtrType = LLVM::LLVMPointerType::get(storedType);
 
     // %Size = getelementptr %T* null, int 1
     // %SizeI = ptrtoint %T* %Size to i32
@@ -949,8 +946,7 @@ public:
     // Cast from i8* to the pointer pointer to LLVM type.
     auto llvmValueType = getTypeConverter()->convertType(valueType);
     auto castedStorage = rewriter.create<LLVM::BitcastOp>(
-        loc, LLVM::LLVMPointerType::get(llvmValueType.cast<LLVM::LLVMType>()),
-        storage.getResult(0));
+        loc, LLVM::LLVMPointerType::get(llvmValueType), storage.getResult(0));
 
     // Load from the async value storage.
     auto loaded = rewriter.create<LLVM::LoadOp>(loc, castedStorage.getResult());
@@ -1015,9 +1011,7 @@ public:
 
       // Cast storage pointer to the yielded value type.
       auto castedStorage = rewriter.create<LLVM::BitcastOp>(
-          loc,
-          LLVM::LLVMPointerType::get(
-              yieldValue.getType().cast<LLVM::LLVMType>()),
+          loc, LLVM::LLVMPointerType::get(yieldValue.getType()),
           storage.getResult(0));
 
       // Store the yielded value into the async value storage.

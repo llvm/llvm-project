@@ -362,8 +362,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i64, Custom);
     }
 
-    for (auto VT : MVT::integer_scalable_vector_valuetypes())
+    for (auto VT : MVT::integer_scalable_vector_valuetypes()) {
       setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
+
+      setOperationAction(ISD::SMIN, VT, Legal);
+      setOperationAction(ISD::SMAX, VT, Legal);
+      setOperationAction(ISD::UMIN, VT, Legal);
+      setOperationAction(ISD::UMAX, VT, Legal);
+    }
 
     // We must custom-lower SPLAT_VECTOR vXi64 on RV32
     if (!Subtarget.is64Bit())

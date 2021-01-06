@@ -202,6 +202,11 @@ tool.
 OPTIONS
 ^^^^^^^
 
+.. option:: -show-branches=<VIEW>
+
+ Show coverage for branch conditions in terms of either count or percentage.
+ The supported views are: "count", "percent".
+
 .. option:: -show-line-counts
 
  Show the execution counts for each line. Defaults to true, unless another
@@ -359,6 +364,10 @@ OPTIONS
  universal binary or to use an architecture that does not match a
  non-universal binary.
 
+.. option:: -show-branch-summary
+
+ Show statistics for all branch conditions. Defaults to true.
+
 .. option:: -show-functions
 
  Show coverage summaries for each function. Defaults to false.
@@ -390,9 +399,9 @@ The :program:`llvm-cov export` command exports coverage data of the binaries
 *BIN*,... using the profile data *PROFILE* in either JSON or lcov trace file
 format.
 
-When exporting JSON, the regions, functions, expansions, and summaries of the
-coverage data will be exported. When exporting an lcov trace file, the
-line-based coverage and summaries will be exported.
+When exporting JSON, the regions, functions, branches, expansions, and
+summaries of the coverage data will be exported. When exporting an lcov trace
+file, the line-based coverage, branch coverage, and summaries will be exported.
 
 The exported data can optionally be filtered to only export the coverage
 for the files listed in *SOURCES*.

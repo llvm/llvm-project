@@ -5,14 +5,7 @@ define void @f() #0 {
 ; CHECK: Function Attrs: mustprogress
 ; CHECK-LABEL: define {{[^@]+}}@f
 ; CHECK-SAME: () [[ATTR0:#.*]] {
-; CHECK-NEXT:    br label [[TMP1:%.*]]
-; CHECK:       1:
-; CHECK-NEXT:    [[DOT01:%.*]] = phi i32 [ 1, [[TMP0:%.*]] ], [ [[TMP3:%.*]], [[TMP2:%.*]] ]
-; CHECK-NEXT:    [[DOT0:%.*]] = phi i32 [ 1, [[TMP0]] ], [ [[TMP3]], [[TMP2]] ]
-; CHECK-NEXT:    br label [[TMP2]]
-; CHECK:       2:
-; CHECK-NEXT:    [[TMP3]] = add nsw i32 [[DOT01]], [[DOT0]]
-; CHECK-NEXT:    br label [[TMP1]]
+; CHECK-NEXT:    unreachable
 ;
   br label %1
 

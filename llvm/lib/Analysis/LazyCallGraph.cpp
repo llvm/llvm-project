@@ -1373,23 +1373,6 @@ LazyCallGraph::RefSCC::removeInternalRefEdge(Node &SourceN,
   return Result;
 }
 
-void LazyCallGraph::RefSCC::handleTrivialEdgeInsertion(Node &SourceN,
-                                                       Node &TargetN) {
-  // The only trivial case that requires any graph updates is when we add new
-  // ref edge and may connect different RefSCCs along that path. This is only
-  // because of the parents set. Every other part of the graph remains constant
-  // after this edge insertion.
-  assert(G->lookupRefSCC(SourceN) == this && "Source must be in this RefSCC.");
-  RefSCC &TargetRC = *G->lookupRefSCC(TargetN);
-  if (&TargetRC == this)
-    return;
-
-#ifdef EXPENSIVE_CHECKS
-  assert(TargetRC.isDescendantOf(*this) &&
-         "Target must be a descendant of the Source.");
-#endif
-}
-
 void LazyCallGraph::RefSCC::insertTrivialCallEdge(Node &SourceN,
                                                   Node &TargetN) {
 #ifndef NDEBUG
@@ -1420,9 +1403,6 @@ void LazyCallGraph::RefSCC::insertTrivialCallEdge(Node &SourceN,
     // Create the new edge.
     SourceN->Edges.emplace_back(TargetN, Edge::Call);
   }
-
-  // Now that we have the edge, handle the graph fallout.
-  handleTrivialEdgeInsertion(SourceN, TargetN);
 }
 
 void LazyCallGraph::RefSCC::insertTrivialRefEdge(Node &SourceN, Node &TargetN) {
@@ -1449,9 +1429,6 @@ void LazyCallGraph::RefSCC::insertTrivialRefEdge(Node &SourceN, Node &TargetN) {
 
   // Create the new edge.
   SourceN->Edges.emplace_back(TargetN, Edge::Ref);
-
-  // Now that we have the edge, handle the graph fallout.
-  handleTrivialEdgeInsertion(SourceN, TargetN);
 }
 
 void LazyCallGraph::RefSCC::replaceNodeFunction(Node &N, Function &NewF) {
