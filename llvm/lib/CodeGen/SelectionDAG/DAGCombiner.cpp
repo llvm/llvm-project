@@ -4274,9 +4274,9 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
     if (DAG.SignBitIsZero(N1) && DAG.SignBitIsZero(N0))
       return DAG.getNode(ISD::UREM, DL, VT, N0, N1);
   } else {
-    SDValue NegOne = DAG.getAllOnesConstant(DL, VT);
     if (DAG.isKnownToBeAPowerOfTwo(N1)) {
       // fold (urem x, pow2) -> (and x, pow2-1)
+      SDValue NegOne = DAG.getAllOnesConstant(DL, VT);
       SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N1, NegOne);
       AddToWorklist(Add.getNode());
       return DAG.getNode(ISD::AND, DL, VT, N0, Add);
@@ -4284,6 +4284,7 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
     if (N1.getOpcode() == ISD::SHL &&
         DAG.isKnownToBeAPowerOfTwo(N1.getOperand(0))) {
       // fold (urem x, (shl pow2, y)) -> (and x, (add (shl pow2, y), -1))
+      SDValue NegOne = DAG.getAllOnesConstant(DL, VT);
       SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N1, NegOne);
       AddToWorklist(Add.getNode());
       return DAG.getNode(ISD::AND, DL, VT, N0, Add);
