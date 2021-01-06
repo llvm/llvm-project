@@ -2201,9 +2201,17 @@ struct TemplStruct {
   TemplStruct() {}
   ~TemplStruct() {}
 
+  void outOfLine(T);
+
 private:
   T m_t;
 };
+
+template<typename T>
+void TemplStruct<T>::outOfLine(T)
+{
+
+}
 
 template<typename T>
 T timesTwo(T input)
@@ -2277,7 +2285,7 @@ template<> bool timesTwo<bool>(bool){
                      hasTemplateArgument(0, refersToType(asString("float"))));
     EXPECT_TRUE(matches(Code, traverse(TK_AsIs, MTempl)));
     // TODO: If we could match on explicit instantiations of function templates,
-    // this would be EXPECT_TRUE.
+    // this would be EXPECT_TRUE. See Sema::ActOnExplicitInstantiation.
     EXPECT_FALSE(
         matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, MTempl)));
   }
@@ -2321,6 +2329,14 @@ template<> bool timesTwo<bool>(bool){
         hasTemplateArgument(0,
                             templateArgument(refersToType(asString("long")))),
         has(cxxConstructorDecl(hasName("TemplStruct"))));
+    EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
+    EXPECT_FALSE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
+  }
+  {
+    // Instantiated, out-of-line methods are not matchable.
+    auto M =
+        cxxMethodDecl(hasName("outOfLine"), isDefinition(),
+                      hasParameter(0, parmVarDecl(hasType(asString("float")))));
     EXPECT_TRUE(matches(Code, traverse(TK_AsIs, M)));
     EXPECT_FALSE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, M)));
   }
