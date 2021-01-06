@@ -57,7 +57,7 @@ llvm::Error FrontendAction::Execute() {
 
   if (ci.parsing().messages().AnyFatalError()) {
     const unsigned diagID = ci.diagnostics().getCustomDiagID(
-        clang::DiagnosticsEngine::Error, "could not scan %0");
+        clang::DiagnosticsEngine::Error, "Could not scan %0");
     ci.diagnostics().Report(diagID) << GetCurrentFileOrBufferName();
     ci.parsing().messages().Emit(llvm::errs(), ci.allCookedSources());
 
