@@ -88,8 +88,10 @@ public:
 
   static ConstantInt *getTrue(LLVMContext &Context);
   static ConstantInt *getFalse(LLVMContext &Context);
+  static ConstantInt *getBool(LLVMContext &Context, bool V);
   static Constant *getTrue(Type *Ty);
   static Constant *getFalse(Type *Ty);
+  static Constant *getBool(Type *Ty, bool V);
 
   /// If Ty is a vector type, return a Constant with a splat of the given
   /// value. Otherwise return a ConstantInt for the given value.
