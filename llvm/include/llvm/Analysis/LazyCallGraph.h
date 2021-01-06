@@ -598,10 +598,6 @@ public:
     void verify();
 #endif
 
-    /// Handle any necessary parent set updates after inserting a trivial ref
-    /// or call edge.
-    void handleTrivialEdgeInsertion(Node &SourceN, Node &TargetN);
-
   public:
     using iterator = pointee_iterator<SmallVectorImpl<SCC *>::const_iterator>;
     using range = iterator_range<iterator>;
