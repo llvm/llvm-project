@@ -416,6 +416,42 @@ add_entrypoint_object(
     -O2
 )
 
+add_entrypoint_object(
+  nearbyint
+  SRCS
+    nearbyint.cpp
+  HDRS
+    nearbyint.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  nearbyintf
+  SRCS
+    nearbyintf.cpp
+  HDRS
+    nearbyintf.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  nearbyintl
+  SRCS
+    nearbyintl.cpp
+  HDRS
+    nearbyintl.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
 add_object_library(
   exp_utils
   HDRS
