@@ -186,14 +186,14 @@ spv.func @u_less_than_vector(%arg0: vector<2xi64>, %arg1: vector<2xi64>) "None" 
 
 // CHECK-LABEL: @f_ord_equal_scalar
 spv.func @f_ord_equal_scalar(%arg0: f32, %arg1: f32) "None" {
-  // CHECK: llvm.fcmp "oeq" %{{.*}}, %{{.*}} : !llvm.float
+  // CHECK: llvm.fcmp "oeq" %{{.*}}, %{{.*}} : f32
   %0 = spv.FOrdEqual %arg0, %arg1 : f32
   spv.Return
 }
 
 // CHECK-LABEL: @f_ord_equal_vector
 spv.func @f_ord_equal_vector(%arg0: vector<4xf64>, %arg1: vector<4xf64>) "None" {
-  // CHECK: llvm.fcmp "oeq" %{{.*}}, %{{.*}} : !llvm.vec<4 x double>
+  // CHECK: llvm.fcmp "oeq" %{{.*}}, %{{.*}} : !llvm.vec<4 x f64>
   %0 = spv.FOrdEqual %arg0, %arg1 : vector<4xf64>
   spv.Return
 }
@@ -204,14 +204,14 @@ spv.func @f_ord_equal_vector(%arg0: vector<4xf64>, %arg1: vector<4xf64>) "None" 
 
 // CHECK-LABEL: @f_ord_greater_than_equal_scalar
 spv.func @f_ord_greater_than_equal_scalar(%arg0: f64, %arg1: f64) "None" {
-  // CHECK: llvm.fcmp "oge" %{{.*}}, %{{.*}} : !llvm.double
+  // CHECK: llvm.fcmp "oge" %{{.*}}, %{{.*}} : f64
   %0 = spv.FOrdGreaterThanEqual %arg0, %arg1 : f64
   spv.Return
 }
 
 // CHECK-LABEL: @f_ord_greater_than_equal_vector
 spv.func @f_ord_greater_than_equal_vector(%arg0: vector<2xf64>, %arg1: vector<2xf64>) "None" {
-  // CHECK: llvm.fcmp "oge" %{{.*}}, %{{.*}} : !llvm.vec<2 x double>
+  // CHECK: llvm.fcmp "oge" %{{.*}}, %{{.*}} : !llvm.vec<2 x f64>
   %0 = spv.FOrdGreaterThanEqual %arg0, %arg1 : vector<2xf64>
   spv.Return
 }
@@ -222,14 +222,14 @@ spv.func @f_ord_greater_than_equal_vector(%arg0: vector<2xf64>, %arg1: vector<2x
 
 // CHECK-LABEL: @f_ord_greater_than_scalar
 spv.func @f_ord_greater_than_scalar(%arg0: f64, %arg1: f64) "None" {
-  // CHECK: llvm.fcmp "ogt" %{{.*}}, %{{.*}} : !llvm.double
+  // CHECK: llvm.fcmp "ogt" %{{.*}}, %{{.*}} : f64
   %0 = spv.FOrdGreaterThan %arg0, %arg1 : f64
   spv.Return
 }
 
 // CHECK-LABEL: @f_ord_greater_than_vector
 spv.func @f_ord_greater_than_vector(%arg0: vector<2xf64>, %arg1: vector<2xf64>) "None" {
-  // CHECK: llvm.fcmp "ogt" %{{.*}}, %{{.*}} : !llvm.vec<2 x double>
+  // CHECK: llvm.fcmp "ogt" %{{.*}}, %{{.*}} : !llvm.vec<2 x f64>
   %0 = spv.FOrdGreaterThan %arg0, %arg1 : vector<2xf64>
   spv.Return
 }
@@ -240,14 +240,14 @@ spv.func @f_ord_greater_than_vector(%arg0: vector<2xf64>, %arg1: vector<2xf64>) 
 
 // CHECK-LABEL: @f_ord_less_than_scalar
 spv.func @f_ord_less_than_scalar(%arg0: f64, %arg1: f64) "None" {
-  // CHECK: llvm.fcmp "olt" %{{.*}}, %{{.*}} : !llvm.double
+  // CHECK: llvm.fcmp "olt" %{{.*}}, %{{.*}} : f64
   %0 = spv.FOrdLessThan %arg0, %arg1 : f64
   spv.Return
 }
 
 // CHECK-LABEL: @f_ord_less_than_vector
 spv.func @f_ord_less_than_vector(%arg0: vector<2xf64>, %arg1: vector<2xf64>) "None" {
-  // CHECK: llvm.fcmp "olt" %{{.*}}, %{{.*}} : !llvm.vec<2 x double>
+  // CHECK: llvm.fcmp "olt" %{{.*}}, %{{.*}} : !llvm.vec<2 x f64>
   %0 = spv.FOrdLessThan %arg0, %arg1 : vector<2xf64>
   spv.Return
 }
@@ -258,14 +258,14 @@ spv.func @f_ord_less_than_vector(%arg0: vector<2xf64>, %arg1: vector<2xf64>) "No
 
 // CHECK-LABEL: @f_ord_less_than_equal_scalar
 spv.func @f_ord_less_than_equal_scalar(%arg0: f64, %arg1: f64) "None" {
-  // CHECK: llvm.fcmp "ole" %{{.*}}, %{{.*}} : !llvm.double
+  // CHECK: llvm.fcmp "ole" %{{.*}}, %{{.*}} : f64
   %0 = spv.FOrdLessThanEqual %arg0, %arg1 : f64
   spv.Return
 }
 
 // CHECK-LABEL: @f_ord_less_than_equal_vector
 spv.func @f_ord_less_than_equal_vector(%arg0: vector<2xf64>, %arg1: vector<2xf64>) "None" {
-  // CHECK: llvm.fcmp "ole" %{{.*}}, %{{.*}} : !llvm.vec<2 x double>
+  // CHECK: llvm.fcmp "ole" %{{.*}}, %{{.*}} : !llvm.vec<2 x f64>
   %0 = spv.FOrdLessThanEqual %arg0, %arg1 : vector<2xf64>
   spv.Return
 }
@@ -276,14 +276,14 @@ spv.func @f_ord_less_than_equal_vector(%arg0: vector<2xf64>, %arg1: vector<2xf64
 
 // CHECK-LABEL: @f_ord_not_equal_scalar
 spv.func @f_ord_not_equal_scalar(%arg0: f32, %arg1: f32) "None" {
-  // CHECK: llvm.fcmp "one" %{{.*}}, %{{.*}} : !llvm.float
+  // CHECK: llvm.fcmp "one" %{{.*}}, %{{.*}} : f32
   %0 = spv.FOrdNotEqual %arg0, %arg1 : f32
   spv.Return
 }
 
 // CHECK-LABEL: @f_ord_not_equal_vector
 spv.func @f_ord_not_equal_vector(%arg0: vector<4xf64>, %arg1: vector<4xf64>) "None" {
-  // CHECK: llvm.fcmp "one" %{{.*}}, %{{.*}} : !llvm.vec<4 x double>
+  // CHECK: llvm.fcmp "one" %{{.*}}, %{{.*}} : !llvm.vec<4 x f64>
   %0 = spv.FOrdNotEqual %arg0, %arg1 : vector<4xf64>
   spv.Return
 }
@@ -294,14 +294,14 @@ spv.func @f_ord_not_equal_vector(%arg0: vector<4xf64>, %arg1: vector<4xf64>) "No
 
 // CHECK-LABEL: @f_unord_equal_scalar
 spv.func @f_unord_equal_scalar(%arg0: f32, %arg1: f32) "None" {
-  // CHECK: llvm.fcmp "ueq" %{{.*}}, %{{.*}} : !llvm.float
+  // CHECK: llvm.fcmp "ueq" %{{.*}}, %{{.*}} : f32
   %0 = spv.FUnordEqual %arg0, %arg1 : f32
   spv.Return
 }
 
 // CHECK-LABEL: @f_unord_equal_vector
 spv.func @f_unord_equal_vector(%arg0: vector<4xf64>, %arg1: vector<4xf64>) "None" {
-  // CHECK: llvm.fcmp "ueq" %{{.*}}, %{{.*}} : !llvm.vec<4 x double>
+  // CHECK: llvm.fcmp "ueq" %{{.*}}, %{{.*}} : !llvm.vec<4 x f64>
   %0 = spv.FUnordEqual %arg0, %arg1 : vector<4xf64>
   spv.Return
 }
@@ -312,14 +312,14 @@ spv.func @f_unord_equal_vector(%arg0: vector<4xf64>, %arg1: vector<4xf64>) "None
 
 // CHECK-LABEL: @f_unord_greater_than_equal_scalar
 spv.func @f_unord_greater_than_equal_scalar(%arg0: f64, %arg1: f64) "None" {
-  // CHECK: llvm.fcmp "uge" %{{.*}}, %{{.*}} : !llvm.double
+  // CHECK: llvm.fcmp "uge" %{{.*}}, %{{.*}} : f64
   %0 = spv.FUnordGreaterThanEqual %arg0, %arg1 : f64
   spv.Return
 }
 
 // CHECK-LABEL: @f_unord_greater_than_equal_vector
 spv.func @f_unord_greater_than_equal_vector(%arg0: vector<2xf64>, %arg1: vector<2xf64>) "None" {
-  // CHECK: llvm.fcmp "uge" %{{.*}}, %{{.*}} : !llvm.vec<2 x double>
+  // CHECK: llvm.fcmp "uge" %{{.*}}, %{{.*}} : !llvm.vec<2 x f64>
   %0 = spv.FUnordGreaterThanEqual %arg0, %arg1 : vector<2xf64>
   spv.Return
 }
@@ -330,14 +330,14 @@ spv.func @f_unord_greater_than_equal_vector(%arg0: vector<2xf64>, %arg1: vector<
 
 // CHECK-LABEL: @f_unord_greater_than_scalar
 spv.func @f_unord_greater_than_scalar(%arg0: f64, %arg1: f64) "None" {
-  // CHECK: llvm.fcmp "ugt" %{{.*}}, %{{.*}} : !llvm.double
+  // CHECK: llvm.fcmp "ugt" %{{.*}}, %{{.*}} : f64
   %0 = spv.FUnordGreaterThan %arg0, %arg1 : f64
   spv.Return
 }
 
 // CHECK-LABEL: @f_unord_greater_than_vector
 spv.func @f_unord_greater_than_vector(%arg0: vector<2xf64>, %arg1: vector<2xf64>) "None" {
-  // CHECK: llvm.fcmp "ugt" %{{.*}}, %{{.*}} : !llvm.vec<2 x double>
+  // CHECK: llvm.fcmp "ugt" %{{.*}}, %{{.*}} : !llvm.vec<2 x f64>
   %0 = spv.FUnordGreaterThan %arg0, %arg1 : vector<2xf64>
   spv.Return
 }
@@ -348,14 +348,14 @@ spv.func @f_unord_greater_than_vector(%arg0: vector<2xf64>, %arg1: vector<2xf64>
 
 // CHECK-LABEL: @f_unord_less_than_scalar
 spv.func @f_unord_less_than_scalar(%arg0: f64, %arg1: f64) "None" {
-  // CHECK: llvm.fcmp "ult" %{{.*}}, %{{.*}} : !llvm.double
+  // CHECK: llvm.fcmp "ult" %{{.*}}, %{{.*}} : f64
   %0 = spv.FUnordLessThan %arg0, %arg1 : f64
   spv.Return
 }
 
 // CHECK-LABEL: @f_unord_less_than_vector
 spv.func @f_unord_less_than_vector(%arg0: vector<2xf64>, %arg1: vector<2xf64>) "None" {
-  // CHECK: llvm.fcmp "ult" %{{.*}}, %{{.*}} : !llvm.vec<2 x double>
+  // CHECK: llvm.fcmp "ult" %{{.*}}, %{{.*}} : !llvm.vec<2 x f64>
   %0 = spv.FUnordLessThan %arg0, %arg1 : vector<2xf64>
   spv.Return
 }
@@ -366,14 +366,14 @@ spv.func @f_unord_less_than_vector(%arg0: vector<2xf64>, %arg1: vector<2xf64>) "
 
 // CHECK-LABEL: @f_unord_less_than_equal_scalar
 spv.func @f_unord_less_than_equal_scalar(%arg0: f64, %arg1: f64) "None" {
-  // CHECK: llvm.fcmp "ule" %{{.*}}, %{{.*}} : !llvm.double
+  // CHECK: llvm.fcmp "ule" %{{.*}}, %{{.*}} : f64
   %0 = spv.FUnordLessThanEqual %arg0, %arg1 : f64
   spv.Return
 }
 
 // CHECK-LABEL: @f_unord_less_than_equal_vector
 spv.func @f_unord_less_than_equal_vector(%arg0: vector<2xf64>, %arg1: vector<2xf64>) "None" {
-  // CHECK: llvm.fcmp "ule" %{{.*}}, %{{.*}} : !llvm.vec<2 x double>
+  // CHECK: llvm.fcmp "ule" %{{.*}}, %{{.*}} : !llvm.vec<2 x f64>
   %0 = spv.FUnordLessThanEqual %arg0, %arg1 : vector<2xf64>
   spv.Return
 }
@@ -384,14 +384,14 @@ spv.func @f_unord_less_than_equal_vector(%arg0: vector<2xf64>, %arg1: vector<2xf
 
 // CHECK-LABEL: @f_unord_not_equal_scalar
 spv.func @f_unord_not_equal_scalar(%arg0: f32, %arg1: f32) "None" {
-  // CHECK: llvm.fcmp "une" %{{.*}}, %{{.*}} : !llvm.float
+  // CHECK: llvm.fcmp "une" %{{.*}}, %{{.*}} : f32
   %0 = spv.FUnordNotEqual %arg0, %arg1 : f32
   spv.Return
 }
 
 // CHECK-LABEL: @f_unord_not_equal_vector
 spv.func @f_unord_not_equal_vector(%arg0: vector<4xf64>, %arg1: vector<4xf64>) "None" {
-  // CHECK: llvm.fcmp "une" %{{.*}}, %{{.*}} : !llvm.vec<4 x double>
+  // CHECK: llvm.fcmp "une" %{{.*}}, %{{.*}} : !llvm.vec<4 x f64>
   %0 = spv.FUnordNotEqual %arg0, %arg1 : vector<4xf64>
   spv.Return
 }

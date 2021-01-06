@@ -86,9 +86,9 @@ static ParseResult parseNVVMVoteBallotOp(OpAsmParser &parser,
 
 static LogicalResult verify(MmaOp op) {
   MLIRContext *context = op.getContext();
-  auto f16Ty = LLVM::LLVMHalfType::get(context);
+  auto f16Ty = Float16Type::get(context);
   auto f16x2Ty = LLVM::LLVMFixedVectorType::get(f16Ty, 2);
-  auto f32Ty = LLVM::LLVMFloatType::get(context);
+  auto f32Ty = Float32Type::get(context);
   auto f16x2x4StructTy = LLVM::LLVMStructType::getLiteral(
       context, {f16x2Ty, f16x2Ty, f16x2Ty, f16x2Ty});
   auto f32x8StructTy = LLVM::LLVMStructType::getLiteral(

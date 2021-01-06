@@ -32,14 +32,14 @@ func @genbool_var_1d(%arg0: index) -> vector<11xi1> {
 // CMP32: %[[A:.*]] = llvm.add %{{.*}}, %[[C]] : !llvm.vec<16 x i32>
 // CMP32: %[[M:.*]] = llvm.icmp "slt" %[[A]], %{{.*}} : !llvm.vec<16 x i32>
 // CMP32: %[[L:.*]] = llvm.intr.masked.load %{{.*}}, %[[M]], %{{.*}}
-// CMP32: llvm.return %[[L]] : !llvm.vec<16 x float>
+// CMP32: llvm.return %[[L]] : !llvm.vec<16 x f32>
 
 // CMP64-LABEL: llvm.func @transfer_read_1d
 // CMP64: %[[C:.*]] = llvm.mlir.constant(dense<[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]> : vector<16xi64>) : !llvm.vec<16 x i64>
 // CMP64: %[[A:.*]] = llvm.add %{{.*}}, %[[C]] : !llvm.vec<16 x i64>
 // CMP64: %[[M:.*]] = llvm.icmp "slt" %[[A]], %{{.*}} : !llvm.vec<16 x i64>
 // CMP64: %[[L:.*]] = llvm.intr.masked.load %{{.*}}, %[[M]], %{{.*}}
-// CMP64: llvm.return %[[L]] : !llvm.vec<16 x float>
+// CMP64: llvm.return %[[L]] : !llvm.vec<16 x f32>
 
 func @transfer_read_1d(%A : memref<?xf32>, %i: index) -> vector<16xf32> {
   %d = constant -1.0: f32

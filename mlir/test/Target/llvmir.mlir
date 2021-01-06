@@ -13,10 +13,10 @@ llvm.mlir.global internal @int_global_array(dense<62> : vector<3xi32>) : !llvm.a
 llvm.mlir.global internal @i32_global_addr_space(62: i32) {addr_space = 7 : i32} : i32
 
 // CHECK: @float_global = internal global float 0.000000e+00
-llvm.mlir.global internal @float_global(0.0: f32) : !llvm.float
+llvm.mlir.global internal @float_global(0.0: f32) : f32
 
 // CHECK: @float_global_array = internal global [1 x float] [float -5.000000e+00]
-llvm.mlir.global internal @float_global_array(dense<[-5.0]> : vector<1xf32>) : !llvm.array<1 x float>
+llvm.mlir.global internal @float_global_array(dense<[-5.0]> : vector<1xf32>) : !llvm.array<1 x f32>
 
 // CHECK: @string_const = internal constant [6 x i8] c"foobar"
 llvm.mlir.global internal constant @string_const("foobar") : !llvm.array<6 x i8>
@@ -414,12 +414,12 @@ llvm.func @memref_alloc() {
   %0 = llvm.mlir.constant(10 : index) : i64
   %1 = llvm.mlir.constant(10 : index) : i64
   %2 = llvm.mul %0, %1 : i64
-  %3 = llvm.mlir.undef : !llvm.struct<(ptr<float>)>
+  %3 = llvm.mlir.undef : !llvm.struct<(ptr<f32>)>
   %4 = llvm.mlir.constant(4 : index) : i64
   %5 = llvm.mul %2, %4 : i64
   %6 = llvm.call @malloc(%5) : (i64) -> !llvm.ptr<i8>
-  %7 = llvm.bitcast %6 : !llvm.ptr<i8> to !llvm.ptr<float>
-  %8 = llvm.insertvalue %7, %3[0] : !llvm.struct<(ptr<float>)>
+  %7 = llvm.bitcast %6 : !llvm.ptr<i8> to !llvm.ptr<f32>
+  %8 = llvm.insertvalue %7, %3[0] : !llvm.struct<(ptr<f32>)>
 // CHECK-NEXT: ret void
   llvm.return
 }
@@ -434,13 +434,13 @@ llvm.func @store_load_static() {
 // CHECK-NEXT: %{{[0-9]+}} = bitcast i8* %{{[0-9]+}} to float*
 // CHECK-NEXT: %{{[0-9]+}} = insertvalue { float* } undef, float* %{{[0-9]+}}, 0
   %0 = llvm.mlir.constant(10 : index) : i64
-  %1 = llvm.mlir.undef : !llvm.struct<(ptr<float>)>
+  %1 = llvm.mlir.undef : !llvm.struct<(ptr<f32>)>
   %2 = llvm.mlir.constant(4 : index) : i64
   %3 = llvm.mul %0, %2 : i64
   %4 = llvm.call @malloc(%3) : (i64) -> !llvm.ptr<i8>
-  %5 = llvm.bitcast %4 : !llvm.ptr<i8> to !llvm.ptr<float>
-  %6 = llvm.insertvalue %5, %1[0] : !llvm.struct<(ptr<float>)>
-  %7 = llvm.mlir.constant(1.000000e+00 : f32) : !llvm.float
+  %5 = llvm.bitcast %4 : !llvm.ptr<i8> to !llvm.ptr<f32>
+  %6 = llvm.insertvalue %5, %1[0] : !llvm.struct<(ptr<f32>)>
+  %7 = llvm.mlir.constant(1.000000e+00 : f32) : f32
   llvm.br ^bb1
 ^bb1:   // pred: ^bb0
   %8 = llvm.mlir.constant(0 : index) : i64
@@ -457,9 +457,9 @@ llvm.func @store_load_static() {
 // CHECK-NEXT: %{{[0-9]+}} = getelementptr float, float* %{{[0-9]+}}, i64 %{{[0-9]+}}
 // CHECK-NEXT: store float 1.000000e+00, float* %{{[0-9]+}}
   %12 = llvm.mlir.constant(10 : index) : i64
-  %13 = llvm.extractvalue %6[0] : !llvm.struct<(ptr<float>)>
-  %14 = llvm.getelementptr %13[%10] : (!llvm.ptr<float>, i64) -> !llvm.ptr<float>
-  llvm.store %7, %14 : !llvm.ptr<float>
+  %13 = llvm.extractvalue %6[0] : !llvm.struct<(ptr<f32>)>
+  %14 = llvm.getelementptr %13[%10] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+  llvm.store %7, %14 : !llvm.ptr<f32>
   %15 = llvm.mlir.constant(1 : index) : i64
 // CHECK-NEXT: %{{[0-9]+}} = add i64 %{{[0-9]+}}, 1
   %16 = llvm.add %10, %15 : i64
@@ -482,9 +482,9 @@ llvm.func @store_load_static() {
 // CHECK-NEXT: %{{[0-9]+}} = getelementptr float, float* %{{[0-9]+}}, i64 %{{[0-9]+}}
 // CHECK-NEXT: %{{[0-9]+}} = load float, float* %{{[0-9]+}}
   %21 = llvm.mlir.constant(10 : index) : i64
-  %22 = llvm.extractvalue %6[0] : !llvm.struct<(ptr<float>)>
-  %23 = llvm.getelementptr %22[%19] : (!llvm.ptr<float>, i64) -> !llvm.ptr<float>
-  %24 = llvm.load %23 : !llvm.ptr<float>
+  %22 = llvm.extractvalue %6[0] : !llvm.struct<(ptr<f32>)>
+  %23 = llvm.getelementptr %22[%19] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+  %24 = llvm.load %23 : !llvm.ptr<f32>
   %25 = llvm.mlir.constant(1 : index) : i64
 // CHECK-NEXT: %{{[0-9]+}} = add i64 %{{[0-9]+}}, 1
   %26 = llvm.add %19, %25 : i64
@@ -502,14 +502,14 @@ llvm.func @store_load_dynamic(%arg0: i64) {
 // CHECK-NEXT: %{{[0-9]+}} = bitcast i8* %{{[0-9]+}} to float*
 // CHECK-NEXT: %{{[0-9]+}} = insertvalue { float*, i64 } undef, float* %{{[0-9]+}}, 0
 // CHECK-NEXT: %{{[0-9]+}} = insertvalue { float*, i64 } %{{[0-9]+}}, i64 %{{[0-9]+}}, 1
-  %0 = llvm.mlir.undef : !llvm.struct<(ptr<float>, i64)>
+  %0 = llvm.mlir.undef : !llvm.struct<(ptr<f32>, i64)>
   %1 = llvm.mlir.constant(4 : index) : i64
   %2 = llvm.mul %arg0, %1 : i64
   %3 = llvm.call @malloc(%2) : (i64) -> !llvm.ptr<i8>
-  %4 = llvm.bitcast %3 : !llvm.ptr<i8> to !llvm.ptr<float>
-  %5 = llvm.insertvalue %4, %0[0] : !llvm.struct<(ptr<float>, i64)>
-  %6 = llvm.insertvalue %arg0, %5[1] : !llvm.struct<(ptr<float>, i64)>
-  %7 = llvm.mlir.constant(1.000000e+00 : f32) : !llvm.float
+  %4 = llvm.bitcast %3 : !llvm.ptr<i8> to !llvm.ptr<f32>
+  %5 = llvm.insertvalue %4, %0[0] : !llvm.struct<(ptr<f32>, i64)>
+  %6 = llvm.insertvalue %arg0, %5[1] : !llvm.struct<(ptr<f32>, i64)>
+  %7 = llvm.mlir.constant(1.000000e+00 : f32) : f32
 // CHECK-NEXT: br label %{{[0-9]+}}
   llvm.br ^bb1
 ^bb1:   // pred: ^bb0
@@ -526,10 +526,10 @@ llvm.func @store_load_dynamic(%arg0: i64) {
 // CHECK-NEXT: %{{[0-9]+}} = extractvalue { float*, i64 } %{{[0-9]+}}, 0
 // CHECK-NEXT: %{{[0-9]+}} = getelementptr float, float* %{{[0-9]+}}, i64 %{{[0-9]+}}
 // CHECK-NEXT: store float 1.000000e+00, float* %{{[0-9]+}}
-  %11 = llvm.extractvalue %6[1] : !llvm.struct<(ptr<float>, i64)>
-  %12 = llvm.extractvalue %6[0] : !llvm.struct<(ptr<float>, i64)>
-  %13 = llvm.getelementptr %12[%9] : (!llvm.ptr<float>, i64) -> !llvm.ptr<float>
-  llvm.store %7, %13 : !llvm.ptr<float>
+  %11 = llvm.extractvalue %6[1] : !llvm.struct<(ptr<f32>, i64)>
+  %12 = llvm.extractvalue %6[0] : !llvm.struct<(ptr<f32>, i64)>
+  %13 = llvm.getelementptr %12[%9] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+  llvm.store %7, %13 : !llvm.ptr<f32>
   %14 = llvm.mlir.constant(1 : index) : i64
 // CHECK-NEXT: %{{[0-9]+}} = add i64 %{{[0-9]+}}, 1
   %15 = llvm.add %9, %14 : i64
@@ -551,10 +551,10 @@ llvm.func @store_load_dynamic(%arg0: i64) {
 // CHECK-NEXT: %{{[0-9]+}} = extractvalue { float*, i64 } %{{[0-9]+}}, 0
 // CHECK-NEXT: %{{[0-9]+}} = getelementptr float, float* %{{[0-9]+}}, i64 %{{[0-9]+}}
 // CHECK-NEXT: %{{[0-9]+}} = load float, float* %{{[0-9]+}}
-  %19 = llvm.extractvalue %6[1] : !llvm.struct<(ptr<float>, i64)>
-  %20 = llvm.extractvalue %6[0] : !llvm.struct<(ptr<float>, i64)>
-  %21 = llvm.getelementptr %20[%17] : (!llvm.ptr<float>, i64) -> !llvm.ptr<float>
-  %22 = llvm.load %21 : !llvm.ptr<float>
+  %19 = llvm.extractvalue %6[1] : !llvm.struct<(ptr<f32>, i64)>
+  %20 = llvm.extractvalue %6[0] : !llvm.struct<(ptr<f32>, i64)>
+  %21 = llvm.getelementptr %20[%17] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+  %22 = llvm.load %21 : !llvm.ptr<f32>
   %23 = llvm.mlir.constant(1 : index) : i64
 // CHECK-NEXT: %{{[0-9]+}} = add i64 %{{[0-9]+}}, 1
   %24 = llvm.add %17, %23 : i64
@@ -582,14 +582,14 @@ llvm.func @store_load_mixed(%arg0: i64) {
   %3 = llvm.mul %1, %arg0 : i64
   %4 = llvm.mul %3, %2 : i64
   %5 = llvm.mul %4, %0 : i64
-  %6 = llvm.mlir.undef : !llvm.struct<(ptr<float>, i64, i64)>
+  %6 = llvm.mlir.undef : !llvm.struct<(ptr<f32>, i64, i64)>
   %7 = llvm.mlir.constant(4 : index) : i64
   %8 = llvm.mul %5, %7 : i64
   %9 = llvm.call @malloc(%8) : (i64) -> !llvm.ptr<i8>
-  %10 = llvm.bitcast %9 : !llvm.ptr<i8> to !llvm.ptr<float>
-  %11 = llvm.insertvalue %10, %6[0] : !llvm.struct<(ptr<float>, i64, i64)>
-  %12 = llvm.insertvalue %arg0, %11[1] : !llvm.struct<(ptr<float>, i64, i64)>
-  %13 = llvm.insertvalue %0, %12[2] : !llvm.struct<(ptr<float>, i64, i64)>
+  %10 = llvm.bitcast %9 : !llvm.ptr<i8> to !llvm.ptr<f32>
+  %11 = llvm.insertvalue %10, %6[0] : !llvm.struct<(ptr<f32>, i64, i64)>
+  %12 = llvm.insertvalue %arg0, %11[1] : !llvm.struct<(ptr<f32>, i64, i64)>
+  %13 = llvm.insertvalue %0, %12[2] : !llvm.struct<(ptr<f32>, i64, i64)>
 
 // CHECK-NEXT: %{{[0-9]+}} = call i64 @get_index()
 // CHECK-NEXT: %{{[0-9]+}} = call i64 @get_index()
@@ -597,7 +597,7 @@ llvm.func @store_load_mixed(%arg0: i64) {
   %15 = llvm.mlir.constant(2 : index) : i64
   %16 = llvm.call @get_index() : () -> i64
   %17 = llvm.call @get_index() : () -> i64
-  %18 = llvm.mlir.constant(4.200000e+01 : f32) : !llvm.float
+  %18 = llvm.mlir.constant(4.200000e+01 : f32) : f32
   %19 = llvm.mlir.constant(2 : index) : i64
 // CHECK-NEXT: %{{[0-9]+}} = extractvalue { float*, i64, i64 } %{{[0-9]+}}, 1
 // CHECK-NEXT: %{{[0-9]+}} = extractvalue { float*, i64, i64 } %{{[0-9]+}}, 2
@@ -610,18 +610,18 @@ llvm.func @store_load_mixed(%arg0: i64) {
 // CHECK-NEXT: %{{[0-9]+}} = extractvalue { float*, i64, i64 } %{{[0-9]+}}, 0
 // CHECK-NEXT: %{{[0-9]+}} = getelementptr float, float* %{{[0-9]+}}, i64 %{{[0-9]+}}
 // CHECK-NEXT: store float 4.200000e+01, float* %{{[0-9]+}}
-  %20 = llvm.extractvalue %13[1] : !llvm.struct<(ptr<float>, i64, i64)>
+  %20 = llvm.extractvalue %13[1] : !llvm.struct<(ptr<f32>, i64, i64)>
   %21 = llvm.mlir.constant(4 : index) : i64
-  %22 = llvm.extractvalue %13[2] : !llvm.struct<(ptr<float>, i64, i64)>
+  %22 = llvm.extractvalue %13[2] : !llvm.struct<(ptr<f32>, i64, i64)>
   %23 = llvm.mul %14, %20 : i64
   %24 = llvm.add %23, %15 : i64
   %25 = llvm.mul %24, %21 : i64
   %26 = llvm.add %25, %16 : i64
   %27 = llvm.mul %26, %22 : i64
   %28 = llvm.add %27, %17 : i64
-  %29 = llvm.extractvalue %13[0] : !llvm.struct<(ptr<float>, i64, i64)>
-  %30 = llvm.getelementptr %29[%28] : (!llvm.ptr<float>, i64) -> !llvm.ptr<float>
-  llvm.store %18, %30 : !llvm.ptr<float>
+  %29 = llvm.extractvalue %13[0] : !llvm.struct<(ptr<f32>, i64, i64)>
+  %30 = llvm.getelementptr %29[%28] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+  llvm.store %18, %30 : !llvm.ptr<f32>
 // CHECK-NEXT: %{{[0-9]+}} = extractvalue { float*, i64, i64 } %{{[0-9]+}}, 1
 // CHECK-NEXT: %{{[0-9]+}} = extractvalue { float*, i64, i64 } %{{[0-9]+}}, 2
 // CHECK-NEXT: %{{[0-9]+}} = mul i64 %{{[0-9]+}}, %{{[0-9]+}}
@@ -634,43 +634,43 @@ llvm.func @store_load_mixed(%arg0: i64) {
 // CHECK-NEXT: %{{[0-9]+}} = getelementptr float, float* %{{[0-9]+}}, i64 %{{[0-9]+}}
 // CHECK-NEXT: %{{[0-9]+}} = load float, float* %{{[0-9]+}}
   %31 = llvm.mlir.constant(2 : index) : i64
-  %32 = llvm.extractvalue %13[1] : !llvm.struct<(ptr<float>, i64, i64)>
+  %32 = llvm.extractvalue %13[1] : !llvm.struct<(ptr<f32>, i64, i64)>
   %33 = llvm.mlir.constant(4 : index) : i64
-  %34 = llvm.extractvalue %13[2] : !llvm.struct<(ptr<float>, i64, i64)>
+  %34 = llvm.extractvalue %13[2] : !llvm.struct<(ptr<f32>, i64, i64)>
   %35 = llvm.mul %17, %32 : i64
   %36 = llvm.add %35, %16 : i64
   %37 = llvm.mul %36, %33 : i64
   %38 = llvm.add %37, %15 : i64
   %39 = llvm.mul %38, %34 : i64
   %40 = llvm.add %39, %14 : i64
-  %41 = llvm.extractvalue %13[0] : !llvm.struct<(ptr<float>, i64, i64)>
-  %42 = llvm.getelementptr %41[%40] : (!llvm.ptr<float>, i64) -> !llvm.ptr<float>
-  %43 = llvm.load %42 : !llvm.ptr<float>
+  %41 = llvm.extractvalue %13[0] : !llvm.struct<(ptr<f32>, i64, i64)>
+  %42 = llvm.getelementptr %41[%40] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+  %43 = llvm.load %42 : !llvm.ptr<f32>
 // CHECK-NEXT: ret void
   llvm.return
 }
 
 // CHECK-LABEL: define { float*, i64 } @memref_args_rets({ float* } {{%.*}}, { float*, i64 } {{%.*}}, { float*, i64 } {{%.*}})
-llvm.func @memref_args_rets(%arg0: !llvm.struct<(ptr<float>)>, %arg1: !llvm.struct<(ptr<float>, i64)>, %arg2: !llvm.struct<(ptr<float>, i64)>) -> !llvm.struct<(ptr<float>, i64)> {
+llvm.func @memref_args_rets(%arg0: !llvm.struct<(ptr<f32>)>, %arg1: !llvm.struct<(ptr<f32>, i64)>, %arg2: !llvm.struct<(ptr<f32>, i64)>) -> !llvm.struct<(ptr<f32>, i64)> {
   %0 = llvm.mlir.constant(7 : index) : i64
 // CHECK-NEXT: %{{[0-9]+}} = call i64 @get_index()
   %1 = llvm.call @get_index() : () -> i64
-  %2 = llvm.mlir.constant(4.200000e+01 : f32) : !llvm.float
+  %2 = llvm.mlir.constant(4.200000e+01 : f32) : f32
 // CHECK-NEXT: %{{[0-9]+}} = extractvalue { float* } %{{[0-9]+}}, 0
 // CHECK-NEXT: %{{[0-9]+}} = getelementptr float, float* %{{[0-9]+}}, i64 7
 // CHECK-NEXT: store float 4.200000e+01, float* %{{[0-9]+}}
   %3 = llvm.mlir.constant(10 : index) : i64
-  %4 = llvm.extractvalue %arg0[0] : !llvm.struct<(ptr<float>)>
-  %5 = llvm.getelementptr %4[%0] : (!llvm.ptr<float>, i64) -> !llvm.ptr<float>
-  llvm.store %2, %5 : !llvm.ptr<float>
+  %4 = llvm.extractvalue %arg0[0] : !llvm.struct<(ptr<f32>)>
+  %5 = llvm.getelementptr %4[%0] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+  llvm.store %2, %5 : !llvm.ptr<f32>
 // CHECK-NEXT: %{{[0-9]+}} = extractvalue { float*, i64 } %{{[0-9]+}}, 1
 // CHECK-NEXT: %{{[0-9]+}} = extractvalue { float*, i64 } %{{[0-9]+}}, 0
 // CHECK-NEXT: %{{[0-9]+}} = getelementptr float, float* %{{[0-9]+}}, i64 7
 // CHECK-NEXT: store float 4.200000e+01, float* %{{[0-9]+}}
-  %6 = llvm.extractvalue %arg1[1] : !llvm.struct<(ptr<float>, i64)>
-  %7 = llvm.extractvalue %arg1[0] : !llvm.struct<(ptr<float>, i64)>
-  %8 = llvm.getelementptr %7[%0] : (!llvm.ptr<float>, i64) -> !llvm.ptr<float>
-  llvm.store %2, %8 : !llvm.ptr<float>
+  %6 = llvm.extractvalue %arg1[1] : !llvm.struct<(ptr<f32>, i64)>
+  %7 = llvm.extractvalue %arg1[0] : !llvm.struct<(ptr<f32>, i64)>
+  %8 = llvm.getelementptr %7[%0] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+  llvm.store %2, %8 : !llvm.ptr<f32>
 // CHECK-NEXT: %{{[0-9]+}} = extractvalue { float*, i64 } %{{[0-9]+}}, 1
 // CHECK-NEXT: %{{[0-9]+}} = mul i64 7, %{{[0-9]+}}
 // CHECK-NEXT: %{{[0-9]+}} = add i64 %{{[0-9]+}}, %{{[0-9]+}}
@@ -678,12 +678,12 @@ llvm.func @memref_args_rets(%arg0: !llvm.struct<(ptr<float>)>, %arg1: !llvm.stru
 // CHECK-NEXT: %{{[0-9]+}} = getelementptr float, float* %{{[0-9]+}}, i64 %{{[0-9]+}}
 // CHECK-NEXT: store float 4.200000e+01, float* %{{[0-9]+}}
   %9 = llvm.mlir.constant(10 : index) : i64
-  %10 = llvm.extractvalue %arg2[1] : !llvm.struct<(ptr<float>, i64)>
+  %10 = llvm.extractvalue %arg2[1] : !llvm.struct<(ptr<f32>, i64)>
   %11 = llvm.mul %0, %10 : i64
   %12 = llvm.add %11, %1 : i64
-  %13 = llvm.extractvalue %arg2[0] : !llvm.struct<(ptr<float>, i64)>
-  %14 = llvm.getelementptr %13[%12] : (!llvm.ptr<float>, i64) -> !llvm.ptr<float>
-  llvm.store %2, %14 : !llvm.ptr<float>
+  %13 = llvm.extractvalue %arg2[0] : !llvm.struct<(ptr<f32>, i64)>
+  %14 = llvm.getelementptr %13[%12] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+  llvm.store %2, %14 : !llvm.ptr<f32>
 // CHECK-NEXT: %{{[0-9]+}} = mul i64 10, %{{[0-9]+}}
 // CHECK-NEXT: %{{[0-9]+}} = mul i64 %{{[0-9]+}}, 4
 // CHECK-NEXT: %{{[0-9]+}} = call i8* @malloc(i64 %{{[0-9]+}})
@@ -692,28 +692,28 @@ llvm.func @memref_args_rets(%arg0: !llvm.struct<(ptr<float>)>, %arg1: !llvm.stru
 // CHECK-NEXT: %{{[0-9]+}} = insertvalue { float*, i64 } %{{[0-9]+}}, i64 %{{[0-9]+}}, 1
   %15 = llvm.mlir.constant(10 : index) : i64
   %16 = llvm.mul %15, %1 : i64
-  %17 = llvm.mlir.undef : !llvm.struct<(ptr<float>, i64)>
+  %17 = llvm.mlir.undef : !llvm.struct<(ptr<f32>, i64)>
   %18 = llvm.mlir.constant(4 : index) : i64
   %19 = llvm.mul %16, %18 : i64
   %20 = llvm.call @malloc(%19) : (i64) -> !llvm.ptr<i8>
-  %21 = llvm.bitcast %20 : !llvm.ptr<i8> to !llvm.ptr<float>
-  %22 = llvm.insertvalue %21, %17[0] : !llvm.struct<(ptr<float>, i64)>
-  %23 = llvm.insertvalue %1, %22[1] : !llvm.struct<(ptr<float>, i64)>
+  %21 = llvm.bitcast %20 : !llvm.ptr<i8> to !llvm.ptr<f32>
+  %22 = llvm.insertvalue %21, %17[0] : !llvm.struct<(ptr<f32>, i64)>
+  %23 = llvm.insertvalue %1, %22[1] : !llvm.struct<(ptr<f32>, i64)>
 // CHECK-NEXT: ret { float*, i64 } %{{[0-9]+}}
-  llvm.return %23 : !llvm.struct<(ptr<float>, i64)>
+  llvm.return %23 : !llvm.struct<(ptr<f32>, i64)>
 }
 
 
 // CHECK-LABEL: define i64 @memref_dim({ float*, i64, i64 } {{%.*}})
-llvm.func @memref_dim(%arg0: !llvm.struct<(ptr<float>, i64, i64)>) -> i64 {
+llvm.func @memref_dim(%arg0: !llvm.struct<(ptr<f32>, i64, i64)>) -> i64 {
 // Expecting this to create an LLVM constant.
   %0 = llvm.mlir.constant(42 : index) : i64
 // CHECK-NEXT: %2 = extractvalue { float*, i64, i64 } %0, 1
-  %1 = llvm.extractvalue %arg0[1] : !llvm.struct<(ptr<float>, i64, i64)>
+  %1 = llvm.extractvalue %arg0[1] : !llvm.struct<(ptr<f32>, i64, i64)>
 // Expecting this to create an LLVM constant.
   %2 = llvm.mlir.constant(10 : index) : i64
 // CHECK-NEXT: %3 = extractvalue { float*, i64, i64 } %0, 2
-  %3 = llvm.extractvalue %arg0[2] : !llvm.struct<(ptr<float>, i64, i64)>
+  %3 = llvm.extractvalue %arg0[2] : !llvm.struct<(ptr<f32>, i64, i64)>
 // Checking that the constant for d0 has been created.
 // CHECK-NEXT: %4 = add i64 42, %2
   %4 = llvm.add %0, %1 : i64
@@ -727,23 +727,23 @@ llvm.func @memref_dim(%arg0: !llvm.struct<(ptr<float>, i64, i64)>) -> i64 {
 }
 
 llvm.func @get_i64() -> i64
-llvm.func @get_f32() -> !llvm.float
-llvm.func @get_memref() -> !llvm.struct<(ptr<float>, i64, i64)>
+llvm.func @get_f32() -> f32
+llvm.func @get_memref() -> !llvm.struct<(ptr<f32>, i64, i64)>
 
 // CHECK-LABEL: define { i64, float, { float*, i64, i64 } } @multireturn()
-llvm.func @multireturn() -> !llvm.struct<(i64, float, struct<(ptr<float>, i64, i64)>)> {
+llvm.func @multireturn() -> !llvm.struct<(i64, f32, struct<(ptr<f32>, i64, i64)>)> {
   %0 = llvm.call @get_i64() : () -> i64
-  %1 = llvm.call @get_f32() : () -> !llvm.float
-  %2 = llvm.call @get_memref() : () -> !llvm.struct<(ptr<float>, i64, i64)>
+  %1 = llvm.call @get_f32() : () -> f32
+  %2 = llvm.call @get_memref() : () -> !llvm.struct<(ptr<f32>, i64, i64)>
 // CHECK:        %{{[0-9]+}} = insertvalue { i64, float, { float*, i64, i64 } } undef, i64 %{{[0-9]+}}, 0
 // CHECK-NEXT:   %{{[0-9]+}} = insertvalue { i64, float, { float*, i64, i64 } } %{{[0-9]+}}, float %{{[0-9]+}}, 1
 // CHECK-NEXT:   %{{[0-9]+}} = insertvalue { i64, float, { float*, i64, i64 } } %{{[0-9]+}}, { float*, i64, i64 } %{{[0-9]+}}, 2
 // CHECK-NEXT:   ret { i64, float, { float*, i64, i64 } } %{{[0-9]+}}
-  %3 = llvm.mlir.undef : !llvm.struct<(i64, float, struct<(ptr<float>, i64, i64)>)>
-  %4 = llvm.insertvalue %0, %3[0] : !llvm.struct<(i64, float, struct<(ptr<float>, i64, i64)>)>
-  %5 = llvm.insertvalue %1, %4[1] : !llvm.struct<(i64, float, struct<(ptr<float>, i64, i64)>)>
-  %6 = llvm.insertvalue %2, %5[2] : !llvm.struct<(i64, float, struct<(ptr<float>, i64, i64)>)>
-  llvm.return %6 : !llvm.struct<(i64, float, struct<(ptr<float>, i64, i64)>)>
+  %3 = llvm.mlir.undef : !llvm.struct<(i64, f32, struct<(ptr<f32>, i64, i64)>)>
+  %4 = llvm.insertvalue %0, %3[0] : !llvm.struct<(i64, f32, struct<(ptr<f32>, i64, i64)>)>
+  %5 = llvm.insertvalue %1, %4[1] : !llvm.struct<(i64, f32, struct<(ptr<f32>, i64, i64)>)>
+  %6 = llvm.insertvalue %2, %5[2] : !llvm.struct<(i64, f32, struct<(ptr<f32>, i64, i64)>)>
+  llvm.return %6 : !llvm.struct<(i64, f32, struct<(ptr<f32>, i64, i64)>)>
 }
 
 
@@ -753,41 +753,41 @@ llvm.func @multireturn_caller() {
 // CHECK-NEXT:   [[ret0:%[0-9]+]] = extractvalue { i64, float, { float*, i64, i64 } } %1, 0
 // CHECK-NEXT:   [[ret1:%[0-9]+]] = extractvalue { i64, float, { float*, i64, i64 } } %1, 1
 // CHECK-NEXT:   [[ret2:%[0-9]+]] = extractvalue { i64, float, { float*, i64, i64 } } %1, 2
-  %0 = llvm.call @multireturn() : () -> !llvm.struct<(i64, float, struct<(ptr<float>, i64, i64)>)>
-  %1 = llvm.extractvalue %0[0] : !llvm.struct<(i64, float, struct<(ptr<float>, i64, i64)>)>
-  %2 = llvm.extractvalue %0[1] : !llvm.struct<(i64, float, struct<(ptr<float>, i64, i64)>)>
-  %3 = llvm.extractvalue %0[2] : !llvm.struct<(i64, float, struct<(ptr<float>, i64, i64)>)>
+  %0 = llvm.call @multireturn() : () -> !llvm.struct<(i64, f32, struct<(ptr<f32>, i64, i64)>)>
+  %1 = llvm.extractvalue %0[0] : !llvm.struct<(i64, f32, struct<(ptr<f32>, i64, i64)>)>
+  %2 = llvm.extractvalue %0[1] : !llvm.struct<(i64, f32, struct<(ptr<f32>, i64, i64)>)>
+  %3 = llvm.extractvalue %0[2] : !llvm.struct<(i64, f32, struct<(ptr<f32>, i64, i64)>)>
   %4 = llvm.mlir.constant(42) : i64
 // CHECK:   add i64 [[ret0]], 42
   %5 = llvm.add %1, %4 : i64
-  %6 = llvm.mlir.constant(4.200000e+01 : f32) : !llvm.float
+  %6 = llvm.mlir.constant(4.200000e+01 : f32) : f32
 // CHECK:   fadd float [[ret1]], 4.200000e+01
-  %7 = llvm.fadd %2, %6 : !llvm.float
+  %7 = llvm.fadd %2, %6 : f32
   %8 = llvm.mlir.constant(0 : index) : i64
   %9 = llvm.mlir.constant(42 : index) : i64
 // CHECK:   extractvalue { float*, i64, i64 } [[ret2]], 0
-  %10 = llvm.extractvalue %3[1] : !llvm.struct<(ptr<float>, i64, i64)>
+  %10 = llvm.extractvalue %3[1] : !llvm.struct<(ptr<f32>, i64, i64)>
   %11 = llvm.mlir.constant(10 : index) : i64
-  %12 = llvm.extractvalue %3[2] : !llvm.struct<(ptr<float>, i64, i64)>
+  %12 = llvm.extractvalue %3[2] : !llvm.struct<(ptr<f32>, i64, i64)>
   %13 = llvm.mul %8, %10 : i64
   %14 = llvm.add %13, %8 : i64
   %15 = llvm.mul %14, %11 : i64
   %16 = llvm.add %15, %8 : i64
   %17 = llvm.mul %16, %12 : i64
   %18 = llvm.add %17, %8 : i64
-  %19 = llvm.extractvalue %3[0] : !llvm.struct<(ptr<float>, i64, i64)>
-  %20 = llvm.getelementptr %19[%18] : (!llvm.ptr<float>, i64) -> !llvm.ptr<float>
-  %21 = llvm.load %20 : !llvm.ptr<float>
+  %19 = llvm.extractvalue %3[0] : !llvm.struct<(ptr<f32>, i64, i64)>
+  %20 = llvm.getelementptr %19[%18] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+  %21 = llvm.load %20 : !llvm.ptr<f32>
   llvm.return
 }
 
 // CHECK-LABEL: define <4 x float> @vector_ops(<4 x float> {{%.*}}, <4 x i1> {{%.*}}, <4 x i64> {{%.*}})
-llvm.func @vector_ops(%arg0: !llvm.vec<4 x float>, %arg1: !llvm.vec<4 x i1>, %arg2: !llvm.vec<4 x i64>) -> !llvm.vec<4 x float> {
-  %0 = llvm.mlir.constant(dense<4.200000e+01> : vector<4xf32>) : !llvm.vec<4 x float>
+llvm.func @vector_ops(%arg0: !llvm.vec<4 x f32>, %arg1: !llvm.vec<4 x i1>, %arg2: !llvm.vec<4 x i64>) -> !llvm.vec<4 x f32> {
+  %0 = llvm.mlir.constant(dense<4.200000e+01> : vector<4xf32>) : !llvm.vec<4 x f32>
 // CHECK-NEXT: %4 = fadd <4 x float> %0, <float 4.200000e+01, float 4.200000e+01, float 4.200000e+01, float 4.200000e+01>
-  %1 = llvm.fadd %arg0, %0 : !llvm.vec<4 x float>
+  %1 = llvm.fadd %arg0, %0 : !llvm.vec<4 x f32>
 // CHECK-NEXT: %5 = select <4 x i1> %1, <4 x float> %4, <4 x float> %0
-  %2 = llvm.select %arg1, %1, %arg0 : !llvm.vec<4 x i1>, !llvm.vec<4 x float>
+  %2 = llvm.select %arg1, %1, %arg0 : !llvm.vec<4 x i1>, !llvm.vec<4 x f32>
 // CHECK-NEXT: %6 = sdiv <4 x i64> %2, %2
   %3 = llvm.sdiv %arg2, %arg2 : !llvm.vec<4 x i64>
 // CHECK-NEXT: %7 = udiv <4 x i64> %2, %2
@@ -797,9 +797,9 @@ llvm.func @vector_ops(%arg0: !llvm.vec<4 x float>, %arg1: !llvm.vec<4 x i1>, %ar
 // CHECK-NEXT: %9 = urem <4 x i64> %2, %2
   %6 = llvm.urem %arg2, %arg2 : !llvm.vec<4 x i64>
 // CHECK-NEXT: %10 = fdiv <4 x float> %0, <float 4.200000e+01, float 4.200000e+01, float 4.200000e+01, float 4.200000e+01>
-  %7 = llvm.fdiv %arg0, %0 : !llvm.vec<4 x float>
+  %7 = llvm.fdiv %arg0, %0 : !llvm.vec<4 x f32>
 // CHECK-NEXT: %11 = frem <4 x float> %0, <float 4.200000e+01, float 4.200000e+01, float 4.200000e+01, float 4.200000e+01>
-  %8 = llvm.frem %arg0, %0 : !llvm.vec<4 x float>
+  %8 = llvm.frem %arg0, %0 : !llvm.vec<4 x f32>
 // CHECK-NEXT: %12 = and <4 x i64> %2, %2
   %9 = llvm.and %arg2, %arg2 : !llvm.vec<4 x i64>
 // CHECK-NEXT: %13 = or <4 x i64> %2, %2
@@ -813,41 +813,41 @@ llvm.func @vector_ops(%arg0: !llvm.vec<4 x float>, %arg1: !llvm.vec<4 x i1>, %ar
 // CHECK-NEXT: %17 = ashr <4 x i64> %2, %2
   %14 = llvm.ashr %arg2, %arg2 : !llvm.vec<4 x i64>
 // CHECK-NEXT:    ret <4 x float> %4
-  llvm.return %1 : !llvm.vec<4 x float>
+  llvm.return %1 : !llvm.vec<4 x f32>
 }
 
 // CHECK-LABEL: @vector_splat_1d
-llvm.func @vector_splat_1d() -> !llvm.vec<4 x float> {
+llvm.func @vector_splat_1d() -> !llvm.vec<4 x f32> {
   // CHECK: ret <4 x float> zeroinitializer
-  %0 = llvm.mlir.constant(dense<0.000000e+00> : vector<4xf32>) : !llvm.vec<4 x float>
-  llvm.return %0 : !llvm.vec<4 x float>
+  %0 = llvm.mlir.constant(dense<0.000000e+00> : vector<4xf32>) : !llvm.vec<4 x f32>
+  llvm.return %0 : !llvm.vec<4 x f32>
 }
 
 // CHECK-LABEL: @vector_splat_2d
-llvm.func @vector_splat_2d() -> !llvm.array<4 x vec<16 x float>> {
+llvm.func @vector_splat_2d() -> !llvm.array<4 x vec<16 x f32>> {
   // CHECK: ret [4 x <16 x float>] zeroinitializer
-  %0 = llvm.mlir.constant(dense<0.000000e+00> : vector<4x16xf32>) : !llvm.array<4 x vec<16 x float>>
-  llvm.return %0 : !llvm.array<4 x vec<16 x float>>
+  %0 = llvm.mlir.constant(dense<0.000000e+00> : vector<4x16xf32>) : !llvm.array<4 x vec<16 x f32>>
+  llvm.return %0 : !llvm.array<4 x vec<16 x f32>>
 }
 
 // CHECK-LABEL: @vector_splat_3d
-llvm.func @vector_splat_3d() -> !llvm.array<4 x array<16 x vec<4 x float>>> {
+llvm.func @vector_splat_3d() -> !llvm.array<4 x array<16 x vec<4 x f32>>> {
   // CHECK: ret [4 x [16 x <4 x float>]] zeroinitializer
-  %0 = llvm.mlir.constant(dense<0.000000e+00> : vector<4x16x4xf32>) : !llvm.array<4 x array<16 x vec<4 x float>>>
-  llvm.return %0 : !llvm.array<4 x array<16 x vec<4 x float>>>
+  %0 = llvm.mlir.constant(dense<0.000000e+00> : vector<4x16x4xf32>) : !llvm.array<4 x array<16 x vec<4 x f32>>>
+  llvm.return %0 : !llvm.array<4 x array<16 x vec<4 x f32>>>
 }
 
 // CHECK-LABEL: @vector_splat_nonzero
-llvm.func @vector_splat_nonzero() -> !llvm.vec<4 x float> {
+llvm.func @vector_splat_nonzero() -> !llvm.vec<4 x f32> {
   // CHECK: ret <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
-  %0 = llvm.mlir.constant(dense<1.000000e+00> : vector<4xf32>) : !llvm.vec<4 x float>
-  llvm.return %0 : !llvm.vec<4 x float>
+  %0 = llvm.mlir.constant(dense<1.000000e+00> : vector<4xf32>) : !llvm.vec<4 x f32>
+  llvm.return %0 : !llvm.vec<4 x f32>
 }
 
 // CHECK-LABEL: @ops
-llvm.func @ops(%arg0: !llvm.float, %arg1: !llvm.float, %arg2: i32, %arg3: i32) -> !llvm.struct<(float, i32)> {
+llvm.func @ops(%arg0: f32, %arg1: f32, %arg2: i32, %arg3: i32) -> !llvm.struct<(f32, i32)> {
 // CHECK-NEXT: fsub float %0, %1
-  %0 = llvm.fsub %arg0, %arg1 : !llvm.float
+  %0 = llvm.fsub %arg0, %arg1 : f32
 // CHECK-NEXT: %6 = sub i32 %2, %3
   %1 = llvm.sub %arg2, %arg3 : i32
 // CHECK-NEXT: %7 = icmp slt i32 %2, %6
@@ -863,14 +863,14 @@ llvm.func @ops(%arg0: !llvm.float, %arg1: !llvm.float, %arg2: i32, %arg3: i32) -
 // CHECK-NEXT: %12 = urem i32 %2, %3
   %7 = llvm.urem %arg2, %arg3 : i32
 
-  %8 = llvm.mlir.undef : !llvm.struct<(float, i32)>
-  %9 = llvm.insertvalue %0, %8[0] : !llvm.struct<(float, i32)>
-  %10 = llvm.insertvalue %3, %9[1] : !llvm.struct<(float, i32)>
+  %8 = llvm.mlir.undef : !llvm.struct<(f32, i32)>
+  %9 = llvm.insertvalue %0, %8[0] : !llvm.struct<(f32, i32)>
+  %10 = llvm.insertvalue %3, %9[1] : !llvm.struct<(f32, i32)>
 
 // CHECK: %15 = fdiv float %0, %1
-  %11 = llvm.fdiv %arg0, %arg1 : !llvm.float
+  %11 = llvm.fdiv %arg0, %arg1 : f32
 // CHECK-NEXT: %16 = frem float %0, %1
-  %12 = llvm.frem %arg0, %arg1 : !llvm.float
+  %12 = llvm.frem %arg0, %arg1 : f32
 
 // CHECK-NEXT: %17 = and i32 %2, %3
   %13 = llvm.and %arg2, %arg3 : i32
@@ -886,9 +886,9 @@ llvm.func @ops(%arg0: !llvm.float, %arg1: !llvm.float, %arg2: i32, %arg3: i32) -
   %18 = llvm.ashr %arg2, %arg3 : i32
 
 // CHECK-NEXT: fneg float %0
-  %19 = llvm.fneg %arg0 : !llvm.float
+  %19 = llvm.fneg %arg0 : f32
 
-  llvm.return %10 : !llvm.struct<(float, i32)>
+  llvm.return %10 : !llvm.struct<(f32, i32)>
 }
 
 //
@@ -905,9 +905,9 @@ llvm.func @indirect_const_call(%arg0: i64) {
 }
 
 // CHECK-LABEL: define i32 @indirect_call(i32 (float)* {{%.*}}, float {{%.*}})
-llvm.func @indirect_call(%arg0: !llvm.ptr<func<i32 (float)>>, %arg1: !llvm.float) -> i32 {
+llvm.func @indirect_call(%arg0: !llvm.ptr<func<i32 (f32)>>, %arg1: f32) -> i32 {
 // CHECK-NEXT:  %3 = call i32 %0(float %1)
-  %0 = llvm.call %arg0(%arg1) : (!llvm.float) -> i32
+  %0 = llvm.call %arg0(%arg1) : (f32) -> i32
 // CHECK-NEXT:  ret i32 %3
   llvm.return %0 : i32
 }
@@ -935,12 +935,12 @@ llvm.func @cond_br_arguments(%arg0: i1, %arg1: i1) {
 }
 
 // CHECK-LABEL: define void @llvm_noalias(float* noalias {{%*.}})
-llvm.func @llvm_noalias(%arg0: !llvm.ptr<float> {llvm.noalias = true}) {
+llvm.func @llvm_noalias(%arg0: !llvm.ptr<f32> {llvm.noalias = true}) {
   llvm.return
 }
 
 // CHECK-LABEL: define void @llvm_align(float* align 4 {{%*.}})
-llvm.func @llvm_align(%arg0: !llvm.ptr<float> {llvm.align = 4}) {
+llvm.func @llvm_align(%arg0: !llvm.ptr<f32> {llvm.align = 4}) {
   llvm.return
 }
 
@@ -960,10 +960,10 @@ llvm.func @fpconversion(%arg0 : i32) -> i32 {
 // CHECK-NEXT: %3 = fptosi float %2 to i32
 // CHECK-NEXT: %4 = uitofp i32 %3 to float
 // CHECK-NEXT: %5 = fptoui float %4 to i32
-  %1 = llvm.sitofp %arg0 : i32 to !llvm.float
-  %2 = llvm.fptosi %1 : !llvm.float to i32
-  %3 = llvm.uitofp %2 : i32 to !llvm.float
-  %4 = llvm.fptoui %3 : !llvm.float to i32
+  %1 = llvm.sitofp %arg0 : i32 to f32
+  %2 = llvm.fptosi %1 : f32 to i32
+  %3 = llvm.uitofp %2 : i32 to f32
+  %4 = llvm.fptoui %3 : f32 to i32
   llvm.return %4 : i32
 }
 
@@ -986,7 +986,7 @@ llvm.func @noreach() {
 }
 
 // CHECK-LABEL: define void @fcmp
-llvm.func @fcmp(%arg0: !llvm.float, %arg1: !llvm.float) {
+llvm.func @fcmp(%arg0: f32, %arg1: f32) {
   // CHECK: fcmp oeq float %0, %1
   // CHECK-NEXT: fcmp ogt float %0, %1
   // CHECK-NEXT: fcmp oge float %0, %1
@@ -1001,40 +1001,40 @@ llvm.func @fcmp(%arg0: !llvm.float, %arg1: !llvm.float) {
   // CHECK-NEXT: fcmp ule float %0, %1
   // CHECK-NEXT: fcmp une float %0, %1
   // CHECK-NEXT: fcmp uno float %0, %1
-  %0 = llvm.fcmp "oeq" %arg0, %arg1 : !llvm.float
-  %1 = llvm.fcmp "ogt" %arg0, %arg1 : !llvm.float
-  %2 = llvm.fcmp "oge" %arg0, %arg1 : !llvm.float
-  %3 = llvm.fcmp "olt" %arg0, %arg1 : !llvm.float
-  %4 = llvm.fcmp "ole" %arg0, %arg1 : !llvm.float
-  %5 = llvm.fcmp "one" %arg0, %arg1 : !llvm.float
-  %6 = llvm.fcmp "ord" %arg0, %arg1 : !llvm.float
-  %7 = llvm.fcmp "ueq" %arg0, %arg1 : !llvm.float
-  %8 = llvm.fcmp "ugt" %arg0, %arg1 : !llvm.float
-  %9 = llvm.fcmp "uge" %arg0, %arg1 : !llvm.float
-  %10 = llvm.fcmp "ult" %arg0, %arg1 : !llvm.float
-  %11 = llvm.fcmp "ule" %arg0, %arg1 : !llvm.float
-  %12 = llvm.fcmp "une" %arg0, %arg1 : !llvm.float
-  %13 = llvm.fcmp "uno" %arg0, %arg1 : !llvm.float
+  %0 = llvm.fcmp "oeq" %arg0, %arg1 : f32
+  %1 = llvm.fcmp "ogt" %arg0, %arg1 : f32
+  %2 = llvm.fcmp "oge" %arg0, %arg1 : f32
+  %3 = llvm.fcmp "olt" %arg0, %arg1 : f32
+  %4 = llvm.fcmp "ole" %arg0, %arg1 : f32
+  %5 = llvm.fcmp "one" %arg0, %arg1 : f32
+  %6 = llvm.fcmp "ord" %arg0, %arg1 : f32
+  %7 = llvm.fcmp "ueq" %arg0, %arg1 : f32
+  %8 = llvm.fcmp "ugt" %arg0, %arg1 : f32
+  %9 = llvm.fcmp "uge" %arg0, %arg1 : f32
+  %10 = llvm.fcmp "ult" %arg0, %arg1 : f32
+  %11 = llvm.fcmp "ule" %arg0, %arg1 : f32
+  %12 = llvm.fcmp "une" %arg0, %arg1 : f32
+  %13 = llvm.fcmp "uno" %arg0, %arg1 : f32
   llvm.return
 }
 
 // CHECK-LABEL: @vect
-llvm.func @vect(%arg0: !llvm.vec<4 x float>, %arg1: i32, %arg2: !llvm.float) {
+llvm.func @vect(%arg0: !llvm.vec<4 x f32>, %arg1: i32, %arg2: f32) {
   // CHECK-NEXT: extractelement <4 x float> {{.*}}, i32
   // CHECK-NEXT: insertelement <4 x float> {{.*}}, float %2, i32
   // CHECK-NEXT: shufflevector <4 x float> {{.*}}, <4 x float> {{.*}}, <5 x i32> <i32 0, i32 0, i32 0, i32 0, i32 7>
-  %0 = llvm.extractelement %arg0[%arg1 : i32] : !llvm.vec<4 x float>
-  %1 = llvm.insertelement %arg2, %arg0[%arg1 : i32] : !llvm.vec<4 x float>
-  %2 = llvm.shufflevector %arg0, %arg0 [0 : i32, 0 : i32, 0 : i32, 0 : i32, 7 : i32] : !llvm.vec<4 x float>, !llvm.vec<4 x float>
+  %0 = llvm.extractelement %arg0[%arg1 : i32] : !llvm.vec<4 x f32>
+  %1 = llvm.insertelement %arg2, %arg0[%arg1 : i32] : !llvm.vec<4 x f32>
+  %2 = llvm.shufflevector %arg0, %arg0 [0 : i32, 0 : i32, 0 : i32, 0 : i32, 7 : i32] : !llvm.vec<4 x f32>, !llvm.vec<4 x f32>
   llvm.return
 }
 
 // CHECK-LABEL: @vect_i64idx
-llvm.func @vect_i64idx(%arg0: !llvm.vec<4 x float>, %arg1: i64, %arg2: !llvm.float) {
+llvm.func @vect_i64idx(%arg0: !llvm.vec<4 x f32>, %arg1: i64, %arg2: f32) {
   // CHECK-NEXT: extractelement <4 x float> {{.*}}, i64
   // CHECK-NEXT: insertelement <4 x float> {{.*}}, float %2, i64
-  %0 = llvm.extractelement %arg0[%arg1 : i64] : !llvm.vec<4 x float>
-  %1 = llvm.insertelement %arg2, %arg0[%arg1 : i64] : !llvm.vec<4 x float>
+  %0 = llvm.extractelement %arg0[%arg1 : i64] : !llvm.vec<4 x f32>
+  %1 = llvm.insertelement %arg2, %arg0[%arg1 : i64] : !llvm.vec<4 x f32>
   llvm.return
 }
 
@@ -1050,20 +1050,20 @@ llvm.func @alloca(%size : i64) {
 }
 
 // CHECK-LABEL: @constants
-llvm.func @constants() -> !llvm.vec<4 x float> {
+llvm.func @constants() -> !llvm.vec<4 x f32> {
   // CHECK: ret <4 x float> <float 4.2{{0*}}e+01, float 0.{{0*}}e+00, float 0.{{0*}}e+00, float 0.{{0*}}e+00>
-  %0 = llvm.mlir.constant(sparse<[[0]], [4.2e+01]> : vector<4xf32>) : !llvm.vec<4 x float>
-  llvm.return %0 : !llvm.vec<4 x float>
+  %0 = llvm.mlir.constant(sparse<[[0]], [4.2e+01]> : vector<4xf32>) : !llvm.vec<4 x f32>
+  llvm.return %0 : !llvm.vec<4 x f32>
 }
 
 // CHECK-LABEL: @fp_casts
-llvm.func @fp_casts(%fp1 : !llvm.float, %fp2 : !llvm.double) -> i16 {
+llvm.func @fp_casts(%fp1 : f32, %fp2 : f64) -> i16 {
 // CHECK:    fptrunc double {{.*}} to float
-  %a = llvm.fptrunc %fp2 : !llvm.double to !llvm.float
+  %a = llvm.fptrunc %fp2 : f64 to f32
 // CHECK:    fpext float {{.*}} to double
-  %b = llvm.fpext %fp1 : !llvm.float to !llvm.double
+  %b = llvm.fpext %fp1 : f32 to f64
 // CHECK:    fptosi double {{.*}} to i16
-  %c = llvm.fptosi %b : !llvm.double to i16
+  %c = llvm.fptosi %b : f64 to i16
   llvm.return %c : i16
 }
 
@@ -1107,14 +1107,14 @@ llvm.func @elements_constant_3d_array() -> !llvm.array<2 x array<2 x array<2 x i
 
 // CHECK-LABEL: @atomicrmw
 llvm.func @atomicrmw(
-    %f32_ptr : !llvm.ptr<float>, %f32 : !llvm.float,
+    %f32_ptr : !llvm.ptr<f32>, %f32 : f32,
     %i32_ptr : !llvm.ptr<i32>, %i32 : i32) {
   // CHECK: atomicrmw fadd float* %{{.*}}, float %{{.*}} unordered
-  %0 = llvm.atomicrmw fadd %f32_ptr, %f32 unordered : !llvm.float
+  %0 = llvm.atomicrmw fadd %f32_ptr, %f32 unordered : f32
   // CHECK: atomicrmw fsub float* %{{.*}}, float %{{.*}} unordered
-  %1 = llvm.atomicrmw fsub %f32_ptr, %f32 unordered : !llvm.float
+  %1 = llvm.atomicrmw fsub %f32_ptr, %f32 unordered : f32
   // CHECK: atomicrmw xchg float* %{{.*}}, float %{{.*}} monotonic
-  %2 = llvm.atomicrmw xchg %f32_ptr, %f32 monotonic : !llvm.float
+  %2 = llvm.atomicrmw xchg %f32_ptr, %f32 monotonic : f32
   // CHECK: atomicrmw add i32* %{{.*}}, i32 %{{.*}} acquire
   %3 = llvm.atomicrmw add %i32_ptr, %i32 acquire : i32
   // CHECK: atomicrmw sub i32* %{{.*}}, i32 %{{.*}} release
@@ -1235,9 +1235,9 @@ llvm.func @passthrough() attributes {passthrough = ["noinline", ["alignstack", "
 // -----
 
 // CHECK-LABEL: @constant_bf16
-llvm.func @constant_bf16() -> !llvm.bfloat {
-  %0 = llvm.mlir.constant(1.000000e+01 : bf16) : !llvm.bfloat
-  llvm.return %0 : !llvm.bfloat
+llvm.func @constant_bf16() -> bf16 {
+  %0 = llvm.mlir.constant(1.000000e+01 : bf16) : bf16
+  llvm.return %0 : bf16
 }
 
 // CHECK: ret bfloat 0xR4120
@@ -1360,26 +1360,26 @@ llvm.func @useInlineAsm(%arg0: i32) {
 
 // -----
 
-llvm.func @fastmathFlagsFunc(!llvm.float) -> !llvm.float
+llvm.func @fastmathFlagsFunc(f32) -> f32
 
 // CHECK-LABEL: @fastmathFlags
-llvm.func @fastmathFlags(%arg0: !llvm.float) {
+llvm.func @fastmathFlags(%arg0: f32) {
 // CHECK: {{.*}} = fadd nnan ninf float {{.*}}, {{.*}}
 // CHECK: {{.*}} = fsub nnan ninf float {{.*}}, {{.*}}
 // CHECK: {{.*}} = fmul nnan ninf float {{.*}}, {{.*}}
 // CHECK: {{.*}} = fdiv nnan ninf float {{.*}}, {{.*}}
 // CHECK: {{.*}} = frem nnan ninf float {{.*}}, {{.*}}
-  %0 = llvm.fadd %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : !llvm.float
-  %1 = llvm.fsub %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : !llvm.float
-  %2 = llvm.fmul %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : !llvm.float
-  %3 = llvm.fdiv %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : !llvm.float
-  %4 = llvm.frem %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : !llvm.float
+  %0 = llvm.fadd %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : f32
+  %1 = llvm.fsub %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : f32
+  %2 = llvm.fmul %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : f32
+  %3 = llvm.fdiv %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : f32
+  %4 = llvm.frem %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : f32
 
 // CHECK: {{.*}} = fcmp nnan ninf oeq {{.*}}, {{.*}}
-  %5 = llvm.fcmp "oeq" %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : !llvm.float
+  %5 = llvm.fcmp "oeq" %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : f32
 
 // CHECK: {{.*}} = fneg nnan ninf float {{.*}}
-  %6 = llvm.fneg %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : !llvm.float
+  %6 = llvm.fneg %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : f32
 
 // CHECK: {{.*}} = call float @fastmathFlagsFunc({{.*}})
 // CHECK: {{.*}} = call nnan float @fastmathFlagsFunc({{.*}})
@@ -1390,15 +1390,15 @@ llvm.func @fastmathFlags(%arg0: !llvm.float) {
 // CHECK: {{.*}} = call afn float @fastmathFlagsFunc({{.*}})
 // CHECK: {{.*}} = call reassoc float @fastmathFlagsFunc({{.*}})
 // CHECK: {{.*}} = call fast float @fastmathFlagsFunc({{.*}})
-  %8 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<>} : (!llvm.float) -> (!llvm.float)
-  %9 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<nnan>} : (!llvm.float) -> (!llvm.float)
-  %10 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<ninf>} : (!llvm.float) -> (!llvm.float)
-  %11 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<nsz>} : (!llvm.float) -> (!llvm.float)
-  %12 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<arcp>} : (!llvm.float) -> (!llvm.float)
-  %13 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<contract>} : (!llvm.float) -> (!llvm.float)
-  %14 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<afn>} : (!llvm.float) -> (!llvm.float)
-  %15 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<reassoc>} : (!llvm.float) -> (!llvm.float)
-  %16 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<fast>} : (!llvm.float) -> (!llvm.float)
+  %8 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<>} : (f32) -> (f32)
+  %9 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<nnan>} : (f32) -> (f32)
+  %10 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<ninf>} : (f32) -> (f32)
+  %11 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<nsz>} : (f32) -> (f32)
+  %12 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<arcp>} : (f32) -> (f32)
+  %13 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<contract>} : (f32) -> (f32)
+  %14 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<afn>} : (f32) -> (f32)
+  %15 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<reassoc>} : (f32) -> (f32)
+  %16 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<fast>} : (f32) -> (f32)
   llvm.return
 }
 

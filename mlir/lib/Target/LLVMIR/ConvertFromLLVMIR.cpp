@@ -172,14 +172,8 @@ Type Importer::getStdTypeForAttr(Type type) {
   if (!type)
     return nullptr;
 
-  if (auto intType = type.dyn_cast<IntegerType>())
-    return intType;
-
-  if (type.isa<LLVMFloatType>())
-    return b.getF32Type();
-
-  if (type.isa<LLVMDoubleType>())
-    return b.getF64Type();
+  if (type.isa<IntegerType, FloatType>())
+    return type;
 
   // LLVM vectors can only contain scalars.
   if (auto vectorType = type.dyn_cast<LLVM::LLVMVectorType>()) {
@@ -269,7 +263,7 @@ Attribute Importer::getConstantAsAttr(llvm::Constant *value) {
       return DenseElementsAttr::get(attrType, values);
     }
 
-    if (type.isa<LLVMFloatType>() || type.isa<LLVMDoubleType>()) {
+    if (type.isa<Float32Type, Float64Type>()) {
       SmallVector<APFloat, 8> values;
       values.reserve(cd->getNumElements());
       for (unsigned i = 0, e = cd->getNumElements(); i < e; ++i)

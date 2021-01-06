@@ -57,7 +57,7 @@ class VulkanLaunchFuncToVulkanCallsPass
           VulkanLaunchFuncToVulkanCallsPass> {
 private:
   void initializeCachedTypes() {
-    llvmFloatType = LLVM::LLVMFloatType::get(&getContext());
+    llvmFloatType = Float32Type::get(&getContext());
     llvmVoidType = LLVM::LLVMVoidType::get(&getContext());
     llvmPointerType =
         LLVM::LLVMPointerType::get(IntegerType::get(&getContext(), 8));
@@ -132,9 +132,9 @@ private:
 
   /// Returns a string representation from the given `type`.
   StringRef stringifyType(Type type) {
-    if (type.isa<LLVM::LLVMFloatType>())
+    if (type.isa<Float32Type>())
       return "Float";
-    if (type.isa<LLVM::LLVMHalfType>())
+    if (type.isa<Float16Type>())
       return "Half";
     if (auto intType = type.dyn_cast<IntegerType>()) {
       if (intType.getWidth() == 32)
@@ -241,7 +241,7 @@ void VulkanLaunchFuncToVulkanCallsPass::createBindMemRefCalls(
         llvm::formatv("bindMemRef{0}D{1}", rank, stringifyType(type)).str();
     // Special case for fp16 type. Since it is not a supported type in C we use
     // int16_t and bitcast the descriptor.
-    if (type.isa<LLVM::LLVMHalfType>()) {
+    if (type.isa<Float16Type>()) {
       auto memRefTy = getMemRefType(rank, IntegerType::get(&getContext(), 16));
       ptrToMemRefDescriptor = builder.create<LLVM::BitcastOp>(
           loc, LLVM::LLVMPointerType::get(memRefTy), ptrToMemRefDescriptor);
@@ -323,15 +323,14 @@ void VulkanLaunchFuncToVulkanCallsPass::declareVulkanFunctions(Location loc) {
   }
 
   for (unsigned i = 1; i <= 3; i++) {
-    SmallVector<Type, 5> types{LLVM::LLVMFloatType::get(&getContext()),
-                               IntegerType::get(&getContext(), 32),
-                               IntegerType::get(&getContext(), 16),
-                               IntegerType::get(&getContext(), 8),
-                               LLVM::LLVMHalfType::get(&getContext())};
+    SmallVector<Type, 5> types{
+        Float32Type::get(&getContext()), IntegerType::get(&getContext(), 32),
+        IntegerType::get(&getContext(), 16), IntegerType::get(&getContext(), 8),
+        Float16Type::get(&getContext())};
     for (auto type : types) {
       std::string fnName = "bindMemRef" + std::to_string(i) + "D" +
                            std::string(stringifyType(type));
-      if (type.isa<LLVM::LLVMHalfType>())
+      if (type.isa<Float16Type>())
         type = IntegerType::get(&getContext(), 16);
       if (!module.lookupSymbol(fnName)) {
         auto fnType = LLVM::LLVMFunctionType::get(

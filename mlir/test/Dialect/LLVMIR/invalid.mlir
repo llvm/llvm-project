@@ -69,30 +69,30 @@ func @alloca_non_integer_alignment() {
 
 // -----
 
-func @gep_missing_input_result_type(%pos : i64, %base : !llvm.ptr<float>) {
+func @gep_missing_input_result_type(%pos : i64, %base : !llvm.ptr<f32>) {
   // expected-error@+1 {{2 operands present, but expected 0}}
   llvm.getelementptr %base[%pos] : () -> ()
 }
 
 // -----
 
-func @gep_missing_input_type(%pos : i64, %base : !llvm.ptr<float>) {
+func @gep_missing_input_type(%pos : i64, %base : !llvm.ptr<f32>) {
   // expected-error@+1 {{2 operands present, but expected 0}}
-  llvm.getelementptr %base[%pos] : () -> (!llvm.ptr<float>)
+  llvm.getelementptr %base[%pos] : () -> (!llvm.ptr<f32>)
 }
 
 // -----
 
-func @gep_missing_result_type(%pos : i64, %base : !llvm.ptr<float>) {
+func @gep_missing_result_type(%pos : i64, %base : !llvm.ptr<f32>) {
   // expected-error@+1 {{op requires one result}}
-  llvm.getelementptr %base[%pos] : (!llvm.ptr<float>, i64) -> ()
+  llvm.getelementptr %base[%pos] : (!llvm.ptr<f32>, i64) -> ()
 }
 
 // -----
 
-func @gep_non_function_type(%pos : i64, %base : !llvm.ptr<float>) {
+func @gep_non_function_type(%pos : i64, %base : !llvm.ptr<f32>) {
   // expected-error@+1 {{invalid kind of type specified}}
-  llvm.getelementptr %base[%pos] : !llvm.ptr<float>
+  llvm.getelementptr %base[%pos] : !llvm.ptr<f32>
 }
 
 // -----
@@ -104,23 +104,23 @@ func @load_non_llvm_type(%foo : memref<f32>) {
 
 // -----
 
-func @load_non_ptr_type(%foo : !llvm.float) {
+func @load_non_ptr_type(%foo : f32) {
   // expected-error@+1 {{expected LLVM pointer type}}
-  llvm.load %foo : !llvm.float
+  llvm.load %foo : f32
 }
 
 // -----
 
-func @store_non_llvm_type(%foo : memref<f32>, %bar : !llvm.float) {
+func @store_non_llvm_type(%foo : memref<f32>, %bar : f32) {
   // expected-error@+1 {{expected LLVM pointer type}}
   llvm.store %bar, %foo : memref<f32>
 }
 
 // -----
 
-func @store_non_ptr_type(%foo : !llvm.float, %bar : !llvm.float) {
+func @store_non_ptr_type(%foo : f32, %bar : f32) {
   // expected-error@+1 {{expected LLVM pointer type}}
-  llvm.store %bar, %foo : !llvm.float
+  llvm.store %bar, %foo : f32
 }
 
 // -----
@@ -317,23 +317,23 @@ func @extractvalue_wrong_nesting() {
 
 // -----
 
-func @invalid_vector_type_1(%arg0: !llvm.vec<4 x float>, %arg1: i32, %arg2: !llvm.float) {
+func @invalid_vector_type_1(%arg0: !llvm.vec<4 x f32>, %arg1: i32, %arg2: f32) {
   // expected-error@+1 {{expected LLVM IR dialect vector type for operand #1}}
-  %0 = llvm.extractelement %arg2[%arg1 : i32] : !llvm.float
+  %0 = llvm.extractelement %arg2[%arg1 : i32] : f32
 }
 
 // -----
 
-func @invalid_vector_type_2(%arg0: !llvm.vec<4 x float>, %arg1: i32, %arg2: !llvm.float) {
+func @invalid_vector_type_2(%arg0: !llvm.vec<4 x f32>, %arg1: i32, %arg2: f32) {
   // expected-error@+1 {{expected LLVM IR dialect vector type for operand #1}}
-  %0 = llvm.insertelement %arg2, %arg2[%arg1 : i32] : !llvm.float
+  %0 = llvm.insertelement %arg2, %arg2[%arg1 : i32] : f32
 }
 
 // -----
 
-func @invalid_vector_type_3(%arg0: !llvm.vec<4 x float>, %arg1: i32, %arg2: !llvm.float) {
+func @invalid_vector_type_3(%arg0: !llvm.vec<4 x f32>, %arg1: i32, %arg2: f32) {
   // expected-error@+1 {{expected LLVM IR dialect vector type for operand #1}}
-  %0 = llvm.shufflevector %arg2, %arg2 [0 : i32, 0 : i32, 0 : i32, 0 : i32, 7 : i32] : !llvm.float, !llvm.float
+  %0 = llvm.shufflevector %arg2, %arg2 [0 : i32, 0 : i32, 0 : i32, 0 : i32, 7 : i32] : f32, f32
 }
 
 // -----
@@ -366,113 +366,113 @@ func @nvvm_invalid_shfl_pred_3(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i3
 
 // -----
 
-func @nvvm_invalid_mma_0(%a0 : !llvm.half, %a1 : !llvm.vec<2 x half>,
-                         %b0 : !llvm.vec<2 x half>, %b1 : !llvm.vec<2 x half>,
-                         %c0 : !llvm.float, %c1 : !llvm.float, %c2 : !llvm.float, %c3 : !llvm.float,
-                         %c4 : !llvm.float, %c5 : !llvm.float, %c6 : !llvm.float, %c7 : !llvm.float) {
+func @nvvm_invalid_mma_0(%a0 : f16, %a1 : !llvm.vec<2 x f16>,
+                         %b0 : !llvm.vec<2 x f16>, %b1 : !llvm.vec<2 x f16>,
+                         %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32,
+                         %c4 : f32, %c5 : f32, %c6 : f32, %c7 : f32) {
   // expected-error@+1 {{expected operands to be 4 <halfx2>s followed by either 4 <halfx2>s or 8 floats}}
-  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="row", blayout="col"} : (!llvm.half, !llvm.vec<2 x half>, !llvm.vec<2 x half>, !llvm.vec<2 x half>, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float) -> !llvm.struct<(float, float, float, float, float, float, float, float)>
-  llvm.return %0 : !llvm.struct<(float, float, float, float, float, float, float, float)>
+  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="row", blayout="col"} : (f16, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, f32, f32, f32, f32, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
+  llvm.return %0 : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
 }
 
 // -----
 
-func @nvvm_invalid_mma_1(%a0 : !llvm.vec<2 x half>, %a1 : !llvm.vec<2 x half>,
-                         %b0 : !llvm.vec<2 x half>, %b1 : !llvm.vec<2 x half>,
-                         %c0 : !llvm.float, %c1 : !llvm.float, %c2 : !llvm.float, %c3 : !llvm.float,
-                         %c4 : !llvm.float, %c5 : !llvm.float, %c6 : !llvm.float, %c7 : !llvm.float) {
+func @nvvm_invalid_mma_1(%a0 : !llvm.vec<2 x f16>, %a1 : !llvm.vec<2 x f16>,
+                         %b0 : !llvm.vec<2 x f16>, %b1 : !llvm.vec<2 x f16>,
+                         %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32,
+                         %c4 : f32, %c5 : f32, %c6 : f32, %c7 : f32) {
   // expected-error@+1 {{expected result type to be a struct of either 4 <halfx2>s or 8 floats}}
-  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="row", blayout="col"} : (!llvm.vec<2 x half>, !llvm.vec<2 x half>, !llvm.vec<2 x half>, !llvm.vec<2 x half>, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float) -> !llvm.struct<(float, float, float, float, float, float, float, half)>
-  llvm.return %0 : !llvm.struct<(float, float, float, float, float, float, float, half)>
+  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="row", blayout="col"} : (!llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, f32, f32, f32, f32, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f16)>
+  llvm.return %0 : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f16)>
 }
 
 // -----
 
-func @nvvm_invalid_mma_2(%a0 : !llvm.vec<2 x half>, %a1 : !llvm.vec<2 x half>,
-                         %b0 : !llvm.vec<2 x half>, %b1 : !llvm.vec<2 x half>,
-                         %c0 : !llvm.float, %c1 : !llvm.float, %c2 : !llvm.float, %c3 : !llvm.float,
-                         %c4 : !llvm.float, %c5 : !llvm.float, %c6 : !llvm.float, %c7 : !llvm.float) {
+func @nvvm_invalid_mma_2(%a0 : !llvm.vec<2 x f16>, %a1 : !llvm.vec<2 x f16>,
+                         %b0 : !llvm.vec<2 x f16>, %b1 : !llvm.vec<2 x f16>,
+                         %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32,
+                         %c4 : f32, %c5 : f32, %c6 : f32, %c7 : f32) {
   // expected-error@+1 {{alayout and blayout attributes must be set to either "row" or "col"}}
-  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 : (!llvm.vec<2 x half>, !llvm.vec<2 x half>, !llvm.vec<2 x half>, !llvm.vec<2 x half>, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float) -> !llvm.struct<(float, float, float, float, float, float, float, float)>
-  llvm.return %0 : !llvm.struct<(float, float, float, float, float, float, float, float)>
+  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 : (!llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, f32, f32, f32, f32, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
+  llvm.return %0 : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
 }
 
 // -----
 
-func @nvvm_invalid_mma_3(%a0 : !llvm.vec<2 x half>, %a1 : !llvm.vec<2 x half>,
-                         %b0 : !llvm.vec<2 x half>, %b1 : !llvm.vec<2 x half>,
-                         %c0 : !llvm.vec<2 x half>, %c1 : !llvm.vec<2 x half>,
-                         %c2 : !llvm.vec<2 x half>, %c3 : !llvm.vec<2 x half>) {
+func @nvvm_invalid_mma_3(%a0 : !llvm.vec<2 x f16>, %a1 : !llvm.vec<2 x f16>,
+                         %b0 : !llvm.vec<2 x f16>, %b1 : !llvm.vec<2 x f16>,
+                         %c0 : !llvm.vec<2 x f16>, %c1 : !llvm.vec<2 x f16>,
+                         %c2 : !llvm.vec<2 x f16>, %c3 : !llvm.vec<2 x f16>) {
   // expected-error@+1 {{unimplemented mma.sync variant}}
-  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3 {alayout="row", blayout="col"} : (!llvm.vec<2 x half>, !llvm.vec<2 x half>, !llvm.vec<2 x half>, !llvm.vec<2 x half>, !llvm.vec<2 x half>, !llvm.vec<2 x half>, !llvm.vec<2 x half>, !llvm.vec<2 x half>) -> !llvm.struct<(float, float, float, float, float, float, float, float)>
-  llvm.return %0 : !llvm.struct<(float, float, float, float, float, float, float, float)>
+  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3 {alayout="row", blayout="col"} : (!llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
+  llvm.return %0 : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
 }
 
 // -----
 
-func @nvvm_invalid_mma_4(%a0 : !llvm.vec<2 x half>, %a1 : !llvm.vec<2 x half>,
-                         %b0 : !llvm.vec<2 x half>, %b1 : !llvm.vec<2 x half>,
-                         %c0 : !llvm.float, %c1 : !llvm.float, %c2 : !llvm.float, %c3 : !llvm.float,
-                         %c4 : !llvm.float, %c5 : !llvm.float, %c6 : !llvm.float, %c7 : !llvm.float) {
+func @nvvm_invalid_mma_4(%a0 : !llvm.vec<2 x f16>, %a1 : !llvm.vec<2 x f16>,
+                         %b0 : !llvm.vec<2 x f16>, %b1 : !llvm.vec<2 x f16>,
+                         %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32,
+                         %c4 : f32, %c5 : f32, %c6 : f32, %c7 : f32) {
   // expected-error@+1 {{unimplemented mma.sync variant}}
-  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="row", blayout="col"} : (!llvm.vec<2 x half>, !llvm.vec<2 x half>, !llvm.vec<2 x half>, !llvm.vec<2 x half>, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float) -> !llvm.struct<(vec<2 x half>, vec<2 x half>, vec<2 x half>, vec<2 x half>)>
-  llvm.return %0 : !llvm.struct<(vec<2 x half>, vec<2 x half>, vec<2 x half>, vec<2 x half>)>
+  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="row", blayout="col"} : (!llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, f32, f32, f32, f32, f32, f32, f32, f32) -> !llvm.struct<(vec<2 x f16>, vec<2 x f16>, vec<2 x f16>, vec<2 x f16>)>
+  llvm.return %0 : !llvm.struct<(vec<2 x f16>, vec<2 x f16>, vec<2 x f16>, vec<2 x f16>)>
 }
 
 // -----
 
-func @nvvm_invalid_mma_5(%a0 : !llvm.vec<2 x half>, %a1 : !llvm.vec<2 x half>,
-                         %b0 : !llvm.vec<2 x half>, %b1 : !llvm.vec<2 x half>,
-                         %c0 : !llvm.float, %c1 : !llvm.float, %c2 : !llvm.float, %c3 : !llvm.float,
-                         %c4 : !llvm.float, %c5 : !llvm.float, %c6 : !llvm.float, %c7 : !llvm.float) {
+func @nvvm_invalid_mma_5(%a0 : !llvm.vec<2 x f16>, %a1 : !llvm.vec<2 x f16>,
+                         %b0 : !llvm.vec<2 x f16>, %b1 : !llvm.vec<2 x f16>,
+                         %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32,
+                         %c4 : f32, %c5 : f32, %c6 : f32, %c7 : f32) {
   // expected-error@+1 {{unimplemented mma.sync variant}}
-  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="col", blayout="row"} : (!llvm.vec<2 x half>, !llvm.vec<2 x half>, !llvm.vec<2 x half>, !llvm.vec<2 x half>, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float) -> !llvm.struct<(float, float, float, float, float, float, float, float)>
-  llvm.return %0 : !llvm.struct<(float, float, float, float, float, float, float, float)>
+  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="col", blayout="row"} : (!llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, f32, f32, f32, f32, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
+  llvm.return %0 : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
 }
 
 // -----
 
-func @nvvm_invalid_mma_6(%a0 : !llvm.vec<2 x half>, %a1 : !llvm.vec<2 x half>,
-                         %b0 : !llvm.vec<2 x half>, %b1 : !llvm.vec<2 x half>,
-                         %c0 : !llvm.float, %c1 : !llvm.float, %c2 : !llvm.float, %c3 : !llvm.float,
-                         %c4 : !llvm.float, %c5 : !llvm.float, %c6 : !llvm.float, %c7 : !llvm.float) {
+func @nvvm_invalid_mma_6(%a0 : !llvm.vec<2 x f16>, %a1 : !llvm.vec<2 x f16>,
+                         %b0 : !llvm.vec<2 x f16>, %b1 : !llvm.vec<2 x f16>,
+                         %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32,
+                         %c4 : f32, %c5 : f32, %c6 : f32, %c7 : f32) {
   // expected-error@+1 {{invalid kind of type specified}}
-  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="col", blayout="row"} : !llvm.struct<(float, float, float, float, float, float, float, float)>
-  llvm.return %0 : !llvm.struct<(float, float, float, float, float, float, float, float)>
+  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="col", blayout="row"} : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
+  llvm.return %0 : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
 }
 
 // -----
 
-func @nvvm_invalid_mma_7(%a0 : !llvm.vec<2 x half>, %a1 : !llvm.vec<2 x half>,
-                         %b0 : !llvm.vec<2 x half>, %b1 : !llvm.vec<2 x half>,
-                         %c0 : !llvm.float, %c1 : !llvm.float, %c2 : !llvm.float, %c3 : !llvm.float,
-                         %c4 : !llvm.float, %c5 : !llvm.float, %c6 : !llvm.float, %c7 : !llvm.float) {
+func @nvvm_invalid_mma_7(%a0 : !llvm.vec<2 x f16>, %a1 : !llvm.vec<2 x f16>,
+                         %b0 : !llvm.vec<2 x f16>, %b1 : !llvm.vec<2 x f16>,
+                         %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32,
+                         %c4 : f32, %c5 : f32, %c6 : f32, %c7 : f32) {
   // expected-error@+1 {{op requires one result}}
-  %0:2 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="col", blayout="row"} : (!llvm.vec<2 x half>, !llvm.vec<2 x half>, !llvm.vec<2 x half>, !llvm.vec<2 x half>, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float) -> (!llvm.struct<(float, float, float, float, float, float, float, float)>, i32)
-  llvm.return %0#0 : !llvm.struct<(float, float, float, float, float, float, float, float)>
+  %0:2 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="col", blayout="row"} : (!llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, f32, f32, f32, f32, f32, f32, f32, f32) -> (!llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>, i32)
+  llvm.return %0#0 : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
 }
 
 // -----
 
-func @atomicrmw_expected_ptr(%f32 : !llvm.float) {
+func @atomicrmw_expected_ptr(%f32 : f32) {
   // expected-error@+1 {{operand #0 must be LLVM pointer to floating point LLVM type or LLVM integer type}}
-  %0 = "llvm.atomicrmw"(%f32, %f32) {bin_op=11, ordering=1} : (!llvm.float, !llvm.float) -> !llvm.float
+  %0 = "llvm.atomicrmw"(%f32, %f32) {bin_op=11, ordering=1} : (f32, f32) -> f32
   llvm.return
 }
 
 // -----
 
-func @atomicrmw_mismatched_operands(%f32_ptr : !llvm.ptr<float>, %i32 : i32) {
+func @atomicrmw_mismatched_operands(%f32_ptr : !llvm.ptr<f32>, %i32 : i32) {
   // expected-error@+1 {{expected LLVM IR element type for operand #0 to match type for operand #1}}
-  %0 = "llvm.atomicrmw"(%f32_ptr, %i32) {bin_op=11, ordering=1} : (!llvm.ptr<float>, i32) -> !llvm.float
+  %0 = "llvm.atomicrmw"(%f32_ptr, %i32) {bin_op=11, ordering=1} : (!llvm.ptr<f32>, i32) -> f32
   llvm.return
 }
 
 // -----
 
-func @atomicrmw_mismatched_operands(%f32_ptr : !llvm.ptr<float>, %f32 : !llvm.float) {
+func @atomicrmw_mismatched_operands(%f32_ptr : !llvm.ptr<f32>, %f32 : f32) {
   // expected-error@+1 {{expected LLVM IR result type to match type for operand #1}}
-  %0 = "llvm.atomicrmw"(%f32_ptr, %f32) {bin_op=11, ordering=1} : (!llvm.ptr<float>, !llvm.float) -> i32
+  %0 = "llvm.atomicrmw"(%f32_ptr, %f32) {bin_op=11, ordering=1} : (!llvm.ptr<f32>, f32) -> i32
   llvm.return
 }
 
@@ -494,17 +494,17 @@ func @atomicrmw_unexpected_xchg_type(%i1_ptr : !llvm.ptr<i1>, %i1 : i1) {
 
 // -----
 
-func @atomicrmw_expected_int(%f32_ptr : !llvm.ptr<float>, %f32 : !llvm.float) {
+func @atomicrmw_expected_int(%f32_ptr : !llvm.ptr<f32>, %f32 : f32) {
   // expected-error@+1 {{expected LLVM IR integer type}}
-  %0 = llvm.atomicrmw max %f32_ptr, %f32 unordered : !llvm.float
+  %0 = llvm.atomicrmw max %f32_ptr, %f32 unordered : f32
   llvm.return
 }
 
 // -----
 
-func @cmpxchg_expected_ptr(%f32_ptr : !llvm.ptr<float>, %f32 : !llvm.float) {
+func @cmpxchg_expected_ptr(%f32_ptr : !llvm.ptr<f32>, %f32 : f32) {
   // expected-error@+1 {{op operand #0 must be LLVM pointer to LLVM integer type or LLVM pointer type}}
-  %0 = "llvm.cmpxchg"(%f32, %f32, %f32) {success_ordering=2,failure_ordering=2} : (!llvm.float, !llvm.float, !llvm.float) -> !llvm.struct<(float, i1)>
+  %0 = "llvm.cmpxchg"(%f32, %f32, %f32) {success_ordering=2,failure_ordering=2} : (f32, f32, f32) -> !llvm.struct<(f32, i1)>
   llvm.return
 }
 
