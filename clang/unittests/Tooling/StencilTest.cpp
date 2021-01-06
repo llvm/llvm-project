@@ -8,6 +8,7 @@
 
 #include "clang/Tooling/Transformer/Stencil.h"
 #include "clang/AST/ASTTypeTraits.h"
+#include "clang/AST/Expr.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/FixIt.h"
 #include "clang/Tooling/Tooling.h"
@@ -29,10 +30,18 @@ using ::testing::HasSubstr;
 using MatchResult = MatchFinder::MatchResult;
 
 // Create a valid translation-unit from a statement.
-static std::string wrapSnippet(StringRef StatementCode) {
-  return ("namespace N { class C {}; } "
-          "namespace { class AnonC {}; } "
-          "struct S { int field; }; auto stencil_test_snippet = []{" +
+static std::string wrapSnippet(StringRef ExtraPreface,
+                               StringRef StatementCode) {
+  constexpr char Preface[] = R"cc(
+    namespace N { class C {}; }
+    namespace { class AnonC {}; }
+    struct S { int Field; };
+    struct Smart {
+      S* operator->() const;
+      S& operator*() const;
+    };
+  )cc";
+  return (Preface + ExtraPreface + "auto stencil_test_snippet = []{" +
           StatementCode + "};")
       .str();
 }
@@ -55,10 +64,12 @@ struct TestMatch {
 // matcher correspondingly. `Matcher` should match one of the statements in
 // `StatementCode` exactly -- that is, produce exactly one match. However,
 // `StatementCode` may contain other statements not described by `Matcher`.
+// `ExtraPreface` (optionally) adds extra decls to the TU, before the code.
 static llvm::Optional<TestMatch> matchStmt(StringRef StatementCode,
-                                           StatementMatcher Matcher) {
-  auto AstUnit = tooling::buildASTFromCodeWithArgs(wrapSnippet(StatementCode),
-                                                   {"-Wno-unused-value"});
+                                           StatementMatcher Matcher,
+                                           StringRef ExtraPreface = "") {
+  auto AstUnit = tooling::buildASTFromCodeWithArgs(
+      wrapSnippet(ExtraPreface, StatementCode), {"-Wno-unused-value"});
   if (AstUnit == nullptr) {
     ADD_FAILURE() << "AST construction failed";
     return llvm::None;
@@ -260,6 +271,42 @@ TEST_F(StencilTest, MaybeDerefAddressExpr) {
   testExpr(Id, "int x; &x;", maybeDeref(Id), "x");
 }
 
+TEST_F(StencilTest, MaybeDerefSmartPointer) {
+  StringRef Id = "id";
+  std::string Snippet = R"cc(
+    Smart x;
+    x;
+  )cc";
+  testExpr(Id, Snippet, maybeDeref(Id), "*x");
+}
+
+// Tests that unique_ptr specifically is handled.
+TEST_F(StencilTest, MaybeDerefSmartPointerUniquePtr) {
+  StringRef Id = "id";
+  // We deliberately specify `unique_ptr` as empty to verify that it matches
+  // because of its name, rather than its contents.
+  StringRef ExtraPreface =
+      "namespace std { template <typename T> class unique_ptr {}; }\n";
+  StringRef Snippet = R"cc(
+    std::unique_ptr<int> x;
+    x;
+  )cc";
+  auto StmtMatch = matchStmt(Snippet, expr().bind(Id), ExtraPreface);
+  ASSERT_TRUE(StmtMatch);
+  EXPECT_THAT_EXPECTED(maybeDeref(Id)->eval(StmtMatch->Result),
+                       HasValue(std::string("*x")));
+}
+
+TEST_F(StencilTest, MaybeDerefSmartPointerFromMemberExpr) {
+  StringRef Id = "id";
+  std::string Snippet = "Smart x; x->Field;";
+  auto StmtMatch =
+      matchStmt(Snippet, memberExpr(hasObjectExpression(expr().bind(Id))));
+  ASSERT_TRUE(StmtMatch);
+  const Stencil Stencil = maybeDeref(Id);
+  EXPECT_THAT_EXPECTED(Stencil->eval(StmtMatch->Result), HasValue("*x"));
+}
+
 TEST_F(StencilTest, MaybeAddressOfPointer) {
   StringRef Id = "id";
   testExpr(Id, "int *x; x;", maybeAddressOf(Id), "x");
@@ -278,6 +325,26 @@ TEST_F(StencilTest, MaybeAddressOfBinOp) {
 TEST_F(StencilTest, MaybeAddressOfDerefExpr) {
   StringRef Id = "id";
   testExpr(Id, "int *x; *x;", addressOf(Id), "x");
+}
+
+TEST_F(StencilTest, MaybeAddressOfSmartPointer) {
+  StringRef Id = "id";
+  testExpr(Id, "Smart x; x;", maybeAddressOf(Id), "x");
+}
+
+TEST_F(StencilTest, MaybeAddressOfSmartPointerFromMemberCall) {
+  StringRef Id = "id";
+  std::string Snippet = "Smart x; x->Field;";
+  auto StmtMatch =
+      matchStmt(Snippet, memberExpr(hasObjectExpression(expr().bind(Id))));
+  ASSERT_TRUE(StmtMatch);
+  const Stencil Stencil = maybeAddressOf(Id);
+  EXPECT_THAT_EXPECTED(Stencil->eval(StmtMatch->Result), HasValue("x"));
+}
+
+TEST_F(StencilTest, MaybeAddressOfSmartPointerDerefNoCancel) {
+  StringRef Id = "id";
+  testExpr(Id, "Smart x; *x;", maybeAddressOf(Id), "&*x");
 }
 
 TEST_F(StencilTest, AccessOpValue) {
