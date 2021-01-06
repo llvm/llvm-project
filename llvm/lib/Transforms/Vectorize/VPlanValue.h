@@ -166,6 +166,15 @@ public:
   void replaceAllUsesWith(VPValue *New);
 
   VPDef *getDef() { return Def; }
+
+  /// Returns the underlying IR value, if this VPValue is defined outside the
+  /// scope of VPlan. Returns nullptr if the VPValue is defined by a VPDef
+  /// inside a VPlan.
+  Value *getLiveInIRValue() {
+    assert(!getDef() &&
+           "VPValue is not a live-in; it is defined by a VPDef inside a VPlan");
+    return getUnderlyingValue();
+  }
 };
 
 typedef DenseMap<Value *, VPValue *> Value2VPValueTy;
