@@ -275,6 +275,9 @@ void VETargetLowering::initSPUActions() {
   }
 
   /// } Atomic isntructions
+
+  // Intrinsic instructions
+  setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
 }
 
 void VETargetLowering::initVPUActions() {
@@ -1525,6 +1528,37 @@ static SDValue lowerRETURNADDR(SDValue Op, SelectionDAG &DAG,
                      MachinePointerInfo());
 }
 
+SDValue VETargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  unsigned IntNo = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  switch (IntNo) {
+  default: // Don't custom lower most intrinsics.
+    return SDValue();
+  case Intrinsic::eh_sjlj_lsda: {
+    MachineFunction &MF = DAG.getMachineFunction();
+    MVT VT = Op.getSimpleValueType();
+    const VETargetMachine *TM =
+        static_cast<const VETargetMachine *>(&DAG.getTarget());
+
+    // Create GCC_except_tableXX string.  The real symbol for that will be
+    // generated in EHStreamer::emitExceptionTable() later.  So, we just
+    // borrow it's name here.
+    TM->getStrList()->push_back(std::string(
+        (Twine("GCC_except_table") + Twine(MF.getFunctionNumber())).str()));
+    SDValue Addr =
+        DAG.getTargetExternalSymbol(TM->getStrList()->back().c_str(), VT, 0);
+    if (isPositionIndependent()) {
+      Addr = makeHiLoPair(Addr, VEMCExpr::VK_VE_GOTOFF_HI32,
+                          VEMCExpr::VK_VE_GOTOFF_LO32, DAG);
+      SDValue GlobalBase = DAG.getNode(VEISD::GLOBAL_BASE_REG, DL, VT);
+      return DAG.getNode(ISD::ADD, DL, VT, GlobalBase, Addr);
+    }
+    return makeHiLoPair(Addr, VEMCExpr::VK_VE_HI32, VEMCExpr::VK_VE_LO32, DAG);
+  }
+  }
+}
+
 static SDValue getSplatValue(SDNode *N) {
   if (auto *BuildVec = dyn_cast<BuildVectorSDNode>(N)) {
     return BuildVec->getSplatValue();
@@ -1571,6 +1605,8 @@ SDValue VETargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerGlobalAddress(Op, DAG);
   case ISD::GlobalTLSAddress:
     return lowerGlobalTLSAddress(Op, DAG);
+  case ISD::INTRINSIC_WO_CHAIN:
+    return lowerINTRINSIC_WO_CHAIN(Op, DAG);
   case ISD::JumpTable:
     return lowerJumpTable(Op, DAG);
   case ISD::LOAD:
