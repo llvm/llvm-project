@@ -78,8 +78,19 @@ void ParseSyntaxOnlyAction::ExecuteAction() {
   common::LanguageFeatureControl features;
   Fortran::common::IntrinsicTypeDefaultKinds defaultKinds;
 
-  // Parse
+  // Parse. In case of failure, report and return.
   ci.parsing().Parse(llvm::outs());
+
+  if (ci.parsing().messages().AnyFatalError()) {
+    unsigned diagID = ci.diagnostics().getCustomDiagID(
+        clang::DiagnosticsEngine::Error, "could not parse %0");
+    ci.diagnostics().Report(diagID) << GetCurrentFileOrBufferName();
+
+    ci.parsing().messages().Emit(
+        llvm::errs(), this->instance().allCookedSources());
+    return;
+  }
+
   auto &parseTree{*ci.parsing().parseTree()};
 
   // Prepare semantics

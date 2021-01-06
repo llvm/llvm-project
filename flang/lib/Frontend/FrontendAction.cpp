@@ -45,12 +45,24 @@ bool FrontendAction::ShouldEraseOutputFiles() {
 }
 
 llvm::Error FrontendAction::Execute() {
+  CompilerInstance &ci = this->instance();
+
   std::string currentInputPath{GetCurrentFileOrBufferName()};
 
   Fortran::parser::Options parserOptions =
       this->instance().invocation().fortranOpts();
 
-  this->instance().parsing().Prescan(currentInputPath, parserOptions);
+  // Prescan. In case of failure, report and return.
+  ci.parsing().Prescan(currentInputPath, parserOptions);
+
+  if (ci.parsing().messages().AnyFatalError()) {
+    const unsigned diagID = ci.diagnostics().getCustomDiagID(
+        clang::DiagnosticsEngine::Error, "could not scan %0");
+    ci.diagnostics().Report(diagID) << GetCurrentFileOrBufferName();
+    ci.parsing().messages().Emit(llvm::errs(), ci.allCookedSources());
+
+    return llvm::Error::success();
+  }
 
   ExecuteAction();
 
