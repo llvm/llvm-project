@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Frontend/CompilerInvocation.h"
+#include "flang/Frontend/PreprocessorOptions.h"
 #include "clang/Basic/AllDiagnostics.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/DiagnosticOptions.h"
@@ -26,10 +27,12 @@ using namespace Fortran::frontend;
 // Initialization.
 //===----------------------------------------------------------------------===//
 CompilerInvocationBase::CompilerInvocationBase()
-    : diagnosticOpts_(new clang::DiagnosticOptions()) {}
+    : diagnosticOpts_(new clang::DiagnosticOptions()),
+      preprocessorOpts_(new PreprocessorOptions()) {}
 
 CompilerInvocationBase::CompilerInvocationBase(const CompilerInvocationBase &x)
-    : diagnosticOpts_(new clang::DiagnosticOptions(x.GetDiagnosticOpts())) {}
+    : diagnosticOpts_(new clang::DiagnosticOptions(x.GetDiagnosticOpts())),
+      preprocessorOpts_(new PreprocessorOptions(x.preprocessorOpts())) {}
 
 CompilerInvocationBase::~CompilerInvocationBase() = default;
 
@@ -155,6 +158,24 @@ static InputKind ParseFrontendArgs(FrontendOptions &opts,
   return dashX;
 }
 
+/// Parses all preprocessor input arguments and populates the preprocessor
+/// options accordingly.
+///
+/// \param [in] opts The preprocessor options instance
+/// \param [out] args The list of input arguments
+static void parsePreprocessorArgs(
+    Fortran::frontend::PreprocessorOptions &opts, llvm::opt::ArgList &args) {
+  // Add macros from the command line.
+  for (const auto *currentArg : args.filtered(
+           clang::driver::options::OPT_D, clang::driver::options::OPT_U)) {
+    if (currentArg->getOption().matches(clang::driver::options::OPT_D)) {
+      opts.addMacroDef(currentArg->getValue());
+    } else {
+      opts.addMacroUndef(currentArg->getValue());
+    }
+  }
+}
+
 bool CompilerInvocation::CreateFromArgs(CompilerInvocation &res,
     llvm::ArrayRef<const char *> commandLineArgs,
     clang::DiagnosticsEngine &diags) {
@@ -183,8 +204,45 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &res,
 
   // Parse the frontend args
   ParseFrontendArgs(res.frontendOpts(), args, diags);
+  // Parse the preprocessor args
+  parsePreprocessorArgs(res.preprocessorOpts(), args);
 
   return success;
+}
+
+/// Collect the macro definitions provided by the given preprocessor
+/// options into the parser options.
+///
+/// \param [in] ppOpts The preprocessor options
+/// \param [out] opts The fortran options
+static void collectMacroDefinitions(
+    const PreprocessorOptions &ppOpts, Fortran::parser::Options &opts) {
+  for (unsigned i = 0, n = ppOpts.macros.size(); i != n; ++i) {
+    llvm::StringRef macro = ppOpts.macros[i].first;
+    bool isUndef = ppOpts.macros[i].second;
+
+    std::pair<llvm::StringRef, llvm::StringRef> macroPair = macro.split('=');
+    llvm::StringRef macroName = macroPair.first;
+    llvm::StringRef macroBody = macroPair.second;
+
+    // For an #undef'd macro, we only care about the name.
+    if (isUndef) {
+      opts.predefinitions.emplace_back(
+          macroName.str(), std::optional<std::string>{});
+      continue;
+    }
+
+    // For a #define'd macro, figure out the actual definition.
+    if (macroName.size() == macro.size())
+      macroBody = "1";
+    else {
+      // Note: GCC drops anything following an end-of-line character.
+      llvm::StringRef::size_type End = macroBody.find_first_of("\n\r");
+      macroBody = macroBody.substr(0, End);
+    }
+    opts.predefinitions.emplace_back(
+        macroName, std::optional<std::string>(macroBody.str()));
+  }
 }
 
 void CompilerInvocation::SetDefaultFortranOpts() {
@@ -194,4 +252,11 @@ void CompilerInvocation::SetDefaultFortranOpts() {
   std::vector<std::string> searchDirectories{"."s};
   fortranOptions.searchDirectories = searchDirectories;
   fortranOptions.isFixedForm = false;
+}
+
+void CompilerInvocation::setFortranOpts() {
+  auto &fortranOptions = fortranOpts();
+  const auto &preprocessorOptions = preprocessorOpts();
+
+  collectMacroDefinitions(preprocessorOptions, fortranOptions);
 }
