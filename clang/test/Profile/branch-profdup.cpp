@@ -1,7 +1,7 @@
 // Test to ensure RHS condition of logical operators isn't evaluated more than
 // one time when instrumenting RHS counter blocks for branch coverage.
 
-// RUN: %clang_cc1 -main-file-name branch-profdup.cpp %s -o - -emit-llvm -fprofile-instrument=clang | FileCheck -allow-deprecated-dag-overlap %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++11 -main-file-name branch-profdup.cpp %s -o - -emit-llvm -fprofile-instrument=clang | FileCheck -allow-deprecated-dag-overlap %s
 
 // CHECK-LABEL: define {{.*}}@_Z5test1b
 // CHECK-COUNT-1: = call {{.*}}@_Z5fval1v()
