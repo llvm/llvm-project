@@ -122,7 +122,7 @@ define signext i32 @ret_callresult_uint8_as_anyint32() nounwind {
 define zeroext i8 @sint8_arg_to_uint8_ret(i8 signext %a) nounwind {
 ; RV32I-LABEL: sint8_arg_to_uint8_ret:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    zext.b a0, a0
+; RV32I-NEXT:    andi a0, a0, 255
 ; RV32I-NEXT:    ret
   ret i8 %a
 }
@@ -132,7 +132,7 @@ define void @pass_sint8_as_uint8(i8 signext %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    zext.b a0, a0
+; RV32I-NEXT:    andi a0, a0, 255
 ; RV32I-NEXT:    call receive_uint8@plt
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
@@ -149,7 +149,7 @@ define zeroext i8 @ret_callresult_sint8_as_uint8() nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    call return_sint8@plt
-; RV32I-NEXT:    zext.b a0, a0
+; RV32I-NEXT:    andi a0, a0, 255
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -229,7 +229,7 @@ define signext i32 @ret_callresult_sint8_as_anyint32() nounwind {
 define zeroext i8 @anyint32_arg_to_uint8_ret(i32 signext %a) nounwind {
 ; RV32I-LABEL: anyint32_arg_to_uint8_ret:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    zext.b a0, a0
+; RV32I-NEXT:    andi a0, a0, 255
 ; RV32I-NEXT:    ret
   %1 = trunc i32 %a to i8
   ret i8 %1
@@ -240,7 +240,7 @@ define void @pass_anyint32_as_uint8(i32 signext %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    zext.b a0, a0
+; RV32I-NEXT:    andi a0, a0, 255
 ; RV32I-NEXT:    call receive_uint8@plt
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
@@ -258,7 +258,7 @@ define zeroext i8 @ret_callresult_anyint32_as_uint8() nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    call return_anyint32@plt
-; RV32I-NEXT:    zext.b a0, a0
+; RV32I-NEXT:    andi a0, a0, 255
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
