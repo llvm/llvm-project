@@ -10,6 +10,12 @@
 
 // REQUIRES: cxxabi
 
+// These checks are unsupported on newer versions of Android due to the
+// following patch that makes it harder to defeat ASLR by not mapping unused
+// shadow regions:
+// https://android-review.googlesource.com/c/platform/bionic/+/1333960
+// UNSUPPORTED: android
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
