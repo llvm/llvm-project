@@ -384,7 +384,7 @@ static DeviceDebugInfoLevel mustEmitDebugInfo(const ArgList &Args) {
     }
     return IsDebugEnabled ? EmitSameDebugInfoAsHost : DebugDirectivesOnly;
   }
-  return DisableDebugInfo;
+  return willEmitRemarks(Args) ? DebugDirectivesOnly : DisableDebugInfo;
 }
 
 void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
