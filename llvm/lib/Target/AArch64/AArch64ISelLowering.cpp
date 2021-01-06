@@ -999,6 +999,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                     MVT::v8f16, MVT::v4f32, MVT::v2f64 }) {
       setOperationAction(ISD::VECREDUCE_FMAX, VT, Custom);
       setOperationAction(ISD::VECREDUCE_FMIN, VT, Custom);
+
+      if (VT.getVectorElementType() != MVT::f16 || Subtarget->hasFullFP16())
+        setOperationAction(ISD::VECREDUCE_FADD, VT, Legal);
     }
     for (MVT VT : { MVT::v8i8, MVT::v4i16, MVT::v2i32,
                     MVT::v16i8, MVT::v8i16, MVT::v4i32 }) {
@@ -3344,7 +3347,8 @@ static bool isExtendedBUILD_VECTOR(SDNode *N, SelectionDAG &DAG,
 }
 
 static SDValue skipExtensionForVectorMULL(SDNode *N, SelectionDAG &DAG) {
-  if (N->getOpcode() == ISD::SIGN_EXTEND || N->getOpcode() == ISD::ZERO_EXTEND)
+  if (N->getOpcode() == ISD::SIGN_EXTEND ||
+      N->getOpcode() == ISD::ZERO_EXTEND || N->getOpcode() == ISD::ANY_EXTEND)
     return addRequiredExtensionForVectorMULL(N->getOperand(0), DAG,
                                              N->getOperand(0)->getValueType(0),
                                              N->getValueType(0),
@@ -3374,6 +3378,7 @@ static bool isSignExtended(SDNode *N, SelectionDAG &DAG) {
 
 static bool isZeroExtended(SDNode *N, SelectionDAG &DAG) {
   return N->getOpcode() == ISD::ZERO_EXTEND ||
+         N->getOpcode() == ISD::ANY_EXTEND ||
          isExtendedBUILD_VECTOR(N, DAG, false);
 }
 

@@ -54,6 +54,10 @@ using namespace __tsan;
 #define vfork __vfork14
 #endif
 
+#if SANITIZER_ANDROID
+#define mallopt(a, b)
+#endif
+
 #ifdef __mips__
 const int kSigCount = 129;
 #else
@@ -93,7 +97,7 @@ extern "C" void _exit(int status);
 extern "C" int fileno_unlocked(void *stream);
 extern "C" int dirfd(void *dirp);
 #endif
-#if SANITIZER_GLIBC
+#if !SANITIZER_FREEBSD && !SANITIZER_ANDROID && !SANITIZER_NETBSD
 extern "C" int mallopt(int param, int value);
 #endif
 #if SANITIZER_NETBSD
@@ -2664,7 +2668,7 @@ void InitializeInterceptors() {
 #endif
 
   // Instruct libc malloc to consume less memory.
-#if SANITIZER_GLIBC
+#if SANITIZER_LINUX
   mallopt(1, 0);  // M_MXFAST
   mallopt(-3, 32*1024);  // M_MMAP_THRESHOLD
 #endif

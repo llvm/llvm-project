@@ -60,7 +60,7 @@ void InitializePlatformInterceptors();
 # define ASAN_USE_ALIAS_ATTRIBUTE_FOR_INDEX 0
 #endif
 
-#if SANITIZER_GLIBC || SANITIZER_SOLARIS
+#if (SANITIZER_LINUX && !SANITIZER_ANDROID) || SANITIZER_SOLARIS
 # define ASAN_INTERCEPT_SWAPCONTEXT 1
 #else
 # define ASAN_INTERCEPT_SWAPCONTEXT 0
@@ -72,7 +72,7 @@ void InitializePlatformInterceptors();
 # define ASAN_INTERCEPT_SIGLONGJMP 0
 #endif
 
-#if SANITIZER_GLIBC
+#if SANITIZER_LINUX && !SANITIZER_ANDROID
 # define ASAN_INTERCEPT___LONGJMP_CHK 1
 #else
 # define ASAN_INTERCEPT___LONGJMP_CHK 0
@@ -106,7 +106,7 @@ void InitializePlatformInterceptors();
 # define ASAN_INTERCEPT_ATEXIT 0
 #endif
 
-#if SANITIZER_GLIBC
+#if SANITIZER_LINUX && !SANITIZER_ANDROID
 # define ASAN_INTERCEPT___STRDUP 1
 #else
 # define ASAN_INTERCEPT___STRDUP 0

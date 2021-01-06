@@ -18,6 +18,7 @@ using namespace llvm;
 using namespace clang;
 
 using ::testing::Contains;
+using ::testing::HasSubstr;
 using ::testing::StrEq;
 
 namespace {
@@ -342,30 +343,109 @@ TEST_F(CommandLineTest, CanGenerateCC1CommandLineSeparateRequiredAbsent) {
   ASSERT_THAT(GeneratedArgs, Contains(StrEq(DefaultTriple.c_str())));
 }
 
-TEST_F(CommandLineTest, CanGenerateCC1CommandLineSeparateEnumNonDefault) {
+TEST_F(CommandLineTest, SeparateEnumNonDefault) {
   const char *Args[] = {"-mrelocation-model", "static"};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
   ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_EQ(Invocation.getCodeGenOpts().RelocationModel, Reloc::Model::Static);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 
   // Non default relocation model.
+  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-mrelocation-model")));
   ASSERT_THAT(GeneratedArgs, Contains(StrEq("static")));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-mrelocation-model=static"))));
 }
 
-TEST_F(CommandLineTest, CanGenerateCC1COmmandLineSeparateEnumDefault) {
+TEST_F(CommandLineTest, SeparateEnumDefault) {
   const char *Args[] = {"-mrelocation-model", "pic"};
 
   CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
 
   ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_EQ(Invocation.getCodeGenOpts().RelocationModel, Reloc::Model::PIC_);
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 
   // Default relocation model.
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-mrelocation-model"))));
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("pic"))));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-mrelocation-model=pic"))));
+}
+
+TEST_F(CommandLineTest, JoinedEnumNonDefault) {
+  const char *Args[] = {"-fobjc-dispatch-method=non-legacy"};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_EQ(Invocation.getCodeGenOpts().getObjCDispatchMethod(),
+            CodeGenOptions::NonLegacy);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+
+  ASSERT_THAT(GeneratedArgs,
+              Contains(StrEq("-fobjc-dispatch-method=non-legacy")));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fobjc-dispatch-method="))));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("non-legacy"))));
+}
+
+TEST_F(CommandLineTest, JoinedEnumDefault) {
+  const char *Args[] = {"-fobjc-dispatch-method=legacy"};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_EQ(Invocation.getCodeGenOpts().getObjCDispatchMethod(),
+            CodeGenOptions::Legacy);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+
+  ASSERT_THAT(GeneratedArgs,
+              Not(Contains(StrEq("-fobjc-dispatch-method=legacy"))));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fobjc-dispatch-method="))));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("legacy"))));
+}
+
+TEST_F(CommandLineTest, StringVectorEmpty) {
+  const char *Args[] = {""};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(Invocation.getFrontendOpts().ModuleMapFiles.empty());
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_THAT(GeneratedArgs, Not(Contains(HasSubstr("-fmodule-map-file="))));
+}
+
+TEST_F(CommandLineTest, StringVectorSingle) {
+  const char *Args[] = {"-fmodule-map-file=a"};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_EQ(Invocation.getFrontendOpts().ModuleMapFiles,
+            std::vector<std::string>({"a"}));
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_EQ(count(GeneratedArgs, StringRef("-fmodule-map-file=a")), 1);
+}
+
+TEST_F(CommandLineTest, StringVectorMultiple) {
+  const char *Args[] = {"-fmodule-map-file=a", "-fmodule-map-file=b"};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(Invocation.getFrontendOpts().ModuleMapFiles ==
+              std::vector<std::string>({"a", "b"}));
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+  ASSERT_EQ(count(GeneratedArgs, StringRef("-fmodule-map-file=a")), 1);
+  ASSERT_EQ(count(GeneratedArgs, StringRef("-fmodule-map-file=b")), 1);
 }
 
 // Wide integer option.
