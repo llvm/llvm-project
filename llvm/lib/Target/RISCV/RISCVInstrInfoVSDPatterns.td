@@ -164,6 +164,12 @@ defm "" : VPatBinarySDNode_VV_VX_VI<shl, "PseudoVSLL", uimm5>;
 defm "" : VPatBinarySDNode_VV_VX_VI<srl, "PseudoVSRL", uimm5>;
 defm "" : VPatBinarySDNode_VV_VX_VI<sra, "PseudoVSRA", uimm5>;
 
+// 12.9. Vector Integer Min/Max Instructions
+defm "" : VPatBinarySDNode_VV_VX<umin, "PseudoVMINU">;
+defm "" : VPatBinarySDNode_VV_VX<smin, "PseudoVMIN">;
+defm "" : VPatBinarySDNode_VV_VX<umax, "PseudoVMAXU">;
+defm "" : VPatBinarySDNode_VV_VX<smax, "PseudoVMAX">;
+
 } // Predicates = [HasStdExtV]
 
 //===----------------------------------------------------------------------===//
