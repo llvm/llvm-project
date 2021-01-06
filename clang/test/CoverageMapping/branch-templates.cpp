@@ -1,7 +1,7 @@
 // Test that branch regions are generated for conditions in function template
 // instantiations.
 
-// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name branch-templates.cpp %s | FileCheck %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++11 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name branch-templates.cpp %s | FileCheck %s
 
 template<typename T>
 void unused(T x) {
