@@ -1197,13 +1197,13 @@ Value *llvm::SimplifyURemInst(Value *Op0, Value *Op1, const SimplifyQuery &Q) {
   return ::SimplifyURemInst(Op0, Op1, Q, RecursionLimit);
 }
 
-/// Returns true if a shift by \c Amount always yields undef.
-static bool isUndefShift(Value *Amount, const SimplifyQuery &Q) {
+/// Returns true if a shift by \c Amount always yields poison.
+static bool isPoisonShift(Value *Amount, const SimplifyQuery &Q) {
   Constant *C = dyn_cast<Constant>(Amount);
   if (!C)
     return false;
 
-  // X shift by undef -> undef because it may shift by the bitwidth.
+  // X shift by undef -> poison because it may shift by the bitwidth.
   if (Q.isUndefValue(C))
     return true;
 
@@ -1218,7 +1218,7 @@ static bool isUndefShift(Value *Amount, const SimplifyQuery &Q) {
     for (unsigned I = 0,
                   E = cast<FixedVectorType>(C->getType())->getNumElements();
          I != E; ++I)
-      if (!isUndefShift(C->getAggregateElement(I), Q))
+      if (!isPoisonShift(C->getAggregateElement(I), Q))
         return false;
     return true;
   }
@@ -1246,8 +1246,8 @@ static Value *SimplifyShift(Instruction::BinaryOps Opcode, Value *Op0,
     return Op0;
 
   // Fold undefined shifts.
-  if (isUndefShift(Op1, Q))
-    return UndefValue::get(Op0->getType());
+  if (isPoisonShift(Op1, Q))
+    return PoisonValue::get(Op0->getType());
 
   // If the operation is with the result of a select instruction, check whether
   // operating on either branch of the select always yields the same value.
@@ -1265,7 +1265,7 @@ static Value *SimplifyShift(Instruction::BinaryOps Opcode, Value *Op0,
   // the number of bits in the type, the shift is undefined.
   KnownBits Known = computeKnownBits(Op1, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
   if (Known.One.getLimitedValue() >= Known.getBitWidth())
-    return UndefValue::get(Op0->getType());
+    return PoisonValue::get(Op0->getType());
 
   // If all valid bits in the shift amount are known zero, the first operand is
   // unchanged.
