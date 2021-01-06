@@ -4690,9 +4690,9 @@ bool SimplifyCFGOpt::simplifyUnreachable(UnreachableInst *UI) {
         Changed = true;
       } else {
         Value* Cond = BI->getCondition();
-        assert(BI->getSuccessor(0) != BI->getSuccessor(1) &&
-               "Same-destination conditional branch instruction was "
-               "already canonicalized into an unconditional branch.");
+        //        assert(BI->getSuccessor(0) != BI->getSuccessor(1) &&
+        //               "Same-destination conditional branch instruction was "
+        //               "already canonicalized into an unconditional branch.");
         if (BI->getSuccessor(0) == BB) {
           Builder.CreateAssumption(Builder.CreateNot(Cond));
           Builder.CreateBr(BI->getSuccessor(1));
