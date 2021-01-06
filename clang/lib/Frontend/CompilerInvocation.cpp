@@ -1399,6 +1399,32 @@ static bool checkVerifyPrefixes(const std::vector<std::string> &VerifyPrefixes,
   return Success;
 }
 
+bool CompilerInvocation::parseSimpleArgs(const ArgList &Args,
+                                         DiagnosticsEngine &Diags) {
+  bool Success = true;
+
+#define OPTION_WITH_MARSHALLING(                                               \
+    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
+    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
+    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
+    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
+  if ((FLAGS)&options::CC1Option) {                                            \
+    this->KEYPATH = MERGER(this->KEYPATH, DEFAULT_VALUE);                      \
+    if (IMPLIED_CHECK)                                                         \
+      this->KEYPATH = MERGER(this->KEYPATH, IMPLIED_VALUE);                    \
+    if (SHOULD_PARSE)                                                          \
+      if (auto MaybeValue =                                                    \
+              NORMALIZER(OPT_##ID, TABLE_INDEX, Args, Diags, Success))         \
+        this->KEYPATH = MERGER(                                                \
+            this->KEYPATH, static_cast<decltype(this->KEYPATH)>(*MaybeValue)); \
+  }
+
+#include "clang/Driver/Options.inc"
+#undef OPTION_WITH_MARSHALLING
+
+  return Success;
+}
+
 bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
                                 DiagnosticsEngine *Diags,
                                 bool DefaultDiagColor) {
@@ -2969,32 +2995,6 @@ static void ParseTargetArgs(TargetOptions &Opts, ArgList &Args,
     else
       Opts.SDKVersion = Version;
   }
-}
-
-bool CompilerInvocation::parseSimpleArgs(const ArgList &Args,
-                                         DiagnosticsEngine &Diags) {
-  bool Success = true;
-
-#define OPTION_WITH_MARSHALLING(                                               \
-    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
-    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
-    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
-  if ((FLAGS)&options::CC1Option) {                                            \
-    this->KEYPATH = MERGER(this->KEYPATH, DEFAULT_VALUE);                      \
-    if (IMPLIED_CHECK)                                                         \
-      this->KEYPATH = MERGER(this->KEYPATH, IMPLIED_VALUE);                    \
-    if (SHOULD_PARSE)                                                          \
-      if (auto MaybeValue = \
-            NORMALIZER(OPT_##ID, TABLE_INDEX, Args, Diags, Success))    \
-        this->KEYPATH = MERGER(                                                \
-            this->KEYPATH, static_cast<decltype(this->KEYPATH)>(*MaybeValue)); \
-  }
-
-#include "clang/Driver/Options.inc"
-#undef OPTION_WITH_MARSHALLING
-
-  return Success;
 }
 
 bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
