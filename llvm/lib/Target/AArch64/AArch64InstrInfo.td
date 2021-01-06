@@ -4765,18 +4765,18 @@ defm SSUBW   : SIMDWideThreeVectorBHS<0, 0b0011, "ssubw",
 defm UABAL   : SIMDLongThreeVectorTiedBHSabal<1, 0b0101, "uabal",
                                               AArch64uabd>;
 defm UADDL   : SIMDLongThreeVectorBHS<1, 0b0000, "uaddl",
-                 BinOpFrag<(add (zext node:$LHS), (zext node:$RHS))>>;
+                 BinOpFrag<(add (zanyext node:$LHS), (zanyext node:$RHS))>>;
 defm UADDW   : SIMDWideThreeVectorBHS<1, 0b0001, "uaddw",
-                 BinOpFrag<(add node:$LHS, (zext node:$RHS))>>;
+                 BinOpFrag<(add node:$LHS, (zanyext node:$RHS))>>;
 defm UMLAL   : SIMDLongThreeVectorTiedBHS<1, 0b1000, "umlal",
     TriOpFrag<(add node:$LHS, (int_aarch64_neon_umull node:$MHS, node:$RHS))>>;
 defm UMLSL   : SIMDLongThreeVectorTiedBHS<1, 0b1010, "umlsl",
     TriOpFrag<(sub node:$LHS, (int_aarch64_neon_umull node:$MHS, node:$RHS))>>;
 defm UMULL   : SIMDLongThreeVectorBHS<1, 0b1100, "umull", int_aarch64_neon_umull>;
 defm USUBL   : SIMDLongThreeVectorBHS<1, 0b0010, "usubl",
-                 BinOpFrag<(sub (zext node:$LHS), (zext node:$RHS))>>;
+                 BinOpFrag<(sub (zanyext node:$LHS), (zanyext node:$RHS))>>;
 defm USUBW   : SIMDWideThreeVectorBHS<   1, 0b0011, "usubw",
-                 BinOpFrag<(sub node:$LHS, (zext node:$RHS))>>;
+                 BinOpFrag<(sub node:$LHS, (zanyext node:$RHS))>>;
 
 // Additional patterns for SMULL and UMULL
 multiclass Neon_mul_widen_patterns<SDPatternOperator opnode,
