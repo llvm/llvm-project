@@ -1279,7 +1279,7 @@ SDValue SelectionDAG::getConstant(uint64_t Val, const SDLoc &DL, EVT VT,
                                   bool isT, bool isO) {
   EVT EltVT = VT.getScalarType();
   assert((EltVT.getSizeInBits() >= 64 ||
-         (uint64_t)((int64_t)Val >> EltVT.getSizeInBits()) + 1 < 2) &&
+          (uint64_t)((int64_t)Val >> EltVT.getSizeInBits()) + 1 < 2) &&
          "getConstant with a uint64_t value that doesn't fit in the type!");
   return getConstant(APInt(EltVT.getSizeInBits(), Val), DL, VT, isT, isO);
 }
@@ -1301,10 +1301,10 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, const SDLoc &DL,
   // inserted value (the type does not need to match the vector element type).
   // Any extra bits introduced will be truncated away.
   if (VT.isVector() && TLI->getTypeAction(*getContext(), EltVT) ==
-      TargetLowering::TypePromoteInteger) {
-   EltVT = TLI->getTypeToTransformTo(*getContext(), EltVT);
-   APInt NewVal = Elt->getValue().zextOrTrunc(EltVT.getSizeInBits());
-   Elt = ConstantInt::get(*getContext(), NewVal);
+                           TargetLowering::TypePromoteInteger) {
+    EltVT = TLI->getTypeToTransformTo(*getContext(), EltVT);
+    APInt NewVal = Elt->getValue().zextOrTrunc(EltVT.getSizeInBits());
+    Elt = ConstantInt::get(*getContext(), NewVal);
   }
   // In other cases the element type is illegal and needs to be expanded, for
   // example v2i64 on MIPS32. In this case, find the nearest legal type, split
@@ -1314,7 +1314,7 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, const SDLoc &DL,
   // only legalize if the DAG tells us we must produce legal types.
   else if (NewNodesMustHaveLegalTypes && VT.isVector() &&
            TLI->getTypeAction(*getContext(), EltVT) ==
-           TargetLowering::TypeExpandInteger) {
+               TargetLowering::TypeExpandInteger) {
     const APInt &NewVal = Elt->getValue();
     EVT ViaEltVT = TLI->getTypeToTransformTo(*getContext(), EltVT);
     unsigned ViaEltSizeInBits = ViaEltVT.getSizeInBits();
@@ -1328,9 +1328,9 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, const SDLoc &DL,
 
     SmallVector<SDValue, 2> EltParts;
     for (unsigned i = 0; i < ViaVecNumElts / VT.getVectorNumElements(); ++i) {
-      EltParts.push_back(getConstant(NewVal.lshr(i * ViaEltSizeInBits)
-                                           .zextOrTrunc(ViaEltSizeInBits), DL,
-                                     ViaEltVT, isT, isO));
+      EltParts.push_back(getConstant(
+          NewVal.lshr(i * ViaEltSizeInBits).zextOrTrunc(ViaEltSizeInBits), DL,
+          ViaEltVT, isT, isO));
     }
 
     // EltParts is currently in little endian order. If we actually want
@@ -1349,7 +1349,8 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, const SDLoc &DL,
     for (unsigned i = 0, e = VT.getVectorNumElements(); i != e; ++i)
       llvm::append_range(Ops, EltParts);
 
-    SDValue V = getNode(ISD::BITCAST, DL, VT, getBuildVector(ViaVecVT, DL, Ops));
+    SDValue V =
+        getNode(ISD::BITCAST, DL, VT, getBuildVector(ViaVecVT, DL, Ops));
     return V;
   }
 
