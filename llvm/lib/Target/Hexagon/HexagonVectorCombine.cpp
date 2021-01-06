@@ -117,8 +117,11 @@ public:
   const HexagonSubtarget &HST;
 
 private:
+#ifndef NDEBUG
+  // These two functions are only used for assertions at the moment.
   bool isByteVecTy(Type *Ty) const;
-  bool isSectorTy(Type *Ty) const LLVM_ATTRIBUTE_UNUSED;
+  bool isSectorTy(Type *Ty) const;
+#endif
   Value *getElementRange(IRBuilder<> &Builder, Value *Lo, Value *Hi, int Start,
                          int Length) const;
 };
@@ -1406,6 +1409,7 @@ auto HexagonVectorCombine::isSafeToMoveBeforeInBB(const Instruction &In,
   return true;
 }
 
+#ifndef NDEBUG
 auto HexagonVectorCombine::isByteVecTy(Type *Ty) const -> bool {
   if (auto *VecTy = dyn_cast<VectorType>(Ty))
     return VecTy->getElementType() == getByteTy();
@@ -1420,6 +1424,7 @@ auto HexagonVectorCombine::isSectorTy(Type *Ty) const -> bool {
     return Size == static_cast<int>(HST.getVectorLength());
   return Size == 4 || Size == 8;
 }
+#endif
 
 auto HexagonVectorCombine::getElementRange(IRBuilder<> &Builder, Value *Lo,
                                            Value *Hi, int Start,
