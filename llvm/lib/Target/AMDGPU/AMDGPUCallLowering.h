@@ -42,6 +42,10 @@ class AMDGPUCallLowering final : public CallLowering {
                         bool IsOutgoing,
                         SplitArgTy PerformArgSplit) const;
 
+  bool canLowerReturn(MachineFunction &MF, CallingConv::ID CallConv,
+                      SmallVectorImpl<BaseArgInfo> &Outs,
+                      bool IsVarArg) const override;
+
   bool lowerReturnVal(MachineIRBuilder &B, const Value *Val,
                       ArrayRef<Register> VRegs, MachineInstrBuilder &Ret) const;
 

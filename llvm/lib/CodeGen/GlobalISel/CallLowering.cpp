@@ -95,8 +95,7 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
 
   SmallVector<BaseArgInfo, 4> SplitArgs;
   getReturnInfo(CallConv, RetTy, CB.getAttributes(), SplitArgs, DL);
-  Info.CanLowerReturn =
-      canLowerReturn(MF, CallConv, SplitArgs, IsVarArg, RetTy->getContext());
+  Info.CanLowerReturn = canLowerReturn(MF, CallConv, SplitArgs, IsVarArg);
 
   if (!Info.CanLowerReturn) {
     // Callee requires sret demotion.
@@ -592,8 +591,7 @@ bool CallLowering::checkReturnTypeForCallConv(MachineFunction &MF) const {
   SmallVector<BaseArgInfo, 4> SplitArgs;
   getReturnInfo(CallConv, ReturnType, F.getAttributes(), SplitArgs,
                 MF.getDataLayout());
-  return canLowerReturn(MF, CallConv, SplitArgs, F.isVarArg(),
-                        ReturnType->getContext());
+  return canLowerReturn(MF, CallConv, SplitArgs, F.isVarArg());
 }
 
 bool CallLowering::analyzeArgInfo(CCState &CCState,

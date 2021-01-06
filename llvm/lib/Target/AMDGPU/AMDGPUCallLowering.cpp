@@ -20,6 +20,7 @@
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 
@@ -420,6 +421,22 @@ static void unpackRegsToOrigType(MachineIRBuilder &B,
   B.buildUnmerge(UnmergeResults, UnmergeSrc);
 }
 
+bool AMDGPUCallLowering::canLowerReturn(MachineFunction &MF,
+                                        CallingConv::ID CallConv,
+                                        SmallVectorImpl<BaseArgInfo> &Outs,
+                                        bool IsVarArg) const {
+  // For shaders. Vector types should be explicitly handled by CC.
+  if (AMDGPU::isEntryFunctionCC(CallConv))
+    return true;
+
+  SmallVector<CCValAssign, 16> ArgLocs;
+  const SITargetLowering &TLI = *getTLI<SITargetLowering>();
+  CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs,
+                 MF.getFunction().getContext());
+
+  return checkReturn(CCInfo, Outs, TLI.CCAssignFnForReturn(CallConv, IsVarArg));
+}
+
 /// Lower the return value for the already existing \p Ret. This assumes that
 /// \p B's insertion point is correct.
 bool AMDGPUCallLowering::lowerReturnVal(MachineIRBuilder &B,
@@ -533,7 +550,9 @@ bool AMDGPUCallLowering::lowerReturn(MachineIRBuilder &B, const Value *Val,
     Ret.addUse(ReturnAddrVReg);
   }
 
-  if (!lowerReturnVal(B, Val, VRegs, Ret))
+  if (!FLI.CanLowerReturn)
+    insertSRetStores(B, Val->getType(), VRegs, FLI.DemoteRegister);
+  else if (!lowerReturnVal(B, Val, VRegs, Ret))
     return false;
 
   if (ReturnOpc == AMDGPU::S_SETPC_B64_return) {
@@ -871,6 +890,11 @@ bool AMDGPUCallLowering::lowerFormalArguments(
   SmallVector<ArgInfo, 32> SplitArgs;
   unsigned Idx = 0;
   unsigned PSInputNum = 0;
+
+  // Insert the hidden sret parameter if the return value won't fit in the
+  // return registers.
+  if (!FLI.CanLowerReturn)
+    insertSRetIncomingArgument(F, SplitArgs, FLI.DemoteRegister, MRI, DL);
 
   for (auto &Arg : F.args()) {
     if (DL.getTypeStoreSize(Arg.getType()) == 0)
@@ -1327,7 +1351,10 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     MIRBuilder.buildInstr(AMDGPU::ADJCALLSTACKDOWN);
 
   SmallVector<ArgInfo, 8> InArgs;
-  if (!Info.OrigRet.Ty->isVoidTy()) {
+  if (!Info.CanLowerReturn) {
+    insertSRetLoads(MIRBuilder, Info.OrigRet.Ty, Info.OrigRet.Regs,
+                    Info.DemoteRegister, Info.DemoteStackIndex);
+  } else if (!Info.OrigRet.Ty->isVoidTy()) {
     SmallVector<ArgInfo, 8> PreSplitRetInfos;
 
     splitToValueTypes(
@@ -1350,7 +1377,7 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // Finally we can copy the returned value back into its virtual-register. In
   // symmetry with the arguments, the physical register must be an
   // implicit-define of the call instruction.
-  if (!Info.OrigRet.Ty->isVoidTy()) {
+  if (Info.CanLowerReturn && !Info.OrigRet.Ty->isVoidTy()) {
     CCAssignFn *RetAssignFn = TLI.CCAssignFnForReturn(Info.CallConv,
                                                       Info.IsVarArg);
     CallReturnHandler Handler(MIRBuilder, MRI, MIB, RetAssignFn);
