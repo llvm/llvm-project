@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=VI %s
-; RUN: llc -march=amdgcn -mcpu=hawaii -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=CI %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GFX9 -check-prefix=VI %s
+; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=hawaii -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; Test calls when called by other callable functions rather than
 ; kernels.
