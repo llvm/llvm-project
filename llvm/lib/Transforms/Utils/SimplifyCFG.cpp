@@ -17,6 +17,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -1085,7 +1086,6 @@ static void FitWeights(MutableArrayRef<uint64_t> Weights) {
 /// (either a switch or a branch on "X == c").
 /// See if any of the predecessors of the terminator block are value comparisons
 /// on the same value.  If so, and if safe to do so, fold them together.
-// FIXME: switch to non-permissive DomTreeUpdater::applyUpdates().
 bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(Instruction *TI,
                                                          IRBuilder<> &Builder) {
   BasicBlock *BB = TI->getParent();
@@ -1129,7 +1129,7 @@ bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(Instruction *TI,
       // Based on whether the default edge from PTI goes to BB or not, fill in
       // PredCases and PredDefault with the new switch cases we would like to
       // build.
-      SmallVector<BasicBlock *, 8> NewSuccessors;
+      SmallMapVector<BasicBlock *, int, 8> NewSuccessors;
 
       // Update the branch weight metadata along the way
       SmallVector<uint64_t, 8> Weights;
@@ -1185,7 +1185,7 @@ bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(Instruction *TI,
           if (PredDefault != BB)
             Updates.push_back({DominatorTree::Delete, Pred, PredDefault});
           PredDefault = BBDefault;
-          NewSuccessors.push_back(BBDefault);
+          ++NewSuccessors[BBDefault];
         }
 
         unsigned CasesFromPred = Weights.size();
@@ -1194,7 +1194,7 @@ bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(Instruction *TI,
           if (!PTIHandled.count(BBCases[i].Value) &&
               BBCases[i].Dest != BBDefault) {
             PredCases.push_back(BBCases[i]);
-            NewSuccessors.push_back(BBCases[i].Dest);
+            ++NewSuccessors[BBCases[i].Dest];
             if (SuccHasWeights || PredHasWeights) {
               // The default weight is at index 0, so weight for the ith case
               // should be at index i+1. Scale the cases from successor by
@@ -1242,7 +1242,7 @@ bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(Instruction *TI,
             if (PredHasWeights || SuccHasWeights)
               Weights.push_back(WeightsForHandled[BBCases[i].Value]);
             PredCases.push_back(BBCases[i]);
-            NewSuccessors.push_back(BBCases[i].Dest);
+            ++NewSuccessors[BBCases[i].Dest];
             PTIHandled.erase(
                 BBCases[i].Value); // This constant is taken care of
           }
@@ -1253,16 +1253,20 @@ bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(Instruction *TI,
           if (PredHasWeights || SuccHasWeights)
             Weights.push_back(WeightsForHandled[I]);
           PredCases.push_back(ValueEqualityComparisonCase(I, BBDefault));
-          NewSuccessors.push_back(BBDefault);
+          ++NewSuccessors[BBDefault];
         }
       }
 
       // Okay, at this point, we know which new successor Pred will get.  Make
       // sure we update the number of entries in the PHI nodes for these
       // successors.
-      for (BasicBlock *NewSuccessor : NewSuccessors) {
-        AddPredecessorToBlock(NewSuccessor, Pred, BB);
-        Updates.push_back({DominatorTree::Insert, Pred, NewSuccessor});
+      for (const std::pair<BasicBlock *, int /*Num*/> &NewSuccessor :
+           NewSuccessors) {
+        for (auto I : seq(0, NewSuccessor.second)) {
+          (void)I;
+          AddPredecessorToBlock(NewSuccessor.first, Pred, BB);
+        }
+        Updates.push_back({DominatorTree::Insert, Pred, NewSuccessor.first});
       }
 
       Builder.SetInsertPoint(PTI);
@@ -1314,7 +1318,7 @@ bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(Instruction *TI,
       Updates.push_back({DominatorTree::Delete, Pred, BB});
 
       if (DTU)
-        DTU->applyUpdatesPermissive(Updates);
+        DTU->applyUpdates(Updates);
 
       Changed = true;
     }
