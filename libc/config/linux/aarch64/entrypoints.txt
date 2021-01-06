@@ -65,6 +65,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.floor
     libc.src.math.floorf
     libc.src.math.floorl
+    libc.src.math.fmaf
     libc.src.math.fmax
     libc.src.math.fmaxf
     libc.src.math.fmaxl
