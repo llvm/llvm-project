@@ -2075,7 +2075,8 @@ QualType Sema::BuildPointerType(QualType T,
     return QualType();
   }
 
-  if (T->isFunctionType() && getLangOpts().OpenCL) {
+  if (T->isFunctionType() && getLangOpts().OpenCL &&
+      !getOpenCLOptions().isEnabled("__cl_clang_function_pointers")) {
     Diag(Loc, diag::err_opencl_function_pointer);
     return QualType();
   }

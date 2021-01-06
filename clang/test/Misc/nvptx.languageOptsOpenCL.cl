@@ -20,7 +20,12 @@
 #ifndef cl_clang_storage_class_specifiers
 #error "Missing cl_clang_storage_class_specifiers define"
 #endif
-#pragma OPENCL EXTENSION cl_clang_storage_class_specifiers: enable
+#pragma OPENCL EXTENSION cl_clang_storage_class_specifiers : enable
+
+#ifndef __cl_clang_function_pointers
+#error "Missing __cl_clang_function_pointers define"
+#endif
+#pragma OPENCL EXTENSION __cl_clang_function_pointers : enable
 
 #ifdef cl_khr_fp16
 #error "Incorrect cl_khr_fp16 define"
