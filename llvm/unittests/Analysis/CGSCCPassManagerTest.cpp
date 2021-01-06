@@ -1490,15 +1490,15 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses4) {
         BasicBlock *BB = BasicBlock::Create(FnewF->getContext(), "", FnewF);
         ReturnInst::Create(FnewF->getContext(), BB);
 
+        // And insert a call to `newF`
+        Instruction *IP = &FnF->getEntryBlock().front();
+        (void)CallInst::Create(FnewF, {}, "", IP);
+
         // Use the CallGraphUpdater to update the call graph for the new
         // function.
         CallGraphUpdater CGU;
         CGU.initialize(CG, C, AM, UR);
-        CGU.registerOutlinedFunction(*FnewF);
-
-        // And insert a call to `newF`
-        Instruction *IP = &FnF->getEntryBlock().front();
-        (void)CallInst::Create(FnewF, {}, "", IP);
+        CGU.registerOutlinedFunction(*FnF, *FnewF);
 
         auto &FN = *llvm::find_if(
             C, [](LazyCallGraph::Node &N) { return N.getName() == "f"; });
@@ -1533,7 +1533,6 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses5) {
     // function.
     CallGraphUpdater CGU;
     CGU.initialize(CG, C, AM, UR);
-    CGU.registerOutlinedFunction(*FnewF);
 
     // And insert a call to `newF`
     Instruction *IP = &FnF->getEntryBlock().front();
@@ -1542,9 +1541,8 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses5) {
     auto &FN = *llvm::find_if(
         C, [](LazyCallGraph::Node &N) { return N.getName() == "f"; });
 
-    ASSERT_DEATH(
-        updateCGAndAnalysisManagerForFunctionPass(CG, C, FN, AM, UR, FAM),
-        "Any new calls should be modeled as");
+    ASSERT_DEATH(updateCGAndAnalysisManagerForCGSCCPass(CG, C, FN, AM, UR, FAM),
+                 "should already have an associated node");
   }));
 
   ModulePassManager MPM(/*DebugLogging*/ true);
@@ -1767,6 +1765,12 @@ TEST_F(CGSCCPassManagerTest, TestInsertionOfNewFunctions1) {
           (void)CastInst::CreatePointerCast(
               &F, Type::getInt8PtrTy(F.getContext()), "f.ref",
               &F.getEntryBlock().front());
+          // 3. Insert a ref edge from 'f' to 'g'.
+          (void)CastInst::CreatePointerCast(
+              G, Type::getInt8PtrTy(F.getContext()), "g.ref",
+              &F.getEntryBlock().front());
+
+          CG.addSplitFunction(F, *G);
 
           ASSERT_FALSE(verifyModule(*F.getParent(), &errs()));
 
@@ -1786,7 +1790,7 @@ TEST_F(CGSCCPassManagerTest, TestInsertionOfNewFunctions1) {
   ASSERT_TRUE(Ran);
 }
 
-// Start with f, end with f -> (g1 <-> g2) and f -ref-> (h1 <-> h2).
+// Start with f, end with f -> g1, f -> g2, and f -ref-> (h1 <-ref-> h2).
 TEST_F(CGSCCPassManagerTest, TestInsertionOfNewFunctions2) {
   std::unique_ptr<Module> M = parseIR("define void @f() {\n"
                                       "entry:\n"
@@ -1811,7 +1815,7 @@ TEST_F(CGSCCPassManagerTest, TestInsertionOfNewFunctions2) {
       if (F.getName() != "f")
         continue;
 
-      // Create mutually recursive functions (call) 'g1' and 'g2'.
+      // Create g1 and g2.
       auto *G1 = Function::Create(F.getFunctionType(), F.getLinkage(),
                                   F.getAddressSpace(), "g1", F.getParent());
       auto *G2 = Function::Create(F.getFunctionType(), F.getLinkage(),
@@ -1820,15 +1824,16 @@ TEST_F(CGSCCPassManagerTest, TestInsertionOfNewFunctions2) {
           BasicBlock::Create(F.getParent()->getContext(), "entry", G1);
       BasicBlock *G2BB =
           BasicBlock::Create(F.getParent()->getContext(), "entry", G2);
-      (void)CallInst::Create(G2, {}, "", G1BB);
       (void)ReturnInst::Create(G1->getContext(), G1BB);
-      (void)CallInst::Create(G1, {}, "", G2BB);
       (void)ReturnInst::Create(G2->getContext(), G2BB);
 
       // Add 'f -> g1' call edge.
       (void)CallInst::Create(G1, {}, "", &F.getEntryBlock().front());
       // Add 'f -> g2' call edge.
       (void)CallInst::Create(G2, {}, "", &F.getEntryBlock().front());
+
+      CG.addSplitFunction(F, *G1);
+      CG.addSplitFunction(F, *G2);
 
       // Create mutually recursive functions (ref only) 'h1' and 'h2'.
       auto *H1 = Function::Create(F.getFunctionType(), F.getLinkage(),
@@ -1852,6 +1857,8 @@ TEST_F(CGSCCPassManagerTest, TestInsertionOfNewFunctions2) {
       // Add 'f -> h2' ref edge.
       (void)CastInst::CreatePointerCast(H2, Type::getInt8PtrTy(F.getContext()),
                                         "h2.ref", &F.getEntryBlock().front());
+
+      CG.addSplitRefRecursiveFunctions(F, SmallVector<Function *, 2>({H1, H2}));
 
       ASSERT_FALSE(verifyModule(*F.getParent(), &errs()));
 
