@@ -5796,8 +5796,9 @@ static void DbgGatherEqualValues(Loop *L, ScalarEvolution &SE,
         if (!SE.isSCEVable(Phi.getType()))
           continue;
         auto PhiSCEV = SE.getSCEV(&Phi);
-        if (Optional<APInt> Offset =
-                SE.computeConstantDifference(DbgValueSCEV, PhiSCEV))
+        Optional<APInt> Offset =
+                SE.computeConstantDifference(DbgValueSCEV, PhiSCEV);
+        if (Offset && Offset->getMinSignedBits() <= 64)
           EqSet.emplace_back(std::make_tuple(
               &Phi, Offset.getValue().getSExtValue(), DVI->getExpression()));
       }
