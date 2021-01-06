@@ -920,6 +920,10 @@ def not  : PatFrag<(ops node:$in), (xor node:$in, -1)>;
 def vnot : PatFrag<(ops node:$in), (xor node:$in, immAllOnesV)>;
 def ineg : PatFrag<(ops node:$in), (sub 0, node:$in)>;
 
+def zanyext : PatFrags<(ops node:$op),
+                       [(zext node:$op),
+                        (anyext node:$op)]>;
+
 // null_frag - The null pattern operator is used in multiclass instantiations
 // which accept an SDPatternOperator for use in matching patterns for internal
 // definitions. When expanding a pattern, if the null fragment is referenced
