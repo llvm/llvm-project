@@ -314,6 +314,18 @@ vmsltu.vi v8, v4, 16
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 57 b4 47 72 <unknown>
 
+vmsltu.vi v8, v4, 0, v0.t
+# CHECK-INST: vmsne.vv v8, v4, v4, v0.t
+# CHECK-ENCODING: [0x57,0x04,0x42,0x64]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
+# CHECK-UNKNOWN: 57 04 42 64 <unknown>
+
+vmsltu.vi v8, v4, 0
+# CHECK-INST: vmsne.vv v8, v4, v4
+# CHECK-ENCODING: [0x57,0x04,0x42,0x66]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
+# CHECK-UNKNOWN: 57 04 42 66 <unknown>
+
 vmslt.vi v8, v4, 16, v0.t
 # CHECK-INST: vmsle.vi v8, v4, 15, v0.t
 # CHECK-ENCODING: [0x57,0xb4,0x47,0x74]
@@ -337,6 +349,18 @@ vmsgeu.vi v8, v4, 16
 # CHECK-ENCODING: [0x57,0xb4,0x47,0x7a]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 57 b4 47 7a <unknown>
+
+vmsgeu.vi v8, v4, 0, v0.t
+# CHECK-INST: vmseq.vv v8, v4, v4, v0.t
+# CHECK-ENCODING: [0x57,0x04,0x42,0x60]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
+# CHECK-UNKNOWN: 57 04 42 60 <unknown>
+
+vmsgeu.vi v8, v4, 0
+# CHECK-INST: vmseq.vv v8, v4, v4
+# CHECK-ENCODING: [0x57,0x04,0x42,0x62]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
+# CHECK-UNKNOWN: 57 04 42 62 <unknown>
 
 vmsge.vi v8, v4, 16, v0.t
 # CHECK-INST: vmsgt.vi v8, v4, 15, v0.t
