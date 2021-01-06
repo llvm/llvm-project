@@ -4525,7 +4525,6 @@ bool AMDGPUAsmParser::ParseAMDKernelCodeTValue(StringRef ID,
   }
   Lex();
 
-  //TODO-GFX11
   if (ID == "enable_wavefront_size32") {
     if (Header.code_properties & AMD_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32) {
       if (!isGFX10Plus())
@@ -4966,6 +4965,7 @@ StringRef AMDGPUAsmParser::parseMnemonicSuffix(StringRef Name) {
   setForcedDPP(false);
   setForcedSDWA(false);
 
+  // TODO-GFX11 VOP3 DPP
   if (Name.endswith("_e64")) {
     setForcedEncodingSize(64);
     return Name.substr(0, Name.size() - 4);
@@ -7654,6 +7654,7 @@ AMDGPUOperand::Ptr AMDGPUAsmParser::defaultFI() const {
   return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyDppFi);
 }
 
+// TODO-GFX11 VOP3 DPP
 void AMDGPUAsmParser::cvtDPP(MCInst &Inst, const OperandVector &Operands, bool IsDPP8) {
   OptionalImmIndexMap OptionalIdx;
 

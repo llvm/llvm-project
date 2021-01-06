@@ -3949,6 +3949,12 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     }
   }
 
+  // TODO-GFX11 Verify VOP3 Opsel. Related to 16 bit reg support
+  if ( isVOP3(MI) ) {
+     // if uses opsel and target != gfx11 and vop3opsel not set
+     // return false
+  }
+
   // Verify misc. restrictions on specific instructions.
   if (Desc.getOpcode() == AMDGPU::V_DIV_SCALE_F32_e64 ||
       Desc.getOpcode() == AMDGPU::V_DIV_SCALE_F64_e64) {
