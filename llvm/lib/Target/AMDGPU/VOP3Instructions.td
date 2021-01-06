@@ -867,6 +867,10 @@ let InOperandList = (ins SSrcOrLds_b32:$src0, SCSrc_b32:$src1, VGPR_32:$vdst_in)
   defm V_WRITELANE_B32 : VOP3_Real_gfx10<0x361>;
 } // End InOperandList = (ins SSrcOrLds_b32:$src0, SCSrc_b32:$src1, VGPR_32:$vdst_in)
 
+let SubtargetPredicate = isGFX10Before1030 in {
+  defm V_MUL_LO_I32      : VOP3_Real_gfx10<0x16b>;
+}
+
 defm V_XOR3_B32           : VOP3_Real_gfx10<0x178>;
 defm V_LSHLREV_B64        : VOP3_Real_gfx10<0x2ff>;
 defm V_LSHRREV_B64        : VOP3_Real_gfx10<0x300>;
@@ -992,6 +996,7 @@ multiclass VOP3be_Real_gfx6_gfx7_gfx10<bits<10> op> :
 defm V_LSHL_B64        : VOP3_Real_gfx6_gfx7<0x161>;
 defm V_LSHR_B64        : VOP3_Real_gfx6_gfx7<0x162>;
 defm V_ASHR_I64        : VOP3_Real_gfx6_gfx7<0x163>;
+defm V_MUL_LO_I32      : VOP3_Real_gfx6_gfx7<0x16b>;
 
 defm V_MAD_LEGACY_F32  : VOP3_Real_gfx6_gfx7_gfx10<0x140>;
 defm V_MAD_F32         : VOP3_Real_gfx6_gfx7_gfx10<0x141>;
@@ -1033,7 +1038,6 @@ defm V_MAX_F64         : VOP3_Real_gfx6_gfx7_gfx10<0x167>;
 defm V_LDEXP_F64       : VOP3_Real_gfx6_gfx7_gfx10<0x168>;
 defm V_MUL_LO_U32      : VOP3_Real_gfx6_gfx7_gfx10<0x169>;
 defm V_MUL_HI_U32      : VOP3_Real_gfx6_gfx7_gfx10<0x16a>;
-defm V_MUL_LO_I32      : VOP3_Real_gfx6_gfx7_gfx10<0x16b>;
 defm V_MUL_HI_I32      : VOP3_Real_gfx6_gfx7_gfx10<0x16c>;
 defm V_DIV_FMAS_F32    : VOP3_Real_gfx6_gfx7_gfx10<0x16f>;
 defm V_DIV_FMAS_F64    : VOP3_Real_gfx6_gfx7_gfx10<0x170>;
