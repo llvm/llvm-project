@@ -3370,7 +3370,7 @@ static Value *foldICmpWithLowBitMaskedVal(ICmpInst &I,
   Type *OpTy = M->getType();
   auto *VecC = dyn_cast<Constant>(M);
   auto *OpVTy = dyn_cast<FixedVectorType>(OpTy);
-  if (OpVTy && VecC && VecC->containsUndefElement()) {
+  if (OpVTy && VecC && VecC->containsUndefOrPoisonElement()) {
     Constant *SafeReplacementConstant = nullptr;
     for (unsigned i = 0, e = OpVTy->getNumElements(); i != e; ++i) {
       if (!isa<UndefValue>(VecC->getAggregateElement(i))) {
@@ -5259,7 +5259,8 @@ InstCombiner::getFlippedStrictnessPredicateAndConstant(CmpInst::Predicate Pred,
   // It may not be safe to change a compare predicate in the presence of
   // undefined elements, so replace those elements with the first safe constant
   // that we found.
-  if (C->containsUndefElement()) {
+  // TODO: in case of poison, it is safe; let's replace undefs only.
+  if (C->containsUndefOrPoisonElement()) {
     assert(SafeReplacementConstant && "Replacement constant not set");
     C = Constant::replaceUndefsWith(C, SafeReplacementConstant);
   }
