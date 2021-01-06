@@ -739,11 +739,10 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
         TFI->getFrameIndexReference(*Asm->MF, Fragment.FI, FrameReg);
     DwarfExpr.addFragmentOffset(Expr);
 
-    assert(!Offset.getScalable() &&
-           "Frame offsets with a scalable component are not supported");
-
+    auto *TRI = Asm->MF->getSubtarget().getRegisterInfo();
     SmallVector<uint64_t, 8> Ops;
-    DIExpression::appendOffset(Ops, Offset.getFixed());
+    TRI->getOffsetOpcodes(Offset, Ops);
+
     // According to
     // https://docs.nvidia.com/cuda/archive/10.0/ptx-writers-guide-to-interoperability/index.html#cuda-specific-dwarf
     // cuda-gdb requires DW_AT_address_class for all variables to be able to
