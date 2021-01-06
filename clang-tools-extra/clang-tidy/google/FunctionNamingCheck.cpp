@@ -51,7 +51,7 @@ FixItHint generateFixItHint(const FunctionDecl *Decl) {
   // A fixit can be generated for functions of static storage class but
   // otherwise the check cannot determine the appropriate function name prefix
   // to use.
-  if (Decl->getStorageClass() != SC_Static)
+  if (Decl->getStorageClass() != StorageClass::Static)
     return FixItHint();
 
   StringRef Name = Decl->getName();
@@ -109,7 +109,7 @@ void FunctionNamingCheck::registerMatchers(MatchFinder *Finder) {
 void FunctionNamingCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedDecl = Result.Nodes.getNodeAs<FunctionDecl>("function");
 
-  bool IsGlobal = MatchedDecl->getStorageClass() != SC_Static;
+  bool IsGlobal = MatchedDecl->getStorageClass() != StorageClass::Static;
   diag(MatchedDecl->getLocation(),
        "%select{static function|function in global namespace}1 named %0 must "
        "%select{be in|have an appropriate prefix followed by}1 Pascal case as "

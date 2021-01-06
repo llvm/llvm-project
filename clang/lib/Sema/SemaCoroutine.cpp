@@ -543,7 +543,8 @@ VarDecl *Sema::buildCoroutinePromise(SourceLocation Loc) {
 
   auto *VD = VarDecl::Create(Context, FD, FD->getLocation(), FD->getLocation(),
                              &PP.getIdentifierTable().get("__promise"), T,
-                             Context.getTrivialTypeSourceInfo(T, Loc), SC_None);
+                             Context.getTrivialTypeSourceInfo(T, Loc),
+                             StorageClass::None);
   VD->setImplicit();
   CheckVariableDeclarationType(VD);
   if (VD->isInvalidDecl())
@@ -1577,7 +1578,7 @@ bool CoroutineStmtBuilder::makeGroDeclAndReturnStmt() {
   auto *GroDecl = VarDecl::Create(
       S.Context, &FD, FD.getLocation(), FD.getLocation(),
       &S.PP.getIdentifierTable().get("__coro_gro"), GroType,
-      S.Context.getTrivialTypeSourceInfo(GroType, Loc), SC_None);
+      S.Context.getTrivialTypeSourceInfo(GroType, Loc), StorageClass::None);
   GroDecl->setImplicit();
 
   S.CheckVariableDeclarationType(GroDecl);
@@ -1645,7 +1646,7 @@ static VarDecl *buildVarDecl(Sema &S, SourceLocation Loc, QualType Type,
                              IdentifierInfo *II) {
   TypeSourceInfo *TInfo = S.Context.getTrivialTypeSourceInfo(Type, Loc);
   VarDecl *Decl = VarDecl::Create(S.Context, S.CurContext, Loc, Loc, II, Type,
-                                  TInfo, SC_None);
+                                  TInfo, StorageClass::None);
   Decl->setImplicit();
   return Decl;
 }

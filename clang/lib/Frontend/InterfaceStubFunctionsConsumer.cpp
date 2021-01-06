@@ -58,8 +58,8 @@ class InterfaceStubFunctionsConsumer : public ASTConsumer {
           if (isa<BlockDecl>(Parent) || isa<CXXMethodDecl>(Parent))
             return true;
 
-        if ((VD->getStorageClass() == StorageClass::SC_Extern) ||
-            (VD->getStorageClass() == StorageClass::SC_Static &&
+        if ((VD->getStorageClass() == StorageClass::Extern) ||
+            (VD->getStorageClass() == StorageClass::Static &&
              VD->getParentFunctionOrMethod() == nullptr))
           return true;
       }
@@ -75,7 +75,7 @@ class InterfaceStubFunctionsConsumer : public ASTConsumer {
           if (MD->isDependentContext() || !MD->hasBody())
             return true;
         }
-        if (FD->getStorageClass() == StorageClass::SC_Static)
+        if (FD->getStorageClass() == StorageClass::Static)
           return true;
       }
       return false;
