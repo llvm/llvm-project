@@ -77,6 +77,7 @@ STATISTIC(NumSimpl, "Number of blocks simplified");
 
 /// If we have more than one empty (other than phi node) return blocks,
 /// merge them together to promote recursive block merging.
+// FIXME: switch to non-permissive DomTreeUpdater::applyUpdates().
 static bool mergeEmptyReturnBlocks(Function &F, DomTreeUpdater *DTU) {
   bool Changed = false;
 
