@@ -133,3 +133,17 @@ mrs x5, BRBTGT31_EL1
 // CHECK: mrs     x5, BRBTGT31_EL1        // encoding: [0xc5,0x8f,0x31,0xd5]
 // ERROR-NO-BRBE: [[@LINE-4]]:5: error: expected writable system register
 // ERROR-NO-BRBE: [[@LINE-4]]:9: error: expected readable system register
+
+brb iall
+brb inj
+// CHECK: brb iall  // encoding: [0x9f,0x72,0x09,0xd5]
+// CHECK: brb inj   // encoding: [0xbf,0x72,0x09,0xd5]
+// ERROR-NO-BRBE: [[@LINE-4]]:1: error: instruction requires: brbe
+// ERROR-NO-BRBE: [[@LINE-4]]:1: error: instruction requires: brbe
+
+brb IALL
+brb INJ
+// CHECK: brb iall  // encoding: [0x9f,0x72,0x09,0xd5]
+// CHECK: brb inj   // encoding: [0xbf,0x72,0x09,0xd5]
+// ERROR-NO-BRBE: [[@LINE-4]]:1: error: instruction requires: brbe
+// ERROR-NO-BRBE: [[@LINE-4]]:1: error: instruction requires: brbe
