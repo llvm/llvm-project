@@ -29,4 +29,6 @@ void foo(int3 arg1, int8 arg2) {
   int res13 = vec_step(*incomplete1); // expected-error {{'vec_step' requires built-in scalar or vector type, '__private struct S' invalid}}
   int res14 = vec_step(int16*); // expected-error {{'vec_step' requires built-in scalar or vector type, '__private int16 *' invalid}}
   int res15 = vec_step(void(void)); // expected-error {{'vec_step' requires built-in scalar or vector type, 'void (void)' invalid}}
+
+  int res_no_effect = vec_step(auto3++); // expected-warning {{expression with side effects has no effect in an unevaluated context}}
 }
