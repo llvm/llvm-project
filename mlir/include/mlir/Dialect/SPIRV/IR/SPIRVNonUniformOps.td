@@ -631,7 +631,9 @@ def SPV_GroupNonUniformSMinOp :
 // -----
 
 def SPV_GroupNonUniformUMaxOp :
-    SPV_GroupNonUniformArithmeticOp<"GroupNonUniformUMax", SPV_Integer, []> {
+    SPV_GroupNonUniformArithmeticOp<"GroupNonUniformUMax",
+                                    SPV_Integer,
+                                    [UnsignedOp]> {
   let summary = [{
     An unsigned integer maximum group operation of all Value operands
     contributed by active invocations in the group.
@@ -681,7 +683,9 @@ def SPV_GroupNonUniformUMaxOp :
 // -----
 
 def SPV_GroupNonUniformUMinOp :
-    SPV_GroupNonUniformArithmeticOp<"GroupNonUniformUMin", SPV_Integer, []> {
+    SPV_GroupNonUniformArithmeticOp<"GroupNonUniformUMin",
+                                    SPV_Integer,
+                                    [UnsignedOp]> {
   let summary = [{
     An unsigned integer minimum group operation of all Value operands
     contributed by active invocations in the group.
