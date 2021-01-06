@@ -165,6 +165,12 @@ AffineMap getTransferMinorIdentityMap(ShapedType shapedType,
 bool isDisjointTransferSet(VectorTransferOpInterface transferA,
                            VectorTransferOpInterface transferB);
 
+/// Same behavior as `isDisjointTransferSet` but doesn't require the operations
+/// to have the same tensor/memref. This allows comparing operations accessing
+/// different tensors.
+bool isDisjointTransferIndices(VectorTransferOpInterface transferA,
+                               VectorTransferOpInterface transferB);
+
 namespace matcher {
 
 /// Matches vector.transfer_read, vector.transfer_write and ops that return a

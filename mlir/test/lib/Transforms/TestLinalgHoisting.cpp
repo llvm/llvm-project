@@ -47,6 +47,7 @@ void TestLinalgHoisting::runOnFunction() {
   }
   if (testHoistRedundantTransfers) {
     hoistRedundantVectorTransfers(getFunction());
+    hoistRedundantVectorTransfersOnTensor(getFunction());
     return;
   }
 }
