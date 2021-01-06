@@ -3,6 +3,6 @@
 
 ! REQUIRES: new-flang-driver
 
-! ERROR: could not scan {{.*}}scanning-error.f95
+! ERROR: Could not scan {{.*}}scanning-error.f95
 
 #NOT-PP-DIRECTIVE
