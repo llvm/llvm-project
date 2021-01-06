@@ -5019,6 +5019,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         // (s6.9.e and s6.12.5 OpenCL v2.0) except for printf.
         // We also allow here any toolchain reserved identifiers.
         if (FTI.isVariadic &&
+            !S.getOpenCLOptions().isEnabled("__cl_clang_variadic_functions") &&
             !(D.getIdentifier() &&
               ((D.getIdentifier()->getName() == "printf" &&
                 (LangOpts.OpenCLCPlusPlus || LangOpts.OpenCLVersion >= 120)) ||

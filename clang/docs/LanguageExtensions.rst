@@ -1773,6 +1773,31 @@ correctly in any circumstances. It can be used if:
     void (*fp)(); // error - pointers to function are not allowed
   }
 
+``__cl_clang_variadic_functions``
+---------------------------------
+
+With this extension it is possible to enable variadic arguments in functions
+using regular OpenCL extension pragma mechanism detailed in `the OpenCL
+Extension Specification, section 1.2
+<https://www.khronos.org/registry/OpenCL/specs/3.0-unified/html/OpenCL_Ext.html#extensions-overview>`_.
+
+This is not conformant behavior and it can only be used portably when the
+functions with variadic prototypes do not get generated in binary e.g. the
+variadic prototype is used to spesify a function type with any number of
+arguments in metaprogramming algorithms in C++ for OpenCL.
+
+This extensions can also be used when the kernel code is intended for targets
+supporting the variadic arguments e.g. majority of CPU targets.
+
+**Example of Use**:
+
+.. code-block:: c++
+
+  #pragma OPENCL EXTENSION __cl_clang_variadic_functions : enable
+  void foo(int a, ...); // compiled - no diagnostic generated
+
+  #pragma OPENCL EXTENSION __cl_clang_variadic_functions : disable
+  void bar(int a, ...); // error - variadic prototype is not allowed
 
 Builtin Functions
 =================

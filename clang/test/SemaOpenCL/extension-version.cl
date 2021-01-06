@@ -24,6 +24,11 @@
 #endif
 #pragma OPENCL EXTENSION __cl_clang_function_pointers : enable
 
+#ifndef __cl_clang_variadic_functions
+#error "Missing __cl_clang_variadic_functions define"
+#endif
+#pragma OPENCL EXTENSION __cl_clang_variadic_functions : enable
+
 #ifndef cl_khr_fp16
 #error "Missing cl_khr_fp16 define"
 #endif
