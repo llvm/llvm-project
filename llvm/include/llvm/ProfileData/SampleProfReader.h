@@ -226,7 +226,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
@@ -247,6 +246,7 @@
 namespace llvm {
 
 class raw_ostream;
+class Twine;
 
 namespace sampleprof {
 
@@ -408,7 +408,7 @@ public:
   StringMap<FunctionSamples> &getProfiles() { return Profiles; }
 
   /// Report a parse error message.
-  void reportError(int64_t LineNumber, Twine Msg) const {
+  void reportError(int64_t LineNumber, const Twine &Msg) const {
     Ctx.diagnose(DiagnosticInfoSampleProfile(Buffer->getBufferIdentifier(),
                                              LineNumber, Msg));
   }
