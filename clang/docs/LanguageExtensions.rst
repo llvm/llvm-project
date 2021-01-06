@@ -1722,6 +1722,58 @@ syntax to be used with ``std::complex`` with the same meaning.)
 For GCC compatibility, ``__builtin_complex(re, im)`` can also be used to
 construct a complex number from the given real and imaginary components.
 
+OpenCL Features
+===============
+
+Clang supports internal OpenCL extensions documented below.
+
+``__cl_clang_function_pointers``
+--------------------------------
+
+With this extension it is possible to enable various language features that
+are relying on function pointers using regular OpenCL extension pragma
+mechanism detailed in `the OpenCL Extension Specification,
+section 1.2
+<https://www.khronos.org/registry/OpenCL/specs/3.0-unified/html/OpenCL_Ext.html#extensions-overview>`_.
+
+In C++ for OpenCL this also enables:
+
+- Use of member function pointers;
+
+- Unrestricted use of references to functions;
+
+- Virtual member functions.
+
+Such functionality is not conformant and does not guarantee to compile
+correctly in any circumstances. It can be used if:
+
+- the kernel source does not contain call expressions to (member-) function
+  pointers, or virtual functions. For example this extension can be used in
+  metaprogramming algorithms to be able to specify/detect types generically.
+
+- the generated kernel binary does not contain indirect calls because they
+  are eliminated using compiler optimizations e.g. devirtualization. 
+
+- the selected target supports the function pointer like functionality e.g.
+  most CPU targets.
+
+**Example of Use**:
+
+.. code-block:: c++
+
+  #pragma OPENCL EXTENSION __cl_clang_function_pointers : enable
+  void foo()
+  {
+    void (*fp)(); // compiled - no diagnostic generated
+  }
+
+  #pragma OPENCL EXTENSION __cl_clang_function_pointers : disable
+  void bar()
+  {
+    void (*fp)(); // error - pointers to function are not allowed
+  }
+
+
 Builtin Functions
 =================
 

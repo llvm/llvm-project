@@ -285,6 +285,7 @@ public:
   void setSupportedOpenCLOpts() override {
     auto &Opts = getSupportedOpenCLOpts();
     Opts.support("cl_clang_storage_class_specifiers");
+    Opts.support("__cl_clang_function_pointers");
 
     bool IsAMDGCN = isAMDGCN(getTriple());
 
