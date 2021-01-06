@@ -395,7 +395,7 @@ CXXMethodDecl *Sema::startLambdaDefinition(CXXRecordDecl *Class,
       Context, Class, EndLoc,
       DeclarationNameInfo(MethodName, IntroducerRange.getBegin(),
                           MethodNameLoc),
-      MethodType, MethodTypeInfo, StorageClass::None,
+      MethodType, MethodTypeInfo, SC_None,
       /*isInline=*/true, ConstexprKind, EndLoc, TrailingRequiresClause);
   Method->setAccess(AS_public);
   if (!TemplateParams)
@@ -867,8 +867,8 @@ VarDecl *Sema::createLambdaInitCaptureVarDecl(SourceLocation Loc,
   // used as a variable, and only exists as a way to name and refer to the
   // init-capture.
   // FIXME: Pass in separate source locations for '&' and identifier.
-  VarDecl *NewVD = VarDecl::Create(Context, CurContext, Loc, Loc, Id,
-                                   InitCaptureType, TSI, StorageClass::Auto);
+  VarDecl *NewVD = VarDecl::Create(Context, CurContext, Loc,
+                                   Loc, Id, InitCaptureType, TSI, SC_Auto);
   NewVD->setInitCapture(true);
   NewVD->setReferenced(true);
   // FIXME: Pass in a VarDecl::InitializationStyle.
@@ -1484,8 +1484,7 @@ static void addFunctionPointerConversion(Sema &S, SourceRange IntroducerRange,
   // to the new static invoker parameters - not the call operator's.
   CXXMethodDecl *Invoke = CXXMethodDecl::Create(
       S.Context, Class, Loc, DeclarationNameInfo(InvokerName, Loc),
-      InvokerFunctionTy, CallOperator->getTypeSourceInfo(),
-      StorageClass::Static,
+      InvokerFunctionTy, CallOperator->getTypeSourceInfo(), SC_Static,
       /*isInline=*/true, ConstexprSpecKind::Unspecified,
       CallOperator->getBody()->getEndLoc());
   for (unsigned I = 0, N = CallOperator->getNumParams(); I != N; ++I)
@@ -2009,9 +2008,10 @@ ExprResult Sema::BuildBlockForLambdaConversion(SourceLocation CurrentLocation,
   // the lambda object.
   TypeSourceInfo *CapVarTSI =
       Context.getTrivialTypeSourceInfo(Src->getType());
-  VarDecl *CapVar =
-      VarDecl::Create(Context, Block, ConvLocation, ConvLocation, nullptr,
-                      Src->getType(), CapVarTSI, StorageClass::None);
+  VarDecl *CapVar = VarDecl::Create(Context, Block, ConvLocation,
+                                    ConvLocation, nullptr,
+                                    Src->getType(), CapVarTSI,
+                                    SC_None);
   BlockDecl::Capture Capture(/*variable=*/CapVar, /*byRef=*/false,
                              /*nested=*/false, /*copy=*/Init.get());
   Block->setCaptures(Context, Capture, /*CapturesCXXThis=*/false);

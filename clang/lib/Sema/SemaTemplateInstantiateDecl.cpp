@@ -2377,7 +2377,7 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
         Conversion->getConstexprKind(), Conversion->getEndLoc(),
         TrailingRequiresClause);
   } else {
-    StorageClass SC = D->isStatic() ? StorageClass::Static : StorageClass::None;
+    StorageClass SC = D->isStatic() ? SC_Static : SC_None;
     Method = CXXMethodDecl::Create(SemaRef.Context, Record, StartLoc, NameInfo,
                                    T, TInfo, SC, D->isInlineSpecified(),
                                    D->getConstexprKind(), D->getEndLoc(),

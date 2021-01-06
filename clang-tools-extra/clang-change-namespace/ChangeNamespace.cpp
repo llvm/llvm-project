@@ -632,7 +632,8 @@ void ChangeNamespaceTool::run(
       return;
     // Ignore out-of-line static methods since they will be handled by nested
     // name specifiers.
-    if (Func->getCanonicalDecl()->getStorageClass() == StorageClass::Static &&
+    if (Func->getCanonicalDecl()->getStorageClass() ==
+            StorageClass::SC_Static &&
         Func->isOutOfLine())
       return;
     const auto *Context = Result.Nodes.getNodeAs<Decl>("dc");

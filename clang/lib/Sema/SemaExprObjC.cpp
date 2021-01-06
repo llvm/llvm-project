@@ -293,10 +293,11 @@ static ObjCMethodDecl *getNSNumberFactoryMethod(Sema &S, SourceLocation Loc,
                                /*isImplicitlyDeclared=*/true,
                                /*isDefined=*/false, ObjCMethodDecl::Required,
                                /*HasRelatedResultType=*/false);
-    ParmVarDecl *value = ParmVarDecl::Create(
-        S.Context, Method, SourceLocation(), SourceLocation(),
-        &CX.Idents.get("value"), NumberType, /*TInfo=*/nullptr,
-        StorageClass::None, nullptr);
+    ParmVarDecl *value = ParmVarDecl::Create(S.Context, Method,
+                                             SourceLocation(), SourceLocation(),
+                                             &CX.Idents.get("value"),
+                                             NumberType, /*TInfo=*/nullptr,
+                                             SC_None, nullptr);
     Method->setMethodParams(S.Context, value, None);
   }
 
@@ -569,11 +570,13 @@ ExprResult Sema::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
               /*isDefined=*/false, ObjCMethodDecl::Required,
               /*HasRelatedResultType=*/false);
           QualType ConstCharType = Context.CharTy.withConst();
-          ParmVarDecl *value = ParmVarDecl::Create(
-              Context, M, SourceLocation(), SourceLocation(),
-              &Context.Idents.get("value"),
-              Context.getPointerType(ConstCharType),
-              /*TInfo=*/nullptr, StorageClass::None, nullptr);
+          ParmVarDecl *value =
+            ParmVarDecl::Create(Context, M,
+                                SourceLocation(), SourceLocation(),
+                                &Context.Idents.get("value"),
+                                Context.getPointerType(ConstCharType),
+                                /*TInfo=*/nullptr,
+                                SC_None, nullptr);
           M->setMethodParams(Context, value, None);
           BoxingMethod = M;
         }
@@ -683,17 +686,23 @@ ExprResult Sema::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
 
         SmallVector<ParmVarDecl *, 2> Params;
 
-        ParmVarDecl *bytes = ParmVarDecl::Create(
-            Context, M, SourceLocation(), SourceLocation(),
-            &Context.Idents.get("bytes"), Context.VoidPtrTy.withConst(),
-            /*TInfo=*/nullptr, StorageClass::None, nullptr);
+        ParmVarDecl *bytes =
+        ParmVarDecl::Create(Context, M,
+                            SourceLocation(), SourceLocation(),
+                            &Context.Idents.get("bytes"),
+                            Context.VoidPtrTy.withConst(),
+                            /*TInfo=*/nullptr,
+                            SC_None, nullptr);
         Params.push_back(bytes);
 
         QualType ConstCharType = Context.CharTy.withConst();
-        ParmVarDecl *type = ParmVarDecl::Create(
-            Context, M, SourceLocation(), SourceLocation(),
-            &Context.Idents.get("type"), Context.getPointerType(ConstCharType),
-            /*TInfo=*/nullptr, StorageClass::None, nullptr);
+        ParmVarDecl *type =
+        ParmVarDecl::Create(Context, M,
+                            SourceLocation(), SourceLocation(),
+                            &Context.Idents.get("type"),
+                            Context.getPointerType(ConstCharType),
+                            /*TInfo=*/nullptr,
+                            SC_None, nullptr);
         Params.push_back(type);
 
         M->setMethodParams(Context, Params, None);
@@ -808,15 +817,21 @@ ExprResult Sema::BuildObjCArrayLiteral(SourceRange SR, MultiExprArg Elements) {
           /*isImplicitlyDeclared=*/true, /*isDefined=*/false,
           ObjCMethodDecl::Required, false);
       SmallVector<ParmVarDecl *, 2> Params;
-      ParmVarDecl *objects = ParmVarDecl::Create(
-          Context, Method, SourceLocation(), SourceLocation(),
-          &Context.Idents.get("objects"), Context.getPointerType(IdT),
-          /*TInfo=*/nullptr, StorageClass::None, nullptr);
+      ParmVarDecl *objects = ParmVarDecl::Create(Context, Method,
+                                                 SourceLocation(),
+                                                 SourceLocation(),
+                                                 &Context.Idents.get("objects"),
+                                                 Context.getPointerType(IdT),
+                                                 /*TInfo=*/nullptr,
+                                                 SC_None, nullptr);
       Params.push_back(objects);
-      ParmVarDecl *cnt = ParmVarDecl::Create(
-          Context, Method, SourceLocation(), SourceLocation(),
-          &Context.Idents.get("cnt"), Context.UnsignedLongTy,
-          /*TInfo=*/nullptr, StorageClass::None, nullptr);
+      ParmVarDecl *cnt = ParmVarDecl::Create(Context, Method,
+                                             SourceLocation(),
+                                             SourceLocation(),
+                                             &Context.Idents.get("cnt"),
+                                             Context.UnsignedLongTy,
+                                             /*TInfo=*/nullptr, SC_None,
+                                             nullptr);
       Params.push_back(cnt);
       Method->setMethodParams(Context, Params, None);
     }
@@ -964,20 +979,29 @@ ExprResult Sema::BuildObjCDictionaryLiteral(SourceRange SR,
           /*isImplicitlyDeclared=*/true, /*isDefined=*/false,
           ObjCMethodDecl::Required, false);
       SmallVector<ParmVarDecl *, 3> Params;
-      ParmVarDecl *objects = ParmVarDecl::Create(
-          Context, Method, SourceLocation(), SourceLocation(),
-          &Context.Idents.get("objects"), Context.getPointerType(IdT),
-          /*TInfo=*/nullptr, StorageClass::None, nullptr);
+      ParmVarDecl *objects = ParmVarDecl::Create(Context, Method,
+                                                 SourceLocation(),
+                                                 SourceLocation(),
+                                                 &Context.Idents.get("objects"),
+                                                 Context.getPointerType(IdT),
+                                                 /*TInfo=*/nullptr, SC_None,
+                                                 nullptr);
       Params.push_back(objects);
-      ParmVarDecl *keys = ParmVarDecl::Create(
-          Context, Method, SourceLocation(), SourceLocation(),
-          &Context.Idents.get("keys"), Context.getPointerType(IdT),
-          /*TInfo=*/nullptr, StorageClass::None, nullptr);
+      ParmVarDecl *keys = ParmVarDecl::Create(Context, Method,
+                                              SourceLocation(),
+                                              SourceLocation(),
+                                              &Context.Idents.get("keys"),
+                                              Context.getPointerType(IdT),
+                                              /*TInfo=*/nullptr, SC_None,
+                                              nullptr);
       Params.push_back(keys);
-      ParmVarDecl *cnt = ParmVarDecl::Create(
-          Context, Method, SourceLocation(), SourceLocation(),
-          &Context.Idents.get("cnt"), Context.UnsignedLongTy,
-          /*TInfo=*/nullptr, StorageClass::None, nullptr);
+      ParmVarDecl *cnt = ParmVarDecl::Create(Context, Method,
+                                             SourceLocation(),
+                                             SourceLocation(),
+                                             &Context.Idents.get("cnt"),
+                                             Context.UnsignedLongTy,
+                                             /*TInfo=*/nullptr, SC_None,
+                                             nullptr);
       Params.push_back(cnt);
       Method->setMethodParams(Context, Params, None);
     }
