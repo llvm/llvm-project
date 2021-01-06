@@ -19,6 +19,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
@@ -255,6 +256,24 @@ void LazyCallGraph::SCC::verify() {
            "Must set low link to -1 when adding a node to an SCC!");
     for (Edge &E : **N)
       assert(E.getNode().isPopulated() && "Can't have an unpopulated node!");
+
+#ifdef EXPENSIVE_CHECKS
+    // Verify that all nodes in this SCC can reach all other nodes.
+    SmallVector<Node *, 4> Worklist;
+    SmallPtrSet<Node *, 4> Visited;
+    Worklist.push_back(N);
+    while (!Worklist.empty()) {
+      Node *VisitingNode = Worklist.pop_back_val();
+      if (!Visited.insert(VisitingNode).second)
+        continue;
+      for (Edge &E : (*VisitingNode)->calls())
+        Worklist.push_back(&E.getNode());
+    }
+    for (Node *NodeToVisit : Nodes) {
+      assert(Visited.contains(NodeToVisit) &&
+             "Cannot reach all nodes within SCC");
+    }
+#endif
   }
 }
 #endif
@@ -357,6 +376,31 @@ void LazyCallGraph::RefSCC::verify() {
         }
       }
   }
+
+#ifdef EXPENSIVE_CHECKS
+  // Verify that all nodes in this RefSCC can reach all other nodes.
+  SmallVector<Node *> Nodes;
+  for (SCC *C : SCCs) {
+    for (Node &N : *C)
+      Nodes.push_back(&N);
+  }
+  for (Node *N : Nodes) {
+    SmallVector<Node *, 4> Worklist;
+    SmallPtrSet<Node *, 4> Visited;
+    Worklist.push_back(N);
+    while (!Worklist.empty()) {
+      Node *VisitingNode = Worklist.pop_back_val();
+      if (!Visited.insert(VisitingNode).second)
+        continue;
+      for (Edge &E : **VisitingNode)
+        Worklist.push_back(&E.getNode());
+    }
+    for (Node *NodeToVisit : Nodes) {
+      assert(Visited.contains(NodeToVisit) &&
+             "Cannot reach all nodes within RefSCC");
+    }
+  }
+#endif
 }
 #endif
 
@@ -1542,6 +1586,215 @@ void LazyCallGraph::removeDeadFunction(Function &F) {
   // allocators.
 }
 
+// Gets the Edge::Kind from one function to another by looking at the function's
+// instructions. Asserts if there is no edge.
+// Useful for determining what type of edge should exist between functions when
+// the edge hasn't been created yet.
+static LazyCallGraph::Edge::Kind getEdgeKind(Function &OriginalFunction,
+                                             Function &NewFunction) {
+  // In release builds, assume that if there are no direct calls to the new
+  // function, then there is a ref edge. In debug builds, keep track of
+  // references to assert that there is actually a ref edge if there is no call
+  // edge.
+#ifndef NDEBUG
+  SmallVector<Constant *, 16> Worklist;
+  SmallPtrSet<Constant *, 16> Visited;
+#endif
+
+  for (Instruction &I : instructions(OriginalFunction)) {
+    if (auto *CB = dyn_cast<CallBase>(&I)) {
+      if (Function *Callee = CB->getCalledFunction()) {
+        if (Callee == &NewFunction)
+          return LazyCallGraph::Edge::Kind::Call;
+      }
+    }
+#ifndef NDEBUG
+    for (Value *Op : I.operand_values()) {
+      if (Constant *C = dyn_cast<Constant>(Op)) {
+        if (Visited.insert(C).second)
+          Worklist.push_back(C);
+      }
+    }
+#endif
+  }
+
+#ifndef NDEBUG
+  bool FoundNewFunction = false;
+  LazyCallGraph::visitReferences(Worklist, Visited, [&](Function &F) {
+    if (&F == &NewFunction)
+      FoundNewFunction = true;
+  });
+  assert(FoundNewFunction && "No edge from original function to new function");
+#endif
+
+  return LazyCallGraph::Edge::Kind::Ref;
+}
+
+void LazyCallGraph::addSplitFunction(Function &OriginalFunction,
+                                     Function &NewFunction) {
+  assert(lookup(OriginalFunction) &&
+         "Original function's node should already exist");
+  Node &OriginalN = get(OriginalFunction);
+  SCC *OriginalC = lookupSCC(OriginalN);
+  RefSCC *OriginalRC = lookupRefSCC(OriginalN);
+
+#ifndef NDEBUG
+  OriginalRC->verify();
+  auto VerifyOnExit = make_scope_exit([&]() { OriginalRC->verify(); });
+#endif
+
+  assert(!lookup(NewFunction) &&
+         "New function's node should not already exist");
+  Node &NewN = initNode(NewFunction);
+
+  Edge::Kind EK = getEdgeKind(OriginalFunction, NewFunction);
+
+  SCC *NewC = nullptr;
+  for (Edge &E : *NewN) {
+    Node &EN = E.getNode();
+    if (EK == Edge::Kind::Call && E.isCall() && lookupSCC(EN) == OriginalC) {
+      // If the edge to the new function is a call edge and there is a call edge
+      // from the new function to any function in the original function's SCC,
+      // it is in the same SCC (and RefSCC) as the original function.
+      NewC = OriginalC;
+      NewC->Nodes.push_back(&NewN);
+      break;
+    }
+  }
+
+  if (!NewC) {
+    for (Edge &E : *NewN) {
+      Node &EN = E.getNode();
+      if (lookupRefSCC(EN) == OriginalRC) {
+        // If there is any edge from the new function to any function in the
+        // original function's RefSCC, it is in the same RefSCC as the original
+        // function but a new SCC.
+        RefSCC *NewRC = OriginalRC;
+        NewC = createSCC(*NewRC, SmallVector<Node *, 1>({&NewN}));
+
+        // The new function's SCC is not the same as the original function's
+        // SCC, since that case was handled earlier. If the edge from the
+        // original function to the new function was a call edge, then we need
+        // to insert the newly created function's SCC before the original
+        // function's SCC. Otherwise either the new SCC comes after the original
+        // function's SCC, or it doesn't matter, and in both cases we can add it
+        // to the very end.
+        int InsertIndex = EK == Edge::Kind::Call ? NewRC->SCCIndices[OriginalC]
+                                                 : NewRC->SCCIndices.size();
+        NewRC->SCCs.insert(NewRC->SCCs.begin() + InsertIndex, NewC);
+        for (int I = InsertIndex, Size = NewRC->SCCs.size(); I < Size; ++I)
+          NewRC->SCCIndices[NewRC->SCCs[I]] = I;
+
+        break;
+      }
+    }
+  }
+
+  if (!NewC) {
+    // We didn't find any edges back to the original function's RefSCC, so the
+    // new function belongs in a new RefSCC. The new RefSCC goes before the
+    // original function's RefSCC.
+    RefSCC *NewRC = createRefSCC(*this);
+    NewC = createSCC(*NewRC, SmallVector<Node *, 1>({&NewN}));
+    NewRC->SCCIndices[NewC] = 0;
+    NewRC->SCCs.push_back(NewC);
+    auto OriginalRCIndex = RefSCCIndices.find(OriginalRC)->second;
+    PostOrderRefSCCs.insert(PostOrderRefSCCs.begin() + OriginalRCIndex, NewRC);
+    for (int I = OriginalRCIndex, Size = PostOrderRefSCCs.size(); I < Size; ++I)
+      RefSCCIndices[PostOrderRefSCCs[I]] = I;
+  }
+
+  SCCMap[&NewN] = NewC;
+
+  OriginalN->insertEdgeInternal(NewN, EK);
+}
+
+void LazyCallGraph::addSplitRefRecursiveFunctions(
+    Function &OriginalFunction, ArrayRef<Function *> NewFunctions) {
+  assert(!NewFunctions.empty() && "Can't add zero functions");
+  assert(lookup(OriginalFunction) &&
+         "Original function's node should already exist");
+  Node &OriginalN = get(OriginalFunction);
+  RefSCC *OriginalRC = lookupRefSCC(OriginalN);
+
+#ifndef NDEBUG
+  OriginalRC->verify();
+  auto VerifyOnExit = make_scope_exit([&]() {
+    OriginalRC->verify();
+#ifdef EXPENSIVE_CHECKS
+    for (Function *NewFunction : NewFunctions)
+      lookupRefSCC(get(*NewFunction))->verify();
+#endif
+  });
+#endif
+
+  bool ExistsRefToOriginalRefSCC = false;
+
+  for (Function *NewFunction : NewFunctions) {
+    Node &NewN = initNode(*NewFunction);
+
+    OriginalN->insertEdgeInternal(NewN, Edge::Kind::Ref);
+
+    // Check if there is any edge from any new function back to any function in
+    // the original function's RefSCC.
+    for (Edge &E : *NewN) {
+      if (lookupRefSCC(E.getNode()) == OriginalRC) {
+        ExistsRefToOriginalRefSCC = true;
+        break;
+      }
+    }
+  }
+
+  RefSCC *NewRC;
+  if (ExistsRefToOriginalRefSCC) {
+    // If there is any edge from any new function to any function in the
+    // original function's RefSCC, all new functions will be in the same RefSCC
+    // as the original function.
+    NewRC = OriginalRC;
+  } else {
+    // Otherwise the new functions are in their own RefSCC.
+    NewRC = createRefSCC(*this);
+    // The new RefSCC goes before the original function's RefSCC in postorder
+    // since there are only edges from the original function's RefSCC to the new
+    // RefSCC.
+    auto OriginalRCIndex = RefSCCIndices.find(OriginalRC)->second;
+    PostOrderRefSCCs.insert(PostOrderRefSCCs.begin() + OriginalRCIndex, NewRC);
+    for (int I = OriginalRCIndex, Size = PostOrderRefSCCs.size(); I < Size; ++I)
+      RefSCCIndices[PostOrderRefSCCs[I]] = I;
+  }
+
+  for (Function *NewFunction : NewFunctions) {
+    Node &NewN = get(*NewFunction);
+    // Each new function is in its own new SCC. The original function can only
+    // have a ref edge to new functions, and no other existing functions can
+    // have references to new functions. Each new function only has a ref edge
+    // to the other new functions.
+    SCC *NewC = createSCC(*NewRC, SmallVector<Node *, 1>({&NewN}));
+    // The new SCCs are either sibling SCCs or parent SCCs to all other existing
+    // SCCs in the RefSCC. Either way, they can go at the back of the postorder
+    // SCC list.
+    auto Index = NewRC->SCCIndices.size();
+    NewRC->SCCIndices[NewC] = Index;
+    NewRC->SCCs.push_back(NewC);
+    SCCMap[&NewN] = NewC;
+  }
+
+#ifndef NDEBUG
+  for (Function *F1 : NewFunctions) {
+    assert(getEdgeKind(OriginalFunction, *F1) == Edge::Kind::Ref &&
+           "Expected ref edges from original function to every new function");
+    Node &N1 = get(*F1);
+    for (Function *F2 : NewFunctions) {
+      if (F1 == F2)
+        continue;
+      Node &N2 = get(*F2);
+      assert(!N1->lookup(N2)->isCall() &&
+             "Edges between new functions must be ref edges");
+    }
+#endif
+  }
+}
+
 LazyCallGraph::Node &LazyCallGraph::insertInto(Function &F, Node *&MappedN) {
   return *new (MappedN = BPA.Allocate()) Node(*this, F);
 }
@@ -1556,12 +1809,11 @@ void LazyCallGraph::updateGraphPtrs() {
     RC->G = this;
 }
 
-LazyCallGraph::Node &LazyCallGraph::initNode(Node &N, LazyCallGraph::SCC &C) {
-  NodeMap[&N.getFunction()] = &N;
+LazyCallGraph::Node &LazyCallGraph::initNode(Function &F) {
+  Node &N = get(F);
   N.DFSNumber = N.LowLink = -1;
   N.populate();
-  C.Nodes.push_back(&N);
-  SCCMap[&N] = &C;
+  NodeMap[&F] = &N;
   return N;
 }
 
