@@ -118,7 +118,7 @@ public:
 
 private:
   bool isByteVecTy(Type *Ty) const;
-  bool isSectorTy(Type *Ty) const;
+  bool isSectorTy(Type *Ty) const LLVM_ATTRIBUTE_UNUSED;
   Value *getElementRange(IRBuilder<> &Builder, Value *Lo, Value *Hi, int Start,
                          int Length) const;
 };
