@@ -1,9 +1,9 @@
-; RUN: llc -march=amdgcn -mcpu=bonaire -show-mc-encoding < %s | FileCheck -check-prefix=GCN -check-prefix=CI -check-prefix=ALL %s
-; RUN: llc -march=amdgcn -mcpu=carrizo --show-mc-encoding < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=ALL %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 --show-mc-encoding < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -check-prefix=ALL %s
-; RUN: llc -march=amdgcn -mcpu=bonaire -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=2 < %s -mattr=-flat-for-global | FileCheck -check-prefix=GCNHSA -check-prefix=CIHSA -check-prefix=ALL %s
-; RUN: llc -march=amdgcn -mcpu=carrizo -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=2 -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCNHSA -check-prefix=VIHSA -check-prefix=ALL %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=2 -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCNHSA -check-prefix=GFX10HSA -check-prefix=ALL %s
+; RUN: llc -march=amdgcn -mcpu=bonaire -show-mc-encoding < %s | FileCheck --check-prefixes=GCN,CI,ALL %s
+; RUN: llc -march=amdgcn -mcpu=carrizo --show-mc-encoding < %s | FileCheck --check-prefixes=GCN,VI,ALL %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 --show-mc-encoding < %s | FileCheck --check-prefixes=GCN,GFX9,ALL %s
+; RUN: llc -march=amdgcn -mcpu=bonaire -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=2 < %s -mattr=-flat-for-global | FileCheck --check-prefixes=GCNHSA,ALL %s
+; RUN: llc -march=amdgcn -mcpu=carrizo -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=2 -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCNHSA,ALL %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=2 -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCNHSA,GFX10HSA,ALL %s
 
 ; FIXME: align on alloca seems to be ignored for private_segment_alignment
 
