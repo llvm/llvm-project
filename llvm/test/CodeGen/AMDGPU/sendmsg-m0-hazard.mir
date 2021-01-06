@@ -1,7 +1,7 @@
 # RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,GFX9 %s
 # RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,VI %s
-# RUN: llc -march=amdgcn -mcpu=hawaii -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,CI %s
-# RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,SI %s
+# RUN: llc -march=amdgcn -mcpu=hawaii -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck --check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck --check-prefix=GCN %s
 
 ---
 name: m0_sendmsg
