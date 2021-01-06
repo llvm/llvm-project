@@ -106,7 +106,7 @@ namespace test {
 void registerTestSparsification() {
   PassRegistration<TestSparsification> sparsificationPass(
       "test-sparsification",
-      "Test automatic geneneration of sparse tensor code");
+      "Test automatic generation of sparse tensor code");
 }
 
 } // namespace test

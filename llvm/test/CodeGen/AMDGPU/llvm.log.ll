@@ -1,7 +1,7 @@
-; RUN: llc -march=amdgcn < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=GCN -check-prefix=SI -check-prefix=FUNC  %s
-; RUN: llc -march=amdgcn -mcpu=tonga < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=GCN -check-prefix=GFX8 --check-prefix=FUNC %s
-; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=EG -check-prefix=FUNC %s
-; RUN: llc -march=r600 -mcpu=cayman < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=CM -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn < %s | FileCheck -allow-deprecated-dag-overlap --check-prefixes=GCN,FUNC  %s
+; RUN: llc -march=amdgcn -mcpu=tonga < %s | FileCheck -allow-deprecated-dag-overlap --check-prefixes=GCN,FUNC %s
+; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -allow-deprecated-dag-overlap --check-prefixes=EG,FUNC %s
+; RUN: llc -march=r600 -mcpu=cayman < %s | FileCheck -allow-deprecated-dag-overlap --check-prefixes=CM,FUNC %s
 
 ; FUNC-LABEL: {{^}}test:
 ; EG: LOG_IEEE

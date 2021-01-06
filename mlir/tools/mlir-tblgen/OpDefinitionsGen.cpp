@@ -1010,7 +1010,7 @@ void OpEmitter::genNamedRegionGetters() {
     if (region.name.empty())
       continue;
 
-    // Generate the accessors for a varidiadic region.
+    // Generate the accessors for a variadic region.
     if (region.isVariadic()) {
       auto *m = opClass.addMethodAndPrune("::mlir::MutableArrayRef<Region>",
                                           region.name);
@@ -2378,7 +2378,7 @@ void OpOperandAdaptorEmitter::addVerification() {
 
   FmtContext verifyCtx;
   populateSubstitutions(op, "odsAttrs.get", "getODSOperands",
-                        "<no results should be genarated>", verifyCtx);
+                        "<no results should be generated>", verifyCtx);
   genAttributeVerifier(op, "odsAttrs.get",
                        Twine("emitError(loc, \"'") + op.getOperationName() +
                            "' op \"",

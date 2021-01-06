@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -mattr=-enable-ds128 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-enable-ds128 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,FUNC %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -mattr=-enable-ds128 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-enable-ds128 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-enable-ds128 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9,FUNC %s
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefixes=EG,FUNC %s
 

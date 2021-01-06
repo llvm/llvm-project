@@ -6434,25 +6434,7 @@ static void HandleAddressSpaceTypeAttribute(QualType &Type,
       return;
     }
 
-    Expr *ASArgExpr;
-    if (Attr.isArgIdent(0)) {
-      // Special case where the argument is a template id.
-      CXXScopeSpec SS;
-      SourceLocation TemplateKWLoc;
-      UnqualifiedId id;
-      id.setIdentifier(Attr.getArgAsIdent(0)->Ident, Attr.getLoc());
-
-      ExprResult AddrSpace = S.ActOnIdExpression(
-          S.getCurScope(), SS, TemplateKWLoc, id, /*HasTrailingLParen=*/false,
-          /*IsAddressOfOperand=*/false);
-      if (AddrSpace.isInvalid())
-        return;
-
-      ASArgExpr = static_cast<Expr *>(AddrSpace.get());
-    } else {
-      ASArgExpr = static_cast<Expr *>(Attr.getArgAsExpr(0));
-    }
-
+    Expr *ASArgExpr = static_cast<Expr *>(Attr.getArgAsExpr(0));
     LangAS ASIdx;
     if (!BuildAddressSpaceIndex(S, ASIdx, ASArgExpr, Attr.getLoc())) {
       Attr.setInvalid();
@@ -7658,25 +7640,7 @@ static void HandleVectorSizeAttr(QualType &CurType, const ParsedAttr &Attr,
     return;
   }
 
-  Expr *SizeExpr;
-  // Special case where the argument is a template id.
-  if (Attr.isArgIdent(0)) {
-    CXXScopeSpec SS;
-    SourceLocation TemplateKWLoc;
-    UnqualifiedId Id;
-    Id.setIdentifier(Attr.getArgAsIdent(0)->Ident, Attr.getLoc());
-
-    ExprResult Size = S.ActOnIdExpression(S.getCurScope(), SS, TemplateKWLoc,
-                                          Id, /*HasTrailingLParen=*/false,
-                                          /*IsAddressOfOperand=*/false);
-
-    if (Size.isInvalid())
-      return;
-    SizeExpr = Size.get();
-  } else {
-    SizeExpr = Attr.getArgAsExpr(0);
-  }
-
+  Expr *SizeExpr = Attr.getArgAsExpr(0);
   QualType T = S.BuildVectorType(CurType, SizeExpr, Attr.getLoc());
   if (!T.isNull())
     CurType = T;
@@ -7695,28 +7659,8 @@ static void HandleExtVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
     return;
   }
 
-  Expr *sizeExpr;
-
-  // Special case where the argument is a template id.
-  if (Attr.isArgIdent(0)) {
-    CXXScopeSpec SS;
-    SourceLocation TemplateKWLoc;
-    UnqualifiedId id;
-    id.setIdentifier(Attr.getArgAsIdent(0)->Ident, Attr.getLoc());
-
-    ExprResult Size = S.ActOnIdExpression(S.getCurScope(), SS, TemplateKWLoc,
-                                          id, /*HasTrailingLParen=*/false,
-                                          /*IsAddressOfOperand=*/false);
-    if (Size.isInvalid())
-      return;
-
-    sizeExpr = Size.get();
-  } else {
-    sizeExpr = Attr.getArgAsExpr(0);
-  }
-
-  // Create the vector type.
-  QualType T = S.BuildExtVectorType(CurType, sizeExpr, Attr.getLoc());
+  Expr *SizeExpr = Attr.getArgAsExpr(0);
+  QualType T = S.BuildExtVectorType(CurType, SizeExpr, Attr.getLoc());
   if (!T.isNull())
     CurType = T;
 }
@@ -7988,49 +7932,8 @@ static void HandleMatrixTypeAttr(QualType &CurType, const ParsedAttr &Attr,
     return;
   }
 
-  Expr *RowsExpr = nullptr;
-  Expr *ColsExpr = nullptr;
-
-  // TODO: Refactor parameter extraction into separate function
-  // Get the number of rows
-  if (Attr.isArgIdent(0)) {
-    CXXScopeSpec SS;
-    SourceLocation TemplateKeywordLoc;
-    UnqualifiedId id;
-    id.setIdentifier(Attr.getArgAsIdent(0)->Ident, Attr.getLoc());
-    ExprResult Rows = S.ActOnIdExpression(S.getCurScope(), SS,
-                                          TemplateKeywordLoc, id, false, false);
-
-    if (Rows.isInvalid())
-      // TODO: maybe a good error message would be nice here
-      return;
-    RowsExpr = Rows.get();
-  } else {
-    assert(Attr.isArgExpr(0) &&
-           "Argument to should either be an identity or expression");
-    RowsExpr = Attr.getArgAsExpr(0);
-  }
-
-  // Get the number of columns
-  if (Attr.isArgIdent(1)) {
-    CXXScopeSpec SS;
-    SourceLocation TemplateKeywordLoc;
-    UnqualifiedId id;
-    id.setIdentifier(Attr.getArgAsIdent(1)->Ident, Attr.getLoc());
-    ExprResult Columns = S.ActOnIdExpression(
-        S.getCurScope(), SS, TemplateKeywordLoc, id, false, false);
-
-    if (Columns.isInvalid())
-      // TODO: a good error message would be nice here
-      return;
-    RowsExpr = Columns.get();
-  } else {
-    assert(Attr.isArgExpr(1) &&
-           "Argument to should either be an identity or expression");
-    ColsExpr = Attr.getArgAsExpr(1);
-  }
-
-  // Create the matrix type.
+  Expr *RowsExpr = Attr.getArgAsExpr(0);
+  Expr *ColsExpr = Attr.getArgAsExpr(1);
   QualType T = S.BuildMatrixType(CurType, RowsExpr, ColsExpr, Attr.getLoc());
   if (!T.isNull())
     CurType = T;

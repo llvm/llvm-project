@@ -1,8 +1,8 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global,-enable-ds128 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global,-enable-ds128 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI,FUNC %s
-; RUN: llc -march=amdgcn -mcpu=gfx908 -mattr=-flat-for-global,-enable-ds128 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI,FUNC %s
-; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global,-enable-ds128 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,FUNC %s
+; RUN: llc -march=amdgcn -mcpu=gfx908 -mattr=-flat-for-global,-enable-ds128 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,FUNC %s
+; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck --check-prefixes=EG,FUNC %s
 
 ; Testing for ds_read/write_128
 ; RUN: llc -march=amdgcn -mcpu=tahiti -mattr=+enable-ds128 < %s | FileCheck -check-prefixes=SI,FUNC %s

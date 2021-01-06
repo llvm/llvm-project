@@ -296,7 +296,7 @@ static void emitTypeDefList(SmallVectorImpl<TypeDef> &typeDefs,
 /// {0}: Storage class namespace.
 /// {1}: Storage class c++ name.
 /// {2}: Parameters parameters.
-/// {3}: Parameter initialzer string.
+/// {3}: Parameter initializer string.
 /// {4}: Parameter name list.
 /// {5}: Parameter types.
 static const char *const typeDefStorageClassBegin = R"(

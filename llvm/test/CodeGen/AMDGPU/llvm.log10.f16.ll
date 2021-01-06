@@ -1,6 +1,6 @@
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=SIVI -check-prefix=FUNC %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=SIVI -check-prefix=VIGFX9 -check-prefix=FUNC %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX9 -check-prefix=VIGFX9 -check-prefix=FUNC %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck --check-prefixes=VI,VIGFX9 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX9,VIGFX9 %s
 
 declare half @llvm.log10.f16(half %a)
 declare <2 x half> @llvm.log10.v2f16(<2 x half> %a)
