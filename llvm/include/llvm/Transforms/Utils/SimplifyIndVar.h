@@ -74,7 +74,7 @@ struct WideIVInfo {
 
 /// Widen Induction Variables - Extend the width of an IV to cover its
 /// widest uses.
-PHINode *createWideIV(WideIVInfo &WI,
+PHINode *createWideIV(const WideIVInfo &WI,
     LoopInfo *LI, ScalarEvolution *SE, SCEVExpander &Rewriter,
     DominatorTree *DT, SmallVectorImpl<WeakTrackingVH> &DeadInsts,
     unsigned &NumElimExt, unsigned &NumWidened,

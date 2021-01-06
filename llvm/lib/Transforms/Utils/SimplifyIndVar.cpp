@@ -2076,7 +2076,7 @@ void WidenIV::calculatePostIncRanges(PHINode *OrigPhi) {
   }
 }
 
-PHINode *llvm::createWideIV(WideIVInfo &WI,
+PHINode *llvm::createWideIV(const WideIVInfo &WI,
     LoopInfo *LI, ScalarEvolution *SE, SCEVExpander &Rewriter,
     DominatorTree *DT, SmallVectorImpl<WeakTrackingVH> &DeadInsts,
     unsigned &NumElimExt, unsigned &NumWidened,
