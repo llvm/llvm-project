@@ -1425,48 +1425,53 @@ attributes #1 = { nounwind readnone speculatable willreturn }
 
 %struct.a = type { float, float }
 
+declare i32 @foo(double)
+
 define void @d(%struct.a* %e, %struct.a* %f) {
 ; CHECK-LABEL: d:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
 ; CHECK-NEXT:    stw 0, 4(1)
-; CHECK-NEXT:    stwu 1, -48(1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    stwu 1, -64(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    .cfi_offset lr, 4
+; CHECK-NEXT:    .cfi_offset r28, -16
 ; CHECK-NEXT:    .cfi_offset r29, -12
 ; CHECK-NEXT:    .cfi_offset r30, -8
+; CHECK-NEXT:    .cfi_offset r28, -48
 ; CHECK-NEXT:    .cfi_offset r29, -40
 ; CHECK-NEXT:    .cfi_offset r30, -32
 ; CHECK-NEXT:    lwz 4, 0(4)
 ; CHECK-NEXT:    lwz 3, 0(3)
-; CHECK-NEXT:    stw 29, 36(1) # 4-byte Folded Spill
-; CHECK-NEXT:    evstdd 29, 8(1) # 8-byte Folded Spill
+; CHECK-NEXT:    stw 29, 52(1) # 4-byte Folded Spill
+; CHECK-NEXT:    evstdd 29, 24(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    efdcfs 29, 4
-; CHECK-NEXT:    stw 30, 40(1) # 4-byte Folded Spill
+; CHECK-NEXT:    stw 28, 48(1) # 4-byte Folded Spill
 ; CHECK-NEXT:    mr 4, 29
-; CHECK-NEXT:    evstdd 30, 16(1) # 8-byte Folded Spill
+; CHECK-NEXT:    stw 30, 56(1) # 4-byte Folded Spill
+; CHECK-NEXT:    evstdd 28, 16(1) # 8-byte Folded Spill
+; CHECK-NEXT:    evstdd 30, 32(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    efdcfs 30, 3
 ; CHECK-NEXT:    evmergehi 3, 29, 29
-; CHECK-NEXT:    mtctr 3
 ; CHECK-NEXT:    # kill: def $r3 killed $r3 killed $s3
-; CHECK-NEXT:    bctrl
+; CHECK-NEXT:    bl foo
+; CHECK-NEXT:    mr 28, 3
 ; CHECK-NEXT:    evmergehi 3, 30, 30
 ; CHECK-NEXT:    mr 4, 30
-; CHECK-NEXT:    mtctr 3
 ; CHECK-NEXT:    # kill: def $r3 killed $r3 killed $s3
-; CHECK-NEXT:    bctrl
-; CHECK-NEXT:    li 3, .LCPI58_0@l
-; CHECK-NEXT:    lis 4, .LCPI58_0@ha
-; CHECK-NEXT:    evlddx 3, 4, 3
-; CHECK-NEXT:    evldd 30, 16(1) # 8-byte Folded Reload
+; CHECK-NEXT:    bl foo
+; CHECK-NEXT:    efdcfsi 3, 28
+; CHECK-NEXT:    evldd 30, 32(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    efdmul 3, 29, 3
-; CHECK-NEXT:    evldd 29, 8(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    efscfd 3, 3
+; CHECK-NEXT:    evldd 29, 24(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    stw 3, 0(3)
-; CHECK-NEXT:    lwz 30, 40(1) # 4-byte Folded Reload
-; CHECK-NEXT:    lwz 29, 36(1) # 4-byte Folded Reload
-; CHECK-NEXT:    lwz 0, 52(1)
-; CHECK-NEXT:    addi 1, 1, 48
+; CHECK-NEXT:    evldd 28, 16(1) # 8-byte Folded Reload
+; CHECK-NEXT:    lwz 30, 56(1) # 4-byte Folded Reload
+; CHECK-NEXT:    lwz 29, 52(1) # 4-byte Folded Reload
+; CHECK-NEXT:    lwz 28, 48(1) # 4-byte Folded Reload
+; CHECK-NEXT:    lwz 0, 68(1)
+; CHECK-NEXT:    addi 1, 1, 64
 ; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
 entry:
@@ -1475,8 +1480,8 @@ entry:
   %conv = fpext float %1 to double
   %2 = load float, float* %0
   %g = fpext float %2 to double
-  %3 = call i32 undef(double %g)
-  %h = call i32 undef(double %conv)
+  %3 = call i32 @foo(double %g)
+  %h = call i32 @foo(double %conv)
   %n = sitofp i32 %3 to double
   %k = fmul double %g, %n
   %l = fptrunc double %k to float
