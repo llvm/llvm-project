@@ -1791,8 +1791,8 @@ void LazyCallGraph::addSplitRefRecursiveFunctions(
       assert(!N1->lookup(N2)->isCall() &&
              "Edges between new functions must be ref edges");
     }
-#endif
   }
+#endif
 }
 
 LazyCallGraph::Node &LazyCallGraph::insertInto(Function &F, Node *&MappedN) {
