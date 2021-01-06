@@ -608,8 +608,7 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
       llvm_unreachable("invalid for functions");
     }
 
-    if (D->isInlineSpecified())
-      Out << "inline ";
+    if (D->isInlineSpecified())  Out << "inline ";
     if (D->isVirtualAsWritten()) Out << "virtual ";
     if (D->isModulePrivate())    Out << "__module_private__ ";
     if (D->isConstexprSpecified() && !D->isExplicitlyDefaulted())
