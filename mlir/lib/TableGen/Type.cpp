@@ -60,8 +60,8 @@ StringRef TypeConstraint::getCPPClassName() const {
 
 Type::Type(const llvm::Record *record) : TypeConstraint(record) {}
 
-StringRef Type::getTypeDescription() const {
-  return def->getValueAsString("typeDescription");
+StringRef Type::getDescription() const {
+  return def->getValueAsString("description");
 }
 
 Dialect Type::getDialect() const {

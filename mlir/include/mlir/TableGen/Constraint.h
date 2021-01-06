@@ -45,7 +45,7 @@ public:
 
   // Returns the user-readable description of this constraint. If the
   // description is not provided, returns the TableGen def name.
-  StringRef getDescription() const;
+  StringRef getSummary() const;
 
   // Constraint kind
   enum Kind { CK_Attr, CK_Region, CK_Successor, CK_Type, CK_Uncategorized };
