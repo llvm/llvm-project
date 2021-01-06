@@ -1049,3 +1049,16 @@ add_fp_unittest(
     libc.src.math.nextafterl
     libc.utils.FPUtil.fputil
 )
+
+add_fp_unittest(
+  fmaf_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    fmaf_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.fmaf
+    libc.utils.FPUtil.fputil
+)
