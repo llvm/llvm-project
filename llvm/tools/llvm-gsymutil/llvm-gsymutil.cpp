@@ -416,7 +416,7 @@ static llvm::Error convertFileToGSYM(raw_ostream &OS) {
   OS << "Input file: " << ConvertFilename << "\n";
 
   auto Objs = expandBundle(ConvertFilename);
-  Objects.insert(Objects.end(), Objs.begin(), Objs.end());
+  llvm::append_range(Objects, Objs);
 
   for (auto Object : Objects) {
     if (auto Err = handleFileConversionToGSYM(Object, OutFile))

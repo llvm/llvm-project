@@ -312,8 +312,7 @@ void GraphRenderer::calculateVertexStatistics() {
     if (V.first != 0) {
       for (auto &E : G.inEdges(V.first)) {
         auto &A = E.second;
-        TempTimings.insert(TempTimings.end(), A.Timings.begin(),
-                           A.Timings.end());
+        llvm::append_range(TempTimings, A.Timings);
       }
       getStats(TempTimings.begin(), TempTimings.end(), G[V.first].S);
       updateMaxStats(G[V.first].S, G.GraphVertexMax);

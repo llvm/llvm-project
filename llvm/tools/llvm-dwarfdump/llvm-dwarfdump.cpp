@@ -670,7 +670,7 @@ int main(int argc, char **argv) {
   std::vector<std::string> Objects;
   for (const auto &F : InputFilenames) {
     auto Objs = expandBundle(F);
-    Objects.insert(Objects.end(), Objs.begin(), Objs.end());
+    llvm::append_range(Objects, Objs);
   }
 
   bool Success = true;

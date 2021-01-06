@@ -52,9 +52,8 @@ static uint64_t getDebugInfoSize(DWARFContext &Dwarf) {
 /// Similar to DWARFUnitSection::getUnitForOffset(), but returning our
 /// CompileUnit object instead.
 static CompileUnit *getUnitForOffset(const UnitListTy &Units, uint64_t Offset) {
-  auto CU = std::upper_bound(
-      Units.begin(), Units.end(), Offset,
-      [](uint64_t LHS, const std::unique_ptr<CompileUnit> &RHS) {
+  auto CU = llvm::upper_bound(
+      Units, Offset, [](uint64_t LHS, const std::unique_ptr<CompileUnit> &RHS) {
         return LHS < RHS->getOrigUnit().getNextUnitOffset();
       });
   return CU != Units.end() ? CU->get() : nullptr;

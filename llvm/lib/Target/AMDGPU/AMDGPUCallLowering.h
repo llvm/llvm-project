@@ -47,13 +47,15 @@ public:
   AMDGPUCallLowering(const AMDGPUTargetLowering &TLI);
 
   bool lowerReturn(MachineIRBuilder &B, const Value *Val,
-                   ArrayRef<Register> VRegs) const override;
+                   ArrayRef<Register> VRegs,
+                   FunctionLoweringInfo &FLI) const override;
 
   bool lowerFormalArgumentsKernel(MachineIRBuilder &B, const Function &F,
                                   ArrayRef<ArrayRef<Register>> VRegs) const;
 
   bool lowerFormalArguments(MachineIRBuilder &B, const Function &F,
-                            ArrayRef<ArrayRef<Register>> VRegs) const override;
+                            ArrayRef<ArrayRef<Register>> VRegs,
+                            FunctionLoweringInfo &FLI) const override;
 
   bool passSpecialInputs(MachineIRBuilder &MIRBuilder,
                          CCState &CCInfo,
