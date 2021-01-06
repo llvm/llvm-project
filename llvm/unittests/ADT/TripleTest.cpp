@@ -1264,6 +1264,14 @@ TEST(TripleTest, getOSVersion) {
   EXPECT_EQ((unsigned)0, Minor);
   EXPECT_EQ((unsigned)0, Micro);
 
+  // For darwin triples on macOS 11, only compare the major version.
+  T = Triple("x86_64-apple-darwin20.2");
+  EXPECT_TRUE(T.isMacOSX());
+  T.getMacOSXVersion(Major, Minor, Micro);
+  EXPECT_EQ((unsigned)11, Major);
+  EXPECT_EQ((unsigned)0, Minor);
+  EXPECT_EQ((unsigned)0, Micro);
+
   T = Triple("armv7-apple-ios");
   EXPECT_FALSE(T.isMacOSX());
   EXPECT_TRUE(T.isiOS());
