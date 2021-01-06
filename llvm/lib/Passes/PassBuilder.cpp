@@ -1897,7 +1897,7 @@ AAManager PassBuilder::buildDefaultAAPipeline() {
 
   // Add target-specific alias analyses.
   if (TM)
-    TM->registerAliasAnalyses(AA);
+    TM->registerDefaultAliasAnalyses(AA);
 
   return AA;
 }
