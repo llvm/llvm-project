@@ -1,18 +1,31 @@
 // RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -triple spir-unknown-unknown
 // RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -triple spir-unknown-unknown -DFUNCPTREXT
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -triple spir-unknown-unknown -DVARARG
 
 #ifdef FUNCPTREXT
 #pragma OPENCL EXTENSION __cl_clang_function_pointers : enable
 #endif
+#ifdef VARARGEXT
+#pragma OPENCL EXTENSION __cl_clang_variadic_functions : enable
+#endif
 
 // Variadic functions
-void vararg_f(int, ...);                    // expected-error {{invalid prototype, variadic arguments are not allowed in OpenCL}}
-void __vararg_f(int, ...);
-typedef void (*vararg_fptr_t)(int, ...);    // expected-error {{invalid prototype, variadic arguments are not allowed in OpenCL}}
-#ifndef FUNCPTREXT
-// expected-error@-2 {{pointers to functions are not allowed}}
+void vararg_f(int, ...);
+#ifndef VARARGEXT
+// expected-error@-2 {{invalid prototype, variadic arguments are not allowed in OpenCL}}
 #endif
-int printf(__constant const char *st, ...); // expected-error {{invalid prototype, variadic arguments are not allowed in OpenCL}}
+void __vararg_f(int, ...);
+typedef void (*vararg_fptr_t)(int, ...);
+#ifndef VARARGEXT
+// expected-error@-2 {{invalid prototype, variadic arguments are not allowed in OpenCL}}
+#endif
+#ifndef FUNCPTREXT
+// expected-error@-5 {{pointers to functions are not allowed}}
+#endif
+int printf(__constant const char *st, ...);
+#ifndef VARARGEXT
+// expected-error@-2 {{invalid prototype, variadic arguments are not allowed in OpenCL}}
+#endif
 
 // Struct type with function pointer field
 typedef struct s
