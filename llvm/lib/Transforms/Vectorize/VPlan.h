@@ -932,13 +932,15 @@ public:
 
 /// A recipe for handling phi nodes of integer and floating-point inductions,
 /// producing their vector and scalar values.
-class VPWidenIntOrFpInductionRecipe : public VPRecipeBase {
+class VPWidenIntOrFpInductionRecipe : public VPRecipeBase, public VPUser {
   PHINode *IV;
   TruncInst *Trunc;
 
 public:
-  VPWidenIntOrFpInductionRecipe(PHINode *IV, TruncInst *Trunc = nullptr)
-      : VPRecipeBase(VPWidenIntOrFpInductionSC), IV(IV), Trunc(Trunc) {
+  VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start,
+                                TruncInst *Trunc = nullptr)
+      : VPRecipeBase(VPWidenIntOrFpInductionSC), VPUser({Start}), IV(IV),
+        Trunc(Trunc) {
     if (Trunc)
       new VPValue(Trunc, this);
     else
@@ -958,6 +960,9 @@ public:
   /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
+
+  /// Returns the start value of the induction.
+  VPValue *getStartValue() { return getOperand(0); }
 };
 
 /// A recipe for handling all phi nodes except for integer and FP inductions.
