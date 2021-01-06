@@ -17,9 +17,10 @@
 #ifndef LLVM_SUPPORT_SIGNPOSTS_H
 #define LLVM_SUPPORT_SIGNPOSTS_H
 
+#include "llvm/ADT/StringRef.h"
+
 namespace llvm {
 class SignpostEmitterImpl;
-class Timer;
 
 /// Manages the emission of signposts into the recording method supported by
 /// the OS.
@@ -32,10 +33,10 @@ public:
 
   bool isEnabled() const;
 
-  /// Begin a signposted interval for the given timer.
-  void startTimerInterval(Timer *T);
-  /// End a signposted interval for the given timer.
-  void endTimerInterval(Timer *T);
+  /// Begin a signposted interval for a given object.
+  void startInterval(const void *O, StringRef Name);
+  /// End a signposted interval for a given object.
+  void endInterval(const void *O, StringRef Name);
 };
 
 } // end namespace llvm
