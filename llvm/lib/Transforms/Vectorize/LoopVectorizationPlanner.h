@@ -274,9 +274,7 @@ public:
   bool hasPlanWithVFs(const ArrayRef<ElementCount> VFs) const {
     return any_of(VPlans, [&](const VPlanPtr &Plan) {
       return all_of(VFs, [&](const ElementCount &VF) {
-        if (Plan->hasVF(VF))
-          return true;
-        return false;
+        return Plan->hasVF(VF);
       });
     });
   }
