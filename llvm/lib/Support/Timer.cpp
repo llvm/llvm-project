@@ -143,7 +143,7 @@ TimeRecord TimeRecord::getCurrentTime(bool Start) {
 void Timer::startTimer() {
   assert(!Running && "Cannot start a running timer");
   Running = Triggered = true;
-  Signposts->startTimerInterval(this);
+  Signposts->startInterval(this, getName());
   StartTime = TimeRecord::getCurrentTime(true);
 }
 
@@ -152,7 +152,7 @@ void Timer::stopTimer() {
   Running = false;
   Time += TimeRecord::getCurrentTime(false);
   Time -= StartTime;
-  Signposts->endTimerInterval(this);
+  Signposts->endInterval(this, getName());
 }
 
 void Timer::clear() {
