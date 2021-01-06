@@ -11,7 +11,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 define void @test() {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  bb279:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> undef, float undef, i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> poison, float undef, i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> [[TMP0]], float undef, i32 1
 ; CHECK-NEXT:    br label [[BB283:%.*]]
 ; CHECK:       bb283:

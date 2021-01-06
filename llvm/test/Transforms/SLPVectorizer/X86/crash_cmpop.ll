@@ -62,10 +62,10 @@ define void @testfunc(float* nocapture %dest, float* nocapture readonly %src) {
 ; AVX-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, float* [[DEST:%.*]], i64 [[INDVARS_IV]]
 ; AVX-NEXT:    store float [[ACC1_056]], float* [[ARRAYIDX2]], align 4
 ; AVX-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[TMP0]], i32 1
-; AVX-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> undef, float [[TMP2]], i32 0
+; AVX-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[TMP2]], i32 0
 ; AVX-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP0]], i32 0
 ; AVX-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> [[TMP3]], float [[TMP4]], i32 1
-; AVX-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> undef, float [[TMP1]], i32 0
+; AVX-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> poison, float [[TMP1]], i32 0
 ; AVX-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> [[TMP6]], float [[TMP1]], i32 1
 ; AVX-NEXT:    [[TMP8:%.*]] = fadd <2 x float> [[TMP5]], [[TMP7]]
 ; AVX-NEXT:    [[TMP9:%.*]] = fmul <2 x float> [[TMP0]], zeroinitializer
@@ -78,7 +78,7 @@ define void @testfunc(float* nocapture %dest, float* nocapture readonly %src) {
 ; AVX-NEXT:    [[TMP16:%.*]] = extractelement <2 x float> [[TMP15]], i32 0
 ; AVX-NEXT:    [[TMP17:%.*]] = extractelement <2 x float> [[TMP15]], i32 1
 ; AVX-NEXT:    [[ADD13]] = fadd float [[TMP16]], [[TMP17]]
-; AVX-NEXT:    [[TMP18:%.*]] = insertelement <2 x float> undef, float [[TMP17]], i32 0
+; AVX-NEXT:    [[TMP18:%.*]] = insertelement <2 x float> poison, float [[TMP17]], i32 0
 ; AVX-NEXT:    [[TMP19:%.*]] = insertelement <2 x float> [[TMP18]], float [[ADD13]], i32 1
 ; AVX-NEXT:    [[TMP20:%.*]] = fcmp olt <2 x float> [[TMP19]], <float 1.000000e+00, float 1.000000e+00>
 ; AVX-NEXT:    [[TMP21:%.*]] = select <2 x i1> [[TMP20]], <2 x float> [[TMP19]], <2 x float> <float 1.000000e+00, float 1.000000e+00>

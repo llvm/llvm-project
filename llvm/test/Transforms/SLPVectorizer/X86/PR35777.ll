@@ -4,11 +4,11 @@
 @global = local_unnamed_addr global [6 x double] zeroinitializer, align 16
 
 define { i64, i64 } @patatino(double %arg) {
-; CHECK-LABEL: define {{[^@]+}}@patatino(
+; CHECK-LABEL: @patatino(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, <2 x double>* bitcast ([6 x double]* @global to <2 x double>*), align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* bitcast (double* getelementptr inbounds ([6 x double], [6 x double]* @global, i64 0, i64 2) to <2 x double>*), align 16
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> undef, double [[ARG:%.*]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[ARG:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[ARG]], i32 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[TMP0]], [[TMP4]]

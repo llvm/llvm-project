@@ -2405,10 +2405,10 @@ Value *InnerLoopVectorizer::getOrCreateVectorValue(Value *V, unsigned Part) {
       VectorValue = getBroadcastInstrs(ScalarValue);
       VectorLoopValueMap.setVectorValue(V, Part, VectorValue);
     } else {
-      // Initialize packing with insertelements to start from undef.
+      // Initialize packing with insertelements to start from poison.
       assert(!VF.isScalable() && "VF is assumed to be non scalable.");
-      Value *Undef = UndefValue::get(VectorType::get(V->getType(), VF));
-      VectorLoopValueMap.setVectorValue(V, Part, Undef);
+      Value *Poison = PoisonValue::get(VectorType::get(V->getType(), VF));
+      VectorLoopValueMap.setVectorValue(V, Part, Poison);
       for (unsigned Lane = 0; Lane < VF.getKnownMinValue(); ++Lane)
         packScalarIntoVectorValue(V, {Part, Lane});
       VectorValue = VectorLoopValueMap.getVectorValue(V, Part);
@@ -2503,9 +2503,9 @@ static bool useMaskedInterleavedAccesses(const TargetTransformInfo &TTI) {
 //   }
 // To:
 //   %wide.vec = load <12 x i32>                       ; Read 4 tuples of R,G,B
-//   %R.vec = shuffle %wide.vec, undef, <0, 3, 6, 9>   ; R elements
-//   %G.vec = shuffle %wide.vec, undef, <1, 4, 7, 10>  ; G elements
-//   %B.vec = shuffle %wide.vec, undef, <2, 5, 8, 11>  ; B elements
+//   %R.vec = shuffle %wide.vec, poison, <0, 3, 6, 9>   ; R elements
+//   %G.vec = shuffle %wide.vec, poison, <1, 4, 7, 10>  ; G elements
+//   %B.vec = shuffle %wide.vec, poison, <2, 5, 8, 11>  ; B elements
 //
 // Or translate following interleaved store group (factor = 3):
 //   for (i = 0; i < N; i+=3) {
@@ -2516,7 +2516,7 @@ static bool useMaskedInterleavedAccesses(const TargetTransformInfo &TTI) {
 //   }
 // To:
 //   %R_G.vec = shuffle %R.vec, %G.vec, <0, 1, 2, ..., 7>
-//   %B_U.vec = shuffle %B.vec, undef, <0, 1, 2, 3, u, u, u, u>
+//   %B_U.vec = shuffle %B.vec, poison, <0, 1, 2, 3, u, u, u, u>
 //   %interleaved.vec = shuffle %R_G.vec, %B_U.vec,
 //        <0, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11>    ; Interleave R,G,B elements
 //   store <12 x i32> %interleaved.vec              ; Write 4 tuples of R,G,B
@@ -2581,7 +2581,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
   }
 
   setDebugLocFromInst(Builder, Instr);
-  Value *UndefVec = UndefValue::get(VecTy);
+  Value *PoisonVec = PoisonValue::get(VecTy);
 
   Value *MaskForGaps = nullptr;
   if (Group->requiresScalarEpilogue() && !Cost->isScalarEpilogueAllowed()) {
@@ -2614,7 +2614,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
         }
         NewLoad =
             Builder.CreateMaskedLoad(AddrParts[Part], Group->getAlign(),
-                                     GroupMask, UndefVec, "wide.masked.vec");
+                                     GroupMask, PoisonVec, "wide.masked.vec");
       }
       else
         NewLoad = Builder.CreateAlignedLoad(VecTy, AddrParts[Part],
@@ -2832,7 +2832,7 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(
       auto *VecPtr = CreateVecPtr(Part, State.get(Addr, {0, 0}));
       if (isMaskRequired)
         NewLI = Builder.CreateMaskedLoad(
-            VecPtr, Alignment, BlockInMaskParts[Part], UndefValue::get(DataTy),
+            VecPtr, Alignment, BlockInMaskParts[Part], PoisonValue::get(DataTy),
             "wide.masked.load");
       else
         NewLI =
@@ -4026,7 +4026,7 @@ void InnerLoopVectorizer::fixFirstOrderRecurrence(PHINode *Phi) {
     Builder.SetInsertPoint(LoopVectorPreHeader->getTerminator());
     assert(!VF.isScalable() && "VF is assumed to be non scalable.");
     VectorInit = Builder.CreateInsertElement(
-        UndefValue::get(VectorType::get(VectorInit->getType(), VF)), VectorInit,
+        PoisonValue::get(VectorType::get(VectorInit->getType(), VF)), VectorInit,
         Builder.getInt32(VF.getKnownMinValue() - 1), "vector.recur.init");
   }
 
@@ -8796,13 +8796,13 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
                                     *State.Instance, IsPredicated, State);
     // Insert scalar instance packing it into a vector.
     if (AlsoPack && State.VF.isVector()) {
-      // If we're constructing lane 0, initialize to start from undef.
+      // If we're constructing lane 0, initialize to start from poison.
       if (State.Instance->Lane == 0) {
         assert(!State.VF.isScalable() && "VF is assumed to be non scalable.");
-        Value *Undef = UndefValue::get(
+        Value *Poison = PoisonValue::get(
             VectorType::get(getUnderlyingValue()->getType(), State.VF));
         State.ValueMap.setVectorValue(getUnderlyingInstr(),
-                                      State.Instance->Part, Undef);
+                                      State.Instance->Part, Poison);
       }
       State.ILV->packScalarIntoVectorValue(getUnderlyingInstr(),
                                            *State.Instance);
@@ -8875,7 +8875,7 @@ void VPPredInstPHIRecipe::execute(VPTransformState &State) {
   } else {
     Type *PredInstType = PredInst->getType();
     PHINode *Phi = State.Builder.CreatePHI(PredInstType, 2);
-    Phi->addIncoming(UndefValue::get(ScalarPredInst->getType()), PredicatingBB);
+    Phi->addIncoming(PoisonValue::get(ScalarPredInst->getType()), PredicatingBB);
     Phi->addIncoming(ScalarPredInst, PredicatedBB);
     State.ValueMap.resetScalarValue(PredInst, *State.Instance, Phi);
   }

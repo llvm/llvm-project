@@ -407,7 +407,7 @@ for.end:
 ; CHECK:       %next.gep11 = getelementptr i32, i32* %a, i64 %[[I2]]
 ; CHECK:       %[[I3:.+]] = or i64 %index, 3
 ; CHECK:       %next.gep12 = getelementptr i32, i32* %a, i64 %[[I3]]
-; CHECK:       %[[V0:.+]] = insertelement <4 x i32*> undef, i32* %next.gep, i32 0
+; CHECK:       %[[V0:.+]] = insertelement <4 x i32*> poison, i32* %next.gep, i32 0
 ; CHECK:       %[[V1:.+]] = insertelement <4 x i32*> %[[V0]], i32* %next.gep10, i32 1
 ; CHECK:       %[[V2:.+]] = insertelement <4 x i32*> %[[V1]], i32* %next.gep11, i32 2
 ; CHECK:       %[[V3:.+]] = insertelement <4 x i32*> %[[V2]], i32* %next.gep12, i32 3
