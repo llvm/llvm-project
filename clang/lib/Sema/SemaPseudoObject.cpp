@@ -1191,12 +1191,15 @@ bool ObjCSubscriptOpBuilder::findAtIndexGetter() {
         /*isSynthesizedAccessorStub=*/false,
         /*isImplicitlyDeclared=*/true, /*isDefined=*/false,
         ObjCMethodDecl::Required, false);
-    ParmVarDecl *Argument = ParmVarDecl::Create(
-        S.Context, AtIndexGetter, SourceLocation(), SourceLocation(),
-        arrayRef ? &S.Context.Idents.get("index")
-                 : &S.Context.Idents.get("key"),
-        arrayRef ? S.Context.UnsignedLongTy : S.Context.getObjCIdType(),
-        /*TInfo=*/nullptr, StorageClass::None, nullptr);
+    ParmVarDecl *Argument = ParmVarDecl::Create(S.Context, AtIndexGetter,
+                                                SourceLocation(), SourceLocation(),
+                                                arrayRef ? &S.Context.Idents.get("index")
+                                                         : &S.Context.Idents.get("key"),
+                                                arrayRef ? S.Context.UnsignedLongTy
+                                                         : S.Context.getObjCIdType(),
+                                                /*TInfo=*/nullptr,
+                                                SC_None,
+                                                nullptr);
     AtIndexGetter->setMethodParams(S.Context, Argument, None);
   }
 
@@ -1295,17 +1298,23 @@ bool ObjCSubscriptOpBuilder::findAtIndexSetter() {
         /*isImplicitlyDeclared=*/true, /*isDefined=*/false,
         ObjCMethodDecl::Required, false);
     SmallVector<ParmVarDecl *, 2> Params;
-    ParmVarDecl *object = ParmVarDecl::Create(
-        S.Context, AtIndexSetter, SourceLocation(), SourceLocation(),
-        &S.Context.Idents.get("object"), S.Context.getObjCIdType(),
-        /*TInfo=*/nullptr, StorageClass::None, nullptr);
+    ParmVarDecl *object = ParmVarDecl::Create(S.Context, AtIndexSetter,
+                                                SourceLocation(), SourceLocation(),
+                                                &S.Context.Idents.get("object"),
+                                                S.Context.getObjCIdType(),
+                                                /*TInfo=*/nullptr,
+                                                SC_None,
+                                                nullptr);
     Params.push_back(object);
-    ParmVarDecl *key = ParmVarDecl::Create(
-        S.Context, AtIndexSetter, SourceLocation(), SourceLocation(),
-        arrayRef ? &S.Context.Idents.get("index")
-                 : &S.Context.Idents.get("key"),
-        arrayRef ? S.Context.UnsignedLongTy : S.Context.getObjCIdType(),
-        /*TInfo=*/nullptr, StorageClass::None, nullptr);
+    ParmVarDecl *key = ParmVarDecl::Create(S.Context, AtIndexSetter,
+                                                SourceLocation(), SourceLocation(),
+                                                arrayRef ?  &S.Context.Idents.get("index")
+                                                         :  &S.Context.Idents.get("key"),
+                                                arrayRef ? S.Context.UnsignedLongTy
+                                                         : S.Context.getObjCIdType(),
+                                                /*TInfo=*/nullptr,
+                                                SC_None,
+                                                nullptr);
     Params.push_back(key);
     AtIndexSetter->setMethodParams(S.Context, Params, None);
   }

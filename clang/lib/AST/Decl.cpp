@@ -620,7 +620,7 @@ static StorageClass getStorageClass(const Decl *D) {
     if (auto *FD = dyn_cast<FunctionDecl>(D))
       return FD->getStorageClass();
   }
-  return StorageClass::None;
+  return SC_None;
 }
 
 LinkageInfo
@@ -635,7 +635,7 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
   //   A name having namespace scope (3.3.6) has internal linkage if it
   //   is the name of
 
-  if (getStorageClass(D->getCanonicalDecl()) == StorageClass::Static) {
+  if (getStorageClass(D->getCanonicalDecl()) == SC_Static) {
     // - a variable, variable template, function, or function template
     //   that is explicitly declared static; or
     // (This bullet corresponds to C99 6.2.2p3.)
@@ -660,19 +660,19 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
       if (PrevVar)
         return getLVForDecl(PrevVar, computation);
 
-      if (Var->getStorageClass() != StorageClass::Extern &&
-          Var->getStorageClass() != StorageClass::PrivateExtern &&
+      if (Var->getStorageClass() != SC_Extern &&
+          Var->getStorageClass() != SC_PrivateExtern &&
           !isSingleLineLanguageLinkage(*Var))
         return getInternalLinkageFor(Var);
     }
 
     for (const VarDecl *PrevVar = Var->getPreviousDecl(); PrevVar;
          PrevVar = PrevVar->getPreviousDecl()) {
-      if (PrevVar->getStorageClass() == StorageClass::PrivateExtern &&
-          Var->getStorageClass() == StorageClass::None)
+      if (PrevVar->getStorageClass() == SC_PrivateExtern &&
+          Var->getStorageClass() == SC_None)
         return getDeclLinkageAndVisibility(PrevVar);
       // Explicitly declared static.
-      if (PrevVar->getStorageClass() == StorageClass::Static)
+      if (PrevVar->getStorageClass() == SC_Static)
         return getInternalLinkageFor(Var);
     }
   } else if (const auto *IFD = dyn_cast<IndirectFieldDecl>(D)) {
@@ -789,7 +789,7 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
         LV.mergeVisibility(TypeLV);
     }
 
-    if (Var->getStorageClass() == StorageClass::PrivateExtern)
+    if (Var->getStorageClass() == SC_PrivateExtern)
       LV.mergeVisibility(HiddenVisibility, true);
 
     // Note that Sema::MergeVarDecl already takes care of implementing
@@ -810,7 +810,7 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
     // for justification).  In practice, GCC doesn't do this, so it's
     // just too painful to make work.
 
-    if (Function->getStorageClass() == StorageClass::PrivateExtern)
+    if (Function->getStorageClass() == SC_PrivateExtern)
       LV.mergeVisibility(HiddenVisibility, true);
 
     // Note that Sema::MergeCompatibleFunctionDecls already takes care of
@@ -1229,7 +1229,7 @@ LinkageInfo LinkageComputer::getLVForLocalDecl(const NamedDecl *D,
       return getInternalLinkageFor(Function);
 
     // This is a "void f();" which got merged with a file static.
-    if (Function->getCanonicalDecl()->getStorageClass() == StorageClass::Static)
+    if (Function->getCanonicalDecl()->getStorageClass() == SC_Static)
       return getInternalLinkageFor(Function);
 
     LinkageInfo LV;
@@ -1252,7 +1252,7 @@ LinkageInfo LinkageComputer::getLVForLocalDecl(const NamedDecl *D,
         return getInternalLinkageFor(Var);
 
       LinkageInfo LV;
-      if (Var->getStorageClass() == StorageClass::PrivateExtern)
+      if (Var->getStorageClass() == SC_PrivateExtern)
         LV.mergeVisibility(HiddenVisibility, true);
       else if (!hasExplicitVisibilityAlready(computation)) {
         if (Optional<Visibility> Vis = getExplicitVisibility(Var, computation))
@@ -1962,18 +1962,12 @@ void QualifierInfo::setTemplateParameterListsInfo(
 
 const char *VarDecl::getStorageClassSpecifierString(StorageClass SC) {
   switch (SC) {
-  case StorageClass::None:
-    break;
-  case StorageClass::Auto:
-    return "auto";
-  case StorageClass::Extern:
-    return "extern";
-  case StorageClass::PrivateExtern:
-    return "__private_extern__";
-  case StorageClass::Register:
-    return "register";
-  case StorageClass::Static:
-    return "static";
+  case SC_None:                 break;
+  case SC_Auto:                 return "auto";
+  case SC_Extern:               return "extern";
+  case SC_PrivateExtern:        return "__private_extern__";
+  case SC_Register:             return "register";
+  case SC_Static:               return "static";
   }
 
   llvm_unreachable("Invalid storage class");
@@ -1992,7 +1986,7 @@ VarDecl::VarDecl(Kind DK, ASTContext &C, DeclContext *DC,
   static_assert(sizeof(NonParmVarDeclBitfields) <= sizeof(unsigned),
                 "NonParmVarDeclBitfields too large!");
   AllBits = 0;
-  VarDeclBits.SClass = static_cast<unsigned>(SC);
+  VarDeclBits.SClass = SC;
   // Everything else is implicitly initialized to false.
 }
 
@@ -2006,12 +2000,12 @@ VarDecl *VarDecl::Create(ASTContext &C, DeclContext *DC,
 VarDecl *VarDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
   return new (C, ID)
       VarDecl(Var, C, nullptr, SourceLocation(), SourceLocation(), nullptr,
-              QualType(), nullptr, StorageClass::None);
+              QualType(), nullptr, SC_None);
 }
 
 void VarDecl::setStorageClass(StorageClass SC) {
   assert(isLegalForVariable(SC));
-  VarDeclBits.SClass = static_cast<unsigned>(SC);
+  VarDeclBits.SClass = SC;
 }
 
 VarDecl::TLSKind VarDecl::getTLSKind() const {
@@ -2726,7 +2720,7 @@ QualType ParmVarDecl::getOriginalType() const {
 ParmVarDecl *ParmVarDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
   return new (C, ID)
       ParmVarDecl(ParmVar, C, nullptr, SourceLocation(), SourceLocation(),
-                  nullptr, QualType(), nullptr, StorageClass::None, nullptr);
+                  nullptr, QualType(), nullptr, SC_None, nullptr);
 }
 
 SourceRange ParmVarDecl::getSourceRange() const {
@@ -2836,7 +2830,7 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
       DeclContext(DK), redeclarable_base(C), Body(), ODRHash(0),
       EndRangeLoc(NameInfo.getEndLoc()), DNLoc(NameInfo.getInfo()) {
   assert(T.isNull() || T->isFunctionType());
-  FunctionDeclBits.SClass = static_cast<uint64_t>(S);
+  FunctionDeclBits.SClass = S;
   FunctionDeclBits.IsInline = isInlineSpecified;
   FunctionDeclBits.IsInlineSpecified = isInlineSpecified;
   FunctionDeclBits.IsVirtualAsWritten = false;
@@ -3187,7 +3181,7 @@ bool FunctionDecl::isGlobal() const {
   if (const auto *Method = dyn_cast<CXXMethodDecl>(this))
     return Method->isStatic();
 
-  if (getCanonicalDecl()->getStorageClass() == StorageClass::Static)
+  if (getCanonicalDecl()->getStorageClass() == SC_Static)
     return false;
 
   for (const DeclContext *DC = getDeclContext();
@@ -3294,7 +3288,7 @@ unsigned FunctionDecl::getBuiltinID(bool ConsiderWrapperFunctions) const {
   // function or whether it just has the same name.
 
   // If this is a static function, it's not a builtin.
-  if (!ConsiderWrapperFunctions && getStorageClass() == StorageClass::Static)
+  if (!ConsiderWrapperFunctions && getStorageClass() == SC_Static)
     return 0;
 
   // OpenCL v1.2 s6.9.f - The library functions defined in
@@ -3386,19 +3380,19 @@ bool FunctionDecl::isMSExternInline() const {
 
   for (const FunctionDecl *FD = getMostRecentDecl(); FD;
        FD = FD->getPreviousDecl())
-    if (!FD->isImplicit() && FD->getStorageClass() == StorageClass::Extern)
+    if (!FD->isImplicit() && FD->getStorageClass() == SC_Extern)
       return true;
 
   return false;
 }
 
 static bool redeclForcesDefMSVC(const FunctionDecl *Redecl) {
-  if (Redecl->getStorageClass() != StorageClass::Extern)
+  if (Redecl->getStorageClass() != SC_Extern)
     return false;
 
   for (const FunctionDecl *FD = Redecl->getPreviousDecl(); FD;
        FD = FD->getPreviousDecl())
-    if (!FD->isImplicit() && FD->getStorageClass() == StorageClass::Extern)
+    if (!FD->isImplicit() && FD->getStorageClass() == SC_Extern)
       return false;
 
   return true;
@@ -3414,8 +3408,7 @@ static bool RedeclForcesDefC99(const FunctionDecl *Redecl) {
   if (Redecl->isImplicit())
     return false;
 
-  if (!Redecl->isInlineSpecified() ||
-      Redecl->getStorageClass() == StorageClass::Extern)
+  if (!Redecl->isInlineSpecified() || Redecl->getStorageClass() == SC_Extern)
     return true; // Not an inline definition
 
   return false;
@@ -3449,7 +3442,7 @@ bool FunctionDecl::doesDeclarationForceExternallyVisibleDefinition() const {
     //
     // FIXME: What happens if gnu_inline gets added on after the first
     // declaration?
-    if (!isInlineSpecified() || getStorageClass() == StorageClass::Extern)
+    if (!isInlineSpecified() || getStorageClass() == SC_Extern)
       return false;
 
     const FunctionDecl *Prev = this;
@@ -3461,10 +3454,10 @@ bool FunctionDecl::doesDeclarationForceExternallyVisibleDefinition() const {
         // If it's not the case that both 'inline' and 'extern' are
         // specified on the definition, then it is always externally visible.
         if (!Prev->isInlineSpecified() ||
-            Prev->getStorageClass() != StorageClass::Extern)
+            Prev->getStorageClass() != SC_Extern)
           return false;
       } else if (Prev->isInlineSpecified() &&
-                 Prev->getStorageClass() != StorageClass::Extern) {
+                 Prev->getStorageClass() != SC_Extern) {
         return false;
       }
     }
@@ -3475,7 +3468,7 @@ bool FunctionDecl::doesDeclarationForceExternallyVisibleDefinition() const {
   //   [...] If all of the file scope declarations for a function in a
   //   translation unit include the inline function specifier without extern,
   //   then the definition in that translation unit is an inline definition.
-  if (isInlineSpecified() && getStorageClass() != StorageClass::Extern)
+  if (isInlineSpecified() && getStorageClass() != SC_Extern)
     return false;
   const FunctionDecl *Prev = this;
   bool FoundBody = false;
@@ -3563,14 +3556,14 @@ bool FunctionDecl::isInlineDefinitionExternallyVisible() const {
     // externally visible.
     if (Context.getLangOpts().CPlusPlus)
       return false;
-    if (!(isInlineSpecified() && getStorageClass() == StorageClass::Extern))
+    if (!(isInlineSpecified() && getStorageClass() == SC_Extern))
       return true;
 
     // If any declaration is 'inline' but not 'extern', then this definition
     // is externally visible.
     for (auto Redecl : redecls()) {
       if (Redecl->isInlineSpecified() &&
-          Redecl->getStorageClass() != StorageClass::Extern)
+          Redecl->getStorageClass() != SC_Extern)
         return true;
     }
 
@@ -4845,10 +4838,9 @@ FunctionDecl *FunctionDecl::Create(ASTContext &C, DeclContext *DC,
 }
 
 FunctionDecl *FunctionDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
-  return new (C, ID) FunctionDecl(Function, C, nullptr, SourceLocation(),
-                                  DeclarationNameInfo(), QualType(), nullptr,
-                                  StorageClass::None, false,
-                                  ConstexprSpecKind::Unspecified, nullptr);
+  return new (C, ID) FunctionDecl(
+      Function, C, nullptr, SourceLocation(), DeclarationNameInfo(), QualType(),
+      nullptr, SC_None, false, ConstexprSpecKind::Unspecified, nullptr);
 }
 
 BlockDecl *BlockDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation L) {

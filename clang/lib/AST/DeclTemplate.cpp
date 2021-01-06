@@ -1226,7 +1226,7 @@ VarTemplateSpecializationDecl::VarTemplateSpecializationDecl(
 VarTemplateSpecializationDecl::VarTemplateSpecializationDecl(Kind DK,
                                                              ASTContext &C)
     : VarDecl(DK, C, nullptr, SourceLocation(), SourceLocation(), nullptr,
-              QualType(), nullptr, StorageClass::None),
+              QualType(), nullptr, SC_None),
       SpecializationKind(TSK_Undeclared), IsCompleteDefinition(false) {}
 
 VarTemplateSpecializationDecl *VarTemplateSpecializationDecl::Create(

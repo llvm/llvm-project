@@ -2023,9 +2023,9 @@ LocalScope* CFGBuilder::addLocalScopeForVarDecl(VarDecl *VD,
 
   // Check if variable is local.
   switch (VD->getStorageClass()) {
-  case StorageClass::None:
-  case StorageClass::Auto:
-  case StorageClass::Register:
+  case SC_None:
+  case SC_Auto:
+  case SC_Register:
     break;
   default: return Scope;
   }

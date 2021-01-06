@@ -3835,7 +3835,7 @@ bool Expr::refersToGlobalRegisterVar() const {
 
   if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E))
     if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
-      if (VD->getStorageClass() == StorageClass::Register &&
+      if (VD->getStorageClass() == SC_Register &&
           VD->hasAttr<AsmLabelAttr>() && !VD->isLocalVarDecl())
         return true;
 
