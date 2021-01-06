@@ -286,6 +286,7 @@ public:
     auto &Opts = getSupportedOpenCLOpts();
     Opts.support("cl_clang_storage_class_specifiers");
     Opts.support("__cl_clang_function_pointers");
+    Opts.support("__cl_clang_variadic_functions");
 
     bool IsAMDGCN = isAMDGCN(getTriple());
 
