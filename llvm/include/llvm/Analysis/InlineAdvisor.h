@@ -9,13 +9,11 @@
 #ifndef LLVM_INLINEADVISOR_H_
 #define LLVM_INLINEADVISOR_H_
 
-#include <memory>
-#include <unordered_set>
-#include <vector>
-
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/PassManager.h"
+#include <memory>
+#include <unordered_set>
 
 namespace llvm {
 class BasicBlock;
