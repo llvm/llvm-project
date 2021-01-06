@@ -39,6 +39,12 @@ else()
   target_compile_definitions(omptarget PUBLIC OMPTARGET_PROFILE_ENABLED)
 endif()
 
+# libomptarget needs to be set separately because add_llvm_library doesn't
+# conform with location configuration of its parent scope.
+set_target_properties(omptarget
+  PROPERTIES
+  LIBRARY_OUTPUT_DIRECTORY ${LIBOMPTARGET_LIBRARY_DIR})
+
 # Install libomptarget under the lib destination folder.
 install(TARGETS omptarget LIBRARY COMPONENT omptarget
   DESTINATION "${OPENMP_INSTALL_LIBDIR}")
