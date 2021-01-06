@@ -1211,8 +1211,6 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &MF,
 
         StackOffset Offset =
             TFI->getFrameIndexReference(MF, FrameIdx, Reg);
-        assert(!Offset.getScalable() &&
-               "Frame offsets with a scalable component are not supported");
         MI.getOperand(0).ChangeToRegister(Reg, false /*isDef*/);
         MI.getOperand(0).setIsDebug();
 
@@ -1238,7 +1236,8 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &MF,
           // Make the DBG_VALUE direct.
           MI.getDebugOffset().ChangeToRegister(0, false);
         }
-        DIExpr = DIExpression::prepend(DIExpr, PrependFlags, Offset.getFixed());
+
+        DIExpr = TRI.prependOffsetExpression(DIExpr, PrependFlags, Offset);
         MI.getDebugExpressionOp().setMetadata(DIExpr);
         continue;
       }
