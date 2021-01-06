@@ -4631,7 +4631,7 @@ static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1,
   Indices.assign(Mask.begin(), Mask.end());
 
   // Canonicalization: If mask does not select elements from an input vector,
-  // replace that input vector with undef.
+  // replace that input vector with poison.
   if (!Scalable) {
     bool MaskSelects0 = false, MaskSelects1 = false;
     unsigned InVecNumElts = InVecEltCount.getKnownMinValue();
@@ -4644,9 +4644,9 @@ static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1,
         MaskSelects1 = true;
     }
     if (!MaskSelects0)
-      Op0 = UndefValue::get(InVecTy);
+      Op0 = PoisonValue::get(InVecTy);
     if (!MaskSelects1)
-      Op1 = UndefValue::get(InVecTy);
+      Op1 = PoisonValue::get(InVecTy);
   }
 
   auto *Op0Const = dyn_cast<Constant>(Op0);
