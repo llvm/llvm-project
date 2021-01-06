@@ -1,7 +1,7 @@
 ; REQUIRES: asserts
 ; RUN: llc -debug-only=regalloc < %s 2>&1 |FileCheck %s --check-prefix=DEBUG
 
-; DEBUG-COUNT-3:         AllocationOrder(VRSAVERC) = [ ]
+; DEBUG-COUNT-1:         AllocationOrder(VRSAVERC) = [ ]
 
 target triple = "powerpc64le-unknown-linux-gnu"
 
