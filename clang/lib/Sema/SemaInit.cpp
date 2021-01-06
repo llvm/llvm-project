@@ -8200,9 +8200,21 @@ ExprResult InitializationSequence::Perform(Sema &S,
       if (S.CheckExceptionSpecCompatibility(CurInit.get(), DestType))
         return ExprError();
 
+      QualType MTETy = Step->Type;
+
+      // When this is an incomplete array type (such as when this is
+      // initializing an array of unknown bounds from an init list), use THAT
+      // type instead so that we propogate the array bounds.
+      if (MTETy->isIncompleteArrayType() &&
+          !CurInit.get()->getType()->isIncompleteArrayType() &&
+          S.Context.hasSameType(
+              MTETy->getPointeeOrArrayElementType(),
+              CurInit.get()->getType()->getPointeeOrArrayElementType()))
+        MTETy = CurInit.get()->getType();
+
       // Materialize the temporary into memory.
       MaterializeTemporaryExpr *MTE = S.CreateMaterializeTemporaryExpr(
-          Step->Type, CurInit.get(), Entity.getType()->isLValueReferenceType());
+          MTETy, CurInit.get(), Entity.getType()->isLValueReferenceType());
       CurInit = MTE;
 
       // If we're extending this temporary to automatic storage duration -- we

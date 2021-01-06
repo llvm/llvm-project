@@ -11705,9 +11705,152 @@ static bool IsSVECntIntrinsic(SDValue S) {
   return false;
 }
 
+/// Calculates what the pre-extend type is, based on the extension
+/// operation node provided by \p Extend.
+///
+/// In the case that \p Extend is a SIGN_EXTEND or a ZERO_EXTEND, the
+/// pre-extend type is pulled directly from the operand, while other extend
+/// operations need a bit more inspection to get this information.
+///
+/// \param Extend The SDNode from the DAG that represents the extend operation
+/// \param DAG The SelectionDAG hosting the \p Extend node
+///
+/// \returns The type representing the \p Extend source type, or \p MVT::Other
+/// if no valid type can be determined
+static EVT calculatePreExtendType(SDValue Extend, SelectionDAG &DAG) {
+  switch (Extend.getOpcode()) {
+  case ISD::SIGN_EXTEND:
+  case ISD::ZERO_EXTEND:
+    return Extend.getOperand(0).getValueType();
+  case ISD::AssertSext:
+  case ISD::AssertZext:
+  case ISD::SIGN_EXTEND_INREG: {
+    VTSDNode *TypeNode = dyn_cast<VTSDNode>(Extend.getOperand(1));
+    if (!TypeNode)
+      return MVT::Other;
+    return TypeNode->getVT();
+  }
+  case ISD::AND: {
+    ConstantSDNode *Constant =
+        dyn_cast<ConstantSDNode>(Extend.getOperand(1).getNode());
+    if (!Constant)
+      return MVT::Other;
+
+    uint32_t Mask = Constant->getZExtValue();
+
+    if (Mask == UCHAR_MAX)
+      return MVT::i8;
+    else if (Mask == USHRT_MAX)
+      return MVT::i16;
+    else if (Mask == UINT_MAX)
+      return MVT::i32;
+
+    return MVT::Other;
+  }
+  default:
+    return MVT::Other;
+  }
+
+  llvm_unreachable("Code path unhandled in calculatePreExtendType!");
+}
+
+/// Combines a dup(sext/zext) node pattern into sext/zext(dup)
+/// making use of the vector SExt/ZExt rather than the scalar SExt/ZExt
+static SDValue performCommonVectorExtendCombine(SDValue VectorShuffle,
+                                                SelectionDAG &DAG) {
+
+  ShuffleVectorSDNode *ShuffleNode =
+      dyn_cast<ShuffleVectorSDNode>(VectorShuffle.getNode());
+  if (!ShuffleNode)
+    return SDValue();
+
+  // Ensuring the mask is zero before continuing
+  if (!ShuffleNode->isSplat() || ShuffleNode->getSplatIndex() != 0)
+    return SDValue();
+
+  SDValue InsertVectorElt = VectorShuffle.getOperand(0);
+
+  if (InsertVectorElt.getOpcode() != ISD::INSERT_VECTOR_ELT)
+    return SDValue();
+
+  SDValue InsertLane = InsertVectorElt.getOperand(2);
+  ConstantSDNode *Constant = dyn_cast<ConstantSDNode>(InsertLane.getNode());
+  // Ensures the insert is inserting into lane 0
+  if (!Constant || Constant->getZExtValue() != 0)
+    return SDValue();
+
+  SDValue Extend = InsertVectorElt.getOperand(1);
+  unsigned ExtendOpcode = Extend.getOpcode();
+
+  bool IsSExt = ExtendOpcode == ISD::SIGN_EXTEND ||
+                ExtendOpcode == ISD::SIGN_EXTEND_INREG ||
+                ExtendOpcode == ISD::AssertSext;
+  if (!IsSExt && ExtendOpcode != ISD::ZERO_EXTEND &&
+      ExtendOpcode != ISD::AssertZext && ExtendOpcode != ISD::AND)
+    return SDValue();
+
+  EVT TargetType = VectorShuffle.getValueType();
+  EVT PreExtendType = calculatePreExtendType(Extend, DAG);
+
+  if ((TargetType != MVT::v8i16 && TargetType != MVT::v4i32 &&
+       TargetType != MVT::v2i64) ||
+      (PreExtendType == MVT::Other))
+    return SDValue();
+
+  EVT PreExtendVT = TargetType.changeVectorElementType(PreExtendType);
+
+  if (PreExtendVT.getVectorElementCount() != TargetType.getVectorElementCount())
+    return SDValue();
+
+  if (TargetType.getScalarSizeInBits() != PreExtendVT.getScalarSizeInBits() * 2)
+    return SDValue();
+
+  SDLoc DL(VectorShuffle);
+
+  SDValue InsertVectorNode = DAG.getNode(
+      InsertVectorElt.getOpcode(), DL, PreExtendVT, DAG.getUNDEF(PreExtendVT),
+      Extend.getOperand(0), DAG.getConstant(0, DL, MVT::i64));
+
+  std::vector<int> ShuffleMask(TargetType.getVectorElementCount().getValue());
+
+  SDValue VectorShuffleNode =
+      DAG.getVectorShuffle(PreExtendVT, DL, InsertVectorNode,
+                           DAG.getUNDEF(PreExtendVT), ShuffleMask);
+
+  SDValue ExtendNode =
+      DAG.getNode(IsSExt ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND, DL, TargetType,
+                  VectorShuffleNode, DAG.getValueType(TargetType));
+
+  return ExtendNode;
+}
+
+/// Combines a mul(dup(sext/zext)) node pattern into mul(sext/zext(dup))
+/// making use of the vector SExt/ZExt rather than the scalar SExt/ZExt
+static SDValue performMulVectorExtendCombine(SDNode *Mul, SelectionDAG &DAG) {
+  // If the value type isn't a vector, none of the operands are going to be dups
+  if (!Mul->getValueType(0).isVector())
+    return SDValue();
+
+  SDValue Op0 = performCommonVectorExtendCombine(Mul->getOperand(0), DAG);
+  SDValue Op1 = performCommonVectorExtendCombine(Mul->getOperand(1), DAG);
+
+  // Neither operands have been changed, don't make any further changes
+  if (!Op0 && !Op1)
+    return SDValue();
+
+  SDLoc DL(Mul);
+  return DAG.getNode(Mul->getOpcode(), DL, Mul->getValueType(0),
+                     Op0 ? Op0 : Mul->getOperand(0),
+                     Op1 ? Op1 : Mul->getOperand(1));
+}
+
 static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const AArch64Subtarget *Subtarget) {
+
+  if (SDValue Ext = performMulVectorExtendCombine(N, DAG))
+    return Ext;
+
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 

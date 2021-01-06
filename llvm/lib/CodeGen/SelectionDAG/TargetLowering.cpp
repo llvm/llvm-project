@@ -3486,35 +3486,36 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
     // Optimize some CTPOP cases.
     if (SDValue V = simplifySetCCWithCTPOP(*this, VT, N0, C1, Cond, dl, DAG))
       return V;
-  }
-
-  // FIXME: Support vectors.
-  if (auto *N1C = dyn_cast<ConstantSDNode>(N1.getNode())) {
-    const APInt &C1 = N1C->getAPIntValue();
 
     // If the LHS is '(srl (ctlz x), 5)', the RHS is 0/1, and this is an
     // equality comparison, then we're just comparing whether X itself is
     // zero.
     if (N0.getOpcode() == ISD::SRL && (C1.isNullValue() || C1.isOneValue()) &&
         N0.getOperand(0).getOpcode() == ISD::CTLZ &&
-        N0.getOperand(1).getOpcode() == ISD::Constant) {
-      const APInt &ShAmt = N0.getConstantOperandAPInt(1);
-      if ((Cond == ISD::SETEQ || Cond == ISD::SETNE) &&
-          ShAmt == Log2_32(N0.getValueSizeInBits())) {
-        if ((C1 == 0) == (Cond == ISD::SETEQ)) {
-          // (srl (ctlz x), 5) == 0  -> X != 0
-          // (srl (ctlz x), 5) != 1  -> X != 0
-          Cond = ISD::SETNE;
-        } else {
-          // (srl (ctlz x), 5) != 0  -> X == 0
-          // (srl (ctlz x), 5) == 1  -> X == 0
-          Cond = ISD::SETEQ;
+        isPowerOf2_32(N0.getScalarValueSizeInBits())) {
+      if (ConstantSDNode *ShAmt = isConstOrConstSplat(N0.getOperand(1))) {
+        if ((Cond == ISD::SETEQ || Cond == ISD::SETNE) &&
+            ShAmt->getAPIntValue() == Log2_32(N0.getScalarValueSizeInBits())) {
+          if ((C1 == 0) == (Cond == ISD::SETEQ)) {
+            // (srl (ctlz x), 5) == 0  -> X != 0
+            // (srl (ctlz x), 5) != 1  -> X != 0
+            Cond = ISD::SETNE;
+          } else {
+            // (srl (ctlz x), 5) != 0  -> X == 0
+            // (srl (ctlz x), 5) == 1  -> X == 0
+            Cond = ISD::SETEQ;
+          }
+          SDValue Zero = DAG.getConstant(0, dl, N0.getValueType());
+          return DAG.getSetCC(dl, VT, N0.getOperand(0).getOperand(0), Zero,
+                              Cond);
         }
-        SDValue Zero = DAG.getConstant(0, dl, N0.getValueType());
-        return DAG.getSetCC(dl, VT, N0.getOperand(0).getOperand(0),
-                            Zero, Cond);
       }
     }
+  }
+
+  // FIXME: Support vectors.
+  if (auto *N1C = dyn_cast<ConstantSDNode>(N1.getNode())) {
+    const APInt &C1 = N1C->getAPIntValue();
 
     // (zext x) == C --> x == (trunc C)
     // (sext x) == C --> x == (trunc C)
