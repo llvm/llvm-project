@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-suspicious-semicolon %t -- -- -std=c++17
+// RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-suspicious-semicolon %t
 
 void fail()
 {
