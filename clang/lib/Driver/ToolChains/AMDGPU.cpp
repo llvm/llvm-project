@@ -88,23 +88,30 @@ void RocmInstallationDetector::scanLibDevicePath(llvm::StringRef Path) {
   }
 }
 
-void RocmInstallationDetector::ParseHIPVersionFile(llvm::StringRef V) {
+// Parse and extract version numbers from `.hipVersion`. Return `true` if
+// the parsing fails.
+bool RocmInstallationDetector::parseHIPVersionFile(llvm::StringRef V) {
   SmallVector<StringRef, 4> VersionParts;
   V.split(VersionParts, '\n');
-  unsigned Major;
-  unsigned Minor;
+  unsigned Major = ~0U;
+  unsigned Minor = ~0U;
   for (auto Part : VersionParts) {
-    auto Splits = Part.split('=');
-    if (Splits.first == "HIP_VERSION_MAJOR")
-      Splits.second.getAsInteger(0, Major);
-    else if (Splits.first == "HIP_VERSION_MINOR")
-      Splits.second.getAsInteger(0, Minor);
-    else if (Splits.first == "HIP_VERSION_PATCH")
+    auto Splits = Part.rtrim().split('=');
+    if (Splits.first == "HIP_VERSION_MAJOR") {
+      if (Splits.second.getAsInteger(0, Major))
+        return true;
+    } else if (Splits.first == "HIP_VERSION_MINOR") {
+      if (Splits.second.getAsInteger(0, Minor))
+        return true;
+    } else if (Splits.first == "HIP_VERSION_PATCH")
       VersionPatch = Splits.second.str();
   }
+  if (Major == ~0U || Minor == ~0U)
+    return true;
   VersionMajorMinor = llvm::VersionTuple(Major, Minor);
   DetectedVersion =
       (Twine(Major) + "." + Twine(Minor) + "." + VersionPatch).str();
+  return false;
 }
 
 // For candidate specified by --rocm-path we do not do strict check.
@@ -290,7 +297,8 @@ void RocmInstallationDetector::detectHIPRuntime() {
       continue;
 
     if (HIPVersionArg.empty() && VersionFile)
-      ParseHIPVersionFile((*VersionFile)->getBuffer());
+      if (parseHIPVersionFile((*VersionFile)->getBuffer()))
+        continue;
 
     HasHIPRuntime = true;
     return;

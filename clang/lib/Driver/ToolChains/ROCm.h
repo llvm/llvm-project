@@ -103,7 +103,7 @@ private:
   }
 
   void scanLibDevicePath(llvm::StringRef Path);
-  void ParseHIPVersionFile(llvm::StringRef V);
+  bool parseHIPVersionFile(llvm::StringRef V);
   SmallVector<Candidate, 4> getInstallationPathCandidates();
 
 public:

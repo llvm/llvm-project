@@ -315,7 +315,7 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
         formatv("\"operand {0} of native code call '{1}' failed to satisfy "
                 "constraint: "
                 "'{2}'\"",
-                i, tree.getNativeCodeTemplate(), constraint.getDescription()));
+                i, tree.getNativeCodeTemplate(), constraint.getSummary()));
   }
 
   LLVM_DEBUG(llvm::dbgs() << "done emitting match for native code call\n");
@@ -425,7 +425,7 @@ void PatternEmitter::emitOperandMatch(DagNode tree, StringRef opName,
           formatv("\"operand {0} of op '{1}' failed to satisfy constraint: "
                   "'{2}'\"",
                   operand - op.operand_begin(), op.getOperationName(),
-                  constraint.getDescription()));
+                  constraint.getSummary()));
     }
   }
 
@@ -491,7 +491,7 @@ void PatternEmitter::emitAttributeMatch(DagNode tree, StringRef opName,
         formatv("\"op '{0}' attribute '{1}' failed to satisfy constraint: "
                 "{2}\"",
                 op.getOperationName(), namedAttr->name,
-                matcher.getAsConstraint().getDescription()));
+                matcher.getAsConstraint().getSummary()));
   }
 
   // Capture the value
@@ -536,7 +536,7 @@ void PatternEmitter::emitMatchLogic(DagNode tree, StringRef opName) {
       emitMatchCheck(
           opName, tgfmt(condition, &fmtCtx.withSelf(self.str())),
           formatv("\"value entity '{0}' failed to satisfy constraint: {1}\"",
-                  entities.front(), constraint.getDescription()));
+                  entities.front(), constraint.getSummary()));
 
     } else if (isa<AttrConstraint>(constraint)) {
       PrintFatalError(
@@ -562,7 +562,7 @@ void PatternEmitter::emitMatchLogic(DagNode tree, StringRef opName) {
                      formatv("\"entities '{0}' failed to satisfy constraint: "
                              "{1}\"",
                              llvm::join(entities, ", "),
-                             constraint.getDescription()));
+                             constraint.getSummary()));
     }
   }
 
