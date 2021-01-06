@@ -102,7 +102,7 @@ class LLVM_PointerTo<Type pointee> : Type<
          "$_self",
          "$_self.cast<::mlir::LLVM::LLVMPointerType>().getElementType()",
          pointee.predicate>]>,
-  "LLVM pointer to " # pointee.description>;
+  "LLVM pointer to " # pointee.summary>;
 
 // Type constraint accepting any LLVM structure type.
 def LLVM_AnyStruct : Type<CPred<"$_self.isa<::mlir::LLVM::LLVMStructType>()">,
@@ -142,7 +142,7 @@ class LLVM_VectorOf<Type element> : Type<
          "$_self",
          "$_self.cast<::mlir::LLVM::LLVMVectorType>().getElementType()",
          element.predicate>]>,
-  "LLVM vector of " # element.description>;
+  "LLVM vector of " # element.summary>;
 
 // Type constraint accepting a constrained type, or a vector of such types.
 class LLVM_ScalarOrVectorOf<Type element> :

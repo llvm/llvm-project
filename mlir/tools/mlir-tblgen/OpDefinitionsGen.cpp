@@ -248,7 +248,7 @@ void StaticVerifierFunctionEmitter::emitTypeConstraintMethods(
        << formatv(
               "    return op->emitOpError(valueKind) << \" #\" << "
               "valueGroupStartIndex << \" must be {0}, but got \" << type;\n",
-              constraint.getDescription())
+              constraint.getSummary())
        << "  }\n"
        << "  return ::mlir::success();\n"
        << "}\n\n";
@@ -576,7 +576,7 @@ static void genAttributeVerifier(const Operator &op, const char *attrGet,
     body << tgfmt("    if (!($0)) return $1\"attribute '$2' "
                   "failed to satisfy constraint: $3\");\n",
                   /*ctx=*/nullptr, tgfmt(condition, &ctx.withSelf(varName)),
-                  emitErrorPrefix, attrName, attr.getDescription());
+                  emitErrorPrefix, attrName, attr.getSummary());
     if (allowMissingAttr)
       body << "  }\n";
     body << "  }\n";
@@ -1991,7 +1991,7 @@ void OpEmitter::genVerifier() {
       body << tgfmt("  if (!($0))\n    "
                     "return emitOpError(\"failed to verify that $1\");\n",
                     &verifyCtx, tgfmt(t->getPredTemplate(), &verifyCtx),
-                    t->getDescription());
+                    t->getSummary());
     }
   }
 
@@ -2086,7 +2086,7 @@ void OpEmitter::genRegionVerifier(OpMethodBody &body) {
                     "verify constraint: {2}\";\n      }\n",
                     constraint,
                     region.name.empty() ? "" : "('" + region.name + "') ",
-                    region.constraint.getDescription())
+                    region.constraint.getSummary())
          << "      ++index;\n"
          << "    }\n";
   }
@@ -2125,7 +2125,7 @@ void OpEmitter::genSuccessorVerifier(OpMethodBody &body) {
                     "failed to "
                     "verify constraint: {2}\";\n      }\n",
                     constraint, successor.name,
-                    successor.constraint.getDescription())
+                    successor.constraint.getSummary())
          << "      ++index;\n"
          << "    }\n";
   }
