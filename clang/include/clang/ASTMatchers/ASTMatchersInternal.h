@@ -723,6 +723,8 @@ public:
 
   virtual bool IsMatchingInASTNodeNotSpelledInSource() const = 0;
 
+  virtual bool IsMatchingInASTNodeNotAsIs() const = 0;
+
   bool isTraversalIgnoringImplicitNodes() const;
 
 protected:
