@@ -86,7 +86,6 @@ typedef struct Address {
 class PPCFastISel final : public FastISel {
 
   const TargetMachine &TM;
-  const PPCSubtarget *PPCSubTarget;
   const PPCSubtarget *Subtarget;
   PPCFunctionInfo *PPCFuncInfo;
   const TargetInstrInfo &TII;
@@ -97,7 +96,6 @@ class PPCFastISel final : public FastISel {
     explicit PPCFastISel(FunctionLoweringInfo &FuncInfo,
                          const TargetLibraryInfo *LibInfo)
         : FastISel(FuncInfo, LibInfo), TM(FuncInfo.MF->getTarget()),
-          PPCSubTarget(&FuncInfo.MF->getSubtarget<PPCSubtarget>()),
           Subtarget(&FuncInfo.MF->getSubtarget<PPCSubtarget>()),
           PPCFuncInfo(FuncInfo.MF->getInfo<PPCFunctionInfo>()),
           TII(*Subtarget->getInstrInfo()), TLI(*Subtarget->getTargetLowering()),
