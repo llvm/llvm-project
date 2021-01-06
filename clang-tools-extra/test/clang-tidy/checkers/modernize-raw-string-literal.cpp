@@ -1,5 +1,4 @@
-// RUN: %check_clang_tidy -std=c++11,c++14,c++17 %s modernize-raw-string-literal %t -- -config="{CheckOptions: [{key: modernize-raw-string-literal.ReplaceShorterLiterals, value: 1}]}"
-// FIXME: Fix the checker to work in C++20 mode.
+// RUN: %check_clang_tidy %s modernize-raw-string-literal %t -- -config="{CheckOptions: [{key: modernize-raw-string-literal.ReplaceShorterLiterals, value: 1}]}"
 
 char const *const BackSlash("goink\\frob");
 // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: escaped string literal can be written as a raw string literal [modernize-raw-string-literal]
@@ -47,8 +46,8 @@ char const *const MultibyteSnowman("\xE2\x98\x83");
 char const *const TrailingSpace("A line \\with space. \n");
 char const *const TrailingNewLine("A single \\line.\n");
 char const *const AlreadyRaw(R"(foobie\\bletch)");
-char const *const UTF8Literal(u8"foobie\\bletch");
-char const *const UTF8RawLiteral(u8R"(foobie\\bletch)");
+auto const *const UTF8Literal(u8"foobie\\bletch");
+auto const *const UTF8RawLiteral(u8R"(foobie\\bletch)");
 // TODO: enable these tests once all supported compilers
 // support char16_t and char32_t (VS2013 does not)
 // char16_t const *const UTF16Literal(u"foobie\\bletch");

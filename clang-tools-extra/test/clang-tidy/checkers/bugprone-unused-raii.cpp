@@ -36,6 +36,16 @@ struct Ctor {
   }
 };
 
+template <typename T>
+void templ() {
+  T();
+}
+
+template <typename T>
+void neverInstantiated() {
+  T();
+}
+
 void test() {
   Foo(42);
 // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: object destroyed immediately after creation; did you mean to name the object?
@@ -53,6 +63,9 @@ void test() {
   FooBar();
 // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: object destroyed immediately after creation; did you mean to name the object?
 // CHECK-FIXES: FooBar give_me_a_name;
+
+  templ<FooBar>();
+  templ<Bar>();
 
   Bar();
   f();
