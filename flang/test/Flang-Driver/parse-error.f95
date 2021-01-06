@@ -3,6 +3,6 @@
 
 ! REQUIRES: new-flang-driver
 
-! ERROR: could not parse {{.*}}parse-error.f95
+! ERROR: Could not parse {{.*}}parse-error.f95
 
 "This file will not parse"

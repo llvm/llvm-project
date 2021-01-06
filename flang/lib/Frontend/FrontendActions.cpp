@@ -83,7 +83,7 @@ void ParseSyntaxOnlyAction::ExecuteAction() {
 
   if (ci.parsing().messages().AnyFatalError()) {
     unsigned diagID = ci.diagnostics().getCustomDiagID(
-        clang::DiagnosticsEngine::Error, "could not parse %0");
+        clang::DiagnosticsEngine::Error, "Could not parse %0");
     ci.diagnostics().Report(diagID) << GetCurrentFileOrBufferName();
 
     ci.parsing().messages().Emit(
@@ -107,7 +107,7 @@ void ParseSyntaxOnlyAction::ExecuteAction() {
 
   if (semantics.AnyFatalError()) {
     unsigned DiagID = ci.diagnostics().getCustomDiagID(
-        clang::DiagnosticsEngine::Error, "semantic errors in %0");
+        clang::DiagnosticsEngine::Error, "Semantic errors in %0");
     ci.diagnostics().Report(DiagID) << GetCurrentFileOrBufferName();
   }
 }
