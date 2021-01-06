@@ -13,7 +13,7 @@
 
 ; If this check fails please read test/CodeGen/AArch64/README for instructions
 ; on how to resolve it.
-; WARN-NOT: warning: {{.*}}TypeSize is not scalable
+; WARN-NOT: warning:
 
 declare void @do_something(<vscale x 4 x i32> %x)
 
