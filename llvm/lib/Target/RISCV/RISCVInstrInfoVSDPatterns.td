@@ -35,11 +35,6 @@ def SplatPat       : ComplexPattern<vAny, 1, "selectVSplat", [], [], 1>;
 def SplatPat_simm5 : ComplexPattern<vAny, 1, "selectVSplatSimm5", []>;
 def SplatPat_uimm5 : ComplexPattern<vAny, 1, "selectVSplatUimm5", []>;
 
-// A mask-vector version of the standard 'vnot' fragment but using splat_vector
-// rather than (the implicit) build_vector
-def riscv_m_vnot : PatFrag<(ops node:$in),
-                           (xor node:$in, (splat_vector (XLenVT 1)))>;
-
 multiclass VPatUSLoadStoreSDNode<LLVMType type,
                                  LLVMType mask_type,
                                  int sew,
@@ -198,20 +193,20 @@ foreach mti = AllMasks in {
             (!cast<Instruction>("PseudoVMXOR_MM_"#mti.LMul.MX)
                  VR:$rs1, VR:$rs2, VLMax, mti.SEW)>;
 
-  def : Pat<(mti.Mask (riscv_m_vnot (and VR:$rs1, VR:$rs2))),
+  def : Pat<(mti.Mask (vnot (and VR:$rs1, VR:$rs2))),
             (!cast<Instruction>("PseudoVMNAND_MM_"#mti.LMul.MX)
                  VR:$rs1, VR:$rs2, VLMax, mti.SEW)>;
-  def : Pat<(mti.Mask (riscv_m_vnot (or VR:$rs1, VR:$rs2))),
+  def : Pat<(mti.Mask (vnot (or VR:$rs1, VR:$rs2))),
             (!cast<Instruction>("PseudoVMNOR_MM_"#mti.LMul.MX)
                  VR:$rs1, VR:$rs2, VLMax, mti.SEW)>;
-  def : Pat<(mti.Mask (riscv_m_vnot (xor VR:$rs1, VR:$rs2))),
+  def : Pat<(mti.Mask (vnot (xor VR:$rs1, VR:$rs2))),
             (!cast<Instruction>("PseudoVMXNOR_MM_"#mti.LMul.MX)
                  VR:$rs1, VR:$rs2, VLMax, mti.SEW)>;
 
-  def : Pat<(mti.Mask (and VR:$rs1, (riscv_m_vnot VR:$rs2))),
+  def : Pat<(mti.Mask (and VR:$rs1, (vnot VR:$rs2))),
             (!cast<Instruction>("PseudoVMANDNOT_MM_"#mti.LMul.MX)
                  VR:$rs1, VR:$rs2, VLMax, mti.SEW)>;
-  def : Pat<(mti.Mask (or VR:$rs1, (riscv_m_vnot VR:$rs2))),
+  def : Pat<(mti.Mask (or VR:$rs1, (vnot VR:$rs2))),
             (!cast<Instruction>("PseudoVMORNOT_MM_"#mti.LMul.MX)
                  VR:$rs1, VR:$rs2, VLMax, mti.SEW)>;
 }
@@ -233,9 +228,9 @@ foreach vti = AllIntegerVectors in {
 }
 
 foreach mti = AllMasks in {
-  def : Pat<(mti.Mask (splat_vector (XLenVT 1))),
+  def : Pat<(mti.Mask immAllOnesV),
             (!cast<Instruction>("PseudoVMSET_M_"#mti.BX) VLMax, mti.SEW)>;
-  def : Pat<(mti.Mask (splat_vector (XLenVT 0))),
+  def : Pat<(mti.Mask immAllZerosV),
             (!cast<Instruction>("PseudoVMCLR_M_"#mti.BX) VLMax, mti.SEW)>;
 }
 } // Predicates = [HasStdExtV]
