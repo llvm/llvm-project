@@ -35,7 +35,6 @@ class VPDef;
 class VPSlotTracker;
 class VPUser;
 class VPRecipeBase;
-class VPPredInstPHIRecipe;
 class VPWidenMemoryInstructionRecipe;
 
 // This is the base class of the VPlan Def/Use graph, used for modeling the data
@@ -51,7 +50,6 @@ class VPValue {
   friend class VPInterleavedAccessInfo;
   friend class VPSlotTracker;
   friend class VPRecipeBase;
-  friend class VPPredInstPHIRecipe;
   friend class VPWidenMemoryInstructionRecipe;
 
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
