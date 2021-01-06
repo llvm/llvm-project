@@ -21,6 +21,8 @@ set(LIBOMPTARGET_SRC_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/omptarget.cpp
 )
 
+include_directories(${LIBOMPTARGET_LLVM_MAIN_INCLUDE_DIR})
+
 # Build libomptarget library with libdl dependency. Add LLVMSupport
 # dependency if building in-tree with profiling enabled.
 if(OPENMP_STANDALONE_BUILD OR (NOT OPENMP_ENABLE_LIBOMPTARGET_PROFILING))
