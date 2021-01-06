@@ -77,7 +77,6 @@ STATISTIC(NumSimpl, "Number of blocks simplified");
 
 /// If we have more than one empty (other than phi node) return blocks,
 /// merge them together to promote recursive block merging.
-// FIXME: switch to non-permissive DomTreeUpdater::applyUpdates().
 static bool mergeEmptyReturnBlocks(Function &F, DomTreeUpdater *DTU) {
   bool Changed = false;
 
@@ -143,7 +142,10 @@ static bool mergeEmptyReturnBlocks(Function &F, DomTreeUpdater *DTU) {
       if (DTU) {
         for (auto *Predecessor : predecessors(&BB)) {
           Updates.push_back({DominatorTree::Delete, Predecessor, &BB});
-          Updates.push_back({DominatorTree::Insert, Predecessor, RetBlock});
+          // But, iff Predecessor already branches to RetBlock,
+          // don't (re-)add DomTree edge, because it already exists.
+          if (!is_contained(successors(Predecessor), RetBlock))
+            Updates.push_back({DominatorTree::Insert, Predecessor, RetBlock});
         }
       }
       BB.replaceAllUsesWith(RetBlock);
@@ -176,7 +178,7 @@ static bool mergeEmptyReturnBlocks(Function &F, DomTreeUpdater *DTU) {
   }
 
   if (DTU) {
-    DTU->applyUpdatesPermissive(Updates);
+    DTU->applyUpdates(Updates);
     for (auto *BB : DeadBlocks)
       DTU->deleteBB(BB);
   } else {
