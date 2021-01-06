@@ -290,7 +290,7 @@ def Test_Dialect_2 : Dialect {
 }
 def MyStruct : StructAttr<"MyStruct", Test_Dialect_2,
 [StructFieldAttr<"potatoes", I64ElementsAttr>]> {
-  let description = "A structure describing a number of potatoes.";
+  let summary = "A structure describing a number of potatoes.";
 }
 
 def StructAttrOp : NS_Op<"struct_attr_op", []> {
