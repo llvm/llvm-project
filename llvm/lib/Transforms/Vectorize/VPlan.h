@@ -1242,7 +1242,7 @@ public:
   /// nodes after merging back from a Branch-on-Mask.
   VPPredInstPHIRecipe(VPValue *PredV)
       : VPRecipeBase(VPPredInstPHISC), VPUser(PredV) {
-    new VPValue(VPValue::VPValueSC, PredV->getUnderlyingValue(), this);
+    new VPValue(PredV->getUnderlyingValue(), this);
   }
   ~VPPredInstPHIRecipe() override = default;
 
