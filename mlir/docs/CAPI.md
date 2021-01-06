@@ -107,7 +107,7 @@ these are represented as instances of `MlirStringRef` structure that contains a
 pointer to the first character of the string fragment (`str`) and the fragment
 length (`length`). Note that the fragment is _not necessarily_ null-terminated,
 the `length` field must be used to identify the last character. `MlirStringRef`
-is a non-owning pointer, the caller is in charge of perfoming the copy or
+is a non-owning pointer, the caller is in charge of performing the copy or
 ensuring that the pointee outlives all uses of `MlirStringRef`.
 
 ### Printing
