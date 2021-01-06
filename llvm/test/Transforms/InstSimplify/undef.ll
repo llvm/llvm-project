@@ -172,7 +172,7 @@ define i64 @test17(i64 %a) {
 define i64 @test18(i64 %a) {
 ; CHECK-LABEL: @test18(
 ; CHECK-NEXT:    [[R:%.*]] = call i64 undef(i64 [[A:%.*]])
-; CHECK-NEXT:    ret i64 undef
+; CHECK-NEXT:    ret i64 poison
 ;
   %r = call i64 (i64) undef(i64 %a)
   ret i64 %r
