@@ -156,9 +156,7 @@ define <2 x i64> @vmlalu32(<2 x i64> %A, <2 x i32> %B, <2 x i32> %C) nounwind {
 define <8 x i16> @vmlala8(<8 x i16> %A, <8 x i8> %B, <8 x i8> %C) nounwind {
 ; CHECK-LABEL: vmlala8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmovl.u8 q8, d3
-; CHECK-NEXT:    vmovl.u8 q9, d2
-; CHECK-NEXT:    vmla.i16 q0, q9, q8
+; CHECK-NEXT:    vmlal.u8 q0, d2, d3
 ; CHECK-NEXT:    vbic.i16 q0, #0xff00
 ; CHECK-NEXT:    bx lr
   %tmp4 = zext <8 x i8> %B to <8 x i16>
@@ -172,9 +170,7 @@ define <8 x i16> @vmlala8(<8 x i16> %A, <8 x i8> %B, <8 x i8> %C) nounwind {
 define <4 x i32> @vmlala16(<4 x i32> %A, <4 x i16> %B, <4 x i16> %C) nounwind {
 ; CHECK-LABEL: vmlala16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmovl.u16 q8, d3
-; CHECK-NEXT:    vmovl.u16 q9, d2
-; CHECK-NEXT:    vmla.i32 q0, q9, q8
+; CHECK-NEXT:    vmlal.u16 q0, d2, d3
 ; CHECK-NEXT:    vmov.i32 q8, #0xffff
 ; CHECK-NEXT:    vand q0, q0, q8
 ; CHECK-NEXT:    bx lr
@@ -189,32 +185,10 @@ define <4 x i32> @vmlala16(<4 x i32> %A, <4 x i16> %B, <4 x i16> %C) nounwind {
 define <2 x i64> @vmlala32(<2 x i64> %A, <2 x i32> %B, <2 x i32> %C) nounwind {
 ; CHECK-LABEL: vmlala32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .save {r4, r5, r6, r7, r11, lr}
-; CHECK-NEXT:    push {r4, r5, r6, r7, r11, lr}
-; CHECK-NEXT:    vmovl.u32 q8, d3
-; CHECK-NEXT:    vmovl.u32 q9, d2
-; CHECK-NEXT:    vmov.32 r0, d16[0]
-; CHECK-NEXT:    vmov.32 r1, d18[0]
-; CHECK-NEXT:    vmov.32 r12, d16[1]
-; CHECK-NEXT:    vmov.32 r3, d17[0]
-; CHECK-NEXT:    vmov.32 r2, d19[0]
-; CHECK-NEXT:    vmov.32 lr, d17[1]
-; CHECK-NEXT:    vmov.32 r6, d19[1]
-; CHECK-NEXT:    umull r7, r5, r1, r0
-; CHECK-NEXT:    mla r1, r1, r12, r5
-; CHECK-NEXT:    umull r5, r4, r2, r3
-; CHECK-NEXT:    mla r2, r2, lr, r4
-; CHECK-NEXT:    vmov.32 r4, d18[1]
-; CHECK-NEXT:    vmov.i64 q9, #0xffffffff
-; CHECK-NEXT:    mla r2, r6, r3, r2
-; CHECK-NEXT:    vmov.32 d17[0], r5
-; CHECK-NEXT:    vmov.32 d16[0], r7
-; CHECK-NEXT:    vmov.32 d17[1], r2
-; CHECK-NEXT:    mla r0, r4, r0, r1
-; CHECK-NEXT:    vmov.32 d16[1], r0
-; CHECK-NEXT:    vadd.i64 q8, q0, q8
-; CHECK-NEXT:    vand q0, q8, q9
-; CHECK-NEXT:    pop {r4, r5, r6, r7, r11, pc}
+; CHECK-NEXT:    vmlal.u32 q0, d2, d3
+; CHECK-NEXT:    vmov.i64 q8, #0xffffffff
+; CHECK-NEXT:    vand q0, q0, q8
+; CHECK-NEXT:    bx lr
   %tmp4 = zext <2 x i32> %B to <2 x i64>
   %tmp5 = zext <2 x i32> %C to <2 x i64>
   %tmp6 = mul <2 x i64> %tmp4, %tmp5
@@ -282,10 +256,7 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @test_vmlal_lanea16(<4 x i32> %arg0_uint32x4_t, <4 x i16> %arg1_uint16x4_t, <4 x i16> %arg2_uint16x4_t) nounwind readnone {
 ; CHECK-LABEL: test_vmlal_lanea16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vdup.16 d16, d3[1]
-; CHECK-NEXT:    vmovl.u16 q9, d2
-; CHECK-NEXT:    vmovl.u16 q8, d16
-; CHECK-NEXT:    vmla.i32 q0, q9, q8
+; CHECK-NEXT:    vmlal.u16 q0, d2, d3[1]
 ; CHECK-NEXT:    vmov.i32 q8, #0xffff
 ; CHECK-NEXT:    vand q0, q0, q8
 ; CHECK-NEXT:    bx lr
@@ -302,33 +273,10 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @test_vmlal_lanea32(<2 x i64> %arg0_uint64x2_t, <2 x i32> %arg1_uint32x2_t, <2 x i32> %arg2_uint32x2_t) nounwind readnone {
 ; CHECK-LABEL: test_vmlal_lanea32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r6, r7, r11, lr}
-; CHECK-NEXT:    push {r4, r5, r6, r7, r11, lr}
-; CHECK-NEXT:    vdup.32 d16, d3[1]
-; CHECK-NEXT:    vmovl.u32 q9, d2
-; CHECK-NEXT:    vmovl.u32 q8, d16
-; CHECK-NEXT:    vmov.32 r0, d18[0]
-; CHECK-NEXT:    vmov.32 r3, d19[0]
-; CHECK-NEXT:    vmov.32 r1, d16[0]
-; CHECK-NEXT:    vmov.32 r12, d16[1]
-; CHECK-NEXT:    vmov.32 r2, d17[0]
-; CHECK-NEXT:    vmov.32 lr, d17[1]
-; CHECK-NEXT:    vmov.32 r6, d19[1]
-; CHECK-NEXT:    umull r7, r5, r0, r1
-; CHECK-NEXT:    mla r0, r0, r12, r5
-; CHECK-NEXT:    umull r5, r4, r3, r2
-; CHECK-NEXT:    mla r3, r3, lr, r4
-; CHECK-NEXT:    vmov.32 r4, d18[1]
-; CHECK-NEXT:    vmov.i64 q9, #0xffffffff
-; CHECK-NEXT:    mla r2, r6, r2, r3
-; CHECK-NEXT:    vmov.32 d17[0], r5
-; CHECK-NEXT:    vmov.32 d16[0], r7
-; CHECK-NEXT:    vmov.32 d17[1], r2
-; CHECK-NEXT:    mla r0, r4, r1, r0
-; CHECK-NEXT:    vmov.32 d16[1], r0
-; CHECK-NEXT:    vadd.i64 q8, q0, q8
-; CHECK-NEXT:    vand q0, q8, q9
-; CHECK-NEXT:    pop {r4, r5, r6, r7, r11, pc}
+; CHECK-NEXT:    vmlal.u32 q0, d2, d3[1]
+; CHECK-NEXT:    vmov.i64 q8, #0xffffffff
+; CHECK-NEXT:    vand q0, q0, q8
+; CHECK-NEXT:    bx lr
 entry:
   %0 = shufflevector <2 x i32> %arg2_uint32x2_t, <2 x i32> undef, <2 x i32> <i32 1, i32 1> ; <<2 x i32>> [#uses=1]
   %1 = zext <2 x i32> %arg1_uint32x2_t to <2 x i64>
