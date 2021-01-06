@@ -2674,13 +2674,13 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
 /// If we found a conditional branch that goes to two returning blocks,
 /// try to merge them together into one return,
 /// introducing a select if the return values disagree.
-// FIXME: switch to non-permissive DomTreeUpdater::applyUpdates().
 bool SimplifyCFGOpt::SimplifyCondBranchToTwoReturns(BranchInst *BI,
                                                     IRBuilder<> &Builder) {
   auto *BB = BI->getParent();
   assert(BI->isConditional() && "Must be a conditional branch");
   BasicBlock *TrueSucc = BI->getSuccessor(0);
   BasicBlock *FalseSucc = BI->getSuccessor(1);
+  // NOTE: destinations may match, this could be degenerate uncond branch.
   ReturnInst *TrueRet = cast<ReturnInst>(TrueSucc->getTerminator());
   ReturnInst *FalseRet = cast<ReturnInst>(FalseSucc->getTerminator());
 
@@ -2702,8 +2702,11 @@ bool SimplifyCFGOpt::SimplifyCondBranchToTwoReturns(BranchInst *BI,
     Builder.CreateRetVoid();
     EraseTerminatorAndDCECond(BI);
     if (DTU) {
-      DTU->applyUpdatesPermissive({{DominatorTree::Delete, BB, TrueSucc},
-                                   {DominatorTree::Delete, BB, FalseSucc}});
+      SmallVector<DominatorTree::UpdateType, 2> Updates;
+      Updates.push_back({DominatorTree::Delete, BB, TrueSucc});
+      if (TrueSucc != FalseSucc)
+        Updates.push_back({DominatorTree::Delete, BB, FalseSucc});
+      DTU->applyUpdates(Updates);
     }
     return true;
   }
@@ -2761,10 +2764,12 @@ bool SimplifyCFGOpt::SimplifyCondBranchToTwoReturns(BranchInst *BI,
                     << *TrueSucc << "\nFALSEBLOCK: " << *FalseSucc);
 
   EraseTerminatorAndDCECond(BI);
-
   if (DTU) {
-    DTU->applyUpdatesPermissive({{DominatorTree::Delete, BB, TrueSucc},
-                                 {DominatorTree::Delete, BB, FalseSucc}});
+    SmallVector<DominatorTree::UpdateType, 2> Updates;
+    Updates.push_back({DominatorTree::Delete, BB, TrueSucc});
+    if (TrueSucc != FalseSucc)
+      Updates.push_back({DominatorTree::Delete, BB, FalseSucc});
+    DTU->applyUpdates(Updates);
   }
 
   return true;
