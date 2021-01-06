@@ -385,7 +385,7 @@ structure `A` is represented as `!llvm.struct<"A", (ptr<"B", (ptr<"A">)>,
 ptr<"B", (ptr<"A">))>`. Note that the structure `B` is "unrolled" for both
 elements. _A structure with the same name but different body is a syntax error._
 **The user must ensure structure name uniqueness across all modules processed in
-a given MLIR context.** Stucture names are arbitrary string literals and may
+a given MLIR context.** Structure names are arbitrary string literals and may
 include, e.g., spaces and keywords.
 
 Identified structs may be _opaque_. In this case, the body is unknown but the
