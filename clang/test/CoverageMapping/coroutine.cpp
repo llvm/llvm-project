@@ -37,10 +37,11 @@ struct std::experimental::coroutine_traits<int, int> {
 };
 
 // CHECK-LABEL: _Z2f1i:
-int f1(int x) {       // CHECK-NEXT: File 0, [[@LINE]]:15 -> [[@LINE+7]]:2 = #0
+int f1(int x) {       // CHECK-NEXT: File 0, [[@LINE]]:15 -> [[@LINE+8]]:2 = #0
   if (x > 42) {       // CHECK-NEXT: File 0, [[@LINE]]:7 -> [[@LINE]]:13 = #0
-    ++x;              // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:14 -> [[@LINE-1]]:15 = #1
-  } else {            // CHECK-NEXT: File 0, [[@LINE-2]]:15 -> [[@LINE]]:4 = #1
+                      // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:7 -> [[@LINE-1]]:13 = #1, (#0 - #1)
+    ++x;              // CHECK-NEXT: Gap,File 0, [[@LINE-2]]:14 -> [[@LINE-2]]:15 = #1
+  } else {            // CHECK-NEXT: File 0, [[@LINE-3]]:15 -> [[@LINE]]:4 = #1
     co_return x + 42; // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:4 -> [[@LINE-1]]:10 = (#0 - #1)
   }                   // CHECK-NEXT: File 0, [[@LINE-2]]:10 -> [[@LINE]]:4 = (#0 - #1)
   co_return x;        // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:4 -> [[@LINE]]:3 = #1

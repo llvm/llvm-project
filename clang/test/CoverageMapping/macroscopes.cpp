@@ -85,6 +85,7 @@ int main() {
 
 // CHECK-NEXT: File 1, 3:24 -> 3:53 = #0
 // CHECK-NEXT: File 1, 3:40 -> 3:45 = (#0 + #1)
+// CHECK-NEXT: Branch,File 1, 3:40 -> 3:45 = #1, #0
 // CHECK-NEXT: File 1, 3:47 -> 3:50 = #1
 // CHECK-NEXT: File 1, 3:52 -> 3:53 = #1
 // CHECK-NEXT: File 2, 10:3 -> 20:4 = #1
@@ -97,6 +98,7 @@ int main() {
 // CHECK-NEXT: File 3, 6:3 -> 7:4 = #1
 // CHECK-NEXT: File 4, 3:24 -> 3:53 = #0
 // CHECK-NEXT: File 4, 3:40 -> 3:45 = (#0 + #4)
+// CHECK-NEXT: Branch,File 4, 3:40 -> 3:45 = #4, #0
 // CHECK-NEXT: File 4, 3:47 -> 3:50 = #4
 // CHECK-NEXT: File 4, 3:52 -> 3:53 = #4
 // CHECK-NEXT: File 5, 10:3 -> 20:4 = #4
@@ -109,20 +111,25 @@ int main() {
 // CHECK-NEXT: File 6, 6:3 -> 7:4 = #4
 // CHECK-NEXT: File 7, 3:24 -> 3:53 = #0
 // CHECK-NEXT: File 7, 3:40 -> 3:45 = (#0 + #7)
+// CHECK-NEXT: Branch,File 7, 3:40 -> 3:45 = #7, #0
 // CHECK-NEXT: File 7, 3:47 -> 3:50 = #7
 // CHECK-NEXT: File 7, 3:52 -> 3:53 = #7
 // CHECK-NEXT: File 8, 6:3 -> 7:4 = #7
 // CHECK-NEXT: File 9, 22:24 -> 22:37 = #0
 // CHECK-NEXT: File 9, 22:31 -> 22:36 = (#0 + #8)
+// CHECK-NEXT: Branch,File 9, 22:31 -> 22:36 = #8, #0
 // CHECK-NEXT: File 10, 23:21 -> 23:24 = #8
 // CHECK-NEXT: File 11, 22:24 -> 22:37 = #0
 // CHECK-NEXT: File 11, 22:31 -> 22:36 = (#0 + #9)
+// CHECK-NEXT: Branch,File 11, 22:31 -> 22:36 = #9, #0
 // CHECK-NEXT: File 12, 23:21 -> 23:24 = #9
 // CHECK-NEXT: File 13, 6:3 -> 7:4 = #9
 // CHECK-NEXT: File 14, 26:3 -> 28:4 = #0
 // CHECK-NEXT: File 14, 27:19 -> 27:24 = (#0 + #10)
+// CHECK-NEXT: Branch,File 14, 27:19 -> 27:24 = #10, #0
 // CHECK-NEXT: File 14, 27:26 -> 27:29 = #10
 // CHECK-NEXT: File 14, 27:31 -> 28:4 = #10
 // CHECK-NEXT: File 15, 31:3 -> 34:4 = #0
 // CHECK-NEXT: File 15, 32:10 -> 32:15 = (#0 + #11)
+// CHECK-NEXT: Branch,File 15, 32:10 -> 32:15 = #11, #0
 // CHECK-NEXT: File 15, 32:17 -> 34:4 = #11
