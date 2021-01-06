@@ -30,8 +30,7 @@ func @void_pointer() {
 
 func @repeated_struct_name() {
   "some.op"() : () -> !llvm.struct<"a", (ptr<struct<"a">>)>
-  // expected-error @+2 {{identified type already used with a different body}}
-  // expected-note @+1 {{existing body: (ptr<struct<"a">>)}}
+  // expected-error @+1 {{identified type already used with a different body}}
   "some.op"() : () -> !llvm.struct<"a", (i32)>
 }
 
@@ -39,8 +38,7 @@ func @repeated_struct_name() {
 
 func @repeated_struct_name_packed() {
   "some.op"() : () -> !llvm.struct<"a", packed (i32)>
-  // expected-error @+2 {{identified type already used with a different body}}
-  // expected-note @+1 {{existing body: packed (i32)}}
+  // expected-error @+1 {{identified type already used with a different body}}
   "some.op"() : () -> !llvm.struct<"a", (i32)>
 }
 
@@ -48,8 +46,7 @@ func @repeated_struct_name_packed() {
 
 func @repeated_struct_opaque() {
   "some.op"() : () -> !llvm.struct<"a", opaque>
-  // expected-error @+2 {{identified type already used with a different body}}
-  // expected-note @+1 {{existing body: opaque}}
+  // expected-error @+1 {{identified type already used with a different body}}
   "some.op"() : () -> !llvm.struct<"a", ()>
 }
 
@@ -57,8 +54,7 @@ func @repeated_struct_opaque() {
 
 func @repeated_struct_opaque_non_empty() {
   "some.op"() : () -> !llvm.struct<"a", opaque>
-  // expected-error @+2 {{identified type already used with a different body}}
-  // expected-note @+1 {{existing body: opaque}}
+  // expected-error @+1 {{identified type already used with a different body}}
   "some.op"() : () -> !llvm.struct<"a", (i32, i32)>
 }
 
@@ -95,8 +91,7 @@ func @unexpected_type() {
 
 func @explicitly_opaque_struct() {
   "some.op"() : () -> !llvm.struct<"a", opaque>
-  // expected-error @+2 {{identified type already used with a different body}}
-  // expected-note @+1 {{existing body: opaque}}
+  // expected-error @+1 {{identified type already used with a different body}}
   "some.op"() : () -> !llvm.struct<"a", ()>
 }
 
