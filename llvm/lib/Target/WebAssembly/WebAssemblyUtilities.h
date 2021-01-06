@@ -19,6 +19,9 @@ namespace llvm {
 
 class MachineInstr;
 class MachineOperand;
+class MCContext;
+class MCSymbolWasm;
+class StringRef;
 class WebAssemblyFunctionInfo;
 
 namespace WebAssembly {
@@ -36,6 +39,11 @@ extern const char *const PersonalityWrapperFn;
 /// Returns the operand number of a callee, assuming the argument is a call
 /// instruction.
 const MachineOperand &getCalleeOp(const MachineInstr &MI);
+
+/// Returns the operand number of a callee, assuming the argument is a call
+/// instruction.
+MCSymbolWasm *getOrCreateFunctionTableSymbol(MCContext &Ctx,
+                                             const StringRef &Name);
 
 } // end namespace WebAssembly
 
