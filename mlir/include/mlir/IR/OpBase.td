@@ -345,7 +345,8 @@ class AnyTypeOf<list<Type> allowedTypes, string summary = "",
     Or<!foreach(allowedtype, allowedTypes, allowedtype.predicate)>,
     !if(!eq(summary, ""),
         !interleave(!foreach(t, allowedTypes, t.summary), " or "),
-        summary)>;
+        summary),
+    cppClassName>;
 
 // Integer types.
 
