@@ -275,17 +275,21 @@ public:
       : public std::iterator<std::input_iterator_tag, T, ssize_t> {
     llvm::ArrayRef<T> Array;
     size_t Index;
+    size_t Offset;
 
   public:
     explicit const_iterator(llvm::ArrayRef<T> Array, size_t Index = 0)
-        : Array(Array), Index(Index) {}
+        : Array(Array), Index(Index), Offset(Index % Array.size()) {}
     const_iterator &operator++() {
       ++Index;
+      ++Offset;
+      if (Offset == Array.size())
+        Offset = 0;
       return *this;
     }
     bool operator==(const_iterator Other) const { return Index == Other.Index; }
     bool operator!=(const_iterator Other) const { return !(*this == Other); }
-    const T &operator*() const { return Array[Index % Array.size()]; }
+    const T &operator*() const { return Array[Offset]; }
   };
 
   CircularArrayRef(llvm::ArrayRef<T> Array, size_t Size)
