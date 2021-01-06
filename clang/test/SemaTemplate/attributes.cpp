@@ -126,4 +126,10 @@ namespace preferred_name {
   };
   auto it = MemberTemplate<int>::Iter<const int>();
   int n = it; // expected-error {{no viable conversion from 'preferred_name::MemberTemplate<int>::const_iterator' to 'int'}}
+
+  template<int A, int B, typename ...T> struct Foo;
+  template<typename ...T> using Bar = Foo<1, 2, T...>;
+  template<int A, int B, typename ...T> struct [[clang::preferred_name(::preferred_name::Bar<T...>)]] Foo {};
+  Foo<1, 2, int, float>::nosuch x; // expected-error {{no type named 'nosuch' in 'preferred_name::Bar<int, float>'}}
 }
+::preferred_name::Foo<1, 2, int, float>::nosuch x; // expected-error {{no type named 'nosuch' in 'preferred_name::Bar<int, float>'}}
