@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/CommandLine.h"
@@ -530,6 +531,31 @@ TargetRegisterInfo::lookThruCopyLike(Register SrcReg,
 
     SrcReg = CopySrcReg;
   }
+}
+
+void TargetRegisterInfo::getOffsetOpcodes(
+    const StackOffset &Offset, SmallVectorImpl<uint64_t> &Ops) const {
+  assert(!Offset.getScalable() && "Scalable offsets are not handled");
+  DIExpression::appendOffset(Ops, Offset.getFixed());
+}
+
+DIExpression *
+TargetRegisterInfo::prependOffsetExpression(const DIExpression *Expr,
+                                            unsigned PrependFlags,
+                                            const StackOffset &Offset) const {
+  assert((PrependFlags &
+          ~(DIExpression::DerefBefore | DIExpression::DerefAfter |
+            DIExpression::StackValue | DIExpression::EntryValue)) == 0 &&
+         "Unsupported prepend flag");
+  SmallVector<uint64_t, 16> OffsetExpr;
+  if (PrependFlags & DIExpression::DerefBefore)
+    OffsetExpr.push_back(dwarf::DW_OP_deref);
+  getOffsetOpcodes(Offset, OffsetExpr);
+  if (PrependFlags & DIExpression::DerefAfter)
+    OffsetExpr.push_back(dwarf::DW_OP_deref);
+  return DIExpression::prependOpcodes(Expr, OffsetExpr,
+                                      PrependFlags & DIExpression::StackValue,
+                                      PrependFlags & DIExpression::EntryValue);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
