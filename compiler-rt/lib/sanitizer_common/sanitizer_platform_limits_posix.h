@@ -443,8 +443,6 @@ struct __sanitizer_cmsghdr {
   int cmsg_type;
 };
 #else
-// In POSIX, int msg_iovlen; socklen_t msg_controllen; socklen_t cmsg_len; but
-// many implementations don't conform to the standard.
 struct __sanitizer_msghdr {
   void *msg_name;
   unsigned msg_namelen;
