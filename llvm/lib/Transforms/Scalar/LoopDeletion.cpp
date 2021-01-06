@@ -156,13 +156,6 @@ static LoopDeletionResult deleteLoopIfDead(Loop *L, DominatorTree &DT,
         << "Deletion requires Loop with preheader and dedicated exits.\n");
     return LoopDeletionResult::Unmodified;
   }
-  // We can't remove loops that contain subloops.  If the subloops were dead,
-  // they would already have been removed in earlier executions of this pass.
-  if (L->begin() != L->end()) {
-    LLVM_DEBUG(dbgs() << "Loop contains subloops.\n");
-    return LoopDeletionResult::Unmodified;
-  }
-
 
   BasicBlock *ExitBlock = L->getUniqueExitBlock();
 
