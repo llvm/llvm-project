@@ -1,6 +1,6 @@
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tahiti -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -allow-deprecated-dag-overlap -enable-var-scope -check-prefix=GCN -check-prefix=SI -check-prefix=SIVI %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -allow-deprecated-dag-overlap -enable-var-scope -check-prefix=GCN -check-prefix=VI -check-prefix=GFX89 %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -allow-deprecated-dag-overlap -enable-var-scope -check-prefix=GCN -check-prefix=GFX9 -check-prefix=GFX89 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tahiti -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -allow-deprecated-dag-overlap -enable-var-scope --check-prefixes=GCN,SI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -allow-deprecated-dag-overlap -enable-var-scope --check-prefixes=GCN,GFX89 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -allow-deprecated-dag-overlap -enable-var-scope --check-prefixes=GCN,GFX89 %s
 
 ; GCN-LABEL: {{^}}fpext_f16_to_f32
 ; GCN: buffer_load_ushort v[[A_F16:[0-9]+]]

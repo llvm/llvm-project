@@ -1,8 +1,8 @@
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=bonaire < %s | FileCheck -check-prefixes=CHECK,CIVI %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefixes=CHECK,CIVI %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -mattr=-flat-for-global < %s | FileCheck -check-prefixes=CHECK,CIVI,HSA,CIVI-HSA %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=CHECK,HSA,GFX9 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=CHECK,HSA,GFX10 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -mattr=-flat-for-global < %s | FileCheck -check-prefixes=CHECK,CIVI,CIVI-HSA %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=CHECK,GFX9 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=CHECK,GFX10 %s
 
 ; CHECK-LABEL: {{^}}store_flat_i32:
 ; CHECK-DAG: s_load_dwordx2 s{{\[}}[[LO_SREG:[0-9]+]]:[[HI_SREG:[0-9]+]]],

@@ -40,10 +40,11 @@ typedef void (*iterate_callback)(uintptr_t base, size_t size, void *arg);
 // the version in the process that analyzes the crash.
 //
 // fault_addr is the fault address. On aarch64 this is available in the system
-// register FAR_ELx, or far_context.far in an upcoming release of the Linux
-// kernel. This address must include the pointer tag; note that the kernel
-// strips the tag from the fields siginfo.si_addr and sigcontext.fault_address,
-// so these addresses are not suitable to be passed as fault_addr.
+// register FAR_ELx, or siginfo.si_addr in Linux 5.11 or above. This address
+// must include the pointer tag; this is available if SA_EXPOSE_TAGBITS was set
+// in sigaction.sa_flags when the signal handler was registered. Note that the
+// kernel strips the tag from the field sigcontext.fault_address, so this
+// address is not suitable to be passed as fault_addr.
 //
 // stack_depot is a pointer to the stack depot data structure, which may be
 // obtained by calling the function __scudo_get_stack_depot_addr() in the

@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap %s --check-prefix=SI --check-prefix=FUNC --check-prefix=GCN
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap %s --check-prefix=VI --check-prefix=FUNC --check-prefix=GCN
-; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -allow-deprecated-dag-overlap %s --check-prefix=EG --check-prefix=FUNC
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap %s --check-prefixes=SI,FUNC,GCN
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap %s --check-prefixes=FUNC,GCN
+; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -allow-deprecated-dag-overlap %s --check-prefixes=EG,FUNC
 
 declare float @llvm.fabs.f32(float) #1
 

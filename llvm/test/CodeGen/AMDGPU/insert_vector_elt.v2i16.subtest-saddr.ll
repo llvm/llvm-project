@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-amdgpu-aa=0 -mattr=+flat-for-global -denormal-fp-math=preserve-sign -enable-misched=false < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX89 %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-amdgpu-aa=0 -mattr=+flat-for-global -denormal-fp-math=preserve-sign -enable-misched=false < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX89 %s
 
 ; GCN-LABEL: {{^}}v_insertelement_v2i16_dynamic_vgpr:
 
