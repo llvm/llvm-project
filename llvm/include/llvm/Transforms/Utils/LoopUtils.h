@@ -366,8 +366,7 @@ Value *getShuffleReduction(IRBuilderBase &Builder, Value *Src, unsigned Op,
 /// required to implement the reduction.
 /// Fast-math-flags are propagated using the IRBuilder's setting.
 Value *createSimpleTargetReduction(IRBuilderBase &B,
-                                   const TargetTransformInfo *TTI,
-                                   unsigned Opcode, Value *Src,
+                                   const TargetTransformInfo *TTI, Value *Src,
                                    RecurKind RdxKind,
                                    ArrayRef<Value *> RedOps = None);
 
