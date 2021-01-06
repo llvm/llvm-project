@@ -1285,3 +1285,43 @@ defm "" : SIMDQFM<F64x2, 254, 255>;
 
 defm Q15MULR_SAT_S :
   SIMDBinary<I16x8, int_wasm_q15mulr_saturate_signed, "q15mulr_sat_s", 156>;
+
+//===----------------------------------------------------------------------===//
+// Experimental prefetch instructions: prefetch.t, prefetch.nt
+//===----------------------------------------------------------------------===//
+
+let mayLoad = true, UseNamedOperandTable = true in {
+defm PREFETCH_T_A32 :
+  SIMD_I<(outs), (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
+         (outs), (ins P2Align:$p2align, offset32_op:$off), [],
+         "prefetch.t\t${off}(${addr})$p2align",
+         "prefetch.t\t$off$p2align", 0xc5>;
+defm PREFETCH_T_A64 :
+  SIMD_I<(outs), (ins P2Align:$p2align, offset64_op:$off, I64:$addr),
+         (outs), (ins P2Align:$p2align, offset64_op:$off), [],
+         "prefetch.t\t${off}(${addr})$p2align",
+         "prefetch.t\t$off$p2align", 0xc5>;
+defm PREFETCH_NT_A32 :
+  SIMD_I<(outs), (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
+         (outs), (ins P2Align:$p2align, offset32_op:$off), [],
+         "prefetch.nt\t${off}(${addr})$p2align",
+         "prefetch.nt\t$off$p2align", 0xc6>;
+defm PREFETCH_NT_A64 :
+  SIMD_I<(outs), (ins P2Align:$p2align, offset64_op:$off, I64:$addr),
+         (outs), (ins P2Align:$p2align, offset64_op:$off), [],
+         "prefetch.nt\t${off}(${addr})$p2align",
+         "prefetch.nt\t$off$p2align", 0xc6>;
+} // mayLoad, UseNamedOperandTable
+
+multiclass PrefetchPatNoOffset<PatFrag kind, string inst> {
+  def : Pat<(kind I32:$addr), (!cast<NI>(inst # "_A32") 0, 0, $addr)>,
+        Requires<[HasAddr32]>;
+  def : Pat<(kind I64:$addr), (!cast<NI>(inst # "_A64") 0, 0, $addr)>,
+        Requires<[HasAddr64]>;
+}
+
+foreach inst = [["PREFETCH_T", "int_wasm_prefetch_t"],
+                ["PREFETCH_NT", "int_wasm_prefetch_nt"]] in {
+defvar node = !cast<Intrinsic>(inst[1]);
+defm : PrefetchPatNoOffset<node, inst[0]>;
+}

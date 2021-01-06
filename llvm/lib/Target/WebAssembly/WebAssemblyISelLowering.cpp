@@ -756,6 +756,16 @@ bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.align = MemAlign;
     return true;
   }
+  case Intrinsic::wasm_prefetch_t:
+  case Intrinsic::wasm_prefetch_nt: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::i8;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.align = Align(1);
+    Info.flags = MachineMemOperand::MOLoad;
+    return true;
+  }
   default:
     return false;
   }

@@ -1002,3 +1002,13 @@ i8x16 shuffle(i8x16 x, i8x16 y) {
   // WEBASSEMBLY-SAME: i32 15
   // WEBASSEMBLY-NEXT: ret
 }
+
+void prefetch_t(void *p) {
+  return __builtin_wasm_prefetch_t(p);
+  // WEBASSEMBLY: call void @llvm.wasm.prefetch.t(i8* %p)
+}
+
+void prefetch_nt(void *p) {
+  return __builtin_wasm_prefetch_nt(p);
+  // WEBASSEMBLY: call void @llvm.wasm.prefetch.nt(i8* %p)
+}
