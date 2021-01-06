@@ -315,8 +315,7 @@ protected:
         Type::getFloatTy(Context),
         Type::getDoubleTy(Context)
       });
-      ScalarTypes.insert(ScalarTypes.end(),
-        AdditionalScalarTypes.begin(), AdditionalScalarTypes.end());
+      llvm::append_range(ScalarTypes, AdditionalScalarTypes);
     }
 
     return ScalarTypes[getRandom() % ScalarTypes.size()];

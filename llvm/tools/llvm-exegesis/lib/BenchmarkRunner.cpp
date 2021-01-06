@@ -182,9 +182,7 @@ Expected<InstructionBenchmark> BenchmarkRunner::runConfiguration(
       const ExecutableFunction EF(State.createTargetMachine(),
                                   getObjectFromBuffer(OS.str()));
       const auto FnBytes = EF.getFunctionBytes();
-      InstrBenchmark.AssembledSnippet.insert(
-          InstrBenchmark.AssembledSnippet.end(), FnBytes.begin(),
-          FnBytes.end());
+      llvm::append_range(InstrBenchmark.AssembledSnippet, FnBytes);
     }
 
     // Assemble NumRepetitions instructions repetitions of the snippet for
