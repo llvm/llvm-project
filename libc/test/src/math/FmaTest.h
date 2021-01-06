@@ -13,8 +13,7 @@
 #include "utils/FPUtil/TestHelpers.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 #include "utils/UnitTest/Test.h"
-
-#include <random>
+#include "utils/testutils/RandUtils.h"
 
 namespace mpfr = __llvm_libc::testing::mpfr;
 
@@ -32,8 +31,9 @@ private:
 
   UIntType getRandomBitPattern() {
     UIntType bits{0};
-    for (size_t i = 0; i < sizeof(UIntType) / 2; ++i) {
-      bits = (bits << 2) + static_cast<uint16_t>(std::rand());
+    for (UIntType i = 0; i < sizeof(UIntType) / 2; ++i) {
+      bits =
+          (bits << 2) + static_cast<uint16_t>(__llvm_libc::testutils::rand());
     }
     return bits;
   }
