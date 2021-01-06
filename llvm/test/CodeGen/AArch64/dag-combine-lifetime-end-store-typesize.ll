@@ -5,7 +5,7 @@
 ; node linked to a scalable store.
 
 ; If this check fails please read test/CodeGen/AArch64/README for instructions on how to resolve it.
-; CHECK-NOT: warning: {{.*}}TypeSize is not scalable
+; CHECK-NOT: warning:
 
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
