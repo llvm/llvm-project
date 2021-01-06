@@ -24,17 +24,14 @@ svint32_t sizeless_callee(svint32_t x) {
 
 // CHECK-LABEL: @fixed_caller(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[X:%.*]] = alloca <16 x i32>, align 16
 // CHECK-NEXT:    [[RETVAL_COERCE:%.*]] = alloca <vscale x 4 x i32>, align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <16 x i32>* [[X]] to <vscale x 4 x i32>*
-// CHECK-NEXT:    store <vscale x 4 x i32> [[X_COERCE:%.*]], <vscale x 4 x i32>* [[TMP0]], align 16
-// CHECK-NEXT:    [[X1:%.*]] = load <16 x i32>, <16 x i32>* [[X]], align 16, [[TBAA6:!tbaa !.*]]
-// CHECK-NEXT:    [[CASTSCALABLESVE:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> undef, <16 x i32> [[X1]], i64 0)
+// CHECK-NEXT:    [[X:%.*]] = call <16 x i32> @llvm.experimental.vector.extract.v16i32.nxv4i32(<vscale x 4 x i32> [[X_COERCE:%.*]], i64 0)
+// CHECK-NEXT:    [[CASTSCALABLESVE:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> undef, <16 x i32> [[X]], i64 0)
 // CHECK-NEXT:    [[CASTFIXEDSVE:%.*]] = call <16 x i32> @llvm.experimental.vector.extract.v16i32.nxv4i32(<vscale x 4 x i32> [[CASTSCALABLESVE]], i64 0)
 // CHECK-NEXT:    [[RETVAL_0__SROA_CAST:%.*]] = bitcast <vscale x 4 x i32>* [[RETVAL_COERCE]] to <16 x i32>*
 // CHECK-NEXT:    store <16 x i32> [[CASTFIXEDSVE]], <16 x i32>* [[RETVAL_0__SROA_CAST]], align 16
-// CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[RETVAL_COERCE]], align 16
-// CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[RETVAL_COERCE]], align 16
+// CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 fixed_int32_t fixed_caller(fixed_int32_t x) {
   return sizeless_callee(x);
@@ -42,15 +39,12 @@ fixed_int32_t fixed_caller(fixed_int32_t x) {
 
 // CHECK-LABEL: @fixed_callee(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[X:%.*]] = alloca <16 x i32>, align 16
 // CHECK-NEXT:    [[RETVAL_COERCE:%.*]] = alloca <vscale x 4 x i32>, align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <16 x i32>* [[X]] to <vscale x 4 x i32>*
-// CHECK-NEXT:    store <vscale x 4 x i32> [[X_COERCE:%.*]], <vscale x 4 x i32>* [[TMP0]], align 16
-// CHECK-NEXT:    [[X1:%.*]] = load <16 x i32>, <16 x i32>* [[X]], align 16, [[TBAA6]]
+// CHECK-NEXT:    [[X:%.*]] = call <16 x i32> @llvm.experimental.vector.extract.v16i32.nxv4i32(<vscale x 4 x i32> [[X_COERCE:%.*]], i64 0)
 // CHECK-NEXT:    [[RETVAL_0__SROA_CAST:%.*]] = bitcast <vscale x 4 x i32>* [[RETVAL_COERCE]] to <16 x i32>*
-// CHECK-NEXT:    store <16 x i32> [[X1]], <16 x i32>* [[RETVAL_0__SROA_CAST]], align 16
-// CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[RETVAL_COERCE]], align 16
-// CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP1]]
+// CHECK-NEXT:    store <16 x i32> [[X]], <16 x i32>* [[RETVAL_0__SROA_CAST]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[RETVAL_COERCE]], align 16
+// CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
 fixed_int32_t fixed_callee(fixed_int32_t x) {
   return x;
@@ -67,7 +61,7 @@ fixed_int32_t fixed_callee(fixed_int32_t x) {
 // CHECK-NEXT:    [[CALL:%.*]] = call <vscale x 4 x i32> @fixed_callee(<vscale x 4 x i32> [[TMP0]])
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x i32>* [[COERCE1]] to <vscale x 4 x i32>*
 // CHECK-NEXT:    store <vscale x 4 x i32> [[CALL]], <vscale x 4 x i32>* [[TMP1]], align 16
-// CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i32>, <16 x i32>* [[COERCE1]], align 16, [[TBAA6]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i32>, <16 x i32>* [[COERCE1]], align 16, [[TBAA6:!tbaa !.*]]
 // CHECK-NEXT:    [[CASTSCALABLESVE:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> undef, <16 x i32> [[TMP2]], i64 0)
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[CASTSCALABLESVE]]
 //
@@ -81,24 +75,18 @@ svint32_t sizeless_caller(svint32_t x) {
 
 // CHECK-LABEL: @call_int32_ff(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[OP1:%.*]] = alloca <16 x i32>, align 16
-// CHECK-NEXT:    [[OP2:%.*]] = alloca <16 x i32>, align 16
 // CHECK-NEXT:    [[RETVAL_COERCE:%.*]] = alloca <vscale x 4 x i32>, align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <16 x i32>* [[OP1]] to <vscale x 4 x i32>*
-// CHECK-NEXT:    store <vscale x 4 x i32> [[OP1_COERCE:%.*]], <vscale x 4 x i32>* [[TMP0]], align 16
-// CHECK-NEXT:    [[OP11:%.*]] = load <16 x i32>, <16 x i32>* [[OP1]], align 16, [[TBAA6]]
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x i32>* [[OP2]] to <vscale x 4 x i32>*
-// CHECK-NEXT:    store <vscale x 4 x i32> [[OP2_COERCE:%.*]], <vscale x 4 x i32>* [[TMP1]], align 16
-// CHECK-NEXT:    [[OP22:%.*]] = load <16 x i32>, <16 x i32>* [[OP2]], align 16, [[TBAA6]]
-// CHECK-NEXT:    [[CASTSCALABLESVE:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> undef, <16 x i32> [[OP11]], i64 0)
-// CHECK-NEXT:    [[CASTSCALABLESVE3:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> undef, <16 x i32> [[OP22]], i64 0)
-// CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.sel.nxv4i32(<vscale x 4 x i1> [[TMP2]], <vscale x 4 x i32> [[CASTSCALABLESVE]], <vscale x 4 x i32> [[CASTSCALABLESVE3]])
-// CHECK-NEXT:    [[CASTFIXEDSVE:%.*]] = call <16 x i32> @llvm.experimental.vector.extract.v16i32.nxv4i32(<vscale x 4 x i32> [[TMP3]], i64 0)
+// CHECK-NEXT:    [[OP1:%.*]] = call <16 x i32> @llvm.experimental.vector.extract.v16i32.nxv4i32(<vscale x 4 x i32> [[X_COERCE:%.*]], i64 0)
+// CHECK-NEXT:    [[OP2:%.*]] = call <16 x i32> @llvm.experimental.vector.extract.v16i32.nxv4i32(<vscale x 4 x i32> [[X_COERCE1:%.*]], i64 0)
+// CHECK-NEXT:    [[CASTSCALABLESVE:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> undef, <16 x i32> [[OP1]], i64 0)
+// CHECK-NEXT:    [[CASTSCALABLESVE3:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> undef, <16 x i32> [[OP2]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.sel.nxv4i32(<vscale x 4 x i1> [[TMP0]], <vscale x 4 x i32> [[CASTSCALABLESVE]], <vscale x 4 x i32> [[CASTSCALABLESVE3]])
+// CHECK-NEXT:    [[CASTFIXEDSVE:%.*]] = call <16 x i32> @llvm.experimental.vector.extract.v16i32.nxv4i32(<vscale x 4 x i32> [[TMP1]], i64 0)
 // CHECK-NEXT:    [[RETVAL_0__SROA_CAST:%.*]] = bitcast <vscale x 4 x i32>* [[RETVAL_COERCE]] to <16 x i32>*
 // CHECK-NEXT:    store <16 x i32> [[CASTFIXEDSVE]], <16 x i32>* [[RETVAL_0__SROA_CAST]], align 16
-// CHECK-NEXT:    [[TMP4:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[RETVAL_COERCE]], align 16
-// CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP4]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[RETVAL_COERCE]], align 16
+// CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP2]]
 //
 fixed_int32_t call_int32_ff(svbool_t pg, fixed_int32_t op1, fixed_int32_t op2) {
   return svsel(pg, op1, op2);
@@ -106,24 +94,18 @@ fixed_int32_t call_int32_ff(svbool_t pg, fixed_int32_t op1, fixed_int32_t op2) {
 
 // CHECK-LABEL: @call_float64_ff(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[OP1:%.*]] = alloca <8 x double>, align 16
-// CHECK-NEXT:    [[OP2:%.*]] = alloca <8 x double>, align 16
 // CHECK-NEXT:    [[RETVAL_COERCE:%.*]] = alloca <vscale x 2 x double>, align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x double>* [[OP1]] to <vscale x 2 x double>*
-// CHECK-NEXT:    store <vscale x 2 x double> [[OP1_COERCE:%.*]], <vscale x 2 x double>* [[TMP0]], align 16
-// CHECK-NEXT:    [[OP11:%.*]] = load <8 x double>, <8 x double>* [[OP1]], align 16, [[TBAA6]]
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x double>* [[OP2]] to <vscale x 2 x double>*
-// CHECK-NEXT:    store <vscale x 2 x double> [[OP2_COERCE:%.*]], <vscale x 2 x double>* [[TMP1]], align 16
-// CHECK-NEXT:    [[OP22:%.*]] = load <8 x double>, <8 x double>* [[OP2]], align 16, [[TBAA6]]
-// CHECK-NEXT:    [[CASTSCALABLESVE:%.*]] = call <vscale x 2 x double> @llvm.experimental.vector.insert.nxv2f64.v8f64(<vscale x 2 x double> undef, <8 x double> [[OP11]], i64 0)
-// CHECK-NEXT:    [[CASTSCALABLESVE3:%.*]] = call <vscale x 2 x double> @llvm.experimental.vector.insert.nxv2f64.v8f64(<vscale x 2 x double> undef, <8 x double> [[OP22]], i64 0)
-// CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.sel.nxv2f64(<vscale x 2 x i1> [[TMP2]], <vscale x 2 x double> [[CASTSCALABLESVE]], <vscale x 2 x double> [[CASTSCALABLESVE3]])
-// CHECK-NEXT:    [[CASTFIXEDSVE:%.*]] = call <8 x double> @llvm.experimental.vector.extract.v8f64.nxv2f64(<vscale x 2 x double> [[TMP3]], i64 0)
+// CHECK-NEXT:    [[OP1:%.*]] = call <8 x double> @llvm.experimental.vector.extract.v8f64.nxv2f64(<vscale x 2 x double> [[X_COERCE:%.*]], i64 0)
+// CHECK-NEXT:    [[OP2:%.*]] = call <8 x double> @llvm.experimental.vector.extract.v8f64.nxv2f64(<vscale x 2 x double> [[X_COERCE1:%.*]], i64 0)
+// CHECK-NEXT:    [[CASTSCALABLESVE:%.*]] = call <vscale x 2 x double> @llvm.experimental.vector.insert.nxv2f64.v8f64(<vscale x 2 x double> undef, <8 x double> [[OP1]], i64 0)
+// CHECK-NEXT:    [[CASTSCALABLESVE3:%.*]] = call <vscale x 2 x double> @llvm.experimental.vector.insert.nxv2f64.v8f64(<vscale x 2 x double> undef, <8 x double> [[OP2]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.sel.nxv2f64(<vscale x 2 x i1> [[TMP0]], <vscale x 2 x double> [[CASTSCALABLESVE]], <vscale x 2 x double> [[CASTSCALABLESVE3]])
+// CHECK-NEXT:    [[CASTFIXEDSVE:%.*]] = call <8 x double> @llvm.experimental.vector.extract.v8f64.nxv2f64(<vscale x 2 x double> [[TMP1]], i64 0)
 // CHECK-NEXT:    [[RETVAL_0__SROA_CAST:%.*]] = bitcast <vscale x 2 x double>* [[RETVAL_COERCE]] to <8 x double>*
 // CHECK-NEXT:    store <8 x double> [[CASTFIXEDSVE]], <8 x double>* [[RETVAL_0__SROA_CAST]], align 16
-// CHECK-NEXT:    [[TMP4:%.*]] = load <vscale x 2 x double>, <vscale x 2 x double>* [[RETVAL_COERCE]], align 16
-// CHECK-NEXT:    ret <vscale x 2 x double> [[TMP4]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 2 x double>, <vscale x 2 x double>* [[RETVAL_COERCE]], align 16
+// CHECK-NEXT:    ret <vscale x 2 x double> [[TMP2]]
 //
 fixed_float64_t call_float64_ff(svbool_t pg, fixed_float64_t op1, fixed_float64_t op2) {
   return svsel(pg, op1, op2);
@@ -168,19 +150,16 @@ fixed_bool_t call_bool_ff(svbool_t pg, fixed_bool_t op1, fixed_bool_t op2) {
 
 // CHECK-LABEL: @call_int32_fs(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[OP1:%.*]] = alloca <16 x i32>, align 16
 // CHECK-NEXT:    [[RETVAL_COERCE:%.*]] = alloca <vscale x 4 x i32>, align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <16 x i32>* [[OP1]] to <vscale x 4 x i32>*
-// CHECK-NEXT:    store <vscale x 4 x i32> [[OP1_COERCE:%.*]], <vscale x 4 x i32>* [[TMP0]], align 16
-// CHECK-NEXT:    [[OP11:%.*]] = load <16 x i32>, <16 x i32>* [[OP1]], align 16, [[TBAA6]]
-// CHECK-NEXT:    [[CASTSCALABLESVE:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> undef, <16 x i32> [[OP11]], i64 0)
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.sel.nxv4i32(<vscale x 4 x i1> [[TMP1]], <vscale x 4 x i32> [[CASTSCALABLESVE]], <vscale x 4 x i32> [[OP2:%.*]])
-// CHECK-NEXT:    [[CASTFIXEDSVE:%.*]] = call <16 x i32> @llvm.experimental.vector.extract.v16i32.nxv4i32(<vscale x 4 x i32> [[TMP2]], i64 0)
+// CHECK-NEXT:    [[OP1:%.*]] = call <16 x i32> @llvm.experimental.vector.extract.v16i32.nxv4i32(<vscale x 4 x i32> [[X_COERCE:%.*]], i64 0)
+// CHECK-NEXT:    [[CASTSCALABLESVE:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> undef, <16 x i32> [[OP1]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.sel.nxv4i32(<vscale x 4 x i1> [[TMP0]], <vscale x 4 x i32> [[CASTSCALABLESVE]], <vscale x 4 x i32> [[OP2:%.*]])
+// CHECK-NEXT:    [[CASTFIXEDSVE:%.*]] = call <16 x i32> @llvm.experimental.vector.extract.v16i32.nxv4i32(<vscale x 4 x i32> [[TMP1]], i64 0)
 // CHECK-NEXT:    [[RETVAL_0__SROA_CAST:%.*]] = bitcast <vscale x 4 x i32>* [[RETVAL_COERCE]] to <16 x i32>*
 // CHECK-NEXT:    store <16 x i32> [[CASTFIXEDSVE]], <16 x i32>* [[RETVAL_0__SROA_CAST]], align 16
-// CHECK-NEXT:    [[TMP3:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[RETVAL_COERCE]], align 16
-// CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP3]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[RETVAL_COERCE]], align 16
+// CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP2]]
 //
 fixed_int32_t call_int32_fs(svbool_t pg, fixed_int32_t op1, svint32_t op2) {
   return svsel(pg, op1, op2);
@@ -188,19 +167,16 @@ fixed_int32_t call_int32_fs(svbool_t pg, fixed_int32_t op1, svint32_t op2) {
 
 // CHECK-LABEL: @call_float64_fs(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[OP1:%.*]] = alloca <8 x double>, align 16
 // CHECK-NEXT:    [[RETVAL_COERCE:%.*]] = alloca <vscale x 2 x double>, align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x double>* [[OP1]] to <vscale x 2 x double>*
-// CHECK-NEXT:    store <vscale x 2 x double> [[OP1_COERCE:%.*]], <vscale x 2 x double>* [[TMP0]], align 16
-// CHECK-NEXT:    [[OP11:%.*]] = load <8 x double>, <8 x double>* [[OP1]], align 16, [[TBAA6]]
-// CHECK-NEXT:    [[CASTSCALABLESVE:%.*]] = call <vscale x 2 x double> @llvm.experimental.vector.insert.nxv2f64.v8f64(<vscale x 2 x double> undef, <8 x double> [[OP11]], i64 0)
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.sel.nxv2f64(<vscale x 2 x i1> [[TMP1]], <vscale x 2 x double> [[CASTSCALABLESVE]], <vscale x 2 x double> [[OP2:%.*]])
-// CHECK-NEXT:    [[CASTFIXEDSVE:%.*]] = call <8 x double> @llvm.experimental.vector.extract.v8f64.nxv2f64(<vscale x 2 x double> [[TMP2]], i64 0)
+// CHECK-NEXT:    [[OP1:%.*]] = call <8 x double> @llvm.experimental.vector.extract.v8f64.nxv2f64(<vscale x 2 x double> [[X_COERCE:%.*]], i64 0)
+// CHECK-NEXT:    [[CASTSCALABLESVE:%.*]] = call <vscale x 2 x double> @llvm.experimental.vector.insert.nxv2f64.v8f64(<vscale x 2 x double> undef, <8 x double> [[OP1]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.sel.nxv2f64(<vscale x 2 x i1> [[TMP0]], <vscale x 2 x double> [[CASTSCALABLESVE]], <vscale x 2 x double> [[OP2:%.*]])
+// CHECK-NEXT:    [[CASTFIXEDSVE:%.*]] = call <8 x double> @llvm.experimental.vector.extract.v8f64.nxv2f64(<vscale x 2 x double> [[TMP1]], i64 0)
 // CHECK-NEXT:    [[RETVAL_0__SROA_CAST:%.*]] = bitcast <vscale x 2 x double>* [[RETVAL_COERCE]] to <8 x double>*
 // CHECK-NEXT:    store <8 x double> [[CASTFIXEDSVE]], <8 x double>* [[RETVAL_0__SROA_CAST]], align 16
-// CHECK-NEXT:    [[TMP3:%.*]] = load <vscale x 2 x double>, <vscale x 2 x double>* [[RETVAL_COERCE]], align 16
-// CHECK-NEXT:    ret <vscale x 2 x double> [[TMP3]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 2 x double>, <vscale x 2 x double>* [[RETVAL_COERCE]], align 16
+// CHECK-NEXT:    ret <vscale x 2 x double> [[TMP2]]
 //
 fixed_float64_t call_float64_fs(svbool_t pg, fixed_float64_t op1, svfloat64_t op2) {
   return svsel(pg, op1, op2);
