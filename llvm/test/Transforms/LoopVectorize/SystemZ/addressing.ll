@@ -46,7 +46,7 @@ define i32 @foo1(i32* nocapture noalias %A, i32** nocapture %PtrPtr) {
 ;CHECK:  %4 = load i32*, i32** %2, align 8
 ;CHECK:  %5 = load i32, i32* %3, align 4
 ;CHECK:  %6 = load i32, i32* %4, align 4
-;CHECK:  %7 = insertelement <2 x i32> undef, i32 %5, i32 0
+;CHECK:  %7 = insertelement <2 x i32> poison, i32 %5, i32 0
 ;CHECK:  %8 = insertelement <2 x i32> %7, i32 %6, i32 1
 ;CHECK:  %9 = getelementptr inbounds i32, i32* %A, i64 %index
 ;CHECK:  %10 = bitcast i32* %9 to <2 x i32>*

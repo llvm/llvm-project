@@ -23,7 +23,7 @@ define i32 @foo(i32* noalias nocapture %B, i32* noalias nocapture %A, i32 %n, i3
 ; CHECK-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[A]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> undef, i32 [[MUL238]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[MUL238]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[MUL238]], i32 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[MUL238]], i32 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[MUL238]], i32 3
@@ -76,7 +76,7 @@ define i32 @extr_user(i32* noalias nocapture %B, i32* noalias nocapture %A, i32 
 ; CHECK-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[A]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> undef, i32 [[MUL238]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[MUL238]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[MUL238]], i32 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[MUL238]], i32 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[MUL238]], i32 3
@@ -122,7 +122,7 @@ define i32 @extr_user1(i32* noalias nocapture %B, i32* noalias nocapture %A, i32
 ; CHECK-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[A]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> undef, i32 [[MUL238]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[MUL238]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[MUL238]], i32 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[MUL238]], i32 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[MUL238]], i32 3

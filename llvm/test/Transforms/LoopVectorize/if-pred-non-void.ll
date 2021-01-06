@@ -24,10 +24,10 @@ for.cond.cleanup:                                 ; preds = %if.end
 ; CHECK:   %[[SDA0:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 0
 ; CHECK:   %[[SDA1:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 0
 ; CHECK:   %[[SD0:[a-zA-Z0-9]+]] = sdiv i32 %[[SDA0]], %[[SDA1]]
-; CHECK:   %[[SD1:[a-zA-Z0-9]+]] = insertelement <2 x i32> undef, i32 %[[SD0]], i32 0
+; CHECK:   %[[SD1:[a-zA-Z0-9]+]] = insertelement <2 x i32> poison, i32 %[[SD0]], i32 0
 ; CHECK:   br label %[[ESD]]
 ; CHECK: [[ESD]]:
-; CHECK:   %[[SDR:[a-zA-Z0-9]+]] = phi <2 x i32> [ undef, %vector.body ], [ %[[SD1]], %[[CSD]] ]
+; CHECK:   %[[SDR:[a-zA-Z0-9]+]] = phi <2 x i32> [ poison, %vector.body ], [ %[[SD1]], %[[CSD]] ]
 ; CHECK:   %[[SDEEH:[a-zA-Z0-9]+]] = extractelement <2 x i1> %{{.*}}, i32 1
 ; CHECK:   br i1 %[[SDEEH]], label %[[CSDH:[a-zA-Z0-9.]+]], label %[[ESDH:[a-zA-Z0-9.]+]]
 ; CHECK: [[CSDH]]:
@@ -45,10 +45,10 @@ for.cond.cleanup:                                 ; preds = %if.end
 ; CHECK:   %[[UDA0:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 0
 ; CHECK:   %[[UDA1:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 0
 ; CHECK:   %[[UD0:[a-zA-Z0-9]+]] = udiv i32 %[[UDA0]], %[[UDA1]]
-; CHECK:   %[[UD1:[a-zA-Z0-9]+]] = insertelement <2 x i32> undef, i32 %[[UD0]], i32 0
+; CHECK:   %[[UD1:[a-zA-Z0-9]+]] = insertelement <2 x i32> poison, i32 %[[UD0]], i32 0
 ; CHECK:   br label %[[EUD]]
 ; CHECK: [[EUD]]:
-; CHECK:   %{{.*}} = phi <2 x i32> [ undef, %{{.*}} ], [ %[[UD1]], %[[CUD]] ]
+; CHECK:   %{{.*}} = phi <2 x i32> [ poison, %{{.*}} ], [ %[[UD1]], %[[CUD]] ]
 
 ; CHECK:   %[[SREE:[a-zA-Z0-9]+]] = extractelement <2 x i1> %{{.*}}, i32 0
 ; CHECK:   br i1 %[[SREE]], label %[[CSR:[a-zA-Z0-9.]+]], label %[[ESR:[a-zA-Z0-9.]+]]
@@ -56,10 +56,10 @@ for.cond.cleanup:                                 ; preds = %if.end
 ; CHECK:   %[[SRA0:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 0
 ; CHECK:   %[[SRA1:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 0
 ; CHECK:   %[[SR0:[a-zA-Z0-9]+]] = srem i32 %[[SRA0]], %[[SRA1]]
-; CHECK:   %[[SR1:[a-zA-Z0-9]+]] = insertelement <2 x i32> undef, i32 %[[SR0]], i32 0
+; CHECK:   %[[SR1:[a-zA-Z0-9]+]] = insertelement <2 x i32> poison, i32 %[[SR0]], i32 0
 ; CHECK:   br label %[[ESR]]
 ; CHECK: [[ESR]]:
-; CHECK:   %{{.*}} = phi <2 x i32> [ undef, %{{.*}} ], [ %[[SR1]], %[[CSR]] ]
+; CHECK:   %{{.*}} = phi <2 x i32> [ poison, %{{.*}} ], [ %[[SR1]], %[[CSR]] ]
 
 ; CHECK:   %[[UREE:[a-zA-Z0-9]+]] = extractelement <2 x i1> %{{.*}}, i32 0
 ; CHECK:   br i1 %[[UREE]], label %[[CUR:[a-zA-Z0-9.]+]], label %[[EUR:[a-zA-Z0-9.]+]]
@@ -67,10 +67,10 @@ for.cond.cleanup:                                 ; preds = %if.end
 ; CHECK:   %[[URA0:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 0
 ; CHECK:   %[[URA1:[a-zA-Z0-9]+]] = extractelement <2 x i32> %{{.*}}, i32 0
 ; CHECK:   %[[UR0:[a-zA-Z0-9]+]] = urem i32 %[[URA0]], %[[URA1]]
-; CHECK:   %[[UR1:[a-zA-Z0-9]+]] = insertelement <2 x i32> undef, i32 %[[UR0]], i32 0
+; CHECK:   %[[UR1:[a-zA-Z0-9]+]] = insertelement <2 x i32> poison, i32 %[[UR0]], i32 0
 ; CHECK:   br label %[[EUR]]
 ; CHECK: [[EUR]]:
-; CHECK:   %{{.*}} = phi <2 x i32> [ undef, %{{.*}} ], [ %[[UR1]], %[[CUR]] ]
+; CHECK:   %{{.*}} = phi <2 x i32> [ poison, %{{.*}} ], [ %[[UR1]], %[[CUR]] ]
 
 for.body:                                         ; preds = %if.end, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %if.end ]
@@ -124,7 +124,7 @@ for.cond.cleanup:                                 ; preds = %if.end
 ; CHECK:   %[[PD:[a-zA-Z0-9]+]] = sdiv i32 %{{.*}}, %{{.*}}
 ; CHECK:   br label %[[FI]]
 ; CHECK: [[FI]]:
-; CHECK:   %{{.*}} = phi i32 [ undef, %vector.body ], [ %[[PD]], %[[THEN]] ]
+; CHECK:   %{{.*}} = phi i32 [ poison, %vector.body ], [ %[[PD]], %[[THEN]] ]
 
 for.body:                                         ; preds = %if.end, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %if.end ]
@@ -169,7 +169,7 @@ for.cond.cleanup:                                 ; preds = %if.end
 ; CHECK:   %[[PD:[a-zA-Z0-9]+]] = sdiv i32 %{{.*}}, %{{.*}}
 ; CHECK:   br label %[[FI]]
 ; CHECK: [[FI]]:
-; CHECK:   %{{.*}} = phi i32 [ undef, %vector.body ], [ %[[PD]], %[[THEN]] ]
+; CHECK:   %{{.*}} = phi i32 [ poison, %vector.body ], [ %[[PD]], %[[THEN]] ]
 
 
 for.body:                                         ; preds = %if.end, %entry
@@ -213,10 +213,10 @@ entry:
 ; CHECK:   %[[T01:.+]] = add nsw i32 %[[T00]], %x
 ; CHECK:   %[[T02:.+]] = extractelement <2 x i32> %wide.load, i32 0
 ; CHECK:   %[[T03:.+]] = udiv i32 %[[T02]], %[[T01]]
-; CHECK:   %[[T04:.+]] = insertelement <2 x i32> undef, i32 %[[T03]], i32 0
+; CHECK:   %[[T04:.+]] = insertelement <2 x i32> poison, i32 %[[T03]], i32 0
 ; CHECK:   br label %[[CONT0]]
 ; CHECK: [[CONT0]]:
-; CHECK:   %[[T05:.+]] = phi <2 x i32> [ undef, %vector.body ], [ %[[T04]], %[[IF0]] ]
+; CHECK:   %[[T05:.+]] = phi <2 x i32> [ poison, %vector.body ], [ %[[T04]], %[[IF0]] ]
 ; CHECK:   br i1 {{.*}}, label %[[IF1:.+]], label %[[CONT1:.+]]
 ; CHECK: [[IF1]]:
 ; CHECK:   %[[T06:.+]] = extractelement <2 x i32> %wide.load, i32 1
@@ -242,14 +242,14 @@ entry:
 ; UNROLL-NO-VF:   %[[DIV0:.+]] = udiv i32 %[[LOAD0]], %[[ADD0]]
 ; UNROLL-NO-VF:   br label %[[CONT0]]
 ; UNROLL-NO-VF: [[CONT0]]:
-; UNROLL-NO-VF:   phi i32 [ undef, %vector.body ], [ %[[DIV0]], %[[IF0]] ]
+; UNROLL-NO-VF:   phi i32 [ poison, %vector.body ], [ %[[DIV0]], %[[IF0]] ]
 ; UNROLL-NO-VF:   br i1 {{.*}}, label %[[IF1:.+]], label %[[CONT1:.+]]
 ; UNROLL-NO-VF: [[IF1]]:
 ; UNROLL-NO-VF:   %[[ADD1:.+]] = add nsw i32 %[[LOAD1]], %x
 ; UNROLL-NO-VF:   %[[DIV1:.+]] = udiv i32 %[[LOAD1]], %[[ADD1]]
 ; UNROLL-NO-VF:   br label %[[CONT1]]
 ; UNROLL-NO-VF: [[CONT1]]:
-; UNROLL-NO-VF:   phi i32 [ undef, %[[CONT0]] ], [ %[[DIV1]], %[[IF1]] ]
+; UNROLL-NO-VF:   phi i32 [ poison, %[[CONT0]] ], [ %[[DIV1]], %[[IF1]] ]
 ; UNROLL-NO-VF:   br i1 {{.*}}, label %middle.block, label %vector.body
 ;
 for.body:

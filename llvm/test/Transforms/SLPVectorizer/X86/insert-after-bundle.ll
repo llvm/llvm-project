@@ -24,19 +24,19 @@ entry:
 define void @bar(i8* noalias nocapture readonly %a, i8* noalias nocapture readonly %b, i8* noalias nocapture readonly %c, i8* noalias nocapture readonly %d, i8* noalias nocapture %e, i32 %w) local_unnamed_addr #1 {
 ; SSE-LABEL: @bar(
 ; SSE-NEXT:  entry:
-; SSE-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> undef, i32 [[W:%.*]], i32 0
+; SSE-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[W:%.*]], i32 0
 ; SSE-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[TMP0]], i32 [[W]], i32 1
 ; SSE-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[W]], i32 2
 ; SSE-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[W]], i32 3
-; SSE-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> undef, i32 [[W]], i32 0
+; SSE-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> poison, i32 [[W]], i32 0
 ; SSE-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[W]], i32 1
 ; SSE-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[W]], i32 2
 ; SSE-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[W]], i32 3
-; SSE-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> undef, i32 [[W]], i32 0
+; SSE-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> poison, i32 [[W]], i32 0
 ; SSE-NEXT:    [[TMP9:%.*]] = insertelement <4 x i32> [[TMP8]], i32 [[W]], i32 1
 ; SSE-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> [[TMP9]], i32 [[W]], i32 2
 ; SSE-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP10]], i32 [[W]], i32 3
-; SSE-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> undef, i32 [[W]], i32 0
+; SSE-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> poison, i32 [[W]], i32 0
 ; SSE-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> [[TMP12]], i32 [[W]], i32 1
 ; SSE-NEXT:    [[TMP14:%.*]] = insertelement <4 x i32> [[TMP13]], i32 [[W]], i32 2
 ; SSE-NEXT:    [[TMP15:%.*]] = insertelement <4 x i32> [[TMP14]], i32 [[W]], i32 3
@@ -196,7 +196,7 @@ define void @bar(i8* noalias nocapture readonly %a, i8* noalias nocapture readon
 ;
 ; AVX512-LABEL: @bar(
 ; AVX512-NEXT:  entry:
-; AVX512-NEXT:    [[TMP0:%.*]] = insertelement <16 x i32> undef, i32 [[W:%.*]], i32 0
+; AVX512-NEXT:    [[TMP0:%.*]] = insertelement <16 x i32> poison, i32 [[W:%.*]], i32 0
 ; AVX512-NEXT:    [[TMP1:%.*]] = insertelement <16 x i32> [[TMP0]], i32 [[W]], i32 1
 ; AVX512-NEXT:    [[TMP2:%.*]] = insertelement <16 x i32> [[TMP1]], i32 [[W]], i32 2
 ; AVX512-NEXT:    [[TMP3:%.*]] = insertelement <16 x i32> [[TMP2]], i32 [[W]], i32 3

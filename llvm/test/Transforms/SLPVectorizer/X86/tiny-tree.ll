@@ -225,7 +225,7 @@ define void @store_splat(float*, float) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, float* [[TMP0]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, float* [[TMP0]], i64 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, float* [[TMP0]], i64 3
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> undef, float [[TMP1:%.*]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> poison, float [[TMP1:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x float> [[TMP7]], float [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> [[TMP8]], float [[TMP1]], i32 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x float> [[TMP9]], float [[TMP1]], i32 3

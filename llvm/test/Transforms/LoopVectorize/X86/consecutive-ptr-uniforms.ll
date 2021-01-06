@@ -109,10 +109,10 @@ attributes #0 = { "target-cpu"="knl" }
 ; FORCE:       pred.load.if:
 ; FORCE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [3 x i32], [3 x i32]* @a, i32 0, i32 [[TMP0]]
 ; FORCE-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP6]], align 1
-; FORCE-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> undef, i32 [[TMP7]], i32 0
+; FORCE-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> poison, i32 [[TMP7]], i32 0
 ; FORCE-NEXT:    br label [[PRED_LOAD_CONTINUE]]
 ; FORCE:       pred.load.continue:
-; FORCE-NEXT:    [[TMP9:%.*]] = phi <2 x i32> [ undef, [[PRED_STORE_CONTINUE2]] ], [ [[TMP8]], [[PRED_LOAD_IF]] ]
+; FORCE-NEXT:    [[TMP9:%.*]] = phi <2 x i32> [ poison, [[PRED_STORE_CONTINUE2]] ], [ [[TMP8]], [[PRED_LOAD_IF]] ]
 ; FORCE-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP2]], i32 1
 ; FORCE-NEXT:    br i1 [[TMP10]], label [[PRED_LOAD_IF3:%.*]], label [[PRED_LOAD_CONTINUE4]]
 ; FORCE:       pred.load.if3:

@@ -4,7 +4,7 @@
 define void @mainTest(i32 %param, i32 * %vals, i32 %len) {
 ; CHECK-LABEL: @mainTest(
 ; CHECK-NEXT:  bci_15.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> <i32 31, i32 undef>, i32 [[PARAM:%.*]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> <i32 31, i32 poison>, i32 [[PARAM:%.*]], i32 1
 ; CHECK-NEXT:    br label [[BCI_15:%.*]]
 ; CHECK:       bci_15:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ [[TMP7:%.*]], [[BCI_15]] ], [ [[TMP0]], [[BCI_15_PREHEADER:%.*]] ]
@@ -16,7 +16,7 @@ define void @mainTest(i32 %param, i32 * %vals, i32 %len) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.and.v16i32(<16 x i32> [[TMP4]])
 ; CHECK-NEXT:    [[OP_EXTRA:%.*]] = and i32 [[TMP5]], [[TMP2]]
 ; CHECK-NEXT:    [[V44:%.*]] = add i32 [[TMP2]], 16
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> undef, i32 [[V44]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> poison, i32 [[V44]], i32 0
 ; CHECK-NEXT:    [[TMP7]] = insertelement <2 x i32> [[TMP6]], i32 [[OP_EXTRA]], i32 1
 ; CHECK-NEXT:    br i1 true, label [[BCI_15]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:

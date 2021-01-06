@@ -462,7 +462,7 @@ define <8 x i32> @sdiv_v8i32_undefs(<8 x i32> %a) {
 
 define <8 x i32> @add_sub_v8i32_splat(<8 x i32> %a, i32 %b) {
 ; CHECK-LABEL: @add_sub_v8i32_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> undef, i32 [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> poison, i32 [[B:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> undef, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <8 x i32> [[TMP2]], [[A:%.*]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub <8 x i32> [[TMP2]], [[A]]
