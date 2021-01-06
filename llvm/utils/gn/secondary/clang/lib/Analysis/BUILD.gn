@@ -16,6 +16,7 @@ static_library("Analysis") {
     "CFGReachabilityAnalysis.cpp",
     "CFGStmtMap.cpp",
     "CallGraph.cpp",
+    "CalledOnceCheck.cpp",
     "CloneDetection.cpp",
     "CocoaConventions.cpp",
     "CodeInjector.cpp",
