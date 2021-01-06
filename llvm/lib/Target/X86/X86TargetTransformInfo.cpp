@@ -3188,11 +3188,10 @@ int X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                 const Instruction *I) {
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput) {
-    if (isa_and_nonnull<StoreInst>(I)) {
-      Value *Ptr = I->getOperand(1);
+    if (auto *SI = dyn_cast_or_null<StoreInst>(I)) {
       // Store instruction with index and scale costs 2 Uops.
       // Check the preceding GEP to identify non-const indices.
-      if (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr)) {
+      if (auto *GEP = dyn_cast<GetElementPtrInst>(SI->getPointerOperand())) {
         if (!all_of(GEP->indices(), [](Value *V) { return isa<Constant>(V); }))
           return TTI::TCC_Basic * 2;
       }
