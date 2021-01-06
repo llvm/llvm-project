@@ -21,10 +21,10 @@ entry:
 define <4 x i32> @mlai16_and(<4 x i16> %vec0, <4 x i16> %vec1, <4 x i16> %vec2) {
 ; CHECK-LABEL: mlai16_and:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v2.4s, v2.4h, #0
-; CHECK-NEXT:    umlal v2.4s, v1.4h, v0.4h
-; CHECK-NEXT:    movi v0.2d, #0x00ffff0000ffff
-; CHECK-NEXT:    and v0.16b, v2.16b, v0.16b
+; CHECK-NEXT:    umull v0.4s, v1.4h, v0.4h
+; CHECK-NEXT:    uaddw v0.4s, v0.4s, v2.4h
+; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
 entry:
   %v0 = sext <4 x i16> %vec0 to <4 x i32>
@@ -157,10 +157,10 @@ entry:
 define <2 x i64> @mlai32_and(<2 x i32> %vec0, <2 x i32> %vec1, <2 x i32> %vec2) {
 ; CHECK-LABEL: mlai32_and:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v2.2d, v2.2s, #0
-; CHECK-NEXT:    umlal v2.2d, v1.2s, v0.2s
-; CHECK-NEXT:    movi v0.2d, #0x000000ffffffff
-; CHECK-NEXT:    and v0.16b, v2.16b, v0.16b
+; CHECK-NEXT:    umull v0.2d, v1.2s, v0.2s
+; CHECK-NEXT:    uaddw v0.2d, v0.2d, v2.2s
+; CHECK-NEXT:    movi v1.2d, #0x000000ffffffff
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
 entry:
   %v0 = sext <2 x i32> %vec0 to <2 x i64>
