@@ -666,6 +666,13 @@ public:
   bool IsMatchingInASTNodeNotSpelledInSource() const override {
     return TraversingASTNodeNotSpelledInSource;
   }
+  bool isMatchingChildrenNotSpelledInSource() const override {
+    return TraversingASTChildrenNotSpelledInSource;
+  }
+  void setMatchingChildrenNotSpelledInSource(bool Set) override {
+    TraversingASTChildrenNotSpelledInSource = Set;
+  }
+
   bool IsMatchingInASTNodeNotAsIs() const override {
     return TraversingASTNodeNotAsIs;
   }
@@ -713,20 +720,6 @@ private:
       V->TraversingASTNodeNotAsIs = B;
     }
     ~ASTNodeNotAsIsSourceScope() { MV->TraversingASTNodeNotAsIs = MB; }
-
-  private:
-    MatchASTVisitor *MV;
-    bool MB;
-  };
-
-  struct ASTChildrenNotSpelledInSource {
-    ASTChildrenNotSpelledInSource(MatchASTVisitor *V, bool B)
-        : MV(V), MB(V->TraversingASTChildrenNotSpelledInSource) {
-      V->TraversingASTChildrenNotSpelledInSource = B;
-    }
-    ~ASTChildrenNotSpelledInSource() {
-      MV->TraversingASTChildrenNotSpelledInSource = MB;
-    }
 
   private:
     MatchASTVisitor *MV;
@@ -1168,7 +1161,7 @@ bool MatchASTVisitor::TraverseDecl(Decl *DeclNode) {
   }
 
   ASTNodeNotSpelledInSourceScope RAII1(this, ScopedTraversal);
-  ASTChildrenNotSpelledInSource RAII2(this, ScopedChildren);
+  ASTChildrenNotSpelledInSourceScope RAII2(this, ScopedChildren);
 
   match(*DeclNode);
   return RecursiveASTVisitor<MatchASTVisitor>::TraverseDecl(DeclNode);
