@@ -257,7 +257,7 @@ void VETargetLowering::initSPUActions() {
     // Support i8/i16 atomic swap.
     setOperationAction(ISD::ATOMIC_SWAP, VT, Custom);
 
-    // FIXME: Support "atmam" isntructions.
+    // FIXME: Support "atmam" instructions.
     setOperationAction(ISD::ATOMIC_LOAD_ADD, VT, Expand);
     setOperationAction(ISD::ATOMIC_LOAD_SUB, VT, Expand);
     setOperationAction(ISD::ATOMIC_LOAD_AND, VT, Expand);
@@ -274,7 +274,7 @@ void VETargetLowering::initSPUActions() {
     setOperationAction(ISD::ATOMIC_LOAD_UMAX, VT, Expand);
   }
 
-  /// } Atomic isntructions
+  /// } Atomic instructions
 
   // Intrinsic instructions
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
