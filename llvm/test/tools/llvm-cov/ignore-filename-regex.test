@@ -4,7 +4,7 @@
 # Ignore all header files.
 RUN: llvm-cov report -instr-profile %S/Inputs/sources_specified/main.profdata \
 RUN:   -path-equivalence=/tmp,%S/Inputs -ignore-filename-regex='.*\.h$' \
-RUN:   %S/Inputs/sources_specified/main.covmapping \
+RUN:   %S/Inputs/sources_specified/main.covmapping --show-branch-summary=false \
 RUN:   | FileCheck -check-prefix=REPORT_IGNORE_HEADERS %s
 
 REPORT_IGNORE_HEADERS-NOT: {{.*}}dec.h{{.*}}
@@ -15,7 +15,7 @@ REPORT_IGNORE_HEADERS: {{^}}TOTAL 1{{.*}}100.00%{{$}}
 # Ignore all files from "extra" directory.
 RUN: llvm-cov report -instr-profile %S/Inputs/sources_specified/main.profdata \
 RUN:   -path-equivalence=/tmp,%S/Inputs -ignore-filename-regex='.*extra[/\\].*' \
-RUN:   %S/Inputs/sources_specified/main.covmapping \
+RUN:   %S/Inputs/sources_specified/main.covmapping --show-branch-summary=false \
 RUN:   | FileCheck -check-prefix=REPORT_IGNORE_DIR %s
 
 REPORT_IGNORE_DIR-NOT: {{.*}}extra{{[/\\]}}dec.h{{.*}}
@@ -27,7 +27,7 @@ REPORT_IGNORE_DIR: {{^}}TOTAL 5{{.*}}90.00%{{$}}
 # Ignore all files from "extra" directory even when SOURCES specified.
 RUN: llvm-cov report -instr-profile %S/Inputs/sources_specified/main.profdata \
 RUN:   -path-equivalence=/tmp,%S/Inputs -ignore-filename-regex='.*extra[/\\].*' \
-RUN:   %S/Inputs/sources_specified/main.covmapping \
+RUN:   %S/Inputs/sources_specified/main.covmapping --show-branch-summary=false \
 RUN:   %S/Inputs/sources_specified/extra %S/Inputs/sources_specified/abs.h \
 RUN:   | FileCheck -check-prefix=REPORT_IGNORE_DIR_WITH_SOURCES %s
 
