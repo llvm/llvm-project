@@ -74,8 +74,6 @@ def SDT_WebAssemblyCallSeqStart : SDCallSeqStart<[SDTCisVT<0, iPTR>,
                                                   SDTCisVT<1, iPTR>]>;
 def SDT_WebAssemblyCallSeqEnd :
     SDCallSeqEnd<[SDTCisVT<0, iPTR>, SDTCisVT<1, iPTR>]>;
-def SDT_WebAssemblyCall0      : SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>;
-def SDT_WebAssemblyCall1      : SDTypeProfile<1, -1, [SDTCisPtrTy<1>]>;
 def SDT_WebAssemblyBrTable    : SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>;
 def SDT_WebAssemblyArgument   : SDTypeProfile<1, 1, [SDTCisVT<1, i32>]>;
 def SDT_WebAssemblyReturn     : SDTypeProfile<0, -1, []>;
