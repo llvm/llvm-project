@@ -1388,6 +1388,42 @@ static bool addNoRecurseAttrs(const SCCNodeSet &SCCNodes) {
   return true;
 }
 
+static bool instructionDoesNotReturn(Instruction &I) {
+  if (auto *CB = dyn_cast<CallBase>(&I)) {
+    Function *Callee = CB->getCalledFunction();
+    return Callee && Callee->doesNotReturn();
+  }
+  return false;
+}
+
+// A basic block can only return if it terminates with a ReturnInst and does not
+// contain calls to noreturn functions.
+static bool basicBlockCanReturn(BasicBlock &BB) {
+  if (!isa<ReturnInst>(BB.getTerminator()))
+    return false;
+  return none_of(BB, instructionDoesNotReturn);
+}
+
+// Set the noreturn function attribute if possible.
+static bool addNoReturnAttrs(const SCCNodeSet &SCCNodes) {
+  bool Changed = false;
+
+  for (Function *F : SCCNodes) {
+    if (!F || !F->hasExactDefinition() || F->hasFnAttribute(Attribute::Naked) ||
+        F->doesNotReturn())
+      continue;
+
+    // The function can return if any basic blocks can return.
+    // FIXME: this doesn't handle recursion or unreachable blocks.
+    if (none_of(*F, basicBlockCanReturn)) {
+      F->setDoesNotReturn();
+      Changed = true;
+    }
+  }
+
+  return Changed;
+}
+
 static SCCNodesResult createSCCNodeSet(ArrayRef<Function *> Functions) {
   SCCNodesResult Res;
   Res.HasUnknownCall = false;
@@ -1431,6 +1467,7 @@ static bool deriveAttrsInPostOrder(ArrayRef<Function *> Functions,
   Changed |= addReadAttrs(Nodes.SCCNodes, AARGetter);
   Changed |= addArgumentAttrs(Nodes.SCCNodes);
   Changed |= inferConvergent(Nodes.SCCNodes);
+  Changed |= addNoReturnAttrs(Nodes.SCCNodes);
 
   // If we have no external nodes participating in the SCC, we can deduce some
   // more precise attributes as well.
