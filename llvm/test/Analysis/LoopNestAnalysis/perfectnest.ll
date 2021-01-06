@@ -85,6 +85,55 @@ perf_nest_2D_2_loop_i_end:
   ret void
 }
 
+define void @perf_nest_2D_3(i32** %y, i32** %x, i64 signext %nx, i64 signext %ny) {
+; CHECK-LABEL: IsPerfect=true, Depth=1, OutermostLoop: perf_nest_2D_3_loop_j, Loops: ( perf_nest_2D_3_loop_j )
+; CHECK-LABEL: IsPerfect=true, Depth=2, OutermostLoop: perf_nest_2D_3_loop_i, Loops: ( perf_nest_2D_3_loop_i perf_nest_2D_3_loop_j )
+entry:
+  br label %perf_nest_2D_3_loop_i
+
+perf_nest_2D_3_loop_i:
+  %i = phi i64 [ 0, %entry ], [ %inc13, %inc_i ]
+  %cmp21 = icmp slt i64 0, %ny
+  br label %singleSucc
+
+singleSucc:
+  br i1 %cmp21, label %preheader.j, label %for.end
+
+preheader.j:
+  br label %perf_nest_2D_3_loop_j
+
+perf_nest_2D_3_loop_j:
+  %j = phi i64 [ 0, %preheader.j ], [ %inc, %inc_j ]
+  %arrayidx = getelementptr inbounds i32*, i32** %x, i64 %j
+  %0 = load i32*, i32** %arrayidx, align 8
+  %arrayidx6 = getelementptr inbounds i32, i32* %0, i64 %j
+  %1 = load i32, i32* %arrayidx6, align 4
+  %arrayidx8 = getelementptr inbounds i32*, i32** %y, i64 %j
+  %2 = load i32*, i32** %arrayidx8, align 8
+  %arrayidx11 = getelementptr inbounds i32, i32* %2, i64 %i
+  store i32 %1, i32* %arrayidx11, align 4
+  br label %inc_j
+
+inc_j:
+  %inc = add nsw i64 %j, 1
+  %cmp2 = icmp slt i64 %inc, %ny
+  br i1 %cmp2, label %perf_nest_2D_3_loop_j, label %for.exit
+
+for.exit:
+  br label %for.end
+
+for.end:
+  br label %inc_i
+
+inc_i:
+  %inc13 = add nsw i64 %i, 1
+  %cmp = icmp slt i64 %inc13, %nx
+  br i1 %cmp, label %perf_nest_2D_3_loop_i, label %perf_nest_2D_3_loop_i_end
+
+perf_nest_2D_3_loop_i_end:
+  ret void
+}
+
 ; Test a perfect 3-dim loop nest of the form:
 ;   for (i=0; i<nx; ++i)
 ;     for (j=0; j<ny; ++j)
