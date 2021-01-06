@@ -3940,13 +3940,13 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
     CmdArgs.push_back("-gno-inline-line-tables");
   }
 
-  // Adjust the debug info kind for the given toolchain.
-  TC.adjustDebugInfoKind(DebugInfoKind, Args);
-
   // When emitting remarks, we need at least debug lines in the output.
   if (willEmitRemarks(Args) &&
       DebugInfoKind <= codegenoptions::DebugDirectivesOnly)
     DebugInfoKind = codegenoptions::DebugLineTablesOnly;
+
+  // Adjust the debug info kind for the given toolchain.
+  TC.adjustDebugInfoKind(DebugInfoKind, Args);
 
   RenderDebugEnablingArgs(Args, CmdArgs, DebugInfoKind, EffectiveDWARFVersion,
                           DebuggerTuning);
