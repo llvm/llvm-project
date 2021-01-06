@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -31,6 +32,7 @@ namespace llvm {
 class CallBase;
 class DataLayout;
 class Function;
+class FunctionLoweringInfo;
 class MachineIRBuilder;
 struct MachinePointerInfo;
 class MachineRegisterInfo;
@@ -42,21 +44,30 @@ class CallLowering {
 
   virtual void anchor();
 public:
-  struct ArgInfo {
+  struct BaseArgInfo {
+    Type *Ty;
+    SmallVector<ISD::ArgFlagsTy, 4> Flags;
+    bool IsFixed;
+
+    BaseArgInfo(Type *Ty,
+                ArrayRef<ISD::ArgFlagsTy> Flags = ArrayRef<ISD::ArgFlagsTy>(),
+                bool IsFixed = true)
+        : Ty(Ty), Flags(Flags.begin(), Flags.end()), IsFixed(IsFixed) {}
+
+    BaseArgInfo() : Ty(nullptr), IsFixed(false) {}
+  };
+
+  struct ArgInfo : public BaseArgInfo {
     SmallVector<Register, 4> Regs;
     // If the argument had to be split into multiple parts according to the
     // target calling convention, then this contains the original vregs
     // if the argument was an incoming arg.
     SmallVector<Register, 2> OrigRegs;
-    Type *Ty;
-    SmallVector<ISD::ArgFlagsTy, 4> Flags;
-    bool IsFixed;
 
     ArgInfo(ArrayRef<Register> Regs, Type *Ty,
             ArrayRef<ISD::ArgFlagsTy> Flags = ArrayRef<ISD::ArgFlagsTy>(),
             bool IsFixed = true)
-        : Regs(Regs.begin(), Regs.end()), Ty(Ty),
-          Flags(Flags.begin(), Flags.end()), IsFixed(IsFixed) {
+        : BaseArgInfo(Ty, Flags, IsFixed), Regs(Regs.begin(), Regs.end()) {
       if (!Regs.empty() && Flags.empty())
         this->Flags.push_back(ISD::ArgFlagsTy());
       // FIXME: We should have just one way of saying "no register".
@@ -65,7 +76,7 @@ public:
              "only void types should have no register");
     }
 
-    ArgInfo() : Ty(nullptr), IsFixed(false) {}
+    ArgInfo() : BaseArgInfo() {}
   };
 
   struct CallLoweringInfo {
@@ -101,6 +112,15 @@ public:
 
     /// True if the call is to a vararg function.
     bool IsVarArg = false;
+
+    /// True if the function's return value can be lowered to registers.
+    bool CanLowerReturn = true;
+
+    /// VReg to hold the hidden sret parameter.
+    Register DemoteRegister;
+
+    /// The stack index for sret demotion.
+    int DemoteStackIndex;
   };
 
   /// Argument handling is mostly uniform between the four places that
@@ -292,20 +312,73 @@ public:
     return false;
   }
 
+  /// Load the returned value from the stack into virtual registers in \p VRegs.
+  /// It uses the frame index \p FI and the start offset from \p DemoteReg.
+  /// The loaded data size will be determined from \p RetTy.
+  void insertSRetLoads(MachineIRBuilder &MIRBuilder, Type *RetTy,
+                       ArrayRef<Register> VRegs, Register DemoteReg,
+                       int FI) const;
+
+  /// Store the return value given by \p VRegs into stack starting at the offset
+  /// specified in \p DemoteReg.
+  void insertSRetStores(MachineIRBuilder &MIRBuilder, Type *RetTy,
+                        ArrayRef<Register> VRegs, Register DemoteReg) const;
+
+  /// Insert the hidden sret ArgInfo to the beginning of \p SplitArgs.
+  /// This function should be called from the target specific
+  /// lowerFormalArguments when \p F requires the sret demotion.
+  void insertSRetIncomingArgument(const Function &F,
+                                  SmallVectorImpl<ArgInfo> &SplitArgs,
+                                  Register &DemoteReg, MachineRegisterInfo &MRI,
+                                  const DataLayout &DL) const;
+
+  /// For the call-base described by \p CB, insert the hidden sret ArgInfo to
+  /// the OrigArgs field of \p Info.
+  void insertSRetOutgoingArgument(MachineIRBuilder &MIRBuilder,
+                                  const CallBase &CB,
+                                  CallLoweringInfo &Info) const;
+
+  /// \return True if the return type described by \p Outs can be returned
+  /// without performing sret demotion.
+  bool checkReturn(CCState &CCInfo, SmallVectorImpl<BaseArgInfo> &Outs,
+                   CCAssignFn *Fn) const;
+
+  /// Get the type and the ArgFlags for the split components of \p RetTy as
+  /// returned by \c ComputeValueVTs.
+  void getReturnInfo(CallingConv::ID CallConv, Type *RetTy, AttributeList Attrs,
+                     SmallVectorImpl<BaseArgInfo> &Outs,
+                     const DataLayout &DL) const;
+
+  /// Toplevel function to check the return type based on the target calling
+  /// convention. \return True if the return value of \p MF can be returned
+  /// without performing sret demotion.
+  bool checkReturnTypeForCallConv(MachineFunction &MF) const;
+
+  /// This hook must be implemented to check whether the return values
+  /// described by \p Outs can fit into the return registers. If false
+  /// is returned, an sret-demotion is performed.
+  virtual bool canLowerReturn(MachineFunction &MF, CallingConv::ID CallConv,
+                              SmallVectorImpl<BaseArgInfo> &Outs, bool IsVarArg,
+                              LLVMContext &Context) const {
+    return true;
+  }
+
   /// This hook must be implemented to lower outgoing return values, described
   /// by \p Val, into the specified virtual registers \p VRegs.
   /// This hook is used by GlobalISel.
+  ///
+  /// \p FLI is required for sret demotion.
   ///
   /// \p SwiftErrorVReg is non-zero if the function has a swifterror parameter
   /// that needs to be implicitly returned.
   ///
   /// \return True if the lowering succeeds, false otherwise.
   virtual bool lowerReturn(MachineIRBuilder &MIRBuilder, const Value *Val,
-                           ArrayRef<Register> VRegs,
+                           ArrayRef<Register> VRegs, FunctionLoweringInfo &FLI,
                            Register SwiftErrorVReg) const {
     if (!supportSwiftError()) {
       assert(SwiftErrorVReg == 0 && "attempt to use unsupported swifterror");
-      return lowerReturn(MIRBuilder, Val, VRegs);
+      return lowerReturn(MIRBuilder, Val, VRegs, FLI);
     }
     return false;
   }
@@ -313,7 +386,8 @@ public:
   /// This hook behaves as the extended lowerReturn function, but for targets
   /// that do not support swifterror value promotion.
   virtual bool lowerReturn(MachineIRBuilder &MIRBuilder, const Value *Val,
-                           ArrayRef<Register> VRegs) const {
+                           ArrayRef<Register> VRegs,
+                           FunctionLoweringInfo &FLI) const {
     return false;
   }
 
@@ -326,12 +400,13 @@ public:
   /// the second in \c VRegs[1], and so on. For each argument, there will be one
   /// register for each non-aggregate type, as returned by \c computeValueLLTs.
   /// \p MIRBuilder is set to the proper insertion for the argument
-  /// lowering.
+  /// lowering. \p FLI is required for sret demotion.
   ///
   /// \return True if the lowering succeeded, false otherwise.
   virtual bool lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                     const Function &F,
-                                    ArrayRef<ArrayRef<Register>> VRegs) const {
+                                    ArrayRef<ArrayRef<Register>> VRegs,
+                                    FunctionLoweringInfo &FLI) const {
     return false;
   }
 
