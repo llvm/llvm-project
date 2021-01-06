@@ -289,10 +289,10 @@ void UDTLayoutBase::addChildToLayout(std::unique_ptr<LayoutItemBase> Child) {
     UsedBytes |= ChildBytes;
 
     if (ChildBytes.count() > 0) {
-      auto Loc = std::upper_bound(LayoutItems.begin(), LayoutItems.end(), Begin,
-                                  [](uint32_t Off, const LayoutItemBase *Item) {
-                                    return (Off < Item->getOffsetInParent());
-                                  });
+      auto Loc = llvm::upper_bound(
+          LayoutItems, Begin, [](uint32_t Off, const LayoutItemBase *Item) {
+            return (Off < Item->getOffsetInParent());
+          });
 
       LayoutItems.insert(Loc, Child.get());
     }
