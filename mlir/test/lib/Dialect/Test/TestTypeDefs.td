@@ -21,9 +21,6 @@ class Test_Type<string name> : TypeDef<Test_Dialect, name> { }
 
 def SimpleTypeA : Test_Type<"SimpleA"> {
   let mnemonic = "smpla";
-
-  let printer = [{ $_printer << "smpla"; }];
-  let parser = [{ return get($_ctxt); }];
 }
 
 // A more complex parameterized type.
