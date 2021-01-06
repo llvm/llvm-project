@@ -107,9 +107,10 @@ public:
         SetTagZeroFn(SetTagZeroFn), StgpFn(StgpFn) {}
 
   bool addRange(uint64_t Start, uint64_t End, Instruction *Inst) {
-    auto I = std::lower_bound(
-        Ranges.begin(), Ranges.end(), Start,
-        [](const Range &LHS, uint64_t RHS) { return LHS.End <= RHS; });
+    auto I =
+        llvm::lower_bound(Ranges, Start, [](const Range &LHS, uint64_t RHS) {
+          return LHS.End <= RHS;
+        });
     if (I != Ranges.end() && End > I->Start) {
       // Overlap - bail.
       return false;
