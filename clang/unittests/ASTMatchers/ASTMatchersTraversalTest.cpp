@@ -3065,6 +3065,33 @@ void func14() {
       traverse(TK_IgnoreUnlessSpelledInSource,
                functionDecl(hasName("func14"), hasDescendant(floatLiteral()))),
       langCxx20OrLater()));
+
+  Code = R"cpp(
+void foo() {
+    int explicit_captured = 0;
+    int implicit_captured = 0;
+    auto l = [&, explicit_captured](int i) {
+        if (i || explicit_captured || implicit_captured) return;
+    };
+}
+)cpp";
+
+  EXPECT_TRUE(matches(Code, traverse(TK_AsIs, ifStmt())));
+  EXPECT_TRUE(
+      matches(Code, traverse(TK_IgnoreUnlessSpelledInSource, ifStmt())));
+
+  auto lambdaExplicitCapture = declRefExpr(
+      to(varDecl(hasName("explicit_captured"))), unless(hasAncestor(ifStmt())));
+  auto lambdaImplicitCapture = declRefExpr(
+      to(varDecl(hasName("implicit_captured"))), unless(hasAncestor(ifStmt())));
+
+  EXPECT_TRUE(matches(Code, traverse(TK_AsIs, lambdaExplicitCapture)));
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource, lambdaExplicitCapture)));
+
+  EXPECT_TRUE(matches(Code, traverse(TK_AsIs, lambdaImplicitCapture)));
+  EXPECT_FALSE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource, lambdaImplicitCapture)));
 }
 
 TEST(IgnoringImpCasts, MatchesImpCasts) {
