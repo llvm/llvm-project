@@ -49,7 +49,7 @@ public:
   Optional<StringRef> getBuilderCall() const;
 
   // Return the C++ class name for this type (which may just be ::mlir::Type).
-  StringRef getCPPClassName() const;
+  std::string getCPPClassName() const;
 };
 
 // Wrapper class with helper methods for accessing Types defined in TableGen.

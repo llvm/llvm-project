@@ -248,6 +248,23 @@ def NS_JOp : NS_Op<"op_with_InferTypeOpInterface_interface", [DeclareOpInterface
 // CHECK: static void build(::mlir::OpBuilder &, ::mlir::OperationState &odsState, ::mlir::TypeRange resultTypes, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {});
 // CHECK: static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {});
 
+// Test that type defs have the proper namespaces when used as a constraint.
+// ---
+
+def Test_Dialect2 : Dialect {
+  let name = "test";
+  let cppNamespace = "::mlir::dialect2";
+}
+def TestDialect2Type : TypeDef<Test_Dialect2, "Dialect2Type">;
+
+def NS_ResultWithDialectTypeOp : NS_Op<"op_with_dialect_type", []> {
+  let results = (outs TestDialect2Type);
+}
+
+// CHECK-LABEL: NS::ResultWithDialectTypeOp declarations
+// CHECK:     class ResultWithDialectTypeOp :
+// CHECK-SAME: ::mlir::OpTrait::OneTypedResult<::mlir::dialect2::Dialect2TypeType>
+
 // Check that default builders can be suppressed.
 // ---
 
