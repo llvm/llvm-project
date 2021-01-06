@@ -40,10 +40,10 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
   /// which threads participate in the shuffle) and a maskAndClamp (specifying
   /// the highest lane which participates in the shuffle).
   ///
-  ///     %one = llvm.constant(1 : i32) : !llvm.i32
-  ///     %shl = llvm.shl %one, %width : !llvm.i32
-  ///     %active_mask = llvm.sub %shl, %one : !llvm.i32
-  ///     %mask_and_clamp = llvm.sub %width, %one : !llvm.i32
+  ///     %one = llvm.constant(1 : i32) : i32
+  ///     %shl = llvm.shl %one, %width : i32
+  ///     %active_mask = llvm.sub %shl, %one : i32
+  ///     %mask_and_clamp = llvm.sub %width, %one : i32
   ///     %shfl = nvvm.shfl.sync.bfly %active_mask, %value, %offset,
   ///         %mask_and_clamp : !llvm<"{ float, i1 }">
   ///     %shfl_value = llvm.extractvalue %shfl[0 : index] :
@@ -57,8 +57,8 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     gpu::ShuffleOpAdaptor adaptor(operands);
 
     auto valueTy = adaptor.value().getType();
-    auto int32Type = LLVM::LLVMIntegerType::get(rewriter.getContext(), 32);
-    auto predTy = LLVM::LLVMIntegerType::get(rewriter.getContext(), 1);
+    auto int32Type = IntegerType::get(rewriter.getContext(), 32);
+    auto predTy = IntegerType::get(rewriter.getContext(), 1);
     auto resultTy = LLVM::LLVMStructType::getLiteral(rewriter.getContext(),
                                                      {valueTy, predTy});
 

@@ -66,7 +66,7 @@ namespace {
 struct AsyncAPI {
   // All async types are lowered to opaque i8* LLVM pointers at runtime.
   static LLVM::LLVMPointerType opaquePointerType(MLIRContext *ctx) {
-    return LLVM::LLVMPointerType::get(LLVM::LLVMIntegerType::get(ctx, 8));
+    return LLVM::LLVMPointerType::get(IntegerType::get(ctx, 8));
   }
 
   static FunctionType addOrDropRefFunctionType(MLIRContext *ctx) {
@@ -222,10 +222,10 @@ static void addCoroutineIntrinsicsDeclarations(ModuleOp module) {
   auto token = LLVMTokenType::get(ctx);
   auto voidTy = LLVMVoidType::get(ctx);
 
-  auto i8 = LLVMIntegerType::get(ctx, 8);
-  auto i1 = LLVMIntegerType::get(ctx, 1);
-  auto i32 = LLVMIntegerType::get(ctx, 32);
-  auto i64 = LLVMIntegerType::get(ctx, 64);
+  auto i8 = IntegerType::get(ctx, 8);
+  auto i1 = IntegerType::get(ctx, 1);
+  auto i32 = IntegerType::get(ctx, 32);
+  auto i64 = IntegerType::get(ctx, 64);
   auto i8Ptr = LLVMPointerType::get(i8);
 
   addLLVMFuncDecl(module, builder, kCoroId, token, {i32, i8Ptr, i8Ptr, i8Ptr});
@@ -254,8 +254,8 @@ static void addCRuntimeDeclarations(ModuleOp module) {
                                module.getBody()->getTerminator());
 
   auto voidTy = LLVMVoidType::get(ctx);
-  auto i64 = LLVMIntegerType::get(ctx, 64);
-  auto i8Ptr = LLVMPointerType::get(LLVMIntegerType::get(ctx, 8));
+  auto i64 = IntegerType::get(ctx, 64);
+  auto i8Ptr = LLVMPointerType::get(IntegerType::get(ctx, 8));
 
   addLLVMFuncDecl(module, builder, kMalloc, i8Ptr, {i64});
   addLLVMFuncDecl(module, builder, kFree, voidTy, {i8Ptr});
@@ -280,7 +280,7 @@ static void addResumeFunction(ModuleOp module) {
     return;
 
   auto voidTy = LLVM::LLVMVoidType::get(ctx);
-  auto i8Ptr = LLVM::LLVMPointerType::get(LLVM::LLVMIntegerType::get(ctx, 8));
+  auto i8Ptr = LLVM::LLVMPointerType::get(IntegerType::get(ctx, 8));
 
   auto resumeOp = moduleBuilder.create<LLVM::LLVMFuncOp>(
       loc, kResume, LLVM::LLVMFunctionType::get(voidTy, {i8Ptr}));
@@ -361,10 +361,10 @@ static CoroMachinery setupCoroMachinery(FuncOp func) {
   MLIRContext *ctx = func.getContext();
 
   auto token = LLVM::LLVMTokenType::get(ctx);
-  auto i1 = LLVM::LLVMIntegerType::get(ctx, 1);
-  auto i32 = LLVM::LLVMIntegerType::get(ctx, 32);
-  auto i64 = LLVM::LLVMIntegerType::get(ctx, 64);
-  auto i8Ptr = LLVM::LLVMPointerType::get(LLVM::LLVMIntegerType::get(ctx, 8));
+  auto i1 = IntegerType::get(ctx, 1);
+  auto i32 = IntegerType::get(ctx, 32);
+  auto i64 = IntegerType::get(ctx, 64);
+  auto i8Ptr = LLVM::LLVMPointerType::get(IntegerType::get(ctx, 8));
 
   Block *entryBlock = func.addEntryBlock();
   Location loc = func.getBody().getLoc();
@@ -393,11 +393,7 @@ static CoroMachinery setupCoroMachinery(FuncOp func) {
                                                 builder.getI32IntegerAttr(1));
     auto gep = builder.create<LLVM::GEPOp>(loc, storagePtrType, nullPtr,
                                            one.getResult());
-    auto size = builder.create<LLVM::PtrToIntOp>(loc, i32, gep);
-
-    // Cast to std type because runtime API defined using std types.
-    return builder.create<LLVM::DialectCastOp>(loc, builder.getI32Type(),
-                                               size.getResult());
+    return builder.create<LLVM::PtrToIntOp>(loc, i32, gep);
   };
 
   // We use the `async.value` type as a return type although it does not match
@@ -529,8 +525,8 @@ static void addSuspensionPoint(CoroMachinery coro, Value coroState,
                                OpBuilder &builder) {
   Location loc = op->getLoc();
   MLIRContext *ctx = op->getContext();
-  auto i1 = LLVM::LLVMIntegerType::get(ctx, 1);
-  auto i8 = LLVM::LLVMIntegerType::get(ctx, 8);
+  auto i1 = IntegerType::get(ctx, 1);
+  auto i8 = IntegerType::get(ctx, 8);
 
   // Add a coroutine suspension in place of original `op` in the split block.
   OpBuilder::InsertionGuard guard(builder);

@@ -16,8 +16,8 @@
 @g4 = external global i32, align 8
 ; CHECK: llvm.mlir.global internal constant @int_gep() : !llvm.ptr<i32> {
 ; CHECK-DAG:   %[[addr:[0-9]+]] = llvm.mlir.addressof @g4 : !llvm.ptr<i32>
-; CHECK-DAG:   %[[c2:[0-9]+]] = llvm.mlir.constant(2 : i32) : !llvm.i32
-; CHECK-NEXT:  %[[gepinit:[0-9]+]] = llvm.getelementptr %[[addr]][%[[c2]]] : (!llvm.ptr<i32>, !llvm.i32) -> !llvm.ptr<i32>
+; CHECK-DAG:   %[[c2:[0-9]+]] = llvm.mlir.constant(2 : i32) : i32
+; CHECK-NEXT:  %[[gepinit:[0-9]+]] = llvm.getelementptr %[[addr]][%[[c2]]] : (!llvm.ptr<i32>, i32) -> !llvm.ptr<i32>
 ; CHECK-NEXT:  llvm.return %[[gepinit]] : !llvm.ptr<i32>
 ; CHECK-NEXT: }
 @int_gep = internal constant i32* getelementptr (i32, i32* @g4, i32 2)
@@ -26,27 +26,27 @@
 ; Linkage attribute.
 ;
 
-; CHECK: llvm.mlir.global private @private(42 : i32) : !llvm.i32
+; CHECK: llvm.mlir.global private @private(42 : i32) : i32
 @private = private global i32 42
-; CHECK: llvm.mlir.global internal @internal(42 : i32) : !llvm.i32
+; CHECK: llvm.mlir.global internal @internal(42 : i32) : i32
 @internal = internal global i32 42
-; CHECK: llvm.mlir.global available_externally @available_externally(42 : i32) : !llvm.i32
+; CHECK: llvm.mlir.global available_externally @available_externally(42 : i32) : i32
 @available_externally = available_externally global i32 42
-; CHECK: llvm.mlir.global linkonce @linkonce(42 : i32) : !llvm.i32
+; CHECK: llvm.mlir.global linkonce @linkonce(42 : i32) : i32
 @linkonce = linkonce global i32 42
-; CHECK: llvm.mlir.global weak @weak(42 : i32) : !llvm.i32
+; CHECK: llvm.mlir.global weak @weak(42 : i32) : i32
 @weak = weak global i32 42
-; CHECK: llvm.mlir.global common @common(42 : i32) : !llvm.i32
+; CHECK: llvm.mlir.global common @common(42 : i32) : i32
 @common = common global i32 42
-; CHECK: llvm.mlir.global appending @appending(42 : i32) : !llvm.i32
+; CHECK: llvm.mlir.global appending @appending(42 : i32) : i32
 @appending = appending global i32 42
-; CHECK: llvm.mlir.global extern_weak @extern_weak() : !llvm.i32
+; CHECK: llvm.mlir.global extern_weak @extern_weak() : i32
 @extern_weak = extern_weak global i32
-; CHECK: llvm.mlir.global linkonce_odr @linkonce_odr(42 : i32) : !llvm.i32
+; CHECK: llvm.mlir.global linkonce_odr @linkonce_odr(42 : i32) : i32
 @linkonce_odr = linkonce_odr global i32 42
-; CHECK: llvm.mlir.global weak_odr @weak_odr(42 : i32) : !llvm.i32
+; CHECK: llvm.mlir.global weak_odr @weak_odr(42 : i32) : i32
 @weak_odr = weak_odr global i32 42
-; CHECK: llvm.mlir.global external @external() : !llvm.i32
+; CHECK: llvm.mlir.global external @external() : i32
 @external = external global i32
 
 ;
@@ -73,54 +73,54 @@ define internal void @func_internal() {
   ret void
 }
 
-; CHECK: llvm.func @fe(!llvm.i32) -> !llvm.float
+; CHECK: llvm.func @fe(i32) -> !llvm.float
 declare float @fe(i32)
 
 ; FIXME: function attributes.
-; CHECK-LABEL: llvm.func internal @f1(%arg0: !llvm.i64) -> !llvm.i32 {
-; CHECK-DAG: %[[c2:[0-9]+]] = llvm.mlir.constant(2 : i32) : !llvm.i32
-; CHECK-DAG: %[[c42:[0-9]+]] = llvm.mlir.constant(42 : i32) : !llvm.i32
-; CHECK-DAG: %[[c1:[0-9]+]] = llvm.mlir.constant(true) : !llvm.i1
-; CHECK-DAG: %[[c43:[0-9]+]] = llvm.mlir.constant(43 : i32) : !llvm.i32
+; CHECK-LABEL: llvm.func internal @f1(%arg0: i64) -> i32 {
+; CHECK-DAG: %[[c2:[0-9]+]] = llvm.mlir.constant(2 : i32) : i32
+; CHECK-DAG: %[[c42:[0-9]+]] = llvm.mlir.constant(42 : i32) : i32
+; CHECK-DAG: %[[c1:[0-9]+]] = llvm.mlir.constant(true) : i1
+; CHECK-DAG: %[[c43:[0-9]+]] = llvm.mlir.constant(43 : i32) : i32
 define internal dso_local i32 @f1(i64 %a) norecurse {
 entry:
-; CHECK: %{{[0-9]+}} = llvm.inttoptr %arg0 : !llvm.i64 to !llvm.ptr<i64>
+; CHECK: %{{[0-9]+}} = llvm.inttoptr %arg0 : i64 to !llvm.ptr<i64>
   %aa = inttoptr i64 %a to i64*
 ; %[[addrof:[0-9]+]] = llvm.mlir.addressof @g2 : !llvm.ptr<double>
 ; %[[addrof2:[0-9]+]] = llvm.mlir.addressof @g2 : !llvm.ptr<double>
-; %{{[0-9]+}} = llvm.inttoptr %arg0 : !llvm.i64 to !llvm.ptr<i64>
-; %{{[0-9]+}} = llvm.ptrtoint %[[addrof2]] : !llvm.ptr<double> to !llvm.i64
-; %{{[0-9]+}} = llvm.getelementptr %[[addrof]][%3] : (!llvm.ptr<double>, !llvm.i32) -> !llvm.ptr<double>
+; %{{[0-9]+}} = llvm.inttoptr %arg0 : i64 to !llvm.ptr<i64>
+; %{{[0-9]+}} = llvm.ptrtoint %[[addrof2]] : !llvm.ptr<double> to i64
+; %{{[0-9]+}} = llvm.getelementptr %[[addrof]][%3] : (!llvm.ptr<double>, i32) -> !llvm.ptr<double>
   %bb = ptrtoint double* @g2 to i64
   %cc = getelementptr double, double* @g2, i32 2
-; CHECK: %[[b:[0-9]+]] = llvm.trunc %arg0 : !llvm.i64 to !llvm.i32
+; CHECK: %[[b:[0-9]+]] = llvm.trunc %arg0 : i64 to i32
   %b = trunc i64 %a to i32
-; CHECK: %[[c:[0-9]+]] = llvm.call @fe(%[[b]]) : (!llvm.i32) -> !llvm.float
+; CHECK: %[[c:[0-9]+]] = llvm.call @fe(%[[b]]) : (i32) -> !llvm.float
   %c = call float @fe(i32 %b)
-; CHECK: %[[d:[0-9]+]] = llvm.fptosi %[[c]] : !llvm.float to !llvm.i32
+; CHECK: %[[d:[0-9]+]] = llvm.fptosi %[[c]] : !llvm.float to i32
   %d = fptosi float %c to i32
 ; FIXME: icmp should return i1.
-; CHECK: %[[e:[0-9]+]] = llvm.icmp "ne" %[[d]], %[[c2]] : !llvm.i32
+; CHECK: %[[e:[0-9]+]] = llvm.icmp "ne" %[[d]], %[[c2]] : i32
   %e = icmp ne i32 %d, 2
 ; CHECK: llvm.cond_br %[[e]], ^bb1, ^bb2
   br i1 %e, label %if.then, label %if.end
 
 ; CHECK: ^bb1:
 if.then:
-; CHECK: llvm.return %[[c42]] : !llvm.i32
+; CHECK: llvm.return %[[c42]] : i32
   ret i32 42
   
 ; CHECK: ^bb2:
 if.end:
-; CHECK: %[[orcond:[0-9]+]] = llvm.or %[[e]], %[[c1]] : !llvm.i1
+; CHECK: %[[orcond:[0-9]+]] = llvm.or %[[e]], %[[c1]] : i1
   %or.cond = or i1 %e, 1
 ; CHECK: llvm.return %[[c43]]
   ret i32 43
 }
 
 ; Test that instructions that dominate can be out of sequential order.
-; CHECK-LABEL: llvm.func @f2(%arg0: !llvm.i64) -> !llvm.i64 {
-; CHECK-DAG: %[[c3:[0-9]+]] = llvm.mlir.constant(3 : i64) : !llvm.i64
+; CHECK-LABEL: llvm.func @f2(%arg0: i64) -> i64 {
+; CHECK-DAG: %[[c3:[0-9]+]] = llvm.mlir.constant(3 : i64) : i64
 define i64 @f2(i64 %a) noduplicate {
 entry:
 ; CHECK: llvm.br ^bb2
@@ -133,21 +133,21 @@ end:
 
 ; CHECK: ^bb2:
 next:
-; CHECK: %1 = llvm.add %arg0, %[[c3]] : !llvm.i64
+; CHECK: %1 = llvm.add %arg0, %[[c3]] : i64
   %b = add i64 %a, 3
 ; CHECK: llvm.br ^bb1
   br label %end
 }
 
 ; Test arguments/phis.
-; CHECK-LABEL: llvm.func @f2_phis(%arg0: !llvm.i64) -> !llvm.i64 {
-; CHECK-DAG: %[[c3:[0-9]+]] = llvm.mlir.constant(3 : i64) : !llvm.i64
+; CHECK-LABEL: llvm.func @f2_phis(%arg0: i64) -> i64 {
+; CHECK-DAG: %[[c3:[0-9]+]] = llvm.mlir.constant(3 : i64) : i64
 define i64 @f2_phis(i64 %a) noduplicate {
 entry:
 ; CHECK: llvm.br ^bb2
   br label %next
 
-; CHECK: ^bb1(%1: !llvm.i64):
+; CHECK: ^bb1(%1: i64):
 end:
   %c = phi i64 [ %b, %next ]
 ; CHECK: llvm.return %1
@@ -155,7 +155,7 @@ end:
 
 ; CHECK: ^bb2:
 next:
-; CHECK: %2 = llvm.add %arg0, %[[c3]] : !llvm.i64
+; CHECK: %2 = llvm.add %arg0, %[[c3]] : i64
   %b = add i64 %a, 3
 ; CHECK: llvm.br ^bb1
   br label %end
@@ -200,7 +200,7 @@ define void @f5(i32 %d) {
 
 ; CHECK-LABEL: llvm.func @f6(%arg0: !llvm.ptr<func<void (i16)>>)
 define void @f6(void (i16) *%fn) {
-; CHECK: %[[c:[0-9]+]] = llvm.mlir.constant(0 : i16) : !llvm.i16
+; CHECK: %[[c:[0-9]+]] = llvm.mlir.constant(0 : i16) : i16
 ; CHECK: llvm.call %arg0(%[[c]])
   call void %fn(i16 0)
   ret void
@@ -280,7 +280,7 @@ declare i32 @__gxx_personality_v0(...)
 ; CHECK-LABEL: @invokeLandingpad
 define i32 @invokeLandingpad() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
   ; CHECK: %[[a1:[0-9]+]] = llvm.bitcast %{{[0-9]+}} : !llvm.ptr<ptr<ptr<i8>>> to !llvm.ptr<i8>
-  ; CHECK: %[[a3:[0-9]+]] = llvm.alloca %{{[0-9]+}} x !llvm.i8 : (!llvm.i32) -> !llvm.ptr<i8>
+  ; CHECK: %[[a3:[0-9]+]] = llvm.alloca %{{[0-9]+}} x i8 : (i32) -> !llvm.ptr<i8>
   %1 = alloca i8
   ; CHECK: llvm.invoke @foo(%[[a3]]) to ^bb2 unwind ^bb1 : (!llvm.ptr<i8>) -> ()
   invoke void @foo(i8* %1) to label %4 unwind label %2
@@ -294,7 +294,7 @@ define i32 @invokeLandingpad() personality i8* bitcast (i32 (...)* @__gxx_person
   resume { i8*, i32 } %3
 
 ; CHECK: ^bb2:
-  ; CHECK: llvm.return %{{[0-9]+}} : !llvm.i32
+  ; CHECK: llvm.return %{{[0-9]+}} : i32
   ret i32 1
 
 ; CHECK: ^bb3:
@@ -302,16 +302,16 @@ define i32 @invokeLandingpad() personality i8* bitcast (i32 (...)* @__gxx_person
   %6 = invoke i8* @bar(i8* %1) to label %4 unwind label %2
 
 ; CHECK: ^bb4:
-  ; CHECK: llvm.return %{{[0-9]+}} : !llvm.i32
+  ; CHECK: llvm.return %{{[0-9]+}} : i32
   ret i32 0
 }
 
 ;CHECK-LABEL: @useFreezeOp
 define i32 @useFreezeOp(i32 %x) {
-  ;CHECK: %{{[0-9]+}} = llvm.freeze %{{[0-9a-z]+}} : !llvm.i32
+  ;CHECK: %{{[0-9]+}} = llvm.freeze %{{[0-9a-z]+}} : i32
   %1 = freeze i32 %x
   %2 = add i8 10, 10
-  ;CHECK: %{{[0-9]+}} = llvm.freeze %{{[0-9]+}} : !llvm.i8
+  ;CHECK: %{{[0-9]+}} = llvm.freeze %{{[0-9]+}} : i8
   %3 = freeze i8 %2
   %poison = add nsw i1 0, undef
   ret i32 0

@@ -7,9 +7,8 @@ func @mlir_dialect_cast(%0: index, %1: i32, %2: bf16, %3: f16, %4: f32, %5: f64,
                         %6: vector<42xf32>, %7: memref<42xf32>,
                         %8: memref<?xf32>, %9: memref<f32>,
                         %10: memref<*xf32>) {
-  llvm.mlir.cast %0 : index to !llvm.i64
-  llvm.mlir.cast %0 : index to !llvm.i32
-  llvm.mlir.cast %1 : i32 to !llvm.i32
+  llvm.mlir.cast %0 : index to i64
+  llvm.mlir.cast %0 : index to i32
   llvm.mlir.cast %2 : bf16 to !llvm.bfloat
   llvm.mlir.cast %3 : f16 to !llvm.half
   llvm.mlir.cast %4 : f32 to !llvm.float
@@ -71,15 +70,8 @@ func @mlir_dialect_cast_f64(%0 : f64) {
 // -----
 
 func @mlir_dialect_cast_integer_non_integer(%0 : i16) {
-  // expected-error@+1 {{invalid cast between integer and non-integer type}}
+  // expected-error@+1 {{unsupported cast}}
   llvm.mlir.cast %0 : i16 to !llvm.half
-}
-
-// -----
-
-func @mlir_dialect_cast_integer_bitwidth_mismatch(%0 : i16) {
-  // expected-error@+1 {{invalid cast between integers with mismatching bitwidth}}
-  llvm.mlir.cast %0 : i16 to !llvm.i32
 }
 
 // -----
