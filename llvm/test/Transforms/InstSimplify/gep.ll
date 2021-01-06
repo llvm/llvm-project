@@ -218,12 +218,21 @@ define <vscale x 2 x i64*> @ptr_idx_mix_scalar_scalable_vector() {
 
 ; Check ConstantExpr::getGetElementPtr() using ElementCount for size queries - end.
 
-; TODO: this should return poison
+; TODO: these should return poison
 
 define i8* @poison() {
 ; CHECK-LABEL: @poison(
 ; CHECK-NEXT:    ret i8* undef
 ;
   %v = getelementptr i8, i8* poison, i64 1
+  ret i8* %v
+}
+
+define i8* @poison2(i8* %baseptr) {
+; CHECK-LABEL: @poison2(
+; CHECK-NEXT:    [[V:%.*]] = getelementptr i8, i8* [[BASEPTR:%.*]], i64 poison
+; CHECK-NEXT:    ret i8* [[V]]
+;
+  %v = getelementptr i8, i8* %baseptr, i64 poison
   ret i8* %v
 }
