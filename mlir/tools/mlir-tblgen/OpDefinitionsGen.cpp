@@ -328,6 +328,9 @@ private:
   // Generates setter for the attributes.
   void genAttrSetters();
 
+  // Generates removers for optional attributes.
+  void genOptionalAttrRemovers();
+
   // Generates getters for named operands.
   void genNamedOperandGetters();
 
@@ -600,6 +603,7 @@ OpEmitter::OpEmitter(const Operator &op,
   genNamedSuccessorGetters();
   genAttrGetters();
   genAttrSetters();
+  genOptionalAttrRemovers();
   genBuilder();
   genParser();
   genPrinter();
@@ -774,6 +778,28 @@ void OpEmitter::genAttrSetters() {
     const auto &attr = namedAttr.attr;
     if (!attr.isDerivedAttr())
       emitAttrWithStorageType(name, attr);
+  }
+}
+
+void OpEmitter::genOptionalAttrRemovers() {
+  // Generate methods for removing optional attributes, instead of having to
+  // use the string interface. Enables better compile time verification.
+  auto emitRemoveAttr = [&](StringRef name) {
+    auto upperInitial = name.take_front().upper();
+    auto suffix = name.drop_front();
+    auto *method = opClass.addMethodAndPrune(
+        "Attribute", ("remove" + upperInitial + suffix + "Attr").str());
+    if (!method)
+      return;
+    auto &body = method->body();
+    body << "  return (*this)->removeAttr(\"" << name << "\");";
+  };
+
+  for (const auto &namedAttr : op.getAttributes()) {
+    const auto &name = namedAttr.name;
+    const auto &attr = namedAttr.attr;
+    if (attr.isOptional())
+      emitRemoveAttr(name);
   }
 }
 
