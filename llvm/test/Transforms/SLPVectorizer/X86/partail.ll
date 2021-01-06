@@ -13,11 +13,11 @@ define void @get_block(i32 %y_pos) local_unnamed_addr #0 {
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[SUB14:%.*]] = sub nsw i32 [[Y_POS:%.*]], undef
 ; CHECK-NEXT:    [[SHR15:%.*]] = ashr i32 [[SUB14]], 2
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> undef, i32 [[SHR15]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[SHR15]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[SUB14]], i32 1
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <4 x i32> [[SHUFFLE]], <i32 0, i32 -1, i32 -5, i32 -9>
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> undef, i32 [[SHR15]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> poison, i32 [[SHR15]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 undef, i32 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 undef, i32 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 undef, i32 3

@@ -42,7 +42,7 @@ define dso_local void @j() local_unnamed_addr {
 ; CHECK-NEXT:    [[ARRAYIDX18:%.*]] = getelementptr inbounds i32, i32* [[TMP0]], i64 15
 ; CHECK-NEXT:    [[TMP15:%.*]] = load i32, i32* @a, align 4
 ; CHECK-NEXT:    [[CONV19:%.*]] = sitofp i32 [[TMP15]] to float
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x float> <float -1.000000e+00, float -1.000000e+00, float undef, float undef>, float [[CONV19]], i32 2
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x float> <float -1.000000e+00, float -1.000000e+00, float poison, float poison>, float [[CONV19]], i32 2
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x float> [[SHUFFLE]], i32 2
 ; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x float> [[TMP16]], float [[TMP17]], i32 3
 ; CHECK-NEXT:    [[TMP19:%.*]] = fadd <4 x float> [[TMP10]], [[TMP18]]

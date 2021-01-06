@@ -513,7 +513,7 @@ define i32 @test_count_bits(i8* %test_base) {
 ; CHECK-NEXT:    [[TMP27:%.*]] = load i8, i8* [[TMP13]], align 1
 ; CHECK-NEXT:    [[TMP28:%.*]] = load i8, i8* [[TMP15]], align 1
 ; CHECK-NEXT:    [[TMP29:%.*]] = load i8, i8* [[TMP17]], align 1
-; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <4 x i8> undef, i8 [[TMP26]], i32 0
+; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <4 x i8> poison, i8 [[TMP26]], i32 0
 ; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <4 x i8> [[TMP30]], i8 [[TMP27]], i32 1
 ; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <4 x i8> [[TMP31]], i8 [[TMP28]], i32 2
 ; CHECK-NEXT:    [[TMP33:%.*]] = insertelement <4 x i8> [[TMP32]], i8 [[TMP29]], i32 3
@@ -521,7 +521,7 @@ define i32 @test_count_bits(i8* %test_base) {
 ; CHECK-NEXT:    [[TMP35:%.*]] = load i8, i8* [[TMP21]], align 1
 ; CHECK-NEXT:    [[TMP36:%.*]] = load i8, i8* [[TMP23]], align 1
 ; CHECK-NEXT:    [[TMP37:%.*]] = load i8, i8* [[TMP25]], align 1
-; CHECK-NEXT:    [[TMP38:%.*]] = insertelement <4 x i8> undef, i8 [[TMP34]], i32 0
+; CHECK-NEXT:    [[TMP38:%.*]] = insertelement <4 x i8> poison, i8 [[TMP34]], i32 0
 ; CHECK-NEXT:    [[TMP39:%.*]] = insertelement <4 x i8> [[TMP38]], i8 [[TMP35]], i32 1
 ; CHECK-NEXT:    [[TMP40:%.*]] = insertelement <4 x i8> [[TMP39]], i8 [[TMP36]], i32 2
 ; CHECK-NEXT:    [[TMP41:%.*]] = insertelement <4 x i8> [[TMP40]], i8 [[TMP37]], i32 3

@@ -16,10 +16,10 @@ target triple = "x86_64-apple-macosx10.8.0"
 ; CHECK: [[IF0]]:
 ; CHECK:   %[[T0:.+]] = extractelement <2 x i32> %wide.masked.load, i32 0
 ; CHECK:   %[[T1:.+]] = sdiv i32 %[[T0]], %x
-; CHECK:   %[[T2:.+]] = insertelement <2 x i32> undef, i32 %[[T1]], i32 0
+; CHECK:   %[[T2:.+]] = insertelement <2 x i32> poison, i32 %[[T1]], i32 0
 ; CHECK:   br label %[[CONT0]]
 ; CHECK: [[CONT0]]:
-; CHECK:   %[[T3:.+]] = phi <2 x i32> [ undef, %vector.body ], [ %[[T2]], %[[IF0]] ]
+; CHECK:   %[[T3:.+]] = phi <2 x i32> [ poison, %vector.body ], [ %[[T2]], %[[IF0]] ]
 ; CHECK:   br i1 {{.*}}, label %[[IF1:.+]], label %[[CONT1:.+]]
 ; CHECK: [[IF1]]:
 ; CHECK:   %[[T4:.+]] = extractelement <2 x i32> %wide.masked.load, i32 1
