@@ -152,6 +152,12 @@ def VOP1_F64_I32 : VOPProfileI2F <f64, i32>;
 def VOP1_F32_I32 : VOPProfileI2F <f32, i32>;
 def VOP1_F16_I16 : VOPProfileI2F <f16, i16>;
 
+def VOP_NOP_PROFILE : VOPProfile <[untyped, untyped, untyped, untyped]>{
+  let HasExtVOP3DPP = 0;
+}
+
+// OMod clears exceptions when set. OMod was always an operand, but its
+// now explicitly set.
 class VOP_SPECIAL_OMOD_PROF<ValueType dstVt, ValueType srcVt> :
   VOPProfile<[dstVt, srcVt, untyped, untyped]> {
 
@@ -160,10 +166,6 @@ class VOP_SPECIAL_OMOD_PROF<ValueType dstVt, ValueType srcVt> :
 def VOP_I32_F32_SPECIAL_OMOD : VOP_SPECIAL_OMOD_PROF<i32, f32>;
 def VOP_I32_F64_SPECIAL_OMOD : VOP_SPECIAL_OMOD_PROF<i32, f64>;
 def VOP_I16_F16_SPECIAL_OMOD : VOP_SPECIAL_OMOD_PROF<i16, f16>;
-
-def VOP_NOP_PROFILE : VOPProfile <[untyped, untyped, untyped, untyped]>{
-  let HasExtVOP3DPP = 0;
-}
 
 //===----------------------------------------------------------------------===//
 // VOP1 Instructions

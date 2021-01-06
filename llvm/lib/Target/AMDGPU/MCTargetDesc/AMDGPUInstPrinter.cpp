@@ -370,12 +370,15 @@ void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
 
 void AMDGPUInstPrinter::printVOPDst(const MCInst *MI, unsigned OpNo,
                                     const MCSubtargetInfo &STI, raw_ostream &O) {
+  auto TSFlags = MII.get(MI->getOpcode()).TSFlags;
   if (OpNo == 0) {
-    if (MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::VOP3)
+    if (TSFlags & SIInstrFlags::VOP3 && TSFlags & SIInstrFlags::DPP)
+      O << "_e64_dpp ";
+    else if (TSFlags & SIInstrFlags::VOP3)
       O << "_e64 ";
-    else if (MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::DPP)
+    else if (TSFlags & SIInstrFlags::DPP)
       O << "_dpp ";
-    else if (MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::SDWA)
+    else if (TSFlags & SIInstrFlags::SDWA)
       O << "_sdwa ";
     else
       O << "_e32 ";

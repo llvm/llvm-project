@@ -335,7 +335,9 @@ class VOP_MAC <ValueType vt0, ValueType vt1=vt0> : VOPProfile <[vt0, vt1, vt1, v
                     dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
                     bank_mask:$bank_mask, bound_ctrl:$bound_ctrl);
   let InsDPP16 = !con(InsDPP, (ins FI:$fi));
-  let InsVOP3Base = Ins64;
+  let InsVOP3Base  = getIns64<Src0VOP3DPP, Src1RC64, RegisterOperand<VGPR_32>, 3,
+                       0, HasModifiers, HasModifiers, HasOMod,
+                       Src0Mod, Src1Mod, Src2Mod>.ret;
 
   let InsDPP8 = (ins Src0ModDPP:$src0_modifiers, Src0DPP:$src0,
                      Src1ModDPP:$src1_modifiers, Src1DPP:$src1,
@@ -352,8 +354,6 @@ class VOP_MAC <ValueType vt0, ValueType vt1=vt0> : VOPProfile <[vt0, vt1, vt1, v
   let AsmDPP = getAsmDPP<1, 2, HasModifiers, vt0>.ret;
   let AsmDPP16 = getAsmDPP16<1, 2, HasModifiers, vt0>.ret;
   let AsmDPP8 = getAsmDPP8<1, 2, 0, vt0>.ret;
-  let AsmVOP3DPPBase = !if(HasDst, !if(!eq(DstVT.Size, 1), "$sdst",
-                       "$vdst"), "") # Asm64;
   let AsmSDWA = getAsmSDWA<1, 2, vt0>.ret;
   let AsmSDWA9 = getAsmSDWA9<1, 1, 2, vt0>.ret;
   let HasSrc2 = 0;
@@ -400,6 +400,7 @@ def VOP2b_I32_I1_I32_I32 : VOPProfile<[i32, i32, i32, untyped], 0, /*EnableClamp
   let AsmDPP = "$vdst, vcc, $src0, $src1 $dpp_ctrl$row_mask$bank_mask$bound_ctrl";
   let AsmDPP8 = "$vdst, vcc, $src0, $src1 $dpp8$fi";
   let AsmDPP16 = AsmDPP#"$fi";
+  let AsmVOP3DPPBase = Asm64;
   let InsDPP = (ins DstRCDPP:$old,
                     Src0DPP:$src0,
                     Src1DPP:$src1,
@@ -410,11 +411,10 @@ def VOP2b_I32_I1_I32_I32 : VOPProfile<[i32, i32, i32, untyped], 0, /*EnableClamp
                     Src0DPP:$src0,
                     Src1DPP:$src1,
                     dpp8:$dpp8, FI:$fi);
-  // TODO-GFX11 VOP3 DPP
-  /*let AsmVOP3DPPBase = Asm64*/
-  /*let InsVOP3Base = Ins64;*/
   let Outs32 = (outs DstRC:$vdst);
   let Outs64 = (outs DstRC:$vdst, VOPDstS64orS32:$sdst);
+  let OutsVOP3DPP = Outs64;
+  let OutsVOP3DPP8 = Outs64;
 }
 
 // Write out to vcc or arbitrary SGPR and read in from vcc or
@@ -428,10 +428,11 @@ def VOP2b_I32_I1_I32_I32_I1 : VOPProfile<[i32, i32, i32, i1], 0, /*EnableClamp=*
   let AsmDPP = "$vdst, vcc, $src0, $src1, vcc $dpp_ctrl$row_mask$bank_mask$bound_ctrl";
   let AsmDPP8 = "$vdst, vcc, $src0, $src1, vcc $dpp8$fi";
   let AsmDPP16 = AsmDPP#"$fi";
-  // TODO-GFX11 VOP3 DPP
-  /*let AsmVOP3DPPBase = Asm64*/
   let Outs32 = (outs DstRC:$vdst);
   let Outs64 = (outs DstRC:$vdst, VOPDstS64orS32:$sdst);
+  let AsmVOP3DPPBase = Asm64;
+  let OutsVOP3DPP = Outs64;
+  let OutsVOP3DPP8 = Outs64;
 
   // Suppress src2 implied by type since the 32-bit encoding uses an
   // implicit VCC use.
@@ -453,7 +454,6 @@ def VOP2b_I32_I1_I32_I32_I1 : VOPProfile<[i32, i32, i32, i1], 0, /*EnableClamp=*
                     Src0DPP:$src0,
                     Src1DPP:$src1,
                    dpp8:$dpp8, FI:$fi);
-  let InsVOP3Base = Ins64;
 
   let HasExt = 1;
   let HasExtDPP = 1;
@@ -469,9 +469,8 @@ class VOP2e_SGPR<list<ValueType> ArgVT> : VOPProfile<ArgVT, /*EnableF32SrcMods=*
   let AsmSDWA9 = "$vdst, $src0_modifiers, $src1_modifiers, vcc$clamp $dst_sel $dst_unused $src0_sel $src1_sel";
   let AsmDPP = "$vdst, $src0, $src1, vcc $dpp_ctrl$row_mask$bank_mask$bound_ctrl";
   let AsmDPP8 = "$vdst, $src0, $src1, vcc $dpp8$fi";
-  // TODO-GFX11 VOP3 DPP
-  /*let AsmVOP3DPPBase = Asm64*/
   let AsmDPP16 = AsmDPP#"$fi";
+  let AsmVOP3DPPBase = Asm64;
 
   let Outs32 = (outs DstRC:$vdst);
   let Outs64 = (outs DstRC:$vdst);
@@ -496,9 +495,6 @@ class VOP2e_SGPR<list<ValueType> ArgVT> : VOPProfile<ArgVT, /*EnableF32SrcMods=*
                     Src0ModDPP:$src0_modifiers, Src0DPP:$src0,
                     Src1ModDPP:$src1_modifiers, Src1DPP:$src1,
                     dpp8:$dpp8, FI:$fi);
-  // TODO-GFX11 VOP3 DPP
-  /*let Ins64 = (ins Src0RC32:$src0, Src1RC32:$src1);*/
-  /*let InsVOP3Base = Ins64;*/
 
   let HasExt = 1;
   let HasExtDPP = 1;
@@ -1238,7 +1234,7 @@ defm V_CVT_PK_RTZ_F16_F32  : VOP2_Real_FULL_with_name_gfx11<0x02f,
 defm V_PK_FMAC_F16     : VOP2_Real_NO_VOP3_gfx11<0x03c>;
 
 // VOP3 only.
-defm V_CNDMASK_B16        : VOP2_Realtriple_e64_gfx11<0x25d>;
+defm V_CNDMASK_B16        : VOP3_Realtriple_gfx11<0x25d>;
 defm V_LDEXP_F32          : VOP3_Realtriple_gfx11<0x31c>;
 defm V_BFM_B32            : VOP3_Realtriple_gfx11<0x31d>;
 defm V_BCNT_U32_B32       : VOP3_Realtriple_gfx11<0x31e>;
@@ -1248,10 +1244,9 @@ defm V_CVT_PKNORM_I16_F32 : VOP3_Realtriple_gfx11<0x321>;
 defm V_CVT_PKNORM_U16_F32 : VOP3_Realtriple_gfx11<0x322>;
 defm V_CVT_PK_U16_U32     : VOP3_Realtriple_gfx11<0x323>;
 defm V_CVT_PK_I16_I32     : VOP3_Realtriple_gfx11<0x324>;
-
-defm V_ADD_CO_U32 : VOP3be_Realtriple_gfx11<0x300>;
-defm V_SUB_CO_U32 : VOP3be_Realtriple_gfx11<0x301>;
-defm V_SUBREV_CO_U32 : VOP3be_Realtriple_gfx11<0x302>;
+defm V_ADD_CO_U32         : VOP3be_Realtriple_gfx11<0x300>;
+defm V_SUB_CO_U32         : VOP3be_Realtriple_gfx11<0x301>;
+defm V_SUBREV_CO_U32      : VOP3be_Realtriple_gfx11<0x302>;
 
 let SubtargetPredicate = isGFX11Plus in {
   defm : VOP2eInstAliases<V_CNDMASK_B32_e32, V_CNDMASK_B32_e32_gfx11>;

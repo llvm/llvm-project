@@ -1159,14 +1159,6 @@ def FORMAT : NamedOperandU8<"FORMAT", NamedMatchClass<"FORMAT", 0>>;
 def DMask : NamedOperandU16<"DMask", NamedMatchClass<"DMask">>;
 def Dim : NamedOperandU8<"Dim", NamedMatchClass<"Dim", 0>>;
 
-def dpp8 : NamedOperandU32<"DPP8", NamedMatchClass<"DPP8", 0>>;
-
-def dpp_ctrl : NamedOperandU32<"DPPCtrl", NamedMatchClass<"DPPCtrl", 0>>;
-def row_mask : NamedOperandU32<"RowMask", NamedMatchClass<"RowMask">>;
-def bank_mask : NamedOperandU32<"BankMask", NamedMatchClass<"BankMask">>;
-def bound_ctrl : NamedOperandBit<"BoundCtrl", NamedMatchClass<"BoundCtrl">>;
-def FI : NamedOperandU32<"FI", NamedMatchClass<"FI">>;
-
 def dst_sel : NamedOperandU32<"SDWADstSel", NamedMatchClass<"SDWADstSel">>;
 def src0_sel : NamedOperandU32<"SDWASrc0Sel", NamedMatchClass<"SDWASrc0Sel">>;
 def src1_sel : NamedOperandU32<"SDWASrc1Sel", NamedMatchClass<"SDWASrc1Sel">>;
@@ -1176,6 +1168,15 @@ def op_sel0 : NamedOperandU32Default0<"OpSel", NamedMatchClass<"OpSel">>;
 def op_sel_hi0 : NamedOperandU32Default0<"OpSelHi", NamedMatchClass<"OpSelHi">>;
 def neg_lo0 : NamedOperandU32Default0<"NegLo", NamedMatchClass<"NegLo">>;
 def neg_hi0 : NamedOperandU32Default0<"NegHi", NamedMatchClass<"NegHi">>;
+
+// TODO Make dpp8 and dpp_ctrl optional and have defaults
+def dpp8 : NamedOperandU32<"DPP8", NamedMatchClass<"DPP8", 0>>;
+def dpp_ctrl : NamedOperandU32<"DPPCtrl", NamedMatchClass<"DPPCtrl", 0>>;
+
+def row_mask : NamedOperandU32<"RowMask", NamedMatchClass<"RowMask">>;
+def bank_mask : NamedOperandU32<"BankMask", NamedMatchClass<"BankMask">>;
+def bound_ctrl : NamedOperandBit<"BoundCtrl", NamedMatchClass<"BoundCtrl">>;
+def FI : NamedOperandU32<"FI", NamedMatchClass<"FI">>;
 
 def blgp : NamedOperandU32<"BLGP", NamedMatchClass<"BLGP">>;
 def cbsz : NamedOperandU32<"CBSZ", NamedMatchClass<"CBSZ">>;
@@ -2244,6 +2245,8 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
   field RegisterClass Src0DPP = getVregSrcForVT<Src0VT>.ret;
   field RegisterClass Src1DPP = getVregSrcForVT<Src1VT>.ret;
   field RegisterClass Src2DPP = getVregSrcForVT<Src2VT>.ret;
+  // TODO-GFX11 Choose Src0VOP3DPP operand class when real 16bit regs exist
+  field RegisterOperand Src0VOP3DPP = VGPRSrc_32;
   field RegisterOperand Src0SDWA = getSDWASrcForVT<Src0VT>.ret;
   field RegisterOperand Src1SDWA = getSDWASrcForVT<Src0VT>.ret;
   field Operand Src0Mod = getSrcMod<Src0VT, EnableF32SrcMods>.ret;
@@ -2326,6 +2329,8 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
   field dag Outs64 = Outs;
   field dag OutsDPP = getOutsDPP<HasDst, DstVT, DstRCDPP>.ret;
   field dag OutsDPP8 = getOutsDPP<HasDst, DstVT, DstRCDPP>.ret;
+  field dag OutsVOP3DPP = OutsDPP;
+  field dag OutsVOP3DPP8 = OutsDPP8;
   field dag OutsSDWA = getOutsSDWA<HasDst, DstVT, DstRCSDWA>.ret;
 
   field dag Ins32 = getIns32<Src0RC32, Src1RC32, NumSrcArgs>.ret;
@@ -2349,7 +2354,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
   field dag InsDPP8 = getInsDPP8<DstRCDPP, Src0DPP, Src1DPP, Src2DPP,
                                  NumSrcArgs, HasModifiers,
                                  Src0ModDPP, Src1ModDPP, Src2ModDPP>.ret;
-  field dag InsVOP3Base = getInsVOP3Base<Src0RC64, Src1RC64,
+  field dag InsVOP3Base = getInsVOP3Base<Src0VOP3DPP, Src1RC64,
                   Src2RC64, NumSrcArgs, HasClamp, HasModifiers, HasSrc2Mods, HasOMod,
                   Src0ModDPP, Src1ModDPP, Src2ModDPP, HasOpSel, IsVOP3P>.ret;
   field dag InsVOP3DPP = getInsVOP3DPP<InsVOP3Base, DstRCDPP, NumSrcArgs>.ret;
@@ -2596,6 +2601,14 @@ def getDPPOp32 : InstrMapping {
   let ColFields = ["AsmVariantName"];
   let KeyCol = ["Default"];
   let ValueCols = [["DPP"]];
+}
+
+def getDPPOp64 : InstrMapping {
+  let FilterClass = "VOP";
+  let RowFields = ["OpName"];
+  let ColFields = ["AsmVariantName"];
+  let KeyCol = ["Default"];
+  let ValueCols = [["VOP3_DPP"]];
 }
 
 // Maps an commuted opcode to its original version
