@@ -60,10 +60,14 @@ class AArch64Inst<Format f, string cstr> : Instruction {
   bits<2> Form    = F.Value;
 
   // Defaults
+  bit isWhile = 0;
+  bit isPTestLike = 0;
   FalseLanesEnum FalseLanes = FalseLanesNone;
   DestructiveInstTypeEnum DestructiveInstType = NotDestructive;
   ElementSizeEnum ElementSize = ElementSizeNone;
 
+  let TSFlags{10}  = isPTestLike;
+  let TSFlags{9}   = isWhile;
   let TSFlags{8-7} = FalseLanes.Value;
   let TSFlags{6-3} = DestructiveInstType.Value;
   let TSFlags{2-0} = ElementSize.Value;
