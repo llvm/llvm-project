@@ -601,16 +601,25 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
   if (!Policy.SuppressSpecifiers) {
     if (!Policy.SupressStorageClassSpecifiers) {
       switch (D->getStorageClass()) {
-      case SC_None: break;
-      case SC_Extern: Out << "extern "; break;
-      case SC_Static: Out << "static "; break;
-      case SC_PrivateExtern: Out << "__private_extern__ "; break;
-      case SC_Auto: case SC_Register:
+      case StorageClass::None:
+        break;
+      case StorageClass::Extern:
+        Out << "extern ";
+        break;
+      case StorageClass::Static:
+        Out << "static ";
+        break;
+      case StorageClass::PrivateExtern:
+        Out << "__private_extern__ ";
+        break;
+      case StorageClass::Auto:
+      case StorageClass::Register:
         llvm_unreachable("invalid for functions");
       }
     }
 
-    if (D->isInlineSpecified())  Out << "inline ";
+    if (D->isInlineSpecified())
+      Out << "inline ";
     if (D->isVirtualAsWritten()) Out << "virtual ";
     if (D->isModulePrivate())    Out << "__module_private__ ";
     if (D->isConstexprSpecified() && !D->isExplicitlyDefaulted())
@@ -850,7 +859,7 @@ void DeclPrinter::VisitVarDecl(VarDecl *D) {
 
   if (!Policy.SuppressSpecifiers) {
     StorageClass SC = D->getStorageClass();
-    if (SC != SC_None)
+    if (SC != StorageClass::None)
       Out << VarDecl::getStorageClassSpecifierString(SC) << " ";
 
     switch (D->getTSCSpec()) {
