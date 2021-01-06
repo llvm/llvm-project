@@ -1946,6 +1946,7 @@ bool SampleProfileLoader::doInitialization(Module &M,
     return false;
   }
   Reader = std::move(ReaderOrErr.get());
+  Reader->setSkipFlatProf(LTOPhase == ThinOrFullLTOPhase::ThinLTOPostLink);
   Reader->collectFuncsFrom(M);
   ProfileIsValid = (Reader->read() == sampleprof_error::success);
   PSL = Reader->getProfileSymbolList();
@@ -2111,7 +2112,10 @@ bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) 
       initialEntryCount = -1;
   }
 
-  F.setEntryCount(ProfileCount(initialEntryCount, Function::PCT_Real));
+  // Initialize entry count when the function has no existing entry
+  // count value.
+  if (!F.getEntryCount().hasValue())
+    F.setEntryCount(ProfileCount(initialEntryCount, Function::PCT_Real));
   std::unique_ptr<OptimizationRemarkEmitter> OwnedORE;
   if (AM) {
     auto &FAM =
