@@ -193,6 +193,9 @@ The integer sanitizer `-fsanitize=integer` now has a new sanitizer:
 left shift to overflow (i.e. to shift bits out), but it has been the source of
 bugs and exploits in certain codebases in the past.
 
+Many Sanitizers (asan, cfi, lsan, msan, tsan, ubsan) have support for
+musl-based Linux distributions. Some of them may be rudimentary.
+
 External Open Source Projects Using LLVM 12
 ===========================================
 
