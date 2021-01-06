@@ -1,5 +1,5 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -enable-misched=false < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
-; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs -enable-misched=false < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CIVI,VI %s
+; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs -enable-misched=false < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CIVI %s
 ; RUN: llc -march=amdgcn -mcpu=hawaii -verify-machineinstrs -enable-misched=false < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CIVI,CI %s
 
 ; GCN-LABEL: mixlo_simple:
