@@ -224,9 +224,7 @@ define <2 x i64> @vaddlu32(<2 x i32> %A, <2 x i32> %B) {
 define <8 x i16> @vaddla8(<8 x i8> %A, <8 x i8> %B) {
 ; CHECK-LABEL: vaddla8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmovl.u8 q8, d1
-; CHECK-NEXT:    vmovl.u8 q9, d0
-; CHECK-NEXT:    vadd.i16 q0, q9, q8
+; CHECK-NEXT:    vaddl.u8 q0, d0, d1
 ; CHECK-NEXT:    vbic.i16 q0, #0xff00
 ; CHECK-NEXT:    bx lr
   %tmp3 = zext <8 x i8> %A to <8 x i16>
@@ -239,11 +237,9 @@ define <8 x i16> @vaddla8(<8 x i8> %A, <8 x i8> %B) {
 define <4 x i32> @vaddla16(<4 x i16> %A, <4 x i16> %B) {
 ; CHECK-LABEL: vaddla16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmovl.u16 q8, d1
-; CHECK-NEXT:    vmovl.u16 q9, d0
-; CHECK-NEXT:    vmov.i32 q10, #0xffff
-; CHECK-NEXT:    vadd.i32 q8, q9, q8
-; CHECK-NEXT:    vand q0, q8, q10
+; CHECK-NEXT:    vmov.i32 q8, #0xffff
+; CHECK-NEXT:    vaddl.u16 q9, d0, d1
+; CHECK-NEXT:    vand q0, q9, q8
 ; CHECK-NEXT:    bx lr
   %tmp3 = zext <4 x i16> %A to <4 x i32>
   %tmp4 = zext <4 x i16> %B to <4 x i32>
@@ -255,11 +251,9 @@ define <4 x i32> @vaddla16(<4 x i16> %A, <4 x i16> %B) {
 define <2 x i64> @vaddla32(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-LABEL: vaddla32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmovl.u32 q8, d1
-; CHECK-NEXT:    vmovl.u32 q9, d0
-; CHECK-NEXT:    vmov.i64 q10, #0xffffffff
-; CHECK-NEXT:    vadd.i64 q8, q9, q8
-; CHECK-NEXT:    vand q0, q8, q10
+; CHECK-NEXT:    vmov.i64 q8, #0xffffffff
+; CHECK-NEXT:    vaddl.u32 q9, d0, d1
+; CHECK-NEXT:    vand q0, q9, q8
 ; CHECK-NEXT:    bx lr
   %tmp3 = zext <2 x i32> %A to <2 x i64>
   %tmp4 = zext <2 x i32> %B to <2 x i64>
@@ -331,8 +325,7 @@ define <2 x i64> @vaddwu32(<2 x i64> %A, <2 x i32> %B) {
 define <8 x i16> @vaddwa8(<8 x i16> %A, <8 x i8> %B) {
 ; CHECK-LABEL: vaddwa8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmovl.u8 q8, d2
-; CHECK-NEXT:    vadd.i16 q0, q0, q8
+; CHECK-NEXT:    vaddw.u8 q0, q0, d2
 ; CHECK-NEXT:    vbic.i16 q0, #0xff00
 ; CHECK-NEXT:    bx lr
   %tmp3 = zext <8 x i8> %B to <8 x i16>
@@ -344,10 +337,9 @@ define <8 x i16> @vaddwa8(<8 x i16> %A, <8 x i8> %B) {
 define <4 x i32> @vaddwa16(<4 x i32> %A, <4 x i16> %B) {
 ; CHECK-LABEL: vaddwa16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmovl.u16 q8, d2
-; CHECK-NEXT:    vmov.i32 q9, #0xffff
-; CHECK-NEXT:    vadd.i32 q8, q0, q8
-; CHECK-NEXT:    vand q0, q8, q9
+; CHECK-NEXT:    vmov.i32 q8, #0xffff
+; CHECK-NEXT:    vaddw.u16 q9, q0, d2
+; CHECK-NEXT:    vand q0, q9, q8
 ; CHECK-NEXT:    bx lr
   %tmp3 = zext <4 x i16> %B to <4 x i32>
   %tmp4 = add <4 x i32> %A, %tmp3
@@ -358,10 +350,9 @@ define <4 x i32> @vaddwa16(<4 x i32> %A, <4 x i16> %B) {
 define <2 x i64> @vaddwa32(<2 x i64> %A, <2 x i32> %B) {
 ; CHECK-LABEL: vaddwa32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmovl.u32 q8, d2
-; CHECK-NEXT:    vmov.i64 q9, #0xffffffff
-; CHECK-NEXT:    vadd.i64 q8, q0, q8
-; CHECK-NEXT:    vand q0, q8, q9
+; CHECK-NEXT:    vmov.i64 q8, #0xffffffff
+; CHECK-NEXT:    vaddw.u32 q9, q0, d2
+; CHECK-NEXT:    vand q0, q9, q8
 ; CHECK-NEXT:    bx lr
   %tmp3 = zext <2 x i32> %B to <2 x i64>
   %tmp4 = add <2 x i64> %A, %tmp3
