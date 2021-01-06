@@ -809,7 +809,10 @@ def : MnemonicAlias<"move", "mv">;
 def : MnemonicAlias<"scall", "ecall">;
 def : MnemonicAlias<"sbreak", "ebreak">;
 
-def : InstAlias<"zext.b $rd, $rs", (ANDI GPR:$rd, GPR:$rs, 0xFF)>;
+// This alias was added to the spec in December 2020. Don't print it by default
+// to allow assembly we print to be compatible with versions of GNU assembler
+// that don't support this alias.
+def : InstAlias<"zext.b $rd, $rs", (ANDI GPR:$rd, GPR:$rs, 0xFF), 0>;
 
 //===----------------------------------------------------------------------===//
 // Pseudo-instructions and codegen patterns
