@@ -16,6 +16,8 @@
 !   2.11 Kernels Loop
 !   2.11 Serial Loop
 !   2.14.3 Set
+!   2.14.1 Init
+!   2.14.2 Shutdown
 !   2.16.13 Wait
 
 program openacc_clause_validity
@@ -267,6 +269,32 @@ program openacc_clause_validity
   !$acc set device_type(i)
   !$acc set device_type(2, i, j)
   !$acc set device_num(1) default_async(2) device_type(2, i, j)
+  !ERROR: At most one IF clause can appear on the INIT directive
+  !$acc init if(.TRUE.) if(ifCondition)
+
+  !ERROR: At most one DEVICE_NUM clause can appear on the INIT directive
+  !$acc init device_num(1) device_num(i)
+
+  !ERROR: At most one DEVICE_TYPE clause can appear on the INIT directive
+  !$acc init device_type(2) device_type(i, j)
+
+  !$acc shutdown
+  !$acc shutdown if(.TRUE.)
+  !$acc shutdown if(ifCondition)
+  !$acc shutdown device_num(1)
+  !$acc shutdown device_num(i)
+  !$acc shutdown device_type(i)
+  !$acc shutdown device_type(2, i, j)
+  !$acc shutdown device_num(i) device_type(i, j) if(ifCondition)
+
+  !ERROR: At most one IF clause can appear on the SHUTDOWN directive
+  !$acc shutdown if(.TRUE.) if(ifCondition)
+
+  !ERROR: At most one DEVICE_NUM clause can appear on the SHUTDOWN directive
+  !$acc shutdown device_num(1) device_num(i)
+
+  !ERROR: At most one DEVICE_TYPE clause can appear on the SHUTDOWN directive
+  !$acc shutdown device_type(2) device_type(i, j)
 
   !ERROR: At least one of ATTACH, COPYIN, CREATE clause must appear on the ENTER DATA directive
   !$acc enter data
