@@ -1,4 +1,5 @@
 ; RUN: llc -enable-machine-outliner -mtriple=ppc32-unknown-linux < %s | FileCheck %s
+; RUN: llc -enable-machine-outliner -mtriple=powerpc-ibm-aix-xcoff < %s | FileCheck %s -check-prefix=AIX
 ;
 ; NOTE: Machine outliner doesn't run.
 @x = global i32 0, align 4
