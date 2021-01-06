@@ -17,6 +17,7 @@ subroutine acc_parallel
 !CHECK: [[A:%.*]] = fir.alloca !fir.array<10x10xf32> {name = "{{.*}}Ea"}
 !CHECK: [[B:%.*]] = fir.alloca !fir.array<10x10xf32> {name = "{{.*}}Eb"}
 !CHECK: [[C:%.*]] = fir.alloca !fir.array<10x10xf32> {name = "{{.*}}Ec"}
+!CHECK: [[IFCONDITION:%.*]] = fir.address_of(@{{.*}}ifcondition) : !fir.ref<!fir.logical<4>>
 
   !$acc parallel
   !$acc end parallel
@@ -164,8 +165,7 @@ subroutine acc_parallel
   !$acc parallel self(ifCondition)
   !$acc end parallel
 
-!CHECK:      [[SELFCOND:%.*]] = fir.load %{{.*}} : !fir.ref<!fir.logical<4>>
-!CHECK:      [[SELF2:%.*]] = fir.convert [[SELFCOND]] : (!fir.logical<4>) -> i1
+!CHECK:      [[SELF2:%.*]] = fir.convert [[IFCONDITION]] : (!fir.ref<!fir.logical<4>>) -> i1
 !CHECK:      acc.parallel self([[SELF2]]) {
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
