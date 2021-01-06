@@ -515,7 +515,7 @@ static void getVectorElementwiseOpUnrollState(Operation *op,
 /// Generates slices of 'vectorType' according to 'sizes' and 'strides, and
 /// calls 'fn' with linear index and indices for each slice.
 static void generateTransferOpSlices(
-    Type memrefElementType, VectorType vectorType, TupleType tupleType,
+    Type shapedElementType, VectorType vectorType, TupleType tupleType,
     ArrayRef<int64_t> sizes, ArrayRef<int64_t> strides, ArrayRef<Value> indices,
     OpBuilder &builder, function_ref<void(unsigned, ArrayRef<Value>)> fn) {
   // Compute strides w.r.t. to slice counts in each dimension.
@@ -539,9 +539,9 @@ static void generateTransferOpSlices(
   //   vector rank is 4 - 2 = 2, and so 'indexOffset' = 3 - 2 = 1.
   //
   unsigned vectorRank = vectorType.getRank();
-  if (auto memrefVectorElementType = memrefElementType.dyn_cast<VectorType>()) {
-    assert(vectorRank >= memrefVectorElementType.getRank());
-    vectorRank -= memrefVectorElementType.getRank();
+  if (auto sourceVectorElementType = shapedElementType.dyn_cast<VectorType>()) {
+    assert(vectorRank >= sourceVectorElementType.getRank());
+    vectorRank -= sourceVectorElementType.getRank();
   }
   unsigned indexOffset = numSliceIndices - vectorRank;
 
@@ -598,8 +598,8 @@ static Value unrollTransferReadOp(vector::TransferReadOp readOp,
   SmallVector<int64_t, 4> strides(targetShape.size(), 1);
 
   Location loc = readOp.getLoc();
-  auto memrefElementType =
-      readOp.source().getType().cast<MemRefType>().getElementType();
+  auto shapedElementType =
+      readOp.source().getType().cast<ShapedType>().getElementType();
   auto tupleType = generateExtractSlicesOpResultType(
       sourceVectorType, targetShape, strides, builder);
   int64_t numSlices = tupleType.size();
@@ -618,7 +618,7 @@ static Value unrollTransferReadOp(vector::TransferReadOp readOp,
         readOp.permutation_map(), readOp.padding(),
         readOp.masked() ? *readOp.masked() : ArrayAttr());
   };
-  generateTransferOpSlices(memrefElementType, sourceVectorType, tupleType,
+  generateTransferOpSlices(shapedElementType, sourceVectorType, tupleType,
                            targetShape, strides, indices, builder, createSlice);
 
   // Create tuple of splice transfer read operations.
@@ -634,7 +634,8 @@ static Value unrollTransferReadOp(vector::TransferReadOp readOp,
 // Entry point for unrolling declarative pattern rewrite for transfer_write op.
 LogicalResult
 mlir::vector::unrollTransferWriteOp(OpBuilder &builder, Operation *op,
-                                    ArrayRef<int64_t> targetShape) {
+                                    ArrayRef<int64_t> targetShape,
+                                    SmallVector<Value, 1> &result) {
   auto writeOp = cast<vector::TransferWriteOp>(op);
   if (!isIdentitySuffix(writeOp.permutation_map()))
     return failure();
@@ -645,20 +646,28 @@ mlir::vector::unrollTransferWriteOp(OpBuilder &builder, Operation *op,
   Location loc = writeOp.getLoc();
   Value tuple = builder.create<vector::ExtractSlicesOp>(
       loc, tupleType, writeOp.vector(), targetShape, strides);
-  auto memrefElementType =
-      writeOp.source().getType().cast<MemRefType>().getElementType();
+  auto shapedElementType =
+      writeOp.source().getType().cast<ShapedType>().getElementType();
   SmallVector<Value, 4> indices(writeOp.indices().begin(),
                                 writeOp.indices().end());
+  // If the TransferWrite returns a tensor, keep track of the last tensor
+  // created.
+  Value resultTensor;
   auto createSlice = [&](unsigned index, ArrayRef<Value> sliceIndices) {
     auto element = builder.create<vector::TupleGetOp>(
         loc, tupleType.getType(index), tuple, builder.getI64IntegerAttr(index));
-    builder.create<vector::TransferWriteOp>(
-        loc, element.getResult(), writeOp.source(), sliceIndices,
+    Operation *write = builder.create<vector::TransferWriteOp>(
+        loc, element.getResult(),
+        resultTensor ? resultTensor : writeOp.source(), sliceIndices,
         writeOp.permutation_map(),
         writeOp.masked() ? *writeOp.masked() : ArrayAttr());
+    if (!write->getResults().empty())
+      resultTensor = write->getResult(0);
   };
-  generateTransferOpSlices(memrefElementType, sourceVectorType, tupleType,
+  generateTransferOpSlices(shapedElementType, sourceVectorType, tupleType,
                            targetShape, strides, indices, builder, createSlice);
+  if (resultTensor)
+    result.push_back(resultTensor);
   return success();
 }
 
@@ -761,25 +770,32 @@ struct SplitTransferWriteOp : public OpRewritePattern<vector::TransferWriteOp> {
     insertSlicesOp.getStrides(strides);
 
     Location loc = xferWriteOp.getLoc();
-    auto memrefElementType =
-        xferWriteOp.source().getType().cast<MemRefType>().getElementType();
+    auto shapedElementType =
+        xferWriteOp.source().getType().cast<ShapedType>().getElementType();
     SmallVector<Value, 4> indices(xferWriteOp.indices().begin(),
                                   xferWriteOp.indices().end());
+    Value resultTensor;
     auto createSlice = [&](unsigned index, ArrayRef<Value> sliceIndices) {
       // Create split TransferWriteOp for source vector 'tupleOp.operand[i]'.
       // `masked` attribute propagates conservatively: if the coarse op didn't
       // need masking, the fine op doesn't either.
-      rewriter.create<vector::TransferWriteOp>(
-          loc, tupleOp.getOperand(index), xferWriteOp.source(), sliceIndices,
+      Operation *write = rewriter.create<vector::TransferWriteOp>(
+          loc, tupleOp.getOperand(index),
+          resultTensor ? resultTensor : xferWriteOp.source(), sliceIndices,
           xferWriteOp.permutation_map(),
           xferWriteOp.masked() ? *xferWriteOp.masked() : ArrayAttr());
+      if (!write->getResults().empty())
+        resultTensor = write->getResult(0);
     };
-    generateTransferOpSlices(memrefElementType, resultVectorType,
+    generateTransferOpSlices(shapedElementType, resultVectorType,
                              sourceTupleType, sizes, strides, indices, rewriter,
                              createSlice);
 
     // Erase old 'xferWriteOp'.
-    rewriter.eraseOp(xferWriteOp);
+    if (resultTensor)
+      rewriter.replaceOp(xferWriteOp, ArrayRef<Value>(resultTensor));
+    else
+      rewriter.eraseOp(xferWriteOp);
     return success();
   }
 };
