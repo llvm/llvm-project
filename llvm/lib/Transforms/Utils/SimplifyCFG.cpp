@@ -4683,16 +4683,18 @@ bool SimplifyCFGOpt::simplifyUnreachable(UnreachableInst *UI) {
     Instruction *TI = Predecessor->getTerminator();
     IRBuilder<> Builder(TI);
     if (auto *BI = dyn_cast<BranchInst>(TI)) {
-      if (BI->isUnconditional()) {
-        assert(BI->getSuccessor(0) == BB && "Incorrect CFG");
+      // We could either have a proper unconditional branch,
+      // or a degenerate conditional branch with matching destinations.
+      if (all_of(BI->successors(),
+                 [BB](auto *Successor) { return Successor == BB; })) {
         new UnreachableInst(TI->getContext(), TI);
         TI->eraseFromParent();
         Changed = true;
       } else {
+        assert(BI->isConditional() && "Can't get here with an uncond branch.");
         Value* Cond = BI->getCondition();
-        //        assert(BI->getSuccessor(0) != BI->getSuccessor(1) &&
-        //               "Same-destination conditional branch instruction was "
-        //               "already canonicalized into an unconditional branch.");
+        assert(BI->getSuccessor(0) != BI->getSuccessor(1) &&
+               "The destinations are guaranteed to be different here.");
         if (BI->getSuccessor(0) == BB) {
           Builder.CreateAssumption(Builder.CreateNot(Cond));
           Builder.CreateBr(BI->getSuccessor(1));
