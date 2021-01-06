@@ -36,15 +36,14 @@ using VectorScaleOpLowering =
     OneToOneConvertToLLVMPattern<VectorScaleOp, LLVM::vector_scale>;
 
 // Extract an LLVM IR type from the LLVM IR dialect type.
-static LLVM::LLVMType unwrap(Type type) {
+static Type unwrap(Type type) {
   if (!type)
     return nullptr;
   auto *mlirContext = type.getContext();
-  auto wrappedLLVMType = type.dyn_cast<LLVM::LLVMType>();
-  if (!wrappedLLVMType)
+  if (!LLVM::isCompatibleType(type))
     emitError(UnknownLoc::get(mlirContext),
               "conversion resulted in a non-LLVM type");
-  return wrappedLLVMType;
+  return type;
 }
 
 static Optional<Type>

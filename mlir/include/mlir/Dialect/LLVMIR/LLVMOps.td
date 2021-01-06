@@ -49,9 +49,8 @@ def LLVM_VoidResultTypeOpBuilder :
   OpBuilderDAG<(ins "Type":$resultType, "ValueRange":$operands,
     CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
   [{
-    auto llvmType = resultType.dyn_cast<LLVMType>(); (void)llvmType;
-    assert(llvmType && "result must be an LLVM type");
-    assert(llvmType.isa<LLVMVoidType>() &&
+    assert(isCompatibleType(resultType) && "result must be an LLVM type");
+    assert(resultType.isa<LLVMVoidType>() &&
            "for zero-result operands, only 'void' is accepted as result type");
     build($_builder, $_state, operands, attributes);
   }]>;
@@ -443,7 +442,7 @@ def LLVM_CallOp : LLVM_Op<"call"> {
     OpBuilderDAG<(ins "LLVMFuncOp":$func, "ValueRange":$operands,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
     [{
-      LLVMType resultType = func.getType().getReturnType();
+      Type resultType = func.getType().getReturnType();
       if (!resultType.isa<LLVM::LLVMVoidType>())
         $_state.addTypes(resultType);
       $_state.addAttribute("callee", $_builder.getSymbolRefAttr(func));
@@ -756,23 +755,21 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof"> {
   }];
 
   let builders = [
-    OpBuilderDAG<(ins "LLVMType":$resType, "StringRef":$name,
-      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
-    [{
-      $_state.addAttribute("global_name",$_builder.getSymbolRefAttr(name));
-      $_state.addAttributes(attrs);
-      $_state.addTypes(resType);}]>,
     OpBuilderDAG<(ins "GlobalOp":$global,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
     [{
       build($_builder, $_state,
             LLVM::LLVMPointerType::get(global.getType(), global.addr_space()),
-            global.sym_name(), attrs);}]>,
+            global.sym_name());
+      $_state.addAttributes(attrs);
+    }]>,
     OpBuilderDAG<(ins "LLVMFuncOp":$func,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
     [{
       build($_builder, $_state,
-            LLVM::LLVMPointerType::get(func.getType()), func.getName(), attrs);}]>
+            LLVM::LLVMPointerType::get(func.getType()), func.getName());
+      $_state.addAttributes(attrs);
+    }]>
   ];
 
   let extraClassDeclaration = [{
@@ -883,15 +880,15 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
   let regions = (region AnyRegion:$initializer);
 
   let builders = [
-    OpBuilderDAG<(ins "LLVMType":$type, "bool":$isConstant, "Linkage":$linkage,
+    OpBuilderDAG<(ins "Type":$type, "bool":$isConstant, "Linkage":$linkage,
       "StringRef":$name, "Attribute":$value, CArg<"unsigned", "0">:$addrSpace,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
   ];
 
   let extraClassDeclaration = [{
     /// Return the LLVM type of the global.
-    LLVMType getType() {
-      return type().cast<LLVMType>();
+    Type getType() {
+      return type();
     }
     /// Return the initializer attribute if it exists, or a null attribute.
     Attribute getValueOrNull() {
@@ -957,7 +954,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func",
   let skipDefaultBuilders = 1;
 
   let builders = [
-    OpBuilderDAG<(ins "StringRef":$name, "LLVMType":$type,
+    OpBuilderDAG<(ins "StringRef":$name, "Type":$type,
       CArg<"Linkage", "Linkage::External">:$linkage,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs,
       CArg<"ArrayRef<DictionaryAttr>", "{}">:$argAttrs)>

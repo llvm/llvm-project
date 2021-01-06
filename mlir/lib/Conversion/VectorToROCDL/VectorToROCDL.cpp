@@ -30,8 +30,8 @@ using namespace mlir::vector;
 static LogicalResult replaceTransferOpWithMubuf(
     ConversionPatternRewriter &rewriter, ArrayRef<Value> operands,
     LLVMTypeConverter &typeConverter, Location loc, TransferReadOp xferOp,
-    LLVM::LLVMType &vecTy, Value &dwordConfig, Value &vindex,
-    Value &offsetSizeInBytes, Value &glc, Value &slc) {
+    Type &vecTy, Value &dwordConfig, Value &vindex, Value &offsetSizeInBytes,
+    Value &glc, Value &slc) {
   rewriter.replaceOpWithNewOp<ROCDL::MubufLoadOp>(
       xferOp, vecTy, dwordConfig, vindex, offsetSizeInBytes, glc, slc);
   return success();
@@ -40,8 +40,8 @@ static LogicalResult replaceTransferOpWithMubuf(
 static LogicalResult replaceTransferOpWithMubuf(
     ConversionPatternRewriter &rewriter, ArrayRef<Value> operands,
     LLVMTypeConverter &typeConverter, Location loc, TransferWriteOp xferOp,
-    LLVM::LLVMType &vecTy, Value &dwordConfig, Value &vindex,
-    Value &offsetSizeInBytes, Value &glc, Value &slc) {
+    Type &vecTy, Value &dwordConfig, Value &vindex, Value &offsetSizeInBytes,
+    Value &glc, Value &slc) {
   auto adaptor = TransferWriteOpAdaptor(operands);
   rewriter.replaceOpWithNewOp<ROCDL::MubufStoreOp>(xferOp, adaptor.vector(),
                                                    dwordConfig, vindex,
@@ -121,16 +121,16 @@ public:
     Type i64Ty = rewriter.getIntegerType(64);
     Value i64x2Ty = rewriter.create<LLVM::BitcastOp>(
         loc,
-        LLVM::LLVMFixedVectorType::get(
-            toLLVMTy(i64Ty).template cast<LLVM::LLVMType>(), 2),
+        LLVM::LLVMFixedVectorType::get(toLLVMTy(i64Ty).template cast<Type>(),
+                                       2),
         constConfig);
     Value dataPtrAsI64 = rewriter.create<LLVM::PtrToIntOp>(
-        loc, toLLVMTy(i64Ty).template cast<LLVM::LLVMType>(), dataPtr);
+        loc, toLLVMTy(i64Ty).template cast<Type>(), dataPtr);
     Value zero = this->createIndexConstant(rewriter, loc, 0);
     Value dwordConfig = rewriter.create<LLVM::InsertElementOp>(
         loc,
-        LLVM::LLVMFixedVectorType::get(
-            toLLVMTy(i64Ty).template cast<LLVM::LLVMType>(), 2),
+        LLVM::LLVMFixedVectorType::get(toLLVMTy(i64Ty).template cast<Type>(),
+                                       2),
         i64x2Ty, dataPtrAsI64, zero);
     dwordConfig =
         rewriter.create<LLVM::BitcastOp>(loc, toLLVMTy(i32Vecx4), dwordConfig);

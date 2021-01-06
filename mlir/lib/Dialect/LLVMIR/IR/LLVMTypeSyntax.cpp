@@ -19,11 +19,11 @@ using namespace mlir::LLVM;
 // Printing.
 //===----------------------------------------------------------------------===//
 
-static void printTypeImpl(llvm::raw_ostream &os, LLVMType type,
+static void printTypeImpl(llvm::raw_ostream &os, Type type,
                           llvm::SetVector<StringRef> &stack);
 
 /// Returns the keyword to use for the given type.
-static StringRef getTypeKeyword(LLVMType type) {
+static StringRef getTypeKeyword(Type type) {
   return TypeSwitch<Type, StringRef>(type)
       .Case<LLVMVoidType>([&](Type) { return "void"; })
       .Case<LLVMHalfType>([&](Type) { return "half"; })
@@ -64,7 +64,7 @@ static void printStructTypeBody(llvm::raw_ostream &os, LLVMStructType type,
   os << '(';
   if (type.isIdentified())
     stack.insert(type.getName());
-  llvm::interleaveComma(type.getBody(), os, [&](LLVMType subtype) {
+  llvm::interleaveComma(type.getBody(), os, [&](Type subtype) {
     printTypeImpl(os, subtype, stack);
   });
   if (type.isIdentified())
@@ -109,9 +109,9 @@ static void printFunctionType(llvm::raw_ostream &os, LLVMFunctionType funcType,
   os << '<';
   printTypeImpl(os, funcType.getReturnType(), stack);
   os << " (";
-  llvm::interleaveComma(
-      funcType.getParams(), os,
-      [&os, &stack](LLVMType subtype) { printTypeImpl(os, subtype, stack); });
+  llvm::interleaveComma(funcType.getParams(), os, [&os, &stack](Type subtype) {
+    printTypeImpl(os, subtype, stack);
+  });
   if (funcType.isVarArg()) {
     if (funcType.getNumParams() != 0)
       os << ", ";
@@ -129,7 +129,7 @@ static void printFunctionType(llvm::raw_ostream &os, LLVMFunctionType funcType,
 ///   struct<"c", (ptr<struct<"b", (ptr<struct<"c">>)>>,
 ///                ptr<struct<"b", (ptr<struct<"c">>)>>)>
 /// note that "b" is printed twice.
-static void printTypeImpl(llvm::raw_ostream &os, LLVMType type,
+static void printTypeImpl(llvm::raw_ostream &os, Type type,
                           llvm::SetVector<StringRef> &stack) {
   if (!type) {
     os << "<<NULL-TYPE>>";
@@ -171,7 +171,7 @@ static void printTypeImpl(llvm::raw_ostream &os, LLVMType type,
     return printFunctionType(os, funcType, stack);
 }
 
-void mlir::LLVM::detail::printType(LLVMType type, DialectAsmPrinter &printer) {
+void mlir::LLVM::detail::printType(Type type, DialectAsmPrinter &printer) {
   llvm::SetVector<StringRef> stack;
   return printTypeImpl(printer.getStream(), type, stack);
 }
@@ -180,13 +180,13 @@ void mlir::LLVM::detail::printType(LLVMType type, DialectAsmPrinter &printer) {
 // Parsing.
 //===----------------------------------------------------------------------===//
 
-static LLVMType parseTypeImpl(DialectAsmParser &parser,
-                              llvm::SetVector<StringRef> &stack);
+static Type parseTypeImpl(DialectAsmParser &parser,
+                          llvm::SetVector<StringRef> &stack);
 
 /// Helper to be chained with other parsing functions.
 static ParseResult parseTypeImpl(DialectAsmParser &parser,
                                  llvm::SetVector<StringRef> &stack,
-                                 LLVMType &result) {
+                                 Type &result) {
   result = parseTypeImpl(parser, stack);
   return success(result != nullptr);
 }
@@ -196,7 +196,7 @@ static ParseResult parseTypeImpl(DialectAsmParser &parser,
 static LLVMFunctionType parseFunctionType(DialectAsmParser &parser,
                                           llvm::SetVector<StringRef> &stack) {
   Location loc = parser.getEncodedSourceLoc(parser.getCurrentLocation());
-  LLVMType returnType;
+  Type returnType;
   if (parser.parseLess() || parseTypeImpl(parser, stack, returnType) ||
       parser.parseLParen())
     return LLVMFunctionType();
@@ -210,7 +210,7 @@ static LLVMFunctionType parseFunctionType(DialectAsmParser &parser,
   }
 
   // Parse arguments.
-  SmallVector<LLVMType, 8> argTypes;
+  SmallVector<Type, 8> argTypes;
   do {
     if (succeeded(parser.parseOptionalEllipsis())) {
       if (parser.parseOptionalRParen() || parser.parseOptionalGreater())
@@ -235,7 +235,7 @@ static LLVMFunctionType parseFunctionType(DialectAsmParser &parser,
 static LLVMPointerType parsePointerType(DialectAsmParser &parser,
                                         llvm::SetVector<StringRef> &stack) {
   Location loc = parser.getEncodedSourceLoc(parser.getCurrentLocation());
-  LLVMType elementType;
+  Type elementType;
   if (parser.parseLess() || parseTypeImpl(parser, stack, elementType))
     return LLVMPointerType();
 
@@ -255,7 +255,7 @@ static LLVMVectorType parseVectorType(DialectAsmParser &parser,
                                       llvm::SetVector<StringRef> &stack) {
   SmallVector<int64_t, 2> dims;
   llvm::SMLoc dimPos;
-  LLVMType elementType;
+  Type elementType;
   Location loc = parser.getEncodedSourceLoc(parser.getCurrentLocation());
   if (parser.parseLess() || parser.getCurrentLocation(&dimPos) ||
       parser.parseDimensionList(dims, /*allowDynamic=*/true) ||
@@ -286,7 +286,7 @@ static LLVMArrayType parseArrayType(DialectAsmParser &parser,
                                     llvm::SetVector<StringRef> &stack) {
   SmallVector<int64_t, 1> dims;
   llvm::SMLoc sizePos;
-  LLVMType elementType;
+  Type elementType;
   Location loc = parser.getEncodedSourceLoc(parser.getCurrentLocation());
   if (parser.parseLess() || parser.getCurrentLocation(&sizePos) ||
       parser.parseDimensionList(dims, /*allowDynamic=*/false) ||
@@ -305,11 +305,11 @@ static LLVMArrayType parseArrayType(DialectAsmParser &parser,
 /// error at `subtypesLoc` in case of failure, uses `stack` to make sure the
 /// types printed in the error message look like they did when parsed.
 static LLVMStructType trySetStructBody(LLVMStructType type,
-                                       ArrayRef<LLVMType> subtypes,
-                                       bool isPacked, DialectAsmParser &parser,
+                                       ArrayRef<Type> subtypes, bool isPacked,
+                                       DialectAsmParser &parser,
                                        llvm::SMLoc subtypesLoc,
                                        llvm::SetVector<StringRef> &stack) {
-  for (LLVMType t : subtypes) {
+  for (Type t : subtypes) {
     if (!LLVMStructType::isValidElementType(t)) {
       parser.emitError(subtypesLoc)
           << "invalid LLVM structure element type: " << t;
@@ -389,12 +389,12 @@ static LLVMStructType parseStructType(DialectAsmParser &parser,
 
   // Parse subtypes. For identified structs, put the identifier of the struct on
   // the stack to support self-references in the recursive calls.
-  SmallVector<LLVMType, 4> subtypes;
+  SmallVector<Type, 4> subtypes;
   llvm::SMLoc subtypesLoc = parser.getCurrentLocation();
   do {
     if (isIdentified)
       stack.insert(name);
-    LLVMType type = parseTypeImpl(parser, stack);
+    Type type = parseTypeImpl(parser, stack);
     if (!type)
       return LLVMStructType();
     subtypes.push_back(type);
@@ -413,8 +413,8 @@ static LLVMStructType parseStructType(DialectAsmParser &parser,
 }
 
 /// Parses one of the LLVM dialect types.
-static LLVMType parseTypeImpl(DialectAsmParser &parser,
-                              llvm::SetVector<StringRef> &stack) {
+static Type parseTypeImpl(DialectAsmParser &parser,
+                          llvm::SetVector<StringRef> &stack) {
   // Special case for integers (i[1-9][0-9]*) that are literals rather than
   // keywords for the parser, so they are not caught by the main dispatch below.
   // Try parsing it a built-in integer type instead.
@@ -425,11 +425,11 @@ static LLVMType parseTypeImpl(DialectAsmParser &parser,
   OptionalParseResult result = parser.parseOptionalType(maybeIntegerType);
   if (result.hasValue()) {
     if (failed(*result))
-      return LLVMType();
+      return Type();
 
     if (!maybeIntegerType.isSignlessInteger()) {
       parser.emitError(keyLoc) << "unexpected type, expected i* or keyword";
-      return LLVMType();
+      return Type();
     }
     return LLVMIntegerType::getChecked(
         loc, maybeIntegerType.getIntOrFloatBitWidth());
@@ -438,9 +438,9 @@ static LLVMType parseTypeImpl(DialectAsmParser &parser,
   // Dispatch to concrete functions.
   StringRef key;
   if (failed(parser.parseKeyword(&key)))
-    return LLVMType();
+    return Type();
 
-  return StringSwitch<function_ref<LLVMType()>>(key)
+  return StringSwitch<function_ref<Type()>>(key)
       .Case("void", [&] { return LLVMVoidType::get(ctx); })
       .Case("half", [&] { return LLVMHalfType::get(ctx); })
       .Case("bfloat", [&] { return LLVMBFloatType::get(ctx); })
@@ -460,11 +460,11 @@ static LLVMType parseTypeImpl(DialectAsmParser &parser,
       .Case("struct", [&] { return parseStructType(parser, stack); })
       .Default([&] {
         parser.emitError(keyLoc) << "unknown LLVM type: " << key;
-        return LLVMType();
+        return Type();
       })();
 }
 
-LLVMType mlir::LLVM::detail::parseType(DialectAsmParser &parser) {
+Type mlir::LLVM::detail::parseType(DialectAsmParser &parser) {
   llvm::SetVector<StringRef> stack;
   return parseTypeImpl(parser, stack);
 }

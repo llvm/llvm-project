@@ -149,11 +149,11 @@ def ROCDL_MubufLoadOp :
                  LLVM_Type:$slc)>{
   string llvmBuilder = [{
       $res = createIntrinsicCall(builder,
-          llvm::Intrinsic::amdgcn_buffer_load, {$rsrc, $vindex, $offset, $glc, 
+          llvm::Intrinsic::amdgcn_buffer_load, {$rsrc, $vindex, $offset, $glc,
           $slc}, {$_resultType});
   }];
   let parser = [{ return parseROCDLMubufLoadOp(parser, result); }];
-  let printer = [{ 
+  let printer = [{
     Operation *op = this->getOperation();
     p << op->getName() << " " << op->getOperands()
       << " : " << op->getResultTypes();
@@ -169,7 +169,7 @@ def ROCDL_MubufStoreOp :
                  LLVM_Type:$glc,
                  LLVM_Type:$slc)>{
   string llvmBuilder = [{
-    auto vdataType = convertType(op.vdata().getType().cast<LLVM::LLVMType>());
+    auto vdataType = convertType(op.vdata().getType());
     createIntrinsicCall(builder,
           llvm::Intrinsic::amdgcn_buffer_store, {$vdata, $rsrc, $vindex,
           $offset, $glc, $slc}, {vdataType});
