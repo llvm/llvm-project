@@ -40,6 +40,7 @@
 // CHECK-NEXT: CXX11NoReturn (SubjectMatchRule_function)
 // CHECK-NEXT: CallableWhen (SubjectMatchRule_function_is_member)
 // CHECK-NEXT: Callback (SubjectMatchRule_function)
+// CHECK-NEXT: CalledOnce (SubjectMatchRule_variable_is_parameter)
 // CHECK-NEXT: Capability (SubjectMatchRule_record, SubjectMatchRule_type_alias)
 // CHECK-NEXT: CarriesDependency (SubjectMatchRule_variable_is_parameter, SubjectMatchRule_objc_method, SubjectMatchRule_function)
 // CHECK-NEXT: Cleanup (SubjectMatchRule_variable_is_local)
