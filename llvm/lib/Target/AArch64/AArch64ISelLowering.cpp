@@ -11810,6 +11810,11 @@ static SDValue performCommonVectorExtendCombine(SDValue VectorShuffle,
       (PreExtendType == MVT::Other))
     return SDValue();
 
+  // Restrict valid pre-extend data type
+  if (PreExtendType != MVT::i8 && PreExtendType != MVT::i16 &&
+      PreExtendType != MVT::i32)
+    return SDValue();
+
   EVT PreExtendVT = TargetType.changeVectorElementType(PreExtendType);
 
   if (PreExtendVT.getVectorElementCount() != TargetType.getVectorElementCount())
