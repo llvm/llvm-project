@@ -371,7 +371,7 @@ def testArrayAttr():
     try:
       ArrayAttr.get([42])
     except RuntimeError as e:
-      # CHECK: Error: Invalid attribute when attempting to create an ArrayAttribute (Unable to cast Python instance of type <class 'int'> to C++ type 'mlir::python::PyAttribute')
+      # CHECK: Error: Invalid attribute when attempting to create an ArrayAttribute
       print("Error: ", e)
 run(testArrayAttr)
 
