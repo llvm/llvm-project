@@ -1894,7 +1894,7 @@ struct ConstantOpLowering : public ConvertOpToLLVMPattern<ConstantOp> {
       for (const NamedAttribute &attr : op->getAttrs()) {
         if (attr.first.strref() == "value")
           continue;
-        newOp.setAttr(attr.first, attr.second);
+        newOp->setAttr(attr.first, attr.second);
       }
       rewriter.replaceOp(op, newOp->getResults());
       return success();
