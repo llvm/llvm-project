@@ -214,7 +214,8 @@ TEST(DataExtractorTest, Cursor_chaining) {
   EXPECT_THAT_ERROR(C.takeError(), Succeeded());
 }
 
-#if defined(GTEST_HAS_DEATH_TEST) && defined(_DEBUG)
+#if defined(GTEST_HAS_DEATH_TEST) && defined(_DEBUG) &&                        \
+    LLVM_ENABLE_ABI_BREAKING_CHECKS
 TEST(DataExtractorDeathTest, Cursor) {
   DataExtractor DE(StringRef("AB"), false, 8);
 
