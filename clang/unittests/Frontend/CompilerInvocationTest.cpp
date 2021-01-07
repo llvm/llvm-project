@@ -508,6 +508,53 @@ TEST_F(CommandLineTest, StringVectorMultiple) {
   ASSERT_THAT(GeneratedArgs, ContainsN(HasSubstr("-fmodule-map-file"), 2));
 }
 
+// CommaJoined option with MarshallingInfoStringVector.
+
+TEST_F(CommandLineTest, StringVectorCommaJoinedNone) {
+  const char *Args[] = {""};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(Invocation.getLangOpts()->CommentOpts.BlockCommandNames.empty());
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+
+  ASSERT_THAT(GeneratedArgs,
+              Not(Contains(HasSubstr("-fcomment-block-commands"))));
+}
+
+TEST_F(CommandLineTest, StringVectorCommaJoinedSingle) {
+  const char *Args[] = {"-fcomment-block-commands=x,y"};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_EQ(Invocation.getLangOpts()->CommentOpts.BlockCommandNames,
+            std::vector<std::string>({"x", "y"}));
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+
+  ASSERT_THAT(GeneratedArgs,
+              ContainsN(StrEq("-fcomment-block-commands=x,y"), 1));
+}
+
+TEST_F(CommandLineTest, StringVectorCommaJoinedMultiple) {
+  const char *Args[] = {"-fcomment-block-commands=x,y",
+                        "-fcomment-block-commands=a,b"};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_EQ(Invocation.getLangOpts()->CommentOpts.BlockCommandNames,
+            std::vector<std::string>({"x", "y", "a", "b"}));
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+
+  ASSERT_THAT(GeneratedArgs,
+              ContainsN(StrEq("-fcomment-block-commands=x,y,a,b"), 1));
+}
+
 // A flag that should be parsed only if a condition is met.
 
 TEST_F(CommandLineTest, ConditionalParsingIfFalseFlagNotPresent) {
