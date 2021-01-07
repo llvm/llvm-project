@@ -15,13 +15,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUTARGETMACHINE_H
 
 #include "AMDGPUSubtarget.h"
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetMachine.h"
-#include <memory>
 
 namespace llvm {
 
@@ -61,11 +55,7 @@ public:
   void registerDefaultAliasAnalyses(AAManager &) override;
 
   /// Get the integer value of a null pointer in the given address space.
-  static int64_t getNullPointerValue(unsigned AddrSpace) {
-    return (AddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
-            AddrSpace == AMDGPUAS::PRIVATE_ADDRESS ||
-            AddrSpace == AMDGPUAS::REGION_ADDRESS) ? -1 : 0;
-  }
+  static int64_t getNullPointerValue(unsigned AddrSpace);
 
   bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override;
 

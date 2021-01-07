@@ -17,13 +17,11 @@
 #define GET_REGINFO_HEADER
 #include "AMDGPUGenRegisterInfo.inc"
 
-#include "SIDefines.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-
 namespace llvm {
 
 class GCNSubtarget;
 class LiveIntervals;
+class RegisterBank;
 class SIMachineFunctionInfo;
 
 class SIRegisterInfo final : public AMDGPUGenRegisterInfo {
@@ -155,14 +153,7 @@ public:
     return isSGPRClass(getRegClass(RCID));
   }
 
-  bool isSGPRReg(const MachineRegisterInfo &MRI, Register Reg) const {
-    const TargetRegisterClass *RC;
-    if (Reg.isVirtual())
-      RC = MRI.getRegClass(Reg);
-    else
-      RC = getPhysRegClass(Reg);
-    return isSGPRClass(RC);
-  }
+  bool isSGPRReg(const MachineRegisterInfo &MRI, Register Reg) const;
 
   /// \returns true if this class contains only AGPR registers
   bool isAGPRClass(const TargetRegisterClass *RC) const {
@@ -205,11 +196,7 @@ public:
 
   /// \returns True if operands defined with this operand type can accept
   /// a literal constant (i.e. any 32-bit immediate).
-  bool opCanUseLiteralConstant(unsigned OpType) const {
-    // TODO: 64-bit operands have extending behavior from 32-bit literal.
-    return OpType >= AMDGPU::OPERAND_REG_IMM_FIRST &&
-           OpType <= AMDGPU::OPERAND_REG_IMM_LAST;
-  }
+  bool opCanUseLiteralConstant(unsigned OpType) const;
 
   /// \returns True if operands defined with this operand type can accept
   /// an inline constant. i.e. An integer value in the range (-16, 64) or

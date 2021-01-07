@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/MachineScheduler.h"
+#include "llvm/CodeGen/ScheduleDAGMutation.h"
+#include <memory>
 
 namespace llvm {
 

@@ -14,7 +14,6 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUCALLLOWERING_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUCALLLOWERING_H
 
-#include "AMDGPU.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 
 namespace llvm {
