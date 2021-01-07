@@ -2270,6 +2270,8 @@ multiclass sve_int_perm_bin_perm_zz<bits<3> opc, string asm,
   def : SVE_2_Op_Pat<nxv8f16, op, nxv8f16, nxv8f16, !cast<Instruction>(NAME # _H)>;
   def : SVE_2_Op_Pat<nxv4f16, op, nxv4f16, nxv4f16, !cast<Instruction>(NAME # _S)>;
   def : SVE_2_Op_Pat<nxv4f32, op, nxv4f32, nxv4f32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_2_Op_Pat<nxv2f16, op, nxv2f16, nxv2f16, !cast<Instruction>(NAME # _D)>;
+  def : SVE_2_Op_Pat<nxv2f32, op, nxv2f32, nxv2f32, !cast<Instruction>(NAME # _D)>;
   def : SVE_2_Op_Pat<nxv2f64, op, nxv2f64, nxv2f64, !cast<Instruction>(NAME # _D)>;
 
   def : SVE_2_Op_Pat<nxv8bf16, op, nxv8bf16, nxv8bf16, !cast<Instruction>(NAME # _H)>;
