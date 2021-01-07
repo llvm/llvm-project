@@ -532,7 +532,7 @@ Error UsePrecompSource::mergeInPrecompHeaderObj() {
          TypeIndex::FirstNonSimpleIndex);
   assert(precompDependency.getTypesCount() <= precompSrc->tpiMap.size());
   // Use the previously remapped index map from the precompiled headers.
-  indexMapStorage.append(precompSrc->tpiMap.begin(),
+  indexMapStorage.insert(indexMapStorage.begin(), precompSrc->tpiMap.begin(),
                          precompSrc->tpiMap.begin() +
                              precompDependency.getTypesCount());
 
@@ -842,6 +842,7 @@ void UsePrecompSource::loadGHashes() {
 }
 
 void UsePrecompSource::remapTpiWithGHashes(GHashState *g) {
+  fillMapFromGHashes(g, indexMapStorage);
   // This object was compiled with /Yu, so process the corresponding
   // precompiled headers object (/Yc) first. Some type indices in the current
   // object are referencing data in the precompiled headers object, so we need
@@ -851,7 +852,6 @@ void UsePrecompSource::remapTpiWithGHashes(GHashState *g) {
     return;
   }
 
-  fillMapFromGHashes(g, indexMapStorage);
   tpiMap = indexMapStorage;
   ipiMap = indexMapStorage;
   mergeUniqueTypeRecords(file->debugTypes,
