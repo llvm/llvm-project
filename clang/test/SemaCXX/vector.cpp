@@ -513,3 +513,20 @@ void use(char16 c) {
 }
 
 } // namespace PR45780
+
+namespace PR48540 {
+// The below used to cause an OOM error, or an assert, make sure it is still
+//  valid.
+int (__attribute__((vector_size(16))) a);
+
+template <typename T, int I>
+struct S {
+  T (__attribute__((vector_size(16))) a);
+  int (__attribute__((vector_size(I))) b);
+  T (__attribute__((vector_size(I))) c);
+};
+
+void use() {
+  S<int, 16> s;
+}
+} // namespace PR48540
