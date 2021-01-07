@@ -2342,20 +2342,19 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
     llvm::StringRef suffix(ast_child_name);
     if (suffix.consume_front("__ObjC."))
       ast_child_name = suffix.str();
+    assert((llvm::StringRef(child_name).contains('.') ||
+            Equivalent(child_name, ast_child_name)));
+    assert((Equivalent(llvm::Optional<uint64_t>(child_byte_size),
+                       llvm::Optional<uint64_t>(ast_child_byte_size)) ||
+            ast_language_flags));
+    assert(Equivalent(llvm::Optional<uint64_t>(child_byte_offset),
+                      llvm::Optional<uint64_t>(ast_child_byte_offset)));
     assert(
-        (llvm::StringRef(child_name).contains('.') ||
-         Equivalent(child_name, ast_child_name)) &&
-        (Equivalent(llvm::Optional<uint64_t>(child_byte_size),
-                    llvm::Optional<uint64_t>(ast_child_byte_size)) ||
-         ast_language_flags) &&
-        Equivalent(llvm::Optional<uint64_t>(child_byte_offset),
-                   llvm::Optional<uint64_t>(ast_child_byte_offset)) &&
-        Equivalent(child_bitfield_bit_offset, ast_child_bitfield_bit_offset) &&
-        Equivalent(child_bitfield_bit_size, ast_child_bitfield_bit_size) &&
-        Equivalent(child_is_base_class, ast_child_is_base_class) &&
-        Equivalent(child_is_deref_of_parent, ast_child_is_deref_of_parent) &&
-        Equivalent(language_flags, ast_language_flags) &&
-        "TypeSystemSwiftTypeRef diverges from SwiftASTContext");
+        Equivalent(child_bitfield_bit_offset, ast_child_bitfield_bit_offset));
+    assert(Equivalent(child_bitfield_bit_size, ast_child_bitfield_bit_size));
+    assert(Equivalent(child_is_base_class, ast_child_is_base_class));
+    assert(Equivalent(child_is_deref_of_parent, ast_child_is_deref_of_parent));
+    assert(Equivalent(language_flags, ast_language_flags));
   });
 #endif
   VALIDATE_AND_RETURN(
