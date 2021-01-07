@@ -72,6 +72,8 @@ class CountPropertyType<string typeName = ""> : PropertyType<typeName> {
 
 def APInt : PropertyType<"llvm::APInt"> { let PassByReference = 1; }
 def APSInt : PropertyType<"llvm::APSInt"> { let PassByReference = 1; }
+def APValue : PropertyType { let PassByReference = 1; }
+def APValueKind : EnumPropertyType<"APValue::ValueKind">;
 def ArraySizeModifier : EnumPropertyType<"ArrayType::ArraySizeModifier">;
 def AttrKind : EnumPropertyType<"attr::Kind">;
 def AutoTypeKeyword : EnumPropertyType;
@@ -109,7 +111,15 @@ def DeclRef : RefPropertyType<"Decl"> { let ConstWhenWriting = 1; }
     SubclassPropertyType<"ValueDecl", DeclRef>;
 def ElaboratedTypeKeyword : EnumPropertyType;
 def ExtParameterInfo : PropertyType<"FunctionProtoType::ExtParameterInfo">;
+def FixedPointSemantics : PropertyType<"llvm::FixedPointSemantics"> {
+  let PassByReference = 1;
+}
 def Identifier : RefPropertyType<"IdentifierInfo"> { let ConstWhenWriting = 1; }
+def LValuePathEntry : PropertyType<"APValue::LValuePathEntry">;
+def LValuePathSerializationHelper :
+    PropertyType<"APValue::LValuePathSerializationHelper"> {
+  let BufferElementTypes = [ LValuePathEntry ];
+}
 def NestedNameSpecifier : PropertyType<"NestedNameSpecifier *">;
 def NestedNameSpecifierKind :
   EnumPropertyType<"NestedNameSpecifier::SpecifierKind">;
@@ -235,6 +245,304 @@ class PropertyTypeCase<PropertyType type, string name> : HasProperties {
 
   /// The name of the case (a value of the type's kind enum).
   string Name = name;
+}
+
+// Type cases for APValue.
+def : PropertyTypeKind<APValue, APValueKind,
+                       "node.getKind()">;
+let Class = PropertyTypeCase<APValue, "None"> in {
+  def : Creator<[{ return APValue(); }]>;
+}
+let Class = PropertyTypeCase<APValue, "Indeterminate"> in {
+  def : Creator<[{ return APValue::IndeterminateValue(); }]>;
+}
+let Class = PropertyTypeCase<APValue, "Int"> in {
+  def : Property<"value", APSInt> {
+    let Read = [{ node.getInt() }];
+  }
+  def : Creator<[{ return APValue(value); }]>;
+}
+let Class = PropertyTypeCase<APValue, "Float"> in {
+  def : Property<"semantics", UInt32> {
+    let Read = [{
+      static_cast<uint32_t>(
+        llvm::APFloatBase::SemanticsToEnum(node.getFloat().getSemantics()))
+    }];
+  }
+  def : Property<"value", APInt> {
+    let Read = [{ node.getFloat().bitcastToAPInt() }];
+  }
+  def : Creator<[{
+    const llvm::fltSemantics &floatSema = llvm::APFloatBase::EnumToSemantics(
+        static_cast<llvm::APFloatBase::Semantics>(semantics));
+    return APValue(llvm::APFloat(floatSema, value));
+  }]>;
+}
+let Class = PropertyTypeCase<APValue, "FixedPoint"> in {
+  def : Property<"semantics", FixedPointSemantics> {
+    let Read = [{ node.getFixedPoint().getSemantics() }];
+  }
+  def : Property<"value", APSInt> {
+    let Read = [{ node.getFixedPoint().getValue() }];
+  }
+  def : Creator<[{
+    return APValue(llvm::APFixedPoint(std::move(value), semantics));
+  }]>;
+}
+let Class = PropertyTypeCase<APValue, "ComplexInt"> in {
+  def : Property<"real", APSInt> {
+    let Read = [{ node.getComplexIntReal() }];
+  }
+  def : Property<"imag", APSInt> {
+    let Read = [{ node.getComplexIntImag() }];
+  }
+  def : Creator<[{ return APValue(real, imag); }]>;
+}
+let Class = PropertyTypeCase<APValue, "ComplexFloat"> in {
+  def : ReadHelper<[{
+    auto sema = llvm::APFloatBase::SemanticsToEnum(
+        node.getComplexFloatReal().getSemantics());
+    assert(sema == llvm::APFloatBase::SemanticsToEnum(
+        node.getComplexFloatImag().getSemantics()));
+  }]>;
+  def : Property<"semantics", UInt32> {
+    let Read = [{ static_cast<uint32_t>(sema) }];
+  }
+  def : Property<"real", APInt> {
+    let Read = [{ node.getComplexFloatReal().bitcastToAPInt() }];
+  }
+  def : Property<"imag", APInt> {
+    let Read = [{ node.getComplexFloatImag().bitcastToAPInt() }];
+  }
+  def : Creator<[{
+    const llvm::fltSemantics &sema = llvm::APFloatBase::EnumToSemantics(
+        static_cast<llvm::APFloatBase::Semantics>(semantics));
+    return APValue(llvm::APFloat(sema, real),
+                   llvm::APFloat(sema, imag));
+  }]>;
+}
+let Class = PropertyTypeCase<APValue, "Vector"> in {
+  def : ReadHelper<[{
+    SmallVector<APValue, 4> buffer;
+    unsigned len = node.getVectorLength();
+    for (unsigned i = 0; i < len; ++i)
+      buffer.push_back(node.getVectorElt(i));
+  }]>;
+  def : Property<"elements", Array<APValue>> {
+    let Read = [{ buffer }];
+  }
+  def : Creator<[{
+    APValue result;
+    result.MakeVector();
+    unsigned length = elements.size();
+    (void)result.setVectorUninit(length);
+    for (unsigned i = 0; i < length; i++)
+      result.getVectorElt(i) = elements[i];
+    return result;
+  }]>;
+}
+let Class = PropertyTypeCase<APValue, "Array"> in {
+  def : ReadHelper<[{
+    SmallVector<APValue, 4> buffer{};
+    unsigned initLength = node.getArrayInitializedElts();
+    for (unsigned i = 0; i < initLength; ++i)
+      buffer.push_back(node.getArrayInitializedElt(i));
+    if (node.hasArrayFiller())
+      buffer.push_back(node.getArrayFiller());
+  }]>;
+  def : Property<"totalLength", UInt32> {
+    let Read = [{ node.getArraySize() }];
+  }
+  def : Property<"hasFiller", Bool> {
+    let Read = [{ node.hasArrayFiller() }];
+  }
+  def : Property<"elements", Array<APValue>> {
+    let Read = [{ buffer }];
+  }
+  def : Creator<[{
+    APValue result;
+    unsigned initLength = elements.size() - (hasFiller ? 1 : 0);
+    result.MakeArray(initLength, totalLength);
+    for (unsigned i = 0; i < initLength; ++i)
+      result.getArrayInitializedElt(i) = elements[i];
+    if (hasFiller)
+      result.getArrayFiller() = elements.back();
+    return result;
+  }]>;
+}
+let Class = PropertyTypeCase<APValue, "Struct"> in {
+  def : ReadHelper<[{
+    SmallVector<APValue, 4> structBases;
+    unsigned numBases = node.getStructNumBases();
+    for (unsigned i = 0; i < numBases; ++i)
+      structBases.push_back(node.getStructBase(i));
+    SmallVector<APValue, 4> structFields;
+    unsigned numFields = node.getStructNumFields();
+    for (unsigned i = 0; i < numFields; ++i)
+      structFields.push_back(node.getStructField(i));
+  }]>;
+  def : Property<"bases", Array<APValue>> {
+    let Read = [{ structBases }];
+  }
+  def : Property<"fields", Array<APValue>> {
+    let Read = [{ structFields }];
+  }
+  def : Creator<[{
+    APValue result;
+    result.MakeStruct(bases.size(), fields.size());
+    for (unsigned i = 0; i < bases.size(); ++i)
+      result.getStructBase(i) = bases[i];
+    for (unsigned i = 0; i < fields.size(); ++i)
+      result.getStructField(i) = fields[i];
+    return result;
+  }]>;
+}
+let Class = PropertyTypeCase<APValue, "Union"> in {
+  def : Property<"fieldDecl", DeclRef> {
+    let Read = [{ node.getUnionField() }];
+  }
+  def : Property<"value", APValue> {
+    let Read = [{ node.getUnionValue() }];
+  }
+  def : Creator<[{
+    return APValue(cast<clang::FieldDecl>(fieldDecl), std::move(value));
+  }]>;
+}
+let Class = PropertyTypeCase<APValue, "AddrLabelDiff"> in {
+  def : Property<"lhs", StmtRef> {
+    let Read = [{ const_cast<AddrLabelExpr *>(node.getAddrLabelDiffLHS()) }];
+  }
+  def : Property<"rhs", StmtRef> {
+    let Read = [{ const_cast<AddrLabelExpr *>(node.getAddrLabelDiffRHS()) }];
+  }
+  def : Creator<[{
+    return APValue(cast<AddrLabelExpr>(lhs), cast<AddrLabelExpr>(rhs));
+  }]>;
+}
+let Class = PropertyTypeCase<APValue, "MemberPointer"> in {
+  def : Property<"isDerived", Bool> {
+    let Read = [{ node.isMemberPointerToDerivedMember() }];
+  }
+  def : Property<"member", ValueDeclRef> {
+    let Read = [{ node.getMemberPointerDecl() }];
+  }
+  def : Property<"memberPath", Array<CXXRecordDeclRef>> {
+    let Read = [{ node.getMemberPointerPath() }];
+  }
+  def : Creator<[{
+    APValue result;
+    unsigned pathSize = memberPath.size();
+    const CXXRecordDecl **pathArray =
+        result.setMemberPointerUninit(member, isDerived, pathSize).data();
+    for (unsigned i = 0; i < pathSize; ++i)
+      pathArray[i] = memberPath[i]->getCanonicalDecl();
+    return result;
+  }]>;
+}
+let Class = PropertyTypeCase<APValue, "LValue"> in {
+  def : ReadHelper<[{
+    auto lvalueBase = node.getLValueBase();
+    const Expr *expr =
+        lvalueBase ? lvalueBase.dyn_cast<const Expr *>() : nullptr;
+    bool lvalueBaseIsExpr = (bool) expr;
+    bool lvalueBaseIsTypeInfo = lvalueBase.is<TypeInfoLValue>();
+    QualType elemTy;
+    if (lvalueBase) {
+      if (lvalueBaseIsTypeInfo) {
+        elemTy = lvalueBase.getTypeInfoType();
+      } else if (lvalueBaseIsExpr) {
+        elemTy = expr->getType();
+      } else {
+        elemTy = lvalueBase.get<const ValueDecl *>()->getType();
+      }
+    }
+  }]>;
+  def : Property<"hasLValuePath", Bool> {
+    let Read = [{ node.hasLValuePath() }];
+  }
+  def : Property<"isLValueOnePastTheEnd", Bool> {
+    let Read = [{ node.isLValueOnePastTheEnd() }];
+  }
+  def : Property<"isExpr", Bool> {
+    let Read = [{ lvalueBaseIsExpr }];
+  }
+  def : Property<"isTypeInfo", Bool> {
+    let Read = [{ lvalueBaseIsTypeInfo }];
+  }
+  def : Property<"hasBase", Bool> {
+    let Read = [{ static_cast<bool>(lvalueBase) }];
+  }
+  def : Property<"isNullPtr", Bool> {
+    let Read = [{ node.isNullPointer() }];
+  }
+  def : Property<"typeInfo", QualType> {
+    let Conditional = [{ hasBase && isTypeInfo }];
+    let Read = [{
+      QualType(node.getLValueBase().get<TypeInfoLValue>().getType(), 0)
+    }];
+  }
+  def : Property<"type", QualType> {
+    let Conditional = [{ hasBase && isTypeInfo }];
+    let Read = [{ node.getLValueBase().getTypeInfoType() }];
+  }
+  def : Property<"callIndex", UInt32> {
+    let Conditional = [{ hasBase && !isTypeInfo }];
+    let Read = [{ node.getLValueBase().getCallIndex() }];
+  }
+  def : Property<"version", UInt32> {
+    let Conditional = [{ hasBase && !isTypeInfo }];
+    let Read = [{ node.getLValueBase().getVersion() }];
+  }
+  def : Property<"stmt", StmtRef> {
+    let Conditional = [{ hasBase && !isTypeInfo && isExpr }];
+    let Read = [{ const_cast<Expr *>(expr) }];
+  }
+  def : Property<"decl", DeclRef> {
+    let Conditional = [{ hasBase && !isTypeInfo && !isExpr }];
+    let Read = [{ lvalueBase.get<const ValueDecl *>() }];
+  }
+  def : Property<"offsetQuantity", UInt32> {
+    let Read = [{ node.getLValueOffset().getQuantity() }];
+  }
+  def : Property<"lvaluePath", LValuePathSerializationHelper> {
+    let Conditional = [{ hasLValuePath }];
+    let Read = [{
+      APValue::LValuePathSerializationHelper(node.getLValuePath(), elemTy)
+    }];
+  }
+  def : Creator<[{
+    (void)ctx;
+    APValue::LValueBase base;
+    QualType elemTy;
+    if (hasBase) {
+      if (isTypeInfo) {
+        base = APValue::LValueBase::getTypeInfo(
+            TypeInfoLValue(typeInfo.getValue().getTypePtr()), type.getValue());
+        elemTy = base.getTypeInfoType();
+      } else if (isExpr) {
+        base = APValue::LValueBase(cast<Expr>(stmt.getValue()),
+                                   callIndex.getValue(), version.getValue());
+        elemTy = base.get<const Expr *>()->getType();
+      } else {
+        base = APValue::LValueBase(cast<ValueDecl>(decl.getValue()),
+                                   callIndex.getValue(), version.getValue());
+        elemTy = base.get<const ValueDecl *>()->getType();
+      }
+    }
+    CharUnits offset = CharUnits::fromQuantity(offsetQuantity);
+    APValue result;
+    result.MakeLValue();
+    if (!hasLValuePath) {
+      result.setLValue(base, offset, APValue::NoLValuePath{}, isNullPtr);
+      return result;
+    }
+    auto pathLength = lvaluePath->Path.size();
+    APValue::LValuePathEntry *path = result.setLValueUninit(
+        base, offset, pathLength, isLValueOnePastTheEnd, isNullPtr).data();
+    assert(lvaluePath->getType() == elemTy && "Unexpected type reference!");
+    llvm::copy(lvaluePath->Path, path);
+    return result;
+  }]>;
 }
 
 // Type cases for DeclarationName.
