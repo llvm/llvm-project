@@ -7529,9 +7529,14 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
 
     // Collect the incoming values from the PHIs.
     Incoming.clear();
-    for (PHINode &P : BB->phis())
-      if (!VisitedInstrs.count(&P) && !R.isDeleted(&P))
-        Incoming.push_back(&P);
+    for (Instruction &I : *BB) {
+      PHINode *P = dyn_cast<PHINode>(&I);
+      if (!P)
+        break;
+
+      if (!VisitedInstrs.count(P) && !R.isDeleted(P))
+        Incoming.push_back(P);
+    }
 
     // Sort by type.
     llvm::stable_sort(Incoming, PhiTypeSorterFunc);
