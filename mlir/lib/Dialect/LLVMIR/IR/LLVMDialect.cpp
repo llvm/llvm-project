@@ -36,6 +36,51 @@ static constexpr const char kVolatileAttrName[] = "volatile_";
 static constexpr const char kNonTemporalAttrName[] = "nontemporal";
 
 #include "mlir/Dialect/LLVMIR/LLVMOpsEnums.cpp.inc"
+#include "mlir/Dialect/LLVMIR/LLVMOpsInterfaces.cpp.inc"
+
+namespace mlir {
+namespace LLVM {
+namespace detail {
+struct BitmaskEnumStorage : public AttributeStorage {
+  using KeyTy = uint64_t;
+
+  BitmaskEnumStorage(KeyTy val) : value(val) {}
+
+  bool operator==(const KeyTy &key) const { return value == key; }
+
+  static BitmaskEnumStorage *construct(AttributeStorageAllocator &allocator,
+                                       const KeyTy &key) {
+    return new (allocator.allocate<BitmaskEnumStorage>())
+        BitmaskEnumStorage(key);
+  }
+
+  KeyTy value = 0;
+};
+} // namespace detail
+} // namespace LLVM
+} // namespace mlir
+
+static auto processFMFAttr(ArrayRef<NamedAttribute> attrs) {
+  SmallVector<NamedAttribute, 8> filteredAttrs(
+      llvm::make_filter_range(attrs, [&](NamedAttribute attr) {
+        if (attr.first == "fastmathFlags") {
+          auto defAttr = FMFAttr::get({}, attr.second.getContext());
+          return defAttr != attr.second;
+        }
+        return true;
+      }));
+  return filteredAttrs;
+}
+
+static ParseResult parseLLVMOpAttrs(OpAsmParser &parser,
+                                    NamedAttrList &result) {
+  return parser.parseOptionalAttrDict(result);
+}
+
+static void printLLVMOpAttrs(OpAsmPrinter &printer, Operation *op,
+                             DictionaryAttr attrs) {
+  printer.printOptionalAttrDict(processFMFAttr(attrs.getValue()));
+}
 
 //===----------------------------------------------------------------------===//
 // Printing/parsing for LLVM::CmpOp.
@@ -50,7 +95,7 @@ static void printICmpOp(OpAsmPrinter &p, ICmpOp &op) {
 static void printFCmpOp(OpAsmPrinter &p, FCmpOp &op) {
   p << op.getOperationName() << " \"" << stringifyFCmpPredicate(op.predicate())
     << "\" " << op.getOperand(0) << ", " << op.getOperand(1);
-  p.printOptionalAttrDict(op.getAttrs(), {"predicate"});
+  p.printOptionalAttrDict(processFMFAttr(op.getAttrs()), {"predicate"});
   p << " : " << op.lhs().getType();
 }
 
@@ -771,7 +816,7 @@ static void printCallOp(OpAsmPrinter &p, CallOp &op) {
 
   auto args = op.getOperands().drop_front(isDirect ? 0 : 1);
   p << '(' << args << ')';
-  p.printOptionalAttrDict(op.getAttrs(), {"callee"});
+  p.printOptionalAttrDict(processFMFAttr(op.getAttrs()), {"callee"});
 
   // Reconstruct the function MLIR function type from operand and result types.
   p << " : "
@@ -2041,6 +2086,8 @@ static LogicalResult verify(FenceOp &op) {
 //===----------------------------------------------------------------------===//
 
 void LLVMDialect::initialize() {
+  addAttributes<FMFAttr>();
+
   // clang-format off
   addTypes<LLVMVoidType,
            LLVMHalfType,
@@ -2171,4 +2218,88 @@ Value mlir::LLVM::createGlobalString(Location loc, OpBuilder &builder,
 bool mlir::LLVM::satisfiesLLVMModule(Operation *op) {
   return op->hasTrait<OpTrait::SymbolTable>() &&
          op->hasTrait<OpTrait::IsIsolatedFromAbove>();
+}
+
+FMFAttr FMFAttr::get(FastmathFlags flags, MLIRContext *context) {
+  return Base::get(context, static_cast<uint64_t>(flags));
+}
+
+FastmathFlags FMFAttr::getFlags() const {
+  return static_cast<FastmathFlags>(getImpl()->value);
+}
+
+static constexpr const FastmathFlags FastmathFlagsList[] = {
+    // clang-format off
+    FastmathFlags::nnan,
+    FastmathFlags::ninf,
+    FastmathFlags::nsz,
+    FastmathFlags::arcp,
+    FastmathFlags::contract,
+    FastmathFlags::afn,
+    FastmathFlags::reassoc,
+    FastmathFlags::fast,
+    // clang-format on
+};
+
+void FMFAttr::print(DialectAsmPrinter &printer) const {
+  printer << "fastmath<";
+  auto flags = llvm::make_filter_range(FastmathFlagsList, [&](auto flag) {
+    return bitEnumContains(getFlags(), flag);
+  });
+  llvm::interleaveComma(flags, printer,
+                        [&](auto flag) { printer << stringifyEnum(flag); });
+  printer << ">";
+}
+
+Attribute FMFAttr::parse(DialectAsmParser &parser) {
+  if (failed(parser.parseLess()))
+    return {};
+
+  FastmathFlags flags = {};
+  if (failed(parser.parseOptionalGreater())) {
+    do {
+      StringRef elemName;
+      if (failed(parser.parseKeyword(&elemName)))
+        return {};
+
+      auto elem = symbolizeFastmathFlags(elemName);
+      if (!elem) {
+        parser.emitError(parser.getNameLoc(), "Unknown fastmath flag: ")
+            << elemName;
+        return {};
+      }
+
+      flags = flags | *elem;
+    } while (succeeded(parser.parseOptionalComma()));
+
+    if (failed(parser.parseGreater()))
+      return {};
+  }
+
+  return FMFAttr::get(flags, parser.getBuilder().getContext());
+}
+
+Attribute LLVMDialect::parseAttribute(DialectAsmParser &parser,
+                                      Type type) const {
+  if (type) {
+    parser.emitError(parser.getNameLoc(), "unexpected type");
+    return {};
+  }
+  StringRef attrKind;
+  if (parser.parseKeyword(&attrKind))
+    return {};
+
+  if (attrKind == "fastmath")
+    return FMFAttr::parse(parser);
+
+  parser.emitError(parser.getNameLoc(), "Unknown attrribute type: ")
+      << attrKind;
+  return {};
+}
+
+void LLVMDialect::printAttribute(Attribute attr, DialectAsmPrinter &os) const {
+  if (auto fmf = attr.dyn_cast<FMFAttr>())
+    fmf.print(os);
+  else
+    llvm_unreachable("Unknown attribute type");
 }
