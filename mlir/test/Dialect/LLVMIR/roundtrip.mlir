@@ -387,3 +387,35 @@ llvm.func @useInlineAsm(%arg0: !llvm.i32) {
 
   llvm.return
 }
+
+// CHECK-LABEL: @fastmathFlags
+func @fastmathFlags(%arg0: !llvm.float, %arg1: !llvm.float, %arg2: !llvm.i32) {
+// CHECK: {{.*}} = llvm.fadd %arg0, %arg1 {fastmathFlags = #llvm.fastmath<fast>} : !llvm.float
+// CHECK: {{.*}} = llvm.fsub %arg0, %arg1 {fastmathFlags = #llvm.fastmath<fast>} : !llvm.float
+// CHECK: {{.*}} = llvm.fmul %arg0, %arg1 {fastmathFlags = #llvm.fastmath<fast>} : !llvm.float
+// CHECK: {{.*}} = llvm.fdiv %arg0, %arg1 {fastmathFlags = #llvm.fastmath<fast>} : !llvm.float
+// CHECK: {{.*}} = llvm.frem %arg0, %arg1 {fastmathFlags = #llvm.fastmath<fast>} : !llvm.float
+  %0 = llvm.fadd %arg0, %arg1 {fastmathFlags = #llvm.fastmath<fast>} : !llvm.float
+  %1 = llvm.fsub %arg0, %arg1 {fastmathFlags = #llvm.fastmath<fast>} : !llvm.float
+  %2 = llvm.fmul %arg0, %arg1 {fastmathFlags = #llvm.fastmath<fast>} : !llvm.float
+  %3 = llvm.fdiv %arg0, %arg1 {fastmathFlags = #llvm.fastmath<fast>} : !llvm.float
+  %4 = llvm.frem %arg0, %arg1 {fastmathFlags = #llvm.fastmath<fast>} : !llvm.float
+
+// CHECK: {{.*}} = llvm.fcmp "oeq" %arg0, %arg1 {fastmathFlags = #llvm.fastmath<fast>} : !llvm.float
+  %5 = llvm.fcmp "oeq" %arg0, %arg1 {fastmathFlags = #llvm.fastmath<fast>} : !llvm.float
+
+// CHECK: {{.*}} = llvm.fneg %arg0 {fastmathFlags = #llvm.fastmath<fast>} : !llvm.float
+  %6 = llvm.fneg %arg0 {fastmathFlags = #llvm.fastmath<fast>} : !llvm.float
+
+// CHECK: {{.*}} = llvm.call @foo(%arg2) {fastmathFlags = #llvm.fastmath<fast>} : (!llvm.i32) -> !llvm.struct<(i32, double, i32)>
+  %7 = llvm.call @foo(%arg2) {fastmathFlags = #llvm.fastmath<fast>} : (!llvm.i32) -> !llvm.struct<(i32, double, i32)>
+
+// CHECK: {{.*}} = llvm.fadd %arg0, %arg1 : !llvm.float
+  %8 = llvm.fadd %arg0, %arg1 {fastmathFlags = #llvm.fastmath<>} : !llvm.float
+// CHECK: {{.*}} = llvm.fadd %arg0, %arg1 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : !llvm.float
+  %9 = llvm.fadd %arg0, %arg1 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : !llvm.float
+
+// CHECK: {{.*}} = llvm.fneg %arg0 : !llvm.float
+  %10 = llvm.fneg %arg0 {fastmathFlags = #llvm.fastmath<>} : !llvm.float
+  return
+}
