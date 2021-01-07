@@ -2711,6 +2711,238 @@ public:
 } // namespace
 
 //------------------------------------------------------------------------------
+// PyAffineExpr and subclasses.
+//------------------------------------------------------------------------------
+
+namespace {
+/// CRTP base class for Python MLIR affine expressions that subclass AffineExpr
+/// and should be castable from it. Intermediate hierarchy classes can be
+/// modeled by specifying BaseTy.
+template <typename DerivedTy, typename BaseTy = PyAffineExpr>
+class PyConcreteAffineExpr : public BaseTy {
+public:
+  // Derived classes must define statics for:
+  //   IsAFunctionTy isaFunction
+  //   const char *pyClassName
+  // and redefine bindDerived.
+  using ClassTy = py::class_<DerivedTy, BaseTy>;
+  using IsAFunctionTy = bool (*)(MlirAffineExpr);
+
+  PyConcreteAffineExpr() = default;
+  PyConcreteAffineExpr(PyMlirContextRef contextRef, MlirAffineExpr affineExpr)
+      : BaseTy(std::move(contextRef), affineExpr) {}
+  PyConcreteAffineExpr(PyAffineExpr &orig)
+      : PyConcreteAffineExpr(orig.getContext(), castFrom(orig)) {}
+
+  static MlirAffineExpr castFrom(PyAffineExpr &orig) {
+    if (!DerivedTy::isaFunction(orig)) {
+      auto origRepr = py::repr(py::cast(orig)).cast<std::string>();
+      throw SetPyError(PyExc_ValueError,
+                       Twine("Cannot cast affine expression to ") +
+                           DerivedTy::pyClassName + " (from " + origRepr + ")");
+    }
+    return orig;
+  }
+
+  static void bind(py::module &m) {
+    auto cls = ClassTy(m, DerivedTy::pyClassName);
+    cls.def(py::init<PyAffineExpr &>());
+    DerivedTy::bindDerived(cls);
+  }
+
+  /// Implemented by derived classes to add methods to the Python subclass.
+  static void bindDerived(ClassTy &m) {}
+};
+
+class PyAffineConstantExpr : public PyConcreteAffineExpr<PyAffineConstantExpr> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAffineExprIsAConstant;
+  static constexpr const char *pyClassName = "AffineConstantExpr";
+  using PyConcreteAffineExpr::PyConcreteAffineExpr;
+
+  static PyAffineConstantExpr get(intptr_t value,
+                                  DefaultingPyMlirContext context) {
+    MlirAffineExpr affineExpr =
+        mlirAffineConstantExprGet(context->get(), static_cast<int64_t>(value));
+    return PyAffineConstantExpr(context->getRef(), affineExpr);
+  }
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static("get", &PyAffineConstantExpr::get, py::arg("value"),
+                 py::arg("context") = py::none());
+    c.def_property_readonly("value", [](PyAffineConstantExpr &self) {
+      return mlirAffineConstantExprGetValue(self);
+    });
+  }
+};
+
+class PyAffineDimExpr : public PyConcreteAffineExpr<PyAffineDimExpr> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAffineExprIsADim;
+  static constexpr const char *pyClassName = "AffineDimExpr";
+  using PyConcreteAffineExpr::PyConcreteAffineExpr;
+
+  static PyAffineDimExpr get(intptr_t pos, DefaultingPyMlirContext context) {
+    MlirAffineExpr affineExpr = mlirAffineDimExprGet(context->get(), pos);
+    return PyAffineDimExpr(context->getRef(), affineExpr);
+  }
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static("get", &PyAffineDimExpr::get, py::arg("position"),
+                 py::arg("context") = py::none());
+    c.def_property_readonly("position", [](PyAffineDimExpr &self) {
+      return mlirAffineDimExprGetPosition(self);
+    });
+  }
+};
+
+class PyAffineSymbolExpr : public PyConcreteAffineExpr<PyAffineSymbolExpr> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAffineExprIsASymbol;
+  static constexpr const char *pyClassName = "AffineSymbolExpr";
+  using PyConcreteAffineExpr::PyConcreteAffineExpr;
+
+  static PyAffineSymbolExpr get(intptr_t pos, DefaultingPyMlirContext context) {
+    MlirAffineExpr affineExpr = mlirAffineSymbolExprGet(context->get(), pos);
+    return PyAffineSymbolExpr(context->getRef(), affineExpr);
+  }
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static("get", &PyAffineSymbolExpr::get, py::arg("position"),
+                 py::arg("context") = py::none());
+    c.def_property_readonly("position", [](PyAffineSymbolExpr &self) {
+      return mlirAffineSymbolExprGetPosition(self);
+    });
+  }
+};
+
+class PyAffineBinaryExpr : public PyConcreteAffineExpr<PyAffineBinaryExpr> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAffineExprIsABinary;
+  static constexpr const char *pyClassName = "AffineBinaryExpr";
+  using PyConcreteAffineExpr::PyConcreteAffineExpr;
+
+  PyAffineExpr lhs() {
+    MlirAffineExpr lhsExpr = mlirAffineBinaryOpExprGetLHS(get());
+    return PyAffineExpr(getContext(), lhsExpr);
+  }
+
+  PyAffineExpr rhs() {
+    MlirAffineExpr rhsExpr = mlirAffineBinaryOpExprGetRHS(get());
+    return PyAffineExpr(getContext(), rhsExpr);
+  }
+
+  static void bindDerived(ClassTy &c) {
+    c.def_property_readonly("lhs", &PyAffineBinaryExpr::lhs);
+    c.def_property_readonly("rhs", &PyAffineBinaryExpr::rhs);
+  }
+};
+
+class PyAffineAddExpr
+    : public PyConcreteAffineExpr<PyAffineAddExpr, PyAffineBinaryExpr> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAffineExprIsAAdd;
+  static constexpr const char *pyClassName = "AffineAddExpr";
+  using PyConcreteAffineExpr::PyConcreteAffineExpr;
+
+  static PyAffineAddExpr get(PyAffineExpr lhs, PyAffineExpr rhs) {
+    MlirAffineExpr expr = mlirAffineAddExprGet(lhs, rhs);
+    return PyAffineAddExpr(lhs.getContext(), expr);
+  }
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static("get", &PyAffineAddExpr::get);
+  }
+};
+
+class PyAffineMulExpr
+    : public PyConcreteAffineExpr<PyAffineMulExpr, PyAffineBinaryExpr> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAffineExprIsAMul;
+  static constexpr const char *pyClassName = "AffineMulExpr";
+  using PyConcreteAffineExpr::PyConcreteAffineExpr;
+
+  static PyAffineMulExpr get(PyAffineExpr lhs, PyAffineExpr rhs) {
+    MlirAffineExpr expr = mlirAffineMulExprGet(lhs, rhs);
+    return PyAffineMulExpr(lhs.getContext(), expr);
+  }
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static("get", &PyAffineMulExpr::get);
+  }
+};
+
+class PyAffineModExpr
+    : public PyConcreteAffineExpr<PyAffineModExpr, PyAffineBinaryExpr> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAffineExprIsAMod;
+  static constexpr const char *pyClassName = "AffineModExpr";
+  using PyConcreteAffineExpr::PyConcreteAffineExpr;
+
+  static PyAffineModExpr get(PyAffineExpr lhs, PyAffineExpr rhs) {
+    MlirAffineExpr expr = mlirAffineModExprGet(lhs, rhs);
+    return PyAffineModExpr(lhs.getContext(), expr);
+  }
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static("get", &PyAffineModExpr::get);
+  }
+};
+
+class PyAffineFloorDivExpr
+    : public PyConcreteAffineExpr<PyAffineFloorDivExpr, PyAffineBinaryExpr> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAffineExprIsAFloorDiv;
+  static constexpr const char *pyClassName = "AffineFloorDivExpr";
+  using PyConcreteAffineExpr::PyConcreteAffineExpr;
+
+  static PyAffineFloorDivExpr get(PyAffineExpr lhs, PyAffineExpr rhs) {
+    MlirAffineExpr expr = mlirAffineFloorDivExprGet(lhs, rhs);
+    return PyAffineFloorDivExpr(lhs.getContext(), expr);
+  }
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static("get", &PyAffineFloorDivExpr::get);
+  }
+};
+
+class PyAffineCeilDivExpr
+    : public PyConcreteAffineExpr<PyAffineCeilDivExpr, PyAffineBinaryExpr> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAffineExprIsACeilDiv;
+  static constexpr const char *pyClassName = "AffineCeilDivExpr";
+  using PyConcreteAffineExpr::PyConcreteAffineExpr;
+
+  static PyAffineCeilDivExpr get(PyAffineExpr lhs, PyAffineExpr rhs) {
+    MlirAffineExpr expr = mlirAffineCeilDivExprGet(lhs, rhs);
+    return PyAffineCeilDivExpr(lhs.getContext(), expr);
+  }
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static("get", &PyAffineCeilDivExpr::get);
+  }
+};
+} // namespace
+
+bool PyAffineExpr::operator==(const PyAffineExpr &other) {
+  return mlirAffineExprEqual(affineExpr, other.affineExpr);
+}
+
+py::object PyAffineExpr::getCapsule() {
+  return py::reinterpret_steal<py::object>(
+      mlirPythonAffineExprToCapsule(*this));
+}
+
+PyAffineExpr PyAffineExpr::createFromCapsule(py::object capsule) {
+  MlirAffineExpr rawAffineExpr = mlirPythonCapsuleToAffineExpr(capsule.ptr());
+  if (mlirAffineExprIsNull(rawAffineExpr))
+    throw py::error_already_set();
+  return PyAffineExpr(
+      PyMlirContext::forContext(mlirAffineExprGetContext(rawAffineExpr)),
+      rawAffineExpr);
+}
+
+//------------------------------------------------------------------------------
 // PyAffineMap.
 //------------------------------------------------------------------------------
 
@@ -3413,6 +3645,94 @@ void mlir::python::populateIRSubmodule(py::module &m) {
   PyOpResultList::bind(m);
   PyRegionIterator::bind(m);
   PyRegionList::bind(m);
+
+  //----------------------------------------------------------------------------
+  // Mapping of PyAffineExpr and derived classes.
+  //----------------------------------------------------------------------------
+  py::class_<PyAffineExpr>(m, "AffineExpr")
+      .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR,
+                             &PyAffineExpr::getCapsule)
+      .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyAffineExpr::createFromCapsule)
+      .def("__add__",
+           [](PyAffineExpr &self, PyAffineExpr &other) {
+             return PyAffineAddExpr::get(self, other);
+           })
+      .def("__mul__",
+           [](PyAffineExpr &self, PyAffineExpr &other) {
+             return PyAffineMulExpr::get(self, other);
+           })
+      .def("__mod__",
+           [](PyAffineExpr &self, PyAffineExpr &other) {
+             return PyAffineModExpr::get(self, other);
+           })
+      .def("__sub__",
+           [](PyAffineExpr &self, PyAffineExpr &other) {
+             auto negOne =
+                 PyAffineConstantExpr::get(-1, *self.getContext().get());
+             return PyAffineAddExpr::get(self,
+                                         PyAffineMulExpr::get(negOne, other));
+           })
+      .def("__eq__", [](PyAffineExpr &self,
+                        PyAffineExpr &other) { return self == other; })
+      .def("__eq__",
+           [](PyAffineExpr &self, py::object &other) { return false; })
+      .def("__str__",
+           [](PyAffineExpr &self) {
+             PyPrintAccumulator printAccum;
+             mlirAffineExprPrint(self, printAccum.getCallback(),
+                                 printAccum.getUserData());
+             return printAccum.join();
+           })
+      .def("__repr__",
+           [](PyAffineExpr &self) {
+             PyPrintAccumulator printAccum;
+             printAccum.parts.append("AffineExpr(");
+             mlirAffineExprPrint(self, printAccum.getCallback(),
+                                 printAccum.getUserData());
+             printAccum.parts.append(")");
+             return printAccum.join();
+           })
+      .def_property_readonly(
+          "context",
+          [](PyAffineExpr &self) { return self.getContext().getObject(); })
+      .def_static(
+          "get_add", &PyAffineAddExpr::get,
+          "Gets an affine expression containing a sum of two expressions.")
+      .def_static(
+          "get_mul", &PyAffineMulExpr::get,
+          "Gets an affine expression containing a product of two expressions.")
+      .def_static("get_mod", &PyAffineModExpr::get,
+                  "Gets an affine expression containing the modulo of dividing "
+                  "one expression by another.")
+      .def_static("get_floor_div", &PyAffineFloorDivExpr::get,
+                  "Gets an affine expression containing the rounded-down "
+                  "result of dividing one expression by another.")
+      .def_static("get_ceil_div", &PyAffineCeilDivExpr::get,
+                  "Gets an affine expression containing the rounded-up result "
+                  "of dividing one expression by another.")
+      .def_static("get_constant", &PyAffineConstantExpr::get, py::arg("value"),
+                  py::arg("context") = py::none(),
+                  "Gets a constant affine expression with the given value.")
+      .def_static(
+          "get_dim", &PyAffineDimExpr::get, py::arg("position"),
+          py::arg("context") = py::none(),
+          "Gets an affine expression of a dimension at the given position.")
+      .def_static(
+          "get_symbol", &PyAffineSymbolExpr::get, py::arg("position"),
+          py::arg("context") = py::none(),
+          "Gets an affine expression of a symbol at the given position.")
+      .def(
+          "dump", [](PyAffineExpr &self) { mlirAffineExprDump(self); },
+          kDumpDocstring);
+  PyAffineConstantExpr::bind(m);
+  PyAffineDimExpr::bind(m);
+  PyAffineSymbolExpr::bind(m);
+  PyAffineBinaryExpr::bind(m);
+  PyAffineAddExpr::bind(m);
+  PyAffineMulExpr::bind(m);
+  PyAffineModExpr::bind(m);
+  PyAffineFloorDivExpr::bind(m);
+  PyAffineCeilDivExpr::bind(m);
 
   //----------------------------------------------------------------------------
   // Mapping of PyAffineMap.
