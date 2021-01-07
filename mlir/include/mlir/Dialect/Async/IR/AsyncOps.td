@@ -241,7 +241,7 @@ def Async_AwaitAllOp : Async_Op<"await_all", []> {
 //   1. Operation returns async result (e.g. the result of an `async.execute`).
 //   2. Async value passed in as a block argument.
 //
-// It is the responsiblity of the async value user to extend the lifetime by
+// It is the responsibility of the async value user to extend the lifetime by
 // adding a +1 reference, if the reference counted value captured by the
 // asynchronously executed region (`async.execute` operation), and drop it after
 // the last nested use.

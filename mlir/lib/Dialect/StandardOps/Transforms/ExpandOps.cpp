@@ -1,4 +1,4 @@
-//===- StdExpandDivs.cpp - Code to prepare Std for lowring Divs 0to LLVM  -===//
+//===- StdExpandDivs.cpp - Code to prepare Std for lowering Divs to LLVM  -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file Std transformations to expand Divs operation to help for the
-// lowering to LLVM. Currently implemented tranformations are Ceil and Floor
+// lowering to LLVM. Currently implemented transformations are Ceil and Floor
 // for Signed Integers.
 //
 //===----------------------------------------------------------------------===//

@@ -23,7 +23,7 @@ namespace mlir {
 namespace tosa {
 
 //===----------------------------------------------------------------------===//
-// Utililty functions to support quantization handling in Tosa.
+// Utility functions to support quantization handling in Tosa.
 //===----------------------------------------------------------------------===//
 
 /// From a scale value, computes multiplier and shift values

@@ -207,7 +207,7 @@ public:
   }
 
   static void bind(py::module &m) {
-    py::class_<PyRegionList>(m, "ReqionSequence")
+    py::class_<PyRegionList>(m, "RegionSequence")
         .def("__len__", &PyRegionList::dunderLen)
         .def("__getitem__", &PyRegionList::dunderGetItem);
   }

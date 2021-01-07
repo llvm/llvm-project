@@ -296,7 +296,7 @@ static LogicalResult verify(OperationOp op) {
                             << resultTypes.size() << " constraints";
   }
 
-  // If the operation is within a rewrite body and doesn't have type inferrence,
+  // If the operation is within a rewrite body and doesn't have type inference,
   // ensure that the result types can be resolved.
   if (isWithinRewrite && !op.hasTypeInference()) {
     if (failed(verifyResultTypesAreInferrable(op, opResults, resultTypes)))

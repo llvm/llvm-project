@@ -143,7 +143,7 @@ private:
                        PDLByteCodeMutableState &state,
                        SmallVectorImpl<MatchResult> *matches) const;
 
-  /// A vector containing pointers to unqiued data. The storage is intentionally
+  /// A vector containing pointers to uniqued data. The storage is intentionally
   /// opaque such that we can store a wide range of data types. The types of
   /// data stored here include:
   ///  * Attribute, Identifier, OperationName, Type

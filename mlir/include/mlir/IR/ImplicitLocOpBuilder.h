@@ -17,7 +17,7 @@
 
 namespace mlir {
 
-/// ImplictLocOpBuilder maintains a 'current location', allowing use of the
+/// ImplicitLocOpBuilder maintains a 'current location', allowing use of the
 /// create<> method without specifying the location.  It is otherwise the same
 /// as OpBuilder.
 class ImplicitLocOpBuilder : public mlir::OpBuilder {

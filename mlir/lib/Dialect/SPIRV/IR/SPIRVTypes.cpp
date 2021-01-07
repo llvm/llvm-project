@@ -752,7 +752,7 @@ struct spirv::detail::StructTypeStorage : public TypeStorage {
   /// An identified struct type is uniqued only by the first part (field 0)
   /// of the key.
   ///
-  /// A literal struct type is unqiued only by the second part (fields 1, 2, and
+  /// A literal struct type is uniqued only by the second part (fields 1, 2, and
   /// 3) of the key. The identifier field (field 0) must be empty.
   using KeyTy =
       std::tuple<StringRef, ArrayRef<Type>, ArrayRef<StructType::OffsetInfo>,
