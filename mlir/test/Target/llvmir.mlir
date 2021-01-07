@@ -1360,6 +1360,50 @@ llvm.func @useInlineAsm(%arg0: !llvm.i32) {
 
 // -----
 
+llvm.func @fastmathFlagsFunc(!llvm.float) -> !llvm.float
+
+// CHECK-LABEL: @fastmathFlags
+llvm.func @fastmathFlags(%arg0: !llvm.float) {
+// CHECK: {{.*}} = fadd nnan ninf float {{.*}}, {{.*}}
+// CHECK: {{.*}} = fsub nnan ninf float {{.*}}, {{.*}}
+// CHECK: {{.*}} = fmul nnan ninf float {{.*}}, {{.*}}
+// CHECK: {{.*}} = fdiv nnan ninf float {{.*}}, {{.*}}
+// CHECK: {{.*}} = frem nnan ninf float {{.*}}, {{.*}}
+  %0 = llvm.fadd %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : !llvm.float
+  %1 = llvm.fsub %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : !llvm.float
+  %2 = llvm.fmul %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : !llvm.float
+  %3 = llvm.fdiv %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : !llvm.float
+  %4 = llvm.frem %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : !llvm.float
+
+// CHECK: {{.*}} = fcmp nnan ninf oeq {{.*}}, {{.*}}
+  %5 = llvm.fcmp "oeq" %arg0, %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : !llvm.float
+
+// CHECK: {{.*}} = fneg nnan ninf float {{.*}}
+  %6 = llvm.fneg %arg0 {fastmathFlags = #llvm.fastmath<nnan, ninf>} : !llvm.float
+
+// CHECK: {{.*}} = call float @fastmathFlagsFunc({{.*}})
+// CHECK: {{.*}} = call nnan float @fastmathFlagsFunc({{.*}})
+// CHECK: {{.*}} = call ninf float @fastmathFlagsFunc({{.*}})
+// CHECK: {{.*}} = call nsz float @fastmathFlagsFunc({{.*}})
+// CHECK: {{.*}} = call arcp float @fastmathFlagsFunc({{.*}})
+// CHECK: {{.*}} = call contract float @fastmathFlagsFunc({{.*}})
+// CHECK: {{.*}} = call afn float @fastmathFlagsFunc({{.*}})
+// CHECK: {{.*}} = call reassoc float @fastmathFlagsFunc({{.*}})
+// CHECK: {{.*}} = call fast float @fastmathFlagsFunc({{.*}})
+  %8 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<>} : (!llvm.float) -> (!llvm.float)
+  %9 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<nnan>} : (!llvm.float) -> (!llvm.float)
+  %10 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<ninf>} : (!llvm.float) -> (!llvm.float)
+  %11 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<nsz>} : (!llvm.float) -> (!llvm.float)
+  %12 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<arcp>} : (!llvm.float) -> (!llvm.float)
+  %13 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<contract>} : (!llvm.float) -> (!llvm.float)
+  %14 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<afn>} : (!llvm.float) -> (!llvm.float)
+  %15 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<reassoc>} : (!llvm.float) -> (!llvm.float)
+  %16 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<fast>} : (!llvm.float) -> (!llvm.float)
+  llvm.return
+}
+
+// -----
+
 // CHECK-LABEL: @switch_args
 llvm.func @switch_args(%arg0: !llvm.i32) {
   %0 = llvm.mlir.constant(5 : i32) : !llvm.i32
