@@ -720,6 +720,13 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
       addConstantFPValue(*VariableDie, DVal->getConstantFP());
     } else if (DVal->isConstantInt()) {
       addConstantValue(*VariableDie, DVal->getConstantInt(), DV.getType());
+    } else if (DVal->isTargetIndexLocation()) {
+      DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+      DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
+      const DIBasicType *BT = dyn_cast<DIBasicType>(
+          static_cast<const Metadata *>(DV.getVariable()->getType()));
+      DwarfDebug::emitDebugLocValue(*Asm, BT, *DVal, DwarfExpr);
+      addBlock(*VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
     }
     return VariableDie;
   }
