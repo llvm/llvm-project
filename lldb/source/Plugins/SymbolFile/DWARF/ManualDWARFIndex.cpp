@@ -28,8 +28,7 @@ void ManualDWARFIndex::Index() {
   SymbolFileDWARF &main_dwarf = *m_dwarf;
   m_dwarf = nullptr;
 
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, "%p", static_cast<void *>(&main_dwarf));
+  LLDB_SCOPED_TIMERF("%p", static_cast<void *>(&main_dwarf));
 
   DWARFDebugInfo &main_info = main_dwarf.DebugInfo();
   SymbolFileDWARFDwo *dwp_dwarf = main_dwarf.GetDwpSymbolFile().get();

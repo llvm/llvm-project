@@ -35,9 +35,7 @@ ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp, const FileSpec *file,
   ObjectFileSP object_file_sp;
 
   if (module_sp) {
-    static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-    Timer scoped_timer(
-        func_cat,
+    LLDB_SCOPED_TIMERF(
         "ObjectFile::FindPlugin (module = %s, file = %p, file_offset = "
         "0x%8.8" PRIx64 ", file_size = 0x%8.8" PRIx64 ")",
         module_sp->GetFileSpec().GetPath().c_str(),
@@ -174,9 +172,7 @@ ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
   ObjectFileSP object_file_sp;
 
   if (module_sp) {
-    static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-    Timer scoped_timer(func_cat,
-                       "ObjectFile::FindPlugin (module = "
+    LLDB_SCOPED_TIMERF("ObjectFile::FindPlugin (module = "
                        "%s, process = %p, header_addr = "
                        "0x%" PRIx64 ")",
                        module_sp->GetFileSpec().GetPath().c_str(),

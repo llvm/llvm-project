@@ -251,8 +251,7 @@ void Symtab::InitNameIndexes() {
   // Protected function, no need to lock mutex...
   if (!m_name_indexes_computed) {
     m_name_indexes_computed = true;
-    static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-    Timer scoped_timer(func_cat, "%s", LLVM_PRETTY_FUNCTION);
+    LLDB_SCOPED_TIMER();
     // Create the name index vector to be able to quickly search by name
     const size_t num_symbols = m_symbols.size();
     m_name_to_index.Reserve(num_symbols);
@@ -411,9 +410,8 @@ void Symtab::PreloadSymbols() {
 void Symtab::AppendSymbolNamesToMap(const IndexCollection &indexes,
                                     bool add_demangled, bool add_mangled,
                                     NameToIndexMap &name_to_index_map) const {
+  LLDB_SCOPED_TIMER();
   if (add_demangled || add_mangled) {
-    static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-    Timer scoped_timer(func_cat, "%s", LLVM_PRETTY_FUNCTION);
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
     // Create the name index vector to be able to quickly search by name
@@ -566,9 +564,7 @@ struct SymbolIndexComparator {
 void Symtab::SortSymbolIndexesByValue(std::vector<uint32_t> &indexes,
                                       bool remove_duplicates) const {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
+  LLDB_SCOPED_TIMER();
   // No need to sort if we have zero or one items...
   if (indexes.size() <= 1)
     return;
@@ -594,8 +590,7 @@ uint32_t Symtab::AppendSymbolIndexesWithName(ConstString symbol_name,
                                              std::vector<uint32_t> &indexes) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, "%s", LLVM_PRETTY_FUNCTION);
+  LLDB_SCOPED_TIMER();
   if (symbol_name) {
     if (!m_name_indexes_computed)
       InitNameIndexes();
@@ -611,8 +606,7 @@ uint32_t Symtab::AppendSymbolIndexesWithName(ConstString symbol_name,
                                              std::vector<uint32_t> &indexes) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, "%s", LLVM_PRETTY_FUNCTION);
+  LLDB_SCOPED_TIMER();
   if (symbol_name) {
     const size_t old_size = indexes.size();
     if (!m_name_indexes_computed)
@@ -741,8 +735,7 @@ Symtab::FindAllSymbolsWithNameAndType(ConstString name,
                                       std::vector<uint32_t> &symbol_indexes) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, "%s", LLVM_PRETTY_FUNCTION);
+  LLDB_SCOPED_TIMER();
   // Initialize all of the lookup by name indexes before converting NAME to a
   // uniqued string NAME_STR below.
   if (!m_name_indexes_computed)
@@ -760,8 +753,7 @@ void Symtab::FindAllSymbolsWithNameAndType(
     Visibility symbol_visibility, std::vector<uint32_t> &symbol_indexes) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, "%s", LLVM_PRETTY_FUNCTION);
+  LLDB_SCOPED_TIMER();
   // Initialize all of the lookup by name indexes before converting NAME to a
   // uniqued string NAME_STR below.
   if (!m_name_indexes_computed)
@@ -790,9 +782,7 @@ Symbol *Symtab::FindFirstSymbolWithNameAndType(ConstString name,
                                                Debug symbol_debug_type,
                                                Visibility symbol_visibility) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, "%s", LLVM_PRETTY_FUNCTION);
+  LLDB_SCOPED_TIMER();
   if (!m_name_indexes_computed)
     InitNameIndexes();
 

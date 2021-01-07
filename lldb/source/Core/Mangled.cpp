@@ -14,7 +14,6 @@
 #include "lldb/Utility/Logging.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
-#include "lldb/Utility/Timer.h"
 #include "lldb/lldb-enumerations.h"
 
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
@@ -227,12 +226,6 @@ static char *GetItaniumDemangledStr(const char *M) {
 // makes use of ItaniumPartialDemangler's rich demangle info
 bool Mangled::DemangleWithRichManglingInfo(
     RichManglingContext &context, SkipMangledNameFn *skip_mangled_name) {
-  // We need to generate and cache the demangled name.
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat,
-                     "Mangled::DemangleWithRichNameIndexInfo (m_mangled = %s)",
-                     m_mangled.GetCString());
-
   // Others are not meant to arrive here. ObjC names or C's main() for example
   // have their names stored in m_demangled, while m_mangled is empty.
   assert(m_mangled);
@@ -298,11 +291,6 @@ ConstString Mangled::GetDemangledName() const {
   // Check to make sure we have a valid mangled name and that we haven't
   // already decoded our mangled name.
   if (m_mangled && m_demangled.IsNull()) {
-    // We need to generate and cache the demangled name.
-    static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-    Timer scoped_timer(func_cat, "Mangled::GetDemangledName (m_mangled = %s)",
-                       m_mangled.GetCString());
-
     // Don't bother running anything that isn't mangled
     const char *mangled_name = m_mangled.GetCString();
     ManglingScheme mangling_scheme = GetManglingScheme(m_mangled.GetStringRef());
