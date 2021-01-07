@@ -134,9 +134,9 @@ static void createPHIsForSplitLoopExit(ArrayRef<BasicBlock *> Preds,
   }
 }
 
-BasicBlock *
-llvm::SplitCriticalEdge(Instruction *TI, unsigned SuccNum,
-                        const CriticalEdgeSplittingOptions &Options) {
+BasicBlock *llvm::SplitCriticalEdge(Instruction *TI, unsigned SuccNum,
+                                    const CriticalEdgeSplittingOptions &Options,
+                                    const Twine &BBName) {
   if (!isCriticalEdge(TI, SuccNum, Options.MergeIdenticalEdges))
     return nullptr;
 
@@ -196,8 +196,13 @@ llvm::SplitCriticalEdge(Instruction *TI, unsigned SuccNum,
   }
 
   // Create a new basic block, linking it into the CFG.
-  BasicBlock *NewBB = BasicBlock::Create(TI->getContext(),
-                      TIBB->getName() + "." + DestBB->getName() + "_crit_edge");
+  BasicBlock *NewBB = nullptr;
+  if (BBName.str() != "")
+    NewBB = BasicBlock::Create(TI->getContext(), BBName);
+  else
+    NewBB = BasicBlock::Create(TI->getContext(), TIBB->getName() + "." +
+                                                     DestBB->getName() +
+                                                     "_crit_edge");
   // Create our unconditional branch.
   BranchInst *NewBI = BranchInst::Create(DestBB, NewBB);
   NewBI->setDebugLoc(TI->getDebugLoc());

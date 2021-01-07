@@ -196,7 +196,8 @@ struct CriticalEdgeSplittingOptions {
 /// to.
 BasicBlock *SplitCriticalEdge(Instruction *TI, unsigned SuccNum,
                               const CriticalEdgeSplittingOptions &Options =
-                                  CriticalEdgeSplittingOptions());
+                                  CriticalEdgeSplittingOptions(),
+                              const Twine &BBName = "");
 
 inline BasicBlock *
 SplitCriticalEdge(BasicBlock *BB, succ_iterator SI,
@@ -248,7 +249,8 @@ unsigned SplitAllCriticalEdges(Function &F,
 /// basic block between \p From and \p To.
 BasicBlock *SplitEdge(BasicBlock *From, BasicBlock *To,
                       DominatorTree *DT = nullptr, LoopInfo *LI = nullptr,
-                      MemorySSAUpdater *MSSAU = nullptr);
+                      MemorySSAUpdater *MSSAU = nullptr,
+                      const Twine &BBName = "");
 
 /// Split the specified block at the specified instruction.
 ///
