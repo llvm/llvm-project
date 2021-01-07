@@ -152,7 +152,7 @@ public:
 
     // Add children present in the snapshot for not in the real CFG.
     auto &AddedChildren = It->second.DI[1];
-    Res.insert(Res.end(), AddedChildren.begin(), AddedChildren.end());
+    llvm::append_range(Res, AddedChildren);
 
     return Res;
   }
