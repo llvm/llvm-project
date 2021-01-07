@@ -440,12 +440,8 @@ BasicBlock *BasicBlock::splitBasicBlockBefore(iterator I, const Twine &BBName) {
 void BasicBlock::replacePhiUsesWith(BasicBlock *Old, BasicBlock *New) {
   // N.B. This might not be a complete BasicBlock, so don't assume
   // that it ends with a non-phi instruction.
-  for (iterator II = begin(), IE = end(); II != IE; ++II) {
-    PHINode *PN = dyn_cast<PHINode>(II);
-    if (!PN)
-      break;
-    PN->replaceIncomingBlockWith(Old, New);
-  }
+  for (PHINode &PN : phis())
+    PN.replaceIncomingBlockWith(Old, New);
 }
 
 void BasicBlock::replaceSuccessorsPhiUsesWith(BasicBlock *Old,
