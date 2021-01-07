@@ -897,7 +897,7 @@ struct SingleBlockImplicitTerminator {
 
     /// Ensure that the given region has the terminator required by this trait.
     /// If OpBuilder is provided, use it to build the terminator and notify the
-    /// OpBuilder litsteners accordingly. If only a Builder is provided, locally
+    /// OpBuilder listeners accordingly. If only a Builder is provided, locally
     /// construct an OpBuilder with no listeners; this should only be used if no
     /// OpBuilder is available at the call site, e.g., in the parser.
     static void ensureTerminator(Region &region, Builder &builder,

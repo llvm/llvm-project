@@ -932,7 +932,7 @@ def SPV_GLSLUClampOp : SPV_GLSLTernaryArithmeticOp<"UClamp", 44, SPV_SignlessOrU
     <!-- End of AutoGen section -->
     ```
     uclamp-op ::= ssa-id `=` `spv.GLSL.UClamp` ssa-use, ssa-use, ssa-use `:`
-               unsgined-signless-scalar-vector-type
+               unsigned-signless-scalar-vector-type
     ```
     #### Example:
 

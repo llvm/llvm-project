@@ -42,7 +42,7 @@ def FuncBufferize : Pass<"func-bufferize", "ModuleOp"> {
     As this pass rewrites function operations, it also rewrites the
     corresponding return operations. Other return-like operations that
     implement the `ReturnLike` trait are not rewritten in general, as they
-    require that the correspondign parent operation is also rewritten.
+    require that the corresponding parent operation is also rewritten.
     Finally, this pass fails for unknown terminators, as we cannot decide
     whether they need rewriting. 
   }];

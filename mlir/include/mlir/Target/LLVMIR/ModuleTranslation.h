@@ -154,7 +154,7 @@ protected:
   DenseMap<Block *, llvm::BasicBlock *> blockMapping;
 
   /// A mapping between MLIR LLVM dialect terminators and LLVM IR terminators
-  /// they are converted to. This allows for conneting PHI nodes to the source
+  /// they are converted to. This allows for connecting PHI nodes to the source
   /// values after all operations are converted.
   DenseMap<Operation *, llvm::Instruction *> branchMapping;
 };

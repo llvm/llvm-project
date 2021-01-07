@@ -246,9 +246,9 @@ private:
   std::unique_ptr<detail::PassPipelineCLParserImpl> impl;
 };
 
-/// This class implements a command-line parser spefically for MLIR pass names.
-/// It registers a cl option with a given argument and description that accepts
-/// a comma delimited list of pass names.
+/// This class implements a command-line parser specifically for MLIR pass
+/// names. It registers a cl option with a given argument and description that
+/// accepts a comma delimited list of pass names.
 class PassNameCLParser {
 public:
   /// Construct a parser with the given command line description.

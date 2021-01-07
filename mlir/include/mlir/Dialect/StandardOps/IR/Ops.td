@@ -1832,7 +1832,7 @@ def GlobalMemrefOp : Std_Op<"global_memref", [Symbol]> {
     // Uninitialized externally visible variable.
     global_memref @z : memref<3xf16> = uninitialized
 
-    // Externally visibile constant variable.
+    // Externally visible constant variable.
     global_memref constant @c : memref<2xi32> = dense<1, 4>
     ```
   }];

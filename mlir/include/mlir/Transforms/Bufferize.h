@@ -45,7 +45,7 @@ public:
 /// "legal" in the given ConversionTarget.
 ///
 /// This function should be called by all bufferization passes using
-/// BufferizeTypeConverter so that materializations work proprely. One exception
+/// BufferizeTypeConverter so that materializations work properly. One exception
 /// is bufferization passes doing "full" conversions, where it can be desirable
 /// for even the materializations to remain illegal so that they are eliminated,
 /// such as via the patterns in

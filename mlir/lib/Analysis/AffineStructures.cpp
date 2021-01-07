@@ -1061,7 +1061,7 @@ FlatAffineConstraints::findIntegerSample() const {
 /// constant term.
 static int64_t valueAt(ArrayRef<int64_t> expr, ArrayRef<int64_t> point) {
   assert(expr.size() == 1 + point.size() &&
-         "Dimensionalities of point and expresion don't match!");
+         "Dimensionalities of point and expression don't match!");
   int64_t value = expr.back();
   for (unsigned i = 0; i < point.size(); ++i)
     value += expr[i] * point[i];
