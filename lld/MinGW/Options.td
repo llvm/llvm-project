@@ -28,6 +28,9 @@ defm allow_multiple_definition: B<"allow-multiple-definition",
     "Do not allow multiple definitions (default)">;
 def Bdynamic: F<"Bdynamic">, HelpText<"Link against shared libraries">;
 def Bstatic: F<"Bstatic">, HelpText<"Do not link against shared libraries">;
+defm demangle: B<"demangle",
+    "Demangle symbol names (default)",
+    "Do not demangle symbol names">;
 def disable_auto_import: F<"disable-auto-import">,
     HelpText<"Don't automatically import data symbols from other DLLs without dllimport">;
 def disable_runtime_pseudo_reloc: F<"disable-runtime-pseudo-reloc">,
