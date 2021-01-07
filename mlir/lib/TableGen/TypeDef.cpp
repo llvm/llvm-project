@@ -145,7 +145,7 @@ StringRef TypeParameter::getCppType() const {
 Optional<StringRef> TypeParameter::getSummary() const {
   auto *parameterType = def->getArg(num);
   if (auto *typeParameter = dyn_cast<llvm::DefInit>(parameterType)) {
-    const auto *desc = typeParameter->getDef()->getValue("description");
+    const auto *desc = typeParameter->getDef()->getValue("summary");
     if (llvm::StringInit *ci = dyn_cast<llvm::StringInit>(desc->getValue()))
       return ci->getValue();
   }
