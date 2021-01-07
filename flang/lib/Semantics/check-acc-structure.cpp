@@ -134,9 +134,30 @@ void AccStructureChecker::Enter(
 }
 
 void AccStructureChecker::Leave(
-    const parser::OpenACCStandaloneDeclarativeConstruct &) {
+    const parser::OpenACCStandaloneDeclarativeConstruct &x) {
   // Restriction - line 2409
   CheckAtLeastOneClause();
+
+  // Restriction - line 2417-2418 - In a Fortran module declaration section,
+  // only create, copyin, device_resident, and link clauses are allowed.
+  const auto &declarativeDir{std::get<parser::AccDeclarativeDirective>(x.t)};
+  const auto &scope{context_.FindScope(declarativeDir.source)};
+  const Scope &containingScope{GetProgramUnitContaining(scope)};
+  if (containingScope.kind() == Scope::Kind::Module) {
+    for (auto cl : GetContext().actualClauses) {
+      if (cl != llvm::acc::Clause::ACCC_create &&
+          cl != llvm::acc::Clause::ACCC_copyin &&
+          cl != llvm::acc::Clause::ACCC_device_resident &&
+          cl != llvm::acc::Clause::ACCC_link)
+        context_.Say(GetContext().directiveSource,
+            "%s clause is not allowed on the %s directive in module "
+            "declaration "
+            "section"_err_en_US,
+            parser::ToUpperCaseLetters(
+                llvm::acc::getOpenACCClauseName(cl).str()),
+            ContextDirectiveAsFortran());
+    }
+  }
   dirContext_.pop_back();
 }
 
