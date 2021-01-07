@@ -508,6 +508,68 @@ TEST_F(CommandLineTest, StringVectorMultiple) {
   ASSERT_THAT(GeneratedArgs, ContainsN(HasSubstr("-fmodule-map-file"), 2));
 }
 
+// A flag that should be parsed only if a condition is met.
+
+TEST_F(CommandLineTest, ConditionalParsingIfFalseFlagNotPresent) {
+  const char *Args[] = {""};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_FALSE(Invocation.getLangOpts()->SYCL);
+  ASSERT_EQ(Invocation.getLangOpts()->getSYCLVersion(), LangOptions::SYCL_None);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fsycl"))));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(HasSubstr("-sycl-std="))));
+}
+
+TEST_F(CommandLineTest, ConditionalParsingIfFalseFlagPresent) {
+  const char *Args[] = {"-sycl-std=2017"};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_FALSE(Invocation.getLangOpts()->SYCL);
+  ASSERT_EQ(Invocation.getLangOpts()->getSYCLVersion(), LangOptions::SYCL_None);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+
+  ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fsycl"))));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(HasSubstr("-sycl-std="))));
+}
+
+TEST_F(CommandLineTest, ConditionalParsingIfTrueFlagNotPresent) {
+  const char *Args[] = {"-fsycl"};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(Invocation.getLangOpts()->SYCL);
+  ASSERT_EQ(Invocation.getLangOpts()->getSYCLVersion(), LangOptions::SYCL_None);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+
+  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-fsycl")));
+  ASSERT_THAT(GeneratedArgs, Not(Contains(HasSubstr("-sycl-std="))));
+}
+
+TEST_F(CommandLineTest, ConditionalParsingIfTrueFlagPresent) {
+  const char *Args[] = {"-fsycl", "-sycl-std=2017"};
+
+  CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags);
+
+  ASSERT_FALSE(Diags->hasErrorOccurred());
+  ASSERT_TRUE(Invocation.getLangOpts()->SYCL);
+  ASSERT_EQ(Invocation.getLangOpts()->getSYCLVersion(), LangOptions::SYCL_2017);
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+
+  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-fsycl")));
+  ASSERT_THAT(GeneratedArgs, Contains(StrEq("-sycl-std=2017")));
+}
+
 // Wide integer option.
 
 TEST_F(CommandLineTest, WideIntegerHighValue) {
