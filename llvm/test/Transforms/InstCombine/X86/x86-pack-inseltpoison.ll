@@ -244,7 +244,7 @@ define <16 x i8> @elts_packsswb_128(<8 x i16> %a0, <8 x i16> %a1) {
 
 define <16 x i8> @elts_packuswb_128(<8 x i16> %a0, <8 x i16> %a1) {
 ; CHECK-LABEL: @elts_packuswb_128(
-; CHECK-NEXT:    ret <16 x i8> undef
+; CHECK-NEXT:    ret <16 x i8> poison
 ;
   %1 = insertelement <8 x i16> poison, i16 0, i32 0
   %2 = insertelement <8 x i16> poison, i16 0, i32 0
@@ -293,7 +293,7 @@ define <32 x i8> @elts_packsswb_256(<16 x i16> %a0, <16 x i16> %a1) {
 
 define <32 x i8> @elts_packuswb_256(<16 x i16> %a0, <16 x i16> %a1) {
 ; CHECK-LABEL: @elts_packuswb_256(
-; CHECK-NEXT:    ret <32 x i8> undef
+; CHECK-NEXT:    ret <32 x i8> poison
 ;
   %1 = insertelement <16 x i16> poison, i16 0, i32 1
   %2 = insertelement <16 x i16> poison, i16 0, i32 0
@@ -344,7 +344,7 @@ define <64 x i8> @elts_packsswb_512(<32 x i16> %a0, <32 x i16> %a1) {
 
 define <64 x i8> @elts_packuswb_512(<32 x i16> %a0, <32 x i16> %a1) {
 ; CHECK-LABEL: @elts_packuswb_512(
-; CHECK-NEXT:    ret <64 x i8> undef
+; CHECK-NEXT:    ret <64 x i8> poison
 ;
   %1 = insertelement <32 x i16> poison, i16 0, i32 1
   %2 = insertelement <32 x i16> poison, i16 0, i32 0

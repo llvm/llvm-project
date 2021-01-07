@@ -1339,17 +1339,20 @@ Constant *ConstantVector::getImpl(ArrayRef<Constant*> V) {
   Constant *C = V[0];
   bool isZero = C->isNullValue();
   bool isUndef = isa<UndefValue>(C);
+  bool isPoison = isa<PoisonValue>(C);
 
   if (isZero || isUndef) {
     for (unsigned i = 1, e = V.size(); i != e; ++i)
       if (V[i] != C) {
-        isZero = isUndef = false;
+        isZero = isUndef = isPoison = false;
         break;
       }
   }
 
   if (isZero)
     return ConstantAggregateZero::get(T);
+  if (isPoison)
+    return PoisonValue::get(T);
   if (isUndef)
     return UndefValue::get(T);
 
