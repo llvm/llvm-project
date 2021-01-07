@@ -6199,8 +6199,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if ((C.getDriver().isSaveTempsEnabled() ||
        JA.isHostOffloading(Action::OFK_OpenMP)) &&
       !(C.getDriver().embedBitcodeInObject() && !C.getDriver().isUsingLTO()) &&
-      isa<CompileJobAction>(JA))
-    CmdArgs.push_back("-disable-llvm-passes");
+      isa<CompileJobAction>(JA)) {
+    // We do not want to disable llvm opt passes if we are offloading
+    // amdgpu openmp code, and -save-temps is specified.
+    // We want the same opt passes run regardless of setting -save-temps.
+    if (!(Triple.isAMDGCN() && C.getDriver().isSaveTempsEnabled() &&
+          JA.getOffloadingDeviceKind() == Action::OFK_OpenMP))
+      CmdArgs.push_back("-disable-llvm-passes");
+  }
 
   Args.AddAllArgs(CmdArgs, options::OPT_undef);
 
