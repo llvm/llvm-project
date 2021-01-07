@@ -2244,7 +2244,7 @@ static constexpr const FastmathFlags FastmathFlagsList[] = {
 void FMFAttr::print(DialectAsmPrinter &printer) const {
   printer << "fastmath<";
   auto flags = llvm::make_filter_range(FastmathFlagsList, [&](auto flag) {
-    return bitEnumContains(getFlags(), flag);
+    return bitEnumContains(this->getFlags(), flag);
   });
   llvm::interleaveComma(flags, printer,
                         [&](auto flag) { printer << stringifyEnum(flag); });
