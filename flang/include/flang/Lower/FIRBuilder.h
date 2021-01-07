@@ -102,6 +102,7 @@ public:
   mlir::Value allocateLocal(mlir::Location loc, mlir::Type ty,
                             llvm::StringRef nm,
                             llvm::ArrayRef<mlir::Value> shape,
+                            llvm::ArrayRef<mlir::Value> lenParams,
                             bool asTarget = false);
 
   /// Create a temporary. A temp is allocated using `fir.alloca` and can be read

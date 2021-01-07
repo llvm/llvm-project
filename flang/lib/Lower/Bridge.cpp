@@ -1852,7 +1852,8 @@ private:
   mlir::Value createNewLocal(mlir::Location loc,
                              const Fortran::lower::pft::Variable &var,
                              mlir::Value preAlloc,
-                             llvm::ArrayRef<mlir::Value> shape = {}) {
+                             llvm::ArrayRef<mlir::Value> shape = {},
+                             llvm::ArrayRef<mlir::Value> lenParams = {}) {
     if (preAlloc)
       return preAlloc;
     auto nm = mangleName(var.getSymbol());
@@ -1866,9 +1867,11 @@ private:
         for (unsigned i = 0, end = arrTy.getDimension(); i < end; ++i)
           if (typeShape[i] == fir::SequenceType::getUnknownExtent())
             args.push_back(shape[i]);
-        return builder->allocateLocal(loc, ty, nm, args, var.isTarget());
+        return builder->allocateLocal(loc, ty, nm, args, lenParams,
+                                      var.isTarget());
       }
-    auto local = builder->allocateLocal(loc, ty, nm, shape, var.isTarget());
+    auto local =
+        builder->allocateLocal(loc, ty, nm, shape, lenParams, var.isTarget());
     // Set local pointer/allocatable to null.
     if (var.isHeapAlloc() || var.isPointer()) {
       auto zero =
@@ -2051,8 +2054,9 @@ private:
     auto size = std::get<1>(var.getInterval());
     fir::SequenceType::Shape shape(1, size);
     auto seqTy = fir::SequenceType::get(shape, i8Ty);
-    auto local = builder->allocateLocal(toLocation(), seqTy, "", llvm::None,
-                                        /*target=*/false);
+    auto local =
+        builder->allocateLocal(toLocation(), seqTy, "", llvm::None, llvm::None,
+                               /*target=*/false);
     insertAggregateStore(storeMap, var, local);
   }
   /// Instantiate a member of an equivalence. Compute its address in its
@@ -2264,8 +2268,9 @@ private:
                               const Fortran::lower::pft::Variable &var,
                               mlir::Type varType) {
     auto boxTy = fir::BoxType::get(varType);
-    auto boxAlloc = builder->allocateLocal(
-        loc, boxTy, mangleName(var.getSymbol()), llvm::None, var.isTarget());
+    auto boxAlloc =
+        builder->allocateLocal(loc, boxTy, mangleName(var.getSymbol()),
+                               llvm::None, llvm::None, var.isTarget());
     localSymbols.addSymbol(var.getSymbol(), boxAlloc);
     // TODO Note: for globals, we want to init desc only once, so ideally we
     // probably want to avoid a runtime call to do this.
@@ -2435,9 +2440,8 @@ private:
             addCharSymbol(sym, preAlloc, len);
             return;
           }
-          auto charTy = genType(var);
-          auto local = charHelp.createCharacterTemp(charTy, charLen);
-          addCharSymbol(sym, local.getBuffer(), local.getLen());
+          auto local = createNewLocal(loc, var, preAlloc);
+          addCharSymbol(sym, local, len);
         },
 
         //===--------------------------------------------------------------===//
@@ -2479,8 +2483,9 @@ private:
             addCharSymbol(sym, preAlloc, len);
             return;
           }
-          auto local = charHelp.createCharacterTemp(genType(var), len);
-          addCharSymbol(sym, local.getBuffer(), local.getLen());
+          llvm::SmallVector<mlir::Value, 1> lengths = {len};
+          auto local = createNewLocal(loc, var, preAlloc, llvm::None, lengths);
+          addCharSymbol(sym, local, len);
         },
 
         //===--------------------------------------------------------------===//
@@ -2627,9 +2632,8 @@ private:
           // local CHARACTER array with computed bounds
           assert(Fortran::lower::isExplicitShape(sym) ||
                  Fortran::semantics::IsAllocatableOrPointer(sym));
-          llvm::SmallVector<mlir::Value, 8> shape = {len};
-          shape.append(extents.begin(), extents.end());
-          auto local = createNewLocal(loc, var, preAlloc, shape);
+          llvm::SmallVector<mlir::Value, 1> lengths = {len};
+          auto local = createNewLocal(loc, var, preAlloc, extents, lengths);
           localSymbols.addCharSymbolWithBounds(sym, local, len, extents,
                                                lbounds);
         },
@@ -2661,6 +2665,7 @@ private:
             else
               len = builder->createIntegerConstant(loc, idxTy, sym.size());
           }
+          llvm::SmallVector<mlir::Value, 1> lengths = {len};
 
           // cast to the known constant parts from the declaration
           auto castTy = builder->getRefType(genType(var));
@@ -2677,7 +2682,8 @@ private:
               return;
             }
             // local CHARACTER array with constant size
-            auto local = createNewLocal(loc, var, preAlloc);
+            auto local =
+                createNewLocal(loc, var, preAlloc, llvm::None, lengths);
             localSymbols.addCharSymbolWithShape(sym, local, len, shape);
             return;
           }
@@ -2702,10 +2708,7 @@ private:
           assert((!mustBeDummy) &&
                  (Fortran::lower::isExplicitShape(sym) ||
                   Fortran::semantics::IsAllocatableOrPointer(sym)));
-          llvm::SmallVector<mlir::Value, 8> shape;
-          shape.push_back(len);
-          shape.append(extents.begin(), extents.end());
-          auto local = createNewLocal(loc, var, preAlloc, shape);
+          auto local = createNewLocal(loc, var, preAlloc, llvm::None, lengths);
           localSymbols.addCharSymbolWithBounds(sym, local, len, extents,
                                                lbounds);
         },
@@ -2746,8 +2749,8 @@ private:
               localSymbols.addCharSymbolWithShape(sym, addr, len, shape, true);
               return;
             }
-            // local CHARACTER array with constant size
-            auto local = createNewLocal(loc, var, preAlloc);
+            // local CHARACTER array
+            auto local = createNewLocal(loc, var, preAlloc, shape);
             localSymbols.addCharSymbolWithShape(sym, local, len, shape);
             return;
           }
@@ -2763,10 +2766,7 @@ private:
           // local CHARACTER array with computed bounds
           assert(Fortran::lower::isExplicitShape(sym) ||
                  Fortran::semantics::IsAllocatableOrPointer(sym));
-          llvm::SmallVector<mlir::Value, 8> shape;
-          shape.push_back(len);
-          shape.append(extents.begin(), extents.end());
-          auto local = createNewLocal(loc, var, preAlloc, shape);
+          auto local = createNewLocal(loc, var, preAlloc, extents);
           localSymbols.addCharSymbolWithBounds(sym, local, len, extents,
                                                lbounds);
         },
@@ -2810,6 +2810,7 @@ private:
             else
               len = builder->createIntegerConstant(loc, idxTy, sym.size());
           }
+          llvm::SmallVector<mlir::Value, 1> lengths = {len};
 
           // cast to the known constant parts from the declaration
           auto castTy = builder->getRefType(genType(var));
@@ -2823,8 +2824,8 @@ private:
               localSymbols.addCharSymbolWithShape(sym, addr, len, shape, true);
               return;
             }
-            // local CHARACTER array with constant size
-            auto local = createNewLocal(loc, var, preAlloc);
+            // local CHARACTER array
+            auto local = createNewLocal(loc, var, preAlloc, shape, lengths);
             localSymbols.addCharSymbolWithShape(sym, local, len, shape);
             return;
           }
@@ -2840,10 +2841,7 @@ private:
           // local CHARACTER array with computed bounds
           assert(Fortran::lower::isExplicitShape(sym) ||
                  Fortran::semantics::IsAllocatableOrPointer(sym));
-          llvm::SmallVector<mlir::Value, 8> shape;
-          shape.push_back(len);
-          shape.append(extents.begin(), extents.end());
-          auto local = createNewLocal(loc, var, preAlloc, shape);
+          auto local = createNewLocal(loc, var, preAlloc, extents, lengths);
           localSymbols.addCharSymbolWithBounds(sym, local, len, extents,
                                                lbounds);
         },
