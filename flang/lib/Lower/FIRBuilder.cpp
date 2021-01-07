@@ -95,9 +95,15 @@ mlir::Value Fortran::lower::FirOpBuilder::createRealConstant(
 
 mlir::Value Fortran::lower::FirOpBuilder::allocateLocal(
     mlir::Location loc, mlir::Type ty, llvm::StringRef nm,
-    llvm::ArrayRef<mlir::Value> shape, bool asTarget) {
+    llvm::ArrayRef<mlir::Value> shape, llvm::ArrayRef<mlir::Value> lenParams,
+    bool asTarget) {
   llvm::SmallVector<mlir::Value, 8> indices;
   auto idxTy = getIndexType();
+  // FIXME: AllocaOp has a lenParams argument, but it is ignored, so add lengths
+  // into the index so far (for characters, that works OK).
+  llvm::for_each(lenParams, [&](mlir::Value sh) {
+    indices.push_back(createConvert(loc, idxTy, sh));
+  });
   llvm::for_each(shape, [&](mlir::Value sh) {
     indices.push_back(createConvert(loc, idxTy, sh));
   });
