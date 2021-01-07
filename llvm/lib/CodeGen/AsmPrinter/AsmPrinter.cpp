@@ -949,6 +949,8 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
   } else if (MI->getDebugOperand(0).isTargetIndex()) {
     auto Op = MI->getDebugOperand(0);
     OS << "!target-index(" << Op.getIndex() << "," << Op.getOffset() << ")";
+    // NOTE: Want this comment at start of line, don't emit with AddComment.
+    AP.OutStreamer->emitRawComment(OS.str());
     return true;
   } else {
     Register Reg;
