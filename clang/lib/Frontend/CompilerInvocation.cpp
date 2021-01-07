@@ -328,7 +328,8 @@ static void denormalizeStringVector(SmallVectorImpl<const char *> &Args,
                                     Option::OptionClass OptClass,
                                     unsigned TableIndex,
                                     const std::vector<std::string> &Values) {
-  if (OptClass == Option::OptionClass::CommaJoinedClass) {
+  switch (OptClass) {
+  case Option::CommaJoinedClass: {
     std::string CommaJoinedValue;
     if (!Values.empty()) {
       CommaJoinedValue.append(Values.front());
@@ -339,9 +340,17 @@ static void denormalizeStringVector(SmallVectorImpl<const char *> &Args,
     }
     denormalizeString(Args, Spelling, SA, Option::OptionClass::JoinedClass,
                       TableIndex, CommaJoinedValue);
-  } else if (OptClass == Option::OptionClass::JoinedClass) {
+    break;
+  }
+  case Option::JoinedClass:
+  case Option::SeparateClass:
+  case Option::JoinedOrSeparateClass:
     for (const std::string &Value : Values)
       denormalizeString(Args, Spelling, SA, OptClass, TableIndex, Value);
+    break;
+  default:
+    llvm_unreachable("Cannot denormalize an option with option class "
+                     "incompatible with string vector denormalization.");
   }
 }
 
@@ -1082,8 +1091,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     }
   }
 
-  Opts.Reciprocals = Args.getAllArgValues(OPT_mrecip_EQ);
-
   // Basic Block Sections implies Function Sections.
   Opts.FunctionSections =
       Args.hasArg(OPT_ffunction_sections) ||
@@ -1213,10 +1220,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     }
     Opts.LinkBitcodeFiles.push_back(F);
   }
-  Opts.SanitizeCoverageAllowlistFiles =
-      Args.getAllArgValues(OPT_fsanitize_coverage_allowlist);
-  Opts.SanitizeCoverageBlocklistFiles =
-      Args.getAllArgValues(OPT_fsanitize_coverage_blocklist);
   Opts.SSPBufferSize =
       getLastArgIntValue(Args, OPT_stack_protector_buffer_size, 8, Diags);
 
@@ -1298,8 +1301,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     }
   }
 
-  Opts.DependentLibraries = Args.getAllArgValues(OPT_dependent_lib);
-  Opts.LinkerOptions = Args.getAllArgValues(OPT_linker_option);
   bool NeedLocTracking = false;
 
   if (!Opts.OptRecordFile.empty())
@@ -1373,8 +1374,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   if (NeedLocTracking && Opts.getDebugInfo() == codegenoptions::NoDebugInfo)
     Opts.setDebugInfo(codegenoptions::LocTrackingOnly);
 
-  Opts.RewriteMapFiles = Args.getAllArgValues(OPT_frewrite_map_file);
-
   // Parse -fsanitize-recover= arguments.
   // FIXME: Report unrecoverable sanitizers incorrectly specified here.
   parseSanitizerKinds("-fsanitize-recover=",
@@ -1389,8 +1388,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Success &=
       parsePointerAuthOptions(Opts.PointerAuth, Args, LangOpts, Triple, Diags);
 
-  Opts.DefaultFunctionAttrs = Args.getAllArgValues(OPT_default_function_attr);
-
   // -f[no-]split-cold-code
   // This may only be enabled when optimizing, and when small code size
   // increases are tolerable.
@@ -1400,14 +1397,11 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
       (Opts.OptimizationLevel > 0) && (Opts.OptimizeSize != 2) &&
       Args.hasFlag(OPT_fsplit_cold_code, OPT_fno_split_cold_code, true);
 
-  Opts.PassPlugins = Args.getAllArgValues(OPT_fpass_plugin_EQ);
-
   return Success;
 }
 
 static void ParseDependencyOutputArgs(DependencyOutputOptions &Opts,
                                       ArgList &Args) {
-  Opts.Targets = Args.getAllArgValues(OPT_MT);
   Opts.SkipUnusedModuleMaps = Args.hasArg(OPT_skip_unused_modulemap_file_deps);
   if (Args.hasArg(OPT_show_includes)) {
     // Writing both /showIncludes and preprocessor output to stdout
@@ -1586,7 +1580,6 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
   Opts.ShowParseableFixits = Args.hasArg(OPT_fdiagnostics_parseable_fixits);
   Opts.ShowPresumedLoc = !Args.hasArg(OPT_fno_diagnostics_use_presumed_location);
   Opts.VerifyDiagnostics = Args.hasArg(OPT_verify) || Args.hasArg(OPT_verify_EQ);
-  Opts.VerifyPrefixes = Args.getAllArgValues(OPT_verify_EQ);
   if (Args.hasArg(OPT_verify))
     Opts.VerifyPrefixes.push_back("expected");
   // Keep VerifyPrefixes in its original order for the sake of diagnostics, and
@@ -1632,8 +1625,6 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
   }
   Opts.MessageLength =
       getLastArgIntValue(Args, OPT_fmessage_length_EQ, 0, Diags);
-
-  Opts.UndefPrefixes = Args.getAllArgValues(OPT_Wundef_prefix_EQ);
 
   addDiagnosticArgs(Args, OPT_W_Group, OPT_W_value_Group, Opts.Warnings);
   addDiagnosticArgs(Args, OPT_R_Group, OPT_R_value_Group, Opts.Remarks);
@@ -1831,8 +1822,6 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   }
 
   Opts.Plugins = Args.getAllArgValues(OPT_load);
-  Opts.ASTMergeFiles = Args.getAllArgValues(OPT_ast_merge);
-  Opts.LLVMArgs = Args.getAllArgValues(OPT_mllvm);
   Opts.ASTDumpDecls = Args.hasArg(OPT_ast_dump, OPT_ast_dump_EQ);
   Opts.ASTDumpAll = Args.hasArg(OPT_ast_dump_all, OPT_ast_dump_all_EQ);
   // Only the -fmodule-file=<file> form.
@@ -1841,7 +1830,6 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
     if (Val.find('=') == StringRef::npos)
       Opts.ModuleFiles.push_back(std::string(Val));
   }
-  Opts.ModulesEmbedFiles = Args.getAllArgValues(OPT_fmodules_embed_file_EQ);
   Opts.AllowPCMWithCompilerErrors = Args.hasArg(OPT_fallow_pcm_with_errors);
 
   if (Opts.ProgramAction != frontend::GenerateModule && Opts.IsSystemModule)
@@ -2670,7 +2658,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
                         || Args.hasArg(OPT_fdump_record_layouts);
   if (Opts.FastRelaxedMath)
     Opts.setDefaultFPContractMode(LangOptions::FPM_Fast);
-  Opts.ModuleFeatures = Args.getAllArgValues(OPT_fmodule_feature);
   llvm::sort(Opts.ModuleFeatures);
   Opts.NativeHalfType |= Args.hasArg(OPT_fnative_half_type);
   Opts.NativeHalfArgsAndReturns |= Args.hasArg(OPT_fnative_half_arguments_and_returns);
@@ -2880,19 +2867,11 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   // Parse -fsanitize= arguments.
   parseSanitizerKinds("-fsanitize=", Args.getAllArgValues(OPT_fsanitize_EQ),
                       Diags, Opts.Sanitize);
-  Opts.SanitizerBlacklistFiles = Args.getAllArgValues(OPT_fsanitize_blacklist);
   std::vector<std::string> systemBlacklists =
       Args.getAllArgValues(OPT_fsanitize_system_blacklist);
   Opts.SanitizerBlacklistFiles.insert(Opts.SanitizerBlacklistFiles.end(),
                                       systemBlacklists.begin(),
                                       systemBlacklists.end());
-
-  // -fxray-{always,never}-instrument= filenames.
-  Opts.XRayAlwaysInstrumentFiles =
-      Args.getAllArgValues(OPT_fxray_always_instrument);
-  Opts.XRayNeverInstrumentFiles =
-      Args.getAllArgValues(OPT_fxray_never_instrument);
-  Opts.XRayAttrListFiles = Args.getAllArgValues(OPT_fxray_attr_list);
 
   if (Arg *A = Args.getLastArg(OPT_fclang_abi_compat_EQ)) {
     Opts.setClangABICompat(LangOptions::ClangABI::Latest);
@@ -3068,8 +3047,6 @@ static void ParsePreprocessorArgs(PreprocessorOptions &Opts, ArgList &Args,
       Opts.addMacroUndef(A->getValue());
   }
 
-  Opts.MacroIncludes = Args.getAllArgValues(OPT_imacros);
-
   // Add the ordered list of -includes.
   for (const auto *A : Args.filtered(OPT_include))
     Opts.Includes.emplace_back(A->getValue());
@@ -3108,8 +3085,6 @@ static void ParsePreprocessorOutputArgs(PreprocessorOutputOptions &Opts,
 
 static void ParseTargetArgs(TargetOptions &Opts, ArgList &Args,
                             DiagnosticsEngine &Diags) {
-  Opts.FeaturesAsWritten = Args.getAllArgValues(OPT_target_feature);
-  Opts.OpenCLExtensionsAsWritten = Args.getAllArgValues(OPT_cl_ext_EQ);
   Opts.AllowAMDGPUUnsafeFPAtomics =
       Args.hasFlag(options::OPT_munsafe_fp_atomics,
                    options::OPT_mno_unsafe_fp_atomics, false);
