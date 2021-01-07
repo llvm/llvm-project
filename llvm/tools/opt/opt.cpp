@@ -480,30 +480,22 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       return false;
 
   std::vector<StringRef> PassNamePrefix = {
-      "x86-",  "xcore-", "wasm-",    "systemz-", "ppc-",   "nvvm-",   "nvptx-",
-      "mips-", "lanai-", "hexagon-", "bpf-",     "avr-",   "thumb2-", "arm-",
-      "si-",   "gcn-",   "amdgpu-",  "aarch64-", "amdgcn-"};
+      "x86-",  "xcore-", "wasm-",    "systemz-", "ppc-",    "nvvm-",   "nvptx-",
+      "mips-", "lanai-", "hexagon-", "bpf-",     "avr-",    "thumb2-", "arm-",
+      "si-",   "gcn-",   "amdgpu-",  "aarch64-", "amdgcn-", "polly-"};
   std::vector<StringRef> PassNameContain = {"ehprepare"};
-  std::vector<StringRef> PassNameExact = {"safe-stack",
-                                          "cost-model",
-                                          "codegenprepare",
-                                          "interleaved-load-combine",
-                                          "unreachableblockelim",
-                                          "verify-safepoint-ir",
-                                          "divergence",
-                                          "atomic-expand",
-                                          "hardware-loops",
-                                          "type-promotion",
-                                          "mve-tail-predication",
-                                          "interleaved-access",
-                                          "global-merge",
-                                          "pre-isel-intrinsic-lowering",
-                                          "expand-reductions",
-                                          "indirectbr-expand",
-                                          "generic-to-nvvm",
-                                          "expandmemcmp",
-                                          "loop-reduce",
-                                          "lower-amx-type"};
+  std::vector<StringRef> PassNameExact = {
+      "safe-stack",           "cost-model",
+      "codegenprepare",       "interleaved-load-combine",
+      "unreachableblockelim", "verify-safepoint-ir",
+      "divergence",           "atomic-expand",
+      "hardware-loops",       "type-promotion",
+      "mve-tail-predication", "interleaved-access",
+      "global-merge",         "pre-isel-intrinsic-lowering",
+      "expand-reductions",    "indirectbr-expand",
+      "generic-to-nvvm",      "expandmemcmp",
+      "loop-reduce",          "lower-amx-type",
+      "polyhedral-info"};
   for (const auto &P : PassNamePrefix)
     if (Pass.startswith(P))
       return true;
