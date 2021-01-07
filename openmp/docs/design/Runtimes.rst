@@ -98,6 +98,85 @@ Or, to enable every flag run with every bit set.
 
    $ env LIBOMPTARGET_INFO=-1 ./your-application
 
+For example, given a small application implementing the ``ZAXPY`` BLAS routine,
+``Libomptarget`` can provide useful information about data mappings and thread
+usages.
+
+.. code-block:: c++
+
+    #include <complex>
+
+    using complex = std::complex<double>;
+
+    void zaxpy(complex *X, complex *Y, complex D, std::size_t N) {
+    #pragma omp target teams distribute parallel for
+      for (std::size_t i = 0; i < N; ++i)
+        Y[i] = D * X[i] + Y[i];
+    }
+
+    int main() {
+      const std::size_t N = 1024;
+      complex X[N], Y[N], D;
+    #pragma omp target data map(to:X[0 : N]) map(tofrom:Y[0 : N])
+      zaxpy(X, Y, D, N);
+    }
+
+Compiling this code targeting ``nvptx64`` with all information enabled will
+provide the following output from the runtime library.
+
+.. code-block:: console
+
+    $ clang++ -fopenmp -fopenmp-targets=nvptx64 -O3 -gline-tables-only zaxpy.cpp -o zaxpy
+    $ env LIBOMPTARGET_INFO=-1 ./zaxpy
+
+.. code-block:: text
+
+    Info: Device supports up to 65536 CUDA blocks and 1024 threads with a warp size of 32
+    Info: Entering OpenMP data region at zaxpy.cpp:14:1 with 2 arguments:
+    Info: to(X[0:N])[16384] 
+    Info: tofrom(Y[0:N])[16384] 
+    Info: OpenMP Host-Device pointer mappings after block at zaxpy.cpp:14:1:
+    Info: Host Ptr           Target Ptr         Size (B) RefCount Declaration
+    Info: 0x00007fff963f4000 0x00007fd225004000 16384    1        Y[0:N] at zaxpy.cpp:13:17
+    Info: 0x00007fff963f8000 0x00007fd225000000 16384    1        X[0:N] at zaxpy.cpp:13:11
+    Info: Entering OpenMP kernel at zaxpy.cpp:6:1 with 4 arguments:
+    Info: firstprivate(N)[8] (implicit)
+    Info: use_address(Y)[0] (implicit)
+    Info: tofrom(D)[16] (implicit)
+    Info: use_address(X)[0] (implicit)
+    Info: Mapping exists (implicit) with HstPtrBegin=0x00007ffe37d8be80, 
+          TgtPtrBegin=0x00007f90ff004000, Size=0, updated RefCount=2, Name=Y
+    Info: Mapping exists (implicit) with HstPtrBegin=0x00007ffe37d8fe80, 
+          TgtPtrBegin=0x00007f90ff000000, Size=0, updated RefCount=2, Name=X
+    Info: Launching kernel __omp_offloading_fd02_c2c4ac1a__Z5daxpyPNSt3__17complexIdEES2_S1_m_l6
+          with 8 blocks and 128 threads in SPMD mode
+    Info: OpenMP Host-Device pointer mappings after block at zaxpy.cpp:6:1:
+    Info: Host Ptr           Target Ptr         Size (B) RefCount Declaration
+    Info: 0x00007fff963f4000 0x00007fd225004000 16384    1        Y[0:N] at zaxpy.cpp:13:17
+    Info: 0x00007fff963f8000 0x00007fd225000000 16384    1        X[0:N] at zaxpy.cpp:13:11
+    Info: Exiting OpenMP data region at zaxpy.cpp:14:1 with 2 arguments:
+    Info: to(X[0:N])[16384] 
+    Info: tofrom(Y[0:N])[16384] 
+
+From this information, we can see the OpenMP kernel being launched on the CUDA
+device with enough threads and blocks for all ``1024`` iterations of the loop in
+simplified :doc:`SPMD Mode <Offloading>`. The information from the OpenMP data
+region shows the two arrays ``X`` and ``Y`` being copied from the host to the
+device. This creates an entry in the host-device mapping table associating the
+host pointers to the newly created device data. The data mappings in the OpenMP
+device kernel show the default mappings being used for all the variables used
+implicitly on the device. Because ``X`` and ``Y`` are already mapped in the
+device's table, no new entries are created. Additionally, the default mapping
+shows that ``D`` will be copied back from the device once the OpenMP device
+kernel region ends even though it isn't written to. Finally, at the end of the
+OpenMP data region the entries for ``X`` and ``Y`` are removed from the table.
+
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+
+   Offloading
+
 LLVM/OpenMP Target Host Runtime Plugins (``libomptarget.rtl.XXXX``)
 -------------------------------------------------------------------
 
