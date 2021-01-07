@@ -65,6 +65,10 @@ public:
   llvm::Error EnterSession(lldb::user_id_t debugger_id);
   llvm::Error LeaveSession();
 
+  void CollectDataForBreakpointCommandCallback(
+      std::vector<BreakpointOptions *> &bp_options_vec,
+      CommandReturnObject &result) override;
+
   Status SetBreakpointCommandCallback(BreakpointOptions *bp_options,
                                       const char *command_body_text) override;
 
