@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=HSA-TRAP %s
+; RUN: llc -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; FIXME: merge with trap.ll
 

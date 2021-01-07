@@ -1,13 +1,13 @@
 ; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=verde -amdgpu-use-divergent-register-indexing -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,SI,SIVI,MUBUF %s
 ; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=gfx803 -mattr=-flat-for-global -amdgpu-use-divergent-register-indexing -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,VI,SIVI,MUBUF %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-use-divergent-register-indexing -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX9,GFX9_10,MUBUF,GFX9-MUBUF,GFX9_10-MUBUF %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-use-divergent-register-indexing -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX9_10,MUBUF,GFX9-MUBUF,GFX9_10-MUBUF %s
 ; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=gfx900 -filetype=obj -amdgpu-use-divergent-register-indexing < %s | llvm-readobj -r - | FileCheck --check-prefix=RELS %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=gfx1010 -mattr=-flat-for-global -amdgpu-use-divergent-register-indexing -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX10_W32,GFX9_10,MUBUF,GFX10_W32-MUBUF,GFX9_10-MUBUF %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=gfx1010 -mattr=-flat-for-global,+wavefrontsize64 -amdgpu-use-divergent-register-indexing -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX10_W64,GFX9_10,MUBUF,GFX10_W64-MUBUF,GFX9_10-MUBUF %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-use-divergent-register-indexing -amdgpu-enable-flat-scratch -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX9,GFX9_10,FLATSCR,GFX9-FLATSCR %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=gfx1030 -mattr=-flat-for-global -amdgpu-use-divergent-register-indexing -amdgpu-enable-flat-scratch -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX10_W32,GFX9_10,FLATSCR,GFX10-FLATSCR,GFX9_10-FLATSCR %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn--amdpal -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-use-divergent-register-indexing -amdgpu-enable-flat-scratch -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX9,GFX9_10,FLATSCR,GFX9-FLATSCR-PAL %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn--amdpal -mcpu=gfx1030 -mattr=-flat-for-global -amdgpu-use-divergent-register-indexing -amdgpu-enable-flat-scratch -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX10_W32,GFX9_10,FLATSCR,GFX10-FLATSCR-PAL,GFX9_10-FLATSCR %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=gfx1010 -mattr=-flat-for-global -amdgpu-use-divergent-register-indexing -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX9_10,MUBUF,GFX10_W32-MUBUF,GFX9_10-MUBUF %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=gfx1010 -mattr=-flat-for-global,+wavefrontsize64 -amdgpu-use-divergent-register-indexing -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX9_10,MUBUF,GFX10_W64-MUBUF,GFX9_10-MUBUF %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-use-divergent-register-indexing -amdgpu-enable-flat-scratch -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX9_10,FLATSCR,GFX9-FLATSCR %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=gfx1030 -mattr=-flat-for-global -amdgpu-use-divergent-register-indexing -amdgpu-enable-flat-scratch -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX9_10,FLATSCR,GFX10-FLATSCR %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn--amdpal -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-use-divergent-register-indexing -amdgpu-enable-flat-scratch -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX9_10,FLATSCR,GFX9-FLATSCR-PAL %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn--amdpal -mcpu=gfx1030 -mattr=-flat-for-global -amdgpu-use-divergent-register-indexing -amdgpu-enable-flat-scratch -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX9_10,FLATSCR,GFX10-FLATSCR-PAL %s
 
 ; RELS: R_AMDGPU_ABS32_LO SCRATCH_RSRC_DWORD0
 ; RELS: R_AMDGPU_ABS32_LO SCRATCH_RSRC_DWORD1
