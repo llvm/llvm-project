@@ -15,13 +15,13 @@ mlir::Value Value({reinterpret_cast<void *>(0x8),
 mlir::Type Type(nullptr);
 mlir::Type IndexType = mlir::IndexType::get(&Context);
 mlir::Type IntegerType =
-    mlir::IntegerType::get(3, mlir::IntegerType::Unsigned, &Context);
+    mlir::IntegerType::get(&Context, 3, mlir::IntegerType::Unsigned);
 mlir::Type FloatType = mlir::Float32Type::get(&Context);
 mlir::Type MemRefType = mlir::MemRefType::get({4, 5}, FloatType);
 mlir::Type UnrankedMemRefType = mlir::UnrankedMemRefType::get(IntegerType, 6);
 mlir::Type VectorType = mlir::VectorType::get({1, 2}, FloatType);
 mlir::Type TupleType =
-    mlir::TupleType::get(mlir::TypeRange({IndexType, FloatType}), &Context);
+    mlir::TupleType::get(&Context, mlir::TypeRange({IndexType, FloatType}));
 
 auto UnknownLoc = mlir::UnknownLoc::get(&Context);
 auto FileLineColLoc = mlir::FileLineColLoc::get("file", 7, 8, &Context);
