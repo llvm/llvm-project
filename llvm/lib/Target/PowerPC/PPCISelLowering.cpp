@@ -2399,36 +2399,6 @@ SDValue PPC::get_VSPLTI_elt(SDNode *N, unsigned ByteSize, SelectionDAG &DAG) {
   return SDValue();
 }
 
-/// isQVALIGNIShuffleMask - If this is a qvaligni shuffle mask, return the shift
-/// amount, otherwise return -1.
-int PPC::isQVALIGNIShuffleMask(SDNode *N) {
-  EVT VT = N->getValueType(0);
-  if (VT != MVT::v4f64 && VT != MVT::v4f32 && VT != MVT::v4i1)
-    return -1;
-
-  ShuffleVectorSDNode *SVOp = cast<ShuffleVectorSDNode>(N);
-
-  // Find the first non-undef value in the shuffle mask.
-  unsigned i;
-  for (i = 0; i != 4 && SVOp->getMaskElt(i) < 0; ++i)
-    /*search*/;
-
-  if (i == 4) return -1;  // all undef.
-
-  // Otherwise, check to see if the rest of the elements are consecutively
-  // numbered from this value.
-  unsigned ShiftAmt = SVOp->getMaskElt(i);
-  if (ShiftAmt < i) return -1;
-  ShiftAmt -= i;
-
-  // Check the rest of the elements to see if they are consecutive.
-  for (++i; i != 4; ++i)
-    if (!isConstantOrUndef(SVOp->getMaskElt(i), ShiftAmt+i))
-      return -1;
-
-  return ShiftAmt;
-}
-
 //===----------------------------------------------------------------------===//
 //  Addressing Mode Selection
 //===----------------------------------------------------------------------===//
