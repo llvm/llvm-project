@@ -1653,6 +1653,7 @@ void coro::salvageDebugInfo(
     ++InsertPt;
   Builder.SetInsertPoint(&F->getEntryBlock(), InsertPt);
   DIExpression *Expr = DDI->getExpression();
+  assert(Expr && "null DIExpression");
   // Follow the pointer arithmetic all the way to the incoming
   // function argument and convert into a DIExpression.
   Value *Storage = DDI->getAddress();
@@ -1662,6 +1663,9 @@ void coro::salvageDebugInfo(
     } else if (auto *GEPInst = dyn_cast<GetElementPtrInst>(Storage)) {
       Expr = llvm::salvageDebugInfoImpl(*GEPInst, Expr,
                                         /*WithStackValue=*/false);
+      // Bail out if the expression couldn't be salvaged.
+      if (!Expr)
+        return;
       Storage = GEPInst->getOperand(0);
     } else if (auto *BCInst = dyn_cast<llvm::BitCastInst>(Storage))
       Storage = BCInst->getOperand(0);
