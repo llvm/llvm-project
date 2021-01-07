@@ -486,7 +486,9 @@ class PoisoningVH
 #endif
 
   ValueTy *getValPtr() const {
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     assert(!Poisoned && "Accessed a poisoned value handle!");
+#endif
     return static_cast<ValueTy *>(getRawValPtr());
   }
   void setValPtr(ValueTy *P) { setRawValPtr(GetAsValue(P)); }
