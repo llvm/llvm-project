@@ -1766,24 +1766,26 @@ static void updateCallGraphAfterCoroutineSplit(
     End->eraseFromParent();
   }
 
-  switch (Shape.ABI) {
-  case coro::ABI::Switch:
-    // Each clone in the Switch lowering is independent of the other clones. Let
-    // the LazyCallGraph know about each one separately.
-    for (Function *Clone : Clones)
-      CG.addSplitFunction(N.getFunction(), *Clone);
-    break;
-  case coro::ABI::Async:
-  case coro::ABI::Retcon:
-  case coro::ABI::RetconOnce:
-    // Each clone in the Async/Retcon lowering references of the other clones.
-    // Let the LazyCallGraph know about all of them at once.
-    CG.addSplitRefRecursiveFunctions(N.getFunction(), Clones);
-    break;
-  }
+  if (!Clones.empty()) {
+    switch (Shape.ABI) {
+    case coro::ABI::Switch:
+      // Each clone in the Switch lowering is independent of the other clones.
+      // Let the LazyCallGraph know about each one separately.
+      for (Function *Clone : Clones)
+        CG.addSplitFunction(N.getFunction(), *Clone);
+      break;
+    case coro::ABI::Async:
+    case coro::ABI::Retcon:
+    case coro::ABI::RetconOnce:
+      // Each clone in the Async/Retcon lowering references of the other clones.
+      // Let the LazyCallGraph know about all of them at once.
+      CG.addSplitRefRecursiveFunctions(N.getFunction(), Clones);
+      break;
+    }
 
-  // Let the CGSCC infra handle the changes to the original function.
-  updateCGAndAnalysisManagerForCGSCCPass(CG, C, N, AM, UR, FAM);
+    // Let the CGSCC infra handle the changes to the original function.
+    updateCGAndAnalysisManagerForCGSCCPass(CG, C, N, AM, UR, FAM);
+  }
 
   // Do some cleanup and let the CGSCC infra see if we've cleaned up any edges
   // to the split functions.
