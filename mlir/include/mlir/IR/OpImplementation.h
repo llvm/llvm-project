@@ -128,16 +128,15 @@ public:
   }
 
   /// Print the complete type of an operation in functional form.
-  void printFunctionalType(Operation *op) {
-    printFunctionalType(op->getOperandTypes(), op->getResultTypes());
-  }
+  void printFunctionalType(Operation *op);
+
   /// Print the two given type ranges in a functional form.
   template <typename InputRangeT, typename ResultRangeT>
   void printFunctionalType(InputRangeT &&inputs, ResultRangeT &&results) {
     auto &os = getStream();
-    os << "(";
+    os << '(';
     llvm::interleaveComma(inputs, *this);
-    os << ")";
+    os << ')';
     printArrowTypeList(results);
   }
 
@@ -414,7 +413,8 @@ public:
   virtual ParseResult parseOptionalEllipsis() = 0;
 
   /// Parse an integer value from the stream.
-  template <typename IntT> ParseResult parseInteger(IntT &result) {
+  template <typename IntT>
+  ParseResult parseInteger(IntT &result) {
     auto loc = getCurrentLocation();
     OptionalParseResult parseResult = parseOptionalInteger(result);
     if (!parseResult.hasValue())
