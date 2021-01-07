@@ -78,3 +78,19 @@ func @f(%arg0: i64) -> (i64 {test.invalid_attr}) {
 
 // expected-error@+1 {{symbol declaration cannot have public visibility}}
 func @invalid_public_declaration()
+
+// -----
+
+// expected-error@+1 {{'sym_visibility' is an inferred attribute and should not be specified in the explicit attribute dictionary}}
+func @legacy_visibility_syntax() attributes { sym_visibility = "private" }
+
+// -----
+
+// expected-error@+1 {{'sym_name' is an inferred attribute and should not be specified in the explicit attribute dictionary}}
+func private @invalid_symbol_name_attr() attributes { sym_name = "x" }
+
+// -----
+
+// expected-error@+1 {{'type' is an inferred attribute and should not be specified in the explicit attribute dictionary}}
+func private @invalid_symbol_type_attr() attributes { type = "x" }
+
