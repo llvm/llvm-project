@@ -19,11 +19,12 @@
 my_kernel.kd:
   .long 0x00000000           ;; group_segment_fixed_size
   .long 0x00000000           ;; private_segment_fixed_size
-  .quad 0x00FF000000000000   ;; reserved bytes.
+  .long 0x00000000           ;; kernarg_segment_size.
+  .long 0x00000000           ;; reserved bytes.
   .quad 0x0000000000000000   ;; kernel_code_entry_byte_offset, any value works.
 
   ;; 20 reserved bytes.
-  .quad 0x0000000000000000
+  .quad 0x00FF000000000000   ;; reserved bytes.
   .quad 0x0000000000000000
   .long 0x00000000
 

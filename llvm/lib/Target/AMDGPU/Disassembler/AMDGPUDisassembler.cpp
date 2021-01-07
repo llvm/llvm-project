@@ -1427,11 +1427,19 @@ AMDGPUDisassembler::decodeKernelDescriptorDirective(
              << FourByteBuffer << '\n';
     return MCDisassembler::Success;
 
+  case amdhsa::KERNARG_SIZE_OFFSET:
+    FourByteBuffer = DE.getU32(Cursor);
+    KdStream << Indent << ".amdhsa_kernarg_size "
+             << FourByteBuffer << '\n';
+    return MCDisassembler::Success;
+
   case amdhsa::RESERVED0_OFFSET:
-    // 8 reserved bytes, must be 0.
-    EightByteBuffer = DE.getU64(Cursor);
-    if (EightByteBuffer) {
-      return MCDisassembler::Fail;
+    // 4 reserved bytes, must be 0.
+    ReservedBytes = DE.getBytes(Cursor, 4);
+    for (int I = 0; I < 4; ++I) {
+      if (ReservedBytes[I] != 0) {
+        return MCDisassembler::Fail;
+      }
     }
     return MCDisassembler::Success;
 

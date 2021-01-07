@@ -305,6 +305,7 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
      << '\n';
   OS << "\t\t.amdhsa_private_segment_fixed_size "
      << KD.private_segment_fixed_size << '\n';
+  OS << "\t\t.amdhsa_kernarg_size " << KD.kernarg_size << '\n';
 
   PRINT_FIELD(OS, ".amdhsa_user_sgpr_private_segment_buffer", KD,
               kernel_code_properties,
@@ -808,8 +809,11 @@ void AMDGPUTargetELFStreamer::EmitAmdhsaKernelDescriptor(
   Streamer.emitLabel(KernelDescriptorSymbol);
   Streamer.emitInt32(KernelDescriptor.group_segment_fixed_size);
   Streamer.emitInt32(KernelDescriptor.private_segment_fixed_size);
+  Streamer.emitInt32(KernelDescriptor.kernarg_size);
+
   for (uint8_t Res : KernelDescriptor.reserved0)
     Streamer.emitInt8(Res);
+
   // FIXME: Remove the use of VK_AMDGPU_REL64 in the expression below. The
   // expression being created is:
   //   (start of kernel code) - (start of kernel descriptor)
