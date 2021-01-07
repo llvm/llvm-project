@@ -374,27 +374,6 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
-// LLVMIntegerTypeStorage.
-//===----------------------------------------------------------------------===//
-
-/// Storage type for LLVM dialect integer types. These are uniqued by bitwidth.
-struct LLVMIntegerTypeStorage : public TypeStorage {
-  using KeyTy = unsigned;
-
-  LLVMIntegerTypeStorage(unsigned width) : bitwidth(width) {}
-
-  static LLVMIntegerTypeStorage *construct(TypeStorageAllocator &allocator,
-                                           const KeyTy &key) {
-    return new (allocator.allocate<LLVMIntegerTypeStorage>())
-        LLVMIntegerTypeStorage(key);
-  }
-
-  bool operator==(const KeyTy &key) const { return key == bitwidth; }
-
-  unsigned bitwidth;
-};
-
-//===----------------------------------------------------------------------===//
 // LLVMPointerTypeStorage.
 //===----------------------------------------------------------------------===//
 

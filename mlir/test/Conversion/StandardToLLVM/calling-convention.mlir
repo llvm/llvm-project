@@ -8,8 +8,8 @@
 
 // An external function is transformed into the glue around calling an interface function.
 // CHECK-LABEL: @external
-// CHECK: %[[ALLOC0:.*]]: !llvm.ptr<float>, %[[ALIGN0:.*]]: !llvm.ptr<float>, %[[OFFSET0:.*]]: !llvm.i64, %[[SIZE00:.*]]: !llvm.i64, %[[SIZE01:.*]]: !llvm.i64, %[[STRIDE00:.*]]: !llvm.i64, %[[STRIDE01:.*]]: !llvm.i64,
-// CHECK: %[[ALLOC1:.*]]: !llvm.ptr<float>, %[[ALIGN1:.*]]: !llvm.ptr<float>, %[[OFFSET1:.*]]: !llvm.i64)
+// CHECK: %[[ALLOC0:.*]]: !llvm.ptr<float>, %[[ALIGN0:.*]]: !llvm.ptr<float>, %[[OFFSET0:.*]]: i64, %[[SIZE00:.*]]: i64, %[[SIZE01:.*]]: i64, %[[STRIDE00:.*]]: i64, %[[STRIDE01:.*]]: i64,
+// CHECK: %[[ALLOC1:.*]]: !llvm.ptr<float>, %[[ALIGN1:.*]]: !llvm.ptr<float>, %[[OFFSET1:.*]]: i64)
 func private @external(%arg0: memref<?x?xf32>, %arg1: memref<f32>)
   // Populate the descriptor for arg0.
   // CHECK: %[[DESC00:.*]] = llvm.mlir.undef : !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)>
@@ -67,7 +67,7 @@ func @caller() {
   // CHECK: %[[OFFSET1:.*]] = llvm.extractvalue %[[DESC1]][2]
 
   // Forward the values to the call.
-  // CHECK: llvm.call @external(%[[ALLOC0]], %[[ALIGN0]], %[[OFFSET0]], %[[SIZE00]], %[[SIZE01]], %[[STRIDE00]], %[[STRIDE01]], %[[ALLOC1]], %[[ALIGN1]], %[[OFFSET1]]) : (!llvm.ptr<float>, !llvm.ptr<float>, !llvm.i64, !llvm.i64, !llvm.i64, !llvm.i64, !llvm.i64, !llvm.ptr<float>, !llvm.ptr<float>, !llvm.i64) -> ()
+  // CHECK: llvm.call @external(%[[ALLOC0]], %[[ALIGN0]], %[[OFFSET0]], %[[SIZE00]], %[[SIZE01]], %[[STRIDE00]], %[[STRIDE01]], %[[ALLOC1]], %[[ALIGN1]], %[[OFFSET1]]) : (!llvm.ptr<float>, !llvm.ptr<float>, i64, i64, i64, i64, i64, !llvm.ptr<float>, !llvm.ptr<float>, i64) -> ()
   call @external(%0#0, %0#1) : (memref<?x?xf32>, memref<f32>) -> ()
   return
 }
@@ -93,7 +93,7 @@ func @callee(%arg0: memref<?xf32>, %arg1: index) {
   // CHECK: %[[STRIDE:.*]] = llvm.extractvalue %[[DESC]][4, 0]
 
   // Forward the descriptor components to the call.
-  // CHECK: llvm.call @callee(%[[ALLOC]], %[[ALIGN]], %[[OFFSET]], %[[SIZE]], %[[STRIDE]], %{{.*}}) : (!llvm.ptr<float>, !llvm.ptr<float>, !llvm.i64, !llvm.i64, !llvm.i64, !llvm.i64) -> ()
+  // CHECK: llvm.call @callee(%[[ALLOC]], %[[ALIGN]], %[[OFFSET]], %[[SIZE]], %[[STRIDE]], %{{.*}}) : (!llvm.ptr<float>, !llvm.ptr<float>, i64, i64, i64, i64) -> ()
 
 //   EMIT_C_ATTRIBUTE-NOT: @mlir_ciface_callee
 
@@ -132,7 +132,7 @@ func @return_var_memref_caller(%arg0: memref<4x3xf32>) {
   // CHECK: %[[TABLES_SIZE:.*]] = llvm.mul %[[DOUBLE_RANK_INC]], %[[IDX_SIZE]]
   // CHECK: %[[ALLOC_SIZE:.*]] = llvm.add %[[DOUBLE_PTR_SIZE]], %[[TABLES_SIZE]]
   // CHECK: %[[FALSE:.*]] = llvm.mlir.constant(false)
-  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %[[ALLOC_SIZE]] x !llvm.i8
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %[[ALLOC_SIZE]] x i8
   // CHECK: %[[SOURCE:.*]] = llvm.extractvalue %[[CALL_RES]][1]
   // CHECK: "llvm.intr.memcpy"(%[[ALLOCA]], %[[SOURCE]], %[[ALLOC_SIZE]], %[[FALSE]])
   // CHECK: llvm.call @free(%[[SOURCE]])
@@ -187,7 +187,7 @@ func @return_two_var_memref_caller(%arg0: memref<4x3xf32>) {
   // CHECK: %[[RES_2:.*]] = llvm.extractvalue %[[CALL_RES]][1]
   %0:2 = call @return_two_var_memref(%arg0) : (memref<4x3xf32>) -> (memref<*xf32>, memref<*xf32>)
 
-  // CHECK: %[[ALLOCA_1:.*]] = llvm.alloca %{{.*}} x !llvm.i8
+  // CHECK: %[[ALLOCA_1:.*]] = llvm.alloca %{{.*}} x i8
   // CHECK: %[[SOURCE_1:.*]] = llvm.extractvalue %[[RES_1:.*]][1] : ![[DESC_TYPE:.*]]
   // CHECK: "llvm.intr.memcpy"(%[[ALLOCA_1]], %[[SOURCE_1]], %{{.*}}, %[[FALSE:.*]])
   // CHECK: llvm.call @free(%[[SOURCE_1]])
@@ -195,7 +195,7 @@ func @return_two_var_memref_caller(%arg0: memref<4x3xf32>) {
   // CHECK: %[[DESC_11:.*]] = llvm.insertvalue %{{.*}}, %[[DESC_1]][0]
   // CHECK: llvm.insertvalue %[[ALLOCA_1]], %[[DESC_11]][1]
 
-  // CHECK: %[[ALLOCA_2:.*]] = llvm.alloca %{{.*}} x !llvm.i8
+  // CHECK: %[[ALLOCA_2:.*]] = llvm.alloca %{{.*}} x i8
   // CHECK: %[[SOURCE_2:.*]] = llvm.extractvalue %[[RES_2:.*]][1]
   // CHECK: "llvm.intr.memcpy"(%[[ALLOCA_2]], %[[SOURCE_2]], %{{.*}}, %[[FALSE]])
   // CHECK: llvm.call @free(%[[SOURCE_2]])

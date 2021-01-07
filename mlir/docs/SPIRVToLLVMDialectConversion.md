@@ -159,8 +159,8 @@ SPIR-V Dialect op                     | LLVM Dialect intrinsic
 `spv.Not` is modelled with a `xor` operation with a mask with all bits set.
 
 ```mlir
-                            %mask = llvm.mlir.constant(-1 : i32) : !llvm.i32
-%0 = spv.Not %op : i32  =>  %0  = llvm.xor %op, %mask : !llvm.i32
+                            %mask = llvm.mlir.constant(-1 : i32) : i32
+%0 = spv.Not %op : i32  =>  %0  = llvm.xor %op, %mask : i32
 ```
 
 #### Bitfield ops
@@ -189,10 +189,10 @@ to note:
     ```mlir
     // Broadcasting offset
     %offset0 = llvm.mlir.undef : !llvm.vec<2 x i8>
-    %zero = llvm.mlir.constant(0 : i32) : !llvm.i32
-    %offset1 = llvm.insertelement %offset, %offset0[%zero : !llvm.i32] : !llvm.vec<2 x i8>
-    %one = llvm.mlir.constant(1 : i32) : !llvm.i32
-    %vec_offset = llvm.insertelement  %offset, %offset1[%one : !llvm.i32] : !llvm.vec<2 x i8>
+    %zero = llvm.mlir.constant(0 : i32) : i32
+    %offset1 = llvm.insertelement %offset, %offset0[%zero : i32] : !llvm.vec<2 x i8>
+    %one = llvm.mlir.constant(1 : i32) : i32
+    %vec_offset = llvm.insertelement  %offset, %offset1[%one : i32] : !llvm.vec<2 x i8>
 
     // Broadcasting count
     // ...
@@ -209,10 +209,10 @@ to note:
     ```
 
     Also, note that if the bitwidth of `offset` or `count` is greater than the
-    bitwidth of `base`, truncation is still permitted. This is because the ops have a
-    defined behaviour with `offset` and `count` being less than the size of
-    `base`. It creates a natural upper bound on what values `offset` and `count`
-    can take, which is 64. This can be expressed in less than 8 bits.
+    bitwidth of `base`, truncation is still permitted. This is because the ops
+    have a defined behaviour with `offset` and `count` being less than the size
+    of `base`. It creates a natural upper bound on what values `offset` and
+    `count` can take, which is 64. This can be expressed in less than 8 bits.
 
 Now, having these two cases in mind, we can proceed with conversion for the ops
 and their operands.
@@ -227,18 +227,18 @@ would be to create a mask with bits set outside
 
 ```mlir
 // Create mask
-// %minus_one = llvm.mlir.constant(-1 : i32) : !llvm.i32
-// %t0        = llvm.shl %minus_one, %count : !llvm.i32
-// %t1        = llvm.xor %t0, %minus_one : !llvm.i32
-// %t2        = llvm.shl %t1, %offset : !llvm.i32
-// %mask      = llvm.xor %t2, %minus_one : !llvm.i32
+// %minus_one = llvm.mlir.constant(-1 : i32) : i32
+// %t0        = llvm.shl %minus_one, %count : i32
+// %t1        = llvm.xor %t0, %minus_one : i32
+// %t2        = llvm.shl %t1, %offset : i32
+// %mask      = llvm.xor %t2, %minus_one : i32
 
 // Extract unchanged bits from the Base
-// %new_base  = llvm.and %base, %mask : !llvm.i32
+// %new_base  = llvm.and %base, %mask : i32
 
 // Insert new bits
-// %sh_insert = llvm.shl %insert, %offset : !llvm.i32
-// %res       = llvm.or %new_base, %sh_insert : !llvm.i32
+// %sh_insert = llvm.shl %insert, %offset : i32
+// %res       = llvm.or %new_base, %sh_insert : i32
 %res = spv.BitFieldInsert %base, %insert, %offset, %count : i32, i32, i32
 ```
 
@@ -251,14 +251,14 @@ sign bit.
 
 ```mlir
 // Calculate the amount to shift left.
-// %size    = llvm.mlir.constant(32 : i32) : !llvm.i32
-// %t0      = llvm.add %count, %offset : !llvm.i32
-// %t1      = llvm.sub %size, %t0 : !llvm.i32
+// %size    = llvm.mlir.constant(32 : i32) : i32
+// %t0      = llvm.add %count, %offset : i32
+// %t1      = llvm.sub %size, %t0 : i32
 
 // Shift left and then right to extract the bits
-// %sh_left = llvm.shl %base, %t1 : !llvm.i32
-// %t2      = llvm.add %offset, %t1 : !llvm.i32
-// %res     = llvm.ashr %sh_left, %t2 : !llvm.i32
+// %sh_left = llvm.shl %base, %t1 : i32
+// %t2      = llvm.add %offset, %t1 : i32
+// %res     = llvm.ashr %sh_left, %t2 : i32
 %res = spv.BitFieldSExtract %base, %offset, %count : i32, i32, i32
 ```
 
@@ -270,13 +270,13 @@ and the mask is applied.
 
 ```mlir
 // Create a mask
-// %minus_one = llvm.mlir.constant(-1 : i32) : !llvm.i32
-// %t0        = llvm.shl %minus_one, %count : !llvm.i32
-// mask       = llvm.xor  %t0, %minus_one : !llvm.i32
+// %minus_one = llvm.mlir.constant(-1 : i32) : i32
+// %t0        = llvm.shl %minus_one, %count : i32
+// mask       = llvm.xor  %t0, %minus_one : i32
 
 // Shift Base and apply mask
-// %sh_base   = llvm.lshr %base, %offset : !llvm.i32
-// %res       = llvm.and %sh_base, %mask : !llvm.i32
+// %sh_base   = llvm.lshr %base, %offset : i32
+// %res       = llvm.and %sh_base, %mask : i32
 %res = spv.BitFieldUExtract %base, %offset, %count : i32, i32, i32
 ```
 
@@ -371,34 +371,34 @@ non-vector      | `spv.CompositeInsert`  | `llvm.insertvalue`
 First of all, it is important to note that there is no direct representation of
 entry points in LLVM. At the moment, we use the following approach:
 
-* `spv.EntryPoint` is simply removed.
+*   `spv.EntryPoint` is simply removed.
 
-* In contrast, `spv.ExecutionMode` may contain important information about the
-  entry point. For example, `LocalSize` provides information about the
-  work-group size that can be reused.
+*   In contrast, `spv.ExecutionMode` may contain important information about the
+    entry point. For example, `LocalSize` provides information about the
+    work-group size that can be reused.
 
-  In order to preserve this information, `spv.ExecutionMode` is converted to
-  a struct global variable that stores the execution mode id and any variables
-  associated with it. In C, the struct has the structure shown below.
+    In order to preserve this information, `spv.ExecutionMode` is converted to a
+    struct global variable that stores the execution mode id and any variables
+    associated with it. In C, the struct has the structure shown below.
 
-  ```C
-  // No values are associated      // There are values that are associated
-  // with this entry point.        // with this entry point.
-  struct {                         struct {
-    int32_t executionMode;             int32_t executionMode;
-  };                                   int32_t values[];
-                                   };
-  ```
+    ```C
+    // No values are associated      // There are values that are associated
+    // with this entry point.        // with this entry point.
+    struct {                         struct {
+      int32_t executionMode;             int32_t executionMode;
+    };                                   int32_t values[];
+                                     };
+    ```
 
-  ```mlir
-  // spv.ExecutionMode @empty "ContractionOff"
-  llvm.mlir.global external constant @{{.*}}() : !llvm.struct<(i32)> {
-    %0   = llvm.mlir.undef : !llvm.struct<(i32)>
-    %1   = llvm.mlir.constant(31 : i32) : !llvm.i32
-    %ret = llvm.insertvalue %1, %0[0 : i32] : !llvm.struct<(i32)>
-    llvm.return %ret : !llvm.struct<(i32)>
-  }
-  ```
+    ```mlir
+    // spv.ExecutionMode @empty "ContractionOff"
+    llvm.mlir.global external constant @{{.*}}() : !llvm.struct<(i32)> {
+      %0   = llvm.mlir.undef : !llvm.struct<(i32)>
+      %1   = llvm.mlir.constant(31 : i32) : i32
+      %ret = llvm.insertvalue %1, %0[0 : i32] : !llvm.struct<(i32)>
+      llvm.return %ret : !llvm.struct<(i32)>
+    }
+    ```
 
 ### Logical ops
 
@@ -417,8 +417,8 @@ SPIR-V Dialect op                     | LLVM Dialect op
 modelled with `xor` operation with a mask with all bits set.
 
 ```mlir
-                                  %mask = llvm.mlir.constant(-1 : i1) : !llvm.i1
-%0 = spv.LogicalNot %op : i1  =>  %0    = llvm.xor %op, %mask : !llvm.i1
+                                  %mask = llvm.mlir.constant(-1 : i1) : i1
+%0 = spv.LogicalNot %op : i1  =>  %0    = llvm.xor %op, %mask : i1
 ```
 
 ### Memory ops
@@ -441,8 +441,8 @@ order to go through the pointer.
 // Corresponding LLVM dialect code
 %i   = ...
 %var = ...
-%0   = llvm.mlir.constant(0 : i32) : !llvm.i32
-%el  = llvm.getelementptr %var[%0, %i, %i] : (!llvm.ptr<struct<packed (float, array<4 x float>)>>, !llvm.i32, !llvm.i32, !llvm.i32)
+%0   = llvm.mlir.constant(0 : i32) : i32
+%el  = llvm.getelementptr %var[%0, %i, %i] : (!llvm.ptr<struct<packed (float, array<4 x float>)>>, i32, i32, i32)
 ```
 
 #### `spv.Load` and `spv.Store`
@@ -538,13 +538,13 @@ Also, at the moment initialization is only possible via `spv.constant`.
 
 ```mlir
 // Conversion of VariableOp without initialization
-                                                               %size = llvm.mlir.constant(1 : i32) : !llvm.i32
-%res = spv.Variable : !spv.ptr<vector<3xf32>, Function>   =>   %res  = llvm.alloca  %size x !llvm.vec<3 x float> : (!llvm.i32) -> !llvm.ptr<vec<3 x float>>
+                                                               %size = llvm.mlir.constant(1 : i32) : i32
+%res = spv.Variable : !spv.ptr<vector<3xf32>, Function>   =>   %res  = llvm.alloca  %size x !llvm.vec<3 x float> : (i32) -> !llvm.ptr<vec<3 x float>>
 
 // Conversion of VariableOp with initialization
-                                                               %c    = llvm.mlir.constant(0 : i64) : !llvm.i64
-%c   = spv.constant 0 : i64                                    %size = llvm.mlir.constant(1 : i32) : !llvm.i32
-%res = spv.Variable init(%c) : !spv.ptr<i64, Function>    =>   %res	 = llvm.alloca %[[SIZE]] x !llvm.i64 : (!llvm.i32) -> !llvm.ptr<i64>
+                                                               %c    = llvm.mlir.constant(0 : i64) : i64
+%c   = spv.constant 0 : i64                                    %size = llvm.mlir.constant(1 : i32) : i32
+%res = spv.Variable init(%c) : !spv.ptr<i64, Function>    =>   %res  = llvm.alloca %[[SIZE]] x i64 : (i32) -> !llvm.ptr<i64>
                                                                llvm.store %c, %res : !llvm.ptr<i64>
 ```
 
@@ -582,11 +582,11 @@ bitwidth. This leads to the following conversions:
 
 ```mlir
 // Shift without extension
-%res0 = spv.ShiftRightArithmetic %0, %2 : i32, i32  =>  %res0 = llvm.ashr %0, %2 : !llvm.i32
+%res0 = spv.ShiftRightArithmetic %0, %2 : i32, i32  =>  %res0 = llvm.ashr %0, %2 : i32
 
 // Shift with extension
-                                                        %ext  = llvm.sext %1 : !llvm.i16 to !llvm.i32
-%res1 = spv.ShiftRightArithmetic %0, %1 : i32, i16  =>  %res1 = llvm.ashr %0, %ext: !llvm.i32
+                                                        %ext  = llvm.sext %1 : i16 to i32
+%res1 = spv.ShiftRightArithmetic %0, %1 : i32, i16  =>  %res1 = llvm.ashr %0, %ext: i32
 ```
 
 ### `spv.constant`
@@ -612,7 +612,7 @@ to handle it case-by-case, given that the purpose of the conversion is not to
 cover all possible corner cases.
 
 ```mlir
-// %0 = llvm.mlir.constant(0 : i8) : !llvm.i8
+// %0 = llvm.mlir.constant(0 : i8) : i8
 %0 = spv.constant  0 : i8
 
 // %1 = llvm.mlir.constant(dense<[2, 3, 4]> : vector<3xi32>) : !llvm.vec<3 x i32>
@@ -677,11 +677,11 @@ blocks being reachable. Moreover, selection and loop control attributes (such as
 
 ```mlir
 // Conversion of selection
-%cond = spv.constant true                               %cond = llvm.mlir.constant(true) : !llvm.i1
+%cond = spv.constant true                               %cond = llvm.mlir.constant(true) : i1
 spv.selection {
   spv.BranchConditional %cond, ^true, ^false            llvm.cond_br %cond, ^true, ^false
 
-^true:																								^true:
+^true:                                                                                              ^true:
   // True block code                                    // True block code
   spv.Branch ^merge                             =>      llvm.br ^merge
 
@@ -692,13 +692,13 @@ spv.selection {
 ^merge:                                               ^merge:
   spv.mlir.merge                                            llvm.br ^continue
 }
-// Remaining code																			^continue:
+// Remaining code                                                                           ^continue:
                                                         // Remaining code
 ```
 
 ```mlir
 // Conversion of loop
-%cond = spv.constant true                               %cond = llvm.mlir.constant(true) : !llvm.i1
+%cond = spv.constant true                               %cond = llvm.mlir.constant(true) : i1
 spv.loop {
   spv.Branch ^header                                    llvm.br ^header
 

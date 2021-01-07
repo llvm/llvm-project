@@ -13,16 +13,16 @@ module {
     %2 = llvm.mlir.constant(3.000000e+00 : f32) : !llvm.float
     %3 = llvm.mlir.constant(4.000000e+00 : f32) : !llvm.float
     %4 = llvm.mlir.undef : !llvm.vec<4 x float>
-    %5 = llvm.mlir.constant(0 : index) : !llvm.i64
-    %6 = llvm.insertelement %0, %4[%5 : !llvm.i64] : !llvm.vec<4 x float>
+    %5 = llvm.mlir.constant(0 : index) : i64
+    %6 = llvm.insertelement %0, %4[%5 : i64] : !llvm.vec<4 x float>
     %7 = llvm.shufflevector %6, %4 [0 : i32, 0 : i32, 0 : i32, 0 : i32]
         : !llvm.vec<4 x float>, !llvm.vec<4 x float>
-    %8 = llvm.mlir.constant(1 : i64) : !llvm.i64
-    %9 = llvm.insertelement %1, %7[%8 : !llvm.i64] : !llvm.vec<4 x float>
-    %10 = llvm.mlir.constant(2 : i64) : !llvm.i64
-    %11 = llvm.insertelement %2, %9[%10 : !llvm.i64] : !llvm.vec<4 x float>
-    %12 = llvm.mlir.constant(3 : i64) : !llvm.i64
-    %v = llvm.insertelement %3, %11[%12 : !llvm.i64] : !llvm.vec<4 x float>
+    %8 = llvm.mlir.constant(1 : i64) : i64
+    %9 = llvm.insertelement %1, %7[%8 : i64] : !llvm.vec<4 x float>
+    %10 = llvm.mlir.constant(2 : i64) : i64
+    %11 = llvm.insertelement %2, %9[%10 : i64] : !llvm.vec<4 x float>
+    %12 = llvm.mlir.constant(3 : i64) : i64
+    %v = llvm.insertelement %3, %11[%12 : i64] : !llvm.vec<4 x float>
 
     %max = "llvm.intr.vector.reduce.fmax"(%v)
         : (!llvm.vec<4 x float>) -> !llvm.float

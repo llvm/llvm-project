@@ -123,7 +123,7 @@ spv.func @sin(%arg0: f32, %arg1: vector<3xf16>) "None" {
 
 // CHECK-LABEL: @smax
 spv.func @smax(%arg0: i16, %arg1: vector<3xi32>) "None" {
-  // CHECK: "llvm.intr.smax"(%{{.*}}, %{{.*}}) : (!llvm.i16, !llvm.i16) -> !llvm.i16
+  // CHECK: "llvm.intr.smax"(%{{.*}}, %{{.*}}) : (i16, i16) -> i16
   %0 = spv.GLSL.SMax %arg0, %arg0 : i16
   // CHECK: "llvm.intr.smax"(%{{.*}}, %{{.*}}) : (!llvm.vec<3 x i32>, !llvm.vec<3 x i32>) -> !llvm.vec<3 x i32>
   %1 = spv.GLSL.SMax %arg1, %arg1 : vector<3xi32>
@@ -136,7 +136,7 @@ spv.func @smax(%arg0: i16, %arg1: vector<3xi32>) "None" {
 
 // CHECK-LABEL: @smin
 spv.func @smin(%arg0: i16, %arg1: vector<3xi32>) "None" {
-  // CHECK: "llvm.intr.smin"(%{{.*}}, %{{.*}}) : (!llvm.i16, !llvm.i16) -> !llvm.i16
+  // CHECK: "llvm.intr.smin"(%{{.*}}, %{{.*}}) : (i16, i16) -> i16
   %0 = spv.GLSL.SMin %arg0, %arg0 : i16
   // CHECK: "llvm.intr.smin"(%{{.*}}, %{{.*}}) : (!llvm.vec<3 x i32>, !llvm.vec<3 x i32>) -> !llvm.vec<3 x i32>
   %1 = spv.GLSL.SMin %arg1, %arg1 : vector<3xi32>

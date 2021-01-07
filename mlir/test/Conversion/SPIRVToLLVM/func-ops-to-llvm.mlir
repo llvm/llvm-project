@@ -16,7 +16,7 @@ spv.func @return() "None" {
 
 // CHECK-LABEL: @return_value
 spv.func @return_value(%arg: i32) -> i32 "None" {
-  // CHECK: llvm.return %{{.*}} : !llvm.i32
+  // CHECK: llvm.return %{{.*}} : i32
   spv.ReturnValue %arg : i32
 }
 
@@ -49,7 +49,7 @@ spv.func @const() "Const" {
   spv.Return
 }
 
-// CHECK-LABEL: llvm.func @scalar_types(%arg0: !llvm.i32, %arg1: !llvm.i1, %arg2: !llvm.double, %arg3: !llvm.float)
+// CHECK-LABEL: llvm.func @scalar_types(%arg0: i32, %arg1: i1, %arg2: !llvm.double, %arg3: !llvm.float)
 spv.func @scalar_types(%arg0: i32, %arg1: i1, %arg2: f64, %arg3: f32) "None" {
   spv.Return
 }
@@ -65,11 +65,11 @@ spv.func @vector_types(%arg0: vector<2xi64>, %arg1: vector<2xi64>) -> vector<2xi
 //===----------------------------------------------------------------------===//
 
 // CHECK-LABEL: llvm.func @function_calls
-// CHECK-SAME: %[[ARG0:.*]]: !llvm.i32, %[[ARG1:.*]]: !llvm.i1, %[[ARG2:.*]]: !llvm.double, %[[ARG3:.*]]: !llvm.vec<2 x i64>, %[[ARG4:.*]]: !llvm.vec<2 x float>
+// CHECK-SAME: %[[ARG0:.*]]: i32, %[[ARG1:.*]]: i1, %[[ARG2:.*]]: !llvm.double, %[[ARG3:.*]]: !llvm.vec<2 x i64>, %[[ARG4:.*]]: !llvm.vec<2 x float>
 spv.func @function_calls(%arg0: i32, %arg1: i1, %arg2: f64, %arg3: vector<2xi64>, %arg4: vector<2xf32>) "None" {
   // CHECK: llvm.call @void_1() : () -> ()
   // CHECK: llvm.call @void_2(%[[ARG3]]) : (!llvm.vec<2 x i64>) -> ()
-  // CHECK: llvm.call @value_scalar(%[[ARG0]], %[[ARG1]], %[[ARG2]]) : (!llvm.i32, !llvm.i1, !llvm.double) -> !llvm.i32
+  // CHECK: llvm.call @value_scalar(%[[ARG0]], %[[ARG1]], %[[ARG2]]) : (i32, i1, !llvm.double) -> i32
   // CHECK: llvm.call @value_vector(%[[ARG3]], %[[ARG4]]) : (!llvm.vec<2 x i64>, !llvm.vec<2 x float>) -> !llvm.vec<2 x float>
   spv.FunctionCall @void_1() : () -> ()
   spv.FunctionCall @void_2(%arg3) : (vector<2xi64>) -> ()

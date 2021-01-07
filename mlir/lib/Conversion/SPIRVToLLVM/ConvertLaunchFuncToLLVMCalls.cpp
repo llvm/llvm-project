@@ -60,7 +60,7 @@ static unsigned calculateGlobalIndex(spirv::GlobalVariableOp op) {
 static void copy(Location loc, Value dst, Value src, Value size,
                  OpBuilder &builder) {
   MLIRContext *context = builder.getContext();
-  auto llvmI1Type = LLVM::LLVMIntegerType::get(context, 1);
+  auto llvmI1Type = IntegerType::get(context, 1);
   Value isVolatile = builder.create<LLVM::ConstantOp>(
       loc, llvmI1Type, builder.getBoolAttr(false));
   builder.create<LLVM::MemcpyOp>(loc, dst, src, size, isVolatile);

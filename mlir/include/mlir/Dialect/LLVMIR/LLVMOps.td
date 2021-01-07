@@ -184,7 +184,7 @@ def LLVM_ICmpOp : LLVM_Op<"icmp", [NoSideEffect]> {
   let builders = [
     OpBuilderDAG<(ins "ICmpPredicate":$predicate, "Value":$lhs, "Value":$rhs),
     [{
-      build($_builder, $_state, LLVMIntegerType::get(lhs.getType().getContext(), 1),
+      build($_builder, $_state, IntegerType::get(lhs.getType().getContext(), 1),
             $_builder.getI64IntegerAttr(static_cast<int64_t>(predicate)), lhs, rhs);
     }]>];
   let parser = [{ return parseCmpOp<ICmpPredicate>(parser, result); }];
@@ -235,7 +235,7 @@ def LLVM_FCmpOp : LLVM_Op<"fcmp", [
     OpBuilderDAG<(ins "FCmpPredicate":$predicate, "Value":$lhs, "Value":$rhs,
                   CArg<"FastmathFlags", "{}">:$fmf),
     [{
-      build($_builder, $_state, LLVMIntegerType::get(lhs.getType().getContext(), 1),
+      build($_builder, $_state, IntegerType::get(lhs.getType().getContext(), 1),
             $_builder.getI64IntegerAttr(static_cast<int64_t>(predicate)), lhs, rhs,
             ::mlir::LLVM::FMFAttr::get(fmf, $_builder.getContext()));
     }]>];
@@ -791,7 +791,7 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof"> {
     }
 
     // Define the global.
-    llvm.mlir.global @const(42 : i32) : !llvm.i32
+    llvm.mlir.global @const(42 : i32) : i32
     ```
   }];
 
@@ -862,9 +862,9 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     //   i32* getelementptr (i32* @g2, i32 2)
     llvm.mlir.global constant @int_gep() : !llvm.ptr<i32> {
       %0 = llvm.mlir.addressof @g2 : !llvm.ptr<i32>
-      %1 = llvm.mlir.constant(2 : i32) : !llvm.i32
+      %1 = llvm.mlir.constant(2 : i32) : i32
       %2 = llvm.getelementptr %0[%1]
-         : (!llvm.ptr<i32>, !llvm.i32) -> !llvm.ptr<i32>
+         : (!llvm.ptr<i32>, i32) -> !llvm.ptr<i32>
       // The initializer region must end with `llvm.return`.
       llvm.return %2 : !llvm.ptr<i32>
     }
@@ -880,7 +880,7 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
 
     ```mlir
     // Global values use @-identifiers.
-    llvm.mlir.global constant @cst(42 : i32) : !llvm.i32
+    llvm.mlir.global constant @cst(42 : i32) : i32
 
     // Non-constant values must also be initialized.
     llvm.mlir.global @variable(32.0 : f32) : !llvm.float
@@ -895,9 +895,9 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     // A complex initializer is constructed with an initializer region.
     llvm.mlir.global constant @int_gep() : !llvm.ptr<i32> {
       %0 = llvm.mlir.addressof @g2 : !llvm.ptr<i32>
-      %1 = llvm.mlir.constant(2 : i32) : !llvm.i32
+      %1 = llvm.mlir.constant(2 : i32) : i32
       %2 = llvm.getelementptr %0[%1]
-         : (!llvm.ptr<i32>, !llvm.i32) -> !llvm.ptr<i32>
+         : (!llvm.ptr<i32>, i32) -> !llvm.ptr<i32>
       llvm.return %2 : !llvm.ptr<i32>
     }
     ```
@@ -911,7 +911,7 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
 
     ```mlir
     // A constant with internal linkage will not participate in linking.
-    llvm.mlir.global internal constant @cst(42 : i32) : !llvm.i32
+    llvm.mlir.global internal constant @cst(42 : i32) : i32
 
     // By default, "external" linkage is assumed and the global participates in
     // symbol resolution at link-time.
@@ -969,13 +969,13 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func",
 
     ```mlir
     // The type of @bar is !llvm<"i64 (i64)">
-    llvm.func @bar(%arg0: !llvm.i64) -> !llvm.i64 {
-      llvm.return %arg0 : !llvm.i64
+    llvm.func @bar(%arg0: i64) -> i64 {
+      llvm.return %arg0 : i64
     }
 
     // Type type of @foo is !llvm<"void (i64)">
     // !llvm.void type is omitted
-    llvm.func @foo(%arg0: !llvm.i64) {
+    llvm.func @foo(%arg0: i64) {
       llvm.return
     }
 
@@ -1102,10 +1102,10 @@ def LLVM_ConstantOp
 
     ```mlir
     // Integer constant, internal i32 is mandatory
-    %0 = llvm.mlir.constant(42 : i32) : !llvm.i32
+    %0 = llvm.mlir.constant(42 : i32) : i32
 
     // It's okay to omit i64.
-    %1 = llvm.mlir.constant(42) : !llvm.i64
+    %1 = llvm.mlir.constant(42) : i64
 
     // Floating point constant.
     %2 = llvm.mlir.constant(42.0 : f32) : !llvm.float

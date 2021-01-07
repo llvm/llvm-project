@@ -15,7 +15,7 @@
 
 // Declarations of C library functions.
 llvm.func @fabsf(!llvm.float) -> !llvm.float
-llvm.func @malloc(!llvm.i64) -> !llvm.ptr<i8>
+llvm.func @malloc(i64) -> !llvm.ptr<i8>
 llvm.func @free(!llvm.ptr<i8>)
 
 // Check that a simple function with a nested call works.
@@ -28,8 +28,8 @@ llvm.func @main() -> !llvm.float {
 
 // Helper typed functions wrapping calls to "malloc" and "free".
 llvm.func @allocation() -> !llvm.ptr<float> {
-  %0 = llvm.mlir.constant(4 : index) : !llvm.i64
-  %1 = llvm.call @malloc(%0) : (!llvm.i64) -> !llvm.ptr<i8>
+  %0 = llvm.mlir.constant(4 : index) : i64
+  %1 = llvm.call @malloc(%0) : (i64) -> !llvm.ptr<i8>
   %2 = llvm.bitcast %1 : !llvm.ptr<i8> to !llvm.ptr<float>
   llvm.return %2 : !llvm.ptr<float>
 }
@@ -43,11 +43,11 @@ llvm.func @deallocation(%arg0: !llvm.ptr<float>) {
 // works.
 llvm.func @foo() -> !llvm.float {
   %0 = llvm.call @allocation() : () -> !llvm.ptr<float>
-  %1 = llvm.mlir.constant(0 : index) : !llvm.i64
+  %1 = llvm.mlir.constant(0 : index) : i64
   %2 = llvm.mlir.constant(1.234000e+03 : f32) : !llvm.float
-  %3 = llvm.getelementptr %0[%1] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
+  %3 = llvm.getelementptr %0[%1] : (!llvm.ptr<float>, i64) -> !llvm.ptr<float>
   llvm.store %2, %3 : !llvm.ptr<float>
-  %4 = llvm.getelementptr %0[%1] : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
+  %4 = llvm.getelementptr %0[%1] : (!llvm.ptr<float>, i64) -> !llvm.ptr<float>
   %5 = llvm.load %4 : !llvm.ptr<float>
   llvm.call @deallocation(%0) : (!llvm.ptr<float>) -> ()
   llvm.return %5 : !llvm.float
@@ -55,15 +55,15 @@ llvm.func @foo() -> !llvm.float {
 // NOMAIN: 1.234000e+03
 
 // Check that i32 return type works
-llvm.func @int32_main() -> !llvm.i32 {
-  %0 = llvm.mlir.constant(42 : i32) : !llvm.i32
-  llvm.return %0 : !llvm.i32
+llvm.func @int32_main() -> i32 {
+  %0 = llvm.mlir.constant(42 : i32) : i32
+  llvm.return %0 : i32
 }
 // INT32MAIN: 42
 
 // Check that i64 return type works
-llvm.func @int64_main() -> !llvm.i64 {
-  %0 = llvm.mlir.constant(42 : i64) : !llvm.i64
-  llvm.return %0 : !llvm.i64
+llvm.func @int64_main() -> i64 {
+  %0 = llvm.mlir.constant(42 : i64) : i64
+  llvm.return %0 : i64
 }
 // INT64MAIN: 42

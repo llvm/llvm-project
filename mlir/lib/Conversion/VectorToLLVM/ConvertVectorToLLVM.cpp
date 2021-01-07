@@ -747,7 +747,7 @@ public:
 
     // Remaining extraction of element from 1-D LLVM vector
     auto position = positionAttrs.back().cast<IntegerAttr>();
-    auto i64Type = LLVM::LLVMIntegerType::get(rewriter.getContext(), 64);
+    auto i64Type = IntegerType::get(rewriter.getContext(), 64);
     auto constant = rewriter.create<LLVM::ConstantOp>(loc, i64Type, position);
     extracted =
         rewriter.create<LLVM::ExtractElementOp>(loc, extracted, constant);
@@ -855,7 +855,7 @@ public:
     }
 
     // Insertion of an element into a 1-D LLVM vector.
-    auto i64Type = LLVM::LLVMIntegerType::get(rewriter.getContext(), 64);
+    auto i64Type = IntegerType::get(rewriter.getContext(), 64);
     auto constant = rewriter.create<LLVM::ConstantOp>(loc, i64Type, position);
     Value inserted = rewriter.create<LLVM::InsertElementOp>(
         loc, typeConverter->convertType(oneDVectorType), extracted,
@@ -1121,7 +1121,7 @@ public:
         }))
       return failure();
 
-    auto int64Ty = LLVM::LLVMIntegerType::get(rewriter.getContext(), 64);
+    auto int64Ty = IntegerType::get(rewriter.getContext(), 64);
 
     // Create descriptor.
     auto desc = MemRefDescriptor::undef(rewriter, loc, llvmTargetDescriptorTy);
@@ -1360,11 +1360,11 @@ private:
       switch (conversion) {
       case PrintConversion::ZeroExt64:
         value = rewriter.create<ZeroExtendIOp>(
-            loc, value, LLVM::LLVMIntegerType::get(rewriter.getContext(), 64));
+            loc, value, IntegerType::get(rewriter.getContext(), 64));
         break;
       case PrintConversion::SignExt64:
         value = rewriter.create<SignExtendIOp>(
-            loc, value, LLVM::LLVMIntegerType::get(rewriter.getContext(), 64));
+            loc, value, IntegerType::get(rewriter.getContext(), 64));
         break;
       case PrintConversion::None:
         break;
@@ -1414,12 +1414,10 @@ private:
 
   // Helpers for method names.
   Operation *getPrintI64(Operation *op) const {
-    return getPrint(op, "printI64",
-                    LLVM::LLVMIntegerType::get(op->getContext(), 64));
+    return getPrint(op, "printI64", IntegerType::get(op->getContext(), 64));
   }
   Operation *getPrintU64(Operation *op) const {
-    return getPrint(op, "printU64",
-                    LLVM::LLVMIntegerType::get(op->getContext(), 64));
+    return getPrint(op, "printU64", IntegerType::get(op->getContext(), 64));
   }
   Operation *getPrintFloat(Operation *op) const {
     return getPrint(op, "printF32", LLVM::LLVMFloatType::get(op->getContext()));
