@@ -39,6 +39,61 @@ public:
   }
 };
 
+template <typename M>
+std::string describeContainsN(M InnerMatcher, unsigned N, bool Negation) {
+  StringRef Contains = Negation ? "doesn't contain" : "contains";
+  StringRef Instance = N == 1 ? " instance " : " instances ";
+  StringRef Element = "of element that ";
+
+  std::ostringstream Inner;
+  InnerMatcher.impl().DescribeTo(&Inner);
+
+  return (Contains + " exactly " + Twine(N) + Instance + Element + Inner.str())
+      .str();
+}
+
+MATCHER_P2(ContainsN, InnerMatcher, N,
+           describeContainsN(InnerMatcher, N, negation)) {
+  auto InnerMatches = [this](const auto &Element) {
+    ::testing::internal::DummyMatchResultListener InnerListener;
+    return InnerMatcher.impl().MatchAndExplain(Element, &InnerListener);
+  };
+
+  return count_if(arg, InnerMatches) == N;
+}
+
+TEST(ContainsN, Empty) {
+  const char *Array[] = {""};
+
+  ASSERT_THAT(Array, ContainsN(StrEq("x"), 0));
+  ASSERT_THAT(Array, Not(ContainsN(StrEq("x"), 1)));
+  ASSERT_THAT(Array, Not(ContainsN(StrEq("x"), 2)));
+}
+
+TEST(ContainsN, Zero) {
+  const char *Array[] = {"y"};
+
+  ASSERT_THAT(Array, ContainsN(StrEq("x"), 0));
+  ASSERT_THAT(Array, Not(ContainsN(StrEq("x"), 1)));
+  ASSERT_THAT(Array, Not(ContainsN(StrEq("x"), 2)));
+}
+
+TEST(ContainsN, One) {
+  const char *Array[] = {"a", "b", "x", "z"};
+
+  ASSERT_THAT(Array, Not(ContainsN(StrEq("x"), 0)));
+  ASSERT_THAT(Array, ContainsN(StrEq("x"), 1));
+  ASSERT_THAT(Array, Not(ContainsN(StrEq("x"), 2)));
+}
+
+TEST(ContainsN, Two) {
+  const char *Array[] = {"x", "a", "b", "x"};
+
+  ASSERT_THAT(Array, Not(ContainsN(StrEq("x"), 0)));
+  ASSERT_THAT(Array, Not(ContainsN(StrEq("x"), 1)));
+  ASSERT_THAT(Array, ContainsN(StrEq("x"), 2));
+}
+
 // Boolean option with a keypath that defaults to true.
 // The only flag with a negative spelling can set the keypath to false.
 
@@ -270,7 +325,7 @@ TEST_F(CommandLineTest, BoolOptionCC1ViaLetPresentPos) {
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
 
-  ASSERT_EQ(count(GeneratedArgs, StringRef("-fdebug-pass-manager")), 1);
+  ASSERT_THAT(GeneratedArgs, ContainsN(StrEq("-fdebug-pass-manager"), 1));
   ASSERT_THAT(GeneratedArgs, Not(Contains(StrEq("-fno-debug-pass-manager"))));
 }
 
@@ -418,7 +473,8 @@ TEST_F(CommandLineTest, StringVectorEmpty) {
   ASSERT_TRUE(Invocation.getFrontendOpts().ModuleMapFiles.empty());
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
-  ASSERT_THAT(GeneratedArgs, Not(Contains(HasSubstr("-fmodule-map-file="))));
+
+  ASSERT_THAT(GeneratedArgs, Not(Contains(HasSubstr("-fmodule-map-file"))));
 }
 
 TEST_F(CommandLineTest, StringVectorSingle) {
@@ -431,7 +487,9 @@ TEST_F(CommandLineTest, StringVectorSingle) {
             std::vector<std::string>({"a"}));
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
-  ASSERT_EQ(count(GeneratedArgs, StringRef("-fmodule-map-file=a")), 1);
+
+  ASSERT_THAT(GeneratedArgs, ContainsN(StrEq("-fmodule-map-file=a"), 1));
+  ASSERT_THAT(GeneratedArgs, ContainsN(HasSubstr("-fmodule-map-file"), 1));
 }
 
 TEST_F(CommandLineTest, StringVectorMultiple) {
@@ -444,8 +502,10 @@ TEST_F(CommandLineTest, StringVectorMultiple) {
               std::vector<std::string>({"a", "b"}));
 
   Invocation.generateCC1CommandLine(GeneratedArgs, *this);
-  ASSERT_EQ(count(GeneratedArgs, StringRef("-fmodule-map-file=a")), 1);
-  ASSERT_EQ(count(GeneratedArgs, StringRef("-fmodule-map-file=b")), 1);
+
+  ASSERT_THAT(GeneratedArgs, ContainsN(StrEq("-fmodule-map-file=a"), 1));
+  ASSERT_THAT(GeneratedArgs, ContainsN(StrEq("-fmodule-map-file=b"), 1));
+  ASSERT_THAT(GeneratedArgs, ContainsN(HasSubstr("-fmodule-map-file"), 2));
 }
 
 // A flag that should be parsed only if a condition is met.
