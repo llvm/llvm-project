@@ -293,6 +293,10 @@ bool DynTypedMatcher::matches(const DynTypedNode &DynNode,
       Finder->IsMatchingInASTNodeNotSpelledInSource())
     return false;
 
+  if (!Finder->isTraversalIgnoringImplicitNodes() &&
+      Finder->IsMatchingInASTNodeNotAsIs())
+    return false;
+
   auto N =
       Finder->getASTContext().getParentMapContext().traverseIgnored(DynNode);
 
@@ -315,6 +319,10 @@ bool DynTypedMatcher::matchesNoKindCheck(const DynTypedNode &DynNode,
 
   if (Finder->isTraversalIgnoringImplicitNodes() &&
       Finder->IsMatchingInASTNodeNotSpelledInSource())
+    return false;
+
+  if (!Finder->isTraversalIgnoringImplicitNodes() &&
+      Finder->IsMatchingInASTNodeNotAsIs())
     return false;
 
   auto N =

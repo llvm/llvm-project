@@ -32,6 +32,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-aa"
 
+AnalysisKey AMDGPUAA::Key;
+
 // Register this pass...
 char AMDGPUAAWrapperPass::ID = 0;
 char AMDGPUExternalAAWrapper::ID = 0;

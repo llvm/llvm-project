@@ -255,6 +255,9 @@ bool hasDisableAllTransformsHint(const Loop *L);
 /// Look for the loop attribute that disables the LICM transformation heuristics.
 bool hasDisableLICMTransformsHint(const Loop *L);
 
+/// Look for the loop attribute that requires progress within the loop.
+bool hasMustProgress(const Loop *L);
+
 /// The mode sets how eager a transformation should be applied.
 enum TransformationMode {
   /// The pass can use heuristics to determine whether a transformation should
@@ -366,8 +369,7 @@ Value *getShuffleReduction(IRBuilderBase &Builder, Value *Src, unsigned Op,
 /// required to implement the reduction.
 /// Fast-math-flags are propagated using the IRBuilder's setting.
 Value *createSimpleTargetReduction(IRBuilderBase &B,
-                                   const TargetTransformInfo *TTI,
-                                   unsigned Opcode, Value *Src,
+                                   const TargetTransformInfo *TTI, Value *Src,
                                    RecurKind RdxKind,
                                    ArrayRef<Value *> RedOps = None);
 

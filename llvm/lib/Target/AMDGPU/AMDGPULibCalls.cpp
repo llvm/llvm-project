@@ -1753,7 +1753,7 @@ bool AMDGPUSimplifyLibCalls::runOnFunction(Function &F) {
 
 PreservedAnalyses AMDGPUSimplifyLibCallsPass::run(Function &F,
                                                   FunctionAnalysisManager &AM) {
-  AMDGPULibCalls Simplifier;
+  AMDGPULibCalls Simplifier(&TM);
   Simplifier.initNativeFuncs();
 
   bool Changed = false;

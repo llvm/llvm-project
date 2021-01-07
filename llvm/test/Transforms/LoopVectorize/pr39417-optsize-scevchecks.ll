@@ -57,7 +57,7 @@ define void @scev4stride1(i32* noalias nocapture %a, i32* noalias nocapture read
 ; CHECK-NEXT:    [[TMP14:%.*]] = load i32, i32* [[TMP8]], align 4
 ; CHECK-NEXT:    [[TMP15:%.*]] = load i32, i32* [[TMP10]], align 4
 ; CHECK-NEXT:    [[TMP16:%.*]] = load i32, i32* [[TMP12]], align 4
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x i32> undef, i32 [[TMP13]], i32 0
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x i32> poison, i32 [[TMP13]], i32 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i32> [[TMP17]], i32 [[TMP14]], i32 1
 ; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i32> [[TMP18]], i32 [[TMP15]], i32 2
 ; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i32> [[TMP19]], i32 [[TMP16]], i32 3

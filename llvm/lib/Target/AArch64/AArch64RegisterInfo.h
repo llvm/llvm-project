@@ -135,6 +135,9 @@ public:
                       unsigned SubReg, const TargetRegisterClass *DstRC,
                       unsigned DstSubReg, const TargetRegisterClass *NewRC,
                       LiveIntervals &LIS) const override;
+
+  void getOffsetOpcodes(const StackOffset &Offset,
+                        SmallVectorImpl<uint64_t> &Ops) const override;
 };
 
 } // end namespace llvm

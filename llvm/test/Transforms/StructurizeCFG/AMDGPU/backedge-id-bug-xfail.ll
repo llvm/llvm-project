@@ -1,5 +1,5 @@
 ; XFAIL: *
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -S -structurizecfg -verify-region-info %s
+; RUN: opt -mtriple=amdgcn-amd-amdhsa -S -structurizecfg -verify-region-info %s -enable-new-pm=0
 
 ; FIXME: Merge into backedge-id-bug
 ; Variant which has an issue with region construction

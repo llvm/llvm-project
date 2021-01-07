@@ -57,22 +57,27 @@ static void HandleTargetOutcome(bool success, ident_t *loc = nullptr) {
     break;
   case tgt_mandatory:
     if (!success) {
-      if (getInfoLevel() > 1)
+      if (getInfoLevel() & OMP_INFOTYPE_DUMP_TABLE)
         for (const auto &Device : PM->Devices)
-          dumpTargetPointerMappings(Device);
+          dumpTargetPointerMappings(loc, Device);
       else
-        FAILURE_MESSAGE("run with env LIBOMPTARGET_INFO>1 to dump host-target "
-                        "pointer maps\n");
+        FAILURE_MESSAGE("Run with LIBOMPTARGET_DEBUG=%d to dump host-target "
+                        "pointer mappings.\n",
+                        OMP_INFOTYPE_DUMP_TABLE);
 
       SourceInfo info(loc);
       if (info.isAvailible())
         fprintf(stderr, "%s:%d:%d: ", info.getFilename(), info.getLine(),
                 info.getColumn());
       else
-        FAILURE_MESSAGE(
-            "Build with debug information to provide more information");
+        FAILURE_MESSAGE("Source location information not present. Compile with "
+                        "-g or -gline-tables-only.\n");
       FATAL_MESSAGE0(
           1, "failure of target construct while offloading is mandatory");
+    } else {
+      if (getInfoLevel() & OMP_INFOTYPE_DUMP_TABLE)
+        for (const auto &Device : PM->Devices)
+          dumpTargetPointerMappings(loc, Device);
     }
     break;
   }
@@ -147,12 +152,15 @@ EXTERN void __tgt_target_data_begin_mapper(ident_t *loc, int64_t device_id,
 
   DeviceTy &Device = PM->Devices[device_id];
 
+  if (getInfoLevel() & OMP_INFOTYPE_KERNEL_ARGS)
+    printKernelArguments(loc, device_id, arg_num, arg_sizes, arg_types,
+                         arg_names, "Entering OpenMP data region");
 #ifdef OMPTARGET_DEBUG
   for (int i = 0; i < arg_num; ++i) {
     DP("Entry %2d: Base=" DPxMOD ", Begin=" DPxMOD ", Size=%" PRId64
        ", Type=0x%" PRIx64 ", Name=%s\n",
        i, DPxPTR(args_base[i]), DPxPTR(args[i]), arg_sizes[i], arg_types[i],
-       (arg_names) ? getNameFromMapping(arg_names[i]).c_str() : "(null)");
+       (arg_names) ? getNameFromMapping(arg_names[i]).c_str() : "unknown");
   }
 #endif
 
@@ -227,12 +235,15 @@ EXTERN void __tgt_target_data_end_mapper(ident_t *loc, int64_t device_id,
     return;
   }
 
+  if (getInfoLevel() & OMP_INFOTYPE_KERNEL_ARGS)
+    printKernelArguments(loc, device_id, arg_num, arg_sizes, arg_types,
+                         arg_names, "Exiting OpenMP data region");
 #ifdef OMPTARGET_DEBUG
   for (int i=0; i<arg_num; ++i) {
     DP("Entry %2d: Base=" DPxMOD ", Begin=" DPxMOD ", Size=%" PRId64
        ", Type=0x%" PRIx64 ", Name=%s\n",
        i, DPxPTR(args_base[i]), DPxPTR(args[i]), arg_sizes[i], arg_types[i],
-       (arg_names) ? getNameFromMapping(arg_names[i]).c_str() : "(null)");
+       (arg_names) ? getNameFromMapping(arg_names[i]).c_str() : "unknown");
   }
 #endif
 
@@ -294,6 +305,10 @@ EXTERN void __tgt_target_data_update_mapper(ident_t *loc, int64_t device_id,
     return;
   }
 
+  if (getInfoLevel() & OMP_INFOTYPE_KERNEL_ARGS)
+    printKernelArguments(loc, device_id, arg_num, arg_sizes, arg_types,
+                         arg_names, "Updating OpenMP data");
+
   DeviceTy &Device = PM->Devices[device_id];
   int rc = targetDataUpdate(Device, arg_num, args_base, args, arg_sizes,
                             arg_types, arg_names, arg_mappers);
@@ -351,12 +366,15 @@ EXTERN int __tgt_target_mapper(ident_t *loc, int64_t device_id, void *host_ptr,
     return OFFLOAD_FAIL;
   }
 
+  if (getInfoLevel() & OMP_INFOTYPE_KERNEL_ARGS)
+    printKernelArguments(loc, device_id, arg_num, arg_sizes, arg_types,
+                         arg_names, "Entering OpenMP kernel");
 #ifdef OMPTARGET_DEBUG
   for (int i=0; i<arg_num; ++i) {
     DP("Entry %2d: Base=" DPxMOD ", Begin=" DPxMOD ", Size=%" PRId64
        ", Type=0x%" PRIx64 ", Name=%s\n",
        i, DPxPTR(args_base[i]), DPxPTR(args[i]), arg_sizes[i], arg_types[i],
-       (arg_names) ? getNameFromMapping(arg_names[i]).c_str() : "(null)");
+       (arg_names) ? getNameFromMapping(arg_names[i]).c_str() : "unknown");
   }
 #endif
 
@@ -423,12 +441,15 @@ EXTERN int __tgt_target_teams_mapper(ident_t *loc, int64_t device_id,
     return OFFLOAD_FAIL;
   }
 
+  if (getInfoLevel() & OMP_INFOTYPE_KERNEL_ARGS)
+    printKernelArguments(loc, device_id, arg_num, arg_sizes, arg_types,
+                         arg_names, "Entering OpenMP kernel");
 #ifdef OMPTARGET_DEBUG
   for (int i=0; i<arg_num; ++i) {
     DP("Entry %2d: Base=" DPxMOD ", Begin=" DPxMOD ", Size=%" PRId64
        ", Type=0x%" PRIx64 ", Name=%s\n",
        i, DPxPTR(args_base[i]), DPxPTR(args[i]), arg_sizes[i], arg_types[i],
-       (arg_names) ? getNameFromMapping(arg_names[i]).c_str() : "(null)");
+       (arg_names) ? getNameFromMapping(arg_names[i]).c_str() : "unknown");
   }
 #endif
 
@@ -436,7 +457,6 @@ EXTERN int __tgt_target_teams_mapper(ident_t *loc, int64_t device_id,
                   arg_types, arg_names, arg_mappers, team_num, thread_limit,
                   true /*team*/);
   HandleTargetOutcome(rc == OFFLOAD_SUCCESS, loc);
-
   return rc;
 }
 

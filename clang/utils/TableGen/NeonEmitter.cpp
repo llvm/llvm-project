@@ -1690,14 +1690,18 @@ std::pair<Type, std::string> Intrinsic::DagEmitter::emitDagDup(DagInit *DI) {
 
 std::pair<Type, std::string> Intrinsic::DagEmitter::emitDagDupTyped(DagInit *DI) {
   assert_with_loc(DI->getNumArgs() == 2, "dup_typed() expects two arguments");
-  std::pair<Type, std::string> A =
-      emitDagArg(DI->getArg(0), std::string(DI->getArgNameStr(0)));
   std::pair<Type, std::string> B =
       emitDagArg(DI->getArg(1), std::string(DI->getArgNameStr(1)));
   assert_with_loc(B.first.isScalar(),
                   "dup_typed() requires a scalar as the second argument");
+  Type T;
+  // If the type argument is a constant string, construct the type directly.
+  if (StringInit *SI = dyn_cast<StringInit>(DI->getArg(0))) {
+    T = Type::fromTypedefName(SI->getAsUnquotedString());
+    assert_with_loc(!T.isVoid(), "Unknown typedef");
+  } else
+    T = emitDagArg(DI->getArg(0), std::string(DI->getArgNameStr(0))).first;
 
-  Type T = A.first;
   assert_with_loc(T.isVector(), "dup_typed() used but target type is scalar!");
   std::string S = "(" + T.str() + ") {";
   for (unsigned I = 0; I < T.getNumElements(); ++I) {

@@ -335,6 +335,39 @@ TEST(MergeIndexTest, FuzzyFind) {
               UnorderedElementsAre("ns::A", "ns::B", "ns::C"));
 }
 
+TEST(MergeIndexTest, FuzzyFindRemovedSymbol) {
+  FileIndex DynamicIndex, StaticIndex;
+  MergedIndex Merge(&DynamicIndex, &StaticIndex);
+
+  const char *HeaderCode = "class Foo;";
+  auto HeaderSymbols = TestTU::withHeaderCode(HeaderCode).headerSymbols();
+  auto Foo = findSymbol(HeaderSymbols, "Foo");
+
+  // Build static index for test.cc with Foo symbol
+  TestTU Test;
+  Test.HeaderCode = HeaderCode;
+  Test.Code = "class Foo {};";
+  Test.Filename = "test.cc";
+  auto AST = Test.build();
+  StaticIndex.updateMain(testPath(Test.Filename), AST);
+
+  // Remove Foo symbol, i.e. build dynamic index for test.cc, which is empty.
+  Test.HeaderCode = "";
+  Test.Code = "";
+  AST = Test.build();
+  DynamicIndex.updateMain(testPath(Test.Filename), AST);
+
+  // Merged index should not return removed symbol.
+  FuzzyFindRequest Req;
+  Req.AnyScope = true;
+  Req.Query = "Foo";
+  unsigned SymbolCounter = 0;
+  bool IsIncomplete =
+      Merge.fuzzyFind(Req, [&](const Symbol &) { ++SymbolCounter; });
+  EXPECT_FALSE(IsIncomplete);
+  EXPECT_EQ(SymbolCounter, 0u);
+}
+
 TEST(MergeTest, Merge) {
   Symbol L, R;
   L.ID = R.ID = SymbolID("hello");

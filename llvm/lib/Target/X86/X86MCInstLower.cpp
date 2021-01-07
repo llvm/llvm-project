@@ -1784,10 +1784,7 @@ static const Constant *getConstantFromPool(const MachineInstr &MI,
   if (ConstantEntry.isMachineConstantPoolEntry())
     return nullptr;
 
-  const Constant *C = ConstantEntry.Val.ConstVal;
-  assert((!C || ConstantEntry.getType() == C->getType()) &&
-         "Expected a constant of the same type!");
-  return C;
+  return ConstantEntry.Val.ConstVal;
 }
 
 static std::string getShuffleComment(const MachineInstr *MI, unsigned SrcOp1Idx,

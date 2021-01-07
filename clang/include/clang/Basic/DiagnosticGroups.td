@@ -487,6 +487,8 @@ def ObjCPointerIntrospect : DiagGroup<"deprecated-objc-pointer-introspection", [
 def ObjCMultipleMethodNames : DiagGroup<"objc-multiple-method-names">;
 def ObjCFlexibleArray : DiagGroup<"objc-flexible-array">;
 def ObjCBoxing : DiagGroup<"objc-boxing">;
+def CompletionHandler : DiagGroup<"completion-handler">;
+def CalledOnceParameter : DiagGroup<"called-once-parameter", [CompletionHandler]>;
 def OpenCLUnsupportedRGBA: DiagGroup<"opencl-unsupported-rgba">;
 def UnderalignedExceptionObject : DiagGroup<"underaligned-exception-object">;
 def DeprecatedObjCIsaUsage : DiagGroup<"deprecated-objc-isa-usage">;

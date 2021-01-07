@@ -1,7 +1,8 @@
 // RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name continue.c %s | FileCheck %s
 
-int main() {                    // CHECK: File 0, [[@LINE]]:12 -> [[@LINE+21]]:2 = #0
-  int j = 0;                    // CHECK-NEXT: File 0, [[@LINE+2]]:18 -> [[@LINE+2]]:24 = (#0 + #1)
+int main() {                    // CHECK: File 0, [[@LINE]]:12 -> [[@LINE+22]]:2 = #0
+  int j = 0;                    // CHECK-NEXT: File 0, [[@LINE+3]]:18 -> [[@LINE+3]]:24 = (#0 + #1)
+                                // CHECK-NEXT: Branch,File 0, [[@LINE+2]]:18 -> [[@LINE+2]]:24 = #1, #0
                                 // CHECK-NEXT: File 0, [[@LINE+1]]:26 -> [[@LINE+1]]:29 = #1
   for(int i = 0; i < 20; ++i) { // CHECK: File 0, [[@LINE]]:31 -> [[@LINE+17]]:4 = #1
     if(i < 10) {                // CHECK: File 0, [[@LINE]]:16 -> [[@LINE+13]]:6 = #2

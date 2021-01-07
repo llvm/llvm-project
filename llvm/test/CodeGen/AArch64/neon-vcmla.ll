@@ -9,6 +9,17 @@ entry:
   ret <4 x half> %res
 }
 
+define <4 x half> @test_16x4_lane_1(<4 x half> %a, <4 x half> %b, <4 x half> %c) {
+entry:
+; CHECK-LABEL: test_16x4_lane_1
+; CHECK: fcmla v{{[0-9]+}}.4h, v{{[0-9]+}}.4h, v{{[0-9]+}}.h[1], #0
+;
+  %c.cast = bitcast <4 x half> %c to <2 x i32>
+  %c.dup = shufflevector <2 x i32> %c.cast , <2 x i32> undef, <2 x i32> <i32 1, i32 1>
+  %c.res = bitcast <2 x i32> %c.dup to <4 x half>
+  %res = tail call <4 x half> @llvm.aarch64.neon.vcmla.rot0.v4f16(<4 x half> %a, <4 x half> %b, <4 x half> %c.res)
+  ret <4 x half> %res
+}
 
 define <4 x half> @test_rot90_16x4(<4 x half> %a, <4 x half> %b, <4 x half> %c) {
 entry:
@@ -19,12 +30,36 @@ entry:
   ret <4 x half> %res
 }
 
+define <4 x half> @test_rot90_16x4_lane_0(<4 x half> %a, <4 x half> %b, <4 x half> %c) {
+entry:
+; CHECK-LABEL: test_rot90_16x4_lane_0
+; CHECK: fcmla v{{[0-9]+}}.4h, v{{[0-9]+}}.4h, v{{[0-9]+}}.h[0], #90
+;
+  %c.cast = bitcast <4 x half> %c to <2 x i32>
+  %c.dup = shufflevector <2 x i32> %c.cast , <2 x i32> undef, <2 x i32> <i32 0, i32 0>
+  %c.res = bitcast <2 x i32> %c.dup to <4 x half>
+  %res = tail call <4 x half> @llvm.aarch64.neon.vcmla.rot90.v4f16(<4 x half> %a, <4 x half> %b, <4 x half> %c.res)
+  ret <4 x half> %res
+}
+
 define <4 x half> @test_rot180_16x4(<4 x half> %a, <4 x half> %b, <4 x half> %c) {
 entry:
 ; CHECK-LABEL: test_rot180_16x4
 ; CHECK: fcmla v{{[0-9]+}}.4h, v{{[0-9]+}}.4h, v{{[0-9]+}}.4h, #180
 ;
   %res = tail call <4 x half> @llvm.aarch64.neon.vcmla.rot180.v4f16(<4 x half> %a, <4 x half> %b, <4 x half> %c)
+  ret <4 x half> %res
+}
+
+define <4 x half> @test_rot180_16x4_lane_0(<4 x half> %a, <4 x half> %b, <8 x half> %c) {
+entry:
+; CHECK-LABEL: test_rot180_16x4_lane_0
+; CHECK: fcmla v{{[0-9]+}}.4h, v{{[0-9]+}}.4h, v{{[0-9]+}}.h[0], #180
+
+  %c.cast = bitcast <8 x half> %c to <4 x i32>
+  %c.dup = shufflevector <4 x i32> %c.cast , <4 x i32> undef, <2 x i32> <i32 0, i32 0>
+  %c.res = bitcast <2 x i32> %c.dup to <4 x half>
+  %res = tail call <4 x half> @llvm.aarch64.neon.vcmla.rot180.v4f16(<4 x half> %a, <4 x half> %b, <4 x half> %c.res)
   ret <4 x half> %res
 }
 
@@ -82,12 +117,36 @@ entry:
   ret <8 x half> %res
 }
 
+define <8 x half> @test_16x8_lane_0(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
+entry:
+; CHECK-LABEL: test_16x8_lane_0
+; CHECK: fcmla v{{[0-9]+}}.8h, v{{[0-9]+}}.8h, v{{[0-9]+}}.h[0], #0
+;
+  %c.cast = bitcast <8 x half> %c to <4 x i32>
+  %c.dup = shufflevector <4 x i32> %c.cast , <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
+  %c.res = bitcast <4 x i32> %c.dup to <8 x half>
+  %res = tail call <8 x half> @llvm.aarch64.neon.vcmla.rot0.v8f16(<8 x half> %a, <8 x half> %b, <8 x half> %c.res)
+  ret <8 x half> %res
+}
+
 define <8 x half> @test_rot90_16x8(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
 entry:
 ; CHECK-LABEL: test_rot90_16x8
 ; CHECK: fcmla v{{[0-9]+}}.8h, v{{[0-9]+}}.8h, v{{[0-9]+}}.8h, #90
 ;
   %res = tail call <8 x half> @llvm.aarch64.neon.vcmla.rot90.v8f16(<8 x half> %a, <8 x half> %b, <8 x half> %c)
+  ret <8 x half> %res
+}
+
+define <8 x half> @test_rot90_16x8_lane_1(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
+entry:
+; CHECK-LABEL: test_rot90_16x8_lane_1
+; CHECK: fcmla v{{[0-9]+}}.8h, v{{[0-9]+}}.8h, v{{[0-9]+}}.h[1], #90
+;
+  %c.cast = bitcast <8 x half> %c to <4 x i32>
+  %c.dup = shufflevector <4 x i32> %c.cast , <4 x i32> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %c.res = bitcast <4 x i32> %c.dup to <8 x half>
+  %res = tail call <8 x half> @llvm.aarch64.neon.vcmla.rot90.v8f16(<8 x half> %a, <8 x half> %b, <8 x half> %c.res)
   ret <8 x half> %res
 }
 
@@ -100,6 +159,18 @@ entry:
   ret <8 x half> %res
 }
 
+define <8 x half> @test_rot180_16x8_lane_1(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
+entry:
+; CHECK-LABEL: test_rot180_16x8_lane_1
+; CHECK: fcmla v{{[0-9]+}}.8h, v{{[0-9]+}}.8h, v{{[0-9]+}}.h[1], #180
+;
+  %c.cast = bitcast <8 x half> %c to <4 x i32>
+  %c.dup = shufflevector <4 x i32> %c.cast , <4 x i32> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %c.res = bitcast <4 x i32> %c.dup to <8 x half>
+  %res = tail call <8 x half> @llvm.aarch64.neon.vcmla.rot180.v8f16(<8 x half> %a, <8 x half> %b, <8 x half> %c.res)
+  ret <8 x half> %res
+}
+
 define <8 x half> @test_rot270_16x8(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
 entry:
 ; CHECK-LABEL: test_rot270_16x8
@@ -109,12 +180,36 @@ entry:
   ret <8 x half> %res
 }
 
+define <8 x half> @test_rot270_16x8_lane_0(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
+entry:
+; CHECK-LABEL: test_rot270_16x8_lane_0
+; CHECK: fcmla v{{[0-9]+}}.8h, v{{[0-9]+}}.8h, v{{[0-9]+}}.h[0], #270
+;
+  %c.cast = bitcast <8 x half> %c to <4 x i32>
+  %c.dup = shufflevector <4 x i32> %c.cast , <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
+  %c.res = bitcast <4 x i32> %c.dup to <8 x half>
+  %res = tail call <8 x half> @llvm.aarch64.neon.vcmla.rot270.v8f16(<8 x half> %a, <8 x half> %b, <8 x half> %c.res)
+  ret <8 x half> %res
+}
+
 define <4 x float> @test_32x4(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 entry:
 ; CHECK-LABEL: test_32x4
 ; CHECK: fcmla v{{[0-9]+}}.4s, v{{[0-9]+}}.4s, v{{[0-9]+}}.4s, #0
 ;
   %res = tail call <4 x float> @llvm.aarch64.neon.vcmla.rot0.v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c)
+  ret <4 x float> %res
+}
+
+define <4 x float> @test_32x4_lane_0(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
+entry:
+; CHECK-LABEL: test_32x4_lane_0
+; CHECK: fcmla v{{[0-9]+}}.4s, v{{[0-9]+}}.4s, v{{[0-9]+}}.s[0], #0
+;
+  %c.cast = bitcast <4 x float> %c to <2 x i64>
+  %c.dup = shufflevector <2 x i64> %c.cast , <2 x i64> undef, <2 x i32> <i32 0, i32 0>
+  %c.res = bitcast <2 x i64> %c.dup to <4 x float>
+  %res = tail call <4 x float> @llvm.aarch64.neon.vcmla.rot0.v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c.res)
   ret <4 x float> %res
 }
 

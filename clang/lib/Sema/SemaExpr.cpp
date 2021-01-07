@@ -4089,13 +4089,23 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(Expr *E,
 
   bool IsUnevaluatedOperand =
       (ExprKind == UETT_SizeOf || ExprKind == UETT_AlignOf ||
-       ExprKind == UETT_PreferredAlignOf);
+       ExprKind == UETT_PreferredAlignOf || ExprKind == UETT_VecStep);
   if (IsUnevaluatedOperand) {
     ExprResult Result = CheckUnevaluatedOperand(E);
     if (Result.isInvalid())
       return true;
     E = Result.get();
   }
+
+  // The operand for sizeof and alignof is in an unevaluated expression context,
+  // so side effects could result in unintended consequences.
+  // Exclude instantiation-dependent expressions, because 'sizeof' is sometimes
+  // used to build SFINAE gadgets.
+  // FIXME: Should we consider instantiation-dependent operands to 'alignof'?
+  if (IsUnevaluatedOperand && !inTemplateInstantiation() &&
+      !E->isInstantiationDependent() &&
+      E->HasSideEffects(Context, false))
+    Diag(E->getExprLoc(), diag::warn_side_effects_unevaluated_context);
 
   if (ExprKind == UETT_VecStep)
     return CheckVecStepTraitOperandType(*this, ExprTy, E->getExprLoc(),
@@ -4132,16 +4142,6 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(Expr *E,
         << getTraitSpelling(ExprKind) << E->getSourceRange();
     return true;
   }
-
-  // The operand for sizeof and alignof is in an unevaluated expression context,
-  // so side effects could result in unintended consequences.
-  // Exclude instantiation-dependent expressions, because 'sizeof' is sometimes
-  // used to build SFINAE gadgets.
-  // FIXME: Should we consider instantiation-dependent operands to 'alignof'?
-  if (IsUnevaluatedOperand && !inTemplateInstantiation() &&
-      !E->isInstantiationDependent() &&
-      E->HasSideEffects(Context, false))
-    Diag(E->getExprLoc(), diag::warn_side_effects_unevaluated_context);
 
   if (CheckObjCTraitOperandConstraints(*this, ExprTy, E->getExprLoc(),
                                        E->getSourceRange(), ExprKind))
@@ -6484,7 +6484,7 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
            "should only occur in error-recovery path.");
     QualType ReturnType =
         llvm::isa_and_nonnull<FunctionDecl>(NDecl)
-            ? dyn_cast<FunctionDecl>(NDecl)->getCallResultType()
+            ? cast<FunctionDecl>(NDecl)->getCallResultType()
             : Context.DependentTy;
     return CallExpr::Create(Context, Fn, ArgExprs, ReturnType,
                             Expr::getValueKindForType(ReturnType), RParenLoc,
@@ -15404,10 +15404,6 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
 
   PopDeclContext();
 
-  // Pop the block scope now but keep it alive to the end of this function.
-  AnalysisBasedWarnings::Policy WP = AnalysisWarnings.getDefaultPolicy();
-  PoppedFunctionScopePtr ScopeRAII = PopFunctionScopeInfo(&WP, BD, BlockTy);
-
   // Set the captured variables on the block.
   SmallVector<BlockDecl::Capture, 4> Captures;
   for (Capture &Cap : BSI->Captures) {
@@ -15474,6 +15470,10 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
     Captures.push_back(NewCap);
   }
   BD->setCaptures(Context, Captures, BSI->CXXThisCaptureIndex != 0);
+
+  // Pop the block scope now but keep it alive to the end of this function.
+  AnalysisBasedWarnings::Policy WP = AnalysisWarnings.getDefaultPolicy();
+  PoppedFunctionScopePtr ScopeRAII = PopFunctionScopeInfo(&WP, BD, BlockTy);
 
   BlockExpr *Result = new (Context) BlockExpr(BD, BlockTy);
 

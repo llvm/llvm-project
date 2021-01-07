@@ -88,6 +88,12 @@ private:
                                ArrayRef<ExpansionRecord> Expansions,
                                const CoverageMapping &Coverage);
 
+  /// Create source views for the branches of the view.
+  void attachBranchSubViews(SourceCoverageView &View, StringRef SourceName,
+                            ArrayRef<CountedRegion> Branches,
+                            const MemoryBuffer &File,
+                            CoverageData &CoverageInfo);
+
   /// Create the source view of a particular function.
   std::unique_ptr<SourceCoverageView>
   createFunctionView(const FunctionRecord &Function,
@@ -268,12 +274,42 @@ void CodeCoverageTool::attachExpansionSubViews(
     if (!SourceBuffer)
       continue;
 
+    auto SubViewBranches = ExpansionCoverage.getBranches();
     auto SubViewExpansions = ExpansionCoverage.getExpansions();
     auto SubView =
         SourceCoverageView::create(Expansion.Function.Name, SourceBuffer.get(),
                                    ViewOpts, std::move(ExpansionCoverage));
     attachExpansionSubViews(*SubView, SubViewExpansions, Coverage);
+    attachBranchSubViews(*SubView, Expansion.Function.Name, SubViewBranches,
+                         SourceBuffer.get(), ExpansionCoverage);
     View.addExpansion(Expansion.Region, std::move(SubView));
+  }
+}
+
+void CodeCoverageTool::attachBranchSubViews(SourceCoverageView &View,
+                                            StringRef SourceName,
+                                            ArrayRef<CountedRegion> Branches,
+                                            const MemoryBuffer &File,
+                                            CoverageData &CoverageInfo) {
+  if (!ViewOpts.ShowBranchCounts && !ViewOpts.ShowBranchPercents)
+    return;
+
+  const auto *NextBranch = Branches.begin();
+  const auto *EndBranch = Branches.end();
+
+  // Group branches that have the same line number into the same subview.
+  while (NextBranch != EndBranch) {
+    std::vector<CountedRegion> ViewBranches;
+    unsigned CurrentLine = NextBranch->LineStart;
+
+    while (NextBranch != EndBranch && CurrentLine == NextBranch->LineStart)
+      ViewBranches.push_back(*NextBranch++);
+
+    if (!ViewBranches.empty()) {
+      auto SubView = SourceCoverageView::create(SourceName, File, ViewOpts,
+                                                std::move(CoverageInfo));
+      View.addBranch(CurrentLine, ViewBranches, std::move(SubView));
+    }
   }
 }
 
@@ -287,11 +323,14 @@ CodeCoverageTool::createFunctionView(const FunctionRecord &Function,
   if (!SourceBuffer)
     return nullptr;
 
+  auto Branches = FunctionCoverage.getBranches();
   auto Expansions = FunctionCoverage.getExpansions();
   auto View = SourceCoverageView::create(DC.demangle(Function.Name),
                                          SourceBuffer.get(), ViewOpts,
                                          std::move(FunctionCoverage));
   attachExpansionSubViews(*View, Expansions, Coverage);
+  attachBranchSubViews(*View, DC.demangle(Function.Name), Branches,
+                       SourceBuffer.get(), FunctionCoverage);
 
   return View;
 }
@@ -306,10 +345,13 @@ CodeCoverageTool::createSourceFileView(StringRef SourceFile,
   if (FileCoverage.empty())
     return nullptr;
 
+  auto Branches = FileCoverage.getBranches();
   auto Expansions = FileCoverage.getExpansions();
   auto View = SourceCoverageView::create(SourceFile, SourceBuffer.get(),
                                          ViewOpts, std::move(FileCoverage));
   attachExpansionSubViews(*View, Expansions, Coverage);
+  attachBranchSubViews(*View, SourceFile, Branches, SourceBuffer.get(),
+                       FileCoverage);
   if (!ViewOpts.ShowFunctionInstantiations)
     return View;
 
@@ -326,9 +368,12 @@ CodeCoverageTool::createSourceFileView(StringRef SourceFile,
       if (Function->ExecutionCount > 0) {
         auto SubViewCoverage = Coverage.getCoverageForFunction(*Function);
         auto SubViewExpansions = SubViewCoverage.getExpansions();
+        auto SubViewBranches = SubViewCoverage.getBranches();
         SubView = SourceCoverageView::create(
             Funcname, SourceBuffer.get(), ViewOpts, std::move(SubViewCoverage));
         attachExpansionSubViews(*SubView, SubViewExpansions, Coverage);
+        attachBranchSubViews(*SubView, SourceFile, SubViewBranches,
+                             SourceBuffer.get(), SubViewCoverage);
       }
 
       unsigned FileID = Function->CountedRegions.front().FileID;
@@ -645,6 +690,11 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       cl::desc("Show region statistics in summary table"),
       cl::init(true));
 
+  cl::opt<bool> BranchSummary(
+      "show-branch-summary", cl::Optional,
+      cl::desc("Show branch condition statistics in summary table"),
+      cl::init(true));
+
   cl::opt<bool> InstantiationSummary(
       "show-instantiation-summary", cl::Optional,
       cl::desc("Show instantiation statistics in summary table"));
@@ -788,6 +838,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       ::exit(0);
     }
 
+    ViewOpts.ShowBranchSummary = BranchSummary;
     ViewOpts.ShowRegionSummary = RegionSummary;
     ViewOpts.ShowInstantiationSummary = InstantiationSummary;
     ViewOpts.ExportSummaryOnly = SummaryOnly;
@@ -821,6 +872,15 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
       "show-regions", cl::Optional,
       cl::desc("Show the execution counts for each region"),
       cl::cat(ViewCategory));
+
+  cl::opt<CoverageViewOptions::BranchOutputType> ShowBranches(
+      "show-branches", cl::Optional,
+      cl::desc("Show coverage for branch conditions"), cl::cat(ViewCategory),
+      cl::values(clEnumValN(CoverageViewOptions::BranchOutputType::Count,
+                            "count", "Show True/False counts"),
+                 clEnumValN(CoverageViewOptions::BranchOutputType::Percent,
+                            "percent", "Show True/False percent")),
+      cl::init(CoverageViewOptions::BranchOutputType::Off));
 
   cl::opt<bool> ShowBestLineRegionsCounts(
       "show-line-counts-or-regions", cl::Optional,
@@ -865,6 +925,10 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
                            !ShowRegions || ShowBestLineRegionsCounts;
   ViewOpts.ShowRegionMarkers = ShowRegions || ShowBestLineRegionsCounts;
   ViewOpts.ShowExpandedRegions = ShowExpansions;
+  ViewOpts.ShowBranchCounts =
+      ShowBranches == CoverageViewOptions::BranchOutputType::Count;
+  ViewOpts.ShowBranchPercents =
+      ShowBranches == CoverageViewOptions::BranchOutputType::Percent;
   ViewOpts.ShowFunctionInstantiations = ShowInstantiations;
   ViewOpts.ShowOutputDirectory = ShowOutputDirectory;
   ViewOpts.TabSize = TabSize;

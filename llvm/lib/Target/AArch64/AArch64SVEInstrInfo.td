@@ -201,6 +201,8 @@ def SDT_AArch64IntExtend : SDTypeProfile<1, 4, [
 ]>;
 
 // Predicated operations with the result of inactive lanes provided by the last operand.
+def AArch64clz_mt    : SDNode<"AArch64ISD::CTLZ_MERGE_PASSTHRU", SDT_AArch64Arith>;
+def AArch64cnt_mt    : SDNode<"AArch64ISD::CTPOP_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64fneg_mt   : SDNode<"AArch64ISD::FNEG_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64fabs_mt   : SDNode<"AArch64ISD::FABS_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64sxt_mt    : SDNode<"AArch64ISD::SIGN_EXTEND_INREG_MERGE_PASSTHRU", SDT_AArch64IntExtend>;
@@ -216,6 +218,12 @@ def AArch64fsqrt_mt  : SDNode<"AArch64ISD::FSQRT_MERGE_PASSTHRU", SDT_AArch64Ari
 def AArch64frecpx_mt : SDNode<"AArch64ISD::FRECPX_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64rbit_mt   : SDNode<"AArch64ISD::BITREVERSE_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64revb_mt   : SDNode<"AArch64ISD::BSWAP_MERGE_PASSTHRU", SDT_AArch64Arith>;
+
+// These are like the above but we don't yet have need for ISD nodes. They allow
+// a single pattern to match intrinsic and ISD operand layouts.
+def AArch64cls_mt  : PatFrags<(ops node:$pg, node:$op, node:$pt), [(int_aarch64_sve_cls  node:$pt, node:$pg, node:$op)]>;
+def AArch64cnot_mt : PatFrags<(ops node:$pg, node:$op, node:$pt), [(int_aarch64_sve_cnot node:$pt, node:$pg, node:$op)]>;
+def AArch64not_mt  : PatFrags<(ops node:$pg, node:$op, node:$pt), [(int_aarch64_sve_not  node:$pt, node:$pg, node:$op)]>;
 
 def SDT_AArch64FCVT : SDTypeProfile<1, 3, [
   SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>, SDTCisVec<3>,
@@ -371,12 +379,11 @@ let Predicates = [HasSVE] in {
   defm ABS_ZPmZ  : sve_int_un_pred_arit_0<  0b110, "abs",  int_aarch64_sve_abs>;
   defm NEG_ZPmZ  : sve_int_un_pred_arit_0<  0b111, "neg",  int_aarch64_sve_neg>;
 
-  defm CLS_ZPmZ  : sve_int_un_pred_arit_1<   0b000, "cls",  int_aarch64_sve_cls>;
-  defm CLZ_ZPmZ  : sve_int_un_pred_arit_1<   0b001, "clz",  int_aarch64_sve_clz>;
-  defm CNT_ZPmZ  : sve_int_un_pred_arit_1<   0b010, "cnt",  int_aarch64_sve_cnt>;
-
-  defm CNOT_ZPmZ : sve_int_un_pred_arit_1<   0b011, "cnot", int_aarch64_sve_cnot>;
-  defm NOT_ZPmZ  : sve_int_un_pred_arit_1<   0b110, "not",  int_aarch64_sve_not>;
+  defm CLS_ZPmZ  : sve_int_un_pred_arit_1<   0b000, "cls",  AArch64cls_mt>;
+  defm CLZ_ZPmZ  : sve_int_un_pred_arit_1<   0b001, "clz",  AArch64clz_mt>;
+  defm CNT_ZPmZ  : sve_int_un_pred_arit_1<   0b010, "cnt",  AArch64cnt_mt>;
+  defm CNOT_ZPmZ : sve_int_un_pred_arit_1<   0b011, "cnot", AArch64cnot_mt>;
+  defm NOT_ZPmZ  : sve_int_un_pred_arit_1<   0b110, "not",  AArch64not_mt>;
   defm FABS_ZPmZ : sve_int_un_pred_arit_1_fp<0b100, "fabs", AArch64fabs_mt>;
   defm FNEG_ZPmZ : sve_int_un_pred_arit_1_fp<0b101, "fneg", AArch64fneg_mt>;
 

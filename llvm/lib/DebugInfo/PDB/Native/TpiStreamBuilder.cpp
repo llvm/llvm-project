@@ -91,7 +91,7 @@ void TpiStreamBuilder::addTypeRecords(ArrayRef<uint8_t> Types,
   updateTypeIndexOffsets(Sizes);
 
   TypeRecBuffers.push_back(Types);
-  TypeHashes.insert(TypeHashes.end(), Hashes.begin(), Hashes.end());
+  llvm::append_range(TypeHashes, Hashes);
 }
 
 Error TpiStreamBuilder::finalize() {

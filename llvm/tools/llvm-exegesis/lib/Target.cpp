@@ -132,8 +132,7 @@ const PfmCountersInfo &ExegesisTarget::getPfmCounters(StringRef CpuName) const {
          "CpuPfmCounters table is not sorted");
 
   // Find entry
-  auto Found =
-      std::lower_bound(CpuPfmCounters.begin(), CpuPfmCounters.end(), CpuName);
+  auto Found = llvm::lower_bound(CpuPfmCounters, CpuName);
   if (Found == CpuPfmCounters.end() || StringRef(Found->CpuName) != CpuName) {
     // Use the default.
     if (CpuPfmCounters.begin() != CpuPfmCounters.end() &&

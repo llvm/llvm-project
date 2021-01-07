@@ -45,11 +45,12 @@ public:
 
   bool SelectAddrFI(SDValue Addr, SDValue &Base);
 
-  bool SelectSLOI(SDValue N, SDValue &RS1, SDValue &Shamt);
-  bool SelectSROI(SDValue N, SDValue &RS1, SDValue &Shamt);
-  bool SelectSLLIUW(SDValue N, SDValue &RS1, SDValue &Shamt);
-  bool SelectSLOIW(SDValue N, SDValue &RS1, SDValue &Shamt);
-  bool SelectSROIW(SDValue N, SDValue &RS1, SDValue &Shamt);
+  bool MatchSRLIW(SDNode *N) const;
+  bool MatchSLOI(SDNode *N) const;
+  bool MatchSROI(SDNode *N) const;
+  bool MatchSROIW(SDNode *N) const;
+  bool MatchSLLIUW(SDNode *N) const;
+
   bool selectVSplat(SDValue N, SDValue &SplatVal);
   bool selectVSplatSimm5(SDValue N, SDValue &SplatVal);
   bool selectVSplatUimm5(SDValue N, SDValue &SplatVal);

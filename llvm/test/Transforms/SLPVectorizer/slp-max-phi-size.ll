@@ -132,13 +132,13 @@ define void @phi_float32(half %hval, float %fval) {
 ; MAX256-NEXT:  bb:
 ; MAX256-NEXT:    br label [[BB1:%.*]]
 ; MAX256:       bb1:
-; MAX256-NEXT:    [[TMP0:%.*]] = insertelement <4 x half> undef, half [[HVAL:%.*]], i32 0
+; MAX256-NEXT:    [[TMP0:%.*]] = insertelement <4 x half> poison, half [[HVAL:%.*]], i32 0
 ; MAX256-NEXT:    [[TMP1:%.*]] = insertelement <4 x half> [[TMP0]], half [[HVAL]], i32 1
 ; MAX256-NEXT:    [[TMP2:%.*]] = insertelement <4 x half> [[TMP1]], half [[HVAL]], i32 2
 ; MAX256-NEXT:    [[TMP3:%.*]] = insertelement <4 x half> [[TMP2]], half [[HVAL]], i32 3
 ; MAX256-NEXT:    [[TMP4:%.*]] = fpext <4 x half> [[TMP3]] to <4 x float>
 ; MAX256-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
-; MAX256-NEXT:    [[TMP5:%.*]] = insertelement <8 x float> undef, float [[FVAL:%.*]], i32 0
+; MAX256-NEXT:    [[TMP5:%.*]] = insertelement <8 x float> poison, float [[FVAL:%.*]], i32 0
 ; MAX256-NEXT:    [[TMP6:%.*]] = insertelement <8 x float> [[TMP5]], float [[FVAL]], i32 1
 ; MAX256-NEXT:    [[TMP7:%.*]] = insertelement <8 x float> [[TMP6]], float [[FVAL]], i32 2
 ; MAX256-NEXT:    [[TMP8:%.*]] = insertelement <8 x float> [[TMP7]], float [[FVAL]], i32 3
@@ -152,7 +152,7 @@ define void @phi_float32(half %hval, float %fval) {
 ; MAX256-NEXT:    [[TMP16:%.*]] = extractelement <8 x float> [[SHUFFLE]], i32 2
 ; MAX256-NEXT:    [[TMP17:%.*]] = extractelement <8 x float> [[SHUFFLE]], i32 1
 ; MAX256-NEXT:    [[TMP18:%.*]] = extractelement <8 x float> [[SHUFFLE]], i32 0
-; MAX256-NEXT:    [[TMP19:%.*]] = insertelement <8 x float> undef, float [[TMP15]], i32 0
+; MAX256-NEXT:    [[TMP19:%.*]] = insertelement <8 x float> poison, float [[TMP15]], i32 0
 ; MAX256-NEXT:    [[TMP20:%.*]] = insertelement <8 x float> [[TMP19]], float [[TMP16]], i32 1
 ; MAX256-NEXT:    [[TMP21:%.*]] = insertelement <8 x float> [[TMP20]], float [[TMP17]], i32 2
 ; MAX256-NEXT:    [[TMP22:%.*]] = insertelement <8 x float> [[TMP21]], float [[TMP18]], i32 3
@@ -167,7 +167,7 @@ define void @phi_float32(half %hval, float %fval) {
 ; MAX256-NEXT:    [[TMP31:%.*]] = fmul <8 x float> [[TMP26]], [[TMP12]]
 ; MAX256-NEXT:    [[TMP32:%.*]] = fadd <8 x float> zeroinitializer, [[TMP31]]
 ; MAX256-NEXT:    [[TMP33:%.*]] = extractelement <8 x float> [[TMP14]], i32 0
-; MAX256-NEXT:    [[TMP34:%.*]] = insertelement <8 x float> undef, float [[TMP33]], i32 0
+; MAX256-NEXT:    [[TMP34:%.*]] = insertelement <8 x float> poison, float [[TMP33]], i32 0
 ; MAX256-NEXT:    [[TMP35:%.*]] = extractelement <8 x float> [[TMP14]], i32 1
 ; MAX256-NEXT:    [[TMP36:%.*]] = insertelement <8 x float> [[TMP34]], float [[TMP35]], i32 1
 ; MAX256-NEXT:    [[TMP37:%.*]] = insertelement <8 x float> [[TMP36]], float [[FVAL]], i32 2
@@ -226,7 +226,7 @@ define void @phi_float32(half %hval, float %fval) {
 ; MAX256-NEXT:    [[TMP82:%.*]] = extractelement <8 x float> [[TMP14]], i32 7
 ; MAX256-NEXT:    [[TMP83:%.*]] = insertelement <8 x float> [[TMP81]], float [[TMP82]], i32 7
 ; MAX256-NEXT:    [[TMP84:%.*]] = extractelement <8 x float> [[TMP28]], i32 0
-; MAX256-NEXT:    [[TMP85:%.*]] = insertelement <8 x float> undef, float [[TMP84]], i32 0
+; MAX256-NEXT:    [[TMP85:%.*]] = insertelement <8 x float> poison, float [[TMP84]], i32 0
 ; MAX256-NEXT:    [[TMP86:%.*]] = insertelement <8 x float> [[TMP85]], float [[FVAL]], i32 1
 ; MAX256-NEXT:    [[TMP87:%.*]] = insertelement <8 x float> [[TMP86]], float [[FVAL]], i32 2
 ; MAX256-NEXT:    [[TMP88:%.*]] = insertelement <8 x float> [[TMP87]], float [[TMP47]], i32 3
@@ -236,7 +236,7 @@ define void @phi_float32(half %hval, float %fval) {
 ; MAX256-NEXT:    [[TMP92:%.*]] = insertelement <8 x float> [[TMP91]], float [[FVAL]], i32 6
 ; MAX256-NEXT:    [[TMP93:%.*]] = insertelement <8 x float> [[TMP92]], float [[TMP53]], i32 7
 ; MAX256-NEXT:    [[TMP94:%.*]] = extractelement <8 x float> [[TMP30]], i32 0
-; MAX256-NEXT:    [[TMP95:%.*]] = insertelement <8 x float> undef, float [[TMP94]], i32 0
+; MAX256-NEXT:    [[TMP95:%.*]] = insertelement <8 x float> poison, float [[TMP94]], i32 0
 ; MAX256-NEXT:    [[TMP96:%.*]] = insertelement <8 x float> [[TMP95]], float [[FVAL]], i32 1
 ; MAX256-NEXT:    [[TMP97:%.*]] = insertelement <8 x float> [[TMP96]], float [[FVAL]], i32 2
 ; MAX256-NEXT:    [[TMP98:%.*]] = insertelement <8 x float> [[TMP97]], float [[TMP57]], i32 3
@@ -246,7 +246,7 @@ define void @phi_float32(half %hval, float %fval) {
 ; MAX256-NEXT:    [[TMP102:%.*]] = insertelement <8 x float> [[TMP101]], float [[FVAL]], i32 6
 ; MAX256-NEXT:    [[TMP103:%.*]] = insertelement <8 x float> [[TMP102]], float [[TMP63]], i32 7
 ; MAX256-NEXT:    [[TMP104:%.*]] = extractelement <8 x float> [[TMP32]], i32 0
-; MAX256-NEXT:    [[TMP105:%.*]] = insertelement <8 x float> undef, float [[TMP104]], i32 0
+; MAX256-NEXT:    [[TMP105:%.*]] = insertelement <8 x float> poison, float [[TMP104]], i32 0
 ; MAX256-NEXT:    [[TMP106:%.*]] = insertelement <8 x float> [[TMP105]], float [[FVAL]], i32 1
 ; MAX256-NEXT:    [[TMP107:%.*]] = insertelement <8 x float> [[TMP106]], float [[FVAL]], i32 2
 ; MAX256-NEXT:    [[TMP108:%.*]] = insertelement <8 x float> [[TMP107]], float [[TMP67]], i32 3
@@ -267,7 +267,7 @@ define void @phi_float32(half %hval, float %fval) {
 ; MAX256-NEXT:    [[TMP121:%.*]] = extractelement <8 x float> [[TMP14]], i32 7
 ; MAX256-NEXT:    [[TMP122:%.*]] = insertelement <8 x float> [[TMP120]], float [[TMP121]], i32 7
 ; MAX256-NEXT:    [[TMP123:%.*]] = extractelement <8 x float> [[TMP28]], i32 0
-; MAX256-NEXT:    [[TMP124:%.*]] = insertelement <8 x float> undef, float [[TMP123]], i32 0
+; MAX256-NEXT:    [[TMP124:%.*]] = insertelement <8 x float> poison, float [[TMP123]], i32 0
 ; MAX256-NEXT:    [[TMP125:%.*]] = insertelement <8 x float> [[TMP124]], float [[FVAL]], i32 1
 ; MAX256-NEXT:    [[TMP126:%.*]] = insertelement <8 x float> [[TMP125]], float [[TMP45]], i32 2
 ; MAX256-NEXT:    [[TMP127:%.*]] = insertelement <8 x float> [[TMP126]], float [[FVAL]], i32 3
@@ -277,7 +277,7 @@ define void @phi_float32(half %hval, float %fval) {
 ; MAX256-NEXT:    [[TMP131:%.*]] = insertelement <8 x float> [[TMP130]], float [[TMP51]], i32 6
 ; MAX256-NEXT:    [[TMP132:%.*]] = insertelement <8 x float> [[TMP131]], float [[FVAL]], i32 7
 ; MAX256-NEXT:    [[TMP133:%.*]] = extractelement <8 x float> [[TMP30]], i32 0
-; MAX256-NEXT:    [[TMP134:%.*]] = insertelement <8 x float> undef, float [[TMP133]], i32 0
+; MAX256-NEXT:    [[TMP134:%.*]] = insertelement <8 x float> poison, float [[TMP133]], i32 0
 ; MAX256-NEXT:    [[TMP135:%.*]] = insertelement <8 x float> [[TMP134]], float [[FVAL]], i32 1
 ; MAX256-NEXT:    [[TMP136:%.*]] = insertelement <8 x float> [[TMP135]], float [[TMP55]], i32 2
 ; MAX256-NEXT:    [[TMP137:%.*]] = insertelement <8 x float> [[TMP136]], float [[FVAL]], i32 3
@@ -287,7 +287,7 @@ define void @phi_float32(half %hval, float %fval) {
 ; MAX256-NEXT:    [[TMP141:%.*]] = insertelement <8 x float> [[TMP140]], float [[TMP61]], i32 6
 ; MAX256-NEXT:    [[TMP142:%.*]] = insertelement <8 x float> [[TMP141]], float [[FVAL]], i32 7
 ; MAX256-NEXT:    [[TMP143:%.*]] = extractelement <8 x float> [[TMP32]], i32 0
-; MAX256-NEXT:    [[TMP144:%.*]] = insertelement <8 x float> undef, float [[TMP143]], i32 0
+; MAX256-NEXT:    [[TMP144:%.*]] = insertelement <8 x float> poison, float [[TMP143]], i32 0
 ; MAX256-NEXT:    [[TMP145:%.*]] = insertelement <8 x float> [[TMP144]], float [[FVAL]], i32 1
 ; MAX256-NEXT:    [[TMP146:%.*]] = insertelement <8 x float> [[TMP145]], float [[TMP65]], i32 2
 ; MAX256-NEXT:    [[TMP147:%.*]] = insertelement <8 x float> [[TMP146]], float [[FVAL]], i32 3
@@ -310,13 +310,13 @@ define void @phi_float32(half %hval, float %fval) {
 ; MAX1024-NEXT:  bb:
 ; MAX1024-NEXT:    br label [[BB1:%.*]]
 ; MAX1024:       bb1:
-; MAX1024-NEXT:    [[TMP0:%.*]] = insertelement <4 x half> undef, half [[HVAL:%.*]], i32 0
+; MAX1024-NEXT:    [[TMP0:%.*]] = insertelement <4 x half> poison, half [[HVAL:%.*]], i32 0
 ; MAX1024-NEXT:    [[TMP1:%.*]] = insertelement <4 x half> [[TMP0]], half [[HVAL]], i32 1
 ; MAX1024-NEXT:    [[TMP2:%.*]] = insertelement <4 x half> [[TMP1]], half [[HVAL]], i32 2
 ; MAX1024-NEXT:    [[TMP3:%.*]] = insertelement <4 x half> [[TMP2]], half [[HVAL]], i32 3
 ; MAX1024-NEXT:    [[TMP4:%.*]] = fpext <4 x half> [[TMP3]] to <4 x float>
 ; MAX1024-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 3, i32 2, i32 1, i32 0, i32 3, i32 2, i32 1, i32 0, i32 3, i32 2, i32 1, i32 0, i32 3, i32 2, i32 1, i32 0, i32 3, i32 2, i32 1, i32 0, i32 3, i32 2, i32 1, i32 0>
-; MAX1024-NEXT:    [[TMP5:%.*]] = insertelement <32 x float> undef, float [[FVAL:%.*]], i32 0
+; MAX1024-NEXT:    [[TMP5:%.*]] = insertelement <32 x float> poison, float [[FVAL:%.*]], i32 0
 ; MAX1024-NEXT:    [[TMP6:%.*]] = insertelement <32 x float> [[TMP5]], float [[FVAL]], i32 1
 ; MAX1024-NEXT:    [[TMP7:%.*]] = insertelement <32 x float> [[TMP6]], float [[FVAL]], i32 2
 ; MAX1024-NEXT:    [[TMP8:%.*]] = insertelement <32 x float> [[TMP7]], float [[FVAL]], i32 3
@@ -351,7 +351,7 @@ define void @phi_float32(half %hval, float %fval) {
 ; MAX1024-NEXT:    [[TMP37:%.*]] = fmul <32 x float> [[SHUFFLE]], [[TMP36]]
 ; MAX1024-NEXT:    [[TMP38:%.*]] = fadd <32 x float> zeroinitializer, [[TMP37]]
 ; MAX1024-NEXT:    [[TMP39:%.*]] = extractelement <32 x float> [[TMP38]], i32 0
-; MAX1024-NEXT:    [[TMP40:%.*]] = insertelement <32 x float> undef, float [[TMP39]], i32 0
+; MAX1024-NEXT:    [[TMP40:%.*]] = insertelement <32 x float> poison, float [[TMP39]], i32 0
 ; MAX1024-NEXT:    [[TMP41:%.*]] = extractelement <32 x float> [[TMP38]], i32 1
 ; MAX1024-NEXT:    [[TMP42:%.*]] = insertelement <32 x float> [[TMP40]], float [[TMP41]], i32 1
 ; MAX1024-NEXT:    [[TMP43:%.*]] = insertelement <32 x float> [[TMP42]], float [[FVAL]], i32 2

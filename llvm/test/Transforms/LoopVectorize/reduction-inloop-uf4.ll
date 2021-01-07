@@ -37,7 +37,7 @@ define i32 @reduction_sum_single(i32* noalias nocapture %A) {
 ; CHECK-NEXT:    [[TMP15]] = add i32 [[TMP14]], [[VEC_PHI3]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
-; CHECK-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !0
+; CHECK-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add i32 [[TMP11]], [[TMP9]]
 ; CHECK-NEXT:    [[BIN_RDX7:%.*]] = add i32 [[TMP13]], [[BIN_RDX]]
@@ -46,7 +46,7 @@ define i32 @reduction_sum_single(i32* noalias nocapture %A) {
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[DOTLR_PH:%.*]]
 ; CHECK:       .lr.ph:
-; CHECK-NEXT:    br i1 undef, label [[DOT_CRIT_EDGE]], label [[DOTLR_PH]], !llvm.loop !2
+; CHECK-NEXT:    br i1 undef, label [[DOT_CRIT_EDGE]], label [[DOTLR_PH]], [[LOOP2:!llvm.loop !.*]]
 ; CHECK:       ._crit_edge:
 ; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i32 [ undef, [[DOTLR_PH]] ], [ [[BIN_RDX8]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i32 [[SUM_0_LCSSA]]
@@ -95,10 +95,10 @@ define i32 @predicated(i32* noalias nocapture %A) {
 ; CHECK:       pred.load.if:
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP5]], align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> undef, i32 [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> poison, i32 [[TMP6]], i32 0
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE]]
 ; CHECK:       pred.load.continue:
-; CHECK-NEXT:    [[TMP8:%.*]] = phi <4 x i32> [ undef, [[VECTOR_BODY]] ], [ [[TMP7]], [[PRED_LOAD_IF]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <4 x i32> [ poison, [[VECTOR_BODY]] ], [ [[TMP7]], [[PRED_LOAD_IF]] ]
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP0]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[PRED_LOAD_IF7:%.*]], label [[PRED_LOAD_CONTINUE8:%.*]]
 ; CHECK:       pred.load.if7:
@@ -135,10 +135,10 @@ define i32 @predicated(i32* noalias nocapture %A) {
 ; CHECK-NEXT:    [[TMP28:%.*]] = or i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP28]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = load i32, i32* [[TMP29]], align 4
-; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <4 x i32> undef, i32 [[TMP30]], i32 0
+; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <4 x i32> poison, i32 [[TMP30]], i32 0
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE14]]
 ; CHECK:       pred.load.continue14:
-; CHECK-NEXT:    [[TMP32:%.*]] = phi <4 x i32> [ undef, [[PRED_LOAD_CONTINUE12]] ], [ [[TMP31]], [[PRED_LOAD_IF13]] ]
+; CHECK-NEXT:    [[TMP32:%.*]] = phi <4 x i32> [ poison, [[PRED_LOAD_CONTINUE12]] ], [ [[TMP31]], [[PRED_LOAD_IF13]] ]
 ; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <4 x i1> [[TMP1]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP33]], label [[PRED_LOAD_IF15:%.*]], label [[PRED_LOAD_CONTINUE16:%.*]]
 ; CHECK:       pred.load.if15:
@@ -175,10 +175,10 @@ define i32 @predicated(i32* noalias nocapture %A) {
 ; CHECK-NEXT:    [[TMP52:%.*]] = or i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP52]]
 ; CHECK-NEXT:    [[TMP54:%.*]] = load i32, i32* [[TMP53]], align 4
-; CHECK-NEXT:    [[TMP55:%.*]] = insertelement <4 x i32> undef, i32 [[TMP54]], i32 0
+; CHECK-NEXT:    [[TMP55:%.*]] = insertelement <4 x i32> poison, i32 [[TMP54]], i32 0
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE22]]
 ; CHECK:       pred.load.continue22:
-; CHECK-NEXT:    [[TMP56:%.*]] = phi <4 x i32> [ undef, [[PRED_LOAD_CONTINUE20]] ], [ [[TMP55]], [[PRED_LOAD_IF21]] ]
+; CHECK-NEXT:    [[TMP56:%.*]] = phi <4 x i32> [ poison, [[PRED_LOAD_CONTINUE20]] ], [ [[TMP55]], [[PRED_LOAD_IF21]] ]
 ; CHECK-NEXT:    [[TMP57:%.*]] = extractelement <4 x i1> [[TMP2]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP57]], label [[PRED_LOAD_IF23:%.*]], label [[PRED_LOAD_CONTINUE24:%.*]]
 ; CHECK:       pred.load.if23:
@@ -215,10 +215,10 @@ define i32 @predicated(i32* noalias nocapture %A) {
 ; CHECK-NEXT:    [[TMP76:%.*]] = or i64 [[INDEX]], 12
 ; CHECK-NEXT:    [[TMP77:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP76]]
 ; CHECK-NEXT:    [[TMP78:%.*]] = load i32, i32* [[TMP77]], align 4
-; CHECK-NEXT:    [[TMP79:%.*]] = insertelement <4 x i32> undef, i32 [[TMP78]], i32 0
+; CHECK-NEXT:    [[TMP79:%.*]] = insertelement <4 x i32> poison, i32 [[TMP78]], i32 0
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE30]]
 ; CHECK:       pred.load.continue30:
-; CHECK-NEXT:    [[TMP80:%.*]] = phi <4 x i32> [ undef, [[PRED_LOAD_CONTINUE28]] ], [ [[TMP79]], [[PRED_LOAD_IF29]] ]
+; CHECK-NEXT:    [[TMP80:%.*]] = phi <4 x i32> [ poison, [[PRED_LOAD_CONTINUE28]] ], [ [[TMP79]], [[PRED_LOAD_IF29]] ]
 ; CHECK-NEXT:    [[TMP81:%.*]] = extractelement <4 x i1> [[TMP3]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP81]], label [[PRED_LOAD_IF31:%.*]], label [[PRED_LOAD_CONTINUE32:%.*]]
 ; CHECK:       pred.load.if31:
@@ -264,7 +264,7 @@ define i32 @predicated(i32* noalias nocapture %A) {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 16, i64 16, i64 16, i64 16>
 ; CHECK-NEXT:    [[TMP111:%.*]] = icmp eq i64 [[INDEX_NEXT]], 272
-; CHECK-NEXT:    br i1 [[TMP111]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !4
+; CHECK-NEXT:    br i1 [[TMP111]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP4:!llvm.loop !.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add i32 [[TMP104]], [[TMP101]]
 ; CHECK-NEXT:    [[BIN_RDX37:%.*]] = add i32 [[TMP107]], [[BIN_RDX]]
@@ -273,7 +273,7 @@ define i32 @predicated(i32* noalias nocapture %A) {
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[DOTLR_PH:%.*]]
 ; CHECK:       .lr.ph:
-; CHECK-NEXT:    br i1 undef, label [[DOT_CRIT_EDGE]], label [[DOTLR_PH]], !llvm.loop !5
+; CHECK-NEXT:    br i1 undef, label [[DOT_CRIT_EDGE]], label [[DOTLR_PH]], [[LOOP5:!llvm.loop !.*]]
 ; CHECK:       ._crit_edge:
 ; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i32 [ undef, [[DOTLR_PH]] ], [ [[BIN_RDX38]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i32 [[SUM_0_LCSSA]]

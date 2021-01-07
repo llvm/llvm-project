@@ -11,18 +11,19 @@
 // Sizes and layouts of platform-specific POSIX data structures.
 //===----------------------------------------------------------------------===//
 
-#include "sanitizer_platform.h"
-
-#if SANITIZER_LINUX || SANITIZER_MAC
+#if defined(__linux__) || defined(__APPLE__)
 // Tests in this file assume that off_t-dependent data structures match the
 // libc ABI. For example, struct dirent here is what readdir() function (as
 // exported from libc) returns, and not the user-facing "dirent", which
 // depends on _FILE_OFFSET_BITS setting.
 // To get this "true" dirent definition, we undefine _FILE_OFFSET_BITS below.
-#ifdef _FILE_OFFSET_BITS
 #undef _FILE_OFFSET_BITS
 #endif
 
+// Must go after undef _FILE_OFFSET_BITS.
+#include "sanitizer_platform.h"
+
+#if SANITIZER_LINUX || SANITIZER_MAC
 // Must go after undef _FILE_OFFSET_BITS.
 #include "sanitizer_glibc_version.h"
 
@@ -37,6 +38,7 @@
 #include <pwd.h>
 #include <signal.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <sys/mman.h>
 #include <sys/resource.h>
 #include <sys/socket.h>
@@ -58,7 +60,6 @@
 #endif
 
 #if !SANITIZER_ANDROID
-#include <fstab.h>
 #include <sys/mount.h>
 #include <sys/timeb.h>
 #include <utmpx.h>
@@ -110,20 +111,31 @@ typedef struct user_fpregs elf_fpregset_t;
 #include <wordexp.h>
 #endif
 
-#if SANITIZER_LINUX && !SANITIZER_ANDROID
-#include <glob.h>
-#include <obstack.h>
-#include <mqueue.h>
+#if SANITIZER_LINUX
+#if SANITIZER_GLIBC
+#include <fstab.h>
 #include <net/if_ppp.h>
 #include <netax25/ax25.h>
 #include <netipx/ipx.h>
 #include <netrom/netrom.h>
+#include <obstack.h>
 #if HAVE_RPC_XDR_H
 # include <rpc/xdr.h>
 #endif
 #include <scsi/scsi.h>
-#include <sys/mtio.h>
+#else
+#include <linux/if_ppp.h>
+#include <linux/kd.h>
+#include <linux/ppp_defs.h>
+#endif  // SANITIZER_GLIBC
+
+#if SANITIZER_ANDROID
+#include <linux/mtio.h>
+#else
+#include <glob.h>
+#include <mqueue.h>
 #include <sys/kd.h>
+#include <sys/mtio.h>
 #include <sys/shm.h>
 #include <sys/statvfs.h>
 #include <sys/timex.h>
@@ -142,20 +154,14 @@ typedef struct user_fpregs elf_fpregset_t;
 #include <sys/msg.h>
 #include <sys/ipc.h>
 #include <crypt.h>
-#endif // SANITIZER_LINUX && !SANITIZER_ANDROID
+#endif  // SANITIZER_ANDROID
 
-#if SANITIZER_ANDROID
-#include <linux/kd.h>
-#include <linux/mtio.h>
-#include <linux/ppp_defs.h>
-#include <linux/if_ppp.h>
-#endif
-
-#if SANITIZER_LINUX
 #include <link.h>
 #include <sys/vfs.h>
 #include <sys/epoll.h>
 #include <linux/capability.h>
+#else
+#include <fstab.h>
 #endif // SANITIZER_LINUX
 
 #if SANITIZER_MAC
@@ -202,8 +208,10 @@ namespace __sanitizer {
   unsigned struct_statfs64_sz = sizeof(struct statfs64);
 #endif // (SANITIZER_MAC && !TARGET_CPU_ARM64) && !SANITIZER_IOS
 
-#if !SANITIZER_ANDROID
+#if SANITIZER_GLIBC || SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_MAC
   unsigned struct_fstab_sz = sizeof(struct fstab);
+#endif  // SANITIZER_GLIBC || SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_MAC
+#if !SANITIZER_ANDROID
   unsigned struct_statfs_sz = sizeof(struct statfs);
   unsigned struct_sockaddr_sz = sizeof(struct sockaddr);
   unsigned ucontext_t_sz = sizeof(ucontext_t);
@@ -299,7 +307,7 @@ unsigned struct_ElfW_Phdr_sz = sizeof(ElfW(Phdr));
 unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
 #endif
 
-#if SANITIZER_LINUX && !SANITIZER_ANDROID
+#if SANITIZER_GLIBC
   int glob_nomatch = GLOB_NOMATCH;
   int glob_altdirfunc = GLOB_ALTDIRFUNC;
 #endif
@@ -422,7 +430,9 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   unsigned struct_input_id_sz = sizeof(struct input_id);
   unsigned struct_mtpos_sz = sizeof(struct mtpos);
   unsigned struct_rtentry_sz = sizeof(struct rtentry);
+#if SANITIZER_GLIBC || SANITIZER_ANDROID
   unsigned struct_termio_sz = sizeof(struct termio);
+#endif
   unsigned struct_vt_consize_sz = sizeof(struct vt_consize);
   unsigned struct_vt_sizes_sz = sizeof(struct vt_sizes);
   unsigned struct_vt_stat_sz = sizeof(struct vt_stat);
@@ -447,7 +457,7 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   unsigned struct_vt_mode_sz = sizeof(struct vt_mode);
 #endif // SANITIZER_LINUX
 
-#if SANITIZER_LINUX && !SANITIZER_ANDROID
+#if SANITIZER_GLIBC
   unsigned struct_ax25_parms_struct_sz = sizeof(struct ax25_parms_struct);
   unsigned struct_cyclades_monitor_sz = sizeof(struct cyclades_monitor);
 #if EV_VERSION > (0x010000)
@@ -470,12 +480,10 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   unsigned struct_sockaddr_ax25_sz = sizeof(struct sockaddr_ax25);
   unsigned struct_unimapdesc_sz = sizeof(struct unimapdesc);
   unsigned struct_unimapinit_sz = sizeof(struct unimapinit);
-#endif // SANITIZER_LINUX && !SANITIZER_ANDROID
 
-#if SANITIZER_LINUX && !SANITIZER_ANDROID
   unsigned struct_audio_buf_info_sz = sizeof(struct audio_buf_info);
   unsigned struct_ppp_stats_sz = sizeof(struct ppp_stats);
-#endif // (SANITIZER_LINUX || SANITIZER_FREEBSD) && !SANITIZER_ANDROID
+#endif  // SANITIZER_GLIBC
 
 #if !SANITIZER_ANDROID && !SANITIZER_MAC
   unsigned struct_sioc_sg_req_sz = sizeof(struct sioc_sg_req);
@@ -881,6 +889,7 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   unsigned IOCTL_PIO_UNIMAP = PIO_UNIMAP;
   unsigned IOCTL_PIO_UNIMAPCLR = PIO_UNIMAPCLR;
   unsigned IOCTL_PIO_UNISCRNMAP = PIO_UNISCRNMAP;
+#if SANITIZER_GLIBC
   unsigned IOCTL_SCSI_IOCTL_GET_IDLUN = SCSI_IOCTL_GET_IDLUN;
   unsigned IOCTL_SCSI_IOCTL_PROBE_HOST = SCSI_IOCTL_PROBE_HOST;
   unsigned IOCTL_SCSI_IOCTL_TAGGED_DISABLE = SCSI_IOCTL_TAGGED_DISABLE;
@@ -899,6 +908,7 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   unsigned IOCTL_SIOCNRGETPARMS = SIOCNRGETPARMS;
   unsigned IOCTL_SIOCNRRTCTL = SIOCNRRTCTL;
   unsigned IOCTL_SIOCNRSETPARMS = SIOCNRSETPARMS;
+#endif
   unsigned IOCTL_TIOCGSERIAL = TIOCGSERIAL;
   unsigned IOCTL_TIOCSERGETMULTI = TIOCSERGETMULTI;
   unsigned IOCTL_TIOCSERSETMULTI = TIOCSERSETMULTI;
@@ -969,7 +979,7 @@ CHECK_SIZE_AND_OFFSET(dl_phdr_info, dlpi_phdr);
 CHECK_SIZE_AND_OFFSET(dl_phdr_info, dlpi_phnum);
 #endif // SANITIZER_LINUX || SANITIZER_FREEBSD
 
-#if (SANITIZER_LINUX || SANITIZER_FREEBSD) && !SANITIZER_ANDROID
+#if SANITIZER_GLIBC || SANITIZER_FREEBSD
 CHECK_TYPE_SIZE(glob_t);
 CHECK_SIZE_AND_OFFSET(glob_t, gl_pathc);
 CHECK_SIZE_AND_OFFSET(glob_t, gl_pathv);
@@ -980,7 +990,7 @@ CHECK_SIZE_AND_OFFSET(glob_t, gl_readdir);
 CHECK_SIZE_AND_OFFSET(glob_t, gl_opendir);
 CHECK_SIZE_AND_OFFSET(glob_t, gl_lstat);
 CHECK_SIZE_AND_OFFSET(glob_t, gl_stat);
-#endif
+#endif  // SANITIZER_GLIBC || SANITIZER_FREEBSD
 
 CHECK_TYPE_SIZE(addrinfo);
 CHECK_SIZE_AND_OFFSET(addrinfo, ai_flags);
@@ -1003,17 +1013,27 @@ CHECK_TYPE_SIZE(iovec);
 CHECK_SIZE_AND_OFFSET(iovec, iov_base);
 CHECK_SIZE_AND_OFFSET(iovec, iov_len);
 
+// In POSIX, int msg_iovlen; socklen_t msg_controllen; socklen_t cmsg_len; but
+// many implementations don't conform to the standard. Since we pick the
+// non-conforming glibc definition, exclude the checks for musl (incompatible
+// sizes but compatible offsets).
 CHECK_TYPE_SIZE(msghdr);
 CHECK_SIZE_AND_OFFSET(msghdr, msg_name);
 CHECK_SIZE_AND_OFFSET(msghdr, msg_namelen);
 CHECK_SIZE_AND_OFFSET(msghdr, msg_iov);
+#if SANITIZER_GLIBC || SANITIZER_ANDROID
 CHECK_SIZE_AND_OFFSET(msghdr, msg_iovlen);
+#endif
 CHECK_SIZE_AND_OFFSET(msghdr, msg_control);
+#if SANITIZER_GLIBC || SANITIZER_ANDROID
 CHECK_SIZE_AND_OFFSET(msghdr, msg_controllen);
+#endif
 CHECK_SIZE_AND_OFFSET(msghdr, msg_flags);
 
 CHECK_TYPE_SIZE(cmsghdr);
+#if SANITIZER_GLIBC || SANITIZER_ANDROID
 CHECK_SIZE_AND_OFFSET(cmsghdr, cmsg_len);
+#endif
 CHECK_SIZE_AND_OFFSET(cmsghdr, cmsg_level);
 CHECK_SIZE_AND_OFFSET(cmsghdr, cmsg_type);
 
@@ -1121,7 +1141,7 @@ CHECK_SIZE_AND_OFFSET(mntent, mnt_passno);
 
 CHECK_TYPE_SIZE(ether_addr);
 
-#if (SANITIZER_LINUX || SANITIZER_FREEBSD) && !SANITIZER_ANDROID
+#if SANITIZER_GLIBC || SANITIZER_FREEBSD
 CHECK_TYPE_SIZE(ipc_perm);
 # if SANITIZER_FREEBSD
 CHECK_SIZE_AND_OFFSET(ipc_perm, key);
@@ -1183,7 +1203,7 @@ CHECK_SIZE_AND_OFFSET(ifaddrs, ifa_dstaddr);
 CHECK_SIZE_AND_OFFSET(ifaddrs, ifa_data);
 #endif
 
-#if SANITIZER_LINUX
+#if SANITIZER_GLIBC || SANITIZER_ANDROID
 COMPILER_CHECK(sizeof(__sanitizer_struct_mallinfo) == sizeof(struct mallinfo));
 #endif
 
@@ -1233,7 +1253,7 @@ COMPILER_CHECK(__sanitizer_XDR_DECODE == XDR_DECODE);
 COMPILER_CHECK(__sanitizer_XDR_FREE == XDR_FREE);
 #endif
 
-#if SANITIZER_LINUX && !SANITIZER_ANDROID
+#if SANITIZER_GLIBC
 COMPILER_CHECK(sizeof(__sanitizer_FILE) <= sizeof(FILE));
 CHECK_SIZE_AND_OFFSET(FILE, _flags);
 CHECK_SIZE_AND_OFFSET(FILE, _IO_read_ptr);
@@ -1250,9 +1270,7 @@ CHECK_SIZE_AND_OFFSET(FILE, _IO_save_end);
 CHECK_SIZE_AND_OFFSET(FILE, _markers);
 CHECK_SIZE_AND_OFFSET(FILE, _chain);
 CHECK_SIZE_AND_OFFSET(FILE, _fileno);
-#endif
 
-#if SANITIZER_LINUX && !SANITIZER_ANDROID
 COMPILER_CHECK(sizeof(__sanitizer__obstack_chunk) <= sizeof(_obstack_chunk));
 CHECK_SIZE_AND_OFFSET(_obstack_chunk, limit);
 CHECK_SIZE_AND_OFFSET(_obstack_chunk, prev);
@@ -1267,7 +1285,7 @@ CHECK_SIZE_AND_OFFSET(cookie_io_functions_t, read);
 CHECK_SIZE_AND_OFFSET(cookie_io_functions_t, write);
 CHECK_SIZE_AND_OFFSET(cookie_io_functions_t, seek);
 CHECK_SIZE_AND_OFFSET(cookie_io_functions_t, close);
-#endif
+#endif  // SANITIZER_GLIBC
 
 #if SANITIZER_LINUX || SANITIZER_FREEBSD
 CHECK_TYPE_SIZE(sem_t);

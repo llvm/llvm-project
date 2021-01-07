@@ -99,7 +99,7 @@ define i64 @test11() {
 
 define i64 @test11b(i64 %a) {
 ; CHECK-LABEL: @test11b(
-; CHECK-NEXT:    ret i64 undef
+; CHECK-NEXT:    ret i64 poison
 ;
   %r = shl i64 %a, undef
   ret i64 %r
@@ -115,7 +115,7 @@ define i64 @test12() {
 
 define i64 @test12b(i64 %a) {
 ; CHECK-LABEL: @test12b(
-; CHECK-NEXT:    ret i64 undef
+; CHECK-NEXT:    ret i64 poison
 ;
   %r = ashr i64 %a, undef
   ret i64 %r
@@ -131,7 +131,7 @@ define i64 @test13() {
 
 define i64 @test13b(i64 %a) {
 ; CHECK-LABEL: @test13b(
-; CHECK-NEXT:    ret i64 undef
+; CHECK-NEXT:    ret i64 poison
 ;
   %r = lshr i64 %a, undef
   ret i64 %r
@@ -172,7 +172,7 @@ define i64 @test17(i64 %a) {
 define i64 @test18(i64 %a) {
 ; CHECK-LABEL: @test18(
 ; CHECK-NEXT:    [[R:%.*]] = call i64 undef(i64 [[A:%.*]])
-; CHECK-NEXT:    ret i64 undef
+; CHECK-NEXT:    ret i64 poison
 ;
   %r = call i64 (i64) undef(i64 %a)
   ret i64 %r
@@ -180,7 +180,7 @@ define i64 @test18(i64 %a) {
 
 define <4 x i8> @test19(<4 x i8> %a) {
 ; CHECK-LABEL: @test19(
-; CHECK-NEXT:    ret <4 x i8> undef
+; CHECK-NEXT:    ret <4 x i8> poison
 ;
   %b = shl <4 x i8> %a, <i8 8, i8 9, i8 undef, i8 -1>
   ret <4 x i8> %b

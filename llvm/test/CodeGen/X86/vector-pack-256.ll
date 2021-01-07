@@ -31,10 +31,7 @@ define <16 x i16> @trunc_concat_packssdw_256(<8 x i32> %a0, <8 x i32> %a1) nounw
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpsrad $17, %ymm0, %ymm0
 ; AVX512-NEXT:    vpsrad $23, %ymm1, %ymm1
-; AVX512-NEXT:    vperm2i128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
-; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
-; AVX512-NEXT:    vpmovdw %zmm0, %ymm0
+; AVX512-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %1 = ashr <8 x i32> %a0, <i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17>
   %2 = ashr <8 x i32> %a1, <i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23>
@@ -68,10 +65,7 @@ define <16 x i16> @trunc_concat_packusdw_256(<8 x i32> %a0, <8 x i32> %a1) nounw
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpsrld $17, %ymm0, %ymm0
 ; AVX512-NEXT:    vpandd {{.*}}(%rip){1to8}, %ymm1, %ymm1
-; AVX512-NEXT:    vperm2i128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
-; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
-; AVX512-NEXT:    vpmovdw %zmm0, %ymm0
+; AVX512-NEXT:    vpackusdw %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %1 = lshr <8 x i32> %a0, <i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17>
   %2 = and  <8 x i32> %a1, <i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15>
@@ -100,28 +94,12 @@ define <32 x i8> @trunc_concat_packsswb_256(<16 x i16> %a0, <16 x i16> %a1) noun
 ; AVX2-NEXT:    vpacksswb %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512F-LABEL: trunc_concat_packsswb_256:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpsraw $15, %ymm0, %ymm0
-; AVX512F-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
-; AVX512F-NEXT:    vperm2i128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
-; AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
-; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
-; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm1 = ymm2[0],zero,ymm2[1],zero,ymm2[2],zero,ymm2[3],zero,ymm2[4],zero,ymm2[5],zero,ymm2[6],zero,ymm2[7],zero,ymm2[8],zero,ymm2[9],zero,ymm2[10],zero,ymm2[11],zero,ymm2[12],zero,ymm2[13],zero,ymm2[14],zero,ymm2[15],zero
-; AVX512F-NEXT:    vpmovdb %zmm1, %xmm1
-; AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512F-NEXT:    retq
-;
-; AVX512BW-LABEL: trunc_concat_packsswb_256:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpsraw $15, %ymm0, %ymm0
-; AVX512BW-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
-; AVX512BW-NEXT:    vperm2i128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
-; AVX512BW-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512BW-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
-; AVX512BW-NEXT:    vpmovwb %zmm0, %ymm0
-; AVX512BW-NEXT:    retq
+; AVX512-LABEL: trunc_concat_packsswb_256:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsraw $15, %ymm0, %ymm0
+; AVX512-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
+; AVX512-NEXT:    vpacksswb %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    retq
   %1 = ashr <16 x i16> %a0, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
   %2 = and  <16 x i16> %a1, <i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1>
   %3 = shufflevector <16 x i16> %1, <16 x i16> %2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -149,28 +127,12 @@ define <32 x i8> @trunc_concat_packuswb_256(<16 x i16> %a0, <16 x i16> %a1) noun
 ; AVX2-NEXT:    vpackuswb %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512F-LABEL: trunc_concat_packuswb_256:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpsrlw $15, %ymm0, %ymm0
-; AVX512F-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
-; AVX512F-NEXT:    vperm2i128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
-; AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
-; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
-; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm1 = ymm2[0],zero,ymm2[1],zero,ymm2[2],zero,ymm2[3],zero,ymm2[4],zero,ymm2[5],zero,ymm2[6],zero,ymm2[7],zero,ymm2[8],zero,ymm2[9],zero,ymm2[10],zero,ymm2[11],zero,ymm2[12],zero,ymm2[13],zero,ymm2[14],zero,ymm2[15],zero
-; AVX512F-NEXT:    vpmovdb %zmm1, %xmm1
-; AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512F-NEXT:    retq
-;
-; AVX512BW-LABEL: trunc_concat_packuswb_256:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpsrlw $15, %ymm0, %ymm0
-; AVX512BW-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
-; AVX512BW-NEXT:    vperm2i128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
-; AVX512BW-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512BW-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
-; AVX512BW-NEXT:    vpmovwb %zmm0, %ymm0
-; AVX512BW-NEXT:    retq
+; AVX512-LABEL: trunc_concat_packuswb_256:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsrlw $15, %ymm0, %ymm0
+; AVX512-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
+; AVX512-NEXT:    vpackuswb %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    retq
   %1 = lshr <16 x i16> %a0, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
   %2 = and  <16 x i16> %a1, <i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1, i16  1>
   %3 = shufflevector <16 x i16> %1, <16 x i16> %2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>

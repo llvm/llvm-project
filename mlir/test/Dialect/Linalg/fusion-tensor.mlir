@@ -536,3 +536,45 @@ func @constant_fusion(%arg0 : tensor<4xf32>) -> (tensor<4xf32>) {
 //      CHECK:     %[[T2:.+]] = addf %[[ARG1]], %[[CST]]
 //      CHECK:     linalg.yield %[[T2]]
 //      CHECK:   return %[[T1]]
+
+// -----
+
+#map0 = affine_map<(d0, d1) -> (d0, d1)>
+#map1 = affine_map<(d0) -> (0, d0)>
+#map2 = affine_map<(d0) -> (0)>
+func @consumer_with_reduction(%arg0: tensor<1x10xf32>,
+                              %arg1: tensor<1x10xf32>,
+                              %arg2: tensor<1xf32>) -> tensor<1xf32> {
+  %init = linalg.init_tensor [1, 10] : tensor<1x10xf32>
+  %0 = linalg.generic
+    {indexing_maps = [#map0, #map0, #map0],
+     iterator_types = ["parallel", "parallel"]}
+    ins(%arg0, %arg1 : tensor<1x10xf32>, tensor<1x10xf32>)
+    outs(%init : tensor<1x10xf32>) {
+  ^bb0(%arg3: f32, %arg4: f32, %arg5: f32):  // no predecessors
+    %2 = addf %arg3, %arg4 : f32
+    linalg.yield %2 : f32
+  } -> tensor<1x10xf32>
+  %1 = linalg.generic
+    {indexing_maps = [#map1, #map2],
+     iterator_types = ["reduction"]}
+    ins(%0 : tensor<1x10xf32>)
+    outs(%arg2 : tensor<1xf32>)  {
+  ^bb0(%arg3: f32, %arg4: f32):  // no predecessors
+    %2 = addf %arg3, %arg4 : f32
+    linalg.yield %2 : f32
+  } -> tensor<1xf32>
+  return %1 : tensor<1xf32>
+}
+//  CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0) -> (0, d0)>
+//  CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0) -> (0)>
+//      CHECK: func @consumer_with_reduction(%[[ARG0:.+]]: tensor<1x10xf32>, %[[ARG1:.+]]: tensor<1x10xf32>, %[[ARG2:.+]]: tensor<1xf32>)
+//      CHECK:   %[[RES:.+]] = linalg.generic
+// CHECK-SAME:     indexing_maps = [#[[MAP0]], #[[MAP0]], #[[MAP1]]]
+// CHECK-SAME:     iterator_types = ["reduction"]
+// CHECK-SAME:     ins(%[[ARG0]], %[[ARG1]] : tensor<1x10xf32>, tensor<1x10xf32>)
+//      CHECK:   ^{{.+}}(%[[T0:.+]]: f32, %[[T1:.+]]: f32, %[[T2:.+]]: f32)
+//      CHECK:     %[[T3:.+]] = addf %[[T0]], %[[T1]] : f32
+//      CHECK:     %[[T4:.+]] = addf %[[T3]], %[[T2]] : f32
+//      CHECK:     linalg.yield %[[T4]]
+//      CHECK:   return %[[RES]]

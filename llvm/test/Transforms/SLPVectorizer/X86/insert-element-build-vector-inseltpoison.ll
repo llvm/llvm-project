@@ -230,20 +230,20 @@ define <4 x float> @simple_select_no_users(<4 x float> %a, <4 x float> %b, <4 x 
 ; CHECK-NEXT:    [[B1:%.*]] = extractelement <4 x float> [[B]], i32 1
 ; CHECK-NEXT:    [[B2:%.*]] = extractelement <4 x float> [[B]], i32 2
 ; CHECK-NEXT:    [[B3:%.*]] = extractelement <4 x float> [[B]], i32 3
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> undef, i32 [[C0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[C0]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[C1]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <2 x i32> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> undef, i32 [[C2]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> poison, i32 [[C2]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> [[TMP4]], i32 [[C3]], i32 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne <2 x i32> [[TMP5]], zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> undef, float [[A0]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> poison, float [[A0]], i32 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x float> [[TMP7]], float [[A1]], i32 1
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x float> undef, float [[B0]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x float> poison, float [[B0]], i32 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x float> [[TMP9]], float [[B1]], i32 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = select <2 x i1> [[TMP3]], <2 x float> [[TMP8]], <2 x float> [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x float> undef, float [[A2]], i32 0
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x float> poison, float [[A2]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x float> [[TMP12]], float [[A3]], i32 1
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x float> undef, float [[B2]], i32 0
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x float> poison, float [[B2]], i32 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x float> [[TMP14]], float [[B3]], i32 1
 ; CHECK-NEXT:    [[TMP16:%.*]] = select <2 x i1> [[TMP6]], <2 x float> [[TMP13]], <2 x float> [[TMP15]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x float> [[TMP11]], i32 0
@@ -450,7 +450,7 @@ define <4 x float> @take_credit(<4 x float> %a, <4 x float> %b) {
 ; Make sure we handle multiple trees that feed one build vector correctly.
 define <4 x double> @multi_tree(double %w, double %x, double %y, double %z) {
 ; CHECK-LABEL: @multi_tree(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> undef, double [[Z:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> poison, double [[Z:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> [[TMP1]], double [[Y:%.*]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP2]], double [[X:%.*]], i32 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> [[TMP3]], double [[W:%.*]], i32 3

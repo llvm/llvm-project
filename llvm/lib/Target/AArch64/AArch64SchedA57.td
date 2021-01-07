@@ -93,7 +93,7 @@ def : SchedAlias<WriteFCmp,  A57Write_3cyc_1V>;
 def : SchedAlias<WriteFCvt,  A57Write_5cyc_1V>;
 def : SchedAlias<WriteFCopy, A57Write_5cyc_1L>;
 def : SchedAlias<WriteFImm,  A57Write_3cyc_1V>;
-def : SchedAlias<WriteFMul,  A57Write_5cyc_1V>;
+def : WriteRes<WriteFMul, [A57UnitV]> { let Latency = 5;}
 def : SchedAlias<WriteFDiv,  A57Write_17cyc_1W>;
 def : SchedAlias<WriteV,     A57Write_3cyc_1V>;
 def : SchedAlias<WriteVLD,   A57Write_5cyc_1L>;
@@ -350,12 +350,16 @@ def : InstRW<[A57Write_8cyc_8S, WriteAdr],      (instregex "ST4Fourv(2d)_POST$")
 //   D form - v8i8_v8i16, v4i16_v4i32, v2i32_v2i64
 //   Q form - v16i8_v8i16, v8i16_v4i32, v4i32_v2i64
 
+// Cortex A57 Software Optimization Guide Sec 3.14
+// Advance for absolute diff accum, pairwise add and accumulate, shift accumulate
+def A57ReadIVA3 : SchedReadAdvance<3, [A57Write_4cyc_1X_NonMul_Forward, A57Write_5cyc_2X_NonMul_Forward]>;
+
 // ASIMD absolute diff accum, D-form
-def : InstRW<[A57Write_4cyc_1X], (instregex "^[SU]ABA(v8i8|v4i16|v2i32)$")>;
+def : InstRW<[A57Write_4cyc_1X_NonMul_Forward, A57ReadIVA3], (instregex "^[SU]ABA(v8i8|v4i16|v2i32)$")>;
 // ASIMD absolute diff accum, Q-form
-def : InstRW<[A57Write_5cyc_2X], (instregex "^[SU]ABA(v16i8|v8i16|v4i32)$")>;
+def : InstRW<[A57Write_5cyc_2X_NonMul_Forward, A57ReadIVA3], (instregex "^[SU]ABA(v16i8|v8i16|v4i32)$")>;
 // ASIMD absolute diff accum long
-def : InstRW<[A57Write_4cyc_1X], (instregex "^[SU]ABAL")>;
+def : InstRW<[A57Write_4cyc_1X_NonMul_Forward, A57ReadIVA3], (instregex "^[SU]ABAL")>;
 
 // ASIMD arith, reduce, 4H/4S
 def : InstRW<[A57Write_4cyc_1X], (instregex "^[SU]?ADDL?V(v8i8|v4i16|v2i32)v$")>;
@@ -372,32 +376,41 @@ def : InstRW<[A57Write_7cyc_1V_1X], (instregex "^[SU](MIN|MAX)V(v8i8|v8i16)v$")>
 def : InstRW<[A57Write_8cyc_2X], (instregex "^[SU](MIN|MAX)Vv16i8v$")>;
 
 // ASIMD multiply, D-form
-def : InstRW<[A57Write_5cyc_1W], (instregex "^(P?MUL|SQR?DMULH)(v8i8|v4i16|v2i32|v1i8|v1i16|v1i32|v1i64)(_indexed)?$")>;
+// MUL
+def : InstRW<[A57Write_5cyc_1W_Mul_Forward], (instregex "^MUL(v8i8|v4i16|v2i32|v1i8|v1i16|v1i32|v1i64)(_indexed)?$")>;
+// PMUL, SQDMULH, SQRDMULH
+def : InstRW<[A57Write_5cyc_1W], (instregex "^(PMUL|SQR?DMULH)(v8i8|v4i16|v2i32|v1i8|v1i16|v1i32|v1i64)(_indexed)?$")>;
+
 // ASIMD multiply, Q-form
-def : InstRW<[A57Write_6cyc_2W], (instregex "^(P?MUL|SQR?DMULH)(v16i8|v8i16|v4i32)(_indexed)?$")>;
+// MUL
+def : InstRW<[A57Write_6cyc_2W_Mul_Forward], (instregex "^MUL(v16i8|v8i16|v4i32)(_indexed)?$")>;
+// PMUL, SQDMULH, SQRDMULH
+def : InstRW<[A57Write_6cyc_2W], (instregex "^(PMUL|SQR?DMULH)(v16i8|v8i16|v4i32)(_indexed)?$")>;
+
+// Cortex A57 Software Optimization Guide Sec 3.14
+def A57ReadIVMA4   : SchedReadAdvance<4 , [A57Write_5cyc_1W_Mul_Forward, A57Write_6cyc_2W_Mul_Forward]>;
+def A57ReadIVMA3   : SchedReadAdvance<3 , [A57Write_5cyc_1W_Mul_Forward, A57Write_6cyc_2W_Mul_Forward]>;
 
 // ASIMD multiply accumulate, D-form
-def : InstRW<[A57Write_5cyc_1W], (instregex "^ML[AS](v8i8|v4i16|v2i32)(_indexed)?$")>;
+def : InstRW<[A57Write_5cyc_1W_Mul_Forward, A57ReadIVMA4], (instregex "^ML[AS](v8i8|v4i16|v2i32)(_indexed)?$")>;
 // ASIMD multiply accumulate, Q-form
-def : InstRW<[A57Write_6cyc_2W], (instregex "^ML[AS](v16i8|v8i16|v4i32)(_indexed)?$")>;
+def : InstRW<[A57Write_6cyc_2W_Mul_Forward, A57ReadIVMA4], (instregex "^ML[AS](v16i8|v8i16|v4i32)(_indexed)?$")>;
 
 // ASIMD multiply accumulate long
 // ASIMD multiply accumulate saturating long
-def A57WriteIVMA   : SchedWriteRes<[A57UnitW]> { let Latency = 5;  }
-def A57ReadIVMA4   : SchedReadAdvance<4, [A57WriteIVMA]>;
-def : InstRW<[A57WriteIVMA, A57ReadIVMA4], (instregex "^(S|U|SQD)ML[AS]L")>;
+def : InstRW<[A57Write_5cyc_1W_Mul_Forward, A57ReadIVMA4], (instregex "^(S|U)ML[AS]L")>;
+def : InstRW<[A57Write_5cyc_1W_Mul_Forward, A57ReadIVMA3], (instregex "^SQDML[AS]L")>;
 
 // ASIMD multiply long
-def : InstRW<[A57Write_5cyc_1W], (instregex "^(S|U|SQD)MULL")>;
+def : InstRW<[A57Write_5cyc_1W_Mul_Forward], (instregex "^(S|U)MULL")>;
+def : InstRW<[A57Write_5cyc_1W], (instregex "^SQDMULL")>;
 def : InstRW<[A57Write_5cyc_1W], (instregex "^PMULL(v8i8|v16i8)")>;
 def : InstRW<[A57Write_3cyc_1W], (instregex "^PMULL(v1i64|v2i64)")>;
 
 // ASIMD pairwise add and accumulate
 // ASIMD shift accumulate
-def A57WriteIVA    : SchedWriteRes<[A57UnitX]> { let Latency = 4;  }
-def A57ReadIVA3    : SchedReadAdvance<3, [A57WriteIVA]>;
-def : InstRW<[A57WriteIVA, A57ReadIVA3], (instregex "^[SU]ADALP")>;
-def : InstRW<[A57WriteIVA, A57ReadIVA3], (instregex "^(S|SR|U|UR)SRA")>;
+def : InstRW<[A57Write_4cyc_1X_NonMul_Forward, A57ReadIVA3], (instregex "^[SU]ADALP")>;
+def : InstRW<[A57Write_4cyc_1X_NonMul_Forward, A57ReadIVA3], (instregex "^(S|SR|U|UR)SRA")>;
 
 // ASIMD shift by immed, complex
 def : InstRW<[A57Write_4cyc_1X], (instregex "^[SU]?(Q|R){1,2}SHR")>;
@@ -474,17 +487,22 @@ def : InstRW<[A57Write_9cyc_3V], (instregex "^(FMAX|FMIN)(NM)?P(v4f32|v2f64|v2i6
 def : InstRW<[A57Write_10cyc_3V], (instregex "^(FMAX|FMIN)(NM)?Vv")>;
 
 // ASIMD FP multiply, D-form, FZ
-def : InstRW<[A57Write_5cyc_1V], (instregex "^FMULX?(v2f32|v1i32|v2i32|v1i64|32|64)")>;
+def : InstRW<[A57Write_5cyc_1V_FP_Forward], (instregex "^FMULX?(v2f32|v1i32|v2i32|v1i64|32|64)")>;
 // ASIMD FP multiply, Q-form, FZ
-def : InstRW<[A57Write_5cyc_2V], (instregex "^FMULX?(v4f32|v2f64|v4i32|v2i64)")>;
+def : InstRW<[A57Write_5cyc_2V_FP_Forward], (instregex "^FMULX?(v4f32|v2f64|v4i32|v2i64)")>;
 
 // ASIMD FP multiply accumulate, D-form, FZ
 // ASIMD FP multiply accumulate, Q-form, FZ
 def A57WriteFPVMAD : SchedWriteRes<[A57UnitV]> { let Latency = 9;  }
 def A57WriteFPVMAQ : SchedWriteRes<[A57UnitV, A57UnitV]> { let Latency = 10;  }
-def A57ReadFPVMA5  : SchedReadAdvance<5, [A57WriteFPVMAD, A57WriteFPVMAQ]>;
+
+// Cortex A57 Software Optimization Guide Sec 3.15
+// Advances from FP mul and mul-accum to mul-accum
+def A57ReadFPVMA5  : SchedReadAdvance<5, [A57WriteFPVMAD, A57WriteFPVMAQ, A57Write_5cyc_1V_FP_Forward, A57Write_5cyc_2V_FP_Forward]>;
+def A57ReadFPVMA6  : SchedReadAdvance<6, [A57WriteFPVMAD, A57WriteFPVMAQ, A57Write_5cyc_1V_FP_Forward, A57Write_5cyc_2V_FP_Forward]>;
+
 def : InstRW<[A57WriteFPVMAD, A57ReadFPVMA5], (instregex "^FML[AS](v2f32|v1i32|v2i32|v1i64)")>;
-def : InstRW<[A57WriteFPVMAQ, A57ReadFPVMA5], (instregex "^FML[AS](v4f32|v2f64|v4i32|v2i64)")>;
+def : InstRW<[A57WriteFPVMAQ, A57ReadFPVMA6], (instregex "^FML[AS](v4f32|v2f64|v4i32|v2i64)")>;
 
 // ASIMD FP round, D-form
 def : InstRW<[A57Write_5cyc_1V], (instregex "^FRINT[AIMNPXZ](v2f32)")>;
@@ -547,8 +565,9 @@ def : InstRW<[A57Write_6cyc_3V], (instregex "^(UZP|ZIP)(1|2)(v16i8|v8i16|v4i32|v
 
 def : InstRW<[A57Write_5cyc_1V], (instregex "^F(ADD|SUB)[DS]rr")>;
 
+// Cortex A57 Software Optimization Guide Sec 3.10
 def A57WriteFPMA  : SchedWriteRes<[A57UnitV]> { let Latency = 9;  }
-def A57ReadFPMA5  : SchedReadAdvance<5, [A57WriteFPMA]>;
+def A57ReadFPMA5  : SchedReadAdvance<5, [A57WriteFPMA, WriteFMul]>;
 def A57ReadFPM    : SchedReadAdvance<0>;
 def : InstRW<[A57WriteFPMA, A57ReadFPM, A57ReadFPM, A57ReadFPMA5], (instregex "^FN?M(ADD|SUB)[DS]rrr")>;
 

@@ -9,6 +9,7 @@
 #ifndef CLANG_AST_ABSTRACTBASICWRITER_H
 #define CLANG_AST_ABSTRACTBASICWRITER_H
 
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclTemplate.h"
 
 namespace clang {
@@ -121,6 +122,7 @@ template <class Impl>
 class DataStreamBasicWriter : public BasicWriterBase<Impl> {
 protected:
   using BasicWriterBase<Impl>::asImpl;
+  DataStreamBasicWriter(ASTContext &ctx) : BasicWriterBase<Impl>(ctx) {}
 
 public:
   /// Implement property-find by ignoring it.  We rely on properties being
@@ -161,6 +163,39 @@ public:
     const uint64_t *words = value.getRawData();
     for (size_t i = 0, e = value.getNumWords(); i != e; ++i)
       asImpl().writeUInt64(words[i]);
+  }
+
+  void writeFixedPointSemantics(const llvm::FixedPointSemantics &sema) {
+    asImpl().writeUInt32(sema.getWidth());
+    asImpl().writeUInt32(sema.getScale());
+    asImpl().writeUInt32(sema.isSigned() | sema.isSaturated() << 1 |
+                         sema.hasUnsignedPadding() << 2);
+  }
+
+  void writeLValuePathSerializationHelper(
+      APValue::LValuePathSerializationHelper lvaluePath) {
+    ArrayRef<APValue::LValuePathEntry> path = lvaluePath.Path;
+    QualType elemTy = lvaluePath.getType();
+    asImpl().writeQualType(elemTy);
+    asImpl().writeUInt32(path.size());
+    auto &ctx = ((BasicWriterBase<Impl> *)this)->getASTContext();
+    for (auto elem : path) {
+      if (elemTy->getAs<RecordType>()) {
+        asImpl().writeUInt32(elem.getAsBaseOrMember().getInt());
+        const Decl *baseOrMember = elem.getAsBaseOrMember().getPointer();
+        if (const auto *recordDecl = dyn_cast<CXXRecordDecl>(baseOrMember)) {
+          asImpl().writeDeclRef(recordDecl);
+          elemTy = ctx.getRecordType(recordDecl);
+        } else {
+          const auto *valueDecl = cast<ValueDecl>(baseOrMember);
+          asImpl().writeDeclRef(valueDecl);
+          elemTy = valueDecl->getType();
+        }
+      } else {
+        asImpl().writeUInt32(elem.getAsArrayIndex());
+        elemTy = ctx.getAsArrayType(elemTy)->getElementType();
+      }
+    }
   }
 
   void writeQualifiers(Qualifiers value) {

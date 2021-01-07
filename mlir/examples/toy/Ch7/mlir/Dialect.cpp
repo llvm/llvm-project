@@ -244,7 +244,7 @@ static mlir::LogicalResult verifyConstantForType(mlir::Type type,
 
   // Check that each of the elements are valid.
   llvm::ArrayRef<mlir::Attribute> attrElementValues = attrValue.getValue();
-  for (const auto &it : llvm::zip(resultElementTypes, attrElementValues))
+  for (const auto it : llvm::zip(resultElementTypes, attrElementValues))
     if (failed(verifyConstantForType(std::get<0>(it), std::get<1>(it), op)))
       return mlir::failure();
   return mlir::success();

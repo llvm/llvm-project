@@ -8,7 +8,7 @@ simple_loops
 
 conditionals
 4904767535850050386
-11
+13
 1
 100
 50
@@ -19,7 +19,9 @@ conditionals
 99
 100
 99
+99
 100
+1
 
 early_exits
 2880354649761471549
@@ -106,28 +108,38 @@ big_switch
 
 boolean_operators
 1245693242827665
-8
+14
 1
 100
 34
+1
+66
 66
 17
+1
 34
+17
+33
 33
 50
+33
 
 boolop_loops
 12402604614320574815
-9
+13
 1
 50
 51
 50
+50
 26
+1
 50
 51
 50
+50
 26
+1
 
 conditional_operator
 54992

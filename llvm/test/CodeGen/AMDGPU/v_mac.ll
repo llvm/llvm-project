@@ -105,7 +105,7 @@ entry:
   %b = load float, float addrspace(1)* %b_ptr
   %c = load float, float addrspace(1)* %c_ptr
 
-  %neg_a = fsub float -0.0, %a
+  %neg_a = fneg float %a
   %tmp0 = fmul float %neg_a, %b
   %tmp1 = fadd float %tmp0, %c
 
@@ -165,7 +165,7 @@ entry:
   %b = load float, float addrspace(1)* %b_ptr
   %c = load float, float addrspace(1)* %c_ptr
 
-  %neg_b = fsub float -0.0, %b
+  %neg_b = fneg float %b
   %tmp0 = fmul float %a, %neg_b
   %tmp1 = fadd float %tmp0, %c
 
@@ -205,7 +205,7 @@ entry:
   %b = load float, float addrspace(1)* %b_ptr
   %c = load float, float addrspace(1)* %c_ptr
 
-  %neg_c = fsub float -0.0, %c
+  %neg_c = fneg float %c
   %tmp0 = fmul float %a, %b
   %tmp1 = fadd float %tmp0, %neg_c
 

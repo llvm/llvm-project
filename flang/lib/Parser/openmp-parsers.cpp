@@ -218,8 +218,8 @@ TYPE_PARSER(
                      parenthesized(Parser<OmpObjectList>{}))) ||
     "PROC_BIND" >> construct<OmpClause>(construct<OmpClause::ProcBind>(
                        parenthesized(Parser<OmpProcBindClause>{}))) ||
-    "REDUCTION" >>
-        construct<OmpClause>(parenthesized(Parser<OmpReductionClause>{})) ||
+    "REDUCTION" >> construct<OmpClause>(construct<OmpClause::Reduction>(
+                       parenthesized(Parser<OmpReductionClause>{}))) ||
     "TASK_REDUCTION" >>
         construct<OmpClause>(construct<OmpClause::TaskReduction>(
             parenthesized(Parser<OmpReductionClause>{}))) ||

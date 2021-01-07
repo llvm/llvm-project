@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-use-after-move %t -- -- -std=c++17 -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-use-after-move %t -- -- -fno-delayed-template-parsing
 
 typedef decltype(nullptr) nullptr_t;
 

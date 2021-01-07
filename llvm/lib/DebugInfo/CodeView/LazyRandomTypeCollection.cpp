@@ -172,10 +172,10 @@ Error LazyRandomTypeCollection::visitRangeForType(TypeIndex TI) {
   if (PartialOffsets.empty())
     return fullScanForType(TI);
 
-  auto Next = std::upper_bound(PartialOffsets.begin(), PartialOffsets.end(), TI,
-                               [](TypeIndex Value, const TypeIndexOffset &IO) {
-                                 return Value < IO.Type;
-                               });
+  auto Next = llvm::upper_bound(PartialOffsets, TI,
+                                [](TypeIndex Value, const TypeIndexOffset &IO) {
+                                  return Value < IO.Type;
+                                });
 
   assert(Next != PartialOffsets.begin());
   auto Prev = std::prev(Next);

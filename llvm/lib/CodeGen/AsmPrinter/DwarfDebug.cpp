@@ -151,6 +151,14 @@ static cl::opt<LinkageNameOption>
                                             "Abstract subprograms")),
                       cl::init(DefaultLinkageNames));
 
+static cl::opt<DefaultOnOff> AlwaysUseRangesInV5(
+    "always-use-ranges-in-v5", cl::Hidden,
+    cl::desc("Always use DW_AT_ranges in DWARFv5 whenever it could allow more "
+             "address pool entry sharing to reduce relocations/object size"),
+    cl::values(clEnumVal(Default, "Default for platform"),
+               clEnumVal(Enable, "Enabled"), clEnumVal(Disable, "Disabled")),
+    cl::init(Default));
+
 static constexpr unsigned ULEB128PadSize = 4;
 
 void DebugLocDwarfExpression::emitOp(uint8_t Op, const char *Comment) {
@@ -421,6 +429,19 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
     EnableOpConvert = !((tuneForGDB() && useSplitDwarf()) || (tuneForLLDB() && !TT.isOSBinFormatMachO()));
   else
     EnableOpConvert = (DwarfOpConvert == Enable);
+
+  // Split DWARF would benefit object size significantly by trading reductions
+  // in address pool usage for slightly increased range list encodings.
+  if (DwarfVersion >= 5) {
+    if (AlwaysUseRangesInV5 == Default) {
+      // FIXME: In the future, enable this by default for Split DWARF where the
+      // tradeoff is more pronounced due to being able to offload the range
+      // lists to the dwo file and shrink object files/reduce relocations there.
+      AlwaysUseRanges = false;
+    } else {
+      AlwaysUseRanges = AlwaysUseRangesInV5 == Enable;
+    }
+  }
 
   Asm->OutStreamer->getContext().setDwarfVersion(DwarfVersion);
   Asm->OutStreamer->getContext().setDwarfFormat(Dwarf64 ? dwarf::DWARF64

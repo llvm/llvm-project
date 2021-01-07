@@ -53,10 +53,7 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  bool hasSjLjLowering() const override {
-    // TODO
-    return false;
-  }
+  bool hasSjLjLowering() const override { return true; }
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override;
 

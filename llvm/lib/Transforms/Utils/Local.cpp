@@ -1340,16 +1340,22 @@ static bool PhiHasDebugValue(DILocalVariable *DIVar,
 /// least n bits.
 static bool valueCoversEntireFragment(Type *ValTy, DbgVariableIntrinsic *DII) {
   const DataLayout &DL = DII->getModule()->getDataLayout();
-  uint64_t ValueSize = DL.getTypeAllocSizeInBits(ValTy);
-  if (auto FragmentSize = DII->getFragmentSizeInBits())
-    return ValueSize >= *FragmentSize;
+  TypeSize ValueSize = DL.getTypeAllocSizeInBits(ValTy);
+  if (Optional<uint64_t> FragmentSize = DII->getFragmentSizeInBits()) {
+    assert(!ValueSize.isScalable() &&
+           "Fragments don't work on scalable types.");
+    return ValueSize.getFixedSize() >= *FragmentSize;
+  }
   // We can't always calculate the size of the DI variable (e.g. if it is a
   // VLA). Try to use the size of the alloca that the dbg intrinsic describes
   // intead.
   if (DII->isAddressOfVariable())
     if (auto *AI = dyn_cast_or_null<AllocaInst>(DII->getVariableLocation()))
-      if (auto FragmentSize = AI->getAllocationSizeInBits(DL))
-        return ValueSize >= *FragmentSize;
+      if (Optional<TypeSize> FragmentSize = AI->getAllocationSizeInBits(DL)) {
+        assert(ValueSize.isScalable() == FragmentSize->isScalable() &&
+               "Both sizes should agree on the scalable flag.");
+        return TypeSize::isKnownGE(ValueSize, *FragmentSize);
+      }
   // Could not determine size of variable. Conservatively return false.
   return false;
 }

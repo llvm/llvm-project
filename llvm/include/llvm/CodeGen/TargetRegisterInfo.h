@@ -34,6 +34,7 @@
 namespace llvm {
 
 class BitVector;
+class DIExpression;
 class LiveRegMatrix;
 class MachineFunction;
 class MachineInstr;
@@ -922,6 +923,15 @@ public:
                                   int64_t Offset) const {
     llvm_unreachable("isFrameOffsetLegal does not exist on this target");
   }
+
+  /// Gets the DWARF expression opcodes for \p Offset.
+  virtual void getOffsetOpcodes(const StackOffset &Offset,
+                                SmallVectorImpl<uint64_t> &Ops) const;
+
+  /// Prepends a DWARF expression for \p Offset to DIExpression \p Expr.
+  DIExpression *
+  prependOffsetExpression(const DIExpression *Expr, unsigned PrependFlags,
+                          const StackOffset &Offset) const;
 
   /// Spill the register so it can be used by the register scavenger.
   /// Return true if the register was spilled, false otherwise.

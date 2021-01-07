@@ -3953,6 +3953,40 @@ def err_attribute_preferred_name_arg_invalid : Error<
   "argument %0 to 'preferred_name' attribute is not a typedef for "
   "a specialization of %1">;
 
+// called-once attribute diagnostics.
+def err_called_once_attribute_wrong_type : Error<
+  "'called_once' attribute only applies to function-like parameters">;
+
+def warn_completion_handler_never_called : Warning<
+  "%select{|captured }1completion handler is never called">,
+  InGroup<CompletionHandler>, DefaultIgnore;
+def warn_called_once_never_called : Warning<
+  "%select{|captured }1%0 parameter marked 'called_once' is never called">,
+  InGroup<CalledOnceParameter>;
+
+def warn_completion_handler_never_called_when : Warning<
+  "completion handler is never %select{used|called}1 when "
+  "%select{taking true branch|taking false branch|"
+  "handling this case|none of the cases applies|"
+  "entering the loop|skipping the loop|taking one of the branches}2">,
+  InGroup<CompletionHandler>, DefaultIgnore;
+def warn_called_once_never_called_when : Warning<
+  "%0 parameter marked 'called_once' is never %select{used|called}1 when "
+  "%select{taking true branch|taking false branch|"
+  "handling this case|none of the cases applies|"
+  "entering the loop|skipping the loop|taking one of the branches}2">,
+  InGroup<CalledOnceParameter>;
+
+def warn_completion_handler_called_twice : Warning<
+  "completion handler is called twice">,
+  InGroup<CompletionHandler>, DefaultIgnore;
+def warn_called_once_gets_called_twice : Warning<
+  "%0 parameter marked 'called_once' is called twice">,
+  InGroup<CalledOnceParameter>;
+def note_called_once_gets_called_twice : Note<
+  "previous call is here%select{; set to nil to indicate "
+  "it cannot be called afterwards|}0">;
+
 // objc_designated_initializer attribute diagnostics.
 def warn_objc_designated_init_missing_super_call : Warning<
   "designated initializer missing a 'super' call to a designated initializer of the super class">,

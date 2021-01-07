@@ -274,6 +274,7 @@ void AArch64CallLowering::splitToValueTypes(
 bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                                       const Value *Val,
                                       ArrayRef<Register> VRegs,
+                                      FunctionLoweringInfo &FLI,
                                       Register SwiftErrorVReg) const {
   auto MIB = MIRBuilder.buildInstrNoInsert(AArch64::RET_ReallyLR);
   assert(((Val && !VRegs.empty()) || (!Val && VRegs.empty())) &&
@@ -440,7 +441,7 @@ bool AArch64CallLowering::fallBackToDAGISel(const Function &F) const {
 
 bool AArch64CallLowering::lowerFormalArguments(
     MachineIRBuilder &MIRBuilder, const Function &F,
-    ArrayRef<ArrayRef<Register>> VRegs) const {
+    ArrayRef<ArrayRef<Register>> VRegs, FunctionLoweringInfo &FLI) const {
   MachineFunction &MF = MIRBuilder.getMF();
   MachineBasicBlock &MBB = MIRBuilder.getMBB();
   MachineRegisterInfo &MRI = MF.getRegInfo();

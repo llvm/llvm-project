@@ -160,13 +160,19 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
       // In this table, we will track which indices are loaded from the argument
       // (where direct loads are tracked as no indices).
       ScalarizeTable &ArgIndices = ScalarizedElements[&*I];
-      for (User *U : I->users()) {
-        Instruction *UI = cast<Instruction>(U);
+      for (auto Iter = I->user_begin(), End = I->user_end(); Iter != End;) {
+        Instruction *UI = cast<Instruction>(*Iter++);
         Type *SrcTy;
         if (LoadInst *L = dyn_cast<LoadInst>(UI))
           SrcTy = L->getType();
         else
           SrcTy = cast<GetElementPtrInst>(UI)->getSourceElementType();
+        // Skip dead GEPs and remove them.
+        if (isa<GetElementPtrInst>(UI) && UI->use_empty()) {
+          UI->eraseFromParent();
+          continue;
+        }
+
         IndicesVector Indices;
         Indices.reserve(UI->getNumOperands() - 1);
         // Since loads will only have a single operand, and GEPs only a single
@@ -436,6 +442,8 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
                           << "' in function '" << F->getName() << "'\n");
       } else {
         GetElementPtrInst *GEP = cast<GetElementPtrInst>(I->user_back());
+        assert(!GEP->use_empty() &&
+               "GEPs without uses should be cleaned up already");
         IndicesVector Operands;
         Operands.reserve(GEP->getNumIndices());
         for (User::op_iterator II = GEP->idx_begin(), IE = GEP->idx_end();
@@ -674,11 +682,7 @@ static bool isSafeToPromoteArgument(Argument *Arg, Type *ByValTy, AAResults &AAR
       if (GEP->use_empty()) {
         // Dead GEP's cause trouble later.  Just remove them if we run into
         // them.
-        GEP->eraseFromParent();
-        // TODO: This runs the above loop over and over again for dead GEPs
-        // Couldn't we just do increment the UI iterator earlier and erase the
-        // use?
-        return isSafeToPromoteArgument(Arg, ByValTy, AAR, MaxElements);
+        continue;
       }
 
       if (!UpdateBaseTy(GEP->getSourceElementType()))

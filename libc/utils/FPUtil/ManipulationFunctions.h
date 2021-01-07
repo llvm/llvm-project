@@ -143,7 +143,42 @@ static inline T ldexp(T x, int exp) {
   return normal;
 }
 
+template <typename T,
+          cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, int> = 0>
+static inline T nextafter(T from, T to) {
+  FPBits<T> fromBits(from);
+  if (fromBits.isNaN())
+    return from;
+
+  FPBits<T> toBits(to);
+  if (toBits.isNaN())
+    return to;
+
+  if (from == to)
+    return to;
+
+  using UIntType = typename FPBits<T>::UIntType;
+  auto intVal = fromBits.bitsAsUInt();
+  UIntType signMask = (UIntType(1) << (sizeof(T) * 8 - 1));
+  if (from != T(0.0)) {
+    if ((from < to) == (from > T(0.0))) {
+      ++intVal;
+    } else {
+      --intVal;
+    }
+  } else {
+    intVal = (toBits.bitsAsUInt() & signMask) + UIntType(1);
+  }
+
+  return *reinterpret_cast<T *>(&intVal);
+  // TODO: Raise floating point exceptions as required by the standard.
+}
+
 } // namespace fputil
 } // namespace __llvm_libc
+
+#if (defined(__x86_64__) || defined(__i386__))
+#include "NextAfterLongDoubleX86.h"
+#endif // defined(__x86_64__) || defined(__i386__)
 
 #endif // LLVM_LIBC_UTILS_FPUTIL_MANIPULATION_FUNCTIONS_H

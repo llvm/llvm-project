@@ -336,7 +336,7 @@ static void emitEnumDecl(const Record &enumDef, raw_ostream &os) {
   StringRef enumName = enumAttr.getEnumClassName();
   StringRef cppNamespace = enumAttr.getCppNamespace();
   std::string underlyingType = std::string(enumAttr.getUnderlyingType());
-  StringRef description = enumAttr.getDescription();
+  StringRef description = enumAttr.getSummary();
   StringRef strToSymFnName = enumAttr.getStringToSymbolFnName();
   StringRef symToStrFnName = enumAttr.getSymbolToStringFnName();
   StringRef symToStrFnRetType = enumAttr.getSymbolToStringFnRetType();

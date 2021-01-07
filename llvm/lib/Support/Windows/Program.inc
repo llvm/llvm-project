@@ -212,7 +212,7 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
         return false;
       }
 
-      EnvBlock.insert(EnvBlock.end(), EnvString.begin(), EnvString.end());
+      llvm::append_range(EnvBlock, EnvString);
       EnvBlock.push_back(0);
     }
     EnvBlock.push_back(0);

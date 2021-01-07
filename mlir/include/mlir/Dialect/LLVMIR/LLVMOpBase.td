@@ -49,8 +49,8 @@ def LLVM_Dialect : Dialect {
 
 // LLVM dialect type.
 def LLVM_Type : DialectType<LLVM_Dialect,
-                            CPred<"$_self.isa<::mlir::LLVM::LLVMType>()">,
-                            "LLVM dialect type">;
+                            CPred<"::mlir::LLVM::isCompatibleType($_self)">,
+                            "LLVM dialect-compatible type">;
 
 // Type constraint accepting LLVM integer types.
 def LLVM_AnyInteger : Type<
@@ -102,7 +102,7 @@ class LLVM_PointerTo<Type pointee> : Type<
          "$_self",
          "$_self.cast<::mlir::LLVM::LLVMPointerType>().getElementType()",
          pointee.predicate>]>,
-  "LLVM pointer to " # pointee.description>;
+  "LLVM pointer to " # pointee.summary>;
 
 // Type constraint accepting any LLVM structure type.
 def LLVM_AnyStruct : Type<CPred<"$_self.isa<::mlir::LLVM::LLVMStructType>()">,
@@ -142,7 +142,7 @@ class LLVM_VectorOf<Type element> : Type<
          "$_self",
          "$_self.cast<::mlir::LLVM::LLVMVectorType>().getElementType()",
          element.predicate>]>,
-  "LLVM vector of " # element.description>;
+  "LLVM vector of " # element.summary>;
 
 // Type constraint accepting a constrained type, or a vector of such types.
 class LLVM_ScalarOrVectorOf<Type element> :
@@ -223,9 +223,9 @@ class ListIntSubst<string pattern, list<int> values> {
 // or result in the operation.
 def LLVM_IntrPatterns {
   string operand =
-    [{convertType(opInst.getOperand($0).getType().cast<LLVM::LLVMType>())}];
+    [{convertType(opInst.getOperand($0).getType())}];
   string result =
-    [{convertType(opInst.getResult($0).getType().cast<LLVM::LLVMType>())}];
+    [{convertType(opInst.getResult($0).getType())}];
   string structResult =
     [{convertType(opInst.getResult(0).getType().cast<LLVM::LLVMStructType>()
                                                    .getBody()[$0])}];

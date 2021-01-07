@@ -320,10 +320,12 @@ class RegisterCommandsTestCase(TestBase):
             ]
 
             st0regname = None
-            if currentFrame.FindRegister("st0").IsValid():
-                st0regname = "st0"
-            elif currentFrame.FindRegister("stmm0").IsValid():
+            # Darwin is using stmmN by default but support stN as an alias.
+            # Therefore, we need to check for stmmN first.
+            if currentFrame.FindRegister("stmm0").IsValid():
                 st0regname = "stmm0"
+            elif currentFrame.FindRegister("st0").IsValid():
+                st0regname = "st0"
             if st0regname is not None:
                 # reg          value
                 # must-have

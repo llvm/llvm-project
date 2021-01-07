@@ -1116,7 +1116,12 @@ public:
   _LIBCPP_INLINE_VISIBILITY
   void clear() noexcept { __pn_.clear(); }
 
-  path& make_preferred() { return *this; }
+  path& make_preferred() {
+#if defined(_LIBCPP_WIN32API)
+    _VSTD::replace(__pn_.begin(), __pn_.end(), L'/', L'\\');
+#endif
+    return *this;
+  }
 
   _LIBCPP_INLINE_VISIBILITY
   path& remove_filename() {

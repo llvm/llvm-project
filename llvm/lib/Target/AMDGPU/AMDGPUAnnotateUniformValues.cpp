@@ -142,10 +142,11 @@ void AMDGPUAnnotateUniformValues::visitLoadInst(LoadInst &I) {
   }
 
   bool NotClobbered = false;
+  bool GlobalLoad = isGlobalLoad(I);
   if (PtrI)
-    NotClobbered = !isClobberedInFunction(&I);
+    NotClobbered = GlobalLoad && !isClobberedInFunction(&I);
   else if (isa<Argument>(Ptr) || isa<GlobalValue>(Ptr)) {
-    if (isGlobalLoad(I) && !isClobberedInFunction(&I)) {
+    if (GlobalLoad && !isClobberedInFunction(&I)) {
       NotClobbered = true;
       // Lookup for the existing GEP
       if (noClobberClones.count(Ptr)) {

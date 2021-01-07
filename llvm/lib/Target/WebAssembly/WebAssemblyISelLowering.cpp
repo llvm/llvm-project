@@ -16,6 +16,7 @@
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyTargetMachine.h"
+#include "WebAssemblyUtilities.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -477,6 +478,15 @@ static MachineBasicBlock *LowerCallResults(MachineInstr &CallResults,
   if (IsIndirect) {
     MIB.addImm(0);
     MIB.addImm(0);
+
+    // Ensure that the object file has a __indirect_function_table import, as we
+    // call_indirect against it.
+    MCSymbolWasm *Sym = WebAssembly::getOrCreateFunctionTableSymbol(
+        MF.getContext(), "__indirect_function_table");
+    // Until call_indirect emits TABLE_NUMBER relocs against this symbol, mark
+    // it as NO_STRIP so as to ensure that the indirect function table makes it
+    // to linked output.
+    Sym->setNoStrip();
   }
 
   for (auto Use : CallParams.uses())
@@ -744,6 +754,16 @@ bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = MemVT;
     Info.offset = 0;
     Info.align = MemAlign;
+    return true;
+  }
+  case Intrinsic::wasm_prefetch_t:
+  case Intrinsic::wasm_prefetch_nt: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::i8;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.align = Align(1);
+    Info.flags = MachineMemOperand::MOLoad;
     return true;
   }
   default:

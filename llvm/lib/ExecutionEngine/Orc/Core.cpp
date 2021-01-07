@@ -1241,8 +1241,7 @@ void JITDylib::setLinkOrder(JITDylibSearchOrder NewLinkOrder,
       if (NewLinkOrder.empty() || NewLinkOrder.front().first != this)
         LinkOrder.push_back(
             std::make_pair(this, JITDylibLookupFlags::MatchAllSymbols));
-      LinkOrder.insert(LinkOrder.end(), NewLinkOrder.begin(),
-                       NewLinkOrder.end());
+      llvm::append_range(LinkOrder, NewLinkOrder);
     } else
       LinkOrder = std::move(NewLinkOrder);
   });

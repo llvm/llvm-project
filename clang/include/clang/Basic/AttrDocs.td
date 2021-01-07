@@ -5162,6 +5162,59 @@ in the future.
   }];
 }
 
+def CalledOnceDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The ``called_once`` attribute specifies that the annotated function or method
+parameter is invoked exactly once on all execution paths. It only applies
+to parameters with function-like types, i.e. function pointers or blocks. This
+concept is particularly useful for asynchronous programs.
+
+Clang implements a check for ``called_once`` parameters,
+``-Wcalled-once-parameter``. It is on by default and finds the following
+violations:
+
+* Parameter is not called at all.
+
+* Parameter is called more than once.
+
+* Parameter is not called on one of the execution paths.
+
+In the latter case, Clang pinpoints the path where parameter is not invoked
+by showing the control-flow statement where the path diverges.
+
+.. code-block:: objc
+
+  void fooWithCallback(void (^callback)(void) __attribute__((called_once))) {
+    if (somePredicate()) {
+      ...
+      callback();
+    } esle {
+      callback(); // OK: callback is called on every path
+    }
+  }
+
+  void barWithCallback(void (^callback)(void) __attribute__((called_once))) {
+    if (somePredicate()) {
+      ...
+      callback(); // note: previous call is here
+    }
+    callback(); // warning: callback is called twice
+  }
+
+  void foobarWithCallback(void (^callback)(void) __attribute__((called_once))) {
+    if (somePredicate()) {  // warning: callback is not called when condition is false
+      ...
+      callback();
+    }
+  }
+
+This attribute is useful for API developers who want to double-check if they
+implemented their method correctly.
+
+  }];
+}
+
 def GnuInlineDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{

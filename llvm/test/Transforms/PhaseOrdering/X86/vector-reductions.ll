@@ -284,12 +284,12 @@ define i1 @cmp_lt_gt(double %a, double %b, double %c) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[FNEG:%.*]] = fneg double [[B:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[A:%.*]], 2.000000e+00
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> undef, double [[C:%.*]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[C:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[FNEG]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> undef, double [[B]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[B]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[C]], i32 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = fsub <2 x double> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> undef, double [[MUL]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> poison, double [[MUL]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> undef, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = fdiv <2 x double> [[TMP4]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = fcmp olt <2 x double> [[TMP7]], <double 0x3EB0C6F7A0B5ED8D, double 0x3EB0C6F7A0B5ED8D>

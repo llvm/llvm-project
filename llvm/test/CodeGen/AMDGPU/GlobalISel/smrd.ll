@@ -1,9 +1,9 @@
 ; FIXME: Need to add support for mubuf stores to enable this on SI.
-; XUN: llc < %s -march=amdgcn -mcpu=tahiti -show-mc-encoding -verify-machineinstrs -global-isel | FileCheck --check-prefix=SI --check-prefix=GCN --check-prefix=SIVI %s
-; RUN: llc < %s -march=amdgcn -mcpu=bonaire -show-mc-encoding -verify-machineinstrs -global-isel | FileCheck --check-prefix=CI --check-prefix=GCN --check-prefix=SICIVI %s
-; RUN: llc < %s -march=amdgcn -mcpu=tonga -show-mc-encoding -verify-machineinstrs -global-isel | FileCheck --check-prefix=VI --check-prefix=GCN --check-prefix=SIVI --check-prefix=SICIVI %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -show-mc-encoding -verify-machineinstrs -global-isel < %s | FileCheck -check-prefix=GFX9 -check-prefix=GFX9_10 -check-prefix=GCN -check-prefix=VIGFX9_10 -check-prefix=SIVIGFX9_10  %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -show-mc-encoding -verify-machineinstrs -global-isel < %s | FileCheck -check-prefix=GFX10 -check-prefix=GFX9_10 -check-prefix=GCN -check-prefix=VIGFX9_10 -check-prefix=SIVIGFX9_10  %s
+; XUN: llc < %s -march=amdgcn -mcpu=tahiti -show-mc-encoding -verify-machineinstrs -global-isel | FileCheck --check-prefixes=SI,GCN %s
+; RUN: llc < %s -march=amdgcn -mcpu=bonaire -show-mc-encoding -verify-machineinstrs -global-isel | FileCheck --check-prefixes=CI,GCN,SICIVI %s
+; RUN: llc < %s -march=amdgcn -mcpu=tonga -show-mc-encoding -verify-machineinstrs -global-isel | FileCheck --check-prefixes=VI,GCN,SICIVI %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -show-mc-encoding -verify-machineinstrs -global-isel < %s | FileCheck --check-prefixes=GFX9_10,GCN,VIGFX9_10,SIVIGFX9_10  %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -show-mc-encoding -verify-machineinstrs -global-isel < %s | FileCheck --check-prefixes=GFX9_10,GCN,VIGFX9_10,SIVIGFX9_10  %s
 
 ; SMRD load with an immediate offset.
 ; GCN-LABEL: {{^}}smrd0:

@@ -139,7 +139,6 @@ namespace {
   ///
   class PPCDAGToDAGISel : public SelectionDAGISel {
     const PPCTargetMachine &TM;
-    const PPCSubtarget *PPCSubTarget = nullptr;
     const PPCSubtarget *Subtarget = nullptr;
     const PPCTargetLowering *PPCLowering = nullptr;
     unsigned GlobalBaseReg = 0;
@@ -151,7 +150,6 @@ namespace {
     bool runOnMachineFunction(MachineFunction &MF) override {
       // Make sure we re-emit a set of the global base reg if necessary
       GlobalBaseReg = 0;
-      PPCSubTarget = &MF.getSubtarget<PPCSubtarget>();
       Subtarget = &MF.getSubtarget<PPCSubtarget>();
       PPCLowering = Subtarget->getTargetLowering();
       SelectionDAGISel::runOnMachineFunction(MF);
