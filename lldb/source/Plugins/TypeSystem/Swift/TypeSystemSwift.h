@@ -149,6 +149,13 @@ public:
   virtual std::string GetSwiftName(const clang::Decl *clang_decl,
                                    TypeSystemClang &clang_typesystem) = 0;
 
+  void DumpValue(lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx,
+                 Stream *s, lldb::Format format, const DataExtractor &data,
+                 lldb::offset_t data_offset, size_t data_byte_size,
+                 uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset,
+                 bool show_types, bool show_summary, bool verbose,
+                 uint32_t depth) override;
+
   /// Unavailable hardcoded functions that don't make sense for Swift.
   /// \{
   ConstString DeclContextGetName(void *opaque_decl_ctx) override { return {}; }
