@@ -57,16 +57,15 @@ OpAsmPrinter::~OpAsmPrinter() {}
 void OpAsmPrinter::printFunctionalType(Operation *op) {
   auto &os = getStream();
   os << '(';
-  llvm::interleaveComma(op->getOperands(), os, [&](Value op) {
+  llvm::interleaveComma(op->getOperands(), os, [&](Value operand) {
     // Print the types of null values as <<NULL TYPE>>.
-    *this << (op ? op.getType() : Type());
+    *this << (operand ? operand.getType() : Type());
   });
   os << ") -> ";
 
   // Print the result list.  We don't parenthesize single result types unless
   // it is a function (avoiding a grammar ambiguity).
-  auto numResults = op->getNumResults();
-  bool wrapped = numResults != 1;
+  bool wrapped = op->getNumResults() != 1;
   if (!wrapped && op->getResult(0).getType() &&
       op->getResult(0).getType().isa<FunctionType>())
     wrapped = true;
@@ -74,9 +73,9 @@ void OpAsmPrinter::printFunctionalType(Operation *op) {
   if (wrapped)
     os << '(';
 
-  llvm::interleaveComma(op->getResults(), os, [&](const OpResult &r) {
+  llvm::interleaveComma(op->getResults(), os, [&](const OpResult &result) {
     // Print the types of null values as <<NULL TYPE>>.
-    *this << (r ? r.getType() : Type());
+    *this << (result ? result.getType() : Type());
   });
 
   if (wrapped)
