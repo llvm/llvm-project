@@ -2843,12 +2843,8 @@ static void computeLiveInValues(BasicBlock::reverse_iterator Begin,
 
 static void computeLiveOutSeed(BasicBlock *BB, SetVector<Value *> &LiveTmp) {
   for (BasicBlock *Succ : successors(BB)) {
-    for (auto &I : *Succ) {
-      PHINode *PN = dyn_cast<PHINode>(&I);
-      if (!PN)
-        break;
-
-      Value *V = PN->getIncomingValueForBlock(BB);
+    for (PHINode &PN : Succ->phis()) {
+      Value *V = PN.getIncomingValueForBlock(BB);
       assert(!isUnhandledGCPointerType(V->getType()) &&
              "support for FCA unimplemented");
       if (isHandledGCPointerType(V->getType()) && !isa<Constant>(V))
