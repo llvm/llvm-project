@@ -150,7 +150,7 @@ multiclass SICommonWriteRes {
   def : HWWriteRes<Write16PassMAI, [HWXDL], 16>;
 
   def : ReadAdvance<MIVGPRRead, -2>;
-  def : InstRW<[Write64Bit, MIReadVGPR], (instregex "^V_ACCVGPR_WRITE_B32$")>;
+  def : InstRW<[Write64Bit, MIReadVGPR], (instregex "^V_ACCVGPR_WRITE_B32_e64$")>;
 
   // Technically mfma reads can be from 0 to 4 cycles but that does not make
   // sense to model because its register setup is huge. In particular if we

@@ -3006,15 +3006,15 @@ unsigned AMDGPUAsmParser::getConstantBusLimit(unsigned Opcode) const {
 
   switch (Opcode) {
   // 64-bit shift instructions can use only one scalar value input
-  case AMDGPU::V_LSHLREV_B64:
+  case AMDGPU::V_LSHLREV_B64_e64:
   case AMDGPU::V_LSHLREV_B64_gfx10:
-  case AMDGPU::V_LSHL_B64:
-  case AMDGPU::V_LSHRREV_B64:
+  case AMDGPU::V_LSHRREV_B64_e64:
   case AMDGPU::V_LSHRREV_B64_gfx10:
-  case AMDGPU::V_LSHR_B64:
-  case AMDGPU::V_ASHRREV_I64:
+  case AMDGPU::V_ASHRREV_I64_e64:
   case AMDGPU::V_ASHRREV_I64_gfx10:
-  case AMDGPU::V_ASHR_I64:
+  case AMDGPU::V_LSHL_B64_e64:
+  case AMDGPU::V_LSHR_B64_e64:
+  case AMDGPU::V_ASHR_I64_e64:
     return 1;
   default:
     return 2;
@@ -3528,15 +3528,15 @@ static bool IsRevOpcode(const unsigned Opcode)
   case AMDGPU::V_ASHRREV_I16_e64_vi:
   case AMDGPU::V_ASHRREV_I16_gfx10:
 
-  case AMDGPU::V_LSHLREV_B64:
+  case AMDGPU::V_LSHLREV_B64_e64:
   case AMDGPU::V_LSHLREV_B64_gfx10:
   case AMDGPU::V_LSHLREV_B64_vi:
 
-  case AMDGPU::V_LSHRREV_B64:
+  case AMDGPU::V_LSHRREV_B64_e64:
   case AMDGPU::V_LSHRREV_B64_gfx10:
   case AMDGPU::V_LSHRREV_B64_vi:
 
-  case AMDGPU::V_ASHRREV_I64:
+  case AMDGPU::V_ASHRREV_I64_e64:
   case AMDGPU::V_ASHRREV_I64_gfx10:
   case AMDGPU::V_ASHRREV_I64_vi:
 

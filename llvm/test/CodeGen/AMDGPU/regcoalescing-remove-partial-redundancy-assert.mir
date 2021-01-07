@@ -48,8 +48,8 @@ body:             |
 
   bb.6:
     %36:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM undef %37:sgpr_128, 2708, 0, 0 :: (dereferenceable invariant load 4)
-    %39:vgpr_32 = nnan arcp contract reassoc nofpexcept V_MAD_F32 0, killed %110.sub1, 0, target-flags(amdgpu-gotprel32-lo) 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-    %40:vgpr_32 = nofpexcept V_MAD_F32 0, %111.sub1, 0, target-flags(amdgpu-gotprel32-lo) 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %39:vgpr_32 = nnan arcp contract reassoc nofpexcept V_MAD_F32_e64 0, killed %110.sub1, 0, target-flags(amdgpu-gotprel32-lo) 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %40:vgpr_32 = nofpexcept V_MAD_F32_e64 0, %111.sub1, 0, target-flags(amdgpu-gotprel32-lo) 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     %41:vgpr_32 = nofpexcept V_MUL_F32_e64 0, 0, 0, killed %40, 1, 0, implicit $mode, implicit $exec
     %43:vgpr_32 = nofpexcept V_MUL_F32_e32 0, %39, implicit $mode, implicit $exec
     %44:vgpr_32 = COPY killed %43
@@ -159,7 +159,7 @@ body:             |
 
   bb.28:
     dead %77:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    %78:vgpr_32 = nnan arcp contract reassoc nofpexcept V_MAD_F32 0, killed %113.sub1, 0, target-flags(amdgpu-gotprel32-lo) 0, 0, 1065353216, 0, 0, implicit $mode, implicit $exec
+    %78:vgpr_32 = nnan arcp contract reassoc nofpexcept V_MAD_F32_e64 0, killed %113.sub1, 0, target-flags(amdgpu-gotprel32-lo) 0, 0, 1065353216, 0, 0, implicit $mode, implicit $exec
     dead %80:sreg_32_xm0 = S_MOV_B32 0
     dead %82:vgpr_32 = nofpexcept V_MUL_F32_e32 killed %78, %78, implicit $mode, implicit $exec
     dead %126:vgpr_32 = V_MOV_B32_e32 2143289344, implicit $exec
