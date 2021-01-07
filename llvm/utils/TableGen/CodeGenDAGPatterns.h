@@ -1176,7 +1176,7 @@ public:
   const CodeGenTarget &getTargetInfo() const { return Target; }
   const TypeSetByHwMode &getLegalTypes() const { return LegalVTS; }
 
-  Record *getSDNodeNamed(const std::string &Name) const;
+  Record *getSDNodeNamed(StringRef Name) const;
 
   const SDNodeInfo &getSDNodeInfo(Record *R) const {
     auto F = SDNodes.find(R);
