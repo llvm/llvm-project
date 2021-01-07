@@ -496,7 +496,7 @@ def WhileOp : SCF_Op<"while",
        * In a "do-while" loop, this region contains the loop body. */
       %next = call @payload(%arg1) : (f32) -> f32
 
-      /* And also evalutes the condition. */
+      /* And also evaluates the condition. */
       %condition = call @evaluate_condition(%arg1) : (f32) -> i1
 
       /* Loop through the "after" region. */
@@ -525,7 +525,7 @@ def WhileOp : SCF_Op<"while",
        * "after" region. */
       %shared = call @shared_compute(%arg1) : (f32) -> i64
 
-      /* Evalute the condition. */
+      /* Evaluate the condition. */
       %condition = call @evaluate_condition(%arg1, %shared) : (f32, i64) -> i1
 
       /* Forward the result of the shared computation to the "after" region.

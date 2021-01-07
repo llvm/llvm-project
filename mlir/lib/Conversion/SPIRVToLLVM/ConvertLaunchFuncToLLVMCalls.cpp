@@ -200,7 +200,7 @@ class GPULaunchLowering : public ConvertOpToLLVMPattern<gpu::LaunchFuncOp> {
     auto numKernelOperands = launchOp.getNumKernelOperands();
     auto kernelOperands = operands.take_back(numKernelOperands);
     for (auto operand : llvm::enumerate(kernelOperands)) {
-      // Check if the kernel's opernad is a ranked memref.
+      // Check if the kernel's operand is a ranked memref.
       auto memRefType = launchOp.getKernelOperand(operand.index())
                             .getType()
                             .dyn_cast<MemRefType>();

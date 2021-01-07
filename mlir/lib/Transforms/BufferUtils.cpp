@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements utilties for buffer optimization passes.
+// This file implements utilities for buffer optimization passes.
 //
 //===----------------------------------------------------------------------===//
 

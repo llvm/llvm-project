@@ -466,7 +466,7 @@ def Vector_ExtractMapOp :
     along each dimension.
 
     The dimension associated to each element of `ids` used to extract are
-    implicitly deduced from the the destination type. For each dimension the
+    implicitly deduced from the destination type. For each dimension the
     multiplicity is the destination dimension size divided by the source
     dimension size, each dimension with a multiplicity greater than 1 is
     associated to the next id, following ids order.

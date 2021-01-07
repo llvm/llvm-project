@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the the SPIR-V module combiner library.
+// This file implements the SPIR-V module combiner library.
 //
 //===----------------------------------------------------------------------===//
 
@@ -81,7 +81,7 @@ emplaceOrGetReplacementSymbol(KeyTy key, SymbolOpTy symbolOp,
 /// Note: We use the operation's name (not the symbol name) as part of the hash
 /// computation. This prevents, for example, mistakenly considering a global
 /// variable and a spec constant as duplicates because their descriptor set +
-/// binding and spec_id, repectively, happen to hash to the same value.
+/// binding and spec_id, respectively, happen to hash to the same value.
 static llvm::hash_code computeHash(SymbolOpInterface symbolOp) {
   llvm::hash_code hashCode(0);
   hashCode = llvm::hash_combine(symbolOp->getName());
@@ -140,7 +140,7 @@ combine(llvm::MutableArrayRef<spirv::ModuleOp> modules,
   // renamed in order to maintain the conflicting symbol in the input module
   // being merged. For example, if the conflict is between a global variable in
   // the current combined module and a function in the input module, the global
-  // varaible is renamed. In order to notify listeners of the symbol updates in
+  // variable is renamed. In order to notify listeners of the symbol updates in
   // such cases, we need to keep track of the module from which the renamed
   // symbol in the combined module originated. This map keeps such information.
   DenseMap<StringRef, spirv::ModuleOp> symNameToModuleMap;
@@ -156,7 +156,7 @@ combine(llvm::MutableArrayRef<spirv::ModuleOp> modules,
     spirv::ModuleOp moduleClone = module.clone();
 
     // In the combined module, rename all symbols that conflict with symbols
-    // from the current input module. This renmaing applies to all ops except
+    // from the current input module. This renaming applies to all ops except
     // for spv.funcs. This way, if the conflicting op in the input module is
     // non-spv.func, we rename that symbol instead and maintain the spv.func in
     // the combined module name as it is.
@@ -184,7 +184,7 @@ combine(llvm::MutableArrayRef<spirv::ModuleOp> modules,
           symRenameListener(originalModule, oldSymName, newSymName);
 
           // Since the symbol name is updated, there is no need to maintain the
-          // entry that assocaites the old symbol name with the original module.
+          // entry that associates the old symbol name with the original module.
           symNameToModuleMap.erase(oldSymName);
           // Instead, add a new entry to map the new symbol name to the original
           // module in case it gets renamed again later.

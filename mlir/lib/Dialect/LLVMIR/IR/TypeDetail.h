@@ -91,7 +91,7 @@ public:
     /// Returns the identifier of a key for identified structs.
     StringRef getIdentifier() const {
       assert(isIdentified() &&
-             "non-identified struct key canont have an identifier");
+             "non-identified struct key cannot have an identifier");
       return name;
     }
 
@@ -219,7 +219,7 @@ public:
                                            key.isOpaque());
   }
 
-  /// Hook into the type unquing infrastructure.
+  /// Hook into the type uniquing infrastructure.
   bool operator==(const KeyTy &other) const { return getKey() == other; };
   static llvm::hash_code hashKey(const KeyTy &key) { return key.hashValue(); }
   static LLVMStructTypeStorage *construct(TypeStorageAllocator &allocator,

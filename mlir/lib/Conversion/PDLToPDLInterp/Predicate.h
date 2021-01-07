@@ -419,7 +419,7 @@ public:
 // PredicateBuilder
 //===----------------------------------------------------------------------===//
 
-/// This class provides utilties for constructing predicates.
+/// This class provides utilities for constructing predicates.
 class PredicateBuilder {
 public:
   PredicateBuilder(PredicateUniquer &uniquer, MLIRContext *ctx)
