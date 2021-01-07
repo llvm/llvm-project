@@ -206,6 +206,8 @@ class VOP3a_gfx10<bits<10> op, VOPProfile p> : VOP3a<p> {
   let Inst{31-26} = 0x35;
 }
 
+class VOP3a_gfx11<bits<10> op, VOPProfile p> : VOP3a_gfx10<op, p>;
+
 class VOP3a_vi <bits<10> op, VOPProfile P> : VOP3a<P> {
   let Inst{25-16} = op;
   let Inst{15}    = !if(P.HasClamp, clamp{0}, 0);
