@@ -32,13 +32,16 @@ class AMDGPUCallLowering final : public CallLowering {
   /// A function of this type is used to perform value split action.
   using SplitArgTy = std::function<void(ArrayRef<Register>, Register, LLT, LLT, int)>;
 
-  void splitToValueTypes(MachineIRBuilder &B,
-                         const ArgInfo &OrigArgInfo,
+  void splitToValueTypes(MachineIRBuilder &B, const ArgInfo &OrigArgInfo,
                          SmallVectorImpl<ArgInfo> &SplitArgs,
-                         const DataLayout &DL,
-                         CallingConv::ID CallConv,
-                         bool IsOutgoing,
-                         SplitArgTy SplitArg) const;
+                         const DataLayout &DL, CallingConv::ID CallConv) const;
+
+  void processSplitArgs(MachineIRBuilder &B, const ArgInfo &OrigArgInfo,
+                        const SmallVectorImpl<ArgInfo> &SplitArg,
+                        SmallVectorImpl<ArgInfo> &SplitArgs,
+                        const DataLayout &DL, CallingConv::ID CallConv,
+                        bool IsOutgoing,
+                        SplitArgTy PerformArgSplit) const;
 
   bool lowerReturnVal(MachineIRBuilder &B, const Value *Val,
                       ArrayRef<Register> VRegs, MachineInstrBuilder &Ret) const;
