@@ -1056,7 +1056,7 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
       thumb_arch_name.erase(0, 3);
       thumb_arch_name.insert(0, "thumb");
     } else {
-      thumb_arch_name = "thumbv8.2a";
+      thumb_arch_name = "thumbv8.7a";
     }
     thumb_arch.GetTriple().setArchName(llvm::StringRef(thumb_arch_name));
   }
@@ -1068,7 +1068,7 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
   // specified)
   if (triple.getArch() == llvm::Triple::arm &&
       triple.getSubArch() == llvm::Triple::NoSubArch)
-    triple.setArchName("armv8.2a");
+    triple.setArchName("armv8.7a");
 
   std::string features_str = "";
   const char *triple_str = triple.getTriple().c_str();
@@ -1137,16 +1137,13 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
       features_str += "+dspr2,";
   }
 
-  // If any AArch64 variant, enable the ARMv8.5 ISA with SVE extensions so we
-  // can disassemble newer instructions.
-  if (triple.getArch() == llvm::Triple::aarch64 || 
-      triple.getArch() == llvm::Triple::aarch64_32)
-    features_str += "+v8.5a,+sve2";
+  // If any AArch64 variant, enable latest ISA with any optional
+  // extensions like SVE.
+  if (triple.isAArch64()) {
+    features_str += "+v8.7a,+sve2,+mte";
 
-  if ((triple.getArch() == llvm::Triple::aarch64 ||
-       triple.getArch() == llvm::Triple::aarch64_32)
-      && triple.getVendor() == llvm::Triple::Apple) {
-    cpu = "apple-latest";
+    if (triple.getVendor() == llvm::Triple::Apple)
+      cpu = "apple-latest";
   }
 
   // We use m_disasm_up.get() to tell whether we are valid or not, so if this
