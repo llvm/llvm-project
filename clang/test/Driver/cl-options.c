@@ -686,6 +686,11 @@
 // CLANG-NOT: "--dependent-lib=libcmt"
 // CLANG-NOT: "-vectorize-slp"
 
+// Cover PR42501: clang-cl /clang: pass-through causes read-after-free with aliased options.
+// RUN: %clang_cl /clang:-save-temps /clang:-Wl,test1,test2 -### -- %s 2>&1 | FileCheck -check-prefix=SAVETEMPS %s
+// SAVETEMPS: "-save-temps=cwd"
+// SAVETEMPS: "test1" "test2"
+
 // Validate that the default triple is used when run an empty tools dir is specified
 // RUN: %clang_cl -vctoolsdir "" -### -- %s 2>&1 | FileCheck %s --check-prefix VCTOOLSDIR
 // VCTOOLSDIR: "-triple" "{{[a-zA-Z0-9_-]*}}-pc-windows-msvc19.11.0"
