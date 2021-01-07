@@ -142,12 +142,12 @@ namespace std {
       constexpr size_type find_last_not_of(const charT* s, size_type pos, size_type n) const;
       constexpr size_type find_last_not_of(const charT* s, size_type pos = npos) const;
 
-      constexpr bool starts_with(basic_string_view s) const noexcept; // C++2a
-      constexpr bool starts_with(charT c) const noexcept;             // C++2a
-      constexpr bool starts_with(const charT* s) const;               // C++2a
-      constexpr bool ends_with(basic_string_view s) const noexcept;   // C++2a
-      constexpr bool ends_with(charT c) const noexcept;               // C++2a
-      constexpr bool ends_with(const charT* s) const;                 // C++2a
+      constexpr bool starts_with(basic_string_view s) const noexcept; // C++20
+      constexpr bool starts_with(charT c) const noexcept;             // C++20
+      constexpr bool starts_with(const charT* s) const;               // C++20
+      constexpr bool ends_with(basic_string_view s) const noexcept;   // C++20
+      constexpr bool ends_with(charT c) const noexcept;               // C++20
+      constexpr bool ends_with(const charT* s) const;                 // C++20
 
      private:
       const_pointer data_;  // exposition only

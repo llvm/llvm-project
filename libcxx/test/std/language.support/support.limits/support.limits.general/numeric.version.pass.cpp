@@ -14,9 +14,9 @@
 // Test the feature test macros defined by <numeric>
 
 /*  Constant                        Value
-    __cpp_lib_constexpr_numeric     201911L [C++2a]
+    __cpp_lib_constexpr_numeric     201911L [C++20]
     __cpp_lib_gcd_lcm               201606L [C++17]
-    __cpp_lib_interpolate           201902L [C++2a]
+    __cpp_lib_interpolate           201902L [C++20]
     __cpp_lib_parallel_algorithm    201603L [C++17]
 */
 
@@ -26,7 +26,7 @@
 #if TEST_STD_VER < 14
 
 # ifdef __cpp_lib_constexpr_numeric
-#   error "__cpp_lib_constexpr_numeric should not be defined before c++2a"
+#   error "__cpp_lib_constexpr_numeric should not be defined before c++20"
 # endif
 
 # ifdef __cpp_lib_gcd_lcm
@@ -34,7 +34,7 @@
 # endif
 
 # ifdef __cpp_lib_interpolate
-#   error "__cpp_lib_interpolate should not be defined before c++2a"
+#   error "__cpp_lib_interpolate should not be defined before c++20"
 # endif
 
 # ifdef __cpp_lib_parallel_algorithm
@@ -44,7 +44,7 @@
 #elif TEST_STD_VER == 14
 
 # ifdef __cpp_lib_constexpr_numeric
-#   error "__cpp_lib_constexpr_numeric should not be defined before c++2a"
+#   error "__cpp_lib_constexpr_numeric should not be defined before c++20"
 # endif
 
 # ifdef __cpp_lib_gcd_lcm
@@ -52,7 +52,7 @@
 # endif
 
 # ifdef __cpp_lib_interpolate
-#   error "__cpp_lib_interpolate should not be defined before c++2a"
+#   error "__cpp_lib_interpolate should not be defined before c++20"
 # endif
 
 # ifdef __cpp_lib_parallel_algorithm
@@ -62,7 +62,7 @@
 #elif TEST_STD_VER == 17
 
 # ifdef __cpp_lib_constexpr_numeric
-#   error "__cpp_lib_constexpr_numeric should not be defined before c++2a"
+#   error "__cpp_lib_constexpr_numeric should not be defined before c++20"
 # endif
 
 # ifndef __cpp_lib_gcd_lcm
@@ -73,7 +73,7 @@
 # endif
 
 # ifdef __cpp_lib_interpolate
-#   error "__cpp_lib_interpolate should not be defined before c++2a"
+#   error "__cpp_lib_interpolate should not be defined before c++20"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -89,35 +89,35 @@
 #   endif
 # endif
 
-#elif TEST_STD_VER > 17
+#elif TEST_STD_VER == 20
 
 # ifndef __cpp_lib_constexpr_numeric
-#   error "__cpp_lib_constexpr_numeric should be defined in c++2a"
+#   error "__cpp_lib_constexpr_numeric should be defined in c++20"
 # endif
 # if __cpp_lib_constexpr_numeric != 201911L
-#   error "__cpp_lib_constexpr_numeric should have the value 201911L in c++2a"
+#   error "__cpp_lib_constexpr_numeric should have the value 201911L in c++20"
 # endif
 
 # ifndef __cpp_lib_gcd_lcm
-#   error "__cpp_lib_gcd_lcm should be defined in c++2a"
+#   error "__cpp_lib_gcd_lcm should be defined in c++20"
 # endif
 # if __cpp_lib_gcd_lcm != 201606L
-#   error "__cpp_lib_gcd_lcm should have the value 201606L in c++2a"
+#   error "__cpp_lib_gcd_lcm should have the value 201606L in c++20"
 # endif
 
 # ifndef __cpp_lib_interpolate
-#   error "__cpp_lib_interpolate should be defined in c++2a"
+#   error "__cpp_lib_interpolate should be defined in c++20"
 # endif
 # if __cpp_lib_interpolate != 201902L
-#   error "__cpp_lib_interpolate should have the value 201902L in c++2a"
+#   error "__cpp_lib_interpolate should have the value 201902L in c++20"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_parallel_algorithm
-#     error "__cpp_lib_parallel_algorithm should be defined in c++2a"
+#     error "__cpp_lib_parallel_algorithm should be defined in c++20"
 #   endif
 #   if __cpp_lib_parallel_algorithm != 201603L
-#     error "__cpp_lib_parallel_algorithm should have the value 201603L in c++2a"
+#     error "__cpp_lib_parallel_algorithm should have the value 201603L in c++20"
 #   endif
 # else // _LIBCPP_VERSION
 #   ifdef __cpp_lib_parallel_algorithm
@@ -125,6 +125,6 @@
 #   endif
 # endif
 
-#endif // TEST_STD_VER > 17
+#endif // TEST_STD_VER == 20
 
 int main(int, char**) { return 0; }

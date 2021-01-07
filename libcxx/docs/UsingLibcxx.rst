@@ -254,7 +254,7 @@ C++17 Specific Configuration Macros
 **_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR**:
   This macro is used to re-enable `std::auto_ptr` in C++17.
 
-C++2a Specific Configuration Macros:
+C++20 Specific Configuration Macros:
 ------------------------------------
 **_LIBCPP_DISABLE_NODISCARD_AFTER_CXX17**:
   This macro can be used to disable diagnostics emitted from functions marked

@@ -47,14 +47,14 @@
 #   endif
 # endif
 
-#elif TEST_STD_VER > 17
+#elif TEST_STD_VER == 20
 
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_execution
-#     error "__cpp_lib_execution should be defined in c++2a"
+#     error "__cpp_lib_execution should be defined in c++20"
 #   endif
 #   if __cpp_lib_execution != 201603L
-#     error "__cpp_lib_execution should have the value 201603L in c++2a"
+#     error "__cpp_lib_execution should have the value 201603L in c++20"
 #   endif
 # else // _LIBCPP_VERSION
 #   ifdef __cpp_lib_execution
@@ -62,6 +62,6 @@
 #   endif
 # endif
 
-#endif // TEST_STD_VER > 17
+#endif // TEST_STD_VER == 20
 
 int main(int, char**) { return 0; }

@@ -317,12 +317,12 @@ public:
     int compare(size_type pos1, size_type n1, const value_type* s) const;
     int compare(size_type pos1, size_type n1, const value_type* s, size_type n2) const;
 
-    bool starts_with(basic_string_view<charT, traits> sv) const noexcept; // C++2a
-    bool starts_with(charT c) const noexcept;                             // C++2a
-    bool starts_with(const charT* s) const;                               // C++2a
-    bool ends_with(basic_string_view<charT, traits> sv) const noexcept;   // C++2a
-    bool ends_with(charT c) const noexcept;                               // C++2a
-    bool ends_with(const charT* s) const;                                 // C++2a
+    bool starts_with(basic_string_view<charT, traits> sv) const noexcept; // C++20
+    bool starts_with(charT c) const noexcept;                             // C++20
+    bool starts_with(const charT* s) const;                               // C++20
+    bool ends_with(basic_string_view<charT, traits> sv) const noexcept;   // C++20
+    bool ends_with(charT c) const noexcept;                               // C++20
+    bool ends_with(const charT* s) const;                                 // C++20
 
     bool __invariants() const;
 };
