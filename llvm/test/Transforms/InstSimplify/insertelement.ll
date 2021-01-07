@@ -52,8 +52,7 @@ define <4 x i32> @test5_poison(<4 x i32> %A) {
 
 define <4 x i32> @elem_poison(<4 x i32> %A) {
 ; CHECK-LABEL: @elem_poison(
-; CHECK-NEXT:    [[B:%.*]] = insertelement <4 x i32> [[A:%.*]], i32 poison, i32 1
-; CHECK-NEXT:    ret <4 x i32> [[B]]
+; CHECK-NEXT:    ret <4 x i32> [[A:%.*]]
 ;
   %B = insertelement <4 x i32> %A, i32 poison, i32 1
   ret <4 x i32> %B
