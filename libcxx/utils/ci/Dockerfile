@@ -50,19 +50,28 @@ RUN apt-get update && apt-get install -y libc6-dev-i386 # Required to cross-comp
 
 # Install the most recently released LLVM
 RUN apt-get update && apt-get install -y lsb-release wget software-properties-common
-RUN bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
-RUN ln -s $(find /usr/bin -regex '^.+/clang\+\+-[0-9.]+$') /usr/bin/clang++
-RUN ln -s $(find /usr/bin -regex '^.+/clang-[0-9.]+$') /usr/bin/clang
+RUN wget https://apt.llvm.org/llvm.sh -O /tmp/llvm.sh
+RUN bash /tmp/llvm.sh
+RUN LLVM_VERSION=$(find /usr/bin -regex '^.+/clang-[0-9.]+$') && LLVM_VERSION=${LLVM_VERSION#*clang-} && echo "LLVM_VERSION=$LLVM_VERSION" > /tmp/env.sh
+RUN ln -s $(find /usr/bin -regex '^.+/clang\+\+-[0-9.]+$') /usr/bin/clang++ && [ -e $(readlink /usr/bin/clang++) ]
+RUN ln -s $(find /usr/bin -regex '^.+/clang-[0-9.]+$') /usr/bin/clang && [ -e $(readlink /usr/bin/clang) ]
 
-RUN apt-get update && apt-get install -y clang-format-11
-# Make a symbolic link to git-clang-format (pointing to git-clang-format-<version>), if it doesn't exist.
-RUN which git-clang-format || $(cd /usr/bin/ && ln -s $(ls git-clang-format-* | sort -rV | head -n 1) git-clang-format)
+# Install the not-yet-released LLVM
+RUN . /tmp/env.sh && echo "LLVM_TOT_VERSION=$(($LLVM_VERSION + 1))" >> /tmp/env.sh
+RUN . /tmp/env.sh && bash /tmp/llvm.sh ${LLVM_TOT_VERSION}
+RUN . /tmp/env.sh && ln -s /usr/bin/clang++-${LLVM_TOT_VERSION} /usr/bin/clang++-tot && [ -e $(readlink /usr/bin/clang++-tot) ]
+RUN . /tmp/env.sh && ln -s /usr/bin/clang-${LLVM_TOT_VERSION} /usr/bin/clang-tot && [ -e $(readlink /usr/bin/clang-tot) ]
+
+# Install clang-format
+RUN . /tmp/env.sh && apt-get install -y clang-format-$LLVM_VERSION
+RUN ln -s $(find /usr/bin -regex '^.+/clang-format-[0-9.]+$') /usr/bin/clang-format && [ -e $(readlink /usr/bin/clang-format) ]
+RUN ln -s $(find /usr/bin -regex '^.+/git-clang-format-[0-9.]+$') /usr/bin/git-clang-format && [ -e $(readlink /usr/bin/git-clang-format) ]
 
 # Install a recent GCC
 RUN add-apt-repository ppa:ubuntu-toolchain-r/test
 RUN apt-get update && apt install -y gcc-10 g++-10
-RUN ln -f -s /usr/bin/g++-10 /usr/bin/g++
-RUN ln -f -s /usr/bin/gcc-10 /usr/bin/gcc
+RUN ln -f -s /usr/bin/g++-10 /usr/bin/g++ && [ -e $(readlink /usr/bin/g++) ]
+RUN ln -f -s /usr/bin/gcc-10 /usr/bin/gcc && [ -e $(readlink /usr/bin/gcc) ]
 
 # Install a recent CMake
 RUN wget https://github.com/Kitware/CMake/releases/download/v3.18.2/cmake-3.18.2-Linux-x86_64.sh -O /tmp/install-cmake.sh
