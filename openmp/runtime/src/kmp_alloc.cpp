@@ -1239,6 +1239,9 @@ static void **mk_hbw_preferred;
 static void **mk_hugetlb;
 static void **mk_hbw_hugetlb;
 static void **mk_hbw_preferred_hugetlb;
+static void **mk_dax_kmem;
+static void **mk_dax_kmem_all;
+static void **mk_dax_kmem_preferred;
 
 #if KMP_OS_UNIX && KMP_DYNAMIC_LIB
 static inline void chk_kind(void ***pkind) {
@@ -1279,25 +1282,21 @@ void __kmp_init_memkind() {
       mk_hbw_preferred_hugetlb =
           (void **)dlsym(h_memkind, "MEMKIND_HBW_PREFERRED_HUGETLB");
       chk_kind(&mk_hbw_preferred_hugetlb);
+      mk_dax_kmem = (void **)dlsym(h_memkind, "MEMKIND_DAX_KMEM");
+      chk_kind(&mk_dax_kmem);
+      mk_dax_kmem_all = (void **)dlsym(h_memkind, "MEMKIND_DAX_KMEM_ALL");
+      chk_kind(&mk_dax_kmem_all);
+      mk_dax_kmem_preferred =
+          (void **)dlsym(h_memkind, "MEMKIND_DAX_KMEM_PREFERRED");
+      chk_kind(&mk_dax_kmem_preferred);
       KE_TRACE(25, ("__kmp_init_memkind: memkind library initialized\n"));
       return; // success
     }
     dlclose(h_memkind); // failure
-    h_memkind = NULL;
   }
-  kmp_mk_check = NULL;
-  kmp_mk_alloc = NULL;
-  kmp_mk_free = NULL;
-  mk_default = NULL;
-  mk_interleave = NULL;
-  mk_hbw = NULL;
-  mk_hbw_interleave = NULL;
-  mk_hbw_preferred = NULL;
-  mk_hugetlb = NULL;
-  mk_hbw_hugetlb = NULL;
-  mk_hbw_preferred_hugetlb = NULL;
-#else
+#else // !(KMP_OS_UNIX && KMP_DYNAMIC_LIB)
   kmp_mk_lib_name = "";
+#endif // !(KMP_OS_UNIX && KMP_DYNAMIC_LIB)
   h_memkind = NULL;
   kmp_mk_check = NULL;
   kmp_mk_alloc = NULL;
@@ -1310,7 +1309,9 @@ void __kmp_init_memkind() {
   mk_hugetlb = NULL;
   mk_hbw_hugetlb = NULL;
   mk_hbw_preferred_hugetlb = NULL;
-#endif
+  mk_dax_kmem = NULL;
+  mk_dax_kmem_all = NULL;
+  mk_dax_kmem_preferred = NULL;
 }
 
 void __kmp_fini_memkind() {
@@ -1332,6 +1333,9 @@ void __kmp_fini_memkind() {
   mk_hugetlb = NULL;
   mk_hbw_hugetlb = NULL;
   mk_hbw_preferred_hugetlb = NULL;
+  mk_dax_kmem = NULL;
+  mk_dax_kmem_all = NULL;
+  mk_dax_kmem_preferred = NULL;
 #endif
 }
 
@@ -1398,6 +1402,17 @@ omp_allocator_handle_t __kmpc_init_allocator(int gtid, omp_memspace_handle_t ms,
         al->memkind = mk_hbw_preferred;
       } else {
         // HBW is requested but not available --> return NULL allocator
+        __kmp_free(al);
+        return omp_null_allocator;
+      }
+    } else if (ms == omp_large_cap_mem_space) {
+      if (mk_dax_kmem_all) {
+        // All pmem nodes are visited
+        al->memkind = mk_dax_kmem_all;
+      } else if (mk_dax_kmem) {
+        // Only closest pmem node is visited
+        al->memkind = mk_dax_kmem;
+      } else {
         __kmp_free(al);
         return omp_null_allocator;
       }
@@ -1473,6 +1488,8 @@ void *__kmpc_alloc(int gtid, size_t size, omp_allocator_handle_t allocator) {
       // pre-defined allocator
       if (allocator == omp_high_bw_mem_alloc && mk_hbw_preferred) {
         ptr = kmp_mk_alloc(*mk_hbw_preferred, desc.size_a);
+      } else if (allocator == omp_large_cap_mem_alloc && mk_dax_kmem_all) {
+        ptr = kmp_mk_alloc(*mk_dax_kmem_all, desc.size_a);
       } else {
         ptr = kmp_mk_alloc(*mk_default, desc.size_a);
       }
@@ -1529,6 +1546,8 @@ void *__kmpc_alloc(int gtid, size_t size, omp_allocator_handle_t allocator) {
     // pre-defined allocator
     if (allocator == omp_high_bw_mem_alloc) {
       // ptr = NULL;
+    } else if (allocator == omp_large_cap_mem_alloc) {
+      // warnings?
     } else {
       ptr = __kmp_thread_malloc(__kmp_thread_from_gtid(gtid), desc.size_a);
     }
@@ -1684,6 +1703,8 @@ void __kmpc_free(int gtid, void *ptr, const omp_allocator_handle_t allocator) {
       // pre-defined allocator
       if (oal == omp_high_bw_mem_alloc && mk_hbw_preferred) {
         kmp_mk_free(*mk_hbw_preferred, desc.ptr_alloc);
+      } else if (oal == omp_large_cap_mem_alloc && mk_dax_kmem_all) {
+        kmp_mk_free(*mk_dax_kmem_all, desc.ptr_alloc);
       } else {
         kmp_mk_free(*mk_default, desc.ptr_alloc);
       }
