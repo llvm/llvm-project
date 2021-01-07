@@ -260,7 +260,6 @@ void DWARFDebugLoc::dumpRawEntry(const DWARFLocationEntry &Entry,
     Value1 = Entry.Value1;
     break;
   case dwarf::DW_LLE_end_of_list:
-    Value0 = Value1 = 0;
     return;
   default:
     llvm_unreachable("Not possible in DWARF4!");
