@@ -15,7 +15,7 @@
 
 /*  Constant                       Value
     __cpp_lib_as_const             201510L [C++17]
-    __cpp_lib_constexpr_utility    201811L [C++2a]
+    __cpp_lib_constexpr_utility    201811L [C++20]
     __cpp_lib_exchange_function    201304L [C++14]
     __cpp_lib_integer_sequence     201304L [C++14]
     __cpp_lib_to_chars             201611L [C++17]
@@ -32,7 +32,7 @@
 # endif
 
 # ifdef __cpp_lib_constexpr_utility
-#   error "__cpp_lib_constexpr_utility should not be defined before c++2a"
+#   error "__cpp_lib_constexpr_utility should not be defined before c++20"
 # endif
 
 # ifdef __cpp_lib_exchange_function
@@ -58,7 +58,7 @@
 # endif
 
 # ifdef __cpp_lib_constexpr_utility
-#   error "__cpp_lib_constexpr_utility should not be defined before c++2a"
+#   error "__cpp_lib_constexpr_utility should not be defined before c++20"
 # endif
 
 # ifndef __cpp_lib_exchange_function
@@ -96,7 +96,7 @@
 # endif
 
 # ifdef __cpp_lib_constexpr_utility
-#   error "__cpp_lib_constexpr_utility should not be defined before c++2a"
+#   error "__cpp_lib_constexpr_utility should not be defined before c++20"
 # endif
 
 # ifndef __cpp_lib_exchange_function
@@ -133,42 +133,42 @@
 #   error "__cpp_lib_tuples_by_type should have the value 201304L in c++17"
 # endif
 
-#elif TEST_STD_VER > 17
+#elif TEST_STD_VER == 20
 
 # ifndef __cpp_lib_as_const
-#   error "__cpp_lib_as_const should be defined in c++2a"
+#   error "__cpp_lib_as_const should be defined in c++20"
 # endif
 # if __cpp_lib_as_const != 201510L
-#   error "__cpp_lib_as_const should have the value 201510L in c++2a"
+#   error "__cpp_lib_as_const should have the value 201510L in c++20"
 # endif
 
 # ifndef __cpp_lib_constexpr_utility
-#   error "__cpp_lib_constexpr_utility should be defined in c++2a"
+#   error "__cpp_lib_constexpr_utility should be defined in c++20"
 # endif
 # if __cpp_lib_constexpr_utility != 201811L
-#   error "__cpp_lib_constexpr_utility should have the value 201811L in c++2a"
+#   error "__cpp_lib_constexpr_utility should have the value 201811L in c++20"
 # endif
 
 # ifndef __cpp_lib_exchange_function
-#   error "__cpp_lib_exchange_function should be defined in c++2a"
+#   error "__cpp_lib_exchange_function should be defined in c++20"
 # endif
 # if __cpp_lib_exchange_function != 201304L
-#   error "__cpp_lib_exchange_function should have the value 201304L in c++2a"
+#   error "__cpp_lib_exchange_function should have the value 201304L in c++20"
 # endif
 
 # ifndef __cpp_lib_integer_sequence
-#   error "__cpp_lib_integer_sequence should be defined in c++2a"
+#   error "__cpp_lib_integer_sequence should be defined in c++20"
 # endif
 # if __cpp_lib_integer_sequence != 201304L
-#   error "__cpp_lib_integer_sequence should have the value 201304L in c++2a"
+#   error "__cpp_lib_integer_sequence should have the value 201304L in c++20"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_to_chars
-#     error "__cpp_lib_to_chars should be defined in c++2a"
+#     error "__cpp_lib_to_chars should be defined in c++20"
 #   endif
 #   if __cpp_lib_to_chars != 201611L
-#     error "__cpp_lib_to_chars should have the value 201611L in c++2a"
+#     error "__cpp_lib_to_chars should have the value 201611L in c++20"
 #   endif
 # else // _LIBCPP_VERSION
 #   ifdef __cpp_lib_to_chars
@@ -177,12 +177,12 @@
 # endif
 
 # ifndef __cpp_lib_tuples_by_type
-#   error "__cpp_lib_tuples_by_type should be defined in c++2a"
+#   error "__cpp_lib_tuples_by_type should be defined in c++20"
 # endif
 # if __cpp_lib_tuples_by_type != 201304L
-#   error "__cpp_lib_tuples_by_type should have the value 201304L in c++2a"
+#   error "__cpp_lib_tuples_by_type should have the value 201304L in c++20"
 # endif
 
-#endif // TEST_STD_VER > 17
+#endif // TEST_STD_VER == 20
 
 int main(int, char**) { return 0; }

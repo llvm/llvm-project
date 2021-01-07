@@ -14,7 +14,7 @@
 // Test the feature test macros defined by <filesystem>
 
 /*  Constant                Value
-    __cpp_lib_char8_t       201811L [C++2a]
+    __cpp_lib_char8_t       201811L [C++20]
     __cpp_lib_filesystem    201703L [C++17]
 */
 
@@ -24,7 +24,7 @@
 #if TEST_STD_VER < 14
 
 # ifdef __cpp_lib_char8_t
-#   error "__cpp_lib_char8_t should not be defined before c++2a"
+#   error "__cpp_lib_char8_t should not be defined before c++20"
 # endif
 
 # ifdef __cpp_lib_filesystem
@@ -34,7 +34,7 @@
 #elif TEST_STD_VER == 14
 
 # ifdef __cpp_lib_char8_t
-#   error "__cpp_lib_char8_t should not be defined before c++2a"
+#   error "__cpp_lib_char8_t should not be defined before c++20"
 # endif
 
 # ifdef __cpp_lib_filesystem
@@ -44,7 +44,7 @@
 #elif TEST_STD_VER == 17
 
 # ifdef __cpp_lib_char8_t
-#   error "__cpp_lib_char8_t should not be defined before c++2a"
+#   error "__cpp_lib_char8_t should not be defined before c++20"
 # endif
 
 # ifndef __cpp_lib_filesystem
@@ -54,14 +54,14 @@
 #   error "__cpp_lib_filesystem should have the value 201703L in c++17"
 # endif
 
-#elif TEST_STD_VER > 17
+#elif TEST_STD_VER == 20
 
 # if defined(__cpp_char8_t)
 #   ifndef __cpp_lib_char8_t
-#     error "__cpp_lib_char8_t should be defined in c++2a"
+#     error "__cpp_lib_char8_t should be defined in c++20"
 #   endif
 #   if __cpp_lib_char8_t != 201811L
-#     error "__cpp_lib_char8_t should have the value 201811L in c++2a"
+#     error "__cpp_lib_char8_t should have the value 201811L in c++20"
 #   endif
 # else
 #   ifdef __cpp_lib_char8_t
@@ -70,12 +70,12 @@
 # endif
 
 # ifndef __cpp_lib_filesystem
-#   error "__cpp_lib_filesystem should be defined in c++2a"
+#   error "__cpp_lib_filesystem should be defined in c++20"
 # endif
 # if __cpp_lib_filesystem != 201703L
-#   error "__cpp_lib_filesystem should have the value 201703L in c++2a"
+#   error "__cpp_lib_filesystem should have the value 201703L in c++20"
 # endif
 
-#endif // TEST_STD_VER > 17
+#endif // TEST_STD_VER == 20
 
 int main(int, char**) { return 0; }

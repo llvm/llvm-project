@@ -95,36 +95,36 @@
 #   error "__cpp_lib_tuples_by_type should have the value 201304L in c++17"
 # endif
 
-#elif TEST_STD_VER > 17
+#elif TEST_STD_VER == 20
 
 # ifndef __cpp_lib_apply
-#   error "__cpp_lib_apply should be defined in c++2a"
+#   error "__cpp_lib_apply should be defined in c++20"
 # endif
 # if __cpp_lib_apply != 201603L
-#   error "__cpp_lib_apply should have the value 201603L in c++2a"
+#   error "__cpp_lib_apply should have the value 201603L in c++20"
 # endif
 
 # ifndef __cpp_lib_make_from_tuple
-#   error "__cpp_lib_make_from_tuple should be defined in c++2a"
+#   error "__cpp_lib_make_from_tuple should be defined in c++20"
 # endif
 # if __cpp_lib_make_from_tuple != 201606L
-#   error "__cpp_lib_make_from_tuple should have the value 201606L in c++2a"
+#   error "__cpp_lib_make_from_tuple should have the value 201606L in c++20"
 # endif
 
 # ifndef __cpp_lib_tuple_element_t
-#   error "__cpp_lib_tuple_element_t should be defined in c++2a"
+#   error "__cpp_lib_tuple_element_t should be defined in c++20"
 # endif
 # if __cpp_lib_tuple_element_t != 201402L
-#   error "__cpp_lib_tuple_element_t should have the value 201402L in c++2a"
+#   error "__cpp_lib_tuple_element_t should have the value 201402L in c++20"
 # endif
 
 # ifndef __cpp_lib_tuples_by_type
-#   error "__cpp_lib_tuples_by_type should be defined in c++2a"
+#   error "__cpp_lib_tuples_by_type should be defined in c++20"
 # endif
 # if __cpp_lib_tuples_by_type != 201304L
-#   error "__cpp_lib_tuples_by_type should have the value 201304L in c++2a"
+#   error "__cpp_lib_tuples_by_type should have the value 201304L in c++20"
 # endif
 
-#endif // TEST_STD_VER > 17
+#endif // TEST_STD_VER == 20
 
 int main(int, char**) { return 0; }
