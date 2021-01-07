@@ -2681,18 +2681,6 @@ TypeSystemSwiftTypeRef::dump(opaque_compiler_type_t type) const {
 }
 #endif
 
-void TypeSystemSwiftTypeRef::DumpValue(
-    opaque_compiler_type_t type, ExecutionContext *exe_ctx, Stream *s,
-    lldb::Format format, const DataExtractor &data, lldb::offset_t data_offset,
-    size_t data_byte_size, uint32_t bitfield_bit_size,
-    uint32_t bitfield_bit_offset, bool show_types, bool show_summary,
-    bool verbose, uint32_t depth) {
-  return m_swift_ast_context->DumpValue(
-      ReconstructType(type), exe_ctx, s, format, data, data_offset,
-      data_byte_size, bitfield_bit_size, bitfield_bit_offset, show_types,
-      show_summary, verbose, depth);
-}
-
 bool TypeSystemSwiftTypeRef::DumpTypeValue(
     opaque_compiler_type_t type, Stream *s, lldb::Format format,
     const DataExtractor &data, lldb::offset_t data_offset,
