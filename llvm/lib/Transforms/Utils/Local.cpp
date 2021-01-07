@@ -329,22 +329,20 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
     if (auto *BA =
           dyn_cast<BlockAddress>(IBI->getAddress()->stripPointerCasts())) {
       BasicBlock *TheOnlyDest = BA->getBasicBlock();
-      std::vector <DominatorTree::UpdateType> Updates;
-      if (DTU)
-        Updates.reserve(IBI->getNumDestinations() - 1);
+      SmallSetVector<BasicBlock *, 8> RemovedSuccessors;
 
       // Insert the new branch.
       Builder.CreateBr(TheOnlyDest);
 
+      BasicBlock *SuccToKeep = TheOnlyDest;
       for (unsigned i = 0, e = IBI->getNumDestinations(); i != e; ++i) {
-        if (IBI->getDestination(i) == TheOnlyDest) {
-          TheOnlyDest = nullptr;
+        BasicBlock *DestBB = IBI->getDestination(i);
+        if (DTU && DestBB != TheOnlyDest)
+          RemovedSuccessors.insert(DestBB);
+        if (IBI->getDestination(i) == SuccToKeep) {
+          SuccToKeep = nullptr;
         } else {
-          BasicBlock *ParentBB = IBI->getParent();
-          BasicBlock *DestBB = IBI->getDestination(i);
-          DestBB->removePredecessor(ParentBB);
-          if (DTU)
-            Updates.push_back({DominatorTree::Delete, ParentBB, DestBB});
+          DestBB->removePredecessor(BB);
         }
       }
       Value *Address = IBI->getAddress();
@@ -361,13 +359,18 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       // If we didn't find our destination in the IBI successor list, then we
       // have undefined behavior.  Replace the unconditional branch with an
       // 'unreachable' instruction.
-      if (TheOnlyDest) {
+      if (SuccToKeep) {
         BB->getTerminator()->eraseFromParent();
         new UnreachableInst(BB->getContext(), BB);
       }
 
-      if (DTU)
-        DTU->applyUpdatesPermissive(Updates);
+      if (DTU) {
+        std::vector<DominatorTree::UpdateType> Updates;
+        Updates.reserve(RemovedSuccessors.size());
+        for (auto *RemovedSuccessor : RemovedSuccessors)
+          Updates.push_back({DominatorTree::Delete, BB, RemovedSuccessor});
+        DTU->applyUpdates(Updates);
+      }
       return true;
     }
   }
