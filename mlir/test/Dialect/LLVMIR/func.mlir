@@ -87,16 +87,6 @@ module {
     llvm.return
   }
 
-  // CHECK: llvm.func @byvalattr(%{{.*}}: !llvm.ptr<i32> {llvm.byval})
-  llvm.func @byvalattr(%arg0: !llvm.ptr<i32> {llvm.byval}) {
-    llvm.return
-  }
-
-  // CHECK: llvm.func @sretattr(%{{.*}}: !llvm.ptr<i32> {llvm.sret})
-  llvm.func @sretattr(%arg0: !llvm.ptr<i32> {llvm.sret}) {
-    llvm.return
-  }
-
   // CHECK: llvm.func @variadic(...)
   llvm.func @variadic(...)
 

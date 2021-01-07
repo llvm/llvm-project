@@ -1102,22 +1102,6 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
           llvm::AttrBuilder().addAlignmentAttr(llvm::Align(attr.getInt())));
     }
 
-    if (auto attr = func.getArgAttrOfType<UnitAttr>(argIdx, "llvm.sret")) {
-      auto argTy = mlirArg.getType().dyn_cast<LLVM::LLVMType>();
-      if (!argTy.isa<LLVM::LLVMPointerType>())
-        return func.emitError(
-            "llvm.sret attribute attached to LLVM non-pointer argument");
-      llvmArg.addAttr(llvm::Attribute::AttrKind::StructRet);
-    }
-
-    if (auto attr = func.getArgAttrOfType<UnitAttr>(argIdx, "llvm.byval")) {
-      auto argTy = mlirArg.getType().dyn_cast<LLVM::LLVMType>();
-      if (!argTy.isa<LLVM::LLVMPointerType>())
-        return func.emitError(
-            "llvm.byval attribute attached to LLVM non-pointer argument");
-      llvmArg.addAttr(llvm::Attribute::AttrKind::ByVal);
-    }
-
     valueMapping[mlirArg] = &llvmArg;
     argIdx++;
   }
