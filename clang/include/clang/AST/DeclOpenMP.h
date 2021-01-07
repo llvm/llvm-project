@@ -163,7 +163,7 @@ public:
 /// 'float':
 ///
 /// \code
-/// #pragma omp declare reduction (foo : int,float : omp_out += omp_in) \
+/// #pragma omp declare reduction (foo : int,float : omp_out += omp_in)
 ///                     initializer (omp_priv = 0)
 /// \endcode
 ///
