@@ -1048,11 +1048,13 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
   if (DTU) {
     Updates.push_back({DominatorTree::Delete, BB, Succ});
     // All predecessors of BB will be moved to Succ.
-    for (auto I = pred_begin(BB), E = pred_end(BB); I != E; ++I) {
-      Updates.push_back({DominatorTree::Delete, *I, BB});
+    SmallSetVector<BasicBlock *, 8> Predecessors(pred_begin(BB), pred_end(BB));
+    Updates.reserve(Updates.size() + 2 * Predecessors.size());
+    for (auto *Predecessor : Predecessors) {
+      Updates.push_back({DominatorTree::Delete, Predecessor, BB});
       // This predecessor of BB may already have Succ as a successor.
-      if (!llvm::is_contained(successors(*I), Succ))
-        Updates.push_back({DominatorTree::Insert, *I, Succ});
+      if (!llvm::is_contained(successors(Predecessor), Succ))
+        Updates.push_back({DominatorTree::Insert, Predecessor, Succ});
     }
   }
 
@@ -1109,7 +1111,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
                            "applying corresponding DTU updates.");
 
   if (DTU) {
-    DTU->applyUpdatesPermissive(Updates);
+    DTU->applyUpdates(Updates);
     DTU->deleteBB(BB);
   } else {
     BB->eraseFromParent(); // Delete the old basic block.
