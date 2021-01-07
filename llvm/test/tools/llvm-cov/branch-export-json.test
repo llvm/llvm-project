@@ -1,6 +1,6 @@
 
 // RUN: llvm-profdata merge %S/Inputs/branch-showBranchPercentage.proftext -o %t.profdata
-// RUN: llvm-cov export --format=text %S/Inputs/branch-showBranchPercentage.o32l -instr-profile %t.profdata -path-equivalence=/tmp,%S %S/branch-showBranchPercentage.c | FileCheck %s
+// RUN: llvm-cov export --format=text %S/Inputs/branch-showBranchPercentage.o32l -instr-profile %t.profdata | FileCheck %s
 
 // CHECK: "branches":
 // CHECK: 14,7,14,15,1,5,0,0,4
@@ -22,7 +22,7 @@
 
 // Check recursive macro-expansions.
 // RUN: llvm-profdata merge %S/Inputs/branch-macros.proftext -o %t.profdata
-// RUN: llvm-cov export --format=text %S/Inputs/branch-macros.o32l -instr-profile %t.profdata -path-equivalence=/tmp,%S %S/branch-macros.c | FileCheck %s -check-prefix=MACROS
+// RUN: llvm-cov export --format=text %S/Inputs/branch-macros.o32l -instr-profile %t.profdata | FileCheck %s -check-prefix=MACROS
 
 // MACROS: "branches":
 // MACROS: 27,10,27,11,0,3,0,0,4
