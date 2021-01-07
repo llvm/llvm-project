@@ -7,7 +7,6 @@
 !   2.5.3 Kernels
 !   2.9 Loop
 !   2.12 Atomic
-!   2.13 Declare
 !   2.14.3 Set
 !   2.14.4 Update
 !   2.15.1 Routine
@@ -42,8 +41,6 @@ program openacc_clause_validity
   type(atype) :: t
   type(atype), dimension(10) :: ta
 
-  !ERROR: At least one clause is required on the DECLARE directive
-  !$acc declare
   real(8), dimension(N) :: a, f, g, h
 
   !$acc init
