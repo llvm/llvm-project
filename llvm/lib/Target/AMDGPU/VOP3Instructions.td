@@ -820,7 +820,7 @@ def : IntClampPat<V_MQSAD_U32_U8, int_amdgcn_mqsad_u32_u8>;
 // GFX10.
 //===----------------------------------------------------------------------===//
 
-let AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10" in {
+let AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10" in {
   multiclass VOP3_Real_gfx10<bits<10> op> {
     def _gfx10 :
       VOP3_Real<!cast<VOP_Pseudo>(NAME), SIEncodingFamily.GFX10>,

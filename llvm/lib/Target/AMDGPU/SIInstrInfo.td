@@ -2369,7 +2369,7 @@ multiclass VINTRP_m <bits <2> op, dag outs, dag ins, string asm,
 
   def _vi : VINTRP_Real_vi <op, NAME, outs, ins, asm>;
 
-  let AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10" in {
+  let AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10" in {
     def _gfx10 : VINTRP_Real_si<op, NAME, outs, ins, asm, SIEncodingFamily.GFX10>;
   } // End AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10"
 }
