@@ -10,7 +10,8 @@ define void @wombat(i32* %ptr, i32* %ptr1) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, <2 x i32>* [[TMP0]], align 8
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i32, i32* [[PTR1:%.*]], i32 3
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <2 x i32> [[TMP1]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[SHRINK_SHUFFLE:%.*]] = shufflevector <4 x i32> [[SHUFFLE]], <4 x i32> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <2 x i32> [[SHRINK_SHUFFLE]], <i32 -1, i32 -1>
 ; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i32, i32* [[PTR1]], i32 4
 ; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr inbounds i32, i32* [[PTR1]], i32 5

@@ -666,6 +666,29 @@ ModuleTranslation::convertOmpOperation(Operation &opInst,
       });
 }
 
+static llvm::FastMathFlags getFastmathFlags(FastmathFlagsInterface &op) {
+  using llvmFMF = llvm::FastMathFlags;
+  using FuncT = void (llvmFMF::*)(bool);
+  const std::pair<FastmathFlags, FuncT> handlers[] = {
+      // clang-format off
+      {FastmathFlags::nnan,     &llvmFMF::setNoNaNs},
+      {FastmathFlags::ninf,     &llvmFMF::setNoInfs},
+      {FastmathFlags::nsz,      &llvmFMF::setNoSignedZeros},
+      {FastmathFlags::arcp,     &llvmFMF::setAllowReciprocal},
+      {FastmathFlags::contract, &llvmFMF::setAllowContract},
+      {FastmathFlags::afn,      &llvmFMF::setApproxFunc},
+      {FastmathFlags::reassoc,  &llvmFMF::setAllowReassoc},
+      {FastmathFlags::fast,     &llvmFMF::setFast},
+      // clang-format on
+  };
+  llvm::FastMathFlags ret;
+  auto fmf = op.fastmathFlags();
+  for (auto it : handlers)
+    if (bitEnumContains(fmf, it.first))
+      (ret.*(it.second))(true);
+  return ret;
+}
+
 /// Given a single MLIR operation, create the corresponding LLVM IR operation
 /// using the `builder`.  LLVM IR Builder does not have a generic interface so
 /// this has to be a long chain of `if`s calling different functions with a
@@ -679,6 +702,10 @@ LogicalResult ModuleTranslation::convertOperation(Operation &opInst,
       position.push_back(v.cast<IntegerAttr>().getValue().getZExtValue());
     return position;
   };
+
+  llvm::IRBuilder<>::FastMathFlagGuard fmfGuard(builder);
+  if (auto fmf = dyn_cast<FastmathFlagsInterface>(opInst))
+    builder.setFastMathFlags(getFastmathFlags(fmf));
 
 #include "mlir/Dialect/LLVMIR/LLVMConversions.inc"
 
