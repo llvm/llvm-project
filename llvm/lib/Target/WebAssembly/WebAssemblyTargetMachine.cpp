@@ -326,10 +326,10 @@ public:
   void addPreEmitPass() override;
 
   // No reg alloc
-  bool addRegAssignmentFast() override { return false; }
+  bool addRegAssignAndRewriteFast() override { return false; }
 
   // No reg alloc
-  bool addRegAssignmentOptimized() override { return false; }
+  bool addRegAssignAndRewriteOptimized() override { return false; }
 };
 } // end anonymous namespace
 
