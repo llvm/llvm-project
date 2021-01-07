@@ -1,3 +1,6 @@
+// xfailing this while it's being invested in rdar://72434219
+// XFAIL: *
+
 // RUN: rm -rf %t.dir
 // RUN: rm -rf %t.cdb
 // RUN: mkdir -p %t.dir
