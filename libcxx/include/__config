@@ -49,8 +49,10 @@
 #    define _LIBCPP_STD_VER 14
 #  elif __cplusplus <= 201703L
 #    define _LIBCPP_STD_VER 17
+#  elif __cplusplus <= 202002L
+#    define _LIBCPP_STD_VER 20
 #  else
-#    define _LIBCPP_STD_VER 18  // current year, or date of c++2a ratification
+#    define _LIBCPP_STD_VER 21  // current year, or date of c++2b ratification
 #  endif
 #endif  // _LIBCPP_STD_VER
 

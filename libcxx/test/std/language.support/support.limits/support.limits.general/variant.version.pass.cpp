@@ -41,15 +41,15 @@
 #   error "__cpp_lib_variant should have the value 201606L in c++17"
 # endif
 
-#elif TEST_STD_VER > 17
+#elif TEST_STD_VER == 20
 
 # ifndef __cpp_lib_variant
-#   error "__cpp_lib_variant should be defined in c++2a"
+#   error "__cpp_lib_variant should be defined in c++20"
 # endif
 # if __cpp_lib_variant != 201606L
-#   error "__cpp_lib_variant should have the value 201606L in c++2a"
+#   error "__cpp_lib_variant should have the value 201606L in c++20"
 # endif
 
-#endif // TEST_STD_VER > 17
+#endif // TEST_STD_VER == 20
 
 int main(int, char**) { return 0; }
