@@ -71,7 +71,6 @@ public:
   StringRef NormalizedValuesScope;
   StringRef ImpliedCheck;
   StringRef ImpliedValue;
-  StringRef ShouldParse;
   StringRef Normalizer;
   StringRef Denormalizer;
   StringRef ValueMerger;
@@ -102,8 +101,6 @@ struct SimpleEnumValueTable {
 
   void emit(raw_ostream &OS) const {
     write_cstring(OS, StringRef(getOptionSpelling(R)));
-    OS << ", ";
-    OS << ShouldParse;
     OS << ", ";
     OS << ShouldAlwaysEmit;
     OS << ", ";
@@ -170,7 +167,6 @@ static MarshallingInfo createMarshallingInfo(const Record &R) {
   Ret.ImpliedValue =
       R.getValueAsOptionalString("ImpliedValue").getValueOr(Ret.DefaultValue);
 
-  Ret.ShouldParse = R.getValueAsString("ShouldParse");
   Ret.Normalizer = R.getValueAsString("Normalizer");
   Ret.Denormalizer = R.getValueAsString("Denormalizer");
   Ret.ValueMerger = R.getValueAsString("ValueMerger");
