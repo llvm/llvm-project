@@ -2176,12 +2176,12 @@ CompilerType TypeSystemSwiftTypeRef::GetFieldAtIndex(
 static swift::Demangle::NodePointer
 GetClangTypeTypeNode(TypeSystemSwiftTypeRef &ts,
                      swift::Demangle::Demangler &dem, CompilerType clang_type,
-                     SwiftASTContext *swift_ast_context) {
+                     SwiftASTContext *module_holder) {
   assert(llvm::isa<TypeSystemClang>(clang_type.GetTypeSystem()) &&
          "expected a clang type");
   using namespace swift::Demangle;
   NodePointer type = dem.createNode(Node::Kind::Type);
-  type->addChild(GetClangTypeNode(clang_type, dem, swift_ast_context), dem);
+  type->addChild(GetClangTypeNode(clang_type, dem, module_holder), dem);
   return type;
 }
 
