@@ -631,8 +631,16 @@ TEST(ConstantsTest, isElementWiseEqual) {
 
   Type *Int32Ty = Type::getInt32Ty(Context);
   Constant *CU = UndefValue::get(Int32Ty);
+  Constant *CP = PoisonValue::get(Int32Ty);
   Constant *C1 = ConstantInt::get(Int32Ty, 1);
   Constant *C2 = ConstantInt::get(Int32Ty, 2);
+
+  Constant *CUU = ConstantVector::get({CU, CU});
+  Constant *CPP = ConstantVector::get({CP, CP});
+  Constant *CUP = ConstantVector::get({CU, CP});
+  EXPECT_EQ(CUU, UndefValue::get(CUU->getType()));
+  EXPECT_EQ(CPP, PoisonValue::get(CPP->getType()));
+  EXPECT_NE(CUP, UndefValue::get(CUP->getType()));
 
   Constant *C1211 = ConstantVector::get({C1, C2, C1, C1});
   Constant *C12U1 = ConstantVector::get({C1, C2, CU, C1});
