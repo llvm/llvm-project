@@ -183,9 +183,6 @@ public:
   /// function for this subtarget.
   Align getStackAlignment() const { return StackAlignment; }
 
-  /// getDarwinDirective - Returns the -m directive specified for the cpu.
-  unsigned getDarwinDirective() const { return CPUDirective; }
-
   /// getCPUDirective - Returns the -m directive specified for the cpu.
   ///
   unsigned getCPUDirective() const { return CPUDirective; }
