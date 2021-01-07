@@ -166,6 +166,7 @@ llvm_canonicalize_cmake_booleans(
   LLDB_ENABLE_LZMA
   LLVM_ENABLE_ZLIB
   LLVM_ENABLE_SHARED_LIBS
+  LLDB_USE_SYSTEM_DEBUGSERVER
   LLDB_IS_64_BITS)
 
 # Configure the individual test suites.
