@@ -53,7 +53,7 @@ define <2 x i64> @ins1_ins1_iterate(i64 %w, i64 %x, i64 %y, i64 %z) {
 ; CHECK-NEXT:    [[S0_SCALAR:%.*]] = sub i64 [[W:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[S1_SCALAR:%.*]] = or i64 [[S0_SCALAR]], [[Y:%.*]]
 ; CHECK-NEXT:    [[S2_SCALAR:%.*]] = shl i64 [[Z:%.*]], [[S1_SCALAR]]
-; CHECK-NEXT:    [[S2:%.*]] = insertelement <2 x i64> undef, i64 [[S2_SCALAR]], i64 1
+; CHECK-NEXT:    [[S2:%.*]] = insertelement <2 x i64> poison, i64 [[S2_SCALAR]], i64 1
 ; CHECK-NEXT:    ret <2 x i64> [[S2]]
 ;
   %i0 = insertelement <2 x i64> undef, i64 %w, i64 1
