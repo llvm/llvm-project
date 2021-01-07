@@ -649,11 +649,11 @@ static void addData(SmallVectorImpl<char> &DataBytes,
                        Fill->getValue());
     } else if (auto *LEB = dyn_cast<MCLEBFragment>(&Frag)) {
       const SmallVectorImpl<char> &Contents = LEB->getContents();
-      DataBytes.insert(DataBytes.end(), Contents.begin(), Contents.end());
+      llvm::append_range(DataBytes, Contents);
     } else {
       const auto &DataFrag = cast<MCDataFragment>(Frag);
       const SmallVectorImpl<char> &Contents = DataFrag.getContents();
-      DataBytes.insert(DataBytes.end(), Contents.begin(), Contents.end());
+      llvm::append_range(DataBytes, Contents);
     }
   }
 

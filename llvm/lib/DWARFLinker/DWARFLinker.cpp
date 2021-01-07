@@ -1575,7 +1575,7 @@ static void insertLineSequence(std::vector<DWARFDebugLine::Row> &Seq,
     return;
 
   if (!Rows.empty() && Rows.back().Address < Seq.front().Address) {
-    Rows.insert(Rows.end(), Seq.begin(), Seq.end());
+    llvm::append_range(Rows, Seq);
     Seq.clear();
     return;
   }

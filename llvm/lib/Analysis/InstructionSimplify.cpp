@@ -4401,10 +4401,10 @@ Value *llvm::SimplifyInsertElementInst(Value *Vec, Value *Val, Value *Idx,
   if (Q.isUndefValue(Idx))
     return PoisonValue::get(Vec->getType());
 
-  // If the scalar is undef, and there is no risk of propagating poison from the
-  // vector value, simplify to the vector value.
-  if (Q.isUndefValue(Val) &&
-      isGuaranteedNotToBeUndefOrPoison(Vec))
+  // If the scalar is poison, or it is undef and there is no risk of
+  // propagating poison from the vector value, simplify to the vector value.
+  if (isa<PoisonValue>(Val) ||
+      (Q.isUndefValue(Val) && isGuaranteedNotToBePoison(Vec)))
     return Vec;
 
   // If we are extracting a value from a vector, then inserting it into the same

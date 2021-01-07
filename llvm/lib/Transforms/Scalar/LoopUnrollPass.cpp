@@ -483,24 +483,20 @@ static Optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
 
     // Prepare for the iteration by collecting any simplified entry or backedge
     // inputs.
-    for (Instruction &I : *L->getHeader()) {
-      auto *PHI = dyn_cast<PHINode>(&I);
-      if (!PHI)
-        break;
-
+    for (PHINode &PHI : L->getHeader()->phis()) {
       // The loop header PHI nodes must have exactly two input: one from the
       // loop preheader and one from the loop latch.
       assert(
-          PHI->getNumIncomingValues() == 2 &&
+          PHI.getNumIncomingValues() == 2 &&
           "Must have an incoming value only for the preheader and the latch.");
 
-      Value *V = PHI->getIncomingValueForBlock(
+      Value *V = PHI.getIncomingValueForBlock(
           Iteration == 0 ? L->getLoopPreheader() : L->getLoopLatch());
       Constant *C = dyn_cast<Constant>(V);
       if (Iteration != 0 && !C)
         C = SimplifiedValues.lookup(V);
       if (C)
-        SimplifiedInputValues.push_back({PHI, C});
+        SimplifiedInputValues.push_back({&PHI, C});
     }
 
     // Now clear and re-populate the map for the next iteration.
@@ -625,12 +621,8 @@ static Optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
     BasicBlock *ExitingBB, *ExitBB;
     std::tie(ExitingBB, ExitBB) = ExitWorklist.pop_back_val();
 
-    for (Instruction &I : *ExitBB) {
-      auto *PN = dyn_cast<PHINode>(&I);
-      if (!PN)
-        break;
-
-      Value *Op = PN->getIncomingValueForBlock(ExitingBB);
+    for (PHINode &PN : ExitBB->phis()) {
+      Value *Op = PN.getIncomingValueForBlock(ExitingBB);
       if (auto *OpI = dyn_cast<Instruction>(Op))
         if (L->contains(OpI))
           AddCostRecursively(*OpI, TripCount - 1);
