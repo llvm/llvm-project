@@ -323,7 +323,7 @@ std::unique_ptr<FixedCompilationDatabase>
 FixedCompilationDatabase::loadFromCommandLine(int &Argc,
                                               const char *const *Argv,
                                               std::string &ErrorMsg,
-                                              Twine Directory) {
+                                              const Twine &Directory) {
   ErrorMsg.clear();
   if (Argc == 0)
     return nullptr;
@@ -368,8 +368,8 @@ FixedCompilationDatabase::loadFromBuffer(StringRef Directory, StringRef Data,
   return std::make_unique<FixedCompilationDatabase>(Directory, std::move(Args));
 }
 
-FixedCompilationDatabase::
-FixedCompilationDatabase(Twine Directory, ArrayRef<std::string> CommandLine) {
+FixedCompilationDatabase::FixedCompilationDatabase(
+    const Twine &Directory, ArrayRef<std::string> CommandLine) {
   std::vector<std::string> ToolCommandLine(1, GetClangToolCommand());
   ToolCommandLine.insert(ToolCommandLine.end(),
                          CommandLine.begin(), CommandLine.end());
