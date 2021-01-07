@@ -624,6 +624,34 @@ _GLIBCXX_END_NAMESPACE_VERSION
 } // namespace std
 #endif
 
+// Define device-side math functions from <ymath.h> on MSVC.
+#if defined(_MSC_VER)
+#if defined(__cplusplus)
+extern "C" {
+#endif // defined(__cplusplus)
+__DEVICE__ __attribute__((overloadable)) double _Cosh(double x, double y) {
+  return cosh(x) * y;
+}
+__DEVICE__ __attribute__((overloadable)) float _FCosh(float x, float y) {
+  return coshf(x) * y;
+}
+__DEVICE__ __attribute__((overloadable)) short _Dtest(double *p) {
+  return fpclassify(*p);
+}
+__DEVICE__ __attribute__((overloadable)) short _FDtest(float *p) {
+  return fpclassify(*p);
+}
+__DEVICE__ __attribute__((overloadable)) double _Sinh(double x, double y) {
+  return sinh(x) * y;
+}
+__DEVICE__ __attribute__((overloadable)) float _FSinh(float x, float y) {
+  return sinhf(x) * y;
+}
+#if defined(__cplusplus)
+}
+#endif // defined(__cplusplus)
+#endif // defined(_MSC_VER)
+
 #pragma pop_macro("__DEVICE__")
 
 #endif // __CLANG_HIP_CMATH_H__
