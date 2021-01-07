@@ -962,78 +962,51 @@ __gxx_personality_v0
     bool native_exception = (exceptionClass     & get_vendor_and_language) ==
                             (kOurExceptionClass & get_vendor_and_language);
     scan_results results;
+    // Process a catch handler for a native exception first.
+    if (actions == (_UA_CLEANUP_PHASE | _UA_HANDLER_FRAME) &&
+        native_exception) {
+        // Reload the results from the phase 1 cache.
+        __cxa_exception* exception_header =
+            (__cxa_exception*)(unwind_exception + 1) - 1;
+        results.ttypeIndex = exception_header->handlerSwitchValue;
+        results.actionRecord = exception_header->actionRecord;
+        results.languageSpecificData = exception_header->languageSpecificData;
+        results.landingPad =
+            reinterpret_cast<uintptr_t>(exception_header->catchTemp);
+        results.adjustedPtr = exception_header->adjustedPtr;
+
+        // Jump to the handler.
+        set_registers(unwind_exception, context, results);
+        return _URC_INSTALL_CONTEXT;
+    }
+
+    // In other cases we need to scan LSDA.
+    scan_eh_tab(results, actions, native_exception, unwind_exception, context);
+    if (results.reason == _URC_CONTINUE_UNWIND ||
+        results.reason == _URC_FATAL_PHASE1_ERROR)
+        return results.reason;
+
     if (actions & _UA_SEARCH_PHASE)
     {
         // Phase 1 search:  All we're looking for in phase 1 is a handler that
         //   halts unwinding
-        scan_eh_tab(results, actions, native_exception, unwind_exception, context);
-        if (results.reason == _URC_HANDLER_FOUND)
-        {
-            // Found one.  Can we cache the results somewhere to optimize phase 2?
-            if (native_exception)
-            {
-                __cxa_exception* exception_header = (__cxa_exception*)(unwind_exception+1) - 1;
-                exception_header->handlerSwitchValue = static_cast<int>(results.ttypeIndex);
-                exception_header->actionRecord = results.actionRecord;
-                exception_header->languageSpecificData = results.languageSpecificData;
-                exception_header->catchTemp = reinterpret_cast<void*>(results.landingPad);
-                exception_header->adjustedPtr = results.adjustedPtr;
-            }
-            return _URC_HANDLER_FOUND;
+        assert(results.reason == _URC_HANDLER_FOUND);
+        if (native_exception) {
+            // For a native exception, cache the LSDA result.
+            __cxa_exception* exc = (__cxa_exception*)(unwind_exception + 1) - 1;
+            exc->handlerSwitchValue = static_cast<int>(results.ttypeIndex);
+            exc->actionRecord = results.actionRecord;
+            exc->languageSpecificData = results.languageSpecificData;
+            exc->catchTemp = reinterpret_cast<void*>(results.landingPad);
+            exc->adjustedPtr = results.adjustedPtr;
         }
-        // Did not find a catching-handler.  Return the results of the scan
-        //    (normally _URC_CONTINUE_UNWIND, but could have been _URC_FATAL_PHASE1_ERROR
-        //     if we were called improperly).
-        return results.reason;
+        return _URC_HANDLER_FOUND;
     }
-    if (actions & _UA_CLEANUP_PHASE)
-    {
-        // Phase 2 search:
-        //  Did we find a catching handler in phase 1?
-        if (actions & _UA_HANDLER_FRAME)
-        {
-            // Yes, phase 1 said we have a catching handler here.
-            // Did we cache the results of the scan?
-            if (native_exception)
-            {
-                // Yes, reload the results from the cache.
-                __cxa_exception* exception_header = (__cxa_exception*)(unwind_exception+1) - 1;
-                results.ttypeIndex = exception_header->handlerSwitchValue;
-                results.actionRecord = exception_header->actionRecord;
-                results.languageSpecificData = exception_header->languageSpecificData;
-                results.landingPad = reinterpret_cast<uintptr_t>(exception_header->catchTemp);
-                results.adjustedPtr = exception_header->adjustedPtr;
-            }
-            else
-            {
-                // No, do the scan again to reload the results.
-                scan_eh_tab(results, actions, native_exception, unwind_exception, context);
-                // Phase 1 told us we would find a handler.  Now in Phase 2 we
-                //   didn't find a handler.  The eh table should not be changing!
-                if (results.reason != _URC_HANDLER_FOUND)
-                    call_terminate(native_exception, unwind_exception);
-            }
-            // Jump to the handler
-            set_registers(unwind_exception, context, results);
-            return _URC_INSTALL_CONTEXT;
-        }
-        // Either we didn't do a phase 1 search (due to forced unwinding), or
-        //   phase 1 reported no catching-handlers.
-        // Search for a (non-catching) cleanup
-        scan_eh_tab(results, actions, native_exception, unwind_exception, context);
-        if (results.reason == _URC_HANDLER_FOUND)
-        {
-            // Found a non-catching handler.  Jump to it:
-            set_registers(unwind_exception, context, results);
-            return _URC_INSTALL_CONTEXT;
-        }
-        // Did not find a cleanup.  Return the results of the scan
-        //    (normally _URC_CONTINUE_UNWIND, but could have been _URC_FATAL_PHASE2_ERROR
-        //     if we were called improperly).
-        return results.reason;
-    }
-    // We were called improperly: neither a phase 1 or phase 2 search
-    return _URC_FATAL_PHASE1_ERROR;
+
+    assert(actions & _UA_CLEANUP_PHASE);
+    assert(results.reason == _URC_HANDLER_FOUND);
+    set_registers(unwind_exception, context, results);
+    return _URC_INSTALL_CONTEXT;
 }
 
 #if defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__)
