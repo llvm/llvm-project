@@ -95,7 +95,7 @@ static void checkConcrete(Record &R) {
     // done merely because existing targets have legitimate cases of
     // non-concrete variables in helper defs. Ideally, we'd introduce a
     // 'maybe' or 'optional' modifier instead of this.
-    if (RV.getPrefix())
+    if (RV.isNonconcreteOK())
       continue;
 
     if (Init *V = RV.getValue()) {
@@ -1596,8 +1596,9 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
       ParseRec = ParseRecTmp.get();
     }
 
-    ParseRec->addValue(RecordVal(A, Start->getType(), false));
-    ParseRec->addValue(RecordVal(B, ListType->getElementType(), false));
+    ParseRec->addValue(RecordVal(A, Start->getType(), RecordVal::FK_Normal));
+    ParseRec->addValue(RecordVal(B, ListType->getElementType(),
+                                 RecordVal::FK_Normal));
     Init *ExprUntyped = ParseValue(ParseRec);
     ParseRec->removeValue(A);
     ParseRec->removeValue(B);
@@ -1845,7 +1846,7 @@ Init *TGParser::ParseOperationForEachFilter(Record *CurRec, RecTy *ItemType) {
     ParseRec = ParseRecTmp.get();
   }
 
-  ParseRec->addValue(RecordVal(LHS, InEltType, false));
+  ParseRec->addValue(RecordVal(LHS, InEltType, RecordVal::FK_Normal));
   Init *RHS = ParseValue(ParseRec, ExprEltType);
   ParseRec->removeValue(LHS);
   if (!RHS)
@@ -2618,8 +2619,10 @@ Init *TGParser::ParseDeclaration(Record *CurRec,
                              "::");
   }
 
-  // Add the value.
-  if (AddValue(CurRec, IdLoc, RecordVal(DeclName, IdLoc, Type, HasField)))
+  // Add the field to the record.
+  if (AddValue(CurRec, IdLoc, RecordVal(DeclName, IdLoc, Type,
+                                        HasField ? RecordVal::FK_NonconcreteOK
+                                                 : RecordVal::FK_Normal)))
     return nullptr;
 
   // If a value is present, parse it.

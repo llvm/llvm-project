@@ -311,7 +311,7 @@ std::string CodeEmitterGen::getInstructionCaseForEncoding(Record *R, Record *Enc
   for (const RecordVal &RV : EncodingDef->getValues()) {
     // Ignore fixed fields in the record, we're looking for values like:
     //    bits<5> RST = { ?, ?, ?, ?, ? };
-    if (RV.getPrefix() || RV.getValue()->isComplete())
+    if (RV.isNonconcreteOK() || RV.getValue()->isComplete())
       continue;
 
     AddCodeToMergeInOperand(R, BI, std::string(RV.getName()), NumberedOp,
