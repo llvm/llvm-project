@@ -328,8 +328,20 @@ static void denormalizeStringVector(SmallVectorImpl<const char *> &Args,
                                     Option::OptionClass OptClass,
                                     unsigned TableIndex,
                                     const std::vector<std::string> &Values) {
-  for (const std::string &Value : Values) {
-    denormalizeString(Args, Spelling, SA, OptClass, TableIndex, Value);
+  if (OptClass == Option::OptionClass::CommaJoinedClass) {
+    std::string CommaJoinedValue;
+    if (!Values.empty()) {
+      CommaJoinedValue.append(Values.front());
+      for (const std::string &Value : llvm::drop_begin(Values, 1)) {
+        CommaJoinedValue.append(",");
+        CommaJoinedValue.append(Value);
+      }
+    }
+    denormalizeString(Args, Spelling, SA, Option::OptionClass::JoinedClass,
+                      TableIndex, CommaJoinedValue);
+  } else if (OptClass == Option::OptionClass::JoinedClass) {
+    for (const std::string &Value : Values)
+      denormalizeString(Args, Spelling, SA, OptClass, TableIndex, Value);
   }
 }
 
@@ -785,7 +797,6 @@ static void parseAnalyzerConfigs(AnalyzerOptions &AnOpts,
 }
 
 static void ParseCommentArgs(CommentOptions &Opts, ArgList &Args) {
-  Opts.BlockCommandNames = Args.getAllArgValues(OPT_fcomment_block_commands);
   Opts.ParseAllComments = Args.hasArg(OPT_fparse_all_comments);
 }
 
