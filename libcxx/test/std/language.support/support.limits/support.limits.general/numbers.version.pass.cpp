@@ -14,7 +14,7 @@
 // Test the feature test macros defined by <numbers>
 
 /*  Constant                    Value
-    __cpp_lib_math_constants    201907L [C++2a]
+    __cpp_lib_math_constants    201907L [C++20]
 */
 
 #include <numbers>
@@ -23,29 +23,29 @@
 #if TEST_STD_VER < 14
 
 # ifdef __cpp_lib_math_constants
-#   error "__cpp_lib_math_constants should not be defined before c++2a"
+#   error "__cpp_lib_math_constants should not be defined before c++20"
 # endif
 
 #elif TEST_STD_VER == 14
 
 # ifdef __cpp_lib_math_constants
-#   error "__cpp_lib_math_constants should not be defined before c++2a"
+#   error "__cpp_lib_math_constants should not be defined before c++20"
 # endif
 
 #elif TEST_STD_VER == 17
 
 # ifdef __cpp_lib_math_constants
-#   error "__cpp_lib_math_constants should not be defined before c++2a"
+#   error "__cpp_lib_math_constants should not be defined before c++20"
 # endif
 
-#elif TEST_STD_VER > 17
+#elif TEST_STD_VER == 20
 
 # if defined(__cpp_concepts) && __cpp_concepts >= 201811L
 #   ifndef __cpp_lib_math_constants
-#     error "__cpp_lib_math_constants should be defined in c++2a"
+#     error "__cpp_lib_math_constants should be defined in c++20"
 #   endif
 #   if __cpp_lib_math_constants != 201907L
-#     error "__cpp_lib_math_constants should have the value 201907L in c++2a"
+#     error "__cpp_lib_math_constants should have the value 201907L in c++20"
 #   endif
 # else
 #   ifdef __cpp_lib_math_constants
@@ -53,6 +53,6 @@
 #   endif
 # endif
 
-#endif // TEST_STD_VER > 17
+#endif // TEST_STD_VER == 20
 
 int main(int, char**) { return 0; }

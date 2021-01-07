@@ -289,7 +289,7 @@ feature_test_macros = sorted([ add_version_header(x) for x in [
     "headers": ["unordered_map"],
   }, {
     "name": "__cpp_lib_array_constexpr",
-    "values": { "c++17": int(201603), "c++2a": int(201811) },
+    "values": { "c++17": int(201603), "c++20": int(201811) },
     "headers": ["iterator", "array"],
   }, {
     "name": "__cpp_lib_nonmember_container_access",
@@ -328,22 +328,22 @@ feature_test_macros = sorted([ add_version_header(x) for x in [
     "values": { "c++17": int(201703) },
     "headers": ["mutex"],
   },
-  # C++2a
+  # C++20
   {
     "name": "__cpp_lib_char8_t",
-    "values": { "c++2a": int(201811) },
+    "values": { "c++20": int(201811) },
     "headers": ["atomic", "filesystem", "istream", "limits", "locale", "ostream",
                 "string", "string_view"],
     "depends": "defined(__cpp_char8_t)",
     "internal_depends": "!defined(_LIBCPP_NO_HAS_CHAR8_T)",
   }, {
     "name": "__cpp_lib_erase_if",
-    "values": { "c++2a": int(202002) },
+    "values": { "c++20": int(202002) },
     "headers": ["string", "deque", "forward_list", "list", "vector", "map",
                 "set", "unordered_map", "unordered_set"]
   }, {
     "name": "__cpp_lib_destroying_delete",
-    "values": { "c++2a": int(201806) },
+    "values": { "c++20": int(201806) },
     "headers": ["new"],
     "depends":
       "TEST_STD_VER > 17"
@@ -355,135 +355,135 @@ feature_test_macros = sorted([ add_version_header(x) for x in [
       " && __cpp_impl_destroying_delete >= 201806L",
   }, {
     "name": "__cpp_lib_three_way_comparison",
-    "values": { "c++2a": int(201711) },
+    "values": { "c++20": int(201711) },
     "headers": ["compare"],
     "unimplemented": True,
   }, {
     "name": "__cpp_lib_concepts",
-    "values": { "c++2a": int(201806) },
+    "values": { "c++20": int(201806) },
     "headers": ["concepts"],
     "unimplemented": True,
   }, {
     "name": "__cpp_lib_constexpr_swap_algorithms",
-    "values": { "c++2a": int(201806) },
+    "values": { "c++20": int(201806) },
     "headers": ["algorithm"],
     "unimplemented": True,
   }, {
     "name": "__cpp_lib_constexpr_functional",
-    "values": { "c++2a": int(201907) },
+    "values": { "c++20": int(201907) },
     "headers": ["functional"],
   }, {
     "name": "__cpp_lib_constexpr_numeric",
-    "values": { "c++2a": int(201911) },
+    "values": { "c++20": int(201911) },
     "headers": ["numeric"],
   }, {
     "name": "__cpp_lib_bind_front",
-    "values": { "c++2a": int(201811) },
+    "values": { "c++20": int(201811) },
     "headers": ["functional"],
     "unimplemented": True,
   }, {
     "name": "__cpp_lib_is_constant_evaluated",
-    "values": { "c++2a": int(201811) },
+    "values": { "c++20": int(201811) },
     "headers": ["type_traits"],
     "depends": "TEST_HAS_BUILTIN(__builtin_is_constant_evaluated) || TEST_GCC_VER >= 900",
     "internal_depends": "!defined(_LIBCPP_HAS_NO_BUILTIN_IS_CONSTANT_EVALUATED)",
   }, {
     "name": "__cpp_lib_list_remove_return_type",
-    "values": { "c++2a": int(201806) },
+    "values": { "c++20": int(201806) },
     "headers": ["forward_list", "list"],
   }, {
     "name": "__cpp_lib_generic_unordered_lookup",
-    "values": { "c++2a": int(201811) },
+    "values": { "c++20": int(201811) },
     "headers": ["unordered_map", "unordered_set"],
   }, {
     "name": "__cpp_lib_ranges",
-    "values": { "c++2a": int(201811) },
+    "values": { "c++20": int(201811) },
     "headers": ["algorithm", "functional", "iterator", "memory", "ranges"],
     "unimplemented": True,
   }, {
     "name": "__cpp_lib_bit_cast",
-    "values": { "c++2a": int(201806) },
+    "values": { "c++20": int(201806) },
     "headers": ["bit"],
     "unimplemented": True,
   }, {
     "name": "__cpp_lib_atomic_ref",
-    "values": { "c++2a": int(201806) },
+    "values": { "c++20": int(201806) },
     "headers": ["atomic"],
     "unimplemented": True,
     "depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
     "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
   }, {
     "name": "__cpp_lib_int_pow2",
-    "values": { "c++2a": int(202002) },
+    "values": { "c++20": int(202002) },
     "headers": ["bit"],
   }, {
     "name": "__cpp_lib_interpolate",
-    "values": { "c++2a": int(201902) },
+    "values": { "c++20": int(201902) },
     "headers": ["numeric"],
   }, {
     "name": "__cpp_lib_endian",
-    "values": { "c++2a": int(201907) },
+    "values": { "c++20": int(201907) },
     "headers": ["bit"],
   }, {
     "name": "__cpp_lib_to_array",
-    "values": { "c++2a": int(201907) },
+    "values": { "c++20": int(201907) },
     "headers": ["array"],
   }, {
     "name": "__cpp_lib_span",
-    "values": { "c++2a": int(202002) },
+    "values": { "c++20": int(202002) },
     "headers": ["span"],
   }, {
     "name": "__cpp_lib_math_constants",
-    "values": { "c++2a": int(201907) },
+    "values": { "c++20": int(201907) },
     "headers": ["numbers"],
     "depends": "defined(__cpp_concepts) && __cpp_concepts >= 201811L",
     "internal_depends": "defined(__cpp_concepts) && __cpp_concepts >= 201811L",
   }, {
     "name": "__cpp_lib_constexpr_utility",
-    "values": { "c++2a": int(201811) },
+    "values": { "c++20": int(201811) },
     "headers": ["utility"],
   }, {
     "name": "__cpp_lib_atomic_flag_test",
-    "values": { "c++2a": int(201907) },
+    "values": { "c++20": int(201907) },
     "headers": ["atomic"],
     "depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
     "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
   }, {
     "name": "__cpp_lib_atomic_lock_free_type_aliases",
-    "values": { "c++2a": int(201907) },
+    "values": { "c++20": int(201907) },
     "headers": ["atomic"],
     "depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
     "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
   }, {
     "name": "__cpp_lib_atomic_wait",
-    "values": { "c++2a": int(201907) },
+    "values": { "c++20": int(201907) },
     "headers": ["atomic"],
     "depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
     "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
   }, {
     "name": "__cpp_lib_atomic_float",
-    "values": { "c++2a": int(201711) },
+    "values": { "c++20": int(201711) },
     "headers": ["atomic"],
     "unimplemented": True,
     "depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
     "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
   }, {
     "name": "__cpp_lib_atomic_shared_ptr",
-    "values": { "c++2a": int(201711) },
+    "values": { "c++20": int(201711) },
     "headers": ["atomic"],
     "unimplemented": True,
     "depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
     "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
   }, {
     "name": "__cpp_lib_atomic_value_initialization",
-    "values": { "c++2a": int(201911) },
+    "values": { "c++20": int(201911) },
     "headers": ["atomic", "memory"],
     "unimplemented": True,
     "depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
     "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
   }, {
     "name": "__cpp_lib_constexpr_dynamic_alloc",
-    "values": { "c++2a": int(201907) },
+    "values": { "c++20": int(201907) },
     "headers": ["memory"]
   },
 ]], key=lambda tc: tc["name"])
@@ -506,7 +506,7 @@ lit_markup = {
 }
 
 def get_std_dialects():
-  std_dialects = ['c++14', 'c++17', 'c++2a']
+  std_dialects = ['c++14', 'c++17', 'c++20']
   return list(std_dialects)
 
 def get_first_std(d):
@@ -656,7 +656,7 @@ def produce_version_header():
 #endif
 
 #if _LIBCPP_STD_VER > 17
-{cxx2a_macros}
+{cxx20_macros}
 #endif
 
 #endif // _LIBCPP_VERSIONH
@@ -666,7 +666,7 @@ def produce_version_header():
       synopsis=produce_version_synopsis().strip(),
       cxx14_macros=produce_macros_definition_for_std('c++14').strip(),
       cxx17_macros=produce_macros_definition_for_std('c++17').strip(),
-      cxx2a_macros=produce_macros_definition_for_std('c++2a').strip())
+      cxx20_macros=produce_macros_definition_for_std('c++20').strip())
 
   version_header_path = os.path.join(include_path, 'version')
   with open(version_header_path, 'w', newline='\n') as f:
@@ -798,11 +798,11 @@ def produce_tests():
 
 {cxx17_tests}
 
-#elif TEST_STD_VER > 17
+#elif TEST_STD_VER == 20
 
-{cxx2a_tests}
+{cxx20_tests}
 
-#endif // TEST_STD_VER > 17
+#endif // TEST_STD_VER == 20
 
 int main(int, char**) {{ return 0; }}
 """.format(script_name=script_name,
@@ -812,7 +812,7 @@ int main(int, char**) {{ return 0; }}
            cxx11_tests=generate_std_test(test_list, 'c++11').strip(),
            cxx14_tests=generate_std_test(test_list, 'c++14').strip(),
            cxx17_tests=generate_std_test(test_list, 'c++17').strip(),
-           cxx2a_tests=generate_std_test(test_list, 'c++2a').strip())
+           cxx20_tests=generate_std_test(test_list, 'c++20').strip())
     test_name = "{header}.version.pass.cpp".format(header=h)
     out_path = os.path.join(macro_test_path, test_name)
     with open(out_path, 'w', newline='\n') as f:
