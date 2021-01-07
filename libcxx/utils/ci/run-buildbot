@@ -58,7 +58,7 @@ done
 
 MONOREPO_ROOT="${MONOREPO_ROOT:="$(git rev-parse --show-toplevel)"}"
 BUILD_DIR="${BUILD_DIR:=${MONOREPO_ROOT}/build/${BUILDER}}"
-INSTALL_DIR="${BUILD_DIR}/install}"
+INSTALL_DIR="${BUILD_DIR}/install"
 
 function clean() {
     rm -rf "${BUILD_DIR}"
