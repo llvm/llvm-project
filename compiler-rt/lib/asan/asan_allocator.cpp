@@ -1185,12 +1185,30 @@ IgnoreObjectResult IgnoreObjectLocked(const void *p) {
 }
 
 void GetAdditionalThreadContextPtrs(ThreadContextBase *tctx, void *ptrs) {
-  // This function can be used to treat memory reachable from `tctx` as live.
-  // This is useful for threads that have been created but not yet started.
+  // Look for the arg pointer of threads that have been created or are running.
+  // This is necessary to prevent false positive leaks due to the AsanThread
+  // holding the only live reference to a heap object.  This can happen because
+  // the `pthread_create()` interceptor doesn't wait for the child thread to
+  // start before returning and thus loosing the the only live reference to the
+  // heap object on the stack.
 
-  // This is currently a no-op because the ASan `pthread_create()` interceptor
-  // blocks until the child thread starts which keeps the thread's `arg` pointer
-  // live.
+  __asan::AsanThreadContext *atctx =
+      reinterpret_cast<__asan::AsanThreadContext *>(tctx);
+  __asan::AsanThread *asan_thread = atctx->thread;
+
+  // Note ThreadStatusRunning is required because there is a small window where
+  // the thread status switches to `ThreadStatusRunning` but the `arg` pointer
+  // still isn't on the stack yet.
+  if (atctx->status != ThreadStatusCreated &&
+      atctx->status != ThreadStatusRunning)
+    return;
+
+  uptr thread_arg = reinterpret_cast<uptr>(asan_thread->get_arg());
+  if (!thread_arg)
+    return;
+
+  auto ptrsVec = reinterpret_cast<InternalMmapVector<uptr> *>(ptrs);
+  ptrsVec->push_back(thread_arg);
 }
 
 }  // namespace __lsan

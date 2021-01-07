@@ -189,20 +189,11 @@ DECLARE_REAL_AND_INTERCEPTOR(void, free, void *)
 #include "sanitizer_common/sanitizer_common_syscalls.inc"
 #include "sanitizer_common/sanitizer_syscalls_netbsd.inc"
 
-struct ThreadStartParam {
-  atomic_uintptr_t t;
-  atomic_uintptr_t is_registered;
-};
-
 #if ASAN_INTERCEPT_PTHREAD_CREATE
 static thread_return_t THREAD_CALLING_CONV asan_thread_start(void *arg) {
-  ThreadStartParam *param = reinterpret_cast<ThreadStartParam *>(arg);
-  AsanThread *t = nullptr;
-  while ((t = reinterpret_cast<AsanThread *>(
-              atomic_load(&param->t, memory_order_acquire))) == nullptr)
-    internal_sched_yield();
+  AsanThread *t = (AsanThread *)arg;
   SetCurrentThread(t);
-  return t->ThreadStart(GetTid(), &param->is_registered);
+  return t->ThreadStart(GetTid());
 }
 
 INTERCEPTOR(int, pthread_create, void *thread,
@@ -215,9 +206,11 @@ INTERCEPTOR(int, pthread_create, void *thread,
   int detached = 0;
   if (attr)
     REAL(pthread_attr_getdetachstate)(attr, &detached);
-  ThreadStartParam param;
-  atomic_store(&param.t, 0, memory_order_relaxed);
-  atomic_store(&param.is_registered, 0, memory_order_relaxed);
+
+  u32 current_tid = GetCurrentTidOrInvalid();
+  AsanThread *t =
+      AsanThread::Create(start_routine, arg, current_tid, &stack, detached);
+
   int result;
   {
     // Ignore all allocations made by pthread_create: thread stack/TLS may be
@@ -227,21 +220,13 @@ INTERCEPTOR(int, pthread_create, void *thread,
 #if CAN_SANITIZE_LEAKS
     __lsan::ScopedInterceptorDisabler disabler;
 #endif
-    result = REAL(pthread_create)(thread, attr, asan_thread_start, &param);
+    result = REAL(pthread_create)(thread, attr, asan_thread_start, t);
   }
-  if (result == 0) {
-    u32 current_tid = GetCurrentTidOrInvalid();
-    AsanThread *t =
-        AsanThread::Create(start_routine, arg, current_tid, &stack, detached);
-    atomic_store(&param.t, reinterpret_cast<uptr>(t), memory_order_release);
-    // Wait until the AsanThread object is initialized and the ThreadRegistry
-    // entry is in "started" state. One reason for this is that after this
-    // interceptor exits, the child thread's stack may be the only thing holding
-    // the |arg| pointer. This may cause LSan to report a leak if leak checking
-    // happens at a point when the interceptor has already exited, but the stack
-    // range for the child thread is not yet known.
-    while (atomic_load(&param.is_registered, memory_order_acquire) == 0)
-      internal_sched_yield();
+  if (result != 0) {
+    // If the thread didn't start delete the AsanThread to avoid leaking it.
+    // Note AsanThreadContexts never get destroyed so the AsanThreadContext
+    // that was just created for the AsanThread is wasted.
+    t->Destroy();
   }
   return result;
 }
