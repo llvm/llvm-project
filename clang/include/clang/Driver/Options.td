@@ -1201,7 +1201,7 @@ def fansi_escape_codes : Flag<["-"], "fansi-escape-codes">, Group<f_Group>,
   MarshallingInfoFlag<"DiagnosticOpts->UseANSIEscapeCodes">;
 def fcomment_block_commands : CommaJoined<["-"], "fcomment-block-commands=">, Group<f_clang_Group>, Flags<[CC1Option]>,
   HelpText<"Treat each comma separated argument in <arg> as a documentation comment block command">,
-  MetaVarName<"<arg>">;
+  MetaVarName<"<arg>">, MarshallingInfoStringVector<"LangOpts->CommentOpts.BlockCommandNames">;
 def fparse_all_comments : Flag<["-"], "fparse-all-comments">, Group<f_clang_Group>, Flags<[CC1Option]>,
   MarshallingInfoFlag<"LangOpts->CommentOpts.ParseAllComments">;
 def frecord_command_line : Flag<["-"], "frecord-command-line">,
@@ -4091,7 +4091,9 @@ defm sycl : BoolOption<"sycl",
   BothFlags<[CoreOption], " SYCL kernels compilation for device">, "f">,
   Group<sycl_Group>;
 def sycl_std_EQ : Joined<["-"], "sycl-std=">, Group<sycl_Group>, Flags<[CC1Option, NoArgumentUnused, CoreOption]>,
-  HelpText<"SYCL language standard to compile for.">, Values<"2017, 121, 1.2.1, sycl-1.2.1">;
+  HelpText<"SYCL language standard to compile for.">, Values<"2017,121,1.2.1,sycl-1.2.1">,
+  NormalizedValues<["SYCL_2017", "SYCL_2017", "SYCL_2017", "SYCL_2017"]>, NormalizedValuesScope<"LangOptions">,
+  MarshallingInfoString<"LangOpts->SYCLVersion", "SYCL_None">, ShouldParseIf<fsycl.KeyPath>, AutoNormalizeEnum;
 
 //===----------------------------------------------------------------------===//
 // FlangOption and FC1 Options
