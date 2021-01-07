@@ -330,11 +330,11 @@ void AMDGPUCallLowering::processSplitArgs(
   // FIXME: This is mostly nasty pre-processing before handleAssignments. Most
   // of this should be performed by handleAssignments.
 
-  int SplitIdx = 0;
-  for (const ArgInfo &SplitArg : SplitArg) {
+  for (int SplitIdx = 0, e = SplitArg.size(); SplitIdx != e; ++SplitIdx) {
+    const ArgInfo &CurSplitArg = SplitArg[SplitIdx];
     Register Reg = OrigArg.Regs[SplitIdx];
-    EVT VT = EVT::getEVT(SplitArg.Ty);
-    LLT LLTy = getLLTForType(*SplitArg.Ty, DL);
+    EVT VT = EVT::getEVT(CurSplitArg.Ty);
+    LLT LLTy = getLLTForType(*CurSplitArg.Ty, DL);
 
     unsigned NumParts = TLI.getNumRegistersForCallingConv(Ctx, CallConv, VT);
     MVT RegVT = TLI.getRegisterTypeForCallingConv(Ctx, CallConv, VT);
@@ -342,9 +342,8 @@ void AMDGPUCallLowering::processSplitArgs(
     if (NumParts == 1) {
       // No splitting to do, but we want to replace the original type (e.g. [1 x
       // double] -> double).
-      SplitArgs.emplace_back(Reg, SplitArg.Ty, OrigArg.Flags, OrigArg.IsFixed);
-
-      ++SplitIdx;
+      SplitArgs.emplace_back(Reg, CurSplitArg.Ty, OrigArg.Flags,
+                             OrigArg.IsFixed);
       continue;
     }
 
@@ -362,8 +361,6 @@ void AMDGPUCallLowering::processSplitArgs(
     }
 
     PerformArgSplit(SplitRegs, Reg, LLTy, PartLLT, SplitIdx);
-
-    ++SplitIdx;
   }
 }
 
