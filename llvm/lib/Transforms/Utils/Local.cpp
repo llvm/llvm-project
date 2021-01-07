@@ -231,9 +231,6 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
         i = SI->removeCase(i);
         e = SI->case_end();
         Changed = true;
-        if (DTU)
-          DTU->applyUpdatesPermissive(
-              {{DominatorTree::Delete, ParentBB, DefaultDest}});
         continue;
       }
 
@@ -259,19 +256,19 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       // Insert the new branch.
       Builder.CreateBr(TheOnlyDest);
       BasicBlock *BB = SI->getParent();
-      std::vector <DominatorTree::UpdateType> Updates;
-      if (DTU)
-        Updates.reserve(SI->getNumSuccessors() - 1);
+
+      SmallSetVector<BasicBlock *, 8> RemovedSuccessors;
 
       // Remove entries from PHI nodes which we no longer branch to...
+      BasicBlock *SuccToKeep = TheOnlyDest;
       for (BasicBlock *Succ : successors(SI)) {
+        if (DTU && Succ != TheOnlyDest)
+          RemovedSuccessors.insert(Succ);
         // Found case matching a constant operand?
-        if (Succ == TheOnlyDest) {
-          TheOnlyDest = nullptr; // Don't modify the first branch to TheOnlyDest
+        if (Succ == SuccToKeep) {
+          SuccToKeep = nullptr; // Don't modify the first branch to TheOnlyDest
         } else {
           Succ->removePredecessor(BB);
-          if (DTU)
-            Updates.push_back({DominatorTree::Delete, BB, Succ});
         }
       }
 
@@ -280,8 +277,13 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       SI->eraseFromParent();
       if (DeleteDeadConditions)
         RecursivelyDeleteTriviallyDeadInstructions(Cond, TLI);
-      if (DTU)
-        DTU->applyUpdatesPermissive(Updates);
+      if (DTU) {
+        std::vector<DominatorTree::UpdateType> Updates;
+        Updates.reserve(RemovedSuccessors.size());
+        for (auto *RemovedSuccessor : RemovedSuccessors)
+          Updates.push_back({DominatorTree::Delete, BB, RemovedSuccessor});
+        DTU->applyUpdates(Updates);
+      }
       return true;
     }
 
