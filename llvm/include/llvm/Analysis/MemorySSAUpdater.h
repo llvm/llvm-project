@@ -119,8 +119,11 @@ public:
       ArrayRef<BasicBlock *> ExitBlocks,
       ArrayRef<std::unique_ptr<ValueToValueMapTy>> VMaps, DominatorTree &DT);
 
-  /// Apply CFG updates, analogous with the DT edge updates.
-  void applyUpdates(ArrayRef<CFGUpdate> Updates, DominatorTree &DT);
+  /// Apply CFG updates, analogous with the DT edge updates. By default, the
+  /// DT is assumed to be already up to date. If UpdateDTFirst is true, first
+  /// update the DT with the same updates.
+  void applyUpdates(ArrayRef<CFGUpdate> Updates, DominatorTree &DT,
+                    bool UpdateDTFirst = false);
   /// Apply CFG insert updates, analogous with the DT edge updates.
   void applyInsertUpdates(ArrayRef<CFGUpdate> Updates, DominatorTree &DT);
 
