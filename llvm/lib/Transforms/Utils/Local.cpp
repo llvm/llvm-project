@@ -2025,19 +2025,18 @@ unsigned llvm::changeToUnreachable(Instruction *I, bool UseLLVMTrap,
                                    bool PreserveLCSSA, DomTreeUpdater *DTU,
                                    MemorySSAUpdater *MSSAU) {
   BasicBlock *BB = I->getParent();
-  std::vector <DominatorTree::UpdateType> Updates;
 
   if (MSSAU)
     MSSAU->changeToUnreachable(I);
 
+  SmallSetVector<BasicBlock *, 8> UniqueSuccessors;
+
   // Loop over all of the successors, removing BB's entry from any PHI
   // nodes.
-  if (DTU)
-    Updates.reserve(BB->getTerminator()->getNumSuccessors());
   for (BasicBlock *Successor : successors(BB)) {
     Successor->removePredecessor(BB, PreserveLCSSA);
     if (DTU)
-      Updates.push_back({DominatorTree::Delete, BB, Successor});
+      UniqueSuccessors.insert(Successor);
   }
   // Insert a call to llvm.trap right before this.  This turns the undefined
   // behavior into a hard fail instead of falling through into random code.
@@ -2059,8 +2058,13 @@ unsigned llvm::changeToUnreachable(Instruction *I, bool UseLLVMTrap,
     BB->getInstList().erase(BBI++);
     ++NumInstrsRemoved;
   }
-  if (DTU)
-    DTU->applyUpdatesPermissive(Updates);
+  if (DTU) {
+    SmallVector<DominatorTree::UpdateType, 8> Updates;
+    Updates.reserve(UniqueSuccessors.size());
+    for (BasicBlock *UniqueSuccessor : UniqueSuccessors)
+      Updates.push_back({DominatorTree::Delete, BB, UniqueSuccessor});
+    DTU->applyUpdates(Updates);
+  }
   return NumInstrsRemoved;
 }
 
