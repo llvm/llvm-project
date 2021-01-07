@@ -6,7 +6,7 @@
 
 // CHECK-LABEL: @i_equal_scalar
 spv.func @i_equal_scalar(%arg0: i32, %arg1: i32) "None" {
-  // CHECK: llvm.icmp "eq" %{{.*}}, %{{.*}} : !llvm.i32
+  // CHECK: llvm.icmp "eq" %{{.*}}, %{{.*}} : i32
   %0 = spv.IEqual %arg0, %arg1 : i32
   spv.Return
 }
@@ -24,7 +24,7 @@ spv.func @i_equal_vector(%arg0: vector<4xi64>, %arg1: vector<4xi64>) "None" {
 
 // CHECK-LABEL: @i_not_equal_scalar
 spv.func @i_not_equal_scalar(%arg0: i64, %arg1: i64) "None" {
-  // CHECK: llvm.icmp "ne" %{{.*}}, %{{.*}} : !llvm.i64
+  // CHECK: llvm.icmp "ne" %{{.*}}, %{{.*}} : i64
   %0 = spv.INotEqual %arg0, %arg1 : i64
   spv.Return
 }
@@ -42,7 +42,7 @@ spv.func @i_not_equal_vector(%arg0: vector<2xi64>, %arg1: vector<2xi64>) "None" 
 
 // CHECK-LABEL: @s_greater_than_equal_scalar
 spv.func @s_greater_than_equal_scalar(%arg0: i64, %arg1: i64) "None" {
-  // CHECK: llvm.icmp "sge" %{{.*}}, %{{.*}} : !llvm.i64
+  // CHECK: llvm.icmp "sge" %{{.*}}, %{{.*}} : i64
   %0 = spv.SGreaterThanEqual %arg0, %arg1 : i64
   spv.Return
 }
@@ -60,7 +60,7 @@ spv.func @s_greater_than_equal_vector(%arg0: vector<2xi64>, %arg1: vector<2xi64>
 
 // CHECK-LABEL: @s_greater_than_scalar
 spv.func @s_greater_than_scalar(%arg0: i64, %arg1: i64) "None" {
-  // CHECK: llvm.icmp "sgt" %{{.*}}, %{{.*}} : !llvm.i64
+  // CHECK: llvm.icmp "sgt" %{{.*}}, %{{.*}} : i64
   %0 = spv.SGreaterThan %arg0, %arg1 : i64
   spv.Return
 }
@@ -78,7 +78,7 @@ spv.func @s_greater_than_vector(%arg0: vector<2xi64>, %arg1: vector<2xi64>) "Non
 
 // CHECK-LABEL: @s_less_than_equal_scalar
 spv.func @s_less_than_equal_scalar(%arg0: i64, %arg1: i64) "None" {
-  // CHECK: llvm.icmp "sle" %{{.*}}, %{{.*}} : !llvm.i64
+  // CHECK: llvm.icmp "sle" %{{.*}}, %{{.*}} : i64
   %0 = spv.SLessThanEqual %arg0, %arg1 : i64
   spv.Return
 }
@@ -96,7 +96,7 @@ spv.func @s_less_than_equal_vector(%arg0: vector<2xi64>, %arg1: vector<2xi64>) "
 
 // CHECK-LABEL: @s_less_than_scalar
 spv.func @s_less_than_scalar(%arg0: i64, %arg1: i64) "None" {
-  // CHECK: llvm.icmp "slt" %{{.*}}, %{{.*}} : !llvm.i64
+  // CHECK: llvm.icmp "slt" %{{.*}}, %{{.*}} : i64
   %0 = spv.SLessThan %arg0, %arg1 : i64
   spv.Return
 }
@@ -114,7 +114,7 @@ spv.func @s_less_than_vector(%arg0: vector<2xi64>, %arg1: vector<2xi64>) "None" 
 
 // CHECK-LABEL: @u_greater_than_equal_scalar
 spv.func @u_greater_than_equal_scalar(%arg0: i64, %arg1: i64) "None" {
-  // CHECK: llvm.icmp "uge" %{{.*}}, %{{.*}} : !llvm.i64
+  // CHECK: llvm.icmp "uge" %{{.*}}, %{{.*}} : i64
   %0 = spv.UGreaterThanEqual %arg0, %arg1 : i64
   spv.Return
 }
@@ -132,7 +132,7 @@ spv.func @u_greater_than_equal_vector(%arg0: vector<2xi64>, %arg1: vector<2xi64>
 
 // CHECK-LABEL: @u_greater_than_scalar
 spv.func @u_greater_than_scalar(%arg0: i64, %arg1: i64) "None" {
-  // CHECK: llvm.icmp "ugt" %{{.*}}, %{{.*}} : !llvm.i64
+  // CHECK: llvm.icmp "ugt" %{{.*}}, %{{.*}} : i64
   %0 = spv.UGreaterThan %arg0, %arg1 : i64
   spv.Return
 }
@@ -150,7 +150,7 @@ spv.func @u_greater_than_vector(%arg0: vector<2xi64>, %arg1: vector<2xi64>) "Non
 
 // CHECK-LABEL: @u_less_than_equal_scalar
 spv.func @u_less_than_equal_scalar(%arg0: i64, %arg1: i64) "None" {
-  // CHECK: llvm.icmp "ule" %{{.*}}, %{{.*}} : !llvm.i64
+  // CHECK: llvm.icmp "ule" %{{.*}}, %{{.*}} : i64
   %0 = spv.ULessThanEqual %arg0, %arg1 : i64
   spv.Return
 }
@@ -168,7 +168,7 @@ spv.func @u_less_than_equal_vector(%arg0: vector<2xi64>, %arg1: vector<2xi64>) "
 
 // CHECK-LABEL: @u_less_than_scalar
 spv.func @u_less_than_scalar(%arg0: i64, %arg1: i64) "None" {
-  // CHECK: llvm.icmp "ult" %{{.*}}, %{{.*}} : !llvm.i64
+  // CHECK: llvm.icmp "ult" %{{.*}}, %{{.*}} : i64
   %0 = spv.ULessThan %arg0, %arg1 : i64
   spv.Return
 }

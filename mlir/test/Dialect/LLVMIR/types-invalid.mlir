@@ -76,7 +76,7 @@ func @struct_literal_opaque() {
 // -----
 
 func @unexpected_type() {
-  // expected-error @+1 {{unexpected type, expected i* or keyword}}
+  // expected-error @+1 {{unexpected type, expected keyword}}
   "some.op"() : () -> !llvm.f32
 }
 
@@ -150,3 +150,14 @@ func @scalable_void_vector() {
   // expected-error @+1 {{invalid vector element type}}
   "some.op"() : () -> !llvm.vec<? x 4 x void>
 }
+
+// -----
+
+// expected-warning @+1 {{deprecated syntax, drop '!llvm.' for integers}}
+func private @deprecated_int() -> !llvm.i32
+
+// -----
+
+
+// expected-error @+1 {{unexpected type, expected keyword}}
+func private @unexpected_type() -> !llvm.tensor<*xf32>

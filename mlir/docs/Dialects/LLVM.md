@@ -66,11 +66,11 @@ For example:
 
 ```mlir
 ^bb1:
-  %0 = llvm.addi %arg0, %cst : !llvm.i32
-  llvm.br ^bb2[%0: !llvm.i32]
+  %0 = llvm.addi %arg0, %cst : i32
+  llvm.br ^bb2[%0: i32]
 
 // If the control flow comes from ^bb1, %arg1 == %0.
-^bb2(%arg1: !llvm.i32)
+^bb2(%arg1: i32)
   // ...
 ```
 
@@ -91,9 +91,9 @@ control flow to the same block with different arguments. For example:
 
 ```mlir
 ^bb1:
-  llvm.cond_br %cond, ^bb2[%0: !llvm.i32], ^bb2[%1: !llvm.i32]
+  llvm.cond_br %cond, ^bb2[%0: i32], ^bb2[%1: i32]
 
-^bb2(%arg0: !llvm.i32):
+^bb2(%arg0: i32):
   // ...
 ```
 
@@ -124,7 +124,7 @@ Examples:
 %2 = llvm.mlir.null : !llvm.ptr<func<void ()>>
 
 // Constant 42 as i32.
-%3 = llvm.mlir.constant(42 : i32) : !llvm.i32
+%3 = llvm.mlir.constant(42 : i32) : i32
 
 // Splat dense vector constant.
 %3 = llvm.mlir.constant(dense<1.0> : vector<4xf32>) : !llvm.vec<4 x float>

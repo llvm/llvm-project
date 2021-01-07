@@ -75,12 +75,12 @@ protected:
 
   Type llvmVoidType = LLVM::LLVMVoidType::get(context);
   Type llvmPointerType =
-      LLVM::LLVMPointerType::get(LLVM::LLVMIntegerType::get(context, 8));
+      LLVM::LLVMPointerType::get(IntegerType::get(context, 8));
   Type llvmPointerPointerType = LLVM::LLVMPointerType::get(llvmPointerType);
-  Type llvmInt8Type = LLVM::LLVMIntegerType::get(context, 8);
-  Type llvmInt32Type = LLVM::LLVMIntegerType::get(context, 32);
-  Type llvmInt64Type = LLVM::LLVMIntegerType::get(context, 64);
-  Type llvmIntPtrType = LLVM::LLVMIntegerType::get(
+  Type llvmInt8Type = IntegerType::get(context, 8);
+  Type llvmInt32Type = IntegerType::get(context, 32);
+  Type llvmInt64Type = IntegerType::get(context, 64);
+  Type llvmIntPtrType = IntegerType::get(
       context, this->getTypeConverter()->getPointerBitwidth(0));
 
   FunctionCallBuilder moduleLoadCallBuilder = {
@@ -716,10 +716,10 @@ mlir::createGpuToLLVMConversionPass(StringRef gpuBinaryAnnotation) {
 void mlir::populateGpuToLLVMConversionPatterns(
     LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
     StringRef gpuBinaryAnnotation) {
-  converter.addConversion([context = &converter.getContext()](
-                              gpu::AsyncTokenType type) -> Type {
-    return LLVM::LLVMPointerType::get(LLVM::LLVMIntegerType::get(context, 8));
-  });
+  converter.addConversion(
+      [context = &converter.getContext()](gpu::AsyncTokenType type) -> Type {
+        return LLVM::LLVMPointerType::get(IntegerType::get(context, 8));
+      });
   patterns.insert<ConvertAllocOpToGpuRuntimeCallPattern,
                   ConvertDeallocOpToGpuRuntimeCallPattern,
                   ConvertHostRegisterOpToGpuRuntimeCallPattern,

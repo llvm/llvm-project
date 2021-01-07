@@ -13,8 +13,8 @@ spv.func @composite_extract_array(%arg: !spv.array<4x!spv.array<4xf32>>) "None" 
 
 // CHECK-LABEL: @composite_extract_vector
 spv.func @composite_extract_vector(%arg: vector<3xf32>) "None" {
-  // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
-  // CHECK: llvm.extractelement %{{.*}}[%[[ZERO]] : !llvm.i32] : !llvm.vec<3 x float>
+  // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK: llvm.extractelement %{{.*}}[%[[ZERO]] : i32] : !llvm.vec<3 x float>
   %0 = spv.CompositeExtract %arg[0 : i32] : vector<3xf32>
   spv.Return
 }
@@ -32,8 +32,8 @@ spv.func @composite_insert_struct(%arg0: i32, %arg1: !spv.struct<(f32, !spv.arra
 
 // CHECK-LABEL: @composite_insert_vector
 spv.func @composite_insert_vector(%arg0: vector<3xf32>, %arg1: f32) "None" {
-  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : !llvm.i32
-  // CHECK: llvm.insertelement %{{.*}}, %{{.*}}[%[[ONE]] : !llvm.i32] : !llvm.vec<3 x float>
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: llvm.insertelement %{{.*}}, %{{.*}}[%[[ONE]] : i32] : !llvm.vec<3 x float>
   %0 = spv.CompositeInsert %arg1, %arg0[1 : i32] : f32 into vector<3xf32>
   spv.Return
 }
@@ -44,9 +44,9 @@ spv.func @composite_insert_vector(%arg0: vector<3xf32>, %arg1: f32) "None" {
 
 // CHECK-LABEL: @select_scalar
 spv.func @select_scalar(%arg0: i1, %arg1: vector<3xi32>, %arg2: f32) "None" {
-  // CHECK: llvm.select %{{.*}}, %{{.*}}, %{{.*}} : !llvm.i1, !llvm.vec<3 x i32>
+  // CHECK: llvm.select %{{.*}}, %{{.*}}, %{{.*}} : i1, !llvm.vec<3 x i32>
   %0 = spv.Select %arg0, %arg1, %arg1 : i1, vector<3xi32>
-  // CHECK: llvm.select %{{.*}}, %{{.*}}, %{{.*}} : !llvm.i1, !llvm.float
+  // CHECK: llvm.select %{{.*}}, %{{.*}}, %{{.*}} : i1, !llvm.float
   %1 = spv.Select %arg0, %arg2, %arg2 : i1, f32
   spv.Return
 }
@@ -65,7 +65,7 @@ spv.func @select_vector(%arg0: vector<2xi1>, %arg1: vector<2xi32>) "None" {
 //      CHECK: module {
 // CHECK-NEXT:   llvm.mlir.global external constant @{{.*}}() : !llvm.struct<(i32)> {
 // CHECK-NEXT:     %[[UNDEF:.*]] = llvm.mlir.undef : !llvm.struct<(i32)>
-// CHECK-NEXT:     %[[VAL:.*]] = llvm.mlir.constant(31 : i32) : !llvm.i32
+// CHECK-NEXT:     %[[VAL:.*]] = llvm.mlir.constant(31 : i32) : i32
 // CHECK-NEXT:     %[[RET:.*]] = llvm.insertvalue %[[VAL]], %[[UNDEF]][0 : i32] : !llvm.struct<(i32)>
 // CHECK-NEXT:     llvm.return %[[RET]] : !llvm.struct<(i32)>
 // CHECK-NEXT:   }
@@ -84,13 +84,13 @@ spv.module Logical OpenCL {
 //      CHECK: module {
 // CHECK-NEXT:   llvm.mlir.global external constant @{{.*}}() : !llvm.struct<(i32, array<3 x i32>)> {
 // CHECK-NEXT:     %[[UNDEF:.*]] = llvm.mlir.undef : !llvm.struct<(i32, array<3 x i32>)>
-// CHECK-NEXT:     %[[EM:.*]] = llvm.mlir.constant(18 : i32) : !llvm.i32
+// CHECK-NEXT:     %[[EM:.*]] = llvm.mlir.constant(18 : i32) : i32
 // CHECK-NEXT:     %[[T0:.*]] = llvm.insertvalue %[[EM]], %[[UNDEF]][0 : i32] : !llvm.struct<(i32, array<3 x i32>)>
-// CHECK-NEXT:     %[[C0:.*]] = llvm.mlir.constant(32 : i32) : !llvm.i32
+// CHECK-NEXT:     %[[C0:.*]] = llvm.mlir.constant(32 : i32) : i32
 // CHECK-NEXT:     %[[T1:.*]] = llvm.insertvalue %[[C0]], %[[T0]][1 : i32, 0 : i32] : !llvm.struct<(i32, array<3 x i32>)>
-// CHECK-NEXT:     %[[C1:.*]] = llvm.mlir.constant(1 : i32) : !llvm.i32
+// CHECK-NEXT:     %[[C1:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK-NEXT:     %[[T2:.*]] = llvm.insertvalue %[[C1]], %[[T1]][1 : i32, 1 : i32] : !llvm.struct<(i32, array<3 x i32>)>
-// CHECK-NEXT:     %[[C2:.*]] = llvm.mlir.constant(1 : i32) : !llvm.i32
+// CHECK-NEXT:     %[[C2:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK-NEXT:     %[[RET:.*]] = llvm.insertvalue %[[C2]], %[[T2]][1 : i32, 2 : i32] : !llvm.struct<(i32, array<3 x i32>)>
 // CHECK-NEXT:     llvm.return %[[RET]] : !llvm.struct<(i32, array<3 x i32>)>
 // CHECK-NEXT:   }

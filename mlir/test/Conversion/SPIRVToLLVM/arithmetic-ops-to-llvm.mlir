@@ -6,7 +6,7 @@
 
 // CHECK-LABEL: @iadd_scalar
 spv.func @iadd_scalar(%arg0: i32, %arg1: i32) "None" {
-  // CHECK: llvm.add %{{.*}}, %{{.*}} : !llvm.i32
+  // CHECK: llvm.add %{{.*}}, %{{.*}} : i32
   %0 = spv.IAdd %arg0, %arg1 : i32
   spv.Return
 }
@@ -24,7 +24,7 @@ spv.func @iadd_vector(%arg0: vector<4xi64>, %arg1: vector<4xi64>) "None" {
 
 // CHECK-LABEL: @isub_scalar
 spv.func @isub_scalar(%arg0: i8, %arg1: i8) "None" {
-  // CHECK: llvm.sub %{{.*}}, %{{.*}} : !llvm.i8
+  // CHECK: llvm.sub %{{.*}}, %{{.*}} : i8
   %0 = spv.ISub %arg0, %arg1 : i8
   spv.Return
 }
@@ -42,7 +42,7 @@ spv.func @isub_vector(%arg0: vector<2xi16>, %arg1: vector<2xi16>) "None" {
 
 // CHECK-LABEL: @imul_scalar
 spv.func @imul_scalar(%arg0: i32, %arg1: i32) "None" {
-  // CHECK: llvm.mul %{{.*}}, %{{.*}} : !llvm.i32
+  // CHECK: llvm.mul %{{.*}}, %{{.*}} : i32
   %0 = spv.IMul %arg0, %arg1 : i32
   spv.Return
 }
@@ -168,7 +168,7 @@ spv.func @fneg_vector(%arg: vector<2xf32>) "None" {
 
 // CHECK-LABEL: @udiv_scalar
 spv.func @udiv_scalar(%arg0: i32, %arg1: i32) "None" {
-  // CHECK: llvm.udiv %{{.*}}, %{{.*}} : !llvm.i32
+  // CHECK: llvm.udiv %{{.*}}, %{{.*}} : i32
   %0 = spv.UDiv %arg0, %arg1 : i32
   spv.Return
 }
@@ -186,7 +186,7 @@ spv.func @udiv_vector(%arg0: vector<3xi64>, %arg1: vector<3xi64>) "None" {
 
 // CHECK-LABEL: @umod_scalar
 spv.func @umod_scalar(%arg0: i32, %arg1: i32) "None" {
-  // CHECK: llvm.urem %{{.*}}, %{{.*}} : !llvm.i32
+  // CHECK: llvm.urem %{{.*}}, %{{.*}} : i32
   %0 = spv.UMod %arg0, %arg1 : i32
   spv.Return
 }
@@ -204,7 +204,7 @@ spv.func @umod_vector(%arg0: vector<3xi64>, %arg1: vector<3xi64>) "None" {
 
 // CHECK-LABEL: @sdiv_scalar
 spv.func @sdiv_scalar(%arg0: i16, %arg1: i16) "None" {
-  // CHECK: llvm.sdiv %{{.*}}, %{{.*}} : !llvm.i16
+  // CHECK: llvm.sdiv %{{.*}}, %{{.*}} : i16
   %0 = spv.SDiv %arg0, %arg1 : i16
   spv.Return
 }
@@ -222,7 +222,7 @@ spv.func @sdiv_vector(%arg0: vector<2xi64>, %arg1: vector<2xi64>) "None" {
 
 // CHECK-LABEL: @srem_scalar
 spv.func @srem_scalar(%arg0: i32, %arg1: i32) "None" {
-  // CHECK: llvm.srem %{{.*}}, %{{.*}} : !llvm.i32
+  // CHECK: llvm.srem %{{.*}}, %{{.*}} : i32
   %0 = spv.SRem %arg0, %arg1 : i32
   spv.Return
 }

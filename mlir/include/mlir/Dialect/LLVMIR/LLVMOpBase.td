@@ -54,18 +54,18 @@ def LLVM_Type : DialectType<LLVM_Dialect,
 
 // Type constraint accepting LLVM integer types.
 def LLVM_AnyInteger : Type<
-  CPred<"$_self.isa<::mlir::LLVM::LLVMIntegerType>()">,
+  CPred<"$_self.isa<::mlir::IntegerType>()">,
   "LLVM integer type">;
 
 // Type constraints accepting LLVM integer type of a specific width.
 class LLVM_IntBase<int width> :
     Type<And<[
         LLVM_AnyInteger.predicate,
-        CPred<"$_self.cast<::mlir::LLVM::LLVMIntegerType>().getBitWidth() == "
+        CPred<"$_self.cast<::mlir::IntegerType>().getWidth() == "
               # width>]>,
         "LLVM " # width # "-bit integer type">,
     BuildableType<
-        "::mlir::LLVM::LLVMIntegerType::get($_builder.getContext(), "
+        "::mlir::IntegerType::get($_builder.getContext(), "
         # width # ")">;
 
 def LLVM_i1 : LLVM_IntBase<1>;

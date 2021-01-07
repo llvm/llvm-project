@@ -215,7 +215,7 @@ func @multiple_uses2(%arg0 : memref<*xf32>) {
 
 // -----
 
-llvm.mlir.global internal @global(42 : i64) : !llvm.i64
+llvm.mlir.global internal @global(42 : i64) : i64
 
 //CHECK-LABEL: @function_call
 func @function_call(%arg0 : memref<?xf32>) {
@@ -249,7 +249,7 @@ func @recursive_device_function() {
 // CHECK:     llvm.mlir.addressof @global : !llvm.ptr<i64>
 // CHECK:     gpu.return
 //
-// CHECK:   llvm.mlir.global internal @global(42 : i64) : !llvm.i64
+// CHECK:   llvm.mlir.global internal @global(42 : i64) : i64
 //
 // CHECK:   func @device_function()
 // CHECK:   func @recursive_device_function()

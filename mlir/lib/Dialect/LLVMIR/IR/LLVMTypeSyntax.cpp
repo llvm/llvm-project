@@ -24,7 +24,7 @@ using namespace mlir::LLVM;
 /// internal functions to avoid getting a verbose `!llvm` prefix. Otherwise
 /// prints it as usual.
 static void dispatchPrint(DialectAsmPrinter &printer, Type type) {
-  if (isCompatibleType(type))
+  if (isCompatibleType(type) && !type.isa<IntegerType>())
     return mlir::LLVM::detail::printType(type, printer);
   printer.printType(type);
 }
@@ -45,7 +45,6 @@ static StringRef getTypeKeyword(Type type) {
       .Case<LLVMLabelType>([&](Type) { return "label"; })
       .Case<LLVMMetadataType>([&](Type) { return "metadata"; })
       .Case<LLVMFunctionType>([&](Type) { return "func"; })
-      .Case<LLVMIntegerType>([&](Type) { return "i"; })
       .Case<LLVMPointerType>([&](Type) { return "ptr"; })
       .Case<LLVMVectorType>([&](Type) { return "vec"; })
       .Case<LLVMArrayType>([&](Type) { return "array"; })
@@ -146,11 +145,6 @@ void mlir::LLVM::detail::printType(Type type, DialectAsmPrinter &printer) {
   }
 
   printer << getTypeKeyword(type);
-
-  if (auto intType = type.dyn_cast<LLVMIntegerType>()) {
-    printer << intType.getBitWidth();
-    return;
-  }
 
   if (auto ptrType = type.dyn_cast<LLVMPointerType>()) {
     printer << '<';
@@ -416,26 +410,30 @@ static LLVMStructType parseStructType(DialectAsmParser &parser) {
 /// will try to parse any type in full form (including types with the `!llvm`
 /// prefix), and on failure fall back to parsing the short-hand version of the
 /// LLVM dialect types without the `!llvm` prefix.
-static Type dispatchParse(DialectAsmParser &parser) {
-  Type type;
+static Type dispatchParse(DialectAsmParser &parser, bool allowAny = true) {
   llvm::SMLoc keyLoc = parser.getCurrentLocation();
-  Location loc = parser.getEncodedSourceLoc(keyLoc);
-  OptionalParseResult parseResult = parser.parseOptionalType(type);
-  if (parseResult.hasValue()) {
-    if (failed(*parseResult))
-      return Type();
 
-    // Special case for integers (i[1-9][0-9]*) that are literals rather than
-    // keywords for the parser, so they are not caught by the main dispatch
-    // below. Try parsing it a built-in integer type instead.
-    auto intType = type.dyn_cast<IntegerType>();
-    if (!intType || !intType.isSignless())
-      return type;
-
-    return LLVMIntegerType::getChecked(loc, intType.getWidth());
+  // Try parsing any MLIR type.
+  Type type;
+  OptionalParseResult result = parser.parseOptionalType(type);
+  if (result.hasValue()) {
+    if (failed(result.getValue()))
+      return nullptr;
+    // TODO: integer types are temporarily allowed for compatibility with the
+    // deprecated !llvm.i[0-9]+ syntax.
+    if (!allowAny) {
+      auto intType = type.dyn_cast<IntegerType>();
+      if (!intType || !intType.isSignless()) {
+        parser.emitError(keyLoc) << "unexpected type, expected keyword";
+        return nullptr;
+      }
+      Location loc = parser.getEncodedSourceLoc(keyLoc);
+      emitWarning(loc) << "deprecated syntax, drop '!llvm.' for integers";
+    }
+    return type;
   }
 
-  // Dispatch to concrete functions.
+  // If no type found, fallback to the shorthand form.
   StringRef key;
   if (failed(parser.parseKeyword(&key)))
     return Type();
@@ -474,11 +472,11 @@ static ParseResult dispatchParse(DialectAsmParser &parser, Type &type) {
 /// Parses one of the LLVM dialect types.
 Type mlir::LLVM::detail::parseType(DialectAsmParser &parser) {
   llvm::SMLoc loc = parser.getCurrentLocation();
-  Type type = dispatchParse(parser);
+  Type type = dispatchParse(parser, /*allowAny=*/false);
   if (!type)
     return type;
   if (!isCompatibleType(type)) {
-    parser.emitError(loc) << "unexpected type, expected i* or keyword";
+    parser.emitError(loc) << "unexpected type, expected keyword";
     return nullptr;
   }
   return type;
