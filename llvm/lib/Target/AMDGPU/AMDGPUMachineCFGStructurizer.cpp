@@ -12,35 +12,16 @@
 
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
-#include "SIInstrInfo.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegionInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/Config/llvm-config.h"
-#include "llvm/IR/DebugLoc.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
-#include <cassert>
-#include <tuple>
-#include <utility>
 
 using namespace llvm;
 

@@ -10,11 +10,10 @@
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUGLOBALISELUTILS_H
 
 #include "llvm/CodeGen/Register.h"
-#include <tuple>
+#include <utility>
 
 namespace llvm {
 
-class MachineInstr;
 class MachineRegisterInfo;
 
 namespace AMDGPU {

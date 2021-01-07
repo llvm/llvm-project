@@ -23,19 +23,11 @@
 
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "SIInstrInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineSSAUpdater.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/LLVMContext.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Target/TargetMachine.h"
 
 #define DEBUG_TYPE "si-i1-copies"
 

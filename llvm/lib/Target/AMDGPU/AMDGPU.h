@@ -10,8 +10,6 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPU_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPU_H
 
-#include "llvm/IR/IntrinsicsAMDGPU.h" // TODO: Sink this.
-#include "llvm/IR/IntrinsicsR600.h"   // TODO: Sink this.
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CodeGen.h"
 

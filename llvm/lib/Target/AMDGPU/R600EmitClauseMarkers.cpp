@@ -16,23 +16,6 @@
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
 #include "R600Defines.h"
-#include "R600InstrInfo.h"
-#include "R600RegisterInfo.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/Pass.h"
-#include "llvm/Support/ErrorHandling.h"
-#include <cassert>
-#include <cstdint>
-#include <utility>
-#include <vector>
 
 using namespace llvm;
 

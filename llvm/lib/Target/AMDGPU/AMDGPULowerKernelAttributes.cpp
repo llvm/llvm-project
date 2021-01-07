@@ -21,7 +21,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/PassManager.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Pass.h"
 

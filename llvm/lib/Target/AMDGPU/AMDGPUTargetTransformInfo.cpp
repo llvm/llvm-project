@@ -15,41 +15,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUTargetTransformInfo.h"
-#include "AMDGPUSubtarget.h"
-#include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/ADT/STLExtras.h"
+#include "AMDGPUTargetMachine.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/CodeGen/ISDOpcodes.h"
-#include "llvm/CodeGen/ValueTypes.h"
-#include "llvm/IR/Argument.h"
-#include "llvm/IR/Attributes.h"
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallingConv.h"
-#include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Instruction.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Module.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/IR/Type.h"
-#include "llvm/IR/Value.h"
-#include "llvm/MC/SubtargetFeature.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
-#include "llvm/Support/MachineValueType.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetMachine.h"
-#include <algorithm>
-#include <cassert>
-#include <limits>
-#include <utility>
 
 using namespace llvm;
 
@@ -103,6 +74,12 @@ static bool dependsOnLocalPhi(const Loop *L, const Value *Cond,
   }
   return false;
 }
+
+AMDGPUTTIImpl::AMDGPUTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
+    : BaseT(TM, F.getParent()->getDataLayout()),
+      TargetTriple(TM->getTargetTriple()),
+      ST(static_cast<const GCNSubtarget *>(TM->getSubtargetImpl(F))),
+      TLI(ST->getTargetLowering()) {}
 
 void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                             TTI::UnrollingPreferences &UP) {
@@ -261,6 +238,21 @@ void AMDGPUTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                                           TTI::PeelingPreferences &PP) {
   BaseT::getPeelingPreferences(L, SE, PP);
 }
+
+GCNTTIImpl::GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
+    : BaseT(TM, F.getParent()->getDataLayout()),
+      ST(static_cast<const GCNSubtarget *>(TM->getSubtargetImpl(F))),
+      TLI(ST->getTargetLowering()), CommonTTI(TM, F),
+      IsGraphics(AMDGPU::isGraphics(F.getCallingConv())),
+      MaxVGPRs(ST->getMaxNumVGPRs(
+          std::max(ST->getWavesPerEU(F).first,
+                   ST->getWavesPerEUForWorkGroup(
+                       ST->getFlatWorkGroupSizes(F).second)))) {
+  AMDGPU::SIModeRegisterDefaults Mode(F);
+  HasFP32Denormals = Mode.allFP32Denormals();
+  HasFP64FP16Denormals = Mode.allFP64FP16Denormals();
+}
+
 unsigned GCNTTIImpl::getHardwareNumberOfRegisters(bool Vec) const {
   // The concept of vector registers doesn't really exist. Some packed vector
   // operations operate on the normal 32-bit registers.
@@ -1120,6 +1112,11 @@ void GCNTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                                        TTI::PeelingPreferences &PP) {
   CommonTTI.getPeelingPreferences(L, SE, PP);
 }
+
+R600TTIImpl::R600TTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
+    : BaseT(TM, F.getParent()->getDataLayout()),
+      ST(static_cast<const R600Subtarget *>(TM->getSubtargetImpl(F))),
+      TLI(ST->getTargetLowering()), CommonTTI(TM, F) {}
 
 unsigned R600TTIImpl::getHardwareNumberOfRegisters(bool Vec) const {
   return 4 * 128; // XXX - 4 channels. Should these count as vector instead?

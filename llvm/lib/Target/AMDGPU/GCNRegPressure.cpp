@@ -13,24 +13,7 @@
 
 #include "GCNRegPressure.h"
 #include "AMDGPUSubtarget.h"
-#include "SIRegisterInfo.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/CodeGen/LiveInterval.h"
-#include "llvm/CodeGen/LiveIntervals.h"
-#include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterPressure.h"
-#include "llvm/CodeGen/SlotIndexes.h"
-#include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/Config/llvm-config.h"
-#include "llvm/MC/LaneBitmask.h"
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
-#include <algorithm>
-#include <cassert>
 
 using namespace llvm;
 
