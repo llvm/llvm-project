@@ -1678,7 +1678,7 @@ Constant *Constant::getSplatValue(bool AllowUndefs) const {
       ConstantInt *Index = dyn_cast<ConstantInt>(IElt->getOperand(2));
 
       if (Index && Index->getValue() == 0 &&
-          std::all_of(Mask.begin(), Mask.end(), [](int I) { return I == 0; }))
+          llvm::all_of(Mask, [](int I) { return I == 0; }))
         return SplatVal;
     }
   }
