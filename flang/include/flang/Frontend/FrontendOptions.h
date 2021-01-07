@@ -28,6 +28,9 @@ enum ActionKind {
   /// -fsyntax-only
   ParseSyntaxOnly,
 
+  /// Emit a .o file.
+  EmitObj,
+
   /// TODO: RunPreprocessor, EmitLLVM, EmitLLVMOnly,
   /// EmitCodeGenOnly, EmitAssembly, (...)
 };

@@ -857,7 +857,7 @@ def current__version : JoinedOrSeparate<["-"], "current_version">;
 def cxx_isystem : JoinedOrSeparate<["-"], "cxx-isystem">, Group<clang_i_Group>,
   HelpText<"Add directory to the C++ SYSTEM include search path">, Flags<[CC1Option]>,
   MetaVarName<"<directory>">;
-def c : Flag<["-"], "c">, Flags<[NoXarchOption]>, Group<Action_Group>,
+def c : Flag<["-"], "c">, Flags<[NoXarchOption, FlangOption]>, Group<Action_Group>,
   HelpText<"Only run preprocess, compile, and assemble steps">;
 def fconvergent_functions : Flag<["-"], "fconvergent-functions">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Assume functions may be convergent">;
@@ -4854,8 +4854,6 @@ def emit_llvm_only : Flag<["-"], "emit-llvm-only">,
   HelpText<"Build ASTs and convert to LLVM, discarding output">;
 def emit_codegen_only : Flag<["-"], "emit-codegen-only">,
   HelpText<"Generate machine code, but discard output">;
-def emit_obj : Flag<["-"], "emit-obj">,
-  HelpText<"Emit native object files">;
 def rewrite_test : Flag<["-"], "rewrite-test">,
   HelpText<"Rewriter playground">;
 def rewrite_macros : Flag<["-"], "rewrite-macros">,
@@ -5228,6 +5226,18 @@ def fsycl_is_device : Flag<["-"], "fsycl-is-device">,
   HelpText<"Generate code for SYCL device.">;
 
 } // let Flags = [CC1Option, NoDriverOption]
+
+//===----------------------------------------------------------------------===//
+// Frontend Options - cc1 + fc1
+//===----------------------------------------------------------------------===//
+let Flags = [CC1Option, FC1Option, NoDriverOption] in {
+let Group = Action_Group in {
+
+def emit_obj : Flag<["-"], "emit-obj">,
+  HelpText<"Emit native object files">;
+
+} // let Group = Action_Group
+} // let Flags = [CC1Option, FC1Option, NoDriverOption]
 
 //===----------------------------------------------------------------------===//
 // cc1as-only Options

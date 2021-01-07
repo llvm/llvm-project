@@ -111,3 +111,10 @@ void ParseSyntaxOnlyAction::ExecuteAction() {
     ci.diagnostics().Report(DiagID) << GetCurrentFileOrBufferName();
   }
 }
+
+void EmitObjAction::ExecuteAction() {
+  CompilerInstance &ci = this->instance();
+  unsigned DiagID = ci.diagnostics().getCustomDiagID(
+      clang::DiagnosticsEngine::Error, "code-generation is not available yet");
+  ci.diagnostics().Report(DiagID);
+}
