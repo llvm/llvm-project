@@ -2376,12 +2376,16 @@ bool llvm::removeUnreachableBlocks(Function &F, DomTreeUpdater *DTU,
   // their internal references. Update DTU if available.
   std::vector<DominatorTree::UpdateType> Updates;
   for (auto *BB : DeadBlockSet) {
+    SmallSetVector<BasicBlock *, 8> UniqueSuccessors;
     for (BasicBlock *Successor : successors(BB)) {
       if (!DeadBlockSet.count(Successor))
         Successor->removePredecessor(BB);
       if (DTU)
-        Updates.push_back({DominatorTree::Delete, BB, Successor});
+        UniqueSuccessors.insert(Successor);
     }
+    if (DTU)
+      for (auto *UniqueSuccessor : UniqueSuccessors)
+        Updates.push_back({DominatorTree::Delete, BB, UniqueSuccessor});
     BB->dropAllReferences();
     if (DTU) {
       Instruction *TI = BB->getTerminator();
@@ -2398,7 +2402,7 @@ bool llvm::removeUnreachableBlocks(Function &F, DomTreeUpdater *DTU,
   }
 
   if (DTU) {
-    DTU->applyUpdatesPermissive(Updates);
+    DTU->applyUpdates(Updates);
     bool Deleted = false;
     for (auto *BB : DeadBlockSet) {
       if (DTU->isBBPendingDeletion(BB))
