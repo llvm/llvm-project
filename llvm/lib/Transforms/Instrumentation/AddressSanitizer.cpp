@@ -1876,8 +1876,8 @@ bool ModuleAddressSanitizer::shouldInstrumentGlobal(GlobalVariable *G) const {
     // Do not instrument user-defined sections (with names resembling
     // valid C identifiers)
     if (TargetTriple.isOSBinFormatELF()) {
-      if (std::all_of(Section.begin(), Section.end(),
-                      [](char c) { return llvm::isAlnum(c) || c == '_'; }))
+      if (llvm::all_of(Section,
+                       [](char c) { return llvm::isAlnum(c) || c == '_'; }))
         return false;
     }
 

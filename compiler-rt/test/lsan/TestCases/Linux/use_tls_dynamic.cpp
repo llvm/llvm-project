@@ -23,6 +23,11 @@
 int main(int argc, char *argv[]) {
   std::string path = std::string(argv[0]) + "-so.so";
 
+  // Clear any previous errors. On Android, the dynamic loader can have some
+  // left over dlerror() messages due to a missing symbol resolution for a
+  // deprecated malloc function.
+  dlerror();
+
   void *handle = dlopen(path.c_str(), RTLD_LAZY);
   assert(handle != 0);
   typedef void **(* store_t)(void *p);
@@ -31,10 +36,10 @@ int main(int argc, char *argv[]) {
   // Sometimes dlerror() occurs when we broke the interceptors.
   // Add the message here to make the error more obvious.
   const char *dlerror_msg = dlerror();
-  assert(dlerror_msg == nullptr);
   if (dlerror_msg != nullptr) {
     fprintf(stderr, "DLERROR: %s\n", dlerror_msg);
     fflush(stderr);
+    abort();
   }
   void *p = malloc(1337);
   // If we don't  know about dynamic TLS, we will return a false leak above.

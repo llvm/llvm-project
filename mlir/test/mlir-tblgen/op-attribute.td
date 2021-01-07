@@ -77,6 +77,12 @@ def AOp : NS_Op<"a_op", []> {
 // DEF:      void AOp::cAttrAttr(some-attr-kind attr) {
 // DEF-NEXT:   (*this)->setAttr("cAttr", attr);
 
+// Test remove methods
+// ---
+
+// DEF: ::mlir::Attribute AOp::removeCAttrAttr() {
+// DEF-NEXT: return (*this)->removeAttr("cAttr");
+
 // Test build methods
 // ---
 
@@ -265,6 +271,9 @@ def UnitAttrOp : NS_Op<"unit_attr_op", []> {
 // DEF: bool UnitAttrOp::attr() {
 // DEF:   return {{.*}} != nullptr
 
+// DEF: ::mlir::Attribute UnitAttrOp::removeAttrAttr() {
+// DEF-NEXT:   (*this)->removeAttr("attr");
+
 // DEF: build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, /*optional*/::mlir::UnitAttr attr)
 
 
@@ -279,9 +288,9 @@ def SomeTypedArrayAttr : TypedArrayAttrBase<SomeAttr, "SomeAttr array">;
 def Test_Dialect_2 : Dialect {
   let name = "dialect_2";
 }
-def MyStruct : StructAttr<"MyStruct", Test_Dialect_2, 
+def MyStruct : StructAttr<"MyStruct", Test_Dialect_2,
 [StructFieldAttr<"potatoes", I64ElementsAttr>]> {
-  let description = "A structure describing a number of potatoes.";
+  let summary = "A structure describing a number of potatoes.";
 }
 
 def StructAttrOp : NS_Op<"struct_attr_op", []> {

@@ -328,6 +328,7 @@ void unevaluated() {
                         // expected-warning@-1 {{declaration does not declare anything}}
   sizeof(co_await a); // expected-error {{'co_await' cannot be used in an unevaluated context}}
                       // expected-error@-1 {{invalid application of 'sizeof' to an incomplete type 'void'}}
+                      // expected-warning@-2 {{expression with side effects has no effect in an unevaluated context}}
   typeid(co_await a); // expected-error {{'co_await' cannot be used in an unevaluated context}}
                       // expected-warning@-1 {{expression with side effects has no effect in an unevaluated context}}
                       // expected-warning@-2 {{expression result unused}}
@@ -335,6 +336,7 @@ void unevaluated() {
                         // expected-warning@-1 {{declaration does not declare anything}}
   sizeof(co_yield 2); // expected-error {{'co_yield' cannot be used in an unevaluated context}}
                       // expected-error@-1 {{invalid application of 'sizeof' to an incomplete type 'void'}}
+                      // expected-warning@-2 {{expression with side effects has no effect in an unevaluated context}}
   typeid(co_yield 3); // expected-error {{'co_yield' cannot be used in an unevaluated context}}
                       // expected-warning@-1 {{expression with side effects has no effect in an unevaluated context}}
                       // expected-warning@-2 {{expression result unused}}

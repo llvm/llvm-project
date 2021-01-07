@@ -598,10 +598,6 @@ public:
     void verify();
 #endif
 
-    /// Handle any necessary parent set updates after inserting a trivial ref
-    /// or call edge.
-    void handleTrivialEdgeInsertion(Node &SourceN, Node &TargetN);
-
   public:
     using iterator = pointee_iterator<SmallVectorImpl<SCC *>::const_iterator>;
     using range = iterator_range<iterator>;
@@ -1001,10 +997,6 @@ public:
   /// remain active and reachable.
   bool isLibFunction(Function &F) const { return LibFunctions.count(&F); }
 
-  /// Helper to initialize a new node created outside of creating SCCs and add
-  /// it to the NodeMap. e.g. when a function is outlined.
-  Node &initNode(Node &N, LazyCallGraph::SCC &C);
-
   ///@{
   /// \name Pre-SCC Mutation API
   ///
@@ -1053,6 +1045,30 @@ public:
   /// DFS in order to call this safely. Typically, the function will have been
   /// fully visited by the DFS prior to calling this routine.
   void removeDeadFunction(Function &F);
+
+  /// Add a new function split/outlined from an existing function.
+  ///
+  /// The new function may only reference other functions that the original
+  /// function did.
+  ///
+  /// The original function must reference (either directly or indirectly) the
+  /// new function.
+  ///
+  /// The new function may also reference the original function.
+  /// It may end up in a parent SCC in the case that the original function's
+  /// edge to the new function is a ref edge, and the edge back is a call edge.
+  void addSplitFunction(Function &OriginalFunction, Function &NewFunction);
+
+  /// Add new ref-recursive functions split/outlined from an existing function.
+  ///
+  /// The new functions may only reference other functions that the original
+  /// function did. The new functions may reference (not call) the original
+  /// function.
+  ///
+  /// The original function must reference (not call) all new functions.
+  /// All new functions must reference (not call) each other.
+  void addSplitRefRecursiveFunctions(Function &OriginalFunction,
+                                     ArrayRef<Function *> NewFunctions);
 
   ///@}
 
@@ -1156,6 +1172,11 @@ private:
   /// Helper to insert a new function, with an already looked-up entry in
   /// the NodeMap.
   Node &insertInto(Function &F, Node *&MappedN);
+
+  /// Helper to initialize a new node created outside of creating SCCs and add
+  /// it to the NodeMap if necessary. For example, useful when a function is
+  /// split.
+  Node &initNode(Function &F);
 
   /// Helper to update pointers back to the graph object during moves.
   void updateGraphPtrs();

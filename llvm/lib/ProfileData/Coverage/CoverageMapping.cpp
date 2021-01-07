@@ -249,7 +249,12 @@ Error CoverageMapping::loadFunctionRecord(
       consumeError(std::move(E));
       return Error::success();
     }
-    Function.pushRegion(Region, *ExecutionCount);
+    Expected<int64_t> AltExecutionCount = Ctx.evaluate(Region.FalseCount);
+    if (auto E = AltExecutionCount.takeError()) {
+      consumeError(std::move(E));
+      return Error::success();
+    }
+    Function.pushRegion(Region, *ExecutionCount, *AltExecutionCount);
   }
 
   // Don't create records for (filenames, function) pairs we've already seen.
@@ -611,8 +616,7 @@ public:
 std::vector<StringRef> CoverageMapping::getUniqueSourceFiles() const {
   std::vector<StringRef> Filenames;
   for (const auto &Function : getCoveredFunctions())
-    Filenames.insert(Filenames.end(), Function.Filenames.begin(),
-                     Function.Filenames.end());
+    llvm::append_range(Filenames, Function.Filenames);
   llvm::sort(Filenames);
   auto Last = std::unique(Filenames.begin(), Filenames.end());
   Filenames.erase(Last, Filenames.end());
@@ -672,6 +676,10 @@ CoverageData CoverageMapping::getCoverageForFile(StringRef Filename) const {
         if (MainFileID && isExpansion(CR, *MainFileID))
           FileCoverage.Expansions.emplace_back(CR, Function);
       }
+    // Capture branch regions specific to the function (excluding expansions).
+    for (const auto &CR : Function.CountedBranchRegions)
+      if (FileIDs.test(CR.FileID) && (CR.FileID == CR.ExpandedFileID))
+        FileCoverage.BranchRegions.push_back(CR);
   }
 
   LLVM_DEBUG(dbgs() << "Emitting segments for file: " << Filename << "\n");
@@ -719,6 +727,10 @@ CoverageMapping::getCoverageForFunction(const FunctionRecord &Function) const {
       if (isExpansion(CR, *MainFileID))
         FunctionCoverage.Expansions.emplace_back(CR, Function);
     }
+  // Capture branch regions specific to the function (excluding expansions).
+  for (const auto &CR : Function.CountedBranchRegions)
+    if (CR.FileID == *MainFileID)
+      FunctionCoverage.BranchRegions.push_back(CR);
 
   LLVM_DEBUG(dbgs() << "Emitting segments for function: " << Function.Name
                     << "\n");
@@ -738,6 +750,10 @@ CoverageData CoverageMapping::getCoverageForExpansion(
       if (isExpansion(CR, Expansion.FileID))
         ExpansionCoverage.Expansions.emplace_back(CR, Expansion.Function);
     }
+  for (const auto &CR : Expansion.Function.CountedBranchRegions)
+    // Capture branch regions that only pertain to the corresponding expansion.
+    if (CR.FileID == Expansion.FileID)
+      ExpansionCoverage.BranchRegions.push_back(CR);
 
   LLVM_DEBUG(dbgs() << "Emitting segments for expansion of file "
                     << Expansion.FileID << "\n");

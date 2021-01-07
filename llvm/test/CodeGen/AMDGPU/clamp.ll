@@ -1,5 +1,5 @@
 ; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI,GFX678 %s
-; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX89,VI,GFX678 %s
+; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX89,GFX678 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX89,GFX9 %s
 
 ; GCN-LABEL: {{^}}v_clamp_f32:
@@ -25,7 +25,7 @@ define amdgpu_kernel void @v_clamp_neg_f32(float addrspace(1)* %out, float addrs
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
   %a = load float, float addrspace(1)* %gep0
-  %fneg.a = fsub float -0.0, %a
+  %fneg.a = fneg float %a
   %max = call float @llvm.maxnum.f32(float %fneg.a, float 0.0)
   %med = call float @llvm.minnum.f32(float %max, float 1.0)
 
@@ -42,7 +42,7 @@ define amdgpu_kernel void @v_clamp_negabs_f32(float addrspace(1)* %out, float ad
   %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
   %a = load float, float addrspace(1)* %gep0
   %fabs.a = call float @llvm.fabs.f32(float %a)
-  %fneg.fabs.a = fsub float -0.0, %fabs.a
+  %fneg.fabs.a = fneg float %fabs.a
 
   %max = call float @llvm.maxnum.f32(float %fneg.fabs.a, float 0.0)
   %med = call float @llvm.minnum.f32(float %max, float 1.0)

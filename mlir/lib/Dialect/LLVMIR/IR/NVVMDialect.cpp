@@ -53,19 +53,18 @@ static ParseResult parseNVVMShflSyncBflyOp(OpAsmParser &parser,
       parser.addTypeToList(resultType, result.types))
     return failure();
 
-  auto type = resultType.cast<LLVM::LLVMType>();
   for (auto &attr : result.attributes) {
     if (attr.first != "return_value_and_is_valid")
       continue;
-    auto structType = type.dyn_cast<LLVM::LLVMStructType>();
+    auto structType = resultType.dyn_cast<LLVM::LLVMStructType>();
     if (structType && !structType.getBody().empty())
-      type = structType.getBody()[0];
+      resultType = structType.getBody()[0];
     break;
   }
 
   auto int32Ty =
       LLVM::LLVMIntegerType::get(parser.getBuilder().getContext(), 32);
-  return parser.resolveOperands(ops, {int32Ty, type, int32Ty, int32Ty},
+  return parser.resolveOperands(ops, {int32Ty, resultType, int32Ty, int32Ty},
                                 parser.getNameLoc(), result.operands);
 }
 

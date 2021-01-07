@@ -538,15 +538,8 @@ static void genBuffers(Merger &merger, CodeGen &codegen,
       // Find lower and upper bound in current dimension.
       Value up;
       if (shape[d] == TensorType::kDynamicSize) {
-        // For the output tensor, we may need to infer the upper bound.
-        // For all others, we look at the incoming argument.
-        if (t == numInputs && !op.getNumInitTensors()) {
-          up = codegen.sizes[i];
-          assert(up); // TODO: what else?
-        } else {
-          Value arg = t < numInputs ? op.getInput(t) : op.getInitTensors()[0];
-          up = rewriter.create<DimOp>(loc, arg, d);
-        }
+        Value arg = t < numInputs ? op.getInput(t) : op.getOutput(0);
+        up = rewriter.create<DimOp>(loc, arg, d);
         args.push_back(up);
       } else {
         up = rewriter.create<ConstantIndexOp>(loc, shape[d]);

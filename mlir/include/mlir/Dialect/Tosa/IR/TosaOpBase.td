@@ -63,7 +63,7 @@ def Tosa_UnaryOpQuantizationAttr : StructAttr<"UnaryOpQuantizationAttr",
     StructFieldAttr<"input_zp",         I32Attr>,
     StructFieldAttr<"output_zp",        I32Attr>
     ]> {
-  let description = "Attribute for UnaryOp quantization information.";
+  let summary = "Attribute for UnaryOp quantization information.";
 }
 
 // There is no explicit BinaryOpQuantizationAttr for 2-input/1-output ops. In
@@ -82,7 +82,7 @@ def Tosa_ConvOpQuantizationAttr : StructAttr<"ConvOpQuantizationAttr",
     StructFieldAttr<"input_zp",         I32Attr>,
     StructFieldAttr<"weight_zp",        I32Attr>
     ]> {
-  let description = "Attribute for Conv type op quantization information.";
+  let summary = "Attribute for Conv type op quantization information.";
 }
 
 def Tosa_MatMulOpQuantizationAttr : StructAttr<"MatMulOpQuantizationAttr",
@@ -90,7 +90,7 @@ def Tosa_MatMulOpQuantizationAttr : StructAttr<"MatMulOpQuantizationAttr",
     StructFieldAttr<"a_zp",             I32Attr>,
     StructFieldAttr<"b_zp",             I32Attr>
     ]> {
-  let description = "Attribute for MatMulOp quantization information.";
+  let summary = "Attribute for MatMulOp quantization information.";
 }
 
 // This attribute holds input zero point correction applied to the padding
@@ -101,7 +101,7 @@ def Tosa_PadOpQuantizationAttr : StructAttr<"PadOpQuantizationAttr",
   Tosa_Dialect, [
     StructFieldAttr<"input_zp",         I32Attr>
     ]> {
-  let description = "Attribute for PadOp quantization information.";
+  let summary = "Attribute for PadOp quantization information.";
 }
 
 //===----------------------------------------------------------------------===//

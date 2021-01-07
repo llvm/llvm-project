@@ -177,6 +177,40 @@ public:
     return llvm::APInt(bitWidth, numWords, &data[0]);
   }
 
+  llvm::FixedPointSemantics readFixedPointSemantics() {
+    unsigned width = asImpl().readUInt32();
+    unsigned scale = asImpl().readUInt32();
+    unsigned tmp = asImpl().readUInt32();
+    bool isSigned = tmp & 0x1;
+    bool isSaturated = tmp & 0x2;
+    bool hasUnsignedPadding = tmp & 0x4;
+    return llvm::FixedPointSemantics(width, scale, isSigned, isSaturated,
+                                     hasUnsignedPadding);
+  }
+
+  APValue::LValuePathSerializationHelper readLValuePathSerializationHelper(
+      SmallVectorImpl<APValue::LValuePathEntry> &path) {
+    auto elemTy = asImpl().readQualType();
+    unsigned pathLength = asImpl().readUInt32();
+    for (unsigned i = 0; i < pathLength; ++i) {
+      if (elemTy->template getAs<RecordType>()) {
+        unsigned int_ = asImpl().readUInt32();
+        Decl *decl = asImpl().template readDeclAs<Decl>();
+        if (auto *recordDecl = dyn_cast<CXXRecordDecl>(decl))
+          elemTy = getASTContext().getRecordType(recordDecl);
+        else
+          elemTy = cast<ValueDecl>(decl)->getType();
+        path.push_back(
+            APValue::LValuePathEntry(APValue::BaseOrMemberType(decl, int_)));
+      } else {
+        elemTy = getASTContext().getAsArrayType(elemTy)->getElementType();
+        path.push_back(
+            APValue::LValuePathEntry::ArrayIndex(asImpl().readUInt32()));
+      }
+    }
+    return APValue::LValuePathSerializationHelper(path, elemTy);
+  }
+
   Qualifiers readQualifiers() {
     static_assert(sizeof(Qualifiers().getAsOpaqueValue()) <= sizeof(uint32_t),
                   "update this if the value size changes");

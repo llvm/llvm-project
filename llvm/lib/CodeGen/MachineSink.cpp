@@ -1024,9 +1024,9 @@ bool MachineSinking::hasStoreBetween(MachineBasicBlock *From,
     return HasStoreCache[BlockPair];
 
   if (StoreInstrCache.find(BlockPair) != StoreInstrCache.end())
-    return std::any_of(
-        StoreInstrCache[BlockPair].begin(), StoreInstrCache[BlockPair].end(),
-        [&](MachineInstr *I) { return I->mayAlias(AA, MI, false); });
+    return llvm::any_of(StoreInstrCache[BlockPair], [&](MachineInstr *I) {
+      return I->mayAlias(AA, MI, false);
+    });
 
   bool SawStore = false;
   bool HasAliasedStore = false;
@@ -1588,7 +1588,6 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
     // recorded which reg units that DBG_VALUEs read, if this instruction
     // writes any of those units then the corresponding DBG_VALUEs must sink.
     SetVector<MachineInstr *> DbgValsToSinkSet;
-    SmallVector<MachineInstr *, 4> DbgValsToSink;
     for (auto &MO : MI->operands()) {
       if (!MO.isReg() || !MO.isDef())
         continue;
@@ -1598,8 +1597,8 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
         for (auto *MI : SeenDbgInstrs.lookup(Reg))
           DbgValsToSinkSet.insert(MI);
     }
-    DbgValsToSink.insert(DbgValsToSink.begin(), DbgValsToSinkSet.begin(),
-                         DbgValsToSinkSet.end());
+    SmallVector<MachineInstr *, 4> DbgValsToSink(DbgValsToSinkSet.begin(),
+                                                 DbgValsToSinkSet.end());
 
     // Clear the kill flag if SrcReg is killed between MI and the end of the
     // block.

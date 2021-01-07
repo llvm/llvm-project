@@ -1,4 +1,5 @@
 ; RUN: opt < %s -prune-eh -S -enable-new-pm=0 | not grep "ret i32"
+; RUN: opt < %s -passes='function-attrs,function(simplifycfg)' -S | not grep "ret i32"
 
 declare void @noreturn() noreturn
 

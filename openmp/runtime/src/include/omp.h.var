@@ -213,6 +213,24 @@
      */
     extern const char * __KAI_KMPC_CONVENTION  omp_get_interop_rc_desc(const omp_interop_rc_t, omp_interop_rc_t);
 
+    /* OpenMP 5.1 device memory routines */
+
+    /*!
+     * The `omp_target_memcpy_async` routine asynchronously performs a copy between any combination of host and device pointers.
+     */
+    extern int    __KAI_KMPC_CONVENTION  omp_target_memcpy_async(void *, const void *, size_t, size_t, size_t, int,
+                                             int, int, omp_depend_t *);
+    /*!
+     * The `omp_target_memcpy_rect_async` routine asynchronously performs a copy between any combination of host and device pointers.
+     */
+    extern int    __KAI_KMPC_CONVENTION  omp_target_memcpy_rect_async(void *, const void *, size_t, int, const size_t *,
+                                             const size_t *, const size_t *, const size_t *, const size_t *, int, int,
+                                             int, omp_depend_t *);
+    /*!
+     * The `omp_get_mapped_ptr` routine returns the device pointer that is associated with a host pointer for a given device.
+     */
+    extern void * __KAI_KMPC_CONVENTION  omp_get_mapped_ptr(const void *, int);
+
     /* kmp API functions */
     extern int    __KAI_KMPC_CONVENTION  kmp_get_stacksize          (void);
     extern void   __KAI_KMPC_CONVENTION  kmp_set_stacksize          (int);

@@ -65,7 +65,7 @@ private:
     llvmInt64Type = LLVM::LLVMIntegerType::get(&getContext(), 64);
   }
 
-  LLVM::LLVMType getMemRefType(uint32_t rank, LLVM::LLVMType elemenType) {
+  Type getMemRefType(uint32_t rank, Type elemenType) {
     // According to the MLIR doc memref argument is converted into a
     // pointer-to-struct argument of type:
     // template <typename Elem, size_t Rank>
@@ -89,10 +89,10 @@ private:
          llvmArrayRankElementSizeType, llvmArrayRankElementSizeType});
   }
 
-  LLVM::LLVMType getVoidType() { return llvmVoidType; }
-  LLVM::LLVMType getPointerType() { return llvmPointerType; }
-  LLVM::LLVMType getInt32Type() { return llvmInt32Type; }
-  LLVM::LLVMType getInt64Type() { return llvmInt64Type; }
+  Type getVoidType() { return llvmVoidType; }
+  Type getPointerType() { return llvmPointerType; }
+  Type getInt32Type() { return llvmInt32Type; }
+  Type getInt64Type() { return llvmInt64Type; }
 
   /// Creates an LLVM global for the given `name`.
   Value createEntryPointNameConstant(StringRef name, Location loc,
@@ -128,10 +128,10 @@ private:
 
   /// Deduces a rank and element type from the given 'ptrToMemRefDescriptor`.
   LogicalResult deduceMemRefRankAndType(Value ptrToMemRefDescriptor,
-                                        uint32_t &rank, LLVM::LLVMType &type);
+                                        uint32_t &rank, Type &type);
 
   /// Returns a string representation from the given `type`.
-  StringRef stringifyType(LLVM::LLVMType type) {
+  StringRef stringifyType(Type type) {
     if (type.isa<LLVM::LLVMFloatType>())
       return "Float";
     if (type.isa<LLVM::LLVMHalfType>())
@@ -152,11 +152,11 @@ public:
   void runOnOperation() override;
 
 private:
-  LLVM::LLVMType llvmFloatType;
-  LLVM::LLVMType llvmVoidType;
-  LLVM::LLVMType llvmPointerType;
-  LLVM::LLVMType llvmInt32Type;
-  LLVM::LLVMType llvmInt64Type;
+  Type llvmFloatType;
+  Type llvmVoidType;
+  Type llvmPointerType;
+  Type llvmInt32Type;
+  Type llvmInt64Type;
 
   // TODO: Use an associative array to support multiple vulkan launch calls.
   std::pair<StringAttr, StringAttr> spirvAttributes;
@@ -230,7 +230,7 @@ void VulkanLaunchFuncToVulkanCallsPass::createBindMemRefCalls(
 
     auto ptrToMemRefDescriptor = en.value();
     uint32_t rank = 0;
-    LLVM::LLVMType type;
+    Type type;
     if (failed(deduceMemRefRankAndType(ptrToMemRefDescriptor, rank, type))) {
       cInterfaceVulkanLaunchCallOp.emitError()
           << "invalid memref descriptor " << ptrToMemRefDescriptor.getType();
@@ -258,7 +258,7 @@ void VulkanLaunchFuncToVulkanCallsPass::createBindMemRefCalls(
 }
 
 LogicalResult VulkanLaunchFuncToVulkanCallsPass::deduceMemRefRankAndType(
-    Value ptrToMemRefDescriptor, uint32_t &rank, LLVM::LLVMType &type) {
+    Value ptrToMemRefDescriptor, uint32_t &rank, Type &type) {
   auto llvmPtrDescriptorTy =
       ptrToMemRefDescriptor.getType().dyn_cast<LLVM::LLVMPointerType>();
   if (!llvmPtrDescriptorTy)
@@ -324,12 +324,11 @@ void VulkanLaunchFuncToVulkanCallsPass::declareVulkanFunctions(Location loc) {
   }
 
   for (unsigned i = 1; i <= 3; i++) {
-    SmallVector<LLVM::LLVMType, 5> types{
-        LLVM::LLVMFloatType::get(&getContext()),
-        LLVM::LLVMIntegerType::get(&getContext(), 32),
-        LLVM::LLVMIntegerType::get(&getContext(), 16),
-        LLVM::LLVMIntegerType::get(&getContext(), 8),
-        LLVM::LLVMHalfType::get(&getContext())};
+    SmallVector<Type, 5> types{LLVM::LLVMFloatType::get(&getContext()),
+                               LLVM::LLVMIntegerType::get(&getContext(), 32),
+                               LLVM::LLVMIntegerType::get(&getContext(), 16),
+                               LLVM::LLVMIntegerType::get(&getContext(), 8),
+                               LLVM::LLVMHalfType::get(&getContext())};
     for (auto type : types) {
       std::string fnName = "bindMemRef" + std::to_string(i) + "D" +
                            std::string(stringifyType(type));

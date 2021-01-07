@@ -1200,11 +1200,11 @@ define float @extra_args_no_replace(float* nocapture readonly %x, i32 %a, i32 %b
 define i32 @wobble(i32 %arg, i32 %bar) {
 ; CHECK-LABEL: @wobble(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> undef, i32 [[ARG:%.*]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[ARG:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[TMP0]], i32 [[ARG]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[ARG]], i32 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[ARG]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> undef, i32 [[BAR:%.*]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> poison, i32 [[BAR:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[BAR]], i32 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[BAR]], i32 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[BAR]], i32 3
@@ -1219,11 +1219,11 @@ define i32 @wobble(i32 %arg, i32 %bar) {
 ;
 ; THRESHOLD-LABEL: @wobble(
 ; THRESHOLD-NEXT:  bb:
-; THRESHOLD-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> undef, i32 [[ARG:%.*]], i32 0
+; THRESHOLD-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[ARG:%.*]], i32 0
 ; THRESHOLD-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[TMP0]], i32 [[ARG]], i32 1
 ; THRESHOLD-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[ARG]], i32 2
 ; THRESHOLD-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[ARG]], i32 3
-; THRESHOLD-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> undef, i32 [[BAR:%.*]], i32 0
+; THRESHOLD-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> poison, i32 [[BAR:%.*]], i32 0
 ; THRESHOLD-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[BAR]], i32 1
 ; THRESHOLD-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[BAR]], i32 2
 ; THRESHOLD-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[BAR]], i32 3

@@ -187,15 +187,6 @@ void RISCVInstPrinter::printVMaskReg(const MCInst *MI, unsigned OpNo,
   O << ".t";
 }
 
-void RISCVInstPrinter::printSImm5Plus1(const MCInst *MI, unsigned OpNo,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &O) {
-  const MCOperand &MO = MI->getOperand(OpNo);
-
-  assert(MO.isImm() && "printSImm5Plus1 can only print constant operands");
-  O << MO.getImm() + 1;
-}
-
 const char *RISCVInstPrinter::getRegisterName(unsigned RegNo) {
   return getRegisterName(RegNo, ArchRegNames ? RISCV::NoRegAltName
                                              : RISCV::ABIRegAltName);

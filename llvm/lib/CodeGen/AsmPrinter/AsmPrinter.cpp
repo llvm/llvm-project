@@ -1970,8 +1970,7 @@ void AsmPrinter::emitConstantPool() {
       unsigned NewOffset = alignTo(Offset, CPE.getAlign());
       OutStreamer->emitZeros(NewOffset - Offset);
 
-      Type *Ty = CPE.getType();
-      Offset = NewOffset + getDataLayout().getTypeAllocSize(Ty);
+      Offset = NewOffset + CPE.getSizeInBytes(getDataLayout());
 
       OutStreamer->emitLabel(Sym);
       if (CPE.isMachineConstantPoolEntry())

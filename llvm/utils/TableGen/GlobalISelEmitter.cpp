@@ -4998,7 +4998,8 @@ GlobalISelEmitter::inferSuperRegisterClass(const TypeSetByHwMode &Ty,
   // Use the information we found above to find a minimal register class which
   // supports the subregister and type we want.
   auto RC =
-      Target.getSuperRegForSubReg(Ty.getValueTypeByHwMode(), CGRegs, SubIdx);
+      Target.getSuperRegForSubReg(Ty.getValueTypeByHwMode(), CGRegs, SubIdx,
+                                  /* MustBeAllocatable */ true);
   if (!RC)
     return None;
   return *RC;

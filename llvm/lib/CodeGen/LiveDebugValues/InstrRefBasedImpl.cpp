@@ -182,6 +182,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/TypeSize.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -221,14 +222,16 @@ namespace {
 // an offset.
 struct SpillLoc {
   unsigned SpillBase;
-  int SpillOffset;
+  StackOffset SpillOffset;
   bool operator==(const SpillLoc &Other) const {
-    return std::tie(SpillBase, SpillOffset) ==
-           std::tie(Other.SpillBase, Other.SpillOffset);
+    return std::make_pair(SpillBase, SpillOffset) ==
+           std::make_pair(Other.SpillBase, Other.SpillOffset);
   }
   bool operator<(const SpillLoc &Other) const {
-    return std::tie(SpillBase, SpillOffset) <
-           std::tie(Other.SpillBase, Other.SpillOffset);
+    return std::make_tuple(SpillBase, SpillOffset.getFixed(),
+                    SpillOffset.getScalable()) <
+           std::make_tuple(Other.SpillBase, Other.SpillOffset.getFixed(),
+                    Other.SpillOffset.getScalable());
   }
 };
 
@@ -769,8 +772,10 @@ public:
     } else if (LocIdxToLocID[*MLoc] >= NumRegs) {
       unsigned LocID = LocIdxToLocID[*MLoc];
       const SpillLoc &Spill = SpillLocs[LocID - NumRegs + 1];
-      Expr = DIExpression::prepend(Expr, DIExpression::ApplyOffset,
-                                   Spill.SpillOffset);
+
+      auto *TRI = MF.getSubtarget().getRegisterInfo();
+      Expr = TRI->prependOffsetExpression(Expr, DIExpression::ApplyOffset,
+                                          Spill.SpillOffset);
       unsigned Base = Spill.SpillBase;
       MIB.addReg(Base, RegState::Debug);
       MIB.addImm(0);
@@ -1579,9 +1584,7 @@ InstrRefBasedLDV::extractSpillBaseRegAndOffset(const MachineInstr &MI) {
   const MachineBasicBlock *MBB = MI.getParent();
   Register Reg;
   StackOffset Offset = TFI->getFrameIndexReference(*MBB->getParent(), FI, Reg);
-  assert(!Offset.getScalable() &&
-         "Frame offsets with a scalable component are not supported");
-  return {Reg, static_cast<int>(Offset.getFixed())};
+  return {Reg, Offset};
 }
 
 /// End all previous ranges related to @MI and start a new range from @MI

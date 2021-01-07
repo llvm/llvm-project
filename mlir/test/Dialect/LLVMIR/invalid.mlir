@@ -163,7 +163,7 @@ func @call_non_llvm() {
 // -----
 
 func @call_non_llvm_indirect(%arg0 : i32) {
-  // expected-error@+1 {{'llvm.call' op operand #0 must be LLVM dialect type, but got 'i32'}}
+  // expected-error@+1 {{'llvm.call' op operand #0 must be LLVM dialect-compatible type, but got 'i32'}}
   "llvm.call"(%arg0) : (i32) -> ()
 }
 

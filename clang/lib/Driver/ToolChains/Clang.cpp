@@ -3940,13 +3940,13 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
     CmdArgs.push_back("-gno-inline-line-tables");
   }
 
-  // Adjust the debug info kind for the given toolchain.
-  TC.adjustDebugInfoKind(DebugInfoKind, Args);
-
   // When emitting remarks, we need at least debug lines in the output.
   if (willEmitRemarks(Args) &&
       DebugInfoKind <= codegenoptions::DebugDirectivesOnly)
     DebugInfoKind = codegenoptions::DebugLineTablesOnly;
+
+  // Adjust the debug info kind for the given toolchain.
+  TC.adjustDebugInfoKind(DebugInfoKind, Args);
 
   RenderDebugEnablingArgs(Args, CmdArgs, DebugInfoKind, EffectiveDWARFVersion,
                           DebuggerTuning);
@@ -6396,26 +6396,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_fno_cxx_static_destructors, true))
     CmdArgs.push_back("-fno-c++-static-destructors");
 
-  if (Arg *A = Args.getLastArg(options::OPT_moutline,
-                               options::OPT_mno_outline)) {
-    if (A->getOption().matches(options::OPT_moutline)) {
-      // We only support -moutline in AArch64 and ARM targets right now. If
-      // we're not compiling for these, emit a warning and ignore the flag.
-      // Otherwise, add the proper mllvm flags.
-      if (!(Triple.isARM() || Triple.isThumb() ||
-            Triple.getArch() == llvm::Triple::aarch64 ||
-            Triple.getArch() == llvm::Triple::aarch64_32)) {
-        D.Diag(diag::warn_drv_moutline_unsupported_opt) << Triple.getArchName();
-      } else {
-        CmdArgs.push_back("-mllvm");
-        CmdArgs.push_back("-enable-machine-outliner");
-      }
-    } else {
-      // Disable all outlining behaviour.
-      CmdArgs.push_back("-mllvm");
-      CmdArgs.push_back("-enable-machine-outliner=never");
-    }
-  }
+  addMachineOutlinerArgs(D, Args, CmdArgs, Triple, /*IsLTO=*/false);
 
   if (Arg *A = Args.getLastArg(options::OPT_moutline_atomics,
                                options::OPT_mno_outline_atomics)) {

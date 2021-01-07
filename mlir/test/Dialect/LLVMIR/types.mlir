@@ -182,3 +182,29 @@ func @identified_struct() {
   return
 }
 
+func @verbose() {
+  // CHECK: !llvm.struct<(i64, struct<(float)>)>
+  "some.op"() : () -> !llvm.struct<(!llvm.i64, !llvm.struct<(!llvm.float)>)>
+  return
+}
+
+// -----
+
+// Check that type aliases can be used inside LLVM dialect types. Note that
+// currently they are _not_ printed back as this would require
+// DialectAsmPrinter to have a mechanism for querying the presence and
+// usability of an alias outside of its `printType` method.
+
+!baz = type !llvm.i64
+!qux = type !llvm.struct<(!baz)>
+
+!rec = type !llvm.struct<"a", (ptr<struct<"a">>)>
+
+// CHECK: aliases
+llvm.func @aliases() {
+  // CHECK: !llvm.struct<(i32, float, struct<(i64)>)>
+  "some.op"() : () -> !llvm.struct<(i32, float, !qux)>
+  // CHECK: !llvm.struct<"a", (ptr<struct<"a">>)>
+  "some.op"() : () -> !rec
+  llvm.return
+}

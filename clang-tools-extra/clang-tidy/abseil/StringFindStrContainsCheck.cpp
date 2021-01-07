@@ -24,9 +24,10 @@ namespace clang {
 namespace tidy {
 namespace abseil {
 
+using ::clang::transformer::addInclude;
 using ::clang::transformer::applyFirst;
 using ::clang::transformer::cat;
-using ::clang::transformer::change;
+using ::clang::transformer::changeTo;
 using ::clang::transformer::makeRule;
 using ::clang::transformer::node;
 using ::clang::transformer::RewriteRule;
@@ -38,22 +39,9 @@ static const char DefaultStringLikeClasses[] = "::std::basic_string;"
                                                "::absl::string_view";
 static const char DefaultAbseilStringsMatchHeader[] = "absl/strings/match.h";
 
-static llvm::Optional<transformer::RewriteRule>
-MakeRule(const LangOptions &LangOpts,
-         const ClangTidyCheck::OptionsView &Options) {
-  // Parse options.
-  //
-  // FIXME(tdl-g): These options are being parsed redundantly with the
-  // constructor because TransformerClangTidyCheck forces us to provide MakeRule
-  // before "this" is fully constructed, but StoreOptions requires us to store
-  // the parsed options in "this".  We need to fix TransformerClangTidyCheck and
-  // then we can clean this up.
-  const std::vector<std::string> StringLikeClassNames =
-      utils::options::parseStringList(
-          Options.get("StringLikeClasses", DefaultStringLikeClasses));
-  const std::string AbseilStringsMatchHeader =
-      Options.get("AbseilStringsMatchHeader", DefaultAbseilStringsMatchHeader);
-
+static transformer::RewriteRule
+makeRewriteRule(const std::vector<std::string> &StringLikeClassNames,
+                StringRef AbseilStringsMatchHeader) {
   auto StringLikeClass = cxxRecordDecl(hasAnyName(SmallVector<StringRef, 4>(
       StringLikeClassNames.begin(), StringLikeClassNames.end())));
   auto StringType =
@@ -75,29 +63,36 @@ MakeRule(const LangOptions &LangOpts,
       onImplicitObjectArgument(expr().bind("string_being_searched")));
 
   RewriteRule rule = applyFirst(
-      {makeRule(binaryOperator(hasOperatorName("=="),
-                               hasOperands(ignoringParenImpCasts(StringNpos),
-                                           ignoringParenImpCasts(StringFind))),
-                change(cat("!absl::StrContains(", node("string_being_searched"),
-                           ", ", node("parameter_to_find"), ")")),
-                cat("use !absl::StrContains instead of find() == npos")),
-       makeRule(binaryOperator(hasOperatorName("!="),
-                               hasOperands(ignoringParenImpCasts(StringNpos),
-                                           ignoringParenImpCasts(StringFind))),
-                change(cat("absl::StrContains(", node("string_being_searched"),
-                           ", ", node("parameter_to_find"), ")")),
-                cat("use absl::StrContains instead of find() != npos"))});
-  addInclude(rule, AbseilStringsMatchHeader);
+      {makeRule(
+           binaryOperator(hasOperatorName("=="),
+                          hasOperands(ignoringParenImpCasts(StringNpos),
+                                      ignoringParenImpCasts(StringFind))),
+           {changeTo(cat("!absl::StrContains(", node("string_being_searched"),
+                         ", ", node("parameter_to_find"), ")")),
+            addInclude(AbseilStringsMatchHeader)},
+           cat("use !absl::StrContains instead of find() == npos")),
+       makeRule(
+           binaryOperator(hasOperatorName("!="),
+                          hasOperands(ignoringParenImpCasts(StringNpos),
+                                      ignoringParenImpCasts(StringFind))),
+           {changeTo(cat("absl::StrContains(", node("string_being_searched"),
+                         ", ", node("parameter_to_find"), ")")),
+            addInclude(AbseilStringsMatchHeader)},
+           cat("use absl::StrContains instead "
+               "of find() != npos"))});
   return rule;
 }
 
 StringFindStrContainsCheck::StringFindStrContainsCheck(
     StringRef Name, ClangTidyContext *Context)
-    : TransformerClangTidyCheck(&MakeRule, Name, Context),
+    : TransformerClangTidyCheck(Name, Context),
       StringLikeClassesOption(utils::options::parseStringList(
           Options.get("StringLikeClasses", DefaultStringLikeClasses))),
       AbseilStringsMatchHeaderOption(Options.get(
-          "AbseilStringsMatchHeader", DefaultAbseilStringsMatchHeader)) {}
+          "AbseilStringsMatchHeader", DefaultAbseilStringsMatchHeader)) {
+  setRule(
+      makeRewriteRule(StringLikeClassesOption, AbseilStringsMatchHeaderOption));
+}
 
 bool StringFindStrContainsCheck::isLanguageVersionSupported(
     const LangOptions &LangOpts) const {

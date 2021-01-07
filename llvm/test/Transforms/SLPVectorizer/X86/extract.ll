@@ -57,7 +57,7 @@ define void @fextr2(double* %ptr) {
 ; CHECK-NEXT:    [[V0:%.*]] = extractelement <4 x double> [[LD]], i32 0
 ; CHECK-NEXT:    [[V1:%.*]] = extractelement <4 x double> [[LD]], i32 1
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds double, double* [[PTR:%.*]], i64 0
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> undef, double [[V0]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[V0]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[V1]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP1]], <double 5.500000e+00, double 6.600000e+00>
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast double* [[P0]] to <2 x double>*

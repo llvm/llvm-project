@@ -213,7 +213,7 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
     return Err;
   unsigned LineStart = 0;
   for (size_t I = 0; I < NumRegions; ++I) {
-    Counter C;
+    Counter C, C2;
     CounterMappingRegion::RegionKind Kind = CounterMappingRegion::CodeRegion;
 
     // Read the combined counter + region kind.
@@ -223,6 +223,18 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
       return Err;
     unsigned Tag = EncodedCounterAndRegion & Counter::EncodingTagMask;
     uint64_t ExpandedFileID = 0;
+
+    // If Tag does not represent a ZeroCounter, then it is understood to refer
+    // to a counter or counter expression with region kind assumed to be
+    // "CodeRegion". In that case, EncodedCounterAndRegion actually encodes the
+    // referenced counter or counter expression (and nothing else).
+    //
+    // If Tag represents a ZeroCounter and EncodingExpansionRegionBit is set,
+    // then EncodedCounterAndRegion is interpreted to represent an
+    // ExpansionRegion. In all other cases, EncodedCounterAndRegion is
+    // interpreted to refer to a specific region kind, after which additional
+    // fields may be read (e.g. BranchRegions have two encoded counters that
+    // follow an encoded region kind value).
     if (Tag != Counter::Zero) {
       if (auto Err = decodeCounter(EncodedCounterAndRegion, C))
         return Err;
@@ -242,6 +254,14 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
           break;
         case CounterMappingRegion::SkippedRegion:
           Kind = CounterMappingRegion::SkippedRegion;
+          break;
+        case CounterMappingRegion::BranchRegion:
+          // For a Branch Region, read two successive counters.
+          Kind = CounterMappingRegion::BranchRegion;
+          if (auto Err = readCounter(C))
+            return Err;
+          if (auto Err = readCounter(C2))
+            return Err;
           break;
         default:
           return make_error<CoverageMapError>(coveragemap_error::malformed);
@@ -294,7 +314,7 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
       dbgs() << "\n";
     });
 
-    auto CMR = CounterMappingRegion(C, InferredFileID, ExpandedFileID,
+    auto CMR = CounterMappingRegion(C, C2, InferredFileID, ExpandedFileID,
                                     LineStart, ColumnStart,
                                     LineStart + NumLines, ColumnEnd, Kind);
     if (CMR.startLoc() > CMR.endLoc())
@@ -600,7 +620,7 @@ public:
     CovBuf += FilenamesSize;
     FilenameRange FileRange(FilenamesBegin, Filenames.size() - FilenamesBegin);
 
-    if (Version == CovMapVersion::Version4) {
+    if (Version >= CovMapVersion::Version4) {
       // Map a hash of the filenames region to the filename range associated
       // with this coverage header.
       int64_t FilenamesRef =
@@ -628,7 +648,7 @@ public:
     // This is a no-op in Version4 (coverage mappings are not affixed to the
     // coverage header).
     const char *MappingBuf = CovBuf;
-    if (Version == CovMapVersion::Version4 && CoverageSize != 0)
+    if (Version >= CovMapVersion::Version4 && CoverageSize != 0)
       return make_error<CoverageMapError>(coveragemap_error::malformed);
     CovBuf += CoverageSize;
     const char *MappingEnd = CovBuf;
@@ -682,7 +702,7 @@ public:
       if (FileRange && !FileRange->isInvalid()) {
         StringRef Mapping =
             CFR->template getCoverageMapping<Endian>(OutOfLineMappingBuf);
-        if (Version == CovMapVersion::Version4 &&
+        if (Version >= CovMapVersion::Version4 &&
             Mapping.data() + Mapping.size() > FuncRecBufEnd)
           return make_error<CoverageMapError>(coveragemap_error::malformed);
         if (Error Err = insertFunctionRecordIfNeeded(CFR, Mapping, *FileRange))
@@ -711,6 +731,7 @@ Expected<std::unique_ptr<CovMapFuncRecordReader>> CovMapFuncRecordReader::get(
   case CovMapVersion::Version2:
   case CovMapVersion::Version3:
   case CovMapVersion::Version4:
+  case CovMapVersion::Version5:
     // Decompress the name data.
     if (Error E = P.create(P.getNameData()))
       return std::move(E);
@@ -723,6 +744,9 @@ Expected<std::unique_ptr<CovMapFuncRecordReader>> CovMapFuncRecordReader::get(
     else if (Version == CovMapVersion::Version4)
       return std::make_unique<VersionedCovMapFuncRecordReader<
           CovMapVersion::Version4, IntPtrT, Endian>>(P, R, F);
+    else if (Version == CovMapVersion::Version5)
+      return std::make_unique<VersionedCovMapFuncRecordReader<
+          CovMapVersion::Version5, IntPtrT, Endian>>(P, R, F);
   }
   llvm_unreachable("Unsupported version");
 }
@@ -766,7 +790,7 @@ static Error readCoverageMappingData(
   }
   // In Version4, function records are not affixed to coverage headers. Read
   // the records from their dedicated section.
-  if (Version == CovMapVersion::Version4)
+  if (Version >= CovMapVersion::Version4)
     return Reader->readFunctionRecords(FuncRecBuf, FuncRecBufEnd, None, nullptr,
                                        nullptr);
   return Error::success();

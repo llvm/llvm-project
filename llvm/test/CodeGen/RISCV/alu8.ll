@@ -44,13 +44,13 @@ define i8 @slti(i8 %a) nounwind {
 define i8 @sltiu(i8 %a) nounwind {
 ; RV32I-LABEL: sltiu:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    zext.b a0, a0
+; RV32I-NEXT:    andi a0, a0, 255
 ; RV32I-NEXT:    sltiu a0, a0, 3
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: sltiu:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    zext.b a0, a0
+; RV64I-NEXT:    andi a0, a0, 255
 ; RV64I-NEXT:    sltiu a0, a0, 3
 ; RV64I-NEXT:    ret
   %1 = icmp ult i8 %a, 3
@@ -215,15 +215,15 @@ define i8 @slt(i8 %a, i8 %b) nounwind {
 define i8 @sltu(i8 %a, i8 %b) nounwind {
 ; RV32I-LABEL: sltu:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    zext.b a1, a1
-; RV32I-NEXT:    zext.b a0, a0
+; RV32I-NEXT:    andi a1, a1, 255
+; RV32I-NEXT:    andi a0, a0, 255
 ; RV32I-NEXT:    sltu a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: sltu:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    zext.b a1, a1
-; RV64I-NEXT:    zext.b a0, a0
+; RV64I-NEXT:    andi a1, a1, 255
+; RV64I-NEXT:    andi a0, a0, 255
 ; RV64I-NEXT:    sltu a0, a0, a1
 ; RV64I-NEXT:    ret
   %1 = icmp ult i8 %a, %b
@@ -248,13 +248,13 @@ define i8 @xor(i8 %a, i8 %b) nounwind {
 define i8 @srl(i8 %a, i8 %b) nounwind {
 ; RV32I-LABEL: srl:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    zext.b a0, a0
+; RV32I-NEXT:    andi a0, a0, 255
 ; RV32I-NEXT:    srl a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: srl:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    zext.b a0, a0
+; RV64I-NEXT:    andi a0, a0, 255
 ; RV64I-NEXT:    srl a0, a0, a1
 ; RV64I-NEXT:    ret
   %1 = lshr i8 %a, %b

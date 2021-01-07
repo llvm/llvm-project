@@ -142,6 +142,8 @@ bool CompilerInstance::ExecuteAction(FrontendAction &act) {
   // TODO: Instead of defaults we should be setting these options based on the
   // user input.
   this->invocation().SetDefaultFortranOpts();
+  // Set the fortran options to user-based input.
+  this->invocation().setFortranOpts();
 
   // Connect Input to a CompileInstance
   for (const FrontendInputFile &fif : frontendOpts().inputs_) {

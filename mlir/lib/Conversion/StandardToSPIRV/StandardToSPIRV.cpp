@@ -187,36 +187,6 @@ static Value shiftValue(Location loc, Value value, Value offset, Value mask,
                                                    offset);
 }
 
-/// Returns true if the operator is operating on unsigned integers.
-/// TODO: Have a TreatOperandsAsUnsignedInteger trait and bake the information
-/// to the ops themselves.
-template <typename SPIRVOp>
-bool isUnsignedOp() {
-  return false;
-}
-
-#define CHECK_UNSIGNED_OP(SPIRVOp)                                             \
-  template <>                                                                  \
-  bool isUnsignedOp<SPIRVOp>() {                                               \
-    return true;                                                               \
-  }
-
-CHECK_UNSIGNED_OP(spirv::AtomicUMaxOp)
-CHECK_UNSIGNED_OP(spirv::AtomicUMinOp)
-CHECK_UNSIGNED_OP(spirv::BitFieldUExtractOp)
-CHECK_UNSIGNED_OP(spirv::ConvertUToFOp)
-CHECK_UNSIGNED_OP(spirv::GroupNonUniformUMaxOp)
-CHECK_UNSIGNED_OP(spirv::GroupNonUniformUMinOp)
-CHECK_UNSIGNED_OP(spirv::UConvertOp)
-CHECK_UNSIGNED_OP(spirv::UDivOp)
-CHECK_UNSIGNED_OP(spirv::UGreaterThanEqualOp)
-CHECK_UNSIGNED_OP(spirv::UGreaterThanOp)
-CHECK_UNSIGNED_OP(spirv::ULessThanEqualOp)
-CHECK_UNSIGNED_OP(spirv::ULessThanOp)
-CHECK_UNSIGNED_OP(spirv::UModOp)
-
-#undef CHECK_UNSIGNED_OP
-
 /// Returns true if the allocations of type `t` can be lowered to SPIR-V.
 static bool isAllocationSupported(MemRefType t) {
   // Currently only support workgroup local memory allocations with static
@@ -334,7 +304,8 @@ public:
     auto dstType = this->typeConverter.convertType(operation.getType());
     if (!dstType)
       return failure();
-    if (isUnsignedOp<SPIRVOp>() && dstType != operation.getType()) {
+    if (SPIRVOp::template hasTrait<OpTrait::spirv::UnsignedOp>() &&
+        dstType != operation.getType()) {
       return operation.emitError(
           "bitwidth emulation is not implemented yet on unsigned op");
     }
@@ -799,7 +770,7 @@ CmpIOpPattern::matchAndRewrite(CmpIOp cmpIOp, ArrayRef<Value> operands,
   switch (cmpIOp.getPredicate()) {
 #define DISPATCH(cmpPredicate, spirvOp)                                        \
   case cmpPredicate:                                                           \
-    if (isUnsignedOp<spirvOp>() &&                                             \
+    if (spirvOp::template hasTrait<OpTrait::spirv::UnsignedOp>() &&            \
         operandType != this->typeConverter.convertType(operandType)) {         \
       return cmpIOp.emitError(                                                 \
           "bitwidth emulation is not implemented yet on unsigned op");         \

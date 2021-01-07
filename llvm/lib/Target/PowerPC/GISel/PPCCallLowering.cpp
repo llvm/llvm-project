@@ -25,6 +25,7 @@ PPCCallLowering::PPCCallLowering(const PPCTargetLowering &TLI)
 
 bool PPCCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                                   const Value *Val, ArrayRef<Register> VRegs,
+                                  FunctionLoweringInfo &FLI,
                                   Register SwiftErrorVReg) const {
   assert(((Val && !VRegs.empty()) || (!Val && VRegs.empty())) &&
          "Return value without a vreg");
@@ -35,9 +36,10 @@ bool PPCCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
   return true;
 }
 
-bool PPCCallLowering::lowerFormalArguments(
-    MachineIRBuilder &MIRBuilder, const Function &F,
-    ArrayRef<ArrayRef<Register>> VRegs) const {
+bool PPCCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
+                                           const Function &F,
+                                           ArrayRef<ArrayRef<Register>> VRegs,
+                                           FunctionLoweringInfo &FLI) const {
 
   // If VRegs is empty, then there are no formal arguments to lower and thus can
   // always return true. If there are formal arguments, we currently do not

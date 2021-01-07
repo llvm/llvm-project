@@ -913,7 +913,6 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
   SmallSetVector<Node *, 4> DemotedCallTargets;
   SmallSetVector<Node *, 4> NewCallEdges;
   SmallSetVector<Node *, 4> NewRefEdges;
-  SmallSetVector<Node *, 4> NewNodes;
 
   // First walk the function and handle all called functions. We do this first
   // because if there is a single call edge, whether there are ref edges is
@@ -923,10 +922,8 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
       if (Function *Callee = CB->getCalledFunction()) {
         if (Visited.insert(Callee).second && !Callee->isDeclaration()) {
           Node *CalleeN = G.lookup(*Callee);
-          if (!CalleeN) {
-            CalleeN = &G.get(*Callee);
-            NewNodes.insert(CalleeN);
-          }
+          assert(CalleeN &&
+                 "Visited function should already have an associated node");
           Edge *E = N->lookup(*CalleeN);
           assert((E || !FunctionPass) &&
                  "No function transformations should introduce *new* "
@@ -961,10 +958,8 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
 
   auto VisitRef = [&](Function &Referee) {
     Node *RefereeN = G.lookup(Referee);
-    if (!RefereeN) {
-      RefereeN = &G.get(Referee);
-      NewNodes.insert(RefereeN);
-    }
+    assert(RefereeN &&
+           "Visited function should already have an associated node");
     Edge *E = N->lookup(*RefereeN);
     assert((E || !FunctionPass) &&
            "No function transformations should introduce *new* ref "
@@ -979,9 +974,6 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
       DemotedCallTargets.insert(RefereeN);
   };
   LazyCallGraph::visitReferences(Worklist, Visited, VisitRef);
-
-  for (Node *NewNode : NewNodes)
-    G.initNode(*NewNode, *C);
 
   // Handle new ref edges.
   for (Node *RefTarget : NewRefEdges) {

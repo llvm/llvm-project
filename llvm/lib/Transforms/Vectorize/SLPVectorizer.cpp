@@ -257,7 +257,7 @@ static bool isCommutative(Instruction *I) {
 /// %x3x3 = mul i8 %x3, %x3
 /// %y1y1 = mul i8 %y1, %y1
 /// %y2y2 = mul i8 %y2, %y2
-/// %ins1 = insertelement <4 x i8> undef, i8 %x0x0, i32 0
+/// %ins1 = insertelement <4 x i8> poison, i8 %x0x0, i32 0
 /// %ins2 = insertelement <4 x i8> %ins1, i8 %x3x3, i32 1
 /// %ins3 = insertelement <4 x i8> %ins2, i8 %y1y1, i32 2
 /// %ins4 = insertelement <4 x i8> %ins3, i8 %y2y2, i32 3
@@ -272,13 +272,13 @@ static bool isCommutative(Instruction *I) {
 /// %x3 = extractelement <4 x i8> %x, i32 3
 /// %y1 = extractelement <4 x i8> %y, i32 1
 /// %y2 = extractelement <4 x i8> %y, i32 2
-/// %1 = insertelement <4 x i8> undef, i8 %x0, i32 0
+/// %1 = insertelement <4 x i8> poison, i8 %x0, i32 0
 /// %2 = insertelement <4 x i8> %1, i8 %x3, i32 1
 /// %3 = insertelement <4 x i8> %2, i8 %y1, i32 2
 /// %4 = insertelement <4 x i8> %3, i8 %y2, i32 3
 /// %5 = mul <4 x i8> %4, %4
 /// %6 = extractelement <4 x i8> %5, i32 0
-/// %ins1 = insertelement <4 x i8> undef, i8 %6, i32 0
+/// %ins1 = insertelement <4 x i8> poison, i8 %6, i32 0
 /// %7 = extractelement <4 x i8> %5, i32 1
 /// %ins2 = insertelement <4 x i8> %ins1, i8 %7, i32 1
 /// %8 = extractelement <4 x i8> %5, i32 2
@@ -311,7 +311,7 @@ isShuffle(ArrayRef<Value *> VL) {
     if (Idx->getValue().uge(Size))
       continue;
     unsigned IntIdx = Idx->getValue().getZExtValue();
-    // We can extractelement from undef vector.
+    // We can extractelement from undef or poison vector.
     if (isa<UndefValue>(Vec))
       continue;
     // For correct shuffling we have to have at most 2 different vector operands
@@ -3384,8 +3384,7 @@ bool BoUpSLP::canReuseExtract(ArrayRef<Value *> VL, Value *OpValue,
 }
 
 bool BoUpSLP::areAllUsersVectorized(Instruction *I) const {
-  return I->hasOneUse() ||
-         std::all_of(I->user_begin(), I->user_end(), [this](User *U) {
+  return I->hasOneUse() || llvm::all_of(I->users(), [this](User *U) {
            return ScalarToTreeEntry.count(U) > 0;
          });
 }
@@ -4168,11 +4167,10 @@ void BoUpSLP::setInsertPointAfterBundle(TreeEntry *E) {
   // should be in this block.
   auto *Front = E->getMainOp();
   auto *BB = Front->getParent();
-  assert(llvm::all_of(make_range(E->Scalars.begin(), E->Scalars.end()),
-                      [=](Value *V) -> bool {
-                        auto *I = cast<Instruction>(V);
-                        return !E->isOpcodeOrAlt(I) || I->getParent() == BB;
-                      }));
+  assert(llvm::all_of(E->Scalars, [=](Value *V) -> bool {
+    auto *I = cast<Instruction>(V);
+    return !E->isOpcodeOrAlt(I) || I->getParent() == BB;
+  }));
 
   // The last instruction in the bundle in program order.
   Instruction *LastInst = nullptr;
@@ -4229,7 +4227,7 @@ Value *BoUpSLP::gather(ArrayRef<Value *> VL) {
   Value *Val0 =
       isa<StoreInst>(VL[0]) ? cast<StoreInst>(VL[0])->getValueOperand() : VL[0];
   FixedVectorType *VecTy = FixedVectorType::get(Val0->getType(), VL.size());
-  Value *Vec = UndefValue::get(VecTy);
+  Value *Vec = PoisonValue::get(VecTy);
   unsigned InsIndex = 0;
   for (Value *Val : VL) {
     Vec = Builder.CreateInsertElement(Vec, Val, Builder.getInt32(InsIndex++));
@@ -6271,7 +6269,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
         // part should also switch to same interface.
         // For example, the following case is projected code after SLP:
         //  %4 = extractelement <4 x i64> %3, i32 0
-        //  %v0 = insertelement <4 x i64> undef, i64 %4, i32 0
+        //  %v0 = insertelement <4 x i64> poison, i64 %4, i32 0
         //  %5 = extractelement <4 x i64> %3, i32 1
         //  %v1 = insertelement <4 x i64> %v0, i64 %5, i32 1
         //  %6 = extractelement <4 x i64> %3, i32 2
@@ -6382,35 +6380,6 @@ bool SLPVectorizerPass::tryToVectorize(Instruction *I, BoUpSLP &R) {
   return false;
 }
 
-/// Generate a shuffle mask to be used in a reduction tree.
-///
-/// \param VecLen The length of the vector to be reduced.
-/// \param NumEltsToRdx The number of elements that should be reduced in the
-///        vector.
-/// \param IsPairwise Whether the reduction is a pairwise or splitting
-///        reduction. A pairwise reduction will generate a mask of
-///        <0,2,...> or <1,3,..> while a splitting reduction will generate
-///        <2,3, undef,undef> for a vector of 4 and NumElts = 2.
-/// \param IsLeft True will generate a mask of even elements, odd otherwise.
-static SmallVector<int, 32> createRdxShuffleMask(unsigned VecLen,
-                                                 unsigned NumEltsToRdx,
-                                                 bool IsPairwise, bool IsLeft) {
-  assert((IsPairwise || !IsLeft) && "Don't support a <0,1,undef,...> mask");
-
-  SmallVector<int, 32> ShuffleMask(VecLen, -1);
-
-  if (IsPairwise)
-    // Build a mask of 0, 2, ... (left) or 1, 3, ... (right).
-    for (unsigned i = 0; i != NumEltsToRdx; ++i)
-      ShuffleMask[i] = 2 * i + !IsLeft;
-  else
-    // Move the upper half of the vector to the lower half.
-    for (unsigned i = 0; i != NumEltsToRdx; ++i)
-      ShuffleMask[i] = NumEltsToRdx + i;
-
-  return ShuffleMask;
-}
-
 namespace {
 
 /// Model horizontal reductions.
@@ -6486,6 +6455,7 @@ class HorizontalReduction {
     Value *createOp(IRBuilder<> &Builder, Value *LHS, Value *RHS,
                     const Twine &Name) const {
       assert(isVectorizable() && "Unhandled reduction operation.");
+      unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(Kind);
       switch (Kind) {
       case RecurKind::Add:
       case RecurKind::Mul:
@@ -6494,26 +6464,22 @@ class HorizontalReduction {
       case RecurKind::Xor:
       case RecurKind::FAdd:
       case RecurKind::FMul:
-        return Builder.CreateBinOp((Instruction::BinaryOps)Opcode, LHS, RHS,
+        return Builder.CreateBinOp((Instruction::BinaryOps)RdxOpcode, LHS, RHS,
                                    Name);
 
       case RecurKind::SMax: {
-        assert(Opcode == Instruction::ICmp && "Expected integer types.");
         Value *Cmp = Builder.CreateICmpSGT(LHS, RHS, Name);
         return Builder.CreateSelect(Cmp, LHS, RHS, Name);
       }
       case RecurKind::SMin: {
-        assert(Opcode == Instruction::ICmp && "Expected integer types.");
         Value *Cmp = Builder.CreateICmpSLT(LHS, RHS, Name);
         return Builder.CreateSelect(Cmp, LHS, RHS, Name);
       }
       case RecurKind::UMax: {
-        assert(Opcode == Instruction::ICmp && "Expected integer types.");
         Value *Cmp = Builder.CreateICmpUGT(LHS, RHS, Name);
         return Builder.CreateSelect(Cmp, LHS, RHS, Name);
       }
       case RecurKind::UMin: {
-        assert(Opcode == Instruction::ICmp && "Expected integer types.");
         Value *Cmp = Builder.CreateICmpULT(LHS, RHS, Name);
         return Builder.CreateSelect(Cmp, LHS, RHS, Name);
       }
@@ -6666,28 +6632,15 @@ class HorizontalReduction {
                     const ReductionOpsListType &ReductionOps) const {
       assert(isVectorizable() &&
              "Expected add|fadd or min/max reduction operation.");
-      auto *Op = createOp(Builder, LHS, RHS, Name);
-      switch (Kind) {
-      case RecurKind::Add:
-      case RecurKind::Mul:
-      case RecurKind::Or:
-      case RecurKind::And:
-      case RecurKind::Xor:
-      case RecurKind::FAdd:
-      case RecurKind::FMul:
-        propagateIRFlags(Op, ReductionOps[0]);
-        return Op;
-      case RecurKind::SMax:
-      case RecurKind::SMin:
-      case RecurKind::UMax:
-      case RecurKind::UMin:
-        if (auto *SI = dyn_cast<SelectInst>(Op))
-          propagateIRFlags(SI->getCondition(), ReductionOps[0]);
+      Value *Op = createOp(Builder, LHS, RHS, Name);
+      if (RecurrenceDescriptor::isIntMinMaxRecurrenceKind(Kind)) {
+        if (auto *Sel = dyn_cast<SelectInst>(Op))
+          propagateIRFlags(Sel->getCondition(), ReductionOps[0]);
         propagateIRFlags(Op, ReductionOps[1]);
         return Op;
-      default:
-        llvm_unreachable("Unknown reduction operation.");
       }
+      propagateIRFlags(Op, ReductionOps[0]);
+      return Op;
     }
     /// Creates reduction operation with the current opcode with the IR flags
     /// from \p I.
@@ -6695,30 +6648,15 @@ class HorizontalReduction {
                     const Twine &Name, Instruction *I) const {
       assert(isVectorizable() &&
              "Expected add|fadd or min/max reduction operation.");
-      auto *Op = createOp(Builder, LHS, RHS, Name);
-      switch (Kind) {
-      case RecurKind::Add:
-      case RecurKind::Mul:
-      case RecurKind::Or:
-      case RecurKind::And:
-      case RecurKind::Xor:
-      case RecurKind::FAdd:
-      case RecurKind::FMul:
-        propagateIRFlags(Op, I);
-        return Op;
-      case RecurKind::SMax:
-      case RecurKind::SMin:
-      case RecurKind::UMax:
-      case RecurKind::UMin:
-        if (auto *SI = dyn_cast<SelectInst>(Op)) {
-          propagateIRFlags(SI->getCondition(),
+      Value *Op = createOp(Builder, LHS, RHS, Name);
+      if (RecurrenceDescriptor::isIntMinMaxRecurrenceKind(Kind)) {
+        if (auto *Sel = dyn_cast<SelectInst>(Op)) {
+          propagateIRFlags(Sel->getCondition(),
                            cast<SelectInst>(I)->getCondition());
         }
-        propagateIRFlags(Op, I);
-        return Op;
-      default:
-        llvm_unreachable("Unknown reduction operation.");
       }
+      propagateIRFlags(Op, I);
+      return Op;
     }
   };
 
@@ -6729,10 +6667,6 @@ class HorizontalReduction {
 
   /// The operation data for the leaf values that we perform a reduction on.
   OperationData RdxLeafVal;
-
-  /// Should we model this reduction as a pairwise reduction tree or a tree that
-  /// splits the vector in halves and adds those halves.
-  bool IsPairwiseReduction = false;
 
   /// Checks if the ParentStackElem.first should be marked as a reduction
   /// operation with an extra argument or as extra argument itself.
@@ -7170,9 +7104,11 @@ private:
     Type *ScalarTy = FirstReducedVal->getType();
     auto *VecTy = FixedVectorType::get(ScalarTy, ReduxWidth);
 
-    int PairwiseRdxCost;
+    RecurKind Kind = RdxTreeInst.getKind();
+    unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(Kind);
     int SplittingRdxCost;
-    switch (RdxTreeInst.getKind()) {
+    int ScalarReduxCost;
+    switch (Kind) {
     case RecurKind::Add:
     case RecurKind::Mul:
     case RecurKind::Or:
@@ -7180,68 +7116,35 @@ private:
     case RecurKind::Xor:
     case RecurKind::FAdd:
     case RecurKind::FMul:
-      PairwiseRdxCost =
-          TTI->getArithmeticReductionCost(RdxTreeInst.getOpcode(), VecTy,
-                                          /*IsPairwiseForm=*/true);
-      SplittingRdxCost =
-          TTI->getArithmeticReductionCost(RdxTreeInst.getOpcode(), VecTy,
-                                          /*IsPairwiseForm=*/false);
+      SplittingRdxCost = TTI->getArithmeticReductionCost(
+          RdxOpcode, VecTy, /*IsPairwiseForm=*/false);
+      ScalarReduxCost = TTI->getArithmeticInstrCost(RdxOpcode, ScalarTy);
       break;
     case RecurKind::SMax:
     case RecurKind::SMin:
     case RecurKind::UMax:
     case RecurKind::UMin: {
       auto *VecCondTy = cast<VectorType>(CmpInst::makeCmpResultType(VecTy));
-      RecurKind Kind = RdxTreeInst.getKind();
       bool IsUnsigned = Kind == RecurKind::UMax || Kind == RecurKind::UMin;
-      PairwiseRdxCost =
-          TTI->getMinMaxReductionCost(VecTy, VecCondTy,
-                                      /*IsPairwiseForm=*/true, IsUnsigned);
       SplittingRdxCost =
           TTI->getMinMaxReductionCost(VecTy, VecCondTy,
                                       /*IsPairwiseForm=*/false, IsUnsigned);
-      break;
-    }
-    default:
-      llvm_unreachable("Expected arithmetic or min/max reduction operation");
-    }
-
-    IsPairwiseReduction = PairwiseRdxCost < SplittingRdxCost;
-    int VecReduxCost = IsPairwiseReduction ? PairwiseRdxCost : SplittingRdxCost;
-
-    int ScalarReduxCost = 0;
-    switch (RdxTreeInst.getKind()) {
-    case RecurKind::Add:
-    case RecurKind::Mul:
-    case RecurKind::Or:
-    case RecurKind::And:
-    case RecurKind::Xor:
-    case RecurKind::FAdd:
-    case RecurKind::FMul:
       ScalarReduxCost =
-          TTI->getArithmeticInstrCost(RdxTreeInst.getOpcode(), ScalarTy);
-      break;
-    case RecurKind::SMax:
-    case RecurKind::SMin:
-    case RecurKind::UMax:
-    case RecurKind::UMin:
-      ScalarReduxCost =
-          TTI->getCmpSelInstrCost(RdxTreeInst.getOpcode(), ScalarTy) +
+          TTI->getCmpSelInstrCost(RdxOpcode, ScalarTy) +
           TTI->getCmpSelInstrCost(Instruction::Select, ScalarTy,
                                   CmpInst::makeCmpResultType(ScalarTy));
       break;
+    }
     default:
       llvm_unreachable("Expected arithmetic or min/max reduction operation");
     }
+
     ScalarReduxCost *= (ReduxWidth - 1);
-
-    LLVM_DEBUG(dbgs() << "SLP: Adding cost " << VecReduxCost - ScalarReduxCost
+    LLVM_DEBUG(dbgs() << "SLP: Adding cost "
+                      << SplittingRdxCost - ScalarReduxCost
                       << " for reduction that starts with " << *FirstReducedVal
-                      << " (It is a "
-                      << (IsPairwiseReduction ? "pairwise" : "splitting")
-                      << " reduction)\n");
-
-    return VecReduxCost - ScalarReduxCost;
+                      << " (It is a splitting reduction)\n");
+    return SplittingRdxCost - ScalarReduxCost;
   }
 
   /// Emit a horizontal reduction of the vectorized value.
@@ -7251,30 +7154,12 @@ private:
     assert(isPowerOf2_32(ReduxWidth) &&
            "We only handle power-of-two reductions for now");
 
-    if (!IsPairwiseReduction) {
-      // FIXME: The builder should use an FMF guard. It should not be hard-coded
-      //        to 'fast'.
-      assert(Builder.getFastMathFlags().isFast() && "Expected 'fast' FMF");
-      return createSimpleTargetReduction(
-          Builder, TTI, RdxTreeInst.getOpcode(), VectorizedValue,
-          RdxTreeInst.getKind(), ReductionOps.back());
-    }
-
-    Value *TmpVec = VectorizedValue;
-    for (unsigned i = ReduxWidth / 2; i != 0; i >>= 1) {
-      auto LeftMask = createRdxShuffleMask(ReduxWidth, i, true, true);
-      auto RightMask = createRdxShuffleMask(ReduxWidth, i, true, false);
-
-      Value *LeftShuf =
-          Builder.CreateShuffleVector(TmpVec, LeftMask, "rdx.shuf.l");
-      Value *RightShuf =
-          Builder.CreateShuffleVector(TmpVec, RightMask, "rdx.shuf.r");
-      TmpVec = RdxTreeInst.createOp(Builder, LeftShuf, RightShuf, "op.rdx",
-                                    ReductionOps);
-    }
-
-    // The result is in the first element of the vector.
-    return Builder.CreateExtractElement(TmpVec, Builder.getInt32(0));
+    // FIXME: The builder should use an FMF guard. It should not be hard-coded
+    //        to 'fast'.
+    assert(Builder.getFastMathFlags().isFast() && "Expected 'fast' FMF");
+    return createSimpleTargetReduction(Builder, TTI, VectorizedValue,
+                                       RdxTreeInst.getKind(),
+                                       ReductionOps.back());
   }
 };
 
@@ -7369,7 +7254,7 @@ static bool findBuildAggregate_rec(Instruction *LastInsertInst,
 }
 
 /// Recognize construction of vectors like
-///  %ra = insertelement <4 x float> undef, float %s0, i32 0
+///  %ra = insertelement <4 x float> poison, float %s0, i32 0
 ///  %rb = insertelement <4 x float> %ra, float %s1, i32 1
 ///  %rc = insertelement <4 x float> %rb, float %s2, i32 2
 ///  %rd = insertelement <4 x float> %rc, float %s3, i32 3
@@ -7644,14 +7529,9 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
 
     // Collect the incoming values from the PHIs.
     Incoming.clear();
-    for (Instruction &I : *BB) {
-      PHINode *P = dyn_cast<PHINode>(&I);
-      if (!P)
-        break;
-
-      if (!VisitedInstrs.count(P) && !R.isDeleted(P))
-        Incoming.push_back(P);
-    }
+    for (PHINode &P : BB->phis())
+      if (!VisitedInstrs.count(&P) && !R.isDeleted(&P))
+        Incoming.push_back(&P);
 
     // Sort by type.
     llvm::stable_sort(Incoming, PhiTypeSorterFunc);

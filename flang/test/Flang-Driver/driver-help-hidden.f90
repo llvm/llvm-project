@@ -19,12 +19,14 @@
 ! CHECK-EMPTY:
 ! CHECK-NEXT:OPTIONS:
 ! CHECK-NEXT: -###      Print (but do not run) the commands to run for this compilation
+! CHECK-NEXT: -D <macro>=<value>     Define <macro> to <value> (or 1 if <value> omitted)
 ! CHECK-NEXT: -E        Only run the preprocessor
 ! CHECK-NEXT: -fcolor-diagnostics    Enable colors in diagnostics
 ! CHECK-NEXT: -fno-color-diagnostics Disable colors in diagnostics
 ! CHECK-NEXT: -help     Display available options
 ! CHECK-NEXT: -o <file> Write output to <file>
 ! CHECK-NEXT: -test-io  Run the InputOuputTest action. Use for development and testing only.
+! CHECK-NEXT: -U <macro>             Undefine macro <macro>
 ! CHECK-NEXT: --version Print version information
 
 !-------------------------------------------------------------

@@ -160,10 +160,10 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK:       pred.load.if:
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [2048 x i32], [2048 x i32]* @b, i64 0, i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = load i32, i32* [[TMP25]], align 4
-; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <4 x i32> undef, i32 [[TMP26]], i32 0
+; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <4 x i32> poison, i32 [[TMP26]], i32 0
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE]]
 ; CHECK:       pred.load.continue:
-; CHECK-NEXT:    [[TMP28:%.*]] = phi <4 x i32> [ undef, [[VECTOR_BODY9]] ], [ [[TMP27]], [[PRED_LOAD_IF]] ]
+; CHECK-NEXT:    [[TMP28:%.*]] = phi <4 x i32> [ poison, [[VECTOR_BODY9]] ], [ [[TMP27]], [[PRED_LOAD_IF]] ]
 ; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <4 x i1> [[TMP23]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP29]], label [[PRED_LOAD_IF30:%.*]], label [[PRED_LOAD_CONTINUE31:%.*]]
 ; CHECK:       pred.load.if30:
@@ -196,10 +196,10 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK:       pred.load.if36:
 ; CHECK-NEXT:    [[TMP45:%.*]] = getelementptr inbounds [2048 x i32], [2048 x i32]* @c, i64 0, i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP46:%.*]] = load i32, i32* [[TMP45]], align 4
-; CHECK-NEXT:    [[TMP47:%.*]] = insertelement <4 x i32> undef, i32 [[TMP46]], i32 0
+; CHECK-NEXT:    [[TMP47:%.*]] = insertelement <4 x i32> poison, i32 [[TMP46]], i32 0
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE37]]
 ; CHECK:       pred.load.continue37:
-; CHECK-NEXT:    [[TMP48:%.*]] = phi <4 x i32> [ undef, [[PRED_LOAD_CONTINUE35]] ], [ [[TMP47]], [[PRED_LOAD_IF36]] ]
+; CHECK-NEXT:    [[TMP48:%.*]] = phi <4 x i32> [ poison, [[PRED_LOAD_CONTINUE35]] ], [ [[TMP47]], [[PRED_LOAD_IF36]] ]
 ; CHECK-NEXT:    [[TMP49:%.*]] = extractelement <4 x i1> [[TMP23]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP49]], label [[PRED_LOAD_IF38:%.*]], label [[PRED_LOAD_CONTINUE39:%.*]]
 ; CHECK:       pred.load.if38:
@@ -345,7 +345,7 @@ define void @example3(i32 %n, i32* noalias nocapture %p, i32* noalias nocapture 
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* [[NEXT_GEP10]], align 16
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE]]
 ; CHECK:       pred.load.continue:
-; CHECK-NEXT:    [[TMP7:%.*]] = phi i32 [ undef, [[VECTOR_BODY]] ], [ [[TMP6]], [[PRED_LOAD_IF]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = phi i32 [ poison, [[VECTOR_BODY]] ], [ [[TMP6]], [[PRED_LOAD_IF]] ]
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP4]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[PRED_LOAD_IF16:%.*]], label [[PRED_LOAD_CONTINUE17:%.*]]
 ; CHECK:       pred.load.if16:
@@ -354,7 +354,7 @@ define void @example3(i32 %n, i32* noalias nocapture %p, i32* noalias nocapture 
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i32, i32* [[NEXT_GEP11]], align 16
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE17]]
 ; CHECK:       pred.load.continue17:
-; CHECK-NEXT:    [[TMP11:%.*]] = phi i32 [ undef, [[PRED_LOAD_CONTINUE]] ], [ [[TMP10]], [[PRED_LOAD_IF16]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = phi i32 [ poison, [[PRED_LOAD_CONTINUE]] ], [ [[TMP10]], [[PRED_LOAD_IF16]] ]
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP4]], i32 2
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[PRED_LOAD_IF18:%.*]], label [[PRED_LOAD_CONTINUE19:%.*]]
 ; CHECK:       pred.load.if18:
@@ -363,7 +363,7 @@ define void @example3(i32 %n, i32* noalias nocapture %p, i32* noalias nocapture 
 ; CHECK-NEXT:    [[TMP14:%.*]] = load i32, i32* [[NEXT_GEP12]], align 16
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE19]]
 ; CHECK:       pred.load.continue19:
-; CHECK-NEXT:    [[TMP15:%.*]] = phi i32 [ undef, [[PRED_LOAD_CONTINUE17]] ], [ [[TMP14]], [[PRED_LOAD_IF18]] ]
+; CHECK-NEXT:    [[TMP15:%.*]] = phi i32 [ poison, [[PRED_LOAD_CONTINUE17]] ], [ [[TMP14]], [[PRED_LOAD_IF18]] ]
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i1> [[TMP4]], i32 3
 ; CHECK-NEXT:    br i1 [[TMP16]], label [[PRED_LOAD_IF20:%.*]], label [[PRED_LOAD_CONTINUE21:%.*]]
 ; CHECK:       pred.load.if20:
@@ -372,7 +372,7 @@ define void @example3(i32 %n, i32* noalias nocapture %p, i32* noalias nocapture 
 ; CHECK-NEXT:    [[TMP18:%.*]] = load i32, i32* [[NEXT_GEP13]], align 16
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE21]]
 ; CHECK:       pred.load.continue21:
-; CHECK-NEXT:    [[TMP19:%.*]] = phi i32 [ undef, [[PRED_LOAD_CONTINUE19]] ], [ [[TMP18]], [[PRED_LOAD_IF20]] ]
+; CHECK-NEXT:    [[TMP19:%.*]] = phi i32 [ poison, [[PRED_LOAD_CONTINUE19]] ], [ [[TMP18]], [[PRED_LOAD_IF20]] ]
 ; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <4 x i1> [[TMP4]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
@@ -545,7 +545,7 @@ define void @example23c(i16* noalias nocapture %src, i32* noalias nocapture %dst
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i16, i16* [[NEXT_GEP]], align 2
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE]]
 ; CHECK:       pred.load.continue:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi i16 [ undef, [[VECTOR_BODY]] ], [ [[TMP3]], [[PRED_LOAD_IF]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi i16 [ poison, [[VECTOR_BODY]] ], [ [[TMP3]], [[PRED_LOAD_IF]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i1> [[TMP1]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[PRED_LOAD_IF11:%.*]], label [[PRED_LOAD_CONTINUE12:%.*]]
 ; CHECK:       pred.load.if11:
@@ -554,7 +554,7 @@ define void @example23c(i16* noalias nocapture %src, i32* noalias nocapture %dst
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i16, i16* [[NEXT_GEP4]], align 2
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE12]]
 ; CHECK:       pred.load.continue12:
-; CHECK-NEXT:    [[TMP8:%.*]] = phi i16 [ undef, [[PRED_LOAD_CONTINUE]] ], [ [[TMP7]], [[PRED_LOAD_IF11]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi i16 [ poison, [[PRED_LOAD_CONTINUE]] ], [ [[TMP7]], [[PRED_LOAD_IF11]] ]
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP1]], i32 2
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[PRED_LOAD_IF13:%.*]], label [[PRED_LOAD_CONTINUE14:%.*]]
 ; CHECK:       pred.load.if13:
@@ -563,7 +563,7 @@ define void @example23c(i16* noalias nocapture %src, i32* noalias nocapture %dst
 ; CHECK-NEXT:    [[TMP11:%.*]] = load i16, i16* [[NEXT_GEP5]], align 2
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE14]]
 ; CHECK:       pred.load.continue14:
-; CHECK-NEXT:    [[TMP12:%.*]] = phi i16 [ undef, [[PRED_LOAD_CONTINUE12]] ], [ [[TMP11]], [[PRED_LOAD_IF13]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi i16 [ poison, [[PRED_LOAD_CONTINUE12]] ], [ [[TMP11]], [[PRED_LOAD_IF13]] ]
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i1> [[TMP1]], i32 3
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[PRED_LOAD_IF15:%.*]], label [[PRED_LOAD_CONTINUE16:%.*]]
 ; CHECK:       pred.load.if15:
@@ -572,7 +572,7 @@ define void @example23c(i16* noalias nocapture %src, i32* noalias nocapture %dst
 ; CHECK-NEXT:    [[TMP15:%.*]] = load i16, i16* [[NEXT_GEP6]], align 2
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE16]]
 ; CHECK:       pred.load.continue16:
-; CHECK-NEXT:    [[TMP16:%.*]] = phi i16 [ undef, [[PRED_LOAD_CONTINUE14]] ], [ [[TMP15]], [[PRED_LOAD_IF15]] ]
+; CHECK-NEXT:    [[TMP16:%.*]] = phi i16 [ poison, [[PRED_LOAD_CONTINUE14]] ], [ [[TMP15]], [[PRED_LOAD_IF15]] ]
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i1> [[TMP1]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP17]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:

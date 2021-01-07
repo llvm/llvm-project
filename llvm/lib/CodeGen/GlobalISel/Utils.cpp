@@ -14,6 +14,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
+#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -549,6 +550,58 @@ Optional<APInt> llvm::ConstantFoldExtOp(unsigned Opcode, const Register Op1,
     }
   }
   return None;
+}
+
+bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
+                                  GISelKnownBits *KB) {
+  Optional<DefinitionAndSourceRegister> DefSrcReg =
+      getDefSrcRegIgnoringCopies(Reg, MRI);
+  if (!DefSrcReg)
+    return false;
+
+  const MachineInstr &MI = *DefSrcReg->MI;
+  const LLT Ty = MRI.getType(Reg);
+
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_CONSTANT: {
+    unsigned BitWidth = Ty.getScalarSizeInBits();
+    const ConstantInt *CI = MI.getOperand(1).getCImm();
+    return CI->getValue().zextOrTrunc(BitWidth).isPowerOf2();
+  }
+  case TargetOpcode::G_SHL: {
+    // A left-shift of a constant one will have exactly one bit set because
+    // shifting the bit off the end is undefined.
+
+    // TODO: Constant splat
+    if (auto ConstLHS = getConstantVRegVal(MI.getOperand(1).getReg(), MRI)) {
+      if (*ConstLHS == 1)
+        return true;
+    }
+
+    break;
+  }
+  case TargetOpcode::G_LSHR: {
+    if (auto ConstLHS = getConstantVRegVal(MI.getOperand(1).getReg(), MRI)) {
+      if (ConstLHS->isSignMask())
+        return true;
+    }
+
+    break;
+  }
+  default:
+    break;
+  }
+
+  // TODO: Are all operands of a build vector constant powers of two?
+  if (!KB)
+    return false;
+
+  // More could be done here, though the above checks are enough
+  // to handle some common cases.
+
+  // Fall back to computeKnownBits to catch other known cases.
+  KnownBits Known = KB->getKnownBits(Reg);
+  return (Known.countMaxPopulation() == 1) && (Known.countMinPopulation() == 1);
 }
 
 void llvm::getSelectionDAGFallbackAnalysisUsage(AnalysisUsage &AU) {

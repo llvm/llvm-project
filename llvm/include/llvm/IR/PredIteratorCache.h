@@ -44,7 +44,7 @@ private:
     if (Entry)
       return Entry;
 
-    SmallVector<BasicBlock *, 32> PredCache(pred_begin(BB), pred_end(BB));
+    SmallVector<BasicBlock *, 32> PredCache(predecessors(BB));
     PredCache.push_back(nullptr); // null terminator.
 
     BlockToPredCountMap[BB] = PredCache.size() - 1;

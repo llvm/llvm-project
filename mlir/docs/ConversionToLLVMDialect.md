@@ -126,7 +126,7 @@ memref<1x? x vector<4xf32>> -> !llvm.struct<(ptr<vec<4 x float>>,
 
 Ranked memrefs with static shape and default layout can be converted into an
 LLVM dialect pointer to their element type. Only the default alignment is
-supported in such cases, e.g. the `alloc` operation cannot have an alignemnt
+supported in such cases, e.g. the `alloc` operation cannot have an alignment
 attribute.
 
 Examples:
@@ -233,11 +233,11 @@ Examples:
 
 When used as function arguments, both ranked and unranked memrefs are converted
 into a list of arguments that represents each _scalar_ component of their
-descriptor. This is intended for some comaptibility with C ABI, in which
+descriptor. This is intended for some compatibility with C ABI, in which
 structure types would need to be passed by-pointer leading to the need for
 allocations and related issues, as well as for aliasing annotations, which are
 currently attached to pointer in function arguments. Having scalar components
-means that each size and stride is passed as an invidivual value.
+means that each size and stride is passed as an individual value.
 
 When used as function results, memrefs are converted as usual, i.e. each memref
 is converted to a descriptor struct (default convention) or to a pointer (bare

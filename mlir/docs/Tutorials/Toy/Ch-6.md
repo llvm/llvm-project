@@ -37,10 +37,11 @@ static FlatSymbolRefAttr getOrInsertPrintf(PatternRewriter &rewriter,
 
   // Create a function declaration for printf, the signature is:
   //   * `i32 (i8*, ...)`
-  auto llvmI32Ty = LLVM::LLVMType::getInt32Ty(llvmDialect);
-  auto llvmI8PtrTy = LLVM::LLVMType::getInt8PtrTy(llvmDialect);
-  auto llvmFnType = LLVM::LLVMType::getFunctionTy(llvmI32Ty, llvmI8PtrTy,
-                                                  /*isVarArg=*/true);
+  auto llvmI32Ty = LLVM::LLVMIntegerType::get(context, 32);
+  auto llvmI8PtrTy =
+      LLVM::LLVMPointerType::get(LLVM::LLVMIntegerType::get(context, 8));
+  auto llvmFnType = LLVM::LLVMFunctionType::get(llvmI32Ty, llvmI8PtrTy,
+                                                /*isVarArg=*/true);
 
   // Insert the printf function into the body of the parent module.
   PatternRewriter::InsertionGuard insertGuard(rewriter);

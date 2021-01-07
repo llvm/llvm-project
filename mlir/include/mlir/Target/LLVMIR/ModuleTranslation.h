@@ -104,7 +104,7 @@ protected:
                                          llvm::IRBuilder<> &builder);
 
   /// Converts the type from MLIR LLVM dialect to LLVM.
-  llvm::Type *convertType(LLVMType type);
+  llvm::Type *convertType(Type type);
 
   static std::unique_ptr<llvm::Module>
   prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,

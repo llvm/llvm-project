@@ -38,7 +38,7 @@ def ArmSVE_ScalableVectorType : DialectType<ArmSVE_Dialect,
     CPred<"$_self.isa<ScalableVectorType>()">,
               "scalable vector type">,
     BuildableType<"$_builder.getType<ScalableVectorType>()"> {
-  let typeDescription = [{
+  let description = [{
     `arm_sve.vector` represents vectors that will be processed by a scalable
     vector architecture.
   }];
@@ -119,8 +119,8 @@ class ScalableVectorOfLengthAndType<list<int> allowedLengths,
                                     list<Type> allowedTypes> : Type<
   And<[ScalableVectorOf<allowedTypes>.predicate,
        ScalableVectorOfLength<allowedLengths>.predicate]>,
-  ScalableVectorOf<allowedTypes>.description #
-  ScalableVectorOfLength<allowedLengths>.description>;
+  ScalableVectorOf<allowedTypes>.summary #
+  ScalableVectorOfLength<allowedLengths>.summary>;
 
 //===----------------------------------------------------------------------===//
 // ArmSVE op definitions

@@ -159,6 +159,7 @@ private:
   bool parseSymbolicImmVal(const MCExpr *&ImmVal);
   bool parseNeonVectorList(OperandVector &Operands);
   bool parseOptionalMulOperand(OperandVector &Operands);
+  bool parseKeywordOperand(OperandVector &Operands);
   bool parseOperand(OperandVector &Operands, bool isCondCode,
                     bool invertCondCode);
   bool parseImmExpr(int64_t &Out);
@@ -3701,6 +3702,17 @@ bool AArch64AsmParser::parseOptionalMulOperand(OperandVector &Operands) {
   return Error(getLoc(), "expected 'vl' or '#<imm>'");
 }
 
+bool AArch64AsmParser::parseKeywordOperand(OperandVector &Operands) {
+  MCAsmParser &Parser = getParser();
+  auto Tok = Parser.getTok();
+  if (Tok.isNot(AsmToken::Identifier))
+    return true;
+  Operands.push_back(AArch64Operand::CreateToken(Tok.getString(), false,
+                                                 Tok.getLoc(), getContext()));
+  Parser.Lex();
+  return false;
+}
+
 /// parseOperand - Parse a arm instruction operand.  For now this parses the
 /// operand regardless of the mnemonic.
 bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
@@ -3764,6 +3776,11 @@ bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
     // We can only continue if no tokens were eaten.
     if (GotShift != MatchOperand_NoMatch)
       return GotShift;
+
+    // If this is a two-word mnemonic, parse its special keyword
+    // operand as an identifier.
+    if (Mnemonic == "brb")
+      return parseKeywordOperand(Operands);
 
     // This was not a register so parse other operands that start with an
     // identifier (like labels) as expressions and create them as immediates.

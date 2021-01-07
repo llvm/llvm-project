@@ -77,7 +77,11 @@ FunctionPass *createAMDGPURewriteOutArgumentsPass();
 FunctionPass *createSIModeRegisterPass();
 
 struct AMDGPUSimplifyLibCallsPass : PassInfoMixin<AMDGPUSimplifyLibCallsPass> {
+  AMDGPUSimplifyLibCallsPass(TargetMachine &TM) : TM(TM) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+private:
+  TargetMachine &TM;
 };
 
 struct AMDGPUUseNativeCallsPass : PassInfoMixin<AMDGPUUseNativeCallsPass> {
@@ -123,8 +127,26 @@ struct AMDGPULowerKernelAttributesPass
 void initializeAMDGPUPropagateAttributesEarlyPass(PassRegistry &);
 extern char &AMDGPUPropagateAttributesEarlyID;
 
+struct AMDGPUPropagateAttributesEarlyPass
+    : PassInfoMixin<AMDGPUPropagateAttributesEarlyPass> {
+  AMDGPUPropagateAttributesEarlyPass(TargetMachine &TM) : TM(TM) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+private:
+  TargetMachine &TM;
+};
+
 void initializeAMDGPUPropagateAttributesLatePass(PassRegistry &);
 extern char &AMDGPUPropagateAttributesLateID;
+
+struct AMDGPUPropagateAttributesLatePass
+    : PassInfoMixin<AMDGPUPropagateAttributesLatePass> {
+  AMDGPUPropagateAttributesLatePass(TargetMachine &TM) : TM(TM) {}
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+
+private:
+  TargetMachine &TM;
+};
 
 void initializeAMDGPURewriteOutArgumentsPass(PassRegistry &);
 extern char &AMDGPURewriteOutArgumentsID;
@@ -235,6 +257,15 @@ FunctionPass *createAMDGPUISelDag(
   TargetMachine *TM = nullptr,
   CodeGenOpt::Level OptLevel = CodeGenOpt::Default);
 ModulePass *createAMDGPUAlwaysInlinePass(bool GlobalOpt = true);
+
+struct AMDGPUAlwaysInlinePass : PassInfoMixin<AMDGPUAlwaysInlinePass> {
+  AMDGPUAlwaysInlinePass(bool GlobalOpt = true) : GlobalOpt(GlobalOpt) {}
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+
+private:
+  bool GlobalOpt;
+};
+
 ModulePass *createR600OpenCLImageTypeLoweringPass();
 FunctionPass *createAMDGPUAnnotateUniformValues();
 
@@ -242,9 +273,18 @@ ModulePass *createAMDGPUPrintfRuntimeBinding();
 void initializeAMDGPUPrintfRuntimeBindingPass(PassRegistry&);
 extern char &AMDGPUPrintfRuntimeBindingID;
 
+struct AMDGPUPrintfRuntimeBindingPass
+    : PassInfoMixin<AMDGPUPrintfRuntimeBindingPass> {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
 ModulePass* createAMDGPUUnifyMetadataPass();
 void initializeAMDGPUUnifyMetadataPass(PassRegistry&);
 extern char &AMDGPUUnifyMetadataID;
+
+struct AMDGPUUnifyMetadataPass : PassInfoMixin<AMDGPUUnifyMetadataPass> {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
 
 void initializeSIOptimizeExecMaskingPreRAPass(PassRegistry&);
 extern char &SIOptimizeExecMaskingPreRAID;

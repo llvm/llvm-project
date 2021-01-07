@@ -1,7 +1,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -denormal-fp-math-f32=preserve-sign -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX89,GFX9,GFX9-F32FLUSH %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -denormal-fp-math-f32=ieee -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX89,GFX9,GFX9-F32DENORM %s
-; RUN: llc -march=amdgcn -mcpu=gfx803 -denormal-fp-math-f32=preserve-sign -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX89,VI,VI-F32FLUSH %s
-; RUN: llc -march=amdgcn -mcpu=gfx803 -denormal-fp-math-f32=ieee -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX89,VI,VI-F32DENORM %s
+; RUN: llc -march=amdgcn -mcpu=gfx803 -denormal-fp-math-f32=preserve-sign -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX89 %s
+; RUN: llc -march=amdgcn -mcpu=gfx803 -denormal-fp-math-f32=ieee -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX89 %s
 
 ;  fold (fadd (fpext (fmul x, y)), z) -> (fma (fpext x), (fpext y), z)
 
@@ -288,7 +288,7 @@ define float @fsub_fneg_fpext_fmul_f16_to_f32(half %x, half %y, float %z) #0 {
 entry:
   %mul = fmul half %x, %y
   %mul.ext = fpext half %mul to float
-  %neg.mul.ext = fsub float -0.0, %mul.ext
+  %neg.mul.ext = fneg float %mul.ext
   %add = fsub float %neg.mul.ext, %z
   ret float %add
 }

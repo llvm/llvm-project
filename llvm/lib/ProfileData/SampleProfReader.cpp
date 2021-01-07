@@ -1349,7 +1349,7 @@ std::error_code SampleProfileReaderGCC::readOneFunctionProfile(
 
     InlineCallStack NewStack;
     NewStack.push_back(FProfile);
-    NewStack.insert(NewStack.end(), InlineStack.begin(), InlineStack.end());
+    llvm::append_range(NewStack, InlineStack);
     if (Update) {
       // Walk up the inline stack, adding the samples on this line to
       // the total sample count of the callers in the chain.
@@ -1397,7 +1397,7 @@ std::error_code SampleProfileReaderGCC::readOneFunctionProfile(
       return sampleprof_error::truncated;
     InlineCallStack NewStack;
     NewStack.push_back(FProfile);
-    NewStack.insert(NewStack.end(), InlineStack.begin(), InlineStack.end());
+    llvm::append_range(NewStack, InlineStack);
     if (std::error_code EC = readOneFunctionProfile(NewStack, Update, Offset))
       return EC;
   }

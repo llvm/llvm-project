@@ -99,7 +99,7 @@ define amdgpu_kernel void @fneg_fptrunc_f32_to_f16(
     float addrspace(1)* %a) {
 entry:
   %a.val = load float, float addrspace(1)* %a
-  %a.fneg = fsub float -0.0, %a.val
+  %a.fneg = fneg float %a.val
   %r.val = fptrunc float %a.fneg to half
   store half %r.val, half addrspace(1)* %r
   ret void
@@ -132,7 +132,7 @@ define amdgpu_kernel void @fneg_fabs_fptrunc_f32_to_f16(
 entry:
   %a.val = load float, float addrspace(1)* %a
   %a.fabs = call float @llvm.fabs.f32(float %a.val)
-  %a.fneg.fabs = fsub float -0.0, %a.fabs
+  %a.fneg.fabs = fneg float %a.fabs
   %r.val = fptrunc float %a.fneg.fabs to half
   store half %r.val, half addrspace(1)* %r
   ret void

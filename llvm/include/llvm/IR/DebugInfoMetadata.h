@@ -240,9 +240,8 @@ class GenericDINode : public DINode {
                                 StorageType Storage, bool ShouldCreate = true);
 
   TempGenericDINode cloneImpl() const {
-    return getTemporary(
-        getContext(), getTag(), getHeader(),
-        SmallVector<Metadata *, 4>(dwarf_op_begin(), dwarf_op_end()));
+    return getTemporary(getContext(), getTag(), getHeader(),
+                        SmallVector<Metadata *, 4>(dwarf_operands()));
   }
 
 public:

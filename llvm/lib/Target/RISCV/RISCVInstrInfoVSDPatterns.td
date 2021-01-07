@@ -164,6 +164,23 @@ defm "" : VPatBinarySDNode_VV_VX_VI<shl, "PseudoVSLL", uimm5>;
 defm "" : VPatBinarySDNode_VV_VX_VI<srl, "PseudoVSRL", uimm5>;
 defm "" : VPatBinarySDNode_VV_VX_VI<sra, "PseudoVSRA", uimm5>;
 
+// 12.9. Vector Integer Min/Max Instructions
+defm "" : VPatBinarySDNode_VV_VX<umin, "PseudoVMINU">;
+defm "" : VPatBinarySDNode_VV_VX<smin, "PseudoVMIN">;
+defm "" : VPatBinarySDNode_VV_VX<umax, "PseudoVMAXU">;
+defm "" : VPatBinarySDNode_VV_VX<smax, "PseudoVMAX">;
+
+// 12.10. Vector Single-Width Integer Multiply Instructions
+defm "" : VPatBinarySDNode_VV_VX<mul, "PseudoVMUL">;
+defm "" : VPatBinarySDNode_VV_VX<mulhs, "PseudoVMULH">;
+defm "" : VPatBinarySDNode_VV_VX<mulhu, "PseudoVMULHU">;
+
+// 12.11. Vector Integer Divide Instructions
+defm "" : VPatBinarySDNode_VV_VX<sdiv, "PseudoVDIVU">;
+defm "" : VPatBinarySDNode_VV_VX<udiv, "PseudoVDIV">;
+defm "" : VPatBinarySDNode_VV_VX<urem, "PseudoVREMU">;
+defm "" : VPatBinarySDNode_VV_VX<srem, "PseudoVREM">;
+
 } // Predicates = [HasStdExtV]
 
 //===----------------------------------------------------------------------===//

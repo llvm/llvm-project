@@ -248,7 +248,7 @@ void StaticVerifierFunctionEmitter::emitTypeConstraintMethods(
        << formatv(
               "    return op->emitOpError(valueKind) << \" #\" << "
               "valueGroupStartIndex << \" must be {0}, but got \" << type;\n",
-              constraint.getDescription())
+              constraint.getSummary())
        << "  }\n"
        << "  return ::mlir::success();\n"
        << "}\n\n";
@@ -327,6 +327,9 @@ private:
 
   // Generates setter for the attributes.
   void genAttrSetters();
+
+  // Generates removers for optional attributes.
+  void genOptionalAttrRemovers();
 
   // Generates getters for named operands.
   void genNamedOperandGetters();
@@ -573,7 +576,7 @@ static void genAttributeVerifier(const Operator &op, const char *attrGet,
     body << tgfmt("    if (!($0)) return $1\"attribute '$2' "
                   "failed to satisfy constraint: $3\");\n",
                   /*ctx=*/nullptr, tgfmt(condition, &ctx.withSelf(varName)),
-                  emitErrorPrefix, attrName, attr.getDescription());
+                  emitErrorPrefix, attrName, attr.getSummary());
     if (allowMissingAttr)
       body << "  }\n";
     body << "  }\n";
@@ -600,6 +603,7 @@ OpEmitter::OpEmitter(const Operator &op,
   genNamedSuccessorGetters();
   genAttrGetters();
   genAttrSetters();
+  genOptionalAttrRemovers();
   genBuilder();
   genParser();
   genPrinter();
@@ -774,6 +778,28 @@ void OpEmitter::genAttrSetters() {
     const auto &attr = namedAttr.attr;
     if (!attr.isDerivedAttr())
       emitAttrWithStorageType(name, attr);
+  }
+}
+
+void OpEmitter::genOptionalAttrRemovers() {
+  // Generate methods for removing optional attributes, instead of having to
+  // use the string interface. Enables better compile time verification.
+  auto emitRemoveAttr = [&](StringRef name) {
+    auto upperInitial = name.take_front().upper();
+    auto suffix = name.drop_front();
+    auto *method = opClass.addMethodAndPrune(
+        "::mlir::Attribute", ("remove" + upperInitial + suffix + "Attr").str());
+    if (!method)
+      return;
+    auto &body = method->body();
+    body << "  return (*this)->removeAttr(\"" << name << "\");";
+  };
+
+  for (const auto &namedAttr : op.getAttributes()) {
+    const auto &name = namedAttr.name;
+    const auto &attr = namedAttr.attr;
+    if (attr.isOptional())
+      emitRemoveAttr(name);
   }
 }
 
@@ -984,7 +1010,7 @@ void OpEmitter::genNamedRegionGetters() {
     if (region.name.empty())
       continue;
 
-    // Generate the accessors for a varidiadic region.
+    // Generate the accessors for a variadic region.
     if (region.isVariadic()) {
       auto *m = opClass.addMethodAndPrune("::mlir::MutableArrayRef<Region>",
                                           region.name);
@@ -1965,7 +1991,7 @@ void OpEmitter::genVerifier() {
       body << tgfmt("  if (!($0))\n    "
                     "return emitOpError(\"failed to verify that $1\");\n",
                     &verifyCtx, tgfmt(t->getPredTemplate(), &verifyCtx),
-                    t->getDescription());
+                    t->getSummary());
     }
   }
 
@@ -2060,7 +2086,7 @@ void OpEmitter::genRegionVerifier(OpMethodBody &body) {
                     "verify constraint: {2}\";\n      }\n",
                     constraint,
                     region.name.empty() ? "" : "('" + region.name + "') ",
-                    region.constraint.getDescription())
+                    region.constraint.getSummary())
          << "      ++index;\n"
          << "    }\n";
   }
@@ -2099,7 +2125,7 @@ void OpEmitter::genSuccessorVerifier(OpMethodBody &body) {
                     "failed to "
                     "verify constraint: {2}\";\n      }\n",
                     constraint, successor.name,
-                    successor.constraint.getDescription())
+                    successor.constraint.getSummary())
          << "      ++index;\n"
          << "    }\n";
   }
@@ -2352,7 +2378,7 @@ void OpOperandAdaptorEmitter::addVerification() {
 
   FmtContext verifyCtx;
   populateSubstitutions(op, "odsAttrs.get", "getODSOperands",
-                        "<no results should be genarated>", verifyCtx);
+                        "<no results should be generated>", verifyCtx);
   genAttributeVerifier(op, "odsAttrs.get",
                        Twine("emitError(loc, \"'") + op.getOperationName() +
                            "' op \"",
