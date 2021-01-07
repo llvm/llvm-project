@@ -905,8 +905,8 @@ Init *BinOpInit::getStrConcat(Init *I0, Init *I1) {
 static ListInit *ConcatListInits(const ListInit *LHS,
                                  const ListInit *RHS) {
   SmallVector<Init *, 8> Args;
-  Args.insert(Args.end(), LHS->begin(), LHS->end());
-  Args.insert(Args.end(), RHS->begin(), RHS->end());
+  llvm::append_range(Args, *LHS);
+  llvm::append_range(Args, *RHS);
   return ListInit::get(Args, LHS->getElementType());
 }
 
@@ -959,8 +959,8 @@ Init *BinOpInit::Fold(Record *CurRec) const {
     ListInit *RHSs = dyn_cast<ListInit>(RHS);
     if (LHSs && RHSs) {
       SmallVector<Init *, 8> Args;
-      Args.insert(Args.end(), LHSs->begin(), LHSs->end());
-      Args.insert(Args.end(), RHSs->begin(), RHSs->end());
+      llvm::append_range(Args, *LHSs);
+      llvm::append_range(Args, *RHSs);
       return ListInit::get(Args, LHSs->getElementType());
     }
     break;

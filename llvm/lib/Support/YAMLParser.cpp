@@ -715,7 +715,7 @@ std::string yaml::escape(StringRef Input, bool EscapePrintable) {
         // Found invalid char.
         SmallString<4> Val;
         encodeUTF8(0xFFFD, Val);
-        EscapedInput.insert(EscapedInput.end(), Val.begin(), Val.end());
+        llvm::append_range(EscapedInput, Val);
         // FIXME: Error reporting.
         return EscapedInput;
       }
@@ -1984,11 +1984,11 @@ StringRef ScalarNode::getValue(SmallVectorImpl<char> &Storage) const {
       Storage.reserve(UnquotedValue.size());
       for (; i != StringRef::npos; i = UnquotedValue.find('\'')) {
         StringRef Valid(UnquotedValue.begin(), i);
-        Storage.insert(Storage.end(), Valid.begin(), Valid.end());
+        llvm::append_range(Storage, Valid);
         Storage.push_back('\'');
         UnquotedValue = UnquotedValue.substr(i + 2);
       }
-      Storage.insert(Storage.end(), UnquotedValue.begin(), UnquotedValue.end());
+      llvm::append_range(Storage, UnquotedValue);
       return StringRef(Storage.begin(), Storage.size());
     }
     return UnquotedValue;
@@ -2007,7 +2007,7 @@ StringRef ScalarNode::unescapeDoubleQuoted( StringRef UnquotedValue
   for (; i != StringRef::npos; i = UnquotedValue.find_first_of("\\\r\n")) {
     // Insert all previous chars into Storage.
     StringRef Valid(UnquotedValue.begin(), i);
-    Storage.insert(Storage.end(), Valid.begin(), Valid.end());
+    llvm::append_range(Storage, Valid);
     // Chop off inserted chars.
     UnquotedValue = UnquotedValue.substr(i);
 
@@ -2139,7 +2139,7 @@ StringRef ScalarNode::unescapeDoubleQuoted( StringRef UnquotedValue
       UnquotedValue = UnquotedValue.substr(1);
     }
   }
-  Storage.insert(Storage.end(), UnquotedValue.begin(), UnquotedValue.end());
+  llvm::append_range(Storage, UnquotedValue);
   return StringRef(Storage.begin(), Storage.size());
 }
 

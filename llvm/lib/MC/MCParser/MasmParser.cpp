@@ -4044,8 +4044,7 @@ bool MasmParser::parseStructInstList(
         return true;
 
       for (int i = 0; i < Repetitions; ++i)
-        Initializers.insert(Initializers.end(), DuplicatedValues.begin(),
-                            DuplicatedValues.end());
+        llvm::append_range(Initializers, DuplicatedValues);
     } else {
       Initializers.emplace_back();
       if (parseStructInitializer(Structure, Initializers.back()))
@@ -7119,7 +7118,7 @@ bool MasmParser::parseMSInlineAsm(
     // Consider implicit defs to be clobbers.  Think of cpuid and push.
     ArrayRef<MCPhysReg> ImpDefs(Desc.getImplicitDefs(),
                                 Desc.getNumImplicitDefs());
-    ClobberRegs.insert(ClobberRegs.end(), ImpDefs.begin(), ImpDefs.end());
+    llvm::append_range(ClobberRegs, ImpDefs);
   }
 
   // Set the number of Outputs and Inputs.

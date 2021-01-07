@@ -1200,7 +1200,7 @@ AttributeList AttributeList::get(LLVMContext &C, AttributeSet FnAttrs,
   if (NumSets > 2) {
     // Drop the empty argument attribute sets at the end.
     ArgAttrs = ArgAttrs.take_front(NumSets - 2);
-    AttrSets.insert(AttrSets.end(), ArgAttrs.begin(), ArgAttrs.end());
+    llvm::append_range(AttrSets, ArgAttrs);
   }
 
   return getImpl(C, AttrSets);
