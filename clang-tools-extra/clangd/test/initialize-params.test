@@ -8,6 +8,9 @@
 # CHECK-NEXT:      "astProvider": true,
 # CHECK-NEXT:      "callHierarchyProvider": true,
 # CHECK-NEXT:      "codeActionProvider": true,
+# CHECK-NEXT:      "compilationDatabase": {
+# CHECK-NEXT:        "automaticReload": true
+# CHECK-NEXT:      },
 # CHECK-NEXT:      "completionProvider": {
 # CHECK-NEXT:        "allCommitCharacters": [
 # CHECK-NEXT:          " ",
