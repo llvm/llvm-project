@@ -287,13 +287,9 @@ void HexagonTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
       [=](LoopPassManager &LPM, PassBuilder::OptimizationLevel Level) {
         LPM.addPass(HexagonLoopIdiomRecognitionPass());
       });
-  PB.registerOptimizerLastEPCallback(
-      [=](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
-        LoopPassManager LPM(DebugPassManager);
-        FunctionPassManager FPM(DebugPassManager);
+  PB.registerLoopOptimizerEndEPCallback(
+      [=](LoopPassManager &LPM, PassBuilder::OptimizationLevel Level) {
         LPM.addPass(HexagonVectorLoopCarriedReusePass());
-        FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM)));
-        MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
       });
 }
 
