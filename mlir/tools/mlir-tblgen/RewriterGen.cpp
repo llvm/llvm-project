@@ -83,9 +83,10 @@ private:
   void emitOpMatch(DagNode tree, StringRef opName, int depth);
 
   // Emits C++ statements for matching the `argIndex`-th argument of the given
-  // DAG `tree` as an operand.
+  // DAG `tree` as an operand. operandIndex is the index in the DAG excluding
+  // the preceding attributes.
   void emitOperandMatch(DagNode tree, StringRef opName, int argIndex,
-                        int depth);
+                        int operandIndex, int depth);
 
   // Emits C++ statements for matching the `argIndex`-th argument of the given
   // DAG `tree` as an attribute.
@@ -379,7 +380,7 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
     // Next handle DAG leaf: operand or attribute
     if (opArg.is<NamedTypeConstraint *>()) {
       // emitOperandMatch's argument indexing counts attributes.
-      emitOperandMatch(tree, castedName, i, depth);
+      emitOperandMatch(tree, castedName, i, nextOperand, depth);
       ++nextOperand;
     } else if (opArg.is<NamedAttribute *>()) {
       emitAttributeMatch(tree, opName, i, depth);
@@ -393,7 +394,8 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
 }
 
 void PatternEmitter::emitOperandMatch(DagNode tree, StringRef opName,
-                                      int argIndex, int depth) {
+                                      int argIndex, int operandIndex,
+                                      int depth) {
   Operator &op = tree.getDialectOp(opMap);
   auto *operand = op.getArg(argIndex).get<NamedTypeConstraint *>();
   auto matcher = tree.getArgAsLeaf(argIndex);
@@ -418,7 +420,7 @@ void PatternEmitter::emitOperandMatch(DagNode tree, StringRef opName,
         PrintFatalError(loc, error);
       }
       auto self = formatv("(*{0}.getODSOperands({1}).begin()).getType()",
-                          opName, argIndex);
+                          opName, operandIndex);
       emitMatchCheck(
           opName,
           tgfmt(constraint.getConditionTemplate(), &fmtCtx.withSelf(self)),
