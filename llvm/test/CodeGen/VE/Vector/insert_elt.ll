@@ -15,9 +15,7 @@ define fastcc <256 x i64> @insert_rr_v256i64(i32 signext %idx, i64 %s) {
 define fastcc <256 x i64> @insert_ri7_v256i64(i64 %s) {
 ; CHECK-LABEL: insert_ri7_v256i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lea %s0, 256
-; CHECK-NEXT:    lvl %s0
-; CHECK-NEXT:    vbrd %v0, %s0
+; CHECK-NEXT:    lsv %v0(127), %s0
 ; CHECK-NEXT:    b.l.t (, %s10)
   %ret = insertelement <256 x i64> undef, i64 %s, i32 127
   ret <256 x i64> %ret
@@ -26,9 +24,8 @@ define fastcc <256 x i64> @insert_ri7_v256i64(i64 %s) {
 define fastcc <256 x i64> @insert_ri8_v256i64(i64 %s) {
 ; CHECK-LABEL: insert_ri8_v256i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lea %s0, 256
-; CHECK-NEXT:    lvl %s0
-; CHECK-NEXT:    vbrd %v0, %s0
+; CHECK-NEXT:    lea %s1, 128
+; CHECK-NEXT:    lsv %v0(%s1), %s0
 ; CHECK-NEXT:    b.l.t (, %s10)
   %ret = insertelement <256 x i64> undef, i64 %s, i32 128
   ret <256 x i64> %ret
@@ -37,9 +34,7 @@ define fastcc <256 x i64> @insert_ri8_v256i64(i64 %s) {
 define fastcc <512 x i64> @insert_ri_v512i64(i64 %s) {
 ; CHECK-LABEL: insert_ri_v512i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lea %s0, 256
-; CHECK-NEXT:    lvl %s0
-; CHECK-NEXT:    vbrd %v1, %s0
+; CHECK-NEXT:    lsv %v1(116), %s0
 ; CHECK-NEXT:    b.l.t (, %s10)
   %ret = insertelement <512 x i64> undef, i64 %s, i32 372
   ret <512 x i64> %ret
@@ -60,9 +55,8 @@ define fastcc <256 x i32> @insert_rr_v256i32(i32 signext %idx, i32 signext %s) {
 define fastcc <256 x i32> @insert_ri7_v256i32(i32 signext %s) {
 ; CHECK-LABEL: insert_ri7_v256i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lea %s0, 256
-; CHECK-NEXT:    lvl %s0
-; CHECK-NEXT:    vbrd %v0, %s0
+; CHECK-NEXT:    and %s0, %s0, (32)0
+; CHECK-NEXT:    lsv %v0(127), %s0
 ; CHECK-NEXT:    b.l.t (, %s10)
   %ret = insertelement <256 x i32> undef, i32 %s, i32 127
   ret <256 x i32> %ret
@@ -71,9 +65,9 @@ define fastcc <256 x i32> @insert_ri7_v256i32(i32 signext %s) {
 define fastcc <256 x i32> @insert_ri8_v256i32(i32 signext %s) {
 ; CHECK-LABEL: insert_ri8_v256i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lea %s0, 256
-; CHECK-NEXT:    lvl %s0
-; CHECK-NEXT:    vbrd %v0, %s0
+; CHECK-NEXT:    and %s0, %s0, (32)0
+; CHECK-NEXT:    lea %s1, 128
+; CHECK-NEXT:    lsv %v0(%s1), %s0
 ; CHECK-NEXT:    b.l.t (, %s10)
   %ret = insertelement <256 x i32> undef, i32 %s, i32 128
   ret <256 x i32> %ret
@@ -82,9 +76,12 @@ define fastcc <256 x i32> @insert_ri8_v256i32(i32 signext %s) {
 define fastcc <512 x i32> @insert_ri_v512i32(i32 signext %s) {
 ; CHECK-LABEL: insert_ri_v512i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lea %s0, 512
-; CHECK-NEXT:    lvl %s0
-; CHECK-NEXT:    vbrd %v0, %s0
+; CHECK-NEXT:    lea %s1, 186
+; CHECK-NEXT:    lvs %s2, %v0(%s1)
+; CHECK-NEXT:    and %s2, %s2, (32)0
+; CHECK-NEXT:    sll %s0, %s0, 32
+; CHECK-NEXT:    or %s0, %s2, %s0
+; CHECK-NEXT:    lsv %v0(%s1), %s0
 ; CHECK-NEXT:    b.l.t (, %s10)
   %ret = insertelement <512 x i32> undef, i32 %s, i32 372
   ret <512 x i32> %ret
@@ -122,9 +119,7 @@ define fastcc <256 x double> @insert_rr_v256f64(i32 signext %idx, double %s) {
 define fastcc <256 x double> @insert_ri7_v256f64(double %s) {
 ; CHECK-LABEL: insert_ri7_v256f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lea %s0, 256
-; CHECK-NEXT:    lvl %s0
-; CHECK-NEXT:    vbrd %v0, %s0
+; CHECK-NEXT:    lsv %v0(127), %s0
 ; CHECK-NEXT:    b.l.t (, %s10)
   %ret = insertelement <256 x double> undef, double %s, i32 127
   ret <256 x double> %ret
@@ -133,9 +128,8 @@ define fastcc <256 x double> @insert_ri7_v256f64(double %s) {
 define fastcc <256 x double> @insert_ri8_v256f64(double %s) {
 ; CHECK-LABEL: insert_ri8_v256f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lea %s0, 256
-; CHECK-NEXT:    lvl %s0
-; CHECK-NEXT:    vbrd %v0, %s0
+; CHECK-NEXT:    lea %s1, 128
+; CHECK-NEXT:    lsv %v0(%s1), %s0
 ; CHECK-NEXT:    b.l.t (, %s10)
   %ret = insertelement <256 x double> undef, double %s, i32 128
   ret <256 x double> %ret
@@ -144,9 +138,7 @@ define fastcc <256 x double> @insert_ri8_v256f64(double %s) {
 define fastcc <512 x double> @insert_ri_v512f64(double %s) {
 ; CHECK-LABEL: insert_ri_v512f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lea %s0, 256
-; CHECK-NEXT:    lvl %s0
-; CHECK-NEXT:    vbrd %v1, %s0
+; CHECK-NEXT:    lsv %v1(116), %s0
 ; CHECK-NEXT:    b.l.t (, %s10)
   %ret = insertelement <512 x double> undef, double %s, i32 372
   ret <512 x double> %ret
@@ -166,9 +158,7 @@ define fastcc <256 x float> @insert_rr_v256f32(i32 signext %idx, float %s) {
 define fastcc <256 x float> @insert_ri7_v256f32(float %s) {
 ; CHECK-LABEL: insert_ri7_v256f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lea %s0, 256
-; CHECK-NEXT:    lvl %s0
-; CHECK-NEXT:    vbrd %v0, %s0
+; CHECK-NEXT:    lsv %v0(127), %s0
 ; CHECK-NEXT:    b.l.t (, %s10)
   %ret = insertelement <256 x float> undef, float %s, i32 127
   ret <256 x float> %ret
@@ -177,9 +167,8 @@ define fastcc <256 x float> @insert_ri7_v256f32(float %s) {
 define fastcc <256 x float> @insert_ri8_v256f32(float %s) {
 ; CHECK-LABEL: insert_ri8_v256f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lea %s0, 256
-; CHECK-NEXT:    lvl %s0
-; CHECK-NEXT:    vbrd %v0, %s0
+; CHECK-NEXT:    lea %s1, 128
+; CHECK-NEXT:    lsv %v0(%s1), %s0
 ; CHECK-NEXT:    b.l.t (, %s10)
   %ret = insertelement <256 x float> undef, float %s, i32 128
   ret <256 x float> %ret
@@ -188,9 +177,13 @@ define fastcc <256 x float> @insert_ri8_v256f32(float %s) {
 define fastcc <512 x float> @insert_ri_v512f32(float %s) {
 ; CHECK-LABEL: insert_ri_v512f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lea %s0, 512
-; CHECK-NEXT:    lvl %s0
-; CHECK-NEXT:    vbrd %v0, %s0
+; CHECK-NEXT:    sra.l %s0, %s0, 32
+; CHECK-NEXT:    lea %s1, 186
+; CHECK-NEXT:    lvs %s2, %v0(%s1)
+; CHECK-NEXT:    and %s2, %s2, (32)0
+; CHECK-NEXT:    sll %s0, %s0, 32
+; CHECK-NEXT:    or %s0, %s2, %s0
+; CHECK-NEXT:    lsv %v0(%s1), %s0
 ; CHECK-NEXT:    b.l.t (, %s10)
   %ret = insertelement <512 x float> undef, float %s, i32 372
   ret <512 x float> %ret
