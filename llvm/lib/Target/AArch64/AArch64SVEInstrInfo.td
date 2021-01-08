@@ -205,6 +205,8 @@ def AArch64clz_mt    : SDNode<"AArch64ISD::CTLZ_MERGE_PASSTHRU", SDT_AArch64Arit
 def AArch64cnt_mt    : SDNode<"AArch64ISD::CTPOP_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64fneg_mt   : SDNode<"AArch64ISD::FNEG_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64fabs_mt   : SDNode<"AArch64ISD::FABS_MERGE_PASSTHRU", SDT_AArch64Arith>;
+def AArch64abs_mt   : SDNode<"AArch64ISD::ABS_MERGE_PASSTHRU", SDT_AArch64Arith>;
+def AArch64neg_mt   : SDNode<"AArch64ISD::NEG_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64sxt_mt    : SDNode<"AArch64ISD::SIGN_EXTEND_INREG_MERGE_PASSTHRU", SDT_AArch64IntExtend>;
 def AArch64uxt_mt    : SDNode<"AArch64ISD::ZERO_EXTEND_INREG_MERGE_PASSTHRU", SDT_AArch64IntExtend>;
 def AArch64frintp_mt : SDNode<"AArch64ISD::FCEIL_MERGE_PASSTHRU", SDT_AArch64Arith>;
@@ -376,8 +378,8 @@ let Predicates = [HasSVE] in {
   defm UXTH_ZPmZ : sve_int_un_pred_arit_0_w<0b011, "uxth", AArch64uxt_mt>;
   defm SXTW_ZPmZ : sve_int_un_pred_arit_0_d<0b100, "sxtw", AArch64sxt_mt>;
   defm UXTW_ZPmZ : sve_int_un_pred_arit_0_d<0b101, "uxtw", AArch64uxt_mt>;
-  defm ABS_ZPmZ  : sve_int_un_pred_arit_0<  0b110, "abs",  int_aarch64_sve_abs>;
-  defm NEG_ZPmZ  : sve_int_un_pred_arit_0<  0b111, "neg",  int_aarch64_sve_neg>;
+  defm ABS_ZPmZ  : sve_int_un_pred_arit_0<  0b110, "abs",  AArch64abs_mt>;
+  defm NEG_ZPmZ  : sve_int_un_pred_arit_0<  0b111, "neg",  AArch64neg_mt>;
 
   defm CLS_ZPmZ  : sve_int_un_pred_arit_1<   0b000, "cls",  AArch64cls_mt>;
   defm CLZ_ZPmZ  : sve_int_un_pred_arit_1<   0b001, "clz",  AArch64clz_mt>;
