@@ -396,6 +396,18 @@ SwiftLanguageRuntimeImpl::GetReflectionContext() {
 }
 
 void SwiftLanguageRuntimeImpl::SetupReflection() {
+  // SetupABIBit() iterates of the Target's images and thus needs to
+  // acquire that ModuleList's lock. We need to acquire this before
+  // locking m_add_module_mutex, since ModulesDidLoad can also be
+  // called from a place where that lock is already held:
+  // +   lldb_private::DynamicLoaderDarwin::AddModulesUsingImageInfos()
+  // +     lldb_private::ModuleList::AppendIfNeeded()
+  // +       lldb_private::Target::NotifyModuleAdded()
+  // +         lldb_private::Target::ModulesDidLoad()
+
+  // The global ABI bit is read by the Swift runtime library.
+  SetupABIBit();
+  
   std::lock_guard<std::recursive_mutex> lock(m_add_module_mutex);
   if (m_initialized_reflection_ctx)
     return;
@@ -417,9 +429,6 @@ void SwiftLanguageRuntimeImpl::SetupReflection() {
     return true;
   });
   m_modules_to_add.Clear();
-
-  // The global ABI bit is read by the Swift runtime library.
-  SetupABIBit();
 }
 
 bool SwiftLanguageRuntimeImpl::IsABIStable() {
