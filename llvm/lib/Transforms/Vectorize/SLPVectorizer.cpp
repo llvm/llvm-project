@@ -2499,7 +2499,7 @@ BoUpSLP::~BoUpSLP() {
            "trying to erase instruction with users.");
     Pair.getFirst()->eraseFromParent();
   }
-  assert(!verifyFunction(*F, &dbgs()));
+  LLVM_DEBUG(verifyFunction(*F));
 }
 
 void BoUpSLP::eraseInstructions(ArrayRef<Value *> AV) {
