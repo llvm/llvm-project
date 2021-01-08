@@ -105,7 +105,7 @@ void llvm::DeleteDeadBlocks(ArrayRef <BasicBlock *> BBs, DomTreeUpdater *DTU,
   DetatchDeadBlocks(BBs, DTU ? &Updates : nullptr, KeepOneInputPHIs);
 
   if (DTU)
-    DTU->applyUpdatesPermissive(Updates);
+    DTU->applyUpdates(Updates);
 
   for (BasicBlock *BB : BBs)
     if (DTU)
