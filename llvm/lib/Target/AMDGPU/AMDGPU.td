@@ -688,6 +688,12 @@ def FeatureUnalignedAccessMode : SubtargetFeature<"unaligned-access-mode",
   " supports it"
 >;
 
+def FeaturePackedTID : SubtargetFeature<"packed-tid",
+  "HasPackedTID",
+  "true",
+  "Workitem IDs are packed into v0 at kernel launch"
+>;
+
 def FeatureArchitectedFlatScratch : SubtargetFeature<"architected-flat-scratch",
   "HasArchitectedFlatScratch",
   "true",
@@ -1055,7 +1061,8 @@ def FeatureISAVersion11_0_0 : FeatureSet<
    FeatureArchitectedFlatScratch,
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
-   FeatureDoesNotSupportXNACK]>;
+   FeatureDoesNotSupportXNACK,
+   FeaturePackedTID]>;
 
 //===----------------------------------------------------------------------===//
 

@@ -396,6 +396,7 @@ protected:
   bool CFALUBug;
   bool LDSMisalignedBug;
   bool HasMFMAInlineLiteralBug;
+  bool HasPackedTID;
   bool HasVertexCache;
   short TexVTXClauseSize;
   bool UnalignedBufferAccess;
@@ -1155,6 +1156,8 @@ public:
 
   /// Return true if the target has the S_DELAY_ALU instruction.
   bool hasDelayAlu() const { return GFX11Insts; }
+
+  bool hasPackedTID() const { return HasPackedTID; }
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs

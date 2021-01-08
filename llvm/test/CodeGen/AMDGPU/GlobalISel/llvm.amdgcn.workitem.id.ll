@@ -1,9 +1,10 @@
-; RUN: llc -global-isel -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=2 -mcpu=kaveri -verify-machineinstrs < %s | FileCheck --check-prefixes=ALL,CO-V2  %s
-; RUN: llc -global-isel -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=2 -mcpu=carrizo -verify-machineinstrs < %s | FileCheck --check-prefixes=ALL,CO-V2  %s
-; RUN: llc -global-isel -mtriple=amdgcn-- -mcpu=hawaii -mattr=+flat-for-global -verify-machineinstrs < %s | FileCheck --check-prefixes=ALL,MESA %s
-; RUN: llc -global-isel -mtriple=amdgcn-- -mcpu=tonga -mattr=+flat-for-global -verify-machineinstrs < %s | FileCheck --check-prefixes=ALL,MESA %s
-; RUN: llc -global-isel -mtriple=amdgcn-unknown-mesa3d -mattr=+flat-for-global -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,CO-V2 %s
-; RUN: llc -global-isel -mtriple=amdgcn-unknown-mesa3d -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,CO-V2 %s
+; RUN: llc -global-isel -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=2 -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,UNPACKED-TID,CO-V2 %s
+; RUN: llc -global-isel -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=2 -mcpu=carrizo -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,UNPACKED-TID,CO-V2 %s
+; RUN: llc -global-isel -mtriple=amdgcn-- -mcpu=hawaii -mattr=+flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,UNPACKED-TID,MESA %s
+; RUN: llc -global-isel -mtriple=amdgcn-- -mcpu=tonga -mattr=+flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,UNPACKED-TID,MESA %s
+; RUN: llc -global-isel -mtriple=amdgcn-unknown-mesa3d -mattr=+flat-for-global -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,UNPACKED-TID,CO-V2 %s
+; RUN: llc -global-isel -mtriple=amdgcn-unknown-mesa3d -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,UNPACKED-TID,CO-V2 %s
+; RUN: llc -global-isel -mtriple=amdgcn-unknown-mesa3d -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,PACKED-TID %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare i32 @llvm.amdgcn.workitem.id.y() #0
@@ -16,8 +17,10 @@ declare i32 @llvm.amdgcn.workitem.id.z() #0
 ; ALL-LABEL: {{^}}test_workitem_id_x:
 ; CO-V2: enable_vgpr_workitem_id = 0
 
+; PACKED-TID: enable_vgpr_workitem_id = 0
+
 ; ALL-NOT: v0
-; ALL: {{buffer|flat}}_store_dword {{.*}}v0
+; ALL: {{buffer|flat|global}}_store_{{dword|b32}} {{.*}}v0
 define amdgpu_kernel void @test_workitem_id_x(i32 addrspace(1)* %out) #1 {
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   store i32 %id, i32 addrspace(1)* %out
@@ -31,8 +34,14 @@ define amdgpu_kernel void @test_workitem_id_x(i32 addrspace(1)* %out) #1 {
 ; ALL-LABEL: {{^}}test_workitem_id_y:
 ; CO-V2: enable_vgpr_workitem_id = 1
 
-; ALL-NOT: v1
-; ALL: {{buffer|flat}}_store_dword {{.*}}v1
+; PACKED-TID: enable_vgpr_workitem_id = 1
+; PACKED-TID-NOT: v0
+; PACKED-TID: v_lshrrev_b32_e32 v[[#REG1:]], 10, v0
+; PACKED-TID: v_and_b32_e32 v[[#REG2:]], 0x3ff, v[[#REG1]]
+; PACKED-TID: global_store_b32 {{.*}}, v[[#REG2]]
+
+; UNPACKED-TID-NOT: v1
+; UNPACKED-TID: {{buffer|flat}}_store_dword {{.*}}v1
 define amdgpu_kernel void @test_workitem_id_y(i32 addrspace(1)* %out) #1 {
   %id = call i32 @llvm.amdgcn.workitem.id.y()
   store i32 %id, i32 addrspace(1)* %out
@@ -46,8 +55,14 @@ define amdgpu_kernel void @test_workitem_id_y(i32 addrspace(1)* %out) #1 {
 ; ALL-LABEL: {{^}}test_workitem_id_z:
 ; CO-V2: enable_vgpr_workitem_id = 2
 
-; ALL-NOT: v2
-; ALL: {{buffer|flat}}_store_dword {{.*}}v2
+; PACKED-TID: enable_vgpr_workitem_id = 2
+; PACKED-TID-NOT: v0
+; PACKED-TID: v_lshrrev_b32_e32 v[[#REG1:]], 20, v0
+; PACKED-TID: v_and_b32_e32 v[[#REG2:]], 0x3ff, v[[#REG1]]
+; PACKED-TID: global_store_b32 {{.*}}, v[[#REG2]]
+
+; UNPACKED-TID-NOT: v2
+; UNPACKED-TID: {{buffer|flat}}_store_dword {{.*}}v2
 define amdgpu_kernel void @test_workitem_id_z(i32 addrspace(1)* %out) #1 {
   %id = call i32 @llvm.amdgcn.workitem.id.z()
   store i32 %id, i32 addrspace(1)* %out
@@ -56,9 +71,9 @@ define amdgpu_kernel void @test_workitem_id_z(i32 addrspace(1)* %out) #1 {
 
 ; ALL-LABEL: {{^}}test_workitem_id_x_usex2:
 ; ALL-NOT: v0
-; ALL: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
+; ALL: {{flat|global}}_store_{{dword|b32}} {{.*}}, v0
 ; ALL-NOT: v0
-; ALL: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
+; ALL: {{flat|global}}_store_{{dword|b32}} {{.*}}, v0
 define amdgpu_kernel void @test_workitem_id_x_usex2(i32 addrspace(1)* %out) #1 {
   %id0 = call i32 @llvm.amdgcn.workitem.id.x()
   store volatile i32 %id0, i32 addrspace(1)* %out
@@ -70,9 +85,9 @@ define amdgpu_kernel void @test_workitem_id_x_usex2(i32 addrspace(1)* %out) #1 {
 
 ; ALL-LABEL: {{^}}test_workitem_id_x_use_outside_entry:
 ; ALL-NOT: v0
-; ALL: flat_store_dword
+; ALL: {{flat|global}}_store_{{dword|b32}}
 ; ALL-NOT: v0
-; ALL: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
+; ALL: {{flat|global}}_store_{{dword|b32}} {{.*}}, v0
 define amdgpu_kernel void @test_workitem_id_x_use_outside_entry(i32 addrspace(1)* %out, i32 %arg) #1 {
 bb0:
   store volatile i32 0, i32 addrspace(1)* %out
@@ -90,7 +105,8 @@ bb2:
 
 ; ALL-LABEL: {{^}}test_workitem_id_x_func:
 ; ALL: s_waitcnt
-; ALL-NEXT: v_and_b32_e32 v2, 0x3ff, v2
+; ALL: v_and_b32_e32 v[[#REG1:]], 0x3ff, v2
+; ALL: {{flat|global}}_store_{{dword|b32}} {{.*}}, v[[#REG1]]
 define void @test_workitem_id_x_func(i32 addrspace(1)* %out) #1 {
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   store i32 %id, i32 addrspace(1)* %out
@@ -98,8 +114,9 @@ define void @test_workitem_id_x_func(i32 addrspace(1)* %out) #1 {
 }
 
 ; ALL-LABEL: {{^}}test_workitem_id_y_func:
-; ALL: v_lshrrev_b32_e32 v2, 10, v2
-; ALL-NEXT: v_and_b32_e32 v2, 0x3ff, v2
+; ALL: v_lshrrev_b32_e32 v[[#REG1:]], 10, v2
+; ALL: v_and_b32_e32 v[[#REG2:]], 0x3ff, v[[#REG1]]
+; ALL: {{flat|global}}_store_{{dword|b32}} {{.*}}, v[[#REG2]]
 define void @test_workitem_id_y_func(i32 addrspace(1)* %out) #1 {
   %id = call i32 @llvm.amdgcn.workitem.id.y()
   store i32 %id, i32 addrspace(1)* %out
@@ -107,8 +124,9 @@ define void @test_workitem_id_y_func(i32 addrspace(1)* %out) #1 {
 }
 
 ; ALL-LABEL: {{^}}test_workitem_id_z_func:
-; ALL: v_lshrrev_b32_e32 v2, 20, v2
-; ALL-NEXT: v_and_b32_e32 v2, 0x3ff, v2
+; ALL: v_lshrrev_b32_e32 v[[#REG1:]], 20, v2
+; ALL: v_and_b32_e32 v[[#REG2:]], 0x3ff, v[[#REG1]]
+; ALL: {{flat|global}}_store_{{dword|b32}} {{.*}}, v[[#REG2]]
 define void @test_workitem_id_z_func(i32 addrspace(1)* %out) #1 {
   %id = call i32 @llvm.amdgcn.workitem.id.z()
   store i32 %id, i32 addrspace(1)* %out

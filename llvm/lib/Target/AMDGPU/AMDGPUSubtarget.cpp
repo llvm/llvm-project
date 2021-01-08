@@ -293,6 +293,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     HasUnpackedD16VMem(false),
     LDSMisalignedBug(false),
     HasMFMAInlineLiteralBug(false),
+    HasPackedTID(false),
     UnalignedBufferAccess(false),
     UnalignedDSAccess(false),
 
