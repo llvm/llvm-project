@@ -382,6 +382,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::UMIN, VT, Legal);
       setOperationAction(ISD::UMAX, VT, Legal);
 
+      setOperationAction(ISD::ROTL, VT, Expand);
+      setOperationAction(ISD::ROTR, VT, Expand);
+
       if (isTypeLegal(VT)) {
         // Custom-lower extensions and truncations from/to mask types.
         setOperationAction(ISD::ANY_EXTEND, VT, Custom);
@@ -2010,6 +2013,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     // Comparing with 0 may allow us to fold into bnez/beqz.
     SDValue LHS = N->getOperand(0);
     SDValue RHS = N->getOperand(1);
+    if (LHS.getValueType().isScalableVector())
+      break;
     auto CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
     APInt Mask = APInt::getBitsSetFrom(LHS.getValueSizeInBits(), 1);
     if (isOneConstant(RHS) && ISD::isIntEqualitySetCC(CC) &&
