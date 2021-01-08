@@ -5425,10 +5425,10 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
         // take care of putting the two halves in the right place but we have to
         // combine them.
         SDValue &Bits =
-            std::find_if(RegsToPass.begin(), RegsToPass.end(),
-                         [=](const std::pair<unsigned, SDValue> &Elt) {
-                           return Elt.first == VA.getLocReg();
-                         })
+            llvm::find_if(RegsToPass,
+                          [=](const std::pair<unsigned, SDValue> &Elt) {
+                            return Elt.first == VA.getLocReg();
+                          })
                 ->second;
         Bits = DAG.getNode(ISD::OR, DL, Bits.getValueType(), Bits, Arg);
         // Call site info is used for function's parameter entry value
@@ -5709,11 +5709,9 @@ AArch64TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
     if (RegsUsed.count(VA.getLocReg())) {
       SDValue &Bits =
-          std::find_if(RetVals.begin(), RetVals.end(),
-                       [=](const std::pair<unsigned, SDValue> &Elt) {
-                         return Elt.first == VA.getLocReg();
-                       })
-              ->second;
+          llvm::find_if(RetVals, [=](const std::pair<unsigned, SDValue> &Elt) {
+            return Elt.first == VA.getLocReg();
+          })->second;
       Bits = DAG.getNode(ISD::OR, DL, Bits.getValueType(), Bits, Arg);
     } else {
       RetVals.emplace_back(VA.getLocReg(), Arg);

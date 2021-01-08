@@ -1559,10 +1559,9 @@ bool X86InstructionSelector::selectDivRem(MachineInstr &I,
        }},                                                 // i64
   };
 
-  auto OpEntryIt = std::find_if(std::begin(OpTable), std::end(OpTable),
-                                [RegTy](const DivRemEntry &El) {
-                                  return El.SizeInBits == RegTy.getSizeInBits();
-                                });
+  auto OpEntryIt = llvm::find_if(OpTable, [RegTy](const DivRemEntry &El) {
+    return El.SizeInBits == RegTy.getSizeInBits();
+  });
   if (OpEntryIt == std::end(OpTable))
     return false;
 

@@ -224,9 +224,8 @@ collectVirtualRegUses(const MachineInstr &MI, const LiveIntervals &LIS,
     auto const UsedMask = getUsedRegMask(MO, MRI, LIS);
 
     auto Reg = MO.getReg();
-    auto I = std::find_if(Res.begin(), Res.end(), [Reg](const RegisterMaskPair &RM) {
-      return RM.RegUnit == Reg;
-    });
+    auto I = llvm::find_if(
+        Res, [Reg](const RegisterMaskPair &RM) { return RM.RegUnit == Reg; });
     if (I != Res.end())
       I->LaneMask |= UsedMask;
     else

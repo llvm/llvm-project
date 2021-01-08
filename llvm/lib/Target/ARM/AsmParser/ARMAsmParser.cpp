@@ -6240,10 +6240,9 @@ bool ARMAsmParser::parsePrefix(ARMMCExpr::VariantKind &RefKind) {
   StringRef IDVal = Parser.getTok().getIdentifier();
 
   const auto &Prefix =
-      std::find_if(std::begin(PrefixEntries), std::end(PrefixEntries),
-                   [&IDVal](const PrefixEntry &PE) {
-                      return PE.Spelling == IDVal;
-                   });
+      llvm::find_if(PrefixEntries, [&IDVal](const PrefixEntry &PE) {
+        return PE.Spelling == IDVal;
+      });
   if (Prefix == std::end(PrefixEntries)) {
     Error(Parser.getTok().getLoc(), "unexpected prefix in operand");
     return true;
