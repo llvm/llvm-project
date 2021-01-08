@@ -47,6 +47,9 @@ endif()
 
 include(builtin-config-ix)
 
+option(COMPILER_RT_BUILTINS_HIDE_SYMBOLS
+  "Do not export any symbols from the static library." ON)
+
 # TODO: Need to add a mechanism for logging errors when builtin source files are
 # added to a sub-directory and not this CMakeLists file.
 set(GENERIC_SOURCES
@@ -666,7 +669,7 @@ else ()
       append_list_if(COMPILER_RT_HAS_FPIC_FLAG -fPIC BUILTIN_CFLAGS)
     endif()
     append_list_if(COMPILER_RT_HAS_FNO_BUILTIN_FLAG -fno-builtin BUILTIN_CFLAGS)
-    if(NOT ANDROID)
+    if(COMPILER_RT_BUILTINS_HIDE_SYMBOLS)
       append_list_if(COMPILER_RT_HAS_VISIBILITY_HIDDEN_FLAG -fvisibility=hidden BUILTIN_CFLAGS)
     endif()
     if(NOT COMPILER_RT_DEBUG)
@@ -676,7 +679,7 @@ else ()
 
   set(BUILTIN_DEFS "")
 
-  if(NOT ANDROID)
+  if(COMPILER_RT_BUILTINS_HIDE_SYMBOLS)
     append_list_if(COMPILER_RT_HAS_VISIBILITY_HIDDEN_FLAG VISIBILITY_HIDDEN BUILTIN_DEFS)
   endif()
 
