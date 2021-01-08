@@ -237,20 +237,6 @@ public:
   /// \see ModuleList::GetSize()
   Module *GetModulePointerAtIndex(size_t idx) const;
 
-  /// Get the module pointer for the module at index \a idx without acquiring
-  /// the ModuleList mutex.  This MUST already have been acquired with
-  /// ModuleList::GetMutex and locked for this call to be safe.
-  ///
-  /// \param[in] idx
-  ///     An index into this module collection.
-  ///
-  /// \return
-  ///     A pointer to a Module which can by nullptr if \a idx is out
-  ///     of range.
-  ///
-  /// \see ModuleList::GetSize()
-  Module *GetModulePointerAtIndexUnlocked(size_t idx) const;
-
   /// Find compile units by partial or full path.
   ///
   /// Finds all compile units that match \a path in all of the modules and
@@ -491,11 +477,13 @@ public:
   typedef LockingAdaptedIterable<collection, lldb::ModuleSP, vector_adapter,
                                  std::recursive_mutex>
       ModuleIterable;
-  ModuleIterable Modules() { return ModuleIterable(m_modules, GetMutex()); }
+  ModuleIterable Modules() const {
+    return ModuleIterable(m_modules, GetMutex());
+  }
 
   typedef AdaptedIterable<collection, lldb::ModuleSP, vector_adapter>
       ModuleIterableNoLocking;
-  ModuleIterableNoLocking ModulesNoLocking() {
+  ModuleIterableNoLocking ModulesNoLocking() const {
     return ModuleIterableNoLocking(m_modules);
   }
 };

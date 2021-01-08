@@ -452,15 +452,11 @@ bool AppleObjCTrampolineHandler::AppleObjCVTables::InitializeVTableSymbols() {
   if (process_sp) {
     Target &target = process_sp->GetTarget();
 
-    const ModuleList &target_modules = target.GetImages();
-    std::lock_guard<std::recursive_mutex> guard(target_modules.GetMutex());
-    size_t num_modules = target_modules.GetSize();
     if (!m_objc_module_sp) {
-      for (size_t i = 0; i < num_modules; i++) {
+      for (ModuleSP module_sp : target.GetImages().Modules()) {
         if (ObjCLanguageRuntime::Get(*process_sp)
-                ->IsModuleObjCLibrary(
-                    target_modules.GetModuleAtIndexUnlocked(i))) {
-          m_objc_module_sp = target_modules.GetModuleAtIndexUnlocked(i);
+                ->IsModuleObjCLibrary(module_sp)) {
+          m_objc_module_sp = module_sp;
           break;
         }
       }

@@ -728,13 +728,8 @@ bool DynamicLoaderMacOSXDYLD::InitializeFromAllImageInfos() {
     // DYLD_*_PATH pointed to an equivalent version.  We don't want it to stay
     // in the target's module list or it will confuse us, so unload it here.
     Target &target = m_process->GetTarget();
-    const ModuleList &target_modules = target.GetImages();
     ModuleList not_loaded_modules;
-    std::lock_guard<std::recursive_mutex> guard(target_modules.GetMutex());
-
-    size_t num_modules = target_modules.GetSize();
-    for (size_t i = 0; i < num_modules; i++) {
-      ModuleSP module_sp = target_modules.GetModuleAtIndexUnlocked(i);
+    for (ModuleSP module_sp : target.GetImages().Modules()) {
       if (!module_sp->IsLoadedInTarget(&target)) {
         if (log) {
           StreamString s;
