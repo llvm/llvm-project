@@ -971,10 +971,23 @@ public:
 };
 
 /// A recipe for handling all phi nodes except for integer and FP inductions.
+/// For reduction PHIs, RdxDesc must point to the corresponding recurrence
+/// descriptor.
 class VPWidenPHIRecipe : public VPRecipeBase {
   PHINode *Phi;
 
+  /// Descriptor for a reduction PHI.
+  RecurrenceDescriptor *RdxDesc = nullptr;
+
 public:
+  /// Create a new VPWidenPHIRecipe for the reduction \p Phi described by \p
+  /// RdxDesc.
+  VPWidenPHIRecipe(PHINode *Phi, RecurrenceDescriptor &RdxDesc)
+      : VPWidenPHIRecipe(Phi) {
+    this->RdxDesc = &RdxDesc;
+  }
+
+  /// Create a VPWidenPHIRecipe for \p Phi
   VPWidenPHIRecipe(PHINode *Phi) : VPRecipeBase(VPWidenPHISC), Phi(Phi) {
     new VPValue(Phi, this);
   }
