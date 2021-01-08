@@ -14027,8 +14027,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     // Lowering vector comparisons to fcmp instructions, while
     // ignoring signalling behaviour requested
     // ignoring rounding mode requested
-    // This is is only possible as long as FENV_ACCESS is not implemented.
-    // See also: https://reviews.llvm.org/D45616
+    // This is only possible if fp-model is not strict and FENV_ACCESS is off.
 
     // The third argument is the comparison condition, and integer in the
     // range [0, 31]
