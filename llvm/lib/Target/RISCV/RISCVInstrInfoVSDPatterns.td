@@ -346,6 +346,24 @@ defm "" : VPatBinarySDNode_VV_VX<udiv, "PseudoVDIV">;
 defm "" : VPatBinarySDNode_VV_VX<urem, "PseudoVREMU">;
 defm "" : VPatBinarySDNode_VV_VX<srem, "PseudoVREM">;
 
+// 12.16. Vector Integer Merge Instructions
+foreach vti = AllIntegerVectors in {
+  def : Pat<(vti.Vector (vselect (vti.Mask VMV0:$vm), vti.RegClass:$rs1,
+                                                      vti.RegClass:$rs2)),
+            (!cast<Instruction>("PseudoVMERGE_VVM_"#vti.LMul.MX)
+                 vti.RegClass:$rs2, vti.RegClass:$rs1, VMV0:$vm, VLMax, vti.SEW)>;
+
+  def : Pat<(vti.Vector (vselect (vti.Mask VMV0:$vm), (SplatPat XLenVT:$rs1),
+                                                      vti.RegClass:$rs2)),
+            (!cast<Instruction>("PseudoVMERGE_VXM_"#vti.LMul.MX)
+                 vti.RegClass:$rs2, GPR:$rs1, VMV0:$vm, VLMax, vti.SEW)>;
+
+  def : Pat<(vti.Vector (vselect (vti.Mask VMV0:$vm), (SplatPat_simm5 simm5:$rs1),
+                                                      vti.RegClass:$rs2)),
+            (!cast<Instruction>("PseudoVMERGE_VIM_"#vti.LMul.MX)
+                 vti.RegClass:$rs2, simm5:$rs1, VMV0:$vm, VLMax, vti.SEW)>;
+}
+
 // 16.1. Vector Mask-Register Logical Instructions
 foreach mti = AllMasks in {
   def : Pat<(mti.Mask (and VR:$rs1, VR:$rs2)),
@@ -403,6 +421,30 @@ defm "" : VPatFPSetCCSDNode_VV_VF_FV<SETOLT, "PseudoVMFLT", "PseudoVMFGT">;
 defm "" : VPatFPSetCCSDNode_VV_VF_FV<SETLE,  "PseudoVMFLE", "PseudoVMFGE">;
 defm "" : VPatFPSetCCSDNode_VV_VF_FV<SETOLE, "PseudoVMFLE", "PseudoVMFGE">;
 
+// Floating-point vselects:
+// 12.16. Vector Integer Merge Instructions
+// 14.13. Vector Floating-Point Merge Instruction
+foreach fvti = AllFloatVectors in {
+  def : Pat<(fvti.Vector (vselect (fvti.Mask VMV0:$vm), fvti.RegClass:$rs1,
+                                                        fvti.RegClass:$rs2)),
+            (!cast<Instruction>("PseudoVMERGE_VVM_"#fvti.LMul.MX)
+                 fvti.RegClass:$rs2, fvti.RegClass:$rs1, VMV0:$vm,
+                 VLMax, fvti.SEW)>;
+
+  def : Pat<(fvti.Vector (vselect (fvti.Mask VMV0:$vm),
+                                  (splat_vector fvti.ScalarRegClass:$rs1),
+                                  fvti.RegClass:$rs2)),
+            (!cast<Instruction>("PseudoVFMERGE_VFM_"#fvti.LMul.MX)
+                 fvti.RegClass:$rs2,
+                 ToFPR32<fvti.Scalar, fvti.ScalarRegClass, "rs1">.ret,
+                 VMV0:$vm, VLMax, fvti.SEW)>;
+
+  def : Pat<(fvti.Vector (vselect (fvti.Mask VMV0:$vm),
+                                  (splat_vector (fvti.Scalar fpimm0)),
+                                  fvti.RegClass:$rs2)),
+            (!cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX)
+                 fvti.RegClass:$rs2, 0, VMV0:$vm, VLMax, fvti.SEW)>;
+}
 } // Predicates = [HasStdExtV, HasStdExtF]
 
 //===----------------------------------------------------------------------===//
