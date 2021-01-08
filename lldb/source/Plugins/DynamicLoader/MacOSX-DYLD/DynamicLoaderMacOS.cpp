@@ -401,18 +401,16 @@ DynamicLoaderMacOS::GetDyldLockVariableAddressFromModule(Module *module) {
 Status DynamicLoaderMacOS::CanLoadImage() {
   Status error;
   addr_t symbol_address = LLDB_INVALID_ADDRESS;
+  ConstString g_libdyld_name("libdyld.dylib");
   Target &target = m_process->GetTarget();
   const ModuleList &target_modules = target.GetImages();
   std::lock_guard<std::recursive_mutex> guard(target_modules.GetMutex());
-  const size_t num_modules = target_modules.GetSize();
-  ConstString g_libdyld_name("libdyld.dylib");
 
   // Find any modules named "libdyld.dylib" and look for the symbol there first
-  for (size_t i = 0; i < num_modules; i++) {
-    Module *module_pointer = target_modules.GetModulePointerAtIndexUnlocked(i);
-    if (module_pointer) {
-      if (module_pointer->GetFileSpec().GetFilename() == g_libdyld_name) {
-        symbol_address = GetDyldLockVariableAddressFromModule(module_pointer);
+  for (ModuleSP module_sp : target.GetImages().ModulesNoLocking()) {
+    if (module_sp) {
+      if (module_sp->GetFileSpec().GetFilename() == g_libdyld_name) {
+        symbol_address = GetDyldLockVariableAddressFromModule(module_sp.get());
         if (symbol_address != LLDB_INVALID_ADDRESS)
           break;
       }
@@ -421,12 +419,10 @@ Status DynamicLoaderMacOS::CanLoadImage() {
 
   // Search through all modules looking for the symbol in them
   if (symbol_address == LLDB_INVALID_ADDRESS) {
-    for (size_t i = 0; i < num_modules; i++) {
-      Module *module_pointer =
-          target_modules.GetModulePointerAtIndexUnlocked(i);
-      if (module_pointer) {
+    for (ModuleSP module_sp : target.GetImages().Modules()) {
+      if (module_sp) {
         addr_t symbol_address =
-            GetDyldLockVariableAddressFromModule(module_pointer);
+            GetDyldLockVariableAddressFromModule(module_sp.get());
         if (symbol_address != LLDB_INVALID_ADDRESS)
           break;
       }
@@ -451,9 +447,9 @@ Status DynamicLoaderMacOS::CanLoadImage() {
     // _dyld_start) - so we should not allow dlopen calls. But if we found more
     // than one module then we are clearly past _dyld_start so in that case
     // we'll default to "it's safe".
-    if (num_modules <= 1)
-        error.SetErrorString("could not find the dyld library or "
-                                       "the dyld lock symbol");
+    if (target.GetImages().GetSize() <= 1)
+      error.SetErrorString("could not find the dyld library or "
+                           "the dyld lock symbol");
   }
   return error;
 }

@@ -170,7 +170,7 @@ template <typename C, typename E, E (*A)(typename C::const_iterator &),
           typename MutexType>
 class LockingAdaptedIterable : public AdaptedIterable<C, E, A> {
 public:
-  LockingAdaptedIterable(C &container, MutexType &mutex)
+  LockingAdaptedIterable(const C &container, MutexType &mutex)
       : AdaptedIterable<C, E, A>(container), m_mutex(&mutex) {
     m_mutex->lock();
   }
