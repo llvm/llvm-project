@@ -1569,6 +1569,17 @@ defm SHMB : SHMm<"shm.b", 0x31, I64>;
 // Pattern Matchings
 //===----------------------------------------------------------------------===//
 
+// Basic cast between registers.  This is often used in ISel patterns, so make
+// them as OutPatFrag.
+def i2l : OutPatFrag<(ops node:$exp),
+                     (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $exp, sub_i32)>;
+def l2i : OutPatFrag<(ops node:$exp),
+                     (EXTRACT_SUBREG $exp, sub_i32)>;
+def f2l : OutPatFrag<(ops node:$exp),
+                     (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $exp, sub_f32)>;
+def l2f : OutPatFrag<(ops node:$exp),
+                     (EXTRACT_SUBREG $exp, sub_f32)>;
+
 // Small immediates.
 def : Pat<(i32 simm7:$val), (EXTRACT_SUBREG (ORim (LO7 $val), 0), sub_i32)>;
 def : Pat<(i64 simm7:$val), (ORim (LO7 $val), 0)>;
@@ -1781,9 +1792,6 @@ defm : ATMLDm<atomic_load_8, LD1BZXrri, LD1BZXrii, LD1BZXzri, LD1BZXzii>;
 defm : ATMLDm<atomic_load_16, LD2BZXrri, LD2BZXrii, LD2BZXzri, LD2BZXzii>;
 defm : ATMLDm<atomic_load_32, LDLZXrri, LDLZXrii, LDLZXzri, LDLZXzii>;
 defm : ATMLDm<atomic_load_64, LDrri, LDrii, LDzri, LDzii>;
-
-def i2l : OutPatFrag<(ops node:$exp),
-                     (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $exp, sub_i32)>;
 
 // Optimized atomic loads with sext
 multiclass SXATMLDm<SDPatternOperator from, Operand TY,
