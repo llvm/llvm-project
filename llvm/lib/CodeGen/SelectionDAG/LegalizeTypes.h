@@ -300,6 +300,7 @@ private:
   SDValue PromoteIntRes_EXTRACT_SUBVECTOR(SDNode *N);
   SDValue PromoteIntRes_VECTOR_REVERSE(SDNode *N);
   SDValue PromoteIntRes_VECTOR_SHUFFLE(SDNode *N);
+  SDValue PromoteIntRes_VECTOR_SPLICE(SDNode *N);
   SDValue PromoteIntRes_BUILD_VECTOR(SDNode *N);
   SDValue PromoteIntRes_SCALAR_TO_VECTOR(SDNode *N);
   SDValue PromoteIntRes_SPLAT_VECTOR(SDNode *N);
@@ -838,6 +839,7 @@ private:
   void SplitVecRes_VECTOR_REVERSE(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N, SDValue &Lo,
                                   SDValue &Hi);
+  void SplitVecRes_VECTOR_SPLICE(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_VAARG(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_FP_TO_XINT_SAT(SDNode *N, SDValue &Lo, SDValue &Hi);
 

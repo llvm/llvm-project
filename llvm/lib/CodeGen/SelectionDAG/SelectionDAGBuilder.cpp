@@ -7105,6 +7105,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::experimental_vector_reverse:
     visitVectorReverse(I);
     return;
+  case Intrinsic::experimental_vector_splice:
+    visitVectorSplice(I);
+    return;
   }
 }
 
@@ -10955,4 +10958,38 @@ void SelectionDAGBuilder::visitFreeze(const FreezeInst &I) {
 
   setValue(&I, DAG.getNode(ISD::MERGE_VALUES, getCurSDLoc(),
                            DAG.getVTList(ValueVTs), Values));
+}
+
+void SelectionDAGBuilder::visitVectorSplice(const CallInst &I) {
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+
+  SDLoc DL = getCurSDLoc();
+  SDValue V1 = getValue(I.getOperand(0));
+  SDValue V2 = getValue(I.getOperand(1));
+  int64_t Imm = cast<ConstantInt>(I.getOperand(2))->getSExtValue();
+
+  // VECTOR_SHUFFLE doesn't support a scalable mask so use a dedicated node.
+  if (VT.isScalableVector()) {
+    MVT IdxVT = TLI.getVectorIdxTy(DAG.getDataLayout());
+    setValue(&I, DAG.getNode(ISD::VECTOR_SPLICE, DL, VT, V1, V2,
+                             DAG.getConstant(Imm, DL, IdxVT)));
+    return;
+  }
+
+  unsigned NumElts = VT.getVectorNumElements();
+
+  if ((-Imm > NumElts) || (Imm >= NumElts)) {
+    // Result is undefined if immediate is out-of-bounds.
+    setValue(&I, DAG.getUNDEF(VT));
+    return;
+  }
+
+  uint64_t Idx = (NumElts + Imm) % NumElts;
+
+  // Use VECTOR_SHUFFLE to maintain original behaviour for fixed-length vectors.
+  SmallVector<int, 8> Mask;
+  for (unsigned i = 0; i < NumElts; ++i)
+    Mask.push_back(Idx + i);
+  setValue(&I, DAG.getVectorShuffle(VT, DL, V1, V2, Mask));
 }
