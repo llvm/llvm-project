@@ -130,7 +130,7 @@ public:
     }
       _LIBCPP_FALLTHROUGH();
     case PS_InRootName: {
-      PosPtr TkEnd = consumeSeparator(Start, End);
+      PosPtr TkEnd = consumeAllSeparators(Start, End);
       if (TkEnd)
         return makeState(PS_InRootDir, Start, TkEnd);
       else
@@ -140,7 +140,7 @@ public:
       return makeState(PS_InFilenames, Start, consumeName(Start, End));
 
     case PS_InFilenames: {
-      PosPtr SepEnd = consumeSeparator(Start, End);
+      PosPtr SepEnd = consumeAllSeparators(Start, End);
       if (SepEnd != End) {
         PosPtr TkEnd = consumeName(SepEnd, End);
         if (TkEnd)
@@ -166,7 +166,7 @@ public:
     switch (State) {
     case PS_AtEnd: {
       // Try to consume a trailing separator or root directory first.
-      if (PosPtr SepEnd = consumeSeparator(RStart, REnd)) {
+      if (PosPtr SepEnd = consumeAllSeparators(RStart, REnd)) {
         if (SepEnd == REnd)
           return makeState(PS_InRootDir, Path.data(), RStart + 1);
         PosPtr TkStart = consumeRootName(SepEnd, REnd);
@@ -185,7 +185,7 @@ public:
       return makeState(PS_InFilenames, consumeName(RStart, REnd) + 1,
                        RStart + 1);
     case PS_InFilenames: {
-      PosPtr SepEnd = consumeSeparator(RStart, REnd);
+      PosPtr SepEnd = consumeAllSeparators(RStart, REnd);
       if (SepEnd == REnd)
         return makeState(PS_InRootDir, Path.data(), RStart + 1);
       PosPtr TkStart = consumeRootName(SepEnd ? SepEnd : RStart, REnd);
@@ -304,7 +304,8 @@ private:
     _LIBCPP_UNREACHABLE();
   }
 
-  PosPtr consumeSeparator(PosPtr P, PosPtr End) const noexcept {
+  // Consume all consecutive separators.
+  PosPtr consumeAllSeparators(PosPtr P, PosPtr End) const noexcept {
     if (P == nullptr || P == End || !isSeparator(*P))
       return nullptr;
     const int Inc = P < End ? 1 : -1;
@@ -316,7 +317,7 @@ private:
 
   // Consume exactly N separators, or return nullptr.
   PosPtr consumeNSeparators(PosPtr P, PosPtr End, int N) const noexcept {
-    PosPtr Ret = consumeSeparator(P, End);
+    PosPtr Ret = consumeAllSeparators(P, End);
     if (Ret == nullptr)
       return nullptr;
     if (P < End) {
