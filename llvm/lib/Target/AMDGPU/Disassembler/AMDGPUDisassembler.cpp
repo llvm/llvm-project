@@ -1578,11 +1578,10 @@ bool AMDGPUSymbolizer::tryAddingSymbolicOperand(MCInst &Inst,
   if (!Symbols)
     return false;
 
-  auto Result = std::find_if(Symbols->begin(), Symbols->end(),
-                             [Value](const SymbolInfoTy& Val) {
-                                return Val.Addr == static_cast<uint64_t>(Value)
-                                    && Val.Type == ELF::STT_NOTYPE;
-                             });
+  auto Result = llvm::find_if(*Symbols, [Value](const SymbolInfoTy &Val) {
+    return Val.Addr == static_cast<uint64_t>(Value) &&
+           Val.Type == ELF::STT_NOTYPE;
+  });
   if (Result != Symbols->end()) {
     auto *Sym = Ctx.getOrCreateSymbol(Result->Name);
     const auto *Add = MCSymbolRefExpr::create(Sym, Ctx);

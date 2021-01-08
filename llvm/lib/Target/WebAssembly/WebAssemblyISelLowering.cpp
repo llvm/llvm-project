@@ -1629,8 +1629,8 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   SmallVector<SwizzleEntry, 16> SwizzleCounts;
 
   auto AddCount = [](auto &Counts, const auto &Val) {
-    auto CountIt = std::find_if(Counts.begin(), Counts.end(),
-                                [&Val](auto E) { return E.first == Val; });
+    auto CountIt =
+        llvm::find_if(Counts, [&Val](auto E) { return E.first == Val; });
     if (CountIt == Counts.end()) {
       Counts.emplace_back(Val, 1);
     } else {
