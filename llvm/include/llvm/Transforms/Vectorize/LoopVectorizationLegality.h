@@ -325,6 +325,10 @@ public:
 
   const LoopAccessInfo *getLAI() const { return LAI; }
 
+  bool isSafeForAnyVectorWidth() const {
+    return LAI->getDepChecker().isSafeForAnyVectorWidth();
+  }
+
   unsigned getMaxSafeDepDistBytes() { return LAI->getMaxSafeDepDistBytes(); }
 
   uint64_t getMaxSafeVectorWidthInBits() const {
