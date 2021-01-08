@@ -21,6 +21,20 @@ subroutine s
   !print *, dot_product(g(0:12:1), x(11:(-1):(-1)))
 end subroutine s
 
+! CHECK-LABEL: func @_QPs2
+subroutine s2
+  real :: x(10)
+  x = 0.0
+  ! CHECK: fir.call @_FortranAioBeginExternalListOutput
+  print *, x
+  ! CHECK: %[[s:.*]] = fir.slice {{.*}} !fir.slice<1>
+  ! CHECK: %[[p:.*]] = fir.array_coor %{{.*}} [%[[s]]] %
+  ! CHECK: fir.store %{{.*}} to %[[p]] : !fir.ref<f32>
+  x(1:10:3) = 2.0
+  ! CHECK: fir.call @_FortranAioBeginExternalListOutput
+  print *, x
+end subroutine s2
+
 ! CHECK-LABEL: func @_QQmain
 program main
   integer :: A(10)

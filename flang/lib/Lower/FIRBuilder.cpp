@@ -247,8 +247,8 @@ mlir::Value Fortran::lower::FirOpBuilder::createSlice(
     mlir::ValueRange path) {
   if (triples.empty()) {
     // If there is no slicing by triple notation, then take the whole array.
-    llvm::SmallVector<mlir::Value, 8> trips;
     auto fullShape = [&](const fir::AbstractArrayBox &arr) -> mlir::Value {
+      llvm::SmallVector<mlir::Value, 8> trips;
       auto idxTy = getIndexType();
       auto one = createIntegerConstant(loc, idxTy, 1);
       auto sliceTy = fir::SliceType::get(getContext(), arr.rank());

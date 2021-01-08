@@ -1465,7 +1465,8 @@ private:
                           const Fortran::semantics::Symbol *sym,
                           Fortran::lower::StatementContext &stmtCtx) {
     auto loc = toLocation();
-    if (Fortran::evaluate::IsConstantExpr(assign.rhs)) {
+    if (Fortran::evaluate::IsConstantExpr(assign.rhs) &&
+        (assign.lhs.Rank() == assign.rhs.Rank())) {
       // TODO: Constants get expanded out as inline array values. Probably want
       // to reconsider that based on context. For an initializer, that's fine,
       // but inlining large arrays in a function is not.
