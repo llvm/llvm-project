@@ -55,6 +55,21 @@
 #   endif
 # endif
 
-#endif // TEST_STD_VER == 20
+#elif TEST_STD_VER > 20
+
+# if !defined(_LIBCPP_HAS_NO_THREADS)
+#   ifndef __cpp_lib_semaphore
+#     error "__cpp_lib_semaphore should be defined in c++2b"
+#   endif
+#   if __cpp_lib_semaphore != 201907L
+#     error "__cpp_lib_semaphore should have the value 201907L in c++2b"
+#   endif
+# else
+#   ifdef __cpp_lib_semaphore
+#     error "__cpp_lib_semaphore should not be defined when !defined(_LIBCPP_HAS_NO_THREADS) is not defined!"
+#   endif
+# endif
+
+#endif // TEST_STD_VER > 20
 
 int main(int, char**) { return 0; }

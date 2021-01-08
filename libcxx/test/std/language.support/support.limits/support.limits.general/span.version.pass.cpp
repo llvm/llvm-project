@@ -47,6 +47,15 @@
 #   error "__cpp_lib_span should have the value 202002L in c++20"
 # endif
 
-#endif // TEST_STD_VER == 20
+#elif TEST_STD_VER > 20
+
+# ifndef __cpp_lib_span
+#   error "__cpp_lib_span should be defined in c++2b"
+# endif
+# if __cpp_lib_span != 202002L
+#   error "__cpp_lib_span should have the value 202002L in c++2b"
+# endif
+
+#endif // TEST_STD_VER > 20
 
 int main(int, char**) { return 0; }

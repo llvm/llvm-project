@@ -105,6 +105,35 @@
 #   endif
 # endif
 
-#endif // TEST_STD_VER == 20
+#elif TEST_STD_VER > 20
+
+# ifndef __cpp_lib_hypot
+#   error "__cpp_lib_hypot should be defined in c++2b"
+# endif
+# if __cpp_lib_hypot != 201603L
+#   error "__cpp_lib_hypot should have the value 201603L in c++2b"
+# endif
+
+# ifndef __cpp_lib_interpolate
+#   error "__cpp_lib_interpolate should be defined in c++2b"
+# endif
+# if __cpp_lib_interpolate != 201902L
+#   error "__cpp_lib_interpolate should have the value 201902L in c++2b"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_math_special_functions
+#     error "__cpp_lib_math_special_functions should be defined in c++2b"
+#   endif
+#   if __cpp_lib_math_special_functions != 201603L
+#     error "__cpp_lib_math_special_functions should have the value 201603L in c++2b"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_math_special_functions
+#     error "__cpp_lib_math_special_functions should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+#endif // TEST_STD_VER > 20
 
 int main(int, char**) { return 0; }

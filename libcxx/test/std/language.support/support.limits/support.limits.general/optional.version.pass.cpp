@@ -50,6 +50,15 @@
 #   error "__cpp_lib_optional should have the value 201606L in c++20"
 # endif
 
-#endif // TEST_STD_VER == 20
+#elif TEST_STD_VER > 20
+
+# ifndef __cpp_lib_optional
+#   error "__cpp_lib_optional should be defined in c++2b"
+# endif
+# if __cpp_lib_optional != 201606L
+#   error "__cpp_lib_optional should have the value 201606L in c++2b"
+# endif
+
+#endif // TEST_STD_VER > 20
 
 int main(int, char**) { return 0; }

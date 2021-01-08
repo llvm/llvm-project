@@ -142,6 +142,43 @@
 #   error "__cpp_lib_nonmember_container_access should have the value 201411L in c++20"
 # endif
 
-#endif // TEST_STD_VER == 20
+#elif TEST_STD_VER > 20
+
+# ifndef __cpp_lib_allocator_traits_is_always_equal
+#   error "__cpp_lib_allocator_traits_is_always_equal should be defined in c++2b"
+# endif
+# if __cpp_lib_allocator_traits_is_always_equal != 201411L
+#   error "__cpp_lib_allocator_traits_is_always_equal should have the value 201411L in c++2b"
+# endif
+
+# ifndef __cpp_lib_erase_if
+#   error "__cpp_lib_erase_if should be defined in c++2b"
+# endif
+# if __cpp_lib_erase_if != 202002L
+#   error "__cpp_lib_erase_if should have the value 202002L in c++2b"
+# endif
+
+# ifndef __cpp_lib_generic_associative_lookup
+#   error "__cpp_lib_generic_associative_lookup should be defined in c++2b"
+# endif
+# if __cpp_lib_generic_associative_lookup != 201304L
+#   error "__cpp_lib_generic_associative_lookup should have the value 201304L in c++2b"
+# endif
+
+# ifndef __cpp_lib_node_extract
+#   error "__cpp_lib_node_extract should be defined in c++2b"
+# endif
+# if __cpp_lib_node_extract != 201606L
+#   error "__cpp_lib_node_extract should have the value 201606L in c++2b"
+# endif
+
+# ifndef __cpp_lib_nonmember_container_access
+#   error "__cpp_lib_nonmember_container_access should be defined in c++2b"
+# endif
+# if __cpp_lib_nonmember_container_access != 201411L
+#   error "__cpp_lib_nonmember_container_access should have the value 201411L in c++2b"
+# endif
+
+#endif // TEST_STD_VER > 20
 
 int main(int, char**) { return 0; }
