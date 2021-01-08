@@ -445,14 +445,11 @@ public:
           "[MemoryReader] asked to read string data at address 0x%" PRIx64,
           address.getAddressData());
 
-    uint32_t read_size = 50 * 1024;
-    std::vector<char> storage(read_size, 0);
     Target &target(m_process.GetTarget());
     Address addr(address.getAddressData());
     Status error;
-    target.ReadCStringFromMemory(addr, &storage[0], storage.size(), error);
+    target.ReadCStringFromMemory(addr, dest, error);
     if (error.Success()) {
-      dest.assign(&storage[0]);
       if (log) {
         StreamString stream;
         for (auto c : dest) {
