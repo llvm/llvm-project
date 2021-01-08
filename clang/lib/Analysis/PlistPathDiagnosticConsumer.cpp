@@ -1,4 +1,4 @@
-//===--- PlistDiagnostics.cpp - Plist Diagnostics for Paths -----*- C++ -*-===//
+//===--- PlistPathDiagnosticConsumer.cpp - Plist Diagnostics ----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,22 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file defines the PlistDiagnostics object.
+//  This file defines the PlistPathDiagnosticConsumer object.
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Analysis/CrossTUAnalysisHelper.h"
 #include "clang/Analysis/IssueHash.h"
 #include "clang/Analysis/PathDiagnostic.h"
+#include "clang/Analysis/PathDiagnosticConsumers.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/PlistSupport.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Version.h"
-#include "clang/CrossTU/CrossTranslationUnit.h"
-#include "clang/Frontend/ASTUnit.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/TokenConcatenation.h"
 #include "clang/Rewrite/Core/HTMLRewrite.h"
-#include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -38,29 +37,29 @@ using namespace markup;
 //===----------------------------------------------------------------------===//
 
 namespace {
-  class PlistDiagnostics : public PathDiagnosticConsumer {
+  class PlistPathDiagnosticConsumer : public PathDiagnosticConsumer {
     PathDiagnosticConsumerOptions DiagOpts;
     const std::string OutputFile;
     const Preprocessor &PP;
-    const cross_tu::CrossTranslationUnitContext &CTU;
+    const CrossTUAnalysisHelper &CTU;
     const bool SupportsCrossFileDiagnostics;
 
     void printBugPath(llvm::raw_ostream &o, const FIDMap &FM,
                       const PathPieces &Path);
 
   public:
-    PlistDiagnostics(PathDiagnosticConsumerOptions DiagOpts,
+    PlistPathDiagnosticConsumer(PathDiagnosticConsumerOptions DiagOpts,
                      const std::string &OutputFile, const Preprocessor &PP,
-                     const cross_tu::CrossTranslationUnitContext &CTU,
+                     const CrossTUAnalysisHelper &CTU,
                      bool supportsMultipleFiles);
 
-    ~PlistDiagnostics() override {}
+    ~PlistPathDiagnosticConsumer() override {}
 
     void FlushDiagnosticsImpl(std::vector<const PathDiagnostic *> &Diags,
                               FilesMade *filesMade) override;
 
     StringRef getName() const override {
-      return "PlistDiagnostics";
+      return "PlistPathDiagnosticConsumer";
     }
 
     PathGenerationScheme getGenerationScheme() const override {
@@ -79,13 +78,13 @@ namespace {
 class PlistPrinter {
   const FIDMap& FM;
   const Preprocessor &PP;
-  const cross_tu::CrossTranslationUnitContext &CTU;
+  const CrossTUAnalysisHelper &CTU;
   llvm::SmallVector<const PathDiagnosticMacroPiece *, 0> MacroPieces;
 
 public:
   PlistPrinter(const FIDMap& FM,
                const Preprocessor &PP,
-               const cross_tu::CrossTranslationUnitContext &CTU)
+               const CrossTUAnalysisHelper &CTU)
     : FM(FM), PP(PP), CTU(CTU) {
   }
 
@@ -175,7 +174,7 @@ static void printCoverage(const PathDiagnostic *D,
 
 static ExpansionInfo
 getExpandedMacro(SourceLocation MacroLoc, const Preprocessor &PP,
-                 const cross_tu::CrossTranslationUnitContext &CTU);
+                 const CrossTUAnalysisHelper &CTU);
 
 //===----------------------------------------------------------------------===//
 // Methods of PlistPrinter.
@@ -516,12 +515,12 @@ static void printCoverage(const PathDiagnostic *D,
 }
 
 //===----------------------------------------------------------------------===//
-// Methods of PlistDiagnostics.
+// Methods of PlistPathDiagnosticConsumer.
 //===----------------------------------------------------------------------===//
 
-PlistDiagnostics::PlistDiagnostics(
+PlistPathDiagnosticConsumer::PlistPathDiagnosticConsumer(
     PathDiagnosticConsumerOptions DiagOpts, const std::string &output,
-    const Preprocessor &PP, const cross_tu::CrossTranslationUnitContext &CTU,
+    const Preprocessor &PP, const CrossTUAnalysisHelper &CTU,
     bool supportsMultipleFiles)
     : DiagOpts(std::move(DiagOpts)), OutputFile(output), PP(PP), CTU(CTU),
       SupportsCrossFileDiagnostics(supportsMultipleFiles) {
@@ -532,14 +531,14 @@ PlistDiagnostics::PlistDiagnostics(
 void ento::createPlistDiagnosticConsumer(
     PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
     const std::string &OutputFile, const Preprocessor &PP,
-    const cross_tu::CrossTranslationUnitContext &CTU) {
+    const CrossTUAnalysisHelper &CTU) {
 
   // TODO: Emit an error here.
   if (OutputFile.empty())
     return;
 
-  C.push_back(new PlistDiagnostics(DiagOpts, OutputFile, PP, CTU,
-                                   /*supportsMultipleFiles=*/false));
+  C.push_back(new PlistPathDiagnosticConsumer(DiagOpts, OutputFile, PP, CTU,
+                                              /*supportsMultipleFiles=*/false));
   createTextMinimalPathDiagnosticConsumer(std::move(DiagOpts), C, OutputFile,
                                           PP, CTU);
 }
@@ -547,20 +546,21 @@ void ento::createPlistDiagnosticConsumer(
 void ento::createPlistMultiFileDiagnosticConsumer(
     PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
     const std::string &OutputFile, const Preprocessor &PP,
-    const cross_tu::CrossTranslationUnitContext &CTU) {
+    const CrossTUAnalysisHelper &CTU) {
 
   // TODO: Emit an error here.
   if (OutputFile.empty())
     return;
 
-  C.push_back(new PlistDiagnostics(DiagOpts, OutputFile, PP, CTU,
-                                   /*supportsMultipleFiles=*/true));
+  C.push_back(new PlistPathDiagnosticConsumer(DiagOpts, OutputFile, PP, CTU,
+                                              /*supportsMultipleFiles=*/true));
   createTextMinimalPathDiagnosticConsumer(std::move(DiagOpts), C, OutputFile,
                                           PP, CTU);
 }
 
-void PlistDiagnostics::printBugPath(llvm::raw_ostream &o, const FIDMap &FM,
-                                    const PathPieces &Path) {
+void PlistPathDiagnosticConsumer::printBugPath(llvm::raw_ostream &o,
+                                               const FIDMap &FM,
+                                               const PathPieces &Path) {
   PlistPrinter Printer(FM, PP, CTU);
   assert(std::is_partitioned(Path.begin(), Path.end(),
                              [](const PathDiagnosticPieceRef &E) {
@@ -603,9 +603,8 @@ void PlistDiagnostics::printBugPath(llvm::raw_ostream &o, const FIDMap &FM,
   o << "   </array>\n";
 }
 
-void PlistDiagnostics::FlushDiagnosticsImpl(
-                                    std::vector<const PathDiagnostic *> &Diags,
-                                    FilesMade *filesMade) {
+void PlistPathDiagnosticConsumer::FlushDiagnosticsImpl(
+    std::vector<const PathDiagnostic *> &Diags, FilesMade *filesMade) {
   // Build up a set of FIDs that we use by scanning the locations and
   // ranges of the diagnostics.
   FIDMap FM;
@@ -985,12 +984,13 @@ static const MacroInfo *getMacroInfoForLocation(const Preprocessor &PP,
 
 static ExpansionInfo
 getExpandedMacro(SourceLocation MacroLoc, const Preprocessor &PP,
-                 const cross_tu::CrossTranslationUnitContext &CTU) {
+                 const CrossTUAnalysisHelper &CTU) {
 
   const Preprocessor *PPToUse = &PP;
-  if (auto LocAndUnit = CTU.getImportedFromSourceLocation(MacroLoc)) {
+  if (auto LocAndUnit =
+      CTU.getImportedFromSourceLocationWithPreprocessor(MacroLoc)) {
     MacroLoc = LocAndUnit->first;
-    PPToUse = &LocAndUnit->second->getPreprocessor();
+    PPToUse = LocAndUnit->second;
   }
 
   llvm::SmallString<200> ExpansionBuf;
