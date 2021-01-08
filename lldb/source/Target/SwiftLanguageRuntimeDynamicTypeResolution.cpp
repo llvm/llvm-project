@@ -1485,6 +1485,11 @@ bool SwiftLanguageRuntimeImpl::ForEachSuperClassType(
   auto *reflection_ctx = GetReflectionContext();
   if (!reflection_ctx)
     return false;
+  CompilerType instance_type = instance.GetCompilerType();
+  auto *ts =
+      llvm::dyn_cast_or_null<TypeSystemSwift>(instance_type.GetTypeSystem());
+  if (!ts)
+    return false;
 
   lldb::addr_t pointer = instance.GetPointerValue();
   // Maybe this belongs into GetPointerValue, but on the other hand it
@@ -1494,7 +1499,7 @@ bool SwiftLanguageRuntimeImpl::ForEachSuperClassType(
   // libReflection cannot tell up how many bits to strip from
   // multi-payload enum values.
   auto addr_deref =
-    FixupPointerValue(pointer, instance.GetCompilerType());
+    FixupPointerValue(pointer, instance_type);
   pointer = addr_deref.first;
   if (addr_deref.second) {
       // This is a reference storage object.
@@ -1503,11 +1508,6 @@ bool SwiftLanguageRuntimeImpl::ForEachSuperClassType(
               &pointer))
         return false;
   }
-
-  auto *ts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(
-      instance.GetCompilerType().GetTypeSystem());
-  if (!ts)
-    return false;
 
   auto md_ptr = reflection_ctx->readMetadataFromInstance(pointer);
   if (!md_ptr)
