@@ -696,7 +696,7 @@ void TpiSource::mergeUniqueTypeRecords(ArrayRef<uint8_t> typeRecords,
 
 void TpiSource::remapTpiWithGHashes(GHashState *g) {
   assert(config->debugGHashes && "ghashes must be enabled");
-  fillMapFromGHashes(g, indexMapStorage);
+  fillMapFromGHashes(g);
   tpiMap = indexMapStorage;
   ipiMap = indexMapStorage;
   mergeUniqueTypeRecords(file->debugTypes);
@@ -761,13 +761,13 @@ void TypeServerSource::remapTpiWithGHashes(GHashState *g) {
   // propagate errors, those should've been handled during ghash loading.
   pdb::PDBFile &pdbFile = pdbInputFile->session->getPDBFile();
   pdb::TpiStream &tpi = check(pdbFile.getPDBTpiStream());
-  fillMapFromGHashes(g, indexMapStorage);
+  fillMapFromGHashes(g);
   tpiMap = indexMapStorage;
   mergeUniqueTypeRecords(typeArrayToBytes(tpi.typeArray()));
   if (pdbFile.hasPDBIpiStream()) {
     pdb::TpiStream &ipi = check(pdbFile.getPDBIpiStream());
     ipiSrc->indexMapStorage.resize(ipiSrc->ghashes.size());
-    ipiSrc->fillMapFromGHashes(g, ipiSrc->indexMapStorage);
+    ipiSrc->fillMapFromGHashes(g);
     ipiMap = ipiSrc->indexMapStorage;
     ipiSrc->tpiMap = tpiMap;
     ipiSrc->ipiMap = ipiMap;
@@ -842,7 +842,7 @@ void UsePrecompSource::loadGHashes() {
 }
 
 void UsePrecompSource::remapTpiWithGHashes(GHashState *g) {
-  fillMapFromGHashes(g, indexMapStorage);
+  fillMapFromGHashes(g);
   // This object was compiled with /Yu, so process the corresponding
   // precompiled headers object (/Yc) first. Some type indices in the current
   // object are referencing data in the precompiled headers object, so we need
@@ -1149,14 +1149,14 @@ static TypeIndex loadPdbTypeIndexFromCell(GHashState *g,
 
 // Fill in a TPI or IPI index map using ghashes. For each source type, use its
 // ghash to lookup its final type index in the PDB, and store that in the map.
-void TpiSource::fillMapFromGHashes(GHashState *g,
-                                   SmallVectorImpl<TypeIndex> &mapToFill) {
+void TpiSource::fillMapFromGHashes(GHashState *g) {
   for (size_t i = 0, e = ghashes.size(); i < e; ++i) {
     TypeIndex fakeCellIndex = indexMapStorage[i];
     if (fakeCellIndex.isSimple())
-      mapToFill[i] = fakeCellIndex;
+      indexMapStorage[i] = fakeCellIndex;
     else
-      mapToFill[i] = loadPdbTypeIndexFromCell(g, fakeCellIndex.toArrayIndex());
+      indexMapStorage[i] =
+          loadPdbTypeIndexFromCell(g, fakeCellIndex.toArrayIndex());
   }
 }
 
