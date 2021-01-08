@@ -2,6 +2,9 @@
 
 // Define intrinsics written by hand
 
+// SVOB pattern.
+def : Pat<(int_ve_vl_svob), (SVOB)>;
+
 // The lsv and lvs patterns
 def : Pat<(int_ve_vl_lsv_vvss v256f64:$pt, i32:$sy, i64:$sz),
           (LSVrr_v (INSERT_SUBREG (i64 (IMPLICIT_DEF)), i32:$sy, sub_i32),
