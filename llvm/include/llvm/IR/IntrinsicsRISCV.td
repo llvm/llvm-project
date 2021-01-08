@@ -189,6 +189,19 @@ let TargetPrefix = "riscv" in {
                      LLVMPointerType<LLVMMatchType<0>>, llvm_anyvector_ty,
                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty],
                     [NoCapture<ArgIndex<1>>, IntrWriteMem]>, RISCVVIntrinsic;
+  // For destination vector type is the same as source vector.
+  // Input: (vector_in, vl)
+  class RISCVUnaryAANoMask
+        : Intrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, llvm_anyint_ty],
+                    [IntrNoMem]>, RISCVVIntrinsic;
+  // For destination vector type is the same as first source vector (with mask).
+  // Input: (vector_in, mask, vl)
+  class RISCVUnaryAAMask
+        : Intrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, LLVMMatchType<0>,
+                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty],
+                    [IntrNoMem]>, RISCVVIntrinsic;
   // For destination vector type is the same as first and second source vector.
   // Input: (vector_in, vector_in, vl)
   class RISCVBinaryAAANoMask
@@ -210,7 +223,6 @@ let TargetPrefix = "riscv" in {
                     [IntrNoMem]>, RISCVVIntrinsic {
     let ExtendOperand = 2;
   }
-
   // For destination vector type is the same as first source vector (with mask).
   // Input: (maskedoff, vector_in, vector_in/scalar_in, mask, vl)
   class RISCVBinaryAAXMask
@@ -326,7 +338,6 @@ let TargetPrefix = "riscv" in {
                     [IntrNoMem, IntrHasSideEffects]>, RISCVVIntrinsic {
     let ExtendOperand = 3;
   }
-
   class RISCVTernaryAAAXNoMask
         : Intrinsic<[llvm_anyvector_ty],
                     [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyint_ty,
@@ -470,7 +481,10 @@ let TargetPrefix = "riscv" in {
     def "int_riscv_" # NAME : RISCVIStore;
     def "int_riscv_" # NAME # "_mask" : RISCVIStoreMask;
   }
-
+  multiclass RISCVUnaryAA {
+    def "int_riscv_" # NAME : RISCVUnaryAANoMask;
+    def "int_riscv_" # NAME # "_mask" : RISCVUnaryAAMask;
+  }
   // AAX means the destination type(A) is the same as the first source
   // type(A). X means any type for the second source operand.
   multiclass RISCVBinaryAAX {
@@ -684,6 +698,8 @@ let TargetPrefix = "riscv" in {
   defm vfwnmacc : RISCVTernaryWide;
   defm vfwmsac : RISCVTernaryWide;
   defm vfwnmsac : RISCVTernaryWide;
+
+  defm vfsqrt : RISCVUnaryAA;
 
   defm vfmin : RISCVBinaryAAX;
   defm vfmax : RISCVBinaryAAX;
