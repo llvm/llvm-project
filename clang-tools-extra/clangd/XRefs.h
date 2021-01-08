@@ -83,7 +83,9 @@ struct ReferencesResult {
   bool HasMore = false;
 };
 
-/// Returns implementations of the virtual function at a specified \p Pos.
+/// Returns implementations at a specified \p Pos:
+///   - overrides for a virtual method;
+///   - subclasses for a base class;
 std::vector<LocatedSymbol> findImplementations(ParsedAST &AST, Position Pos,
                                                const SymbolIndex *Index);
 
