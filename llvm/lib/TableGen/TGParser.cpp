@@ -229,38 +229,33 @@ bool TGParser::SetValue(Record *CurRec, SMLoc Loc, Init *ValName,
 /// args as SubClass's template arguments.
 bool TGParser::AddSubClass(Record *CurRec, SubClassReference &SubClass) {
   Record *SC = SubClass.Rec;
-  // Add all of the values in the subclass into the current class.
-  for (const RecordVal &Val : SC->getValues())
-    if (AddValue(CurRec, SubClass.RefRange.Start, Val))
-      return true;
-
-  ArrayRef<Init *> TArgs = SC->getTemplateArgs();
-
-  // Ensure that an appropriate number of template arguments are specified.
-  if (TArgs.size() < SubClass.TemplateArgs.size())
-    return Error(SubClass.RefRange.Start,
-                 "More template args specified than expected");
-
-  // Loop over all of the template arguments, setting them to the specified
-  // value or leaving them as the default if necessary.
   MapResolver R(CurRec);
 
-  for (unsigned i = 0, e = TArgs.size(); i != e; ++i) {
-    if (i < SubClass.TemplateArgs.size()) {
-      // If a value is specified for this template arg, set it now.
-      if (SetValue(CurRec, SubClass.RefRange.Start, TArgs[i],
-                   None, SubClass.TemplateArgs[i]))
+  // Loop over all the subclass record's fields. Add template arguments
+  // to the resolver map. Add regular fields to the new record.
+  for (const RecordVal &Field : SC->getValues()) {
+    if (Field.isTemplateArg()) {
+      R.set(Field.getNameInit(), Field.getValue());
+    } else {
+      if (AddValue(CurRec, SubClass.RefRange.Start, Field))
         return true;
-    } else if (!CurRec->getValue(TArgs[i])->getValue()->isComplete()) {
+    }
+  }
+
+  ArrayRef<Init *> TArgs = SC->getTemplateArgs();
+  assert(SubClass.TemplateArgs.size() <= TArgs.size() &&
+         "Too many template arguments allowed");
+
+  // Loop over the template argument names. If a value was specified,
+  // reset the map value. If not and there was no default, complain.
+  for (unsigned I = 0, E = TArgs.size(); I != E; ++I) {
+    if (I < SubClass.TemplateArgs.size())
+      R.set(TArgs[I], SubClass.TemplateArgs[I]);
+    else if (!R.isComplete(TArgs[I]))
       return Error(SubClass.RefRange.Start,
                    "Value not specified for template argument #" +
-                   Twine(i) + " (" + TArgs[i]->getAsUnquotedString() +
-                   ") of subclass '" + SC->getNameInitAsString() + "'!");
-    }
-
-    R.set(TArgs[i], CurRec->getValue(TArgs[i])->getValue());
-
-    CurRec->removeValue(TArgs[i]);
+                       Twine(I) + " (" + TArgs[I]->getAsUnquotedString() +
+                       ") of parent class '" + SC->getNameInitAsString() + "'");
   }
 
   Init *Name;
@@ -2579,8 +2574,8 @@ void TGParser::ParseValueList(SmallVectorImpl<Init*> &Result, Record *CurRec,
 }
 
 /// ParseDeclaration - Read a declaration, returning the name of field ID, or an
-/// empty string on error.  This can happen in a number of different context's,
-/// including within a def or in the template args for a def (which which case
+/// empty string on error.  This can happen in a number of different contexts,
+/// including within a def or in the template args for a class (in which case
 /// CurRec will be non-null) and within the template args for a multiclass (in
 /// which case CurRec will be null, but CurMultiClass will be set).  This can
 /// also happen within a def that is within a multiclass, which will set both
@@ -2611,23 +2606,30 @@ Init *TGParser::ParseDeclaration(Record *CurRec,
   Init *DeclName = StringInit::get(Str);
   Lex.Lex();
 
-  if (ParsingTemplateArgs) {
-    if (CurRec)
-      DeclName = QualifyName(*CurRec, CurMultiClass, DeclName, ":");
-    else
-      assert(CurMultiClass);
-    if (CurMultiClass)
-      DeclName = QualifyName(CurMultiClass->Rec, CurMultiClass, DeclName,
-                             "::");
-  }
+  bool BadField;
+  if (!ParsingTemplateArgs) { // def, possibly in a multiclass
+    BadField = AddValue(CurRec, IdLoc,
+                        RecordVal(DeclName, IdLoc, Type,
+                                  HasField ? RecordVal::FK_NonconcreteOK
+                                           : RecordVal::FK_Normal));
 
-  // Add the field to the record.
-  if (AddValue(CurRec, IdLoc, RecordVal(DeclName, IdLoc, Type,
-                                        HasField ? RecordVal::FK_NonconcreteOK
-                                                 : RecordVal::FK_Normal)))
+  } else if (CurRec) { // class template argument
+    DeclName = QualifyName(*CurRec, CurMultiClass, DeclName, ":");
+    BadField = AddValue(CurRec, IdLoc,
+                        RecordVal(DeclName, IdLoc, Type,
+                                  RecordVal::FK_TemplateArg));
+
+  } else { // multiclass template argument
+    assert(CurMultiClass && "invalid context for template argument");
+    DeclName = QualifyName(CurMultiClass->Rec, CurMultiClass, DeclName, "::");
+    BadField = AddValue(CurRec, IdLoc,
+                        RecordVal(DeclName, IdLoc, Type,
+                                  RecordVal::FK_TemplateArg));
+  }
+  if (BadField)
     return nullptr;
 
-  // If a value is present, parse it.
+  // If a value is present, parse it and set new field's value.
   if (consume(tgtok::equal)) {
     SMLoc ValLoc = Lex.getLoc();
     Init *Val = ParseValue(CurRec, Type);
@@ -2728,7 +2730,7 @@ VarInit *TGParser::ParseForeachDeclaration(Init *&ForeachListValue) {
 
 /// ParseTemplateArgList - Read a template argument list, which is a non-empty
 /// sequence of template-declarations in <>'s.  If CurRec is non-null, these are
-/// template args for a def, which may or may not be in a multiclass.  If null,
+/// template args for a class, which may or may not be in a multiclass. If null,
 /// these are the template args for a multiclass.
 ///
 ///    TemplateArgList ::= '<' Declaration (',' Declaration)* '>'

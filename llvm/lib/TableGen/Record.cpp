@@ -2316,7 +2316,7 @@ void Record::resolveReferences(Resolver &R, const RecordVal *SkipVal) {
           Type =
               (Twine("of type '") + VRT->getType()->getAsString() + "' ").str();
         PrintFatalError(getLoc(), Twine("Invalid value ") + Type +
-                                      "is found when setting '" +
+                                      "found when setting field '" +
                                       Value.getNameInitAsString() +
                                       "' of type '" +
                                       Value.getType()->getAsString() +
