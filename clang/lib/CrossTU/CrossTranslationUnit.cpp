@@ -765,7 +765,7 @@ CrossTranslationUnitContext::getOrCreateASTImporter(ASTUnit *Unit) {
 
 llvm::Optional<std::pair<SourceLocation, ASTUnit *>>
 CrossTranslationUnitContext::getImportedFromSourceLocation(
-    SourceLocation ToLoc) const {
+    const clang::SourceLocation &ToLoc) const {
   const SourceManager &SM = Context.getSourceManager();
   auto DecToLoc = SM.getDecomposedLoc(ToLoc);
 
@@ -779,17 +779,6 @@ CrossTranslationUnitContext::getImportedFromSourceLocation(
       Unit->getSourceManager().getComposedLoc(FromID, DecToLoc.second);
 
   return std::make_pair(FromLoc, Unit);
-}
-
-llvm::Optional<std::pair<SourceLocation, Preprocessor *>>
-CrossTranslationUnitContext::getImportedFromSourceLocationWithPreprocessor(
-    SourceLocation ToLoc) const {
-  if (llvm::Optional<std::pair<SourceLocation, ASTUnit *>> LocAndUnit =
-      getImportedFromSourceLocation(ToLoc)) {
-    return std::make_pair(LocAndUnit->first,
-                          &LocAndUnit->second->getPreprocessor());
-  }
-  return None;
 }
 
 } // namespace cross_tu

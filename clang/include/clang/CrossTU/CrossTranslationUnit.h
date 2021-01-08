@@ -14,7 +14,6 @@
 #ifndef LLVM_CLANG_CROSSTU_CROSSTRANSLATIONUNIT_H
 #define LLVM_CLANG_CROSSTU_CROSSTRANSLATIONUNIT_H
 
-#include "clang/Analysis/CrossTUAnalysisHelper.h"
 #include "clang/AST/ASTImporterSharedState.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
@@ -121,10 +120,10 @@ bool containsConst(const VarDecl *VD, const ASTContext &ACtx);
 /// the locations of the AST files for each definition.
 ///
 /// Note that this class also implements caching.
-class CrossTranslationUnitContext : public CrossTUAnalysisHelper {
+class CrossTranslationUnitContext {
 public:
   CrossTranslationUnitContext(CompilerInstance &CI);
-  ~CrossTranslationUnitContext() override;
+  ~CrossTranslationUnitContext();
 
   /// This function loads a function or variable definition from an
   ///        external AST file and merges it into the original AST.
@@ -187,24 +186,12 @@ public:
   /// imported source location.
   /// \p ToLoc Source location in the imported-to AST.
   /// \return Source location in the imported-from AST and the corresponding
-  /// ASTUnit object (the AST was loaded from a file using an internal ASTUni
+  /// ASTUnit object (the AST was loaded from a file using an internal ASTUnit
   /// object that is returned here).
   /// If any error happens (ToLoc is a non-imported source location) empty is
   /// returned.
   llvm::Optional<std::pair<SourceLocation /*FromLoc*/, ASTUnit *>>
-  getImportedFromSourceLocation(SourceLocation ToLoc) const;
-
-  /// Determine the original source location in the original TU for an
-  /// imported source location.
-  /// \p ToLoc Source location in the imported-to AST.
-  /// \return Source location in the imported-from AST and the Preprocessor
-  /// corresponding to the AST unit that originally contained the imported-from
-  /// source location.
-  /// If any error happens (ToLoc is a non-imported source location) empty is
-  /// returned.
-  llvm::Optional<std::pair<SourceLocation /*FromLoc*/, Preprocessor *>>
-  getImportedFromSourceLocationWithPreprocessor(
-      SourceLocation ToLoc) const override;
+  getImportedFromSourceLocation(const clang::SourceLocation &ToLoc) const;
 
 private:
   using ImportedFileIDMap =
