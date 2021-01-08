@@ -4260,13 +4260,18 @@ Value *BoUpSLP::vectorizeTree(ArrayRef<Value *> VL) {
       if (E->isSame(VL)) {
         Value *V = vectorizeTree(E);
         if (VL.size() == E->Scalars.size() && !E->ReuseShuffleIndices.empty()) {
-          // Reshuffle to get only unique values.
-          SmallVector<int, 4> UniqueIdxs;
-          SmallSet<int, 4> UsedIdxs;
-          for (int Idx : E->ReuseShuffleIndices)
-            if (UsedIdxs.insert(Idx).second)
-              UniqueIdxs.emplace_back(Idx);
-          V = Builder.CreateShuffleVector(V, UniqueIdxs, "shrink.shuffle");
+          // We need to get the vectorized value but without shuffle.
+          if (auto *SV = dyn_cast<ShuffleVectorInst>(V)) {
+            V = SV->getOperand(0);
+          } else {
+            // Reshuffle to get only unique values.
+            SmallVector<int, 4> UniqueIdxs;
+            SmallSet<int, 4> UsedIdxs;
+            for (int Idx : E->ReuseShuffleIndices)
+              if (UsedIdxs.insert(Idx).second)
+                UniqueIdxs.emplace_back(Idx);
+            V = Builder.CreateShuffleVector(V, UniqueIdxs);
+          }
         }
         return V;
       }
