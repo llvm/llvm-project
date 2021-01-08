@@ -6759,13 +6759,6 @@ let Predicates = [HasMVEInt] in {
             (v8i16 (MVE_VPSEL (MVE_VMOVimmi16 1), (MVE_VMOVimmi16 0), ARMVCCNone, VCCR:$pred))>;
   def : Pat<(v4i32 (anyext  (v4i1  VCCR:$pred))),
             (v4i32 (MVE_VPSEL (MVE_VMOVimmi32 1), (MVE_VMOVimmi32 0), ARMVCCNone, VCCR:$pred))>;
-
-  def : Pat<(v16i1 (trunc (v16i8 MQPR:$v1))),
-            (v16i1 (MVE_VCMPi32r (v16i8 MQPR:$v1), ZR, ARMCCne))>;
-  def : Pat<(v8i1 (trunc (v8i16  MQPR:$v1))),
-            (v8i1 (MVE_VCMPi32r (v8i16 MQPR:$v1), ZR, ARMCCne))>;
-  def : Pat<(v4i1 (trunc (v4i32  MQPR:$v1))),
-            (v4i1 (MVE_VCMPi32r (v4i32 MQPR:$v1), ZR, ARMCCne))>;
 }
 
 let Predicates = [HasMVEFloat] in {

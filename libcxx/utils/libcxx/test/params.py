@@ -8,7 +8,7 @@
 
 from libcxx.test.dsl import *
 
-_allStandards = ['c++03', 'c++11', 'c++14', 'c++17', 'c++2a']
+_allStandards = ['c++03', 'c++11', 'c++14', 'c++17', 'c++2a', 'c++2b']
 _warningFlags = [
   '-Werror',
   '-Wall',

@@ -142,6 +142,49 @@
 #   error "__cpp_lib_nonmember_container_access should have the value 201411L in c++20"
 # endif
 
-#endif // TEST_STD_VER == 20
+#elif TEST_STD_VER > 20
+
+# ifndef __cpp_lib_allocator_traits_is_always_equal
+#   error "__cpp_lib_allocator_traits_is_always_equal should be defined in c++2b"
+# endif
+# if __cpp_lib_allocator_traits_is_always_equal != 201411L
+#   error "__cpp_lib_allocator_traits_is_always_equal should have the value 201411L in c++2b"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_constexpr_vector
+#     error "__cpp_lib_constexpr_vector should be defined in c++2b"
+#   endif
+#   if __cpp_lib_constexpr_vector != 201907L
+#     error "__cpp_lib_constexpr_vector should have the value 201907L in c++2b"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_constexpr_vector
+#     error "__cpp_lib_constexpr_vector should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# ifndef __cpp_lib_erase_if
+#   error "__cpp_lib_erase_if should be defined in c++2b"
+# endif
+# if __cpp_lib_erase_if != 202002L
+#   error "__cpp_lib_erase_if should have the value 202002L in c++2b"
+# endif
+
+# ifndef __cpp_lib_incomplete_container_elements
+#   error "__cpp_lib_incomplete_container_elements should be defined in c++2b"
+# endif
+# if __cpp_lib_incomplete_container_elements != 201505L
+#   error "__cpp_lib_incomplete_container_elements should have the value 201505L in c++2b"
+# endif
+
+# ifndef __cpp_lib_nonmember_container_access
+#   error "__cpp_lib_nonmember_container_access should be defined in c++2b"
+# endif
+# if __cpp_lib_nonmember_container_access != 201411L
+#   error "__cpp_lib_nonmember_container_access should have the value 201411L in c++2b"
+# endif
+
+#endif // TEST_STD_VER > 20
 
 int main(int, char**) { return 0; }

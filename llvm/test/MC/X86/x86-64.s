@@ -1538,6 +1538,14 @@ vmovq %xmm0, %rax
 // CHECK:  encoding: [0x0f,0x01,0xfc]
                 clzero %rax
 
+// CHECK:       tlbsync 
+// CHECK:  encoding: [0x0f,0x01,0xff]
+                tlbsync
+
+// CHECK:       invlpgb
+// CHECK:  encoding: [0x0f,0x01,0xfe]
+                invlpgb %rax, %edx 
+
 // CHECK: 	movl %r15d, (%r15,%r15)
 // CHECK:  encoding: [0x47,0x89,0x3c,0x3f]
 movl %r15d, (%r15,%r15)

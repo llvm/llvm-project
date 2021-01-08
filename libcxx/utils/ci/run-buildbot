@@ -145,6 +145,14 @@ generic-cxx20)
     check-cxx-cxxabi
     check-abi-list
 ;;
+generic-cxx2b)
+    export CC=clang-tot
+    export CXX=clang++-tot
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx2b.cmake"
+    check-cxx-cxxabi
+    check-abi-list
+;;
 generic-noexceptions)
     export CC=clang
     export CXX=clang++

@@ -2925,6 +2925,34 @@ def : InstAlias<"clzero\t{%eax|eax}", (CLZERO32r)>, Requires<[Not64BitMode]>;
 def : InstAlias<"clzero\t{%rax|rax}", (CLZERO64r)>, Requires<[In64BitMode]>;
 
 //===----------------------------------------------------------------------===//
+// INVLPGB Instruction
+// OPCODE 0F 01 FE
+//
+let SchedRW = [WriteSystem] in {
+  let Uses = [EAX, EDX] in
+  def INVLPGB32 : I<0x01, MRM_FE, (outs), (ins),
+                  "invlpgb}", []>,
+                  PS, Requires<[Not64BitMode]>;
+  let Uses = [RAX, EDX] in
+  def INVLPGB64 : I<0x01, MRM_FE, (outs), (ins),
+                  "invlpgb", []>,
+                  PS, Requires<[In64BitMode]>;
+} // SchedRW
+
+def : InstAlias<"invlpgb\t{%eax, %edx|eax, edx}", (INVLPGB32)>, Requires<[Not64BitMode]>;
+def : InstAlias<"invlpgb\t{%rax, %edx|rax, edx}", (INVLPGB64)>, Requires<[In64BitMode]>;
+
+//===----------------------------------------------------------------------===//
+// TLBSYNC Instruction
+// OPCODE 0F 01 FF
+//
+let SchedRW = [WriteSystem] in {
+  def TLBSYNC   : I<0x01, MRM_FF, (outs), (ins),
+                  "tlbsync", []>,
+                  PS, Requires<[]>;
+} // SchedRW
+
+//===----------------------------------------------------------------------===//
 // HRESET Instruction
 //
 let Uses = [EAX], SchedRW = [WriteSystem] in
@@ -3126,6 +3154,7 @@ include "X86InstrMPX.td"
 
 include "X86InstrVMX.td"
 include "X86InstrSVM.td"
+include "X86InstrSNP.td"
 
 include "X86InstrTSX.td"
 include "X86InstrSGX.td"
