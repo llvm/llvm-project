@@ -284,10 +284,9 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
                                         LoadDependentFiles load_dependent_files,
                                         lldb::PlatformSP &platform_sp,
                                         lldb::TargetSP &target_sp) {
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(
-      func_cat, "TargetList::CreateTarget (file = '%s', arch = '%s')",
-      user_exe_path.str().c_str(), specified_arch.GetArchitectureName());
+  LLDB_SCOPED_TIMERF("TargetList::CreateTarget (file = '%s', arch = '%s')",
+                     user_exe_path.str().c_str(),
+                     specified_arch.GetArchitectureName());
   Status error;
   const bool is_dummy_target = false;
 

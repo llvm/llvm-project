@@ -300,9 +300,7 @@ ObjectContainer *ObjectContainerBSDArchive::CreateInstance(
     DataExtractor data;
     data.SetData(data_sp, data_offset, length);
     if (file && data_sp && ObjectContainerBSDArchive::MagicBytesMatch(data)) {
-      static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-      Timer scoped_timer(
-          func_cat,
+      LLDB_SCOPED_TIMERF(
           "ObjectContainerBSDArchive::CreateInstance (module = %s, file = "
           "%p, file_offset = 0x%8.8" PRIx64 ", file_size = 0x%8.8" PRIx64 ")",
           module_sp->GetFileSpec().GetPath().c_str(),
