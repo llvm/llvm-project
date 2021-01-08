@@ -1,6 +1,8 @@
 # REQUIRES: x86
-# RUN: %clang -target x86_64-pc-linux -g -O0 %S/Inputs/subprogram_ranges.s -o %t.out
-# RUN: %lldb -b -s %s %t.out 2>&1 | FileCheck %s
+# REQUIRES: lld
+# RUN: %clang -target x86_64-pc-linux -g -O0 %S/Inputs/subprogram_ranges.s -o %t.o -c
+# RUN: ld.lld %t.o -o %t
+# RUN: %lldb -b -s %s %t 2>&1 | FileCheck %s
 
 # Test breaking on symbols and printing variables when a DW_TAG_subprogram uses
 # DW_AT_ranges instead of DW_AT_low_pc/DW_AT_high_pc.  While the assembly here
