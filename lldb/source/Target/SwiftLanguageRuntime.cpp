@@ -107,19 +107,21 @@ static ModuleSP findRuntime(Process &process, RuntimeKind runtime_kind) {
       return {};
   }
 
-  ModuleList images = process.GetTarget().GetImages();
-  for (unsigned i = 0, e = images.GetSize(); i < e; ++i) {
-    ModuleSP image = images.GetModuleAtIndex(i);
-    if (!image)
-      continue;
-    if (runtime_kind == RuntimeKind::Swift &&
-        IsModuleSwiftRuntime(process, *image))
-      return image;
+  ModuleSP runtime_image;
+  process.GetTarget().GetImages().ForEach([&](const ModuleSP &image) {
+    if (runtime_kind == RuntimeKind::Swift && image &&
+        IsModuleSwiftRuntime(process, *image)) {
+      runtime_image = image;
+      return false;
+    }
     if (runtime_kind == RuntimeKind::ObjC &&
-        objc_runtime->IsModuleObjCLibrary(image))
-      return image;
-  }
-  return {};
+        objc_runtime->IsModuleObjCLibrary(image)) {
+      runtime_image = image;
+      return false;
+    }
+    return true;
+  });
+  return runtime_image;
 }
 
 static llvm::Optional<lldb::addr_t>
