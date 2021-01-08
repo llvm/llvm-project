@@ -67,7 +67,7 @@ inline OwningOpRef<ContainerOpT> constructContainerOpForParserIfNecessary(
   // contain the operations inside of it.
   if (failed(op.verify()))
     return OwningOpRef<ContainerOpT>();
-  return std::move(opRef);
+  return opRef;
 }
 } // end namespace detail
 
