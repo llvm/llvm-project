@@ -16,4 +16,4 @@
 
 b main
 # CHECK: (lldb) b main
-# CHECK-NEXT: Breakpoint 1: where = subprogram_ranges.test.tmp.out`main + 6 at main.c:2:7
+# CHECK-NEXT: Breakpoint 1: where = {{.*}}`main + 6 at main.c:2:7
