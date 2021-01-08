@@ -2110,7 +2110,7 @@ void llvm::changeToCall(InvokeInst *II, DomTreeUpdater *DTU) {
   UnwindDestBB->removePredecessor(BB);
   II->eraseFromParent();
   if (DTU)
-    DTU->applyUpdatesPermissive({{DominatorTree::Delete, BB, UnwindDestBB}});
+    DTU->applyUpdates({{DominatorTree::Delete, BB, UnwindDestBB}});
 }
 
 BasicBlock *llvm::changeToInvokeAndSplitBasicBlock(CallInst *CI,
