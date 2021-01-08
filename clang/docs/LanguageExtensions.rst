@@ -3112,8 +3112,18 @@ manually enable vectorization or interleaving.
     ...
   }
 
-The vector width is specified by ``vectorize_width(_value_)`` and the interleave
-count is specified by ``interleave_count(_value_)``, where
+The vector width is specified by
+``vectorize_width(_value_[, fixed|scalable])``, where _value_ is a positive
+integer and the type of vectorization can be specified with an optional
+second parameter. The default for the second parameter is 'fixed' and
+refers to fixed width vectorization, whereas 'scalable' indicates the
+compiler should use scalable vectors instead. Another use of vectorize_width
+is ``vectorize_width(fixed|scalable)`` where the user can hint at the type
+of vectorization to use without specifying the exact width. In both variants
+of the pragma the vectorizer may decide to fall back on fixed width
+vectorization if the target does not support scalable vectors.
+
+The interleave count is specified by ``interleave_count(_value_)``, where
 _value_ is a positive integer. This is useful for specifying the optimal
 width/count of the set of target architectures supported by your application.
 
