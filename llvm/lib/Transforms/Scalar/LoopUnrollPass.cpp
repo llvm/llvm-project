@@ -1371,7 +1371,7 @@ PreservedAnalyses LoopFullUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
     }
 
     // Otherwise erase the loop from the list if it was in the old loops.
-    return OldLoops.count(SibLoop) != 0;
+    return OldLoops.contains(SibLoop);
   });
   Updater.addSiblingLoops(SibLoops);
 
