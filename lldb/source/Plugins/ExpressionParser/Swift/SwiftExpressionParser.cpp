@@ -550,6 +550,8 @@ static void AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
   auto *stack_frame = stack_frame_sp.get();
   imported_self_type = swift_runtime->BindGenericTypeParameters(
       *stack_frame, imported_self_type);
+  if (!imported_self_type)
+    return;
 
   {
     auto *swift_type_system = llvm::dyn_cast_or_null<TypeSystemSwift>(
@@ -561,6 +563,8 @@ static void AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
     // extend the referent:
     imported_self_type = swift_type_system->GetReferentType(
         imported_self_type.GetOpaqueQualType());
+    if (!imported_self_type)
+      return;
   }
 
   {
@@ -573,6 +577,8 @@ static void AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
     // and we have to grab the instance type:
     imported_self_type = swift_type_system->GetInstanceType(
         imported_self_type.GetOpaqueQualType());
+    if (!imported_self_type)
+      return;
   }
 
   Flags imported_self_type_flags(imported_self_type.GetTypeInfo());
