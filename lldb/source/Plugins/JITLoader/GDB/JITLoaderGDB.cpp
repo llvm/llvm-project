@@ -291,8 +291,8 @@ bool JITLoaderGDB::ReadJITDescriptorImpl(bool all_entries) {
   jit_descriptor<ptr_t> jit_desc;
   const size_t jit_desc_size = sizeof(jit_desc);
   Status error;
-  size_t bytes_read = m_process->DoReadMemory(m_jit_descriptor_addr, &jit_desc,
-                                              jit_desc_size, error);
+  size_t bytes_read = m_process->ReadMemory(m_jit_descriptor_addr, &jit_desc,
+                                            jit_desc_size, error);
   if (bytes_read != jit_desc_size || !error.Success()) {
     LLDB_LOGF(log, "JITLoaderGDB::%s failed to read JIT descriptor",
               __FUNCTION__);
