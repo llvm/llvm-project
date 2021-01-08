@@ -4,7 +4,7 @@
 
 RUN: lld-link %p/Inputs/precomp-ghash-precomp.obj \
 RUN:    %p/Inputs/precomp-ghash-obj1.obj\
-RUN:    %p/Inputs/precomp-ghash-obj2.obj /debug:ghash /out:%t.exe /pdb:%t.pdb
+RUN:    %p/Inputs/precomp-ghash-obj2.obj /debug:ghash /out:%t.exe /pdb:%t.pdb /nodefaultlib /force
 RUN: llvm-pdbutil dump -types -ids %t.pdb | FileCheck %s
 
 ; These object files were generated via the following inputs and commands:
@@ -44,10 +44,10 @@ RUN: llvm-pdbutil dump -types -ids %t.pdb | FileCheck %s
 CHECK:                           Types (TPI Stream)
 CHECK-NEXT: ============================================================
 CHECK:   0x1003 | LF_MFUNCTION
-CHECK:   0x274F | LF_PROCEDURE
+CHECK:   0x1377 | LF_PROCEDURE
 CHECK:                     Types (IPI Stream)                     
 CHECK-NEXT: ============================================================
-CHECK:   0x189D | LF_FUNC_ID [size = 20]
-CHECK-NEXT:       name = main, type = 0x274F, parent scope = <no type>
-CHECK-NEXT:  0x189E | LF_MFUNC_ID [size = 20]
+CHECK:   0x10A5 | LF_FUNC_ID [size = 20]
+CHECK-NEXT:       name = main, type = 0x1377, parent scope = <no type>
+CHECK-NEXT:  0x10A6 | LF_MFUNC_ID [size = 20]
 CHECK-NEXT:           name = {ctor}, type = 0x1003, class type = 0x1000
