@@ -1,25 +1,21 @@
-// Pattern Matchings for VEL Intrinsics
+/// Pattern Matchings for VEL intrinsic instructions.
 
-// Define intrinsics written by hand
+/// Intrinsic patterns written by hand.
 
 // SVOB pattern.
 def : Pat<(int_ve_vl_svob), (SVOB)>;
 
-// The lsv and lvs patterns
+// LSV patterns.
 def : Pat<(int_ve_vl_lsv_vvss v256f64:$pt, i32:$sy, i64:$sz),
-          (LSVrr_v (INSERT_SUBREG (i64 (IMPLICIT_DEF)), i32:$sy, sub_i32),
-                   i64:$sz, v256f64:$pt)>;
-def : Pat<(int_ve_vl_lvsl_svs v256f64:$vx, i32:$sy),
-          (LVSvr v256f64:$vx,
-                 (INSERT_SUBREG (i64 (IMPLICIT_DEF)), i32:$sy, sub_i32))>;
-def : Pat<(int_ve_vl_lvsd_svs v256f64:$vx, i32:$sy),
-          (LVSvr v256f64:$vx,
-                 (INSERT_SUBREG (i64 (IMPLICIT_DEF)), i32:$sy, sub_i32))>;
-def : Pat<(int_ve_vl_lvss_svs v256f64:$vx, i32:$sy),
-          (EXTRACT_SUBREG (LVSvr v256f64:$vx,
-                                 (INSERT_SUBREG (i64 (IMPLICIT_DEF)), i32:$sy,
-                                                sub_i32)),
-                          sub_f32)>;
+          (LSVrr_v (i2l i32:$sy), i64:$sz, v256f64:$pt)>;
 
-// Define intrinsics automatically generated
+// LVS patterns.
+def : Pat<(int_ve_vl_lvsl_svs v256f64:$vx, i32:$sy),
+          (LVSvr v256f64:$vx, (i2l i32:$sy))>;
+def : Pat<(int_ve_vl_lvsd_svs v256f64:$vx, i32:$sy),
+          (LVSvr v256f64:$vx, (i2l i32:$sy))>;
+def : Pat<(int_ve_vl_lvss_svs v256f64:$vx, i32:$sy),
+          (l2f (LVSvr v256f64:$vx, (i2l i32:$sy)))>;
+
+/// Intrinsic patterns automatically generated.
 include "VEInstrIntrinsicVL.gen.td"
