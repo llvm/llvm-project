@@ -947,8 +947,10 @@ public:
     // Load from the async value storage.
     auto loaded = rewriter.create<LLVM::LoadOp>(loc, castedStorage.getResult());
 
-    // Cast from LLVM type to the expected value type. This cast will become
-    // no-op after lowering to LLVM.
+    // Cast from LLVM type to the expected value type if necessary. This cast
+    // will become no-op after lowering to LLVM.
+    if (valueType == loaded.getType())
+      return loaded;
     return rewriter.create<LLVM::DialectCastOp>(loc, valueType, loaded);
   }
 };

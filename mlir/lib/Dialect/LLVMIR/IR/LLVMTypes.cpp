@@ -318,13 +318,13 @@ bool mlir::LLVM::isCompatibleType(Type type) {
 
   // clang-format off
   return type.isa<
+      BFloat16Type,
+      Float16Type,
+      Float32Type,
+      Float64Type,
       LLVMArrayType,
-      LLVMBFloatType,
-      LLVMDoubleType,
       LLVMFP128Type,
-      LLVMFloatType,
       LLVMFunctionType,
-      LLVMHalfType,
       LLVMLabelType,
       LLVMMetadataType,
       LLVMPPCFP128Type,
@@ -339,15 +339,20 @@ bool mlir::LLVM::isCompatibleType(Type type) {
   // clang-format on
 }
 
+bool mlir::LLVM::isCompatibleFloatingPointType(Type type) {
+  return type.isa<BFloat16Type, Float16Type, Float32Type, Float64Type,
+                  LLVMFP128Type, LLVMPPCFP128Type, LLVMX86FP80Type>();
+}
+
 llvm::TypeSize mlir::LLVM::getPrimitiveTypeSizeInBits(Type type) {
   assert(isCompatibleType(type) &&
          "expected a type compatible with the LLVM dialect");
 
   return llvm::TypeSwitch<Type, llvm::TypeSize>(type)
-      .Case<LLVMHalfType, LLVMBFloatType>(
+      .Case<BFloat16Type, Float16Type>(
           [](Type) { return llvm::TypeSize::Fixed(16); })
-      .Case<LLVMFloatType>([](Type) { return llvm::TypeSize::Fixed(32); })
-      .Case<LLVMDoubleType, LLVMX86MMXType>(
+      .Case<Float32Type>([](Type) { return llvm::TypeSize::Fixed(32); })
+      .Case<Float64Type, LLVMX86MMXType>(
           [](Type) { return llvm::TypeSize::Fixed(64); })
       .Case<IntegerType>([](IntegerType intTy) {
         return llvm::TypeSize::Fixed(intTy.getWidth());

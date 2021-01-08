@@ -36,13 +36,8 @@ struct LLVMStructTypeStorage;
 struct LLVMTypeAndSizeStorage;
 } // namespace detail
 
-class LLVMBFloatType;
-class LLVMHalfType;
-class LLVMFloatType;
-class LLVMDoubleType;
 class LLVMFP128Type;
 class LLVMX86FP80Type;
-class LLVMIntegerType;
 
 //===----------------------------------------------------------------------===//
 // Trivial types.
@@ -56,10 +51,6 @@ class LLVMIntegerType;
   }
 
 DEFINE_TRIVIAL_LLVM_TYPE(LLVMVoidType);
-DEFINE_TRIVIAL_LLVM_TYPE(LLVMHalfType);
-DEFINE_TRIVIAL_LLVM_TYPE(LLVMBFloatType);
-DEFINE_TRIVIAL_LLVM_TYPE(LLVMFloatType);
-DEFINE_TRIVIAL_LLVM_TYPE(LLVMDoubleType);
 DEFINE_TRIVIAL_LLVM_TYPE(LLVMFP128Type);
 DEFINE_TRIVIAL_LLVM_TYPE(LLVMX86FP80Type);
 DEFINE_TRIVIAL_LLVM_TYPE(LLVMPPCFP128Type);
@@ -389,10 +380,9 @@ void printType(Type type, DialectAsmPrinter &printer);
 /// Returns `true` if the given type is compatible with the LLVM dialect.
 bool isCompatibleType(Type type);
 
-inline bool isCompatibleFloatingPointType(Type type) {
-  return type.isa<LLVMHalfType, LLVMBFloatType, LLVMFloatType, LLVMDoubleType,
-                  LLVMFP128Type, LLVMX86FP80Type>();
-}
+/// Returns `true` if the given type is a floating-point type compatible with
+/// the LLVM dialect.
+bool isCompatibleFloatingPointType(Type type);
 
 /// Returns the size of the given primitive LLVM dialect-compatible type
 /// (including vectors) in bits, for example, the size of i16 is 16 and

@@ -25,10 +25,10 @@ Scalar types are converted to their LLVM counterparts if they exist. The
 following conversions are currently implemented:
 
 -   `i*` converts to `!llvm.i*`
--   `bf16` converts to `!llvm.bfloat`
--   `f16` converts to `!llvm.half`
--   `f32` converts to `!llvm.float`
--   `f64` converts to `!llvm.double`
+-   `bf16` converts to `bf16`
+-   `f16` converts to `f16`
+-   `f32` converts to `f32`
+-   `f64` converts to `f64`
 
 ### Index Type
 
@@ -48,8 +48,8 @@ size with element type converted using these conversion rules. In the
 n-dimensional case, MLIR vectors are converted to (n-1)-dimensional array types
 of one-dimensional vectors.
 
-For example, `vector<4 x f32>` converts to `!llvm.vec<4 x float>` and `vector<4
-x 8 x 16 x f32>` converts to `!llvm.array<4 x array<8 x vec<16 x float>>>`.
+For example, `vector<4 x f32>` converts to `!llvm.vec<4 x f32>` and `vector<4 x
+8 x 16 x f32>` converts to `!llvm.array<4 x array<8 x vec<16 x f32>>>`.
 
 ### Ranked Memref Types
 
@@ -106,18 +106,18 @@ resulting in a struct containing two pointers + offset.
 Examples:
 
 ```mlir
-memref<f32> -> !llvm.struct<(ptr<float> , ptr<float>, i64)>
-memref<1 x f32> -> !llvm.struct<(ptr<float>, ptr<float>, i64,
+memref<f32> -> !llvm.struct<(ptr<f32> , ptr<f32>, i64)>
+memref<1 x f32> -> !llvm.struct<(ptr<f32>, ptr<f32>, i64,
                                  array<1 x 64>, array<1 x i64>)>
-memref<? x f32> -> !llvm.struct<(ptr<float>, ptr<float>, i64
+memref<? x f32> -> !llvm.struct<(ptr<f32>, ptr<f32>, i64
                                  array<1 x 64>, array<1 x i64>)>
-memref<10x42x42x43x123 x f32> -> !llvm.struct<(ptr<float>, ptr<float>, i64
+memref<10x42x42x43x123 x f32> -> !llvm.struct<(ptr<f32>, ptr<f32>, i64
                                                array<5 x 64>, array<5 x i64>)>
-memref<10x?x42x?x123 x f32> -> !llvm.struct<(ptr<float>, ptr<float>, i64
+memref<10x?x42x?x123 x f32> -> !llvm.struct<(ptr<f32>, ptr<f32>, i64
                                              array<5 x 64>, array<5 x i64>)>
 
 // Memref types can have vectors as element types
-memref<1x? x vector<4xf32>> -> !llvm.struct<(ptr<vec<4 x float>>,
+memref<1x? x vector<4xf32>> -> !llvm.struct<(ptr<vec<4 x f32>>,
                                              ptr<vec<4 x float>>, i64,
                                              array<1 x i64>, array<1 x i64>)>
 ```
@@ -132,11 +132,11 @@ attribute.
 Examples:
 
 ```mlir
-memref<f32> -> !llvm.ptr<float>
-memref<10x42 x f32> -> !llvm.ptr<float>
+memref<f32> -> !llvm.ptr<f32>
+memref<10x42 x f32> -> !llvm.ptr<f32>
 
 // Memrefs with vector types are also supported.
-memref<10x42 x vector<4xf32>> -> !llvm.ptr<vec<4 x float>>
+memref<10x42 x vector<4xf32>> -> !llvm.ptr<vec<4 x f32>>
 ```
 
 ### Unranked Memref types
@@ -196,12 +196,12 @@ Examples:
 // Binary function with one result:
 (i32, f32) -> (i64)
 // has its arguments handled separately
-!llvm.func<i64 (i32, float)>
+!llvm.func<i64 (i32, f32)>
 
 // Binary function with two results:
 (i32, f32) -> (i64, f64)
 // has its result aggregated into a structure type.
-!llvm.func<struct<(i64, double)> (i32, float)>
+!llvm.func<struct<(i64, f64)> (i32, f32)>
 ```
 
 #### Functions as Function Arguments or Results
@@ -249,19 +249,19 @@ Examples:
 // A memref descriptor appearing as function argument:
 (memref<f32>) -> ()
 // gets converted into a list of individual scalar components of a descriptor.
-!llvm.func<void (ptr<float>, ptr<float>, i64)>
+!llvm.func<void (ptr<f32>, ptr<f32>, i64)>
 
 // The list of arguments is linearized and one can freely mix memref and other
 // types in this list:
 (memref<f32>, f32) -> ()
 // which gets converted into a flat list.
-!llvm.func<void (ptr<float>, ptr<float>, i64, float)>
+!llvm.func<void (ptr<f32>, ptr<f32>, i64, f32)>
 
 // For nD ranked memref descriptors:
 (memref<?x?xf32>) -> ()
 // the converted signature will contain 2n+1 `index`-typed integer arguments,
 // offset, n sizes and n strides, per memref argument type.
-!llvm.func<void (ptr<float>, ptr<float>, i64, i64, i64, i64, i64)>
+!llvm.func<void (ptr<f32>, ptr<f32>, i64, i64, i64, i64, i64)>
 
 // Same rules apply to unranked descriptors:
 (memref<*xf32>) -> ()
@@ -271,12 +271,12 @@ Examples:
 // However, returning a memref from a function is not affected:
 () -> (memref<?xf32>)
 // gets converted to a function returning a descriptor structure.
-!llvm.func<struct<(ptr<float>, ptr<float>, i64, array<1xi64>, array<1xi64>)> ()>
+!llvm.func<struct<(ptr<f32>, ptr<f32>, i64, array<1xi64>, array<1xi64>)> ()>
 
 // If multiple memref-typed results are returned:
 () -> (memref<f32>, memref<f64>)
 // their descriptor structures are additionally packed into another structure,
 // potentially with other non-memref typed results.
-!llvm.func<struct<(struct<(ptr<float>, ptr<float>, i64)>,
+!llvm.func<struct<(struct<(ptr<f32>, ptr<f32>, i64)>,
                    struct<(ptr<double>, ptr<double>, i64)>)> ()>
 ```

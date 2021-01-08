@@ -15,6 +15,7 @@
 
 /*  Constant              Value
     __cpp_lib_bit_cast    201806L [C++20]
+    __cpp_lib_bitops      201907L [C++20]
     __cpp_lib_endian      201907L [C++20]
     __cpp_lib_int_pow2    202002L [C++20]
 */
@@ -26,6 +27,10 @@
 
 # ifdef __cpp_lib_bit_cast
 #   error "__cpp_lib_bit_cast should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_bitops
+#   error "__cpp_lib_bitops should not be defined before c++20"
 # endif
 
 # ifdef __cpp_lib_endian
@@ -42,6 +47,10 @@
 #   error "__cpp_lib_bit_cast should not be defined before c++20"
 # endif
 
+# ifdef __cpp_lib_bitops
+#   error "__cpp_lib_bitops should not be defined before c++20"
+# endif
+
 # ifdef __cpp_lib_endian
 #   error "__cpp_lib_endian should not be defined before c++20"
 # endif
@@ -54,6 +63,10 @@
 
 # ifdef __cpp_lib_bit_cast
 #   error "__cpp_lib_bit_cast should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_bitops
+#   error "__cpp_lib_bitops should not be defined before c++20"
 # endif
 
 # ifdef __cpp_lib_endian
@@ -76,6 +89,19 @@
 # else // _LIBCPP_VERSION
 #   ifdef __cpp_lib_bit_cast
 #     error "__cpp_lib_bit_cast should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_bitops
+#     error "__cpp_lib_bitops should be defined in c++20"
+#   endif
+#   if __cpp_lib_bitops != 201907L
+#     error "__cpp_lib_bitops should have the value 201907L in c++20"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_bitops
+#     error "__cpp_lib_bitops should not be defined because it is unimplemented in libc++!"
 #   endif
 # endif
 

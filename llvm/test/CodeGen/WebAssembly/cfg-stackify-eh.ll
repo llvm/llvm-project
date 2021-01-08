@@ -76,7 +76,7 @@ catch:                                            ; preds = %catch.fallthrough
   catchret from %1 to label %try.cont
 
 rethrow:                                          ; preds = %catch.fallthrough
-  call void @llvm.wasm.rethrow.in.catch() [ "funclet"(token %1) ]
+  call void @llvm.wasm.rethrow() [ "funclet"(token %1) ]
   unreachable
 
 try.cont:                                         ; preds = %catch, %catch2, %entry
@@ -179,7 +179,7 @@ invoke.cont8:                                     ; preds = %catch6
   catchret from %9 to label %try.cont
 
 rethrow5:                                         ; preds = %catch.start3
-  invoke void @llvm.wasm.rethrow.in.catch() [ "funclet"(token %9) ]
+  invoke void @llvm.wasm.rethrow() [ "funclet"(token %9) ]
           to label %unreachable unwind label %ehcleanup9
 
 try.cont:                                         ; preds = %invoke.cont8, %catch
@@ -187,7 +187,7 @@ try.cont:                                         ; preds = %invoke.cont8, %catc
   catchret from %1 to label %try.cont11
 
 rethrow:                                          ; preds = %catch.start
-  call void @llvm.wasm.rethrow.in.catch() [ "funclet"(token %1) ]
+  call void @llvm.wasm.rethrow() [ "funclet"(token %1) ]
   unreachable
 
 try.cont11:                                       ; preds = %try.cont, %entry
@@ -864,7 +864,7 @@ invoke.cont2:                                     ; preds = %catch
   catchret from %1 to label %for.inc
 
 rethrow:                                          ; preds = %catch.start
-  call void @llvm.wasm.rethrow.in.catch() #6 [ "funclet"(token %1) ]
+  call void @llvm.wasm.rethrow() #6 [ "funclet"(token %1) ]
   unreachable
 
 for.inc:                                          ; preds = %invoke.cont2, %for.body
@@ -1093,7 +1093,7 @@ declare %class.MyClass* @_ZN7MyClassC2ERKS_(%class.MyClass* returned, %class.MyC
 declare i32 @__gxx_wasm_personality_v0(...)
 declare i8* @llvm.wasm.get.exception(token)
 declare i32 @llvm.wasm.get.ehselector(token)
-declare void @llvm.wasm.rethrow.in.catch()
+declare void @llvm.wasm.rethrow()
 declare i32 @llvm.eh.typeid.for(i8*)
 declare i8* @__cxa_begin_catch(i8*)
 declare void @__cxa_end_catch()

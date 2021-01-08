@@ -13,9 +13,12 @@
 
 // Test the feature test macros defined by <string_view>
 
-/*  Constant                 Value
-    __cpp_lib_char8_t        201811L [C++20]
-    __cpp_lib_string_view    201606L [C++17]
+/*  Constant                           Value
+    __cpp_lib_char8_t                  201811L [C++20]
+    __cpp_lib_constexpr_string_view    201811L [C++20]
+    __cpp_lib_starts_ends_with         201711L [C++20]
+    __cpp_lib_string_view              201606L [C++17]
+                                       201803L [C++20]
 */
 
 #include <string_view>
@@ -25,6 +28,14 @@
 
 # ifdef __cpp_lib_char8_t
 #   error "__cpp_lib_char8_t should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_constexpr_string_view
+#   error "__cpp_lib_constexpr_string_view should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_starts_ends_with
+#   error "__cpp_lib_starts_ends_with should not be defined before c++20"
 # endif
 
 # ifdef __cpp_lib_string_view
@@ -37,6 +48,14 @@
 #   error "__cpp_lib_char8_t should not be defined before c++20"
 # endif
 
+# ifdef __cpp_lib_constexpr_string_view
+#   error "__cpp_lib_constexpr_string_view should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_starts_ends_with
+#   error "__cpp_lib_starts_ends_with should not be defined before c++20"
+# endif
+
 # ifdef __cpp_lib_string_view
 #   error "__cpp_lib_string_view should not be defined before c++17"
 # endif
@@ -45,6 +64,14 @@
 
 # ifdef __cpp_lib_char8_t
 #   error "__cpp_lib_char8_t should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_constexpr_string_view
+#   error "__cpp_lib_constexpr_string_view should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_starts_ends_with
+#   error "__cpp_lib_starts_ends_with should not be defined before c++20"
 # endif
 
 # ifndef __cpp_lib_string_view
@@ -69,11 +96,31 @@
 #   endif
 # endif
 
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_constexpr_string_view
+#     error "__cpp_lib_constexpr_string_view should be defined in c++20"
+#   endif
+#   if __cpp_lib_constexpr_string_view != 201811L
+#     error "__cpp_lib_constexpr_string_view should have the value 201811L in c++20"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_constexpr_string_view
+#     error "__cpp_lib_constexpr_string_view should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# ifndef __cpp_lib_starts_ends_with
+#   error "__cpp_lib_starts_ends_with should be defined in c++20"
+# endif
+# if __cpp_lib_starts_ends_with != 201711L
+#   error "__cpp_lib_starts_ends_with should have the value 201711L in c++20"
+# endif
+
 # ifndef __cpp_lib_string_view
 #   error "__cpp_lib_string_view should be defined in c++20"
 # endif
-# if __cpp_lib_string_view != 201606L
-#   error "__cpp_lib_string_view should have the value 201606L in c++20"
+# if __cpp_lib_string_view != 201803L
+#   error "__cpp_lib_string_view should have the value 201803L in c++20"
 # endif
 
 #endif // TEST_STD_VER == 20
