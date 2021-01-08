@@ -130,6 +130,8 @@ public:
   SDValue lowerVAARG(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   /// } Custom Lower
 
   /// Replace the results of node with an illegal result

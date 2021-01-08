@@ -74,6 +74,8 @@ bool VETargetLowering::CanLowerReturn(
 static const MVT AllVectorVTs[] = {MVT::v256i32, MVT::v512i32, MVT::v256i64,
                                    MVT::v256f32, MVT::v512f32, MVT::v256f64};
 
+static const MVT AllPackedVTs[] = {MVT::v512i32, MVT::v512f32};
+
 void VETargetLowering::initRegisterClasses() {
   // Set up the register classes.
   addRegisterClass(MVT::i32, &VE::I32RegClass);
@@ -292,6 +294,8 @@ void VETargetLowering::initSPUActions() {
 void VETargetLowering::initVPUActions() {
   for (MVT LegalVecVT : AllVectorVTs) {
     setOperationAction(ISD::BUILD_VECTOR, LegalVecVT, Custom);
+    setOperationAction(ISD::INSERT_VECTOR_ELT, LegalVecVT, Legal);
+    setOperationAction(ISD::EXTRACT_VECTOR_ELT, LegalVecVT, Legal);
     // Translate all vector instructions with legal element types to VVP_*
     // nodes.
     // TODO We will custom-widen into VVP_* nodes in the future. While we are
@@ -300,6 +304,11 @@ void VETargetLowering::initVPUActions() {
 #define ADD_VVP_OP(VVP_NAME, ISD_NAME)                                         \
   setOperationAction(ISD::ISD_NAME, LegalVecVT, Custom);
 #include "VVPNodes.def"
+  }
+
+  for (MVT LegalPackedVT : AllPackedVTs) {
+    setOperationAction(ISD::INSERT_VECTOR_ELT, LegalPackedVT, Custom);
+    setOperationAction(ISD::EXTRACT_VECTOR_ELT, LegalPackedVT, Custom);
   }
 }
 
@@ -1662,6 +1671,11 @@ SDValue VETargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::VAARG:
     return lowerVAARG(Op, DAG);
 
+  case ISD::INSERT_VECTOR_ELT:
+    return lowerINSERT_VECTOR_ELT(Op, DAG);
+  case ISD::EXTRACT_VECTOR_ELT:
+    return lowerEXTRACT_VECTOR_ELT(Op, DAG);
+
 #define ADD_BINARY_VVP_OP(VVP_NAME, ISD_NAME) case ISD::ISD_NAME:
 #include "VVPNodes.def"
     return lowerToVVP(Op, DAG);
@@ -2660,4 +2674,101 @@ SDValue VETargetLowering::lowerToVVP(SDValue Op, SelectionDAG &DAG) const {
                        Op->getOperand(1), Mask, AVL);
   }
   llvm_unreachable("lowerToVVP called for unexpected SDNode.");
+}
+
+SDValue VETargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+  assert(Op.getOpcode() == ISD::EXTRACT_VECTOR_ELT && "Unknown opcode!");
+  MVT VT = Op.getOperand(0).getSimpleValueType();
+
+  // Special treatment for packed V64 types.
+  assert(VT == MVT::v512i32 || VT == MVT::v512f32);
+  // Example of codes:
+  //   %packed_v = extractelt %vr, %idx / 2
+  //   %v = %packed_v >> (%idx % 2 * 32)
+  //   %res = %v & 0xffffffff
+
+  SDValue Vec = Op.getOperand(0);
+  SDValue Idx = Op.getOperand(1);
+  SDLoc DL(Op);
+  SDValue Result = Op;
+  if (0 /* Idx->isConstant() */) {
+    // TODO: optimized implementation using constant values
+  } else {
+    SDValue Const1 = DAG.getConstant(1, DL, MVT::i64);
+    SDValue HalfIdx = DAG.getNode(ISD::SRL, DL, MVT::i64, {Idx, Const1});
+    SDValue PackedElt =
+        SDValue(DAG.getMachineNode(VE::LVSvr, DL, MVT::i64, {Vec, HalfIdx}), 0);
+    SDValue AndIdx = DAG.getNode(ISD::AND, DL, MVT::i64, {Idx, Const1});
+    SDValue Shift = DAG.getNode(ISD::XOR, DL, MVT::i64, {AndIdx, Const1});
+    SDValue Const5 = DAG.getConstant(5, DL, MVT::i64);
+    Shift = DAG.getNode(ISD::SHL, DL, MVT::i64, {Shift, Const5});
+    PackedElt = DAG.getNode(ISD::SRL, DL, MVT::i64, {PackedElt, Shift});
+    SDValue Mask = DAG.getConstant(0xFFFFFFFFL, DL, MVT::i64);
+    PackedElt = DAG.getNode(ISD::AND, DL, MVT::i64, {PackedElt, Mask});
+    SDValue SubI32 = DAG.getTargetConstant(VE::sub_i32, DL, MVT::i32);
+    Result = SDValue(DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, DL,
+                                        MVT::i32, PackedElt, SubI32),
+                     0);
+
+    if (Op.getSimpleValueType() == MVT::f32) {
+      Result = DAG.getBitcast(MVT::f32, Result);
+    } else {
+      assert(Op.getSimpleValueType() == MVT::i32);
+    }
+  }
+  return Result;
+}
+
+SDValue VETargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  assert(Op.getOpcode() == ISD::INSERT_VECTOR_ELT && "Unknown opcode!");
+  MVT VT = Op.getOperand(0).getSimpleValueType();
+
+  // Special treatment for packed V64 types.
+  assert(VT == MVT::v512i32 || VT == MVT::v512f32);
+  // The v512i32 and v512f32 starts from upper bits (0..31).  This "upper
+  // bits" required `val << 32` from C implementation's point of view.
+  //
+  // Example of codes:
+  //   %packed_elt = extractelt %vr, (%idx >> 1)
+  //   %shift = ((%idx & 1) ^ 1) << 5
+  //   %packed_elt &= 0xffffffff00000000 >> shift
+  //   %packed_elt |= (zext %val) << shift
+  //   %vr = insertelt %vr, %packed_elt, (%idx >> 1)
+
+  SDLoc DL(Op);
+  SDValue Vec = Op.getOperand(0);
+  SDValue Val = Op.getOperand(1);
+  SDValue Idx = Op.getOperand(2);
+  if (Idx.getSimpleValueType() == MVT::i32)
+    Idx = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Idx);
+  if (Val.getSimpleValueType() == MVT::f32)
+    Val = DAG.getBitcast(MVT::i32, Val);
+  assert(Val.getSimpleValueType() == MVT::i32);
+  Val = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Val);
+
+  SDValue Result = Op;
+  if (0 /* Idx->isConstant()*/) {
+    // TODO: optimized implementation using constant values
+  } else {
+    SDValue Const1 = DAG.getConstant(1, DL, MVT::i64);
+    SDValue HalfIdx = DAG.getNode(ISD::SRL, DL, MVT::i64, {Idx, Const1});
+    SDValue PackedElt =
+        SDValue(DAG.getMachineNode(VE::LVSvr, DL, MVT::i64, {Vec, HalfIdx}), 0);
+    SDValue AndIdx = DAG.getNode(ISD::AND, DL, MVT::i64, {Idx, Const1});
+    SDValue Shift = DAG.getNode(ISD::XOR, DL, MVT::i64, {AndIdx, Const1});
+    SDValue Const5 = DAG.getConstant(5, DL, MVT::i64);
+    Shift = DAG.getNode(ISD::SHL, DL, MVT::i64, {Shift, Const5});
+    SDValue Mask = DAG.getConstant(0xFFFFFFFF00000000L, DL, MVT::i64);
+    Mask = DAG.getNode(ISD::SRL, DL, MVT::i64, {Mask, Shift});
+    PackedElt = DAG.getNode(ISD::AND, DL, MVT::i64, {PackedElt, Mask});
+    Val = DAG.getNode(ISD::SHL, DL, MVT::i64, {Val, Shift});
+    PackedElt = DAG.getNode(ISD::OR, DL, MVT::i64, {PackedElt, Val});
+    Result =
+        SDValue(DAG.getMachineNode(VE::LSVrr_v, DL, Vec.getSimpleValueType(),
+                                   {HalfIdx, PackedElt, Vec}),
+                0);
+  }
+  return Result;
 }
