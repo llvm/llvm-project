@@ -1223,10 +1223,12 @@ bool Decoder::dumpPackedARM64Entry(const object::COFFObjectFile &COFF,
     if (I == (RF.RegI() + 1) / 2 - 1 && RF.RegI() % 2 == 1) {
       // The last register, an odd register without a pair
       if (RF.CR() == 1) {
-        if (I == 0) // If this is the only register pair
-          SW.startLine() << format("stp x%d, lr, [sp, #-%d]!\n", 19 + 2 * I,
-                                   SavSZ);
-        else
+        if (I == 0) { // If this is the only register pair
+          // CR=1 combined with RegI=1 doesn't map to a documented case;
+          // it doesn't map to any regular unwind info opcode, and the
+          // actual unwinder doesn't support it.
+          SW.startLine() << "INVALID!\n";
+        } else
           SW.startLine() << format("stp x%d, lr, [sp, #%d]\n", 19 + 2 * I,
                                    16 * I);
       } else {

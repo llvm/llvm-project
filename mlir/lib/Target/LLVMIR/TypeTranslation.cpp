@@ -8,6 +8,7 @@
 
 #include "mlir/Target/LLVMIR/TypeTranslation.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
 
 #include "llvm/ADT/TypeSwitch.h"
@@ -71,10 +72,9 @@ public:
             .Case([this](LLVM::LLVMMetadataType) {
               return llvm::Type::getMetadataTy(context);
             })
-            .Case<LLVM::LLVMArrayType, LLVM::LLVMIntegerType,
-                  LLVM::LLVMFunctionType, LLVM::LLVMPointerType,
-                  LLVM::LLVMStructType, LLVM::LLVMFixedVectorType,
-                  LLVM::LLVMScalableVectorType>(
+            .Case<LLVM::LLVMArrayType, IntegerType, LLVM::LLVMFunctionType,
+                  LLVM::LLVMPointerType, LLVM::LLVMStructType,
+                  LLVM::LLVMFixedVectorType, LLVM::LLVMScalableVectorType>(
                 [this](auto type) { return this->translate(type); })
             .Default([](Type t) -> llvm::Type * {
               llvm_unreachable("unknown LLVM dialect type");
@@ -101,8 +101,8 @@ private:
   }
 
   /// Translates the given integer type.
-  llvm::Type *translate(LLVM::LLVMIntegerType type) {
-    return llvm::IntegerType::get(context, type.getBitWidth());
+  llvm::Type *translate(IntegerType type) {
+    return llvm::IntegerType::get(context, type.getWidth());
   }
 
   /// Translates the given pointer type.
@@ -253,7 +253,7 @@ private:
 
   /// Translates the given integer type.
   Type translate(llvm::IntegerType *type) {
-    return LLVM::LLVMIntegerType::get(&context, type->getBitWidth());
+    return IntegerType::get(&context, type->getBitWidth());
   }
 
   /// Translates the given pointer type.

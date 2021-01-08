@@ -19,7 +19,7 @@ func private @fifth_order_left(%arg0: (((() -> ()) -> ()) -> ()) -> ())
 func private @fifth_order_right(%arg0: () -> (() -> (() -> (() -> ()))))
 
 // Check that memrefs are converted to argument packs if appear as function arguments.
-// CHECK: llvm.func @memref_call_conv(!llvm.ptr<float>, !llvm.ptr<float>, !llvm.i64, !llvm.i64, !llvm.i64)
+// CHECK: llvm.func @memref_call_conv(!llvm.ptr<float>, !llvm.ptr<float>, i64, i64, i64)
 func private @memref_call_conv(%arg0: memref<?xf32>)
 
 // Same in nested functions.
@@ -37,25 +37,25 @@ func @pass_through(%arg0: () -> ()) -> (() -> ()) {
   return %bbarg : () -> ()
 }
 
-// CHECK-LABEL: llvm.func @body(!llvm.i32)
+// CHECK-LABEL: llvm.func @body(i32)
 func private @body(i32)
 
 // CHECK-LABEL: llvm.func @indirect_const_call
-// CHECK-SAME: (%[[ARG0:.*]]: !llvm.i32) {
+// CHECK-SAME: (%[[ARG0:.*]]: i32) {
 func @indirect_const_call(%arg0: i32) {
 // CHECK-NEXT: %[[ADDR:.*]] = llvm.mlir.addressof @body : !llvm.ptr<func<void (i32)>>
   %0 = constant @body : (i32) -> ()
-// CHECK-NEXT:  llvm.call %[[ADDR]](%[[ARG0:.*]]) : (!llvm.i32) -> ()
+// CHECK-NEXT:  llvm.call %[[ADDR]](%[[ARG0:.*]]) : (i32) -> ()
   call_indirect %0(%arg0) : (i32) -> ()
 // CHECK-NEXT:  llvm.return
   return
 }
 
-// CHECK-LABEL: llvm.func @indirect_call(%arg0: !llvm.ptr<func<i32 (float)>>, %arg1: !llvm.float) -> !llvm.i32 {
+// CHECK-LABEL: llvm.func @indirect_call(%arg0: !llvm.ptr<func<i32 (float)>>, %arg1: !llvm.float) -> i32 {
 func @indirect_call(%arg0: (f32) -> i32, %arg1: f32) -> i32 {
-// CHECK-NEXT:  %0 = llvm.call %arg0(%arg1) : (!llvm.float) -> !llvm.i32
+// CHECK-NEXT:  %0 = llvm.call %arg0(%arg1) : (!llvm.float) -> i32
   %0 = call_indirect %arg0(%arg1) : (f32) -> i32
-// CHECK-NEXT:  llvm.return %0 : !llvm.i32
+// CHECK-NEXT:  llvm.return %0 : i32
   return %0 : i32
 }
 

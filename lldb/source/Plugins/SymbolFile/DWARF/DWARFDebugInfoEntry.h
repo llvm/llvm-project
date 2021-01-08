@@ -42,7 +42,7 @@ public:
   bool operator==(const DWARFDebugInfoEntry &rhs) const;
   bool operator!=(const DWARFDebugInfoEntry &rhs) const;
 
-  void BuildFunctionAddressRangeTable(const DWARFUnit *cu,
+  void BuildFunctionAddressRangeTable(DWARFUnit *cu,
                                       DWARFDebugAranges *debug_aranges) const;
 
   bool Extract(const lldb_private::DWARFDataExtractor &data,

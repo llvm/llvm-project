@@ -13,8 +13,8 @@
 #include "clang/Analysis/PathDiagnostic.h"
 #include "clang/Analysis/PathDiagnosticConsumers.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/CrossTU/CrossTranslationUnit.h"
 #include "clang/Lex/Preprocessor.h"
+#include "llvm/Support/Path.h"
 
 using namespace clang;
 using namespace ento;

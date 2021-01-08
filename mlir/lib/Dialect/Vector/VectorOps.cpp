@@ -1908,7 +1908,7 @@ public:
     auto dstVecType = op.getType().cast<VectorType>();
     unsigned dstRank = dstVecType.getRank();
     unsigned rankDiff = dstRank - srcRrank;
-    // Check if the most inner dimensions of the source of the broacast are the
+    // Check if the most inner dimensions of the source of the broadcast are the
     // same as the destination of the extract. If this is the case we can just
     // use a broadcast as the original dimensions are untouched.
     bool lowerDimMatch = true;

@@ -174,7 +174,7 @@ MLIRContext &LLVMTypeConverter::getContext() {
 }
 
 Type LLVMTypeConverter::getIndexType() {
-  return LLVM::LLVMIntegerType::get(&getContext(), getIndexTypeBitwidth());
+  return IntegerType::get(&getContext(), getIndexTypeBitwidth());
 }
 
 unsigned LLVMTypeConverter::getPointerBitwidth(unsigned addressSpace) {
@@ -186,7 +186,7 @@ Type LLVMTypeConverter::convertIndexType(IndexType type) {
 }
 
 Type LLVMTypeConverter::convertIntegerType(IntegerType type) {
-  return LLVM::LLVMIntegerType::get(&getContext(), type.getWidth());
+  return IntegerType::get(&getContext(), type.getWidth());
 }
 
 Type LLVMTypeConverter::convertFloatType(FloatType type) {
@@ -361,8 +361,8 @@ static constexpr unsigned kPtrInUnrankedMemRefDescriptor = 1;
 ///    stack allocated (alloca) copy of a MemRef descriptor that got casted to
 ///    be unranked.
 SmallVector<Type, 2> LLVMTypeConverter::getUnrankedMemRefDescriptorFields() {
-  return {getIndexType(), LLVM::LLVMPointerType::get(
-                              LLVM::LLVMIntegerType::get(&getContext(), 8))};
+  return {getIndexType(),
+          LLVM::LLVMPointerType::get(IntegerType::get(&getContext(), 8))};
 }
 
 Type LLVMTypeConverter::convertUnrankedMemRefType(UnrankedMemRefType type) {
@@ -1021,9 +1021,8 @@ Type ConvertToLLVMPattern::getIndexType() const {
 }
 
 Type ConvertToLLVMPattern::getIntPtrType(unsigned addressSpace) const {
-  return LLVM::LLVMIntegerType::get(
-      &getTypeConverter()->getContext(),
-      getTypeConverter()->getPointerBitwidth(addressSpace));
+  return IntegerType::get(&getTypeConverter()->getContext(),
+                          getTypeConverter()->getPointerBitwidth(addressSpace));
 }
 
 Type ConvertToLLVMPattern::getVoidType() const {
@@ -1032,7 +1031,7 @@ Type ConvertToLLVMPattern::getVoidType() const {
 
 Type ConvertToLLVMPattern::getVoidPtrType() const {
   return LLVM::LLVMPointerType::get(
-      LLVM::LLVMIntegerType::get(&getTypeConverter()->getContext(), 8));
+      IntegerType::get(&getTypeConverter()->getContext(), 8));
 }
 
 Value ConvertToLLVMPattern::createIndexConstant(
@@ -2197,9 +2196,8 @@ static LogicalResult copyUnrankedDescriptors(OpBuilder &builder, Location loc,
   // Get frequently used types.
   MLIRContext *context = builder.getContext();
   auto voidType = LLVM::LLVMVoidType::get(context);
-  Type voidPtrType =
-      LLVM::LLVMPointerType::get(LLVM::LLVMIntegerType::get(context, 8));
-  auto i1Type = LLVM::LLVMIntegerType::get(context, 1);
+  Type voidPtrType = LLVM::LLVMPointerType::get(IntegerType::get(context, 8));
+  auto i1Type = IntegerType::get(context, 1);
   Type indexType = typeConverter.getIndexType();
 
   // Find the malloc and free, or declare them if necessary.
@@ -2838,7 +2836,7 @@ private:
 
     Value zeroIndex = createIndexConstant(rewriter, loc, 0);
     Value pred = rewriter.create<LLVM::ICmpOp>(
-        loc, LLVM::LLVMIntegerType::get(rewriter.getContext(), 1),
+        loc, IntegerType::get(rewriter.getContext(), 1),
         LLVM::ICmpPredicate::sge, indexArg, zeroIndex);
 
     Block *bodyBlock =
@@ -3107,10 +3105,10 @@ struct IndexCastOpLowering : public ConvertOpToLLVMPattern<IndexCastOp> {
 
     auto targetType =
         typeConverter->convertType(indexCastOp.getResult().getType())
-            .cast<LLVM::LLVMIntegerType>();
-    auto sourceType = transformed.in().getType().cast<LLVM::LLVMIntegerType>();
-    unsigned targetBits = targetType.getBitWidth();
-    unsigned sourceBits = sourceType.getBitWidth();
+            .cast<IntegerType>();
+    auto sourceType = transformed.in().getType().cast<IntegerType>();
+    unsigned targetBits = targetType.getWidth();
+    unsigned sourceBits = sourceType.getWidth();
 
     if (targetBits == sourceBits)
       rewriter.replaceOp(indexCastOp, transformed.in());
@@ -3870,7 +3868,7 @@ struct GenericAtomicRMWOpLowering
     // Append the cmpxchg op to the end of the loop block.
     auto successOrdering = LLVM::AtomicOrdering::acq_rel;
     auto failureOrdering = LLVM::AtomicOrdering::monotonic;
-    auto boolType = LLVM::LLVMIntegerType::get(rewriter.getContext(), 1);
+    auto boolType = IntegerType::get(rewriter.getContext(), 1);
     auto pairType = LLVM::LLVMStructType::getLiteral(rewriter.getContext(),
                                                      {valueType, boolType});
     auto cmpxchg = rewriter.create<LLVM::AtomicCmpXchgOp>(
@@ -4054,7 +4052,7 @@ Type LLVMTypeConverter::packFunctionResults(ArrayRef<Type> types) {
 Value LLVMTypeConverter::promoteOneMemRefDescriptor(Location loc, Value operand,
                                                     OpBuilder &builder) {
   auto *context = builder.getContext();
-  auto int64Ty = LLVM::LLVMIntegerType::get(builder.getContext(), 64);
+  auto int64Ty = IntegerType::get(builder.getContext(), 64);
   auto indexType = IndexType::get(context);
   // Alloca with proper alignment. We do not expect optimizations of this
   // alloca op and so we omit allocating at the entry block.

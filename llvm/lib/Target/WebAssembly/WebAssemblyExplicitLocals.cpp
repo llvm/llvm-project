@@ -241,6 +241,10 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
     auto Local = static_cast<unsigned>(MI.getOperand(1).getImm());
     Reg2Local[Reg] = Local;
     checkFrameBase(MFI, Local, Reg);
+
+    // Update debug value to point to the local before removing.
+    WebAssemblyDebugValueManager(&MI).replaceWithLocal(Local);
+
     MI.eraseFromParent();
     Changed = true;
   }

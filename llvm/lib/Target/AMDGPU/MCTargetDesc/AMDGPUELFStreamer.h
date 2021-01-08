@@ -14,13 +14,15 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUELFSTREAMER_H
 #define LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUELFSTREAMER_H
 
-#include "llvm/MC/MCELFStreamer.h"
-
+#include <memory>
 namespace llvm {
 class MCAsmBackend;
 class MCCodeEmitter;
 class MCContext;
 class MCSubtargetInfo;
+class MCELFStreamer;
+class Triple;
+class MCObjectWriter;
 
 MCELFStreamer *createAMDGPUELFStreamer(const Triple &T, MCContext &Context,
                                        std::unique_ptr<MCAsmBackend> MAB,

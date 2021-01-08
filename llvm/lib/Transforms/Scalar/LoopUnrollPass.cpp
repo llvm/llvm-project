@@ -218,8 +218,10 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
 
   // Apply size attributes
   bool OptForSize = L->getHeader()->getParent()->hasOptSize() ||
-                    llvm::shouldOptimizeForSize(L->getHeader(), PSI, BFI,
-                                                PGSOQueryType::IRPass);
+                    // Let unroll hints / pragmas take precedence over PGSO.
+                    (hasUnrollTransformation(L) != TM_ForcedByUser &&
+                     llvm::shouldOptimizeForSize(L->getHeader(), PSI, BFI,
+                                                 PGSOQueryType::IRPass));
   if (OptForSize) {
     UP.Threshold = UP.OptSizeThreshold;
     UP.PartialThreshold = UP.PartialOptSizeThreshold;
@@ -1369,7 +1371,7 @@ PreservedAnalyses LoopFullUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
     }
 
     // Otherwise erase the loop from the list if it was in the old loops.
-    return OldLoops.count(SibLoop) != 0;
+    return OldLoops.contains(SibLoop);
   });
   Updater.addSiblingLoops(SibLoops);
 

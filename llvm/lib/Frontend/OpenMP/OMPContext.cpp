@@ -14,7 +14,9 @@
 
 #include "llvm/Frontend/OpenMP/OMPContext.h"
 #include "llvm/ADT/SetOperations.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -58,9 +60,13 @@ OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple) {
 
   // Add the appropriate device architecture trait based on the triple.
 #define OMP_TRAIT_PROPERTY(Enum, TraitSetEnum, TraitSelectorEnum, Str)         \
-  if (TraitSelector::TraitSelectorEnum == TraitSelector::device_arch)          \
+  if (TraitSelector::TraitSelectorEnum == TraitSelector::device_arch) {        \
     if (TargetTriple.getArch() == TargetTriple.getArchTypeForLLVMName(Str))    \
-      ActiveTraits.set(unsigned(TraitProperty::Enum));
+      ActiveTraits.set(unsigned(TraitProperty::Enum));                         \
+    if (StringRef(Str) == StringRef("x86_64") &&                               \
+        TargetTriple.getArch() == Triple::x86_64)                              \
+      ActiveTraits.set(unsigned(TraitProperty::Enum));                         \
+  }
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
 
   // TODO: What exactly do we want to see as device ISA trait?

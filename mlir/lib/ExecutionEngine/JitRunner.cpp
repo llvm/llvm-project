@@ -199,8 +199,8 @@ Error checkCompatibleReturnType<int32_t>(LLVM::LLVMFuncOp mainFunction) {
   auto resultType = mainFunction.getType()
                         .cast<LLVM::LLVMFunctionType>()
                         .getReturnType()
-                        .dyn_cast<LLVM::LLVMIntegerType>();
-  if (!resultType || resultType.getBitWidth() != 32)
+                        .dyn_cast<IntegerType>();
+  if (!resultType || resultType.getWidth() != 32)
     return make_string_error("only single llvm.i32 function result supported");
   return Error::success();
 }
@@ -209,8 +209,8 @@ Error checkCompatibleReturnType<int64_t>(LLVM::LLVMFuncOp mainFunction) {
   auto resultType = mainFunction.getType()
                         .cast<LLVM::LLVMFunctionType>()
                         .getReturnType()
-                        .dyn_cast<LLVM::LLVMIntegerType>();
-  if (!resultType || resultType.getBitWidth() != 64)
+                        .dyn_cast<IntegerType>();
+  if (!resultType || resultType.getWidth() != 64)
     return make_string_error("only single llvm.i64 function result supported");
   return Error::success();
 }

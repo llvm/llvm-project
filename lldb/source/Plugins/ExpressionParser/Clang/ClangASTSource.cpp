@@ -690,12 +690,7 @@ void ClangASTSource::FillNamespaceMap(
     return;
   }
 
-  const ModuleList &target_images = m_target->GetImages();
-  std::lock_guard<std::recursive_mutex> guard(target_images.GetMutex());
-
-  for (size_t i = 0, e = target_images.GetSize(); i < e; ++i) {
-    lldb::ModuleSP image = target_images.GetModuleAtIndexUnlocked(i);
-
+  for (lldb::ModuleSP image : m_target->GetImages().Modules()) {
     if (!image)
       continue;
 
@@ -1667,14 +1662,8 @@ void ClangASTSource::CompleteNamespaceMap(
                module_sp->GetFileSpec().GetFilename());
     }
   } else {
-    const ModuleList &target_images = m_target->GetImages();
-    std::lock_guard<std::recursive_mutex> guard(target_images.GetMutex());
-
     CompilerDeclContext null_namespace_decl;
-
-    for (size_t i = 0, e = target_images.GetSize(); i < e; ++i) {
-      lldb::ModuleSP image = target_images.GetModuleAtIndexUnlocked(i);
-
+    for (lldb::ModuleSP image : m_target->GetImages().Modules()) {
       if (!image)
         continue;
 

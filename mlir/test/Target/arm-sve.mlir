@@ -49,8 +49,8 @@ llvm.func @arm_sve_ummla(%arg0: !llvm.vec<? x 16 x i8>,
 }
 
 // CHECK-LABEL: define i64 @get_vector_scale()
-llvm.func @get_vector_scale() -> !llvm.i64 {
+llvm.func @get_vector_scale() -> i64 {
   // CHECK: call i64 @llvm.vscale.i64()
-  %0 = "llvm_arm_sve.vscale"() : () -> !llvm.i64
-  llvm.return %0 : !llvm.i64
+  %0 = "llvm_arm_sve.vscale"() : () -> i64
+  llvm.return %0 : i64
 }

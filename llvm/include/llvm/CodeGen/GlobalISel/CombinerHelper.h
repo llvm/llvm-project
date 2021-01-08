@@ -400,6 +400,9 @@ public:
   /// Check if operand \p OpIdx is undef.
   bool matchOperandIsUndef(MachineInstr &MI, unsigned OpIdx);
 
+  /// Check if operand \p OpIdx is known to be a power of 2.
+  bool matchOperandIsKnownToBeAPowerOfTwo(MachineInstr &MI, unsigned OpIdx);
+
   /// Erase \p MI
   bool eraseInst(MachineInstr &MI);
 
@@ -458,6 +461,9 @@ public:
   /// Combine G_PTR_ADD with nullptr to G_INTTOPTR
   bool matchPtrAddZero(MachineInstr &MI);
   bool applyPtrAddZero(MachineInstr &MI);
+
+  /// Combine G_UREM x, (known power of 2) to an add and bitmasking.
+  bool applySimplifyURemByPow2(MachineInstr &MI);
 
   bool matchCombineInsertVecElts(MachineInstr &MI,
                                  SmallVectorImpl<Register> &MatchInfo);

@@ -12,24 +12,9 @@
 
 #include "GCNHazardRecognizer.h"
 #include "AMDGPUSubtarget.h"
-#include "SIDefines.h"
-#include "SIInstrInfo.h"
-#include "SIRegisterInfo.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
-#include "llvm/MC/MCInstrDesc.h"
-#include "llvm/Support/ErrorHandling.h"
-#include <algorithm>
-#include <cassert>
-#include <limits>
-#include <set>
-#include <vector>
+#include "llvm/Support/TargetParser.h"
 
 using namespace llvm;
 

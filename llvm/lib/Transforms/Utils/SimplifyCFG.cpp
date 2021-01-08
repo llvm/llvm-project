@@ -1261,7 +1261,6 @@ bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(Instruction *TI,
       // Okay, at this point, we know which new successor Pred will get.  Make
       // sure we update the number of entries in the PHI nodes for these
       // successors.
-      assert(!NewSuccessors.empty() && "Should be adding some new successors.");
       for (const std::pair<BasicBlock *, int /*Num*/> &NewSuccessor :
            NewSuccessors) {
         for (auto I : seq(0, NewSuccessor.second)) {

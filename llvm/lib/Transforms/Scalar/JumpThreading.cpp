@@ -1757,7 +1757,7 @@ bool JumpThreadingPass::processThreadableEdges(Value *Cond, BasicBlock *BB,
     // and we still want to process.
     erase_if(PredToDestList,
              [&](const std::pair<BasicBlock *, BasicBlock *> &PredToDest) {
-               return LoopHeaders.count(PredToDest.second) != 0;
+               return LoopHeaders.contains(PredToDest.second);
              });
 
     if (PredToDestList.empty())

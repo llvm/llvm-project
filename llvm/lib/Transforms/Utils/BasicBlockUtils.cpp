@@ -105,7 +105,7 @@ void llvm::DeleteDeadBlocks(ArrayRef <BasicBlock *> BBs, DomTreeUpdater *DTU,
   DetatchDeadBlocks(BBs, DTU ? &Updates : nullptr, KeepOneInputPHIs);
 
   if (DTU)
-    DTU->applyUpdatesPermissive(Updates);
+    DTU->applyUpdates(Updates);
 
   for (BasicBlock *BB : BBs)
     if (DTU)
@@ -230,19 +230,21 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
   // These dominator edges will be redirected from Pred.
   std::vector<DominatorTree::UpdateType> Updates;
   if (DTU) {
-    Updates.reserve(1 + (2 * succ_size(BB)));
+    SmallSetVector<BasicBlock *, 2> UniqueSuccessors(succ_begin(BB),
+                                                     succ_end(BB));
+    Updates.reserve(1 + (2 * UniqueSuccessors.size()));
     // Add insert edges first. Experimentally, for the particular case of two
     // blocks that can be merged, with a single successor and single predecessor
     // respectively, it is beneficial to have all insert updates first. Deleting
     // edges first may lead to unreachable blocks, followed by inserting edges
     // making the blocks reachable again. Such DT updates lead to high compile
     // times. We add inserts before deletes here to reduce compile time.
-    for (auto I = succ_begin(BB), E = succ_end(BB); I != E; ++I)
+    for (BasicBlock *UniqueSuccessor : UniqueSuccessors)
       // This successor of BB may already have PredBB as a predecessor.
-      if (!llvm::is_contained(successors(PredBB), *I))
-        Updates.push_back({DominatorTree::Insert, PredBB, *I});
-    for (auto I = succ_begin(BB), E = succ_end(BB); I != E; ++I)
-      Updates.push_back({DominatorTree::Delete, BB, *I});
+      if (!llvm::is_contained(successors(PredBB), UniqueSuccessor))
+        Updates.push_back({DominatorTree::Insert, PredBB, UniqueSuccessor});
+    for (BasicBlock *UniqueSuccessor : UniqueSuccessors)
+      Updates.push_back({DominatorTree::Delete, BB, UniqueSuccessor});
     Updates.push_back({DominatorTree::Delete, PredBB, BB});
   }
 
@@ -303,7 +305,7 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
            isa<UnreachableInst>(BB->getTerminator()) &&
            "The successor list of BB isn't empty before "
            "applying corresponding DTU updates.");
-    DTU->applyUpdatesPermissive(Updates);
+    DTU->applyUpdates(Updates);
     DTU->deleteBB(BB);
   } else {
     BB->eraseFromParent(); // Nuke BB if DTU is nullptr.

@@ -6135,6 +6135,17 @@ namespace {
     void VisitMacroQualifiedTypeLoc(MacroQualifiedTypeLoc TL) {
       TL.setExpansionLoc(Chunk.Loc);
     }
+    void VisitVectorTypeLoc(VectorTypeLoc TL) { TL.setNameLoc(Chunk.Loc); }
+    void VisitDependentVectorTypeLoc(DependentVectorTypeLoc TL) {
+      TL.setNameLoc(Chunk.Loc);
+    }
+    void VisitExtVectorTypeLoc(ExtVectorTypeLoc TL) {
+      TL.setNameLoc(Chunk.Loc);
+    }
+    void
+    VisitDependentSizedExtVectorTypeLoc(DependentSizedExtVectorTypeLoc TL) {
+      TL.setNameLoc(Chunk.Loc);
+    }
 
     void VisitTypeLoc(TypeLoc TL) {
       llvm_unreachable("unsupported TypeLoc kind in declarator!");

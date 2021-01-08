@@ -1308,7 +1308,7 @@ FunctionPass *TargetPassConfig::createRegAllocPass(bool Optimized) {
   return createTargetRegisterAllocator(Optimized);
 }
 
-bool TargetPassConfig::addRegAssignmentFast() {
+bool TargetPassConfig::addRegAssignAndRewriteFast() {
   if (RegAlloc != &useDefaultRegisterAllocator &&
       RegAlloc != &createFastRegisterAllocator)
     report_fatal_error("Must use fast (default) register allocator for unoptimized regalloc.");
@@ -1317,7 +1317,7 @@ bool TargetPassConfig::addRegAssignmentFast() {
   return true;
 }
 
-bool TargetPassConfig::addRegAssignmentOptimized() {
+bool TargetPassConfig::addRegAssignAndRewriteOptimized() {
   // Add the selected register allocation pass.
   addPass(createRegAllocPass(true));
 
@@ -1326,12 +1326,6 @@ bool TargetPassConfig::addRegAssignmentOptimized() {
 
   // Finally rewrite virtual registers.
   addPass(&VirtRegRewriterID);
-
-  // Perform stack slot coloring and post-ra machine LICM.
-  //
-  // FIXME: Re-enable coloring with register when it's capable of adding
-  // kill markers.
-  addPass(&StackSlotColoringID);
 
   return true;
 }
@@ -1348,7 +1342,7 @@ void TargetPassConfig::addFastRegAlloc() {
   addPass(&PHIEliminationID, false);
   addPass(&TwoAddressInstructionPassID, false);
 
-  addRegAssignmentFast();
+  addRegAssignAndRewriteFast();
 }
 
 /// Add standard target-independent passes that are tightly coupled with
@@ -1391,7 +1385,13 @@ void TargetPassConfig::addOptimizedRegAlloc() {
   // PreRA instruction scheduling.
   addPass(&MachineSchedulerID);
 
-  if (addRegAssignmentOptimized()) {
+  if (addRegAssignAndRewriteOptimized()) {
+    // Perform stack slot coloring and post-ra machine LICM.
+    //
+    // FIXME: Re-enable coloring with register when it's capable of adding
+    // kill markers.
+    addPass(&StackSlotColoringID);
+
     // Allow targets to expand pseudo instructions depending on the choice of
     // registers before MachineCopyPropagation.
     addPostRewrite();

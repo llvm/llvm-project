@@ -13,6 +13,7 @@
 
 #include "ReduceGlobalVarInitializers.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/GlobalValue.h"
 
 using namespace llvm;
 
@@ -23,8 +24,11 @@ static void extractGVsFromModule(std::vector<Chunk> ChunksToKeep,
 
   // Drop initializers of out-of-chunk GVs
   for (auto &GV : Program->globals())
-    if (GV.hasInitializer() && !O.shouldKeep())
+    if (GV.hasInitializer() && !O.shouldKeep()) {
       GV.setInitializer(nullptr);
+      GV.setLinkage(GlobalValue::LinkageTypes::ExternalLinkage);
+      GV.setComdat(nullptr);
+    }
 }
 
 /// Counts the amount of initialized GVs and displays their

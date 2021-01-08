@@ -114,6 +114,8 @@ enum NodeType : unsigned {
   FCVTZS_MERGE_PASSTHRU,
   SIGN_EXTEND_INREG_MERGE_PASSTHRU,
   ZERO_EXTEND_INREG_MERGE_PASSTHRU,
+  ABS_MERGE_PASSTHRU,
+  NEG_MERGE_PASSTHRU,
 
   SETCC_MERGE_ZERO,
 
@@ -812,6 +814,7 @@ private:
                           SDValue ThisVal) const;
 
   SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerABS(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerMGATHER(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerMSCATTER(SDValue Op, SelectionDAG &DAG) const;

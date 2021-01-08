@@ -50,20 +50,20 @@ func @func() {
 
 // CHECK-LABEL: @integer
 func @integer() {
-  // CHECK: !llvm.i1
-  "some.op"() : () -> !llvm.i1
-  // CHECK: !llvm.i8
-  "some.op"() : () -> !llvm.i8
-  // CHECK: !llvm.i16
-  "some.op"() : () -> !llvm.i16
-  // CHECK: !llvm.i32
-  "some.op"() : () -> !llvm.i32
-  // CHECK: !llvm.i64
-  "some.op"() : () -> !llvm.i64
-  // CHECK: !llvm.i57
-  "some.op"() : () -> !llvm.i57
-  // CHECK: !llvm.i129
-  "some.op"() : () -> !llvm.i129
+  // CHECK: i1
+  "some.op"() : () -> i1
+  // CHECK: i8
+  "some.op"() : () -> i8
+  // CHECK: i16
+  "some.op"() : () -> i16
+  // CHECK: i32
+  "some.op"() : () -> i32
+  // CHECK: i64
+  "some.op"() : () -> i64
+  // CHECK: i57
+  "some.op"() : () -> i57
+  // CHECK: i129
+  "some.op"() : () -> i129
   return
 }
 
@@ -184,7 +184,7 @@ func @identified_struct() {
 
 func @verbose() {
   // CHECK: !llvm.struct<(i64, struct<(float)>)>
-  "some.op"() : () -> !llvm.struct<(!llvm.i64, !llvm.struct<(!llvm.float)>)>
+  "some.op"() : () -> !llvm.struct<(i64, !llvm.struct<(!llvm.float)>)>
   return
 }
 
@@ -195,7 +195,7 @@ func @verbose() {
 // DialectAsmPrinter to have a mechanism for querying the presence and
 // usability of an alias outside of its `printType` method.
 
-!baz = type !llvm.i64
+!baz = type i64
 !qux = type !llvm.struct<(!baz)>
 
 !rec = type !llvm.struct<"a", (ptr<struct<"a">>)>

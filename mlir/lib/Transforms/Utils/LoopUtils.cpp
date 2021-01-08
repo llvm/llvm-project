@@ -507,7 +507,8 @@ checkTilingLegality(MutableArrayRef<mlir::AffineForOp> origLoops) {
   return success(checkTilingLegalityImpl(origLoops));
 }
 
-/// Check if the input data is valid and wheter tiled code will be legal or not.
+/// Check if the input data is valid and whether tiled code will be legal or
+/// not.
 template <typename t>
 void performPreTilingChecks(MutableArrayRef<AffineForOp> input,
                             ArrayRef<t> tileSizes) {

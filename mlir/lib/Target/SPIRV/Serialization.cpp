@@ -1044,7 +1044,7 @@ bool Serializer::isInterfaceStructPtrType(Type type) const {
 LogicalResult Serializer::processType(Location loc, Type type,
                                       uint32_t &typeID) {
   // Maintains a set of names for nested identified struct types. This is used
-  // to properly serialize resursive references.
+  // to properly serialize recursive references.
   llvm::SetVector<StringRef> serializationCtx;
   return processTypeImpl(loc, type, typeID, serializationCtx);
 }

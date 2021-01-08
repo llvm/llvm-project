@@ -14,25 +14,17 @@
 
 #include "AMDGPUISelLowering.h"
 #include "AMDGPU.h"
-#include "AMDGPUCallLowering.h"
-#include "AMDGPUFrameLowering.h"
+#include "AMDGPUInstrInfo.h"
+#include "AMDGPUMachineFunction.h"
 #include "AMDGPUSubtarget.h"
-#include "AMDGPUTargetMachine.h"
-#include "Utils/AMDGPUBaseInfo.h"
-#include "R600MachineFunctionInfo.h"
-#include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/Analysis.h"
-#include "llvm/CodeGen/CallingConvLower.h"
-#include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/SelectionDAG.h"
-#include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
-#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
-#include "llvm/Support/MathExtras.h"
+#include "llvm/Target/TargetMachine.h"
+
 using namespace llvm;
 
 #include "AMDGPUGenCallingConv.inc"
@@ -571,6 +563,17 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::AssertZext);
   setTargetDAGCombine(ISD::AssertSext);
   setTargetDAGCombine(ISD::INTRINSIC_WO_CHAIN);
+}
+
+bool AMDGPUTargetLowering::mayIgnoreSignedZero(SDValue Op) const {
+  if (getTargetMachine().Options.NoSignedZerosFPMath)
+    return true;
+
+  const auto Flags = Op.getNode()->getFlags();
+  if (Flags.hasNoSignedZeros())
+    return true;
+
+  return false;
 }
 
 //===----------------------------------------------------------------------===//

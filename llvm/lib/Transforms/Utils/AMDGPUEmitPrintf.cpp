@@ -17,9 +17,6 @@
 #include "llvm/Transforms/Utils/AMDGPUEmitPrintf.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/IR/IRBuilder.h"
-
-#include <iostream>
 
 using namespace llvm;
 

@@ -1,7 +1,7 @@
 
 // RUN: llvm-profdata merge %S/Inputs/branch-c-general.proftext -o %t.profdata
-// RUN: llvm-cov show %S/Inputs/branch-c-general.o32l -instr-profile %t.profdata -path-equivalence=/tmp,%S %S/branch-c-general.c | FileCheck %s
-// RUN: llvm-cov report %S/Inputs/branch-c-general.o32l --show-branch-summary=false -instr-profile %t.profdata -show-functions -path-equivalence=/tmp,%S %S/branch-c-general.c | FileCheck %s -check-prefix=REPORT
+// RUN: llvm-cov show %S/Inputs/branch-c-general.o32l -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs | FileCheck %s
+// RUN: llvm-cov report %S/Inputs/branch-c-general.o32l --show-branch-summary=false -instr-profile %t.profdata -show-functions -path-equivalence=/tmp,%S/Inputs %S/Inputs/branch-c-general.c | FileCheck %s -check-prefix=REPORT
 
 // CHECK-NOT: | Branch
 

@@ -1,7 +1,7 @@
 ; RUN: llc < %s -O0 -verify-machineinstrs | FileCheck %s
 
 ; CHECK: %bb.0
-; CHECK: #DEBUG_VALUE: usage:self <- %4
+; CHECK: #DEBUG_VALUE: usage:self <- !target-index(0,0)
 ; CHECK: %bb.1
 ; CHECK: DW_TAG_variable
 source_filename = "test/CodeGen/WebAssembly/dbgvalue.ll"

@@ -31,7 +31,6 @@ class LLVMDialect;
 
 namespace detail {
 struct LLVMFunctionTypeStorage;
-struct LLVMIntegerTypeStorage;
 struct LLVMPointerTypeStorage;
 struct LLVMStructTypeStorage;
 struct LLVMTypeAndSizeStorage;
@@ -153,30 +152,6 @@ public:
   static LogicalResult verifyConstructionInvariants(Location loc, Type result,
                                                     ArrayRef<Type> arguments,
                                                     bool);
-};
-
-//===----------------------------------------------------------------------===//
-// LLVMIntegerType.
-//===----------------------------------------------------------------------===//
-
-/// LLVM dialect signless integer type parameterized by bitwidth.
-class LLVMIntegerType : public Type::TypeBase<LLVMIntegerType, Type,
-                                              detail::LLVMIntegerTypeStorage> {
-public:
-  /// Inherit base constructor.
-  using Base::Base;
-
-  /// Gets or creates an instance of the integer of the specified `bitwidth` in
-  /// the given context.
-  static LLVMIntegerType get(MLIRContext *ctx, unsigned bitwidth);
-  static LLVMIntegerType getChecked(Location loc, unsigned bitwidth);
-
-  /// Returns the bitwidth of this integer type.
-  unsigned getBitWidth();
-
-  /// Verifies that the type about to be constructed is well-formed.
-  static LogicalResult verifyConstructionInvariants(Location loc,
-                                                    unsigned bitwidth);
 };
 
 //===----------------------------------------------------------------------===//
@@ -412,30 +387,7 @@ void printType(Type type, DialectAsmPrinter &printer);
 //===----------------------------------------------------------------------===//
 
 /// Returns `true` if the given type is compatible with the LLVM dialect.
-inline bool isCompatibleType(Type type) {
-  // clang-format off
-  return type.isa<
-      LLVMArrayType,
-      LLVMBFloatType,
-      LLVMDoubleType,
-      LLVMFP128Type,
-      LLVMFloatType,
-      LLVMFunctionType,
-      LLVMHalfType,
-      LLVMIntegerType,
-      LLVMLabelType,
-      LLVMMetadataType,
-      LLVMPPCFP128Type,
-      LLVMPointerType,
-      LLVMStructType,
-      LLVMTokenType,
-      LLVMVectorType,
-      LLVMVoidType,
-      LLVMX86FP80Type,
-      LLVMX86MMXType
-  >();
-  // clang-format on
-}
+bool isCompatibleType(Type type);
 
 inline bool isCompatibleFloatingPointType(Type type) {
   return type.isa<LLVMHalfType, LLVMBFloatType, LLVMFloatType, LLVMDoubleType,
@@ -443,7 +395,7 @@ inline bool isCompatibleFloatingPointType(Type type) {
 }
 
 /// Returns the size of the given primitive LLVM dialect-compatible type
-/// (including vectors) in bits, for example, the size of !llvm.i16 is 16 and
+/// (including vectors) in bits, for example, the size of i16 is 16 and
 /// the size of !llvm.vec<4 x i16> is 64. Returns 0 for non-primitive
 /// (aggregates such as struct) or types that don't have a size (such as void).
 llvm::TypeSize getPrimitiveTypeSizeInBits(Type type);

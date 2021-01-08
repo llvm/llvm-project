@@ -216,15 +216,11 @@ void DynamicLoaderDarwin::UnloadAllImages() {
   const ModuleList &target_modules = target.GetImages();
   std::lock_guard<std::recursive_mutex> guard(target_modules.GetMutex());
 
-  size_t num_modules = target_modules.GetSize();
   ModuleSP dyld_sp(GetDYLDModule());
-
-  for (size_t i = 0; i < num_modules; i++) {
-    ModuleSP module_sp = target_modules.GetModuleAtIndexUnlocked(i);
-
+  for (ModuleSP module_sp : target_modules.Modules()) {
     // Don't remove dyld - else we'll lose our breakpoint notifying us about
     // libraries being re-loaded...
-    if (module_sp.get() != nullptr && module_sp.get() != dyld_sp.get()) {
+    if (module_sp && module_sp != dyld_sp) {
       UnloadSections(module_sp);
       unloaded_modules_list.Append(module_sp);
     }

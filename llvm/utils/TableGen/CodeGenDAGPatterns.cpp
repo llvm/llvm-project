@@ -3088,7 +3088,7 @@ CodeGenDAGPatterns::CodeGenDAGPatterns(RecordKeeper &R,
   VerifyInstructionFlags();
 }
 
-Record *CodeGenDAGPatterns::getSDNodeNamed(const std::string &Name) const {
+Record *CodeGenDAGPatterns::getSDNodeNamed(StringRef Name) const {
   Record *N = Records.getDef(Name);
   if (!N || !N->isSubClassOf("SDNode"))
     PrintFatalError("Error getting SDNode '" + Name + "'!");

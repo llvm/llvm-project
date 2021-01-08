@@ -698,7 +698,7 @@ collectFusableLoops(ArrayRef<LinalgOp> ops,
       // the operation, if the accesses in the producer/consumer are transposes
       // of each other, the loop bounds for the tiled producer can be
       // manipulated accordingly. This requires some additional bookkeeping in
-      // the implementation of tile+fuse that is defered to later.
+      // the implementation of tile+fuse that is deferred to later.
       if (doesTransposeAccess(*consumerLoopToProducerLoop, fusableLoops)) {
         op.emitRemark("unhandled fusion when fusion requires permutation");
         return {};
@@ -769,8 +769,7 @@ FusableOpDependencesTy mlir::linalg::findAllFusableDependences(
       if (!consumerMap.isProjectedPermutation()) {
         op.emitRemark(
             "unhandled case where indexing map for fused view in the consumer "
-            "is "
-            "not a projected permuration while fusing at index ")
+            "is not a projected permutation while fusing at index ")
             << operandIndex;
         return FusableOpDependencesTy{};
       }

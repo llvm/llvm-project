@@ -7114,7 +7114,7 @@ uint64x2_t test_vmlal_u32(uint64x2_t a, uint32x2_t b, uint32x2_t c) {
 // CHECK:   [[LANE:%.*]] = shufflevector <4 x i16> [[TMP1]], <4 x i16> [[TMP1]], <4 x i32> <i32 3, i32 3, i32 3, i32 3>
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x i16> [[B:%.*]] to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast <4 x i16> [[LANE]] to <8 x i8>
-// CHECK:   [[VMULL2_I:%.*]] = call <4 x i32> @llvm.arm.neon.vmulls.v4i32(<4 x i16> [[B]], <4 x i16> [[LANE]]) #8
+// CHECK:   [[VMULL2_I:%.*]] = call <4 x i32> @llvm.arm.neon.vmulls.v4i32(<4 x i16> [[B]], <4 x i16> [[LANE]])
 // CHECK:   [[ADD:%.*]] = add <4 x i32> [[A:%.*]], [[VMULL2_I]]
 // CHECK:   ret <4 x i32> [[ADD]]
 int32x4_t test_vmlal_lane_s16(int32x4_t a, int16x4_t b, int16x4_t c) {
@@ -7127,7 +7127,7 @@ int32x4_t test_vmlal_lane_s16(int32x4_t a, int16x4_t b, int16x4_t c) {
 // CHECK:   [[LANE:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> [[TMP1]], <2 x i32> <i32 1, i32 1>
 // CHECK:   [[TMP2:%.*]] = bitcast <2 x i32> [[B:%.*]] to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast <2 x i32> [[LANE]] to <8 x i8>
-// CHECK:   [[VMULL2_I:%.*]] = call <2 x i64> @llvm.arm.neon.vmulls.v2i64(<2 x i32> [[B]], <2 x i32> [[LANE]]) #8
+// CHECK:   [[VMULL2_I:%.*]] = call <2 x i64> @llvm.arm.neon.vmulls.v2i64(<2 x i32> [[B]], <2 x i32> [[LANE]])
 // CHECK:   [[ADD:%.*]] = add <2 x i64> [[A:%.*]], [[VMULL2_I]]
 // CHECK:   ret <2 x i64> [[ADD]]
 int64x2_t test_vmlal_lane_s32(int64x2_t a, int32x2_t b, int32x2_t c) {
@@ -7140,7 +7140,7 @@ int64x2_t test_vmlal_lane_s32(int64x2_t a, int32x2_t b, int32x2_t c) {
 // CHECK:   [[LANE:%.*]] = shufflevector <4 x i16> [[TMP1]], <4 x i16> [[TMP1]], <4 x i32> <i32 3, i32 3, i32 3, i32 3>
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x i16> [[B:%.*]] to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast <4 x i16> [[LANE]] to <8 x i8>
-// CHECK:   [[VMULL2_I:%.*]] = call <4 x i32> @llvm.arm.neon.vmullu.v4i32(<4 x i16> [[B]], <4 x i16> [[LANE]]) #8
+// CHECK:   [[VMULL2_I:%.*]] = call <4 x i32> @llvm.arm.neon.vmullu.v4i32(<4 x i16> [[B]], <4 x i16> [[LANE]])
 // CHECK:   [[ADD:%.*]] = add <4 x i32> [[A:%.*]], [[VMULL2_I]]
 // CHECK:   ret <4 x i32> [[ADD]]
 uint32x4_t test_vmlal_lane_u16(uint32x4_t a, uint16x4_t b, uint16x4_t c) {
@@ -7153,7 +7153,7 @@ uint32x4_t test_vmlal_lane_u16(uint32x4_t a, uint16x4_t b, uint16x4_t c) {
 // CHECK:   [[LANE:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> [[TMP1]], <2 x i32> <i32 1, i32 1>
 // CHECK:   [[TMP2:%.*]] = bitcast <2 x i32> [[B:%.*]] to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast <2 x i32> [[LANE]] to <8 x i8>
-// CHECK:   [[VMULL2_I:%.*]] = call <2 x i64> @llvm.arm.neon.vmullu.v2i64(<2 x i32> [[B]], <2 x i32> [[LANE]]) #8
+// CHECK:   [[VMULL2_I:%.*]] = call <2 x i64> @llvm.arm.neon.vmullu.v2i64(<2 x i32> [[B]], <2 x i32> [[LANE]])
 // CHECK:   [[ADD:%.*]] = add <2 x i64> [[A:%.*]], [[VMULL2_I]]
 // CHECK:   ret <2 x i64> [[ADD]]
 uint64x2_t test_vmlal_lane_u32(uint64x2_t a, uint32x2_t b, uint32x2_t c) {
@@ -7618,7 +7618,7 @@ uint64x2_t test_vmlsl_u32(uint64x2_t a, uint32x2_t b, uint32x2_t c) {
 // CHECK:   [[LANE:%.*]] = shufflevector <4 x i16> [[TMP1]], <4 x i16> [[TMP1]], <4 x i32> <i32 3, i32 3, i32 3, i32 3>
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x i16> [[B:%.*]] to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast <4 x i16> [[LANE]] to <8 x i8>
-// CHECK:   [[VMULL2_I:%.*]] = call <4 x i32> @llvm.arm.neon.vmulls.v4i32(<4 x i16> [[B]], <4 x i16> [[LANE]]) #8
+// CHECK:   [[VMULL2_I:%.*]] = call <4 x i32> @llvm.arm.neon.vmulls.v4i32(<4 x i16> [[B]], <4 x i16> [[LANE]])
 // CHECK:   [[SUB:%.*]] = sub <4 x i32> [[A:%.*]], [[VMULL2_I]]
 // CHECK:   ret <4 x i32> [[SUB]]
 int32x4_t test_vmlsl_lane_s16(int32x4_t a, int16x4_t b, int16x4_t c) {
@@ -7631,7 +7631,7 @@ int32x4_t test_vmlsl_lane_s16(int32x4_t a, int16x4_t b, int16x4_t c) {
 // CHECK:   [[LANE:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> [[TMP1]], <2 x i32> <i32 1, i32 1>
 // CHECK:   [[TMP2:%.*]] = bitcast <2 x i32> [[B:%.*]] to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast <2 x i32> [[LANE]] to <8 x i8>
-// CHECK:   [[VMULL2_I:%.*]] = call <2 x i64> @llvm.arm.neon.vmulls.v2i64(<2 x i32> [[B]], <2 x i32> [[LANE]]) #8
+// CHECK:   [[VMULL2_I:%.*]] = call <2 x i64> @llvm.arm.neon.vmulls.v2i64(<2 x i32> [[B]], <2 x i32> [[LANE]])
 // CHECK:   [[SUB:%.*]] = sub <2 x i64> [[A:%.*]], [[VMULL2_I]]
 // CHECK:   ret <2 x i64> [[SUB]]
 int64x2_t test_vmlsl_lane_s32(int64x2_t a, int32x2_t b, int32x2_t c) {
@@ -7644,7 +7644,7 @@ int64x2_t test_vmlsl_lane_s32(int64x2_t a, int32x2_t b, int32x2_t c) {
 // CHECK:   [[LANE:%.*]] = shufflevector <4 x i16> [[TMP1]], <4 x i16> [[TMP1]], <4 x i32> <i32 3, i32 3, i32 3, i32 3>
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x i16> [[B:%.*]] to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast <4 x i16> [[LANE]] to <8 x i8>
-// CHECK:   [[VMULL2_I:%.*]] = call <4 x i32> @llvm.arm.neon.vmullu.v4i32(<4 x i16> [[B]], <4 x i16> [[LANE]]) #8
+// CHECK:   [[VMULL2_I:%.*]] = call <4 x i32> @llvm.arm.neon.vmullu.v4i32(<4 x i16> [[B]], <4 x i16> [[LANE]])
 // CHECK:   [[SUB:%.*]] = sub <4 x i32> [[A:%.*]], [[VMULL2_I]]
 // CHECK:   ret <4 x i32> [[SUB]]
 uint32x4_t test_vmlsl_lane_u16(uint32x4_t a, uint16x4_t b, uint16x4_t c) {
@@ -7657,7 +7657,7 @@ uint32x4_t test_vmlsl_lane_u16(uint32x4_t a, uint16x4_t b, uint16x4_t c) {
 // CHECK:   [[LANE:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> [[TMP1]], <2 x i32> <i32 1, i32 1>
 // CHECK:   [[TMP2:%.*]] = bitcast <2 x i32> [[B:%.*]] to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast <2 x i32> [[LANE]] to <8 x i8>
-// CHECK:   [[VMULL2_I:%.*]] = call <2 x i64> @llvm.arm.neon.vmullu.v2i64(<2 x i32> [[B]], <2 x i32> [[LANE]]) #8
+// CHECK:   [[VMULL2_I:%.*]] = call <2 x i64> @llvm.arm.neon.vmullu.v2i64(<2 x i32> [[B]], <2 x i32> [[LANE]])
 // CHECK:   [[SUB:%.*]] = sub <2 x i64> [[A:%.*]], [[VMULL2_I]]
 // CHECK:   ret <2 x i64> [[SUB]]
 uint64x2_t test_vmlsl_lane_u32(uint64x2_t a, uint32x2_t b, uint32x2_t c) {
@@ -8497,7 +8497,7 @@ poly16x8_t test_vmull_p8(poly8x8_t a, poly8x8_t b) {
 // CHECK:   [[LANE:%.*]] = shufflevector <4 x i16> [[TMP1]], <4 x i16> [[TMP1]], <4 x i32> <i32 3, i32 3, i32 3, i32 3>
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x i16> [[A:%.*]] to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast <4 x i16> [[LANE]] to <8 x i8>
-// CHECK:   [[VMULL2_I:%.*]] = call <4 x i32> @llvm.arm.neon.vmulls.v4i32(<4 x i16> [[A]], <4 x i16> [[LANE]]) #8
+// CHECK:   [[VMULL2_I:%.*]] = call <4 x i32> @llvm.arm.neon.vmulls.v4i32(<4 x i16> [[A]], <4 x i16> [[LANE]])
 // CHECK:   ret <4 x i32> [[VMULL2_I]]
 int32x4_t test_vmull_lane_s16(int16x4_t a, int16x4_t b) {
   return vmull_lane_s16(a, b, 3);
@@ -8509,7 +8509,7 @@ int32x4_t test_vmull_lane_s16(int16x4_t a, int16x4_t b) {
 // CHECK:   [[LANE:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> [[TMP1]], <2 x i32> <i32 1, i32 1>
 // CHECK:   [[TMP2:%.*]] = bitcast <2 x i32> [[A:%.*]] to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast <2 x i32> [[LANE]] to <8 x i8>
-// CHECK:   [[VMULL2_I:%.*]] = call <2 x i64> @llvm.arm.neon.vmulls.v2i64(<2 x i32> [[A]], <2 x i32> [[LANE]]) #8
+// CHECK:   [[VMULL2_I:%.*]] = call <2 x i64> @llvm.arm.neon.vmulls.v2i64(<2 x i32> [[A]], <2 x i32> [[LANE]])
 // CHECK:   ret <2 x i64> [[VMULL2_I]]
 int64x2_t test_vmull_lane_s32(int32x2_t a, int32x2_t b) {
   return vmull_lane_s32(a, b, 1);
@@ -8521,7 +8521,7 @@ int64x2_t test_vmull_lane_s32(int32x2_t a, int32x2_t b) {
 // CHECK:   [[LANE:%.*]] = shufflevector <4 x i16> [[TMP1]], <4 x i16> [[TMP1]], <4 x i32> <i32 3, i32 3, i32 3, i32 3>
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x i16> [[A:%.*]] to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast <4 x i16> [[LANE]] to <8 x i8>
-// CHECK:   [[VMULL2_I:%.*]] = call <4 x i32> @llvm.arm.neon.vmullu.v4i32(<4 x i16> [[A]], <4 x i16> [[LANE]]) #8
+// CHECK:   [[VMULL2_I:%.*]] = call <4 x i32> @llvm.arm.neon.vmullu.v4i32(<4 x i16> [[A]], <4 x i16> [[LANE]])
 // CHECK:   ret <4 x i32> [[VMULL2_I]]
 uint32x4_t test_vmull_lane_u16(uint16x4_t a, uint16x4_t b) {
   return vmull_lane_u16(a, b, 3);
@@ -8533,7 +8533,7 @@ uint32x4_t test_vmull_lane_u16(uint16x4_t a, uint16x4_t b) {
 // CHECK:   [[LANE:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> [[TMP1]], <2 x i32> <i32 1, i32 1>
 // CHECK:   [[TMP2:%.*]] = bitcast <2 x i32> [[A:%.*]] to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast <2 x i32> [[LANE]] to <8 x i8>
-// CHECK:   [[VMULL2_I:%.*]] = call <2 x i64> @llvm.arm.neon.vmullu.v2i64(<2 x i32> [[A]], <2 x i32> [[LANE]]) #8
+// CHECK:   [[VMULL2_I:%.*]] = call <2 x i64> @llvm.arm.neon.vmullu.v2i64(<2 x i32> [[A]], <2 x i32> [[LANE]])
 // CHECK:   ret <2 x i64> [[VMULL2_I]]
 uint64x2_t test_vmull_lane_u32(uint32x2_t a, uint32x2_t b) {
   return vmull_lane_u32(a, b, 1);
@@ -9822,8 +9822,8 @@ int64x2_t test_vqdmlal_s32(int64x2_t a, int32x2_t b, int32x2_t c) {
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast <4 x i16> [[B:%.*]] to <8 x i8>
 // CHECK:   [[TMP4:%.*]] = bitcast <4 x i16> [[LANE]] to <8 x i8>
-// CHECK:   [[VQDMLAL2_I:%.*]] = call <4 x i32> @llvm.arm.neon.vqdmull.v4i32(<4 x i16> [[B]], <4 x i16> [[LANE]]) #8
-// CHECK:   [[VQDMLAL_V3_I:%.*]] = call <4 x i32> @llvm.sadd.sat.v4i32(<4 x i32> [[A]], <4 x i32> [[VQDMLAL2_I]]) #8
+// CHECK:   [[VQDMLAL2_I:%.*]] = call <4 x i32> @llvm.arm.neon.vqdmull.v4i32(<4 x i16> [[B]], <4 x i16> [[LANE]])
+// CHECK:   [[VQDMLAL_V3_I:%.*]] = call <4 x i32> @llvm.sadd.sat.v4i32(<4 x i32> [[A]], <4 x i32> [[VQDMLAL2_I]])
 // CHECK:   ret <4 x i32> [[VQDMLAL_V3_I]]
 int32x4_t test_vqdmlal_lane_s16(int32x4_t a, int16x4_t b, int16x4_t c) {
   return vqdmlal_lane_s16(a, b, c, 3);
@@ -9836,8 +9836,8 @@ int32x4_t test_vqdmlal_lane_s16(int32x4_t a, int16x4_t b, int16x4_t c) {
 // CHECK:   [[TMP2:%.*]] = bitcast <2 x i64> [[A:%.*]] to <16 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast <2 x i32> [[B:%.*]] to <8 x i8>
 // CHECK:   [[TMP4:%.*]] = bitcast <2 x i32> [[LANE]] to <8 x i8>
-// CHECK:   [[VQDMLAL2_I:%.*]] = call <2 x i64> @llvm.arm.neon.vqdmull.v2i64(<2 x i32> [[B]], <2 x i32> [[LANE]]) #8
-// CHECK:   [[VQDMLAL_V3_I:%.*]] = call <2 x i64> @llvm.sadd.sat.v2i64(<2 x i64> [[A]], <2 x i64> [[VQDMLAL2_I]]) #8
+// CHECK:   [[VQDMLAL2_I:%.*]] = call <2 x i64> @llvm.arm.neon.vqdmull.v2i64(<2 x i32> [[B]], <2 x i32> [[LANE]])
+// CHECK:   [[VQDMLAL_V3_I:%.*]] = call <2 x i64> @llvm.sadd.sat.v2i64(<2 x i64> [[A]], <2 x i64> [[VQDMLAL2_I]])
 // CHECK:   ret <2 x i64> [[VQDMLAL_V3_I]]
 int64x2_t test_vqdmlal_lane_s32(int64x2_t a, int32x2_t b, int32x2_t c) {
   return vqdmlal_lane_s32(a, b, c, 1);
@@ -9900,8 +9900,8 @@ int64x2_t test_vqdmlsl_s32(int64x2_t a, int32x2_t b, int32x2_t c) {
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast <4 x i16> [[B:%.*]] to <8 x i8>
 // CHECK:   [[TMP4:%.*]] = bitcast <4 x i16> [[LANE]] to <8 x i8>
-// CHECK:   [[VQDMLAL2_I:%.*]] = call <4 x i32> @llvm.arm.neon.vqdmull.v4i32(<4 x i16> [[B]], <4 x i16> [[LANE]]) #8
-// CHECK:   [[VQDMLSL_V3_I:%.*]] = call <4 x i32> @llvm.ssub.sat.v4i32(<4 x i32> [[A]], <4 x i32> [[VQDMLAL2_I]]) #8
+// CHECK:   [[VQDMLAL2_I:%.*]] = call <4 x i32> @llvm.arm.neon.vqdmull.v4i32(<4 x i16> [[B]], <4 x i16> [[LANE]])
+// CHECK:   [[VQDMLSL_V3_I:%.*]] = call <4 x i32> @llvm.ssub.sat.v4i32(<4 x i32> [[A]], <4 x i32> [[VQDMLAL2_I]])
 // CHECK:   ret <4 x i32> [[VQDMLSL_V3_I]]
 int32x4_t test_vqdmlsl_lane_s16(int32x4_t a, int16x4_t b, int16x4_t c) {
   return vqdmlsl_lane_s16(a, b, c, 3);
@@ -9914,8 +9914,8 @@ int32x4_t test_vqdmlsl_lane_s16(int32x4_t a, int16x4_t b, int16x4_t c) {
 // CHECK:   [[TMP2:%.*]] = bitcast <2 x i64> [[A:%.*]] to <16 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast <2 x i32> [[B:%.*]] to <8 x i8>
 // CHECK:   [[TMP4:%.*]] = bitcast <2 x i32> [[LANE]] to <8 x i8>
-// CHECK:   [[VQDMLAL2_I:%.*]] = call <2 x i64> @llvm.arm.neon.vqdmull.v2i64(<2 x i32> [[B]], <2 x i32> [[LANE]]) #8
-// CHECK:   [[VQDMLSL_V3_I:%.*]] = call <2 x i64> @llvm.ssub.sat.v2i64(<2 x i64> [[A]], <2 x i64> [[VQDMLAL2_I]]) #8
+// CHECK:   [[VQDMLAL2_I:%.*]] = call <2 x i64> @llvm.arm.neon.vqdmull.v2i64(<2 x i32> [[B]], <2 x i32> [[LANE]])
+// CHECK:   [[VQDMLSL_V3_I:%.*]] = call <2 x i64> @llvm.ssub.sat.v2i64(<2 x i64> [[A]], <2 x i64> [[VQDMLAL2_I]])
 // CHECK:   ret <2 x i64> [[VQDMLSL_V3_I]]
 int64x2_t test_vqdmlsl_lane_s32(int64x2_t a, int32x2_t b, int32x2_t c) {
   return vqdmlsl_lane_s32(a, b, c, 1);
@@ -9995,7 +9995,7 @@ int32x4_t test_vqdmulhq_s32(int32x4_t a, int32x4_t b) {
 // CHECK:   [[LANE:%.*]] = shufflevector <4 x i16> [[TMP1]], <4 x i16> [[TMP1]], <4 x i32> <i32 3, i32 3, i32 3, i32 3>
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x i16> [[A:%.*]] to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast <4 x i16> [[LANE]] to <8 x i8>
-// CHECK:   [[VQDMULH_V2_I:%.*]] = call <4 x i16> @llvm.arm.neon.vqdmulh.v4i16(<4 x i16> [[A]], <4 x i16> [[LANE]]) #8
+// CHECK:   [[VQDMULH_V2_I:%.*]] = call <4 x i16> @llvm.arm.neon.vqdmulh.v4i16(<4 x i16> [[A]], <4 x i16> [[LANE]])
 // CHECK:   [[VQDMULH_V3_I:%.*]] = bitcast <4 x i16> [[VQDMULH_V2_I]] to <8 x i8>
 // CHECK:   ret <4 x i16> [[VQDMULH_V2_I]]
 int16x4_t test_vqdmulh_lane_s16(int16x4_t a, int16x4_t b) {
@@ -10008,7 +10008,7 @@ int16x4_t test_vqdmulh_lane_s16(int16x4_t a, int16x4_t b) {
 // CHECK:   [[LANE:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> [[TMP1]], <2 x i32> <i32 1, i32 1>
 // CHECK:   [[TMP2:%.*]] = bitcast <2 x i32> [[A:%.*]] to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast <2 x i32> [[LANE]] to <8 x i8>
-// CHECK:   [[VQDMULH_V2_I:%.*]] = call <2 x i32> @llvm.arm.neon.vqdmulh.v2i32(<2 x i32> [[A]], <2 x i32> [[LANE]]) #8
+// CHECK:   [[VQDMULH_V2_I:%.*]] = call <2 x i32> @llvm.arm.neon.vqdmulh.v2i32(<2 x i32> [[A]], <2 x i32> [[LANE]])
 // CHECK:   [[VQDMULH_V3_I:%.*]] = bitcast <2 x i32> [[VQDMULH_V2_I]] to <8 x i8>
 // CHECK:   ret <2 x i32> [[VQDMULH_V2_I]]
 int32x2_t test_vqdmulh_lane_s32(int32x2_t a, int32x2_t b) {
@@ -10021,7 +10021,7 @@ int32x2_t test_vqdmulh_lane_s32(int32x2_t a, int32x2_t b) {
 // CHECK:   [[LANE:%.*]] = shufflevector <4 x i16> [[TMP1]], <4 x i16> [[TMP1]], <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 // CHECK:   [[TMP2:%.*]] = bitcast <8 x i16> [[A:%.*]] to <16 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast <8 x i16> [[LANE]] to <16 x i8>
-// CHECK:   [[VQDMULHQ_V2_I:%.*]] = call <8 x i16> @llvm.arm.neon.vqdmulh.v8i16(<8 x i16> [[A]], <8 x i16> [[LANE]]) #8
+// CHECK:   [[VQDMULHQ_V2_I:%.*]] = call <8 x i16> @llvm.arm.neon.vqdmulh.v8i16(<8 x i16> [[A]], <8 x i16> [[LANE]])
 // CHECK:   [[VQDMULHQ_V3_I:%.*]] = bitcast <8 x i16> [[VQDMULHQ_V2_I]] to <16 x i8>
 // CHECK:   ret <8 x i16> [[VQDMULHQ_V2_I]]
 int16x8_t test_vqdmulhq_lane_s16(int16x8_t a, int16x4_t b) {
@@ -10034,7 +10034,7 @@ int16x8_t test_vqdmulhq_lane_s16(int16x8_t a, int16x4_t b) {
 // CHECK:   [[LANE:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> [[TMP1]], <4 x i32> <i32 1, i32 1, i32 1, i32 1>
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast <4 x i32> [[LANE]] to <16 x i8>
-// CHECK:   [[VQDMULHQ_V2_I:%.*]] = call <4 x i32> @llvm.arm.neon.vqdmulh.v4i32(<4 x i32> [[A]], <4 x i32> [[LANE]]) #8
+// CHECK:   [[VQDMULHQ_V2_I:%.*]] = call <4 x i32> @llvm.arm.neon.vqdmulh.v4i32(<4 x i32> [[A]], <4 x i32> [[LANE]])
 // CHECK:   [[VQDMULHQ_V3_I:%.*]] = bitcast <4 x i32> [[VQDMULHQ_V2_I]] to <16 x i8>
 // CHECK:   ret <4 x i32> [[VQDMULHQ_V2_I]]
 int32x4_t test_vqdmulhq_lane_s32(int32x4_t a, int32x2_t b) {
@@ -10125,7 +10125,7 @@ int64x2_t test_vqdmull_s32(int32x2_t a, int32x2_t b) {
 // CHECK:   [[LANE:%.*]] = shufflevector <4 x i16> [[TMP1]], <4 x i16> [[TMP1]], <4 x i32> <i32 3, i32 3, i32 3, i32 3>
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x i16> [[A:%.*]] to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast <4 x i16> [[LANE]] to <8 x i8>
-// CHECK:   [[VQDMULL_V2_I:%.*]] = call <4 x i32> @llvm.arm.neon.vqdmull.v4i32(<4 x i16> [[A]], <4 x i16> [[LANE]]) #8
+// CHECK:   [[VQDMULL_V2_I:%.*]] = call <4 x i32> @llvm.arm.neon.vqdmull.v4i32(<4 x i16> [[A]], <4 x i16> [[LANE]])
 // CHECK:   [[VQDMULL_V3_I:%.*]] = bitcast <4 x i32> [[VQDMULL_V2_I]] to <16 x i8>
 // CHECK:   ret <4 x i32> [[VQDMULL_V2_I]]
 int32x4_t test_vqdmull_lane_s16(int16x4_t a, int16x4_t b) {
@@ -10138,7 +10138,7 @@ int32x4_t test_vqdmull_lane_s16(int16x4_t a, int16x4_t b) {
 // CHECK:   [[LANE:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> [[TMP1]], <2 x i32> <i32 1, i32 1>
 // CHECK:   [[TMP2:%.*]] = bitcast <2 x i32> [[A:%.*]] to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast <2 x i32> [[LANE]] to <8 x i8>
-// CHECK:   [[VQDMULL_V2_I:%.*]] = call <2 x i64> @llvm.arm.neon.vqdmull.v2i64(<2 x i32> [[A]], <2 x i32> [[LANE]]) #8
+// CHECK:   [[VQDMULL_V2_I:%.*]] = call <2 x i64> @llvm.arm.neon.vqdmull.v2i64(<2 x i32> [[A]], <2 x i32> [[LANE]])
 // CHECK:   [[VQDMULL_V3_I:%.*]] = bitcast <2 x i64> [[VQDMULL_V2_I]] to <16 x i8>
 // CHECK:   ret <2 x i64> [[VQDMULL_V2_I]]
 int64x2_t test_vqdmull_lane_s32(int32x2_t a, int32x2_t b) {
@@ -10345,7 +10345,7 @@ int32x4_t test_vqrdmulhq_s32(int32x4_t a, int32x4_t b) {
 // CHECK:   [[LANE:%.*]] = shufflevector <4 x i16> [[TMP1]], <4 x i16> [[TMP1]], <4 x i32> <i32 3, i32 3, i32 3, i32 3>
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x i16> [[A:%.*]] to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast <4 x i16> [[LANE]] to <8 x i8>
-// CHECK:   [[VQRDMULH_V2_I:%.*]] = call <4 x i16> @llvm.arm.neon.vqrdmulh.v4i16(<4 x i16> [[A]], <4 x i16> [[LANE]]) #8
+// CHECK:   [[VQRDMULH_V2_I:%.*]] = call <4 x i16> @llvm.arm.neon.vqrdmulh.v4i16(<4 x i16> [[A]], <4 x i16> [[LANE]])
 // CHECK:   [[VQRDMULH_V3_I:%.*]] = bitcast <4 x i16> [[VQRDMULH_V2_I]] to <8 x i8>
 // CHECK:   ret <4 x i16> [[VQRDMULH_V2_I]]
 int16x4_t test_vqrdmulh_lane_s16(int16x4_t a, int16x4_t b) {
@@ -10358,7 +10358,7 @@ int16x4_t test_vqrdmulh_lane_s16(int16x4_t a, int16x4_t b) {
 // CHECK:   [[LANE:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> [[TMP1]], <2 x i32> <i32 1, i32 1>
 // CHECK:   [[TMP2:%.*]] = bitcast <2 x i32> [[A:%.*]] to <8 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast <2 x i32> [[LANE]] to <8 x i8>
-// CHECK:   [[VQRDMULH_V2_I:%.*]] = call <2 x i32> @llvm.arm.neon.vqrdmulh.v2i32(<2 x i32> [[A]], <2 x i32> [[LANE]]) #8
+// CHECK:   [[VQRDMULH_V2_I:%.*]] = call <2 x i32> @llvm.arm.neon.vqrdmulh.v2i32(<2 x i32> [[A]], <2 x i32> [[LANE]])
 // CHECK:   [[VQRDMULH_V3_I:%.*]] = bitcast <2 x i32> [[VQRDMULH_V2_I]] to <8 x i8>
 // CHECK:   ret <2 x i32> [[VQRDMULH_V2_I]]
 int32x2_t test_vqrdmulh_lane_s32(int32x2_t a, int32x2_t b) {
@@ -10371,7 +10371,7 @@ int32x2_t test_vqrdmulh_lane_s32(int32x2_t a, int32x2_t b) {
 // CHECK:   [[LANE:%.*]] = shufflevector <4 x i16> [[TMP1]], <4 x i16> [[TMP1]], <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 // CHECK:   [[TMP2:%.*]] = bitcast <8 x i16> [[A:%.*]] to <16 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast <8 x i16> [[LANE]] to <16 x i8>
-// CHECK:   [[VQRDMULHQ_V2_I:%.*]] = call <8 x i16> @llvm.arm.neon.vqrdmulh.v8i16(<8 x i16> [[A]], <8 x i16> [[LANE]]) #8
+// CHECK:   [[VQRDMULHQ_V2_I:%.*]] = call <8 x i16> @llvm.arm.neon.vqrdmulh.v8i16(<8 x i16> [[A]], <8 x i16> [[LANE]])
 // CHECK:   [[VQRDMULHQ_V3_I:%.*]] = bitcast <8 x i16> [[VQRDMULHQ_V2_I]] to <16 x i8>
 // CHECK:   ret <8 x i16> [[VQRDMULHQ_V2_I]]
 int16x8_t test_vqrdmulhq_lane_s16(int16x8_t a, int16x4_t b) {
@@ -10384,7 +10384,7 @@ int16x8_t test_vqrdmulhq_lane_s16(int16x8_t a, int16x4_t b) {
 // CHECK:   [[LANE:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> [[TMP1]], <4 x i32> <i32 1, i32 1, i32 1, i32 1>
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
 // CHECK:   [[TMP3:%.*]] = bitcast <4 x i32> [[LANE]] to <16 x i8>
-// CHECK:   [[VQRDMULHQ_V2_I:%.*]] = call <4 x i32> @llvm.arm.neon.vqrdmulh.v4i32(<4 x i32> [[A]], <4 x i32> [[LANE]]) #8
+// CHECK:   [[VQRDMULHQ_V2_I:%.*]] = call <4 x i32> @llvm.arm.neon.vqrdmulh.v4i32(<4 x i32> [[A]], <4 x i32> [[LANE]])
 // CHECK:   [[VQRDMULHQ_V3_I:%.*]] = bitcast <4 x i32> [[VQRDMULHQ_V2_I]] to <16 x i8>
 // CHECK:   ret <4 x i32> [[VQRDMULHQ_V2_I]]
 int32x4_t test_vqrdmulhq_lane_s32(int32x4_t a, int32x2_t b) {

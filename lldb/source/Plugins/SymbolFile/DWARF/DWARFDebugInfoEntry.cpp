@@ -687,13 +687,15 @@ const char *DWARFDebugInfoEntry::GetPubname(const DWARFUnit *cu) const {
 /// table, except that the actual DIE offset for the function is placed in the
 /// table instead of the compile unit offset.
 void DWARFDebugInfoEntry::BuildFunctionAddressRangeTable(
-    const DWARFUnit *cu, DWARFDebugAranges *debug_aranges) const {
+    DWARFUnit *cu, DWARFDebugAranges *debug_aranges) const {
   if (m_tag) {
     if (m_tag == DW_TAG_subprogram) {
-      dw_addr_t lo_pc = LLDB_INVALID_ADDRESS;
-      dw_addr_t hi_pc = LLDB_INVALID_ADDRESS;
-      if (GetAttributeAddressRange(cu, lo_pc, hi_pc, LLDB_INVALID_ADDRESS)) {
-        debug_aranges->AppendRange(GetOffset(), lo_pc, hi_pc);
+      DWARFRangeList ranges;
+      GetAttributeAddressRanges(cu, ranges,
+                                /*check_hi_lo_pc=*/true);
+      for (const auto &r : ranges) {
+        debug_aranges->AppendRange(GetOffset(), r.GetRangeBase(),
+                                   r.GetRangeEnd());
       }
     }
 

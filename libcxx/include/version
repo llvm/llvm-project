@@ -15,13 +15,13 @@
 
 Macro name                                              Value   Headers
 __cpp_lib_addressof_constexpr                           201603L <memory>
-__cpp_lib_allocator_traits_is_always_equal              201411L <memory> <scoped_allocator> <string>
-                                                                <deque> <forward_list> <list>
-                                                                <vector> <map> <set>
-                                                                <unordered_map> <unordered_set>
+__cpp_lib_allocator_traits_is_always_equal              201411L <deque> <forward_list> <list>
+                                                                <map> <memory> <scoped_allocator>
+                                                                <set> <string> <unordered_map>
+                                                                <unordered_set> <vector>
 __cpp_lib_any                                           201606L <any>
 __cpp_lib_apply                                         201603L <tuple>
-__cpp_lib_array_constexpr                               201811L <iterator> <array>
+__cpp_lib_array_constexpr                               201811L <array> <iterator>
                                                         201603L // C++17
 __cpp_lib_as_const                                      201510L <utility>
 __cpp_lib_atomic_flag_test                              201907L <atomic>
@@ -53,9 +53,9 @@ __cpp_lib_constexpr_utility                             201811L <utility>
 __cpp_lib_destroying_delete                             201806L <new>
 __cpp_lib_enable_shared_from_this                       201603L <memory>
 __cpp_lib_endian                                        201907L <bit>
-__cpp_lib_erase_if                                      202002L <string> <deque> <forward_list>
-                                                                <list> <vector> <map>
-                                                                <set> <unordered_map> <unordered_set>
+__cpp_lib_erase_if                                      202002L <deque> <forward_list> <list>
+                                                                <map> <set> <string>
+                                                                <unordered_map> <unordered_set> <vector>
 __cpp_lib_exchange_function                             201304L <utility>
 __cpp_lib_execution                                     201603L <execution>
 __cpp_lib_filesystem                                    201703L <filesystem>
@@ -89,8 +89,8 @@ __cpp_lib_math_special_functions                        201603L <cmath>
 __cpp_lib_memory_resource                               201603L <memory_resource>
 __cpp_lib_node_extract                                  201606L <map> <set> <unordered_map>
                                                                 <unordered_set>
-__cpp_lib_nonmember_container_access                    201411L <iterator> <array> <deque>
-                                                                <forward_list> <list> <map>
+__cpp_lib_nonmember_container_access                    201411L <array> <deque> <forward_list>
+                                                                <iterator> <list> <map>
                                                                 <regex> <set> <string>
                                                                 <unordered_map> <unordered_set> <vector>
 __cpp_lib_not_fn                                        201603L <functional>
@@ -119,7 +119,7 @@ __cpp_lib_transformation_trait_aliases                  201304L <type_traits>
 __cpp_lib_transparent_operators                         201510L <functional>
                                                         201210L // C++14
 __cpp_lib_tuple_element_t                               201402L <tuple>
-__cpp_lib_tuples_by_type                                201304L <utility> <tuple>
+__cpp_lib_tuples_by_type                                201304L <tuple> <utility>
 __cpp_lib_type_trait_variable_templates                 201510L <type_traits>
 __cpp_lib_uncaught_exceptions                           201411L <exception>
 __cpp_lib_unordered_map_try_emplace                     201411L <unordered_map>

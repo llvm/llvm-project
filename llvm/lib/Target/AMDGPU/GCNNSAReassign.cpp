@@ -15,17 +15,12 @@
 
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
-#include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/MathExtras.h"
-#include <algorithm>
 
 using namespace llvm;
 

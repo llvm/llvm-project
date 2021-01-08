@@ -28,17 +28,17 @@ llvm.func @return_x86_mmx() -> !llvm.x86_mmx
 //
 
 // CHECK: declare void @f_void_i32(i32)
-llvm.func @f_void_i32(!llvm.i32) -> !llvm.void
+llvm.func @f_void_i32(i32) -> !llvm.void
 // CHECK: declare i32 @f_i32_empty()
-llvm.func @f_i32_empty() -> !llvm.i32
+llvm.func @f_i32_empty() -> i32
 // CHECK: declare i32 @f_i32_half_bfloat_float_double(half, bfloat, float, double)
-llvm.func @f_i32_half_bfloat_float_double(!llvm.half, !llvm.bfloat, !llvm.float, !llvm.double) -> !llvm.i32
+llvm.func @f_i32_half_bfloat_float_double(!llvm.half, !llvm.bfloat, !llvm.float, !llvm.double) -> i32
 // CHECK: declare i32 @f_i32_i32_i32(i32, i32)
-llvm.func @f_i32_i32_i32(!llvm.i32, !llvm.i32) -> !llvm.i32
+llvm.func @f_i32_i32_i32(i32, i32) -> i32
 // CHECK: declare void @f_void_variadic(...)
 llvm.func @f_void_variadic(...)
 // CHECK: declare void @f_void_i32_i32_variadic(i32, i32, ...)
-llvm.func @f_void_i32_i32_variadic(!llvm.i32, !llvm.i32, ...)
+llvm.func @f_void_i32_i32_variadic(i32, i32, ...)
 // CHECK: declare i32 (i32)* @f_f_i32_i32()
 llvm.func @f_f_i32_i32() -> !llvm.ptr<func<i32 (i32)>>
 
@@ -47,19 +47,19 @@ llvm.func @f_f_i32_i32() -> !llvm.ptr<func<i32 (i32)>>
 //
 
 // CHECK: declare i1 @return_i1()
-llvm.func @return_i1() -> !llvm.i1
+llvm.func @return_i1() -> i1
 // CHECK: declare i8 @return_i8()
-llvm.func @return_i8() -> !llvm.i8
+llvm.func @return_i8() -> i8
 // CHECK: declare i16 @return_i16()
-llvm.func @return_i16() -> !llvm.i16
+llvm.func @return_i16() -> i16
 // CHECK: declare i32 @return_i32()
-llvm.func @return_i32() -> !llvm.i32
+llvm.func @return_i32() -> i32
 // CHECK: declare i64 @return_i64()
-llvm.func @return_i64() -> !llvm.i64
+llvm.func @return_i64() -> i64
 // CHECK: declare i57 @return_i57()
-llvm.func @return_i57() -> !llvm.i57
+llvm.func @return_i57() -> i57
 // CHECK: declare i129 @return_i129()
-llvm.func @return_i129() -> !llvm.i129
+llvm.func @return_i129() -> i129
 
 //
 // Pointers.

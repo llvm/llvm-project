@@ -310,7 +310,7 @@ void test24() {
 void test25() {
   // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* {{.*}}, i1 false, i1 true, i1
   gi = OBJECT_SIZE_BUILTIN((void*)0x1000, 0);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* {{.*}}, i1 false, i1 true, i1
+  // CHECK: store i32 0
   gi = OBJECT_SIZE_BUILTIN((void*)0x1000, 1);
   // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* {{.*}}, i1 true, i1 true, i1
   gi = OBJECT_SIZE_BUILTIN((void*)0x1000, 2);
@@ -321,7 +321,7 @@ void test25() {
 
   // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* {{.*}}, i1 false, i1 true, i1
   gi = OBJECT_SIZE_BUILTIN((void*)0 + 0x1000, 0);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* {{.*}}, i1 false, i1 true, i1
+  // CHECK: store i32 0
   gi = OBJECT_SIZE_BUILTIN((void*)0 + 0x1000, 1);
   // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* {{.*}}, i1 true, i1 true, i1
   gi = OBJECT_SIZE_BUILTIN((void*)0 + 0x1000, 2);
@@ -337,7 +337,7 @@ void test26() {
 
   // CHECK: store i32 316
   gi = OBJECT_SIZE_BUILTIN(&t[1].v[11], 0);
-  // CHECK: store i32 312
+  // CHECK: store i32 0
   gi = OBJECT_SIZE_BUILTIN(&t[1].v[12], 1);
   // CHECK: store i32 308
   gi = OBJECT_SIZE_BUILTIN(&t[1].v[13], 2);
@@ -433,7 +433,7 @@ void test29(struct DynStructVar *dv, struct DynStruct0 *d0,
 
   // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1
   gi = OBJECT_SIZE_BUILTIN(d0->snd, 0);
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1
+  // CHECK: store i32 0
   gi = OBJECT_SIZE_BUILTIN(d0->snd, 1);
   // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 true, i1 true, i1
   gi = OBJECT_SIZE_BUILTIN(d0->snd, 2);
@@ -518,7 +518,7 @@ void test31() {
   // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1
   gi = OBJECT_SIZE_BUILTIN(&ds1[9].snd[0], 1);
 
-  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1
+  // CHECK: store i32 0
   gi = OBJECT_SIZE_BUILTIN(&ds0[9].snd[0], 1);
 
   // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false, i1 true, i1

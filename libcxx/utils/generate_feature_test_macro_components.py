@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 
 import os
-import tempfile
-from builtins import int, range
+from builtins import range
 from functools import reduce
 
 def get_libcxx_paths():
@@ -20,7 +19,6 @@ def get_libcxx_paths():
   assert os.path.exists(os.path.join(macro_test_path, 'version.version.pass.cpp'))
   return script_name, src_root, include_path, docs_path, macro_test_path
 
-
 script_name, source_root, include_path, docs_path, macro_test_path = get_libcxx_paths()
 
 def has_header(h):
@@ -28,465 +26,454 @@ def has_header(h):
   return os.path.exists(h_path)
 
 def add_version_header(tc):
-    tc["headers"].append("version")
-    return tc
+  tc["headers"].append("version")
+  return tc
 
-feature_test_macros = sorted([ add_version_header(x) for x in [
-  # C++14 macros
+feature_test_macros = [ add_version_header(x) for x in [
   {
-    "name": "__cpp_lib_integer_sequence",
-    "values": { "c++14": int(201304) },
-    "headers": ["utility"],
-  }, {
-    "name": "__cpp_lib_exchange_function",
-    "values": { "c++14": int(201304) },
-    "headers": ["utility"],
-  }, {
-    "name": "__cpp_lib_tuples_by_type",
-    "values": { "c++14": int(201304) },
-    "headers": ["utility", "tuple"],
-  }, {
-    "name": "__cpp_lib_tuple_element_t",
-    "values": { "c++14": int(201402) },
-    "headers": ["tuple"],
-  }, {
-    "name": "__cpp_lib_make_unique",
-    "values": { "c++14": int(201304) },
-    "headers": ["memory"],
-  }, {
-    "name": "__cpp_lib_transparent_operators",
-    "values": { "c++14": int(201210), "c++17": int(201510) },
-    "headers": ["functional"],
-  }, {
-    "name": "__cpp_lib_integral_constant_callable",
-    "values": { "c++14": int(201304) },
-    "headers": ["type_traits"],
-  }, {
-    "name": "__cpp_lib_transformation_trait_aliases",
-    "values": { "c++14": int(201304) },
-    "headers": ["type_traits"]
-  }, {
-    "name": "__cpp_lib_result_of_sfinae",
-    "values": { "c++14": int(201210) },
-    "headers": ["functional", "type_traits"]
-  }, {
-    "name": "__cpp_lib_is_final",
-    "values": { "c++14": int(201402) },
-    "headers": ["type_traits"]
-  }, {
-    "name": "__cpp_lib_is_null_pointer",
-    "values": { "c++14": int(201309) },
-    "headers": ["type_traits"]
-  }, {
-    "name": "__cpp_lib_chrono_udls",
-    "values": { "c++14": int(201304) },
-    "headers": ["chrono"]
-  }, {
-    "name": "__cpp_lib_string_udls",
-    "values": { "c++14": int(201304) },
-    "headers": ["string"]
-  }, {
-    "name": "__cpp_lib_generic_associative_lookup",
-    "values": { "c++14": int(201304) },
-    "headers": ["map", "set"]
-  }, {
-    "name": "__cpp_lib_null_iterators",
-    "values": { "c++14": int(201304) },
-    "headers": ["iterator"]
-  }, {
-    "name": "__cpp_lib_make_reverse_iterator",
-    "values": { "c++14": int(201402) },
-    "headers": ["iterator"]
-  }, {
-    "name": "__cpp_lib_robust_nonmodifying_seq_ops",
-    "values": { "c++14": int(201304) },
-    "headers": ["algorithm"]
-  }, {
-    "name": "__cpp_lib_complex_udls",
-    "values": { "c++14": int(201309) },
-    "headers": ["complex"]
-  }, {
-    "name": "__cpp_lib_quoted_string_io",
-    "values": { "c++14": int(201304) },
-    "headers": ["iomanip"]
-  }, {
-    "name": "__cpp_lib_shared_timed_mutex",
-    "values": { "c++14": int(201402) },
-    "headers": ["shared_mutex"],
-    "depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
-  },
-  # C++17 macros
-  {
-    "name": "__cpp_lib_atomic_is_always_lock_free",
-    "values": { "c++17": int(201603) },
-    "headers": ["atomic"],
-    "depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
-  }, {
-    "name": "__cpp_lib_filesystem",
-    "values": { "c++17": int(201703) },
-    "headers": ["filesystem"]
-  }, {
-    "name": "__cpp_lib_invoke",
-    "values": { "c++17": int(201411) },
-    "headers": ["functional"]
-  }, {
-    "name": "__cpp_lib_void_t",
-    "values": { "c++17": int(201411) },
-    "headers": ["type_traits"]
-  }, {
-    "name": "__cpp_lib_node_extract",
-    "values": { "c++17": int(201606) },
-    "headers": ["map", "set", "unordered_map", "unordered_set"]
-  }, {
-    "name": "__cpp_lib_byte",
-    "values": { "c++17": int(201603) },
-    "headers": ["cstddef"],
-  }, {
-    "name": "__cpp_lib_hardware_interference_size",
-    "values": { "c++17": int(201703) },
-    "headers": ["new"],
-    "unimplemented": True,
-  }, {
-    "name": "__cpp_lib_launder",
-    "values": { "c++17": int(201606) },
-    "headers": ["new"],
-  }, {
-    "name": "__cpp_lib_uncaught_exceptions",
-    "values": { "c++17": int(201411) },
-    "headers": ["exception"],
-  }, {
-    "name": "__cpp_lib_as_const",
-    "values": { "c++17": int(201510) },
-    "headers": ["utility"],
-  }, {
-    "name": "__cpp_lib_make_from_tuple",
-    "values": { "c++17": int(201606) },
-    "headers": ["tuple"],
-  }, {
-    "name": "__cpp_lib_apply",
-    "values": { "c++17": int(201603) },
-    "headers": ["tuple"],
-  }, {
-    "name": "__cpp_lib_optional",
-    "values": { "c++17": int(201606) },
-    "headers": ["optional"],
-  }, {
-    "name": "__cpp_lib_variant",
-    "values": { "c++17": int(201606) },
-    "headers": ["variant"],
-  }, {
-    "name": "__cpp_lib_any",
-    "values": { "c++17": int(201606) },
-    "headers": ["any"],
-  }, {
     "name": "__cpp_lib_addressof_constexpr",
-    "values": { "c++17": int(201603) },
+    "values": { "c++17": 201603 },
     "headers": ["memory"],
     "depends": "TEST_HAS_BUILTIN(__builtin_addressof) || TEST_GCC_VER >= 700",
     "internal_depends": "!defined(_LIBCPP_HAS_NO_BUILTIN_ADDRESSOF)",
   }, {
-    "name": "__cpp_lib_raw_memory_algorithms",
-    "values": { "c++17": int(201606) },
-    "headers": ["memory"],
-  }, {
-    "name": "__cpp_lib_enable_shared_from_this",
-    "values": { "c++17": int(201603) },
-    "headers": ["memory"],
-  }, {
-    "name": "__cpp_lib_shared_ptr_weak_type",
-    "values": { "c++17": int(201606) },
-    "headers": ["memory"],
-  }, {
-    "name": "__cpp_lib_shared_ptr_arrays",
-    "values": { "c++17": int(201611) }, # "c++20": int(201707) # Enable this when we support arrays in std::make_shared
-    "headers": ["memory"],
-  }, {
-    "name": "__cpp_lib_memory_resource",
-    "values": { "c++17": int(201603) },
-    "headers": ["memory_resource"],
-    "unimplemented": True,
-  }, {
-    "name": "__cpp_lib_boyer_moore_searcher",
-    "values": { "c++17": int(201603) },
-    "headers": ["functional"],
-    "unimplemented": True,
-  }, {
-    "name": "__cpp_lib_not_fn",
-    "values": { "c++17": int(201603) },
-    "headers": ["functional"],
-  }, {
-    "name": "__cpp_lib_bool_constant",
-    "values": { "c++17": int(201505) },
-    "headers": ["type_traits"],
-  }, {
-    "name": "__cpp_lib_type_trait_variable_templates",
-    "values": { "c++17": int(201510) },
-    "headers": ["type_traits"],
-  }, {
-    "name": "__cpp_lib_logical_traits",
-    "values": { "c++17": int(201510) },
-    "headers": ["type_traits"],
-  }, {
-    "name": "__cpp_lib_is_swappable",
-    "values": { "c++17": int(201603) },
-    "headers": ["type_traits"],
-  }, {
-    "name": "__cpp_lib_is_invocable",
-    "values": { "c++17": int(201703) },
-    "headers": ["type_traits"],
-  }, {
-    "name": "__cpp_lib_has_unique_object_representations",
-    "values": { "c++17": int(201606) },
-    "headers": ["type_traits"],
-    "depends": "TEST_HAS_BUILTIN_IDENTIFIER(__has_unique_object_representations) || TEST_GCC_VER >= 700",
-    "internal_depends": "defined(_LIBCPP_HAS_UNIQUE_OBJECT_REPRESENTATIONS)",
-  }, {
-    "name": "__cpp_lib_is_aggregate",
-    "values": { "c++17": int(201703) },
-    "headers": ["type_traits"],
-    "depends": "TEST_HAS_BUILTIN_IDENTIFIER(__is_aggregate) || TEST_GCC_VER_NEW >= 7001",
-    "internal_depends": "!defined(_LIBCPP_HAS_NO_IS_AGGREGATE)",
-  }, {
-    "name": "__cpp_lib_chrono",
-    "values": { "c++17": int(201611) },
-    "headers": ["chrono"],
-  }, {
-    "name": "__cpp_lib_execution",
-    "values": { "c++17": int(201603) },
-    "headers": ["execution"],
-    "unimplemented": True
-  }, {
-    "name": "__cpp_lib_parallel_algorithm",
-    "values": { "c++17": int(201603) },
-    "headers": ["algorithm", "numeric"],
-    "unimplemented": True,
-  }, {
-    "name": "__cpp_lib_to_chars",
-    "values": { "c++17": int(201611) },
-    "headers": ["utility"],
-    "unimplemented": True,
-  }, {
-    "name": "__cpp_lib_string_view",
-    "values": { "c++17": int(201606) },
-    "headers": ["string", "string_view"],
-  }, {
     "name": "__cpp_lib_allocator_traits_is_always_equal",
-    "values": { "c++17": int(201411) },
-    "headers": ["memory", "scoped_allocator", "string", "deque", "forward_list", "list", "vector", "map", "set", "unordered_map", "unordered_set"],
+    "values": { "c++17": 201411 },
+    "headers": ["deque", "forward_list", "list", "map", "memory", "scoped_allocator", "set", "string", "unordered_map", "unordered_set", "vector"],
   }, {
-    "name": "__cpp_lib_incomplete_container_elements",
-    "values": { "c++17": int(201505) },
-    "headers": ["forward_list", "list", "vector"],
+    "name": "__cpp_lib_any",
+    "values": { "c++17": 201606 },
+    "headers": ["any"],
   }, {
-    "name": "__cpp_lib_map_try_emplace",
-    "values": { "c++17": int(201411) },
-    "headers": ["map"],
-  }, {
-    "name": "__cpp_lib_unordered_map_try_emplace",
-    "values": { "c++17": int(201411) },
-    "headers": ["unordered_map"],
+    "name": "__cpp_lib_apply",
+    "values": { "c++17": 201603 },
+    "headers": ["tuple"],
   }, {
     "name": "__cpp_lib_array_constexpr",
-    "values": { "c++17": int(201603), "c++20": int(201811) },
-    "headers": ["iterator", "array"],
+    "values": { "c++17": 201603, "c++20": 201811 },
+    "headers": ["array", "iterator"],
   }, {
-    "name": "__cpp_lib_nonmember_container_access",
-    "values": { "c++17": int(201411) },
-    "headers": ["iterator", "array", "deque", "forward_list", "list", "map", "regex",
-                "set", "string", "unordered_map", "unordered_set", "vector"],
-  }, {
-    "name": "__cpp_lib_sample",
-    "values": { "c++17": int(201603) },
-    "headers": ["algorithm"],
-  }, {
-    "name": "__cpp_lib_clamp",
-    "values": { "c++17": int(201603) },
-    "headers": ["algorithm"],
-  }, {
-    "name": "__cpp_lib_gcd_lcm",
-    "values": { "c++17": int(201606) },
-    "headers": ["numeric"],
-  }, {
-    "name": "__cpp_lib_hypot",
-    "values": { "c++17": int(201603) },
-    "headers": ["cmath"],
-  }, {
-    "name": "__cpp_lib_math_special_functions",
-    "values": { "c++17": int(201603) },
-    "headers": ["cmath"],
-    "unimplemented": True,
-  }, {
-    "name": "__cpp_lib_shared_mutex",
-    "values": { "c++17": int(201505) },
-    "headers": ["shared_mutex"],
-    "depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
-  }, {
-    "name": "__cpp_lib_scoped_lock",
-    "values": { "c++17": int(201703) },
-    "headers": ["mutex"],
-  },
-  # C++20
-  {
-    "name": "__cpp_lib_char8_t",
-    "values": { "c++20": int(201811) },
-    "headers": ["atomic", "filesystem", "istream", "limits", "locale", "ostream",
-                "string", "string_view"],
-    "depends": "defined(__cpp_char8_t)",
-    "internal_depends": "!defined(_LIBCPP_NO_HAS_CHAR8_T)",
-  }, {
-    "name": "__cpp_lib_erase_if",
-    "values": { "c++20": int(202002) },
-    "headers": ["string", "deque", "forward_list", "list", "vector", "map",
-                "set", "unordered_map", "unordered_set"]
-  }, {
-    "name": "__cpp_lib_destroying_delete",
-    "values": { "c++20": int(201806) },
-    "headers": ["new"],
-    "depends":
-      "TEST_STD_VER > 17"
-      " && defined(__cpp_impl_destroying_delete)"
-      " && __cpp_impl_destroying_delete >= 201806L",
-    "internal_depends":
-      "_LIBCPP_STD_VER > 17"
-      " && defined(__cpp_impl_destroying_delete)"
-      " && __cpp_impl_destroying_delete >= 201806L",
-  }, {
-    "name": "__cpp_lib_three_way_comparison",
-    "values": { "c++20": int(201711) },
-    "headers": ["compare"],
-    "unimplemented": True,
-  }, {
-    "name": "__cpp_lib_concepts",
-    "values": { "c++20": int(201806) },
-    "headers": ["concepts"],
-    "unimplemented": True,
-  }, {
-    "name": "__cpp_lib_constexpr_swap_algorithms",
-    "values": { "c++20": int(201806) },
-    "headers": ["algorithm"],
-    "unimplemented": True,
-  }, {
-    "name": "__cpp_lib_constexpr_functional",
-    "values": { "c++20": int(201907) },
-    "headers": ["functional"],
-  }, {
-    "name": "__cpp_lib_constexpr_numeric",
-    "values": { "c++20": int(201911) },
-    "headers": ["numeric"],
-  }, {
-    "name": "__cpp_lib_bind_front",
-    "values": { "c++20": int(201811) },
-    "headers": ["functional"],
-    "unimplemented": True,
-  }, {
-    "name": "__cpp_lib_is_constant_evaluated",
-    "values": { "c++20": int(201811) },
-    "headers": ["type_traits"],
-    "depends": "TEST_HAS_BUILTIN(__builtin_is_constant_evaluated) || TEST_GCC_VER >= 900",
-    "internal_depends": "!defined(_LIBCPP_HAS_NO_BUILTIN_IS_CONSTANT_EVALUATED)",
-  }, {
-    "name": "__cpp_lib_list_remove_return_type",
-    "values": { "c++20": int(201806) },
-    "headers": ["forward_list", "list"],
-  }, {
-    "name": "__cpp_lib_generic_unordered_lookup",
-    "values": { "c++20": int(201811) },
-    "headers": ["unordered_map", "unordered_set"],
-  }, {
-    "name": "__cpp_lib_ranges",
-    "values": { "c++20": int(201811) },
-    "headers": ["algorithm", "functional", "iterator", "memory", "ranges"],
-    "unimplemented": True,
-  }, {
-    "name": "__cpp_lib_bit_cast",
-    "values": { "c++20": int(201806) },
-    "headers": ["bit"],
-    "unimplemented": True,
-  }, {
-    "name": "__cpp_lib_atomic_ref",
-    "values": { "c++20": int(201806) },
-    "headers": ["atomic"],
-    "unimplemented": True,
-    "depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
-  }, {
-    "name": "__cpp_lib_int_pow2",
-    "values": { "c++20": int(202002) },
-    "headers": ["bit"],
-  }, {
-    "name": "__cpp_lib_interpolate",
-    "values": { "c++20": int(201902) },
-    "headers": ["numeric"],
-  }, {
-    "name": "__cpp_lib_endian",
-    "values": { "c++20": int(201907) },
-    "headers": ["bit"],
-  }, {
-    "name": "__cpp_lib_to_array",
-    "values": { "c++20": int(201907) },
-    "headers": ["array"],
-  }, {
-    "name": "__cpp_lib_span",
-    "values": { "c++20": int(202002) },
-    "headers": ["span"],
-  }, {
-    "name": "__cpp_lib_math_constants",
-    "values": { "c++20": int(201907) },
-    "headers": ["numbers"],
-    "depends": "defined(__cpp_concepts) && __cpp_concepts >= 201811L",
-    "internal_depends": "defined(__cpp_concepts) && __cpp_concepts >= 201811L",
-  }, {
-    "name": "__cpp_lib_constexpr_utility",
-    "values": { "c++20": int(201811) },
+    "name": "__cpp_lib_as_const",
+    "values": { "c++17": 201510 },
     "headers": ["utility"],
   }, {
     "name": "__cpp_lib_atomic_flag_test",
-    "values": { "c++20": int(201907) },
-    "headers": ["atomic"],
-    "depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
-  }, {
-    "name": "__cpp_lib_atomic_lock_free_type_aliases",
-    "values": { "c++20": int(201907) },
-    "headers": ["atomic"],
-    "depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
-  }, {
-    "name": "__cpp_lib_atomic_wait",
-    "values": { "c++20": int(201907) },
+    "values": { "c++20": 201907 },
     "headers": ["atomic"],
     "depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
     "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
   }, {
     "name": "__cpp_lib_atomic_float",
-    "values": { "c++20": int(201711) },
+    "values": { "c++20": 201711 },
     "headers": ["atomic"],
-    "unimplemented": True,
     "depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
     "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
+    "unimplemented": True,
+  }, {
+    "name": "__cpp_lib_atomic_is_always_lock_free",
+    "values": { "c++17": 201603 },
+    "headers": ["atomic"],
+    "depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
+    "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
+  }, {
+    "name": "__cpp_lib_atomic_lock_free_type_aliases",
+    "values": { "c++20": 201907 },
+    "headers": ["atomic"],
+    "depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
+    "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
+  }, {
+    "name": "__cpp_lib_atomic_ref",
+    "values": { "c++20": 201806 },
+    "headers": ["atomic"],
+    "depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
+    "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
+    "unimplemented": True,
   }, {
     "name": "__cpp_lib_atomic_shared_ptr",
-    "values": { "c++20": int(201711) },
+    "values": { "c++20": 201711 },
     "headers": ["atomic"],
-    "unimplemented": True,
     "depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
     "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
+    "unimplemented": True,
   }, {
     "name": "__cpp_lib_atomic_value_initialization",
-    "values": { "c++20": int(201911) },
+    "values": { "c++20": 201911 },
     "headers": ["atomic", "memory"],
+    "depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
+    "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
     "unimplemented": True,
+  }, {
+    "name": "__cpp_lib_atomic_wait",
+    "values": { "c++20": 201907 },
+    "headers": ["atomic"],
     "depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
     "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
   }, {
+    "name": "__cpp_lib_bind_front",
+    "values": { "c++20": 201811 },
+    "headers": ["functional"],
+    "unimplemented": True,
+  }, {
+    "name": "__cpp_lib_bit_cast",
+    "values": { "c++20": 201806 },
+    "headers": ["bit"],
+    "unimplemented": True,
+  }, {
+    "name": "__cpp_lib_bool_constant",
+    "values": { "c++17": 201505 },
+    "headers": ["type_traits"],
+  }, {
+    "name": "__cpp_lib_boyer_moore_searcher",
+    "values": { "c++17": 201603 },
+    "headers": ["functional"],
+    "unimplemented": True,
+  }, {
+    "name": "__cpp_lib_byte",
+    "values": { "c++17": 201603 },
+    "headers": ["cstddef"],
+  }, {
+    "name": "__cpp_lib_char8_t",
+    "values": { "c++20": 201811 },
+    "headers": ["atomic", "filesystem", "istream", "limits", "locale", "ostream", "string", "string_view"],
+    "depends": "defined(__cpp_char8_t)",
+    "internal_depends": "!defined(_LIBCPP_NO_HAS_CHAR8_T)",
+  }, {
+    "name": "__cpp_lib_chrono",
+    "values": { "c++17": 201611 },
+    "headers": ["chrono"],
+  }, {
+    "name": "__cpp_lib_chrono_udls",
+    "values": { "c++14": 201304 },
+    "headers": ["chrono"],
+  }, {
+    "name": "__cpp_lib_clamp",
+    "values": { "c++17": 201603 },
+    "headers": ["algorithm"],
+  }, {
+    "name": "__cpp_lib_complex_udls",
+    "values": { "c++14": 201309 },
+    "headers": ["complex"],
+  }, {
+    "name": "__cpp_lib_concepts",
+    "values": { "c++20": 201806 },
+    "headers": ["concepts"],
+    "unimplemented": True,
+  }, {
     "name": "__cpp_lib_constexpr_dynamic_alloc",
-    "values": { "c++20": int(201907) },
-    "headers": ["memory"]
-  },
-]], key=lambda tc: tc["name"])
+    "values": { "c++20": 201907 },
+    "headers": ["memory"],
+  }, {
+    "name": "__cpp_lib_constexpr_functional",
+    "values": { "c++20": 201907 },
+    "headers": ["functional"],
+  }, {
+    "name": "__cpp_lib_constexpr_numeric",
+    "values": { "c++20": 201911 },
+    "headers": ["numeric"],
+  }, {
+    "name": "__cpp_lib_constexpr_swap_algorithms",
+    "values": { "c++20": 201806 },
+    "headers": ["algorithm"],
+    "unimplemented": True,
+  }, {
+    "name": "__cpp_lib_constexpr_utility",
+    "values": { "c++20": 201811 },
+    "headers": ["utility"],
+  }, {
+    "name": "__cpp_lib_destroying_delete",
+    "values": { "c++20": 201806 },
+    "headers": ["new"],
+    "depends": "TEST_STD_VER > 17 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L",
+    "internal_depends": "_LIBCPP_STD_VER > 17 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L",
+  }, {
+    "name": "__cpp_lib_enable_shared_from_this",
+    "values": { "c++17": 201603 },
+    "headers": ["memory"],
+  }, {
+    "name": "__cpp_lib_endian",
+    "values": { "c++20": 201907 },
+    "headers": ["bit"],
+  }, {
+    "name": "__cpp_lib_erase_if",
+    "values": { "c++20": 202002 },
+    "headers": ["deque", "forward_list", "list", "map", "set", "string", "unordered_map", "unordered_set", "vector"],
+  }, {
+    "name": "__cpp_lib_exchange_function",
+    "values": { "c++14": 201304 },
+    "headers": ["utility"],
+  }, {
+    "name": "__cpp_lib_execution",
+    "values": { "c++17": 201603 },
+    "headers": ["execution"],
+    "unimplemented": True,
+  }, {
+    "name": "__cpp_lib_filesystem",
+    "values": { "c++17": 201703 },
+    "headers": ["filesystem"],
+  }, {
+    "name": "__cpp_lib_gcd_lcm",
+    "values": { "c++17": 201606 },
+    "headers": ["numeric"],
+  }, {
+    "name": "__cpp_lib_generic_associative_lookup",
+    "values": { "c++14": 201304 },
+    "headers": ["map", "set"],
+  }, {
+    "name": "__cpp_lib_generic_unordered_lookup",
+    "values": { "c++20": 201811 },
+    "headers": ["unordered_map", "unordered_set"],
+  }, {
+    "name": "__cpp_lib_hardware_interference_size",
+    "values": { "c++17": 201703 },
+    "headers": ["new"],
+    "unimplemented": True,
+  }, {
+    "name": "__cpp_lib_has_unique_object_representations",
+    "values": { "c++17": 201606 },
+    "headers": ["type_traits"],
+    "depends": "TEST_HAS_BUILTIN_IDENTIFIER(__has_unique_object_representations) || TEST_GCC_VER >= 700",
+    "internal_depends": "defined(_LIBCPP_HAS_UNIQUE_OBJECT_REPRESENTATIONS)",
+  }, {
+    "name": "__cpp_lib_hypot",
+    "values": { "c++17": 201603 },
+    "headers": ["cmath"],
+  }, {
+    "name": "__cpp_lib_incomplete_container_elements",
+    "values": { "c++17": 201505 },
+    "headers": ["forward_list", "list", "vector"],
+  }, {
+    "name": "__cpp_lib_int_pow2",
+    "values": { "c++20": 202002 },
+    "headers": ["bit"],
+  }, {
+    "name": "__cpp_lib_integer_sequence",
+    "values": { "c++14": 201304 },
+    "headers": ["utility"],
+  }, {
+    "name": "__cpp_lib_integral_constant_callable",
+    "values": { "c++14": 201304 },
+    "headers": ["type_traits"],
+  }, {
+    "name": "__cpp_lib_interpolate",
+    "values": { "c++20": 201902 },
+    "headers": ["numeric"],
+  }, {
+    "name": "__cpp_lib_invoke",
+    "values": { "c++17": 201411 },
+    "headers": ["functional"],
+  }, {
+    "name": "__cpp_lib_is_aggregate",
+    "values": { "c++17": 201703 },
+    "headers": ["type_traits"],
+    "depends": "TEST_HAS_BUILTIN_IDENTIFIER(__is_aggregate) || TEST_GCC_VER_NEW >= 7001",
+    "internal_depends": "!defined(_LIBCPP_HAS_NO_IS_AGGREGATE)",
+  }, {
+    "name": "__cpp_lib_is_constant_evaluated",
+    "values": { "c++20": 201811 },
+    "headers": ["type_traits"],
+    "depends": "TEST_HAS_BUILTIN(__builtin_is_constant_evaluated) || TEST_GCC_VER >= 900",
+    "internal_depends": "!defined(_LIBCPP_HAS_NO_BUILTIN_IS_CONSTANT_EVALUATED)",
+  }, {
+    "name": "__cpp_lib_is_final",
+    "values": { "c++14": 201402 },
+    "headers": ["type_traits"],
+  }, {
+    "name": "__cpp_lib_is_invocable",
+    "values": { "c++17": 201703 },
+    "headers": ["type_traits"],
+  }, {
+    "name": "__cpp_lib_is_null_pointer",
+    "values": { "c++14": 201309 },
+    "headers": ["type_traits"],
+  }, {
+    "name": "__cpp_lib_is_swappable",
+    "values": { "c++17": 201603 },
+    "headers": ["type_traits"],
+  }, {
+    "name": "__cpp_lib_launder",
+    "values": { "c++17": 201606 },
+    "headers": ["new"],
+  }, {
+    "name": "__cpp_lib_list_remove_return_type",
+    "values": { "c++20": 201806 },
+    "headers": ["forward_list", "list"],
+  }, {
+    "name": "__cpp_lib_logical_traits",
+    "values": { "c++17": 201510 },
+    "headers": ["type_traits"],
+  }, {
+    "name": "__cpp_lib_make_from_tuple",
+    "values": { "c++17": 201606 },
+    "headers": ["tuple"],
+  }, {
+    "name": "__cpp_lib_make_reverse_iterator",
+    "values": { "c++14": 201402 },
+    "headers": ["iterator"],
+  }, {
+    "name": "__cpp_lib_make_unique",
+    "values": { "c++14": 201304 },
+    "headers": ["memory"],
+  }, {
+    "name": "__cpp_lib_map_try_emplace",
+    "values": { "c++17": 201411 },
+    "headers": ["map"],
+  }, {
+    "name": "__cpp_lib_math_constants",
+    "values": { "c++20": 201907 },
+    "headers": ["numbers"],
+    "depends": "defined(__cpp_concepts) && __cpp_concepts >= 201811L",
+    "internal_depends": "defined(__cpp_concepts) && __cpp_concepts >= 201811L",
+  }, {
+    "name": "__cpp_lib_math_special_functions",
+    "values": { "c++17": 201603 },
+    "headers": ["cmath"],
+    "unimplemented": True,
+  }, {
+    "name": "__cpp_lib_memory_resource",
+    "values": { "c++17": 201603 },
+    "headers": ["memory_resource"],
+    "unimplemented": True,
+  }, {
+    "name": "__cpp_lib_node_extract",
+    "values": { "c++17": 201606 },
+    "headers": ["map", "set", "unordered_map", "unordered_set"],
+  }, {
+    "name": "__cpp_lib_nonmember_container_access",
+    "values": { "c++17": 201411 },
+    "headers": ["array", "deque", "forward_list", "iterator", "list", "map", "regex", "set", "string", "unordered_map", "unordered_set", "vector"],
+  }, {
+    "name": "__cpp_lib_not_fn",
+    "values": { "c++17": 201603 },
+    "headers": ["functional"],
+  }, {
+    "name": "__cpp_lib_null_iterators",
+    "values": { "c++14": 201304 },
+    "headers": ["iterator"],
+  }, {
+    "name": "__cpp_lib_optional",
+    "values": { "c++17": 201606 },
+    "headers": ["optional"],
+  }, {
+    "name": "__cpp_lib_parallel_algorithm",
+    "values": { "c++17": 201603 },
+    "headers": ["algorithm", "numeric"],
+    "unimplemented": True,
+  }, {
+    "name": "__cpp_lib_quoted_string_io",
+    "values": { "c++14": 201304 },
+    "headers": ["iomanip"],
+  }, {
+    "name": "__cpp_lib_ranges",
+    "values": { "c++20": 201811 },
+    "headers": ["algorithm", "functional", "iterator", "memory", "ranges"],
+    "unimplemented": True,
+  }, {
+    "name": "__cpp_lib_raw_memory_algorithms",
+    "values": { "c++17": 201606 },
+    "headers": ["memory"],
+  }, {
+    "name": "__cpp_lib_result_of_sfinae",
+    "values": { "c++14": 201210 },
+    "headers": ["functional", "type_traits"],
+  }, {
+    "name": "__cpp_lib_robust_nonmodifying_seq_ops",
+    "values": { "c++14": 201304 },
+    "headers": ["algorithm"],
+  }, {
+    "name": "__cpp_lib_sample",
+    "values": { "c++17": 201603 },
+    "headers": ["algorithm"],
+  }, {
+    "name": "__cpp_lib_scoped_lock",
+    "values": { "c++17": 201703 },
+    "headers": ["mutex"],
+  }, {
+    "name": "__cpp_lib_shared_mutex",
+    "values": { "c++17": 201505 },
+    "headers": ["shared_mutex"],
+    "depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
+    "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
+  }, {
+    "name": "__cpp_lib_shared_ptr_arrays",
+    "values": { "c++17": 201611 },
+    "headers": ["memory"],
+  }, {
+    "name": "__cpp_lib_shared_ptr_weak_type",
+    "values": { "c++17": 201606 },
+    "headers": ["memory"],
+  }, {
+    "name": "__cpp_lib_shared_timed_mutex",
+    "values": { "c++14": 201402 },
+    "headers": ["shared_mutex"],
+    "depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
+    "internal_depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
+  }, {
+    "name": "__cpp_lib_span",
+    "values": { "c++20": 202002 },
+    "headers": ["span"],
+  }, {
+    "name": "__cpp_lib_string_udls",
+    "values": { "c++14": 201304 },
+    "headers": ["string"],
+  }, {
+    "name": "__cpp_lib_string_view",
+    "values": { "c++17": 201606 },
+    "headers": ["string", "string_view"],
+  }, {
+    "name": "__cpp_lib_three_way_comparison",
+    "values": { "c++20": 201711 },
+    "headers": ["compare"],
+    "unimplemented": True,
+  }, {
+    "name": "__cpp_lib_to_array",
+    "values": { "c++20": 201907 },
+    "headers": ["array"],
+  }, {
+    "name": "__cpp_lib_to_chars",
+    "values": { "c++17": 201611 },
+    "headers": ["utility"],
+    "unimplemented": True,
+  }, {
+    "name": "__cpp_lib_transformation_trait_aliases",
+    "values": { "c++14": 201304 },
+    "headers": ["type_traits"],
+  }, {
+    "name": "__cpp_lib_transparent_operators",
+    "values": { "c++14": 201210, "c++17": 201510 },
+    "headers": ["functional"],
+  }, {
+    "name": "__cpp_lib_tuple_element_t",
+    "values": { "c++14": 201402 },
+    "headers": ["tuple"],
+  }, {
+    "name": "__cpp_lib_tuples_by_type",
+    "values": { "c++14": 201304 },
+    "headers": ["tuple", "utility"],
+  }, {
+    "name": "__cpp_lib_type_trait_variable_templates",
+    "values": { "c++17": 201510 },
+    "headers": ["type_traits"],
+  }, {
+    "name": "__cpp_lib_uncaught_exceptions",
+    "values": { "c++17": 201411 },
+    "headers": ["exception"],
+  }, {
+    "name": "__cpp_lib_unordered_map_try_emplace",
+    "values": { "c++17": 201411 },
+    "headers": ["unordered_map"],
+  }, {
+    "name": "__cpp_lib_variant",
+    "values": { "c++17": 201606 },
+    "headers": ["variant"],
+  }, {
+    "name": "__cpp_lib_void_t",
+    "values": { "c++17": 201411 },
+    "headers": ["type_traits"],
+  }
+]]
+
+assert feature_test_macros == sorted(feature_test_macros, key=lambda tc: tc["name"])
+assert all(tc["headers"] == sorted(tc["headers"]) for tc in feature_test_macros)
 
 # Map from each header to the Lit annotations that should be used for
 # tests that include that header.
@@ -714,7 +701,7 @@ test_types = {
 # endif
 """,
 
-  "defined":"""
+  "defined": """
 # ifndef {name}
 #   error "{name} should be defined in {std}"
 # endif
@@ -832,7 +819,6 @@ def make_widths(grid):
 def create_table(grid, indent):
   indent_str = ' '*indent
   col_widths = make_widths(grid)
-  num_cols = len(grid[0])
   result = [indent_str + add_divider(col_widths, 2)]
   header_flag = 2
   for row_i in range(0, len(grid)):

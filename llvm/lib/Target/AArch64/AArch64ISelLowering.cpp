@@ -187,6 +187,8 @@ static bool isMergePassthruOpcode(unsigned Opc) {
   case AArch64ISD::CTLZ_MERGE_PASSTHRU:
   case AArch64ISD::CTPOP_MERGE_PASSTHRU:
   case AArch64ISD::DUP_MERGE_PASSTHRU:
+  case AArch64ISD::ABS_MERGE_PASSTHRU:
+  case AArch64ISD::NEG_MERGE_PASSTHRU:
   case AArch64ISD::FNEG_MERGE_PASSTHRU:
   case AArch64ISD::SIGN_EXTEND_INREG_MERGE_PASSTHRU:
   case AArch64ISD::ZERO_EXTEND_INREG_MERGE_PASSTHRU:
@@ -1097,6 +1099,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SHL, VT, Custom);
       setOperationAction(ISD::SRL, VT, Custom);
       setOperationAction(ISD::SRA, VT, Custom);
+      setOperationAction(ISD::ABS, VT, Custom);
       setOperationAction(ISD::VECREDUCE_ADD, VT, Custom);
       setOperationAction(ISD::VECREDUCE_AND, VT, Custom);
       setOperationAction(ISD::VECREDUCE_OR, VT, Custom);
@@ -1345,6 +1348,7 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
 
   // Lower fixed length vector operations to scalable equivalents.
+  setOperationAction(ISD::ABS, VT, Custom);
   setOperationAction(ISD::ADD, VT, Custom);
   setOperationAction(ISD::AND, VT, Custom);
   setOperationAction(ISD::ANY_EXTEND, VT, Custom);
@@ -1743,6 +1747,8 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::FSQRT_MERGE_PASSTHRU)
     MAKE_CASE(AArch64ISD::FRECPX_MERGE_PASSTHRU)
     MAKE_CASE(AArch64ISD::FABS_MERGE_PASSTHRU)
+    MAKE_CASE(AArch64ISD::ABS_MERGE_PASSTHRU)
+    MAKE_CASE(AArch64ISD::NEG_MERGE_PASSTHRU)
     MAKE_CASE(AArch64ISD::SETCC_MERGE_ZERO)
     MAKE_CASE(AArch64ISD::ADC)
     MAKE_CASE(AArch64ISD::SBC)
@@ -3661,6 +3667,12 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::aarch64_sve_fabs:
     return DAG.getNode(AArch64ISD::FABS_MERGE_PASSTHRU, dl, Op.getValueType(),
                        Op.getOperand(2), Op.getOperand(3), Op.getOperand(1));
+  case Intrinsic::aarch64_sve_abs:
+    return DAG.getNode(AArch64ISD::ABS_MERGE_PASSTHRU, dl, Op.getValueType(),
+                       Op.getOperand(2), Op.getOperand(3), Op.getOperand(1));
+  case Intrinsic::aarch64_sve_neg:
+    return DAG.getNode(AArch64ISD::NEG_MERGE_PASSTHRU, dl, Op.getValueType(),
+                       Op.getOperand(2), Op.getOperand(3), Op.getOperand(1));
   case Intrinsic::aarch64_sve_convert_to_svbool: {
     EVT OutVT = Op.getValueType();
     EVT InVT = Op.getOperand(1).getValueType();
@@ -4163,8 +4175,11 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
 }
 
 // Generate SUBS and CSEL for integer abs.
-static SDValue LowerABS(SDValue Op, SelectionDAG &DAG) {
+SDValue AArch64TargetLowering::LowerABS(SDValue Op, SelectionDAG &DAG) const {
   MVT VT = Op.getSimpleValueType();
+
+  if (VT.isVector())
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::ABS_MERGE_PASSTHRU);
 
   SDLoc DL(Op);
   SDValue Neg = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT),
@@ -5425,10 +5440,10 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
         // take care of putting the two halves in the right place but we have to
         // combine them.
         SDValue &Bits =
-            std::find_if(RegsToPass.begin(), RegsToPass.end(),
-                         [=](const std::pair<unsigned, SDValue> &Elt) {
-                           return Elt.first == VA.getLocReg();
-                         })
+            llvm::find_if(RegsToPass,
+                          [=](const std::pair<unsigned, SDValue> &Elt) {
+                            return Elt.first == VA.getLocReg();
+                          })
                 ->second;
         Bits = DAG.getNode(ISD::OR, DL, Bits.getValueType(), Bits, Arg);
         // Call site info is used for function's parameter entry value
@@ -5709,11 +5724,9 @@ AArch64TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
     if (RegsUsed.count(VA.getLocReg())) {
       SDValue &Bits =
-          std::find_if(RetVals.begin(), RetVals.end(),
-                       [=](const std::pair<unsigned, SDValue> &Elt) {
-                         return Elt.first == VA.getLocReg();
-                       })
-              ->second;
+          llvm::find_if(RetVals, [=](const std::pair<unsigned, SDValue> &Elt) {
+            return Elt.first == VA.getLocReg();
+          })->second;
       Bits = DAG.getNode(ISD::OR, DL, Bits.getValueType(), Bits, Arg);
     } else {
       RetVals.emplace_back(VA.getLocReg(), Arg);

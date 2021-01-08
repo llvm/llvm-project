@@ -12,48 +12,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "AMDGPUArgumentUsageInfo.h"
-#include "AMDGPUISelLowering.h" // For AMDGPUISD
-#include "AMDGPUInstrInfo.h"
-#include "AMDGPUPerfHintAnalysis.h"
 #include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "SIDefines.h"
-#include "SIISelLowering.h"
-#include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
-#include "SIRegisterInfo.h"
-#include "llvm/ADT/APInt.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/LegacyDivergenceAnalysis.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
-#include "llvm/CodeGen/ISDOpcodes.h"
-#include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
-#include "llvm/CodeGen/ValueTypes.h"
-#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/InitializePasses.h"
+
 #ifdef EXPENSIVE_CHECKS
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Dominators.h"
 #endif
-#include "llvm/IR/Instruction.h"
-#include "llvm/MC/MCInstrDesc.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/CodeGen.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MachineValueType.h"
-#include "llvm/Support/MathExtras.h"
-#include <cassert>
-#include <cstdint>
-#include <new>
-#include <vector>
 
 #define DEBUG_TYPE "isel"
 

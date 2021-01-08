@@ -127,8 +127,6 @@ public:
   void addClassToPassName(StringRef ClassName, StringRef PassName);
   /// Get the pass name for a given pass class name.
   StringRef getPassNameForClassName(StringRef ClassName);
-  /// Whether or not the class to pass name map contains the pass name.
-  bool hasPassName(StringRef PassName);
 
 private:
   friend class PassInstrumentation;

@@ -35,7 +35,7 @@ following conversions are currently implemented:
 Index type is converted to an LLVM dialect integer type with bitwidth equal to
 the bitwidth of the pointer size as specified by the
 [data layout](Dialects/LLVM.md#data-layout-and-triple) of the closest module.
-For example, on x86-64 CPUs it converts to `!llvm.i64`. This behavior can be
+For example, on x86-64 CPUs it converts to `i64`. This behavior can be
 overridden by the type converter configuration, which is often exposed as a pass
 option by conversion passes.
 
