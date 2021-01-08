@@ -19,6 +19,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#undef NDEBUG
+#include <assert.h>
 
 // We directly test the library atomic functions, not using the C builtins. This
 // should avoid confounding factors, ensuring that we actually test the
@@ -28,6 +30,9 @@
 #define _STRINGIFY(x) #x
 #define STRINGIFY(x) _STRINGIFY(x)
 #define EXTERNAL_NAME(name) asm(STRINGIFY(__USER_LABEL_PREFIX__) #name)
+
+bool __atomic_is_lock_free_c(size_t size, void *ptr)
+    EXTERNAL_NAME(__atomic_is_lock_free);
 
 void __atomic_load_c(int size, void *src, void *dest,
                      int model) EXTERNAL_NAME(__atomic_load);
@@ -573,11 +578,86 @@ void test_fetch_op(void) {
   }
 }
 
+void test_is_lock_free(void) {
+  // The result of __atomic_is_lock_free is architecture dependent, so we only
+  // check for a true return value for the sizes where we know that at compile
+  // time that they are supported. If __atomic_always_lock_free() returns false
+  // for a given size, we can only check that __atomic_is_lock_free() returns
+  // false for unaligned values.
+  // Note: This assumption will have to be revisited when we support an
+  // architecture that allows for unaligned atomics.
+  // XXX: Do any architectures report true for unaligned atomics?
+
+  // All atomic.c implementations fall back to the non-specialized case for
+  // size=0, so despite the operation being a no-op, they still take locks and
+  // therefore __atomic_is_lock_free should return false.
+  assert(!__atomic_is_lock_free_c(0, NULL) && "size zero should never be lock-free");
+  assert(!__atomic_is_lock_free_c(0, (void *)8) && "size zero should never be lock-free");
+
+  if (__atomic_always_lock_free(1, 0)) {
+    assert(__atomic_is_lock_free_c(1, NULL) && "aligned size=1 should always be lock-free");
+    assert(__atomic_is_lock_free_c(1, (void *)1) && "aligned size=1 should always be lock-free");
+  }
+
+  if (__atomic_always_lock_free(2, 0)) {
+    assert(__atomic_is_lock_free_c(2, NULL) && "aligned size=2 should always be lock-free");
+    assert(__atomic_is_lock_free_c(2, (void *)2) && "aligned size=2 should always be lock-free");
+  }
+  assert(!__atomic_is_lock_free_c(2, (void *)1) && "unaligned size=2 should not be lock-free");
+
+  if (__atomic_always_lock_free(4, 0)) {
+    assert(__atomic_is_lock_free_c(4, NULL) && "aligned size=4 should always be lock-free");
+    assert(__atomic_is_lock_free_c(4, (void *)4) && "aligned size=4 should always be lock-free");
+  }
+  assert(!__atomic_is_lock_free_c(4, (void *)3) && "unaligned size=4 should not be lock-free");
+  assert(!__atomic_is_lock_free_c(4, (void *)2) && "unaligned size=4 should not be lock-free");
+  assert(!__atomic_is_lock_free_c(4, (void *)1) && "unaligned size=4 should not be lock-free");
+
+  if (__atomic_always_lock_free(8, 0)) {
+    assert(__atomic_is_lock_free_c(8, NULL) && "aligned size=8 should always be lock-free");
+    assert(__atomic_is_lock_free_c(8, (void *)8) && "aligned size=8 should always be lock-free");
+  }
+  assert(!__atomic_is_lock_free_c(8, (void *)7) && "unaligned size=8 should not be lock-free");
+  assert(!__atomic_is_lock_free_c(8, (void *)4) && "unaligned size=8 should not be lock-free");
+  assert(!__atomic_is_lock_free_c(8, (void *)2) && "unaligned size=8 should not be lock-free");
+  assert(!__atomic_is_lock_free_c(8, (void *)1) && "unaligned size=8 should not be lock-free");
+
+  if (__atomic_always_lock_free(16, 0)) {
+    assert(__atomic_is_lock_free_c(16, NULL) && "aligned size=16 should always be lock-free");
+    assert(__atomic_is_lock_free_c(16, (void *)16) && "aligned size=16 should always be lock-free");
+  }
+  assert(!__atomic_is_lock_free_c(16, (void *)15) && "unaligned size=16 should not be lock-free");
+  assert(!__atomic_is_lock_free_c(16, (void *)8) && "unaligned size=16 should not be lock-free");
+  assert(!__atomic_is_lock_free_c(16, (void *)4) && "unaligned size=16 should not be lock-free");
+  assert(!__atomic_is_lock_free_c(16, (void *)2) && "unaligned size=16 should not be lock-free");
+  assert(!__atomic_is_lock_free_c(16, (void *)1) && "unaligned size=16 should not be lock-free");
+
+  // In the current implementation > 16 bytes are never lock-free:
+  assert(!__atomic_is_lock_free_c(32, NULL) && "aligned size=32 should not be lock-free");
+  assert(!__atomic_is_lock_free_c(32, (void*)32) && "aligned size=32 should not be lock-free");
+  assert(!__atomic_is_lock_free_c(32, (void*)31) && "unaligned size=32 should not be lock-free");
+
+  // We also don't support non-power-of-two sizes:
+  assert(!__atomic_is_lock_free_c(3, NULL) && "aligned size=3 should not be lock-free");
+  assert(!__atomic_is_lock_free_c(5, NULL) && "aligned size=5 should not be lock-free");
+  assert(!__atomic_is_lock_free_c(6, NULL) && "aligned size=6 should not be lock-free");
+  assert(!__atomic_is_lock_free_c(7, NULL) && "aligned size=7 should not be lock-free");
+  assert(!__atomic_is_lock_free_c(9, NULL) && "aligned size=9 should not be lock-free");
+  assert(!__atomic_is_lock_free_c(10, NULL) && "aligned size=10 should not be lock-free");
+  assert(!__atomic_is_lock_free_c(11, NULL) && "aligned size=11 should not be lock-free");
+  assert(!__atomic_is_lock_free_c(12, NULL) && "aligned size=12 should not be lock-free");
+  assert(!__atomic_is_lock_free_c(13, NULL) && "aligned size=13 should not be lock-free");
+  assert(!__atomic_is_lock_free_c(14, NULL) && "aligned size=14 should not be lock-free");
+  assert(!__atomic_is_lock_free_c(15, NULL) && "aligned size=15 should not be lock-free");
+  assert(!__atomic_is_lock_free_c(17, NULL) && "aligned size=17 should not be lock-free");
+}
+
 int main() {
   test_loads();
   test_stores();
   test_exchanges();
   test_compare_exchanges();
   test_fetch_op();
+  test_is_lock_free();
   return 0;
 }

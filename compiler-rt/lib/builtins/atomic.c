@@ -36,6 +36,8 @@
 #pragma redefine_extname __atomic_exchange_c SYMBOL_NAME(__atomic_exchange)
 #pragma redefine_extname __atomic_compare_exchange_c SYMBOL_NAME(              \
     __atomic_compare_exchange)
+#pragma redefine_extname __atomic_is_lock_free_c SYMBOL_NAME(                  \
+    __atomic_is_lock_free)
 
 /// Number of locks.  This allocates one page on 32-bit platforms, two on
 /// 64-bit.  This can be specified externally if a different trade between
@@ -156,6 +158,14 @@ static __inline Lock *lock_for_pointer(void *ptr) {
       break;                                                                   \
     }                                                                          \
   } while (0)
+
+/// Whether atomic operations for the given size (and alignment) are lock-free.
+bool __atomic_is_lock_free_c(size_t size, void *ptr) {
+#define LOCK_FREE_ACTION(type) return true;
+  LOCK_FREE_CASES(ptr);
+#undef LOCK_FREE_ACTION
+  return false;
+}
 
 /// An atomic load operation.  This is atomic with respect to the source
 /// pointer only.
