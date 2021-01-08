@@ -1096,7 +1096,7 @@ LoopReroll::DAGRootTracker::nextInstr(int Val, UsesTy &In,
                                       UsesTy::iterator *StartI) {
   UsesTy::iterator I = StartI ? *StartI : In.begin();
   while (I != In.end() && (I->second.test(Val) == 0 ||
-                           Exclude.count(I->first) != 0))
+                           Exclude.contains(I->first)))
     ++I;
   return I;
 }
