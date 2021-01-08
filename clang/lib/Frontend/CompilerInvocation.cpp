@@ -986,6 +986,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     setPGOUseInstrumentor(Opts, Opts.ProfileInstrumentUsePath);
 
   Opts.CodeModel = TargetOpts.CodeModel;
+  Opts.Dwarf64 = Args.hasArg(OPT_gdwarf64);
 
   if (const Arg *A = Args.getLastArg(OPT_ftime_report, OPT_ftime_report_EQ)) {
     Opts.TimePasses = true;

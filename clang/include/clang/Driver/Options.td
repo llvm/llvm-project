@@ -2574,6 +2574,10 @@ def gdwarf_4 : Flag<["-"], "gdwarf-4">, Group<g_Group>,
   HelpText<"Generate source-level debug information with dwarf version 4">;
 def gdwarf_5 : Flag<["-"], "gdwarf-5">, Group<g_Group>,
   HelpText<"Generate source-level debug information with dwarf version 5">;
+def gdwarf64 : Flag<["-"], "gdwarf64">, Group<g_Group>, Flags<[CC1Option]>,
+  HelpText<"Enables DWARF64 format for ELF binaries, if debug information emission is enabled.">;
+def gdwarf32 : Flag<["-"], "gdwarf32">, Group<g_Group>, Flags<[CC1Option]>,
+  HelpText<"Enables DWARF32 format for ELF binaries, if debug information emission is enabled.">;
 
 def gcodeview : Flag<["-"], "gcodeview">,
   HelpText<"Generate CodeView debug information">,

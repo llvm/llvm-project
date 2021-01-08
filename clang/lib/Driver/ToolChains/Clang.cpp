@@ -4017,6 +4017,25 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
   if (DebuggerTuning == llvm::DebuggerKind::SCE)
     CmdArgs.push_back("-dwarf-explicit-import");
 
+  auto *DwarfFormatArg =
+      Args.getLastArg(options::OPT_gdwarf64, options::OPT_gdwarf32);
+  if (DwarfFormatArg &&
+      DwarfFormatArg->getOption().matches(options::OPT_gdwarf64)) {
+    const llvm::Triple &RawTriple = TC.getTriple();
+    if (EffectiveDWARFVersion < 3)
+      D.Diag(diag::err_drv_argument_only_allowed_with)
+          << DwarfFormatArg->getAsString(Args) << "DWARFv3 or greater";
+    else if (!RawTriple.isArch64Bit())
+      D.Diag(diag::err_drv_argument_only_allowed_with)
+          << DwarfFormatArg->getAsString(Args) << "64 bit architecture";
+    else if (!RawTriple.isOSBinFormatELF())
+      D.Diag(diag::err_drv_argument_only_allowed_with)
+          << DwarfFormatArg->getAsString(Args) << "ELF platforms";
+  }
+
+  if (DwarfFormatArg)
+    DwarfFormatArg->render(Args, CmdArgs);
+
   RenderDebugInfoCompressionArgs(Args, CmdArgs, D, TC);
 }
 
