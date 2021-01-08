@@ -1611,11 +1611,11 @@ TEST(LocateSymbol, NearbyIdentifier) {
 
 TEST(FindImplementations, Inheritance) {
   llvm::StringRef Test = R"cpp(
-    struct Base {
+    struct $0^Base {
       virtual void F$1^oo();
       void C$4^oncrete();
     };
-    struct Child1 : Base {
+    struct $0[[Child1]] : Base {
       void $1[[Fo$3^o]]() override;
       virtual void B$2^ar();
       void Concrete();  // No implementations for concrete methods.
@@ -1625,7 +1625,7 @@ TEST(FindImplementations, Inheritance) {
       void $2[[Bar]]() override;
     };
     void FromReference() {
-      Base* B;
+      $0^Base* B;
       B->Fo$1^o();
       B->C$4^oncrete();
       &Base::Fo$1^o;
@@ -1633,12 +1633,16 @@ TEST(FindImplementations, Inheritance) {
       C1->B$2^ar();
       C1->Fo$3^o();
     }
+    // CRTP should work.
+    template<typename T>
+    struct $5^TemplateBase {};
+    struct $5[[Child3]] : public TemplateBase<Child3> {};
   )cpp";
 
   Annotations Code(Test);
   auto TU = TestTU::withCode(Code.code());
   auto AST = TU.build();
-  for (const std::string &Label : {"1", "2", "3", "4"}) {
+  for (StringRef Label : {"0", "1", "2", "3", "4", "5"}) {
     for (const auto &Point : Code.points(Label)) {
       EXPECT_THAT(findImplementations(AST, Point, TU.index().get()),
                   UnorderedPointwise(DeclRange(), Code.ranges(Label)))
