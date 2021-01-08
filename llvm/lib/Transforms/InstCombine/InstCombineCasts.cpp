@@ -2523,7 +2523,7 @@ Instruction *InstCombinerImpl::optimizeBitCastFromPhi(CastInst &CI,
         if (BCI == &CI)
           RetVal = I;
       } else if (auto *PHI = dyn_cast<PHINode>(V)) {
-        assert(OldPhiNodes.count(PHI) > 0);
+        assert(OldPhiNodes.contains(PHI));
         (void) PHI;
       } else {
         llvm_unreachable("all uses should be handled");

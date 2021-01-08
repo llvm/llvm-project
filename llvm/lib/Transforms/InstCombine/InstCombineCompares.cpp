@@ -502,7 +502,7 @@ static bool canRewriteGEPAsOffset(Value *Start, Value *Base,
 
       Value *V = WorkList.back();
 
-      if (Explored.count(V) != 0) {
+      if (Explored.contains(V)) {
         WorkList.pop_back();
         continue;
       }
