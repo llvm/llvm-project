@@ -66,7 +66,6 @@ public:
   static constexpr const char *MacroName = "OPTION_WITH_MARSHALLING";
   const Record &R;
   bool ShouldAlwaysEmit;
-  StringRef MacroPrefix;
   StringRef KeyPath;
   StringRef DefaultValue;
   StringRef NormalizedValuesScope;
@@ -100,10 +99,6 @@ struct SimpleEnumValueTable {
       "static const SimpleEnumValueTable SimpleEnumValueTables[] = ";
 
   MarshallingInfo(const Record &R) : R(R) {}
-
-  std::string getMacroName() const {
-    return (MacroPrefix + MarshallingInfo::MacroName).str();
-  }
 
   void emit(raw_ostream &OS) const {
     write_cstring(OS, StringRef(getOptionSpelling(R)));
@@ -168,7 +163,6 @@ static MarshallingInfo createMarshallingInfo(const Record &R) {
   MarshallingInfo Ret(R);
 
   Ret.ShouldAlwaysEmit = R.getValueAsBit("ShouldAlwaysEmit");
-  Ret.MacroPrefix = R.getValueAsString("MacroPrefix");
   Ret.KeyPath = R.getValueAsString("KeyPath");
   Ret.DefaultValue = R.getValueAsString("DefaultValue");
   Ret.NormalizedValuesScope = R.getValueAsString("NormalizedValuesScope");
@@ -430,13 +424,13 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
     MarshallingInfos.push_back(createMarshallingInfo(*R));
 
   for (const auto &MI : MarshallingInfos) {
-    OS << "#ifdef " << MI.getMacroName() << "\n";
-    OS << MI.getMacroName() << "(";
+    OS << "#ifdef " << MarshallingInfo::MacroName << "\n";
+    OS << MarshallingInfo::MacroName << "(";
     WriteOptRecordFields(OS, MI.R);
     OS << ", ";
     MI.emit(OS);
     OS << ")\n";
-    OS << "#endif // " << MI.getMacroName() << "\n";
+    OS << "#endif // " << MarshallingInfo::MacroName << "\n";
   }
 
   OS << "\n";
