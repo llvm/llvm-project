@@ -134,26 +134,9 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
   // Branch - See if we are conditional jumping on constant
   if (auto *BI = dyn_cast<BranchInst>(T)) {
     if (BI->isUnconditional()) return false;  // Can't optimize uncond branch
+
     BasicBlock *Dest1 = BI->getSuccessor(0);
     BasicBlock *Dest2 = BI->getSuccessor(1);
-
-    if (auto *Cond = dyn_cast<ConstantInt>(BI->getCondition())) {
-      // Are we branching on constant?
-      // YES.  Change to unconditional branch...
-      BasicBlock *Destination = Cond->getZExtValue() ? Dest1 : Dest2;
-      BasicBlock *OldDest     = Cond->getZExtValue() ? Dest2 : Dest1;
-
-      // Let the basic block know that we are letting go of it.  Based on this,
-      // it will adjust it's PHI nodes.
-      OldDest->removePredecessor(BB);
-
-      // Replace the conditional branch with an unconditional one.
-      Builder.CreateBr(Destination);
-      BI->eraseFromParent();
-      if (DTU)
-        DTU->applyUpdatesPermissive({{DominatorTree::Delete, BB, OldDest}});
-      return true;
-    }
 
     if (Dest2 == Dest1) {       // Conditional branch to same location?
       // This branch matches something like this:
@@ -172,6 +155,25 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
         RecursivelyDeleteTriviallyDeadInstructions(Cond, TLI);
       return true;
     }
+
+    if (auto *Cond = dyn_cast<ConstantInt>(BI->getCondition())) {
+      // Are we branching on constant?
+      // YES.  Change to unconditional branch...
+      BasicBlock *Destination = Cond->getZExtValue() ? Dest1 : Dest2;
+      BasicBlock *OldDest = Cond->getZExtValue() ? Dest2 : Dest1;
+
+      // Let the basic block know that we are letting go of it.  Based on this,
+      // it will adjust it's PHI nodes.
+      OldDest->removePredecessor(BB);
+
+      // Replace the conditional branch with an unconditional one.
+      Builder.CreateBr(Destination);
+      BI->eraseFromParent();
+      if (DTU)
+        DTU->applyUpdates({{DominatorTree::Delete, BB, OldDest}});
+      return true;
+    }
+
     return false;
   }
 
