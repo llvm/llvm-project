@@ -869,17 +869,17 @@ private:
   llvm::SmallVector<FpPragmaStackEntry, 2> FpPragmaStack;
   llvm::SmallVector<std::string, 2> FpPragmaStrings;
 
-  /// The pragma pack state.
-  Optional<unsigned> PragmaPackCurrentValue;
-  SourceLocation PragmaPackCurrentLocation;
-  struct PragmaPackStackEntry {
+  /// The pragma align/pack state.
+  Optional<unsigned> PragmaAlignPackCurrentValue;
+  SourceLocation PragmaAlignPackCurrentLocation;
+  struct PragmaAlignPackStackEntry {
     unsigned Value;
     SourceLocation Location;
     SourceLocation PushLocation;
     StringRef SlotLabel;
   };
-  llvm::SmallVector<PragmaPackStackEntry, 2> PragmaPackStack;
-  llvm::SmallVector<std::string, 2> PragmaPackStrings;
+  llvm::SmallVector<PragmaAlignPackStackEntry, 2> PragmaAlignPackStack;
+  llvm::SmallVector<std::string, 2> PragmaAlignPackStrings;
 
   /// The OpenCL extension settings.
   OpenCLOptions OpenCLExtensions;

@@ -164,7 +164,7 @@ void MergedIndex::relations(
 
 // Returns true if \p L is (strictly) preferred to \p R (e.g. by file paths). If
 // neither is preferred, this returns false.
-bool prefer(const SymbolLocation &L, const SymbolLocation &R) {
+static bool prefer(const SymbolLocation &L, const SymbolLocation &R) {
   if (!L)
     return false;
   if (!R)

@@ -47,8 +47,8 @@ namespace tgtok {
 
     // Reserved keywords. ('ElseKW' is named to distinguish it from the
     // existing 'Else' that means the preprocessor #else.)
-    Bit, Bits, Class, Code, Dag, Def, Defm, Defset, Defvar, ElseKW, FalseKW,
-    Field, Foreach, If, In, Include, Int, Let, List, MultiClass,
+    Assert, Bit, Bits, Class, Code, Dag, Def, Defm, Defset, Defvar, ElseKW,
+    FalseKW, Field, Foreach, If, In, Include, Int, Let, List, MultiClass,
     String, Then, TrueKW,
 
     // Bang operators.

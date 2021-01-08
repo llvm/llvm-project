@@ -590,13 +590,12 @@ LogicalResult ModuleTranslation::convertOmpWsLoop(Operation &opInst,
 
   // Delegate actual loop construction to the OpenMP IRBuilder.
   // TODO: this currently assumes WsLoop is semantically similar to SCF loop,
-  // i.e. it has a positive step, uses signed integer semantics, and its upper
-  // bound is not included. Reconsider this code when WsLoop clearly supports
-  // more cases.
+  // i.e. it has a positive step, uses signed integer semantics. Reconsider
+  // this code when WsLoop clearly supports more cases.
   llvm::BasicBlock *insertBlock = builder.GetInsertBlock();
   llvm::CanonicalLoopInfo *loopInfo = ompBuilder->createCanonicalLoop(
       ompLoc, bodyGen, lowerBound, upperBound, step, /*IsSigned=*/true,
-      /*InclusiveStop=*/false);
+      /*InclusiveStop=*/loop.inclusive());
   if (failed(bodyGenStatus))
     return failure();
 
@@ -606,9 +605,8 @@ LogicalResult ModuleTranslation::convertOmpWsLoop(Operation &opInst,
   // Put them at the start of the current block for now.
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP(
       insertBlock, insertBlock->getFirstInsertionPt());
-  loopInfo = ompBuilder->createStaticWorkshareLoop(
-      ompLoc, loopInfo, allocaIP,
-      !loop.nowait().hasValue() || loop.nowait().getValue(), chunk);
+  loopInfo = ompBuilder->createStaticWorkshareLoop(ompLoc, loopInfo, allocaIP,
+                                                   !loop.nowait(), chunk);
 
   // Continue building IR after the loop.
   builder.restoreIP(loopInfo->getAfterIP());

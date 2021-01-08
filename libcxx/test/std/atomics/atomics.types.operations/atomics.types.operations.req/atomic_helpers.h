@@ -106,13 +106,14 @@ struct TestEachAtomicType {
     void operator()() const {
         TestEachIntegralType<TestFunctor>()();
         TestFunctor<UserAtomicType>()();
-#ifndef __APPLE__
         /*
-            These aren't going to be lock-free,
-            so some libatomic.a is necessary.
+            Note: These aren't going to be lock-free,
+            so some libatomic.a is necessary. To handle
+            the case where the support functions are
+            missing, all tests that use this file should add:
+            XFAIL: !non-lockfree-atomics
         */
         TestFunctor<LargeUserAtomicType>()();
-#endif
 /*
     Enable these once we have P0528 
     

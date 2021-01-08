@@ -42,7 +42,16 @@ std::string LoopHintAttr::getValueString(const PrintingPolicy &Policy) const {
   OS << "(";
   if (state == Numeric)
     value->printPretty(OS, nullptr, Policy);
-  else if (state == Enable)
+  else if (state == FixedWidth || state == ScalableWidth) {
+    if (value) {
+      value->printPretty(OS, nullptr, Policy);
+      if (state == ScalableWidth)
+        OS << ", scalable";
+    } else if (state == ScalableWidth)
+      OS << "scalable";
+    else
+      OS << "fixed";
+  } else if (state == Enable)
     OS << "enable";
   else if (state == Full)
     OS << "full";

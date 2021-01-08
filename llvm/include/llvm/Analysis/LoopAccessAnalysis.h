@@ -205,6 +205,12 @@ public:
     return Status == VectorizationSafetyStatus::Safe;
   }
 
+  /// Return true if the number of elements that are safe to operate on
+  /// simultaneously is not bounded.
+  bool isSafeForAnyVectorWidth() const {
+    return MaxSafeVectorWidthInBits == UINT_MAX;
+  }
+
   /// The maximum number of bytes of a vector register we can vectorize
   /// the accesses safely with.
   uint64_t getMaxSafeDepDistBytes() { return MaxSafeDepDistBytes; }

@@ -337,6 +337,20 @@ static void RemoveAllCppKeywords(IdentifierTable &idents) {
 #include "clang/Basic/TokenKinds.def"
 }
 
+/// Configures Clang diagnostics for the expression parser.
+static void SetupDefaultClangDiagnostics(CompilerInstance &compiler) {
+  // List of Clang warning groups that are not useful when parsing expressions.
+  const std::vector<const char *> groupsToIgnore = {
+      "unused-value",
+      "odr",
+  };
+  for (const char *group : groupsToIgnore) {
+    compiler.getDiagnostics().setSeverityForGroup(
+        clang::diag::Flavor::WarningOrError, group,
+        clang::diag::Severity::Ignored, SourceLocation());
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Implementation of ClangExpressionParser
 //===----------------------------------------------------------------------===//
@@ -637,12 +651,7 @@ ClangExpressionParser::ClangExpressionParser(
     m_compiler->getCodeGenOpts().setDebugInfo(codegenoptions::NoDebugInfo);
 
   // Disable some warnings.
-  m_compiler->getDiagnostics().setSeverityForGroup(
-      clang::diag::Flavor::WarningOrError, "unused-value",
-      clang::diag::Severity::Ignored, SourceLocation());
-  m_compiler->getDiagnostics().setSeverityForGroup(
-      clang::diag::Flavor::WarningOrError, "odr",
-      clang::diag::Severity::Ignored, SourceLocation());
+  SetupDefaultClangDiagnostics(*m_compiler);
 
   // Inform the target of the language options
   //
