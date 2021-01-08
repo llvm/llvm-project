@@ -17,6 +17,19 @@ def : Pat<(i64 (int_ve_vl_pack_f32a ADDRrii:$addr)),
                              !add(32, 64)), 0,
                       (HI32 (i64 0x0000000100000001))))>;
 
+// The extract/insert patterns.
+def : Pat<(v256i1 (int_ve_vl_extract_vm512u v512i1:$vm)),
+          (EXTRACT_SUBREG v512i1:$vm, sub_vm_even)>;
+
+def : Pat<(v256i1 (int_ve_vl_extract_vm512l v512i1:$vm)),
+          (EXTRACT_SUBREG v512i1:$vm, sub_vm_odd)>;
+
+def : Pat<(v512i1 (int_ve_vl_insert_vm512u v512i1:$vmx, v256i1:$vmy)),
+          (INSERT_SUBREG v512i1:$vmx, v256i1:$vmy, sub_vm_even)>;
+
+def : Pat<(v512i1 (int_ve_vl_insert_vm512l v512i1:$vmx, v256i1:$vmy)),
+          (INSERT_SUBREG v512i1:$vmx, v256i1:$vmy, sub_vm_odd)>;
+
 // LSV patterns.
 def : Pat<(int_ve_vl_lsv_vvss v256f64:$pt, i32:$sy, i64:$sz),
           (LSVrr_v (i2l i32:$sy), i64:$sz, v256f64:$pt)>;
