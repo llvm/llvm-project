@@ -117,10 +117,17 @@ std::unique_ptr<Module> llvm::CloneModule(
   //
   for (Module::const_global_iterator I = M.global_begin(), E = M.global_end();
        I != E; ++I) {
+    GlobalVariable *GV = cast<GlobalVariable>(VMap[&*I]);
+
+    SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
+    I->getAllMetadata(MDs);
+    for (auto MD : MDs)
+      GV->addMetadata(MD.first,
+                      *MapMetadata(MD.second, VMap, RF_MoveDistinctMDs));
+
     if (I->isDeclaration())
       continue;
 
-    GlobalVariable *GV = cast<GlobalVariable>(VMap[&*I]);
     if (!ShouldCloneDefinition(&*I)) {
       // Skip after setting the correct linkage for an external reference.
       GV->setLinkage(GlobalValue::ExternalLinkage);
@@ -128,12 +135,6 @@ std::unique_ptr<Module> llvm::CloneModule(
     }
     if (I->hasInitializer())
       GV->setInitializer(MapValue(I->getInitializer(), VMap));
-
-    SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
-    I->getAllMetadata(MDs);
-    for (auto MD : MDs)
-      GV->addMetadata(MD.first,
-                      *MapMetadata(MD.second, VMap, RF_MoveDistinctMDs));
 
     copyComdat(GV, &*I);
   }
