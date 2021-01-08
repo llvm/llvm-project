@@ -1079,60 +1079,12 @@ bool MachineLICMBase::IsLICMCandidate(MachineInstr &I) {
 }
 
 /// Returns true if the instruction is loop invariant.
-/// I.e., all virtual register operands are defined outside of the loop,
-/// physical registers aren't accessed explicitly, and there are no side
-/// effects that aren't captured by the operands or other flags.
 bool MachineLICMBase::IsLoopInvariantInst(MachineInstr &I) {
   if (!IsLICMCandidate(I)) {
     LLVM_DEBUG(dbgs() << "LICM: Instruction not a LICM candidate\n");
     return false;
   }
-
-  // The instruction is loop invariant if all of its operands are.
-  for (const MachineOperand &MO : I.operands()) {
-    if (!MO.isReg())
-      continue;
-
-    Register Reg = MO.getReg();
-    if (Reg == 0) continue;
-
-    // Don't hoist an instruction that uses or defines a physical register.
-    if (Register::isPhysicalRegister(Reg)) {
-      if (MO.isUse()) {
-        // If the physreg has no defs anywhere, it's just an ambient register
-        // and we can freely move its uses. Alternatively, if it's allocatable,
-        // it could get allocated to something with a def during allocation.
-        // However, if the physreg is known to always be caller saved/restored
-        // then this use is safe to hoist.
-        if (!MRI->isConstantPhysReg(Reg) &&
-            !(TRI->isCallerPreservedPhysReg(Reg.asMCReg(), *I.getMF())))
-          return false;
-        // Otherwise it's safe to move.
-        continue;
-      } else if (!MO.isDead()) {
-        // A def that isn't dead. We can't move it.
-        return false;
-      } else if (CurLoop->getHeader()->isLiveIn(Reg)) {
-        // If the reg is live into the loop, we can't hoist an instruction
-        // which would clobber it.
-        return false;
-      }
-    }
-
-    if (!MO.isUse())
-      continue;
-
-    assert(MRI->getVRegDef(Reg) &&
-           "Machine instr not mapped for this vreg?!");
-
-    // If the loop contains the definition of an operand, then the instruction
-    // isn't loop invariant.
-    if (CurLoop->contains(MRI->getVRegDef(Reg)))
-      return false;
-  }
-
-  // If we got this far, the instruction is loop invariant!
-  return true;
+  return CurLoop->isLoopInvariant(I);
 }
 
 /// Return true if the specified instruction is used by a phi node and hoisting
