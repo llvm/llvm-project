@@ -88,6 +88,42 @@ TEST(VPInstructionTest, moveAfter) {
   EXPECT_EQ(I3->getParent(), I4->getParent());
 }
 
+TEST(VPInstructionTest, moveBefore) {
+  VPInstruction *I1 = new VPInstruction(0, {});
+  VPInstruction *I2 = new VPInstruction(1, {});
+  VPInstruction *I3 = new VPInstruction(2, {});
+
+  VPBasicBlock VPBB1;
+  VPBB1.appendRecipe(I1);
+  VPBB1.appendRecipe(I2);
+  VPBB1.appendRecipe(I3);
+
+  I1->moveBefore(VPBB1, I3->getIterator());
+
+  CHECK_ITERATOR(VPBB1, I2, I1, I3);
+
+  VPInstruction *I4 = new VPInstruction(4, {});
+  VPInstruction *I5 = new VPInstruction(5, {});
+  VPBasicBlock VPBB2;
+  VPBB2.appendRecipe(I4);
+  VPBB2.appendRecipe(I5);
+
+  I3->moveBefore(VPBB2, I4->getIterator());
+
+  CHECK_ITERATOR(VPBB1, I2, I1);
+  CHECK_ITERATOR(VPBB2, I3, I4, I5);
+  EXPECT_EQ(I3->getParent(), I4->getParent());
+
+  VPBasicBlock VPBB3;
+
+  I4->moveBefore(VPBB3, VPBB3.end());
+
+  CHECK_ITERATOR(VPBB1, I2, I1);
+  CHECK_ITERATOR(VPBB2, I3, I5);
+  CHECK_ITERATOR(VPBB3, I4);
+  EXPECT_EQ(&VPBB3, I4->getParent());
+}
+
 TEST(VPInstructionTest, setOperand) {
   VPValue *VPV1 = new VPValue();
   VPValue *VPV2 = new VPValue();
