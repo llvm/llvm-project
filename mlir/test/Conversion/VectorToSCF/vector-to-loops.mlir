@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -convert-vector-to-scf -split-input-file | FileCheck %s
-// RUN: mlir-opt %s -convert-vector-to-scf=full-unroll=true -split-input-file | FileCheck %s --check-prefix=FULL-UNROLL
+// RUN: mlir-opt %s -convert-vector-to-scf -split-input-file -allow-unregistered-dialect | FileCheck %s
+// RUN: mlir-opt %s -convert-vector-to-scf=full-unroll=true -split-input-file -allow-unregistered-dialect | FileCheck %s --check-prefix=FULL-UNROLL
 
 // CHECK-LABEL: func @materialize_read_1d() {
 func @materialize_read_1d() {
@@ -22,6 +22,9 @@ func @materialize_read_1d() {
       // CHECK-NEXT: else
       // CHECK-NEXT: vector.insertelement
       // CHECK-NEXT: store
+      // Add a dummy use to prevent dead code elimination from removing transfer
+      // read ops.
+      "dummy_use"(%f1, %f2, %f3, %f4) : (vector<4xf32>, vector<4xf32>, vector<4xf32>, vector<4xf32>) -> ()
     }
   }
   return
@@ -41,6 +44,9 @@ func @materialize_read_1d_partially_specialized(%dyn1 : index, %dyn2 : index, %d
             %f1 = vector.transfer_read %A[%i0, %i1, %i2, %i3, %i4], %f0 {permutation_map = affine_map<(d0, d1, d2, d3, d4) -> (d3)>} : memref<7x?x?x42x?xf32>, vector<4xf32>
             %i3p1 = affine.apply affine_map<(d0) -> (d0 + 1)> (%i3)
             %f2 = vector.transfer_read %A[%i0, %i1, %i2, %i3p1, %i4], %f0 {permutation_map = affine_map<(d0, d1, d2, d3, d4) -> (d3)>} : memref<7x?x?x42x?xf32>, vector<4xf32>
+            // Add a dummy use to prevent dead code elimination from removing
+            // transfer read ops.
+            "dummy_use"(%f1, %f2) : (vector<4xf32>, vector<4xf32>) -> ()
           }
         }
       }
@@ -88,6 +94,9 @@ func @materialize_read(%M: index, %N: index, %O: index, %P: index) {
   // CHECK-NEXT:              }
   // CHECK-NEXT:            }
   // CHECK-NEXT:          }
+  // CHECK-NEXT:          %[[ALLOC_CAST:.*]] = vector.type_cast %[[ALLOC]] : memref<5x4xvector<3xf32>> to memref<vector<5x4x3xf32>>
+  // CHECK-NEXT:          %[[LD:.*]] = load %[[ALLOC_CAST]][] : memref<vector<5x4x3xf32>>
+  // CHECK-NEXT:          "dummy_use"(%[[LD]]) : (vector<5x4x3xf32>) -> ()
   // CHECK-NEXT:        }
   // CHECK-NEXT:      }
   // CHECK-NEXT:    }
@@ -104,6 +113,9 @@ func @materialize_read(%M: index, %N: index, %O: index, %P: index) {
       affine.for %i2 = 0 to %O {
         affine.for %i3 = 0 to %P step 5 {
           %f = vector.transfer_read %A[%i0, %i1, %i2, %i3], %f0 {permutation_map = affine_map<(d0, d1, d2, d3) -> (d3, 0, d0)>} : memref<?x?x?x?xf32>, vector<5x4x3xf32>
+          // Add a dummy use to prevent dead code elimination from removing
+          // transfer read ops.
+          "dummy_use"(%f) : (vector<5x4x3xf32>) -> ()
         }
       }
     }
