@@ -1,7 +1,7 @@
-; RUN: opt -aa-pipeline=basic-aa -passes=dot-ddg -dot-ddg-filename-prefix=out.full < %s 2>&1 > /dev/null
-; RUN: FileCheck %s -input-file=out.full.foo.for.body.dot
-; RUN: opt -aa-pipeline=basic-aa -passes=dot-ddg -dot-ddg-filename-prefix=out.only -dot-ddg-only < %s 2>&1 > /dev/null
-; RUN: FileCheck %s -input-file=out.only.foo.for.body.dot -check-prefix=CHECK-ONLY
+; RUN: opt -aa-pipeline=basic-aa -passes=dot-ddg -dot-ddg-filename-prefix=%t < %s 2>&1 > /dev/null
+; RUN: FileCheck %s -input-file=%t.foo.for.body.dot
+; RUN: opt -aa-pipeline=basic-aa -passes=dot-ddg -dot-ddg-filename-prefix=%t -dot-ddg-only < %s 2>&1 > /dev/null
+; RUN: FileCheck %s -input-file=%t.foo.for.body.dot -check-prefix=CHECK-ONLY
 
 target datalayout = "e-m:e-i64:64-n32:64-v256:256:256-v512:512:512"
 
