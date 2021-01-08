@@ -680,4 +680,19 @@ TEST_F(CommandLineTest, PresentAndNotImpliedGenerated) {
   ASSERT_THAT(GeneratedArgs, Contains(StrEq("-cl-mad-enable")));
   ASSERT_THAT(GeneratedArgs, Contains(StrEq("-menable-unsafe-fp-math")));
 }
+
+// Diagnostic option.
+
+TEST_F(CommandLineTest, DiagnosticOptionPresent) {
+  const char *Args[] = {"-verify=xyz"};
+
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
+
+  ASSERT_EQ(Invocation.getDiagnosticOpts().VerifyPrefixes,
+            std::vector<std::string>({"xyz"}));
+
+  Invocation.generateCC1CommandLine(GeneratedArgs, *this);
+
+  ASSERT_THAT(GeneratedArgs, ContainsN(StrEq("-verify=xyz"), 1));
+}
 } // anonymous namespace

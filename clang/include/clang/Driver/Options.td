@@ -241,6 +241,8 @@ def mno_mpx : Flag<["-"], "mno-mpx">, Group<clang_ignored_legacy_options_Group>;
 def clang_ignored_gcc_optimization_f_Group : OptionGroup<
   "<clang_ignored_gcc_optimization_f_Group>">, Group<f_Group>, Flags<[Ignored]>;
 
+class IsDiag { string MacroPrefix = "DIAG_"; }
+
 // A boolean option which is opt-in in CC1. The positive option exists in CC1 and
 // Args.hasArg(OPT_ffoo) is used to check that the flag is enabled.
 // This is useful if the option is usually disabled.
@@ -762,7 +764,7 @@ def Wp_COMMA : CommaJoined<["-"], "Wp,">,
 def Wundef_prefix_EQ : CommaJoined<["-"], "Wundef-prefix=">, Group<W_value_Group>,
   Flags<[CC1Option, CoreOption, HelpHidden]>, MetaVarName<"<arg>">,
   HelpText<"Enable warnings for undefined macros with a prefix in the comma separated list <arg>">,
-  MarshallingInfoStringVector<"DiagnosticOpts->UndefPrefixes">;
+  MarshallingInfoStringVector<"UndefPrefixes">, IsDiag;
 def Wwrite_strings : Flag<["-"], "Wwrite-strings">, Group<W_Group>, Flags<[CC1Option, HelpHidden]>;
 def Wno_write_strings : Flag<["-"], "Wno-write-strings">, Group<W_Group>, Flags<[CC1Option, HelpHidden]>;
 def W_Joined : Joined<["-"], "W">, Group<W_Group>, Flags<[CC1Option, CoreOption]>,
@@ -1210,7 +1212,9 @@ defm borland_extensions : BoolFOption<"borland-extensions",
 def fbuiltin : Flag<["-"], "fbuiltin">, Group<f_Group>, Flags<[CoreOption]>;
 def fbuiltin_module_map : Flag <["-"], "fbuiltin-module-map">, Group<f_Group>,
   Flags<[NoXarchOption]>, HelpText<"Load the clang builtins module map file.">;
-defm caret_diagnostics : OptOutFFlag<"caret-diagnostics", "", "">;
+defm caret_diagnostics : BoolFOption<"caret-diagnostics",
+  "ShowCarets", DefaultsToTrue,
+  ChangedBy<NegFlag>, ResetBy<PosFlag>>, IsDiag;
 def fclang_abi_compat_EQ : Joined<["-"], "fclang-abi-compat=">, Group<f_clang_Group>,
   Flags<[CC1Option]>, MetaVarName<"<version>">, Values<"<major>.<minor>,latest">,
   HelpText<"Attempt to match the ABI of Clang <version>">;
@@ -1222,7 +1226,7 @@ def fdiagnostics_color : Flag<["-"], "fdiagnostics-color">, Group<f_Group>,
 def fdiagnostics_color_EQ : Joined<["-"], "fdiagnostics-color=">, Group<f_Group>;
 def fansi_escape_codes : Flag<["-"], "fansi-escape-codes">, Group<f_Group>,
   Flags<[CoreOption, CC1Option]>, HelpText<"Use ANSI escape codes for diagnostics">,
-  MarshallingInfoFlag<"DiagnosticOpts->UseANSIEscapeCodes">;
+  MarshallingInfoFlag<"UseANSIEscapeCodes">, IsDiag;
 def fcomment_block_commands : CommaJoined<["-"], "fcomment-block-commands=">, Group<f_clang_Group>, Flags<[CC1Option]>,
   HelpText<"Treat each comma separated argument in <arg> as a documentation comment block command">,
   MetaVarName<"<arg>">, MarshallingInfoStringVector<"LangOpts->CommentOpts.BlockCommandNames">;
@@ -1275,11 +1279,16 @@ def fdebug_pass_structure : Flag<["-"], "fdebug-pass-structure">, Group<f_Group>
 def fdepfile_entry : Joined<["-"], "fdepfile-entry=">,
     Group<f_clang_Group>, Flags<[CC1Option]>;
 def fdiagnostics_fixit_info : Flag<["-"], "fdiagnostics-fixit-info">, Group<f_clang_Group>;
+def fno_diagnostics_fixit_info : Flag<["-"], "fno-diagnostics-fixit-info">, Group<f_Group>,
+  Flags<[CC1Option]>, HelpText<"Do not include fixit information in diagnostics">,
+  MarshallingInfoNegativeFlag<"ShowFixits">, IsDiag;
 def fdiagnostics_parseable_fixits : Flag<["-"], "fdiagnostics-parseable-fixits">, Group<f_clang_Group>,
-    Flags<[CoreOption, CC1Option]>, HelpText<"Print fix-its in machine parseable form">;
+    Flags<[CoreOption, CC1Option]>, HelpText<"Print fix-its in machine parseable form">,
+    MarshallingInfoFlag<"ShowParseableFixits">, IsDiag;
 def fdiagnostics_print_source_range_info : Flag<["-"], "fdiagnostics-print-source-range-info">,
     Group<f_clang_Group>,  Flags<[CC1Option]>,
-    HelpText<"Print source range spans in numeric form">;
+    HelpText<"Print source range spans in numeric form">,
+    MarshallingInfoFlag<"ShowSourceRanges">, IsDiag;
 defm diagnostics_show_hotness : BoolFOption<"diagnostics-show-hotness",
   "CodeGenOpts.DiagnosticsWithHotness", DefaultsToFalse,
   ChangedBy<PosFlag, [], "Enable profile hotness information in diagnostic line">,
@@ -1288,15 +1297,19 @@ def fdiagnostics_hotness_threshold_EQ : Joined<["-"], "fdiagnostics-hotness-thre
     Group<f_Group>, Flags<[CC1Option]>, MetaVarName<"<value>">,
     HelpText<"Prevent optimization remarks from being output if they do not have at least this profile count. "
     "Use 'auto' to apply the threshold from profile summary">;
-def fdiagnostics_show_option : Flag<["-"], "fdiagnostics-show-option">, Group<f_Group>,
-    HelpText<"Print option name with mappable diagnostics">;
-def fdiagnostics_show_note_include_stack : Flag<["-"], "fdiagnostics-show-note-include-stack">,
-    Group<f_Group>, Flags<[CC1Option]>, HelpText<"Display include stacks for diagnostic notes">;
+defm diagnostics_show_option : BoolFOption<"diagnostics-show-option",
+    "ShowOptionNames", DefaultsToTrue,
+    ChangedBy<NegFlag>, ResetBy<PosFlag, [], "Print option name with mappable diagnostics">>, IsDiag;
+defm diagnostics_show_note_include_stack : BoolFOption<"diagnostics-show-note-include-stack",
+    "ShowNoteIncludeStack", DefaultsToFalse,
+    ChangedBy<PosFlag, [], "Display include stacks for diagnostic notes">,
+    ResetBy<NegFlag>, BothFlags<[CC1Option]>>, IsDiag;
 def fdiagnostics_format_EQ : Joined<["-"], "fdiagnostics-format=">, Group<f_clang_Group>;
 def fdiagnostics_show_category_EQ : Joined<["-"], "fdiagnostics-show-category=">, Group<f_clang_Group>;
 def fdiagnostics_show_template_tree : Flag<["-"], "fdiagnostics-show-template-tree">,
     Group<f_Group>, Flags<[CC1Option]>,
-    HelpText<"Print a template comparison tree for differing templates">;
+    HelpText<"Print a template comparison tree for differing templates">,
+    MarshallingInfoFlag<"ShowTemplateTree">, IsDiag;
 def fdeclspec : Flag<["-"], "fdeclspec">, Group<f_clang_Group>,
   HelpText<"Allow __declspec as a keyword">, Flags<[CC1Option]>;
 def fdiscard_value_names : Flag<["-"], "fdiscard-value-names">, Group<f_clang_Group>,
@@ -1316,7 +1329,8 @@ defm elide_constructors : BoolFOption<"elide-constructors",
   ResetBy<PosFlag>>;
 def fno_elide_type : Flag<["-"], "fno-elide-type">, Group<f_Group>,
     Flags<[CC1Option]>,
-    HelpText<"Do not elide types when printing diagnostics">;
+    HelpText<"Do not elide types when printing diagnostics">,
+    MarshallingInfoNegativeFlag<"ElideType">, IsDiag;
 def feliminate_unused_debug_symbols : Flag<["-"], "feliminate-unused-debug-symbols">, Group<f_Group>;
 defm eliminate_unused_debug_types : OptOutFFlag<"eliminate-unused-debug-types",
   "Do not emit ", "Emit ", " debug info for defined but unused types">;
@@ -1820,7 +1834,8 @@ defm merge_all_constants : BoolFOption<"merge-all-constants",
   ChangedBy<PosFlag, [CoreOption], "Allow">, ResetBy<NegFlag, [], "Disallow">,
   BothFlags<[], " merging of constants">>;
 def fmessage_length_EQ : Joined<["-"], "fmessage-length=">, Group<f_Group>, Flags<[CC1Option]>,
-  HelpText<"Format message diagnostics so that they fit within N columns">;
+  HelpText<"Format message diagnostics so that they fit within N columns">,
+  MarshallingInfoStringInt<"MessageLength">, IsDiag;
 def fms_extensions : Flag<["-"], "fms-extensions">, Group<f_Group>, Flags<[CC1Option, CoreOption]>,
   HelpText<"Accept some non-standard constructs supported by the Microsoft compiler">;
 def fms_compatibility : Flag<["-"], "fms-compatibility">, Group<f_Group>, Flags<[CC1Option, CoreOption]>,
@@ -1987,11 +2002,6 @@ def fno_common : Flag<["-"], "fno-common">, Group<f_Group>, Flags<[CC1Option]>,
     HelpText<"Compile common globals like normal definitions">;
 def fno_cxx_modules : Flag <["-"], "fno-cxx-modules">, Group<f_Group>,
   Flags<[NoXarchOption]>;
-def fno_diagnostics_fixit_info : Flag<["-"], "fno-diagnostics-fixit-info">, Group<f_Group>,
-  Flags<[CC1Option]>, HelpText<"Do not include fixit information in diagnostics">;
-def fno_diagnostics_show_option : Flag<["-"], "fno-diagnostics-show-option">, Group<f_Group>, Flags<[CC1Option]>;
-def fno_diagnostics_show_note_include_stack : Flag<["-"], "fno-diagnostics-show-note-include-stack">,
-    Flags<[CC1Option]>, Group<f_Group>;
 def fdigraphs : Flag<["-"], "fdigraphs">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Enable alternative token representations '<:', ':>', '<%', '%>', '%:', '%:%:' (default)">;
 def fno_digraphs : Flag<["-"], "fno-digraphs">, Group<f_Group>, Flags<[CC1Option]>,
@@ -2039,10 +2049,9 @@ def fno_omit_frame_pointer : Flag<["-"], "fno-omit-frame-pointer">, Group<f_Grou
 def fno_operator_names : Flag<["-"], "fno-operator-names">, Group<f_Group>,
   HelpText<"Do not treat C++ operator name keywords as synonyms for operators">,
   Flags<[CC1Option]>;
-def fno_show_source_location : Flag<["-"], "fno-show-source-location">, Group<f_Group>,
-  Flags<[CC1Option]>, HelpText<"Do not include source location information with diagnostics">;
 def fdiagnostics_absolute_paths : Flag<["-"], "fdiagnostics-absolute-paths">, Group<f_Group>,
-  Flags<[CC1Option, CoreOption]>, HelpText<"Print absolute paths in diagnostics">;
+  Flags<[CC1Option, CoreOption]>, HelpText<"Print absolute paths in diagnostics">,
+  MarshallingInfoFlag<"AbsolutePath">, IsDiag;
 def fno_stack_protector : Flag<["-"], "fno-stack-protector">, Group<f_Group>,
   HelpText<"Disable the use of stack protectors">;
 def fno_strict_aliasing : Flag<["-"], "fno-strict-aliasing">, Group<f_Group>,
@@ -2253,9 +2262,17 @@ def fno_short_wchar : Flag<["-"], "fno-short-wchar">, Group<f_Group>,
   HelpText<"Force wchar_t to be an unsigned int">;
 def fshow_overloads_EQ : Joined<["-"], "fshow-overloads=">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Which overload candidates to show when overload resolution fails: "
-           "best|all; defaults to all">, Values<"best,all">;
-defm show_column : OptOutFFlag<"show-column", "", "Do not include column number on diagnostics">;
-def fshow_source_location : Flag<["-"], "fshow-source-location">, Group<f_Group>;
+           "best|all; defaults to all">, Values<"best,all">,
+  NormalizedValues<["Ovl_Best", "Ovl_All"]>,
+  MarshallingInfoString<"ShowOverloads", "Ovl_All">, AutoNormalizeEnum, IsDiag;
+defm show_column : BoolFOption<"show-column",
+  "ShowColumn", DefaultsToTrue,
+  ChangedBy<NegFlag, [], "Do not include column number on diagnostics">,
+  ResetBy<PosFlag>>, IsDiag;
+defm show_source_location : BoolFOption<"show-source-location",
+  "ShowLocation", DefaultsToTrue,
+  ChangedBy<NegFlag, [], "Do not include source location information with diagnostics">,
+  ResetBy<PosFlag>>, IsDiag;
 defm spell_checking : BoolFOption<"spell-checking",
   "LangOpts->SpellChecking", DefaultsToTrue,
   ChangedBy<NegFlag, [], "Disable spell-checking">, ResetBy<PosFlag>>;
@@ -3406,8 +3423,10 @@ def o : JoinedOrSeparate<["-"], "o">, Flags<[NoXarchOption, RenderAsInput,
   MarshallingInfoString<"FrontendOpts.OutputFile">;
 def pagezero__size : JoinedOrSeparate<["-"], "pagezero_size">;
 def pass_exit_codes : Flag<["-", "--"], "pass-exit-codes">, Flags<[Unsupported]>;
-def pedantic_errors : Flag<["-", "--"], "pedantic-errors">, Group<pedantic_Group>, Flags<[CC1Option]>;
-def pedantic : Flag<["-", "--"], "pedantic">, Group<pedantic_Group>, Flags<[CC1Option]>;
+def pedantic_errors : Flag<["-", "--"], "pedantic-errors">, Group<pedantic_Group>, Flags<[CC1Option]>,
+  MarshallingInfoFlag<"PedanticErrors">, IsDiag;
+def pedantic : Flag<["-", "--"], "pedantic">, Group<pedantic_Group>, Flags<[CC1Option]>,
+  MarshallingInfoFlag<"Pedantic">, IsDiag;
 def pg : Flag<["-"], "pg">, HelpText<"Enable mcount instrumentation">, Flags<[CC1Option]>,
   MarshallingInfoFlag<"CodeGenOpts.InstrumentForProfiling">;
 def pipe : Flag<["-", "--"], "pipe">,
@@ -3575,7 +3594,8 @@ def weak__library : Separate<["-"], "weak_library">, Flags<[LinkerInput]>;
 def weak__reference__mismatches : Separate<["-"], "weak_reference_mismatches">;
 def whatsloaded : Flag<["-"], "whatsloaded">;
 def whyload : Flag<["-"], "whyload">;
-def w : Flag<["-"], "w">, HelpText<"Suppress all warnings">, Flags<[CC1Option]>;
+def w : Flag<["-"], "w">, HelpText<"Suppress all warnings">, Flags<[CC1Option]>,
+  MarshallingInfoFlag<"IgnoreWarnings">, IsDiag;
 def x : JoinedOrSeparate<["-"], "x">, Flags<[NoXarchOption,CC1Option]>,
   HelpText<"Treat subsequent input files as having type <language>">,
   MetaVarName<"<language>">;
@@ -4713,37 +4733,50 @@ def show_includes : Flag<["--"], "show-includes">,
 //===----------------------------------------------------------------------===//
 
 def diagnostic_log_file : Separate<["-"], "diagnostic-log-file">,
-  HelpText<"Filename (or -) to log diagnostics to">;
+  HelpText<"Filename (or -) to log diagnostics to">,
+  MarshallingInfoString<"DiagnosticLogFile">, IsDiag;
 def diagnostic_serialized_file : Separate<["-"], "serialize-diagnostic-file">,
   MetaVarName<"<filename>">,
   HelpText<"File for serializing diagnostics in a binary format">;
 
 def fdiagnostics_format : Separate<["-"], "fdiagnostics-format">,
-  HelpText<"Change diagnostic formatting to match IDE and command line tools">, Values<"clang,msvc,msvc-fallback,vi">;
+  HelpText<"Change diagnostic formatting to match IDE and command line tools">, Values<"clang,msvc,msvc-fallback,vi">,
+  NormalizedValuesScope<"DiagnosticOptions">, NormalizedValues<["Clang", "MSVC", "MSVC", "Vi"]>,
+  MarshallingInfoString<"Format", "Clang">, AutoNormalizeEnum, IsDiag;
 def fdiagnostics_show_category : Separate<["-"], "fdiagnostics-show-category">,
-  HelpText<"Print diagnostic category">, Values<"none,id,name">;
+  HelpText<"Print diagnostic category">, Values<"none,id,name">,
+  NormalizedValues<["0", "1", "2"]>,
+  MarshallingInfoString<"ShowCategories", "0">, AutoNormalizeEnum, IsDiag;
 def fno_diagnostics_use_presumed_location : Flag<["-"], "fno-diagnostics-use-presumed-location">,
-  HelpText<"Ignore #line directives when displaying diagnostic locations">;
+  HelpText<"Ignore #line directives when displaying diagnostic locations">,
+  MarshallingInfoNegativeFlag<"ShowPresumedLoc">, IsDiag;
 def ftabstop : Separate<["-"], "ftabstop">, MetaVarName<"<N>">,
-  HelpText<"Set the tab stop distance.">;
+  HelpText<"Set the tab stop distance.">,
+  MarshallingInfoStringInt<"TabStop", "DiagnosticOptions::DefaultTabStop">, IsDiag;
 def ferror_limit : Separate<["-"], "ferror-limit">, MetaVarName<"<N>">,
-  HelpText<"Set the maximum number of errors to emit before stopping (0 = no limit).">;
+  HelpText<"Set the maximum number of errors to emit before stopping (0 = no limit).">,
+  MarshallingInfoStringInt<"ErrorLimit">, IsDiag;
 def fmacro_backtrace_limit : Separate<["-"], "fmacro-backtrace-limit">, MetaVarName<"<N>">,
-  HelpText<"Set the maximum number of entries to print in a macro expansion backtrace (0 = no limit).">;
+  HelpText<"Set the maximum number of entries to print in a macro expansion backtrace (0 = no limit).">,
+  MarshallingInfoStringInt<"MacroBacktraceLimit", "DiagnosticOptions::DefaultMacroBacktraceLimit">, IsDiag;
 def ftemplate_backtrace_limit : Separate<["-"], "ftemplate-backtrace-limit">, MetaVarName<"<N>">,
-  HelpText<"Set the maximum number of entries to print in a template instantiation backtrace (0 = no limit).">;
+  HelpText<"Set the maximum number of entries to print in a template instantiation backtrace (0 = no limit).">,
+  MarshallingInfoStringInt<"TemplateBacktraceLimit", "DiagnosticOptions::DefaultTemplateBacktraceLimit">, IsDiag;
 def fconstexpr_backtrace_limit : Separate<["-"], "fconstexpr-backtrace-limit">, MetaVarName<"<N>">,
-  HelpText<"Set the maximum number of entries to print in a constexpr evaluation backtrace (0 = no limit).">;
+  HelpText<"Set the maximum number of entries to print in a constexpr evaluation backtrace (0 = no limit).">,
+  MarshallingInfoStringInt<"ConstexprBacktraceLimit", "DiagnosticOptions::DefaultConstexprBacktraceLimit">, IsDiag;
 def fspell_checking_limit : Separate<["-"], "fspell-checking-limit">, MetaVarName<"<N>">,
-  HelpText<"Set the maximum number of times to perform spell checking on unrecognized identifiers (0 = no limit).">;
+  HelpText<"Set the maximum number of times to perform spell checking on unrecognized identifiers (0 = no limit).">,
+  MarshallingInfoStringInt<"SpellCheckingLimit", "DiagnosticOptions::DefaultSpellCheckingLimit">, IsDiag;
 def fcaret_diagnostics_max_lines :
   Separate<["-"], "fcaret-diagnostics-max-lines">, MetaVarName<"<N>">,
-  HelpText<"Set the maximum number of source lines to show in a caret diagnostic">;
+  HelpText<"Set the maximum number of source lines to show in a caret diagnostic">,
+  MarshallingInfoStringInt<"SnippetLineLimit", "DiagnosticOptions::DefaultSnippetLineLimit">, IsDiag;
 def verify_EQ : CommaJoined<["-"], "verify=">,
   MetaVarName<"<prefixes>">,
   HelpText<"Verify diagnostic output using comment directives that start with"
            " prefixes in the comma-separated sequence <prefixes>">,
-  MarshallingInfoStringVector<"DiagnosticOpts->VerifyPrefixes">;
+  MarshallingInfoStringVector<"VerifyPrefixes">, IsDiag;
 def verify : Flag<["-"], "verify">,
   HelpText<"Equivalent to -verify=expected">;
 def verify_ignore_unexpected : Flag<["-"], "verify-ignore-unexpected">,
@@ -4751,7 +4784,8 @@ def verify_ignore_unexpected : Flag<["-"], "verify-ignore-unexpected">,
 def verify_ignore_unexpected_EQ : CommaJoined<["-"], "verify-ignore-unexpected=">,
   HelpText<"Ignore unexpected diagnostic messages">;
 def Wno_rewrite_macros : Flag<["-"], "Wno-rewrite-macros">,
-  HelpText<"Silence ObjC rewriting warnings">;
+  HelpText<"Silence ObjC rewriting warnings">,
+  MarshallingInfoFlag<"NoRewriteMacros">, IsDiag;
 
 //===----------------------------------------------------------------------===//
 // Frontend Options
