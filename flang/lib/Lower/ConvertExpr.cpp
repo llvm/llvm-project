@@ -2024,11 +2024,11 @@ public:
                 if (auto optLo = t.lower())
                   trips.push_back(fir::getBase(asScalar(*optLo)));
                 else
-                  TODO("lbound, dependent type?");
+                  TODO("lbound");
                 if (auto optUp = t.upper())
                   trips.push_back(fir::getBase(asScalar(*optUp)));
                 else
-                  TODO("ubound, dependent type?");
+                  TODO("ubound");
                 trips.push_back(fir::getBase(asScalar(t.stride())));
               },
               [&](const Fortran::evaluate::IndirectSubscriptIntegerExpr &ie) {

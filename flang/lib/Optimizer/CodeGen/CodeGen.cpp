@@ -1159,12 +1159,12 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::XEmboxOp> {
         xbox, operands, rewriter, rank, xbox.lenParamOffset());
     // Generate the triples in the dims field of the descriptor
     auto i64Ty = mlir::LLVM::LLVMIntegerType::get(xbox.getContext(), 64);
-    assert(xbox.shapeOperands().size() && "must have a shape");
+    assert(xbox.shape().size() && "must have a shape");
     unsigned shapeOff = 1;
-    bool hasShift = xbox.shiftOperands().size();
-    unsigned shiftOff = shapeOff + xbox.shapeOperands().size();
-    bool hasSlice = xbox.sliceOperands().size();
-    unsigned sliceOff = shiftOff + xbox.shiftOperands().size();
+    bool hasShift = xbox.shift().size();
+    unsigned shiftOff = shapeOff + xbox.shape().size();
+    bool hasSlice = xbox.slice().size();
+    unsigned sliceOff = shiftOff + xbox.shift().size();
     auto loc = xbox.getLoc();
     mlir::Value zero = genConstantIndex(loc, i64Ty, rewriter, 0);
     mlir::Value one = genConstantIndex(loc, i64Ty, rewriter, 1);
@@ -1439,17 +1439,14 @@ struct XArrayCoorOpConversion
             mlir::ConversionPatternRewriter &rewriter) const override {
     auto loc = coor.getLoc();
     auto rank = coor.getRank();
-    assert(coor.indexOperands().size() == rank);
-    assert(coor.shapeOperands().size() == 0 ||
-           coor.shapeOperands().size() == rank);
-    assert(coor.shiftOperands().size() == 0 ||
-           coor.shiftOperands().size() == rank);
-    assert(coor.sliceOperands().size() == 0 ||
-           coor.sliceOperands().size() == 3 * rank);
-    auto indexOps = coor.indexOperands().begin();
-    auto shapeOps = coor.shapeOperands().begin();
-    auto shiftOps = coor.shiftOperands().begin();
-    auto sliceOps = coor.sliceOperands().begin();
+    assert(coor.indices().size() == rank);
+    assert(coor.shape().size() == 0 || coor.shape().size() == rank);
+    assert(coor.shift().size() == 0 || coor.shift().size() == rank);
+    assert(coor.slice().size() == 0 || coor.slice().size() == 3 * rank);
+    auto indexOps = coor.indices().begin();
+    auto shapeOps = coor.shape().begin();
+    auto shiftOps = coor.shift().begin();
+    auto sliceOps = coor.slice().begin();
     auto idxTy = lowerTy().indexType();
     mlir::Value base;
     if (coor.subcomponent().empty()) {
@@ -1470,8 +1467,8 @@ struct XArrayCoorOpConversion
     mlir::Value one = genConstantIndex(loc, idxTy, rewriter, 1);
     auto prevExt = one;
     mlir::Value off = genConstantIndex(loc, idxTy, rewriter, 0);
-    const bool isShifted = coor.shiftOperands().size() != 0;
-    const bool isSliced = coor.sliceOperands().size() != 0;
+    const bool isShifted = coor.shift().size() != 0;
+    const bool isSliced = coor.slice().size() != 0;
     for (unsigned i = 0; i < rank;
          ++i, ++indexOps, ++shapeOps, ++shiftOps, ++sliceOps) {
       auto index = asType(loc, rewriter, idxTy, *indexOps);
