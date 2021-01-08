@@ -73,8 +73,36 @@ def MxList {
   list<LMULInfo> m = [V_MF8, V_MF4, V_MF2, V_M1, V_M2, V_M4, V_M8];
 }
 
+class MxSet<int eew> {
+  list<LMULInfo> m = !cond(!eq(eew, 8) : [V_MF8, V_MF4, V_MF2, V_M1, V_M2, V_M4, V_M8],
+                           !eq(eew, 16) : [V_MF4, V_MF2, V_M1, V_M2, V_M4, V_M8],
+                           !eq(eew, 32) : [V_MF2, V_M1, V_M2, V_M4, V_M8],
+                           !eq(eew, 64) : [V_M1, V_M2, V_M4, V_M8]);
+}
+
 class shift_amount<int num> {
   int val = !if(!eq(num, 1), 0, !add(1, shift_amount<!srl(num, 1)>.val));
+}
+
+class octuple_from_str<string MX> {
+  int ret = !cond(!eq(MX, "MF8") : 1,
+                        !eq(MX, "MF4") : 2,
+                        !eq(MX, "MF2") : 4,
+                        !eq(MX, "M1") : 8,
+                        !eq(MX, "M2") : 16,
+                        !eq(MX, "M4") : 32,
+                        !eq(MX, "M8") : 64);
+}
+
+class octuple_to_str<int octuple> {
+  string ret = !if(!eq(octuple, 1), "MF8",
+                   !if(!eq(octuple, 2), "MF4",
+                   !if(!eq(octuple, 4), "MF2",
+                   !if(!eq(octuple, 8), "M1",
+                   !if(!eq(octuple, 16), "M2",
+                   !if(!eq(octuple, 32), "M4",
+                   !if(!eq(octuple, 64), "M8",
+                   "NoDef")))))));
 }
 
 // Output pattern for X0 used to represent VLMAX in the pseudo instructions.
@@ -826,6 +854,74 @@ class VPseudoTernaryNoMask<VReg RetClass,
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
+class VPseudoAMOWDNoMask<VReg RetClass,
+                         VReg Op1Class> :
+        Pseudo<(outs GetVRegNoV0<RetClass>.R:$vd_wd),
+               (ins GPR:$rs1,
+                    Op1Class:$vs2,
+                    GetVRegNoV0<RetClass>.R:$vd,
+                    GPR:$vl, ixlenimm:$sew), []>,
+        RISCVVPseudo {
+  let mayLoad = 1;
+  let mayStore = 1;
+  let hasSideEffects = 1;
+  let usesCustomInserter = 1;
+  let Constraints = "$vd_wd = $vd";
+  let Uses = [VL, VTYPE];
+  let HasVLOp = 1;
+  let HasSEWOp = 1;
+  let HasDummyMask = 1;
+  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
+}
+
+class VPseudoAMOWDMask<VReg RetClass,
+                       VReg Op1Class> :
+        Pseudo<(outs GetVRegNoV0<RetClass>.R:$vd_wd),
+               (ins GPR:$rs1,
+                    Op1Class:$vs2,
+                    GetVRegNoV0<RetClass>.R:$vd,
+                    VMaskOp:$vm, GPR:$vl, ixlenimm:$sew), []>,
+        RISCVVPseudo {
+  let mayLoad = 1;
+  let mayStore = 1;
+  let hasSideEffects = 1;
+  let usesCustomInserter = 1;
+  let Constraints = "$vd_wd = $vd";
+  let Uses = [VL, VTYPE];
+  let HasVLOp = 1;
+  let HasSEWOp = 1;
+  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
+}
+
+multiclass VPseudoAMOEI<int eew> {
+  // Standard scalar AMO supports 32, 64, and 128 Mem data bits,
+  // and in the base vector "V" extension, only SEW up to ELEN = max(XLEN, FLEN)
+  // are required to be supported.
+  // therefore only [32, 64] is allowed here.
+  foreach sew = [32, 64] in {
+    foreach lmul = MxSet<sew>.m in {
+      defvar octuple_lmul = octuple_from_str<lmul.MX>.ret;
+      // Calculate emul = eew * lmul / sew
+      defvar octuple_emul = !srl(!mul(eew, octuple_lmul), shift_amount<sew>.val);
+      if !and(!ge(octuple_emul, 1), !le(octuple_emul, 64)) then {
+        defvar emulMX = octuple_to_str<octuple_emul>.ret;
+        defvar lmulMX = octuple_to_str<octuple_lmul>.ret;
+        defvar emul= !cast<LMULInfo>("V_" # emulMX);
+        defvar lmul = !cast<LMULInfo>("V_" # lmulMX);
+        let VLMul = lmul.value in {
+          def "_WD_" # lmulMX # "_" # emulMX : VPseudoAMOWDNoMask<lmul.vrclass, emul.vrclass>;
+          def "_WD_" # lmulMX # "_" # emulMX # "_MASK" : VPseudoAMOWDMask<lmul.vrclass, emul.vrclass>;
+        }
+      }
+    }
+  }
+}
+
+multiclass VPseudoAMO {
+  foreach eew = EEWList in
+    defm "EI" # eew : VPseudoAMOEI<eew>;
+}
+
 multiclass VPseudoUSLoad {
   foreach lmul = MxList.m in {
     defvar LInfo = lmul.MX;
@@ -1507,6 +1603,42 @@ class VPatTernaryMask<string intrinsic,
                     op2_kind:$rs2,
                     (mask_type V0),
                     (NoX0 GPR:$vl), sew)>;
+
+class VPatAMOWDNoMask<string intrinsic_name,
+                    string inst,
+                    ValueType result_type,
+                    ValueType op1_type,
+                    int sew,
+                    LMULInfo vlmul,
+                    LMULInfo emul,
+                    VReg op1_reg_class> :
+  Pat<(result_type (!cast<Intrinsic>(intrinsic_name)
+                    GPR:$rs1,
+                    (op1_type op1_reg_class:$vs2),
+                    (result_type vlmul.vrclass:$vd),
+                    (XLenVT GPR:$vl))),
+                   (!cast<Instruction>(inst # "_WD_" # vlmul.MX # "_" # emul.MX)
+                    $rs1, $vs2, $vd,
+                    (NoX0 GPR:$vl), sew)>;
+
+class VPatAMOWDMask<string intrinsic_name,
+                    string inst,
+                    ValueType result_type,
+                    ValueType op1_type,
+                    ValueType mask_type,
+                    int sew,
+                    LMULInfo vlmul,
+                    LMULInfo emul,
+                    VReg op1_reg_class> :
+  Pat<(result_type (!cast<Intrinsic>(intrinsic_name # "_mask")
+                    GPR:$rs1,
+                    (op1_type op1_reg_class:$vs2),
+                    (result_type vlmul.vrclass:$vd),
+                    (mask_type V0),
+                    (XLenVT GPR:$vl))),
+                   (!cast<Instruction>(inst # "_WD_" # vlmul.MX # "_" # emul.MX # "_MASK")
+                    $rs1, $vs2, $vd,
+                    (mask_type V0), (NoX0 GPR:$vl), sew)>;
 
 multiclass VPatUSLoad<string intrinsic,
                       string inst,
@@ -2383,6 +2515,44 @@ multiclass VPatConversionVF_WF <string intrinsic, string instruction> {
   }
 }
 
+multiclass VPatAMOWD<string intrinsic,
+                     string inst,
+                     ValueType result_type,
+                     ValueType offset_type,
+                     ValueType mask_type,
+                     int sew,
+                     LMULInfo vlmul,
+                     LMULInfo emul,
+                     VReg op1_reg_class>
+{
+  def : VPatAMOWDNoMask<intrinsic, inst, result_type, offset_type,
+                        sew, vlmul, emul, op1_reg_class>;
+  def : VPatAMOWDMask<intrinsic, inst, result_type, offset_type,
+                      mask_type, sew, vlmul, emul, op1_reg_class>;
+}
+
+multiclass VPatAMOV_WD<string intrinsic,
+                       string inst,
+                       list<VTypeInfo> vtilist> {
+  foreach eew = EEWList in {
+    foreach vti = vtilist in {
+      if !or(!eq(vti.SEW, 32), !eq(vti.SEW, 64)) then {
+        defvar octuple_lmul = octuple_from_str<vti.LMul.MX>.ret;
+        // Calculate emul = eew * lmul / sew
+        defvar octuple_emul = !srl(!mul(eew, octuple_lmul), shift_amount<vti.SEW>.val);
+        if !and(!ge(octuple_emul, 1), !le(octuple_emul, 64)) then {
+          defvar emulMX = octuple_to_str<octuple_emul>.ret;
+          defvar offsetVti = !cast<VTypeInfo>("VI" # eew # emulMX);
+          defvar inst_ei = inst # "EI" # eew;
+          defm : VPatAMOWD<intrinsic, inst_ei,
+                           vti.Vector, offsetVti.Vector,
+                           vti.Mask, vti.SEW, vti.LMul, offsetVti.LMul, offsetVti.RegClass>;
+        }
+      }
+    }
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Pseudo instructions
 //===----------------------------------------------------------------------===//
@@ -2458,6 +2628,19 @@ let hasSideEffects = 1, Defs = [VL] in
 foreach eew = EEWList in {
   defm PseudoVLE # eew # FF : VPseudoUSLoad;
 }
+
+//===----------------------------------------------------------------------===//
+// 8. Vector AMO Operations
+//===----------------------------------------------------------------------===//
+defm PseudoVAMOSWAP : VPseudoAMO;
+defm PseudoVAMOADD : VPseudoAMO;
+defm PseudoVAMOXOR : VPseudoAMO;
+defm PseudoVAMOAND : VPseudoAMO;
+defm PseudoVAMOOR : VPseudoAMO;
+defm PseudoVAMOMIN : VPseudoAMO;
+defm PseudoVAMOMAX : VPseudoAMO;
+defm PseudoVAMOMINU : VPseudoAMO;
+defm PseudoVAMOMAXU : VPseudoAMO;
 
 //===----------------------------------------------------------------------===//
 // 12. Vector Integer Arithmetic Instructions
@@ -2983,13 +3166,7 @@ foreach vti = AllVectors in
 foreach vti = AllVectors in
 foreach eew = EEWList in {
   defvar vlmul = vti.LMul;
-  defvar octuple_lmul = !cond(!eq(vti.LMul.MX, "MF8") : 1,
-                        !eq(vti.LMul.MX, "MF4") : 2,
-                        !eq(vti.LMul.MX, "MF2") : 4,
-                        !eq(vti.LMul.MX, "M1") : 8,
-                        !eq(vti.LMul.MX, "M2") : 16,
-                        !eq(vti.LMul.MX, "M4") : 32,
-                        !eq(vti.LMul.MX, "M8") : 64);
+  defvar octuple_lmul = octuple_from_str<vti.LMul.MX>.ret;
   defvar log_sew = shift_amount<vti.SEW>.val;
   // The data vector register group has EEW=SEW, EMUL=LMUL, while the offset
   // vector register group has EEW encoding in the instruction and EMUL=(EEW/SEW)*LMUL.
@@ -2998,13 +3175,7 @@ foreach eew = EEWList in {
   // legal octuple elmul should be more than 0 and less than equal 64
   if !gt(octuple_elmul, 0) then {
     if !le(octuple_elmul, 64) then {
-       defvar log_elmul = shift_amount<octuple_elmul>.val;
-       // 0, 1, 2 -> V_MF8 ~ V_MF2
-       // 3, 4, 5, 6 -> V_M1 ~ V_M8
-       defvar elmul_str = !if(!eq(log_elmul, 0), "MF8",
-                          !if(!eq(log_elmul, 1), "MF4",
-                          !if(!eq(log_elmul, 2), "MF2",
-                          "M" # !cast<string>(!shl(1, !add(log_elmul, -3))))));
+       defvar elmul_str = octuple_to_str<octuple_elmul>.ret;
        defvar elmul =!cast<LMULInfo>("V_" # elmul_str);
        defvar idx_vti = !cast<VTypeInfo>("VI" # eew # elmul_str);
 
@@ -3023,12 +3194,32 @@ foreach eew = EEWList in {
     }
   }
 }
+} // Predicates = [HasStdExtV]
 
+//===----------------------------------------------------------------------===//
+// 8. Vector AMO Operations
+//===----------------------------------------------------------------------===//
+let Predicates = [HasStdExtZvamo] in {
+  defm "" : VPatAMOV_WD<"int_riscv_vamoswap", "PseudoVAMOSWAP", AllIntegerVectors>;
+  defm "" : VPatAMOV_WD<"int_riscv_vamoadd", "PseudoVAMOADD", AllIntegerVectors>;
+  defm "" : VPatAMOV_WD<"int_riscv_vamoxor", "PseudoVAMOXOR", AllIntegerVectors>;
+  defm "" : VPatAMOV_WD<"int_riscv_vamoand", "PseudoVAMOAND", AllIntegerVectors>;
+  defm "" : VPatAMOV_WD<"int_riscv_vamoor", "PseudoVAMOOR", AllIntegerVectors>;
+  defm "" : VPatAMOV_WD<"int_riscv_vamomin", "PseudoVAMOMIN", AllIntegerVectors>;
+  defm "" : VPatAMOV_WD<"int_riscv_vamomax", "PseudoVAMOMAX", AllIntegerVectors>;
+  defm "" : VPatAMOV_WD<"int_riscv_vamominu", "PseudoVAMOMINU", AllIntegerVectors>;
+  defm "" : VPatAMOV_WD<"int_riscv_vamomaxu", "PseudoVAMOMAXU", AllIntegerVectors>;
+} // Predicates = [HasStdExtZvamo]
+
+let Predicates = [HasStdExtZvamo, HasStdExtF] in {
+  defm "" : VPatAMOV_WD<"int_riscv_vamoswap", "PseudoVAMOSWAP", AllFloatVectors>;
+} // Predicates = [HasStdExtZvamo, HasStdExtF]
 
 //===----------------------------------------------------------------------===//
 // 12. Vector Integer Arithmetic Instructions
 //===----------------------------------------------------------------------===//
 
+let Predicates = [HasStdExtV] in {
 //===----------------------------------------------------------------------===//
 // 12.1. Vector Single-Width Integer Add and Subtract
 //===----------------------------------------------------------------------===//
