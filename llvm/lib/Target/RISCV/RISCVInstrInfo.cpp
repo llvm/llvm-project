@@ -1112,3 +1112,43 @@ MachineInstr *RISCVInstrInfo::commuteInstructionImpl(MachineInstr &MI,
 #undef CASE_VFMA_SPLATS
 #undef CASE_VFMA_OPCODE_LMULS
 #undef CASE_VFMA_OPCODE_COMMON
+
+Register RISCVInstrInfo::getVLENFactoredAmount(MachineFunction &MF,
+                                               MachineBasicBlock &MBB,
+                                               MachineBasicBlock::iterator II,
+                                               int64_t Amount) const {
+  assert(Amount > 0 && "There is no need to get VLEN scaled value.");
+  assert(Amount % 8 == 0 &&
+         "Reserve the stack by the multiple of one vector size.");
+
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  const RISCVInstrInfo *TII = MF.getSubtarget<RISCVSubtarget>().getInstrInfo();
+  DebugLoc DL = II->getDebugLoc();
+  int64_t NumOfVReg = Amount / 8;
+
+  Register SizeOfVector = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+  BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENB), SizeOfVector);
+  Register FactorRegister = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+  assert(isInt<12>(NumOfVReg) &&
+         "Expect the number of vector registers within 12-bits.");
+  if (isPowerOf2_32(NumOfVReg)) {
+    uint32_t ShiftAmount = Log2_32(NumOfVReg);
+    if (ShiftAmount == 0)
+      return SizeOfVector;
+    BuildMI(MBB, II, DL, TII->get(RISCV::SLLI), FactorRegister)
+        .addReg(SizeOfVector, RegState::Kill)
+        .addImm(ShiftAmount);
+  } else {
+    Register VN = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+    BuildMI(MBB, II, DL, TII->get(RISCV::ADDI), VN)
+        .addReg(RISCV::X0)
+        .addImm(NumOfVReg);
+    assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtM() &&
+           "M-extension must be enabled to calculate the vscaled size/offset.");
+    BuildMI(MBB, II, DL, TII->get(RISCV::MUL), FactorRegister)
+        .addReg(SizeOfVector, RegState::Kill)
+        .addReg(VN, RegState::Kill);
+  }
+
+  return FactorRegister;
+}
