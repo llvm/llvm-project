@@ -54,6 +54,7 @@
 #include "PassDetail.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/StandardOps/Utils/Utils.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
@@ -394,13 +395,8 @@ private:
 
     // Extract information about dynamically shaped types by
     // extracting their dynamic dimensions.
-    SmallVector<Value, 4> dynamicOperands;
-    for (auto shapeElement : llvm::enumerate(memRefType.getShape())) {
-      if (!ShapedType::isDynamic(shapeElement.value()))
-        continue;
-      dynamicOperands.push_back(builder.create<DimOp>(
-          terminator->getLoc(), sourceValue, shapeElement.index()));
-    }
+    auto dynamicOperands =
+        getDynOperands(terminator->getLoc(), sourceValue, builder);
 
     // TODO: provide a generic interface to create dialect-specific
     // Alloc and CopyOp nodes.
