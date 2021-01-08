@@ -231,6 +231,17 @@ MlirType mlirMemRefTypeGet(MlirType elementType, intptr_t rank,
                       unwrap(elementType), maps, memorySpace));
 }
 
+MlirType mlirMemRefTypeGetChecked(MlirType elementType, intptr_t rank,
+                                  const int64_t *shape, intptr_t numMaps,
+                                  MlirAffineMap const *affineMaps,
+                                  unsigned memorySpace, MlirLocation loc) {
+  SmallVector<AffineMap, 1> maps;
+  (void)unwrapList(numMaps, affineMaps, maps);
+  return wrap(MemRefType::getChecked(
+      unwrap(loc), llvm::makeArrayRef(shape, static_cast<size_t>(rank)),
+      unwrap(elementType), maps, memorySpace));
+}
+
 MlirType mlirMemRefTypeContiguousGet(MlirType elementType, intptr_t rank,
                                      const int64_t *shape,
                                      unsigned memorySpace) {
