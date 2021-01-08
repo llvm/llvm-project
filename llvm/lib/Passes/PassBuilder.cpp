@@ -459,14 +459,6 @@ PassBuilder::PassBuilder(bool DebugLogging, TargetMachine *TM,
 #define CGSCC_ANALYSIS(NAME, CREATE_PASS)                                      \
   PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);
 #include "PassRegistry.def"
-    for (const auto &P : printBeforePasses()) {
-      if (!PIC->hasPassName(P))
-        report_fatal_error("unrecognized pass name: " + P);
-    }
-    for (const auto &P : printAfterPasses()) {
-      if (!PIC->hasPassName(P))
-        report_fatal_error("unrecognized pass name: " + P);
-    }
   }
 }
 
