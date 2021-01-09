@@ -2699,8 +2699,8 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
 
   using namespace swift::Demangle;
   Demangler dem;
-  auto *canonical_type = DemangleCanonicalType(dem, type);
-  auto kind = canonical_type->getKind();
+  auto *node = DemangleCanonicalType(dem, type);
+  auto kind = node->getKind();
 
   switch (kind) {
   case Node::Kind::Structure: {
@@ -2708,7 +2708,7 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
     // In rare instances, a Swift `Structure` wraps an ObjC enum. An example is
     // `$sSo16ComparisonResultVD`. For now, use `SwiftASTContext` to handle
     // these enum structs.
-    auto resolved = ResolveTypeAlias(m_swift_ast_context, dem, canonical_type, true);
+    auto resolved = ResolveTypeAlias(m_swift_ast_context, dem, node, true);
     if (auto clang_type = std::get<CompilerType>(resolved)) {
       bool is_signed;
       if (!clang_type.IsEnumerationType(is_signed))
@@ -2778,14 +2778,12 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
     case Node::Kind::Unmanaged:
     case Node::Kind::Unowned:
     case Node::Kind::Weak:
-      return GetReferentType(dem, canonical_type)
+      return GetReferentType(dem, node)
           .DumpTypeValue(s, format, data, data_offset, data_byte_size,
                          bitfield_bit_size, bitfield_bit_offset, exe_scope,
                          is_base_class);
     default:
-      // Temporary
-      llvm::dbgs() << "DumpTypeValue: " << getNodeKindString(kind) << "\n";
-      assert(false && "Unhandled Demangle node kind");
+      return false;
     }
   };
 
