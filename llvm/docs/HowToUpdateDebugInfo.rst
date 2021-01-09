@@ -59,6 +59,17 @@ Examples of transformations for which this rule *does not* apply include:
 * LICM. E.g., if an instruction is moved from the loop body to the preheader,
   the rule for :ref:`dropping locations<WhenToDropLocation>` applies.
 
+In addition to the rule above, a transformation should also preserve the debug
+location of an instruction that is moved between basic blocks, if the
+destination block already contains an instruction with an identical debug
+location.
+
+Examples of transformations that should follow this rule include:
+
+* Moving instructions between basic blocks. For example, if instruction ``I1``
+  in ``BB1`` is moved before ``I2`` in ``BB2``, the source location of ``I1``
+  can be preserved if it has the same source location as ``I2``.
+
 .. _WhenToMergeLocation:
 
 When to merge instruction locations
