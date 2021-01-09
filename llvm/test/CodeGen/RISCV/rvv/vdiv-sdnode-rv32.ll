@@ -37,13 +37,9 @@ define <vscale x 1 x i8> @vdiv_vi_nxv1i8_0(<vscale x 1 x i8> %va) {
 }
 
 ; Test V/1 to see if we can optimize it away for scalable vectors.
-; FIXME: We can't.
 define <vscale x 1 x i8> @vdiv_vi_nxv1i8_1(<vscale x 1 x i8> %va) {
 ; CHECK-LABEL: vdiv_vi_nxv1i8_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, zero, 1
-; CHECK-NEXT:    vsetvli a1, zero, e8,mf8,ta,mu
-; CHECK-NEXT:    vdivu.vx v16, v16, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x i8> undef, i8 1, i32 0
   %splat = shufflevector <vscale x 1 x i8> %head, <vscale x 1 x i8> undef, <vscale x 1 x i32> zeroinitializer
@@ -52,13 +48,11 @@ define <vscale x 1 x i8> @vdiv_vi_nxv1i8_1(<vscale x 1 x i8> %va) {
 }
 
 ; Test 0/V to see if we can optimize it away for scalable vectors.
-; FIXME: We can't.
 define <vscale x 1 x i8> @vdiv_iv_nxv1i8_0(<vscale x 1 x i8> %va) {
 ; CHECK-LABEL: vdiv_iv_nxv1i8_0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8,mf8,ta,mu
-; CHECK-NEXT:    vmv.v.i v25, 0
-; CHECK-NEXT:    vdivu.vv v16, v25, v16
+; CHECK-NEXT:    vmv.v.i v16, 0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x i8> undef, i8 0, i32 0
   %splat = shufflevector <vscale x 1 x i8> %head, <vscale x 1 x i8> undef, <vscale x 1 x i32> zeroinitializer
