@@ -15,6 +15,7 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/AffineExpr.h"
+#include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
 
@@ -44,10 +45,9 @@ namespace {
 /// A pattern to convert a linalg.generic op to SPIR-V ops under the condition
 /// that the linalg.generic op is performing reduction with a workload size that
 /// can fit in one workgroup.
-class SingleWorkgroupReduction final
-    : public SPIRVOpLowering<linalg::GenericOp> {
-public:
-  using SPIRVOpLowering<linalg::GenericOp>::SPIRVOpLowering;
+struct SingleWorkgroupReduction final
+    : public OpConversionPattern<linalg::GenericOp> {
+  using OpConversionPattern::OpConversionPattern;
 
   /// Matches the given linalg.generic op as performing reduction and returns
   /// the binary op kind if successful.
@@ -142,9 +142,11 @@ LogicalResult SingleWorkgroupReduction::matchAndRewrite(
 
   // TODO: Load to Workgroup storage class first.
 
+  auto *typeConverter = getTypeConverter<SPIRVTypeConverter>();
+
   // Get the input element accessed by this invocation.
   Value inputElementPtr = spirv::getElementPtr(
-      typeConverter, originalInputType, convertedInput, {x}, loc, rewriter);
+      *typeConverter, originalInputType, convertedInput, {x}, loc, rewriter);
   Value inputElement = rewriter.create<spirv::LoadOp>(loc, inputElementPtr);
 
   // Perform the group reduction operation.
@@ -163,10 +165,10 @@ LogicalResult SingleWorkgroupReduction::matchAndRewrite(
 
   // Get the output element accessed by this reduction.
   Value zero = spirv::ConstantOp::getZero(
-      typeConverter.getIndexType(rewriter.getContext()), loc, rewriter);
+      typeConverter->getIndexType(rewriter.getContext()), loc, rewriter);
   SmallVector<Value, 1> zeroIndices(originalOutputType.getRank(), zero);
   Value outputElementPtr =
-      spirv::getElementPtr(typeConverter, originalOutputType, convertedOutput,
+      spirv::getElementPtr(*typeConverter, originalOutputType, convertedOutput,
                            zeroIndices, loc, rewriter);
 
   // Write out the final reduction result. This should be only conducted by one
@@ -204,5 +206,5 @@ LogicalResult SingleWorkgroupReduction::matchAndRewrite(
 void mlir::populateLinalgToSPIRVPatterns(MLIRContext *context,
                                          SPIRVTypeConverter &typeConverter,
                                          OwningRewritePatternList &patterns) {
-  patterns.insert<SingleWorkgroupReduction>(context, typeConverter);
+  patterns.insert<SingleWorkgroupReduction>(typeConverter, context);
 }
