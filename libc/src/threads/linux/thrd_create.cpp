@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/threads/thrd_create.h"
 #include "config/linux/syscall.h" // For syscall function.
 #include "include/errno.h"        // For E* error values.
 #include "include/sys/mman.h"     // For PROT_* and MAP_* definitions.

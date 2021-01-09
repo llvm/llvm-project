@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/fenv/fetestexcept.h"
 #include "src/__support/common.h"
 #include "utils/FPUtil/FEnv.h"
 

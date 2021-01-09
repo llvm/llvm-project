@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/threads/call_once.h"
 #include "config/linux/syscall.h" // For syscall functions.
 #include "include/sys/syscall.h"  // For syscall numbers.
 #include "include/threads.h"      // For call_once related type definition.

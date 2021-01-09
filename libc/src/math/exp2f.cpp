@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/math/exp2f.h"
 #include "exp_utils.h"
 #include "math_utils.h"
 
