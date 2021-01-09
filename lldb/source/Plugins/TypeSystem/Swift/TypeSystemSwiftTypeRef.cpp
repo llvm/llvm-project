@@ -2788,24 +2788,18 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
     }
   };
 
-  auto result = impl();
-  if (!m_swift_ast_context)
-    return result;
-  auto cmp_type = ReconstructType(type);
-  if (!cmp_type)
-    return result;
-  StreamString cmp_s;
-  bool equivalent =
-      Equivalent(result, m_swift_ast_context->DumpTypeValue(
-                             ReconstructType(type), &cmp_s, format, data,
-                             data_offset, data_byte_size, bitfield_bit_size,
-                             bitfield_bit_offset, exe_scope, is_base_class)) &&
-      Equivalent(ConstString(cmp_s.GetString()),
-                 ConstString(((StreamString *)s)->GetString()));
-  if (!equivalent)
-    llvm::dbgs() << "failing type was " << (const char *)type << "\n";
-  assert(equivalent && "TypeSystemSwiftTypeRef diverges from SwiftASTContext");
-  return result;
+#ifndef NDEBUG
+  StreamString ast_s;
+  auto defer = llvm::make_scope_exit([&] {
+    assert(Equivalent(ConstString(ast_s.GetString()),
+                      ConstString(((StreamString *)s)->GetString())) &&
+           "TypeSystemSwiftTypeRef diverges from SwiftASTContext");
+  });
+#endif
+  VALIDATE_AND_RETURN(impl, DumpTypeValue, type,
+                      (ReconstructType(type), &ast_s, format, data, data_offset,
+                       data_byte_size, bitfield_bit_size, bitfield_bit_offset,
+                       exe_scope, is_base_class));
 }
 
 void TypeSystemSwiftTypeRef::DumpTypeDescription(opaque_compiler_type_t type,
