@@ -75,7 +75,7 @@ static HeaderFileType getOutputType(const opt::InputArgList &args) {
 
 static Optional<std::string>
 findAlongPathsWithExtensions(StringRef name, ArrayRef<StringRef> extensions) {
-  llvm::SmallString<261> base;
+  SmallString<261> base;
   for (StringRef dir : config->librarySearchPaths) {
     base = dir;
     path::append(base, Twine("lib") + name);
@@ -99,7 +99,7 @@ static Optional<std::string> findLibrary(StringRef name) {
 }
 
 static Optional<std::string> findFramework(StringRef name) {
-  llvm::SmallString<260> symlink;
+  SmallString<260> symlink;
   StringRef suffix;
   std::tie(name, suffix) = name.split(",");
   for (StringRef dir : config->frameworkSearchPaths) {
@@ -109,7 +109,7 @@ static Optional<std::string> findFramework(StringRef name) {
     if (!suffix.empty()) {
       // NOTE: we must resolve the symlink before trying the suffixes, because
       // there are no symlinks for the suffixed paths.
-      llvm::SmallString<260> location;
+      SmallString<260> location;
       if (!fs::real_path(symlink, location)) {
         // only append suffix if realpath() succeeds
         Twine suffixed = location + suffix;
@@ -127,11 +127,11 @@ static Optional<std::string> findFramework(StringRef name) {
 
 static TargetInfo *createTargetInfo(opt::InputArgList &args) {
   StringRef arch = args.getLastArgValue(OPT_arch, "x86_64");
-  config->arch = llvm::MachO::getArchitectureFromName(
+  config->arch = MachO::getArchitectureFromName(
       args.getLastArgValue(OPT_arch, arch));
   switch (config->arch) {
-  case llvm::MachO::AK_x86_64:
-  case llvm::MachO::AK_x86_64h:
+  case MachO::AK_x86_64:
+  case MachO::AK_x86_64h:
     return createX86_64TargetInfo();
   default:
     fatal("missing or unsupported -arch " + arch);
@@ -575,7 +575,7 @@ static void handlePlatformVersion(const opt::Arg *arg) {
 static void handleUndefined(const opt::Arg *arg) {
   StringRef treatmentStr = arg->getValue(0);
   config->undefinedSymbolTreatment =
-      llvm::StringSwitch<UndefinedSymbolTreatment>(treatmentStr)
+      StringSwitch<UndefinedSymbolTreatment>(treatmentStr)
           .Case("error", UndefinedSymbolTreatment::error)
           .Case("warning", UndefinedSymbolTreatment::warning)
           .Case("suppress", UndefinedSymbolTreatment::suppress)
@@ -677,7 +677,7 @@ static uint32_t parseDylibVersion(const opt::ArgList& args, unsigned id) {
   return version.rawValue();
 }
 
-bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
+bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
                  raw_ostream &stdoutOS, raw_ostream &stderrOS) {
   lld::stdoutOS = &stdoutOS;
   lld::stderrOS = &stderrOS;
@@ -762,11 +762,11 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     message(getLLDVersion());
     message(StringRef("Library search paths:") +
             (config->librarySearchPaths.size()
-                 ? "\n\t" + llvm::join(config->librarySearchPaths, "\n\t")
+                 ? "\n\t" + join(config->librarySearchPaths, "\n\t")
                  : ""));
     message(StringRef("Framework search paths:") +
             (config->frameworkSearchPaths.size()
-                 ? "\n\t" + llvm::join(config->frameworkSearchPaths, "\n\t")
+                 ? "\n\t" + join(config->frameworkSearchPaths, "\n\t")
                  : ""));
     freeArena();
     return !errorCount();
