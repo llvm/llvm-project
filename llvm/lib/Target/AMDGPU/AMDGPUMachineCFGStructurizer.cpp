@@ -984,11 +984,11 @@ void LinearizedRegion::addMBBs(LinearizedRegion *InnerRegion) {
 }
 
 bool LinearizedRegion::contains(MachineBasicBlock *MBB) {
-  return MBBs.count(MBB) == 1;
+  return MBBs.contains(MBB);
 }
 
 bool LinearizedRegion::isLiveOut(unsigned Reg) {
-  return LiveOuts.count(Reg) == 1;
+  return LiveOuts.contains(Reg);
 }
 
 bool LinearizedRegion::hasNoDef(unsigned Reg, MachineRegisterInfo *MRI) {
