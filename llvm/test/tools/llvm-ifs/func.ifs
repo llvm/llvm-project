@@ -4,6 +4,9 @@
 # RUN: llvm-ifs -action write-bin -o - %s %S/object.ifs | \
 # RUN: llvm-readelf --all - | FileCheck %s --check-prefixes=CHECK-ELF
 
+# RUN: llvm-ifs -action write-bin -o - %s %S/object.ifs -use-interfacestub | \
+# RUN: llvm-readelf --all - | FileCheck %s --check-prefixes=CHECK-ELF
+
 # RUN: llvm-ifs -action write-bin -force-format TBD -o - %s %S/object.ifs | \
 # RUN: FileCheck %s --check-prefixes=CHECK-DARWIN-TBD3
 
