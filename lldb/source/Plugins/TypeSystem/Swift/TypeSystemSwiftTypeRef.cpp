@@ -2709,11 +2709,10 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
     // `$sSo16ComparisonResultVD`. For now, use `SwiftASTContext` to handle
     // these enum structs.
     auto resolved = ResolveTypeAlias(m_swift_ast_context, dem, node, true);
-    if (auto clang_type = std::get<CompilerType>(resolved)) {
-      bool is_signed;
-      if (!clang_type.IsEnumerationType(is_signed))
+    auto clang_type = std::get<CompilerType>(resolved);
+    bool is_signed;
+    if (!clang_type.IsEnumerationType(is_signed))
         break;
-    }
     LLVM_FALLTHROUGH;
   }
   case Node::Kind::Enum:
