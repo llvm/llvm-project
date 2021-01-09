@@ -2703,10 +2703,22 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
   auto kind = canonical_type->getKind();
 
   switch (kind) {
+  case Node::Kind::Structure: {
+    // TODO: Handle ObjC enums masquerading as structs.
+    // In rare instances, a Swift `Structure` wraps an ObjC enum. An example is
+    // `$sSo16ComparisonResultVD`. For now, use `SwiftASTContext` to handle
+    // these enum structs.
+    auto resolved = ResolveTypeAlias(m_swift_ast_context, dem, canonical_type, true);
+    if (auto clang_type = std::get<CompilerType>(resolved)) {
+      bool is_signed;
+      if (!clang_type.IsEnumerationType(is_signed))
+        break;
+    }
+    LLVM_FALLTHROUGH;
+  }
   case Node::Kind::Enum:
   case Node::Kind::BoundGenericEnum:
-    // TODO: To support Enums, an ExecutionContext parameter will have to be
-    // added and callers updated.
+    // TODO: Add support for Enums.
     return m_swift_ast_context->DumpTypeValue(
         ReconstructType(type), s, format, data, data_offset, data_byte_size,
         bitfield_bit_size, bitfield_bit_offset, exe_scope, is_base_class);
@@ -2770,8 +2782,6 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
           .DumpTypeValue(s, format, data, data_offset, data_byte_size,
                          bitfield_bit_size, bitfield_bit_offset, exe_scope,
                          is_base_class);
-    case Node::Kind::Structure:
-      return false;
     default:
       // Temporary
       llvm::dbgs() << "DumpTypeValue: " << getNodeKindString(kind) << "\n";
