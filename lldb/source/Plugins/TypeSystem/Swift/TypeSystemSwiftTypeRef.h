@@ -325,6 +325,9 @@ private:
                              const char *mangled_name,
                              bool resolve_objc_module);
 
+  CompilerType GetReferentType(swift::Demangle::Demangler &dem,
+                               swift::Demangle::NodePointer node);
+
   /// Return an APINotes manager for the module with module id \id.
   /// APINotes are used to get at the SDK swiftification annotations.
   clang::api_notes::APINotesManager *
