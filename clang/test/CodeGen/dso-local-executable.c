@@ -42,7 +42,7 @@
 // PIE-DAG: define dso_local i32* @zed()
 // PIE-DAG: declare void @import_func()
 
-// RUN: %clang_cc1 -triple x86_64 -emit-llvm -pic-level 1 -pic-is-pie -mpie-copy-relocations %s -o - | FileCheck --check-prefix=PIE-DIRECT %s
+// RUN: %clang_cc1 -triple x86_64 -emit-llvm -pic-level 1 -pic-is-pie -fdirect-access-external-data %s -o - | FileCheck --check-prefix=PIE-DIRECT %s
 // PIE-DIRECT:      @baz = dso_local global i32 42
 // PIE-DIRECT-NEXT: @import_var = external dso_local global i32
 // PIE-DIRECT-NEXT: @weak_bar = extern_weak global i32
@@ -64,7 +64,7 @@
 // NOPLT-DAG: define dso_local i32* @zed()
 // NOPLT-DAG: declare void @import_func()
 
-// RUN: %clang_cc1 -triple x86_64 -emit-llvm -fno-plt -pic-level 1 -pic-is-pie -mpie-copy-relocations %s -o - | FileCheck --check-prefix=PIE-DIRECT-NOPLT %s
+// RUN: %clang_cc1 -triple x86_64 -emit-llvm -fno-plt -pic-level 1 -pic-is-pie -fdirect-access-external-data %s -o - | FileCheck --check-prefix=PIE-DIRECT-NOPLT %s
 // PIE-DIRECT-NOPLT:      @baz = dso_local global i32 42
 // PIE-DIRECT-NOPLT-NEXT: @import_var = external dso_local global i32
 // PIE-DIRECT-NOPLT-NEXT: @weak_bar = extern_weak global i32
@@ -75,7 +75,7 @@
 // PIE-DIRECT-NOPLT-DAG: define dso_local i32* @zed()
 // PIE-DIRECT-NOPLT-DAG: declare void @import_func()
 
-// RUN: %clang_cc1 -triple x86_64 -emit-llvm -pic-is-pie -fno-plt %s -o - | FileCheck --check-prefix=PIE-NO-PLT %s
+// RUN: %clang_cc1 -triple x86_64 -emit-llvm -pic-level 1 -pic-is-pie -fno-plt %s -o - | FileCheck --check-prefix=PIE-NO-PLT %s
 // RUN: %clang_cc1 -triple powerpc64le -emit-llvm -mrelocation-model static %s -o - | FileCheck --check-prefix=PIE-NO-PLT %s
 // PIE-NO-PLT:      @baz = dso_local global i32 42
 // PIE-NO-PLT-NEXT: @import_var = external global i32

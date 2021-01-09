@@ -986,7 +986,7 @@ static bool shouldAssumeDSOLocal(const CodeGenModule &CGM,
   // If we can use copy relocations we can assume it is local.
   if (auto *Var = dyn_cast<llvm::GlobalVariable>(GV))
     if (!Var->isThreadLocal() &&
-        (RM == llvm::Reloc::Static || CGOpts.PIECopyRelocations))
+        (RM == llvm::Reloc::Static || CGOpts.DirectAccessExternalData))
       return true;
 
   // If we can use a plt entry as the symbol address we can assume it
