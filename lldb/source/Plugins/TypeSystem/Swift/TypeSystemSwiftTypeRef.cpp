@@ -2579,16 +2579,6 @@ CompilerType TypeSystemSwiftTypeRef::GetErrorType() {
 }
 
 CompilerType
-TypeSystemSwiftTypeRef::GetReferentType(swift::Demangle::Demangler &dem,
-                                        swift::Demangle::NodePointer parent) {
-  assert(parent->hasChildren());
-  auto *node = parent->getFirstChild();
-  if (!node || node->getKind() != Node::Kind::Type || !node->hasChildren())
-    return {this, nullptr};
-  return RemangleAsType(dem, node);
-}
-
-CompilerType
 TypeSystemSwiftTypeRef::GetReferentType(opaque_compiler_type_t type) {
   auto impl = [&]() -> CompilerType {
     using namespace swift::Demangle;
@@ -2599,7 +2589,10 @@ TypeSystemSwiftTypeRef::GetReferentType(opaque_compiler_type_t type) {
          node->getKind() != Node::Kind::Unmanaged) ||
         !node->hasChildren())
       return {this, type};
-    GetReferentType(dem, node);
+    node = node->getFirstChild();
+    if (!node || node->getKind() != Node::Kind::Type || !node->hasChildren())
+      return {this, type};
+    return RemangleAsType(dem, node);
   };
   VALIDATE_AND_RETURN(impl, GetReferentType, type, (ReconstructType(type)));
 }
@@ -2776,11 +2769,14 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
     }
     case Node::Kind::Unmanaged:
     case Node::Kind::Unowned:
-    case Node::Kind::Weak:
-      return GetReferentType(dem, node)
-          .DumpTypeValue(s, format, data, data_offset, data_byte_size,
-                         bitfield_bit_size, bitfield_bit_offset, exe_scope,
-                         is_base_class);
+    case Node::Kind::Weak: {
+      auto *referent_node = node->getFirstChild();
+      assert(referent_node->getKind() == Node::Kind::Type);
+      auto referent_type = RemangleAsType(dem, referent_node);
+      return referent_type.DumpTypeValue(
+          s, format, data, data_offset, data_byte_size, bitfield_bit_size,
+          bitfield_bit_offset, exe_scope, is_base_class);
+    }
     case Node::Kind::Structure:
     case Node::Kind::BoundGenericStructure:
       return false;
