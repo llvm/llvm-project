@@ -2781,8 +2781,13 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
           .DumpTypeValue(s, format, data, data_offset, data_byte_size,
                          bitfield_bit_size, bitfield_bit_offset, exe_scope,
                          is_base_class);
-    default:
+    case Node::Kind::Structure:
+    case Node::Kind::BoundGenericStructure:
       return false;
+    default:
+      LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+                "Using SwiftASTContext::DumpTypeValue fallback for type %s",
+                AsMangledName(type));
     }
   };
 
