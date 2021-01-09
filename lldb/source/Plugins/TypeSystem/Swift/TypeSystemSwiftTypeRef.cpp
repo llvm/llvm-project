@@ -13,6 +13,7 @@
 #include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRef.h"
 #include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
 
+#include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeMap.h"
@@ -2575,6 +2576,16 @@ CompilerType TypeSystemSwiftTypeRef::GetErrorType() {
 }
 
 CompilerType
+TypeSystemSwiftTypeRef::GetReferentType(swift::Demangle::Demangler &dem,
+                                        swift::Demangle::NodePointer parent) {
+  assert(parent->hasChildren());
+  auto *node = parent->getFirstChild();
+  if (!node || node->getKind() != Node::Kind::Type || !node->hasChildren())
+    return {this, nullptr};
+  return RemangleAsType(dem, node);
+}
+
+CompilerType
 TypeSystemSwiftTypeRef::GetReferentType(opaque_compiler_type_t type) {
   auto impl = [&]() -> CompilerType {
     using namespace swift::Demangle;
@@ -2585,10 +2596,7 @@ TypeSystemSwiftTypeRef::GetReferentType(opaque_compiler_type_t type) {
          node->getKind() != Node::Kind::Unmanaged) ||
         !node->hasChildren())
       return {this, type};
-    node = node->getFirstChild();
-    if (!node || node->getKind() != Node::Kind::Type || !node->hasChildren())
-      return {this, type};
-    return RemangleAsType(dem, node);
+    GetReferentType(dem, node);
   };
   VALIDATE_AND_RETURN(impl, GetReferentType, type, (ReconstructType(type)));
 }
@@ -2695,9 +2703,109 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
     size_t data_byte_size, uint32_t bitfield_bit_size,
     uint32_t bitfield_bit_offset, ExecutionContextScope *exe_scope,
     bool is_base_class) {
-  return m_swift_ast_context->DumpTypeValue(
-      ReconstructType(type), s, format, data, data_offset, data_byte_size,
-      bitfield_bit_size, bitfield_bit_offset, exe_scope, is_base_class);
+  if (!type)
+    return false;
+
+  using namespace swift::Demangle;
+  Demangler dem;
+  auto *canonical_type = DemangleCanonicalType(dem, type);
+  auto kind = canonical_type->getKind();
+
+  switch (kind) {
+  case Node::Kind::Enum:
+  case Node::Kind::BoundGenericEnum:
+    // TODO: To support Enums, an ExecutionContext parameter will have to be
+    // added and callers updated.
+    return m_swift_ast_context->DumpTypeValue(
+        ReconstructType(type), s, format, data, data_offset, data_byte_size,
+        bitfield_bit_size, bitfield_bit_offset, exe_scope, is_base_class);
+  }
+
+  auto impl = [&]() -> bool {
+    switch (kind) {
+    case Node::Kind::Class:
+    case Node::Kind::BoundGenericClass:
+      if (is_base_class)
+        break;
+      LLVM_FALLTHROUGH;
+    case Node::Kind::ExistentialMetatype:
+    case Node::Kind::Metatype:
+      format = eFormatPointer;
+      LLVM_FALLTHROUGH;
+    case Node::Kind::BuiltinTypeName:
+    case Node::Kind::DependentGenericParamType:
+    case Node::Kind::FunctionType:
+    case Node::Kind::ImplFunctionType: {
+      uint32_t item_count = 1;
+      // A few formats, we might need to modify our size and count for
+      // depending on how we are trying to display the value.
+      switch (format) {
+      case eFormatChar:
+      case eFormatCharPrintable:
+      case eFormatCharArray:
+      case eFormatBytes:
+      case eFormatBytesWithASCII:
+        item_count = data_byte_size;
+        data_byte_size = 1;
+        break;
+      case eFormatUnicode16:
+        item_count = data_byte_size / 2;
+        data_byte_size = 2;
+        break;
+      case eFormatUnicode32:
+        item_count = data_byte_size / 4;
+        data_byte_size = 4;
+        break;
+      case eFormatAddressInfo:
+        if (data_byte_size == 0) {
+          data_byte_size = exe_scope->CalculateTarget()
+                               ->GetArchitecture()
+                               .GetAddressByteSize();
+          item_count = 1;
+        }
+        break;
+      default:
+        break;
+      }
+      return DumpDataExtractor(data, s, data_offset, format, data_byte_size,
+                               item_count, UINT32_MAX, LLDB_INVALID_ADDRESS,
+                               bitfield_bit_size, bitfield_bit_offset,
+                               exe_scope);
+    }
+    case Node::Kind::Unmanaged:
+    case Node::Kind::Unowned:
+    case Node::Kind::Weak:
+      return GetReferentType(dem, canonical_type)
+          .DumpTypeValue(s, format, data, data_offset, data_byte_size,
+                         bitfield_bit_size, bitfield_bit_offset, exe_scope,
+                         is_base_class);
+    case Node::Kind::Structure:
+      return false;
+    default:
+      // Temporary
+      llvm::dbgs() << "DumpTypeValue: " << getNodeKindString(kind) << "\n";
+      assert(false && "Unhandled Demangle node kind");
+    }
+  };
+
+  auto result = impl();
+  if (!m_swift_ast_context)
+    return result;
+  auto cmp_type = ReconstructType(type);
+  if (!cmp_type)
+    return result;
+  StreamString cmp_s;
+  bool equivalent =
+      Equivalent(result, m_swift_ast_context->DumpTypeValue(
+                             ReconstructType(type), &cmp_s, format, data,
+                             data_offset, data_byte_size, bitfield_bit_size,
+                             bitfield_bit_offset, exe_scope, is_base_class)) &&
+      Equivalent(ConstString(cmp_s.GetString()),
+                 ConstString(((StreamString *)s)->GetString()));
+  if (!equivalent)
+    llvm::dbgs() << "failing type was " << (const char *)type << "\n";
+  assert(equivalent && "TypeSystemSwiftTypeRef diverges from SwiftASTContext");
+  return result;
 }
 
 void TypeSystemSwiftTypeRef::DumpTypeDescription(opaque_compiler_type_t type,
