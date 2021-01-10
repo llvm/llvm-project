@@ -462,6 +462,30 @@ inline std::string join_items(Sep Separator, Args &&... Items) {
   return Result;
 }
 
+/// A helper class to return the specified delimiter string after the first
+/// invocation of operator StringRef().  Used to generate a comma-separated
+/// list from a loop like so:
+///
+/// \code
+///   SubsequentDelim SD;
+///   for (auto &I : C)
+///     OS << SD << I.getName();
+/// \end
+class SubsequentDelim {
+  bool First = true;
+  StringRef Delim;
+
+ public:
+  SubsequentDelim(StringRef Delim = ", ") : Delim(Delim) {}
+  operator StringRef() {
+    if (First) {
+      First = false;
+      return {};
+    }
+    return Delim;
+  }
+};
+
 } // end namespace llvm
 
 #endif // LLVM_ADT_STRINGEXTRAS_H

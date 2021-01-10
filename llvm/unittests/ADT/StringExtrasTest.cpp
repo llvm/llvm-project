@@ -215,3 +215,17 @@ TEST(StringExtras, IToStr) {
   EXPECT_EQ(std::to_string(MinInt64), itostr(MinInt64));
   EXPECT_EQ(std::to_string(MaxInt64), itostr(MaxInt64));
 }
+
+TEST(StringExtras, SubsequentDelim) {
+  SubsequentDelim SD;
+  StringRef S = SD;
+  EXPECT_EQ(S, "");
+  S = SD;
+  EXPECT_EQ(S, ", ");
+
+  SubsequentDelim SD2(" ");
+  S = SD2;
+  EXPECT_EQ(S, "");
+  S = SD2;
+  EXPECT_EQ(S, " ");
+}
