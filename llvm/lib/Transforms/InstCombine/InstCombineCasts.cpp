@@ -2500,10 +2500,7 @@ Instruction *InstCombinerImpl::optimizeBitCastFromPhi(CastInst &CI,
   Instruction *RetVal = nullptr;
   for (auto *OldPN : OldPhiNodes) {
     PHINode *NewPN = NewPNodes[OldPN];
-    for (auto It = OldPN->user_begin(), End = OldPN->user_end(); It != End; ) {
-      User *V = *It;
-      // We may remove this user, advance to avoid iterator invalidation.
-      ++It;
+    for (User *V : make_early_inc_range(OldPN->users())) {
       if (auto *SI = dyn_cast<StoreInst>(V)) {
         assert(SI->isSimple() && SI->getOperand(0) == OldPN);
         Builder.SetInsertPoint(SI);
