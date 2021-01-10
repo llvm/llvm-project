@@ -43,9 +43,9 @@
 // STATIC-INDIRECT-NEXT: @bar = external global i32
 // STATIC-INDIRECT-NEXT: @local_thread_var = dso_local thread_local global i32 42
 // STATIC-INDIRECT-NEXT: @thread_var = external thread_local global i32
-// STATIC-INDIRECT-DAG:  declare dso_local void @import_func()
+// STATIC-INDIRECT-DAG:  declare void @import_func()
 // STATIC-INDIRECT-DAG:  define dso_local i32* @zed()
-// STATIC-INDIRECT-DAG:  declare dso_local void @foo()
+// STATIC-INDIRECT-DAG:  declare void @foo()
 
 // RUN: %clang_cc1 -triple x86_64 -emit-llvm -pic-level 1 -pic-is-pie %s -o - | FileCheck --check-prefix=PIE %s
 // PIE:      @baz = dso_local global i32 42
