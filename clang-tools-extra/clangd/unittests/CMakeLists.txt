@@ -35,6 +35,7 @@ add_custom_target(ClangdUnitTests)
 add_unittest(ClangdUnitTests ClangdTests
   Annotations.cpp
   ASTTests.cpp
+  ASTSignalsTests.cpp
   BackgroundIndexTests.cpp
   CallHierarchyTests.cpp
   CanonicalIncludesTests.cpp
