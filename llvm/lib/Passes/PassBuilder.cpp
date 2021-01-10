@@ -790,9 +790,6 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   else
     FPM.addPass(GVN());
 
-  // Specially optimize memory movement as it doesn't look like dataflow in SSA.
-  FPM.addPass(MemCpyOptPass());
-
   // Sparse conditional constant propagation.
   // FIXME: It isn't clear why we do this *after* loop passes rather than
   // before...
@@ -817,6 +814,9 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   // the simplifications and basic cleanup after all the simplifications.
   // TODO: Investigate if this is too expensive.
   FPM.addPass(ADCEPass());
+
+  // Specially optimize memory movement as it doesn't look like dataflow in SSA.
+  FPM.addPass(MemCpyOptPass());
 
   FPM.addPass(DSEPass());
   FPM.addPass(createFunctionToLoopPassAdaptor(
