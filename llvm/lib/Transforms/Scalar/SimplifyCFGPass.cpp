@@ -141,11 +141,11 @@ static bool mergeEmptyReturnBlocks(Function &F, DomTreeUpdater *DTU) {
       // All predecessors of BB should now branch to RetBlock instead.
       if (DTU) {
         for (auto *Predecessor : predecessors(&BB)) {
-          Updates.push_back({DominatorTree::Delete, Predecessor, &BB});
           // But, iff Predecessor already branches to RetBlock,
           // don't (re-)add DomTree edge, because it already exists.
           if (!is_contained(successors(Predecessor), RetBlock))
             Updates.push_back({DominatorTree::Insert, Predecessor, RetBlock});
+          Updates.push_back({DominatorTree::Delete, Predecessor, &BB});
         }
       }
       BB.replaceAllUsesWith(RetBlock);
