@@ -47,8 +47,8 @@ enum {
 
   InstFormatMask = 31,
 
-  ConstraintOffset = 5,
-  ConstraintMask = 0b111
+  ConstraintShift = 5,
+  ConstraintMask = 0b111 << ConstraintShift,
 };
 
 // Match with the definitions in RISCVInstrFormatsV.td
