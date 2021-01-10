@@ -750,7 +750,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   if (const opt::Arg *arg =
           args.getLastArg(OPT_search_paths_first, OPT_search_dylibs_first))
     config->searchDylibsFirst =
-        (arg && arg->getOption().getID() == OPT_search_dylibs_first);
+        arg->getOption().getID() == OPT_search_dylibs_first;
 
   config->dylibCompatibilityVersion =
       parseDylibVersion(args, OPT_compatibility_version);
