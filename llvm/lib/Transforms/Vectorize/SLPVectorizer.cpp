@@ -2502,7 +2502,7 @@ BoUpSLP::~BoUpSLP() {
 #ifdef EXPENSIVE_CHECKS
   // If we could guarantee that this call is not extremely slow, we could
   // remove the ifdef limitation (see PR47712).
-  assert(!verifyFunction(*F, %dbgs()));
+  assert(!verifyFunction(*F, &dbgs()));
 #endif
 }
 
