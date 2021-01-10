@@ -432,3 +432,94 @@ loop.latch:                                        ; preds = %if.then122, %for.b
 exit:
   ret void
 }
+
+; A recurrence in a multiple exit loop.
+define i16 @multiple_exit(i16* %p, i32 %n) {
+; CHECK-LABEL: @multiple_exit(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_COND:%.*]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]
+; CHECK-NEXT:    [[REC:%.*]] = phi i16 [ 0, [[ENTRY]] ], [ [[REC_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[IPROM:%.*]] = sext i32 [[I]] to i64
+; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[IPROM]]
+; CHECK-NEXT:    [[REC_NEXT]] = load i16, i16* [[B]], align 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[IF_END:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    store i16 [[REC]], i16* [[B]], align 4
+; CHECK-NEXT:    [[INC]] = add nsw i32 [[I]], 1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[I]], 2096
+; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_COND]], label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[REC_LCSSA:%.*]] = phi i16 [ [[REC]], [[FOR_BODY]] ], [ [[REC]], [[FOR_COND]] ]
+; CHECK-NEXT:    ret i16 [[REC_LCSSA]]
+;
+entry:
+  br label %for.cond
+
+for.cond:
+  %i = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %rec = phi i16 [0, %entry], [ %rec.next, %for.body ]
+  %iprom = sext i32 %i to i64
+  %b = getelementptr inbounds i16, i16* %p, i64 %iprom
+  %rec.next = load i16, i16* %b
+  %cmp = icmp slt i32 %i, %n
+  br i1 %cmp, label %for.body, label %if.end
+
+for.body:
+  store i16 %rec , i16* %b, align 4
+  %inc = add nsw i32 %i, 1
+  %cmp2 = icmp slt i32 %i, 2096
+  br i1 %cmp2, label %for.cond, label %if.end
+
+if.end:
+  ret i16 %rec
+}
+
+
+; A multiple exit case where one of the exiting edges involves a value
+; from the recurrence and one does not.
+define i16 @multiple_exit2(i16* %p, i32 %n) {
+; CHECK-LABEL: @multiple_exit2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_COND:%.*]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]
+; CHECK-NEXT:    [[REC:%.*]] = phi i16 [ 0, [[ENTRY]] ], [ [[REC_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[IPROM:%.*]] = sext i32 [[I]] to i64
+; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds i16, i16* [[P:%.*]], i64 [[IPROM]]
+; CHECK-NEXT:    [[REC_NEXT]] = load i16, i16* [[B]], align 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[IF_END:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    store i16 [[REC]], i16* [[B]], align 4
+; CHECK-NEXT:    [[INC]] = add nsw i32 [[I]], 1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[I]], 2096
+; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_COND]], label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[REC_LCSSA:%.*]] = phi i16 [ [[REC]], [[FOR_COND]] ], [ 10, [[FOR_BODY]] ]
+; CHECK-NEXT:    ret i16 [[REC_LCSSA]]
+;
+entry:
+  br label %for.cond
+
+for.cond:
+  %i = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %rec = phi i16 [0, %entry], [ %rec.next, %for.body ]
+  %iprom = sext i32 %i to i64
+  %b = getelementptr inbounds i16, i16* %p, i64 %iprom
+  %rec.next = load i16, i16* %b
+  %cmp = icmp slt i32 %i, %n
+  br i1 %cmp, label %for.body, label %if.end
+
+for.body:
+  store i16 %rec , i16* %b, align 4
+  %inc = add nsw i32 %i, 1
+  %cmp2 = icmp slt i32 %i, 2096
+  br i1 %cmp2, label %for.cond, label %if.end
+
+if.end:
+  %rec.lcssa = phi i16 [ %rec, %for.cond ], [ 10, %for.body ]
+  ret i16 %rec.lcssa
+}
