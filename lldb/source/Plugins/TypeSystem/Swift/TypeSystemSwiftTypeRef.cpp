@@ -2781,9 +2781,11 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
     case Node::Kind::BoundGenericStructure:
       return false;
     default:
+      assert(false && "Unhandled node kind");
       LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-                "Using SwiftASTContext::DumpTypeValue fallback for type %s",
+                "DumpTypeValue: Unhandled node kind for type %s",
                 AsMangledName(type));
+      return false;
     }
   };
 
