@@ -35,10 +35,26 @@ endforeach()
 # Generate dialect-specific bindings.
 ################################################################################
 
+add_mlir_dialect_python_bindings(MLIRBindingsPythonLinalgOps
+  TD_FILE LinalgOps.td
+  DIALECT_NAME linalg
+  DEPENDS LinalgOdsGen)
+add_dependencies(MLIRBindingsPythonSources MLIRBindingsPythonLinalgOps)
+
+add_mlir_dialect_python_bindings(MLIRBindingsPythonShapeOps
+  TD_FILE ShapeOps.td
+  DIALECT_NAME shape)
+add_dependencies(MLIRBindingsPythonSources MLIRBindingsPythonShapeOps)
+
 add_mlir_dialect_python_bindings(MLIRBindingsPythonStandardOps
-  StandardOps.td
-  std)
+  TD_FILE StandardOps.td
+  DIALECT_NAME std)
 add_dependencies(MLIRBindingsPythonSources MLIRBindingsPythonStandardOps)
+
+add_mlir_dialect_python_bindings(MLIRBindingsPythonTensorOps
+  TD_FILE TensorOps.td
+  DIALECT_NAME tensor)
+add_dependencies(MLIRBindingsPythonSources MLIRBindingsPythonTensorOps)
 
 ################################################################################
 # Build core python extension
