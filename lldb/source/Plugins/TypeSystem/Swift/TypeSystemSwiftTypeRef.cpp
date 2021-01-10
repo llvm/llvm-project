@@ -2790,7 +2790,7 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
     case Node::Kind::BoundGenericStructure:
       return false;
     default:
-      assert(false && "Unhandled node kind");
+      llvm_unreachable("Unhandled node kind");
       LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
                 "DumpTypeValue: Unhandled node kind for type %s",
                 AsMangledName(type));
