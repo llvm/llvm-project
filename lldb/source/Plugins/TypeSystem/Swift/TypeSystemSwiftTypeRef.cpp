@@ -2730,7 +2730,7 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
     case Node::Kind::Class:
     case Node::Kind::BoundGenericClass:
       if (is_base_class)
-        break;
+        return false;
       LLVM_FALLTHROUGH;
     case Node::Kind::ExistentialMetatype:
     case Node::Kind::Metatype:
