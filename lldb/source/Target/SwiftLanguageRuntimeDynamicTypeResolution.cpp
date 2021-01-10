@@ -315,17 +315,17 @@ public:
     if (name.empty())
       return swift::remote::RemoteAddress(nullptr);
 
-    LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-             "[MemoryReader] asked to retrieve the address of symbol {0}",
-             name);
+    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+
+    LLDB_LOGV(log, "[MemoryReader] asked to retrieve the address of symbol {0}",
+              name);
 
     ConstString name_cs(name.c_str(), name.size());
     SymbolContextList sc_list;
     m_process.GetTarget().GetImages().FindSymbolsWithNameAndType(
         name_cs, lldb::eSymbolTypeAny, sc_list);
     if (!sc_list.GetSize()) {
-      LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-               "[MemoryReader] symbol resolution failed {0}", name);
+      LLDB_LOGV(log, "[MemoryReader] symbol resolution failed {0}", name);
       return swift::remote::RemoteAddress(nullptr);
     }
 
@@ -346,16 +346,15 @@ public:
     if (sc_list.GetSize() == 1 && sc_list.GetContextAtIndex(0, sym_ctx)) {
       if (sym_ctx.symbol) {
         auto load_addr = sym_ctx.symbol->GetLoadAddress(&m_process.GetTarget());
-        LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-                 "[MemoryReader] symbol resolved to 0x%" PRIx64, load_addr);
+        LLDB_LOGV(log, "[MemoryReader] symbol resolved to 0x%" PRIx64,
+                  load_addr);
         return swift::remote::RemoteAddress(load_addr);
       }
     }
 
     // Empty list, resolution failed.
     if (sc_list.GetSize() == 0) {
-      LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-               "[MemoryReader] symbol resoution failed {0}", name);
+      LLDB_LOGV(log, "[MemoryReader] symbol resolution failed {0}", name);
       return swift::remote::RemoteAddress(nullptr);
     }
 
@@ -370,13 +369,11 @@ public:
           m_process.GetTarget().ReadUnsignedIntegerFromMemory(
               load_addr, false, m_process.GetAddressByteSize(), 0, error);
       if (sym_value != other_sym_value) {
-        LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-                 "[MemoryReader] symbol resoution failed {0}", name);
+        LLDB_LOGV(log, "[MemoryReader] symbol resolution failed {0}", name);
         return swift::remote::RemoteAddress(nullptr);
       }
     }
-    LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-             "[MemoryReader] symbol resolved to {0}", load_addr);
+    LLDB_LOGV(log, "[MemoryReader] symbol resolved to {0}", load_addr);
     return swift::remote::RemoteAddress(load_addr);
   }
 
@@ -396,14 +393,13 @@ public:
 
     Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
 
-    if (log)
-      log->Printf("[MemoryReader] asked to read %" PRIu64
-                  " bytes at address 0x%" PRIx64,
-                  size, address.getAddressData());
+    LLDB_LOGV(log,
+              "[MemoryReader] asked to read %" PRIu64
+              " bytes at address 0x%" PRIx64,
+              size, address.getAddressData());
 
     if (size > m_max_read_amount) {
-      if (log)
-        log->Printf("[MemoryReader] memory read exceeds maximum allowed size");
+      LLDB_LOGV(log, "[MemoryReader] memory read exceeds maximum allowed size");
       return false;
     }
 
@@ -411,27 +407,24 @@ public:
     Address addr(address.getAddressData());
     Status error;
     if (size > target.ReadMemory(addr, false, dest, size, error)) {
-      if (log)
-        log->Printf(
-            "[MemoryReader] memory read returned fewer bytes than asked for");
+      LLDB_LOGV(log, "[MemoryReader] memory read returned fewer bytes than asked for");
       return false;
     }
     if (error.Fail()) {
-      if (log)
-        log->Printf("[MemoryReader] memory read returned error: %s",
-                    error.AsCString());
+      LLDB_LOGV(log, "[MemoryReader] memory read returned error: %s", error.AsCString());
       return false;
     }
 
-    if (log && log->GetVerbose()) {
+    auto format_data = [](auto dest, auto size) {
       StreamString stream;
       for (uint64_t i = 0; i < size; i++) {
         stream.PutHex8(dest[i]);
         stream.PutChar(' ');
       }
-      log->Printf("[MemoryReader] memory read returned data: %s",
-                  stream.GetData());
-    }
+      return stream.GetData();
+    };
+    LLDB_LOGV(log, "[MemoryReader] memory read returned data: %s",
+              format_data(dest, size));
 
     return true;
   }
@@ -440,17 +433,16 @@ public:
                   std::string &dest) override {
     Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
 
-    if (log)
-      log->Printf(
-          "[MemoryReader] asked to read string data at address 0x%" PRIx64,
-          address.getAddressData());
+    LLDB_LOGV(log,
+              "[MemoryReader] asked to read string data at address 0x%" PRIx64,
+              address.getAddressData());
 
     Target &target(m_process.GetTarget());
     Address addr(address.getAddressData());
     Status error;
     target.ReadCStringFromMemory(addr, dest, error);
     if (error.Success()) {
-      if (log) {
+      auto format_string = [](const std::string &dest) {
         StreamString stream;
         for (auto c : dest) {
           if (c >= 32 && c <= 127) {
@@ -460,14 +452,14 @@ public:
             stream.PutHex8(c);
           }
         }
-        log->Printf("[MemoryReader] memory read returned data: \"%s\"",
-                    stream.GetData());
-      }
+        return stream.GetData();
+      };
+      LLDB_LOGV(log, "[MemoryReader] memory read returned data: \"%s\"",
+                format_string(dest));
       return true;
     } else {
-      if (log)
-        log->Printf("[MemoryReader] memory read returned error: %s",
-                    error.AsCString());
+      LLDB_LOGV(log, "[MemoryReader] memory read returned error: %s",
+                error.AsCString());
       return false;
     }
   }
