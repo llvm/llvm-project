@@ -2126,8 +2126,69 @@ TypeSystemSwiftTypeRef::GetByteStride(opaque_compiler_type_t type,
 
 lldb::Encoding TypeSystemSwiftTypeRef::GetEncoding(opaque_compiler_type_t type,
                                                    uint64_t &count) {
-  return m_swift_ast_context->GetEncoding(ReconstructType(type), count);
+  if (!type)
+    return lldb::eEncodingInvalid;
+
+  auto impl = [&]() -> lldb::Encoding {
+    count = 1;
+
+    using namespace swift::Demangle;
+    Demangler dem;
+    auto *node = DemangleCanonicalType(dem, type);
+    auto kind = node->getKind();
+
+    if (kind == Node::Kind::BuiltinTypeName) {
+      assert(node->hasText());
+      if (node->getText().startswith(swift::BUILTIN_TYPE_NAME_INT) ||
+          node->getText() == swift::BUILTIN_TYPE_NAME_WORD)
+        return lldb::eEncodingSint;
+      if (node->getText() == swift::BUILTIN_TYPE_NAME_FLOAT)
+        return lldb::eEncodingIEEE754;
+      if (node->getText() == swift::BUILTIN_TYPE_NAME_RAWPOINTER ||
+          node->getText() == swift::BUILTIN_TYPE_NAME_NATIVEOBJECT ||
+          node->getText() == swift::BUILTIN_TYPE_NAME_UNSAFEVALUEBUFFER ||
+          node->getText() == swift::BUILTIN_TYPE_NAME_BRIDGEOBJECT)
+        return lldb::eEncodingUint;
+
+      count = 0;
+      return lldb::eEncodingInvalid;
+    }
+
+    switch (kind) {
+    case Node::Kind::Class:
+    case Node::Kind::BoundGenericClass:
+    case Node::Kind::FunctionType:
+    case Node::Kind::ImplFunctionType:
+    case Node::Kind::DependentGenericParamType:
+    case Node::Kind::Function:
+    case Node::Kind::BoundGenericFunction:
+    case Node::Kind::Metatype:
+    case Node::Kind::ExistentialMetatype:
+      return lldb::eEncodingUint;
+
+    case Node::Kind::Unmanaged:
+    case Node::Kind::Unowned:
+    case Node::Kind::Weak: {
+      auto *referent_node = node->getFirstChild();
+      assert(referent_node->getKind() == Node::Kind::Type);
+      auto referent_type = RemangleAsType(dem, referent_node);
+      return referent_type.GetEncoding(count);
+    }
+    default:
+      llvm_unreachable("Unhandled node kind");
+      LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+                "GetEncoding: Unhandled node kind for type %s",
+                AsMangledName(type));
+      break;
+    }
+
+    count = 0;
+    return lldb::eEncodingInvalid;
+  };
+
+  VALIDATE_AND_RETURN(impl, GetEncoding, type, (ReconstructType(type), count));
 }
+
 lldb::Format TypeSystemSwiftTypeRef::GetFormat(opaque_compiler_type_t type) {
   return m_swift_ast_context->GetFormat(ReconstructType(type));
 }
