@@ -90,8 +90,8 @@ define dso_local void @t7(i8 %v) nounwind {
 ; ELF64-LABEL: t7:
   %1 = add nsw i8 %v, 1
   store i8 %1, i8* @a, align 1
-; ELF64: addis
 ; ELF64: addi
+; ELF64: addis
 ; ELF64: addi
 ; ELF64: stb
   ret void
@@ -101,8 +101,8 @@ define dso_local void @t8(i16 %v) nounwind {
 ; ELF64-LABEL: t8:
   %1 = add nsw i16 %v, 1
   store i16 %1, i16* @b, align 2
-; ELF64: addis
 ; ELF64: addi
+; ELF64: addis
 ; ELF64: addi
 ; ELF64: sth
   ret void
@@ -112,8 +112,8 @@ define dso_local void @t9(i32 %v) nounwind {
 ; ELF64-LABEL: t9:
   %1 = add nsw i32 %v, 1
   store i32 %1, i32* @c, align 4
-; ELF64: addis
 ; ELF64: addi
+; ELF64: addis
 ; ELF64: addi
 ; ELF64: stw
   ret void
@@ -123,8 +123,8 @@ define dso_local void @t10(i64 %v) nounwind {
 ; ELF64-LABEL: t10:
   %1 = add nsw i64 %v, 1
   store i64 %1, i64* @d, align 4
-; ELF64: addis
 ; ELF64: addi
+; ELF64: addis
 ; ELF64: addi
 ; ELF64: std
   ret void
@@ -184,8 +184,8 @@ define dso_local void @t15(i64 %v) nounwind {
 ; ELF64-LABEL: t15:
   %1 = add nsw i64 %v, 1
   store i64 %1, i64* getelementptr inbounds (%struct.t, %struct.t* @h, i32 0, i32 1), align 1
-; ELF64: addis
 ; ELF64: addi
+; ELF64: addis
 ; ELF64: addi
 ; ELF64: li
 ; ELF64: stdx
@@ -209,8 +209,8 @@ define dso_local void @t17(i64 %v) nounwind {
 ; ELF64-LABEL: t17:
   %1 = add nsw i64 %v, 1
   store i64 %1, i64* getelementptr inbounds ([8192 x i64], [8192 x i64]* @i, i32 0, i64 5000), align 8
-; ELF64: addis
 ; ELF64: addi
+; ELF64: addis
 ; ELF64: addi
 ; ELF64: lis
 ; ELF64: ori

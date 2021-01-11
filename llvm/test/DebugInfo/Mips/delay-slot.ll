@@ -16,6 +16,7 @@
 ; CHECK: 0x0000000000000004      2      0      1   0             0  is_stmt prologue_end
 ; CHECK: 0x0000000000000020      3      0      1   0             0  is_stmt
 ; CHECK: 0x0000000000000030      4      0      1   0             0  is_stmt
+; CHECK: 0x0000000000000040      0      0      1   0             0
 ; CHECK: 0x0000000000000048      5      0      1   0             0  is_stmt
 ; CHECK: 0x0000000000000050      5      0      1   0             0  is_stmt end_sequence
 

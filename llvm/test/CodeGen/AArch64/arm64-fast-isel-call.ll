@@ -82,12 +82,12 @@ entry:
 ; CHECK:       mov x0, xzr
 ; CHECK:       mov w1, #-8
 ; CHECK:       mov [[REG2:w[0-9]+]], #1023
-; CHECK:       uxth w2, [[REG2]]
 ; CHECK:       mov [[REG3:w[0-9]+]], #2
-; CHECK:       sxtb w3, [[REG3]]
 ; CHECK:       mov [[REG4:w[0-9]+]], wzr
-; CHECK:       and w4, [[REG4]], #0x1
 ; CHECK:       mov [[REG5:w[0-9]+]], #1
+; CHECK:       uxth w2, [[REG2]]
+; CHECK:       sxtb w3, [[REG3]]
+; CHECK:       and w4, [[REG4]], #0x1
 ; CHECK:       and w5, [[REG5]], #0x1
 ; CHECK:       bl _func2
   %call = call i32 @func2(i64 zeroext 0, i32 signext -8, i16 zeroext 1023, i8 signext -254, i1 zeroext 0, i1 zeroext 1)
