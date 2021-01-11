@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/math/remquof.h"
 #include "src/__support/common.h"
 #include "utils/FPUtil/DivisionAndRemainderOperations.h"
 

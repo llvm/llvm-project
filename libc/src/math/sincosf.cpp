@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/math/sincosf.h"
 #include "math_utils.h"
 #include "sincosf_utils.h"
 

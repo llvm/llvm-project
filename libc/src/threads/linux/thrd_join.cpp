@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/threads/thrd_join.h"
 #include "config/linux/syscall.h" // For syscall function.
 #include "include/sys/syscall.h"  // For syscall numbers.
 #include "include/threads.h"      // For thrd_* type definitions.

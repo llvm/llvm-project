@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#include "src/math/hypotf.h"
 #include "src/__support/common.h"
 #include "utils/FPUtil/Hypot.h"
 

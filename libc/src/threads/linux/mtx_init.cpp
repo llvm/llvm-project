@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/threads/mtx_init.h"
 #include "include/threads.h" // For mtx_t definition.
 #include "src/__support/common.h"
 #include "src/threads/linux/thread_utils.h"

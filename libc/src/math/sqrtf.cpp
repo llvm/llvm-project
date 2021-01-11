@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/math/sqrtf.h"
 #include "src/__support/common.h"
 #include "utils/FPUtil/Sqrt.h"
 
