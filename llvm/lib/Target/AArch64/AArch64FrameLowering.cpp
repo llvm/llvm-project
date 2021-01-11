@@ -1082,7 +1082,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
 
   // If we're saving LR, sign it first.
   if (shouldAuthenticateLR(MF)) {
-    if (LLVM_UNLIKELY(!Subtarget.hasPA()))
+    if (LLVM_UNLIKELY(!Subtarget.hasPAuth()))
       report_fatal_error("arm64e LR authentication requires ptrauth");
     for (const CalleeSavedInfo &Info : MFI.getCalleeSavedInfo()) {
       if (Info.getReg() != AArch64::LR)
@@ -1533,7 +1533,7 @@ static void InsertReturnAddressAuth(MachineFunction &MF,
   // this instruction can safely used for any v8a architecture.
   // From v8.3a onwards there are optimised authenticate LR and return
   // instructions, namely RETA{A,B}, that can be used instead.
-  if (Subtarget.hasPA() && MBBI != MBB.end() &&
+  if (Subtarget.hasPAuth() && MBBI != MBB.end() &&
       MBBI->getOpcode() == AArch64::RET_ReallyLR) {
     BuildMI(MBB, MBBI, DL,
             TII->get(MFI.shouldSignWithBKey() ? AArch64::RETAB : AArch64::RETAA))
@@ -1587,7 +1587,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   // Use scope_exit to ensure we do that last on all return paths.
   auto InsertAuthLROnExit = make_scope_exit([&]() {
     if (shouldAuthenticateLR(MF)) {
-      if (LLVM_UNLIKELY(!Subtarget.hasPA()))
+      if (LLVM_UNLIKELY(!Subtarget.hasPAuth()))
         report_fatal_error("arm64e LR authentication requires ptrauth");
       for (const CalleeSavedInfo &Info : MFI.getCalleeSavedInfo()) {
         if (Info.getReg() != AArch64::LR)

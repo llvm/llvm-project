@@ -6834,7 +6834,7 @@ static void signOutlinedFunction(MachineFunction &MF, MachineBasicBlock &MBB,
 
     // If v8.3a features are available we can replace a RET instruction by
     // RETAA or RETAB and omit the AUT instructions
-    if (Subtarget.hasV8_3aOps() && MBBAUT != MBB.end() &&
+    if (Subtarget.hasPAuth() && MBBAUT != MBB.end() &&
         MBBAUT->getOpcode() == AArch64::RET) {
       BuildMI(MBB, MBBAUT, DL,
               TII->get(ShouldSignReturnAddrWithAKey ? AArch64::RETAA
