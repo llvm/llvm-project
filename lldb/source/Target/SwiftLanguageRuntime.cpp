@@ -107,19 +107,21 @@ static ModuleSP findRuntime(Process &process, RuntimeKind runtime_kind) {
       return {};
   }
 
-  ModuleList images = process.GetTarget().GetImages();
-  for (unsigned i = 0, e = images.GetSize(); i < e; ++i) {
-    ModuleSP image = images.GetModuleAtIndex(i);
-    if (!image)
-      continue;
-    if (runtime_kind == RuntimeKind::Swift &&
-        IsModuleSwiftRuntime(process, *image))
-      return image;
+  ModuleSP runtime_image;
+  process.GetTarget().GetImages().ForEach([&](const ModuleSP &image) {
+    if (runtime_kind == RuntimeKind::Swift && image &&
+        IsModuleSwiftRuntime(process, *image)) {
+      runtime_image = image;
+      return false;
+    }
     if (runtime_kind == RuntimeKind::ObjC &&
-        objc_runtime->IsModuleObjCLibrary(image))
-      return image;
-  }
-  return {};
+        objc_runtime->IsModuleObjCLibrary(image)) {
+      runtime_image = image;
+      return false;
+    }
+    return true;
+  });
+  return runtime_image;
 }
 
 static llvm::Optional<lldb::addr_t>
@@ -394,6 +396,18 @@ SwiftLanguageRuntimeImpl::GetReflectionContext() {
 }
 
 void SwiftLanguageRuntimeImpl::SetupReflection() {
+  // SetupABIBit() iterates of the Target's images and thus needs to
+  // acquire that ModuleList's lock. We need to acquire this before
+  // locking m_add_module_mutex, since ModulesDidLoad can also be
+  // called from a place where that lock is already held:
+  // +   lldb_private::DynamicLoaderDarwin::AddModulesUsingImageInfos()
+  // +     lldb_private::ModuleList::AppendIfNeeded()
+  // +       lldb_private::Target::NotifyModuleAdded()
+  // +         lldb_private::Target::ModulesDidLoad()
+
+  // The global ABI bit is read by the Swift runtime library.
+  SetupABIBit();
+  
   std::lock_guard<std::recursive_mutex> lock(m_add_module_mutex);
   if (m_initialized_reflection_ctx)
     return;
@@ -415,9 +429,6 @@ void SwiftLanguageRuntimeImpl::SetupReflection() {
     return true;
   });
   m_modules_to_add.Clear();
-
-  // The global ABI bit is read by the Swift runtime library.
-  SetupABIBit();
 }
 
 bool SwiftLanguageRuntimeImpl::IsABIStable() {
