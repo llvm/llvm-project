@@ -1267,7 +1267,8 @@ bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(Instruction *TI,
           (void)I;
           AddPredecessorToBlock(NewSuccessor.first, Pred, BB);
         }
-        Updates.push_back({DominatorTree::Insert, Pred, NewSuccessor.first});
+        if (!is_contained(successors(Pred), NewSuccessor.first))
+          Updates.push_back({DominatorTree::Insert, Pred, NewSuccessor.first});
       }
 
       Builder.SetInsertPoint(PTI);
