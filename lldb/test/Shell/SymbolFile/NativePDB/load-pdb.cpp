@@ -22,7 +22,7 @@ int main(int argc, char** argv) {
 // CHECK: (lldb) target symbols add {{.*}}bar.pdb
 // CHECK: symbol file '{{.*}}bar.pdb' has been added to '{{.*}}foo.exe'
 // CHECK: (lldb) b main
-// CHECK: Breakpoint 1: where = foo.exe`main + 23 at load-pdb.cpp:19, address = 0x0000000140001017
+// CHECK: Breakpoint 1: where = foo.exe`main + 21 at load-pdb.cpp:19, address = 0x0000000140001015
 // CHECK: (lldb) image dump symfile
 // CHECK: Types:
 // CHECK: {{.*}}: Type{0x00010024} , size = 0, compiler_type = {{.*}} int (int, char **)

@@ -1,4 +1,4 @@
-; RUN: llc -fast-isel-sink-local-values -O0 -fast-isel -fast-isel-abort=1 -verify-machineinstrs -mtriple=arm64-apple-darwin < %s | FileCheck %s
+; RUN: llc -O0 -fast-isel -fast-isel-abort=1 -verify-machineinstrs -mtriple=arm64-apple-darwin < %s | FileCheck %s
 
 define void @t0(i32 %a) nounwind {
 entry:
@@ -93,11 +93,12 @@ define void @t6() nounwind {
 declare void @llvm.trap() nounwind
 
 define void @ands(i32* %addr) {
-; CHECK-LABEL: ands:
-; CHECK: tst [[COND:w[0-9]+]], #0x1
-; CHECK-NEXT: mov w{{[0-9]+}}, #2
-; CHECK-NEXT: mov w{{[0-9]+}}, #1
-; CHECK-NEXT: csel [[COND]],
+; FIXME: 'select i1 undef' makes this unreliable (ub?).
+; COM: CHECK-LABEL: ands:
+; COM: CHECK: tst [[COND:w[0-9]+]], #0x1
+; COM: CHECK-NEXT: mov w{{[0-9]+}}, #2
+; COM: CHECK-NEXT: mov w{{[0-9]+}}, #1
+; COM: CHECK-NEXT: csel [[COND]],
 entry:
   %cond91 = select i1 undef, i32 1, i32 2
   store i32 %cond91, i32* %addr, align 4

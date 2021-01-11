@@ -45,31 +45,31 @@
 ; if they've changed due to a bugfix, change in register allocation, etc.
 
 ; CHECK:      [[A]]:
-; CHECK-NEXT:   DW_LLE_startx_length (0x00000002, 0x0000000f): DW_OP_consts +0, DW_OP_stack_value
-; CHECK-NEXT:   DW_LLE_startx_length (0x00000003, 0x0000000b): DW_OP_reg0 RAX
-; CHECK-NEXT:   DW_LLE_startx_length (0x00000004, 0x00000012): DW_OP_breg7 RSP-4
+; CHECK-NEXT:   DW_LLE_startx_length (0x00000001, 0x00000011): DW_OP_consts +0, DW_OP_stack_value
+; CHECK-NEXT:   DW_LLE_startx_length (0x00000002, 0x0000000b): DW_OP_reg0 RAX
+; CHECK-NEXT:   DW_LLE_startx_length (0x00000003, 0x00000012): DW_OP_breg7 RSP-4
 ; CHECK-NEXT:   DW_LLE_end_of_list   ()
 ; CHECK:      [[E]]:
-; CHECK-NEXT:   DW_LLE_startx_length (0x00000005, 0x0000000b): DW_OP_reg0 RAX
-; CHECK-NEXT:   DW_LLE_startx_length (0x00000006, 0x0000005a): DW_OP_breg7 RSP-48
+; CHECK-NEXT:   DW_LLE_startx_length (0x00000004, 0x0000000b): DW_OP_reg0 RAX
+; CHECK-NEXT:   DW_LLE_startx_length (0x00000005, 0x0000005a): DW_OP_breg7 RSP-48
 ; CHECK-NEXT:   DW_LLE_end_of_list   ()
 ; CHECK:      [[B]]:
-; CHECK-NEXT:   DW_LLE_startx_length (0x00000007, 0x0000000b): DW_OP_reg0 RAX
-; CHECK-NEXT:   DW_LLE_startx_length (0x00000008, 0x00000042): DW_OP_breg7 RSP-24
+; CHECK-NEXT:   DW_LLE_startx_length (0x00000006, 0x0000000b): DW_OP_reg0 RAX
+; CHECK-NEXT:   DW_LLE_startx_length (0x00000007, 0x00000042): DW_OP_breg7 RSP-24
 ; CHECK-NEXT:   DW_LLE_end_of_list   ()
 ; CHECK:      [[D]]:
-; CHECK-NEXT:   DW_LLE_startx_length (0x00000009, 0x0000000b): DW_OP_reg0 RAX
-; CHECK-NEXT:   DW_LLE_startx_length (0x0000000a, 0x0000002a): DW_OP_breg7 RSP-12
+; CHECK-NEXT:   DW_LLE_startx_length (0x00000008, 0x0000000b): DW_OP_reg0 RAX
+; CHECK-NEXT:   DW_LLE_startx_length (0x00000009, 0x0000002a): DW_OP_breg7 RSP-12
 ; CHECK-NEXT:   DW_LLE_end_of_list   ()
 
 ; Make sure we don't produce any relocations in any .dwo section (though in particular, debug_info.dwo)
 ; HDR-NOT: .rela.{{.*}}.dwo
 
 ; Make sure we have enough stuff in the debug_addr to cover the address indexes
-; (10 is the last index in debug_loc.dwo, making 11 entries of 8 bytes each,
-; 11 * 8 == 88 base 10 == 58 base 16)
+; (9 is the last index in debug_loc.dwo, making 10 entries of 8 bytes each,
+; 10 * 8 == 80 base 10 == 50 base 16)
 
-; HDR: .debug_addr 00000058
+; HDR: .debug_addr 00000050
 ; HDR-NOT: .rela.{{.*}}.dwo
 
 ; Check for the existence of a DWARF v5-style range list table in the .debug_rnglists

@@ -1,12 +1,12 @@
-; RUN: llc -fast-isel-sink-local-values < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-apple-ios | FileCheck %s --check-prefix=ARM
-; RUN: llc -fast-isel-sink-local-values < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-linux-gnueabi | FileCheck %s --check-prefix=ARM
-; RUN: llc -fast-isel-sink-local-values < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=thumbv7-apple-ios | FileCheck %s --check-prefix=THUMB
-; RUN: llc -fast-isel-sink-local-values < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-apple-ios -mattr=+long-calls | FileCheck %s --check-prefix=ARM-LONG --check-prefix=ARM-LONG-MACHO
-; RUN: llc -fast-isel-sink-local-values < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-linux-gnueabi -mattr=+long-calls | FileCheck %s --check-prefix=ARM-LONG --check-prefix=ARM-LONG-ELF
-; RUN: llc -fast-isel-sink-local-values < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=thumbv7-apple-ios -mattr=+long-calls | FileCheck %s --check-prefix=THUMB-LONG
-; RUN: llc -fast-isel-sink-local-values < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-apple-ios -mattr=-fpregs | FileCheck %s --check-prefix=ARM-NOVFP
-; RUN: llc -fast-isel-sink-local-values < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-linux-gnueabi -mattr=-fpregs | FileCheck %s --check-prefix=ARM-NOVFP
-; RUN: llc -fast-isel-sink-local-values < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=thumbv7-apple-ios -mattr=-fpregs | FileCheck %s --check-prefix=THUMB-NOVFP
+; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-apple-ios | FileCheck %s --check-prefix=ARM
+; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-linux-gnueabi | FileCheck %s --check-prefix=ARM
+; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=thumbv7-apple-ios | FileCheck %s --check-prefix=THUMB
+; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-apple-ios -mattr=+long-calls | FileCheck %s --check-prefix=ARM-LONG --check-prefix=ARM-LONG-MACHO
+; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-linux-gnueabi -mattr=+long-calls | FileCheck %s --check-prefix=ARM-LONG --check-prefix=ARM-LONG-ELF
+; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=thumbv7-apple-ios -mattr=+long-calls | FileCheck %s --check-prefix=THUMB-LONG
+; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-apple-ios -mattr=-fpregs | FileCheck %s --check-prefix=ARM-NOVFP
+; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-linux-gnueabi -mattr=-fpregs | FileCheck %s --check-prefix=ARM-NOVFP
+; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=thumbv7-apple-ios -mattr=-fpregs | FileCheck %s --check-prefix=THUMB-NOVFP
 
 ; Note that some of these tests assume that relocations are either
 ; movw/movt or constant pool loads. Different platforms will select
@@ -100,8 +100,8 @@ entry:
 ; ARM-DAG: and [[R3]], [[R3]], #255
 ; ARM-DAG: and [[R4]], [[R4]], #255
 ; ARM-DAG: str [[R4]], [sp]
-; ARM-DAG: and [[R4]], [[R5]], #255
-; ARM-DAG: str [[R4]], [sp, #4]
+; ARM-DAG: and [[R5]], [[R5]], #255
+; ARM-DAG: str [[R5]], [sp, #4]
 ; ARM: bl {{_?}}bar
 ; ARM-LONG-LABEL: @t10
 
@@ -127,8 +127,8 @@ entry:
 ; THUMB-DAG: and [[R3]], [[R3]], #255
 ; THUMB-DAG: and [[R4]], [[R4]], #255
 ; THUMB-DAG: str.w [[R4]], [sp]
-; THUMB-DAG: and [[R4]], [[R5]], #255
-; THUMB-DAG: str.w [[R4]], [sp, #4]
+; THUMB-DAG: and [[R5]], [[R5]], #255
+; THUMB-DAG: str.w [[R5]], [sp, #4]
 ; THUMB: bl {{_?}}bar
 ; THUMB-LONG-LABEL: @t10
 ; THUMB-LONG: {{(movw)|(ldr.n)}} [[R1:l?r[0-9]*]], {{(:lower16:L_bar\$non_lazy_ptr)|(.LCPI)}}
