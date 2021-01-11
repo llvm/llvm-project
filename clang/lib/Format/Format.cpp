@@ -2291,7 +2291,8 @@ tooling::Replacements sortCppIncludes(const FormatStyle &Style, StringRef Code,
          Style.IncludeStyle.IncludeBlocks ==
              tooling::IncludeStyle::IBS_Regroup);
 
-    if (!FormattingOff && !Line.endswith("\\")) {
+    bool MergeWithNextLine = Trimmed.endswith("\\");
+    if (!FormattingOff && !MergeWithNextLine) {
       if (IncludeRegex.match(Line, &Matches)) {
         StringRef IncludeName = Matches[2];
         int Category = Categories.getIncludePriority(
@@ -2309,10 +2310,12 @@ tooling::Replacements sortCppIncludes(const FormatStyle &Style, StringRef Code,
         IncludesInBlock.clear();
         FirstIncludeBlock = false;
       }
-      Prev = Pos + 1;
     }
     if (Pos == StringRef::npos || Pos + 1 == Code.size())
       break;
+
+    if (!MergeWithNextLine)
+      Prev = Pos + 1;
     SearchFrom = Pos + 1;
   }
   if (!IncludesInBlock.empty()) {
