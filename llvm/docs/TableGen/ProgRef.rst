@@ -194,11 +194,11 @@ numeric literal rather than an identifier.
 TableGen has the following reserved keywords, which cannot be used as
 identifiers::
 
-   bit        bits          class         code          dag
-   def        else          false         foreach       defm
-   defset     defvar        field         if            in
-   include    int           let           list          multiclass
-   string     then          true
+   assert     bit           bits          class         code
+   dag        def           else          false         foreach
+   defm       defset        defvar        field         if
+   in         include       int           let           list
+   multiclass string        then          true
 
 .. warning::
   The ``field`` reserved word is deprecated.
@@ -536,8 +536,8 @@ files.
 
 .. productionlist::
    TableGenFile: `Statement`*
-   Statement: `Class` | `Def` | `Defm` | `Defset` | `Defvar` | `Foreach`
-            :| `If` | `Let` | `MultiClass`
+   Statement: `Assert` | `Class` | `Def` | `Defm` | `Defset` | `Defvar`
+            :| `Foreach` | `If` | `Let` | `MultiClass`
 
 The following sections describe each of these top-level statements. 
 
@@ -616,6 +616,7 @@ name of a multiclass.
    BodyItem: (`Type` | "code") `TokIdentifier` ["=" `Value`] ";"
            :| "let" `TokIdentifier` ["{" `RangeList` "}"] "=" `Value` ";"
            :| "defvar" `TokIdentifier` "=" `Value` ";"
+           :| `Assert`
 
 A field definition in the body specifies a field to be included in the class
 or record. If no initial value is specified, then the field's value is
@@ -1245,6 +1246,34 @@ inner scope. Any ``defvar`` variables defined in the bodies go out of scope
 when the bodies are finished (see `Defvar in a Record Body`_ for more details).
 
 The ``if`` statement can also be used in a record :token:`Body`.
+
+
+``assert`` --- check that a condition is true
+---------------------------------------------
+
+The ``assert`` statement checks a boolean condition to be sure that it is true
+and prints an error message if it is not.
+
+.. productionlist::
+   Assert: "assert" `condition` "," `message` ";"
+
+If the boolean condition is true, the statement does nothing. If the
+condition is false, it prints a nonfatal error message. The **message**, which
+can be an arbitrary string expression, is included in the error message as a
+note. The exact behavior of the ``assert`` statement depends on its
+placement.
+
+* At top level, the assertion is checked immediately.
+
+* In a record definition, the statement is saved and all assertions are
+  checked after the record is completely built.
+
+* In a class definition, the assertions are saved and inherited by all
+  the record definitions that inherit from the class. The assertions are
+  then checked when the records are completely built. [this placement is not
+  yet available]
+
+* In a multiclass definition, ... [this placement is not yet available]
 
 
 Additional Details
