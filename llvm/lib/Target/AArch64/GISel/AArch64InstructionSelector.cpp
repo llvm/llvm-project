@@ -4958,7 +4958,7 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
                                                 AArch64::GPR64RegClass);
       }
 
-      if (STI.hasV8_3aOps()) {
+      if (STI.hasPAuth()) {
         MIRBuilder.buildInstr(AArch64::XPACI, {DstReg}, {MFReturnAddr});
       } else {
         MIRBuilder.buildCopy({Register(AArch64::LR)}, {MFReturnAddr});
@@ -4986,7 +4986,7 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
     else {
       MFI.setReturnAddressIsTaken(true);
 
-      if (STI.hasV8_3aOps()) {
+      if (STI.hasPAuth()) {
         Register TmpReg = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
         MIRBuilder.buildInstr(AArch64::LDRXui, {TmpReg}, {FrameAddr}).addImm(1);
         MIRBuilder.buildInstr(AArch64::XPACI, {DstReg}, {TmpReg});
