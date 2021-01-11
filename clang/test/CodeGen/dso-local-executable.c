@@ -20,7 +20,10 @@
 // MINGW-DAG: define dso_local i32* @zed()
 // MINGW-DAG: declare dllimport void @import_func()
 
+/// Static relocation model defaults to -fdirect-access-external-data and sets
+/// dso_local on most global objects.
 // RUN: %clang_cc1 -triple x86_64 -emit-llvm -mrelocation-model static %s -o - | FileCheck --check-prefix=STATIC %s
+// RUN: %clang_cc1 -triple x86_64 -emit-llvm -mrelocation-model static -fdirect-access-external-data %s -o - | FileCheck --check-prefix=STATIC %s
 // STATIC:      @baz = dso_local global i32 42
 // STATIC-NEXT: @import_var = external dso_local global i32
 // STATIC-NEXT: @weak_bar = extern_weak dso_local global i32
@@ -30,6 +33,19 @@
 // STATIC-DAG: declare dso_local void @foo()
 // STATIC-DAG: define dso_local i32* @zed()
 // STATIC-DAG: declare dso_local void @import_func()
+
+/// If -fno-direct-access-external-data is set, drop dso_local from global variable
+/// declarations.
+// RUN: %clang_cc1 -triple x86_64 -emit-llvm %s -mrelocation-model static -fno-direct-access-external-data -o - | FileCheck --check-prefix=STATIC-INDIRECT %s
+// STATIC-INDIRECT:      @baz = dso_local global i32 42
+// STATIC-INDIRECT-NEXT: @import_var = external global i32
+// STATIC-INDIRECT-NEXT: @weak_bar = extern_weak global i32
+// STATIC-INDIRECT-NEXT: @bar = external global i32
+// STATIC-INDIRECT-NEXT: @local_thread_var = dso_local thread_local global i32 42
+// STATIC-INDIRECT-NEXT: @thread_var = external thread_local global i32
+// STATIC-INDIRECT-DAG:  declare dso_local void @import_func()
+// STATIC-INDIRECT-DAG:  define dso_local i32* @zed()
+// STATIC-INDIRECT-DAG:  declare dso_local void @foo()
 
 // RUN: %clang_cc1 -triple x86_64 -emit-llvm -pic-level 1 -pic-is-pie %s -o - | FileCheck --check-prefix=PIE %s
 // PIE:      @baz = dso_local global i32 42
@@ -87,7 +103,9 @@
 // PIE-NO-PLT-DAG:  define dso_local i32* @zed()
 // PIE-NO-PLT-DAG:  declare void @foo()
 
+/// -fdirect-access-external-data is currently ignored for -fPIC.
 // RUN: %clang_cc1 -triple x86_64 -emit-llvm -pic-level 2 %s -o - | FileCheck --check-prefix=SHARED %s
+// RUN: %clang_cc1 -triple x86_64 -emit-llvm -pic-level 2 -fdirect-access-external-data %s -o - | FileCheck --check-prefix=SHARED %s
 // SHARED-DAG: @bar = external global i32
 // SHARED-DAG: @weak_bar = extern_weak global i32
 // SHARED-DAG: declare void @foo()
