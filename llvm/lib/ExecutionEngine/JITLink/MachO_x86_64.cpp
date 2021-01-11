@@ -685,7 +685,7 @@ void link_MachO_x86_64(std::unique_ptr<LinkGraph> G,
     });
 
     // Add GOT/Stubs optimizer pass.
-    Config.PostAllocationPasses.push_back(optimizeMachO_x86_64_GOTAndStubs);
+    Config.PreFixupPasses.push_back(optimizeMachO_x86_64_GOTAndStubs);
   }
 
   if (auto Err = Ctx->modifyPassConfig(G->getTargetTriple(), Config))

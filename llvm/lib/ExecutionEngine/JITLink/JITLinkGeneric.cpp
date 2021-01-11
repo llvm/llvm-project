@@ -114,7 +114,7 @@ void JITLinkerBase::linkPhase2(std::unique_ptr<JITLinkerBase> Self,
     dumpGraph(dbgs());
   });
 
-  if (auto Err = runPasses(Passes.PostAllocationPasses))
+  if (auto Err = runPasses(Passes.PreFixupPasses))
     return deallocateAndBailOut(std::move(Err));
 
   LLVM_DEBUG({
