@@ -48,14 +48,11 @@ void test02() {
 // CHECK-SAME:    [[#VBITS]]
 // CHECK-SAME:    EES_(<vscale x 4 x i32> %x.coerce, <vscale x 4 x i32> %y.coerce)
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   [[RETVAL_COERCE:%.*]] = alloca <vscale x 4 x i32>, align 16
 // CHECK-NEXT:   [[X:%.*]] = call <[[#div(VBITS, 32)]] x i32> @llvm.experimental.vector.extract.v[[#div(VBITS, 32)]]i32.nxv4i32(<vscale x 4 x i32> [[X_COERCE:%.*]], i64 0)
 // CHECK-NEXT:   [[Y:%.*]] = call <[[#div(VBITS, 32)]] x i32> @llvm.experimental.vector.extract.v[[#div(VBITS, 32)]]i32.nxv4i32(<vscale x 4 x i32> [[X_COERCE1:%.*]], i64 0)
 // CHECK-NEXT:   [[ADD:%.*]] = add <[[#div(VBITS, 32)]] x i32> [[Y]], [[X]]
-// CHECK-NEXT:   [[RETVAL_0__SROA_CAST:%.*]] = bitcast <vscale x 4 x i32>* [[RETVAL_COERCE]] to <[[#div(VBITS, 32)]] x i32>*
-// CHECK-NEXT:   store <[[#div(VBITS, 32)]] x i32> [[ADD]], <[[#div(VBITS, 32)]] x i32>* [[RETVAL_0__SROA_CAST]], align 16
-// CHECK-NEXT:   [[TMP0:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[RETVAL_COERCE]], align 16
-// CHECK-NEXT:   ret <vscale x 4 x i32> [[TMP0]]
+// CHECK-NEXT:   [[CASTSCALABLESVE:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.insert.nxv4i32.v[[#div(VBITS, 32)]]i32(<vscale x 4 x i32> undef, <[[#div(VBITS, 32)]] x i32> [[ADD]], i64 0)
+// CHECK-NEXT:   ret <vscale x 4 x i32> [[CASTSCALABLESVE]]
 typedef svint32_t vec __attribute__((arm_sve_vector_bits(N)));
 auto f(vec x, vec y) { return x + y; } // Returns a vec.
 #endif
