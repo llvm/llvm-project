@@ -102,7 +102,7 @@ entry:
 
 ; GFX10-LABEL: {{^}}v_clamp_i64_i16_zero
 ; GFX6789: v_mov_b32_e32 v0, 0
-; GFX10: v_cmp_lt_i64_e32 vcc_lo, 0, v[0:1]
+; GFX10: v_mov_b32_e32 v0, 0
 define i16 @v_clamp_i64_i16_zero(i64 %in) #0 {
 entry:
   %max = call i64 @llvm.smax.i64(i64 %in, i64 0)
