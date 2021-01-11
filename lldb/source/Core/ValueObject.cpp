@@ -3317,7 +3317,7 @@ bool ValueObject::CanProvideValue() {
   // we need to support invalid types as providers of values because some bare-
   // board debugging scenarios have no notion of types, but still manage to
   // have raw numeric values for things like registers. sigh.
-  const CompilerType &type(GetCompilerType());
+  CompilerType type = GetCompilerType();
   return (!type.IsValid()) || (0 != (type.GetTypeInfo() & eTypeHasValue));
 }
 
