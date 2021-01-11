@@ -1,4 +1,7 @@
-// RUN: mlir-rocm-runner %s --shared-libs=%rocm_wrapper_library_dir/librocm-runtime-wrappers%shlibext,%linalg_test_lib_dir/libmlir_runner_utils%shlibext --entry-point-result=void | FileCheck %s
+// RUN: mlir-rocm-runner %s \
+// RUN:   --shared-libs=%rocm_wrapper_library_dir/librocm-runtime-wrappers%shlibext
+// RUN:   --entry-point-result=void \
+// RUN: | FileCheck %s
 
 func @other_func(%arg0 : f32, %arg1 : memref<?xf32>) {
   %c0 = constant 0 : index
