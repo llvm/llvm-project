@@ -1318,7 +1318,7 @@ def Vector_TransferWriteOp :
 
 def Vector_MaskedLoadOp :
   Vector_Op<"maskedload">,
-    Arguments<(ins AnyMemRef:$base,
+    Arguments<(ins Arg<AnyMemRef, "", [MemRead]>:$base,
                Variadic<Index>:$indices,
                VectorOfRankAndType<[1], [I1]>:$mask,
                VectorOfRank<[1]>:$pass_thru)>,
@@ -1370,7 +1370,7 @@ def Vector_MaskedLoadOp :
 
 def Vector_MaskedStoreOp :
   Vector_Op<"maskedstore">,
-    Arguments<(ins AnyMemRef:$base,
+    Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
                Variadic<Index>:$indices,
                VectorOfRankAndType<[1], [I1]>:$mask,
                VectorOfRank<[1]>:$value)> {
@@ -1418,7 +1418,7 @@ def Vector_MaskedStoreOp :
 
 def Vector_GatherOp :
   Vector_Op<"gather">,
-    Arguments<(ins AnyMemRef:$base,
+    Arguments<(ins Arg<AnyMemRef, "", [MemRead]>:$base,
                VectorOfRankAndType<[1], [AnyInteger]>:$indices,
                VectorOfRankAndType<[1], [I1]>:$mask,
                VectorOfRank<[1]>:$pass_thru)>,
@@ -1475,7 +1475,7 @@ def Vector_GatherOp :
 
 def Vector_ScatterOp :
   Vector_Op<"scatter">,
-    Arguments<(ins AnyMemRef:$base,
+    Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
                VectorOfRankAndType<[1], [AnyInteger]>:$indices,
                VectorOfRankAndType<[1], [I1]>:$mask,
                VectorOfRank<[1]>:$value)> {
@@ -1531,7 +1531,7 @@ def Vector_ScatterOp :
 
 def Vector_ExpandLoadOp :
   Vector_Op<"expandload">,
-    Arguments<(ins AnyMemRef:$base,
+    Arguments<(ins Arg<AnyMemRef, "", [MemRead]>:$base,
                Variadic<Index>:$indices,
                VectorOfRankAndType<[1], [I1]>:$mask,
                VectorOfRank<[1]>:$pass_thru)>,
@@ -1586,7 +1586,7 @@ def Vector_ExpandLoadOp :
 
 def Vector_CompressStoreOp :
   Vector_Op<"compressstore">,
-    Arguments<(ins AnyMemRef:$base,
+    Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
                Variadic<Index>:$indices,
                VectorOfRankAndType<[1], [I1]>:$mask,
                VectorOfRank<[1]>:$value)> {
