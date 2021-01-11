@@ -977,8 +977,7 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
       ArgTypes.push_back(VD->getType());
     QualType FnType = getContext().getFunctionType(
         RetTy, ArgTypes, FunctionProtoType::ExtProtoInfo(CC));
-    DI->EmitFunctionStart(GD, Loc, StartLoc, FnType, CurFn, CurFuncIsThunk,
-                          Builder);
+    DI->emitFunctionStart(GD, Loc, StartLoc, FnType, CurFn, CurFuncIsThunk);
   }
 
   if (ShouldInstrumentFunction()) {
