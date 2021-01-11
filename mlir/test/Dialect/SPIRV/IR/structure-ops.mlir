@@ -214,6 +214,41 @@ spv.module Logical GLSL450 {
 // -----
 
 //===----------------------------------------------------------------------===//
+// spv.ExecutionMode
+//===----------------------------------------------------------------------===//
+
+spv.module Logical GLSL450 {
+   spv.func @do_nothing() -> () "None" {
+     spv.Return
+   }
+   spv.EntryPoint "GLCompute" @do_nothing
+   // CHECK: spv.ExecutionMode {{@.*}} "ContractionOff"
+   spv.ExecutionMode @do_nothing "ContractionOff"
+}
+
+spv.module Logical GLSL450 {
+   spv.func @do_nothing() -> () "None" {
+     spv.Return
+   }
+   spv.EntryPoint "GLCompute" @do_nothing
+   // CHECK: spv.ExecutionMode {{@.*}} "LocalSizeHint", 3, 4, 5
+   spv.ExecutionMode @do_nothing "LocalSizeHint", 3, 4, 5
+}
+
+// -----
+
+spv.module Logical GLSL450 {
+   spv.func @do_nothing() -> () "None" {
+     spv.Return
+   }
+   spv.EntryPoint "GLCompute" @do_nothing
+   // expected-error @+1 {{custom op 'spv.ExecutionMode' invalid execution_mode attribute specification: "GLCompute"}}
+   spv.ExecutionMode @do_nothing "GLCompute", 3, 4, 5
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spv.func
 //===----------------------------------------------------------------------===//
 
