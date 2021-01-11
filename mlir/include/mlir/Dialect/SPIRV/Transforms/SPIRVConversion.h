@@ -63,19 +63,6 @@ private:
   spirv::TargetEnv targetEnv;
 };
 
-/// Base class to define a conversion pattern to lower `SourceOp` into SPIR-V.
-template <typename SourceOp>
-class SPIRVOpLowering : public OpConversionPattern<SourceOp> {
-public:
-  SPIRVOpLowering(MLIRContext *context, SPIRVTypeConverter &typeConverter,
-                  PatternBenefit benefit = 1)
-      : OpConversionPattern<SourceOp>(context, benefit),
-        typeConverter(typeConverter) {}
-
-protected:
-  SPIRVTypeConverter &typeConverter;
-};
-
 /// Appends to a pattern list additional patterns for translating the builtin
 /// `func` op to the SPIR-V dialect. These patterns do not handle shader
 /// interface/ABI; they convert function parameters to be of SPIR-V allowed

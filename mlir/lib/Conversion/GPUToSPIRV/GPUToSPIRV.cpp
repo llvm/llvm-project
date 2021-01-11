@@ -17,6 +17,8 @@
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/StringSwitch.h"
 
 using namespace mlir;
 
@@ -26,9 +28,9 @@ namespace {
 /// Pattern lowering GPU block/thread size/id to loading SPIR-V invocation
 /// builtin variables.
 template <typename SourceOp, spirv::BuiltIn builtin>
-class LaunchConfigConversion : public SPIRVOpLowering<SourceOp> {
+class LaunchConfigConversion : public OpConversionPattern<SourceOp> {
 public:
-  using SPIRVOpLowering<SourceOp>::SPIRVOpLowering;
+  using OpConversionPattern<SourceOp>::OpConversionPattern;
 
   LogicalResult
   matchAndRewrite(SourceOp op, ArrayRef<Value> operands,
@@ -38,9 +40,9 @@ public:
 /// Pattern lowering subgroup size/id to loading SPIR-V invocation
 /// builtin variables.
 template <typename SourceOp, spirv::BuiltIn builtin>
-class SingleDimLaunchConfigConversion : public SPIRVOpLowering<SourceOp> {
+class SingleDimLaunchConfigConversion : public OpConversionPattern<SourceOp> {
 public:
-  using SPIRVOpLowering<SourceOp>::SPIRVOpLowering;
+  using OpConversionPattern<SourceOp>::OpConversionPattern;
 
   LogicalResult
   matchAndRewrite(SourceOp op, ArrayRef<Value> operands,
@@ -51,9 +53,9 @@ public:
 /// a constant with WorkgroupSize decoration. So here we cannot generate a
 /// builtin variable; instead the information in the `spv.entry_point_abi`
 /// attribute on the surrounding FuncOp is used to replace the gpu::BlockDimOp.
-class WorkGroupSizeConversion : public SPIRVOpLowering<gpu::BlockDimOp> {
+class WorkGroupSizeConversion : public OpConversionPattern<gpu::BlockDimOp> {
 public:
-  using SPIRVOpLowering<gpu::BlockDimOp>::SPIRVOpLowering;
+  using OpConversionPattern<gpu::BlockDimOp>::OpConversionPattern;
 
   LogicalResult
   matchAndRewrite(gpu::BlockDimOp op, ArrayRef<Value> operands,
@@ -61,9 +63,9 @@ public:
 };
 
 /// Pattern to convert a kernel function in GPU dialect within a spv.module.
-class GPUFuncOpConversion final : public SPIRVOpLowering<gpu::GPUFuncOp> {
+class GPUFuncOpConversion final : public OpConversionPattern<gpu::GPUFuncOp> {
 public:
-  using SPIRVOpLowering<gpu::GPUFuncOp>::SPIRVOpLowering;
+  using OpConversionPattern<gpu::GPUFuncOp>::OpConversionPattern;
 
   LogicalResult
   matchAndRewrite(gpu::GPUFuncOp funcOp, ArrayRef<Value> operands,
@@ -74,9 +76,9 @@ private:
 };
 
 /// Pattern to convert a gpu.module to a spv.module.
-class GPUModuleConversion final : public SPIRVOpLowering<gpu::GPUModuleOp> {
+class GPUModuleConversion final : public OpConversionPattern<gpu::GPUModuleOp> {
 public:
-  using SPIRVOpLowering<gpu::GPUModuleOp>::SPIRVOpLowering;
+  using OpConversionPattern<gpu::GPUModuleOp>::OpConversionPattern;
 
   LogicalResult
   matchAndRewrite(gpu::GPUModuleOp moduleOp, ArrayRef<Value> operands,
@@ -85,9 +87,9 @@ public:
 
 /// Pattern to convert a gpu.return into a SPIR-V return.
 // TODO: This can go to DRR when GPU return has operands.
-class GPUReturnOpConversion final : public SPIRVOpLowering<gpu::ReturnOp> {
+class GPUReturnOpConversion final : public OpConversionPattern<gpu::ReturnOp> {
 public:
-  using SPIRVOpLowering<gpu::ReturnOp>::SPIRVOpLowering;
+  using OpConversionPattern<gpu::ReturnOp>::OpConversionPattern;
 
   LogicalResult
   matchAndRewrite(gpu::ReturnOp returnOp, ArrayRef<Value> operands,
@@ -102,17 +104,14 @@ public:
 
 static Optional<int32_t> getLaunchConfigIndex(Operation *op) {
   auto dimAttr = op->getAttrOfType<StringAttr>("dimension");
-  if (!dimAttr) {
-    return {};
-  }
-  if (dimAttr.getValue() == "x") {
-    return 0;
-  } else if (dimAttr.getValue() == "y") {
-    return 1;
-  } else if (dimAttr.getValue() == "z") {
-    return 2;
-  }
-  return {};
+  if (!dimAttr)
+    return llvm::None;
+
+  return llvm::StringSwitch<Optional<int32_t>>(dimAttr.getValue())
+      .Case("x", 0)
+      .Case("y", 1)
+      .Case("z", 2)
+      .Default(llvm::None);
 }
 
 template <typename SourceOp, spirv::BuiltIn builtin>
@@ -150,7 +149,8 @@ LogicalResult WorkGroupSizeConversion::matchAndRewrite(
 
   auto workGroupSizeAttr = spirv::lookupLocalWorkGroupSize(op);
   auto val = workGroupSizeAttr.getValue<int32_t>(index.getValue());
-  auto convertedType = typeConverter.convertType(op.getResult().getType());
+  auto convertedType =
+      getTypeConverter()->convertType(op.getResult().getType());
   if (!convertedType)
     return failure();
   rewriter.replaceOpWithNewOp<spirv::ConstantOp>(
@@ -164,7 +164,7 @@ LogicalResult WorkGroupSizeConversion::matchAndRewrite(
 
 // Legalizes a GPU function as an entry SPIR-V function.
 static spirv::FuncOp
-lowerAsEntryFunction(gpu::GPUFuncOp funcOp, SPIRVTypeConverter &typeConverter,
+lowerAsEntryFunction(gpu::GPUFuncOp funcOp, TypeConverter &typeConverter,
                      ConversionPatternRewriter &rewriter,
                      spirv::EntryPointABIAttr entryPointInfo,
                      ArrayRef<spirv::InterfaceVarABIAttr> argABIInfo) {
@@ -266,7 +266,7 @@ LogicalResult GPUFuncOpConversion::matchAndRewrite(
     return failure();
   }
   spirv::FuncOp newFuncOp = lowerAsEntryFunction(
-      funcOp, typeConverter, rewriter, entryPointAttr, argABI);
+      funcOp, *getTypeConverter(), rewriter, entryPointAttr, argABI);
   if (!newFuncOp)
     return failure();
   newFuncOp.removeAttr(Identifier::get(gpu::GPUDialect::getKernelFuncAttrName(),
@@ -344,5 +344,5 @@ void mlir::populateGPUToSPIRVPatterns(MLIRContext *context,
                                       spirv::BuiltIn::NumSubgroups>,
       SingleDimLaunchConfigConversion<gpu::SubgroupSizeOp,
                                       spirv::BuiltIn::SubgroupSize>,
-      WorkGroupSizeConversion>(context, typeConverter);
+      WorkGroupSizeConversion>(typeConverter, context);
 }
