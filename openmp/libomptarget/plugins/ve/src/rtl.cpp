@@ -36,7 +36,7 @@
 #define TARGET_ELF_ID 0
 #endif
 
-#include "../../common/elf_common.c"
+#include "elf_common.h"
 
 struct DynLibTy {
   char *FileName;
