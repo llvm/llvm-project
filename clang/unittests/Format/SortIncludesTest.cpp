@@ -879,6 +879,42 @@ TEST_F(SortIncludesTest, DoNotRegroupGroupsInGoogleObjCStyle) {
                  "#include \"a.h\""));
 }
 
+TEST_F(SortIncludesTest, skipUTF8ByteOrderMarkMerge) {
+  Style.IncludeBlocks = Style.IBS_Merge;
+  std::string Code = "\xEF\xBB\xBF#include \"d.h\"\r\n"
+                     "#include \"b.h\"\r\n"
+                     "\r\n"
+                     "#include \"c.h\"\r\n"
+                     "#include \"a.h\"\r\n"
+                     "#include \"e.h\"\r\n";
+
+  std::string Expected = "\xEF\xBB\xBF#include \"e.h\"\r\n"
+                         "#include \"a.h\"\r\n"
+                         "#include \"b.h\"\r\n"
+                         "#include \"c.h\"\r\n"
+                         "#include \"d.h\"\r\n";
+
+  EXPECT_EQ(Expected, sort(Code, "e.cpp", 1));
+}
+
+TEST_F(SortIncludesTest, skipUTF8ByteOrderMarkPreserve) {
+  Style.IncludeBlocks = Style.IBS_Preserve;
+  std::string Code = "\xEF\xBB\xBF#include \"d.h\"\r\n"
+                     "#include \"b.h\"\r\n"
+                     "\r\n"
+                     "#include \"c.h\"\r\n"
+                     "#include \"a.h\"\r\n"
+                     "#include \"e.h\"\r\n";
+
+  std::string Expected = "\xEF\xBB\xBF#include \"b.h\"\r\n"
+                         "#include \"d.h\"\r\n"
+                         "\r\n"
+                         "#include \"a.h\"\r\n"
+                         "#include \"c.h\"\r\n"
+                         "#include \"e.h\"\r\n";
+
+  EXPECT_EQ(Expected, sort(Code, "e.cpp", 2));
+}
 } // end namespace
 } // end namespace format
 } // end namespace clang
