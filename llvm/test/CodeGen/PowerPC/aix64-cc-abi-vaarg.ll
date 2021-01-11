@@ -1,9 +1,9 @@
 ; RUN: llc -O2 -mtriple powerpc64-ibm-aix-xcoff -stop-after=machine-cp -verify-machineinstrs < %s | \
-; RUN: FileCheck --check-prefixes=CHECK,64BIT %s
+; RUN: FileCheck --check-prefix=64BIT %s
 
 ; RUN: llc -O2 -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec \
 ; RUN: -mtriple powerpc64-ibm-aix-xcoff < %s | \
-; RUN: FileCheck --check-prefixes=CHECKASM,ASM64 %s
+; RUN: FileCheck --check-prefix=ASM64 %s
 
   define i32 @int_va_arg(i32 %a, ...) local_unnamed_addr  {
   entry:

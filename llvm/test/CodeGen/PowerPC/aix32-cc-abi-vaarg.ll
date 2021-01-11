@@ -1,9 +1,9 @@
 ; RUN: llc -O2 -mtriple powerpc-ibm-aix-xcoff -stop-after=machine-cp -verify-machineinstrs < %s | \
-; RUN: FileCheck --check-prefixes=CHECK,32BIT %s
+; RUN: FileCheck --check-prefix=32BIT %s
 
 ; RUN: llc -O2 -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec \
 ; RUN:  -mtriple powerpc-ibm-aix-xcoff < %s | \
-; RUN: FileCheck --check-prefixes=CHECKASM,ASM32 %s
+; RUN: FileCheck --check-prefix=ASM32 %s
 
   define i32 @int_va_arg(i32 %a, ...) local_unnamed_addr  {
   entry:

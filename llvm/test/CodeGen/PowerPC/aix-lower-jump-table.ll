@@ -27,10 +27,10 @@
 ; RUN: --check-prefixes=64LARGE-ASM,LARGE-ASM %s
 
 ; RUN: llc -mtriple powerpc-ibm-aix-xcoff -function-sections < %s | FileCheck \
-; RUN: --check-prefixes=FUNC-ASM,CHECK %s
+; RUN: --check-prefix=FUNC-ASM %s
 
 ; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -function-sections < %s | FileCheck \
-; RUN: --check-prefixes=FUNC-ASM,CHECK %s
+; RUN: --check-prefix=FUNC-ASM %s
 
   define i32 @jump_table(i32 %a) {
   entry:
