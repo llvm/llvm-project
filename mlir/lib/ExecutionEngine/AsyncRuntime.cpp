@@ -359,9 +359,6 @@ extern "C" void mlirAsyncRuntimePrintCurrentThreadId() {
 // Export symbols for the MLIR runner integration. All other symbols are hidden.
 #ifndef _WIN32
 #define API __attribute__((visibility("default")))
-#else
-#define API
-#endif // _WIN32
 
 extern "C" API void __mlir_runner_init(llvm::StringMap<void *> &exportSymbols) {
   auto exportSymbol = [&](llvm::StringRef name, auto ptr) {
@@ -406,5 +403,7 @@ extern "C" API void __mlir_runner_init(llvm::StringMap<void *> &exportSymbols) {
 }
 
 extern "C" API void __mlir_runner_destroy() { resetDefaultAsyncRuntime(); }
+
+#endif // _WIN32
 
 #endif // MLIR_ASYNCRUNTIME_DEFINE_FUNCTIONS
