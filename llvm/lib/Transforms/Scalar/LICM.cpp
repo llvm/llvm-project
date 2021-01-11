@@ -624,7 +624,7 @@ public:
       else if (!TrueDestSucc.empty()) {
         Function *F = TrueDest->getParent();
         auto IsSucc = [&](BasicBlock &BB) { return TrueDestSucc.count(&BB); };
-        auto It = std::find_if(F->begin(), F->end(), IsSucc);
+        auto It = llvm::find_if(*F, IsSucc);
         assert(It != F->end() && "Could not find successor in function");
         CommonSucc = &*It;
       }
@@ -692,8 +692,7 @@ public:
           return BB != Pair.second && (Pair.first->getSuccessor(0) == BB ||
                                        Pair.first->getSuccessor(1) == BB);
         };
-    auto It = std::find_if(HoistableBranches.begin(), HoistableBranches.end(),
-                           HasBBAsSuccessor);
+    auto It = llvm::find_if(HoistableBranches, HasBBAsSuccessor);
 
     // If not involved in a pending branch, hoist to preheader
     BasicBlock *InitialPreheader = CurLoop->getLoopPreheader();

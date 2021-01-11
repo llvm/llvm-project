@@ -628,9 +628,8 @@ static BasicBlock *mergeComparisons(ArrayRef<BCECmpBlock> Comparisons,
   // If there is one block that requires splitting, we do it now, i.e.
   // just before we know we will collapse the chain. The instructions
   // can be executed before any of the instructions in the chain.
-  const auto ToSplit =
-      std::find_if(Comparisons.begin(), Comparisons.end(),
-                   [](const BCECmpBlock &B) { return B.RequireSplit; });
+  const auto ToSplit = llvm::find_if(
+      Comparisons, [](const BCECmpBlock &B) { return B.RequireSplit; });
   if (ToSplit != Comparisons.end()) {
     LLVM_DEBUG(dbgs() << "Splitting non_BCE work to header\n");
     ToSplit->split(BB, AA);
