@@ -2150,7 +2150,7 @@ lldb::Encoding TypeSystemSwiftTypeRef::GetEncoding(opaque_compiler_type_t type,
           node->getText() == swift::BUILTIN_TYPE_NAME_UNSAFEVALUEBUFFER ||
           node->getText() == swift::BUILTIN_TYPE_NAME_BRIDGEOBJECT)
         return lldb::eEncodingUint;
-      if (node->getText() == swift::BUILTIN_TYPE_NAME_VEC) {
+      if (node->getText().startswith(swift::BUILTIN_TYPE_NAME_VEC)) {
         count = 0;
         return lldb::eEncodingInvalid;
       }
