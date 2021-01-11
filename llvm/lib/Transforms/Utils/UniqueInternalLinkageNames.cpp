@@ -27,9 +27,12 @@ static bool uniqueifyInternalLinkageNames(Module &M) {
   Md5.final(R);
   SmallString<32> Str;
   llvm::MD5::stringifyResult(R, Str);
+  // Convert MD5hash to Decimal. Demangler suffixes can either contain numbers
+  // or characters but not both.
+  APInt IntHash = APInt(128, Str.str(), 16);
   // Prepend "__uniq" before the hash for tools like profilers to understand that
   // this symbol is of internal linkage type.
-  std::string ModuleNameHash = (Twine(".__uniq.") + Twine(Str)).str();
+  std::string ModuleNameHash = (Twine(".__uniq.") + Twine(IntHash.toString(10, false))).str();
   bool Changed = false;
 
   // Append the module hash to all internal linkage functions.
