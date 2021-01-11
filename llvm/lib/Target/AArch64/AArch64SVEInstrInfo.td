@@ -1183,6 +1183,10 @@ let Predicates = [HasSVE] in {
             (UZP1_ZZZ_H $v1, $v2)>;
   def : Pat<(nxv4f32 (concat_vectors nxv2f32:$v1, nxv2f32:$v2)),
             (UZP1_ZZZ_S $v1, $v2)>;
+  def : Pat<(nxv4bf16 (concat_vectors nxv2bf16:$v1, nxv2bf16:$v2)),
+            (UZP1_ZZZ_S $v1, $v2)>;
+  def : Pat<(nxv8bf16 (concat_vectors nxv4bf16:$v1, nxv4bf16:$v2)),
+            (UZP1_ZZZ_H $v1, $v2)>;
 
   defm CMPHS_PPzZZ : sve_int_cmp_0<0b000, "cmphs", SETUGE, SETULE>;
   defm CMPHI_PPzZZ : sve_int_cmp_0<0b001, "cmphi", SETUGT, SETULT>;
@@ -1735,6 +1739,16 @@ let Predicates = [HasSVE] in {
   def : Pat<(nxv4i32 (reinterpret_cast (nxv4f16 ZPR:$src))), (COPY_TO_REGCLASS ZPR:$src, ZPR)>;
   def : Pat<(nxv2i64 (reinterpret_cast (nxv2bf16 ZPR:$src))), (COPY_TO_REGCLASS ZPR:$src, ZPR)>;
   def : Pat<(nxv4i32 (reinterpret_cast (nxv4bf16 ZPR:$src))), (COPY_TO_REGCLASS ZPR:$src, ZPR)>;
+
+  def : Pat<(nxv2f16 (reinterpret_cast (nxv2i64 ZPR:$src))), (COPY_TO_REGCLASS ZPR:$src, ZPR)>;
+  def : Pat<(nxv2f32 (reinterpret_cast (nxv2i64 ZPR:$src))), (COPY_TO_REGCLASS ZPR:$src, ZPR)>;
+  def : Pat<(nxv2f64 (reinterpret_cast (nxv2i64 ZPR:$src))), (COPY_TO_REGCLASS ZPR:$src, ZPR)>;
+  def : Pat<(nxv4f16 (reinterpret_cast (nxv4i32 ZPR:$src))), (COPY_TO_REGCLASS ZPR:$src, ZPR)>;
+  def : Pat<(nxv4f32 (reinterpret_cast (nxv4i32 ZPR:$src))), (COPY_TO_REGCLASS ZPR:$src, ZPR)>;
+  def : Pat<(nxv8f16 (reinterpret_cast (nxv8i16 ZPR:$src))), (COPY_TO_REGCLASS ZPR:$src, ZPR)>;
+  def : Pat<(nxv2bf16 (reinterpret_cast (nxv2i64 ZPR:$src))), (COPY_TO_REGCLASS ZPR:$src, ZPR)>;
+  def : Pat<(nxv4bf16 (reinterpret_cast (nxv4i32 ZPR:$src))), (COPY_TO_REGCLASS ZPR:$src, ZPR)>;
+  def : Pat<(nxv8bf16 (reinterpret_cast (nxv8i16 ZPR:$src))), (COPY_TO_REGCLASS ZPR:$src, ZPR)>;
 
   def : Pat<(nxv16i1 (and PPR:$Ps1, PPR:$Ps2)),
             (AND_PPzPP (PTRUE_B 31), PPR:$Ps1, PPR:$Ps2)>;
