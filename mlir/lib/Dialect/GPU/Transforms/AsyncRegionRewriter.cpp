@@ -78,6 +78,8 @@ private:
     if (op->getNumRegions() > 0)
       return op->emitOpError("regions are not supported");
 
+    auto tokenType = builder.getType<gpu::AsyncTokenType>();
+
     // If there is no current token, insert a `gpu.wait async` without
     // dependencies to create one.
     if (!currentToken)
@@ -108,7 +110,7 @@ private:
   }
 
   OpBuilder builder;
-  const Type tokenType = builder.getType<gpu::AsyncTokenType>();
+
   // The token that represents the current asynchronous dependency. It's valid
   // range starts with a `gpu.wait async` op, and ends with a `gpu.wait` op.
   // In between, each gpu::AsyncOpInterface depends on the current token and
