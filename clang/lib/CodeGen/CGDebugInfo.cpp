@@ -3156,8 +3156,6 @@ llvm::DIType *CGDebugInfo::getTypeOrNull(QualType Ty) {
 
 void CGDebugInfo::completeTemplateDefinition(
     const ClassTemplateSpecializationDecl &SD) {
-  if (DebugKind <= codegenoptions::DebugLineTablesOnly)
-    return;
   completeUnusedClass(SD);
 }
 
