@@ -1,4 +1,4 @@
-//===-- elf_common.c - Common ELF functionality -------------------*- C -*-===//
+//===-- elf_common.h - Common ELF functionality -------------------*- C -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,7 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #if !(defined(_OMPTARGET_DEBUG_H))
-#error Include elf_common.c in the plugin source AFTER Debug.h has\
+#error Include elf_common.h in the plugin source AFTER Debug.h has\
  been included.
 #endif
 
@@ -23,7 +23,7 @@
 
 // Check whether an image is valid for execution on target_id
 static inline int32_t elf_check_machine(__tgt_device_image *image,
-    uint16_t target_id) {
+                                        uint16_t target_id) {
 
   // Is the library version incompatible with the header file?
   if (elf_version(EV_CURRENT) == EV_NONE) {
