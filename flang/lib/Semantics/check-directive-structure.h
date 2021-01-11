@@ -232,8 +232,6 @@ protected:
   // Check that only clauses in set are after the specific clauses.
   void CheckOnlyAllowedAfter(C clause, common::EnumSet<C, ClauseEnumSize> set);
 
-  void CheckRequired(C clause);
-
   void CheckRequireAtLeastOneOf();
 
   void CheckAllowed(C clause);
@@ -326,6 +324,8 @@ DirectiveStructureChecker<D, C, PC, ClauseEnumSize>::ClauseSetToString(
 template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
 void DirectiveStructureChecker<D, C, PC,
     ClauseEnumSize>::CheckRequireAtLeastOneOf() {
+  if (GetContext().requiredClauses.empty())
+    return;
   for (auto cl : GetContext().actualClauses) {
     if (GetContext().requiredClauses.test(cl))
       return;
@@ -445,17 +445,6 @@ void DirectiveStructureChecker<D, C, PC, ClauseEnumSize>::SayNotMatching(
       .Say(endSource, "Unmatched %s directive"_err_en_US,
           parser::ToUpperCaseLetters(endSource.ToString()))
       .Attach(beginSource, "Does not match directive"_en_US);
-}
-
-// Check that at least one of the required clauses is present on the directive.
-template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
-void DirectiveStructureChecker<D, C, PC, ClauseEnumSize>::CheckRequired(C c) {
-  if (!FindClause(c)) {
-    context_.Say(GetContext().directiveSource,
-        "At least one %s clause must appear on the %s directive"_err_en_US,
-        parser::ToUpperCaseLetters(getClauseName(c).str()),
-        ContextDirectiveAsFortran());
-  }
 }
 
 // Check the value of the clause is a positive parameter.
