@@ -2142,7 +2142,8 @@ lldb::Encoding TypeSystemSwiftTypeRef::GetEncoding(opaque_compiler_type_t type,
       if (node->getText().startswith(swift::BUILTIN_TYPE_NAME_INT) ||
           node->getText() == swift::BUILTIN_TYPE_NAME_WORD)
         return lldb::eEncodingSint;
-      if (node->getText() == swift::BUILTIN_TYPE_NAME_FLOAT)
+      if (node->getText().startswith(swift::BUILTIN_TYPE_NAME_FLOAT) ||
+          node->getText().startswith(swift::BUILTIN_TYPE_NAME_FLOAT_PPC))
         return lldb::eEncodingIEEE754;
       if (node->getText() == swift::BUILTIN_TYPE_NAME_RAWPOINTER ||
           node->getText() == swift::BUILTIN_TYPE_NAME_NATIVEOBJECT ||
