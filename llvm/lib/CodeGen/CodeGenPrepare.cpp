@@ -633,8 +633,8 @@ void CodeGenPrepare::removeAllAssertingVHReferences(Value *V) {
     return;
 
   auto &GEPVector = VecI->second;
-  const auto &I = std::find_if(GEPVector.begin(), GEPVector.end(),
-                               [=](auto &Elt) { return Elt.first == GEP; });
+  const auto &I =
+      llvm::find_if(GEPVector, [=](auto &Elt) { return Elt.first == GEP; });
   if (I == GEPVector.end())
     return;
 
