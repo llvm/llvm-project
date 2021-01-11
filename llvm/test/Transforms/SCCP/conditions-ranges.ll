@@ -886,6 +886,91 @@ false:
   ret void
 }
 
+define void @f16_conditions_and_logical(i32 %a, i32 %b) {
+; CHECK-LABEL: @f16_conditions_and_logical(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LT:%.*]] = icmp ult i32 [[A:%.*]], 100
+; CHECK-NEXT:    [[GT:%.*]] = icmp ugt i32 [[A]], 20
+; CHECK-NEXT:    [[BC:%.*]] = select i1 [[LT]], i1 [[GT]], i1 false
+; CHECK-NEXT:    br i1 [[BC]], label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK:       true:
+; CHECK-NEXT:    [[F_1:%.*]] = icmp eq i32 [[A]], 0
+; CHECK-NEXT:    call void @use(i1 [[F_1]])
+; CHECK-NEXT:    [[F_2:%.*]] = icmp eq i32 [[A]], 20
+; CHECK-NEXT:    call void @use(i1 [[F_2]])
+; CHECK-NEXT:    [[F_3:%.*]] = icmp ugt i32 [[A]], 100
+; CHECK-NEXT:    call void @use(i1 [[F_3]])
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i32 [[A]], 100
+; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    [[T_2:%.*]] = icmp ne i32 [[A]], 20
+; CHECK-NEXT:    call void @use(i1 [[T_2]])
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i32 [[A]], 21
+; CHECK-NEXT:    call void @use(i1 [[C_1]])
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i32 [[A]], 21
+; CHECK-NEXT:    call void @use(i1 [[C_2]])
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i32 [[A]], 50
+; CHECK-NEXT:    call void @use(i1 [[C_3]])
+; CHECK-NEXT:    ret void
+; CHECK:       false:
+; CHECK-NEXT:    [[F_4:%.*]] = icmp eq i32 [[A]], 50
+; CHECK-NEXT:    call void @use(i1 [[F_4]])
+; CHECK-NEXT:    [[T_3:%.*]] = icmp ne i32 [[A]], 50
+; CHECK-NEXT:    call void @use(i1 [[T_3]])
+; CHECK-NEXT:    [[C_4:%.*]] = icmp eq i32 [[A]], 10
+; CHECK-NEXT:    call void @use(i1 [[C_4]])
+; CHECK-NEXT:    [[C_5:%.*]] = icmp eq i32 [[B:%.*]], 100
+; CHECK-NEXT:    call void @use(i1 [[C_5]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %lt = icmp ult i32 %a, 100
+  %gt = icmp ugt i32 %a, 20
+  %bc = select i1 %lt, i1 %gt, i1 false
+  br i1 %bc, label %true, label %false
+
+true: ; %a in [21, 100)
+  ; Conditions below are false.
+  %f.1 = icmp eq i32 %a, 0
+  call void @use(i1 %f.1)
+  %f.2 = icmp eq i32 %a, 20
+  call void @use(i1 %f.2)
+  %f.3 = icmp ugt i32 %a, 100
+  call void @use(i1 %f.3)
+
+  ; Conditions below are true.
+  %t.1 = icmp ult i32 %a, 100
+  call void @use(i1 %t.1)
+  %t.2 = icmp ne i32 %a, 20
+  call void @use(i1 %t.2)
+
+  ; Conditions below cannot be simplified.
+  %c.1 = icmp eq i32 %a, 21
+  call void @use(i1 %c.1)
+  %c.2 = icmp ugt i32 %a, 21
+  call void @use(i1 %c.2)
+  %c.3 = icmp ugt i32 %a, 50
+  call void @use(i1 %c.3)
+  ret void
+
+false:
+; TODO: Currently there is no conditional range info in the false branch for branch conditions with an AND.
+;       %a should be in in [100, 21)
+  ; Conditions below are false;
+  %f.4 = icmp eq i32 %a, 50
+  call void @use(i1 %f.4)
+
+  ; Conditions below are true;
+  %t.3 = icmp ne i32 %a, 50
+  call void @use(i1 %t.3)
+
+  ; Conditions below cannot be simplified.
+  %c.4 = icmp eq i32 %a, 10
+  call void @use(i1 %c.4)
+  %c.5 = icmp eq i32 %b, 100
+  call void @use(i1 %c.5)
+  ret void
+}
+
 define void @f17_conditions_or(i32 %a, i32 %b) {
 ; CHECK-LABEL: @f17_conditions_or(
 ; CHECK-NEXT:  entry:
@@ -921,6 +1006,91 @@ entry:
   %gt = icmp uge i32 %a, 100
   %lt = icmp ule i32 %a, 20
   %bc = or i1 %lt, %gt
+  br i1 %bc, label %true, label %false
+
+false: ; %a in [21, 100)
+  ; Conditions below are false.
+  %f.1 = icmp eq i32 %a, 0
+  call void @use(i1 %f.1)
+  %f.2 = icmp eq i32 %a, 20
+  call void @use(i1 %f.2)
+  %f.3 = icmp ugt i32 %a, 100
+  call void @use(i1 %f.3)
+
+  ; Conditions below are true.
+  %t.1 = icmp ult i32 %a, 100
+  call void @use(i1 %t.1)
+  %t.2 = icmp ne i32 %a, 20
+  call void @use(i1 %t.2)
+
+  ; Conditions below cannot be simplified.
+  %c.1 = icmp eq i32 %a, 21
+  call void @use(i1 %c.1)
+  %c.2 = icmp ugt i32 %a, 21
+  call void @use(i1 %c.2)
+  %c.3 = icmp ugt i32 %a, 50
+  call void @use(i1 %c.3)
+  ret void
+
+true:
+; TODO: Currently there is no conditional range info in the false branch for branch conditions with an AND.
+;       %a should be in in [100, 21)
+  ; Conditions below are false;
+  %f.4 = icmp eq i32 %a, 50
+  call void @use(i1 %f.4)
+
+  ; Conditions below are true;
+  %t.3 = icmp ne i32 %a, 50
+  call void @use(i1 %t.3)
+
+  ; Conditions below cannot be simplified.
+  %c.4 = icmp eq i32 %a, 10
+  call void @use(i1 %c.4)
+  %c.5 = icmp eq i32 %b, 100
+  call void @use(i1 %c.5)
+  ret void
+}
+
+define void @f17_conditions_or_logical(i32 %a, i32 %b) {
+; CHECK-LABEL: @f17_conditions_or_logical(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[GT:%.*]] = icmp uge i32 [[A:%.*]], 100
+; CHECK-NEXT:    [[LT:%.*]] = icmp ule i32 [[A]], 20
+; CHECK-NEXT:    [[BC:%.*]] = select i1 [[LT]], i1 true, i1 [[GT]]
+; CHECK-NEXT:    br i1 [[BC]], label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK:       false:
+; CHECK-NEXT:    [[F_1:%.*]] = icmp eq i32 [[A]], 0
+; CHECK-NEXT:    call void @use(i1 [[F_1]])
+; CHECK-NEXT:    [[F_2:%.*]] = icmp eq i32 [[A]], 20
+; CHECK-NEXT:    call void @use(i1 [[F_2]])
+; CHECK-NEXT:    [[F_3:%.*]] = icmp ugt i32 [[A]], 100
+; CHECK-NEXT:    call void @use(i1 [[F_3]])
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i32 [[A]], 100
+; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    [[T_2:%.*]] = icmp ne i32 [[A]], 20
+; CHECK-NEXT:    call void @use(i1 [[T_2]])
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i32 [[A]], 21
+; CHECK-NEXT:    call void @use(i1 [[C_1]])
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i32 [[A]], 21
+; CHECK-NEXT:    call void @use(i1 [[C_2]])
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i32 [[A]], 50
+; CHECK-NEXT:    call void @use(i1 [[C_3]])
+; CHECK-NEXT:    ret void
+; CHECK:       true:
+; CHECK-NEXT:    [[F_4:%.*]] = icmp eq i32 [[A]], 50
+; CHECK-NEXT:    call void @use(i1 [[F_4]])
+; CHECK-NEXT:    [[T_3:%.*]] = icmp ne i32 [[A]], 50
+; CHECK-NEXT:    call void @use(i1 [[T_3]])
+; CHECK-NEXT:    [[C_4:%.*]] = icmp eq i32 [[A]], 10
+; CHECK-NEXT:    call void @use(i1 [[C_4]])
+; CHECK-NEXT:    [[C_5:%.*]] = icmp eq i32 [[B:%.*]], 100
+; CHECK-NEXT:    call void @use(i1 [[C_5]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %gt = icmp uge i32 %a, 100
+  %lt = icmp ule i32 %a, 20
+  %bc = select i1 %lt, i1 true, i1 %gt
   br i1 %bc, label %true, label %false
 
 false: ; %a in [21, 100)
