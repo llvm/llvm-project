@@ -900,6 +900,45 @@ TEST_F(SortIncludesTest, DoNotRegroupGroupsInGoogleObjCStyle) {
                  "#include \"a.h\""));
 }
 
+TEST_F(SortIncludesTest, DoNotTreatPrecompiledHeadersAsFirstBlock) {
+  Style.IncludeBlocks = Style.IBS_Merge;
+  std::string Code = "#include \"d.h\"\r\n"
+                     "#include \"b.h\"\r\n"
+                     "#pragma hdrstop\r\n"
+                     "\r\n"
+                     "#include \"c.h\"\r\n"
+                     "#include \"a.h\"\r\n"
+                     "#include \"e.h\"\r\n";
+
+  std::string Expected = "#include \"b.h\"\r\n"
+                         "#include \"d.h\"\r\n"
+                         "#pragma hdrstop\r\n"
+                         "\r\n"
+                         "#include \"e.h\"\r\n"
+                         "#include \"a.h\"\r\n"
+                         "#include \"c.h\"\r\n";
+
+  EXPECT_EQ(Expected, sort(Code, "e.cpp", 2));
+
+  Code = "#include \"d.h\"\n"
+         "#include \"b.h\"\n"
+         "#pragma hdrstop( \"c:\\projects\\include\\myinc.pch\" )\n"
+         "\n"
+         "#include \"c.h\"\n"
+         "#include \"a.h\"\n"
+         "#include \"e.h\"\n";
+
+  Expected = "#include \"b.h\"\n"
+             "#include \"d.h\"\n"
+             "#pragma hdrstop(\"c:\\projects\\include\\myinc.pch\")\n"
+             "\n"
+             "#include \"e.h\"\n"
+             "#include \"a.h\"\n"
+             "#include \"c.h\"\n";
+
+  EXPECT_EQ(Expected, sort(Code, "e.cpp", 2));
+}
+
 TEST_F(SortIncludesTest, skipUTF8ByteOrderMarkMerge) {
   Style.IncludeBlocks = Style.IBS_Merge;
   std::string Code = "\xEF\xBB\xBF#include \"d.h\"\r\n"
