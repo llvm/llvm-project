@@ -664,7 +664,7 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella)
     currentTopLevelTapi = nullptr;
 }
 
-ArchiveFile::ArchiveFile(std::unique_ptr<llvm::object::Archive> &&f)
+ArchiveFile::ArchiveFile(std::unique_ptr<object::Archive> &&f)
     : InputFile(ArchiveKind, f->getMemoryBufferRef()), file(std::move(f)) {
   for (const object::Archive::Symbol &sym : file->symbols())
     symtab->addLazy(sym.getName(), this, sym);
