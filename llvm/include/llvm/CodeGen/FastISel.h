@@ -224,10 +224,6 @@ protected:
   /// makes sense (for example, on function calls)
   MachineInstr *EmitStartPt;
 
-  /// Last local value flush point. On a subsequent flush, no local value will
-  /// sink past this point.
-  MachineBasicBlock::iterator LastFlushPoint;
-
 public:
   virtual ~FastISel();
 

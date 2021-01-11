@@ -236,7 +236,6 @@ void FastISel::flushLocalValueMap() {
   LastLocalValue = EmitStartPt;
   recomputeInsertPt();
   SavedInsertPt = FuncInfo.InsertPt;
-  LastFlushPoint = FuncInfo.InsertPt;
 }
 
 bool FastISel::hasTrivialKill(const Value *V) {
@@ -458,8 +457,6 @@ void FastISel::removeDeadCode(MachineBasicBlock::iterator I,
   assert(I.isValid() && E.isValid() && std::distance(I, E) > 0 &&
          "Invalid iterator!");
   while (I != E) {
-    if (LastFlushPoint == I)
-      LastFlushPoint = E;
     if (SavedInsertPt == I)
       SavedInsertPt = E;
     if (EmitStartPt == I)
@@ -1210,11 +1207,6 @@ bool FastISel::selectCall(const User *I) {
 
   // Handle simple inline asms.
   if (const InlineAsm *IA = dyn_cast<InlineAsm>(Call->getCalledOperand())) {
-    // If the inline asm has side effects, then make sure that no local value
-    // lives across by flushing the local value map.
-    if (IA->hasSideEffects())
-      flushLocalValueMap();
-
     // Don't attempt to handle constraints.
     if (!IA->getConstraintString().empty())
       return false;
@@ -1243,15 +1235,6 @@ bool FastISel::selectCall(const User *I) {
   // Handle intrinsic function calls.
   if (const auto *II = dyn_cast<IntrinsicInst>(Call))
     return selectIntrinsicCall(II);
-
-  // Usually, it does not make sense to initialize a value,
-  // make an unrelated function call and use the value, because
-  // it tends to be spilled on the stack. So, we move the pointer
-  // to the last local value to the beginning of the block, so that
-  // all the values which have already been materialized,
-  // appear after the call. It also makes sense to skip intrinsics
-  // since they tend to be inlined.
-  flushLocalValueMap();
 
   return lowerCall(Call);
 }
@@ -1409,20 +1392,6 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
     return selectXRayCustomEvent(II);
   case Intrinsic::xray_typedevent:
     return selectXRayTypedEvent(II);
-
-  case Intrinsic::memcpy:
-  case Intrinsic::memcpy_element_unordered_atomic:
-  case Intrinsic::memcpy_inline:
-  case Intrinsic::memmove:
-  case Intrinsic::memmove_element_unordered_atomic:
-  case Intrinsic::memset:
-  case Intrinsic::memset_element_unordered_atomic:
-    // Flush the local value map just like we do for regular calls,
-    // to avoid excessive spills and reloads.
-    // These intrinsics mostly turn into library calls at O0; and
-    // even memcpy_inline should be treated like one for this purpose.
-    flushLocalValueMap();
-    break;
   }
 
   return fastLowerIntrinsicCall(II);
