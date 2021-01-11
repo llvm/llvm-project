@@ -296,7 +296,9 @@ static void writeInstrProfile(StringRef OutputFilename,
                               ProfileFormat OutputFormat,
                               InstrProfWriter &Writer) {
   std::error_code EC;
-  raw_fd_ostream Output(OutputFilename.data(), EC, sys::fs::OF_None);
+  raw_fd_ostream Output(OutputFilename.data(), EC,
+                        OutputFormat == PF_Text ? sys::fs::OF_Text
+                                                : sys::fs::OF_None);
   if (EC)
     exitWithErrorCode(EC, OutputFilename);
 
