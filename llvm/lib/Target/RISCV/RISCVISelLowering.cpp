@@ -3899,16 +3899,28 @@ bool RISCVTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
                                                  SDValue C) const {
   // Check integral scalar types.
   if (VT.isScalarInteger()) {
-    // Do not perform the transformation on riscv32 with the M extension.
-    if (!Subtarget.is64Bit() && Subtarget.hasStdExtM())
+    // Omit the optimization if the sub target has the M extension and the data
+    // size exceeds XLen.
+    if (Subtarget.hasStdExtM() && VT.getSizeInBits() > Subtarget.getXLen())
       return false;
     if (auto *ConstNode = dyn_cast<ConstantSDNode>(C.getNode())) {
-      if (ConstNode->getAPIntValue().getBitWidth() > 8 * sizeof(int64_t))
-        return false;
-      int64_t Imm = ConstNode->getSExtValue();
-      if (isPowerOf2_64(Imm + 1) || isPowerOf2_64(Imm - 1) ||
-          isPowerOf2_64(1 - Imm) || isPowerOf2_64(-1 - Imm))
+      // Break the MUL to a SLLI and an ADD/SUB.
+      const APInt &Imm = ConstNode->getAPIntValue();
+      if ((Imm + 1).isPowerOf2() || (Imm - 1).isPowerOf2() ||
+          (1 - Imm).isPowerOf2() || (-1 - Imm).isPowerOf2())
         return true;
+      // Omit the following optimization if the sub target has the M extension
+      // and the data size >= XLen.
+      if (Subtarget.hasStdExtM() && VT.getSizeInBits() >= Subtarget.getXLen())
+        return false;
+      // Break the MUL to two SLLI instructions and an ADD/SUB, if Imm needs
+      // a pair of LUI/ADDI.
+      if (!Imm.isSignedIntN(12) && Imm.countTrailingZeros() < 12) {
+        APInt ImmS = Imm.ashr(Imm.countTrailingZeros());
+        if ((ImmS + 1).isPowerOf2() || (ImmS - 1).isPowerOf2() ||
+            (1 - ImmS).isPowerOf2())
+        return true;
+      }
     }
   }
 
