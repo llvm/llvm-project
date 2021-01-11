@@ -11,12 +11,33 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/TypeDef.h"
+#include "mlir/TableGen/Dialect.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 
 using namespace mlir;
 using namespace mlir::tblgen;
+
+//===----------------------------------------------------------------------===//
+// TypeBuilder
+//===----------------------------------------------------------------------===//
+
+/// Return an optional code body used for the `getChecked` variant of this
+/// builder.
+Optional<StringRef> TypeBuilder::getCheckedBody() const {
+  Optional<StringRef> body = def->getValueAsOptionalString("checkedBody");
+  return body && !body->empty() ? body : llvm::None;
+}
+
+/// Returns true if this builder is able to infer the MLIRContext parameter.
+bool TypeBuilder::hasInferredContextParameter() const {
+  return def->getValueAsBit("hasInferredContextParam");
+}
+
+//===----------------------------------------------------------------------===//
+// TypeDef
+//===----------------------------------------------------------------------===//
 
 Dialect TypeDef::getDialect() const {
   auto *dialectDef =
@@ -98,12 +119,44 @@ llvm::Optional<StringRef> TypeDef::getExtraDecls() const {
   return value.empty() ? llvm::Optional<StringRef>() : value;
 }
 llvm::ArrayRef<llvm::SMLoc> TypeDef::getLoc() const { return def->getLoc(); }
+
+bool TypeDef::skipDefaultBuilders() const {
+  return def->getValueAsBit("skipDefaultBuilders");
+}
+
 bool TypeDef::operator==(const TypeDef &other) const {
   return def == other.def;
 }
 
 bool TypeDef::operator<(const TypeDef &other) const {
   return getName() < other.getName();
+}
+
+//===----------------------------------------------------------------------===//
+// TypeParameter
+//===----------------------------------------------------------------------===//
+
+TypeDef::TypeDef(const llvm::Record *def) : def(def) {
+  // Populate the builders.
+  auto *builderList =
+      dyn_cast_or_null<llvm::ListInit>(def->getValueInit("builders"));
+  if (builderList && !builderList->empty()) {
+    for (llvm::Init *init : builderList->getValues()) {
+      TypeBuilder builder(cast<llvm::DefInit>(init)->getDef(), def->getLoc());
+
+      // Ensure that all parameters have names.
+      for (const TypeBuilder::Parameter &param : builder.getParameters()) {
+        if (!param.getName())
+          PrintFatalError(def->getLoc(),
+                          "type builder parameters must have a name");
+      }
+      builders.emplace_back(builder);
+    }
+  } else if (skipDefaultBuilders()) {
+    PrintFatalError(
+        def->getLoc(),
+        "default builders are skipped and no custom builders provided");
+  }
 }
 
 StringRef TypeParameter::getName() const {

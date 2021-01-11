@@ -74,7 +74,7 @@ def ScalableVectorType : ArmSVE_Type<"ScalableVector"> {
     VectorType vector;
     if ($_parser.parseType(vector))
       return Type();
-    return get(ctxt, vector.getShape(), vector.getElementType());
+    return get($_ctxt, vector.getShape(), vector.getElementType());
   }];
 
   let extraClassDeclaration = [{

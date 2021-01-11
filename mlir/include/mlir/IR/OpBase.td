@@ -2430,6 +2430,73 @@ def replaceWithValue;
 // Data type generation
 //===----------------------------------------------------------------------===//
 
+// Class for defining a custom type getter.
+//
+// TableGen generates several generic getter methods for each type by default,
+// corresponding to the specified dag parameters. If the default generated ones
+// cannot cover some use case, custom getters can be defined using instances of
+// this class.
+//
+// The signature of the `get` is always either:
+//
+// ```c++
+// static <Type-Name> get(MLIRContext *context, <other-parameters>...) {
+//   <body>...
+// }
+// ```
+//
+// or:
+//
+// ```c++
+// static <TypeName> get(MLIRContext *context, <parameters>...);
+// ```
+//
+// To define a custom getter, the parameter list and body should be passed
+// in as separate template arguments to this class. The parameter list is a
+// TableGen DAG with `ins` operation with named arguments, which has either:
+//   - string initializers ("Type":$name) to represent a typed parameter, or
+//   - CArg-typed initializers (CArg<"Type", "default">:$name) to represent a
+//     typed parameter that may have a default value.
+// The type string is used verbatim to produce code and, therefore, must be a
+// valid C++ type. It is used inside the C++ namespace of the parent Type's
+// dialect; explicit namespace qualification like `::mlir` may be necessary if
+// Types are not placed inside the `mlir` namespace. The default value string is
+// used verbatim to produce code and must be a valid C++ initializer the given
+// type. For example, the following signature specification
+//
+// ```
+// TypeBuilder<(ins "int":$integerArg, CArg<"float", "3.0f">:$floatArg)>
+// ```
+//
+// has an integer parameter and a float parameter with a default value.
+//
+// If an empty string is passed in for `body`, then *only* the builder
+// declaration will be generated; this provides a way to define complicated
+// builders entirely in C++.
+//
+// `checkedBody` is similar to `body`, but is the code block used when
+// generating a `getChecked` method.
+class TypeBuilder<dag parameters, code bodyCode = "",
+                  code checkedBodyCode = ""> {
+  dag dagParams = parameters;
+  code body = bodyCode;
+  code checkedBody = checkedBodyCode;
+
+  // The context parameter can be inferred from one of the other parameters and
+  // is not implicitly added to the parameter list.
+  bit hasInferredContextParam = 0;
+}
+
+// A class of TypeBuilder that is able to infer the MLIRContext parameter from
+// one of the other builder parameters. Instances of this builder do not have
+// `MLIRContext *` implicitly added to the parameter list.
+class TypeBuilderWithInferredContext<dag parameters, code bodyCode = "",
+                                     code checkedBodyCode = "">
+  : TypeBuilder<parameters, bodyCode> {
+  code checkedBody = checkedBodyCode;
+  let hasInferredContextParam = 1;
+}
+
 // Define a new type, named `name`, belonging to `dialect` that inherits from
 // the given C++ base class.
 class TypeDef<Dialect dialect, string name,
@@ -2475,6 +2542,18 @@ class TypeDef<Dialect dialect, string name,
   // for re-allocating ArrayRefs. It is defined below.)
   dag parameters = (ins);
 
+  // Custom type builder methods.
+  // In addition to the custom builders provided here, and unless
+  // skipDefaultBuilders is set, a default builder is generated with the
+  // following signature:
+  //
+  // ```c++
+  // static <TypeName> get(MLIRContext *, <parameters>);
+  // ```
+  //
+  // Note that builders should only be provided when a type has parameters.
+  list<TypeBuilder> builders = ?;
+
   // Use the lowercased name as the keyword for parsing/printing. Specify only
   // if you want tblgen to generate declarations and/or definitions of
   // printer/parser for this type.
@@ -2488,6 +2567,9 @@ class TypeDef<Dialect dialect, string name,
 
   // If set, generate accessors for each Type parameter.
   bit genAccessors = 1;
+  // Avoid generating default get/getChecked functions. Custom get methods must
+  // be provided.
+  bit skipDefaultBuilders = 0;
   // Generate the verifyConstructionInvariants declaration and getChecked
   // method.
   bit genVerifyInvariantsDecl = 0;
