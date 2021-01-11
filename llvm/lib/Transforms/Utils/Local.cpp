@@ -735,13 +735,13 @@ void llvm::MergeBasicBlockIntoOnlyPred(BasicBlock *DestBB,
   SmallVector<DominatorTree::UpdateType, 32> Updates;
 
   if (DTU) {
-    Updates.push_back({DominatorTree::Delete, PredBB, DestBB});
     for (auto I = pred_begin(PredBB), E = pred_end(PredBB); I != E; ++I) {
-      Updates.push_back({DominatorTree::Delete, *I, PredBB});
       // This predecessor of PredBB may already have DestBB as a successor.
       if (!llvm::is_contained(successors(*I), DestBB))
         Updates.push_back({DominatorTree::Insert, *I, DestBB});
+      Updates.push_back({DominatorTree::Delete, *I, PredBB});
     }
+    Updates.push_back({DominatorTree::Delete, PredBB, DestBB});
   }
 
   // Zap anything that took the address of DestBB.  Not doing this will give the
@@ -1046,16 +1046,16 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
 
   SmallVector<DominatorTree::UpdateType, 32> Updates;
   if (DTU) {
-    Updates.push_back({DominatorTree::Delete, BB, Succ});
     // All predecessors of BB will be moved to Succ.
     SmallSetVector<BasicBlock *, 8> Predecessors(pred_begin(BB), pred_end(BB));
     Updates.reserve(Updates.size() + 2 * Predecessors.size());
     for (auto *Predecessor : Predecessors) {
-      Updates.push_back({DominatorTree::Delete, Predecessor, BB});
       // This predecessor of BB may already have Succ as a successor.
       if (!llvm::is_contained(successors(Predecessor), Succ))
         Updates.push_back({DominatorTree::Insert, Predecessor, Succ});
+      Updates.push_back({DominatorTree::Delete, Predecessor, BB});
     }
+    Updates.push_back({DominatorTree::Delete, BB, Succ});
   }
 
   if (isa<PHINode>(Succ->begin())) {
