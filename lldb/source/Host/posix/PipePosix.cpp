@@ -117,7 +117,7 @@ Status PipePosix::CreateNew(llvm::StringRef name, bool child_process_inherit) {
     return Status("Pipe is already opened");
 
   Status error;
-  if (::mkfifo(name.data(), 0660) != 0)
+  if (::mkfifo(name.str().c_str(), 0660) != 0)
     error.SetErrorToErrno();
 
   return error;
@@ -138,8 +138,8 @@ Status PipePosix::CreateWithUniqueName(llvm::StringRef prefix,
   // try again.
   Status error;
   do {
-    llvm::sys::fs::createUniqueFile(tmpdir_file_spec.GetPath(),
-                                    named_pipe_path);
+    llvm::sys::fs::createUniquePath(tmpdir_file_spec.GetPath(), named_pipe_path,
+                                    /*MakeAbsolute=*/false);
     error = CreateNew(named_pipe_path, child_process_inherit);
   } while (error.GetError() == EEXIST);
 
@@ -158,7 +158,7 @@ Status PipePosix::OpenAsReader(llvm::StringRef name,
     flags |= O_CLOEXEC;
 
   Status error;
-  int fd = llvm::sys::RetryAfterSignal(-1, ::open, name.data(), flags);
+  int fd = llvm::sys::RetryAfterSignal(-1, ::open, name.str().c_str(), flags);
   if (fd != -1)
     m_fds[READ] = fd;
   else
@@ -189,7 +189,7 @@ PipePosix::OpenAsWriterWithTimeout(llvm::StringRef name,
     }
 
     errno = 0;
-    int fd = ::open(name.data(), flags);
+    int fd = ::open(name.str().c_str(), flags);
     if (fd == -1) {
       const auto errno_copy = errno;
       // We may get ENXIO if a reader side of the pipe hasn't opened yet.

@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -std=c++2a -emit-llvm %s -triple x86_64-linux-gnu -o - | FileCheck %s --check-prefixes=CHECK,CHECK-ITANIUM,CHECK-64BIT
-// RUN: %clang_cc1 -std=c++2a -emit-llvm %s -triple x86_64-windows -o - | FileCheck %s --check-prefixes=CHECK,CHECK-MSABI,CHECK-MSABI64,CHECK-64BIT
-// RUN: %clang_cc1 -std=c++2a -emit-llvm %s -triple i386-windows -o - | FileCheck %s --check-prefixes=CHECK,CHECK-MSABI,CHECK-MSABI32,CHECK-32BIT
+// RUN: %clang_cc1 -std=c++2a -fexceptions -emit-llvm %s -triple x86_64-linux-gnu -o - | FileCheck %s --check-prefixes=CHECK,CHECK-ITANIUM,CHECK-64BIT
+// RUN: %clang_cc1 -std=c++2a -fexceptions -emit-llvm %s -triple x86_64-windows -o - | FileCheck %s --check-prefixes=CHECK,CHECK-MSABI,CHECK-MSABI64,CHECK-64BIT
+// RUN: %clang_cc1 -std=c++2a -fexceptions -emit-llvm %s -triple i386-windows -o - | FileCheck %s --check-prefixes=CHECK,CHECK-MSABI,CHECK-MSABI32,CHECK-32BIT
 
 // PR46908: ensure the IR passes the verifier with optimizations enabled.
-// RUN: %clang_cc1 -std=c++2a -emit-llvm-only %s -triple x86_64-linux-gnu -O2
-// RUN: %clang_cc1 -std=c++2a -emit-llvm-only %s -triple x86_64-windows -O2
-// RUN: %clang_cc1 -std=c++2a -emit-llvm-only %s -triple i386-windows -O2
+// RUN: %clang_cc1 -std=c++2a -fexceptions -emit-llvm-only %s -triple x86_64-linux-gnu -O2
+// RUN: %clang_cc1 -std=c++2a -fexceptions -emit-llvm-only %s -triple x86_64-windows -O2
+// RUN: %clang_cc1 -std=c++2a -fexceptions -emit-llvm-only %s -triple i386-windows -O2
 
 namespace std {
   using size_t = decltype(sizeof(0));
@@ -102,6 +102,41 @@ void delete_D(D *d) { delete d; }
 // CHECK-NOT: call
 // CHECK: }
 
+struct J {
+  J(); // might throw
+  void operator delete(J *, std::destroying_delete_t);
+};
+
+// CHECK-ITANIUM-LABEL: define {{.*}}@_Z1j
+// CHECK-MSABI-LABEL: define {{.*}}@"?j@@
+J *j() {
+  // CHECK-ITANIUM: invoke {{.*}}@_ZN1JC1Ev(
+  // CHECK-ITANIUM: call {{.*}}@_ZdlPv(
+  // CHECK-NOT: }
+  // CHECK-MSABI: invoke {{.*}}@"??0J@@Q{{AE|EAA}}@XZ"(
+  // CHECK-MSABI: call {{.*}}@"??3@YAXP{{E?}}AX@Z"(
+  return new J;
+  // CHECK: }
+}
+
+struct K {
+  K(); // might throw
+  void operator delete(void *);
+  void operator delete(K *, std::destroying_delete_t);
+};
+
+// CHECK-ITANIUM-LABEL: define {{.*}}@_Z1k
+// CHECK-MSABI-LABEL: define {{.*}}@"?k@@
+K *k() {
+  // CHECK-ITANIUM: invoke {{.*}}@_ZN1KC1Ev(
+  // CHECK-ITANIUM: call {{.*}}@_ZN1KdlEPv(
+  // CHECK-NOT: }
+  // CHECK-MSABI: invoke {{.*}}@"??0K@@Q{{AE|EAA}}@XZ"(
+  // CHECK-MSABI: call {{.*}}@"??3K@@SAXP{{E?}}AX@Z"(
+  return new K;
+  // CHECK: }
+}
+
 struct E { void *data; };
 struct F { void operator delete(F *, std::destroying_delete_t, std::size_t, std::align_val_t); void *data; };
 struct alignas(16) G : E, F { void *data; };
@@ -127,8 +162,8 @@ H::~H() { call_in_dtor(); }
 // CHECK-ITANIUM-NOT: call
 // CHECK-ITANIUM: }
 
-// CHECK-MSABI64: define {{.*}} @"??_GH@@UEAAPEAXI@Z"(
-// CHECK-MSABI32: define {{.*}} @"??_GH@@UAEPAXI@Z"(
+// CHECK-MSABI64-LABEL: define {{.*}} @"??_GH@@UEAAPEAXI@Z"(
+// CHECK-MSABI32-LABEL: define {{.*}} @"??_GH@@UAEPAXI@Z"(
 // CHECK-MSABI-NOT: call{{ }}
 // CHECK-MSABI: load i32
 // CHECK-MSABI: icmp eq i32 {{.*}}, 0
@@ -158,8 +193,8 @@ I::~I() { call_in_dtor(); }
 // CHECK-ITANIUM-NOT: call
 // CHECK-ITANIUM: }
 
-// CHECK-MSABI64: define {{.*}} @"??_GI@@UEAAPEAXI@Z"(
-// CHECK-MSABI32: define {{.*}} @"??_GI@@UAEPAXI@Z"(
+// CHECK-MSABI64-LABEL: define {{.*}} @"??_GI@@UEAAPEAXI@Z"(
+// CHECK-MSABI32-LABEL: define {{.*}} @"??_GI@@UAEPAXI@Z"(
 // CHECK-MSABI-NOT: call{{ }}
 // CHECK-MSABI: load i32
 // CHECK-MSABI: icmp eq i32 {{.*}}, 0

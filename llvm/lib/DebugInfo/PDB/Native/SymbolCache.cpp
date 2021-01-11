@@ -109,9 +109,10 @@ SymIndexId SymbolCache::createSimpleType(TypeIndex Index,
     return createSymbol<NativeTypePointer>(Index);
 
   const auto Kind = Index.getSimpleKind();
-  const auto It = std::find_if(
-      std::begin(BuiltinTypes), std::end(BuiltinTypes),
-      [Kind](const BuiltinTypeEntry &Builtin) { return Builtin.Kind == Kind; });
+  const auto It =
+      llvm::find_if(BuiltinTypes, [Kind](const BuiltinTypeEntry &Builtin) {
+        return Builtin.Kind == Kind;
+      });
   if (It == std::end(BuiltinTypes))
     return 0;
   return createSymbol<NativeTypeBuiltin>(Mods, It->Type, It->Size);

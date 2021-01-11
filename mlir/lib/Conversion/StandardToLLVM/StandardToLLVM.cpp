@@ -1735,19 +1735,18 @@ struct CreateComplexOpLowering
   using ConvertOpToLLVMPattern<CreateComplexOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(CreateComplexOp op, ArrayRef<Value> operands,
+  matchAndRewrite(CreateComplexOp complexOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    auto complexOp = cast<CreateComplexOp>(op);
     CreateComplexOp::Adaptor transformed(operands);
 
     // Pack real and imaginary part in a complex number struct.
-    auto loc = op.getLoc();
+    auto loc = complexOp.getLoc();
     auto structType = typeConverter->convertType(complexOp.getType());
     auto complexStruct = ComplexStructBuilder::undef(rewriter, loc, structType);
     complexStruct.setReal(rewriter, loc, transformed.real());
     complexStruct.setImaginary(rewriter, loc, transformed.imaginary());
 
-    rewriter.replaceOp(op, {complexStruct});
+    rewriter.replaceOp(complexOp, {complexStruct});
     return success();
   }
 };
@@ -1794,8 +1793,7 @@ template <typename OpTy>
 BinaryComplexOperands
 unpackBinaryComplexOperands(OpTy op, ArrayRef<Value> operands,
                             ConversionPatternRewriter &rewriter) {
-  auto bop = cast<OpTy>(op);
-  auto loc = bop.getLoc();
+  auto loc = op.getLoc();
   typename OpTy::Adaptor transformed(operands);
 
   // Extract real and imaginary values from operands.

@@ -972,8 +972,8 @@ public:
 
 /// A recipe for handling all phi nodes except for integer and FP inductions.
 /// For reduction PHIs, RdxDesc must point to the corresponding recurrence
-/// descriptor.
-class VPWidenPHIRecipe : public VPRecipeBase {
+/// descriptor and the start value is the first operand of the recipe.
+class VPWidenPHIRecipe : public VPRecipeBase, public VPUser {
   PHINode *Phi;
 
   /// Descriptor for a reduction PHI.
@@ -982,9 +982,10 @@ class VPWidenPHIRecipe : public VPRecipeBase {
 public:
   /// Create a new VPWidenPHIRecipe for the reduction \p Phi described by \p
   /// RdxDesc.
-  VPWidenPHIRecipe(PHINode *Phi, RecurrenceDescriptor &RdxDesc)
+  VPWidenPHIRecipe(PHINode *Phi, RecurrenceDescriptor &RdxDesc, VPValue &Start)
       : VPWidenPHIRecipe(Phi) {
     this->RdxDesc = &RdxDesc;
+    addOperand(&Start);
   }
 
   /// Create a VPWidenPHIRecipe for \p Phi
@@ -1004,6 +1005,11 @@ public:
   /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
+
+  /// Returns the start value of the phi, if it is a reduction.
+  VPValue *getStartValue() {
+    return getNumOperands() == 0 ? nullptr : getOperand(0);
+  }
 };
 
 /// A recipe for vectorizing a phi-node as a sequence of mask-based select

@@ -1227,11 +1227,11 @@ struct PassConfiguration {
   ///
   /// These passes are called on the graph after memory has been allocated,
   /// content copied into working memory, and nodes have been assigned their
-  /// final addresses.
+  /// final addresses, but before any fixups have been applied.
   ///
   /// Notable use cases: Late link-time optimizations like GOT and stub
   /// elimination.
-  LinkGraphPassList PostAllocationPasses;
+  LinkGraphPassList PreFixupPasses;
 
   /// Post-fixup passes.
   ///

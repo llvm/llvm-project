@@ -266,11 +266,10 @@ void GIMatchTreeBuilder::runStep() {
       LLVM_DEBUG(dbgs() << "Leaf contains multiple rules, drop after the first "
                            "fully tested rule\n");
       auto FirstFullyTested =
-          std::find_if(Leaves.begin(), Leaves.end(),
-                       [](const GIMatchTreeBuilderLeafInfo &X) {
-                         return X.isFullyTraversed() && X.isFullyTested() &&
-                                !X.getMatchDag().hasPostMatchPredicate();
-                       });
+          llvm::find_if(Leaves, [](const GIMatchTreeBuilderLeafInfo &X) {
+            return X.isFullyTraversed() && X.isFullyTested() &&
+                   !X.getMatchDag().hasPostMatchPredicate();
+          });
       if (FirstFullyTested != Leaves.end())
         FirstFullyTested++;
 

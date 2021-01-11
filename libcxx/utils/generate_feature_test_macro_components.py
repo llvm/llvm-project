@@ -196,7 +196,6 @@ feature_test_macros = [ add_version_header(x) for x in [
     "name": "__cpp_lib_constexpr_functional",
     "values": { "c++20": 201907 },
     "headers": ["functional"],
-    "unimplemented": True,
   }, {
     "name": "__cpp_lib_constexpr_iterator",
     "values": { "c++20": 201811 },

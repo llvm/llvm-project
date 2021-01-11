@@ -60,13 +60,22 @@ public:
   std::vector<Reloc> relocs;
 };
 
+inline uint8_t sectionType(uint32_t flags) {
+  return flags & llvm::MachO::SECTION_TYPE;
+}
+
 inline bool isZeroFill(uint32_t flags) {
-  return llvm::MachO::isVirtualSection(flags & llvm::MachO::SECTION_TYPE);
+  return llvm::MachO::isVirtualSection(sectionType(flags));
 }
 
 inline bool isThreadLocalVariables(uint32_t flags) {
-  return (flags & llvm::MachO::SECTION_TYPE) ==
-         llvm::MachO::S_THREAD_LOCAL_VARIABLES;
+  return sectionType(flags) == llvm::MachO::S_THREAD_LOCAL_VARIABLES;
+}
+
+// These sections contain the data for initializing thread-local variables.
+inline bool isThreadLocalData(uint32_t flags) {
+  return sectionType(flags) == llvm::MachO::S_THREAD_LOCAL_REGULAR ||
+         sectionType(flags) == llvm::MachO::S_THREAD_LOCAL_ZEROFILL;
 }
 
 inline bool isDebugSection(uint32_t flags) {

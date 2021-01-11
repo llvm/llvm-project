@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/threads/mtx_unlock.h"
 #include "config/linux/syscall.h" // For syscall functions.
 #include "include/sys/syscall.h"  // For syscall numbers.
 #include "include/threads.h"      // For mtx_t definition.
@@ -18,7 +19,7 @@
 namespace __llvm_libc {
 
 // The implementation currently handles only plain mutexes.
-int LLVM_LIBC_ENTRYPOINT(mtx_unlock)(mtx_t *mutex) {
+LLVM_LIBC_FUNCTION(int, mtx_unlock, (mtx_t * mutex)) {
   FutexData *futex_word = reinterpret_cast<FutexData *>(mutex->__internal_data);
   while (true) {
     uint32_t mutex_status = MS_Waiting;

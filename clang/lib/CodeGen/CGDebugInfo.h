@@ -603,8 +603,7 @@ private:
 
   /// Get the type from the cache or create a new partial type if
   /// necessary.
-  llvm::DICompositeType *getOrCreateLimitedType(const RecordType *Ty,
-                                                llvm::DIFile *F);
+  llvm::DICompositeType *getOrCreateLimitedType(const RecordType *Ty);
 
   /// Create type metadata for a source language type.
   llvm::DIType *CreateTypeNode(QualType Ty, llvm::DIFile *Fg);

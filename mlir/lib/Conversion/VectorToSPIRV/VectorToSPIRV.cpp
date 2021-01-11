@@ -24,8 +24,9 @@ using namespace mlir;
 
 namespace {
 struct VectorBroadcastConvert final
-    : public SPIRVOpLowering<vector::BroadcastOp> {
-  using SPIRVOpLowering<vector::BroadcastOp>::SPIRVOpLowering;
+    : public OpConversionPattern<vector::BroadcastOp> {
+  using OpConversionPattern::OpConversionPattern;
+
   LogicalResult
   matchAndRewrite(vector::BroadcastOp broadcastOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
@@ -43,8 +44,9 @@ struct VectorBroadcastConvert final
 };
 
 struct VectorExtractOpConvert final
-    : public SPIRVOpLowering<vector::ExtractOp> {
-  using SPIRVOpLowering<vector::ExtractOp>::SPIRVOpLowering;
+    : public OpConversionPattern<vector::ExtractOp> {
+  using OpConversionPattern::OpConversionPattern;
+
   LogicalResult
   matchAndRewrite(vector::ExtractOp extractOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
@@ -60,8 +62,10 @@ struct VectorExtractOpConvert final
   }
 };
 
-struct VectorInsertOpConvert final : public SPIRVOpLowering<vector::InsertOp> {
-  using SPIRVOpLowering<vector::InsertOp>::SPIRVOpLowering;
+struct VectorInsertOpConvert final
+    : public OpConversionPattern<vector::InsertOp> {
+  using OpConversionPattern::OpConversionPattern;
+
   LogicalResult
   matchAndRewrite(vector::InsertOp insertOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
@@ -78,8 +82,9 @@ struct VectorInsertOpConvert final : public SPIRVOpLowering<vector::InsertOp> {
 };
 
 struct VectorExtractElementOpConvert final
-    : public SPIRVOpLowering<vector::ExtractElementOp> {
-  using SPIRVOpLowering<vector::ExtractElementOp>::SPIRVOpLowering;
+    : public OpConversionPattern<vector::ExtractElementOp> {
+  using OpConversionPattern::OpConversionPattern;
+
   LogicalResult
   matchAndRewrite(vector::ExtractElementOp extractElementOp,
                   ArrayRef<Value> operands,
@@ -96,8 +101,9 @@ struct VectorExtractElementOpConvert final
 };
 
 struct VectorInsertElementOpConvert final
-    : public SPIRVOpLowering<vector::InsertElementOp> {
-  using SPIRVOpLowering<vector::InsertElementOp>::SPIRVOpLowering;
+    : public OpConversionPattern<vector::InsertElementOp> {
+  using OpConversionPattern::OpConversionPattern;
+
   LogicalResult
   matchAndRewrite(vector::InsertElementOp insertElementOp,
                   ArrayRef<Value> operands,
@@ -120,5 +126,5 @@ void mlir::populateVectorToSPIRVPatterns(MLIRContext *context,
                                          OwningRewritePatternList &patterns) {
   patterns.insert<VectorBroadcastConvert, VectorExtractOpConvert,
                   VectorInsertOpConvert, VectorExtractElementOpConvert,
-                  VectorInsertElementOpConvert>(context, typeConverter);
+                  VectorInsertElementOpConvert>(typeConverter, context);
 }

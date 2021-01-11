@@ -572,7 +572,6 @@ void ScalarEnumerationTraits<WasmYAML::ValueType>::enumeration(
   ECase(F64);
   ECase(V128);
   ECase(FUNCREF);
-  ECase(EXNREF);
   ECase(EXTERNREF);
   ECase(FUNC);
 #undef ECase

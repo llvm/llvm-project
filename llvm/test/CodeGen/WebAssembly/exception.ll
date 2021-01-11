@@ -30,15 +30,9 @@ define void @test_throw(i8* %p) {
 ; CHECK:     global.get  ${{.+}}=, __stack_pointer
 ; CHECK:     try
 ; CHECK:       call      foo
-; CHECK:     catch     $[[EXNREF:[0-9]+]]=
+; CHECK:     catch     $[[EXN:[0-9]+]]=, __cpp_exception
 ; CHECK:       global.set  __stack_pointer
-; CHECK:       block i32
-; CHECK:         br_on_exn 0, __cpp_exception, $[[EXNREF]]
-; CHECK:         rethrow   $[[EXNREF]]
-; CHECK:       end_block
-; CHECK:       extract_exception $[[EXN:[0-9]+]]=
-; CHECK-DAG:   i32.store  __wasm_lpad_context
-; CHECK-DAG:   i32.store  __wasm_lpad_context{{.+}}
+; CHECK:       i32.{{store|const}} {{.*}} __wasm_lpad_context
 ; CHECK:       call       $drop=, _Unwind_CallPersonality, $[[EXN]]
 ; CHECK:       block
 ; CHECK:         br_if     0
@@ -46,7 +40,7 @@ define void @test_throw(i8* %p) {
 ; CHECK:         call      __cxa_end_catch
 ; CHECK:         br        1
 ; CHECK:       end_block
-; CHECK:       rethrow   $[[EXNREF]]
+; CHECK:       rethrow   0
 ; CHECK:     end_try
 define void @test_catch() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:
@@ -91,10 +85,10 @@ try.cont:                                         ; preds = %catch, %entry
 ; CHECK-LABEL: test_cleanup:
 ; CHECK: try
 ; CHECK:   call      foo
-; CHECK: catch     $[[EXNREF:[0-9]+]]=
+; CHECK: catch_all
 ; CHECK:   global.set  __stack_pointer
 ; CHECK:   call      $drop=, _ZN4TempD2Ev
-; CHECK:   rethrow   $[[EXNREF]]
+; CHECK:   rethrow   0
 ; CHECK: end_try
 define void @test_cleanup() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:
@@ -131,17 +125,11 @@ ehcleanup:                                        ; preds = %entry
 ; CHECK:   call      $drop=, __cxa_begin_catch
 ; CHECK:   try
 ; CHECK:     call      foo
-; CHECK:   catch
+; CHECK:   catch_all
 ; CHECK:     try
 ; CHECK:       call      __cxa_end_catch
-; CHECK:     catch
-; CHECK:       block     i32
-; CHECK:         br_on_exn   0, __cpp_exception
-; CHECK:         i32.const  ${{.*}}=, 0
-; CHECK:         call      __clang_call_terminate
-; CHECK:         unreachable
-; CHECK:       end_block
-; CHECK:       call      __clang_call_terminate
+; CHECK:     catch     $[[EXN:[0-9]+]]=, __cpp_exception
+; CHECK:       call      __clang_call_terminate, $[[EXN]]
 ; CHECK:       unreachable
 ; CHECK:     end_try
 ; CHECK:     rethrow

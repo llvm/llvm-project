@@ -5,7 +5,16 @@
 
 func @compress16(%base: memref<?xf32>,
                  %mask: vector<16xi1>, %value: vector<16xf32>) {
-  vector.compressstore %base, %mask, %value
+  %c0 = constant 0: index
+  vector.compressstore %base[%c0], %mask, %value
+    : memref<?xf32>, vector<16xi1>, vector<16xf32>
+  return
+}
+
+func @compress16_at8(%base: memref<?xf32>,
+                     %mask: vector<16xi1>, %value: vector<16xf32>) {
+  %c8 = constant 8: index
+  vector.compressstore %base[%c8], %mask, %value
     : memref<?xf32>, vector<16xi1>, vector<16xf32>
   return
 }
@@ -85,6 +94,11 @@ func @entry() {
     : (memref<?xf32>, vector<16xi1>, vector<16xf32>) -> ()
   call @printmem16(%A) : (memref<?xf32>) -> ()
   // CHECK-NEXT: ( 0, 1, 2, 3, 11, 13, 15, 7, 8, 9, 10, 11, 12, 13, 14, 15 )
+
+  call @compress16_at8(%A, %some1, %value)
+    : (memref<?xf32>, vector<16xi1>, vector<16xf32>) -> ()
+  call @printmem16(%A) : (memref<?xf32>) -> ()
+  // CHECK-NEXT: ( 0, 1, 2, 3, 11, 13, 15, 7, 0, 1, 2, 3, 12, 13, 14, 15 )
 
   return
 }

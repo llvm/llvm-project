@@ -10,8 +10,8 @@ define <2 x double> @shuffle_binop_fol(<4 x double>* %ptr) {
 ; CHECK-LABEL: @shuffle_binop_fol(
 ; CHECK-NEXT:  vector.body.preheader:
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x double>, <4 x double>* [[PTR:%.*]], align 8
-; CHECK-NEXT:    [[EXTRACTED1:%.*]] = shufflevector <4 x double> [[WIDE_LOAD]], <4 x double> undef, <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[EXTRACTED2:%.*]] = shufflevector <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, <4 x double> undef, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[EXTRACTED1:%.*]] = shufflevector <4 x double> [[WIDE_LOAD]], <4 x double> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[EXTRACTED2:%.*]] = shufflevector <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, <4 x double> poison, <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:    [[FADD3:%.*]] = fadd <2 x double> [[EXTRACTED1]], [[EXTRACTED2]]
 ; CHECK-NEXT:    ret <2 x double> [[FADD3]]
 ;
@@ -19,6 +19,21 @@ vector.body.preheader:
   %wide.load = load <4 x double>, <4 x double>* %ptr, align 8
   %fadd = fadd <4 x double> %wide.load, <double 1.0, double 1.0, double 1.0, double 1.0>
   %extracted = shufflevector <4 x double> %fadd, <4 x double> undef, <2 x i32> <i32 0, i32 2>
+  ret <2 x double> %extracted
+}
+
+define <2 x double> @shuffle_binop_fol_oob(<4 x double>* %ptr) {
+; CHECK-LABEL: @shuffle_binop_fol_oob(
+; CHECK-NEXT:  vector.body.preheader:
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x double>, <4 x double>* [[PTR:%.*]], align 8
+; CHECK-NEXT:    [[FADD:%.*]] = fadd <4 x double> [[WIDE_LOAD]], <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    [[EXTRACTED:%.*]] = shufflevector <4 x double> [[FADD]], <4 x double> undef, <2 x i32> <i32 0, i32 4>
+; CHECK-NEXT:    ret <2 x double> [[EXTRACTED]]
+;
+vector.body.preheader:
+  %wide.load = load <4 x double>, <4 x double>* %ptr, align 8
+  %fadd = fadd <4 x double> %wide.load, <double 1.0, double 1.0, double 1.0, double 1.0>
+  %extracted = shufflevector <4 x double> %fadd, <4 x double> undef, <2 x i32> <i32 0, i32 4>
   ret <2 x double> %extracted
 }
 

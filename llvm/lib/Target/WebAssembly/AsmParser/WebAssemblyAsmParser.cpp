@@ -340,8 +340,6 @@ public:
         Type == "i32x4" || Type == "i64x2" || Type == "f32x4" ||
         Type == "f64x2")
       return wasm::ValType::V128;
-    if (Type == "exnref")
-      return wasm::ValType::EXNREF;
     if (Type == "funcref")
       return wasm::ValType::FUNCREF;
     if (Type == "externref")
@@ -359,7 +357,6 @@ public:
         .Case("v128", WebAssembly::BlockType::V128)
         .Case("funcref", WebAssembly::BlockType::Funcref)
         .Case("externref", WebAssembly::BlockType::Externref)
-        .Case("exnref", WebAssembly::BlockType::Exnref)
         .Case("void", WebAssembly::BlockType::Void)
         .Default(WebAssembly::BlockType::Invalid);
   }

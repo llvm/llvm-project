@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/math/nextafterl.h"
 #include "src/__support/common.h"
 #include "utils/FPUtil/ManipulationFunctions.h"
 
 namespace __llvm_libc {
 
-long double LLVM_LIBC_ENTRYPOINT(nextafterl)(long double x, long double y) {
+LLVM_LIBC_FUNCTION(long double, nextafterl, (long double x, long double y)) {
   return fputil::nextafter(x, y);
 }
 

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/math/expf.h"
 #include "exp_utils.h"
 #include "math_utils.h"
 
@@ -21,7 +22,7 @@
 
 namespace __llvm_libc {
 
-float LLVM_LIBC_ENTRYPOINT(expf)(float x) {
+LLVM_LIBC_FUNCTION(float, expf, (float x)) {
   uint32_t abstop;
   uint64_t ki, t;
   // double_t for better performance on targets with FLT_EVAL_METHOD == 2.

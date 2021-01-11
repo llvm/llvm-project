@@ -850,7 +850,6 @@ private:
   using DefsMap = DenseMap<const BasicBlock *, std::unique_ptr<DefsList>>;
 
   void markUnreachableAsLiveOnEntry(BasicBlock *BB);
-  bool dominatesUse(const MemoryAccess *, const MemoryAccess *) const;
   MemoryPhi *createMemoryPhi(BasicBlock *BB);
   template <typename AliasAnalysisType>
   MemoryUseOrDef *createNewAccess(Instruction *, AliasAnalysisType *,

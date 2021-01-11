@@ -135,8 +135,8 @@ func @test_alloc_memref_map_rank_mismatch() {
 
 func @intlimit2() {
 ^bb:
-  %0 = "std.constant"() {value = 0} : () -> i4096
-  %1 = "std.constant"() {value = 1} : () -> i4097 // expected-error {{integer bitwidth is limited to 4096 bits}}
+  %0 = "std.constant"() {value = 0} : () -> i16777215
+  %1 = "std.constant"() {value = 1} : () -> i16777216 // expected-error {{integer bitwidth is limited to 16777215 bits}}
   return
 }
 
@@ -1250,5 +1250,13 @@ func @subtensor_wrong_static_type(%t: tensor<8x16x4xf32>, %idx : index) {
   %0 = subtensor %t[0, 0, 0][%idx, 3, %idx][1, 1, 1]
     : tensor<8x16x4xf32> to tensor<4x4x4xf32>
 
+  return
+}
+
+// -----
+
+func @no_zero_bit_integer_attrs() {
+  // expected-error @+1 {{integer constant out of range for attribute}}
+  %x = "some.op"(){value = 0 : i0} : () -> f32
   return
 }

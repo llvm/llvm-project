@@ -247,12 +247,6 @@ public:
     return false;
   }
 
-  /// This method returns the canonical induction variable of the specified
-  /// type for the specified loop (inserting one if there is none).  A
-  /// canonical induction variable starts at zero and steps by one on each
-  /// iteration.
-  PHINode *getOrInsertCanonicalInductionVariable(const Loop *L, Type *Ty);
-
   /// Return the induction variable increment's IV operand.
   Instruction *getIVIncOperand(Instruction *IncV, Instruction *InsertPos,
                                bool allowScale);
@@ -364,10 +358,6 @@ public:
   }
 
   void setChainedPhi(PHINode *PN) { ChainedPhis.insert(PN); }
-
-  /// Try to find existing LLVM IR value for S available at the point At.
-  Value *getExactExistingExpansion(const SCEV *S, const Instruction *At,
-                                   Loop *L);
 
   /// Try to find the ValueOffsetPair for S. The function is mainly used to
   /// check whether S can be expanded cheaply.  If this returns a non-None

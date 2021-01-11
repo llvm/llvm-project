@@ -5,12 +5,13 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#include "src/math/hypotf.h"
 #include "src/__support/common.h"
 #include "utils/FPUtil/Hypot.h"
 
 namespace __llvm_libc {
 
-float LLVM_LIBC_ENTRYPOINT(hypotf)(float x, float y) {
+LLVM_LIBC_FUNCTION(float, hypotf, (float x, float y)) {
   return __llvm_libc::fputil::hypot(x, y);
 }
 

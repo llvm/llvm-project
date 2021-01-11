@@ -164,10 +164,15 @@ bool ISD::isConstantSplatVector(const SDNode *N, APInt &SplatVal) {
 // FIXME: AllOnes and AllZeros duplicate a lot of code. Could these be
 // specializations of the more general isConstantSplatVector()?
 
-bool ISD::isBuildVectorAllOnes(const SDNode *N) {
+bool ISD::isConstantSplatVectorAllOnes(const SDNode *N, bool BuildVectorOnly) {
   // Look through a bit convert.
   while (N->getOpcode() == ISD::BITCAST)
     N = N->getOperand(0).getNode();
+
+  if (!BuildVectorOnly && N->getOpcode() == ISD::SPLAT_VECTOR) {
+    APInt SplatVal;
+    return isConstantSplatVector(N, SplatVal) && SplatVal.isAllOnesValue();
+  }
 
   if (N->getOpcode() != ISD::BUILD_VECTOR) return false;
 
@@ -208,10 +213,15 @@ bool ISD::isBuildVectorAllOnes(const SDNode *N) {
   return true;
 }
 
-bool ISD::isBuildVectorAllZeros(const SDNode *N) {
+bool ISD::isConstantSplatVectorAllZeros(const SDNode *N, bool BuildVectorOnly) {
   // Look through a bit convert.
   while (N->getOpcode() == ISD::BITCAST)
     N = N->getOperand(0).getNode();
+
+  if (!BuildVectorOnly && N->getOpcode() == ISD::SPLAT_VECTOR) {
+    APInt SplatVal;
+    return isConstantSplatVector(N, SplatVal) && SplatVal.isNullValue();
+  }
 
   if (N->getOpcode() != ISD::BUILD_VECTOR) return false;
 
@@ -243,6 +253,14 @@ bool ISD::isBuildVectorAllZeros(const SDNode *N) {
   if (IsAllUndef)
     return false;
   return true;
+}
+
+bool ISD::isBuildVectorAllOnes(const SDNode *N) {
+  return isConstantSplatVectorAllOnes(N, /*BuildVectorOnly*/ true);
+}
+
+bool ISD::isBuildVectorAllZeros(const SDNode *N) {
+  return isConstantSplatVectorAllZeros(N, /*BuildVectorOnly*/ true);
 }
 
 bool ISD::isBuildVectorOfConstantSDNodes(const SDNode *N) {
@@ -9110,6 +9128,18 @@ ConstantSDNode *llvm::isConstOrConstSplat(SDValue N, bool AllowUndefs,
                                           bool AllowTruncation) {
   if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(N))
     return CN;
+
+  // SplatVectors can truncate their operands. Ignore that case here unless
+  // AllowTruncation is set.
+  if (N->getOpcode() == ISD::SPLAT_VECTOR) {
+    EVT VecEltVT = N->getValueType(0).getVectorElementType();
+    if (auto *CN = dyn_cast<ConstantSDNode>(N->getOperand(0))) {
+      EVT CVT = CN->getValueType(0);
+      assert(CVT.bitsGE(VecEltVT) && "Illegal splat_vector element extension");
+      if (AllowTruncation || CVT == VecEltVT)
+        return CN;
+    }
+  }
 
   if (BuildVectorSDNode *BV = dyn_cast<BuildVectorSDNode>(N)) {
     BitVector UndefElements;

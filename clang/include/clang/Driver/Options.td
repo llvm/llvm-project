@@ -2184,6 +2184,10 @@ def fpic : Flag<["-"], "fpic">, Group<f_Group>;
 def fno_pic : Flag<["-"], "fno-pic">, Group<f_Group>;
 def fpie : Flag<["-"], "fpie">, Group<f_Group>;
 def fno_pie : Flag<["-"], "fno-pie">, Group<f_Group>;
+def fdirect_access_external_data : Flag<["-"], "fdirect-access-external-data">, Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"Don't use GOT indirection to reference external data symbols">;
+def fno_direct_access_external_data : Flag<["-"], "fno-direct-access-external-data">, Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"Use GOT indirection to reference external data symbols">;
 defm plt : BoolFOption<"plt",
   "CodeGenOpts.NoPLT", DefaultsToFalse,
   ChangedBy<NegFlag, [], "Use GOT indirection instead of PLT to make external function calls (x86 only)">,
@@ -2574,6 +2578,10 @@ def gdwarf_4 : Flag<["-"], "gdwarf-4">, Group<g_Group>,
   HelpText<"Generate source-level debug information with dwarf version 4">;
 def gdwarf_5 : Flag<["-"], "gdwarf-5">, Group<g_Group>,
   HelpText<"Generate source-level debug information with dwarf version 5">;
+def gdwarf64 : Flag<["-"], "gdwarf64">, Group<g_Group>, Flags<[CC1Option]>,
+  HelpText<"Enables DWARF64 format for ELF binaries, if debug information emission is enabled.">;
+def gdwarf32 : Flag<["-"], "gdwarf32">, Group<g_Group>, Flags<[CC1Option]>,
+  HelpText<"Enables DWARF32 format for ELF binaries, if debug information emission is enabled.">;
 
 def gcodeview : Flag<["-"], "gcodeview">,
   HelpText<"Generate CodeView debug information">,
@@ -3147,10 +3155,10 @@ def mstack_protector_guard_offset_EQ : Joined<["-"], "mstack-protector-guard-off
   HelpText<"Use the given offset for addressing the stack-protector guard">;
 def mstack_protector_guard_reg_EQ : Joined<["-"], "mstack-protector-guard-reg=">, Group<m_Group>, Flags<[CC1Option]>,
   HelpText<"Use the given reg for addressing the stack-protector guard">;
-defm pie_copy_relocations : BoolOption<"pie-copy-relocations",
-  "CodeGenOpts.PIECopyRelocations", DefaultsToFalse,
-  ChangedBy<PosFlag, [CC1Option], "Use copy relocations support for PIE builds">,
-  ResetBy<NegFlag>, BothFlags<[]>, "m">, Group<m_Group>;
+def mpie_copy_relocations : Flag<["-"], "mpie-copy-relocations">,
+  Alias<fdirect_access_external_data>, Group<m_Group>;
+def mno_pie_copy_relocations : Flag<["-"], "mno-pie-copy-relocations">,
+  Alias<fno_direct_access_external_data>, Group<m_Group>;
 def mfentry : Flag<["-"], "mfentry">, HelpText<"Insert calls to fentry at function entry (x86/SystemZ only)">,
   Flags<[CC1Option]>, Group<m_Group>,
   MarshallingInfoFlag<"CodeGenOpts.CallFEntry">;

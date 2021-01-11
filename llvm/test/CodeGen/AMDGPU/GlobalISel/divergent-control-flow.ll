@@ -12,7 +12,8 @@ define i32 @divergent_if_swap_brtarget_order0(i32 %value) {
 ; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; CHECK-NEXT:    s_cbranch_execz BB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %if.true
-; CHECK-NEXT:    global_load_dword v0, v[0:1], off
+; CHECK-NEXT:    global_load_dword v0, v[0:1], off glc
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:  BB0_2: ; %endif
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
@@ -39,7 +40,8 @@ define i32 @divergent_if_swap_brtarget_order1(i32 %value) {
 ; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; CHECK-NEXT:    s_cbranch_execz BB1_2
 ; CHECK-NEXT:  ; %bb.1: ; %if.true
-; CHECK-NEXT:    global_load_dword v0, v[0:1], off
+; CHECK-NEXT:    global_load_dword v0, v[0:1], off glc
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:  BB1_2: ; %endif
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
@@ -68,7 +70,8 @@ define i32 @divergent_if_nonboolean_condition0(i32 %value) {
 ; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; CHECK-NEXT:    s_cbranch_execz BB2_2
 ; CHECK-NEXT:  ; %bb.1: ; %if.true
-; CHECK-NEXT:    global_load_dword v0, v[0:1], off
+; CHECK-NEXT:    global_load_dword v0, v[0:1], off glc
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:  BB2_2: ; %endif
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
@@ -99,7 +102,8 @@ define i32 @divergent_if_nonboolean_condition1(i32 addrspace(1)* %ptr) {
 ; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; CHECK-NEXT:    s_cbranch_execz BB3_2
 ; CHECK-NEXT:  ; %bb.1: ; %if.true
-; CHECK-NEXT:    global_load_dword v0, v[0:1], off
+; CHECK-NEXT:    global_load_dword v0, v[0:1], off glc
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:  BB3_2: ; %endif
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
@@ -219,7 +223,7 @@ define amdgpu_kernel void @break_loop(i32 %arg) {
 ; CHECK-NEXT:    s_cbranch_vccnz BB5_1
 ; CHECK-NEXT:  ; %bb.3: ; %bb4
 ; CHECK-NEXT:    ; in Loop: Header=BB5_2 Depth=1
-; CHECK-NEXT:    global_load_dword v2, v[0:1], off
+; CHECK-NEXT:    global_load_dword v2, v[0:1], off glc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cmp_ge_i32_e64 s[2:3], v0, v2
 ; CHECK-NEXT:    s_branch BB5_1

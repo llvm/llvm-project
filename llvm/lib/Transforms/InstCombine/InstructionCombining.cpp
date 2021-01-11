@@ -1175,8 +1175,8 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
     }
   }
 
-  for (auto UI = PN->user_begin(), E = PN->user_end(); UI != E;) {
-    Instruction *User = cast<Instruction>(*UI++);
+  for (User *U : make_early_inc_range(PN->users())) {
+    Instruction *User = cast<Instruction>(U);
     if (User == &I) continue;
     replaceInstUsesWith(*User, NewPN);
     eraseInstFromFunction(*User);

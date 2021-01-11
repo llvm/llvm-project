@@ -15,7 +15,7 @@
 
 namespace __llvm_libc {
 
-ssize_t LLVM_LIBC_ENTRYPOINT(write)(int fd, const void *buf, size_t count) {
+LLVM_LIBC_FUNCTION(ssize_t, write, (int fd, const void *buf, size_t count)) {
   long ret = __llvm_libc::syscall(SYS_write, fd, buf, count);
   if (ret < 0) {
     llvmlibc_errno = -ret;

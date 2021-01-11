@@ -3,8 +3,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse4.2 | FileCheck %s --check-prefixes=SSE,SSE4
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx    | FileCheck %s --check-prefixes=AVX,AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2   | FileCheck %s --check-prefixes=AVX,AVX2
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl,+avx512f  | FileCheck %s --check-prefixes=AVX,AVX512,AVX512F
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl,+avx512bw | FileCheck %s --check-prefixes=AVX,AVX512,AVX512BW
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl,+avx512f  | FileCheck %s --check-prefixes=AVX,AVX512
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl,+avx512bw | FileCheck %s --check-prefixes=AVX,AVX512
 
 ; trunc(concat(x,y)) -> pack
 

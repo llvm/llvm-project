@@ -942,6 +942,13 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     }
   }
 
+  // PIC defaults to -fno-direct-access-external-data while non-PIC defaults to
+  // -fdirect-access-external-data.
+  Opts.DirectAccessExternalData =
+      Args.hasArg(OPT_fdirect_access_external_data) ||
+      (!Args.hasArg(OPT_fno_direct_access_external_data) &&
+       getLastArgIntValue(Args, OPT_pic_level, 0, Diags) == 0);
+
   // If -fuse-ctor-homing is set and limited debug info is already on, then use
   // constructor homing.
   if (Args.getLastArg(OPT_fuse_ctor_homing))
@@ -986,6 +993,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     setPGOUseInstrumentor(Opts, Opts.ProfileInstrumentUsePath);
 
   Opts.CodeModel = TargetOpts.CodeModel;
+  Opts.Dwarf64 = Args.hasArg(OPT_gdwarf64);
 
   if (const Arg *A = Args.getLastArg(OPT_ftime_report, OPT_ftime_report_EQ)) {
     Opts.TimePasses = true;

@@ -3894,8 +3894,8 @@ void llvm::UpgradeCallsToIntrinsic(Function *F) {
   if (UpgradeIntrinsicFunction(F, NewFn)) {
     // Replace all users of the old function with the new function or new
     // instructions. This is not a range loop because the call is deleted.
-    for (auto UI = F->user_begin(), UE = F->user_end(); UI != UE; )
-      if (CallInst *CI = dyn_cast<CallInst>(*UI++))
+    for (User *U : make_early_inc_range(F->users()))
+      if (CallInst *CI = dyn_cast<CallInst>(U))
         UpgradeIntrinsicCall(CI, NewFn);
 
     // Remove old function, no longer used, from the module.
@@ -4031,8 +4031,8 @@ void llvm::UpgradeARCRuntime(Module &M) {
 
     Function *NewFn = llvm::Intrinsic::getDeclaration(&M, IntrinsicFunc);
 
-    for (auto I = Fn->user_begin(), E = Fn->user_end(); I != E;) {
-      CallInst *CI = dyn_cast<CallInst>(*I++);
+    for (User *U : make_early_inc_range(Fn->users())) {
+      CallInst *CI = dyn_cast<CallInst>(U);
       if (!CI || CI->getCalledFunction() != Fn)
         continue;
 

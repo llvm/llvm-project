@@ -2139,6 +2139,16 @@ public:
     return RequireCompleteType(Loc, T, CompleteTypeKind::Normal, Diagnoser);
   }
 
+  /// Get the type of expression E, triggering instantiation to complete the
+  /// type if necessary -- that is, if the expression refers to a templated
+  /// static data member of incomplete array type.
+  ///
+  /// May still return an incomplete type if instantiation was not possible or
+  /// if the type is incomplete for a different reason. Use
+  /// RequireCompleteExprType instead if a diagnostic is expected for an
+  /// incomplete expression type.
+  QualType getCompletedType(Expr *E);
+
   void completeExprArrayBound(Expr *E);
   bool RequireCompleteExprType(Expr *E, CompleteTypeKind Kind,
                                TypeDiagnoser &Diagnoser);

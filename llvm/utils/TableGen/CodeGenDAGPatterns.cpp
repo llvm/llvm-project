@@ -3701,10 +3701,11 @@ void CodeGenDAGPatterns::parseInstructionPattern(
   for (unsigned i = 0; i != NumResults; ++i) {
     if (i == CGI.Operands.size()) {
       const std::string &OpName =
-          std::find_if(InstResults.begin(), InstResults.end(),
-                       [](const std::pair<std::string, TreePatternNodePtr> &P) {
-                         return P.second;
-                       })
+          llvm::find_if(
+              InstResults,
+              [](const std::pair<std::string, TreePatternNodePtr> &P) {
+                return P.second;
+              })
               ->first;
 
       I.error("'" + OpName + "' set but does not appear in operand list!");

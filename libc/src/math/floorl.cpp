@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/math/floorl.h"
 #include "src/__support/common.h"
 #include "utils/FPUtil/NearestIntegerOperations.h"
 
 namespace __llvm_libc {
 
-long double LLVM_LIBC_ENTRYPOINT(floorl)(long double x) {
+LLVM_LIBC_FUNCTION(long double, floorl, (long double x)) {
   return fputil::floor(x);
 }
 

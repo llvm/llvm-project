@@ -49,7 +49,7 @@ void OutputSegment::addOutputSection(OutputSection *osec) {
   sections.push_back(osec);
 }
 
-static llvm::DenseMap<StringRef, OutputSegment *> nameToOutputSegment;
+static DenseMap<StringRef, OutputSegment *> nameToOutputSegment;
 std::vector<OutputSegment *> macho::outputSegments;
 
 OutputSegment *macho::getOrCreateOutputSegment(StringRef name) {

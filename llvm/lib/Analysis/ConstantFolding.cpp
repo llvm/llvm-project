@@ -1515,6 +1515,8 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::powi:
   case Intrinsic::fma:
   case Intrinsic::fmuladd:
+  case Intrinsic::fptoui_sat:
+  case Intrinsic::fptosi_sat:
   case Intrinsic::convert_from_fp16:
   case Intrinsic::convert_to_fp16:
   case Intrinsic::amdgcn_cos:
@@ -1850,8 +1852,11 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
   if (isa<UndefValue>(Operands[0])) {
     // cosine(arg) is between -1 and 1. cosine(invalid arg) is NaN.
     // ctpop() is between 0 and bitwidth, pick 0 for undef.
+    // fptoui.sat and fptosi.sat can always fold to zero (for a zero input).
     if (IntrinsicID == Intrinsic::cos ||
-        IntrinsicID == Intrinsic::ctpop)
+        IntrinsicID == Intrinsic::ctpop ||
+        IntrinsicID == Intrinsic::fptoui_sat ||
+        IntrinsicID == Intrinsic::fptosi_sat)
       return Constant::getNullValue(Ty);
     if (IntrinsicID == Intrinsic::bswap ||
         IntrinsicID == Intrinsic::bitreverse ||
@@ -1921,6 +1926,16 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       else
         return Signed ? ConstantInt::get(Ty, APInt::getSignedMaxValue(Width))
                       : ConstantInt::get(Ty, APInt::getMaxValue(Width));
+    }
+
+    if (IntrinsicID == Intrinsic::fptoui_sat ||
+        IntrinsicID == Intrinsic::fptosi_sat) {
+      // convertToInteger() already has the desired saturation semantics.
+      APSInt Int(Ty->getIntegerBitWidth(),
+                 IntrinsicID == Intrinsic::fptoui_sat);
+      bool IsExact;
+      U.convertToInteger(Int, APFloat::rmTowardZero, &IsExact);
+      return ConstantInt::get(Ty, Int);
     }
 
     if (!Ty->isHalfTy() && !Ty->isFloatTy() && !Ty->isDoubleTy())

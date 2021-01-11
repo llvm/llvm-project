@@ -666,7 +666,7 @@ bool LiveVariables::runOnMachineFunction(MachineFunction &mf) {
   // other part of the code generator if this happens.
 #ifndef NDEBUG
   for(MachineFunction::iterator i = MF->begin(), e = MF->end(); i != e; ++i)
-    assert(Visited.count(&*i) != 0 && "unreachable basic block found");
+    assert(Visited.contains(&*i) && "unreachable basic block found");
 #endif
 
   PhysRegDef.clear();

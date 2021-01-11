@@ -341,6 +341,13 @@ public:
   /// does not require type conversion.
   TypeConverter *getTypeConverter() const { return typeConverter; }
 
+  template <typename ConverterTy>
+  std::enable_if_t<std::is_base_of<TypeConverter, ConverterTy>::value,
+                   ConverterTy *>
+  getTypeConverter() const {
+    return static_cast<ConverterTy *>(typeConverter);
+  }
+
 protected:
   /// See `RewritePattern::RewritePattern` for information on the other
   /// available constructors.

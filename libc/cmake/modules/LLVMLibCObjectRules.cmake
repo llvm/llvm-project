@@ -147,10 +147,26 @@ function(add_entrypoint_object target_name)
     message(FATAL_ERROR "`add_entrypoint_object` rule requires HDRS to be specified.")
   endif()
 
-  set(objects_target_name "${fq_target_name}_objects")
+  set(common_compile_options -fpie ${LLVM_CXX_STD_default} -ffreestanding ${ADD_ENTRYPOINT_OBJ_COMPILE_OPTIONS})
+  set(internal_target_name ${fq_target_name}.__internal__)
+  set(include_dirs ${LIBC_BUILD_DIR}/include ${LIBC_SOURCE_DIR} ${LIBC_BUILD_DIR})
+  get_fq_deps_list(fq_deps_list ${ADD_ENTRYPOINT_OBJ_DEPENDS})
+  set(full_deps_list ${fq_deps_list} libc.src.__support.common)
 
   add_library(
-    ${objects_target_name}
+    ${internal_target_name}
+    # TODO: We don't need an object library for internal consumption.
+    # A future change should switch this to a normal static library.
+    OBJECT
+    ${ADD_ENTRYPOINT_OBJ_SRCS}
+    ${ADD_ENTRYPOINT_OBJ_HDRS}
+  )
+  target_compile_options(${internal_target_name} BEFORE PRIVATE ${common_compile_options})
+  target_include_directories(${internal_target_name} PRIVATE ${include_dirs})
+  add_dependencies(${internal_target_name} ${full_deps_list})
+
+  add_library(
+    ${fq_target_name}
     # We want an object library as the objects will eventually get packaged into
     # an archive (like libc.a).
     OBJECT
@@ -158,68 +174,20 @@ function(add_entrypoint_object target_name)
     ${ADD_ENTRYPOINT_OBJ_HDRS}
   )
   target_compile_options(
-    ${objects_target_name}
-    BEFORE
-    PRIVATE
-      -fpie ${LLVM_CXX_STD_default} -ffreestanding
+      ${fq_target_name} BEFORE PRIVATE ${common_compile_options} -DLLVM_LIBC_PUBLIC_PACKAGING
   )
-  target_include_directories(
-    ${objects_target_name}
-    PRIVATE
-      ${LIBC_BUILD_DIR}/include
-      ${LIBC_SOURCE_DIR}
-      ${LIBC_BUILD_DIR}
-  )
-  get_fq_deps_list(fq_deps_list ${ADD_ENTRYPOINT_OBJ_DEPENDS})
-  add_dependencies(
-    ${objects_target_name}
-    libc.src.__support.common
-    ${fq_deps_list}
-  )
+  target_include_directories(${fq_target_name} PRIVATE ${include_dirs})
+  add_dependencies(${fq_target_name} ${full_deps_list})
 
-  if(ADD_ENTRYPOINT_OBJ_COMPILE_OPTIONS)
-    target_compile_options(
-      ${objects_target_name}
-      PRIVATE ${ADD_ENTRYPOINT_OBJ_COMPILE_OPTIONS}
-    )
-  endif()
-
-  set(object_file_raw "${CMAKE_CURRENT_BINARY_DIR}/${target_name}_raw.o")
-  set(object_file "${CMAKE_CURRENT_BINARY_DIR}/${target_name}.o")
-
-  set(input_objects $<TARGET_OBJECTS:${objects_target_name}>)
-  add_custom_command(
-    OUTPUT ${object_file_raw}
-    DEPENDS ${input_objects}
-    COMMAND ${CMAKE_LINKER} -r ${input_objects} -o ${object_file_raw}
-  )
-
-  set(alias_attributes "0,function,global")
-  if(ADD_ENTRYPOINT_OBJ_REDIRECTED)
-    set(alias_attributes "${alias_attributes},hidden")
-  endif()
-
-  add_custom_command(
-    OUTPUT ${object_file}
-    # We llvm-objcopy here as GNU-binutils objcopy does not support the 'hidden' flag.
-    DEPENDS ${object_file_raw} ${llvm-objcopy}
-    COMMAND $<TARGET_FILE:llvm-objcopy> --add-symbol
-            "${entrypoint_name}=.llvm.libc.entrypoint.${entrypoint_name}:${alias_attributes}"
-            ${object_file_raw} ${object_file}
-  )
-
-  add_custom_target(
-    ${fq_target_name}
-    ALL
-    DEPENDS ${object_file}
-  )
   set_target_properties(
     ${fq_target_name}
     PROPERTIES
       "ENTRYPOINT_NAME" ${entrypoint_name}
       "TARGET_TYPE" ${ENTRYPOINT_OBJ_TARGET_TYPE}
-      "OBJECT_FILE" "${object_file}"
-      "OBJECT_FILE_RAW" "${object_file_raw}"
+      "OBJECT_FILE" $<TARGET_OBJECTS:${fq_target_name}>
+      # TODO: We don't need to list internal object files if the internal
+      # target is a normal static library.
+      "OBJECT_FILE_RAW" $<TARGET_OBJECTS:${internal_target_name}>
       "DEPS" "${fq_deps_list}"
   )
 
@@ -273,7 +241,7 @@ function(add_entrypoint_object target_name)
       # crossplatform touch.
       COMMAND "${CMAKE_COMMAND}" -E touch ${lint_timestamp}
       COMMENT "Linting... ${target_name}"
-      DEPENDS clang-tidy ${objects_target_name} ${ADD_ENTRYPOINT_OBJ_SRCS}
+      DEPENDS clang-tidy ${internal_target_name} ${ADD_ENTRYPOINT_OBJ_SRCS}
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
 

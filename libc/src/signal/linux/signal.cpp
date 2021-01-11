@@ -14,7 +14,7 @@
 
 namespace __llvm_libc {
 
-sighandler_t LLVM_LIBC_ENTRYPOINT(signal)(int signum, sighandler_t handler) {
+LLVM_LIBC_FUNCTION(sighandler_t, signal, (int signum, sighandler_t handler)) {
   struct __sigaction action, old;
   action.sa_handler = handler;
   action.sa_flags = SA_RESTART;

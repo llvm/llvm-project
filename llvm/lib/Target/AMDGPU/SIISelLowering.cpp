@@ -8196,8 +8196,7 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV(SDValue Op,
   EVT VT = Op.getValueType();
   const SDNodeFlags Flags = Op->getFlags();
 
-  bool AllowInaccurateRcp = DAG.getTarget().Options.UnsafeFPMath ||
-                            Flags.hasApproximateFuncs();
+  bool AllowInaccurateRcp = Flags.hasApproximateFuncs();
 
   // Without !fpmath accuracy information, we can't do more because we don't
   // know exactly whether rcp is accurate enough to meet !fpmath requirement.
