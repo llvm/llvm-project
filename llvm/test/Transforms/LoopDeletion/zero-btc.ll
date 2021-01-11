@@ -9,7 +9,9 @@ define void @test_trivial() {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    store i32 0, i32* @G, align 4
-; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 false, label [[LOOP_LOOP_CRIT_EDGE:%.*]], label [[EXIT:%.*]]
+; CHECK:       loop.loop_crit_edge:
+; CHECK-NEXT:    unreachable
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -30,11 +32,13 @@ define void @test_bottom_tested() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_INC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    store i32 0, i32* @G, align 4
-; CHECK-NEXT:    [[IV_INC]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_INC:%.*]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[BE_TAKEN:%.*]] = icmp ne i32 [[IV_INC]], 1
-; CHECK-NEXT:    br i1 [[BE_TAKEN]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[BE_TAKEN]], label [[LOOP_LOOP_CRIT_EDGE:%.*]], label [[EXIT:%.*]]
+; CHECK:       loop.loop_crit_edge:
+; CHECK-NEXT:    unreachable
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -57,13 +61,15 @@ define void @test_early_exit() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_INC:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    store i32 0, i32* @G, align 4
-; CHECK-NEXT:    [[IV_INC]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_INC:%.*]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[BE_TAKEN:%.*]] = icmp ne i32 [[IV_INC]], 1
-; CHECK-NEXT:    br i1 [[BE_TAKEN]], label [[LATCH]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[BE_TAKEN]], label [[LATCH:%.*]], label [[EXIT:%.*]]
 ; CHECK:       latch:
-; CHECK-NEXT:    br label [[LOOP]]
+; CHECK-NEXT:    br label [[LATCH_SPLIT:%.*]]
+; CHECK:       latch.split:
+; CHECK-NEXT:    unreachable
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -88,15 +94,17 @@ define void @test_multi_exit1() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_INC:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    store i32 0, i32* @G, align 4
-; CHECK-NEXT:    [[IV_INC]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_INC:%.*]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[BE_TAKEN:%.*]] = icmp ne i32 [[IV_INC]], 1
-; CHECK-NEXT:    br i1 [[BE_TAKEN]], label [[LATCH]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[BE_TAKEN]], label [[LATCH:%.*]], label [[EXIT:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    store i32 1, i32* @G, align 4
 ; CHECK-NEXT:    [[COND2:%.*]] = icmp ult i32 [[IV_INC]], 30
-; CHECK-NEXT:    br i1 [[COND2]], label [[LOOP]], label [[EXIT]]
+; CHECK-NEXT:    br i1 [[COND2]], label [[LATCH_LOOP_CRIT_EDGE:%.*]], label [[EXIT]]
+; CHECK:       latch.loop_crit_edge:
+; CHECK-NEXT:    unreachable
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -127,7 +135,9 @@ define void @test_multi_exit2() {
 ; CHECK-NEXT:    br i1 true, label [[LATCH:%.*]], label [[EXIT:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    store i32 1, i32* @G, align 4
-; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[EXIT]]
+; CHECK-NEXT:    br i1 false, label [[LATCH_LOOP_CRIT_EDGE:%.*]], label [[EXIT]]
+; CHECK:       latch.loop_crit_edge:
+; CHECK-NEXT:    unreachable
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -218,7 +228,9 @@ define void @test_multi_exit5() {
 ; CHECK-NEXT:    br i1 true, label [[LATCH:%.*]], label [[EXIT1:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    store i32 1, i32* @G, align 4
-; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[EXIT2:%.*]]
+; CHECK-NEXT:    br i1 false, label [[LATCH_LOOP_CRIT_EDGE:%.*]], label [[EXIT2:%.*]]
+; CHECK:       latch.loop_crit_edge:
+; CHECK-NEXT:    unreachable
 ; CHECK:       exit1:
 ; CHECK-NEXT:    ret void
 ; CHECK:       exit2:
@@ -254,7 +266,9 @@ define void @test_live_inner() {
 ; CHECK-NEXT:    [[CND:%.*]] = icmp ult i32 [[IV_INC]], 200
 ; CHECK-NEXT:    br i1 [[CND]], label [[INNER]], label [[LATCH:%.*]]
 ; CHECK:       latch:
-; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 false, label [[LATCH_LOOP_CRIT_EDGE:%.*]], label [[EXIT:%.*]]
+; CHECK:       latch.loop_crit_edge:
+; CHECK-NEXT:    unreachable
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -316,4 +330,46 @@ latch:
 
 exit:
   ret void
+}
+
+; Key point is that inner_latch drops out of the outer loop when
+; the inner loop is deleted, and thus the lcssa phi needs to be
+; in the inner_latch block to preserve LCSSA.  We either have to
+; insert the LCSSA phi, or not break the inner backedge.
+define void @loop_nest_lcssa() {
+; CHECK-LABEL: @loop_nest_lcssa(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 1, 2
+; CHECK-NEXT:    br label [[OUTER_HEADER:%.*]]
+; CHECK:       outer_header:
+; CHECK-NEXT:    br label [[INNER_HEADER:%.*]]
+; CHECK:       inner_header:
+; CHECK-NEXT:    br i1 false, label [[INNER_LATCH:%.*]], label [[OUTER_LATCH:%.*]]
+; CHECK:       inner_latch:
+; CHECK-NEXT:    br i1 false, label [[INNER_HEADER]], label [[LOOPEXIT:%.*]]
+; CHECK:       outer_latch:
+; CHECK-NEXT:    br label [[OUTER_HEADER]]
+; CHECK:       loopexit:
+; CHECK-NEXT:    [[DOTLCSSA32:%.*]] = phi i32 [ [[TMP0]], [[INNER_LATCH]] ]
+; CHECK-NEXT:    unreachable
+;
+entry:
+  br label %outer_header
+
+outer_header:
+  %0 = add i32 1, 2
+  br label %inner_header
+
+inner_header:
+  br i1 false, label %inner_latch, label %outer_latch
+
+inner_latch:
+  br i1 false, label %inner_header, label %loopexit
+
+outer_latch:
+  br label %outer_header
+
+loopexit:
+  %.lcssa32 = phi i32 [ %0, %inner_latch ]
+  unreachable
 }
