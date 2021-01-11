@@ -30,9 +30,8 @@ multiclass REF_I<WebAssemblyRegClass reg, ValueType vt> {
 
 defm "" : REF_I<FUNCREF, funcref>;
 defm "" : REF_I<EXTERNREF, externref>;
-defm "" : REF_I<EXNREF, exnref>;
 
-foreach reg = [FUNCREF, EXTERNREF, EXNREF] in {
+foreach reg = [FUNCREF, EXTERNREF] in {
 def : Pat<(select (i32 (setne I32:$cond, 0)), reg:$lhs, reg:$rhs),
           (!cast<Instruction>("SELECT_"#reg) reg:$lhs, reg:$rhs, I32:$cond)>;
 def : Pat<(select (i32 (seteq I32:$cond, 0)), reg:$lhs, reg:$rhs),

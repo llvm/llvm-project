@@ -140,7 +140,6 @@ enum class BlockType : unsigned {
   V128 = unsigned(wasm::ValType::V128),
   Externref = unsigned(wasm::ValType::EXTERNREF),
   Funcref = unsigned(wasm::ValType::FUNCREF),
-  Exnref = unsigned(wasm::ValType::EXNREF),
   // Multivalue blocks (and other non-void blocks) are only emitted when the
   // blocks will never be exited and are at the ends of functions (see
   // WebAssemblyCFGStackify::fixEndsAtEndOfFunction). They also are never made
@@ -328,8 +327,6 @@ inline bool isArgument(unsigned Opc) {
   case WebAssembly::ARGUMENT_funcref_S:
   case WebAssembly::ARGUMENT_externref:
   case WebAssembly::ARGUMENT_externref_S:
-  case WebAssembly::ARGUMENT_exnref:
-  case WebAssembly::ARGUMENT_exnref_S:
     return true;
   default:
     return false;
@@ -352,8 +349,6 @@ inline bool isCopy(unsigned Opc) {
   case WebAssembly::COPY_FUNCREF_S:
   case WebAssembly::COPY_EXTERNREF:
   case WebAssembly::COPY_EXTERNREF_S:
-  case WebAssembly::COPY_EXNREF:
-  case WebAssembly::COPY_EXNREF_S:
     return true;
   default:
     return false;
@@ -376,8 +371,6 @@ inline bool isTee(unsigned Opc) {
   case WebAssembly::TEE_FUNCREF_S:
   case WebAssembly::TEE_EXTERNREF:
   case WebAssembly::TEE_EXTERNREF_S:
-  case WebAssembly::TEE_EXNREF:
-  case WebAssembly::TEE_EXNREF_S:
     return true;
   default:
     return false;

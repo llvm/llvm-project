@@ -242,20 +242,12 @@ void WebAssemblyCFGStackify::placeBlockMarker(MachineBasicBlock &MBB) {
   // which reduces overall stack height.
   MachineBasicBlock *Header = nullptr;
   bool IsBranchedTo = false;
-  bool IsBrOnExn = false;
-  MachineInstr *BrOnExn = nullptr;
   int MBBNumber = MBB.getNumber();
   for (MachineBasicBlock *Pred : MBB.predecessors()) {
     if (Pred->getNumber() < MBBNumber) {
       Header = Header ? MDT.findNearestCommonDominator(Header, Pred) : Pred;
-      if (explicitlyBranchesTo(Pred, &MBB)) {
+      if (explicitlyBranchesTo(Pred, &MBB))
         IsBranchedTo = true;
-        if (Pred->getFirstTerminator()->getOpcode() == WebAssembly::BR_ON_EXN) {
-          IsBrOnExn = true;
-          assert(!BrOnExn && "There should be only one br_on_exn per block");
-          BrOnExn = &*Pred->getFirstTerminator();
-        }
-      }
     }
   }
   if (!Header)
@@ -340,22 +332,7 @@ void WebAssemblyCFGStackify::placeBlockMarker(MachineBasicBlock &MBB) {
   }
 
   // Add the BLOCK.
-
-  // 'br_on_exn' extracts exnref object and pushes variable number of values
-  // depending on its tag. For C++ exception, its a single i32 value, and the
-  // generated code will be in the form of:
-  // block i32
-  //   br_on_exn 0, $__cpp_exception
-  //   rethrow
-  // end_block
   WebAssembly::BlockType ReturnType = WebAssembly::BlockType::Void;
-  if (IsBrOnExn) {
-    const char *TagName = BrOnExn->getOperand(1).getSymbolName();
-    if (std::strcmp(TagName, "__cpp_exception") != 0)
-      llvm_unreachable("Only C++ exception is supported");
-    ReturnType = WebAssembly::BlockType::I32;
-  }
-
   auto InsertPos = getLatestInsertPos(Header, BeforeSet, AfterSet);
   MachineInstr *Begin =
       BuildMI(*Header, InsertPos, Header->findDebugLoc(InsertPos),
@@ -776,8 +753,6 @@ static unsigned getCopyOpcode(const TargetRegisterClass *RC) {
     return WebAssembly::COPY_FUNCREF;
   if (RC == &WebAssembly::EXTERNREFRegClass)
     return WebAssembly::COPY_EXTERNREF;
-  if (RC == &WebAssembly::EXNREFRegClass)
-    return WebAssembly::COPY_EXNREF;
   llvm_unreachable("Unexpected register class");
 }
 
