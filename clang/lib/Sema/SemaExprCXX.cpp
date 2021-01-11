@@ -2630,8 +2630,24 @@ bool Sema::FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
   if (FoundDelete.isAmbiguous())
     return true; // FIXME: clean up expressions?
 
+  // Filter out any destroying operator deletes. We can't possibly call such a
+  // function in this context, because we're handling the case where the object
+  // was not successfully constructed.
+  // FIXME: This is not covered by the language rules yet.
+  {
+    LookupResult::Filter Filter = FoundDelete.makeFilter();
+    while (Filter.hasNext()) {
+      auto *FD = dyn_cast<FunctionDecl>(Filter.next()->getUnderlyingDecl());
+      if (FD && FD->isDestroyingOperatorDelete())
+        Filter.erase();
+    }
+    Filter.done();
+  }
+
   bool FoundGlobalDelete = FoundDelete.empty();
   if (FoundDelete.empty()) {
+    FoundDelete.clear(LookupOrdinaryName);
+
     if (DeleteScope == AFS_Class)
       return true;
 
