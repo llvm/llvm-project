@@ -409,6 +409,9 @@ llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
   FileID FID;
 
   if (Loc.isInvalid()) {
+    // The DIFile used by the CU is distinct from the main source file. Call
+    // createFile() below for canonicalization if the source file was specified
+    // with an absolute path.
     FileName = TheCU->getFile()->getFilename();
   } else {
     PresumedLoc PLoc = SM.getPresumedLoc(Loc);
