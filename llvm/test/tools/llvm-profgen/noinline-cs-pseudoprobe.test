@@ -1,4 +1,20 @@
 ; RUN: llvm-profgen --perfscript=%S/Inputs/noinline-cs-pseudoprobe.perfscript --binary=%S/Inputs/noinline-cs-pseudoprobe.perfbin --output=%t --show-unwinder-output | FileCheck %s --check-prefix=CHECK-UNWINDER
+; RUN: FileCheck %s --input-file %t
+
+; CHECK:     [main:2 @ foo]:75:0
+; CHECK-NEXT: 2: 15
+; CHECK-NEXT: 3: 15
+; CHECK-NEXT: 4: 15
+; CHECK-NEXT: 6: 15
+; CHECK-NEXT: 8: 15 bar:15
+; CHECK-NEXT: !CFGChecksum: 138950591924
+; CHECK-NEXT:[main:2 @ foo:8 @ bar]:60:15
+; CHECK-NEXT: 1: 15
+; CHECK-NEXT: 2: 15
+; CHECK-NEXT: 3: 15
+; CHECK-NEXT: 4: 15
+; CHECK-NEXT: !CFGChecksum: 72617220756
+
 
 ; CHECK-UNWINDER:      Binary(noinline-cs-pseudoprobe.perfbin)'s Range Counter:
 ; CHECK-UNWINDER-NEXT: main:2
