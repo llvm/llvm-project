@@ -15,7 +15,7 @@
 #include "WebAssembly.h"
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyUtilities.h"
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/WasmEHFuncInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -32,6 +32,7 @@ class WebAssemblyLateEHPrepare final : public MachineFunctionPass {
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
+  bool removeUnreachableEHPads(MachineFunction &MF);
   void recordCatchRetBBs(MachineFunction &MF);
   bool hoistCatches(MachineFunction &MF);
   bool addCatchAlls(MachineFunction &MF);
@@ -40,7 +41,7 @@ class WebAssemblyLateEHPrepare final : public MachineFunctionPass {
   bool restoreStackPointer(MachineFunction &MF);
 
   MachineBasicBlock *getMatchingEHPad(MachineInstr *MI);
-  SmallSet<MachineBasicBlock *, 8> CatchRetBBs;
+  SmallPtrSet<MachineBasicBlock *, 8> CatchRetBBs;
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -94,14 +95,18 @@ WebAssemblyLateEHPrepare::getMatchingEHPad(MachineInstr *MI) {
 template <typename Container>
 static void eraseDeadBBsAndChildren(const Container &MBBs) {
   SmallVector<MachineBasicBlock *, 8> WL(MBBs.begin(), MBBs.end());
+  SmallPtrSet<MachineBasicBlock *, 8> Deleted;
   while (!WL.empty()) {
     MachineBasicBlock *MBB = WL.pop_back_val();
-    if (!MBB->pred_empty())
+    if (Deleted.count(MBB) || !MBB->pred_empty())
       continue;
     SmallVector<MachineBasicBlock *, 4> Succs(MBB->successors());
     WL.append(MBB->succ_begin(), MBB->succ_end());
     for (auto *Succ : Succs)
       MBB->removeSuccessor(Succ);
+    // To prevent deleting the same BB multiple times, which can happen when
+    // 'MBBs' contain both a parent and a child
+    Deleted.insert(MBB);
     MBB->eraseFromParent();
   }
 }
@@ -117,6 +122,7 @@ bool WebAssemblyLateEHPrepare::runOnMachineFunction(MachineFunction &MF) {
 
   bool Changed = false;
   if (MF.getFunction().hasPersonalityFn()) {
+    Changed |= removeUnreachableEHPads(MF);
     recordCatchRetBBs(MF);
     Changed |= hoistCatches(MF);
     Changed |= addCatchAlls(MF);
@@ -128,9 +134,20 @@ bool WebAssemblyLateEHPrepare::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
-// Record which BB ends with 'CATCHRET' instruction, because this will be
-// replaced with BRs later. This set of 'CATCHRET' BBs is necessary in
-// 'getMatchingEHPad' function.
+// Remove unreachable EH pads and its children. If they remain, CFG
+// stackification can be tricky.
+bool WebAssemblyLateEHPrepare::removeUnreachableEHPads(MachineFunction &MF) {
+  SmallVector<MachineBasicBlock *, 4> ToDelete;
+  for (auto &MBB : MF)
+    if (MBB.isEHPad() && MBB.pred_empty())
+      ToDelete.push_back(&MBB);
+  eraseDeadBBsAndChildren(ToDelete);
+  return !ToDelete.empty();
+}
+
+// Record which BB ends with catchret instruction, because this will be replaced
+// with 'br's later. This set of catchret BBs is necessary in 'getMatchingEHPad'
+// function.
 void WebAssemblyLateEHPrepare::recordCatchRetBBs(MachineFunction &MF) {
   CatchRetBBs.clear();
   for (auto &MBB : MF) {
@@ -204,6 +221,8 @@ bool WebAssemblyLateEHPrepare::addCatchAlls(MachineFunction &MF) {
   return Changed;
 }
 
+// Replace pseudo-instructions catchret and cleanupret with br and rethrow
+// respectively.
 bool WebAssemblyLateEHPrepare::replaceFuncletReturns(MachineFunction &MF) {
   bool Changed = false;
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
@@ -239,6 +258,7 @@ bool WebAssemblyLateEHPrepare::replaceFuncletReturns(MachineFunction &MF) {
   return Changed;
 }
 
+// Remove unnecessary unreachables after a throw or rethrow.
 bool WebAssemblyLateEHPrepare::removeUnnecessaryUnreachables(
     MachineFunction &MF) {
   bool Changed = false;
