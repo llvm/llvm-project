@@ -2535,6 +2535,8 @@ public:
   }
 };
 
+class PyMemRefLayoutMapList;
+
 /// Ranked MemRef Type subclass - MemRefType.
 class PyMemRefType : public PyConcreteType<PyMemRefType, PyShapedType> {
 public:
@@ -2542,16 +2544,22 @@ public:
   static constexpr const char *pyClassName = "MemRefType";
   using PyConcreteType::PyConcreteType;
 
+  PyMemRefLayoutMapList getLayout();
+
   static void bindDerived(ClassTy &c) {
-    // TODO: Add mlirMemRefTypeGet and mlirMemRefTypeGetAffineMap binding
-    // once the affine map binding is completed.
     c.def_static(
-         "get_contiguous_memref",
-         // TODO: Make the location optional and create a default location.
+         "get",
          [](PyType &elementType, std::vector<int64_t> shape,
-            unsigned memorySpace, DefaultingPyLocation loc) {
-           MlirType t = mlirMemRefTypeContiguousGetChecked(
-               elementType, shape.size(), shape.data(), memorySpace, loc);
+            std::vector<PyAffineMap> layout, unsigned memorySpace,
+            DefaultingPyLocation loc) {
+           SmallVector<MlirAffineMap> maps;
+           maps.reserve(layout.size());
+           for (PyAffineMap &map : layout)
+             maps.push_back(map);
+
+           MlirType t = mlirMemRefTypeGetChecked(elementType, shape.size(),
+                                                 shape.data(), maps.size(),
+                                                 maps.data(), memorySpace, loc);
            // TODO: Rework error reporting once diagnostic engine is exposed
            // in C API.
            if (mlirTypeIsNull(t)) {
@@ -2565,15 +2573,11 @@ public:
            }
            return PyMemRefType(elementType.getContext(), t);
          },
-         py::arg("element_type"), py::arg("shape"), py::arg("memory_space"),
+         py::arg("element_type"), py::arg("shape"),
+         py::arg("layout") = py::list(), py::arg("memory_space") = 0,
          py::arg("loc") = py::none(), "Create a memref type")
-        .def_property_readonly(
-            "num_affine_maps",
-            [](PyMemRefType &self) -> intptr_t {
-              return mlirMemRefTypeGetNumAffineMaps(self);
-            },
-            "Returns the number of affine layout maps in the given MemRef "
-            "type.")
+        .def_property_readonly("layout", &PyMemRefType::getLayout,
+                               "The list of layout maps of the MemRef type.")
         .def_property_readonly(
             "memory_space",
             [](PyMemRefType &self) -> unsigned {
@@ -2582,6 +2586,41 @@ public:
             "Returns the memory space of the given MemRef type.");
   }
 };
+
+/// A list of affine layout maps in a memref type. Internally, these are stored
+/// as consecutive elements, random access is cheap. Both the type and the maps
+/// are owned by the context, no need to worry about lifetime extension.
+class PyMemRefLayoutMapList
+    : public Sliceable<PyMemRefLayoutMapList, PyAffineMap> {
+public:
+  static constexpr const char *pyClassName = "MemRefLayoutMapList";
+
+  PyMemRefLayoutMapList(PyMemRefType type, intptr_t startIndex = 0,
+                        intptr_t length = -1, intptr_t step = 1)
+      : Sliceable(startIndex,
+                  length == -1 ? mlirMemRefTypeGetNumAffineMaps(type) : length,
+                  step),
+        memref(type) {}
+
+  intptr_t getNumElements() { return mlirMemRefTypeGetNumAffineMaps(memref); }
+
+  PyAffineMap getElement(intptr_t index) {
+    return PyAffineMap(memref.getContext(),
+                       mlirMemRefTypeGetAffineMap(memref, index));
+  }
+
+  PyMemRefLayoutMapList slice(intptr_t startIndex, intptr_t length,
+                              intptr_t step) {
+    return PyMemRefLayoutMapList(memref, startIndex, length, step);
+  }
+
+private:
+  PyMemRefType memref;
+};
+
+PyMemRefLayoutMapList PyMemRefType::getLayout() {
+  return PyMemRefLayoutMapList(*this);
+}
 
 /// Unranked MemRef Type subclass - UnrankedMemRefType.
 class PyUnrankedMemRefType
@@ -3631,6 +3670,7 @@ void mlir::python::populateIRSubmodule(py::module &m) {
   PyRankedTensorType::bind(m);
   PyUnrankedTensorType::bind(m);
   PyMemRefType::bind(m);
+  PyMemRefLayoutMapList::bind(m);
   PyUnrankedMemRefType::bind(m);
   PyTupleType::bind(m);
   PyFunctionType::bind(m);
