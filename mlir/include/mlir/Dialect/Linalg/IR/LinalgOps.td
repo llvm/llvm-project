@@ -183,6 +183,14 @@ class Linalg_ReshapeLikeOp<string mnemonic, list<OpTrait> traits = []> :
       return llvm::to_vector<4>(llvm::map_range(reassociation(), [
       ](Attribute a) { return a.cast<AffineMapAttr>().getValue(); }));
     }
+    SmallVector<ReassociationExprs, 4> getReassociationExprs() {
+      return
+        llvm::to_vector<4>(llvm::map_range(reassociation(),
+	  [](Attribute a) {
+	    return llvm::to_vector<2>(
+	      a.cast<AffineMapAttr>().getValue().getResults());
+	  }));
+    }
   }];
   let assemblyFormat = [{
     $src $reassociation attr-dict `:` type($src) `into` type(results)
