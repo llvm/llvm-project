@@ -133,7 +133,7 @@ struct HybridSample : public PerfSample {
   // Profiled binary that current frame address belongs to
   ProfiledBinary *Binary;
   // Call stack recorded in FILO(leaf to root) order
-  std::list<uint64_t> CallStack;
+  SmallVector<uint64_t, 16> CallStack;
   // LBR stack recorded in FIFO order
   SmallVector<LBREntry, 16> LBRStack;
 
@@ -147,7 +147,7 @@ struct HybridSample : public PerfSample {
     const HybridSample *Other = dyn_cast<HybridSample>(K);
     if (Other->Binary != Binary)
       return false;
-    const std::list<uint64_t> &OtherCallStack = Other->CallStack;
+    const SmallVector<uint64_t, 16> &OtherCallStack = Other->CallStack;
     const SmallVector<LBREntry, 16> &OtherLBRStack = Other->LBRStack;
 
     if (CallStack.size() != OtherCallStack.size() ||
@@ -193,14 +193,40 @@ using AggregatedCounter =
     std::unordered_map<Hashable<PerfSample>, uint64_t,
                        Hashable<PerfSample>::Hash, Hashable<PerfSample>::Equal>;
 
+using SampleVector = SmallVector<std::tuple<uint64_t, uint64_t, uint64_t>, 16>;
 // The state for the unwinder, it doesn't hold the data but only keep the
 // pointer/index of the data, While unwinding, the CallStack is changed
 // dynamicially and will be recorded as the context of the sample
 struct UnwindState {
   // Profiled binary that current frame address belongs to
   const ProfiledBinary *Binary;
-  // TODO: switch to use trie for call stack
-  std::list<uint64_t> CallStack;
+  // Call stack trie node
+  struct ProfiledFrame {
+    const uint64_t Address = 0;
+    ProfiledFrame *Parent;
+    SampleVector RangeSamples;
+    SampleVector BranchSamples;
+    std::unordered_map<uint64_t, std::unique_ptr<ProfiledFrame>> Children;
+
+    ProfiledFrame(uint64_t Addr = 0, ProfiledFrame *P = nullptr)
+        : Address(Addr), Parent(P) {}
+    ProfiledFrame *getOrCreateChildFrame(uint64_t Address) {
+      assert(Address && "Address can't be zero!");
+      auto Ret = Children.emplace(
+          Address, std::make_unique<ProfiledFrame>(Address, this));
+      return Ret.first->second.get();
+    }
+    void recordRangeCount(uint64_t Start, uint64_t End, uint64_t Count) {
+      RangeSamples.emplace_back(std::make_tuple(Start, End, Count));
+    }
+    void recordBranchCount(uint64_t Source, uint64_t Target, uint64_t Count) {
+      BranchSamples.emplace_back(std::make_tuple(Source, Target, Count));
+    }
+    bool isDummyRoot() { return Address == 0; }
+  };
+
+  ProfiledFrame DummyTrieRoot;
+  ProfiledFrame *CurrentLeafFrame;
   // Used to fall through the LBR stack
   uint32_t LBRIndex = 0;
   // Reference to HybridSample.LBRStack
@@ -208,19 +234,20 @@ struct UnwindState {
   // Used to iterate the address range
   InstructionPointer InstPtr;
   UnwindState(const HybridSample *Sample)
-      : Binary(Sample->Binary), CallStack(Sample->CallStack),
-        LBRStack(Sample->LBRStack),
-        InstPtr(Sample->Binary, Sample->CallStack.front()) {}
+      : Binary(Sample->Binary), LBRStack(Sample->LBRStack),
+        InstPtr(Sample->Binary, Sample->CallStack.front()) {
+    initFrameTrie(Sample->CallStack);
+  }
 
   bool validateInitialState() {
     uint64_t LBRLeaf = LBRStack[LBRIndex].Target;
-    uint64_t StackLeaf = CallStack.front();
+    uint64_t LeafAddr = CurrentLeafFrame->Address;
     // When we take a stack sample, ideally the sampling distance between the
     // leaf IP of stack and the last LBR target shouldn't be very large.
     // Use a heuristic size (0x100) to filter out broken records.
-    if (StackLeaf < LBRLeaf || StackLeaf >= LBRLeaf + 0x100) {
+    if (LeafAddr < LBRLeaf || LeafAddr >= LBRLeaf + 0x100) {
       WithColor::warning() << "Bogus trace: stack tip = "
-                           << format("%#010x", StackLeaf)
+                           << format("%#010x", LeafAddr)
                            << ", LBR tip = " << format("%#010x\n", LBRLeaf);
       return false;
     }
@@ -228,19 +255,40 @@ struct UnwindState {
   }
 
   void checkStateConsistency() {
-    assert(InstPtr.Address == CallStack.front() &&
+    assert(InstPtr.Address == CurrentLeafFrame->Address &&
            "IP should align with context leaf");
   }
 
-  std::string getExpandedContextStr() const {
-    return Binary->getExpandedContextStr(CallStack);
-  }
   const ProfiledBinary *getBinary() const { return Binary; }
   bool hasNextLBR() const { return LBRIndex < LBRStack.size(); }
   uint64_t getCurrentLBRSource() const { return LBRStack[LBRIndex].Source; }
   uint64_t getCurrentLBRTarget() const { return LBRStack[LBRIndex].Target; }
   const LBREntry &getCurrentLBR() const { return LBRStack[LBRIndex]; }
   void advanceLBR() { LBRIndex++; }
+
+  ProfiledFrame *getParentFrame() { return CurrentLeafFrame->Parent; }
+
+  void pushFrame(uint64_t Address) {
+    CurrentLeafFrame = CurrentLeafFrame->getOrCreateChildFrame(Address);
+  }
+
+  void switchToFrame(uint64_t Address) {
+    if (CurrentLeafFrame->Address == Address)
+      return;
+    CurrentLeafFrame = CurrentLeafFrame->Parent->getOrCreateChildFrame(Address);
+  }
+
+  void popFrame() { CurrentLeafFrame = CurrentLeafFrame->Parent; }
+
+  void initFrameTrie(const SmallVectorImpl<uint64_t> &CallStack) {
+    ProfiledFrame *Cur = &DummyTrieRoot;
+    for (auto Address : reverse(CallStack)) {
+      Cur = Cur->getOrCreateChildFrame(Address);
+    }
+    CurrentLeafFrame = Cur;
+  }
+
+  ProfiledFrame *getDummyRootPtr() { return &DummyTrieRoot; }
 };
 
 // Base class for sample counter key with context
@@ -330,6 +378,56 @@ using ContextSampleCounterMap =
     std::unordered_map<Hashable<ContextKey>, SampleCounter,
                        Hashable<ContextKey>::Hash, Hashable<ContextKey>::Equal>;
 
+struct FrameStack {
+  SmallVector<uint64_t, 16> Stack;
+  const ProfiledBinary *Binary;
+  FrameStack(const ProfiledBinary *B) : Binary(B) {}
+  bool pushFrame(UnwindState::ProfiledFrame *Cur) {
+    Stack.push_back(Cur->Address);
+    return true;
+  }
+
+  void popFrame() {
+    if (!Stack.empty())
+      Stack.pop_back();
+  }
+  std::shared_ptr<StringBasedCtxKey> getContextKey();
+};
+
+struct ProbeStack {
+  SmallVector<const PseudoProbe *, 16> Stack;
+  const ProfiledBinary *Binary;
+  ProbeStack(const ProfiledBinary *B) : Binary(B) {}
+  bool pushFrame(UnwindState::ProfiledFrame *Cur) {
+    const PseudoProbe *CallProbe = Binary->getCallProbeForAddr(Cur->Address);
+    // We may not find a probe for a merged or external callsite.
+    // Callsite merging may cause the loss of original probe IDs.
+    // Cutting off the context from here since the inliner will
+    // not know how to consume a context with unknown callsites.
+    if (!CallProbe)
+      return false;
+    Stack.push_back(CallProbe);
+    return true;
+  }
+
+  void popFrame() {
+    if (!Stack.empty())
+      Stack.pop_back();
+  }
+  // Use pseudo probe based context key to get the sample counter
+  // A context stands for a call path from 'main' to an uninlined
+  // callee with all inline frames recovered on that path. The probes
+  // belonging to that call path is the probes either originated from
+  // the callee or from any functions inlined into the callee. Since
+  // pseudo probes are organized in a tri-tree style after decoded,
+  // the tree path from the tri-tree root (which is the uninlined
+  // callee) to the probe node forms an inline context.
+  // Here we use a list of probe(pointer) as the context key to speed up
+  // aggregation and the final context string will be generate in
+  // ProfileGenerator
+  std::shared_ptr<ProbeBasedCtxKey> getContextKey();
+};
+
 /*
 As in hybrid sample we have a group of LBRs and the most recent sampling call
 stack, we can walk through those LBRs to infer more call stacks which would be
@@ -351,47 +449,43 @@ range as sample counter for further CS profile generation.
 */
 class VirtualUnwinder {
 public:
-  VirtualUnwinder(ContextSampleCounterMap *Counter) : CtxCounterMap(Counter) {}
+  VirtualUnwinder(ContextSampleCounterMap *Counter, const ProfiledBinary *B)
+      : CtxCounterMap(Counter), Binary(B) {}
+  bool unwind(const HybridSample *Sample, uint64_t Repeat);
 
+private:
   bool isCallState(UnwindState &State) const {
     // The tail call frame is always missing here in stack sample, we will
     // use a specific tail call tracker to infer it.
-    return State.getBinary()->addressIsCall(State.getCurrentLBRSource());
+    return Binary->addressIsCall(State.getCurrentLBRSource());
   }
 
   bool isReturnState(UnwindState &State) const {
     // Simply check addressIsReturn, as ret is always reliable, both for
     // regular call and tail call.
-    return State.getBinary()->addressIsReturn(State.getCurrentLBRSource());
+    return Binary->addressIsReturn(State.getCurrentLBRSource());
   }
 
   void unwindCall(UnwindState &State);
   void unwindLinear(UnwindState &State, uint64_t Repeat);
   void unwindReturn(UnwindState &State);
   void unwindBranchWithinFrame(UnwindState &State);
-  bool unwind(const HybridSample *Sample, uint64_t Repeat);
+
+  template <typename T>
+  void collectSamplesFromFrame(UnwindState::ProfiledFrame *Cur, T &Stack);
+  // Collect each samples on trie node by DFS traversal
+  template <typename T>
+  void collectSamplesFromFrameTrie(UnwindState::ProfiledFrame *Cur, T &Stack);
+  void collectSamplesFromFrameTrie(UnwindState::ProfiledFrame *Cur);
+
   void recordRangeCount(uint64_t Start, uint64_t End, UnwindState &State,
                         uint64_t Repeat);
   void recordBranchCount(const LBREntry &Branch, UnwindState &State,
                          uint64_t Repeat);
-  SampleCounter &getOrCreateCounter(const ProfiledBinary *Binary,
-                                    std::list<uint64_t> &CallStack);
-  // Use pseudo probe based context key to get the sample counter
-  // A context stands for a call path from 'main' to an uninlined
-  // callee with all inline frames recovered on that path. The probes
-  // belonging to that call path is the probes either originated from
-  // the callee or from any functions inlined into the callee. Since
-  // pseudo probes are organized in a tri-tree style after decoded,
-  // the tree path from the tri-tree root (which is the uninlined
-  // callee) to the probe node forms an inline context.
-  // Here we use a list of probe(pointer) as the context key to speed up
-  // aggregation and the final context string will be generate in
-  // ProfileGenerator
-  SampleCounter &getOrCreateCounterForProbe(const ProfiledBinary *Binary,
-                                            std::list<uint64_t> &CallStack);
 
-private:
   ContextSampleCounterMap *CtxCounterMap;
+  // Profiled binary that current frame address belongs to
+  const ProfiledBinary *Binary;
 };
 
 // Filename to binary map
@@ -457,10 +551,11 @@ private:
   // Parse the hybrid sample including the call and LBR line
   void parseHybridSample(TraceStream &TraceIt);
   // Extract call stack from the perf trace lines
-  bool extractCallstack(TraceStream &TraceIt, std::list<uint64_t> &CallStack);
+  bool extractCallstack(TraceStream &TraceIt,
+                        SmallVectorImpl<uint64_t> &CallStack);
   // Extract LBR stack from one perf trace line
   bool extractLBRStack(TraceStream &TraceIt,
-                       SmallVector<LBREntry, 16> &LBRStack,
+                       SmallVectorImpl<LBREntry> &LBRStack,
                        ProfiledBinary *Binary);
   void checkAndSetPerfType(cl::list<std::string> &PerfTraceFilenames);
   // Post process the profile after trace aggregation, we will do simple range
