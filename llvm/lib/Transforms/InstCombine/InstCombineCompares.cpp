@@ -2210,6 +2210,21 @@ Instruction *InstCombinerImpl::foldICmpShrConstant(ICmpInst &Cmp,
           (ShiftedC + 1).ashr(ShAmtVal) == (C + 1))
         return new ICmpInst(Pred, X, ConstantInt::get(ShrTy, ShiftedC));
     }
+
+    // If the compare constant has significant bits above the lowest sign-bit,
+    // then convert an unsigned cmp to a test of the sign-bit:
+    // (ashr X, ShiftC) u> C --> X s< 0
+    // (ashr X, ShiftC) u< C --> X s> -1
+    if (C.getBitWidth() > 2 && C.getNumSignBits() <= ShAmtVal) {
+      if (Pred == CmpInst::ICMP_UGT) {
+        return new ICmpInst(CmpInst::ICMP_SLT, X,
+                            ConstantInt::getNullValue(ShrTy));
+      }
+      if (Pred == CmpInst::ICMP_ULT) {
+        return new ICmpInst(CmpInst::ICMP_SGT, X,
+                            ConstantInt::getAllOnesValue(ShrTy));
+      }
+    }
   } else {
     if (Pred == CmpInst::ICMP_ULT || (Pred == CmpInst::ICMP_UGT && IsExact)) {
       // icmp ult (lshr X, ShAmtC), C --> icmp ult X, (C << ShAmtC)
