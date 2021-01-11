@@ -16,9 +16,13 @@
 ! FLANG FRONTEND DRIVER (flang-new -fc1)
 !----------------------------------------
 ! TEST 3: Both input files are processed
-! RUN: %flang-new -fc1 -test-io  %S/Inputs/hello-world.f90 %s 2>&1 \
-! RUN:  && FileCheck %s --input-file=%S/multiple-input-files.txt --match-full-lines -check-prefix=FC1-OUTPUT1 \
-! RUN:  && FileCheck %s --input-file=%S/Inputs/hello-world.txt --match-full-lines -check-prefix=FC1-OUTPUT2
+! This particular test case generates output files in the same directory as the input files. We need to copy the input files into a
+! temporary directory to avoid polluting the source directory.
+! RUN: rm -rf %t-dir && mkdir -p %t-dir && cd %t-dir
+! RUN: cp %s . && cp %S/Inputs/hello-world.f90 .
+! RUN: %flang-new -fc1 -test-io  hello-world.f90 multiple-input-files.f90 2>&1 \
+! RUN:  && FileCheck %s --input-file=multiple-input-files.txt --match-full-lines -check-prefix=FC1-OUTPUT1 \
+! RUN:  && FileCheck %s --input-file=hello-world.txt --match-full-lines -check-prefix=FC1-OUTPUT2
 
 ! TEST 4: Only the last input file is processed
 ! RUN: %flang-new -fc1 -test-io %s %S/Inputs/hello-world.f90 -o %t 2>&1 \
