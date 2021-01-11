@@ -36,8 +36,8 @@ define void @t1() nounwind ssp {
 ; THUMB: {{(movt r0, :upper16:_?message1)|(ldr r0, \[r0\])}}
 ; THUMB: adds r0, #5
 ; THUMB: movs r1, #64
-; THUMB: and r1, r1, #255
 ; THUMB: movs r2, #10
+; THUMB: and r1, r1, #255
 ; THUMB: bl {{_?}}memset
 ; THUMB-LONG-LABEL: t1:
 ; THUMB-LONG: movw r3, :lower16:L_memset$non_lazy_ptr

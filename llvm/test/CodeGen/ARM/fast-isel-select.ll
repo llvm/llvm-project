@@ -6,12 +6,14 @@
 define i32 @t1(i1 %c) nounwind readnone {
 entry:
 ; ARM-LABEL: t1:
-; ARM: tst r0, #1
+; ARM: mov r1, r0
 ; ARM: movw r0, #10
+; ARM: tst r1, #1
 ; ARM: moveq r0, #20
 ; THUMB-LABEL: t1:
-; THUMB: tst.w r0, #1
-; THUMB: movw r0, #10
+; THUMB: mov r1, r0
+; THUMB: movs r0, #10
+; THUMB: tst.w r1, #1
 ; THUMB: it eq
 ; THUMB: moveq r0, #20
   %0 = select i1 %c, i32 10, i32 20
@@ -50,12 +52,14 @@ entry:
 define i32 @t4(i1 %c) nounwind readnone {
 entry:
 ; ARM-LABEL: t4:
-; ARM: tst r0, #1
+; ARM: mov r1, r0
 ; ARM: mvn r0, #9
+; ARM: tst r1, #1
 ; ARM: mvneq r0, #0
 ; THUMB-LABEL: t4:
-; THUMB: tst.w r0, #1
+; THUMB: mov r1, r0
 ; THUMB: mvn r0, #9
+; THUMB: tst.w r1, #1
 ; THUMB: it eq
 ; THUMB: mvneq r0, #0
   %0 = select i1 %c, i32 -10, i32 -1
