@@ -111,5 +111,4 @@ add_mlir_library(mlir_async_runtime
   mlir_c_runner_utils_static
   ${LLVM_PTHREAD_LIB}
 )
-set_property(TARGET mlir_async_runtime PROPERTY CXX_VISIBILITY_PRESET hidden)
 target_compile_definitions(mlir_async_runtime PRIVATE mlir_async_runtime_EXPORTS)
