@@ -44,6 +44,7 @@
 #include "llvm/Analysis/IRSimilarityIdentifier.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueMap.h"
+#include "llvm/Support/InstructionCost.h"
 #include "llvm/Transforms/Utils/CodeExtractor.h"
 #include <set>
 
@@ -150,7 +151,7 @@ struct OutlinableRegion {
   ///
   /// \param [in] TTI - The TargetTransformInfo for the parent function.
   /// \returns the code size of the region
-  unsigned getBenefit(TargetTransformInfo &TTI);
+  InstructionCost getBenefit(TargetTransformInfo &TTI);
 };
 
 /// This class is a pass that identifies similarity in a Module, extracts
@@ -214,14 +215,14 @@ private:
   /// \param [in] CurrentGroup - The collection of OutlinableRegions to be
   /// analyzed.
   /// \returns the number of outlined instructions across all regions.
-  unsigned findBenefitFromAllRegions(OutlinableGroup &CurrentGroup);
+  InstructionCost findBenefitFromAllRegions(OutlinableGroup &CurrentGroup);
 
   /// Find the number of instructions that will be added by reloading arguments.
   ///
   /// \param [in] CurrentGroup - The collection of OutlinableRegions to be
   /// analyzed.
   /// \returns the number of added reload instructions across all regions.
-  unsigned findCostOutputReloads(OutlinableGroup &CurrentGroup);
+  InstructionCost findCostOutputReloads(OutlinableGroup &CurrentGroup);
 
   /// Find the cost and the benefit of \p CurrentGroup and save it back to
   /// \p CurrentGroup.
