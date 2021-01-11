@@ -38,7 +38,10 @@ public:
   void initialize();
 
   /// Finalize the underlying module, e.g., by outlining regions.
-  void finalize();
+  /// \param AllowExtractorSinking Flag to include sinking instructions,
+  ///                              emitted by CodeExtractor, in the
+  ///                              outlined region. Default is false.
+  void finalize(bool AllowExtractorSinking = false);
 
   /// Add attributes known for \p FnID to \p Fn.
   void addAttributes(omp::RuntimeFunction FnID, Function &Fn);

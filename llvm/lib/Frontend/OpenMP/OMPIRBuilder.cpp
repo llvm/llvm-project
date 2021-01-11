@@ -127,7 +127,7 @@ Function *OpenMPIRBuilder::getOrCreateRuntimeFunctionPtr(RuntimeFunction FnID) {
 
 void OpenMPIRBuilder::initialize() { initializeTypes(M); }
 
-void OpenMPIRBuilder::finalize() {
+void OpenMPIRBuilder::finalize(bool AllowExtractorSinking) {
   SmallPtrSet<BasicBlock *, 32> ParallelRegionBlockSet;
   SmallVector<BasicBlock *, 32> Blocks;
   for (OutlineInfo &OI : OutlineInfos) {
@@ -170,6 +170,25 @@ void OpenMPIRBuilder::finalize() {
       BasicBlock &ArtificialEntry = OutlinedFn->getEntryBlock();
       assert(ArtificialEntry.getUniqueSuccessor() == OI.EntryBB);
       assert(OI.EntryBB->getUniquePredecessor() == &ArtificialEntry);
+      if (AllowExtractorSinking) {
+        // Move instructions from the to-be-deleted ArtificialEntry to the entry
+        // basic block of the parallel region. CodeExtractor may have sunk
+        // allocas/bitcasts for values that are solely used in the outlined
+        // region and do not escape.
+        assert(!ArtificialEntry.empty() &&
+               "Expected instructions to sink in the outlined region");
+        for (BasicBlock::iterator It = ArtificialEntry.begin(),
+                                  End = ArtificialEntry.end();
+             It != End;) {
+          Instruction &I = *It;
+          It++;
+
+          if (I.isTerminator())
+            continue;
+
+          I.moveBefore(*OI.EntryBB, OI.EntryBB->getFirstInsertionPt());
+        }
+      }
       OI.EntryBB->moveBefore(&ArtificialEntry);
       ArtificialEntry.eraseFromParent();
     }
