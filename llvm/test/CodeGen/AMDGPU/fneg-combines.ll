@@ -252,7 +252,7 @@ define amdgpu_ps float @fneg_fadd_0(float inreg %tmp2, float inreg %tmp6, <4 x i
 ; GCN-NSZ-DAG: v_cmp_nlt_f32_e64 {{.*}}, -[[D]]
 define amdgpu_ps float @fneg_fadd_0_nsz(float inreg %tmp2, float inreg %tmp6, <4 x i32> %arg) local_unnamed_addr #2 {
 .entry:
-  %tmp7 = fdiv float 1.000000e+00, %tmp6
+  %tmp7 = fdiv afn float 1.000000e+00, %tmp6
   %tmp8 = fmul float 0.000000e+00, %tmp7
   %tmp9 = fmul reassoc nnan arcp contract float 0.000000e+00, %tmp8
   %.i188 = fadd float %tmp9, 0.000000e+00

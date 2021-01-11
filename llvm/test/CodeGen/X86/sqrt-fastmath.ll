@@ -118,7 +118,7 @@ define float @finite_f32_estimate_ieee_ninf(float %f) #1 {
 ; AVX512-NEXT:    vmovss %xmm0, %xmm1, %xmm1 {%k1}
 ; AVX512-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX512-NEXT:    retq
-  %call = tail call ninf float @__sqrtf_finite(float %f) #2
+  %call = tail call ninf afn float @__sqrtf_finite(float %f) #2
   ret float %call
 }
 
@@ -177,7 +177,7 @@ define float @finite_f32_estimate_daz_ninf(float %f) #4 {
 ; AVX512-NEXT:    vmovss %xmm2, %xmm1, %xmm1 {%k1}
 ; AVX512-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX512-NEXT:    retq
-  %call = tail call ninf float @__sqrtf_finite(float %f) #2
+  %call = tail call ninf afn float @__sqrtf_finite(float %f) #2
   ret float %call
 }
 
@@ -262,7 +262,7 @@ define float @sqrtf_check_denorms_ninf(float %x) #3 {
 ; AVX512-NEXT:    vmovss %xmm0, %xmm1, %xmm1 {%k1}
 ; AVX512-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX512-NEXT:    retq
-  %call = tail call ninf float @__sqrtf_finite(float %x) #2
+  %call = tail call ninf afn float @__sqrtf_finite(float %x) #2
   ret float %call
 }
 
@@ -327,7 +327,7 @@ define <4 x float> @sqrt_v4f32_check_denorms_ninf(<4 x float> %x) #3 {
 ; AVX512-NEXT:    vcmpleps %xmm0, %xmm2, %xmm0
 ; AVX512-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
-  %call = tail call ninf <4 x float> @llvm.sqrt.v4f32(<4 x float> %x) #2
+  %call = tail call ninf afn <4 x float> @llvm.sqrt.v4f32(<4 x float> %x) #2
   ret <4 x float> %call
 }
 
