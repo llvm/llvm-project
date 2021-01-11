@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=powerpc -relocation-model=pic | \
 ; RUN:    FileCheck -check-prefixes=SMALL,SMALL-BSS %s
 ; RUN: llc < %s -mtriple=powerpc -relocation-model=pic -mattr=+secure-plt | \
-; RUN:    FileCheck -check-prefixes=SMALL,SMALL-SECUREPLT %s
+; RUN:    FileCheck -check-prefixes=SMALL,SMALL-SECURE %s
 @bar = common global i32 0, align 4
 
 declare i32 @call_foo(i32, ...)
@@ -21,8 +21,8 @@ entry:
 ; SMALL-BSS:     bl _GLOBAL_OFFSET_TABLE_@local-4
 ; SMALL-SECURE:  bl .L0$pb
 ; SMALL:         mflr 30
-; SMALL-SECURE:  addis 30, 30, _GLOBAL_OFFSET_TABLE_-.Lo$pb@ha
-; SMALL-SECURE:  addi 30, 30, _GLOBAL_OFFSET_TABLE_-.Lo$pb@l
+; SMALL-SECURE:  addis 30, 30, _GLOBAL_OFFSET_TABLE_-.L0$pb@ha
+; SMALL-SECURE:  addi 30, 30, _GLOBAL_OFFSET_TABLE_-.L0$pb@l
 ; SMALL-DAG:     stw {{[0-9]+}}, 8(1)
 ; SMALL-DAG:     lwz [[VREG:[0-9]+]], bar@GOT(30)
 ; SMALL-DAG:     lwz {{[0-9]+}}, 0([[VREG]])
