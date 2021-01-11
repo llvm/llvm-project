@@ -521,6 +521,18 @@ void Operator::populateOpStructure() {
     regions.push_back({name, region});
   }
 
+  // Populate the builders.
+  auto *builderList =
+      dyn_cast_or_null<llvm::ListInit>(def.getValueInit("builders"));
+  if (builderList && !builderList->empty()) {
+    for (llvm::Init *init : builderList->getValues())
+      builders.emplace_back(cast<llvm::DefInit>(init)->getDef(), def.getLoc());
+  } else if (skipDefaultBuilders()) {
+    PrintFatalError(
+        def.getLoc(),
+        "default builders are skipped and no custom builders provided");
+  }
+
   LLVM_DEBUG(print(llvm::dbgs()));
 }
 
