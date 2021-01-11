@@ -15,6 +15,7 @@
 
 /*  Constant               Value
     __cpp_lib_execution    201603L [C++17]
+                           201902L [C++20]
 */
 
 #include <execution>
@@ -53,8 +54,8 @@
 #   ifndef __cpp_lib_execution
 #     error "__cpp_lib_execution should be defined in c++20"
 #   endif
-#   if __cpp_lib_execution != 201603L
-#     error "__cpp_lib_execution should have the value 201603L in c++20"
+#   if __cpp_lib_execution != 201902L
+#     error "__cpp_lib_execution should have the value 201902L in c++20"
 #   endif
 # else // _LIBCPP_VERSION
 #   ifdef __cpp_lib_execution

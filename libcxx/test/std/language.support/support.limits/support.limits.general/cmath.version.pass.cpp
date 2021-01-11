@@ -15,6 +15,7 @@
 
 /*  Constant                            Value
     __cpp_lib_hypot                     201603L [C++17]
+    __cpp_lib_interpolate               201902L [C++20]
     __cpp_lib_math_special_functions    201603L [C++17]
 */
 
@@ -27,6 +28,10 @@
 #   error "__cpp_lib_hypot should not be defined before c++17"
 # endif
 
+# ifdef __cpp_lib_interpolate
+#   error "__cpp_lib_interpolate should not be defined before c++20"
+# endif
+
 # ifdef __cpp_lib_math_special_functions
 #   error "__cpp_lib_math_special_functions should not be defined before c++17"
 # endif
@@ -35,6 +40,10 @@
 
 # ifdef __cpp_lib_hypot
 #   error "__cpp_lib_hypot should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_interpolate
+#   error "__cpp_lib_interpolate should not be defined before c++20"
 # endif
 
 # ifdef __cpp_lib_math_special_functions
@@ -48,6 +57,10 @@
 # endif
 # if __cpp_lib_hypot != 201603L
 #   error "__cpp_lib_hypot should have the value 201603L in c++17"
+# endif
+
+# ifdef __cpp_lib_interpolate
+#   error "__cpp_lib_interpolate should not be defined before c++20"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -70,6 +83,13 @@
 # endif
 # if __cpp_lib_hypot != 201603L
 #   error "__cpp_lib_hypot should have the value 201603L in c++20"
+# endif
+
+# ifndef __cpp_lib_interpolate
+#   error "__cpp_lib_interpolate should be defined in c++20"
+# endif
+# if __cpp_lib_interpolate != 201902L
+#   error "__cpp_lib_interpolate should have the value 201902L in c++20"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
