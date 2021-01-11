@@ -377,6 +377,41 @@ ISD::NodeType ISD::getVecReduceBaseOpcode(unsigned VecReduceOpcode) {
   }
 }
 
+bool ISD::isVPOpcode(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    return false;
+#define BEGIN_REGISTER_VP_SDNODE(SDOPC, ...)                                   \
+  case ISD::SDOPC:                                                             \
+    return true;
+#include "llvm/IR/VPIntrinsics.def"
+  }
+}
+
+/// The operand position of the vector mask.
+Optional<unsigned> ISD::getVPMaskIdx(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    return None;
+#define BEGIN_REGISTER_VP_SDNODE(SDOPC, LEGALPOS, TDNAME, MASKPOS, ...)        \
+  case ISD::SDOPC:                                                             \
+    return MASKPOS;
+#include "llvm/IR/VPIntrinsics.def"
+  }
+}
+
+/// The operand position of the explicit vector length parameter.
+Optional<unsigned> ISD::getVPExplicitVectorLengthIdx(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    return None;
+#define BEGIN_REGISTER_VP_SDNODE(SDOPC, LEGALPOS, TDNAME, MASKPOS, EVLPOS)     \
+  case ISD::SDOPC:                                                             \
+    return EVLPOS;
+#include "llvm/IR/VPIntrinsics.def"
+  }
+}
+
 ISD::NodeType ISD::getExtForLoadExtType(bool IsFP, ISD::LoadExtType ExtType) {
   switch (ExtType) {
   case ISD::EXTLOAD:

@@ -301,6 +301,8 @@ void VETargetLowering::initVPUActions() {
     // TODO We will custom-widen into VVP_* nodes in the future. While we are
     // buildling the infrastructure for this, we only do this for legal vector
     // VTs.
+#define HANDLE_VP_TO_VVP(VP_OPC, VVP_NAME)                                     \
+  setOperationAction(ISD::VP_OPC, LegalVecVT, Custom);
 #define ADD_VVP_OP(VVP_NAME, ISD_NAME)                                         \
   setOperationAction(ISD::ISD_NAME, LegalVecVT, Custom);
 #include "VVPNodes.def"
@@ -1666,7 +1668,11 @@ SDValue VETargetLowering::lowerBUILD_VECTOR(SDValue Op,
 }
 
 SDValue VETargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
-  switch (Op.getOpcode()) {
+  unsigned Opcode = Op.getOpcode();
+  if (ISD::isVPOpcode(Opcode))
+    return lowerToVVP(Op, DAG);
+
+  switch (Opcode) {
   default:
     llvm_unreachable("Should not custom lower this!");
   case ISD::ATOMIC_FENCE:
@@ -2664,8 +2670,11 @@ bool VETargetLowering::hasAndNot(SDValue Y) const {
 }
 
 /// \returns the VVP_* SDNode opcode corresponsing to \p OC.
-static Optional<unsigned> getVVPOpcode(unsigned OC) {
-  switch (OC) {
+static Optional<unsigned> getVVPOpcode(unsigned Opcode) {
+  switch (Opcode) {
+#define HANDLE_VP_TO_VVP(VPOPC, VVPNAME)                                       \
+  case ISD::VPOPC:                                                             \
+    return VEISD::VVPNAME;
 #define ADD_VVP_OP(VVPNAME, SDNAME)                                            \
   case VEISD::VVPNAME:                                                         \
   case ISD::SDNAME:                                                            \
@@ -2677,27 +2686,41 @@ static Optional<unsigned> getVVPOpcode(unsigned OC) {
 
 SDValue VETargetLowering::lowerToVVP(SDValue Op, SelectionDAG &DAG) const {
   // Can we represent this as a VVP node.
-  auto OCOpt = getVVPOpcode(Op->getOpcode());
-  if (!OCOpt.hasValue())
+  const unsigned Opcode = Op->getOpcode();
+  auto VVPOpcodeOpt = getVVPOpcode(Opcode);
+  if (!VVPOpcodeOpt.hasValue())
     return SDValue();
-  unsigned VVPOC = OCOpt.getValue();
+  unsigned VVPOpcode = VVPOpcodeOpt.getValue();
+  const bool FromVP = ISD::isVPOpcode(Opcode);
 
   // The representative and legalized vector type of this operation.
+  SDLoc DL(Op);
+  MVT MaskVT = MVT::v256i1; // TODO: packed mode.
   EVT OpVecVT = Op.getValueType();
   EVT LegalVecVT = getTypeToTransformTo(*DAG.getContext(), OpVecVT);
 
-  // Materialize the VL parameter.
-  SDLoc DL(Op);
-  SDValue AVL = DAG.getConstant(OpVecVT.getVectorNumElements(), DL, MVT::i32);
-  MVT MaskVT = MVT::v256i1;
-  SDValue ConstTrue = DAG.getConstant(1, DL, MVT::i32);
-  SDValue Mask = DAG.getNode(VEISD::VEC_BROADCAST, DL, MaskVT,
-                             ConstTrue); // emit a VEISD::VEC_BROADCAST here.
+  SDValue AVL;
+  SDValue Mask;
+
+  if (FromVP) {
+    // All upstream VP SDNodes always have a mask and avl.
+    auto MaskIdx = ISD::getVPMaskIdx(Opcode).getValue();
+    auto AVLIdx = ISD::getVPExplicitVectorLengthIdx(Opcode).getValue();
+    Mask = Op->getOperand(MaskIdx);
+    AVL = Op->getOperand(AVLIdx);
+
+  } else {
+    // Materialize the VL parameter.
+    AVL = DAG.getConstant(OpVecVT.getVectorNumElements(), DL, MVT::i32);
+    SDValue ConstTrue = DAG.getConstant(1, DL, MVT::i32);
+    Mask = DAG.getNode(VEISD::VEC_BROADCAST, DL, MaskVT,
+                       ConstTrue); // emit a VEISD::VEC_BROADCAST here.
+  }
 
   // Categories we are interested in.
   bool IsBinaryOp = false;
 
-  switch (VVPOC) {
+  switch (VVPOpcode) {
 #define ADD_BINARY_VVP_OP(VVPNAME, ...)                                        \
   case VEISD::VVPNAME:                                                         \
     IsBinaryOp = true;                                                         \
@@ -2707,7 +2730,7 @@ SDValue VETargetLowering::lowerToVVP(SDValue Op, SelectionDAG &DAG) const {
 
   if (IsBinaryOp) {
     assert(LegalVecVT.isSimple());
-    return DAG.getNode(VVPOC, DL, LegalVecVT, Op->getOperand(0),
+    return DAG.getNode(VVPOpcode, DL, LegalVecVT, Op->getOperand(0),
                        Op->getOperand(1), Mask, AVL);
   }
   llvm_unreachable("lowerToVVP called for unexpected SDNode.");
