@@ -113,11 +113,6 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "isel"
 
-// FIXME: Remove this after the feature has proven reliable.
-static cl::opt<bool> SinkLocalValues("fast-isel-sink-local-values",
-                                     cl::init(true), cl::Hidden,
-                                     cl::desc("Sink local values in FastISel"));
-
 STATISTIC(NumFastIselSuccessIndependent, "Number of insts selected by "
                                          "target-independent selector");
 STATISTIC(NumFastIselSuccessTarget, "Number of insts selected by "
