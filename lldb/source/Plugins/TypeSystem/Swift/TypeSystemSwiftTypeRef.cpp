@@ -2128,10 +2128,10 @@ TypeSystemSwiftTypeRef::GetByteStride(opaque_compiler_type_t type,
 
 lldb::Encoding TypeSystemSwiftTypeRef::GetEncoding(opaque_compiler_type_t type,
                                                    uint64_t &count) {
-  if (!type)
-    return lldb::eEncodingInvalid;
-
   auto impl = [&]() -> lldb::Encoding {
+    if (!type)
+      return lldb::eEncodingInvalid;
+
     count = 1;
 
     using namespace swift::Demangle;
