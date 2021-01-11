@@ -163,8 +163,7 @@ defm BR_ON_EXN : I<(outs), (ins bb_op:$dst, event_op:$tag, EXNREF:$exn),
 // This is a pseudo instruction that simulates popping a value from stack, which
 // has been pushed by br_on_exn
 let isCodeGenOnly = 1, hasSideEffects = 1 in
-defm EXTRACT_EXCEPTION_I32 : NRI<(outs I32:$dst), (ins),
-                                 [(set I32:$dst, (int_wasm_extract_exception))],
+defm EXTRACT_EXCEPTION_I32 : NRI<(outs I32:$dst), (ins), [],
                                  "extract_exception\t$dst">;
 
 // Pseudo instructions: cleanupret / catchret

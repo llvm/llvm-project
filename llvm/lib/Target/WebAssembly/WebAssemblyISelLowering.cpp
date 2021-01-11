@@ -1496,7 +1496,7 @@ SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
   case Intrinsic::wasm_throw: {
     // We only support C++ exceptions for now
     int Tag = cast<ConstantSDNode>(Op.getOperand(2).getNode())->getZExtValue();
-    if (Tag != CPP_EXCEPTION)
+    if (Tag != WebAssembly::CPP_EXCEPTION)
       llvm_unreachable("Invalid tag!");
     const TargetLowering &TLI = DAG.getTargetLoweringInfo();
     MVT PtrVT = TLI.getPointerTy(DAG.getDataLayout());
