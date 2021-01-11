@@ -1045,6 +1045,57 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
   ret float %r.0.lcssa
 }
 
+define i64 @loopinvariant_mla(i32* nocapture readonly %x, i32 %y, i32 %n) #0 {
+; CHECK-LABEL: @loopinvariant_mla(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP7:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP7]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.body.lr.ph:
+; CHECK-NEXT:    [[CONV1:%.*]] = sext i32 [[Y:%.*]] to i64
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.cond.cleanup.loopexit:
+; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i64 [ [[ADD:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    [[S_0_LCSSA:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[ADD_LCSSA]], [[FOR_COND_CLEANUP_LOOPEXIT:%.*]] ]
+; CHECK-NEXT:    ret i64 [[S_0_LCSSA]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_09:%.*]] = phi i32 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[S_08:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[ADD]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[X:%.*]], i32 [[I_09]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i64 [[CONV]], [[CONV1]]
+; CHECK-NEXT:    [[ADD]] = add nsw i64 [[MUL]], [[S_08]]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_09]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[FOR_BODY]]
+;
+entry:
+  %cmp7 = icmp sgt i32 %n, 0
+  br i1 %cmp7, label %for.body.lr.ph, label %for.cond.cleanup
+
+for.body.lr.ph:                                   ; preds = %entry
+  %conv1 = sext i32 %y to i64
+  br label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  %s.0.lcssa = phi i64 [ 0, %entry ], [ %add, %for.body ]
+  ret i64 %s.0.lcssa
+
+for.body:                                         ; preds = %for.body.lr.ph, %for.body
+  %i.09 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
+  %s.08 = phi i64 [ 0, %for.body.lr.ph ], [ %add, %for.body ]
+  %arrayidx = getelementptr inbounds i32, i32* %x, i32 %i.09
+  %0 = load i32, i32* %arrayidx, align 4
+  %conv = sext i32 %0 to i64
+  %mul = mul nsw i64 %conv, %conv1
+  %add = add nsw i64 %mul, %s.08
+  %inc = add nuw nsw i32 %i.09, 1
+  %exitcond.not = icmp eq i32 %inc, %n
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
 attributes #0 = { "target-features"="+mve.fp" }
 !6 = distinct !{!6, !7}
 !7 = !{!"llvm.loop.vectorize.width", i32 16}
