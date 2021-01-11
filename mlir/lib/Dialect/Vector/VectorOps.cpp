@@ -76,20 +76,6 @@ static MaskFormat get1DMaskFormat(Value mask) {
   return MaskFormat::Unknown;
 }
 
-/// Helper method to cast a 1-D memref<10xf32> "base" into a
-/// memref<vector<10xf32>> in the output parameter "newBase",
-/// using the 'element' vector type "vt". Returns true on success.
-static bool castedToMemRef(Location loc, Value base, MemRefType mt,
-                           VectorType vt, PatternRewriter &rewriter,
-                           Value &newBase) {
-  // The vector.type_cast operation does not accept unknown memref<?xf32>.
-  // TODO: generalize the cast and accept this case too
-  if (!mt.hasStaticShape())
-    return false;
-  newBase = rewriter.create<TypeCastOp>(loc, MemRefType::get({}, vt), base);
-  return true;
-}
-
 //===----------------------------------------------------------------------===//
 // VectorDialect
 //===----------------------------------------------------------------------===//
@@ -2380,13 +2366,10 @@ public:
   using OpRewritePattern<MaskedLoadOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(MaskedLoadOp load,
                                 PatternRewriter &rewriter) const override {
-    Value newBase;
     switch (get1DMaskFormat(load.mask())) {
     case MaskFormat::AllTrue:
-      if (!castedToMemRef(load.getLoc(), load.base(), load.getMemRefType(),
-                          load.getResultVectorType(), rewriter, newBase))
-        return failure();
-      rewriter.replaceOpWithNewOp<LoadOp>(load, newBase);
+      rewriter.replaceOpWithNewOp<vector::TransferReadOp>(
+          load, load.getType(), load.base(), load.indices(), false);
       return success();
     case MaskFormat::AllFalse:
       rewriter.replaceOp(load, load.pass_thru());
@@ -2426,13 +2409,10 @@ public:
   using OpRewritePattern<MaskedStoreOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(MaskedStoreOp store,
                                 PatternRewriter &rewriter) const override {
-    Value newBase;
     switch (get1DMaskFormat(store.mask())) {
     case MaskFormat::AllTrue:
-      if (!castedToMemRef(store.getLoc(), store.base(), store.getMemRefType(),
-                          store.getValueVectorType(), rewriter, newBase))
-        return failure();
-      rewriter.replaceOpWithNewOp<StoreOp>(store, store.value(), newBase);
+      rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
+          store, store.value(), store.base(), store.indices(), false);
       return success();
     case MaskFormat::AllFalse:
       rewriter.eraseOp(store);
@@ -2568,14 +2548,10 @@ public:
   using OpRewritePattern<ExpandLoadOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(ExpandLoadOp expand,
                                 PatternRewriter &rewriter) const override {
-    Value newBase;
     switch (get1DMaskFormat(expand.mask())) {
     case MaskFormat::AllTrue:
-      if (!castedToMemRef(expand.getLoc(), expand.base(),
-                          expand.getMemRefType(), expand.getResultVectorType(),
-                          rewriter, newBase))
-        return failure();
-      rewriter.replaceOpWithNewOp<LoadOp>(expand, newBase);
+      rewriter.replaceOpWithNewOp<vector::TransferReadOp>(
+          expand, expand.getType(), expand.base(), expand.indices(), false);
       return success();
     case MaskFormat::AllFalse:
       rewriter.replaceOp(expand, expand.pass_thru());
@@ -2615,14 +2591,11 @@ public:
   using OpRewritePattern<CompressStoreOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(CompressStoreOp compress,
                                 PatternRewriter &rewriter) const override {
-    Value newBase;
     switch (get1DMaskFormat(compress.mask())) {
     case MaskFormat::AllTrue:
-      if (!castedToMemRef(compress.getLoc(), compress.base(),
-                          compress.getMemRefType(),
-                          compress.getValueVectorType(), rewriter, newBase))
-        return failure();
-      rewriter.replaceOpWithNewOp<StoreOp>(compress, compress.value(), newBase);
+      rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
+          compress, compress.value(), compress.base(), compress.indices(),
+          false);
       return success();
     case MaskFormat::AllFalse:
       rewriter.eraseOp(compress);

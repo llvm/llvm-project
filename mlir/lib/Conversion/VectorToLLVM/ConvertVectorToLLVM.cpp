@@ -173,33 +173,7 @@ static LogicalResult getBase(ConversionPatternRewriter &rewriter, Location loc,
   return success();
 }
 
-// Helper that returns a pointer given a memref base.
-static LogicalResult getBasePtr(ConversionPatternRewriter &rewriter,
-                                Location loc, Value memref,
-                                MemRefType memRefType, Value &ptr) {
-  Value base;
-  if (failed(getBase(rewriter, loc, memref, memRefType, base)))
-    return failure();
-  auto pType = MemRefDescriptor(memref).getElementPtrType();
-  ptr = rewriter.create<LLVM::GEPOp>(loc, pType, base);
-  return success();
-}
-
-// Helper that returns a bit-casted pointer given a memref base.
-static LogicalResult getBasePtr(ConversionPatternRewriter &rewriter,
-                                Location loc, Value memref,
-                                MemRefType memRefType, Type type, Value &ptr) {
-  Value base;
-  if (failed(getBase(rewriter, loc, memref, memRefType, base)))
-    return failure();
-  auto pType = LLVM::LLVMPointerType::get(type);
-  base = rewriter.create<LLVM::BitcastOp>(loc, pType, base);
-  ptr = rewriter.create<LLVM::GEPOp>(loc, pType, base);
-  return success();
-}
-
-// Helper that returns vector of pointers given a memref base and an index
-// vector.
+// Helper that returns vector of pointers given a memref base with index vector.
 static LogicalResult getIndexedPtrs(ConversionPatternRewriter &rewriter,
                                     Location loc, Value memref, Value indices,
                                     MemRefType memRefType, VectorType vType,
@@ -211,6 +185,18 @@ static LogicalResult getIndexedPtrs(ConversionPatternRewriter &rewriter,
   auto ptrsType = LLVM::LLVMFixedVectorType::get(pType, vType.getDimSize(0));
   ptrs = rewriter.create<LLVM::GEPOp>(loc, ptrsType, base, indices);
   return success();
+}
+
+// Casts a strided element pointer to a vector pointer. The vector pointer
+// would always be on address space 0, therefore addrspacecast shall be
+// used when source/dst memrefs are not on address space 0.
+static Value castDataPtr(ConversionPatternRewriter &rewriter, Location loc,
+                         Value ptr, MemRefType memRefType, Type vt) {
+  auto pType =
+      LLVM::LLVMPointerType::get(vt.template cast<LLVM::LLVMFixedVectorType>());
+  if (memRefType.getMemorySpace() == 0)
+    return rewriter.create<LLVM::BitcastOp>(loc, pType, ptr);
+  return rewriter.create<LLVM::AddrSpaceCastOp>(loc, pType, ptr);
 }
 
 static LogicalResult
@@ -343,18 +329,18 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = load->getLoc();
     auto adaptor = vector::MaskedLoadOpAdaptor(operands);
+    MemRefType memRefType = load.getMemRefType();
 
     // Resolve alignment.
     unsigned align;
-    if (failed(getMemRefAlignment(*getTypeConverter(), load.getMemRefType(),
-                                  align)))
+    if (failed(getMemRefAlignment(*getTypeConverter(), memRefType, align)))
       return failure();
 
+    // Resolve address.
     auto vtype = typeConverter->convertType(load.getResultVectorType());
-    Value ptr;
-    if (failed(getBasePtr(rewriter, loc, adaptor.base(), load.getMemRefType(),
-                          vtype, ptr)))
-      return failure();
+    Value dataPtr = this->getStridedElementPtr(loc, memRefType, adaptor.base(),
+                                               adaptor.indices(), rewriter);
+    Value ptr = castDataPtr(rewriter, loc, dataPtr, memRefType, vtype);
 
     rewriter.replaceOpWithNewOp<LLVM::MaskedLoadOp>(
         load, vtype, ptr, adaptor.mask(), adaptor.pass_thru(),
@@ -374,18 +360,18 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = store->getLoc();
     auto adaptor = vector::MaskedStoreOpAdaptor(operands);
+    MemRefType memRefType = store.getMemRefType();
 
     // Resolve alignment.
     unsigned align;
-    if (failed(getMemRefAlignment(*getTypeConverter(), store.getMemRefType(),
-                                  align)))
+    if (failed(getMemRefAlignment(*getTypeConverter(), memRefType, align)))
       return failure();
 
+    // Resolve address.
     auto vtype = typeConverter->convertType(store.getValueVectorType());
-    Value ptr;
-    if (failed(getBasePtr(rewriter, loc, adaptor.base(), store.getMemRefType(),
-                          vtype, ptr)))
-      return failure();
+    Value dataPtr = this->getStridedElementPtr(loc, memRefType, adaptor.base(),
+                                               adaptor.indices(), rewriter);
+    Value ptr = castDataPtr(rewriter, loc, dataPtr, memRefType, vtype);
 
     rewriter.replaceOpWithNewOp<LLVM::MaskedStoreOp>(
         store, adaptor.value(), ptr, adaptor.mask(),
@@ -473,16 +459,15 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = expand->getLoc();
     auto adaptor = vector::ExpandLoadOpAdaptor(operands);
+    MemRefType memRefType = expand.getMemRefType();
 
-    Value ptr;
-    if (failed(getBasePtr(rewriter, loc, adaptor.base(), expand.getMemRefType(),
-                          ptr)))
-      return failure();
+    // Resolve address.
+    auto vtype = typeConverter->convertType(expand.getResultVectorType());
+    Value ptr = this->getStridedElementPtr(loc, memRefType, adaptor.base(),
+                                           adaptor.indices(), rewriter);
 
-    auto vType = expand.getResultVectorType();
     rewriter.replaceOpWithNewOp<LLVM::masked_expandload>(
-        expand, typeConverter->convertType(vType), ptr, adaptor.mask(),
-        adaptor.pass_thru());
+        expand, vtype, ptr, adaptor.mask(), adaptor.pass_thru());
     return success();
   }
 };
@@ -498,11 +483,11 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = compress->getLoc();
     auto adaptor = vector::CompressStoreOpAdaptor(operands);
+    MemRefType memRefType = compress.getMemRefType();
 
-    Value ptr;
-    if (failed(getBasePtr(rewriter, loc, adaptor.base(),
-                          compress.getMemRefType(), ptr)))
-      return failure();
+    // Resolve address.
+    Value ptr = this->getStridedElementPtr(loc, memRefType, adaptor.base(),
+                                           adaptor.indices(), rewriter);
 
     rewriter.replaceOpWithNewOp<LLVM::masked_compressstore>(
         compress, adaptor.value(), ptr, adaptor.mask());
@@ -1223,21 +1208,11 @@ public:
     }
 
     // 1. Get the source/dst address as an LLVM vector pointer.
-    //    The vector pointer would always be on address space 0, therefore
-    //    addrspacecast shall be used when source/dst memrefs are not on
-    //    address space 0.
-    // TODO: support alignment when possible.
+    VectorType vtp = xferOp.getVectorType();
     Value dataPtr = this->getStridedElementPtr(
         loc, memRefType, adaptor.source(), adaptor.indices(), rewriter);
-    auto vecTy = toLLVMTy(xferOp.getVectorType())
-                     .template cast<LLVM::LLVMFixedVectorType>();
-    Value vectorDataPtr;
-    if (memRefType.getMemorySpace() == 0)
-      vectorDataPtr = rewriter.create<LLVM::BitcastOp>(
-          loc, LLVM::LLVMPointerType::get(vecTy), dataPtr);
-    else
-      vectorDataPtr = rewriter.create<LLVM::AddrSpaceCastOp>(
-          loc, LLVM::LLVMPointerType::get(vecTy), dataPtr);
+    Value vectorDataPtr =
+        castDataPtr(rewriter, loc, dataPtr, memRefType, toLLVMTy(vtp));
 
     if (!xferOp.isMaskedDim(0))
       return replaceTransferOpWithLoadOrStore(rewriter,
@@ -1251,7 +1226,7 @@ public:
     //
     // TODO: when the leaf transfer rank is k > 1, we need the last `k`
     //       dimensions here.
-    unsigned vecWidth = vecTy.getNumElements();
+    unsigned vecWidth = vtp.getNumElements();
     unsigned lastIndex = llvm::size(xferOp.indices()) - 1;
     Value off = xferOp.indices()[lastIndex];
     Value dim = rewriter.create<DimOp>(loc, xferOp.source(), lastIndex);

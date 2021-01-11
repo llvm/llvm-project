@@ -5,7 +5,16 @@
 
 func @maskedload16(%base: memref<?xf32>, %mask: vector<16xi1>,
                    %pass_thru: vector<16xf32>) -> vector<16xf32> {
-  %ld = vector.maskedload %base, %mask, %pass_thru
+  %c0 = constant 0: index
+  %ld = vector.maskedload %base[%c0], %mask, %pass_thru
+    : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+  return %ld : vector<16xf32>
+}
+
+func @maskedload16_at8(%base: memref<?xf32>, %mask: vector<16xi1>,
+                       %pass_thru: vector<16xf32>) -> vector<16xf32> {
+  %c8 = constant 8: index
+  %ld = vector.maskedload %base[%c8], %mask, %pass_thru
     : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
   return %ld : vector<16xf32>
 }
@@ -60,6 +69,11 @@ func @entry() {
     : (memref<?xf32>, vector<16xi1>, vector<16xf32>) -> (vector<16xf32>)
   vector.print %l4 : vector<16xf32>
   // CHECK: ( -7, 1, 2, 3, 4, 5, 6, 7, -7, -7, -7, -7, -7, 13, 14, -7 )
+
+  %l5 = call @maskedload16_at8(%A, %some, %pass)
+    : (memref<?xf32>, vector<16xi1>, vector<16xf32>) -> (vector<16xf32>)
+  vector.print %l5 : vector<16xf32>
+  // CHECK: ( 8, 9, 10, 11, 12, 13, 14, 15, -7, -7, -7, -7, -7, -7, -7, -7 )
 
   return
 }
