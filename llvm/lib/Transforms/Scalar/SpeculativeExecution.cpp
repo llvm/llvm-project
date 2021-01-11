@@ -281,7 +281,7 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
 
     for (const Value *V : U->operand_values()) {
       if (const Instruction *I = dyn_cast<Instruction>(V)) {
-        if (NotHoisted.count(I) > 0)
+        if (NotHoisted.contains(I))
           return false;
       }
     }
