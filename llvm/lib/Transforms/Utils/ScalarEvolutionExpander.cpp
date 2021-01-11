@@ -2152,15 +2152,6 @@ SCEVExpander::replaceCongruentIVs(Loop *L, const DominatorTree *DT,
   return NumElim;
 }
 
-Value *SCEVExpander::getExactExistingExpansion(const SCEV *S,
-                                               const Instruction *At, Loop *L) {
-  Optional<ScalarEvolution::ValueOffsetPair> VO =
-      getRelatedExistingExpansion(S, At, L);
-  if (VO && VO.getValue().second == nullptr)
-    return VO.getValue().first;
-  return nullptr;
-}
-
 Optional<ScalarEvolution::ValueOffsetPair>
 SCEVExpander::getRelatedExistingExpansion(const SCEV *S, const Instruction *At,
                                           Loop *L) {
