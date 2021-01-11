@@ -26,10 +26,14 @@ _Sat unsigned long _Accum sat_ula;
 _Sat short _Fract sat_sf;
 _Sat _Fract sat_f;
 _Sat long _Fract sat_lf;
+_Sat unsigned _Fract sat_uf;
 
 short s;
 int i;
 unsigned int ui;
+
+float fl;
+double d;
 
 // CHECK-LABEL: @fix_same1(
 // CHECK-NEXT:  entry:
@@ -694,4 +698,299 @@ void int_sat3() {
 //
 void int_sat4() {
   sat_usa = ui;
+}
+
+
+// CHECK-LABEL: @float_fix1(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, float* @fl, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = fmul float [[TMP0]], 1.280000e+02
+// CHECK-NEXT:    [[TMP2:%.*]] = fptosi float [[TMP1]] to i16
+// CHECK-NEXT:    store i16 [[TMP2]], i16* @sa, align 2
+// CHECK-NEXT:    ret void
+//
+void float_fix1() {
+  sa = fl;
+}
+
+// CHECK-LABEL: @float_fix2(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, float* @fl, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = fmul float [[TMP0]], 3.276800e+04
+// CHECK-NEXT:    [[TMP2:%.*]] = fptosi float [[TMP1]] to i32
+// CHECK-NEXT:    store i32 [[TMP2]], i32* @a, align 4
+// CHECK-NEXT:    ret void
+//
+void float_fix2() {
+  a = fl;
+}
+
+// CHECK-LABEL: @float_fix3(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, float* @fl, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = fmul float [[TMP0]], 0x41E0000000000000
+// CHECK-NEXT:    [[TMP2:%.*]] = fptosi float [[TMP1]] to i64
+// CHECK-NEXT:    store i64 [[TMP2]], i64* @la, align 8
+// CHECK-NEXT:    ret void
+//
+void float_fix3() {
+  la = fl;
+}
+
+// CHECK-LABEL: @float_fix4(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, float* @fl, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = fmul float [[TMP0]], 1.280000e+02
+// CHECK-NEXT:    [[TMP2:%.*]] = fptosi float [[TMP1]] to i8
+// CHECK-NEXT:    store i8 [[TMP2]], i8* @sf, align 1
+// CHECK-NEXT:    ret void
+//
+void float_fix4() {
+  sf = fl;
+}
+
+// CHECK-LABEL: @float_fix5(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, float* @fl, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = fmul float [[TMP0]], 0x41E0000000000000
+// CHECK-NEXT:    [[TMP2:%.*]] = fptosi float [[TMP1]] to i32
+// CHECK-NEXT:    store i32 [[TMP2]], i32* @lf, align 4
+// CHECK-NEXT:    ret void
+//
+void float_fix5() {
+  lf = fl;
+}
+
+// SIGNED-LABEL: @float_fix6(
+// SIGNED-NEXT:  entry:
+// SIGNED-NEXT:    [[TMP0:%.*]] = load float, float* @fl, align 4
+// SIGNED-NEXT:    [[TMP1:%.*]] = fmul float [[TMP0]], 6.553600e+04
+// SIGNED-NEXT:    [[TMP2:%.*]] = fptoui float [[TMP1]] to i32
+// SIGNED-NEXT:    store i32 [[TMP2]], i32* @ua, align 4
+// SIGNED-NEXT:    ret void
+//
+// UNSIGNED-LABEL: @float_fix6(
+// UNSIGNED-NEXT:  entry:
+// UNSIGNED-NEXT:    [[TMP0:%.*]] = load float, float* @fl, align 4
+// UNSIGNED-NEXT:    [[TMP1:%.*]] = fmul float [[TMP0]], 3.276800e+04
+// UNSIGNED-NEXT:    [[TMP2:%.*]] = fptosi float [[TMP1]] to i32
+// UNSIGNED-NEXT:    store i32 [[TMP2]], i32* @ua, align 4
+// UNSIGNED-NEXT:    ret void
+//
+void float_fix6() {
+  ua = fl;
+}
+
+// SIGNED-LABEL: @float_fix7(
+// SIGNED-NEXT:  entry:
+// SIGNED-NEXT:    [[TMP0:%.*]] = load float, float* @fl, align 4
+// SIGNED-NEXT:    [[TMP1:%.*]] = fmul float [[TMP0]], 6.553600e+04
+// SIGNED-NEXT:    [[TMP2:%.*]] = fptoui float [[TMP1]] to i16
+// SIGNED-NEXT:    store i16 [[TMP2]], i16* @uf, align 2
+// SIGNED-NEXT:    ret void
+//
+// UNSIGNED-LABEL: @float_fix7(
+// UNSIGNED-NEXT:  entry:
+// UNSIGNED-NEXT:    [[TMP0:%.*]] = load float, float* @fl, align 4
+// UNSIGNED-NEXT:    [[TMP1:%.*]] = fmul float [[TMP0]], 3.276800e+04
+// UNSIGNED-NEXT:    [[TMP2:%.*]] = fptosi float [[TMP1]] to i16
+// UNSIGNED-NEXT:    store i16 [[TMP2]], i16* @uf, align 2
+// UNSIGNED-NEXT:    ret void
+//
+void float_fix7() {
+  uf = fl;
+}
+
+
+// CHECK-LABEL: @fix_float1(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = load i16, i16* @sa, align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = sitofp i16 [[TMP0]] to float
+// CHECK-NEXT:    [[TMP2:%.*]] = fmul float [[TMP1]], 7.812500e-03
+// CHECK-NEXT:    store float [[TMP2]], float* @fl, align 4
+// CHECK-NEXT:    ret void
+//
+void fix_float1() {
+  fl = sa;
+}
+
+// CHECK-LABEL: @fix_float2(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* @a, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = sitofp i32 [[TMP0]] to float
+// CHECK-NEXT:    [[TMP2:%.*]] = fmul float [[TMP1]], 0x3F00000000000000
+// CHECK-NEXT:    store float [[TMP2]], float* @fl, align 4
+// CHECK-NEXT:    ret void
+//
+void fix_float2() {
+  fl = a;
+}
+
+// CHECK-LABEL: @fix_float3(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = load i64, i64* @la, align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = sitofp i64 [[TMP0]] to float
+// CHECK-NEXT:    [[TMP2:%.*]] = fmul float [[TMP1]], 0x3E00000000000000
+// CHECK-NEXT:    store float [[TMP2]], float* @fl, align 4
+// CHECK-NEXT:    ret void
+//
+void fix_float3() {
+  fl = la;
+}
+
+// CHECK-LABEL: @fix_float4(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = load i8, i8* @sf, align 1
+// CHECK-NEXT:    [[TMP1:%.*]] = sitofp i8 [[TMP0]] to float
+// CHECK-NEXT:    [[TMP2:%.*]] = fmul float [[TMP1]], 7.812500e-03
+// CHECK-NEXT:    store float [[TMP2]], float* @fl, align 4
+// CHECK-NEXT:    ret void
+//
+void fix_float4() {
+  fl = sf;
+}
+
+// CHECK-LABEL: @fix_float5(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* @lf, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = sitofp i32 [[TMP0]] to float
+// CHECK-NEXT:    [[TMP2:%.*]] = fmul float [[TMP1]], 0x3E00000000000000
+// CHECK-NEXT:    store float [[TMP2]], float* @fl, align 4
+// CHECK-NEXT:    ret void
+//
+void fix_float5() {
+  fl = lf;
+}
+
+// SIGNED-LABEL: @fix_float6(
+// SIGNED-NEXT:  entry:
+// SIGNED-NEXT:    [[TMP0:%.*]] = load i32, i32* @ua, align 4
+// SIGNED-NEXT:    [[TMP1:%.*]] = uitofp i32 [[TMP0]] to float
+// SIGNED-NEXT:    [[TMP2:%.*]] = fmul float [[TMP1]], 0x3EF0000000000000
+// SIGNED-NEXT:    store float [[TMP2]], float* @fl, align 4
+// SIGNED-NEXT:    ret void
+//
+// UNSIGNED-LABEL: @fix_float6(
+// UNSIGNED-NEXT:  entry:
+// UNSIGNED-NEXT:    [[TMP0:%.*]] = load i32, i32* @ua, align 4
+// UNSIGNED-NEXT:    [[TMP1:%.*]] = uitofp i32 [[TMP0]] to float
+// UNSIGNED-NEXT:    [[TMP2:%.*]] = fmul float [[TMP1]], 0x3F00000000000000
+// UNSIGNED-NEXT:    store float [[TMP2]], float* @fl, align 4
+// UNSIGNED-NEXT:    ret void
+//
+void fix_float6() {
+  fl = ua;
+}
+
+// SIGNED-LABEL: @fix_float7(
+// SIGNED-NEXT:  entry:
+// SIGNED-NEXT:    [[TMP0:%.*]] = load i16, i16* @uf, align 2
+// SIGNED-NEXT:    [[TMP1:%.*]] = uitofp i16 [[TMP0]] to float
+// SIGNED-NEXT:    [[TMP2:%.*]] = fmul float [[TMP1]], 0x3EF0000000000000
+// SIGNED-NEXT:    store float [[TMP2]], float* @fl, align 4
+// SIGNED-NEXT:    ret void
+//
+// UNSIGNED-LABEL: @fix_float7(
+// UNSIGNED-NEXT:  entry:
+// UNSIGNED-NEXT:    [[TMP0:%.*]] = load i16, i16* @uf, align 2
+// UNSIGNED-NEXT:    [[TMP1:%.*]] = uitofp i16 [[TMP0]] to float
+// UNSIGNED-NEXT:    [[TMP2:%.*]] = fmul float [[TMP1]], 0x3F00000000000000
+// UNSIGNED-NEXT:    store float [[TMP2]], float* @fl, align 4
+// UNSIGNED-NEXT:    ret void
+//
+void fix_float7() {
+  fl = uf;
+}
+
+
+// CHECK-LABEL: @float_sat1(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, float* @fl, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = fmul float [[TMP0]], 1.280000e+02
+// CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.fptosi.sat.i16.f32(float [[TMP1]])
+// CHECK-NEXT:    store i16 [[TMP2]], i16* @sat_sa, align 2
+// CHECK-NEXT:    ret void
+//
+void float_sat1() {
+  sat_sa = fl;
+}
+
+// CHECK-LABEL: @float_sat2(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, float* @fl, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = fmul float [[TMP0]], 3.276800e+04
+// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.fptosi.sat.i32.f32(float [[TMP1]])
+// CHECK-NEXT:    store i32 [[TMP2]], i32* @sat_a, align 4
+// CHECK-NEXT:    ret void
+//
+void float_sat2() {
+  sat_a = fl;
+}
+
+// CHECK-LABEL: @float_sat3(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, float* @fl, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = fmul float [[TMP0]], 0x41E0000000000000
+// CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.fptosi.sat.i64.f32(float [[TMP1]])
+// CHECK-NEXT:    store i64 [[TMP2]], i64* @sat_la, align 8
+// CHECK-NEXT:    ret void
+//
+void float_sat3() {
+  sat_la = fl;
+}
+
+// CHECK-LABEL: @float_sat4(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, float* @fl, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = fmul float [[TMP0]], 1.280000e+02
+// CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.fptosi.sat.i8.f32(float [[TMP1]])
+// CHECK-NEXT:    store i8 [[TMP2]], i8* @sat_sf, align 1
+// CHECK-NEXT:    ret void
+//
+void float_sat4() {
+  sat_sf = fl;
+}
+
+// SIGNED-LABEL: @float_sat5(
+// SIGNED-NEXT:  entry:
+// SIGNED-NEXT:    [[TMP0:%.*]] = load float, float* @fl, align 4
+// SIGNED-NEXT:    [[TMP1:%.*]] = fmul float [[TMP0]], 6.553600e+04
+// SIGNED-NEXT:    [[TMP2:%.*]] = call i32 @llvm.fptoui.sat.i32.f32(float [[TMP1]])
+// SIGNED-NEXT:    store i32 [[TMP2]], i32* @sat_ua, align 4
+// SIGNED-NEXT:    ret void
+//
+// UNSIGNED-LABEL: @float_sat5(
+// UNSIGNED-NEXT:  entry:
+// UNSIGNED-NEXT:    [[TMP0:%.*]] = load float, float* @fl, align 4
+// UNSIGNED-NEXT:    [[TMP1:%.*]] = fmul float [[TMP0]], 3.276800e+04
+// UNSIGNED-NEXT:    [[TMP2:%.*]] = call i32 @llvm.fptosi.sat.i32.f32(float [[TMP1]])
+// UNSIGNED-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[TMP2]], 0
+// UNSIGNED-NEXT:    [[SATMIN:%.*]] = select i1 [[TMP3]], i32 0, i32 [[TMP2]]
+// UNSIGNED-NEXT:    store i32 [[SATMIN]], i32* @sat_ua, align 4
+// UNSIGNED-NEXT:    ret void
+//
+void float_sat5() {
+  sat_ua = fl;
+}
+
+// SIGNED-LABEL: @float_sat6(
+// SIGNED-NEXT:  entry:
+// SIGNED-NEXT:    [[TMP0:%.*]] = load float, float* @fl, align 4
+// SIGNED-NEXT:    [[TMP1:%.*]] = fmul float [[TMP0]], 6.553600e+04
+// SIGNED-NEXT:    [[TMP2:%.*]] = call i16 @llvm.fptoui.sat.i16.f32(float [[TMP1]])
+// SIGNED-NEXT:    store i16 [[TMP2]], i16* @sat_uf, align 2
+// SIGNED-NEXT:    ret void
+//
+// UNSIGNED-LABEL: @float_sat6(
+// UNSIGNED-NEXT:  entry:
+// UNSIGNED-NEXT:    [[TMP0:%.*]] = load float, float* @fl, align 4
+// UNSIGNED-NEXT:    [[TMP1:%.*]] = fmul float [[TMP0]], 3.276800e+04
+// UNSIGNED-NEXT:    [[TMP2:%.*]] = call i16 @llvm.fptosi.sat.i16.f32(float [[TMP1]])
+// UNSIGNED-NEXT:    [[TMP3:%.*]] = icmp slt i16 [[TMP2]], 0
+// UNSIGNED-NEXT:    [[SATMIN:%.*]] = select i1 [[TMP3]], i16 0, i16 [[TMP2]]
+// UNSIGNED-NEXT:    store i16 [[SATMIN]], i16* @sat_uf, align 2
+// UNSIGNED-NEXT:    ret void
+//
+void float_sat6() {
+  sat_uf = fl;
 }
