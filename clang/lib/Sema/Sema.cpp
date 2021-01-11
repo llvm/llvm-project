@@ -120,8 +120,9 @@ public:
         }
 
         IncludeStack.push_back(IncludeLoc);
-        S->DiagnoseNonDefaultPragmaPack(
-            Sema::PragmaPackDiagnoseKind::NonDefaultStateAtInclude, IncludeLoc);
+        S->DiagnoseNonDefaultPragmaAlignPack(
+            Sema::PragmaAlignPackDiagnoseKind::NonDefaultStateAtInclude,
+            IncludeLoc);
       }
       break;
     }
@@ -130,8 +131,8 @@ public:
         if (llvm::timeTraceProfilerEnabled())
           llvm::timeTraceProfilerEnd();
 
-        S->DiagnoseNonDefaultPragmaPack(
-            Sema::PragmaPackDiagnoseKind::ChangedStateAtExit,
+        S->DiagnoseNonDefaultPragmaAlignPack(
+            Sema::PragmaAlignPackDiagnoseKind::ChangedStateAtExit,
             IncludeStack.pop_back_val());
       }
       break;
@@ -163,7 +164,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       OriginalLexicalContext(nullptr), MSStructPragmaOn(false),
       MSPointerToMemberRepresentationMethod(
           LangOpts.getMSPointerToMemberRepresentationMethod()),
-      VtorDispStack(LangOpts.getVtorDispMode()), PackStack(0),
+      VtorDispStack(LangOpts.getVtorDispMode()), AlignPackStack(0),
       DataSegStack(nullptr), BSSSegStack(nullptr), ConstSegStack(nullptr),
       CodeSegStack(nullptr), FpPragmaStack(FPOptionsOverride()),
       CurInitSeg(nullptr), VisContext(nullptr),
@@ -1044,7 +1045,7 @@ void Sema::ActOnEndOfTranslationUnit() {
     }
   }
 
-  DiagnoseUnterminatedPragmaPack();
+  DiagnoseUnterminatedPragmaAlignPack();
   DiagnoseUnterminatedPragmaAttribute();
 
   // All delayed member exception specs should be checked or we end up accepting
