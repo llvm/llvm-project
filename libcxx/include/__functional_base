@@ -308,7 +308,7 @@ struct __invoke_return
 #endif  // !defined(_LIBCPP_CXX03_LANG)
 
 
-template <class _Ret>
+template <class _Ret, bool = is_void<_Ret>::value>
 struct __invoke_void_return_wrapper
 {
 #ifndef _LIBCPP_CXX03_LANG
@@ -339,8 +339,8 @@ struct __invoke_void_return_wrapper
 #endif
 };
 
-template <>
-struct __invoke_void_return_wrapper<void>
+template <class _Ret>
+struct __invoke_void_return_wrapper<_Ret, true>
 {
 #ifndef _LIBCPP_CXX03_LANG
     template <class ..._Args>
