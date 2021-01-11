@@ -136,17 +136,27 @@ function(add_mlir_python_extension libname extname)
 
 endfunction()
 
-function(add_mlir_dialect_python_bindings tblgen_target filename dialectname)
-  set(LLVM_TARGET_DEFINITIONS ${filename})
-  mlir_tablegen("${dialectname}.py" -gen-python-op-bindings
-                -bind-dialect=${dialectname})
-  add_public_tablegen_target(${tblgen_target})
+function(add_mlir_dialect_python_bindings tblgen_target)
+  cmake_parse_arguments(ARG
+    ""
+    "TD_FILE;DIALECT_NAME"
+    "DEPENDS"
+    ${ARGN})
+
+  set(LLVM_TARGET_DEFINITIONS ${ARG_TD_FILE})
+  mlir_tablegen("${ARG_DIALECT_NAME}.py" -gen-python-op-bindings
+                -bind-dialect=${ARG_DIALECT_NAME})
+  add_public_tablegen_target(
+    ${tblgen_target})
+  if(ARG_DEPENDS)
+    add_dependencies(${tblgen_target} ${ARG_DEPENDS})
+  endif()
 
   add_custom_command(
     TARGET ${tblgen_target} POST_BUILD
-    COMMENT "Copying generated python source \"dialects/${dialectname}.py\""
+    COMMENT "Copying generated python source \"dialects/${ARG_DIALECT_NAME}.py\""
     COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-      "${CMAKE_CURRENT_BINARY_DIR}/${dialectname}.py"
-      "${PROJECT_BINARY_DIR}/python/mlir/dialects/${dialectname}.py")
+      "${CMAKE_CURRENT_BINARY_DIR}/${ARG_DIALECT_NAME}.py"
+      "${PROJECT_BINARY_DIR}/python/mlir/dialects/${ARG_DIALECT_NAME}.py")
 endfunction()
 
