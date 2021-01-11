@@ -1222,6 +1222,13 @@ func @maskedload_pass_thru_type_mask_mismatch(%base: memref<?xf32>, %mask: vecto
 
 // -----
 
+func @maskedload_memref_mismatch(%base: memref<?xf32>, %mask: vector<16xi1>, %pass: vector<16xf32>) {
+  // expected-error@+1 {{'vector.maskedload' op requires 1 indices}}
+  %0 = vector.maskedload %base[], %mask, %pass : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+}
+
+// -----
+
 func @maskedstore_base_type_mismatch(%base: memref<?xf64>, %mask: vector<16xi1>, %value: vector<16xf32>) {
   %c0 = constant 0 : index
   // expected-error@+1 {{'vector.maskedstore' op base and value element type should match}}
@@ -1234,6 +1241,14 @@ func @maskedstore_dim_mask_mismatch(%base: memref<?xf32>, %mask: vector<15xi1>, 
   %c0 = constant 0 : index
   // expected-error@+1 {{'vector.maskedstore' op expected value dim to match mask dim}}
   vector.maskedstore %base[%c0], %mask, %value : memref<?xf32>, vector<15xi1>, vector<16xf32>
+}
+
+// -----
+
+func @maskedstore_memref_mismatch(%base: memref<?xf32>, %mask: vector<16xi1>, %value: vector<16xf32>) {
+  %c0 = constant 0 : index
+  // expected-error@+1 {{'vector.maskedstore' op requires 1 indices}}
+  vector.maskedstore %base[%c0, %c0], %mask, %value : memref<?xf32>, vector<16xi1>, vector<16xf32>
 }
 
 // -----
@@ -1343,6 +1358,14 @@ func @expand_pass_thru_mismatch(%base: memref<?xf32>, %mask: vector<16xi1>, %pas
 
 // -----
 
+func @expand_memref_mismatch(%base: memref<?x?xf32>, %mask: vector<16xi1>, %pass_thru: vector<16xf32>) {
+  %c0 = constant 0 : index
+  // expected-error@+1 {{'vector.expandload' op requires 2 indices}}
+  %0 = vector.expandload %base[%c0], %mask, %pass_thru : memref<?x?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+}
+
+// -----
+
 func @compress_base_type_mismatch(%base: memref<?xf64>, %mask: vector<16xi1>, %value: vector<16xf32>) {
   %c0 = constant 0 : index
   // expected-error@+1 {{'vector.compressstore' op base and value element type should match}}
@@ -1355,6 +1378,14 @@ func @compress_dim_mask_mismatch(%base: memref<?xf32>, %mask: vector<17xi1>, %va
   %c0 = constant 0 : index
   // expected-error@+1 {{'vector.compressstore' op expected value dim to match mask dim}}
   vector.compressstore %base[%c0], %mask, %value : memref<?xf32>, vector<17xi1>, vector<16xf32>
+}
+
+// -----
+
+func @compress_memref_mismatch(%base: memref<?x?xf32>, %mask: vector<16xi1>, %value: vector<16xf32>) {
+  %c0 = constant 0 : index
+  // expected-error@+1 {{'vector.compressstore' op requires 2 indices}}
+  vector.compressstore %base[%c0, %c0, %c0], %mask, %value : memref<?x?xf32>, vector<16xi1>, vector<16xf32>
 }
 
 // -----

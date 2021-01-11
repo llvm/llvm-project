@@ -37,6 +37,7 @@ add_library(omptarget.rtl.cuda SHARED src/rtl.cpp)
 install(TARGETS omptarget.rtl.cuda LIBRARY DESTINATION "${OPENMP_INSTALL_LIBDIR}")
 
 target_link_libraries(omptarget.rtl.cuda
+  elf_common
   ${LIBOMPTARGET_DEP_CUDA_DRIVER_LIBRARIES}
   ${LIBOMPTARGET_DEP_LIBELF_LIBRARIES}
   "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports"

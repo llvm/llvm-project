@@ -34,7 +34,7 @@
 #define TARGET_ELF_ID 0
 #endif
 
-#include "../../common/elf_common.c"
+#include "elf_common.h"
 
 #define NUMBER_OF_DEVICES 4
 #define OFFLOADSECTIONNAME "omp_offloading_entries"
