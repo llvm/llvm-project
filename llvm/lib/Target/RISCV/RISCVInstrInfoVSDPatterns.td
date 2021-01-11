@@ -35,6 +35,10 @@ def SplatPat       : ComplexPattern<vAny, 1, "selectVSplat", [], [], 1>;
 def SplatPat_simm5 : ComplexPattern<vAny, 1, "selectVSplatSimm5", []>;
 def SplatPat_uimm5 : ComplexPattern<vAny, 1, "selectVSplatUimm5", []>;
 
+class SwapHelper<dag Prefix, dag A, dag B, dag Suffix, bit swap> {
+   dag Value = !con(Prefix, !if(swap, B, A), !if(swap, A, B), Suffix);
+}
+
 multiclass VPatUSLoadStoreSDNode<LLVMType type,
                                  LLVMType mask_type,
                                  int sew,
@@ -128,6 +132,66 @@ multiclass VPatBinarySDNode_VV_VX_VI<SDNode vop, string instruction_name,
   }
 }
 
+multiclass VPatIntegerSetCCSDNode_VV<CondCode cc,
+                                     string instruction_name,
+                                     bit swap = 0> {
+  foreach vti = AllIntegerVectors in {
+    defvar instruction = !cast<Instruction>(instruction_name#"_VV_"#vti.LMul.MX);
+    def : Pat<(vti.Mask (setcc (vti.Vector vti.RegClass:$rs1),
+                               (vti.Vector vti.RegClass:$rs2), cc)),
+              SwapHelper<(instruction),
+                         (instruction vti.RegClass:$rs1),
+                         (instruction vti.RegClass:$rs2),
+                         (instruction VLMax, vti.SEW),
+                         swap>.Value>;
+  }
+}
+
+multiclass VPatIntegerSetCCSDNode_XI<CondCode cc,
+                                     string instruction_name,
+                                     string kind,
+                                     ComplexPattern SplatPatKind,
+                                     DAGOperand xop_kind,
+                                     bit swap = 0> {
+  foreach vti = AllIntegerVectors in {
+    defvar instruction = !cast<Instruction>(instruction_name#_#kind#_#vti.LMul.MX);
+    def : Pat<(vti.Mask (setcc (vti.Vector vti.RegClass:$rs1),
+                               (vti.Vector (SplatPatKind xop_kind:$rs2)), cc)),
+              SwapHelper<(instruction),
+                         (instruction vti.RegClass:$rs1),
+                         (instruction xop_kind:$rs2),
+                         (instruction VLMax, vti.SEW),
+                         swap>.Value>;
+  }
+}
+
+multiclass VPatIntegerSetCCSDNode_VV_VX_VI<CondCode cc,
+                                           string instruction_name,
+                                           bit swap = 0> {
+  defm : VPatIntegerSetCCSDNode_VV<cc, instruction_name, swap>;
+  defm : VPatIntegerSetCCSDNode_XI<cc, instruction_name, "VX",
+                                   SplatPat, GPR, swap>;
+  defm : VPatIntegerSetCCSDNode_XI<cc, instruction_name, "VI",
+                                   SplatPat_simm5, simm5, swap>;
+}
+
+multiclass VPatIntegerSetCCSDNode_VV_VX<CondCode cc,
+                                        string instruction_name,
+                                        bit swap = 0> {
+  defm : VPatIntegerSetCCSDNode_VV<cc, instruction_name, swap>;
+  defm : VPatIntegerSetCCSDNode_XI<cc, instruction_name, "VX",
+                                   SplatPat, GPR, swap>;
+}
+
+multiclass VPatIntegerSetCCSDNode_VX_VI<CondCode cc,
+                                        string instruction_name,
+                                        bit swap = 0> {
+  defm : VPatIntegerSetCCSDNode_XI<cc, instruction_name, "VX",
+                                   SplatPat, GPR, swap>;
+  defm : VPatIntegerSetCCSDNode_XI<cc, instruction_name, "VI",
+                                   SplatPat_simm5, simm5, swap>;
+}
+
 //===----------------------------------------------------------------------===//
 // Patterns.
 //===----------------------------------------------------------------------===//
@@ -163,6 +227,28 @@ defm "" : VPatBinarySDNode_VV_VX_VI<xor, "PseudoVXOR">;
 defm "" : VPatBinarySDNode_VV_VX_VI<shl, "PseudoVSLL", uimm5>;
 defm "" : VPatBinarySDNode_VV_VX_VI<srl, "PseudoVSRL", uimm5>;
 defm "" : VPatBinarySDNode_VV_VX_VI<sra, "PseudoVSRA", uimm5>;
+
+// 12.8. Vector Integer Comparison Instructions
+defm "" : VPatIntegerSetCCSDNode_VV_VX_VI<SETEQ,  "PseudoVMSEQ">;
+defm "" : VPatIntegerSetCCSDNode_VV_VX_VI<SETNE,  "PseudoVMSNE">;
+
+// FIXME: Support immediate forms of these by choosing SLE decrementing the
+// immediate
+defm "" : VPatIntegerSetCCSDNode_VV_VX<SETLT,  "PseudoVMSLT">;
+defm "" : VPatIntegerSetCCSDNode_VV_VX<SETULT, "PseudoVMSLTU">;
+
+defm "" : VPatIntegerSetCCSDNode_VV<SETGT,  "PseudoVMSLT", /*swap*/1>;
+defm "" : VPatIntegerSetCCSDNode_VV<SETUGT, "PseudoVMSLTU", /*swap*/1>;
+defm "" : VPatIntegerSetCCSDNode_VX_VI<SETGT,  "PseudoVMSGT">;
+defm "" : VPatIntegerSetCCSDNode_VX_VI<SETUGT, "PseudoVMSGTU">;
+
+defm "" : VPatIntegerSetCCSDNode_VV_VX_VI<SETLE,  "PseudoVMSLE">;
+defm "" : VPatIntegerSetCCSDNode_VV_VX_VI<SETULE, "PseudoVMSLEU">;
+
+// FIXME: Support immediate forms of these by choosing SGT and decrementing the
+// immediate
+defm "" : VPatIntegerSetCCSDNode_VV<SETGE,  "PseudoVMSLE", /*swap*/1>;
+defm "" : VPatIntegerSetCCSDNode_VV<SETUGE, "PseudoVMSLEU", /*swap*/1>;
 
 // 12.9. Vector Integer Min/Max Instructions
 defm "" : VPatBinarySDNode_VV_VX<umin, "PseudoVMINU">;
