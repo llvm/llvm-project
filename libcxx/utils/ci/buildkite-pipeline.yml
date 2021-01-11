@@ -75,6 +75,18 @@ steps:
         - exit_status: -1  # Agent was lost
           limit: 2
 
+  - label: "C++2b"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx2b"
+    artifact_paths:
+      - "**/test-results.xml"
+      - "**/*.abilist"
+    agents:
+      queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
   - label: "-fno-exceptions"
     command: "libcxx/utils/ci/run-buildbot generic-noexceptions"
     artifact_paths:

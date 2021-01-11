@@ -24,6 +24,8 @@
 #include <thread>
 #include <vector>
 
+#include "llvm/ADT/StringMap.h"
+
 using namespace mlir::runtime;
 
 //===----------------------------------------------------------------------===//
@@ -109,9 +111,17 @@ private:
 } // namespace
 
 // Returns the default per-process instance of an async runtime.
-static AsyncRuntime *getDefaultAsyncRuntimeInstance() {
+static std::unique_ptr<AsyncRuntime> &getDefaultAsyncRuntimeInstance() {
   static auto runtime = std::make_unique<AsyncRuntime>();
-  return runtime.get();
+  return runtime;
+}
+
+static void resetDefaultAsyncRuntime() {
+  return getDefaultAsyncRuntimeInstance().reset();
+}
+
+static AsyncRuntime *getDefaultAsyncRuntime() {
+  return getDefaultAsyncRuntimeInstance().get();
 }
 
 // Async token provides a mechanism to signal asynchronous operation completion.
@@ -184,19 +194,19 @@ extern "C" void mlirAsyncRuntimeDropRef(RefCountedObjPtr ptr, int32_t count) {
 
 // Creates a new `async.token` in not-ready state.
 extern "C" AsyncToken *mlirAsyncRuntimeCreateToken() {
-  AsyncToken *token = new AsyncToken(getDefaultAsyncRuntimeInstance());
+  AsyncToken *token = new AsyncToken(getDefaultAsyncRuntime());
   return token;
 }
 
 // Creates a new `async.value` in not-ready state.
 extern "C" AsyncValue *mlirAsyncRuntimeCreateValue(int32_t size) {
-  AsyncValue *value = new AsyncValue(getDefaultAsyncRuntimeInstance(), size);
+  AsyncValue *value = new AsyncValue(getDefaultAsyncRuntime(), size);
   return value;
 }
 
 // Create a new `async.group` in empty state.
 extern "C" AsyncGroup *mlirAsyncRuntimeCreateGroup() {
-  AsyncGroup *group = new AsyncGroup(getDefaultAsyncRuntimeInstance());
+  AsyncGroup *group = new AsyncGroup(getDefaultAsyncRuntime());
   return group;
 }
 
@@ -341,5 +351,59 @@ extern "C" void mlirAsyncRuntimePrintCurrentThreadId() {
   static thread_local std::thread::id thisId = std::this_thread::get_id();
   std::cout << "Current thread id: " << thisId << std::endl;
 }
+
+//===----------------------------------------------------------------------===//
+// MLIR Runner (JitRunner) dynamic library integration.
+//===----------------------------------------------------------------------===//
+
+// Export symbols for the MLIR runner integration. All other symbols are hidden.
+#ifndef _WIN32
+#define API __attribute__((visibility("default")))
+
+extern "C" API void __mlir_runner_init(llvm::StringMap<void *> &exportSymbols) {
+  auto exportSymbol = [&](llvm::StringRef name, auto ptr) {
+    assert(exportSymbols.count(name) == 0 && "symbol already exists");
+    exportSymbols[name] = reinterpret_cast<void *>(ptr);
+  };
+
+  exportSymbol("mlirAsyncRuntimeAddRef",
+               &mlir::runtime::mlirAsyncRuntimeAddRef);
+  exportSymbol("mlirAsyncRuntimeDropRef",
+               &mlir::runtime::mlirAsyncRuntimeDropRef);
+  exportSymbol("mlirAsyncRuntimeExecute",
+               &mlir::runtime::mlirAsyncRuntimeExecute);
+  exportSymbol("mlirAsyncRuntimeGetValueStorage",
+               &mlir::runtime::mlirAsyncRuntimeGetValueStorage);
+  exportSymbol("mlirAsyncRuntimeCreateToken",
+               &mlir::runtime::mlirAsyncRuntimeCreateToken);
+  exportSymbol("mlirAsyncRuntimeCreateValue",
+               &mlir::runtime::mlirAsyncRuntimeCreateValue);
+  exportSymbol("mlirAsyncRuntimeEmplaceToken",
+               &mlir::runtime::mlirAsyncRuntimeEmplaceToken);
+  exportSymbol("mlirAsyncRuntimeEmplaceValue",
+               &mlir::runtime::mlirAsyncRuntimeEmplaceValue);
+  exportSymbol("mlirAsyncRuntimeAwaitToken",
+               &mlir::runtime::mlirAsyncRuntimeAwaitToken);
+  exportSymbol("mlirAsyncRuntimeAwaitValue",
+               &mlir::runtime::mlirAsyncRuntimeAwaitValue);
+  exportSymbol("mlirAsyncRuntimeAwaitTokenAndExecute",
+               &mlir::runtime::mlirAsyncRuntimeAwaitTokenAndExecute);
+  exportSymbol("mlirAsyncRuntimeAwaitValueAndExecute",
+               &mlir::runtime::mlirAsyncRuntimeAwaitValueAndExecute);
+  exportSymbol("mlirAsyncRuntimeCreateGroup",
+               &mlir::runtime::mlirAsyncRuntimeCreateGroup);
+  exportSymbol("mlirAsyncRuntimeAddTokenToGroup",
+               &mlir::runtime::mlirAsyncRuntimeAddTokenToGroup);
+  exportSymbol("mlirAsyncRuntimeAwaitAllInGroup",
+               &mlir::runtime::mlirAsyncRuntimeAwaitAllInGroup);
+  exportSymbol("mlirAsyncRuntimeAwaitAllInGroupAndExecute",
+               &mlir::runtime::mlirAsyncRuntimeAwaitAllInGroupAndExecute);
+  exportSymbol("mlirAsyncRuntimePrintCurrentThreadId",
+               &mlir::runtime::mlirAsyncRuntimePrintCurrentThreadId);
+}
+
+extern "C" API void __mlir_runner_destroy() { resetDefaultAsyncRuntime(); }
+
+#endif // _WIN32
 
 #endif // MLIR_ASYNCRUNTIME_DEFINE_FUNCTIONS

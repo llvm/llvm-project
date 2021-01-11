@@ -122,7 +122,9 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments]> {
     The workshare loop construct specifies that the iterations of the loop(s)
     will be executed in parallel by threads in the current context. These
     iterations are spread across threads that already exist in the enclosing
-    parallel region.
+    parallel region. The lower and upper bounds specify a half-open range: the
+    range includes the lower bound but does not include the upper bound. If the
+    `inclusive` attribute is specified then the upper bound is also included.
 
     The body region can contain any number of blocks. The region is terminated
     by "omp.yield" instruction without operands.
@@ -174,9 +176,10 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments]> {
              OptionalAttr<ScheduleKind>:$schedule_val,
              Optional<AnyType>:$schedule_chunk_var,
              Confined<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$collapse_val,
-             OptionalAttr<UnitAttr>:$nowait,
+             UnitAttr:$nowait,
              Confined<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$ordered_val,
-             OptionalAttr<OrderKind>:$order_val);
+             OptionalAttr<OrderKind>:$order_val,
+             UnitAttr:$inclusive);
 
   let builders = [
     OpBuilderDAG<(ins "ValueRange":$lowerBound, "ValueRange":$upperBound,

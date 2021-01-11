@@ -130,8 +130,8 @@ llvm.func @free(!llvm<"i8*">)
 llvm.func @printf(!llvm<"i8*">, ...) -> i32
 llvm.func @malloc(i64) -> !llvm<"i8*">
 llvm.func @main() {
-  %0 = llvm.mlir.constant(1.000000e+00 : f64) : !llvm.double
-  %1 = llvm.mlir.constant(2.000000e+00 : f64) : !llvm.double
+  %0 = llvm.mlir.constant(1.000000e+00 : f64) : f64
+  %1 = llvm.mlir.constant(2.000000e+00 : f64) : f64
 
   ...
 
@@ -144,9 +144,9 @@ llvm.func @main() {
   %226 = llvm.mlir.constant(1 : index) : i64
   %227 = llvm.mul %219, %226 : i64
   %228 = llvm.add %225, %227 : i64
-  %229 = llvm.getelementptr %221[%228] : (!llvm<"double*">, i64) -> !llvm<"double*">
+  %229 = llvm.getelementptr %221[%228] : (!llvm."double*">, i64) -> !llvm<"f64*">
   %230 = llvm.load %229 : !llvm<"double*">
-  %231 = llvm.call @printf(%207, %230) : (!llvm<"i8*">, !llvm.double) -> i32
+  %231 = llvm.call @printf(%207, %230) : (!llvm<"i8*">, f64) -> i32
   %232 = llvm.add %219, %218 : i64
   llvm.br ^bb15(%232 : i64)
 

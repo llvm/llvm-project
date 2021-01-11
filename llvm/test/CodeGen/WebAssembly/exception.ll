@@ -70,7 +70,7 @@ catch:                                            ; preds = %catch.start
   catchret from %1 to label %try.cont
 
 rethrow:                                          ; preds = %catch.start
-  call void @llvm.wasm.rethrow.in.catch() [ "funclet"(token %1) ]
+  call void @llvm.wasm.rethrow() [ "funclet"(token %1) ]
   unreachable
 
 try.cont:                                         ; preds = %catch, %entry
@@ -258,7 +258,7 @@ invoke.cont1:                                     ; preds = %catch
   catchret from %1 to label %try.cont
 
 rethrow:                                          ; preds = %catch.start
-  call void @llvm.wasm.rethrow.in.catch() [ "funclet"(token %1) ]
+  call void @llvm.wasm.rethrow() [ "funclet"(token %1) ]
   unreachable
 
 try.cont:                                         ; preds = %invoke.cont1, %entry
@@ -368,7 +368,7 @@ declare i32 @__gxx_wasm_personality_v0(...)
 declare void @llvm.wasm.throw(i32, i8*)
 declare i8* @llvm.wasm.get.exception(token)
 declare i32 @llvm.wasm.get.ehselector(token)
-declare void @llvm.wasm.rethrow.in.catch()
+declare void @llvm.wasm.rethrow()
 declare i32 @llvm.eh.typeid.for(i8*)
 declare i8* @__cxa_begin_catch(i8*)
 declare void @__cxa_end_catch()

@@ -820,13 +820,10 @@ template <typename ReshapeOpTy>
 static OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
                                   ArrayRef<Attribute> operands) {
   // Fold producer-consumer reshape ops that where the operand type of the
-  // producer is same as the return type of the consumer. This can only be
-  // verified if the shapes in question are static.
+  // producer is same as the return type of the consumer.
   ReshapeOpTy reshapeSrcOp =
       reshapeOp.src().template getDefiningOp<ReshapeOpTy>();
-  if (reshapeSrcOp && reshapeSrcOp.getSrcType().hasStaticShape() &&
-      reshapeOp.getResultType().hasStaticShape() &&
-      reshapeSrcOp.getSrcType() == reshapeOp.getResultType())
+  if (reshapeSrcOp && reshapeSrcOp.getSrcType() == reshapeOp.getResultType())
     return reshapeSrcOp.src();
   // Reshape of a constant can be replaced with a new constant.
   if (auto elements = operands.front().dyn_cast_or_null<DenseElementsAttr>()) {
@@ -1030,6 +1027,57 @@ void mlir::linalg::ReshapeOp::build(OpBuilder &b, OperationState &result,
 
 Value mlir::linalg::ReshapeOp::getViewSource() { return src(); }
 
+/// Verify that shapes of the reshaped types using following rules
+/// 1) if a dimension in the collapsed type is static, then the corresponding
+///    dimensions in the expanded shape should be
+///    a) static
+///    b) the product should be same as the collaped shape.
+/// 2) if a dimension in the collaped type is dynamic, one and only one of the
+///    corresponding dimensions in the expanded type should be dynamic. This
+///    rule is only needed with reshape operations that are expanding.
+template <typename OpTy>
+static LogicalResult verifyReshapeLikeShapes(OpTy op, ShapedType collapsedType,
+                                             ShapedType expandedType,
+                                             bool isExpandingReshape) {
+  ArrayRef<int64_t> collapsedShape = collapsedType.getShape();
+  ArrayRef<int64_t> expandedShape = expandedType.getShape();
+  unsigned expandedDimStart = 0;
+  for (auto map : llvm::enumerate(op.getReassociationMaps())) {
+    Optional<int64_t> dynamicDims;
+    int64_t linearizedStaticShape = 1;
+    for (auto dim : llvm::enumerate(expandedShape.slice(
+             expandedDimStart, map.value().getNumResults()))) {
+      if (ShapedType::isDynamic(dim.value())) {
+        if (isExpandingReshape && dynamicDims) {
+          return op->emitOpError("invalid to have a single dimension (")
+                 << map.index() << ") expanded into multiple dynamic dims ("
+                 << expandedDimStart + dynamicDims.getValue() << ","
+                 << expandedDimStart + dim.index() << ")";
+        }
+        dynamicDims = dim.index();
+      } else {
+        linearizedStaticShape *= dim.value();
+      }
+    }
+    if (dynamicDims) {
+      if (!ShapedType::isDynamic(collapsedShape[map.index()])) {
+        return op->emitOpError("expected dimension ")
+               << map.index()
+               << " of collapsed type to be dynamic since one or more of the "
+                  "corresponding dimensions in the expanded type is dynamic";
+      }
+    } else {
+      if (collapsedShape[map.index()] != linearizedStaticShape) {
+        return op->emitOpError("expected dimension ")
+               << map.index() << " of collapsed type to be static value of "
+               << linearizedStaticShape << " ";
+      }
+    }
+    expandedDimStart += map.value().getNumResults();
+  }
+  return success();
+}
+
 // Common verifier for reshape-like types. Fills `expandedType` and
 // `collapsedType` with the proper `src` or `result` type.
 template <typename Op, typename T>
@@ -1073,7 +1121,7 @@ static LogicalResult verifyReshapeLikeTypes(Op op, T &expandedType,
   if (!isReassociationValid(maps, &invalidIdx))
     return op.emitOpError("expected reassociation map #")
            << invalidIdx << " to be valid and contiguous";
-  return success();
+  return verifyReshapeLikeShapes(op, collapsedType, expandedType, !isCollapse);
 }
 
 static LogicalResult verify(ReshapeOp op) {
@@ -1152,8 +1200,6 @@ static LogicalResult verify(TensorReshapeOp op) {
   if (failed(verifyReshapeLikeTypes(op, expandedType, collapsedType)))
     return failure();
   auto maps = getAffineMaps(op.reassociation());
-  // TODO: expanding a ? with a non-constant is under-specified. Error
-  // out.
   RankedTensorType expectedType =
       computeTensorReshapeCollapsedType(expandedType, maps);
   if (collapsedType != expectedType)

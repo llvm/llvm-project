@@ -5,8 +5,17 @@
 
 func @maskedstore16(%base: memref<?xf32>,
                     %mask: vector<16xi1>, %value: vector<16xf32>) {
-  vector.maskedstore %base, %mask, %value
-    : vector<16xi1>, vector<16xf32> into memref<?xf32>
+  %c0 = constant 0: index
+  vector.maskedstore %base[%c0], %mask, %value
+    : memref<?xf32>, vector<16xi1>, vector<16xf32>
+  return
+}
+
+func @maskedstore16_at8(%base: memref<?xf32>,
+                        %mask: vector<16xi1>, %value: vector<16xf32>) {
+  %c8 = constant 8: index
+  vector.maskedstore %base[%c8], %mask, %value
+    : memref<?xf32>, vector<16xi1>, vector<16xf32>
   return
 }
 
@@ -84,6 +93,11 @@ func @entry() {
     : (memref<?xf32>, vector<16xi1>, vector<16xf32>) -> ()
   call @printmem16(%A) : (memref<?xf32>) -> ()
   // CHECK: ( 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 )
+
+  call @maskedstore16_at8(%A, %some, %val)
+    : (memref<?xf32>, vector<16xi1>, vector<16xf32>) -> ()
+  call @printmem16(%A) : (memref<?xf32>) -> ()
+  // CHECK: ( 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7 )
 
   return
 }

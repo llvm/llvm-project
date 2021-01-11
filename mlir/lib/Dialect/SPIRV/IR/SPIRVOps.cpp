@@ -15,12 +15,14 @@
 #include "mlir/Dialect/SPIRV/IR/ParserUtils.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVOpTraits.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/FunctionImplementation.h"
+#include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "llvm/ADT/StringExtras.h"
@@ -3439,21 +3441,7 @@ static LogicalResult verify(spirv::SpecConstantOperationOp constOp) {
 
   Operation &enclosedOp = block.getOperations().front();
 
-  // TODO Add a `UsableInSpecConstantOp` trait and mark ops from the list below
-  // with it instead.
-  if (!isa<spirv::SConvertOp, spirv::UConvertOp, spirv::FConvertOp,
-           spirv::SNegateOp, spirv::NotOp, spirv::IAddOp, spirv::ISubOp,
-           spirv::IMulOp, spirv::UDivOp, spirv::SDivOp, spirv::UModOp,
-           spirv::SRemOp, spirv::SModOp, spirv::ShiftRightLogicalOp,
-           spirv::ShiftRightArithmeticOp, spirv::ShiftLeftLogicalOp,
-           spirv::BitwiseOrOp, spirv::BitwiseXorOp, spirv::BitwiseAndOp,
-           spirv::CompositeExtractOp, spirv::CompositeInsertOp,
-           spirv::LogicalOrOp, spirv::LogicalAndOp, spirv::LogicalNotOp,
-           spirv::LogicalEqualOp, spirv::LogicalNotEqualOp, spirv::SelectOp,
-           spirv::IEqualOp, spirv::INotEqualOp, spirv::ULessThanOp,
-           spirv::SLessThanOp, spirv::UGreaterThanOp, spirv::SGreaterThanOp,
-           spirv::ULessThanEqualOp, spirv::SLessThanEqualOp,
-           spirv::UGreaterThanEqualOp, spirv::SGreaterThanEqualOp>(enclosedOp))
+  if (!enclosedOp.hasTrait<OpTrait::spirv::UsableInSpecConstantOp>())
     return constOp.emitOpError("invalid enclosed op");
 
   for (auto operand : enclosedOp.getOperands())

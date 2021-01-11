@@ -46,16 +46,16 @@ spv.func @integer_constant_vector() "None" {
 
 // CHECK-LABEL: @float_constant_scalar
 spv.func @float_constant_scalar() "None" {
-  // CHECK: llvm.mlir.constant(5.000000e+00 : f16) : !llvm.half
+  // CHECK: llvm.mlir.constant(5.000000e+00 : f16) : f16
   %0 = spv.constant 5.000000e+00 : f16
-  // CHECK: llvm.mlir.constant(5.000000e+00 : f64) : !llvm.double
+  // CHECK: llvm.mlir.constant(5.000000e+00 : f64) : f64
   %1 = spv.constant 5.000000e+00 : f64
   spv.Return
 }
 
 // CHECK-LABEL: @float_constant_vector
 spv.func @float_constant_vector() "None" {
-  // CHECK: llvm.mlir.constant(dense<[2.000000e+00, 3.000000e+00]> : vector<2xf32>) : !llvm.vec<2 x float>
+  // CHECK: llvm.mlir.constant(dense<[2.000000e+00, 3.000000e+00]> : vector<2xf32>) : !llvm.vec<2 x f32>
   %0 = spv.constant dense<[2.000000e+00, 3.000000e+00]> : vector<2xf32>
   spv.Return
 }

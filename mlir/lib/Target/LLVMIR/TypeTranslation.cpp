@@ -39,16 +39,14 @@ public:
             .Case([this](LLVM::LLVMVoidType) {
               return llvm::Type::getVoidTy(context);
             })
-            .Case([this](LLVM::LLVMHalfType) {
-              return llvm::Type::getHalfTy(context);
-            })
-            .Case([this](LLVM::LLVMBFloatType) {
+            .Case(
+                [this](Float16Type) { return llvm::Type::getHalfTy(context); })
+            .Case([this](BFloat16Type) {
               return llvm::Type::getBFloatTy(context);
             })
-            .Case([this](LLVM::LLVMFloatType) {
-              return llvm::Type::getFloatTy(context);
-            })
-            .Case([this](LLVM::LLVMDoubleType) {
+            .Case(
+                [this](Float32Type) { return llvm::Type::getFloatTy(context); })
+            .Case([this](Float64Type) {
               return llvm::Type::getDoubleTy(context);
             })
             .Case([this](LLVM::LLVMFP128Type) {
@@ -215,13 +213,13 @@ private:
     if (type->isVoidTy())
       return LLVM::LLVMVoidType::get(&context);
     if (type->isHalfTy())
-      return LLVM::LLVMHalfType::get(&context);
+      return Float16Type::get(&context);
     if (type->isBFloatTy())
-      return LLVM::LLVMBFloatType::get(&context);
+      return BFloat16Type::get(&context);
     if (type->isFloatTy())
-      return LLVM::LLVMFloatType::get(&context);
+      return Float32Type::get(&context);
     if (type->isDoubleTy())
-      return LLVM::LLVMDoubleType::get(&context);
+      return Float64Type::get(&context);
     if (type->isFP128Ty())
       return LLVM::LLVMFP128Type::get(&context);
     if (type->isX86_FP80Ty())

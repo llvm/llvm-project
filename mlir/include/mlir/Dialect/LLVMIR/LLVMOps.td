@@ -466,13 +466,13 @@ def LLVM_CallOp : LLVM_Op<"call",
 
     ```mlir
     // Direct call without arguments and with one result.
-    %0 = llvm.call @foo() : () -> (!llvm.float)
+    %0 = llvm.call @foo() : () -> (f32)
 
     // Direct call with arguments and without a result.
-    llvm.call @bar(%0) : (!llvm.float) -> ()
+    llvm.call @bar(%0) : (f32) -> ()
 
     // Indirect call with an argument and without a result.
-    llvm.call %1(%0) : (!llvm.float) -> ()
+    llvm.call %1(%0) : (f32) -> ()
     ```
   }];
   let arguments = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
@@ -847,7 +847,7 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     represented as MLIR attributes can be given in-line:
 
     ```mlir
-    llvm.mlir.global @variable(32.0 : f32) : !llvm.float
+    llvm.mlir.global @variable(32.0 : f32) : f32
     ```
 
     This initialization and type syntax is similar to `llvm.mlir.constant` and
@@ -883,7 +883,7 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     llvm.mlir.global constant @cst(42 : i32) : i32
 
     // Non-constant values must also be initialized.
-    llvm.mlir.global @variable(32.0 : f32) : !llvm.float
+    llvm.mlir.global @variable(32.0 : f32) : f32
 
     // Strings are expected to be of wrapped LLVM i8 array type and do not
     // automatically include the trailing zero.
@@ -915,7 +915,7 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
 
     // By default, "external" linkage is assumed and the global participates in
     // symbol resolution at link-time.
-    llvm.mlir.global @glob(0 : f32) : !llvm.float
+    llvm.mlir.global @glob(0 : f32) : f32
     ```
   }];
   let regions = (region AnyRegion:$initializer);
@@ -1073,7 +1073,7 @@ def LLVM_UndefOp : LLVM_Op<"mlir.undef", [NoSideEffect]>,
 
     ```mlir
     // Create a structure with a 32-bit integer followed by a float.
-    %0 = llvm.mlir.undef : !llvm.struct<(i32, float)>
+    %0 = llvm.mlir.undef : !llvm.struct<(i32, f32)>
     ```
   }];
   let results = (outs LLVM_Type:$res);
@@ -1108,10 +1108,10 @@ def LLVM_ConstantOp
     %1 = llvm.mlir.constant(42) : i64
 
     // Floating point constant.
-    %2 = llvm.mlir.constant(42.0 : f32) : !llvm.float
+    %2 = llvm.mlir.constant(42.0 : f32) : f32
 
     // Splat dense vector constant.
-    %3 = llvm.mlir.constant(dense<1.0> : vector<4xf32>) : !llvm.vec<4 x float>
+    %3 = llvm.mlir.constant(dense<1.0> : vector<4xf32>) : !llvm.vec<4 x f32>
     ```
   }];
 
@@ -1133,7 +1133,7 @@ def LLVM_DialectCastOp : LLVM_Op<"mlir.cast", [NoSideEffect]> {
     Example:
       llvm.mlir.cast %v : f16 to llvm.half
       llvm.mlir.cast %v : llvm.float to f32
-      llvm.mlir.cast %v : !llvm<"<2 x float>"> to vector<2xf32>
+      llvm.mlir.cast %v : !llvm."<2 x f32>"> to vector<2xf32>
   }];
   let arguments = (ins AnyType:$in);
   let results = (outs AnyType:$res);

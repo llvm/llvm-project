@@ -2389,7 +2389,7 @@ multiclass VPatConversionVF_WF <string intrinsic, string instruction> {
 }
 
 //===----------------------------------------------------------------------===//
-// Pseudo instructions and patterns.
+// Pseudo instructions
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtV] in {
@@ -2458,10 +2458,6 @@ let hasSideEffects = 1, Defs = [VL] in
 foreach eew = EEWList in {
   defm PseudoVLE # eew # FF : VPseudoUSLoad;
 }
-
-//===----------------------------------------------------------------------===//
-// Pseudo Instructions
-//===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
 // 12. Vector Integer Arithmetic Instructions
@@ -2587,7 +2583,7 @@ defm PseudoVWMACCSU    : VPseudoTernaryW_VV_VX;
 defm PseudoVWMACCUS    : VPseudoTernaryW_VX</*IsFloat*/false>;
 
 //===----------------------------------------------------------------------===//
-// 12.15. Vector Integer Merge Instructions
+// 12.16. Vector Integer Merge Instructions
 //===----------------------------------------------------------------------===//
 defm PseudoVMERGE      : VPseudoBinaryV_VM_XM_IM;
 
@@ -3222,7 +3218,7 @@ defm "" : VPatTernaryW_VV_VX<"int_riscv_vwmaccsu", "PseudoVWMACCSU", AllWidenabl
 defm "" : VPatTernaryW_VX<"int_riscv_vwmaccus", "PseudoVWMACCUS", AllWidenableIntVectors>;
 
 //===----------------------------------------------------------------------===//
-// 12.15. Vector Integer Merge Instructions
+// 12.16. Vector Integer Merge Instructions
 //===----------------------------------------------------------------------===//
 defm "" : VPatBinaryV_VM_XM_IM<"int_riscv_vmerge", "PseudoVMERGE">;
 
