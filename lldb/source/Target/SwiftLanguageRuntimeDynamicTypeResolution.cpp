@@ -2649,18 +2649,15 @@ const swift::reflection::TypeInfo *SwiftLanguageRuntimeImpl::GetTypeInfo(
 
   // Resolve all type aliases.
   type = type.GetCanonicalType();
-  
+
   // Resolve all generic type parameters in the type for the current
-  // frame.  Archetype binding has to happen in the scratch context,
-  // so we lock it while we are in this function.
+  // frame. Generic parameter binding has to happen in the scratch
+  // context, so we lock it while we are in this function.
   std::unique_ptr<SwiftASTContextLock> lock;
   if (exe_scope)
     if (StackFrame *frame = exe_scope->CalculateStackFrame().get()) {
       ExecutionContext exe_ctx;
-      // FIXME: Should be
-      // frame->CalculateExecutionContext(exe_ctx);
-      // but all the other functions currently get this wrong, too!
-      m_process.GetTarget().CalculateExecutionContext(exe_ctx);
+      frame->CalculateExecutionContext(exe_ctx);
       lock = std::make_unique<SwiftASTContextLock>(&exe_ctx);
       type = BindGenericTypeParameters(*frame, type);
     }
