@@ -1083,11 +1083,14 @@ Type ConvertToLLVMPattern::getElementPtrType(MemRefType type) const {
 }
 
 void ConvertToLLVMPattern::getMemRefDescriptorSizes(
-    Location loc, MemRefType memRefType, ArrayRef<Value> dynamicSizes,
+    Location loc, MemRefType memRefType, ValueRange dynamicSizes,
     ConversionPatternRewriter &rewriter, SmallVectorImpl<Value> &sizes,
     SmallVectorImpl<Value> &strides, Value &sizeBytes) const {
   assert(isConvertibleAndHasIdentityMaps(memRefType) &&
          "layout maps must have been normalized away");
+  assert(count(memRefType.getShape(), ShapedType::kDynamicSize) ==
+             static_cast<ssize_t>(dynamicSizes.size()) &&
+         "dynamicSizes size doesn't match dynamic sizes count in memref shape");
 
   sizes.reserve(memRefType.getRank());
   unsigned dynamicIndex = 0;
@@ -4080,8 +4083,7 @@ SmallVector<Value, 4> LLVMTypeConverter::promoteOperands(Location loc,
         continue;
       }
       if (auto memrefType = operand.getType().dyn_cast<MemRefType>()) {
-        MemRefDescriptor::unpack(builder, loc, llvmOperand,
-                                 operand.getType().cast<MemRefType>(),
+        MemRefDescriptor::unpack(builder, loc, llvmOperand, memrefType,
                                  promotedOperands);
         continue;
       }
