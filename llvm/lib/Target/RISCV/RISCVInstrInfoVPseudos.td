@@ -3363,8 +3363,8 @@ foreach fvti = AllFloatVectors in {
   // If we're splatting fpimm0, use vmv.v.x vd, x0.
   def : Pat<(fvti.Vector (int_riscv_vfmv_v_f
                          (fvti.Scalar (fpimm0)), GPR:$vl)),
-            (!cast<Instruction>("PseudoVMV_V_X_"#fvti.LMul.MX)
-             X0, (NoX0 GPR:$vl), fvti.SEW)>;
+            (!cast<Instruction>("PseudoVMV_V_I_"#fvti.LMul.MX)
+             0, (NoX0 GPR:$vl), fvti.SEW)>;
 
   def : Pat<(fvti.Vector (int_riscv_vfmv_v_f
                          (fvti.Scalar fvti.ScalarRegClass:$rs2), GPR:$vl)),
