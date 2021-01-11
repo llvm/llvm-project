@@ -443,6 +443,7 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
     setOperationAction(ISD::SCALAR_TO_VECTOR, VT, Expand);
     setOperationAction(ISD::LOAD, VT, Custom);
     setOperationAction(ISD::STORE, VT, Custom);
+    setOperationAction(ISD::TRUNCATE, VT, Custom);
   }
 }
 
@@ -8660,6 +8661,23 @@ static SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG,
                      DAG.getConstant(ARMCC::NE, dl, MVT::i32));
 }
 
+// Turn a truncate into a predicate (an i1 vector) into icmp(and(x, 1), 0).
+static SDValue LowerTruncatei1(SDValue N, SelectionDAG &DAG,
+                               const ARMSubtarget *ST) {
+  assert(ST->hasMVEIntegerOps() && "Expected MVE!");
+  EVT VT = N.getValueType();
+  assert((VT == MVT::v16i1 || VT == MVT::v8i1 || VT == MVT::v4i1) &&
+         "Expected a vector i1 type!");
+  SDValue Op = N.getOperand(0);
+  EVT FromVT = Op.getValueType();
+  SDLoc DL(N);
+
+  SDValue And =
+      DAG.getNode(ISD::AND, DL, FromVT, Op, DAG.getConstant(1, DL, FromVT));
+  return DAG.getNode(ISD::SETCC, DL, VT, And, DAG.getConstant(0, DL, FromVT),
+                     DAG.getCondCode(ISD::SETNE));
+}
+
 /// isExtendedBUILD_VECTOR - Check if N is a constant BUILD_VECTOR where each
 /// element has been zero/sign-extended, depending on the isSigned parameter,
 /// from an integer type half its size.
@@ -9771,6 +9789,7 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::INSERT_VECTOR_ELT: return LowerINSERT_VECTOR_ELT(Op, DAG);
   case ISD::EXTRACT_VECTOR_ELT: return LowerEXTRACT_VECTOR_ELT(Op, DAG, Subtarget);
   case ISD::CONCAT_VECTORS: return LowerCONCAT_VECTORS(Op, DAG, Subtarget);
+  case ISD::TRUNCATE:      return LowerTruncatei1(Op, DAG, Subtarget);
   case ISD::FLT_ROUNDS_:   return LowerFLT_ROUNDS_(Op, DAG);
   case ISD::MUL:           return LowerMUL(Op, DAG);
   case ISD::SDIV:
