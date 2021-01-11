@@ -13,7 +13,7 @@
 #ifndef MLIR_DIALECT_PDLINTERP_IR_PDLINTERPOPS
 #define MLIR_DIALECT_PDLINTERP_IR_PDLINTERPOPS
 
-include "mlir/Dialect/PDL/IR/PDLBase.td"
+include "mlir/Dialect/PDL/IR/PDLTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 //===----------------------------------------------------------------------===//

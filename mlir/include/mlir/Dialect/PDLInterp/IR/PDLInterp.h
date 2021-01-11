@@ -15,6 +15,7 @@
 #define MLIR_DIALECT_PDLINTERP_IR_PDLINTERP_H_
 
 #include "mlir/Dialect/PDL/IR/PDL.h"
+#include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 

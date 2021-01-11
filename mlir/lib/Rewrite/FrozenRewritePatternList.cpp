@@ -9,7 +9,7 @@
 #include "mlir/Rewrite/FrozenRewritePatternList.h"
 #include "ByteCode.h"
 #include "mlir/Conversion/PDLToPDLInterp/PDLToPDLInterp.h"
-#include "mlir/Dialect/PDL/IR/PDL.h"
+#include "mlir/Dialect/PDL/IR/PDLOps.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"

@@ -1,4 +1,4 @@
-//===- PDLBase.td - PDL base definitions -------------------*- tablegen -*-===//
+//===- PDLDialect.td - PDL dialect definition --------------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Defines base support for MLIR PDL operations.
+// Defines the MLIR PDL dialect.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_PDL_IR_PDLBASE
-#define MLIR_DIALECT_PDL_IR_PDLBASE
+#ifndef MLIR_DIALECT_PDL_IR_PDLDIALECT
+#define MLIR_DIALECT_PDL_IR_PDLDIALECT
 
 include "mlir/IR/OpBase.td"
 
@@ -66,31 +66,4 @@ def PDL_Dialect : Dialect {
   let cppNamespace = "::mlir::pdl";
 }
 
-//===----------------------------------------------------------------------===//
-// PDL Types
-//===----------------------------------------------------------------------===//
-
-class PDL_Handle<string underlying> :
-    DialectType<PDL_Dialect, CPred<"$_self.isa<" # underlying # ">()">,
-                underlying>,
-    BuildableType<"$_builder.getType<" # underlying # ">()">;
-
-// Handle for `mlir::Attribute`.
-def PDL_Attribute : PDL_Handle<"mlir::pdl::AttributeType">;
-
-// Handle for `mlir::Operation*`.
-def PDL_Operation : PDL_Handle<"mlir::pdl::OperationType">;
-
-// Handle for `mlir::Type`.
-def PDL_Type : PDL_Handle<"mlir::pdl::TypeType">;
-
-// Handle for `mlir::Value`.
-def PDL_Value : PDL_Handle<"mlir::pdl::ValueType">;
-
-// A positional value is a location on a pattern DAG, which may be an operation,
-// an attribute, or an operand/result.
-def PDL_PositionalValue :
-    AnyTypeOf<[PDL_Attribute, PDL_Operation, PDL_Type, PDL_Value],
-              "Positional Value">;
-
-#endif // MLIR_DIALECT_PDL_IR_PDLBASE
+#endif // MLIR_DIALECT_PDL_IR_PDLDIALECT
