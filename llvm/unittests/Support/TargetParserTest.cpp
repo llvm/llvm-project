@@ -1423,6 +1423,7 @@ TEST(TargetParserTest, AArch64ArchFeatures) {
 TEST(TargetParserTest, AArch64ArchExtFeature) {
   const char *ArchExt[][4] = {{"crc", "nocrc", "+crc", "-crc"},
                               {"crypto", "nocrypto", "+crypto", "-crypto"},
+                              {"flagm", "noflagm", "+flagm", "-flagm"},
                               {"fp", "nofp", "+fp-armv8", "-fp-armv8"},
                               {"simd", "nosimd", "+neon", "-neon"},
                               {"fp16", "nofp16", "+fullfp16", "-fullfp16"},
