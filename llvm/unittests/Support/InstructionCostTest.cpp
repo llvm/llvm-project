@@ -59,6 +59,6 @@ TEST_F(CostTest, Operators) {
   EXPECT_EQ(*(VThree.getValue()), 3);
   EXPECT_EQ(IThreeA.getValue(), None);
 
-  EXPECT_EQ(InstructionCost::min(VThree, VNegTwo), -2);
-  EXPECT_EQ(InstructionCost::max(VThree, VSix), 6);
+  EXPECT_EQ(std::min(VThree, VNegTwo), -2);
+  EXPECT_EQ(std::max(VThree, VSix), 6);
 }

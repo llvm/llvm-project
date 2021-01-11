@@ -6305,7 +6305,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
         Cost -= UserCost;
       }
 
-      MinCost = InstructionCost::min(MinCost, Cost);
+      MinCost = std::min(MinCost, Cost);
 
       if (Cost.isValid() && Cost < -SLPCostThreshold) {
         LLVM_DEBUG(dbgs() << "SLP: Vectorizing list at cost:" << Cost << ".\n");
