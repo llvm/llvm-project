@@ -3184,7 +3184,6 @@ bool TGParser::ParseIfBody(MultiClass *CurMultiClass, StringRef Kind) {
 ///
 ///   Assert ::= ASSERT condition , message ;
 bool TGParser::ParseAssert(MultiClass *CurMultiClass, Record *CurRec) {
-  SMLoc Loc = Lex.getLoc();
   assert(Lex.getCode() == tgtok::Assert && "Unknown tok");
   Lex.Lex(); // Eat the 'assert' token.
 
