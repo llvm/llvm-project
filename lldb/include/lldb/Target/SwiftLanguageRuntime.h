@@ -270,6 +270,10 @@ public:
       bool &child_is_deref_of_parent, ValueObject *valobj,
       uint64_t &language_flags);
 
+  /// Ask Remote Mirrors about the fields of a composite type.
+  llvm::Optional<unsigned> GetNumFields(CompilerType type,
+                                        ExecutionContext *exe_ctx);
+
   /// Ask Remote Mirrors for the size of a Swift type.
   llvm::Optional<uint64_t> GetBitSize(CompilerType type,
                                       ExecutionContextScope *exe_scope);
