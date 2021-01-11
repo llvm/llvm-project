@@ -966,8 +966,6 @@ true:
   ret void
 }
 
-; TODO: Currently only the information of the AND used as branch condition is
-; used.
 define void @f18_conditions_chained_and(i32 %a, i32 %b) {
 ; CHECK-LABEL: @f18_conditions_chained_and(
 ; CHECK-NEXT:  entry:
@@ -978,18 +976,12 @@ define void @f18_conditions_chained_and(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[BC_2:%.*]] = and i1 [[BC]], [[B_LT]]
 ; CHECK-NEXT:    br i1 [[BC_2]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
-; CHECK-NEXT:    [[F_1:%.*]] = icmp eq i32 [[A]], 0
-; CHECK-NEXT:    call void @use(i1 [[F_1]])
-; CHECK-NEXT:    [[F_2:%.*]] = icmp eq i32 [[A]], 20
-; CHECK-NEXT:    call void @use(i1 [[F_2]])
-; CHECK-NEXT:    [[F_3:%.*]] = icmp ugt i32 [[A]], 100
-; CHECK-NEXT:    call void @use(i1 [[F_3]])
-; CHECK-NEXT:    [[F_4:%.*]] = icmp ugt i32 [[B]], 100
-; CHECK-NEXT:    call void @use(i1 [[F_4]])
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i32 [[A]], 100
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ne i32 [[A]], 20
-; CHECK-NEXT:    call void @use(i1 [[T_2]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i32 [[A]], 21
 ; CHECK-NEXT:    call void @use(i1 [[C_1]])
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i32 [[A]], 21
