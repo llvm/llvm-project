@@ -187,7 +187,7 @@ def : InstRW<[WLat1, FXU, NormalGr], (instregex "LLIL(F|H|L)$")>;
 
 def : InstRW<[WLat1, FXU, NormalGr], (instregex "LG(F|H)I$")>;
 def : InstRW<[WLat1, FXU, NormalGr], (instregex "LHI(Mux)?$")>;
-def : InstRW<[WLat1, FXU, NormalGr], (instregex "LR(Mux)?$")>;
+def : InstRW<[WLat1, FXU, NormalGr], (instregex "LR$")>;
 
 // Load and trap
 def : InstRW<[WLat1LSU, FXU, LSU, NormalGr], (instregex "L(FH|G)?AT$")>;
