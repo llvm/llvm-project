@@ -373,19 +373,19 @@ LogicalResult ConvertAllocOpToGpuRuntimeCallPattern::matchAndRewrite(
     return failure();
 
   auto loc = allocOp.getLoc();
+  auto adaptor = gpu::AllocOpAdaptor(operands, allocOp->getAttrDictionary());
 
   // Get shape of the memref as values: static sizes are constant
   // values and dynamic sizes are passed to 'alloc' as operands.
   SmallVector<Value, 4> shape;
   SmallVector<Value, 4> strides;
   Value sizeBytes;
-  getMemRefDescriptorSizes(loc, memRefType, operands, rewriter, shape, strides,
-                           sizeBytes);
+  getMemRefDescriptorSizes(loc, memRefType, adaptor.dynamicSizes(), rewriter,
+                           shape, strides, sizeBytes);
 
   // Allocate the underlying buffer and store a pointer to it in the MemRef
   // descriptor.
   Type elementPtrType = this->getElementPtrType(memRefType);
-  auto adaptor = gpu::AllocOpAdaptor(operands, allocOp->getAttrDictionary());
   auto stream = adaptor.asyncDependencies().front();
   Value allocatedPtr =
       allocCallBuilder.create(loc, rewriter, {sizeBytes, stream}).getResult(0);

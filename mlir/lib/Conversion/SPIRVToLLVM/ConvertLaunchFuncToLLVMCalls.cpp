@@ -212,8 +212,8 @@ class GPULaunchLowering : public ConvertOpToLLVMPattern<gpu::LaunchFuncOp> {
       SmallVector<Value, 4> sizes;
       SmallVector<Value, 4> strides;
       Value sizeBytes;
-      getMemRefDescriptorSizes(loc, memRefType, operand.value(), rewriter,
-                               sizes, strides, sizeBytes);
+      getMemRefDescriptorSizes(loc, memRefType, {}, rewriter, sizes, strides,
+                               sizeBytes);
       MemRefDescriptor descriptor(operand.value());
       Value src = descriptor.allocatedPtr(rewriter, loc);
 
