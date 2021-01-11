@@ -107,11 +107,9 @@ define <8 x i32> @trunc8i64_8i32_lshr(<8 x i64> %a) {
 ;
 ; AVX2-SLOW-LABEL: trunc8i64_8i32_lshr:
 ; AVX2-SLOW:       # %bb.0: # %entry
-; AVX2-SLOW-NEXT:    vpsrlq $32, %ymm1, %ymm1
-; AVX2-SLOW-NEXT:    vpsrlq $32, %ymm0, %ymm0
-; AVX2-SLOW-NEXT:    vperm2i128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
-; AVX2-SLOW-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX2-SLOW-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2],ymm2[0,2],ymm0[4,6],ymm2[4,6]
+; AVX2-SLOW-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
+; AVX2-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-SLOW-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,3],ymm2[1,3],ymm0[5,7],ymm2[5,7]
 ; AVX2-SLOW-NEXT:    retq
 ;
 ; AVX2-FAST-LABEL: trunc8i64_8i32_lshr:
