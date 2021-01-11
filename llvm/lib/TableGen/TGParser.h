@@ -222,6 +222,7 @@ private:  // Parser methods.
   bool ParseForeach(MultiClass *CurMultiClass);
   bool ParseIf(MultiClass *CurMultiClass);
   bool ParseIfBody(MultiClass *CurMultiClass, StringRef Kind);
+  bool ParseAssert(MultiClass *CurMultiClass, Record *CurRec);
   bool ParseTopLevelLet(MultiClass *CurMultiClass);
   void ParseLetList(SmallVectorImpl<LetRecord> &Result);
 
@@ -263,6 +264,8 @@ private:  // Parser methods.
   MultiClass *ParseMultiClassID();
   bool ApplyLetStack(Record *CurRec);
   bool ApplyLetStack(RecordsEntry &Entry);
+  void CheckAssert(SMLoc Loc, Init *Condition, Init *Message);
+  void CheckRecordAsserts(Record &Rec);
 };
 
 } // end namespace llvm
