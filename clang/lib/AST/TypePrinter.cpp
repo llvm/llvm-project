@@ -1229,6 +1229,9 @@ void TypePrinter::AppendScope(DeclContext *DC, raw_ostream &OS,
   if (DC->isFunctionOrMethod())
     return;
 
+  if (Policy.Callbacks && Policy.Callbacks->isScopeVisible(DC))
+    return;
+
   if (const auto *NS = dyn_cast<NamespaceDecl>(DC)) {
     if (Policy.SuppressUnwrittenScope && NS->isAnonymousNamespace())
       return AppendScope(DC->getParent(), OS, NameInScope);

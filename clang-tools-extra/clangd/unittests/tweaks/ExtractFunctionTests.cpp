@@ -97,6 +97,22 @@ void f(const int c) {
 })cpp";
   EXPECT_EQ(apply(ConstCheckInput), ConstCheckOutput);
 
+  // Check const qualifier with namespace
+  std::string ConstNamespaceCheckInput = R"cpp(
+namespace X { struct Y { int z; }; }
+int f(const X::Y &y) {
+  [[return y.z + y.z;]]
+})cpp";
+  std::string ConstNamespaceCheckOutput = R"cpp(
+namespace X { struct Y { int z; }; }
+int extracted(const X::Y &y) {
+return y.z + y.z;
+}
+int f(const X::Y &y) {
+  return extracted(y);
+})cpp";
+  EXPECT_EQ(apply(ConstNamespaceCheckInput), ConstNamespaceCheckOutput);
+
   // Don't extract when we need to make a function as a parameter.
   EXPECT_THAT(apply("void f() { [[int a; f();]] }"), StartsWith("fail"));
 
