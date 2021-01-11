@@ -106,30 +106,30 @@ Symbols:
 
 # SYMTAB-GNU:      Stack Sizes:
 # SYMTAB-GNU-NEXT:          Size     Function
-# SYMTAB-GNU-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 1 in SHT_RELA section with index 5: unable to read an entry with index 3 from SHT_SYMTAB section with index 7: section [index 7] has a sh_offset (0xffffeeee) + sh_size (0x78) that is greater than the file size (0x450)
+# SYMTAB-GNU-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 0 in SHT_RELA section with index 5: unable to read an entry with index 3 from SHT_SYMTAB section with index 7: section [index 7] has a sh_offset (0xffffeeee) + sh_size (0x78) that is greater than the file size (0x450)
 # SYMTAB-GNU-NEXT: warning: '[[FILE]]': unable to read the symbol table: section [index 7] has a sh_offset (0xffffeeee) + sh_size (0x78) that is greater than the file size (0x450)
 # SYMTAB-GNU-NEXT: warning: '[[FILE]]': could not identify function symbol for stack size entry in SHT_PROGBITS section with index 3
 # SYMTAB-GNU-NEXT:            16     ?
-# SYMTAB-GNU-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 2 in SHT_RELA section with index 5: unable to read an entry with index 2 from SHT_SYMTAB section with index 7: section [index 7] has a sh_offset (0xffffeeee) + sh_size (0x78) that is greater than the file size (0x450)
+# SYMTAB-GNU-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 1 in SHT_RELA section with index 5: unable to read an entry with index 2 from SHT_SYMTAB section with index 7: section [index 7] has a sh_offset (0xffffeeee) + sh_size (0x78) that is greater than the file size (0x450)
 # SYMTAB-GNU-NEXT:            32     ?
-# SYMTAB-GNU-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 1 in SHT_RELA section with index 6: unable to read an entry with index 1 from SHT_SYMTAB section with index 7: section [index 7] has a sh_offset (0xffffeeee) + sh_size (0x78) that is greater than the file size (0x450)
+# SYMTAB-GNU-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 0 in SHT_RELA section with index 6: unable to read an entry with index 1 from SHT_SYMTAB section with index 7: section [index 7] has a sh_offset (0xffffeeee) + sh_size (0x78) that is greater than the file size (0x450)
 # SYMTAB-GNU-NEXT: warning: '[[FILE]]': could not identify function symbol for stack size entry in SHT_PROGBITS section with index 4
 # SYMTAB-GNU-NEXT:             8     ?
 
 # SYMTAB-LLVM:      StackSizes [
-# SYMTAB-LLVM-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 1 in SHT_RELA section with index 5: unable to read an entry with index 3 from SHT_SYMTAB section with index 7: section [index 7] has a sh_offset (0xffffeeee) + sh_size (0x78) that is greater than the file size (0x450)
+# SYMTAB-LLVM-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 0 in SHT_RELA section with index 5: unable to read an entry with index 3 from SHT_SYMTAB section with index 7: section [index 7] has a sh_offset (0xffffeeee) + sh_size (0x78) that is greater than the file size (0x450)
 # SYMTAB-LLVM-NEXT: warning: '[[FILE]]': unable to read the symbol table: section [index 7] has a sh_offset (0xffffeeee) + sh_size (0x78) that is greater than the file size (0x450)
 # SYMTAB-LLVM-NEXT: warning: '[[FILE]]': could not identify function symbol for stack size entry in SHT_PROGBITS section with index 3
 # SYMTAB-LLVM-NEXT:   Entry {
 # SYMTAB-LLVM-NEXT:     Function: ?
 # SYMTAB-LLVM-NEXT:     Size: 0x10
 # SYMTAB-LLVM-NEXT:   }
-# SYMTAB-LLVM-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 2 in SHT_RELA section with index 5: unable to read an entry with index 2 from SHT_SYMTAB section with index 7: section [index 7] has a sh_offset (0xffffeeee) + sh_size (0x78) that is greater than the file size (0x450)
+# SYMTAB-LLVM-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 1 in SHT_RELA section with index 5: unable to read an entry with index 2 from SHT_SYMTAB section with index 7: section [index 7] has a sh_offset (0xffffeeee) + sh_size (0x78) that is greater than the file size (0x450)
 # SYMTAB-LLVM-NEXT:   Entry {
 # SYMTAB-LLVM-NEXT:     Function: ?
 # SYMTAB-LLVM-NEXT:     Size: 0x20
 # SYMTAB-LLVM-NEXT:   }
-# SYMTAB-LLVM-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 1 in SHT_RELA section with index 6: unable to read an entry with index 1 from SHT_SYMTAB section with index 7: section [index 7] has a sh_offset (0xffffeeee) + sh_size (0x78) that is greater than the file size (0x450)
+# SYMTAB-LLVM-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 0 in SHT_RELA section with index 6: unable to read an entry with index 1 from SHT_SYMTAB section with index 7: section [index 7] has a sh_offset (0xffffeeee) + sh_size (0x78) that is greater than the file size (0x450)
 # SYMTAB-LLVM-NEXT: warning: '[[FILE]]': could not identify function symbol for stack size entry in SHT_PROGBITS section with index 4
 # SYMTAB-LLVM-NEXT:   Entry {
 # SYMTAB-LLVM-NEXT:     Function: ?
@@ -491,9 +491,9 @@ Symbols:
 # BADSECTION-OUT-GNU-NEXT: warning: '[[FILE]]': unable to get address of symbol '_Z3foof': invalid section index: 10
 # BADSECTION-OUT-GNU-NEXT: warning: '[[FILE]]': could not identify function symbol for stack size entry in SHT_PROGBITS section with index 2
 # BADSECTION-OUT-GNU-NEXT:             8     ?
-# BADSECTION-OUT-GNU-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 2 in SHT_RELA section with index 3: unable to read an entry with index 255 from SHT_SYMTAB section with index 4: can't read an entry at 0x17e8: it goes past the end of the section (0x30)
+# BADSECTION-OUT-GNU-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 1 in SHT_RELA section with index 3: unable to read an entry with index 255 from SHT_SYMTAB section with index 4: can't read an entry at 0x17e8: it goes past the end of the section (0x30)
 # BADSECTION-OUT-GNU-NEXT:            22     ?
-# BADSECTION-OUT-GNU-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 3 in SHT_RELA section with index 3: unable to read an entry with index 255 from SHT_SYMTAB section with index 4: can't read an entry at 0x17e8: it goes past the end of the section (0x30)
+# BADSECTION-OUT-GNU-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 2 in SHT_RELA section with index 3: unable to read an entry with index 255 from SHT_SYMTAB section with index 4: can't read an entry at 0x17e8: it goes past the end of the section (0x30)
 # BADSECTION-OUT-GNU-NEXT:            36     ?
 
 # BADSECTION-OUT-LLVM:      StackSizes [
@@ -504,12 +504,12 @@ Symbols:
 # BADSECTION-OUT-LLVM-NEXT:     Function: ?
 # BADSECTION-OUT-LLVM-NEXT:     Size: 0x8
 # BADSECTION-OUT-LLVM-NEXT:   }
-# BADSECTION-OUT-LLVM-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 2 in SHT_RELA section with index 3: unable to read an entry with index 255 from SHT_SYMTAB section with index 4: can't read an entry at 0x17e8: it goes past the end of the section (0x30)
+# BADSECTION-OUT-LLVM-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 1 in SHT_RELA section with index 3: unable to read an entry with index 255 from SHT_SYMTAB section with index 4: can't read an entry at 0x17e8: it goes past the end of the section (0x30)
 # BADSECTION-OUT-LLVM-NEXT:   Entry {
 # BADSECTION-OUT-LLVM-NEXT:     Function: ?
 # BADSECTION-OUT-LLVM-NEXT:     Size: 0x16
 # BADSECTION-OUT-LLVM-NEXT:   }
-# BADSECTION-OUT-LLVM-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 3 in SHT_RELA section with index 3: unable to read an entry with index 255 from SHT_SYMTAB section with index 4: can't read an entry at 0x17e8: it goes past the end of the section (0x30)
+# BADSECTION-OUT-LLVM-NEXT: warning: '[[FILE]]': unable to get the target of relocation with index 2 in SHT_RELA section with index 3: unable to read an entry with index 255 from SHT_SYMTAB section with index 4: can't read an entry at 0x17e8: it goes past the end of the section (0x30)
 # BADSECTION-OUT-LLVM-NEXT:   Entry {
 # BADSECTION-OUT-LLVM-NEXT:     Function: ?
 # BADSECTION-OUT-LLVM-NEXT:     Size: 0x24
@@ -715,17 +715,17 @@ Symbols:
 
 # UNSUPPRELOC-GNU:      Stack Sizes:
 # UNSUPPRELOC-GNU-NEXT:   Size     Function
-# UNSUPPRELOC-GNU-NEXT: warning: '[[FILE]]': SHT_RELA section with index 3 contains an unsupported relocation with index 1: R_X86_64_RELATIVE
+# UNSUPPRELOC-GNU-NEXT: warning: '[[FILE]]': SHT_RELA section with index 3 contains an unsupported relocation with index 0: R_X86_64_RELATIVE
 # UNSUPPRELOC-GNU-NEXT:      0     foo
-# UNSUPPRELOC-GNU-NEXT: warning: '[[FILE]]': SHT_RELA section with index 3 contains an unsupported relocation with index 3: R_X86_64_RELATIVE
+# UNSUPPRELOC-GNU-NEXT: warning: '[[FILE]]': SHT_RELA section with index 3 contains an unsupported relocation with index 2: R_X86_64_RELATIVE
 
 # UNSUPPRELOC-LLVM:      StackSizes [
-# UNSUPPRELOC-LLVM-NEXT: warning: '[[FILE]]': SHT_RELA section with index 3 contains an unsupported relocation with index 1: R_X86_64_RELATIVE
+# UNSUPPRELOC-LLVM-NEXT: warning: '[[FILE]]': SHT_RELA section with index 3 contains an unsupported relocation with index 0: R_X86_64_RELATIVE
 # UNSUPPRELOC-LLVM-NEXT:   Entry {
 # UNSUPPRELOC-LLVM-NEXT:     Function: foo
 # UNSUPPRELOC-LLVM-NEXT:     Size: 0x0
 # UNSUPPRELOC-LLVM-NEXT:   }
-# UNSUPPRELOC-LLVM-NEXT: warning: '[[FILE]]': SHT_RELA section with index 3 contains an unsupported relocation with index 3: R_X86_64_RELATIVE
+# UNSUPPRELOC-LLVM-NEXT: warning: '[[FILE]]': SHT_RELA section with index 3 contains an unsupported relocation with index 2: R_X86_64_RELATIVE
 # UNSUPPRELOC-LLVM-NEXT: ]
 
 --- !ELF
@@ -848,7 +848,7 @@ Symbols:
 # RUN: llvm-readelf --stack-sizes %t17 2>&1 | FileCheck %s -DFILE=%t17 --check-prefix=UNSUPPRELOC2
 # RUN: llvm-readobj --stack-sizes %t17 2>&1 | FileCheck %s -DFILE=%t17 --check-prefix=UNSUPPRELOC2
 
-# UNSUPPRELOC2: warning: '[[FILE]]': SHT_RELA section with index 2 contains an unsupported relocation with index 1: R_X86_64_64
+# UNSUPPRELOC2: warning: '[[FILE]]': SHT_RELA section with index 2 contains an unsupported relocation with index 0: R_X86_64_64
 
 --- !ELF
 FileHeader:

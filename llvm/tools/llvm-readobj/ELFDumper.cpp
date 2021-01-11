@@ -5578,9 +5578,8 @@ static void printNotesHelper(
     return;
   }
 
-  size_t I = 0;
-  for (const typename ELFT::Phdr &P : *PhdrsOrErr) {
-    ++I;
+  for (size_t I = 0, E = (*PhdrsOrErr).size(); I != E; ++I) {
+    const typename ELFT::Phdr &P = (*PhdrsOrErr)[I];
     if (P.p_type != PT_NOTE)
       continue;
     StartNotesFn(/*SecName=*/None, P.p_offset, P.p_filesz);
@@ -5740,7 +5739,7 @@ void DumpStyle<ELFT>::forEachRelocationDo(
   case ELF::SHT_REL:
     if (Expected<Elf_Rel_Range> RangeOrErr = Obj.rels(Sec)) {
       for (const Elf_Rel &R : *RangeOrErr)
-        RelRelaFn(Relocation<ELFT>(R, IsMips64EL), ++RelNdx, Sec, SymTab);
+        RelRelaFn(Relocation<ELFT>(R, IsMips64EL), RelNdx++, Sec, SymTab);
     } else {
       Warn(RangeOrErr.takeError());
     }
@@ -5748,7 +5747,7 @@ void DumpStyle<ELFT>::forEachRelocationDo(
   case ELF::SHT_RELA:
     if (Expected<Elf_Rela_Range> RangeOrErr = Obj.relas(Sec)) {
       for (const Elf_Rela &R : *RangeOrErr)
-        RelRelaFn(Relocation<ELFT>(R, IsMips64EL), ++RelNdx, Sec, SymTab);
+        RelRelaFn(Relocation<ELFT>(R, IsMips64EL), RelNdx++, Sec, SymTab);
     } else {
       Warn(RangeOrErr.takeError());
     }
@@ -5767,7 +5766,7 @@ void DumpStyle<ELFT>::forEachRelocationDo(
     }
 
     for (const Elf_Rel &R : Obj.decode_relrs(*RangeOrErr))
-      RelRelaFn(Relocation<ELFT>(R, IsMips64EL), ++RelNdx, Sec,
+      RelRelaFn(Relocation<ELFT>(R, IsMips64EL), RelNdx++, Sec,
                 /*SymTab=*/nullptr);
     break;
   }
@@ -5775,7 +5774,7 @@ void DumpStyle<ELFT>::forEachRelocationDo(
   case ELF::SHT_ANDROID_RELA:
     if (Expected<std::vector<Elf_Rela>> RelasOrErr = Obj.android_relas(Sec)) {
       for (const Elf_Rela &R : *RelasOrErr)
-        RelRelaFn(Relocation<ELFT>(R, IsMips64EL), ++RelNdx, Sec, SymTab);
+        RelRelaFn(Relocation<ELFT>(R, IsMips64EL), RelNdx++, Sec, SymTab);
     } else {
       Warn(RelasOrErr.takeError());
     }
