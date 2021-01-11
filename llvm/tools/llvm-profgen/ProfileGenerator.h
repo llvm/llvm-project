@@ -25,7 +25,7 @@ public:
   ProfileGenerator(){};
   virtual ~ProfileGenerator() = default;
   static std::unique_ptr<ProfileGenerator>
-  create(const BinarySampleCounterMap &SampleCounters,
+  create(const BinarySampleCounterMap &BinarySampleCounters,
          enum PerfScriptType SampleType);
   virtual void generateProfile() = 0;
 
@@ -50,7 +50,6 @@ protected:
   */
   void findDisjointRanges(RangeSample &DisjointRanges,
                           const RangeSample &Ranges);
-
   // Used by SampleProfileWriter
   StringMap<FunctionSamples> ProfileMap;
 };
@@ -65,6 +64,8 @@ public:
 
 public:
   void generateProfile() override {
+    // Enable context-sensitive functionalities in SampleProf
+    FunctionSamples::ProfileIsCS = true;
     for (const auto &BI : BinarySampleCounters) {
       ProfiledBinary *Binary = BI.first;
       for (const auto &CI : BI.second) {
@@ -90,14 +91,16 @@ public:
     populateInferredFunctionSamples();
   }
 
+protected:
+  // Lookup or create FunctionSamples for the context
+  FunctionSamples &getFunctionProfileForContext(StringRef ContextId);
+
 private:
   // Helper function for updating body sample for a leaf location in
   // FunctionProfile
   void updateBodySamplesforFunctionProfile(FunctionSamples &FunctionProfile,
                                            const FrameLocation &LeafLoc,
                                            uint64_t Count);
-  // Lookup or create FunctionSamples for the context
-  FunctionSamples &getFunctionProfileForContext(StringRef ContextId);
   void populateFunctionBodySamples(FunctionSamples &FunctionProfile,
                                    const RangeSample &RangeCounters,
                                    ProfiledBinary *Binary);
@@ -108,14 +111,38 @@ private:
   void populateInferredFunctionSamples();
 };
 
+using ProbeCounterMap = std::unordered_map<const PseudoProbe *, uint64_t>;
+
 class PseudoProbeCSProfileGenerator : public CSProfileGenerator {
 
 public:
   PseudoProbeCSProfileGenerator(const BinarySampleCounterMap &Counters)
       : CSProfileGenerator(Counters) {}
-  void generateProfile() override {
-    // TODO
-  }
+  void generateProfile() override;
+
+private:
+  // Go through each address from range to extract the top frame probe by
+  // looking up in the Address2ProbeMap
+  void extractProbesFromRange(const RangeSample &RangeCounter,
+                              ProbeCounterMap &ProbeCounter,
+                              ProfiledBinary *Binary);
+  // Fill in function body samples from probes
+  void populateBodySamplesWithProbes(const RangeSample &RangeCounter,
+                                     StringRef PrefixContextId,
+                                     ProfiledBinary *Binary);
+  // Fill in boundary samples for a call probe
+  void populateBoundarySamplesWithProbes(const BranchSample &BranchCounter,
+                                         StringRef PrefixContextId,
+                                         ProfiledBinary *Binary);
+  // Helper function to get FunctionSamples for the leaf inlined context
+  FunctionSamples &getFunctionProfileForLeafProbe(
+      StringRef PrefixContextId,
+      SmallVector<std::string, 16> &LeafInlinedContext,
+      const PseudoProbeFuncDesc *LeafFuncDesc);
+  // Helper function to get FunctionSamples for the leaf probe
+  FunctionSamples &getFunctionProfileForLeafProbe(StringRef PrefixContextId,
+                                                  const PseudoProbe *LeafProbe,
+                                                  ProfiledBinary *Binary);
 };
 
 } // end namespace sampleprof
