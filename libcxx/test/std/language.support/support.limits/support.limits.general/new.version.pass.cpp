@@ -111,6 +111,41 @@
 #   error "__cpp_lib_launder should have the value 201606L in c++20"
 # endif
 
-#endif // TEST_STD_VER == 20
+#elif TEST_STD_VER > 20
+
+# if TEST_STD_VER > 17 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L
+#   ifndef __cpp_lib_destroying_delete
+#     error "__cpp_lib_destroying_delete should be defined in c++2b"
+#   endif
+#   if __cpp_lib_destroying_delete != 201806L
+#     error "__cpp_lib_destroying_delete should have the value 201806L in c++2b"
+#   endif
+# else
+#   ifdef __cpp_lib_destroying_delete
+#     error "__cpp_lib_destroying_delete should not be defined when TEST_STD_VER > 17 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L is not defined!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_hardware_interference_size
+#     error "__cpp_lib_hardware_interference_size should be defined in c++2b"
+#   endif
+#   if __cpp_lib_hardware_interference_size != 201703L
+#     error "__cpp_lib_hardware_interference_size should have the value 201703L in c++2b"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_hardware_interference_size
+#     error "__cpp_lib_hardware_interference_size should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# ifndef __cpp_lib_launder
+#   error "__cpp_lib_launder should be defined in c++2b"
+# endif
+# if __cpp_lib_launder != 201606L
+#   error "__cpp_lib_launder should have the value 201606L in c++2b"
+# endif
+
+#endif // TEST_STD_VER > 20
 
 int main(int, char**) { return 0; }

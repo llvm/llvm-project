@@ -76,6 +76,28 @@
 #   error "__cpp_lib_filesystem should have the value 201703L in c++20"
 # endif
 
-#endif // TEST_STD_VER == 20
+#elif TEST_STD_VER > 20
+
+# if defined(__cpp_char8_t)
+#   ifndef __cpp_lib_char8_t
+#     error "__cpp_lib_char8_t should be defined in c++2b"
+#   endif
+#   if __cpp_lib_char8_t != 201811L
+#     error "__cpp_lib_char8_t should have the value 201811L in c++2b"
+#   endif
+# else
+#   ifdef __cpp_lib_char8_t
+#     error "__cpp_lib_char8_t should not be defined when defined(__cpp_char8_t) is not defined!"
+#   endif
+# endif
+
+# ifndef __cpp_lib_filesystem
+#   error "__cpp_lib_filesystem should be defined in c++2b"
+# endif
+# if __cpp_lib_filesystem != 201703L
+#   error "__cpp_lib_filesystem should have the value 201703L in c++2b"
+# endif
+
+#endif // TEST_STD_VER > 20
 
 int main(int, char**) { return 0; }
