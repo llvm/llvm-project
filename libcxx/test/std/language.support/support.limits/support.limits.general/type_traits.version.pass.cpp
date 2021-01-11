@@ -15,15 +15,20 @@
 
 /*  Constant                                       Value
     __cpp_lib_bool_constant                        201505L [C++17]
+    __cpp_lib_bounded_array_traits                 201902L [C++20]
     __cpp_lib_has_unique_object_representations    201606L [C++17]
     __cpp_lib_integral_constant_callable           201304L [C++14]
     __cpp_lib_is_aggregate                         201703L [C++17]
     __cpp_lib_is_constant_evaluated                201811L [C++20]
     __cpp_lib_is_final                             201402L [C++14]
     __cpp_lib_is_invocable                         201703L [C++17]
+    __cpp_lib_is_layout_compatible                 201907L [C++20]
+    __cpp_lib_is_nothrow_convertible               201806L [C++20]
     __cpp_lib_is_null_pointer                      201309L [C++14]
+    __cpp_lib_is_pointer_interconvertible          201907L [C++20]
     __cpp_lib_is_swappable                         201603L [C++17]
     __cpp_lib_logical_traits                       201510L [C++17]
+    __cpp_lib_remove_cvref                         201711L [C++20]
     __cpp_lib_result_of_sfinae                     201210L [C++14]
     __cpp_lib_transformation_trait_aliases         201304L [C++14]
     __cpp_lib_type_trait_variable_templates        201510L [C++17]
@@ -37,6 +42,10 @@
 
 # ifdef __cpp_lib_bool_constant
 #   error "__cpp_lib_bool_constant should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_bounded_array_traits
+#   error "__cpp_lib_bounded_array_traits should not be defined before c++20"
 # endif
 
 # ifdef __cpp_lib_has_unique_object_representations
@@ -63,8 +72,20 @@
 #   error "__cpp_lib_is_invocable should not be defined before c++17"
 # endif
 
+# ifdef __cpp_lib_is_layout_compatible
+#   error "__cpp_lib_is_layout_compatible should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_is_nothrow_convertible
+#   error "__cpp_lib_is_nothrow_convertible should not be defined before c++20"
+# endif
+
 # ifdef __cpp_lib_is_null_pointer
 #   error "__cpp_lib_is_null_pointer should not be defined before c++14"
+# endif
+
+# ifdef __cpp_lib_is_pointer_interconvertible
+#   error "__cpp_lib_is_pointer_interconvertible should not be defined before c++20"
 # endif
 
 # ifdef __cpp_lib_is_swappable
@@ -73,6 +94,10 @@
 
 # ifdef __cpp_lib_logical_traits
 #   error "__cpp_lib_logical_traits should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_remove_cvref
+#   error "__cpp_lib_remove_cvref should not be defined before c++20"
 # endif
 
 # ifdef __cpp_lib_result_of_sfinae
@@ -95,6 +120,10 @@
 
 # ifdef __cpp_lib_bool_constant
 #   error "__cpp_lib_bool_constant should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_bounded_array_traits
+#   error "__cpp_lib_bounded_array_traits should not be defined before c++20"
 # endif
 
 # ifdef __cpp_lib_has_unique_object_representations
@@ -127,11 +156,23 @@
 #   error "__cpp_lib_is_invocable should not be defined before c++17"
 # endif
 
+# ifdef __cpp_lib_is_layout_compatible
+#   error "__cpp_lib_is_layout_compatible should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_is_nothrow_convertible
+#   error "__cpp_lib_is_nothrow_convertible should not be defined before c++20"
+# endif
+
 # ifndef __cpp_lib_is_null_pointer
 #   error "__cpp_lib_is_null_pointer should be defined in c++14"
 # endif
 # if __cpp_lib_is_null_pointer != 201309L
 #   error "__cpp_lib_is_null_pointer should have the value 201309L in c++14"
+# endif
+
+# ifdef __cpp_lib_is_pointer_interconvertible
+#   error "__cpp_lib_is_pointer_interconvertible should not be defined before c++20"
 # endif
 
 # ifdef __cpp_lib_is_swappable
@@ -140,6 +181,10 @@
 
 # ifdef __cpp_lib_logical_traits
 #   error "__cpp_lib_logical_traits should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_remove_cvref
+#   error "__cpp_lib_remove_cvref should not be defined before c++20"
 # endif
 
 # ifndef __cpp_lib_result_of_sfinae
@@ -171,6 +216,10 @@
 # endif
 # if __cpp_lib_bool_constant != 201505L
 #   error "__cpp_lib_bool_constant should have the value 201505L in c++17"
+# endif
+
+# ifdef __cpp_lib_bounded_array_traits
+#   error "__cpp_lib_bounded_array_traits should not be defined before c++20"
 # endif
 
 # if TEST_HAS_BUILTIN_IDENTIFIER(__has_unique_object_representations) || TEST_GCC_VER >= 700
@@ -224,11 +273,23 @@
 #   error "__cpp_lib_is_invocable should have the value 201703L in c++17"
 # endif
 
+# ifdef __cpp_lib_is_layout_compatible
+#   error "__cpp_lib_is_layout_compatible should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_is_nothrow_convertible
+#   error "__cpp_lib_is_nothrow_convertible should not be defined before c++20"
+# endif
+
 # ifndef __cpp_lib_is_null_pointer
 #   error "__cpp_lib_is_null_pointer should be defined in c++17"
 # endif
 # if __cpp_lib_is_null_pointer != 201309L
 #   error "__cpp_lib_is_null_pointer should have the value 201309L in c++17"
+# endif
+
+# ifdef __cpp_lib_is_pointer_interconvertible
+#   error "__cpp_lib_is_pointer_interconvertible should not be defined before c++20"
 # endif
 
 # ifndef __cpp_lib_is_swappable
@@ -243,6 +304,10 @@
 # endif
 # if __cpp_lib_logical_traits != 201510L
 #   error "__cpp_lib_logical_traits should have the value 201510L in c++17"
+# endif
+
+# ifdef __cpp_lib_remove_cvref
+#   error "__cpp_lib_remove_cvref should not be defined before c++20"
 # endif
 
 # ifndef __cpp_lib_result_of_sfinae
@@ -280,6 +345,13 @@
 # endif
 # if __cpp_lib_bool_constant != 201505L
 #   error "__cpp_lib_bool_constant should have the value 201505L in c++20"
+# endif
+
+# ifndef __cpp_lib_bounded_array_traits
+#   error "__cpp_lib_bounded_array_traits should be defined in c++20"
+# endif
+# if __cpp_lib_bounded_array_traits != 201902L
+#   error "__cpp_lib_bounded_array_traits should have the value 201902L in c++20"
 # endif
 
 # if TEST_HAS_BUILTIN_IDENTIFIER(__has_unique_object_representations) || TEST_GCC_VER >= 700
@@ -342,11 +414,44 @@
 #   error "__cpp_lib_is_invocable should have the value 201703L in c++20"
 # endif
 
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_is_layout_compatible
+#     error "__cpp_lib_is_layout_compatible should be defined in c++20"
+#   endif
+#   if __cpp_lib_is_layout_compatible != 201907L
+#     error "__cpp_lib_is_layout_compatible should have the value 201907L in c++20"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_is_layout_compatible
+#     error "__cpp_lib_is_layout_compatible should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# ifndef __cpp_lib_is_nothrow_convertible
+#   error "__cpp_lib_is_nothrow_convertible should be defined in c++20"
+# endif
+# if __cpp_lib_is_nothrow_convertible != 201806L
+#   error "__cpp_lib_is_nothrow_convertible should have the value 201806L in c++20"
+# endif
+
 # ifndef __cpp_lib_is_null_pointer
 #   error "__cpp_lib_is_null_pointer should be defined in c++20"
 # endif
 # if __cpp_lib_is_null_pointer != 201309L
 #   error "__cpp_lib_is_null_pointer should have the value 201309L in c++20"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_is_pointer_interconvertible
+#     error "__cpp_lib_is_pointer_interconvertible should be defined in c++20"
+#   endif
+#   if __cpp_lib_is_pointer_interconvertible != 201907L
+#     error "__cpp_lib_is_pointer_interconvertible should have the value 201907L in c++20"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_is_pointer_interconvertible
+#     error "__cpp_lib_is_pointer_interconvertible should not be defined because it is unimplemented in libc++!"
+#   endif
 # endif
 
 # ifndef __cpp_lib_is_swappable
@@ -361,6 +466,13 @@
 # endif
 # if __cpp_lib_logical_traits != 201510L
 #   error "__cpp_lib_logical_traits should have the value 201510L in c++20"
+# endif
+
+# ifndef __cpp_lib_remove_cvref
+#   error "__cpp_lib_remove_cvref should be defined in c++20"
+# endif
+# if __cpp_lib_remove_cvref != 201711L
+#   error "__cpp_lib_remove_cvref should have the value 201711L in c++20"
 # endif
 
 # ifndef __cpp_lib_result_of_sfinae

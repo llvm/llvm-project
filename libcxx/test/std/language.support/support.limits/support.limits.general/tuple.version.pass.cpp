@@ -15,6 +15,7 @@
 
 /*  Constant                     Value
     __cpp_lib_apply              201603L [C++17]
+    __cpp_lib_constexpr_tuple    201811L [C++20]
     __cpp_lib_make_from_tuple    201606L [C++17]
     __cpp_lib_tuple_element_t    201402L [C++14]
     __cpp_lib_tuples_by_type     201304L [C++14]
@@ -27,6 +28,10 @@
 
 # ifdef __cpp_lib_apply
 #   error "__cpp_lib_apply should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_constexpr_tuple
+#   error "__cpp_lib_constexpr_tuple should not be defined before c++20"
 # endif
 
 # ifdef __cpp_lib_make_from_tuple
@@ -45,6 +50,10 @@
 
 # ifdef __cpp_lib_apply
 #   error "__cpp_lib_apply should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_constexpr_tuple
+#   error "__cpp_lib_constexpr_tuple should not be defined before c++20"
 # endif
 
 # ifdef __cpp_lib_make_from_tuple
@@ -72,6 +81,10 @@
 # endif
 # if __cpp_lib_apply != 201603L
 #   error "__cpp_lib_apply should have the value 201603L in c++17"
+# endif
+
+# ifdef __cpp_lib_constexpr_tuple
+#   error "__cpp_lib_constexpr_tuple should not be defined before c++20"
 # endif
 
 # ifndef __cpp_lib_make_from_tuple
@@ -102,6 +115,19 @@
 # endif
 # if __cpp_lib_apply != 201603L
 #   error "__cpp_lib_apply should have the value 201603L in c++20"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_constexpr_tuple
+#     error "__cpp_lib_constexpr_tuple should be defined in c++20"
+#   endif
+#   if __cpp_lib_constexpr_tuple != 201811L
+#     error "__cpp_lib_constexpr_tuple should have the value 201811L in c++20"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_constexpr_tuple
+#     error "__cpp_lib_constexpr_tuple should not be defined because it is unimplemented in libc++!"
+#   endif
 # endif
 
 # ifndef __cpp_lib_make_from_tuple

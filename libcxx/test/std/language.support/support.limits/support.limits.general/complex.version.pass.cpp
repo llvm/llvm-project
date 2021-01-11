@@ -13,8 +13,9 @@
 
 // Test the feature test macros defined by <complex>
 
-/*  Constant                  Value
-    __cpp_lib_complex_udls    201309L [C++14]
+/*  Constant                       Value
+    __cpp_lib_complex_udls         201309L [C++14]
+    __cpp_lib_constexpr_complex    201711L [C++20]
 */
 
 #include <complex>
@@ -26,6 +27,10 @@
 #   error "__cpp_lib_complex_udls should not be defined before c++14"
 # endif
 
+# ifdef __cpp_lib_constexpr_complex
+#   error "__cpp_lib_constexpr_complex should not be defined before c++20"
+# endif
+
 #elif TEST_STD_VER == 14
 
 # ifndef __cpp_lib_complex_udls
@@ -33,6 +38,10 @@
 # endif
 # if __cpp_lib_complex_udls != 201309L
 #   error "__cpp_lib_complex_udls should have the value 201309L in c++14"
+# endif
+
+# ifdef __cpp_lib_constexpr_complex
+#   error "__cpp_lib_constexpr_complex should not be defined before c++20"
 # endif
 
 #elif TEST_STD_VER == 17
@@ -44,6 +53,10 @@
 #   error "__cpp_lib_complex_udls should have the value 201309L in c++17"
 # endif
 
+# ifdef __cpp_lib_constexpr_complex
+#   error "__cpp_lib_constexpr_complex should not be defined before c++20"
+# endif
+
 #elif TEST_STD_VER == 20
 
 # ifndef __cpp_lib_complex_udls
@@ -51,6 +64,19 @@
 # endif
 # if __cpp_lib_complex_udls != 201309L
 #   error "__cpp_lib_complex_udls should have the value 201309L in c++20"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_constexpr_complex
+#     error "__cpp_lib_constexpr_complex should be defined in c++20"
+#   endif
+#   if __cpp_lib_constexpr_complex != 201711L
+#     error "__cpp_lib_constexpr_complex should have the value 201711L in c++20"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_constexpr_complex
+#     error "__cpp_lib_constexpr_complex should not be defined because it is unimplemented in libc++!"
+#   endif
 # endif
 
 #endif // TEST_STD_VER == 20

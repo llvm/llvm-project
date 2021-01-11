@@ -13,13 +13,14 @@
 
 // Test the feature test macros defined by <utility>
 
-/*  Constant                       Value
-    __cpp_lib_as_const             201510L [C++17]
-    __cpp_lib_constexpr_utility    201811L [C++20]
-    __cpp_lib_exchange_function    201304L [C++14]
-    __cpp_lib_integer_sequence     201304L [C++14]
-    __cpp_lib_to_chars             201611L [C++17]
-    __cpp_lib_tuples_by_type       201304L [C++14]
+/*  Constant                                  Value
+    __cpp_lib_as_const                        201510L [C++17]
+    __cpp_lib_constexpr_utility               201811L [C++20]
+    __cpp_lib_exchange_function               201304L [C++14]
+    __cpp_lib_integer_comparison_functions    202002L [C++20]
+    __cpp_lib_integer_sequence                201304L [C++14]
+    __cpp_lib_to_chars                        201611L [C++17]
+    __cpp_lib_tuples_by_type                  201304L [C++14]
 */
 
 #include <utility>
@@ -37,6 +38,10 @@
 
 # ifdef __cpp_lib_exchange_function
 #   error "__cpp_lib_exchange_function should not be defined before c++14"
+# endif
+
+# ifdef __cpp_lib_integer_comparison_functions
+#   error "__cpp_lib_integer_comparison_functions should not be defined before c++20"
 # endif
 
 # ifdef __cpp_lib_integer_sequence
@@ -66,6 +71,10 @@
 # endif
 # if __cpp_lib_exchange_function != 201304L
 #   error "__cpp_lib_exchange_function should have the value 201304L in c++14"
+# endif
+
+# ifdef __cpp_lib_integer_comparison_functions
+#   error "__cpp_lib_integer_comparison_functions should not be defined before c++20"
 # endif
 
 # ifndef __cpp_lib_integer_sequence
@@ -104,6 +113,10 @@
 # endif
 # if __cpp_lib_exchange_function != 201304L
 #   error "__cpp_lib_exchange_function should have the value 201304L in c++17"
+# endif
+
+# ifdef __cpp_lib_integer_comparison_functions
+#   error "__cpp_lib_integer_comparison_functions should not be defined before c++20"
 # endif
 
 # ifndef __cpp_lib_integer_sequence
@@ -154,6 +167,19 @@
 # endif
 # if __cpp_lib_exchange_function != 201304L
 #   error "__cpp_lib_exchange_function should have the value 201304L in c++20"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_integer_comparison_functions
+#     error "__cpp_lib_integer_comparison_functions should be defined in c++20"
+#   endif
+#   if __cpp_lib_integer_comparison_functions != 202002L
+#     error "__cpp_lib_integer_comparison_functions should have the value 202002L in c++20"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_integer_comparison_functions
+#     error "__cpp_lib_integer_comparison_functions should not be defined because it is unimplemented in libc++!"
+#   endif
 # endif
 
 # ifndef __cpp_lib_integer_sequence
