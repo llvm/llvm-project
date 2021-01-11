@@ -15,4 +15,4 @@ Arch: AArch64
 Symbols: {}
 ...
 
-# ERR: Permission denied when trying to open `{{.*}}.TestDir/Output.TestFile` for writing
+# ERR: {{.*}}Permission denied{{.*}} when trying to open `{{.*}}.TestDir/Output.TestFile` for writing

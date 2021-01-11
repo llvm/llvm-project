@@ -1132,6 +1132,71 @@ void ConvertAsyncToLLVMPass::runOnOperation() {
 }
 } // namespace
 
+namespace {
+class ConvertExecuteOpTypes : public OpConversionPattern<ExecuteOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(ExecuteOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    ExecuteOp newOp =
+        cast<ExecuteOp>(rewriter.cloneWithoutRegions(*op.getOperation()));
+    rewriter.inlineRegionBefore(op.getRegion(), newOp.getRegion(),
+                                newOp.getRegion().end());
+
+    // Set operands and update block argument and result types.
+    newOp->setOperands(operands);
+    if (failed(rewriter.convertRegionTypes(&newOp.getRegion(), *typeConverter)))
+      return failure();
+    for (auto result : newOp.getResults())
+      result.setType(typeConverter->convertType(result.getType()));
+
+    rewriter.replaceOp(op, newOp.getResults());
+    return success();
+  }
+};
+
+// Dummy pattern to trigger the appropriate type conversion / materialization.
+class ConvertAwaitOpTypes : public OpConversionPattern<AwaitOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(AwaitOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<AwaitOp>(op, operands.front());
+    return success();
+  }
+};
+
+// Dummy pattern to trigger the appropriate type conversion / materialization.
+class ConvertYieldOpTypes : public OpConversionPattern<async::YieldOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(async::YieldOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<async::YieldOp>(op, operands);
+    return success();
+  }
+};
+} // namespace
+
 std::unique_ptr<OperationPass<ModuleOp>> mlir::createConvertAsyncToLLVMPass() {
   return std::make_unique<ConvertAsyncToLLVMPass>();
+}
+
+void mlir::populateAsyncStructuralTypeConversionsAndLegality(
+    MLIRContext *context, TypeConverter &typeConverter,
+    OwningRewritePatternList &patterns, ConversionTarget &target) {
+  typeConverter.addConversion([&](TokenType type) { return type; });
+  typeConverter.addConversion([&](ValueType type) {
+    return ValueType::get(typeConverter.convertType(type.getValueType()));
+  });
+
+  patterns
+      .insert<ConvertExecuteOpTypes, ConvertAwaitOpTypes, ConvertYieldOpTypes>(
+          typeConverter, context);
+
+  target.addDynamicallyLegalOp<AwaitOp, ExecuteOp, async::YieldOp>(
+      [&](Operation *op) { return typeConverter.isLegal(op); });
 }

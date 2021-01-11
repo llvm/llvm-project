@@ -10,7 +10,6 @@
 #ifndef MLIR_C_AFFINEEXPR_H
 #define MLIR_C_AFFINEEXPR_H
 
-#include "mlir-c/AffineMap.h"
 #include "mlir-c/IR.h"
 
 #ifdef __cplusplus
@@ -44,6 +43,16 @@ DEFINE_C_API_STRUCT(MlirAffineExpr, const void);
 /// Gets the context that owns the affine expression.
 MLIR_CAPI_EXPORTED MlirContext
 mlirAffineExprGetContext(MlirAffineExpr affineExpr);
+
+/// Returns `true` if the two affine expressions are equal.
+MLIR_CAPI_EXPORTED bool mlirAffineExprEqual(MlirAffineExpr lhs,
+                                            MlirAffineExpr rhs);
+
+/// Returns `true` if the given affine expression is a null expression. Note
+/// constant zero is not a null expression.
+inline bool mlirAffineExprIsNull(MlirAffineExpr affineExpr) {
+  return affineExpr.ptr == NULL;
+}
 
 /** Prints an affine expression by sending chunks of the string representation
  * and forwarding `userData to `callback`. Note that the callback may be called
@@ -82,6 +91,9 @@ MLIR_CAPI_EXPORTED bool mlirAffineExprIsFunctionOfDim(MlirAffineExpr affineExpr,
 // Affine Dimension Expression.
 //===----------------------------------------------------------------------===//
 
+/// Checks whether the given affine expression is a dimension expression.
+MLIR_CAPI_EXPORTED bool mlirAffineExprIsADim(MlirAffineExpr affineExpr);
+
 /// Creates an affine dimension expression with 'position' in the context.
 MLIR_CAPI_EXPORTED MlirAffineExpr mlirAffineDimExprGet(MlirContext ctx,
                                                        intptr_t position);
@@ -94,6 +106,9 @@ mlirAffineDimExprGetPosition(MlirAffineExpr affineExpr);
 // Affine Symbol Expression.
 //===----------------------------------------------------------------------===//
 
+/// Checks whether the given affine expression is a symbol expression.
+MLIR_CAPI_EXPORTED bool mlirAffineExprIsASymbol(MlirAffineExpr affineExpr);
+
 /// Creates an affine symbol expression with 'position' in the context.
 MLIR_CAPI_EXPORTED MlirAffineExpr mlirAffineSymbolExprGet(MlirContext ctx,
                                                           intptr_t position);
@@ -105,6 +120,9 @@ mlirAffineSymbolExprGetPosition(MlirAffineExpr affineExpr);
 //===----------------------------------------------------------------------===//
 // Affine Constant Expression.
 //===----------------------------------------------------------------------===//
+
+/// Checks whether the given affine expression is a constant expression.
+MLIR_CAPI_EXPORTED bool mlirAffineExprIsAConstant(MlirAffineExpr affineExpr);
 
 /// Creates an affine constant expression with 'constant' in the context.
 MLIR_CAPI_EXPORTED MlirAffineExpr mlirAffineConstantExprGet(MlirContext ctx,
@@ -172,6 +190,9 @@ MLIR_CAPI_EXPORTED MlirAffineExpr mlirAffineCeilDivExprGet(MlirAffineExpr lhs,
 //===----------------------------------------------------------------------===//
 // Affine Binary Operation Expression.
 //===----------------------------------------------------------------------===//
+
+/// Checks whether the given affine expression is binary.
+MLIR_CAPI_EXPORTED bool mlirAffineExprIsABinary(MlirAffineExpr affineExpr);
 
 /** Returns the left hand side affine expression of the given affine binary
  * operation expression. */

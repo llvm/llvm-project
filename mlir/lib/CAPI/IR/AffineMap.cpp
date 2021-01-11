@@ -8,6 +8,7 @@
 
 #include "mlir-c/AffineMap.h"
 #include "mlir-c/IR.h"
+#include "mlir/CAPI/AffineExpr.h"
 #include "mlir/CAPI/AffineMap.h"
 #include "mlir/CAPI/IR.h"
 #include "mlir/CAPI/Utils.h"
@@ -37,9 +38,17 @@ MlirAffineMap mlirAffineMapEmptyGet(MlirContext ctx) {
   return wrap(AffineMap::get(unwrap(ctx)));
 }
 
-MlirAffineMap mlirAffineMapGet(MlirContext ctx, intptr_t dimCount,
-                               intptr_t symbolCount) {
+MlirAffineMap mlirAffineMapZeroResultGet(MlirContext ctx, intptr_t dimCount,
+                                         intptr_t symbolCount) {
   return wrap(AffineMap::get(dimCount, symbolCount, unwrap(ctx)));
+}
+
+MlirAffineMap mlirAffineMapGet(MlirContext ctx, intptr_t dimCount,
+                               intptr_t symbolCount, intptr_t nAffineExprs,
+                               MlirAffineExpr *affineExprs) {
+  SmallVector<AffineExpr, 4> exprs;
+  ArrayRef<AffineExpr> exprList = unwrapList(nAffineExprs, affineExprs, exprs);
+  return wrap(AffineMap::get(dimCount, symbolCount, exprList, unwrap(ctx)));
 }
 
 MlirAffineMap mlirAffineMapConstantGet(MlirContext ctx, int64_t val) {
@@ -92,6 +101,10 @@ intptr_t mlirAffineMapGetNumSymbols(MlirAffineMap affineMap) {
 
 intptr_t mlirAffineMapGetNumResults(MlirAffineMap affineMap) {
   return unwrap(affineMap).getNumResults();
+}
+
+MlirAffineExpr mlirAffineMapGetResult(MlirAffineMap affineMap, intptr_t pos) {
+  return wrap(unwrap(affineMap).getResult(static_cast<unsigned>(pos)));
 }
 
 intptr_t mlirAffineMapGetNumInputs(MlirAffineMap affineMap) {

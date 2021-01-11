@@ -53,6 +53,22 @@ TYPED_TEST(IntrusiveRefCntPtrTest, InteropsWithUniquePtr) {
   EXPECT_EQ(0, NumInstances);
 }
 
+TYPED_TEST(IntrusiveRefCntPtrTest, MakeIntrusiveRefCnt) {
+  EXPECT_EQ(0, NumInstances);
+  {
+    auto S1 = makeIntrusiveRefCnt<TypeParam>();
+    auto S2 = makeIntrusiveRefCnt<const TypeParam>();
+    EXPECT_EQ(2, NumInstances);
+    static_assert(
+        std::is_same<decltype(S1), IntrusiveRefCntPtr<TypeParam>>::value,
+        "Non-const type mismatch");
+    static_assert(
+        std::is_same<decltype(S2), IntrusiveRefCntPtr<const TypeParam>>::value,
+        "Const type mismatch");
+  }
+  EXPECT_EQ(0, NumInstances);
+}
+
 struct InterceptRefCounted : public RefCountedBase<InterceptRefCounted> {
   InterceptRefCounted(bool *Released, bool *Retained)
     : Released(Released), Retained(Retained) {}

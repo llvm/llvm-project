@@ -192,6 +192,45 @@ multiclass VPatIntegerSetCCSDNode_VX_VI<CondCode cc,
                                    SplatPat_simm5, simm5, swap>;
 }
 
+multiclass VPatFPSetCCSDNode_VV<CondCode cc, string instruction_name> {
+  foreach fvti = AllFloatVectors in
+    def : Pat<(fvti.Mask (setcc (fvti.Vector fvti.RegClass:$rs1),
+                                (fvti.Vector fvti.RegClass:$rs2),
+                                cc)),
+              (!cast<Instruction>(instruction_name#"_VV_"#fvti.LMul.MX)
+                  fvti.RegClass:$rs1, fvti.RegClass:$rs2, VLMax, fvti.SEW)>;
+}
+
+multiclass VPatFPSetCCSDNode_VF<CondCode cc, string instruction_name> {
+  foreach fvti = AllFloatVectors in
+    def : Pat<(fvti.Mask (setcc (fvti.Vector fvti.RegClass:$rs1),
+                                (fvti.Vector (splat_vector fvti.ScalarRegClass:$rs2)),
+                                cc)),
+              (!cast<Instruction>(instruction_name#"_VF_"#fvti.LMul.MX)
+                  fvti.RegClass:$rs1,
+                  ToFPR32<fvti.Scalar, fvti.ScalarRegClass, "rs2">.ret,
+                  VLMax, fvti.SEW)>;
+}
+
+multiclass VPatFPSetCCSDNode_FV<CondCode cc, string swapped_op_instruction_name> {
+  foreach fvti = AllFloatVectors in
+    def : Pat<(fvti.Mask (setcc (fvti.Vector (splat_vector fvti.ScalarRegClass:$rs2)),
+                                (fvti.Vector fvti.RegClass:$rs1),
+                                cc)),
+              (!cast<Instruction>(swapped_op_instruction_name#"_VF_"#fvti.LMul.MX)
+                  fvti.RegClass:$rs1,
+                  ToFPR32<fvti.Scalar, fvti.ScalarRegClass, "rs2">.ret,
+                  VLMax, fvti.SEW)>;
+}
+
+multiclass VPatFPSetCCSDNode_VV_VF_FV<CondCode cc,
+                                      string inst_name,
+                                      string swapped_op_inst_name> {
+  defm : VPatFPSetCCSDNode_VV<cc, inst_name>;
+  defm : VPatFPSetCCSDNode_VF<cc, inst_name>;
+  defm : VPatFPSetCCSDNode_FV<cc, swapped_op_inst_name>;
+}
+
 //===----------------------------------------------------------------------===//
 // Patterns.
 //===----------------------------------------------------------------------===//
@@ -299,6 +338,23 @@ foreach mti = AllMasks in {
 
 } // Predicates = [HasStdExtV]
 
+let Predicates = [HasStdExtV, HasStdExtF] in {
+
+// 14.11. Vector Floating-Point Compare Instructions
+defm "" : VPatFPSetCCSDNode_VV_VF_FV<SETEQ,  "PseudoVMFEQ", "PseudoVMFEQ">;
+defm "" : VPatFPSetCCSDNode_VV_VF_FV<SETOEQ, "PseudoVMFEQ", "PseudoVMFEQ">;
+
+defm "" : VPatFPSetCCSDNode_VV_VF_FV<SETNE,  "PseudoVMFNE", "PseudoVMFNE">;
+defm "" : VPatFPSetCCSDNode_VV_VF_FV<SETUNE, "PseudoVMFNE", "PseudoVMFNE">;
+
+defm "" : VPatFPSetCCSDNode_VV_VF_FV<SETLT,  "PseudoVMFLT", "PseudoVMFGT">;
+defm "" : VPatFPSetCCSDNode_VV_VF_FV<SETOLT, "PseudoVMFLT", "PseudoVMFGT">;
+
+defm "" : VPatFPSetCCSDNode_VV_VF_FV<SETLE,  "PseudoVMFLE", "PseudoVMFGE">;
+defm "" : VPatFPSetCCSDNode_VV_VF_FV<SETOLE, "PseudoVMFLE", "PseudoVMFGE">;
+
+} // Predicates = [HasStdExtV, HasStdExtF]
+
 //===----------------------------------------------------------------------===//
 // Vector Splats
 //===----------------------------------------------------------------------===//
@@ -333,3 +389,16 @@ foreach vti = AllIntegerVectors in {
   }
 }
 } // Predicates = [HasStdExtV, IsRV32]
+
+let Predicates = [HasStdExtV, HasStdExtF] in {
+foreach fvti = AllFloatVectors in {
+  def : Pat<(fvti.Vector (splat_vector fvti.ScalarRegClass:$rs1)),
+            (!cast<Instruction>("PseudoVFMV_V_F_"#fvti.LMul.MX)
+              ToFPR32<fvti.Scalar, fvti.ScalarRegClass, "rs1">.ret,
+              VLMax, fvti.SEW)>;
+
+  def : Pat<(fvti.Vector (splat_vector (fvti.Scalar fpimm0))),
+            (!cast<Instruction>("PseudoVMV_V_I_"#fvti.LMul.MX)
+              0, VLMax, fvti.SEW)>;
+}
+} // Predicates = [HasStdExtV, HasStdExtF]
