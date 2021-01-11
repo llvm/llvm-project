@@ -538,7 +538,7 @@ public:
   early_inc_iterator_impl(WrappedIteratorT I) : BaseT(I) {}
 
   using BaseT::operator*;
-  typename BaseT::reference operator*() {
+  decltype(*std::declval<WrappedIteratorT>()) operator*() {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
     assert(!IsEarlyIncremented && "Cannot dereference twice!");
     IsEarlyIncremented = true;
