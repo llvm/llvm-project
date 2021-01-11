@@ -273,9 +273,8 @@ void GenerateGetKind(const std::vector<Record *> &Records, raw_ostream &OS,
                      StringRef Enum, const DirectiveLanguage &DirLang,
                      StringRef Prefix, bool ImplicitAsUnknown) {
 
-  auto DefaultIt = std::find_if(Records.begin(), Records.end(), [](Record *R) {
-    return R->getValueAsBit("isDefault") == true;
-  });
+  auto DefaultIt = llvm::find_if(
+      Records, [](Record *R) { return R->getValueAsBit("isDefault") == true; });
 
   if (DefaultIt == Records.end()) {
     PrintError("At least one " + Enum + " must be defined as default.");
@@ -312,10 +311,9 @@ void GenerateGetKindClauseVal(const DirectiveLanguage &DirLang,
     if (ClauseVals.size() <= 0)
       continue;
 
-    auto DefaultIt =
-        std::find_if(ClauseVals.begin(), ClauseVals.end(), [](Record *CV) {
-          return CV->getValueAsBit("isDefault") == true;
-        });
+    auto DefaultIt = llvm::find_if(ClauseVals, [](Record *CV) {
+      return CV->getValueAsBit("isDefault") == true;
+    });
 
     if (DefaultIt == ClauseVals.end()) {
       PrintError("At least one val in Clause " + C.getFormattedName() +
