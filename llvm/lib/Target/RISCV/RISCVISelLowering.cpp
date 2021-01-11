@@ -403,12 +403,20 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         // 2. Integer VTs are lowered as a series of "RISCVISD::TRUNCATE_VECTOR"
         // nodes which truncate by one power of two at a time.
         setOperationAction(ISD::TRUNCATE, VT, Custom);
+
+        // Custom-lower insert/extract operations to simplify patterns.
+        setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
+        setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
       }
     }
 
-    // We must custom-lower SPLAT_VECTOR vXi64 on RV32
-    if (!Subtarget.is64Bit())
+    // We must custom-lower certain vXi64 operations on RV32 due to the vector
+    // element type being illegal.
+    if (!Subtarget.is64Bit()) {
       setOperationAction(ISD::SPLAT_VECTOR, MVT::i64, Custom);
+      setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::i64, Custom);
+      setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::i64, Custom);
+    }
 
     // Expand various CCs to best match the RVV ISA, which natively supports UNE
     // but no other unordered comparisons, and supports all ordered comparisons
@@ -423,33 +431,34 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::SETGT,  ISD::SETOGT, ISD::SETGE,  ISD::SETOGE,
     };
 
+    // Sets common operation actions on RVV floating-point vector types.
+    const auto SetCommonVFPActions = [&](MVT VT) {
+      setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
+      // Custom-lower insert/extract operations to simplify patterns.
+      setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
+      setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
+      for (auto CC : VFPCCToExpand)
+        setCondCodeAction(CC, VT, Expand);
+    };
+
     if (Subtarget.hasStdExtZfh()) {
       for (auto VT : {RISCVVMVTs::vfloat16mf4_t, RISCVVMVTs::vfloat16mf2_t,
                       RISCVVMVTs::vfloat16m1_t, RISCVVMVTs::vfloat16m2_t,
-                      RISCVVMVTs::vfloat16m4_t, RISCVVMVTs::vfloat16m8_t}) {
-        setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
-        for (auto CC : VFPCCToExpand)
-          setCondCodeAction(CC, VT, Expand);
-      }
+                      RISCVVMVTs::vfloat16m4_t, RISCVVMVTs::vfloat16m8_t})
+        SetCommonVFPActions(VT);
     }
 
     if (Subtarget.hasStdExtF()) {
       for (auto VT : {RISCVVMVTs::vfloat32mf2_t, RISCVVMVTs::vfloat32m1_t,
                       RISCVVMVTs::vfloat32m2_t, RISCVVMVTs::vfloat32m4_t,
-                      RISCVVMVTs::vfloat32m8_t}) {
-        setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
-        for (auto CC : VFPCCToExpand)
-          setCondCodeAction(CC, VT, Expand);
-      }
+                      RISCVVMVTs::vfloat32m8_t})
+        SetCommonVFPActions(VT);
     }
 
     if (Subtarget.hasStdExtD()) {
       for (auto VT : {RISCVVMVTs::vfloat64m1_t, RISCVVMVTs::vfloat64m2_t,
-                      RISCVVMVTs::vfloat64m4_t, RISCVVMVTs::vfloat64m8_t}) {
-        setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
-        for (auto CC : VFPCCToExpand)
-          setCondCodeAction(CC, VT, Expand);
-      }
+                      RISCVVMVTs::vfloat64m4_t, RISCVVMVTs::vfloat64m8_t})
+        SetCommonVFPActions(VT);
     }
   }
 
@@ -761,6 +770,10 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerVectorMaskExt(Op, DAG, /*ExtVal*/ -1);
   case ISD::SPLAT_VECTOR:
     return lowerSPLATVECTOR(Op, DAG);
+  case ISD::INSERT_VECTOR_ELT:
+    return lowerINSERT_VECTOR_ELT(Op, DAG);
+  case ISD::EXTRACT_VECTOR_ELT:
+    return lowerEXTRACT_VECTOR_ELT(Op, DAG);
   case ISD::VSCALE: {
     MVT VT = Op.getSimpleValueType();
     SDLoc DL(Op);
@@ -1209,6 +1222,12 @@ SDValue RISCVTargetLowering::lowerSPLATVECTOR(SDValue Op,
                          DAG.getConstant(CVal->getSExtValue(), DL, MVT::i32));
   }
 
+  if (SplatVal.getOpcode() == ISD::SIGN_EXTEND &&
+      SplatVal.getOperand(0).getValueType() == MVT::i32) {
+    return DAG.getNode(RISCVISD::SPLAT_VECTOR_I64, DL, VecVT,
+                       SplatVal.getOperand(0));
+  }
+
   // Else, on RV32 we lower an i64-element SPLAT_VECTOR thus, being careful not
   // to accidentally sign-extend the 32-bit halves to the e64 SEW:
   // vmv.v.x vX, hi
@@ -1304,6 +1323,72 @@ SDValue RISCVTargetLowering::lowerVectorMaskTrunc(SDValue Op,
   SDValue Trunc = DAG.getNode(ISD::AND, DL, VecVT, Src, SplatOne);
 
   return DAG.getSetCC(DL, MaskVT, Trunc, SplatZero, ISD::SETNE);
+}
+
+SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
+                                                    SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  EVT VecVT = Op.getValueType();
+  SDValue Vec = Op.getOperand(0);
+  SDValue Val = Op.getOperand(1);
+  SDValue Idx = Op.getOperand(2);
+
+  // Custom-legalize INSERT_VECTOR_ELT where XLEN>=SEW, so that the vector is
+  // first slid down into position, the value is inserted into the first
+  // position, and the vector is slid back up. We do this to simplify patterns.
+  //   (slideup vec, (insertelt (slidedown impdef, vec, idx), val, 0), idx),
+  if (Subtarget.is64Bit() || VecVT.getVectorElementType() != MVT::i64) {
+    if (isNullConstant(Idx))
+      return Op;
+    SDValue Slidedown = DAG.getNode(RISCVISD::VSLIDEDOWN, DL, VecVT,
+                                    DAG.getUNDEF(VecVT), Vec, Idx);
+    SDValue InsertElt0 =
+        DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VecVT, Slidedown, Val,
+                    DAG.getConstant(0, DL, Subtarget.getXLenVT()));
+
+    return DAG.getNode(RISCVISD::VSLIDEUP, DL, VecVT, Vec, InsertElt0, Idx);
+  }
+
+  // Custom-legalize INSERT_VECTOR_ELT where XLEN<SEW, as the SEW element type
+  // is illegal (currently only vXi64 RV32).
+  // Since there is no easy way of getting a single element into a vector when
+  // XLEN<SEW, we lower the operation to the following sequence:
+  //   splat      vVal, rVal
+  //   vid.v      vVid
+  //   vmseq.vx   mMask, vVid, rIdx
+  //   vmerge.vvm vDest, vSrc, vVal, mMask
+  // This essentially merges the original vector with the inserted element by
+  // using a mask whose only set bit is that corresponding to the insert
+  // index.
+  SDValue SplattedVal = DAG.getSplatVector(VecVT, DL, Val);
+  SDValue SplattedIdx = DAG.getNode(RISCVISD::SPLAT_VECTOR_I64, DL, VecVT, Idx);
+
+  SDValue VID = DAG.getNode(RISCVISD::VID, DL, VecVT);
+  auto SetCCVT =
+      getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VecVT);
+  SDValue Mask = DAG.getSetCC(DL, SetCCVT, VID, SplattedIdx, ISD::SETEQ);
+
+  return DAG.getNode(ISD::VSELECT, DL, VecVT, Mask, SplattedVal, Vec);
+}
+
+// Custom-lower EXTRACT_VECTOR_ELT operations to slide the vector down, then
+// extract the first element: (extractelt (slidedown vec, idx), 0). This is
+// done to maintain partity with the legalization of RV32 vXi64 legalization.
+SDValue RISCVTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
+                                                     SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Idx = Op.getOperand(1);
+  if (isNullConstant(Idx))
+    return Op;
+
+  SDValue Vec = Op.getOperand(0);
+  EVT EltVT = Op.getValueType();
+  EVT VecVT = Vec.getValueType();
+  SDValue Slidedown = DAG.getNode(RISCVISD::VSLIDEDOWN, DL, VecVT,
+                                  DAG.getUNDEF(VecVT), Vec, Idx);
+
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Slidedown,
+                     DAG.getConstant(0, DL, Subtarget.getXLenVT()));
 }
 
 SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
@@ -1638,6 +1723,44 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
         N->getOpcode() == ISD::FSHL ? RISCVISD::FSLW : RISCVISD::FSRW;
     SDValue NewOp = DAG.getNode(Opc, DL, MVT::i64, NewOp0, NewOp1, NewOp2);
     Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, NewOp));
+    break;
+  }
+  case ISD::EXTRACT_VECTOR_ELT: {
+    // Custom-legalize an EXTRACT_VECTOR_ELT where XLEN<SEW, as the SEW element
+    // type is illegal (currently only vXi64 RV32).
+    // With vmv.x.s, when SEW > XLEN, only the least-significant XLEN bits are
+    // transferred to the destination register. We issue two of these from the
+    // upper- and lower- halves of the SEW-bit vector element, slid down to the
+    // first element.
+    SDLoc DL(N);
+    SDValue Vec = N->getOperand(0);
+    SDValue Idx = N->getOperand(1);
+    EVT VecVT = Vec.getValueType();
+    assert(!Subtarget.is64Bit() && N->getValueType(0) == MVT::i64 &&
+           VecVT.getVectorElementType() == MVT::i64 &&
+           "Unexpected EXTRACT_VECTOR_ELT legalization");
+
+    SDValue Slidedown = Vec;
+    // Unless the index is known to be 0, we must slide the vector down to get
+    // the desired element into index 0.
+    if (!isNullConstant(Idx))
+      Slidedown = DAG.getNode(RISCVISD::VSLIDEDOWN, DL, VecVT,
+                              DAG.getUNDEF(VecVT), Vec, Idx);
+
+    MVT XLenVT = Subtarget.getXLenVT();
+    // Extract the lower XLEN bits of the correct vector element.
+    SDValue EltLo = DAG.getNode(RISCVISD::VMV_X_S, DL, XLenVT, Slidedown, Idx);
+
+    // To extract the upper XLEN bits of the vector element, shift the first
+    // element right by 32 bits and re-extract the lower XLEN bits.
+    SDValue ThirtyTwoV =
+        DAG.getNode(RISCVISD::SPLAT_VECTOR_I64, DL, VecVT,
+                    DAG.getConstant(32, DL, Subtarget.getXLenVT()));
+    SDValue LShr32 = DAG.getNode(ISD::SRL, DL, VecVT, Slidedown, ThirtyTwoV);
+
+    SDValue EltHi = DAG.getNode(RISCVISD::VMV_X_S, DL, XLenVT, LShr32, Idx);
+
+    Results.push_back(DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, EltLo, EltHi));
     break;
   }
   case ISD::INTRINSIC_WO_CHAIN: {
@@ -2231,8 +2354,12 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
     return 33;
   case RISCVISD::VMV_X_S:
     // The number of sign bits of the scalar result is computed by obtaining the
-    // element type of the input vector operand, substracting its width from the
-    // XLEN, and then adding one (sign bit within the element type).
+    // element type of the input vector operand, subtracting its width from the
+    // XLEN, and then adding one (sign bit within the element type). If the
+    // element type is wider than XLen, the least-significant XLEN bits are
+    // taken.
+    if (Op.getOperand(0).getScalarValueSizeInBits() > Subtarget.getXLen())
+      return 1;
     return Subtarget.getXLen() - Op.getOperand(0).getScalarValueSizeInBits() + 1;
   }
 
@@ -3893,6 +4020,9 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VLEFF)
   NODE_NAME_CASE(VLEFF_MASK)
   NODE_NAME_CASE(READ_VL)
+  NODE_NAME_CASE(VSLIDEUP)
+  NODE_NAME_CASE(VSLIDEDOWN)
+  NODE_NAME_CASE(VID)
   }
   // clang-format on
   return nullptr;

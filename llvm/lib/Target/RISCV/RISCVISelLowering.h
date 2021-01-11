@@ -101,6 +101,13 @@ enum NodeType : unsigned {
   VLEFF_MASK,
   // read vl CSR
   READ_VL,
+  // Matches the semantics of vslideup/vslidedown. The first operand is the
+  // pass-thru operand, the second is the source vector, and the third is the
+  // XLenVT index (either constant or non-constant).
+  VSLIDEUP,
+  VSLIDEDOWN,
+  // Matches the semantics of the unmasked vid.v instruction.
+  VID,
 };
 } // namespace RISCVISD
 
@@ -298,6 +305,8 @@ private:
   SDValue lowerVectorMaskExt(SDValue Op, SelectionDAG &DAG,
                              int64_t ExtTrueVal) const;
   SDValue lowerVectorMaskTrunc(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, SelectionDAG &DAG) const;
 
