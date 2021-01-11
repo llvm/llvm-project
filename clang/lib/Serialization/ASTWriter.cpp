@@ -4144,24 +4144,24 @@ void ASTWriter::WriteMSPointersToMembersPragmaOptions(Sema &SemaRef) {
   Stream.EmitRecord(POINTERS_TO_MEMBERS_PRAGMA_OPTIONS, Record);
 }
 
-/// Write the state of 'pragma pack' at the end of the module.
+/// Write the state of 'pragma align/pack' at the end of the module.
 void ASTWriter::WritePackPragmaOptions(Sema &SemaRef) {
-  // Don't serialize pragma pack state for modules, since it should only take
-  // effect on a per-submodule basis.
+  // Don't serialize pragma align/pack state for modules, since it should only
+  // take effect on a per-submodule basis.
   if (WritingModule)
     return;
 
   RecordData Record;
-  Record.push_back(SemaRef.PackStack.CurrentValue);
-  AddSourceLocation(SemaRef.PackStack.CurrentPragmaLocation, Record);
-  Record.push_back(SemaRef.PackStack.Stack.size());
-  for (const auto &StackEntry : SemaRef.PackStack.Stack) {
+  Record.push_back(SemaRef.AlignPackStack.CurrentValue);
+  AddSourceLocation(SemaRef.AlignPackStack.CurrentPragmaLocation, Record);
+  Record.push_back(SemaRef.AlignPackStack.Stack.size());
+  for (const auto &StackEntry : SemaRef.AlignPackStack.Stack) {
     Record.push_back(StackEntry.Value);
     AddSourceLocation(StackEntry.PragmaLocation, Record);
     AddSourceLocation(StackEntry.PragmaPushLocation, Record);
     AddString(StackEntry.StackSlotLabel, Record);
   }
-  Stream.EmitRecord(PACK_PRAGMA_OPTIONS, Record);
+  Stream.EmitRecord(ALIGN_PACK_PRAGMA_OPTIONS, Record);
 }
 
 /// Write the state of 'pragma float_control' at the end of the module.
