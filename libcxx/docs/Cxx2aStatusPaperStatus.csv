@@ -21,7 +21,7 @@
 "`P0551R3 <https://wg21.link/P0551R3>`__","LWG","Thou Shalt Not Specialize ``std``\  Function Templates!","Jacksonville","|Complete|","11.0"
 "`P0753R2 <https://wg21.link/P0753R2>`__","LWG","Manipulators for C++ Synchronized Buffered Ostream","Jacksonville","",""
 "`P0754R2 <https://wg21.link/P0754R2>`__","LWG","<version>","Jacksonville","|Complete|","7.0"
-"`P0809R0 <https://wg21.link/P0809R0>`__","LWG","Comparing Unordered Containers","Jacksonville","",""
+"`P0809R0 <https://wg21.link/P0809R0>`__","LWG","Comparing Unordered Containers","Jacksonville","|Nothing To Do|",""
 "`P0858R0 <https://wg21.link/P0858R0>`__","LWG","Constexpr iterator requirements","Jacksonville","",""
 "`P0905R1 <https://wg21.link/P0905R1>`__","CWG","Symmetry for spaceship","Jacksonville","",""
 "`P0966R1 <https://wg21.link/P0966R1>`__","LWG","``string::reserve``\  Should Not Shrink","Jacksonville","|Complete| [#note-P0966]_","12.0"
