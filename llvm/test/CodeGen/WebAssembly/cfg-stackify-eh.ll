@@ -1,8 +1,8 @@
 ; REQUIRES: asserts
 ; TODO Reenable disabled lines after updating the backend to the new spec
-; R UN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -exception-model=wasm -mattr=+exception-handling | FileCheck %s
+; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -exception-model=wasm -mattr=+exception-handling | FileCheck %s
 ; RUN: llc < %s -disable-wasm-fallthrough-return-opt -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -exception-model=wasm -mattr=+exception-handling
-; R UN: llc < %s -O0 -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -verify-machineinstrs -exception-model=wasm -mattr=+exception-handling | FileCheck %s --check-prefix=NOOPT
+; RUN: llc < %s -O0 -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -verify-machineinstrs -exception-model=wasm -mattr=+exception-handling | FileCheck %s --check-prefix=NOOPT
 ; R UN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -exception-model=wasm -mattr=+exception-handling -wasm-disable-ehpad-sort | FileCheck %s --check-prefix=NOSORT
 ; R UN: llc < %s -disable-wasm-fallthrough-return-opt -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -exception-model=wasm -mattr=+exception-handling -wasm-disable-ehpad-sort | FileCheck %s --check-prefix=NOSORT-LOCALS
 ; R UN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -exception-model=wasm -mattr=+exception-handling -wasm-disable-ehpad-sort -stats 2>&1 | FileCheck %s --check-prefix=NOSORT-STAT
@@ -43,7 +43,7 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK:     call      __cxa_end_catch
 ; CHECK:     br        1                               # 1: down to label[[L1]]
 ; CHECK:   end_block                                   # label[[L2]]:
-; CHECK:   rethrow   {{.*}}                            # to caller
+; CHECK:   rethrow   0                                 # to caller
 ; CHECK: end_try                                       # label[[L1]]:
 define void @test0() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:
@@ -118,19 +118,19 @@ try.cont:                                         ; preds = %catch, %catch2, %en
 ; CHECK:               br        2                     # 2: down to label[[L3:[0-9]+]]
 ; CHECK:             catch
 ; CHECK:               call      __cxa_end_catch
-; CHECK:               rethrow   {{.*}}                # down to catch[[C0:[0-9]+]]
+; CHECK:               rethrow   0                     # down to catch[[C0:[0-9]+]]
 ; CHECK:             end_try
 ; CHECK:           end_block                           # label[[L2]]:
-; CHECK:           rethrow   {{.*}}                    # down to catch[[C0]]
-; CHECK:         catch     {{.*}}                      # catch[[C0]]:
+; CHECK:           rethrow   0                         # down to catch[[C0]]
+; CHECK:         catch_all                             # catch[[C0]]:
 ; CHECK:           call      __cxa_end_catch
-; CHECK:           rethrow   {{.*}}                    # to caller
+; CHECK:           rethrow   0                         # to caller
 ; CHECK:         end_try                               # label[[L3]]:
 ; CHECK:         call      __cxa_end_catch
 ; CHECK:         br        2                           # 2: down to label[[L1]]
 ; CHECK:       end_try
 ; CHECK:     end_block                                 # label[[L0]]:
-; CHECK:     rethrow   {{.*}}                          # to caller
+; CHECK:     rethrow   0                               # to caller
 ; CHECK:   end_block                                   # label[[L1]]:
 ; CHECK:   call      __cxa_end_catch
 ; CHECK: end_try
@@ -237,7 +237,7 @@ unreachable:                                      ; preds = %rethrow5
 ; CHECK:             call      __clang_call_terminate
 ; CHECK:             unreachable
 ; CHECK:           end_try
-; CHECK:           rethrow   {{.*}}                    # to caller
+; CHECK:           rethrow   0                         # to caller
 ; CHECK:         end_try
 ; CHECK:       end_block                               # label[[L1]]:
 ; CHECK:       call      __cxa_end_catch
@@ -658,7 +658,7 @@ try.cont:                                         ; preds = %catch.start
 ; NOSORT:           br_on_exn   0, {{.*}}              # 0: down to label[[L2:[0-9]+]]
 ; --- Nested try/catch/end_try starts
 ; NOSORT:           try
-; NOSORT:             rethrow   {{.*}}                 # down to catch[[C0:[0-9]+]]
+; NOSORT:             rethrow   0                      # down to catch[[C0:[0-9]+]]
 ; NOSORT:           catch     $[[REG1:[0-9]+]]=        # catch[[C0]]:
 ; NOSORT:             br        5                      # 5: down to label[[L3:[0-9]+]]
 ; NOSORT:           end_try
