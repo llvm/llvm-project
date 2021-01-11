@@ -131,3 +131,38 @@ define fastcc <256 x double> @vmrgw_vvvMvl(<256 x double> %0, <256 x double> %1,
 
 ; Function Attrs: nounwind readnone
 declare <256 x double> @llvm.ve.vl.vmrgw.vvvMvl(<256 x double>, <256 x double>, <512 x i1>, <256 x double>, i32)
+
+; Function Attrs: nounwind readnone
+define fastcc <256 x double> @vmrgw_vsvMl(i32 signext %0, <256 x double> %1, <512 x i1> %2) {
+; CHECK-LABEL: vmrgw_vsvMl:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    and %s0, %s0, (32)0
+; CHECK-NEXT:    lea %s1, 256
+; CHECK-NEXT:    lvl %s1
+; CHECK-NEXT:    vmrg.w %v0, %s0, %v0, %vm2
+; CHECK-NEXT:    b.l.t (, %s10)
+  %4 = tail call fast <256 x double> @llvm.ve.vl.vmrgw.vsvMl(i32 %0, <256 x double> %1, <512 x i1> %2, i32 256)
+  ret <256 x double> %4
+}
+
+; Function Attrs: nounwind readnone
+declare <256 x double> @llvm.ve.vl.vmrgw.vsvMl(i32, <256 x double>, <512 x i1>, i32)
+
+; Function Attrs: nounwind readnone
+define fastcc <256 x double> @vmrgw_vsvMvl(i32 signext %0, <256 x double> %1, <512 x i1> %2, <256 x double> %3) {
+; CHECK-LABEL: vmrgw_vsvMvl:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    and %s0, %s0, (32)0
+; CHECK-NEXT:    lea %s1, 128
+; CHECK-NEXT:    lvl %s1
+; CHECK-NEXT:    vmrg.w %v1, %s0, %v0, %vm2
+; CHECK-NEXT:    lea %s16, 256
+; CHECK-NEXT:    lvl %s16
+; CHECK-NEXT:    vor %v0, (0)1, %v1
+; CHECK-NEXT:    b.l.t (, %s10)
+  %5 = tail call fast <256 x double> @llvm.ve.vl.vmrgw.vsvMvl(i32 %0, <256 x double> %1, <512 x i1> %2, <256 x double> %3, i32 128)
+  ret <256 x double> %5
+}
+
+; Function Attrs: nounwind readnone
+declare <256 x double> @llvm.ve.vl.vmrgw.vsvMvl(i32, <256 x double>, <512 x i1>, <256 x double>, i32)

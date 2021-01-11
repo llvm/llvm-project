@@ -72,3 +72,25 @@ ods_def<Test3Op> :
 def test3(A: f32(Batch, M, K), B: f32(K, N)) -> (C: f32(Batch, M, N)) {
   C(b, m, n) = std_addf<k>(std_mulf(A(b, m, k), B(k, n)));
 }
+
+// Test attribute definitions
+// ODS-LABEL: def Test4Op
+// ODS: F32ArrayAttr:$array_attr,
+// ODS: F32:$f32_attr,
+// ODS: RankedF32ElementsAttr<[4]>:$fvec_attr,
+// ODS: I32:$i32_attr,
+// ODS: RankedI32ElementsAttr<[5, 6]>:$ivec_attr,
+// ODS: OptionalAttr<F32>:$optional_attr
+//
+ods_def<Test4Op> :
+def test4(A: f32(Batch, M, K), B: f32(K, N)) -> (C: f32(Batch, M, N))
+attr(
+  f32_attr: f32,
+  i32_attr: i32,
+  fvec_attr: 4xf32,
+  ivec_attr: 5x6xi32,
+  array_attr : f32[],
+  optional_attr? : f32
+) {
+  C(b, m, n) = std_addf<k>(std_mulf(A(b, m, k), B(k, n)));
+}

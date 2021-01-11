@@ -172,7 +172,7 @@ Sections:
 
 # ERR3-GNU:      Displaying notes found at file offset 0xffff0000 with length 0x00000000:
 # ERR3-GNU-NEXT:   Owner                Data size        Description
-# ERR3-GNU-NEXT: warning: '[[FILE]]': unable to read notes from the PT_NOTE segment with index 1: invalid offset (0xffff0000) or size (0x0)
+# ERR3-GNU-NEXT: warning: '[[FILE]]': unable to read notes from the PT_NOTE segment with index 0: invalid offset (0xffff0000) or size (0x0)
 # ERR3-GNU-NOT: {{.}}
 
 # ERR3-LLVM:      Notes [
@@ -180,7 +180,7 @@ Sections:
 # ERR3-LLVM-NEXT:     Name: <?>
 # ERR3-LLVM-NEXT:     Offset: 0xFFFF0000
 # ERR3-LLVM-NEXT:     Size: 0x0
-# ERR3-LLVM-NEXT: warning: '[[FILE]]': unable to read notes from the PT_NOTE segment with index 1: invalid offset (0xffff0000) or size (0x0)
+# ERR3-LLVM-NEXT: warning: '[[FILE]]': unable to read notes from the PT_NOTE segment with index 0: invalid offset (0xffff0000) or size (0x0)
 # ERR3-LLVM-NEXT:   }
 # ERR3-LLVM-NEXT: ]
 
@@ -203,7 +203,7 @@ ProgramHeaders:
 
 # ERR4-GNU:      Displaying notes found at file offset 0x00000000 with length 0xffff0000:
 # ERR4-GNU-NEXT:   Owner                Data size        Description
-# ERR4-GNU-NEXT: warning: '[[FILE]]': unable to read notes from the PT_NOTE segment with index 1: invalid offset (0x0) or size (0xffff0000)
+# ERR4-GNU-NEXT: warning: '[[FILE]]': unable to read notes from the PT_NOTE segment with index 0: invalid offset (0x0) or size (0xffff0000)
 # ERR4-GNU-NOT: {{.}}
 
 # ERR4-LLVM:      Notes [
@@ -211,7 +211,7 @@ ProgramHeaders:
 # ERR4-LLVM-NEXT:     Name: <?>
 # ERR4-LLVM-NEXT:     Offset: 0x0
 # ERR4-LLVM-NEXT:     Size: 0xFFFF0000
-# ERR4-LLVM-NEXT: warning: '[[FILE]]': unable to read notes from the PT_NOTE segment with index 1: invalid offset (0x0) or size (0xffff0000)
+# ERR4-LLVM-NEXT: warning: '[[FILE]]': unable to read notes from the PT_NOTE segment with index 0: invalid offset (0x0) or size (0xffff0000)
 # ERR4-LLVM-NEXT:   }
 # ERR4-LLVM-NEXT: ]
 
