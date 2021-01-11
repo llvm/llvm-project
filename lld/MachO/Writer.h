@@ -14,6 +14,8 @@
 namespace lld {
 namespace macho {
 
+class OutputSection;
+
 class LoadCommand {
 public:
   virtual ~LoadCommand() = default;
@@ -24,6 +26,8 @@ public:
 void writeResult();
 
 void createSyntheticSections();
+
+extern OutputSection *firstTLVDataSection;
 
 } // namespace macho
 } // namespace lld
