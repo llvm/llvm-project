@@ -13,6 +13,7 @@
 #include "mlir/Target/SPIRV/Deserialization.h"
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVModule.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
@@ -28,6 +29,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
@@ -132,6 +134,14 @@ struct DeferredStructTypeInfo {
   SmallVector<spirv::StructType::MemberDecorationInfo, 0> memberDecorationsInfo;
 };
 
+/// A struct that collects the info needed to materialize/emit a
+/// SpecConstantOperation op.
+struct SpecConstOperationMaterializationInfo {
+  spirv::Opcode enclodesOpcode;
+  uint32_t resultTypeID;
+  SmallVector<uint32_t> enclosedOpOperands;
+};
+
 //===----------------------------------------------------------------------===//
 // Deserializer Declaration
 //===----------------------------------------------------------------------===//
@@ -216,9 +226,14 @@ private:
   /// Gets the constant's attribute and type associated with the given <id>.
   Optional<std::pair<Attribute, Type>> getConstant(uint32_t id);
 
-  /// Gets the constant's integer attribute with the given <id>. Returns a null
-  /// IntegerAttr if the given is not registered or does not correspond to an
-  /// integer constant.
+  /// Gets the info needed to materialize the spec constant operation op
+  /// associated with the given <id>.
+  Optional<SpecConstOperationMaterializationInfo>
+  getSpecConstantOperation(uint32_t id);
+
+  /// Gets the constant's integer attribute with the given <id>. Returns a
+  /// null IntegerAttr if the given is not registered or does not correspond
+  /// to an integer constant.
   IntegerAttr getConstantInt(uint32_t id);
 
   /// Returns a symbol to be used for the function name with the given
@@ -305,7 +320,19 @@ private:
   /// `operands`.
   LogicalResult processConstantComposite(ArrayRef<uint32_t> operands);
 
+  /// Processes a SPIR-V OpSpecConstantComposite instruction with the given
+  /// `operands`.
   LogicalResult processSpecConstantComposite(ArrayRef<uint32_t> operands);
+
+  /// Processes a SPIR-V OpSpecConstantOperation instruction with the given
+  /// `operands`.
+  LogicalResult processSpecConstantOperation(ArrayRef<uint32_t> operands);
+
+  /// Materializes/emits an OpSpecConstantOperation instruction.
+  Value materializeSpecConstantOperation(uint32_t resultID,
+                                         spirv::Opcode enclosedOpcode,
+                                         uint32_t resultTypeID,
+                                         ArrayRef<uint32_t> enclosedOpOperands);
 
   /// Processes a SPIR-V OpConstantNull instruction with the given `operands`.
   LogicalResult processConstantNull(ArrayRef<uint32_t> operands);
@@ -533,6 +560,11 @@ private:
 
   // Result <id> to composite spec constant mapping.
   DenseMap<uint32_t, spirv::SpecConstantCompositeOp> specConstCompositeMap;
+
+  /// Result <id> to info needed to materialize an OpSpecConstantOperation
+  /// mapping.
+  DenseMap<uint32_t, SpecConstOperationMaterializationInfo>
+      specConstOperationMap;
 
   // Result <id> to variable mapping.
   DenseMap<uint32_t, spirv::GlobalVariableOp> globalVariableMap;
@@ -1032,6 +1064,14 @@ LogicalResult Deserializer::processFunctionEnd(ArrayRef<uint32_t> operands) {
 Optional<std::pair<Attribute, Type>> Deserializer::getConstant(uint32_t id) {
   auto constIt = constantMap.find(id);
   if (constIt == constantMap.end())
+    return llvm::None;
+  return constIt->getSecond();
+}
+
+Optional<SpecConstOperationMaterializationInfo>
+Deserializer::getSpecConstantOperation(uint32_t id) {
+  auto constIt = specConstOperationMap.find(id);
+  if (constIt == specConstOperationMap.end())
     return llvm::None;
   return constIt->getSecond();
 }
@@ -1745,6 +1785,91 @@ Deserializer::processSpecConstantComposite(ArrayRef<uint32_t> operands) {
   return success();
 }
 
+LogicalResult
+Deserializer::processSpecConstantOperation(ArrayRef<uint32_t> operands) {
+  if (operands.size() < 3)
+    return emitError(unknownLoc, "OpConstantOperation must have type <id>, "
+                                 "result <id>, and operand opcode");
+
+  uint32_t resultTypeID = operands[0];
+
+  if (!getType(resultTypeID))
+    return emitError(unknownLoc, "undefined result type from <id> ")
+           << resultTypeID;
+
+  uint32_t resultID = operands[1];
+  spirv::Opcode enclosedOpcode = static_cast<spirv::Opcode>(operands[2]);
+  auto emplaceResult = specConstOperationMap.try_emplace(
+      resultID,
+      SpecConstOperationMaterializationInfo{
+          enclosedOpcode, resultTypeID,
+          SmallVector<uint32_t>{operands.begin() + 3, operands.end()}});
+
+  if (!emplaceResult.second)
+    return emitError(unknownLoc, "value with <id>: ")
+           << resultID << " is probably defined before.";
+
+  return success();
+}
+
+Value Deserializer::materializeSpecConstantOperation(
+    uint32_t resultID, spirv::Opcode enclosedOpcode, uint32_t resultTypeID,
+    ArrayRef<uint32_t> enclosedOpOperands) {
+
+  Type resultType = getType(resultTypeID);
+
+  // Instructions wrapped by OpSpecConstantOp need an ID for their
+  // Deserializer::processOp<op_name>(...) to emit the corresponding SPIR-V
+  // dialect wrapped op. For that purpose, a new value map is created and "fake"
+  // ID in that map is assigned to the result of the enclosed instruction. Note
+  // that there is no need to update this fake ID since we only need to
+  // reference the created Value for the enclosed op from the spv::YieldOp
+  // created later in this method (both of which are the only values in their
+  // region: the SpecConstantOperation's region). If we encounter another
+  // SpecConstantOperation in the module, we simply re-use the fake ID since the
+  // previous Value assigned to it isn't visible in the current scope anyway.
+  DenseMap<uint32_t, Value> newValueMap;
+  llvm::SaveAndRestore<DenseMap<uint32_t, Value>> valueMapGuard(valueMap,
+                                                                newValueMap);
+  constexpr uint32_t fakeID = static_cast<uint32_t>(-3);
+
+  SmallVector<uint32_t, 4> enclosedOpResultTypeAndOperands;
+  enclosedOpResultTypeAndOperands.push_back(resultTypeID);
+  enclosedOpResultTypeAndOperands.push_back(fakeID);
+  enclosedOpResultTypeAndOperands.append(enclosedOpOperands.begin(),
+                                         enclosedOpOperands.end());
+
+  // Process enclosed instruction before creating the enclosing
+  // specConstantOperation (and its region). This way, references to constants,
+  // global variables, and spec constants will be materialized outside the new
+  // op's region. For more info, see Deserializer::getValue's implementation.
+  if (failed(
+          processInstruction(enclosedOpcode, enclosedOpResultTypeAndOperands)))
+    return Value();
+
+  // Since the enclosed op is emitted in the current block, split it in a
+  // separate new block.
+  Block *enclosedBlock = curBlock->splitBlock(&curBlock->back());
+
+  auto loc = createFileLineColLoc(opBuilder);
+  auto specConstOperationOp =
+      opBuilder.create<spirv::SpecConstantOperationOp>(loc, resultType);
+
+  Region &body = specConstOperationOp.body();
+  // Move the new block into SpecConstantOperation's body.
+  body.getBlocks().splice(body.end(), curBlock->getParent()->getBlocks(),
+                          Region::iterator(enclosedBlock));
+  Block &block = body.back();
+
+  // RAII guard to reset the insertion point to the module's region after
+  // deserializing the body of the specConstantOperation.
+  OpBuilder::InsertionGuard moduleInsertionGuard(opBuilder);
+  opBuilder.setInsertionPointToEnd(&block);
+
+  opBuilder.create<spirv::YieldOp>(loc, block.front().getResult(0));
+  return specConstOperationOp.getResult();
+}
+
 LogicalResult Deserializer::processConstantNull(ArrayRef<uint32_t> operands) {
   if (operands.size() != 2) {
     return emitError(unknownLoc,
@@ -2378,6 +2503,12 @@ Value Deserializer::getValue(uint32_t id) {
         opBuilder.getSymbolRefAttr(constCompositeOp.getOperation()));
     return referenceOfOp.reference();
   }
+  if (auto specConstOperationInfo = getSpecConstantOperation(id)) {
+    return materializeSpecConstantOperation(
+        id, specConstOperationInfo->enclodesOpcode,
+        specConstOperationInfo->resultTypeID,
+        specConstOperationInfo->enclosedOpOperands);
+  }
   if (auto undef = getUndefType(id)) {
     return opBuilder.create<spirv::UndefOp>(unknownLoc, undef);
   }
@@ -2483,6 +2614,8 @@ LogicalResult Deserializer::processInstruction(spirv::Opcode opcode,
     return processConstantComposite(operands);
   case spirv::Opcode::OpSpecConstantComposite:
     return processSpecConstantComposite(operands);
+  case spirv::Opcode::OpSpecConstantOperation:
+    return processSpecConstantOperation(operands);
   case spirv::Opcode::OpConstantTrue:
     return processConstantBool(/*isTrue=*/true, operands, /*isSpec=*/false);
   case spirv::Opcode::OpSpecConstantTrue:

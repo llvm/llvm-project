@@ -3445,9 +3445,8 @@ static LogicalResult verify(spirv::SpecConstantOperationOp constOp) {
     return constOp.emitOpError("invalid enclosed op");
 
   for (auto operand : enclosedOp.getOperands())
-    if (!isa<spirv::ConstantOp, spirv::SpecConstantOp,
-             spirv::SpecConstantCompositeOp, spirv::SpecConstantOperationOp>(
-            operand.getDefiningOp()))
+    if (!isa<spirv::ConstantOp, spirv::ReferenceOfOp,
+             spirv::SpecConstantOperationOp>(operand.getDefiningOp()))
       return constOp.emitOpError(
           "invalid operand, must be defined by a constant operation");
 

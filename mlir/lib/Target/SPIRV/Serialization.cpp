@@ -204,6 +204,9 @@ private:
   LogicalResult
   processSpecConstantCompositeOp(spirv::SpecConstantCompositeOp op);
 
+  LogicalResult
+  processSpecConstantOperationOp(spirv::SpecConstantOperationOp op);
+
   /// SPIR-V dialect supports OpUndef using spv.UndefOp that produces a SSA
   /// value to use with other operations. The SPIR-V spec recommends that
   /// OpUndef be generated at module level. The serialization generates an
@@ -709,6 +712,49 @@ Serializer::processSpecConstantCompositeOp(spirv::SpecConstantCompositeOp op) {
   specConstIDMap[op.sym_name()] = resultID;
 
   return processName(resultID, op.sym_name());
+}
+
+LogicalResult
+Serializer::processSpecConstantOperationOp(spirv::SpecConstantOperationOp op) {
+  uint32_t typeID = 0;
+  if (failed(processType(op.getLoc(), op.getType(), typeID))) {
+    return failure();
+  }
+
+  auto resultID = getNextID();
+
+  SmallVector<uint32_t, 8> operands;
+  operands.push_back(typeID);
+  operands.push_back(resultID);
+
+  Block &block = op.getRegion().getBlocks().front();
+  Operation &enclosedOp = block.getOperations().front();
+
+  std::string enclosedOpName;
+  llvm::raw_string_ostream rss(enclosedOpName);
+  rss << "Op" << enclosedOp.getName().stripDialect();
+  auto enclosedOpcode = spirv::symbolizeOpcode(rss.str());
+
+  if (!enclosedOpcode) {
+    op.emitError("Couldn't find op code for op ")
+        << enclosedOp.getName().getStringRef();
+    return failure();
+  }
+
+  operands.push_back(static_cast<uint32_t>(enclosedOpcode.getValue()));
+
+  // Append operands to the enclosed op to the list of operands.
+  for (Value operand : enclosedOp.getOperands()) {
+    uint32_t id = getValueID(operand);
+    assert(id && "use before def!");
+    operands.push_back(id);
+  }
+
+  encodeInstructionInto(typesGlobalValues,
+                        spirv::Opcode::OpSpecConstantOperation, operands);
+  valueIDMap[op.getResult()] = resultID;
+
+  return success();
 }
 
 LogicalResult Serializer::processUndefOp(spirv::UndefOp op) {
@@ -1928,6 +1974,9 @@ LogicalResult Serializer::processOperation(Operation *opInst) {
       .Case([&](spirv::SpecConstantOp op) { return processSpecConstantOp(op); })
       .Case([&](spirv::SpecConstantCompositeOp op) {
         return processSpecConstantCompositeOp(op);
+      })
+      .Case([&](spirv::SpecConstantOperationOp op) {
+        return processSpecConstantOperationOp(op);
       })
       .Case([&](spirv::UndefOp op) { return processUndefOp(op); })
       .Case([&](spirv::VariableOp op) { return processVariableOp(op); })
