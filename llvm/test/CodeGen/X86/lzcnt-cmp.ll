@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-- -mattr=+lzcnt | FileCheck %s --check-prefixes=X86
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+lzcnt | FileCheck %s --check-prefix=X64
 
-define i1 @lshr_ctlz_cmpeq_one_i64(i64 %in) {
+define i1 @lshr_ctlz_cmpeq_one_i64(i64 %in) nounwind {
 ; X86-LABEL: lshr_ctlz_cmpeq_one_i64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -21,7 +21,7 @@ define i1 @lshr_ctlz_cmpeq_one_i64(i64 %in) {
   ret i1 %icmp
 }
 
-define i1 @lshr_ctlz_undef_cmpeq_one_i64(i64 %in) {
+define i1 @lshr_ctlz_undef_cmpeq_one_i64(i64 %in) nounwind {
 ; X86-LABEL: lshr_ctlz_undef_cmpeq_one_i64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    xorl %eax, %eax
@@ -48,7 +48,7 @@ define i1 @lshr_ctlz_undef_cmpeq_one_i64(i64 %in) {
   ret i1 %icmp
 }
 
-define i1 @lshr_ctlz_cmpne_zero_i64(i64 %in) {
+define i1 @lshr_ctlz_cmpne_zero_i64(i64 %in) nounwind {
 ; X86-LABEL: lshr_ctlz_cmpne_zero_i64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -67,7 +67,7 @@ define i1 @lshr_ctlz_cmpne_zero_i64(i64 %in) {
   ret i1 %icmp
 }
 
-define i1 @lshr_ctlz_undef_cmpne_zero_i64(i64 %in) {
+define i1 @lshr_ctlz_undef_cmpne_zero_i64(i64 %in) nounwind {
 ; X86-LABEL: lshr_ctlz_undef_cmpne_zero_i64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    xorl %eax, %eax
@@ -93,12 +93,10 @@ define i1 @lshr_ctlz_undef_cmpne_zero_i64(i64 %in) {
   ret i1 %icmp
 }
 
-define <2 x i64> @lshr_ctlz_cmpeq_zero_v2i64(<2 x i64> %in) {
+define <2 x i64> @lshr_ctlz_cmpeq_zero_v2i64(<2 x i64> %in) nounwind {
 ; X86-LABEL: lshr_ctlz_cmpeq_zero_v2i64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -115,7 +113,6 @@ define <2 x i64> @lshr_ctlz_cmpeq_zero_v2i64(<2 x i64> %in) {
 ; X86-NEXT:    movl %ecx, 4(%eax)
 ; X86-NEXT:    movl %ecx, (%eax)
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl $4
 ;
 ; X64-LABEL: lshr_ctlz_cmpeq_zero_v2i64:
@@ -134,12 +131,10 @@ define <2 x i64> @lshr_ctlz_cmpeq_zero_v2i64(<2 x i64> %in) {
   ret <2 x i64> %sext
 }
 
-define <2 x i64> @lshr_ctlz_cmpne_zero_v2i64(<2 x i64> %in) {
+define <2 x i64> @lshr_ctlz_cmpne_zero_v2i64(<2 x i64> %in) nounwind {
 ; X86-LABEL: lshr_ctlz_cmpne_zero_v2i64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -156,7 +151,6 @@ define <2 x i64> @lshr_ctlz_cmpne_zero_v2i64(<2 x i64> %in) {
 ; X86-NEXT:    movl %ecx, 4(%eax)
 ; X86-NEXT:    movl %ecx, (%eax)
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl $4
 ;
 ; X64-LABEL: lshr_ctlz_cmpne_zero_v2i64:
