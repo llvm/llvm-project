@@ -1252,3 +1252,11 @@ func @subtensor_wrong_static_type(%t: tensor<8x16x4xf32>, %idx : index) {
 
   return
 }
+
+// -----
+
+func @no_zero_bit_integer_attrs() {
+  // expected-error @+1 {{integer constant out of range for attribute}}
+  %x = "some.op"(){value = 0 : i0} : () -> f32
+  return
+}
