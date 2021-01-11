@@ -5884,3 +5884,28 @@ Attribute docs`_, and `the GCC Inline docs`_.
 }];
   let Heading = "always_inline, __force_inline";
 }
+
+def EnforceTCBDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+  The ``enforce_tcb`` attribute can be placed on functions to enforce that a
+  trusted compute base (TCB) does not call out of the TCB. This generates a
+  warning every time a function not marked with an ``enforce_tcb`` attribute is
+  called from a function with the ``enforce_tcb`` attribute. A function may be a
+  part of multiple TCBs. Invocations through function pointers are currently
+  not checked. Builtins are considered to a part of every TCB.
+
+  - ``enforce_tcb(Name)`` indicates that this function is a part of the TCB named ``Name``
+  }];
+}
+
+def EnforceTCBLeafDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+  The ``enforce_tcb_leaf`` attribute satisfies the requirement enforced by
+  ``enforce_tcb`` for the marked function to be in the named TCB but does not
+  continue to check the functions called from within the leaf function.
+
+  - ``enforce_tcb_leaf(Name)`` indicates that this function is a part of the TCB named ``Name``
+  }];
+}
