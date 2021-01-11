@@ -2108,6 +2108,10 @@ public:
     return getNumOperands() > 10 ? getOperandAs<Metadata>(10) : nullptr;
   }
 
+  void replaceRawLinkageName(MDString *LinkageName) {
+    replaceOperandWith(3, LinkageName);
+  }
+
   /// Check if this subprogram describes the given function.
   ///
   /// FIXME: Should this be looking through bitcasts?
