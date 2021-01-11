@@ -595,6 +595,32 @@ typedef int PACKED_REDUCTION_METHOD_T;
 #include <pthread.h>
 #endif
 
+enum kmp_hw_t : int {
+  KMP_HW_UNKNOWN = -1,
+  KMP_HW_MACHINE = 0,
+  KMP_HW_SOCKET,
+  KMP_HW_PROC_GROUP,
+  KMP_HW_NUMA,
+  KMP_HW_DIE,
+  KMP_HW_L3,
+  KMP_HW_TILE,
+  KMP_HW_MODULE,
+  KMP_HW_L2,
+  KMP_HW_L1,
+  KMP_HW_CORE,
+  KMP_HW_THREAD,
+  KMP_HW_LAST
+};
+
+#define KMP_ASSERT_VALID_HW_TYPE(type)                                         \
+  KMP_DEBUG_ASSERT(type >= (kmp_hw_t)0 && type < KMP_HW_LAST)
+
+#define KMP_FOREACH_HW_TYPE(type)                                              \
+  for (kmp_hw_t type = (kmp_hw_t)0; type < KMP_HW_LAST;                        \
+       type = (kmp_hw_t)((int)type + 1))
+
+const char *__kmp_hw_get_catalog_string(kmp_hw_t type, bool plural = false);
+
 /* Only Linux* OS and Windows* OS support thread affinity. */
 #if KMP_AFFINITY_SUPPORTED
 
