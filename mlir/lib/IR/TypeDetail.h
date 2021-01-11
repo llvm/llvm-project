@@ -27,31 +27,6 @@ class MLIRContext;
 
 namespace detail {
 
-/// Opaque Type Storage and Uniquing.
-struct OpaqueTypeStorage : public TypeStorage {
-  OpaqueTypeStorage(Identifier dialectNamespace, StringRef typeData)
-      : dialectNamespace(dialectNamespace), typeData(typeData) {}
-
-  /// The hash key used for uniquing.
-  using KeyTy = std::pair<Identifier, StringRef>;
-  bool operator==(const KeyTy &key) const {
-    return key == KeyTy(dialectNamespace, typeData);
-  }
-
-  static OpaqueTypeStorage *construct(TypeStorageAllocator &allocator,
-                                      const KeyTy &key) {
-    StringRef tyData = allocator.copyInto(key.second);
-    return new (allocator.allocate<OpaqueTypeStorage>())
-        OpaqueTypeStorage(key.first, tyData);
-  }
-
-  // The dialect namespace.
-  Identifier dialectNamespace;
-
-  // The parser type data for this opaque type.
-  StringRef typeData;
-};
-
 /// Integer Type Storage and Uniquing.
 struct IntegerTypeStorage : public TypeStorage {
   IntegerTypeStorage(unsigned width,
@@ -288,24 +263,6 @@ struct UnrankedMemRefTypeStorage : public BaseMemRefTypeStorage {
     return new (allocator.allocate<UnrankedMemRefTypeStorage>())
         UnrankedMemRefTypeStorage(std::get<0>(key), std::get<1>(key));
   }
-};
-
-/// Complex Type Storage.
-struct ComplexTypeStorage : public TypeStorage {
-  ComplexTypeStorage(Type elementType) : elementType(elementType) {}
-
-  /// The hash key used for uniquing.
-  using KeyTy = Type;
-  bool operator==(const KeyTy &key) const { return key == elementType; }
-
-  /// Construction.
-  static ComplexTypeStorage *construct(TypeStorageAllocator &allocator,
-                                       Type elementType) {
-    return new (allocator.allocate<ComplexTypeStorage>())
-        ComplexTypeStorage(elementType);
-  }
-
-  Type elementType;
 };
 
 /// A type representing a collection of other types.
