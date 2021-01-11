@@ -113,42 +113,42 @@ func @identified_struct_with_void() {
 
 func @dynamic_vector() {
   // expected-error @+1 {{expected '? x <integer> x <type>' or '<integer> x <type>'}}
-  "some.op"() : () -> !llvm.vec<? x f32>
+  "some.op"() : () -> !llvm.vec<? x ptr<f32>>
 }
 
 // -----
 
 func @dynamic_scalable_vector() {
   // expected-error @+1 {{expected '? x <integer> x <type>' or '<integer> x <type>'}}
-  "some.op"() : () -> !llvm.vec<? x ? x f32>
+  "some.op"() : () -> !llvm.vec<?x? x ptr<f32>>
 }
 
 // -----
 
 func @unscalable_vector() {
   // expected-error @+1 {{expected '? x <integer> x <type>' or '<integer> x <type>'}}
-  "some.op"() : () -> !llvm.vec<4 x 4 x i32>
+  "some.op"() : () -> !llvm.vec<4x4 x ptr<i32>>
 }
 
 // -----
 
 func @zero_vector() {
   // expected-error @+1 {{the number of vector elements must be positive}}
-  "some.op"() : () -> !llvm.vec<0 x i32>
+  "some.op"() : () -> !llvm.vec<0 x ptr<i32>>
 }
 
 // -----
 
 func @nested_vector() {
   // expected-error @+1 {{invalid vector element type}}
-  "some.op"() : () -> !llvm.vec<2 x vec<2 x i32>>
+  "some.op"() : () -> !llvm.vec<2 x vector<2xi32>>
 }
 
 // -----
 
 func @scalable_void_vector() {
   // expected-error @+1 {{invalid vector element type}}
-  "some.op"() : () -> !llvm.vec<? x 4 x void>
+  "some.op"() : () -> !llvm.vec<?x4 x void>
 }
 
 // -----

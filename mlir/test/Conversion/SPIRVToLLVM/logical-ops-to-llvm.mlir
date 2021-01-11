@@ -13,7 +13,7 @@ spv.func @logical_equal_scalar(%arg0: i1, %arg1: i1) "None" {
 
 // CHECK-LABEL: @logical_equal_vector
 spv.func @logical_equal_vector(%arg0: vector<4xi1>, %arg1: vector<4xi1>) "None" {
-  // CHECK: llvm.icmp "eq" %{{.*}}, %{{.*}} : !llvm.vec<4 x i1>
+  // CHECK: llvm.icmp "eq" %{{.*}}, %{{.*}} : vector<4xi1>
   %0 = spv.LogicalEqual %arg0, %arg0 : vector<4xi1>
   spv.Return
 }
@@ -31,7 +31,7 @@ spv.func @logical_not_equal_scalar(%arg0: i1, %arg1: i1) "None" {
 
 // CHECK-LABEL: @logical_not_equal_vector
 spv.func @logical_not_equal_vector(%arg0: vector<4xi1>, %arg1: vector<4xi1>) "None" {
-  // CHECK: llvm.icmp "ne" %{{.*}}, %{{.*}} : !llvm.vec<4 x i1>
+  // CHECK: llvm.icmp "ne" %{{.*}}, %{{.*}} : vector<4xi1>
   %0 = spv.LogicalNotEqual %arg0, %arg0 : vector<4xi1>
   spv.Return
 }
@@ -50,8 +50,8 @@ spv.func @logical_not_scalar(%arg0: i1) "None" {
 
 // CHECK-LABEL: @logical_not_vector
 spv.func @logical_not_vector(%arg0: vector<4xi1>) "None" {
-  // CHECK: %[[CONST:.*]] = llvm.mlir.constant(dense<true> : vector<4xi1>) : !llvm.vec<4 x i1>
-  // CHECK: llvm.xor %{{.*}}, %[[CONST]] : !llvm.vec<4 x i1>
+  // CHECK: %[[CONST:.*]] = llvm.mlir.constant(dense<true> : vector<4xi1>) : vector<4xi1>
+  // CHECK: llvm.xor %{{.*}}, %[[CONST]] : vector<4xi1>
   %0 = spv.LogicalNot %arg0 : vector<4xi1>
   spv.Return
 }
@@ -69,7 +69,7 @@ spv.func @logical_and_scalar(%arg0: i1, %arg1: i1) "None" {
 
 // CHECK-LABEL: @logical_and_vector
 spv.func @logical_and_vector(%arg0: vector<4xi1>, %arg1: vector<4xi1>) "None" {
-  // CHECK: llvm.and %{{.*}}, %{{.*}} : !llvm.vec<4 x i1>
+  // CHECK: llvm.and %{{.*}}, %{{.*}} : vector<4xi1>
   %0 = spv.LogicalAnd %arg0, %arg0 : vector<4xi1>
   spv.Return
 }
@@ -87,7 +87,7 @@ spv.func @logical_or_scalar(%arg0: i1, %arg1: i1) "None" {
 
 // CHECK-LABEL: @logical_or_vector
 spv.func @logical_or_vector(%arg0: vector<4xi1>, %arg1: vector<4xi1>) "None" {
-  // CHECK: llvm.or %{{.*}}, %{{.*}} : !llvm.vec<4 x i1>
+  // CHECK: llvm.or %{{.*}}, %{{.*}} : vector<4xi1>
   %0 = spv.LogicalOr %arg0, %arg0 : vector<4xi1>
   spv.Return
 }

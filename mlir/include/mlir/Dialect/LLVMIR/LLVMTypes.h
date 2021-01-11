@@ -317,12 +317,11 @@ public:
 /// LLVM dialect fixed vector type, represents a sequence of elements of known
 /// length that can be processed as one.
 class LLVMFixedVectorType
-    : public Type::TypeBase<LLVMFixedVectorType, LLVMVectorType,
+    : public Type::TypeBase<LLVMFixedVectorType, Type,
                             detail::LLVMTypeAndSizeStorage> {
 public:
   /// Inherit base constructor.
   using Base::Base;
-  using LLVMVectorType::verifyConstructionInvariants;
 
   /// Gets or creates a fixed vector type containing `numElements` of
   /// `elementType` in the same context as `elementType`.
@@ -330,8 +329,21 @@ public:
   static LLVMFixedVectorType getChecked(Location loc, Type elementType,
                                         unsigned numElements);
 
+  /// Checks if the given type can be used in a vector type. This type supports
+  /// only a subset of LLVM dialect types that don't have a built-in
+  /// counter-part, e.g., pointers.
+  static bool isValidElementType(Type type);
+
+  /// Returns the element type of the vector.
+  Type getElementType();
+
   /// Returns the number of elements in the fixed vector.
   unsigned getNumElements();
+
+  /// Verifies that the type about to be constructed is well-formed.
+  static LogicalResult verifyConstructionInvariants(Location loc,
+                                                    Type elementType,
+                                                    unsigned numElements);
 };
 
 //===----------------------------------------------------------------------===//
@@ -342,12 +354,11 @@ public:
 /// unknown length that is known to be divisible by some constant. These
 /// elements can be processed as one in SIMD context.
 class LLVMScalableVectorType
-    : public Type::TypeBase<LLVMScalableVectorType, LLVMVectorType,
+    : public Type::TypeBase<LLVMScalableVectorType, Type,
                             detail::LLVMTypeAndSizeStorage> {
 public:
   /// Inherit base constructor.
   using Base::Base;
-  using LLVMVectorType::verifyConstructionInvariants;
 
   /// Gets or creates a scalable vector type containing a non-zero multiple of
   /// `minNumElements` of `elementType` in the same context as `elementType`.
@@ -355,10 +366,21 @@ public:
   static LLVMScalableVectorType getChecked(Location loc, Type elementType,
                                            unsigned minNumElements);
 
+  /// Checks if the given type can be used in a vector type.
+  static bool isValidElementType(Type type);
+
+  /// Returns the element type of the vector.
+  Type getElementType();
+
   /// Returns the scaling factor of the number of elements in the vector. The
   /// vector contains at least the resulting number of elements, or any non-zero
   /// multiple of this number.
   unsigned getMinNumElements();
+
+  /// Verifies that the type about to be constructed is well-formed.
+  static LogicalResult verifyConstructionInvariants(Location loc,
+                                                    Type elementType,
+                                                    unsigned minNumElements);
 };
 
 //===----------------------------------------------------------------------===//
@@ -384,9 +406,26 @@ bool isCompatibleType(Type type);
 /// the LLVM dialect.
 bool isCompatibleFloatingPointType(Type type);
 
+/// Returns `true` if the given type is a vector type compatible with the LLVM
+/// dialect. Compatible types include 1D built-in vector types of built-in
+/// integers and floating-point values, LLVM dialect fixed vector types of LLVM
+/// dialect pointers and LLVM dialect scalable vector types.
+bool isCompatibleVectorType(Type type);
+
+/// Returns the element type of any vector type compatible with the LLVM
+/// dialect.
+Type getVectorElementType(Type type);
+
+/// Returns the element count of any LLVM-compatible vector type.
+llvm::ElementCount getVectorNumElements(Type type);
+
+/// Creates an LLVM dialect-compatible type with the given element type and
+/// length.
+Type getFixedVectorType(Type elementType, unsigned numElements);
+
 /// Returns the size of the given primitive LLVM dialect-compatible type
 /// (including vectors) in bits, for example, the size of i16 is 16 and
-/// the size of !llvm.vec<4 x i16> is 64. Returns 0 for non-primitive
+/// the size of vector<4xi16> is 64. Returns 0 for non-primitive
 /// (aggregates such as struct) or types that don't have a size (such as void).
 llvm::TypeSize getPrimitiveTypeSizeInBits(Type type);
 

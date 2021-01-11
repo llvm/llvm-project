@@ -184,17 +184,17 @@ spv.func @variable_scalar_with_initialization() "None" {
 // CHECK-LABEL: @variable_vector
 spv.func @variable_vector() "None" {
   // CHECK: %[[SIZE:.*]] = llvm.mlir.constant(1 : i32) : i32
-  // CHECK: llvm.alloca  %[[SIZE]] x !llvm.vec<3 x f32> : (i32) -> !llvm.ptr<vec<3 x f32>>
+  // CHECK: llvm.alloca  %[[SIZE]] x vector<3xf32> : (i32) -> !llvm.ptr<vector<3xf32>>
   %0 = spv.Variable : !spv.ptr<vector<3xf32>, Function>
   spv.Return
 }
 
 // CHECK-LABEL: @variable_vector_with_initialization
 spv.func @variable_vector_with_initialization() "None" {
-  // CHECK: %[[VALUE:.*]] = llvm.mlir.constant(dense<false> : vector<3xi1>) : !llvm.vec<3 x i1>
+  // CHECK: %[[VALUE:.*]] = llvm.mlir.constant(dense<false> : vector<3xi1>) : vector<3xi1>
   // CHECK: %[[SIZE:.*]] = llvm.mlir.constant(1 : i32) : i32
-  // CHECK: %[[ALLOCATED:.*]] = llvm.alloca %[[SIZE]] x !llvm.vec<3 x i1> : (i32) -> !llvm.ptr<vec<3 x i1>>
-  // CHECK: llvm.store %[[VALUE]], %[[ALLOCATED]] : !llvm.ptr<vec<3 x i1>>
+  // CHECK: %[[ALLOCATED:.*]] = llvm.alloca %[[SIZE]] x vector<3xi1> : (i32) -> !llvm.ptr<vector<3xi1>>
+  // CHECK: llvm.store %[[VALUE]], %[[ALLOCATED]] : !llvm.ptr<vector<3xi1>>
   %c = spv.constant dense<false> : vector<3xi1>
   %0 = spv.Variable init(%c) : !spv.ptr<vector<3xi1>, Function>
   spv.Return

@@ -126,8 +126,8 @@ def LLVM_AnyNonAggregate : Type<Neg<LLVM_AnyAggregate.predicate>,
                                "LLVM non-aggregate type">;
 
 // Type constraint accepting any LLVM vector type.
-def LLVM_AnyVector : Type<CPred<"$_self.isa<::mlir::LLVM::LLVMVectorType>()">,
-                         "LLVM vector type">;
+def LLVM_AnyVector : Type<CPred<"::mlir::LLVM::isCompatibleVectorType($_self)">,
+                         "LLVM dialect-compatible vector type">;
 
 // Type constraint accepting an LLVM vector type with an additional constraint
 // on the vector element type.
@@ -135,9 +135,9 @@ class LLVM_VectorOf<Type element> : Type<
   And<[LLVM_AnyVector.predicate,
        SubstLeaves<
          "$_self",
-         "$_self.cast<::mlir::LLVM::LLVMVectorType>().getElementType()",
+         "::mlir::LLVM::getVectorElementType($_self)",
          element.predicate>]>,
-  "LLVM vector of " # element.summary>;
+  "LLVM dialect-compatible vector of " # element.summary>;
 
 // Type constraint accepting a constrained type, or a vector of such types.
 class LLVM_ScalarOrVectorOf<Type element> :

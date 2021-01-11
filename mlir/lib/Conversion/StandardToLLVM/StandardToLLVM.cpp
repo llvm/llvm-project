@@ -390,16 +390,16 @@ Type LLVMTypeConverter::convertMemRefToBarePtr(BaseMemRefType type) {
   return LLVM::LLVMPointerType::get(elementType, type.getMemorySpace());
 }
 
-// Convert an n-D vector type to an LLVM vector type via (n-1)-D array type when
-// n > 1.
-// For example, `vector<4 x f32>` converts to `!llvm.type<"<4 x f32>">` and
-// `vector<4 x 8 x 16 f32>` converts to `!llvm."[4 x [8 x <16 x f32>]]">`.
+/// Convert an n-D vector type to an LLVM vector type via (n-1)-D array type
+/// when n > 1. For example, `vector<4 x f32>` remains as is while,
+/// `vector<4x8x16xf32>` converts to `!llvm.array<4xarray<8 x vector<16xf32>>>`.
 Type LLVMTypeConverter::convertVectorType(VectorType type) {
   auto elementType = unwrap(convertType(type.getElementType()));
   if (!elementType)
     return {};
-  Type vectorType =
-      LLVM::LLVMFixedVectorType::get(elementType, type.getShape().back());
+  Type vectorType = VectorType::get(type.getShape().back(), elementType);
+  assert(LLVM::isCompatibleVectorType(vectorType) &&
+         "expected vector type compatible with the LLVM dialect");
   auto shape = type.getShape();
   for (int i = shape.size() - 2; i >= 0; --i)
     vectorType = LLVM::LLVMArrayType::get(vectorType, shape[i]);
@@ -1500,7 +1500,7 @@ static NDVectorTypeInfo extractNDVectorTypeInfo(VectorType vectorType,
         llvmTy.cast<LLVM::LLVMArrayType>().getNumElements());
     llvmTy = llvmTy.cast<LLVM::LLVMArrayType>().getElementType();
   }
-  if (!llvmTy.isa<LLVM::LLVMVectorType>())
+  if (!LLVM::isCompatibleVectorType(llvmTy))
     return info;
   info.llvmVectorTy = llvmTy;
   return info;
@@ -2484,7 +2484,7 @@ struct RsqrtOpLowering : public ConvertOpToLLVMPattern<RsqrtOp> {
 
     if (!operandType.isa<LLVM::LLVMArrayType>()) {
       LLVM::ConstantOp one;
-      if (operandType.isa<LLVM::LLVMVectorType>()) {
+      if (LLVM::isCompatibleVectorType(operandType)) {
         one = rewriter.create<LLVM::ConstantOp>(
             loc, operandType,
             SplatElementsAttr::get(resultType.cast<ShapedType>(), floatOne));
@@ -2505,8 +2505,7 @@ struct RsqrtOpLowering : public ConvertOpToLLVMPattern<RsqrtOp> {
         [&](Type llvmVectorTy, ValueRange operands) {
           auto splatAttr = SplatElementsAttr::get(
               mlir::VectorType::get(
-                  {llvmVectorTy.cast<LLVM::LLVMFixedVectorType>()
-                       .getNumElements()},
+                  {LLVM::getVectorNumElements(llvmVectorTy).getFixedValue()},
                   floatType),
               floatOne);
           auto one =

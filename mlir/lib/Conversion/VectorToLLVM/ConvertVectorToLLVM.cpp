@@ -182,7 +182,7 @@ static LogicalResult getIndexedPtrs(ConversionPatternRewriter &rewriter,
   if (failed(getBase(rewriter, loc, memref, memRefType, base)))
     return failure();
   auto pType = MemRefDescriptor(memref).getElementPtrType();
-  auto ptrsType = LLVM::LLVMFixedVectorType::get(pType, vType.getDimSize(0));
+  auto ptrsType = LLVM::getFixedVectorType(pType, vType.getDimSize(0));
   ptrs = rewriter.create<LLVM::GEPOp>(loc, ptrsType, base, indices);
   return success();
 }
@@ -192,8 +192,7 @@ static LogicalResult getIndexedPtrs(ConversionPatternRewriter &rewriter,
 // used when source/dst memrefs are not on address space 0.
 static Value castDataPtr(ConversionPatternRewriter &rewriter, Location loc,
                          Value ptr, MemRefType memRefType, Type vt) {
-  auto pType =
-      LLVM::LLVMPointerType::get(vt.template cast<LLVM::LLVMFixedVectorType>());
+  auto pType = LLVM::LLVMPointerType::get(vt);
   if (memRefType.getMemorySpace() == 0)
     return rewriter.create<LLVM::BitcastOp>(loc, pType, ptr);
   return rewriter.create<LLVM::AddrSpaceCastOp>(loc, pType, ptr);
@@ -1226,7 +1225,7 @@ public:
     //
     // TODO: when the leaf transfer rank is k > 1, we need the last `k`
     //       dimensions here.
-    unsigned vecWidth = vtp.getNumElements();
+    unsigned vecWidth = LLVM::getVectorNumElements(vtp).getFixedValue();
     unsigned lastIndex = llvm::size(xferOp.indices()) - 1;
     Value off = xferOp.indices()[lastIndex];
     Value dim = rewriter.create<DimOp>(loc, xferOp.source(), lastIndex);

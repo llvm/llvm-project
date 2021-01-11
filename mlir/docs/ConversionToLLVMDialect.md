@@ -48,8 +48,8 @@ size with element type converted using these conversion rules. In the
 n-dimensional case, MLIR vectors are converted to (n-1)-dimensional array types
 of one-dimensional vectors.
 
-For example, `vector<4 x f32>` converts to `!llvm.vec<4 x f32>` and `vector<4 x
-8 x 16 x f32>` converts to `!llvm.array<4 x array<8 x vec<16 x f32>>>`.
+For example, `vector<4xf32>` converts to `vector<4xf32>` and `vector<4 x 8 x 16
+x f32>` converts to `!llvm.array<4 x array<8 x vec<16 x f32>>>`.
 
 ### Ranked Memref Types
 

@@ -236,38 +236,15 @@ LogicalResult LLVMStructType::verifyConstructionInvariants(Location loc,
 // Vector types.
 //===----------------------------------------------------------------------===//
 
-bool LLVMVectorType::isValidElementType(Type type) {
-  if (auto intType = type.dyn_cast<IntegerType>())
-    return intType.isSignless();
-  return type.isa<LLVMPointerType>() ||
-         mlir::LLVM::isCompatibleFloatingPointType(type);
-}
-
-/// Support type casting functionality.
-bool LLVMVectorType::classof(Type type) {
-  return type.isa<LLVMFixedVectorType, LLVMScalableVectorType>();
-}
-
-Type LLVMVectorType::getElementType() {
-  // Both derived classes share the implementation type.
-  return static_cast<detail::LLVMTypeAndSizeStorage *>(impl)->elementType;
-}
-
-llvm::ElementCount LLVMVectorType::getElementCount() {
-  // Both derived classes share the implementation type.
-  return llvm::ElementCount::get(
-      static_cast<detail::LLVMTypeAndSizeStorage *>(impl)->numElements,
-      isa<LLVMScalableVectorType>());
-}
-
 /// Verifies that the type about to be constructed is well-formed.
-LogicalResult
-LLVMVectorType::verifyConstructionInvariants(Location loc, Type elementType,
-                                             unsigned numElements) {
+template <typename VecTy>
+static LogicalResult verifyVectorConstructionInvariants(Location loc,
+                                                        Type elementType,
+                                                        unsigned numElements) {
   if (numElements == 0)
     return emitError(loc, "the number of vector elements must be positive");
 
-  if (!isValidElementType(elementType))
+  if (!VecTy::isValidElementType(elementType))
     return emitError(loc, "invalid vector element type");
 
   return success();
@@ -286,9 +263,28 @@ LLVMFixedVectorType LLVMFixedVectorType::getChecked(Location loc,
   return Base::getChecked(loc, elementType, numElements);
 }
 
+Type LLVMFixedVectorType::getElementType() {
+  return static_cast<detail::LLVMTypeAndSizeStorage *>(impl)->elementType;
+}
+
 unsigned LLVMFixedVectorType::getNumElements() {
   return getImpl()->numElements;
 }
+
+bool LLVMFixedVectorType::isValidElementType(Type type) {
+  return type
+      .isa<LLVMPointerType, LLVMX86FP80Type, LLVMFP128Type, LLVMPPCFP128Type>();
+}
+
+LogicalResult LLVMFixedVectorType::verifyConstructionInvariants(
+    Location loc, Type elementType, unsigned numElements) {
+  return verifyVectorConstructionInvariants<LLVMFixedVectorType>(
+      loc, elementType, numElements);
+}
+
+//===----------------------------------------------------------------------===//
+// LLVMScalableVectorType.
+//===----------------------------------------------------------------------===//
 
 LLVMScalableVectorType LLVMScalableVectorType::get(Type elementType,
                                                    unsigned minNumElements) {
@@ -303,8 +299,25 @@ LLVMScalableVectorType::getChecked(Location loc, Type elementType,
   return Base::getChecked(loc, elementType, minNumElements);
 }
 
+Type LLVMScalableVectorType::getElementType() {
+  return static_cast<detail::LLVMTypeAndSizeStorage *>(impl)->elementType;
+}
+
 unsigned LLVMScalableVectorType::getMinNumElements() {
   return getImpl()->numElements;
+}
+
+bool LLVMScalableVectorType::isValidElementType(Type type) {
+  if (auto intType = type.dyn_cast<IntegerType>())
+    return intType.isSignless();
+
+  return isCompatibleFloatingPointType(type) || type.isa<LLVMPointerType>();
+}
+
+LogicalResult LLVMScalableVectorType::verifyConstructionInvariants(
+    Location loc, Type elementType, unsigned numElements) {
+  return verifyVectorConstructionInvariants<LLVMScalableVectorType>(
+      loc, elementType, numElements);
 }
 
 //===----------------------------------------------------------------------===//
@@ -315,6 +328,10 @@ bool mlir::LLVM::isCompatibleType(Type type) {
   // Only signless integers are compatible.
   if (auto intType = type.dyn_cast<IntegerType>())
     return intType.isSignless();
+
+  // 1D vector types are compatible if their element types are.
+  if (auto vecType = type.dyn_cast<VectorType>())
+    return vecType.getRank() == 1 && isCompatibleType(vecType.getElementType());
 
   // clang-format off
   return type.isa<
@@ -331,7 +348,8 @@ bool mlir::LLVM::isCompatibleType(Type type) {
       LLVMPointerType,
       LLVMStructType,
       LLVMTokenType,
-      LLVMVectorType,
+      LLVMFixedVectorType,
+      LLVMScalableVectorType,
       LLVMVoidType,
       LLVMX86FP80Type,
       LLVMX86MMXType
@@ -342,6 +360,55 @@ bool mlir::LLVM::isCompatibleType(Type type) {
 bool mlir::LLVM::isCompatibleFloatingPointType(Type type) {
   return type.isa<BFloat16Type, Float16Type, Float32Type, Float64Type,
                   LLVMFP128Type, LLVMPPCFP128Type, LLVMX86FP80Type>();
+}
+
+bool mlir::LLVM::isCompatibleVectorType(Type type) {
+  if (type.isa<LLVMFixedVectorType, LLVMScalableVectorType>())
+    return true;
+
+  if (auto vecType = type.dyn_cast<VectorType>()) {
+    if (vecType.getRank() != 1)
+      return false;
+    Type elementType = vecType.getElementType();
+    if (auto intType = elementType.dyn_cast<IntegerType>())
+      return intType.isSignless();
+    return elementType
+        .isa<BFloat16Type, Float16Type, Float32Type, Float64Type>();
+  }
+  return false;
+}
+
+Type mlir::LLVM::getVectorElementType(Type type) {
+  return llvm::TypeSwitch<Type, Type>(type)
+      .Case<LLVMFixedVectorType, LLVMScalableVectorType, VectorType>(
+          [](auto ty) { return ty.getElementType(); })
+      .Default([](Type) -> Type {
+        llvm_unreachable("incompatible with LLVM vector type");
+      });
+}
+
+llvm::ElementCount mlir::LLVM::getVectorNumElements(Type type) {
+  return llvm::TypeSwitch<Type, llvm::ElementCount>(type)
+      .Case<LLVMFixedVectorType, VectorType>([](auto ty) {
+        return llvm::ElementCount::getFixed(ty.getNumElements());
+      })
+      .Case([](LLVMScalableVectorType ty) {
+        return llvm::ElementCount::getScalable(ty.getMinNumElements());
+      })
+      .Default([](Type) -> llvm::ElementCount {
+        llvm_unreachable("incompatible with LLVM vector type");
+      });
+}
+
+Type mlir::LLVM::getFixedVectorType(Type elementType, unsigned numElements) {
+  bool useLLVM = LLVMFixedVectorType::isValidElementType(elementType);
+  bool useBuiltIn = VectorType::isValidElementType(elementType);
+  (void)useBuiltIn;
+  assert((useLLVM ^ useBuiltIn) && "expected LLVM-compatible fixed-vector type "
+                                   "to be either builtin or LLVM dialect type");
+  if (useLLVM)
+    return LLVMFixedVectorType::get(elementType, numElements);
+  return VectorType::get(numElements, elementType);
 }
 
 llvm::TypeSize mlir::LLVM::getPrimitiveTypeSizeInBits(Type type) {
@@ -360,15 +427,19 @@ llvm::TypeSize mlir::LLVM::getPrimitiveTypeSizeInBits(Type type) {
       .Case<LLVMX86FP80Type>([](Type) { return llvm::TypeSize::Fixed(80); })
       .Case<LLVMPPCFP128Type, LLVMFP128Type>(
           [](Type) { return llvm::TypeSize::Fixed(128); })
-      .Case<LLVMVectorType>([](LLVMVectorType t) {
+      .Case<LLVMFixedVectorType>([](LLVMFixedVectorType t) {
         llvm::TypeSize elementSize =
             getPrimitiveTypeSizeInBits(t.getElementType());
-        llvm::ElementCount elementCount = t.getElementCount();
-        assert(!elementSize.isScalable() &&
-               "vector type should have fixed-width elements");
-        return llvm::TypeSize(elementSize.getFixedSize() *
-                                  elementCount.getKnownMinValue(),
-                              elementCount.isScalable());
+        return llvm::TypeSize(elementSize.getFixedSize() * t.getNumElements(),
+                              elementSize.isScalable());
+      })
+      .Case<VectorType>([](VectorType t) {
+        assert(isCompatibleVectorType(t) &&
+               "unexpected incompatible with LLVM vector type");
+        llvm::TypeSize elementSize =
+            getPrimitiveTypeSizeInBits(t.getElementType());
+        return llvm::TypeSize(elementSize.getFixedSize() * t.getNumElements(),
+                              elementSize.isScalable());
       })
       .Default([](Type ty) {
         assert((ty.isa<LLVMVoidType, LLVMLabelType, LLVMMetadataType,
