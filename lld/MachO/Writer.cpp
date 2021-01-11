@@ -557,7 +557,8 @@ static int sectionOrder(OutputSection *osec) {
         .Case(section_names::unwindInfo, std::numeric_limits<int>::max() - 1)
         .Case(section_names::ehFrame, std::numeric_limits<int>::max())
         .Default(0);
-  } else if (segname == segment_names::data) {
+  }
+  if (segname == segment_names::data) {
     // For each thread spawned, dyld will initialize its TLVs by copying the
     // address range from the start of the first thread-local data section to
     // the end of the last one. We therefore arrange these sections contiguously
@@ -575,7 +576,8 @@ static int sectionOrder(OutputSection *osec) {
     default:
       return 0;
     }
-  } else if (segname == segment_names::linkEdit) {
+  }
+  if (segname == segment_names::linkEdit) {
     return StringSwitch<int>(osec->name)
         .Case(section_names::rebase, -8)
         .Case(section_names::binding, -7)
