@@ -169,48 +169,6 @@ TEST_F(OverlayCDBTest, Adjustments) {
                                            "-DFallback", "-DAdjust_baz.cc"));
 }
 
-// Allows placement of files for tests and cleans them up after.
-// FIXME: GlobalCompilationDatabase is mostly VFS-clean now, switch to MockFS?
-class ScratchFS {
-  llvm::SmallString<128> Root;
-
-public:
-  ScratchFS() {
-    EXPECT_FALSE(llvm::sys::fs::createUniqueDirectory("clangd-cdb-test", Root))
-        << "Failed to create unique directory";
-  }
-
-  ~ScratchFS() {
-    EXPECT_FALSE(llvm::sys::fs::remove_directories(Root))
-        << "Failed to cleanup " << Root;
-  }
-
-  llvm::StringRef root() const { return Root; }
-
-  void write(PathRef RelativePath, llvm::StringRef Contents) {
-    std::string AbsPath = path(RelativePath);
-    EXPECT_FALSE(llvm::sys::fs::create_directories(
-        llvm::sys::path::parent_path(AbsPath)))
-        << "Failed to create directories for: " << AbsPath;
-
-    std::error_code EC;
-    llvm::raw_fd_ostream OS(AbsPath, EC);
-    EXPECT_FALSE(EC) << "Failed to open " << AbsPath << " for writing";
-    OS << llvm::formatv(Contents.data(),
-                        llvm::sys::path::convert_to_slash(Root));
-    OS.close();
-
-    EXPECT_FALSE(OS.has_error());
-  }
-
-  std::string path(PathRef RelativePath) const {
-    llvm::SmallString<128> AbsPath(Root);
-    llvm::sys::path::append(AbsPath, RelativePath);
-    llvm::sys::path::native(AbsPath);
-    return AbsPath.str().str();
-  }
-};
-
 TEST(GlobalCompilationDatabaseTest, DiscoveryWithNestedCDBs) {
   const char *const CDBOuter =
       R"cdb(
@@ -242,34 +200,35 @@ TEST(GlobalCompilationDatabaseTest, DiscoveryWithNestedCDBs) {
         }
       ]
       )cdb";
-  ScratchFS FS;
-  RealThreadsafeFS TFS;
-  FS.write("compile_commands.json", CDBOuter);
-  FS.write("build/compile_commands.json", CDBInner);
+  MockFS FS;
+  FS.Files[testPath("compile_commands.json")] =
+      llvm::formatv(CDBOuter, llvm::sys::path::convert_to_slash(testRoot()));
+  FS.Files[testPath("build/compile_commands.json")] =
+      llvm::formatv(CDBInner, llvm::sys::path::convert_to_slash(testRoot()));
 
   // Note that gen2.cc goes missing with our following model, not sure this
   // happens in practice though.
   {
-    DirectoryBasedGlobalCompilationDatabase DB(TFS);
+    DirectoryBasedGlobalCompilationDatabase DB(FS);
     std::vector<std::string> DiscoveredFiles;
     auto Sub =
         DB.watch([&DiscoveredFiles](const std::vector<std::string> Changes) {
           DiscoveredFiles = Changes;
         });
 
-    DB.getCompileCommand(FS.path("build/../a.cc"));
+    DB.getCompileCommand(testPath("build/../a.cc"));
     EXPECT_THAT(DiscoveredFiles, UnorderedElementsAre(AllOf(
                                      EndsWith("a.cc"), Not(HasSubstr("..")))));
     DiscoveredFiles.clear();
 
-    DB.getCompileCommand(FS.path("build/gen.cc"));
+    DB.getCompileCommand(testPath("build/gen.cc"));
     EXPECT_THAT(DiscoveredFiles, UnorderedElementsAre(EndsWith("gen.cc")));
   }
 
   // With a custom compile commands dir.
   {
-    DirectoryBasedGlobalCompilationDatabase::Options Opts(TFS);
-    Opts.CompileCommandsDir = FS.root().str();
+    DirectoryBasedGlobalCompilationDatabase::Options Opts(FS);
+    Opts.CompileCommandsDir = testRoot();
     DirectoryBasedGlobalCompilationDatabase DB(Opts);
     std::vector<std::string> DiscoveredFiles;
     auto Sub =
@@ -277,24 +236,23 @@ TEST(GlobalCompilationDatabaseTest, DiscoveryWithNestedCDBs) {
           DiscoveredFiles = Changes;
         });
 
-    DB.getCompileCommand(FS.path("a.cc"));
+    DB.getCompileCommand(testPath("a.cc"));
     EXPECT_THAT(DiscoveredFiles,
                 UnorderedElementsAre(EndsWith("a.cc"), EndsWith("gen.cc"),
                                      EndsWith("gen2.cc")));
     DiscoveredFiles.clear();
 
-    DB.getCompileCommand(FS.path("build/gen.cc"));
+    DB.getCompileCommand(testPath("build/gen.cc"));
     EXPECT_THAT(DiscoveredFiles, IsEmpty());
   }
 }
 
 TEST(GlobalCompilationDatabaseTest, BuildDir) {
-  ScratchFS FS;
-  RealThreadsafeFS TFS;
+  MockFS FS;
   auto Command = [&](llvm::StringRef Relative) {
-    DirectoryBasedGlobalCompilationDatabase::Options Opts(TFS);
+    DirectoryBasedGlobalCompilationDatabase::Options Opts(FS);
     return DirectoryBasedGlobalCompilationDatabase(Opts)
-        .getCompileCommand(FS.path(Relative))
+        .getCompileCommand(testPath(Relative))
         .getValueOr(tooling::CompileCommand())
         .CommandLine;
   };
@@ -314,7 +272,8 @@ TEST(GlobalCompilationDatabaseTest, BuildDir) {
         }
       ]
       )cdb";
-  FS.write("x/build/compile_commands.json", CDB);
+  FS.Files[testPath("x/build/compile_commands.json")] =
+      llvm::formatv(CDB, llvm::sys::path::convert_to_slash(testRoot()));
   EXPECT_THAT(Command("x/foo.cc"), Contains("-DXYZZY"));
   EXPECT_THAT(Command("bar.cc"), IsEmpty())
       << "x/build/compile_flags.json only applicable to x/";
