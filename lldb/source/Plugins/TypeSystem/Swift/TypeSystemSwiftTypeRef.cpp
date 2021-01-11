@@ -2230,18 +2230,21 @@ TypeSystemSwiftTypeRef::GetNumChildren(opaque_compiler_type_t type,
 
 uint32_t TypeSystemSwiftTypeRef::GetNumFields(opaque_compiler_type_t type,
                                               ExecutionContext *exe_ctx) {
-  assert(exe_ctx && "Need exe_ctx");
   if (exe_ctx)
     if (auto *runtime = SwiftLanguageRuntime::Get(exe_ctx->GetProcessSP()))
       if (auto num_fields =
-              runtime->GetNumChildren(GetCanonicalType(type), nullptr)) {
-        // Use a lambda to intercept and unwrap the `Optional` return value.
-        return [&]() {
-          auto impl = [&]() { return num_fields; };
+              runtime->GetNumFields(GetCanonicalType(type), exe_ctx))
+        // Use a lambda to intercept & unwrap the `Optional` return value from
+        // `SwiftLanguageRuntime::GetNumFields`.
+        return [&] {
+          auto impl = [&]() -> llvm::Optional<uint32_t> {
+            if (!type)
+              return 0;
+            return num_fields;
+          };
           VALIDATE_AND_RETURN(impl, GetNumFields, type,
                               (ReconstructType(type), exe_ctx));
         }().getValue();
-      }
 
   LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
             "Using SwiftASTContext::GetNumFields fallback for type %s",

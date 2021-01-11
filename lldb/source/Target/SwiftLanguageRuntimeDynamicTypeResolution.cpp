@@ -1128,7 +1128,7 @@ SwiftLanguageRuntimeImpl::GetNumFields(CompilerType type,
     auto *eti = llvm::cast<EnumTypeInfo>(ti);
     return eti->getNumPayloadCases();
   }
-  case TypeInfoKind::Reference:
+  case TypeInfoKind::Reference: {
     // Objects.
     auto *rti = llvm::cast<ReferenceTypeInfo>(ti);
     switch (rti->getReferenceKind()) {
@@ -1148,6 +1148,8 @@ SwiftLanguageRuntimeImpl::GetNumFields(CompilerType type,
 
       return {};
     }
+  }
+  default:
     // FIXME: Implement more cases.
     return {};
   }
