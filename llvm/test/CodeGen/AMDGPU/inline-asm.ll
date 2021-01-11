@@ -245,6 +245,7 @@ entry:
 ; FIXME: Should prodbably be masking high bits of load.
 ; CHECK-LABEL: {{^}}i1_input_phys_vgpr_x2:
 ; CHECK: buffer_load_ubyte v0
+; CHECK-NEXT: s_waitcnt
 ; CHECK-NEXT: buffer_load_ubyte v1
 ; CHECK-NEXT: s_waitcnt
 ; CHECK-NEXT: ASMSTART
