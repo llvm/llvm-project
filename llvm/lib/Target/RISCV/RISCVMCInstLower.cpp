@@ -147,14 +147,24 @@ static bool lowerRISCVVMachineInstrToMCInst(const MachineInstr *MI,
       MF->getSubtarget<RISCVSubtarget>().getRegisterInfo();
   assert(TRI && "TargetRegisterInfo expected");
 
+  uint64_t TSFlags = MI->getDesc().TSFlags;
+  int NumOps = MI->getNumExplicitOperands();
+
   for (const MachineOperand &MO : MI->explicit_operands()) {
     int OpNo = (int)MI->getOperandNo(&MO);
     assert(OpNo >= 0 && "Operand number doesn't fit in an 'int' type");
 
-    // Skip VL, SEW and MergeOp operands
-    if (OpNo == RVV->getVLIndex() || OpNo == RVV->getSEWIndex() ||
-        OpNo == RVV->getMergeOpIndex())
+    // Skip VL and SEW operands which are the last two operands if present.
+    if ((TSFlags & RISCVII::HasVLOpMask) && OpNo == (NumOps - 2))
       continue;
+    if ((TSFlags & RISCVII::HasSEWOpMask) && OpNo == (NumOps - 1))
+      continue;
+
+    // Skip merge op. It should be the first operand after the result.
+    if ((TSFlags & RISCVII::HasMergeOpMask) && OpNo == 1) {
+      assert(MI->getNumExplicitDefs() == 1);
+      continue;
+    }
 
     MCOperand MCOp;
     switch (MO.getType()) {
@@ -182,7 +192,7 @@ static bool lowerRISCVVMachineInstrToMCInst(const MachineInstr *MI,
 
   // Unmasked pseudo instructions need to append dummy mask operand to
   // V instructions. All V instructions are modeled as the masked version.
-  if (RVV->hasDummyMask())
+  if (TSFlags & RISCVII::HasDummyMaskOpMask)
     OutMI.addOperand(MCOperand::createReg(RISCV::NoRegister));
 
   return true;

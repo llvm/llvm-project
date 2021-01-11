@@ -2122,7 +2122,7 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
 
 static MachineBasicBlock *addVSetVL(MachineInstr &MI, MachineBasicBlock *BB,
                                     int VLIndex, unsigned SEWIndex,
-                                    unsigned VLMul, bool WritesElement0) {
+                                    RISCVVLMUL VLMul, bool WritesElement0) {
   MachineFunction &MF = *BB->getParent();
   DebugLoc DL = MI.getDebugLoc();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
@@ -2130,9 +2130,6 @@ static MachineBasicBlock *addVSetVL(MachineInstr &MI, MachineBasicBlock *BB,
   unsigned SEW = MI.getOperand(SEWIndex).getImm();
   assert(RISCVVType::isValidSEW(SEW) && "Unexpected SEW");
   RISCVVSEW ElementWidth = static_cast<RISCVVSEW>(Log2_32(SEW / 8));
-
-  // LMUL should already be encoded correctly.
-  RISCVVLMUL Multiplier = static_cast<RISCVVLMUL>(VLMul);
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
@@ -2160,7 +2157,7 @@ static MachineBasicBlock *addVSetVL(MachineInstr &MI, MachineBasicBlock *BB,
     TailAgnostic = false;
 
   // For simplicity we reuse the vtype representation here.
-  MIB.addImm(RISCVVType::encodeVTYPE(Multiplier, ElementWidth,
+  MIB.addImm(RISCVVType::encodeVTYPE(VLMul, ElementWidth,
                                      /*TailAgnostic*/ TailAgnostic,
                                      /*MaskAgnostic*/ false));
 
@@ -2177,15 +2174,17 @@ static MachineBasicBlock *addVSetVL(MachineInstr &MI, MachineBasicBlock *BB,
 MachineBasicBlock *
 RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                  MachineBasicBlock *BB) const {
+  uint64_t TSFlags = MI.getDesc().TSFlags;
 
-  if (const RISCVVPseudosTable::PseudoInfo *RVV =
-          RISCVVPseudosTable::getPseudoInfo(MI.getOpcode())) {
-    int VLIndex = RVV->getVLIndex();
-    int SEWIndex = RVV->getSEWIndex();
-    bool WritesElement0 = RVV->writesElement0();
+  if (TSFlags & RISCVII::HasSEWOpMask) {
+    unsigned NumOperands = MI.getNumExplicitOperands();
+    int VLIndex = (TSFlags & RISCVII::HasVLOpMask) ? NumOperands - 2 : -1;
+    unsigned SEWIndex = NumOperands - 1;
+    bool WritesElement0 = TSFlags & RISCVII::WritesElement0Mask;
 
-    assert(SEWIndex >= 0 && "SEWIndex must be >= 0");
-    return addVSetVL(MI, BB, VLIndex, SEWIndex, RVV->VLMul, WritesElement0);
+    RISCVVLMUL VLMul = static_cast<RISCVVLMUL>((TSFlags & RISCVII::VLMulMask) >>
+                                               RISCVII::VLMulShift);
+    return addVSetVL(MI, BB, VLIndex, SEWIndex, VLMul, WritesElement0);
   }
 
   switch (MI.getOpcode()) {

@@ -167,6 +167,24 @@ class RVInst<dag outs, dag ins, string opcodestr, string argstr,
   // Defaults
   RISCVVConstraint RVVConstraint = NoConstraint;
   let TSFlags{7-5} = RVVConstraint.Value;
+
+  bits<3> VLMul = 0;
+  let TSFlags{10-8} = VLMul;
+
+  bit HasDummyMask = 0;
+  let TSFlags{11} = HasDummyMask;
+
+  bit WritesElement0 = 0;
+  let TSFlags{12} = WritesElement0;
+
+  bit HasMergeOp = 0;
+  let TSFlags{13} = HasMergeOp;
+
+  bit HasSEWOp = 0;
+  let TSFlags{14} = HasSEWOp;
+
+  bit HasVLOp = 0;
+  let TSFlags{15} = HasVLOp;
 }
 
 // Pseudo instructions
