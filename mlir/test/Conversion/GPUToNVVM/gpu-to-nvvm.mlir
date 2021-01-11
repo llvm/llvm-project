@@ -110,7 +110,7 @@ gpu.module @test_module {
 gpu.module @test_module {
   // CHECK-LABEL: func @gpu_shuffle()
   func @gpu_shuffle() -> (f32) {
-    // CHECK: %[[#VALUE:]] = llvm.mlir.constant(1.000000e+00 : f32) : !llvm.float
+    // CHECK: %[[#VALUE:]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
     %arg0 = constant 1.0 : f32
     // CHECK: %[[#OFFSET:]] = llvm.mlir.constant(4 : i32) : i32
     %arg1 = constant 4 : i32
@@ -120,9 +120,9 @@ gpu.module @test_module {
     // CHECK: %[[#SHL:]] = llvm.shl %[[#ONE]], %[[#WIDTH]] : i32
     // CHECK: %[[#MASK:]] = llvm.sub %[[#SHL]], %[[#ONE]] : i32
     // CHECK: %[[#CLAMP:]] = llvm.sub %[[#WIDTH]], %[[#ONE]] : i32
-    // CHECK: %[[#SHFL:]] = nvvm.shfl.sync.bfly %[[#MASK]], %[[#VALUE]], %[[#OFFSET]], %[[#CLAMP]] : !llvm.struct<(float, i1)>
-    // CHECK: llvm.extractvalue %[[#SHFL]][0 : index] : !llvm.struct<(float, i1)>
-    // CHECK: llvm.extractvalue %[[#SHFL]][1 : index] : !llvm.struct<(float, i1)>
+    // CHECK: %[[#SHFL:]] = nvvm.shfl.sync.bfly %[[#MASK]], %[[#VALUE]], %[[#OFFSET]], %[[#CLAMP]] : !llvm.struct<(f32, i1)>
+    // CHECK: llvm.extractvalue %[[#SHFL]][0 : index] : !llvm.struct<(f32, i1)>
+    // CHECK: llvm.extractvalue %[[#SHFL]][1 : index] : !llvm.struct<(f32, i1)>
     %shfl, %pred = "gpu.shuffle"(%arg0, %arg1, %arg2) { mode = "xor" } : (f32, i32, i32) -> (f32, i1)
 
     std.return %shfl : f32
@@ -143,14 +143,14 @@ gpu.module @test_module {
 // -----
 
 gpu.module @test_module {
-  // CHECK: llvm.func @__nv_fabsf(!llvm.float) -> !llvm.float
-  // CHECK: llvm.func @__nv_fabs(!llvm.double) -> !llvm.double
+  // CHECK: llvm.func @__nv_fabsf(f32) -> f32
+  // CHECK: llvm.func @__nv_fabs(f64) -> f64
   // CHECK-LABEL: func @gpu_fabs
   func @gpu_fabs(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
     %result32 = std.absf %arg_f32 : f32
-    // CHECK: llvm.call @__nv_fabsf(%{{.*}}) : (!llvm.float) -> !llvm.float
+    // CHECK: llvm.call @__nv_fabsf(%{{.*}}) : (f32) -> f32
     %result64 = std.absf %arg_f64 : f64
-    // CHECK: llvm.call @__nv_fabs(%{{.*}}) : (!llvm.double) -> !llvm.double
+    // CHECK: llvm.call @__nv_fabs(%{{.*}}) : (f64) -> f64
     std.return %result32, %result64 : f32, f64
   }
 }
@@ -158,14 +158,14 @@ gpu.module @test_module {
 // -----
 
 gpu.module @test_module {
-  // CHECK: llvm.func @__nv_ceilf(!llvm.float) -> !llvm.float
-  // CHECK: llvm.func @__nv_ceil(!llvm.double) -> !llvm.double
+  // CHECK: llvm.func @__nv_ceilf(f32) -> f32
+  // CHECK: llvm.func @__nv_ceil(f64) -> f64
   // CHECK-LABEL: func @gpu_ceil
   func @gpu_ceil(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
     %result32 = std.ceilf %arg_f32 : f32
-    // CHECK: llvm.call @__nv_ceilf(%{{.*}}) : (!llvm.float) -> !llvm.float
+    // CHECK: llvm.call @__nv_ceilf(%{{.*}}) : (f32) -> f32
     %result64 = std.ceilf %arg_f64 : f64
-    // CHECK: llvm.call @__nv_ceil(%{{.*}}) : (!llvm.double) -> !llvm.double
+    // CHECK: llvm.call @__nv_ceil(%{{.*}}) : (f64) -> f64
     std.return %result32, %result64 : f32, f64
   }
 }
@@ -173,14 +173,14 @@ gpu.module @test_module {
 // -----
 
 gpu.module @test_module {
-  // CHECK: llvm.func @__nv_floorf(!llvm.float) -> !llvm.float
-  // CHECK: llvm.func @__nv_floor(!llvm.double) -> !llvm.double
+  // CHECK: llvm.func @__nv_floorf(f32) -> f32
+  // CHECK: llvm.func @__nv_floor(f64) -> f64
   // CHECK-LABEL: func @gpu_floor
   func @gpu_floor(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
     %result32 = std.floorf %arg_f32 : f32
-    // CHECK: llvm.call @__nv_floorf(%{{.*}}) : (!llvm.float) -> !llvm.float
+    // CHECK: llvm.call @__nv_floorf(%{{.*}}) : (f32) -> f32
     %result64 = std.floorf %arg_f64 : f64
-    // CHECK: llvm.call @__nv_floor(%{{.*}}) : (!llvm.double) -> !llvm.double
+    // CHECK: llvm.call @__nv_floor(%{{.*}}) : (f64) -> f64
     std.return %result32, %result64 : f32, f64
   }
 }
@@ -188,28 +188,28 @@ gpu.module @test_module {
 // -----
 
 gpu.module @test_module {
-  // CHECK: llvm.func @__nv_cosf(!llvm.float) -> !llvm.float
-  // CHECK: llvm.func @__nv_cos(!llvm.double) -> !llvm.double
+  // CHECK: llvm.func @__nv_cosf(f32) -> f32
+  // CHECK: llvm.func @__nv_cos(f64) -> f64
   // CHECK-LABEL: func @gpu_cos
   func @gpu_cos(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
     %result32 = std.cos %arg_f32 : f32
-    // CHECK: llvm.call @__nv_cosf(%{{.*}}) : (!llvm.float) -> !llvm.float
+    // CHECK: llvm.call @__nv_cosf(%{{.*}}) : (f32) -> f32
     %result64 = std.cos %arg_f64 : f64
-    // CHECK: llvm.call @__nv_cos(%{{.*}}) : (!llvm.double) -> !llvm.double
+    // CHECK: llvm.call @__nv_cos(%{{.*}}) : (f64) -> f64
     std.return %result32, %result64 : f32, f64
   }
 }
 
 // -----
 gpu.module @test_module {
-  // CHECK: llvm.func @__nv_expf(!llvm.float) -> !llvm.float
-  // CHECK: llvm.func @__nv_exp(!llvm.double) -> !llvm.double
+  // CHECK: llvm.func @__nv_expf(f32) -> f32
+  // CHECK: llvm.func @__nv_exp(f64) -> f64
   // CHECK-LABEL: func @gpu_exp
   func @gpu_exp(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
     %result32 = std.exp %arg_f32 : f32
-    // CHECK: llvm.call @__nv_expf(%{{.*}}) : (!llvm.float) -> !llvm.float
+    // CHECK: llvm.call @__nv_expf(%{{.*}}) : (f32) -> f32
     %result64 = std.exp %arg_f64 : f64
-    // CHECK: llvm.call @__nv_exp(%{{.*}}) : (!llvm.double) -> !llvm.double
+    // CHECK: llvm.call @__nv_exp(%{{.*}}) : (f64) -> f64
     std.return %result32, %result64 : f32, f64
   }
 }
@@ -217,14 +217,14 @@ gpu.module @test_module {
 // -----
 
 gpu.module @test_module {
-  // CHECK: llvm.func @__nv_logf(!llvm.float) -> !llvm.float
-  // CHECK: llvm.func @__nv_log(!llvm.double) -> !llvm.double
+  // CHECK: llvm.func @__nv_logf(f32) -> f32
+  // CHECK: llvm.func @__nv_log(f64) -> f64
   // CHECK-LABEL: func @gpu_log
   func @gpu_log(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
     %result32 = std.log %arg_f32 : f32
-    // CHECK: llvm.call @__nv_logf(%{{.*}}) : (!llvm.float) -> !llvm.float
+    // CHECK: llvm.call @__nv_logf(%{{.*}}) : (f32) -> f32
     %result64 = std.log %arg_f64 : f64
-    // CHECK: llvm.call @__nv_log(%{{.*}}) : (!llvm.double) -> !llvm.double
+    // CHECK: llvm.call @__nv_log(%{{.*}}) : (f64) -> f64
     std.return %result32, %result64 : f32, f64
   }
 }
@@ -232,14 +232,14 @@ gpu.module @test_module {
 // -----
 
 gpu.module @test_module {
-  // CHECK: llvm.func @__nv_log10f(!llvm.float) -> !llvm.float
-  // CHECK: llvm.func @__nv_log10(!llvm.double) -> !llvm.double
+  // CHECK: llvm.func @__nv_log10f(f32) -> f32
+  // CHECK: llvm.func @__nv_log10(f64) -> f64
   // CHECK-LABEL: func @gpu_log10
   func @gpu_log10(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
     %result32 = std.log10 %arg_f32 : f32
-    // CHECK: llvm.call @__nv_log10f(%{{.*}}) : (!llvm.float) -> !llvm.float
+    // CHECK: llvm.call @__nv_log10f(%{{.*}}) : (f32) -> f32
     %result64 = std.log10 %arg_f64 : f64
-    // CHECK: llvm.call @__nv_log10(%{{.*}}) : (!llvm.double) -> !llvm.double
+    // CHECK: llvm.call @__nv_log10(%{{.*}}) : (f64) -> f64
     std.return %result32, %result64 : f32, f64
   }
 }
@@ -247,14 +247,14 @@ gpu.module @test_module {
 // -----
 
 gpu.module @test_module {
-  // CHECK: llvm.func @__nv_log2f(!llvm.float) -> !llvm.float
-  // CHECK: llvm.func @__nv_log2(!llvm.double) -> !llvm.double
+  // CHECK: llvm.func @__nv_log2f(f32) -> f32
+  // CHECK: llvm.func @__nv_log2(f64) -> f64
   // CHECK-LABEL: func @gpu_log2
   func @gpu_log2(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
     %result32 = std.log2 %arg_f32 : f32
-    // CHECK: llvm.call @__nv_log2f(%{{.*}}) : (!llvm.float) -> !llvm.float
+    // CHECK: llvm.call @__nv_log2f(%{{.*}}) : (f32) -> f32
     %result64 = std.log2 %arg_f64 : f64
-    // CHECK: llvm.call @__nv_log2(%{{.*}}) : (!llvm.double) -> !llvm.double
+    // CHECK: llvm.call @__nv_log2(%{{.*}}) : (f64) -> f64
     std.return %result32, %result64 : f32, f64
   }
 }
@@ -262,14 +262,14 @@ gpu.module @test_module {
 // -----
 
 gpu.module @test_module {
-  // CHECK: llvm.func @__nv_sinf(!llvm.float) -> !llvm.float
-  // CHECK: llvm.func @__nv_sin(!llvm.double) -> !llvm.double
+  // CHECK: llvm.func @__nv_sinf(f32) -> f32
+  // CHECK: llvm.func @__nv_sin(f64) -> f64
   // CHECK-LABEL: func @gpu_sin
   func @gpu_sin(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
     %result32 = std.sin %arg_f32 : f32
-    // CHECK: llvm.call @__nv_sinf(%{{.*}}) : (!llvm.float) -> !llvm.float
+    // CHECK: llvm.call @__nv_sinf(%{{.*}}) : (f32) -> f32
     %result64 = std.sin %arg_f64 : f64
-    // CHECK: llvm.call @__nv_sin(%{{.*}}) : (!llvm.double) -> !llvm.double
+    // CHECK: llvm.call @__nv_sin(%{{.*}}) : (f64) -> f64
     std.return %result32, %result64 : f32, f64
   }
 }
@@ -277,18 +277,18 @@ gpu.module @test_module {
 // -----
 
 gpu.module @test_module {
-  // CHECK: llvm.func @__nv_tanhf(!llvm.float) -> !llvm.float
-  // CHECK: llvm.func @__nv_tanh(!llvm.double) -> !llvm.double
+  // CHECK: llvm.func @__nv_tanhf(f32) -> f32
+  // CHECK: llvm.func @__nv_tanh(f64) -> f64
   // CHECK-LABEL: func @gpu_tanh
   func @gpu_tanh(%arg_f16 : f16, %arg_f32 : f32, %arg_f64 : f64) -> (f16, f32, f64) {
     %result16 = std.tanh %arg_f16 : f16
-    // CHECK: llvm.fpext %{{.*}} : !llvm.half to !llvm.float
-    // CHECK-NEXT: llvm.call @__nv_tanhf(%{{.*}}) : (!llvm.float) -> !llvm.float
-    // CHECK-NEXT: llvm.fptrunc %{{.*}} : !llvm.float to !llvm.half
+    // CHECK: llvm.fpext %{{.*}} : f16 to f32
+    // CHECK-NEXT: llvm.call @__nv_tanhf(%{{.*}}) : (f32) -> f32
+    // CHECK-NEXT: llvm.fptrunc %{{.*}} : f32 to f16
     %result32 = std.tanh %arg_f32 : f32
-    // CHECK: llvm.call @__nv_tanhf(%{{.*}}) : (!llvm.float) -> !llvm.float
+    // CHECK: llvm.call @__nv_tanhf(%{{.*}}) : (f32) -> f32
     %result64 = std.tanh %arg_f64 : f64
-    // CHECK: llvm.call @__nv_tanh(%{{.*}}) : (!llvm.double) -> !llvm.double
+    // CHECK: llvm.call @__nv_tanh(%{{.*}}) : (f64) -> f64
     std.return %result16, %result32, %result64 : f16, f32, f64
   }
 }
@@ -296,19 +296,19 @@ gpu.module @test_module {
 // -----
 
 gpu.module @test_module {
-  // CHECK: llvm.func @__nv_rsqrtf(!llvm.float) -> !llvm.float
-  // CHECK: llvm.func @__nv_rsqrt(!llvm.double) -> !llvm.double
+  // CHECK: llvm.func @__nv_rsqrtf(f32) -> f32
+  // CHECK: llvm.func @__nv_rsqrt(f64) -> f64
   // CHECK-LABEL: func @gpu_rsqrt
   func @gpu_rsqrt(%arg_f16 : f16, %arg_f32 : f32, %arg_f64 : f64)
       -> (f16, f32, f64) {
     %result16 = std.rsqrt %arg_f16 : f16
-    // CHECK: llvm.fpext %{{.*}} : !llvm.half to !llvm.float
-    // CHECK-NEXT: llvm.call @__nv_rsqrtf(%{{.*}}) : (!llvm.float) -> !llvm.float
-    // CHECK-NEXT: llvm.fptrunc %{{.*}} : !llvm.float to !llvm.half
+    // CHECK: llvm.fpext %{{.*}} : f16 to f32
+    // CHECK-NEXT: llvm.call @__nv_rsqrtf(%{{.*}}) : (f32) -> f32
+    // CHECK-NEXT: llvm.fptrunc %{{.*}} : f32 to f16
     %result32 = std.rsqrt %arg_f32 : f32
-    // CHECK: llvm.call @__nv_rsqrtf(%{{.*}}) : (!llvm.float) -> !llvm.float
+    // CHECK: llvm.call @__nv_rsqrtf(%{{.*}}) : (f32) -> f32
     %result64 = std.rsqrt %arg_f64 : f64
-    // CHECK: llvm.call @__nv_rsqrt(%{{.*}}) : (!llvm.double) -> !llvm.double
+    // CHECK: llvm.call @__nv_rsqrt(%{{.*}}) : (f64) -> f64
     std.return %result16, %result32, %result64 : f16, f32, f64
   }
 }
@@ -316,19 +316,19 @@ gpu.module @test_module {
 // -----
 
 gpu.module @test_module {
-  // CHECK: llvm.func @__nv_sqrtf(!llvm.float) -> !llvm.float
-  // CHECK: llvm.func @__nv_sqrt(!llvm.double) -> !llvm.double
+  // CHECK: llvm.func @__nv_sqrtf(f32) -> f32
+  // CHECK: llvm.func @__nv_sqrt(f64) -> f64
   // CHECK-LABEL: func @gpu_sqrt
   func @gpu_sqrt(%arg_f16 : f16, %arg_f32 : f32, %arg_f64 : f64)
       -> (f16, f32, f64) {
     %result16 = std.sqrt %arg_f16 : f16
-    // CHECK: llvm.fpext %{{.*}} : !llvm.half to !llvm.float
-    // CHECK-NEXT: llvm.call @__nv_sqrtf(%{{.*}}) : (!llvm.float) -> !llvm.float
-    // CHECK-NEXT: llvm.fptrunc %{{.*}} : !llvm.float to !llvm.half
+    // CHECK: llvm.fpext %{{.*}} : f16 to f32
+    // CHECK-NEXT: llvm.call @__nv_sqrtf(%{{.*}}) : (f32) -> f32
+    // CHECK-NEXT: llvm.fptrunc %{{.*}} : f32 to f16
     %result32 = std.sqrt %arg_f32 : f32
-    // CHECK: llvm.call @__nv_sqrtf(%{{.*}}) : (!llvm.float) -> !llvm.float
+    // CHECK: llvm.call @__nv_sqrtf(%{{.*}}) : (f32) -> f32
     %result64 = std.sqrt %arg_f64 : f64
-    // CHECK: llvm.call @__nv_sqrt(%{{.*}}) : (!llvm.double) -> !llvm.double
+    // CHECK: llvm.call @__nv_sqrt(%{{.*}}) : (f64) -> f64
     std.return %result16, %result32, %result64 : f16, f32, f64
   }
 }
@@ -336,19 +336,19 @@ gpu.module @test_module {
 // -----
 
 gpu.module @test_module {
-  // CHECK: llvm.func @__nv_atanf(!llvm.float) -> !llvm.float
-  // CHECK: llvm.func @__nv_atan(!llvm.double) -> !llvm.double
+  // CHECK: llvm.func @__nv_atanf(f32) -> f32
+  // CHECK: llvm.func @__nv_atan(f64) -> f64
   // CHECK-LABEL: func @gpu_atan
   func @gpu_atan(%arg_f16 : f16, %arg_f32 : f32, %arg_f64 : f64)
       -> (f16, f32, f64) {
     %result16 = std.atan %arg_f16 : f16
-    // CHECK: llvm.fpext %{{.*}} : !llvm.half to !llvm.float
-    // CHECK-NEXT: llvm.call @__nv_atanf(%{{.*}}) : (!llvm.float) -> !llvm.float
-    // CHECK-NEXT: llvm.fptrunc %{{.*}} : !llvm.float to !llvm.half
+    // CHECK: llvm.fpext %{{.*}} : f16 to f32
+    // CHECK-NEXT: llvm.call @__nv_atanf(%{{.*}}) : (f32) -> f32
+    // CHECK-NEXT: llvm.fptrunc %{{.*}} : f32 to f16
     %result32 = std.atan %arg_f32 : f32
-    // CHECK: llvm.call @__nv_atanf(%{{.*}}) : (!llvm.float) -> !llvm.float
+    // CHECK: llvm.call @__nv_atanf(%{{.*}}) : (f32) -> f32
     %result64 = std.atan %arg_f64 : f64
-    // CHECK: llvm.call @__nv_atan(%{{.*}}) : (!llvm.double) -> !llvm.double
+    // CHECK: llvm.call @__nv_atan(%{{.*}}) : (f64) -> f64
     std.return %result16, %result32, %result64 : f16, f32, f64
   }
 }
@@ -356,20 +356,20 @@ gpu.module @test_module {
 // -----
 
 gpu.module @test_module {
-  // CHECK: llvm.func @__nv_atan2f(!llvm.float, !llvm.float) -> !llvm.float
-  // CHECK: llvm.func @__nv_atan2(!llvm.double, !llvm.double) -> !llvm.double
+  // CHECK: llvm.func @__nv_atan2f(f32, f32) -> f32
+  // CHECK: llvm.func @__nv_atan2(f64, f64) -> f64
   // CHECK-LABEL: func @gpu_atan2
   func @gpu_atan2(%arg_f16 : f16, %arg_f32 : f32, %arg_f64 : f64)
       -> (f16, f32, f64) {
     %result16 = std.atan2 %arg_f16, %arg_f16 : f16
-    // CHECK: llvm.fpext %{{.*}} : !llvm.half to !llvm.float
-    // CHECK: llvm.fpext %{{.*}} : !llvm.half to !llvm.float
-    // CHECK-NEXT: llvm.call @__nv_atan2f(%{{.*}}) : (!llvm.float, !llvm.float) -> !llvm.float
-    // CHECK-NEXT: llvm.fptrunc %{{.*}} : !llvm.float to !llvm.half
+    // CHECK: llvm.fpext %{{.*}} : f16 to f32
+    // CHECK: llvm.fpext %{{.*}} : f16 to f32
+    // CHECK-NEXT: llvm.call @__nv_atan2f(%{{.*}}) : (f32, f32) -> f32
+    // CHECK-NEXT: llvm.fptrunc %{{.*}} : f32 to f16
     %result32 = std.atan2 %arg_f32, %arg_f32 : f32
-    // CHECK: llvm.call @__nv_atan2f(%{{.*}}) : (!llvm.float, !llvm.float) -> !llvm.float
+    // CHECK: llvm.call @__nv_atan2f(%{{.*}}) : (f32, f32) -> f32
     %result64 = std.atan2 %arg_f64, %arg_f64 : f64
-    // CHECK: llvm.call @__nv_atan2(%{{.*}}) : (!llvm.double, !llvm.double) -> !llvm.double
+    // CHECK: llvm.call @__nv_atan2(%{{.*}}) : (f64, f64) -> f64
     std.return %result16, %result32, %result64 : f16, f32, f64
   }
 }
@@ -380,14 +380,14 @@ gpu.module @test_module {
 gpu.module @test_module {
   "test.symbol_scope"() ({
   // CHECK: test.symbol_scope
-  // CHECK: llvm.func @__nv_expf(!llvm.float) -> !llvm.float
-  // CHECK: llvm.func @__nv_exp(!llvm.double) -> !llvm.double
+  // CHECK: llvm.func @__nv_expf(f32) -> f32
+  // CHECK: llvm.func @__nv_exp(f64) -> f64
   // CHECK-LABEL: func @gpu_exp
     func @gpu_exp(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
       %result32 = std.exp %arg_f32 : f32
-      // CHECK: llvm.call @__nv_expf(%{{.*}}) : (!llvm.float) -> !llvm.float
+      // CHECK: llvm.call @__nv_expf(%{{.*}}) : (f32) -> f32
       %result64 = std.exp %arg_f64 : f64
-      // CHECK: llvm.call @__nv_exp(%{{.*}}) : (!llvm.double) -> !llvm.double
+      // CHECK: llvm.call @__nv_exp(%{{.*}}) : (f64) -> f64
       std.return %result32, %result64 : f32, f64
     }
     "test.finish" () : () -> ()
@@ -397,14 +397,14 @@ gpu.module @test_module {
 // -----
 
 gpu.module @test_module {
-  // CHECK: llvm.func @__nv_powf(!llvm.float, !llvm.float) -> !llvm.float
-  // CHECK: llvm.func @__nv_pow(!llvm.double, !llvm.double) -> !llvm.double
+  // CHECK: llvm.func @__nv_powf(f32, f32) -> f32
+  // CHECK: llvm.func @__nv_pow(f64, f64) -> f64
   // CHECK-LABEL: func @gpu_pow
   func @gpu_pow(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
     %result32 = std.powf %arg_f32, %arg_f32 : f32
-    // CHECK: llvm.call @__nv_powf(%{{.*}}, %{{.*}}) : (!llvm.float, !llvm.float) -> !llvm.float
+    // CHECK: llvm.call @__nv_powf(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
     %result64 = std.powf %arg_f64, %arg_f64 : f64
-    // CHECK: llvm.call @__nv_pow(%{{.*}}, %{{.*}}) : (!llvm.double, !llvm.double) -> !llvm.double
+    // CHECK: llvm.call @__nv_pow(%{{.*}}, %{{.*}}) : (f64, f64) -> f64
     std.return %result32, %result64 : f32, f64
   }
 }

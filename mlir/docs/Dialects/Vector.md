@@ -264,11 +264,11 @@ Consider a vector of rank n with  static sizes `{s_0, ... s_{n-1}}` (i.e. an
 MLIR `vector<s_0x...s_{n-1}xf32>`). Lowering such an `n-D` MLIR vector type to
 an LLVM descriptor can be done by either:
 
-1. Flattening to a `1-D` vector: `!llvm<"(s_0*...*s_{n-1})xfloat">` in the
-MLIR LLVM dialect.
-2. Nested aggregate type of `1-D` vector:
-`!llvm<"[s_0x[s_1x[...<s_{n-1}xfloat>]]]">` in the MLIR LLVM dialect.
-3. A mix of both.
+1.  Flattening to a `1-D` vector: `!llvm<"(s_0*...*s_{n-1})xfloat">` in the MLIR
+    LLVM dialect.
+2.  Nested aggregate type of `1-D` vector:
+    `!llvm."[s_0x[s_1x[...<s_{n-1}xf32>]]]">` in the MLIR LLVM dialect.
+3.  A mix of both.
 
 There are multiple tradeoffs involved in choosing one or the other that we
 discuss. It is important to note that “a mix of both” immediately reduces to

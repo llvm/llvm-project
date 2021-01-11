@@ -9,8 +9,8 @@ llvm.mlir.global constant @default_external_constant(42) : i64
 // CHECK: llvm.mlir.global internal @global(42 : i64) : i64
 llvm.mlir.global internal @global(42 : i64) : i64
 
-// CHECK: llvm.mlir.global internal constant @constant(3.700000e+01 : f64) : !llvm.float
-llvm.mlir.global internal constant @constant(37.0) : !llvm.float
+// CHECK: llvm.mlir.global internal constant @constant(3.700000e+01 : f64) : f32
+llvm.mlir.global internal constant @constant(37.0) : f32
 
 // CHECK: llvm.mlir.global internal constant @".string"("foobar")
 llvm.mlir.global internal constant @".string"("foobar") : !llvm.array<6 x i8>

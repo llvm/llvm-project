@@ -82,11 +82,11 @@ func @foo(%arg0: memref<?xf32>) -> () {
 
 // Gets converted to the following
 // (using type alias for brevity):
-!llvm.memref_1d = type !llvm.struct<(ptr<float>, ptr<float>, i64,
+!llvm.memref_1d = type !llvm.struct<(ptr<f32>, ptr<f32>, i64,
                                      array<1xi64>, array<1xi64>)>
 
-llvm.func @foo(%arg0: !llvm.ptr<float>,  // Allocated pointer.
-               %arg1: !llvm.ptr<float>,  // Aligned pointer.
+llvm.func @foo(%arg0: !llvm.ptr<f32>,  // Allocated pointer.
+               %arg1: !llvm.ptr<f32>,  // Aligned pointer.
                %arg2: i64,         // Offset.
                %arg3: i64,         // Size in dim 0.
                %arg4: i64) {       // Stride in dim 0.
@@ -113,7 +113,7 @@ func @bar() {
 
 // Gets converted to the following
 // (using type alias for brevity):
-!llvm.memref_1d = type !llvm.struct<(ptr<float>, ptr<float>, i64,
+!llvm.memref_1d = type !llvm.struct<(ptr<f32>, ptr<f32>, i64,
                                      array<1xi64>, array<1xi64>)>
 
 llvm.func @bar() {
@@ -264,11 +264,11 @@ func @qux(%arg0: memref<?x?xf32>)
 
 // Gets converted into the following
 // (using type alias for brevity):
-!llvm.memref_2d = type !llvm.struct<(ptr<float>, ptr<float>, i64,
+!llvm.memref_2d = type !llvm.struct<(ptr<f32>, ptr<f32>, i64,
                                      array<2xi64>, array<2xi64>)>
 
 // Function with unpacked arguments.
-llvm.func @qux(%arg0: !llvm.ptr<float>, %arg1: !llvm.ptr<float>,
+llvm.func @qux(%arg0: !llvm.ptr<f32>, %arg1: !llvm.ptr<f32>,
                %arg2: i64, %arg3: i64, %arg4: i64,
                %arg5: i64, %arg6: i64) {
   // Populate memref descriptor (as per calling convention).
@@ -284,14 +284,14 @@ llvm.func @qux(%arg0: !llvm.ptr<float>, %arg1: !llvm.ptr<float>,
   // Store the descriptor in a stack-allocated space.
   %8 = llvm.mlir.constant(1 : index) : i64
   %9 = llvm.alloca %8 x !llvm.memref_2d
-     : (i64) -> !llvm.ptr<struct<(ptr<float>, ptr<float>, i64,
+     : (i64) -> !llvm.ptr<struct<(ptr<f32>, ptr<f32>, i64,
                                         array<2xi64>, array<2xi64>)>>
-  llvm.store %7, %9 : !llvm.ptr<struct<(ptr<float>, ptr<float>, i64,
+  llvm.store %7, %9 : !llvm.ptr<struct<(ptr<f32>, ptr<f32>, i64,
                                         array<2xi64>, array<2xi64>)>>
 
   // Call the interface function.
   llvm.call @_mlir_ciface_qux(%9)
-     : (!llvm.ptr<struct<(ptr<float>, ptr<float>, i64,
+     : (!llvm.ptr<struct<(ptr<f32>, ptr<f32>, i64,
                           array<2xi64>, array<2xi64>)>>) -> ()
 
   // The stored descriptor will be freed on return.
@@ -299,7 +299,7 @@ llvm.func @qux(%arg0: !llvm.ptr<float>, %arg1: !llvm.ptr<float>,
 }
 
 // Interface function.
-llvm.func @_mlir_ciface_qux(!llvm.ptr<struct<(ptr<float>, ptr<float>, i64,
+llvm.func @_mlir_ciface_qux(!llvm.ptr<struct<(ptr<f32>, ptr<f32>, i64,
                                               array<2xi64>, array<2xi64>)>>)
 ```
 
@@ -310,13 +310,13 @@ func @foo(%arg0: memref<?x?xf32>) {
 
 // Gets converted into the following
 // (using type alias for brevity):
-!llvm.memref_2d = type !llvm.struct<(ptr<float>, ptr<float>, i64,
+!llvm.memref_2d = type !llvm.struct<(ptr<f32>, ptr<f32>, i64,
                                      array<2xi64>, array<2xi64>)>
-!llvm.memref_2d_ptr = type !llvm.ptr<struct<(ptr<float>, ptr<float>, i64,
+!llvm.memref_2d_ptr = type !llvm.ptr<struct<(ptr<f32>, ptr<f32>, i64,
                                              array<2xi64>, array<2xi64>)>>
 
 // Function with unpacked arguments.
-llvm.func @foo(%arg0: !llvm.ptr<float>, %arg1: !llvm.ptr<float>,
+llvm.func @foo(%arg0: !llvm.ptr<f32>, %arg1: !llvm.ptr<f32>,
                %arg2: i64, %arg3: i64, %arg4: i64,
                %arg5: i64, %arg6: i64) {
   llvm.return
@@ -336,7 +336,7 @@ llvm.func @_mlir_ciface_foo(%arg0: !llvm.memref_2d_ptr) {
   %6 = llvm.extractvalue %0[4, 0] : !llvm.memref_2d
   %7 = llvm.extractvalue %0[4, 1] : !llvm.memref_2d
   llvm.call @foo(%1, %2, %3, %4, %5, %6, %7)
-    : (!llvm.ptr<float>, !llvm.ptr<float>, i64, i64, i64,
+    : (!llvm.ptr<f32>, !llvm.ptr<f32>, i64, i64, i64,
        i64, i64) -> ()
   llvm.return
 }
@@ -395,7 +395,7 @@ is transformed into the equivalent of the following code:
 // Compute the linearized index from strides.
 // When strides or, in absence of explicit strides, the corresponding sizes are
 // dynamic, extract the stride value from the descriptor.
-%stride1 = llvm.extractvalue[4, 0] : !llvm.struct<(ptr<float>, ptr<float>, i64,
+%stride1 = llvm.extractvalue[4, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64,
                                                    array<4xi64>, array<4xi64>)>
 %addr1 = muli %stride1, %1 : i64
 
@@ -415,21 +415,21 @@ is transformed into the equivalent of the following code:
 
 // If the linear offset is known to be zero, it can also be omitted. If it is
 // dynamic, it is extracted from the descriptor.
-%offset = llvm.extractvalue[2] : !llvm.struct<(ptr<float>, ptr<float>, i64,
+%offset = llvm.extractvalue[2] : !llvm.struct<(ptr<f32>, ptr<f32>, i64,
                                                array<4xi64>, array<4xi64>)>
 %addr7 = addi %addr6, %offset : i64
 
 // All accesses are based on the aligned pointer.
-%aligned = llvm.extractvalue[1] : !llvm.struct<(ptr<float>, ptr<float>, i64,
+%aligned = llvm.extractvalue[1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64,
                                                 array<4xi64>, array<4xi64>)>
 
 // Get the address of the data pointer.
 %ptr = llvm.getelementptr %aligned[%addr8]
-     : !llvm.struct<(ptr<float>, ptr<float>, i64, array<4xi64>, array<4xi64>)>
-     -> !llvm.ptr<float>
+     : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<4xi64>, array<4xi64>)>
+     -> !llvm.ptr<f32>
 
 // Perform the actual load.
-%0 = llvm.load %ptr : !llvm.ptr<float>
+%0 = llvm.load %ptr : !llvm.ptr<f32>
 ```
 
 For stores, the address computation code is identical and only the actual store
