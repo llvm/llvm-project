@@ -133,10 +133,14 @@ void InitializeDbgHelpIfNeeded() {
   }
 }
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wframe-larger-than="
+#endif
 bool WinSymbolizerTool::SymbolizePC(uptr addr, SymbolizedStack *frame) {
   InitializeDbgHelpIfNeeded();
 
-  // See http://msdn.microsoft.com/en-us/library/ms680578(VS.85).aspx
+  // See https://docs.microsoft.com/en-us/windows/win32/debug/retrieving-symbol-information-by-address
   char buffer[sizeof(SYMBOL_INFO) + MAX_SYM_NAME * sizeof(CHAR)];
   PSYMBOL_INFO symbol = (PSYMBOL_INFO)buffer;
   symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
@@ -162,6 +166,9 @@ bool WinSymbolizerTool::SymbolizePC(uptr addr, SymbolizedStack *frame) {
   // Otherwise, try llvm-symbolizer.
   return got_fileline;
 }
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 const char *WinSymbolizerTool::Demangle(const char *name) {
   CHECK(is_dbghelp_initialized);
