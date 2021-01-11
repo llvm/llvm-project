@@ -1251,6 +1251,27 @@ int printAffineExpr(MlirContext ctx) {
   if (!mlirAffineExprIsACeilDiv(affineCeilDivExpr))
     return 13;
 
+  if (!mlirAffineExprIsABinary(affineAddExpr))
+    return 14;
+
+  // Test other 'IsA' method on affine expressions.
+  if (!mlirAffineExprIsAConstant(affineConstantExpr))
+    return 15;
+
+  if (!mlirAffineExprIsADim(affineDimExpr))
+    return 16;
+
+  if (!mlirAffineExprIsASymbol(affineSymbolExpr))
+    return 17;
+
+  // Test equality and nullity.
+  MlirAffineExpr otherDimExpr = mlirAffineDimExprGet(ctx, 5);
+  if (!mlirAffineExprEqual(affineDimExpr, otherDimExpr))
+    return 18;
+
+  if (mlirAffineExprIsNull(affineDimExpr))
+    return 19;
+
   return 0;
 }
 

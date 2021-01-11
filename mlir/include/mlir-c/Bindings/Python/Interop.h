@@ -23,10 +23,12 @@
 
 #include <Python.h>
 
+#include "mlir-c/AffineExpr.h"
 #include "mlir-c/AffineMap.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Pass.h"
 
+#define MLIR_PYTHON_CAPSULE_AFFINE_EXPR "mlir.ir.AffineExpr._CAPIPtr"
 #define MLIR_PYTHON_CAPSULE_AFFINE_MAP "mlir.ir.AffineMap._CAPIPtr"
 #define MLIR_PYTHON_CAPSULE_ATTRIBUTE "mlir.ir.Attribute._CAPIPtr"
 #define MLIR_PYTHON_CAPSULE_CONTEXT "mlir.ir.Context._CAPIPtr"
@@ -71,6 +73,25 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/** Creates a capsule object encapsulating the raw C-API MlirAffineExpr. The
+ * returned capsule does not extend or affect ownership of any Python objects
+ * that reference the expression in any way.
+ */
+static inline PyObject *mlirPythonAffineExprToCapsule(MlirAffineExpr expr) {
+  return PyCapsule_New(MLIR_PYTHON_GET_WRAPPED_POINTER(expr),
+                       MLIR_PYTHON_CAPSULE_AFFINE_EXPR, NULL);
+}
+
+/** Extracts an MlirAffineExpr from a capsule as produced from
+ * mlirPythonAffineExprToCapsule. If the capsule is not of the right type, then
+ * a null expression is returned (as checked via mlirAffineExprIsNull). In such
+ * a case, the Python APIs will have already set an error. */
+static inline MlirAffineExpr mlirPythonCapsuleToAffineExpr(PyObject *capsule) {
+  void *ptr = PyCapsule_GetPointer(capsule, MLIR_PYTHON_CAPSULE_AFFINE_EXPR);
+  MlirAffineExpr expr = {ptr};
+  return expr;
+}
 
 /** Creates a capsule object encapsulating the raw C-API MlirAttribute.
  * The returned capsule does not extend or affect ownership of any Python
