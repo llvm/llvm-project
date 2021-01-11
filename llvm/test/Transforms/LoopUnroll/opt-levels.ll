@@ -7,10 +7,10 @@
 ; the behavior, we artificially disable unrolling for anything but O3 by setting
 ; the default threshold to 0.
 
-; O3:     loop2.preheader
-; O2-NOT: loop2.preheader
-; Os-NOT: loop2.preheader
-; Oz-NOT: loop2.preheader
+; O3:     loop1.preheader
+; O2-NOT: loop1.preheader
+; Os-NOT: loop1.preheader
+; Oz-NOT: loop1.preheader
 
 define void @unroll(i32 %iter, i32* %addr1, i32* %addr2) nounwind {
 entry:
