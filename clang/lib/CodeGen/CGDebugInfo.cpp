@@ -3132,10 +3132,6 @@ static QualType UnwrapTypeForDebugInfo(QualType T, const ASTContext &C) {
 }
 
 llvm::DIType *CGDebugInfo::getTypeOrNull(QualType Ty) {
-
-  // Unwrap the type as needed for debug information.
-  Ty = UnwrapTypeForDebugInfo(Ty, CGM.getContext());
-
   auto It = TypeCache.find(Ty.getAsOpaquePtr());
   if (It != TypeCache.end()) {
     // Verify that the debug info still exists.
