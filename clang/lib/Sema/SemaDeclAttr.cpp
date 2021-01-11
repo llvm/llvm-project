@@ -7517,75 +7517,6 @@ static void handleCFGuardAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) CFGuardAttr(S.Context, AL, Arg));
 }
 
-
-template <typename AttrTy>
-static const AttrTy *findEnforceTCBAttrByName(Decl *D, StringRef Name) {
-  auto Attrs = D->specific_attrs<AttrTy>();
-  auto I = llvm::find_if(Attrs,
-                         [Name](const AttrTy *A) {
-                           return A->getTCBName() == Name;
-                         });
-  return I == Attrs.end() ? nullptr : *I;
-}
-
-template <typename AttrTy, typename ConflictingAttrTy>
-static void handleEnforceTCBAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  StringRef Argument;
-  if (!S.checkStringLiteralArgumentAttr(AL, 0, Argument))
-    return;
-
-  // A function cannot be have both regular and leaf membership in the same TCB.
-  if (const ConflictingAttrTy *ConflictingAttr =
-      findEnforceTCBAttrByName<ConflictingAttrTy>(D, Argument)) {
-    // We could attach a note to the other attribute but in this case
-    // there's no need given how the two are very close to each other.
-    S.Diag(AL.getLoc(), diag::err_tcb_conflicting_attributes)
-      << AL.getAttrName()->getName() << ConflictingAttr->getAttrName()->getName()
-      << Argument;
-
-    // Error recovery: drop the non-leaf attribute so that to suppress
-    // all future warnings caused by erroneous attributes. The leaf attribute
-    // needs to be kept because it can only suppresses warnings, not cause them.
-    D->dropAttr<EnforceTCBAttr>();
-    return;
-  }
-
-  D->addAttr(AttrTy::Create(S.Context, Argument, AL));
-}
-
-template <typename AttrTy, typename ConflictingAttrTy>
-static AttrTy *mergeEnforceTCBAttrImpl(Sema &S, Decl *D, const AttrTy &AL) {
-  // Check if the new redeclaration has different leaf-ness in the same TCB.
-  StringRef TCBName = AL.getTCBName();
-  if (const ConflictingAttrTy *ConflictingAttr =
-      findEnforceTCBAttrByName<ConflictingAttrTy>(D, TCBName)) {
-    S.Diag(ConflictingAttr->getLoc(), diag::err_tcb_conflicting_attributes)
-      << ConflictingAttr->getAttrName()->getName()
-      << AL.getAttrName()->getName() << TCBName;
-
-    // Add a note so that the user could easily find the conflicting attribute.
-    S.Diag(AL.getLoc(), diag::note_conflicting_attribute);
-
-    // More error recovery.
-    D->dropAttr<EnforceTCBAttr>();
-    return nullptr;
-  }
-
-  ASTContext &Context = S.getASTContext();
-  return ::new(Context) AttrTy(Context, AL, AL.getTCBName());
-}
-
-EnforceTCBAttr *Sema::mergeEnforceTCBAttr(Decl *D, const EnforceTCBAttr &AL) {
-  return mergeEnforceTCBAttrImpl<EnforceTCBAttr, EnforceTCBLeafAttr>(
-      *this, D, AL);
-}
-
-EnforceTCBLeafAttr *Sema::mergeEnforceTCBLeafAttr(
-    Decl *D, const EnforceTCBLeafAttr &AL) {
-  return mergeEnforceTCBAttrImpl<EnforceTCBLeafAttr, EnforceTCBAttr>(
-      *this, D, AL);
-}
-
 //===----------------------------------------------------------------------===//
 // Top Level Sema Entry Points
 //===----------------------------------------------------------------------===//
@@ -8288,14 +8219,6 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
 
   case ParsedAttr::AT_UseHandle:
     handleHandleAttr<UseHandleAttr>(S, D, AL);
-    break;
-
-  case ParsedAttr::AT_EnforceTCB:
-    handleEnforceTCBAttr<EnforceTCBAttr, EnforceTCBLeafAttr>(S, D, AL);
-    break;
-
-  case ParsedAttr::AT_EnforceTCBLeaf:
-    handleEnforceTCBAttr<EnforceTCBLeafAttr, EnforceTCBAttr>(S, D, AL);
     break;
   }
 }

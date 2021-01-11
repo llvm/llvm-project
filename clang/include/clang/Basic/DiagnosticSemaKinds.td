@@ -11116,11 +11116,4 @@ def err_probability_not_constant_float : Error<
 def err_probability_out_of_range : Error<
    "probability argument to __builtin_expect_with_probability is outside the "
    "range [0.0, 1.0]">;
-
-// TCB warnings
-def err_tcb_conflicting_attributes : Error<
-  "attributes '%0(\"%2\")' and '%1(\"%2\")' are mutually exclusive">;
-def warn_tcb_enforcement_violation : Warning<
-  "calling %0 is a violation of trusted computing base '%1'">,
-  InGroup<DiagGroup<"tcb-enforcement">>;
 } // end of sema component.
