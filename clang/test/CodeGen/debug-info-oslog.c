@@ -11,5 +11,5 @@ void test_builtin_os_log(void *buf, int i, const char *data) {
 // number between file and type.
 
 // CHECK: distinct !DISubprogram(name: "__os_log_helper_1_0_1_4_0",
-// CHECK-SAME:                   file: !{{[0-9+]}}, type
+// CHECK-SAME:                   file: !{{.*}}, type
 // CHECK-SAME:                   flags: DIFlagArtificial
