@@ -1553,12 +1553,12 @@ void HoistSpillHelper::hoistAllSpills() {
     for (auto const &Insert : SpillsToIns) {
       MachineBasicBlock *BB = Insert.first;
       Register LiveReg = Insert.second;
-      MachineBasicBlock::iterator MI = IPA.getLastInsertPointIter(OrigLI, *BB);
-      MachineInstrSpan MIS(MI, BB);
-      TII.storeRegToStackSlot(*BB, MI, LiveReg, false, Slot,
+      MachineBasicBlock::iterator MII = IPA.getLastInsertPointIter(OrigLI, *BB);
+      MachineInstrSpan MIS(MII, BB);
+      TII.storeRegToStackSlot(*BB, MII, LiveReg, false, Slot,
                               MRI.getRegClass(LiveReg), &TRI);
-      LIS.InsertMachineInstrRangeInMaps(MIS.begin(), MI);
-      for (const MachineInstr &MI : make_range(MIS.begin(), MI))
+      LIS.InsertMachineInstrRangeInMaps(MIS.begin(), MII);
+      for (const MachineInstr &MI : make_range(MIS.begin(), MII))
         getVDefInterval(MI, LIS);
       ++NumSpills;
     }
