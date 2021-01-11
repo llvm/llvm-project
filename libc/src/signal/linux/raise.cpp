@@ -13,7 +13,7 @@
 
 namespace __llvm_libc {
 
-int LLVM_LIBC_ENTRYPOINT(raise)(int sig) {
+LLVM_LIBC_FUNCTION(int, raise, (int sig)) {
   __llvm_libc::Sigset sigset;
   __llvm_libc::block_all_signals(sigset);
   long pid = __llvm_libc::syscall(SYS_getpid);

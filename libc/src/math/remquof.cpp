@@ -11,7 +11,7 @@
 
 namespace __llvm_libc {
 
-float LLVM_LIBC_ENTRYPOINT(remquof)(float x, float y, int *exp) {
+LLVM_LIBC_FUNCTION(float, remquof, (float x, float y, int *exp)) {
   return fputil::remquo(x, y, *exp);
 }
 

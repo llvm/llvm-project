@@ -15,6 +15,6 @@ namespace __llvm_libc {
 
 // TODO: Currently restricted to default locale.
 // These should be extended using locale information.
-int LLVM_LIBC_ENTRYPOINT(isalnum)(int c) { return internal::isalnum(c); }
+LLVM_LIBC_FUNCTION(int, isalnum, (int c)) { return internal::isalnum(c); }
 
 } // namespace __llvm_libc

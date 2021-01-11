@@ -42,7 +42,7 @@ static inline time_t outOfRange() {
   return static_cast<time_t>(-1);
 }
 
-time_t LLVM_LIBC_ENTRYPOINT(mktime)(struct tm *t1) {
+LLVM_LIBC_FUNCTION(time_t, mktime, (struct tm * t1)) {
   // Unlike most C Library functions, mktime doesn't just die on bad input.
   // TODO(rtenneti); Handle leap seconds. Handle out of range time and date
   // values that don't overflow or underflow.

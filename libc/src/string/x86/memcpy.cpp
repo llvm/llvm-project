@@ -80,8 +80,9 @@ static void memcpy_x86(char *__restrict dst, const char *__restrict src,
   return CopyRepMovsb(dst, src, count);
 }
 
-void *LLVM_LIBC_ENTRYPOINT(memcpy)(void *__restrict dst,
-                                   const void *__restrict src, size_t size) {
+LLVM_LIBC_FUNCTION(void *, memcpy,
+                   (void *__restrict dst, const void *__restrict src,
+                    size_t size)) {
   memcpy_x86(reinterpret_cast<char *>(dst), reinterpret_cast<const char *>(src),
              size);
   return dst;

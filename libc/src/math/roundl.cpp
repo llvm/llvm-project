@@ -11,7 +11,7 @@
 
 namespace __llvm_libc {
 
-long double LLVM_LIBC_ENTRYPOINT(roundl)(long double x) {
+LLVM_LIBC_FUNCTION(long double, roundl, (long double x)) {
   return fputil::round(x);
 }
 

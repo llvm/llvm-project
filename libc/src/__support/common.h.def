@@ -15,8 +15,19 @@
 #define unlikely(x) __builtin_expect (x, 0)
 #define UNUSED __attribute__((unused))
 
-<!> Include the platform specific definitions at build time. For example, that
-<!> of entrypoint macro.
-%%include_file(${platform_defs})
+#ifndef LLVM_LIBC_FUNCTION_ATTR
+  #define LLVM_LIBC_FUNCTION_ATTR
+#endif
+
+#ifdef LLVM_LIBC_PUBLIC_PACKAGING
+#define LLVM_LIBC_FUNCTION(type, name, arglist) \
+  type name arglist; \
+  LLVM_LIBC_FUNCTION_ATTR decltype(__llvm_libc::name) __##name##_impl__ __asm__(#name); \
+  decltype(__llvm_libc::name) name [[gnu::alias(#name)]]; \
+  type __##name##_impl__ arglist                                        
+#else
+#define LLVM_LIBC_FUNCTION(type, name, arglist)\
+  type name arglist
+#endif
 
 #endif // LLVM_LIBC_SUPPORT_COMMON_H

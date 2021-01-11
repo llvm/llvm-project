@@ -11,7 +11,7 @@
 
 namespace __llvm_libc {
 
-double LLVM_LIBC_ENTRYPOINT(rint)(double x) {
+LLVM_LIBC_FUNCTION(double, rint, (double x)) {
   return fputil::roundUsingCurrentRoundingMode(x);
 }
 

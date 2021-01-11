@@ -17,7 +17,7 @@ namespace __llvm_libc {
 
 // This function is currently linux only. It has to be refactored suitably if
 // mmap is to be supported on non-linux operating systems also.
-int LLVM_LIBC_ENTRYPOINT(munmap)(void *addr, size_t size) {
+LLVM_LIBC_FUNCTION(int, munmap, (void *addr, size_t size)) {
   long ret_val =
       __llvm_libc::syscall(SYS_munmap, reinterpret_cast<long>(addr), size);
 

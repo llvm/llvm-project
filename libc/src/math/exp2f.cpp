@@ -20,7 +20,7 @@
 
 namespace __llvm_libc {
 
-float LLVM_LIBC_ENTRYPOINT(exp2f)(float x) {
+LLVM_LIBC_FUNCTION(float, exp2f, (float x)) {
   uint32_t abstop;
   uint64_t ki, t;
   // double_t for better performance on targets with FLT_EVAL_METHOD==2.
