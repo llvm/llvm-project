@@ -135,3 +135,33 @@ MyString StaticVarWithTypedefString<T>::str = "";
 void testStaticVarWithTypedefString() {
   (void)StaticVarWithTypedefString<int>::str;
 }
+
+namespace ArrayBound {
+#if __cplusplus >= 201103L
+  template<typename T> void make_unique(T &&);
+
+  template<typename> struct Foo {
+    static constexpr char kMessage[] = "abc";
+    static void f() { make_unique(kMessage); }
+    static void g1() { const char (&ref)[4] = kMessage; } // OK
+    // We can diagnose this prior to instantiation because kMessage is not type-dependent.
+    static void g2() { const char (&ref)[5] = kMessage; } // expected-error {{could not bind}}
+  };
+  template void Foo<int>::f();
+#endif
+
+  template<typename> struct Bar {
+    static const char kMessage[];
+    // Here, kMessage is type-dependent, so we don't diagnose until
+    // instantiation.
+    static void g1() { const char (&ref)[4] = kMessage; } // expected-error {{could not bind to an lvalue of type 'const char [5]'}}
+    static void g2() { const char (&ref)[5] = kMessage; } // expected-error {{could not bind to an lvalue of type 'const char [4]'}}
+  };
+  template<typename T> const char Bar<T>::kMessage[] = "foo";
+  template void Bar<int>::g1();
+  template void Bar<int>::g2(); // expected-note {{in instantiation of}}
+
+  template<> const char Bar<char>::kMessage[] = "foox";
+  template void Bar<char>::g1(); // expected-note {{in instantiation of}}
+  template void Bar<char>::g2();
+}
