@@ -40,21 +40,21 @@ llvm.func @llvm.nvvm.barrier0() {
 
 llvm.func @nvvm_shfl(
     %0 : i32, %1 : i32, %2 : i32,
-    %3 : i32, %4 : !llvm.float) -> i32 {
+    %3 : i32, %4 : f32) -> i32 {
   // CHECK: call i32 @llvm.nvvm.shfl.sync.bfly.i32(i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
   %6 = nvvm.shfl.sync.bfly %0, %3, %1, %2 : i32
   // CHECK: call float @llvm.nvvm.shfl.sync.bfly.f32(i32 %{{.*}}, float %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
-  %7 = nvvm.shfl.sync.bfly %0, %4, %1, %2 : !llvm.float
+  %7 = nvvm.shfl.sync.bfly %0, %4, %1, %2 : f32
   llvm.return %6 : i32
 }
 
 llvm.func @nvvm_shfl_pred(
     %0 : i32, %1 : i32, %2 : i32,
-    %3 : i32, %4 : !llvm.float) -> !llvm.struct<(i32, i1)> {
+    %3 : i32, %4 : f32) -> !llvm.struct<(i32, i1)> {
   // CHECK: call { i32, i1 } @llvm.nvvm.shfl.sync.bfly.i32p(i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
   %6 = nvvm.shfl.sync.bfly %0, %3, %1, %2 {return_value_and_is_valid} : !llvm.struct<(i32, i1)>
   // CHECK: call { float, i1 } @llvm.nvvm.shfl.sync.bfly.f32p(i32 %{{.*}}, float %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
-  %7 = nvvm.shfl.sync.bfly %0, %4, %1, %2 {return_value_and_is_valid} : !llvm.struct<(float, i1)>
+  %7 = nvvm.shfl.sync.bfly %0, %4, %1, %2 {return_value_and_is_valid} : !llvm.struct<(f32, i1)>
   llvm.return %6 : !llvm.struct<(i32, i1)>
 }
 
@@ -64,13 +64,13 @@ llvm.func @nvvm_vote(%0 : i32, %1 : i1) -> i32 {
   llvm.return %3 : i32
 }
 
-llvm.func @nvvm_mma(%a0 : !llvm.vec<2 x half>, %a1 : !llvm.vec<2 x half>,
-                    %b0 : !llvm.vec<2 x half>, %b1 : !llvm.vec<2 x half>,
-                    %c0 : !llvm.float, %c1 : !llvm.float, %c2 : !llvm.float, %c3 : !llvm.float,
-                    %c4 : !llvm.float, %c5 : !llvm.float, %c6 : !llvm.float, %c7 : !llvm.float) {
+llvm.func @nvvm_mma(%a0 : !llvm.vec<2 x f16>, %a1 : !llvm.vec<2 x f16>,
+                    %b0 : !llvm.vec<2 x f16>, %b1 : !llvm.vec<2 x f16>,
+                    %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32,
+                    %c4 : f32, %c5 : f32, %c6 : f32, %c7 : f32) {
   // CHECK: call { float, float, float, float, float, float, float, float } @llvm.nvvm.mma.m8n8k4.row.col.f32.f32
-  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="row", blayout="col"} : (!llvm.vec<2 x half>, !llvm.vec<2 x half>, !llvm.vec<2 x half>, !llvm.vec<2 x half>, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float) -> !llvm.struct<(float, float, float, float, float, float, float, float)>
-  llvm.return %0 : !llvm.struct<(float, float, float, float, float, float, float, float)>
+  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="row", blayout="col"} : (!llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, f32, f32, f32, f32, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
+  llvm.return %0 : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
 }
 
 // This function has the "kernel" attribute attached and should appear in the

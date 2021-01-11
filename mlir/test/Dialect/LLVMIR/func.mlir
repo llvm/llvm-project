@@ -40,8 +40,8 @@ module {
   // CHECK: llvm.func @roundtrip1()
   llvm.func @roundtrip1()
 
-  // CHECK: llvm.func @roundtrip2(i64, !llvm.float) -> !llvm.double
-  llvm.func @roundtrip2(i64, !llvm.float) -> !llvm.double
+  // CHECK: llvm.func @roundtrip2(i64, f32) -> f64
+  llvm.func @roundtrip2(i64, f32) -> f64
 
   // CHECK: llvm.func @roundtrip3(i32, i1)
   llvm.func @roundtrip3(%a: i32, %b: i1)

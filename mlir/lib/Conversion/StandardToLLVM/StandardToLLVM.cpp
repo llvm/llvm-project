@@ -189,17 +189,7 @@ Type LLVMTypeConverter::convertIntegerType(IntegerType type) {
   return IntegerType::get(&getContext(), type.getWidth());
 }
 
-Type LLVMTypeConverter::convertFloatType(FloatType type) {
-  if (type.isa<Float32Type>())
-    return LLVM::LLVMFloatType::get(&getContext());
-  if (type.isa<Float64Type>())
-    return LLVM::LLVMDoubleType::get(&getContext());
-  if (type.isa<Float16Type>())
-    return LLVM::LLVMHalfType::get(&getContext());
-  if (type.isa<BFloat16Type>())
-    return LLVM::LLVMBFloatType::get(&getContext());
-  llvm_unreachable("non-float type in convertFloatType");
-}
+Type LLVMTypeConverter::convertFloatType(FloatType type) { return type; }
 
 // Convert a `ComplexType` to an LLVM type. The result is a complex number
 // struct with entries for the
@@ -402,8 +392,8 @@ Type LLVMTypeConverter::convertMemRefToBarePtr(BaseMemRefType type) {
 
 // Convert an n-D vector type to an LLVM vector type via (n-1)-D array type when
 // n > 1.
-// For example, `vector<4 x f32>` converts to `!llvm.type<"<4 x float>">` and
-// `vector<4 x 8 x 16 f32>` converts to `!llvm<"[4 x [8 x <16 x float>]]">`.
+// For example, `vector<4 x f32>` converts to `!llvm.type<"<4 x f32>">` and
+// `vector<4 x 8 x 16 f32>` converts to `!llvm."[4 x [8 x <16 x f32>]]">`.
 Type LLVMTypeConverter::convertVectorType(VectorType type) {
   auto elementType = unwrap(convertType(type.getElementType()));
   if (!elementType)

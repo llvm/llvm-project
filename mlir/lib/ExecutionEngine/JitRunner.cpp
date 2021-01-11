@@ -201,7 +201,7 @@ Error checkCompatibleReturnType<int32_t>(LLVM::LLVMFuncOp mainFunction) {
                         .getReturnType()
                         .dyn_cast<IntegerType>();
   if (!resultType || resultType.getWidth() != 32)
-    return make_string_error("only single llvm.i32 function result supported");
+    return make_string_error("only single i32 function result supported");
   return Error::success();
 }
 template <>
@@ -211,7 +211,7 @@ Error checkCompatibleReturnType<int64_t>(LLVM::LLVMFuncOp mainFunction) {
                         .getReturnType()
                         .dyn_cast<IntegerType>();
   if (!resultType || resultType.getWidth() != 64)
-    return make_string_error("only single llvm.i64 function result supported");
+    return make_string_error("only single i64 function result supported");
   return Error::success();
 }
 template <>
@@ -219,8 +219,8 @@ Error checkCompatibleReturnType<float>(LLVM::LLVMFuncOp mainFunction) {
   if (!mainFunction.getType()
            .cast<LLVM::LLVMFunctionType>()
            .getReturnType()
-           .isa<LLVM::LLVMFloatType>())
-    return make_string_error("only single llvm.f32 function result supported");
+           .isa<Float32Type>())
+    return make_string_error("only single f32 function result supported");
   return Error::success();
 }
 template <typename Type>

@@ -302,7 +302,7 @@ llvm.func @test_omp_master() -> () {
 // CHECK: @[[$wsloop_loc_struct:.*]] = private unnamed_addr constant %struct.ident_t {{.*}} @[[$wsloop_loc]], {{.*}}
 
 // CHECK-LABEL: @wsloop_simple
-llvm.func @wsloop_simple(%arg0: !llvm.ptr<float>) {
+llvm.func @wsloop_simple(%arg0: !llvm.ptr<f32>) {
   %0 = llvm.mlir.constant(42 : index) : i64
   %1 = llvm.mlir.constant(10 : index) : i64
   %2 = llvm.mlir.constant(1 : index) : i64
@@ -313,9 +313,9 @@ llvm.func @wsloop_simple(%arg0: !llvm.ptr<float>) {
       // tested there. Just check that the right functions are called.
       // CHECK: call i32 @__kmpc_global_thread_num
       // CHECK: call void @__kmpc_for_static_init_{{.*}}(%struct.ident_t* @[[$wsloop_loc_struct]],
-      %3 = llvm.mlir.constant(2.000000e+00 : f32) : !llvm.float
-      %4 = llvm.getelementptr %arg0[%arg1] : (!llvm.ptr<float>, i64) -> !llvm.ptr<float>
-      llvm.store %3, %4 : !llvm.ptr<float>
+      %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
+      %4 = llvm.getelementptr %arg0[%arg1] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+      llvm.store %3, %4 : !llvm.ptr<f32>
       omp.yield
       // CHECK: call void @__kmpc_for_static_fini(%struct.ident_t* @[[$wsloop_loc_struct]],
     }) {operand_segment_sizes = dense<[1, 1, 1, 0, 0, 0, 0, 0, 0]> : vector<9xi32>} : (i64, i64, i64) -> ()

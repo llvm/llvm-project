@@ -768,8 +768,8 @@ public:
 /// is converted to:
 /// ```
 ///  llvm.intr.fmuladd %va, %va, %va:
-///    (!llvm<"<8 x float>">, !llvm<"<8 x float>">, !llvm<"<8 x float>">)
-///    -> !llvm<"<8 x float>">
+///    (!llvm."<8 x f32>">, !llvm<"<8 x f32>">, !llvm<"<8 x f32>">)
+///    -> !llvm."<8 x f32>">
 /// ```
 class VectorFMAOp1DConversion : public ConvertOpToLLVMPattern<vector::FMAOp> {
 public:
@@ -1420,11 +1420,10 @@ private:
     return getPrint(op, "printU64", IntegerType::get(op->getContext(), 64));
   }
   Operation *getPrintFloat(Operation *op) const {
-    return getPrint(op, "printF32", LLVM::LLVMFloatType::get(op->getContext()));
+    return getPrint(op, "printF32", Float32Type::get(op->getContext()));
   }
   Operation *getPrintDouble(Operation *op) const {
-    return getPrint(op, "printF64",
-                    LLVM::LLVMDoubleType::get(op->getContext()));
+    return getPrint(op, "printF64", Float64Type::get(op->getContext()));
   }
   Operation *getPrintOpen(Operation *op) const {
     return getPrint(op, "printOpen", {});

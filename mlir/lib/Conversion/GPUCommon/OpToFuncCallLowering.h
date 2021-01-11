@@ -27,7 +27,7 @@ namespace mlir {
 ///   %exp_f32 = std.exp %arg_f32 : f32
 ///
 /// will be transformed into
-///   llvm.call @__nv_expf(%arg_f32) : (!llvm.float) -> !llvm.float
+///   llvm.call @__nv_expf(%arg_f32) : (f32) -> f32
 template <typename SourceOp>
 struct OpToFuncCallLowering : public ConvertOpToLLVMPattern<SourceOp> {
 public:
@@ -79,12 +79,11 @@ public:
 private:
   Value maybeCast(Value operand, PatternRewriter &rewriter) const {
     Type type = operand.getType();
-    if (!type.isa<LLVM::LLVMHalfType>())
+    if (!type.isa<Float16Type>())
       return operand;
 
     return rewriter.create<LLVM::FPExtOp>(
-        operand.getLoc(), LLVM::LLVMFloatType::get(rewriter.getContext()),
-        operand);
+        operand.getLoc(), Float32Type::get(rewriter.getContext()), operand);
   }
 
   Type getFunctionType(Type resultType, ArrayRef<Value> operands) const {
@@ -96,9 +95,9 @@ private:
   }
 
   StringRef getFunctionName(Type type) const {
-    if (type.isa<LLVM::LLVMFloatType>())
+    if (type.isa<Float32Type>())
       return f32Func;
-    if (type.isa<LLVM::LLVMDoubleType>())
+    if (type.isa<Float64Type>())
       return f64Func;
     return "";
   }

@@ -1258,40 +1258,22 @@ static LogicalResult verifyCastWithIndex(Type llvmType) {
 }
 
 /// Checks if `llvmType` is dialect cast-compatible with built-in `type` and
-/// reports errors to the location of `op`.
-static LogicalResult verifyCast(DialectCastOp op, Type llvmType, Type type) {
+/// reports errors to the location of `op`. `isElement` indicates whether the
+/// verification is performed for types that are element types inside a
+/// container; we don't want casts from X to X at the top level, but c1<X> to
+/// c2<X> may be fine.
+static LogicalResult verifyCast(DialectCastOp op, Type llvmType, Type type,
+                                bool isElement = false) {
+  // Equal element types are directly compatible.
+  if (isElement && llvmType == type)
+    return success();
+
   // Index is compatible with any integer.
   if (type.isIndex()) {
     if (succeeded(verifyCastWithIndex(llvmType)))
       return success();
 
     return op.emitOpError("invalid cast between index and non-integer type");
-  }
-
-  // Simple one-to-one mappings for floating point types.
-  if (type.isF16()) {
-    if (llvmType.isa<LLVMHalfType>())
-      return success();
-    return op.emitOpError(
-        "invalid cast between f16 and a type other than !llvm.half");
-  }
-  if (type.isBF16()) {
-    if (llvmType.isa<LLVMBFloatType>())
-      return success();
-    return op->emitOpError(
-        "invalid cast between bf16 and a type other than !llvm.bfloat");
-  }
-  if (type.isF32()) {
-    if (llvmType.isa<LLVMFloatType>())
-      return success();
-    return op->emitOpError(
-        "invalid cast between f32 and a type other than !llvm.float");
-  }
-  if (type.isF64()) {
-    if (llvmType.isa<LLVMDoubleType>())
-      return success();
-    return op->emitOpError(
-        "invalid cast between f64 and a type other than !llvm.double");
   }
 
   // Vectors are compatible if they are 1D non-scalable, and their element types
@@ -1309,7 +1291,7 @@ static LogicalResult verifyCast(DialectCastOp op, Type llvmType, Type type) {
           "invalid cast between vectors with mismatching sizes");
 
     return verifyCast(op, llvmVector.getElementType(),
-                      vectorType.getElementType());
+                      vectorType.getElementType(), /*isElement=*/true);
   }
 
   if (auto memrefType = type.dyn_cast<MemRefType>()) {
@@ -1324,7 +1306,7 @@ static LogicalResult verifyCast(DialectCastOp op, Type llvmType, Type type) {
                              "different memory spaces");
 
       return verifyCast(op, ptrType.getElementType(),
-                        memrefType.getElementType());
+                        memrefType.getElementType(), /*isElement=*/true);
     }
 
     // Otherwise, memrefs are convertible to a descriptor, which is a structure
@@ -1347,7 +1329,7 @@ static LogicalResult verifyCast(DialectCastOp op, Type llvmType, Type type) {
       return op->emitOpError("expected first element of a memref descriptor to "
                              "be a pointer in the address space of the memref");
     if (failed(verifyCast(op, allocatedPtr.getElementType(),
-                          memrefType.getElementType())))
+                          memrefType.getElementType(), /*isElement=*/true)))
       return failure();
 
     auto alignedPtr = structType.getBody()[1].dyn_cast<LLVMPointerType>();
@@ -1357,7 +1339,7 @@ static LogicalResult verifyCast(DialectCastOp op, Type llvmType, Type type) {
           "expected second element of a memref descriptor to "
           "be a pointer in the address space of the memref");
     if (failed(verifyCast(op, alignedPtr.getElementType(),
-                          memrefType.getElementType())))
+                          memrefType.getElementType(), /*isElement=*/true)))
       return failure();
 
     // The second element (offset) is an equivalent of index.
@@ -1946,9 +1928,9 @@ static LogicalResult verify(AtomicRMWOp op) {
     auto intType = valType.dyn_cast<IntegerType>();
     unsigned intBitWidth = intType ? intType.getWidth() : 0;
     if (intBitWidth != 8 && intBitWidth != 16 && intBitWidth != 32 &&
-        intBitWidth != 64 && !valType.isa<LLVMBFloatType>() &&
-        !valType.isa<LLVMHalfType>() && !valType.isa<LLVMFloatType>() &&
-        !valType.isa<LLVMDoubleType>())
+        intBitWidth != 64 && !valType.isa<BFloat16Type>() &&
+        !valType.isa<Float16Type>() && !valType.isa<Float32Type>() &&
+        !valType.isa<Float64Type>())
       return op.emitOpError("unexpected LLVM IR type for 'xchg' bin_op");
   } else {
     auto intType = valType.dyn_cast<IntegerType>();
@@ -2014,8 +1996,8 @@ static LogicalResult verify(AtomicCmpXchgOp op) {
   unsigned intBitWidth = intType ? intType.getWidth() : 0;
   if (!valType.isa<LLVMPointerType>() && intBitWidth != 8 &&
       intBitWidth != 16 && intBitWidth != 32 && intBitWidth != 64 &&
-      !valType.isa<LLVMBFloatType>() && !valType.isa<LLVMHalfType>() &&
-      !valType.isa<LLVMFloatType>() && !valType.isa<LLVMDoubleType>())
+      !valType.isa<BFloat16Type>() && !valType.isa<Float16Type>() &&
+      !valType.isa<Float32Type>() && !valType.isa<Float64Type>())
     return op.emitOpError("unexpected LLVM IR type");
   if (op.success_ordering() < AtomicOrdering::monotonic ||
       op.failure_ordering() < AtomicOrdering::monotonic)
@@ -2076,10 +2058,6 @@ void LLVMDialect::initialize() {
 
   // clang-format off
   addTypes<LLVMVoidType,
-           LLVMHalfType,
-           LLVMBFloatType,
-           LLVMFloatType,
-           LLVMDoubleType,
            LLVMFP128Type,
            LLVMX86FP80Type,
            LLVMPPCFP128Type,

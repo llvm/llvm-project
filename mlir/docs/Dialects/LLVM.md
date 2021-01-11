@@ -115,7 +115,7 @@ Examples:
 ```mlir
 // Create an undefined value of structure type with a 32-bit integer followed
 // by a float.
-%0 = llvm.mlir.undef : !llvm.struct<(i32, float)>
+%0 = llvm.mlir.undef : !llvm.struct<(i32, f32)>
 
 // Null pointer to i8.
 %1 = llvm.mlir.null : !llvm.ptr<i8>
@@ -127,7 +127,7 @@ Examples:
 %3 = llvm.mlir.constant(42 : i32) : i32
 
 // Splat dense vector constant.
-%3 = llvm.mlir.constant(dense<1.0> : vector<4xf32>) : !llvm.vec<4 x float>
+%3 = llvm.mlir.constant(dense<1.0> : vector<4xf32>) : !llvm.vec<4 x f32>
 ```
 
 Note that constants use built-in types within the initializer definition: MLIR
@@ -214,14 +214,6 @@ containing an 8-bit and a 32-bit integer.
 
 The following non-parametric types are supported.
 
--   `!llvm.bfloat` (`LLVMBFloatType`) - 16-bit “brain” floating-point value
-    (7-bit significand).
--   `!llvm.half` (`LLVMHalfType`) - 16-bit floating-point value as per
-    IEEE-754-2008.
--   `!llvm.float` (`LLVMFloatType`) - 32-bit floating-point value as per
-    IEEE-754-2008.
--   `!llvm.double` (`LLVMDoubleType`) - 64-bit floating-point value as per
-    IEEE-754-2008.
 -   `!llvm.fp128` (`LLVMFP128Type`) - 128-bit floating-point value as per
     IEEE-754-2008.
 -   `!llvm.x86_fp80` (`LLVMX86FP80Type`) - 80-bit floating-point value (x87).
@@ -322,7 +314,7 @@ For example,
 
 ```mlir
 !llvm.func<void ()>            // a function with no arguments;
-!llvm.func<i32 (float, i32)>  // a function with two arguments and a result;
+!llvm.func<i32 (f32, i32)>  // a function with two arguments and a result;
 !llvm.func<void (i32, ...)>   // a variadic function with at least one argument.
 ```
 

@@ -87,7 +87,7 @@ module attributes {gpu.container_module} {
 module attributes {gpu.container_module} {
   module @kernels {
     // expected-error@+1 {{'gpu.func' op expects parent op 'gpu.module'}}
-    gpu.func @kernel_1(%arg1 : !llvm.ptr<float>) {
+    gpu.func @kernel_1(%arg1 : !llvm.ptr<f32>) {
       gpu.return
     }
   }
@@ -122,14 +122,14 @@ module attributes {gpu.container_module} {
 
 module attributes {gpu.container_module} {
   module @kernels {
-    gpu.func @kernel_1(%arg1 : !llvm.ptr<float>) kernel {
+    gpu.func @kernel_1(%arg1 : !llvm.ptr<f32>) kernel {
       gpu.return
     }
   }
 
-  func @launch_func_missing_kernel_attr(%sz : index, %arg : !llvm.ptr<float>) {
+  func @launch_func_missing_kernel_attr(%sz : index, %arg : !llvm.ptr<f32>) {
     // expected-error@+1 {{kernel module 'kernels' is undefined}}
-    gpu.launch_func @kernels::@kernel_1 blocks in (%sz, %sz, %sz) threads in (%sz, %sz, %sz) args(%arg : !llvm.ptr<float>)
+    gpu.launch_func @kernels::@kernel_1 blocks in (%sz, %sz, %sz) threads in (%sz, %sz, %sz) args(%arg : !llvm.ptr<f32>)
     return
   }
 }
@@ -138,14 +138,14 @@ module attributes {gpu.container_module} {
 
 module attributes {gpu.container_module} {
   gpu.module @kernels {
-    gpu.func @kernel_1(%arg1 : !llvm.ptr<float>) {
+    gpu.func @kernel_1(%arg1 : !llvm.ptr<f32>) {
       gpu.return
     }
   }
 
-  func @launch_func_missing_kernel_attr(%sz : index, %arg : !llvm.ptr<float>) {
+  func @launch_func_missing_kernel_attr(%sz : index, %arg : !llvm.ptr<f32>) {
     // expected-error@+1 {{kernel function is missing the 'gpu.kernel' attribute}}
-    gpu.launch_func @kernels::@kernel_1 blocks in (%sz, %sz, %sz) threads in (%sz, %sz, %sz) args(%arg : !llvm.ptr<float>)
+    gpu.launch_func @kernels::@kernel_1 blocks in (%sz, %sz, %sz) threads in (%sz, %sz, %sz) args(%arg : !llvm.ptr<f32>)
     return
   }
 }
@@ -154,14 +154,14 @@ module attributes {gpu.container_module} {
 
 module attributes {gpu.container_module} {
   gpu.module @kernels {
-    gpu.func @kernel_1(%arg1 : !llvm.ptr<float>) kernel {
+    gpu.func @kernel_1(%arg1 : !llvm.ptr<f32>) kernel {
       gpu.return
     }
   }
 
-  func @launch_func_kernel_operand_size(%sz : index, %arg : !llvm.ptr<float>) {
+  func @launch_func_kernel_operand_size(%sz : index, %arg : !llvm.ptr<f32>) {
     // expected-error@+1 {{got 2 kernel operands but expected 1}}
-    gpu.launch_func @kernels::@kernel_1 blocks in (%sz, %sz, %sz) threads in (%sz, %sz, %sz) args(%arg : !llvm.ptr<float>, %arg : !llvm.ptr<float>)
+    gpu.launch_func @kernels::@kernel_1 blocks in (%sz, %sz, %sz) threads in (%sz, %sz, %sz) args(%arg : !llvm.ptr<f32>, %arg : !llvm.ptr<f32>)
     return
   }
 }

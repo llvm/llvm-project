@@ -150,8 +150,8 @@ private:
   /// Convert an integer type `i*` to `!llvm<"i*">`.
   Type convertIntegerType(IntegerType type);
 
-  /// Convert a floating point type: `f16` to `!llvm.half`, `f32` to
-  /// `!llvm.float` and `f64` to `!llvm.double`.  `bf16` is not supported
+  /// Convert a floating point type: `f16` to `f16`, `f32` to
+  /// `f32` and `f64` to `f64`.  `bf16` is not supported
   /// by LLVM.
   Type convertFloatType(FloatType type);
 
@@ -528,10 +528,10 @@ protected:
   /// `strides[1]` = llvm.mlir.constant(1 : index) : i64
   /// `strides[0]` = `sizes[0]`
   /// %size        = llvm.mul `sizes[0]`, `sizes[1]` : i64
-  /// %nullptr     = llvm.mlir.null : !llvm.ptr<float>
+  /// %nullptr     = llvm.mlir.null : !llvm.ptr<f32>
   /// %gep         = llvm.getelementptr %nullptr[%size]
-  ///                  : (!llvm.ptr<float>, i64) -> !llvm.ptr<float>
-  /// `sizeBytes`  = llvm.ptrtoint %gep : !llvm.ptr<float> to i64
+  ///                  : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+  /// `sizeBytes`  = llvm.ptrtoint %gep : !llvm.ptr<f32> to i64
   void getMemRefDescriptorSizes(Location loc, MemRefType memRefType,
                                 ArrayRef<Value> dynamicSizes,
                                 ConversionPatternRewriter &rewriter,

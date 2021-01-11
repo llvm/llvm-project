@@ -5,7 +5,7 @@
 
 ; CHECK: llvm.mlir.global external @g1() : !llvm.struct<"struct.s", (struct<"struct.t", ()>, i64)>
 @g1 = external global %struct.s, align 8
-; CHECK: llvm.mlir.global external @g2() : !llvm.double
+; CHECK: llvm.mlir.global external @g2() : f64
 @g2 = external global double, align 8
 ; CHECK: llvm.mlir.global internal @g3("string")
 @g3 = internal global [6 x i8] c"string"
@@ -55,7 +55,7 @@
 
 ; CHECK: llvm.mlir.global internal constant @vector_constant(dense<[1, 2]> : vector<2xi32>) : !llvm.vec<2 x i32>
 @vector_constant = internal constant <2 x i32> <i32 1, i32 2>
-; CHECK: llvm.mlir.global internal constant @array_constant(dense<[1.000000e+00, 2.000000e+00]> : tensor<2xf32>) : !llvm.array<2 x float>
+; CHECK: llvm.mlir.global internal constant @array_constant(dense<[1.000000e+00, 2.000000e+00]> : tensor<2xf32>) : !llvm.array<2 x f32>
 @array_constant = internal constant [2 x float] [float 1., float 2.]
 ; CHECK: llvm.mlir.global internal constant @nested_array_constant(dense<[{{\[}}1, 2], [3, 4]]> : tensor<2x2xi32>) : !llvm.array<2 x array<2 x i32>>
 @nested_array_constant = internal constant [2 x [2 x i32]] [[2 x i32] [i32 1, i32 2], [2 x i32] [i32 3, i32 4]]
@@ -73,7 +73,7 @@ define internal void @func_internal() {
   ret void
 }
 
-; CHECK: llvm.func @fe(i32) -> !llvm.float
+; CHECK: llvm.func @fe(i32) -> f32
 declare float @fe(i32)
 
 ; FIXME: function attributes.
@@ -86,18 +86,18 @@ define internal dso_local i32 @f1(i64 %a) norecurse {
 entry:
 ; CHECK: %{{[0-9]+}} = llvm.inttoptr %arg0 : i64 to !llvm.ptr<i64>
   %aa = inttoptr i64 %a to i64*
-; %[[addrof:[0-9]+]] = llvm.mlir.addressof @g2 : !llvm.ptr<double>
-; %[[addrof2:[0-9]+]] = llvm.mlir.addressof @g2 : !llvm.ptr<double>
+; %[[addrof:[0-9]+]] = llvm.mlir.addressof @g2 : !llvm.ptr<f64>
+; %[[addrof2:[0-9]+]] = llvm.mlir.addressof @g2 : !llvm.ptr<f64>
 ; %{{[0-9]+}} = llvm.inttoptr %arg0 : i64 to !llvm.ptr<i64>
-; %{{[0-9]+}} = llvm.ptrtoint %[[addrof2]] : !llvm.ptr<double> to i64
-; %{{[0-9]+}} = llvm.getelementptr %[[addrof]][%3] : (!llvm.ptr<double>, i32) -> !llvm.ptr<double>
+; %{{[0-9]+}} = llvm.ptrtoint %[[addrof2]] : !llvm.ptr<f64> to i64
+; %{{[0-9]+}} = llvm.getelementptr %[[addrof]][%3] : (!llvm.ptr<f64>, i32) -> !llvm.ptr<f64>
   %bb = ptrtoint double* @g2 to i64
   %cc = getelementptr double, double* @g2, i32 2
 ; CHECK: %[[b:[0-9]+]] = llvm.trunc %arg0 : i64 to i32
   %b = trunc i64 %a to i32
-; CHECK: %[[c:[0-9]+]] = llvm.call @fe(%[[b]]) : (i32) -> !llvm.float
+; CHECK: %[[c:[0-9]+]] = llvm.call @fe(%[[b]]) : (i32) -> f32
   %c = call float @fe(i32 %b)
-; CHECK: %[[d:[0-9]+]] = llvm.fptosi %[[c]] : !llvm.float to i32
+; CHECK: %[[d:[0-9]+]] = llvm.fptosi %[[c]] : f32 to i32
   %d = fptosi float %c to i32
 ; FIXME: icmp should return i1.
 ; CHECK: %[[e:[0-9]+]] = llvm.icmp "ne" %[[d]], %[[c2]] : i32
@@ -163,8 +163,8 @@ next:
 
 ; CHECK-LABEL: llvm.func @f3() -> !llvm.ptr<i32>
 define i32* @f3() {
-; CHECK: %[[c:[0-9]+]] = llvm.mlir.addressof @g2 : !llvm.ptr<double>
-; CHECK: %[[b:[0-9]+]] = llvm.bitcast %[[c]] : !llvm.ptr<double> to !llvm.ptr<i32>
+; CHECK: %[[c:[0-9]+]] = llvm.mlir.addressof @g2 : !llvm.ptr<f64>
+; CHECK: %[[b:[0-9]+]] = llvm.bitcast %[[c]] : !llvm.ptr<f64> to !llvm.ptr<i32>
 ; CHECK: llvm.return %[[b]] : !llvm.ptr<i32>
   ret i32* bitcast (double* @g2 to i32*)
 }
@@ -206,31 +206,31 @@ define void @f6(void (i16) *%fn) {
   ret void
 }
 
-; CHECK-LABEL: llvm.func @FPArithmetic(%arg0: !llvm.float, %arg1: !llvm.float, %arg2: !llvm.double, %arg3: !llvm.double)
+; CHECK-LABEL: llvm.func @FPArithmetic(%arg0: f32, %arg1: f32, %arg2: f64, %arg3: f64)
 define void @FPArithmetic(float %a, float %b, double %c, double %d) {
-  ; CHECK: %[[a1:[0-9]+]] = llvm.mlir.constant(3.030000e+01 : f64) : !llvm.double
-  ; CHECK: %[[a2:[0-9]+]] = llvm.mlir.constant(3.030000e+01 : f32) : !llvm.float
-  ; CHECK: %[[a3:[0-9]+]] = llvm.fadd %[[a2]], %arg0 : !llvm.float
+  ; CHECK: %[[a1:[0-9]+]] = llvm.mlir.constant(3.030000e+01 : f64) : f64
+  ; CHECK: %[[a2:[0-9]+]] = llvm.mlir.constant(3.030000e+01 : f32) : f32
+  ; CHECK: %[[a3:[0-9]+]] = llvm.fadd %[[a2]], %arg0 : f32
   %1 = fadd float 0x403E4CCCC0000000, %a
-  ; CHECK: %[[a4:[0-9]+]] = llvm.fadd %arg0, %arg1 : !llvm.float
+  ; CHECK: %[[a4:[0-9]+]] = llvm.fadd %arg0, %arg1 : f32
   %2 = fadd float %a, %b
-  ; CHECK: %[[a5:[0-9]+]] = llvm.fadd %[[a1]], %arg2 : !llvm.double
+  ; CHECK: %[[a5:[0-9]+]] = llvm.fadd %[[a1]], %arg2 : f64
   %3 = fadd double 3.030000e+01, %c
-  ; CHECK: %[[a6:[0-9]+]] = llvm.fsub %arg0, %arg1 : !llvm.float
+  ; CHECK: %[[a6:[0-9]+]] = llvm.fsub %arg0, %arg1 : f32
   %4 = fsub float %a, %b
-  ; CHECK: %[[a7:[0-9]+]] = llvm.fsub %arg2, %arg3 : !llvm.double
+  ; CHECK: %[[a7:[0-9]+]] = llvm.fsub %arg2, %arg3 : f64
   %5 = fsub double %c, %d
-  ; CHECK: %[[a8:[0-9]+]] = llvm.fmul %arg0, %arg1 : !llvm.float
+  ; CHECK: %[[a8:[0-9]+]] = llvm.fmul %arg0, %arg1 : f32
   %6 = fmul float %a, %b
-  ; CHECK: %[[a9:[0-9]+]] = llvm.fmul %arg2, %arg3 : !llvm.double
+  ; CHECK: %[[a9:[0-9]+]] = llvm.fmul %arg2, %arg3 : f64
   %7 = fmul double %c, %d
-  ; CHECK: %[[a10:[0-9]+]] = llvm.fdiv %arg0, %arg1 : !llvm.float
+  ; CHECK: %[[a10:[0-9]+]] = llvm.fdiv %arg0, %arg1 : f32
   %8 = fdiv float %a, %b
-  ; CHECK: %[[a12:[0-9]+]] = llvm.fdiv %arg2, %arg3 : !llvm.double
+  ; CHECK: %[[a12:[0-9]+]] = llvm.fdiv %arg2, %arg3 : f64
   %9 = fdiv double %c, %d
-  ; CHECK: %[[a11:[0-9]+]] = llvm.frem %arg0, %arg1 : !llvm.float
+  ; CHECK: %[[a11:[0-9]+]] = llvm.frem %arg0, %arg1 : f32
   %10 = frem float %a, %b
-  ; CHECK: %[[a13:[0-9]+]] = llvm.frem %arg2, %arg3 : !llvm.double
+  ; CHECK: %[[a13:[0-9]+]] = llvm.frem %arg2, %arg3 : f64
   %11 = frem double %c, %d
   ret void
 }
