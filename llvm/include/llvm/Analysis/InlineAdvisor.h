@@ -121,6 +121,25 @@ private:
   bool Recorded = false;
 };
 
+class DefaultInlineAdvice : public InlineAdvice {
+public:
+  DefaultInlineAdvice(InlineAdvisor *Advisor, CallBase &CB,
+                      Optional<InlineCost> OIC, OptimizationRemarkEmitter &ORE,
+                      bool EmitRemarks = true)
+      : InlineAdvice(Advisor, CB, ORE, OIC.hasValue()), OriginalCB(&CB),
+        OIC(OIC), EmitRemarks(EmitRemarks) {}
+
+private:
+  void recordUnsuccessfulInliningImpl(const InlineResult &Result) override;
+  void recordInliningWithCalleeDeletedImpl() override;
+  void recordInliningImpl() override;
+
+private:
+  CallBase *const OriginalCB;
+  Optional<InlineCost> OIC;
+  bool EmitRemarks;
+};
+
 /// Interface for deciding whether to inline a call site or not.
 class InlineAdvisor {
 public:
