@@ -194,6 +194,9 @@ public:
     S &= Other.S;
     return *this;
   }
+  bool contains(DeclRelationSet Other) const {
+    return (S & Other.S) == Other.S;
+  }
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, DeclRelationSet);
 };
 // The above operators can't be looked up if both sides are enums.
