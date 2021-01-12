@@ -149,6 +149,19 @@ static void testHandleMoveIntoNewBundle(MachineFunction &MF, LiveIntervals &LIS,
   LIS.handleMoveIntoNewBundle(*BundleStart, true);
 }
 
+/**
+ * Split block numbered \p BlockNum at instruction \p SplitAt using
+ * MachineBasicBlock::splitAt updating liveness intervals.
+ */
+static void testSplitAt(MachineFunction &MF, LiveIntervals &LIS,
+                        unsigned SplitAt, unsigned BlockNum) {
+  MachineInstr &SplitInstr = getMI(MF, SplitAt, BlockNum);
+  MachineBasicBlock &MBB = *SplitInstr.getParent();
+
+  // Split block and update live intervals
+  MBB.splitAt(SplitInstr, false, &LIS);
+}
+
 static void liveIntervalTest(StringRef MIRFunc, LiveIntervalTest T) {
   LLVMContext Context;
   std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
@@ -605,6 +618,34 @@ TEST(LiveIntervalTest, BundleSubRegDef) {
     S_NOP 0, implicit %0.sub1
 )MIR", [](MachineFunction &MF, LiveIntervals &LIS) {
     testHandleMoveIntoNewBundle(MF, LIS, 0, 1, 0);
+  });
+}
+
+TEST(LiveIntervalTest, SplitAtOneInstruction) {
+  liveIntervalTest(R"MIR(
+    successors: %bb.1
+    %0 = IMPLICIT_DEF
+    S_BRANCH %bb.1
+  bb.1:
+    S_NOP 0
+)MIR", [](MachineFunction &MF, LiveIntervals &LIS) {
+    testSplitAt(MF, LIS, 1, 0);
+  });
+}
+
+TEST(LiveIntervalTest, SplitAtMultiInstruction) {
+  liveIntervalTest(R"MIR(
+    successors: %bb.1
+    %0 = IMPLICIT_DEF
+    S_NOP 0
+    S_NOP 0
+    S_NOP 0
+    S_NOP 0
+    S_BRANCH %bb.1
+  bb.1:
+    S_NOP 0
+)MIR", [](MachineFunction &MF, LiveIntervals &LIS) {
+    testSplitAt(MF, LIS, 0, 0);
   });
 }
 
