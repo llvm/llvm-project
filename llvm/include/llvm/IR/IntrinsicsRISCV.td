@@ -740,7 +740,7 @@ let TargetPrefix = "riscv" in {
 
   defm vrgather : RISCVBinaryAAX;
 
-  def "int_riscv_vcompress_mask" : RISCVBinaryAAAMask;
+  def "int_riscv_vcompress" : RISCVBinaryAAAMask;
 
   defm vaaddu : RISCVSaturatingBinaryAAX;
   defm vaadd : RISCVSaturatingBinaryAAX;
