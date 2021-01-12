@@ -93,11 +93,12 @@ define void @t6() nounwind {
 declare void @llvm.trap() nounwind
 
 define void @ands(i32* %addr) {
-; CHECK-LABEL: ands:
-; CHECK: tst [[COND:w[0-9]+]], #0x1
-; CHECK-NEXT: mov w{{[0-9]+}}, #2
-; CHECK-NEXT: mov w{{[0-9]+}}, #1
-; CHECK-NEXT: csel [[COND]],
+; FIXME: 'select i1 undef' makes this unreliable (ub?).
+; COM: CHECK-LABEL: ands:
+; COM: CHECK: tst [[COND:w[0-9]+]], #0x1
+; COM: CHECK-NEXT: mov w{{[0-9]+}}, #2
+; COM: CHECK-NEXT: mov w{{[0-9]+}}, #1
+; COM: CHECK-NEXT: csel [[COND]],
 entry:
   %cond91 = select i1 undef, i32 1, i32 2
   store i32 %cond91, i32* %addr, align 4

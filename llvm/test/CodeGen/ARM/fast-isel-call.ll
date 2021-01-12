@@ -100,8 +100,8 @@ entry:
 ; ARM-DAG: and [[R3]], [[R3]], #255
 ; ARM-DAG: and [[R4]], [[R4]], #255
 ; ARM-DAG: str [[R4]], [sp]
-; ARM-DAG: and [[R4]], [[R5]], #255
-; ARM-DAG: str [[R4]], [sp, #4]
+; ARM-DAG: and [[R5]], [[R5]], #255
+; ARM-DAG: str [[R5]], [sp, #4]
 ; ARM: bl {{_?}}bar
 ; ARM-LONG-LABEL: @t10
 
@@ -127,8 +127,8 @@ entry:
 ; THUMB-DAG: and [[R3]], [[R3]], #255
 ; THUMB-DAG: and [[R4]], [[R4]], #255
 ; THUMB-DAG: str.w [[R4]], [sp]
-; THUMB-DAG: and [[R4]], [[R5]], #255
-; THUMB-DAG: str.w [[R4]], [sp, #4]
+; THUMB-DAG: and [[R5]], [[R5]], #255
+; THUMB-DAG: str.w [[R5]], [sp, #4]
 ; THUMB: bl {{_?}}bar
 ; THUMB-LONG-LABEL: @t10
 ; THUMB-LONG: {{(movw)|(ldr.n)}} [[R1:l?r[0-9]*]], {{(:lower16:L_bar\$non_lazy_ptr)|(.LCPI)}}
