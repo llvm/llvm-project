@@ -8383,7 +8383,9 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
 
     if (Legal->isReductionVariable(Phi)) {
       RecurrenceDescriptor &RdxDesc = Legal->getReductionVars()[Phi];
-      return new VPWidenPHIRecipe(Phi, RdxDesc);
+      VPValue *StartV =
+          Plan->getOrAddVPValue(RdxDesc.getRecurrenceStartValue());
+      return new VPWidenPHIRecipe(Phi, RdxDesc, *StartV);
     }
 
     return new VPWidenPHIRecipe(Phi);
@@ -8802,9 +8804,8 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
 }
 
 void VPWidenPHIRecipe::execute(VPTransformState &State) {
-  Value *StartV = nullptr;
-  if (RdxDesc)
-    StartV = RdxDesc->getRecurrenceStartValue();
+  Value *StartV =
+      getStartValue() ? getStartValue()->getLiveInIRValue() : nullptr;
   State.ILV->widenPHIInstruction(Phi, RdxDesc, StartV, State.UF, State.VF);
 }
 
