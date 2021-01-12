@@ -322,7 +322,7 @@ define i64 @func5(i64 %x, i64 %y) nounwind {
 ; X64-NEXT:    movq %r15, %rdi
 ; X64-NEXT:    movq %r12, %rsi
 ; X64-NEXT:    movq %r13, %rcx
-; X64-NEXT:    callq __divti3
+; X64-NEXT:    callq __divti3@PLT
 ; X64-NEXT:    movq %rax, %rbx
 ; X64-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-NEXT:    movq %rdx, %rbp
@@ -338,7 +338,7 @@ define i64 @func5(i64 %x, i64 %y) nounwind {
 ; X64-NEXT:    movq %r12, %rsi
 ; X64-NEXT:    movq (%rsp), %rdx # 8-byte Reload
 ; X64-NEXT:    movq %r13, %rcx
-; X64-NEXT:    callq __modti3
+; X64-NEXT:    callq __modti3@PLT
 ; X64-NEXT:    orq %rax, %rdx
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    testb %r14b, %al
@@ -613,7 +613,7 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    movq %r12, %rdi
 ; X64-NEXT:    movq %rbp, %rsi
 ; X64-NEXT:    movq %r15, %rcx
-; X64-NEXT:    callq __divti3
+; X64-NEXT:    callq __divti3@PLT
 ; X64-NEXT:    movq %rax, %r13
 ; X64-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-NEXT:    movq %rdx, %r14
@@ -626,7 +626,7 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    movq %rbp, %rsi
 ; X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
 ; X64-NEXT:    movq %r15, %rcx
-; X64-NEXT:    callq __modti3
+; X64-NEXT:    callq __modti3@PLT
 ; X64-NEXT:    orq %rax, %rdx
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    testb %bl, %al
@@ -668,7 +668,7 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    movq %r15, %rdi
 ; X64-NEXT:    movq %r13, %rsi
 ; X64-NEXT:    movq %rbp, %rcx
-; X64-NEXT:    callq __divti3
+; X64-NEXT:    callq __divti3@PLT
 ; X64-NEXT:    movq %rax, %r12
 ; X64-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-NEXT:    movq %rdx, %r14
@@ -681,7 +681,7 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    movq %r13, %rsi
 ; X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
 ; X64-NEXT:    movq %rbp, %rcx
-; X64-NEXT:    callq __modti3
+; X64-NEXT:    callq __modti3@PLT
 ; X64-NEXT:    orq %rax, %rdx
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    testb %bl, %al
@@ -735,7 +735,7 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    movq %r15, %rdi
 ; X64-NEXT:    movq %r12, %rsi
 ; X64-NEXT:    movq %rbp, %rcx
-; X64-NEXT:    callq __divti3
+; X64-NEXT:    callq __divti3@PLT
 ; X64-NEXT:    movq %rax, %r13
 ; X64-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-NEXT:    movq %rdx, %r14
@@ -748,7 +748,7 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    movq %r12, %rsi
 ; X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
 ; X64-NEXT:    movq %rbp, %rcx
-; X64-NEXT:    callq __modti3
+; X64-NEXT:    callq __modti3@PLT
 ; X64-NEXT:    orq %rax, %rdx
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    testb %bl, %al
@@ -790,7 +790,7 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    movq %r15, %rdi
 ; X64-NEXT:    movq %r13, %rsi
 ; X64-NEXT:    movq %rbp, %rcx
-; X64-NEXT:    callq __divti3
+; X64-NEXT:    callq __divti3@PLT
 ; X64-NEXT:    movq %rax, %r12
 ; X64-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-NEXT:    movq %rdx, %r14
@@ -803,7 +803,7 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    movq %r13, %rsi
 ; X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
 ; X64-NEXT:    movq %rbp, %rcx
-; X64-NEXT:    callq __modti3
+; X64-NEXT:    callq __modti3@PLT
 ; X64-NEXT:    orq %rax, %rdx
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    testb %bl, %al

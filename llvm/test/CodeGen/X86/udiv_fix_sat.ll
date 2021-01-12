@@ -179,7 +179,7 @@ define i64 @func5(i64 %x, i64 %y) nounwind {
 ; X64-NEXT:    shlq $32, %rdi
 ; X64-NEXT:    xorl %ebx, %ebx
 ; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    callq __udivti3
+; X64-NEXT:    callq __udivti3@PLT
 ; X64-NEXT:    cmpq $-1, %rax
 ; X64-NEXT:    movq $-1, %rcx
 ; X64-NEXT:    cmovbq %rax, %rcx
