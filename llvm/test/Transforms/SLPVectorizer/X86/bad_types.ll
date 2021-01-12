@@ -15,8 +15,8 @@ define void @test1(x86_mmx %a, x86_mmx %b, i64* %ptr) {
 ; CHECK-NEXT:    [[A_AND:%.*]] = and i64 [[A_CAST]], 42
 ; CHECK-NEXT:    [[B_AND:%.*]] = and i64 [[B_CAST]], 42
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, i64* [[PTR:%.*]], i32 1
-; CHECK-NEXT:    store i64 [[A_AND]], i64* [[PTR]]
-; CHECK-NEXT:    store i64 [[B_AND]], i64* [[GEP]]
+; CHECK-NEXT:    store i64 [[A_AND]], i64* [[PTR]], align 8
+; CHECK-NEXT:    store i64 [[B_AND]], i64* [[GEP]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -110,3 +110,33 @@ bb1:                                              ; preds = %entry
 }
 
 declare void @f(i64, i64)
+
+define void @test4(i32 %a, i28* %ptr) {
+; Check that we do not vectorize types that are padded to a bigger ones.
+; FIXME: This is not correct! See D94446.
+;
+; CHECK-LABEL: @test4(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[A:%.*]] to i28
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i28, i28* [[PTR:%.*]], i32 1
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i28, i28* [[PTR]], i32 2
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i28, i28* [[PTR]], i32 3
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i28> poison, i28 [[TRUNC]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i28> [[TMP0]], i28 [[TRUNC]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i28> [[TMP1]], i28 [[TRUNC]], i32 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i28> [[TMP2]], i28 [[TRUNC]], i32 3
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i28* [[PTR]] to <4 x i28>*
+; CHECK-NEXT:    store <4 x i28> [[TMP3]], <4 x i28>* [[TMP4]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %trunc = trunc i32 %a to i28
+  %gep1 = getelementptr i28, i28* %ptr, i32 1
+  %gep2 = getelementptr i28, i28* %ptr, i32 2
+  %gep3 = getelementptr i28, i28* %ptr, i32 3
+  store i28 %trunc, i28* %ptr
+  store i28 %trunc, i28* %gep1
+  store i28 %trunc, i28* %gep2
+  store i28 %trunc, i28* %gep3
+  ret void
+}
