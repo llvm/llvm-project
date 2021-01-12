@@ -48756,9 +48756,9 @@ static SDValue combineSubToSubus(SDNode *N, SelectionDAG &DAG,
 
   // PSUBUS is supported, starting from SSE2.
   EVT EltVT = VT.getVectorElementType();
-  if (!(Subtarget.hasSSE2() && (EltVT == MVT::i8 || EltVT == MVT::i16 ||
-                                VT == MVT::v8i32 || VT == MVT::v8i64)) &&
-      !(Subtarget.useBWIRegs() && (VT == MVT::v16i32)))
+  if (!(Subtarget.hasSSE2() &&
+        (EltVT == MVT::i8 || EltVT == MVT::i16 || VT == MVT::v8i32 ||
+         VT == MVT::v8i64 || VT == MVT::v16i32)))
     return SDValue();
 
   SDValue SubusLHS, SubusRHS;
@@ -48795,8 +48795,8 @@ static SDValue combineSubToSubus(SDNode *N, SelectionDAG &DAG,
     SDValue MinRHS = Op1.getOperand(0).getOperand(1);
     EVT TruncVT = Op1.getOperand(0).getValueType();
     if (!(Subtarget.hasSSE2() &&
-          (TruncVT == MVT::v8i32 || TruncVT == MVT::v8i64)) &&
-        !(Subtarget.useBWIRegs() && (TruncVT == MVT::v16i32)))
+          (TruncVT == MVT::v8i32 || TruncVT == MVT::v8i64 ||
+           TruncVT == MVT::v16i32)))
       return SDValue();
     SDValue OpToSaturate;
     if (MinLHS.getOpcode() == ISD::ZERO_EXTEND &&
