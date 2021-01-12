@@ -831,8 +831,8 @@ private:
 
   std::string getSymbolSectionNdx(const Elf_Sym &Symbol,
                                   unsigned SymIndex) const;
-  void printProgramHeaders();
-  void printSectionMapping();
+  void printProgramHeaders() override;
+  void printSectionMapping() override;
   void printGNUVersionSectionProlog(const typename ELFT::Shdr &Sec,
                                     const Twine &Label, unsigned EntriesNum);
 
@@ -879,8 +879,8 @@ private:
   void printSymbol(const Elf_Sym &Symbol, unsigned SymIndex,
                    Optional<StringRef> StrTable, bool IsDynamic,
                    bool /*NonVisibilityBitsUsed*/) const override;
-  void printProgramHeaders();
-  void printSectionMapping() {}
+  void printProgramHeaders() override;
+  void printSectionMapping() override {}
   void printStackSizeEntry(uint64_t Size, StringRef FuncName) override;
 
   void printMipsGOT(const MipsGOTParser<ELFT> &Parser) override;
