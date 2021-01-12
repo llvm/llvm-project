@@ -36,7 +36,7 @@
 ; YAML-MISS-NEXT: Function:        _Z7caller2v
 ; YAML-MISS-NEXT: Hotness:         2
 
-; CHECK-RPASS: _Z7callee1v inlined into _Z7caller1v with (cost=-30, threshold=4500) at callsite _Z7caller1v:1 (hotness: 401)
+; CHECK-RPASS: _Z7callee1v inlined into _Z7caller1v with (cost=-30, threshold=4500) at callsite _Z7caller1v:1:10; (hotness: 401)
 ; CHECK-RPASS-NOT: _Z7callee2v not inlined into _Z7caller2v because it should never be inlined (cost=never): noinline function attribute (hotness: 2)
 
 ; ModuleID = 'remarks-hotness.cpp'
@@ -93,4 +93,3 @@ attributes #1 = { noinline nounwind uwtable "use-sample-profile" }
 !17 = distinct !DISubprogram(name: "caller2", linkageName: "_Z7caller2v", scope: !1, file: !1, line: 13, type: !8, scopeLine: 13, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !2)
 !18 = !DILocation(line: 14, column: 10, scope: !17)
 !19 = !DILocation(line: 14, column: 3, scope: !17)
-
