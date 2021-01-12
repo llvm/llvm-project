@@ -92,26 +92,31 @@ findAllFusableDependences(ArrayRef<LinalgOp> ops,
 
 /// Fuses producer into consumer if the producer is structurally feasible and
 /// the fusion would not violate dependencies.
-/// Implements the fusion part of the "tileAndFuse on buffers"
-/// transformation and thus requires the `consumerdIdx`^th operand of `consumer`
-/// to be a `subview` op (generally obtained by applying the tiling
-/// transformation).
-Optional<FusionInfo> fuseProducerOfBuffer(OpBuilder &b, LinalgOp consumer,
-                                          unsigned consumerIdx,
+/// Implements the fusion part of the "tileAndFuse on buffers" transformation
+/// and thus requires the `consumerOpOperand` to be a `subview` op (generally
+/// obtained by applying the tiling transformation).
+Optional<FusionInfo> fuseProducerOfBuffer(OpBuilder &b,
+                                          OpOperand &consumerOpOperand,
                                           const LinalgDependenceGraph &graph);
 /// Tensor counterpart of `fuseProducerOfBuffer`.
 /// This implements the fusion part of the "tileAndFuse on tensors"
-/// transformation and thus requires the `consumerdIdx`^th operand of `consumer`
-/// to be the result of a `subtensor` op (generally obtained by applying the
-/// tiling transformation).
-Optional<FusionInfo> fuseProducerOfTensor(OpBuilder &b, LinalgOp consumer,
-                                          unsigned consumerIdx);
+/// transformation and thus requires the `consumerOpOperand` to be a `subtensor`
+/// op (generally obtained by applying the tiling transformation).
+Optional<FusionInfo> fuseProducerOfTensor(OpBuilder &b,
+                                          OpOperand &consumerOpOperand);
+/// Tensor counterpart of `fuseProducerOfBuffer`.
+/// This implements the fusion part of the "tileAndFuse on tensors"
+/// transformation and thus requires the `consumerOpOperand` to be a `subtensor`
+/// op (generally obtained by applying the tiling transformation).
+/// Assumes `producerOfTensor` is a Linalg op that produces `consumerOpOperand`.
+Optional<FusionInfo> fuseProducerOfTensor(OpBuilder &b,
+                                          OpResult producerOpResult,
+                                          OpOperand &consumerOpOperand);
 
 /// Fuse linalg operation on tensors, with the producer of the operand at
 /// position `consumerIdx` of the consumer.
 Optional<SmallVector<Value, 1>> fuseTensorOps(PatternRewriter &rewriter,
-                                              Operation *consumer,
-                                              unsigned consumerIdx);
+                                              OpOperand &consumerOpOperand);
 
 /// Like `getShape`, but only returns statically-known information, without
 /// generating any new IR. For each shape dimension, returns >=0 if that
