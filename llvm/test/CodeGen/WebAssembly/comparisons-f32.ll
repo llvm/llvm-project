@@ -102,16 +102,14 @@ define i32 @oge_f32(float %x, float %y) {
 ; CHECK-NEXT: .functype ueq_f32 (f32, f32) -> (i32){{$}}
 ; CHECK-NEXT: local.get $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: local.get $push[[L1:[0-9]+]]=, 1{{$}}
-; CHECK-NEXT: f32.eq $push[[NUM0:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
+; CHECK-NEXT: f32.gt $push[[NUM0:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
 ; CHECK-NEXT: local.get $push[[L2:[0-9]+]]=, 0{{$}}
-; CHECK-NEXT: local.get $push[[L3:[0-9]+]]=, 0{{$}}
-; CHECK-NEXT: f32.ne $push[[NUM1:[0-9]+]]=, $pop[[L2]], $pop[[L3]]{{$}}
-; CHECK-NEXT: local.get $push[[L4:[0-9]+]]=, 1{{$}}
-; CHECK-NEXT: local.get $push[[L5:[0-9]+]]=, 1{{$}}
-; CHECK-NEXT: f32.ne $push[[NUM2:[0-9]+]]=, $pop[[L4]], $pop[[L5]]{{$}}
-; CHECK-NEXT: i32.or $push[[NUM3:[0-9]+]]=, $pop[[NUM1]], $pop[[NUM2]]{{$}}
-; CHECK-NEXT: i32.or $push[[NUM4:[0-9]+]]=, $pop[[NUM0]], $pop[[NUM3]]{{$}}
-; CHECK-NEXT: return $pop[[NUM4]]{{$}}
+; CHECK-NEXT: local.get $push[[L3:[0-9]+]]=, 1{{$}}
+; CHECK-NEXT: f32.lt $push[[NUM1:[0-9]+]]=, $pop[[L2]], $pop[[L3]]{{$}}
+; CHECK-NEXT: i32.or $push[[NUM2:[0-9]+]]=, $pop[[NUM0]], $pop[[NUM1]]{{$}}
+; CHECK-NEXT: i32.const $push[[C0:[0-9]+]]=, 1
+; CHECK-NEXT: i32.xor $push[[NUM3:[0-9]+]]=, $pop[[NUM2]], $pop[[C0]]{{$}}
+; CHECK-NEXT: return $pop[[NUM3]]{{$}}
 define i32 @ueq_f32(float %x, float %y) {
   %a = fcmp ueq float %x, %y
   %b = zext i1 %a to i32
@@ -122,15 +120,11 @@ define i32 @ueq_f32(float %x, float %y) {
 ; CHECK-NEXT: .functype one_f32 (f32, f32) -> (i32){{$}}
 ; CHECK-NEXT: local.get $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: local.get $push[[L1:[0-9]+]]=, 1{{$}}
-; CHECK-NEXT: f32.ne $push[[NUM0:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
+; CHECK-NEXT: f32.gt $push[[NUM0:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
 ; CHECK-NEXT: local.get $push[[L2:[0-9]+]]=, 0{{$}}
-; CHECK-NEXT: local.get $push[[L3:[0-9]+]]=, 0{{$}}
-; CHECK-NEXT: f32.eq $push[[NUM1:[0-9]+]]=, $pop[[L2]], $pop[[L3]]{{$}}
-; CHECK-NEXT: local.get $push[[L4:[0-9]+]]=, 1{{$}}
-; CHECK-NEXT: local.get $push[[L5:[0-9]+]]=, 1{{$}}
-; CHECK-NEXT: f32.eq $push[[NUM2:[0-9]+]]=, $pop[[L4]], $pop[[L5]]{{$}}
-; CHECK-NEXT: i32.and $push[[NUM3:[0-9]+]]=, $pop[[NUM1]], $pop[[NUM2]]{{$}}
-; CHECK-NEXT: i32.and $push[[NUM4:[0-9]+]]=, $pop[[NUM0]], $pop[[NUM3]]{{$}}
+; CHECK-NEXT: local.get $push[[L3:[0-9]+]]=, 1{{$}}
+; CHECK-NEXT: f32.lt $push[[NUM1:[0-9]+]]=, $pop[[L2]], $pop[[L3]]{{$}}
+; CHECK-NEXT: i32.or $push[[NUM4:[0-9]+]]=, $pop[[NUM0]], $pop[[NUM1]]{{$}}
 ; CHECK-NEXT: return $pop[[NUM4]]
 define i32 @one_f32(float %x, float %y) {
   %a = fcmp one float %x, %y
