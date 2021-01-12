@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-v,+f,+experimental-zfh -verify-machineinstrs \
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-v,+d,+experimental-zfh -verify-machineinstrs \
 ; RUN:   --riscv-no-aliases < %s | FileCheck %s
 declare <vscale x 1 x half> @llvm.riscv.vfmerge.nxv1f16.nxv1f16(
   <vscale x 1 x half>,
@@ -440,6 +440,166 @@ entry:
   ret <vscale x 16 x float> %a
 }
 
+declare <vscale x 1 x double> @llvm.riscv.vfmerge.nxv1f64.nxv1f64(
+  <vscale x 1 x double>,
+  <vscale x 1 x double>,
+  <vscale x 1 x i1>,
+  i32);
+
+define <vscale x 1 x double> @intrinsic_vfmerge_vvm_nxv1f64_nxv1f64_nxv1f64(<vscale x 1 x double> %0, <vscale x 1 x double> %1, <vscale x 1 x i1> %2, i32 %3) nounwind {
+entry:
+; CHECK-LABEL: intrinsic_vfmerge_vvm_nxv1f64_nxv1f64_nxv1f64
+; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e64,m1
+; CHECK:       vmerge.vvm {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}, v0
+  %a = call <vscale x 1 x double> @llvm.riscv.vfmerge.nxv1f64.nxv1f64(
+    <vscale x 1 x double> %0,
+    <vscale x 1 x double> %1,
+    <vscale x 1 x i1> %2,
+    i32 %3)
+
+  ret <vscale x 1 x double> %a
+}
+
+declare <vscale x 1 x double> @llvm.riscv.vfmerge.nxv1f64.f64(
+  <vscale x 1 x double>,
+  double,
+  <vscale x 1 x i1>,
+  i32);
+
+define <vscale x 1 x double> @intrinsic_vfmerge_vfm_nxv1f64_nxv1f64_f64(<vscale x 1 x double> %0, double %1, <vscale x 1 x i1> %2, i32 %3) nounwind {
+entry:
+; CHECK-LABEL: intrinsic_vfmerge_vfm_nxv1f64_nxv1f64_f64
+; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e64,m1
+; CHECK:       vfmerge.vfm {{v[0-9]+}}, {{v[0-9]+}}, {{ft[0-9]+}}, v0
+  %a = call <vscale x 1 x double> @llvm.riscv.vfmerge.nxv1f64.f64(
+    <vscale x 1 x double> %0,
+    double %1,
+    <vscale x 1 x i1> %2,
+    i32 %3)
+
+  ret <vscale x 1 x double> %a
+}
+
+declare <vscale x 2 x double> @llvm.riscv.vfmerge.nxv2f64.nxv2f64(
+  <vscale x 2 x double>,
+  <vscale x 2 x double>,
+  <vscale x 2 x i1>,
+  i32);
+
+define <vscale x 2 x double> @intrinsic_vfmerge_vvm_nxv2f64_nxv2f64_nxv2f64(<vscale x 2 x double> %0, <vscale x 2 x double> %1, <vscale x 2 x i1> %2, i32 %3) nounwind {
+entry:
+; CHECK-LABEL: intrinsic_vfmerge_vvm_nxv2f64_nxv2f64_nxv2f64
+; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e64,m2
+; CHECK:       vmerge.vvm {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}, v0
+  %a = call <vscale x 2 x double> @llvm.riscv.vfmerge.nxv2f64.nxv2f64(
+    <vscale x 2 x double> %0,
+    <vscale x 2 x double> %1,
+    <vscale x 2 x i1> %2,
+    i32 %3)
+
+  ret <vscale x 2 x double> %a
+}
+
+declare <vscale x 2 x double> @llvm.riscv.vfmerge.nxv2f64.f64(
+  <vscale x 2 x double>,
+  double,
+  <vscale x 2 x i1>,
+  i32);
+
+define <vscale x 2 x double> @intrinsic_vfmerge_vfm_nxv2f64_nxv2f64_f64(<vscale x 2 x double> %0, double %1, <vscale x 2 x i1> %2, i32 %3) nounwind {
+entry:
+; CHECK-LABEL: intrinsic_vfmerge_vfm_nxv2f64_nxv2f64_f64
+; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e64,m2
+; CHECK:       vfmerge.vfm {{v[0-9]+}}, {{v[0-9]+}}, {{ft[0-9]+}}, v0
+  %a = call <vscale x 2 x double> @llvm.riscv.vfmerge.nxv2f64.f64(
+    <vscale x 2 x double> %0,
+    double %1,
+    <vscale x 2 x i1> %2,
+    i32 %3)
+
+  ret <vscale x 2 x double> %a
+}
+
+declare <vscale x 4 x double> @llvm.riscv.vfmerge.nxv4f64.nxv4f64(
+  <vscale x 4 x double>,
+  <vscale x 4 x double>,
+  <vscale x 4 x i1>,
+  i32);
+
+define <vscale x 4 x double> @intrinsic_vfmerge_vvm_nxv4f64_nxv4f64_nxv4f64(<vscale x 4 x double> %0, <vscale x 4 x double> %1, <vscale x 4 x i1> %2, i32 %3) nounwind {
+entry:
+; CHECK-LABEL: intrinsic_vfmerge_vvm_nxv4f64_nxv4f64_nxv4f64
+; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e64,m4
+; CHECK:       vmerge.vvm {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}, v0
+  %a = call <vscale x 4 x double> @llvm.riscv.vfmerge.nxv4f64.nxv4f64(
+    <vscale x 4 x double> %0,
+    <vscale x 4 x double> %1,
+    <vscale x 4 x i1> %2,
+    i32 %3)
+
+  ret <vscale x 4 x double> %a
+}
+
+declare <vscale x 4 x double> @llvm.riscv.vfmerge.nxv4f64.f64(
+  <vscale x 4 x double>,
+  double,
+  <vscale x 4 x i1>,
+  i32);
+
+define <vscale x 4 x double> @intrinsic_vfmerge_vfm_nxv4f64_nxv4f64_f64(<vscale x 4 x double> %0, double %1, <vscale x 4 x i1> %2, i32 %3) nounwind {
+entry:
+; CHECK-LABEL: intrinsic_vfmerge_vfm_nxv4f64_nxv4f64_f64
+; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e64,m4
+; CHECK:       vfmerge.vfm {{v[0-9]+}}, {{v[0-9]+}}, {{ft[0-9]+}}, v0
+  %a = call <vscale x 4 x double> @llvm.riscv.vfmerge.nxv4f64.f64(
+    <vscale x 4 x double> %0,
+    double %1,
+    <vscale x 4 x i1> %2,
+    i32 %3)
+
+  ret <vscale x 4 x double> %a
+}
+
+declare <vscale x 8 x double> @llvm.riscv.vfmerge.nxv8f64.nxv8f64(
+  <vscale x 8 x double>,
+  <vscale x 8 x double>,
+  <vscale x 8 x i1>,
+  i32);
+
+define <vscale x 8 x double> @intrinsic_vfmerge_vvm_nxv8f64_nxv8f64_nxv8f64(<vscale x 8 x double> %0, <vscale x 8 x double> %1, <vscale x 8 x i1> %2, i32 %3) nounwind {
+entry:
+; CHECK-LABEL: intrinsic_vfmerge_vvm_nxv8f64_nxv8f64_nxv8f64
+; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e64,m8
+; CHECK:       vmerge.vvm {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}, v0
+  %a = call <vscale x 8 x double> @llvm.riscv.vfmerge.nxv8f64.nxv8f64(
+    <vscale x 8 x double> %0,
+    <vscale x 8 x double> %1,
+    <vscale x 8 x i1> %2,
+    i32 %3)
+
+  ret <vscale x 8 x double> %a
+}
+
+declare <vscale x 8 x double> @llvm.riscv.vfmerge.nxv8f64.f64(
+  <vscale x 8 x double>,
+  double,
+  <vscale x 8 x i1>,
+  i32);
+
+define <vscale x 8 x double> @intrinsic_vfmerge_vfm_nxv8f64_nxv8f64_f64(<vscale x 8 x double> %0, double %1, <vscale x 8 x i1> %2, i32 %3) nounwind {
+entry:
+; CHECK-LABEL: intrinsic_vfmerge_vfm_nxv8f64_nxv8f64_f64
+; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e64,m8
+; CHECK:       vfmerge.vfm {{v[0-9]+}}, {{v[0-9]+}}, {{ft[0-9]+}}, v0
+  %a = call <vscale x 8 x double> @llvm.riscv.vfmerge.nxv8f64.f64(
+    <vscale x 8 x double> %0,
+    double %1,
+    <vscale x 8 x i1> %2,
+    i32 %3)
+
+  ret <vscale x 8 x double> %a
+}
+
 define <vscale x 1 x half> @intrinsic_vfmerge_vzm_nxv1f16_nxv1f16_f16(<vscale x 1 x half> %0, <vscale x 1 x i1> %1, i32 %2) nounwind {
 entry:
 ; CHECK-LABEL: intrinsic_vfmerge_vzm_nxv1f16_nxv1f16_f16
@@ -592,4 +752,60 @@ entry:
     i32 %2)
 
   ret <vscale x 16 x float> %a
+}
+
+define <vscale x 1 x double> @intrinsic_vfmerge_vzm_nxv1f64_nxv1f64_f64(<vscale x 1 x double> %0, <vscale x 1 x i1> %1, i32 %2) nounwind {
+entry:
+; CHECK-LABEL: intrinsic_vfmerge_vzm_nxv1f64_nxv1f64_f64
+; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e64,m1,ta,mu
+; CHECK:       vmerge.vim {{v[0-9]+}}, {{v[0-9]+}}, 0, v0
+  %a = call <vscale x 1 x double> @llvm.riscv.vfmerge.nxv1f64.f64(
+    <vscale x 1 x double> %0,
+    double zeroinitializer,
+    <vscale x 1 x i1> %1,
+    i32 %2)
+
+  ret <vscale x 1 x double> %a
+}
+
+define <vscale x 2 x double> @intrinsic_vfmerge_vzm_nxv2f64_nxv2f64_f64(<vscale x 2 x double> %0, <vscale x 2 x i1> %1, i32 %2) nounwind {
+entry:
+; CHECK-LABEL: intrinsic_vfmerge_vzm_nxv2f64_nxv2f64_f64
+; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e64,m2,ta,mu
+; CHECK:       vmerge.vim {{v[0-9]+}}, {{v[0-9]+}}, 0, v0
+  %a = call <vscale x 2 x double> @llvm.riscv.vfmerge.nxv2f64.f64(
+    <vscale x 2 x double> %0,
+    double zeroinitializer,
+    <vscale x 2 x i1> %1,
+    i32 %2)
+
+  ret <vscale x 2 x double> %a
+}
+
+define <vscale x 4 x double> @intrinsic_vfmerge_vzm_nxv4f64_nxv4f64_f64(<vscale x 4 x double> %0, <vscale x 4 x i1> %1, i32 %2) nounwind {
+entry:
+; CHECK-LABEL: intrinsic_vfmerge_vzm_nxv4f64_nxv4f64_f64
+; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e64,m4,ta,mu
+; CHECK:       vmerge.vim {{v[0-9]+}}, {{v[0-9]+}}, 0, v0
+  %a = call <vscale x 4 x double> @llvm.riscv.vfmerge.nxv4f64.f64(
+    <vscale x 4 x double> %0,
+    double zeroinitializer,
+    <vscale x 4 x i1> %1,
+    i32 %2)
+
+  ret <vscale x 4 x double> %a
+}
+
+define <vscale x 8 x double> @intrinsic_vfmerge_vzm_nxv8f64_nxv8f64_f64(<vscale x 8 x double> %0, <vscale x 8 x i1> %1, i32 %2) nounwind {
+entry:
+; CHECK-LABEL: intrinsic_vfmerge_vzm_nxv8f64_nxv8f64_f64
+; CHECK:       vsetvli {{.*}}, {{a[0-9]+}}, e64,m8,ta,mu
+; CHECK:       vmerge.vim {{v[0-9]+}}, {{v[0-9]+}}, 0, v0
+  %a = call <vscale x 8 x double> @llvm.riscv.vfmerge.nxv8f64.f64(
+    <vscale x 8 x double> %0,
+    double zeroinitializer,
+    <vscale x 8 x i1> %1,
+    i32 %2)
+
+  ret <vscale x 8 x double> %a
 }
