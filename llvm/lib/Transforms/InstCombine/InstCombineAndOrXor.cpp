@@ -1627,6 +1627,14 @@ static Instruction *foldOrToXor(BinaryOperator &I,
         match(Op1, m_Not(m_c_Or(m_Specific(A), m_Specific(B)))))
       return BinaryOperator::CreateNot(Builder.CreateXor(A, B));
 
+  // Operand complexity canonicalization guarantees that the 'xor' is Op0.
+  // (A ^ B) | ~(A | B) --> ~(A & B)
+  // (A ^ B) | ~(B | A) --> ~(A & B)
+  if (Op0->hasOneUse() || Op1->hasOneUse())
+    if (match(Op0, m_Xor(m_Value(A), m_Value(B))) &&
+        match(Op1, m_Not(m_c_Or(m_Specific(A), m_Specific(B)))))
+      return BinaryOperator::CreateNot(Builder.CreateAnd(A, B));
+
   // (A & ~B) | (~A & B) --> A ^ B
   // (A & ~B) | (B & ~A) --> A ^ B
   // (~B & A) | (~A & B) --> A ^ B
