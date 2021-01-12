@@ -1101,8 +1101,7 @@ bool LoopVectorizationLegality::canVectorizeLoopCFG(Loop *Lp,
   // TODO: This restriction can be relaxed in the near future, it's here solely
   // to allow separation of changes for review. We need to generalize the phi
   // update logic in a number of places.
-  BasicBlock *ExitBB = Lp->getUniqueExitBlock();
-  if (!ExitBB) {
+  if (!Lp->getUniqueExitBlock()) {
     reportVectorizationFailure("The loop must have a unique exit block",
         "loop control flow is not understood by vectorizer",
         "CFGNotUnderstood", ORE, TheLoop);
@@ -1110,24 +1109,7 @@ bool LoopVectorizationLegality::canVectorizeLoopCFG(Loop *Lp,
       Result = false;
     else
       return false;
-  } else {
-    // The existing code assumes that LCSSA implies that phis are single entry
-    // (which was true when we had at most a single exiting edge from the latch).
-    // In general, there's nothing which prevents an LCSSA phi in exit block from
-    // having two or more values if there are multiple exiting edges leading to
-    // the exit block.  (TODO: implement general case)
-    if (!llvm::empty(ExitBB->phis()) && !ExitBB->getSinglePredecessor()) {
-      reportVectorizationFailure("The loop must have no live-out values if "
-                                 "it has more than one exiting block",
-          "loop control flow is not understood by vectorizer",
-          "CFGNotUnderstood", ORE, TheLoop);
-      if (DoExtraAnalysis)
-        Result = false;
-      else
-        return false;
-    }
   }
-
   return Result;
 }
 
