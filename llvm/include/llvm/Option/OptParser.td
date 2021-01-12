@@ -97,6 +97,7 @@ class Option<list<string> prefixes, string name, OptionKind kind> {
   OptionGroup Group = ?;
   Option Alias = ?;
   list<string> AliasArgs = [];
+  code MacroPrefix = "";
   code KeyPath = ?;
   code DefaultValue = ?;
   code ImpliedValue = ?;
