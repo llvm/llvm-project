@@ -1,4 +1,6 @@
 # RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.3a --disassemble < %s 2>&1 | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8r --disassemble < %s 2>&1 | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+pauth --disassemble < %s 2>&1 | FileCheck %s
 
 # CHECK: warning: potentially undefined instruction encoding
 # CHECK-NEXT: [0x00,0x0c,0x20,0xf8]
