@@ -265,10 +265,10 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   // Rank and shape checks
   const auto *actualLastSymbol{evaluate::GetLastSymbol(actual)};
   if (actualLastSymbol) {
-    actualLastSymbol = GetAssociationRoot(*actualLastSymbol);
+    actualLastSymbol = &ResolveAssociations(*actualLastSymbol);
   }
   const ObjectEntityDetails *actualLastObject{actualLastSymbol
-          ? actualLastSymbol->GetUltimate().detailsIf<ObjectEntityDetails>()
+          ? actualLastSymbol->detailsIf<ObjectEntityDetails>()
           : nullptr};
   int actualRank{evaluate::GetRank(actualType.shape())};
   bool actualIsPointer{(actualLastSymbol && IsPointer(*actualLastSymbol)) ||

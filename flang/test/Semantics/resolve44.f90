@@ -20,12 +20,10 @@ program main
     integer, kind :: kind
     integer, len :: len
     !ERROR: Recursive use of the derived type requires POINTER or ALLOCATABLE
-    !ERROR: An automatic variable or component must not be initialized
     type(recursive2(kind,len)) :: bad1
     type(recursive2(kind,len)), pointer :: ok1
     type(recursive2(kind,len)), allocatable :: ok2
     !ERROR: Recursive use of the derived type requires POINTER or ALLOCATABLE
-    !ERROR: An automatic variable or component must not be initialized
     !ERROR: CLASS entity 'bad2' must be a dummy argument or have ALLOCATABLE or POINTER attribute
     class(recursive2(kind,len)) :: bad2
     class(recursive2(kind,len)), pointer :: ok3

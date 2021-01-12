@@ -223,6 +223,14 @@ std::optional<DataRef> ExtractDataRef(
     return std::nullopt;
   }
 }
+template <typename A>
+std::optional<DataRef> ExtractDataRef(const A *p, bool intoSubstring = false) {
+  if (p) {
+    return ExtractDataRef(*p, intoSubstring);
+  } else {
+    return std::nullopt;
+  }
+}
 std::optional<DataRef> ExtractSubstringBase(const Substring &);
 
 // Predicate: is an expression is an array element reference?
@@ -807,9 +815,6 @@ template <typename A> SymbolVector GetSymbolVector(const A &x) {
 // when none is found.
 const Symbol *GetLastTarget(const SymbolVector &);
 
-// Resolves any whole ASSOCIATE(B=>A) associations, then returns GetUltimate()
-const Symbol &ResolveAssociations(const Symbol &);
-
 // Collects all of the Symbols in an expression
 template <typename A> semantics::SymbolSet CollectSymbols(const A &);
 extern template semantics::SymbolSet CollectSymbols(const Expr<SomeType> &);
@@ -904,6 +909,7 @@ class Scope;
 
 // These functions are used in Evaluate so they are defined here rather than in
 // Semantics to avoid a link-time dependency on Semantics.
+// All of these apply GetUltimate() or ResolveAssociations() to their arguments.
 
 bool IsVariableName(const Symbol &);
 bool IsPureProcedure(const Symbol &);
@@ -917,9 +923,18 @@ bool IsFunctionResult(const Symbol &);
 bool IsKindTypeParameter(const Symbol &);
 bool IsLenTypeParameter(const Symbol &);
 
-// Follow use, host, and construct assocations to a variable, if any.
-const Symbol *GetAssociationRoot(const Symbol &);
-Symbol *GetAssociationRoot(Symbol &);
+// ResolveAssociations() traverses use associations and host associations
+// like GetUltimate(), but also resolves through whole variable associations
+// with ASSOCIATE(x => y) and related constructs.  GetAssociationRoot()
+// applies ResolveAssociations() and then, in the case of resolution to
+// a construct association with part of a variable that does not involve a
+// vector subscript, returns the first symbol of that variable instead
+// of the construct entity.
+// (E.g., for ASSOCIATE(x => y%z), ResolveAssociations(x) returns x,
+// while GetAssociationRoot(x) returns y.)
+const Symbol &ResolveAssociations(const Symbol &);
+const Symbol &GetAssociationRoot(const Symbol &);
+
 const Symbol *FindCommonBlockContaining(const Symbol &);
 int CountLenParameters(const DerivedTypeSpec &);
 int CountNonConstantLenParameters(const DerivedTypeSpec &);
