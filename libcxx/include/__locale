@@ -33,6 +33,8 @@
 # include <support/solaris/xlocale.h>
 #elif defined(_NEWLIB_VERSION)
 # include <support/newlib/xlocale.h>
+#elif defined(__OpenBSD__)
+# include <support/openbsd/xlocale.h>
 #elif (defined(__APPLE__)      || defined(__FreeBSD__) \
     || defined(__EMSCRIPTEN__) || defined(__IBMCPP__))
 # include <xlocale.h>
