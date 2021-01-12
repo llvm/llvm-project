@@ -108,6 +108,34 @@
 #   endif
 # endif
 
-#endif // TEST_STD_VER == 20
+#elif TEST_STD_VER > 20
+
+# if !defined(_LIBCPP_HAS_NO_THREADS)
+#   ifndef __cpp_lib_shared_mutex
+#     error "__cpp_lib_shared_mutex should be defined in c++2b"
+#   endif
+#   if __cpp_lib_shared_mutex != 201505L
+#     error "__cpp_lib_shared_mutex should have the value 201505L in c++2b"
+#   endif
+# else
+#   ifdef __cpp_lib_shared_mutex
+#     error "__cpp_lib_shared_mutex should not be defined when !defined(_LIBCPP_HAS_NO_THREADS) is not defined!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_HAS_NO_THREADS)
+#   ifndef __cpp_lib_shared_timed_mutex
+#     error "__cpp_lib_shared_timed_mutex should be defined in c++2b"
+#   endif
+#   if __cpp_lib_shared_timed_mutex != 201402L
+#     error "__cpp_lib_shared_timed_mutex should have the value 201402L in c++2b"
+#   endif
+# else
+#   ifdef __cpp_lib_shared_timed_mutex
+#     error "__cpp_lib_shared_timed_mutex should not be defined when !defined(_LIBCPP_HAS_NO_THREADS) is not defined!"
+#   endif
+# endif
+
+#endif // TEST_STD_VER > 20
 
 int main(int, char**) { return 0; }

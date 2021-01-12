@@ -53,6 +53,21 @@
 #   endif
 # endif
 
-#endif // TEST_STD_VER == 20
+#elif TEST_STD_VER > 20
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_three_way_comparison
+#     error "__cpp_lib_three_way_comparison should be defined in c++2b"
+#   endif
+#   if __cpp_lib_three_way_comparison != 201907L
+#     error "__cpp_lib_three_way_comparison should have the value 201907L in c++2b"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_three_way_comparison
+#     error "__cpp_lib_three_way_comparison should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+#endif // TEST_STD_VER > 20
 
 int main(int, char**) { return 0; }
