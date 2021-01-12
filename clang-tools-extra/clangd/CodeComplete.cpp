@@ -1111,8 +1111,8 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
       offsetToClangLineColumn(Input.ParseInput.Contents, Input.Offset);
 
   std::unique_ptr<llvm::MemoryBuffer> ContentsBuffer =
-      llvm::MemoryBuffer::getMemBufferCopy(Input.ParseInput.Contents,
-                                           Input.FileName);
+      llvm::MemoryBuffer::getMemBuffer(Input.ParseInput.Contents,
+                                       Input.FileName);
   // The diagnostic options must be set before creating a CompilerInstance.
   CI->getDiagnosticOpts().IgnoreWarnings = true;
   // We reuse the preamble whether it's valid or not. This is a
