@@ -3223,9 +3223,6 @@ public:
       Decl *D, const WebAssemblyImportNameAttr &AL);
   WebAssemblyImportModuleAttr *mergeImportModuleAttr(
       Decl *D, const WebAssemblyImportModuleAttr &AL);
-  EnforceTCBAttr *mergeEnforceTCBAttr(Decl *D, const EnforceTCBAttr &AL);
-  EnforceTCBLeafAttr *mergeEnforceTCBLeafAttr(Decl *D,
-                                              const EnforceTCBLeafAttr &AL);
 
   void mergeDeclAttributes(NamedDecl *New, Decl *Old,
                            AvailabilityMergeKind AMK = AMK_Redeclaration);
@@ -12477,8 +12474,6 @@ private:
   /// Check whether receiver is mutable ObjC container which
   /// attempts to add itself into the container
   void CheckObjCCircularContainer(ObjCMessageExpr *Message);
-
-  void CheckTCBEnforcement(const CallExpr *TheCall, const FunctionDecl *Callee);
 
   void AnalyzeDeleteExprMismatch(const CXXDeleteExpr *DE);
   void AnalyzeDeleteExprMismatch(FieldDecl *Field, SourceLocation DeleteLoc,
