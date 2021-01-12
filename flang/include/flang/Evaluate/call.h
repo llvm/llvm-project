@@ -13,6 +13,7 @@
 #include "constant.h"
 #include "formatting.h"
 #include "type.h"
+#include "flang/Common/Fortran.h"
 #include "flang/Common/indirection.h"
 #include "flang/Common/reference.h"
 #include "flang/Parser/char-block.h"
@@ -73,6 +74,7 @@ public:
   explicit ActualArgument(Expr<SomeType> &&);
   explicit ActualArgument(common::CopyableIndirection<Expr<SomeType>> &&);
   explicit ActualArgument(AssumedType);
+  explicit ActualArgument(common::Label);
   ~ActualArgument();
   ActualArgument &operator=(Expr<SomeType> &&);
 
@@ -101,6 +103,8 @@ public:
     }
   }
 
+  common::Label GetLabel() const { return std::get<common::Label>(u_); }
+
   std::optional<DynamicType> GetType() const;
   int Rank() const;
   bool operator==(const ActualArgument &) const;
@@ -108,8 +112,9 @@ public:
 
   std::optional<parser::CharBlock> keyword() const { return keyword_; }
   void set_keyword(parser::CharBlock x) { keyword_ = x; }
-  bool isAlternateReturn() const { return isAlternateReturn_; }
-  void set_isAlternateReturn() { isAlternateReturn_ = true; }
+  bool isAlternateReturn() const {
+    return std::holds_alternative<common::Label>(u_);
+  }
   bool isPassedObject() const { return isPassedObject_; }
   void set_isPassedObject(bool yes = true) { isPassedObject_ = yes; }
 
@@ -131,9 +136,10 @@ private:
   // e.g. between X and (X).  The parser attempts to parse each argument
   // first as a variable, then as an expression, and the distinction appears
   // in the parse tree.
-  std::variant<common::CopyableIndirection<Expr<SomeType>>, AssumedType> u_;
+  std::variant<common::CopyableIndirection<Expr<SomeType>>, AssumedType,
+      common::Label>
+      u_;
   std::optional<parser::CharBlock> keyword_;
-  bool isAlternateReturn_{false}; // whether expr is a "*label" number
   bool isPassedObject_{false};
   common::Intent dummyIntent_{common::Intent::Default};
 };
