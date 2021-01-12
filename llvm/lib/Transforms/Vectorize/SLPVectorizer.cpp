@@ -6863,33 +6863,32 @@ public:
       // (possibly) a reduced value. If the reduced value opcode is not set,
       // the first met operation != reduction operation is considered as the
       // reduced value class.
+      // Only handle trees in the current basic block.
+      // Each tree node needs to have minimal number of users except for the
+      // ultimate reduction.
       const bool IsRdxInst = EdgeOpData == RdxTreeInst;
-      if (I && I != Phi &&
+      if (I && I != Phi && I != B &&
+          RdxTreeInst.hasSameParent(I, B->getParent(), IsRdxInst) &&
+          RdxTreeInst.hasRequiredNumberOfUses(I, IsRdxInst) &&
           (!RdxLeafVal || EdgeOpData == RdxLeafVal || IsRdxInst)) {
-        // Only handle trees in the current basic block.
-        // Each tree node needs to have minimal number of users except for the
-        // ultimate reduction.
-        if (RdxTreeInst.hasSameParent(I, B->getParent(), IsRdxInst) &&
-            RdxTreeInst.hasRequiredNumberOfUses(I, IsRdxInst) && I != B) {
-          if (IsRdxInst) {
-            // We need to be able to reassociate the reduction operations.
-            if (!EdgeOpData.isAssociative(I)) {
-              // I is an extra argument for TreeN (its parent operation).
-              markExtraArg(Stack.back(), I);
-              continue;
-            }
-          } else if (RdxLeafVal && RdxLeafVal != EdgeOpData) {
-            // Make sure that the opcodes of the operations that we are going to
-            // reduce match.
+        if (IsRdxInst) {
+          // We need to be able to reassociate the reduction operations.
+          if (!EdgeOpData.isAssociative(I)) {
             // I is an extra argument for TreeN (its parent operation).
             markExtraArg(Stack.back(), I);
             continue;
-          } else if (!RdxLeafVal) {
-            RdxLeafVal = EdgeOpData;
           }
-          Stack.push_back(std::make_pair(I, EdgeOpData.getFirstOperandIndex()));
+        } else if (RdxLeafVal && RdxLeafVal != EdgeOpData) {
+          // Make sure that the opcodes of the operations that we are going to
+          // reduce match.
+          // I is an extra argument for TreeN (its parent operation).
+          markExtraArg(Stack.back(), I);
           continue;
+        } else if (!RdxLeafVal) {
+          RdxLeafVal = EdgeOpData;
         }
+        Stack.push_back(std::make_pair(I, EdgeOpData.getFirstOperandIndex()));
+        continue;
       }
       // NextV is an extra argument for TreeN (its parent operation).
       markExtraArg(Stack.back(), NextV);
