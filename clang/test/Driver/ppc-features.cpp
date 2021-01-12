@@ -155,6 +155,9 @@
 // CHECK-SPE: "-target-feature" "+spe"
 // CHECK-NOSPE: "-target-feature" "-spe"
 
+// RUN: %clang -target powerpc %s -mefpu2 -c -### 2>&1 | FileCheck -check-prefix=CHECK-EFPU2 %s
+// CHECK-EFPU2: "-target-feature" "+efpu2"
+
 // Assembler features
 // RUN: %clang -target powerpc-unknown-linux-gnu %s -### -o %t.o -no-integrated-as 2>&1 | FileCheck -check-prefix=CHECK_32_BE_AS_ARGS %s
 // CHECK_32_BE_AS_ARGS: "-mppc"
