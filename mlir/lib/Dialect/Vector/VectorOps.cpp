@@ -2365,10 +2365,12 @@ static LogicalResult verify(MaskedLoadOp op) {
   VectorType maskVType = op.getMaskVectorType();
   VectorType passVType = op.getPassThruVectorType();
   VectorType resVType = op.getResultVectorType();
+  MemRefType memType = op.getMemRefType();
 
-  if (resVType.getElementType() != op.getMemRefType().getElementType())
+  if (resVType.getElementType() != memType.getElementType())
     return op.emitOpError("base and result element type should match");
-
+  if (llvm::size(op.indices()) != memType.getRank())
+    return op.emitOpError("requires ") << memType.getRank() << " indices";
   if (resVType.getDimSize(0) != maskVType.getDimSize(0))
     return op.emitOpError("expected result dim to match mask dim");
   if (resVType != passVType)
@@ -2410,10 +2412,12 @@ void MaskedLoadOp::getCanonicalizationPatterns(
 static LogicalResult verify(MaskedStoreOp op) {
   VectorType maskVType = op.getMaskVectorType();
   VectorType valueVType = op.getValueVectorType();
+  MemRefType memType = op.getMemRefType();
 
-  if (valueVType.getElementType() != op.getMemRefType().getElementType())
+  if (valueVType.getElementType() != memType.getElementType())
     return op.emitOpError("base and value element type should match");
-
+  if (llvm::size(op.indices()) != memType.getRank())
+    return op.emitOpError("requires ") << memType.getRank() << " indices";
   if (valueVType.getDimSize(0) != maskVType.getDimSize(0))
     return op.emitOpError("expected value dim to match mask dim");
   return success();
@@ -2454,10 +2458,10 @@ static LogicalResult verify(GatherOp op) {
   VectorType indicesVType = op.getIndicesVectorType();
   VectorType maskVType = op.getMaskVectorType();
   VectorType resVType = op.getResultVectorType();
+  MemRefType memType = op.getMemRefType();
 
-  if (resVType.getElementType() != op.getMemRefType().getElementType())
+  if (resVType.getElementType() != memType.getElementType())
     return op.emitOpError("base and result element type should match");
-
   if (resVType.getDimSize(0) != indicesVType.getDimSize(0))
     return op.emitOpError("expected result dim to match indices dim");
   if (resVType.getDimSize(0) != maskVType.getDimSize(0))
@@ -2500,10 +2504,10 @@ static LogicalResult verify(ScatterOp op) {
   VectorType indicesVType = op.getIndicesVectorType();
   VectorType maskVType = op.getMaskVectorType();
   VectorType valueVType = op.getValueVectorType();
+  MemRefType memType = op.getMemRefType();
 
-  if (valueVType.getElementType() != op.getMemRefType().getElementType())
+  if (valueVType.getElementType() != memType.getElementType())
     return op.emitOpError("base and value element type should match");
-
   if (valueVType.getDimSize(0) != indicesVType.getDimSize(0))
     return op.emitOpError("expected value dim to match indices dim");
   if (valueVType.getDimSize(0) != maskVType.getDimSize(0))
@@ -2544,10 +2548,12 @@ static LogicalResult verify(ExpandLoadOp op) {
   VectorType maskVType = op.getMaskVectorType();
   VectorType passVType = op.getPassThruVectorType();
   VectorType resVType = op.getResultVectorType();
+  MemRefType memType = op.getMemRefType();
 
-  if (resVType.getElementType() != op.getMemRefType().getElementType())
+  if (resVType.getElementType() != memType.getElementType())
     return op.emitOpError("base and result element type should match");
-
+  if (llvm::size(op.indices()) != memType.getRank())
+    return op.emitOpError("requires ") << memType.getRank() << " indices";
   if (resVType.getDimSize(0) != maskVType.getDimSize(0))
     return op.emitOpError("expected result dim to match mask dim");
   if (resVType != passVType)
@@ -2589,10 +2595,12 @@ void ExpandLoadOp::getCanonicalizationPatterns(
 static LogicalResult verify(CompressStoreOp op) {
   VectorType maskVType = op.getMaskVectorType();
   VectorType valueVType = op.getValueVectorType();
+  MemRefType memType = op.getMemRefType();
 
-  if (valueVType.getElementType() != op.getMemRefType().getElementType())
+  if (valueVType.getElementType() != memType.getElementType())
     return op.emitOpError("base and value element type should match");
-
+  if (llvm::size(op.indices()) != memType.getRank())
+    return op.emitOpError("requires ") << memType.getRank() << " indices";
   if (valueVType.getDimSize(0) != maskVType.getDimSize(0))
     return op.emitOpError("expected value dim to match mask dim");
   return success();
