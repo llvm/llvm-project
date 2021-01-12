@@ -44,7 +44,7 @@ LoopVersioning::LoopVersioning(const LoopAccessInfo &LAI,
       AliasChecks(Checks.begin(), Checks.end()),
       Preds(LAI.getPSE().getUnionPredicate()), LAI(LAI), LI(LI), DT(DT),
       SE(SE) {
-  assert(L->getExitBlock() && "No single exit block");
+  assert(L->getUniqueExitBlock() && "No single exit block");
 }
 
 void LoopVersioning::versionLoop(
