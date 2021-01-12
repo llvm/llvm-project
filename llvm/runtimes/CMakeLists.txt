@@ -20,7 +20,7 @@ foreach(entry ${entries})
 endforeach()
 
 # Side-by-side subprojects layout.
-set(LLVM_ALL_RUNTIMES "libcxx;libcxxabi;libunwind;compiler-rt")
+set(LLVM_ALL_RUNTIMES "libcxx;libcxxabi;libunwind;compiler-rt;openmp")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build (${LLVM_ALL_RUNTIMES}), or \"all\".")
 if(LLVM_ENABLE_RUNTIMES STREQUAL "all" )
