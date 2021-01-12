@@ -11,6 +11,7 @@
 #include "Globals.h"
 #include "PybindUtils.h"
 
+#include "mlir-c/AffineMap.h"
 #include "mlir-c/Bindings/Python/Interop.h"
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
@@ -2943,8 +2944,42 @@ PyAffineExpr PyAffineExpr::createFromCapsule(py::object capsule) {
 }
 
 //------------------------------------------------------------------------------
-// PyAffineMap.
+// PyAffineMap and utilities.
 //------------------------------------------------------------------------------
+
+namespace {
+/// A list of expressions contained in an affine map. Internally these are
+/// stored as a consecutive array leading to inexpensive random access. Both
+/// the map and the expression are owned by the context so we need not bother
+/// with lifetime extension.
+class PyAffineMapExprList
+    : public Sliceable<PyAffineMapExprList, PyAffineExpr> {
+public:
+  static constexpr const char *pyClassName = "AffineExprList";
+
+  PyAffineMapExprList(PyAffineMap map, intptr_t startIndex = 0,
+                      intptr_t length = -1, intptr_t step = 1)
+      : Sliceable(startIndex,
+                  length == -1 ? mlirAffineMapGetNumResults(map) : length,
+                  step),
+        affineMap(map) {}
+
+  intptr_t getNumElements() { return mlirAffineMapGetNumResults(affineMap); }
+
+  PyAffineExpr getElement(intptr_t pos) {
+    return PyAffineExpr(affineMap.getContext(),
+                        mlirAffineMapGetResult(affineMap, pos));
+  }
+
+  PyAffineMapExprList slice(intptr_t startIndex, intptr_t length,
+                            intptr_t step) {
+    return PyAffineMapExprList(affineMap, startIndex, length, step);
+  }
+
+private:
+  PyAffineMap affineMap;
+};
+} // end namespace
 
 bool PyAffineMap::operator==(const PyAffineMap &other) {
   return mlirAffineMapEqual(affineMap, other.affineMap);
@@ -3741,6 +3776,72 @@ void mlir::python::populateIRSubmodule(py::module &m) {
       .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR,
                              &PyAffineMap::getCapsule)
       .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyAffineMap::createFromCapsule)
+      .def("__eq__",
+           [](PyAffineMap &self, PyAffineMap &other) { return self == other; })
+      .def("__eq__", [](PyAffineMap &self, py::object &other) { return false; })
+      .def("__str__",
+           [](PyAffineMap &self) {
+             PyPrintAccumulator printAccum;
+             mlirAffineMapPrint(self, printAccum.getCallback(),
+                                printAccum.getUserData());
+             return printAccum.join();
+           })
+      .def("__repr__",
+           [](PyAffineMap &self) {
+             PyPrintAccumulator printAccum;
+             printAccum.parts.append("AffineMap(");
+             mlirAffineMapPrint(self, printAccum.getCallback(),
+                                printAccum.getUserData());
+             printAccum.parts.append(")");
+             return printAccum.join();
+           })
+      .def_property_readonly(
+          "context",
+          [](PyAffineMap &self) { return self.getContext().getObject(); },
+          "Context that owns the Affine Map")
+      .def(
+          "dump", [](PyAffineMap &self) { mlirAffineMapDump(self); },
+          kDumpDocstring)
+      .def_static(
+          "get",
+          [](intptr_t dimCount, intptr_t symbolCount, py::list exprs,
+             DefaultingPyMlirContext context) {
+            SmallVector<MlirAffineExpr> affineExprs;
+            affineExprs.reserve(py::len(exprs));
+            for (py::handle expr : exprs) {
+              try {
+                affineExprs.push_back(expr.cast<PyAffineExpr>());
+              } catch (py::cast_error &err) {
+                std::string msg =
+                    std::string("Invalid expression when attempting to create "
+                                "an AffineMap (") +
+                    err.what() + ")";
+                throw py::cast_error(msg);
+              } catch (py::reference_cast_error &err) {
+                std::string msg =
+                    std::string("Invalid expression (None?) when attempting to "
+                                "create an AffineMap (") +
+                    err.what() + ")";
+                throw py::cast_error(msg);
+              }
+            }
+            MlirAffineMap map =
+                mlirAffineMapGet(context->get(), dimCount, symbolCount,
+                                 affineExprs.size(), affineExprs.data());
+            return PyAffineMap(context->getRef(), map);
+          },
+          py::arg("dim_count"), py::arg("symbol_count"), py::arg("exprs"),
+          py::arg("context") = py::none(),
+          "Gets a map with the given expressions as results.")
+      .def_static(
+          "get_constant",
+          [](intptr_t value, DefaultingPyMlirContext context) {
+            MlirAffineMap affineMap =
+                mlirAffineMapConstantGet(context->get(), value);
+            return PyAffineMap(context->getRef(), affineMap);
+          },
+          py::arg("value"), py::arg("context") = py::none(),
+          "Gets an affine map with a single constant result")
       .def_static(
           "get_empty",
           [](DefaultingPyMlirContext context) {
@@ -3748,14 +3849,82 @@ void mlir::python::populateIRSubmodule(py::module &m) {
             return PyAffineMap(context->getRef(), affineMap);
           },
           py::arg("context") = py::none(), "Gets an empty affine map.")
+      .def_static(
+          "get_identity",
+          [](intptr_t nDims, DefaultingPyMlirContext context) {
+            MlirAffineMap affineMap =
+                mlirAffineMapMultiDimIdentityGet(context->get(), nDims);
+            return PyAffineMap(context->getRef(), affineMap);
+          },
+          py::arg("n_dims"), py::arg("context") = py::none(),
+          "Gets an identity map with the given number of dimensions.")
+      .def_static(
+          "get_minor_identity",
+          [](intptr_t nDims, intptr_t nResults,
+             DefaultingPyMlirContext context) {
+            MlirAffineMap affineMap =
+                mlirAffineMapMinorIdentityGet(context->get(), nDims, nResults);
+            return PyAffineMap(context->getRef(), affineMap);
+          },
+          py::arg("n_dims"), py::arg("n_results"),
+          py::arg("context") = py::none(),
+          "Gets a minor identity map with the given number of dimensions and "
+          "results.")
+      .def_static(
+          "get_permutation",
+          [](std::vector<unsigned> permutation,
+             DefaultingPyMlirContext context) {
+            MlirAffineMap affineMap = mlirAffineMapPermutationGet(
+                context->get(), permutation.size(), permutation.data());
+            return PyAffineMap(context->getRef(), affineMap);
+          },
+          py::arg("permutation"), py::arg("context") = py::none(),
+          "Gets an affine map that permutes its inputs.")
+      .def("get_submap",
+           [](PyAffineMap &self, std::vector<intptr_t> &resultPos) {
+             intptr_t numResults = mlirAffineMapGetNumResults(self);
+             for (intptr_t pos : resultPos) {
+               if (pos < 0 || pos >= numResults)
+                 throw py::value_error("result position out of bounds");
+             }
+             MlirAffineMap affineMap = mlirAffineMapGetSubMap(
+                 self, resultPos.size(), resultPos.data());
+             return PyAffineMap(self.getContext(), affineMap);
+           })
+      .def("get_major_submap",
+           [](PyAffineMap &self, intptr_t nResults) {
+             if (nResults >= mlirAffineMapGetNumResults(self))
+               throw py::value_error("number of results out of bounds");
+             MlirAffineMap affineMap =
+                 mlirAffineMapGetMajorSubMap(self, nResults);
+             return PyAffineMap(self.getContext(), affineMap);
+           })
+      .def("get_minor_submap",
+           [](PyAffineMap &self, intptr_t nResults) {
+             if (nResults >= mlirAffineMapGetNumResults(self))
+               throw py::value_error("number of results out of bounds");
+             MlirAffineMap affineMap =
+                 mlirAffineMapGetMinorSubMap(self, nResults);
+             return PyAffineMap(self.getContext(), affineMap);
+           })
       .def_property_readonly(
-          "context",
-          [](PyAffineMap &self) { return self.getContext().getObject(); },
-          "Context that owns the Affine Map")
-      .def("__eq__",
-           [](PyAffineMap &self, PyAffineMap &other) { return self == other; })
-      .def("__eq__", [](PyAffineMap &self, py::object &other) { return false; })
-      .def(
-          "dump", [](PyAffineMap &self) { mlirAffineMapDump(self); },
-          kDumpDocstring);
+          "is_permutation",
+          [](PyAffineMap &self) { return mlirAffineMapIsPermutation(self); })
+      .def_property_readonly("is_projected_permutation",
+                             [](PyAffineMap &self) {
+                               return mlirAffineMapIsProjectedPermutation(self);
+                             })
+      .def_property_readonly(
+          "n_dims",
+          [](PyAffineMap &self) { return mlirAffineMapGetNumDims(self); })
+      .def_property_readonly(
+          "n_inputs",
+          [](PyAffineMap &self) { return mlirAffineMapGetNumInputs(self); })
+      .def_property_readonly(
+          "n_symbols",
+          [](PyAffineMap &self) { return mlirAffineMapGetNumSymbols(self); })
+      .def_property_readonly("results", [](PyAffineMap &self) {
+        return PyAffineMapExprList(self);
+      });
+  PyAffineMapExprList::bind(m);
 }

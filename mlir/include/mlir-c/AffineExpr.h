@@ -10,7 +10,6 @@
 #ifndef MLIR_C_AFFINEEXPR_H
 #define MLIR_C_AFFINEEXPR_H
 
-#include "mlir-c/AffineMap.h"
 #include "mlir-c/IR.h"
 
 #ifdef __cplusplus
