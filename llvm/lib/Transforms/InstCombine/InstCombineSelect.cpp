@@ -2572,11 +2572,13 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
   if (SelType->isIntOrIntVectorTy(1) &&
       TrueVal->getType() == CondVal->getType()) {
-    if (EnableUnsafeSelectTransform && match(TrueVal, m_One())) {
+    if (match(TrueVal, m_One()) &&
+        (EnableUnsafeSelectTransform || impliesPoison(FalseVal, CondVal))) {
       // Change: A = select B, true, C --> A = or B, C
       return BinaryOperator::CreateOr(CondVal, FalseVal);
     }
-    if (EnableUnsafeSelectTransform && match(FalseVal, m_Zero())) {
+    if (match(FalseVal, m_Zero()) &&
+        (EnableUnsafeSelectTransform || impliesPoison(TrueVal, CondVal))) {
       // Change: A = select B, C, false --> A = and B, C
       return BinaryOperator::CreateAnd(CondVal, TrueVal);
     }
