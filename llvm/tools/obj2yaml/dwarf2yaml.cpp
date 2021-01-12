@@ -219,8 +219,8 @@ void dumpDebugInfo(DWARFContext &DCtx, DWARFYAML::Data &Y) {
     const DWARFDebugAbbrev *DebugAbbrev = DCtx.getDebugAbbrev();
     NewUnit.AbbrevTableID = std::distance(
         DebugAbbrev->begin(),
-        std::find_if(
-            DebugAbbrev->begin(), DebugAbbrev->end(),
+        llvm::find_if(
+            *DebugAbbrev,
             [&](const std::pair<uint64_t, DWARFAbbreviationDeclarationSet> &P) {
               return P.first == CU->getAbbreviations()->getOffset();
             }));

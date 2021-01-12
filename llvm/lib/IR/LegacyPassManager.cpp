@@ -137,8 +137,7 @@ void PMDataManager::emitInstrCountChangedRemark(
     // remarks. Since it's possible that the first function in the module
     // doesn't actually contain a basic block, we have to go and find one that's
     // suitable for emitting remarks.
-    auto It = std::find_if(M.begin(), M.end(),
-                          [](const Function &Fn) { return !Fn.empty(); });
+    auto It = llvm::find_if(M, [](const Function &Fn) { return !Fn.empty(); });
 
     // Didn't find a function. Quit.
     if (It == M.end())
