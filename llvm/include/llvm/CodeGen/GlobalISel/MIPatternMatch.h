@@ -472,7 +472,6 @@ struct TernaryOp_match {
     return false;
   }
 };
-
 template <typename Src0Ty, typename Src1Ty, typename Src2Ty>
 inline TernaryOp_match<Src0Ty, Src1Ty, Src2Ty,
                        TargetOpcode::G_INSERT_VECTOR_ELT>
