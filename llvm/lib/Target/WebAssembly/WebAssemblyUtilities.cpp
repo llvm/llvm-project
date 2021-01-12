@@ -115,3 +115,17 @@ WebAssembly::getOrCreateFunctionTableSymbol(MCContext &Ctx,
   }
   return Sym;
 }
+
+// Find a catch instruction from an EH pad.
+MachineInstr *WebAssembly::findCatch(MachineBasicBlock *EHPad) {
+  assert(EHPad->isEHPad());
+  auto Pos = EHPad->begin();
+  // Skip any label or debug instructions. Also skip 'end' marker instructions
+  // that may exist after marker placement in CFGStackify.
+  while (Pos != EHPad->end() &&
+         (Pos->isLabel() || Pos->isDebugInstr() || isMarker(Pos->getOpcode())))
+    Pos++;
+  if (Pos != EHPad->end() && WebAssembly::isCatch(Pos->getOpcode()))
+    return &*Pos;
+  return nullptr;
+}
