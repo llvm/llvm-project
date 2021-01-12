@@ -2814,14 +2814,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Val;
   }
 
-  if (Args.hasArg(OPT_ftrapping_math)) {
-    Opts.setFPExceptionMode(LangOptions::FPE_Strict);
-  }
-
-  if (Args.hasArg(OPT_fno_trapping_math)) {
-    Opts.setFPExceptionMode(LangOptions::FPE_Ignore);
-  }
-
   LangOptions::FPExceptionModeKind FPEB = LangOptions::FPE_Ignore;
   if (Arg *A = Args.getLastArg(OPT_ffp_exception_behavior_EQ)) {
     StringRef Val = A->getValue();

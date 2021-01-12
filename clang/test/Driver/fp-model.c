@@ -80,7 +80,6 @@
 // RUN: %clang -### -ftrapping-math -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-TRAP %s
 // CHECK-TRAP: "-cc1"
-// CHECK-TRAP: "-ftrapping-math"
 // CHECK-TRAP: "-ffp-exception-behavior=strict"
 
 // RUN: %clang -### -nostdinc -ffp-model=fast -c %s 2>&1 \
@@ -106,15 +105,8 @@
 // RUN: %clang -### -nostdinc -ffp-model=strict -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FPM-STRICT %s
 // CHECK-FPM-STRICT: "-cc1"
-// CHECK-FPM-STRICT: "-ftrapping-math"
 // CHECK-FPM-STRICT: "-frounding-math"
 // CHECK-FPM-STRICT: "-ffp-exception-behavior=strict"
-
-// RUN: %clang -### -nostdinc -ftrapping-math -ffp-exception-behavior=ignore -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-TRAP-IGNORE %s
-// CHECK-TRAP-IGNORE: "-cc1"
-// CHECK-TRAP-IGNORE: "-fno-rounding-math"
-// CHECK-TRAP-IGNORE: "-ffp-exception-behavior=ignore"
 
 
 // RUN: %clang -### -nostdinc -ffp-exception-behavior=strict -c %s 2>&1 \
