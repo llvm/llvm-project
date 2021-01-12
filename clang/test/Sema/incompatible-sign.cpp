@@ -4,11 +4,11 @@
 void plainToSigned() {
   extern char c;
   signed char *p;
-  p = &c; // expected-error {{converts between pointers to integer types with different sign}}
+  p = &c; // expected-error {{converts between pointers to integer types where one is of the unique plain 'char' type and the other is not}}
 }
 
 void unsignedToPlain() {
   extern unsigned char uc;
   char *p;
-  p = &uc; // expected-error {{converts between pointers to integer types with different sign}}
+  p = &uc; // expected-error {{converts between pointers to integer types where one is of the unique plain 'char' type and the other is not}}
 }
