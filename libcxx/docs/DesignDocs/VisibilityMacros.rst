@@ -131,12 +131,6 @@ Visibility Macros
   specified on the primary template and to export the member functions produced
   by the explicit instantiation in the dylib.
 
-  **GCC Behavior**: GCC ignores visibility attributes applied the type in
-  extern template declarations and applying an attribute results in a warning.
-  However since `_LIBCPP_TEMPLATE_VIS` is the same as
-  `__attribute__((visibility("default"))` the visibility is already correct.
-  The macro has an empty definition with GCC.
-
   **Windows Behavior**: `extern template` and `dllexport` are fundamentally
   incompatible *on a class template* on Windows; the former suppresses
   instantiation, while the latter forces it. Specifying both on the same
