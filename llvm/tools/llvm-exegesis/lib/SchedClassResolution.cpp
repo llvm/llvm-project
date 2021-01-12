@@ -286,11 +286,11 @@ std::vector<BenchmarkMeasure> ResolvedSchedClass::getAsPoint(
       uint16_t ProcResIdx = findProcResIdx(STI, Key);
       if (ProcResIdx > 0) {
         // Find the pressure on ProcResIdx `Key`.
-        const auto ProcResPressureIt = std::find_if(
-            IdealizedProcResPressure.begin(), IdealizedProcResPressure.end(),
-            [ProcResIdx](const std::pair<uint16_t, float> &WPR) {
-              return WPR.first == ProcResIdx;
-            });
+        const auto ProcResPressureIt =
+            llvm::find_if(IdealizedProcResPressure,
+                          [ProcResIdx](const std::pair<uint16_t, float> &WPR) {
+                            return WPR.first == ProcResIdx;
+                          });
         Measure.PerInstructionValue =
             ProcResPressureIt == IdealizedProcResPressure.end()
                 ? 0.0

@@ -198,9 +198,9 @@ public:
   /// Return the estimated cost of loop \p L if the given loop is part of the
   /// loop nest associated with this object. Return -1 otherwise.
   CacheCostTy getLoopCost(const Loop &L) const {
-    auto IT = std::find_if(
-        LoopCosts.begin(), LoopCosts.end(),
-        [&L](const LoopCacheCostTy &LCC) { return LCC.first == &L; });
+    auto IT = llvm::find_if(LoopCosts, [&L](const LoopCacheCostTy &LCC) {
+      return LCC.first == &L;
+    });
     return (IT != LoopCosts.end()) ? (*IT).second : -1;
   }
 
