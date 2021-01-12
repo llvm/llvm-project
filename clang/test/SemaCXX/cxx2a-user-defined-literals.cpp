@@ -24,4 +24,33 @@ chrono::day bin_d = 0b011d;
 // expected-note@9{{candidate constructor (the implicit move constructor)}}
 chrono::day hex_d = 0x44d;
 chrono::year y  = 10y;
+
+namespace ignore_class_udl_for_numeric_literals {
+  struct A { constexpr A(const char*) {} };
+  struct B { constexpr B(char); };
+  struct C { constexpr C(int); };
+  template<A> void operator""_a();
+  template<B> void operator""_b();
+  template<C> void operator""_c();
+  void test_class_udl_1() {
+    1_a; // expected-error {{no matching}}
+    1_b; // expected-error {{no matching}}
+    1_c; // expected-error {{no matching}}
+    "1"_a;
+    "1"_b; // expected-error {{no matching}}
+    "1"_c; // expected-error {{no matching}}
+  }
+  template<char...> void operator""_a();
+  template<char...> void operator""_b();
+  template<char...> void operator""_c();
+  void test_class_udl_2() {
+    1_a;
+    // FIXME: The standard appears to say these two are ambiguous!
+    1_b;
+    1_c;
+    "1"_a;
+    "1"_b; // expected-error {{no matching}}
+    "1"_c; // expected-error {{no matching}}
+  }
+}
 #endif
