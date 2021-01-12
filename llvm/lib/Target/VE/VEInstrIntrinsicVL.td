@@ -30,6 +30,24 @@ def : Pat<(v512i1 (int_ve_vl_insert_vm512u v512i1:$vmx, v256i1:$vmy)),
 def : Pat<(v512i1 (int_ve_vl_insert_vm512l v512i1:$vmx, v256i1:$vmy)),
           (INSERT_SUBREG v512i1:$vmx, v256i1:$vmy, sub_vm_odd)>;
 
+// VMRG patterns.
+def : Pat<(int_ve_vl_vmrgw_vsvMl i32:$sy, v256f64:$vz, v512i1:$vm, i32:$vl),
+          (VMRGWrvml (i2l i32:$sy), v256f64:$vz, v512i1:$vm, i32:$vl)>;
+def : Pat<(int_ve_vl_vmrgw_vsvMvl i32:$sy, v256f64:$vz, v512i1:$vm,
+                                  v256f64:$pt, i32:$vl),
+          (VMRGWrvml_v (i2l i32:$sy), v256f64:$vz, v512i1:$vm, i32:$vl,
+                       v256f64:$pt)>;
+
+// VMV patterns.
+def : Pat<(int_ve_vl_vmv_vsvl i32:$sy, v256f64:$vz, i32:$vl),
+          (VMVrvl (i2l i32:$sy), v256f64:$vz, i32:$vl)>;
+def : Pat<(int_ve_vl_vmv_vsvvl i32:$sy, v256f64:$vz, v256f64:$pt, i32:$vl),
+          (VMVrvl_v (i2l i32:$sy), v256f64:$vz, i32:$vl, v256f64:$pt)>;
+def : Pat<(int_ve_vl_vmv_vsvmvl i32:$sy, v256f64:$vz, v256i1:$vm, v256f64:$pt,
+                                i32:$vl),
+          (VMVrvml_v (i2l i32:$sy), v256f64:$vz, v256i1:$vm, i32:$vl,
+                     v256f64:$pt)>;
+
 // LSV patterns.
 def : Pat<(int_ve_vl_lsv_vvss v256f64:$pt, i32:$sy, i64:$sz),
           (LSVrr_v (i2l i32:$sy), i64:$sz, v256f64:$pt)>;
