@@ -37,3 +37,37 @@ FileHeader:
   Data:  ELFDATA2LSB
   Type:  ET_DYN
 Symbols: []
+
+## A symbol table without the null entry is non-conforming.
+## Check we don't print "Symbols" and "DynamicSymbols" keys in this case.
+
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: obj2yaml %t3 | FileCheck %s --check-prefix=EMPTY
+
+# EMPTY:      Sections:
+# EMPTY-NEXT:   - Name:    .symtab
+# EMPTY-NEXT:     Type:    SHT_SYMTAB
+# EMPTY-NEXT:     Link:    .strtab
+## TODO: we shouldn't dump the default "EntSize" value.
+# EMPTY-NEXT:     EntSize: 0x18
+# EMPTY-NEXT:     Size:    0x0
+# EMPTY-NEXT:   - Name:    .dynsym
+# EMPTY-NEXT:     Type:    SHT_DYNSYM
+# EMPTY-NEXT:     Flags:   [ SHF_ALLOC ]
+## TODO: we shouldn't dump the default "EntSize" value.
+# EMPTY-NEXT:     EntSize: 0x18
+# EMPTY-NEXT:     Size:    0x0
+# EMPTY-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name: .symtab
+    Type: SHT_SYMTAB
+    Size: 0
+  - Name: .dynsym
+    Type: SHT_DYNSYM
+    Size: 0
