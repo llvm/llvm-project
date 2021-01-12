@@ -107,8 +107,8 @@ define void @func_store_private_arg_i32_ptr(i32 addrspace(5)* %ptr) #0 {
 
 ; GCN-LABEL: {{^}}func_load_private_arg_i32_ptr:
 ; GCN: s_waitcnt
-; MUBUF-NEXT:        buffer_load_dword v0, v0, s[0:3], 0 offen{{$}}
-; GFX9-FLATSCR-NEXT: scratch_load_dword v0, v0, off{{$}}
+; MUBUF-NEXT:        buffer_load_dword v0, v0, s[0:3], 0 offen glc{{$}}
+; GFX9-FLATSCR-NEXT: scratch_load_dword v0, v0, off glc{{$}}
 define void @func_load_private_arg_i32_ptr(i32 addrspace(5)* %ptr) #0 {
   %val = load volatile i32, i32 addrspace(5)* %ptr
   ret void
@@ -162,11 +162,11 @@ define void @void_func_byval_struct_i8_i32_ptr_value({ i8, i32 } addrspace(5)* b
 ; GCN: s_and_saveexec_b64
 
 ; CI: v_add_i32_e32 [[GEP:v[0-9]+]], vcc, 4, [[SHIFT]]
-; CI: buffer_load_dword v{{[0-9]+}}, off, s[0:3], s32 offset:4{{$}}
+; CI: buffer_load_dword v{{[0-9]+}}, off, s[0:3], s32 offset:4 glc{{$}}
 
 ; GFX9: v_add_u32_e32 [[GEP:v[0-9]+]], 4, [[SP]]
-; GFX9-MUBUF:   buffer_load_dword v{{[0-9]+}}, off, s[0:3], s32 offset:4{{$}}
-; GFX9-FLATSCR: scratch_load_dword v{{[0-9]+}}, off, s32 offset:4{{$}}
+; GFX9-MUBUF:   buffer_load_dword v{{[0-9]+}}, off, s[0:3], s32 offset:4 glc{{$}}
+; GFX9-FLATSCR: scratch_load_dword v{{[0-9]+}}, off, s32 offset:4 glc{{$}}
 
 ; GCN: ds_write_b32 v{{[0-9]+}}, [[GEP]]
 define void @void_func_byval_struct_i8_i32_ptr_nonentry_block({ i8, i32 } addrspace(5)* byval({ i8, i32 }) %arg0, i32 %arg2) #0 {

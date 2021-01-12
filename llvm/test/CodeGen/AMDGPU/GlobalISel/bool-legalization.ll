@@ -59,9 +59,11 @@ define amdgpu_kernel void @sgpr_trunc_brcond(i32 %cond) {
 ; GCN-NEXT:  ; %bb.1: ; %bb0
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    flat_store_dword v[0:1], v0
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:  BB3_2: ; %bb1
 ; GCN-NEXT:    v_mov_b32_e32 v0, 1
 ; GCN-NEXT:    flat_store_dword v[0:1], v0
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 entry:
   %trunc = trunc i32 %cond to i1
   br i1 %trunc, label %bb0, label %bb1
@@ -88,9 +90,11 @@ define amdgpu_kernel void @brcond_sgpr_trunc_and(i32 %cond0, i32 %cond1) {
 ; GCN-NEXT:  ; %bb.1: ; %bb0
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    flat_store_dword v[0:1], v0
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:  BB4_2: ; %bb1
 ; GCN-NEXT:    v_mov_b32_e32 v0, 1
 ; GCN-NEXT:    flat_store_dword v[0:1], v0
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 entry:
   %trunc0 = trunc i32 %cond0 to i1
   %trunc1 = trunc i32 %cond1 to i1
