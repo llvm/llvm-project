@@ -21,19 +21,19 @@ using namespace mlir;
 namespace {
 /// Canonicalize operations in nested regions.
 struct Canonicalizer : public CanonicalizerBase<Canonicalizer> {
-  void runOnOperation() override {
-    OwningRewritePatternList patterns;
-
-    // TODO: Instead of adding all known patterns from the whole system lazily
-    // add and cache the canonicalization patterns for ops we see in practice
-    // when building the worklist.  For now, we just grab everything.
-    auto *context = &getContext();
+  /// Initialize the canonicalizer by building the set of patterns used during
+  /// execution.
+  void initialize(MLIRContext *context) override {
+    OwningRewritePatternList owningPatterns;
     for (auto *op : context->getRegisteredOperations())
-      op->getCanonicalizationPatterns(patterns, context);
-
-    Operation *op = getOperation();
-    applyPatternsAndFoldGreedily(op->getRegions(), std::move(patterns));
+      op->getCanonicalizationPatterns(owningPatterns, context);
+    patterns = std::move(owningPatterns);
   }
+  void runOnOperation() override {
+    applyPatternsAndFoldGreedily(getOperation()->getRegions(), patterns);
+  }
+
+  FrozenRewritePatternList patterns;
 };
 } // end anonymous namespace
 

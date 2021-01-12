@@ -81,9 +81,10 @@ namespace mlir {
 namespace detail {
 struct OpPassManagerImpl {
   OpPassManagerImpl(Identifier identifier, OpPassManager::Nesting nesting)
-      : name(identifier.str()), identifier(identifier), nesting(nesting) {}
+      : name(identifier.str()), identifier(identifier),
+        initializationGeneration(0), nesting(nesting) {}
   OpPassManagerImpl(StringRef name, OpPassManager::Nesting nesting)
-      : name(name), nesting(nesting) {}
+      : name(name), initializationGeneration(0), nesting(nesting) {}
 
   /// Merge the passes of this pass manager into the one provided.
   void mergeInto(OpPassManagerImpl &rhs);
@@ -105,6 +106,7 @@ struct OpPassManagerImpl {
   /// pass.
   void splitAdaptorPasses();
 
+  /// Return the operation name of this pass manager as an identifier.
   Identifier getOpName(MLIRContext &context) {
     if (!identifier)
       identifier = Identifier::get(name, &context);
@@ -120,6 +122,10 @@ struct OpPassManagerImpl {
 
   /// The set of passes to run as part of this pass manager.
   std::vector<std::unique_ptr<Pass>> passes;
+
+  /// The current initialization generation of this pass manager. This is used
+  /// to indicate when a pass manager should be reinitialized.
+  unsigned initializationGeneration;
 
   /// Control the implicit nesting of passes that mismatch the name set for this
   /// OpPassManager.
@@ -320,16 +326,36 @@ void OpPassManager::getDependentDialects(DialectRegistry &dialects) const {
   registerDialectsForPipeline(*this, dialects);
 }
 
+void OpPassManager::setNesting(Nesting nesting) { impl->nesting = nesting; }
+
 OpPassManager::Nesting OpPassManager::getNesting() { return impl->nesting; }
 
-void OpPassManager::setNesting(Nesting nesting) { impl->nesting = nesting; }
+void OpPassManager::initialize(MLIRContext *context,
+                               unsigned newInitGeneration) {
+  if (impl->initializationGeneration == newInitGeneration)
+    return;
+  impl->initializationGeneration = newInitGeneration;
+  for (Pass &pass : getPasses()) {
+    // If this pass isn't an adaptor, directly initialize it.
+    auto *adaptor = dyn_cast<OpToOpPassAdaptor>(&pass);
+    if (!adaptor) {
+      pass.initialize(context);
+      continue;
+    }
+
+    // Otherwise, initialize each of the adaptors pass managers.
+    for (OpPassManager &adaptorPM : adaptor->getPassManagers())
+      adaptorPM.initialize(context, newInitGeneration);
+  }
+}
 
 //===----------------------------------------------------------------------===//
 // OpToOpPassAdaptor
 //===----------------------------------------------------------------------===//
 
 LogicalResult OpToOpPassAdaptor::run(Pass *pass, Operation *op,
-                                     AnalysisManager am, bool verifyPasses) {
+                                     AnalysisManager am, bool verifyPasses,
+                                     unsigned parentInitGeneration) {
   if (!op->getName().getAbstractOperation())
     return op->emitOpError()
            << "trying to schedule a pass on an unregistered operation";
@@ -352,9 +378,12 @@ LogicalResult OpToOpPassAdaptor::run(Pass *pass, Operation *op,
                 "nested under the current operation the pass is processing";
     assert(pipeline.getOpName() == root->getName().getStringRef());
 
+    // Initialize the user provided pipeline and execute the pipeline.
+    pipeline.initialize(root->getContext(), parentInitGeneration);
     AnalysisManager nestedAm = root == op ? am : am.nest(root);
     return OpToOpPassAdaptor::runPipeline(pipeline.getPasses(), root, nestedAm,
-                                          verifyPasses, pi, &parentInfo);
+                                          verifyPasses, parentInitGeneration,
+                                          pi, &parentInfo);
   };
   pass->passState.emplace(op, am, dynamic_pipeline_callback);
 
@@ -391,7 +420,8 @@ LogicalResult OpToOpPassAdaptor::run(Pass *pass, Operation *op,
 /// Run the given operation and analysis manager on a provided op pass manager.
 LogicalResult OpToOpPassAdaptor::runPipeline(
     iterator_range<OpPassManager::pass_iterator> passes, Operation *op,
-    AnalysisManager am, bool verifyPasses, PassInstrumentor *instrumentor,
+    AnalysisManager am, bool verifyPasses, unsigned parentInitGeneration,
+    PassInstrumentor *instrumentor,
     const PassInstrumentation::PipelineParentInfo *parentInfo) {
   assert((!instrumentor || parentInfo) &&
          "expected parent info if instrumentor is provided");
@@ -407,7 +437,7 @@ LogicalResult OpToOpPassAdaptor::runPipeline(
   if (instrumentor)
     instrumentor->runBeforePipeline(op->getName().getIdentifier(), *parentInfo);
   for (Pass &pass : passes)
-    if (failed(run(&pass, op, am, verifyPasses)))
+    if (failed(run(&pass, op, am, verifyPasses, parentInitGeneration)))
       return failure();
   if (instrumentor)
     instrumentor->runAfterPipeline(op->getName().getIdentifier(), *parentInfo);
@@ -502,8 +532,10 @@ void OpToOpPassAdaptor::runOnOperationImpl(bool verifyPasses) {
           continue;
 
         // Run the held pipeline over the current operation.
+        unsigned initGeneration = mgr->impl->initializationGeneration;
         if (failed(runPipeline(mgr->getPasses(), &op, am.nest(&op),
-                               verifyPasses, instrumentor, &parentInfo)))
+                               verifyPasses, initGeneration, instrumentor,
+                               &parentInfo)))
           return signalPassFailure();
       }
     }
@@ -578,9 +610,10 @@ void OpToOpPassAdaptor::runOnOperationAsyncImpl(bool verifyPasses) {
               pms, it.first->getName().getIdentifier(), getContext());
           assert(pm && "expected valid pass manager for operation");
 
+          unsigned initGeneration = pm->impl->initializationGeneration;
           LogicalResult pipelineResult =
               runPipeline(pm->getPasses(), it.first, it.second, verifyPasses,
-                          instrumentor, &parentInfo);
+                          initGeneration, instrumentor, &parentInfo);
 
           // Drop this thread from being tracked by the diagnostic handler.
           // After this task has finished, the thread may be used outside of
@@ -753,7 +786,8 @@ PassManager::runWithCrashRecovery(MutableArrayRef<std::unique_ptr<Pass>> passes,
   llvm::CrashRecoveryContext recoveryContext;
   recoveryContext.RunSafelyOnThread([&] {
     for (std::unique_ptr<Pass> &pass : passes)
-      if (failed(OpToOpPassAdaptor::run(pass.get(), op, am, verifyPasses)))
+      if (failed(OpToOpPassAdaptor::run(pass.get(), op, am, verifyPasses,
+                                        impl->initializationGeneration)))
         return;
     passManagerResult = success();
   });
@@ -801,6 +835,9 @@ LogicalResult PassManager::run(Operation *op) {
   getDependentDialects(dependentDialects);
   dependentDialects.loadAll(context);
 
+  // Initialize all of the passes within the pass manager with a new generation.
+  initialize(context, impl->initializationGeneration + 1);
+
   // Construct a top level analysis manager for the pipeline.
   ModuleAnalysisManager am(op, instrumentor.get());
 
@@ -812,7 +849,8 @@ LogicalResult PassManager::run(Operation *op) {
   LogicalResult result =
       crashReproducerFileName
           ? runWithCrashRecovery(op, am)
-          : OpToOpPassAdaptor::runPipeline(getPasses(), op, am, verifyPasses);
+          : OpToOpPassAdaptor::runPipeline(getPasses(), op, am, verifyPasses,
+                                           impl->initializationGeneration);
 
   // Notify the context that the run is done.
   context->exitMultiThreadedExecution();
