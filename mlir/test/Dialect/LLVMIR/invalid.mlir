@@ -317,21 +317,21 @@ func @extractvalue_wrong_nesting() {
 
 // -----
 
-func @invalid_vector_type_1(%arg0: !llvm.vec<4 x f32>, %arg1: i32, %arg2: f32) {
-  // expected-error@+1 {{expected LLVM IR dialect vector type for operand #1}}
+func @invalid_vector_type_1(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32) {
+  // expected-error@+1 {{expected LLVM dialect-compatible vector type for operand #1}}
   %0 = llvm.extractelement %arg2[%arg1 : i32] : f32
 }
 
 // -----
 
-func @invalid_vector_type_2(%arg0: !llvm.vec<4 x f32>, %arg1: i32, %arg2: f32) {
-  // expected-error@+1 {{expected LLVM IR dialect vector type for operand #1}}
+func @invalid_vector_type_2(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32) {
+  // expected-error@+1 {{expected LLVM dialect-compatible vector type for operand #1}}
   %0 = llvm.insertelement %arg2, %arg2[%arg1 : i32] : f32
 }
 
 // -----
 
-func @invalid_vector_type_3(%arg0: !llvm.vec<4 x f32>, %arg1: i32, %arg2: f32) {
+func @invalid_vector_type_3(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32) {
   // expected-error@+1 {{expected LLVM IR dialect vector type for operand #1}}
   %0 = llvm.shufflevector %arg2, %arg2 [0 : i32, 0 : i32, 0 : i32, 0 : i32, 7 : i32] : f32, f32
 }
@@ -366,74 +366,74 @@ func @nvvm_invalid_shfl_pred_3(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i3
 
 // -----
 
-func @nvvm_invalid_mma_0(%a0 : f16, %a1 : !llvm.vec<2 x f16>,
-                         %b0 : !llvm.vec<2 x f16>, %b1 : !llvm.vec<2 x f16>,
+func @nvvm_invalid_mma_0(%a0 : f16, %a1 : vector<2xf16>,
+                         %b0 : vector<2xf16>, %b1 : vector<2xf16>,
                          %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32,
                          %c4 : f32, %c5 : f32, %c6 : f32, %c7 : f32) {
   // expected-error@+1 {{expected operands to be 4 <halfx2>s followed by either 4 <halfx2>s or 8 floats}}
-  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="row", blayout="col"} : (f16, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, f32, f32, f32, f32, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
+  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="row", blayout="col"} : (f16, vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
   llvm.return %0 : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
 }
 
 // -----
 
-func @nvvm_invalid_mma_1(%a0 : !llvm.vec<2 x f16>, %a1 : !llvm.vec<2 x f16>,
-                         %b0 : !llvm.vec<2 x f16>, %b1 : !llvm.vec<2 x f16>,
+func @nvvm_invalid_mma_1(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
+                         %b0 : vector<2xf16>, %b1 : vector<2xf16>,
                          %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32,
                          %c4 : f32, %c5 : f32, %c6 : f32, %c7 : f32) {
   // expected-error@+1 {{expected result type to be a struct of either 4 <halfx2>s or 8 floats}}
-  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="row", blayout="col"} : (!llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, f32, f32, f32, f32, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f16)>
+  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="row", blayout="col"} : (vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f16)>
   llvm.return %0 : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f16)>
 }
 
 // -----
 
-func @nvvm_invalid_mma_2(%a0 : !llvm.vec<2 x f16>, %a1 : !llvm.vec<2 x f16>,
-                         %b0 : !llvm.vec<2 x f16>, %b1 : !llvm.vec<2 x f16>,
+func @nvvm_invalid_mma_2(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
+                         %b0 : vector<2xf16>, %b1 : vector<2xf16>,
                          %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32,
                          %c4 : f32, %c5 : f32, %c6 : f32, %c7 : f32) {
   // expected-error@+1 {{alayout and blayout attributes must be set to either "row" or "col"}}
-  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 : (!llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, f32, f32, f32, f32, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
+  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 : (vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
   llvm.return %0 : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
 }
 
 // -----
 
-func @nvvm_invalid_mma_3(%a0 : !llvm.vec<2 x f16>, %a1 : !llvm.vec<2 x f16>,
-                         %b0 : !llvm.vec<2 x f16>, %b1 : !llvm.vec<2 x f16>,
-                         %c0 : !llvm.vec<2 x f16>, %c1 : !llvm.vec<2 x f16>,
-                         %c2 : !llvm.vec<2 x f16>, %c3 : !llvm.vec<2 x f16>) {
+func @nvvm_invalid_mma_3(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
+                         %b0 : vector<2xf16>, %b1 : vector<2xf16>,
+                         %c0 : vector<2xf16>, %c1 : vector<2xf16>,
+                         %c2 : vector<2xf16>, %c3 : vector<2xf16>) {
   // expected-error@+1 {{unimplemented mma.sync variant}}
-  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3 {alayout="row", blayout="col"} : (!llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
+  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3 {alayout="row", blayout="col"} : (vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
   llvm.return %0 : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
 }
 
 // -----
 
-func @nvvm_invalid_mma_4(%a0 : !llvm.vec<2 x f16>, %a1 : !llvm.vec<2 x f16>,
-                         %b0 : !llvm.vec<2 x f16>, %b1 : !llvm.vec<2 x f16>,
+func @nvvm_invalid_mma_4(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
+                         %b0 : vector<2xf16>, %b1 : vector<2xf16>,
                          %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32,
                          %c4 : f32, %c5 : f32, %c6 : f32, %c7 : f32) {
   // expected-error@+1 {{unimplemented mma.sync variant}}
-  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="row", blayout="col"} : (!llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, f32, f32, f32, f32, f32, f32, f32, f32) -> !llvm.struct<(vec<2 x f16>, vec<2 x f16>, vec<2 x f16>, vec<2 x f16>)>
-  llvm.return %0 : !llvm.struct<(vec<2 x f16>, vec<2 x f16>, vec<2 x f16>, vec<2 x f16>)>
+  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="row", blayout="col"} : (vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32, f32, f32, f32, f32) -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
+  llvm.return %0 : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
 }
 
 // -----
 
-func @nvvm_invalid_mma_5(%a0 : !llvm.vec<2 x f16>, %a1 : !llvm.vec<2 x f16>,
-                         %b0 : !llvm.vec<2 x f16>, %b1 : !llvm.vec<2 x f16>,
+func @nvvm_invalid_mma_5(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
+                         %b0 : vector<2xf16>, %b1 : vector<2xf16>,
                          %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32,
                          %c4 : f32, %c5 : f32, %c6 : f32, %c7 : f32) {
   // expected-error@+1 {{unimplemented mma.sync variant}}
-  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="col", blayout="row"} : (!llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, f32, f32, f32, f32, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
+  %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="col", blayout="row"} : (vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
   llvm.return %0 : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
 }
 
 // -----
 
-func @nvvm_invalid_mma_6(%a0 : !llvm.vec<2 x f16>, %a1 : !llvm.vec<2 x f16>,
-                         %b0 : !llvm.vec<2 x f16>, %b1 : !llvm.vec<2 x f16>,
+func @nvvm_invalid_mma_6(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
+                         %b0 : vector<2xf16>, %b1 : vector<2xf16>,
                          %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32,
                          %c4 : f32, %c5 : f32, %c6 : f32, %c7 : f32) {
   // expected-error@+1 {{invalid kind of type specified}}
@@ -443,12 +443,12 @@ func @nvvm_invalid_mma_6(%a0 : !llvm.vec<2 x f16>, %a1 : !llvm.vec<2 x f16>,
 
 // -----
 
-func @nvvm_invalid_mma_7(%a0 : !llvm.vec<2 x f16>, %a1 : !llvm.vec<2 x f16>,
-                         %b0 : !llvm.vec<2 x f16>, %b1 : !llvm.vec<2 x f16>,
+func @nvvm_invalid_mma_7(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
+                         %b0 : vector<2xf16>, %b1 : vector<2xf16>,
                          %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32,
                          %c4 : f32, %c5 : f32, %c6 : f32, %c7 : f32) {
   // expected-error@+1 {{op requires one result}}
-  %0:2 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="col", blayout="row"} : (!llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, !llvm.vec<2 x f16>, f32, f32, f32, f32, f32, f32, f32, f32) -> (!llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>, i32)
+  %0:2 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="col", blayout="row"} : (vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32, f32, f32, f32, f32) -> (!llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>, i32)
   llvm.return %0#0 : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
 }
 

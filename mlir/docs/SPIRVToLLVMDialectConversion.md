@@ -34,9 +34,9 @@ SPIR-V Dialect | LLVM Dialect
 
 ### Vector types
 
-SPIR-V Dialect                       | LLVM Dialect
-:----------------------------------: | :----------------------------------:
-`vector<<count> x <scalar-type>>`    | `!llvm.vec<<count> x <scalar-type>>`
+SPIR-V Dialect                    | LLVM Dialect
+:-------------------------------: | :-------------------------------:
+`vector<<count> x <scalar-type>>` | `vector<<count> x <scalar-type>>`
 
 ### Pointer types
 
@@ -188,11 +188,11 @@ to note:
 
     ```mlir
     // Broadcasting offset
-    %offset0 = llvm.mlir.undef : !llvm.vec<2 x i8>
+    %offset0 = llvm.mlir.undef : vector<2xi8>
     %zero = llvm.mlir.constant(0 : i32) : i32
-    %offset1 = llvm.insertelement %offset, %offset0[%zero : i32] : !llvm.vec<2 x i8>
+    %offset1 = llvm.insertelement %offset, %offset0[%zero : i32] : vector<2xi8>
     %one = llvm.mlir.constant(1 : i32) : i32
-    %vec_offset = llvm.insertelement  %offset, %offset1[%one : i32] : !llvm.vec<2 x i8>
+    %vec_offset = llvm.insertelement  %offset, %offset1[%one : i32] : vector<2xi8>
 
     // Broadcasting count
     // ...
@@ -205,7 +205,7 @@ to note:
 
     ```mlir
     // Zero extending offset after broadcasting
-    %res_offset = llvm.zext %vec_offset: !llvm.vec<2 x i8> to !llvm.vec<2 x i32>
+    %res_offset = llvm.zext %vec_offset: vector<2xi8> to vector<2xi32>
     ```
 
     Also, note that if the bitwidth of `offset` or `count` is greater than the
@@ -534,7 +534,7 @@ Also, at the moment initialization is only possible via `spv.constant`.
 ```mlir
 // Conversion of VariableOp without initialization
                                                                %size = llvm.mlir.constant(1 : i32) : i32
-%res = spv.Variable : !spv.ptr<vector<3xf32>, Function>   =>   %res  = llvm.alloca  %size x !llvm.vec<3 x f32> : (i32) -> !llvm.ptr<vec<3 x f32>>
+%res = spv.Variable : !spv.ptr<vector<3xf32>, Function>   =>   %res  = llvm.alloca  %size x vector<3xf32> : (i32) -> !llvm.ptr<vec<3 x f32>>
 
 // Conversion of VariableOp with initialization
                                                                %c    = llvm.mlir.constant(0 : i64) : i64
@@ -610,7 +610,7 @@ cover all possible corner cases.
 // %0 = llvm.mlir.constant(0 : i8) : i8
 %0 = spv.constant  0 : i8
 
-// %1 = llvm.mlir.constant(dense<[2, 3, 4]> : vector<3xi32>) : !llvm.vec<3 x i32>
+// %1 = llvm.mlir.constant(dense<[2, 3, 4]> : vector<3xi32>) : vector<3xi32>
 %1 = spv.constant dense<[2, 3, 4]> : vector<3xui32>
 ```
 

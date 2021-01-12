@@ -9,7 +9,6 @@ func @mlir_dialect_cast(%0: index, %1: i32, %2: bf16, %3: f16, %4: f32, %5: f64,
                         %10: memref<*xf32>) {
   llvm.mlir.cast %0 : index to i64
   llvm.mlir.cast %0 : index to i32
-  llvm.mlir.cast %6 : vector<42xf32> to !llvm.vec<42xf32>
   llvm.mlir.cast %7 : memref<42xf32> to !llvm.ptr<f32>
   llvm.mlir.cast %7 : memref<42xf32> to !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<1xi64>, array<1xi64>)>
   llvm.mlir.cast %8 : memref<?xf32> to !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<1xi64>, array<1xi64>)>
@@ -72,23 +71,9 @@ func @mlir_dialect_cast_integer_non_integer(%0 : i16) {
 
 // -----
 
-func @mlir_dialect_cast_nd_vector(%0 : vector<2x2xf32>) {
-  // expected-error@+1 {{only 1-d vector is allowed}}
-  llvm.mlir.cast %0 : vector<2x2xf32> to !llvm.vec<4xf32>
-}
-
-// -----
-
 func @mlir_dialect_cast_scalable_vector(%0 : vector<2xf32>) {
-  // expected-error@+1 {{only fixed-sized vector is allowed}}
+  // expected-error@+1 {{vector types should not be casted}}
   llvm.mlir.cast %0 : vector<2xf32> to !llvm.vec<?x2xf32>
-}
-
-// -----
-
-func @mlir_dialect_cast_vector_size_mismatch(%0 : vector<2xf32>) {
-  // expected-error@+1 {{invalid cast between vectors with mismatching sizes}}
-  llvm.mlir.cast %0 : vector<2xf32> to !llvm.vec<4xf32>
 }
 
 // -----

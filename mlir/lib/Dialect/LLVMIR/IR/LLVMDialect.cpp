@@ -150,9 +150,9 @@ static ParseResult parseCmpOp(OpAsmParser &parser, OperationState &result) {
   if (!isCompatibleType(type))
     return parser.emitError(trailingTypeLoc,
                             "expected LLVM dialect-compatible type");
-  if (auto vecArgType = type.dyn_cast<LLVM::LLVMFixedVectorType>())
-    resultType =
-        LLVMFixedVectorType::get(resultType, vecArgType.getNumElements());
+  if (LLVM::isCompatibleVectorType(type))
+    resultType = LLVM::getFixedVectorType(
+        resultType, LLVM::getVectorNumElements(type).getFixedValue());
   assert(!type.isa<LLVM::LLVMScalableVectorType>() &&
          "unhandled scalable vector");
 
@@ -913,8 +913,8 @@ static ParseResult parseCallOp(OpAsmParser &parser, OperationState &result) {
 void LLVM::ExtractElementOp::build(OpBuilder &b, OperationState &result,
                                    Value vector, Value position,
                                    ArrayRef<NamedAttribute> attrs) {
-  auto vectorType = vector.getType().cast<LLVM::LLVMVectorType>();
-  auto llvmType = vectorType.getElementType();
+  auto vectorType = vector.getType();
+  auto llvmType = LLVM::getVectorElementType(vectorType);
   build(b, result, llvmType, vector, position);
   result.addAttributes(attrs);
 }
@@ -941,11 +941,10 @@ static ParseResult parseExtractElementOp(OpAsmParser &parser,
       parser.resolveOperand(vector, type, result.operands) ||
       parser.resolveOperand(position, positionType, result.operands))
     return failure();
-  auto vectorType = type.dyn_cast<LLVM::LLVMVectorType>();
-  if (!vectorType)
+  if (!LLVM::isCompatibleVectorType(type))
     return parser.emitError(
-        loc, "expected LLVM IR dialect vector type for operand #1");
-  result.addTypes(vectorType.getElementType());
+        loc, "expected LLVM dialect-compatible vector type for operand #1");
+  result.addTypes(LLVM::getVectorElementType(type));
   return success();
 }
 
@@ -1057,11 +1056,10 @@ static ParseResult parseInsertElementOp(OpAsmParser &parser,
       parser.parseColonType(vectorType))
     return failure();
 
-  auto llvmVectorType = vectorType.dyn_cast<LLVM::LLVMVectorType>();
-  if (!llvmVectorType)
+  if (!LLVM::isCompatibleVectorType(vectorType))
     return parser.emitError(
-        loc, "expected LLVM IR dialect vector type for operand #1");
-  Type valueType = llvmVectorType.getElementType();
+        loc, "expected LLVM dialect-compatible vector type for operand #1");
+  Type valueType = LLVM::getVectorElementType(vectorType);
   if (!valueType)
     return failure();
 
@@ -1278,21 +1276,8 @@ static LogicalResult verifyCast(DialectCastOp op, Type llvmType, Type type,
 
   // Vectors are compatible if they are 1D non-scalable, and their element types
   // are compatible.
-  if (auto vectorType = type.dyn_cast<VectorType>()) {
-    if (vectorType.getRank() != 1)
-      return op->emitOpError("only 1-d vector is allowed");
-
-    auto llvmVector = llvmType.dyn_cast<LLVMFixedVectorType>();
-    if (!llvmVector)
-      return op->emitOpError("only fixed-sized vector is allowed");
-
-    if (vectorType.getDimSize(0) != llvmVector.getNumElements())
-      return op->emitOpError(
-          "invalid cast between vectors with mismatching sizes");
-
-    return verifyCast(op, llvmVector.getElementType(),
-                      vectorType.getElementType(), /*isElement=*/true);
-  }
+  if (auto vectorType = type.dyn_cast<VectorType>())
+    return op.emitOpError("vector types should not be casted");
 
   if (auto memrefType = type.dyn_cast<MemRefType>()) {
     // Bare pointer convention: statically-shaped memref is compatible with an
@@ -1543,9 +1528,9 @@ static LogicalResult verify(GlobalOp op) {
 void LLVM::ShuffleVectorOp::build(OpBuilder &b, OperationState &result,
                                   Value v1, Value v2, ArrayAttr mask,
                                   ArrayRef<NamedAttribute> attrs) {
-  auto containerType = v1.getType().cast<LLVM::LLVMVectorType>();
-  auto vType =
-      LLVMFixedVectorType::get(containerType.getElementType(), mask.size());
+  auto containerType = v1.getType();
+  auto vType = LLVM::getFixedVectorType(
+      LLVM::getVectorElementType(containerType), mask.size());
   build(b, result, vType, v1, v2, mask);
   result.addAttributes(attrs);
 }
@@ -1575,12 +1560,11 @@ static ParseResult parseShuffleVectorOp(OpAsmParser &parser,
       parser.resolveOperand(v1, typeV1, result.operands) ||
       parser.resolveOperand(v2, typeV2, result.operands))
     return failure();
-  auto containerType = typeV1.dyn_cast<LLVM::LLVMVectorType>();
-  if (!containerType)
+  if (!LLVM::isCompatibleVectorType(typeV1))
     return parser.emitError(
         loc, "expected LLVM IR dialect vector type for operand #1");
-  auto vType =
-      LLVMFixedVectorType::get(containerType.getElementType(), maskAttr.size());
+  auto vType = LLVM::getFixedVectorType(LLVM::getVectorElementType(typeV1),
+                                        maskAttr.size());
   result.addTypes(vType);
   return success();
 }

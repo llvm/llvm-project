@@ -176,13 +176,13 @@ Type Importer::getStdTypeForAttr(Type type) {
     return type;
 
   // LLVM vectors can only contain scalars.
-  if (auto vectorType = type.dyn_cast<LLVM::LLVMVectorType>()) {
-    auto numElements = vectorType.getElementCount();
+  if (LLVM::isCompatibleVectorType(type)) {
+    auto numElements = LLVM::getVectorNumElements(type);
     if (numElements.isScalable()) {
       emitError(unknownLoc) << "scalable vectors not supported";
       return nullptr;
     }
-    Type elementType = getStdTypeForAttr(vectorType.getElementType());
+    Type elementType = getStdTypeForAttr(LLVM::getVectorElementType(type));
     if (!elementType)
       return nullptr;
     return VectorType::get(numElements.getKnownMinValue(), elementType);
@@ -200,16 +200,16 @@ Type Importer::getStdTypeForAttr(Type type) {
 
     // If the innermost type is a vector, use the multi-dimensional vector as
     // attribute type.
-    if (auto vectorType =
-            arrayType.getElementType().dyn_cast<LLVMVectorType>()) {
-      auto numElements = vectorType.getElementCount();
+    if (LLVM::isCompatibleVectorType(arrayType.getElementType())) {
+      auto numElements = LLVM::getVectorNumElements(arrayType.getElementType());
       if (numElements.isScalable()) {
         emitError(unknownLoc) << "scalable vectors not supported";
         return nullptr;
       }
       shape.push_back(numElements.getKnownMinValue());
 
-      Type elementType = getStdTypeForAttr(vectorType.getElementType());
+      Type elementType = getStdTypeForAttr(
+          LLVM::getVectorElementType(arrayType.getElementType()));
       if (!elementType)
         return nullptr;
       return VectorType::get(shape, elementType);

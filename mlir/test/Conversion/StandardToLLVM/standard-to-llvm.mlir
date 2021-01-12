@@ -68,11 +68,11 @@ func @rsqrt_double(%arg0 : f64) {
 // -----
 
 // CHECK-LABEL: func @rsqrt_vector(
-// CHECK-SAME: !llvm.vec<4 x f32>
+// CHECK-SAME: vector<4xf32>
 func @rsqrt_vector(%arg0 : vector<4xf32>) {
-  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(dense<1.000000e+00> : vector<4xf32>) : !llvm.vec<4 x f32>
-  // CHECK: %[[SQRT:.*]] = "llvm.intr.sqrt"(%arg0) : (!llvm.vec<4 x f32>) -> !llvm.vec<4 x f32>
-  // CHECK: %[[DIV:.*]] = llvm.fdiv %[[ONE]], %[[SQRT]] : !llvm.vec<4 x f32>
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(dense<1.000000e+00> : vector<4xf32>) : vector<4xf32>
+  // CHECK: %[[SQRT:.*]] = "llvm.intr.sqrt"(%arg0) : (vector<4xf32>) -> vector<4xf32>
+  // CHECK: %[[DIV:.*]] = llvm.fdiv %[[ONE]], %[[SQRT]] : vector<4xf32>
   %0 = rsqrt %arg0 : vector<4xf32>
   std.return
 }
@@ -80,13 +80,13 @@ func @rsqrt_vector(%arg0 : vector<4xf32>) {
 // -----
 
 // CHECK-LABEL: func @rsqrt_multidim_vector(
-// CHECK-SAME: !llvm.array<4 x vec<3 x f32>>
+// CHECK-SAME: !llvm.array<4 x vector<3xf32>>
 func @rsqrt_multidim_vector(%arg0 : vector<4x3xf32>) {
-  // CHECK: %[[EXTRACT:.*]] = llvm.extractvalue %arg0[0] : !llvm.array<4 x vec<3 x f32>>
-  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(dense<1.000000e+00> : vector<3xf32>) : !llvm.vec<3 x f32>
-  // CHECK: %[[SQRT:.*]] = "llvm.intr.sqrt"(%[[EXTRACT]]) : (!llvm.vec<3 x f32>) -> !llvm.vec<3 x f32>
-  // CHECK: %[[DIV:.*]] = llvm.fdiv %[[ONE]], %[[SQRT]] : !llvm.vec<3 x f32>
-  // CHECK: %[[INSERT:.*]] = llvm.insertvalue %[[DIV]], %0[0] : !llvm.array<4 x vec<3 x f32>>
+  // CHECK: %[[EXTRACT:.*]] = llvm.extractvalue %arg0[0] : !llvm.array<4 x vector<3xf32>>
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(dense<1.000000e+00> : vector<3xf32>) : vector<3xf32>
+  // CHECK: %[[SQRT:.*]] = "llvm.intr.sqrt"(%[[EXTRACT]]) : (vector<3xf32>) -> vector<3xf32>
+  // CHECK: %[[DIV:.*]] = llvm.fdiv %[[ONE]], %[[SQRT]] : vector<3xf32>
+  // CHECK: %[[INSERT:.*]] = llvm.insertvalue %[[DIV]], %0[0] : !llvm.array<4 x vector<3xf32>>
   %0 = rsqrt %arg0 : vector<4x3xf32>
   std.return
 }
