@@ -359,10 +359,9 @@ static bool isSafeToMove(const MachineOperand *Def, const MachineOperand *Use,
   if (NextI == Insert)
     return true;
 
-  // 'catch' and 'extract_exception' should be the first instruction of a BB and
-  // cannot move.
-  if (DefI->getOpcode() == WebAssembly::CATCH ||
-      DefI->getOpcode() == WebAssembly::EXTRACT_EXCEPTION_I32)
+  // 'catch' and 'catch_all' should be the first instruction of a BB and cannot
+  // move.
+  if (WebAssembly::isCatch(DefI->getOpcode()))
     return false;
 
   // Check for register dependencies.

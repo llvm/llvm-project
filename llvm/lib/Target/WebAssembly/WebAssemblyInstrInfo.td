@@ -81,7 +81,8 @@ def SDT_WebAssemblyWrapper    : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
                                                      SDTCisPtrTy<0>]>;
 def SDT_WebAssemblyWrapperPIC : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
                                                      SDTCisPtrTy<0>]>;
-def SDT_WebAssemblyThrow      : SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>;
+def SDT_WebAssemblyThrow      : SDTypeProfile<0, -1, []>;
+def SDT_WebAssemblyCatch      : SDTypeProfile<1, 1, [SDTCisPtrTy<0>]>;
 
 //===----------------------------------------------------------------------===//
 // WebAssembly-specific DAG Nodes.
@@ -107,6 +108,8 @@ def WebAssemblywrapperPIC  : SDNode<"WebAssemblyISD::WrapperPIC",
                                      SDT_WebAssemblyWrapperPIC>;
 def WebAssemblythrow : SDNode<"WebAssemblyISD::THROW", SDT_WebAssemblyThrow,
                               [SDNPHasChain, SDNPVariadic]>;
+def WebAssemblycatch : SDNode<"WebAssemblyISD::CATCH", SDT_WebAssemblyCatch,
+                              [SDNPHasChain, SDNPSideEffect]>;
 
 //===----------------------------------------------------------------------===//
 // WebAssembly-specific Operands.

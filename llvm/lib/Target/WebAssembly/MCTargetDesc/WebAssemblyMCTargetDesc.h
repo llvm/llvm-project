@@ -440,6 +440,18 @@ inline bool isMarker(unsigned Opc) {
   }
 }
 
+inline bool isCatch(unsigned Opc) {
+  switch (Opc) {
+  case WebAssembly::CATCH:
+  case WebAssembly::CATCH_S:
+  case WebAssembly::CATCH_ALL:
+  case WebAssembly::CATCH_ALL_S:
+    return true;
+  default:
+    return false;
+  }
+}
+
 } // end namespace WebAssembly
 } // end namespace llvm
 
