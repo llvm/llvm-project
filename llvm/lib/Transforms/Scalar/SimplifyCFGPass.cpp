@@ -86,8 +86,9 @@ static bool mergeEmptyReturnBlocks(Function &F, DomTreeUpdater *DTU) {
   BasicBlock *RetBlock = nullptr;
 
   // Scan all the blocks in the function, looking for empty return blocks.
-  for (Function::iterator BBI = F.begin(), E = F.end(); BBI != E; ) {
-    BasicBlock &BB = *BBI++;
+  for (BasicBlock &BB : make_early_inc_range(F)) {
+    if (DTU && DTU->isBBPendingDeletion(&BB))
+      continue;
 
     // Only look at return blocks.
     ReturnInst *Ret = dyn_cast<ReturnInst>(BB.getTerminator());
