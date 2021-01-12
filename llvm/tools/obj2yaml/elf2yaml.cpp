@@ -725,6 +725,8 @@ template <class ELFT>
 static unsigned getDefaultShEntSize(ELFYAML::ELF_SHT SecType,
                                     StringRef SecName) {
   switch (SecType) {
+  case ELF::SHT_GROUP:
+    return sizeof(typename ELFT::Word);
   case ELF::SHT_REL:
     return sizeof(typename ELFT::Rel);
   case ELF::SHT_RELA:
