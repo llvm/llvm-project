@@ -935,7 +935,7 @@ public:
     std::string ParentName(ParentSymbolicName);
     if (ComplexSubOperands.count(SymbolicName)) {
       auto RecordedParentName = ComplexSubOperandsParentName[SymbolicName];
-      if (RecordedParentName.compare(ParentName) != 0)
+      if (RecordedParentName != ParentName)
         return failedImport("Error: Complex suboperand " + SymbolicName +
                             " referenced by different operands: " +
                             RecordedParentName + " and " + ParentName + ".");
@@ -1331,7 +1331,7 @@ public:
   bool isIdentical(const PredicateMatcher &B) const override {
     return OperandPredicateMatcher::isIdentical(B) &&
            StoreIdx == cast<RecordNamedOperandMatcher>(&B)->StoreIdx &&
-           Name.compare(cast<RecordNamedOperandMatcher>(&B)->Name) == 0;
+           Name == cast<RecordNamedOperandMatcher>(&B)->Name;
   }
 
   void emitPredicateOpcodes(MatchTable &Table,
