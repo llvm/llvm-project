@@ -30,7 +30,7 @@ declare void @_Z7CapturePi(i32*)
 ; FUCHSIA-AARCH64-COMMON: cmp [[C]], [[D]]
 
 ; WINDOWS-AARCH64: adrp x8, __security_cookie
-; WINDOWS-AARCH64: ldr x8, [x8, __security_cookie]
+; WINDOWS-AARCH64: ldr x8, [x8, :lo12:__security_cookie]
 ; WINDOWS-AARCH64: str x8, [sp, #8]
 ; WINDOWS-AARCH64: bl  _Z7CapturePi
 ; WINDOWS-AARCH64: ldr x0, [sp, #8]
