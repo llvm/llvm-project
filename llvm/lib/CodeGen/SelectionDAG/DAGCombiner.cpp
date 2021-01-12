@@ -21008,8 +21008,8 @@ SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
   if (N0.isUndef() && N1.getOpcode() == ISD::BITCAST &&
       N1.getOperand(0).getOpcode() == ISD::EXTRACT_SUBVECTOR &&
       N1.getOperand(0).getOperand(1) == N2 &&
-      N1.getOperand(0).getOperand(0).getValueType().getVectorNumElements() ==
-          VT.getVectorNumElements() &&
+      N1.getOperand(0).getOperand(0).getValueType().getVectorElementCount() ==
+          VT.getVectorElementCount() &&
       N1.getOperand(0).getOperand(0).getValueType().getSizeInBits() ==
           VT.getSizeInBits()) {
     return DAG.getBitcast(VT, N1.getOperand(0).getOperand(0));
@@ -21026,7 +21026,7 @@ SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
     EVT CN1VT = CN1.getValueType();
     if (CN0VT.isVector() && CN1VT.isVector() &&
         CN0VT.getVectorElementType() == CN1VT.getVectorElementType() &&
-        CN0VT.getVectorNumElements() == VT.getVectorNumElements()) {
+        CN0VT.getVectorElementCount() == VT.getVectorElementCount()) {
       SDValue NewINSERT = DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N),
                                       CN0.getValueType(), CN0, CN1, N2);
       return DAG.getBitcast(VT, NewINSERT);
@@ -21107,8 +21107,10 @@ SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
   // If the input vector is a concatenation, and the insert replaces
   // one of the pieces, we can optimize into a single concat_vectors.
   if (N0.getOpcode() == ISD::CONCAT_VECTORS && N0.hasOneUse() &&
-      N0.getOperand(0).getValueType() == N1.getValueType()) {
-    unsigned Factor = N1.getValueType().getVectorNumElements();
+      N0.getOperand(0).getValueType() == N1.getValueType() &&
+      N0.getOperand(0).getValueType().isScalableVector() ==
+          N1.getValueType().isScalableVector()) {
+    unsigned Factor = N1.getValueType().getVectorMinNumElements();
     SmallVector<SDValue, 8> Ops(N0->op_begin(), N0->op_end());
     Ops[InsIdx / Factor] = N1;
     return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N), VT, Ops);
