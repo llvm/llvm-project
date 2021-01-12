@@ -1173,6 +1173,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     }
 
     for (auto VT : {MVT::nxv2bf16, MVT::nxv4bf16, MVT::nxv8bf16}) {
+      setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
       setOperationAction(ISD::MGATHER, VT, Custom);
       setOperationAction(ISD::MSCATTER, VT, Custom);
     }
@@ -3998,7 +3999,6 @@ SDValue AArch64TargetLowering::LowerMGATHER(SDValue Op,
 
   // Handle FP data
   if (VT.isFloatingPoint()) {
-    VT = VT.changeVectorElementTypeToInteger();
     ElementCount EC = VT.getVectorElementCount();
     auto ScalarIntVT =
         MVT::getIntegerVT(AArch64::SVEBitsPerBlock / EC.getKnownMinValue());
@@ -4021,7 +4021,14 @@ SDValue AArch64TargetLowering::LowerMGATHER(SDValue Op,
     Opcode = getSignExtendedGatherOpcode(Opcode);
 
   SDValue Ops[] = {Chain, Mask, BasePtr, Index, InputVT, PassThru};
-  return DAG.getNode(Opcode, DL, VTs, Ops);
+  SDValue Gather = DAG.getNode(Opcode, DL, VTs, Ops);
+
+  if (VT.isFloatingPoint()) {
+    SDValue Cast = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, VT, Gather);
+    return DAG.getMergeValues({Cast, Gather}, DL);
+  }
+
+  return Gather;
 }
 
 SDValue AArch64TargetLowering::LowerMSCATTER(SDValue Op,
