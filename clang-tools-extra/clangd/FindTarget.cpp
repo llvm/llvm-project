@@ -330,6 +330,7 @@ private:
   llvm::SmallDenseMap<const NamedDecl *,
                       std::pair<RelSet, /*InsertionOrder*/ size_t>>
       Decls;
+  llvm::SmallDenseMap<const Decl *, RelSet> Seen;
   RelSet Flags;
 
   template <typename T> void debug(T &Node, RelSet Flags) {
@@ -359,6 +360,15 @@ public:
     if (!D)
       return;
     debug(*D, Flags);
+
+    // Avoid recursion (which can arise in the presence of heuristic
+    // resolution of dependent names) by exiting early if we have
+    // already seen this decl with all flags in Flags.
+    auto Res = Seen.try_emplace(D);
+    if (!Res.second && Res.first->second.contains(Flags))
+      return;
+    Res.first->second |= Flags;
+
     if (const UsingDirectiveDecl *UDD = llvm::dyn_cast<UsingDirectiveDecl>(D))
       D = UDD->getNominatedNamespaceAsWritten();
 
