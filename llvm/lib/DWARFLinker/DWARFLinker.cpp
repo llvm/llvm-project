@@ -1217,9 +1217,10 @@ unsigned DWARFLinker::DIECloner::cloneAttribute(
     return cloneScalarAttribute(Die, InputDIE, File, Unit, AttrSpec, Val,
                                 AttrSize, Info);
   default:
-    Linker.reportWarning(
-        "Unsupported attribute form in cloneAttribute. Dropping.", File,
-        &InputDIE);
+    Linker.reportWarning("Unsupported attribute form " +
+                             dwarf::FormEncodingString(AttrSpec.Form) +
+                             " in cloneAttribute. Dropping.",
+                         File, &InputDIE);
   }
 
   return 0;
