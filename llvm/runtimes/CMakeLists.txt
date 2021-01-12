@@ -60,6 +60,7 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   project(Runtimes C CXX ASM)
 
   find_package(LLVM PATHS "${LLVM_BINARY_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
+  find_package(Clang PATHS "${LLVM_BINARY_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
 
   # Add the root project's CMake modules, and the LLVM build's modules to the
   # CMake module path.
@@ -136,8 +137,11 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
     # The subdirectories need to treat this as standalone builds. D57992 tried
     # to get rid of this, but the runtimes treat *_STANDALONE_BUILD=OFF as if
     # llvm & clang are configured in the same CMake, and setup dependencies
-    # against their targets.
-    set(${canon_name}_STANDALONE_BUILD ON)
+    # against their targets. OpenMP has fixed the issue so we don't set the
+    # variable.
+    if (NOT ${canon_name} STREQUAL "OPENMP")
+      set(${canon_name}_STANDALONE_BUILD ON)
+    endif()
 
     if(LLVM_RUNTIMES_LIBDIR_SUBDIR)
       set(${canon_name}_LIBDIR_SUBDIR "${LLVM_RUNTIMES_LIBDIR_SUBDIR}" CACHE STRING "" FORCE)
