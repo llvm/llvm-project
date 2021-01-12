@@ -247,12 +247,6 @@ public:
     return false;
   }
 
-  /// This method returns the canonical induction variable of the specified
-  /// type for the specified loop (inserting one if there is none).  A
-  /// canonical induction variable starts at zero and steps by one on each
-  /// iteration.
-  PHINode *getOrInsertCanonicalInductionVariable(const Loop *L, Type *Ty);
-
   /// Return the induction variable increment's IV operand.
   Instruction *getIVIncOperand(Instruction *IncV, Instruction *InsertPos,
                                bool allowScale);
