@@ -1065,14 +1065,24 @@ ReturnInst *llvm::FoldReturnIntoUncondBranch(ReturnInst *RI, BasicBlock *BB,
   return cast<ReturnInst>(NewRet);
 }
 
-Instruction *llvm::SplitBlockAndInsertIfThen(Value *Cond,
-                                             Instruction *SplitBefore,
-                                             bool Unreachable,
-                                             MDNode *BranchWeights,
-                                             DominatorTree *DT, LoopInfo *LI,
-                                             BasicBlock *ThenBlock) {
+static Instruction *
+SplitBlockAndInsertIfThenImpl(Value *Cond, Instruction *SplitBefore,
+                              bool Unreachable, MDNode *BranchWeights,
+                              DomTreeUpdater *DTU, DominatorTree *DT,
+                              LoopInfo *LI, BasicBlock *ThenBlock) {
+  SmallVector<DominatorTree::UpdateType, 8> Updates;
   BasicBlock *Head = SplitBefore->getParent();
   BasicBlock *Tail = Head->splitBasicBlock(SplitBefore->getIterator());
+  if (DTU) {
+    SmallSetVector<BasicBlock *, 8> UniqueSuccessorsOfHead(succ_begin(Tail),
+                                                           succ_end(Tail));
+    Updates.push_back({DominatorTree::Insert, Head, Tail});
+    Updates.reserve(Updates.size() + 2 * UniqueSuccessorsOfHead.size());
+    for (BasicBlock *UniqueSuccessorOfHead : UniqueSuccessorsOfHead) {
+      Updates.push_back({DominatorTree::Insert, Tail, UniqueSuccessorOfHead});
+      Updates.push_back({DominatorTree::Delete, Head, UniqueSuccessorOfHead});
+    }
+  }
   Instruction *HeadOldTerm = Head->getTerminator();
   LLVMContext &C = Head->getContext();
   Instruction *CheckTerm;
@@ -1081,17 +1091,24 @@ Instruction *llvm::SplitBlockAndInsertIfThen(Value *Cond,
     ThenBlock = BasicBlock::Create(C, "", Head->getParent(), Tail);
     if (Unreachable)
       CheckTerm = new UnreachableInst(C, ThenBlock);
-    else
+    else {
       CheckTerm = BranchInst::Create(Tail, ThenBlock);
+      if (DTU)
+        Updates.push_back({DominatorTree::Insert, ThenBlock, Tail});
+    }
     CheckTerm->setDebugLoc(SplitBefore->getDebugLoc());
   } else
     CheckTerm = ThenBlock->getTerminator();
   BranchInst *HeadNewTerm =
-    BranchInst::Create(/*ifTrue*/ThenBlock, /*ifFalse*/Tail, Cond);
+      BranchInst::Create(/*ifTrue*/ ThenBlock, /*ifFalse*/ Tail, Cond);
+  if (DTU)
+    Updates.push_back({DominatorTree::Insert, Head, ThenBlock});
   HeadNewTerm->setMetadata(LLVMContext::MD_prof, BranchWeights);
   ReplaceInstWithInst(HeadOldTerm, HeadNewTerm);
 
-  if (DT) {
+  if (DTU)
+    DTU->applyUpdates(Updates);
+  else if (DT) {
     if (DomTreeNode *OldNode = DT->getNode(Head)) {
       std::vector<DomTreeNode *> Children(OldNode->begin(), OldNode->end());
 
@@ -1115,6 +1132,27 @@ Instruction *llvm::SplitBlockAndInsertIfThen(Value *Cond,
   }
 
   return CheckTerm;
+}
+
+Instruction *llvm::SplitBlockAndInsertIfThen(Value *Cond,
+                                             Instruction *SplitBefore,
+                                             bool Unreachable,
+                                             MDNode *BranchWeights,
+                                             DominatorTree *DT, LoopInfo *LI,
+                                             BasicBlock *ThenBlock) {
+  return SplitBlockAndInsertIfThenImpl(Cond, SplitBefore, Unreachable,
+                                       BranchWeights,
+                                       /*DTU=*/nullptr, DT, LI, ThenBlock);
+}
+Instruction *llvm::SplitBlockAndInsertIfThen(Value *Cond,
+                                             Instruction *SplitBefore,
+                                             bool Unreachable,
+                                             MDNode *BranchWeights,
+                                             DomTreeUpdater *DTU, LoopInfo *LI,
+                                             BasicBlock *ThenBlock) {
+  return SplitBlockAndInsertIfThenImpl(Cond, SplitBefore, Unreachable,
+                                       BranchWeights, DTU, /*DT=*/nullptr, LI,
+                                       ThenBlock);
 }
 
 void llvm::SplitBlockAndInsertIfThenElse(Value *Cond, Instruction *SplitBefore,

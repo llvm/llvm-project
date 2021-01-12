@@ -773,7 +773,8 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
   Value *PtrLowBitsOOB = IRB.CreateICmpUGE(PtrLowBits, MemTag);
   SplitBlockAndInsertIfThen(PtrLowBitsOOB, CheckTerm, false,
                             MDBuilder(*C).createBranchWeights(1, 100000),
-                            nullptr, nullptr, CheckFailTerm->getParent());
+                            (DomTreeUpdater *)nullptr, nullptr,
+                            CheckFailTerm->getParent());
 
   IRB.SetInsertPoint(CheckTerm);
   Value *InlineTagAddr = IRB.CreateOr(AddrLong, 15);
@@ -782,7 +783,8 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
   Value *InlineTagMismatch = IRB.CreateICmpNE(PtrTag, InlineTag);
   SplitBlockAndInsertIfThen(InlineTagMismatch, CheckTerm, false,
                             MDBuilder(*C).createBranchWeights(1, 100000),
-                            nullptr, nullptr, CheckFailTerm->getParent());
+                            (DomTreeUpdater *)nullptr, nullptr,
+                            CheckFailTerm->getParent());
 
   IRB.SetInsertPoint(CheckFailTerm);
   InlineAsm *Asm;
