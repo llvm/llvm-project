@@ -3,11 +3,11 @@
 ; RUN: llc -global-isel -march=amdgcn -mcpu=tahiti -denormal-fp-math=ieee -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX6,GFX6-IEEE %s
 ; RUN: llc -global-isel -march=amdgcn -mcpu=tahiti -denormal-fp-math=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX6,GFX6-FLUSH %s
 
-; RUN: llc -global-isel -march=amdgcn -mcpu=fiji -denormal-fp-math=ieee -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX89,GFX8,GFX8-IEEE %s
-; RUN: llc -global-isel -march=amdgcn -mcpu=fiji -denormal-fp-math=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX89,GFX8,GFX8-FLUSH %s
+; RUN: llc -global-isel -march=amdgcn -mcpu=fiji -denormal-fp-math=ieee -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX89,GFX8 %s
+; RUN: llc -global-isel -march=amdgcn -mcpu=fiji -denormal-fp-math=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX89,GFX8 %s
 
-; RUN: llc -global-isel -march=amdgcn -mcpu=gfx900 -denormal-fp-math=ieee -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX89,GFX9,GFX9-IEEE %s
-; RUN: llc -global-isel -march=amdgcn -mcpu=gfx900 -denormal-fp-math=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX89,GFX9,GFX9-FLUSH %s
+; RUN: llc -global-isel -march=amdgcn -mcpu=gfx900 -denormal-fp-math=ieee -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX89,GFX9 %s
+; RUN: llc -global-isel -march=amdgcn -mcpu=gfx900 -denormal-fp-math=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX89,GFX9 %s
 
 define half @v_fdiv_f16(half %a, half %b) {
 ; GFX6-IEEE-LABEL: v_fdiv_f16:
