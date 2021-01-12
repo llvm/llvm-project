@@ -5,7 +5,8 @@
 // RUN:     {key: bugprone-easily-swappable-parameters.IgnoredParameterTypeSuffixes, value: ""}, \
 // RUN:     {key: bugprone-easily-swappable-parameters.QualifiersMix, value: 0}, \
 // RUN:     {key: bugprone-easily-swappable-parameters.ModelImplicitConversions, value: 0}, \
-// RUN:     {key: bugprone-easily-swappable-parameters.SuppressParametersUsedTogether, value: 0} \
+// RUN:     {key: bugprone-easily-swappable-parameters.SuppressParametersUsedTogether, value: 0}, \
+// RUN:     {key: bugprone-easily-swappable-parameters.NamePrefixSuffixSilenceDissimilarityTreshold, value: 0} \
 // RUN:  ]}' --
 
 namespace std {

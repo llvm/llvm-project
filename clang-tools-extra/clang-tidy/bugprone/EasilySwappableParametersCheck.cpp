@@ -70,6 +70,11 @@ static constexpr bool DefaultModelImplicitConversions = true;
 /// used together.
 static constexpr bool DefaultSuppressParametersUsedTogether = true;
 
+/// The default value for the NamePrefixSuffixSilenceDissimilarityTreshold
+/// check option.
+static constexpr std::size_t
+    DefaultNamePrefixSuffixSilenceDissimilarityTreshold = 1;
+
 using namespace clang::ast_matchers;
 
 namespace clang {
@@ -85,6 +90,8 @@ static bool isIgnoredParameter(const TheCheck &Check, const ParmVarDecl *Node);
 static inline bool
 isSimilarlyUsedParameter(const SimilarlyUsedParameterPairSuppressor &Suppressor,
                          const ParmVarDecl *Param1, const ParmVarDecl *Param2);
+static bool prefixSuffixCoverUnderThreshold(std::size_t Threshold,
+                                            StringRef Str1, StringRef Str2);
 } // namespace filter
 
 namespace model {
@@ -1292,10 +1299,22 @@ static MixableParameterRange modelMixingRange(
 
   for (std::size_t I = StartIndex + 1; I < NumParams; ++I) {
     const ParmVarDecl *Ith = FD->getParamDecl(I);
-    LLVM_DEBUG(llvm::dbgs() << "Check param #" << I << "...\n");
-
+    StringRef ParamName = Ith->getName();
+    LLVM_DEBUG(llvm::dbgs()
+               << "Check param #" << I << " '" << ParamName << "'...\n");
     if (filter::isIgnoredParameter(Check, Ith)) {
       LLVM_DEBUG(llvm::dbgs() << "Param #" << I << " is ignored. Break!\n");
+      break;
+    }
+
+    StringRef PrevParamName = FD->getParamDecl(I - 1)->getName();
+    if (!ParamName.empty() && !PrevParamName.empty() &&
+        filter::prefixSuffixCoverUnderThreshold(
+            Check.NamePrefixSuffixSilenceDissimilarityTreshold, PrevParamName,
+            ParamName)) {
+      LLVM_DEBUG(llvm::dbgs() << "Parameter '" << ParamName
+                              << "' follows a pattern with previous parameter '"
+                              << PrevParamName << "'. Break!\n");
       break;
     }
 
@@ -1675,6 +1694,70 @@ isSimilarlyUsedParameter(const SimilarlyUsedParameterPairSuppressor &Suppressor,
   return Suppressor(Param1, Param2);
 }
 
+static void padStringAtEnd(SmallVectorImpl<char> &Str, std::size_t ToLen) {
+  while (Str.size() < ToLen)
+    Str.emplace_back('\0');
+}
+
+static void padStringAtBegin(SmallVectorImpl<char> &Str, std::size_t ToLen) {
+  while (Str.size() < ToLen)
+    Str.insert(Str.begin(), '\0');
+}
+
+static bool isCommonPrefixWithoutSomeCharacters(std::size_t N, StringRef S1,
+                                                StringRef S2) {
+  assert(S1.size() >= N && S2.size() >= N);
+  StringRef S1Prefix = S1.take_front(S1.size() - N),
+            S2Prefix = S2.take_front(S2.size() - N);
+  return S1Prefix == S2Prefix && !S1Prefix.empty();
+}
+
+static bool isCommonSuffixWithoutSomeCharacters(std::size_t N, StringRef S1,
+                                                StringRef S2) {
+  assert(S1.size() >= N && S2.size() >= N);
+  StringRef S1Suffix = S1.take_back(S1.size() - N),
+            S2Suffix = S2.take_back(S2.size() - N);
+  return S1Suffix == S2Suffix && !S1Suffix.empty();
+}
+
+/// Returns whether the two strings are prefixes or suffixes of each other with
+/// at most Threshold characters differing on the non-common end.
+static bool prefixSuffixCoverUnderThreshold(std::size_t Threshold,
+                                            StringRef Str1, StringRef Str2) {
+  if (Threshold == 0)
+    return false;
+
+  // Pad the two strings to the longer length.
+  std::size_t BiggerLength = std::max(Str1.size(), Str2.size());
+
+  if (BiggerLength <= Threshold)
+    // If the length of the strings is still smaller than the threshold, they
+    // would be covered by an empty prefix/suffix with the rest differing.
+    // (E.g. "A" and "X" with Threshold = 1 would mean we think they are
+    // similar and do not warn about them, which is a too eager assumption.)
+    return false;
+
+  SmallString<32> S1PadE{Str1}, S2PadE{Str2};
+  padStringAtEnd(S1PadE, BiggerLength);
+  padStringAtEnd(S2PadE, BiggerLength);
+
+  if (isCommonPrefixWithoutSomeCharacters(
+          Threshold, StringRef{S1PadE.begin(), BiggerLength},
+          StringRef{S2PadE.begin(), BiggerLength}))
+    return true;
+
+  SmallString<32> S1PadB{Str1}, S2PadB{Str2};
+  padStringAtBegin(S1PadB, BiggerLength);
+  padStringAtBegin(S2PadB, BiggerLength);
+
+  if (isCommonSuffixWithoutSomeCharacters(
+          Threshold, StringRef{S1PadB.begin(), BiggerLength},
+          StringRef{S2PadB.begin(), BiggerLength}))
+    return true;
+
+  return false;
+}
+
 } // namespace filter
 
 /// Matches functions that have at least the specified amount of parameters.
@@ -1891,7 +1974,10 @@ EasilySwappableParametersCheck::EasilySwappableParametersCheck(
                                            DefaultModelImplicitConversions)),
       SuppressParametersUsedTogether(
           Options.get("SuppressParametersUsedTogether",
-                      DefaultSuppressParametersUsedTogether)) {}
+                      DefaultSuppressParametersUsedTogether)),
+      NamePrefixSuffixSilenceDissimilarityTreshold(
+          Options.get("NamePrefixSuffixSilenceDissimilarityTreshold",
+                      DefaultNamePrefixSuffixSilenceDissimilarityTreshold)) {}
 
 void EasilySwappableParametersCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
@@ -1904,6 +1990,8 @@ void EasilySwappableParametersCheck::storeOptions(
   Options.store(Opts, "ModelImplicitConversions", ModelImplicitConversions);
   Options.store(Opts, "SuppressParametersUsedTogether",
                 SuppressParametersUsedTogether);
+  Options.store(Opts, "NamePrefixSuffixSilenceDissimilarityTreshold",
+                NamePrefixSuffixSilenceDissimilarityTreshold);
 }
 
 void EasilySwappableParametersCheck::registerMatchers(MatchFinder *Finder) {
