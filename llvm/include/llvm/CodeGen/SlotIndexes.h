@@ -604,38 +604,27 @@ class raw_ostream;
     }
 
     /// Add the given MachineBasicBlock into the maps.
-    /// If \p InsertionPoint is specified then the block will be placed
-    /// before the given machine instr, otherwise it will be placed
-    /// before the next block in MachineFunction insertion order.
-    void insertMBBInMaps(MachineBasicBlock *mbb,
-                         MachineInstr *InsertionPoint = nullptr) {
-      MachineFunction::iterator nextMBB =
-        std::next(MachineFunction::iterator(mbb));
+    /// If it contains any instructions then they must already be in the maps.
+    /// This is used after a block has been split by moving some suffix of its
+    /// instructions into a newly created block.
+    void insertMBBInMaps(MachineBasicBlock *mbb) {
+      assert(mbb != &mbb->getParent()->front() &&
+             "Can't insert a new block at the beginning of a function.");
+      auto prevMBB = std::prev(MachineFunction::iterator(mbb));
 
-      IndexListEntry *startEntry = nullptr;
-      IndexListEntry *endEntry = nullptr;
-      IndexList::iterator newItr;
-      if (InsertionPoint) {
-        startEntry = createEntry(nullptr, 0);
-        endEntry = getInstructionIndex(*InsertionPoint).listEntry();
-        newItr = indexList.insert(endEntry->getIterator(), startEntry);
-      } else if (nextMBB == mbb->getParent()->end()) {
-        startEntry = &indexList.back();
-        endEntry = createEntry(nullptr, 0);
-        newItr = indexList.insertAfter(startEntry->getIterator(), endEntry);
-      } else {
-        startEntry = createEntry(nullptr, 0);
-        endEntry = getMBBStartIdx(&*nextMBB).listEntry();
-        newItr = indexList.insert(endEntry->getIterator(), startEntry);
-      }
+      // Create a new entry to be used for the start of mbb and the end of
+      // prevMBB.
+      IndexListEntry *startEntry = createEntry(nullptr, 0);
+      IndexListEntry *endEntry = getMBBEndIdx(&*prevMBB).listEntry();
+      IndexListEntry *insEntry =
+          mbb->empty() ? endEntry
+                       : getInstructionIndex(mbb->front()).listEntry();
+      IndexList::iterator newItr =
+          indexList.insert(insEntry->getIterator(), startEntry);
 
       SlotIndex startIdx(startEntry, SlotIndex::Slot_Block);
       SlotIndex endIdx(endEntry, SlotIndex::Slot_Block);
 
-      MachineFunction::iterator prevMBB(mbb);
-      assert(prevMBB != mbb->getParent()->end() &&
-             "Can't insert a new block at the beginning of a function.");
-      --prevMBB;
       MBBRanges[prevMBB->getNumber()].second = startIdx;
 
       assert(unsigned(mbb->getNumber()) == MBBRanges.size() &&

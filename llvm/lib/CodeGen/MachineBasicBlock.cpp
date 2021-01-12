@@ -980,7 +980,7 @@ MachineBasicBlock *MachineBasicBlock::splitAt(MachineInstr &MI,
     addLiveIns(*SplitBB, LiveRegs);
 
   if (LIS)
-    LIS->insertMBBInMaps(SplitBB, &MI);
+    LIS->insertMBBInMaps(SplitBB);
 
   return SplitBB;
 }
