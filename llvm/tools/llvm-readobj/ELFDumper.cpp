@@ -265,7 +265,7 @@ public:
     // with a DT_NULL entry. However, sometimes the section content may
     // continue past the DT_NULL entry, so to dump the section correctly,
     // we first find the end of the entries by iterating over them.
-    Elf_Dyn_Range Table = DynamicTable.getAsArrayRef<Elf_Dyn>();
+    Elf_Dyn_Range Table = DynamicTable.template getAsArrayRef<Elf_Dyn>();
 
     size_t Size = 0;
     while (Size < Table.size())
@@ -278,7 +278,7 @@ public:
   Elf_Sym_Range dynamic_symbols() const {
     if (!DynSymRegion)
       return Elf_Sym_Range();
-    return DynSymRegion->getAsArrayRef<Elf_Sym>();
+    return DynSymRegion->template getAsArrayRef<Elf_Sym>();
   }
 
   const Elf_Shdr *findSectionByName(StringRef Name) const;
@@ -1828,7 +1828,7 @@ void ELFDumper<ELFT>::loadDynamicTable() {
                                   sizeof(Elf_Dyn)));
     FromPhdr.SizePrintName = "PT_DYNAMIC size";
     FromPhdr.EntSizePrintName = "";
-    IsPhdrTableValid = !FromPhdr.getAsArrayRef<Elf_Dyn>().empty();
+    IsPhdrTableValid = !FromPhdr.template getAsArrayRef<Elf_Dyn>().empty();
   }
 
   // Locate the dynamic table described in a section header.
@@ -1844,7 +1844,7 @@ void ELFDumper<ELFT>::loadDynamicTable() {
       FromSec = *RegOrErr;
       FromSec.Context = describe(*DynamicSec);
       FromSec.EntSizePrintName = "";
-      IsSecTableValid = !FromSec.getAsArrayRef<Elf_Dyn>().empty();
+      IsSecTableValid = !FromSec.template getAsArrayRef<Elf_Dyn>().empty();
     } else {
       reportUniqueWarning("unable to read the dynamic table from " +
                           describe(*DynamicSec) + ": " +
@@ -2584,7 +2584,7 @@ getGnuHashTableChains(Optional<DynRegionInfo> DynSymRegion,
     return createError("no dynamic symbol table found");
 
   ArrayRef<typename ELFT::Sym> DynSymTable =
-      DynSymRegion->getAsArrayRef<typename ELFT::Sym>();
+      DynSymRegion->template getAsArrayRef<typename ELFT::Sym>();
   size_t NumSyms = DynSymTable.size();
   if (!NumSyms)
     return createError("the dynamic symbol table is empty");
@@ -4480,21 +4480,24 @@ void ELFDumper<ELFT>::printRelocationsHelper(const Elf_Shdr &Sec) {
 
 template <class ELFT> void ELFDumper<ELFT>::printDynamicRelocationsHelper() {
   const bool IsMips64EL = this->Obj.isMips64EL();
-  if ( this->DynRelaRegion.Size > 0) {
-    printDynamicRelocHeader(ELF::SHT_RELA, "RELA",  this->DynRelaRegion);
-    for (const Elf_Rela &Rela : this->DynRelaRegion.getAsArrayRef<Elf_Rela>())
+  if (this->DynRelaRegion.Size > 0) {
+    printDynamicRelocHeader(ELF::SHT_RELA, "RELA", this->DynRelaRegion);
+    for (const Elf_Rela &Rela :
+         this->DynRelaRegion.template getAsArrayRef<Elf_Rela>())
       printDynamicReloc(Relocation<ELFT>(Rela, IsMips64EL));
   }
 
   if (this->DynRelRegion.Size > 0) {
     printDynamicRelocHeader(ELF::SHT_REL, "REL", this->DynRelRegion);
-    for (const Elf_Rel &Rel : this->DynRelRegion.getAsArrayRef<Elf_Rel>())
+    for (const Elf_Rel &Rel :
+         this->DynRelRegion.template getAsArrayRef<Elf_Rel>())
       printDynamicReloc(Relocation<ELFT>(Rel, IsMips64EL));
   }
 
   if (this->DynRelrRegion.Size > 0) {
     printDynamicRelocHeader(ELF::SHT_REL, "RELR", this->DynRelrRegion);
-    Elf_Relr_Range Relrs = this->DynRelrRegion.getAsArrayRef<Elf_Relr>();
+    Elf_Relr_Range Relrs =
+        this->DynRelrRegion.template getAsArrayRef<Elf_Relr>();
     for (const Elf_Rel &Rel : Obj.decode_relrs(Relrs))
       printDynamicReloc(Relocation<ELFT>(Rel, IsMips64EL));
   }
@@ -4503,11 +4506,12 @@ template <class ELFT> void ELFDumper<ELFT>::printDynamicRelocationsHelper() {
     if (this->DynPLTRelRegion.EntSize == sizeof(Elf_Rela)) {
       printDynamicRelocHeader(ELF::SHT_RELA, "PLT", this->DynPLTRelRegion);
       for (const Elf_Rela &Rela :
-           this->DynPLTRelRegion.getAsArrayRef<Elf_Rela>())
+           this->DynPLTRelRegion.template getAsArrayRef<Elf_Rela>())
         printDynamicReloc(Relocation<ELFT>(Rela, IsMips64EL));
     } else {
       printDynamicRelocHeader(ELF::SHT_REL, "PLT", this->DynPLTRelRegion);
-      for (const Elf_Rel &Rel : this->DynPLTRelRegion.getAsArrayRef<Elf_Rel>())
+      for (const Elf_Rel &Rel :
+           this->DynPLTRelRegion.template getAsArrayRef<Elf_Rel>())
         printDynamicReloc(Relocation<ELFT>(Rel, IsMips64EL));
     }
   }
