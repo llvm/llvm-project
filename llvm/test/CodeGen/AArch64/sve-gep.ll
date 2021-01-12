@@ -8,8 +8,7 @@
 define <vscale x 2 x i64>* @scalar_of_scalable_1(<vscale x 2 x i64>* %base) {
 ; CHECK-LABEL: scalar_of_scalable_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    rdvl x8, #4
-; CHECK-NEXT:    add x0, x0, x8
+; CHECK-NEXT:    addvl x0, x0, #4
 ; CHECK-NEXT:    ret
   %d = getelementptr <vscale x 2 x i64>, <vscale x 2 x i64>* %base, i64 4
   ret <vscale x 2 x i64>* %d
