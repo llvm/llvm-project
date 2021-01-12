@@ -132,6 +132,46 @@ multiclass VPatBinarySDNode_VV_VX_VI<SDNode vop, string instruction_name,
   }
 }
 
+class VPatBinarySDNode_VF<SDNode vop,
+                          string instruction_name,
+                          ValueType result_type,
+                          ValueType vop_type,
+                          ValueType xop_type,
+                          ValueType mask_type,
+                          int sew,
+                          LMULInfo vlmul,
+                          VReg RetClass,
+                          VReg vop_reg_class,
+                          DAGOperand xop_kind> :
+    Pat<(result_type (vop (vop_type vop_reg_class:$rs1),
+                          (vop_type (splat_vector xop_kind:$rs2)))),
+        (!cast<Instruction>(instruction_name#"_VF_"#vlmul.MX)
+                     vop_reg_class:$rs1,
+                     ToFPR32<xop_type, xop_kind, "rs2">.ret,
+                     VLMax, sew)>;
+
+multiclass VPatBinaryFPSDNode_VV_VF<SDNode vop, string instruction_name> {
+  foreach vti = AllFloatVectors in {
+    def : VPatBinarySDNode_VV<vop, instruction_name,
+                              vti.Vector, vti.Vector, vti.Mask, vti.SEW,
+                              vti.LMul, vti.RegClass, vti.RegClass>;
+    def : VPatBinarySDNode_VF<vop, instruction_name,
+                              vti.Vector, vti.Vector, vti.Scalar, vti.Mask,
+                              vti.SEW, vti.LMul, vti.RegClass, vti.RegClass,
+                              vti.ScalarRegClass>;
+  }
+}
+
+multiclass VPatBinaryFPSDNode_R_VF<SDNode vop, string instruction_name> {
+  foreach fvti = AllFloatVectors in
+    def : Pat<(fvti.Vector (vop (fvti.Vector (splat_vector fvti.Scalar:$rs2)),
+                                (fvti.Vector fvti.RegClass:$rs1))),
+              (!cast<Instruction>(instruction_name#"_VF_"#fvti.LMul.MX)
+                           fvti.RegClass:$rs1,
+                           ToFPR32<fvti.Scalar, fvti.ScalarRegClass, "rs2">.ret,
+                           VLMax, fvti.SEW)>;
+}
+
 multiclass VPatIntegerSetCCSDNode_VV<CondCode cc,
                                      string instruction_name,
                                      bit swap = 0> {
@@ -339,6 +379,16 @@ foreach mti = AllMasks in {
 } // Predicates = [HasStdExtV]
 
 let Predicates = [HasStdExtV, HasStdExtF] in {
+
+// 14.2. Vector Single-Width Floating-Point Add/Subtract Instructions
+defm "" : VPatBinaryFPSDNode_VV_VF<fadd, "PseudoVFADD">;
+defm "" : VPatBinaryFPSDNode_VV_VF<fsub, "PseudoVFSUB">;
+defm "" : VPatBinaryFPSDNode_R_VF<fsub, "PseudoVFRSUB">;
+
+// 14.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
+defm "" : VPatBinaryFPSDNode_VV_VF<fmul, "PseudoVFMUL">;
+defm "" : VPatBinaryFPSDNode_VV_VF<fdiv, "PseudoVFDIV">;
+defm "" : VPatBinaryFPSDNode_R_VF<fdiv, "PseudoVFRDIV">;
 
 // 14.11. Vector Floating-Point Compare Instructions
 defm "" : VPatFPSetCCSDNode_VV_VF_FV<SETEQ,  "PseudoVMFEQ", "PseudoVMFEQ">;
