@@ -2707,6 +2707,11 @@ defm PseudoVMFGT       : VPseudoBinaryM_VX</*IsFloat=*/1>;
 defm PseudoVMFGE       : VPseudoBinaryM_VX</*IsFloat=*/1>;
 
 //===----------------------------------------------------------------------===//
+// 14.14. Vector Floating-Point Classify Instruction
+//===----------------------------------------------------------------------===//
+defm PseudoVFCLASS     : VPseudoUnaryV_V;
+
+//===----------------------------------------------------------------------===//
 // 14.15. Vector Floating-Point Merge Instruction
 //===----------------------------------------------------------------------===//
 defm PseudoVFMERGE     : VPseudoBinaryV_XM</*CarryOut =*/0,/*CarryIn =*/true,
@@ -2785,6 +2790,7 @@ defm PseudoVFREDMAX    : VPseudoReductionV_VS;
 //===----------------------------------------------------------------------===//
 defm PseudoVFWREDSUM   : VPseudoReductionV_VS;
 defm PseudoVFWREDOSUM  : VPseudoReductionV_VS;
+
 } // Predicates = [HasStdExtV, HasStdExtF]
 
 //===----------------------------------------------------------------------===//
@@ -3348,6 +3354,11 @@ defm "" : VPatBinaryM_VX<"int_riscv_vmfgt", "PseudoVMFGT", AllFloatVectors>;
 defm "" : VPatBinaryM_VX<"int_riscv_vmfge", "PseudoVMFGE", AllFloatVectors>;
 
 //===----------------------------------------------------------------------===//
+// 14.14. Vector Floating-Point Classify Instruction
+//===----------------------------------------------------------------------===//
+defm "" : VPatConversionVI_VF<"int_riscv_vfclass", "PseudoVFCLASS">;
+
+//===----------------------------------------------------------------------===//
 // 14.15. Vector Floating-Point Merge Instruction
 //===----------------------------------------------------------------------===//
 // We can use vmerge.vvm to support vector-vector vfmerge.
@@ -3441,6 +3452,7 @@ defm "" : VPatReductionV_VS<"int_riscv_vfredmax", "PseudoVFREDMAX", /*IsFloat=*/
 //===----------------------------------------------------------------------===//
 defm "" : VPatReductionW_VS<"int_riscv_vfwredsum", "PseudoVFWREDSUM", /*IsFloat=*/1>;
 defm "" : VPatReductionW_VS<"int_riscv_vfwredosum", "PseudoVFWREDOSUM", /*IsFloat=*/1>;
+
 } // Predicates = [HasStdExtV, HasStdExtF]
 
 //===----------------------------------------------------------------------===//
