@@ -9,6 +9,7 @@
 #ifndef DIALECT_GPU_TRANSFORMS_PASSDETAIL_H_
 #define DIALECT_GPU_TRANSFORMS_PASSDETAIL_H_
 
+#include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
