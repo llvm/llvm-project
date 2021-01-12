@@ -70,7 +70,7 @@ define <2 x i1> @test8vec(<2 x i1> %C, <2 x i1> %X) {
 
 define <vscale x 2 x i1> @test8vvec(<vscale x 2 x i1> %C, <vscale x 2 x i1> %X) {
 ; CHECK-LABEL: @test8vvec(
-; CHECK-NEXT:    [[R:%.*]] = and <vscale x 2 x i1> [[C:%.*]],  [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and <vscale x 2 x i1> [[C:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret <vscale x 2 x i1> [[R]]
 ;
   %R = select <vscale x 2 x i1> %C, <vscale x 2 x i1> %X, <vscale x 2 x i1> zeroinitializer
@@ -501,6 +501,27 @@ ret:
   ret i32 %b
 }
 
+define i32 @test26_logical(i1 %cond)  {
+; CHECK-LABEL: @test26_logical(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[JUMP:%.*]], label [[RET:%.*]]
+; CHECK:       jump:
+; CHECK-NEXT:    br label [[RET]]
+; CHECK:       ret:
+; CHECK-NEXT:    [[B:%.*]] = phi i32 [ 10, [[JUMP]] ], [ 20, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[B]]
+;
+entry:
+  br i1 %cond, label %jump, label %ret
+jump:
+  %c = select i1 false, i1 true, i1 false
+  br label %ret
+ret:
+  %a = phi i1 [true, %entry], [%c, %jump]
+  %b = select i1 %a, i32 20, i32 10
+  ret i32 %b
+}
+
 define i32 @test27(i1 %c, i32 %A, i32 %B)  {
 ; CHECK-LABEL: @test27(
 ; CHECK-NEXT:  entry:
@@ -720,9 +741,9 @@ define i48 @test51(<3 x i1> %icmp, <3 x i16> %tmp) {
 
 define <vscale x 4 x float> @bitcast_select_bitcast(<vscale x 4 x i1> %icmp, <vscale x 4 x i32> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: @bitcast_select_bitcast(
-; CHECK-NEXT:    [[BC1:%.*]] = bitcast <vscale x 4 x i32> [[A:%.*]] to <vscale x 4 x float>
-; CHECK-NEXT:    [[SELECT:%.*]] = select <vscale x 4 x i1> [[ICMP:%.*]], <vscale x 4 x float> [[B:%.*]], <vscale x 4 x float> [[BC1]]
-; CHECK-NEXT:    ret <vscale x 4 x float> [[SELECT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 4 x i32> [[A:%.*]] to <vscale x 4 x float>
+; CHECK-NEXT:    [[BC2:%.*]] = select <vscale x 4 x i1> [[ICMP:%.*]], <vscale x 4 x float> [[B:%.*]], <vscale x 4 x float> [[TMP1]]
+; CHECK-NEXT:    ret <vscale x 4 x float> [[BC2]]
 ;
   %bc1 = bitcast <vscale x 4 x float> %b to <vscale x 4 x i32>
   %select = select <vscale x 4 x i1> %icmp, <vscale x 4 x i32> %bc1, <vscale x 4 x i32> %a

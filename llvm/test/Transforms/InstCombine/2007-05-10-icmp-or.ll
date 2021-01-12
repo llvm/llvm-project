@@ -12,3 +12,14 @@ define i1 @test(i32 %tmp9) {
   ret i1 %bothcond
 }
 
+define i1 @test_logical(i32 %tmp9) {
+; CHECK-LABEL: @test_logical(
+; CHECK-NEXT:    [[TMP20:%.*]] = icmp ugt i32 [[TMP9:%.*]], 255
+; CHECK-NEXT:    ret i1 [[TMP20]]
+;
+  %tmp20 = icmp ugt i32 %tmp9, 255                ; <i1> [#uses=1]
+  %tmp11.not = icmp sgt i32 %tmp9, 255            ; <i1> [#uses=1]
+  %bothcond = select i1 %tmp20, i1 true, i1 %tmp11.not            ; <i1> [#uses=1]
+  ret i1 %bothcond
+}
+

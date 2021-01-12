@@ -38,3 +38,40 @@ okay:
 incompatible:
   ret void
 }
+
+define void @f_logical(i8* %x) nounwind  {
+; CHECK-LABEL: @f_logical(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[BB:%.*]]
+; CHECK:       bb:
+; CHECK-NEXT:    [[L1:%.*]] = load i8, i8* [[X:%.*]], align 1
+; CHECK-NEXT:    [[S1:%.*]] = add i8 [[L1]], -6
+; CHECK-NEXT:    [[C1:%.*]] = icmp ugt i8 [[S1]], 2
+; CHECK-NEXT:    [[S2:%.*]] = add i8 [[L1]], -10
+; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i8 [[S2]], 2
+; CHECK-NEXT:    [[A1:%.*]] = and i1 [[C1]], [[C2]]
+; CHECK-NEXT:    br i1 [[A1]], label [[INCOMPATIBLE:%.*]], label [[OKAY:%.*]]
+; CHECK:       okay:
+; CHECK-NEXT:    ret void
+; CHECK:       incompatible:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %bb
+
+bb:
+  %g1 = getelementptr i8, i8* %x, i32 0
+  %l1 = load i8, i8* %g1, align 1
+  %s1 = sub i8 %l1, 6
+  %c1 = icmp ugt i8 %s1, 2
+  %s2 = sub i8 %l1, 10
+  %c2 = icmp ugt i8 %s2, 2
+  %a1 = select i1 %c1, i1 %c2, i1 false
+  br i1 %a1, label %incompatible, label %okay
+
+okay:
+  ret void
+
+incompatible:
+  ret void
+}
