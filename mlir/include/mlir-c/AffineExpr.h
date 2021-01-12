@@ -50,7 +50,7 @@ MLIR_CAPI_EXPORTED bool mlirAffineExprEqual(MlirAffineExpr lhs,
 
 /// Returns `true` if the given affine expression is a null expression. Note
 /// constant zero is not a null expression.
-inline bool mlirAffineExprIsNull(MlirAffineExpr affineExpr) {
+inline static bool mlirAffineExprIsNull(MlirAffineExpr affineExpr) {
   return affineExpr.ptr == NULL;
 }
 
