@@ -735,7 +735,7 @@ public:
   GNUELFDumper(const object::ELFObjectFile<ELFT> &ObjF, ScopedPrinter &Writer)
       : ELFDumper<ELFT>(ObjF, Writer),
         OS(static_cast<formatted_raw_ostream &>(Writer.getOStream())) {
-    assert(&W.getOStream() == &llvm::fouts());
+    assert(&this->W.getOStream() == &llvm::fouts());
   }
 
   void printFileHeaders() override;
