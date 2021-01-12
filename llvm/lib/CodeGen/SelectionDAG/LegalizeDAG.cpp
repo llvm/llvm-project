@@ -1741,13 +1741,28 @@ bool SelectionDAGLegalize::LegalizeSetCCCondCode(
         assert(TLI.isCondCodeLegal(ISD::SETOEQ, OpVT)
             && "If SETO is expanded, SETOEQ must be legal!");
         CC1 = ISD::SETOEQ; CC2 = ISD::SETOEQ; Opc = ISD::AND; break;
+    case ISD::SETONE:
+    case ISD::SETUEQ:
+        // If the SETUO or SETO CC isn't legal, we might be able to use
+        // SETOGT || SETOLT, inverting the result for SETUEQ. We only need one
+        // of SETOGT/SETOLT to be legal, the other can be emulated by swapping
+        // the operands.
+        CC2 = ((unsigned)CCCode & 0x8U) ? ISD::SETUO : ISD::SETO;
+        if (!TLI.isCondCodeLegal(CC2, OpVT) &&
+            (TLI.isCondCodeLegal(ISD::SETOGT, OpVT) ||
+             TLI.isCondCodeLegal(ISD::SETOLT, OpVT))) {
+          CC1 = ISD::SETOGT;
+          CC2 = ISD::SETOLT;
+          Opc = ISD::OR;
+          NeedInvert = ((unsigned)CCCode & 0x8U);
+          break;
+        }
+        LLVM_FALLTHROUGH;
     case ISD::SETOEQ:
     case ISD::SETOGT:
     case ISD::SETOGE:
     case ISD::SETOLT:
     case ISD::SETOLE:
-    case ISD::SETONE:
-    case ISD::SETUEQ:
     case ISD::SETUNE:
     case ISD::SETUGT:
     case ISD::SETUGE:

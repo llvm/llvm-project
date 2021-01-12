@@ -297,12 +297,10 @@ define i1 @test_fcmpord(float %a, float %b) #0 {
 define i1 @test_fcmpueq(float %a, float %b) #0 {
 ; CHECK-LABEL: test_fcmpueq:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    efscmpeq 0, 3, 3
-; CHECK-NEXT:    efscmpeq 1, 4, 4
-; CHECK-NEXT:    crnand 20, 5, 1
-; CHECK-NEXT:    efscmpeq 0, 3, 4
+; CHECK-NEXT:    efscmpgt 0, 3, 4
+; CHECK-NEXT:    efscmplt 1, 3, 4
 ; CHECK-NEXT:    li 5, 1
-; CHECK-NEXT:    crnor 20, 1, 20
+; CHECK-NEXT:    cror 20, 5, 1
 ; CHECK-NEXT:    bc 12, 20, .LBB14_2
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    ori 3, 5, 0
@@ -318,12 +316,10 @@ define i1 @test_fcmpueq(float %a, float %b) #0 {
 define i1 @test_fcmpne(float %a, float %b) #0 {
 ; CHECK-LABEL: test_fcmpne:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    efscmpeq 0, 4, 4
-; CHECK-NEXT:    efscmpeq 1, 3, 3
-; CHECK-NEXT:    crand 20, 5, 1
-; CHECK-NEXT:    efscmpeq 0, 3, 4
+; CHECK-NEXT:    efscmplt 0, 3, 4
+; CHECK-NEXT:    efscmpgt 1, 3, 4
 ; CHECK-NEXT:    li 5, 1
-; CHECK-NEXT:    crorc 20, 1, 20
+; CHECK-NEXT:    crnor 20, 5, 1
 ; CHECK-NEXT:    bc 12, 20, .LBB15_2
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    ori 3, 5, 0
@@ -1117,22 +1113,19 @@ define i32 @test_dcmpueq(double %a, double %b) #0 {
 ; SPE-LABEL: test_dcmpueq:
 ; SPE:       # %bb.0: # %entry
 ; SPE-NEXT:    stwu 1, -16(1)
+; SPE-NEXT:    evmergelo 5, 5, 6
 ; SPE-NEXT:    evmergelo 3, 3, 4
-; SPE-NEXT:    evmergelo 4, 5, 6
-; SPE-NEXT:    efdcmpeq 0, 4, 4
-; SPE-NEXT:    bc 4, 1, .LBB16_4
+; SPE-NEXT:    efdcmplt 0, 3, 5
+; SPE-NEXT:    bc 12, 1, .LBB16_3
 ; SPE-NEXT:  # %bb.1: # %entry
-; SPE-NEXT:    efdcmpeq 0, 3, 3
-; SPE-NEXT:    bc 4, 1, .LBB16_4
-; SPE-NEXT:  # %bb.2: # %entry
-; SPE-NEXT:    efdcmpeq 0, 3, 4
-; SPE-NEXT:    bc 12, 1, .LBB16_4
-; SPE-NEXT:  # %bb.3: # %fa
-; SPE-NEXT:    li 3, 0
-; SPE-NEXT:    b .LBB16_5
-; SPE-NEXT:  .LBB16_4: # %tr
+; SPE-NEXT:    efdcmpgt 0, 3, 5
+; SPE-NEXT:    bc 12, 1, .LBB16_3
+; SPE-NEXT:  # %bb.2: # %tr
 ; SPE-NEXT:    li 3, 1
-; SPE-NEXT:  .LBB16_5: # %ret
+; SPE-NEXT:    b .LBB16_4
+; SPE-NEXT:  .LBB16_3: # %fa
+; SPE-NEXT:    li 3, 0
+; SPE-NEXT:  .LBB16_4: # %ret
 ; SPE-NEXT:    stw 3, 12(1)
 ; SPE-NEXT:    lwz 3, 12(1)
 ; SPE-NEXT:    addi 1, 1, 16
@@ -1208,14 +1201,12 @@ ret:
 define i1 @test_dcmpne(double %a, double %b) #0 {
 ; SPE-LABEL: test_dcmpne:
 ; SPE:       # %bb.0: # %entry
+; SPE-NEXT:    evmergelo 5, 5, 6
 ; SPE-NEXT:    evmergelo 3, 3, 4
-; SPE-NEXT:    evmergelo 4, 5, 6
 ; SPE-NEXT:    li 7, 1
-; SPE-NEXT:    efdcmpeq 0, 4, 4
-; SPE-NEXT:    efdcmpeq 1, 3, 3
-; SPE-NEXT:    efdcmpeq 5, 3, 4
-; SPE-NEXT:    crand 24, 5, 1
-; SPE-NEXT:    crorc 20, 21, 24
+; SPE-NEXT:    efdcmplt 0, 3, 5
+; SPE-NEXT:    efdcmpgt 1, 3, 5
+; SPE-NEXT:    crnor 20, 5, 1
 ; SPE-NEXT:    bc 12, 20, .LBB17_2
 ; SPE-NEXT:  # %bb.1: # %entry
 ; SPE-NEXT:    ori 3, 7, 0
