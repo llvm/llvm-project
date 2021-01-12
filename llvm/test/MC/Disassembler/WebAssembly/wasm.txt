@@ -23,7 +23,6 @@
 0x11 0x80 0x01 0x00
 
 # CHECK: call 0
-# CHECK-NOT: exnref.call 0
 0x10 0x00
 
 # CHECK: local.get 128
@@ -55,6 +54,3 @@
 # This can mean end_block/end_loop/end_if/end_function/end_try..
 # CHECK: end
 0x0B
-
-# CHECK: br_on_exn 0, 0
-0x0A 0x00 0x00
