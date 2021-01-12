@@ -221,6 +221,9 @@ struct LegacyLICMPass : public LoopPass {
     if (skipLoop(L))
       return false;
 
+    LLVM_DEBUG(dbgs() << "Perform LICM on Loop with header at block "
+                      << L->getHeader()->getNameOrAsOperand() << "\n");
+
     auto *SE = getAnalysisIfAvailable<ScalarEvolutionWrapperPass>();
     MemorySSA *MSSA = EnableMSSALoopDependency
                           ? (&getAnalysis<MemorySSAWrapperPass>().getMSSA())
@@ -697,9 +700,10 @@ public:
     // If not involved in a pending branch, hoist to preheader
     BasicBlock *InitialPreheader = CurLoop->getLoopPreheader();
     if (It == HoistableBranches.end()) {
-      LLVM_DEBUG(dbgs() << "LICM using " << InitialPreheader->getName()
-                        << " as hoist destination for " << BB->getName()
-                        << "\n");
+      LLVM_DEBUG(dbgs() << "LICM using "
+                        << InitialPreheader->getNameOrAsOperand()
+                        << " as hoist destination for "
+                        << BB->getNameOrAsOperand() << "\n");
       HoistDestinationMap[BB] = InitialPreheader;
       return InitialPreheader;
     }
@@ -978,7 +982,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
           HoistPoint = Dominator->getTerminator();
         }
         LLVM_DEBUG(dbgs() << "LICM rehoisting to "
-                          << HoistPoint->getParent()->getName()
+                          << HoistPoint->getParent()->getNameOrAsOperand()
                           << ": " << *I << "\n");
         moveInstructionBefore(*I, *HoistPoint, *SafetyInfo, MSSAU, SE);
         HoistPoint = I;
@@ -1737,8 +1741,8 @@ static void hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
                   BasicBlock *Dest, ICFLoopSafetyInfo *SafetyInfo,
                   MemorySSAUpdater *MSSAU, ScalarEvolution *SE,
                   OptimizationRemarkEmitter *ORE) {
-  LLVM_DEBUG(dbgs() << "LICM hoisting to " << Dest->getName() << ": " << I
-                    << "\n");
+  LLVM_DEBUG(dbgs() << "LICM hoisting to " << Dest->getNameOrAsOperand() << ": "
+                    << I << "\n");
   ORE->emit([&]() {
     return OptimizationRemark(DEBUG_TYPE, "Hoisted", &I) << "hoisting "
                                                          << ore::NV("Inst", &I);
