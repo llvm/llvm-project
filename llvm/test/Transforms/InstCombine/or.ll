@@ -1004,10 +1004,8 @@ end:
 
 define i32 @test1(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[OR]], -1
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[XOR]], [[NEG]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[OR1:%.*]] = xor i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i32 [[OR1]]
 ;
   %xor = xor i32 %y, %x
@@ -1019,13 +1017,11 @@ define i32 @test1(i32 %x, i32 %y) {
 
 define i32 @test2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[OR]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[XOR]], [[NEG]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[OR1:%.*]] = xor i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i32 [[OR1]]
 ;
-  %or = or i32 %y, %x
+  %or = or i32 %x, %y
   %neg = xor i32 %or, -1
   %xor = xor i32 %y, %x
   %or1 = or i32 %xor, %neg
@@ -1034,25 +1030,21 @@ define i32 @test2(i32 %x, i32 %y) {
 
 define i32 @test3(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[OR]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[XOR]], [[NEG]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[OR1:%.*]] = xor i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i32 [[OR1]]
 ;
   %or = or i32 %y, %x
   %neg = xor i32 %or, -1
-  %xor = xor i32 %y, %x
+  %xor = xor i32 %x, %y
   %or1 = or i32 %xor, %neg
   ret i32 %or1
 }
 
 define <2 x i32> @test4_vec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @test4_vec(
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[NEG:%.*]] = xor <2 x i32> [[OR]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i32> [[Y]], [[X]]
-; CHECK-NEXT:    [[OR1:%.*]] = or <2 x i32> [[XOR]], [[NEG]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[OR1:%.*]] = xor <2 x i32> [[TMP1]], <i32 -1, i32 -1>
 ; CHECK-NEXT:    ret <2 x i32> [[OR1]]
 ;
   %or = or <2 x i32> %y, %x
@@ -1066,9 +1058,9 @@ define i32 @test5_use(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test5_use(
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[OR]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y]], [[X]]
 ; CHECK-NEXT:    call void @use(i32 [[NEG]])
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[XOR]], [[NEG]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[Y]], [[X]]
+; CHECK-NEXT:    [[OR1:%.*]] = xor i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i32 [[OR1]]
 ;
   %or = or i32 %y, %x
@@ -1081,11 +1073,10 @@ define i32 @test5_use(i32 %x, i32 %y) {
 
 define i32 @test5_use2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test5_use2(
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[OR]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y]], [[X]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    call void @use(i32 [[XOR]])
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[XOR]], [[NEG]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[Y]], [[X]]
+; CHECK-NEXT:    [[OR1:%.*]] = xor i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i32 [[OR1]]
 ;
   %or = or i32 %y, %x
