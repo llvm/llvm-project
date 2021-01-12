@@ -2,6 +2,7 @@
 ; RUN: opt < %s -instcombine -S | FileCheck %s
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:128:128-n32:64"
+declare void @use(i32)
 
 define i32 @test12(i32 %A) {
         ; Should be eliminated
@@ -1000,3 +1001,116 @@ end:
   %conv8 = zext i1 %t5 to i32
   ret i32 %conv8
 }
+
+define i32 @test1(i32 %x, i32 %y) {
+; CHECK-LABEL: @test1(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y]], [[X]]
+; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[OR]], -1
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[XOR]], [[NEG]]
+; CHECK-NEXT:    ret i32 [[OR1]]
+;
+  %xor = xor i32 %y, %x
+  %or = or i32 %y, %x
+  %neg = xor i32 %or, -1
+  %or1 = or i32 %xor, %neg
+  ret i32 %or1
+}
+
+define i32 @test2(i32 %x, i32 %y) {
+; CHECK-LABEL: @test2(
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[OR]], -1
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y]], [[X]]
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[XOR]], [[NEG]]
+; CHECK-NEXT:    ret i32 [[OR1]]
+;
+  %or = or i32 %y, %x
+  %neg = xor i32 %or, -1
+  %xor = xor i32 %y, %x
+  %or1 = or i32 %xor, %neg
+  ret i32 %or1
+}
+
+define i32 @test3(i32 %x, i32 %y) {
+; CHECK-LABEL: @test3(
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[OR]], -1
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y]], [[X]]
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[XOR]], [[NEG]]
+; CHECK-NEXT:    ret i32 [[OR1]]
+;
+  %or = or i32 %y, %x
+  %neg = xor i32 %or, -1
+  %xor = xor i32 %y, %x
+  %or1 = or i32 %xor, %neg
+  ret i32 %or1
+}
+
+define <2 x i32> @test4_vec(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @test4_vec(
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = xor <2 x i32> [[OR]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i32> [[Y]], [[X]]
+; CHECK-NEXT:    [[OR1:%.*]] = or <2 x i32> [[XOR]], [[NEG]]
+; CHECK-NEXT:    ret <2 x i32> [[OR1]]
+;
+  %or = or <2 x i32> %y, %x
+  %neg = xor <2 x i32> %or, <i32 -1, i32 -1>
+  %xor = xor <2 x i32> %y, %x
+  %or1 = or <2 x i32> %xor, %neg
+  ret <2 x i32> %or1
+}
+
+define i32 @test5_use(i32 %x, i32 %y) {
+; CHECK-LABEL: @test5_use(
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[OR]], -1
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y]], [[X]]
+; CHECK-NEXT:    call void @use(i32 [[NEG]])
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[XOR]], [[NEG]]
+; CHECK-NEXT:    ret i32 [[OR1]]
+;
+  %or = or i32 %y, %x
+  %neg = xor i32 %or, -1
+  %xor = xor i32 %y, %x
+  call void @use(i32 %neg)
+  %or1 = or i32 %xor, %neg
+  ret i32 %or1
+}
+
+define i32 @test5_use2(i32 %x, i32 %y) {
+; CHECK-LABEL: @test5_use2(
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[OR]], -1
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y]], [[X]]
+; CHECK-NEXT:    call void @use(i32 [[XOR]])
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[XOR]], [[NEG]]
+; CHECK-NEXT:    ret i32 [[OR1]]
+;
+  %or = or i32 %y, %x
+  %neg = xor i32 %or, -1
+  %xor = xor i32 %y, %x
+  call void @use(i32 %xor)
+  %or1 = or i32 %xor, %neg
+  ret i32 %or1
+}
+define i32 @test5_use3(i32 %x, i32 %y) {
+; CHECK-LABEL: @test5_use3(
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[OR]], -1
+; CHECK-NEXT:    call void @use(i32 [[NEG]])
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y]], [[X]]
+; CHECK-NEXT:    call void @use(i32 [[XOR]])
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[XOR]], [[NEG]]
+; CHECK-NEXT:    ret i32 [[OR1]]
+;
+  %or = or i32 %y, %x
+  %neg = xor i32 %or, -1
+  call void @use(i32 %neg)
+  %xor = xor i32 %y, %x
+  call void @use(i32 %xor)
+  %or1 = or i32 %xor, %neg
+  ret i32 %or1
+}
+
