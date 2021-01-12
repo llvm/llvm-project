@@ -11,8 +11,8 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: foo
     ; CHECK: renamable $eax = IMPLICIT_DEF
-    ; CHECK: renamable $edx = MOVZX32rm8 renamable $eax, 1, $noreg, 0, $noreg :: (load 1 from `i168* undef` + 20, align 16)
-    ; CHECK: dead renamable $ecx = MOV32rm renamable $eax, 1, $noreg, 0, $noreg :: (load 4 from `i168* undef` + 12, align 16)
+    ; CHECK: renamable $edx = MOVZX32rm8 renamable $eax, 1, $noreg, 0, $noreg :: (load 1 from `i168* undef` + 20, align 4, basealign 16)
+    ; CHECK: dead renamable $ecx = MOV32rm renamable $eax, 1, $noreg, 0, $noreg :: (load 4 from `i168* undef` + 12, basealign 16)
     ; CHECK: renamable $al = MOV8rm killed renamable $eax, 1, $noreg, 0, $noreg :: (load 1 from `i32* undef`, align 4)
     ; CHECK: dead renamable $ecx = COPY renamable $edx
     ; CHECK: dead renamable $ecx = COPY renamable $edx
@@ -26,8 +26,8 @@ body:             |
     ; CHECK: dead renamable $eax = SHRD32rrCL renamable $eax, killed renamable $edx, implicit-def dead $eflags, implicit killed $cl
     ; CHECK: RETL
     %0:gr32 = IMPLICIT_DEF
-    %1:gr32 = MOVZX32rm8 %0, 1, $noreg, 0, $noreg :: (load 1 from `i168* undef` + 20, align 16)
-    %2:gr32 = MOV32rm %0, 1, $noreg, 0, $noreg :: (load 4 from `i168* undef` + 12, align 16)
+    %1:gr32 = MOVZX32rm8 %0, 1, $noreg, 0, $noreg :: (load 1 from `i168* undef` + 20, align 4, basealign 16)
+    %2:gr32 = MOV32rm %0, 1, $noreg, 0, $noreg :: (load 4 from `i168* undef` + 12, basealign 16)
     %3:gr8 = MOV8rm %0, 1, $noreg, 0, $noreg :: (load 1 from `i32* undef`, align 4)
     %4:gr32 = COPY %1
     %5:gr32 = COPY %1
