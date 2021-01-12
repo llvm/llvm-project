@@ -305,24 +305,20 @@ if.then:
   unreachable
 }
 
-; TODO: feq.s+sltiu+bne -> feq.s+beq
 define void @br_fcmp_one(double %a, double %b) nounwind {
 ; RV32IFD-LABEL: br_fcmp_one:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
 ; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    sw a0, 0(sp)
-; RV32IFD-NEXT:    sw a1, 4(sp)
-; RV32IFD-NEXT:    fld ft0, 0(sp)
 ; RV32IFD-NEXT:    sw a2, 0(sp)
 ; RV32IFD-NEXT:    sw a3, 4(sp)
+; RV32IFD-NEXT:    fld ft0, 0(sp)
+; RV32IFD-NEXT:    sw a0, 0(sp)
+; RV32IFD-NEXT:    sw a1, 4(sp)
 ; RV32IFD-NEXT:    fld ft1, 0(sp)
-; RV32IFD-NEXT:    feq.d a0, ft1, ft1
-; RV32IFD-NEXT:    feq.d a1, ft0, ft0
-; RV32IFD-NEXT:    and a0, a1, a0
-; RV32IFD-NEXT:    feq.d a1, ft0, ft1
-; RV32IFD-NEXT:    not a1, a1
-; RV32IFD-NEXT:    and a0, a1, a0
+; RV32IFD-NEXT:    flt.d a0, ft1, ft0
+; RV32IFD-NEXT:    flt.d a1, ft0, ft1
+; RV32IFD-NEXT:    or a0, a1, a0
 ; RV32IFD-NEXT:    bnez a0, .LBB7_2
 ; RV32IFD-NEXT:  # %bb.1: # %if.else
 ; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -335,14 +331,11 @@ define void @br_fcmp_one(double %a, double %b) nounwind {
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
 ; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    fmv.d.x ft0, a0
-; RV64IFD-NEXT:    fmv.d.x ft1, a1
-; RV64IFD-NEXT:    feq.d a0, ft1, ft1
-; RV64IFD-NEXT:    feq.d a1, ft0, ft0
-; RV64IFD-NEXT:    and a0, a1, a0
-; RV64IFD-NEXT:    feq.d a1, ft0, ft1
-; RV64IFD-NEXT:    not a1, a1
-; RV64IFD-NEXT:    and a0, a1, a0
+; RV64IFD-NEXT:    fmv.d.x ft0, a1
+; RV64IFD-NEXT:    fmv.d.x ft1, a0
+; RV64IFD-NEXT:    flt.d a0, ft1, ft0
+; RV64IFD-NEXT:    flt.d a1, ft0, ft1
+; RV64IFD-NEXT:    or a0, a1, a0
 ; RV64IFD-NEXT:    bnez a0, .LBB7_2
 ; RV64IFD-NEXT:  # %bb.1: # %if.else
 ; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -417,13 +410,11 @@ define void @br_fcmp_ueq(double %a, double %b) nounwind {
 ; RV32IFD-NEXT:    sw a0, 0(sp)
 ; RV32IFD-NEXT:    sw a1, 4(sp)
 ; RV32IFD-NEXT:    fld ft1, 0(sp)
-; RV32IFD-NEXT:    feq.d a0, ft1, ft0
-; RV32IFD-NEXT:    feq.d a1, ft0, ft0
-; RV32IFD-NEXT:    feq.d a2, ft1, ft1
-; RV32IFD-NEXT:    and a1, a2, a1
-; RV32IFD-NEXT:    xori a1, a1, 1
-; RV32IFD-NEXT:    or a0, a0, a1
-; RV32IFD-NEXT:    bnez a0, .LBB9_2
+; RV32IFD-NEXT:    flt.d a0, ft1, ft0
+; RV32IFD-NEXT:    flt.d a1, ft0, ft1
+; RV32IFD-NEXT:    or a0, a1, a0
+; RV32IFD-NEXT:    addi a1, zero, 1
+; RV32IFD-NEXT:    bne a0, a1, .LBB9_2
 ; RV32IFD-NEXT:  # %bb.1: # %if.else
 ; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
@@ -437,13 +428,11 @@ define void @br_fcmp_ueq(double %a, double %b) nounwind {
 ; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64IFD-NEXT:    fmv.d.x ft0, a1
 ; RV64IFD-NEXT:    fmv.d.x ft1, a0
-; RV64IFD-NEXT:    feq.d a0, ft1, ft0
-; RV64IFD-NEXT:    feq.d a1, ft0, ft0
-; RV64IFD-NEXT:    feq.d a2, ft1, ft1
-; RV64IFD-NEXT:    and a1, a2, a1
-; RV64IFD-NEXT:    xori a1, a1, 1
-; RV64IFD-NEXT:    or a0, a0, a1
-; RV64IFD-NEXT:    bnez a0, .LBB9_2
+; RV64IFD-NEXT:    flt.d a0, ft1, ft0
+; RV64IFD-NEXT:    flt.d a1, ft0, ft1
+; RV64IFD-NEXT:    or a0, a1, a0
+; RV64IFD-NEXT:    addi a1, zero, 1
+; RV64IFD-NEXT:    bne a0, a1, .LBB9_2
 ; RV64IFD-NEXT:  # %bb.1: # %if.else
 ; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
