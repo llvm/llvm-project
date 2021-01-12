@@ -14,3 +14,14 @@ define i1 @test(i32 %In) {
   ret i1 %V
 }
 
+define i1 @test_logical(i32 %In) {
+; CHECK-LABEL: @test_logical(
+; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[IN:%.*]], 1
+; CHECK-NEXT:    ret i1 [[C2]]
+;
+  %c1 = icmp sgt i32 %In, -1
+  %c2 = icmp eq i32 %In, 1
+  %V = select i1 %c1, i1 %c2, i1 false
+  ret i1 %V
+}
+

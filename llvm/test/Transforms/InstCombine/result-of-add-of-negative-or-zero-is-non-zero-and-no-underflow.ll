@@ -22,6 +22,22 @@ define i1 @t0(i8 %base, i8 %offset) {
   ret i1 %r
 }
 
+define i1 @t0_logical(i8 %base, i8 %offset) {
+; CHECK-LABEL: @t0_logical(
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE:%.*]], [[OFFSET:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[OFFSET]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i8 [[TMP1]], [[BASE]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  %adjusted = add i8 %base, %offset
+  call void @use8(i8 %adjusted)
+  %not_null = icmp ne i8 %adjusted, 0
+  %no_underflow = icmp ule i8 %adjusted, %base
+  %r = select i1 %not_null, i1 %no_underflow, i1 false
+  ret i1 %r
+}
+
 ; We need to produce extra instruction, so one of icmp's must go away.
 define i1 @t1_oneuse0(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t1_oneuse0(
@@ -41,6 +57,25 @@ define i1 @t1_oneuse0(i8 %base, i8 %offset) {
   %r = and i1 %not_null, %no_underflow
   ret i1 %r
 }
+
+define i1 @t1_oneuse0_logical(i8 %base, i8 %offset) {
+; CHECK-LABEL: @t1_oneuse0_logical(
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE:%.*]], [[OFFSET:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
+; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i8 [[ADJUSTED]], 0
+; CHECK-NEXT:    call void @use1(i1 [[NOT_NULL]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[OFFSET]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i8 [[TMP1]], [[BASE]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  %adjusted = add i8 %base, %offset
+  call void @use8(i8 %adjusted)
+  %not_null = icmp ne i8 %adjusted, 0
+  call void @use1(i1 %not_null)
+  %no_underflow = icmp ule i8 %adjusted, %base
+  %r = select i1 %not_null, i1 %no_underflow, i1 false
+  ret i1 %r
+}
 define i1 @t2_oneuse1(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t2_oneuse1(
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE:%.*]], [[OFFSET:%.*]]
@@ -57,6 +92,25 @@ define i1 @t2_oneuse1(i8 %base, i8 %offset) {
   %no_underflow = icmp ule i8 %adjusted, %base
   call void @use1(i1 %no_underflow)
   %r = and i1 %not_null, %no_underflow
+  ret i1 %r
+}
+
+define i1 @t2_oneuse1_logical(i8 %base, i8 %offset) {
+; CHECK-LABEL: @t2_oneuse1_logical(
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE:%.*]], [[OFFSET:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
+; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ule i8 [[ADJUSTED]], [[BASE]]
+; CHECK-NEXT:    call void @use1(i1 [[NO_UNDERFLOW]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[OFFSET]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i8 [[TMP1]], [[BASE]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  %adjusted = add i8 %base, %offset
+  call void @use8(i8 %adjusted)
+  %not_null = icmp ne i8 %adjusted, 0
+  %no_underflow = icmp ule i8 %adjusted, %base
+  call void @use1(i1 %no_underflow)
+  %r = select i1 %not_null, i1 %no_underflow, i1 false
   ret i1 %r
 }
 define i1 @n3_oneuse2_bad(i8 %base, i8 %offset) {
@@ -80,6 +134,27 @@ define i1 @n3_oneuse2_bad(i8 %base, i8 %offset) {
   ret i1 %r
 }
 
+define i1 @n3_oneuse2_bad_logical(i8 %base, i8 %offset) {
+; CHECK-LABEL: @n3_oneuse2_bad_logical(
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE:%.*]], [[OFFSET:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
+; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i8 [[ADJUSTED]], 0
+; CHECK-NEXT:    call void @use1(i1 [[NOT_NULL]])
+; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ule i8 [[ADJUSTED]], [[BASE]]
+; CHECK-NEXT:    call void @use1(i1 [[NO_UNDERFLOW]])
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[NOT_NULL]], [[NO_UNDERFLOW]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %adjusted = add i8 %base, %offset
+  call void @use8(i8 %adjusted)
+  %not_null = icmp ne i8 %adjusted, 0
+  call void @use1(i1 %not_null)
+  %no_underflow = icmp ule i8 %adjusted, %base
+  call void @use1(i1 %no_underflow)
+  %r = select i1 %not_null, i1 %no_underflow, i1 false
+  ret i1 %r
+}
+
 define i1 @t4_commutativity0(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t4_commutativity0(
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE:%.*]], [[OFFSET:%.*]]
@@ -93,6 +168,22 @@ define i1 @t4_commutativity0(i8 %base, i8 %offset) {
   %not_null = icmp ne i8 %adjusted, 0
   %no_underflow = icmp ule i8 %adjusted, %base
   %r = and i1 %no_underflow, %not_null ; swapped
+  ret i1 %r
+}
+
+define i1 @t4_commutativity0_logical(i8 %base, i8 %offset) {
+; CHECK-LABEL: @t4_commutativity0_logical(
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE:%.*]], [[OFFSET:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[OFFSET]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i8 [[TMP1]], [[BASE]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  %adjusted = add i8 %base, %offset
+  call void @use8(i8 %adjusted)
+  %not_null = icmp ne i8 %adjusted, 0
+  %no_underflow = icmp ule i8 %adjusted, %base
+  %r = select i1 %no_underflow, i1 %not_null, i1 false ; swapped
   ret i1 %r
 }
 define i1 @t5_commutativity1(i8 %base, i8 %offset) {
@@ -110,6 +201,22 @@ define i1 @t5_commutativity1(i8 %base, i8 %offset) {
   %r = and i1 %not_null, %no_underflow
   ret i1 %r
 }
+
+define i1 @t5_commutativity1_logical(i8 %base, i8 %offset) {
+; CHECK-LABEL: @t5_commutativity1_logical(
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE:%.*]], [[OFFSET:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[OFFSET]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i8 [[TMP1]], [[BASE]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  %adjusted = add i8 %base, %offset
+  call void @use8(i8 %adjusted)
+  %not_null = icmp ne i8 %adjusted, 0
+  %no_underflow = icmp uge i8 %base, %adjusted ; swapped
+  %r = select i1 %not_null, i1 %no_underflow, i1 false
+  ret i1 %r
+}
 define i1 @t6_commutativity3(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t6_commutativity3(
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE:%.*]], [[OFFSET:%.*]]
@@ -123,6 +230,22 @@ define i1 @t6_commutativity3(i8 %base, i8 %offset) {
   %not_null = icmp ne i8 %adjusted, 0
   %no_underflow = icmp uge i8 %base, %adjusted ; swapped
   %r = and i1 %no_underflow, %not_null ; swapped
+  ret i1 %r
+}
+
+define i1 @t6_commutativity3_logical(i8 %base, i8 %offset) {
+; CHECK-LABEL: @t6_commutativity3_logical(
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE:%.*]], [[OFFSET:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[OFFSET]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i8 [[TMP1]], [[BASE]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  %adjusted = add i8 %base, %offset
+  call void @use8(i8 %adjusted)
+  %not_null = icmp ne i8 %adjusted, 0
+  %no_underflow = icmp uge i8 %base, %adjusted ; swapped
+  %r = select i1 %no_underflow, i1 %not_null, i1 false ; swapped
   ret i1 %r
 }
 
@@ -143,6 +266,22 @@ define i1 @t7(i8 %base, i8 %offset) {
   ret i1 %r
 }
 
+define i1 @t7_logical(i8 %base, i8 %offset) {
+; CHECK-LABEL: @t7_logical(
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE:%.*]], [[OFFSET:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[ADJUSTED]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge i8 [[TMP1]], [[BASE]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  %adjusted = add i8 %base, %offset
+  call void @use8(i8 %adjusted)
+  %not_null = icmp eq i8 %adjusted, 0
+  %no_underflow = icmp ugt i8 %adjusted, %base
+  %r = select i1 %not_null, i1 true, i1 %no_underflow
+  ret i1 %r
+}
+
 ; The comparison can be with any of the values being added.
 define i1 @t8(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t8(
@@ -157,5 +296,21 @@ define i1 @t8(i8 %base, i8 %offset) {
   %not_null = icmp ne i8 %adjusted, 0
   %no_underflow = icmp ule i8 %adjusted, %offset
   %r = and i1 %not_null, %no_underflow
+  ret i1 %r
+}
+
+define i1 @t8_logical(i8 %base, i8 %offset) {
+; CHECK-LABEL: @t8_logical(
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE:%.*]], [[OFFSET:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[BASE]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i8 [[TMP1]], [[OFFSET]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  %adjusted = add i8 %base, %offset
+  call void @use8(i8 %adjusted)
+  %not_null = icmp ne i8 %adjusted, 0
+  %no_underflow = icmp ule i8 %adjusted, %offset
+  %r = select i1 %not_null, i1 %no_underflow, i1 false
   ret i1 %r
 }
