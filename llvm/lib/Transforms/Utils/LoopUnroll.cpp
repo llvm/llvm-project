@@ -288,14 +288,12 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
                                   OptimizationRemarkEmitter *ORE,
                                   bool PreserveLCSSA, Loop **RemainderLoop) {
 
-  BasicBlock *Preheader = L->getLoopPreheader();
-  if (!Preheader) {
+  if (!L->getLoopPreheader()) {
     LLVM_DEBUG(dbgs() << "  Can't unroll; loop preheader-insertion failed.\n");
     return LoopUnrollResult::Unmodified;
   }
 
-  BasicBlock *LatchBlock = L->getLoopLatch();
-  if (!LatchBlock) {
+  if (!L->getLoopLatch()) {
     LLVM_DEBUG(dbgs() << "  Can't unroll; loop exit-block-insertion failed.\n");
     return LoopUnrollResult::Unmodified;
   }
@@ -306,37 +304,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     return LoopUnrollResult::Unmodified;
   }
 
-  // The current loop unroll pass can unroll loops that have
-  // (1) single latch; and
-  // (2a) latch is unconditional; or
-  // (2b) latch is conditional and is an exiting block
-  // FIXME: The implementation can be extended to work with more complicated
-  // cases, e.g. loops with multiple latches.
-  BasicBlock *Header = L->getHeader();
-  BranchInst *LatchBI = dyn_cast<BranchInst>(LatchBlock->getTerminator());
-
-  // A conditional branch which exits the loop, which can be optimized to an
-  // unconditional branch in the unrolled loop in some cases.
-  BranchInst *ExitingBI = nullptr;
-  bool LatchIsExiting = L->isLoopExiting(LatchBlock);
-  if (LatchIsExiting)
-    ExitingBI = LatchBI;
-  else if (BasicBlock *ExitingBlock = L->getExitingBlock())
-    ExitingBI = dyn_cast<BranchInst>(ExitingBlock->getTerminator());
-  if (!LatchBI || (LatchBI->isConditional() && !LatchIsExiting)) {
-    LLVM_DEBUG(
-        dbgs() << "Can't unroll; a conditional latch must exit the loop");
-    return LoopUnrollResult::Unmodified;
-  }
-  LLVM_DEBUG({
-    if (ExitingBI)
-      dbgs() << "  Exiting Block = " << ExitingBI->getParent()->getName()
-             << "\n";
-    else
-      dbgs() << "  No single exiting block\n";
-  });
-
-  if (Header->hasAddressTaken()) {
+  if (L->getHeader()->hasAddressTaken()) {
     // The loop-rotate pass can be helpful to avoid this in many cases.
     LLVM_DEBUG(
         dbgs() << "  Won't unroll loop: address of header block is taken.\n");
@@ -365,20 +333,6 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   // Are we eliminating the loop control altogether?
   bool CompletelyUnroll = ULO.Count == ULO.TripCount;
-  SmallVector<BasicBlock *, 4> ExitBlocks;
-  L->getExitBlocks(ExitBlocks);
-  std::vector<BasicBlock*> OriginalLoopBlocks = L->getBlocks();
-
-  // Go through all exits of L and see if there are any phi-nodes there. We just
-  // conservatively assume that they're inserted to preserve LCSSA form, which
-  // means that complete unrolling might break this form. We need to either fix
-  // it in-place after the transformation, or entirely rebuild LCSSA. TODO: For
-  // now we just recompute LCSSA for the outer loop, but it should be possible
-  // to fix it in-place.
-  bool NeedToFixLCSSA = PreserveLCSSA && CompletelyUnroll &&
-                        any_of(ExitBlocks, [](const BasicBlock *BB) {
-                          return isa<PHINode>(BB->begin());
-                        });
 
   // We assume a run-time trip count if the compiler cannot
   // figure out the loop trip count and the unroll-runtime
@@ -403,11 +357,62 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       BasicBlock *ExitingBlock = L->getLoopLatch();
       assert(ExitingBlock && "Loop without exiting block?");
       assert(L->isLoopExiting(ExitingBlock) && "Latch is not exiting?");
-      Preheader = L->getLoopPreheader();
       ULO.TripCount = SE->getSmallConstantTripCount(L, ExitingBlock);
       ULO.TripMultiple = SE->getSmallConstantTripMultiple(L, ExitingBlock);
     }
   }
+
+  // All these values should be taken only after peeling because they might have
+  // changed.
+  BasicBlock *Preheader = L->getLoopPreheader();
+  BasicBlock *Header = L->getHeader();
+  BasicBlock *LatchBlock = L->getLoopLatch();
+  SmallVector<BasicBlock *, 4> ExitBlocks;
+  L->getExitBlocks(ExitBlocks);
+  std::vector<BasicBlock *> OriginalLoopBlocks = L->getBlocks();
+
+  // Go through all exits of L and see if there are any phi-nodes there. We just
+  // conservatively assume that they're inserted to preserve LCSSA form, which
+  // means that complete unrolling might break this form. We need to either fix
+  // it in-place after the transformation, or entirely rebuild LCSSA. TODO: For
+  // now we just recompute LCSSA for the outer loop, but it should be possible
+  // to fix it in-place.
+  bool NeedToFixLCSSA =
+      PreserveLCSSA && CompletelyUnroll &&
+      any_of(ExitBlocks,
+             [](const BasicBlock *BB) { return isa<PHINode>(BB->begin()); });
+
+  // The current loop unroll pass can unroll loops that have
+  // (1) single latch; and
+  // (2a) latch is unconditional; or
+  // (2b) latch is conditional and is an exiting block
+  // FIXME: The implementation can be extended to work with more complicated
+  // cases, e.g. loops with multiple latches.
+  BranchInst *LatchBI = dyn_cast<BranchInst>(LatchBlock->getTerminator());
+
+  // A conditional branch which exits the loop, which can be optimized to an
+  // unconditional branch in the unrolled loop in some cases.
+  BranchInst *ExitingBI = nullptr;
+  bool LatchIsExiting = L->isLoopExiting(LatchBlock);
+  if (LatchIsExiting)
+    ExitingBI = LatchBI;
+  else if (BasicBlock *ExitingBlock = L->getExitingBlock())
+    ExitingBI = dyn_cast<BranchInst>(ExitingBlock->getTerminator());
+  if (!LatchBI || (LatchBI->isConditional() && !LatchIsExiting)) {
+    // If the peeling guard is changed this assert may be relaxed or even
+    // deleted.
+    assert(!Peeled && "Peeling guard changed!");
+    LLVM_DEBUG(
+        dbgs() << "Can't unroll; a conditional latch must exit the loop");
+    return LoopUnrollResult::Unmodified;
+  }
+  LLVM_DEBUG({
+    if (ExitingBI)
+      dbgs() << "  Exiting Block = " << ExitingBI->getParent()->getName()
+             << "\n";
+    else
+      dbgs() << "  No single exiting block\n";
+  });
 
   // Loops containing convergent instructions must have a count that divides
   // their TripMultiple.
