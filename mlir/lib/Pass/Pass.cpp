@@ -246,6 +246,7 @@ OpPassManager::OpPassManager(OpPassManager &&rhs) : impl(std::move(rhs.impl)) {}
 OpPassManager::OpPassManager(const OpPassManager &rhs) { *this = rhs; }
 OpPassManager &OpPassManager::operator=(const OpPassManager &rhs) {
   impl.reset(new OpPassManagerImpl(rhs.impl->name, rhs.impl->nesting));
+  impl->initializationGeneration = rhs.impl->initializationGeneration;
   for (auto &pass : rhs.impl->passes)
     impl->passes.emplace_back(pass->clone());
   return *this;
