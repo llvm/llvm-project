@@ -2834,9 +2834,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   if (TrappingMath) {
     // FP Exception Behavior is also set to strict
     assert(FPExceptionBehavior.equals("strict"));
-    CmdArgs.push_back("-ftrapping-math");
-  } else if (TrappingMathPresent)
-    CmdArgs.push_back("-fno-trapping-math");
+  }
 
   // The default is IEEE.
   if (DenormalFPMath != llvm::DenormalMode::getIEEE()) {

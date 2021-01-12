@@ -1622,8 +1622,8 @@ def frounding_math : Flag<["-"], "frounding-math">, Group<f_Group>, Flags<[CC1Op
   MarshallingInfoFlag<"LangOpts->FPRoundingMode", "llvm::RoundingMode::NearestTiesToEven">,
   Normalizer<"makeFlagToValueNormalizer(llvm::RoundingMode::Dynamic)">;
 def fno_rounding_math : Flag<["-"], "fno-rounding-math">, Group<f_Group>, Flags<[CC1Option]>;
-def ftrapping_math : Flag<["-"], "ftrapping-math">, Group<f_Group>, Flags<[CC1Option]>;
-def fno_trapping_math : Flag<["-"], "fno-trapping-math">, Group<f_Group>, Flags<[CC1Option]>;
+def ftrapping_math : Flag<["-"], "ftrapping-math">, Group<f_Group>;
+def fno_trapping_math : Flag<["-"], "fno-trapping-math">, Group<f_Group>;
 def ffp_contract : Joined<["-"], "ffp-contract=">, Group<f_Group>,
   Flags<[CC1Option]>, HelpText<"Form fused FP ops (e.g. FMAs):"
   " fast (fuses across statements disregarding pragmas)"
