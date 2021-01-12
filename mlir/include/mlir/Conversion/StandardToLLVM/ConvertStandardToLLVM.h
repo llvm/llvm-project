@@ -533,7 +533,7 @@ protected:
   ///                  : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
   /// `sizeBytes`  = llvm.ptrtoint %gep : !llvm.ptr<f32> to i64
   void getMemRefDescriptorSizes(Location loc, MemRefType memRefType,
-                                ArrayRef<Value> dynamicSizes,
+                                ValueRange dynamicSizes,
                                 ConversionPatternRewriter &rewriter,
                                 SmallVectorImpl<Value> &sizes,
                                 SmallVectorImpl<Value> &strides,
