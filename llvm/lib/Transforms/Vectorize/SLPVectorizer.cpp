@@ -6857,49 +6857,48 @@ public:
 
       // Visit left or right.
       Value *NextV = TreeN->getOperand(EdgeToVisit);
-      if (NextV != Phi) {
-        auto *I = dyn_cast<Instruction>(NextV);
-        OpData = getOperationData(I);
-        // Continue analysis if the next operand is a reduction operation or
-        // (possibly) a reduced value. If the reduced value opcode is not set,
-        // the first met operation != reduction operation is considered as the
-        // reduced value class.
-        const bool IsRdxInst = OpData == RdxTreeInst;
-        if (I && (!RdxLeafVal || OpData == RdxLeafVal || IsRdxInst)) {
-          // Only handle trees in the current basic block.
-          if (!RdxTreeInst.hasSameParent(I, B->getParent(), IsRdxInst)) {
-            // I is an extra argument for TreeN (its parent operation).
-            markExtraArg(Stack.back(), I);
-            continue;
-          }
-
-          // Each tree node needs to have minimal number of users except for the
-          // ultimate reduction.
-          if (!RdxTreeInst.hasRequiredNumberOfUses(I, IsRdxInst) && I != B) {
-            // I is an extra argument for TreeN (its parent operation).
-            markExtraArg(Stack.back(), I);
-            continue;
-          }
-
-          if (IsRdxInst) {
-            // We need to be able to reassociate the reduction operations.
-            if (!OpData.isAssociative(I)) {
-              // I is an extra argument for TreeN (its parent operation).
-              markExtraArg(Stack.back(), I);
-              continue;
-            }
-          } else if (RdxLeafVal && RdxLeafVal != OpData) {
-            // Make sure that the opcodes of the operations that we are going to
-            // reduce match.
-            // I is an extra argument for TreeN (its parent operation).
-            markExtraArg(Stack.back(), I);
-            continue;
-          } else if (!RdxLeafVal) {
-            RdxLeafVal = OpData;
-          }
-          Stack.push_back(std::make_pair(I, OpData.getFirstOperandIndex()));
+      auto *I = dyn_cast<Instruction>(NextV);
+      OpData = getOperationData(I);
+      // Continue analysis if the next operand is a reduction operation or
+      // (possibly) a reduced value. If the reduced value opcode is not set,
+      // the first met operation != reduction operation is considered as the
+      // reduced value class.
+      const bool IsRdxInst = OpData == RdxTreeInst;
+      if (I && I != Phi &&
+          (!RdxLeafVal || OpData == RdxLeafVal || IsRdxInst)) {
+        // Only handle trees in the current basic block.
+        if (!RdxTreeInst.hasSameParent(I, B->getParent(), IsRdxInst)) {
+          // I is an extra argument for TreeN (its parent operation).
+          markExtraArg(Stack.back(), I);
           continue;
         }
+
+        // Each tree node needs to have minimal number of users except for the
+        // ultimate reduction.
+        if (!RdxTreeInst.hasRequiredNumberOfUses(I, IsRdxInst) && I != B) {
+          // I is an extra argument for TreeN (its parent operation).
+          markExtraArg(Stack.back(), I);
+          continue;
+        }
+
+        if (IsRdxInst) {
+          // We need to be able to reassociate the reduction operations.
+          if (!OpData.isAssociative(I)) {
+            // I is an extra argument for TreeN (its parent operation).
+            markExtraArg(Stack.back(), I);
+            continue;
+          }
+        } else if (RdxLeafVal && RdxLeafVal != OpData) {
+          // Make sure that the opcodes of the operations that we are going to
+          // reduce match.
+          // I is an extra argument for TreeN (its parent operation).
+          markExtraArg(Stack.back(), I);
+          continue;
+        } else if (!RdxLeafVal) {
+          RdxLeafVal = OpData;
+        }
+        Stack.push_back(std::make_pair(I, OpData.getFirstOperandIndex()));
+        continue;
       }
       // NextV is an extra argument for TreeN (its parent operation).
       markExtraArg(Stack.back(), NextV);
