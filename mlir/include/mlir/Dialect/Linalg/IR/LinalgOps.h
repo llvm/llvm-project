@@ -56,6 +56,7 @@ SmallVector<Value, 4> applyMapToValues(OpBuilder &b, Location loc,
 LoopRangeBuilder defaultLoopRangesBuilder(LinalgOp op);
 
 using ReassociationIndices = SmallVector<int64_t, 2>;
+using ReassociationIndicesRef = ArrayRef<int64_t>;
 using ReassociationExprs = SmallVector<AffineExpr, 2>;
 
 /// Returns the name mangled library call name to disambiguate between different
