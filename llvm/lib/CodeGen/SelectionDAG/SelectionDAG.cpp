@@ -10085,6 +10085,8 @@ SDNode *SelectionDAG::isConstantIntBuildVectorOrConstantInt(SDValue N) const {
   return nullptr;
 }
 
+// Returns the SDNode if it is a constant float BuildVector
+// or constant float.
 SDNode *SelectionDAG::isConstantFPBuildVectorOrConstantFP(SDValue N) const {
   if (isa<ConstantFPSDNode>(N))
     return N.getNode();
