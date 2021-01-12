@@ -546,8 +546,10 @@ BasicBlock *llvm::SplitBlock(BasicBlock *Old, Instruction *SplitPt,
                              DominatorTree *DT, LoopInfo *LI,
                              MemorySSAUpdater *MSSAU, const Twine &BBName,
                              bool Before) {
-  if (Before)
-    return splitBlockBefore(Old, SplitPt, DT, LI, MSSAU, BBName);
+  if (Before) {
+    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+    return splitBlockBefore(Old, SplitPt, &DTU, LI, MSSAU, BBName);
+  }
   BasicBlock::iterator SplitIt = SplitPt->getIterator();
   while (isa<PHINode>(SplitIt) || SplitIt->isEHPad())
     ++SplitIt;
@@ -580,7 +582,7 @@ BasicBlock *llvm::SplitBlock(BasicBlock *Old, Instruction *SplitPt,
 }
 
 BasicBlock *llvm::splitBlockBefore(BasicBlock *Old, Instruction *SplitPt,
-                                   DominatorTree *DT, LoopInfo *LI,
+                                   DomTreeUpdater *DTU, LoopInfo *LI,
                                    MemorySSAUpdater *MSSAU,
                                    const Twine &BBName) {
 
@@ -598,25 +600,25 @@ BasicBlock *llvm::splitBlockBefore(BasicBlock *Old, Instruction *SplitPt,
     if (Loop *L = LI->getLoopFor(Old))
       L->addBasicBlockToLoop(New, *LI);
 
-  if (DT) {
-    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+  if (DTU) {
     SmallVector<DominatorTree::UpdateType, 8> DTUpdates;
     // New dominates Old. The predecessor nodes of the Old node dominate
     // New node.
+    SmallSetVector<BasicBlock *, 8> UniquePredecessorsOfOld(pred_begin(New),
+                                                            pred_end(New));
     DTUpdates.push_back({DominatorTree::Insert, New, Old});
-    for (BasicBlock *Pred : predecessors(New))
-      if (DT->getNode(Pred)) {
-        DTUpdates.push_back({DominatorTree::Insert, Pred, New});
-        DTUpdates.push_back({DominatorTree::Delete, Pred, Old});
-      }
+    DTUpdates.reserve(DTUpdates.size() + 2 * UniquePredecessorsOfOld.size());
+    for (BasicBlock *UniquePredecessorOfOld : UniquePredecessorsOfOld) {
+      DTUpdates.push_back({DominatorTree::Insert, UniquePredecessorOfOld, New});
+      DTUpdates.push_back({DominatorTree::Delete, UniquePredecessorOfOld, Old});
+    }
 
-    DTU.applyUpdates(DTUpdates);
-    DTU.flush();
+    DTU->applyUpdates(DTUpdates);
 
     // Move MemoryAccesses still tracked in Old, but part of New now.
     // Update accesses in successor blocks accordingly.
     if (MSSAU) {
-      MSSAU->applyUpdates(DTUpdates, *DT);
+      MSSAU->applyUpdates(DTUpdates, DTU->getDomTree());
       if (VerifyMemorySSA)
         MSSAU->getMemorySSA()->verifyMemorySSA();
     }
