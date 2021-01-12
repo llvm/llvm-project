@@ -338,4 +338,9 @@ public:
   }
 };
 
+// GCC still cannot handle the static data member like Clang so we still need
+// this part.
+constexpr const size_t MemoryManagerTy::BucketSize[];
+constexpr const int MemoryManagerTy::NumBuckets;
+
 #endif // LLVM_OPENMP_LIBOMPTARGET_PLUGINS_COMMON_MEMORYMANAGER_MEMORYMANAGER_H
