@@ -491,6 +491,7 @@ int ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
         {ISD::TRUNCATE, MVT::v4i32, MVT::v4i8, 0},
         {ISD::TRUNCATE, MVT::v8i16, MVT::v8i8, 0},
         {ISD::TRUNCATE, MVT::v8i32, MVT::v8i16, 1},
+        {ISD::TRUNCATE, MVT::v8i32, MVT::v8i8, 1},
         {ISD::TRUNCATE, MVT::v16i32, MVT::v16i8, 3},
         {ISD::TRUNCATE, MVT::v16i16, MVT::v16i8, 1},
     };
@@ -749,6 +750,18 @@ int ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
       return Lanes;
     else
       return Lanes * CallCost;
+  }
+
+  if (ISD == ISD::TRUNCATE && ST->hasMVEIntegerOps() &&
+      SrcTy.isFixedLengthVector()) {
+    // Treat a truncate with larger than legal source (128bits for MVE) as
+    // expensive, 2 instructions per lane.
+    if ((SrcTy.getScalarType() == MVT::i8 ||
+         SrcTy.getScalarType() == MVT::i16 ||
+         SrcTy.getScalarType() == MVT::i32) &&
+        SrcTy.getSizeInBits() > 128 &&
+        SrcTy.getSizeInBits() > DstTy.getSizeInBits())
+      return SrcTy.getVectorNumElements() * 2;
   }
 
   // Scalar integer conversion costs.
