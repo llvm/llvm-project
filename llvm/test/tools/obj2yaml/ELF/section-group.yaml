@@ -1,13 +1,15 @@
 ## Checks that the tool is able to read section groups from ELF.
 
+## Check how groups sections are dumped.
+## Check we don't dump the "EntSize" key when sh_entsize == 4.
+
 # RUN: yaml2obj %s -o %t1.o
 # RUN: obj2yaml %t1.o | FileCheck %s -DSEC=.rodata
 
-# CHECK:      - Name:    .group
-# CHECK-NEXT:   Type:    SHT_GROUP
-# CHECK-NEXT:   Link:    .symtab
-# CHECK-NEXT:   EntSize: 0x4
-# CHECK-NEXT:   Info:    signature
+# CHECK:      - Name: .group
+# CHECK-NEXT:   Type: SHT_GROUP
+# CHECK-NEXT:   Link: .symtab
+# CHECK-NEXT:   Info: signature
 # CHECK-NEXT:   Members:
 # CHECK-NEXT:     - SectionOrType: GRP_COMDAT
 # CHECK-NEXT:     - SectionOrType: [[SEC]]
@@ -19,10 +21,11 @@ FileHeader:
   Data:  ELFDATA2LSB
   Type:  ET_REL
 Sections:
-  - Name: .group
-    Type: SHT_GROUP
-    Link: .symtab
-    Info: [[INFO=signature]]
+  - Name:    .group
+    Type:    SHT_GROUP
+    Link:    .symtab
+    Info:    [[INFO=signature]]
+    EntSize: [[ENTSIZE=<none>]]
     Members:
       - SectionOrType: GRP_COMDAT
       - SectionOrType: [[SEC=.rodata]]
@@ -32,6 +35,14 @@ Symbols:
   - Name:    signature
     Type:    STT_OBJECT
     Section: .rodata
+
+## Document that yaml2obj can't dump the SHT_GROUP section when its sh_entsize != 4.
+
+# RUN: yaml2obj %s -DENTSIZE=0xfe -o %t1.entsize.o
+# RUN: not obj2yaml %t1.entsize.o 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t1.entsize.o --check-prefix=ENTSIZE
+
+# ENTSIZE: Error reading file: [[FILE]]: section [index 1] has invalid sh_entsize: expected 4, but got 254
 
 ## Check we are able to dump members of the SHT_GROUP section even when
 ## one of them has section index 0.
