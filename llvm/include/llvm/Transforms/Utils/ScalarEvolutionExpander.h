@@ -365,10 +365,6 @@ public:
 
   void setChainedPhi(PHINode *PN) { ChainedPhis.insert(PN); }
 
-  /// Try to find existing LLVM IR value for S available at the point At.
-  Value *getExactExistingExpansion(const SCEV *S, const Instruction *At,
-                                   Loop *L);
-
   /// Try to find the ValueOffsetPair for S. The function is mainly used to
   /// check whether S can be expanded cheaply.  If this returns a non-None
   /// value, we know we can codegen the `ValueOffsetPair` into a suitable
