@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/threads/mtx_lock.h"
 #include "config/linux/syscall.h" // For syscall functions.
 #include "include/sys/syscall.h"  // For syscall numbers.
 #include "include/threads.h"      // For mtx_t definition.

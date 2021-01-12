@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/math/roundl.h"
 #include "src/__support/common.h"
 #include "utils/FPUtil/NearestIntegerOperations.h"
 

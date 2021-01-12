@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/fenv/fesetround.h"
 #include "src/__support/common.h"
 #include "utils/FPUtil/FEnv.h"
 

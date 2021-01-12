@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/math/fabs.h"
 #include "src/__support/common.h"
 #include "utils/FPUtil/BasicOperations.h"
 

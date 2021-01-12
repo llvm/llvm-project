@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/math/nearbyintf.h"
 #include "src/__support/common.h"
 #include "utils/FPUtil/NearestIntegerOperations.h"
 
