@@ -1511,6 +1511,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLoadStore(MachineInstr *MI) {
                    .addReg(MO.getReg(), (isLd ? getDefRegState(true)
                                               : getKillRegState(MO.isKill())))
                    .cloneMemRefs(*MI);
+    (void)MIB;
     LLVM_DEBUG(dbgs() << "  Added new instruction: " << *MIB);
   } else if (isLd) {
     if (isAM2) {
@@ -1524,6 +1525,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLoadStore(MachineInstr *MI) {
                 .addImm(Pred)
                 .addReg(PredReg)
                 .cloneMemRefs(*MI);
+        (void)MIB;
         LLVM_DEBUG(dbgs() << "  Added new instruction: " << *MIB);
       } else {
         int Imm = ARM_AM::getAM2Opc(AddSub, Bytes, ARM_AM::no_shift);
@@ -1535,6 +1537,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLoadStore(MachineInstr *MI) {
                 .addImm(Imm)
                 .add(predOps(Pred, PredReg))
                 .cloneMemRefs(*MI);
+        (void)MIB;
         LLVM_DEBUG(dbgs() << "  Added new instruction: " << *MIB);
       }
     } else {
@@ -1546,6 +1549,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLoadStore(MachineInstr *MI) {
               .addImm(Offset)
               .add(predOps(Pred, PredReg))
               .cloneMemRefs(*MI);
+      (void)MIB;
       LLVM_DEBUG(dbgs() << "  Added new instruction: " << *MIB);
     }
   } else {
@@ -1563,6 +1567,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLoadStore(MachineInstr *MI) {
                      .addImm(Imm)
                      .add(predOps(Pred, PredReg))
                      .cloneMemRefs(*MI);
+      (void)MIB;
       LLVM_DEBUG(dbgs() << "  Added new instruction: " << *MIB);
     } else {
       // t2STR_PRE, t2STR_POST
@@ -1572,6 +1577,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLoadStore(MachineInstr *MI) {
                      .addImm(Offset)
                      .add(predOps(Pred, PredReg))
                      .cloneMemRefs(*MI);
+      (void)MIB;
       LLVM_DEBUG(dbgs() << "  Added new instruction: " << *MIB);
     }
   }
