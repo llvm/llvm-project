@@ -5,8 +5,18 @@
 
 func @expand16(%base: memref<?xf32>,
                %mask: vector<16xi1>,
-	       %pass_thru: vector<16xf32>) -> vector<16xf32> {
-  %e = vector.expandload %base, %mask, %pass_thru
+               %pass_thru: vector<16xf32>) -> vector<16xf32> {
+  %c0 = constant 0: index
+  %e = vector.expandload %base[%c0], %mask, %pass_thru
+    : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+  return %e : vector<16xf32>
+}
+
+func @expand16_at8(%base: memref<?xf32>,
+                   %mask: vector<16xi1>,
+                   %pass_thru: vector<16xf32>) -> vector<16xf32> {
+  %c8 = constant 8: index
+  %e = vector.expandload %base[%c8], %mask, %pass_thru
     : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
   return %e : vector<16xf32>
 }
@@ -77,6 +87,11 @@ func @entry() {
     : (memref<?xf32>, vector<16xi1>, vector<16xf32>) -> (vector<16xf32>)
   vector.print %e6 : vector<16xf32>
   // CHECK-NEXT: ( -7, 0, 7.7, 1, -7, -7, -7, 2, -7, -7, -7, 3, -7, 4, 7.7, 5 )
+
+  %e7 = call @expand16_at8(%A, %some1, %pass)
+    : (memref<?xf32>, vector<16xi1>, vector<16xf32>) -> (vector<16xf32>)
+  vector.print %e7 : vector<16xf32>
+  // CHECK-NEXT: ( 8, 9, 10, 11, -7, -7, -7, -7, -7, -7, -7, -7, -7, -7, -7, -7 )
 
   return
 }
