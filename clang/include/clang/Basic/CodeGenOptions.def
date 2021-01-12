@@ -369,8 +369,8 @@ VALUE_CODEGENOPT(EmitCheckPathComponentsToStrip, 32, 0)
 /// Whether to report the hotness of the code region for optimization remarks.
 CODEGENOPT(DiagnosticsWithHotness, 1, 0)
 
-/// Whether copy relocations support is available when building as PIE.
-CODEGENOPT(PIECopyRelocations, 1, 0)
+/// Whether to use direct access relocations (instead of GOT) to reference external data symbols.
+CODEGENOPT(DirectAccessExternalData, 1, 0)
 
 /// Whether we should use the undefined behaviour optimization for control flow
 /// paths that reach the end of a function without executing a required return.
