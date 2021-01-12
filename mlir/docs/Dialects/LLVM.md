@@ -127,7 +127,7 @@ Examples:
 %3 = llvm.mlir.constant(42 : i32) : i32
 
 // Splat dense vector constant.
-%3 = llvm.mlir.constant(dense<1.0> : vector<4xf32>) : !llvm.vec<4 x f32>
+%3 = llvm.mlir.constant(dense<1.0> : vector<4xf32>) : vector<4xf32>
 ```
 
 Note that constants use built-in types within the initializer definition: MLIR
@@ -274,7 +274,7 @@ Vectors cannot be nested and only 1D vectors are supported. Scalable vectors are
 still considered 1D. Their syntax is as follows:
 
 ```
-  llvm-vec-type ::= `!llvm.vec<` (`?` `x`)? integer-literal `x` llvm-type `>`
+  llvm-vec-type ::= `vector<` (`?` `x`)? integer-literal `x` llvm-type `>`
 ```
 
 Internally, fixed vector types are represented as `LLVMFixedVectorType` and

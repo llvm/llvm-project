@@ -487,35 +487,35 @@ func @multireturn_caller() {
   return
 }
 
-// CHECK-LABEL: llvm.func @vector_ops(%arg0: !llvm.vec<4 x f32>, %arg1: !llvm.vec<4 x i1>, %arg2: !llvm.vec<4 x i64>, %arg3: !llvm.vec<4 x i64>) -> !llvm.vec<4 x f32> {
+// CHECK-LABEL: llvm.func @vector_ops(%arg0: vector<4xf32>, %arg1: vector<4xi1>, %arg2: vector<4xi64>, %arg3: vector<4xi64>) -> vector<4xf32> {
 func @vector_ops(%arg0: vector<4xf32>, %arg1: vector<4xi1>, %arg2: vector<4xi64>, %arg3: vector<4xi64>) -> vector<4xf32> {
-// CHECK-NEXT:  %0 = llvm.mlir.constant(dense<4.200000e+01> : vector<4xf32>) : !llvm.vec<4 x f32>
+// CHECK-NEXT:  %0 = llvm.mlir.constant(dense<4.200000e+01> : vector<4xf32>) : vector<4xf32>
   %0 = constant dense<42.> : vector<4xf32>
-// CHECK-NEXT:  %1 = llvm.fadd %arg0, %0 : !llvm.vec<4 x f32>
+// CHECK-NEXT:  %1 = llvm.fadd %arg0, %0 : vector<4xf32>
   %1 = addf %arg0, %0 : vector<4xf32>
-// CHECK-NEXT:  %2 = llvm.sdiv %arg2, %arg2 : !llvm.vec<4 x i64>
+// CHECK-NEXT:  %2 = llvm.sdiv %arg2, %arg2 : vector<4xi64>
   %3 = divi_signed %arg2, %arg2 : vector<4xi64>
-// CHECK-NEXT:  %3 = llvm.udiv %arg2, %arg2 : !llvm.vec<4 x i64>
+// CHECK-NEXT:  %3 = llvm.udiv %arg2, %arg2 : vector<4xi64>
   %4 = divi_unsigned %arg2, %arg2 : vector<4xi64>
-// CHECK-NEXT:  %4 = llvm.srem %arg2, %arg2 : !llvm.vec<4 x i64>
+// CHECK-NEXT:  %4 = llvm.srem %arg2, %arg2 : vector<4xi64>
   %5 = remi_signed %arg2, %arg2 : vector<4xi64>
-// CHECK-NEXT:  %5 = llvm.urem %arg2, %arg2 : !llvm.vec<4 x i64>
+// CHECK-NEXT:  %5 = llvm.urem %arg2, %arg2 : vector<4xi64>
   %6 = remi_unsigned %arg2, %arg2 : vector<4xi64>
-// CHECK-NEXT:  %6 = llvm.fdiv %arg0, %0 : !llvm.vec<4 x f32>
+// CHECK-NEXT:  %6 = llvm.fdiv %arg0, %0 : vector<4xf32>
   %7 = divf %arg0, %0 : vector<4xf32>
-// CHECK-NEXT:  %7 = llvm.frem %arg0, %0 : !llvm.vec<4 x f32>
+// CHECK-NEXT:  %7 = llvm.frem %arg0, %0 : vector<4xf32>
   %8 = remf %arg0, %0 : vector<4xf32>
-// CHECK-NEXT:  %8 = llvm.and %arg2, %arg3 : !llvm.vec<4 x i64>
+// CHECK-NEXT:  %8 = llvm.and %arg2, %arg3 : vector<4xi64>
   %9 = and %arg2, %arg3 : vector<4xi64>
-// CHECK-NEXT:  %9 = llvm.or %arg2, %arg3 : !llvm.vec<4 x i64>
+// CHECK-NEXT:  %9 = llvm.or %arg2, %arg3 : vector<4xi64>
   %10 = or %arg2, %arg3 : vector<4xi64>
-// CHECK-NEXT:  %10 = llvm.xor %arg2, %arg3 : !llvm.vec<4 x i64>
+// CHECK-NEXT:  %10 = llvm.xor %arg2, %arg3 : vector<4xi64>
   %11 = xor %arg2, %arg3 : vector<4xi64>
-// CHECK-NEXT:  %11 = llvm.shl %arg2, %arg2 : !llvm.vec<4 x i64>
+// CHECK-NEXT:  %11 = llvm.shl %arg2, %arg2 : vector<4xi64>
   %12 = shift_left %arg2, %arg2 : vector<4xi64>
-// CHECK-NEXT:  %12 = llvm.ashr %arg2, %arg2 : !llvm.vec<4 x i64>
+// CHECK-NEXT:  %12 = llvm.ashr %arg2, %arg2 : vector<4xi64>
   %13 = shift_right_signed %arg2, %arg2 : vector<4xi64>
-// CHECK-NEXT:  %13 = llvm.lshr %arg2, %arg2 : !llvm.vec<4 x i64>
+// CHECK-NEXT:  %13 = llvm.lshr %arg2, %arg2 : vector<4xi64>
   %14 = shift_right_unsigned %arg2, %arg2 : vector<4xi64>
   return %1 : vector<4xf32>
 }
@@ -597,17 +597,17 @@ func @sitofp(%arg0 : i32, %arg1 : i64) {
 // Checking conversion of integer vectors to floating point vector types.
 // CHECK-LABEL: @sitofp_vector
 func @sitofp_vector(%arg0 : vector<2xi16>, %arg1 : vector<2xi32>, %arg2 : vector<2xi64>) {
-// CHECK-NEXT: = llvm.sitofp {{.*}} : !llvm.vec<2 x i16> to !llvm.vec<2 x f32>
+// CHECK-NEXT: = llvm.sitofp {{.*}} : vector<2xi16> to vector<2xf32>
   %0 = sitofp %arg0: vector<2xi16> to vector<2xf32>
-// CHECK-NEXT: = llvm.sitofp {{.*}} : !llvm.vec<2 x i16> to !llvm.vec<2 x f64>
+// CHECK-NEXT: = llvm.sitofp {{.*}} : vector<2xi16> to vector<2xf64>
   %1 = sitofp %arg0: vector<2xi16> to vector<2xf64>
-// CHECK-NEXT: = llvm.sitofp {{.*}} : !llvm.vec<2 x i32> to !llvm.vec<2 x f32>
+// CHECK-NEXT: = llvm.sitofp {{.*}} : vector<2xi32> to vector<2xf32>
   %2 = sitofp %arg1: vector<2xi32> to vector<2xf32>
-// CHECK-NEXT: = llvm.sitofp {{.*}} : !llvm.vec<2 x i32> to !llvm.vec<2 x f64>
+// CHECK-NEXT: = llvm.sitofp {{.*}} : vector<2xi32> to vector<2xf64>
   %3 = sitofp %arg1: vector<2xi32> to vector<2xf64>
-// CHECK-NEXT: = llvm.sitofp {{.*}} : !llvm.vec<2 x i64> to !llvm.vec<2 x f32>
+// CHECK-NEXT: = llvm.sitofp {{.*}} : vector<2xi64> to vector<2xf32>
   %4 = sitofp %arg2: vector<2xi64> to vector<2xf32>
-// CHECK-NEXT: = llvm.sitofp {{.*}} : !llvm.vec<2 x i64> to !llvm.vec<2 x f64>
+// CHECK-NEXT: = llvm.sitofp {{.*}} : vector<2xi64> to vector<2xf64>
   %5 = sitofp %arg2: vector<2xi64> to vector<2xf64>
   return
 }
@@ -641,11 +641,11 @@ func @fpext(%arg0 : f16, %arg1 : f32) {
 // Checking conversion of integer types to floating point.
 // CHECK-LABEL: @fpext
 func @fpext_vector(%arg0 : vector<2xf16>, %arg1 : vector<2xf32>) {
-// CHECK-NEXT: = llvm.fpext {{.*}} : !llvm.vec<2 x f16> to !llvm.vec<2 x f32>
+// CHECK-NEXT: = llvm.fpext {{.*}} : vector<2xf16> to vector<2xf32>
   %0 = fpext %arg0: vector<2xf16> to vector<2xf32>
-// CHECK-NEXT: = llvm.fpext {{.*}} : !llvm.vec<2 x f16> to !llvm.vec<2 x f64>
+// CHECK-NEXT: = llvm.fpext {{.*}} : vector<2xf16> to vector<2xf64>
   %1 = fpext %arg0: vector<2xf16> to vector<2xf64>
-// CHECK-NEXT: = llvm.fpext {{.*}} : !llvm.vec<2 x f32> to !llvm.vec<2 x f64>
+// CHECK-NEXT: = llvm.fpext {{.*}} : vector<2xf32> to vector<2xf64>
   %2 = fpext %arg1: vector<2xf32> to vector<2xf64>
   return
 }
@@ -667,17 +667,17 @@ func @fptosi(%arg0 : f32, %arg1 : f64) {
 // Checking conversion of floating point vectors to integer vector types.
 // CHECK-LABEL: @fptosi_vector
 func @fptosi_vector(%arg0 : vector<2xf16>, %arg1 : vector<2xf32>, %arg2 : vector<2xf64>) {
-// CHECK-NEXT: = llvm.fptosi {{.*}} : !llvm.vec<2 x f16> to !llvm.vec<2 x i32>
+// CHECK-NEXT: = llvm.fptosi {{.*}} : vector<2xf16> to vector<2xi32>
   %0 = fptosi %arg0: vector<2xf16> to vector<2xi32>
-// CHECK-NEXT: = llvm.fptosi {{.*}} : !llvm.vec<2 x f16> to !llvm.vec<2 x i64>
+// CHECK-NEXT: = llvm.fptosi {{.*}} : vector<2xf16> to vector<2xi64>
   %1 = fptosi %arg0: vector<2xf16> to vector<2xi64>
-// CHECK-NEXT: = llvm.fptosi {{.*}} : !llvm.vec<2 x f32> to !llvm.vec<2 x i32>
+// CHECK-NEXT: = llvm.fptosi {{.*}} : vector<2xf32> to vector<2xi32>
   %2 = fptosi %arg1: vector<2xf32> to vector<2xi32>
-// CHECK-NEXT: = llvm.fptosi {{.*}} : !llvm.vec<2 x f32> to !llvm.vec<2 x i64>
+// CHECK-NEXT: = llvm.fptosi {{.*}} : vector<2xf32> to vector<2xi64>
   %3 = fptosi %arg1: vector<2xf32> to vector<2xi64>
-// CHECK-NEXT: = llvm.fptosi {{.*}} : !llvm.vec<2 x f64> to !llvm.vec<2 x i32>
+// CHECK-NEXT: = llvm.fptosi {{.*}} : vector<2xf64> to vector<2xi32>
   %4 = fptosi %arg2: vector<2xf64> to vector<2xi32>
-// CHECK-NEXT: = llvm.fptosi {{.*}} : !llvm.vec<2 x f64> to !llvm.vec<2 x i64>
+// CHECK-NEXT: = llvm.fptosi {{.*}} : vector<2xf64> to vector<2xi64>
   %5 = fptosi %arg2: vector<2xf64> to vector<2xi64>
   return
 }
@@ -699,17 +699,17 @@ func @fptoui(%arg0 : f32, %arg1 : f64) {
 // Checking conversion of floating point vectors to integer vector types.
 // CHECK-LABEL: @fptoui_vector
 func @fptoui_vector(%arg0 : vector<2xf16>, %arg1 : vector<2xf32>, %arg2 : vector<2xf64>) {
-// CHECK-NEXT: = llvm.fptoui {{.*}} : !llvm.vec<2 x f16> to !llvm.vec<2 x i32>
+// CHECK-NEXT: = llvm.fptoui {{.*}} : vector<2xf16> to vector<2xi32>
   %0 = fptoui %arg0: vector<2xf16> to vector<2xi32>
-// CHECK-NEXT: = llvm.fptoui {{.*}} : !llvm.vec<2 x f16> to !llvm.vec<2 x i64>
+// CHECK-NEXT: = llvm.fptoui {{.*}} : vector<2xf16> to vector<2xi64>
   %1 = fptoui %arg0: vector<2xf16> to vector<2xi64>
-// CHECK-NEXT: = llvm.fptoui {{.*}} : !llvm.vec<2 x f32> to !llvm.vec<2 x i32>
+// CHECK-NEXT: = llvm.fptoui {{.*}} : vector<2xf32> to vector<2xi32>
   %2 = fptoui %arg1: vector<2xf32> to vector<2xi32>
-// CHECK-NEXT: = llvm.fptoui {{.*}} : !llvm.vec<2 x f32> to !llvm.vec<2 x i64>
+// CHECK-NEXT: = llvm.fptoui {{.*}} : vector<2xf32> to vector<2xi64>
   %3 = fptoui %arg1: vector<2xf32> to vector<2xi64>
-// CHECK-NEXT: = llvm.fptoui {{.*}} : !llvm.vec<2 x f64> to !llvm.vec<2 x i32>
+// CHECK-NEXT: = llvm.fptoui {{.*}} : vector<2xf64> to vector<2xi32>
   %4 = fptoui %arg2: vector<2xf64> to vector<2xi32>
-// CHECK-NEXT: = llvm.fptoui {{.*}} : !llvm.vec<2 x f64> to !llvm.vec<2 x i64>
+// CHECK-NEXT: = llvm.fptoui {{.*}} : vector<2xf64> to vector<2xi64>
   %5 = fptoui %arg2: vector<2xf64> to vector<2xi64>
   return
 }
@@ -717,17 +717,17 @@ func @fptoui_vector(%arg0 : vector<2xf16>, %arg1 : vector<2xf32>, %arg2 : vector
 // Checking conversion of integer vectors to floating point vector types.
 // CHECK-LABEL: @uitofp_vector
 func @uitofp_vector(%arg0 : vector<2xi16>, %arg1 : vector<2xi32>, %arg2 : vector<2xi64>) {
-// CHECK-NEXT: = llvm.uitofp {{.*}} : !llvm.vec<2 x i16> to !llvm.vec<2 x f32>
+// CHECK-NEXT: = llvm.uitofp {{.*}} : vector<2xi16> to vector<2xf32>
   %0 = uitofp %arg0: vector<2xi16> to vector<2xf32>
-// CHECK-NEXT: = llvm.uitofp {{.*}} : !llvm.vec<2 x i16> to !llvm.vec<2 x f64>
+// CHECK-NEXT: = llvm.uitofp {{.*}} : vector<2xi16> to vector<2xf64>
   %1 = uitofp %arg0: vector<2xi16> to vector<2xf64>
-// CHECK-NEXT: = llvm.uitofp {{.*}} : !llvm.vec<2 x i32> to !llvm.vec<2 x f32>
+// CHECK-NEXT: = llvm.uitofp {{.*}} : vector<2xi32> to vector<2xf32>
   %2 = uitofp %arg1: vector<2xi32> to vector<2xf32>
-// CHECK-NEXT: = llvm.uitofp {{.*}} : !llvm.vec<2 x i32> to !llvm.vec<2 x f64>
+// CHECK-NEXT: = llvm.uitofp {{.*}} : vector<2xi32> to vector<2xf64>
   %3 = uitofp %arg1: vector<2xi32> to vector<2xf64>
-// CHECK-NEXT: = llvm.uitofp {{.*}} : !llvm.vec<2 x i64> to !llvm.vec<2 x f32>
+// CHECK-NEXT: = llvm.uitofp {{.*}} : vector<2xi64> to vector<2xf32>
   %4 = uitofp %arg2: vector<2xi64> to vector<2xf32>
-// CHECK-NEXT: = llvm.uitofp {{.*}} : !llvm.vec<2 x i64> to !llvm.vec<2 x f64>
+// CHECK-NEXT: = llvm.uitofp {{.*}} : vector<2xi64> to vector<2xf64>
   %5 = uitofp %arg2: vector<2xi64> to vector<2xf64>
   return
 }
@@ -747,11 +747,11 @@ func @fptrunc(%arg0 : f32, %arg1 : f64) {
 // Checking conversion of integer types to floating point.
 // CHECK-LABEL: @fptrunc
 func @fptrunc_vector(%arg0 : vector<2xf32>, %arg1 : vector<2xf64>) {
-// CHECK-NEXT: = llvm.fptrunc {{.*}} : !llvm.vec<2 x f32> to !llvm.vec<2 x f16>
+// CHECK-NEXT: = llvm.fptrunc {{.*}} : vector<2xf32> to vector<2xf16>
   %0 = fptrunc %arg0: vector<2xf32> to vector<2xf16>
-// CHECK-NEXT: = llvm.fptrunc {{.*}} : !llvm.vec<2 x f64> to !llvm.vec<2 x f16>
+// CHECK-NEXT: = llvm.fptrunc {{.*}} : vector<2xf64> to vector<2xf16>
   %1 = fptrunc %arg1: vector<2xf64> to vector<2xf16>
-// CHECK-NEXT: = llvm.fptrunc {{.*}} : !llvm.vec<2 x f64> to !llvm.vec<2 x f32>
+// CHECK-NEXT: = llvm.fptrunc {{.*}} : vector<2xf64> to vector<2xf32>
   %2 = fptrunc %arg1: vector<2xf64> to vector<2xf32>
   return
 }
@@ -831,40 +831,40 @@ func @vec_bin(%arg0: vector<2x2x2xf32>) -> vector<2x2x2xf32> {
   %0 = addf %arg0, %arg0 : vector<2x2x2xf32>
   return %0 : vector<2x2x2xf32>
 
-//  CHECK-NEXT: llvm.mlir.undef : !llvm.array<2 x array<2 x vec<2 x f32>>>
+//  CHECK-NEXT: llvm.mlir.undef : !llvm.array<2 x array<2 x vector<2xf32>>>
 
 // This block appears 2x2 times
-//  CHECK-NEXT: llvm.extractvalue %{{.*}}[0, 0] : !llvm.array<2 x array<2 x vec<2 x f32>>>
-//  CHECK-NEXT: llvm.extractvalue %{{.*}}[0, 0] : !llvm.array<2 x array<2 x vec<2 x f32>>>
-//  CHECK-NEXT: llvm.fadd %{{.*}} : !llvm.vec<2 x f32>
-//  CHECK-NEXT: llvm.insertvalue %{{.*}}[0, 0] : !llvm.array<2 x array<2 x vec<2 x f32>>>
+//  CHECK-NEXT: llvm.extractvalue %{{.*}}[0, 0] : !llvm.array<2 x array<2 x vector<2xf32>>>
+//  CHECK-NEXT: llvm.extractvalue %{{.*}}[0, 0] : !llvm.array<2 x array<2 x vector<2xf32>>>
+//  CHECK-NEXT: llvm.fadd %{{.*}} : vector<2xf32>
+//  CHECK-NEXT: llvm.insertvalue %{{.*}}[0, 0] : !llvm.array<2 x array<2 x vector<2xf32>>>
 
 // We check the proper indexing of extract/insert in the remaining 3 positions.
-//       CHECK: llvm.extractvalue %{{.*}}[0, 1] : !llvm.array<2 x array<2 x vec<2 x f32>>>
-//       CHECK: llvm.insertvalue %{{.*}}[0, 1] : !llvm.array<2 x array<2 x vec<2 x f32>>>
-//       CHECK: llvm.extractvalue %{{.*}}[1, 0] : !llvm.array<2 x array<2 x vec<2 x f32>>>
-//       CHECK: llvm.insertvalue %{{.*}}[1, 0] : !llvm.array<2 x array<2 x vec<2 x f32>>>
-//       CHECK: llvm.extractvalue %{{.*}}[1, 1] : !llvm.array<2 x array<2 x vec<2 x f32>>>
-//       CHECK: llvm.insertvalue %{{.*}}[1, 1] : !llvm.array<2 x array<2 x vec<2 x f32>>>
+//       CHECK: llvm.extractvalue %{{.*}}[0, 1] : !llvm.array<2 x array<2 x vector<2xf32>>>
+//       CHECK: llvm.insertvalue %{{.*}}[0, 1] : !llvm.array<2 x array<2 x vector<2xf32>>>
+//       CHECK: llvm.extractvalue %{{.*}}[1, 0] : !llvm.array<2 x array<2 x vector<2xf32>>>
+//       CHECK: llvm.insertvalue %{{.*}}[1, 0] : !llvm.array<2 x array<2 x vector<2xf32>>>
+//       CHECK: llvm.extractvalue %{{.*}}[1, 1] : !llvm.array<2 x array<2 x vector<2xf32>>>
+//       CHECK: llvm.insertvalue %{{.*}}[1, 1] : !llvm.array<2 x array<2 x vector<2xf32>>>
 
 // And we're done
 //   CHECK-NEXT: return
 }
 
 // CHECK-LABEL: @splat
-// CHECK-SAME: %[[A:arg[0-9]+]]: !llvm.vec<4 x f32>
+// CHECK-SAME: %[[A:arg[0-9]+]]: vector<4xf32>
 // CHECK-SAME: %[[ELT:arg[0-9]+]]: f32
 func @splat(%a: vector<4xf32>, %b: f32) -> vector<4xf32> {
   %vb = splat %b : vector<4xf32>
   %r = mulf %a, %vb : vector<4xf32>
   return %r : vector<4xf32>
 }
-// CHECK-NEXT: %[[UNDEF:[0-9]+]] = llvm.mlir.undef : !llvm.vec<4 x f32>
+// CHECK-NEXT: %[[UNDEF:[0-9]+]] = llvm.mlir.undef : vector<4xf32>
 // CHECK-NEXT: %[[ZERO:[0-9]+]] = llvm.mlir.constant(0 : i32) : i32
-// CHECK-NEXT: %[[V:[0-9]+]] = llvm.insertelement %[[ELT]], %[[UNDEF]][%[[ZERO]] : i32] : !llvm.vec<4 x f32>
+// CHECK-NEXT: %[[V:[0-9]+]] = llvm.insertelement %[[ELT]], %[[UNDEF]][%[[ZERO]] : i32] : vector<4xf32>
 // CHECK-NEXT: %[[SPLAT:[0-9]+]] = llvm.shufflevector %[[V]], %[[UNDEF]] [0 : i32, 0 : i32, 0 : i32, 0 : i32]
-// CHECK-NEXT: %[[SCALE:[0-9]+]] = llvm.fmul %[[A]], %[[SPLAT]] : !llvm.vec<4 x f32>
-// CHECK-NEXT: llvm.return %[[SCALE]] : !llvm.vec<4 x f32>
+// CHECK-NEXT: %[[SCALE:[0-9]+]] = llvm.fmul %[[A]], %[[SPLAT]] : vector<4xf32>
+// CHECK-NEXT: llvm.return %[[SCALE]] : vector<4xf32>
 
 // CHECK-LABEL: func @view(
 // CHECK: %[[ARG0:.*]]: i64, %[[ARG1:.*]]: i64, %[[ARG2:.*]]: i64
@@ -1353,24 +1353,6 @@ func @assume_alignment(%0 : memref<4x4xf16>) {
   // CHECK-NEXT: "llvm.intr.assume"(%[[CONDITION]]) : (i1) -> ()
   assume_alignment %0, 16 : memref<4x4xf16>
   return
-}
-
-// -----
-
-// CHECK-LABEL: func @mlir_cast_to_llvm
-// CHECK-SAME: %[[ARG:.*]]:
-func @mlir_cast_to_llvm(%0 : vector<2xf16>) -> !llvm.vec<2 x f16> {
-  %1 = llvm.mlir.cast %0 : vector<2xf16> to !llvm.vec<2 x f16>
-  // CHECK-NEXT: llvm.return %[[ARG]]
-  return %1 : !llvm.vec<2 x f16>
-}
-
-// CHECK-LABEL: func @mlir_cast_from_llvm
-// CHECK-SAME: %[[ARG:.*]]:
-func @mlir_cast_from_llvm(%0 : !llvm.vec<2 x f16>) -> vector<2xf16> {
-  %1 = llvm.mlir.cast %0 : !llvm.vec<2 x f16> to vector<2xf16>
-  // CHECK-NEXT: llvm.return %[[ARG]]
-  return %1 : vector<2xf16>
 }
 
 // -----

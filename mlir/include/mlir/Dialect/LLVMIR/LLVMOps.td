@@ -555,10 +555,10 @@ def LLVM_ShuffleVectorOp : LLVM_Op<"shufflevector", [NoSideEffect]> {
     OpBuilderDAG<(ins "Value":$v1, "Value":$v2, "ArrayAttr":$mask,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>];
   let verifier = [{
-    auto wrappedVectorType1 = v1().getType().cast<LLVMVectorType>();
-    auto wrappedVectorType2 = v2().getType().cast<LLVMVectorType>();
-    if (wrappedVectorType1.getElementType() !=
-        wrappedVectorType2.getElementType())
+    auto type1 = v1().getType();
+    auto type2 = v2().getType();
+    if (::mlir::LLVM::getVectorElementType(type1) !=
+            ::mlir::LLVM::getVectorElementType(type2))
       return emitOpError("expected matching LLVM IR Dialect element types");
     return success();
   }];
@@ -1111,7 +1111,7 @@ def LLVM_ConstantOp
     %2 = llvm.mlir.constant(42.0 : f32) : f32
 
     // Splat dense vector constant.
-    %3 = llvm.mlir.constant(dense<1.0> : vector<4xf32>) : !llvm.vec<4 x f32>
+    %3 = llvm.mlir.constant(dense<1.0> : vector<4xf32>) : vector<4xf32>
     ```
   }];
 

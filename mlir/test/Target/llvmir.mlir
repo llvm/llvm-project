@@ -782,66 +782,66 @@ llvm.func @multireturn_caller() {
 }
 
 // CHECK-LABEL: define <4 x float> @vector_ops(<4 x float> {{%.*}}, <4 x i1> {{%.*}}, <4 x i64> {{%.*}})
-llvm.func @vector_ops(%arg0: !llvm.vec<4 x f32>, %arg1: !llvm.vec<4 x i1>, %arg2: !llvm.vec<4 x i64>) -> !llvm.vec<4 x f32> {
-  %0 = llvm.mlir.constant(dense<4.200000e+01> : vector<4xf32>) : !llvm.vec<4 x f32>
+llvm.func @vector_ops(%arg0: vector<4xf32>, %arg1: vector<4xi1>, %arg2: vector<4xi64>) -> vector<4xf32> {
+  %0 = llvm.mlir.constant(dense<4.200000e+01> : vector<4xf32>) : vector<4xf32>
 // CHECK-NEXT: %4 = fadd <4 x float> %0, <float 4.200000e+01, float 4.200000e+01, float 4.200000e+01, float 4.200000e+01>
-  %1 = llvm.fadd %arg0, %0 : !llvm.vec<4 x f32>
+  %1 = llvm.fadd %arg0, %0 : vector<4xf32>
 // CHECK-NEXT: %5 = select <4 x i1> %1, <4 x float> %4, <4 x float> %0
-  %2 = llvm.select %arg1, %1, %arg0 : !llvm.vec<4 x i1>, !llvm.vec<4 x f32>
+  %2 = llvm.select %arg1, %1, %arg0 : vector<4xi1>, vector<4xf32>
 // CHECK-NEXT: %6 = sdiv <4 x i64> %2, %2
-  %3 = llvm.sdiv %arg2, %arg2 : !llvm.vec<4 x i64>
+  %3 = llvm.sdiv %arg2, %arg2 : vector<4xi64>
 // CHECK-NEXT: %7 = udiv <4 x i64> %2, %2
-  %4 = llvm.udiv %arg2, %arg2 : !llvm.vec<4 x i64>
+  %4 = llvm.udiv %arg2, %arg2 : vector<4xi64>
 // CHECK-NEXT: %8 = srem <4 x i64> %2, %2
-  %5 = llvm.srem %arg2, %arg2 : !llvm.vec<4 x i64>
+  %5 = llvm.srem %arg2, %arg2 : vector<4xi64>
 // CHECK-NEXT: %9 = urem <4 x i64> %2, %2
-  %6 = llvm.urem %arg2, %arg2 : !llvm.vec<4 x i64>
+  %6 = llvm.urem %arg2, %arg2 : vector<4xi64>
 // CHECK-NEXT: %10 = fdiv <4 x float> %0, <float 4.200000e+01, float 4.200000e+01, float 4.200000e+01, float 4.200000e+01>
-  %7 = llvm.fdiv %arg0, %0 : !llvm.vec<4 x f32>
+  %7 = llvm.fdiv %arg0, %0 : vector<4xf32>
 // CHECK-NEXT: %11 = frem <4 x float> %0, <float 4.200000e+01, float 4.200000e+01, float 4.200000e+01, float 4.200000e+01>
-  %8 = llvm.frem %arg0, %0 : !llvm.vec<4 x f32>
+  %8 = llvm.frem %arg0, %0 : vector<4xf32>
 // CHECK-NEXT: %12 = and <4 x i64> %2, %2
-  %9 = llvm.and %arg2, %arg2 : !llvm.vec<4 x i64>
+  %9 = llvm.and %arg2, %arg2 : vector<4xi64>
 // CHECK-NEXT: %13 = or <4 x i64> %2, %2
-  %10 = llvm.or %arg2, %arg2 : !llvm.vec<4 x i64>
+  %10 = llvm.or %arg2, %arg2 : vector<4xi64>
 // CHECK-NEXT: %14 = xor <4 x i64> %2, %2
-  %11 = llvm.xor %arg2, %arg2 : !llvm.vec<4 x i64>
+  %11 = llvm.xor %arg2, %arg2 : vector<4xi64>
 // CHECK-NEXT: %15 = shl <4 x i64> %2, %2
-  %12 = llvm.shl %arg2, %arg2 : !llvm.vec<4 x i64>
+  %12 = llvm.shl %arg2, %arg2 : vector<4xi64>
 // CHECK-NEXT: %16 = lshr <4 x i64> %2, %2
-  %13 = llvm.lshr %arg2, %arg2 : !llvm.vec<4 x i64>
+  %13 = llvm.lshr %arg2, %arg2 : vector<4xi64>
 // CHECK-NEXT: %17 = ashr <4 x i64> %2, %2
-  %14 = llvm.ashr %arg2, %arg2 : !llvm.vec<4 x i64>
+  %14 = llvm.ashr %arg2, %arg2 : vector<4xi64>
 // CHECK-NEXT:    ret <4 x float> %4
-  llvm.return %1 : !llvm.vec<4 x f32>
+  llvm.return %1 : vector<4xf32>
 }
 
 // CHECK-LABEL: @vector_splat_1d
-llvm.func @vector_splat_1d() -> !llvm.vec<4 x f32> {
+llvm.func @vector_splat_1d() -> vector<4xf32> {
   // CHECK: ret <4 x float> zeroinitializer
-  %0 = llvm.mlir.constant(dense<0.000000e+00> : vector<4xf32>) : !llvm.vec<4 x f32>
-  llvm.return %0 : !llvm.vec<4 x f32>
+  %0 = llvm.mlir.constant(dense<0.000000e+00> : vector<4xf32>) : vector<4xf32>
+  llvm.return %0 : vector<4xf32>
 }
 
 // CHECK-LABEL: @vector_splat_2d
-llvm.func @vector_splat_2d() -> !llvm.array<4 x vec<16 x f32>> {
+llvm.func @vector_splat_2d() -> !llvm.array<4 x vector<16 x f32>> {
   // CHECK: ret [4 x <16 x float>] zeroinitializer
-  %0 = llvm.mlir.constant(dense<0.000000e+00> : vector<4x16xf32>) : !llvm.array<4 x vec<16 x f32>>
-  llvm.return %0 : !llvm.array<4 x vec<16 x f32>>
+  %0 = llvm.mlir.constant(dense<0.000000e+00> : vector<4x16xf32>) : !llvm.array<4 x vector<16 x f32>>
+  llvm.return %0 : !llvm.array<4 x vector<16 x f32>>
 }
 
 // CHECK-LABEL: @vector_splat_3d
-llvm.func @vector_splat_3d() -> !llvm.array<4 x array<16 x vec<4 x f32>>> {
+llvm.func @vector_splat_3d() -> !llvm.array<4 x array<16 x vector<4 x f32>>> {
   // CHECK: ret [4 x [16 x <4 x float>]] zeroinitializer
-  %0 = llvm.mlir.constant(dense<0.000000e+00> : vector<4x16x4xf32>) : !llvm.array<4 x array<16 x vec<4 x f32>>>
-  llvm.return %0 : !llvm.array<4 x array<16 x vec<4 x f32>>>
+  %0 = llvm.mlir.constant(dense<0.000000e+00> : vector<4x16x4xf32>) : !llvm.array<4 x array<16 x vector<4 x f32>>>
+  llvm.return %0 : !llvm.array<4 x array<16 x vector<4 x f32>>>
 }
 
 // CHECK-LABEL: @vector_splat_nonzero
-llvm.func @vector_splat_nonzero() -> !llvm.vec<4 x f32> {
+llvm.func @vector_splat_nonzero() -> vector<4xf32> {
   // CHECK: ret <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
-  %0 = llvm.mlir.constant(dense<1.000000e+00> : vector<4xf32>) : !llvm.vec<4 x f32>
-  llvm.return %0 : !llvm.vec<4 x f32>
+  %0 = llvm.mlir.constant(dense<1.000000e+00> : vector<4xf32>) : vector<4xf32>
+  llvm.return %0 : vector<4xf32>
 }
 
 // CHECK-LABEL: @ops
@@ -1019,22 +1019,22 @@ llvm.func @fcmp(%arg0: f32, %arg1: f32) {
 }
 
 // CHECK-LABEL: @vect
-llvm.func @vect(%arg0: !llvm.vec<4 x f32>, %arg1: i32, %arg2: f32) {
+llvm.func @vect(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32) {
   // CHECK-NEXT: extractelement <4 x float> {{.*}}, i32
   // CHECK-NEXT: insertelement <4 x float> {{.*}}, float %2, i32
   // CHECK-NEXT: shufflevector <4 x float> {{.*}}, <4 x float> {{.*}}, <5 x i32> <i32 0, i32 0, i32 0, i32 0, i32 7>
-  %0 = llvm.extractelement %arg0[%arg1 : i32] : !llvm.vec<4 x f32>
-  %1 = llvm.insertelement %arg2, %arg0[%arg1 : i32] : !llvm.vec<4 x f32>
-  %2 = llvm.shufflevector %arg0, %arg0 [0 : i32, 0 : i32, 0 : i32, 0 : i32, 7 : i32] : !llvm.vec<4 x f32>, !llvm.vec<4 x f32>
+  %0 = llvm.extractelement %arg0[%arg1 : i32] : vector<4xf32>
+  %1 = llvm.insertelement %arg2, %arg0[%arg1 : i32] : vector<4xf32>
+  %2 = llvm.shufflevector %arg0, %arg0 [0 : i32, 0 : i32, 0 : i32, 0 : i32, 7 : i32] : vector<4xf32>, vector<4xf32>
   llvm.return
 }
 
 // CHECK-LABEL: @vect_i64idx
-llvm.func @vect_i64idx(%arg0: !llvm.vec<4 x f32>, %arg1: i64, %arg2: f32) {
+llvm.func @vect_i64idx(%arg0: vector<4xf32>, %arg1: i64, %arg2: f32) {
   // CHECK-NEXT: extractelement <4 x float> {{.*}}, i64
   // CHECK-NEXT: insertelement <4 x float> {{.*}}, float %2, i64
-  %0 = llvm.extractelement %arg0[%arg1 : i64] : !llvm.vec<4 x f32>
-  %1 = llvm.insertelement %arg2, %arg0[%arg1 : i64] : !llvm.vec<4 x f32>
+  %0 = llvm.extractelement %arg0[%arg1 : i64] : vector<4xf32>
+  %1 = llvm.insertelement %arg2, %arg0[%arg1 : i64] : vector<4xf32>
   llvm.return
 }
 
@@ -1050,10 +1050,10 @@ llvm.func @alloca(%size : i64) {
 }
 
 // CHECK-LABEL: @constants
-llvm.func @constants() -> !llvm.vec<4 x f32> {
+llvm.func @constants() -> vector<4xf32> {
   // CHECK: ret <4 x float> <float 4.2{{0*}}e+01, float 0.{{0*}}e+00, float 0.{{0*}}e+00, float 0.{{0*}}e+00>
-  %0 = llvm.mlir.constant(sparse<[[0]], [4.2e+01]> : vector<4xf32>) : !llvm.vec<4 x f32>
-  llvm.return %0 : !llvm.vec<4 x f32>
+  %0 = llvm.mlir.constant(sparse<[[0]], [4.2e+01]> : vector<4xf32>) : vector<4xf32>
+  llvm.return %0 : vector<4xf32>
 }
 
 // CHECK-LABEL: @fp_casts
@@ -1088,12 +1088,12 @@ llvm.func @null() -> !llvm.ptr<i32> {
 
 // Check that dense elements attributes are exported properly in constants.
 // CHECK-LABEL: @elements_constant_3d_vector
-llvm.func @elements_constant_3d_vector() -> !llvm.array<2 x array<2 x vec<2 x i32>>> {
+llvm.func @elements_constant_3d_vector() -> !llvm.array<2 x array<2 x vector<2 x i32>>> {
   // CHECK: ret [2 x [2 x <2 x i32>]]
   // CHECK-SAME: {{\[}}[2 x <2 x i32>] [<2 x i32> <i32 1, i32 2>, <2 x i32> <i32 3, i32 4>],
   // CHECK-SAME:       [2 x <2 x i32>] [<2 x i32> <i32 42, i32 43>, <2 x i32> <i32 44, i32 45>]]
-  %0 = llvm.mlir.constant(dense<[[[1, 2], [3, 4]], [[42, 43], [44, 45]]]> : vector<2x2x2xi32>) : !llvm.array<2 x array<2 x vec<2 x i32>>>
-  llvm.return %0 : !llvm.array<2 x array<2 x vec<2 x i32>>>
+  %0 = llvm.mlir.constant(dense<[[[1, 2], [3, 4]], [[42, 43], [44, 45]]]> : vector<2x2x2xi32>) : !llvm.array<2 x array<2 x vector<2 x i32>>>
+  llvm.return %0 : !llvm.array<2 x array<2 x vector<2 x i32>>>
 }
 
 // CHECK-LABEL: @elements_constant_3d_array
