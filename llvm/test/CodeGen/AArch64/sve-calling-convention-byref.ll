@@ -25,9 +25,9 @@ define aarch64_sve_vector_pcs <vscale x 4 x i32> @caller_with_many_sve_arg(<vsca
 ; CHECK: name: caller_with_many_sve_arg
 ; CHECK: stack:
 ; CHECK:      - { id: 0, name: '', type: default, offset: 0, size: 16, alignment: 16,
-; CHECK-NEXT:     stack-id: sve-vec
+; CHECK-NEXT:     stack-id: scalable-vector
 ; CHECK:      - { id: 1, name: '', type: default, offset: 0, size: 16, alignment: 16,
-; CHECK-NEXT:     stack-id: sve-vec
+; CHECK-NEXT:     stack-id: scalable-vector
 ; CHECK-DAG:  [[PTRUE:%[0-9]+]]:ppr_3b = PTRUE_S 31
 ; CHECK-DAG:  ST1W_IMM %{{[0-9]+}}, [[PTRUE]], %stack.1, 0
 ; CHECK-DAG:  ST1W_IMM %{{[0-9]+}}, [[PTRUE]], %stack.0, 0
@@ -61,9 +61,9 @@ define aarch64_sve_vector_pcs <vscale x 4 x i1> @caller_with_many_svepred_arg(<v
 ; CHECK: name: caller_with_many_svepred_arg
 ; CHECK: stack:
 ; CHECK:      - { id: 0, name: '', type: default, offset: 0, size: 1, alignment: 4,
-; CHECK-NEXT:     stack-id: sve-vec
+; CHECK-NEXT:     stack-id: scalable-vector
 ; CHECK:      - { id: 1, name: '', type: default, offset: 0, size: 1, alignment: 4,
-; CHECK-NEXT:     stack-id: sve-vec
+; CHECK-NEXT:     stack-id: scalable-vector
 ; CHECK-DAG: STR_PXI %{{[0-9]+}}, %stack.0, 0
 ; CHECK-DAG: STR_PXI %{{[0-9]+}}, %stack.1, 0
 ; CHECK-DAG: [[BASE1:%[0-9]+]]:gpr64sp = ADDXri %stack.0, 0
@@ -103,9 +103,9 @@ define aarch64_sve_vector_pcs <vscale x 4 x i32> @caller_with_many_gpr_sve_arg(i
 ; CHECK: name: caller_with_many_gpr_sve_arg
 ; CHECK: stack:
 ; CHECK:      - { id: 0, name: '', type: default, offset: 0, size: 16, alignment: 16,
-; CHECK-NEXT:     stack-id: sve-vec
+; CHECK-NEXT:     stack-id: scalable-vector
 ; CHECK:      - { id: 1, name: '', type: default, offset: 0, size: 16, alignment: 16,
-; CHECK-NEXT:     stack-id: sve-vec
+; CHECK-NEXT:     stack-id: scalable-vector
 ; CHECK-DAG: [[PTRUE_S:%[0-9]+]]:ppr_3b = PTRUE_S 31
 ; CHECK-DAG: [[PTRUE_D:%[0-9]+]]:ppr_3b = PTRUE_D 31
 ; CHECK-DAG: ST1D_IMM %{{[0-9]+}}, killed [[PTRUE_D]], %stack.0, 0
