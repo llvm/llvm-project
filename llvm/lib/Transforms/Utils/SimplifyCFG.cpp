@@ -1267,7 +1267,8 @@ bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(Instruction *TI,
           (void)I;
           AddPredecessorToBlock(NewSuccessor.first, Pred, BB);
         }
-        Updates.push_back({DominatorTree::Insert, Pred, NewSuccessor.first});
+        if (!is_contained(successors(Pred), NewSuccessor.first))
+          Updates.push_back({DominatorTree::Insert, Pred, NewSuccessor.first});
       }
 
       Builder.SetInsertPoint(PTI);
@@ -4229,7 +4230,6 @@ bool SimplifyCFGOpt::SimplifyBranchOnICmpChain(BranchInst *BI,
   // We added edges from PI to the EdgeBB.  As such, if there were any
   // PHI nodes in EdgeBB, they need entries to be added corresponding to
   // the number of edges added.
-  Updates.push_back({DominatorTree::Insert, BB, EdgeBB});
   for (BasicBlock::iterator BBI = EdgeBB->begin(); isa<PHINode>(BBI); ++BBI) {
     PHINode *PN = cast<PHINode>(BBI);
     Value *InVal = PN->getIncomingValueForBlock(BB);
@@ -5973,7 +5973,6 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
     RangeCheckBranch =
         Builder.CreateCondBr(Cmp, LookupBB, SI->getDefaultDest());
     Updates.push_back({DominatorTree::Insert, BB, LookupBB});
-    Updates.push_back({DominatorTree::Insert, BB, SI->getDefaultDest()});
   }
 
   // Populate the BB that does the lookups.
