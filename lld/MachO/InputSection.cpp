@@ -11,6 +11,7 @@
 #include "OutputSegment.h"
 #include "Symbols.h"
 #include "Target.h"
+#include "Writer.h"
 #include "lld/Common/Memory.h"
 #include "llvm/Support/Endian.h"
 
@@ -45,11 +46,12 @@ void InputSection::writeTo(uint8_t *buf) {
           target->resolveSymbolVA(buf + r.offset, *referentSym, r.type);
 
       if (isThreadLocalVariables(flags)) {
-        // References from thread-local variable sections are treated
-        // as offsets relative to the start of the referent section,
-        // instead of as absolute addresses.
+        // References from thread-local variable sections are treated as offsets
+        // relative to the start of the thread-local data memory area, which
+        // is initialized via copying all the TLV data sections (which are all
+        // contiguous).
         if (auto *defined = dyn_cast<Defined>(referentSym))
-          referentVA -= defined->isec->parent->addr;
+          referentVA -= firstTLVDataSection->addr;
       }
     } else if (auto *referentIsec = r.referent.dyn_cast<InputSection *>()) {
       referentVA = referentIsec->getVA();
