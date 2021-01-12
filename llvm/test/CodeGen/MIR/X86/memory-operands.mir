@@ -60,11 +60,11 @@
     ret void
   }
 
-  define void @memory_alignment(<8 x float>* %vec) {
+  define void @memory_alignment(<16 x float>* %vec) {
   entry:
-    %v = load <8 x float>, <8 x float>* %vec
-    %v2 = insertelement <8 x float> %v, float 0.0, i32 4
-    store <8 x float> %v2, <8 x float>* %vec
+    %v = load <16 x float>, <16 x float>* %vec
+    %v2 = insertelement <16 x float> %v, float 0.0, i32 4
+    store <16 x float> %v2, <16 x float>* %vec
     ret void
   }
 
@@ -312,16 +312,24 @@ body: |
   bb.0.entry:
     liveins: $rdi
   ; CHECK: name: memory_alignment
-  ; CHECK:      $xmm0 = MOVAPSrm $rdi, 1, $noreg, 0, $noreg :: (load 16 from %ir.vec, align 32)
-  ; CHECK-NEXT: $xmm1 = MOVAPSrm $rdi, 1, $noreg, 16, $noreg :: (load 16 from %ir.vec + 16, align 32)
-  ; CHECK:      MOVAPSmr $rdi, 1, $noreg, 0, $noreg, killed $xmm0 :: (store 16 into %ir.vec, align 32)
-  ; CHECK-NEXT: MOVAPSmr killed $rdi, 1, $noreg, 16, $noreg, killed $xmm1 :: (store 16 into %ir.vec + 16, align 32)
-    $xmm0 = MOVAPSrm $rdi, 1, _, 0, _ :: (load 16 from %ir.vec, align 32)
-    $xmm1 = MOVAPSrm $rdi, 1, _, 16, _ :: (load 16 from %ir.vec + 16, align 32)
-    $xmm2 = FsFLD0SS
-    $xmm1 = MOVSSrr killed $xmm1, killed $xmm2
-    MOVAPSmr $rdi, 1, _, 0, _, killed $xmm0 :: (store 16 into %ir.vec, align 32)
-    MOVAPSmr killed $rdi, 1, _, 16, _, killed $xmm1 :: (store 16 into %ir.vec + 16, align 32)
+  ; CHECK:      $xmm0 = MOVAPSrm $rdi, 1, $noreg, 0, $noreg :: (load 16 from %ir.vec, align 64)
+  ; CHECK-NEXT: $xmm1 = MOVAPSrm $rdi, 1, $noreg, 16, $noreg :: (load 16 from %ir.vec + 16, basealign 64)
+  ; CHECK-NEXT: $xmm2 = MOVAPSrm $rdi, 1, $noreg, 32, $noreg :: (load 16 from %ir.vec + 32, align 32, basealign 64)
+  ; CHECK-NEXT: $xmm3 = MOVAPSrm $rdi, 1, $noreg, 48, $noreg :: (load 16 from %ir.vec + 48, basealign 64)
+  ; CHECK:      MOVAPSmr $rdi, 1, $noreg, 0, $noreg, killed $xmm0 :: (store 16 into %ir.vec, align 64)
+  ; CHECK-NEXT: MOVAPSmr $rdi, 1, $noreg, 16, $noreg, killed $xmm1 :: (store 16 into %ir.vec + 16, basealign 64)
+  ; CHECK-NEXT: MOVAPSmr $rdi, 1, $noreg, 32, $noreg, killed $xmm2 :: (store 16 into %ir.vec + 32, align 32, basealign 64)
+  ; CHECK-NEXT: MOVAPSmr killed $rdi, 1, $noreg, 48, $noreg, killed $xmm3 :: (store 16 into %ir.vec + 48, basealign 64)
+    $xmm0 = MOVAPSrm $rdi, 1, _, 0, _ :: (load 16 from %ir.vec, align 64)
+    $xmm1 = MOVAPSrm $rdi, 1, _, 16, _ :: (load 16 from %ir.vec + 16, basealign 64)
+    $xmm2 = MOVAPSrm $rdi, 1, _, 32, _ :: (load 16 from %ir.vec + 32, align 32, basealign 64)
+    $xmm3 = MOVAPSrm $rdi, 1, _, 48, _ :: (load 16 from %ir.vec + 48, basealign 64)
+    $xmm4 = FsFLD0SS
+    $xmm1 = MOVSSrr killed $xmm1, killed $xmm4
+    MOVAPSmr $rdi, 1, _, 0, _, killed $xmm0 :: (store 16 into %ir.vec, align 64)
+    MOVAPSmr $rdi, 1, _, 16, _, killed $xmm1 :: (store 16 into %ir.vec + 16, basealign 64)
+    MOVAPSmr $rdi, 1, _, 32, _, killed $xmm2 :: (store 16 into %ir.vec + 32, align 32, basealign 64)
+    MOVAPSmr killed $rdi, 1, _, 48, _, killed $xmm3 :: (store 16 into %ir.vec + 48, basealign 64)
     RETQ
 ...
 ---
