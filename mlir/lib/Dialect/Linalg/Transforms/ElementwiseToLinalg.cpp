@@ -10,7 +10,9 @@
 
 #include "PassDetail.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/StandardOps/Utils/Utils.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
@@ -62,18 +64,9 @@ getOrCreateOperandsMatchingResultTypes(OpBuilder &b, Operation *op) {
     // Extract static / dynamic shape mix from the first operand.
     Value firstOperand = operands.front();
     auto rankedTensorType = t.cast<RankedTensorType>();
-    SmallVector<Value, 8> dynamicShape;
-    SmallVector<int64_t, 8> staticShape;
-    dynamicShape.reserve(rankedTensorType.getRank());
-    staticShape.reserve(rankedTensorType.getRank());
-    unsigned idx = 0;
-    for (auto shape : rankedTensorType.getShape()) {
-      staticShape.push_back(shape);
-      if (rankedTensorType.isDynamicDim(idx))
-        dynamicShape.push_back(b.create<DimOp>(loc, firstOperand, idx));
-      ++idx;
-    }
-    // Create init tensor.
+    auto staticShape = llvm::to_vector<4>(rankedTensorType.getShape());
+    auto dynamicShape = getDynOperands(loc, firstOperand, b);
+
     res.push_back(b.create<linalg::InitTensorOp>(
         loc, dynamicShape, staticShape, rankedTensorType.getElementType()));
   }
