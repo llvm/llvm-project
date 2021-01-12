@@ -3,23 +3,32 @@ include "llvm/Option/OptParser.td"
 // Flags that lld/MachO understands but ld64 doesn't. These take
 // '--' instead of '-' and use dashes instead of underscores, so
 // they don't collide with the ld64 compat options.
+def grp_lld : OptionGroup<"kind">, HelpText<"LLD-SPECIFIC">;
 
-def help : Flag<["-", "--"], "help">;
+def help : Flag<["-", "--"], "help">,
+    Group<grp_lld>;
 def help_hidden : Flag<["--"], "help-hidden">,
-  HelpText<"Display help for hidden options">;
+    HelpText<"Display help for hidden options">,
+    Group<grp_lld>;
 def color_diagnostics: Flag<["--"], "color-diagnostics">,
-  HelpText<"Alias for --color-diagnostics=always">;
+    HelpText<"Alias for --color-diagnostics=always">,
+    Group<grp_lld>;
 def no_color_diagnostics: Flag<["--"], "no-color-diagnostics">,
-  HelpText<"Alias for --color-diagnostics=never">;
+    HelpText<"Alias for --color-diagnostics=never">,
+    Group<grp_lld>;
 def color_diagnostics_eq: Joined<["--"], "color-diagnostics=">,
-  HelpText<"Use colors in diagnostics (default: auto)">,
-  MetaVarName<"[auto,always,never]">;
-def reproduce: Separate<["--"], "reproduce">;
+    HelpText<"Use colors in diagnostics (default: auto)">,
+    MetaVarName<"[auto,always,never]">,
+    Group<grp_lld>;
+def reproduce: Separate<["--"], "reproduce">,
+    Group<grp_lld>;
 def reproduce_eq: Joined<["--"], "reproduce=">,
     Alias<!cast<Separate>(reproduce)>,
-    HelpText<"Write tar file containing inputs and command to reproduce link">;
+    HelpText<"Write tar file containing inputs and command to reproduce link">,
+    Group<grp_lld>;
 def version: Flag<["--"], "version">,
-    HelpText<"Display the version number and exit">;
+    HelpText<"Display the version number and exit">,
+    Group<grp_lld>;
 
 
 // This is a complete Options.td compiled from Apple's ld(1) manpage
