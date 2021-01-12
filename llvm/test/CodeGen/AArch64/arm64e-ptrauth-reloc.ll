@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple arm64e-apple-darwin     -aarch64-ptrauth-global-dynamic-mat=1 | FileCheck %s --check-prefixes=CHECK,OPT,DYN-OPT
 ; RUN: llc < %s -mtriple arm64e-apple-darwin -O0 -aarch64-ptrauth-global-dynamic-mat=1 | FileCheck %s --check-prefixes=CHECK,O0,DYN-O0
-; RUN: llc < %s -mtriple arm64e-apple-darwin     -aarch64-ptrauth-global-dynamic-mat=0 | FileCheck %s --check-prefixes=CHECK,OPT,LOAD-OPT
-; RUN: llc < %s -mtriple arm64e-apple-darwin -O0 -aarch64-ptrauth-global-dynamic-mat=0 | FileCheck %s --check-prefixes=CHECK,O0,LOAD-O0
+; RUN: llc < %s -mtriple arm64e-apple-darwin     -aarch64-ptrauth-global-dynamic-mat=0 | FileCheck %s --check-prefixes=CHECK,OPT
+; RUN: llc < %s -mtriple arm64e-apple-darwin -O0 -aarch64-ptrauth-global-dynamic-mat=0 | FileCheck %s --check-prefixes=CHECK,O0
 
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
