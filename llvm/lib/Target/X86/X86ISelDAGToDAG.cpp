@@ -4567,6 +4567,23 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
 
   switch (Opcode) {
   default: break;
+  case ISD::INTRINSIC_WO_CHAIN: {
+    unsigned IntNo = Node->getConstantOperandVal(0);
+    switch (IntNo) {
+    default: break;
+    case Intrinsic::swift_async_context_addr:
+      SDLoc DL(Node);
+      CurDAG->SelectNodeTo(Node, X86::SUB64ri8, MVT::i64,
+                           CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL,
+                                                  X86::RBP, MVT::i64),
+                           CurDAG->getTargetConstant(8, DL, MVT::i32));
+      auto &MF = CurDAG->getMachineFunction();
+      MF.getFrameInfo().setFrameAddressIsTaken(true);
+      MF.getInfo<X86MachineFunctionInfo>()->setHasSwiftAsyncContext(true);
+      return;
+    }
+    break;
+  }
   case ISD::INTRINSIC_W_CHAIN: {
     unsigned IntNo = Node->getConstantOperandVal(1);
     switch (IntNo) {
