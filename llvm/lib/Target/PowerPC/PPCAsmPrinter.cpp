@@ -2201,7 +2201,7 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
       // the sinit and sterm function names.
       if (FormatIndicatorAndUniqueModId.empty()) {
         std::string UniqueModuleId = getUniqueModuleId(&M);
-        if (UniqueModuleId.compare("") != 0)
+        if (UniqueModuleId != "")
           // TODO: Use source file full path to generate the unique module id
           // and add a format indicator as a part of function name in case we
           // will support more than one format.
