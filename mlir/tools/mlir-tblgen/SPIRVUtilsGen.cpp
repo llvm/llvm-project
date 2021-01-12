@@ -996,11 +996,10 @@ static void emitDeserializationFunction(const Record *attrClass,
 /// based on the `opcode`.
 static void initDispatchDeserializationFn(StringRef opcode, StringRef words,
                                           raw_ostream &os) {
-  os << formatv(
-      "LogicalResult "
-      "Deserializer::dispatchToAutogenDeserialization(spirv::Opcode {0}, "
-      "ArrayRef<uint32_t> {1}) {{\n",
-      opcode, words);
+  os << formatv("LogicalResult spirv::Deserializer::"
+                "dispatchToAutogenDeserialization(spirv::Opcode {0},"
+                " ArrayRef<uint32_t> {1}) {{\n",
+                opcode, words);
   os << formatv("  switch ({0}) {{\n", opcode);
 }
 
@@ -1043,8 +1042,8 @@ static void initExtendedSetDeserializationDispatch(StringRef extensionSetName,
                                                    StringRef instructionID,
                                                    StringRef words,
                                                    raw_ostream &os) {
-  os << formatv("LogicalResult "
-                "Deserializer::dispatchToExtensionSetAutogenDeserialization("
+  os << formatv("LogicalResult spirv::Deserializer::"
+                "dispatchToExtensionSetAutogenDeserialization("
                 "StringRef {0}, uint32_t {1}, ArrayRef<uint32_t> {2}) {{\n",
                 extensionSetName, instructionID, words);
 }
