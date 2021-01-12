@@ -49,6 +49,33 @@ enum {
 
   ConstraintShift = 5,
   ConstraintMask = 0b111 << ConstraintShift,
+
+  VLMulShift = ConstraintShift + 3,
+  VLMulMask = 0b111 << VLMulShift,
+
+  // Do we need to add a dummy mask op when converting RVV Pseudo to MCInst.
+  HasDummyMaskOpShift = VLMulShift + 3,
+  HasDummyMaskOpMask = 1 << HasDummyMaskOpShift,
+
+  // Does this instruction only update element 0 the destination register.
+  WritesElement0Shift = HasDummyMaskOpShift + 1,
+  WritesElement0Mask = 1 << WritesElement0Shift,
+
+  // Does this instruction have a merge operand that must be removed when
+  // converting to MCInst. It will be the first explicit use operand. Used by
+  // RVV Pseudos.
+  HasMergeOpShift = WritesElement0Shift + 1,
+  HasMergeOpMask = 1 << HasMergeOpShift,
+
+  // Does this instruction have a SEW operand. It will be the last explicit
+  // operand. Used by RVV Pseudos.
+  HasSEWOpShift = HasMergeOpShift + 1,
+  HasSEWOpMask = 1 << HasSEWOpShift,
+
+  // Does this instruction have a VL operand. It will be the second to last
+  // explicit operand. Used by RVV Pseudos.
+  HasVLOpShift = HasSEWOpShift + 1,
+  HasVLOpMask = 1 << HasVLOpShift,
 };
 
 // Match with the definitions in RISCVInstrFormatsV.td
@@ -373,22 +400,6 @@ static const uint8_t InvalidIndex = 0x80;
 struct PseudoInfo {
   uint16_t Pseudo;
   uint16_t BaseInstr;
-  uint8_t VLIndex;
-  uint8_t SEWIndex;
-  uint8_t MergeOpIndex;
-  uint8_t VLMul;
-  bool HasDummyMask;
-  bool WritesElement0;
-
-  int getVLIndex() const { return static_cast<int8_t>(VLIndex); }
-
-  int getSEWIndex() const { return static_cast<int8_t>(SEWIndex); }
-
-  int getMergeOpIndex() const { return static_cast<int8_t>(MergeOpIndex); }
-
-  bool hasDummyMask() const { return HasDummyMask; }
-
-  bool writesElement0() const { return WritesElement0; }
 };
 
 using namespace RISCV;
