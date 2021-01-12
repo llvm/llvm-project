@@ -209,7 +209,17 @@ static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
 
     // Loop over all of the basic blocks and remove them if they are unneeded.
     for (Function::iterator BBIt = F.begin(); BBIt != F.end(); ) {
-      if (simplifyCFG(&*BBIt++, TTI, DTU, Options, &LoopHeaders)) {
+      BasicBlock &BB = *BBIt++;
+      if (DTU) {
+        assert(
+            !DTU->isBBPendingDeletion(&BB) &&
+            "Should not end up trying to simplify blocks marked for removal.");
+        // Make sure that the advanced iterator does not point at the blocks
+        // that are marked for removal, skip over all such blocks.
+        while (BBIt != F.end() && DTU->isBBPendingDeletion(&*BBIt))
+          ++BBIt;
+      }
+      if (simplifyCFG(&BB, TTI, DTU, Options, &LoopHeaders)) {
         LocalChange = true;
         ++NumSimpl;
       }
