@@ -542,13 +542,15 @@ llvm::SplitAllCriticalEdges(Function &F,
   return NumBroken;
 }
 
-BasicBlock *llvm::SplitBlock(BasicBlock *Old, Instruction *SplitPt,
-                             DominatorTree *DT, LoopInfo *LI,
-                             MemorySSAUpdater *MSSAU, const Twine &BBName,
-                             bool Before) {
+static BasicBlock *SplitBlockImpl(BasicBlock *Old, Instruction *SplitPt,
+                                  DomTreeUpdater *DTU, DominatorTree *DT,
+                                  LoopInfo *LI, MemorySSAUpdater *MSSAU,
+                                  const Twine &BBName, bool Before) {
   if (Before) {
-    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
-    return splitBlockBefore(Old, SplitPt, &DTU, LI, MSSAU, BBName);
+    DomTreeUpdater LocalDTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+    return splitBlockBefore(Old, SplitPt,
+                            DTU ? DTU : (DT ? &LocalDTU : nullptr), LI, MSSAU,
+                            BBName);
   }
   BasicBlock::iterator SplitIt = SplitPt->getIterator();
   while (isa<PHINode>(SplitIt) || SplitIt->isEHPad())
@@ -563,7 +565,20 @@ BasicBlock *llvm::SplitBlock(BasicBlock *Old, Instruction *SplitPt,
     if (Loop *L = LI->getLoopFor(Old))
       L->addBasicBlockToLoop(New, *LI);
 
-  if (DT)
+  if (DTU) {
+    SmallVector<DominatorTree::UpdateType, 8> Updates;
+    // Old dominates New. New node dominates all other nodes dominated by Old.
+    SmallSetVector<BasicBlock *, 8> UniqueSuccessorsOfOld(succ_begin(New),
+                                                          succ_end(New));
+    Updates.push_back({DominatorTree::Insert, Old, New});
+    Updates.reserve(Updates.size() + 2 * UniqueSuccessorsOfOld.size());
+    for (BasicBlock *UniqueSuccessorOfOld : UniqueSuccessorsOfOld) {
+      Updates.push_back({DominatorTree::Insert, New, UniqueSuccessorOfOld});
+      Updates.push_back({DominatorTree::Delete, Old, UniqueSuccessorOfOld});
+    }
+
+    DTU->applyUpdates(Updates);
+  } else if (DT)
     // Old dominates New. New node dominates all other nodes dominated by Old.
     if (DomTreeNode *OldNode = DT->getNode(Old)) {
       std::vector<DomTreeNode *> Children(OldNode->begin(), OldNode->end());
@@ -579,6 +594,21 @@ BasicBlock *llvm::SplitBlock(BasicBlock *Old, Instruction *SplitPt,
     MSSAU->moveAllAfterSpliceBlocks(Old, New, &*(New->begin()));
 
   return New;
+}
+
+BasicBlock *llvm::SplitBlock(BasicBlock *Old, Instruction *SplitPt,
+                             DominatorTree *DT, LoopInfo *LI,
+                             MemorySSAUpdater *MSSAU, const Twine &BBName,
+                             bool Before) {
+  return SplitBlockImpl(Old, SplitPt, /*DTU=*/nullptr, DT, LI, MSSAU, BBName,
+                        Before);
+}
+BasicBlock *llvm::SplitBlock(BasicBlock *Old, Instruction *SplitPt,
+                             DomTreeUpdater *DTU, LoopInfo *LI,
+                             MemorySSAUpdater *MSSAU, const Twine &BBName,
+                             bool Before) {
+  return SplitBlockImpl(Old, SplitPt, DTU, /*DT=*/nullptr, LI, MSSAU, BBName,
+                        Before);
 }
 
 BasicBlock *llvm::splitBlockBefore(BasicBlock *Old, Instruction *SplitPt,
