@@ -3209,10 +3209,7 @@ bool TGParser::ParseAssert(MultiClass *CurMultiClass, Record *CurRec) {
   } else if (CurRec) {
     CurRec->addAssertion(ConditionLoc, Condition, Message);
   } else { // at top level
-    RecordResolver R(*CurRec);
-    Init *Value = Condition->resolveReferences(R);
-    Init *Text = Message->resolveReferences(R);
-    CheckAssert(ConditionLoc, Value, Text);
+    CheckAssert(ConditionLoc, Condition, Message);
   }
  
   return false;
