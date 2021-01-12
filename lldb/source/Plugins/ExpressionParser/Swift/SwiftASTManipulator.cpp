@@ -419,7 +419,6 @@ swift::Stmt *SwiftASTManipulator::ConvertExpressionToTmpReturnVarAccess(
   std::string name_buffer;
   llvm::raw_string_ostream(name_buffer) << "__lldb_tmp_ret_" << m_tmpname_idx++;
   swift::Identifier name = ast_context.getIdentifier(name_buffer);
-  swift::Identifier equalequal_name = ast_context.getIdentifier("==");
 
   ResultLocationInfo result_loc_info(source_loc);
   result_loc_info.orig_expr = expr;
@@ -429,7 +428,7 @@ swift::Stmt *SwiftASTManipulator::ConvertExpressionToTmpReturnVarAccess(
     new_decl_context = decl_context;
 
   llvm::SmallVector<swift::ASTNode, 3> body;
-  llvm::SmallVector<swift::Expr *, 3> false_body;
+
   const bool is_static = false;
   const auto introducer = swift::VarDecl::Introducer::Let;
   result_loc_info.tmp_var_decl = new (ast_context) swift::VarDecl(
@@ -457,31 +456,17 @@ swift::Stmt *SwiftASTManipulator::ConvertExpressionToTmpReturnVarAccess(
         new (ast_context) swift::ReturnStmt(source_loc, nullptr);
     body.push_back(result_loc_info.return_stmt);
   }
-  auto *one_expr = new (ast_context)
-      swift::IntegerLiteralExpr(swift::StringRef("1"), source_loc, true);
-  false_body.push_back(one_expr);
-  auto *equalequal_expr = new (ast_context) swift::UnresolvedDeclRefExpr(
-      swift::DeclNameRef(equalequal_name), swift::DeclRefKind::BinaryOperator,
-      swift::DeclNameLoc(source_loc));
-  false_body.push_back(equalequal_expr);
-  auto *zero_expr = new (ast_context)
-      swift::IntegerLiteralExpr(swift::StringRef("0"), source_loc, true);
-  false_body.push_back(zero_expr);
-  auto *zero_equals_one_expr = swift::SequenceExpr::create(
-      ast_context, llvm::ArrayRef<swift::Expr *>(false_body));
 
-  zero_equals_one_expr->setImplicit();
   auto *body_stmt = swift::BraceStmt::create(
       ast_context, source_loc, llvm::ArrayRef<swift::ASTNode>(body), source_loc,
       true);
 
-  // Default construct a label info that contains nothing for the while
+  // Default construct a label info that contains nothing for the 'do'
   // statement
   swift::LabeledStmtInfo label_info;
 
   auto *assign_stmt = new (ast_context)
-      swift::RepeatWhileStmt(label_info, source_loc, zero_equals_one_expr,
-                             source_loc, body_stmt, true);
+      swift::DoStmt(label_info, source_loc, body_stmt, true);
   result_loc_info.wrapper_stmt = assign_stmt;
 
   m_result_info.push_back(result_loc_info);
