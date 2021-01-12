@@ -412,11 +412,11 @@ ModuleTranslation::convertOmpParallel(Operation &opInst,
   LogicalResult bodyGenStatus = success();
 
   auto bodyGenCB = [&](InsertPointTy allocaIP, InsertPointTy codeGenIP,
-                       llvm::BasicBlock &continuationIP) {
+                       llvm::BasicBlock &continuationBlock) {
     // ParallelOp has only one region associated with it.
     auto &region = cast<omp::ParallelOp>(opInst).getRegion();
     convertOmpOpRegions(region, "omp.par.region", valueMapping, blockMapping,
-                        *codeGenIP.getBlock(), continuationIP, builder,
+                        *codeGenIP.getBlock(), continuationBlock, builder,
                         bodyGenStatus);
   };
 
@@ -517,11 +517,11 @@ LogicalResult ModuleTranslation::convertOmpMaster(Operation &opInst,
   LogicalResult bodyGenStatus = success();
 
   auto bodyGenCB = [&](InsertPointTy allocaIP, InsertPointTy codeGenIP,
-                       llvm::BasicBlock &continuationIP) {
+                       llvm::BasicBlock &continuationBlock) {
     // MasterOp has only one region associated with it.
     auto &region = cast<omp::MasterOp>(opInst).getRegion();
     convertOmpOpRegions(region, "omp.master.region", valueMapping, blockMapping,
-                        *codeGenIP.getBlock(), continuationIP, builder,
+                        *codeGenIP.getBlock(), continuationBlock, builder,
                         bodyGenStatus);
   };
 
