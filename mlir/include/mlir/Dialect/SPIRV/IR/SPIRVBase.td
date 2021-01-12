@@ -3170,6 +3170,7 @@ def SPV_OC_OpSpecConstantTrue          : I32EnumAttrCase<"OpSpecConstantTrue", 4
 def SPV_OC_OpSpecConstantFalse         : I32EnumAttrCase<"OpSpecConstantFalse", 49>;
 def SPV_OC_OpSpecConstant              : I32EnumAttrCase<"OpSpecConstant", 50>;
 def SPV_OC_OpSpecConstantComposite     : I32EnumAttrCase<"OpSpecConstantComposite", 51>;
+def SPV_OC_OpSpecConstantOperation     : I32EnumAttrCase<"OpSpecConstantOperation", 52>;
 def SPV_OC_OpFunction                  : I32EnumAttrCase<"OpFunction", 54>;
 def SPV_OC_OpFunctionParameter         : I32EnumAttrCase<"OpFunctionParameter", 55>;
 def SPV_OC_OpFunctionEnd               : I32EnumAttrCase<"OpFunctionEnd", 56>;
@@ -3314,7 +3315,8 @@ def SPV_OpcodeAttr :
       SPV_OC_OpConstantTrue, SPV_OC_OpConstantFalse, SPV_OC_OpConstant,
       SPV_OC_OpConstantComposite, SPV_OC_OpConstantNull, SPV_OC_OpSpecConstantTrue,
       SPV_OC_OpSpecConstantFalse, SPV_OC_OpSpecConstant,
-      SPV_OC_OpSpecConstantComposite, SPV_OC_OpFunction, SPV_OC_OpFunctionParameter,
+      SPV_OC_OpSpecConstantComposite, SPV_OC_OpSpecConstantOperation,
+      SPV_OC_OpFunction, SPV_OC_OpFunctionParameter,
       SPV_OC_OpFunctionEnd, SPV_OC_OpFunctionCall, SPV_OC_OpVariable, SPV_OC_OpLoad,
       SPV_OC_OpStore, SPV_OC_OpCopyMemory, SPV_OC_OpAccessChain, SPV_OC_OpDecorate,
       SPV_OC_OpMemberDecorate, SPV_OC_OpVectorExtractDynamic,
