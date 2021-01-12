@@ -656,20 +656,8 @@ public:
 /// \endcode
 class ObjCTypeParamList final
     : private llvm::TrailingObjects<ObjCTypeParamList, ObjCTypeParamDecl *> {
-  /// Stores the components of a SourceRange as a POD.
-  struct PODSourceRange {
-    unsigned Begin;
-    unsigned End;
-  };
-
-  union {
-    /// Location of the left and right angle brackets.
-    PODSourceRange Brackets;
-
-    // Used only for alignment.
-    ObjCTypeParamDecl *AlignmentHack;
-  };
-
+  /// Location of the left and right angle brackets.
+  SourceRange Brackets;
   /// The number of parameters in the list, which are tail-allocated.
   unsigned NumParams;
 
@@ -717,17 +705,9 @@ public:
     return *(end() - 1);
   }
 
-  SourceLocation getLAngleLoc() const {
-    return SourceLocation::getFromRawEncoding(Brackets.Begin);
-  }
-
-  SourceLocation getRAngleLoc() const {
-    return SourceLocation::getFromRawEncoding(Brackets.End);
-  }
-
-  SourceRange getSourceRange() const {
-    return SourceRange(getLAngleLoc(), getRAngleLoc());
-  }
+  SourceLocation getLAngleLoc() const { return Brackets.getBegin(); }
+  SourceLocation getRAngleLoc() const { return Brackets.getEnd(); }
+  SourceRange getSourceRange() const { return Brackets; }
 
   /// Gather the default set of type arguments to be substituted for
   /// these type parameters when dealing with an unspecialized type.
