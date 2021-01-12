@@ -637,11 +637,32 @@ void WebAssemblyCFGStackify::removeUnnecessaryInstrs(MachineFunction &MF) {
   //   try
   //     ...
   //     br bb2      <- Not necessary
-  // bb1:
+  // bb1 (ehpad):
   //   catch
   //     ...
-  // bb2:
+  // bb2:            <- Continuation BB
   //   end
+  //
+  // A more involved case: When the BB where 'end' is located is an another EH
+  // pad, the Cont (= continuation) BB is that EH pad's 'end' BB. For example,
+  // bb0:
+  //   try
+  //     try
+  //       ...
+  //       br bb3      <- Not necessary
+  // bb1 (ehpad):
+  //     catch
+  // bb2 (ehpad):
+  //     end
+  //   catch
+  //     ...
+  // bb3:            <- Continuation BB
+  //   end
+  //
+  // When the EH pad at hand is bb1, its matching end_try is in bb2. But it is
+  // another EH pad, so bb0's continuation BB becomes bb3. So 'br bb3' in the
+  // code can be deleted. This is why we run 'while' until 'Cont' is not an EH
+  // pad.
   for (auto &MBB : MF) {
     if (!MBB.isEHPad())
       continue;
@@ -649,7 +670,14 @@ void WebAssemblyCFGStackify::removeUnnecessaryInstrs(MachineFunction &MF) {
     MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
     SmallVector<MachineOperand, 4> Cond;
     MachineBasicBlock *EHPadLayoutPred = MBB.getPrevNode();
-    MachineBasicBlock *Cont = BeginToEnd[EHPadToTry[&MBB]]->getParent();
+
+    MachineBasicBlock *Cont = &MBB;
+    while (Cont->isEHPad()) {
+      MachineInstr *Try = EHPadToTry[Cont];
+      MachineInstr *EndTry = BeginToEnd[Try];
+      Cont = EndTry->getParent();
+    }
+
     bool Analyzable = !TII.analyzeBranch(*EHPadLayoutPred, TBB, FBB, Cond);
     // This condition means either
     // 1. This BB ends with a single unconditional branch whose destinaion is
