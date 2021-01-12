@@ -368,7 +368,6 @@ feature_test_macros = [ add_version_header(x) for x in [
     "name": "__cpp_lib_is_scoped_enum",
     "values": { "c++2b": 202011 },
     "headers": ["type_traits"],
-    "unimplemented": True,
   }, {
     "name": "__cpp_lib_is_swappable",
     "values": { "c++17": 201603 },
