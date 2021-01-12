@@ -3367,6 +3367,14 @@ defm "" : VPatBinaryV_VM<"int_riscv_vfmerge", "PseudoVMERGE",
 defm "" : VPatBinaryV_XM<"int_riscv_vfmerge", "PseudoVFMERGE",
                          /*CarryOut = */0, /*vtilist=*/AllFloatVectors>;
 
+foreach fvti = AllFloatVectors in {
+  defvar instr = !cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX);
+  def : Pat<(fvti.Vector (int_riscv_vfmerge (fvti.Vector fvti.RegClass:$rs2),
+                                            (fvti.Scalar (fpimm0)),
+                                            (fvti.Mask V0), (XLenVT GPR:$vl))),
+            (instr fvti.RegClass:$rs2, 0, (fvti.Mask V0), (NoX0 GPR:$vl), fvti.SEW)>;
+}
+
 //===----------------------------------------------------------------------===//
 // 14.16. Vector Floating-Point Move Instruction
 //===----------------------------------------------------------------------===//
