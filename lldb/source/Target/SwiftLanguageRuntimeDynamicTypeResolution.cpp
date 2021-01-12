@@ -315,17 +315,17 @@ public:
     if (name.empty())
       return swift::remote::RemoteAddress(nullptr);
 
-    LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-             "[MemoryReader] asked to retrieve the address of symbol {0}",
-             name);
+    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+
+    LLDB_LOGV(log, "[MemoryReader] asked to retrieve the address of symbol {0}",
+              name);
 
     ConstString name_cs(name.c_str(), name.size());
     SymbolContextList sc_list;
     m_process.GetTarget().GetImages().FindSymbolsWithNameAndType(
         name_cs, lldb::eSymbolTypeAny, sc_list);
     if (!sc_list.GetSize()) {
-      LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-               "[MemoryReader] symbol resolution failed {0}", name);
+      LLDB_LOGV(log, "[MemoryReader] symbol resolution failed {0}", name);
       return swift::remote::RemoteAddress(nullptr);
     }
 
@@ -346,16 +346,15 @@ public:
     if (sc_list.GetSize() == 1 && sc_list.GetContextAtIndex(0, sym_ctx)) {
       if (sym_ctx.symbol) {
         auto load_addr = sym_ctx.symbol->GetLoadAddress(&m_process.GetTarget());
-        LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-                 "[MemoryReader] symbol resolved to 0x%" PRIx64, load_addr);
+        LLDB_LOGV(log, "[MemoryReader] symbol resolved to 0x%" PRIx64,
+                  load_addr);
         return swift::remote::RemoteAddress(load_addr);
       }
     }
 
     // Empty list, resolution failed.
     if (sc_list.GetSize() == 0) {
-      LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-               "[MemoryReader] symbol resoution failed {0}", name);
+      LLDB_LOGV(log, "[MemoryReader] symbol resolution failed {0}", name);
       return swift::remote::RemoteAddress(nullptr);
     }
 
@@ -370,13 +369,11 @@ public:
           m_process.GetTarget().ReadUnsignedIntegerFromMemory(
               load_addr, false, m_process.GetAddressByteSize(), 0, error);
       if (sym_value != other_sym_value) {
-        LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-                 "[MemoryReader] symbol resoution failed {0}", name);
+        LLDB_LOGV(log, "[MemoryReader] symbol resolution failed {0}", name);
         return swift::remote::RemoteAddress(nullptr);
       }
     }
-    LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-             "[MemoryReader] symbol resolved to {0}", load_addr);
+    LLDB_LOGV(log, "[MemoryReader] symbol resolved to {0}", load_addr);
     return swift::remote::RemoteAddress(load_addr);
   }
 
@@ -396,14 +393,13 @@ public:
 
     Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
 
-    if (log)
-      log->Printf("[MemoryReader] asked to read %" PRIu64
-                  " bytes at address 0x%" PRIx64,
-                  size, address.getAddressData());
+    LLDB_LOGV(log,
+              "[MemoryReader] asked to read %" PRIu64
+              " bytes at address 0x%" PRIx64,
+              size, address.getAddressData());
 
     if (size > m_max_read_amount) {
-      if (log)
-        log->Printf("[MemoryReader] memory read exceeds maximum allowed size");
+      LLDB_LOGV(log, "[MemoryReader] memory read exceeds maximum allowed size");
       return false;
     }
 
@@ -411,27 +407,24 @@ public:
     Address addr(address.getAddressData());
     Status error;
     if (size > target.ReadMemory(addr, false, dest, size, error)) {
-      if (log)
-        log->Printf(
-            "[MemoryReader] memory read returned fewer bytes than asked for");
+      LLDB_LOGV(log, "[MemoryReader] memory read returned fewer bytes than asked for");
       return false;
     }
     if (error.Fail()) {
-      if (log)
-        log->Printf("[MemoryReader] memory read returned error: %s",
-                    error.AsCString());
+      LLDB_LOGV(log, "[MemoryReader] memory read returned error: %s", error.AsCString());
       return false;
     }
 
-    if (log && log->GetVerbose()) {
+    auto format_data = [](auto dest, auto size) {
       StreamString stream;
       for (uint64_t i = 0; i < size; i++) {
         stream.PutHex8(dest[i]);
         stream.PutChar(' ');
       }
-      log->Printf("[MemoryReader] memory read returned data: %s",
-                  stream.GetData());
-    }
+      return stream.GetData();
+    };
+    LLDB_LOGV(log, "[MemoryReader] memory read returned data: %s",
+              format_data(dest, size));
 
     return true;
   }
@@ -440,20 +433,16 @@ public:
                   std::string &dest) override {
     Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
 
-    if (log)
-      log->Printf(
-          "[MemoryReader] asked to read string data at address 0x%" PRIx64,
-          address.getAddressData());
+    LLDB_LOGV(log,
+              "[MemoryReader] asked to read string data at address 0x%" PRIx64,
+              address.getAddressData());
 
-    uint32_t read_size = 50 * 1024;
-    std::vector<char> storage(read_size, 0);
     Target &target(m_process.GetTarget());
     Address addr(address.getAddressData());
     Status error;
-    target.ReadCStringFromMemory(addr, &storage[0], storage.size(), error);
+    target.ReadCStringFromMemory(addr, dest, error);
     if (error.Success()) {
-      dest.assign(&storage[0]);
-      if (log) {
+      auto format_string = [](const std::string &dest) {
         StreamString stream;
         for (auto c : dest) {
           if (c >= 32 && c <= 127) {
@@ -463,14 +452,14 @@ public:
             stream.PutHex8(c);
           }
         }
-        log->Printf("[MemoryReader] memory read returned data: \"%s\"",
-                    stream.GetData());
-      }
+        return stream.GetData();
+      };
+      LLDB_LOGV(log, "[MemoryReader] memory read returned data: \"%s\"",
+                format_string(dest));
       return true;
     } else {
-      if (log)
-        log->Printf("[MemoryReader] memory read returned error: %s",
-                    error.AsCString());
+      LLDB_LOGV(log, "[MemoryReader] memory read returned error: %s",
+                error.AsCString());
       return false;
     }
   }
@@ -1485,6 +1474,11 @@ bool SwiftLanguageRuntimeImpl::ForEachSuperClassType(
   auto *reflection_ctx = GetReflectionContext();
   if (!reflection_ctx)
     return false;
+  CompilerType instance_type = instance.GetCompilerType();
+  auto *ts =
+      llvm::dyn_cast_or_null<TypeSystemSwift>(instance_type.GetTypeSystem());
+  if (!ts)
+    return false;
 
   lldb::addr_t pointer = instance.GetPointerValue();
   // Maybe this belongs into GetPointerValue, but on the other hand it
@@ -1494,7 +1488,7 @@ bool SwiftLanguageRuntimeImpl::ForEachSuperClassType(
   // libReflection cannot tell up how many bits to strip from
   // multi-payload enum values.
   auto addr_deref =
-    FixupPointerValue(pointer, instance.GetCompilerType());
+    FixupPointerValue(pointer, instance_type);
   pointer = addr_deref.first;
   if (addr_deref.second) {
       // This is a reference storage object.
@@ -1503,11 +1497,6 @@ bool SwiftLanguageRuntimeImpl::ForEachSuperClassType(
               &pointer))
         return false;
   }
-
-  auto *ts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(
-      instance.GetCompilerType().GetTypeSystem());
-  if (!ts)
-    return false;
 
   auto md_ptr = reflection_ctx->readMetadataFromInstance(pointer);
   if (!md_ptr)
@@ -2662,18 +2651,15 @@ const swift::reflection::TypeInfo *SwiftLanguageRuntimeImpl::GetTypeInfo(
 
   // Resolve all type aliases.
   type = type.GetCanonicalType();
-  
+
   // Resolve all generic type parameters in the type for the current
-  // frame.  Archetype binding has to happen in the scratch context,
-  // so we lock it while we are in this function.
+  // frame. Generic parameter binding has to happen in the scratch
+  // context, so we lock it while we are in this function.
   std::unique_ptr<SwiftASTContextLock> lock;
   if (exe_scope)
     if (StackFrame *frame = exe_scope->CalculateStackFrame().get()) {
       ExecutionContext exe_ctx;
-      // FIXME: Should be
-      // frame->CalculateExecutionContext(exe_ctx);
-      // but all the other functions currently get this wrong, too!
-      m_process.GetTarget().CalculateExecutionContext(exe_ctx);
+      frame->CalculateExecutionContext(exe_ctx);
       lock = std::make_unique<SwiftASTContextLock>(&exe_ctx);
       type = BindGenericTypeParameters(*frame, type);
     }

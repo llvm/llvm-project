@@ -13,6 +13,7 @@
 #include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRef.h"
 #include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
 
+#include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeMap.h"
@@ -2178,12 +2179,12 @@ CompilerType TypeSystemSwiftTypeRef::GetFieldAtIndex(
 static swift::Demangle::NodePointer
 GetClangTypeTypeNode(TypeSystemSwiftTypeRef &ts,
                      swift::Demangle::Demangler &dem, CompilerType clang_type,
-                     SwiftASTContext *swift_ast_context) {
+                     SwiftASTContext *module_holder) {
   assert(llvm::isa<TypeSystemClang>(clang_type.GetTypeSystem()) &&
          "expected a clang type");
   using namespace swift::Demangle;
   NodePointer type = dem.createNode(Node::Kind::Type);
-  type->addChild(GetClangTypeNode(clang_type, dem, swift_ast_context), dem);
+  type->addChild(GetClangTypeNode(clang_type, dem, module_holder), dem);
   return type;
 }
 
@@ -2344,20 +2345,19 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
     llvm::StringRef suffix(ast_child_name);
     if (suffix.consume_front("__ObjC."))
       ast_child_name = suffix.str();
+    assert((llvm::StringRef(child_name).contains('.') ||
+            Equivalent(child_name, ast_child_name)));
+    assert((Equivalent(llvm::Optional<uint64_t>(child_byte_size),
+                       llvm::Optional<uint64_t>(ast_child_byte_size)) ||
+            ast_language_flags));
+    assert(Equivalent(llvm::Optional<uint64_t>(child_byte_offset),
+                      llvm::Optional<uint64_t>(ast_child_byte_offset)));
     assert(
-        (llvm::StringRef(child_name).contains('.') ||
-         Equivalent(child_name, ast_child_name)) &&
-        (Equivalent(llvm::Optional<uint64_t>(child_byte_size),
-                    llvm::Optional<uint64_t>(ast_child_byte_size)) ||
-         ast_language_flags) &&
-        Equivalent(llvm::Optional<uint64_t>(child_byte_offset),
-                   llvm::Optional<uint64_t>(ast_child_byte_offset)) &&
-        Equivalent(child_bitfield_bit_offset, ast_child_bitfield_bit_offset) &&
-        Equivalent(child_bitfield_bit_size, ast_child_bitfield_bit_size) &&
-        Equivalent(child_is_base_class, ast_child_is_base_class) &&
-        Equivalent(child_is_deref_of_parent, ast_child_is_deref_of_parent) &&
-        Equivalent(language_flags, ast_language_flags) &&
-        "TypeSystemSwiftTypeRef diverges from SwiftASTContext");
+        Equivalent(child_bitfield_bit_offset, ast_child_bitfield_bit_offset));
+    assert(Equivalent(child_bitfield_bit_size, ast_child_bitfield_bit_size));
+    assert(Equivalent(child_is_base_class, ast_child_is_base_class));
+    assert(Equivalent(child_is_deref_of_parent, ast_child_is_deref_of_parent));
+    assert(Equivalent(language_flags, ast_language_flags));
   });
 #endif
   VALIDATE_AND_RETURN(
@@ -2683,27 +2683,126 @@ TypeSystemSwiftTypeRef::dump(opaque_compiler_type_t type) const {
 }
 #endif
 
-void TypeSystemSwiftTypeRef::DumpValue(
-    opaque_compiler_type_t type, ExecutionContext *exe_ctx, Stream *s,
-    lldb::Format format, const DataExtractor &data, lldb::offset_t data_offset,
-    size_t data_byte_size, uint32_t bitfield_bit_size,
-    uint32_t bitfield_bit_offset, bool show_types, bool show_summary,
-    bool verbose, uint32_t depth) {
-  return m_swift_ast_context->DumpValue(
-      ReconstructType(type), exe_ctx, s, format, data, data_offset,
-      data_byte_size, bitfield_bit_size, bitfield_bit_offset, show_types,
-      show_summary, verbose, depth);
-}
-
 bool TypeSystemSwiftTypeRef::DumpTypeValue(
     opaque_compiler_type_t type, Stream *s, lldb::Format format,
     const DataExtractor &data, lldb::offset_t data_offset,
     size_t data_byte_size, uint32_t bitfield_bit_size,
     uint32_t bitfield_bit_offset, ExecutionContextScope *exe_scope,
     bool is_base_class) {
-  return m_swift_ast_context->DumpTypeValue(
-      ReconstructType(type), s, format, data, data_offset, data_byte_size,
-      bitfield_bit_size, bitfield_bit_offset, exe_scope, is_base_class);
+  if (!type)
+    return false;
+
+  using namespace swift::Demangle;
+  Demangler dem;
+  auto *node = DemangleCanonicalType(dem, type);
+  auto kind = node->getKind();
+
+  switch (kind) {
+  case Node::Kind::Structure: {
+    // TODO: Handle ObjC enums masquerading as structs.
+    // In rare instances, a Swift `Structure` wraps an ObjC enum. An example is
+    // `$sSo16ComparisonResultVD`. For now, use `SwiftASTContext` to handle
+    // these enum structs.
+    auto resolved = ResolveTypeAlias(m_swift_ast_context, dem, node, true);
+    auto clang_type = std::get<CompilerType>(resolved);
+    bool is_signed;
+    if (!clang_type.IsEnumerationType(is_signed))
+        break;
+    LLVM_FALLTHROUGH;
+  }
+  case Node::Kind::Enum:
+  case Node::Kind::BoundGenericEnum:
+    // TODO: Add support for Enums.
+    return m_swift_ast_context->DumpTypeValue(
+        ReconstructType(type), s, format, data, data_offset, data_byte_size,
+        bitfield_bit_size, bitfield_bit_offset, exe_scope, is_base_class);
+  }
+
+  auto impl = [&]() -> bool {
+    switch (kind) {
+    case Node::Kind::Class:
+    case Node::Kind::BoundGenericClass:
+      if (is_base_class)
+        return false;
+      LLVM_FALLTHROUGH;
+    case Node::Kind::ExistentialMetatype:
+    case Node::Kind::Metatype:
+      format = eFormatPointer;
+      LLVM_FALLTHROUGH;
+    case Node::Kind::BuiltinTypeName:
+    case Node::Kind::DependentGenericParamType:
+    case Node::Kind::FunctionType:
+    case Node::Kind::ImplFunctionType: {
+      uint32_t item_count = 1;
+      // A few formats, we might need to modify our size and count for
+      // depending on how we are trying to display the value.
+      switch (format) {
+      case eFormatChar:
+      case eFormatCharPrintable:
+      case eFormatCharArray:
+      case eFormatBytes:
+      case eFormatBytesWithASCII:
+        item_count = data_byte_size;
+        data_byte_size = 1;
+        break;
+      case eFormatUnicode16:
+        item_count = data_byte_size / 2;
+        data_byte_size = 2;
+        break;
+      case eFormatUnicode32:
+        item_count = data_byte_size / 4;
+        data_byte_size = 4;
+        break;
+      case eFormatAddressInfo:
+        if (data_byte_size == 0) {
+          data_byte_size = exe_scope->CalculateTarget()
+                               ->GetArchitecture()
+                               .GetAddressByteSize();
+          item_count = 1;
+        }
+        break;
+      default:
+        break;
+      }
+      return DumpDataExtractor(data, s, data_offset, format, data_byte_size,
+                               item_count, UINT32_MAX, LLDB_INVALID_ADDRESS,
+                               bitfield_bit_size, bitfield_bit_offset,
+                               exe_scope);
+    }
+    case Node::Kind::Unmanaged:
+    case Node::Kind::Unowned:
+    case Node::Kind::Weak: {
+      auto *referent_node = node->getFirstChild();
+      assert(referent_node->getKind() == Node::Kind::Type);
+      auto referent_type = RemangleAsType(dem, referent_node);
+      return referent_type.DumpTypeValue(
+          s, format, data, data_offset, data_byte_size, bitfield_bit_size,
+          bitfield_bit_offset, exe_scope, is_base_class);
+    }
+    case Node::Kind::Structure:
+    case Node::Kind::BoundGenericStructure:
+      return false;
+    default:
+      llvm_unreachable("Unhandled node kind");
+      LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+                "DumpTypeValue: Unhandled node kind for type %s",
+                AsMangledName(type));
+      return false;
+    }
+  };
+
+#ifndef NDEBUG
+  StreamString ast_s;
+  auto defer = llvm::make_scope_exit([&] {
+    assert(Equivalent(ConstString(ast_s.GetString()),
+                      ConstString(((StreamString *)s)->GetString())) &&
+           "TypeSystemSwiftTypeRef diverges from SwiftASTContext");
+  });
+#endif
+  VALIDATE_AND_RETURN(impl, DumpTypeValue, type,
+                      (ReconstructType(type), &ast_s, format, data, data_offset,
+                       data_byte_size, bitfield_bit_size, bitfield_bit_offset,
+                       exe_scope, is_base_class));
 }
 
 void TypeSystemSwiftTypeRef::DumpTypeDescription(opaque_compiler_type_t type,
