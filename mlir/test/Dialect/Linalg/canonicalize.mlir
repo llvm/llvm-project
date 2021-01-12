@@ -413,3 +413,39 @@ func @init_tensor_dim_of_linalg_result(%arg_0 : tensor<?xf32>,
 // CHECK-SAME: [[ARG_0:%.*]]: tensor<?xf32>, [[ARG_1:%.*]]: tensor<?xf32>)
 // CHECK: dim [[ARG_0]]
 // CHECK: dim [[ARG_1]]
+
+// -----
+
+func @init_tensor_reshape_expansion(%arg0 : index) -> tensor<2x3x5x4x?x7xf32> {
+  %0 = linalg.init_tensor [6, 5, %arg0] : tensor<6x5x?xf32>
+  %1 = linalg.tensor_reshape %0
+    [affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1)>,
+     affine_map<(d0, d1, d2, d3, d4, d5) -> (d2)>,
+     affine_map<(d0, d1, d2, d3, d4, d5) -> (d3, d4, d5)>] :
+     tensor<6x5x?xf32> into tensor<2x3x5x4x?x7xf32>
+  return %1 : tensor<2x3x5x4x?x7xf32>
+}
+//      CHECK: func @init_tensor_reshape_expansion
+// CHECK-SAME:   %[[ARG0:.+]]: index
+//      CHECK:   %[[C28:.+]] = constant 28 : index
+//      CHECK:   %[[T0:.+]] = divi_unsigned %[[ARG0]], %[[C28]]
+//      CHECK:   %[[T1:.+]] = linalg.init_tensor [2, 3, 5, 4, %[[T0]], 7]
+//      CHECK:   return %[[T1]]
+
+// -----
+
+func @init_tensor_reshape_collapse(%arg0 : index) -> tensor<6x5x?xf32> {
+  %0 = linalg.init_tensor [2, 3, 5, 4, %arg0, 7] : tensor<2x3x5x4x?x7xf32>
+  %1 = linalg.tensor_reshape %0
+    [affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1)>,
+     affine_map<(d0, d1, d2, d3, d4, d5) -> (d2)>,
+     affine_map<(d0, d1, d2, d3, d4, d5) -> (d3, d4, d5)>] :
+    tensor<2x3x5x4x?x7xf32> into tensor<6x5x?xf32>
+  return %1 : tensor<6x5x?xf32>
+}
+//      CHECK: func @init_tensor_reshape_collapse
+// CHECK-SAME:   %[[ARG0:.+]]: index
+//      CHECK:   %[[C28:.+]] = constant 28 : index
+//      CHECK:   %[[T0:.+]] = muli %[[ARG0]], %[[C28]]
+//      CHECK:   %[[T1:.+]] = linalg.init_tensor [6, 5, %[[T0]]]
+//      CHECK:   return %[[T1]]
