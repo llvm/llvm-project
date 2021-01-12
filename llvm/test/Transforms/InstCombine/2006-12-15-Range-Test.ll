@@ -42,3 +42,40 @@ cond_true:              ; preds = %newFuncRoot
   br i1 %bothcond, label %bb27.exitStub, label %cond_next23.exitStub
 }
 
+define i1 @print_pgm_cond_true_logical(i32 %tmp12.reload, i32* %tmp16.out) {
+; CHECK-LABEL: @print_pgm_cond_true_logical(
+; CHECK-NEXT:  newFuncRoot:
+; CHECK-NEXT:    br label [[COND_TRUE:%.*]]
+; CHECK:       bb27.exitStub:
+; CHECK-NEXT:    store i32 [[TMP16:%.*]], i32* [[TMP16_OUT:%.*]], align 4
+; CHECK-NEXT:    ret i1 true
+; CHECK:       cond_next23.exitStub:
+; CHECK-NEXT:    store i32 [[TMP16]], i32* [[TMP16_OUT]], align 4
+; CHECK-NEXT:    ret i1 false
+; CHECK:       cond_true:
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr [17 x i32], [17 x i32]* @r, i32 0, i32 [[TMP12_RELOAD:%.*]]
+; CHECK-NEXT:    [[TMP16]] = load i32, i32* [[TMP15]], align 4
+; CHECK-NEXT:    [[TMP16_OFF:%.*]] = add i32 [[TMP16]], 31
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i32 [[TMP16_OFF]], 62
+; CHECK-NEXT:    br i1 [[TMP0]], label [[BB27_EXITSTUB:%.*]], label [[COND_NEXT23_EXITSTUB:%.*]]
+;
+newFuncRoot:
+  br label %cond_true
+
+bb27.exitStub:          ; preds = %cond_true
+  store i32 %tmp16, i32* %tmp16.out
+  ret i1 true
+
+cond_next23.exitStub:           ; preds = %cond_true
+  store i32 %tmp16, i32* %tmp16.out
+  ret i1 false
+
+cond_true:              ; preds = %newFuncRoot
+  %tmp15 = getelementptr [17 x i32], [17 x i32]* @r, i32 0, i32 %tmp12.reload         ; <i32*> [#uses=1]
+  %tmp16 = load i32, i32* %tmp15               ; <i32> [#uses=4]
+  %tmp18 = icmp slt i32 %tmp16, -31               ; <i1> [#uses=1]
+  %tmp21 = icmp sgt i32 %tmp16, 31                ; <i1> [#uses=1]
+  %bothcond = select i1 %tmp18, i1 true, i1 %tmp21                ; <i1> [#uses=1]
+  br i1 %bothcond, label %bb27.exitStub, label %cond_next23.exitStub
+}
+
