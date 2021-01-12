@@ -4,28 +4,24 @@
 //
 // In particular, we check that ftz and unsafe-math are propagated into the
 // bitcode library as appropriate.
-//
-// In addition, we set -ftrapping-math on the bitcode library, but then set
-// -fno-trapping-math on the main compilations, and ensure that the latter flag
-// overrides the flag on the bitcode library.
 
 // Build the bitcode library.  This is not built in CUDA mode, otherwise it
 // might have incompatible attributes.  This mirrors how libdevice is built.
-// RUN: %clang_cc1 -x c++ -fconvergent-functions -emit-llvm-bc -ftrapping-math -DLIB \
+// RUN: %clang_cc1 -x c++ -fconvergent-functions -emit-llvm-bc -DLIB \
 // RUN:   %s -o %t.bc -triple nvptx-unknown-unknown
 
 // RUN: %clang_cc1 -x cuda %s -emit-llvm -mlink-builtin-bitcode %t.bc -o - \
-// RUN:   -fno-trapping-math -fcuda-is-device -triple nvptx-unknown-unknown \
+// RUN:   -fcuda-is-device -triple nvptx-unknown-unknown \
 // RUN: | FileCheck %s --check-prefix=CHECK --check-prefix=NOFTZ --check-prefix=NOFAST
 
 // RUN: %clang_cc1 -x cuda %s -emit-llvm -mlink-builtin-bitcode %t.bc \
-// RUN:   -fno-trapping-math -fdenormal-fp-math-f32=preserve-sign -o - \
+// RUN:   -fdenormal-fp-math-f32=preserve-sign -o - \
 // RUN:   -fcuda-is-device -triple nvptx-unknown-unknown \
 // RUN: | FileCheck %s --check-prefix=CHECK --check-prefix=FTZ \
 // RUN:   --check-prefix=NOFAST
 
 // RUN: %clang_cc1 -x cuda %s -emit-llvm -mlink-builtin-bitcode %t.bc \
-// RUN:   -fno-trapping-math -fdenormal-fp-math-f32=preserve-sign -o - \
+// RUN:   -fdenormal-fp-math-f32=preserve-sign -o - \
 // RUN:   -fcuda-is-device -menable-unsafe-fp-math -triple nvptx-unknown-unknown \
 // RUN: | FileCheck %s --check-prefix=CHECK --check-prefix=FAST
 

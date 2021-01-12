@@ -66,8 +66,8 @@ static unsigned getBitWidth(Type type) {
 
 /// Returns the bit width of LLVMType integer or vector.
 static unsigned getLLVMTypeBitWidth(Type type) {
-  auto vectorType = type.dyn_cast<LLVM::LLVMVectorType>();
-  return (vectorType ? vectorType.getElementType() : type)
+  return (LLVM::isCompatibleVectorType(type) ? LLVM::getVectorElementType(type)
+                                             : type)
       .cast<IntegerType>()
       .getWidth();
 }

@@ -10,7 +10,7 @@
 ; CHECK: llvm.mlir.global internal @g3("string")
 @g3 = internal global [6 x i8] c"string"
 
-; CHECK: llvm.mlir.global external @g5() : !llvm.vec<8 x i32>
+; CHECK: llvm.mlir.global external @g5() : vector<8xi32>
 @g5 = external global <8 x i32>
 
 @g4 = external global i32, align 8
@@ -53,7 +53,7 @@
 ; Sequential constants.
 ;
 
-; CHECK: llvm.mlir.global internal constant @vector_constant(dense<[1, 2]> : vector<2xi32>) : !llvm.vec<2 x i32>
+; CHECK: llvm.mlir.global internal constant @vector_constant(dense<[1, 2]> : vector<2xi32>) : vector<2xi32>
 @vector_constant = internal constant <2 x i32> <i32 1, i32 2>
 ; CHECK: llvm.mlir.global internal constant @array_constant(dense<[1.000000e+00, 2.000000e+00]> : tensor<2xf32>) : !llvm.array<2 x f32>
 @array_constant = internal constant [2 x float] [float 1., float 2.]
@@ -61,7 +61,7 @@
 @nested_array_constant = internal constant [2 x [2 x i32]] [[2 x i32] [i32 1, i32 2], [2 x i32] [i32 3, i32 4]]
 ; CHECK: llvm.mlir.global internal constant @nested_array_constant3(dense<[{{\[}}[1, 2], [3, 4]]]> : tensor<1x2x2xi32>) : !llvm.array<1 x array<2 x array<2 x i32>>>
 @nested_array_constant3 = internal constant [1 x [2 x [2 x i32]]] [[2 x [2 x i32]] [[2 x i32] [i32 1, i32 2], [2 x i32] [i32 3, i32 4]]]
-; CHECK: llvm.mlir.global internal constant @nested_array_vector(dense<[{{\[}}[1, 2], [3, 4]]]> : vector<1x2x2xi32>) : !llvm.array<1 x array<2 x vec<2 x i32>>>
+; CHECK: llvm.mlir.global internal constant @nested_array_vector(dense<[{{\[}}[1, 2], [3, 4]]]> : vector<1x2x2xi32>) : !llvm.array<1 x array<2 x vector<2xi32>>>
 @nested_array_vector = internal constant [1 x [2 x <2 x i32>]] [[2 x <2 x i32>] [<2 x i32> <i32 1, i32 2>, <2 x i32> <i32 3, i32 4>]]
 
 ;

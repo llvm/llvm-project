@@ -100,6 +100,7 @@ protected:
   bool HasAltivec;
   bool HasFPU;
   bool HasSPE;
+  bool HasEFPU2;
   bool HasVSX;
   bool NeedsTwoConstNR;
   bool HasP8Vector;
@@ -257,6 +258,7 @@ public:
   bool hasFPCVT() const { return HasFPCVT; }
   bool hasAltivec() const { return HasAltivec; }
   bool hasSPE() const { return HasSPE; }
+  bool hasEFPU2() const { return HasEFPU2; }
   bool hasFPU() const { return HasFPU; }
   bool hasVSX() const { return HasVSX; }
   bool needsTwoConstNR() const { return NeedsTwoConstNR; }

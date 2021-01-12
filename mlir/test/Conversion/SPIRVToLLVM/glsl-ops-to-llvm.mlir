@@ -8,7 +8,7 @@
 spv.func @ceil(%arg0: f32, %arg1: vector<3xf16>) "None" {
   // CHECK: "llvm.intr.ceil"(%{{.*}}) : (f32) -> f32
   %0 = spv.GLSL.Ceil %arg0 : f32
-  // CHECK: "llvm.intr.ceil"(%{{.*}}) : (!llvm.vec<3 x f16>) -> !llvm.vec<3 x f16>
+  // CHECK: "llvm.intr.ceil"(%{{.*}}) : (vector<3xf16>) -> vector<3xf16>
   %1 = spv.GLSL.Ceil %arg1 : vector<3xf16>
   spv.Return
 }
@@ -21,7 +21,7 @@ spv.func @ceil(%arg0: f32, %arg1: vector<3xf16>) "None" {
 spv.func @cos(%arg0: f32, %arg1: vector<3xf16>) "None" {
   // CHECK: "llvm.intr.cos"(%{{.*}}) : (f32) -> f32
   %0 = spv.GLSL.Cos %arg0 : f32
-  // CHECK: "llvm.intr.cos"(%{{.*}}) : (!llvm.vec<3 x f16>) -> !llvm.vec<3 x f16>
+  // CHECK: "llvm.intr.cos"(%{{.*}}) : (vector<3xf16>) -> vector<3xf16>
   %1 = spv.GLSL.Cos %arg1 : vector<3xf16>
   spv.Return
 }
@@ -34,7 +34,7 @@ spv.func @cos(%arg0: f32, %arg1: vector<3xf16>) "None" {
 spv.func @exp(%arg0: f32, %arg1: vector<3xf16>) "None" {
   // CHECK: "llvm.intr.exp"(%{{.*}}) : (f32) -> f32
   %0 = spv.GLSL.Exp %arg0 : f32
-  // CHECK: "llvm.intr.exp"(%{{.*}}) : (!llvm.vec<3 x f16>) -> !llvm.vec<3 x f16>
+  // CHECK: "llvm.intr.exp"(%{{.*}}) : (vector<3xf16>) -> vector<3xf16>
   %1 = spv.GLSL.Exp %arg1 : vector<3xf16>
   spv.Return
 }
@@ -47,7 +47,7 @@ spv.func @exp(%arg0: f32, %arg1: vector<3xf16>) "None" {
 spv.func @fabs(%arg0: f32, %arg1: vector<3xf16>) "None" {
   // CHECK: "llvm.intr.fabs"(%{{.*}}) : (f32) -> f32
   %0 = spv.GLSL.FAbs %arg0 : f32
-  // CHECK: "llvm.intr.fabs"(%{{.*}}) : (!llvm.vec<3 x f16>) -> !llvm.vec<3 x f16>
+  // CHECK: "llvm.intr.fabs"(%{{.*}}) : (vector<3xf16>) -> vector<3xf16>
   %1 = spv.GLSL.FAbs %arg1 : vector<3xf16>
   spv.Return
 }
@@ -60,7 +60,7 @@ spv.func @fabs(%arg0: f32, %arg1: vector<3xf16>) "None" {
 spv.func @floor(%arg0: f32, %arg1: vector<3xf16>) "None" {
   // CHECK: "llvm.intr.floor"(%{{.*}}) : (f32) -> f32
   %0 = spv.GLSL.Floor %arg0 : f32
-  // CHECK: "llvm.intr.floor"(%{{.*}}) : (!llvm.vec<3 x f16>) -> !llvm.vec<3 x f16>
+  // CHECK: "llvm.intr.floor"(%{{.*}}) : (vector<3xf16>) -> vector<3xf16>
   %1 = spv.GLSL.Floor %arg1 : vector<3xf16>
   spv.Return
 }
@@ -73,7 +73,7 @@ spv.func @floor(%arg0: f32, %arg1: vector<3xf16>) "None" {
 spv.func @fmax(%arg0: f32, %arg1: vector<3xf16>) "None" {
   // CHECK: "llvm.intr.maxnum"(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
   %0 = spv.GLSL.FMax %arg0, %arg0 : f32
-  // CHECK: "llvm.intr.maxnum"(%{{.*}}, %{{.*}}) : (!llvm.vec<3 x f16>, !llvm.vec<3 x f16>) -> !llvm.vec<3 x f16>
+  // CHECK: "llvm.intr.maxnum"(%{{.*}}, %{{.*}}) : (vector<3xf16>, vector<3xf16>) -> vector<3xf16>
   %1 = spv.GLSL.FMax %arg1, %arg1 : vector<3xf16>
   spv.Return
 }
@@ -86,7 +86,7 @@ spv.func @fmax(%arg0: f32, %arg1: vector<3xf16>) "None" {
 spv.func @fmin(%arg0: f32, %arg1: vector<3xf16>) "None" {
   // CHECK: "llvm.intr.minnum"(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
   %0 = spv.GLSL.FMin %arg0, %arg0 : f32
-  // CHECK: "llvm.intr.minnum"(%{{.*}}, %{{.*}}) : (!llvm.vec<3 x f16>, !llvm.vec<3 x f16>) -> !llvm.vec<3 x f16>
+  // CHECK: "llvm.intr.minnum"(%{{.*}}, %{{.*}}) : (vector<3xf16>, vector<3xf16>) -> vector<3xf16>
   %1 = spv.GLSL.FMin %arg1, %arg1 : vector<3xf16>
   spv.Return
 }
@@ -99,7 +99,7 @@ spv.func @fmin(%arg0: f32, %arg1: vector<3xf16>) "None" {
 spv.func @log(%arg0: f32, %arg1: vector<3xf16>) "None" {
   // CHECK: "llvm.intr.log"(%{{.*}}) : (f32) -> f32
   %0 = spv.GLSL.Log %arg0 : f32
-  // CHECK: "llvm.intr.log"(%{{.*}}) : (!llvm.vec<3 x f16>) -> !llvm.vec<3 x f16>
+  // CHECK: "llvm.intr.log"(%{{.*}}) : (vector<3xf16>) -> vector<3xf16>
   %1 = spv.GLSL.Log %arg1 : vector<3xf16>
   spv.Return
 }
@@ -112,7 +112,7 @@ spv.func @log(%arg0: f32, %arg1: vector<3xf16>) "None" {
 spv.func @sin(%arg0: f32, %arg1: vector<3xf16>) "None" {
   // CHECK: "llvm.intr.sin"(%{{.*}}) : (f32) -> f32
   %0 = spv.GLSL.Sin %arg0 : f32
-  // CHECK: "llvm.intr.sin"(%{{.*}}) : (!llvm.vec<3 x f16>) -> !llvm.vec<3 x f16>
+  // CHECK: "llvm.intr.sin"(%{{.*}}) : (vector<3xf16>) -> vector<3xf16>
   %1 = spv.GLSL.Sin %arg1 : vector<3xf16>
   spv.Return
 }
@@ -125,7 +125,7 @@ spv.func @sin(%arg0: f32, %arg1: vector<3xf16>) "None" {
 spv.func @smax(%arg0: i16, %arg1: vector<3xi32>) "None" {
   // CHECK: "llvm.intr.smax"(%{{.*}}, %{{.*}}) : (i16, i16) -> i16
   %0 = spv.GLSL.SMax %arg0, %arg0 : i16
-  // CHECK: "llvm.intr.smax"(%{{.*}}, %{{.*}}) : (!llvm.vec<3 x i32>, !llvm.vec<3 x i32>) -> !llvm.vec<3 x i32>
+  // CHECK: "llvm.intr.smax"(%{{.*}}, %{{.*}}) : (vector<3xi32>, vector<3xi32>) -> vector<3xi32>
   %1 = spv.GLSL.SMax %arg1, %arg1 : vector<3xi32>
   spv.Return
 }
@@ -138,7 +138,7 @@ spv.func @smax(%arg0: i16, %arg1: vector<3xi32>) "None" {
 spv.func @smin(%arg0: i16, %arg1: vector<3xi32>) "None" {
   // CHECK: "llvm.intr.smin"(%{{.*}}, %{{.*}}) : (i16, i16) -> i16
   %0 = spv.GLSL.SMin %arg0, %arg0 : i16
-  // CHECK: "llvm.intr.smin"(%{{.*}}, %{{.*}}) : (!llvm.vec<3 x i32>, !llvm.vec<3 x i32>) -> !llvm.vec<3 x i32>
+  // CHECK: "llvm.intr.smin"(%{{.*}}, %{{.*}}) : (vector<3xi32>, vector<3xi32>) -> vector<3xi32>
   %1 = spv.GLSL.SMin %arg1, %arg1 : vector<3xi32>
   spv.Return
 }
@@ -151,7 +151,7 @@ spv.func @smin(%arg0: i16, %arg1: vector<3xi32>) "None" {
 spv.func @sqrt(%arg0: f32, %arg1: vector<3xf16>) "None" {
   // CHECK: "llvm.intr.sqrt"(%{{.*}}) : (f32) -> f32
   %0 = spv.GLSL.Sqrt %arg0 : f32
-  // CHECK: "llvm.intr.sqrt"(%{{.*}}) : (!llvm.vec<3 x f16>) -> !llvm.vec<3 x f16>
+  // CHECK: "llvm.intr.sqrt"(%{{.*}}) : (vector<3xf16>) -> vector<3xf16>
   %1 = spv.GLSL.Sqrt %arg1 : vector<3xf16>
   spv.Return
 }

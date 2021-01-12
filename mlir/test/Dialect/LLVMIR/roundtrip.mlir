@@ -223,21 +223,21 @@ llvm.func @foo(%arg0: i32) -> !llvm.struct<(i32, f64, i32)> {
 }
 
 // CHECK-LABEL: @casts
-// CHECK-SAME: (%[[I32:.*]]: i32, %[[I64:.*]]: i64, %[[V4I32:.*]]: !llvm.vec<4 x i32>, %[[V4I64:.*]]: !llvm.vec<4 x i64>, %[[I32PTR:.*]]: !llvm.ptr<i32>)
-func @casts(%arg0: i32, %arg1: i64, %arg2: !llvm.vec<4 x i32>,
-            %arg3: !llvm.vec<4 x i64>, %arg4: !llvm.ptr<i32>) {
+// CHECK-SAME: (%[[I32:.*]]: i32, %[[I64:.*]]: i64, %[[V4I32:.*]]: vector<4xi32>, %[[V4I64:.*]]: vector<4xi64>, %[[I32PTR:.*]]: !llvm.ptr<i32>)
+func @casts(%arg0: i32, %arg1: i64, %arg2: vector<4xi32>,
+            %arg3: vector<4xi64>, %arg4: !llvm.ptr<i32>) {
 // CHECK:  = llvm.sext %[[I32]] : i32 to i56
   %0 = llvm.sext %arg0 : i32 to i56
 // CHECK:  = llvm.zext %[[I32]] : i32 to i64
   %1 = llvm.zext %arg0 : i32 to i64
 // CHECK:  = llvm.trunc %[[I64]] : i64 to i56
   %2 = llvm.trunc %arg1 : i64 to i56
-// CHECK:  = llvm.sext %[[V4I32]] : !llvm.vec<4 x i32> to !llvm.vec<4 x i56>
-  %3 = llvm.sext %arg2 : !llvm.vec<4 x i32> to !llvm.vec<4 x i56>
-// CHECK:  = llvm.zext %[[V4I32]] : !llvm.vec<4 x i32> to !llvm.vec<4 x i64>
-  %4 = llvm.zext %arg2 : !llvm.vec<4 x i32> to !llvm.vec<4 x i64>
-// CHECK:  = llvm.trunc %[[V4I64]] : !llvm.vec<4 x i64> to !llvm.vec<4 x i56>
-  %5 = llvm.trunc %arg3 : !llvm.vec<4 x i64> to !llvm.vec<4 x i56>
+// CHECK:  = llvm.sext %[[V4I32]] : vector<4xi32> to vector<4xi56>
+  %3 = llvm.sext %arg2 : vector<4xi32> to vector<4xi56>
+// CHECK:  = llvm.zext %[[V4I32]] : vector<4xi32> to vector<4xi64>
+  %4 = llvm.zext %arg2 : vector<4xi32> to vector<4xi64>
+// CHECK:  = llvm.trunc %[[V4I64]] : vector<4xi64> to vector<4xi56>
+  %5 = llvm.trunc %arg3 : vector<4xi64> to vector<4xi56>
 // CHECK:  = llvm.sitofp %[[I32]] : i32 to f32
   %6 = llvm.sitofp %arg0 : i32 to f32
 // CHECK: %[[FLOAT:.*]] = llvm.uitofp %[[I32]] : i32 to f32
@@ -252,15 +252,15 @@ func @casts(%arg0: i32, %arg1: i64, %arg2: !llvm.vec<4 x i32>,
 }
 
 // CHECK-LABEL: @vect
-func @vect(%arg0: !llvm.vec<4 x f32>, %arg1: i32, %arg2: f32) {
-// CHECK:  = llvm.extractelement {{.*}} : !llvm.vec<4 x f32>
-  %0 = llvm.extractelement %arg0[%arg1 : i32] : !llvm.vec<4 x f32>
-// CHECK:  = llvm.insertelement {{.*}} : !llvm.vec<4 x f32>
-  %1 = llvm.insertelement %arg2, %arg0[%arg1 : i32] : !llvm.vec<4 x f32>
-// CHECK:  = llvm.shufflevector {{.*}} [0 : i32, 0 : i32, 0 : i32, 0 : i32, 7 : i32] : !llvm.vec<4 x f32>, !llvm.vec<4 x f32>
-  %2 = llvm.shufflevector %arg0, %arg0 [0 : i32, 0 : i32, 0 : i32, 0 : i32, 7 : i32] : !llvm.vec<4 x f32>, !llvm.vec<4 x f32>
-// CHECK:  = llvm.mlir.constant(dense<1.000000e+00> : vector<4xf32>) : !llvm.vec<4 x f32>
-  %3 = llvm.mlir.constant(dense<1.0> : vector<4xf32>) : !llvm.vec<4 x f32>
+func @vect(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32) {
+// CHECK:  = llvm.extractelement {{.*}} : vector<4xf32>
+  %0 = llvm.extractelement %arg0[%arg1 : i32] : vector<4xf32>
+// CHECK:  = llvm.insertelement {{.*}} : vector<4xf32>
+  %1 = llvm.insertelement %arg2, %arg0[%arg1 : i32] : vector<4xf32>
+// CHECK:  = llvm.shufflevector {{.*}} [0 : i32, 0 : i32, 0 : i32, 0 : i32, 7 : i32] : vector<4xf32>, vector<4xf32>
+  %2 = llvm.shufflevector %arg0, %arg0 [0 : i32, 0 : i32, 0 : i32, 0 : i32, 7 : i32] : vector<4xf32>, vector<4xf32>
+// CHECK:  = llvm.mlir.constant(dense<1.000000e+00> : vector<4xf32>) : vector<4xf32>
+  %3 = llvm.mlir.constant(dense<1.0> : vector<4xf32>) : vector<4xf32>
   return
 }
 

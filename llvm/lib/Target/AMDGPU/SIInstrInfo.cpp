@@ -387,7 +387,7 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
   }
 
   if (isFLAT(LdSt)) {
-    // Instructions have either vaddr or saddr or both.
+    // Instructions have either vaddr or saddr or both or none.
     BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
     if (BaseOp)
       BaseOps.push_back(BaseOp);
@@ -443,11 +443,15 @@ bool SIInstrInfo::shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
                                       unsigned NumBytes) const {
   // If the mem ops (to be clustered) do not have the same base ptr, then they
   // should not be clustered
-  assert(!BaseOps1.empty() && !BaseOps2.empty());
-  const MachineInstr &FirstLdSt = *BaseOps1.front()->getParent();
-  const MachineInstr &SecondLdSt = *BaseOps2.front()->getParent();
-  if (!memOpsHaveSameBasePtr(FirstLdSt, BaseOps1, SecondLdSt, BaseOps2))
+  if (!BaseOps1.empty() && !BaseOps2.empty()) {
+    const MachineInstr &FirstLdSt = *BaseOps1.front()->getParent();
+    const MachineInstr &SecondLdSt = *BaseOps2.front()->getParent();
+    if (!memOpsHaveSameBasePtr(FirstLdSt, BaseOps1, SecondLdSt, BaseOps2))
+      return false;
+  } else if (!BaseOps1.empty() || !BaseOps2.empty()) {
+    // If only one base op is empty, they do not have the same base ptr
     return false;
+  }
 
   // In order to avoid regester pressure, on an average, the number of DWORDS
   // loaded together by all clustered mem ops should not exceed 8. This is an

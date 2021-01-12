@@ -284,6 +284,19 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
   }
 
+  if (Subtarget.hasSSE2()) {
+    // Custom lowering for saturating float to int conversions.
+    // We handle promotion to larger result types manually.
+    for (MVT VT : { MVT::i8, MVT::i16, MVT::i32 }) {
+      setOperationAction(ISD::FP_TO_UINT_SAT, VT, Custom);
+      setOperationAction(ISD::FP_TO_SINT_SAT, VT, Custom);
+    }
+    if (Subtarget.is64Bit()) {
+      setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i64, Custom);
+      setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i64, Custom);
+    }
+  }
+
   // Handle address space casts between mixed sized pointers.
   setOperationAction(ISD::ADDRSPACECAST, MVT::i32, Custom);
   setOperationAction(ISD::ADDRSPACECAST, MVT::i64, Custom);
@@ -7685,12 +7698,26 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
 
     // If we know input saturation won't happen (or we don't care for particular
     // lanes), we can treat this as a truncation shuffle.
+    bool Offset0 = false, Offset1 = false;
     if (Opcode == X86ISD::PACKSS) {
       if ((!(N0.isUndef() || EltsLHS.isNullValue()) &&
            DAG.ComputeNumSignBits(N0, EltsLHS, Depth + 1) <= NumBitsPerElt) ||
           (!(N1.isUndef() || EltsRHS.isNullValue()) &&
            DAG.ComputeNumSignBits(N1, EltsRHS, Depth + 1) <= NumBitsPerElt))
         return false;
+      // We can't easily fold ASHR into a shuffle, but if it was feeding a
+      // PACKSS then it was likely being used for sign-extension for a
+      // truncation, so just peek through and adjust the mask accordingly.
+      if (N0.getOpcode() == X86ISD::VSRAI && N->isOnlyUserOf(N0.getNode()) &&
+          N0.getConstantOperandAPInt(1) == NumBitsPerElt) {
+        Offset0 = true;
+        N0 = N0.getOperand(0);
+      }
+      if (N1.getOpcode() == X86ISD::VSRAI && N->isOnlyUserOf(N1.getNode()) &&
+          N1.getConstantOperandAPInt(1) == NumBitsPerElt) {
+        Offset1 = true;
+        N1 = N1.getOperand(0);
+      }
     } else {
       APInt ZeroMask = APInt::getHighBitsSet(2 * NumBitsPerElt, NumBitsPerElt);
       if ((!(N0.isUndef() || EltsLHS.isNullValue()) &&
@@ -7707,6 +7734,13 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
       Ops.push_back(N1);
 
     createPackShuffleMask(VT, Mask, IsUnary);
+
+    if (Offset0 || Offset1) {
+      for (int &M : Mask)
+        if ((Offset0 && isInRange(M, 0, NumElts)) ||
+            (Offset1 && isInRange(M, NumElts, 2 * NumElts)))
+          ++M;
+    }
     return true;
   }
   case X86ISD::VTRUNC: {
@@ -21407,6 +21441,155 @@ SDValue X86TargetLowering::LRINT_LLRINTHelper(SDNode *N,
   return DAG.getLoad(DstVT, DL, Chain, StackPtr, MPI);
 }
 
+SDValue
+X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
+  // This is based on the TargetLowering::expandFP_TO_INT_SAT implementation,
+  // but making use of X86 specifics to produce better instruction sequences.
+  SDNode *Node = Op.getNode();
+  bool IsSigned = Node->getOpcode() == ISD::FP_TO_SINT_SAT;
+  unsigned FpToIntOpcode = IsSigned ? ISD::FP_TO_SINT : ISD::FP_TO_UINT;
+  SDLoc dl(SDValue(Node, 0));
+  SDValue Src = Node->getOperand(0);
+
+  // There are three types involved here: SrcVT is the source floating point
+  // type, DstVT is the type of the result, and TmpVT is the result of the
+  // intermediate FP_TO_*INT operation we'll use (which may be a promotion of
+  // DstVT).
+  EVT SrcVT = Src.getValueType();
+  EVT DstVT = Node->getValueType(0);
+  EVT TmpVT = DstVT;
+
+  // This code is only for floats and doubles. Fall back to generic code for
+  // anything else.
+  if (!isScalarFPTypeInSSEReg(SrcVT))
+    return SDValue();
+
+  unsigned SatWidth = Node->getConstantOperandVal(1);
+  unsigned DstWidth = DstVT.getScalarSizeInBits();
+  unsigned TmpWidth = TmpVT.getScalarSizeInBits();
+  assert(SatWidth <= DstWidth && SatWidth <= TmpWidth &&
+         "Expected saturation width smaller than result width");
+
+  // Promote result of FP_TO_*INT to at least 32 bits.
+  if (TmpWidth < 32) {
+    TmpVT = MVT::i32;
+    TmpWidth = 32;
+  }
+
+  // Promote conversions to unsigned 32-bit to 64-bit, because it will allow
+  // us to use a native signed conversion instead.
+  if (SatWidth == 32 && !IsSigned && Subtarget.is64Bit()) {
+    TmpVT = MVT::i64;
+    TmpWidth = 64;
+  }
+
+  // If the saturation width is smaller than the size of the temporary result,
+  // we can always use signed conversion, which is native.
+  if (SatWidth < TmpWidth)
+    FpToIntOpcode = ISD::FP_TO_SINT;
+
+  // Determine minimum and maximum integer values and their corresponding
+  // floating-point values.
+  APInt MinInt, MaxInt;
+  if (IsSigned) {
+    MinInt = APInt::getSignedMinValue(SatWidth).sextOrSelf(DstWidth);
+    MaxInt = APInt::getSignedMaxValue(SatWidth).sextOrSelf(DstWidth);
+  } else {
+    MinInt = APInt::getMinValue(SatWidth).zextOrSelf(DstWidth);
+    MaxInt = APInt::getMaxValue(SatWidth).zextOrSelf(DstWidth);
+  }
+
+  APFloat MinFloat(DAG.EVTToAPFloatSemantics(SrcVT));
+  APFloat MaxFloat(DAG.EVTToAPFloatSemantics(SrcVT));
+
+  APFloat::opStatus MinStatus = MinFloat.convertFromAPInt(
+    MinInt, IsSigned, APFloat::rmTowardZero);
+  APFloat::opStatus MaxStatus = MaxFloat.convertFromAPInt(
+    MaxInt, IsSigned, APFloat::rmTowardZero);
+  bool AreExactFloatBounds = !(MinStatus & APFloat::opStatus::opInexact)
+                          && !(MaxStatus & APFloat::opStatus::opInexact);
+
+  SDValue MinFloatNode = DAG.getConstantFP(MinFloat, dl, SrcVT);
+  SDValue MaxFloatNode = DAG.getConstantFP(MaxFloat, dl, SrcVT);
+
+  // If the integer bounds are exactly representable as floats, emit a
+  // min+max+fptoi sequence. Otherwise use comparisons and selects.
+  if (AreExactFloatBounds) {
+    if (DstVT != TmpVT) {
+      // Clamp by MinFloat from below. If Src is NaN, propagate NaN.
+      SDValue MinClamped = DAG.getNode(
+        X86ISD::FMAX, dl, SrcVT, MinFloatNode, Src);
+      // Clamp by MaxFloat from above. If Src is NaN, propagate NaN.
+      SDValue BothClamped = DAG.getNode(
+        X86ISD::FMIN, dl, SrcVT, MaxFloatNode, MinClamped);
+      // Convert clamped value to integer.
+      SDValue FpToInt = DAG.getNode(FpToIntOpcode, dl, TmpVT, BothClamped);
+
+      // NaN will become INDVAL, with the top bit set and the rest zero.
+      // Truncation will discard the top bit, resulting in zero.
+      return DAG.getNode(ISD::TRUNCATE, dl, DstVT, FpToInt);
+    }
+
+    // Clamp by MinFloat from below. If Src is NaN, the result is MinFloat.
+    SDValue MinClamped = DAG.getNode(
+      X86ISD::FMAX, dl, SrcVT, Src, MinFloatNode);
+    // Clamp by MaxFloat from above. NaN cannot occur.
+    SDValue BothClamped = DAG.getNode(
+      X86ISD::FMINC, dl, SrcVT, MinClamped, MaxFloatNode);
+    // Convert clamped value to integer.
+    SDValue FpToInt = DAG.getNode(FpToIntOpcode, dl, DstVT, BothClamped);
+
+    if (!IsSigned) {
+      // In the unsigned case we're done, because we mapped NaN to MinFloat,
+      // which is zero.
+      return FpToInt;
+    }
+
+    // Otherwise, select zero if Src is NaN.
+    SDValue ZeroInt = DAG.getConstant(0, dl, DstVT);
+    return DAG.getSelectCC(
+      dl, Src, Src, ZeroInt, FpToInt, ISD::CondCode::SETUO);
+  }
+
+  SDValue MinIntNode = DAG.getConstant(MinInt, dl, DstVT);
+  SDValue MaxIntNode = DAG.getConstant(MaxInt, dl, DstVT);
+
+  // Result of direct conversion, which may be selected away.
+  SDValue FpToInt = DAG.getNode(FpToIntOpcode, dl, TmpVT, Src);
+
+  if (DstVT != TmpVT) {
+    // NaN will become INDVAL, with the top bit set and the rest zero.
+    // Truncation will discard the top bit, resulting in zero.
+    FpToInt = DAG.getNode(ISD::TRUNCATE, dl, DstVT, FpToInt);
+  }
+
+  SDValue Select = FpToInt;
+  // For signed conversions where we saturate to the same size as the
+  // result type of the fptoi instructions, INDVAL coincides with integer
+  // minimum, so we don't need to explicitly check it.
+  if (!IsSigned || SatWidth != TmpVT.getScalarSizeInBits()) {
+    // If Src ULT MinFloat, select MinInt. In particular, this also selects
+    // MinInt if Src is NaN.
+    Select = DAG.getSelectCC(
+      dl, Src, MinFloatNode, MinIntNode, Select, ISD::CondCode::SETULT);
+  }
+
+  // If Src OGT MaxFloat, select MaxInt.
+  Select = DAG.getSelectCC(
+    dl, Src, MaxFloatNode, MaxIntNode, Select, ISD::CondCode::SETOGT);
+
+  // In the unsigned case we are done, because we mapped NaN to MinInt, which
+  // is already zero. The promoted case was already handled above.
+  if (!IsSigned || DstVT != TmpVT) {
+    return Select;
+  }
+
+  // Otherwise, select 0 if Src is NaN.
+  SDValue ZeroInt = DAG.getConstant(0, dl, DstVT);
+  return DAG.getSelectCC(
+    dl, Src, Src, ZeroInt, Select, ISD::CondCode::SETUO);
+}
+
 SDValue X86TargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
   bool IsStrict = Op->isStrictFPOpcode();
 
@@ -29786,6 +29969,8 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::STRICT_FP_TO_SINT:
   case ISD::FP_TO_UINT:
   case ISD::STRICT_FP_TO_UINT:  return LowerFP_TO_INT(Op, DAG);
+  case ISD::FP_TO_SINT_SAT:
+  case ISD::FP_TO_UINT_SAT:     return LowerFP_TO_INT_SAT(Op, DAG);
   case ISD::FP_EXTEND:
   case ISD::STRICT_FP_EXTEND:   return LowerFP_EXTEND(Op, DAG);
   case ISD::FP_ROUND:
@@ -48754,12 +48939,11 @@ static SDValue combineSubToSubus(SDNode *N, SelectionDAG &DAG,
   if (!VT.isVector())
     return SDValue();
 
-  // PSUBUS is supported, starting from SSE2, but truncation for v8i32
-  // is only worth it with SSSE3 (PSHUFB).
+  // PSUBUS is supported, starting from SSE2.
   EVT EltVT = VT.getVectorElementType();
-  if (!(Subtarget.hasSSE2() && (EltVT == MVT::i8 || EltVT == MVT::i16)) &&
-      !(Subtarget.hasSSSE3() && (VT == MVT::v8i32 || VT == MVT::v8i64)) &&
-      !(Subtarget.useBWIRegs() && (VT == MVT::v16i32)))
+  if (!(Subtarget.hasSSE2() &&
+        (EltVT == MVT::i8 || EltVT == MVT::i16 || VT == MVT::v8i32 ||
+         VT == MVT::v8i64 || VT == MVT::v16i32)))
     return SDValue();
 
   SDValue SubusLHS, SubusRHS;
@@ -48795,9 +48979,9 @@ static SDValue combineSubToSubus(SDNode *N, SelectionDAG &DAG,
     SDValue MinLHS = Op1.getOperand(0).getOperand(0);
     SDValue MinRHS = Op1.getOperand(0).getOperand(1);
     EVT TruncVT = Op1.getOperand(0).getValueType();
-    if (!(Subtarget.hasSSSE3() && (TruncVT == MVT::v8i32 ||
-                                   TruncVT == MVT::v8i64)) &&
-        !(Subtarget.useBWIRegs() && (TruncVT == MVT::v16i32)))
+    if (!(Subtarget.hasSSE2() &&
+          (TruncVT == MVT::v8i32 || TruncVT == MVT::v8i64 ||
+           TruncVT == MVT::v16i32)))
       return SDValue();
     SDValue OpToSaturate;
     if (MinLHS.getOpcode() == ISD::ZERO_EXTEND &&
@@ -48835,7 +49019,7 @@ static SDValue combineSubToSubus(SDNode *N, SelectionDAG &DAG,
   // values, or first 48 bits for 64 bit values.
   KnownBits Known = DAG.computeKnownBits(SubusLHS);
   unsigned NumZeros = Known.countMinLeadingZeros();
-  if ((VT == MVT::v8i64 && NumZeros < 48) || NumZeros < 16)
+  if (NumZeros < (VT.getScalarSizeInBits() - 16))
     return SDValue();
 
   EVT ExtType = SubusLHS.getValueType();

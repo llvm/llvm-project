@@ -1087,8 +1087,7 @@ MachineBasicBlock *SIWholeQuadMode::splitBlock(MachineBasicBlock *BB,
       PDT->getBase().applyUpdates(DTUpdates);
 
     // Update live intervals
-    MachineInstr &InsertionPoint = SplitBB->front();
-    LIS->insertMBBInMaps(SplitBB, &InsertionPoint);
+    LIS->insertMBBInMaps(SplitBB);
   }
 
   // Convert last instruction in to a terminator.

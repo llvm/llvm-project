@@ -127,12 +127,12 @@ Examples:
 %3 = llvm.mlir.constant(42 : i32) : i32
 
 // Splat dense vector constant.
-%3 = llvm.mlir.constant(dense<1.0> : vector<4xf32>) : !llvm.vec<4 x f32>
+%3 = llvm.mlir.constant(dense<1.0> : vector<4xf32>) : vector<4xf32>
 ```
 
-Note that constants use built-in types within the initializer definition: MLIR
-attributes are typed and the attributes used for constants require a built-in
-type.
+Note that constants list the type twice. This is an artifact of the LLVM dialect
+not using built-in types, which are used for typed MLIR attributes. The syntax
+will be reevaluated after considering composite constants.
 
 ### Globals
 
@@ -186,33 +186,47 @@ attribute.
 
 ## Types
 
-LLVM dialect defines a set of types that correspond to LLVM IR types. The
-dialect type system is _closed_: types from other dialects are not allowed
-within LLVM dialect aggregate types. This property allows for more concise
-custom syntax and ensures easy translation to LLVM IR.
-
-Similarly to other MLIR context-owned objects, the creation and manipulation of
-LLVM dialect types is thread-safe.
+LLVM dialect uses built-in types whenever possible and defines a set of
+complementary types, which correspond to the LLVM IR types that cannot be
+directly represented with built-in types. Similarly to other MLIR context-owned
+objects, the creation and manipulation of LLVM dialect types is thread-safe.
 
 MLIR does not support module-scoped named type declarations, e.g. `%s = type
 {i32, i32}` in LLVM IR. Instead, types must be fully specified at each use,
 except for recursive types where only the first reference to a named type needs
-to be fully specified. MLIR type aliases are supported for top-level types, i.e.
-they cannot be used inside the type due to type system closedness.
+to be fully specified. MLIR [type aliases](LangRef.md#type-aliases) can be used
+to achieve more compact syntax.
 
 The general syntax of LLVM dialect types is `!llvm.`, followed by a type kind
 identifier (e.g., `ptr` for pointer or `struct` for structure) and by an
 optional list of type parameters in angle brackets. The dialect follows MLIR
 style for types with nested angle brackets and keyword specifiers rather than
-using different bracket styles to differentiate types. Inside angle brackets,
-the `!llvm` prefix is omitted for brevity; thanks to closedness of the type
-system, all types are assumed to be defined in the LLVM dialect. For example,
-`!llvm.ptr<struct<packed, (i8, i32)>>` is a pointer to a packed structure type
-containing an 8-bit and a 32-bit integer.
+using different bracket styles to differentiate types. Types inside the angle
+brackets may omit the `!llvm.` prefix for brevity: the parser first attempts to
+find a type (starting with `!` or a built-in type) and falls back to accepting a
+keyword. For example, `!llvm.ptr<!llvm.ptr<i32>>` and `!llvm.ptr<ptr<i32>>` are
+equivalent, with the latter being the canonical form, and denote a pointer to a
+pointer to a 32-bit integer.
 
-### Simple Types
+### Built-in Type Compatibility
 
-The following non-parametric types are supported.
+LLVM dialect accepts a subset of built-in types that are referred to as _LLVM
+dialect-compatible types_. The following types are compatible:
+
+-   Signless integers - `iN` (`IntegerType`).
+-   Floating point types - `bfloat`, `half`, `float`, `double` (`FloatType`).
+-   1D vectors of signless integers or floating point types - `vector<NxT>`
+    (`VectorType`).
+
+Note that only a subset of types that can be represented by a given class is
+compatible. For example, signed and unsigned integers are not compatible. LLVM
+provides a function, `bool LLVM::isCompatibleType(Type)`, that can be used as a
+compatibility check.
+
+### Additional Simple Types
+
+The following non-parametric types derived from the LLVM IR are available in the
+LLVM dialect:
 
 -   `!llvm.fp128` (`LLVMFP128Type`) - 128-bit floating-point value as per
     IEEE-754-2008.
@@ -231,19 +245,10 @@ The following non-parametric types are supported.
 These types represent a single value (or an absence thereof in case of `void`)
 and correspond to their LLVM IR counterparts.
 
-### Parametric Types
+### Additional Parametric Types
 
-#### Integer Types
-
-Integer types are parametric in MLIR terminology, with their bitwidth being a
-type parameter. They are expressed as follows:
-
-```
-  llvm-int-type ::= `!llvm.i` integer-literal
-```
-
-and represented internally as `LLVMIntegerType`. For example, `i1` is a 1-bit
-integer type (bool) and `i32` as a 32-bit integer type.
+These types are parameterized by the types they contain, e.g., the pointee or
+the element type, which can be either compatible built-in or LLVM dialect types.
 
 #### Pointer Types
 
@@ -255,46 +260,26 @@ reconsidered if MLIR implements named address spaces. Their syntax is as
 follows:
 
 ```
-  llvm-ptr-type ::= `!llvm.ptr<` llvm-type (`,` integer-literal)? `>`
+  llvm-ptr-type ::= `!llvm.ptr<` type (`,` integer-literal)? `>`
 ```
 
 where the optional integer literal corresponds to the memory space. Both cases
 are represented by `LLVMPointerType` internally.
 
-#### Vector Types
-
-Vector types represent sequences of elements, typically when multiple data
-elements are processed by a single instruction (SIMD). Vectors are thought of as
-stored in registers and therefore vector elements can only be addressed through
-constant indices.
-
-Vector types are parameterized by the size, which may be either _fixed_ or a
-multiple of some fixed size in case of _scalable_ vectors, and the element type.
-Vectors cannot be nested and only 1D vectors are supported. Scalable vectors are
-still considered 1D. Their syntax is as follows:
-
-```
-  llvm-vec-type ::= `!llvm.vec<` (`?` `x`)? integer-literal `x` llvm-type `>`
-```
-
-Internally, fixed vector types are represented as `LLVMFixedVectorType` and
-scalable vector types are represented as `LLVMScalableVectorType`. Both classes
-derive`LLVMVectorType`.
-
 #### Array Types
 
-Array types represent sequences of elements in memory. Unlike vectors, array
-elements can be addressed with a value unknown at compile time, and can be
-nested. Only 1D arrays are allowed though.
+Array types represent sequences of elements in memory. Array elements can be
+addressed with a value unknown at compile time, and can be nested. Only 1D
+arrays are allowed though.
 
 Array types are parameterized by the fixed size and the element type.
-Syntactically, their representation is close to vectors:
+Syntactically, their representation is the following:
 
 ```
-  llvm-array-type ::= `!llvm.array<` integer-literal `x` llvm-type `>`
+  llvm-array-type ::= `!llvm.array<` integer-literal `x` type `>`
 ```
 
-and are internally represented as `LLVMArrayType`.
+and they are internally represented as `LLVMArrayType`.
 
 #### Function Types
 
@@ -306,21 +291,73 @@ functions (`LLVMFunctionType`) always have single result, which may be
 `!llvm.void` if the function does not return anything. The syntax is as follows:
 
 ```
-  llvm-func-type ::= `!llvm.func<` llvm-type `(` llvm-type-list (`,` `...`)?
-                     `)` `>`
+  llvm-func-type ::= `!llvm.func<` type `(` type-list (`,` `...`)? `)` `>`
 ```
 
 For example,
 
 ```mlir
-!llvm.func<void ()>            // a function with no arguments;
-!llvm.func<i32 (f32, i32)>  // a function with two arguments and a result;
+!llvm.func<void ()>           // a function with no arguments;
+!llvm.func<i32 (f32, i32)>    // a function with two arguments and a result;
 !llvm.func<void (i32, ...)>   // a variadic function with at least one argument.
 ```
 
 In the LLVM dialect, functions are not first-class objects and one cannot have a
 value of function type. Instead, one can take the address of a function and
 operate on pointers to functions.
+
+### Vector Types
+
+Vector types represent sequences of elements, typically when multiple data
+elements are processed by a single instruction (SIMD). Vectors are thought of as
+stored in registers and therefore vector elements can only be addressed through
+constant indices.
+
+Vector types are parameterized by the size, which may be either _fixed_ or a
+multiple of some fixed size in case of _scalable_ vectors, and the element type.
+Vectors cannot be nested and only 1D vectors are supported. Scalable vectors are
+still considered 1D.
+
+LLVM dialect uses built-in vector types for _fixed_-size vectors of built-in
+types, and provides additional types for fixed-sized vectors of LLVM dialect
+types (`LLVMFixedVectorType`) and scalable vectors of any types
+(`LLVMScalableVectorType`). These two additional types share the following
+syntax:
+
+```
+  llvm-vec-type ::= `!llvm.vec<` (`?` `x`)? integer-literal `x` type `>`
+```
+
+Note that the sets of element types supported by built-in and LLVM dialect
+vector types are mutually exclusive, e.g., the built-in vector type does not
+accept `!llvm.ptr<i32>` and the LLVM dialect fixed-width vector type does not
+accept `i32`.
+
+The following functions are provided to operate on any kind of the vector types
+compatible with the LLVM dialect:
+
+-   `bool LLVM::isCompatibleVectorType(Type)` - checks whether a type is a
+    vector type compatible with the LLVM dialect;
+-   `Type LLVM::getVectorElementType(Type)` - returns the element type of any
+    vector type compatible with the LLVM dialect;
+-   `llvm::ElementCount LLVM::getVectorNumElements(Type)` - returns the number
+    of elements in any vector type compatible with the LLVM dialect;
+-   `Type LLVM::getFixedVectorType(Type, unsigned)` - gets a fixed vector type
+    with the given element type and size; the resulting type is either a
+    built-in or an LLVM dialect vector type depending on which one supports the
+    given element type.
+
+#### Examples of Compatible Vector Types
+
+```mlir
+vector<42 x i32>                   // Vector of 42 32-bit integers.
+!llvm.vec<42 x ptr<i32>>           // Vector of 42 pointers to 32-bit integers.
+!llvm.vec<? x 4 x i32>             // Scalable vector of 32-bit integers with
+                                   // size divisible by 4.
+!llvm.array<2 x vector<2 x i32>>   // Array of 2 vectors of 2 32-bit integers.
+!llvm.array<2 x vec<2 x ptr<i32>>> // Array of 2 vectors of 2 pointers to 32-bit
+                                   // integers.
+```
 
 ### Structure Types
 
@@ -362,10 +399,10 @@ The syntax for identified structure types is as follows.
 ```
 llvm-ident-struct-type ::= `!llvm.struct<` string-literal, `opaque` `>`
                          | `!llvm.struct<` string-literal, `packed`?
-                            `(` llvm-type-or-ref-list  `)` `>`
-llvm-type-or-ref-list ::= <maybe empty comma-separated list of llvm-type-or-ref>
-llvm-type-or-ref ::= <any llvm type>
-                   | `!llvm.struct<` string-literal >
+                           `(` type-or-ref-list  `)` `>`
+type-or-ref-list ::= <maybe empty comma-separated list of type-or-ref>
+type-or-ref ::= <any compatible type with optional !llvm.>
+              | `!llvm.`? `struct<` string-literal `>`
 ```
 
 The body of the identified struct is printed in full unless the it is
@@ -389,9 +426,8 @@ Literal structures are uniqued according to the list of elements they contain,
 and can optionally be packed. The syntax for such structs is as follows.
 
 ```
-llvm-literal-struct-type ::= `!llvm.struct<` `packed`? `(` llvm-type-list `)`
-                             `>`
-llvm-type-list ::= <maybe empty comma-separated list of llvm types w/o `!llvm`>
+llvm-literal-struct-type ::= `!llvm.struct<` `packed`? `(` type-list `)` `>`
+type-list ::= <maybe empty comma-separated list of types with optional !llvm.>
 ```
 
 Literal structs cannot be recursive, but can contain other structs. Therefore,

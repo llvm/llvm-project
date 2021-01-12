@@ -1461,9 +1461,7 @@ SourceRange ObjCTypeParamDecl::getSourceRange() const {
 ObjCTypeParamList::ObjCTypeParamList(SourceLocation lAngleLoc,
                                      ArrayRef<ObjCTypeParamDecl *> typeParams,
                                      SourceLocation rAngleLoc)
-    : NumParams(typeParams.size()) {
-  Brackets.Begin = lAngleLoc.getRawEncoding();
-  Brackets.End = rAngleLoc.getRawEncoding();
+    : Brackets(lAngleLoc, rAngleLoc), NumParams(typeParams.size()) {
   std::copy(typeParams.begin(), typeParams.end(), begin());
 }
 

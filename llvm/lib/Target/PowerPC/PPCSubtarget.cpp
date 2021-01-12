@@ -77,6 +77,7 @@ void PPCSubtarget::initializeEnvironment() {
   HasHardFloat = false;
   HasAltivec = false;
   HasSPE = false;
+  HasEFPU2 = false;
   HasFPU = false;
   HasVSX = false;
   NeedsTwoConstNR = false;

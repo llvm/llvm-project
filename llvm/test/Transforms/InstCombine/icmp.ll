@@ -970,6 +970,22 @@ define i1 @test52(i32 %x1) {
   ret i1 %A
 }
 
+define i1 @test52_logical(i32 %x1) {
+; CHECK-LABEL: @test52_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X1:%.*]], 16711935
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 4980863
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  %conv = and i32 %x1, 255
+  %cmp = icmp eq i32 %conv, 127
+  %i2 = lshr i32 %x1, 16
+  %i3 = trunc i32 %i2 to i8
+  %cmp15 = icmp eq i8 %i3, 76
+
+  %A = select i1 %cmp, i1 %cmp15, i1 false
+  ret i1 %A
+}
+
 define i1 @test52b(i128 %x1) {
 ; CHECK-LABEL: @test52b(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i128 [[X1:%.*]], 16711935
@@ -983,6 +999,22 @@ define i1 @test52b(i128 %x1) {
   %cmp15 = icmp eq i8 %i3, 76
 
   %A = and i1 %cmp, %cmp15
+  ret i1 %A
+}
+
+define i1 @test52b_logical(i128 %x1) {
+; CHECK-LABEL: @test52b_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i128 [[X1:%.*]], 16711935
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i128 [[TMP1]], 4980863
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  %conv = and i128 %x1, 255
+  %cmp = icmp eq i128 %conv, 127
+  %i2 = lshr i128 %x1, 16
+  %i3 = trunc i128 %i2 to i8
+  %cmp15 = icmp eq i8 %i3, 76
+
+  %A = select i1 %cmp, i1 %cmp15, i1 false
   ret i1 %A
 }
 
@@ -1841,6 +1873,24 @@ define i1 @icmp_and_shr_multiuse(i32 %X) {
   ret i1 %and3
 }
 
+define i1 @icmp_and_shr_multiuse_logical(i32 %X) {
+; CHECK-LABEL: @icmp_and_shr_multiuse_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 240
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP1]], 224
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[X]], 496
+; CHECK-NEXT:    [[TOBOOL2:%.*]] = icmp ne i32 [[TMP2]], 432
+; CHECK-NEXT:    [[AND3:%.*]] = and i1 [[TOBOOL]], [[TOBOOL2]]
+; CHECK-NEXT:    ret i1 [[AND3]]
+;
+  %shr = lshr i32 %X, 4
+  %and = and i32 %shr, 15
+  %and2 = and i32 %shr, 31 ; second use of the shift
+  %tobool = icmp ne i32 %and, 14
+  %tobool2 = icmp ne i32 %and2, 27
+  %and3 = select i1 %tobool, i1 %tobool2, i1 false
+  ret i1 %and3
+}
+
 ; Variation of the above with an ashr
 define i1 @icmp_and_ashr_multiuse(i32 %X) {
 ; CHECK-LABEL: @icmp_and_ashr_multiuse(
@@ -1857,6 +1907,24 @@ define i1 @icmp_and_ashr_multiuse(i32 %X) {
   %tobool = icmp ne i32 %and, 14
   %tobool2 = icmp ne i32 %and2, 27
   %and3 = and i1 %tobool, %tobool2
+  ret i1 %and3
+}
+
+define i1 @icmp_and_ashr_multiuse_logical(i32 %X) {
+; CHECK-LABEL: @icmp_and_ashr_multiuse_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 240
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP1]], 224
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[X]], 496
+; CHECK-NEXT:    [[TOBOOL2:%.*]] = icmp ne i32 [[TMP2]], 432
+; CHECK-NEXT:    [[AND3:%.*]] = and i1 [[TOBOOL]], [[TOBOOL2]]
+; CHECK-NEXT:    ret i1 [[AND3]]
+;
+  %shr = ashr i32 %X, 4
+  %and = and i32 %shr, 15
+  %and2 = and i32 %shr, 31 ; second use of the shift
+  %tobool = icmp ne i32 %and, 14
+  %tobool2 = icmp ne i32 %and2, 27
+  %and3 = select i1 %tobool, i1 %tobool2, i1 false
   ret i1 %and3
 }
 
@@ -2162,6 +2230,18 @@ define i1 @or_icmp_eq_B_0_icmp_ult_A_B(i64 %a, i64 %b) {
   ret i1 %3
 }
 
+define i1 @or_icmp_eq_B_0_icmp_ult_A_B_logical(i64 %a, i64 %b) {
+; CHECK-LABEL: @or_icmp_eq_B_0_icmp_ult_A_B_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[B:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge i64 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  %1 = icmp eq i64 %b, 0
+  %2 = icmp ult i64 %a, %b
+  %3 = select i1 %1, i1 true, i1 %2
+  ret i1 %3
+}
+
 define <2 x i1> @or_icmp_eq_B_0_icmp_ult_A_B_uniform(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: @or_icmp_eq_B_0_icmp_ult_A_B_uniform(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i64> [[B:%.*]], <i64 -1, i64 -1>
@@ -2195,6 +2275,18 @@ define i1 @or_icmp_ne_A_0_icmp_ne_B_0(i64 %a, i64 %b) {
   %1 = icmp ne i64 %a, 0
   %2 = icmp ne i64 %b, 0
   %3 = or i1 %1, %2
+  ret i1 %3
+}
+
+define i1 @or_icmp_ne_A_0_icmp_ne_B_0_logical(i64 %a, i64 %b) {
+; CHECK-LABEL: @or_icmp_ne_A_0_icmp_ne_B_0_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = or i64 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  %1 = icmp ne i64 %a, 0
+  %2 = icmp ne i64 %b, 0
+  %3 = select i1 %1, i1 true, i1 %2
   ret i1 %3
 }
 
