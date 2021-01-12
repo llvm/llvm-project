@@ -1,4 +1,4 @@
-; RUN: llc -fast-isel-sink-local-values -O0 -fast-isel -fast-isel-abort=1 -verify-machineinstrs -mtriple=arm64-apple-darwin < %s | FileCheck %s
+; RUN: llc -O0 -fast-isel -fast-isel-abort=1 -verify-machineinstrs -mtriple=arm64-apple-darwin < %s | FileCheck %s
 
 ; Test load/store of global value from global offset table.
 @seed = common global i64 0, align 8
@@ -24,7 +24,11 @@ entry:
 ; CHECK: mov  [[REG3:x[0-9]+]], #13849
 ; CHECK: add  [[REG7:x[0-9]+]], [[REG6]], [[REG3]]
 ; CHECK: and  [[REG8:x[0-9]+]], [[REG7]], #0xffff
+; CHECK: adrp [[REG1:x[0-9]+]], _seed@GOTPAGE
+; CHECK: ldr  [[REG1]], {{\[}}[[REG1]], _seed@GOTPAGEOFF{{\]}}
 ; CHECK: str  [[REG8]], {{\[}}[[REG1]]{{\]}}
+; CHECK: adrp [[REG1:x[0-9]+]], _seed@GOTPAGE
+; CHECK: ldr  [[REG1]], {{\[}}[[REG1]], _seed@GOTPAGEOFF{{\]}}
 ; CHECK: ldr  {{x[0-9]+}}, {{\[}}[[REG1]]{{\]}}
   %0 = load i64, i64* @seed, align 8
   %mul = mul nsw i64 %0, 1309

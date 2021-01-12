@@ -348,9 +348,15 @@ TEST_F(HostTest, getMacOSHostVersion) {
   unsigned HostMajor, HostMinor, HostMicro;
   ASSERT_EQ(HostTriple.getMacOSXVersion(HostMajor, HostMinor, HostMicro), true);
 
-  // Don't compare the 'Micro' version, as it's always '0' for the 'Darwin'
-  // triples.
-  ASSERT_EQ(std::tie(SystemMajor, SystemMinor), std::tie(HostMajor, HostMinor));
+  if (SystemMajor > 10) {
+    // Don't compare the 'Minor' and 'Micro' versions, as they're always '0' for
+    // the 'Darwin' triples on 11.x.
+    ASSERT_EQ(SystemMajor, HostMajor);
+  } else {
+    // Don't compare the 'Micro' version, as it's always '0' for the 'Darwin'
+    // triples.
+    ASSERT_EQ(std::tie(SystemMajor, SystemMinor), std::tie(HostMajor, HostMinor));
+  }
 }
 #endif
 

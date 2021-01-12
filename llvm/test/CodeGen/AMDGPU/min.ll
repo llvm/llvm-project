@@ -1,8 +1,8 @@
-; RUN: llc -march=amdgcn -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-amd-amdhsa -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=GFX8_9_10 -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -check-prefix=GFX9_10 -check-prefix=GFX8_9_10 -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX10 -check-prefix=GFX9_10 -check-prefix=GFX8_9_10 -check-prefix=FUNC %s
-; RUN: llc -march=r600 -mtriple=r600-- -mcpu=cypress -verify-machineinstrs < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,SI,FUNC %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-amd-amdhsa -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,VI,GFX8_9_10,FUNC %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX9_10,GFX8_9_10,FUNC %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX10,GFX9_10,GFX8_9_10,FUNC %s
+; RUN: llc -march=r600 -mtriple=r600-- -mcpu=cypress -verify-machineinstrs < %s | FileCheck --check-prefixes=EG,FUNC %s
 
 ; FUNC-LABEL: {{^}}v_test_imin_sle_i32:
 ; GCN: v_min_i32_e32

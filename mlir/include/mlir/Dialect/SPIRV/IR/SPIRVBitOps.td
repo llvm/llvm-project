@@ -232,7 +232,8 @@ def SPV_BitFieldSExtractOp : SPV_BitFieldExtractOp<"BitFieldSExtract", []> {
 
 // -----
 
-def SPV_BitFieldUExtractOp : SPV_BitFieldExtractOp<"BitFieldUExtract", []> {
+def SPV_BitFieldUExtractOp : SPV_BitFieldExtractOp<"BitFieldUExtract",
+                                                   [UnsignedOp]> {
   let summary = "Extract a bit field from an object, without sign extension.";
 
   let description = [{
@@ -308,7 +309,8 @@ def SPV_BitReverseOp : SPV_BitUnaryOp<"BitReverse", []> {
 
 // -----
 
-def SPV_BitwiseAndOp : SPV_BitBinaryOp<"BitwiseAnd", [Commutative]> {
+def SPV_BitwiseAndOp : SPV_BitBinaryOp<"BitwiseAnd",
+                                       [Commutative, UsableInSpecConstantOp]> {
   let summary = [{
     Result is 1 if both Operand 1 and Operand 2 are 1. Result is 0 if either
     Operand 1 or Operand 2 are 0.
@@ -349,7 +351,8 @@ def SPV_BitwiseAndOp : SPV_BitBinaryOp<"BitwiseAnd", [Commutative]> {
 
 // -----
 
-def SPV_BitwiseOrOp : SPV_BitBinaryOp<"BitwiseOr", [Commutative]> {
+def SPV_BitwiseOrOp : SPV_BitBinaryOp<"BitwiseOr",
+                                      [Commutative, UsableInSpecConstantOp]> {
   let summary = [{
     Result is 1 if either Operand 1 or Operand 2 is 1. Result is 0 if both
     Operand 1 and Operand 2 are 0.
@@ -390,7 +393,8 @@ def SPV_BitwiseOrOp : SPV_BitBinaryOp<"BitwiseOr", [Commutative]> {
 
 // -----
 
-def SPV_BitwiseXorOp : SPV_BitBinaryOp<"BitwiseXor", [Commutative]> {
+def SPV_BitwiseXorOp : SPV_BitBinaryOp<"BitwiseXor",
+                                       [Commutative, UsableInSpecConstantOp]> {
   let summary = [{
     Result is 1 if exactly one of Operand 1 or Operand 2 is 1. Result is 0
     if Operand 1 and Operand 2 have the same value.
@@ -431,7 +435,8 @@ def SPV_BitwiseXorOp : SPV_BitBinaryOp<"BitwiseXor", [Commutative]> {
 
 // -----
 
-def SPV_ShiftLeftLogicalOp : SPV_ShiftOp<"ShiftLeftLogical", []> {
+def SPV_ShiftLeftLogicalOp : SPV_ShiftOp<"ShiftLeftLogical",
+                                         [UsableInSpecConstantOp]> {
   let summary = [{
     Shift the bits in Base left by the number of bits specified in Shift.
     The least-significant bits will be zero filled.
@@ -482,7 +487,8 @@ def SPV_ShiftLeftLogicalOp : SPV_ShiftOp<"ShiftLeftLogical", []> {
 
 // -----
 
-def SPV_ShiftRightArithmeticOp : SPV_ShiftOp<"ShiftRightArithmetic", []> {
+def SPV_ShiftRightArithmeticOp : SPV_ShiftOp<"ShiftRightArithmetic",
+                                             [UsableInSpecConstantOp]> {
   let summary = [{
     Shift the bits in Base right by the number of bits specified in Shift.
     The most-significant bits will be filled with the sign bit from Base.
@@ -530,7 +536,8 @@ def SPV_ShiftRightArithmeticOp : SPV_ShiftOp<"ShiftRightArithmetic", []> {
 
 // -----
 
-def SPV_ShiftRightLogicalOp : SPV_ShiftOp<"ShiftRightLogical", []> {
+def SPV_ShiftRightLogicalOp : SPV_ShiftOp<"ShiftRightLogical",
+                                          [UsableInSpecConstantOp]> {
   let summary = [{
     Shift the bits in Base right by the number of bits specified in Shift.
     The most-significant bits will be zero filled.
@@ -579,7 +586,7 @@ def SPV_ShiftRightLogicalOp : SPV_ShiftOp<"ShiftRightLogical", []> {
 
 // -----
 
-def SPV_NotOp : SPV_BitUnaryOp<"Not", []> {
+def SPV_NotOp : SPV_BitUnaryOp<"Not", [UsableInSpecConstantOp]> {
   let summary = "Complement the bits of Operand.";
 
   let description = [{

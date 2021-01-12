@@ -452,6 +452,14 @@ cmovnae	%bx,%bx
 // CHECK:  encoding: [0x0f,0x01,0xfc]
                 clzero %eax
 
+// CHECK:       tlbsync 
+// CHECK:  encoding: [0x0f,0x01,0xff]
+                tlbsync
+
+// CHECK:       invlpgb
+// CHECK:  encoding: [0x0f,0x01,0xfe]
+                invlpgb %eax, %edx
+
 // radr://8017522
 // CHECK: wait
 // CHECK:  encoding: [0x9b]

@@ -1722,6 +1722,83 @@ syntax to be used with ``std::complex`` with the same meaning.)
 For GCC compatibility, ``__builtin_complex(re, im)`` can also be used to
 construct a complex number from the given real and imaginary components.
 
+OpenCL Features
+===============
+
+Clang supports internal OpenCL extensions documented below.
+
+``__cl_clang_function_pointers``
+--------------------------------
+
+With this extension it is possible to enable various language features that
+are relying on function pointers using regular OpenCL extension pragma
+mechanism detailed in `the OpenCL Extension Specification,
+section 1.2
+<https://www.khronos.org/registry/OpenCL/specs/3.0-unified/html/OpenCL_Ext.html#extensions-overview>`_.
+
+In C++ for OpenCL this also enables:
+
+- Use of member function pointers;
+
+- Unrestricted use of references to functions;
+
+- Virtual member functions.
+
+Such functionality is not conformant and does not guarantee to compile
+correctly in any circumstances. It can be used if:
+
+- the kernel source does not contain call expressions to (member-) function
+  pointers, or virtual functions. For example this extension can be used in
+  metaprogramming algorithms to be able to specify/detect types generically.
+
+- the generated kernel binary does not contain indirect calls because they
+  are eliminated using compiler optimizations e.g. devirtualization. 
+
+- the selected target supports the function pointer like functionality e.g.
+  most CPU targets.
+
+**Example of Use**:
+
+.. code-block:: c++
+
+  #pragma OPENCL EXTENSION __cl_clang_function_pointers : enable
+  void foo()
+  {
+    void (*fp)(); // compiled - no diagnostic generated
+  }
+
+  #pragma OPENCL EXTENSION __cl_clang_function_pointers : disable
+  void bar()
+  {
+    void (*fp)(); // error - pointers to function are not allowed
+  }
+
+``__cl_clang_variadic_functions``
+---------------------------------
+
+With this extension it is possible to enable variadic arguments in functions
+using regular OpenCL extension pragma mechanism detailed in `the OpenCL
+Extension Specification, section 1.2
+<https://www.khronos.org/registry/OpenCL/specs/3.0-unified/html/OpenCL_Ext.html#extensions-overview>`_.
+
+This is not conformant behavior and it can only be used portably when the
+functions with variadic prototypes do not get generated in binary e.g. the
+variadic prototype is used to spesify a function type with any number of
+arguments in metaprogramming algorithms in C++ for OpenCL.
+
+This extensions can also be used when the kernel code is intended for targets
+supporting the variadic arguments e.g. majority of CPU targets.
+
+**Example of Use**:
+
+.. code-block:: c++
+
+  #pragma OPENCL EXTENSION __cl_clang_variadic_functions : enable
+  void foo(int a, ...); // compiled - no diagnostic generated
+
+  #pragma OPENCL EXTENSION __cl_clang_variadic_functions : disable
+  void bar(int a, ...); // error - variadic prototype is not allowed
+
 Builtin Functions
 =================
 
@@ -3030,8 +3107,18 @@ manually enable vectorization or interleaving.
     ...
   }
 
-The vector width is specified by ``vectorize_width(_value_)`` and the interleave
-count is specified by ``interleave_count(_value_)``, where
+The vector width is specified by
+``vectorize_width(_value_[, fixed|scalable])``, where _value_ is a positive
+integer and the type of vectorization can be specified with an optional
+second parameter. The default for the second parameter is 'fixed' and
+refers to fixed width vectorization, whereas 'scalable' indicates the
+compiler should use scalable vectors instead. Another use of vectorize_width
+is ``vectorize_width(fixed|scalable)`` where the user can hint at the type
+of vectorization to use without specifying the exact width. In both variants
+of the pragma the vectorizer may decide to fall back on fixed width
+vectorization if the target does not support scalable vectors.
+
+The interleave count is specified by ``interleave_count(_value_)``, where
 _value_ is a positive integer. This is useful for specifying the optimal
 width/count of the set of target architectures supported by your application.
 

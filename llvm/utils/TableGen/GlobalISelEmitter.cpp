@@ -935,7 +935,7 @@ public:
     std::string ParentName(ParentSymbolicName);
     if (ComplexSubOperands.count(SymbolicName)) {
       auto RecordedParentName = ComplexSubOperandsParentName[SymbolicName];
-      if (RecordedParentName.compare(ParentName) != 0)
+      if (RecordedParentName != ParentName)
         return failedImport("Error: Complex suboperand " + SymbolicName +
                             " referenced by different operands: " +
                             RecordedParentName + " and " + ParentName + ".");
@@ -1331,7 +1331,7 @@ public:
   bool isIdentical(const PredicateMatcher &B) const override {
     return OperandPredicateMatcher::isIdentical(B) &&
            StoreIdx == cast<RecordNamedOperandMatcher>(&B)->StoreIdx &&
-           Name.compare(cast<RecordNamedOperandMatcher>(&B)->Name) == 0;
+           Name == cast<RecordNamedOperandMatcher>(&B)->Name;
   }
 
   void emitPredicateOpcodes(MatchTable &Table,
@@ -2249,10 +2249,10 @@ public:
   }
 
   OperandMatcher &getOperand(unsigned OpIdx) {
-    auto I = std::find_if(Operands.begin(), Operands.end(),
-                          [&OpIdx](const std::unique_ptr<OperandMatcher> &X) {
-                            return X->getOpIdx() == OpIdx;
-                          });
+    auto I = llvm::find_if(Operands,
+                           [&OpIdx](const std::unique_ptr<OperandMatcher> &X) {
+                             return X->getOpIdx() == OpIdx;
+                           });
     if (I != Operands.end())
       return **I;
     llvm_unreachable("Failed to lookup operand");
@@ -4690,6 +4690,8 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
 
   // EXTRACT_SUBREG needs to use a subregister COPY.
   if (Name == "EXTRACT_SUBREG") {
+    if (!Dst->getChild(1)->isLeaf())
+      return failedImport("EXTRACT_SUBREG child #1 is not a leaf");
     DefInit *SubRegInit = dyn_cast<DefInit>(Dst->getChild(1)->getLeafValue());
     if (!SubRegInit)
       return failedImport("EXTRACT_SUBREG child #1 is not a subreg index");

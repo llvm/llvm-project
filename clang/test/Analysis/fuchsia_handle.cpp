@@ -12,10 +12,12 @@ typedef unsigned int uint32_t;
 #define ZX_HANDLE_ACQUIRE __attribute__((acquire_handle("Fuchsia")))
 #define ZX_HANDLE_RELEASE __attribute__((release_handle("Fuchsia")))
 #define ZX_HANDLE_USE __attribute__((use_handle("Fuchsia")))
+#define ZX_HANDLE_ACQUIRE_UNOWNED __attribute__((acquire_handle("FuchsiaUnowned")))
 #else
 #define ZX_HANDLE_ACQUIRE
 #define ZX_HANDLE_RELEASE
 #define ZX_HANDLE_USE
+#define ZX_HANDLE_ACQUIRE_UNOWNED
 #endif
 
 zx_status_t zx_channel_create(
@@ -25,6 +27,11 @@ zx_status_t zx_channel_create(
 
 zx_status_t zx_handle_close(
     zx_handle_t handle ZX_HANDLE_RELEASE);
+
+ZX_HANDLE_ACQUIRE_UNOWNED
+zx_handle_t zx_process_self();
+
+void zx_process_self_param(zx_handle_t *out ZX_HANDLE_ACQUIRE_UNOWNED);
 
 ZX_HANDLE_ACQUIRE
 zx_handle_t return_handle();
@@ -44,6 +51,20 @@ struct MyType {
   ZX_HANDLE_ACQUIRE
   zx_handle_t operator+(zx_handle_t ZX_HANDLE_RELEASE replace);
 };
+
+void checkUnownedHandle01() {
+  zx_handle_t h0;
+  h0 = zx_process_self(); // expected-note {{Function 'zx_process_self' returns an unowned handle}}
+  zx_handle_close(h0);    // expected-warning {{Releasing an unowned handle}}
+                          // expected-note@-1 {{Releasing an unowned handle}}
+}
+
+void checkUnownedHandle02() {
+  zx_handle_t h0;
+  zx_process_self_param(&h0); // expected-note {{Unowned handle allocated through 1st parameter}}
+  zx_handle_close(h0);        // expected-warning {{Releasing an unowned handle}}
+                              // expected-note@-1 {{Releasing an unowned handle}}
+}
 
 void checkInvalidHandle01() {
   zx_handle_t sa, sb;

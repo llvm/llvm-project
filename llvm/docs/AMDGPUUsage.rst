@@ -4732,7 +4732,12 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
                                               - generic
                                               - private    1. buffer/global/flat_load
                                               - constant
-                                                         - volatile & !nontemporal
+                                                         - !volatile & nontemporal
+
+                                                           1. buffer/global/flat_load
+                                                              glc=1 slc=1
+
+                                                         - volatile
 
                                                            1. buffer/global/flat_load
                                                               glc=1
@@ -4750,17 +4755,17 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
                                                               be reordered by
                                                               hardware.
 
-                                                         - !volatile & nontemporal
-
-                                                           1. buffer/global/flat_load
-                                                              glc=1 slc=1
-
      load         *none*       *none*         - local    1. ds_load
      store        *none*       *none*         - global   - !volatile & !nontemporal
                                               - generic
                                               - private    1. buffer/global/flat_store
                                               - constant
-                                                         - volatile & !nontemporal
+                                                         - !volatile & nontemporal
+
+                                                           1. buffer/global/flat_store
+                                                              glc=1 slc=1
+
+                                                         - volatile
 
                                                            1. buffer/global/flat_store
                                                            2. s_waitcnt vmcnt(0)
@@ -4776,11 +4781,6 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
                                                               addresses will not
                                                               be reordered by
                                                               hardware.
-
-                                                         - !volatile & nontemporal
-
-                                                           1. buffer/global/flat_store
-                                                              glc=1 slc=1
 
      store        *none*       *none*         - local    1. ds_store
      **Unordered Atomic**
@@ -6034,7 +6034,12 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-table`.
                                               - generic
                                               - private    1. buffer/global/flat_load
                                               - constant
-                                                         - volatile & !nontemporal
+                                                         - !volatile & nontemporal
+
+                                                           1. buffer/global/flat_load
+                                                              slc=1
+
+                                                         - volatile
 
                                                            1. buffer/global/flat_load
                                                               glc=1 dlc=1
@@ -6052,17 +6057,17 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-table`.
                                                               be reordered by
                                                               hardware.
 
-                                                         - !volatile & nontemporal
-
-                                                           1. buffer/global/flat_load
-                                                              slc=1
-
      load         *none*       *none*         - local    1. ds_load
      store        *none*       *none*         - global   - !volatile & !nontemporal
                                               - generic
                                               - private    1. buffer/global/flat_store
                                               - constant
-                                                         - volatile & !nontemporal
+                                                         - !volatile & nontemporal
+
+                                                            1. buffer/global/flat_store
+                                                               slc=1
+
+                                                         - volatile
 
                                                            1. buffer/global/flat_store
                                                            2. s_waitcnt vscnt(0)
@@ -6078,11 +6083,6 @@ table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx10-table`.
                                                               addresses will not
                                                               be reordered by
                                                               hardware.
-
-                                                         - !volatile & nontemporal
-
-                                                            1. buffer/global/flat_store
-                                                               slc=1
 
      store        *none*       *none*         - local    1. ds_store
      **Unordered Atomic**

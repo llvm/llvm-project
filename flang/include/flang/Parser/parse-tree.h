@@ -333,7 +333,7 @@ using ScalarDefaultCharExpr = Scalar<DefaultCharExpr>;
 using ScalarDefaultCharConstantExpr = Scalar<DefaultChar<ConstantExpr>>;
 
 // R611 label -> digit [digit]...
-using Label = std::uint64_t; // validated later, must be in [1..99999]
+using Label = common::Label; // validated later, must be in [1..99999]
 
 // A wrapper for xzy-stmt productions that are statements, so that
 // source provenances and labels have a uniform representation.

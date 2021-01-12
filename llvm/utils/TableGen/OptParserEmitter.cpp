@@ -66,11 +66,13 @@ public:
   static constexpr const char *MacroName = "OPTION_WITH_MARSHALLING";
   const Record &R;
   bool ShouldAlwaysEmit;
+  StringRef MacroPrefix;
   StringRef KeyPath;
   StringRef DefaultValue;
   StringRef NormalizedValuesScope;
   StringRef ImpliedCheck;
   StringRef ImpliedValue;
+  StringRef ShouldParse;
   StringRef Normalizer;
   StringRef Denormalizer;
   StringRef ValueMerger;
@@ -99,8 +101,14 @@ struct SimpleEnumValueTable {
 
   MarshallingInfo(const Record &R) : R(R) {}
 
+  std::string getMacroName() const {
+    return (MacroPrefix + MarshallingInfo::MacroName).str();
+  }
+
   void emit(raw_ostream &OS) const {
     write_cstring(OS, StringRef(getOptionSpelling(R)));
+    OS << ", ";
+    OS << ShouldParse;
     OS << ", ";
     OS << ShouldAlwaysEmit;
     OS << ", ";
@@ -160,6 +168,7 @@ static MarshallingInfo createMarshallingInfo(const Record &R) {
   MarshallingInfo Ret(R);
 
   Ret.ShouldAlwaysEmit = R.getValueAsBit("ShouldAlwaysEmit");
+  Ret.MacroPrefix = R.getValueAsString("MacroPrefix");
   Ret.KeyPath = R.getValueAsString("KeyPath");
   Ret.DefaultValue = R.getValueAsString("DefaultValue");
   Ret.NormalizedValuesScope = R.getValueAsString("NormalizedValuesScope");
@@ -167,6 +176,7 @@ static MarshallingInfo createMarshallingInfo(const Record &R) {
   Ret.ImpliedValue =
       R.getValueAsOptionalString("ImpliedValue").getValueOr(Ret.DefaultValue);
 
+  Ret.ShouldParse = R.getValueAsString("ShouldParse");
   Ret.Normalizer = R.getValueAsString("Normalizer");
   Ret.Denormalizer = R.getValueAsString("Denormalizer");
   Ret.ValueMerger = R.getValueAsString("ValueMerger");
@@ -420,13 +430,13 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
     MarshallingInfos.push_back(createMarshallingInfo(*R));
 
   for (const auto &MI : MarshallingInfos) {
-    OS << "#ifdef " << MarshallingInfo::MacroName << "\n";
-    OS << MarshallingInfo::MacroName << "(";
+    OS << "#ifdef " << MI.getMacroName() << "\n";
+    OS << MI.getMacroName() << "(";
     WriteOptRecordFields(OS, MI.R);
     OS << ", ";
     MI.emit(OS);
     OS << ")\n";
-    OS << "#endif // " << MarshallingInfo::MacroName << "\n";
+    OS << "#endif // " << MI.getMacroName() << "\n";
   }
 
   OS << "\n";

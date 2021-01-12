@@ -545,7 +545,7 @@ define void @PR47450(i16* nocapture readonly %p) {
 ; CHECK-NEXT:    [[X:%.*]] = load i16, i16* [[P:%.*]], align 2
 ; CHECK-NEXT:    [[Z:%.*]] = zext i16 [[X]] to i32
 ; CHECK-NEXT:    [[S:%.*]] = shl nuw nsw i32 [[Z]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> undef, i32 [[S]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[S]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[S]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[S]], i32 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[S]], i32 3

@@ -93,7 +93,7 @@ uint32_t TgtStackItemSize = 0;
   {}
 #endif
 
-#include "../../common/elf_common.c"
+#include "elf_common.h"
 
 /// Keep entries table per device
 struct FuncOrGblEntryTy {

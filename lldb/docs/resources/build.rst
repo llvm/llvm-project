@@ -34,7 +34,7 @@ If you want to run the test suite, you'll need to build LLDB with Python
 scripting support.
 
 * `Python <http://www.python.org/>`_
-* `SWIG <http://swig.org/>`_ 2 or later.
+* `SWIG <http://swig.org/>`_ 3 or later.
 
 Optional Dependencies
 *********************

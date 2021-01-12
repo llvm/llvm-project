@@ -268,7 +268,9 @@ def SPV_FSubOp : SPV_ArithmeticBinaryOp<"FSub", SPV_Float, []> {
 
 // -----
 
-def SPV_IAddOp : SPV_ArithmeticBinaryOp<"IAdd", SPV_Integer, [Commutative]> {
+def SPV_IAddOp : SPV_ArithmeticBinaryOp<"IAdd",
+                                        SPV_Integer,
+                                        [Commutative, UsableInSpecConstantOp]> {
   let summary = "Integer addition of Operand 1 and Operand 2.";
 
   let description = [{
@@ -306,7 +308,9 @@ def SPV_IAddOp : SPV_ArithmeticBinaryOp<"IAdd", SPV_Integer, [Commutative]> {
 
 // -----
 
-def SPV_IMulOp : SPV_ArithmeticBinaryOp<"IMul", SPV_Integer, [Commutative]> {
+def SPV_IMulOp : SPV_ArithmeticBinaryOp<"IMul",
+                                        SPV_Integer,
+                                        [Commutative, UsableInSpecConstantOp]> {
   let summary = "Integer multiplication of Operand 1 and Operand 2.";
 
   let description = [{
@@ -344,7 +348,9 @@ def SPV_IMulOp : SPV_ArithmeticBinaryOp<"IMul", SPV_Integer, [Commutative]> {
 
 // -----
 
-def SPV_ISubOp : SPV_ArithmeticBinaryOp<"ISub", SPV_Integer, []> {
+def SPV_ISubOp : SPV_ArithmeticBinaryOp<"ISub",
+                                        SPV_Integer,
+                                        [UsableInSpecConstantOp]> {
   let summary = "Integer subtraction of Operand 2 from Operand 1.";
 
   let description = [{
@@ -382,7 +388,9 @@ def SPV_ISubOp : SPV_ArithmeticBinaryOp<"ISub", SPV_Integer, []> {
 
 // -----
 
-def SPV_SDivOp : SPV_ArithmeticBinaryOp<"SDiv", SPV_Integer, []> {
+def SPV_SDivOp : SPV_ArithmeticBinaryOp<"SDiv",
+                                        SPV_Integer,
+                                        [UsableInSpecConstantOp]> {
   let summary = "Signed-integer division of Operand 1 divided by Operand 2.";
 
   let description = [{
@@ -415,7 +423,9 @@ def SPV_SDivOp : SPV_ArithmeticBinaryOp<"SDiv", SPV_Integer, []> {
 
 // -----
 
-def SPV_SModOp : SPV_ArithmeticBinaryOp<"SMod", SPV_Integer, []> {
+def SPV_SModOp : SPV_ArithmeticBinaryOp<"SMod",
+                                        SPV_Integer,
+                                        [UsableInSpecConstantOp]> {
   let summary = [{
     Signed remainder operation for the remainder whose sign matches the sign
     of Operand 2.
@@ -452,7 +462,9 @@ def SPV_SModOp : SPV_ArithmeticBinaryOp<"SMod", SPV_Integer, []> {
 
 // -----
 
-def SPV_SNegateOp : SPV_ArithmeticUnaryOp<"SNegate", SPV_Integer, []> {
+def SPV_SNegateOp : SPV_ArithmeticUnaryOp<"SNegate",
+                                          SPV_Integer,
+                                          [UsableInSpecConstantOp]> {
   let summary = "Signed-integer subtract of Operand from zero.";
 
   let description = [{
@@ -477,7 +489,9 @@ def SPV_SNegateOp : SPV_ArithmeticUnaryOp<"SNegate", SPV_Integer, []> {
 
 // -----
 
-def SPV_SRemOp : SPV_ArithmeticBinaryOp<"SRem", SPV_Integer, []> {
+def SPV_SRemOp : SPV_ArithmeticBinaryOp<"SRem",
+                                        SPV_Integer,
+                                        [UsableInSpecConstantOp]> {
   let summary = [{
     Signed remainder operation for the remainder whose sign matches the sign
     of Operand 1.
@@ -514,7 +528,9 @@ def SPV_SRemOp : SPV_ArithmeticBinaryOp<"SRem", SPV_Integer, []> {
 
 // -----
 
-def SPV_UDivOp : SPV_ArithmeticBinaryOp<"UDiv", SPV_Integer, []> {
+def SPV_UDivOp : SPV_ArithmeticBinaryOp<"UDiv",
+                                        SPV_Integer,
+                                        [UnsignedOp, UsableInSpecConstantOp]> {
   let summary = "Unsigned-integer division of Operand 1 divided by Operand 2.";
 
   let description = [{
@@ -546,7 +562,9 @@ def SPV_UDivOp : SPV_ArithmeticBinaryOp<"UDiv", SPV_Integer, []> {
 
 // -----
 
-def SPV_UModOp : SPV_ArithmeticBinaryOp<"UMod", SPV_Integer> {
+def SPV_UModOp : SPV_ArithmeticBinaryOp<"UMod",
+                                        SPV_Integer,
+                                        [UnsignedOp, UsableInSpecConstantOp]> {
   let summary = "Unsigned modulo operation of Operand 1 modulo Operand 2.";
 
   let description = [{

@@ -13,8 +13,6 @@
 
 #include "AMDGPUMacroFusion.h"
 #include "AMDGPUSubtarget.h"
-#include "SIInstrInfo.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 
 #include "llvm/CodeGen/MacroFusion.h"
 

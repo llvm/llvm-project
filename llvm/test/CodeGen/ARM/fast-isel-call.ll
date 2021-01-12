@@ -1,12 +1,12 @@
-; RUN: llc -fast-isel-sink-local-values < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-apple-ios | FileCheck %s --check-prefix=ARM
-; RUN: llc -fast-isel-sink-local-values < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-linux-gnueabi | FileCheck %s --check-prefix=ARM
-; RUN: llc -fast-isel-sink-local-values < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=thumbv7-apple-ios | FileCheck %s --check-prefix=THUMB
-; RUN: llc -fast-isel-sink-local-values < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-apple-ios -mattr=+long-calls | FileCheck %s --check-prefix=ARM-LONG --check-prefix=ARM-LONG-MACHO
-; RUN: llc -fast-isel-sink-local-values < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-linux-gnueabi -mattr=+long-calls | FileCheck %s --check-prefix=ARM-LONG --check-prefix=ARM-LONG-ELF
-; RUN: llc -fast-isel-sink-local-values < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=thumbv7-apple-ios -mattr=+long-calls | FileCheck %s --check-prefix=THUMB-LONG
-; RUN: llc -fast-isel-sink-local-values < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-apple-ios -mattr=-fpregs | FileCheck %s --check-prefix=ARM-NOVFP
-; RUN: llc -fast-isel-sink-local-values < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-linux-gnueabi -mattr=-fpregs | FileCheck %s --check-prefix=ARM-NOVFP
-; RUN: llc -fast-isel-sink-local-values < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=thumbv7-apple-ios -mattr=-fpregs | FileCheck %s --check-prefix=THUMB-NOVFP
+; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-apple-ios | FileCheck %s --check-prefix=ARM
+; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-linux-gnueabi | FileCheck %s --check-prefix=ARM
+; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=thumbv7-apple-ios | FileCheck %s --check-prefix=THUMB
+; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-apple-ios -mattr=+long-calls | FileCheck %s --check-prefix=ARM-LONG --check-prefix=ARM-LONG-MACHO
+; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-linux-gnueabi -mattr=+long-calls | FileCheck %s --check-prefix=ARM-LONG --check-prefix=ARM-LONG-ELF
+; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=thumbv7-apple-ios -mattr=+long-calls | FileCheck %s --check-prefix=THUMB-LONG
+; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-apple-ios -mattr=-fpregs | FileCheck %s --check-prefix=ARM-NOVFP
+; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-linux-gnueabi -mattr=-fpregs | FileCheck %s --check-prefix=ARM-NOVFP
+; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=thumbv7-apple-ios -mattr=-fpregs | FileCheck %s --check-prefix=THUMB-NOVFP
 
 ; Note that some of these tests assume that relocations are either
 ; movw/movt or constant pool loads. Different platforms will select
@@ -38,8 +38,8 @@ define i32 @t4(i16 zeroext %a) nounwind {
 }
 
 define void @foo(i8 %a, i16 %b) nounwind {
-; ARM: foo
-; THUMB: foo
+; ARM-LABEL: foo:
+; THUMB-LABEL: foo:
 ;; Materialize i1 1
 ; ARM: movw [[REG0:r[0-9]+]], #1
 ; THUMB: movs [[REG0:r[0-9]+]], #1
@@ -87,7 +87,7 @@ declare zeroext i1 @t9();
 
 define i32 @t10() {
 entry:
-; ARM: @t10
+; ARM-LABEL: @t10
 ; ARM-DAG: movw [[R0:l?r[0-9]*]], #0
 ; ARM-DAG: movw [[R1:l?r[0-9]*]], #248
 ; ARM-DAG: movw [[R2:l?r[0-9]*]], #187
@@ -100,8 +100,8 @@ entry:
 ; ARM-DAG: and [[R3]], [[R3]], #255
 ; ARM-DAG: and [[R4]], [[R4]], #255
 ; ARM-DAG: str [[R4]], [sp]
-; ARM-DAG: and [[R4]], [[R5]], #255
-; ARM-DAG: str [[R4]], [sp, #4]
+; ARM-DAG: and [[R5]], [[R5]], #255
+; ARM-DAG: str [[R5]], [sp, #4]
 ; ARM: bl {{_?}}bar
 ; ARM-LONG-LABEL: @t10
 
@@ -114,7 +114,7 @@ entry:
 ; ARM-LONG-ELF: ldr [[R:r[0-9]+]], {{\[}}[[R1]]]
 
 ; ARM-LONG: blx [[R]]
-; THUMB: @t10
+; THUMB-LABEL: @t10
 ; THUMB-DAG: movs [[R0:l?r[0-9]*]], #0
 ; THUMB-DAG: movs [[R1:l?r[0-9]*]], #248
 ; THUMB-DAG: movs [[R2:l?r[0-9]*]], #187
@@ -127,8 +127,8 @@ entry:
 ; THUMB-DAG: and [[R3]], [[R3]], #255
 ; THUMB-DAG: and [[R4]], [[R4]], #255
 ; THUMB-DAG: str.w [[R4]], [sp]
-; THUMB-DAG: and [[R4]], [[R5]], #255
-; THUMB-DAG: str.w [[R4]], [sp, #4]
+; THUMB-DAG: and [[R5]], [[R5]], #255
+; THUMB-DAG: str.w [[R5]], [sp, #4]
 ; THUMB: bl {{_?}}bar
 ; THUMB-LONG-LABEL: @t10
 ; THUMB-LONG: {{(movw)|(ldr.n)}} [[R1:l?r[0-9]*]], {{(:lower16:L_bar\$non_lazy_ptr)|(.LCPI)}}
@@ -146,7 +146,7 @@ define i32 @bar0(i32 %i) nounwind {
 }
 
 define void @foo3() uwtable {
-; ARM: @foo3
+; ARM-LABEL: @foo3
 ; ARM: {{(movw r[0-9]+, :lower16:_?bar0)|(ldr r[0-9]+, .LCPI)}}
 ; ARM: {{(movt r[0-9]+, :upper16:_?bar0)|(ldr r[0-9]+, \[r[0-9]+\])}}
 ; ARM: movw    {{r[0-9]+}}, #0
@@ -164,9 +164,9 @@ define void @foo3() uwtable {
 
 define i32 @LibCall(i32 %a, i32 %b) {
 entry:
-; ARM: LibCall
+; ARM-LABEL: LibCall:
 ; ARM: bl {{___udivsi3|__aeabi_uidiv}}
-; ARM-LONG-LABEL: LibCall
+; ARM-LONG-LABEL: LibCall:
 
 ; ARM-LONG-MACHO: {{(movw r2, :lower16:L___udivsi3\$non_lazy_ptr)|(ldr r2, .LCPI)}}
 ; ARM-LONG-MACHO: {{(movt r2, :upper16:L___udivsi3\$non_lazy_ptr)?}}
@@ -176,7 +176,7 @@ entry:
 ; ARM-LONG-ELF: movt r2, :upper16:__aeabi_uidiv
 
 ; ARM-LONG: blx r2
-; THUMB: LibCall
+; THUMB-LABEL: LibCall:
 ; THUMB: bl {{___udivsi3|__aeabi_uidiv}}
 ; THUMB-LONG-LABEL: LibCall
 ; THUMB-LONG: {{(movw r2, :lower16:L___udivsi3\$non_lazy_ptr)|(ldr.n r2, .LCPI)}}
@@ -191,9 +191,9 @@ entry:
 
 define fastcc void @fast_callee(float %i) ssp {
 entry:
-; ARM: fast_callee
+; ARM-LABEL: fast_callee:
 ; ARM: vmov r0, s0
-; THUMB: fast_callee
+; THUMB-LABEL: fast_callee:
 ; THUMB: vmov r0, s0
 ; ARM-NOVFP: fast_callee
 ; ARM-NOVFP-NOT: s0
@@ -205,14 +205,14 @@ entry:
 
 define void @fast_caller() ssp {
 entry:
-; ARM: fast_caller
+; ARM-LABEL: fast_caller:
 ; ARM: vldr s0,
-; THUMB: fast_caller
+; THUMB-LABEL: fast_caller:
 ; THUMB: vldr s0,
-; ARM-NOVFP: fast_caller
+; ARM-NOVFP-LABEL: fast_caller:
 ; ARM-NOVFP: movw r0, #13107
 ; ARM-NOVFP: movt r0, #16611
-; THUMB-NOVFP: fast_caller
+; THUMB-NOVFP-LABEL: fast_caller:
 ; THUMB-NOVFP: movw r0, #13107
 ; THUMB-NOVFP: movt r0, #16611
   call fastcc void @fast_callee(float 0x401C666660000000)
@@ -221,13 +221,13 @@ entry:
 
 define void @no_fast_callee(float %i) ssp {
 entry:
-; ARM: no_fast_callee
+; ARM-LABEL: no_fast_callee:
 ; ARM: vmov s0, r0
-; THUMB: no_fast_callee
+; THUMB-LABEL: no_fast_callee:
 ; THUMB: vmov s0, r0
-; ARM-NOVFP: no_fast_callee
+; ARM-NOVFP-LABEL: no_fast_callee:
 ; ARM-NOVFP-NOT: s0
-; THUMB-NOVFP: no_fast_callee
+; THUMB-NOVFP-LABEL: no_fast_callee:
 ; THUMB-NOVFP-NOT: s0
   call void @print(float %i)
   ret void
@@ -235,14 +235,14 @@ entry:
 
 define void @no_fast_caller() ssp {
 entry:
-; ARM: no_fast_caller
+; ARM-LABEL: no_fast_caller:
 ; ARM: vmov r0, s0
-; THUMB: no_fast_caller
+; THUMB-LABEL: no_fast_caller:
 ; THUMB: vmov r0, s0
-; ARM-NOVFP: no_fast_caller
+; ARM-NOVFP-LABEL: no_fast_caller:
 ; ARM-NOVFP: movw r0, #13107
 ; ARM-NOVFP: movt r0, #16611
-; THUMB-NOVFP: no_fast_caller
+; THUMB-NOVFP-LABEL: no_fast_caller:
 ; THUMB-NOVFP: movw r0, #13107
 ; THUMB-NOVFP: movt r0, #16611
   call void @no_fast_callee(float 0x401C666660000000)
@@ -252,7 +252,7 @@ entry:
 declare void @bar2(i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6)
 
 define void @call_undef_args() {
-; ARM-LABEL: call_undef_args
+; ARM-LABEL: call_undef_args:
 ; ARM:       movw  r0, #1
 ; ARM-NEXT:  movw  r1, #2
 ; ARM-NEXT:  movw  r2, #3

@@ -312,10 +312,8 @@ bool matcher::operatesOnSuperVectorsOf(Operation &op,
   return true;
 }
 
-bool mlir::isDisjointTransferSet(VectorTransferOpInterface transferA,
-                                 VectorTransferOpInterface transferB) {
-  if (transferA.source() != transferB.source())
-    return false;
+bool mlir::isDisjointTransferIndices(VectorTransferOpInterface transferA,
+                                     VectorTransferOpInterface transferB) {
   // For simplicity only look at transfer of same type.
   if (transferA.getVectorType() != transferB.getVectorType())
     return false;
@@ -344,4 +342,11 @@ bool mlir::isDisjointTransferSet(VectorTransferOpInterface transferA,
     }
   }
   return false;
+}
+
+bool mlir::isDisjointTransferSet(VectorTransferOpInterface transferA,
+                                 VectorTransferOpInterface transferB) {
+  if (transferA.source() != transferB.source())
+    return false;
+  return isDisjointTransferIndices(transferA, transferB);
 }

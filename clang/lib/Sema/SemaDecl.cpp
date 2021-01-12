@@ -436,9 +436,7 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
          Res != ResEnd; ++Res) {
       if (isa<TypeDecl>(*Res) || isa<ObjCInterfaceDecl>(*Res) ||
           (AllowDeducedTemplate && getAsTypeTemplateDecl(*Res))) {
-        if (!IIDecl ||
-            (*Res)->getLocation().getRawEncoding() <
-              IIDecl->getLocation().getRawEncoding())
+        if (!IIDecl || (*Res)->getLocation() < IIDecl->getLocation())
           IIDecl = *Res;
       }
     }
@@ -2614,6 +2612,10 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
     NewAttr = S.mergeImportModuleAttr(D, *IMA);
   else if (const auto *INA = dyn_cast<WebAssemblyImportNameAttr>(Attr))
     NewAttr = S.mergeImportNameAttr(D, *INA);
+  else if (const auto *TCBA = dyn_cast<EnforceTCBAttr>(Attr))
+    NewAttr = S.mergeEnforceTCBAttr(D, *TCBA);
+  else if (const auto *TCBLA = dyn_cast<EnforceTCBLeafAttr>(Attr))
+    NewAttr = S.mergeEnforceTCBLeafAttr(D, *TCBLA);
   else if (Attr->shouldInheritEvenIfAlreadyPresent() || !DeclHasAttr(D, Attr))
     NewAttr = cast<InheritableAttr>(Attr->clone(S.Context));
 
@@ -6748,14 +6750,16 @@ static bool diagnoseOpenCLTypes(Scope *S, Sema &Se, Declarator &D,
   }
 
   // OpenCL v1.0 s6.8.a.3: Pointers to functions are not allowed.
-  QualType NR = R;
-  while (NR->isPointerType() || NR->isMemberFunctionPointerType()) {
-    if (NR->isFunctionPointerType() || NR->isMemberFunctionPointerType()) {
-      Se.Diag(D.getIdentifierLoc(), diag::err_opencl_function_pointer);
-      D.setInvalidType();
-      return false;
+  if (!Se.getOpenCLOptions().isEnabled("__cl_clang_function_pointers")) {
+    QualType NR = R;
+    while (NR->isPointerType() || NR->isMemberFunctionPointerType()) {
+      if (NR->isFunctionPointerType() || NR->isMemberFunctionPointerType()) {
+        Se.Diag(D.getIdentifierLoc(), diag::err_opencl_function_pointer);
+        D.setInvalidType();
+        return false;
+      }
+      NR = NR->getPointeeType();
     }
-    NR = NR->getPointeeType();
   }
 
   if (!Se.getOpenCLOptions().isEnabled("cl_khr_fp16")) {

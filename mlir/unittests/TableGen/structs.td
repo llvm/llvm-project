@@ -20,5 +20,5 @@ def Test_Struct : StructAttr<"TestStruct", Test_Dialect, [
                                 OptionalAttr<I32Attr>>,
                 StructFieldAttr<"sample_default_valued_integer",
                                 DefaultValuedAttr<I32Attr, "42">>] > {
-  let description = "Structure for test data";
+  let summary = "Structure for test data";
 }

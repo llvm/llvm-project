@@ -438,6 +438,7 @@ struct fake_shared_weak_count {
   virtual void on_zero_shared() = 0;
   virtual void _unused_0x18() = 0;
   virtual void on_zero_shared_weak() = 0;
+  virtual ~fake_shared_weak_count() = 0;  // suppress -Wnon-virtual-dtor
 };
 }  // namespace
 

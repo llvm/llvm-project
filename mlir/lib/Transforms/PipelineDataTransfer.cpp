@@ -17,6 +17,7 @@
 #include "mlir/Analysis/LoopAnalysis.h"
 #include "mlir/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/StandardOps/Utils/Utils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Transforms/LoopUtils.h"
 #include "mlir/Transforms/Utils.h"
@@ -83,13 +84,8 @@ static bool doubleBuffer(Value oldMemRef, AffineForOp forOp) {
   // The double buffer is allocated right before 'forOp'.
   OpBuilder bOuter(forOp);
   // Put together alloc operands for any dynamic dimensions of the memref.
-  SmallVector<Value, 4> allocOperands;
-  unsigned dynamicDimCount = 0;
-  for (auto dimSize : oldMemRefType.getShape()) {
-    if (dimSize == -1)
-      allocOperands.push_back(
-          bOuter.create<DimOp>(forOp.getLoc(), oldMemRef, dynamicDimCount++));
-  }
+
+  auto allocOperands = getDynOperands(forOp.getLoc(), oldMemRef, bOuter);
 
   // Create and place the alloc right before the 'affine.for' operation.
   Value newMemRef =

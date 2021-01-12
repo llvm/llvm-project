@@ -159,8 +159,10 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @trunc_v4i1_v4i32(<4 x i32> %src) {
 ; CHECK-LABEL: trunc_v4i1_v4i32:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i32 q2, #0x1
 ; CHECK-NEXT:    vmov.i32 q1, #0x0
-; CHECK-NEXT:    vcmp.i32 ne, q0, zr
+; CHECK-NEXT:    vand q2, q0, q2
+; CHECK-NEXT:    vcmp.i32 ne, q2, zr
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -172,8 +174,10 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @trunc_v8i1_v8i16(<8 x i16> %src) {
 ; CHECK-LABEL: trunc_v8i1_v8i16:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i16 q2, #0x1
 ; CHECK-NEXT:    vmov.i32 q1, #0x0
-; CHECK-NEXT:    vcmp.i32 ne, q0, zr
+; CHECK-NEXT:    vand q2, q0, q2
+; CHECK-NEXT:    vcmp.i16 ne, q2, zr
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -185,8 +189,10 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @trunc_v16i1_v16i8(<16 x i8> %src) {
 ; CHECK-LABEL: trunc_v16i1_v16i8:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i8 q2, #0x1
 ; CHECK-NEXT:    vmov.i32 q1, #0x0
-; CHECK-NEXT:    vcmp.i32 ne, q0, zr
+; CHECK-NEXT:    vand q2, q0, q2
+; CHECK-NEXT:    vcmp.i8 ne, q2, zr
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:

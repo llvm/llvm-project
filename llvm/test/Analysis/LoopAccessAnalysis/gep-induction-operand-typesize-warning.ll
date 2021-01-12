@@ -6,7 +6,7 @@
 ; warning in the llvm::getGEPInductionOperand function.
 
 ; If this check fails please read test/CodeGen/AArch64/README for instructions on how to resolve it.
-; WARN-NOT: warning: {{.*}}TypeSize is not scalable
+; WARN-NOT: warning:
 
 define void @get_gep_induction_operand_typesize_warning(i64 %n, <vscale x 4 x i32>* %a) {
 entry:

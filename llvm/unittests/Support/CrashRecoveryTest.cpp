@@ -109,8 +109,9 @@ TEST(CrashRecoveryTest, LimitedStackTrace) {
   std::string Str = RawStream.str();
   // FIXME: Handle "Depth" parameter in PrintStackTrace() function
   // to print stack trace upto a specified Depth.
-  if (!Triple(sys::getProcessTriple()).isOSWindows())
+  if (!Triple(sys::getProcessTriple()).isOSWindows()) {
     EXPECT_EQ(std::string::npos, Str.find("#1"));
+  }
 }
 
 #ifdef _WIN32

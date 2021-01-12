@@ -573,8 +573,8 @@ private:
         CheckConventionalParameters(CheckConventionalParameters),
         CurrentState(0) {
     initDataStructures();
-    assert(size() == 0 ||
-           !States.empty() && "Data structures are inconsistent");
+    assert((size() == 0 || !States.empty()) &&
+           "Data structures are inconsistent");
   }
 
   //===----------------------------------------------------------------------===//

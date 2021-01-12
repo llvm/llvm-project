@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/math/ldexpf.h"
 #include "src/__support/common.h"
 #include "utils/FPUtil/ManipulationFunctions.h"
 
 namespace __llvm_libc {
 
-float LLVM_LIBC_ENTRYPOINT(ldexpf)(float x, int exp) {
+LLVM_LIBC_FUNCTION(float, ldexpf, (float x, int exp)) {
   return fputil::ldexp(x, exp);
 }
 

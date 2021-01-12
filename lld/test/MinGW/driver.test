@@ -285,3 +285,12 @@ NO_ALLOW_MULTIPLE_DEFINITION-NOT: -force:multiple
 RUN: ld.lld -### -m i386pep foo.o -wrap foo1 --wrap foo2 | FileCheck -check-prefix WRAP %s
 RUN: ld.lld -### -m i386pep foo.o -wrap=foo1 --wrap=foo2 | FileCheck -check-prefix WRAP %s
 WRAP: -wrap:foo1 -wrap:foo2
+
+RUN: ld.lld -### -m i386pep foo.o | FileCheck -check-prefix DEMANGLE %s
+RUN: ld.lld -### -m i386pep foo.o -demangle | FileCheck -check-prefix DEMANGLE %s
+RUN: ld.lld -### -m i386pep foo.o --demangle | FileCheck -check-prefix DEMANGLE %s
+DEMANGLE: -demangle{{ }}
+
+RUN: ld.lld -### -m i386pep foo.o -no-demangle | FileCheck -check-prefix NO-DEMANGLE %s
+RUN: ld.lld -### -m i386pep foo.o --no-demangle | FileCheck -check-prefix NO-DEMANGLE %s
+NO-DEMANGLE: -demangle:no

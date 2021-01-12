@@ -1,5 +1,5 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s --gpu-to-llvm="gpu-binary-annotation=nvvm.cubin" | FileCheck %s
-// RUN: mlir-opt -allow-unregistered-dialect %s --gpu-to-llvm="gpu-binary-annotation=rocdl.hsaco" | FileCheck %s --check-prefix=ROCDL
+// RUN: mlir-opt %s --gpu-to-llvm="gpu-binary-annotation=nvvm.cubin" | FileCheck %s
+// RUN: mlir-opt %s --gpu-to-llvm="gpu-binary-annotation=rocdl.hsaco" | FileCheck %s --check-prefix=ROCDL
 
 module attributes {gpu.container_module} {
 
@@ -10,9 +10,9 @@ module attributes {gpu.container_module} {
   gpu.module @kernel_module attributes {
       nvvm.cubin = "CUBIN", rocdl.hsaco = "HSACO"
   } {
-    llvm.func @kernel(%arg0: !llvm.i32, %arg1: !llvm.ptr<float>,
-        %arg2: !llvm.ptr<float>, %arg3: !llvm.i64, %arg4: !llvm.i64,
-        %arg5: !llvm.i64) attributes {gpu.kernel} {
+    llvm.func @kernel(%arg0: i32, %arg1: !llvm.ptr<f32>,
+        %arg2: !llvm.ptr<f32>, %arg3: i64, %arg4: i64,
+        %arg5: i64) attributes {gpu.kernel} {
       llvm.return
     }
   }
@@ -27,7 +27,7 @@ module attributes {gpu.container_module} {
     return
   }
 
-  // CHECK: [[C8:%.*]] = llvm.mlir.constant(8 : index) : !llvm.i64
+  // CHECK: [[C8:%.*]] = llvm.mlir.constant(8 : index) : i64
   // CHECK: [[ADDRESSOF:%.*]] = llvm.mlir.addressof @[[GLOBAL]]
   // CHECK: [[C0:%.*]] = llvm.mlir.constant(0 : index)
   // CHECK: [[BINARY:%.*]] = llvm.getelementptr [[ADDRESSOF]]{{\[}}[[C0]], [[C0]]]
@@ -39,7 +39,7 @@ module attributes {gpu.container_module} {
   // CHECK: [[C0_I32:%.*]] = llvm.mlir.constant(0 : i32)
   // CHECK: [[STREAM:%.*]] = llvm.call @mgpuStreamCreate
 
-  // CHECK: [[NUM_PARAMS:%.*]] = llvm.mlir.constant(6 : i32) : !llvm.i32
+  // CHECK: [[NUM_PARAMS:%.*]] = llvm.mlir.constant(6 : i32) : i32
   // CHECK-NEXT: [[PARAMS:%.*]] = llvm.alloca [[NUM_PARAMS]] x !llvm.ptr<i8>
 
   // CHECK: [[EXTRA_PARAMS:%.*]] = llvm.mlir.null : !llvm.ptr<ptr<i8>>

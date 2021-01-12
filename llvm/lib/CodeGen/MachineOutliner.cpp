@@ -545,11 +545,10 @@ void MachineOutliner::findCandidates(
       // That is, one must either
       // * End before the other starts
       // * Start after the other ends
-      if (std::all_of(
-              CandidatesForRepeatedSeq.begin(), CandidatesForRepeatedSeq.end(),
-              [&StartIdx, &EndIdx](const Candidate &C) {
-                return (EndIdx < C.getStartIdx() || StartIdx > C.getEndIdx());
-              })) {
+      if (llvm::all_of(CandidatesForRepeatedSeq, [&StartIdx,
+                                                  &EndIdx](const Candidate &C) {
+            return (EndIdx < C.getStartIdx() || StartIdx > C.getEndIdx());
+          })) {
         // It doesn't overlap with anything, so we can outline it.
         // Each sequence is over [StartIt, EndIt].
         // Save the candidate and its location.
@@ -689,7 +688,7 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
 
     // The live-in set for the outlined function is the union of the live-ins
     // from all the outlining points.
-    for (MCPhysReg Reg : make_range(CandLiveIns.begin(), CandLiveIns.end()))
+    for (MCPhysReg Reg : CandLiveIns)
       LiveIns.addReg(Reg);
   }
   addLiveIns(MBB, LiveIns);

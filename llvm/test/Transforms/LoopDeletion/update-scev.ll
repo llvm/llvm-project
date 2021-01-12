@@ -44,10 +44,12 @@ for.body6:                                        ; preds = %for.body6, %for.bod
   %conv10 = zext i1 %cmp9 to i32
   %and = and i32 %conv10, %g.138
   %inc = add i32 %h.039, 1
-  br i1 undef, label %for.inc11, label %for.body6
+  %exit = icmp eq i32 %inc, 20000
+  br i1 %exit, label %for.inc11, label %for.body6
 
 for.inc11:                                        ; preds = %for.body6
   %and.lcssa = phi i32 [ %and, %for.body6 ]
+  call void @sideeffect(i32 %and.lcssa)
   %inc12 = add nsw i32 %val, 1
   %tobool = icmp eq i32 %inc12, 0
   br i1 %tobool, label %for.cond14, label %for.body
@@ -55,6 +57,8 @@ for.inc11:                                        ; preds = %for.body6
 for.cond14:                                       ; preds = %for.cond14, %for.inc11
   br i1 undef, label %for.cond, label %for.cond14
 }
+
+declare void @sideeffect(i32)
 
 ; LoopDeletion removes the loop %for.body7.1. Make sure %inc.lcssa.1 in the loop
 ; exit block is correctly invalidated.

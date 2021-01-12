@@ -34,6 +34,8 @@ static std::unique_ptr<FrontendAction> CreateFrontendBaseAction(
     break;
   case ParseSyntaxOnly:
     return std::make_unique<ParseSyntaxOnlyAction>();
+  case EmitObj:
+    return std::make_unique<EmitObjAction>();
     break;
   default:
     break;

@@ -508,7 +508,6 @@ void Breakpoint::ModulesChanged(ModuleList &module_list, bool load,
             "delete_locations: %i\n",
             module_list.GetSize(), load, delete_locations);
 
-  std::lock_guard<std::recursive_mutex> guard(module_list.GetMutex());
   if (load) {
     // The logic for handling new modules is:
     // 1) If the filter rejects this module, then skip it. 2) Run through the
@@ -525,7 +524,7 @@ void Breakpoint::ModulesChanged(ModuleList &module_list, bool load,
     // them after the locations pass.  Have to do it this way because resolving
     // breakpoints will add new locations potentially.
 
-    for (ModuleSP module_sp : module_list.ModulesNoLocking()) {
+    for (ModuleSP module_sp : module_list.Modules()) {
       bool seen = false;
       if (!m_filter_sp->ModulePasses(module_sp))
         continue;
@@ -589,9 +588,7 @@ void Breakpoint::ModulesChanged(ModuleList &module_list, bool load,
     else
       removed_locations_event = nullptr;
 
-    size_t num_modules = module_list.GetSize();
-    for (size_t i = 0; i < num_modules; i++) {
-      ModuleSP module_sp(module_list.GetModuleAtIndexUnlocked(i));
+    for (ModuleSP module_sp : module_list.Modules()) {
       if (m_filter_sp->ModulePasses(module_sp)) {
         size_t loc_idx = 0;
         size_t num_locations = m_locations.GetSize();

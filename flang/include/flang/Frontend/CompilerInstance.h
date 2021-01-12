@@ -10,6 +10,7 @@
 
 #include "flang/Frontend/CompilerInvocation.h"
 #include "flang/Frontend/FrontendAction.h"
+#include "flang/Frontend/PreprocessorOptions.h"
 #include "flang/Parser/parsing.h"
 #include "flang/Parser/provenance.h"
 #include "flang/Semantics/semantics.h"
@@ -133,6 +134,13 @@ public:
   FrontendOptions &frontendOpts() { return invocation_->frontendOpts(); }
   const FrontendOptions &frontendOpts() const {
     return invocation_->frontendOpts();
+  }
+
+  PreprocessorOptions &preprocessorOpts() {
+    return invocation_->preprocessorOpts();
+  }
+  const PreprocessorOptions &preprocessorOpts() const {
+    return invocation_->preprocessorOpts();
   }
 
   /// }

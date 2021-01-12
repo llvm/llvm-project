@@ -987,7 +987,7 @@ static bool isNoWrapAddRec(Value *Ptr, const SCEVAddRecExpr *AR,
 
   // Make sure there is only one non-const index and analyze that.
   Value *NonConstIndex = nullptr;
-  for (Value *Index : make_range(GEP->idx_begin(), GEP->idx_end()))
+  for (Value *Index : GEP->indices())
     if (!isa<ConstantInt>(Index)) {
       if (NonConstIndex)
         return false;
@@ -1338,7 +1338,7 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
     // If the number of vector iteration between the store and the load are
     // small we could incur conflicts.
     if (Distance % VF && Distance / VF < NumItersForStoreLoadThroughMemory) {
-      MaxVFWithoutSLForwardIssues = (VF >>= 1);
+      MaxVFWithoutSLForwardIssues = (VF >> 1);
       break;
     }
   }

@@ -1,6 +1,6 @@
-; RUN: llc -fast-isel-sink-local-values -mtriple=arm64-apple-darwin -enable-misched=0 -mcpu=cyclone < %s | FileCheck %s
-; RUN: llc -fast-isel-sink-local-values -mtriple=arm64-apple-darwin -enable-misched=0 -mcpu=cyclone -fast-isel < %s | FileCheck %s --check-prefix=FAST
-; RUN: llc -fast-isel-sink-local-values -mtriple=arm64-apple-darwin -enable-misched=0 -mcpu=cyclone -filetype=obj -o %t %s
+; RUN: llc -mtriple=arm64-apple-darwin -enable-misched=0 -mcpu=cyclone < %s | FileCheck %s
+; RUN: llc -mtriple=arm64-apple-darwin -enable-misched=0 -mcpu=cyclone -fast-isel < %s | FileCheck %s --check-prefix=FAST
+; RUN: llc -mtriple=arm64-apple-darwin -enable-misched=0 -mcpu=cyclone -filetype=obj -o %t %s
 ; RUN: llvm-objdump --triple=arm64-apple-darwin -d %t | FileCheck %s --check-prefix=CHECK-ENCODING
 
 ; CHECK-ENCODING-NOT: <unknown>
@@ -51,10 +51,10 @@ entry:
 ; CHECK-NEXT:  blr x16
 ; FAST-LABEL:  jscall_patchpoint_codegen2:
 ; FAST:        mov [[REG1:x[0-9]+]], #2
-; FAST-NEXT:   str [[REG1]], [sp]
 ; FAST-NEXT:   mov [[REG2:w[0-9]+]], #4
-; FAST-NEXT:   str [[REG2]], [sp, #16]
 ; FAST-NEXT:   mov [[REG3:x[0-9]+]], #6
+; FAST-NEXT:   str [[REG1]], [sp]
+; FAST-NEXT:   str [[REG2]], [sp, #16]
 ; FAST-NEXT:   str [[REG3]], [sp, #24]
 ; FAST:        Ltmp
 ; FAST-NEXT:   mov  x16, #281470681743360
@@ -87,14 +87,14 @@ entry:
 ; CHECK-NEXT:  blr x16
 ; FAST-LABEL:  jscall_patchpoint_codegen3:
 ; FAST:        mov [[REG1:x[0-9]+]], #2
-; FAST-NEXT:   str [[REG1]], [sp]
 ; FAST-NEXT:   mov [[REG2:w[0-9]+]], #4
-; FAST-NEXT:   str [[REG2]], [sp, #16]
 ; FAST-NEXT:   mov [[REG3:x[0-9]+]], #6
-; FAST-NEXT:   str [[REG3]], [sp, #24]
 ; FAST-NEXT:   mov [[REG4:w[0-9]+]], #8
-; FAST-NEXT:   str [[REG4]], [sp, #36]
 ; FAST-NEXT:   mov [[REG5:x[0-9]+]], #10
+; FAST-NEXT:   str [[REG1]], [sp]
+; FAST-NEXT:   str [[REG2]], [sp, #16]
+; FAST-NEXT:   str [[REG3]], [sp, #24]
+; FAST-NEXT:   str [[REG4]], [sp, #36]
 ; FAST-NEXT:   str [[REG5]], [sp, #48]
 ; FAST:        Ltmp
 ; FAST-NEXT:   mov   x16, #281470681743360

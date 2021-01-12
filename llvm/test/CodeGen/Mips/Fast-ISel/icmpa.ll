@@ -60,10 +60,10 @@ entry:
   %1 = load i32, i32* @ud, align 4
   %cmp = icmp ugt i32 %0, %1
   %conv = zext i1 %cmp to i32
-; CHECK-DAG:  lw	$[[REG_UD_GOT:[0-9+]]], %got(ud)(${{[0-9]+}})
-; CHECK-DAG:  lw	$[[REG_UC_GOT:[0-9+]]], %got(uc)(${{[0-9]+}})
-; CHECK-DAG:  lw	$[[REG_UD:[0-9]+]], 0($[[REG_UD_GOT]])
-; CHECK-DAG:  lw	$[[REG_UC:[0-9]+]], 0($[[REG_UC_GOT]])
+; CHECK:  lw	$[[REG_UC_GOT:[0-9+]]], %got(uc)(${{[0-9]+}})
+; CHECK:  lw	$[[REG_UC:[0-9]+]], 0($[[REG_UC_GOT]])
+; CHECK:  lw	$[[REG_UD_GOT:[0-9+]]], %got(ud)(${{[0-9]+}})
+; CHECK:  lw	$[[REG_UD:[0-9]+]], 0($[[REG_UD_GOT]])
 ; CHECK:  sltu  $[[REG1:[0-9]+]], $[[REG_UD]], $[[REG_UC]]
 ; FIXME: This instruction is redundant. The sltu can only produce 0 and 1.
 ; CHECK:  andi  ${{[0-9]+}}, $[[REG1]], 1
@@ -119,10 +119,10 @@ entry:
   %1 = load i32, i32* @ud, align 4
   %cmp = icmp ule i32 %0, %1
   %conv = zext i1 %cmp to i32
-; CHECK-DAG:  lw	$[[REG_UD_GOT:[0-9+]]], %got(ud)(${{[0-9]+}})
-; CHECK-DAG:  lw	$[[REG_UC_GOT:[0-9+]]], %got(uc)(${{[0-9]+}})
-; CHECK-DAG:  lw	$[[REG_UD:[0-9]+]], 0($[[REG_UD_GOT]])
-; CHECK-DAG:  lw	$[[REG_UC:[0-9]+]], 0($[[REG_UC_GOT]])
+; CHECK:  lw	$[[REG_UC_GOT:[0-9+]]], %got(uc)(${{[0-9]+}})
+; CHECK:  lw	$[[REG_UC:[0-9]+]], 0($[[REG_UC_GOT]])
+; CHECK:  lw	$[[REG_UD_GOT:[0-9+]]], %got(ud)(${{[0-9]+}})
+; CHECK:  lw	$[[REG_UD:[0-9]+]], 0($[[REG_UD_GOT]])
 ; CHECK:  sltu  $[[REG1:[0-9]+]], $[[REG_UD]], $[[REG_UC]]
 ; CHECK:  xori  $[[REG2:[0-9]+]], $[[REG1]], 1
 ; FIXME: This instruction is redundant. The sltu can only produce 0 and 1.
@@ -139,10 +139,10 @@ entry:
   %1 = load i32, i32* @d, align 4
   %cmp = icmp sgt i32 %0, %1
   %conv = zext i1 %cmp to i32
-; CHECK-DAG:  lw	$[[REG_D_GOT:[0-9+]]], %got(d)(${{[0-9]+}})
-; CHECK-DAG:  lw	$[[REG_C_GOT:[0-9+]]], %got(c)(${{[0-9]+}})
-; CHECK-DAG:  lw	$[[REG_D:[0-9]+]], 0($[[REG_D_GOT]])
-; CHECK-DAG:  lw	$[[REG_C:[0-9]+]], 0($[[REG_C_GOT]])
+; CHECK:  lw	$[[REG_C_GOT:[0-9+]]], %got(c)(${{[0-9]+}})
+; CHECK:  lw	$[[REG_C:[0-9]+]], 0($[[REG_C_GOT]])
+; CHECK:  lw	$[[REG_D_GOT:[0-9+]]], %got(d)(${{[0-9]+}})
+; CHECK:  lw	$[[REG_D:[0-9]+]], 0($[[REG_D_GOT]])
 ; CHECK:  slt  $[[REG1:[0-9]+]], $[[REG_D]], $[[REG_C]]
 ; FIXME: This instruction is redundant. The slt can only produce 0 and 1.
 ; CHECK:  andi  ${{[0-9]+}}, $[[REG1]], 1
@@ -197,10 +197,10 @@ entry:
   %1 = load i32, i32* @d, align 4
   %cmp = icmp sle i32 %0, %1
   %conv = zext i1 %cmp to i32
-; CHECK-DAG:  lw	$[[REG_D_GOT:[0-9+]]], %got(d)(${{[0-9]+}})
-; CHECK-DAG:  lw	$[[REG_C_GOT:[0-9+]]], %got(c)(${{[0-9]+}})
-; CHECK-DAG:  lw	$[[REG_D:[0-9]+]], 0($[[REG_D_GOT]])
-; CHECK-DAG:  lw	$[[REG_C:[0-9]+]], 0($[[REG_C_GOT]])
+; CHECK:  lw	$[[REG_C_GOT:[0-9+]]], %got(c)(${{[0-9]+}})
+; CHECK:  lw	$[[REG_C:[0-9]+]], 0($[[REG_C_GOT]])
+; CHECK:  lw	$[[REG_D_GOT:[0-9+]]], %got(d)(${{[0-9]+}})
+; CHECK:  lw	$[[REG_D:[0-9]+]], 0($[[REG_D_GOT]])
 ; CHECK:        slt     $[[REG1:[0-9]+]], $[[REG_D]], $[[REG_C]]
 ; CHECK:        xori    $[[REG2:[0-9]+]], $[[REG1]], 1
 ; FIXME: This instruction is redundant. The slt can only produce 0 and 1.

@@ -3,18 +3,10 @@
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
-func @gather8(%base: memref<?xf32>,
-              %indices: vector<8xi32>, %mask: vector<8xi1>) -> vector<8xf32> {
-  %g = vector.gather %base, %indices, %mask
-    : (memref<?xf32>, vector<8xi32>, vector<8xi1>) -> vector<8xf32>
-  return %g : vector<8xf32>
-}
-
-func @gather_pass_thru8(%base: memref<?xf32>,
-                        %indices: vector<8xi32>, %mask: vector<8xi1>,
-                        %pass_thru: vector<8xf32>) -> vector<8xf32> {
-  %g = vector.gather %base, %indices, %mask, %pass_thru
-    : (memref<?xf32>, vector<8xi32>, vector<8xi1>, vector<8xf32>) -> vector<8xf32>
+func @gather8(%base: memref<?xf32>, %indices: vector<8xi32>,
+              %mask: vector<8xi1>, %pass_thru: vector<8xf32>) -> vector<8xf32> {
+  %g = vector.gather %base[%indices], %mask, %pass_thru
+    : memref<?xf32>, vector<8xi32>, vector<8xi1>, vector<8xf32> into vector<8xf32>
   return %g : vector<8xf32>
 }
 
@@ -63,31 +55,31 @@ func @entry() {
   // Gather tests.
   //
 
-  %g1 = call @gather8(%A, %idx, %all)
-    : (memref<?xf32>, vector<8xi32>, vector<8xi1>)
+  %g1 = call @gather8(%A, %idx, %all, %pass)
+    : (memref<?xf32>, vector<8xi32>, vector<8xi1>, vector<8xf32>)
     -> (vector<8xf32>)
   vector.print %g1 : vector<8xf32>
   // CHECK: ( 0, 6, 1, 3, 5, 4, 9, 2 )
 
-  %g2 = call @gather_pass_thru8(%A, %idx, %none, %pass)
+  %g2 = call @gather8(%A, %idx, %none, %pass)
     : (memref<?xf32>, vector<8xi32>, vector<8xi1>, vector<8xf32>)
     -> (vector<8xf32>)
   vector.print %g2 : vector<8xf32>
   // CHECK: ( -7, -7, -7, -7, -7, -7, -7, -7 )
 
-  %g3 = call @gather_pass_thru8(%A, %idx, %some, %pass)
+  %g3 = call @gather8(%A, %idx, %some, %pass)
     : (memref<?xf32>, vector<8xi32>, vector<8xi1>, vector<8xf32>)
     -> (vector<8xf32>)
   vector.print %g3 : vector<8xf32>
   // CHECK: ( 0, 6, 1, 3, -7, -7, -7, -7 )
 
-  %g4 = call @gather_pass_thru8(%A, %idx, %more, %pass)
+  %g4 = call @gather8(%A, %idx, %more, %pass)
     : (memref<?xf32>, vector<8xi32>, vector<8xi1>, vector<8xf32>)
     -> (vector<8xf32>)
   vector.print %g4 : vector<8xf32>
   // CHECK: ( 0, 6, 1, 3, -7, -7, -7, 2 )
 
-  %g5 = call @gather_pass_thru8(%A, %idx, %all, %pass)
+  %g5 = call @gather8(%A, %idx, %all, %pass)
     : (memref<?xf32>, vector<8xi32>, vector<8xi1>, vector<8xf32>)
     -> (vector<8xf32>)
   vector.print %g5 : vector<8xf32>

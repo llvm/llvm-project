@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/math/round.h"
 #include "src/__support/common.h"
 #include "utils/FPUtil/NearestIntegerOperations.h"
 
 namespace __llvm_libc {
 
-double LLVM_LIBC_ENTRYPOINT(round)(double x) { return fputil::round(x); }
+LLVM_LIBC_FUNCTION(double, round, (double x)) { return fputil::round(x); }
 
 } // namespace __llvm_libc

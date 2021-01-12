@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "utils/FPUtil/Hypot.h"
+#include "src/math/hypot.h"
 #include "src/__support/common.h"
+#include "utils/FPUtil/Hypot.h"
 
 namespace __llvm_libc {
 
-double LLVM_LIBC_ENTRYPOINT(hypot)(double x, double y) {
+LLVM_LIBC_FUNCTION(double, hypot, (double x, double y)) {
   return __llvm_libc::fputil::hypot(x, y);
 }
 

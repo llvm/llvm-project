@@ -10,7 +10,7 @@ define void @test() #0 {
 ; CHECK-NEXT:    [[DUMMY_PHI:%.*]] = phi i64 [ 1, [[ENTRY:%.*]] ], [ [[OP_EXTRA1:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i64 [ 2, [[ENTRY]] ], [ [[TMP6:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[DUMMY_ADD:%.*]] = add i16 0, 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> undef, i64 [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> poison, i64 [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> [[TMP1]], i64 [[TMP0]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i64> [[TMP2]], i64 [[TMP0]], i32 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i64> [[TMP3]], i64 [[TMP0]], i32 3

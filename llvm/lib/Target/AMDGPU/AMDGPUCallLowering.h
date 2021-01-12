@@ -14,7 +14,6 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUCALLLOWERING_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUCALLLOWERING_H
 
-#include "AMDGPU.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 
 namespace llvm {
@@ -32,13 +31,20 @@ class AMDGPUCallLowering final : public CallLowering {
   /// A function of this type is used to perform value split action.
   using SplitArgTy = std::function<void(ArrayRef<Register>, Register, LLT, LLT, int)>;
 
-  void splitToValueTypes(MachineIRBuilder &B,
-                         const ArgInfo &OrigArgInfo,
+  void splitToValueTypes(MachineIRBuilder &B, const ArgInfo &OrigArgInfo,
                          SmallVectorImpl<ArgInfo> &SplitArgs,
-                         const DataLayout &DL,
-                         CallingConv::ID CallConv,
-                         bool IsOutgoing,
-                         SplitArgTy SplitArg) const;
+                         const DataLayout &DL, CallingConv::ID CallConv) const;
+
+  void processSplitArgs(MachineIRBuilder &B, const ArgInfo &OrigArgInfo,
+                        const SmallVectorImpl<ArgInfo> &SplitArg,
+                        SmallVectorImpl<ArgInfo> &SplitArgs,
+                        const DataLayout &DL, CallingConv::ID CallConv,
+                        bool IsOutgoing,
+                        SplitArgTy PerformArgSplit) const;
+
+  bool canLowerReturn(MachineFunction &MF, CallingConv::ID CallConv,
+                      SmallVectorImpl<BaseArgInfo> &Outs,
+                      bool IsVarArg) const override;
 
   bool lowerReturnVal(MachineIRBuilder &B, const Value *Val,
                       ArrayRef<Register> VRegs, MachineInstrBuilder &Ret) const;
@@ -47,13 +53,15 @@ public:
   AMDGPUCallLowering(const AMDGPUTargetLowering &TLI);
 
   bool lowerReturn(MachineIRBuilder &B, const Value *Val,
-                   ArrayRef<Register> VRegs) const override;
+                   ArrayRef<Register> VRegs,
+                   FunctionLoweringInfo &FLI) const override;
 
   bool lowerFormalArgumentsKernel(MachineIRBuilder &B, const Function &F,
                                   ArrayRef<ArrayRef<Register>> VRegs) const;
 
   bool lowerFormalArguments(MachineIRBuilder &B, const Function &F,
-                            ArrayRef<ArrayRef<Register>> VRegs) const override;
+                            ArrayRef<ArrayRef<Register>> VRegs,
+                            FunctionLoweringInfo &FLI) const override;
 
   bool passSpecialInputs(MachineIRBuilder &MIRBuilder,
                          CCState &CCInfo,

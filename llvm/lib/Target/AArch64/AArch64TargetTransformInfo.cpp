@@ -773,13 +773,13 @@ AArch64TTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
 unsigned AArch64TTIImpl::getGatherScatterOpCost(
     unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
     Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) {
+
+  if (!isa<ScalableVectorType>(DataTy))
+    return BaseT::getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
+                                         Alignment, CostKind, I);
   auto *VT = cast<VectorType>(DataTy);
   auto LT = TLI->getTypeLegalizationCost(DL, DataTy);
   ElementCount LegalVF = LT.second.getVectorElementCount();
-  if (!LegalVF.isScalable())
-    return BaseT::getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
-                                         Alignment, CostKind, I);
-
   Optional<unsigned> MaxNumVScale = getMaxVScale();
   assert(MaxNumVScale && "Expected valid max vscale value");
 

@@ -547,7 +547,6 @@ public:
     AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addPreserved<MemorySSAWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
-    AU.addPreserved<AAResultsWrapperPass>();
   }
 };
 
@@ -888,8 +887,7 @@ void GVNHoist::findHoistableCandidates(OutValuesType &CHIBBs,
     auto TI = BB->getTerminator();
     auto B = CHIs.begin();
     // [PreIt, PHIIt) form a range of CHIs which have identical VNs.
-    auto PHIIt = std::find_if(CHIs.begin(), CHIs.end(),
-                              [B](CHIArg &A) { return A != *B; });
+    auto PHIIt = llvm::find_if(CHIs, [B](CHIArg &A) { return A != *B; });
     auto PrevIt = CHIs.begin();
     while (PrevIt != PHIIt) {
       // Collect values which satisfy safety checks.

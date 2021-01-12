@@ -1212,13 +1212,14 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
       // padding is enabled because overflow into this bit is undefined
       // behavior.
       return Builder.CreateIsNotNull(Src, "tobool");
-    if (DstType->isFixedPointType() || DstType->isIntegerType())
+    if (DstType->isFixedPointType() || DstType->isIntegerType() ||
+        DstType->isRealFloatingType())
       return EmitFixedPointConversion(Src, SrcType, DstType, Loc);
 
     llvm_unreachable(
         "Unhandled scalar conversion from a fixed point type to another type.");
   } else if (DstType->isFixedPointType()) {
-    if (SrcType->isIntegerType())
+    if (SrcType->isIntegerType() || SrcType->isRealFloatingType())
       // This also includes converting booleans and enums to fixed point types.
       return EmitFixedPointConversion(Src, SrcType, DstType, Loc);
 
@@ -1434,19 +1435,29 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
 Value *ScalarExprEmitter::EmitFixedPointConversion(Value *Src, QualType SrcTy,
                                                    QualType DstTy,
                                                    SourceLocation Loc) {
-  auto SrcFPSema = CGF.getContext().getFixedPointSemantics(SrcTy);
-  auto DstFPSema = CGF.getContext().getFixedPointSemantics(DstTy);
   llvm::FixedPointBuilder<CGBuilderTy> FPBuilder(Builder);
   llvm::Value *Result;
-  if (DstTy->isIntegerType())
-    Result = FPBuilder.CreateFixedToInteger(Src, SrcFPSema,
-                                            DstFPSema.getWidth(),
-                                            DstFPSema.isSigned());
-  else if (SrcTy->isIntegerType())
-    Result =  FPBuilder.CreateIntegerToFixed(Src, SrcFPSema.isSigned(),
-                                             DstFPSema);
-  else
-    Result = FPBuilder.CreateFixedToFixed(Src, SrcFPSema, DstFPSema);
+  if (SrcTy->isRealFloatingType())
+    Result = FPBuilder.CreateFloatingToFixed(Src,
+        CGF.getContext().getFixedPointSemantics(DstTy));
+  else if (DstTy->isRealFloatingType())
+    Result = FPBuilder.CreateFixedToFloating(Src,
+        CGF.getContext().getFixedPointSemantics(SrcTy),
+        ConvertType(DstTy));
+  else {
+    auto SrcFPSema = CGF.getContext().getFixedPointSemantics(SrcTy);
+    auto DstFPSema = CGF.getContext().getFixedPointSemantics(DstTy);
+
+    if (DstTy->isIntegerType())
+      Result = FPBuilder.CreateFixedToInteger(Src, SrcFPSema,
+                                              DstFPSema.getWidth(),
+                                              DstFPSema.isSigned());
+    else if (SrcTy->isIntegerType())
+      Result =  FPBuilder.CreateIntegerToFixed(Src, SrcFPSema.isSigned(),
+                                               DstFPSema);
+    else
+      Result = FPBuilder.CreateFixedToFixed(Src, SrcFPSema, DstFPSema);
+  }
   return Result;
 }
 

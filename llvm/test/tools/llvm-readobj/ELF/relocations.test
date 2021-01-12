@@ -510,15 +510,15 @@ Symbols:
 
 # LLVM-SYMNDX:      Relocations [
 # LLVM-SYMNDX-NEXT:   Section (1) .rela.text {
-# LLVM-SYMNDX-NEXT: warning: '[[FILE]]': unable to print relocation 1 in SHT_RELA section with index 1: unable to read an entry with index 2 from SHT_SYMTAB section with index 2: can't read an entry at 0x30: it goes past the end of the section (0x30)
-# LLVM-SYMNDX-NEXT: warning: '[[FILE]]': unable to print relocation 2 in SHT_RELA section with index 1: unable to read an entry with index 3 from SHT_SYMTAB section with index 2: can't read an entry at 0x48: it goes past the end of the section (0x30)
+# LLVM-SYMNDX-NEXT: warning: '[[FILE]]': unable to print relocation 0 in SHT_RELA section with index 1: unable to read an entry with index 2 from SHT_SYMTAB section with index 2: can't read an entry at 0x30: it goes past the end of the section (0x30)
+# LLVM-SYMNDX-NEXT: warning: '[[FILE]]': unable to print relocation 1 in SHT_RELA section with index 1: unable to read an entry with index 3 from SHT_SYMTAB section with index 2: can't read an entry at 0x48: it goes past the end of the section (0x30)
 # LLVM-SYMNDX-NEXT:   }
 # LLVM-SYMNDX-NEXT: ]
 
 # GNU-SYMNDX:      Relocation section '.rela.text' at offset 0x40 contains 2 entries:
 # GNU-SYMNDX-NEXT:     Offset             Info             Type     Symbol's Value  Symbol's Name + Addend
-# GNU-SYMNDX-NEXT: warning: '[[FILE]]': unable to print relocation 1 in SHT_RELA section with index 1: unable to read an entry with index 2 from SHT_SYMTAB section with index 2: can't read an entry at 0x30: it goes past the end of the section (0x30)
-# GNU-SYMNDX-NEXT: warning: '[[FILE]]': unable to print relocation 2 in SHT_RELA section with index 1: unable to read an entry with index 3 from SHT_SYMTAB section with index 2: can't read an entry at 0x48: it goes past the end of the section (0x30)
+# GNU-SYMNDX-NEXT: warning: '[[FILE]]': unable to print relocation 0 in SHT_RELA section with index 1: unable to read an entry with index 2 from SHT_SYMTAB section with index 2: can't read an entry at 0x30: it goes past the end of the section (0x30)
+# GNU-SYMNDX-NEXT: warning: '[[FILE]]': unable to print relocation 1 in SHT_RELA section with index 1: unable to read an entry with index 3 from SHT_SYMTAB section with index 2: can't read an entry at 0x48: it goes past the end of the section (0x30)
 
 --- !ELF
 FileHeader:

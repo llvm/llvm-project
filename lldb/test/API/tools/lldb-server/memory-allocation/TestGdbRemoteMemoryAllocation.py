@@ -1,12 +1,10 @@
-
 import gdbremote_testcase
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-
 supported_linux_archs = ["x86_64", "i386"]
-supported_oses = ["linux", "windows"]
+supported_oses = ["linux", "windows"]+lldbplatformutil.getDarwinOSTriples()
 
 class TestGdbRemoteMemoryAllocation(gdbremote_testcase.GdbRemoteTestCaseBase):
 
@@ -47,7 +45,6 @@ class TestGdbRemoteMemoryAllocation(gdbremote_testcase.GdbRemoteTestCaseBase):
     @skipIf(oslist=no_match(supported_oses))
     @skipIf(oslist=["linux"], archs=no_match(supported_linux_archs))
     @expectedFailureAll(oslist=["windows"]) # Memory allocated with incorrect permissions
-    @llgs_test
     def test_supported(self):
         """Make sure (de)allocation works on platforms where it's supposed to
         work"""
@@ -62,7 +59,6 @@ class TestGdbRemoteMemoryAllocation(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @skipIf(oslist=["linux"], archs=supported_linux_archs)
     @skipIf(oslist=supported_oses)
-    @llgs_test
     def test_unsupported(self):
         """Make sure we get an "unsupported" error on platforms where the
         feature is not implemented."""
@@ -77,7 +73,6 @@ class TestGdbRemoteMemoryAllocation(gdbremote_testcase.GdbRemoteTestCaseBase):
                                          True)
         self.expect_gdbremote_sequence()
 
-    @llgs_test
     def test_bad_packet(self):
         """Make sure we get a proper error for malformed packets."""
 

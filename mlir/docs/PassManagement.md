@@ -131,6 +131,23 @@ end, a pass that may create an entity from a dialect that isn't guaranteed to
 already ne loaded must express this by overriding the `getDependentDialects()`
 method and declare this list of Dialects explicitly.
 
+### Initialization
+
+In certain situations, a Pass may contain state that is constructed dynamically,
+but is potentially expensive to recompute in successive runs of the Pass. One
+such example is when using [`PDL`-based](Dialects/PDLOps.md)
+[patterns](PatternRewriter.md), which are compiled into a bytecode during
+runtime. In these situations, a pass may override the following hook to
+initialize this heavy state:
+
+*   `void initialize(MLIRContext *context)`
+
+This hook is executed once per run of a full pass pipeline, meaning that it does
+not have access to the state available during a `runOnOperation` call. More
+concretely, all necessary accesses to an `MLIRContext` should be driven via the
+provided `context` parameter, and methods that utilize "per-run" state such as
+`getContext`/`getOperation`/`getAnalysis`/etc. must not be used.
+
 ## Analysis Management
 
 An important concept, along with transformation passes, are analyses. These are
@@ -271,7 +288,7 @@ Passes can be added to a pass manager via `addPass`. The pass must either be an
 `op-specific` pass operating on the same operation type as `OpPassManager`, or
 an `op-agnostic` pass.
 
-An `OpPassManager` is generally creted by explicitly nesting a pipeline within
+An `OpPassManager` is generally created by explicitly nesting a pipeline within
 another existing `OpPassManager` via the `nest<>` method. This method takes the
 operation type that the nested pass manager will operate on. At the top-level, a
 `PassManager` acts as an `OpPassManager`. Nesting in this sense, corresponds to

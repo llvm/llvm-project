@@ -75,7 +75,7 @@ public:
   std::string getPredTemplate() const;
 
   // Returns the description of what the predicate is verifying.
-  StringRef getDescription() const;
+  StringRef getSummary() const;
 
   static bool classof(const OpTrait *t) { return t->getKind() == Kind::Pred; }
 };

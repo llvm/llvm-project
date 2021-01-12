@@ -13,7 +13,7 @@
 namespace __llvm_libc {
 
 // TODO: Look at performance benefits of comparing words.
-char *LLVM_LIBC_ENTRYPOINT(strchr)(const char *src, int c) {
+LLVM_LIBC_FUNCTION(char *, strchr, (const char *src, int c)) {
   unsigned char *str =
       const_cast<unsigned char *>(reinterpret_cast<const unsigned char *>(src));
   const unsigned char ch = c;

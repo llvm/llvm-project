@@ -257,7 +257,7 @@ static bool isCommutative(Instruction *I) {
 /// %x3x3 = mul i8 %x3, %x3
 /// %y1y1 = mul i8 %y1, %y1
 /// %y2y2 = mul i8 %y2, %y2
-/// %ins1 = insertelement <4 x i8> undef, i8 %x0x0, i32 0
+/// %ins1 = insertelement <4 x i8> poison, i8 %x0x0, i32 0
 /// %ins2 = insertelement <4 x i8> %ins1, i8 %x3x3, i32 1
 /// %ins3 = insertelement <4 x i8> %ins2, i8 %y1y1, i32 2
 /// %ins4 = insertelement <4 x i8> %ins3, i8 %y2y2, i32 3
@@ -272,13 +272,13 @@ static bool isCommutative(Instruction *I) {
 /// %x3 = extractelement <4 x i8> %x, i32 3
 /// %y1 = extractelement <4 x i8> %y, i32 1
 /// %y2 = extractelement <4 x i8> %y, i32 2
-/// %1 = insertelement <4 x i8> undef, i8 %x0, i32 0
+/// %1 = insertelement <4 x i8> poison, i8 %x0, i32 0
 /// %2 = insertelement <4 x i8> %1, i8 %x3, i32 1
 /// %3 = insertelement <4 x i8> %2, i8 %y1, i32 2
 /// %4 = insertelement <4 x i8> %3, i8 %y2, i32 3
 /// %5 = mul <4 x i8> %4, %4
 /// %6 = extractelement <4 x i8> %5, i32 0
-/// %ins1 = insertelement <4 x i8> undef, i8 %6, i32 0
+/// %ins1 = insertelement <4 x i8> poison, i8 %6, i32 0
 /// %7 = extractelement <4 x i8> %5, i32 1
 /// %ins2 = insertelement <4 x i8> %ins1, i8 %7, i32 1
 /// %8 = extractelement <4 x i8> %5, i32 2
@@ -311,7 +311,7 @@ isShuffle(ArrayRef<Value *> VL) {
     if (Idx->getValue().uge(Size))
       continue;
     unsigned IntIdx = Idx->getValue().getZExtValue();
-    // We can extractelement from undef vector.
+    // We can extractelement from undef or poison vector.
     if (isa<UndefValue>(Vec))
       continue;
     // For correct shuffling we have to have at most 2 different vector operands
@@ -772,7 +772,7 @@ public:
   /// effectively impossible for the backend to undo.
   /// TODO: If load combining is allowed in the IR optimizer, this analysis
   ///       may not be necessary.
-  bool isLoadCombineReductionCandidate(unsigned ReductionOpcode) const;
+  bool isLoadCombineReductionCandidate(RecurKind RdxKind) const;
 
   /// Assume that a vector of stores of bitwise-or/shifted/zexted loaded values
   /// can be load combined in the backend. Load combining may not be allowed in
@@ -2499,7 +2499,11 @@ BoUpSLP::~BoUpSLP() {
            "trying to erase instruction with users.");
     Pair.getFirst()->eraseFromParent();
   }
+#ifdef EXPENSIVE_CHECKS
+  // If we could guarantee that this call is not extremely slow, we could
+  // remove the ifdef limitation (see PR47712).
   assert(!verifyFunction(*F, &dbgs()));
+#endif
 }
 
 void BoUpSLP::eraseInstructions(ArrayRef<Value *> AV) {
@@ -3384,8 +3388,7 @@ bool BoUpSLP::canReuseExtract(ArrayRef<Value *> VL, Value *OpValue,
 }
 
 bool BoUpSLP::areAllUsersVectorized(Instruction *I) const {
-  return I->hasOneUse() ||
-         std::all_of(I->user_begin(), I->user_end(), [this](User *U) {
+  return I->hasOneUse() || llvm::all_of(I->users(), [this](User *U) {
            return ScalarToTreeEntry.count(U) > 0;
          });
 }
@@ -3897,8 +3900,8 @@ static bool isLoadCombineCandidateImpl(Value *Root, unsigned NumElts,
   return true;
 }
 
-bool BoUpSLP::isLoadCombineReductionCandidate(unsigned RdxOpcode) const {
-  if (RdxOpcode != Instruction::Or)
+bool BoUpSLP::isLoadCombineReductionCandidate(RecurKind RdxKind) const {
+  if (RdxKind != RecurKind::Or)
     return false;
 
   unsigned NumElts = VectorizableTree[0]->Scalars.size();
@@ -4168,11 +4171,10 @@ void BoUpSLP::setInsertPointAfterBundle(TreeEntry *E) {
   // should be in this block.
   auto *Front = E->getMainOp();
   auto *BB = Front->getParent();
-  assert(llvm::all_of(make_range(E->Scalars.begin(), E->Scalars.end()),
-                      [=](Value *V) -> bool {
-                        auto *I = cast<Instruction>(V);
-                        return !E->isOpcodeOrAlt(I) || I->getParent() == BB;
-                      }));
+  assert(llvm::all_of(E->Scalars, [=](Value *V) -> bool {
+    auto *I = cast<Instruction>(V);
+    return !E->isOpcodeOrAlt(I) || I->getParent() == BB;
+  }));
 
   // The last instruction in the bundle in program order.
   Instruction *LastInst = nullptr;
@@ -4229,7 +4231,7 @@ Value *BoUpSLP::gather(ArrayRef<Value *> VL) {
   Value *Val0 =
       isa<StoreInst>(VL[0]) ? cast<StoreInst>(VL[0])->getValueOperand() : VL[0];
   FixedVectorType *VecTy = FixedVectorType::get(Val0->getType(), VL.size());
-  Value *Vec = UndefValue::get(VecTy);
+  Value *Vec = PoisonValue::get(VecTy);
   unsigned InsIndex = 0;
   for (Value *Val : VL) {
     Vec = Builder.CreateInsertElement(Vec, Val, Builder.getInt32(InsIndex++));
@@ -6271,7 +6273,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
         // part should also switch to same interface.
         // For example, the following case is projected code after SLP:
         //  %4 = extractelement <4 x i64> %3, i32 0
-        //  %v0 = insertelement <4 x i64> undef, i64 %4, i32 0
+        //  %v0 = insertelement <4 x i64> poison, i64 %4, i32 0
         //  %5 = extractelement <4 x i64> %3, i32 1
         //  %v1 = insertelement <4 x i64> %v0, i64 %5, i32 1
         //  %6 = extractelement <4 x i64> %3, i32 2
@@ -6303,7 +6305,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
         Cost -= UserCost;
       }
 
-      MinCost = InstructionCost::min(MinCost, Cost);
+      MinCost = std::min(MinCost, Cost);
 
       if (Cost.isValid() && Cost < -SLPCostThreshold) {
         LLVM_DEBUG(dbgs() << "SLP: Vectorizing list at cost:" << Cost << ".\n");
@@ -6457,6 +6459,7 @@ class HorizontalReduction {
     Value *createOp(IRBuilder<> &Builder, Value *LHS, Value *RHS,
                     const Twine &Name) const {
       assert(isVectorizable() && "Unhandled reduction operation.");
+      unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(Kind);
       switch (Kind) {
       case RecurKind::Add:
       case RecurKind::Mul:
@@ -6465,26 +6468,22 @@ class HorizontalReduction {
       case RecurKind::Xor:
       case RecurKind::FAdd:
       case RecurKind::FMul:
-        return Builder.CreateBinOp((Instruction::BinaryOps)Opcode, LHS, RHS,
+        return Builder.CreateBinOp((Instruction::BinaryOps)RdxOpcode, LHS, RHS,
                                    Name);
 
       case RecurKind::SMax: {
-        assert(Opcode == Instruction::ICmp && "Expected integer types.");
         Value *Cmp = Builder.CreateICmpSGT(LHS, RHS, Name);
         return Builder.CreateSelect(Cmp, LHS, RHS, Name);
       }
       case RecurKind::SMin: {
-        assert(Opcode == Instruction::ICmp && "Expected integer types.");
         Value *Cmp = Builder.CreateICmpSLT(LHS, RHS, Name);
         return Builder.CreateSelect(Cmp, LHS, RHS, Name);
       }
       case RecurKind::UMax: {
-        assert(Opcode == Instruction::ICmp && "Expected integer types.");
         Value *Cmp = Builder.CreateICmpUGT(LHS, RHS, Name);
         return Builder.CreateSelect(Cmp, LHS, RHS, Name);
       }
       case RecurKind::UMin: {
-        assert(Opcode == Instruction::ICmp && "Expected integer types.");
         Value *Cmp = Builder.CreateICmpULT(LHS, RHS, Name);
         return Builder.CreateSelect(Cmp, LHS, RHS, Name);
       }
@@ -6637,28 +6636,15 @@ class HorizontalReduction {
                     const ReductionOpsListType &ReductionOps) const {
       assert(isVectorizable() &&
              "Expected add|fadd or min/max reduction operation.");
-      auto *Op = createOp(Builder, LHS, RHS, Name);
-      switch (Kind) {
-      case RecurKind::Add:
-      case RecurKind::Mul:
-      case RecurKind::Or:
-      case RecurKind::And:
-      case RecurKind::Xor:
-      case RecurKind::FAdd:
-      case RecurKind::FMul:
-        propagateIRFlags(Op, ReductionOps[0]);
-        return Op;
-      case RecurKind::SMax:
-      case RecurKind::SMin:
-      case RecurKind::UMax:
-      case RecurKind::UMin:
-        if (auto *SI = dyn_cast<SelectInst>(Op))
-          propagateIRFlags(SI->getCondition(), ReductionOps[0]);
+      Value *Op = createOp(Builder, LHS, RHS, Name);
+      if (RecurrenceDescriptor::isIntMinMaxRecurrenceKind(Kind)) {
+        if (auto *Sel = dyn_cast<SelectInst>(Op))
+          propagateIRFlags(Sel->getCondition(), ReductionOps[0]);
         propagateIRFlags(Op, ReductionOps[1]);
         return Op;
-      default:
-        llvm_unreachable("Unknown reduction operation.");
       }
+      propagateIRFlags(Op, ReductionOps[0]);
+      return Op;
     }
     /// Creates reduction operation with the current opcode with the IR flags
     /// from \p I.
@@ -6666,30 +6652,15 @@ class HorizontalReduction {
                     const Twine &Name, Instruction *I) const {
       assert(isVectorizable() &&
              "Expected add|fadd or min/max reduction operation.");
-      auto *Op = createOp(Builder, LHS, RHS, Name);
-      switch (Kind) {
-      case RecurKind::Add:
-      case RecurKind::Mul:
-      case RecurKind::Or:
-      case RecurKind::And:
-      case RecurKind::Xor:
-      case RecurKind::FAdd:
-      case RecurKind::FMul:
-        propagateIRFlags(Op, I);
-        return Op;
-      case RecurKind::SMax:
-      case RecurKind::SMin:
-      case RecurKind::UMax:
-      case RecurKind::UMin:
-        if (auto *SI = dyn_cast<SelectInst>(Op)) {
-          propagateIRFlags(SI->getCondition(),
+      Value *Op = createOp(Builder, LHS, RHS, Name);
+      if (RecurrenceDescriptor::isIntMinMaxRecurrenceKind(Kind)) {
+        if (auto *Sel = dyn_cast<SelectInst>(Op)) {
+          propagateIRFlags(Sel->getCondition(),
                            cast<SelectInst>(I)->getCondition());
         }
-        propagateIRFlags(Op, I);
-        return Op;
-      default:
-        llvm_unreachable("Unknown reduction operation.");
       }
+      propagateIRFlags(Op, I);
+      return Op;
     }
   };
 
@@ -7025,7 +6996,7 @@ public:
       }
       if (V.isTreeTinyAndNotFullyVectorizable())
         break;
-      if (V.isLoadCombineReductionCandidate(RdxTreeInst.getOpcode()))
+      if (V.isLoadCombineReductionCandidate(RdxTreeInst.getKind()))
         break;
 
       V.computeMinimumValueSizes();
@@ -7287,7 +7258,7 @@ static bool findBuildAggregate_rec(Instruction *LastInsertInst,
 }
 
 /// Recognize construction of vectors like
-///  %ra = insertelement <4 x float> undef, float %s0, i32 0
+///  %ra = insertelement <4 x float> poison, float %s0, i32 0
 ///  %rb = insertelement <4 x float> %ra, float %s1, i32 1
 ///  %rc = insertelement <4 x float> %rb, float %s2, i32 2
 ///  %rd = insertelement <4 x float> %rc, float %s3, i32 3
@@ -7624,7 +7595,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       continue;
     // We may go through BB multiple times so skip the one we have checked.
     if (!VisitedInstrs.insert(&*it).second) {
-      if (it->use_empty() && KeyNodes.count(&*it) > 0 &&
+      if (it->use_empty() && KeyNodes.contains(&*it) &&
           vectorizeSimpleInstructions(PostProcessInstructions, BB, R)) {
         // We would like to start over since some instructions are deleted
         // and the iterator may become invalid value.

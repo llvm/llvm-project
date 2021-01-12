@@ -26,6 +26,7 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "loop-delete"
@@ -37,6 +38,14 @@ enum class LoopDeletionResult {
   Modified,
   Deleted,
 };
+
+static LoopDeletionResult merge(LoopDeletionResult A, LoopDeletionResult B) {
+  if (A == LoopDeletionResult::Deleted || B == LoopDeletionResult::Deleted)
+    return LoopDeletionResult::Deleted;
+  if (A == LoopDeletionResult::Modified || B == LoopDeletionResult::Modified)
+    return LoopDeletionResult::Modified;
+  return LoopDeletionResult::Unmodified;
+}
 
 /// Determines if a loop is dead.
 ///
@@ -126,6 +135,34 @@ static bool isLoopNeverExecuted(Loop *L) {
   return true;
 }
 
+/// If we can prove the backedge is untaken, remove it.  This destroys the
+/// loop, but leaves the (now trivially loop invariant) control flow and
+/// side effects (if any) in place.
+static LoopDeletionResult
+breakBackedgeIfNotTaken(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
+                        LoopInfo &LI, MemorySSA *MSSA,
+                        OptimizationRemarkEmitter &ORE) {
+  assert(L->isLCSSAForm(DT) && "Expected LCSSA!");
+
+  if (!L->getLoopLatch())
+    return LoopDeletionResult::Unmodified;
+
+  auto *BTC = SE.getBackedgeTakenCount(L);
+  if (!BTC->isZero())
+    return LoopDeletionResult::Unmodified;
+
+  // For non-outermost loops, the tricky case is that we can drop blocks
+  // out of both inner and outer loops at the same time.  This results in
+  // new exiting block for the outer loop appearing, and possibly needing
+  // an lcssa phi inserted.  (See loop_nest_lcssa test case in zero-btc.ll)
+  // TODO: We can handle a bunch of cases here without much work, revisit.
+  if (!L->isOutermost())
+    return LoopDeletionResult::Unmodified;
+
+  breakLoopBackedge(L, DT, SE, LI, MSSA);
+  return LoopDeletionResult::Deleted;
+}
+
 /// Remove a loop if it is dead.
 ///
 /// A loop is considered dead either if it does not impact the observable
@@ -156,13 +193,6 @@ static LoopDeletionResult deleteLoopIfDead(Loop *L, DominatorTree &DT,
         << "Deletion requires Loop with preheader and dedicated exits.\n");
     return LoopDeletionResult::Unmodified;
   }
-  // We can't remove loops that contain subloops.  If the subloops were dead,
-  // they would already have been removed in earlier executions of this pass.
-  if (L->begin() != L->end()) {
-    LLVM_DEBUG(dbgs() << "Loop contains subloops.\n");
-    return LoopDeletionResult::Unmodified;
-  }
-
 
   BasicBlock *ExitBlock = L->getUniqueExitBlock();
 
@@ -243,6 +273,14 @@ PreservedAnalyses LoopDeletionPass::run(Loop &L, LoopAnalysisManager &AM,
   // but ORE cannot be preserved (see comment before the pass definition).
   OptimizationRemarkEmitter ORE(L.getHeader()->getParent());
   auto Result = deleteLoopIfDead(&L, AR.DT, AR.SE, AR.LI, AR.MSSA, ORE);
+
+  // If we can prove the backedge isn't taken, just break it and be done.  This
+  // leaves the loop structure in place which means it can handle dispatching
+  // to the right exit based on whatever loop invariant structure remains.
+  if (Result != LoopDeletionResult::Deleted)
+    Result = merge(Result, breakBackedgeIfNotTaken(&L, AR.DT, AR.SE, AR.LI,
+                                                   AR.MSSA, ORE));
+
   if (Result == LoopDeletionResult::Unmodified)
     return PreservedAnalyses::all();
 
@@ -301,6 +339,12 @@ bool LoopDeletionLegacyPass::runOnLoop(Loop *L, LPPassManager &LPM) {
   LLVM_DEBUG(L->dump());
 
   LoopDeletionResult Result = deleteLoopIfDead(L, DT, SE, LI, MSSA, ORE);
+
+  // If we can prove the backedge isn't taken, just break it and be done.  This
+  // leaves the loop structure in place which means it can handle dispatching
+  // to the right exit based on whatever loop invariant structure remains.
+  if (Result != LoopDeletionResult::Deleted)
+    Result = merge(Result, breakBackedgeIfNotTaken(L, DT, SE, LI, MSSA, ORE));
 
   if (Result == LoopDeletionResult::Deleted)
     LPM.markLoopAsDeleted(*L);

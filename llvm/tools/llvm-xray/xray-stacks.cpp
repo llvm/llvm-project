@@ -640,10 +640,8 @@ public:
           {
             auto E =
                 std::make_pair(Top, Top->ExtraData.TerminalDurations.size());
-            TopStacksByCount.insert(std::lower_bound(TopStacksByCount.begin(),
-                                                     TopStacksByCount.end(), E,
-                                                     greater_second),
-                                    E);
+            TopStacksByCount.insert(
+                llvm::lower_bound(TopStacksByCount, E, greater_second), E);
             if (TopStacksByCount.size() == 11)
               TopStacksByCount.pop_back();
           }

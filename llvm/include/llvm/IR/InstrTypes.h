@@ -1126,7 +1126,7 @@ public:
 
   explicit OperandBundleDefT(const OperandBundleUse &OBU) {
     Tag = std::string(OBU.getTagName());
-    Inputs.insert(Inputs.end(), OBU.Inputs.begin(), OBU.Inputs.end());
+    llvm::append_range(Inputs, OBU.Inputs);
   }
 
   ArrayRef<InputTy> inputs() const { return Inputs; }

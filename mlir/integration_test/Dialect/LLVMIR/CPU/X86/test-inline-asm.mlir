@@ -3,14 +3,14 @@
 // RUN: FileCheck %s
 
 module {
-  llvm.func @printI64(!llvm.i64)
+  llvm.func @printI64(i64)
   llvm.func @entry()  {
-    %c2 = llvm.mlir.constant(-42: i64) :!llvm.i64
+    %c2 = llvm.mlir.constant(-42: i64) :i64
     %val = llvm.inline_asm "xor $0, $0", "=r,r" %c2 :
-      (!llvm.i64) -> !llvm.i64
+      (i64) -> i64
 
     // CHECK: 0
-    llvm.call @printI64(%val) : (!llvm.i64) -> ()
+    llvm.call @printI64(%val) : (i64) -> ()
     llvm.return
   }
 }

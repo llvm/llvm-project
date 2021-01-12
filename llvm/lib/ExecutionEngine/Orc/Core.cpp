@@ -618,10 +618,10 @@ ResourceTrackerSP JITDylib::createResourceTracker() {
 
 void JITDylib::removeGenerator(DefinitionGenerator &G) {
   std::lock_guard<std::mutex> Lock(GeneratorsMutex);
-  auto I = std::find_if(DefGenerators.begin(), DefGenerators.end(),
-                        [&](const std::shared_ptr<DefinitionGenerator> &H) {
-                          return H.get() == &G;
-                        });
+  auto I = llvm::find_if(DefGenerators,
+                         [&](const std::shared_ptr<DefinitionGenerator> &H) {
+                           return H.get() == &G;
+                         });
   assert(I != DefGenerators.end() && "Generator not found");
   DefGenerators.erase(I);
 }
@@ -1241,8 +1241,7 @@ void JITDylib::setLinkOrder(JITDylibSearchOrder NewLinkOrder,
       if (NewLinkOrder.empty() || NewLinkOrder.front().first != this)
         LinkOrder.push_back(
             std::make_pair(this, JITDylibLookupFlags::MatchAllSymbols));
-      LinkOrder.insert(LinkOrder.end(), NewLinkOrder.begin(),
-                       NewLinkOrder.end());
+      llvm::append_range(LinkOrder, NewLinkOrder);
     } else
       LinkOrder = std::move(NewLinkOrder);
   });
@@ -1265,10 +1264,10 @@ void JITDylib::replaceInLinkOrder(JITDylib &OldJD, JITDylib &NewJD,
 
 void JITDylib::removeFromLinkOrder(JITDylib &JD) {
   ES.runSessionLocked([&]() {
-    auto I = std::find_if(LinkOrder.begin(), LinkOrder.end(),
-                          [&](const JITDylibSearchOrder::value_type &KV) {
-                            return KV.first == &JD;
-                          });
+    auto I = llvm::find_if(LinkOrder,
+                           [&](const JITDylibSearchOrder::value_type &KV) {
+                             return KV.first == &JD;
+                           });
     if (I != LinkOrder.end())
       LinkOrder.erase(I);
   });
@@ -1389,11 +1388,10 @@ void JITDylib::MaterializingInfo::addQuery(
 void JITDylib::MaterializingInfo::removeQuery(
     const AsynchronousSymbolQuery &Q) {
   // FIXME: Implement 'find_as' for shared_ptr<T>/T*.
-  auto I =
-      std::find_if(PendingQueries.begin(), PendingQueries.end(),
-                   [&Q](const std::shared_ptr<AsynchronousSymbolQuery> &V) {
-                     return V.get() == &Q;
-                   });
+  auto I = llvm::find_if(
+      PendingQueries, [&Q](const std::shared_ptr<AsynchronousSymbolQuery> &V) {
+        return V.get() == &Q;
+      });
   assert(I != PendingQueries.end() &&
          "Query is not attached to this MaterializingInfo");
   PendingQueries.erase(I);

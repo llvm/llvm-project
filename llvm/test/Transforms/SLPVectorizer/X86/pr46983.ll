@@ -9,7 +9,7 @@ define void @store_i32(i32* nocapture %0, i32 %1, i32 %2) {
 ; CHECK-LABEL: @store_i32(
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32* [[TMP0:%.*]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <4 x i32>, <4 x i32>* [[TMP4]], align 4, [[TBAA0:!tbaa !.*]]
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> undef, i32 [[TMP1:%.*]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> poison, i32 [[TMP1:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> undef, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul <4 x i32> [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = lshr <4 x i32> [[TMP8]], <i32 15, i32 15, i32 15, i32 15>
@@ -54,7 +54,7 @@ define void @store_i8(i8* nocapture %0, i32 %1, i32 %2) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i8* [[TMP0:%.*]] to <4 x i8>*
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <4 x i8>, <4 x i8>* [[TMP4]], align 1, [[TBAA4:!tbaa !.*]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i8> [[TMP5]] to <4 x i32>
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> undef, i32 [[TMP1:%.*]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> poison, i32 [[TMP1:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP7]], <4 x i32> undef, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul <4 x i32> [[TMP8]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = lshr <4 x i32> [[TMP9]], <i32 15, i32 15, i32 15, i32 15>
@@ -186,7 +186,7 @@ define void @store_i64(i64* nocapture %0, i32 %1, i32 %2) {
 ; AVX2-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP1:%.*]] to i64
 ; AVX2-NEXT:    [[TMP5:%.*]] = bitcast i64* [[TMP0:%.*]] to <4 x i64>*
 ; AVX2-NEXT:    [[TMP6:%.*]] = load <4 x i64>, <4 x i64>* [[TMP5]], align 8, [[TBAA5:!tbaa !.*]]
-; AVX2-NEXT:    [[TMP7:%.*]] = insertelement <4 x i64> undef, i64 [[TMP4]], i32 0
+; AVX2-NEXT:    [[TMP7:%.*]] = insertelement <4 x i64> poison, i64 [[TMP4]], i32 0
 ; AVX2-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i64> [[TMP7]], <4 x i64> undef, <4 x i32> zeroinitializer
 ; AVX2-NEXT:    [[TMP9:%.*]] = mul <4 x i64> [[TMP6]], [[TMP8]]
 ; AVX2-NEXT:    [[TMP10:%.*]] = lshr <4 x i64> [[TMP9]], <i64 15, i64 15, i64 15, i64 15>

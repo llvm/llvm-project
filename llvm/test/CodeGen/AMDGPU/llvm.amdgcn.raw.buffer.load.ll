@@ -1,6 +1,6 @@
-;RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck %s -check-prefix=CHECK -check-prefixes=SICI,PREGFX10
-;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s -check-prefix=CHECK -check-prefixes=VI,PREGFX10
-;RUN: llc < %s -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck %s -check-prefix=CHECK -check-prefix=GFX10
+;RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,PREGFX10
+;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,VI,PREGFX10
+;RUN: llc < %s -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,GFX10
 
 ;CHECK-LABEL: {{^}}buffer_load:
 ;CHECK: buffer_load_dwordx4 v[0:3], off, s[0:3], 0{{$}}

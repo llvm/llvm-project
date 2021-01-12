@@ -555,6 +555,11 @@ public:
             bool IncludeTimestamps = true);
   ~ASTWriter() override;
 
+  ASTContext &getASTContext() const {
+    assert(Context && "requested AST context when not writing AST");
+    return *Context;
+  }
+
   const LangOptions &getLangOpts() const;
 
   /// Get a timestamp for output into the AST file. The actual timestamp

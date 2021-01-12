@@ -120,6 +120,9 @@ if config.lldb_enable_lzma:
 if find_executable('xz') != None:
     config.available_features.add('xz')
 
+if config.lldb_system_debugserver:
+    config.available_features.add('system-debugserver')
+
 # NetBSD permits setting dbregs either if one is root
 # or if user_set_dbregs is enabled
 can_set_dbregs = True

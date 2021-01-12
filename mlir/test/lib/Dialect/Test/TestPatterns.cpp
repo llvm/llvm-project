@@ -61,7 +61,7 @@ public:
 
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
-    // Exercice OperationFolder API for a single-result operation that is folded
+    // Exercise OperationFolder API for a single-result operation that is folded
     // upon construction. The operation being created through the folder has an
     // in-place folder, and it should be still present in the output.
     // Furthermore, the folder should not crash when attempting to recover the

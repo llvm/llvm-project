@@ -2580,6 +2580,12 @@ bool CombinerHelper::matchOperandIsUndef(MachineInstr &MI, unsigned OpIdx) {
          getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, MO.getReg(), MRI);
 }
 
+bool CombinerHelper::matchOperandIsKnownToBeAPowerOfTwo(MachineInstr &MI,
+                                                        unsigned OpIdx) {
+  MachineOperand &MO = MI.getOperand(OpIdx);
+  return isKnownToBeAPowerOfTwo(MO.getReg(), MRI, KB);
+}
+
 bool CombinerHelper::replaceInstWithFConstant(MachineInstr &MI, double C) {
   assert(MI.getNumDefs() == 1 && "Expected only one def?");
   Builder.setInstr(MI);
@@ -3126,6 +3132,22 @@ bool CombinerHelper::applyPtrAddZero(MachineInstr &MI) {
   assert(MI.getOpcode() == TargetOpcode::G_PTR_ADD);
   Builder.setInstrAndDebugLoc(MI);
   Builder.buildIntToPtr(MI.getOperand(0), MI.getOperand(2));
+  MI.eraseFromParent();
+  return true;
+}
+
+/// The second source operand is known to be a power of 2.
+bool CombinerHelper::applySimplifyURemByPow2(MachineInstr &MI) {
+  Register DstReg = MI.getOperand(0).getReg();
+  Register Src0 = MI.getOperand(1).getReg();
+  Register Pow2Src1 = MI.getOperand(2).getReg();
+  LLT Ty = MRI.getType(DstReg);
+  Builder.setInstrAndDebugLoc(MI);
+
+  // Fold (urem x, pow2) -> (and x, pow2-1)
+  auto NegOne = Builder.buildConstant(Ty, -1);
+  auto Add = Builder.buildAdd(Ty, Pow2Src1, NegOne);
+  Builder.buildAnd(DstReg, Src0, Add);
   MI.eraseFromParent();
   return true;
 }

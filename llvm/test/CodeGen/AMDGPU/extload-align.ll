@@ -1,4 +1,4 @@
-; RUN: llc -debug-only=machine-scheduler -march=amdgcn -mtriple=amdgcn-- -verify-machineinstrs %s -o - 2>&1| FileCheck -check-prefix=SI-NOHSA -check-prefix=FUNC -check-prefix=DEBUG %s
+; RUN: llc -debug-only=machine-scheduler -march=amdgcn -mtriple=amdgcn-- -verify-machineinstrs %s -o - 2>&1| FileCheck -check-prefix=DEBUG %s
 target datalayout = "A5"
 ; REQUIRES: asserts
 

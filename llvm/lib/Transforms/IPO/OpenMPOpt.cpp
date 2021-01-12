@@ -28,6 +28,7 @@
 #include "llvm/Transforms/IPO/Attributor.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
+#include "llvm/Transforms/Utils/CodeExtractor.h"
 
 using namespace llvm;
 using namespace omp;
@@ -330,13 +331,17 @@ struct OMPInformationCache : public InformationCache {
     return NumUses;
   }
 
+  // Helper function to recollect uses of a runtime function.
+  void recollectUsesForFunction(RuntimeFunction RTF) {
+    auto &RFI = RFIs[RTF];
+    RFI.clearUsesMap();
+    collectUses(RFI, /*CollectStats*/ false);
+  }
+
   // Helper function to recollect uses of all runtime functions.
   void recollectUses() {
-    for (int Idx = 0; Idx < RFIs.size(); ++Idx) {
-      auto &RFI = RFIs[static_cast<RuntimeFunction>(Idx)];
-      RFI.clearUsesMap();
-      collectUses(RFI, /*CollectStats*/ false);
-    }
+    for (int Idx = 0; Idx < RFIs.size(); ++Idx)
+      recollectUsesForFunction(static_cast<RuntimeFunction>(Idx));
   }
 
   /// Helper to initialize all runtime function information for those defined
@@ -614,15 +619,11 @@ private:
     if (!RFI.Declaration)
       return false;
 
-    // Check if there any __kmpc_push_proc_bind calls for explicit affinities.
-    OMPInformationCache::RuntimeFunctionInfo &ProcBindRFI =
-        OMPInfoCache.RFIs[OMPRTL___kmpc_push_proc_bind];
-
-    // Defensively abort if explicit affinities are set.
-    // TODO: Track ICV proc_bind to merge when mergable regions have the same
-    // affinity.
-    if (ProcBindRFI.Declaration)
-      return false;
+    // Unmergable calls that prevent merging a parallel region.
+    OMPInformationCache::RuntimeFunctionInfo UnmergableCallsInfo[] = {
+        OMPInfoCache.RFIs[OMPRTL___kmpc_push_proc_bind],
+        OMPInfoCache.RFIs[OMPRTL___kmpc_push_num_threads],
+    };
 
     bool Changed = false;
     LoopInfo *LI = nullptr;
@@ -649,6 +650,90 @@ private:
     };
 
     auto FiniCB = [&](InsertPointTy CodeGenIP) {};
+
+    /// Create a sequential execution region within a merged parallel region,
+    /// encapsulated in a master construct with a barrier for synchronization.
+    auto CreateSequentialRegion = [&](Function *OuterFn,
+                                      BasicBlock *OuterPredBB,
+                                      Instruction *SeqStartI,
+                                      Instruction *SeqEndI) {
+      // Isolate the instructions of the sequential region to a separate
+      // block.
+      BasicBlock *ParentBB = SeqStartI->getParent();
+      BasicBlock *SeqEndBB =
+          SplitBlock(ParentBB, SeqEndI->getNextNode(), DT, LI);
+      BasicBlock *SeqAfterBB =
+          SplitBlock(SeqEndBB, &*SeqEndBB->getFirstInsertionPt(), DT, LI);
+      BasicBlock *SeqStartBB =
+          SplitBlock(ParentBB, SeqStartI, DT, LI, nullptr, "seq.par.merged");
+
+      assert(ParentBB->getUniqueSuccessor() == SeqStartBB &&
+             "Expected a different CFG");
+      const DebugLoc DL = ParentBB->getTerminator()->getDebugLoc();
+      ParentBB->getTerminator()->eraseFromParent();
+
+      auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                           BasicBlock &ContinuationIP) {
+        BasicBlock *CGStartBB = CodeGenIP.getBlock();
+        BasicBlock *CGEndBB =
+            SplitBlock(CGStartBB, &*CodeGenIP.getPoint(), DT, LI);
+        assert(SeqStartBB != nullptr && "SeqStartBB should not be null");
+        CGStartBB->getTerminator()->setSuccessor(0, SeqStartBB);
+        assert(SeqEndBB != nullptr && "SeqEndBB should not be null");
+        SeqEndBB->getTerminator()->setSuccessor(0, CGEndBB);
+      };
+      auto FiniCB = [&](InsertPointTy CodeGenIP) {};
+
+      // Find outputs from the sequential region to outside users and
+      // broadcast their values to them.
+      for (Instruction &I : *SeqStartBB) {
+        SmallPtrSet<Instruction *, 4> OutsideUsers;
+        for (User *Usr : I.users()) {
+          Instruction &UsrI = *cast<Instruction>(Usr);
+          // Ignore outputs to LT intrinsics, code extraction for the merged
+          // parallel region will fix them.
+          if (UsrI.isLifetimeStartOrEnd())
+            continue;
+
+          if (UsrI.getParent() != SeqStartBB)
+            OutsideUsers.insert(&UsrI);
+        }
+
+        if (OutsideUsers.empty())
+          continue;
+
+        // Emit an alloca in the outer region to store the broadcasted
+        // value.
+        const DataLayout &DL = M.getDataLayout();
+        AllocaInst *AllocaI = new AllocaInst(
+            I.getType(), DL.getAllocaAddrSpace(), nullptr,
+            I.getName() + ".seq.output.alloc", &OuterFn->front().front());
+
+        // Emit a store instruction in the sequential BB to update the
+        // value.
+        new StoreInst(&I, AllocaI, SeqStartBB->getTerminator());
+
+        // Emit a load instruction and replace the use of the output value
+        // with it.
+        for (Instruction *UsrI : OutsideUsers) {
+          LoadInst *LoadI = new LoadInst(I.getType(), AllocaI,
+                                         I.getName() + ".seq.output.load", UsrI);
+          UsrI->replaceUsesOfWith(&I, LoadI);
+        }
+      }
+
+      OpenMPIRBuilder::LocationDescription Loc(
+          InsertPointTy(ParentBB, ParentBB->end()), DL);
+      InsertPointTy SeqAfterIP =
+          OMPInfoCache.OMPBuilder.createMaster(Loc, BodyGenCB, FiniCB);
+
+      OMPInfoCache.OMPBuilder.createBarrier(SeqAfterIP, OMPD_parallel);
+
+      BranchInst::Create(SeqAfterBB, SeqAfterIP.getBlock());
+
+      LLVM_DEBUG(dbgs() << TAG << "After sequential inlining " << *OuterFn
+                        << "\n");
+    };
 
     // Helper to merge the __kmpc_fork_call calls in MergableCIs. They are all
     // contained in BB and only separated by instructions that can be
@@ -695,6 +780,21 @@ private:
       const DebugLoc DL = BB->getTerminator()->getDebugLoc();
       BB->getTerminator()->eraseFromParent();
 
+      // Create sequential regions for sequential instructions that are
+      // in-between mergable parallel regions.
+      for (auto *It = MergableCIs.begin(), *End = MergableCIs.end() - 1;
+           It != End; ++It) {
+        Instruction *ForkCI = *It;
+        Instruction *NextForkCI = *(It + 1);
+
+        // Continue if there are not in-between instructions.
+        if (ForkCI->getNextNode() == NextForkCI)
+          continue;
+
+        CreateSequentialRegion(OriginalFn, BB, ForkCI->getNextNode(),
+                               NextForkCI->getPrevNode());
+      }
+
       OpenMPIRBuilder::LocationDescription Loc(InsertPointTy(BB, BB->end()),
                                                DL);
       IRBuilder<>::InsertPoint AllocaIP(
@@ -708,7 +808,7 @@ private:
       BranchInst::Create(AfterBB, AfterIP.getBlock());
 
       // Perform the actual outlining.
-      OMPInfoCache.OMPBuilder.finalize();
+      OMPInfoCache.OMPBuilder.finalize(/* AllowExtractorSinking */ true);
 
       Function *OutlinedFn = MergableCIs.front()->getCaller();
 
@@ -763,7 +863,7 @@ private:
       }
 
       assert(OutlinedFn != OriginalFn && "Outlining failed");
-      CGUpdater.registerOutlinedFunction(*OutlinedFn);
+      CGUpdater.registerOutlinedFunction(*OriginalFn, *OutlinedFn);
       CGUpdater.reanalyzeFunction(*OriginalFn);
 
       NumOpenMPParallelRegionsMerged += MergableCIs.size();
@@ -795,16 +895,75 @@ private:
       BasicBlock *BB = It.getFirst();
       SmallVector<CallInst *, 4> MergableCIs;
 
+      /// Returns true if the instruction is mergable, false otherwise.
+      /// A terminator instruction is unmergable by definition since merging
+      /// works within a BB. Instructions before the mergable region are
+      /// mergable if they are not calls to OpenMP runtime functions that may
+      /// set different execution parameters for subsequent parallel regions.
+      /// Instructions in-between parallel regions are mergable if they are not
+      /// calls to any non-intrinsic function since that may call a non-mergable
+      /// OpenMP runtime function.
+      auto IsMergable = [&](Instruction &I, bool IsBeforeMergableRegion) {
+        // We do not merge across BBs, hence return false (unmergable) if the
+        // instruction is a terminator.
+        if (I.isTerminator())
+          return false;
+
+        if (!isa<CallInst>(&I))
+          return true;
+
+        CallInst *CI = cast<CallInst>(&I);
+        if (IsBeforeMergableRegion) {
+          Function *CalledFunction = CI->getCalledFunction();
+          if (!CalledFunction)
+            return false;
+          // Return false (unmergable) if the call before the parallel
+          // region calls an explicit affinity (proc_bind) or number of
+          // threads (num_threads) compiler-generated function. Those settings
+          // may be incompatible with following parallel regions.
+          // TODO: ICV tracking to detect compatibility.
+          for (const auto &RFI : UnmergableCallsInfo) {
+            if (CalledFunction == RFI.Declaration)
+              return false;
+          }
+        } else {
+          // Return false (unmergable) if there is a call instruction
+          // in-between parallel regions when it is not an intrinsic. It
+          // may call an unmergable OpenMP runtime function in its callpath.
+          // TODO: Keep track of possible OpenMP calls in the callpath.
+          if (!isa<IntrinsicInst>(CI))
+            return false;
+        }
+
+        return true;
+      };
       // Find maximal number of parallel region CIs that are safe to merge.
-      for (Instruction &I : *BB) {
+      for (auto It = BB->begin(), End = BB->end(); It != End;) {
+        Instruction &I = *It;
+        ++It;
+
         if (CIs.count(&I)) {
           MergableCIs.push_back(cast<CallInst>(&I));
           continue;
         }
 
-        if (isSafeToSpeculativelyExecute(&I, &I, DT))
+        // Continue expanding if the instruction is mergable.
+        if (IsMergable(I, MergableCIs.empty()))
           continue;
 
+        // Forward the instruction iterator to skip the next parallel region
+        // since there is an unmergable instruction which can affect it.
+        for (; It != End; ++It) {
+          Instruction &SkipI = *It;
+          if (CIs.count(&SkipI)) {
+            LLVM_DEBUG(dbgs() << TAG << "Skip parallel region " << SkipI
+                              << " due to " << I << "\n");
+            ++It;
+            break;
+          }
+        }
+
+        // Store mergable regions found.
         if (MergableCIs.size() > 1) {
           MergableCIsVector.push_back(MergableCIs);
           LLVM_DEBUG(dbgs() << TAG << "Found " << MergableCIs.size()
@@ -825,15 +984,12 @@ private:
     }
 
     if (Changed) {
-      // Update RFI info to set it up for later passes.
-      RFI.clearUsesMap();
-      OMPInfoCache.collectUses(RFI, /* CollectStats */ false);
-
-      // Collect uses for the emitted barrier call.
-      OMPInformationCache::RuntimeFunctionInfo &BarrierRFI =
-          OMPInfoCache.RFIs[OMPRTL___kmpc_barrier];
-      BarrierRFI.clearUsesMap();
-      OMPInfoCache.collectUses(BarrierRFI, /* CollectStats */ false);
+      /// Re-collect use for fork calls, emitted barrier calls, and
+      /// any emitted master/end_master calls.
+      OMPInfoCache.recollectUsesForFunction(OMPRTL___kmpc_fork_call);
+      OMPInfoCache.recollectUsesForFunction(OMPRTL___kmpc_barrier);
+      OMPInfoCache.recollectUsesForFunction(OMPRTL___kmpc_master);
+      OMPInfoCache.recollectUsesForFunction(OMPRTL___kmpc_end_master);
     }
 
     return Changed;

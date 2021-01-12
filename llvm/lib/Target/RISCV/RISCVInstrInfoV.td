@@ -628,7 +628,8 @@ def PseudoVMSLT_VI : Pseudo<(outs VR:$vd),
                             [], "vmslt.vi", "$vd, $vs2, $imm$vm">;
 }
 
-let isAsmParserOnly = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
+let isCodeGenOnly = 0, isAsmParserOnly = 1, hasSideEffects = 0, mayLoad = 0,
+    mayStore = 0 in {
 def PseudoVMSGEU_VX : Pseudo<(outs VR:$vd),
                              (ins VR:$vs2, GPR:$rs1),
                              [], "vmsgeu.vx", "$vd, $vs2, $rs1">;
@@ -648,25 +649,6 @@ def PseudoVMSGE_VX_M_T : Pseudo<(outs VMV0:$vd, VR:$scratch),
                                 (ins VR:$vs2, GPR:$rs1, VMaskOp:$vm),
                                 [], "vmsge.vx", "$vd, $vs2, $rs1$vm, $scratch">;
 }
-
-// This apparently unnecessary alias prevents matching `vmsge{u}.vx vd, vs2, vs1` as if
-// it were an unmasked (i.e. $vm = RISCV::NoRegister) PseudoVMSGE{U}_VX_M.
-def : InstAlias<"vmsgeu.vx $vd, $va, $rs1",
-                (PseudoVMSGEU_VX VR:$vd, VR:$va, GPR:$rs1), 0>;
-def : InstAlias<"vmsge.vx $vd, $va, $rs1",
-                (PseudoVMSGE_VX VR:$vd, VR:$va, GPR:$rs1), 0>;
-def : InstAlias<"vmsgeu.vx v0, $va, $rs1, $vm, $vt",
-                (PseudoVMSGEU_VX_M_T V0, VR:$vt, VR:$va, GPR:$rs1,
-                                     VMaskOp:$vm), 0>;
-def : InstAlias<"vmsge.vx v0, $va, $rs1, $vm, $vt",
-                (PseudoVMSGE_VX_M_T V0, VR:$vt, VR:$va, GPR:$rs1,
-                                    VMaskOp:$vm), 0>;
-def : InstAlias<"vmsgeu.vx $vd, $va, $rs1, $vm",
-                (PseudoVMSGEU_VX_M VRNoV0:$vd, VR:$va, GPR:$rs1,
-                                   VMaskOp:$vm), 0>;
-def : InstAlias<"vmsge.vx $vd, $va, $rs1, $vm",
-                (PseudoVMSGE_VX_M VRNoV0:$vd, VR:$va, GPR:$rs1,
-                                  VMaskOp:$vm), 0>;
 
 // Vector Integer Min/Max Instructions
 defm VMINU_V : VALU_IV_V_X<"vminu", 0b000100>;

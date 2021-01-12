@@ -15,12 +15,10 @@
 //
 
 #include "AMDGPUPALMetadata.h"
-#include "AMDGPU.h"
-#include "AMDGPUAsmPrinter.h"
-#include "MCTargetDesc/AMDGPUTargetStreamer.h"
+#include "AMDGPUPTNote.h"
 #include "SIDefines.h"
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/IR/CallingConv.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/AMDGPUMetadata.h"

@@ -103,7 +103,7 @@ module attributes {gpu.container_module} {
     return
   }
 
- // CHECK-LABEL:func @async_execute_with_result(%{{.*}}: index)
+  // CHECK-LABEL:func @async_execute_with_result(%{{.*}}: index)
   func @async_execute_with_result(%sz : index) -> index {
     // CHECK: %[[a0:.*]], %[[f0:.*]]:2 = async.execute
     // CHECK-SAME: -> (!async.value<index>, !async.value<!gpu.async.token>)

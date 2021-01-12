@@ -79,8 +79,8 @@ for.body:                                         ; preds = %for.cond
 ; X64-NOOPT-NEXT: # in Loop: Header=BB0_1 Depth=1
 ; X64-NOOPT-NEXT:  lfence
 ; X64-NOOPT-NEXT:      movl -{{[0-9]+}}(%rsp), %eax
-; X64-NOOPT-NEXT:      cltd
 ; X64-NOOPT-NEXT:      movl $2, %ecx
+; X64-NOOPT-NEXT:      cltd
 ; X64-NOOPT-NEXT:      idivl %ecx
 ; X64-NOOPT-NEXT:      cmpl $0, %edx
 ; X64-NOOPT-NEXT:  lfence

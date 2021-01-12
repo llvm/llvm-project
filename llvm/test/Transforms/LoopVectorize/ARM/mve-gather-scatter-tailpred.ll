@@ -22,7 +22,7 @@ define void @test_stride1_4i32(i32* readonly %data, i32* noalias nocapture %dst,
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, i32* [[DATA:%.*]], i32 [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, i32* [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32* [[TMP4]] to <4 x i32>*
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* [[TMP5]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* [[TMP5]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <4 x i32> <i32 5, i32 5, i32 5, i32 5>, [[WIDE_MASKED_LOAD]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, i32* [[DST:%.*]], i32 [[TMP0]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, i32* [[TMP7]], i32 0
@@ -379,7 +379,7 @@ define void @test_stride_loopinvar_4i32(i32* readonly %data, i32* noalias nocapt
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, i32* [[DATA:%.*]], i32 [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, i32* [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[TMP5]] to <4 x i32>*
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* [[TMP6]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* [[TMP6]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP7:%.*]] = add nsw <4 x i32> <i32 5, i32 5, i32 5, i32 5>, [[WIDE_MASKED_LOAD]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, i32* [[DST:%.*]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, i32* [[TMP8]], i32 0

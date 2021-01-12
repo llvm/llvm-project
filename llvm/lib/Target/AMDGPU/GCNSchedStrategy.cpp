@@ -13,12 +13,7 @@
 
 #include "GCNSchedStrategy.h"
 #include "AMDGPUSubtarget.h"
-#include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
-#include "SIRegisterInfo.h"
-#include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
-#include "llvm/Support/MathExtras.h"
 
 #define DEBUG_TYPE "machine-scheduler"
 

@@ -62,8 +62,7 @@ int main(int argc, char **argv) {
           errorOrToExpected(MemoryBuffer::getFileOrSTDIN(InputFilename)));
       std::vector<BitcodeModule> Mods = ExitOnErr(getBitcodeModuleList(*MB));
       for (auto &BitcodeMod : Mods) {
-        Buffer.insert(Buffer.end(), BitcodeMod.getBuffer().begin(),
-                      BitcodeMod.getBuffer().end());
+        llvm::append_range(Buffer, BitcodeMod.getBuffer());
         Writer.copyStrtab(BitcodeMod.getStrtab());
       }
     }

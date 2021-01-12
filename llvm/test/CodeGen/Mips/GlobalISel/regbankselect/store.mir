@@ -46,7 +46,7 @@ body:             |
     ; MIPS32: G_STORE [[COPY]](s32), [[COPY2]](p0) :: (store 4 into %ir.ptr, align 8)
     ; MIPS32: [[C:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 4
     ; MIPS32: [[GEP:%[0-9]+]]:gprb(p0) = G_PTR_ADD [[COPY2]], [[C]](s32)
-    ; MIPS32: G_STORE [[COPY1]](s32), [[GEP]](p0) :: (store 4 into %ir.ptr + 4, align 8)
+    ; MIPS32: G_STORE [[COPY1]](s32), [[GEP]](p0) :: (store 4 into %ir.ptr + 4, basealign 8)
     ; MIPS32: RetRA
     %2:_(s32) = COPY $a0
     %3:_(s32) = COPY $a1

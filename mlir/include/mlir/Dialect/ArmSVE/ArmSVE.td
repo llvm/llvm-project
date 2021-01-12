@@ -38,7 +38,7 @@ def ArmSVE_ScalableVectorType : DialectType<ArmSVE_Dialect,
     CPred<"$_self.isa<ScalableVectorType>()">,
               "scalable vector type">,
     BuildableType<"$_builder.getType<ScalableVectorType>()"> {
-  let typeDescription = [{
+  let description = [{
     `arm_sve.vector` represents vectors that will be processed by a scalable
     vector architecture.
   }];
@@ -74,7 +74,7 @@ def ScalableVectorType : ArmSVE_Type<"ScalableVector"> {
     VectorType vector;
     if ($_parser.parseType(vector))
       return Type();
-    return get(ctxt, vector.getShape(), vector.getElementType());
+    return get($_ctxt, vector.getShape(), vector.getElementType());
   }];
 
   let extraClassDeclaration = [{
@@ -119,8 +119,8 @@ class ScalableVectorOfLengthAndType<list<int> allowedLengths,
                                     list<Type> allowedTypes> : Type<
   And<[ScalableVectorOf<allowedTypes>.predicate,
        ScalableVectorOfLength<allowedLengths>.predicate]>,
-  ScalableVectorOf<allowedTypes>.description #
-  ScalableVectorOfLength<allowedLengths>.description>;
+  ScalableVectorOf<allowedTypes>.summary #
+  ScalableVectorOfLength<allowedLengths>.summary>;
 
 //===----------------------------------------------------------------------===//
 // ArmSVE op definitions
@@ -165,7 +165,7 @@ def SmmlaOp : ArmSVE_Op<"smmla",
                 AllTypesMatch<["src1", "src2"]>,
                 AllTypesMatch<["acc", "dst"]>,
               ]> {
-  let summary = "Matrix-matrix mutiply and accumulate op";
+  let summary = "Matrix-matrix multiply and accumulate op";
   let description = [{
     SMMLA: Signed integer matrix multiply-accumulate.
 
@@ -228,7 +228,7 @@ def UmmlaOp : ArmSVE_Op<"ummla",
                 AllTypesMatch<["src1", "src2"]>,
                 AllTypesMatch<["acc", "dst"]>,
               ]> {
-  let summary = "Matrix-matrix mutiply and accumulate op";
+  let summary = "Matrix-matrix multiply and accumulate op";
   let description = [{
     UMMLA: Unsigned integer matrix multiply-accumulate.
 

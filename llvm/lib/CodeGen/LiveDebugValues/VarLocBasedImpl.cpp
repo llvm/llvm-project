@@ -145,6 +145,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/TypeSize.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include <algorithm>
@@ -292,7 +293,7 @@ private:
     // register and an offset.
     struct SpillLoc {
       unsigned SpillBase;
-      int SpillOffset;
+      StackOffset SpillOffset;
       bool operator==(const SpillLoc &Other) const {
         return SpillBase == Other.SpillBase && SpillOffset == Other.SpillOffset;
       }
@@ -323,21 +324,20 @@ private:
 
     /// The value location. Stored separately to avoid repeatedly
     /// extracting it from MI.
-    union {
+    union LocUnion {
       uint64_t RegNo;
       SpillLoc SpillLocation;
       uint64_t Hash;
       int64_t Immediate;
       const ConstantFP *FPImm;
       const ConstantInt *CImm;
+      LocUnion() : Hash(0) {}
     } Loc;
 
     VarLoc(const MachineInstr &MI, LexicalScopes &LS)
         : Var(MI.getDebugVariable(), MI.getDebugExpression(),
               MI.getDebugLoc()->getInlinedAt()),
           Expr(MI.getDebugExpression()), MI(MI) {
-      static_assert((sizeof(Loc) == sizeof(uint64_t)),
-                    "hash does not cover all members of Loc");
       assert(MI.isDebugValue() && "not a DBG_VALUE");
       assert(MI.getNumOperands() == 4 && "malformed DBG_VALUE");
       if (int RegNo = isDbgValueDescribedByReg(MI)) {
@@ -413,7 +413,7 @@ private:
     /// Take the variable described by DBG_VALUE MI, and create a VarLoc
     /// locating it in the specified spill location.
     static VarLoc CreateSpillLoc(const MachineInstr &MI, unsigned SpillBase,
-                                 int SpillOffset, LexicalScopes &LS) {
+                                 StackOffset SpillOffset, LexicalScopes &LS) {
       VarLoc VL(MI, LS);
       assert(VL.Kind == RegisterKind);
       VL.Kind = SpillLocKind;
@@ -450,7 +450,8 @@ private:
         // Use the original DBG_VALUEs expression to build the spilt location
         // on top of. FIXME: spill locations created before this pass runs
         // are not recognized, and not handled here.
-        auto *SpillExpr = DIExpression::prepend(
+        auto *TRI = MF.getSubtarget().getRegisterInfo();
+        auto *SpillExpr = TRI->prependOffsetExpression(
             DIExpr, DIExpression::ApplyOffset, Loc.SpillLocation.SpillOffset);
         unsigned Base = Loc.SpillLocation.SpillBase;
         return BuildMI(MF, DbgLoc, IID, true, Base, Var, SpillExpr);
@@ -519,7 +520,9 @@ private:
         break;
       case SpillLocKind:
         Out << printReg(Loc.SpillLocation.SpillBase, TRI);
-        Out << "[" << Loc.SpillLocation.SpillOffset << "]";
+        Out << "[" << Loc.SpillLocation.SpillOffset.getFixed() << " + "
+            << Loc.SpillLocation.SpillOffset.getScalable() << "x vscale"
+            << "]";
         break;
       case ImmediateKind:
         Out << Loc.Immediate;
@@ -542,14 +545,46 @@ private:
 #endif
 
     bool operator==(const VarLoc &Other) const {
-      return Kind == Other.Kind && Var == Other.Var &&
-             Loc.Hash == Other.Loc.Hash && Expr == Other.Expr;
+      if (Kind != Other.Kind || !(Var == Other.Var) || Expr != Other.Expr)
+        return false;
+
+      switch (Kind) {
+      case SpillLocKind:
+        return Loc.SpillLocation == Other.Loc.SpillLocation;
+      case RegisterKind:
+      case ImmediateKind:
+      case EntryValueKind:
+      case EntryValueBackupKind:
+      case EntryValueCopyBackupKind:
+        return Loc.Hash == Other.Loc.Hash;
+      default:
+        llvm_unreachable("Invalid kind");
+      }
     }
 
     /// This operator guarantees that VarLocs are sorted by Variable first.
     bool operator<(const VarLoc &Other) const {
-      return std::tie(Var, Kind, Loc.Hash, Expr) <
-             std::tie(Other.Var, Other.Kind, Other.Loc.Hash, Other.Expr);
+      switch (Kind) {
+      case SpillLocKind:
+        return std::make_tuple(Var, Kind, Loc.SpillLocation.SpillBase,
+                               Loc.SpillLocation.SpillOffset.getFixed(),
+                               Loc.SpillLocation.SpillOffset.getScalable(),
+                               Expr) <
+               std::make_tuple(
+                   Other.Var, Other.Kind, Other.Loc.SpillLocation.SpillBase,
+                   Other.Loc.SpillLocation.SpillOffset.getFixed(),
+                   Other.Loc.SpillLocation.SpillOffset.getScalable(),
+                   Other.Expr);
+      case RegisterKind:
+      case ImmediateKind:
+      case EntryValueKind:
+      case EntryValueBackupKind:
+      case EntryValueCopyBackupKind:
+        return std::tie(Var, Kind, Loc.Hash, Expr) <
+               std::tie(Other.Var, Other.Kind, Other.Loc.Hash, Other.Expr);
+      default:
+        llvm_unreachable("Invalid kind");
+      }
     }
   };
 
@@ -984,9 +1019,7 @@ VarLocBasedLDV::extractSpillBaseRegAndOffset(const MachineInstr &MI) {
   const MachineBasicBlock *MBB = MI.getParent();
   Register Reg;
   StackOffset Offset = TFI->getFrameIndexReference(*MBB->getParent(), FI, Reg);
-  assert(!Offset.getScalable() &&
-         "Frame offsets with a scalable component are not supported");
-  return {Reg, static_cast<int>(Offset.getFixed())};
+  return {Reg, Offset};
 }
 
 /// Try to salvage the debug entry value if we encounter a new debug value

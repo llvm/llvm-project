@@ -66,11 +66,11 @@ For example:
 
 ```mlir
 ^bb1:
-  %0 = llvm.addi %arg0, %cst : !llvm.i32
-  llvm.br ^bb2[%0: !llvm.i32]
+  %0 = llvm.addi %arg0, %cst : i32
+  llvm.br ^bb2[%0: i32]
 
 // If the control flow comes from ^bb1, %arg1 == %0.
-^bb2(%arg1: !llvm.i32)
+^bb2(%arg1: i32)
   // ...
 ```
 
@@ -91,9 +91,9 @@ control flow to the same block with different arguments. For example:
 
 ```mlir
 ^bb1:
-  llvm.cond_br %cond, ^bb2[%0: !llvm.i32], ^bb2[%1: !llvm.i32]
+  llvm.cond_br %cond, ^bb2[%0: i32], ^bb2[%1: i32]
 
-^bb2(%arg0: !llvm.i32):
+^bb2(%arg0: i32):
   // ...
 ```
 
@@ -115,7 +115,7 @@ Examples:
 ```mlir
 // Create an undefined value of structure type with a 32-bit integer followed
 // by a float.
-%0 = llvm.mlir.undef : !llvm.struct<(i32, float)>
+%0 = llvm.mlir.undef : !llvm.struct<(i32, f32)>
 
 // Null pointer to i8.
 %1 = llvm.mlir.null : !llvm.ptr<i8>
@@ -124,10 +124,10 @@ Examples:
 %2 = llvm.mlir.null : !llvm.ptr<func<void ()>>
 
 // Constant 42 as i32.
-%3 = llvm.mlir.constant(42 : i32) : !llvm.i32
+%3 = llvm.mlir.constant(42 : i32) : i32
 
 // Splat dense vector constant.
-%3 = llvm.mlir.constant(dense<1.0> : vector<4xf32>) : !llvm.vec<4 x float>
+%3 = llvm.mlir.constant(dense<1.0> : vector<4xf32>) : vector<4xf32>
 ```
 
 Note that constants use built-in types within the initializer definition: MLIR
@@ -214,14 +214,6 @@ containing an 8-bit and a 32-bit integer.
 
 The following non-parametric types are supported.
 
--   `!llvm.bfloat` (`LLVMBFloatType`) - 16-bit “brain” floating-point value
-    (7-bit significand).
--   `!llvm.half` (`LLVMHalfType`) - 16-bit floating-point value as per
-    IEEE-754-2008.
--   `!llvm.float` (`LLVMFloatType`) - 32-bit floating-point value as per
-    IEEE-754-2008.
--   `!llvm.double` (`LLVMDoubleType`) - 64-bit floating-point value as per
-    IEEE-754-2008.
 -   `!llvm.fp128` (`LLVMFP128Type`) - 128-bit floating-point value as per
     IEEE-754-2008.
 -   `!llvm.x86_fp80` (`LLVMX86FP80Type`) - 80-bit floating-point value (x87).
@@ -282,7 +274,7 @@ Vectors cannot be nested and only 1D vectors are supported. Scalable vectors are
 still considered 1D. Their syntax is as follows:
 
 ```
-  llvm-vec-type ::= `!llvm.vec<` (`?` `x`)? integer-literal `x` llvm-type `>`
+  llvm-vec-type ::= `vector<` (`?` `x`)? integer-literal `x` llvm-type `>`
 ```
 
 Internally, fixed vector types are represented as `LLVMFixedVectorType` and
@@ -322,7 +314,7 @@ For example,
 
 ```mlir
 !llvm.func<void ()>            // a function with no arguments;
-!llvm.func<i32 (float, i32)>  // a function with two arguments and a result;
+!llvm.func<i32 (f32, i32)>  // a function with two arguments and a result;
 !llvm.func<void (i32, ...)>   // a variadic function with at least one argument.
 ```
 
@@ -385,7 +377,7 @@ structure `A` is represented as `!llvm.struct<"A", (ptr<"B", (ptr<"A">)>,
 ptr<"B", (ptr<"A">))>`. Note that the structure `B` is "unrolled" for both
 elements. _A structure with the same name but different body is a syntax error._
 **The user must ensure structure name uniqueness across all modules processed in
-a given MLIR context.** Stucture names are arbitrary string literals and may
+a given MLIR context.** Structure names are arbitrary string literals and may
 include, e.g., spaces and keywords.
 
 Identified structs may be _opaque_. In this case, the body is unknown but the

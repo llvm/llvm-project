@@ -1461,8 +1461,7 @@ struct DimOfMemRefReshape : public OpRewritePattern<DimOp> {
   }
 };
 
-/// Fold dim of a dim of a cast into the the dim of the source of the tensor
-/// cast.
+/// Fold dim of a dim of a cast into the dim of the source of the tensor cast.
 template <typename CastOpTy>
 struct DimOfCastOp : public OpRewritePattern<DimOp> {
   using OpRewritePattern<DimOp>::OpRewritePattern;

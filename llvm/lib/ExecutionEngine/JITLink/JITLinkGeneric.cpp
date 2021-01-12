@@ -55,6 +55,16 @@ void JITLinkerBase::linkPhase1(std::unique_ptr<JITLinkerBase> Self) {
   if (auto Err = allocateSegments(Layout))
     return Ctx->notifyFailed(std::move(Err));
 
+  LLVM_DEBUG({
+    dbgs() << "Link graph \"" << G->getName()
+           << "\" before post-allocation passes:\n";
+    dumpGraph(dbgs());
+  });
+
+  // Run post-allocation passes.
+  if (auto Err = runPasses(Passes.PostAllocationPasses))
+    return Ctx->notifyFailed(std::move(Err));
+
   // Notify client that the defined symbols have been assigned addresses.
   LLVM_DEBUG(
       { dbgs() << "Resolving symbols defined in " << G->getName() << "\n"; });
@@ -110,11 +120,11 @@ void JITLinkerBase::linkPhase2(std::unique_ptr<JITLinkerBase> Self,
 
   LLVM_DEBUG({
     dbgs() << "Link graph \"" << G->getName()
-           << "\" before post-allocation passes:\n";
+           << "\" before pre-fixup passes:\n";
     dumpGraph(dbgs());
   });
 
-  if (auto Err = runPasses(Passes.PostAllocationPasses))
+  if (auto Err = runPasses(Passes.PreFixupPasses))
     return deallocateAndBailOut(std::move(Err));
 
   LLVM_DEBUG({

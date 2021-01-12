@@ -206,7 +206,7 @@ void VEAsmPrinter::lowerGETGOTAndEmitMCInsts(const MachineInstr *MI,
   // lea %got, _GLOBAL_OFFSET_TABLE_@PC_LO(-24)
   // and %got, %got, (32)0
   // sic %plt
-  // lea.sl %got, _GLOBAL_OFFSET_TABLE_@PC_HI(%got, %plt)
+  // lea.sl %got, _GLOBAL_OFFSET_TABLE_@PC_HI(%plt, %got)
   MCOperand cim24 = MCOperand::createImm(-24);
   MCOperand loImm =
       createGOTRelExprOp(VEMCExpr::VK_VE_PC_LO32, GOTLabel, OutContext);
@@ -251,10 +251,10 @@ void VEAsmPrinter::lowerGETFunPLTAndEmitMCInsts(const MachineInstr *MI,
 
   MCOperand RegPLT = MCOperand::createReg(VE::SX16); // PLT
 
-  // lea %dst, %plt_lo(func)(-24)
+  // lea %dst, func@plt_lo(-24)
   // and %dst, %dst, (32)0
   // sic %plt                            ; FIXME: is it safe to use %plt here?
-  // lea.sl %dst, %plt_hi(func)(%dst, %plt)
+  // lea.sl %dst, func@plt_hi(%plt, %dst)
   MCOperand cim24 = MCOperand::createImm(-24);
   MCOperand loImm =
       createGOTRelExprOp(VEMCExpr::VK_VE_PLT_LO32, AddrSym, OutContext);
@@ -298,7 +298,7 @@ void VEAsmPrinter::lowerGETTLSAddrAndEmitMCInsts(const MachineInstr *MI,
   // lea %s0, sym@tls_gd_lo(-24)
   // and %s0, %s0, (32)0
   // sic %lr
-  // lea.sl %s0, sym@tls_gd_hi(%s0, %lr)
+  // lea.sl %s0, sym@tls_gd_hi(%lr, %s0)
   // lea %s12, __tls_get_addr@plt_lo(8)
   // and %s12, %s12, (32)0
   // lea.sl %s12, __tls_get_addr@plt_hi(%s12, %lr)

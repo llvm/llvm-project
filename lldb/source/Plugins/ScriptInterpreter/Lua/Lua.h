@@ -36,6 +36,7 @@ public:
   CallBreakpointCallback(void *baton, lldb::StackFrameSP stop_frame_sp,
                          lldb::BreakpointLocationSP bp_loc_sp);
   llvm::Error LoadModule(llvm::StringRef filename);
+  llvm::Error CheckSyntax(llvm::StringRef buffer);
   llvm::Error ChangeIO(FILE *out, FILE *err);
 
 private:

@@ -1266,6 +1266,21 @@ static llvm::Value *CreateCoercedLoad(Address Src, llvm::Type *Ty,
     return CGF.Builder.CreateLoad(Src);
   }
 
+  // If coercing a fixed vector to a scalable vector for ABI compatibility, and
+  // the types match, use the llvm.experimental.vector.insert intrinsic to
+  // perform the conversion.
+  if (auto *ScalableDst = dyn_cast<llvm::ScalableVectorType>(Ty)) {
+    if (auto *FixedSrc = dyn_cast<llvm::FixedVectorType>(SrcTy)) {
+      if (ScalableDst->getElementType() == FixedSrc->getElementType()) {
+        auto *Load = CGF.Builder.CreateLoad(Src);
+        auto *UndefVec = llvm::UndefValue::get(ScalableDst);
+        auto *Zero = llvm::Constant::getNullValue(CGF.CGM.Int64Ty);
+        return CGF.Builder.CreateInsertVector(ScalableDst, UndefVec, Load, Zero,
+                                              "castScalableSve");
+      }
+    }
+  }
+
   // Otherwise do coercion through memory. This is stupid, but simple.
   Address Tmp =
       CreateTempAllocaForCoercion(CGF, Ty, Src.getAlignment(), Src.getName());

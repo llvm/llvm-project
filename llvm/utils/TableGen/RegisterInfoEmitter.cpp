@@ -462,18 +462,16 @@ void RegisterInfoEmitter::EmitRegMappingTables(
 
     DefInit *DI = cast<DefInit>(V->getValue());
     Record *Alias = DI->getDef();
-    const auto &AliasIter =
-        std::lower_bound(DwarfRegNums.begin(), DwarfRegNums.end(), Alias,
-                         [](const DwarfRegNumsMapPair &A, const Record *B) {
-                           return LessRecordRegister()(A.first, B);
-                         });
+    const auto &AliasIter = llvm::lower_bound(
+        DwarfRegNums, Alias, [](const DwarfRegNumsMapPair &A, const Record *B) {
+          return LessRecordRegister()(A.first, B);
+        });
     assert(AliasIter != DwarfRegNums.end() && AliasIter->first == Alias &&
            "Expected Alias to be present in map");
-    const auto &RegIter =
-        std::lower_bound(DwarfRegNums.begin(), DwarfRegNums.end(), Reg,
-                         [](const DwarfRegNumsMapPair &A, const Record *B) {
-                           return LessRecordRegister()(A.first, B);
-                         });
+    const auto &RegIter = llvm::lower_bound(
+        DwarfRegNums, Reg, [](const DwarfRegNumsMapPair &A, const Record *B) {
+          return LessRecordRegister()(A.first, B);
+        });
     assert(RegIter != DwarfRegNums.end() && RegIter->first == Reg &&
            "Expected Reg to be present in map");
     RegIter->second = AliasIter->second;

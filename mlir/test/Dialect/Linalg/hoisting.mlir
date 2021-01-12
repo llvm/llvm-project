@@ -230,3 +230,169 @@ func @hoist_vector_transfer_pairs_disjoint(
   }
   return
 }
+
+// VECTOR_TRANSFERS-LABEL: func @hoist_vector_transfer_pairs_tensor
+func @hoist_vector_transfer_pairs_tensor(
+    %tensor0: tensor<?x?xf32>, %tensor1: tensor<?x?xf32>, %tensor2: tensor<?x?xf32>,
+    %tensor3: tensor<?x?xf32>, %tensor4: tensor<?x?xf32>, %tensor5: tensor<?x?xf32>,
+    %val: index, %lb : index, %ub : index, %step: index) ->
+    (tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>,
+     tensor<?x?xf32>, tensor<?x?xf32>) {
+  %c0 = constant 0 : index
+  %cst = constant 0.0 : f32
+
+// VECTOR_TRANSFERS: vector.transfer_read %{{.*}} : tensor<?x?xf32>, vector<1xf32>
+// VECTOR_TRANSFERS: scf.for {{.*}} iter_args({{.*}}) ->
+// VECTOR_TRANSFERS-SAME: (tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, vector<1xf32>) {
+// VECTOR_TRANSFERS:   vector.transfer_read %{{.*}} : tensor<?x?xf32>, vector<2xf32>
+// VECTOR_TRANSFERS:   scf.for {{.*}} iter_args({{.*}}) ->
+// VECTOR_TRANSFERS-SAME: (tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, vector<2xf32>, vector<1xf32>) {
+// VECTOR_TRANSFERS:     vector.transfer_read %{{.*}} : tensor<?x?xf32>, vector<3xf32>
+// VECTOR_TRANSFERS:     vector.transfer_read %{{.*}} : tensor<?x?xf32>, vector<4xf32>
+// VECTOR_TRANSFERS:     "some_crippling_use"(%{{.*}}) : (tensor<?x?xf32>) -> ()
+// VECTOR_TRANSFERS:     vector.transfer_read %{{.*}} : tensor<?x?xf32>, vector<5xf32>
+// VECTOR_TRANSFERS:     "some_use"(%{{.*}}) : (vector<1xf32>) -> vector<1xf32>
+// VECTOR_TRANSFERS:     "some_use"(%{{.*}}) : (vector<2xf32>) -> vector<2xf32>
+// VECTOR_TRANSFERS:     "some_use"(%{{.*}}) : (tensor<?x?xf32>) -> vector<3xf32>
+// VECTOR_TRANSFERS:     "some_use"(%{{.*}}) : (vector<4xf32>) -> vector<4xf32>
+// VECTOR_TRANSFERS:     "some_use"(%{{.*}}) : (vector<5xf32>) -> vector<5xf32>
+// VECTOR_TRANSFERS:     vector.transfer_write %{{.*}} : vector<3xf32>, tensor<?x?xf32>
+// VECTOR_TRANSFERS:     vector.transfer_write %{{.*}} : vector<4xf32>, tensor<?x?xf32>
+// VECTOR_TRANSFERS:     vector.transfer_write %{{.*}} : vector<5xf32>, tensor<?x?xf32>
+// VECTOR_TRANSFERS:     "some_crippling_use"(%{{.*}}) : (tensor<?x?xf32>) -> ()
+// VECTOR_TRANSFERS:     scf.yield {{.*}} :
+// VECTOR_TRANSFERS-SAME: tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, vector<2xf32>, vector<1xf32>
+// VECTOR_TRANSFERS:   }
+// VECTOR_TRANSFERS:   vector.transfer_write %{{.*}} : vector<2xf32>, tensor<?x?xf32>
+// VECTOR_TRANSFERS:   scf.yield {{.*}} :
+// VECTOR_TRANSFERS-SAME: tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, vector<1xf32>
+// VECTOR_TRANSFERS: }
+// VECTOR_TRANSFERS: vector.transfer_write %{{.*}} : vector<1xf32>, tensor<?x?xf32>
+  %0:6 = scf.for %i = %lb to %ub step %step
+  iter_args(%arg0 = %tensor0, %arg1 = %tensor1, %arg2 = %tensor2,
+            %arg3 = %tensor3,  %arg4 = %tensor4, %arg5 = %tensor5)
+  -> (tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>,
+     tensor<?x?xf32>, tensor<?x?xf32>)  {
+    %1:6 = scf.for %j = %lb to %ub step %step
+    iter_args(%arg6 = %arg0, %arg7 = %arg1, %arg8 = %arg2,
+              %arg9 = %arg3,  %arg10 = %arg4, %arg11 = %arg5)
+    -> (tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>,
+       tensor<?x?xf32>, tensor<?x?xf32>)  {
+      %r0 = vector.transfer_read %arg7[%c0, %c0], %cst: tensor<?x?xf32>, vector<1xf32>
+      %r1 = vector.transfer_read %arg6[%i, %i], %cst: tensor<?x?xf32>, vector<2xf32>
+      %r2 = vector.transfer_read %arg8[%c0, %c0], %cst: tensor<?x?xf32>, vector<3xf32>
+      %r3 = vector.transfer_read %arg9[%c0, %c0], %cst: tensor<?x?xf32>, vector<4xf32>
+      "some_crippling_use"(%arg10) : (tensor<?x?xf32>) -> ()
+      %r4 = vector.transfer_read %arg10[%c0, %c0], %cst: tensor<?x?xf32>, vector<5xf32>
+      %r5 = vector.transfer_read %arg11[%c0, %c0], %cst: tensor<?x?xf32>, vector<6xf32>
+      "some_crippling_use"(%arg11) : (tensor<?x?xf32>) -> ()
+      %u0 = "some_use"(%r0) : (vector<1xf32>) -> vector<1xf32>
+      %u1 = "some_use"(%r1) : (vector<2xf32>) -> vector<2xf32>
+      %u2 = "some_use"(%arg8) : (tensor<?x?xf32>) -> vector<3xf32>
+      %u3 = "some_use"(%r3) : (vector<4xf32>) -> vector<4xf32>
+      %u4 = "some_use"(%r4) : (vector<5xf32>) -> vector<5xf32>
+      %u5 = "some_use"(%r5) : (vector<6xf32>) -> vector<6xf32>
+      %w1 = vector.transfer_write %u0, %arg7[%c0, %c0] : vector<1xf32>, tensor<?x?xf32>
+      %w0 = vector.transfer_write %u1, %arg6[%i, %i] : vector<2xf32>, tensor<?x?xf32>
+      %w2 = vector.transfer_write %u2, %arg8[%c0, %c0] : vector<3xf32>, tensor<?x?xf32>
+      %w3 = vector.transfer_write %u3, %arg9[%c0, %c0] : vector<4xf32>, tensor<?x?xf32>
+      %w4 = vector.transfer_write %u4, %arg10[%c0, %c0] : vector<5xf32>, tensor<?x?xf32>
+      %w5 = vector.transfer_write %u5, %arg11[%c0, %c0] : vector<6xf32>, tensor<?x?xf32>
+      "some_crippling_use"(%w3) : (tensor<?x?xf32>) -> ()
+      scf.yield %w0, %w1, %w2, %w3, %w4, %w5 :
+        tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>,
+        tensor<?x?xf32>, tensor<?x?xf32>
+      }
+      scf.yield %1#0,  %1#1, %1#2, %1#3, %1#4, %1#5 :
+        tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>,
+        tensor<?x?xf32>, tensor<?x?xf32>
+  }
+  return %0#0,  %0#1, %0#2, %0#3, %0#4,  %0#5 :
+        tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>,
+        tensor<?x?xf32>, tensor<?x?xf32>
+}
+
+// VECTOR_TRANSFERS-LABEL: func @hoist_vector_transfer_pairs_disjoint_tensor(
+//  VECTOR_TRANSFERS-SAME:   %[[TENSOR0:[a-zA-Z0-9]*]]: tensor<?x?xf32>,
+//  VECTOR_TRANSFERS-SAME:   %[[TENSOR1:[a-zA-Z0-9]*]]: tensor<?x?xf32>,
+//  VECTOR_TRANSFERS-SAME:   %[[TENSOR2:[a-zA-Z0-9]*]]: tensor<?x?xf32>,
+//  VECTOR_TRANSFERS-SAME:   %[[TENSOR3:[a-zA-Z0-9]*]]: tensor<?x?xf32>,
+func @hoist_vector_transfer_pairs_disjoint_tensor(
+    %tensor0: tensor<?x?xf32>, %tensor1: tensor<?x?xf32>,
+    %tensor2: tensor<?x?xf32>, %tensor3: tensor<?x?xf32>,
+    %val: index, %lb : index, %ub : index, %step: index,
+    %random_index : index) ->
+    (tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>) {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %c3 = constant 3 : index
+  %cst = constant 0.0 : f32
+
+// VECTOR_TRANSFERS: vector.transfer_read %[[TENSOR2]]{{.*}} : tensor<?x?xf32>, vector<3xf32>
+// VECTOR_TRANSFERS: vector.transfer_read %[[TENSOR2]]{{.*}} : tensor<?x?xf32>, vector<3xf32>
+// VECTOR_TRANSFERS: vector.transfer_read %[[TENSOR3]]{{.*}} : tensor<?x?xf32>, vector<4xf32>
+// VECTOR_TRANSFERS: vector.transfer_read %[[TENSOR3]]{{.*}} : tensor<?x?xf32>, vector<4xf32>
+// VECTOR_TRANSFERS: %[[R:.*]]:8 = scf.for {{.*}} iter_args({{.*}}) ->
+// VECTOR_TRANSFERS-SAME: (tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, vector<3xf32>, vector<3xf32>, vector<4xf32>, vector<4xf32>) {
+// VECTOR_TRANSFERS:   scf.for {{.*}} iter_args({{.*}}) ->
+// VECTOR_TRANSFERS-SAME: (tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, vector<3xf32>, vector<3xf32>, vector<4xf32>, vector<4xf32>) {
+// VECTOR_TRANSFERS:     vector.transfer_read %[[TENSOR1]]{{.*}} : tensor<?x?xf32>, vector<2xf32>
+// VECTOR_TRANSFERS:     vector.transfer_read %[[TENSOR1]]{{.*}} : tensor<?x?xf32>, vector<2xf32>
+// VECTOR_TRANSFERS:     "some_use"(%{{.*}}) : (vector<2xf32>) -> vector<2xf32>
+// VECTOR_TRANSFERS:     "some_use"(%{{.*}}) : (vector<2xf32>) -> vector<2xf32>
+// VECTOR_TRANSFERS:     "some_use"(%{{.*}}) : (vector<3xf32>) -> vector<3xf32>
+// VECTOR_TRANSFERS:     "some_use"(%{{.*}}) : (vector<3xf32>) -> vector<3xf32>
+// VECTOR_TRANSFERS:     "some_use"(%{{.*}}) : (vector<4xf32>) -> vector<4xf32>
+// VECTOR_TRANSFERS:     "some_use"(%{{.*}}) : (vector<4xf32>) -> vector<4xf32>
+// VECTOR_TRANSFERS:     "some_use"(%{{.*}}) : (vector<2xf32>) -> vector<2xf32>
+// VECTOR_TRANSFERS:     "some_use"(%{{.*}}) : (vector<2xf32>) -> vector<2xf32>
+// VECTOR_TRANSFERS:     vector.transfer_write %{{.*}}, %{{.*}}{{.*}} : vector<2xf32>, tensor<?x?xf32>
+// VECTOR_TRANSFERS:     vector.transfer_write %{{.*}}, %{{.*}}{{.*}} : vector<2xf32>, tensor<?x?xf32>
+// VECTOR_TRANSFERS:     scf.yield {{.*}} :
+// VECTOR_TRANSFERS-SAME: tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, vector<3xf32>, vector<3xf32>, vector<4xf32>, vector<4xf32>
+// VECTOR_TRANSFERS:   }
+// VECTOR_TRANSFERS:   scf.yield {{.*}} :
+// VECTOR_TRANSFERS-SAME: tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, vector<3xf32>, vector<3xf32>, vector<4xf32>, vector<4xf32>
+// VECTOR_TRANSFERS: }
+// VECTOR_TRANSFERS: %[[TENSOR4:.*]] = vector.transfer_write %{{.*}}, %[[R]]#3{{.*}} : vector<4xf32>, tensor<?x?xf32>
+// VECTOR_TRANSFERS: vector.transfer_write %{{.*}}, %[[TENSOR4]]{{.*}} : vector<4xf32>, tensor<?x?xf32>
+// VECTOR_TRANSFERS: %[[TENSOR5:.*]] = vector.transfer_write %{{.*}}, %[[R]]#2{{.*}} : vector<3xf32>, tensor<?x?xf32>
+// VECTOR_TRANSFERS: vector.transfer_write %{{.*}}, %[[TENSOR5]]{{.*}} : vector<3xf32>, tensor<?x?xf32>
+  %0:4 = scf.for %i = %lb to %ub step %step
+  iter_args(%arg0 = %tensor0, %arg1 = %tensor1, %arg2 = %tensor2,
+            %arg3 = %tensor3)
+  -> (tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>) {
+    %1:4 = scf.for %j = %lb to %ub step %step
+    iter_args(%arg4 = %arg0, %arg5 = %arg1, %arg6 = %arg2,
+              %arg7 = %arg3)
+    -> (tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>) {
+      %r00 = vector.transfer_read %arg5[%c0, %c0], %cst: tensor<?x?xf32>, vector<2xf32>
+      %r01 = vector.transfer_read %arg5[%c0, %c1], %cst: tensor<?x?xf32>, vector<2xf32>
+      %r20 = vector.transfer_read %arg6[%c0, %c0], %cst: tensor<?x?xf32>, vector<3xf32>
+      %r21 = vector.transfer_read %arg6[%c0, %c3], %cst: tensor<?x?xf32>, vector<3xf32>
+      %r30 = vector.transfer_read %arg7[%c0, %random_index], %cst: tensor<?x?xf32>, vector<4xf32>
+      %r31 = vector.transfer_read %arg7[%c1, %random_index], %cst: tensor<?x?xf32>, vector<4xf32>
+      %r10 = vector.transfer_read %arg4[%i, %i], %cst: tensor<?x?xf32>, vector<2xf32>
+      %r11 = vector.transfer_read %arg4[%random_index, %random_index], %cst: tensor<?x?xf32>, vector<2xf32>
+      %u00 = "some_use"(%r00) : (vector<2xf32>) -> vector<2xf32>
+      %u01 = "some_use"(%r01) : (vector<2xf32>) -> vector<2xf32>
+      %u20 = "some_use"(%r20) : (vector<3xf32>) -> vector<3xf32>
+      %u21 = "some_use"(%r21) : (vector<3xf32>) -> vector<3xf32>
+      %u30 = "some_use"(%r30) : (vector<4xf32>) -> vector<4xf32>
+      %u31 = "some_use"(%r31) : (vector<4xf32>) -> vector<4xf32>
+      %u10 = "some_use"(%r10) : (vector<2xf32>) -> vector<2xf32>
+      %u11 = "some_use"(%r11) : (vector<2xf32>) -> vector<2xf32>
+      %w10 = vector.transfer_write %u00, %arg5[%c0, %c0] : vector<2xf32>, tensor<?x?xf32>
+      %w11 = vector.transfer_write %u01, %w10[%c0, %c1] : vector<2xf32>, tensor<?x?xf32>
+      %w20 = vector.transfer_write %u20, %arg6[%c0, %c0] : vector<3xf32>, tensor<?x?xf32>
+      %w21 = vector.transfer_write %u21, %w20[%c0, %c3] : vector<3xf32>, tensor<?x?xf32>
+      %w30 = vector.transfer_write %u30, %arg7[%c0, %random_index] : vector<4xf32>, tensor<?x?xf32>
+      %w31 = vector.transfer_write %u31, %w30[%c1, %random_index] : vector<4xf32>, tensor<?x?xf32>
+      %w00 = vector.transfer_write %u10, %arg4[%i, %i] : vector<2xf32>, tensor<?x?xf32>
+      %w01 = vector.transfer_write %u11, %w00[%random_index, %random_index] : vector<2xf32>, tensor<?x?xf32>
+      scf.yield %w01, %w11, %w21, %w31 : tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>
+    }
+    scf.yield %1#0,  %1#1, %1#2, %1#3 : tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>
+  }
+  return %0#0,  %0#1, %0#2, %0#3 : tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>
+}

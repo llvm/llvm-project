@@ -58,7 +58,7 @@ static void emitNamedConstraint(const T &it, raw_ostream &os) {
     os << "`" << it.name << "`";
   else
     os << "&laquo;unnamed&raquo;";
-  os << " | " << it.constraint.getDescription() << "\n";
+  os << " | " << it.constraint.getSummary() << "\n";
 }
 
 //===----------------------------------------------------------------------===//
@@ -106,7 +106,7 @@ static void emitOpDoc(Operator op, raw_ostream &os) {
     for (const auto &it : op.getAttributes()) {
       StringRef storageType = it.attr.getStorageType();
       os << "`" << it.name << "` | " << storageType << " | "
-         << it.attr.getDescription() << "\n";
+         << it.attr.getSummary() << "\n";
     }
   }
 
@@ -153,8 +153,8 @@ static void emitOpDoc(const RecordKeeper &recordKeeper, raw_ostream &os) {
 //===----------------------------------------------------------------------===//
 
 static void emitTypeDoc(const Type &type, raw_ostream &os) {
-  os << "### " << type.getDescription() << "\n";
-  emitDescription(type.getTypeDescription(), os);
+  os << "### " << type.getSummary() << "\n";
+  emitDescription(type.getDescription(), os);
   os << "\n";
 }
 
@@ -198,12 +198,12 @@ static void emitTypeDefDoc(TypeDef td, raw_ostream &os) {
   // Emit attribute documentation.
   SmallVector<TypeParameter, 4> parameters;
   td.getParameters(parameters);
-  if (parameters.size() != 0) {
+  if (!parameters.empty()) {
     os << "\n#### Type parameters:\n\n";
     os << "| Parameter | C++ type | Description |\n"
        << "| :-------: | :-------: | ----------- |\n";
     for (const auto &it : parameters) {
-      auto desc = it.getDescription();
+      auto desc = it.getSummary();
       os << "| " << it.getName() << " | `" << td.getCppClassName() << "` | "
          << (desc ? *desc : "") << " |\n";
     }

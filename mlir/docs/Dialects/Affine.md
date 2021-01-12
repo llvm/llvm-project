@@ -124,19 +124,19 @@ one-dimensional affine expressions, with the entire list enclosed in
 parentheses.
 
 **Context:** An affine function, informally, is a linear function plus a
-constant. More formally, a function f defined on a vector $$\vec{v} \in
-\mathbb{Z}^n$$ is a multidimensional affine function of $$\vec{v}$$ if
-$$f(\vec{v})$$ can be expressed in the form $$M \vec{v} + \vec{c}$$ where $$M$$
-is a constant matrix from $$\mathbb{Z}^{m \times n}$$ and $$\vec{c}$$ is a
-constant vector from $$\mathbb{Z}$$. $$m$$ is the dimensionality of such an
+constant. More formally, a function f defined on a vector $\vec{v} \in
+\mathbb{Z}^n$ is a multidimensional affine function of $\vec{v}$ if
+$f(\vec{v})$ can be expressed in the form $M \vec{v} + \vec{c}$ where $M$
+is a constant matrix from $\mathbb{Z}^{m \times n}$ and $\vec{c}$ is a
+constant vector from $\mathbb{Z}$. $m$ is the dimensionality of such an
 affine function. MLIR further extends the definition of an affine function to
 allow 'floordiv', 'ceildiv', and 'mod' with respect to positive integer
 constants. Such extensions to affine functions have often been referred to as
 quasi-affine functions by the polyhedral compiler community. MLIR uses the term
 'affine map' to refer to these multidimensional quasi-affine functions. As
-examples, $$(i+j+1, j)$$, $$(i \mod 2, j+i)$$, $$(j, i/4, i \mod 4)$$, $$(2i+1,
-j)$$ are two-dimensional affine functions of $$(i, j)$$, but $$(i \cdot j,
-i^2)$$, $$(i \mod j, i/j)$$ are not affine functions of $$(i, j)$$.
+examples, $(i+j+1, j)$, $(i \mod 2, j+i)$, $(j, i/4, i \mod 4)$, $(2i+1,
+j)$ are two-dimensional affine functions of $(i, j)$, but $(i \cdot j,
+i^2)$, $(i \mod j, i/j)$ are not affine functions of $(i, j)$.
 
 ### Affine Maps
 

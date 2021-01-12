@@ -13,53 +13,19 @@
 
 #include "SIInstrInfo.h"
 #include "AMDGPU.h"
+#include "AMDGPUInstrInfo.h"
 #include "AMDGPUSubtarget.h"
 #include "GCNHazardRecognizer.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "SIDefines.h"
 #include "SIMachineFunctionInfo.h"
-#include "SIRegisterInfo.h"
-#include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/ADT/APInt.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/iterator_range.h"
-#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/LiveVariables.h"
-#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
-#include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineInstrBundle.h"
-#include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
-#include "llvm/CodeGen/SelectionDAGNodes.h"
-#include "llvm/CodeGen/TargetOpcodes.h"
-#include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/InlineAsm.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/MC/MCInstrDesc.h"
-#include "llvm/Support/Casting.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MachineValueType.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
-#include <cassert>
-#include <cstdint>
-#include <iterator>
-#include <utility>
 
 using namespace llvm;
 
@@ -421,7 +387,7 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
   }
 
   if (isFLAT(LdSt)) {
-    // Instructions have either vaddr or saddr or both.
+    // Instructions have either vaddr or saddr or both or none.
     BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
     if (BaseOp)
       BaseOps.push_back(BaseOp);
@@ -477,11 +443,15 @@ bool SIInstrInfo::shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
                                       unsigned NumBytes) const {
   // If the mem ops (to be clustered) do not have the same base ptr, then they
   // should not be clustered
-  assert(!BaseOps1.empty() && !BaseOps2.empty());
-  const MachineInstr &FirstLdSt = *BaseOps1.front()->getParent();
-  const MachineInstr &SecondLdSt = *BaseOps2.front()->getParent();
-  if (!memOpsHaveSameBasePtr(FirstLdSt, BaseOps1, SecondLdSt, BaseOps2))
+  if (!BaseOps1.empty() && !BaseOps2.empty()) {
+    const MachineInstr &FirstLdSt = *BaseOps1.front()->getParent();
+    const MachineInstr &SecondLdSt = *BaseOps2.front()->getParent();
+    if (!memOpsHaveSameBasePtr(FirstLdSt, BaseOps1, SecondLdSt, BaseOps2))
+      return false;
+  } else if (!BaseOps1.empty() || !BaseOps2.empty()) {
+    // If only one base op is empty, they do not have the same base ptr
     return false;
+  }
 
   // In order to avoid regester pressure, on an average, the number of DWORDS
   // loaded together by all clustered mem ops should not exceed 8. This is an

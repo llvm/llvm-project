@@ -19,6 +19,7 @@ Sections:
     Type:    SHT_GROUP
     Link:    0x1
     Info:    0x2
+    EntSize: [[ENTSIZE=<none>]]
     Size:    [[SIZE=<none>]]
     Content: [[CONTENT=<none>]]
     Members: [[MEMBERS=<none>]]
@@ -68,10 +69,19 @@ Sections:
 # MEMBERS-ERR: error: "Members" cannot be used with "Content" or "Size"
 
 ## Check we create an empty section when none of "Size", "Content" or "Members" are specified.
+## Check that the default value of sh_entsize is 4.
 
 # RUN: yaml2obj %s -o %t.empty.o
 # RUN: llvm-readelf --sections --section-data %t.empty.o | \
 # RUN:   FileCheck %s --check-prefix=EMPTY-SEC
 
-# EMPTY-SEC: [Nr] Name   Type  Address          Off    Size
-# EMPTY-SEC: [ 1] .group GROUP 0000000000000000 000040 000000
+# EMPTY-SEC: [Nr] Name   Type  Address          Off    Size   ES Flg
+# EMPTY-SEC: [ 1] .group GROUP 0000000000000000 000040 000000 04 1
+
+## Check that we are able to set an arbitrary entry size for the group section.
+
+# RUN: yaml2obj %s -DENTSIZE=0xFE -o %t.entsize.o
+# RUN: llvm-readelf --sections %t.entsize.o | FileCheck %s --check-prefix=ENTSIZE
+
+# ENTSIZE: [Nr] Name   Type  Address          Off    Size   ES Flg
+# ENTSIZE: [ 1] .group GROUP 0000000000000000 000040 000000 fe 1

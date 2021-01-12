@@ -25,6 +25,7 @@ public:
   class Category {
   public:
     explicit Category(const char *category_name);
+    llvm::StringRef GetName() { return m_name; }
 
   private:
     friend class Timer;

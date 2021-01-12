@@ -22,11 +22,6 @@
 namespace clang {
 namespace clangd {
 
-// FIXME: Deleted symbols in dirty files are still returned (from Static).
-//        To identify these eliminate these, we should:
-//          - find the generating file from each Symbol which is Static-only
-//          - ask Dynamic if it has that file (needs new SymbolIndex method)
-//          - if so, drop the Symbol.
 bool MergedIndex::fuzzyFind(
     const FuzzyFindRequest &Req,
     llvm::function_ref<void(const Symbol &)> Callback) const {
@@ -49,7 +44,13 @@ bool MergedIndex::fuzzyFind(
   SymbolSlab Dyn = std::move(DynB).build();
 
   llvm::DenseSet<SymbolID> SeenDynamicSymbols;
+  auto DynamicContainsFile = Dynamic->indexedFiles();
   More |= Static->fuzzyFind(Req, [&](const Symbol &S) {
+    // We expect the definition to see the canonical declaration, so it seems
+    // to be enough to check only the definition if it exists.
+    if (DynamicContainsFile(S.Definition ? S.Definition.FileURI
+                                         : S.CanonicalDeclaration.FileURI))
+      return;
     auto DynS = Dyn.find(S.ID);
     ++StaticCount;
     if (DynS == Dyn.end())
@@ -163,7 +164,7 @@ void MergedIndex::relations(
 
 // Returns true if \p L is (strictly) preferred to \p R (e.g. by file paths). If
 // neither is preferred, this returns false.
-bool prefer(const SymbolLocation &L, const SymbolLocation &R) {
+static bool prefer(const SymbolLocation &L, const SymbolLocation &R) {
   if (!L)
     return false;
   if (!R)

@@ -10,7 +10,6 @@
 #define LLVM_LIB_TARGET_AMDGPU_R600FRAMELOWERING_H
 
 #include "AMDGPUFrameLowering.h"
-#include "llvm/Support/TypeSize.h"
 
 namespace llvm {
 

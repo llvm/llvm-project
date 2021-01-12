@@ -4,6 +4,6 @@
 ! REQUIRES: new-flang-driver
 
 ! CHECK: IF statement is not allowed in IF statement
-! CHECK: semantic errors in {{.*}}syntax-only.f90
+! CHECK: Semantic errors in {{.*}}syntax-only.f90
 IF (A > 0.0) IF (B < 0.0) A = LOG (A)
 END

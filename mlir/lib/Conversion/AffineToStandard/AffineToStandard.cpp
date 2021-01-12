@@ -334,7 +334,7 @@ public:
 
   LogicalResult matchAndRewrite(AffineYieldOp op,
                                 PatternRewriter &rewriter) const override {
-    if (isa<scf::ParallelOp>(op.getParentOp())) {
+    if (isa<scf::ParallelOp>(op->getParentOp())) {
       // scf.parallel does not yield any values via its terminator scf.yield but
       // models reductions differently using additional ops in its region.
       rewriter.replaceOpWithNewOp<scf::YieldOp>(op);

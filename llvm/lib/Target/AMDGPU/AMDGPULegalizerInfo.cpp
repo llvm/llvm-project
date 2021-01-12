@@ -15,21 +15,17 @@
 
 #include "AMDGPU.h"
 #include "AMDGPUGlobalISelUtils.h"
+#include "AMDGPUInstrInfo.h"
 #include "AMDGPUTargetMachine.h"
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
-#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
-#include "llvm/CodeGen/TargetOpcodes.h"
-#include "llvm/CodeGen/ValueTypes.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/Type.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 
 #define DEBUG_TYPE "amdgpu-legalinfo"
 
@@ -3055,22 +3051,14 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
   Register Res = MI.getOperand(0).getReg();
   Register LHS = MI.getOperand(1).getReg();
   Register RHS = MI.getOperand(2).getReg();
-
   uint16_t Flags = MI.getFlags();
-
   LLT ResTy = MRI.getType(Res);
-  LLT S32 = LLT::scalar(32);
-  LLT S64 = LLT::scalar(64);
 
   const MachineFunction &MF = B.getMF();
-  bool Unsafe =
-    MF.getTarget().Options.UnsafeFPMath || MI.getFlag(MachineInstr::FmArcp);
+  bool AllowInaccurateRcp = MF.getTarget().Options.UnsafeFPMath ||
+                            MI.getFlag(MachineInstr::FmAfn);
 
-  if (!MF.getTarget().Options.UnsafeFPMath && ResTy == S64)
-    return false;
-
-  if (!Unsafe && ResTy == S32 &&
-      MF.getInfo<SIMachineFunctionInfo>()->getMode().allFP32Denormals())
+  if (!AllowInaccurateRcp)
     return false;
 
   if (auto CLHS = getConstantFPVRegVal(LHS, MRI)) {
@@ -3097,17 +3085,13 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
   }
 
   // x / y -> x * (1.0 / y)
-  if (Unsafe) {
-    auto RCP = B.buildIntrinsic(Intrinsic::amdgcn_rcp, {ResTy}, false)
-      .addUse(RHS)
-      .setMIFlags(Flags);
-    B.buildFMul(Res, LHS, RCP, Flags);
+  auto RCP = B.buildIntrinsic(Intrinsic::amdgcn_rcp, {ResTy}, false)
+    .addUse(RHS)
+    .setMIFlags(Flags);
+  B.buildFMul(Res, LHS, RCP, Flags);
 
-    MI.eraseFromParent();
-    return true;
-  }
-
-  return false;
+  MI.eraseFromParent();
+  return true;
 }
 
 bool AMDGPULegalizerInfo::legalizeFDIV16(MachineInstr &MI,

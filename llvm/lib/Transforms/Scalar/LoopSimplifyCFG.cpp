@@ -414,9 +414,10 @@ private:
           FixLCSSALoop = FixLCSSALoop->getParentLoop();
         assert(FixLCSSALoop && "Should be a loop!");
         // We need all DT updates to be done before forming LCSSA.
-        DTU.applyUpdates(DTUpdates);
         if (MSSAU)
-          MSSAU->applyUpdates(DTUpdates, DT);
+          MSSAU->applyUpdates(DTUpdates, DT, /*UpdateDT=*/true);
+        else
+          DTU.applyUpdates(DTUpdates);
         DTUpdates.clear();
         formLCSSARecursively(*FixLCSSALoop, DT, &LI, &SE);
       }
@@ -424,8 +425,7 @@ private:
 
     if (MSSAU) {
       // Clear all updates now. Facilitates deletes that follow.
-      DTU.applyUpdates(DTUpdates);
-      MSSAU->applyUpdates(DTUpdates, DT);
+      MSSAU->applyUpdates(DTUpdates, DT, /*UpdateDT=*/true);
       DTUpdates.clear();
       if (VerifyMemorySSA)
         MSSAU->getMemorySSA()->verifyMemorySSA();

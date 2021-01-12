@@ -32,10 +32,10 @@ define i16 @test_true_and_false_branch_equal() {
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[PRED_SREM_IF:%.*]], label [[PRED_SREM_CONTINUE:%.*]]
 ; CHECK:       pred.srem.if:
 ; CHECK-NEXT:    [[TMP7:%.*]] = srem i16 5786, [[TMP2]]
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i16> undef, i16 [[TMP7]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i16> poison, i16 [[TMP7]], i32 0
 ; CHECK-NEXT:    br label [[PRED_SREM_CONTINUE]]
 ; CHECK:       pred.srem.continue:
-; CHECK-NEXT:    [[TMP9:%.*]] = phi <2 x i16> [ undef, [[VECTOR_BODY]] ], [ [[TMP8]], [[PRED_SREM_IF]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = phi <2 x i16> [ poison, [[VECTOR_BODY]] ], [ [[TMP8]], [[PRED_SREM_IF]] ]
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP5]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[PRED_SREM_IF3:%.*]], label [[PRED_SREM_CONTINUE4]]
 ; CHECK:       pred.srem.if3:

@@ -49,27 +49,28 @@ Sema::PragmaStackSentinelRAII::~PragmaStackSentinelRAII() {
 
 void Sema::AddAlignmentAttributesForRecord(RecordDecl *RD) {
   // If there is no pack value, we don't need any attributes.
-  if (!PackStack.CurrentValue)
+  if (!AlignPackStack.CurrentValue)
     return;
 
   // Otherwise, check to see if we need a max field alignment attribute.
-  if (unsigned Alignment = PackStack.CurrentValue) {
+  if (unsigned Alignment = AlignPackStack.CurrentValue) {
     if (Alignment == Sema::kMac68kAlignmentSentinel)
       RD->addAttr(AlignMac68kAttr::CreateImplicit(Context));
     else
       RD->addAttr(MaxFieldAlignmentAttr::CreateImplicit(Context,
                                                         Alignment * 8));
   }
-  if (PackIncludeStack.empty())
+  if (AlignPackIncludeStack.empty())
     return;
-  // The #pragma pack affected a record in an included file,  so Clang should
-  // warn when that pragma was written in a file that included the included
-  // file.
-  for (auto &PackedInclude : llvm::reverse(PackIncludeStack)) {
-    if (PackedInclude.CurrentPragmaLocation != PackStack.CurrentPragmaLocation)
+  // The #pragma align/pack affected a record in an included file, so Clang
+  // should warn when that the pragma was written in a file that included the
+  // included file.
+  for (auto &AlignPackedInclude : llvm::reverse(AlignPackIncludeStack)) {
+    if (AlignPackedInclude.CurrentPragmaLocation !=
+        AlignPackStack.CurrentPragmaLocation)
       break;
-    if (PackedInclude.HasNonDefaultValue)
-      PackedInclude.ShouldWarnOnInclude = true;
+    if (AlignPackedInclude.HasNonDefaultValue)
+      AlignPackedInclude.ShouldWarnOnInclude = true;
   }
 }
 
@@ -238,8 +239,8 @@ void Sema::ActOnPragmaOptionsAlign(PragmaOptionsAlignKind Kind,
     // Reset just pops the top of the stack, or resets the current alignment to
     // default.
     Action = Sema::PSK_Pop;
-    if (PackStack.Stack.empty()) {
-      if (PackStack.CurrentValue) {
+    if (AlignPackStack.Stack.empty()) {
+      if (AlignPackStack.CurrentValue) {
         Action = Sema::PSK_Reset;
       } else {
         Diag(PragmaLoc, diag::warn_pragma_options_align_reset_failed)
@@ -250,7 +251,7 @@ void Sema::ActOnPragmaOptionsAlign(PragmaOptionsAlignKind Kind,
     break;
   }
 
-  PackStack.Act(PragmaLoc, Action, StringRef(), Alignment);
+  AlignPackStack.Act(PragmaLoc, Action, StringRef(), Alignment);
 }
 
 void Sema::ActOnPragmaClangSection(SourceLocation PragmaLoc, PragmaClangSectionAction Action,
@@ -317,7 +318,7 @@ void Sema::ActOnPragmaPack(SourceLocation PragmaLoc, PragmaMsStackAction Action,
     // Show the current alignment, making sure to show the right value
     // for the default.
     // FIXME: This should come from the target.
-    AlignmentVal = PackStack.CurrentValue;
+    AlignmentVal = AlignPackStack.CurrentValue;
     if (AlignmentVal == 0)
       AlignmentVal = 8;
     if (AlignmentVal == Sema::kMac68kAlignmentSentinel)
@@ -330,61 +331,72 @@ void Sema::ActOnPragmaPack(SourceLocation PragmaLoc, PragmaMsStackAction Action,
   if (Action & Sema::PSK_Pop) {
     if (Alignment && !SlotLabel.empty())
       Diag(PragmaLoc, diag::warn_pragma_pack_pop_identifier_and_alignment);
-    if (PackStack.Stack.empty())
+    if (AlignPackStack.Stack.empty())
       Diag(PragmaLoc, diag::warn_pragma_pop_failed) << "pack" << "stack empty";
   }
 
-  PackStack.Act(PragmaLoc, Action, SlotLabel, AlignmentVal);
+  AlignPackStack.Act(PragmaLoc, Action, SlotLabel, AlignmentVal);
 }
 
-void Sema::DiagnoseNonDefaultPragmaPack(PragmaPackDiagnoseKind Kind,
-                                        SourceLocation IncludeLoc) {
-  if (Kind == PragmaPackDiagnoseKind::NonDefaultStateAtInclude) {
-    SourceLocation PrevLocation = PackStack.CurrentPragmaLocation;
+void Sema::DiagnoseNonDefaultPragmaAlignPack(PragmaAlignPackDiagnoseKind Kind,
+                                             SourceLocation IncludeLoc) {
+  if (Kind == PragmaAlignPackDiagnoseKind::NonDefaultStateAtInclude) {
+    SourceLocation PrevLocation = AlignPackStack.CurrentPragmaLocation;
     // Warn about non-default alignment at #includes (without redundant
     // warnings for the same directive in nested includes).
     // The warning is delayed until the end of the file to avoid warnings
     // for files that don't have any records that are affected by the modified
     // alignment.
     bool HasNonDefaultValue =
-        PackStack.hasValue() &&
-        (PackIncludeStack.empty() ||
-         PackIncludeStack.back().CurrentPragmaLocation != PrevLocation);
-    PackIncludeStack.push_back(
-        {PackStack.CurrentValue,
-         PackStack.hasValue() ? PrevLocation : SourceLocation(),
+        AlignPackStack.hasValue() &&
+        (AlignPackIncludeStack.empty() ||
+         AlignPackIncludeStack.back().CurrentPragmaLocation != PrevLocation);
+    AlignPackIncludeStack.push_back(
+        {AlignPackStack.CurrentValue,
+         AlignPackStack.hasValue() ? PrevLocation : SourceLocation(),
          HasNonDefaultValue, /*ShouldWarnOnInclude*/ false});
     return;
   }
 
-  assert(Kind == PragmaPackDiagnoseKind::ChangedStateAtExit && "invalid kind");
-  PackIncludeState PrevPackState = PackIncludeStack.pop_back_val();
-  if (PrevPackState.ShouldWarnOnInclude) {
+  assert(Kind == PragmaAlignPackDiagnoseKind::ChangedStateAtExit &&
+         "invalid kind");
+  AlignPackIncludeState PrevAlignPackState =
+      AlignPackIncludeStack.pop_back_val();
+  // FIXME: AlignPackStack may contain both #pragma align and #pragma pack
+  // information, diagnostics below might not be accurate if we have mixed
+  // pragmas.
+  if (PrevAlignPackState.ShouldWarnOnInclude) {
     // Emit the delayed non-default alignment at #include warning.
     Diag(IncludeLoc, diag::warn_pragma_pack_non_default_at_include);
-    Diag(PrevPackState.CurrentPragmaLocation, diag::note_pragma_pack_here);
+    Diag(PrevAlignPackState.CurrentPragmaLocation, diag::note_pragma_pack_here);
   }
   // Warn about modified alignment after #includes.
-  if (PrevPackState.CurrentValue != PackStack.CurrentValue) {
+  if (PrevAlignPackState.CurrentValue != AlignPackStack.CurrentValue) {
     Diag(IncludeLoc, diag::warn_pragma_pack_modified_after_include);
-    Diag(PackStack.CurrentPragmaLocation, diag::note_pragma_pack_here);
+    Diag(AlignPackStack.CurrentPragmaLocation, diag::note_pragma_pack_here);
   }
 }
 
-void Sema::DiagnoseUnterminatedPragmaPack() {
-  if (PackStack.Stack.empty())
+void Sema::DiagnoseUnterminatedPragmaAlignPack() {
+  if (AlignPackStack.Stack.empty())
     return;
   bool IsInnermost = true;
-  for (const auto &StackSlot : llvm::reverse(PackStack.Stack)) {
+
+  // FIXME: AlignPackStack may contain both #pragma align and #pragma pack
+  // information, diagnostics below might not be accurate if we have mixed
+  // pragmas.
+  for (const auto &StackSlot : llvm::reverse(AlignPackStack.Stack)) {
     Diag(StackSlot.PragmaPushLocation, diag::warn_pragma_pack_no_pop_eof);
     // The user might have already reset the alignment, so suggest replacing
     // the reset with a pop.
-    if (IsInnermost && PackStack.CurrentValue == PackStack.DefaultValue) {
-      auto DB = Diag(PackStack.CurrentPragmaLocation,
+    if (IsInnermost &&
+        AlignPackStack.CurrentValue == AlignPackStack.DefaultValue) {
+      auto DB = Diag(AlignPackStack.CurrentPragmaLocation,
                      diag::note_pragma_pack_pop_instead_reset);
-      SourceLocation FixItLoc = Lexer::findLocationAfterToken(
-          PackStack.CurrentPragmaLocation, tok::l_paren, SourceMgr, LangOpts,
-          /*SkipTrailing=*/false);
+      SourceLocation FixItLoc =
+          Lexer::findLocationAfterToken(AlignPackStack.CurrentPragmaLocation,
+                                        tok::l_paren, SourceMgr, LangOpts,
+                                        /*SkipTrailing=*/false);
       if (FixItLoc.isValid())
         DB << FixItHint::CreateInsertion(FixItLoc, "pop");
     }

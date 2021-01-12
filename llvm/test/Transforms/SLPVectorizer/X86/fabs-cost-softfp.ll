@@ -11,7 +11,7 @@ target triple = "i686-unknown-linux-gnu"
 define void @vectorize_fp128(fp128 %c, fp128 %d) #0 {
 ; CHECK-LABEL: @vectorize_fp128(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x fp128> undef, fp128 [[C:%.*]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x fp128> poison, fp128 [[C:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x fp128> [[TMP0]], fp128 [[D:%.*]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x fp128> @llvm.fabs.v2f128(<2 x fp128> [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp oeq <2 x fp128> [[TMP2]], <fp128 0xL00000000000000007FFF000000000000, fp128 0xL00000000000000007FFF000000000000>

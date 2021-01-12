@@ -6,7 +6,7 @@
 ; warning when performing cost analysis.
 
 ; If this check fails please read test/CodeGen/AArch64/README for instructions on how to resolve it.
-; WARN-NOT: warning: {{.*}}TypeSize is not scalable
+; WARN-NOT: warning:
 
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %retval = getelementptr
 define <vscale x 16 x i8>* @gep_scalable_vector(<vscale x 16 x i8>* %ptr) {

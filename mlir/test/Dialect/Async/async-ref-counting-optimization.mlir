@@ -87,7 +87,7 @@ func @not_cancellable_operations_0(%arg0: !async.token, %arg1: i1) {
 // CHECK-LABEL: @not_cancellable_operations_1
 func @not_cancellable_operations_1(%arg0: !async.token, %arg1: i1) {
   // Same reason as above, although `async.execute` is inside the nested
-  // region or "regular" opeation.
+  // region or "regular" operation.
   //
   // NOTE: This test is not correct w.r.t. reference counting, and at runtime
   // would leak %arg0 value if %arg1 is false. IR like this will not be

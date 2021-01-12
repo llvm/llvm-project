@@ -113,7 +113,7 @@ static llvm::hash_code mlir::test::hash_value(const FieldInfo &fi) { // NOLINT
 
 // Example type validity checker.
 LogicalResult TestIntegerType::verifyConstructionInvariants(
-    Location loc, TestIntegerType::SignednessSemantics ss, unsigned int width) {
+    Location loc, unsigned width, TestIntegerType::SignednessSemantics ss) {
   if (width > 8)
     return failure();
   return success();

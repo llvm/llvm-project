@@ -1,30 +1,19 @@
 ## Checks that the tool is able to read section groups from ELF.
 
-# RUN: yaml2obj --docnum=1 %s -o %t1.o
-# RUN: llvm-readobj --elf-section-groups %t1.o | FileCheck %s -check-prefix=OBJ
-# RUN: obj2yaml %t1.o | FileCheck %s --check-prefix YAML
+## Check how groups sections are dumped.
+## Check we don't dump the "EntSize" key when sh_entsize == 4.
 
-# OBJ:      Groups {
-# OBJ-NEXT:   Group {
-# OBJ-NEXT:     Name: .group
-# OBJ-NEXT:     Index: 1
-# OBJ-NEXT:     Link: 3
-# OBJ-NEXT:     Info: 1
-# OBJ-NEXT:     Type: COMDAT (0x1)
-# OBJ-NEXT:     Signature: signature
-# OBJ-NEXT:     Section(s) in group [
-# OBJ-NEXT:       .rodata (2)
-# OBJ-NEXT:     ]
-# OBJ-NEXT:   }
-# OBJ-NEXT: }
+# RUN: yaml2obj %s -o %t1.o
+# RUN: obj2yaml %t1.o | FileCheck %s -DSEC=.rodata
 
-# YAML: - Name: .group
-# YAML:   Type: SHT_GROUP
-# YAML:   Link: .symtab
-# YAML:   Info: signature
-# YAML:   Members:
-# YAML:     - SectionOrType: GRP_COMDAT
-# YAML:     - SectionOrType: .rodata
+# CHECK:      - Name: .group
+# CHECK-NEXT:   Type: SHT_GROUP
+# CHECK-NEXT:   Link: .symtab
+# CHECK-NEXT:   Info: signature
+# CHECK-NEXT:   Members:
+# CHECK-NEXT:     - SectionOrType: GRP_COMDAT
+# CHECK-NEXT:     - SectionOrType: [[SEC]]
+# CHECK-NEXT: - Name:
 
 --- !ELF
 FileHeader:
@@ -32,13 +21,14 @@ FileHeader:
   Data:  ELFDATA2LSB
   Type:  ET_REL
 Sections:
-  - Name: .group
-    Type: SHT_GROUP
-    Link: .symtab
-    Info: signature
+  - Name:    .group
+    Type:    SHT_GROUP
+    Link:    .symtab
+    Info:    [[INFO=signature]]
+    EntSize: [[ENTSIZE=<none>]]
     Members:
       - SectionOrType: GRP_COMDAT
-      - SectionOrType: .rodata
+      - SectionOrType: [[SEC=.rodata]]
   - Name: .rodata
     Type: SHT_PROGBITS
 Symbols:
@@ -46,24 +36,24 @@ Symbols:
     Type:    STT_OBJECT
     Section: .rodata
 
+## Document that yaml2obj can't dump the SHT_GROUP section when its sh_entsize != 4.
+
+# RUN: yaml2obj %s -DENTSIZE=0xfe -o %t1.entsize.o
+# RUN: not obj2yaml %t1.entsize.o 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t1.entsize.o --check-prefix=ENTSIZE
+
+# ENTSIZE: Error reading file: [[FILE]]: section [index 1] has invalid sh_entsize: expected 4, but got 254
+
+## Check we are able to dump members of the SHT_GROUP section even when
+## one of them has section index 0.
+
+# RUN: yaml2obj -DSEC=0 %s -o %tnull.o
+# RUN: obj2yaml %tnull.o | FileCheck %s -DSEC="''"
+
 ## Check obj2yaml report an error when sh_info field of
 ## group section contains invalid (too large) signature symbol index.
 
-# RUN: yaml2obj --docnum=2 %s -o %t2.o
-# RUN: not obj2yaml %t2.o 2>&1 | FileCheck %s --check-prefix ERR
+# RUN: yaml2obj -DINFO=0xFF %s -o %t2.o
+# RUN: not obj2yaml %t2.o 2>&1 | FileCheck %s -DFILE=%t2.o --check-prefix=ERR
 
---- !ELF
-FileHeader:
-  Class: ELFCLASS64
-  Data:  ELFDATA2LSB
-  Type:  ET_REL
-Sections:
-  - Name: .group
-    Type: SHT_GROUP
-    Link: .symtab
-    Info: 0xFF
-    Members:
-      - SectionOrType: GRP_COMDAT
-Symbols: []
-
-# ERR: Error reading file: {{.*}}2.o: unable to get symbol from section [index 2]: invalid symbol index (255)
+# ERR: Error reading file: [[FILE]]: unable to get symbol from section [index 3]: invalid symbol index (255)

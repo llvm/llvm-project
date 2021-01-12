@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PREGFX10,UNPACKED,PREGFX10-UNPACKED %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx810 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PREGFX10,PACKED,GFX81,PREGFX10-PACKED %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PREGFX10,PACKED,GFX9,PREGFX10-PACKED %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx810 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PREGFX10,PACKED,PREGFX10-PACKED %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PREGFX10,PACKED,PREGFX10-PACKED %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10,PACKED,GFX10-PACKED %s
 
 

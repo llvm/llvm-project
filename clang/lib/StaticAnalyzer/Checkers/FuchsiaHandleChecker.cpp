@@ -20,29 +20,39 @@
 // Art:
 //
 //
-//                              +-+---------v-+         +------------+
-//       acquire_func succeeded |             | Escape  |            |
-//            +----------------->  Allocated  +--------->  Escaped   <--+
-//            |                 |             |         |            |  |
-//            |                 +-----+------++         +------------+  |
-//            |                       |      |                          |
-//            |         release_func  |      +--+                       |
-//            |                       |         | handle  +--------+    |
-//            |                       |         | dies    |        |    |
-//            |                  +----v-----+   +---------> Leaked |    |
-//            |                  |          |             |(REPORT)|    |
-// +----------+--+               | Released | Escape      +--------+    |
-// |             |               |          +---------------------------+
-// | Not tracked <--+            +----+---+-+
-// |             |  |                 |   |        As argument by value
-// +------+------+  |    release_func |   +------+ in function call
-//        |         |                 |          | or by reference in
-//        |         |                 |          | use_func call
-//        +---------+            +----v-----+    |     +-----------+
-//        acquire_func failed    | Double   |    +-----> Use after |
-//                               | released |          | released  |
-//                               | (REPORT) |          | (REPORT)  |
-//                               +----------+          +-----------+
+//                                 +-------------+         +------------+
+//          acquire_func succeeded |             | Escape  |            |
+//               +----------------->  Allocated  +--------->  Escaped   <--+
+//               |                 |             |         |            |  |
+//               |                 +-----+------++         +------------+  |
+//               |                       |      |                          |
+// acquire_func  |         release_func  |      +--+                       |
+//    failed     |                       |         | handle  +--------+    |
+// +---------+   |                       |         | dies    |        |    |
+// |         |   |                  +----v-----+   +---------> Leaked |    |
+// |         |   |                  |          |             |(REPORT)|    |
+// |  +----------+--+               | Released | Escape      +--------+    |
+// |  |             |               |          +---------------------------+
+// +--> Not tracked |               +----+---+-+
+//    |             |                    |   |        As argument by value
+//    +----------+--+       release_func |   +------+ in function call
+//               |                       |          | or by reference in
+//               |                       |          | use_func call
+//    unowned    |                  +----v-----+    |     +-----------+
+//  acquire_func |                  | Double   |    +-----> Use after |
+//   succeeded   |                  | released |          | released  |
+//               |                  | (REPORT) |          | (REPORT)  |
+//        +---------------+         +----------+          +-----------+
+//        | Allocated     |
+//        | Unowned       |  release_func
+//        |               +---------+
+//        +---------------+         |
+//                                  |
+//                            +-----v----------+
+//                            | Release of     |
+//                            | unowned handle |
+//                            | (REPORT)       |
+//                            +----------------+
 //
 // acquire_func represents the functions or syscalls that may acquire a handle.
 // release_func represents the functions or syscalls that may release a handle.
@@ -102,7 +112,7 @@ static const StringRef ErrorTypeName = "zx_status_t";
 
 class HandleState {
 private:
-  enum class Kind { MaybeAllocated, Allocated, Released, Escaped } K;
+  enum class Kind { MaybeAllocated, Allocated, Released, Escaped, Unowned } K;
   SymbolRef ErrorSym;
   HandleState(Kind K, SymbolRef ErrorSym) : K(K), ErrorSym(ErrorSym) {}
 
@@ -114,6 +124,7 @@ public:
   bool maybeAllocated() const { return K == Kind::MaybeAllocated; }
   bool isReleased() const { return K == Kind::Released; }
   bool isEscaped() const { return K == Kind::Escaped; }
+  bool isUnowned() const { return K == Kind::Unowned; }
 
   static HandleState getMaybeAllocated(SymbolRef ErrorSym) {
     return HandleState(Kind::MaybeAllocated, ErrorSym);
@@ -130,6 +141,9 @@ public:
   }
   static HandleState getEscaped() {
     return HandleState(Kind::Escaped, nullptr);
+  }
+  static HandleState getUnowned() {
+    return HandleState(Kind::Unowned, nullptr);
   }
 
   SymbolRef getErrorSym() const { return ErrorSym; }
@@ -149,6 +163,7 @@ public:
       CASE(Kind::Allocated)
       CASE(Kind::Released)
       CASE(Kind::Escaped)
+      CASE(Kind::Unowned)
     }
     if (ErrorSym) {
       OS << " ErrorSym: ";
@@ -163,6 +178,11 @@ template <typename Attr> static bool hasFuchsiaAttr(const Decl *D) {
   return D->hasAttr<Attr>() && D->getAttr<Attr>()->getHandleType() == "Fuchsia";
 }
 
+template <typename Attr> static bool hasFuchsiaUnownedAttr(const Decl *D) {
+  return D->hasAttr<Attr>() &&
+         D->getAttr<Attr>()->getHandleType() == "FuchsiaUnowned";
+}
+
 class FuchsiaHandleChecker
     : public Checker<check::PostCall, check::PreCall, check::DeadSymbols,
                      check::PointerEscape, eval::Assume> {
@@ -172,6 +192,8 @@ class FuchsiaHandleChecker
                                "Fuchsia Handle Error"};
   BugType UseAfterReleaseBugType{this, "Fuchsia handle use after release",
                                  "Fuchsia Handle Error"};
+  BugType ReleaseUnownedBugType{
+      this, "Fuchsia handle release of unowned handle", "Fuchsia Handle Error"};
 
 public:
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
@@ -189,6 +211,9 @@ public:
 
   void reportDoubleRelease(SymbolRef HandleSym, const SourceRange &Range,
                            CheckerContext &C) const;
+
+  void reportUnownedRelease(SymbolRef HandleSym, const SourceRange &Range,
+                            CheckerContext &C) const;
 
   void reportUseAfterFree(SymbolRef HandleSym, const SourceRange &Range,
                           CheckerContext &C) const;
@@ -370,6 +395,21 @@ void FuchsiaHandleChecker::checkPostCall(const CallEvent &Call,
     });
     State =
         State->set<HStateMap>(RetSym, HandleState::getMaybeAllocated(nullptr));
+  } else if (hasFuchsiaUnownedAttr<AcquireHandleAttr>(FuncDecl)) {
+    // Function returns an unowned handle
+    SymbolRef RetSym = Call.getReturnValue().getAsSymbol();
+    Notes.push_back([RetSym, FuncDecl](BugReport &BR) -> std::string {
+      auto *PathBR = static_cast<PathSensitiveBugReport *>(&BR);
+      if (auto IsInteresting = PathBR->getInterestingnessKind(RetSym)) {
+        std::string SBuf;
+        llvm::raw_string_ostream OS(SBuf);
+        OS << "Function '" << FuncDecl->getDeclName()
+           << "' returns an unowned handle";
+        return OS.str();
+      } else
+        return "";
+    });
+    State = State->set<HStateMap>(RetSym, HandleState::getUnowned());
   }
 
   for (unsigned Arg = 0; Arg < Call.getNumArgs(); ++Arg) {
@@ -387,6 +427,9 @@ void FuchsiaHandleChecker::checkPostCall(const CallEvent &Call,
       if (hasFuchsiaAttr<ReleaseHandleAttr>(PVD)) {
         if (HState && HState->isReleased()) {
           reportDoubleRelease(Handle, Call.getArgSourceRange(Arg), C);
+          return;
+        } else if (HState && HState->isUnowned()) {
+          reportUnownedRelease(Handle, Call.getArgSourceRange(Arg), C);
           return;
         } else {
           Notes.push_back([Handle, ParamDiagIdx](BugReport &BR) -> std::string {
@@ -416,6 +459,19 @@ void FuchsiaHandleChecker::checkPostCall(const CallEvent &Call,
         });
         State = State->set<HStateMap>(
             Handle, HandleState::getMaybeAllocated(ResultSymbol));
+      } else if (hasFuchsiaUnownedAttr<AcquireHandleAttr>(PVD)) {
+        Notes.push_back([Handle, ParamDiagIdx](BugReport &BR) -> std::string {
+          auto *PathBR = static_cast<PathSensitiveBugReport *>(&BR);
+          if (auto IsInteresting = PathBR->getInterestingnessKind(Handle)) {
+            std::string SBuf;
+            llvm::raw_string_ostream OS(SBuf);
+            OS << "Unowned handle allocated through " << ParamDiagIdx
+               << llvm::getOrdinalSuffix(ParamDiagIdx) << " parameter";
+            return OS.str();
+          } else
+            return "";
+        });
+        State = State->set<HStateMap>(Handle, HandleState::getUnowned());
       } else if (!hasFuchsiaAttr<UseHandleAttr>(PVD) &&
                  PVD->getType()->isIntegerType()) {
         // Working around integer by-value escapes.
@@ -433,7 +489,8 @@ void FuchsiaHandleChecker::checkPostCall(const CallEvent &Call,
                          PathSensitiveBugReport &BR) -> std::string {
       if (&BR.getBugType() != &UseAfterReleaseBugType &&
           &BR.getBugType() != &LeakBugType &&
-          &BR.getBugType() != &DoubleReleaseBugType)
+          &BR.getBugType() != &DoubleReleaseBugType &&
+          &BR.getBugType() != &ReleaseUnownedBugType)
         return "";
       for (auto &Note : Notes) {
         std::string Text = Note(BR);
@@ -570,6 +627,14 @@ void FuchsiaHandleChecker::reportDoubleRelease(SymbolRef HandleSym,
   ExplodedNode *ErrNode = C.generateErrorNode(C.getState());
   reportBug(HandleSym, ErrNode, C, &Range, DoubleReleaseBugType,
             "Releasing a previously released handle");
+}
+
+void FuchsiaHandleChecker::reportUnownedRelease(SymbolRef HandleSym,
+                                                const SourceRange &Range,
+                                                CheckerContext &C) const {
+  ExplodedNode *ErrNode = C.generateErrorNode(C.getState());
+  reportBug(HandleSym, ErrNode, C, &Range, ReleaseUnownedBugType,
+            "Releasing an unowned handle");
 }
 
 void FuchsiaHandleChecker::reportUseAfterFree(SymbolRef HandleSym,

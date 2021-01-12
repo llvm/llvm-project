@@ -75,6 +75,7 @@ target_link_libraries(
   PUBLIC
   -Wl,--whole-archive hostrpc_services -Wl,--no-whole-archive
   PRIVATE
+  elf_common
   hsa-runtime64::hsa-runtime64
   pthread dl elf
   "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports"

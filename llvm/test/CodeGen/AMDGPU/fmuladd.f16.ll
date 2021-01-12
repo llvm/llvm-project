@@ -1,13 +1,13 @@
-; RUN: llc -march=amdgcn -mcpu=fiji -denormal-fp-math=preserve-sign -denormal-fp-math-f32=ieee -fp-contract=on -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-STRICT,VI-FLUSH,VI %s
-; RUN: llc -march=amdgcn -mcpu=fiji -denormal-fp-math=preserve-sign -denormal-fp-math-f32=ieee -fp-contract=fast -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-CONTRACT,VI-FLUSH,VI %s
+; RUN: llc -march=amdgcn -mcpu=fiji -denormal-fp-math=preserve-sign -denormal-fp-math-f32=ieee -fp-contract=on -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI-FLUSH,VI %s
+; RUN: llc -march=amdgcn -mcpu=fiji -denormal-fp-math=preserve-sign -denormal-fp-math-f32=ieee -fp-contract=fast -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI-FLUSH,VI %s
 
-; RUN: llc -march=amdgcn -mcpu=fiji -denormal-fp-math=ieee -denormal-fp-math-f32=ieee -fp-contract=on -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-STRICT,GCN-DENORM,GCN-DENORM-STRICT,VI-DENORM-STRICT,VI-DENORM,VI %s
-; RUN: llc -march=amdgcn -mcpu=fiji -denormal-fp-math=ieee -denormal-fp-math-f32=ieee -fp-contract=fast -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-CONTRACT,GCN-DENORM,GCN-DENORM-CONTRACT,VI-DENORM-CONTRACT,VI-DENORM,VI %s
+; RUN: llc -march=amdgcn -mcpu=fiji -denormal-fp-math=ieee -denormal-fp-math-f32=ieee -fp-contract=on -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-DENORM,GCN-DENORM-STRICT,VI-DENORM,VI %s
+; RUN: llc -march=amdgcn -mcpu=fiji -denormal-fp-math=ieee -denormal-fp-math-f32=ieee -fp-contract=fast -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-DENORM,GCN-DENORM-CONTRACT,VI-DENORM-CONTRACT,VI-DENORM,VI %s
 
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -denormal-fp-math=preserve-sign -denormal-fp-math-f32=ieee -fp-contract=on -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-STRICT,GFX10-FLUSH,GFX10 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -denormal-fp-math=preserve-sign -denormal-fp-math-f32=ieee -fp-contract=fast -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-CONTRACT,GFX10-FLUSH,GFX10 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -denormal-fp-math=ieee -denormal-fp-math-f32=ieee -fp-contract=on -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-STRICT,GCN-DENORM,GCN-DENORM-STRICT,GFX10-DENORM-STRICT,GFX10-DENORM,GFX10 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -denormal-fp-math=ieee -denormal-fp-math-f32=ieee -fp-contract=fast -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-CONTRACT,GCN-DENORM,GCN-DENORM-CONTRACT,GFX10-DENORM-CONTRACT,GFX10-DENORM,GFX10 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -denormal-fp-math=preserve-sign -denormal-fp-math-f32=ieee -fp-contract=on -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10-FLUSH,GFX10 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -denormal-fp-math=preserve-sign -denormal-fp-math-f32=ieee -fp-contract=fast -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10-FLUSH,GFX10 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -denormal-fp-math=ieee -denormal-fp-math-f32=ieee -fp-contract=on -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-DENORM,GCN-DENORM-STRICT,GFX10-DENORM-STRICT,GFX10-DENORM,GFX10 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -denormal-fp-math=ieee -denormal-fp-math-f32=ieee -fp-contract=fast -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-DENORM,GCN-DENORM-CONTRACT,GFX10-DENORM-CONTRACT,GFX10-DENORM,GFX10 %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 declare half @llvm.fmuladd.f16(half, half, half) #1

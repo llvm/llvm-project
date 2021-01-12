@@ -209,7 +209,7 @@ std::string CompileFortran(std::string path, Fortran::parser::Options options,
   parsing.Prescan(path, options);
   if (!parsing.messages().empty() &&
       (driver.warningsAreErrors || parsing.messages().AnyFatalError())) {
-    llvm::errs() << driver.prefix << "could not scan " << path << '\n';
+    llvm::errs() << driver.prefix << "Could not scan " << path << '\n';
     parsing.messages().Emit(llvm::errs(), allCookedSources);
     exitStatus = EXIT_FAILURE;
     return {};
@@ -232,14 +232,14 @@ std::string CompileFortran(std::string path, Fortran::parser::Options options,
   parsing.messages().Emit(llvm::errs(), allCookedSources);
   if (!parsing.consumedWholeFile()) {
     parsing.EmitMessage(llvm::errs(), parsing.finalRestingPlace(),
-        "parser FAIL (final position)");
+        "Parser FAIL (final position)");
     exitStatus = EXIT_FAILURE;
     return {};
   }
   if ((!parsing.messages().empty() &&
           (driver.warningsAreErrors || parsing.messages().AnyFatalError())) ||
       !parsing.parseTree()) {
-    llvm::errs() << driver.prefix << "could not parse " << path << '\n';
+    llvm::errs() << driver.prefix << "Could not parse " << path << '\n';
     exitStatus = EXIT_FAILURE;
     return {};
   }
@@ -258,7 +258,7 @@ std::string CompileFortran(std::string path, Fortran::parser::Options options,
       if (driver.dumpSymbols) {
         semantics.DumpSymbols(llvm::outs());
       }
-      llvm::errs() << driver.prefix << "semantic errors in " << path << '\n';
+      llvm::errs() << driver.prefix << "Semantic errors in " << path << '\n';
       exitStatus = EXIT_FAILURE;
       if (driver.dumpParseTree) {
         Fortran::parser::DumpTree(llvm::outs(), parseTree, &asFortran);

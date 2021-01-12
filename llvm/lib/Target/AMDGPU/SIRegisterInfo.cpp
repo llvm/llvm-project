@@ -12,23 +12,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "SIRegisterInfo.h"
+#include "AMDGPU.h"
 #include "AMDGPURegisterBankInfo.h"
 #include "AMDGPUSubtarget.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineDominators.h"
-#include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
-#include "llvm/CodeGen/SlotIndexes.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/LLVMContext.h"
-#include <vector>
-
 using namespace llvm;
 
 #define GET_REGINFO_TARGET_DESC
@@ -1951,6 +1942,16 @@ SIRegisterInfo::getPhysRegClass(MCRegister Reg) const {
   return nullptr;
 }
 
+bool SIRegisterInfo::isSGPRReg(const MachineRegisterInfo &MRI,
+                               Register Reg) const {
+  const TargetRegisterClass *RC;
+  if (Reg.isVirtual())
+    RC = MRI.getRegClass(Reg);
+  else
+    RC = getPhysRegClass(Reg);
+  return isSGPRClass(RC);
+}
+
 // TODO: It might be helpful to have some target specific flags in
 // TargetRegisterClass to mark which classes are VGPRs to make this trivial.
 bool SIRegisterInfo::hasVGPRs(const TargetRegisterClass *RC) const {
@@ -2057,6 +2058,12 @@ bool SIRegisterInfo::shouldRewriteCopySrc(
 
   // Plain copy.
   return getCommonSubClass(DefRC, SrcRC) != nullptr;
+}
+
+bool SIRegisterInfo::opCanUseLiteralConstant(unsigned OpType) const {
+  // TODO: 64-bit operands have extending behavior from 32-bit literal.
+  return OpType >= AMDGPU::OPERAND_REG_IMM_FIRST &&
+         OpType <= AMDGPU::OPERAND_REG_IMM_LAST;
 }
 
 /// Returns a lowest register that is not used at any point in the function.

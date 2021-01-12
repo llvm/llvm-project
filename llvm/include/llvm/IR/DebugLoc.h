@@ -72,11 +72,9 @@ namespace llvm {
     /// Rebuild the entire inlined-at chain for this instruction so that the top of
     /// the chain now is inlined-at the new call site.
     /// \param   InlinedAt    The new outermost inlined-at in the chain.
-    /// \param   ReplaceLast  Replace the last location in the inlined-at chain.
     static DebugLoc appendInlinedAt(const DebugLoc &DL, DILocation *InlinedAt,
                                     LLVMContext &Ctx,
-                                    DenseMap<const MDNode *, MDNode *> &Cache,
-                                    bool ReplaceLast = false);
+                                    DenseMap<const MDNode *, MDNode *> &Cache);
 
     unsigned getLine() const;
     unsigned getCol() const;

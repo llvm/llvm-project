@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
-; XUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; XUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,VI %s
 
 ; FIXME: broken on VI because flat instructions need to be emitted
 ; instead of addr64 equivalent of the _OFFSET variants.

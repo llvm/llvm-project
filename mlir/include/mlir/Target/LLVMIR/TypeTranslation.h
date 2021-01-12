@@ -42,7 +42,7 @@ public:
   TypeToLLVMIRTranslator(llvm::LLVMContext &context);
   ~TypeToLLVMIRTranslator();
 
-  /// Returns the perferred alignment for the type given the data layout. Note
+  /// Returns the preferred alignment for the type given the data layout. Note
   /// that this will perform type conversion and store its results for future
   /// uses.
   // TODO: this should be removed when MLIR has proper data layout.

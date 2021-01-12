@@ -378,6 +378,9 @@ class DwarfDebug : public DebugHandlerBase {
   /// Avoid using DW_OP_convert due to consumer incompatibilities.
   bool EnableOpConvert;
 
+  /// Force the use of DW_AT_ranges even for single-entry range lists.
+  bool AlwaysUseRanges = false;
+
   /// DWARF5 Experimental Options
   /// @{
   AccelTableKind TheAccelTableKind;
@@ -691,6 +694,10 @@ public:
 
   /// Returns whether ranges section should be emitted.
   bool useRangesSection() const { return UseRangesSection; }
+
+  /// Returns whether range encodings should be used for single entry range
+  /// lists.
+  bool alwaysUseRanges() const { return AlwaysUseRanges; }
 
   /// Returns whether to use sections as labels rather than temp symbols.
   bool useSectionsAsReferences() const {

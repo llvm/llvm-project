@@ -11,7 +11,6 @@
 
 #include "AMDGPUFrameLowering.h"
 #include "SIMachineFunctionInfo.h"
-#include "llvm/Support/TypeSize.h"
 
 namespace llvm {
 

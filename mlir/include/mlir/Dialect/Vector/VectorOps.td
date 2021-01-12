@@ -466,7 +466,7 @@ def Vector_ExtractMapOp :
     along each dimension.
 
     The dimension associated to each element of `ids` used to extract are
-    implicitly deduced from the the destination type. For each dimension the
+    implicitly deduced from the destination type. For each dimension the
     multiplicity is the destination dimension size divided by the source
     dimension size, each dimension with a multiplicity greater than 1 is
     associated to the next id, following ids order.
@@ -1055,7 +1055,8 @@ def Vector_ExtractStridedSliceOp :
 def Vector_TransferReadOp :
   Vector_Op<"transfer_read", [
       DeclareOpInterfaceMethods<VectorTransferOpInterface>,
-      DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>
+      DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
+      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
     ]>,
     Arguments<(ins AnyShaped:$source, Variadic<Index>:$indices,
                AffineMapAttr:$permutation_map, AnyType:$padding,
@@ -1224,7 +1225,8 @@ def Vector_TransferReadOp :
 def Vector_TransferWriteOp :
   Vector_Op<"transfer_write", [
       DeclareOpInterfaceMethods<VectorTransferOpInterface>,
-      DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>
+      DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
+      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
   ]>,
     Arguments<(ins AnyVector:$vector, AnyShaped:$source,
                Variadic<Index>:$indices,
@@ -1316,7 +1318,8 @@ def Vector_TransferWriteOp :
 
 def Vector_MaskedLoadOp :
   Vector_Op<"maskedload">,
-    Arguments<(ins AnyMemRef:$base,
+    Arguments<(ins Arg<AnyMemRef, "", [MemRead]>:$base,
+               Variadic<Index>:$indices,
                VectorOfRankAndType<[1], [I1]>:$mask,
                VectorOfRank<[1]>:$pass_thru)>,
     Results<(outs VectorOfRank<[1]>:$result)> {
@@ -1325,12 +1328,12 @@ def Vector_MaskedLoadOp :
 
   let description = [{
     The masked load reads elements from memory into a 1-D vector as defined
-    by a base and a 1-D mask vector. When the mask is set, the element is read
-    from memory. Otherwise, the corresponding element is taken from a 1-D
-    pass-through vector. Informally the semantics are:
+    by a base with indices and a 1-D mask vector. When the mask is set, the
+    element is read from memory. Otherwise, the corresponding element is taken
+    from a 1-D pass-through vector. Informally the semantics are:
     ```
-    result[0] := mask[0] ? MEM[base+0] : pass_thru[0]
-    result[1] := mask[1] ? MEM[base+1] : pass_thru[1]
+    result[0] := mask[0] ? base[i+0] : pass_thru[0]
+    result[1] := mask[1] ? base[i+1] : pass_thru[1]
     etc.
     ```
     The masked load can be used directly where applicable, or can be used
@@ -1342,7 +1345,7 @@ def Vector_MaskedLoadOp :
     Example:
 
     ```mlir
-    %0 = vector.maskedload %base, %mask, %pass_thru
+    %0 = vector.maskedload %base[%i], %mask, %pass_thru
        : memref<?xf32>, vector<8xi1>, vector<8xf32> into vector<8xf32>
     ```
   }];
@@ -1360,14 +1363,15 @@ def Vector_MaskedLoadOp :
       return result().getType().cast<VectorType>();
     }
   }];
-  let assemblyFormat = "$base `,` $mask `,` $pass_thru attr-dict `:` "
+  let assemblyFormat = "$base `[` $indices `]` `,` $mask `,` $pass_thru attr-dict `:` "
     "type($base) `,` type($mask) `,` type($pass_thru) `into` type($result)";
   let hasCanonicalizer = 1;
 }
 
 def Vector_MaskedStoreOp :
   Vector_Op<"maskedstore">,
-    Arguments<(ins AnyMemRef:$base,
+    Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
+               Variadic<Index>:$indices,
                VectorOfRankAndType<[1], [I1]>:$mask,
                VectorOfRank<[1]>:$value)> {
 
@@ -1375,12 +1379,12 @@ def Vector_MaskedStoreOp :
 
   let description = [{
     The masked store operation writes elements from a 1-D vector into memory
-    as defined by a base and a 1-D mask vector. When the mask is set, the
-    corresponding element from the vector is written to memory. Otherwise,
+    as defined by a base with indices and a 1-D mask vector. When the mask is
+    set, the corresponding element from the vector is written to memory. Otherwise,
     no action is taken for the element. Informally the semantics are:
     ```
-    if (mask[0]) MEM[base+0] = value[0]
-    if (mask[1]) MEM[base+1] = value[1]
+    if (mask[0]) base[i+0] = value[0]
+    if (mask[1]) base[i+1] = value[1]
     etc.
     ```
     The masked store can be used directly where applicable, or can be used
@@ -1392,7 +1396,7 @@ def Vector_MaskedStoreOp :
     Example:
 
     ```mlir
-    vector.maskedstore %base, %mask, %value
+    vector.maskedstore %base[%i], %mask, %value
       : memref<?xf32>, vector<8xi1>, vector<8xf32>
     ```
   }];
@@ -1407,17 +1411,17 @@ def Vector_MaskedStoreOp :
       return value().getType().cast<VectorType>();
     }
   }];
-  let assemblyFormat = "$base `,` $mask `,` $value attr-dict `:` "
-    "type($mask) `,` type($value) `into` type($base)";
+  let assemblyFormat = "$base `[` $indices `]` `,` $mask `,` $value attr-dict `:` "
+    "type($base) `,` type($mask) `,` type($value)";
   let hasCanonicalizer = 1;
 }
 
 def Vector_GatherOp :
   Vector_Op<"gather">,
-    Arguments<(ins AnyMemRef:$base,
+    Arguments<(ins Arg<AnyMemRef, "", [MemRead]>:$base,
                VectorOfRankAndType<[1], [AnyInteger]>:$indices,
                VectorOfRankAndType<[1], [I1]>:$mask,
-               Variadic<VectorOfRank<[1]>>:$pass_thru)>,
+               VectorOfRank<[1]>:$pass_thru)>,
     Results<(outs VectorOfRank<[1]>:$result)> {
 
   let summary = "gathers elements from memory into a vector as defined by an index vector and mask";
@@ -1426,12 +1430,10 @@ def Vector_GatherOp :
     The gather operation gathers elements from memory into a 1-D vector as
     defined by a base and a 1-D index vector, but only if the corresponding
     bit is set in a 1-D mask vector. Otherwise, the element is taken from a
-    1-D pass-through vector, if provided, or left undefined. Informally the
-    semantics are:
+    1-D pass-through vector. Informally the semantics are:
     ```
-    if (!defined(pass_thru)) pass_thru = [undef, .., undef]
-    result[0] := mask[0] ? MEM[base + index[0]] : pass_thru[0]
-    result[1] := mask[1] ? MEM[base + index[1]] : pass_thru[1]
+    result[0] := mask[0] ? base[index[0]] : pass_thru[0]
+    result[1] := mask[1] ? base[index[1]] : pass_thru[1]
     etc.
     ```
     The vector dialect leaves out-of-bounds behavior undefined.
@@ -1445,8 +1447,8 @@ def Vector_GatherOp :
     Example:
 
     ```mlir
-    %g = vector.gather %base, %indices, %mask, %pass_thru
-        : (memref<?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32>) -> vector<16xf32>
+    %g = vector.gather %base[%indices], %mask, %pass_thru
+       : memref<?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
     ```
   }];
   let extraClassDeclaration = [{
@@ -1460,21 +1462,20 @@ def Vector_GatherOp :
       return mask().getType().cast<VectorType>();
     }
     VectorType getPassThruVectorType() {
-      return (llvm::size(pass_thru()) == 0)
-        ? VectorType()
-        : (*pass_thru().begin()).getType().cast<VectorType>();
+      return pass_thru().getType().cast<VectorType>();
     }
     VectorType getResultVectorType() {
       return result().getType().cast<VectorType>();
     }
   }];
-  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
+  let assemblyFormat = "$base `[` $indices `]` `,` $mask `,` $pass_thru attr-dict `:` "
+    "type($base) `,` type($indices) `,` type($mask) `,` type($pass_thru) `into` type($result)";
   let hasCanonicalizer = 1;
 }
 
 def Vector_ScatterOp :
   Vector_Op<"scatter">,
-    Arguments<(ins AnyMemRef:$base,
+    Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
                VectorOfRankAndType<[1], [AnyInteger]>:$indices,
                VectorOfRankAndType<[1], [I1]>:$mask,
                VectorOfRank<[1]>:$value)> {
@@ -1487,8 +1488,8 @@ def Vector_ScatterOp :
     bit in a 1-D mask vector is set. Otherwise, no action is taken for that
     element. Informally the semantics are:
     ```
-    if (mask[0]) MEM[base + index[0]] = value[0]
-    if (mask[1]) MEM[base + index[1]] = value[1]
+    if (mask[0]) base[index[0]] = value[0]
+    if (mask[1]) base[index[1]] = value[1]
     etc.
     ```
     The vector dialect leaves out-of-bounds and repeated index behavior
@@ -1505,8 +1506,8 @@ def Vector_ScatterOp :
     Example:
 
     ```mlir
-    vector.scatter %base, %indices, %mask, %value
-        : vector<16xi32>, vector<16xi1>, vector<16xf32> into memref<?xf32>
+    vector.scatter %base[%indices], %mask, %value
+        : memref<?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32>
     ```
   }];
   let extraClassDeclaration = [{
@@ -1523,14 +1524,15 @@ def Vector_ScatterOp :
       return value().getType().cast<VectorType>();
     }
   }];
-  let assemblyFormat = "$base `,` $indices `,` $mask `,` $value attr-dict `:` "
-    "type($indices) `,` type($mask) `,` type($value) `into` type($base)";
+  let assemblyFormat = "$base `[` $indices `]` `,` $mask `,` $value attr-dict `:` "
+    "type($base) `,` type($indices) `,` type($mask) `,` type($value)";
   let hasCanonicalizer = 1;
 }
 
 def Vector_ExpandLoadOp :
   Vector_Op<"expandload">,
-    Arguments<(ins AnyMemRef:$base,
+    Arguments<(ins Arg<AnyMemRef, "", [MemRead]>:$base,
+               Variadic<Index>:$indices,
                VectorOfRankAndType<[1], [I1]>:$mask,
                VectorOfRank<[1]>:$pass_thru)>,
     Results<(outs VectorOfRank<[1]>:$result)> {
@@ -1539,13 +1541,13 @@ def Vector_ExpandLoadOp :
 
   let description = [{
     The expand load reads elements from memory into a 1-D vector as defined
-    by a base and a 1-D mask vector. When the mask is set, the next element
-    is read from memory. Otherwise, the corresponding element is taken from
-    a 1-D pass-through vector. Informally the semantics are:
+    by a base with indices and a 1-D mask vector. When the mask is set, the
+    next element is read from memory. Otherwise, the corresponding element
+    is taken from a 1-D pass-through vector. Informally the semantics are:
     ```
-    index = base
-    result[0] := mask[0] ? MEM[index++] : pass_thru[0]
-    result[1] := mask[1] ? MEM[index++] : pass_thru[1]
+    index = i
+    result[0] := mask[0] ? base[index++] : pass_thru[0]
+    result[1] := mask[1] ? base[index++] : pass_thru[1]
     etc.
     ```
     Note that the index increment is done conditionally.
@@ -1559,7 +1561,7 @@ def Vector_ExpandLoadOp :
     Example:
 
     ```mlir
-    %0 = vector.expandload %base, %mask, %pass_thru
+    %0 = vector.expandload %base[%i], %mask, %pass_thru
        : memref<?xf32>, vector<8xi1>, vector<8xf32> into vector<8xf32>
     ```
   }];
@@ -1577,14 +1579,15 @@ def Vector_ExpandLoadOp :
       return result().getType().cast<VectorType>();
     }
   }];
-  let assemblyFormat = "$base `,` $mask `,` $pass_thru attr-dict `:` "
+  let assemblyFormat = "$base `[` $indices `]` `,` $mask `,` $pass_thru attr-dict `:` "
     "type($base) `,` type($mask) `,` type($pass_thru) `into` type($result)";
   let hasCanonicalizer = 1;
 }
 
 def Vector_CompressStoreOp :
   Vector_Op<"compressstore">,
-    Arguments<(ins AnyMemRef:$base,
+    Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
+               Variadic<Index>:$indices,
                VectorOfRankAndType<[1], [I1]>:$mask,
                VectorOfRank<[1]>:$value)> {
 
@@ -1592,13 +1595,13 @@ def Vector_CompressStoreOp :
 
   let description = [{
     The compress store operation writes elements from a 1-D vector into memory
-    as defined by a base and a 1-D mask vector. When the mask is set, the
-    corresponding element from the vector is written next to memory. Otherwise,
-    no action is taken for the element. Informally the semantics are:
+    as defined by a base with indices and a 1-D mask vector. When the mask is
+    set, the corresponding element from the vector is written next to memory.
+    Otherwise, no action is taken for the element. Informally the semantics are:
     ```
-    index = base
-    if (mask[0]) MEM[index++] = value[0]
-    if (mask[1]) MEM[index++] = value[1]
+    index = i
+    if (mask[0]) base[index++] = value[0]
+    if (mask[1]) base[index++] = value[1]
     etc.
     ```
     Note that the index increment is done conditionally.
@@ -1612,7 +1615,7 @@ def Vector_CompressStoreOp :
     Example:
 
     ```mlir
-    vector.compressstore %base, %mask, %value
+    vector.compressstore %base[%i], %mask, %value
       : memref<?xf32>, vector<8xi1>, vector<8xf32>
     ```
   }];
@@ -1627,7 +1630,7 @@ def Vector_CompressStoreOp :
       return value().getType().cast<VectorType>();
     }
   }];
-  let assemblyFormat = "$base `,` $mask `,` $value attr-dict `:` "
+  let assemblyFormat = "$base `[` $indices `]` `,` $mask `,` $value attr-dict `:` "
     "type($base) `,` type($mask) `,` type($value)";
   let hasCanonicalizer = 1;
 }

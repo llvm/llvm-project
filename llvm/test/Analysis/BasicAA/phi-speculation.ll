@@ -6,8 +6,7 @@ target datalayout =
 ; ptr_phi and ptr2_phi do not alias.
 ; CHECK: test_noalias_1
 ; CHECK: NoAlias: i32* %ptr2_phi, i32* %ptr_phi
-; CHECK: MayAlias: i32* %ptr2_inc, i32* %ptr_inc
-; TODO: The incs should also be NoAlias.
+; CHECK: NoAlias: i32* %ptr2_inc, i32* %ptr_inc
 define i32 @test_noalias_1(i32* %ptr2, i32 %count, i32* %coeff) {
 entry:
   %ptr = getelementptr inbounds i32, i32* %ptr2, i64 1
@@ -36,10 +35,9 @@ the_exit:
 
 ; CHECK: test_noalias_2
 ; CHECK: NoAlias: i32* %ptr_outer_phi, i32* %ptr_outer_phi2
-; CHECK: MayAlias: i32* %ptr2_inc_outer, i32* %ptr_inc_outer
+; CHECK: NoAlias: i32* %ptr2_inc_outer, i32* %ptr_inc_outer
 ; CHECK: NoAlias: i32* %ptr2_phi, i32* %ptr_phi
-; CHECK: MayAlias: i32* %ptr2_inc, i32* %ptr_inc
-; TODO: The incs should also be NoAlias.
+; CHECK: NoAlias: i32* %ptr2_inc, i32* %ptr_inc
 define i32 @test_noalias_2(i32* %ptr2, i32 %count, i32* %coeff) {
 entry:
   %ptr = getelementptr inbounds i32, i32* %ptr2, i64 1
@@ -118,8 +116,7 @@ exit:
 }
 
 ; CHECK-LABEL: test_no_loop_mustalias
-; CHECK: MayAlias: i16* %z16, i8* %z8
-; TODO: (z8, z16) could be MustAlias
+; CHECK: MustAlias: i16* %z16, i8* %z8
 define void @test_no_loop_mustalias(i1 %c, i8* noalias %x8, i8* noalias %y8) {
   br i1 %c, label %if, label %else
 

@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/math/ilogbf.h"
 #include "src/__support/common.h"
 #include "utils/FPUtil/ManipulationFunctions.h"
 
 namespace __llvm_libc {
 
-int LLVM_LIBC_ENTRYPOINT(ilogbf)(float x) { return fputil::ilogb(x); }
+LLVM_LIBC_FUNCTION(int, ilogbf, (float x)) { return fputil::ilogb(x); }
 
 } // namespace __llvm_libc

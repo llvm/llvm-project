@@ -7,7 +7,7 @@
 ; this function was previously unaware of scalable types.
 
 ; If this check fails please read test/CodeGen/AArch64/README for instructions on how to resolve it.
-; CHECK-NOT: warning: {{.*}}TypeSize is not scalable
+; CHECK-NOT: warning:
 
 define void @runtime_pointer_checking_insert_typesize(<vscale x 4 x i32>* %a,
                                                       <vscale x 4 x i32>* %b) {

@@ -692,6 +692,30 @@ InFlightDiagnostic OpState::emitRemark(const Twine &message) {
   return getOperation()->emitRemark(message);
 }
 
+Dialect *OpState::getDialect() { return getOperation()->getDialect(); }
+Region *OpState::getParentRegion() { return getOperation()->getParentRegion(); }
+Operation *OpState::getParentOp() { return getOperation()->getParentOp(); }
+OpState::dialect_attr_range OpState::getDialectAttrs() {
+  return state->getDialectAttrs();
+}
+OpState::dialect_attr_iterator OpState::dialect_attr_begin() {
+  return state->dialect_attr_begin();
+}
+OpState::dialect_attr_iterator OpState::dialect_attr_end() {
+  return state->dialect_attr_end();
+}
+Attribute OpState::getAttr(StringRef name) { return state->getAttr(name); }
+void OpState::setAttr(Identifier name, Attribute value) {
+  state->setAttr(name, value);
+}
+void OpState::setAttr(StringRef name, Attribute value) {
+  setAttr(Identifier::get(name, getContext()), value);
+}
+void OpState::setAttrs(ArrayRef<NamedAttribute> attributes) {
+  state->setAttrs(DictionaryAttr::get(attributes, getContext()));
+}
+void OpState::setAttrs(DictionaryAttr newAttrs) { state->setAttrs(newAttrs); }
+
 //===----------------------------------------------------------------------===//
 // Op Trait implementations
 //===----------------------------------------------------------------------===//

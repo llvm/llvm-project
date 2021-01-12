@@ -374,6 +374,48 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     // We must custom-lower SPLAT_VECTOR vXi64 on RV32
     if (!Subtarget.is64Bit())
       setOperationAction(ISD::SPLAT_VECTOR, MVT::i64, Custom);
+
+    // Expand various CCs to best match the RVV ISA, which natively supports UNE
+    // but no other unordered comparisons, and supports all ordered comparisons
+    // except ONE. Additionally, we expand GT,OGT,GE,OGE for optimization
+    // purposes; they are expanded to their swapped-operand CCs (LT,OLT,LE,OLE),
+    // and we pattern-match those back to the "original", swapping operands once
+    // more. This way we catch both operations and both "vf" and "fv" forms with
+    // fewer patterns.
+    ISD::CondCode VFPCCToExpand[] = {
+        ISD::SETO,   ISD::SETONE, ISD::SETUEQ, ISD::SETUGT,
+        ISD::SETUGE, ISD::SETULT, ISD::SETULE, ISD::SETUO,
+        ISD::SETGT,  ISD::SETOGT, ISD::SETGE,  ISD::SETOGE,
+    };
+
+    if (Subtarget.hasStdExtZfh()) {
+      for (auto VT : {RISCVVMVTs::vfloat16mf4_t, RISCVVMVTs::vfloat16mf2_t,
+                      RISCVVMVTs::vfloat16m1_t, RISCVVMVTs::vfloat16m2_t,
+                      RISCVVMVTs::vfloat16m4_t, RISCVVMVTs::vfloat16m8_t}) {
+        setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
+        for (auto CC : VFPCCToExpand)
+          setCondCodeAction(CC, VT, Expand);
+      }
+    }
+
+    if (Subtarget.hasStdExtF()) {
+      for (auto VT : {RISCVVMVTs::vfloat32mf2_t, RISCVVMVTs::vfloat32m1_t,
+                      RISCVVMVTs::vfloat32m2_t, RISCVVMVTs::vfloat32m4_t,
+                      RISCVVMVTs::vfloat32m8_t}) {
+        setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
+        for (auto CC : VFPCCToExpand)
+          setCondCodeAction(CC, VT, Expand);
+      }
+    }
+
+    if (Subtarget.hasStdExtD()) {
+      for (auto VT : {RISCVVMVTs::vfloat64m1_t, RISCVVMVTs::vfloat64m2_t,
+                      RISCVVMVTs::vfloat64m4_t, RISCVVMVTs::vfloat64m8_t}) {
+        setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
+        for (auto CC : VFPCCToExpand)
+          setCondCodeAction(CC, VT, Expand);
+      }
+    }
   }
 
   // Function alignments.
@@ -398,6 +440,8 @@ EVT RISCVTargetLowering::getSetCCResultType(const DataLayout &DL, LLVMContext &,
                                             EVT VT) const {
   if (!VT.isVector())
     return getPointerTy(DL);
+  if (Subtarget.hasStdExtV())
+    return MVT::getVectorVT(MVT::i1, VT.getVectorElementCount());
   return VT.changeVectorElementTypeToInteger();
 }
 
@@ -2120,7 +2164,7 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
 
 static MachineBasicBlock *addVSetVL(MachineInstr &MI, MachineBasicBlock *BB,
                                     int VLIndex, unsigned SEWIndex,
-                                    unsigned VLMul, bool WritesElement0) {
+                                    RISCVVLMUL VLMul, bool WritesElement0) {
   MachineFunction &MF = *BB->getParent();
   DebugLoc DL = MI.getDebugLoc();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
@@ -2128,9 +2172,6 @@ static MachineBasicBlock *addVSetVL(MachineInstr &MI, MachineBasicBlock *BB,
   unsigned SEW = MI.getOperand(SEWIndex).getImm();
   assert(RISCVVType::isValidSEW(SEW) && "Unexpected SEW");
   RISCVVSEW ElementWidth = static_cast<RISCVVSEW>(Log2_32(SEW / 8));
-
-  // LMUL should already be encoded correctly.
-  RISCVVLMUL Multiplier = static_cast<RISCVVLMUL>(VLMul);
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
@@ -2158,7 +2199,7 @@ static MachineBasicBlock *addVSetVL(MachineInstr &MI, MachineBasicBlock *BB,
     TailAgnostic = false;
 
   // For simplicity we reuse the vtype representation here.
-  MIB.addImm(RISCVVType::encodeVTYPE(Multiplier, ElementWidth,
+  MIB.addImm(RISCVVType::encodeVTYPE(VLMul, ElementWidth,
                                      /*TailAgnostic*/ TailAgnostic,
                                      /*MaskAgnostic*/ false));
 
@@ -2175,15 +2216,17 @@ static MachineBasicBlock *addVSetVL(MachineInstr &MI, MachineBasicBlock *BB,
 MachineBasicBlock *
 RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                  MachineBasicBlock *BB) const {
+  uint64_t TSFlags = MI.getDesc().TSFlags;
 
-  if (const RISCVVPseudosTable::PseudoInfo *RVV =
-          RISCVVPseudosTable::getPseudoInfo(MI.getOpcode())) {
-    int VLIndex = RVV->getVLIndex();
-    int SEWIndex = RVV->getSEWIndex();
-    bool WritesElement0 = RVV->writesElement0();
+  if (TSFlags & RISCVII::HasSEWOpMask) {
+    unsigned NumOperands = MI.getNumExplicitOperands();
+    int VLIndex = (TSFlags & RISCVII::HasVLOpMask) ? NumOperands - 2 : -1;
+    unsigned SEWIndex = NumOperands - 1;
+    bool WritesElement0 = TSFlags & RISCVII::WritesElement0Mask;
 
-    assert(SEWIndex >= 0 && "SEWIndex must be >= 0");
-    return addVSetVL(MI, BB, VLIndex, SEWIndex, RVV->VLMul, WritesElement0);
+    RISCVVLMUL VLMul = static_cast<RISCVVLMUL>((TSFlags & RISCVII::VLMulMask) >>
+                                               RISCVII::VLMulShift);
+    return addVSetVL(MI, BB, VLIndex, SEWIndex, VLMul, WritesElement0);
   }
 
   switch (MI.getOpcode()) {
@@ -3897,16 +3940,28 @@ bool RISCVTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
                                                  SDValue C) const {
   // Check integral scalar types.
   if (VT.isScalarInteger()) {
-    // Do not perform the transformation on riscv32 with the M extension.
-    if (!Subtarget.is64Bit() && Subtarget.hasStdExtM())
+    // Omit the optimization if the sub target has the M extension and the data
+    // size exceeds XLen.
+    if (Subtarget.hasStdExtM() && VT.getSizeInBits() > Subtarget.getXLen())
       return false;
     if (auto *ConstNode = dyn_cast<ConstantSDNode>(C.getNode())) {
-      if (ConstNode->getAPIntValue().getBitWidth() > 8 * sizeof(int64_t))
-        return false;
-      int64_t Imm = ConstNode->getSExtValue();
-      if (isPowerOf2_64(Imm + 1) || isPowerOf2_64(Imm - 1) ||
-          isPowerOf2_64(1 - Imm) || isPowerOf2_64(-1 - Imm))
+      // Break the MUL to a SLLI and an ADD/SUB.
+      const APInt &Imm = ConstNode->getAPIntValue();
+      if ((Imm + 1).isPowerOf2() || (Imm - 1).isPowerOf2() ||
+          (1 - Imm).isPowerOf2() || (-1 - Imm).isPowerOf2())
         return true;
+      // Omit the following optimization if the sub target has the M extension
+      // and the data size >= XLen.
+      if (Subtarget.hasStdExtM() && VT.getSizeInBits() >= Subtarget.getXLen())
+        return false;
+      // Break the MUL to two SLLI instructions and an ADD/SUB, if Imm needs
+      // a pair of LUI/ADDI.
+      if (!Imm.isSignedIntN(12) && Imm.countTrailingZeros() < 12) {
+        APInt ImmS = Imm.ashr(Imm.countTrailingZeros());
+        if ((ImmS + 1).isPowerOf2() || (ImmS - 1).isPowerOf2() ||
+            (1 - ImmS).isPowerOf2())
+        return true;
+      }
     }
   }
 

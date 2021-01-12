@@ -14,24 +14,45 @@
 #define MLIR_TABLEGEN_TYPEDEF_H
 
 #include "mlir/Support/LLVM.h"
-#include "mlir/TableGen/Dialect.h"
+#include "mlir/TableGen/Builder.h"
 
 namespace llvm {
-class Record;
 class DagInit;
+class Record;
 class SMLoc;
 } // namespace llvm
 
 namespace mlir {
 namespace tblgen {
-
+class Dialect;
 class TypeParameter;
+
+//===----------------------------------------------------------------------===//
+// TypeBuilder
+//===----------------------------------------------------------------------===//
+
+/// Wrapper class that represents a Tablegen TypeBuilder.
+class TypeBuilder : public Builder {
+public:
+  using Builder::Builder;
+
+  /// Return an optional code body used for the `getChecked` variant of this
+  /// builder.
+  Optional<StringRef> getCheckedBody() const;
+
+  /// Returns true if this builder is able to infer the MLIRContext parameter.
+  bool hasInferredContextParameter() const;
+};
+
+//===----------------------------------------------------------------------===//
+// TypeDef
+//===----------------------------------------------------------------------===//
 
 /// Wrapper class that contains a TableGen TypeDef's record and provides helper
 /// methods for accessing them.
 class TypeDef {
 public:
-  explicit TypeDef(const llvm::Record *def) : def(def) {}
+  explicit TypeDef(const llvm::Record *def);
 
   // Get the dialect for which this type belongs.
   Dialect getDialect() const;
@@ -95,6 +116,13 @@ public:
   // Get the code location (for error printing).
   ArrayRef<llvm::SMLoc> getLoc() const;
 
+  // Returns true if the default get/getChecked methods should be skipped during
+  // generation.
+  bool skipDefaultBuilders() const;
+
+  // Returns the builders of this type.
+  ArrayRef<TypeBuilder> getBuilders() const { return builders; }
+
   // Returns whether two TypeDefs are equal by checking the equality of the
   // underlying record.
   bool operator==(const TypeDef &other) const;
@@ -107,7 +135,14 @@ public:
 
 private:
   const llvm::Record *def;
+
+  // The builders of this type definition.
+  SmallVector<TypeBuilder> builders;
 };
+
+//===----------------------------------------------------------------------===//
+// TypeParameter
+//===----------------------------------------------------------------------===//
 
 // A wrapper class for tblgen TypeParameter, arrays of which belong to TypeDefs
 // to parameterize them.
@@ -119,11 +154,11 @@ public:
   // Get the parameter name.
   StringRef getName() const;
   // If specified, get the custom allocator code for this parameter.
-  llvm::Optional<StringRef> getAllocator() const;
+  Optional<StringRef> getAllocator() const;
   // Get the C++ type of this parameter.
   StringRef getCppType() const;
   // Get a description of this parameter for documentation purposes.
-  llvm::Optional<StringRef> getDescription() const;
+  Optional<StringRef> getSummary() const;
   // Get the assembly syntax documentation.
   StringRef getSyntax() const;
 

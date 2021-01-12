@@ -6358,8 +6358,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
     }
     case bitc::FS_TYPE_TESTS:
       assert(PendingTypeTests.empty());
-      PendingTypeTests.insert(PendingTypeTests.end(), Record.begin(),
-                              Record.end());
+      llvm::append_range(PendingTypeTests, Record);
       break;
 
     case bitc::FS_TYPE_TEST_ASSUME_VCALLS:

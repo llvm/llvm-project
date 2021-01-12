@@ -585,6 +585,43 @@ TEST(ConstantsTest, FoldGlobalVariablePtr) {
       Instruction::And, TheConstantExpr, TheConstant)->isNullValue());
 }
 
+// Check that containsUndefOrPoisonElement and containsPoisonElement is working
+// great
+
+TEST(ConstantsTest, containsUndefElemTest) {
+  LLVMContext Context;
+
+  Type *Int32Ty = Type::getInt32Ty(Context);
+  Constant *CU = UndefValue::get(Int32Ty);
+  Constant *CP = PoisonValue::get(Int32Ty);
+  Constant *C1 = ConstantInt::get(Int32Ty, 1);
+  Constant *C2 = ConstantInt::get(Int32Ty, 2);
+
+  {
+    Constant *V1 = ConstantVector::get({C1, C2});
+    EXPECT_FALSE(V1->containsUndefOrPoisonElement());
+    EXPECT_FALSE(V1->containsPoisonElement());
+  }
+
+  {
+    Constant *V2 = ConstantVector::get({C1, CU});
+    EXPECT_TRUE(V2->containsUndefOrPoisonElement());
+    EXPECT_FALSE(V2->containsPoisonElement());
+  }
+
+  {
+    Constant *V3 = ConstantVector::get({C1, CP});
+    EXPECT_TRUE(V3->containsUndefOrPoisonElement());
+    EXPECT_TRUE(V3->containsPoisonElement());
+  }
+
+  {
+    Constant *V4 = ConstantVector::get({CU, CP});
+    EXPECT_TRUE(V4->containsUndefOrPoisonElement());
+    EXPECT_TRUE(V4->containsPoisonElement());
+  }
+}
+
 // Check that undefined elements in vector constants are matched
 // correctly for both integer and floating-point types. Just don't
 // crash on vectors of pointers (could be handled?).
@@ -594,8 +631,16 @@ TEST(ConstantsTest, isElementWiseEqual) {
 
   Type *Int32Ty = Type::getInt32Ty(Context);
   Constant *CU = UndefValue::get(Int32Ty);
+  Constant *CP = PoisonValue::get(Int32Ty);
   Constant *C1 = ConstantInt::get(Int32Ty, 1);
   Constant *C2 = ConstantInt::get(Int32Ty, 2);
+
+  Constant *CUU = ConstantVector::get({CU, CU});
+  Constant *CPP = ConstantVector::get({CP, CP});
+  Constant *CUP = ConstantVector::get({CU, CP});
+  EXPECT_EQ(CUU, UndefValue::get(CUU->getType()));
+  EXPECT_EQ(CPP, PoisonValue::get(CPP->getType()));
+  EXPECT_NE(CUP, UndefValue::get(CUP->getType()));
 
   Constant *C1211 = ConstantVector::get({C1, C2, C1, C1});
   Constant *C12U1 = ConstantVector::get({C1, C2, CU, C1});

@@ -142,6 +142,11 @@ EXTERN int omp_target_memcpy(void *dst, void *src, size_t length,
       DPxPTR(src), dst_offset, src_offset, length);
 
   if (!dst || !src || length <= 0) {
+    if (length == 0) {
+      DP("Call to omp_target_memcpy with zero length, nothing to do\n");
+      return OFFLOAD_SUCCESS;
+    }
+
     REPORT("Call to omp_target_memcpy with invalid arguments\n");
     return OFFLOAD_FAIL;
   }

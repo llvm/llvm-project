@@ -10,7 +10,7 @@ define i32 @fn1() {
 ; CHECK-LABEL: @fn1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64*, i64** @a, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64*> undef, i64* [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64*> poison, i64* [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64*> [[TMP1]], i64* [[TMP0]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i64, <2 x i64*> [[TMP2]], <2 x i64> <i64 11, i64 56>
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint <2 x i64*> [[TMP3]] to <2 x i64>

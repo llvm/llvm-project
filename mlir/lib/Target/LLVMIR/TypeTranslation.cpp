@@ -8,6 +8,7 @@
 
 #include "mlir/Target/LLVMIR/TypeTranslation.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
 
 #include "llvm/ADT/TypeSwitch.h"
@@ -38,16 +39,14 @@ public:
             .Case([this](LLVM::LLVMVoidType) {
               return llvm::Type::getVoidTy(context);
             })
-            .Case([this](LLVM::LLVMHalfType) {
-              return llvm::Type::getHalfTy(context);
-            })
-            .Case([this](LLVM::LLVMBFloatType) {
+            .Case(
+                [this](Float16Type) { return llvm::Type::getHalfTy(context); })
+            .Case([this](BFloat16Type) {
               return llvm::Type::getBFloatTy(context);
             })
-            .Case([this](LLVM::LLVMFloatType) {
-              return llvm::Type::getFloatTy(context);
-            })
-            .Case([this](LLVM::LLVMDoubleType) {
+            .Case(
+                [this](Float32Type) { return llvm::Type::getFloatTy(context); })
+            .Case([this](Float64Type) {
               return llvm::Type::getDoubleTy(context);
             })
             .Case([this](LLVM::LLVMFP128Type) {
@@ -71,10 +70,10 @@ public:
             .Case([this](LLVM::LLVMMetadataType) {
               return llvm::Type::getMetadataTy(context);
             })
-            .Case<LLVM::LLVMArrayType, LLVM::LLVMIntegerType,
-                  LLVM::LLVMFunctionType, LLVM::LLVMPointerType,
-                  LLVM::LLVMStructType, LLVM::LLVMFixedVectorType,
-                  LLVM::LLVMScalableVectorType>(
+            .Case<LLVM::LLVMArrayType, IntegerType, LLVM::LLVMFunctionType,
+                  LLVM::LLVMPointerType, LLVM::LLVMStructType,
+                  LLVM::LLVMFixedVectorType, LLVM::LLVMScalableVectorType,
+                  VectorType>(
                 [this](auto type) { return this->translate(type); })
             .Default([](Type t) -> llvm::Type * {
               llvm_unreachable("unknown LLVM dialect type");
@@ -101,8 +100,8 @@ private:
   }
 
   /// Translates the given integer type.
-  llvm::Type *translate(LLVM::LLVMIntegerType type) {
-    return llvm::IntegerType::get(context, type.getBitWidth());
+  llvm::Type *translate(IntegerType type) {
+    return llvm::IntegerType::get(context, type.getWidth());
   }
 
   /// Translates the given pointer type.
@@ -132,6 +131,14 @@ private:
     translateTypes(type.getBody(), subtypes);
     structType->setBody(subtypes, type.isPacked());
     return structType;
+  }
+
+  /// Translates the given built-in vector type compatible with LLVM.
+  llvm::Type *translate(VectorType type) {
+    assert(LLVM::isCompatibleVectorType(type) &&
+           "expected compatible with LLVM vector type");
+    return llvm::FixedVectorType::get(translateType(type.getElementType()),
+                                      type.getNumElements());
   }
 
   /// Translates the given fixed-vector type.
@@ -215,13 +222,13 @@ private:
     if (type->isVoidTy())
       return LLVM::LLVMVoidType::get(&context);
     if (type->isHalfTy())
-      return LLVM::LLVMHalfType::get(&context);
+      return Float16Type::get(&context);
     if (type->isBFloatTy())
-      return LLVM::LLVMBFloatType::get(&context);
+      return BFloat16Type::get(&context);
     if (type->isFloatTy())
-      return LLVM::LLVMFloatType::get(&context);
+      return Float32Type::get(&context);
     if (type->isDoubleTy())
-      return LLVM::LLVMDoubleType::get(&context);
+      return Float64Type::get(&context);
     if (type->isFP128Ty())
       return LLVM::LLVMFP128Type::get(&context);
     if (type->isX86_FP80Ty())
@@ -253,7 +260,7 @@ private:
 
   /// Translates the given integer type.
   Type translate(llvm::IntegerType *type) {
-    return LLVM::LLVMIntegerType::get(&context, type->getBitWidth());
+    return IntegerType::get(&context, type->getBitWidth());
   }
 
   /// Translates the given pointer type.
@@ -287,8 +294,8 @@ private:
 
   /// Translates the given fixed-vector type.
   Type translate(llvm::FixedVectorType *type) {
-    return LLVM::LLVMFixedVectorType::get(translateType(type->getElementType()),
-                                          type->getNumElements());
+    return LLVM::getFixedVectorType(translateType(type->getElementType()),
+                                    type->getNumElements());
   }
 
   /// Translates the given scalable-vector type.

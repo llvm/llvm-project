@@ -158,6 +158,38 @@ for.end:                                          ; preds = %for.body
 ; NPGSO-NOT:      phi
 ; NPGSO-NOT:      icmp
 
+;///////////////////// TEST 6 //////////////////////////////
+
+; This test tests that unroll hints take precedence over PGSO and that this loop
+; gets unrolled even though it's cold.
+
+define i32 @Test6() !prof !14 {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %i.05 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %arrayidx = getelementptr inbounds [24 x i32], [24 x i32]* @tab, i32 0, i32 %i.05
+  store i32 %i.05, i32* %arrayidx, align 4
+  %inc = add nuw nsw i32 %i.05, 1
+  %exitcond = icmp eq i32 %inc, 24
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !15
+
+for.end:                                          ; preds = %for.body
+  ret i32 42
+}
+
+; PGSO-LABEL: @Test6
+; PGSO:      store
+; PGSO:      store
+; PGSO:      store
+; PGSO:      store
+; NPGSO-LABEL: @Test6
+; NPGSO:      store
+; NPGSO:      store
+; NPGSO:      store
+; NPGSO:      store
+
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"ProfileSummary", !1}
 !1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
@@ -174,3 +206,5 @@ for.end:                                          ; preds = %for.body
 !12 = !{i32 999000, i64 100, i32 1}
 !13 = !{i32 999999, i64 1, i32 2}
 !14 = !{!"function_entry_count", i64 0}
+!15 = !{!15, !16}
+!16 = !{!"llvm.loop.unroll.count", i32 4}

@@ -13,16 +13,16 @@ func @forward_dead_store(%arg0: i1, %arg1 : memref<4x4xf32>,
   %c4 = constant 4 : index
   %c0 = constant 0 : index
   %cf0 = constant 0.0 : f32
-  vector.transfer_write %v0, %arg1[%c1, %c0] {masked = [false, false]} : 
+  vector.transfer_write %v0, %arg1[%c1, %c0] {masked = [false, false]} :
     vector<1x4xf32>, memref<4x4xf32>
-  %0 = vector.transfer_read %arg1[%c1, %c0], %cf0 {masked = [false, false]} : 
+  %0 = vector.transfer_read %arg1[%c1, %c0], %cf0 {masked = [false, false]} :
     memref<4x4xf32>, vector<1x4xf32>
-  %x = scf.for %i0 = %c0 to %c4 step %c1 iter_args(%acc = %0) 
+  %x = scf.for %i0 = %c0 to %c4 step %c1 iter_args(%acc = %0)
     -> (vector<1x4xf32>) {
     %1 = addf %acc, %acc : vector<1x4xf32>
     scf.yield %1 : vector<1x4xf32>
   }
-  vector.transfer_write %x, %arg1[%c1, %c0] {masked = [false, false]} : 
+  vector.transfer_write %x, %arg1[%c1, %c0] {masked = [false, false]} :
     vector<1x4xf32>, memref<4x4xf32>
   return
 }
@@ -103,7 +103,7 @@ func @forward_nested_negative(%arg0: i1, %arg1 : memref<4x4xf32>,
 //       CHECK:   vector.transfer_read
 //       CHECK:   return
 func @dead_store_region(%arg0: i1, %arg1 : memref<4x4xf32>,
-  %v0 : vector<1x4xf32>, %v1 : vector<1x4xf32>, %i : index) 
+  %v0 : vector<1x4xf32>, %v1 : vector<1x4xf32>, %i : index)
   -> (vector<1x4xf32>) {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
@@ -184,3 +184,56 @@ func @dead_store_nested_region(%arg0: i1, %arg1: i1, %arg2 : memref<4x4xf32>,
   return
 }
 
+// CHECK-LABEL: func @forward_dead_store_tensor
+//   CHECK-NOT:   vector.transfer_write
+//   CHECK-NOT:   vector.transfer_read
+//       CHECK:   scf.for
+//       CHECK:   }
+//       CHECK:   %[[VTW:.*]] = vector.transfer_write
+//       CHECK:   return %[[VTW]] : tensor<4x4xf32>
+func @forward_dead_store_tensor(%arg0: i1, %arg1 : tensor<4x4xf32>,
+  %v0 : vector<1x4xf32>, %v1 : vector<1x4xf32>, %i : index) -> tensor<4x4xf32> {
+  %c1 = constant 1 : index
+  %c4 = constant 4 : index
+  %c0 = constant 0 : index
+  %cf0 = constant 0.0 : f32
+  %w0 = vector.transfer_write %v0, %arg1[%c1, %c0] {masked = [false, false]} :
+    vector<1x4xf32>, tensor<4x4xf32>
+  %0 = vector.transfer_read %w0[%c1, %c0], %cf0 {masked = [false, false]} :
+    tensor<4x4xf32>, vector<1x4xf32>
+  %x = scf.for %i0 = %c0 to %c4 step %c1 iter_args(%acc = %0)
+    -> (vector<1x4xf32>) {
+    %1 = addf %acc, %acc : vector<1x4xf32>
+    scf.yield %1 : vector<1x4xf32>
+  }
+  %w1 = vector.transfer_write %x, %w0[%c1, %c0] {masked = [false, false]} :
+    vector<1x4xf32>, tensor<4x4xf32>
+  return %w1 : tensor<4x4xf32>
+}
+
+// CHECK-LABEL: func @forward_dead_store_negative_tensor
+//       CHECK:   vector.transfer_write
+//       CHECK:   vector.transfer_read
+//       CHECK:   scf.for
+//       CHECK:   }
+//       CHECK:   %[[VTW:.*]] = vector.transfer_write
+//       CHECK:   return %[[VTW]] : tensor<4x4xf32>
+func @forward_dead_store_negative_tensor(%arg0: i1, %arg1 : tensor<4x4xf32>,
+  %v0 : vector<1x4xf32>, %v1 : vector<1x4xf32>, %i : index) -> tensor<4x4xf32> {
+  %c1 = constant 1 : index
+  %c4 = constant 4 : index
+  %c0 = constant 0 : index
+  %cf0 = constant 0.0 : f32
+  %w0 = vector.transfer_write %v0, %arg1[%c1, %i] {masked = [false, false]} :
+    vector<1x4xf32>, tensor<4x4xf32>
+  %0 = vector.transfer_read %w0[%c1, %c0], %cf0 {masked = [false, false]} :
+    tensor<4x4xf32>, vector<1x4xf32>
+  %x = scf.for %i0 = %c0 to %c4 step %c1 iter_args(%acc = %0)
+    -> (vector<1x4xf32>) {
+    %1 = addf %acc, %acc : vector<1x4xf32>
+    scf.yield %1 : vector<1x4xf32>
+  }
+  %w1 = vector.transfer_write %x, %w0[%c1, %c0] {masked = [false, false]} :
+    vector<1x4xf32>, tensor<4x4xf32>
+  return %w1 : tensor<4x4xf32>
+}

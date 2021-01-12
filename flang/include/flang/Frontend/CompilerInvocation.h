@@ -9,10 +9,12 @@
 #define LLVM_FLANG_FRONTEND_COMPILERINVOCATION_H
 
 #include "flang/Frontend/FrontendOptions.h"
+#include "flang/Frontend/PreprocessorOptions.h"
 #include "flang/Parser/parsing.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "llvm/Option/ArgList.h"
+#include <memory>
 
 namespace Fortran::frontend {
 
@@ -27,6 +29,8 @@ class CompilerInvocationBase {
 public:
   /// Options controlling the diagnostic engine.
   llvm::IntrusiveRefCntPtr<clang::DiagnosticOptions> diagnosticOpts_;
+  /// Options for the preprocessor.
+  std::shared_ptr<Fortran::frontend::PreprocessorOptions> preprocessorOpts_;
 
   CompilerInvocationBase();
   CompilerInvocationBase(const CompilerInvocationBase &x);
@@ -37,6 +41,11 @@ public:
   }
   const clang::DiagnosticOptions &GetDiagnosticOpts() const {
     return *diagnosticOpts_.get();
+  }
+
+  PreprocessorOptions &preprocessorOpts() { return *preprocessorOpts_; }
+  const PreprocessorOptions &preprocessorOpts() const {
+    return *preprocessorOpts_;
   }
 };
 
@@ -74,6 +83,10 @@ public:
   // need to extend frontendOpts_ first. Next, we need to add the corresponding
   // compiler driver options in libclangDriver.
   void SetDefaultFortranOpts();
+
+  /// Set the Fortran options to user-specified values.
+  /// These values are found in the preprocessor options.
+  void setFortranOpts();
 };
 
 } // end namespace Fortran::frontend

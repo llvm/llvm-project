@@ -2898,8 +2898,8 @@ static unsigned getHiPELiteral(
 // non-meta instructions between MBBI and MBB.end().
 static bool blockEndIsUnreachable(const MachineBasicBlock &MBB,
                                   MachineBasicBlock::const_iterator MBBI) {
-  return std::all_of(
-             MBB.succ_begin(), MBB.succ_end(),
+  return llvm::all_of(
+             MBB.successors(),
              [](const MachineBasicBlock *Succ) { return Succ->isEHPad(); }) &&
          std::all_of(MBBI, MBB.end(), [](const MachineInstr &MI) {
            return MI.isMetaInstruction();

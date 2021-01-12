@@ -454,7 +454,7 @@ define i32 @call_null() {
 ; CHECK-LABEL: @call_null(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 null()
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
 entry:
   %call = call i32 null()
@@ -465,7 +465,7 @@ define i32 @call_undef() {
 ; CHECK-LABEL: @call_undef(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 undef()
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
 entry:
   %call = call i32 undef()

@@ -102,11 +102,11 @@ define void @vectorized1(float* noalias nocapture %A, float* noalias nocapture r
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, float* [[B:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, float* [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast float* [[TMP3]] to <8 x float>*
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <8 x float> @llvm.masked.load.v8f32.p0v8f32(<8 x float>* [[TMP4]], i32 4, <8 x i1> [[TMP1]], <8 x float> undef), !llvm.access.group !6
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <8 x float> @llvm.masked.load.v8f32.p0v8f32(<8 x float>* [[TMP4]], i32 4, <8 x i1> [[TMP1]], <8 x float> poison), !llvm.access.group !6
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, float* [[A:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, float* [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast float* [[TMP6]] to <8 x float>*
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <8 x float> @llvm.masked.load.v8f32.p0v8f32(<8 x float>* [[TMP7]], i32 4, <8 x i1> [[TMP1]], <8 x float> undef), !llvm.access.group !6
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <8 x float> @llvm.masked.load.v8f32.p0v8f32(<8 x float>* [[TMP7]], i32 4, <8 x i1> [[TMP1]], <8 x float> poison), !llvm.access.group !6
 ; CHECK-NEXT:    [[TMP8:%.*]] = fadd fast <8 x float> [[WIDE_MASKED_LOAD]], [[WIDE_MASKED_LOAD1]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast float* [[TMP6]] to <8 x float>*
 ; CHECK-NEXT:    call void @llvm.masked.store.v8f32.p0v8f32(<8 x float> [[TMP8]], <8 x float>* [[TMP9]], i32 4, <8 x i1> [[TMP1]]), !llvm.access.group !6

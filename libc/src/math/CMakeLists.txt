@@ -416,6 +416,42 @@ add_entrypoint_object(
     -O2
 )
 
+add_entrypoint_object(
+  nearbyint
+  SRCS
+    nearbyint.cpp
+  HDRS
+    nearbyint.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  nearbyintf
+  SRCS
+    nearbyintf.cpp
+  HDRS
+    nearbyintf.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  nearbyintl
+  SRCS
+    nearbyintl.cpp
+  HDRS
+    nearbyintl.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
 add_object_library(
   exp_utils
   HDRS
@@ -900,6 +936,54 @@ add_entrypoint_object(
     hypot.cpp
   HDRS
     hypot.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  nextafter
+  SRCS
+    nextafter.cpp
+  HDRS
+    nextafter.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  nextafterf
+  SRCS
+    nextafterf.cpp
+  HDRS
+    nextafterf.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  nextafterl
+  SRCS
+    nextafterl.cpp
+  HDRS
+    nextafterl.h
+  DEPENDS
+    libc.utils.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  fmaf
+  SRCS
+    fmaf.cpp
+  HDRS
+    fmaf.h
   DEPENDS
     libc.utils.FPUtil.fputil
   COMPILE_OPTIONS

@@ -21,9 +21,6 @@ class Test_Type<string name> : TypeDef<Test_Dialect, name> { }
 
 def SimpleTypeA : Test_Type<"SimpleA"> {
   let mnemonic = "smpla";
-
-  let printer = [{ $_printer << "smpla"; }];
-  let parser = [{ return get($_ctxt); }];
 }
 
 // A more complex parameterized type.
@@ -54,9 +51,9 @@ def IntegerType : Test_Type<"TestInteger"> {
   let genVerifyInvariantsDecl = 1;
   let parameters = (
     ins
+    "unsigned":$width,
     // SignednessSemantics is defined below.
-    "::mlir::test::TestIntegerType::SignednessSemantics":$signedness,
-    "unsigned":$width
+    "::mlir::test::TestIntegerType::SignednessSemantics":$signedness
   );
 
   // We define the printer inline.
@@ -65,6 +62,17 @@ def IntegerType : Test_Type<"TestInteger"> {
     printSignedness($_printer, getImpl()->signedness);
     $_printer << ", " << getImpl()->width << ">";
   }];
+
+  // Define custom builder methods.
+  let builders = [
+    TypeBuilder<(ins "unsigned":$width,
+                     CArg<"SignednessSemantics", "Signless">:$signedness), [{
+      return Base::get($_ctxt, width, signedness);
+    }], [{
+      return Base::getChecked($_loc, width, signedness);
+    }]>
+  ];
+  let skipDefaultBuilders = 1;
 
   // The parser is defined here also.
   let parser = [{
@@ -76,7 +84,7 @@ def IntegerType : Test_Type<"TestInteger"> {
     if ($_parser.parseInteger(width)) return Type();
     if ($_parser.parseGreater()) return Type();
     Location loc = $_parser.getEncodedSourceLoc($_parser.getNameLoc());
-    return getChecked(loc, signedness, width);
+    return getChecked(loc, width, signedness);
   }];
 
   // Any extra code one wants in the type's class declaration.
@@ -87,9 +95,6 @@ def IntegerType : Test_Type<"TestInteger"> {
       Signed,   /// Signed integer
       Unsigned, /// Unsigned integer
     };
-
-    /// This extra function is necessary since it doesn't include signedness
-    static IntegerType getChecked(unsigned width, Location location);
 
     /// Return true if this is a signless integer type.
     bool isSignless() const { return getSignedness() == Signless; }

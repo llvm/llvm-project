@@ -297,6 +297,12 @@ template <class T> struct simplify_type<const IntrusiveRefCntPtr<T>> {
   }
 };
 
+/// Factory function for creating intrusive ref counted pointers.
+template <typename T, typename... Args>
+IntrusiveRefCntPtr<T> makeIntrusiveRefCnt(Args &&...A) {
+  return IntrusiveRefCntPtr<T>(new T(std::forward<Args>(A)...));
+}
+
 } // end namespace llvm
 
 #endif // LLVM_ADT_INTRUSIVEREFCNTPTR_H

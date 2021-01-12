@@ -566,17 +566,17 @@ def testCreateWithInvalidAttributes():
     try:
       Operation.create("module", attributes={None:StringAttr.get("name")})
     except Exception as e:
-      # CHECK: Invalid attribute key (not a string) when attempting to create the operation "module" (Unable to cast Python instance of type <class 'NoneType'> to C++ type
+      # CHECK: Invalid attribute key (not a string) when attempting to create the operation "module"
       print(e)
     try:
       Operation.create("module", attributes={42:StringAttr.get("name")})
     except Exception as e:
-      # CHECK: Invalid attribute key (not a string) when attempting to create the operation "module" (Unable to cast Python instance of type <class 'int'> to C++ type
+      # CHECK: Invalid attribute key (not a string) when attempting to create the operation "module"
       print(e)
     try:
       Operation.create("module", attributes={"some_key":ctx})
     except Exception as e:
-      # CHECK: Invalid attribute value for the key "some_key" when attempting to create the operation "module" (Unable to cast Python instance of type <class '_mlir.ir.Context'> to C++ type 'mlir::python::PyAttribute')
+      # CHECK: Invalid attribute value for the key "some_key" when attempting to create the operation "module"
       print(e)
     try:
       Operation.create("module", attributes={"some_key":None})

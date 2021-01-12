@@ -1765,7 +1765,7 @@ Expr *CastExpr::getSubExprAsWritten() {
     // subexpression describing the call; strip it off.
     if (E->getCastKind() == CK_ConstructorConversion)
       SubExpr =
-        skipImplicitTemporary(cast<CXXConstructExpr>(SubExpr)->getArg(0));
+        skipImplicitTemporary(cast<CXXConstructExpr>(SubExpr->IgnoreImplicit())->getArg(0));
     else if (E->getCastKind() == CK_UserDefinedConversion) {
       assert((isa<CXXMemberCallExpr>(SubExpr) ||
               isa<BlockExpr>(SubExpr)) &&

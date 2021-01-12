@@ -246,7 +246,7 @@ std::string HexagonDYLDRendezvous::ReadStringFromMemory(addr_t addr) {
     return std::string();
 
   for (;;) {
-    size = m_process->DoReadMemory(addr, &c, 1, error);
+    size = m_process->ReadMemory(addr, &c, 1, error);
     if (size != 1 || error.Fail())
       return std::string();
     if (c == 0)

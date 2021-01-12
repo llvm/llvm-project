@@ -33,6 +33,217 @@ func @inotequal_vector(%arg0: vector<4xi32>, %arg1: vector<4xi32>) -> vector<4xi
 // -----
 
 //===----------------------------------------------------------------------===//
+// spv.LogicalAnd
+//===----------------------------------------------------------------------===//
+
+func @logicalBinary(%arg0 : i1, %arg1 : i1, %arg2 : i1)
+{
+  // CHECK: [[TMP:%.*]] = spv.LogicalAnd {{%.*}}, {{%.*}} : i1
+  %0 = spv.LogicalAnd %arg0, %arg1 : i1
+  // CHECK: {{%.*}} = spv.LogicalAnd [[TMP]], {{%.*}} : i1
+  %1 = spv.LogicalAnd %0, %arg2 : i1
+  return
+}
+
+func @logicalBinary2(%arg0 : vector<4xi1>, %arg1 : vector<4xi1>)
+{
+  // CHECK: {{%.*}} = spv.LogicalAnd {{%.*}}, {{%.*}} : vector<4xi1>
+  %0 = spv.LogicalAnd %arg0, %arg1 : vector<4xi1>
+  return
+}
+
+// -----
+
+func @logicalBinary(%arg0 : i1, %arg1 : i1)
+{
+  // expected-error @+2 {{expected ':'}}
+  %0 = spv.LogicalAnd %arg0, %arg1
+  return
+}
+
+// -----
+
+func @logicalBinary(%arg0 : i1, %arg1 : i1)
+{
+  // expected-error @+2 {{expected non-function type}}
+  %0 = spv.LogicalAnd %arg0, %arg1 :
+  return
+}
+
+// -----
+
+func @logicalBinary(%arg0 : i1, %arg1 : i1)
+{
+  // expected-error @+1 {{custom op 'spv.LogicalAnd' expected 2 operands}}
+  %0 = spv.LogicalAnd %arg0 : i1
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spv.LogicalNot
+//===----------------------------------------------------------------------===//
+
+func @logicalUnary(%arg0 : i1, %arg1 : i1)
+{
+  // CHECK: [[TMP:%.*]] = spv.LogicalNot {{%.*}} : i1
+  %0 = spv.LogicalNot %arg0 : i1
+  // CHECK: {{%.*}} = spv.LogicalNot [[TMP]] : i1
+  %1 = spv.LogicalNot %0 : i1
+  return
+}
+
+func @logicalUnary2(%arg0 : vector<4xi1>)
+{
+  // CHECK: {{%.*}} = spv.LogicalNot {{%.*}} : vector<4xi1>
+  %0 = spv.LogicalNot %arg0 : vector<4xi1>
+  return
+}
+
+// -----
+
+func @logicalUnary(%arg0 : i1)
+{
+  // expected-error @+2 {{expected ':'}}
+  %0 = spv.LogicalNot %arg0
+  return
+}
+
+// -----
+
+func @logicalUnary(%arg0 : i1)
+{
+  // expected-error @+2 {{expected non-function type}}
+  %0 = spv.LogicalNot %arg0 :
+  return
+}
+
+// -----
+
+func @logicalUnary(%arg0 : i1)
+{
+  // expected-error @+1 {{expected SSA operand}}
+  %0 = spv.LogicalNot : i1
+  return
+}
+
+// -----
+
+func @logicalUnary(%arg0 : i32)
+{
+  // expected-error @+1 {{operand #0 must be bool or vector of bool values of length 2/3/4/8/16, but got 'i32'}}
+  %0 = spv.LogicalNot %arg0 : i32
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spv.SelectOp
+//===----------------------------------------------------------------------===//
+
+func @select_op_bool(%arg0: i1) -> () {
+  %0 = spv.constant true
+  %1 = spv.constant false
+  // CHECK : spv.Select {{%.*}}, {{%.*}}, {{%.*}} : i1, i1
+  %2 = spv.Select %arg0, %0, %1 : i1, i1
+  return
+}
+
+func @select_op_int(%arg0: i1) -> () {
+  %0 = spv.constant 2 : i32
+  %1 = spv.constant 3 : i32
+  // CHECK : spv.Select {{%.*}}, {{%.*}}, {{%.*}} : i1, i32
+  %2 = spv.Select %arg0, %0, %1 : i1, i32
+  return
+}
+
+func @select_op_float(%arg0: i1) -> () {
+  %0 = spv.constant 2.0 : f32
+  %1 = spv.constant 3.0 : f32
+  // CHECK : spv.Select {{%.*}}, {{%.*}}, {{%.*}} : i1, f32
+  %2 = spv.Select %arg0, %0, %1 : i1, f32
+  return
+}
+
+func @select_op_ptr(%arg0: i1) -> () {
+  %0 = spv.Variable : !spv.ptr<f32, Function>
+  %1 = spv.Variable : !spv.ptr<f32, Function>
+  // CHECK : spv.Select {{%.*}}, {{%.*}}, {{%.*}} : i1, !spv.ptr<f32, Function>
+  %2 = spv.Select %arg0, %0, %1 : i1, !spv.ptr<f32, Function>
+  return
+}
+
+func @select_op_vec(%arg0: i1) -> () {
+  %0 = spv.constant dense<[2.0, 3.0, 4.0]> : vector<3xf32>
+  %1 = spv.constant dense<[5.0, 6.0, 7.0]> : vector<3xf32>
+  // CHECK : spv.Select {{%.*}}, {{%.*}}, {{%.*}} : i1, vector<3xf32>
+  %2 = spv.Select %arg0, %0, %1 : i1, vector<3xf32>
+  return
+}
+
+func @select_op_vec_condn_vec(%arg0: vector<3xi1>) -> () {
+  %0 = spv.constant dense<[2.0, 3.0, 4.0]> : vector<3xf32>
+  %1 = spv.constant dense<[5.0, 6.0, 7.0]> : vector<3xf32>
+  // CHECK : spv.Select {{%.*}}, {{%.*}}, {{%.*}} : vector<3xi1>, vector<3xf32>
+  %2 = spv.Select %arg0, %0, %1 : vector<3xi1>, vector<3xf32>
+  return
+}
+
+// -----
+
+func @select_op(%arg0: i1) -> () {
+  %0 = spv.constant 2 : i32
+  %1 = spv.constant 3 : i32
+  // expected-error @+2 {{expected ','}}
+  %2 = spv.Select %arg0, %0, %1 : i1
+  return
+}
+
+// -----
+
+func @select_op(%arg1: vector<3xi1>) -> () {
+  %0 = spv.constant 2 : i32
+  %1 = spv.constant 3 : i32
+  // expected-error @+1 {{result expected to be of vector type when condition is of vector type}}
+  %2 = spv.Select %arg1, %0, %1 : vector<3xi1>, i32
+  return
+}
+
+// -----
+
+func @select_op(%arg1: vector<4xi1>) -> () {
+  %0 = spv.constant dense<[2, 3, 4]> : vector<3xi32>
+  %1 = spv.constant dense<[5, 6, 7]> : vector<3xi32>
+  // expected-error @+1 {{result should have the same number of elements as the condition when condition is of vector type}}
+  %2 = spv.Select %arg1, %0, %1 : vector<4xi1>, vector<3xi32>
+  return
+}
+
+// -----
+
+func @select_op(%arg1: vector<4xi1>) -> () {
+  %0 = spv.constant dense<[2.0, 3.0, 4.0]> : vector<3xf32>
+  %1 = spv.constant dense<[5, 6, 7]> : vector<3xi32>
+  // expected-error @+1 {{all of {true_value, false_value, result} have same type}}
+  %2 = "spv.Select"(%arg1, %0, %1) : (vector<4xi1>, vector<3xf32>, vector<3xi32>) -> vector<3xi32>
+  return
+}
+
+// -----
+
+func @select_op(%arg1: vector<4xi1>) -> () {
+  %0 = spv.constant dense<[2.0, 3.0, 4.0]> : vector<3xf32>
+  %1 = spv.constant dense<[5, 6, 7]> : vector<3xi32>
+  // expected-error @+1 {{all of {true_value, false_value, result} have same type}}
+  %2 = "spv.Select"(%arg1, %1, %0) : (vector<4xi1>, vector<3xi32>, vector<3xf32>) -> vector<3xi32>
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spv.SGreaterThan
 //===----------------------------------------------------------------------===//
 

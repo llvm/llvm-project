@@ -303,7 +303,7 @@ namespace llvm {
       if (isScalableVector())
         WithColor::warning()
             << "Possible incorrect use of EVT::getVectorNumElements() for "
-               "scalable vector. Scalable flag may be dropped, use"
+               "scalable vector. Scalable flag may be dropped, use "
                "EVT::getVectorElementCount() instead\n";
 #endif
       if (isSimple())

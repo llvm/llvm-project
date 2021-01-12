@@ -93,11 +93,11 @@ protected:
                                            llvm::IRBuilder<> &builder);
   virtual LogicalResult convertOmpMaster(Operation &op,
                                          llvm::IRBuilder<> &builder);
-  void convertOmpOpRegions(Region &region,
+  void convertOmpOpRegions(Region &region, StringRef blockName,
                            DenseMap<Value, llvm::Value *> &valueMapping,
                            DenseMap<Block *, llvm::BasicBlock *> &blockMapping,
-                           llvm::Instruction *codeGenIPBBTI,
-                           llvm::BasicBlock &continuationIP,
+                           llvm::BasicBlock &sourceBlock,
+                           llvm::BasicBlock &continuationBlock,
                            llvm::IRBuilder<> &builder,
                            LogicalResult &bodyGenStatus);
   virtual LogicalResult convertOmpWsLoop(Operation &opInst,
@@ -121,7 +121,8 @@ private:
   LogicalResult convertFunctions();
   LogicalResult convertGlobals();
   LogicalResult convertOneFunction(LLVMFuncOp func);
-  LogicalResult convertBlock(Block &bb, bool ignoreArguments);
+  LogicalResult convertBlock(Block &bb, bool ignoreArguments,
+                             llvm::IRBuilder<> &builder);
 
   llvm::Constant *getLLVMConstant(llvm::Type *llvmType, Attribute attr,
                                   Location loc);
@@ -134,14 +135,11 @@ private:
 
   /// Builder for LLVM IR generation of OpenMP constructs.
   std::unique_ptr<llvm::OpenMPIRBuilder> ompBuilder;
+
   /// Precomputed pointer to OpenMP dialect. Note this can be nullptr if the
   /// OpenMP dialect hasn't been loaded (it is always loaded if there are OpenMP
   /// operations in the module though).
   const Dialect *ompDialect;
-  /// Stack which stores the target block to which a branch a must be added when
-  /// a terminator is seen. A stack is required to handle nested OpenMP parallel
-  /// regions.
-  SmallVector<llvm::BasicBlock *, 4> ompContinuationIPStack;
 
   /// Mappings between llvm.mlir.global definitions and corresponding globals.
   DenseMap<Operation *, llvm::GlobalValue *> globalsMapping;
@@ -156,7 +154,7 @@ protected:
   DenseMap<Block *, llvm::BasicBlock *> blockMapping;
 
   /// A mapping between MLIR LLVM dialect terminators and LLVM IR terminators
-  /// they are converted to. This allows for conneting PHI nodes to the source
+  /// they are converted to. This allows for connecting PHI nodes to the source
   /// values after all operations are converted.
   DenseMap<Operation *, llvm::Instruction *> branchMapping;
 };

@@ -888,6 +888,30 @@ TEST_F(ValueTrackingTest, isGuaranteedNotToBeUndefOrPoison) {
   EXPECT_EQ(isGuaranteedNotToBeUndefOrPoison(PoisonValue::get(IntegerType::get(Context, 8))), false);
   EXPECT_EQ(isGuaranteedNotToBePoison(UndefValue::get(IntegerType::get(Context, 8))), true);
   EXPECT_EQ(isGuaranteedNotToBePoison(PoisonValue::get(IntegerType::get(Context, 8))), false);
+
+  Type *Int32Ty = Type::getInt32Ty(Context);
+  Constant *CU = UndefValue::get(Int32Ty);
+  Constant *CP = PoisonValue::get(Int32Ty);
+  Constant *C1 = ConstantInt::get(Int32Ty, 1);
+  Constant *C2 = ConstantInt::get(Int32Ty, 2);
+
+  {
+    Constant *V1 = ConstantVector::get({C1, C2});
+    EXPECT_TRUE(isGuaranteedNotToBeUndefOrPoison(V1));
+    EXPECT_TRUE(isGuaranteedNotToBePoison(V1));
+  }
+
+  {
+    Constant *V2 = ConstantVector::get({C1, CU});
+    EXPECT_FALSE(isGuaranteedNotToBeUndefOrPoison(V2));
+    EXPECT_TRUE(isGuaranteedNotToBePoison(V2));
+  }
+
+  {
+    Constant *V3 = ConstantVector::get({C1, CP});
+    EXPECT_FALSE(isGuaranteedNotToBeUndefOrPoison(V3));
+    EXPECT_FALSE(isGuaranteedNotToBePoison(V3));
+  }
 }
 
 TEST_F(ValueTrackingTest, isGuaranteedNotToBeUndefOrPoison_assume) {

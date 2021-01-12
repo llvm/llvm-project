@@ -2,11 +2,6 @@ import("//clang/resource_dir.gni")
 import("//libcxx/config.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
 
-declare_args() {
-  # Install libc++ support headers.
-  libcxx_install_support_headers = true
-}
-
 libcxx_needs_site_config =
     libcxx_abi_version != 1 || libcxx_abi_namespace != "" || libcxx_abi_unstable
 
@@ -54,6 +49,7 @@ if (libcxx_needs_site_config) {
 
 copy("include") {
   sources = [
+    "__availability",
     "__bit_reference",
     "__bsd_locale_defaults.h",
     "__bsd_locale_fallbacks.h",
@@ -104,6 +100,7 @@ copy("include") {
     "compare",
     "complex",
     "complex.h",
+    "concepts",
     "condition_variable",
     "csetjmp",
     "csignal",
@@ -122,6 +119,7 @@ copy("include") {
     "deque",
     "errno.h",
     "exception",
+    "execution",
     "experimental/__config",
     "experimental/__memory",
     "experimental/algorithm",
@@ -174,6 +172,7 @@ copy("include") {
     "module.modulemap",
     "mutex",
     "new",
+    "numbers",
     "numeric",
     "optional",
     "ostream",
@@ -200,6 +199,24 @@ copy("include") {
     "string.h",
     "string_view",
     "strstream",
+    "support/android/locale_bionic.h",
+    "support/fuchsia/xlocale.h",
+    "support/ibm/limits.h",
+    "support/ibm/locale_mgmt_aix.h",
+    "support/ibm/nanosleep.h",
+    "support/ibm/support.h",
+    "support/ibm/xlocale.h",
+    "support/musl/xlocale.h",
+    "support/newlib/xlocale.h",
+    "support/nuttx/xlocale.h",
+    "support/solaris/floatingpoint.h",
+    "support/solaris/wchar.h",
+    "support/solaris/xlocale.h",
+    "support/win32/limits_msvc_win32.h",
+    "support/win32/locale_win32.h",
+    "support/xlocale/__nop_locale_mgmt.h",
+    "support/xlocale/__posix_l_fallback.h",
+    "support/xlocale/__strtonum_fallback.h",
     "system_error",
     "tgmath.h",
     "thread",
@@ -233,32 +250,6 @@ copy("include") {
     sources += [ "__config" ]
   } else {
     deps += [ ":copy_config" ]
-  }
-  if (libcxx_install_support_headers) {
-    sources += [
-      "support/android/locale_bionic.h",
-      "support/fuchsia/xlocale.h",
-      "support/ibm/limits.h",
-      "support/ibm/locale_mgmt_aix.h",
-      "support/ibm/nanosleep.h",
-      "support/ibm/support.h",
-      "support/ibm/xlocale.h",
-      "support/musl/xlocale.h",
-      "support/newlib/xlocale.h",
-      "support/nuttx/xlocale.h",
-      "support/solaris/floatingpoint.h",
-      "support/solaris/wchar.h",
-      "support/solaris/xlocale.h",
-      "support/xlocale/__nop_locale_mgmt.h",
-      "support/xlocale/__posix_l_fallback.h",
-      "support/xlocale/__strtonum_fallback.h",
-    ]
-    if (target_os == "win") {
-      sources += [
-        "support/win32/limits_msvc_win32.h",
-        "support/win32/locale_win32.h",
-      ]
-    }
   }
   outputs = [ "$root_build_dir/include/c++/v1/{{source_target_relative}}" ]
 }

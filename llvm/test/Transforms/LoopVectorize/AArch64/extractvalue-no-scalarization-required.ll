@@ -19,11 +19,11 @@
 ; FORCED-NEXT:    %0 = add i32 %index, 0
 ; FORCED-NEXT:    %1 = extractvalue { i64, i64 } %sv, 0
 ; FORCED-NEXT:    %2 = extractvalue { i64, i64 } %sv, 0
-; FORCED-NEXT:    %3 = insertelement <2 x i64> undef, i64 %1, i32 0
+; FORCED-NEXT:    %3 = insertelement <2 x i64> poison, i64 %1, i32 0
 ; FORCED-NEXT:    %4 = insertelement <2 x i64> %3, i64 %2, i32 1
 ; FORCED-NEXT:    %5 = extractvalue { i64, i64 } %sv, 1
 ; FORCED-NEXT:    %6 = extractvalue { i64, i64 } %sv, 1
-; FORCED-NEXT:    %7 = insertelement <2 x i64> undef, i64 %5, i32 0
+; FORCED-NEXT:    %7 = insertelement <2 x i64> poison, i64 %5, i32 0
 ; FORCED-NEXT:    %8 = insertelement <2 x i64> %7, i64 %6, i32 1
 ; FORCED-NEXT:    %9 = getelementptr i64, i64* %dst, i32 %0
 ; FORCED-NEXT:    %10 = add <2 x i64> %4, %8
@@ -68,11 +68,11 @@ declare float @pow(float, float) readnone nounwind
 ; FORCED-NEXT:    %0 = add i32 %index, 0
 ; FORCED-NEXT:    %1 = extractvalue { float, float } %sv, 0
 ; FORCED-NEXT:    %2 = extractvalue { float, float } %sv, 0
-; FORCED-NEXT:    %3 = insertelement <2 x float> undef, float %1, i32 0
+; FORCED-NEXT:    %3 = insertelement <2 x float> poison, float %1, i32 0
 ; FORCED-NEXT:    %4 = insertelement <2 x float> %3, float %2, i32 1
 ; FORCED-NEXT:    %5 = extractvalue { float, float } %sv, 1
 ; FORCED-NEXT:    %6 = extractvalue { float, float } %sv, 1
-; FORCED-NEXT:    %7 = insertelement <2 x float> undef, float %5, i32 0
+; FORCED-NEXT:    %7 = insertelement <2 x float> poison, float %5, i32 0
 ; FORCED-NEXT:    %8 = insertelement <2 x float> %7, float %6, i32 1
 ; FORCED-NEXT:    %9 = getelementptr float, float* %dst, i32 %0
 ; FORCED-NEXT:    %10 = call <2 x float> @llvm.pow.v2f32(<2 x float> %4, <2 x float> %8)

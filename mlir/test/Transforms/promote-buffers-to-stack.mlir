@@ -498,7 +498,7 @@ func @loop_alloc(
 
 // Test Case: structured control-flow loop with a nested if operation.
 // The loop yields buffers that have been defined outside of the loop and the
-// backeges only use the iteration arguments (or one of its aliases).
+// backedges only use the iteration arguments (or one of its aliases).
 // Therefore, we do not have to (and are not allowed to) free any buffers
 // that are passed via the backedges. The alloc is converted to an AllocaOp.
 

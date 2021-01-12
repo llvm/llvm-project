@@ -214,6 +214,41 @@ spv.module Logical GLSL450 {
 // -----
 
 //===----------------------------------------------------------------------===//
+// spv.ExecutionMode
+//===----------------------------------------------------------------------===//
+
+spv.module Logical GLSL450 {
+   spv.func @do_nothing() -> () "None" {
+     spv.Return
+   }
+   spv.EntryPoint "GLCompute" @do_nothing
+   // CHECK: spv.ExecutionMode {{@.*}} "ContractionOff"
+   spv.ExecutionMode @do_nothing "ContractionOff"
+}
+
+spv.module Logical GLSL450 {
+   spv.func @do_nothing() -> () "None" {
+     spv.Return
+   }
+   spv.EntryPoint "GLCompute" @do_nothing
+   // CHECK: spv.ExecutionMode {{@.*}} "LocalSizeHint", 3, 4, 5
+   spv.ExecutionMode @do_nothing "LocalSizeHint", 3, 4, 5
+}
+
+// -----
+
+spv.module Logical GLSL450 {
+   spv.func @do_nothing() -> () "None" {
+     spv.Return
+   }
+   spv.EntryPoint "GLCompute" @do_nothing
+   // expected-error @+1 {{custom op 'spv.ExecutionMode' invalid execution_mode attribute specification: "GLCompute"}}
+   spv.ExecutionMode @do_nothing "GLCompute", 3, 4, 5
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spv.func
 //===----------------------------------------------------------------------===//
 
@@ -775,6 +810,20 @@ spv.module Logical GLSL450 {
     %2 = spv.SpecConstantOperation wraps "spv.IAdd"(%0, %1) : (i32, i32) -> i32
 
     spv.ReturnValue %2 : i32
+  }
+}
+
+// -----
+
+spv.module Logical GLSL450 {
+  spv.specConstant @sc = 42 : i32
+
+  spv.func @foo() -> i32 "None" {
+    // CHECK: [[SC:%.*]] = spv.mlir.referenceof @sc
+    %0 = spv.mlir.referenceof @sc : i32
+    // CHECK: spv.SpecConstantOperation wraps "spv.ISub"([[SC]], [[SC]]) : (i32, i32) -> i32
+    %1 = spv.SpecConstantOperation wraps "spv.ISub"(%0, %0) : (i32, i32) -> i32
+    spv.ReturnValue %1 : i32
   }
 }
 

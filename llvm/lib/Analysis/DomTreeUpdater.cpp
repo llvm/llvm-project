@@ -166,7 +166,7 @@ bool DomTreeUpdater::hasPendingPostDomTreeUpdates() const {
 bool DomTreeUpdater::isBBPendingDeletion(llvm::BasicBlock *DelBB) const {
   if (Strategy == UpdateStrategy::Eager || DeletedBBs.empty())
     return false;
-  return DeletedBBs.count(DelBB) != 0;
+  return DeletedBBs.contains(DelBB);
 }
 
 // The DT and PDT require the nodes related to updates

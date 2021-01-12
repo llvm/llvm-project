@@ -248,10 +248,8 @@ bool SVEIntrinsicOpts::runOnModule(Module &M) {
     case Intrinsic::aarch64_sve_ptest_any:
     case Intrinsic::aarch64_sve_ptest_first:
     case Intrinsic::aarch64_sve_ptest_last:
-      for (auto I = F.user_begin(), E = F.user_end(); I != E;) {
-        auto *Inst = dyn_cast<Instruction>(*I++);
-        Functions.insert(Inst->getFunction());
-      }
+      for (User *U : F.users())
+        Functions.insert(cast<Instruction>(U)->getFunction());
       break;
     default:
       break;

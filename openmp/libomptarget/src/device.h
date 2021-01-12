@@ -29,7 +29,6 @@ struct RTLInfoTy;
 struct __tgt_bin_desc;
 struct __tgt_target_table;
 struct __tgt_async_info;
-class MemoryManagerTy;
 
 using map_var_info_t = void *;
 
@@ -156,9 +155,6 @@ struct DeviceTy {
   // NOTE: Once libomp gains full target-task support, this state should be
   // moved into the target task in libomp.
   std::map<int32_t, uint64_t> LoopTripCnt;
-
-  /// Memory manager
-  std::unique_ptr<MemoryManagerTy> MemoryManager;
 
   DeviceTy(RTLInfoTy *RTL);
 

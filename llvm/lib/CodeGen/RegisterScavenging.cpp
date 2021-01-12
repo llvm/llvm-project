@@ -634,11 +634,10 @@ static Register scavengeVReg(MachineRegisterInfo &MRI, RegScavenger &RS,
   // we get a single contiguous lifetime.
   //
   // Definitions in MRI.def_begin() are unordered, search for the first.
-  MachineRegisterInfo::def_iterator FirstDef =
-    std::find_if(MRI.def_begin(VReg), MRI.def_end(),
-                 [VReg, &TRI](const MachineOperand &MO) {
-      return !MO.getParent()->readsRegister(VReg, &TRI);
-    });
+  MachineRegisterInfo::def_iterator FirstDef = llvm::find_if(
+      MRI.def_operands(VReg), [VReg, &TRI](const MachineOperand &MO) {
+        return !MO.getParent()->readsRegister(VReg, &TRI);
+      });
   assert(FirstDef != MRI.def_end() &&
          "Must have one definition that does not redefine vreg");
   MachineInstr &DefMI = *FirstDef->getParent();

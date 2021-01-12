@@ -14,6 +14,7 @@
 #define OPENACC_OPS
 
 include "mlir/IR/OpBase.td"
+include "mlir/Dialect/OpenACC/AccCommon.td"
 
 def OpenACC_Dialect : Dialect {
   let name = "acc";
@@ -63,15 +64,6 @@ def OpenACC_ReductionOpAttr : StrEnumAttr<"ReductionOpAttr",
 // Type used in operation below.
 def IntOrIndex : AnyTypeOf<[AnyInteger, Index]>;
 
-// Parallel and data op default enumeration
-def OpenACC_DefaultNone : StrEnumAttrCase<"none">;
-def OpenACC_DefaultPresent : StrEnumAttrCase<"present">;
-def OpenACC_DefaultAttr : StrEnumAttr<"DefaultAttr",
-    "default attribute values",
-    [OpenACC_DefaultNone, OpenACC_DefaultPresent]> {
-  let cppNamespace = "::mlir::acc";
-}
-
 //===----------------------------------------------------------------------===//
 // 2.5.1 parallel Construct
 //===----------------------------------------------------------------------===//
@@ -118,7 +110,7 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
                        Variadic<AnyType>:$attachOperands,
                        Variadic<AnyType>:$gangPrivateOperands,
                        Variadic<AnyType>:$gangFirstPrivateOperands,
-                       OptionalAttr<OpenACC_DefaultAttr>:$defaultAttr);
+                       OptionalAttr<DefaultValue>:$defaultAttr);
 
   let regions = (region AnyRegion:$region);
 
@@ -190,7 +182,7 @@ def OpenACC_DataOp : OpenACC_Op<"data",
                        Variadic<AnyType>:$presentOperands,
                        Variadic<AnyType>:$deviceptrOperands,
                        Variadic<AnyType>:$attachOperands,
-                       OptionalAttr<OpenACC_DefaultAttr>:$defaultAttr);
+                       OptionalAttr<DefaultValue>:$defaultAttr);
 
   let regions = (region AnyRegion:$region);
 

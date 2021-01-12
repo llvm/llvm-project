@@ -130,7 +130,7 @@ define fastcc void @dct36(double* %inbuf) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[INBUF]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> undef, double [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double undef, i32 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[TMP1]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast double* [[ARRAYIDX44]] to <2 x double>*

@@ -549,8 +549,8 @@ void ClangdServer::switchSourceHeader(
   //     the same directory.
   //  2) if 1) fails, we use the AST&Index approach, it is slower but supports
   //     different code layout.
-  if (auto CorrespondingFile = getCorrespondingHeaderOrSource(
-          std::string(Path), TFS.view(llvm::None)))
+  if (auto CorrespondingFile =
+          getCorrespondingHeaderOrSource(Path, TFS.view(llvm::None)))
     return CB(std::move(CorrespondingFile));
   auto Action = [Path = Path.str(), CB = std::move(CB),
                  this](llvm::Expected<InputsAndAST> InpAST) mutable {

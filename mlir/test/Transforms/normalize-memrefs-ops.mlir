@@ -6,7 +6,7 @@
 //   that include this operation are constructed so that the normalization should
 //   happen.
 // * test_op_nonnorm: this operation does not have the MemRefsNormalization
-//   attribute. The tests that include this operation are contructed so that the
+//   attribute. The tests that include this operation are constructed so that the
 //    normalization should not happen.
 
 #map0 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2 floordiv 32, d3 floordiv 64, d2 mod 32, d3 mod 64)>

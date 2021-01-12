@@ -101,11 +101,15 @@ public:
   /// lane, the constants still match.
   bool isElementWiseEqual(Value *Y) const;
 
-  /// Return true if this is a vector constant that includes any undefined
-  /// elements. Since it is impossible to inspect a scalable vector element-
-  /// wise at compile time, this function returns true only if the entire
-  /// vector is undef
-  bool containsUndefElement() const;
+  /// Return true if this is a vector constant that includes any undef or
+  /// poison elements. Since it is impossible to inspect a scalable vector
+  /// element- wise at compile time, this function returns true only if the
+  /// entire vector is undef or poison.
+  bool containsUndefOrPoisonElement() const;
+
+  /// Return true if this is a vector constant that includes any poison
+  /// elements.
+  bool containsPoisonElement() const;
 
   /// Return true if this is a fixed width vector constant that includes
   /// any constant expressions.

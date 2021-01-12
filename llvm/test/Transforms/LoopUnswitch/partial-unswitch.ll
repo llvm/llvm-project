@@ -1,4 +1,4 @@
-; RUN: opt -loop-unswitch -verify-dom-info -verify-memoryssa -S %s | FileCheck %s
+; RUN: opt -loop-unswitch -verify-dom-info -verify-memoryssa -S -enable-new-pm=0 %s | FileCheck %s
 
 declare void @clobber()
 

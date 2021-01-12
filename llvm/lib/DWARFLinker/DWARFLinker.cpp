@@ -52,9 +52,8 @@ static uint64_t getDebugInfoSize(DWARFContext &Dwarf) {
 /// Similar to DWARFUnitSection::getUnitForOffset(), but returning our
 /// CompileUnit object instead.
 static CompileUnit *getUnitForOffset(const UnitListTy &Units, uint64_t Offset) {
-  auto CU = std::upper_bound(
-      Units.begin(), Units.end(), Offset,
-      [](uint64_t LHS, const std::unique_ptr<CompileUnit> &RHS) {
+  auto CU = llvm::upper_bound(
+      Units, Offset, [](uint64_t LHS, const std::unique_ptr<CompileUnit> &RHS) {
         return LHS < RHS->getOrigUnit().getNextUnitOffset();
       });
   return CU != Units.end() ? CU->get() : nullptr;
@@ -1218,9 +1217,10 @@ unsigned DWARFLinker::DIECloner::cloneAttribute(
     return cloneScalarAttribute(Die, InputDIE, File, Unit, AttrSpec, Val,
                                 AttrSize, Info);
   default:
-    Linker.reportWarning(
-        "Unsupported attribute form in cloneAttribute. Dropping.", File,
-        &InputDIE);
+    Linker.reportWarning("Unsupported attribute form " +
+                             dwarf::FormEncodingString(AttrSpec.Form) +
+                             " in cloneAttribute. Dropping.",
+                         File, &InputDIE);
   }
 
   return 0;
@@ -1576,7 +1576,7 @@ static void insertLineSequence(std::vector<DWARFDebugLine::Row> &Seq,
     return;
 
   if (!Rows.empty() && Rows.back().Address < Seq.front().Address) {
-    Rows.insert(Rows.end(), Seq.begin(), Seq.end());
+    llvm::append_range(Rows, Seq);
     Seq.clear();
     return;
   }

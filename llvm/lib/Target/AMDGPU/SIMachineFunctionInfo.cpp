@@ -7,21 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "SIMachineFunctionInfo.h"
-#include "AMDGPUArgumentUsageInfo.h"
 #include "AMDGPUTargetMachine.h"
 #include "AMDGPUSubtarget.h"
-#include "SIRegisterInfo.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/ADT/Optional.h"
-#include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/IR/CallingConv.h"
-#include "llvm/IR/Function.h"
-#include <cassert>
-#include <vector>
 
 #define MAX_LANES 64
 

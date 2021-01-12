@@ -27,8 +27,7 @@ Error BitstreamCursor::EnterSubBlock(unsigned BlockID, unsigned *NumWordsP) {
   if (BlockInfo) {
     if (const BitstreamBlockInfo::BlockInfo *Info =
             BlockInfo->getBlockInfo(BlockID)) {
-      CurAbbrevs.insert(CurAbbrevs.end(), Info->Abbrevs.begin(),
-                        Info->Abbrevs.end());
+      llvm::append_range(CurAbbrevs, Info->Abbrevs);
     }
   }
 

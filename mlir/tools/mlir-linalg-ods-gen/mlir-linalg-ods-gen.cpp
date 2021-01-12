@@ -994,7 +994,7 @@ public:
   void printRegionBuilder(llvm::raw_ostream &os, StringRef cppOpName,
                           ComprehensionParsingState &state);
 
-  /// Print the C++ impl for named ops canonicalizers and fodlers.
+  /// Print the C++ impl for named ops canonicalizers and folders.
   void printCanonicalizersAndFolders(llvm::raw_ostream &os,
                                      StringRef cppOpName);
 

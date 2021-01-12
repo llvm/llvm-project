@@ -13,8 +13,9 @@
 
 namespace __llvm_libc {
 
-char *LLVM_LIBC_ENTRYPOINT(strncpy)(char *__restrict dest,
-                                    const char *__restrict src, size_t n) {
+LLVM_LIBC_FUNCTION(char *, strncpy,
+                   (char *__restrict dest, const char *__restrict src,
+                    size_t n)) {
   size_t i = 0;
   // Copy up until \0 is found.
   for (; i < n && src[i] != '\0'; ++i)

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}shl_base_atomicrmw_global_ptr:
 ; GCN: v_add_co_u32_e32 v[[EXTRA_LO:[0-9]+]], vcc, 0x80, v4

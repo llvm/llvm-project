@@ -708,15 +708,13 @@ ASTPropsEmitter::emitBasicReaderWriterTemplate(const ReaderWriterInfo &info) {
   // Emit the Basic{Reader,Writer}Base template.
   Out << "template <class Impl>\n"
          "class Basic" << info.ClassSuffix << "Base {\n";
-  if (info.IsReader)
-    Out << "  ASTContext &C;\n";
+  Out << "  ASTContext &C;\n";
   Out << "protected:\n"
-         "  Basic" << info.ClassSuffix << "Base"
-                   << (info.IsReader ? "(ASTContext &ctx) : C(ctx)" : "()")
-                   << " {}\n"
+         "  Basic"
+      << info.ClassSuffix << "Base" << ("(ASTContext &ctx) : C(ctx)")
+      << " {}\n"
          "public:\n";
-  if (info.IsReader)
-    Out << "  ASTContext &getASTContext() { return C; }\n";
+  Out << "  ASTContext &getASTContext() { return C; }\n";
   Out << "  Impl &asImpl() { return static_cast<Impl&>(*this); }\n";
 
   auto enterReaderWriterMethod = [&](StringRef cxxTypeName,

@@ -869,3 +869,126 @@ loop.latch:
 exit:
   ret void
 }
+
+define i32 @reduction(i32* %addr) {
+; CHECK-LABEL: @reduction(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[ACCUM:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[ACCUM_NEXT:%.*]], [[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, i32* [[ADDR:%.*]], i64 [[IV]]
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV]], 200
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT:%.*]], label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[GEP]], align 4
+; CHECK-NEXT:    [[ACCUM_NEXT]] = add i32 [[ACCUM]], [[TMP0]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND2_NOT:%.*]] = icmp eq i64 [[IV]], 400
+; CHECK-NEXT:    br i1 [[EXITCOND2_NOT]], label [[EXIT]], label [[LOOP_HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[LCSSA:%.*]] = phi i32 [ 0, [[LOOP_HEADER]] ], [ [[ACCUM_NEXT]], [[LOOP_LATCH]] ]
+; CHECK-NEXT:    ret i32 [[LCSSA]]
+;
+; TAILFOLD-LABEL: @reduction(
+; TAILFOLD-NEXT:  entry:
+; TAILFOLD-NEXT:    br label [[LOOP_HEADER:%.*]]
+; TAILFOLD:       loop.header:
+; TAILFOLD-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; TAILFOLD-NEXT:    [[ACCUM:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[ACCUM_NEXT:%.*]], [[LOOP_LATCH]] ]
+; TAILFOLD-NEXT:    [[GEP:%.*]] = getelementptr i32, i32* [[ADDR:%.*]], i64 [[IV]]
+; TAILFOLD-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV]], 200
+; TAILFOLD-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT:%.*]], label [[LOOP_LATCH]]
+; TAILFOLD:       loop.latch:
+; TAILFOLD-NEXT:    [[TMP0:%.*]] = load i32, i32* [[GEP]], align 4
+; TAILFOLD-NEXT:    [[ACCUM_NEXT]] = add i32 [[ACCUM]], [[TMP0]]
+; TAILFOLD-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; TAILFOLD-NEXT:    [[EXITCOND2_NOT:%.*]] = icmp eq i64 [[IV]], 400
+; TAILFOLD-NEXT:    br i1 [[EXITCOND2_NOT]], label [[EXIT]], label [[LOOP_HEADER]]
+; TAILFOLD:       exit:
+; TAILFOLD-NEXT:    [[LCSSA:%.*]] = phi i32 [ 0, [[LOOP_HEADER]] ], [ [[ACCUM_NEXT]], [[LOOP_LATCH]] ]
+; TAILFOLD-NEXT:    ret i32 [[LCSSA]]
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %accum = phi i32 [0, %entry], [%accum.next, %loop.latch]
+  %gep = getelementptr i32, i32* %addr, i64 %iv
+  %exitcond.not = icmp eq i64 %iv, 200
+  br i1 %exitcond.not, label %exit, label %loop.latch
+
+loop.latch:
+  %0 = load i32, i32* %gep, align 4
+  %accum.next = add i32 %accum, %0
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond2.not = icmp eq i64 %iv, 400
+  br i1 %exitcond2.not, label %exit, label %loop.header
+
+exit:
+  %lcssa = phi i32 [0, %loop.header], [%accum.next, %loop.latch]
+  ret i32 %lcssa
+}
+
+; TODO: The current definition of reduction is too strict, we can vectorize
+; this.  There's an analogous single exit case where we extract the N-1
+; value of the reduction that we can also handle.  If we fix the later, the
+; multiple exit case probably falls out.
+define i32 @reduction2(i32* %addr) {
+; CHECK-LABEL: @reduction2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[ACCUM:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[ACCUM_NEXT:%.*]], [[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, i32* [[ADDR:%.*]], i64 [[IV]]
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV]], 200
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT:%.*]], label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[GEP]], align 4
+; CHECK-NEXT:    [[ACCUM_NEXT]] = add i32 [[ACCUM]], [[TMP0]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    br label [[LOOP_HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[ACCUM_LCSSA:%.*]] = phi i32 [ [[ACCUM]], [[LOOP_HEADER]] ]
+; CHECK-NEXT:    ret i32 [[ACCUM_LCSSA]]
+;
+; TAILFOLD-LABEL: @reduction2(
+; TAILFOLD-NEXT:  entry:
+; TAILFOLD-NEXT:    br label [[LOOP_HEADER:%.*]]
+; TAILFOLD:       loop.header:
+; TAILFOLD-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; TAILFOLD-NEXT:    [[ACCUM:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[ACCUM_NEXT:%.*]], [[LOOP_LATCH]] ]
+; TAILFOLD-NEXT:    [[GEP:%.*]] = getelementptr i32, i32* [[ADDR:%.*]], i64 [[IV]]
+; TAILFOLD-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV]], 200
+; TAILFOLD-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT:%.*]], label [[LOOP_LATCH]]
+; TAILFOLD:       loop.latch:
+; TAILFOLD-NEXT:    [[TMP0:%.*]] = load i32, i32* [[GEP]], align 4
+; TAILFOLD-NEXT:    [[ACCUM_NEXT]] = add i32 [[ACCUM]], [[TMP0]]
+; TAILFOLD-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; TAILFOLD-NEXT:    br label [[LOOP_HEADER]]
+; TAILFOLD:       exit:
+; TAILFOLD-NEXT:    [[ACCUM_LCSSA:%.*]] = phi i32 [ [[ACCUM]], [[LOOP_HEADER]] ]
+; TAILFOLD-NEXT:    ret i32 [[ACCUM_LCSSA]]
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %accum = phi i32 [0, %entry], [%accum.next, %loop.latch]
+  %gep = getelementptr i32, i32* %addr, i64 %iv
+  %exitcond.not = icmp eq i64 %iv, 200
+  br i1 %exitcond.not, label %exit, label %loop.latch
+
+loop.latch:
+  %0 = load i32, i32* %gep, align 4
+  %accum.next = add i32 %accum, %0
+  %iv.next = add nuw nsw i64 %iv, 1
+  br label %loop.header
+
+exit:
+  ret i32 %accum
+}
+

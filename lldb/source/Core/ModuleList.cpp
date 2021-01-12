@@ -346,10 +346,6 @@ void ModuleList::ClearImpl(bool use_notifier) {
 
 Module *ModuleList::GetModulePointerAtIndex(size_t idx) const {
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
-  return GetModulePointerAtIndexUnlocked(idx);
-}
-
-Module *ModuleList::GetModulePointerAtIndexUnlocked(size_t idx) const {
   if (idx < m_modules.size())
     return m_modules[idx].get();
   return nullptr;

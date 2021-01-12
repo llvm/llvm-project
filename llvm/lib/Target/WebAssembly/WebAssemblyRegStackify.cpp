@@ -359,10 +359,9 @@ static bool isSafeToMove(const MachineOperand *Def, const MachineOperand *Use,
   if (NextI == Insert)
     return true;
 
-  // 'catch' and 'extract_exception' should be the first instruction of a BB and
-  // cannot move.
-  if (DefI->getOpcode() == WebAssembly::CATCH ||
-      DefI->getOpcode() == WebAssembly::EXTRACT_EXCEPTION_I32)
+  // 'catch' and 'catch_all' should be the first instruction of a BB and cannot
+  // move.
+  if (WebAssembly::isCatch(DefI->getOpcode()))
     return false;
 
   // Check for register dependencies.
@@ -863,24 +862,6 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
         // Argument instructions represent live-in registers and not real
         // instructions.
         if (WebAssembly::isArgument(DefI->getOpcode()))
-          continue;
-
-        // Currently catch's return value register cannot be stackified, because
-        // the wasm LLVM backend currently does not support live-in values
-        // entering blocks, which is a part of multi-value proposal.
-        //
-        // Once we support live-in values of wasm blocks, this can be:
-        // catch                           ; push exnref value onto stack
-        // block exnref -> i32
-        // br_on_exn $__cpp_exception      ; pop the exnref value
-        // end_block
-        //
-        // But because we don't support it yet, the catch instruction's dst
-        // register should be assigned to a local to be propagated across
-        // 'block' boundary now.
-        //
-        // TODO: Fix this once we support the multivalue blocks
-        if (DefI->getOpcode() == WebAssembly::CATCH)
           continue;
 
         MachineOperand *Def = DefI->findRegisterDefOperand(Reg);

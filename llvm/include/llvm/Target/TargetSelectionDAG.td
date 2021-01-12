@@ -250,6 +250,10 @@ def SDTVecInsert : SDTypeProfile<1, 3, [    // vector insert
 def SDTVecReduce : SDTypeProfile<1, 1, [    // vector reduction
   SDTCisInt<0>, SDTCisVec<1>
 ]>;
+def SDTFPVecReduce : SDTypeProfile<1, 1, [  // FP vector reduction
+  SDTCisFP<0>, SDTCisVec<1>
+]>;
+
 
 def SDTSubVecExtract : SDTypeProfile<1, 2, [// subvector extract
   SDTCisSubVecOfVec<0,1>, SDTCisInt<2>
@@ -439,6 +443,7 @@ def vecreduce_smax  : SDNode<"ISD::VECREDUCE_SMAX", SDTVecReduce>;
 def vecreduce_umax  : SDNode<"ISD::VECREDUCE_UMAX", SDTVecReduce>;
 def vecreduce_smin  : SDNode<"ISD::VECREDUCE_SMIN", SDTVecReduce>;
 def vecreduce_umin  : SDNode<"ISD::VECREDUCE_UMIN", SDTVecReduce>;
+def vecreduce_fadd  : SDNode<"ISD::VECREDUCE_FADD", SDTFPVecReduce>;
 
 def fadd       : SDNode<"ISD::FADD"       , SDTFPBinOp, [SDNPCommutative]>;
 def fsub       : SDNode<"ISD::FSUB"       , SDTFPBinOp>;
@@ -904,16 +909,22 @@ class FPImmLeaf<ValueType vt, code pred, SDNodeXForm xform = NOOP_SDNodeXForm>
 def vtInt      : PatLeaf<(vt),  [{ return N->getVT().isInteger(); }]>;
 def vtFP       : PatLeaf<(vt),  [{ return N->getVT().isFloatingPoint(); }]>;
 
-// Use ISD::isBuildVectorAllOnes or ISD::isBuildVectorAllZeros to look for
-// the corresponding build_vector. Will look through bitcasts except when used
-// as a pattern root.
-def immAllOnesV; // ISD::isBuildVectorAllOnes
-def immAllZerosV; // ISD::isBuildVectorAllZeros
+// Use ISD::isConstantSplatVectorAllOnes or ISD::isConstantSplatVectorAllZeros
+// to look for the corresponding build_vector or splat_vector. Will look through
+// bitcasts and check for either opcode, except when used as a pattern root.
+// When used as a pattern root, only fixed-length build_vector and scalable
+// splat_vector are supported.
+def immAllOnesV; // ISD::isConstantSplatVectorAllOnes
+def immAllZerosV; // ISD::isConstantSplatVectorAllZeros
 
 // Other helper fragments.
 def not  : PatFrag<(ops node:$in), (xor node:$in, -1)>;
 def vnot : PatFrag<(ops node:$in), (xor node:$in, immAllOnesV)>;
 def ineg : PatFrag<(ops node:$in), (sub 0, node:$in)>;
+
+def zanyext : PatFrags<(ops node:$op),
+                       [(zext node:$op),
+                        (anyext node:$op)]>;
 
 // null_frag - The null pattern operator is used in multiclass instantiations
 // which accept an SDPatternOperator for use in matching patterns for internal

@@ -97,10 +97,12 @@ class Option<list<string> prefixes, string name, OptionKind kind> {
   OptionGroup Group = ?;
   Option Alias = ?;
   list<string> AliasArgs = [];
+  code MacroPrefix = "";
   code KeyPath = ?;
   code DefaultValue = ?;
   code ImpliedValue = ?;
   code ImpliedCheck = "false";
+  code ShouldParse = "true";
   bit ShouldAlwaysEmit = false;
   code NormalizerRetTy = ?;
   code NormalizedValuesScope = "";
@@ -167,9 +169,21 @@ class MarshallingInfoStringInt<code keypath, code defaultvalue="0", code type="u
   code Denormalizer = "denormalizeString";
 }
 
+class MarshallingInfoStringVector<code keypath>
+  : MarshallingInfo<keypath, "std::vector<std::string>({})"> {
+  code Normalizer = "normalizeStringVector";
+  code Denormalizer = "denormalizeStringVector";
+}
+
 class MarshallingInfoFlag<code keypath, code defaultvalue = "false">
   : MarshallingInfo<keypath, defaultvalue> {
   code Normalizer = "normalizeSimpleFlag";
+  code Denormalizer = "denormalizeSimpleFlag";
+}
+
+class MarshallingInfoNegativeFlag<code keypath, code defaultvalue = "true">
+  : MarshallingInfo<keypath, defaultvalue> {
+  code Normalizer = "normalizeSimpleNegativeFlag";
   code Denormalizer = "denormalizeSimpleFlag";
 }
 
@@ -190,9 +204,7 @@ class MarshallingInfoBooleanFlag<code keypath, code defaultvalue, code value, co
 
 // Mixins for additional marshalling attributes.
 
-class IsNegative {
-  code Normalizer = "normalizeSimpleNegativeFlag";
-}
+class ShouldParseIf<code condition> { code ShouldParse = condition; }
 class AlwaysEmit { bit ShouldAlwaysEmit = true; }
 class Normalizer<code normalizer> { code Normalizer = normalizer; }
 class Denormalizer<code denormalizer> { code Denormalizer = denormalizer; }
@@ -201,9 +213,6 @@ class NormalizedValues<list<code> definitions> { list<code> NormalizedValues = d
 class AutoNormalizeEnum {
   code Normalizer = "normalizeSimpleEnum";
   code Denormalizer = "denormalizeSimpleEnum";
-}
-class AutoNormalizeEnumJoined : AutoNormalizeEnum {
-  code Denormalizer = "denormalizeSimpleEnumJoined";
 }
 class ValueMerger<code merger> { code ValueMerger = merger; }
 class ValueExtractor<code extractor> { code ValueExtractor = extractor; }

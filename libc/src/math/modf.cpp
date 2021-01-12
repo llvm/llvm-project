@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/math/modf.h"
 #include "src/__support/common.h"
 #include "utils/FPUtil/ManipulationFunctions.h"
 
 namespace __llvm_libc {
 
-double LLVM_LIBC_ENTRYPOINT(modf)(double x, double *iptr) {
+LLVM_LIBC_FUNCTION(double, modf, (double x, double *iptr)) {
   return fputil::modf(x, *iptr);
 }
 

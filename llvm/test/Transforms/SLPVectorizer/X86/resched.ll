@@ -19,7 +19,7 @@ define fastcc void @_ZN12_GLOBAL__N_127PolynomialMultiplyRecognize9recognizeEv()
 ; CHECK-NEXT:    [[ARRAYIDX_I_I7_5_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 5
 ; CHECK-NEXT:    [[ARRAYIDX_I_I7_6_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 6
 ; CHECK-NEXT:    [[ARRAYIDX_I_I7_7_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 7
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> undef, i32 [[CONV31_I]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> poison, i32 [[CONV31_I]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> [[TMP1]], i32 [[CONV31_I]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[CONV31_I]], i32 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP3]], i32 [[CONV31_I]], i32 3
@@ -32,7 +32,7 @@ define fastcc void @_ZN12_GLOBAL__N_127PolynomialMultiplyRecognize9recognizeEv()
 ; CHECK-NEXT:    [[ARRAYIDX_I_I7_9_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 9
 ; CHECK-NEXT:    [[ARRAYIDX_I_I7_10_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 10
 ; CHECK-NEXT:    [[ARRAYIDX_I_I7_11_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 11
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> undef, i32 [[CONV31_I]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> poison, i32 [[CONV31_I]], i32 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP10]], i32 [[CONV31_I]], i32 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[CONV31_I]], i32 2
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> [[TMP12]], i32 [[CONV31_I]], i32 3
@@ -43,7 +43,7 @@ define fastcc void @_ZN12_GLOBAL__N_127PolynomialMultiplyRecognize9recognizeEv()
 ; CHECK-NEXT:    [[SHR_13_I_I:%.*]] = lshr i32 [[CONV31_I]], 14
 ; CHECK-NEXT:    [[ARRAYIDX_I_I7_14_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 14
 ; CHECK-NEXT:    [[SHR_14_I_I:%.*]] = lshr i32 [[CONV31_I]], 15
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <16 x i32> undef, i32 [[SUB_I]], i32 0
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <16 x i32> poison, i32 [[SUB_I]], i32 0
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <8 x i32> [[TMP9]], i32 0
 ; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <16 x i32> [[TMP15]], i32 [[TMP16]], i32 1
 ; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <8 x i32> [[TMP9]], i32 1

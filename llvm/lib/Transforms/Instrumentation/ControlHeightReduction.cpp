@@ -731,7 +731,7 @@ static Instruction* getBranchInsertPoint(RegInfo &RI) {
     }
   }
   for (Instruction &I : *EntryBB) {
-    if (EntryBlockSelectSet.count(&I) > 0) {
+    if (EntryBlockSelectSet.contains(&I)) {
       assert(&I == HoistPoint &&
              "HoistPoint must be the first one in Selects");
       break;
@@ -1304,17 +1304,17 @@ void CHR::classifyBiasedScopes(CHRScope *Scope, CHRScope *OutermostScope) {
   for (RegInfo &RI : Scope->RegInfos) {
     if (RI.HasBranch) {
       Region *R = RI.R;
-      if (TrueBiasedRegionsGlobal.count(R) > 0)
+      if (TrueBiasedRegionsGlobal.contains(R))
         OutermostScope->TrueBiasedRegions.insert(R);
-      else if (FalseBiasedRegionsGlobal.count(R) > 0)
+      else if (FalseBiasedRegionsGlobal.contains(R))
         OutermostScope->FalseBiasedRegions.insert(R);
       else
         llvm_unreachable("Must be biased");
     }
     for (SelectInst *SI : RI.Selects) {
-      if (TrueBiasedSelectsGlobal.count(SI) > 0)
+      if (TrueBiasedSelectsGlobal.contains(SI))
         OutermostScope->TrueBiasedSelects.insert(SI);
-      else if (FalseBiasedSelectsGlobal.count(SI) > 0)
+      else if (FalseBiasedSelectsGlobal.contains(SI))
         OutermostScope->FalseBiasedSelects.insert(SI);
       else
         llvm_unreachable("Must be biased");
@@ -1397,8 +1397,8 @@ void CHR::setCHRRegions(CHRScope *Scope, CHRScope *OutermostScope) {
     DenseSet<Instruction *> HoistStops;
     bool IsHoisted = false;
     if (RI.HasBranch) {
-      assert((OutermostScope->TrueBiasedRegions.count(R) > 0 ||
-              OutermostScope->FalseBiasedRegions.count(R) > 0) &&
+      assert((OutermostScope->TrueBiasedRegions.contains(R) ||
+              OutermostScope->FalseBiasedRegions.contains(R)) &&
              "Must be truthy or falsy");
       auto *BI = cast<BranchInst>(R->getEntry()->getTerminator());
       // Note checkHoistValue fills in HoistStops.
@@ -1410,8 +1410,8 @@ void CHR::setCHRRegions(CHRScope *Scope, CHRScope *OutermostScope) {
       IsHoisted = true;
     }
     for (SelectInst *SI : RI.Selects) {
-      assert((OutermostScope->TrueBiasedSelects.count(SI) > 0 ||
-              OutermostScope->FalseBiasedSelects.count(SI) > 0) &&
+      assert((OutermostScope->TrueBiasedSelects.contains(SI) ||
+              OutermostScope->FalseBiasedSelects.contains(SI)) &&
              "Must be true or false biased");
       // Note checkHoistValue fills in HoistStops.
       DenseMap<Instruction *, bool> Visited;

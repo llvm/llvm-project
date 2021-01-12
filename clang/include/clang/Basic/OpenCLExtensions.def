@@ -69,6 +69,8 @@ OPENCLEXT_INTERNAL(cl_khr_subgroups, 200, ~0U)
 
 // Clang Extensions.
 OPENCLEXT_INTERNAL(cl_clang_storage_class_specifiers, 100, ~0U)
+OPENCLEXT_INTERNAL(__cl_clang_function_pointers, 100, ~0U)
+OPENCLEXT_INTERNAL(__cl_clang_variadic_functions, 100, ~0U)
 
 // AMD OpenCL extensions
 OPENCLEXT_INTERNAL(cl_amd_media_ops, 100, ~0U)

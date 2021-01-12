@@ -239,8 +239,8 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
     // While this is normally not behind a use-check,
     // let's consider division to be special since it's costly.
     if (auto *Op1C = dyn_cast<Constant>(I->getOperand(1))) {
-      if (!Op1C->containsUndefElement() && Op1C->isNotMinSignedValue() &&
-          Op1C->isNotOneValue()) {
+      if (!Op1C->containsUndefOrPoisonElement() &&
+          Op1C->isNotMinSignedValue() && Op1C->isNotOneValue()) {
         Value *BO =
             Builder.CreateSDiv(I->getOperand(0), ConstantExpr::getNeg(Op1C),
                                I->getName() + ".neg");

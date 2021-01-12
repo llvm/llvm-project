@@ -103,9 +103,7 @@ entry:
 define <8 x i16> @test_vaddl_a8(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: test_vaddl_a8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    uaddl v0.8h, v0.8b, v1.8b
 ; CHECK-NEXT:    bic v0.8h, #255, lsl #8
 ; CHECK-NEXT:    ret
 entry:
@@ -119,9 +117,7 @@ entry:
 define <4 x i32> @test_vaddl_a16(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-LABEL: test_vaddl_a16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    uaddl v0.4s, v0.4h, v1.4h
 ; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
@@ -136,9 +132,7 @@ entry:
 define <2 x i64> @test_vaddl_a32(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: test_vaddl_a32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ushll v1.2d, v1.2s, #0
-; CHECK-NEXT:    add v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    uaddl v0.2d, v0.2s, v1.2s
 ; CHECK-NEXT:    movi v1.2d, #0x000000ffffffff
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
@@ -237,9 +231,7 @@ entry:
 define <8 x i16> @test_vaddl_high_a8(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: test_vaddl_high_a8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll2 v0.8h, v0.16b, #0
-; CHECK-NEXT:    ushll2 v1.8h, v1.16b, #0
-; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    uaddl2 v0.8h, v0.16b, v1.16b
 ; CHECK-NEXT:    bic v0.8h, #255, lsl #8
 ; CHECK-NEXT:    ret
 entry:
@@ -255,9 +247,7 @@ entry:
 define <4 x i32> @test_vaddl_high_a16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_vaddl_high_a16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll2 v0.4s, v0.8h, #0
-; CHECK-NEXT:    ushll2 v1.4s, v1.8h, #0
-; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    uaddl2 v0.4s, v0.8h, v1.8h
 ; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
@@ -274,9 +264,7 @@ entry:
 define <2 x i64> @test_vaddl_high_a32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: test_vaddl_high_a32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll2 v0.2d, v0.4s, #0
-; CHECK-NEXT:    ushll2 v1.2d, v1.4s, #0
-; CHECK-NEXT:    add v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    uaddl2 v0.2d, v0.4s, v1.4s
 ; CHECK-NEXT:    movi v1.2d, #0x000000ffffffff
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
@@ -359,8 +347,7 @@ entry:
 define <8 x i16> @test_vaddw_a8(<8 x i16> %a, <8 x i8> %b) {
 ; CHECK-LABEL: test_vaddw_a8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-NEXT:    add v0.8h, v1.8h, v0.8h
+; CHECK-NEXT:    uaddw v0.8h, v0.8h, v1.8b
 ; CHECK-NEXT:    bic v0.8h, #255, lsl #8
 ; CHECK-NEXT:    ret
 entry:
@@ -373,8 +360,7 @@ entry:
 define <4 x i32> @test_vaddw_a16(<4 x i32> %a, <4 x i16> %b) {
 ; CHECK-LABEL: test_vaddw_a16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    uaddw v0.4s, v0.4s, v1.4h
 ; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
@@ -388,8 +374,7 @@ entry:
 define <2 x i64> @test_vaddw_a32(<2 x i64> %a, <2 x i32> %b) {
 ; CHECK-LABEL: test_vaddw_a32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v1.2d, v1.2s, #0
-; CHECK-NEXT:    add v0.2d, v1.2d, v0.2d
+; CHECK-NEXT:    uaddw v0.2d, v0.2d, v1.2s
 ; CHECK-NEXT:    movi v1.2d, #0x000000ffffffff
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
@@ -475,8 +460,7 @@ entry:
 define <8 x i16> @test_vaddw_high_a8(<8 x i16> %a, <16 x i8> %b) {
 ; CHECK-LABEL: test_vaddw_high_a8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll2 v1.8h, v1.16b, #0
-; CHECK-NEXT:    add v0.8h, v1.8h, v0.8h
+; CHECK-NEXT:    uaddw2 v0.8h, v0.8h, v1.16b
 ; CHECK-NEXT:    bic v0.8h, #255, lsl #8
 ; CHECK-NEXT:    ret
 entry:
@@ -490,8 +474,7 @@ entry:
 define <4 x i32> @test_vaddw_high_a16(<4 x i32> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_vaddw_high_a16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll2 v1.4s, v1.8h, #0
-; CHECK-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    uaddw2 v0.4s, v0.4s, v1.8h
 ; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
@@ -506,8 +489,7 @@ entry:
 define <2 x i64> @test_vaddw_high_a32(<2 x i64> %a, <4 x i32> %b) {
 ; CHECK-LABEL: test_vaddw_high_a32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll2 v1.2d, v1.4s, #0
-; CHECK-NEXT:    add v0.2d, v1.2d, v0.2d
+; CHECK-NEXT:    uaddw2 v0.2d, v0.2d, v1.4s
 ; CHECK-NEXT:    movi v1.2d, #0x000000ffffffff
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
@@ -594,9 +576,7 @@ entry:
 define <8 x i16> @test_vsubl_a8(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: test_vsubl_a8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-NEXT:    sub v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    usubl v0.8h, v0.8b, v1.8b
 ; CHECK-NEXT:    bic v0.8h, #255, lsl #8
 ; CHECK-NEXT:    ret
 entry:
@@ -610,9 +590,7 @@ entry:
 define <4 x i32> @test_vsubl_a16(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-LABEL: test_vsubl_a16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-NEXT:    sub v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    usubl v0.4s, v0.4h, v1.4h
 ; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
@@ -627,9 +605,7 @@ entry:
 define <2 x i64> @test_vsubl_a32(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: test_vsubl_a32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ushll v1.2d, v1.2s, #0
-; CHECK-NEXT:    sub v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    usubl v0.2d, v0.2s, v1.2s
 ; CHECK-NEXT:    movi v1.2d, #0x000000ffffffff
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
@@ -728,9 +704,7 @@ entry:
 define <8 x i16> @test_vsubl_high_a8(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: test_vsubl_high_a8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll2 v0.8h, v0.16b, #0
-; CHECK-NEXT:    ushll2 v1.8h, v1.16b, #0
-; CHECK-NEXT:    sub v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    usubl2 v0.8h, v0.16b, v1.16b
 ; CHECK-NEXT:    bic v0.8h, #255, lsl #8
 ; CHECK-NEXT:    ret
 entry:
@@ -746,9 +720,7 @@ entry:
 define <4 x i32> @test_vsubl_high_a16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_vsubl_high_a16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll2 v0.4s, v0.8h, #0
-; CHECK-NEXT:    ushll2 v1.4s, v1.8h, #0
-; CHECK-NEXT:    sub v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    usubl2 v0.4s, v0.8h, v1.8h
 ; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
@@ -765,9 +737,7 @@ entry:
 define <2 x i64> @test_vsubl_high_a32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: test_vsubl_high_a32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll2 v0.2d, v0.4s, #0
-; CHECK-NEXT:    ushll2 v1.2d, v1.4s, #0
-; CHECK-NEXT:    sub v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    usubl2 v0.2d, v0.4s, v1.4s
 ; CHECK-NEXT:    movi v1.2d, #0x000000ffffffff
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
@@ -850,8 +820,7 @@ entry:
 define <8 x i16> @test_vsubw_a8(<8 x i16> %a, <8 x i8> %b) {
 ; CHECK-LABEL: test_vsubw_a8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-NEXT:    sub v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    usubw v0.8h, v0.8h, v1.8b
 ; CHECK-NEXT:    bic v0.8h, #255, lsl #8
 ; CHECK-NEXT:    ret
 entry:
@@ -864,8 +833,7 @@ entry:
 define <4 x i32> @test_vsubw_a16(<4 x i32> %a, <4 x i16> %b) {
 ; CHECK-LABEL: test_vsubw_a16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-NEXT:    sub v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    usubw v0.4s, v0.4s, v1.4h
 ; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
@@ -879,8 +847,7 @@ entry:
 define <2 x i64> @test_vsubw_a32(<2 x i64> %a, <2 x i32> %b) {
 ; CHECK-LABEL: test_vsubw_a32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v1.2d, v1.2s, #0
-; CHECK-NEXT:    sub v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    usubw v0.2d, v0.2d, v1.2s
 ; CHECK-NEXT:    movi v1.2d, #0x000000ffffffff
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
@@ -966,8 +933,7 @@ entry:
 define <8 x i16> @test_vsubw_high_a8(<8 x i16> %a, <16 x i8> %b) {
 ; CHECK-LABEL: test_vsubw_high_a8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll2 v1.8h, v1.16b, #0
-; CHECK-NEXT:    sub v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    usubw2 v0.8h, v0.8h, v1.16b
 ; CHECK-NEXT:    bic v0.8h, #255, lsl #8
 ; CHECK-NEXT:    ret
 entry:
@@ -981,8 +947,7 @@ entry:
 define <4 x i32> @test_vsubw_high_a16(<4 x i32> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_vsubw_high_a16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll2 v1.4s, v1.8h, #0
-; CHECK-NEXT:    sub v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    usubw2 v0.4s, v0.4s, v1.8h
 ; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
@@ -997,8 +962,7 @@ entry:
 define <2 x i64> @test_vsubw_high_a32(<2 x i64> %a, <4 x i32> %b) {
 ; CHECK-LABEL: test_vsubw_high_a32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll2 v1.2d, v1.4s, #0
-; CHECK-NEXT:    sub v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    usubw2 v0.2d, v0.2d, v1.4s
 ; CHECK-NEXT:    movi v1.2d, #0x000000ffffffff
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret

@@ -325,7 +325,7 @@ int main(int argc, char **argv) {
   // Apply overrides to llvm-mca specific options.
   processViewOptions();
 
-  if (!MCPU.compare("native"))
+  if (MCPU == "native")
     MCPU = std::string(llvm::sys::getHostCPUName());
 
   std::unique_ptr<MCSubtargetInfo> STI(

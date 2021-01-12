@@ -2521,18 +2521,6 @@ let Predicates = [IsISA3_1] in {
             (EXTRACT_SUBREG (XVTLSBB (COPY_TO_REGCLASS $XB, VSRC)), sub_lt)>;
   def : Pat<(i32 (int_ppc_vsx_xvtlsbb v16i8:$XB, 0)),
             (EXTRACT_SUBREG (XVTLSBB (COPY_TO_REGCLASS $XB, VSRC)), sub_eq)>;
-  def : Pat<(v1i128 (shl v1i128:$VRA, v1i128:$VRB)),
-            (v1i128 (VSLQ v1i128:$VRA, v1i128:$VRB))>;
-  def : Pat<(v1i128 (PPCshl v1i128:$VRA, v1i128:$VRB)),
-            (v1i128 (VSLQ v1i128:$VRA, v1i128:$VRB))>;
-  def : Pat<(v1i128 (srl v1i128:$VRA, v1i128:$VRB)),
-            (v1i128 (VSRQ v1i128:$VRA, v1i128:$VRB))>;
-  def : Pat<(v1i128 (PPCsrl v1i128:$VRA, v1i128:$VRB)),
-            (v1i128 (VSRQ v1i128:$VRA, v1i128:$VRB))>;
-  def : Pat<(v1i128 (sra v1i128:$VRA, v1i128:$VRB)),
-            (v1i128 (VSRAQ v1i128:$VRA, v1i128:$VRB))>;
-  def : Pat<(v1i128 (PPCsra v1i128:$VRA, v1i128:$VRB)),
-            (v1i128 (VSRAQ v1i128:$VRA, v1i128:$VRB))>;
 
   def : Pat <(v1i128 (PPClxvrzx xoaddr:$src, 8)),
              (v1i128 (COPY_TO_REGCLASS (LXVRBX xoaddr:$src), VRRC))>;
@@ -2569,6 +2557,35 @@ let AddedComplexity = 400, Predicates = [IsISA3_1, IsLittleEndian] in {
   def : Pat<(store (f64 (extractelt v2f64:$src, 0)), xoaddr:$dst),
             (STXVRDX $src, xoaddr:$dst)>;
  }
+
+// FIXME: The swap is overkill when the shift amount is a constant.
+// We should just fix the constant in the DAG.
+let AddedComplexity = 400, Predicates = [IsISA3_1, HasVSX] in {
+  def : Pat<(v1i128 (shl v1i128:$VRA, v1i128:$VRB)),
+            (v1i128 (VSLQ v1i128:$VRA,
+                     (XXPERMDI (COPY_TO_REGCLASS $VRB, VSRC),
+                               (COPY_TO_REGCLASS $VRB, VSRC), 2)))>;
+  def : Pat<(v1i128 (PPCshl v1i128:$VRA, v1i128:$VRB)),
+            (v1i128 (VSLQ v1i128:$VRA,
+                     (XXPERMDI (COPY_TO_REGCLASS $VRB, VSRC),
+                               (COPY_TO_REGCLASS $VRB, VSRC), 2)))>;
+  def : Pat<(v1i128 (srl v1i128:$VRA, v1i128:$VRB)),
+            (v1i128 (VSRQ v1i128:$VRA,
+                     (XXPERMDI (COPY_TO_REGCLASS $VRB, VSRC),
+                               (COPY_TO_REGCLASS $VRB, VSRC), 2)))>;
+  def : Pat<(v1i128 (PPCsrl v1i128:$VRA, v1i128:$VRB)),
+            (v1i128 (VSRQ v1i128:$VRA,
+                     (XXPERMDI (COPY_TO_REGCLASS $VRB, VSRC),
+                               (COPY_TO_REGCLASS $VRB, VSRC), 2)))>;
+  def : Pat<(v1i128 (sra v1i128:$VRA, v1i128:$VRB)),
+            (v1i128 (VSRAQ v1i128:$VRA,
+                     (XXPERMDI (COPY_TO_REGCLASS $VRB, VSRC),
+                               (COPY_TO_REGCLASS $VRB, VSRC), 2)))>;
+  def : Pat<(v1i128 (PPCsra v1i128:$VRA, v1i128:$VRB)),
+            (v1i128 (VSRAQ v1i128:$VRA,
+                     (XXPERMDI (COPY_TO_REGCLASS $VRB, VSRC),
+                               (COPY_TO_REGCLASS $VRB, VSRC), 2)))>;
+}
 
 class xxevalPattern <dag pattern, bits<8> imm> :
   Pat<(v4i32 pattern), (XXEVAL $vA, $vB, $vC, imm)> {}

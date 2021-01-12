@@ -146,10 +146,7 @@ static std::string getDataLayoutString(const Triple &T) {
 
   // Note, the alignment values for f64 and i64 on ppc64 in Darwin
   // documentation are wrong; these are correct (i.e. "what gcc does").
-  if (is64Bit || !T.isOSDarwin())
-    Ret += "-i64:64";
-  else
-    Ret += "-f64:32:64";
+  Ret += "-i64:64";
 
   // PPC64 has 32 and 64 bit registers, PPC32 has only 32 bit ones.
   if (is64Bit)
@@ -197,9 +194,6 @@ static std::string computeFSAdditions(StringRef FS, CodeGenOpt::Level OL,
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
-  if (TT.isOSDarwin())
-    return std::make_unique<TargetLoweringObjectFileMachO>();
-
   if (TT.isOSAIX())
     return std::make_unique<TargetLoweringObjectFileXCOFF>();
 
@@ -208,9 +202,6 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
 
 static PPCTargetMachine::PPCABI computeTargetABI(const Triple &TT,
                                                  const TargetOptions &Options) {
-  if (TT.isOSDarwin())
-    report_fatal_error("Darwin is no longer supported for PowerPC");
-  
   if (Options.MCOptions.getABIName().startswith("elfv1"))
     return PPCTargetMachine::PPC_ABI_ELFv1;
   else if (Options.MCOptions.getABIName().startswith("elfv2"))
@@ -239,10 +230,6 @@ static Reloc::Model getEffectiveRelocModel(const Triple &TT,
 
   if (RM.hasValue())
     return *RM;
-
-  // Darwin defaults to dynamic-no-pic.
-  if (TT.isOSDarwin())
-    return Reloc::DynamicNoPIC;
 
   // Big Endian PPC and AIX default to PIC.
   if (TT.getArch() == Triple::ppc64 || TT.isOSAIX())

@@ -412,9 +412,7 @@ public:
   // XCOFF specific sections
   MCSection *getTOCBaseSection() const { return TOCBaseSection; }
 
-  MCSection *getEHFrameSection() {
-    return EHFrameSection;
-  }
+  MCSection *getEHFrameSection() const { return EHFrameSection; }
 
   enum Environment { IsMachO, IsELF, IsCOFF, IsWasm, IsXCOFF };
   Environment getObjectFileType() const { return Env; }

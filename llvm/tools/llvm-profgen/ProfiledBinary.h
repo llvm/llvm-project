@@ -203,7 +203,7 @@ public:
   // using lower bound operation
   uint32_t getIndexForAddr(uint64_t Address) const {
     uint64_t Offset = virtualAddrToOffset(Address);
-    auto Low = std::lower_bound(CodeAddrs.begin(), CodeAddrs.end(), Offset);
+    auto Low = llvm::lower_bound(CodeAddrs, Offset);
     return Low - CodeAddrs.begin();
   }
 

@@ -48,7 +48,7 @@ static cl::opt<std::string> opExcFilter(
 
 static const char *const tblgenNamePrefix = "tblgen_";
 static const char *const generatedArgName = "odsArg";
-static const char *const builder = "odsBuilder";
+static const char *const odsBuilder = "odsBuilder";
 static const char *const builderOpState = "odsState";
 
 // The logic to calculate the actual value range for a declared operand/result
@@ -248,7 +248,7 @@ void StaticVerifierFunctionEmitter::emitTypeConstraintMethods(
        << formatv(
               "    return op->emitOpError(valueKind) << \" #\" << "
               "valueGroupStartIndex << \" must be {0}, but got \" << type;\n",
-              constraint.getDescription())
+              constraint.getSummary())
        << "  }\n"
        << "  return ::mlir::success();\n"
        << "}\n\n";
@@ -576,7 +576,7 @@ static void genAttributeVerifier(const Operator &op, const char *attrGet,
     body << tgfmt("    if (!($0)) return $1\"attribute '$2' "
                   "failed to satisfy constraint: $3\");\n",
                   /*ctx=*/nullptr, tgfmt(condition, &ctx.withSelf(varName)),
-                  emitErrorPrefix, attrName, attr.getDescription());
+                  emitErrorPrefix, attrName, attr.getSummary());
     if (allowMissingAttr)
       body << "  }\n";
     body << "  }\n";
@@ -788,7 +788,7 @@ void OpEmitter::genOptionalAttrRemovers() {
     auto upperInitial = name.take_front().upper();
     auto suffix = name.drop_front();
     auto *method = opClass.addMethodAndPrune(
-        "Attribute", ("remove" + upperInitial + suffix + "Attr").str());
+        "::mlir::Attribute", ("remove" + upperInitial + suffix + "Attr").str());
     if (!method)
       return;
     auto &body = method->body();
@@ -1010,7 +1010,7 @@ void OpEmitter::genNamedRegionGetters() {
     if (region.name.empty())
       continue;
 
-    // Generate the accessors for a varidiadic region.
+    // Generate the accessors for a variadic region.
     if (region.isVariadic()) {
       auto *m = opClass.addMethodAndPrune("::mlir::MutableArrayRef<Region>",
                                           region.name);
@@ -1326,54 +1326,31 @@ void OpEmitter::genUseAttrAsResultTypeBuilder() {
   body << "  }\n";
 }
 
-/// Returns a signature of the builder as defined by a dag-typed initializer.
-/// Updates the context `fctx` to enable replacement of $_builder and $_state
-/// in the body. Reports errors at `loc`.
-static std::string builderSignatureFromDAG(const DagInit *init,
-                                           ArrayRef<llvm::SMLoc> loc) {
-  auto *defInit = dyn_cast<DefInit>(init->getOperator());
-  if (!defInit || !defInit->getDef()->getName().equals("ins"))
-    PrintFatalError(loc, "expected 'ins' in builders");
+/// Returns a signature of the builder. Updates the context `fctx` to enable
+/// replacement of $_builder and $_state in the body.
+static std::string getBuilderSignature(const Builder &builder) {
+  ArrayRef<Builder::Parameter> params(builder.getParameters());
 
   // Inject builder and state arguments.
   llvm::SmallVector<std::string, 8> arguments;
-  arguments.reserve(init->getNumArgs() + 2);
-  arguments.push_back(llvm::formatv("::mlir::OpBuilder &{0}", builder).str());
+  arguments.reserve(params.size() + 2);
+  arguments.push_back(
+      llvm::formatv("::mlir::OpBuilder &{0}", odsBuilder).str());
   arguments.push_back(
       llvm::formatv("::mlir::OperationState &{0}", builderOpState).str());
 
-  // Accept either a StringInit or a DefInit with two string values as dag
-  // arguments. The former corresponds to the type, the latter to the type and
-  // the default value. Similarly to C++, once an argument with a default value
-  // is detected, the following arguments must have default values as well.
-  bool seenDefaultValue = false;
-  for (unsigned i = 0, e = init->getNumArgs(); i < e; ++i) {
+  for (unsigned i = 0, e = params.size(); i < e; ++i) {
     // If no name is provided, generate one.
-    StringInit *argName = init->getArgName(i);
+    Optional<StringRef> paramName = params[i].getName();
     std::string name =
-        argName ? argName->getValue().str() : "odsArg" + std::to_string(i);
+        paramName ? paramName->str() : "odsArg" + std::to_string(i);
 
-    Init *argInit = init->getArg(i);
-    StringRef type;
     std::string defaultValue;
-    if (StringInit *strType = dyn_cast<StringInit>(argInit)) {
-      type = strType->getValue();
-    } else {
-      const Record *typeAndDefaultValue = cast<DefInit>(argInit)->getDef();
-      type = typeAndDefaultValue->getValueAsString("type");
-      StringRef defaultValueRef =
-          typeAndDefaultValue->getValueAsString("defaultValue");
-      if (!defaultValueRef.empty()) {
-        seenDefaultValue = true;
-        defaultValue = llvm::formatv(" = {0}", defaultValueRef).str();
-      }
-    }
-    if (seenDefaultValue && defaultValue.empty())
-      PrintFatalError(loc,
-                      "expected an argument with default value after other "
-                      "arguments with default values");
+    if (Optional<StringRef> defaultParamValue = params[i].getDefaultValue())
+      defaultValue = llvm::formatv(" = {0}", *defaultParamValue).str();
     arguments.push_back(
-        llvm::formatv("{0} {1}{2}", type, name, defaultValue).str());
+        llvm::formatv("{0} {1}{2}", params[i].getCppType(), name, defaultValue)
+            .str());
   }
 
   return llvm::join(arguments, ", ");
@@ -1381,41 +1358,26 @@ static std::string builderSignatureFromDAG(const DagInit *init,
 
 void OpEmitter::genBuilder() {
   // Handle custom builders if provided.
-  // TODO: Create wrapper class for OpBuilder to hide the native
-  // TableGen API calls here.
-  {
-    auto *listInit = dyn_cast_or_null<ListInit>(def.getValueInit("builders"));
-    if (listInit) {
-      for (Init *init : listInit->getValues()) {
-        Record *builderDef = cast<DefInit>(init)->getDef();
-        std::string paramStr = builderSignatureFromDAG(
-            builderDef->getValueAsDag("dagParams"), op.getLoc());
+  for (const Builder &builder : op.getBuilders()) {
+    std::string paramStr = getBuilderSignature(builder);
 
-        StringRef body = builderDef->getValueAsString("body");
-        bool hasBody = !body.empty();
-        OpMethod::Property properties =
-            hasBody ? OpMethod::MP_Static : OpMethod::MP_StaticDeclaration;
-        auto *method =
-            opClass.addMethodAndPrune("void", "build", properties, paramStr);
+    Optional<StringRef> body = builder.getBody();
+    OpMethod::Property properties =
+        body ? OpMethod::MP_Static : OpMethod::MP_StaticDeclaration;
+    auto *method =
+        opClass.addMethodAndPrune("void", "build", properties, paramStr);
 
-        FmtContext fctx;
-        fctx.withBuilder(builder);
-        fctx.addSubst("_state", builderOpState);
-        if (hasBody)
-          method->body() << tgfmt(body, &fctx);
-      }
-    }
-    if (op.skipDefaultBuilders()) {
-      if (!listInit || listInit->empty())
-        PrintFatalError(
-            op.getLoc(),
-            "default builders are skipped and no custom builders provided");
-      return;
-    }
+    FmtContext fctx;
+    fctx.withBuilder(odsBuilder);
+    fctx.addSubst("_state", builderOpState);
+    if (body)
+      method->body() << tgfmt(*body, &fctx);
   }
 
   // Generate default builders that requires all result type, operands, and
   // attributes as parameters.
+  if (op.skipDefaultBuilders())
+    return;
 
   // We generate three classes of builders here:
   // 1. one having a stand-alone parameter for each operand / attribute, and
@@ -1991,7 +1953,7 @@ void OpEmitter::genVerifier() {
       body << tgfmt("  if (!($0))\n    "
                     "return emitOpError(\"failed to verify that $1\");\n",
                     &verifyCtx, tgfmt(t->getPredTemplate(), &verifyCtx),
-                    t->getDescription());
+                    t->getSummary());
     }
   }
 
@@ -2086,7 +2048,7 @@ void OpEmitter::genRegionVerifier(OpMethodBody &body) {
                     "verify constraint: {2}\";\n      }\n",
                     constraint,
                     region.name.empty() ? "" : "('" + region.name + "') ",
-                    region.constraint.getDescription())
+                    region.constraint.getSummary())
          << "      ++index;\n"
          << "    }\n";
   }
@@ -2125,7 +2087,7 @@ void OpEmitter::genSuccessorVerifier(OpMethodBody &body) {
                     "failed to "
                     "verify constraint: {2}\";\n      }\n",
                     constraint, successor.name,
-                    successor.constraint.getDescription())
+                    successor.constraint.getSummary())
          << "      ++index;\n"
          << "    }\n";
   }
@@ -2378,7 +2340,7 @@ void OpOperandAdaptorEmitter::addVerification() {
 
   FmtContext verifyCtx;
   populateSubstitutions(op, "odsAttrs.get", "getODSOperands",
-                        "<no results should be genarated>", verifyCtx);
+                        "<no results should be generated>", verifyCtx);
   genAttributeVerifier(op, "odsAttrs.get",
                        Twine("emitError(loc, \"'") + op.getOperationName() +
                            "' op \"",

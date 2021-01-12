@@ -43,10 +43,10 @@ namespace tooling {
 /// Specifies the working directory and command of a compilation.
 struct CompileCommand {
   CompileCommand() = default;
-  CompileCommand(Twine Directory, Twine Filename,
-                 std::vector<std::string> CommandLine, Twine Output)
+  CompileCommand(const Twine &Directory, const Twine &Filename,
+                 std::vector<std::string> CommandLine, const Twine &Output)
       : Directory(Directory.str()), Filename(Filename.str()),
-        CommandLine(std::move(CommandLine)), Output(Output.str()){}
+        CommandLine(std::move(CommandLine)), Output(Output.str()) {}
 
   /// The working directory the command was executed from.
   std::string Directory;
@@ -180,9 +180,9 @@ public:
   /// \param Argv Points to the command line arguments.
   /// \param ErrorMsg Contains error text if the function returns null pointer.
   /// \param Directory The base directory used in the FixedCompilationDatabase.
-  static std::unique_ptr<FixedCompilationDatabase> loadFromCommandLine(
-      int &Argc, const char *const *Argv, std::string &ErrorMsg,
-      Twine Directory = ".");
+  static std::unique_ptr<FixedCompilationDatabase>
+  loadFromCommandLine(int &Argc, const char *const *Argv, std::string &ErrorMsg,
+                      const Twine &Directory = ".");
 
   /// Reads flags from the given file, one-per-line.
   /// Returns nullptr and sets ErrorMessage if we can't read the file.
@@ -196,7 +196,8 @@ public:
 
   /// Constructs a compilation data base from a specified directory
   /// and command line.
-  FixedCompilationDatabase(Twine Directory, ArrayRef<std::string> CommandLine);
+  FixedCompilationDatabase(const Twine &Directory,
+                           ArrayRef<std::string> CommandLine);
 
   /// Returns the given compile command.
   ///

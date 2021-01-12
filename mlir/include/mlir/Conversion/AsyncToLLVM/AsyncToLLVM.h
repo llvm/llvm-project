@@ -13,12 +13,28 @@
 
 namespace mlir {
 
+class ConversionTarget;
 class ModuleOp;
 template <typename T>
 class OperationPass;
+class MLIRContext;
+class OwningRewritePatternList;
+class TypeConverter;
 
 /// Create a pass to convert Async operations to the LLVM dialect.
 std::unique_ptr<OperationPass<ModuleOp>> createConvertAsyncToLLVMPass();
+
+/// Populates patterns for async structural type conversions.
+///
+/// A "structural" type conversion is one where the underlying ops are
+/// completely agnostic to the actual types involved and simply need to update
+/// their types. An example of this is async.execute -- the async.execute op and
+/// the corresponding async.yield ops need to update their types accordingly to
+/// the TypeConverter, but otherwise don't care what type conversions are
+/// happening.
+void populateAsyncStructuralTypeConversionsAndLegality(
+    MLIRContext *context, TypeConverter &typeConverter,
+    OwningRewritePatternList &patterns, ConversionTarget &target);
 
 } // namespace mlir
 

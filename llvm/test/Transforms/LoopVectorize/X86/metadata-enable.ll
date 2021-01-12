@@ -1769,7 +1769,7 @@ define i32 @disabled(i32* noalias nocapture %a, i32* noalias nocapture readonly 
 ; O3DEFAULT-NEXT:  entry:
 ; O3DEFAULT-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B:%.*]] to <4 x i32>*
 ; O3DEFAULT-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
-; O3DEFAULT-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> undef, i32 [[N:%.*]], i32 0
+; O3DEFAULT-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i32 0
 ; O3DEFAULT-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> undef, <4 x i32> zeroinitializer
 ; O3DEFAULT-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[TMP1]], [[TMP3]]
 ; O3DEFAULT-NEXT:    [[TMP5:%.*]] = bitcast i32* [[A:%.*]] to <4 x i32>*

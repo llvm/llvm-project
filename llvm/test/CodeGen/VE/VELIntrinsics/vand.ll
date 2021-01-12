@@ -4,8 +4,8 @@
 ;;;
 ;;; Note:
 ;;;   We test VAND*vvl, VAND*vvl_v, VAND*rvl, VAND*rvl_v, VAND*vvml_v,
-;;;   VAND*rvml_v, PVAND*vvl, PVAND*vvl_v, PVAND*rvl, PVAND*rvl_v, PVAND*vvml_v, and
-;;;   PVAND*rvml_v instructions.
+;;;   VAND*rvml_v, PVAND*vvl, PVAND*vvl_v, PVAND*rvl, PVAND*rvl_v, PVAND*vvml_v,
+;;;   and PVAND*rvml_v instructions.
 
 ; Function Attrs: nounwind readnone
 define fastcc <256 x double> @vand_vvvl(<256 x double> %0, <256 x double> %1) {

@@ -1,7 +1,7 @@
-; RUN: opt -O0 -mtriple=amdgcn--amdhsa -disable-output -disable-verify -debug-pass=Structure %s 2>&1 | FileCheck -check-prefix=GCN-O0 %s
-; RUN: opt -O1 -mtriple=amdgcn--amdhsa -disable-output -disable-verify -debug-pass=Structure %s 2>&1 | FileCheck -check-prefix=GCN-O1 %s
-; RUN: opt -O2 -mtriple=amdgcn--amdhsa -disable-output -disable-verify -debug-pass=Structure %s 2>&1 | FileCheck -check-prefix=GCN-O2 %s
-; RUN: opt -O3 -mtriple=amdgcn--amdhsa -disable-output -disable-verify -debug-pass=Structure %s 2>&1 | FileCheck -check-prefix=GCN-O3 %s
+; RUN: opt -O0 -mtriple=amdgcn--amdhsa -disable-output -disable-verify -debug-pass=Structure -enable-new-pm=0 %s 2>&1 | FileCheck -check-prefix=GCN-O0 %s
+; RUN: opt -O1 -mtriple=amdgcn--amdhsa -disable-output -disable-verify -debug-pass=Structure -enable-new-pm=0 %s 2>&1 | FileCheck -check-prefix=GCN-O1 %s
+; RUN: opt -O2 -mtriple=amdgcn--amdhsa -disable-output -disable-verify -debug-pass=Structure -enable-new-pm=0 %s 2>&1 | FileCheck -check-prefix=GCN-O2 %s
+; RUN: opt -O3 -mtriple=amdgcn--amdhsa -disable-output -disable-verify -debug-pass=Structure -enable-new-pm=0 %s 2>&1 | FileCheck -check-prefix=GCN-O3 %s
 
 ; REQUIRES: asserts
 

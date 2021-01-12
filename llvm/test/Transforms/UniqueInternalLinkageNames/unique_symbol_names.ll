@@ -10,5 +10,5 @@ entry:
   ret i32 0
 }
 
-; CHECK: @glob.__uniq.6ae72bb15a7d1834b42ae042a58f7a4d = internal global
-; CHECK: define internal i32 @foo.__uniq.6ae72bb15a7d1834b42ae042a58f7a4d()
+; CHECK: @glob.__uniq.142098474322525230676991677820000238157 = internal global
+; CHECK: define internal i32 @foo.__uniq.142098474322525230676991677820000238157()

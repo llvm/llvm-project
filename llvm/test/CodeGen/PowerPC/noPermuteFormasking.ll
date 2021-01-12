@@ -94,6 +94,13 @@ entry:
 }
 
 define i64 @andis_no_cmp(i64 %a, i64 %b) {
+; CHECK-LABEL: andis_no_cmp:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    andis. 5, 3, 1
+; CHECK-NEXT:    li 5, 1
+; CHECK-NEXT:    iseleq 4, 4, 5
+; CHECK-NEXT:    mulld 3, 4, 3
+; CHECK-NEXT:    blr
 entry:
   %and = and i64 %a, 65536
   %tobool = icmp eq i64 %and, 0

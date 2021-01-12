@@ -83,11 +83,7 @@ void DynamicLoaderStatic::LoadAllImagesAtFileAddresses() {
   // Disable JIT for static dynamic loader targets
   m_process->SetCanJIT(false);
 
-  std::lock_guard<std::recursive_mutex> guard(module_list.GetMutex());
-
-  const size_t num_modules = module_list.GetSize();
-  for (uint32_t idx = 0; idx < num_modules; ++idx) {
-    ModuleSP module_sp(module_list.GetModuleAtIndexUnlocked(idx));
+  for (ModuleSP module_sp : module_list.Modules()) {
     if (module_sp) {
       bool changed = false;
       ObjectFile *image_object_file = module_sp->GetObjectFile();

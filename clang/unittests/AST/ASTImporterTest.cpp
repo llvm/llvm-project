@@ -6141,6 +6141,41 @@ TEST_P(ASTImporterOptionSpecificTestBase, TypedefWithAttribute) {
   EXPECT_EQ(ToAttr->getAnnotation(), "A");
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase,
+       ImportOfTemplatedDeclWhenPreviousDeclHasNoDescribedTemplateSet) {
+  Decl *FromTU = getTuDecl(
+      R"(
+
+      namespace std {
+        template<typename T>
+        class basic_stringbuf;
+      }
+      namespace std {
+        class char_traits;
+        template<typename T = char_traits>
+        class basic_stringbuf;
+      }
+      namespace std {
+        template<typename T>
+        class basic_stringbuf {};
+      }
+
+      )",
+      Lang_CXX11);
+
+  auto *From1 = FirstDeclMatcher<ClassTemplateDecl>().match(
+      FromTU,
+      classTemplateDecl(hasName("basic_stringbuf"), unless(isImplicit())));
+  auto *To1 = cast_or_null<ClassTemplateDecl>(Import(From1, Lang_CXX11));
+  EXPECT_TRUE(To1);
+
+  auto *From2 = LastDeclMatcher<ClassTemplateDecl>().match(
+      FromTU,
+      classTemplateDecl(hasName("basic_stringbuf"), unless(isImplicit())));
+  auto *To2 = cast_or_null<ClassTemplateDecl>(Import(From2, Lang_CXX11));
+  EXPECT_TRUE(To2);
+}
+
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, ASTImporterLookupTableTest,
                         DefaultTestValuesForRunOptions, );
 

@@ -263,8 +263,8 @@ bool ARMCallLowering::lowerReturnVal(MachineIRBuilder &MIRBuilder,
 }
 
 bool ARMCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
-                                  const Value *Val,
-                                  ArrayRef<Register> VRegs) const {
+                                  const Value *Val, ArrayRef<Register> VRegs,
+                                  FunctionLoweringInfo &FLI) const {
   assert(!Val == VRegs.empty() && "Return value without a vreg");
 
   auto const &ST = MIRBuilder.getMF().getSubtarget<ARMSubtarget>();
@@ -410,9 +410,10 @@ struct FormalArgHandler : public ARMIncomingValueHandler {
 
 } // end anonymous namespace
 
-bool ARMCallLowering::lowerFormalArguments(
-    MachineIRBuilder &MIRBuilder, const Function &F,
-    ArrayRef<ArrayRef<Register>> VRegs) const {
+bool ARMCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
+                                           const Function &F,
+                                           ArrayRef<ArrayRef<Register>> VRegs,
+                                           FunctionLoweringInfo &FLI) const {
   auto &TLI = *getTLI<ARMTargetLowering>();
   auto Subtarget = TLI.getSubtarget();
 

@@ -722,6 +722,7 @@ void SymtabSection::finalizeContents() {
   for (Symbol *sym : symtab->getSymbols()) {
     if (auto *defined = dyn_cast<Defined>(sym)) {
       assert(defined->isExternal());
+      (void)defined;
       addSymbol(externalSymbols, sym);
     } else if (auto *dysym = dyn_cast<DylibSymbol>(sym)) {
       if (dysym->isReferenced())

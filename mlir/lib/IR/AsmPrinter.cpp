@@ -48,7 +48,39 @@ void OperationName::dump() const { print(llvm::errs()); }
 
 DialectAsmPrinter::~DialectAsmPrinter() {}
 
+//===--------------------------------------------------------------------===//
+// OpAsmPrinter
+//===--------------------------------------------------------------------===//
+
 OpAsmPrinter::~OpAsmPrinter() {}
+
+void OpAsmPrinter::printFunctionalType(Operation *op) {
+  auto &os = getStream();
+  os << '(';
+  llvm::interleaveComma(op->getOperands(), os, [&](Value operand) {
+    // Print the types of null values as <<NULL TYPE>>.
+    *this << (operand ? operand.getType() : Type());
+  });
+  os << ") -> ";
+
+  // Print the result list.  We don't parenthesize single result types unless
+  // it is a function (avoiding a grammar ambiguity).
+  bool wrapped = op->getNumResults() != 1;
+  if (!wrapped && op->getResult(0).getType() &&
+      op->getResult(0).getType().isa<FunctionType>())
+    wrapped = true;
+
+  if (wrapped)
+    os << '(';
+
+  llvm::interleaveComma(op->getResults(), os, [&](const OpResult &result) {
+    // Print the types of null values as <<NULL TYPE>>.
+    *this << (result ? result.getType() : Type());
+  });
+
+  if (wrapped)
+    os << ')';
+}
 
 //===--------------------------------------------------------------------===//
 // Operation OpAsm interface.
@@ -346,7 +378,7 @@ public:
 private:
   /// Print the given operation in the generic form.
   void printGenericOp(Operation *op) override {
-    // Consider nested opertions for aliases.
+    // Consider nested operations for aliases.
     if (op->getNumRegions() != 0) {
       for (Region &region : op->getRegions())
         printRegion(region, /*printEntryBlockArgs=*/true,
@@ -579,7 +611,7 @@ void AliasInitializer::visit(Type type) {
   if (succeeded(generateAlias(type, aliasToType)))
     return;
 
-  // Visit several subtypes that contain types or atttributes.
+  // Visit several subtypes that contain types or attributes.
   if (auto funcType = type.dyn_cast<FunctionType>()) {
     // Visit input and result types for functions.
     for (auto input : funcType.getInputs())

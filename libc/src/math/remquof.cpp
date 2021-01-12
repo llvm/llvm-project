@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/math/remquof.h"
 #include "src/__support/common.h"
 #include "utils/FPUtil/DivisionAndRemainderOperations.h"
 
 namespace __llvm_libc {
 
-float LLVM_LIBC_ENTRYPOINT(remquof)(float x, float y, int *exp) {
+LLVM_LIBC_FUNCTION(float, remquof, (float x, float y, int *exp)) {
   return fputil::remquo(x, y, *exp);
 }
 

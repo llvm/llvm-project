@@ -12,7 +12,6 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/Support/Alignment.h"
 
 namespace llvm {
 

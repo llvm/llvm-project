@@ -1268,7 +1268,7 @@ void OperationFormat::genParserTypeResolution(Operator &op,
          << ")) {\n"
          << formatv("      return parser.emitError(parser.getNameLoc()) << "
                     "\"'{0}' must be {1}, but got \" << type;\n",
-                    variable->name, constraint.getDescription())
+                    variable->name, constraint.getSummary())
          << "    }\n"
          << "  }\n";
   }

@@ -18,7 +18,7 @@ define void @func_21() {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE4:%.*]] ]
-; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <2 x i32> [ <i32 undef, i32 0>, [[VECTOR_PH]] ], [ [[TMP12:%.*]], [[PRED_STORE_CONTINUE4]] ]
+; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <2 x i32> [ <i32 poison, i32 0>, [[VECTOR_PH]] ], [ [[TMP12:%.*]], [[PRED_STORE_CONTINUE4]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE4]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
@@ -28,10 +28,10 @@ define void @func_21() {
 ; CHECK:       pred.load.if:
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [5 x i32], [5 x i32]* @A, i64 0, i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> undef, i32 [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> poison, i32 [[TMP5]], i32 0
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE]]
 ; CHECK:       pred.load.continue:
-; CHECK-NEXT:    [[TMP7:%.*]] = phi <2 x i32> [ undef, [[VECTOR_BODY]] ], [ [[TMP6]], [[PRED_LOAD_IF]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = phi <2 x i32> [ poison, [[VECTOR_BODY]] ], [ [[TMP6]], [[PRED_LOAD_IF]] ]
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP2]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[PRED_LOAD_IF1:%.*]], label [[PRED_LOAD_CONTINUE2:%.*]]
 ; CHECK:       pred.load.if1:

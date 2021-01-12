@@ -57,17 +57,9 @@ std::string Constraint::getConditionTemplate() const {
   return getPredicate().getCondition();
 }
 
-StringRef Constraint::getDescription() const {
-  // If a summary is found, we use that given that it is a focused single line
-  // comment.
+StringRef Constraint::getSummary() const {
   if (Optional<StringRef> summary = def->getValueAsOptionalString("summary"))
     return *summary;
-  // If a summary can't be found, look for a specific description field to use
-  // for the constraint.
-  StringRef desc = def->getValueAsString("description");
-  if (!desc.empty())
-    return desc;
-  // Otherwise, fallback to the name of the constraint definition.
   return def->getName();
 }
 

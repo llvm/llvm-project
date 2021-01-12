@@ -78,7 +78,7 @@ static void emitStructDecl(const Record &structDef, raw_ostream &os) {
   StructAttr structAttr(&structDef);
   StringRef structName = structAttr.getStructClassName();
   StringRef cppNamespace = structAttr.getCppNamespace();
-  StringRef description = structAttr.getDescription();
+  StringRef description = structAttr.getSummary();
   auto fields = structAttr.getAllFields();
 
   // Wrap in the appropriate namespace.

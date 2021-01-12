@@ -495,7 +495,7 @@ Expected<int> LLC::ExecuteProgram(const std::string &Bitcode,
     return std::move(E);
 
   std::vector<std::string> CCArgs(ArgsForCC);
-  CCArgs.insert(CCArgs.end(), SharedLibs.begin(), SharedLibs.end());
+  llvm::append_range(CCArgs, SharedLibs);
 
   // Assuming LLC worked, compile the result with CC and run it.
   return cc->ExecuteProgram(OutputAsmFile, Args, *FileKind, InputFile,

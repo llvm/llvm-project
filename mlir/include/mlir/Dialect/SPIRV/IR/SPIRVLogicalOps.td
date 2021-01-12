@@ -441,7 +441,9 @@ def SPV_FUnordNotEqualOp : SPV_LogicalBinaryOp<"FUnordNotEqual", SPV_Float, [Com
 
 // -----
 
-def SPV_IEqualOp : SPV_LogicalBinaryOp<"IEqual", SPV_Integer, [Commutative]> {
+def SPV_IEqualOp : SPV_LogicalBinaryOp<"IEqual",
+                                       SPV_Integer,
+                                       [Commutative, UsableInSpecConstantOp]> {
   let summary = "Integer comparison for equality.";
 
   let description = [{
@@ -472,7 +474,9 @@ def SPV_IEqualOp : SPV_LogicalBinaryOp<"IEqual", SPV_Integer, [Commutative]> {
 
 // -----
 
-def SPV_INotEqualOp : SPV_LogicalBinaryOp<"INotEqual", SPV_Integer, [Commutative]> {
+def SPV_INotEqualOp : SPV_LogicalBinaryOp<"INotEqual",
+                                          SPV_Integer,
+                                          [Commutative, UsableInSpecConstantOp]> {
   let summary = "Integer comparison for inequality.";
 
   let description = [{
@@ -503,7 +507,10 @@ def SPV_INotEqualOp : SPV_LogicalBinaryOp<"INotEqual", SPV_Integer, [Commutative
 
 // -----
 
-def SPV_LogicalAndOp : SPV_LogicalBinaryOp<"LogicalAnd", SPV_Bool, [Commutative]> {
+def SPV_LogicalAndOp : SPV_LogicalBinaryOp<"LogicalAnd",
+                                           SPV_Bool,
+                                           [Commutative,
+                                            UsableInSpecConstantOp]> {
   let summary = [{
     Result is true if both Operand 1 and Operand 2 are true. Result is false
     if either Operand 1 or Operand 2 are false.
@@ -538,7 +545,10 @@ def SPV_LogicalAndOp : SPV_LogicalBinaryOp<"LogicalAnd", SPV_Bool, [Commutative]
 
 // -----
 
-def SPV_LogicalEqualOp : SPV_LogicalBinaryOp<"LogicalEqual", SPV_Bool, [Commutative]> {
+def SPV_LogicalEqualOp : SPV_LogicalBinaryOp<"LogicalEqual",
+                                             SPV_Bool,
+                                             [Commutative,
+                                              UsableInSpecConstantOp]> {
   let summary = [{
     Result is true if Operand 1 and Operand 2 have the same value. Result is
     false if Operand 1 and Operand 2 have different values.
@@ -571,7 +581,9 @@ def SPV_LogicalEqualOp : SPV_LogicalBinaryOp<"LogicalEqual", SPV_Bool, [Commutat
 
 // -----
 
-def SPV_LogicalNotOp : SPV_LogicalUnaryOp<"LogicalNot", SPV_Bool, []> {
+def SPV_LogicalNotOp : SPV_LogicalUnaryOp<"LogicalNot",
+                                          SPV_Bool,
+                                          [UsableInSpecConstantOp]> {
   let summary = [{
     Result is true if Operand is false.  Result is false if Operand is true.
   }];
@@ -602,7 +614,10 @@ def SPV_LogicalNotOp : SPV_LogicalUnaryOp<"LogicalNot", SPV_Bool, []> {
 
 // -----
 
-def SPV_LogicalNotEqualOp : SPV_LogicalBinaryOp<"LogicalNotEqual", SPV_Bool, [Commutative]> {
+def SPV_LogicalNotEqualOp : SPV_LogicalBinaryOp<"LogicalNotEqual",
+                                                SPV_Bool,
+                                                [Commutative,
+                                                 UsableInSpecConstantOp]> {
   let summary = [{
     Result is true if Operand 1 and Operand 2 have different values. Result
     is false if Operand 1 and Operand 2 have the same value.
@@ -635,7 +650,10 @@ def SPV_LogicalNotEqualOp : SPV_LogicalBinaryOp<"LogicalNotEqual", SPV_Bool, [Co
 
 // -----
 
-def SPV_LogicalOrOp : SPV_LogicalBinaryOp<"LogicalOr", SPV_Bool, [Commutative]> {
+def SPV_LogicalOrOp : SPV_LogicalBinaryOp<"LogicalOr",
+                                          SPV_Bool,
+                                          [Commutative,
+                                           UsableInSpecConstantOp]> {
   let summary = [{
     Result is true if either Operand 1 or Operand 2 is true. Result is false
     if both Operand 1 and Operand 2 are false.
@@ -670,7 +688,9 @@ def SPV_LogicalOrOp : SPV_LogicalBinaryOp<"LogicalOr", SPV_Bool, [Commutative]> 
 
 // -----
 
-def SPV_SGreaterThanOp : SPV_LogicalBinaryOp<"SGreaterThan", SPV_Integer, []> {
+def SPV_SGreaterThanOp : SPV_LogicalBinaryOp<"SGreaterThan",
+                                             SPV_Integer,
+                                             [UsableInSpecConstantOp]> {
   let summary = [{
     Signed-integer comparison if Operand 1 is greater than  Operand 2.
   }];
@@ -703,7 +723,9 @@ def SPV_SGreaterThanOp : SPV_LogicalBinaryOp<"SGreaterThan", SPV_Integer, []> {
 
 // -----
 
-def SPV_SGreaterThanEqualOp : SPV_LogicalBinaryOp<"SGreaterThanEqual", SPV_Integer, []> {
+def SPV_SGreaterThanEqualOp : SPV_LogicalBinaryOp<"SGreaterThanEqual",
+                                                  SPV_Integer,
+                                                  [UsableInSpecConstantOp]> {
   let summary = [{
     Signed-integer comparison if Operand 1 is greater than or equal to
     Operand 2.
@@ -737,7 +759,9 @@ def SPV_SGreaterThanEqualOp : SPV_LogicalBinaryOp<"SGreaterThanEqual", SPV_Integ
 
 // -----
 
-def SPV_SLessThanOp : SPV_LogicalBinaryOp<"SLessThan", SPV_Integer, []> {
+def SPV_SLessThanOp : SPV_LogicalBinaryOp<"SLessThan",
+                                          SPV_Integer,
+                                          [UsableInSpecConstantOp]> {
   let summary = [{
     Signed-integer comparison if Operand 1 is less than Operand 2.
   }];
@@ -770,7 +794,9 @@ def SPV_SLessThanOp : SPV_LogicalBinaryOp<"SLessThan", SPV_Integer, []> {
 
 // -----
 
-def SPV_SLessThanEqualOp : SPV_LogicalBinaryOp<"SLessThanEqual", SPV_Integer, []> {
+def SPV_SLessThanEqualOp : SPV_LogicalBinaryOp<"SLessThanEqual",
+                                               SPV_Integer,
+                                               [UsableInSpecConstantOp]> {
   let summary = [{
     Signed-integer comparison if Operand 1 is less than or equal to Operand
     2.
@@ -805,7 +831,9 @@ def SPV_SLessThanEqualOp : SPV_LogicalBinaryOp<"SLessThanEqual", SPV_Integer, []
 // -----
 
 def SPV_SelectOp : SPV_Op<"Select",
-    [NoSideEffect, AllTypesMatch<["true_value", "false_value", "result"]>]> {
+    [NoSideEffect,
+     AllTypesMatch<["true_value", "false_value", "result"]>,
+     UsableInSpecConstantOp]> {
   let summary = [{
     Select between two objects. Before version 1.4, results are only
     computed per component.
@@ -869,7 +897,10 @@ def SPV_SelectOp : SPV_Op<"Select",
 
 // -----
 
-def SPV_UGreaterThanOp : SPV_LogicalBinaryOp<"UGreaterThan", SPV_Integer, []> {
+def SPV_UGreaterThanOp : SPV_LogicalBinaryOp<"UGreaterThan",
+                                             SPV_Integer,
+                                             [UnsignedOp,
+                                              UsableInSpecConstantOp]> {
   let summary = [{
     Unsigned-integer comparison if Operand 1 is greater than  Operand 2.
   }];
@@ -902,7 +933,10 @@ def SPV_UGreaterThanOp : SPV_LogicalBinaryOp<"UGreaterThan", SPV_Integer, []> {
 
 // -----
 
-def SPV_UGreaterThanEqualOp : SPV_LogicalBinaryOp<"UGreaterThanEqual", SPV_Integer, []> {
+def SPV_UGreaterThanEqualOp : SPV_LogicalBinaryOp<"UGreaterThanEqual",
+                                                  SPV_Integer,
+                                                  [UnsignedOp,
+                                                   UsableInSpecConstantOp]> {
   let summary = [{
     Unsigned-integer comparison if Operand 1 is greater than or equal to
     Operand 2.
@@ -936,7 +970,9 @@ def SPV_UGreaterThanEqualOp : SPV_LogicalBinaryOp<"UGreaterThanEqual", SPV_Integ
 
 // -----
 
-def SPV_ULessThanOp : SPV_LogicalBinaryOp<"ULessThan", SPV_Integer, []> {
+def SPV_ULessThanOp : SPV_LogicalBinaryOp<"ULessThan",
+                                          SPV_Integer,
+                                          [UnsignedOp, UsableInSpecConstantOp]> {
   let summary = [{
     Unsigned-integer comparison if Operand 1 is less than Operand 2.
   }];
@@ -969,8 +1005,10 @@ def SPV_ULessThanOp : SPV_LogicalBinaryOp<"ULessThan", SPV_Integer, []> {
 
 // -----
 
-def SPV_ULessThanEqualOp :
-  SPV_LogicalBinaryOp<"ULessThanEqual", SPV_Integer, []> {
+def SPV_ULessThanEqualOp : SPV_LogicalBinaryOp<"ULessThanEqual",
+                                               SPV_Integer,
+                                               [UnsignedOp,
+                                                UsableInSpecConstantOp]> {
   let summary = [{
     Unsigned-integer comparison if Operand 1 is less than or equal to
     Operand 2.

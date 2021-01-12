@@ -154,6 +154,14 @@ void APValue::LValuePathEntry::Profile(llvm::FoldingSetNodeID &ID) const {
   ID.AddInteger(Value);
 }
 
+APValue::LValuePathSerializationHelper::LValuePathSerializationHelper(
+    ArrayRef<LValuePathEntry> Path, QualType ElemTy)
+    : ElemTy((const void *)ElemTy.getTypePtrOrNull()), Path(Path) {}
+
+QualType APValue::LValuePathSerializationHelper::getType() {
+  return QualType::getFromOpaquePtr(ElemTy);
+}
+
 namespace {
   struct LVBase {
     APValue::LValueBase Base;

@@ -410,21 +410,12 @@ define amdgpu_kernel void @fast_frem_f64(double addrspace(1)* %out, double addrs
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
 ; CI-NEXT:    s_load_dwordx2 s[2:3], s[8:9], 0x0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    v_mov_b32_e32 v0, s2
-; CI-NEXT:    v_mov_b32_e32 v1, s3
-; CI-NEXT:    v_div_scale_f64 v[2:3], s[2:3], v[0:1], v[0:1], s[0:1]
-; CI-NEXT:    v_div_scale_f64 v[8:9], vcc, s[0:1], v[0:1], s[0:1]
-; CI-NEXT:    v_rcp_f64_e32 v[4:5], v[2:3]
-; CI-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 1.0
-; CI-NEXT:    v_fma_f64 v[4:5], v[4:5], v[6:7], v[4:5]
-; CI-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 1.0
-; CI-NEXT:    v_fma_f64 v[4:5], v[4:5], v[6:7], v[4:5]
-; CI-NEXT:    v_mul_f64 v[6:7], v[8:9], v[4:5]
-; CI-NEXT:    v_fma_f64 v[2:3], -v[2:3], v[6:7], v[8:9]
-; CI-NEXT:    v_div_fmas_f64 v[2:3], v[2:3], v[4:5], v[6:7]
-; CI-NEXT:    v_div_fixup_f64 v[2:3], v[2:3], v[0:1], s[0:1]
-; CI-NEXT:    v_trunc_f64_e32 v[2:3], v[2:3]
-; CI-NEXT:    v_fma_f64 v[0:1], -v[2:3], v[0:1], s[0:1]
+; CI-NEXT:    v_mov_b32_e32 v3, s1
+; CI-NEXT:    v_rcp_f64_e32 v[0:1], s[2:3]
+; CI-NEXT:    v_mov_b32_e32 v2, s0
+; CI-NEXT:    v_mul_f64 v[0:1], s[0:1], v[0:1]
+; CI-NEXT:    v_trunc_f64_e32 v[0:1], v[0:1]
+; CI-NEXT:    v_fma_f64 v[0:1], -v[0:1], s[2:3], v[2:3]
 ; CI-NEXT:    v_mov_b32_e32 v2, s4
 ; CI-NEXT:    v_mov_b32_e32 v3, s5
 ; CI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
@@ -438,21 +429,12 @@ define amdgpu_kernel void @fast_frem_f64(double addrspace(1)* %out, double addrs
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
 ; VI-NEXT:    s_load_dwordx2 s[2:3], s[8:9], 0x0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v0, s2
-; VI-NEXT:    v_mov_b32_e32 v1, s3
-; VI-NEXT:    v_div_scale_f64 v[2:3], s[2:3], v[0:1], v[0:1], s[0:1]
-; VI-NEXT:    v_div_scale_f64 v[8:9], vcc, s[0:1], v[0:1], s[0:1]
-; VI-NEXT:    v_rcp_f64_e32 v[4:5], v[2:3]
-; VI-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 1.0
-; VI-NEXT:    v_fma_f64 v[4:5], v[4:5], v[6:7], v[4:5]
-; VI-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 1.0
-; VI-NEXT:    v_fma_f64 v[4:5], v[4:5], v[6:7], v[4:5]
-; VI-NEXT:    v_mul_f64 v[6:7], v[8:9], v[4:5]
-; VI-NEXT:    v_fma_f64 v[2:3], -v[2:3], v[6:7], v[8:9]
-; VI-NEXT:    v_div_fmas_f64 v[2:3], v[2:3], v[4:5], v[6:7]
-; VI-NEXT:    v_div_fixup_f64 v[2:3], v[2:3], v[0:1], s[0:1]
-; VI-NEXT:    v_trunc_f64_e32 v[2:3], v[2:3]
-; VI-NEXT:    v_fma_f64 v[0:1], -v[2:3], v[0:1], s[0:1]
+; VI-NEXT:    v_mov_b32_e32 v3, s1
+; VI-NEXT:    v_rcp_f64_e32 v[0:1], s[2:3]
+; VI-NEXT:    v_mov_b32_e32 v2, s0
+; VI-NEXT:    v_mul_f64 v[0:1], s[0:1], v[0:1]
+; VI-NEXT:    v_trunc_f64_e32 v[0:1], v[0:1]
+; VI-NEXT:    v_fma_f64 v[0:1], -v[0:1], s[2:3], v[2:3]
 ; VI-NEXT:    v_mov_b32_e32 v2, s4
 ; VI-NEXT:    v_mov_b32_e32 v3, s5
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]

@@ -250,12 +250,14 @@ RUN: not FileCheck --check-prefix NUMEXPR-CONSTRAINT-NOMATCH --input-file %s %s 
 RUN:   | FileCheck --check-prefix NUMEXPR-CONSTRAINT-NOMATCH-MSG --strict-whitespace %s
 
 USE DEF FMT EXPL NO MATCH
-12
+UNSI=11
+UNSI: 12
 NUMEXPR-CONSTRAINT-NOMATCH-LABEL: USE DEF FMT EXPL NO MATCH
-NUMEXPR-CONSTRAINT-NOMATCH-NEXT: [[#==UNSI]]
+NUMEXPR-CONSTRAINT-NOMATCH-NEXT: UNSI=[[#UNSI:]]
+NUMEXPR-CONSTRAINT-NOMATCH-NEXT: UNSI: [[#==UNSI]]
 NUMEXPR-CONSTRAINT-NOMATCH-MSG: numeric-expression.txt:[[#@LINE-1]]:34: error: {{N}}UMEXPR-CONSTRAINT-NOMATCH-NEXT: expected string not found in input
-NUMEXPR-CONSTRAINT-NOMATCH-MSG-NEXT: {{N}}UMEXPR-CONSTRAINT-NOMATCH-NEXT: {{\[\[#==UNSI\]\]}}
-NUMEXPR-CONSTRAINT-NOMATCH-MSG-NEXT:   {{^}}                                 ^{{$}}
+NUMEXPR-CONSTRAINT-NOMATCH-MSG-NEXT:  {{N}}UMEXPR-CONSTRAINT-NOMATCH-NEXT: UNSI: {{\[\[#==UNSI\]\]}}
+NUMEXPR-CONSTRAINT-NOMATCH-MSG-NEXT: {{^}}                                 ^{{$}}
 
 ; Empty numeric expression with matching constraint.
 RUN: %ProtectFileCheckOutput \

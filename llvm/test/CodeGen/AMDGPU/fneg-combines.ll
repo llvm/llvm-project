@@ -1,8 +1,8 @@
-; RUN: llc -march=amdgcn -mcpu=hawaii -start-after=sink -mattr=+flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-SAFE -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -enable-no-signed-zeros-fp-math -march=amdgcn -mcpu=hawaii -mattr=+flat-for-global -start-after=sink -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-NSZ -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=hawaii -start-after=sink -mattr=+flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-SAFE,SI %s
+; RUN: llc -enable-no-signed-zeros-fp-math -march=amdgcn -mcpu=hawaii -mattr=+flat-for-global -start-after=sink -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-NSZ,SI %s
 
-; RUN: llc -march=amdgcn -mcpu=fiji -start-after=sink --verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-SAFE -check-prefix=VI -check-prefix=FUNC %s
-; RUN: llc -enable-no-signed-zeros-fp-math -march=amdgcn -mcpu=fiji -start-after=sink -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-NSZ -check-prefix=VI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=fiji -start-after=sink --verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-SAFE,VI %s
+; RUN: llc -enable-no-signed-zeros-fp-math -march=amdgcn -mcpu=fiji -start-after=sink -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GCN-NSZ,VI %s
 
 ; --------------------------------------------------------------------------------
 ; fadd tests
@@ -252,7 +252,7 @@ define amdgpu_ps float @fneg_fadd_0(float inreg %tmp2, float inreg %tmp6, <4 x i
 ; GCN-NSZ-DAG: v_cmp_nlt_f32_e64 {{.*}}, -[[D]]
 define amdgpu_ps float @fneg_fadd_0_nsz(float inreg %tmp2, float inreg %tmp6, <4 x i32> %arg) local_unnamed_addr #2 {
 .entry:
-  %tmp7 = fdiv float 1.000000e+00, %tmp6
+  %tmp7 = fdiv afn float 1.000000e+00, %tmp6
   %tmp8 = fmul float 0.000000e+00, %tmp7
   %tmp9 = fmul reassoc nnan arcp contract float 0.000000e+00, %tmp8
   %.i188 = fadd float %tmp9, 0.000000e+00

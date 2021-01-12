@@ -502,7 +502,7 @@ static bool canRewriteGEPAsOffset(Value *Start, Value *Base,
 
       Value *V = WorkList.back();
 
-      if (Explored.count(V) != 0) {
+      if (Explored.contains(V)) {
         WorkList.pop_back();
         continue;
       }
@@ -2210,6 +2210,21 @@ Instruction *InstCombinerImpl::foldICmpShrConstant(ICmpInst &Cmp,
           (ShiftedC + 1).ashr(ShAmtVal) == (C + 1))
         return new ICmpInst(Pred, X, ConstantInt::get(ShrTy, ShiftedC));
     }
+
+    // If the compare constant has significant bits above the lowest sign-bit,
+    // then convert an unsigned cmp to a test of the sign-bit:
+    // (ashr X, ShiftC) u> C --> X s< 0
+    // (ashr X, ShiftC) u< C --> X s> -1
+    if (C.getBitWidth() > 2 && C.getNumSignBits() <= ShAmtVal) {
+      if (Pred == CmpInst::ICMP_UGT) {
+        return new ICmpInst(CmpInst::ICMP_SLT, X,
+                            ConstantInt::getNullValue(ShrTy));
+      }
+      if (Pred == CmpInst::ICMP_ULT) {
+        return new ICmpInst(CmpInst::ICMP_SGT, X,
+                            ConstantInt::getAllOnesValue(ShrTy));
+      }
+    }
   } else {
     if (Pred == CmpInst::ICMP_ULT || (Pred == CmpInst::ICMP_UGT && IsExact)) {
       // icmp ult (lshr X, ShAmtC), C --> icmp ult X, (C << ShAmtC)
@@ -3370,7 +3385,7 @@ static Value *foldICmpWithLowBitMaskedVal(ICmpInst &I,
   Type *OpTy = M->getType();
   auto *VecC = dyn_cast<Constant>(M);
   auto *OpVTy = dyn_cast<FixedVectorType>(OpTy);
-  if (OpVTy && VecC && VecC->containsUndefElement()) {
+  if (OpVTy && VecC && VecC->containsUndefOrPoisonElement()) {
     Constant *SafeReplacementConstant = nullptr;
     for (unsigned i = 0, e = OpVTy->getNumElements(); i != e; ++i) {
       if (!isa<UndefValue>(VecC->getAggregateElement(i))) {
@@ -4751,8 +4766,7 @@ static Instruction *processUMulZExtIdiom(ICmpInst &I, Value *MulVal,
   // mul.with.overflow and adjust properly mask/size.
   if (MulVal->hasNUsesOrMore(2)) {
     Value *Mul = Builder.CreateExtractValue(Call, 0, "umul.value");
-    for (auto UI = MulVal->user_begin(), UE = MulVal->user_end(); UI != UE;) {
-      User *U = *UI++;
+    for (User *U : make_early_inc_range(MulVal->users())) {
       if (U == &I || U == OtherVal)
         continue;
       if (TruncInst *TI = dyn_cast<TruncInst>(U)) {
@@ -5259,7 +5273,8 @@ InstCombiner::getFlippedStrictnessPredicateAndConstant(CmpInst::Predicate Pred,
   // It may not be safe to change a compare predicate in the presence of
   // undefined elements, so replace those elements with the first safe constant
   // that we found.
-  if (C->containsUndefElement()) {
+  // TODO: in case of poison, it is safe; let's replace undefs only.
+  if (C->containsUndefOrPoisonElement()) {
     assert(SafeReplacementConstant && "Replacement constant not set");
     C = Constant::replaceUndefsWith(C, SafeReplacementConstant);
   }

@@ -30,7 +30,7 @@ define void @PR28330(i32 %n) {
 ; GATHER-NEXT:    [[P17:%.*]] = phi i32 [ [[OP_EXTRA:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; GATHER-NEXT:    [[TMP2:%.*]] = extractelement <8 x i1> [[TMP1]], i32 7
 ; GATHER-NEXT:    [[TMP3:%.*]] = extractelement <8 x i1> [[TMP1]], i32 0
-; GATHER-NEXT:    [[TMP4:%.*]] = insertelement <8 x i1> undef, i1 [[TMP3]], i32 0
+; GATHER-NEXT:    [[TMP4:%.*]] = insertelement <8 x i1> poison, i1 [[TMP3]], i32 0
 ; GATHER-NEXT:    [[TMP5:%.*]] = extractelement <8 x i1> [[TMP1]], i32 1
 ; GATHER-NEXT:    [[TMP6:%.*]] = insertelement <8 x i1> [[TMP4]], i1 [[TMP5]], i32 1
 ; GATHER-NEXT:    [[TMP7:%.*]] = extractelement <8 x i1> [[TMP1]], i32 2
@@ -52,7 +52,7 @@ define void @PR28330(i32 %n) {
 ; GATHER-NEXT:    [[TMP23:%.*]] = extractelement <8 x i32> [[TMP18]], i32 4
 ; GATHER-NEXT:    [[TMP24:%.*]] = extractelement <8 x i32> [[TMP18]], i32 5
 ; GATHER-NEXT:    [[TMP25:%.*]] = extractelement <8 x i32> [[TMP18]], i32 6
-; GATHER-NEXT:    [[TMP26:%.*]] = insertelement <8 x i32> undef, i32 [[TMP19]], i32 0
+; GATHER-NEXT:    [[TMP26:%.*]] = insertelement <8 x i32> poison, i32 [[TMP19]], i32 0
 ; GATHER-NEXT:    [[TMP27:%.*]] = insertelement <8 x i32> [[TMP26]], i32 [[TMP20]], i32 1
 ; GATHER-NEXT:    [[TMP28:%.*]] = insertelement <8 x i32> [[TMP27]], i32 [[TMP21]], i32 2
 ; GATHER-NEXT:    [[TMP29:%.*]] = insertelement <8 x i32> [[TMP28]], i32 [[TMP22]], i32 3
@@ -166,7 +166,7 @@ define void @PR32038(i32 %n) {
 ; GATHER-NEXT:    [[P17:%.*]] = phi i32 [ [[OP_EXTRA:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; GATHER-NEXT:    [[TMP2:%.*]] = extractelement <8 x i1> [[TMP1]], i32 7
 ; GATHER-NEXT:    [[TMP3:%.*]] = extractelement <8 x i1> [[TMP1]], i32 0
-; GATHER-NEXT:    [[TMP4:%.*]] = insertelement <8 x i1> undef, i1 [[TMP3]], i32 0
+; GATHER-NEXT:    [[TMP4:%.*]] = insertelement <8 x i1> poison, i1 [[TMP3]], i32 0
 ; GATHER-NEXT:    [[TMP5:%.*]] = extractelement <8 x i1> [[TMP1]], i32 1
 ; GATHER-NEXT:    [[TMP6:%.*]] = insertelement <8 x i1> [[TMP4]], i1 [[TMP5]], i32 1
 ; GATHER-NEXT:    [[TMP7:%.*]] = extractelement <8 x i1> [[TMP1]], i32 2
@@ -188,7 +188,7 @@ define void @PR32038(i32 %n) {
 ; GATHER-NEXT:    [[TMP23:%.*]] = extractelement <8 x i32> [[TMP18]], i32 4
 ; GATHER-NEXT:    [[TMP24:%.*]] = extractelement <8 x i32> [[TMP18]], i32 5
 ; GATHER-NEXT:    [[TMP25:%.*]] = extractelement <8 x i32> [[TMP18]], i32 6
-; GATHER-NEXT:    [[TMP26:%.*]] = insertelement <8 x i32> undef, i32 [[TMP19]], i32 0
+; GATHER-NEXT:    [[TMP26:%.*]] = insertelement <8 x i32> poison, i32 [[TMP19]], i32 0
 ; GATHER-NEXT:    [[TMP27:%.*]] = insertelement <8 x i32> [[TMP26]], i32 [[TMP20]], i32 1
 ; GATHER-NEXT:    [[TMP28:%.*]] = insertelement <8 x i32> [[TMP27]], i32 [[TMP21]], i32 2
 ; GATHER-NEXT:    [[TMP29:%.*]] = insertelement <8 x i32> [[TMP28]], i32 [[TMP22]], i32 3
@@ -221,7 +221,7 @@ define void @PR32038(i32 %n) {
 ; MAX-COST:       for.body:
 ; MAX-COST-NEXT:    [[P17:%.*]] = phi i32 [ [[P34:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; MAX-COST-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
-; MAX-COST-NEXT:    [[TMP3:%.*]] = insertelement <4 x i1> undef, i1 [[TMP2]], i32 0
+; MAX-COST-NEXT:    [[TMP3:%.*]] = insertelement <4 x i1> poison, i1 [[TMP2]], i32 0
 ; MAX-COST-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP1]], i32 1
 ; MAX-COST-NEXT:    [[TMP5:%.*]] = insertelement <4 x i1> [[TMP3]], i1 [[TMP4]], i32 1
 ; MAX-COST-NEXT:    [[TMP6:%.*]] = insertelement <4 x i1> [[TMP5]], i1 [[P5]], i32 2

@@ -7,7 +7,7 @@ target triple = "x86_64-apple-macosx10.8.0"
 define i32 @foo(i32* nocapture %A, i32 %n, i32 %m) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> undef, i32 [[N:%.*]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[TMP0]], i32 [[N]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[N]], i32 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[N]], i32 3

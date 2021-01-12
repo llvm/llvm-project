@@ -4197,10 +4197,10 @@ def  VADDhq   : N3VQ<0, 0, 0b01, 0b1101, 0, IIC_VBINQ, "vadd", "f16",
 defm VADDLs   : N3VLExt_QHS<0,1,0b0000,0, IIC_VSHLiD, IIC_VSHLiD,
                             "vaddl", "s", add, sext, 1>;
 defm VADDLu   : N3VLExt_QHS<1,1,0b0000,0, IIC_VSHLiD, IIC_VSHLiD,
-                            "vaddl", "u", add, zext, 1>;
+                            "vaddl", "u", add, zanyext, 1>;
 //   VADDW    : Vector Add Wide (Q = Q + D)
 defm VADDWs   : N3VW_QHS<0,1,0b0001,0, "vaddw", "s", add, sext, 0>;
-defm VADDWu   : N3VW_QHS<1,1,0b0001,0, "vaddw", "u", add, zext, 0>;
+defm VADDWu   : N3VW_QHS<1,1,0b0001,0, "vaddw", "u", add, zanyext, 0>;
 //   VHADD    : Vector Halving Add
 defm VHADDs   : N3VInt_QHS<0, 0, 0b0000, 0, N3RegFrm,
                            IIC_VBINi4D, IIC_VBINi4D, IIC_VBINi4Q, IIC_VBINi4Q,
@@ -5045,10 +5045,10 @@ def  VSUBhq   : N3VQ<0, 0, 0b11, 0b1101, 0, IIC_VBINQ, "vsub", "f16",
 defm VSUBLs   : N3VLExt_QHS<0,1,0b0010,0, IIC_VSHLiD, IIC_VSHLiD,
                             "vsubl", "s", sub, sext, 0>;
 defm VSUBLu   : N3VLExt_QHS<1,1,0b0010,0, IIC_VSHLiD, IIC_VSHLiD,
-                            "vsubl", "u", sub, zext, 0>;
+                            "vsubl", "u", sub, zanyext, 0>;
 //   VSUBW    : Vector Subtract Wide (Q = Q - D)
 defm VSUBWs   : N3VW_QHS<0,1,0b0011,0, "vsubw", "s", sub, sext, 0>;
-defm VSUBWu   : N3VW_QHS<1,1,0b0011,0, "vsubw", "u", sub, zext, 0>;
+defm VSUBWu   : N3VW_QHS<1,1,0b0011,0, "vsubw", "u", sub, zanyext, 0>;
 //   VHSUB    : Vector Halving Subtract
 defm VHSUBs   : N3VInt_QHS<0, 0, 0b0010, 0, N3RegFrm,
                            IIC_VSUBi4D, IIC_VSUBi4D, IIC_VSUBi4Q, IIC_VSUBi4Q,

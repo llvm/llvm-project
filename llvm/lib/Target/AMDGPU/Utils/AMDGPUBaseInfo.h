@@ -9,23 +9,15 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUBASEINFO_H
 #define LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUBASEINFO_H
 
-#include "AMDGPU.h"
-#include "AMDKernelCodeT.h"
 #include "SIDefines.h"
 #include "llvm/IR/CallingConv.h"
-#include "llvm/MC/MCInstrDesc.h"
-#include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/Alignment.h"
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/TargetParser.h"
-#include "llvm/Support/raw_ostream.h"
-#include <cstdint>
-#include <string>
-#include <utility>
+
+struct amd_kernel_code_t;
 
 namespace llvm {
 
+struct Align;
 class Argument;
 class Function;
 class GCNSubtarget;
@@ -36,7 +28,13 @@ class MCSubtargetInfo;
 class StringRef;
 class Triple;
 
+namespace amdhsa {
+struct kernel_descriptor_t;
+}
+
 namespace AMDGPU {
+
+struct IsaVersion;
 
 /// \returns HSA OS ABI Version identification.
 Optional<uint8_t> getHsaAbiVersion(const MCSubtargetInfo *STI);

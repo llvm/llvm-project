@@ -568,14 +568,14 @@ public:
   // #pragma pack.
   // Sentinel to represent when the stack is set to mac68k alignment.
   static const unsigned kMac68kAlignmentSentinel = ~0U;
-  PragmaStack<unsigned> PackStack;
-  // The current #pragma pack values and locations at each #include.
-  struct PackIncludeState {
+  PragmaStack<unsigned> AlignPackStack;
+  // The current #pragma align/pack values and locations at each #include.
+  struct AlignPackIncludeState {
     unsigned CurrentValue;
     SourceLocation CurrentPragmaLocation;
     bool HasNonDefaultValue, ShouldWarnOnInclude;
   };
-  SmallVector<PackIncludeState, 8> PackIncludeStack;
+  SmallVector<AlignPackIncludeState, 8> AlignPackIncludeStack;
   // Segment #pragmas.
   PragmaStack<StringLiteral *> DataSegStack;
   PragmaStack<StringLiteral *> BSSSegStack;
@@ -2139,6 +2139,16 @@ public:
     return RequireCompleteType(Loc, T, CompleteTypeKind::Normal, Diagnoser);
   }
 
+  /// Get the type of expression E, triggering instantiation to complete the
+  /// type if necessary -- that is, if the expression refers to a templated
+  /// static data member of incomplete array type.
+  ///
+  /// May still return an incomplete type if instantiation was not possible or
+  /// if the type is incomplete for a different reason. Use
+  /// RequireCompleteExprType instead if a diagnostic is expected for an
+  /// incomplete expression type.
+  QualType getCompletedType(Expr *E);
+
   void completeExprArrayBound(Expr *E);
   bool RequireCompleteExprType(Expr *E, CompleteTypeKind Kind,
                                TypeDiagnoser &Diagnoser);
@@ -3200,6 +3210,9 @@ public:
       Decl *D, const WebAssemblyImportNameAttr &AL);
   WebAssemblyImportModuleAttr *mergeImportModuleAttr(
       Decl *D, const WebAssemblyImportModuleAttr &AL);
+  EnforceTCBAttr *mergeEnforceTCBAttr(Decl *D, const EnforceTCBAttr &AL);
+  EnforceTCBLeafAttr *mergeEnforceTCBLeafAttr(Decl *D,
+                                              const EnforceTCBLeafAttr &AL);
 
   void mergeDeclAttributes(NamedDecl *New, Decl *Old,
                            AvailabilityMergeKind AMK = AMK_Redeclaration);
@@ -9721,14 +9734,14 @@ public:
   void ActOnPragmaPack(SourceLocation PragmaLoc, PragmaMsStackAction Action,
                        StringRef SlotLabel, Expr *Alignment);
 
-  enum class PragmaPackDiagnoseKind {
+  enum class PragmaAlignPackDiagnoseKind {
     NonDefaultStateAtInclude,
     ChangedStateAtExit
   };
 
-  void DiagnoseNonDefaultPragmaPack(PragmaPackDiagnoseKind Kind,
-                                    SourceLocation IncludeLoc);
-  void DiagnoseUnterminatedPragmaPack();
+  void DiagnoseNonDefaultPragmaAlignPack(PragmaAlignPackDiagnoseKind Kind,
+                                         SourceLocation IncludeLoc);
+  void DiagnoseUnterminatedPragmaAlignPack();
 
   /// ActOnPragmaMSStruct - Called on well formed \#pragma ms_struct [on|off].
   void ActOnPragmaMSStruct(PragmaMSStructKind Kind);
@@ -12416,6 +12429,8 @@ private:
   /// Check whether receiver is mutable ObjC container which
   /// attempts to add itself into the container
   void CheckObjCCircularContainer(ObjCMessageExpr *Message);
+
+  void CheckTCBEnforcement(const CallExpr *TheCall, const FunctionDecl *Callee);
 
   void AnalyzeDeleteExprMismatch(const CXXDeleteExpr *DE);
   void AnalyzeDeleteExprMismatch(FieldDecl *Field, SourceLocation DeleteLoc,

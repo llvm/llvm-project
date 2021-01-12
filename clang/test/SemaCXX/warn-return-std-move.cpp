@@ -324,11 +324,29 @@ void test_throw1(Derived&& d) {
     // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:11-[[@LINE-3]]:12}:"std::move(d)"
 }
 
-void ok_throw1() { Derived d; throw d; }
+void ok_throw1() {
+  Derived d;
+  throw d;
+}
 void ok_throw2(Derived d) { throw d; }
-void ok_throw3(Derived& d) { throw d; }
+void ok_throw3(Derived &d) { throw d; }
 void ok_throw4(Derived d) { throw std::move(d); }
-void ok_throw5(Derived& d) { throw std::move(d); }
-void ok_throw6(Derived& d) { throw static_cast<Derived&&>(d); }
+void ok_throw5(Derived &d) { throw std::move(d); }
+void ok_throw6(Derived &d) { throw static_cast<Derived &&>(d); }
 void ok_throw7(TriviallyCopyable d) { throw d; }
 void ok_throw8(OnlyCopyable d) { throw d; }
+
+namespace test_delete {
+struct Base {
+  Base();
+  Base(Base &&) = delete;
+  Base(Base const &);
+};
+
+struct Derived : public Base {};
+
+Base test_ok() {
+  Derived d;
+  return d;
+}
+} // namespace test_delete

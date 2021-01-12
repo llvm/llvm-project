@@ -132,7 +132,7 @@ public:
   }
 
   /// Computes a single conjunction of two lattice points by taking the "union"
-  /// of loop indices (effectively constucting a larger "intersection" of those
+  /// of loop indices (effectively constructing a larger "intersection" of those
   /// indices) with a newly constructed tensor (sub)expression of given kind.
   /// Returns the index of the new lattice point.
   unsigned conjLatPoint(Kind kind, unsigned p0, unsigned p1) {

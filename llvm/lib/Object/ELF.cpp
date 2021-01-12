@@ -589,11 +589,10 @@ ELFFile<ELFT>::toMappedAddr(uint64_t VAddr, WarningHandler WarnHandler) const {
     llvm::stable_sort(LoadSegments, SortPred);
   }
 
-  const Elf_Phdr *const *I =
-      std::upper_bound(LoadSegments.begin(), LoadSegments.end(), VAddr,
-                       [](uint64_t VAddr, const Elf_Phdr_Impl<ELFT> *Phdr) {
-                         return VAddr < Phdr->p_vaddr;
-                       });
+  const Elf_Phdr *const *I = llvm::upper_bound(
+      LoadSegments, VAddr, [](uint64_t VAddr, const Elf_Phdr_Impl<ELFT> *Phdr) {
+        return VAddr < Phdr->p_vaddr;
+      });
 
   if (I == LoadSegments.begin())
     return createError("virtual address is not in any segment: 0x" +

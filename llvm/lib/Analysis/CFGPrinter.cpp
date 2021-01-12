@@ -279,9 +279,10 @@ void DOTGraphTraits<DOTFuncInfo *>::computeHiddenNodes(const Function *F) {
           (HideDeoptimizePaths && Node->getTerminatingDeoptimizeCall());
       return;
     }
-    isHiddenBasicBlock[Node] = std::all_of(
-        succ_begin(Node), succ_end(Node),
-        [this](const BasicBlock *BB) { return isHiddenBasicBlock[BB]; });
+    isHiddenBasicBlock[Node] =
+        llvm::all_of(successors(Node), [this](const BasicBlock *BB) {
+          return isHiddenBasicBlock[BB];
+        });
   };
   /// The post order traversal iteration is done to know the status of
   /// isHiddenBasicBlock for all the successors on the current BB.

@@ -51,6 +51,9 @@ def test2 : Pat<(COp $attr1, $op1, $attr2, (AOp $op2)),
 
 // Check rewriting with a DAG subtree in the result and remapping a location.
 // CHECK: struct test3 : public ::mlir::RewritePattern {
+// We expect ODSOperand 0 here, the attribute before the operand in BOp
+// definition shouldn't shift the counter.
+// CHECK: op1 = (*castedOp0.getODSOperands(0).begin()).getDefiningOp();
 // CHECK: rewriter.create<test::BOp>((*a.getODSResults(0).begin()).getLoc()
 def test3 : Pat<(BOp $attr, (AOp:$a $input)),
                 (BOp $attr, (AOp $input), (location $a))>;

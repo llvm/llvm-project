@@ -39,15 +39,15 @@ define void @Test(i32) {
 ; CHECK-NEXT:    [[OP_EXTRA24:%.*]] = and i32 [[OP_EXTRA23]], [[TMP0]]
 ; CHECK-NEXT:    [[OP_EXTRA25:%.*]] = and i32 [[OP_EXTRA24]], [[TMP0]]
 ; CHECK-NEXT:    [[OP_EXTRA26:%.*]] = and i32 [[OP_EXTRA25]], [[TMP0]]
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> undef, i32 [[OP_EXTRA26]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> poison, i32 [[OP_EXTRA26]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP5]], i32 14910, i32 1
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> undef, i32 [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> poison, i32 [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> [[TMP7]], i32 [[TMP2]], i32 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = and <2 x i32> [[TMP6]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = add <2 x i32> [[TMP6]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x i32> [[TMP9]], <2 x i32> [[TMP10]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i32> [[TMP11]], i32 0
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x i32> undef, i32 [[TMP12]], i32 0
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x i32> poison, i32 [[TMP12]], i32 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i32> [[TMP11]], i32 1
 ; CHECK-NEXT:    [[TMP15]] = insertelement <2 x i32> [[TMP13]], i32 [[TMP14]], i32 1
 ; CHECK-NEXT:    br label [[LOOP]]
@@ -96,9 +96,9 @@ define void @Test(i32) {
 ; FORCE_REDUCTION-NEXT:    [[VAL_39:%.*]] = add i32 [[TMP2]], 12529
 ; FORCE_REDUCTION-NEXT:    [[VAL_40:%.*]] = and i32 [[OP_EXTRA27]], [[VAL_39]]
 ; FORCE_REDUCTION-NEXT:    [[VAL_41:%.*]] = add i32 [[TMP2]], 13685
-; FORCE_REDUCTION-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> undef, i32 [[VAL_40]], i32 0
+; FORCE_REDUCTION-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> poison, i32 [[VAL_40]], i32 0
 ; FORCE_REDUCTION-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> [[TMP7]], i32 [[TMP2]], i32 1
-; FORCE_REDUCTION-NEXT:    [[TMP9:%.*]] = insertelement <2 x i32> undef, i32 [[VAL_41]], i32 0
+; FORCE_REDUCTION-NEXT:    [[TMP9:%.*]] = insertelement <2 x i32> poison, i32 [[VAL_41]], i32 0
 ; FORCE_REDUCTION-NEXT:    [[TMP10:%.*]] = insertelement <2 x i32> [[TMP9]], i32 14910, i32 1
 ; FORCE_REDUCTION-NEXT:    [[TMP11:%.*]] = and <2 x i32> [[TMP8]], [[TMP10]]
 ; FORCE_REDUCTION-NEXT:    [[TMP12:%.*]] = add <2 x i32> [[TMP8]], [[TMP10]]

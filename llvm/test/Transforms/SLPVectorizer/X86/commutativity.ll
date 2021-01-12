@@ -51,7 +51,7 @@ define void @splat(i8 %a, i8 %b, i8 %c) {
 ; SSE-NEXT:    ret void
 ;
 ; AVX-LABEL: @splat(
-; AVX-NEXT:    [[TMP1:%.*]] = insertelement <16 x i8> undef, i8 [[C:%.*]], i32 0
+; AVX-NEXT:    [[TMP1:%.*]] = insertelement <16 x i8> poison, i8 [[C:%.*]], i32 0
 ; AVX-NEXT:    [[TMP2:%.*]] = insertelement <16 x i8> [[TMP1]], i8 [[C]], i32 1
 ; AVX-NEXT:    [[TMP3:%.*]] = insertelement <16 x i8> [[TMP2]], i8 [[C]], i32 2
 ; AVX-NEXT:    [[TMP4:%.*]] = insertelement <16 x i8> [[TMP3]], i8 [[C]], i32 3
@@ -67,7 +67,7 @@ define void @splat(i8 %a, i8 %b, i8 %c) {
 ; AVX-NEXT:    [[TMP14:%.*]] = insertelement <16 x i8> [[TMP13]], i8 [[C]], i32 13
 ; AVX-NEXT:    [[TMP15:%.*]] = insertelement <16 x i8> [[TMP14]], i8 [[C]], i32 14
 ; AVX-NEXT:    [[TMP16:%.*]] = insertelement <16 x i8> [[TMP15]], i8 [[C]], i32 15
-; AVX-NEXT:    [[TMP17:%.*]] = insertelement <2 x i8> undef, i8 [[A:%.*]], i32 0
+; AVX-NEXT:    [[TMP17:%.*]] = insertelement <2 x i8> poison, i8 [[A:%.*]], i32 0
 ; AVX-NEXT:    [[TMP18:%.*]] = insertelement <2 x i8> [[TMP17]], i8 [[B:%.*]], i32 1
 ; AVX-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i8> [[TMP18]], <2 x i8> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 0, i32 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
 ; AVX-NEXT:    [[TMP19:%.*]] = xor <16 x i8> [[TMP16]], [[SHUFFLE]]
@@ -129,11 +129,11 @@ define void @same_opcode_on_one_side(i32 %a, i32 %b, i32 %c) {
 ; SSE-NEXT:    ret void
 ;
 ; AVX-LABEL: @same_opcode_on_one_side(
-; AVX-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> undef, i32 [[C:%.*]], i32 0
+; AVX-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[C:%.*]], i32 0
 ; AVX-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[C]], i32 1
 ; AVX-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[C]], i32 2
 ; AVX-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[C]], i32 3
-; AVX-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> undef, i32 [[A:%.*]], i32 0
+; AVX-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[A:%.*]], i32 0
 ; AVX-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[A]], i32 1
 ; AVX-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[A]], i32 2
 ; AVX-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[A]], i32 3

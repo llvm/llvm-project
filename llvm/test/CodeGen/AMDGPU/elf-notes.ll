@@ -1,12 +1,12 @@
-; RUN: llc -mtriple=amdgcn-amd-unknown -mcpu=gfx802 --amdhsa-code-object-version=2 < %s | FileCheck --check-prefix=GCN --check-prefix=OSABI-UNK --check-prefix=GFX802 %s
-; RUN: llc -mtriple=amdgcn-amd-unknown -mcpu=iceland --amdhsa-code-object-version=2 < %s | FileCheck --check-prefix=GCN --check-prefix=OSABI-UNK --check-prefix=GFX802 %s
-; RUN: llc -mtriple=amdgcn-amd-unknown -mcpu=gfx802 -filetype=obj --amdhsa-code-object-version=2 < %s | llvm-readelf --notes  - | FileCheck --check-prefix=GCN --check-prefix=OSABI-UNK-ELF --check-prefix=GFX802 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx802 --amdhsa-code-object-version=2 < %s | FileCheck --check-prefix=GCN --check-prefix=OSABI-HSA --check-prefix=GFX802 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=iceland --amdhsa-code-object-version=2 < %s | FileCheck --check-prefix=GCN --check-prefix=OSABI-HSA --check-prefix=GFX802 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx802 -filetype=obj --amdhsa-code-object-version=2 < %s | llvm-readelf --notes  - | FileCheck --check-prefix=GCN --check-prefix=OSABI-HSA-ELF --check-prefix=GFX802 %s
-; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx802 --amdhsa-code-object-version=2 < %s | FileCheck --check-prefix=GCN --check-prefix=OSABI-PAL --check-prefix=GFX802 %s
-; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=iceland --amdhsa-code-object-version=2 < %s | FileCheck --check-prefix=GCN --check-prefix=OSABI-PAL --check-prefix=GFX802 %s
-; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx802 -filetype=obj --amdhsa-code-object-version=2 < %s | llvm-readelf --notes  - | FileCheck --check-prefix=GCN --check-prefix=OSABI-PAL-ELF --check-prefix=GFX802 %s
+; RUN: llc -mtriple=amdgcn-amd-unknown -mcpu=gfx802 --amdhsa-code-object-version=2 < %s | FileCheck --check-prefix=OSABI-UNK %s
+; RUN: llc -mtriple=amdgcn-amd-unknown -mcpu=iceland --amdhsa-code-object-version=2 < %s | FileCheck --check-prefix=OSABI-UNK %s
+; RUN: llc -mtriple=amdgcn-amd-unknown -mcpu=gfx802 -filetype=obj --amdhsa-code-object-version=2 < %s | llvm-readelf --notes  - | FileCheck --check-prefix=OSABI-UNK-ELF %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx802 --amdhsa-code-object-version=2 < %s | FileCheck --check-prefix=OSABI-HSA %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=iceland --amdhsa-code-object-version=2 < %s | FileCheck --check-prefix=OSABI-HSA %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx802 -filetype=obj --amdhsa-code-object-version=2 < %s | llvm-readelf --notes  - | FileCheck --check-prefix=OSABI-HSA-ELF %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx802 --amdhsa-code-object-version=2 < %s | FileCheck --check-prefix=OSABI-PAL %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=iceland --amdhsa-code-object-version=2 < %s | FileCheck --check-prefix=OSABI-PAL %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx802 -filetype=obj --amdhsa-code-object-version=2 < %s | llvm-readelf --notes  - | FileCheck --check-prefix=OSABI-PAL-ELF %s
 ; RUN: llc -march=r600 < %s | FileCheck --check-prefix=R600 %s
 
 ; OSABI-UNK-NOT: .hsa_code_object_version

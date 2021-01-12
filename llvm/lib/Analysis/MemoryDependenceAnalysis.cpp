@@ -1016,7 +1016,7 @@ SortNonLocalDepInfoCache(MemoryDependenceResults::NonLocalDepInfo &Cache,
       NonLocalDepEntry Val = Cache.back();
       Cache.pop_back();
       MemoryDependenceResults::NonLocalDepInfo::iterator Entry =
-          std::upper_bound(Cache.begin(), Cache.end(), Val);
+          llvm::upper_bound(Cache, Val);
       Cache.insert(Entry, Val);
     }
     break;

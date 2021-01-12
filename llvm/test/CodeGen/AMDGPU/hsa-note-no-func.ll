@@ -1,6 +1,6 @@
-; RUN: llc < %s -mtriple=amdgcn-- -mcpu=gfx600 --amdhsa-code-object-version=2 | FileCheck --check-prefixes=NONHSA,NONHSA-SI600 %s
-; RUN: llc < %s -mtriple=amdgcn-- -mcpu=gfx601 --amdhsa-code-object-version=2 | FileCheck --check-prefixes=NONHSA,NONHSA-SI601 %s
-; RUN: llc < %s -mtriple=amdgcn-- -mcpu=gfx602 --amdhsa-code-object-version=2 | FileCheck --check-prefixes=NONHSA,NONHSA-SI602 %s
+; RUN: llc < %s -mtriple=amdgcn-- -mcpu=gfx600 --amdhsa-code-object-version=2 | FileCheck --check-prefixes=NONHSA-SI600 %s
+; RUN: llc < %s -mtriple=amdgcn-- -mcpu=gfx601 --amdhsa-code-object-version=2 | FileCheck --check-prefixes=NONHSA-SI601 %s
+; RUN: llc < %s -mtriple=amdgcn-- -mcpu=gfx602 --amdhsa-code-object-version=2 | FileCheck --check-prefixes=NONHSA-SI602 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx700 --amdhsa-code-object-version=2 | FileCheck --check-prefixes=HSA,HSA-CI700 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri --amdhsa-code-object-version=2 | FileCheck --check-prefixes=HSA,HSA-CI700 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx701 --amdhsa-code-object-version=2 | FileCheck --check-prefixes=HSA,HSA-CI701 %s

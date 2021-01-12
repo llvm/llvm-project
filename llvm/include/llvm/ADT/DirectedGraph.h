@@ -229,7 +229,7 @@ public:
       if (*Node == N)
         continue;
       Node->findEdgesTo(N, TempList);
-      EL.insert(EL.end(), TempList.begin(), TempList.end());
+      llvm::append_range(EL, TempList);
       TempList.clear();
     }
     return !EL.empty();

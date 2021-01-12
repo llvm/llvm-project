@@ -78,8 +78,19 @@ void ParseSyntaxOnlyAction::ExecuteAction() {
   common::LanguageFeatureControl features;
   Fortran::common::IntrinsicTypeDefaultKinds defaultKinds;
 
-  // Parse
+  // Parse. In case of failure, report and return.
   ci.parsing().Parse(llvm::outs());
+
+  if (ci.parsing().messages().AnyFatalError()) {
+    unsigned diagID = ci.diagnostics().getCustomDiagID(
+        clang::DiagnosticsEngine::Error, "Could not parse %0");
+    ci.diagnostics().Report(diagID) << GetCurrentFileOrBufferName();
+
+    ci.parsing().messages().Emit(
+        llvm::errs(), this->instance().allCookedSources());
+    return;
+  }
+
   auto &parseTree{*ci.parsing().parseTree()};
 
   // Prepare semantics
@@ -96,7 +107,14 @@ void ParseSyntaxOnlyAction::ExecuteAction() {
 
   if (semantics.AnyFatalError()) {
     unsigned DiagID = ci.diagnostics().getCustomDiagID(
-        clang::DiagnosticsEngine::Error, "semantic errors in %0");
+        clang::DiagnosticsEngine::Error, "Semantic errors in %0");
     ci.diagnostics().Report(DiagID) << GetCurrentFileOrBufferName();
   }
+}
+
+void EmitObjAction::ExecuteAction() {
+  CompilerInstance &ci = this->instance();
+  unsigned DiagID = ci.diagnostics().getCustomDiagID(
+      clang::DiagnosticsEngine::Error, "code-generation is not available yet");
+  ci.diagnostics().Report(DiagID);
 }

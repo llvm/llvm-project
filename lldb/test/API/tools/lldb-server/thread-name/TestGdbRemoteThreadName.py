@@ -1,9 +1,7 @@
-
 import gdbremote_testcase
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
-
 
 class TestGdbRemoteThreadName(gdbremote_testcase.GdbRemoteTestCaseBase):
 
@@ -29,7 +27,6 @@ class TestGdbRemoteThreadName(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertEqual(expected_name, kv_dict.get("name"))
 
     @skipIfWindows # the test is not updated for Windows.
-    @llgs_test
     def test(self):
         """ Make sure lldb-server can retrieve inferior thread name"""
         self.build()

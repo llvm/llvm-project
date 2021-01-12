@@ -105,6 +105,23 @@ Lua::CallBreakpointCallback(void *baton, lldb::StackFrameSP stop_frame_sp,
                                                bp_loc_sp);
 }
 
+llvm::Error Lua::CheckSyntax(llvm::StringRef buffer) {
+  int error =
+      luaL_loadbuffer(m_lua_state, buffer.data(), buffer.size(), "buffer");
+  if (error == LUA_OK) {
+    // Pop buffer
+    lua_pop(m_lua_state, 1);
+    return llvm::Error::success();
+  }
+
+  llvm::Error e = llvm::make_error<llvm::StringError>(
+      llvm::formatv("{0}\n", lua_tostring(m_lua_state, -1)),
+      llvm::inconvertibleErrorCode());
+  // Pop error message from the stack.
+  lua_pop(m_lua_state, 1);
+  return e;
+}
+
 llvm::Error Lua::LoadModule(llvm::StringRef filename) {
   FileSpec file(filename);
   if (!FileSystem::Instance().Exists(file)) {

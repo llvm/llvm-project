@@ -583,6 +583,7 @@ macro(add_custom_libcxx name prefix)
     CMAKE_OBJDUMP
     CMAKE_STRIP
     CMAKE_SYSROOT
+    LIBCXX_HAS_MUSL_LIBC
     PYTHON_EXECUTABLE
     Python3_EXECUTABLE
     Python2_EXECUTABLE

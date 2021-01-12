@@ -16,6 +16,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUPTNOTE_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUPTNOTE_H
 
+namespace llvm {
 namespace AMDGPU {
 
 namespace ElfNote {
@@ -25,7 +26,7 @@ const char SectionName[] = ".note";
 const char NoteNameV2[] = "AMD";
 const char NoteNameV3[] = "AMDGPU";
 
-}
-}
-
+} // End namespace ElfNote
+} // End namespace AMDGPU
+} // End namespace llvm
 #endif // LLVM_LIB_TARGET_AMDGPU_AMDGPUNOTETYPE_H

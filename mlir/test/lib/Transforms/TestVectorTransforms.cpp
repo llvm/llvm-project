@@ -24,11 +24,25 @@ namespace {
 
 struct TestVectorToVectorConversion
     : public PassWrapper<TestVectorToVectorConversion, FunctionPass> {
+  TestVectorToVectorConversion() = default;
+  TestVectorToVectorConversion(const TestVectorToVectorConversion &pass) {}
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<AffineDialect>();
+  }
+
+  Option<bool> unroll{*this, "unroll", llvm::cl::desc("Include unrolling"),
+                      llvm::cl::init(false)};
+
   void runOnFunction() override {
     OwningRewritePatternList patterns;
     auto *ctx = &getContext();
-    patterns.insert<UnrollVectorPattern>(
-        ctx, UnrollVectorOptions().setNativeShapeFn(getShape));
+    if (unroll) {
+      patterns.insert<UnrollVectorPattern>(
+          ctx,
+          UnrollVectorOptions().setNativeShapeFn(getShape).setFilterConstraint(
+              filter));
+    }
     populateVectorToVectorCanonicalizationPatterns(patterns, ctx);
     populateVectorToVectorTransformationPatterns(patterns, ctx);
     applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
@@ -39,12 +53,13 @@ private:
   static Optional<SmallVector<int64_t, 4>> getShape(Operation *op) {
     if (isa<AddFOp, SelectOp, CmpFOp>(op))
       return SmallVector<int64_t, 4>(2, 2);
-    if (auto transferOp = dyn_cast<VectorTransferOpInterface>(op)) {
-      return SmallVector<int64_t, 4>(transferOp.getVectorType().getRank(), 2);
-    }
     if (isa<vector::ContractionOp>(op))
       return SmallVector<int64_t, 4>(3, 2);
     return llvm::None;
+  }
+
+  static LogicalResult filter(Operation *op) {
+    return success(isa<AddFOp, SelectOp, CmpFOp, ContractionOp>(op));
   }
 };
 

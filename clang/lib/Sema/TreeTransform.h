@@ -5178,7 +5178,7 @@ template <typename Derived>
 QualType TreeTransform<Derived>::TransformDependentVectorType(
     TypeLocBuilder &TLB, DependentVectorTypeLoc TL) {
   const DependentVectorType *T = TL.getTypePtr();
-  QualType ElementType = getDerived().TransformType(T->getElementType());
+  QualType ElementType = getDerived().TransformType(TLB, TL.getElementLoc());
   if (ElementType.isNull())
     return QualType();
 
@@ -5219,7 +5219,7 @@ QualType TreeTransform<Derived>::TransformDependentSizedExtVectorType(
   const DependentSizedExtVectorType *T = TL.getTypePtr();
 
   // FIXME: ext vector locs should be nested
-  QualType ElementType = getDerived().TransformType(T->getElementType());
+  QualType ElementType = getDerived().TransformType(TLB, TL.getElementLoc());
   if (ElementType.isNull())
     return QualType();
 
@@ -5386,7 +5386,7 @@ template <typename Derived>
 QualType TreeTransform<Derived>::TransformVectorType(TypeLocBuilder &TLB,
                                                      VectorTypeLoc TL) {
   const VectorType *T = TL.getTypePtr();
-  QualType ElementType = getDerived().TransformType(T->getElementType());
+  QualType ElementType = getDerived().TransformType(TLB, TL.getElementLoc());
   if (ElementType.isNull())
     return QualType();
 
@@ -5409,7 +5409,7 @@ template<typename Derived>
 QualType TreeTransform<Derived>::TransformExtVectorType(TypeLocBuilder &TLB,
                                                         ExtVectorTypeLoc TL) {
   const VectorType *T = TL.getTypePtr();
-  QualType ElementType = getDerived().TransformType(T->getElementType());
+  QualType ElementType = getDerived().TransformType(TLB, TL.getElementLoc());
   if (ElementType.isNull())
     return QualType();
 

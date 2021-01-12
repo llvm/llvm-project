@@ -23,6 +23,15 @@ namespace tools {
 
 /// Flang compiler tool.
 class LLVM_LIBRARY_VISIBILITY Flang : public Tool {
+private:
+  /// Extract preprocessing options from the driver arguments and add them to
+  /// the preprocessor command arguments.
+  ///
+  /// \param [in] Args The list of input driver arguments
+  /// \param [out] CmdArgs The list of output command arguments
+  void AddPreprocessingOptions(const llvm::opt::ArgList &Args,
+                               llvm::opt::ArgStringList &CmdArgs) const;
+
 public:
   Flang(const ToolChain &TC);
   ~Flang() override;

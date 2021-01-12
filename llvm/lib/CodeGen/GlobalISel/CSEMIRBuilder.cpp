@@ -130,7 +130,7 @@ bool CSEMIRBuilder::checkCopyToDefsPossible(ArrayRef<DstOp> DstOps) {
   if (DstOps.size() == 1)
     return true; // always possible to emit copy to just 1 vreg.
 
-  return std::all_of(DstOps.begin(), DstOps.end(), [](const DstOp &Op) {
+  return llvm::all_of(DstOps, [](const DstOp &Op) {
     DstOp::DstType DT = Op.getDstOpKind();
     return DT == DstOp::DstType::Ty_LLT || DT == DstOp::DstType::Ty_RC;
   });

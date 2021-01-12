@@ -241,7 +241,7 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
     if (KnownLowerBits.getMaxValue().ult(BitWidth) &&
         (DemandedUpper.isNullValue() || KnownUpperBits.isZero())) {
       SmallVector<int, 16> ZeroSplat(VWidth, 0);
-      Amt = Builder.CreateShuffleVector(Amt, Amt, ZeroSplat);
+      Amt = Builder.CreateShuffleVector(Amt, ZeroSplat);
       return (LogicalShift ? (ShiftLeft ? Builder.CreateShl(Vec, Amt)
                                         : Builder.CreateLShr(Vec, Amt))
                            : Builder.CreateAShr(Vec, Amt));
@@ -889,8 +889,7 @@ static Value *simplifyX86vpermilvar(const IntrinsicInst &II,
   }
 
   auto V1 = II.getArgOperand(0);
-  auto V2 = UndefValue::get(V1->getType());
-  return Builder.CreateShuffleVector(V1, V2, makeArrayRef(Indexes, NumElts));
+  return Builder.CreateShuffleVector(V1, makeArrayRef(Indexes, NumElts));
 }
 
 /// Attempt to convert vpermd/vpermps to shufflevector if the mask is constant.
@@ -924,8 +923,7 @@ static Value *simplifyX86vpermv(const IntrinsicInst &II,
   }
 
   auto V1 = II.getArgOperand(0);
-  auto V2 = UndefValue::get(VecTy);
-  return Builder.CreateShuffleVector(V1, V2, makeArrayRef(Indexes, Size));
+  return Builder.CreateShuffleVector(V1, makeArrayRef(Indexes, Size));
 }
 
 Optional<Instruction *>

@@ -1042,7 +1042,7 @@ TEST_F(TUSchedulerTests, CommandLineWarnings) {
 
 TEST(DebouncePolicy, Compute) {
   namespace c = std::chrono;
-  std::vector<DebouncePolicy::clock::duration> History = {
+  DebouncePolicy::clock::duration History[] = {
       c::seconds(0),
       c::seconds(5),
       c::seconds(10),
@@ -1053,8 +1053,9 @@ TEST(DebouncePolicy, Compute) {
   Policy.Max = c::seconds(25);
   // Call Policy.compute(History) and return seconds as a float.
   auto Compute = [&](llvm::ArrayRef<DebouncePolicy::clock::duration> History) {
-    using FloatingSeconds = c::duration<float, c::seconds::period>;
-    return static_cast<float>(Policy.compute(History) / FloatingSeconds(1));
+    return c::duration_cast<c::duration<float, c::seconds::period>>(
+               Policy.compute(History))
+        .count();
   };
   EXPECT_NEAR(10, Compute(History), 0.01) << "(upper) median = 10";
   Policy.RebuildRatio = 1.5;

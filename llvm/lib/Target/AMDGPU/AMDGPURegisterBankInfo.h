@@ -20,7 +20,6 @@
 
 #define GET_REGBANK_DECLARATIONS
 #include "AMDGPUGenRegisterBank.inc"
-#undef GET_REGBANK_DECLARATIONS
 
 namespace llvm {
 
@@ -39,6 +38,7 @@ protected:
 #define GET_TARGET_REGBANK_CLASS
 #include "AMDGPUGenRegisterBank.inc"
 };
+
 class AMDGPURegisterBankInfo final : public AMDGPUGenRegisterBankInfo {
 public:
   const GCNSubtarget &Subtarget;

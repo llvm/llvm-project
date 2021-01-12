@@ -462,7 +462,7 @@ void MachineSinking::ProcessDbgInst(MachineInstr &MI) {
 
   DebugVariable Var(MI.getDebugVariable(), MI.getDebugExpression(),
                     MI.getDebugLoc()->getInlinedAt());
-  bool SeenBefore = SeenDbgVars.count(Var) != 0;
+  bool SeenBefore = SeenDbgVars.contains(Var);
 
   MachineOperand &MO = MI.getDebugOperand(0);
   if (MO.isReg() && MO.getReg().isVirtual())
@@ -1588,7 +1588,6 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
     // recorded which reg units that DBG_VALUEs read, if this instruction
     // writes any of those units then the corresponding DBG_VALUEs must sink.
     SetVector<MachineInstr *> DbgValsToSinkSet;
-    SmallVector<MachineInstr *, 4> DbgValsToSink;
     for (auto &MO : MI->operands()) {
       if (!MO.isReg() || !MO.isDef())
         continue;
@@ -1598,8 +1597,8 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
         for (auto *MI : SeenDbgInstrs.lookup(Reg))
           DbgValsToSinkSet.insert(MI);
     }
-    DbgValsToSink.insert(DbgValsToSink.begin(), DbgValsToSinkSet.begin(),
-                         DbgValsToSinkSet.end());
+    SmallVector<MachineInstr *, 4> DbgValsToSink(DbgValsToSinkSet.begin(),
+                                                 DbgValsToSinkSet.end());
 
     // Clear the kill flag if SrcReg is killed between MI and the end of the
     // block.

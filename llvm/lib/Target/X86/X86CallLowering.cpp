@@ -184,9 +184,9 @@ protected:
 
 } // end anonymous namespace
 
-bool X86CallLowering::lowerReturn(
-    MachineIRBuilder &MIRBuilder, const Value *Val,
-    ArrayRef<Register> VRegs) const {
+bool X86CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
+                                  const Value *Val, ArrayRef<Register> VRegs,
+                                  FunctionLoweringInfo &FLI) const {
   assert(((Val && !VRegs.empty()) || (!Val && VRegs.empty())) &&
          "Return value without a vreg");
   auto MIB = MIRBuilder.buildInstrNoInsert(X86::RET).addImm(0);
@@ -322,9 +322,10 @@ protected:
 
 } // end anonymous namespace
 
-bool X86CallLowering::lowerFormalArguments(
-    MachineIRBuilder &MIRBuilder, const Function &F,
-    ArrayRef<ArrayRef<Register>> VRegs) const {
+bool X86CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
+                                           const Function &F,
+                                           ArrayRef<ArrayRef<Register>> VRegs,
+                                           FunctionLoweringInfo &FLI) const {
   if (F.arg_empty())
     return true;
 

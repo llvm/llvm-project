@@ -1336,7 +1336,7 @@ def : RWSysReg<"VSESR_EL2",     0b11, 0b100, 0b0101, 0b0010, 0b011>;
 
 // v8.3a "Pointer authentication extension" registers
 //                              Op0    Op1     CRn     CRm    Op2
-let Requires = [{ {AArch64::FeaturePA} }] in {
+let Requires = [{ {AArch64::FeaturePAuth} }] in {
 def : RWSysReg<"APIAKeyLo_EL1", 0b11, 0b000, 0b0010, 0b0001, 0b000>;
 def : RWSysReg<"APIAKeyHi_EL1", 0b11, 0b000, 0b0010, 0b0001, 0b001>;
 def : RWSysReg<"APIBKeyLo_EL1", 0b11, 0b000, 0b0010, 0b0001, 0b010>;

@@ -244,22 +244,15 @@ exit:
 
 ; Delete a loop (L2) which has subloop (L3).
 ; Here we delete loop L2, but leave L3 as is.
-; FIXME: Can delete L3 as well, by iteratively going backward through the single
-; predecessor of L3 until we reach L1's block that guarantees L3 is never
-; executed.
 define void @test9(i64 %n) {
 ; CHECK-LABEL: test9
-; CHECK-LABEL: L2.preheader:
-; CHECK-NEXT: br label %L3.preheader
-; CHECK-NOT: L2:
-; CHECK-LABEL: L3.preheader:
-; CHECK-NEXT: %y.L2.lcssa = phi i64 [ undef, %L2.preheader ]
-; CHECK-NEXT: br label %L3
-; CHECK-LABEL: L3:
-; CHECK: br i1 %cond2, label %L3, label %L1.loopexit
+; CHECK-LABEL: entry:
+; CHECK-NEXT:    br label %exit
+; CHECK-LABEL: exit:
+; CHECK-NEXT:    ret  void
 ; REMARKS-LABEL: Function: test9
 ; REMARKS: Loop deleted because it never executes
-entry: 
+entry:
   br label %L1
 
 L1:
@@ -283,12 +276,12 @@ exit:
 ; We cannot delete L3 because of call within it.
 ; Since L3 is not deleted, and entirely contained within L2, L2 is also not
 ; deleted.
-; FIXME: We can delete unexecutable loops having
-; subloops contained entirely within them.
 define void @test10(i64 %n) {
 ; CHECK-LABEL: test10
-; CHECK: L2:
-; CHECK: L3:
+; CHECK-LABEL: entry:
+; CHECK-NEXT:   br label %exit
+; CHECK-LABEL: exit:
+; CHECK-NEXT:    ret void
 entry: 
   br label %L1
 

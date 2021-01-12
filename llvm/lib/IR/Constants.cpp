@@ -304,22 +304,34 @@ bool Constant::isElementWiseEqual(Value *Y) const {
   return isa<UndefValue>(CmpEq) || match(CmpEq, m_One());
 }
 
-bool Constant::containsUndefElement() const {
-  if (auto *VTy = dyn_cast<VectorType>(getType())) {
-    if (isa<UndefValue>(this))
+static bool
+containsUndefinedElement(const Constant *C,
+                         function_ref<bool(const Constant *)> HasFn) {
+  if (auto *VTy = dyn_cast<VectorType>(C->getType())) {
+    if (HasFn(C))
       return true;
-    if (isa<ConstantAggregateZero>(this))
+    if (isa<ConstantAggregateZero>(C))
       return false;
-    if (isa<ScalableVectorType>(getType()))
+    if (isa<ScalableVectorType>(C->getType()))
       return false;
 
     for (unsigned i = 0, e = cast<FixedVectorType>(VTy)->getNumElements();
          i != e; ++i)
-      if (isa<UndefValue>(getAggregateElement(i)))
+      if (HasFn(C->getAggregateElement(i)))
         return true;
   }
 
   return false;
+}
+
+bool Constant::containsUndefOrPoisonElement() const {
+  return containsUndefinedElement(
+      this, [&](const auto *C) { return isa<UndefValue>(C); });
+}
+
+bool Constant::containsPoisonElement() const {
+  return containsUndefinedElement(
+      this, [&](const auto *C) { return isa<PoisonValue>(C); });
 }
 
 bool Constant::containsConstantExpression() const {
@@ -328,7 +340,6 @@ bool Constant::containsConstantExpression() const {
       if (isa<ConstantExpr>(getAggregateElement(i)))
         return true;
   }
-
   return false;
 }
 
@@ -1328,17 +1339,20 @@ Constant *ConstantVector::getImpl(ArrayRef<Constant*> V) {
   Constant *C = V[0];
   bool isZero = C->isNullValue();
   bool isUndef = isa<UndefValue>(C);
+  bool isPoison = isa<PoisonValue>(C);
 
   if (isZero || isUndef) {
     for (unsigned i = 1, e = V.size(); i != e; ++i)
       if (V[i] != C) {
-        isZero = isUndef = false;
+        isZero = isUndef = isPoison = false;
         break;
       }
   }
 
   if (isZero)
     return ConstantAggregateZero::get(T);
+  if (isPoison)
+    return PoisonValue::get(T);
   if (isUndef)
     return UndefValue::get(T);
 
@@ -1664,7 +1678,7 @@ Constant *Constant::getSplatValue(bool AllowUndefs) const {
       ConstantInt *Index = dyn_cast<ConstantInt>(IElt->getOperand(2));
 
       if (Index && Index->getValue() == 0 &&
-          std::all_of(Mask.begin(), Mask.end(), [](int I) { return I == 0; }))
+          llvm::all_of(Mask, [](int I) { return I == 0; }))
         return SplatVal;
     }
   }

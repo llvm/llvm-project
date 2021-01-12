@@ -38,7 +38,7 @@ define void @_ZN1C10SwitchModeEv() local_unnamed_addr #0 comdat align 2 {
 ; AVX-NEXT:    [[TMP0:%.*]] = bitcast i64* [[FOO_1]] to <2 x i64>*
 ; AVX-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* [[TMP0]], align 8
 ; AVX-NEXT:    [[BAR5:%.*]] = load i64, i64* undef, align 8
-; AVX-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> undef, i64 [[OR_1]], i32 0
+; AVX-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> poison, i64 [[OR_1]], i32 0
 ; AVX-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> [[TMP2]], i64 [[BAR5]], i32 1
 ; AVX-NEXT:    [[TMP4:%.*]] = and <2 x i64> [[TMP3]], [[TMP1]]
 ; AVX-NEXT:    [[BAR3:%.*]] = getelementptr inbounds [[CLASS_2:%.*]], %class.2* undef, i64 0, i32 0, i32 0, i32 0, i64 0
@@ -103,14 +103,14 @@ define void @pr35497() local_unnamed_addr #0 {
 ; AVX-NEXT:    [[ADD:%.*]] = add i64 undef, undef
 ; AVX-NEXT:    store i64 [[ADD]], i64* undef, align 1
 ; AVX-NEXT:    [[ARRAYIDX2_1:%.*]] = getelementptr inbounds [0 x i64], [0 x i64]* undef, i64 0, i64 5
-; AVX-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> undef, i64 [[TMP0]], i32 1
+; AVX-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> <i64 undef, i64 poison>, i64 [[TMP0]], i32 1
 ; AVX-NEXT:    [[TMP2:%.*]] = shl <2 x i64> [[TMP1]], <i64 2, i64 2>
 ; AVX-NEXT:    [[TMP3:%.*]] = and <2 x i64> [[TMP2]], <i64 20, i64 20>
 ; AVX-NEXT:    [[ARRAYIDX2_2:%.*]] = getelementptr inbounds [0 x i64], [0 x i64]* undef, i64 0, i64 4
 ; AVX-NEXT:    [[TMP4:%.*]] = add nuw nsw <2 x i64> [[TMP3]], zeroinitializer
 ; AVX-NEXT:    [[ARRAYIDX2_5:%.*]] = getelementptr inbounds [0 x i64], [0 x i64]* undef, i64 0, i64 1
 ; AVX-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP4]], i32 1
-; AVX-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> undef, i64 [[TMP5]], i32 0
+; AVX-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> poison, i64 [[TMP5]], i32 0
 ; AVX-NEXT:    [[TMP7:%.*]] = insertelement <2 x i64> [[TMP6]], i64 [[ADD]], i32 1
 ; AVX-NEXT:    [[TMP8:%.*]] = shl <2 x i64> [[TMP7]], <i64 2, i64 2>
 ; AVX-NEXT:    [[TMP9:%.*]] = and <2 x i64> [[TMP8]], <i64 20, i64 20>
@@ -118,7 +118,7 @@ define void @pr35497() local_unnamed_addr #0 {
 ; AVX-NEXT:    [[TMP10:%.*]] = bitcast i64* [[ARRAYIDX2_6]] to <2 x i64>*
 ; AVX-NEXT:    store <2 x i64> [[TMP4]], <2 x i64>* [[TMP10]], align 1
 ; AVX-NEXT:    [[TMP11:%.*]] = extractelement <2 x i64> [[TMP4]], i32 0
-; AVX-NEXT:    [[TMP12:%.*]] = insertelement <2 x i64> undef, i64 [[TMP11]], i32 0
+; AVX-NEXT:    [[TMP12:%.*]] = insertelement <2 x i64> poison, i64 [[TMP11]], i32 0
 ; AVX-NEXT:    [[TMP13:%.*]] = insertelement <2 x i64> [[TMP12]], i64 [[TMP5]], i32 1
 ; AVX-NEXT:    [[TMP14:%.*]] = lshr <2 x i64> [[TMP13]], <i64 6, i64 6>
 ; AVX-NEXT:    [[TMP15:%.*]] = add nuw nsw <2 x i64> [[TMP9]], [[TMP14]]

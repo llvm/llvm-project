@@ -11,7 +11,7 @@ define void @SAXPY(i32* noalias nocapture %x, i32* noalias nocapture %y, i32 %a,
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, i32* [[Y:%.*]], i64 [[I]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[TMP1]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, <4 x i32>* [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> undef, i32 [[A:%.*]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[A:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[A]], i32 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[A]], i32 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[A]], i32 3

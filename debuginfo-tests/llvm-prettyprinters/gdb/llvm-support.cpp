@@ -59,8 +59,8 @@ int main() {
   // Reference symbols that might otherwise be stripped.
   ArrayRef[0];
   MutableArrayRef[0];
-  !ExpectedValue;
-  !ExpectedError;
+  (void)!ExpectedValue;
+  (void)!ExpectedError;
   *OptionalValue;
   *OptionalNone;
   return 0;

@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/math/fmaxl.h"
 #include "src/__support/common.h"
 #include "utils/FPUtil/BasicOperations.h"
 
 namespace __llvm_libc {
 
-long double LLVM_LIBC_ENTRYPOINT(fmaxl)(long double x, long double y) {
+LLVM_LIBC_FUNCTION(long double, fmaxl, (long double x, long double y)) {
   return fputil::fmax(x, y);
 }
 

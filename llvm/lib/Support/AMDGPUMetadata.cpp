@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/Twine.h"
 #include "llvm/Support/AMDGPUMetadata.h"
 #include "llvm/Support/YAMLTraits.h"
 

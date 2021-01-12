@@ -83,8 +83,7 @@ protected:
 
   // Use the ghash table to construct a map from source type index to
   // destination PDB type index. Usable for either TPI or IPI.
-  void fillMapFromGHashes(GHashState *m,
-                          llvm::SmallVectorImpl<TypeIndex> &indexMap);
+  void fillMapFromGHashes(GHashState *m);
 
   // Copies ghashes from a vector into an array. These are long lived, so it's
   // worth the time to copy these into an appropriately sized vector to reduce

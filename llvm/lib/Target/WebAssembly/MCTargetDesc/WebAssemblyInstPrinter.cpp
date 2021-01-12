@@ -94,19 +94,18 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     case WebAssembly::LOOP_S:
       printAnnotation(OS, "label" + utostr(ControlFlowCounter) + ':');
       ControlFlowStack.push_back(std::make_pair(ControlFlowCounter++, true));
-      break;
+      return;
 
     case WebAssembly::BLOCK:
     case WebAssembly::BLOCK_S:
       ControlFlowStack.push_back(std::make_pair(ControlFlowCounter++, false));
-      break;
+      return;
 
     case WebAssembly::TRY:
     case WebAssembly::TRY_S:
-      ControlFlowStack.push_back(std::make_pair(ControlFlowCounter++, false));
-      EHPadStack.push_back(EHPadStackCounter++);
-      LastSeenEHInst = TRY;
-      break;
+      ControlFlowStack.push_back(std::make_pair(ControlFlowCounter, false));
+      EHPadStack.push_back(ControlFlowCounter++);
+      return;
 
     case WebAssembly::END_LOOP:
     case WebAssembly::END_LOOP_S:
@@ -115,7 +114,7 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
       } else {
         ControlFlowStack.pop_back();
       }
-      break;
+      return;
 
     case WebAssembly::END_BLOCK:
     case WebAssembly::END_BLOCK_S:
@@ -125,7 +124,7 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
         printAnnotation(
             OS, "label" + utostr(ControlFlowStack.pop_back_val().first) + ':');
       }
-      break;
+      return;
 
     case WebAssembly::END_TRY:
     case WebAssembly::END_TRY_S:
@@ -134,60 +133,60 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
       } else {
         printAnnotation(
             OS, "label" + utostr(ControlFlowStack.pop_back_val().first) + ':');
-        LastSeenEHInst = END_TRY;
       }
-      break;
+      return;
 
     case WebAssembly::CATCH:
     case WebAssembly::CATCH_S:
+    case WebAssembly::CATCH_ALL:
+    case WebAssembly::CATCH_ALL_S:
       if (EHPadStack.empty()) {
         printAnnotation(OS, "try-catch mismatch!");
       } else {
         printAnnotation(OS, "catch" + utostr(EHPadStack.pop_back_val()) + ':');
       }
-      break;
-    }
+      return;
 
-    // Annotate any control flow label references.
-
-    // rethrow instruction does not take any depth argument and rethrows to the
-    // nearest enclosing catch scope, if any. If there's no enclosing catch
-    // scope, it throws up to the caller.
-    if (Opc == WebAssembly::RETHROW || Opc == WebAssembly::RETHROW_S) {
+    case WebAssembly::RETHROW:
+    case WebAssembly::RETHROW_S:
+      // 'rethrow' rethrows to the nearest enclosing catch scope, if any. If
+      // there's no enclosing catch scope, it throws up to the caller.
       if (EHPadStack.empty()) {
         printAnnotation(OS, "to caller");
       } else {
         printAnnotation(OS, "down to catch" + utostr(EHPadStack.back()));
       }
+      return;
+    }
 
-    } else {
-      unsigned NumFixedOperands = Desc.NumOperands;
-      SmallSet<uint64_t, 8> Printed;
-      for (unsigned I = 0, E = MI->getNumOperands(); I < E; ++I) {
-        // See if this operand denotes a basic block target.
-        if (I < NumFixedOperands) {
-          // A non-variable_ops operand, check its type.
-          if (Desc.OpInfo[I].OperandType != WebAssembly::OPERAND_BASIC_BLOCK)
-            continue;
-        } else {
-          // A variable_ops operand, which currently can be immediates (used in
-          // br_table) which are basic block targets, or for call instructions
-          // when using -wasm-keep-registers (in which case they are registers,
-          // and should not be processed).
-          if (!MI->getOperand(I).isImm())
-            continue;
-        }
-        uint64_t Depth = MI->getOperand(I).getImm();
-        if (!Printed.insert(Depth).second)
+    // Annotate any control flow label references.
+
+    unsigned NumFixedOperands = Desc.NumOperands;
+    SmallSet<uint64_t, 8> Printed;
+    for (unsigned I = 0, E = MI->getNumOperands(); I < E; ++I) {
+      // See if this operand denotes a basic block target.
+      if (I < NumFixedOperands) {
+        // A non-variable_ops operand, check its type.
+        if (Desc.OpInfo[I].OperandType != WebAssembly::OPERAND_BASIC_BLOCK)
           continue;
-        if (Depth >= ControlFlowStack.size()) {
-          printAnnotation(OS, "Invalid depth argument!");
-        } else {
-          const auto &Pair = ControlFlowStack.rbegin()[Depth];
-          printAnnotation(OS, utostr(Depth) + ": " +
-                                  (Pair.second ? "up" : "down") + " to label" +
-                                  utostr(Pair.first));
-        }
+      } else {
+        // A variable_ops operand, which currently can be immediates (used in
+        // br_table) which are basic block targets, or for call instructions
+        // when using -wasm-keep-registers (in which case they are registers,
+        // and should not be processed).
+        if (!MI->getOperand(I).isImm())
+          continue;
+      }
+      uint64_t Depth = MI->getOperand(I).getImm();
+      if (!Printed.insert(Depth).second)
+        continue;
+      if (Depth >= ControlFlowStack.size()) {
+        printAnnotation(OS, "Invalid depth argument!");
+      } else {
+        const auto &Pair = ControlFlowStack.rbegin()[Depth];
+        printAnnotation(OS, utostr(Depth) + ": " +
+                                (Pair.second ? "up" : "down") + " to label" +
+                                utostr(Pair.first));
       }
     }
   }
@@ -345,8 +344,6 @@ const char *WebAssembly::anyTypeToString(unsigned Ty) {
     return "externref";
   case wasm::WASM_TYPE_FUNC:
     return "func";
-  case wasm::WASM_TYPE_EXNREF:
-    return "exnref";
   case wasm::WASM_TYPE_NORESULT:
     return "void";
   default:

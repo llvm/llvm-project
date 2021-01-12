@@ -29,10 +29,10 @@ target triple = "aarch64--linux-gnu"
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw i64 [[TMP4]], %x
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = udiv i64 [[TMP6]], [[TMP5]]
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i64> undef, i64 [[TMP7]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i64> poison, i64 [[TMP7]], i32 0
 ; CHECK-NEXT:    br label %[[PRED_UDIV_CONTINUE]]
 ; CHECK:       [[PRED_UDIV_CONTINUE]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = phi <2 x i64> [ undef, %vector.body ], [ [[TMP8]], %[[PRED_UDIV_IF]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = phi <2 x i64> [ poison, %vector.body ], [ [[TMP8]], %[[PRED_UDIV_IF]] ]
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP2]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[PRED_UDIV_IF1:.*]], label %[[PRED_UDIV_CONTINUE2]]
 ; CHECK:       [[PRED_UDIV_IF1]]:

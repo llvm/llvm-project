@@ -10,7 +10,7 @@
 ; RUN: llc -march=amdgcn -mtriple=amdgcn--amdhsa -mcpu=kaveri --amdhsa-code-object-version=2 -verify-machineinstrs < %s | FileCheck -check-prefixes=CI,HSA-CI-V2,GCN %s
 ; RUN: llc -march=amdgcn -mtriple=amdgcn--amdhsa -mcpu=carrizo --amdhsa-code-object-version=2 -mattr=+xnack -verify-machineinstrs < %s | FileCheck -check-prefixes=VI-XNACK,HSA-VI-XNACK-V2,GCN %s
 
-; RUN: llc -march=amdgcn -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefixes=HSA-CI,GCN %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
 ; RUN: llc -march=amdgcn -mtriple=amdgcn--amdhsa -mcpu=carrizo -mattr=-xnack -verify-machineinstrs < %s | FileCheck -check-prefixes=VI-NOXNACK,HSA-VI-NOXNACK,GCN %s
 ; RUN: llc -march=amdgcn -mtriple=amdgcn--amdhsa -mcpu=carrizo -mattr=+xnack -verify-machineinstrs < %s | FileCheck -check-prefixes=VI-XNACK,HSA-VI-XNACK,GCN %s
 
