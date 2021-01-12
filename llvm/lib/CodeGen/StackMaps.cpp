@@ -91,41 +91,52 @@ unsigned PatchPointOpers::getNextScratchIdx(unsigned StartIdx) const {
   return ScratchIdx;
 }
 
-int StatepointOpers::getFirstGCPtrIdx() {
-  unsigned NumDeoptsIdx = getNumDeoptArgsIdx();
-  unsigned NumDeoptArgs = MI->getOperand(NumDeoptsIdx).getImm();
+unsigned StatepointOpers::getNumGcMapEntriesIdx() {
+  // Take index of num of allocas and skip all allocas records.
+  unsigned CurIdx = getNumAllocaIdx();
+  unsigned NumAllocas = getConstMetaVal(*MI, CurIdx - 1);
+  CurIdx++;
+  while (NumAllocas--)
+    CurIdx = StackMaps::getNextMetaArgIdx(MI, CurIdx);
+  return CurIdx + 1; // skip <StackMaps::ConstantOp>
+}
 
-  unsigned CurIdx = NumDeoptsIdx + 1;
+unsigned StatepointOpers::getNumAllocaIdx() {
+  // Take index of num of gc ptrs and skip all gc ptr records.
+  unsigned CurIdx = getNumGCPtrIdx();
+  unsigned NumGCPtrs = getConstMetaVal(*MI, CurIdx - 1);
+  CurIdx++;
+  while (NumGCPtrs--)
+    CurIdx = StackMaps::getNextMetaArgIdx(MI, CurIdx);
+  return CurIdx + 1; // skip <StackMaps::ConstantOp>
+}
+
+unsigned StatepointOpers::getNumGCPtrIdx() {
+  // Take index of num of deopt args and skip all deopt records.
+  unsigned CurIdx = getNumDeoptArgsIdx();
+  unsigned NumDeoptArgs = getConstMetaVal(*MI, CurIdx - 1);
+  CurIdx++;
   while (NumDeoptArgs--) {
     CurIdx = StackMaps::getNextMetaArgIdx(MI, CurIdx);
   }
-  ++CurIdx; // <StackMaps::ConstantOp>
-  unsigned NumGCPtrs = MI->getOperand(CurIdx).getImm();
+  return CurIdx + 1; // skip <StackMaps::ConstantOp>
+}
+
+int StatepointOpers::getFirstGCPtrIdx() {
+  unsigned NumGCPtrsIdx = getNumGCPtrIdx();
+  unsigned NumGCPtrs = getConstMetaVal(*MI, NumGCPtrsIdx - 1);
   if (NumGCPtrs == 0)
     return -1;
-  ++CurIdx; // <num gc ptrs>
-  assert(CurIdx < MI->getNumOperands() && "Index points past operand list");
-  return (int)CurIdx;
+  ++NumGCPtrsIdx; // skip <num gc ptrs>
+  assert(NumGCPtrsIdx < MI->getNumOperands());
+  return (int)NumGCPtrsIdx;
 }
 
 unsigned StatepointOpers::getGCPointerMap(
     SmallVectorImpl<std::pair<unsigned, unsigned>> &GCMap) {
-  int FirstGCIdx = getFirstGCPtrIdx();
-  if (FirstGCIdx == -1)
-    return 0;
-  unsigned NumGCPtr = getConstMetaVal(*MI, (unsigned)FirstGCIdx - 2);
-  unsigned CurIdx = (unsigned)FirstGCIdx;
-  while (NumGCPtr--)
-    CurIdx = StackMaps::getNextMetaArgIdx(MI, CurIdx);
-
-  unsigned NumAllocas = getConstMetaVal(*MI, CurIdx);
-  CurIdx += 2;
-  while (NumAllocas--)
-    CurIdx = StackMaps::getNextMetaArgIdx(MI, CurIdx);
-
-  assert(CurIdx < MI->getNumOperands());
-  unsigned GCMapSize = getConstMetaVal(*MI, CurIdx);
-  CurIdx += 2;
+  unsigned CurIdx = getNumGcMapEntriesIdx();
+  unsigned GCMapSize = getConstMetaVal(*MI, CurIdx - 1);
+  CurIdx++;
   for (unsigned N = 0; N < GCMapSize; ++N) {
     unsigned B = MI->getOperand(CurIdx++).getImm();
     unsigned D = MI->getOperand(CurIdx++).getImm();
