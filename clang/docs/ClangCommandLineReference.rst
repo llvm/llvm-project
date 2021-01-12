@@ -3145,6 +3145,8 @@ PowerPC
 
 .. option:: -mdirect-move, -mno-direct-move
 
+.. option:: -mefpu2
+
 .. option:: -mfloat128, -mno-float128
 
 .. option:: -mfprnd, -mno-fprnd
