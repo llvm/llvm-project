@@ -196,14 +196,6 @@ public:
     return *this >= RHS2;
   }
 
-  static InstructionCost min(InstructionCost LHS, InstructionCost RHS) {
-    return LHS < RHS ? LHS : RHS;
-  }
-
-  static InstructionCost max(InstructionCost LHS, InstructionCost RHS) {
-    return LHS > RHS ? LHS : RHS;
-  }
-
   void print(raw_ostream &OS) const;
 };
 
