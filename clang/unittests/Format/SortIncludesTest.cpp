@@ -207,6 +207,27 @@ TEST_F(SortIncludesTest, SupportClangFormatOff) {
                  "#include <a>\n"
                  "#include <c>\n"
                  "// clang-format on\n"));
+
+  Style.IncludeBlocks = Style.IBS_Merge;
+  std::string Code = "// clang-format off\r\n"
+                     "#include \"d.h\"\r\n"
+                     "#include \"b.h\"\r\n"
+                     "// clang-format on\r\n"
+                     "\r\n"
+                     "#include \"c.h\"\r\n"
+                     "#include \"a.h\"\r\n"
+                     "#include \"e.h\"\r\n";
+
+  std::string Expected = "// clang-format off\r\n"
+                         "#include \"d.h\"\r\n"
+                         "#include \"b.h\"\r\n"
+                         "// clang-format on\r\n"
+                         "\r\n"
+                         "#include \"e.h\"\r\n"
+                         "#include \"a.h\"\r\n"
+                         "#include \"c.h\"\r\n";
+
+  EXPECT_EQ(Expected, sort(Code, "e.cpp", 1));
 }
 
 TEST_F(SortIncludesTest, SupportClangFormatOffCStyle) {
@@ -915,6 +936,22 @@ TEST_F(SortIncludesTest, skipUTF8ByteOrderMarkPreserve) {
 
   EXPECT_EQ(Expected, sort(Code, "e.cpp", 2));
 }
+
+TEST_F(SortIncludesTest, MergeLines) {
+  Style.IncludeBlocks = Style.IBS_Merge;
+  std::string Code = "#include \"c.h\"\r\n"
+                     "#include \"b\\\r\n"
+                     ".h\"\r\n"
+                     "#include \"a.h\"\r\n";
+
+  std::string Expected = "#include \"a.h\"\r\n"
+                         "#include \"b\\\r\n"
+                         ".h\"\r\n"
+                         "#include \"c.h\"\r\n";
+
+  EXPECT_EQ(Expected, sort(Code, "a.cpp", 1));
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang
