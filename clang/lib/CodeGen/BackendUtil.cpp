@@ -1215,6 +1215,25 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
     // -f[no-]split-cold-code
     PB.setEnableHotColdSplitting(CodeGenOpts.SplitColdCode);
 
+    if (LangOpts.ObjCAutoRefCount) {
+      PB.registerPipelineStartEPCallback(
+          [](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
+            if (Level != PassBuilder::OptimizationLevel::O0)
+              MPM.addPass(
+                  createModuleToFunctionPassAdaptor(ObjCARCExpandPass()));
+          });
+      PB.registerPipelineEarlySimplificationEPCallback(
+          [](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
+            if (Level != PassBuilder::OptimizationLevel::O0)
+              MPM.addPass(ObjCARCAPElimPass());
+          });
+      PB.registerScalarOptimizerLateEPCallback(
+          [](FunctionPassManager &FPM, PassBuilder::OptimizationLevel Level) {
+            if (Level != PassBuilder::OptimizationLevel::O0)
+              FPM.addPass(ObjCARCOptPass());
+          });
+    }
+
     // If we reached here with a non-empty index file name, then the index
     // file was empty and we are not performing ThinLTO backend compilation
     // (used in testing in a distributed build environment). Drop any the type

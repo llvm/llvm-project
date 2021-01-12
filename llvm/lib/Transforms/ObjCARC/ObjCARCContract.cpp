@@ -750,19 +750,13 @@ bool ObjCARCContractLegacyPass::runOnFunction(Function &F) {
   return OCARCC.run(F, AA, DT);
 }
 
-PreservedAnalyses ObjCARCContractPass::run(Module &M,
-                                           ModuleAnalysisManager &AM) {
+PreservedAnalyses ObjCARCContractPass::run(Function &F,
+                                           FunctionAnalysisManager &AM) {
   ObjCARCContract OCAC;
-  OCAC.init(M);
+  OCAC.init(*F.getParent());
 
-  auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  bool Changed = false;
-  for (Function &F : M) {
-    if (F.isDeclaration())
-      continue;
-    Changed |= OCAC.run(F, &FAM.getResult<AAManager>(F),
-                        &FAM.getResult<DominatorTreeAnalysis>(F));
-  }
+  bool Changed = OCAC.run(F, &AM.getResult<AAManager>(F),
+                          &AM.getResult<DominatorTreeAnalysis>(F));
   if (Changed) {
     PreservedAnalyses PA;
     PA.preserveSet<CFGAnalyses>();

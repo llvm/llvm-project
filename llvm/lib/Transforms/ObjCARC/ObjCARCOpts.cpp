@@ -2462,17 +2462,12 @@ void ObjCARCOpt::releaseMemory() {
 /// @}
 ///
 
-PreservedAnalyses ObjCARCOptPass::run(Module &M, ModuleAnalysisManager &AM) {
+PreservedAnalyses ObjCARCOptPass::run(Function &F,
+                                      FunctionAnalysisManager &AM) {
   ObjCARCOpt OCAO;
-  OCAO.init(M);
+  OCAO.init(*F.getParent());
 
-  auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  bool Changed = false;
-  for (Function &F : M) {
-    if (F.isDeclaration())
-      continue;
-    Changed |= OCAO.run(F, FAM.getResult<AAManager>(F));
-  }
+  bool Changed = OCAO.run(F, AM.getResult<AAManager>(F));
   if (Changed) {
     PreservedAnalyses PA;
     PA.preserveSet<CFGAnalyses>();
