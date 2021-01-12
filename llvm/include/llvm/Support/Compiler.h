@@ -314,19 +314,9 @@
 #endif
 
 // LLVM_ATTRIBUTE_DEPRECATED(decl, "message")
-#if __has_feature(attribute_deprecated_with_message)
-# define LLVM_ATTRIBUTE_DEPRECATED(decl, message) \
-  decl __attribute__((deprecated(message)))
-#elif defined(__GNUC__)
-# define LLVM_ATTRIBUTE_DEPRECATED(decl, message) \
-  decl __attribute__((deprecated))
-#elif defined(_MSC_VER)
-# define LLVM_ATTRIBUTE_DEPRECATED(decl, message) \
-  __declspec(deprecated(message)) decl
-#else
-# define LLVM_ATTRIBUTE_DEPRECATED(decl, message) \
-  decl
-#endif
+// This macro will be removed.
+// Use C++14's attribute instead: [[deprecated("message")]]
+#define LLVM_ATTRIBUTE_DEPRECATED(decl, message) [[deprecated(message)]] decl
 
 /// LLVM_BUILTIN_UNREACHABLE - On compilers which support it, expands
 /// to an expression which states that it is undefined behavior for the
