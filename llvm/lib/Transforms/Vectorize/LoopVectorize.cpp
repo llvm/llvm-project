@@ -518,7 +518,8 @@ public:
   /// Vectorize a single PHINode in a block. This method handles the induction
   /// variable canonicalization. It supports both VF = 1 for unrolled loops and
   /// arbitrary length vectors.
-  void widenPHIInstruction(Instruction *PN, unsigned UF, ElementCount VF);
+  void widenPHIInstruction(Instruction *PN, RecurrenceDescriptor *RdxDesc,
+                           Value *StartV, unsigned UF, ElementCount VF);
 
   /// A helper function to scalarize a single Instruction in the innermost loop.
   /// Generates a sequence of scalar instances for each lane between \p MinLane
@@ -4154,8 +4155,6 @@ void InnerLoopVectorizer::fixFirstOrderRecurrence(PHINode *Phi) {
 }
 
 void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
-  Constant *Zero = Builder.getInt32(0);
-
   // Get it's reduction variable descriptor.
   assert(Legal->isReductionVariable(Phi) &&
          "Unable to find the reduction variable");
@@ -4167,45 +4166,8 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
   setDebugLocFromInst(Builder, ReductionStartValue);
   bool IsInLoopReductionPhi = Cost->isInLoopReduction(Phi);
 
-  // We need to generate a reduction vector from the incoming scalar.
-  // To do so, we need to generate the 'identity' vector and override
-  // one of the elements with the incoming scalar reduction. We need
-  // to do it in the vector-loop preheader.
-  Builder.SetInsertPoint(LoopVectorPreHeader->getTerminator());
-
   // This is the vector-clone of the value that leaves the loop.
   Type *VecTy = getOrCreateVectorValue(LoopExitInst, 0)->getType();
-
-  // Find the reduction identity variable. Zero for addition, or, xor,
-  // one for multiplication, -1 for And.
-  Value *Identity;
-  Value *VectorStart;
-  if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RK)) {
-    // MinMax reduction have the start value as their identify.
-    if (VF.isScalar() || IsInLoopReductionPhi) {
-      VectorStart = Identity = ReductionStartValue;
-    } else {
-      VectorStart = Identity =
-        Builder.CreateVectorSplat(VF, ReductionStartValue, "minmax.ident");
-    }
-  } else {
-    // Handle other reduction kinds:
-    Constant *Iden = RecurrenceDescriptor::getRecurrenceIdentity(
-        RK, VecTy->getScalarType());
-    if (VF.isScalar() || IsInLoopReductionPhi) {
-      Identity = Iden;
-      // This vector is the Identity vector where the first element is the
-      // incoming scalar reduction.
-      VectorStart = ReductionStartValue;
-    } else {
-      Identity = ConstantVector::getSplat(VF, Iden);
-
-      // This vector is the Identity vector where the first element is the
-      // incoming scalar reduction.
-      VectorStart =
-        Builder.CreateInsertElement(Identity, ReductionStartValue, Zero);
-    }
-  }
 
   // Wrap flags are in general invalid after vectorization, clear them.
   clearReductionWrapFlags(RdxDesc);
@@ -4220,10 +4182,6 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
   for (unsigned Part = 0; Part < UF; ++Part) {
     Value *VecRdxPhi = getOrCreateVectorValue(Phi, Part);
     Value *Val = getOrCreateVectorValue(LoopVal, Part);
-    // Make sure to add the reduction start value only to the
-    // first unroll part.
-    Value *StartVal = (Part == 0) ? VectorStart : Identity;
-    cast<PHINode>(VecRdxPhi)->addIncoming(StartVal, LoopVectorPreHeader);
     cast<PHINode>(VecRdxPhi)
       ->addIncoming(Val, LI->getLoopFor(LoopVectorBody)->getLoopLatch());
   }
@@ -4598,7 +4556,9 @@ void InnerLoopVectorizer::widenGEP(GetElementPtrInst *GEP, VPValue *VPDef,
   }
 }
 
-void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN, unsigned UF,
+void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
+                                              RecurrenceDescriptor *RdxDesc,
+                                              Value *StartV, unsigned UF,
                                               ElementCount VF) {
   assert(!VF.isScalable() && "scalable vectors not yet supported.");
   PHINode *P = cast<PHINode>(PN);
@@ -4623,19 +4583,59 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN, unsigned UF,
   // Phi nodes have cycles, so we need to vectorize them in two stages. This is
   // stage #1: We create a new vector PHI node with no incoming edges. We'll use
   // this value when we vectorize all of the instructions that use the PHI.
-  if (Legal->isReductionVariable(P) || Legal->isFirstOrderRecurrence(P)) {
+  if (RdxDesc || Legal->isFirstOrderRecurrence(P)) {
+    Value *Iden = nullptr;
+    bool ScalarPHI =
+        (VF.isScalar()) || Cost->isInLoopReduction(cast<PHINode>(PN));
+    Type *VecTy =
+        ScalarPHI ? PN->getType() : VectorType::get(PN->getType(), VF);
+
+    if (RdxDesc) {
+      assert(Legal->isReductionVariable(P) && StartV &&
+             "RdxDesc should only be set for reduction variables; in that case "
+             "a StartV is also required");
+      RecurKind RK = RdxDesc->getRecurrenceKind();
+      if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RK)) {
+        // MinMax reduction have the start value as their identify.
+        if (ScalarPHI) {
+          Iden = StartV;
+        } else {
+          IRBuilderBase::InsertPointGuard IPBuilder(Builder);
+          Builder.SetInsertPoint(LoopVectorPreHeader->getTerminator());
+          StartV = Iden = Builder.CreateVectorSplat(VF, StartV, "minmax.ident");
+        }
+      } else {
+        Constant *IdenC = RecurrenceDescriptor::getRecurrenceIdentity(
+            RK, VecTy->getScalarType());
+        Iden = IdenC;
+
+        if (!ScalarPHI) {
+          Iden = ConstantVector::getSplat(VF, IdenC);
+          IRBuilderBase::InsertPointGuard IPBuilder(Builder);
+          Builder.SetInsertPoint(LoopVectorPreHeader->getTerminator());
+          Constant *Zero = Builder.getInt32(0);
+          StartV = Builder.CreateInsertElement(Iden, StartV, Zero);
+        }
+      }
+    }
+
     for (unsigned Part = 0; Part < UF; ++Part) {
       // This is phase one of vectorizing PHIs.
-      bool ScalarPHI =
-          (VF.isScalar()) || Cost->isInLoopReduction(cast<PHINode>(PN));
-      Type *VecTy =
-          ScalarPHI ? PN->getType() : VectorType::get(PN->getType(), VF);
       Value *EntryPart = PHINode::Create(
           VecTy, 2, "vec.phi", &*LoopVectorBody->getFirstInsertionPt());
       VectorLoopValueMap.setVectorValue(P, Part, EntryPart);
+      if (StartV) {
+        // Make sure to add the reduction start value only to the
+        // first unroll part.
+        Value *StartVal = (Part == 0) ? StartV : Iden;
+        cast<PHINode>(EntryPart)->addIncoming(StartVal, LoopVectorPreHeader);
+      }
     }
     return;
   }
+
+  assert(!Legal->isReductionVariable(P) &&
+         "reductions should be handled above");
 
   setDebugLocFromInst(Builder, P);
 
@@ -8380,6 +8380,12 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
       return tryToBlend(Phi, Plan);
     if ((Recipe = tryToOptimizeInductionPHI(Phi, *Plan)))
       return Recipe;
+
+    if (Legal->isReductionVariable(Phi)) {
+      RecurrenceDescriptor &RdxDesc = Legal->getReductionVars()[Phi];
+      return new VPWidenPHIRecipe(Phi, RdxDesc);
+    }
+
     return new VPWidenPHIRecipe(Phi);
   }
 
@@ -8796,7 +8802,10 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
 }
 
 void VPWidenPHIRecipe::execute(VPTransformState &State) {
-  State.ILV->widenPHIInstruction(Phi, State.UF, State.VF);
+  Value *StartV = nullptr;
+  if (RdxDesc)
+    StartV = RdxDesc->getRecurrenceStartValue();
+  State.ILV->widenPHIInstruction(Phi, RdxDesc, StartV, State.UF, State.VF);
 }
 
 void VPBlendRecipe::execute(VPTransformState &State) {
