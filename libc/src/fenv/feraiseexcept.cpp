@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/fenv/feraiseexcept.h"
 #include "src/__support/common.h"
 #include "utils/FPUtil/FEnv.h"
 
 namespace __llvm_libc {
 
-int LLVM_LIBC_ENTRYPOINT(feraiseexcept)(int e) {
+LLVM_LIBC_FUNCTION(int, feraiseexcept, (int e)) {
   return fputil::raiseExcept(e);
 }
 

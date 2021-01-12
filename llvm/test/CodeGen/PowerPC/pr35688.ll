@@ -6,29 +6,40 @@
 ; Function Attrs: nounwind
 define void @ec_GFp_nistp256_points_mul() {
 ; CHECK-LABEL: ec_GFp_nistp256_points_mul:
-; CHECK:    ld 5, 0(3)
-; CHECK:    li 3, 127
-; CHECK:    li 4, 0
-; CHECK:    subfic 6, 5, 0
-; CHECK:    subfze 6, 4
-; CHECK:    sradi 7, 6, 63
-; CHECK:    srad 6, 6, 3
-; CHECK:    subc 5, 7, 5
-; CHECK:    subfe 5, 4, 6
-; CHECK:    sradi 5, 5, 63
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    ld 5, 0(3)
+; CHECK-NEXT:    li 3, 127
+; CHECK-NEXT:    li 4, 0
+; CHECK-NEXT:    .p2align 5
+; CHECK-NEXT:  .LBB0_1: # %fe_cmovznz.exit.i534.i.15
+; CHECK-NEXT:    #
+; CHECK-NEXT:    subfic 6, 5, 0
+; CHECK-NEXT:    subfze 6, 4
+; CHECK-NEXT:    sradi 7, 6, 63
+; CHECK-NEXT:    srad 6, 6, 3
+; CHECK-NEXT:    subc 5, 7, 5
+; CHECK-NEXT:    subfe 5, 4, 6
+; CHECK-NEXT:    sradi 5, 5, 63
+; CHECK-NEXT:    b .LBB0_1
+;
+; MSSA-LABEL: ec_GFp_nistp256_points_mul:
+; MSSA:       # %bb.0: # %entry
+; MSSA-NEXT:    ld 3, 0(3)
+; MSSA-NEXT:    li 4, 0
+; MSSA-NEXT:    subfic 5, 3, 0
+; MSSA-NEXT:    subfze 5, 4
+; MSSA-NEXT:    sradi 5, 5, 63
+; MSSA-NEXT:    subc 3, 5, 3
+; MSSA-NEXT:    subfe 3, 4, 5
+; MSSA-NEXT:    sradi 3, 3, 63
+; MSSA-NEXT:    std 3, 0(3)
+; MSSA-NEXT:    .p2align 4
+; MSSA-NEXT:  .LBB0_1: # %fe_cmovznz.exit.i534.i.15
+; MSSA-NEXT:    #
+; MSSA-NEXT:    b .LBB0_1
 
 ; With MemorySSA, everything is taken out of the loop by licm.
 ; Loads and stores to undef are treated as non-aliasing.
-; MSSA-LABEL: ec_GFp_nistp256_points_mul
-; MSSA:     ld 3, 0(3)
-; MSSA:     li 4, 0
-; MSSA:     subfic 5, 3, 0
-; MSSA:     subfze 5, 4
-; MSSA:     sradi 5, 5, 63
-; MSSA:     subc 3, 5, 3
-; MSSA:     subfe 3, 4, 5
-; MSSA:     sradi 3, 3, 63
-; MSSA:     std 3, 0(3)
 entry:
   br label %fe_cmovznz.exit.i534.i.15
 

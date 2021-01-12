@@ -2489,6 +2489,7 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
     TargetIndexLocation Loc = Value.getTargetIndexLocation();
     // TODO TargetIndexLocation is a target-independent. Currently only the WebAssembly-specific
     // encoding is supported.
+    assert(AP.TM.getTargetTriple().isWasm());
     DwarfExpr.addWasmLocation(Loc.Index, static_cast<uint64_t>(Loc.Offset));
       DwarfExpr.addExpression(std::move(ExprCursor));
       return;

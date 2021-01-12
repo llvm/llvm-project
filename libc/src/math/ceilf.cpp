@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/math/ceilf.h"
 #include "src/__support/common.h"
 #include "utils/FPUtil/NearestIntegerOperations.h"
 
 namespace __llvm_libc {
 
-float LLVM_LIBC_ENTRYPOINT(ceilf)(float x) { return fputil::ceil(x); }
+LLVM_LIBC_FUNCTION(float, ceilf, (float x)) { return fputil::ceil(x); }
 
 } // namespace __llvm_libc

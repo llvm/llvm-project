@@ -21,10 +21,10 @@ body: |
     liveins: $rdi
   ; CHECK: [[@LINE+1]]:71: expected an integer literal after 'align'
     $xmm0 = MOVAPSrm $rdi, 1, _, 0, _ :: (load 16 from %ir.vec, align -32)
-    $xmm1 = MOVAPSrm $rdi, 1, _, 16, _ :: (load 16 from %ir.vec + 16, align 32)
+    $xmm1 = MOVAPSrm $rdi, 1, _, 16, _ :: (load 16 from %ir.vec + 16, basealign 32)
     $xmm2 = FsFLD0SS
     $xmm1 = MOVSSrr killed $xmm1, killed $xmm2
     MOVAPSmr $rdi, 1, _, 0, _, killed $xmm0 :: (store 16 into %ir.vec, align 32)
-    MOVAPSmr killed $rdi, 1, _, 16, _, killed $xmm1 :: (store 16 into %ir.vec + 16, align 32)
+    MOVAPSmr killed $rdi, 1, _, 16, _, killed $xmm1 :: (store 16 into %ir.vec + 16, basealign 32)
     RETQ
 ...

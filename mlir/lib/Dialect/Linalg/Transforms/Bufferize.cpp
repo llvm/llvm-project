@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/StandardOps/Transforms/Passes.h"
+#include "mlir/Dialect/StandardOps/Utils/Utils.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Operation.h"
@@ -20,18 +21,6 @@
 
 using namespace ::mlir;
 using namespace ::mlir::linalg;
-
-static SmallVector<Value, 4> getDynOperands(Location loc, Value val,
-                                            OpBuilder &b) {
-  SmallVector<Value, 4> dynOperands;
-  auto shapedType = val.getType().cast<ShapedType>();
-  for (auto dim : llvm::enumerate(shapedType.getShape())) {
-    if (dim.value() == TensorType::kDynamicSize) {
-      dynOperands.push_back(b.create<DimOp>(loc, val, dim.index()));
-    }
-  }
-  return dynOperands;
-}
 
 static Value cloneMemref(Location loc, Value memref, OpBuilder &b) {
   auto memrefType = memref.getType().cast<MemRefType>();

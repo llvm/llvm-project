@@ -209,3 +209,77 @@ nope:
   call void @foo(i1 %z)
   ret void
 }
+
+define void @test_and_one_unknown_cond(i32 %x, i1 %c1) {
+; CHECK-LABEL: @test_and_one_unknown_cond(
+; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[A:%.*]] = and i1 [[C1:%.*]], [[C2]]
+; CHECK-NEXT:    br i1 [[A]], label [[BOTH:%.*]], label [[NOPE:%.*]]
+; CHECK:       both:
+; CHECK-NEXT:    call void @bar(i32 [[X]])
+; CHECK-NEXT:    call void @foo(i1 [[C1]])
+; CHECK-NEXT:    call void @foo(i1 [[C2]])
+; CHECK-NEXT:    call void @foo(i1 [[A]])
+; CHECK-NEXT:    ret void
+; CHECK:       nope:
+; CHECK-NEXT:    call void @bar(i32 [[X]])
+; CHECK-NEXT:    call void @foo(i1 [[C1]])
+; CHECK-NEXT:    call void @foo(i1 [[C2]])
+; CHECK-NEXT:    call void @foo(i1 [[A]])
+; CHECK-NEXT:    ret void
+;
+  %c2 = icmp eq i32 %x, 0
+  %a = and i1 %c1, %c2
+  br i1 %a, label %both, label %nope
+
+both:
+  call void @bar(i32 %x)
+  call void @foo(i1 %c1)
+  call void @foo(i1 %c2)
+  call void @foo(i1 %a)
+  ret void
+
+nope:
+  call void @bar(i32 %x)
+  call void @foo(i1 %c1)
+  call void @foo(i1 %c2)
+  call void @foo(i1 %a)
+  ret void
+}
+
+define void @test_or_one_unknown_cond(i32 %x, i1 %c1) {
+; CHECK-LABEL: @test_or_one_unknown_cond(
+; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[A:%.*]] = or i1 [[C1:%.*]], [[C2]]
+; CHECK-NEXT:    br i1 [[A]], label [[NOPE:%.*]], label [[BOTH_INVERTED:%.*]]
+; CHECK:       both_inverted:
+; CHECK-NEXT:    call void @bar(i32 [[X]])
+; CHECK-NEXT:    call void @foo(i1 [[C1]])
+; CHECK-NEXT:    call void @foo(i1 [[C2]])
+; CHECK-NEXT:    call void @foo(i1 [[A]])
+; CHECK-NEXT:    ret void
+; CHECK:       nope:
+; CHECK-NEXT:    call void @bar(i32 [[X]])
+; CHECK-NEXT:    call void @foo(i1 [[C1]])
+; CHECK-NEXT:    call void @foo(i1 [[C2]])
+; CHECK-NEXT:    call void @foo(i1 [[A]])
+; CHECK-NEXT:    ret void
+;
+  %c2 = icmp eq i32 %x, 0
+  %a = or i1 %c1, %c2
+  br i1 %a, label %nope, label %both_inverted
+
+both_inverted:
+  call void @bar(i32 %x)
+  call void @foo(i1 %c1)
+  call void @foo(i1 %c2)
+  call void @foo(i1 %a)
+  ret void
+
+nope:
+  call void @bar(i32 %x)
+  call void @foo(i1 %c1)
+  call void @foo(i1 %c2)
+  call void @foo(i1 %a)
+  ret void
+}

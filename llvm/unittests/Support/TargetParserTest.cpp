@@ -1408,6 +1408,7 @@ TEST(TargetParserTest, AArch64ArchFeatures) {
 TEST(TargetParserTest, AArch64ArchExtFeature) {
   const char *ArchExt[][4] = {{"crc", "nocrc", "+crc", "-crc"},
                               {"crypto", "nocrypto", "+crypto", "-crypto"},
+                              {"flagm", "noflagm", "+flagm", "-flagm"},
                               {"fp", "nofp", "+fp-armv8", "-fp-armv8"},
                               {"simd", "nosimd", "+neon", "-neon"},
                               {"fp16", "nofp16", "+fullfp16", "-fullfp16"},
@@ -1431,6 +1432,7 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
                               {"rng", "norng", "+rand", "-rand"},
                               {"memtag", "nomemtag", "+mte", "-mte"},
                               {"tme", "notme", "+tme", "-tme"},
+                              {"pauth", "nopauth", "+pauth", "-pauth"},
                               {"ssbs", "nossbs", "+ssbs", "-ssbs"},
                               {"sb", "nosb", "+sb", "-sb"},
                               {"predres", "nopredres", "+predres", "-predres"},

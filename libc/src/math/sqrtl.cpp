@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/math/sqrtl.h"
 #include "src/__support/common.h"
 #include "utils/FPUtil/Sqrt.h"
 
 namespace __llvm_libc {
 
-long double LLVM_LIBC_ENTRYPOINT(sqrtl)(long double x) {
+LLVM_LIBC_FUNCTION(long double, sqrtl, (long double x)) {
   return fputil::sqrt(x);
 }
 

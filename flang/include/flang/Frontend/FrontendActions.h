@@ -29,6 +29,10 @@ class ParseSyntaxOnlyAction : public FrontendAction {
   void ExecuteAction() override;
 };
 
+class EmitObjAction : public FrontendAction {
+  void ExecuteAction() override;
+};
+
 } // namespace Fortran::frontend
 
 #endif // LLVM_FLANG_FRONTEND_FRONTENDACTIONS_H

@@ -772,7 +772,7 @@ public:
   /// effectively impossible for the backend to undo.
   /// TODO: If load combining is allowed in the IR optimizer, this analysis
   ///       may not be necessary.
-  bool isLoadCombineReductionCandidate(unsigned ReductionOpcode) const;
+  bool isLoadCombineReductionCandidate(RecurKind RdxKind) const;
 
   /// Assume that a vector of stores of bitwise-or/shifted/zexted loaded values
   /// can be load combined in the backend. Load combining may not be allowed in
@@ -2499,7 +2499,11 @@ BoUpSLP::~BoUpSLP() {
            "trying to erase instruction with users.");
     Pair.getFirst()->eraseFromParent();
   }
+#ifdef EXPENSIVE_CHECKS
+  // If we could guarantee that this call is not extremely slow, we could
+  // remove the ifdef limitation (see PR47712).
   assert(!verifyFunction(*F, &dbgs()));
+#endif
 }
 
 void BoUpSLP::eraseInstructions(ArrayRef<Value *> AV) {
@@ -3896,8 +3900,8 @@ static bool isLoadCombineCandidateImpl(Value *Root, unsigned NumElts,
   return true;
 }
 
-bool BoUpSLP::isLoadCombineReductionCandidate(unsigned RdxOpcode) const {
-  if (RdxOpcode != Instruction::Or)
+bool BoUpSLP::isLoadCombineReductionCandidate(RecurKind RdxKind) const {
+  if (RdxKind != RecurKind::Or)
     return false;
 
   unsigned NumElts = VectorizableTree[0]->Scalars.size();
@@ -6301,7 +6305,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
         Cost -= UserCost;
       }
 
-      MinCost = InstructionCost::min(MinCost, Cost);
+      MinCost = std::min(MinCost, Cost);
 
       if (Cost.isValid() && Cost < -SLPCostThreshold) {
         LLVM_DEBUG(dbgs() << "SLP: Vectorizing list at cost:" << Cost << ".\n");
@@ -6992,7 +6996,7 @@ public:
       }
       if (V.isTreeTinyAndNotFullyVectorizable())
         break;
-      if (V.isLoadCombineReductionCandidate(RdxTreeInst.getOpcode()))
+      if (V.isLoadCombineReductionCandidate(RdxTreeInst.getKind()))
         break;
 
       V.computeMinimumValueSizes();
@@ -7529,9 +7533,14 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
 
     // Collect the incoming values from the PHIs.
     Incoming.clear();
-    for (PHINode &P : BB->phis())
-      if (!VisitedInstrs.count(&P) && !R.isDeleted(&P))
-        Incoming.push_back(&P);
+    for (Instruction &I : *BB) {
+      PHINode *P = dyn_cast<PHINode>(&I);
+      if (!P)
+        break;
+
+      if (!VisitedInstrs.count(P) && !R.isDeleted(P))
+        Incoming.push_back(P);
+    }
 
     // Sort by type.
     llvm::stable_sort(Incoming, PhiTypeSorterFunc);
@@ -7586,7 +7595,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       continue;
     // We may go through BB multiple times so skip the one we have checked.
     if (!VisitedInstrs.insert(&*it).second) {
-      if (it->use_empty() && KeyNodes.count(&*it) > 0 &&
+      if (it->use_empty() && KeyNodes.contains(&*it) &&
           vectorizeSimpleInstructions(PostProcessInstructions, BB, R)) {
         // We would like to start over since some instructions are deleted
         // and the iterator may become invalid value.

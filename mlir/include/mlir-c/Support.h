@@ -76,7 +76,7 @@ mlirStringRefCreateFromCString(const char *str);
  *
  * This function is called back by the functions that need to return a reference
  * to the portion of the string with the following arguments:
- *   - an MlirStringRef represening the current portion of the string
+ *   - an MlirStringRef representing the current portion of the string
  *   - a pointer to user data forwarded from the printing call.
  */
 typedef void (*MlirStringCallback)(MlirStringRef, void *);

@@ -32,6 +32,8 @@ ENUM_CODEGENOPT(CompressDebugSections, llvm::DebugCompressionType, 2,
                 llvm::DebugCompressionType::None)
 CODEGENOPT(RelaxELFRelocations, 1, 0) ///< -Wa,--mrelax-relocations
 CODEGENOPT(AsmVerbose        , 1, 0) ///< -dA, -fverbose-asm.
+CODEGENOPT(Dwarf64           , 1, 0) ///< -gdwarf64.
+CODEGENOPT(Dwarf32           , 1, 1) ///< -gdwarf32.
 CODEGENOPT(PreserveAsmComments, 1, 1) ///< -dA, -fno-preserve-as-comments.
 CODEGENOPT(AssumeSaneOperatorNew , 1, 1) ///< implicit __attribute__((malloc)) operator new
 CODEGENOPT(Autolink          , 1, 1) ///< -fno-autolink
@@ -366,8 +368,8 @@ VALUE_CODEGENOPT(EmitCheckPathComponentsToStrip, 32, 0)
 /// Whether to report the hotness of the code region for optimization remarks.
 CODEGENOPT(DiagnosticsWithHotness, 1, 0)
 
-/// Whether copy relocations support is available when building as PIE.
-CODEGENOPT(PIECopyRelocations, 1, 0)
+/// Whether to use direct access relocations (instead of GOT) to reference external data symbols.
+CODEGENOPT(DirectAccessExternalData, 1, 0)
 
 /// Whether we should use the undefined behaviour optimization for control flow
 /// paths that reach the end of a function without executing a required return.

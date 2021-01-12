@@ -111,9 +111,9 @@ def NVVM_ShflBflyOp :
       return success();
     auto type = getType().dyn_cast<LLVM::LLVMStructType>();
     auto elementType = (type && type.getBody().size() == 2)
-                     ? type.getBody()[1].dyn_cast<LLVM::LLVMIntegerType>()
+                     ? type.getBody()[1].dyn_cast<IntegerType>()
                      : nullptr;
-    if (!elementType || elementType.getBitWidth() != 1)
+    if (!elementType || elementType.getWidth() != 1)
       return emitError("expected return type to be a two-element struct with "
                        "i1 as the second element");
     return success();

@@ -15,10 +15,8 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUISELLOWERING_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUISELLOWERING_H
 
-#include "AMDGPU.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/TargetLowering.h"
-#include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
 
@@ -145,16 +143,7 @@ protected:
 public:
   AMDGPUTargetLowering(const TargetMachine &TM, const AMDGPUSubtarget &STI);
 
-  bool mayIgnoreSignedZero(SDValue Op) const {
-    if (getTargetMachine().Options.NoSignedZerosFPMath)
-      return true;
-
-    const auto Flags = Op.getNode()->getFlags();
-    if (Flags.hasNoSignedZeros())
-      return true;
-
-    return false;
-  }
+  bool mayIgnoreSignedZero(SDValue Op) const;
 
   static inline SDValue stripBitcast(SDValue Val) {
     return Val.getOpcode() == ISD::BITCAST ? Val.getOperand(0) : Val;

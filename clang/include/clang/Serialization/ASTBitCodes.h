@@ -681,8 +681,8 @@ public:
 
       MODULAR_CODEGEN_DECLS = 60,
 
-      /// Record code for \#pragma pack options.
-      PACK_PRAGMA_OPTIONS = 61,
+      /// Record code for \#pragma align/pack options.
+      ALIGN_PACK_PRAGMA_OPTIONS = 61,
 
       /// The stack of open #ifs/#ifdefs recorded in a preamble.
       PP_CONDITIONAL_STACK = 62,

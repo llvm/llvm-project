@@ -1887,7 +1887,7 @@ populateInstruction(CodeGenTarget &Target, const Record &EncodingDef,
     for (unsigned i = 0, e = Vals.size(); i != e; ++i) {
       // Ignore fixed fields in the record, we're looking for values like:
       //    bits<5> RST = { ?, ?, ?, ?, ? };
-      if (Vals[i].getPrefix() || Vals[i].getValue()->isComplete())
+      if (Vals[i].isNonconcreteOK() || Vals[i].getValue()->isComplete())
         continue;
 
       // Determine if Vals[i] actually contributes to the Inst encoding.

@@ -13,13 +13,11 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUINSTRUCTIONSELECTOR_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUINSTRUCTIONSELECTOR_H
 
-#include "AMDGPU.h"
-#include "AMDGPUArgumentUsageInfo.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 
 namespace {
 #define GET_GLOBALISEL_PREDICATE_BITSET
@@ -37,6 +35,7 @@ struct ImageDimIntrinsicInfo;
 
 class AMDGPUInstrInfo;
 class AMDGPURegisterBankInfo;
+class AMDGPUTargetMachine;
 class GCNSubtarget;
 class MachineInstr;
 class MachineIRBuilder;

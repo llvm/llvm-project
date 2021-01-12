@@ -620,7 +620,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
             {"documentSymbolProvider", true},
             {"workspaceSymbolProvider", true},
             {"referencesProvider", true},
-            {"astProvider", true},
+            {"astProvider", true}, // clangd extension
             {"executeCommandProvider",
              llvm::json::Object{
                  {"commands",
@@ -628,7 +628,9 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
                    ExecuteCommandParams::CLANGD_APPLY_TWEAK}},
              }},
             {"typeHierarchyProvider", true},
-            {"memoryUsageProvider", true}, // clangd extension.
+            {"memoryUsageProvider", true}, // clangd extension
+            {"compilationDatabase",        // clangd extension
+             llvm::json::Object{{"automaticReload", true}}},
             {"callHierarchyProvider", true},
         }}}};
   if (Opts.Encoding)

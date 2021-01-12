@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/math/lround.h"
 #include "src/__support/common.h"
 #include "utils/FPUtil/NearestIntegerOperations.h"
 
 namespace __llvm_libc {
 
-long LLVM_LIBC_ENTRYPOINT(lround)(double x) {
+LLVM_LIBC_FUNCTION(long, lround, (double x)) {
   return fputil::roundToSignedInteger<double, long>(x);
 }
 

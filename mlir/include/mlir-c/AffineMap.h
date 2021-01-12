@@ -10,6 +10,7 @@
 #ifndef MLIR_C_AFFINEMAP_H
 #define MLIR_C_AFFINEMAP_H
 
+#include "mlir-c/AffineExpr.h"
 #include "mlir-c/IR.h"
 
 #ifdef __cplusplus
@@ -67,9 +68,18 @@ MLIR_CAPI_EXPORTED MlirAffineMap mlirAffineMapEmptyGet(MlirContext ctx);
 
 /** Creates a zero result affine map of the given dimensions and symbols in the
  * context. The affine map is owned by the context. */
+MLIR_CAPI_EXPORTED MlirAffineMap mlirAffineMapZeroResultGet(
+    MlirContext ctx, intptr_t dimCount, intptr_t symbolCount);
+
+/** Creates an affine map with results defined by the given list of affine
+ * expressions. The map resulting map also has the requested number of input
+ * dimensions and symbols, regardless of them being used in the results.
+ */
 MLIR_CAPI_EXPORTED MlirAffineMap mlirAffineMapGet(MlirContext ctx,
                                                   intptr_t dimCount,
-                                                  intptr_t symbolCount);
+                                                  intptr_t symbolCount,
+                                                  intptr_t nAffineExprs,
+                                                  MlirAffineExpr *affineExprs);
 
 /** Creates a single constant result affine map in the context. The affine map
  * is owned by the context. */
@@ -123,6 +133,10 @@ MLIR_CAPI_EXPORTED intptr_t mlirAffineMapGetNumSymbols(MlirAffineMap affineMap);
 
 /// Returns the number of results of the given affine map.
 MLIR_CAPI_EXPORTED intptr_t mlirAffineMapGetNumResults(MlirAffineMap affineMap);
+
+/// Returns the result at the given position.
+MLIR_CAPI_EXPORTED MlirAffineExpr
+mlirAffineMapGetResult(MlirAffineMap affineMap, intptr_t pos);
 
 /** Returns the number of inputs (dimensions + symbols) of the given affine
  * map. */

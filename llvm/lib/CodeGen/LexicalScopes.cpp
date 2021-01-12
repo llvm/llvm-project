@@ -324,7 +324,7 @@ bool LexicalScopes::dominates(const DILocation *DL, MachineBasicBlock *MBB) {
     Set = std::make_unique<BlockSetT>();
     getMachineBasicBlocks(DL, *Set);
   }
-  return Set->count(MBB) != 0;
+  return Set->contains(MBB);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

@@ -16,8 +16,13 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
+
+//===----------------------------------------------------------------------===//
+// Context
+//===----------------------------------------------------------------------===//
 
 namespace mlir {
 struct ScfToSPIRVContextImpl {
@@ -37,20 +42,40 @@ struct ScfToSPIRVContextImpl {
 ScfToSPIRVContext::ScfToSPIRVContext() {
   impl = std::make_unique<ScfToSPIRVContextImpl>();
 }
+
 ScfToSPIRVContext::~ScfToSPIRVContext() = default;
+
+//===----------------------------------------------------------------------===//
+// Pattern Declarations
+//===----------------------------------------------------------------------===//
 
 namespace {
 /// Common class for all vector to GPU patterns.
 template <typename OpTy>
-class SCFToSPIRVPattern : public SPIRVOpLowering<OpTy> {
+class SCFToSPIRVPattern : public OpConversionPattern<OpTy> {
 public:
   SCFToSPIRVPattern<OpTy>(MLIRContext *context, SPIRVTypeConverter &converter,
                           ScfToSPIRVContextImpl *scfToSPIRVContext)
-      : SPIRVOpLowering<OpTy>::SPIRVOpLowering(context, converter),
-        scfToSPIRVContext(scfToSPIRVContext) {}
+      : OpConversionPattern<OpTy>::OpConversionPattern(context),
+        scfToSPIRVContext(scfToSPIRVContext), typeConverter(converter) {}
 
 protected:
   ScfToSPIRVContextImpl *scfToSPIRVContext;
+  // FIXME: We explicitly keep a reference of the type converter here instead of
+  // passing it to OpConversionPattern during construction. This effectively
+  // bypasses the conversion framework's automation on type conversion. This is
+  // needed right now because the conversion framework will unconditionally
+  // legalize all types used by SCF ops upon discovering them, for example, the
+  // types of loop carried values. We use SPIR-V variables for those loop
+  // carried values. Depending on the available capabilities, the SPIR-V
+  // variable can be different, for example, cooperative matrix or normal
+  // variable. We'd like to detach the conversion of the loop carried values
+  // from the SCF ops (which is mainly a region). So we need to "mark" types
+  // used by SCF ops as legal, if to use the conversion framework for type
+  // conversion. There isn't a straightforward way to do that yet, as when
+  // converting types, ops aren't taken into consideration. Therefore, we just
+  // bypass the framework's type conversion for now.
+  SPIRVTypeConverter &typeConverter;
 };
 
 /// Pattern to convert a scf::ForOp within kernel functions into spirv::LoopOp.
@@ -90,7 +115,6 @@ public:
 /// we load the value from the allocation and use it as the SCF op result.
 template <typename ScfOp, typename OpTy>
 static void replaceSCFOutputValue(ScfOp scfOp, OpTy newOp,
-                                  SPIRVTypeConverter &typeConverter,
                                   ConversionPatternRewriter &rewriter,
                                   ScfToSPIRVContextImpl *scfToSPIRVContext,
                                   ArrayRef<Type> returnTypes) {
@@ -117,7 +141,7 @@ static void replaceSCFOutputValue(ScfOp scfOp, OpTy newOp,
 }
 
 //===----------------------------------------------------------------------===//
-// scf::ForOp.
+// scf::ForOp
 //===----------------------------------------------------------------------===//
 
 LogicalResult
@@ -196,13 +220,12 @@ ForOpConversion::matchAndRewrite(scf::ForOp forOp, ArrayRef<Value> operands,
   SmallVector<Type, 8> initTypes;
   for (auto arg : forOperands.initArgs())
     initTypes.push_back(arg.getType());
-  replaceSCFOutputValue(forOp, loopOp, typeConverter, rewriter,
-                        scfToSPIRVContext, initTypes);
+  replaceSCFOutputValue(forOp, loopOp, rewriter, scfToSPIRVContext, initTypes);
   return success();
 }
 
 //===----------------------------------------------------------------------===//
-// scf::IfOp.
+// scf::IfOp
 //===----------------------------------------------------------------------===//
 
 LogicalResult
@@ -255,10 +278,14 @@ IfOpConversion::matchAndRewrite(scf::IfOp ifOp, ArrayRef<Value> operands,
     auto convertedType = typeConverter.convertType(result.getType());
     returnTypes.push_back(convertedType);
   }
-  replaceSCFOutputValue(ifOp, selectionOp, typeConverter, rewriter,
-                        scfToSPIRVContext, returnTypes);
+  replaceSCFOutputValue(ifOp, selectionOp, rewriter, scfToSPIRVContext,
+                        returnTypes);
   return success();
 }
+
+//===----------------------------------------------------------------------===//
+// scf::YieldOp
+//===----------------------------------------------------------------------===//
 
 /// Yield is lowered to stores to the VariableOp created during lowering of the
 /// parent region. For loops we also need to update the branch looping back to
@@ -289,6 +316,10 @@ LogicalResult TerminatorOpConversion::matchAndRewrite(
   rewriter.eraseOp(terminatorOp);
   return success();
 }
+
+//===----------------------------------------------------------------------===//
+// Hooks
+//===----------------------------------------------------------------------===//
 
 void mlir::populateSCFToSPIRVPatterns(MLIRContext *context,
                                       SPIRVTypeConverter &typeConverter,

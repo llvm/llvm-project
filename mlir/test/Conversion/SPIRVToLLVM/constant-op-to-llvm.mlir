@@ -6,9 +6,9 @@
 
 // CHECK-LABEL: @bool_constant_scalar
 spv.func @bool_constant_scalar() "None" {
-  // CHECK: llvm.mlir.constant(true) : !llvm.i1
+  // CHECK: llvm.mlir.constant(true) : i1
   %0 = spv.constant true
-  // CHECK: llvm.mlir.constant(false) : !llvm.i1
+  // CHECK: llvm.mlir.constant(false) : i1
   %1 = spv.constant false
   spv.Return
 }
@@ -24,11 +24,11 @@ spv.func @bool_constant_vector() "None" {
 
 // CHECK-LABEL: @integer_constant_scalar
 spv.func @integer_constant_scalar() "None" {
-  // CHECK: llvm.mlir.constant(0 : i8) : !llvm.i8
+  // CHECK: llvm.mlir.constant(0 : i8) : i8
   %0 = spv.constant  0 : i8
-  // CHECK: llvm.mlir.constant(-5 : i64) : !llvm.i64
+  // CHECK: llvm.mlir.constant(-5 : i64) : i64
   %1 = spv.constant -5 : si64
-  // CHECK: llvm.mlir.constant(10 : i16) : !llvm.i16
+  // CHECK: llvm.mlir.constant(10 : i16) : i16
   %2 = spv.constant  10 : ui16
   spv.Return
 }
@@ -46,16 +46,16 @@ spv.func @integer_constant_vector() "None" {
 
 // CHECK-LABEL: @float_constant_scalar
 spv.func @float_constant_scalar() "None" {
-  // CHECK: llvm.mlir.constant(5.000000e+00 : f16) : !llvm.half
+  // CHECK: llvm.mlir.constant(5.000000e+00 : f16) : f16
   %0 = spv.constant 5.000000e+00 : f16
-  // CHECK: llvm.mlir.constant(5.000000e+00 : f64) : !llvm.double
+  // CHECK: llvm.mlir.constant(5.000000e+00 : f64) : f64
   %1 = spv.constant 5.000000e+00 : f64
   spv.Return
 }
 
 // CHECK-LABEL: @float_constant_vector
 spv.func @float_constant_vector() "None" {
-  // CHECK: llvm.mlir.constant(dense<[2.000000e+00, 3.000000e+00]> : vector<2xf32>) : !llvm.vec<2 x float>
+  // CHECK: llvm.mlir.constant(dense<[2.000000e+00, 3.000000e+00]> : vector<2xf32>) : !llvm.vec<2 x f32>
   %0 = spv.constant dense<[2.000000e+00, 3.000000e+00]> : vector<2xf32>
   spv.Return
 }

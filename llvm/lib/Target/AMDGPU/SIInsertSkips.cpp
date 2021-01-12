@@ -15,29 +15,9 @@
 
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
-#include "SIInstrInfo.h"
-#include "SIMachineFunctionInfo.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/DepthFirstIterator.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
-#include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/IR/CallingConv.h"
-#include "llvm/IR/DebugLoc.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/MCAsmInfo.h"
-#include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Target/TargetMachine.h"
-#include <cassert>
-#include <cstdint>
-#include <iterator>
 
 using namespace llvm;
 

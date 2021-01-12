@@ -781,6 +781,20 @@ spv.module Logical GLSL450 {
 // -----
 
 spv.module Logical GLSL450 {
+  spv.specConstant @sc = 42 : i32
+
+  spv.func @foo() -> i32 "None" {
+    // CHECK: [[SC:%.*]] = spv.mlir.referenceof @sc
+    %0 = spv.mlir.referenceof @sc : i32
+    // CHECK: spv.SpecConstantOperation wraps "spv.ISub"([[SC]], [[SC]]) : (i32, i32) -> i32
+    %1 = spv.SpecConstantOperation wraps "spv.ISub"(%0, %0) : (i32, i32) -> i32
+    spv.ReturnValue %1 : i32
+  }
+}
+
+// -----
+
+spv.module Logical GLSL450 {
   spv.func @foo() -> i32 "None" {
     %0 = spv.constant 1: i32
     // expected-error @+1 {{op expects parent op 'spv.SpecConstantOperation'}}

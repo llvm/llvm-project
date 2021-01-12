@@ -384,7 +384,7 @@ void InstrInfoEmitter::emitOperandTypeMappings(
           OperandRecords.push_back(Op.Rec);
           ++CurrentOffset;
         } else {
-          for (Init *Arg : make_range(MIOI->arg_begin(), MIOI->arg_end())) {
+          for (Init *Arg : MIOI->getArgs()) {
             OperandRecords.push_back(cast<DefInit>(Arg)->getDef());
             ++CurrentOffset;
           }

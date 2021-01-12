@@ -18,6 +18,7 @@
 
 namespace clang {
 
+class DeclContext;
 class LangOptions;
 class SourceManager;
 class Stmt;
@@ -39,6 +40,15 @@ public:
   virtual std::string remapPath(StringRef Path) const {
     return std::string(Path);
   }
+
+  /// When printing type to be inserted into code in specific context, this
+  /// callback can be used to avoid printing the redundant part of the
+  /// qualifier. For example, when inserting code inside namespace foo, we
+  /// should print bar::SomeType instead of foo::bar::SomeType.
+  /// To do this, shouldPrintScope should return true on "foo" NamespaceDecl.
+  /// The printing stops at the first isScopeVisible() == true, so there will
+  /// be no calls with outer scopes.
+  virtual bool isScopeVisible(const DeclContext *DC) const { return false; }
 };
 
 /// Describes how types, statements, expressions, and declarations should be

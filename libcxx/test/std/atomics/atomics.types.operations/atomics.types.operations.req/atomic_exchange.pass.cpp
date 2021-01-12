@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: libcpp-has-no-threads
+// XFAIL: !non-lockfree-atomics
 //  ... fails assertion line 31
 
 // <atomic>

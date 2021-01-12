@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/math/truncf.h"
 #include "src/__support/common.h"
 #include "utils/FPUtil/NearestIntegerOperations.h"
 
 namespace __llvm_libc {
 
-float LLVM_LIBC_ENTRYPOINT(truncf)(float x) { return fputil::trunc(x); }
+LLVM_LIBC_FUNCTION(float, truncf, (float x)) { return fputil::trunc(x); }
 
 } // namespace __llvm_libc

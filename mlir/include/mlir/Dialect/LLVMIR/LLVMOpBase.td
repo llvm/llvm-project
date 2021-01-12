@@ -54,18 +54,18 @@ def LLVM_Type : DialectType<LLVM_Dialect,
 
 // Type constraint accepting LLVM integer types.
 def LLVM_AnyInteger : Type<
-  CPred<"$_self.isa<::mlir::LLVM::LLVMIntegerType>()">,
+  CPred<"$_self.isa<::mlir::IntegerType>()">,
   "LLVM integer type">;
 
 // Type constraints accepting LLVM integer type of a specific width.
 class LLVM_IntBase<int width> :
     Type<And<[
         LLVM_AnyInteger.predicate,
-        CPred<"$_self.cast<::mlir::LLVM::LLVMIntegerType>().getBitWidth() == "
+        CPred<"$_self.cast<::mlir::IntegerType>().getWidth() == "
               # width>]>,
         "LLVM " # width # "-bit integer type">,
     BuildableType<
-        "::mlir::LLVM::LLVMIntegerType::get($_builder.getContext(), "
+        "::mlir::IntegerType::get($_builder.getContext(), "
         # width # ")">;
 
 def LLVM_i1 : LLVM_IntBase<1>;
@@ -82,12 +82,7 @@ def LLVM_PrimitiveType : Type<
 
 // Type constraint accepting any LLVM floating point type.
 def LLVM_AnyFloat : Type<
-  CPred<"$_self.isa<::mlir::LLVM::LLVMBFloatType, "
-                   "::mlir::LLVM::LLVMHalfType, "
-                   "::mlir::LLVM::LLVMFloatType, "
-                   "::mlir::LLVM::LLVMDoubleType, "
-                   "::mlir::LLVM::LLVMFP128Type, "
-                   "::mlir::LLVM::LLVMX86FP80Type>()">,
+  CPred<"::mlir::LLVM::isCompatibleFloatingPointType($_self)">,
   "floating point LLVM type">;
 
 // Type constraint accepting any LLVM pointer type.

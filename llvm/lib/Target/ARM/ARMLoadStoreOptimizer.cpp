@@ -1268,6 +1268,7 @@ findIncDecAfter(MachineBasicBlock::iterator MBBI, Register Reg,
 bool ARMLoadStoreOpt::MergeBaseUpdateLSMultiple(MachineInstr *MI) {
   // Thumb1 is already using updating loads/stores.
   if (isThumb1) return false;
+  LLVM_DEBUG(dbgs() << "Attempting to merge update of: " << *MI);
 
   const MachineOperand &BaseOP = MI->getOperand(0);
   Register Base = BaseOP.getReg();
@@ -1319,8 +1320,10 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSMultiple(MachineInstr *MI) {
         return false;
     }
   }
-  if (MergeInstr != MBB.end())
+  if (MergeInstr != MBB.end()) {
+    LLVM_DEBUG(dbgs() << "  Erasing old increment: " << *MergeInstr);
     MBB.erase(MergeInstr);
+  }
 
   unsigned NewOpc = getUpdatingLSMultipleOpcode(Opcode, Mode);
   MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII->get(NewOpc))
@@ -1335,6 +1338,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSMultiple(MachineInstr *MI) {
   // Transfer memoperands.
   MIB.setMemRefs(MI->memoperands());
 
+  LLVM_DEBUG(dbgs() << "  Added new load/store: " << *MIB);
   MBB.erase(MBBI);
   return true;
 }
@@ -1445,6 +1449,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLoadStore(MachineInstr *MI) {
   // Thumb1 doesn't have updating LDR/STR.
   // FIXME: Use LDM/STM with single register instead.
   if (isThumb1) return false;
+  LLVM_DEBUG(dbgs() << "Attempting to merge update of: " << *MI);
 
   Register Base = getLoadStoreBaseOp(*MI).getReg();
   bool BaseKill = getLoadStoreBaseOp(*MI).isKill();
@@ -1486,6 +1491,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLoadStore(MachineInstr *MI) {
     } else
       return false;
   }
+  LLVM_DEBUG(dbgs() << "  Erasing old increment: " << *MergeInstr);
   MBB.erase(MergeInstr);
 
   ARM_AM::AddrOpc AddSub = Offset < 0 ? ARM_AM::sub : ARM_AM::add;
@@ -1497,39 +1503,54 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLoadStore(MachineInstr *MI) {
     // updating load/store-multiple instructions can be used with only one
     // register.)
     MachineOperand &MO = MI->getOperand(0);
-    BuildMI(MBB, MBBI, DL, TII->get(NewOpc))
-      .addReg(Base, getDefRegState(true)) // WB base register
-      .addReg(Base, getKillRegState(isLd ? BaseKill : false))
-      .addImm(Pred).addReg(PredReg)
-      .addReg(MO.getReg(), (isLd ? getDefRegState(true) :
-                            getKillRegState(MO.isKill())))
-      .cloneMemRefs(*MI);
+    auto MIB = BuildMI(MBB, MBBI, DL, TII->get(NewOpc))
+                   .addReg(Base, getDefRegState(true)) // WB base register
+                   .addReg(Base, getKillRegState(isLd ? BaseKill : false))
+                   .addImm(Pred)
+                   .addReg(PredReg)
+                   .addReg(MO.getReg(), (isLd ? getDefRegState(true)
+                                              : getKillRegState(MO.isKill())))
+                   .cloneMemRefs(*MI);
+    (void)MIB;
+    LLVM_DEBUG(dbgs() << "  Added new instruction: " << *MIB);
   } else if (isLd) {
     if (isAM2) {
       // LDR_PRE, LDR_POST
       if (NewOpc == ARM::LDR_PRE_IMM || NewOpc == ARM::LDRB_PRE_IMM) {
-        BuildMI(MBB, MBBI, DL, TII->get(NewOpc), MI->getOperand(0).getReg())
-          .addReg(Base, RegState::Define)
-          .addReg(Base).addImm(Offset).addImm(Pred).addReg(PredReg)
-          .cloneMemRefs(*MI);
+        auto MIB =
+            BuildMI(MBB, MBBI, DL, TII->get(NewOpc), MI->getOperand(0).getReg())
+                .addReg(Base, RegState::Define)
+                .addReg(Base)
+                .addImm(Offset)
+                .addImm(Pred)
+                .addReg(PredReg)
+                .cloneMemRefs(*MI);
+        (void)MIB;
+        LLVM_DEBUG(dbgs() << "  Added new instruction: " << *MIB);
       } else {
         int Imm = ARM_AM::getAM2Opc(AddSub, Bytes, ARM_AM::no_shift);
-        BuildMI(MBB, MBBI, DL, TII->get(NewOpc), MI->getOperand(0).getReg())
-            .addReg(Base, RegState::Define)
-            .addReg(Base)
-            .addReg(0)
-            .addImm(Imm)
-            .add(predOps(Pred, PredReg))
-            .cloneMemRefs(*MI);
+        auto MIB =
+            BuildMI(MBB, MBBI, DL, TII->get(NewOpc), MI->getOperand(0).getReg())
+                .addReg(Base, RegState::Define)
+                .addReg(Base)
+                .addReg(0)
+                .addImm(Imm)
+                .add(predOps(Pred, PredReg))
+                .cloneMemRefs(*MI);
+        (void)MIB;
+        LLVM_DEBUG(dbgs() << "  Added new instruction: " << *MIB);
       }
     } else {
       // t2LDR_PRE, t2LDR_POST
-      BuildMI(MBB, MBBI, DL, TII->get(NewOpc), MI->getOperand(0).getReg())
-          .addReg(Base, RegState::Define)
-          .addReg(Base)
-          .addImm(Offset)
-          .add(predOps(Pred, PredReg))
-          .cloneMemRefs(*MI);
+      auto MIB =
+          BuildMI(MBB, MBBI, DL, TII->get(NewOpc), MI->getOperand(0).getReg())
+              .addReg(Base, RegState::Define)
+              .addReg(Base)
+              .addImm(Offset)
+              .add(predOps(Pred, PredReg))
+              .cloneMemRefs(*MI);
+      (void)MIB;
+      LLVM_DEBUG(dbgs() << "  Added new instruction: " << *MIB);
     }
   } else {
     MachineOperand &MO = MI->getOperand(0);
@@ -1539,21 +1560,25 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLoadStore(MachineInstr *MI) {
     if (isAM2 && NewOpc == ARM::STR_POST_IMM) {
       int Imm = ARM_AM::getAM2Opc(AddSub, Bytes, ARM_AM::no_shift);
       // STR_PRE, STR_POST
-      BuildMI(MBB, MBBI, DL, TII->get(NewOpc), Base)
-          .addReg(MO.getReg(), getKillRegState(MO.isKill()))
-          .addReg(Base)
-          .addReg(0)
-          .addImm(Imm)
-          .add(predOps(Pred, PredReg))
-          .cloneMemRefs(*MI);
+      auto MIB = BuildMI(MBB, MBBI, DL, TII->get(NewOpc), Base)
+                     .addReg(MO.getReg(), getKillRegState(MO.isKill()))
+                     .addReg(Base)
+                     .addReg(0)
+                     .addImm(Imm)
+                     .add(predOps(Pred, PredReg))
+                     .cloneMemRefs(*MI);
+      (void)MIB;
+      LLVM_DEBUG(dbgs() << "  Added new instruction: " << *MIB);
     } else {
       // t2STR_PRE, t2STR_POST
-      BuildMI(MBB, MBBI, DL, TII->get(NewOpc), Base)
-          .addReg(MO.getReg(), getKillRegState(MO.isKill()))
-          .addReg(Base)
-          .addImm(Offset)
-          .add(predOps(Pred, PredReg))
-          .cloneMemRefs(*MI);
+      auto MIB = BuildMI(MBB, MBBI, DL, TII->get(NewOpc), Base)
+                     .addReg(MO.getReg(), getKillRegState(MO.isKill()))
+                     .addReg(Base)
+                     .addImm(Offset)
+                     .add(predOps(Pred, PredReg))
+                     .cloneMemRefs(*MI);
+      (void)MIB;
+      LLVM_DEBUG(dbgs() << "  Added new instruction: " << *MIB);
     }
   }
   MBB.erase(MBBI);
@@ -1567,6 +1592,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSDouble(MachineInstr &MI) const {
          "Must have t2STRDi8 or t2LDRDi8");
   if (MI.getOperand(3).getImm() != 0)
     return false;
+  LLVM_DEBUG(dbgs() << "Attempting to merge update of: " << MI);
 
   // Behaviour for writeback is undefined if base register is the same as one
   // of the others.
@@ -1594,6 +1620,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSDouble(MachineInstr &MI) const {
     } else
       return false;
   }
+  LLVM_DEBUG(dbgs() << "  Erasing old increment: " << *MergeInstr);
   MBB.erase(MergeInstr);
 
   DebugLoc DL = MI.getDebugLoc();
@@ -1615,6 +1642,7 @@ bool ARMLoadStoreOpt::MergeBaseUpdateLSDouble(MachineInstr &MI) const {
     MIB.add(MO);
   MIB.cloneMemRefs(MI);
 
+  LLVM_DEBUG(dbgs() << "  Added new load/store: " << *MIB);
   MBB.erase(MBBI);
   return true;
 }

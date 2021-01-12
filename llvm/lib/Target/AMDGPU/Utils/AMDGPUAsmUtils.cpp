@@ -8,6 +8,8 @@
 #include "AMDGPUAsmUtils.h"
 #include "SIDefines.h"
 
+#include "llvm/ADT/StringRef.h"
+
 namespace llvm {
 namespace AMDGPU {
 namespace SendMsg {

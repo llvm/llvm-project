@@ -68,8 +68,8 @@ static unsigned getBitWidth(Type type) {
 static unsigned getLLVMTypeBitWidth(Type type) {
   auto vectorType = type.dyn_cast<LLVM::LLVMVectorType>();
   return (vectorType ? vectorType.getElementType() : type)
-      .cast<LLVM::LLVMIntegerType>()
-      .getBitWidth();
+      .cast<IntegerType>()
+      .getWidth();
 }
 
 /// Creates `IntegerAttribute` with all bits set for given type
@@ -213,7 +213,7 @@ static Type convertStructTypePacked(spirv::StructType type,
 static Value createI32ConstantOf(Location loc, PatternRewriter &rewriter,
                                  unsigned value) {
   return rewriter.create<LLVM::ConstantOp>(
-      loc, LLVM::LLVMIntegerType::get(rewriter.getContext(), 32),
+      loc, IntegerType::get(rewriter.getContext(), 32),
       rewriter.getIntegerAttr(rewriter.getI32Type(), value));
 }
 
@@ -661,7 +661,7 @@ public:
     //   int32_t executionMode;
     //   int32_t values[];          // optional values
     // };
-    auto llvmI32Type = LLVM::LLVMIntegerType::get(context, 32);
+    auto llvmI32Type = IntegerType::get(context, 32);
     SmallVector<Type, 2> fields;
     fields.push_back(llvmI32Type);
     ArrayAttr values = op.values();
@@ -828,7 +828,8 @@ public:
     rewriter.template replaceOpWithNewOp<LLVM::FCmpOp>(
         operation, dstType,
         rewriter.getI64IntegerAttr(static_cast<int64_t>(predicate)),
-        operation.operand1(), operation.operand2());
+        operation.operand1(), operation.operand2(),
+        LLVM::FMFAttr::get({}, operation.getContext()));
     return success();
   }
 };

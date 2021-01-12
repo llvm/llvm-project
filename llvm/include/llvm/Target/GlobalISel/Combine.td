@@ -296,6 +296,13 @@ def binop_left_to_zero: GICombineRule<
   (apply [{ return Helper.replaceSingleDefInstWithOperand(*${root}, 1); }])
 >;
 
+def urem_pow2_to_mask : GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_UREM):$root,
+    [{ return Helper.matchOperandIsKnownToBeAPowerOfTwo(*${root}, 2); }]),
+  (apply [{ return Helper.applySimplifyURemByPow2(*${root}); }])
+>;
+
 // Fold (x op 0) - > 0
 def binop_right_to_zero: GICombineRule<
   (defs root:$root),
@@ -560,7 +567,7 @@ def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
 def const_combines : GICombineGroup<[constant_fp_op, const_ptradd_to_i2p]>;
 
 def known_bits_simplifications : GICombineGroup<[
-  redundant_and, redundant_sext_inreg, redundant_or]>;
+  redundant_and, redundant_sext_inreg, redundant_or, urem_pow2_to_mask]>;
 
 def width_reduction_combines : GICombineGroup<[reduce_shl_of_extend]>;
 

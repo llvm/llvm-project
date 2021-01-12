@@ -91,7 +91,7 @@ public:
     /// Returns the identifier of a key for identified structs.
     StringRef getIdentifier() const {
       assert(isIdentified() &&
-             "non-identified struct key canont have an identifier");
+             "non-identified struct key cannot have an identifier");
       return name;
     }
 
@@ -219,7 +219,7 @@ public:
                                            key.isOpaque());
   }
 
-  /// Hook into the type unquing infrastructure.
+  /// Hook into the type uniquing infrastructure.
   bool operator==(const KeyTy &other) const { return getKey() == other; };
   static llvm::hash_code hashKey(const KeyTy &key) { return key.hashValue(); }
   static LLVMStructTypeStorage *construct(TypeStorageAllocator &allocator,
@@ -371,27 +371,6 @@ private:
   llvm::PointerIntPair<Type, 1, bool> returnTypeAndVariadic;
   /// Argument types.
   ArrayRef<Type> argumentTypes;
-};
-
-//===----------------------------------------------------------------------===//
-// LLVMIntegerTypeStorage.
-//===----------------------------------------------------------------------===//
-
-/// Storage type for LLVM dialect integer types. These are uniqued by bitwidth.
-struct LLVMIntegerTypeStorage : public TypeStorage {
-  using KeyTy = unsigned;
-
-  LLVMIntegerTypeStorage(unsigned width) : bitwidth(width) {}
-
-  static LLVMIntegerTypeStorage *construct(TypeStorageAllocator &allocator,
-                                           const KeyTy &key) {
-    return new (allocator.allocate<LLVMIntegerTypeStorage>())
-        LLVMIntegerTypeStorage(key);
-  }
-
-  bool operator==(const KeyTy &key) const { return key == bitwidth; }
-
-  unsigned bitwidth;
 };
 
 //===----------------------------------------------------------------------===//

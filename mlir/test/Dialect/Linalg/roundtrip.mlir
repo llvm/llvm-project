@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt -split-input-file %s | FileCheck %s
 
 // TODO: Re-enable LLVM lowering test after IndexedGenericOp is lowered.
 //
@@ -621,7 +621,7 @@ func @reshape_dynamic(%arg0: memref<?x?x?xf32>,
     memref<?x?x?xf32> into memref<?x?xf32>
   %r0 = linalg.reshape %0 [affine_map<(i, j, k) -> (i, j)>,
                            affine_map<(i, j, k) -> (k)>] :
-    memref<?x?xf32> into memref<?x?x?xf32>
+    memref<?x?xf32> into memref<?x4x?xf32>
   %1 = linalg.reshape %arg1 [affine_map<(i, j, k) -> (i, j)>,
                              affine_map<(i, j, k) -> (k)>] :
     memref<?x?x?xf32, offset : 0, strides : [?, ?, 1]> into
@@ -629,7 +629,7 @@ func @reshape_dynamic(%arg0: memref<?x?x?xf32>,
   %r1 = linalg.reshape %1 [affine_map<(i, j, k) -> (i, j)>,
                            affine_map<(i, j, k) -> (k)>] :
     memref<?x?xf32, offset : 0, strides : [?, 1]> into
-    memref<?x?x?xf32, offset : 0, strides : [?, ?, 1]>
+    memref<?x4x?xf32, offset : 0, strides : [?, ?, 1]>
   %2 = linalg.reshape %arg2 [affine_map<(i, j, k) -> (i, j)>,
                              affine_map<(i, j, k) -> (k)>] :
     memref<?x?x?xf32, offset : ?, strides : [?, ?, 1]> into
@@ -637,7 +637,7 @@ func @reshape_dynamic(%arg0: memref<?x?x?xf32>,
   %r2 = linalg.reshape %2 [affine_map<(i, j, k) -> (i, j)>,
                            affine_map<(i, j, k) -> (k)>] :
     memref<?x?xf32, offset : ?, strides : [?, 1]> into
-    memref<?x?x?xf32, offset : ?, strides : [?, ?, 1]>
+    memref<?x4x?xf32, offset : ?, strides : [?, ?, 1]>
   return
 }
 
@@ -648,15 +648,15 @@ func @reshape_dynamic(%arg0: memref<?x?x?xf32>,
 //       CHECK:   linalg.reshape {{.*}} [#[[$reshapeD01]], #[[$reshapeD2]]]
 //  CHECK-SAME:     memref<?x?x?xf32> into memref<?x?xf32>
 //       CHECK:   linalg.reshape {{.*}} [#[[$reshapeD01]], #[[$reshapeD2]]]
-//  CHECK-SAME:     memref<?x?xf32> into memref<?x?x?xf32>
+//  CHECK-SAME:     memref<?x?xf32> into memref<?x4x?xf32>
 //       CHECK:   linalg.reshape {{.*}} [#[[$reshapeD01]], #[[$reshapeD2]]]
 //  CHECK-SAME:     memref<?x?x?xf32, #[[$strided3DOFF0]]> into memref<?x?xf32, #[[$strided2DOFF0]]>
 //       CHECK:   linalg.reshape {{.*}} [#[[$reshapeD01]], #[[$reshapeD2]]]
-//  CHECK-SAME:     memref<?x?xf32, #[[$strided2DOFF0]]> into memref<?x?x?xf32, #[[$strided3DOFF0]]>
+//  CHECK-SAME:     memref<?x?xf32, #[[$strided2DOFF0]]> into memref<?x4x?xf32, #[[$strided3DOFF0]]>
 //       CHECK:   linalg.reshape {{.*}} [#[[$reshapeD01]], #[[$reshapeD2]]]
 //  CHECK-SAME:     memref<?x?x?xf32, #[[$strided3D]]> into memref<?x?xf32, #[[$strided2D]]>
 //       CHECK:   linalg.reshape {{.*}} [#[[$reshapeD01]], #[[$reshapeD2]]]
-//  CHECK-SAME:     memref<?x?xf32, #[[$strided2D]]> into memref<?x?x?xf32, #[[$strided3D]]>
+//  CHECK-SAME:     memref<?x?xf32, #[[$strided2D]]> into memref<?x4x?xf32, #[[$strided3D]]>
 
 func @named_ops(%a3: memref<?x?x?xf32>, %b3: memref<?x?x?xf32>, %c3: memref<?x?x?xf32>,
                 %ta3: tensor<?x?x?xf32>, %tb3: tensor<?x?x?xf32>, %tc3: tensor<?x?x?xf32>)
@@ -720,27 +720,36 @@ func @init_tensor(%arg0 : index, %arg1 : index)
 
 // -----
 
-func @init_tensor_err(%arg0 : index, %arg1 : index)
+func @legal_collapsing_reshape_dynamic_tensor
+  (%arg0: tensor<?x?x?x4x?xf32>) -> tensor<?x?x?xf32>
 {
-  // expected-error @+1 {{specified type 'tensor<4x?x?x5xf32>' does not match the inferred type 'tensor<4x5x?x?xf32>'}}
-  %1 = linalg.init_tensor [4, 5, %arg0, %arg1] : tensor<4x?x?x5xf32>
-  return
+  %0 = linalg.tensor_reshape %arg0
+    [affine_map<(d0, d1, d2, d3, d4) -> (d0)>,
+     affine_map<(d0, d1, d2, d3, d4) -> (d1)>,
+     affine_map<(d0, d1, d2, d3, d4) -> (d2, d3, d4)>] :
+    tensor<?x?x?x4x?xf32> into tensor<?x?x?xf32>
+  return %0 : tensor<?x?x?xf32>
 }
+// CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1, d2, d3, d4) -> (d0)>
+// CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1, d2, d3, d4) -> (d1)>
+// CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0, d1, d2, d3, d4) -> (d2, d3, d4)>
+//     CHECK: func @legal_collapsing_reshape_dynamic_tensor
+//     CHECK:   linalg.tensor_reshape %{{.+}} [#[[MAP0]], #[[MAP1]], #[[MAP2]]]
 
 // -----
 
-func @init_tensor_err(%arg0 : index)
+func @legal_collapsing_reshape_dynamic_memref
+  (%arg0: memref<?x?x?x4x?xf32>) -> memref<?x?x?xf32>
 {
-  // expected-error @+1 {{expected 4 sizes values}}
-  %1 = linalg.init_tensor [4, 5, %arg0] : tensor<4x?x?x5xf32>
-  return
+  %0 = linalg.reshape %arg0
+    [affine_map<(d0, d1, d2, d3, d4) -> (d0)>,
+     affine_map<(d0, d1, d2, d3, d4) -> (d1)>,
+     affine_map<(d0, d1, d2, d3, d4) -> (d2, d3, d4)>] :
+    memref<?x?x?x4x?xf32> into memref<?x?x?xf32>
+  return %0 : memref<?x?x?xf32>
 }
-
-// -----
-
-func @init_tensor_err(%arg0 : index)
-{
-  // expected-error @+1 {{expected 2 dynamic sizes values}}
-  %1 = "linalg.init_tensor"(%arg0) {static_sizes = [4, -1, -1, 5]} : (index) -> tensor<4x?x?x5xf32>
-  return
-}
+// CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1, d2, d3, d4) -> (d0)>
+// CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1, d2, d3, d4) -> (d1)>
+// CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0, d1, d2, d3, d4) -> (d2, d3, d4)>
+//     CHECK: func @legal_collapsing_reshape_dynamic_memref
+//     CHECK:   linalg.reshape %{{.+}} [#[[MAP0]], #[[MAP1]], #[[MAP2]]]

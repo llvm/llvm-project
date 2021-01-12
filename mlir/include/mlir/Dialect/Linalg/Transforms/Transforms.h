@@ -267,16 +267,28 @@ void vectorizeLinalgOp(OpBuilder &builder, Operation *op);
 
 /// Emits a loop nest of `LoopTy` with the proper body for `op`.
 template <typename LoopTy>
-Optional<LinalgLoops> linalgLowerOpToLoops(OpBuilder &builder, Operation *op);
+Optional<LinalgLoops>
+linalgLowerOpToLoops(OpBuilder &builder, Operation *op,
+                     ArrayRef<unsigned> interchangeVector = {});
 
-/// Emits a loop nest of `scf.for` with the proper body for `op`.
-LogicalResult linalgOpToLoops(OpBuilder &builder, Operation *op);
+/// Emits a loop nest of `scf.for` with the proper body for `op`. The generated
+/// loop nest will follow the `interchangeVector`-permutated iterator order. If
+/// `interchangeVector` is empty, then no permutation happens.
+LogicalResult linalgOpToLoops(OpBuilder &builder, Operation *op,
+                              ArrayRef<unsigned> interchangeVector = {});
 
-/// Emits a loop nest of `scf.parallel` with the proper body for `op`.
-LogicalResult linalgOpToParallelLoops(OpBuilder &builder, Operation *op);
+/// Emits a loop nest of `scf.parallel` with the proper body for `op`. The
+/// generated loop nest will follow the `interchangeVector`-permutated
+// iterator order. If `interchangeVector` is empty, then no permutation happens.
+LogicalResult
+linalgOpToParallelLoops(OpBuilder &builder, Operation *op,
+                        ArrayRef<unsigned> interchangeVector = {});
 
-/// Emits a loop nest of `affine.for` with the proper body for `op`.
-LogicalResult linalgOpToAffineLoops(OpBuilder &builder, Operation *op);
+/// Emits a loop nest of `affine.for` with the proper body for `op`. The
+/// generated loop nest will follow the `interchangeVector`-permutated
+// iterator order. If `interchangeVector` is empty, then no permutation happens.
+LogicalResult linalgOpToAffineLoops(OpBuilder &builder, Operation *op,
+                                    ArrayRef<unsigned> interchangeVector = {});
 
 //===----------------------------------------------------------------------===//
 // Preconditions that ensure the corresponding transformation succeeds and can
@@ -587,13 +599,17 @@ enum class LinalgLoweringType {
   AffineLoops = 2,
   ParallelLoops = 3
 };
+
 template <typename OpTy>
 struct LinalgLoweringPattern : public RewritePattern {
   LinalgLoweringPattern(MLIRContext *context, LinalgLoweringType loweringType,
                         LinalgMarker marker = LinalgMarker(),
+                        ArrayRef<unsigned> interchangeVector = {},
                         PatternBenefit benefit = 1)
       : RewritePattern(OpTy::getOperationName(), {}, benefit, context),
-        marker(marker), loweringType(loweringType) {}
+        marker(marker), loweringType(loweringType),
+        interchangeVector(interchangeVector.begin(), interchangeVector.end()) {}
+
   // TODO: Move implementation to .cpp once named ops are auto-generated.
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
@@ -603,18 +619,24 @@ struct LinalgLoweringPattern : public RewritePattern {
     if (failed(marker.checkAndNotify(rewriter, linalgOp)))
       return failure();
 
-    if (loweringType == LinalgLoweringType::LibraryCall) {
+    switch (loweringType) {
+    case LinalgLoweringType::LibraryCall:
       // TODO: Move lowering to library calls here.
       return failure();
-    } else if (loweringType == LinalgLoweringType::Loops) {
-      if (failed(linalgOpToLoops(rewriter, op)))
+    case LinalgLoweringType::Loops:
+      if (failed(linalgOpToLoops(rewriter, op, interchangeVector)))
         return failure();
-    } else if (loweringType == LinalgLoweringType::AffineLoops) {
-      if (failed(linalgOpToAffineLoops(rewriter, op)))
+      break;
+    case LinalgLoweringType::AffineLoops:
+      if (failed(linalgOpToAffineLoops(rewriter, op, interchangeVector)))
         return failure();
-    } else if (failed(linalgOpToParallelLoops(rewriter, op))) {
-      return failure();
+      break;
+    case LinalgLoweringType::ParallelLoops:
+      if (failed(linalgOpToParallelLoops(rewriter, op, interchangeVector)))
+        return failure();
+      break;
     }
+
     rewriter.eraseOp(op);
     return success();
   }
@@ -625,6 +647,8 @@ private:
   /// Controls whether the pattern lowers to library calls, scf.for, affine.for
   /// or scf.parallel.
   LinalgLoweringType loweringType;
+  /// Permutated loop order in the generated loop nest.
+  SmallVector<unsigned, 4> interchangeVector;
 };
 
 /// Linalg generalization patterns

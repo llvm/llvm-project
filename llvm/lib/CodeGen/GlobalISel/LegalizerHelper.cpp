@@ -962,10 +962,15 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
 
     Register TmpReg = MRI.createGenericVirtualRegister(NarrowTy);
     auto &MMO = **MI.memoperands_begin();
-    if (MMO.getSizeInBits() == NarrowSize) {
+    unsigned MemSize = MMO.getSizeInBits();
+
+    if (MemSize == NarrowSize) {
       MIRBuilder.buildLoad(TmpReg, PtrReg, MMO);
-    } else {
+    } else if (MemSize < NarrowSize) {
       MIRBuilder.buildLoadInstr(MI.getOpcode(), TmpReg, PtrReg, MMO);
+    } else if (MemSize > NarrowSize) {
+      // FIXME: Need to split the load.
+      return UnableToLegalize;
     }
 
     if (ZExt)

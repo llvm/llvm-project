@@ -11,7 +11,7 @@ func @return() {
 // CHECK: llvm.br
 // CHECK: llvm.cond_br
 // CHECK: llvm.return
-func @control_flow(%cond : !llvm.i1) {
+func @control_flow(%cond : i1) {
   llvm.br ^bb1
 ^bb1:
   llvm.cond_br %cond, ^bb2, ^bb1

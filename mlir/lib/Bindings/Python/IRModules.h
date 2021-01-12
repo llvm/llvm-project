@@ -13,6 +13,7 @@
 
 #include "PybindUtils.h"
 
+#include "mlir-c/AffineExpr.h"
 #include "mlir-c/AffineMap.h"
 #include "mlir-c/IR.h"
 #include "llvm/ADT/DenseMap.h"
@@ -666,6 +667,34 @@ public:
 private:
   PyOperationRef parentOperation;
   MlirValue value;
+};
+
+/// Wrapper around MlirAffineExpr. Affine expressions are owned by the context.
+class PyAffineExpr : public BaseContextObject {
+public:
+  PyAffineExpr(PyMlirContextRef contextRef, MlirAffineExpr affineExpr)
+      : BaseContextObject(std::move(contextRef)), affineExpr(affineExpr) {}
+  bool operator==(const PyAffineExpr &other);
+  operator MlirAffineExpr() const { return affineExpr; }
+  MlirAffineExpr get() const { return affineExpr; }
+
+  /// Gets a capsule wrapping the void* within the MlirAffineExpr.
+  pybind11::object getCapsule();
+
+  /// Creates a PyAffineExpr from the MlirAffineExpr wrapped by a capsule.
+  /// Note that PyAffineExpr instances are uniqued, so the returned object
+  /// may be a pre-existing object. Ownership of the underlying MlirAffineExpr
+  /// is taken by calling this function.
+  static PyAffineExpr createFromCapsule(pybind11::object capsule);
+
+  PyAffineExpr add(const PyAffineExpr &other) const;
+  PyAffineExpr mul(const PyAffineExpr &other) const;
+  PyAffineExpr floorDiv(const PyAffineExpr &other) const;
+  PyAffineExpr ceilDiv(const PyAffineExpr &other) const;
+  PyAffineExpr mod(const PyAffineExpr &other) const;
+
+private:
+  MlirAffineExpr affineExpr;
 };
 
 class PyAffineMap : public BaseContextObject {

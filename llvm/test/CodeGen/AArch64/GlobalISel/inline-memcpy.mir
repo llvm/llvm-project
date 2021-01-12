@@ -256,9 +256,9 @@ body:             |
     ; CHECK: G_STORE [[LOAD7]](s128), [[GEP13]](p0) :: (store 16 into %ir.0 + 112, align 4)
     ; CHECK: [[C7:%[0-9]+]]:_(s64) = G_CONSTANT i64 127
     ; CHECK: [[GEP14:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C7]](s64)
-    ; CHECK: [[LOAD8:%[0-9]+]]:_(s128) = G_LOAD [[GEP14]](p0) :: (load 16 from %ir.1 + 127, align 4)
+    ; CHECK: [[LOAD8:%[0-9]+]]:_(s128) = G_LOAD [[GEP14]](p0) :: (load 16 from %ir.1 + 127, align 1, basealign 4)
     ; CHECK: [[GEP15:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C7]](s64)
-    ; CHECK: G_STORE [[LOAD8]](s128), [[GEP15]](p0) :: (store 16 into %ir.0 + 127, align 4)
+    ; CHECK: G_STORE [[LOAD8]](s128), [[GEP15]](p0) :: (store 16 into %ir.0 + 127, align 1, basealign 4)
     ; CHECK: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1

@@ -69,7 +69,8 @@ def SPV_CompositeConstructOp : SPV_Op<"CompositeConstruct", [NoSideEffect]> {
 
 // -----
 
-def SPV_CompositeExtractOp : SPV_Op<"CompositeExtract", [NoSideEffect]> {
+def SPV_CompositeExtractOp : SPV_Op<"CompositeExtract",
+                                    [NoSideEffect, UsableInSpecConstantOp]> {
   let summary = "Extract a part of a composite object.";
 
   let description = [{
@@ -119,7 +120,8 @@ def SPV_CompositeExtractOp : SPV_Op<"CompositeExtract", [NoSideEffect]> {
 
 // -----
 
-def SPV_CompositeInsertOp : SPV_Op<"CompositeInsert", [NoSideEffect]> {
+def SPV_CompositeInsertOp : SPV_Op<"CompositeInsert",
+                                   [NoSideEffect, UsableInSpecConstantOp]> {
   let summary = [{
     Make a copy of a composite object, while modifying one part of it.
   }];

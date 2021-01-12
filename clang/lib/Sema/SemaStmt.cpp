@@ -672,8 +672,7 @@ static bool CmpCaseVals(const std::pair<llvm::APSInt, CaseStmt*>& lhs,
     return true;
 
   if (lhs.first == rhs.first &&
-      lhs.second->getCaseLoc().getRawEncoding()
-       < rhs.second->getCaseLoc().getRawEncoding())
+      lhs.second->getCaseLoc() < rhs.second->getCaseLoc())
     return true;
   return false;
 }

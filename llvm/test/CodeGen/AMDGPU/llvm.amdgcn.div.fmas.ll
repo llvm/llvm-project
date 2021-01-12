@@ -114,9 +114,9 @@ define amdgpu_kernel void @test_div_fmas_f32_imm_true_cond_to_vcc(float addrspac
 }
 
 ; GCN-LABEL: {{^}}test_div_fmas_f32_logical_cond_to_vcc:
-; SI-DAG: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
-; SI-DAG: buffer_load_dword [[B:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4{{$}}
-; SI-DAG: buffer_load_dword [[C:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
+; SI-DAG: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 glc{{$}}
+; SI-DAG: buffer_load_dword [[B:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4 glc{{$}}
+; SI-DAG: buffer_load_dword [[C:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8 glc{{$}}
 
 ; SI-DAG: v_cmp_eq_u32_e32 [[CMP0:vcc]], 0, v{{[0-9]+}}
 ; SI-DAG: v_cmp_ne_u32_e64 [[CMP1:s\[[0-9]+:[0-9]+\]]], s{{[0-9]+}}, 0{{$}}

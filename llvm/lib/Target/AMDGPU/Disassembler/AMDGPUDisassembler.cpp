@@ -17,36 +17,16 @@
 // ToDo: What to do with instruction suffixes (v_mov_b32 vs v_mov_b32_e32)?
 
 #include "Disassembler/AMDGPUDisassembler.h"
-#include "AMDGPU.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "SIDefines.h"
 #include "TargetInfo/AMDGPUTargetInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm-c/Disassembler.h"
-#include "llvm/ADT/APInt.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Twine.h"
-#include "llvm/BinaryFormat/ELF.h"
+#include "llvm-c/DisassemblerTypes.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixedLenDisassembler.h"
-#include "llvm/MC/MCInst.h"
-#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
-#include "llvm/Support/Endian.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TargetRegistry.h"
-#include "llvm/Support/raw_ostream.h"
-#include <algorithm>
-#include <cassert>
-#include <cstddef>
-#include <cstdint>
-#include <iterator>
-#include <tuple>
-#include <vector>
 
 using namespace llvm;
 
@@ -1628,11 +1608,10 @@ bool AMDGPUSymbolizer::tryAddingSymbolicOperand(MCInst &Inst,
   if (!Symbols)
     return false;
 
-  auto Result = std::find_if(Symbols->begin(), Symbols->end(),
-                             [Value](const SymbolInfoTy& Val) {
-                                return Val.Addr == static_cast<uint64_t>(Value)
-                                    && Val.Type == ELF::STT_NOTYPE;
-                             });
+  auto Result = llvm::find_if(*Symbols, [Value](const SymbolInfoTy &Val) {
+    return Val.Addr == static_cast<uint64_t>(Value) &&
+           Val.Type == ELF::STT_NOTYPE;
+  });
   if (Result != Symbols->end()) {
     auto *Sym = Ctx.getOrCreateSymbol(Result->Name);
     const auto *Add = MCSymbolRefExpr::create(Sym, Ctx);

@@ -182,6 +182,7 @@ class VOP3_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VOPProf
     " " # !if(Features.HasOpSel,
               getAsmVOP3OpSel<NumSrcArgs,
                               HasIntClamp,
+                              P.HasOMod,
                               HasSrc0FloatMods,
                               HasSrc1FloatMods,
                               HasSrc2FloatMods>.ret,

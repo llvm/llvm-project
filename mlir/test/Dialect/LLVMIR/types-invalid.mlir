@@ -76,8 +76,8 @@ func @struct_literal_opaque() {
 // -----
 
 func @unexpected_type() {
-  // expected-error @+1 {{unexpected type, expected i* or keyword}}
-  "some.op"() : () -> !llvm.f32
+  // expected-error @+1 {{unexpected type, expected keyword}}
+  "some.op"() : () -> !llvm.tensor<*xf32>
 }
 
 // -----
@@ -113,14 +113,14 @@ func @identified_struct_with_void() {
 
 func @dynamic_vector() {
   // expected-error @+1 {{expected '? x <integer> x <type>' or '<integer> x <type>'}}
-  "some.op"() : () -> !llvm.vec<? x float>
+  "some.op"() : () -> !llvm.vec<? x f32>
 }
 
 // -----
 
 func @dynamic_scalable_vector() {
   // expected-error @+1 {{expected '? x <integer> x <type>' or '<integer> x <type>'}}
-  "some.op"() : () -> !llvm.vec<? x ? x float>
+  "some.op"() : () -> !llvm.vec<? x ? x f32>
 }
 
 // -----
@@ -150,3 +150,38 @@ func @scalable_void_vector() {
   // expected-error @+1 {{invalid vector element type}}
   "some.op"() : () -> !llvm.vec<? x 4 x void>
 }
+
+// -----
+
+// expected-warning @+1 {{deprecated syntax, drop '!llvm.' for integers}}
+func private @deprecated_int() -> !llvm.i32
+
+// -----
+
+// expected-error @+1 {{unexpected type, expected keyword}}
+func private @unexpected_type() -> !llvm.tensor<*xf32>
+
+// -----
+
+// expected-warning @+1 {{deprecated syntax, use bf16 instead}}
+func private @deprecated_bfloat() -> !llvm.bfloat
+
+// -----
+
+// expected-warning @+1 {{deprecated syntax, use f16 instead}}
+func private @deprecated_half() -> !llvm.half
+
+// -----
+
+// expected-warning @+1 {{deprecated syntax, use f32 instead}}
+func private @deprecated_float() -> !llvm.float
+
+// -----
+
+// expected-warning @+1 {{deprecated syntax, use f64 instead}}
+func private @deprecated_double() -> !llvm.double
+
+// -----
+
+// expected-error @+1 {{unexpected type, expected keyword}}
+func private @unexpected_type() -> !llvm.f32

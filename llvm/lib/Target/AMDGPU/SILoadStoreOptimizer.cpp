@@ -59,32 +59,9 @@
 
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "SIInstrInfo.h"
-#include "SIRegisterInfo.h"
-#include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/IR/DebugLoc.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/MathExtras.h"
-#include "llvm/Support/raw_ostream.h"
-#include <algorithm>
-#include <cassert>
-#include <cstdlib>
-#include <iterator>
-#include <utility>
 
 using namespace llvm;
 

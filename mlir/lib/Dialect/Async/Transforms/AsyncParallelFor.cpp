@@ -185,7 +185,7 @@ AsyncParallelForRewrite::matchAndRewrite(scf::ParallelOp op,
     return [&, loopIdx](OpBuilder &b, Location loc, Value iv, ValueRange args) {
       blockInductionVars[loopIdx] = iv;
 
-      // Continute building async loop nest.
+      // Continue building async loop nest.
       if (loopIdx < op.getNumLoops() - 1) {
         b.create<scf::ForOp>(
             loc, blockLowerBounds[loopIdx + 1], blockUpperBounds[loopIdx + 1],

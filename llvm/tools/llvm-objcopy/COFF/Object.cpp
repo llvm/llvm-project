@@ -89,7 +89,7 @@ const Section *Object::findSection(ssize_t UniqueId) const {
 void Object::removeSections(function_ref<bool(const Section &)> ToRemove) {
   DenseSet<ssize_t> AssociatedSections;
   auto RemoveAssociated = [&AssociatedSections](const Section &Sec) {
-    return AssociatedSections.count(Sec.UniqueId) == 1;
+    return AssociatedSections.contains(Sec.UniqueId);
   };
   do {
     DenseSet<ssize_t> RemovedSections;
@@ -109,7 +109,7 @@ void Object::removeSections(function_ref<bool(const Section &)> ToRemove) {
           // leave them dangling).
           if (RemovedSections.count(Sym.AssociativeComdatTargetSectionId) == 1)
             AssociatedSections.insert(Sym.TargetSectionId);
-          return RemovedSections.count(Sym.TargetSectionId) == 1;
+          return RemovedSections.contains(Sym.TargetSectionId);
         });
     ToRemove = RemoveAssociated;
   } while (!AssociatedSections.empty());

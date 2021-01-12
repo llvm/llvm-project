@@ -324,8 +324,7 @@ class CGDebugInfo {
   /// If the C++ class has vtable info then insert appropriate debug
   /// info entry in EltTys vector.
   void CollectVTableInfo(const CXXRecordDecl *Decl, llvm::DIFile *F,
-                         SmallVectorImpl<llvm::Metadata *> &EltTys,
-                         llvm::DICompositeType *RecordTy);
+                         SmallVectorImpl<llvm::Metadata *> &EltTys);
   /// @}
 
   /// Create a new lexical block node and push it on the stack.
@@ -413,10 +412,9 @@ public:
   /// start of a new function.
   /// \param Loc       The location of the function header.
   /// \param ScopeLoc  The location of the function body.
-  void EmitFunctionStart(GlobalDecl GD, SourceLocation Loc,
+  void emitFunctionStart(GlobalDecl GD, SourceLocation Loc,
                          SourceLocation ScopeLoc, QualType FnType,
-                         llvm::Function *Fn, bool CurFnIsThunk,
-                         CGBuilderTy &Builder);
+                         llvm::Function *Fn, bool CurFnIsThunk);
 
   /// Start a new scope for an inlined function.
   void EmitInlineFunctionStart(CGBuilderTy &Builder, GlobalDecl GD);
@@ -603,8 +601,7 @@ private:
 
   /// Get the type from the cache or create a new partial type if
   /// necessary.
-  llvm::DICompositeType *getOrCreateLimitedType(const RecordType *Ty,
-                                                llvm::DIFile *F);
+  llvm::DICompositeType *getOrCreateLimitedType(const RecordType *Ty);
 
   /// Create type metadata for a source language type.
   llvm::DIType *CreateTypeNode(QualType Ty, llvm::DIFile *Fg);

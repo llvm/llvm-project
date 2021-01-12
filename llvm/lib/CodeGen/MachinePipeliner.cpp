@@ -1595,12 +1595,12 @@ static bool computePath(SUnit *Cur, SetVector<SUnit *> &Path,
                         SmallPtrSet<SUnit *, 8> &Visited) {
   if (Cur->isBoundaryNode())
     return false;
-  if (Exclude.count(Cur) != 0)
+  if (Exclude.contains(Cur))
     return false;
-  if (DestNodes.count(Cur) != 0)
+  if (DestNodes.contains(Cur))
     return true;
   if (!Visited.insert(Cur).second)
-    return Path.count(Cur) != 0;
+    return Path.contains(Cur);
   bool FoundPath = false;
   for (auto &SI : Cur->Succs)
     FoundPath |= computePath(SI.getSUnit(), Path, DestNodes, Exclude, Visited);
@@ -1956,7 +1956,7 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
           for (const auto &I : maxHeight->Succs) {
             if (Nodes.count(I.getSUnit()) == 0)
               continue;
-            if (NodeOrder.count(I.getSUnit()) != 0)
+            if (NodeOrder.contains(I.getSUnit()))
               continue;
             if (ignoreDependence(I, false))
               continue;
@@ -1968,7 +1968,7 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
               continue;
             if (Nodes.count(I.getSUnit()) == 0)
               continue;
-            if (NodeOrder.count(I.getSUnit()) != 0)
+            if (NodeOrder.contains(I.getSUnit()))
               continue;
             R.insert(I.getSUnit());
           }
@@ -2007,7 +2007,7 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
           for (const auto &I : maxDepth->Preds) {
             if (Nodes.count(I.getSUnit()) == 0)
               continue;
-            if (NodeOrder.count(I.getSUnit()) != 0)
+            if (NodeOrder.contains(I.getSUnit()))
               continue;
             R.insert(I.getSUnit());
           }
@@ -2017,7 +2017,7 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
               continue;
             if (Nodes.count(I.getSUnit()) == 0)
               continue;
-            if (NodeOrder.count(I.getSUnit()) != 0)
+            if (NodeOrder.contains(I.getSUnit()))
               continue;
             R.insert(I.getSUnit());
           }

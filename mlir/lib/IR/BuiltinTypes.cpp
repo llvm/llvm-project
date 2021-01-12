@@ -31,14 +31,6 @@ using namespace mlir::detail;
 /// ComplexType
 //===----------------------------------------------------------------------===//
 
-ComplexType ComplexType::get(Type elementType) {
-  return Base::get(elementType.getContext(), elementType);
-}
-
-ComplexType ComplexType::getChecked(Location location, Type elementType) {
-  return Base::getChecked(location, elementType);
-}
-
 /// Verify the construction of an integer type.
 LogicalResult ComplexType::verifyConstructionInvariants(Location loc,
                                                         Type elementType) {
@@ -46,8 +38,6 @@ LogicalResult ComplexType::verifyConstructionInvariants(Location loc,
     return emitError(loc, "invalid element type for complex");
   return success();
 }
-
-Type ComplexType::getElementType() { return getImpl()->elementType; }
 
 //===----------------------------------------------------------------------===//
 // Integer Type
@@ -126,11 +116,6 @@ FloatType FloatType::scaleElementBitwidth(unsigned scale) {
 // FunctionType
 //===----------------------------------------------------------------------===//
 
-FunctionType FunctionType::get(MLIRContext *context, TypeRange inputs,
-                               TypeRange results) {
-  return Base::get(context, inputs, results);
-}
-
 unsigned FunctionType::getNumInputs() const { return getImpl()->numInputs; }
 
 ArrayRef<Type> FunctionType::getInputs() const {
@@ -188,24 +173,6 @@ FunctionType::getWithoutArgsAndResults(ArrayRef<unsigned> argIndices,
 //===----------------------------------------------------------------------===//
 // OpaqueType
 //===----------------------------------------------------------------------===//
-
-OpaqueType OpaqueType::get(MLIRContext *context, Identifier dialect,
-                           StringRef typeData) {
-  return Base::get(context, dialect, typeData);
-}
-
-OpaqueType OpaqueType::getChecked(Location location, Identifier dialect,
-                                  StringRef typeData) {
-  return Base::getChecked(location, dialect, typeData);
-}
-
-/// Returns the dialect namespace of the opaque type.
-Identifier OpaqueType::getDialectNamespace() const {
-  return getImpl()->dialectNamespace;
-}
-
-/// Returns the raw type data of the opaque type.
-StringRef OpaqueType::getTypeData() const { return getImpl()->typeData; }
 
 /// Verify the construction of an opaque type.
 LogicalResult OpaqueType::verifyConstructionInvariants(Location loc,
@@ -693,15 +660,6 @@ LogicalResult mlir::getStridesAndOffset(MemRefType t,
 /// TupleType
 //===----------------------------------------------------------------------===//
 
-/// Get or create a new TupleType with the provided element types. Assumes the
-/// arguments define a well-formed type.
-TupleType TupleType::get(MLIRContext *context, TypeRange elementTypes) {
-  return Base::get(context, elementTypes);
-}
-
-/// Get or create an empty tuple type.
-TupleType TupleType::get(MLIRContext *context) { return get(context, {}); }
-
 /// Return the elements types for this tuple.
 ArrayRef<Type> TupleType::getTypes() const { return getImpl()->getTypes(); }
 
@@ -720,6 +678,10 @@ void TupleType::getFlattenedTypes(SmallVectorImpl<Type> &types) {
 
 /// Return the number of element types.
 size_t TupleType::size() const { return getImpl()->size(); }
+
+//===----------------------------------------------------------------------===//
+// Type Utilities
+//===----------------------------------------------------------------------===//
 
 AffineMap mlir::makeStridedLinearLayoutMap(ArrayRef<int64_t> strides,
                                            int64_t offset,

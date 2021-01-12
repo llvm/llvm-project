@@ -70,7 +70,7 @@ const int var;
 #pragma omp end declare variant
 #pragma omp begin declare variant match(implementation={vendor(score(5): ibm), kind(cpu)}) // expected-warning {{the context selector 'kind' is not valid for the context set 'implementation'; selector ignored}} expected-note {{the context selector 'kind' can be nested in the context set 'device'; try 'match(device={kind(property)})'}} expected-note {{the ignored selector spans until here}}
 #pragma omp end declare variant
-#pragma omp begin declare variant match(device={xxx}) // expected-warning {{'xxx' is not a valid context selector for the context set 'device'; selector ignored}} expected-note {{context selector options are: 'kind' 'isa' 'arch'}} expected-note {{the ignored selector spans until here}}
+#pragma omp begin declare variant match(device={xxx}) // expected-warning {{'xxx' is not a valid context selector for the context set 'device'; selector ignored}} expected-note {{context selector options are: 'kind' 'arch' 'isa'}} expected-note {{the ignored selector spans until here}}
 #pragma omp end declare variant
 #pragma omp begin declare variant match(device={kind}) // expected-warning {{the context selector 'kind' in context set 'device' requires a context property defined in parentheses; selector ignored}} expected-note {{the ignored selector spans until here}}
 #pragma omp end declare variant

@@ -17,6 +17,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
@@ -32,21 +33,13 @@ static cl::opt<unsigned> NVVMIntrRangeSM("nvvm-intr-range-sm", cl::init(20),
 namespace {
 class NVVMIntrRange : public FunctionPass {
  private:
-   struct {
-     unsigned x, y, z;
-   } MaxBlockSize, MaxGridSize;
+   unsigned SmVersion;
 
  public:
    static char ID;
    NVVMIntrRange() : NVVMIntrRange(NVVMIntrRangeSM) {}
-   NVVMIntrRange(unsigned int SmVersion) : FunctionPass(ID) {
-     MaxBlockSize.x = 1024;
-     MaxBlockSize.y = 1024;
-     MaxBlockSize.z = 64;
-
-     MaxGridSize.x = SmVersion >= 30 ? 0x7fffffff : 0xffff;
-     MaxGridSize.y = 0xffff;
-     MaxGridSize.z = 0xffff;
+   NVVMIntrRange(unsigned int SmVersion)
+       : FunctionPass(ID), SmVersion(SmVersion) {
 
      initializeNVVMIntrRangePass(*PassRegistry::getPassRegistry());
    }
@@ -79,7 +72,18 @@ static bool addRangeMetadata(uint64_t Low, uint64_t High, CallInst *C) {
   return true;
 }
 
-bool NVVMIntrRange::runOnFunction(Function &F) {
+static bool runNVVMIntrRange(Function &F, unsigned SmVersion) {
+  struct {
+    unsigned x, y, z;
+  } MaxBlockSize, MaxGridSize;
+  MaxBlockSize.x = 1024;
+  MaxBlockSize.y = 1024;
+  MaxBlockSize.z = 64;
+
+  MaxGridSize.x = SmVersion >= 30 ? 0x7fffffff : 0xffff;
+  MaxGridSize.y = 0xffff;
+  MaxGridSize.z = 0xffff;
+
   // Go through the calls in this function.
   bool Changed = false;
   for (Instruction &I : instructions(F)) {
@@ -150,4 +154,16 @@ bool NVVMIntrRange::runOnFunction(Function &F) {
   }
 
   return Changed;
+}
+
+bool NVVMIntrRange::runOnFunction(Function &F) {
+  return runNVVMIntrRange(F, SmVersion);
+}
+
+NVVMIntrRangePass::NVVMIntrRangePass() : NVVMIntrRangePass(NVVMIntrRangeSM) {}
+
+PreservedAnalyses NVVMIntrRangePass::run(Function &F,
+                                         FunctionAnalysisManager &AM) {
+  return runNVVMIntrRange(F, SmVersion) ? PreservedAnalyses::none()
+                                        : PreservedAnalyses::all();
 }

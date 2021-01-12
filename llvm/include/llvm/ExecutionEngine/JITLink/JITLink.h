@@ -1223,15 +1223,31 @@ struct PassConfiguration {
   /// Notable use cases: Building GOT, stub, and TLV symbols.
   LinkGraphPassList PostPrunePasses;
 
+  /// Post-allocation passes.
+  ///
+  /// These passes are called on the graph after memory has been allocated and
+  /// defined nodes have been assigned their final addresses, but before the
+  /// context has been notified of these addresses. At this point externals
+  /// have not been resolved, and symbol content has not yet been copied into
+  /// working memory.
+  ///
+  /// Notable use cases: Setting up data structures associated with addresses
+  /// of defined symbols (e.g. a mapping of __dso_handle to JITDylib* for the
+  /// JIT runtime) -- using a PostAllocationPass for this ensures that the
+  /// data structures are in-place before any query for resolved symbols
+  /// can complete.
+  LinkGraphPassList PostAllocationPasses;
+
   /// Pre-fixup passes.
   ///
   /// These passes are called on the graph after memory has been allocated,
-  /// content copied into working memory, and nodes have been assigned their
-  /// final addresses.
+  /// content copied into working memory, and all nodes (including externals)
+  /// have been assigned their final addresses, but before any fixups have been
+  /// applied.
   ///
   /// Notable use cases: Late link-time optimizations like GOT and stub
   /// elimination.
-  LinkGraphPassList PostAllocationPasses;
+  LinkGraphPassList PreFixupPasses;
 
   /// Post-fixup passes.
   ///

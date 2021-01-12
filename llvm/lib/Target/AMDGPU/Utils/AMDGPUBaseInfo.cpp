@@ -9,45 +9,23 @@
 #include "AMDGPUBaseInfo.h"
 #include "AMDGPU.h"
 #include "AMDGPUAsmUtils.h"
-#include "AMDGPUTargetTransformInfo.h"
-#include "SIDefines.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
+#include "AMDGPUSubtarget.h"
+#include "AMDKernelCodeT.h"
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/IR/Attributes.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
-#include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
-#include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCInstrDesc.h"
-#include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCRegisterInfo.h"
-#include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/SubtargetFeature.h"
-#include "llvm/Support/Casting.h"
+#include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
-#include <algorithm>
-#include <cassert>
-#include <cstdint>
-#include <cstring>
-#include <utility>
-
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "llvm/Support/TargetParser.h"
 
 #define GET_INSTRINFO_NAMED_OPS
 #define GET_INSTRMAP_INFO
 #include "AMDGPUGenInstrInfo.inc"
-#undef GET_INSTRMAP_INFO
-#undef GET_INSTRINFO_NAMED_OPS
 
 static llvm::cl::opt<unsigned> AmdhsaCodeObjectVersion(
   "amdhsa-code-object-version", llvm::cl::Hidden,

@@ -718,9 +718,123 @@ struct ReplaceDimOfInitTensorOp : public OpRewritePattern<DimOp> {
 };
 } // namespace
 
+static Value getCollapsedInitTensor(OpBuilder &builder,
+                                    TensorReshapeOp reshapeOp) {
+  Location loc = reshapeOp.getLoc();
+  SmallVector<Value, 4> dynamicShapes;
+  SmallVector<int64_t, 4> staticShapes;
+  auto reassociation = reshapeOp.getReassociationMaps();
+  Value src = reshapeOp.src();
+  RankedTensorType srcType = reshapeOp.getSrcType();
+  ArrayRef<int64_t> srcShape = srcType.getShape();
+  for (auto map : reassociation) {
+    Value linearizedDynamicDim = nullptr;
+    int64_t linearizedStaticDim = 1;
+    for (unsigned i : llvm::map_range(map.getResults(), [](AffineExpr e) {
+           return e.cast<AffineDimExpr>().getPosition();
+         })) {
+      if (ShapedType::isDynamic(srcShape[i])) {
+        Value shapeVal = builder.create<DimOp>(loc, src, i);
+        if (linearizedDynamicDim) {
+          linearizedDynamicDim =
+              builder.create<MulIOp>(loc, linearizedDynamicDim, shapeVal);
+        } else {
+          linearizedDynamicDim = shapeVal;
+        }
+      } else {
+        linearizedStaticDim *= srcShape[i];
+      }
+    }
+    if (linearizedDynamicDim) {
+      if (linearizedStaticDim != 1) {
+        linearizedDynamicDim = builder.create<MulIOp>(
+            loc, linearizedDynamicDim,
+            builder.create<ConstantIndexOp>(loc, linearizedStaticDim));
+      }
+      dynamicShapes.push_back(linearizedDynamicDim);
+      staticShapes.push_back(ShapedType::kDynamicSize);
+    } else {
+      staticShapes.push_back(linearizedStaticDim);
+    }
+  }
+  return builder.create<InitTensorOp>(loc, dynamicShapes, staticShapes,
+                                      srcType.getElementType());
+}
+
+static Value getExpandedInitTensor(OpBuilder &builder,
+                                   TensorReshapeOp reshapeOp) {
+  SmallVector<Value, 4> dynamicShapes;
+  SmallVector<int64_t, 4> staticShapes;
+  auto reassociation = reshapeOp.getReassociationMaps();
+  Value src = reshapeOp.src();
+  RankedTensorType srcType = reshapeOp.getSrcType();
+  ArrayRef<int64_t> srcShape = srcType.getShape();
+  ArrayRef<int64_t> dstShape = reshapeOp.getResultType().getShape();
+  Location loc = reshapeOp.getLoc();
+  for (auto map : enumerate(reassociation)) {
+    int64_t linearizedStaticDim = 1;
+    bool hasDynamic = false;
+    for (unsigned i :
+         llvm::map_range(map.value().getResults(), [](AffineExpr e) {
+           return e.cast<AffineDimExpr>().getPosition();
+         })) {
+      if (ShapedType::isDynamic(dstShape[i])) {
+        // Only one of the dimensions of the expanded shape should be dynamic.
+        if (hasDynamic)
+          return nullptr;
+        hasDynamic = true;
+        staticShapes.push_back(ShapedType::kDynamicSize);
+        continue;
+      }
+      staticShapes.push_back(dstShape[i]);
+      linearizedStaticDim *= dstShape[i];
+    }
+    if (hasDynamic) {
+      // If the expanded dimensions has a dynamic shape, the src shape must be
+      // dynamic as well.
+      if (!ShapedType::isDynamic(srcShape[map.index()]))
+        return nullptr;
+      Value dynamicDim = builder.create<DimOp>(loc, src, map.index());
+      if (linearizedStaticDim != 1) {
+        dynamicDim = builder.create<UnsignedDivIOp>(
+            loc, dynamicDim,
+            builder.create<ConstantIndexOp>(loc, linearizedStaticDim));
+      }
+      dynamicShapes.push_back(dynamicDim);
+    }
+  }
+  return builder.create<InitTensorOp>(loc, dynamicShapes, staticShapes,
+                                      srcType.getElementType());
+}
+
+namespace {
+struct FoldWithTensorReshapeOp : public OpRewritePattern<TensorReshapeOp> {
+  using OpRewritePattern<TensorReshapeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(TensorReshapeOp reshapeOp,
+                                PatternRewriter &rewriter) const override {
+    if (!reshapeOp.src().getDefiningOp<InitTensorOp>())
+      return failure();
+    RankedTensorType collapsedType = reshapeOp.getSrcType();
+    RankedTensorType expandedType = reshapeOp.getResultType();
+    bool isCollapsed = expandedType.getRank() < collapsedType.getRank();
+    if (isCollapsed)
+      std::swap(collapsedType, expandedType);
+    Value initTensorOp = isCollapsed
+                             ? getCollapsedInitTensor(rewriter, reshapeOp)
+                             : getExpandedInitTensor(rewriter, reshapeOp);
+    if (!initTensorOp)
+      return failure();
+    rewriter.replaceOp(reshapeOp, initTensorOp);
+    return success();
+  }
+};
+} // namespace
+
 void InitTensorOp::getCanonicalizationPatterns(
     OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<ReplaceDimOfInitTensorOp, ReplaceStaticShapeDims>(context);
+  results.insert<FoldWithTensorReshapeOp, ReplaceDimOfInitTensorOp,
+                 ReplaceStaticShapeDims>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -820,13 +934,10 @@ template <typename ReshapeOpTy>
 static OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
                                   ArrayRef<Attribute> operands) {
   // Fold producer-consumer reshape ops that where the operand type of the
-  // producer is same as the return type of the consumer. This can only be
-  // verified if the shapes in question are static.
+  // producer is same as the return type of the consumer.
   ReshapeOpTy reshapeSrcOp =
       reshapeOp.src().template getDefiningOp<ReshapeOpTy>();
-  if (reshapeSrcOp && reshapeSrcOp.getSrcType().hasStaticShape() &&
-      reshapeOp.getResultType().hasStaticShape() &&
-      reshapeSrcOp.getSrcType() == reshapeOp.getResultType())
+  if (reshapeSrcOp && reshapeSrcOp.getSrcType() == reshapeOp.getResultType())
     return reshapeSrcOp.src();
   // Reshape of a constant can be replaced with a new constant.
   if (auto elements = operands.front().dyn_cast_or_null<DenseElementsAttr>()) {
@@ -1030,6 +1141,57 @@ void mlir::linalg::ReshapeOp::build(OpBuilder &b, OperationState &result,
 
 Value mlir::linalg::ReshapeOp::getViewSource() { return src(); }
 
+/// Verify that shapes of the reshaped types using following rules
+/// 1) if a dimension in the collapsed type is static, then the corresponding
+///    dimensions in the expanded shape should be
+///    a) static
+///    b) the product should be same as the collaped shape.
+/// 2) if a dimension in the collaped type is dynamic, one and only one of the
+///    corresponding dimensions in the expanded type should be dynamic. This
+///    rule is only needed with reshape operations that are expanding.
+template <typename OpTy>
+static LogicalResult verifyReshapeLikeShapes(OpTy op, ShapedType collapsedType,
+                                             ShapedType expandedType,
+                                             bool isExpandingReshape) {
+  ArrayRef<int64_t> collapsedShape = collapsedType.getShape();
+  ArrayRef<int64_t> expandedShape = expandedType.getShape();
+  unsigned expandedDimStart = 0;
+  for (auto map : llvm::enumerate(op.getReassociationMaps())) {
+    Optional<int64_t> dynamicShape;
+    int64_t linearizedStaticShape = 1;
+    for (auto dim : llvm::enumerate(expandedShape.slice(
+             expandedDimStart, map.value().getNumResults()))) {
+      if (ShapedType::isDynamic(dim.value())) {
+        if (isExpandingReshape && dynamicShape) {
+          return op->emitOpError("invalid to have a single dimension (")
+                 << map.index() << ") expanded into multiple dynamic dims ("
+                 << expandedDimStart + dynamicShape.getValue() << ","
+                 << expandedDimStart + dim.index() << ")";
+        }
+        dynamicShape = dim.index();
+      } else {
+        linearizedStaticShape *= dim.value();
+      }
+    }
+    if (dynamicShape) {
+      if (!ShapedType::isDynamic(collapsedShape[map.index()])) {
+        return op->emitOpError("expected dimension ")
+               << map.index()
+               << " of collapsed type to be dynamic since one or more of the "
+                  "corresponding dimensions in the expanded type is dynamic";
+      }
+    } else {
+      if (collapsedShape[map.index()] != linearizedStaticShape) {
+        return op->emitOpError("expected dimension ")
+               << map.index() << " of collapsed type to be static value of "
+               << linearizedStaticShape << " ";
+      }
+    }
+    expandedDimStart += map.value().getNumResults();
+  }
+  return success();
+}
+
 // Common verifier for reshape-like types. Fills `expandedType` and
 // `collapsedType` with the proper `src` or `result` type.
 template <typename Op, typename T>
@@ -1073,7 +1235,7 @@ static LogicalResult verifyReshapeLikeTypes(Op op, T &expandedType,
   if (!isReassociationValid(maps, &invalidIdx))
     return op.emitOpError("expected reassociation map #")
            << invalidIdx << " to be valid and contiguous";
-  return success();
+  return verifyReshapeLikeShapes(op, collapsedType, expandedType, !isCollapse);
 }
 
 static LogicalResult verify(ReshapeOp op) {
@@ -1152,8 +1314,6 @@ static LogicalResult verify(TensorReshapeOp op) {
   if (failed(verifyReshapeLikeTypes(op, expandedType, collapsedType)))
     return failure();
   auto maps = getAffineMaps(op.reassociation());
-  // TODO: expanding a ? with a non-constant is under-specified. Error
-  // out.
   RankedTensorType expectedType =
       computeTensorReshapeCollapsedType(expandedType, maps);
   if (collapsedType != expectedType)

@@ -1,6 +1,6 @@
-# RUN: llc -march=amdgcn -mcpu=kaveri -run-pass=si-peephole-sdwa -o - %s | FileCheck -check-prefix=CI -check-prefix=GCN %s
-# RUN: llc -march=amdgcn -mcpu=fiji -run-pass=si-peephole-sdwa -o - %s | FileCheck -check-prefix=VI -check-prefix=GCN %s
-# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass=si-peephole-sdwa -o - %s | FileCheck -check-prefix=GFX9 -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=kaveri -run-pass=si-peephole-sdwa -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=fiji -run-pass=si-peephole-sdwa -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass=si-peephole-sdwa -o - %s | FileCheck -check-prefix=GCN %s
 
 # No conversion for VOP2 instructions that have only 64-bit encoding
 

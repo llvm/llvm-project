@@ -286,7 +286,7 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
                          // FIXME: LDMXCSR does not actually write to memory,
                          // but intrinsic properties are generated incorrectly
                          // for IntrReadMem+IntrHasSideEffects.
-                        [/*IntrReadMem,*/ IntrArgMemOnly, IntrHasSideEffects]>;
+                        [/*IntrReadMem, IntrArgMemOnly,*/ IntrHasSideEffects]>;
 }
 
 // Misc.

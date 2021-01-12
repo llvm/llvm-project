@@ -10,6 +10,8 @@ add_public_tablegen_target(MLIRLLVMOpsIncGen)
 
 add_mlir_doc(LLVMOps -gen-op-doc LLVMOps Dialects/)
 
+add_mlir_interface(LLVMOpsInterfaces)
+
 set(LLVM_TARGET_DEFINITIONS LLVMOps.td)
 mlir_tablegen(LLVMConversions.inc -gen-llvmir-conversions)
 mlir_tablegen(LLVMConversionEnumsToLLVM.inc -gen-enum-to-llvmir-conversions)

@@ -14,7 +14,7 @@
 
 namespace __llvm_libc {
 
-size_t LLVM_LIBC_ENTRYPOINT(strnlen)(const char *src, size_t n) {
+LLVM_LIBC_FUNCTION(size_t, strnlen, (const char *src, size_t n)) {
   const void *temp = internal::find_first_character(
       reinterpret_cast<const unsigned char *>(src), '\0', n);
   return temp ? reinterpret_cast<const char *>(temp) - src : n;

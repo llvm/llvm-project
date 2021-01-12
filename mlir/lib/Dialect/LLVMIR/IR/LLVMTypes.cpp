@@ -15,6 +15,7 @@
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/TypeSupport.h"
 
@@ -107,28 +108,6 @@ LLVMFunctionType::verifyConstructionInvariants(Location loc, Type result,
     if (!isValidArgumentType(arg))
       return emitError(loc, "invalid function argument type: ") << arg;
 
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
-// Integer type.
-//===----------------------------------------------------------------------===//
-
-LLVMIntegerType LLVMIntegerType::get(MLIRContext *ctx, unsigned bitwidth) {
-  return Base::get(ctx, bitwidth);
-}
-
-LLVMIntegerType LLVMIntegerType::getChecked(Location loc, unsigned bitwidth) {
-  return Base::getChecked(loc, bitwidth);
-}
-
-unsigned LLVMIntegerType::getBitWidth() { return getImpl()->bitwidth; }
-
-LogicalResult LLVMIntegerType::verifyConstructionInvariants(Location loc,
-                                                            unsigned bitwidth) {
-  constexpr int maxSupportedBitwidth = (1 << 24);
-  if (bitwidth >= maxSupportedBitwidth)
-    return emitError(loc, "integer type too wide");
   return success();
 }
 
@@ -258,7 +237,9 @@ LogicalResult LLVMStructType::verifyConstructionInvariants(Location loc,
 //===----------------------------------------------------------------------===//
 
 bool LLVMVectorType::isValidElementType(Type type) {
-  return type.isa<LLVMIntegerType, LLVMPointerType>() ||
+  if (auto intType = type.dyn_cast<IntegerType>())
+    return intType.isSignless();
+  return type.isa<LLVMPointerType>() ||
          mlir::LLVM::isCompatibleFloatingPointType(type);
 }
 
@@ -330,18 +311,51 @@ unsigned LLVMScalableVectorType::getMinNumElements() {
 // Utility functions.
 //===----------------------------------------------------------------------===//
 
+bool mlir::LLVM::isCompatibleType(Type type) {
+  // Only signless integers are compatible.
+  if (auto intType = type.dyn_cast<IntegerType>())
+    return intType.isSignless();
+
+  // clang-format off
+  return type.isa<
+      BFloat16Type,
+      Float16Type,
+      Float32Type,
+      Float64Type,
+      LLVMArrayType,
+      LLVMFP128Type,
+      LLVMFunctionType,
+      LLVMLabelType,
+      LLVMMetadataType,
+      LLVMPPCFP128Type,
+      LLVMPointerType,
+      LLVMStructType,
+      LLVMTokenType,
+      LLVMVectorType,
+      LLVMVoidType,
+      LLVMX86FP80Type,
+      LLVMX86MMXType
+  >();
+  // clang-format on
+}
+
+bool mlir::LLVM::isCompatibleFloatingPointType(Type type) {
+  return type.isa<BFloat16Type, Float16Type, Float32Type, Float64Type,
+                  LLVMFP128Type, LLVMPPCFP128Type, LLVMX86FP80Type>();
+}
+
 llvm::TypeSize mlir::LLVM::getPrimitiveTypeSizeInBits(Type type) {
   assert(isCompatibleType(type) &&
          "expected a type compatible with the LLVM dialect");
 
   return llvm::TypeSwitch<Type, llvm::TypeSize>(type)
-      .Case<LLVMHalfType, LLVMBFloatType>(
+      .Case<BFloat16Type, Float16Type>(
           [](Type) { return llvm::TypeSize::Fixed(16); })
-      .Case<LLVMFloatType>([](Type) { return llvm::TypeSize::Fixed(32); })
-      .Case<LLVMDoubleType, LLVMX86MMXType>(
+      .Case<Float32Type>([](Type) { return llvm::TypeSize::Fixed(32); })
+      .Case<Float64Type, LLVMX86MMXType>(
           [](Type) { return llvm::TypeSize::Fixed(64); })
-      .Case<LLVMIntegerType>([](LLVMIntegerType intTy) {
-        return llvm::TypeSize::Fixed(intTy.getBitWidth());
+      .Case<IntegerType>([](IntegerType intTy) {
+        return llvm::TypeSize::Fixed(intTy.getWidth());
       })
       .Case<LLVMX86FP80Type>([](Type) { return llvm::TypeSize::Fixed(80); })
       .Case<LLVMPPCFP128Type, LLVMFP128Type>(

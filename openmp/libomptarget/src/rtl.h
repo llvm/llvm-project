@@ -94,39 +94,6 @@ struct RTLInfoTy {
   // It is easier to enforce thread-safety at the libomptarget level,
   // so that developers of new RTLs do not have to worry about it.
   std::mutex Mtx;
-
-  // The existence of the mutex above makes RTLInfoTy non-copyable.
-  // We need to provide a copy constructor explicitly.
-  RTLInfoTy() = default;
-
-  RTLInfoTy(const RTLInfoTy &r) {
-    Idx = r.Idx;
-    NumberOfDevices = r.NumberOfDevices;
-    LibraryHandler = r.LibraryHandler;
-#ifdef OMPTARGET_DEBUG
-    RTLName = r.RTLName;
-#endif
-    is_valid_binary = r.is_valid_binary;
-    is_data_exchangable = r.is_data_exchangable;
-    number_of_devices = r.number_of_devices;
-    init_device = r.init_device;
-    load_binary = r.load_binary;
-    data_alloc = r.data_alloc;
-    data_submit = r.data_submit;
-    data_submit_async = r.data_submit_async;
-    data_retrieve = r.data_retrieve;
-    data_retrieve_async = r.data_retrieve_async;
-    data_exchange = r.data_exchange;
-    data_exchange_async = r.data_exchange_async;
-    data_delete = r.data_delete;
-    run_region = r.run_region;
-    run_region_async = r.run_region_async;
-    run_team_region = r.run_team_region;
-    run_team_region_async = r.run_team_region_async;
-    init_requires = r.init_requires;
-    isUsed = r.isUsed;
-    synchronize = r.synchronize;
-  }
 };
 
 /// RTLs identified in the system.

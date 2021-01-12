@@ -8,7 +8,7 @@ Feature Test Macros
 Overview
 ========
 
-Libc++ implements the C++ feature test macros as specified in the C++2a standard,
+Libc++ implements the C++ feature test macros as specified in the C++20 standard,
 and before that in non-normative guiding documents
 (`See cppreference <https://en.cppreference.com/w/User:D41D8CD98F/feature_testing_macros>`_)
 

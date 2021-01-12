@@ -633,8 +633,8 @@ void CodeGenPrepare::removeAllAssertingVHReferences(Value *V) {
     return;
 
   auto &GEPVector = VecI->second;
-  const auto &I = std::find_if(GEPVector.begin(), GEPVector.end(),
-                               [=](auto &Elt) { return Elt.first == GEP; });
+  const auto &I =
+      llvm::find_if(GEPVector, [=](auto &Elt) { return Elt.first == GEP; });
   if (I == GEPVector.end())
     return;
 
@@ -6699,6 +6699,7 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
 /// in MVE takes a GPR (integer) register, and the instruction that incorporate
 /// a VDUP (such as a VADD qd, qm, rm) also require a gpr register.
 bool CodeGenPrepare::optimizeShuffleVectorInst(ShuffleVectorInst *SVI) {
+  // Accept shuf(insertelem(undef/poison, val, 0), undef/poison, <0,0,..>) only
   if (!match(SVI, m_Shuffle(m_InsertElt(m_Undef(), m_Value(), m_ZeroInt()),
                             m_Undef(), m_ZeroMask())))
     return false;
@@ -6718,9 +6719,7 @@ bool CodeGenPrepare::optimizeShuffleVectorInst(ShuffleVectorInst *SVI) {
   Builder.SetInsertPoint(SVI);
   Value *BC1 = Builder.CreateBitCast(
       cast<Instruction>(SVI->getOperand(0))->getOperand(1), NewType);
-  Value *Insert = Builder.CreateInsertElement(UndefValue::get(NewVecType), BC1,
-                                              (uint64_t)0);
-  Value *Shuffle = Builder.CreateShuffleVector(Insert, SVI->getShuffleMask());
+  Value *Shuffle = Builder.CreateVectorSplat(NewVecType->getNumElements(), BC1);
   Value *BC2 = Builder.CreateBitCast(Shuffle, SVIVecType);
 
   SVI->replaceAllUsesWith(BC2);

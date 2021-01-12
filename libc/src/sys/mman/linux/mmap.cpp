@@ -19,8 +19,9 @@ namespace __llvm_libc {
 
 // This function is currently linux only. It has to be refactored suitably if
 // mmap is to be supported on non-linux operating systems also.
-void *LLVM_LIBC_ENTRYPOINT(mmap)(void *addr, size_t size, int prot, int flags,
-                                 int fd, off_t offset) {
+LLVM_LIBC_FUNCTION(void *, mmap,
+                   (void *addr, size_t size, int prot, int flags, int fd,
+                    off_t offset)) {
   // A lot of POSIX standard prescribed validation of the parameters is not
   // done in this function as modern linux versions do it in the syscall.
   // TODO: Perform argument validation not done by the linux syscall.

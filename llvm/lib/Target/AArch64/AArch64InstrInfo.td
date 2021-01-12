@@ -33,8 +33,8 @@ def HasVH            : Predicate<"Subtarget->hasVH()">,
 def HasLOR           : Predicate<"Subtarget->hasLOR()">,
                        AssemblerPredicate<(all_of FeatureLOR), "lor">;
 
-def HasPA            : Predicate<"Subtarget->hasPA()">,
-                       AssemblerPredicate<(all_of FeaturePA), "pa">;
+def HasPAuth         : Predicate<"Subtarget->hasPAuth()">,
+                       AssemblerPredicate<(all_of FeaturePAuth), "pauth">;
 
 def HasJS            : Predicate<"Subtarget->hasJS()">,
                        AssemblerPredicate<(all_of FeatureJS), "jsconv">;
@@ -69,8 +69,8 @@ def HasPMU           : Predicate<"Subtarget->hasPMU()">,
 def HasTLB_RMI          : Predicate<"Subtarget->hasTLB_RMI()">,
                        AssemblerPredicate<(all_of FeatureTLB_RMI), "tlb-rmi">;
 
-def HasFMI           : Predicate<"Subtarget->hasFMI()">,
-                       AssemblerPredicate<(all_of FeatureFMI), "fmi">;
+def HasFlagM         : Predicate<"Subtarget->hasFlagM()">,
+                       AssemblerPredicate<(all_of FeatureFlagM), "flagm">;
 
 def HasRCPC_IMMO      : Predicate<"Subtarget->hasRCPCImm()">,
                        AssemblerPredicate<(all_of FeatureRCPC_IMMO), "rcpc-immo">;
@@ -1073,7 +1073,7 @@ def : InstAlias<"autib1716", (AUTIB1716), 0>;
 def : InstAlias<"xpaclri", (XPACLRI), 0>;
 
 // These pointer authentication instructions require armv8.3a
-let Predicates = [HasPA] in {
+let Predicates = [HasPAuth] in {
 
   // When PA is enabled, a better mnemonic should be emitted.
   def : InstAlias<"paciaz", (PACIAZ), 1>;
@@ -1149,7 +1149,7 @@ def FJCVTZS  : BaseFPToIntegerUnscaled<0b01, 0b11, 0b110, FPR64, GPR32,
 } // HasJS, HasFPARMv8
 
 // v8.4 Flag manipulation instructions
-let Predicates = [HasFMI], Defs = [NZCV], Uses = [NZCV] in {
+let Predicates = [HasFlagM], Defs = [NZCV], Uses = [NZCV] in {
 def CFINV : SimpleSystemI<0, (ins), "cfinv", "">, Sched<[WriteSys]> {
   let Inst{20-5} = 0b0000001000000000;
 }
@@ -1157,7 +1157,7 @@ def SETF8  : BaseFlagManipulation<0, 0, (ins GPR32:$Rn), "setf8", "{\t$Rn}">;
 def SETF16 : BaseFlagManipulation<0, 1, (ins GPR32:$Rn), "setf16", "{\t$Rn}">;
 def RMIF   : FlagRotate<(ins GPR64:$Rn, uimm6:$imm, imm0_15:$mask), "rmif",
                         "{\t$Rn, $imm, $mask}">;
-} // HasFMI
+} // HasFlagM
 
 // v8.5 flag manipulation instructions
 let Predicates = [HasAltNZCV], Uses = [NZCV], Defs = [NZCV] in {

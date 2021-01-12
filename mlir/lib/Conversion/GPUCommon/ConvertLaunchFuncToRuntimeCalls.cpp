@@ -75,12 +75,12 @@ protected:
 
   Type llvmVoidType = LLVM::LLVMVoidType::get(context);
   Type llvmPointerType =
-      LLVM::LLVMPointerType::get(LLVM::LLVMIntegerType::get(context, 8));
+      LLVM::LLVMPointerType::get(IntegerType::get(context, 8));
   Type llvmPointerPointerType = LLVM::LLVMPointerType::get(llvmPointerType);
-  Type llvmInt8Type = LLVM::LLVMIntegerType::get(context, 8);
-  Type llvmInt32Type = LLVM::LLVMIntegerType::get(context, 32);
-  Type llvmInt64Type = LLVM::LLVMIntegerType::get(context, 64);
-  Type llvmIntPtrType = LLVM::LLVMIntegerType::get(
+  Type llvmInt8Type = IntegerType::get(context, 8);
+  Type llvmInt32Type = IntegerType::get(context, 32);
+  Type llvmInt64Type = IntegerType::get(context, 64);
+  Type llvmIntPtrType = IntegerType::get(
       context, this->getTypeConverter()->getPointerBitwidth(0));
 
   FunctionCallBuilder moduleLoadCallBuilder = {
@@ -373,19 +373,19 @@ LogicalResult ConvertAllocOpToGpuRuntimeCallPattern::matchAndRewrite(
     return failure();
 
   auto loc = allocOp.getLoc();
+  auto adaptor = gpu::AllocOpAdaptor(operands, allocOp->getAttrDictionary());
 
   // Get shape of the memref as values: static sizes are constant
   // values and dynamic sizes are passed to 'alloc' as operands.
   SmallVector<Value, 4> shape;
   SmallVector<Value, 4> strides;
   Value sizeBytes;
-  getMemRefDescriptorSizes(loc, memRefType, operands, rewriter, shape, strides,
-                           sizeBytes);
+  getMemRefDescriptorSizes(loc, memRefType, adaptor.dynamicSizes(), rewriter,
+                           shape, strides, sizeBytes);
 
   // Allocate the underlying buffer and store a pointer to it in the MemRef
   // descriptor.
   Type elementPtrType = this->getElementPtrType(memRefType);
-  auto adaptor = gpu::AllocOpAdaptor(operands, allocOp->getAttrDictionary());
   auto stream = adaptor.asyncDependencies().front();
   Value allocatedPtr =
       allocCallBuilder.create(loc, rewriter, {sizeBytes, stream}).getResult(0);
@@ -716,10 +716,10 @@ mlir::createGpuToLLVMConversionPass(StringRef gpuBinaryAnnotation) {
 void mlir::populateGpuToLLVMConversionPatterns(
     LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
     StringRef gpuBinaryAnnotation) {
-  converter.addConversion([context = &converter.getContext()](
-                              gpu::AsyncTokenType type) -> Type {
-    return LLVM::LLVMPointerType::get(LLVM::LLVMIntegerType::get(context, 8));
-  });
+  converter.addConversion(
+      [context = &converter.getContext()](gpu::AsyncTokenType type) -> Type {
+        return LLVM::LLVMPointerType::get(IntegerType::get(context, 8));
+      });
   patterns.insert<ConvertAllocOpToGpuRuntimeCallPattern,
                   ConvertDeallocOpToGpuRuntimeCallPattern,
                   ConvertHostRegisterOpToGpuRuntimeCallPattern,

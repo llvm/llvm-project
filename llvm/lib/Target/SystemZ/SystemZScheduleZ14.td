@@ -205,7 +205,7 @@ def : InstRW<[WLat1, FXa, NormalGr], (instregex "LLIL(F|H|L)$")>;
 
 def : InstRW<[WLat1, FXa, NormalGr], (instregex "LG(F|H)I$")>;
 def : InstRW<[WLat1, FXa, NormalGr], (instregex "LHI(Mux)?$")>;
-def : InstRW<[WLat1, FXa, NormalGr], (instregex "LR(Mux)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "LR$")>;
 
 // Load and zero rightmost byte
 def : InstRW<[LSULatency, LSU, NormalGr], (instregex "LZR(F|G)$")>;

@@ -557,7 +557,27 @@ static int sectionOrder(OutputSection *osec) {
         .Case(section_names::unwindInfo, std::numeric_limits<int>::max() - 1)
         .Case(section_names::ehFrame, std::numeric_limits<int>::max())
         .Default(0);
-  } else if (segname == segment_names::linkEdit) {
+  }
+  if (segname == segment_names::data) {
+    // For each thread spawned, dyld will initialize its TLVs by copying the
+    // address range from the start of the first thread-local data section to
+    // the end of the last one. We therefore arrange these sections contiguously
+    // to minimize the amount of memory used. Additionally, since zerofill
+    // sections must be at the end of their segments, and since TLV data
+    // sections can be zerofills, we end up putting all TLV data sections at the
+    // end of the segment.
+    switch (sectionType(osec->flags)) {
+    case S_THREAD_LOCAL_REGULAR:
+      return std::numeric_limits<int>::max() - 2;
+    case S_THREAD_LOCAL_ZEROFILL:
+      return std::numeric_limits<int>::max() - 1;
+    case S_ZEROFILL:
+      return std::numeric_limits<int>::max();
+    default:
+      return 0;
+    }
+  }
+  if (segname == segment_names::linkEdit) {
     return StringSwitch<int>(osec->name)
         .Case(section_names::rebase, -8)
         .Case(section_names::binding, -7)
@@ -571,7 +591,7 @@ static int sectionOrder(OutputSection *osec) {
   }
   // ZeroFill sections must always be the at the end of their segments,
   // otherwise subsequent sections may get overwritten with zeroes at runtime.
-  if (isZeroFill(osec->flags))
+  if (sectionType(osec->flags) == S_ZEROFILL)
     return std::numeric_limits<int>::max();
   return 0;
 }
@@ -599,6 +619,9 @@ static void sortSegmentsAndSections() {
       // output section indices.
       if (!osec->isHidden())
         osec->index = ++sectionIndex;
+
+      if (!firstTLVDataSection && isThreadLocalData(osec->flags))
+        firstTLVDataSection = osec;
 
       if (!isecPriorities.empty()) {
         if (auto *merged = dyn_cast<MergedOutputSection>(osec)) {
@@ -777,3 +800,5 @@ void macho::createSyntheticSections() {
   in.stubHelper = make<StubHelperSection>();
   in.imageLoaderCache = make<ImageLoaderCacheSection>();
 }
+
+OutputSection *macho::firstTLVDataSection = nullptr;

@@ -7,6 +7,7 @@ set (FILES
   HostTest.cpp
   MainLoopTest.cpp
   NativeProcessProtocolTest.cpp
+  PipeTest.cpp
   ProcessLaunchInfoTest.cpp
   SocketAddressTest.cpp
   SocketTest.cpp

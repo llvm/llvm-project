@@ -10,8 +10,6 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_R600DEFINES_H
 #define LLVM_LIB_TARGET_AMDGPU_R600DEFINES_H
 
-#include "llvm/MC/MCRegisterInfo.h"
-
 // Operand Flags
 #define MO_FLAG_CLAMP (1 << 0)
 #define MO_FLAG_NEG   (1 << 1)

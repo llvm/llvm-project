@@ -688,7 +688,7 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
 
     // The live-in set for the outlined function is the union of the live-ins
     // from all the outlining points.
-    for (MCPhysReg Reg : make_range(CandLiveIns.begin(), CandLiveIns.end()))
+    for (MCPhysReg Reg : CandLiveIns)
       LiveIns.addReg(Reg);
   }
   addLiveIns(MBB, LiveIns);

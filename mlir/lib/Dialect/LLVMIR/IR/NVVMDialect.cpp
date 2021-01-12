@@ -62,8 +62,7 @@ static ParseResult parseNVVMShflSyncBflyOp(OpAsmParser &parser,
     break;
   }
 
-  auto int32Ty =
-      LLVM::LLVMIntegerType::get(parser.getBuilder().getContext(), 32);
+  auto int32Ty = IntegerType::get(parser.getBuilder().getContext(), 32);
   return parser.resolveOperands(ops, {int32Ty, resultType, int32Ty, int32Ty},
                                 parser.getNameLoc(), result.operands);
 }
@@ -72,8 +71,8 @@ static ParseResult parseNVVMShflSyncBflyOp(OpAsmParser &parser,
 static ParseResult parseNVVMVoteBallotOp(OpAsmParser &parser,
                                          OperationState &result) {
   MLIRContext *context = parser.getBuilder().getContext();
-  auto int32Ty = LLVM::LLVMIntegerType::get(context, 32);
-  auto int1Ty = LLVM::LLVMIntegerType::get(context, 1);
+  auto int32Ty = IntegerType::get(context, 32);
+  auto int1Ty = IntegerType::get(context, 1);
 
   SmallVector<OpAsmParser::OperandType, 8> ops;
   Type type;
@@ -87,9 +86,9 @@ static ParseResult parseNVVMVoteBallotOp(OpAsmParser &parser,
 
 static LogicalResult verify(MmaOp op) {
   MLIRContext *context = op.getContext();
-  auto f16Ty = LLVM::LLVMHalfType::get(context);
+  auto f16Ty = Float16Type::get(context);
   auto f16x2Ty = LLVM::LLVMFixedVectorType::get(f16Ty, 2);
-  auto f32Ty = LLVM::LLVMFloatType::get(context);
+  auto f32Ty = Float32Type::get(context);
   auto f16x2x4StructTy = LLVM::LLVMStructType::getLiteral(
       context, {f16x2Ty, f16x2Ty, f16x2Ty, f16x2Ty});
   auto f32x8StructTy = LLVM::LLVMStructType::getLiteral(

@@ -231,12 +231,16 @@ define amdgpu_kernel void @fast_sub_fmuladd_fmul_multi_use_mul() #0 {
 ; GCN-FLUSH-NEXT: v_mac_f32_e32 [[MUL]], [[X]], [[Y]]
 ; GCN-FLUSH-NEXT: v_sub_f32_e32 [[SUB:v[0-9]+]],  [[MUL]], [[Z]]
 ; GCN-FLUSH-NEXT: buffer_store_dword [[MUL]]
+; GCN-FLUSH-NEXT: s_waitcnt vmcnt(0)
 ; GCN-FLUSH-NEXT: buffer_store_dword [[SUB]]
+; GCN-FLUSH-NEXT: s_waitcnt vmcnt(0)
 
 ; GCN-FASTFMA-NEXT: v_fma_f32 [[FMA:v[0-9]+]], [[X]], [[Y]], [[U]]
 ; GCN-FASTFMA-NEXT: v_sub_f32_e32 [[SUB:v[0-9]+]], [[FMA]], [[Z]]
 ; GCN-FASTFMA-NEXT: buffer_store_dword [[FMA]]
+; GCN-FASTFMA-NEXT: s_waitcnt vmcnt(0)
 ; GCN-FASTFMA-NEXT: buffer_store_dword [[SUB]]
+; GCN-FASTFMA-NEXT: s_waitcnt vmcnt(0)
 
 ; GCN-SLOWFMA-DAG: v_mul_f32_e32 v{{[0-9]+}}, [[X]], [[Y]]
 ; GCN-SLOWFMA: v_add_f32_e32
@@ -267,12 +271,16 @@ define amdgpu_kernel void @fast_sub_fmuladd_fmul_multi_use_fmuladd_lhs() #0 {
 ; GCN-FLUSH-NEXT: v_mac_f32_e32 [[MUL]], [[X]], [[Y]]
 ; GCN-FLUSH-NEXT: v_sub_f32_e32 [[SUB:v[0-9]+]],  [[Z]], [[MUL]]
 ; GCN-FLUSH-NEXT: buffer_store_dword [[MUL]]
+; GCN-FLUSH-NEXT: s_waitcnt vmcnt(0)
 ; GCN-FLUSH-NEXT: buffer_store_dword [[SUB]]
+; GCN-FLUSH-NEXT: s_waitcnt vmcnt(0)
 
 ; GCN-FASTFMA-NEXT: v_fma_f32 [[FMA:v[0-9]+]], [[X]], [[Y]], [[U]]
 ; GCN-FASTFMA-NEXT: v_sub_f32_e32 [[SUB:v[0-9]+]], [[Z]], [[FMA]]
 ; GCN-FASTFMA-NEXT: buffer_store_dword [[FMA]]
+; GCN-FASTFMA-NEXT: s_waitcnt vmcnt(0)
 ; GCN-FASTFMA-NEXT: buffer_store_dword [[SUB]]
+; GCN-FASTFMA-NEXT: s_waitcnt vmcnt(0)
 
 ; GCN-SLOWFMA-DAG: v_mul_f32_e32 v{{[0-9]+}}, [[X]], [[Y]]
 ; GCN-SLOWFMA: v_add_f32_e32
@@ -305,12 +313,16 @@ define amdgpu_kernel void @fast_sub_fmuladd_fmul_multi_use_fmuladd_rhs() #0 {
 ; GCN-FLUSH-NEXT: v_mac_f32_e32 [[MUL]], [[X]], [[Y]]
 ; GCN-FLUSH-NEXT: v_sub_f32_e32 [[SUB:v[0-9]+]],  [[MUL]], [[Z]]
 ; GCN-FLUSH-NEXT: buffer_store_dword [[MUL]]
+; GCN-FLUSH-NEXT: s_waitcnt vmcnt(0)
 ; GCN-FLUSH-NEXT: buffer_store_dword [[SUB]]
+; GCN-FLUSH-NEXT: s_waitcnt vmcnt(0)
 
 ; GCN-FASTFMA-NEXT: v_fma_f32 [[FMA:v[0-9]+]], [[X]], [[Y]], [[UFLOAT]]
 ; GCN-FASTFMA-NEXT: v_sub_f32_e32 [[SUB:v[0-9]+]], [[FMA]], [[Z]]
 ; GCN-FASTFMA-NEXT: buffer_store_dword [[FMA]]
+; GCN-FASTFMA-NEXT: s_waitcnt vmcnt(0)
 ; GCN-FASTFMA-NEXT: buffer_store_dword [[SUB]]
+; GCN-FASTFMA-NEXT: s_waitcnt vmcnt(0)
 
 ; GCN-SLOWFMA-DAG: v_mul_f32_e32 v{{[0-9]+}}, [[X]], [[Y]]
 ; GCN-SLOWFMA: v_add_f32_e32
@@ -344,12 +356,16 @@ define amdgpu_kernel void @fast_sub_fmuladd_fpext_fmul_multi_use_fmuladd_lhs() #
 ; GCN-FLUSH-NEXT: v_mac_f32_e32 [[MUL]], [[X]], [[Y]]
 ; GCN-FLUSH-NEXT: v_sub_f32_e32 [[SUB:v[0-9]+]],  [[Z]], [[MUL]]
 ; GCN-FLUSH-NEXT: buffer_store_dword [[MUL]]
+; GCN-FLUSH-NEXT: s_waitcnt vmcnt(0)
 ; GCN-FLUSH-NEXT: buffer_store_dword [[SUB]]
+; GCN-FLUSH-NEXT: s_waitcnt vmcnt(0)
 
 ; GCN-FASTFMA-NEXT: v_fma_f32 [[FMA:v[0-9]+]], [[X]], [[Y]], [[UFLOAT]]
 ; GCN-FASTFMA-NEXT: v_sub_f32_e32 [[SUB:v[0-9]+]], [[Z]], [[FMA]]
 ; GCN-FASTFMA-NEXT: buffer_store_dword [[FMA]]
+; GCN-FASTFMA-NEXT: s_waitcnt vmcnt(0)
 ; GCN-FASTFMA-NEXT: buffer_store_dword [[SUB]]
+; GCN-FASTFMA-NEXT: s_waitcnt vmcnt(0)
 
 ; GCN-SLOWFMA-DAG: v_mul_f32_e32 v{{[0-9]+}}, [[X]], [[Y]]
 ; GCN-SLOWFMA: v_add_f32_e32

@@ -31,6 +31,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/EHPersonalities.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -844,13 +845,21 @@ static void emitComments(const MachineInstr &MI, raw_ostream &CommentOS) {
   if ((Size = MI.getRestoreSize(TII))) {
     CommentOS << *Size << "-byte Reload\n";
   } else if ((Size = MI.getFoldedRestoreSize(TII))) {
-    if (*Size)
-      CommentOS << *Size << "-byte Folded Reload\n";
+    if (*Size) {
+      if (*Size == static_cast<unsigned>(MemoryLocation::UnknownSize))
+        CommentOS << "Unknown-size Folded Reload\n";
+      else
+        CommentOS << *Size << "-byte Folded Reload\n";
+    }
   } else if ((Size = MI.getSpillSize(TII))) {
     CommentOS << *Size << "-byte Spill\n";
   } else if ((Size = MI.getFoldedSpillSize(TII))) {
-    if (*Size)
-      CommentOS << *Size << "-byte Folded Spill\n";
+    if (*Size) {
+      if (*Size == static_cast<unsigned>(MemoryLocation::UnknownSize))
+        CommentOS << "Unknown-size Folded Spill\n";
+      else
+        CommentOS << *Size << "-byte Folded Spill\n";
+    }
   }
 
   // Check for spill-induced copies
@@ -948,6 +957,8 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
   } else if (MI->getDebugOperand(0).isTargetIndex()) {
     auto Op = MI->getDebugOperand(0);
     OS << "!target-index(" << Op.getIndex() << "," << Op.getOffset() << ")";
+    // NOTE: Want this comment at start of line, don't emit with AddComment.
+    AP.OutStreamer->emitRawComment(OS.str());
     return true;
   } else {
     Register Reg;

@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/math/fabsf.h"
 #include "src/__support/common.h"
 #include "utils/FPUtil/BasicOperations.h"
 
 namespace __llvm_libc {
 
-float LLVM_LIBC_ENTRYPOINT(fabsf)(float x) { return fputil::abs(x); }
+LLVM_LIBC_FUNCTION(float, fabsf, (float x)) { return fputil::abs(x); }
 
 } // namespace __llvm_libc

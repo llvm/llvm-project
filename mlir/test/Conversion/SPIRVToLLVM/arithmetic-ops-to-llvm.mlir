@@ -6,7 +6,7 @@
 
 // CHECK-LABEL: @iadd_scalar
 spv.func @iadd_scalar(%arg0: i32, %arg1: i32) "None" {
-  // CHECK: llvm.add %{{.*}}, %{{.*}} : !llvm.i32
+  // CHECK: llvm.add %{{.*}}, %{{.*}} : i32
   %0 = spv.IAdd %arg0, %arg1 : i32
   spv.Return
 }
@@ -24,7 +24,7 @@ spv.func @iadd_vector(%arg0: vector<4xi64>, %arg1: vector<4xi64>) "None" {
 
 // CHECK-LABEL: @isub_scalar
 spv.func @isub_scalar(%arg0: i8, %arg1: i8) "None" {
-  // CHECK: llvm.sub %{{.*}}, %{{.*}} : !llvm.i8
+  // CHECK: llvm.sub %{{.*}}, %{{.*}} : i8
   %0 = spv.ISub %arg0, %arg1 : i8
   spv.Return
 }
@@ -42,7 +42,7 @@ spv.func @isub_vector(%arg0: vector<2xi16>, %arg1: vector<2xi16>) "None" {
 
 // CHECK-LABEL: @imul_scalar
 spv.func @imul_scalar(%arg0: i32, %arg1: i32) "None" {
-  // CHECK: llvm.mul %{{.*}}, %{{.*}} : !llvm.i32
+  // CHECK: llvm.mul %{{.*}}, %{{.*}} : i32
   %0 = spv.IMul %arg0, %arg1 : i32
   spv.Return
 }
@@ -60,14 +60,14 @@ spv.func @imul_vector(%arg0: vector<3xi32>, %arg1: vector<3xi32>) "None" {
 
 // CHECK-LABEL: @fadd_scalar
 spv.func @fadd_scalar(%arg0: f16, %arg1: f16) "None" {
-  // CHECK: llvm.fadd %{{.*}}, %{{.*}} : !llvm.half
+  // CHECK: llvm.fadd %{{.*}}, %{{.*}} : f16
   %0 = spv.FAdd %arg0, %arg1 : f16
   spv.Return
 }
 
 // CHECK-LABEL: @fadd_vector
 spv.func @fadd_vector(%arg0: vector<4xf32>, %arg1: vector<4xf32>) "None" {
-  // CHECK: llvm.fadd %{{.*}}, %{{.*}} : !llvm.vec<4 x float>
+  // CHECK: llvm.fadd %{{.*}}, %{{.*}} : !llvm.vec<4 x f32>
   %0 = spv.FAdd %arg0, %arg1 : vector<4xf32>
   spv.Return
 }
@@ -78,14 +78,14 @@ spv.func @fadd_vector(%arg0: vector<4xf32>, %arg1: vector<4xf32>) "None" {
 
 // CHECK-LABEL: @fsub_scalar
 spv.func @fsub_scalar(%arg0: f32, %arg1: f32) "None" {
-  // CHECK: llvm.fsub %{{.*}}, %{{.*}} : !llvm.float
+  // CHECK: llvm.fsub %{{.*}}, %{{.*}} : f32
   %0 = spv.FSub %arg0, %arg1 : f32
   spv.Return
 }
 
 // CHECK-LABEL: @fsub_vector
 spv.func @fsub_vector(%arg0: vector<2xf32>, %arg1: vector<2xf32>) "None" {
-  // CHECK: llvm.fsub %{{.*}}, %{{.*}} : !llvm.vec<2 x float>
+  // CHECK: llvm.fsub %{{.*}}, %{{.*}} : !llvm.vec<2 x f32>
   %0 = spv.FSub %arg0, %arg1 : vector<2xf32>
   spv.Return
 }
@@ -96,14 +96,14 @@ spv.func @fsub_vector(%arg0: vector<2xf32>, %arg1: vector<2xf32>) "None" {
 
 // CHECK-LABEL: @fdiv_scalar
 spv.func @fdiv_scalar(%arg0: f32, %arg1: f32) "None" {
-  // CHECK: llvm.fdiv %{{.*}}, %{{.*}} : !llvm.float
+  // CHECK: llvm.fdiv %{{.*}}, %{{.*}} : f32
   %0 = spv.FDiv %arg0, %arg1 : f32
   spv.Return
 }
 
 // CHECK-LABEL: @fdiv_vector
 spv.func @fdiv_vector(%arg0: vector<3xf64>, %arg1: vector<3xf64>) "None" {
-  // CHECK: llvm.fdiv %{{.*}}, %{{.*}} : !llvm.vec<3 x double>
+  // CHECK: llvm.fdiv %{{.*}}, %{{.*}} : !llvm.vec<3 x f64>
   %0 = spv.FDiv %arg0, %arg1 : vector<3xf64>
   spv.Return
 }
@@ -114,14 +114,14 @@ spv.func @fdiv_vector(%arg0: vector<3xf64>, %arg1: vector<3xf64>) "None" {
 
 // CHECK-LABEL: @fmul_scalar
 spv.func @fmul_scalar(%arg0: f32, %arg1: f32) "None" {
-  // CHECK: llvm.fmul %{{.*}}, %{{.*}} : !llvm.float
+  // CHECK: llvm.fmul %{{.*}}, %{{.*}} : f32
   %0 = spv.FMul %arg0, %arg1 : f32
   spv.Return
 }
 
 // CHECK-LABEL: @fmul_vector
 spv.func @fmul_vector(%arg0: vector<2xf32>, %arg1: vector<2xf32>) "None" {
-  // CHECK: llvm.fmul %{{.*}}, %{{.*}} : !llvm.vec<2 x float>
+  // CHECK: llvm.fmul %{{.*}}, %{{.*}} : !llvm.vec<2 x f32>
   %0 = spv.FMul %arg0, %arg1 : vector<2xf32>
   spv.Return
 }
@@ -132,14 +132,14 @@ spv.func @fmul_vector(%arg0: vector<2xf32>, %arg1: vector<2xf32>) "None" {
 
 // CHECK-LABEL: @frem_scalar
 spv.func @frem_scalar(%arg0: f32, %arg1: f32) "None" {
-  // CHECK: llvm.frem %{{.*}}, %{{.*}} : !llvm.float
+  // CHECK: llvm.frem %{{.*}}, %{{.*}} : f32
   %0 = spv.FRem %arg0, %arg1 : f32
   spv.Return
 }
 
 // CHECK-LABEL: @frem_vector
 spv.func @frem_vector(%arg0: vector<3xf64>, %arg1: vector<3xf64>) "None" {
-  // CHECK: llvm.frem %{{.*}}, %{{.*}} : !llvm.vec<3 x double>
+  // CHECK: llvm.frem %{{.*}}, %{{.*}} : !llvm.vec<3 x f64>
   %0 = spv.FRem %arg0, %arg1 : vector<3xf64>
   spv.Return
 }
@@ -150,14 +150,14 @@ spv.func @frem_vector(%arg0: vector<3xf64>, %arg1: vector<3xf64>) "None" {
 
 // CHECK-LABEL: @fneg_scalar
 spv.func @fneg_scalar(%arg: f64) "None" {
-  // CHECK: llvm.fneg %{{.*}} : !llvm.double
+  // CHECK: llvm.fneg %{{.*}} : f64
   %0 = spv.FNegate %arg : f64
   spv.Return
 }
 
 // CHECK-LABEL: @fneg_vector
 spv.func @fneg_vector(%arg: vector<2xf32>) "None" {
-  // CHECK: llvm.fneg %{{.*}} : !llvm.vec<2 x float>
+  // CHECK: llvm.fneg %{{.*}} : !llvm.vec<2 x f32>
   %0 = spv.FNegate %arg : vector<2xf32>
   spv.Return
 }
@@ -168,7 +168,7 @@ spv.func @fneg_vector(%arg: vector<2xf32>) "None" {
 
 // CHECK-LABEL: @udiv_scalar
 spv.func @udiv_scalar(%arg0: i32, %arg1: i32) "None" {
-  // CHECK: llvm.udiv %{{.*}}, %{{.*}} : !llvm.i32
+  // CHECK: llvm.udiv %{{.*}}, %{{.*}} : i32
   %0 = spv.UDiv %arg0, %arg1 : i32
   spv.Return
 }
@@ -186,7 +186,7 @@ spv.func @udiv_vector(%arg0: vector<3xi64>, %arg1: vector<3xi64>) "None" {
 
 // CHECK-LABEL: @umod_scalar
 spv.func @umod_scalar(%arg0: i32, %arg1: i32) "None" {
-  // CHECK: llvm.urem %{{.*}}, %{{.*}} : !llvm.i32
+  // CHECK: llvm.urem %{{.*}}, %{{.*}} : i32
   %0 = spv.UMod %arg0, %arg1 : i32
   spv.Return
 }
@@ -204,7 +204,7 @@ spv.func @umod_vector(%arg0: vector<3xi64>, %arg1: vector<3xi64>) "None" {
 
 // CHECK-LABEL: @sdiv_scalar
 spv.func @sdiv_scalar(%arg0: i16, %arg1: i16) "None" {
-  // CHECK: llvm.sdiv %{{.*}}, %{{.*}} : !llvm.i16
+  // CHECK: llvm.sdiv %{{.*}}, %{{.*}} : i16
   %0 = spv.SDiv %arg0, %arg1 : i16
   spv.Return
 }
@@ -222,7 +222,7 @@ spv.func @sdiv_vector(%arg0: vector<2xi64>, %arg1: vector<2xi64>) "None" {
 
 // CHECK-LABEL: @srem_scalar
 spv.func @srem_scalar(%arg0: i32, %arg1: i32) "None" {
-  // CHECK: llvm.srem %{{.*}}, %{{.*}} : !llvm.i32
+  // CHECK: llvm.srem %{{.*}}, %{{.*}} : i32
   %0 = spv.SRem %arg0, %arg1 : i32
   spv.Return
 }

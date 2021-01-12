@@ -646,9 +646,13 @@ entry:
 ; GCN-LABEL: {{^}}store_private_hi_v2i16_to_offset:
 ; GCN: s_waitcnt
 ; GFX900-MUBUF:        buffer_store_dword
+; GFX900-MUBUF-NEXT:   s_waitcnt vmcnt(0)
 ; GFX900-MUBUF-NEXT:   buffer_store_short_d16_hi v0, off, s[0:3], s32 offset:4094
+; GFX900-MUBUF-NEXT:   s_waitcnt vmcnt(0)
 ; GFX900-FLATSCR:      scratch_store_dword
+; GFX900-FLATSCR-NEXT: s_waitcnt vmcnt(0)
 ; GFX900-FLATSCR-NEXT: scratch_store_short_d16_hi off, v0, s32 offset:4094
+; GFX900-FLATSCR-NEXT: s_waitcnt vmcnt(0)
 define void @store_private_hi_v2i16_to_offset(i32 %arg) #0 {
 entry:
   %obj0 = alloca [10 x i32], align 4, addrspace(5)
@@ -665,9 +669,12 @@ entry:
 ; GCN-LABEL: {{^}}store_private_hi_v2i16_i8_to_offset:
 ; GCN: s_waitcnt
 ; GFX900-MUBUF:        buffer_store_dword
+; GFX900-MUBUF-NEXT:   s_waitcnt vmcnt(0)
 ; GFX900-MUBUF-NEXT:   buffer_store_byte_d16_hi v0, off, s[0:3], s32 offset:4095
 ; GFX900-FLATSCR:      scratch_store_dword
+; GFX900-FLATSCR-NEXT: s_waitcnt vmcnt(0)
 ; GFX900-FLATSCR-NEXT: scratch_store_byte_d16_hi off, v0, s32 offset:4095
+; GFX900-FLATSCR-NEXT: s_waitcnt vmcnt(0)
 define void @store_private_hi_v2i16_i8_to_offset(i32 %arg) #0 {
 entry:
   %obj0 = alloca [10 x i32], align 4, addrspace(5)

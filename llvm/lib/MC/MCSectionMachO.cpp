@@ -215,11 +215,11 @@ std::string MCSectionMachO::ParseSectionSpecifier(StringRef Spec,        // In.
     return "";
 
   // Figure out which section type it is.
-  auto TypeDescriptor = std::find_if(
-      std::begin(SectionTypeDescriptors), std::end(SectionTypeDescriptors),
-      [&](decltype(*SectionTypeDescriptors) &Descriptor) {
-        return SectionType == Descriptor.AssemblerName;
-      });
+  auto TypeDescriptor =
+      llvm::find_if(SectionTypeDescriptors,
+                    [&](decltype(*SectionTypeDescriptors) &Descriptor) {
+                      return SectionType == Descriptor.AssemblerName;
+                    });
 
   // If we didn't find the section type, reject it.
   if (TypeDescriptor == std::end(SectionTypeDescriptors))
@@ -243,11 +243,11 @@ std::string MCSectionMachO::ParseSectionSpecifier(StringRef Spec,        // In.
   Attrs.split(SectionAttrs, '+', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
 
   for (StringRef &SectionAttr : SectionAttrs) {
-    auto AttrDescriptorI = std::find_if(
-        std::begin(SectionAttrDescriptors), std::end(SectionAttrDescriptors),
-        [&](decltype(*SectionAttrDescriptors) &Descriptor) {
-          return SectionAttr.trim() == Descriptor.AssemblerName;
-        });
+    auto AttrDescriptorI =
+        llvm::find_if(SectionAttrDescriptors,
+                      [&](decltype(*SectionAttrDescriptors) &Descriptor) {
+                        return SectionAttr.trim() == Descriptor.AssemblerName;
+                      });
     if (AttrDescriptorI == std::end(SectionAttrDescriptors))
       return "mach-o section specifier has invalid attribute";
 

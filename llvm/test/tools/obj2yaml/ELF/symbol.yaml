@@ -25,3 +25,44 @@ Symbols:
   - Name:  bar
     Size:  0x1
     Value: 0x1
+
+## Check how we dump unnamed section symbols.
+## Check we are able to handle the section symbol for the null section.
+## Document we name them with a section name they describe.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: obj2yaml %t2 | FileCheck %s --check-prefix=SECTION-SYM
+
+# SECTION-SYM:      --- !ELF
+# SECTION-SYM-NEXT: FileHeader:
+# SECTION-SYM-NEXT:   Class: ELFCLASS64
+# SECTION-SYM-NEXT:   Data:  ELFDATA2LSB
+# SECTION-SYM-NEXT:   Type:  ET_REL
+# SECTION-SYM-NEXT: Sections:
+# SECTION-SYM-NEXT:   - Name: .section
+# SECTION-SYM-NEXT:     Type: SHT_PROGBITS
+# SECTION-SYM-NEXT: Symbols:
+# SECTION-SYM-NEXT:   - Type: STT_SECTION
+# SECTION-SYM-NEXT:   - Name:    .section
+# SECTION-SYM-NEXT:     Type:    STT_SECTION
+# SECTION-SYM-NEXT:     Section: .section
+# SECTION-SYM-NEXT:   - Name:    .section
+# SECTION-SYM-NEXT:     Type:    STT_SECTION
+# SECTION-SYM-NEXT:     Section: .section
+# SECTION-SYM-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name: .section
+    Type: SHT_PROGBITS
+Symbols:
+  - Type:  STT_SECTION
+    Index: 0
+  - Type:  STT_SECTION
+    Index: 1
+  - Type:  STT_SECTION
+    Index: 1

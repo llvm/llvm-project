@@ -9,7 +9,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 declare float @llvm.fabs.f32(float) nounwind readnone
 
 ; GCN-LABEL: {{^}}madmk_f32:
-; GCN-DAG: buffer_load_dword [[VA:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
+; GCN-DAG: buffer_load_dword [[VA:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 glc{{$}}
 ; GCN-DAG: buffer_load_dword [[VB:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; GCN: v_mac_f32_e32 [[VB]], 0x41200000, [[VA]]
 define amdgpu_kernel void @madmk_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) #0 {
@@ -28,7 +28,7 @@ define amdgpu_kernel void @madmk_f32(float addrspace(1)* noalias %out, float add
 }
 
 ; GCN-LABEL: {{^}}madmk_2_use_f32:
-; GCN-DAG: buffer_load_dword [[VA:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
+; GCN-DAG: buffer_load_dword [[VA:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 glc{{$}}
 ; GCN-DAG: buffer_load_dword [[VB:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; GCN-DAG: buffer_load_dword [[VC:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8
 ; GCN-DAG: s_mov_b32 [[SK:s[0-9]+]], 0x41200000
@@ -61,7 +61,7 @@ define amdgpu_kernel void @madmk_2_use_f32(float addrspace(1)* noalias %out, flo
 
 ; We don't get any benefit if the constant is an inline immediate.
 ; GCN-LABEL: {{^}}madmk_inline_imm_f32:
-; GCN-DAG: buffer_load_dword [[VA:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
+; GCN-DAG: buffer_load_dword [[VA:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 glc{{$}}
 ; GCN-DAG: buffer_load_dword [[VB:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; GCN: v_mac_f32_e32 [[VB]], 4.0, [[VA]]
 define amdgpu_kernel void @madmk_inline_imm_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) #0 {
@@ -128,7 +128,7 @@ define amdgpu_kernel void @scalar_vector_madmk_f32(float addrspace(1)* noalias %
 }
 
 ; GCN-LABEL: {{^}}no_madmk_src0_modifier_f32:
-; GCN-DAG: buffer_load_dword [[VA:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
+; GCN-DAG: buffer_load_dword [[VA:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 glc{{$}}
 ; GCN-DAG: buffer_load_dword [[VB:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; GCN-DAG: s_mov_b32 [[SK:s[0-9]+]], 0x41200000
 ; GCN: v_mad_f32 {{v[0-9]+}}, |[[VA]]|, [[SK]], [[VB]]
@@ -150,7 +150,7 @@ define amdgpu_kernel void @no_madmk_src0_modifier_f32(float addrspace(1)* noalia
 }
 
 ; GCN-LABEL: {{^}}no_madmk_src2_modifier_f32:
-; GCN-DAG: buffer_load_dword [[VA:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
+; GCN-DAG: buffer_load_dword [[VA:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 glc{{$}}
 ; GCN-DAG: buffer_load_dword [[VB:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; GCN: v_mad_f32 {{v[0-9]+}}, {{v[0-9]+}}, {{[sv][0-9]+}}, |{{v[0-9]+}}|
 define amdgpu_kernel void @no_madmk_src2_modifier_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) #0 {

@@ -174,7 +174,7 @@ MLIRContext &LLVMTypeConverter::getContext() {
 }
 
 Type LLVMTypeConverter::getIndexType() {
-  return LLVM::LLVMIntegerType::get(&getContext(), getIndexTypeBitwidth());
+  return IntegerType::get(&getContext(), getIndexTypeBitwidth());
 }
 
 unsigned LLVMTypeConverter::getPointerBitwidth(unsigned addressSpace) {
@@ -186,20 +186,10 @@ Type LLVMTypeConverter::convertIndexType(IndexType type) {
 }
 
 Type LLVMTypeConverter::convertIntegerType(IntegerType type) {
-  return LLVM::LLVMIntegerType::get(&getContext(), type.getWidth());
+  return IntegerType::get(&getContext(), type.getWidth());
 }
 
-Type LLVMTypeConverter::convertFloatType(FloatType type) {
-  if (type.isa<Float32Type>())
-    return LLVM::LLVMFloatType::get(&getContext());
-  if (type.isa<Float64Type>())
-    return LLVM::LLVMDoubleType::get(&getContext());
-  if (type.isa<Float16Type>())
-    return LLVM::LLVMHalfType::get(&getContext());
-  if (type.isa<BFloat16Type>())
-    return LLVM::LLVMBFloatType::get(&getContext());
-  llvm_unreachable("non-float type in convertFloatType");
-}
+Type LLVMTypeConverter::convertFloatType(FloatType type) { return type; }
 
 // Convert a `ComplexType` to an LLVM type. The result is a complex number
 // struct with entries for the
@@ -361,8 +351,8 @@ static constexpr unsigned kPtrInUnrankedMemRefDescriptor = 1;
 ///    stack allocated (alloca) copy of a MemRef descriptor that got casted to
 ///    be unranked.
 SmallVector<Type, 2> LLVMTypeConverter::getUnrankedMemRefDescriptorFields() {
-  return {getIndexType(), LLVM::LLVMPointerType::get(
-                              LLVM::LLVMIntegerType::get(&getContext(), 8))};
+  return {getIndexType(),
+          LLVM::LLVMPointerType::get(IntegerType::get(&getContext(), 8))};
 }
 
 Type LLVMTypeConverter::convertUnrankedMemRefType(UnrankedMemRefType type) {
@@ -402,8 +392,8 @@ Type LLVMTypeConverter::convertMemRefToBarePtr(BaseMemRefType type) {
 
 // Convert an n-D vector type to an LLVM vector type via (n-1)-D array type when
 // n > 1.
-// For example, `vector<4 x f32>` converts to `!llvm.type<"<4 x float>">` and
-// `vector<4 x 8 x 16 f32>` converts to `!llvm<"[4 x [8 x <16 x float>]]">`.
+// For example, `vector<4 x f32>` converts to `!llvm.type<"<4 x f32>">` and
+// `vector<4 x 8 x 16 f32>` converts to `!llvm."[4 x [8 x <16 x f32>]]">`.
 Type LLVMTypeConverter::convertVectorType(VectorType type) {
   auto elementType = unwrap(convertType(type.getElementType()));
   if (!elementType)
@@ -1021,9 +1011,8 @@ Type ConvertToLLVMPattern::getIndexType() const {
 }
 
 Type ConvertToLLVMPattern::getIntPtrType(unsigned addressSpace) const {
-  return LLVM::LLVMIntegerType::get(
-      &getTypeConverter()->getContext(),
-      getTypeConverter()->getPointerBitwidth(addressSpace));
+  return IntegerType::get(&getTypeConverter()->getContext(),
+                          getTypeConverter()->getPointerBitwidth(addressSpace));
 }
 
 Type ConvertToLLVMPattern::getVoidType() const {
@@ -1032,7 +1021,7 @@ Type ConvertToLLVMPattern::getVoidType() const {
 
 Type ConvertToLLVMPattern::getVoidPtrType() const {
   return LLVM::LLVMPointerType::get(
-      LLVM::LLVMIntegerType::get(&getTypeConverter()->getContext(), 8));
+      IntegerType::get(&getTypeConverter()->getContext(), 8));
 }
 
 Value ConvertToLLVMPattern::createIndexConstant(
@@ -1094,11 +1083,14 @@ Type ConvertToLLVMPattern::getElementPtrType(MemRefType type) const {
 }
 
 void ConvertToLLVMPattern::getMemRefDescriptorSizes(
-    Location loc, MemRefType memRefType, ArrayRef<Value> dynamicSizes,
+    Location loc, MemRefType memRefType, ValueRange dynamicSizes,
     ConversionPatternRewriter &rewriter, SmallVectorImpl<Value> &sizes,
     SmallVectorImpl<Value> &strides, Value &sizeBytes) const {
   assert(isConvertibleAndHasIdentityMaps(memRefType) &&
          "layout maps must have been normalized away");
+  assert(count(memRefType.getShape(), ShapedType::kDynamicSize) ==
+             static_cast<ssize_t>(dynamicSizes.size()) &&
+         "dynamicSizes size doesn't match dynamic sizes count in memref shape");
 
   sizes.reserve(memRefType.getRank());
   unsigned dynamicIndex = 0;
@@ -1746,19 +1738,18 @@ struct CreateComplexOpLowering
   using ConvertOpToLLVMPattern<CreateComplexOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(CreateComplexOp op, ArrayRef<Value> operands,
+  matchAndRewrite(CreateComplexOp complexOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    auto complexOp = cast<CreateComplexOp>(op);
     CreateComplexOp::Adaptor transformed(operands);
 
     // Pack real and imaginary part in a complex number struct.
-    auto loc = op.getLoc();
+    auto loc = complexOp.getLoc();
     auto structType = typeConverter->convertType(complexOp.getType());
     auto complexStruct = ComplexStructBuilder::undef(rewriter, loc, structType);
     complexStruct.setReal(rewriter, loc, transformed.real());
     complexStruct.setImaginary(rewriter, loc, transformed.imaginary());
 
-    rewriter.replaceOp(op, {complexStruct});
+    rewriter.replaceOp(complexOp, {complexStruct});
     return success();
   }
 };
@@ -1805,8 +1796,7 @@ template <typename OpTy>
 BinaryComplexOperands
 unpackBinaryComplexOperands(OpTy op, ArrayRef<Value> operands,
                             ConversionPatternRewriter &rewriter) {
-  auto bop = cast<OpTy>(op);
-  auto loc = bop.getLoc();
+  auto loc = op.getLoc();
   typename OpTy::Adaptor transformed(operands);
 
   // Extract real and imaginary values from operands.
@@ -1836,10 +1826,11 @@ struct AddCFOpLowering : public ConvertOpToLLVMPattern<AddCFOp> {
     auto result = ComplexStructBuilder::undef(rewriter, loc, structType);
 
     // Emit IR to add complex numbers.
+    auto fmf = LLVM::FMFAttr::get({}, op.getContext());
     Value real =
-        rewriter.create<LLVM::FAddOp>(loc, arg.lhs.real(), arg.rhs.real());
+        rewriter.create<LLVM::FAddOp>(loc, arg.lhs.real(), arg.rhs.real(), fmf);
     Value imag =
-        rewriter.create<LLVM::FAddOp>(loc, arg.lhs.imag(), arg.rhs.imag());
+        rewriter.create<LLVM::FAddOp>(loc, arg.lhs.imag(), arg.rhs.imag(), fmf);
     result.setReal(rewriter, loc, real);
     result.setImaginary(rewriter, loc, imag);
 
@@ -1863,10 +1854,11 @@ struct SubCFOpLowering : public ConvertOpToLLVMPattern<SubCFOp> {
     auto result = ComplexStructBuilder::undef(rewriter, loc, structType);
 
     // Emit IR to substract complex numbers.
+    auto fmf = LLVM::FMFAttr::get({}, op.getContext());
     Value real =
-        rewriter.create<LLVM::FSubOp>(loc, arg.lhs.real(), arg.rhs.real());
+        rewriter.create<LLVM::FSubOp>(loc, arg.lhs.real(), arg.rhs.real(), fmf);
     Value imag =
-        rewriter.create<LLVM::FSubOp>(loc, arg.lhs.imag(), arg.rhs.imag());
+        rewriter.create<LLVM::FSubOp>(loc, arg.lhs.imag(), arg.rhs.imag(), fmf);
     result.setReal(rewriter, loc, real);
     result.setImaginary(rewriter, loc, imag);
 
@@ -1892,7 +1884,7 @@ struct ConstantOpLowering : public ConvertOpToLLVMPattern<ConstantOp> {
       for (const NamedAttribute &attr : op->getAttrs()) {
         if (attr.first.strref() == "value")
           continue;
-        newOp.setAttr(attr.first, attr.second);
+        newOp->setAttr(attr.first, attr.second);
       }
       rewriter.replaceOp(op, newOp->getResults());
       return success();
@@ -2195,9 +2187,8 @@ static LogicalResult copyUnrankedDescriptors(OpBuilder &builder, Location loc,
   // Get frequently used types.
   MLIRContext *context = builder.getContext();
   auto voidType = LLVM::LLVMVoidType::get(context);
-  Type voidPtrType =
-      LLVM::LLVMPointerType::get(LLVM::LLVMIntegerType::get(context, 8));
-  auto i1Type = LLVM::LLVMIntegerType::get(context, 1);
+  Type voidPtrType = LLVM::LLVMPointerType::get(IntegerType::get(context, 8));
+  auto i1Type = IntegerType::get(context, 1);
   Type indexType = typeConverter.getIndexType();
 
   // Find the malloc and free, or declare them if necessary.
@@ -2836,7 +2827,7 @@ private:
 
     Value zeroIndex = createIndexConstant(rewriter, loc, 0);
     Value pred = rewriter.create<LLVM::ICmpOp>(
-        loc, LLVM::LLVMIntegerType::get(rewriter.getContext(), 1),
+        loc, IntegerType::get(rewriter.getContext(), 1),
         LLVM::ICmpPredicate::sge, indexArg, zeroIndex);
 
     Block *bodyBlock =
@@ -3105,10 +3096,10 @@ struct IndexCastOpLowering : public ConvertOpToLLVMPattern<IndexCastOp> {
 
     auto targetType =
         typeConverter->convertType(indexCastOp.getResult().getType())
-            .cast<LLVM::LLVMIntegerType>();
-    auto sourceType = transformed.in().getType().cast<LLVM::LLVMIntegerType>();
-    unsigned targetBits = targetType.getBitWidth();
-    unsigned sourceBits = sourceType.getBitWidth();
+            .cast<IntegerType>();
+    auto sourceType = transformed.in().getType().cast<IntegerType>();
+    unsigned targetBits = targetType.getWidth();
+    unsigned sourceBits = sourceType.getWidth();
 
     if (targetBits == sourceBits)
       rewriter.replaceOp(indexCastOp, transformed.in());
@@ -3155,11 +3146,12 @@ struct CmpFOpLowering : public ConvertOpToLLVMPattern<CmpFOp> {
                   ConversionPatternRewriter &rewriter) const override {
     CmpFOpAdaptor transformed(operands);
 
+    auto fmf = LLVM::FMFAttr::get({}, cmpfOp.getContext());
     rewriter.replaceOpWithNewOp<LLVM::FCmpOp>(
         cmpfOp, typeConverter->convertType(cmpfOp.getResult().getType()),
         rewriter.getI64IntegerAttr(static_cast<int64_t>(
             convertCmpPredicate<LLVM::FCmpPredicate>(cmpfOp.getPredicate()))),
-        transformed.lhs(), transformed.rhs());
+        transformed.lhs(), transformed.rhs(), fmf);
 
     return success();
   }
@@ -3867,7 +3859,7 @@ struct GenericAtomicRMWOpLowering
     // Append the cmpxchg op to the end of the loop block.
     auto successOrdering = LLVM::AtomicOrdering::acq_rel;
     auto failureOrdering = LLVM::AtomicOrdering::monotonic;
-    auto boolType = LLVM::LLVMIntegerType::get(rewriter.getContext(), 1);
+    auto boolType = IntegerType::get(rewriter.getContext(), 1);
     auto pairType = LLVM::LLVMStructType::getLiteral(rewriter.getContext(),
                                                      {valueType, boolType});
     auto cmpxchg = rewriter.create<LLVM::AtomicCmpXchgOp>(
@@ -4051,7 +4043,7 @@ Type LLVMTypeConverter::packFunctionResults(ArrayRef<Type> types) {
 Value LLVMTypeConverter::promoteOneMemRefDescriptor(Location loc, Value operand,
                                                     OpBuilder &builder) {
   auto *context = builder.getContext();
-  auto int64Ty = LLVM::LLVMIntegerType::get(builder.getContext(), 64);
+  auto int64Ty = IntegerType::get(builder.getContext(), 64);
   auto indexType = IndexType::get(context);
   // Alloca with proper alignment. We do not expect optimizations of this
   // alloca op and so we omit allocating at the entry block.
@@ -4091,8 +4083,7 @@ SmallVector<Value, 4> LLVMTypeConverter::promoteOperands(Location loc,
         continue;
       }
       if (auto memrefType = operand.getType().dyn_cast<MemRefType>()) {
-        MemRefDescriptor::unpack(builder, loc, llvmOperand,
-                                 operand.getType().cast<MemRefType>(),
+        MemRefDescriptor::unpack(builder, loc, llvmOperand, memrefType,
                                  promotedOperands);
         continue;
       }

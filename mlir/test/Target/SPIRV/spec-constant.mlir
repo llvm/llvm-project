@@ -85,3 +85,34 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   // CHECK: spv.specConstantComposite @scc_vector (@sc_f32_1, @sc_f32_2, @sc_f32_3) : vector<3xf32>
   spv.specConstantComposite @scc_vector (@sc_f32_1, @sc_f32_2, @sc_f32_3) : vector<3 x f32>
 }
+
+// -----
+
+spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
+
+  spv.specConstant @sc_i32_1 = 1 : i32
+
+  spv.func @use_composite() -> (i32) "None" {
+    // CHECK: [[USE1:%.*]] = spv.mlir.referenceof @sc_i32_1 : i32
+    // CHECK: [[USE2:%.*]] = spv.constant 0 : i32
+
+    // CHECK: [[RES1:%.*]] = spv.SpecConstantOperation wraps "spv.ISub"([[USE1]], [[USE2]]) : (i32, i32) -> i32
+
+    // CHECK: [[USE3:%.*]] = spv.mlir.referenceof @sc_i32_1 : i32
+    // CHECK: [[USE4:%.*]] = spv.constant 0 : i32
+
+    // CHECK: [[RES2:%.*]] = spv.SpecConstantOperation wraps "spv.ISub"([[USE3]], [[USE4]]) : (i32, i32) -> i32
+
+    %0 = spv.mlir.referenceof @sc_i32_1 : i32
+    %1 = spv.constant 0 : i32
+    %2 = spv.SpecConstantOperation wraps "spv.ISub"(%0, %1) : (i32, i32) -> i32
+
+    // CHECK: [[RES3:%.*]] = spv.SpecConstantOperation wraps "spv.IMul"([[RES1]], [[RES2]]) : (i32, i32) -> i32
+    %3 = spv.SpecConstantOperation wraps "spv.IMul"(%2, %2) : (i32, i32) -> i32
+
+    // Make sure deserialization continues from the right place after creating
+    // the previous op.
+    // CHECK: spv.ReturnValue [[RES3]]
+    spv.ReturnValue %3 : i32
+  }
+}

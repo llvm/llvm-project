@@ -7,10 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUELFStreamer.h"
-#include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
+#include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCObjectWriter.h"
 
 using namespace llvm;

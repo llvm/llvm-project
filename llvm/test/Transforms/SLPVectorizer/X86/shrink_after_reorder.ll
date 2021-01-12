@@ -59,3 +59,49 @@ bb:
   store i32 %tmp45, i32* %tmp46, align 4
   ret void
 }
+
+define internal i32 @ipvideo_decode_block_opcode_0xD_16() {
+; CHECK-LABEL: @ipvideo_decode_block_opcode_0xD_16(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i16> [ undef, [[ENTRY:%.*]] ], [ [[TMP0]], [[IF_END:%.*]] ]
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i16> [[TMP0]], <2 x i16> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[ARRAYIDX11_1:%.*]] = getelementptr inbounds i16, i16* undef, i32 1
+; CHECK-NEXT:    [[ARRAYIDX11_2:%.*]] = getelementptr inbounds i16, i16* undef, i32 2
+; CHECK-NEXT:    [[ARRAYIDX11_3:%.*]] = getelementptr inbounds i16, i16* undef, i32 3
+; CHECK-NEXT:    [[ARRAYIDX11_4:%.*]] = getelementptr inbounds i16, i16* undef, i32 4
+; CHECK-NEXT:    [[ARRAYIDX11_5:%.*]] = getelementptr inbounds i16, i16* undef, i32 5
+; CHECK-NEXT:    [[ARRAYIDX11_6:%.*]] = getelementptr inbounds i16, i16* undef, i32 6
+; CHECK-NEXT:    [[ARRAYIDX11_7:%.*]] = getelementptr inbounds i16, i16* undef, i32 7
+; CHECK-NEXT:    store <8 x i16> [[SHUFFLE]], <8 x i16>* undef, align 2
+; CHECK-NEXT:    br label [[FOR_BODY]]
+;
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %if.end, %entry
+  %P.sroa.7.0 = phi i16 [ undef, %entry ], [ %P.sroa.7.0, %if.end ]
+  %P.sroa.0.0 = phi i16 [ undef, %entry ], [ %P.sroa.0.0, %if.end ]
+  br label %if.end
+
+if.end:                                           ; preds = %for.body
+  store i16 %P.sroa.0.0, i16* undef, align 2
+  %arrayidx11.1 = getelementptr inbounds i16, i16* undef, i32 1
+  store i16 %P.sroa.0.0, i16* %arrayidx11.1, align 2
+  %arrayidx11.2 = getelementptr inbounds i16, i16* undef, i32 2
+  store i16 %P.sroa.0.0, i16* %arrayidx11.2, align 2
+  %arrayidx11.3 = getelementptr inbounds i16, i16* undef, i32 3
+  store i16 %P.sroa.0.0, i16* %arrayidx11.3, align 2
+  %arrayidx11.4 = getelementptr inbounds i16, i16* undef, i32 4
+  store i16 %P.sroa.7.0, i16* %arrayidx11.4, align 2
+  %arrayidx11.5 = getelementptr inbounds i16, i16* undef, i32 5
+  store i16 %P.sroa.7.0, i16* %arrayidx11.5, align 2
+  %arrayidx11.6 = getelementptr inbounds i16, i16* undef, i32 6
+  store i16 %P.sroa.7.0, i16* %arrayidx11.6, align 2
+  %arrayidx11.7 = getelementptr inbounds i16, i16* undef, i32 7
+  store i16 %P.sroa.7.0, i16* %arrayidx11.7, align 2
+  br label %for.body
+}

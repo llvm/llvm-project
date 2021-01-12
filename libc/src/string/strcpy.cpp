@@ -14,8 +14,8 @@
 
 namespace __llvm_libc {
 
-char *LLVM_LIBC_ENTRYPOINT(strcpy)(char *__restrict dest,
-                                   const char *__restrict src) {
+LLVM_LIBC_FUNCTION(char *, strcpy,
+                   (char *__restrict dest, const char *__restrict src)) {
   return reinterpret_cast<char *>(
       __llvm_libc::memcpy(dest, src, internal::string_length(src) + 1));
 }
