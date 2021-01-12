@@ -2446,11 +2446,8 @@ static LogicalResult verify(GatherOp op) {
     return op.emitOpError("expected result dim to match indices dim");
   if (resVType.getDimSize(0) != maskVType.getDimSize(0))
     return op.emitOpError("expected result dim to match mask dim");
-  if (llvm::size(op.pass_thru()) != 0) {
-    VectorType passVType = op.getPassThruVectorType();
-    if (resVType != passVType)
-      return op.emitOpError("expected pass_thru of same type as result type");
-  }
+  if (resVType != op.getPassThruVectorType())
+    return op.emitOpError("expected pass_thru of same type as result type");
   return success();
 }
 
