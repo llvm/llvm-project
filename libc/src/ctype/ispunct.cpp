@@ -15,7 +15,7 @@ namespace __llvm_libc {
 
 // TODO: Currently restricted to default locale.
 // These should be extended using locale information.
-int LLVM_LIBC_ENTRYPOINT(ispunct)(int c) {
+LLVM_LIBC_FUNCTION(int, ispunct, (int c)) {
   return !internal::isalnum(c) && internal::isgraph(c);
 }
 

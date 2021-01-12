@@ -11,7 +11,7 @@
 
 namespace __llvm_libc {
 
-long double LLVM_LIBC_ENTRYPOINT(modfl)(long double x, long double *iptr) {
+LLVM_LIBC_FUNCTION(long double, modfl, (long double x, long double *iptr)) {
   return fputil::modf(x, *iptr);
 }
 

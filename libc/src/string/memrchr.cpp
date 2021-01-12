@@ -12,7 +12,7 @@
 
 namespace __llvm_libc {
 
-void *LLVM_LIBC_ENTRYPOINT(memrchr)(const void *src, int c, size_t n) {
+LLVM_LIBC_FUNCTION(void *, memrchr, (const void *src, int c, size_t n)) {
   const unsigned char *str = reinterpret_cast<const unsigned char *>(src);
   const unsigned char ch = c;
   for (; n != 0; --n) {

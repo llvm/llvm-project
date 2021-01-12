@@ -18,7 +18,7 @@
 namespace __llvm_libc {
 
 // The implementation currently handles only plain mutexes.
-int LLVM_LIBC_ENTRYPOINT(mtx_unlock)(mtx_t *mutex) {
+LLVM_LIBC_FUNCTION(int, mtx_unlock, (mtx_t * mutex)) {
   FutexData *futex_word = reinterpret_cast<FutexData *>(mutex->__internal_data);
   while (true) {
     uint32_t mutex_status = MS_Waiting;

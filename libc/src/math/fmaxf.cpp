@@ -11,7 +11,7 @@
 
 namespace __llvm_libc {
 
-float LLVM_LIBC_ENTRYPOINT(fmaxf)(float x, float y) {
+LLVM_LIBC_FUNCTION(float, fmaxf, (float x, float y)) {
   return fputil::fmax(x, y);
 }
 

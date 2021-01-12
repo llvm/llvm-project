@@ -12,7 +12,7 @@
 
 namespace __llvm_libc {
 
-int LLVM_LIBC_ENTRYPOINT(mtx_init)(mtx_t *mutex, int type) {
+LLVM_LIBC_FUNCTION(int, mtx_init, (mtx_t * mutex, int type)) {
   *(reinterpret_cast<uint32_t *>(mutex->__internal_data)) = MS_Free;
   mutex->__mtx_type = type;
   return thrd_success;

@@ -35,8 +35,8 @@ static __attribute__((noinline)) void start_thread() {
                                      start_args->func(start_args->arg));
 }
 
-int LLVM_LIBC_ENTRYPOINT(thrd_create)(thrd_t *thread, thrd_start_t func,
-                                      void *arg) {
+LLVM_LIBC_FUNCTION(int, thrd_create,
+                   (thrd_t * thread, thrd_start_t func, void *arg)) {
   unsigned clone_flags =
       CLONE_VM        // Share the memory space with the parent.
       | CLONE_FS      // Share the file system with the parent.

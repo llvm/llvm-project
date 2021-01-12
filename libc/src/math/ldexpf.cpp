@@ -11,7 +11,7 @@
 
 namespace __llvm_libc {
 
-float LLVM_LIBC_ENTRYPOINT(ldexpf)(float x, int exp) {
+LLVM_LIBC_FUNCTION(float, ldexpf, (float x, int exp)) {
   return fputil::ldexp(x, exp);
 }
 

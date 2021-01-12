@@ -11,7 +11,7 @@
 
 namespace __llvm_libc {
 
-long LLVM_LIBC_ENTRYPOINT(lroundf)(float x) {
+LLVM_LIBC_FUNCTION(long, lroundf, (float x)) {
   return fputil::roundToSignedInteger<float, long>(x);
 }
 

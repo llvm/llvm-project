@@ -11,7 +11,7 @@
 
 namespace __llvm_libc {
 
-long double LLVM_LIBC_ENTRYPOINT(logbl)(long double x) {
+LLVM_LIBC_FUNCTION(long double, logbl, (long double x)) {
   return fputil::logb(x);
 }
 

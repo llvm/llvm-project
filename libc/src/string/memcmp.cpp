@@ -13,8 +13,8 @@
 namespace __llvm_libc {
 
 // TODO: It is a simple implementation, an optimized version is preparing.
-int LLVM_LIBC_ENTRYPOINT(memcmp)(const void *lhs, const void *rhs,
-                                 size_t count) {
+LLVM_LIBC_FUNCTION(int, memcmp,
+                   (const void *lhs, const void *rhs, size_t count)) {
   const unsigned char *_lhs = reinterpret_cast<const unsigned char *>(lhs);
   const unsigned char *_rhs = reinterpret_cast<const unsigned char *>(rhs);
   for (size_t i = 0; i < count; ++i)

@@ -11,7 +11,7 @@
 
 namespace __llvm_libc {
 
-int LLVM_LIBC_ENTRYPOINT(feclearexcept)(int e) {
+LLVM_LIBC_FUNCTION(int, feclearexcept, (int e)) {
   return fputil::clearExcept(e);
 }
 
