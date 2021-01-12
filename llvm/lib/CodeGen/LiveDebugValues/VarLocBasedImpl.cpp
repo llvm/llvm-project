@@ -572,8 +572,9 @@ private:
                                Expr) <
                std::make_tuple(
                    Other.Var, Other.Kind, Other.Loc.SpillLocation.SpillBase,
-                   Loc.SpillLocation.SpillOffset.getFixed(),
-                   Loc.SpillLocation.SpillOffset.getScalable(), Other.Expr);
+                   Other.Loc.SpillLocation.SpillOffset.getFixed(),
+                   Other.Loc.SpillLocation.SpillOffset.getScalable(),
+                   Other.Expr);
       case RegisterKind:
       case ImmediateKind:
       case EntryValueKind:

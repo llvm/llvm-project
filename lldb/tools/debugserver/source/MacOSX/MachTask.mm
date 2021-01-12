@@ -512,6 +512,7 @@ task_t MachTask::TaskPortForProcessID(pid_t pid, DNBError &err,
     mach_port_t task_self = mach_task_self();
     task_t task = TASK_NULL;
     for (uint32_t i = 0; i < num_retries; i++) {
+      DNBLog("[LaunchAttach] (%d) about to task_for_pid(%d)", getpid(), pid);
       err = ::task_for_pid(task_self, pid, &task);
 
       if (DNBLogCheckLogBit(LOG_TASK) || err.Fail()) {
@@ -522,13 +523,19 @@ task_t MachTask::TaskPortForProcessID(pid_t pid, DNBError &err,
                    err.AsString() ? err.AsString() : "success");
         if (err.Fail()) {
           err.SetErrorString(str);
-          DNBLogError ("MachTask::TaskPortForProcessID task_for_pid failed: %s", str);
+          DNBLogError(
+              "[LaunchAttach] MachTask::TaskPortForProcessID task_for_pid(%d) "
+              "failed: %s",
+              pid, str);
         }
         err.LogThreaded(str);
       }
 
-      if (err.Success())
+      if (err.Success()) {
+        DNBLog("[LaunchAttach] (%d) successfully task_for_pid(%d)'ed", getpid(),
+               pid);
         return task;
+      }
 
       // Sleep a bit and try again
       ::usleep(usec_interval);

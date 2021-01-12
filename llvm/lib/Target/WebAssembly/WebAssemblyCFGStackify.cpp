@@ -57,6 +57,11 @@ class WebAssemblyCFGStackify final : public MachineFunctionPass {
   // which holds the beginning of the scope. This will allow us to quickly skip
   // over scoped regions when walking blocks.
   SmallVector<MachineBasicBlock *, 8> ScopeTops;
+  void updateScopeTops(MachineBasicBlock *Begin, MachineBasicBlock *End) {
+    int EndNo = End->getNumber();
+    if (!ScopeTops[EndNo] || ScopeTops[EndNo]->getNumber() > Begin->getNumber())
+      ScopeTops[EndNo] = Begin;
+  }
 
   // Placing markers.
   void placeMarkers(MachineFunction &MF);
@@ -135,10 +140,10 @@ static bool explicitlyBranchesTo(MachineBasicBlock *Pred,
 // contains instructions that should go before the marker, and AfterSet contains
 // ones that should go after the marker. In this function, AfterSet is only
 // used for sanity checking.
+template <typename Container>
 static MachineBasicBlock::iterator
-getEarliestInsertPos(MachineBasicBlock *MBB,
-                     const SmallPtrSet<const MachineInstr *, 4> &BeforeSet,
-                     const SmallPtrSet<const MachineInstr *, 4> &AfterSet) {
+getEarliestInsertPos(MachineBasicBlock *MBB, const Container &BeforeSet,
+                     const Container &AfterSet) {
   auto InsertPos = MBB->end();
   while (InsertPos != MBB->begin()) {
     if (BeforeSet.count(&*std::prev(InsertPos))) {
@@ -159,10 +164,10 @@ getEarliestInsertPos(MachineBasicBlock *MBB,
 // contains instructions that should go before the marker, and AfterSet contains
 // ones that should go after the marker. In this function, BeforeSet is only
 // used for sanity checking.
+template <typename Container>
 static MachineBasicBlock::iterator
-getLatestInsertPos(MachineBasicBlock *MBB,
-                   const SmallPtrSet<const MachineInstr *, 4> &BeforeSet,
-                   const SmallPtrSet<const MachineInstr *, 4> &AfterSet) {
+getLatestInsertPos(MachineBasicBlock *MBB, const Container &BeforeSet,
+                   const Container &AfterSet) {
   auto InsertPos = MBB->begin();
   while (InsertPos != MBB->end()) {
     if (AfterSet.count(&*InsertPos)) {
@@ -351,10 +356,7 @@ void WebAssemblyCFGStackify::placeBlockMarker(MachineBasicBlock &MBB) {
   registerScope(Begin, End);
 
   // Track the farthest-spanning scope that ends at this point.
-  int Number = MBB.getNumber();
-  if (!ScopeTops[Number] ||
-      ScopeTops[Number]->getNumber() > Header->getNumber())
-    ScopeTops[Number] = Header;
+  updateScopeTops(Header, &MBB);
 }
 
 /// Insert a LOOP marker for a loop starting at MBB (if it's a loop header).
@@ -422,8 +424,7 @@ void WebAssemblyCFGStackify::placeLoopMarker(MachineBasicBlock &MBB) {
   assert((!ScopeTops[AfterLoop->getNumber()] ||
           ScopeTops[AfterLoop->getNumber()]->getNumber() < MBB.getNumber()) &&
          "With block sorting the outermost loop for a block should be first.");
-  if (!ScopeTops[AfterLoop->getNumber()])
-    ScopeTops[AfterLoop->getNumber()] = &MBB;
+  updateScopeTops(&MBB, AfterLoop);
 }
 
 void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
@@ -622,11 +623,8 @@ void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
   // catch         |
   //   end_block --|
   // end_try
-  for (int Number : {Cont->getNumber(), MBB.getNumber()}) {
-    if (!ScopeTops[Number] ||
-        ScopeTops[Number]->getNumber() > Header->getNumber())
-      ScopeTops[Number] = Header;
-  }
+  for (auto *End : {&MBB, Cont})
+    updateScopeTops(Header, End);
 }
 
 void WebAssemblyCFGStackify::removeUnnecessaryInstrs(MachineFunction &MF) {
@@ -742,10 +740,12 @@ static unsigned getCopyOpcode(const TargetRegisterClass *RC) {
 // not yet been added. So 'LLVM_ATTRIBUTE_UNUSED' is added to suppress the
 // warning. Remove the attribute after the new functionality is added.
 LLVM_ATTRIBUTE_UNUSED static void
-unstackifyVRegsUsedInSplitBB(MachineBasicBlock &MBB, MachineBasicBlock &Split,
-                             WebAssemblyFunctionInfo &MFI,
-                             MachineRegisterInfo &MRI,
-                             const WebAssemblyInstrInfo &TII) {
+unstackifyVRegsUsedInSplitBB(MachineBasicBlock &MBB, MachineBasicBlock &Split) {
+  MachineFunction &MF = *MBB.getParent();
+  const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
+  auto &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
+  auto &MRI = MF.getRegInfo();
+
   for (auto &MI : Split) {
     for (auto &MO : MI.explicit_uses()) {
       if (!MO.isReg() || Register::isPhysicalRegister(MO.getReg()))
