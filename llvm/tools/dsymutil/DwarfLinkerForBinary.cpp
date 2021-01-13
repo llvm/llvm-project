@@ -412,9 +412,10 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
                 Stat.getLastModificationTime());
         if (ModificationTime != Obj->getTimestamp()) {
           // Not using the helper here as we can easily stream TimePoint<>.
-          WithColor::warning() << "Timestamp mismatch for " << File << ": "
-                               << Stat.getLastModificationTime() << " and "
-                               << sys::TimePoint<>(Obj->getTimestamp()) << "\n";
+          WithColor::warning()
+              << File << ": timestamp mismatch between swift interface file ("
+              << sys::TimePoint<>(Obj->getTimestamp()) << ") and debug map ("
+              << sys::TimePoint<>(Obj->getTimestamp()) << ")\n";
           continue;
         }
       }
