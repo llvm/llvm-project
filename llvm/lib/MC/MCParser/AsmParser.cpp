@@ -3008,20 +3008,13 @@ bool AsmParser::parseAngleBracketString(std::string &Data) {
 }
 
 /// parseDirectiveAscii:
-//    ::= .ascii [ "string"+ ( , "string"+ )* ]
-///   ::= ( .asciz | .string ) [ "string" ( , "string" )* ]
+///   ::= ( .ascii | .asciz | .string ) [ "string" ( , "string" )* ]
 bool AsmParser::parseDirectiveAscii(StringRef IDVal, bool ZeroTerminated) {
   auto parseOp = [&]() -> bool {
     std::string Data;
-    if (checkForValidSection())
+    if (checkForValidSection() || parseEscapedString(Data))
       return true;
-    // Only support spaces as separators for .ascii directive for now. See the
-    // discusssion at https://reviews.llvm.org/D91460 for more details
-    do {
-      if (parseEscapedString(Data))
-        return true;
-      getStreamer().emitBytes(Data);
-    } while (!ZeroTerminated && getTok().is(AsmToken::String));
+    getStreamer().emitBytes(Data);
     if (ZeroTerminated)
       getStreamer().emitBytes(StringRef("\0", 1));
     return false;
