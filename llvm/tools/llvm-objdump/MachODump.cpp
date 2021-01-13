@@ -2395,7 +2395,7 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
           ArchFound = true;
           Expected<std::unique_ptr<ObjectFile>> ObjOrErr =
               I->getAsObjectFile();
-          std::string ArchitectureName = "";
+          std::string ArchitectureName;
           if (ArchFlags.size() > 1)
             ArchitectureName = I->getArchFlagName();
           if (ObjOrErr) {
@@ -2511,7 +2511,7 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
                                               E = UB->end_objects();
         I != E; ++I) {
     Expected<std::unique_ptr<ObjectFile>> ObjOrErr = I->getAsObjectFile();
-    std::string ArchitectureName = "";
+    std::string ArchitectureName;
     if (moreThanOneArch)
       ArchitectureName = I->getArchFlagName();
     if (ObjOrErr) {
