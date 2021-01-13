@@ -36,6 +36,8 @@ kernel void float_ops() {
 #if __OPENCL_C_VERSION__ < 120
 // expected-error@-2{{invalid argument type}}
 #endif
+  float fcst = 5.5f;
+  float fremainder = fcst % 2.0f; // expected-error {{invalid operands to binary expression}}
 }
 
 kernel void vec_float_ops() {
@@ -56,6 +58,8 @@ kernel void vec_float_ops() {
 #if __OPENCL_C_VERSION__ < 120
 // expected-error@-2{{invalid argument type}}
 #endif
+  float4 f4cst = (float4)(5.5f, 5.5f, 5.5f, 5.5f);
+  float4 f4remainder = f4cst % (float4)(2.0f, 2.0f, 2.0f, 2.0f); // expected-error {{invalid operands to binary expression}}
 }
 
 kernel void double_ops() {
@@ -85,6 +89,8 @@ kernel void double_ops() {
 #if __OPENCL_C_VERSION__ < 120
 // expected-error@-2{{invalid argument type}}
 #endif
+  double dcst = 5.5;
+  double dremainder = dcst % 2.0; // expected-error {{invalid operands to binary expression}}
 }
 
 kernel void vec_double_ops() {
