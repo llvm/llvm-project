@@ -635,10 +635,10 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
     return;
   }
 
-  std::string CaseString("");
+  std::string CaseString;
   raw_string_ostream CaseStream(CaseString);
-  std::string PrevOp("");
-  std::string CurOp("");
+  std::string PrevOp;
+  std::string CurOp;
   CaseStream << "  switch (MI.getOpcode()) {\n";
   CaseStream << "    default: return false;\n";
 
