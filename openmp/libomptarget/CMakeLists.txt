@@ -31,8 +31,8 @@ include(LibomptargetUtils)
 include(LibomptargetGetDependencies)
 
 # LLVM source tree is required at build time for libomptarget
-if (NOT LIBOMPTARGET_LLVM_MAIN_INCLUDE_DIR)
-  message(FATAL_ERROR "Missing definition for LIBOMPTARGET_LLVM_MAIN_INCLUDE_DIR")
+if (NOT LIBOMPTARGET_LLVM_INCLUDE_DIRS)
+  message(FATAL_ERROR "Missing definition for LIBOMPTARGET_LLVM_INCLUDE_DIRS")
 endif()
 
 # This is a list of all the targets that are supported/tested right now.

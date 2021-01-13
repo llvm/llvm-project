@@ -472,7 +472,7 @@ HasOneImplicitDefWithKnownVT(const CodeGenTarget &TargetInfo) const {
 /// include text from the specified variant, returning the new string.
 std::string CodeGenInstruction::
 FlattenAsmStringVariants(StringRef Cur, unsigned Variant) {
-  std::string Res = "";
+  std::string Res;
 
   for (;;) {
     // Find the start of the next variant string.

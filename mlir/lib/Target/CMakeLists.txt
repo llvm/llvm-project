@@ -1,3 +1,5 @@
+add_subdirectory(SPIRV)
+
 add_mlir_translation_library(MLIRTargetLLVMIRModuleTranslation
   LLVMIR/DebugTranslation.cpp
   LLVMIR/ModuleTranslation.cpp
@@ -131,53 +133,4 @@ add_mlir_translation_library(MLIRTargetROCDLIR
   MLIRLLVMIR
   MLIRROCDLIR
   MLIRTargetLLVMIRModuleTranslation
-  )
-
-add_mlir_translation_library(MLIRSPIRVBinaryUtils
-  SPIRV/SPIRVBinaryUtils.cpp
-
-  LINK_LIBS PUBLIC
-  MLIRIR
-  MLIRSPIRV
-  MLIRSupport
-  )
-
-add_mlir_translation_library(MLIRSPIRVSerialization
-  SPIRV/Serialization.cpp
-
-  DEPENDS
-  MLIRSPIRVSerializationGen
-
-  LINK_LIBS PUBLIC
-  MLIRIR
-  MLIRSPIRV
-  MLIRSPIRVBinaryUtils
-  MLIRSupport
-  MLIRTranslation
-  )
-
-add_mlir_translation_library(MLIRSPIRVDeserialization
-  SPIRV/Deserialization.cpp
-
-  DEPENDS
-  MLIRSPIRVSerializationGen
-
-  LINK_LIBS PUBLIC
-  MLIRIR
-  MLIRSPIRV
-  MLIRSPIRVBinaryUtils
-  MLIRSupport
-  MLIRTranslation
-  )
-
-add_mlir_translation_library(MLIRSPIRVTranslateRegistration
-  SPIRV/TranslateRegistration.cpp
-
-  LINK_LIBS PUBLIC
-  MLIRIR
-  MLIRSPIRV
-  MLIRSPIRVSerialization
-  MLIRSPIRVDeserialization
-  MLIRSupport
-  MLIRTranslation
   )

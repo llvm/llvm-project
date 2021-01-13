@@ -73,8 +73,8 @@ tls3:
 # RUN: wasm-ld -no-gc-sections --shared-memory --max-memory=131072 --no-entry -o %t.wasm %t.o
 # RUN: obj2yaml %t.wasm | FileCheck %s
 
-# RUN: wasm-ld -no-gc-sections --shared-memory --max-memory=131072 --no-merge-data-segments --no-entry -o %t.wasm %t.o
-# RUN: obj2yaml %t.wasm | FileCheck %s
+# RUN: wasm-ld -no-gc-sections --shared-memory --max-memory=131072 --no-merge-data-segments --no-entry -o %t2.wasm %t.o
+# RUN: obj2yaml %t2.wasm | FileCheck %s
 
 # CHECK:      - Type:            GLOBAL
 # CHECK-NEXT:   Globals:
@@ -163,3 +163,32 @@ tls3:
 # Expected body of tls_align:
 #   global.get 3
 #   end
+
+
+# Also verify TLS usage with --relocatable
+# RUN: wasm-ld --relocatable -o %t3.wasm %t.o
+# RUN: obj2yaml %t3.wasm | FileCheck %s --check-prefix=RELOC
+
+# RELOC:       - Type:            IMPORT
+# RELOC-NEXT:    Imports:
+# RELOC-NEXT:      - Module:          env
+# RELOC-NEXT:        Field:           __tls_base
+# RELOC-NEXT:        Kind:            GLOBAL
+# RELOC-NEXT:        GlobalType:      I32
+# RELOC-NEXT:        GlobalMutable:   true
+# RELOC-NEXT:      - Module:          env
+# RELOC-NEXT:        Field:           __tls_align
+# RELOC-NEXT:        Kind:            GLOBAL
+# RELOC-NEXT:        GlobalType:      I32
+# RELOC-NEXT:        GlobalMutable:   false
+
+# RELOC:         GlobalNames:
+# RELOC-NEXT:      - Index:           0
+# RELOC-NEXT:        Name:            __tls_base
+# RELOC-NEXT:      - Index:           1
+# RELOC-NEXT:        Name:            __tls_align
+# RELOC-NEXT:    DataSegmentNames:
+# RELOC-NEXT:      - Index:           0
+# RELOC-NEXT:        Name:            .tdata
+# RELOC-NEXT:      - Index:           1
+# RELOC-NEXT:        Name:            .bss.no_tls

@@ -79,7 +79,7 @@ body:             |
     %11 = S_MOV_B32 0
     %12 = REG_SEQUENCE killed %11, 1, killed %10, 2
     %13 = REG_SEQUENCE killed %5, 17, %12, 18
-    %28 = V_LSHL_B64 killed %27, 2, implicit $exec
+    %28 = V_LSHL_B64_e64 killed %27, 2, implicit $exec
     %16 = REG_SEQUENCE killed %4, 17, %12, 18
     %17 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     %19 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 4, 0, 0, 0, 0, 0, implicit $exec
@@ -163,7 +163,7 @@ body:             |
     %11 = S_MOV_B32 0
     %12 = REG_SEQUENCE killed %11, 1, killed %10, 2
     %13 = REG_SEQUENCE killed %5, 17, %12, 18
-    %28 = V_LSHL_B64 killed %27, 2, implicit $exec
+    %28 = V_LSHL_B64_e64 killed %27, 2, implicit $exec
     %16 = REG_SEQUENCE killed %4, 17, %12, 18
     %17 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     %19 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 4, 0, 0, 0, 0, 0, implicit $exec
@@ -247,7 +247,7 @@ body:             |
     %11 = S_MOV_B32 0
     %12 = REG_SEQUENCE killed %11, 1, killed %10, 2
     %13 = REG_SEQUENCE killed %5, 17, %12, 18
-    %28 = V_LSHL_B64 killed %27, 2, implicit $exec
+    %28 = V_LSHL_B64_e64 killed %27, 2, implicit $exec
     %16 = REG_SEQUENCE killed %4, 17, %12, 18
     %17 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     %19 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 4, 0, 0, 0, 0, 0, implicit $exec
@@ -330,7 +330,7 @@ body:             |
     %11 = S_MOV_B32 0
     %12 = REG_SEQUENCE killed %11, 1, killed %10, 2
     %13 = REG_SEQUENCE killed %5, 17, %12, 18
-    %28 = V_LSHL_B64 killed %27, 2, implicit $exec
+    %28 = V_LSHL_B64_e64 killed %27, 2, implicit $exec
     %16 = REG_SEQUENCE killed %4, 17, %12, 18
     %17 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     %19 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 4, 0, 0, 0, 0, 0, implicit $exec
@@ -415,7 +415,7 @@ body:             |
     %11 = S_MOV_B32 0
     %12 = REG_SEQUENCE killed %11, 1, killed %10, 2
     %13 = REG_SEQUENCE killed %5, 17, %12, 18
-    %28 = V_LSHL_B64 killed %27, 2, implicit $exec
+    %28 = V_LSHL_B64_e64 killed %27, 2, implicit $exec
     %16 = REG_SEQUENCE killed %4, 17, %12, 18
     %17 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     %19 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 4, 0, 0, 0, 0, 0, implicit $exec
@@ -500,7 +500,7 @@ body:             |
     %11 = S_MOV_B32 0
     %12 = REG_SEQUENCE killed %11, 1, killed %10, 2
     %13 = REG_SEQUENCE killed %5, 17, %12, 18
-    %28 = V_LSHL_B64 killed %27, 2, implicit $exec
+    %28 = V_LSHL_B64_e64 killed %27, 2, implicit $exec
     %16 = REG_SEQUENCE killed %4, 17, %12, 18
     %17 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     %19 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 4, 0, 0, 0, 0, 0, implicit $exec

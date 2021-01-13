@@ -241,8 +241,8 @@ Symbols:
 # GNU3-NEXT:     1: {{.*}} RSV[0xffff] no_shndx
 # GNU3-NEXT:     2: {{.*}} RSV[0xffff] no_shndx2
 
-# NO-SYMTAB-SHNDX: warning: '{{.*}}tmp3': extended symbol index (1) is past the end of the SHT_SYMTAB_SHNDX section of size 0
-# NO-SYMTAB-SHNDX: warning: '{{.*}}tmp3': extended symbol index (2) is past the end of the SHT_SYMTAB_SHNDX section of size 0
+# NO-SYMTAB-SHNDX: warning: '{{.*}}tmp3': found an extended symbol index (1), but unable to locate the extended symbol index table
+# NO-SYMTAB-SHNDX: warning: '{{.*}}tmp3': found an extended symbol index (2), but unable to locate the extended symbol index table
 
 --- !ELF
 FileHeader:
@@ -267,7 +267,7 @@ Symbols:
 #  SHNDX-ERR-GNU-NEXT: Symbol table '.symtab' contains 2 entries:
 #  SHNDX-ERR-GNU-NEXT:    Num:    Value          Size Type    Bind   Vis       Ndx Name
 #  SHNDX-ERR-GNU-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND
-#  SHNDX-ERR-GNU-NEXT: warning: '[[FILE]]': extended symbol index (1) is past the end of the SHT_SYMTAB_SHNDX section of size 0
+#  SHNDX-ERR-GNU-NEXT: warning: '[[FILE]]': found an extended symbol index (1), but unable to locate the extended symbol index table
 #  SHNDX-ERR-GNU-NEXT:      1: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   RSV[0xffff]
 # SHNDX-ERR-GNU-EMPTY:
 #   SHNDX-ERR-GNU-NOT:{{.}}
@@ -294,7 +294,7 @@ Symbols:
 # SHNDX-ERR-LLVM-NEXT:     Binding: Local (0x0)
 # SHNDX-ERR-LLVM-NEXT:     Type: None (0x0)
 # SHNDX-ERR-LLVM-NEXT:     Other: 0
-# SHNDX-ERR-LLVM-NEXT: warning: '[[FILE]]': extended symbol index (1) is past the end of the SHT_SYMTAB_SHNDX section of size 0
+# SHNDX-ERR-LLVM-NEXT: warning: '[[FILE]]': found an extended symbol index (1), but unable to locate the extended symbol index table
 # SHNDX-ERR-LLVM-NEXT:     Section: Reserved (0xFFFF)
 # SHNDX-ERR-LLVM-NEXT:   }
 # SHNDX-ERR-LLVM-NEXT: ]

@@ -1986,7 +1986,9 @@ void CodeGenModule::ConstructAttributeList(
           FuncAttrs.addAttribute(llvm::Attribute::NoReturn);
         NBA = Fn->getAttr<NoBuiltinAttr>();
       }
-      if (!AttrOnCallSite && TargetDecl->hasAttr<NoMergeAttr>())
+      // Only place nomerge attribute on call sites, never functions. This
+      // allows it to work on indirect virtual function calls.
+      if (AttrOnCallSite && TargetDecl->hasAttr<NoMergeAttr>())
         FuncAttrs.addAttribute(llvm::Attribute::NoMerge);
     }
 
@@ -5019,13 +5021,11 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         Attrs.addAttribute(getLLVMContext(), llvm::AttributeList::FunctionIndex,
                            llvm::Attribute::StrictFP);
 
-  // Add nomerge attribute to the call-site if the callee function doesn't have
-  // the attribute.
-  if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl))
-    if (!FD->hasAttr<NoMergeAttr>() && InNoMergeAttributedStmt)
-      Attrs = Attrs.addAttribute(getLLVMContext(),
-                                 llvm::AttributeList::FunctionIndex,
-                                 llvm::Attribute::NoMerge);
+  // Add call-site nomerge attribute if exists.
+  if (InNoMergeAttributedStmt)
+    Attrs =
+        Attrs.addAttribute(getLLVMContext(), llvm::AttributeList::FunctionIndex,
+                           llvm::Attribute::NoMerge);
 
   // Apply some call-site-specific attributes.
   // TODO: work this into building the attribute set.

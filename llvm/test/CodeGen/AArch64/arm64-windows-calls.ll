@@ -98,3 +98,80 @@ entry:
   %this1 = load %class.C*, %class.C** %this.addr, align 8
   ret void
 }
+
+; The following tests correspond to tests in
+; clang/test/CodeGenCXX/microsoft-abi-sret-and-byval.cpp
+
+; Pod is a trivial HFA
+%struct.Pod = type { [2 x double] }
+; Not an aggregate according to C++14 spec => not HFA according to MSVC
+%struct.NotCXX14Aggregate  = type { %struct.Pod }
+; NotPod is a C++14 aggregate. But not HFA, because it contains
+; NotCXX14Aggregate (which itself is not HFA because it's not a C++14
+; aggregate).
+%struct.NotPod = type { %struct.NotCXX14Aggregate }
+
+; CHECK-LABEL: copy_pod:
+define dso_local %struct.Pod @copy_pod(%struct.Pod* %x) {
+  %x1 = load %struct.Pod, %struct.Pod* %x, align 8
+  ret %struct.Pod %x1
+  ; CHECK: ldp d0, d1, [x0]
+}
+
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64, i1 immarg)
+
+; CHECK-LABEL: copy_notcxx14aggregate:
+define dso_local void
+@copy_notcxx14aggregate(%struct.NotCXX14Aggregate* inreg noalias sret(%struct.NotCXX14Aggregate) align 8 %agg.result,
+                        %struct.NotCXX14Aggregate* %x) {
+  %1 = bitcast %struct.NotCXX14Aggregate* %agg.result to i8*
+  %2 = bitcast %struct.NotCXX14Aggregate* %x to i8*
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %1, i8* align 8 %2, i64 16, i1 false)
+  ret void
+  ; CHECK: str q0, [x0]
+}
+
+; CHECK-LABEL: copy_notpod:
+define dso_local [2 x i64] @copy_notpod(%struct.NotPod* %x) {
+  %x1 = bitcast %struct.NotPod* %x to [2 x i64]*
+  %x2 = load [2 x i64], [2 x i64]* %x1
+  ret [2 x i64] %x2
+  ; CHECK: ldp x8, x1, [x0]
+  ; CHECK: mov x0, x8
+}
+
+@Pod = external global %struct.Pod
+
+; CHECK-LABEL: call_copy_pod:
+define void @call_copy_pod() {
+  %x = call %struct.Pod @copy_pod(%struct.Pod* @Pod)
+  store %struct.Pod %x, %struct.Pod* @Pod
+  ret void
+  ; CHECK: bl copy_pod
+  ; CHECK-NEXT: stp d0, d1, [{{.*}}]
+}
+
+@NotCXX14Aggregate = external global %struct.NotCXX14Aggregate
+
+; CHECK-LABEL: call_copy_notcxx14aggregate:
+define void @call_copy_notcxx14aggregate() {
+  %x = alloca %struct.NotCXX14Aggregate
+  call void @copy_notcxx14aggregate(%struct.NotCXX14Aggregate* %x, %struct.NotCXX14Aggregate* @NotCXX14Aggregate)
+  %x1 = load %struct.NotCXX14Aggregate, %struct.NotCXX14Aggregate* %x
+  store %struct.NotCXX14Aggregate %x1, %struct.NotCXX14Aggregate* @NotCXX14Aggregate
+  ret void
+  ; CHECK: bl copy_notcxx14aggregate
+  ; CHECK-NEXT: ldp {{.*}}, {{.*}}, [sp]
+}
+
+@NotPod = external global %struct.NotPod
+
+; CHECK-LABEL: call_copy_notpod:
+define void @call_copy_notpod() {
+  %x = call [2 x i64] @copy_notpod(%struct.NotPod* @NotPod)
+  %notpod = bitcast %struct.NotPod* @NotPod to [2 x i64]*
+  store [2 x i64] %x, [2 x i64]* %notpod
+  ret void
+  ; CHECK: bl copy_notpod
+  ; CHECK-NEXT: stp x0, x1, [{{.*}}]
+}

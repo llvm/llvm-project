@@ -56,7 +56,7 @@ body:             |
     %13 = REG_SEQUENCE killed %12, 1, killed %11, 2
     %14 = REG_SEQUENCE killed %5, 17, %13, 18
     %15 = S_MOV_B32 2
-    %29 = V_LSHL_B64 killed %28, killed %15, implicit $exec
+    %29 = V_LSHL_B64_e64 killed %28, killed %15, implicit $exec
     %17 = REG_SEQUENCE killed %6, 17, %13, 18
     %18 = REG_SEQUENCE killed %4, 17, %13, 18
     %20 = COPY %29
@@ -127,7 +127,7 @@ body:             |
     %13 = REG_SEQUENCE killed %12, 1, killed %11, 2
     %14 = REG_SEQUENCE killed %5, 17, %13, 18
     %15 = S_MOV_B32 2
-    %29 = V_LSHL_B64 killed %28, killed %15, implicit $exec
+    %29 = V_LSHL_B64_e64 killed %28, killed %15, implicit $exec
     %17 = REG_SEQUENCE killed %6, 17, %13, 18
     %18 = REG_SEQUENCE killed %4, 17, %13, 18
     %20 = COPY %29
@@ -144,7 +144,7 @@ body:             |
 ---
 # GCN: name: no_fold_imm_madak_mad_clamp_f32
 # GCN: %23:vgpr_32 = V_MOV_B32_e32 1090519040, implicit $exec
-# GCN: %24:vgpr_32 = nofpexcept V_MAD_F32 0, killed %19, 0, killed %21, 0, %23, 1, 0, implicit $mode, implicit $exec
+# GCN: %24:vgpr_32 = nofpexcept V_MAD_F32_e64 0, killed %19, 0, killed %21, 0, %23, 1, 0, implicit $mode, implicit $exec
 
 name:            no_fold_imm_madak_mad_clamp_f32
 tracksRegLiveness: true
@@ -198,7 +198,7 @@ body:             |
     %13 = REG_SEQUENCE killed %12, 1, killed %11, 2
     %14 = REG_SEQUENCE killed %5, 17, %13, 18
     %15 = S_MOV_B32 2
-    %29 = V_LSHL_B64 killed %28, killed %15, implicit $exec
+    %29 = V_LSHL_B64_e64 killed %28, killed %15, implicit $exec
     %17 = REG_SEQUENCE killed %6, 17, %13, 18
     %18 = REG_SEQUENCE killed %4, 17, %13, 18
     %20 = COPY %29
@@ -206,7 +206,7 @@ body:             |
     %22 = COPY %29
     %21 = BUFFER_LOAD_DWORD_ADDR64 %22, killed %17, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     %23 = V_MOV_B32_e32 1090519040, implicit $exec
-    %24 = nofpexcept V_MAD_F32 0, killed %19, 0, killed %21, 0, %23, 1, 0, implicit $mode, implicit $exec
+    %24 = nofpexcept V_MAD_F32_e64 0, killed %19, 0, killed %21, 0, %23, 1, 0, implicit $mode, implicit $exec
     %26 = COPY %29
     BUFFER_STORE_DWORD_ADDR64 killed %24, %26, killed %18, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
@@ -215,7 +215,7 @@ body:             |
 ---
 # GCN: name: no_fold_imm_madak_mad_omod_f32
 # GCN: %23:vgpr_32 = V_MOV_B32_e32 1090519040, implicit $exec
-# GCN: %24:vgpr_32 = nofpexcept V_MAD_F32 0, killed %19, 0, killed %21, 0, %23, 0, 1, implicit $mode, implicit $exec
+# GCN: %24:vgpr_32 = nofpexcept V_MAD_F32_e64 0, killed %19, 0, killed %21, 0, %23, 0, 1, implicit $mode, implicit $exec
 
 name:            no_fold_imm_madak_mad_omod_f32
 tracksRegLiveness: true
@@ -269,7 +269,7 @@ body:             |
     %13 = REG_SEQUENCE killed %12, 1, killed %11, 2
     %14 = REG_SEQUENCE killed %5, 17, %13, 18
     %15 = S_MOV_B32 2
-    %29 = V_LSHL_B64 killed %28, killed %15, implicit $exec
+    %29 = V_LSHL_B64_e64 killed %28, killed %15, implicit $exec
     %17 = REG_SEQUENCE killed %6, 17, %13, 18
     %18 = REG_SEQUENCE killed %4, 17, %13, 18
     %20 = COPY %29
@@ -277,7 +277,7 @@ body:             |
     %22 = COPY %29
     %21 = BUFFER_LOAD_DWORD_ADDR64 %22, killed %17, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     %23 = V_MOV_B32_e32 1090519040, implicit $exec
-    %24 = nofpexcept V_MAD_F32 0, killed %19, 0, killed %21, 0, %23, 0, 1, implicit $mode, implicit $exec
+    %24 = nofpexcept V_MAD_F32_e64 0, killed %19, 0, killed %21, 0, %23, 0, 1, implicit $mode, implicit $exec
     %26 = COPY %29
     BUFFER_STORE_DWORD_ADDR64 killed %24, %26, killed %18, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0

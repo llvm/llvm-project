@@ -30,6 +30,25 @@ define i1 @test1(i64 %a, i64 %b, i64* %ptr) {
   ret i1 %overflow.1
 }
 
+define i1 @test1_logical(i64 %a, i64 %b, i64* %ptr) {
+; CHECK-LABEL: @test1_logical(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[A]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[B]], 0
+; CHECK-NEXT:    [[OVERFLOW_1:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    store i64 [[MUL]], i64* [[PTR:%.*]], align 8
+; CHECK-NEXT:    ret i1 [[OVERFLOW_1]]
+;
+
+  %res = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %a, i64 %b)
+  %overflow = extractvalue { i64, i1 } %res, 1
+  %mul = extractvalue { i64, i1 } %res, 0
+  %cmp  = icmp ne i64 %mul, 0
+  %overflow.1 = select i1 %overflow, i1 true, i1 %cmp
+  store i64 %mul, i64* %ptr, align 8
+  ret i1 %overflow.1
+}
+
 define i1 @test1_or_ops_swapped(i64 %a, i64 %b, i64* %ptr) {
 ; CHECK-LABEL: @test1_or_ops_swapped(
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[A:%.*]], [[B:%.*]]
@@ -46,6 +65,26 @@ define i1 @test1_or_ops_swapped(i64 %a, i64 %b, i64* %ptr) {
   %mul = extractvalue { i64, i1 } %res, 0
   %cmp  = icmp ne i64 %mul, 0
   %overflow.1 = or i1 %cmp, %overflow
+  store i64 %mul, i64* %ptr, align 8
+  ret i1 %overflow.1
+}
+
+define i1 @test1_or_ops_swapped_logical(i64 %a, i64 %b, i64* %ptr) {
+; CHECK-LABEL: @test1_or_ops_swapped_logical(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[A]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[B]], 0
+; CHECK-NEXT:    [[OVERFLOW_1:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    store i64 [[MUL]], i64* [[PTR:%.*]], align 8
+; CHECK-NEXT:    ret i1 [[OVERFLOW_1]]
+;
+
+
+  %res = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %a, i64 %b)
+  %overflow = extractvalue { i64, i1 } %res, 1
+  %mul = extractvalue { i64, i1 } %res, 0
+  %cmp  = icmp ne i64 %mul, 0
+  %overflow.1 = select i1 %cmp, i1 true, i1 %overflow
   store i64 %mul, i64* %ptr, align 8
   ret i1 %overflow.1
 }
@@ -71,6 +110,27 @@ define i1 @test2(i64 %a, i64 %b, i64* %ptr) {
   ret i1 %overflow.1
 }
 
+define i1 @test2_logical(i64 %a, i64 %b, i64* %ptr) {
+; CHECK-LABEL: @test2_logical(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[A]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[B]], 0
+; CHECK-NEXT:    [[OVERFLOW_1:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[NEG:%.*]] = sub i64 0, [[MUL]]
+; CHECK-NEXT:    store i64 [[NEG]], i64* [[PTR:%.*]], align 8
+; CHECK-NEXT:    ret i1 [[OVERFLOW_1]]
+;
+
+  %res = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %a, i64 %b)
+  %overflow = extractvalue { i64, i1 } %res, 1
+  %mul = extractvalue { i64, i1 } %res, 0
+  %cmp = icmp ne i64 %mul, 0
+  %overflow.1 = select i1 %overflow, i1 true, i1 %cmp
+  %neg = sub i64 0, %mul
+  store i64 %neg, i64* %ptr, align 8
+  ret i1 %overflow.1
+}
+
 declare void @use(i1)
 
 define i1 @test3_multiple_overflow_users(i64 %a, i64 %b, i64* %ptr) {
@@ -88,6 +148,25 @@ define i1 @test3_multiple_overflow_users(i64 %a, i64 %b, i64* %ptr) {
   %mul = extractvalue { i64, i1 } %res, 0
   %cmp = icmp ne i64 %mul, 0
   %overflow.1 = or i1 %overflow, %cmp
+  call void @use(i1 %overflow)
+  ret i1 %overflow.1
+}
+
+define i1 @test3_multiple_overflow_users_logical(i64 %a, i64 %b, i64* %ptr) {
+; CHECK-LABEL: @test3_multiple_overflow_users_logical(
+; CHECK-NEXT:    [[RES:%.*]] = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[A:%.*]], i64 [[B:%.*]])
+; CHECK-NEXT:    [[OVERFLOW:%.*]] = extractvalue { i64, i1 } [[RES]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[A]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[B]], 0
+; CHECK-NEXT:    [[OVERFLOW_1:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    call void @use(i1 [[OVERFLOW]])
+; CHECK-NEXT:    ret i1 [[OVERFLOW_1]]
+;
+  %res = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %a, i64 %b)
+  %overflow = extractvalue { i64, i1 } %res, 1
+  %mul = extractvalue { i64, i1 } %res, 0
+  %cmp = icmp ne i64 %mul, 0
+  %overflow.1 = select i1 %overflow, i1 true, i1 %cmp
   call void @use(i1 %overflow)
   ret i1 %overflow.1
 }
@@ -116,6 +195,29 @@ define i1 @test3_multiple_overflow_and_mul_users(i64 %a, i64 %b, i64* %ptr) {
   ret i1 %overflow.1
 }
 
+define i1 @test3_multiple_overflow_and_mul_users_logical(i64 %a, i64 %b, i64* %ptr) {
+; CHECK-LABEL: @test3_multiple_overflow_and_mul_users_logical(
+; CHECK-NEXT:    [[RES:%.*]] = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[A:%.*]], i64 [[B:%.*]])
+; CHECK-NEXT:    [[OVERFLOW:%.*]] = extractvalue { i64, i1 } [[RES]], 1
+; CHECK-NEXT:    [[MUL:%.*]] = extractvalue { i64, i1 } [[RES]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[MUL]], 0
+; CHECK-NEXT:    [[OVERFLOW_1:%.*]] = or i1 [[OVERFLOW]], [[CMP]]
+; CHECK-NEXT:    [[NEG:%.*]] = sub i64 0, [[MUL]]
+; CHECK-NEXT:    store i64 [[NEG]], i64* [[PTR:%.*]], align 8
+; CHECK-NEXT:    call void @use(i1 [[OVERFLOW]])
+; CHECK-NEXT:    ret i1 [[OVERFLOW_1]]
+;
+  %res = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %a, i64 %b)
+  %overflow = extractvalue { i64, i1 } %res, 1
+  %mul = extractvalue { i64, i1 } %res, 0
+  %cmp = icmp ne i64 %mul, 0
+  %overflow.1 = select i1 %overflow, i1 true, i1 %cmp
+  %neg = sub i64 0, %mul
+  store i64 %neg, i64* %ptr, align 8
+  call void @use(i1 %overflow)
+  ret i1 %overflow.1
+}
+
 
 declare void @use.2({ i64, i1 })
 define i1 @test3_multiple_res_users(i64 %a, i64 %b, i64* %ptr) {
@@ -135,6 +237,29 @@ define i1 @test3_multiple_res_users(i64 %a, i64 %b, i64* %ptr) {
   %mul = extractvalue { i64, i1 } %res, 0
   %cmp = icmp ne i64 %mul, 0
   %overflow.1 = or i1 %overflow, %cmp
+  %neg = sub i64 0, %mul
+  store i64 %neg, i64* %ptr, align 8
+  call void @use.2({ i64, i1 } %res)
+  ret i1 %overflow.1
+}
+
+define i1 @test3_multiple_res_users_logical(i64 %a, i64 %b, i64* %ptr) {
+; CHECK-LABEL: @test3_multiple_res_users_logical(
+; CHECK-NEXT:    [[RES:%.*]] = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[A:%.*]], i64 [[B:%.*]])
+; CHECK-NEXT:    [[MUL:%.*]] = extractvalue { i64, i1 } [[RES]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[A]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[B]], 0
+; CHECK-NEXT:    [[OVERFLOW_1:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[NEG:%.*]] = sub i64 0, [[MUL]]
+; CHECK-NEXT:    store i64 [[NEG]], i64* [[PTR:%.*]], align 8
+; CHECK-NEXT:    call void @use.2({ i64, i1 } [[RES]])
+; CHECK-NEXT:    ret i1 [[OVERFLOW_1]]
+;
+  %res = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %a, i64 %b)
+  %overflow = extractvalue { i64, i1 } %res, 1
+  %mul = extractvalue { i64, i1 } %res, 0
+  %cmp = icmp ne i64 %mul, 0
+  %overflow.1 = select i1 %overflow, i1 true, i1 %cmp
   %neg = sub i64 0, %mul
   store i64 %neg, i64* %ptr, align 8
   call void @use.2({ i64, i1 } %res)
@@ -167,6 +292,29 @@ define i1 @test3_multiple_mul_users(i64 %a, i64 %b, i64* %ptr) {
   ret i1 %overflow.1
 }
 
+define i1 @test3_multiple_mul_users_logical(i64 %a, i64 %b, i64* %ptr) {
+; CHECK-LABEL: @test3_multiple_mul_users_logical(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[A]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[B]], 0
+; CHECK-NEXT:    [[OVERFLOW_1:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[NEG:%.*]] = sub i64 0, [[MUL]]
+; CHECK-NEXT:    store i64 [[NEG]], i64* [[PTR:%.*]], align 8
+; CHECK-NEXT:    call void @use.3(i64 [[MUL]])
+; CHECK-NEXT:    ret i1 [[OVERFLOW_1]]
+;
+
+  %res = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %a, i64 %b)
+  %overflow = extractvalue { i64, i1 } %res, 1
+  %mul = extractvalue { i64, i1 } %res, 0
+  %cmp = icmp ne i64 %mul, 0
+  %overflow.1 = select i1 %overflow, i1 true, i1 %cmp
+  %neg = sub i64 0, %mul
+  store i64 %neg, i64* %ptr, align 8
+  call void @use.3(i64 %mul)
+  ret i1 %overflow.1
+}
+
 
 
 define i1 @test4_no_icmp_ne(i64 %a, i64 %b, i64* %ptr) {
@@ -185,6 +333,27 @@ define i1 @test4_no_icmp_ne(i64 %a, i64 %b, i64* %ptr) {
   %mul = extractvalue { i64, i1 } %res, 0
   %cmp = icmp sgt i64 %mul, 0
   %overflow.1 = or i1 %overflow, %cmp
+  %neg = sub i64 0, %mul
+  store i64 %neg, i64* %ptr, align 8
+  ret i1 %overflow.1
+}
+
+define i1 @test4_no_icmp_ne_logical(i64 %a, i64 %b, i64* %ptr) {
+; CHECK-LABEL: @test4_no_icmp_ne_logical(
+; CHECK-NEXT:    [[RES:%.*]] = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[A:%.*]], i64 [[B:%.*]])
+; CHECK-NEXT:    [[OVERFLOW:%.*]] = extractvalue { i64, i1 } [[RES]], 1
+; CHECK-NEXT:    [[MUL:%.*]] = extractvalue { i64, i1 } [[RES]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[MUL]], 0
+; CHECK-NEXT:    [[OVERFLOW_1:%.*]] = or i1 [[OVERFLOW]], [[CMP]]
+; CHECK-NEXT:    [[NEG:%.*]] = sub i64 0, [[MUL]]
+; CHECK-NEXT:    store i64 [[NEG]], i64* [[PTR:%.*]], align 8
+; CHECK-NEXT:    ret i1 [[OVERFLOW_1]]
+;
+  %res = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %a, i64 %b)
+  %overflow = extractvalue { i64, i1 } %res, 1
+  %mul = extractvalue { i64, i1 } %res, 0
+  %cmp = icmp sgt i64 %mul, 0
+  %overflow.1 = select i1 %overflow, i1 true, i1 %cmp
   %neg = sub i64 0, %mul
   store i64 %neg, i64* %ptr, align 8
   ret i1 %overflow.1

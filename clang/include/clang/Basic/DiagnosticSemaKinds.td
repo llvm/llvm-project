@@ -854,6 +854,8 @@ def err_pragma_options_align_mac68k_target_unsupported : Error<
 def warn_pragma_pack_invalid_alignment : Warning<
   "expected #pragma pack parameter to be '1', '2', '4', '8', or '16'">,
   InGroup<IgnoredPragmas>;
+def err_pragma_pack_invalid_alignment : Error<
+  warn_pragma_pack_invalid_alignment.Text>;
 def warn_pragma_pack_non_default_at_include : Warning<
   "non-default #pragma pack value changes the alignment of struct or union "
   "members in the included file">, InGroup<PragmaPackSuspiciousInclude>,
@@ -887,6 +889,8 @@ def warn_cxx_ms_struct :
   Warning<"ms_struct may not produce Microsoft-compatible layouts for classes "
           "with base classes or virtual functions">,
   DefaultError, InGroup<IncompatibleMSStruct>;
+def err_pragma_pack_identifer_not_supported : Error<
+  "specifying an identifier within `#pragma pack` is not supported on this target">;
 def err_section_conflict : Error<"%0 causes a section type conflict with %1">;
 def err_no_base_classes : Error<"invalid use of '__super', %0 has no base classes">;
 def err_invalid_super_scope : Error<"invalid use of '__super', "
@@ -3263,7 +3267,7 @@ def warn_attribute_dllexport_explicit_instantiation_def : Warning<
   "'dllexport' attribute ignored on explicit instantiation definition">,
   InGroup<IgnoredAttributes>;
 def warn_invalid_initializer_from_system_header : Warning<
-  "invalid constructor form class in system header, should not be explicit">,
+  "invalid constructor from class in system header, should not be explicit">,
   InGroup<DiagGroup<"invalid-initializer-from-system-header">>;
 def note_used_in_initialization_here : Note<"used in initialization here">;
 def err_attribute_dll_member_of_dll_class : Error<

@@ -135,12 +135,6 @@ struct Out {
   static OutputSection *finiArray;
 };
 
-} // namespace elf
-} // namespace lld
-
-namespace lld {
-namespace elf {
-
 uint64_t getHeaderSize();
 
 extern std::vector<OutputSection *> outputSections;

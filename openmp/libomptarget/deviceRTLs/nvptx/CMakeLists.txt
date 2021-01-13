@@ -56,6 +56,7 @@ if(LIBOMPTARGET_DEP_CUDA_FOUND)
       ${devicertl_common_directory}/src/data_sharing.cu
       ${devicertl_common_directory}/src/libcall.cu
       ${devicertl_common_directory}/src/loop.cu
+      ${devicertl_common_directory}/src/omp_data.cu
       ${devicertl_common_directory}/src/omptarget.cu
       ${devicertl_common_directory}/src/parallel.cu
       ${devicertl_common_directory}/src/reduction.cu
@@ -65,8 +66,6 @@ if(LIBOMPTARGET_DEP_CUDA_FOUND)
       ${devicertl_common_directory}/src/ompd-specific.cu
       src/target_impl.cu
   )
-
-  set(omp_data_objects ${devicertl_common_directory}/src/omp_data.cu)
 
   # Build library support for the highest compute capability the system supports
   # and always build support for sm_35 by default
@@ -110,7 +109,7 @@ if(LIBOMPTARGET_DEP_CUDA_FOUND)
   set(CUDA_SEPARABLE_COMPILATION ON)
   list(APPEND CUDA_NVCC_FLAGS -I${devicertl_base_directory}
                               -I${devicertl_nvptx_directory}/src)
-  cuda_add_library(omptarget-nvptx STATIC ${cuda_src_files} ${omp_data_objects}
+  cuda_add_library(omptarget-nvptx STATIC ${cuda_src_files}
       OPTIONS ${CUDA_ARCH} ${CUDA_DEBUG} ${MAX_SM_DEFINITION})
 
   # Install device RTL under the lib destination folder.

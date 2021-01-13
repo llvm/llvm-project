@@ -655,12 +655,13 @@ def I_ : Flag<["-"], "I-">, Group<I_Group>,
              "remove current directory from include path">;
 def I : JoinedOrSeparate<["-"], "I">, Group<I_Group>,
     Flags<[CC1Option,CC1AsOption]>, MetaVarName<"<dir>">,
-    HelpText<"Add directory to include search path. If there are multiple -I "
-             "options, these directories are searched in the order they are "
-             "given before the standard system directories are searched. "
-             "If the same directory is in the SYSTEM include search paths, for "
-             "example if also specified with -isystem, the -I option will be "
-             "ignored">;
+    HelpText<"Add directory to the end of the list of include search paths">,
+    DocBrief<[{Add directory to include search path. For C++ inputs, if
+there are multiple -I options, these directories are searched
+in the order they are given before the standard system directories
+are searched. If the same directory is in the SYSTEM include search
+paths, for example if also specified with -isystem, the -I option
+will be ignored}]>;
 def L : JoinedOrSeparate<["-"], "L">, Flags<[RenderJoined]>, Group<Link_Group>,
     MetaVarName<"<dir>">, HelpText<"Add directory to library search path">;
 def MD : Flag<["-"], "MD">, Group<M_Group>,
@@ -806,7 +807,7 @@ def Z_Flag : Flag<["-"], "Z">, Group<Link_Group>;
 def Z_Joined : Joined<["-"], "Z">;
 def all__load : Flag<["-"], "all_load">;
 def allowable__client : Separate<["-"], "allowable_client">;
-def ansi : Flag<["-", "--"], "ansi">;
+def ansi : Flag<["-", "--"], "ansi">, Group<CompileOnly_Group>;
 def arch__errors__fatal : Flag<["-"], "arch_errors_fatal">;
 def arch : Separate<["-"], "arch">, Flags<[NoXarchOption]>;
 def arch__only : Separate<["-"], "arch_only">;
@@ -1031,6 +1032,8 @@ defm apple_pragma_pack : BoolFOption<"apple-pragma-pack",
   "LangOpts->ApplePragmaPack", DefaultsToFalse,
   ChangedBy<PosFlag, [], "Enable Apple gcc-compatible #pragma pack handling">,
   ResetBy<NegFlag>>;
+def fxl_pragma_pack : Flag<["-"], "fxl-pragma-pack">, Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"Enable IBM XL #pragma pack handling">;
 def shared_libsan : Flag<["-"], "shared-libsan">,
   HelpText<"Dynamically link the sanitizer runtime">;
 def static_libsan : Flag<["-"], "static-libsan">,
@@ -1971,6 +1974,7 @@ def fmudflapth : Flag<["-"], "fmudflapth">, Group<f_Group>;
 def fmudflap : Flag<["-"], "fmudflap">, Group<f_Group>;
 def fnested_functions : Flag<["-"], "fnested-functions">, Group<f_Group>;
 def fnext_runtime : Flag<["-"], "fnext-runtime">, Group<f_Group>;
+def fno_xl_pragma_pack : Flag<["-"], "fno-xl-pragma-pack">, Group<f_Group>;
 def fno_asm : Flag<["-"], "fno-asm">, Group<f_Group>;
 def fno_asynchronous_unwind_tables : Flag<["-"], "fno-asynchronous-unwind-tables">, Group<f_Group>;
 def fno_assume_sane_operator_new : Flag<["-"], "fno-assume-sane-operator-new">, Group<f_Group>,
@@ -3056,6 +3060,7 @@ def mpcrel: Flag<["-"], "mpcrel">, Group<m_ppc_Features_Group>;
 def mno_pcrel: Flag<["-"], "mno-pcrel">, Group<m_ppc_Features_Group>;
 def mspe : Flag<["-"], "mspe">, Group<m_ppc_Features_Group>;
 def mno_spe : Flag<["-"], "mno-spe">, Group<m_ppc_Features_Group>;
+def mefpu2 : Flag<["-"], "mefpu2">, Group<m_ppc_Features_Group>;
 def mabi_EQ_vec_extabi : Flag<["-"], "mabi=vec-extabi">, Group<m_Group>, Flags<[CC1Option]>,
   HelpText<"Enable the extended Altivec ABI on AIX (AIX only). Uses volatile and nonvolatile vector registers">;
 def mabi_EQ_vec_default : Flag<["-"], "mabi=vec-default">, Group<m_Group>, Flags<[CC1Option]>,

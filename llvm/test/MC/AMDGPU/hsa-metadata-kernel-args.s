@@ -1,6 +1,6 @@
-// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx700 --amdhsa-code-object-version=2 -show-encoding %s | FileCheck --check-prefix=CHECK --check-prefix=GFX700 %s
-// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx800 --amdhsa-code-object-version=2 -show-encoding %s | FileCheck --check-prefix=CHECK --check-prefix=GFX800 %s
-// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx900 --amdhsa-code-object-version=2 -show-encoding %s | FileCheck --check-prefix=CHECK --check-prefix=GFX900 %s
+// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx700 --amdhsa-code-object-version=2 -show-encoding %s | FileCheck --check-prefix=CHECK %s
+// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx800 --amdhsa-code-object-version=2 -show-encoding %s | FileCheck --check-prefix=CHECK %s
+// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx900 --amdhsa-code-object-version=2 -show-encoding %s | FileCheck --check-prefix=CHECK %s
 
 // The legacy ValueType field should be parsed without error, but not
 // re-emitted.

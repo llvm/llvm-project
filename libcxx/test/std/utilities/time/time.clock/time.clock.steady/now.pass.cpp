@@ -25,6 +25,8 @@ int main(int, char**)
     C::time_point t1 = C::now();
     C::time_point t2 = C::now();
     assert(t2 >= t1);
+    // make sure t2 didn't wrap around
+    assert(t2 > std::chrono::time_point<C>());
 
   return 0;
 }

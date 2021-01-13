@@ -1,4 +1,3 @@
-Using perf wrapper that supports hot-text. Try perf.real if you encounter any issues.
 PERF_RECORD_MMAP2 2854748/2854748: [0x400000(0x1000) @ 0 00:1d 123291722 526021]: r-xp /home/noinline-cs-noprobe.perfbin
 
 	          4005dc

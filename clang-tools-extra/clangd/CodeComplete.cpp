@@ -277,7 +277,7 @@ struct CodeCompletionBuilder {
                         CodeCompletionContext::Kind ContextKind,
                         const CodeCompleteOptions &Opts,
                         bool IsUsingDeclaration, tok::TokenKind NextTokenKind)
-      : ASTCtx(ASTCtx), ExtractDocumentation(Opts.IncludeComments),
+      : ASTCtx(ASTCtx),
         EnableFunctionArgSnippets(Opts.EnableFunctionArgSnippets),
         IsUsingDeclaration(IsUsingDeclaration), NextTokenKind(NextTokenKind) {
     add(C, SemaCCS);
@@ -393,7 +393,7 @@ struct CodeCompletionBuilder {
       S.SnippetSuffix = std::string(C.IndexResult->CompletionSnippetSuffix);
       S.ReturnType = std::string(C.IndexResult->ReturnType);
     }
-    if (ExtractDocumentation && !Completion.Documentation) {
+    if (!Completion.Documentation) {
       auto SetDoc = [&](llvm::StringRef Doc) {
         if (!Doc.empty()) {
           Completion.Documentation.emplace();
@@ -512,7 +512,6 @@ private:
   ASTContext *ASTCtx;
   CodeCompletion Completion;
   llvm::SmallVector<BundledEntry, 1> Bundled;
-  bool ExtractDocumentation;
   bool EnableFunctionArgSnippets;
   // No snippets will be generated for using declarations and when the function
   // arguments are already present.
@@ -1765,8 +1764,8 @@ private:
 
 clang::CodeCompleteOptions CodeCompleteOptions::getClangCompleteOpts() const {
   clang::CodeCompleteOptions Result;
-  Result.IncludeCodePatterns = EnableSnippets && IncludeCodePatterns;
-  Result.IncludeMacros = IncludeMacros;
+  Result.IncludeCodePatterns = EnableSnippets;
+  Result.IncludeMacros = true;
   Result.IncludeGlobals = true;
   // We choose to include full comments and not do doxygen parsing in
   // completion.

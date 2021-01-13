@@ -16,7 +16,7 @@ body:             |
 
   bb.1:
     %2:vgpr_32 = V_MAC_F32_e32 0, %0, %1, implicit $mode, implicit $exec
-    %3:vgpr_32 = V_MED3_F32 0, %1, 0, %2, 0, %2, 0, 0, implicit $mode, implicit $exec
+    %3:vgpr_32 = V_MED3_F32_e64 0, %1, 0, %2, 0, %2, 0, 0, implicit $mode, implicit $exec
 
   bb.2:
     %4:vgpr_32 = PHI %5, %bb.3, %3, %bb.1

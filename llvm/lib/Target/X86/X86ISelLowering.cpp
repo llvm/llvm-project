@@ -36088,20 +36088,20 @@ static SDValue canonicalizeShuffleMaskWithHorizOp(
     MutableArrayRef<SDValue> Ops, MutableArrayRef<int> Mask,
     unsigned RootSizeInBits, const SDLoc &DL, SelectionDAG &DAG,
     const X86Subtarget &Subtarget) {
-
-  // Combine binary shuffle of 2 similar 'Horizontal' instructions into a
-  // single instruction. Attempt to match a v2X64 repeating shuffle pattern that
-  // represents the LHS/RHS inputs for the lower/upper halves.
-  if (Mask.empty() || Ops.empty() || 2 < Ops.size())
+  if (Mask.empty() || Ops.empty())
     return SDValue();
 
-  SDValue BC0 = peekThroughBitcasts(Ops.front());
-  SDValue BC1 = peekThroughBitcasts(Ops.back());
+  SmallVector<SDValue> BC;
+  for (SDValue Op : Ops)
+    BC.push_back(peekThroughBitcasts(Op));
+
+  // All ops must be the same horizop + type.
+  SDValue BC0 = BC[0];
   EVT VT0 = BC0.getValueType();
-  EVT VT1 = BC1.getValueType();
   unsigned Opcode0 = BC0.getOpcode();
-  unsigned Opcode1 = BC1.getOpcode();
-  if (Opcode0 != Opcode1 || VT0 != VT1 || VT0.getSizeInBits() != RootSizeInBits)
+  if (VT0.getSizeInBits() != RootSizeInBits || llvm::any_of(BC, [&](SDValue V) {
+        return V.getOpcode() != Opcode0 || V.getValueType() != VT0;
+      }))
     return SDValue();
 
   bool isHoriz = (Opcode0 == X86ISD::FHADD || Opcode0 == X86ISD::HADD ||
@@ -36110,12 +36110,48 @@ static SDValue canonicalizeShuffleMaskWithHorizOp(
   if (!isHoriz && !isPack)
     return SDValue();
 
-  if (Mask.size() == VT0.getVectorNumElements()) {
-    int NumElts = VT0.getVectorNumElements();
-    int NumLanes = VT0.getSizeInBits() / 128;
-    int NumEltsPerLane = NumElts / NumLanes;
-    int NumHalfEltsPerLane = NumEltsPerLane / 2;
+  int NumElts = VT0.getVectorNumElements();
+  int NumLanes = VT0.getSizeInBits() / 128;
+  int NumEltsPerLane = NumElts / NumLanes;
+  int NumHalfEltsPerLane = NumEltsPerLane / 2;
 
+  // See if we can remove the shuffle by resorting the HOP chain so that
+  // the HOP args are pre-shuffled.
+  // TODO: Generalize to any sized/depth chain.
+  // TODO: Add support for PACKSS/PACKUS.
+  if (isHoriz && NumEltsPerLane == 4 && VT0.is128BitVector() &&
+      shouldUseHorizontalOp(Ops.size() == 1, DAG, Subtarget)) {
+    SmallVector<int> ScaledMask;
+    if (scaleShuffleElements(Mask, 4, ScaledMask)) {
+      // Attempt to find a HOP(HOP(X,Y),HOP(Z,W)) source operand.
+      auto GetHOpSrc = [&](int M) {
+        if (M == SM_SentinelUndef)
+          return DAG.getUNDEF(VT0);
+        if (M == SM_SentinelZero)
+          return getZeroVector(VT0.getSimpleVT(), Subtarget, DAG, DL);
+        SDValue Src0 = BC[M / NumElts];
+        SDValue Src1 = Src0.getOperand((M % 4) >= 2);
+        if (Src1.getOpcode() == Opcode0 && Src0->isOnlyUserOf(Src1.getNode()))
+          return Src1.getOperand(M % 2);
+        return SDValue();
+      };
+      SDValue M0 = GetHOpSrc(ScaledMask[0]);
+      SDValue M1 = GetHOpSrc(ScaledMask[1]);
+      SDValue M2 = GetHOpSrc(ScaledMask[2]);
+      SDValue M3 = GetHOpSrc(ScaledMask[3]);
+      if (M0 && M1 && M2 && M3) {
+        SDValue LHS = DAG.getNode(Opcode0, DL, VT0, M0, M1);
+        SDValue RHS = DAG.getNode(Opcode0, DL, VT0, M2, M3);
+        return DAG.getNode(Opcode0, DL, VT0, LHS, RHS);
+      }
+    }
+  }
+
+  if (2 < Ops.size())
+    return SDValue();
+
+  SDValue BC1 = BC[BC.size() - 1];
+  if (Mask.size() == VT0.getVectorNumElements()) {
     // Canonicalize binary shuffles of horizontal ops that use the
     // same sources to an unary shuffle.
     // TODO: Try to perform this fold even if the shuffle remains.
@@ -36159,6 +36195,9 @@ static SDValue canonicalizeShuffleMaskWithHorizOp(
     }
   }
 
+  // Combine binary shuffle of 2 similar 'Horizontal' instructions into a
+  // single instruction. Attempt to match a v2X64 repeating shuffle pattern that
+  // represents the LHS/RHS inputs for the lower/upper halves.
   unsigned EltSizeInBits = RootSizeInBits / Mask.size();
   SmallVector<int, 16> TargetMask128, WideMask128;
   if (isRepeatedTargetShuffleMask(128, EltSizeInBits, Mask, TargetMask128) &&
@@ -45957,11 +45996,11 @@ static SDValue combineVectorSignBitsTruncation(SDNode *N, const SDLoc &DL,
   if (Subtarget.hasAVX512() &&
       !(!Subtarget.useAVX512Regs() && VT.is256BitVector() &&
         InVT.is512BitVector())) {
-    // PACK should still be worth it for 128/256-bit vectors if the sources were
+    // PACK should still be worth it for 128-bit vectors if the sources were
     // originally concatenated from subvectors.
     SmallVector<SDValue> ConcatOps;
-    if (VT.getSizeInBits() > 256 || !collectConcatOps(In.getNode(), ConcatOps))
-      return SDValue();
+    if (VT.getSizeInBits() > 128 || !collectConcatOps(In.getNode(), ConcatOps))
+    return SDValue();
   }
 
   unsigned NumPackedSignBits = std::min<unsigned>(SVT.getSizeInBits(), 16);

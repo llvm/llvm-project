@@ -248,7 +248,7 @@ const char *ReportTitleTag = "h2";
 const char *CreatedTimeTag = "h4";
 
 std::string getPathToStyle(StringRef ViewPath) {
-  std::string PathToStyle = "";
+  std::string PathToStyle;
   std::string PathSep = std::string(sys::path::get_separator());
   unsigned NumSeps = ViewPath.count(PathSep);
   for (unsigned I = 0, E = NumSeps; I < E; ++I)
@@ -617,7 +617,7 @@ void SourceCoverageViewHTML::renderLine(raw_ostream &OS, LineRef L,
 
 void SourceCoverageViewHTML::renderLineCoverageColumn(
     raw_ostream &OS, const LineCoverageStats &Line) {
-  std::string Count = "";
+  std::string Count;
   if (Line.isMapped())
     Count = tag("pre", formatCount(Line.getExecutionCount()));
   std::string CoverageClass =

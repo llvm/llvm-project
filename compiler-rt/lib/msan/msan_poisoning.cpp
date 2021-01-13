@@ -47,7 +47,7 @@ void CopyOrigin(const void *dst, const void *src, uptr size,
   uptr beg = d & ~3UL;
   // Copy left unaligned origin if that memory is poisoned.
   if (beg < d) {
-    u32 o = GetOriginIfPoisoned((uptr)src, d - beg);
+    u32 o = GetOriginIfPoisoned((uptr)src, beg + 4 - d);
     if (o) {
       if (__msan_get_track_origins() > 1) o = ChainOrigin(o, stack);
       *(u32 *)MEM_TO_ORIGIN(beg) = o;

@@ -43,8 +43,7 @@ define void @st1b_upper_bound(<vscale x 16 x i8> %data, <vscale x 16 x i8>* %a) 
 define void @st1b_out_of_upper_bound(<vscale x 16 x i8> %data, <vscale x 16 x i8>* %a) {
 ; CHECK-LABEL: st1b_out_of_upper_bound:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    rdvl x8, #8
-; CHECK-NEXT:    add x8, x0, x8
+; CHECK-NEXT:    addvl x8, x0, #8
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x8]
 ; CHECK-NEXT:    ret
@@ -56,8 +55,7 @@ define void @st1b_out_of_upper_bound(<vscale x 16 x i8> %data, <vscale x 16 x i8
 define void @st1b_out_of_lower_bound(<vscale x 16 x i8> %data, <vscale x 16 x i8>* %a) {
 ; CHECK-LABEL: st1b_out_of_lower_bound:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    rdvl x8, #-9
-; CHECK-NEXT:    add x8, x0, x8
+; CHECK-NEXT:    addvl x8, x0, #-9
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x8]
 ; CHECK-NEXT:    ret

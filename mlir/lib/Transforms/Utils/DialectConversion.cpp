@@ -849,6 +849,7 @@ static void detachNestedAndErase(Operation *op) {
       block.dropAllDefinedValueUses();
     }
   }
+  op->dropAllUses();
   op->erase();
 }
 

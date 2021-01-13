@@ -354,6 +354,8 @@ ENUM_LANGOPT(VtorDispMode, MSVtorDispMode, 2, MSVtorDispMode::ForVBaseOverride,
 
 LANGOPT(ApplePragmaPack, 1, 0, "Apple gcc-compatible #pragma pack handling")
 
+LANGOPT(XLPragmaPack, 1, 0, "IBM XL #pragma pack handling")
+
 LANGOPT(RetainCommentsFromSystemHeaders, 1, 0, "retain documentation comments from system headers in the AST")
 
 LANGOPT(SanitizeAddressFieldPadding, 2, 0, "controls how aggressive is ASan "

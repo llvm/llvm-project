@@ -25,6 +25,7 @@
 #include "clang/Lex/PreprocessingRecord.h"
 #include "clang/Sema/ExternalSemaSource.h"
 #include "clang/Sema/IdentifierResolver.h"
+#include "clang/Sema/Sema.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ContinuousRangeMap.h"
 #include "clang/Serialization/ModuleFile.h"
@@ -870,10 +871,10 @@ private:
   llvm::SmallVector<std::string, 2> FpPragmaStrings;
 
   /// The pragma align/pack state.
-  Optional<unsigned> PragmaAlignPackCurrentValue;
+  Optional<Sema::AlignPackInfo> PragmaAlignPackCurrentValue;
   SourceLocation PragmaAlignPackCurrentLocation;
   struct PragmaAlignPackStackEntry {
-    unsigned Value;
+    Sema::AlignPackInfo Value;
     SourceLocation Location;
     SourceLocation PushLocation;
     StringRef SlotLabel;
@@ -2116,6 +2117,11 @@ public:
 
   /// Read the contents of a CXXCtorInitializer array.
   CXXCtorInitializer **GetExternalCXXCtorInitializers(uint64_t Offset) override;
+
+  /// Read a AlignPackInfo from raw form.
+  Sema::AlignPackInfo ReadAlignPackInfo(uint32_t Raw) const {
+    return Sema::AlignPackInfo::getFromRawEncoding(Raw);
+  }
 
   /// Read a source location from raw form and return it in its
   /// originating module file's source location space.

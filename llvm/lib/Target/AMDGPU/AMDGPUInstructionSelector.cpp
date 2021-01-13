@@ -853,9 +853,9 @@ bool AMDGPUInstructionSelector::selectDivScale(MachineInstr &MI) const {
   LLT Ty = MRI->getType(Dst0);
   unsigned Opc;
   if (Ty == LLT::scalar(32))
-    Opc = AMDGPU::V_DIV_SCALE_F32;
+    Opc = AMDGPU::V_DIV_SCALE_F32_e64;
   else if (Ty == LLT::scalar(64))
-    Opc = AMDGPU::V_DIV_SCALE_F64;
+    Opc = AMDGPU::V_DIV_SCALE_F64_e64;
   else
     return false;
 
@@ -2008,7 +2008,7 @@ bool AMDGPUInstructionSelector::selectG_SZA_EXT(MachineInstr &I) const {
       return constrainSelectedInstRegOperands(*ExtI, TII, TRI, RBI);
     }
 
-    const unsigned BFE = Signed ? AMDGPU::V_BFE_I32 : AMDGPU::V_BFE_U32;
+    const unsigned BFE = Signed ? AMDGPU::V_BFE_I32_e64 : AMDGPU::V_BFE_U32_e64;
     MachineInstr *ExtI =
       BuildMI(MBB, I, DL, TII.get(BFE), DstReg)
       .addReg(SrcReg)
@@ -2872,7 +2872,7 @@ bool AMDGPUInstructionSelector::selectG_SHUFFLE_VECTOR(
     }
   } else if (Mask[0] == 1 && Mask[1] == 0) {
     if (IsVALU) {
-      BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_ALIGNBIT_B32), DstReg)
+      BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_ALIGNBIT_B32_e64), DstReg)
         .addReg(SrcVec)
         .addReg(SrcVec)
         .addImm(16);

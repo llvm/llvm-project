@@ -2497,6 +2497,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
                         || Args.hasArg(OPT_fdump_record_layouts);
   if (Opts.FastRelaxedMath)
     Opts.setDefaultFPContractMode(LangOptions::FPM_Fast);
+  Opts.XLPragmaPack = Args.hasArg(OPT_fxl_pragma_pack);
   llvm::sort(Opts.ModuleFeatures);
   Opts.NativeHalfType |= Args.hasArg(OPT_fnative_half_type);
   Opts.NativeHalfArgsAndReturns |= Args.hasArg(OPT_fnative_half_arguments_and_returns);

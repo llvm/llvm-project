@@ -419,7 +419,6 @@ void DWARFLinker::cleanupAuxiliarryData(LinkContext &Context) {
   DIEAlloc.Reset();
 }
 
-
 /// Check if a variable describing DIE should be kept.
 /// \returns updated TraversalFlags.
 unsigned DWARFLinker::shouldKeepVariableDIE(AddressesMap &RelocMgr,
@@ -845,9 +844,12 @@ void DWARFLinker::assignAbbrev(DIEAbbrev &Abbrev) {
 unsigned DWARFLinker::DIECloner::cloneStringAttribute(
     DIE &Die, AttributeSpec AttrSpec, const DWARFFormValue &Val,
     const DWARFUnit &U, OffsetsStringPool &StringPool, AttributesInfo &Info) {
+  Optional<const char *> String = Val.getAsCString();
+  if (!String)
+    return 0;
+
   // Switch everything to out of line strings.
-  const char *String = *Val.getAsCString();
-  auto StringEntry = StringPool.getEntry(String);
+  auto StringEntry = StringPool.getEntry(*String);
 
   // Update attributes info.
   if (AttrSpec.Attr == dwarf::DW_AT_name)
@@ -1056,6 +1058,7 @@ unsigned DWARFLinker::DIECloner::cloneBlockAttribute(
 unsigned DWARFLinker::DIECloner::cloneAddressAttribute(
     DIE &Die, AttributeSpec AttrSpec, const DWARFFormValue &Val,
     const CompileUnit &Unit, AttributesInfo &Info) {
+  dwarf::Form Form = AttrSpec.Form;
   uint64_t Addr = *Val.getAsAddress();
 
   if (LLVM_UNLIKELY(Linker.Options.Update)) {
@@ -1105,8 +1108,19 @@ unsigned DWARFLinker::DIECloner::cloneAddressAttribute(
       Addr = (Info.OrigCallPc ? Info.OrigCallPc : Addr) + Info.PCOffset;
   }
 
+  // If this is an indexed address emit the relocated address.
+  if (Form == dwarf::DW_FORM_addrx) {
+    if (llvm::Expected<uint64_t> RelocAddr =
+            ObjFile.Addresses->relocateIndexedAddr(Addr)) {
+      Addr = *RelocAddr;
+      Form = dwarf::DW_FORM_addr;
+    } else {
+      Linker.reportWarning(toString(RelocAddr.takeError()), ObjFile);
+    }
+  }
+
   Die.addValue(DIEAlloc, static_cast<dwarf::Attribute>(AttrSpec.Attr),
-               static_cast<dwarf::Form>(AttrSpec.Form), DIEInteger(Addr));
+               static_cast<dwarf::Form>(Form), DIEInteger(Addr));
   return Unit.getOrigUnit().getAddressByteSize();
 }
 
@@ -1188,6 +1202,11 @@ unsigned DWARFLinker::DIECloner::cloneAttribute(
   switch (AttrSpec.Form) {
   case dwarf::DW_FORM_strp:
   case dwarf::DW_FORM_string:
+  case dwarf::DW_FORM_strx:
+  case dwarf::DW_FORM_strx1:
+  case dwarf::DW_FORM_strx2:
+  case dwarf::DW_FORM_strx3:
+  case dwarf::DW_FORM_strx4:
     return cloneStringAttribute(Die, AttrSpec, Val, U, StringPool, Info);
   case dwarf::DW_FORM_ref_addr:
   case dwarf::DW_FORM_ref1:
@@ -1204,6 +1223,7 @@ unsigned DWARFLinker::DIECloner::cloneAttribute(
     return cloneBlockAttribute(Die, File, Unit, AttrSpec, Val, AttrSize,
                                IsLittleEndian);
   case dwarf::DW_FORM_addr:
+  case dwarf::DW_FORM_addrx:
     return cloneAddressAttribute(Die, AttrSpec, Val, Unit, Info);
   case dwarf::DW_FORM_data1:
   case dwarf::DW_FORM_data2:
@@ -1284,6 +1304,9 @@ shouldSkipAttribute(DWARFAbbreviationDeclaration::AttributeSpec AttrSpec,
   case dwarf::DW_AT_high_pc:
   case dwarf::DW_AT_ranges:
     return SkipPC;
+  case dwarf::DW_AT_str_offsets_base:
+    // FIXME: Use the string offset table with Dwarf 5.
+    return true;
   case dwarf::DW_AT_location:
   case dwarf::DW_AT_frame_base:
     // FIXME: for some reason dsymutil-classic keeps the location attributes
@@ -2127,10 +2150,12 @@ uint64_t DWARFLinker::DIECloner::cloneAllCompileUnits(
   const uint64_t StartOutputDebugInfoSize = OutputDebugInfoSize;
 
   for (auto &CurrentUnit : CompileUnits) {
+    const uint16_t DwarfVersion = CurrentUnit->getOrigUnit().getVersion();
+    const uint32_t UnitHeaderSize = DwarfVersion >= 5 ? 12 : 11;
     auto InputDIE = CurrentUnit->getOrigUnit().getUnitDIE();
     CurrentUnit->setStartOffset(OutputDebugInfoSize);
     if (!InputDIE) {
-      OutputDebugInfoSize = CurrentUnit->computeNextUnitOffset();
+      OutputDebugInfoSize = CurrentUnit->computeNextUnitOffset(DwarfVersion);
       continue;
     }
     if (CurrentUnit->getInfo(0).Keep) {
@@ -2138,11 +2163,11 @@ uint64_t DWARFLinker::DIECloner::cloneAllCompileUnits(
       // already has a DIE inside of it.
       CurrentUnit->createOutputDIE();
       cloneDIE(InputDIE, File, *CurrentUnit, StringPool, 0 /* PC offset */,
-               11 /* Unit Header size */, 0, IsLittleEndian,
+               UnitHeaderSize, 0, IsLittleEndian,
                CurrentUnit->getOutputUnitDIE());
     }
 
-    OutputDebugInfoSize = CurrentUnit->computeNextUnitOffset();
+    OutputDebugInfoSize = CurrentUnit->computeNextUnitOffset(DwarfVersion);
 
     if (!Linker.Options.NoOutput) {
       assert(Emitter);
@@ -2183,12 +2208,14 @@ uint64_t DWARFLinker::DIECloner::cloneAllCompileUnits(
       if (!CurrentUnit->getOutputUnitDIE())
         continue;
 
+      unsigned DwarfVersion = CurrentUnit->getOrigUnit().getVersion();
+
       assert(Emitter->getDebugInfoSectionSize() ==
              CurrentUnit->getStartOffset());
-      Emitter->emitCompileUnitHeader(*CurrentUnit);
+      Emitter->emitCompileUnitHeader(*CurrentUnit, DwarfVersion);
       Emitter->emitDIE(*CurrentUnit->getOutputUnitDIE());
       assert(Emitter->getDebugInfoSectionSize() ==
-             CurrentUnit->computeNextUnitOffset());
+             CurrentUnit->computeNextUnitOffset(DwarfVersion));
     }
   }
 

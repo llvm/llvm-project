@@ -1032,7 +1032,12 @@ Flags controlling how ``#include``\s are resolved to files.
 
 .. option:: -I<dir>, --include-directory <arg>, --include-directory=<arg>
 
-Add directory to include search path. If there are multiple -I options, these directories are searched in the order they are given before the standard system directories are searched. If the same directory is in the SYSTEM include search paths, for example if also specified with -isystem, the -I option will be ignored
+Add directory to include search path. For C++ input, if
+there are multiple -I options, these directories are searched
+in the order they are given before the standard system directories
+are searched. If the same directory is in the SYSTEM include search
+paths, for example if also specified with -isystem, the -I option
+will be ignored
 
 .. option:: -I-, --include-barrier
 
@@ -3196,6 +3201,8 @@ PowerPC
 .. option:: -mcrypto, -mno-crypto
 
 .. option:: -mdirect-move, -mno-direct-move
+
+.. option:: -mefpu2
 
 .. option:: -mfloat128, -mno-float128
 

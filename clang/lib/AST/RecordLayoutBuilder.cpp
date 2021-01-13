@@ -615,6 +615,8 @@ protected:
 
   unsigned IsMac68kAlign : 1;
 
+  unsigned IsNaturalAlign : 1;
+
   unsigned IsMsStruct : 1;
 
   /// UnfilledBitsInLastUnit - If the last field laid out was a bitfield,
@@ -693,7 +695,9 @@ protected:
         UnpackedAlignment(CharUnits::One()),
         UnadjustedAlignment(CharUnits::One()), UseExternalLayout(false),
         InferAlignment(false), Packed(false), IsUnion(false),
-        IsMac68kAlign(false), IsMsStruct(false), UnfilledBitsInLastUnit(0),
+        IsMac68kAlign(false),
+        IsNaturalAlign(!Context.getTargetInfo().getTriple().isOSAIX()),
+        IsMsStruct(false), UnfilledBitsInLastUnit(0),
         LastBitfieldStorageUnitSize(0), MaxFieldAlignment(CharUnits::Zero()),
         DataSize(0), NonVirtualSize(CharUnits::Zero()),
         NonVirtualAlignment(CharUnits::One()),
@@ -1243,7 +1247,7 @@ ItaniumRecordLayoutBuilder::LayoutBase(const BaseSubobjectInfo *Base) {
       // By handling a base class that is not empty, we're handling the
       // "first (inherited) member".
       HandledFirstNonOverlappingEmptyField = true;
-    } else {
+    } else if (!IsNaturalAlign) {
       UnpackedPreferredBaseAlign = UnpackedBaseAlign;
       PreferredBaseAlign = BaseAlign;
     }
@@ -1313,8 +1317,6 @@ void ItaniumRecordLayoutBuilder::InitializeLayout(const Decl *D) {
   }
 
   Packed = D->hasAttr<PackedAttr>();
-  HandledFirstNonOverlappingEmptyField =
-      !Context.getTargetInfo().defaultsToAIXPowerAlignment();
 
   // Honor the default struct packing maximum alignment flag.
   if (unsigned DefaultMaxFieldAlignment = Context.getLangOpts().PackStruct) {
@@ -1326,17 +1328,26 @@ void ItaniumRecordLayoutBuilder::InitializeLayout(const Decl *D) {
   // allude to additional (more complicated) semantics, especially with regard
   // to bit-fields, but gcc appears not to follow that.
   if (D->hasAttr<AlignMac68kAttr>()) {
+    assert(
+        !D->hasAttr<AlignNaturalAttr>() &&
+        "Having both mac68k and natural alignment on a decl is not allowed.");
     IsMac68kAlign = true;
     MaxFieldAlignment = CharUnits::fromQuantity(2);
     Alignment = CharUnits::fromQuantity(2);
     PreferredAlignment = CharUnits::fromQuantity(2);
   } else {
+    if (D->hasAttr<AlignNaturalAttr>())
+      IsNaturalAlign = true;
+
     if (const MaxFieldAlignmentAttr *MFAA = D->getAttr<MaxFieldAlignmentAttr>())
       MaxFieldAlignment = Context.toCharUnitsFromBits(MFAA->getAlignment());
 
     if (unsigned MaxAlign = D->getMaxAlignment())
       UpdateAlignment(Context.toCharUnitsFromBits(MaxAlign));
   }
+
+  HandledFirstNonOverlappingEmptyField =
+      !Context.getTargetInfo().defaultsToAIXPowerAlignment() || IsNaturalAlign;
 
   // If there is an external AST source, ask it for the various offsets.
   if (const RecordDecl *RD = dyn_cast<RecordDecl>(D))
@@ -1921,7 +1932,7 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
   // types marked `no_unique_address` are not considered to be prior members.
   CharUnits PreferredAlign = FieldAlign;
   if (DefaultsToAIXPowerAlignment && !AlignIsRequired &&
-      FoundFirstNonOverlappingEmptyFieldForAIX) {
+      (FoundFirstNonOverlappingEmptyFieldForAIX || IsNaturalAlign)) {
     auto performBuiltinTypeAlignmentUpgrade = [&](const BuiltinType *BTy) {
       if (BTy->getKind() == BuiltinType::Double ||
           BTy->getKind() == BuiltinType::LongDouble) {

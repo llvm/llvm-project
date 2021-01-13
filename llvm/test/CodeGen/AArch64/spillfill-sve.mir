@@ -30,7 +30,7 @@ body:             |
     ; CHECK-LABEL: name: spills_fills_stack_id_ppr
     ; CHECK: stack:
     ; CHECK:      - { id: 0, name: '', type: spill-slot, offset: 0, size: 2, alignment: 2
-    ; CHECK-NEXT:     stack-id: sve-vec, callee-saved-register: ''
+    ; CHECK-NEXT:     stack-id: scalable-vector, callee-saved-register: ''
 
     ; EXPAND-LABEL: name: spills_fills_stack_id_ppr
     ; EXPAND: STR_PXI $p0, $sp, 7
@@ -73,7 +73,7 @@ body:             |
     ; CHECK-LABEL: name: spills_fills_stack_id_zpr
     ; CHECK: stack:
     ; CHECK:      - { id: 0, name: '', type: spill-slot, offset: 0, size: 16, alignment: 16
-    ; CHECK-NEXT:     stack-id: sve-vec, callee-saved-register: ''
+    ; CHECK-NEXT:     stack-id: scalable-vector, callee-saved-register: ''
 
     ; EXPAND-LABEL: name: spills_fills_stack_id_zpr
     ; EXPAND: STR_ZXI $z0, $sp, 0
@@ -108,7 +108,7 @@ body:             |
     ; CHECK-LABEL: name: spills_fills_stack_id_zpr2
     ; CHECK: stack:
     ; CHECK:      - { id: 0, name: '', type: spill-slot, offset: 0, size: 32, alignment: 16
-    ; CHECK-NEXT:     stack-id: sve-vec
+    ; CHECK-NEXT:     stack-id: scalable-vector
 
     ; EXPAND-LABEL: name: spills_fills_stack_id_zpr2
     ; EXPAND: STR_ZXI $z0, $sp, 0
@@ -145,7 +145,7 @@ body:             |
     ; CHECK-LABEL: name: spills_fills_stack_id_zpr3
     ; CHECK: stack:
     ; CHECK:      - { id: 0, name: '', type: spill-slot, offset: 0, size: 48, alignment: 16
-    ; CHECK-NEXT:     stack-id: sve-vec
+    ; CHECK-NEXT:     stack-id: scalable-vector
 
     ; EXPAND-LABEL: name: spills_fills_stack_id_zpr3
     ; EXPAND: STR_ZXI $z0, $sp, 0
@@ -184,7 +184,7 @@ body:             |
     ; CHECK-LABEL: name: spills_fills_stack_id_zpr4
     ; CHECK: stack:
     ; CHECK:      - { id: 0, name: '', type: spill-slot, offset: 0, size: 64, alignment: 16
-    ; CHECK-NEXT:     stack-id: sve-vec
+    ; CHECK-NEXT:     stack-id: scalable-vector
 
     ; EXPAND-LABEL: name: spills_fills_stack_id_zpr4
     ; EXPAND: STR_ZXI $z0, $sp, 0

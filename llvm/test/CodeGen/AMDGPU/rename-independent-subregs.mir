@@ -80,7 +80,7 @@ body: |
     undef %0.sub0:vreg_64 = IMPLICIT_DEF
 
   bb.1:
-    undef %0.sub1:vreg_64 = V_ALIGNBIT_B32 %0.sub0:vreg_64, %0.sub0:vreg_64, 16, implicit $exec
+    undef %0.sub1:vreg_64 = V_ALIGNBIT_B32_e64 %0.sub0:vreg_64, %0.sub0:vreg_64, 16, implicit $exec
     INLINEASM &"", 32, 327690, def undef %0.sub0:vreg_64, 327690, def %0.sub1:vreg_64, 2147483657, undef %0.sub0:vreg_64(tied-def 3), 2147549193, %0.sub1:vreg_64(tied-def 5)
     S_BRANCH %bb.1
 

@@ -29,27 +29,27 @@ define <vscale x 2 x i64> @test_nxv2i64_v8i64(<vscale x 2 x i64> %a, <8 x i64> %
 ; CHECK-NEXT:    lsl x10, x10, #3
 ; CHECK-NEXT:    st1d { z0.d }, p0, [sp]
 ; CHECK-NEXT:    str q1, [x9, x10]
-; CHECK-NEXT:    addvl x10, sp, #1
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [sp]
 ; CHECK-NEXT:    mov w9, #2
 ; CHECK-NEXT:    cmp x8, #2 // =2
 ; CHECK-NEXT:    csel x9, x8, x9, lo
+; CHECK-NEXT:    addvl x10, sp, #1
 ; CHECK-NEXT:    lsl x9, x9, #3
 ; CHECK-NEXT:    st1d { z0.d }, p0, [sp, #1, mul vl]
 ; CHECK-NEXT:    str q2, [x10, x9]
-; CHECK-NEXT:    addvl x10, sp, #2
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [sp, #1, mul vl]
 ; CHECK-NEXT:    mov w9, #4
 ; CHECK-NEXT:    cmp x8, #4 // =4
 ; CHECK-NEXT:    csel x9, x8, x9, lo
+; CHECK-NEXT:    addvl x10, sp, #2
 ; CHECK-NEXT:    lsl x9, x9, #3
 ; CHECK-NEXT:    st1d { z0.d }, p0, [sp, #2, mul vl]
 ; CHECK-NEXT:    str q3, [x10, x9]
-; CHECK-NEXT:    addvl x10, sp, #3
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [sp, #2, mul vl]
 ; CHECK-NEXT:    mov w9, #6
 ; CHECK-NEXT:    cmp x8, #6 // =6
 ; CHECK-NEXT:    csel x8, x8, x9, lo
+; CHECK-NEXT:    addvl x10, sp, #3
 ; CHECK-NEXT:    lsl x8, x8, #3
 ; CHECK-NEXT:    st1d { z0.d }, p0, [sp, #3, mul vl]
 ; CHECK-NEXT:    str q4, [x10, x8]
@@ -82,27 +82,27 @@ define <vscale x 2 x double> @test_nxv2f64_v8f64(<vscale x 2 x double> %a, <8 x 
 ; CHECK-NEXT:    lsl x10, x10, #3
 ; CHECK-NEXT:    st1d { z0.d }, p0, [sp]
 ; CHECK-NEXT:    str q1, [x9, x10]
-; CHECK-NEXT:    addvl x10, sp, #1
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [sp]
 ; CHECK-NEXT:    mov w9, #2
 ; CHECK-NEXT:    cmp x8, #2 // =2
 ; CHECK-NEXT:    csel x9, x8, x9, lo
+; CHECK-NEXT:    addvl x10, sp, #1
 ; CHECK-NEXT:    lsl x9, x9, #3
 ; CHECK-NEXT:    st1d { z0.d }, p0, [sp, #1, mul vl]
 ; CHECK-NEXT:    str q2, [x10, x9]
-; CHECK-NEXT:    addvl x10, sp, #2
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [sp, #1, mul vl]
 ; CHECK-NEXT:    mov w9, #4
 ; CHECK-NEXT:    cmp x8, #4 // =4
 ; CHECK-NEXT:    csel x9, x8, x9, lo
+; CHECK-NEXT:    addvl x10, sp, #2
 ; CHECK-NEXT:    lsl x9, x9, #3
 ; CHECK-NEXT:    st1d { z0.d }, p0, [sp, #2, mul vl]
 ; CHECK-NEXT:    str q3, [x10, x9]
-; CHECK-NEXT:    addvl x10, sp, #3
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [sp, #2, mul vl]
 ; CHECK-NEXT:    mov w9, #6
 ; CHECK-NEXT:    cmp x8, #6 // =6
 ; CHECK-NEXT:    csel x8, x8, x9, lo
+; CHECK-NEXT:    addvl x10, sp, #3
 ; CHECK-NEXT:    lsl x8, x8, #3
 ; CHECK-NEXT:    st1d { z0.d }, p0, [sp, #3, mul vl]
 ; CHECK-NEXT:    str q4, [x10, x8]

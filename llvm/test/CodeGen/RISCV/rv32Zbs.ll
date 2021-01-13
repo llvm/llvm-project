@@ -80,17 +80,14 @@ define i64 @sbclr_i64(i64 %a, i64 %b) nounwind {
 ; RV32IB:       # %bb.0:
 ; RV32IB-NEXT:    andi a3, a2, 63
 ; RV32IB-NEXT:    addi a3, a3, -32
-; RV32IB-NEXT:    bltz a3, .LBB2_2
-; RV32IB-NEXT:  # %bb.1:
-; RV32IB-NEXT:    mv a2, zero
-; RV32IB-NEXT:    sbset a3, zero, a3
-; RV32IB-NEXT:    j .LBB2_3
-; RV32IB-NEXT:  .LBB2_2:
-; RV32IB-NEXT:    mv a3, zero
+; RV32IB-NEXT:    slti a4, a3, 0
+; RV32IB-NEXT:    sbset a5, zero, a3
+; RV32IB-NEXT:    cmov a4, a4, a5, zero
 ; RV32IB-NEXT:    sbset a2, zero, a2
-; RV32IB-NEXT:  .LBB2_3:
+; RV32IB-NEXT:    srai a3, a3, 31
+; RV32IB-NEXT:    and a2, a3, a2
+; RV32IB-NEXT:    andn a1, a1, a4
 ; RV32IB-NEXT:    andn a0, a0, a2
-; RV32IB-NEXT:    andn a1, a1, a3
 ; RV32IB-NEXT:    ret
 ;
 ; RV32IBS-LABEL: sbclr_i64:
@@ -239,15 +236,13 @@ define signext i64 @sbset_i64_zero(i64 signext %a) nounwind {
 ;
 ; RV32IB-LABEL: sbset_i64_zero:
 ; RV32IB:       # %bb.0:
-; RV32IB-NEXT:    addi a1, a0, -32
-; RV32IB-NEXT:    bltz a1, .LBB7_2
-; RV32IB-NEXT:  # %bb.1:
-; RV32IB-NEXT:    mv a0, zero
-; RV32IB-NEXT:    sbset a1, zero, a1
-; RV32IB-NEXT:    ret
-; RV32IB-NEXT:  .LBB7_2:
-; RV32IB-NEXT:    mv a1, zero
+; RV32IB-NEXT:    addi a2, a0, -32
+; RV32IB-NEXT:    slti a1, a2, 0
+; RV32IB-NEXT:    sbset a3, zero, a2
+; RV32IB-NEXT:    cmov a1, a1, a3, zero
 ; RV32IB-NEXT:    sbset a0, zero, a0
+; RV32IB-NEXT:    srai a2, a2, 31
+; RV32IB-NEXT:    and a0, a2, a0
 ; RV32IB-NEXT:    ret
 ;
 ; RV32IBS-LABEL: sbset_i64_zero:
@@ -398,20 +393,17 @@ define i64 @sbext_i64(i64 %a, i64 %b) nounwind {
 ;
 ; RV32IB-LABEL: sbext_i64:
 ; RV32IB:       # %bb.0:
-; RV32IB-NEXT:    andi a3, a2, 63
-; RV32IB-NEXT:    addi a4, a3, -32
-; RV32IB-NEXT:    bltz a4, .LBB12_2
-; RV32IB-NEXT:  # %bb.1:
-; RV32IB-NEXT:    srl a0, a1, a4
-; RV32IB-NEXT:    j .LBB12_3
-; RV32IB-NEXT:  .LBB12_2:
 ; RV32IB-NEXT:    srl a0, a0, a2
-; RV32IB-NEXT:    addi a2, zero, 31
-; RV32IB-NEXT:    sub a2, a2, a3
-; RV32IB-NEXT:    slli a1, a1, 1
-; RV32IB-NEXT:    sll a1, a1, a2
-; RV32IB-NEXT:    or a0, a0, a1
-; RV32IB-NEXT:  .LBB12_3:
+; RV32IB-NEXT:    andi a2, a2, 63
+; RV32IB-NEXT:    addi a3, zero, 31
+; RV32IB-NEXT:    sub a3, a3, a2
+; RV32IB-NEXT:    slli a4, a1, 1
+; RV32IB-NEXT:    sll a3, a4, a3
+; RV32IB-NEXT:    or a0, a0, a3
+; RV32IB-NEXT:    addi a2, a2, -32
+; RV32IB-NEXT:    srl a1, a1, a2
+; RV32IB-NEXT:    slti a2, a2, 0
+; RV32IB-NEXT:    cmov a0, a2, a1, a0
 ; RV32IB-NEXT:    andi a0, a0, 1
 ; RV32IB-NEXT:    mv a1, zero
 ; RV32IB-NEXT:    ret

@@ -2050,7 +2050,9 @@ Symbol &ScopeHandler::MakeSymbol(const parser::Name &name, Attrs attrs) {
 }
 Symbol &ScopeHandler::MakeHostAssocSymbol(
     const parser::Name &name, const Symbol &hostSymbol) {
-  Symbol &symbol{MakeSymbol(name, HostAssocDetails{hostSymbol})};
+  Symbol &symbol{*NonDerivedTypeScope()
+                      .try_emplace(name.source, HostAssocDetails{hostSymbol})
+                      .first->second};
   name.symbol = &symbol;
   symbol.attrs() = hostSymbol.attrs(); // TODO: except PRIVATE, PUBLIC?
   symbol.flags() = hostSymbol.flags();
@@ -4945,18 +4947,19 @@ void ConstructVisitor::ResolveIndexName(
     // type came from explicit type-spec
   } else if (!prev) {
     ApplyImplicitRules(symbol);
-  } else if (const Symbol * prevRoot{GetAssociationRoot(*prev)}) {
+  } else {
+    const Symbol &prevRoot{ResolveAssociations(*prev)};
     // prev could be host- use- or construct-associated with another symbol
-    if (!prevRoot->has<ObjectEntityDetails>() &&
-        !prevRoot->has<EntityDetails>()) {
+    if (!prevRoot.has<ObjectEntityDetails>() &&
+        !prevRoot.has<EntityDetails>()) {
       Say2(name, "Index name '%s' conflicts with existing identifier"_err_en_US,
           *prev, "Previous declaration of '%s'"_en_US);
       return;
     } else {
-      if (const auto *type{prevRoot->GetType()}) {
+      if (const auto *type{prevRoot.GetType()}) {
         symbol.SetType(*type);
       }
-      if (prevRoot->IsObjectArray()) {
+      if (prevRoot.IsObjectArray()) {
         SayWithDecl(name, *prev, "Index variable '%s' is not scalar"_err_en_US);
         return;
       }
@@ -5047,7 +5050,7 @@ bool ConstructVisitor::Pre(const parser::DataImpliedDo &x) {
 }
 
 // Sets InDataStmt flag on a variable (or misidentified function) in a DATA
-// statement so that the predicate IsInitialized(base symbol) will be true
+// statement so that the predicate IsStaticallyInitialized() will be true
 // during semantic analysis before the symbol's initializer is constructed.
 bool ConstructVisitor::Pre(const parser::DataIDoObject &x) {
   std::visit(
@@ -5090,11 +5093,10 @@ bool ConstructVisitor::Pre(const parser::DataStmtValue &x) {
   if (auto *elem{parser::Unwrap<parser::ArrayElement>(mutableData)}) {
     if (const auto *name{std::get_if<parser::Name>(&elem->base.u)}) {
       if (const Symbol * symbol{FindSymbol(*name)}) {
-        if (const Symbol * ultimate{GetAssociationRoot(*symbol)}) {
-          if (ultimate->has<DerivedTypeDetails>()) {
-            mutableData.u = elem->ConvertToStructureConstructor(
-                DerivedTypeSpec{name->source, *ultimate});
-          }
+        const Symbol &ultimate{symbol->GetUltimate()};
+        if (ultimate.has<DerivedTypeDetails>()) {
+          mutableData.u = elem->ConvertToStructureConstructor(
+              DerivedTypeSpec{name->source, ultimate});
         }
       }
     }

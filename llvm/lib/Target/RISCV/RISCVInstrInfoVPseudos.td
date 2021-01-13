@@ -947,7 +947,7 @@ multiclass VPseudoUnaryV_M {
 multiclass VPseudoUnaryV_V_AnyMask {
   foreach m = MxList.m in {
     let VLMul = m.value in
-      def _VM # "_" # m.MX # "_MASK" : VPseudoUnaryAnyMask<m.vrclass, m.vrclass>;
+      def _VM # "_" # m.MX : VPseudoUnaryAnyMask<m.vrclass, m.vrclass>;
   }
 }
 
@@ -1404,12 +1404,12 @@ class VPatUnaryAnyMask<string intrinsic,
                        LMULInfo vlmul,
                        VReg result_reg_class,
                        VReg op1_reg_class> :
-  Pat<(result_type (!cast<Intrinsic>(intrinsic#"_mask")
+  Pat<(result_type (!cast<Intrinsic>(intrinsic)
                    (result_type result_reg_class:$merge),
                    (op1_type op1_reg_class:$rs1),
                    (mask_type VR:$rs2),
                    (XLenVT GPR:$vl))),
-                   (!cast<Instruction>(inst#"_"#kind#"_"#vlmul.MX#"_MASK")
+                   (!cast<Instruction>(inst#"_"#kind#"_"#vlmul.MX)
                    (result_type result_reg_class:$merge),
                    (op1_type op1_reg_class:$rs1),
                    (mask_type VR:$rs2),
@@ -3366,6 +3366,14 @@ defm "" : VPatBinaryV_VM<"int_riscv_vfmerge", "PseudoVMERGE",
                          /*CarryOut = */0, /*vtilist=*/AllFloatVectors>;
 defm "" : VPatBinaryV_XM<"int_riscv_vfmerge", "PseudoVFMERGE",
                          /*CarryOut = */0, /*vtilist=*/AllFloatVectors>;
+
+foreach fvti = AllFloatVectors in {
+  defvar instr = !cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX);
+  def : Pat<(fvti.Vector (int_riscv_vfmerge (fvti.Vector fvti.RegClass:$rs2),
+                                            (fvti.Scalar (fpimm0)),
+                                            (fvti.Mask V0), (XLenVT GPR:$vl))),
+            (instr fvti.RegClass:$rs2, 0, (fvti.Mask V0), (NoX0 GPR:$vl), fvti.SEW)>;
+}
 
 //===----------------------------------------------------------------------===//
 // 14.16. Vector Floating-Point Move Instruction

@@ -1647,6 +1647,10 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     }
 
     auto VerifyStackMapConstant = [&](unsigned Offset) {
+      if (Offset >= MI->getNumOperands()) {
+        report("stack map constant to STATEPOINT is out of range!", MI);
+        return;
+      }
       if (!MI->getOperand(Offset - 1).isImm() ||
           MI->getOperand(Offset - 1).getImm() != StackMaps::ConstantOp ||
           !MI->getOperand(Offset).isImm())
@@ -1655,6 +1659,25 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     VerifyStackMapConstant(SO.getCCIdx());
     VerifyStackMapConstant(SO.getFlagsIdx());
     VerifyStackMapConstant(SO.getNumDeoptArgsIdx());
+    VerifyStackMapConstant(SO.getNumGCPtrIdx());
+    VerifyStackMapConstant(SO.getNumAllocaIdx());
+    VerifyStackMapConstant(SO.getNumGcMapEntriesIdx());
+
+    // Verify that all explicit statepoint defs are tied to gc operands as
+    // they are expected to be a relocation of gc operands.
+    unsigned FirstGCPtrIdx = SO.getFirstGCPtrIdx();
+    unsigned LastGCPtrIdx = SO.getNumAllocaIdx() - 2;
+    for (unsigned Idx = 0; Idx < MI->getNumDefs(); Idx++) {
+      unsigned UseOpIdx;
+      if (!MI->isRegTiedToUseOperand(Idx, &UseOpIdx)) {
+        report("STATEPOINT defs expected to be tied", MI);
+        break;
+      }
+      if (UseOpIdx < FirstGCPtrIdx || UseOpIdx > LastGCPtrIdx) {
+        report("STATEPOINT def tied to non-gc operand", MI);
+        break;
+      }
+    }
 
     // TODO: verify we have properly encoded deopt arguments
   } break;

@@ -14548,6 +14548,13 @@ SDValue DAGCombiner::visitBRCOND(SDNode *N) {
   SDValue N1 = N->getOperand(1);
   SDValue N2 = N->getOperand(2);
 
+  // BRCOND(FREEZE(cond)) is equivalent to BRCOND(cond) (both are
+  // nondeterministic jumps).
+  if (N1->getOpcode() == ISD::FREEZE && N1.hasOneUse()) {
+    return DAG.getNode(ISD::BRCOND, SDLoc(N), MVT::Other, Chain,
+                       N1->getOperand(0), N2);
+  }
+
   // If N is a constant we could fold this into a fallthrough or unconditional
   // branch. However that doesn't happen very often in normal code, because
   // Instcombine/SimplifyCFG should have handled the available opportunities.
@@ -20894,11 +20901,7 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
     }
 
     // Check if all indices in Mask are Undef. In case, propagate Undef.
-    bool isUndefMask = true;
-    for (unsigned i = 0; i != NumElts && isUndefMask; ++i)
-      isUndefMask &= Mask[i] < 0;
-
-    if (isUndefMask)
+    if (llvm::all_of(Mask, [](int M) { return M < 0; }))
       return DAG.getUNDEF(VT);
 
     if (!SV0.getNode())

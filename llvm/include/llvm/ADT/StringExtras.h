@@ -384,13 +384,16 @@ inline std::string join_impl(IteratorT Begin, IteratorT End,
 
   size_t Len = (std::distance(Begin, End) - 1) * Separator.size();
   for (IteratorT I = Begin; I != End; ++I)
-    Len += (*Begin).size();
+    Len += (*I).size();
   S.reserve(Len);
+  size_t PrevCapacity = S.capacity();
+  (void)PrevCapacity;
   S += (*Begin);
   while (++Begin != End) {
     S += Separator;
     S += (*Begin);
   }
+  assert(PrevCapacity == S.capacity() && "String grew during building");
   return S;
 }
 

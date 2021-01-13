@@ -27,6 +27,32 @@ entry:
   ret void
 }
 
+define arm_aapcs_vfpcc void @vmovn32_trunc1_onesrc(<8 x i32> %src1, <8 x i16> *%dest) {
+; CHECK-LABEL: vmovn32_trunc1_onesrc:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmovnt.i32 q0, q1
+; CHECK-NEXT:    vstrw.32 q0, [r0]
+; CHECK-NEXT:    bx lr
+entry:
+  %strided.vec = shufflevector <8 x i32> %src1, <8 x i32> undef, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+  %out = trunc <8 x i32> %strided.vec to <8 x i16>
+  store <8 x i16> %out, <8 x i16> *%dest, align 8
+  ret void
+}
+
+define arm_aapcs_vfpcc void @vmovn32_trunc2_onesrc(<8 x i32> %src1, <8 x i16> *%dest) {
+; CHECK-LABEL: vmovn32_trunc2_onesrc:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmovnt.i32 q1, q0
+; CHECK-NEXT:    vstrw.32 q1, [r0]
+; CHECK-NEXT:    bx lr
+entry:
+  %strided.vec = shufflevector <8 x i32> %src1, <8 x i32> undef, <8 x i32> <i32 4, i32 0, i32 5, i32 1, i32 6, i32 2, i32 7, i32 3>
+  %out = trunc <8 x i32> %strided.vec to <8 x i16>
+  store <8 x i16> %out, <8 x i16> *%dest, align 8
+  ret void
+}
+
 define arm_aapcs_vfpcc void @vmovn16_trunc1(<8 x i16> %src1, <8 x i16> %src2, <16 x i8> *%dest) {
 ; CHECK-LABEL: vmovn16_trunc1:
 ; CHECK:       @ %bb.0: @ %entry
@@ -48,6 +74,32 @@ define arm_aapcs_vfpcc void @vmovn16_trunc2(<8 x i16> %src1, <8 x i16> %src2, <1
 ; CHECK-NEXT:    bx lr
 entry:
   %strided.vec = shufflevector <8 x i16> %src1, <8 x i16> %src2, <16 x i32> <i32 8, i32 0, i32 9, i32 1, i32 10, i32 2, i32 11, i32 3, i32 12, i32 4, i32 13, i32 5, i32 14, i32 6, i32 15, i32 7>
+  %out = trunc <16 x i16> %strided.vec to <16 x i8>
+  store <16 x i8> %out, <16 x i8> *%dest, align 8
+  ret void
+}
+
+define arm_aapcs_vfpcc void @vmovn16_trunc1_onesrc(<16 x i16> %src1, <16 x i8> *%dest) {
+; CHECK-LABEL: vmovn16_trunc1_onesrc:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmovnt.i16 q0, q1
+; CHECK-NEXT:    vstrw.32 q0, [r0]
+; CHECK-NEXT:    bx lr
+entry:
+  %strided.vec = shufflevector <16 x i16> %src1, <16 x i16> undef, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
+  %out = trunc <16 x i16> %strided.vec to <16 x i8>
+  store <16 x i8> %out, <16 x i8> *%dest, align 8
+  ret void
+}
+
+define arm_aapcs_vfpcc void @vmovn16_trunc2_onesrc(<16 x i16> %src1, <16 x i8> *%dest) {
+; CHECK-LABEL: vmovn16_trunc2_onesrc:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmovnt.i16 q1, q0
+; CHECK-NEXT:    vstrw.32 q1, [r0]
+; CHECK-NEXT:    bx lr
+entry:
+  %strided.vec = shufflevector <16 x i16> %src1, <16 x i16> undef, <16 x i32> <i32 8, i32 0, i32 9, i32 1, i32 10, i32 2, i32 11, i32 3, i32 12, i32 4, i32 13, i32 5, i32 14, i32 6, i32 15, i32 7>
   %out = trunc <16 x i16> %strided.vec to <16 x i8>
   store <16 x i8> %out, <16 x i8> *%dest, align 8
   ret void

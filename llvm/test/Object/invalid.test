@@ -244,7 +244,7 @@ Symbols: []
 # RUN: llvm-readobj --symbols %p/Inputs/invalid-ext-symtab-index.elf-x86-64 2>&1 | \
 # RUN:   FileCheck -DFILE=%p/Inputs/invalid-ext-symtab-index.elf-x86-64 --check-prefix=INVALID-EXT-SYMTAB-INDEX %s
 
-# INVALID-EXT-SYMTAB-INDEX: warning: '[[FILE]]': extended symbol index (0) is past the end of the SHT_SYMTAB_SHNDX section of size 0
+# INVALID-EXT-SYMTAB-INDEX: warning: '[[FILE]]': found an extended symbol index (0), but unable to locate the extended symbol index table
 # INVALID-EXT-SYMTAB-INDEX: Section: Reserved (0xFFFF)
 
 ## Check that llvm-readobj reports an error if a relocation section

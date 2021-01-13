@@ -81,9 +81,9 @@ public:
   static std::optional<TypeAndShape> Characterize(
       const semantics::ObjectEntityDetails &, FoldingContext &);
   static std::optional<TypeAndShape> Characterize(
-      const semantics::ProcInterface &);
+      const semantics::ProcInterface &, FoldingContext &);
   static std::optional<TypeAndShape> Characterize(
-      const semantics::DeclTypeSpec &);
+      const semantics::DeclTypeSpec &, FoldingContext &);
   static std::optional<TypeAndShape> Characterize(
       const ActualArgument &, FoldingContext &);
 
@@ -101,15 +101,16 @@ public:
         if (type->category() == TypeCategory::Character) {
           if (const auto *chExpr{UnwrapExpr<Expr<SomeCharacter>>(x)}) {
             if (auto length{chExpr->LEN()}) {
-              result.set_LEN(Fold(context, std::move(*length)));
+              result.set_LEN(std::move(*length));
             }
           }
         }
-        return result;
+        return std::move(result.Rewrite(context));
       }
     }
     return std::nullopt;
   }
+
   template <typename A>
   static std::optional<TypeAndShape> Characterize(
       const std::optional<A> &x, FoldingContext &context) {
@@ -121,9 +122,9 @@ public:
   }
   template <typename A>
   static std::optional<TypeAndShape> Characterize(
-      const A *x, FoldingContext &context) {
-    if (x) {
-      return Characterize(*x, context);
+      const A *p, FoldingContext &context) {
+    if (p) {
+      return Characterize(*p, context);
     } else {
       return std::nullopt;
     }
@@ -151,14 +152,17 @@ public:
   std::optional<Expr<SubscriptInteger>> MeasureSizeInBytes(
       FoldingContext &) const;
 
+  // called by Fold() to rewrite in place
+  TypeAndShape &Rewrite(FoldingContext &);
+
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 
 private:
   static std::optional<TypeAndShape> Characterize(
       const semantics::AssocEntityDetails &, FoldingContext &);
   static std::optional<TypeAndShape> Characterize(
-      const semantics::ProcEntityDetails &);
-  void AcquireShape(const semantics::ObjectEntityDetails &, FoldingContext &);
+      const semantics::ProcEntityDetails &, FoldingContext &);
+  void AcquireShape(const semantics::ObjectEntityDetails &);
   void AcquireLEN();
 
 protected:
@@ -325,6 +329,5 @@ struct Procedure {
 private:
   Procedure() {}
 };
-
 } // namespace Fortran::evaluate::characteristics
 #endif // FORTRAN_EVALUATE_CHARACTERISTICS_H_

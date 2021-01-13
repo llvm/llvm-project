@@ -766,9 +766,11 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     D.Diag(diag::err_drv_argument_not_allowed_with)
         << ProfileGenerateArg->getSpelling() << ProfileUseArg->getSpelling();
 
-  if (CSPGOGenerateArg && PGOGenerateArg)
+  if (CSPGOGenerateArg && PGOGenerateArg) {
     D.Diag(diag::err_drv_argument_not_allowed_with)
         << CSPGOGenerateArg->getSpelling() << PGOGenerateArg->getSpelling();
+    PGOGenerateArg = nullptr;
+  }
 
   if (ProfileGenerateArg) {
     if (ProfileGenerateArg->getOption().matches(
@@ -6114,6 +6116,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasFlag(options::OPT_fapple_pragma_pack,
                    options::OPT_fno_apple_pragma_pack, false))
     CmdArgs.push_back("-fapple-pragma-pack");
+
+  if (Args.hasFlag(options::OPT_fxl_pragma_pack,
+                   options::OPT_fno_xl_pragma_pack, RawTriple.isOSAIX()))
+    CmdArgs.push_back("-fxl-pragma-pack");
 
   // Remarks can be enabled with any of the `-f.*optimization-record.*` flags.
   if (willEmitRemarks(Args) && checkRemarksOptions(D, Args, Triple))

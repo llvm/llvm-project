@@ -40,7 +40,7 @@ if.end:
   ret void
 }
 
-define coldcc float @sin_wrapper(float %x) {
+define float @sin_wrapper(float %x) {
 bb:
   %call = tail call float @_Z3sinf(float %x)
   ret float %call
@@ -83,7 +83,7 @@ entry:
   %and = and i32 %tid, %n
   %arrayidx11 = getelementptr inbounds [64 x float], [64 x float] addrspace(5)* %pvt_arr, i32 0, i32 %and
   %tmp12 = load float, float addrspace(5)* %arrayidx11, align 4
-  %c2 = call coldcc float @sin_wrapper(float %tmp12)
+  %c2 = call float @sin_wrapper(float %tmp12)
   store float %c2, float addrspace(5)* %arrayidx7, align 4
   %xor = xor i32 %tid, %n
   %arrayidx16 = getelementptr inbounds [64 x float], [64 x float] addrspace(5)* %pvt_arr, i32 0, i32 %xor

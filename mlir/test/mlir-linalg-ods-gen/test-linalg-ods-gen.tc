@@ -10,9 +10,18 @@
 //       IMPL:  { {{.*}}Parallel{{.*}}, {{.*}}Reduction{{.*}} }
 //
 //       IMPL:  ArrayAttr Test1Op::indexing_maps() {
-//       IMPL:  AffineMap::get(2, 0, {d0, d1}, context),
-//  IMPL-NEXT:  AffineMap::get(2, 0, {d1}, context),
-//  IMPL-NEXT:  AffineMap::get(2, 0, {d0}, context) });
+//       IMPL: auto s0 = getAffineSymbolExpr(0, context); (void)s0;
+//  IMPL-NEXT: auto s1 = getAffineSymbolExpr(1, context); (void)s1;
+//  IMPL-NEXT: auto map0 = AffineMap::get(2, 2, {d0, d1}, context);
+//  IMPL-NEXT: map0 = map0.replaceDimsAndSymbols({}, { s0, s1 }, 2, 0);
+//  IMPL-NEXT: map0 = simplifyAffineMap(map0);
+//  IMPL-NEXT: auto map1 = AffineMap::get(2, 2, {d1}, context);
+//  IMPL-NEXT: map1 = map1.replaceDimsAndSymbols({}, { s0, s1 }, 2, 0);
+//  IMPL-NEXT: map1 = simplifyAffineMap(map1);
+//  IMPL-NEXT: auto map2 = AffineMap::get(2, 2, {d0}, context);
+//  IMPL-NEXT: map2 = map2.replaceDimsAndSymbols({}, { s0, s1 }, 2, 0);
+//  IMPL-NEXT: map2 = simplifyAffineMap(map2);
+//  IMPL-NEXT: return {{.+}}.getAffineMapArrayAttr({ map0, map1, map2 });
 //
 //       IMPL:  void Test1Op::regionBuilder(Block &block) {
 //       IMPL:  Value [[a:.*]](args[0]), [[b:.*]](args[1]), [[c:.*]](args[2]);
@@ -34,9 +43,9 @@ def test1(A: f32(M, K), B: f32(K)) -> (C: f32(M)) {
 //       IMPL:  { {{.*}}Parallel{{.*}}, {{.*}}Parallel{{.*}}, {{.*}}Reduction{{.*}} }
 //
 //       IMPL:  ArrayAttr Test2Op::indexing_maps() {
-//       IMPL:  AffineMap::get(3, 0, {d0, d2}, context),
-//  IMPL-NEXT:  AffineMap::get(3, 0, {d2, d1}, context),
-//  IMPL-NEXT:  AffineMap::get(3, 0, {d0, d1}, context) });
+//       IMPL:  AffineMap::get(3, 3, {d0, d2}, context)
+//       IMPL:  AffineMap::get(3, 3, {d2, d1}, context)
+//       IMPL:  AffineMap::get(3, 3, {d0, d1}, context)
 //
 //       IMPL:  Test2Op::regionBuilder(Block &block) {
 //       IMPL:  Value [[a:.*]](args[0]), [[b:.*]](args[1]), [[c:.*]](args[2]);
@@ -58,9 +67,9 @@ def test2(A: f32(M, K), B: f32(K, N)) -> (C: f32(M, N)) {
 //       IMPL:  { {{.*}}Parallel{{.*}}, {{.*}}Parallel{{.*}}, {{.*}}Reduction{{.*}} }
 //
 //       IMPL:  ArrayAttr Test3Op::indexing_maps() {
-//       IMPL:  AffineMap::get(4, 0, {d0, d1, d3}, context),
-//  IMPL-NEXT:  AffineMap::get(4, 0, {d3, d2}, context),
-//  IMPL-NEXT:  AffineMap::get(4, 0, {d0, d1, d2}, context) });
+//       IMPL:  AffineMap::get(4, 4, {d0, d1, d3}, context)
+//       IMPL:  AffineMap::get(4, 4, {d3, d2}, context)
+//       IMPL:  AffineMap::get(4, 4, {d0, d1, d2}, context)
 //
 //       IMPL:  Test3Op::regionBuilder(Block &block) {
 //       IMPL:  Value [[a:.*]](args[0]), [[b:.*]](args[1]), [[c:.*]](args[2]);
@@ -71,4 +80,48 @@ def test2(A: f32(M, K), B: f32(K, N)) -> (C: f32(M, N)) {
 ods_def<Test3Op> :
 def test3(A: f32(Batch, M, K), B: f32(K, N)) -> (C: f32(Batch, M, N)) {
   C(b, m, n) = std_addf<k>(std_mulf(A(b, m, k), B(k, n)));
+}
+
+// Test attribute definitions
+// ODS-LABEL: def Test4Op
+// ODS: F32ArrayAttr:$array_attr,
+// ODS: F32:$f32_attr,
+// ODS: RankedF32ElementsAttr<[4]>:$fvec_attr,
+// ODS: I32:$i32_attr,
+// ODS: RankedI32ElementsAttr<[5, 6]>:$ivec_attr,
+// ODS: OptionalAttr<F32>:$optional_attr
+//
+ods_def<Test4Op> :
+def test4(A: f32(Batch, M, K), B: f32(K, N)) -> (C: f32(Batch, M, N))
+attr(
+  f32_attr: f32,
+  i32_attr: i32,
+  fvec_attr: 4xf32,
+  ivec_attr: 5x6xi32,
+  array_attr : f32[],
+  optional_attr? : f32
+) {
+  C(b, m, n) = std_addf<k>(std_mulf(A(b, m, k), B(k, n)));
+}
+
+// Test attribute usage in affine expressions
+// IMPL-LABEL: ArrayAttr Test5Op::indexing_maps() {
+// IMPL: auto cst0 = getAffineConstantExpr(strides().getValue<int>({ 0 }), context);
+// IMPL: auto cst1 = getAffineConstantExpr(strides().getValue<int>({ 1 }), context);
+// IMPL: auto map0 = AffineMap::get(7, 9, {d0, d1 * s7 + d4, d2 * s8 + d5, d6}, context);
+// IMPL: map0 = map0.replaceDimsAndSymbols({}, { s0, s1, s2, s3, s4, s5, s6, cst0, cst1 }, 7, 0);
+// IMPL: map0 = simplifyAffineMap(map0);
+// IMPL: auto map1 = AffineMap::get(7, 9, {d3, d4, d5, d6}, context);
+// IMPL: map1 = map1.replaceDimsAndSymbols({}, { s0, s1, s2, s3, s4, s5, s6, cst0, cst1 }, 7, 0);
+// IMPL: map1 = simplifyAffineMap(map1);
+// IMPL: auto map2 = AffineMap::get(7, 7, {d0, d1, d2, d3}, context);
+// IMPL: map2 = map2.replaceDimsAndSymbols({}, { s0, s1, s2, s3, s4, s5, s6, cst0, cst1 }, 7, 0);
+// IMPL: map2 = simplifyAffineMap(map2);
+// IMPL: return {{.+}}.getAffineMapArrayAttr({ map0, map1, map2 });
+//
+ods_def<Test5Op>:
+def test5(I: f32(N, H, W, C), K: f32(F, KH, KW, C)) -> (O: f32(N, H, W, F))
+     attr(strides: 2xi32) {
+  O(n, h, w, f) = std_addf<kh, kw>(std_mulf(
+    I(n, h * strides[0] + kh, w * strides[1] + kw, c), K(f, kh, kw, c)));
 }

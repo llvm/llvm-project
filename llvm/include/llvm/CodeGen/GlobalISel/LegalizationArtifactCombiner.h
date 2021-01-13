@@ -486,7 +486,7 @@ public:
                                     MachineRegisterInfo &MRI,
                                     MachineIRBuilder &Builder,
                                     SmallVectorImpl<Register> &UpdatedDefs,
-                                    GISelObserverWrapper &Observer) {
+                                    GISelChangeObserver &Observer) {
     if (!llvm::canReplaceReg(DstReg, SrcReg, MRI)) {
       Builder.buildCopy(DstReg, SrcReg);
       UpdatedDefs.push_back(DstReg);
@@ -521,7 +521,7 @@ public:
   bool tryCombineUnmergeValues(MachineInstr &MI,
                                SmallVectorImpl<MachineInstr *> &DeadInsts,
                                SmallVectorImpl<Register> &UpdatedDefs,
-                               GISelObserverWrapper &Observer) {
+                               GISelChangeObserver &Observer) {
     assert(MI.getOpcode() == TargetOpcode::G_UNMERGE_VALUES);
 
     unsigned NumDefs = MI.getNumOperands() - 1;
