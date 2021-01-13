@@ -64,7 +64,7 @@ public:
   ///
   /// As a side effect, this also switches the current Dwarf version
   /// of the MC layer to the one of U.getOrigUnit().
-  void emitCompileUnitHeader(CompileUnit &Unit) override;
+  void emitCompileUnitHeader(CompileUnit &Unit, unsigned DwarfVersion) override;
 
   /// Recursively emit the DIE tree rooted at \p Die.
   void emitDIE(DIE &Die) override;
