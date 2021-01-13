@@ -36115,6 +36115,38 @@ static SDValue canonicalizeShuffleMaskWithHorizOp(
   int NumEltsPerLane = NumElts / NumLanes;
   int NumHalfEltsPerLane = NumEltsPerLane / 2;
 
+  // See if we can remove the shuffle by resorting the HOP chain so that
+  // the HOP args are pre-shuffled.
+  // TODO: Generalize to any sized/depth chain.
+  // TODO: Add support for PACKSS/PACKUS.
+  if (isHoriz && NumEltsPerLane == 4 && VT0.is128BitVector() &&
+      shouldUseHorizontalOp(Ops.size() == 1, DAG, Subtarget)) {
+    SmallVector<int> ScaledMask;
+    if (scaleShuffleElements(Mask, 4, ScaledMask)) {
+      // Attempt to find a HOP(HOP(X,Y),HOP(Z,W)) source operand.
+      auto GetHOpSrc = [&](int M) {
+        if (M == SM_SentinelUndef)
+          return DAG.getUNDEF(VT0);
+        if (M == SM_SentinelZero)
+          return getZeroVector(VT0.getSimpleVT(), Subtarget, DAG, DL);
+        SDValue Src0 = BC[M / NumElts];
+        SDValue Src1 = Src0.getOperand((M % 4) >= 2);
+        if (Src1.getOpcode() == Opcode0 && Src0->isOnlyUserOf(Src1.getNode()))
+          return Src1.getOperand(M % 2);
+        return SDValue();
+      };
+      SDValue M0 = GetHOpSrc(ScaledMask[0]);
+      SDValue M1 = GetHOpSrc(ScaledMask[1]);
+      SDValue M2 = GetHOpSrc(ScaledMask[2]);
+      SDValue M3 = GetHOpSrc(ScaledMask[3]);
+      if (M0 && M1 && M2 && M3) {
+        SDValue LHS = DAG.getNode(Opcode0, DL, VT0, M0, M1);
+        SDValue RHS = DAG.getNode(Opcode0, DL, VT0, M2, M3);
+        return DAG.getNode(Opcode0, DL, VT0, LHS, RHS);
+      }
+    }
+  }
+
   if (2 < Ops.size())
     return SDValue();
 
