@@ -5,6 +5,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     # ctype.h entrypoints
     libc.src.ctype.isalnum
     libc.src.ctype.isalpha
+    libc.src.ctype.isascii
     libc.src.ctype.isblank
     libc.src.ctype.iscntrl
     libc.src.ctype.isdigit
@@ -15,6 +16,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.ctype.isspace
     libc.src.ctype.isupper
     libc.src.ctype.isxdigit
+    libc.src.ctype.toascii
     libc.src.ctype.tolower
     libc.src.ctype.toupper
 
