@@ -156,7 +156,6 @@ ProfiledBinary::getExpandedContextStr(const std::list<uint64_t> &Stack) const {
       OContextStr << ContextVec[I];
     }
   }
-
   return OContextStr.str();
 }
 
@@ -187,6 +186,8 @@ void ProfiledBinary::decodePseudoProbe(const ELFObjectFileBase *Obj) {
       StringRef Contents = unwrapOrError(Section.getContents(), FileName);
       ProbeDecoder.buildAddress2ProbeMap(
           reinterpret_cast<const uint8_t *>(Contents.data()), Contents.size());
+      // set UsePseudoProbes flag, used for PerfReader
+      UsePseudoProbes = true;
     }
   }
 

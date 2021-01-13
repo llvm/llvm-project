@@ -133,6 +133,8 @@ class ProfiledBinary {
   // Pseudo probe decoder
   PseudoProbeDecoder ProbeDecoder;
 
+  bool UsePseudoProbes = false;
+
   void setPreferredBaseAddress(const ELFObjectFileBase *O);
 
   void decodePseudoProbe(const ELFObjectFileBase *Obj);
@@ -204,6 +206,7 @@ public:
     return offsetToVirtualAddr(CodeAddrs[Index]);
   }
 
+  bool usePseudoProbes() const { return UsePseudoProbes; }
   // Get the index in CodeAddrs for the address
   // As we might get an address which is not the code
   // here it would round to the next valid code address by
@@ -234,6 +237,17 @@ public:
   // It will search the disassembling info stored in Offset2LocStackMap. This is
   // used as the key of function sample map
   std::string getExpandedContextStr(const std::list<uint64_t> &stack) const;
+
+  const PseudoProbe *getCallProbeForAddr(uint64_t Address) const {
+    return ProbeDecoder.getCallProbeForAddr(Address);
+  }
+  void
+  getInlineContextForProbe(const PseudoProbe *Probe,
+                           SmallVector<std::string, 16> &InlineContextStack,
+                           bool IncludeLeaf) const {
+    return ProbeDecoder.getInlineContextForProbe(Probe, InlineContextStack,
+                                                 IncludeLeaf);
+  }
 };
 
 } // end namespace sampleprof

@@ -253,7 +253,7 @@ struct ContextKey {
   };
 
   // Utilities for LLVM-style RTTI
-  enum ContextKind { CK_StringBased };
+  enum ContextKind { CK_StringBased, CK_ProbeBased };
   const ContextKind Kind;
   ContextKind getKind() const { return Kind; }
   ContextKey(ContextKind K) : Kind(K){};
@@ -273,6 +273,37 @@ struct StringBasedCtxKey : public ContextKey {
   }
 
   void genHashCode() { HashCode = hash_value(Context); }
+};
+
+// Probe based context key as the intermediate key of context
+// String based context key will introduce redundant string handling
+// since the callee context is inferred from the context string which
+// need to be splitted by '@' to get the last location frame, so we
+// can just use probe instead and generate the string in the end.
+struct ProbeBasedCtxKey : public ContextKey {
+  SmallVector<const PseudoProbe *, 16> Probes;
+
+  ProbeBasedCtxKey() : ContextKey(CK_ProbeBased) {}
+  static bool classof(const ContextKey *K) {
+    return K->getKind() == CK_ProbeBased;
+  }
+
+  bool isEqual(const ContextKey *K) const override {
+    const ProbeBasedCtxKey *O = dyn_cast<ProbeBasedCtxKey>(K);
+    assert(O != nullptr && "Probe based key shouldn't be null in isEqual");
+    return std::equal(Probes.begin(), Probes.end(), O->Probes.begin(),
+                      O->Probes.end());
+  }
+
+  void genHashCode() {
+    for (const auto *P : Probes) {
+      HashCode = hash_combine(HashCode, P);
+    }
+    if (HashCode == 0) {
+      // Avoid zero value of HashCode when it's an empty list
+      HashCode = 1;
+    }
+  }
 };
 
 // The counter of branch samples for one function indexed by the branch,
@@ -343,8 +374,21 @@ public:
                         uint64_t Repeat);
   void recordBranchCount(const LBREntry &Branch, UnwindState &State,
                          uint64_t Repeat);
-  SampleCounter &getOrCreateSampleCounter(const ProfiledBinary *Binary,
-                                          std::list<uint64_t> &CallStack);
+  SampleCounter &getOrCreateCounter(const ProfiledBinary *Binary,
+                                    std::list<uint64_t> &CallStack);
+  // Use pseudo probe based context key to get the sample counter
+  // A context stands for a call path from 'main' to an uninlined
+  // callee with all inline frames recovered on that path. The probes
+  // belonging to that call path is the probes either originated from
+  // the callee or from any functions inlined into the callee. Since
+  // pseudo probes are organized in a tri-tree style after decoded,
+  // the tree path from the tri-tree root (which is the uninlined
+  // callee) to the probe node forms an inline context.
+  // Here we use a list of probe(pointer) as the context key to speed up
+  // aggregation and the final context string will be generate in
+  // ProfileGenerator
+  SampleCounter &getOrCreateCounterForProbe(const ProfiledBinary *Binary,
+                                            std::list<uint64_t> &CallStack);
 
 private:
   ContextSampleCounterMap *CtxCounterMap;

@@ -28,13 +28,23 @@ using namespace sampleprof;
 namespace llvm {
 namespace sampleprof {
 
+static bool
+usePseudoProbes(const BinarySampleCounterMap &BinarySampleCounters) {
+  return BinarySampleCounters.size() &&
+         BinarySampleCounters.begin()->first->usePseudoProbes();
+}
+
 std::unique_ptr<ProfileGenerator>
 ProfileGenerator::create(const BinarySampleCounterMap &BinarySampleCounters,
                          enum PerfScriptType SampleType) {
   std::unique_ptr<ProfileGenerator> ProfileGenerator;
-
   if (SampleType == PERF_LBR_STACK) {
-    ProfileGenerator.reset(new CSProfileGenerator(BinarySampleCounters));
+    if (usePseudoProbes(BinarySampleCounters)) {
+      ProfileGenerator.reset(
+          new PseudoProbeCSProfileGenerator(BinarySampleCounters));
+    } else {
+      ProfileGenerator.reset(new CSProfileGenerator(BinarySampleCounters));
+    }
   } else {
     // TODO:
     llvm_unreachable("Unsupported perfscript!");

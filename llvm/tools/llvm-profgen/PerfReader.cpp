@@ -40,18 +40,27 @@ void VirtualUnwinder::unwindLinear(UnwindState &State, uint64_t Repeat) {
   InstructionPointer &IP = State.InstPtr;
   uint64_t Target = State.getCurrentLBRTarget();
   uint64_t End = IP.Address;
-  // Unwind linear execution part
-  while (IP.Address >= Target) {
-    uint64_t PrevIP = IP.Address;
-    IP.backward();
-    // Break into segments for implicit call/return due to inlining
-    bool SameInlinee =
-        State.getBinary()->inlineContextEqual(PrevIP, IP.Address);
-    if (!SameInlinee || PrevIP == Target) {
-      recordRangeCount(PrevIP, End, State, Repeat);
-      End = IP.Address;
+  if (State.getBinary()->usePseudoProbes()) {
+    // The outcome of the virtual unwinding with pseudo probes is a
+    // map from a context key to the address range being unwound.
+    // This means basically linear unwinding is not needed for pseudo
+    // probes. The range will be simply recorded here and will be
+    // converted to a list of pseudo probes to report in ProfileGenerator.
+    recordRangeCount(Target, End, State, Repeat);
+  } else {
+    // Unwind linear execution part
+    while (IP.Address >= Target) {
+      uint64_t PrevIP = IP.Address;
+      IP.backward();
+      // Break into segments for implicit call/return due to inlining
+      bool SameInlinee =
+          State.getBinary()->inlineContextEqual(PrevIP, IP.Address);
+      if (!SameInlinee || PrevIP == Target) {
+        recordRangeCount(PrevIP, End, State, Repeat);
+        End = IP.Address;
+      }
+      State.CallStack.front() = IP.Address;
     }
-    State.CallStack.front() = IP.Address;
   }
 }
 
@@ -73,8 +82,11 @@ void VirtualUnwinder::unwindBranchWithinFrame(UnwindState &State) {
 }
 
 SampleCounter &
-VirtualUnwinder::getOrCreateSampleCounter(const ProfiledBinary *Binary,
-                                          std::list<uint64_t> &CallStack) {
+VirtualUnwinder::getOrCreateCounter(const ProfiledBinary *Binary,
+                                    std::list<uint64_t> &CallStack) {
+  if (Binary->usePseudoProbes()) {
+    return getOrCreateCounterForProbe(Binary, CallStack);
+  }
   std::shared_ptr<StringBasedCtxKey> KeyStr =
       std::make_shared<StringBasedCtxKey>();
   KeyStr->Context = Binary->getExpandedContextStr(CallStack);
@@ -84,12 +96,46 @@ VirtualUnwinder::getOrCreateSampleCounter(const ProfiledBinary *Binary,
   return Ret.first->second;
 }
 
+SampleCounter &
+VirtualUnwinder::getOrCreateCounterForProbe(const ProfiledBinary *Binary,
+                                            std::list<uint64_t> &CallStack) {
+  std::shared_ptr<ProbeBasedCtxKey> ProbeBasedKey =
+      std::make_shared<ProbeBasedCtxKey>();
+  if (CallStack.size() > 1) {
+    // We don't need to top frame probe since it should be extracted
+    // from the range.
+    // The top of stack is an instruction from the function where
+    // the LBR address range physcially resides. Strip it since
+    // the function is not a part of the call context. We also
+    // don't need its inline context since the probes being unwound
+    // come with an inline context all the way back to the uninlined
+    // function in their prefix tree.
+    auto Iter = CallStack.rbegin();
+    auto EndT = std::prev(CallStack.rend());
+    for (; Iter != EndT; Iter++) {
+      uint64_t Address = *Iter;
+      const PseudoProbe *CallProbe = Binary->getCallProbeForAddr(Address);
+      // We may not find a probe for a merged or external callsite.
+      // Callsite merging may cause the loss of original probe IDs.
+      // Cutting off the context from here since the inline will
+      // not know how to consume a context with unknown callsites.
+      if (!CallProbe)
+        break;
+      ProbeBasedKey->Probes.emplace_back(CallProbe);
+    }
+  }
+  ProbeBasedKey->genHashCode();
+  Hashable<ContextKey> ContextId(ProbeBasedKey);
+  auto Ret = CtxCounterMap->emplace(ContextId, SampleCounter());
+  return Ret.first->second;
+}
+
 void VirtualUnwinder::recordRangeCount(uint64_t Start, uint64_t End,
                                        UnwindState &State, uint64_t Repeat) {
   uint64_t StartOffset = State.getBinary()->virtualAddrToOffset(Start);
   uint64_t EndOffset = State.getBinary()->virtualAddrToOffset(End);
   SampleCounter &SCounter =
-      getOrCreateSampleCounter(State.getBinary(), State.CallStack);
+      getOrCreateCounter(State.getBinary(), State.CallStack);
   SCounter.recordRangeCount(StartOffset, EndOffset, Repeat);
 }
 
@@ -100,7 +146,7 @@ void VirtualUnwinder::recordBranchCount(const LBREntry &Branch,
   uint64_t SourceOffset = State.getBinary()->virtualAddrToOffset(Branch.Source);
   uint64_t TargetOffset = State.getBinary()->virtualAddrToOffset(Branch.Target);
   SampleCounter &SCounter =
-      getOrCreateSampleCounter(State.getBinary(), State.CallStack);
+      getOrCreateCounter(State.getBinary(), State.CallStack);
   SCounter.recordBranchCount(SourceOffset, TargetOffset, Repeat);
 }
 
@@ -212,7 +258,7 @@ ProfiledBinary *PerfReader::getBinary(uint64_t Address) {
 }
 
 // Use ordered map to make the output deterministic
-using OrderedCounterForPrint = std::map<StringRef, RangeSample>;
+using OrderedCounterForPrint = std::map<std::string, RangeSample>;
 
 static void printSampleCounter(OrderedCounterForPrint &OrderedCounter) {
   for (auto Range : OrderedCounter) {
@@ -224,22 +270,41 @@ static void printSampleCounter(OrderedCounterForPrint &OrderedCounter) {
   }
 }
 
-static void printRangeCounter(ContextSampleCounterMap &Counter) {
+static std::string getContextKeyStr(ContextKey *K,
+                                    const ProfiledBinary *Binary) {
+  std::string ContextStr;
+  if (const auto *CtxKey = dyn_cast<StringBasedCtxKey>(K)) {
+    return CtxKey->Context;
+  } else if (const auto *CtxKey = dyn_cast<ProbeBasedCtxKey>(K)) {
+    SmallVector<std::string, 16> ContextStack;
+    for (const auto *Probe : CtxKey->Probes) {
+      Binary->getInlineContextForProbe(Probe, ContextStack, true);
+    }
+    for (const auto &Context : ContextStack) {
+      if (ContextStr.size())
+        ContextStr += " @ ";
+      ContextStr += Context;
+    }
+  }
+  return ContextStr;
+}
+
+static void printRangeCounter(ContextSampleCounterMap &Counter,
+                              const ProfiledBinary *Binary) {
   OrderedCounterForPrint OrderedCounter;
   for (auto &CI : Counter) {
-    const StringBasedCtxKey *CtxKey =
-        dyn_cast<StringBasedCtxKey>(CI.first.getPtr());
-    OrderedCounter[CtxKey->Context] = CI.second.RangeCounter;
+    OrderedCounter[getContextKeyStr(CI.first.getPtr(), Binary)] =
+        CI.second.RangeCounter;
   }
   printSampleCounter(OrderedCounter);
 }
 
-static void printBranchCounter(ContextSampleCounterMap &Counter) {
+static void printBranchCounter(ContextSampleCounterMap &Counter,
+                               const ProfiledBinary *Binary) {
   OrderedCounterForPrint OrderedCounter;
   for (auto &CI : Counter) {
-    const StringBasedCtxKey *CtxKey =
-        dyn_cast<StringBasedCtxKey>(CI.first.getPtr());
-    OrderedCounter[CtxKey->Context] = CI.second.BranchCounter;
+    OrderedCounter[getContextKeyStr(CI.first.getPtr(), Binary)] =
+        CI.second.BranchCounter;
   }
   printSampleCounter(OrderedCounter);
 }
@@ -248,9 +313,9 @@ void PerfReader::printUnwinderOutput() {
   for (auto I : BinarySampleCounters) {
     const ProfiledBinary *Binary = I.first;
     outs() << "Binary(" << Binary->getName().str() << ")'s Range Counter:\n";
-    printRangeCounter(I.second);
+    printRangeCounter(I.second, Binary);
     outs() << "\nBinary(" << Binary->getName().str() << ")'s Branch Counter:\n";
-    printBranchCounter(I.second);
+    printBranchCounter(I.second, Binary);
   }
 }
 
