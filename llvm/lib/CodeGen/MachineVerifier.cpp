@@ -1663,6 +1663,22 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     VerifyStackMapConstant(SO.getNumAllocaIdx());
     VerifyStackMapConstant(SO.getNumGcMapEntriesIdx());
 
+    // Verify that all explicit statepoint defs are tied to gc operands as
+    // they are expected to be a relocation of gc operands.
+    unsigned FirstGCPtrIdx = SO.getFirstGCPtrIdx();
+    unsigned LastGCPtrIdx = SO.getNumAllocaIdx() - 2;
+    for (unsigned Idx = 0; Idx < MI->getNumDefs(); Idx++) {
+      unsigned UseOpIdx;
+      if (!MI->isRegTiedToUseOperand(Idx, &UseOpIdx)) {
+        report("STATEPOINT defs expected to be tied", MI);
+        break;
+      }
+      if (UseOpIdx < FirstGCPtrIdx || UseOpIdx > LastGCPtrIdx) {
+        report("STATEPOINT def tied to non-gc operand", MI);
+        break;
+      }
+    }
+
     // TODO: verify we have properly encoded deopt arguments
   } break;
   }
