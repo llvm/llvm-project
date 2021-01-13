@@ -42,8 +42,9 @@ entry:
 ; O2: Running pass: UniqueInternalLinkageNamesPass
 ; O2: Running pass: SampleProfileProbePass
 
-; UNIQUE: define internal i32 @foo.__uniq.{{[0-9]+}}()
+; UNIQUE: define internal i32 @foo.__uniq.{{[0-9]+}}() [[ATTR:#[0-9]+]]
 ; UNIQUE: ret {{.*}} @foo.__uniq.{{[0-9]+}} {{.*}}
+; UNIQUE: attributes [[ATTR]] = {{{.*}} "sample-profile-suffix-elision-policy"="selected" {{.*}}}
 
 ; DBG: distinct !DISubprogram(name: "foo", linkageName: "foo.__uniq.{{[0-9]+}}", scope: ![[#]]
 ; DBG: !DISubprogram(name: "foo", linkageName: "foo.__uniq.{{[0-9]+}}", scope: ![[#]]
