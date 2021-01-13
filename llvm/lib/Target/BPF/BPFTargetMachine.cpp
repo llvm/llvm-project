@@ -57,9 +57,7 @@ static std::string computeDataLayout(const Triple &TT) {
 }
 
 static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
-  if (!RM.hasValue())
-    return Reloc::PIC_;
-  return *RM;
+  return RM.getValueOr(Reloc::PIC_);
 }
 
 BPFTargetMachine::BPFTargetMachine(const Target &T, const Triple &TT,

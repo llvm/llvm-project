@@ -55,9 +55,7 @@ static std::string computeDataLayout(const Triple &T, bool is64Bit) {
 }
 
 static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
-  if (!RM.hasValue())
-    return Reloc::Static;
-  return *RM;
+  return RM.getValueOr(Reloc::Static);
 }
 
 // Code models. Some only make sense for 64-bit code.

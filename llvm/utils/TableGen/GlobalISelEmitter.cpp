@@ -453,9 +453,8 @@ public:
   MatchTableRecord(Optional<unsigned> LabelID_, StringRef EmitStr,
                    unsigned NumElements, unsigned Flags,
                    int64_t RawValue = std::numeric_limits<int64_t>::min())
-      : LabelID(LabelID_.hasValue() ? LabelID_.getValue() : ~0u),
-        EmitStr(EmitStr), NumElements(NumElements), Flags(Flags),
-        RawValue(RawValue) {
+      : LabelID(LabelID_.getValueOr(~0u)), EmitStr(EmitStr),
+        NumElements(NumElements), Flags(Flags), RawValue(RawValue) {
     assert((!LabelID_.hasValue() || LabelID != ~0u) &&
            "This value is reserved for non-labels");
   }
