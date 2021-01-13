@@ -17,7 +17,7 @@ $ clang eh_frame.cpp -g -c -o eh_frame.o
 $ ld -no_compact_unwind eh_frame.o -o eh_frame.out
 
 RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/eh_frame/eh_frame.out -o %t.dSYM
-RUN: dwarfdump --verify %t.dSYM
+RUN: llvm-dwarfdump --verify %t.dSYM
 RUN: otool -s __TEXT __eh_frame %p/../Inputs/private/tmp/eh_frame/eh_frame.out | FileCheck %s
 RUN: otool -s __TEXT __eh_frame %t.dSYM/Contents/Resources/DWARF/eh_frame.out | FileCheck %s
 
