@@ -7,7 +7,6 @@
 # CHECK-NEXT:   - Name:         .MIPS.abiflags
 # CHECK-NEXT:     Type:         SHT_MIPS_ABIFLAGS
 # CHECK-NEXT:     AddressAlign: 0x8
-# CHECK-NEXT:     EntSize:      0x18
 # CHECK-NEXT:     ISA:          MIPS64
 # CHECK-NEXT:     ISARevision:  0x5
 # CHECK-NEXT:     ISAExtension: EXT_OCTEON3
@@ -52,11 +51,16 @@ Sections:
 
 # MIPS:      - Name: .MIPS.abiflags
 # MIPS-NEXT:   Type: SHT_MIPS_ABIFLAGS
+## We don't print the "EntSize" key, because 0x18 is the default value
+## for the sh_entsize field of SHT_MIPS_ABIFLAGS.
 # MIPS-NEXT:   ISA:  0x0
 # MIPS-NEXT: ...
 
 # NOT-MIPS:      - Name:    .MIPS.abiflags
 # NOT-MIPS-NEXT:   Type:    0x7000002A
+## We print the "EntSize" key, because 0x7000002A only means
+## "SHT_MIPS_ABIFLAGS" when machine is EM_MIPS, so 0x18 is not a known default value.
+# NOT-MIPS-NEXT:   EntSize: 0x18
 # NOT-MIPS-NEXT:   Content: '000000000000000000000000000000000000000000000000'
 # NOT-MIPS-NEXT: ...
 
@@ -67,7 +71,17 @@ FileHeader:
   Type:    ET_REL
   Machine: [[MACHINE]]
 Sections:
-  - Name:   .MIPS.abiflags
-    Type:   SHT_PROGBITS
-    ShType: 0x7000002a ## SHT_MIPS_ABIFLAGS.
-    Size:   0x18
+  - Name:    .MIPS.abiflags
+    Type:    SHT_PROGBITS
+    ShType:  0x7000002a ## SHT_MIPS_ABIFLAGS.
+    Size:    0x18
+    EntSize: [[ENTSIZE=0x18]]
+
+## Check we dump the "EntSize" key when the value of the "sh_entsize" field is not equal to 0x18.
+
+# RUN: yaml2obj %s --docnum=2 -DMACHINE=EM_MIPS -DENTSIZE=0x19 -o %t2.mips.entsize
+# RUN: obj2yaml %t2.mips.entsize | FileCheck %s --check-prefix=MIPS-ENTSIZE
+
+# MIPS-ENTSIZE:      - Name:    .MIPS.abiflags
+# MIPS-ENTSIZE-NEXT:   Type:    SHT_MIPS_ABIFLAGS
+# MIPS-ENTSIZE-NEXT:   EntSize: 0x19
