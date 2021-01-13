@@ -56,12 +56,18 @@ TEST(SanitizerMac, GetMacosAlignedVersion) {
 #else
 TEST(SanitizerMac, GetMacosAlignedVersion) {
   MacosVersion vers = GetMacosAlignedVersion();
-  u16 kernel_major = GetDarwinKernelVersion().major;
-  bool macos_11 = (kernel_major >= 20);
-  u16 expected_major = macos_11 ? (kernel_major - 9) : 10;
-  u16 expected_minor = macos_11 ? 0 : (kernel_major - 4);
-  EXPECT_EQ(vers.major, expected_major);
-  EXPECT_EQ(vers.minor, expected_minor);
+  std::ostringstream oss;
+  oss << vers.major << '.' << vers.minor;
+  std::string actual = oss.str();
+
+  char buf[100];
+  size_t len = sizeof(buf);
+  int res = sysctlbyname("kern.osproductversion", buf, &len, nullptr, 0);
+  ASSERT_EQ(res, KERN_SUCCESS);
+  std::string expected(buf);
+
+  // Prefix match
+  ASSERT_EQ(expected.compare(0, actual.size(), actual), 0);
 }
 #endif
 
