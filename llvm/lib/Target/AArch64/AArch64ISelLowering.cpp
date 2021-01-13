@@ -11146,6 +11146,43 @@ bool AArch64TargetLowering::shouldSinkOperands(
 
     return true;
   }
+  case Instruction::Mul: {
+    bool IsProfitable = false;
+    for (auto &Op : I->operands()) {
+      // Make sure we are not already sinking this operand
+      if (any_of(Ops, [&](Use *U) { return U->get() == Op; }))
+        continue;
+
+      ShuffleVectorInst *Shuffle = dyn_cast<ShuffleVectorInst>(Op);
+      if (!Shuffle || !Shuffle->isZeroEltSplat())
+        continue;
+
+      Value *ShuffleOperand = Shuffle->getOperand(0);
+      InsertElementInst *Insert = dyn_cast<InsertElementInst>(ShuffleOperand);
+      if (!Insert)
+        continue;
+
+      Instruction *OperandInstr = dyn_cast<Instruction>(Insert->getOperand(1));
+      if (!OperandInstr)
+        continue;
+
+      ConstantInt *ElementConstant =
+          dyn_cast<ConstantInt>(Insert->getOperand(2));
+      // Check that the insertelement is inserting into element 0
+      if (!ElementConstant || ElementConstant->getZExtValue() != 0)
+        continue;
+
+      unsigned Opcode = OperandInstr->getOpcode();
+      if (Opcode != Instruction::SExt && Opcode != Instruction::ZExt)
+        continue;
+
+      Ops.push_back(&Shuffle->getOperandUse(0));
+      Ops.push_back(&Op);
+      IsProfitable = true;
+    }
+
+    return IsProfitable;
+  }
   default:
     return false;
   }
