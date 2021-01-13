@@ -590,6 +590,12 @@ better adapt to Linalg:
     `i` (resp. `j`) is a parallel iterator encoded by affine dimension of
     position `0` (resp. `1`); `k` (resp. `l`) is a reduction iterator encoded by
     an affine dimension of position `2` (resp. `3`).
+1.  A list of attributes can be defined for the op with the format of `attr(
+    strides: 2xi32)` and referenced in comprehension like `strides[0]`. These
+    attribute uses will be parsed as affine symbols to generate op definition
+    and implementation. For a concrete op instance, the runtime constant values
+    from the attributes will be used to replace the affine symbols and simplify
+    the indexing maps.
 
 These decisions and syntax are subject to evolution and change. In particular,
 op-specific attributes, dynamic ranks, some form of templating, shape
