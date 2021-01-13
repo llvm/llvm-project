@@ -51,7 +51,7 @@ Symbols:
 # RUN: yaml2obj --docnum=2 %s -o %t2
 # RUN: not obj2yaml %t2 2>&1 | FileCheck %s -DFILE=%t2 --check-prefix=CASE2
 
-# CASE2: Error reading file: [[FILE]]: extended symbol index (1) is past the end of the SHT_SYMTAB_SHNDX section of size 0
+# CASE2: Error reading file: [[FILE]]: found an extended symbol index (1), but unable to locate the extended symbol index table
 
 --- !ELF
 FileHeader:
