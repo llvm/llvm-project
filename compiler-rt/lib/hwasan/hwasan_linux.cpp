@@ -119,10 +119,8 @@ void InitPrctl() {
 #define PR_GET_TAGGED_ADDR_CTRL 56
 #define PR_TAGGED_ADDR_ENABLE (1UL << 0)
   // Check we're running on a kernel that can use the tagged address ABI.
-  int local_errno = 0;
-  if (internal_iserror(internal_prctl(PR_GET_TAGGED_ADDR_CTRL, 0, 0, 0, 0),
-                       &local_errno) &&
-      local_errno == EINVAL) {
+  if (internal_prctl(PR_GET_TAGGED_ADDR_CTRL, 0, 0, 0, 0) == (uptr)-1 &&
+      errno == EINVAL) {
 #if SANITIZER_ANDROID
     // Some older Android kernels have the tagged pointer ABI on
     // unconditionally, and hence don't have the tagged-addr prctl while still
@@ -139,8 +137,8 @@ void InitPrctl() {
   }
 
   // Turn on the tagged address ABI.
-  if (internal_iserror(internal_prctl(PR_SET_TAGGED_ADDR_CTRL,
-                                      PR_TAGGED_ADDR_ENABLE, 0, 0, 0)) ||
+  if (internal_prctl(PR_SET_TAGGED_ADDR_CTRL, PR_TAGGED_ADDR_ENABLE, 0, 0, 0) ==
+          (uptr)-1 ||
       !internal_prctl(PR_GET_TAGGED_ADDR_CTRL, 0, 0, 0, 0)) {
     Printf(
         "FATAL: HWAddressSanitizer failed to enable tagged address syscall "
