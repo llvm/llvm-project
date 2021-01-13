@@ -1,6 +1,6 @@
-// RUN: not llvm-mc -triple=thumbv7 -show-encoding < %s 2>&1 | FileCheck --check-prefix=CHECK --check-prefix=CHECK-NONARM --check-prefix=CHECK-THUMBV7 %s
-// RUN: not llvm-mc -triple=thumbv8 -show-encoding < %s 2>&1 | FileCheck --check-prefix=CHECK --check-prefix=CHECK-NONARM --check-prefix=CHECK-THUMBV8 %s
-// RUN: llvm-mc -triple=armv7 -show-encoding < %s 2>&1 | FileCheck --check-prefix=CHECK --check-prefix=CHECK-ARM %s
+// RUN: not llvm-mc -triple=thumbv7 -show-encoding < %s 2>&1 | FileCheck --check-prefixes=CHECK-NONARM,CHECK-THUMBV7 %s
+// RUN: not llvm-mc -triple=thumbv8 -show-encoding < %s 2>&1 | FileCheck --check-prefixes=CHECK-NONARM,CHECK-THUMBV8 %s
+// RUN: llvm-mc -triple=armv7 -show-encoding < %s 2>&1 | FileCheck --check-prefix=CHECK-ARM %s
 
         // lsl #0 is actually mov, so here we check that it behaves the same as
         // mov with regards to the permitted registers
