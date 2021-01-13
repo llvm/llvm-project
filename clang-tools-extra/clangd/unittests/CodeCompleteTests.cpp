@@ -315,8 +315,7 @@ void testAfterDotCompletion(clangd::CodeCompleteOptions Opts) {
   EXPECT_THAT(Results.Completions,
               Not(Contains(Kind(CompletionItemKind::Snippet))));
   // Check documentation.
-  EXPECT_IFF(Opts.IncludeComments, Results.Completions,
-             Contains(IsDocumented()));
+  EXPECT_THAT(Results.Completions, Contains(IsDocumented()));
 }
 
 void testGlobalScopeCompletion(clangd::CodeCompleteOptions Opts) {
@@ -356,14 +355,13 @@ void testGlobalScopeCompletion(clangd::CodeCompleteOptions Opts) {
                     Has("index_func" /* our fake symbol doesn't include () */),
                     Has("GlobalClass"), Has("IndexClass")));
   // A macro.
-  EXPECT_IFF(Opts.IncludeMacros, Results.Completions, Has("MACRO"));
+  EXPECT_THAT(Results.Completions, Has("MACRO"));
   // Local items. Must be present always.
   EXPECT_THAT(Results.Completions,
               AllOf(Has("local_var"), Has("LocalClass"),
                     Contains(Kind(CompletionItemKind::Snippet))));
   // Check documentation.
-  EXPECT_IFF(Opts.IncludeComments, Results.Completions,
-             Contains(IsDocumented()));
+  EXPECT_THAT(Results.Completions, Contains(IsDocumented()));
 }
 
 TEST(CompletionTest, CompletionOptions) {
@@ -373,9 +371,6 @@ TEST(CompletionTest, CompletionOptions) {
   };
   // We used to test every combination of options, but that got too slow (2^N).
   auto Flags = {
-      &clangd::CodeCompleteOptions::IncludeMacros,
-      &clangd::CodeCompleteOptions::IncludeComments,
-      &clangd::CodeCompleteOptions::IncludeCodePatterns,
       &clangd::CodeCompleteOptions::IncludeIneligibleResults,
   };
   // Test default options.
@@ -1686,7 +1681,6 @@ TEST(CompletionTest, DocumentationFromChangedFileCrash) {
   )cpp";
 
   clangd::CodeCompleteOptions Opts;
-  Opts.IncludeComments = true;
   CodeCompleteResult Completions =
       cantFail(runCodeComplete(Server, FooCpp, Source.point(), Opts));
   // We shouldn't crash. Unfortunately, current workaround is to not produce

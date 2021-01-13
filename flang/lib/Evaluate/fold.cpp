@@ -8,8 +8,15 @@
 
 #include "flang/Evaluate/fold.h"
 #include "fold-implementation.h"
+#include "flang/Evaluate/characteristics.h"
 
 namespace Fortran::evaluate {
+
+characteristics::TypeAndShape Fold(
+    FoldingContext &context, characteristics::TypeAndShape &&x) {
+  x.Rewrite(context);
+  return std::move(x);
+}
 
 std::optional<Constant<SubscriptInteger>> GetConstantSubscript(
     FoldingContext &context, Subscript &ss, const NamedEntity &base, int dim) {
