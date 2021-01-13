@@ -74,7 +74,7 @@ body:             |
     %4:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0, 0
     %13:vgpr_32 = V_ASHRREV_I32_e64 31, %3, implicit $exec
     %14:vreg_64 = REG_SEQUENCE %3, %subreg.hi16, %13, %subreg.lo16
-    %15:vreg_64 = V_LSHLREV_B64 2, killed %14, implicit $exec
+    %15:vreg_64 = V_LSHLREV_B64_e64 2, killed %14, implicit $exec
     %5:sreg_32_xm0 = COPY %4.sub1
     %20:vgpr_32 = V_ADD_CO_U32_e32 %4.sub0, %15.sub0, implicit-def $vcc, implicit $exec
     %18:vgpr_32 = COPY killed %5
@@ -204,7 +204,7 @@ body:             |
     %3:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0, 0
     %15:vgpr_32 = V_ASHRREV_I32_e64 31, %2, implicit $exec
     %16:vreg_64 = REG_SEQUENCE %2, %subreg.hi16, %15, %subreg.lo16
-    %17:vreg_64 = V_LSHLREV_B64 2, killed %16, implicit $exec
+    %17:vreg_64 = V_LSHLREV_B64_e64 2, killed %16, implicit $exec
     %9:sreg_32_xm0 = COPY %3.sub1
     %21:vgpr_32 = V_ADD_CO_U32_e32 %3.sub0, %17.sub0, implicit-def $vcc, implicit $exec
     %19:vgpr_32 = COPY killed %9
@@ -328,7 +328,7 @@ body:             |
     %3:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0, 0
     %15:vgpr_32 = V_ASHRREV_I32_e64 31, %2, implicit $exec
     %16:vreg_64 = REG_SEQUENCE %2, %subreg.hi16, %15, %subreg.lo16
-    %17:vreg_64 = V_LSHLREV_B64 2, killed %16, implicit $exec
+    %17:vreg_64 = V_LSHLREV_B64_e64 2, killed %16, implicit $exec
     %9:sreg_32_xm0 = COPY %3.sub1
     %21:vgpr_32 = V_ADD_CO_U32_e32 %3.sub0, %17.sub0, implicit-def $vcc, implicit $exec
     %19:vgpr_32 = COPY killed %9
@@ -520,7 +520,7 @@ body:             |
     %4:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0, 0
     %13:vgpr_32 = V_ASHRREV_I32_e64 31, %3, implicit $exec
     %14:vreg_64 = REG_SEQUENCE %3, %subreg.sub0, %13, %subreg.sub1
-    %15:vreg_64 = V_LSHLREV_B64 2, killed %14, implicit $exec
+    %15:vreg_64 = V_LSHLREV_B64_e64 2, killed %14, implicit $exec
     %5:sreg_32_xm0 = COPY %4.sub1
     %20:vgpr_32 = V_ADD_CO_U32_e32 %4.sub0, %15.sub0, implicit-def $vcc, implicit $exec
     %18:vgpr_32 = COPY killed %5
@@ -727,7 +727,7 @@ body:             |
     %3:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, addrspace 4)
     %15:vgpr_32 = V_ASHRREV_I32_e64 31, %2, implicit $exec
     %16:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %15, %subreg.sub1
-    %17:vreg_64 = V_LSHLREV_B64 2, killed %16, implicit $exec
+    %17:vreg_64 = V_LSHLREV_B64_e64 2, killed %16, implicit $exec
     %9:sreg_32_xm0 = COPY %3.sub1
     %21:vgpr_32 = V_ADD_CO_U32_e32 %3.sub0, %17.sub0, implicit-def $vcc, implicit $exec
     %19:vgpr_32 = COPY killed %9

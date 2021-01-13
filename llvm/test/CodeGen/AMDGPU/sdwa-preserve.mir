@@ -41,7 +41,7 @@ body:             |
 
     %5 = V_AND_B32_e32 65535, %3, implicit $exec
     %6 = V_LSHRREV_B32_e64 16, %4, implicit $exec
-    %7 = V_BFE_U32 %3, 8, 8, implicit $exec
+    %7 = V_BFE_U32_e64 %3, 8, 8, implicit $exec
     %8 = V_LSHRREV_B32_e32 24, %4, implicit $exec
 
     %9 = V_ADD_F16_e64 0, %5, 0, %6, 0, 0, implicit $mode, implicit $exec

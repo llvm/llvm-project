@@ -4,7 +4,7 @@
 # GCN:      V_CMPX_LE_F32_nosdst_e32
 # GCN:      S_ADD_U32
 # GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
-# GCN-NEXT: V_PERMLANE16_B32
+# GCN-NEXT: V_PERMLANE16_B32_e64
 ---
 name:            hazard_vcmpx_permlane16
 body:            |
@@ -19,14 +19,14 @@ body:            |
     $vgpr2 = IMPLICIT_DEF
     $sgpr0 = IMPLICIT_DEF
     $sgpr1 = S_ADD_U32 $sgpr0, 0, implicit-def $scc
-    $vgpr1 = V_PERMLANE16_B32 0, killed $vgpr1, 0, killed $sgpr1, 0, killed $sgpr0, $vgpr1, 0, implicit $exec
+    $vgpr1 = V_PERMLANE16_B32_e64 0, killed $vgpr1, 0, killed $sgpr1, 0, killed $sgpr0, $vgpr1, 0, implicit $exec
     S_ENDPGM 0
 ...
 
 # GCN-LABEL: name: hazard_vcmpx_permlanex16
 # GCN:      V_CMPX_LE_F32_nosdst_e32
 # GCN:      $vgpr1 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
-# GCN-NEXT: V_PERMLANEX16_B32
+# GCN-NEXT: V_PERMLANEX16_B32_e64
 ---
 name:            hazard_vcmpx_permlanex16
 body:            |
@@ -41,7 +41,7 @@ body:            |
     $vgpr2 = IMPLICIT_DEF
     $sgpr0 = IMPLICIT_DEF
     $sgpr1 = IMPLICIT_DEF
-    $vgpr1 = V_PERMLANEX16_B32 0, killed $vgpr1, 0, killed $sgpr1, 0, killed $sgpr0, $vgpr1, 0, implicit $exec
+    $vgpr1 = V_PERMLANEX16_B32_e64 0, killed $vgpr1, 0, killed $sgpr1, 0, killed $sgpr0, $vgpr1, 0, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -49,7 +49,7 @@ body:            |
 # GCN:      V_CMPX_LE_F32_nosdst_e32
 # GCN:      V_NOP
 # GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
-# GCN-NEXT: V_PERMLANE16_B32
+# GCN-NEXT: V_PERMLANE16_B32_e64
 ---
 name:            hazard_vcmpx_permlane16_v_nop
 body:            |
@@ -65,14 +65,14 @@ body:            |
     $sgpr0 = IMPLICIT_DEF
     $sgpr1 = IMPLICIT_DEF
     V_NOP_e32 implicit $exec
-    $vgpr1 = V_PERMLANE16_B32 0, killed $vgpr1, 0, killed $sgpr1, 0, killed $sgpr0, $vgpr1, 0, implicit $exec
+    $vgpr1 = V_PERMLANE16_B32_e64 0, killed $vgpr1, 0, killed $sgpr1, 0, killed $sgpr0, $vgpr1, 0, implicit $exec
     S_ENDPGM 0
 ...
 
 # GCN-LABEL: name: hazard_vcmpx_permlane16_far
 # GCN:      V_CMPX_LE_F32_nosdst_e32
 # GCN:      $vgpr1 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
-# GCN-NEXT: V_PERMLANE16_B32
+# GCN-NEXT: V_PERMLANE16_B32_e64
 ---
 name:            hazard_vcmpx_permlane16_far
 body:            |
@@ -96,14 +96,14 @@ body:            |
     V_NOP_e32 implicit $exec
     V_NOP_e32 implicit $exec
     V_NOP_e32 implicit $exec
-    $vgpr1 = V_PERMLANE16_B32 0, killed $vgpr1, 0, killed $sgpr1, 0, killed $sgpr0, $vgpr1, 0, implicit $exec
+    $vgpr1 = V_PERMLANE16_B32_e64 0, killed $vgpr1, 0, killed $sgpr1, 0, killed $sgpr0, $vgpr1, 0, implicit $exec
     S_ENDPGM 0
 ...
 
 # GCN-LABEL: name: hazard_vcmpx_permlane16_no_hazard
 # GCN:      V_CMPX_LE_F32_nosdst_e32
 # GCN:      V_ADD_F32
-# GCN-NEXT: V_PERMLANE16_B32
+# GCN-NEXT: V_PERMLANE16_B32_e64
 ---
 name:            hazard_vcmpx_permlane16_no_hazard
 body:            |
@@ -118,7 +118,7 @@ body:            |
     $sgpr0 = IMPLICIT_DEF
     $sgpr1 = IMPLICIT_DEF
     $vgpr2 = V_ADD_F32_e32 $vgpr1, $vgpr1,  implicit $mode, implicit $exec
-    $vgpr1 = V_PERMLANE16_B32 0, killed $vgpr1, 0, killed $sgpr1, 0, killed $sgpr0, $vgpr1, 0, implicit $exec
+    $vgpr1 = V_PERMLANE16_B32_e64 0, killed $vgpr1, 0, killed $sgpr1, 0, killed $sgpr0, $vgpr1, 0, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -126,7 +126,7 @@ body:            |
 # GCN:      V_CMPX_LE_F32_nosdst_e32
 # GCN:      S_ADD_U32
 # GCN-NEXT: dead $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
-# GCN-NEXT: V_PERMLANE16_B32
+# GCN-NEXT: V_PERMLANE16_B32_e64
 ---
 name:            hazard_vcmpx_permlane16_undef_src
 body:            |
@@ -140,6 +140,6 @@ body:            |
     $vgpr2 = IMPLICIT_DEF
     $sgpr0 = IMPLICIT_DEF
     $sgpr1 = S_ADD_U32 $sgpr0, 0, implicit-def $scc
-    $vgpr1 = V_PERMLANE16_B32 0, undef $vgpr1, 0, killed $sgpr1, 0, killed $sgpr0, undef $vgpr1, 0, implicit $exec
+    $vgpr1 = V_PERMLANE16_B32_e64 0, undef $vgpr1, 0, killed $sgpr1, 0, killed $sgpr0, undef $vgpr1, 0, implicit $exec
     S_ENDPGM 0
 ...
