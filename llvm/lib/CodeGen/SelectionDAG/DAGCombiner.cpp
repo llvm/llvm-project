@@ -20901,11 +20901,7 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
     }
 
     // Check if all indices in Mask are Undef. In case, propagate Undef.
-    bool isUndefMask = true;
-    for (unsigned i = 0; i != NumElts && isUndefMask; ++i)
-      isUndefMask &= Mask[i] < 0;
-
-    if (isUndefMask)
+    if (llvm::all_of(Mask, [](int M) { return M < 0; }))
       return DAG.getUNDEF(VT);
 
     if (!SV0.getNode())
