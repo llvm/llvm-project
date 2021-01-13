@@ -4,8 +4,6 @@
 // RUN: %lldb --repl < %s | FileCheck %s
 
 var x : Int
-// CHECK: Welcome to {{.*}}Swift
-// CHECK: Type :help
 // CHECK: {{x}}: Int = 0
 x = 42
 x
