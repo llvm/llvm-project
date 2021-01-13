@@ -120,6 +120,8 @@ public:
   /// \p File's parents.
   llvm::Optional<ProjectInfo> getProjectInfo(PathRef File) const override;
 
+  bool blockUntilIdle(Deadline Timeout) const override;
+
 private:
   Options Opts;
 
@@ -151,6 +153,9 @@ private:
     ProjectInfo PI;
   };
   llvm::Optional<CDBLookupResult> lookupCDB(CDBLookupRequest Request) const;
+
+  class BroadcastThread;
+  std::unique_ptr<BroadcastThread> Broadcaster;
 
   // Performs broadcast on governed files.
   void broadcastCDB(CDBLookupResult Res) const;
