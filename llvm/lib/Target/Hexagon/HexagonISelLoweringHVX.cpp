@@ -51,13 +51,6 @@ HexagonTargetLowering::initializeHVXLowering() {
     addRegisterClass(MVT::v256i8,  &Hexagon::HvxWRRegClass);
     addRegisterClass(MVT::v128i16, &Hexagon::HvxWRRegClass);
     addRegisterClass(MVT::v64i32,  &Hexagon::HvxWRRegClass);
-    // Treat v16i1 as a legal type, since there is no way to widen vNi1:
-    // the validity of vNi1 may depend on how the result was obtained.
-    // For example v32i1 is ok when it's a result of comparing v32i32,
-    // but would need to be widened if it came from comparing v32i16.
-    // This precludes using getTypeToTransformTo, since it doesn't have
-    // the necessary context to decide what to do.
-    addRegisterClass(MVT::v16i1, &Hexagon::HvxQRRegClass);
     addRegisterClass(MVT::v32i1, &Hexagon::HvxQRRegClass);
     addRegisterClass(MVT::v64i1, &Hexagon::HvxQRRegClass);
     addRegisterClass(MVT::v128i1, &Hexagon::HvxQRRegClass);
@@ -265,6 +258,10 @@ HexagonTargetLowering::initializeHVXLowering() {
         setOperationAction(ISD::ANY_EXTEND,   VecTy, Custom);
         setOperationAction(ISD::SIGN_EXTEND,  VecTy, Custom);
         setOperationAction(ISD::ZERO_EXTEND,  VecTy, Custom);
+
+        MVT BoolTy = MVT::getVectorVT(MVT::i1, N);
+        if (!isTypeLegal(BoolTy))
+          setOperationAction(ISD::SETCC, BoolTy, Custom);
       }
     }
   }
@@ -279,17 +276,26 @@ HexagonTargetLowering::getPreferredHvxVectorAction(MVT VecTy) const {
   unsigned VecLen = VecTy.getVectorNumElements();
   unsigned HwLen = Subtarget.getVectorLength();
 
-  // Split vectors of i1 that correspond to (byte) vector pairs.
-  if (ElemTy == MVT::i1 && VecLen == 2*HwLen)
+  // Split vectors of i1 that exceed byte vector length.
+  if (ElemTy == MVT::i1 && VecLen > HwLen)
     return TargetLoweringBase::TypeSplitVector;
-  // Treat i1 as i8 from now on.
-  if (ElemTy == MVT::i1)
-    ElemTy = MVT::i8;
+
+  ArrayRef<MVT> Tys = Subtarget.getHVXElementTypes();
+  // For shorter vectors of i1, widen them if any of the corresponding
+  // vectors of integers needs to be widened.
+  if (ElemTy == MVT::i1) {
+    for (MVT T : Tys) {
+      assert(T != MVT::i1);
+      auto A = getPreferredHvxVectorAction(MVT::getVectorVT(T, VecLen));
+      if (A != ~0u)
+        return A;
+    }
+    return ~0u;
+  }
 
   // If the size of VecTy is at least half of the vector length,
   // widen the vector. Note: the threshold was not selected in
   // any scientific way.
-  ArrayRef<MVT> Tys = Subtarget.getHVXElementTypes();
   if (llvm::is_contained(Tys, ElemTy)) {
     unsigned VecWidth = VecTy.getSizeInBits();
     bool HaveThreshold = HvxWidenThreshold.getNumOccurrences() > 0;
@@ -1956,7 +1962,9 @@ HexagonTargetLowering::WidenHvxSetCC(SDValue Op, SelectionDAG &DAG) const {
       getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), WideOpTy);
   SDValue SetCC = DAG.getNode(ISD::SETCC, dl, ResTy,
                               {WideOp0, WideOp1, Op.getOperand(2)});
-  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, ty(Op),
+
+  EVT RetTy = getTypeToTransformTo(*DAG.getContext(), ty(Op));
+  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, RetTy,
                      {SetCC, getZero(dl, MVT::i32, DAG)});
 }
 
@@ -2184,6 +2192,12 @@ HexagonTargetLowering::ReplaceHvxNodeResults(SDNode *N,
     case ISD::ZERO_EXTEND:
       if (shouldWidenToHvx(ty(Op), DAG)) {
         if (SDValue T = WidenHvxExtend(Op, DAG))
+          Results.push_back(T);
+      }
+      break;
+    case ISD::SETCC:
+      if (shouldWidenToHvx(ty(Op), DAG)) {
+        if (SDValue T = WidenHvxSetCC(Op, DAG))
           Results.push_back(T);
       }
       break;
