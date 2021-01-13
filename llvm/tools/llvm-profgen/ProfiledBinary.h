@@ -10,6 +10,7 @@
 #define LLVM_TOOLS_LLVM_PROFGEN_PROFILEDBINARY_H
 
 #include "CallContext.h"
+#include "PseudoProbe.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -128,7 +129,13 @@ class ProfiledBinary {
 
   // The symbolizer used to get inline context for an instruction.
   std::unique_ptr<symbolize::LLVMSymbolizer> Symbolizer;
+
+  // Pseudo probe decoder
+  PseudoProbeDecoder ProbeDecoder;
+
   void setPreferredBaseAddress(const ELFObjectFileBase *O);
+
+  void decodePseudoProbe(const ELFObjectFileBase *Obj);
 
   // Set up disassembler and related components.
   void setUpDisassembler(const ELFObjectFileBase *Obj);

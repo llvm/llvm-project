@@ -29,6 +29,10 @@ static cl::opt<bool> ShowSourceLocations("show-source-locations",
                                          cl::ZeroOrMore,
                                          cl::desc("Print source locations."));
 
+static cl::opt<bool> ShowPseudoProbe(
+    "show-pseudo-probe", cl::ReallyHidden, cl::init(false), cl::ZeroOrMore,
+    cl::desc("Print pseudo probe section and disassembled info."));
+
 namespace llvm {
 namespace sampleprof {
 
@@ -92,6 +96,9 @@ void ProfiledBinary::load() {
 
   // Find the preferred base address for text sections.
   setPreferredBaseAddress(Obj);
+
+  // Decode pseudo probe related section
+  decodePseudoProbe(Obj);
 
   // Disassemble the text sections.
   disassemble(Obj);
@@ -165,6 +172,28 @@ void ProfiledBinary::setPreferredBaseAddress(const ELFObjectFileBase *Obj) {
   exitWithError("no text section found", Obj->getFileName());
 }
 
+void ProfiledBinary::decodePseudoProbe(const ELFObjectFileBase *Obj) {
+  StringRef FileName = Obj->getFileName();
+  for (section_iterator SI = Obj->section_begin(), SE = Obj->section_end();
+       SI != SE; ++SI) {
+    const SectionRef &Section = *SI;
+    StringRef SectionName = unwrapOrError(Section.getName(), FileName);
+
+    if (SectionName == ".pseudo_probe_desc") {
+      StringRef Contents = unwrapOrError(Section.getContents(), FileName);
+      ProbeDecoder.buildGUID2FuncDescMap(
+          reinterpret_cast<const uint8_t *>(Contents.data()), Contents.size());
+    } else if (SectionName == ".pseudo_probe") {
+      StringRef Contents = unwrapOrError(Section.getContents(), FileName);
+      ProbeDecoder.buildAddress2ProbeMap(
+          reinterpret_cast<const uint8_t *>(Contents.data()), Contents.size());
+    }
+  }
+
+  if (ShowPseudoProbe)
+    ProbeDecoder.printGUID2FuncDescMap(outs());
+}
+
 bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
                                         SectionSymbolsTy &Symbols,
                                         const SectionRef &Section) {
@@ -193,6 +222,10 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
       return false;
 
     if (ShowDisassembly) {
+      if (ShowPseudoProbe) {
+        ProbeDecoder.printProbeForAddress(outs(),
+                                          Offset + PreferredBaseAddress);
+      }
       outs() << format("%8" PRIx64 ":", Offset);
       size_t Start = outs().tell();
       IPrinter->printInst(&Inst, Offset + Size, "", *STI.get(), outs());
