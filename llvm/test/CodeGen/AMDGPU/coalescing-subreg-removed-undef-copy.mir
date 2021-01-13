@@ -78,7 +78,7 @@ body:             |
     %44.sub6:sgpr_256 = COPY %43
     %44.sub7:sgpr_256 = COPY killed %43
     %45:vgpr_32 = IMAGE_LOAD_MIP_V1_V4 killed %87, killed %44, 1, -1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from constant-pool, addrspace 4)
-    dead %89:vgpr_32 = V_BFE_U32 killed %45, 7, 1, implicit $exec
+    dead %89:vgpr_32 = V_BFE_U32_e64 killed %45, 7, 1, implicit $exec
     %49:sreg_32_xm0 = S_MOV_B32 1
     %50:sgpr_128 = COPY killed %0
     %50.sub2:sgpr_128 = COPY killed %49

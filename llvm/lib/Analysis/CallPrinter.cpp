@@ -196,7 +196,7 @@ struct DOTGraphTraits<CallGraphDOTInfo *> : public DefaultDOTGraphTraits {
     Function *F = Node->getFunction();
     if (F == nullptr)
       return "";
-    std::string attrs = "";
+    std::string attrs;
     if (ShowHeatColors) {
       uint64_t freq = CGInfo->getFreq(F);
       std::string color = getHeatColor(freq, CGInfo->getMaxFreq());

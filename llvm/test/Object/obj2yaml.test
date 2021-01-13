@@ -385,6 +385,7 @@
 # ELF-MIPSEL-NEXT:     Type:            SHT_MIPS_ABIFLAGS
 # ELF-MIPSEL-NEXT:     Flags:           [ SHF_ALLOC ]
 # ELF-MIPSEL-NEXT:     AddressAlign:    0x8
+# ELF-MIPSEL-NEXT:     EntSize:         0x0
 # ELF-MIPSEL-NEXT:     ISA:             MIPS32
 # ELF-MIPSEL-NEXT:     ISARevision:     0x1
 # ELF-MIPSEL-NEXT:     FpABI:           FP_DOUBLE

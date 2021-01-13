@@ -1596,7 +1596,7 @@ public:
         write(StringRef(Intrinsic::getName(II->getIntrinsicID(), {}))
                   .drop_front(StringRef("llvm.matrix.").size()));
         write(".");
-        std::string Tmp = "";
+        std::string Tmp;
         raw_string_ostream SS(Tmp);
 
         switch (II->getIntrinsicID()) {

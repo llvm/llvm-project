@@ -686,8 +686,8 @@ static MachineInstrBuilder spillVGPRtoAGPR(const GCNSubtarget &ST,
 
   unsigned Dst = IsStore ? Reg : ValueReg;
   unsigned Src = IsStore ? ValueReg : Reg;
-  unsigned Opc = (IsStore ^ TRI->isVGPR(MRI, Reg)) ? AMDGPU::V_ACCVGPR_WRITE_B32
-                                                   : AMDGPU::V_ACCVGPR_READ_B32;
+  unsigned Opc = (IsStore ^ TRI->isVGPR(MRI, Reg)) ? AMDGPU::V_ACCVGPR_WRITE_B32_e64
+                                                   : AMDGPU::V_ACCVGPR_READ_B32_e64;
 
   auto MIB = BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(Opc), Dst)
                .addReg(Src, getKillRegState(IsKill));
@@ -964,7 +964,7 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
       }
       if (IsStore) {
         auto AccRead = BuildMI(*MBB, MI, DL,
-                               TII->get(AMDGPU::V_ACCVGPR_READ_B32), TmpReg)
+                              TII->get(AMDGPU::V_ACCVGPR_READ_B32_e64), TmpReg)
           .addReg(SubReg, getKillRegState(IsKill));
         if (NeedSuperRegDef)
           AccRead.addReg(ValueReg, RegState::ImplicitDefine);
@@ -1003,7 +1003,7 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
       MIB.addReg(ValueReg, RegState::ImplicitDefine);
 
     if (!IsStore && TmpReg != AMDGPU::NoRegister) {
-      MIB = BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_ACCVGPR_WRITE_B32),
+      MIB = BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_ACCVGPR_WRITE_B32_e64),
                     FinalReg)
         .addReg(TmpReg, RegState::Kill);
       MIB->setAsmPrinterFlag(MachineInstr::ReloadReuse);

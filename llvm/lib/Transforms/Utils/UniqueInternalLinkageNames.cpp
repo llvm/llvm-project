@@ -43,6 +43,7 @@ static bool uniqueifyInternalLinkageNames(Module &M) {
   for (auto &F : M) {
     if (F.hasInternalLinkage()) {
       F.setName(F.getName() + ModuleNameHash);
+      F.addFnAttr("sample-profile-suffix-elision-policy", "selected");
       // Replace linkage names in the debug metadata.
       if (DISubprogram *SP = F.getSubprogram()) {
         if (SP->getRawLinkageName()) {

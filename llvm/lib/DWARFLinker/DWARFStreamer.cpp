@@ -121,16 +121,23 @@ void DwarfStreamer::switchToDebugInfoSection(unsigned DwarfVersion) {
 
 /// Emit the compilation unit header for \p Unit in the debug_info section.
 ///
-/// A Dwarf section header is encoded as:
+/// A Dwarf 4 section header is encoded as:
 ///  uint32_t   Unit length (omitting this field)
 ///  uint16_t   Version
 ///  uint32_t   Abbreviation table offset
 ///  uint8_t    Address size
-///
 /// Leading to a total of 11 bytes.
-void DwarfStreamer::emitCompileUnitHeader(CompileUnit &Unit) {
-  unsigned Version = Unit.getOrigUnit().getVersion();
-  switchToDebugInfoSection(Version);
+///
+/// A Dwarf 5 section header is encoded as:
+///  uint32_t   Unit length (omitting this field)
+///  uint16_t   Version
+///  uint8_t    Unit type
+///  uint8_t    Address size
+///  uint32_t   Abbreviation table offset
+/// Leading to a total of 12 bytes.
+void DwarfStreamer::emitCompileUnitHeader(CompileUnit &Unit,
+                                          unsigned DwarfVersion) {
+  switchToDebugInfoSection(DwarfVersion);
 
   /// The start of the unit within its section.
   Unit.setLabelBegin(Asm->createTempSymbol("cu_begin"));
@@ -140,13 +147,22 @@ void DwarfStreamer::emitCompileUnitHeader(CompileUnit &Unit) {
   // been computed in CompileUnit::computeOffsets(). Subtract 4 to that size to
   // account for the length field.
   Asm->emitInt32(Unit.getNextUnitOffset() - Unit.getStartOffset() - 4);
-  Asm->emitInt16(Version);
+  Asm->emitInt16(DwarfVersion);
 
-  // We share one abbreviations table across all units so it's always at the
-  // start of the section.
-  Asm->emitInt32(0);
-  Asm->emitInt8(Unit.getOrigUnit().getAddressByteSize());
-  DebugInfoSectionSize += 11;
+  if (DwarfVersion >= 5) {
+    Asm->emitInt8(dwarf::DW_UT_compile);
+    Asm->emitInt8(Unit.getOrigUnit().getAddressByteSize());
+    // We share one abbreviations table across all units so it's always at the
+    // start of the section.
+    Asm->emitInt32(0);
+    DebugInfoSectionSize += 12;
+  } else {
+    // We share one abbreviations table across all units so it's always at the
+    // start of the section.
+    Asm->emitInt32(0);
+    Asm->emitInt8(Unit.getOrigUnit().getAddressByteSize());
+    DebugInfoSectionSize += 11;
+  }
 
   // Remember this CU.
   EmittedUnits.push_back({Unit.getUniqueID(), Unit.getLabelBegin()});
@@ -211,6 +227,16 @@ void DwarfStreamer::emitStrings(const NonRelocatableStringpool &Pool) {
     // Emit a null terminator.
     Asm->emitInt8(0);
   }
+
+#if 0
+  if (DwarfVersion >= 5) {
+    // Emit an empty string offset section.
+    Asm->OutStreamer->SwitchSection(MOFI->getDwarfStrOffSection());
+    Asm->emitDwarfUnitLength(4, "Length of String Offsets Set");
+    Asm->emitInt16(DwarfVersion);
+    Asm->emitInt16(0);
+  }
+#endif
 }
 
 void DwarfStreamer::emitDebugNames(

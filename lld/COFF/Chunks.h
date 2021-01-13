@@ -204,6 +204,15 @@ public:
   ArrayRef<uint8_t> getContents() const;
   void writeTo(uint8_t *buf) const;
 
+  // Defend against unsorted relocations. This may be overly conservative.
+  void sortRelocations();
+
+  // Write and relocate a portion of the section. This is intended to be called
+  // in a loop. Relocations must be sorted first.
+  void writeAndRelocateSubsection(ArrayRef<uint8_t> sec,
+                                  ArrayRef<uint8_t> subsec,
+                                  uint32_t &nextRelocIndex, uint8_t *buf) const;
+
   uint32_t getOutputCharacteristics() const {
     return header->Characteristics & (permMask | typeMask);
   }
@@ -212,6 +221,7 @@ public:
   }
   void getBaserels(std::vector<Baserel> *res);
   bool isCOMDAT() const;
+  void applyRelocation(uint8_t *off, const coff_relocation &rel) const;
   void applyRelX64(uint8_t *off, uint16_t type, OutputSection *os, uint64_t s,
                    uint64_t p) const;
   void applyRelX86(uint8_t *off, uint16_t type, OutputSection *os, uint64_t s,

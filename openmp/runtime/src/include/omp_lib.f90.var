@@ -98,7 +98,7 @@
         integer (kind=omp_control_tool_result_kind), parameter :: omp_control_tool_success = 0
         integer (kind=omp_control_tool_result_kind), parameter :: omp_control_tool_ignored = 1
 
-        integer (kind=omp_alloctrait_key_kind), parameter :: omp_atk_threadmodel = 1
+        integer (kind=omp_alloctrait_key_kind), parameter :: omp_atk_sync_hint = 1
         integer (kind=omp_alloctrait_key_kind), parameter :: omp_atk_alignment = 2
         integer (kind=omp_alloctrait_key_kind), parameter :: omp_atk_access = 3
         integer (kind=omp_alloctrait_key_kind), parameter :: omp_atk_pool_size = 4
@@ -107,12 +107,13 @@
         integer (kind=omp_alloctrait_key_kind), parameter :: omp_atk_pinned = 7
         integer (kind=omp_alloctrait_key_kind), parameter :: omp_atk_partition = 8
 
+        integer (kind=omp_alloctrait_val_kind), parameter :: omp_atv_default = -1
         integer (kind=omp_alloctrait_val_kind), parameter :: omp_atv_false = 0
         integer (kind=omp_alloctrait_val_kind), parameter :: omp_atv_true = 1
-        integer (kind=omp_alloctrait_val_kind), parameter :: omp_atv_default = 2
         integer (kind=omp_alloctrait_val_kind), parameter :: omp_atv_contended = 3
         integer (kind=omp_alloctrait_val_kind), parameter :: omp_atv_uncontended = 4
-        integer (kind=omp_alloctrait_val_kind), parameter :: omp_atv_sequential = 5
+        integer (kind=omp_alloctrait_val_kind), parameter :: omp_atv_serialized = 5
+        integer (kind=omp_alloctrait_val_kind), parameter :: omp_atv_sequential = omp_atv_serialized
         integer (kind=omp_alloctrait_val_kind), parameter :: omp_atv_private = 6
         integer (kind=omp_alloctrait_val_kind), parameter :: omp_atv_all = 7
         integer (kind=omp_alloctrait_val_kind), parameter :: omp_atv_thread = 8

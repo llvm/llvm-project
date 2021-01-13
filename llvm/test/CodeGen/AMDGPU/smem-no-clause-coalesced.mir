@@ -38,8 +38,8 @@ body:             |
     %3.sub2:sgpr_128 = S_MOV_B32 -1
     %7.sub0:sreg_64_xexec = S_LOAD_DWORD_IMM %7, 48, 0, 0 :: (load 4 from `i8 addrspace(4)* undef`, addrspace 4)
     %8:sreg_64_xexec = S_BUFFER_LOAD_DWORDX2_IMM %3, 640, 0, 0 :: (dereferenceable invariant load 8)
-    undef %9.sub0:vreg_128 = V_LSHL_ADD_U32 %6, 4, %4, implicit $exec
-    %9.sub1:vreg_128 = V_LSHL_ADD_U32 %5, 4, %0, implicit $exec
+    undef %9.sub0:vreg_128 = V_LSHL_ADD_U32_e64 %6, 4, %4, implicit $exec
+    %9.sub1:vreg_128 = V_LSHL_ADD_U32_e64 %5, 4, %0, implicit $exec
     S_ENDPGM 0
 
 ...

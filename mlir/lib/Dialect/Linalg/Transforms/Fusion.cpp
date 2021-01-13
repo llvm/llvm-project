@@ -350,32 +350,6 @@ bool mlir::linalg::isFusableInto(const LinalgDependenceGraph &graph,
   return true;
 }
 
-static bool isSameSubView(Value a, Value b) {
-  if (a == b)
-    return true;
-  auto sva = a.getDefiningOp<SubViewOp>();
-  auto svb = b.getDefiningOp<SubViewOp>();
-  if (!sva || !svb)
-    return false;
-  if (!isSameSubView(sva.getViewSource(), svb.getViewSource()))
-    return false;
-  if (sva.getType() != svb.getType())
-    return false;
-  if (sva.getNumOperands() != svb.getNumOperands())
-    return false;
-  if (sva.static_offsets() != svb.static_offsets())
-    return false;
-  if (sva.static_sizes() != svb.static_sizes())
-    return false;
-  if (sva.static_strides() != svb.static_strides())
-    return false;
-  /// Skip the "source" operand.
-  for (unsigned idx = 1, e = sva.getNumOperands(); idx != e; ++idx)
-    if (sva.getOperand(idx) != svb.getOperand(idx))
-      return false;
-  return true;
-}
-
 static Optional<LinalgDependenceGraph::LinalgDependenceGraphElem>
 findFusableProducer(OpOperand &consumerOpOperand,
                     const LinalgDependenceGraph &dependenceGraph) {

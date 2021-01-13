@@ -41,7 +41,7 @@ body:             |
   bb.0:
     successors: %bb.1(0x80000000)
   
-    %27:vgpr_32 = nnan arcp contract reassoc V_MAD_F32 0, undef %28:vgpr_32, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $mode
+    %27:vgpr_32 = nnan arcp contract reassoc V_MAD_F32_e64 0, undef %28:vgpr_32, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $mode
     %30:vgpr_32 = V_MIN_F32_e32 1065353216, killed %27, implicit $exec, implicit $mode
     %31:sreg_64_xexec = V_CMP_NEQ_F32_e64 0, 1065353216, 0, killed %30, 0, implicit $exec, implicit $mode
     %32:vgpr_32 = V_MOV_B32_e32 2143289344, implicit $exec
@@ -142,7 +142,7 @@ body:             |
     successors: %bb.9(0x80000000)
   
     %65:vgpr_32 = COPY killed %11.sub1
-    %67:vgpr_32 = V_MAD_F32 0, target-flags(amdgpu-gotprel32-hi) 0, 0, killed %91.sub2, 0, killed %65, 0, 0, implicit $exec, implicit $mode
+    %67:vgpr_32 = V_MAD_F32_e64 0, target-flags(amdgpu-gotprel32-hi) 0, 0, killed %91.sub2, 0, killed %65, 0, 0, implicit $exec, implicit $mode
     undef %102.sub1:vreg_128 = COPY killed %67
     %93:vreg_128 = COPY killed %102
     %111:vreg_128 = COPY killed %93

@@ -10,14 +10,13 @@
 # CHECK-NEXT:   Type:  ET_EXEC
 # CHECK-NEXT:   Entry: 0x201000
 # CHECK-NEXT: Sections:
-# CHECK-NEXT:   - Name:            .gnu.version
-# CHECK-NEXT:     Type:            SHT_GNU_versym
-# CHECK-NEXT:     Flags:           [ SHF_ALLOC ]
-# CHECK-NEXT:     Address:         0x200210
-# CHECK-NEXT:     Link:            .dynsym
-# CHECK-NEXT:     AddressAlign:    0x2
-# CHECK-NEXT:     EntSize:         0x2
-# CHECK-NEXT:     Entries:         [ 0, 3, 4 ]
+# CHECK-NEXT:   - Name:         .gnu.version
+# CHECK-NEXT:     Type:         SHT_GNU_versym
+# CHECK-NEXT:     Flags:        [ SHF_ALLOC ]
+# CHECK-NEXT:     Address:      0x200210
+# CHECK-NEXT:     Link:         .dynsym
+# CHECK-NEXT:     AddressAlign: 0x2
+# CHECK-NEXT:     Entries:      [ 0, 3, 4 ]
 # CHECK-NEXT:   - Name:
 # CHECK:      DynamicSymbols:
 # CHECK-NEXT:   - Name:    f1

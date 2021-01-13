@@ -5,8 +5,8 @@
 # multiplies, despite the presence of a barrier in the function.
 # CHECK: BUFFER_LOAD_DWORD_OFFSET
 # CHECK: BUFFER_LOAD_DWORD_OFFSET
-# CHECK: V_MUL_LO_U32
-# CHECK: V_MUL_LO_U32
+# CHECK: V_MUL_LO_U32_e64
+# CHECK: V_MUL_LO_U32_e64
 name: test
 tracksRegLiveness: true
 body: |
@@ -31,14 +31,14 @@ body: |
     %33.sub2:sgpr_128 = V_READFIRSTLANE_B32 %45.sub2, implicit $exec
     %33.sub3:sgpr_128 = V_READFIRSTLANE_B32 %46.sub3, implicit $exec
     %15:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %33, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    %39:vgpr_32 = V_MUL_LO_U32 %15, %15, implicit $exec
+    %39:vgpr_32 = V_MUL_LO_U32_e64 %15, %15, implicit $exec
 
     undef %27.sub0:sgpr_128 = V_READFIRSTLANE_B32 %26.sub0, implicit $exec
     %27.sub1:sgpr_128 = V_READFIRSTLANE_B32 %41.sub1, implicit $exec
     %27.sub2:sgpr_128 = V_READFIRSTLANE_B32 %42.sub2, implicit $exec
     %27.sub3:sgpr_128 = V_READFIRSTLANE_B32 %43.sub3, implicit $exec
     %19:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %27, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    %40:vgpr_32 = V_MUL_LO_U32 %19, %19, implicit $exec
+    %40:vgpr_32 = V_MUL_LO_U32_e64 %19, %19, implicit $exec
 
     %23:vgpr_32 = V_ADD_U32_e32 %39, %40, implicit $exec
     GLOBAL_STORE_DWORD %38, %23, 0, 0, 0, 0, implicit $exec

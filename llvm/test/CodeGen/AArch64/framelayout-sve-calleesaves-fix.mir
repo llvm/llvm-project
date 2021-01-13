@@ -24,7 +24,7 @@
 ...
 name: fix_restorepoint_p4
 stack:
-  - { id: 0, stack-id: sve-vec, size: 16, alignment: 16 }
+  - { id: 0, stack-id: scalable-vector, size: 16, alignment: 16 }
 body:             |
   bb.0.entry:
     $z8 = IMPLICIT_DEF

@@ -1238,7 +1238,7 @@ class VOP2_DPPe <bits<6> op, VOP2_DPP_Pseudo ps, VOPProfile P = ps.Pfl> :
 }
 
 let AssemblerPredicate = isGFX6GFX7, DecoderNamespace = "GFX6GFX7" in {
-  multiclass VOP2Only_Real_gfx6_gfx7<bits<6> op> {
+  multiclass VOP2_Lane_Real_gfx6_gfx7<bits<6> op> {
     def _gfx6_gfx7 :
       VOP2_Real<!cast<VOP2_Pseudo>(NAME), SIEncodingFamily.SI>,
       VOP2e<op{5-0}, !cast<VOP2_Pseudo>(NAME).Pfl>;
@@ -1317,10 +1317,10 @@ defm V_ADDC_U32           : VOP2be_Real_gfx6_gfx7<0x028>;
 defm V_SUBB_U32           : VOP2be_Real_gfx6_gfx7<0x029>;
 defm V_SUBBREV_U32        : VOP2be_Real_gfx6_gfx7<0x02a>;
 
-defm V_READLANE_B32 : VOP2Only_Real_gfx6_gfx7<0x001>;
+defm V_READLANE_B32 : VOP2_Lane_Real_gfx6_gfx7<0x001>;
 
 let InOperandList = (ins SSrcOrLds_b32:$src0, SCSrc_b32:$src1, VGPR_32:$vdst_in) in {
-  defm V_WRITELANE_B32 : VOP2Only_Real_gfx6_gfx7<0x002>;
+  defm V_WRITELANE_B32 : VOP2_Lane_Real_gfx6_gfx7<0x002>;
 } // End InOperandList = (ins SSrcOrLds_b32:$src0, SCSrc_b32:$src1, VGPR_32:$vdst_in)
 
 let SubtargetPredicate = isGFX6GFX7 in {

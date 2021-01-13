@@ -57,6 +57,36 @@ enum PPCInstrMasks : uint64_t {
 
 template <class ELFT> class ELFFile;
 
+template <class T> struct DataRegion {
+  // This constructor is used when we know the start and the size of a data
+  // region. We assume that Arr does not go past the end of the file.
+  DataRegion(ArrayRef<T> Arr) : First(Arr.data()), Size(Arr.size()) {}
+
+  // Sometimes we only know the start of a data region. We still don't want to
+  // read past the end of the file, so we provide the end of a buffer.
+  DataRegion(const T *Data, const uint8_t *BufferEnd)
+      : First(Data), BufEnd(BufferEnd) {}
+
+  Expected<T> operator[](uint64_t N) {
+    assert(Size || BufEnd);
+    if (Size) {
+      if (N >= *Size)
+        return createError(
+            "the index is greater than or equal to the number of entries (" +
+            Twine(*Size) + ")");
+    } else {
+      const uint8_t *EntryStart = (const uint8_t *)First + N * sizeof(T);
+      if (EntryStart + sizeof(T) > BufEnd)
+        return createError("can't read past the end of the file");
+    }
+    return *(First + N);
+  }
+
+  const T *First;
+  Optional<uint64_t> Size = None;
+  const uint8_t *BufEnd = nullptr;
+};
+
 template <class ELFT>
 std::string getSecIndexForError(const ELFFile<ELFT> &Obj,
                                 const typename ELFT::Shdr &Sec) {
@@ -99,6 +129,7 @@ public:
   using WarningHandler = llvm::function_ref<Error(const Twine &Msg)>;
 
   const uint8_t *base() const { return Buf.bytes_begin(); }
+  const uint8_t *end() const { return base() + getBufSize(); }
 
   size_t getBufSize() const { return Buf.size(); }
 
@@ -274,13 +305,13 @@ public:
       Elf_Shdr_Range Sections,
       WarningHandler WarnHandler = &defaultWarningHandler) const;
   Expected<uint32_t> getSectionIndex(const Elf_Sym &Sym, Elf_Sym_Range Syms,
-                                     ArrayRef<Elf_Word> ShndxTable) const;
+                                     DataRegion<Elf_Word> ShndxTable) const;
   Expected<const Elf_Shdr *> getSection(const Elf_Sym &Sym,
                                         const Elf_Shdr *SymTab,
-                                        ArrayRef<Elf_Word> ShndxTable) const;
+                                        DataRegion<Elf_Word> ShndxTable) const;
   Expected<const Elf_Shdr *> getSection(const Elf_Sym &Sym,
                                         Elf_Sym_Range Symtab,
-                                        ArrayRef<Elf_Word> ShndxTable) const;
+                                        DataRegion<Elf_Word> ShndxTable) const;
   Expected<const Elf_Shdr *> getSection(uint32_t Index) const;
 
   Expected<const Elf_Sym *> getSymbol(const Elf_Shdr *Sec,
@@ -313,22 +344,25 @@ getSection(typename ELFT::ShdrRange Sections, uint32_t Index) {
 template <class ELFT>
 inline Expected<uint32_t>
 getExtendedSymbolTableIndex(const typename ELFT::Sym &Sym, unsigned SymIndex,
-                            ArrayRef<typename ELFT::Word> ShndxTable) {
+                            DataRegion<typename ELFT::Word> ShndxTable) {
   assert(Sym.st_shndx == ELF::SHN_XINDEX);
-  if (SymIndex >= ShndxTable.size())
+  if (!ShndxTable.First)
     return createError(
-        "extended symbol index (" + Twine(SymIndex) +
-        ") is past the end of the SHT_SYMTAB_SHNDX section of size " +
-        Twine(ShndxTable.size()));
+        "found an extended symbol index (" + Twine(SymIndex) +
+        "), but unable to locate the extended symbol index table");
 
-  // The size of the table was checked in getSHNDXTable.
-  return ShndxTable[SymIndex];
+  Expected<typename ELFT::Word> TableOrErr = ShndxTable[SymIndex];
+  if (!TableOrErr)
+    return createError("unable to read an extended symbol table at index " +
+                       Twine(SymIndex) + ": " +
+                       toString(TableOrErr.takeError()));
+  return *TableOrErr;
 }
 
 template <class ELFT>
 Expected<uint32_t>
 ELFFile<ELFT>::getSectionIndex(const Elf_Sym &Sym, Elf_Sym_Range Syms,
-                               ArrayRef<Elf_Word> ShndxTable) const {
+                               DataRegion<Elf_Word> ShndxTable) const {
   uint32_t Index = Sym.st_shndx;
   if (Index == ELF::SHN_XINDEX) {
     Expected<uint32_t> ErrorOrIndex =
@@ -345,7 +379,7 @@ ELFFile<ELFT>::getSectionIndex(const Elf_Sym &Sym, Elf_Sym_Range Syms,
 template <class ELFT>
 Expected<const typename ELFT::Shdr *>
 ELFFile<ELFT>::getSection(const Elf_Sym &Sym, const Elf_Shdr *SymTab,
-                          ArrayRef<Elf_Word> ShndxTable) const {
+                          DataRegion<Elf_Word> ShndxTable) const {
   auto SymsOrErr = symbols(SymTab);
   if (!SymsOrErr)
     return SymsOrErr.takeError();
@@ -355,7 +389,7 @@ ELFFile<ELFT>::getSection(const Elf_Sym &Sym, const Elf_Shdr *SymTab,
 template <class ELFT>
 Expected<const typename ELFT::Shdr *>
 ELFFile<ELFT>::getSection(const Elf_Sym &Sym, Elf_Sym_Range Symbols,
-                          ArrayRef<Elf_Word> ShndxTable) const {
+                          DataRegion<Elf_Word> ShndxTable) const {
   auto IndexOrErr = getSectionIndex(Sym, Symbols, ShndxTable);
   if (!IndexOrErr)
     return IndexOrErr.takeError();
