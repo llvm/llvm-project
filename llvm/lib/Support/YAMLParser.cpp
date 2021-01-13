@@ -748,17 +748,18 @@ std::string yaml::escape(StringRef Input, bool EscapePrintable) {
 
 llvm::Optional<bool> yaml::parseBool(StringRef S) {
   switch (S.size()) {
-  case 1:
-    switch (S.front()) {
-    case 'y':
-    case 'Y':
-      return true;
-    case 'n':
-    case 'N':
-      return false;
-    default:
-      return None;
-    }
+// FIXME: SWDEV-268185.
+//  case 1:
+//    switch (S.front()) {
+//    case 'y':
+//    case 'Y':
+//      return true;
+//    case 'n':
+//    case 'N':
+//      return false;
+//    default:
+//      return None;
+//    }
   case 2:
     switch (S.front()) {
     case 'O':
