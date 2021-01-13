@@ -26,9 +26,7 @@
 using namespace llvm;
 
 static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
-  if (!RM.hasValue())
-    return Reloc::Static;
-  return *RM;
+  return RM.getValueOr(Reloc::Static);
 }
 
 static CodeModel::Model
