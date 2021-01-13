@@ -1404,6 +1404,9 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
     Diags = &*IgnoringDiags;
   }
 
+  // The key paths of diagnostic options defined in Options.td start with
+  // "DiagnosticOpts->". Let's provide the expected variable name and type.
+  DiagnosticOptions *DiagnosticOpts = &Opts;
   bool Success = true;
 
 #define DIAG_OPTION_WITH_MARSHALLING(                                          \
@@ -1412,7 +1415,7 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
     DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
     MERGER, EXTRACTOR, TABLE_INDEX)                                            \
   PARSE_OPTION_WITH_MARSHALLING(Args, *Diags, Success, ID, FLAGS, PARAM,       \
-                                SHOULD_PARSE, Opts.KEYPATH, DEFAULT_VALUE,     \
+                                SHOULD_PARSE, KEYPATH, DEFAULT_VALUE,          \
                                 IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER,      \
                                 MERGER, TABLE_INDEX)
 #include "clang/Driver/Options.inc"
@@ -3153,15 +3156,7 @@ void CompilerInvocation::generateCC1CommandLine(
                                    IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, \
                                    EXTRACTOR, TABLE_INDEX)
 
-#define DIAG_OPTION_WITH_MARSHALLING(                                          \
-    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
-    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
-    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
-  GENERATE_OPTION_WITH_MARSHALLING(                                            \
-      Args, SA, KIND, FLAGS, SPELLING, ALWAYS_EMIT,                            \
-      this->DiagnosticOpts->KEYPATH, DEFAULT_VALUE, IMPLIED_CHECK,             \
-      IMPLIED_VALUE, DENORMALIZER, EXTRACTOR, TABLE_INDEX)
+#define DIAG_OPTION_WITH_MARSHALLING OPTION_WITH_MARSHALLING
 
 #include "clang/Driver/Options.inc"
 
