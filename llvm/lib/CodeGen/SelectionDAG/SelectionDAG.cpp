@@ -4796,6 +4796,15 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::VSCALE:
     assert(VT == Operand.getValueType() && "Unexpected VT!");
     break;
+  case ISD::CTPOP:
+    if (Operand.getValueType().getScalarType() == MVT::i1)
+      return Operand;
+    break;
+  case ISD::CTLZ:
+  case ISD::CTTZ:
+    if (Operand.getValueType().getScalarType() == MVT::i1)
+      return getNOT(DL, Operand, Operand.getValueType());
+    break;
   case ISD::VECREDUCE_SMIN:
   case ISD::VECREDUCE_UMAX:
     if (Operand.getValueType().getScalarType() == MVT::i1)
