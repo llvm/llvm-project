@@ -56,6 +56,7 @@ protected:
 };
 
 class CSProfileGenerator : public ProfileGenerator {
+protected:
   const BinarySampleCounterMap &BinarySampleCounters;
 
 public:
@@ -105,6 +106,16 @@ private:
                                        const BranchSample &BranchCounters,
                                        ProfiledBinary *Binary);
   void populateInferredFunctionSamples();
+};
+
+class PseudoProbeCSProfileGenerator : public CSProfileGenerator {
+
+public:
+  PseudoProbeCSProfileGenerator(const BinarySampleCounterMap &Counters)
+      : CSProfileGenerator(Counters) {}
+  void generateProfile() override {
+    // TODO
+  }
 };
 
 } // end namespace sampleprof

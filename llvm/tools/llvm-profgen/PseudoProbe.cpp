@@ -293,5 +293,42 @@ void PseudoProbeDecoder::printProbeForAddress(raw_ostream &OS,
   }
 }
 
+const PseudoProbe *
+PseudoProbeDecoder::getCallProbeForAddr(uint64_t Address) const {
+  auto It = Address2ProbesMap.find(Address);
+  if (It == Address2ProbesMap.end())
+    return nullptr;
+  const std::vector<PseudoProbe> &Probes = It->second;
+
+  const PseudoProbe *CallProbe = nullptr;
+  for (const auto &Probe : Probes) {
+    if (Probe.isCall()) {
+      assert(!CallProbe &&
+             "There should be only one call probe corresponding to address "
+             "which is a callsite.");
+      CallProbe = &Probe;
+    }
+  }
+  return CallProbe;
+}
+
+void PseudoProbeDecoder::getInlineContextForProbe(
+    const PseudoProbe *Probe, SmallVector<std::string, 16> &InlineContextStack,
+    bool IncludeLeaf) const {
+  if (IncludeLeaf) {
+    // Note that the context from probe doesn't include leaf frame,
+    // hence we need to retrieve and prepend leaf if requested.
+    auto It = GUID2FuncDescMap.find(Probe->GUID);
+    assert(It != GUID2FuncDescMap.end() &&
+           "Should have function descriptor for a valid GUID");
+    StringRef FuncName = It->second.FuncName;
+    // InlineContextStack is in callee-caller order, so push leaf in the front
+    InlineContextStack.emplace_back(FuncName.str() + ":" +
+                                    Twine(Probe->Index).str());
+  }
+
+  Probe->getInlineContext(InlineContextStack, GUID2FuncDescMap, true);
+}
+
 } // end namespace sampleprof
 } // end namespace llvm
