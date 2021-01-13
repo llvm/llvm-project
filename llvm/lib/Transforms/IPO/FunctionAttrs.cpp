@@ -22,6 +22,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
@@ -1425,12 +1426,36 @@ static bool addNoReturnAttrs(const SCCNodeSet &SCCNodes) {
   return Changed;
 }
 
+static bool functionWillReturn(const Function &F) {
+  // Must-progress function without side-effects must return.
+  if (F.mustProgress() && F.onlyReadsMemory())
+    return true;
+
+  // Can only analyze functions with a definition.
+  if (F.isDeclaration())
+    return false;
+
+  // Functions with loops require more sophisticated analysis, as the loop
+  // may be infinite. For now, don't try to handle them.
+  SmallVector<std::pair<const BasicBlock *, const BasicBlock *>> Backedges;
+  FindFunctionBackedges(F, Backedges);
+  if (!Backedges.empty())
+    return false;
+
+  // If there are no loops, then the function is willreturn if all calls in
+  // it are willreturn.
+  return all_of(instructions(F), [](const Instruction &I) {
+    const auto *CB = dyn_cast<CallBase>(&I);
+    return !CB || CB->hasFnAttr(Attribute::WillReturn);
+  });
+}
+
 // Set the willreturn function attribute if possible.
 static bool addWillReturn(const SCCNodeSet &SCCNodes) {
   bool Changed = false;
 
   for (Function *F : SCCNodes) {
-    if (!F || !F->onlyReadsMemory() || !F->mustProgress() || F->willReturn())
+    if (!F || F->willReturn() || !functionWillReturn(*F))
       continue;
 
     F->setWillReturn();
