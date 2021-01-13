@@ -947,7 +947,7 @@ multiclass VPseudoUnaryV_M {
 multiclass VPseudoUnaryV_V_AnyMask {
   foreach m = MxList.m in {
     let VLMul = m.value in
-      def _VM # "_" # m.MX # "_MASK" : VPseudoUnaryAnyMask<m.vrclass, m.vrclass>;
+      def _VM # "_" # m.MX : VPseudoUnaryAnyMask<m.vrclass, m.vrclass>;
   }
 }
 
@@ -1404,12 +1404,12 @@ class VPatUnaryAnyMask<string intrinsic,
                        LMULInfo vlmul,
                        VReg result_reg_class,
                        VReg op1_reg_class> :
-  Pat<(result_type (!cast<Intrinsic>(intrinsic#"_mask")
+  Pat<(result_type (!cast<Intrinsic>(intrinsic)
                    (result_type result_reg_class:$merge),
                    (op1_type op1_reg_class:$rs1),
                    (mask_type VR:$rs2),
                    (XLenVT GPR:$vl))),
-                   (!cast<Instruction>(inst#"_"#kind#"_"#vlmul.MX#"_MASK")
+                   (!cast<Instruction>(inst#"_"#kind#"_"#vlmul.MX)
                    (result_type result_reg_class:$merge),
                    (op1_type op1_reg_class:$rs1),
                    (mask_type VR:$rs2),
