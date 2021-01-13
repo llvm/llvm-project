@@ -387,3 +387,54 @@ entry:
   %out = fptoui <2 x double> %src to <2 x i64>
   ret <2 x i64> %out
 }
+
+define arm_aapcs_vfpcc <8 x half> @vmovn32_trunc1(<4 x float> %src1, <4 x float> %src2) {
+; CHECK-MVE-LABEL: vmovn32_trunc1:
+; CHECK-MVE:       @ %bb.0: @ %entry
+; CHECK-MVE-NEXT:    vmov q2, q0
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s0, s8
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s0, s4
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s1, s9
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s1, s5
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s2, s10
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s2, s6
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s3, s11
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s3, s7
+; CHECK-MVE-NEXT:    bx lr
+;
+; CHECK-MVEFP-LABEL: vmovn32_trunc1:
+; CHECK-MVEFP:       @ %bb.0: @ %entry
+; CHECK-MVEFP-NEXT:    vcvtb.f16.f32 q0, q0
+; CHECK-MVEFP-NEXT:    vcvtt.f16.f32 q0, q1
+; CHECK-MVEFP-NEXT:    bx lr
+entry:
+  %strided.vec = shufflevector <4 x float> %src1, <4 x float> %src2, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+  %out = fptrunc <8 x float> %strided.vec to <8 x half>
+  ret <8 x half> %out
+}
+
+define arm_aapcs_vfpcc <8 x half> @vmovn32_trunc2(<4 x float> %src1, <4 x float> %src2) {
+; CHECK-MVE-LABEL: vmovn32_trunc2:
+; CHECK-MVE:       @ %bb.0: @ %entry
+; CHECK-MVE-NEXT:    vmov q2, q0
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s0, s4
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s0, s8
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s1, s5
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s1, s9
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s2, s6
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s2, s10
+; CHECK-MVE-NEXT:    vcvtb.f16.f32 s3, s7
+; CHECK-MVE-NEXT:    vcvtt.f16.f32 s3, s11
+; CHECK-MVE-NEXT:    bx lr
+;
+; CHECK-MVEFP-LABEL: vmovn32_trunc2:
+; CHECK-MVEFP:       @ %bb.0: @ %entry
+; CHECK-MVEFP-NEXT:    vcvtb.f16.f32 q1, q1
+; CHECK-MVEFP-NEXT:    vcvtt.f16.f32 q1, q0
+; CHECK-MVEFP-NEXT:    vmov q0, q1
+; CHECK-MVEFP-NEXT:    bx lr
+entry:
+  %strided.vec = shufflevector <4 x float> %src1, <4 x float> %src2, <8 x i32> <i32 4, i32 0, i32 5, i32 1, i32 6, i32 2, i32 7, i32 3>
+  %out = fptrunc <8 x float> %strided.vec to <8 x half>
+  ret <8 x half> %out
+}
