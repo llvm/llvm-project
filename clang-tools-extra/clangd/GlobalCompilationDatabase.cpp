@@ -556,13 +556,8 @@ DirectoryBasedGlobalCompilationDatabase::getProjectInfo(PathRef File) const {
 OverlayCDB::OverlayCDB(const GlobalCompilationDatabase *Base,
                        std::vector<std::string> FallbackFlags,
                        tooling::ArgumentsAdjuster Adjuster)
-    : Base(Base), ArgsAdjuster(std::move(Adjuster)),
-      FallbackFlags(std::move(FallbackFlags)) {
-  if (Base)
-    BaseChanged = Base->watch([this](const std::vector<std::string> Changes) {
-      OnCommandChanged.broadcast(Changes);
-    });
-}
+    : DelegatingCDB(Base), ArgsAdjuster(std::move(Adjuster)),
+      FallbackFlags(std::move(FallbackFlags)) {}
 
 llvm::Optional<tooling::CompileCommand>
 OverlayCDB::getCompileCommand(PathRef File) const {
@@ -573,8 +568,8 @@ OverlayCDB::getCompileCommand(PathRef File) const {
     if (It != Commands.end())
       Cmd = It->second;
   }
-  if (!Cmd && Base)
-    Cmd = Base->getCompileCommand(File);
+  if (!Cmd)
+    Cmd = DelegatingCDB::getCompileCommand(File);
   if (!Cmd)
     return llvm::None;
   if (ArgsAdjuster)
@@ -583,8 +578,7 @@ OverlayCDB::getCompileCommand(PathRef File) const {
 }
 
 tooling::CompileCommand OverlayCDB::getFallbackCommand(PathRef File) const {
-  auto Cmd = Base ? Base->getFallbackCommand(File)
-                  : GlobalCompilationDatabase::getFallbackCommand(File);
+  auto Cmd = DelegatingCDB::getFallbackCommand(File);
   std::lock_guard<std::mutex> Lock(Mutex);
   Cmd.CommandLine.insert(Cmd.CommandLine.end(), FallbackFlags.begin(),
                          FallbackFlags.end());
@@ -609,13 +603,37 @@ void OverlayCDB::setCompileCommand(
   OnCommandChanged.broadcast({CanonPath});
 }
 
-llvm::Optional<ProjectInfo> OverlayCDB::getProjectInfo(PathRef File) const {
-  // It wouldn't make much sense to treat files with overridden commands
-  // specially when we can't do the same for the (unknown) local headers they
-  // include or changing behavior mid-air after receiving an override.
+DelegatingCDB::DelegatingCDB(const GlobalCompilationDatabase *Base)
+    : Base(Base) {
   if (Base)
-    return Base->getProjectInfo(File);
-  return llvm::None;
+    BaseChanged = Base->watch([this](const std::vector<std::string> Changes) {
+      OnCommandChanged.broadcast(Changes);
+    });
 }
+
+DelegatingCDB::DelegatingCDB(std::unique_ptr<GlobalCompilationDatabase> Base)
+    : DelegatingCDB(Base.get()) {
+  BaseOwner = std::move(Base);
+}
+
+llvm::Optional<tooling::CompileCommand>
+DelegatingCDB::getCompileCommand(PathRef File) const {
+  if (!Base)
+    return llvm::None;
+  return Base->getCompileCommand(File);
+}
+
+llvm::Optional<ProjectInfo> DelegatingCDB::getProjectInfo(PathRef File) const {
+  if (!Base)
+    return llvm::None;
+  return Base->getProjectInfo(File);
+}
+
+tooling::CompileCommand DelegatingCDB::getFallbackCommand(PathRef File) const {
+  if (!Base)
+    return GlobalCompilationDatabase::getFallbackCommand(File);
+  return Base->getFallbackCommand(File);
+}
+
 } // namespace clangd
 } // namespace clang

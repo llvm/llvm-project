@@ -123,6 +123,7 @@ uint64_t ObjFile::calcNewAddend(const WasmRelocation &reloc) const {
   case R_WASM_MEMORY_ADDR_REL_SLEB64:
   case R_WASM_MEMORY_ADDR_I32:
   case R_WASM_MEMORY_ADDR_I64:
+  case R_WASM_MEMORY_ADDR_TLS_SLEB:
   case R_WASM_FUNCTION_OFFSET_I32:
   case R_WASM_FUNCTION_OFFSET_I64:
     return reloc.Addend;

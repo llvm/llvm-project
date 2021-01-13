@@ -183,7 +183,12 @@ public:
   }
 
   void changingInstr(MachineInstr &MI) override {}
-  void changedInstr(MachineInstr &MI) override {}
+  void changedInstr(MachineInstr &MI) override {
+    // FIXME: In principle we should probably add the instruction to NewInsts,
+    // but the way the LegalizerHelper uses the observer, we will always see the
+    // registers we need to set the regbank on also referenced in a new
+    // instruction.
+  }
 };
 
 }
@@ -1167,10 +1172,8 @@ bool AMDGPURegisterBankInfo::applyMappingLoad(MachineInstr &MI,
     // 96-bit loads are only available for vector loads. We need to split this
     // into a 64-bit part, and 32 (unless we can widen to a 128-bit load).
 
-    MachineIRBuilder B(MI);
     ApplyRegBankMapping O(*this, MRI, &AMDGPU::SGPRRegBank);
-    GISelObserverWrapper Observer(&O);
-    B.setChangeObserver(Observer);
+    MachineIRBuilder B(MI, O);
 
     if (MMO->getAlign() < Align(16)) {
       LLT Part64, Part32;
@@ -1209,13 +1212,10 @@ bool AMDGPURegisterBankInfo::applyMappingLoad(MachineInstr &MI,
   LLT PtrTy = MRI.getType(MI.getOperand(1).getReg());
   MRI.setType(BasePtrReg, PtrTy);
 
-  MachineIRBuilder B(MI);
-
   unsigned NumSplitParts = LoadTy.getSizeInBits() / MaxNonSmrdLoadSize;
   const LLT LoadSplitTy = LoadTy.divide(NumSplitParts);
-  ApplyRegBankMapping O(*this, MRI, &AMDGPU::VGPRRegBank);
-  GISelObserverWrapper Observer(&O);
-  B.setChangeObserver(Observer);
+  ApplyRegBankMapping Observer(*this, MRI, &AMDGPU::VGPRRegBank);
+  MachineIRBuilder B(MI, Observer);
   LegalizerHelper Helper(B.getMF(), Observer, B);
 
   if (LoadTy.isVector()) {
@@ -1259,10 +1259,7 @@ bool AMDGPURegisterBankInfo::applyMappingDynStackAlloc(
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   Register SPReg = Info->getStackPtrOffsetReg();
   ApplyRegBankMapping ApplyBank(*this, MRI, &AMDGPU::SGPRRegBank);
-  GISelObserverWrapper Observer(&ApplyBank);
-
-  MachineIRBuilder B(MI);
-  B.setChangeObserver(Observer);
+  MachineIRBuilder B(MI, ApplyBank);
 
   auto WaveSize = B.buildConstant(LLT::scalar(32), ST.getWavefrontSizeLog2());
   auto ScaledSize = B.buildShl(IntPtrTy, AllocSize, WaveSize);
@@ -1552,9 +1549,7 @@ bool AMDGPURegisterBankInfo::applyMappingBFEIntrinsic(
   // The scalar form packs the offset and width in a single operand.
 
   ApplyRegBankMapping ApplyBank(*this, MRI, &AMDGPU::SGPRRegBank);
-  GISelObserverWrapper Observer(&ApplyBank);
-  MachineIRBuilder B(MI);
-  B.setChangeObserver(Observer);
+  MachineIRBuilder B(MI, ApplyBank);
 
   // Ensure the high bits are clear to insert the offset.
   auto OffsetMask = B.buildConstant(S32, maskTrailingOnes<unsigned>(6));
@@ -2146,9 +2141,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     // Promote SGPR/VGPR booleans to s32
     MachineFunction *MF = MI.getParent()->getParent();
     ApplyRegBankMapping ApplyBank(*this, MRI, DstBank);
-    GISelObserverWrapper Observer(&ApplyBank);
-    MachineIRBuilder B(MI);
-    LegalizerHelper Helper(*MF, Observer, B);
+    MachineIRBuilder B(MI, ApplyBank);
+    LegalizerHelper Helper(*MF, ApplyBank, B);
 
     if (Helper.widenScalar(MI, 0, S32) != LegalizerHelper::Legalized)
       llvm_unreachable("widen scalar should have succeeded");
@@ -2291,9 +2285,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
 
       MachineFunction *MF = MI.getParent()->getParent();
       ApplyRegBankMapping ApplyBank(*this, MRI, DstBank);
-      GISelObserverWrapper Observer(&ApplyBank);
-      MachineIRBuilder B(MI);
-      LegalizerHelper Helper(*MF, Observer, B);
+      MachineIRBuilder B(MI, ApplyBank);
+      LegalizerHelper Helper(*MF, ApplyBank, B);
 
       if (Helper.widenScalar(MI, 0, LLT::scalar(32)) !=
           LegalizerHelper::Legalized)
@@ -2365,13 +2358,10 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     const LLT S32 = LLT::scalar(32);
     MachineBasicBlock *MBB = MI.getParent();
     MachineFunction *MF = MBB->getParent();
-    MachineIRBuilder B(MI);
     ApplyRegBankMapping ApplySALU(*this, MRI, &AMDGPU::SGPRRegBank);
-    GISelObserverWrapper Observer(&ApplySALU);
+    MachineIRBuilder B(MI, ApplySALU);
 
     if (DstTy.isVector()) {
-      B.setChangeObserver(Observer);
-
       Register WideSrc0Lo, WideSrc0Hi;
       Register WideSrc1Lo, WideSrc1Hi;
 
@@ -2384,7 +2374,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       B.buildBuildVectorTrunc(DstReg, {Lo.getReg(0), Hi.getReg(0)});
       MI.eraseFromParent();
     } else {
-      LegalizerHelper Helper(*MF, Observer, B);
+      LegalizerHelper Helper(*MF, ApplySALU, B);
 
       if (Helper.widenScalar(MI, 0, S32) != LegalizerHelper::Legalized)
         llvm_unreachable("widen scalar should have succeeded");
@@ -2421,8 +2411,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
 
     if (Ty == V2S16) {
       ApplyRegBankMapping ApplySALU(*this, MRI, &AMDGPU::SGPRRegBank);
-      GISelObserverWrapper Observer(&ApplySALU);
-      B.setChangeObserver(Observer);
+      B.setChangeObserver(ApplySALU);
 
       // Need to widen to s32, and expand as cmp + select, and avoid producing
       // illegal vector extends or unmerges that would need further
@@ -2454,8 +2443,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       MI.eraseFromParent();
     } else if (Ty == S16) {
       ApplyRegBankMapping ApplySALU(*this, MRI, &AMDGPU::SGPRRegBank);
-      GISelObserverWrapper Observer(&ApplySALU);
-      LegalizerHelper Helper(*MF, Observer, B);
+      B.setChangeObserver(ApplySALU);
+      LegalizerHelper Helper(*MF, ApplySALU, B);
 
       // Need to widen to s32, and expand as cmp + select.
       if (Helper.widenScalar(MI, 0, S32) != LegalizerHelper::Legalized)
@@ -2509,9 +2498,6 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   case AMDGPU::G_CTPOP:
   case AMDGPU::G_CTLZ_ZERO_UNDEF:
   case AMDGPU::G_CTTZ_ZERO_UNDEF: {
-    MachineIRBuilder B(MI);
-    MachineFunction &MF = B.getMF();
-
     const RegisterBank *DstBank =
       OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
     if (DstBank == &AMDGPU::SGPRRegBank)
@@ -2524,8 +2510,10 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       break;
 
     ApplyRegBankMapping ApplyVALU(*this, MRI, &AMDGPU::VGPRRegBank);
-    GISelObserverWrapper Observer(&ApplyVALU);
-    LegalizerHelper Helper(MF, Observer, B);
+    MachineIRBuilder B(MI, ApplyVALU);
+
+    MachineFunction &MF = B.getMF();
+    LegalizerHelper Helper(MF, ApplyVALU, B);
 
     if (Helper.narrowScalar(MI, 1, S32) != LegalizerHelper::Legalized)
       llvm_unreachable("narrowScalar should have succeeded");

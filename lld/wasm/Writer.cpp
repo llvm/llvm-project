@@ -284,7 +284,7 @@ void Writer::layoutMemory() {
     log(formatv("mem: {0,-15} offset={1,-8} size={2,-8} align={3}", seg->name,
                 memoryPtr, seg->size, seg->alignment));
 
-    if (seg->name == ".tdata") {
+    if (!config->relocatable && seg->name == ".tdata") {
       if (config->sharedMemory) {
         auto *tlsSize = cast<DefinedGlobal>(WasmSym::tlsSize);
         setGlobalPtr(tlsSize, seg->size);

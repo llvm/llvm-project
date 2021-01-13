@@ -9,6 +9,7 @@
 #include "index/BackgroundRebuild.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CompilationDatabase.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/Threading.h"
 #include "gmock/gmock.h"
@@ -666,25 +667,45 @@ TEST_F(BackgroundIndexTest, CmdLineHash) {
   // Make sure we only store the Cmd for main file.
   EXPECT_FALSE(MSS.loadShard(testPath("A.h"))->Cmd);
 
-  {
-    tooling::CompileCommand CmdStored = *MSS.loadShard(testPath("A.cc"))->Cmd;
-    EXPECT_EQ(CmdStored.CommandLine, Cmd.CommandLine);
-    EXPECT_EQ(CmdStored.Directory, Cmd.Directory);
-  }
+  tooling::CompileCommand CmdStored = *MSS.loadShard(testPath("A.cc"))->Cmd;
+  EXPECT_EQ(CmdStored.CommandLine, Cmd.CommandLine);
+  EXPECT_EQ(CmdStored.Directory, Cmd.Directory);
+}
 
-  // FIXME: Changing compile commands should be enough to invalidate the cache.
-  FS.Files[testPath("A.cc")] = " ";
-  Cmd.CommandLine = {"clang++", "../A.cc", "-Dfoo", "-fsyntax-only"};
-  CDB.setCompileCommand(testPath("build/../A.cc"), Cmd);
+TEST_F(BackgroundIndexTest, Reindex) {
+  MockFS FS;
+  llvm::StringMap<std::string> Storage;
+  size_t CacheHits = 0;
+  MemoryShardStorage MSS(Storage, CacheHits);
+  OverlayCDB CDB(/*Base=*/nullptr);
+  BackgroundIndex Idx(FS, CDB, [&](llvm::StringRef) { return &MSS; },
+                      /*Opts=*/{});
+
+  // Index a file.
+  FS.Files[testPath("A.cc")] = "int theOldFunction();";
+  tooling::CompileCommand Cmd;
+  Cmd.Filename = "../A.cc";
+  Cmd.Directory = testPath("build");
+  Cmd.CommandLine = {"clang++", "../A.cc", "-fsyntax-only"};
+  CDB.setCompileCommand(testPath("A.cc"), Cmd);
   ASSERT_TRUE(Idx.blockUntilIdleForTest());
 
-  EXPECT_FALSE(MSS.loadShard(testPath("A.h"))->Cmd);
+  // Verify the result is indexed and stored.
+  EXPECT_EQ(1u, runFuzzyFind(Idx, "theOldFunction").size());
+  EXPECT_EQ(0u, runFuzzyFind(Idx, "theNewFunction").size());
+  std::string OldShard = Storage.lookup(testPath("A.cc"));
+  EXPECT_NE("", OldShard);
 
-  {
-    tooling::CompileCommand CmdStored = *MSS.loadShard(testPath("A.cc"))->Cmd;
-    EXPECT_EQ(CmdStored.CommandLine, Cmd.CommandLine);
-    EXPECT_EQ(CmdStored.Directory, Cmd.Directory);
-  }
+  // Change the content and command, and notify to reindex it.
+  Cmd.CommandLine.push_back("-DFOO");
+  FS.Files[testPath("A.cc")] = "int theNewFunction();";
+  CDB.setCompileCommand(testPath("A.cc"), Cmd);
+  ASSERT_TRUE(Idx.blockUntilIdleForTest());
+
+  // Currently, we will never index the same main file again.
+  EXPECT_EQ(1u, runFuzzyFind(Idx, "theOldFunction").size());
+  EXPECT_EQ(0u, runFuzzyFind(Idx, "theNewFunction").size());
+  EXPECT_EQ(OldShard, Storage.lookup(testPath("A.cc")));
 }
 
 class BackgroundIndexRebuilderTest : public testing::Test {
@@ -827,6 +848,31 @@ TEST(BackgroundQueueTest, Boost) {
     Q.work([&] { Q.stop(); });
     EXPECT_EQ("AB", Sequence) << "A was boosted after enqueueing";
   }
+}
+
+TEST(BackgroundQueueTest, Duplicates) {
+  std::string Sequence;
+  BackgroundQueue::Task A([&] { Sequence.push_back('A'); });
+  A.QueuePri = 100;
+  A.Key = 1;
+  BackgroundQueue::Task B([&] { Sequence.push_back('B'); });
+  // B has no key, and is not subject to duplicate detection.
+  B.QueuePri = 50;
+
+  BackgroundQueue Q;
+  Q.append({A, B, A, B}); // One A is dropped, the other is high priority.
+  Q.work(/*OnIdle=*/[&] {
+    // The first time we go idle, we enqueue the same task again.
+    if (!llvm::is_contained(Sequence, ' ')) {
+      Sequence.push_back(' ');
+      Q.append({A, B, A, B}); // Both As are dropped.
+    } else {
+      Q.stop();
+    }
+  });
+
+  // This could reasonably be "ABB BBA", if we had good *re*indexing support.
+  EXPECT_EQ("ABB BB", Sequence);
 }
 
 TEST(BackgroundQueueTest, Progress) {
