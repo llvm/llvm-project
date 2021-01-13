@@ -1160,10 +1160,12 @@ Currently, only the following parameter attributes are defined:
 .. _attr_align:
 
 ``align <n>`` or ``align(<n>)``
-    This indicates that the pointer value may be assumed by the optimizer to
-    have the specified alignment.  If the pointer value does not have the
-    specified alignment, behavior is undefined. ``align 1`` has no effect on
-    non-byval, non-preallocated arguments.
+    This indicates that the pointer value has the specified alignment.
+    If the pointer value does not have the specified alignment,
+    :ref:`poison value <poisonvalues>` is returned or passed instead. The
+    ``align`` attribute should be combined with the ``noundef`` attribute to
+    ensure a pointer is aligned, or otherwise the behavior is undefined. Note
+    that ``align 1`` has no effect on non-byval, non-preallocated arguments.
 
     Note that this attribute has additional semantics when combined with the
     ``byval`` or ``preallocated`` attribute, which are documented there.
@@ -1225,7 +1227,9 @@ Currently, only the following parameter attributes are defined:
     This indicates that the parameter or return pointer is not null. This
     attribute may only be applied to pointer typed parameters. This is not
     checked or enforced by LLVM; if the parameter or return pointer is null,
-    the behavior is undefined.
+    :ref:`poison value <poisonvalues>` is returned or passed instead.
+    The ``nonnull`` attribute should be combined with the ``noundef`` attribute
+    to ensure a pointer is not null or otherwise the behavior is undefined.
 
 ``dereferenceable(<n>)``
     This indicates that the parameter or return pointer is dereferenceable. This
