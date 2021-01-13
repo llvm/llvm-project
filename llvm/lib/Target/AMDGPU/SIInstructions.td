@@ -321,6 +321,14 @@ def SI_IF_BREAK : CFPseudoInstSI <
   let isReMaterializable = 1;
 }
 
+// Branch to the early termination block of the shader if SCC is 0.
+// This uses SCC from a previous SALU operation, i.e. the update of
+// a mask of live lanes after a kill/demote operation.
+// Only valid in pixel shaders.
+def SI_EARLY_TERMINATE_SCC0 : SPseudoInstSI <(outs), (ins)> {
+  let Uses = [EXEC,SCC];
+}
+
 let Uses = [EXEC] in {
 
 multiclass PseudoInstKill <dag ins> {

@@ -49,6 +49,7 @@ private:
                   DebugLoc DL);
 
   bool kill(MachineInstr &MI);
+  void earlyTerm(MachineInstr &MI);
 
   bool skipMaskBranch(MachineInstr &MI, MachineBasicBlock &MBB);
 
@@ -145,19 +146,22 @@ bool SIInsertSkips::dominatesAllReachable(MachineBasicBlock &MBB) {
   return true;
 }
 
-static void generatePsEndPgm(MachineBasicBlock &MBB,
-                             MachineBasicBlock::iterator I, DebugLoc DL,
-                             const SIInstrInfo *TII) {
-  // Generate "null export; s_endpgm".
-  BuildMI(MBB, I, DL, TII->get(AMDGPU::EXP_DONE))
-      .addImm(AMDGPU::Exp::ET_NULL)
-      .addReg(AMDGPU::VGPR0, RegState::Undef)
-      .addReg(AMDGPU::VGPR0, RegState::Undef)
-      .addReg(AMDGPU::VGPR0, RegState::Undef)
-      .addReg(AMDGPU::VGPR0, RegState::Undef)
-      .addImm(1)  // vm
-      .addImm(0)  // compr
-      .addImm(0); // en
+static void generateEndPgm(MachineBasicBlock &MBB,
+                           MachineBasicBlock::iterator I, DebugLoc DL,
+                           const SIInstrInfo *TII, bool IsPS) {
+  // "null export"
+  if (IsPS) {
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::EXP_DONE))
+        .addImm(AMDGPU::Exp::ET_NULL)
+        .addReg(AMDGPU::VGPR0, RegState::Undef)
+        .addReg(AMDGPU::VGPR0, RegState::Undef)
+        .addReg(AMDGPU::VGPR0, RegState::Undef)
+        .addReg(AMDGPU::VGPR0, RegState::Undef)
+        .addImm(1)  // vm
+        .addImm(0)  // compr
+        .addImm(0); // en
+  }
+  // s_endpgm
   BuildMI(MBB, I, DL, TII->get(AMDGPU::S_ENDPGM)).addImm(0);
 }
 
@@ -169,7 +173,9 @@ void SIInsertSkips::ensureEarlyExitBlock(MachineBasicBlock &MBB,
   if (!EarlyExitBlock) {
     EarlyExitBlock = MF->CreateMachineBasicBlock();
     MF->insert(MF->end(), EarlyExitBlock);
-    generatePsEndPgm(*EarlyExitBlock, EarlyExitBlock->end(), DL, TII);
+    generateEndPgm(*EarlyExitBlock, EarlyExitBlock->end(), DL, TII,
+                   MF->getFunction().getCallingConv() ==
+                       CallingConv::AMDGPU_PS);
     EarlyExitClearsExec = false;
   }
 
@@ -178,7 +184,6 @@ void SIInsertSkips::ensureEarlyExitBlock(MachineBasicBlock &MBB,
     unsigned Mov = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
     Register Exec = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
     auto ExitI = EarlyExitBlock->getFirstNonPHI();
-    assert(ExitI->getOpcode() == AMDGPU::EXP_DONE);
     BuildMI(*EarlyExitBlock, ExitI, DL, TII->get(Mov), Exec).addImm(0);
     EarlyExitClearsExec = true;
   }
@@ -224,7 +229,7 @@ void SIInsertSkips::skipIfDead(MachineBasicBlock &MBB,
       I == MBB.end() && !llvm::is_contained(MBB.successors(), &*NextBBI);
 
   if (NoSuccessor) {
-    generatePsEndPgm(MBB, I, DL, TII);
+    generateEndPgm(MBB, I, DL, TII, true);
   } else {
     ensureEarlyExitBlock(MBB, false);
 
@@ -368,6 +373,23 @@ bool SIInsertSkips::kill(MachineInstr &MI) {
   }
 }
 
+void SIInsertSkips::earlyTerm(MachineInstr &MI) {
+  MachineBasicBlock &MBB = *MI.getParent();
+  const DebugLoc DL = MI.getDebugLoc();
+
+  ensureEarlyExitBlock(MBB, true);
+
+  auto BranchMI = BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_CBRANCH_SCC0))
+                      .addMBB(EarlyExitBlock);
+  auto Next = std::next(MI.getIterator());
+
+  if (Next != MBB.end() && !Next->isTerminator())
+    splitBlock(MBB, *BranchMI, MDT);
+
+  MBB.addSuccessor(EarlyExitBlock);
+  MDT->getBase().insertEdge(&MBB, EarlyExitBlock);
+}
+
 // Returns true if a branch over the block was inserted.
 bool SIInsertSkips::skipMaskBranch(MachineInstr &MI,
                                    MachineBasicBlock &SrcMBB) {
@@ -393,6 +415,7 @@ bool SIInsertSkips::runOnMachineFunction(MachineFunction &MF) {
   SkipThreshold = SkipThresholdFlag;
 
   SmallVector<MachineInstr *, 4> KillInstrs;
+  SmallVector<MachineInstr *, 4> EarlyTermInstrs;
   bool MadeChange = false;
 
   for (MachineBasicBlock &MBB : MF) {
@@ -451,18 +474,29 @@ bool SIInsertSkips::runOnMachineFunction(MachineFunction &MF) {
         }
         break;
 
+      case AMDGPU::SI_EARLY_TERMINATE_SCC0:
+        EarlyTermInstrs.push_back(&MI);
+        break;
+
       default:
         break;
       }
     }
   }
 
+  for (MachineInstr *Instr : EarlyTermInstrs) {
+    // Early termination in GS does nothing
+    if (MF.getFunction().getCallingConv() != CallingConv::AMDGPU_GS)
+      earlyTerm(*Instr);
+    Instr->eraseFromParent();
+  }
   for (MachineInstr *Kill : KillInstrs) {
     skipIfDead(*Kill->getParent(), std::next(Kill->getIterator()),
                Kill->getDebugLoc());
     Kill->eraseFromParent();
   }
   KillInstrs.clear();
+  EarlyTermInstrs.clear();
   EarlyExitBlock = nullptr;
 
   return MadeChange;
