@@ -1197,6 +1197,58 @@ define float @extra_args_no_replace(float* nocapture readonly %x, i32 %a, i32 %b
   ret float %add4.6
 }
 
+define float @extra_args_no_fast(float* %x, float %a, float %b) {
+; CHECK-LABEL: @extra_args_no_fast(
+; CHECK-NEXT:    [[ADDC:%.*]] = fadd fast float [[B:%.*]], 3.000000e+00
+; CHECK-NEXT:    [[ADD:%.*]] = fadd fast float [[A:%.*]], [[ADDC]]
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds float, float* [[X:%.*]], i64 1
+; CHECK-NEXT:    [[ARRAYIDX3_1:%.*]] = getelementptr inbounds float, float* [[X]], i64 2
+; CHECK-NEXT:    [[ARRAYIDX3_2:%.*]] = getelementptr inbounds float, float* [[X]], i64 3
+; CHECK-NEXT:    [[T0:%.*]] = load float, float* [[X]], align 4
+; CHECK-NEXT:    [[T1:%.*]] = load float, float* [[ARRAYIDX3]], align 4
+; CHECK-NEXT:    [[T2:%.*]] = load float, float* [[ARRAYIDX3_1]], align 4
+; CHECK-NEXT:    [[T3:%.*]] = load float, float* [[ARRAYIDX3_2]], align 4
+; CHECK-NEXT:    [[ADD1:%.*]] = fadd fast float [[T0]], [[ADD]]
+; CHECK-NEXT:    [[ADD4:%.*]] = fadd fast float [[T1]], [[ADD1]]
+; CHECK-NEXT:    [[ADD4_1:%.*]] = fadd float [[T2]], [[ADD4]]
+; CHECK-NEXT:    [[ADD4_2:%.*]] = fadd fast float [[T3]], [[ADD4_1]]
+; CHECK-NEXT:    [[ADD5:%.*]] = fadd fast float [[ADD4_2]], [[A]]
+; CHECK-NEXT:    ret float [[ADD5]]
+;
+; THRESHOLD-LABEL: @extra_args_no_fast(
+; THRESHOLD-NEXT:    [[ADDC:%.*]] = fadd fast float [[B:%.*]], 3.000000e+00
+; THRESHOLD-NEXT:    [[ADD:%.*]] = fadd fast float [[A:%.*]], [[ADDC]]
+; THRESHOLD-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds float, float* [[X:%.*]], i64 1
+; THRESHOLD-NEXT:    [[ARRAYIDX3_1:%.*]] = getelementptr inbounds float, float* [[X]], i64 2
+; THRESHOLD-NEXT:    [[ARRAYIDX3_2:%.*]] = getelementptr inbounds float, float* [[X]], i64 3
+; THRESHOLD-NEXT:    [[T0:%.*]] = load float, float* [[X]], align 4
+; THRESHOLD-NEXT:    [[T1:%.*]] = load float, float* [[ARRAYIDX3]], align 4
+; THRESHOLD-NEXT:    [[T2:%.*]] = load float, float* [[ARRAYIDX3_1]], align 4
+; THRESHOLD-NEXT:    [[T3:%.*]] = load float, float* [[ARRAYIDX3_2]], align 4
+; THRESHOLD-NEXT:    [[ADD1:%.*]] = fadd fast float [[T0]], [[ADD]]
+; THRESHOLD-NEXT:    [[ADD4:%.*]] = fadd fast float [[T1]], [[ADD1]]
+; THRESHOLD-NEXT:    [[ADD4_1:%.*]] = fadd float [[T2]], [[ADD4]]
+; THRESHOLD-NEXT:    [[ADD4_2:%.*]] = fadd fast float [[T3]], [[ADD4_1]]
+; THRESHOLD-NEXT:    [[ADD5:%.*]] = fadd fast float [[ADD4_2]], [[A]]
+; THRESHOLD-NEXT:    ret float [[ADD5]]
+;
+  %addc = fadd fast float %b, 3.0
+  %add = fadd fast float %a, %addc
+  %arrayidx3 = getelementptr inbounds float, float* %x, i64 1
+  %arrayidx3.1 = getelementptr inbounds float, float* %x, i64 2
+  %arrayidx3.2 = getelementptr inbounds float, float* %x, i64 3
+  %t0 = load float, float* %x, align 4
+  %t1 = load float, float* %arrayidx3, align 4
+  %t2 = load float, float* %arrayidx3.1, align 4
+  %t3 = load float, float* %arrayidx3.2, align 4
+  %add1 = fadd fast float %t0, %add
+  %add4 = fadd fast float %t1, %add1
+  %add4.1 = fadd float %t2, %add4  ; this is not a reduction candidate
+  %add4.2 = fadd fast float %t3, %add4.1
+  %add5 = fadd fast float %add4.2, %a
+  ret float %add5
+}
+
 define i32 @wobble(i32 %arg, i32 %bar) {
 ; CHECK-LABEL: @wobble(
 ; CHECK-NEXT:  bb:
