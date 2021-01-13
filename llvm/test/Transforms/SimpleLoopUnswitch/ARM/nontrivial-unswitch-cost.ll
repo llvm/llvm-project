@@ -111,33 +111,19 @@ loop_exit:
 define void @test_unswitch_minsize(i1* %ptr, i1 %cond) #0 {
 ; CHECK-LABEL: @test_unswitch_minsize(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[COND:%.*]], label [[ENTRY_SPLIT_US:%.*]], label [[ENTRY_SPLIT:%.*]]
-; CHECK:       entry.split.us:
-; CHECK-NEXT:    br label [[LOOP_BEGIN_US:%.*]]
-; CHECK:       loop_begin.us:
-; CHECK-NEXT:    call void @x()
-; CHECK-NEXT:    br label [[LOOP_A_US:%.*]]
-; CHECK:       loop_a.us:
-; CHECK-NEXT:    call void @a()
-; CHECK-NEXT:    br label [[LOOP_LATCH_US:%.*]]
-; CHECK:       loop_latch.us:
-; CHECK-NEXT:    [[V_US:%.*]] = load i1, i1* [[PTR:%.*]], align 1
-; CHECK-NEXT:    br i1 [[V_US]], label [[LOOP_BEGIN_US]], label [[LOOP_EXIT_SPLIT_US:%.*]]
-; CHECK:       loop_exit.split.us:
-; CHECK-NEXT:    br label [[LOOP_EXIT:%.*]]
-; CHECK:       entry.split:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN:%.*]]
 ; CHECK:       loop_begin:
 ; CHECK-NEXT:    call void @x()
-; CHECK-NEXT:    br label [[LOOP_B:%.*]]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[LOOP_A:%.*]], label [[LOOP_B:%.*]]
+; CHECK:       loop_a:
+; CHECK-NEXT:    call void @a()
+; CHECK-NEXT:    br label [[LOOP_LATCH:%.*]]
 ; CHECK:       loop_b:
 ; CHECK-NEXT:    call void @b()
-; CHECK-NEXT:    br label [[LOOP_LATCH:%.*]]
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
 ; CHECK:       loop_latch:
-; CHECK-NEXT:    [[V:%.*]] = load i1, i1* [[PTR]], align 1
-; CHECK-NEXT:    br i1 [[V]], label [[LOOP_BEGIN]], label [[LOOP_EXIT_SPLIT:%.*]]
-; CHECK:       loop_exit.split:
-; CHECK-NEXT:    br label [[LOOP_EXIT]]
+; CHECK-NEXT:    [[V:%.*]] = load i1, i1* [[PTR:%.*]], align 1
+; CHECK-NEXT:    br i1 [[V]], label [[LOOP_BEGIN]], label [[LOOP_EXIT:%.*]]
 ; CHECK:       loop_exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -235,39 +221,25 @@ loop_exit:
 define void @test_unswitch_non_dup_code_minsize(i1* %ptr, i1 %cond) #0 {
 ; CHECK-LABEL: @test_unswitch_non_dup_code_minsize(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[COND:%.*]], label [[ENTRY_SPLIT_US:%.*]], label [[ENTRY_SPLIT:%.*]]
-; CHECK:       entry.split.us:
-; CHECK-NEXT:    br label [[LOOP_BEGIN_US:%.*]]
-; CHECK:       loop_begin.us:
-; CHECK-NEXT:    call void @x()
-; CHECK-NEXT:    br label [[LOOP_A_US:%.*]]
-; CHECK:       loop_a.us:
-; CHECK-NEXT:    call void @a()
-; CHECK-NEXT:    call void @a()
-; CHECK-NEXT:    call void @a()
-; CHECK-NEXT:    call void @a()
-; CHECK-NEXT:    br label [[LOOP_LATCH_US:%.*]]
-; CHECK:       loop_latch.us:
-; CHECK-NEXT:    [[V_US:%.*]] = load i1, i1* [[PTR:%.*]], align 1
-; CHECK-NEXT:    br i1 [[V_US]], label [[LOOP_BEGIN_US]], label [[LOOP_EXIT_SPLIT_US:%.*]]
-; CHECK:       loop_exit.split.us:
-; CHECK-NEXT:    br label [[LOOP_EXIT:%.*]]
-; CHECK:       entry.split:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN:%.*]]
 ; CHECK:       loop_begin:
 ; CHECK-NEXT:    call void @x()
-; CHECK-NEXT:    br label [[LOOP_B:%.*]]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[LOOP_A:%.*]], label [[LOOP_B:%.*]]
+; CHECK:       loop_a:
+; CHECK-NEXT:    call void @a()
+; CHECK-NEXT:    call void @a()
+; CHECK-NEXT:    call void @a()
+; CHECK-NEXT:    call void @a()
+; CHECK-NEXT:    br label [[LOOP_LATCH:%.*]]
 ; CHECK:       loop_b:
 ; CHECK-NEXT:    call void @b()
 ; CHECK-NEXT:    call void @b()
 ; CHECK-NEXT:    call void @b()
 ; CHECK-NEXT:    call void @b()
-; CHECK-NEXT:    br label [[LOOP_LATCH:%.*]]
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
 ; CHECK:       loop_latch:
-; CHECK-NEXT:    [[V:%.*]] = load i1, i1* [[PTR]], align 1
-; CHECK-NEXT:    br i1 [[V]], label [[LOOP_BEGIN]], label [[LOOP_EXIT_SPLIT:%.*]]
-; CHECK:       loop_exit.split:
-; CHECK-NEXT:    br label [[LOOP_EXIT]]
+; CHECK-NEXT:    [[V:%.*]] = load i1, i1* [[PTR:%.*]], align 1
+; CHECK-NEXT:    br i1 [[V]], label [[LOOP_BEGIN]], label [[LOOP_EXIT:%.*]]
 ; CHECK:       loop_exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -387,45 +359,31 @@ loop_exit:
 define void @test_unswitch_non_dup_code_in_cfg_minsize(i1* %ptr, i1 %cond) #0 {
 ; CHECK-LABEL: @test_unswitch_non_dup_code_in_cfg_minsize(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[COND:%.*]], label [[ENTRY_SPLIT_US:%.*]], label [[ENTRY_SPLIT:%.*]]
-; CHECK:       entry.split.us:
-; CHECK-NEXT:    br label [[LOOP_BEGIN_US:%.*]]
-; CHECK:       loop_begin.us:
-; CHECK-NEXT:    call void @x()
-; CHECK-NEXT:    br label [[LOOP_A_US:%.*]]
-; CHECK:       loop_a.us:
-; CHECK-NEXT:    [[V1_US:%.*]] = load i1, i1* [[PTR:%.*]], align 1
-; CHECK-NEXT:    br i1 [[V1_US]], label [[LOOP_A_A_US:%.*]], label [[LOOP_A_B_US:%.*]]
-; CHECK:       loop_a_b.us:
-; CHECK-NEXT:    call void @a()
-; CHECK-NEXT:    br label [[LOOP_LATCH_US:%.*]]
-; CHECK:       loop_a_a.us:
-; CHECK-NEXT:    call void @a()
-; CHECK-NEXT:    br label [[LOOP_LATCH_US]]
-; CHECK:       loop_latch.us:
-; CHECK-NEXT:    [[V3_US:%.*]] = load i1, i1* [[PTR]], align 1
-; CHECK-NEXT:    br i1 [[V3_US]], label [[LOOP_BEGIN_US]], label [[LOOP_EXIT_SPLIT_US:%.*]]
-; CHECK:       loop_exit.split.us:
-; CHECK-NEXT:    br label [[LOOP_EXIT:%.*]]
-; CHECK:       entry.split:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN:%.*]]
 ; CHECK:       loop_begin:
 ; CHECK-NEXT:    call void @x()
-; CHECK-NEXT:    br label [[LOOP_B:%.*]]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[LOOP_A:%.*]], label [[LOOP_B:%.*]]
+; CHECK:       loop_a:
+; CHECK-NEXT:    [[V1:%.*]] = load i1, i1* [[PTR:%.*]], align 1
+; CHECK-NEXT:    br i1 [[V1]], label [[LOOP_A_A:%.*]], label [[LOOP_A_B:%.*]]
+; CHECK:       loop_a_a:
+; CHECK-NEXT:    call void @a()
+; CHECK-NEXT:    br label [[LOOP_LATCH:%.*]]
+; CHECK:       loop_a_b:
+; CHECK-NEXT:    call void @a()
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
 ; CHECK:       loop_b:
 ; CHECK-NEXT:    [[V2:%.*]] = load i1, i1* [[PTR]], align 1
 ; CHECK-NEXT:    br i1 [[V2]], label [[LOOP_B_A:%.*]], label [[LOOP_B_B:%.*]]
 ; CHECK:       loop_b_a:
 ; CHECK-NEXT:    call void @b()
-; CHECK-NEXT:    br label [[LOOP_LATCH:%.*]]
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
 ; CHECK:       loop_b_b:
 ; CHECK-NEXT:    call void @b()
 ; CHECK-NEXT:    br label [[LOOP_LATCH]]
 ; CHECK:       loop_latch:
 ; CHECK-NEXT:    [[V3:%.*]] = load i1, i1* [[PTR]], align 1
-; CHECK-NEXT:    br i1 [[V3]], label [[LOOP_BEGIN]], label [[LOOP_EXIT_SPLIT:%.*]]
-; CHECK:       loop_exit.split:
-; CHECK-NEXT:    br label [[LOOP_EXIT]]
+; CHECK-NEXT:    br i1 [[V3]], label [[LOOP_BEGIN]], label [[LOOP_EXIT:%.*]]
 ; CHECK:       loop_exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -666,31 +624,22 @@ loop_exit:
 define void @test_unswitch_dedicated_exiting_minsize(i1* %ptr, i1 %cond) #0 {
 ; CHECK-LABEL: @test_unswitch_dedicated_exiting_minsize(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[COND:%.*]], label [[ENTRY_SPLIT_US:%.*]], label [[ENTRY_SPLIT:%.*]]
-; CHECK:       entry.split.us:
-; CHECK-NEXT:    br label [[LOOP_BEGIN_US:%.*]]
-; CHECK:       loop_begin.us:
-; CHECK-NEXT:    call void @x()
-; CHECK-NEXT:    br label [[LOOP_A_US:%.*]]
-; CHECK:       loop_a.us:
-; CHECK-NEXT:    call void @a()
-; CHECK-NEXT:    br label [[LOOP_LATCH_US:%.*]]
-; CHECK:       loop_latch.us:
-; CHECK-NEXT:    [[V_US:%.*]] = load i1, i1* [[PTR:%.*]], align 1
-; CHECK-NEXT:    br i1 [[V_US]], label [[LOOP_BEGIN_US]], label [[LOOP_EXIT_SPLIT_US:%.*]]
-; CHECK:       loop_exit.split.us:
-; CHECK-NEXT:    br label [[LOOP_EXIT:%.*]]
-; CHECK:       entry.split:
 ; CHECK-NEXT:    br label [[LOOP_BEGIN:%.*]]
 ; CHECK:       loop_begin:
 ; CHECK-NEXT:    call void @x()
-; CHECK-NEXT:    br label [[LOOP_B_EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[LOOP_A:%.*]], label [[LOOP_B_EXIT:%.*]]
+; CHECK:       loop_a:
+; CHECK-NEXT:    call void @a()
+; CHECK-NEXT:    br label [[LOOP_LATCH:%.*]]
 ; CHECK:       loop_b_exit:
 ; CHECK-NEXT:    call void @b()
 ; CHECK-NEXT:    call void @b()
 ; CHECK-NEXT:    call void @b()
 ; CHECK-NEXT:    call void @b()
 ; CHECK-NEXT:    ret void
+; CHECK:       loop_latch:
+; CHECK-NEXT:    [[V:%.*]] = load i1, i1* [[PTR:%.*]], align 1
+; CHECK-NEXT:    br i1 [[V]], label [[LOOP_BEGIN]], label [[LOOP_EXIT:%.*]]
 ; CHECK:       loop_exit:
 ; CHECK-NEXT:    ret void
 ;
