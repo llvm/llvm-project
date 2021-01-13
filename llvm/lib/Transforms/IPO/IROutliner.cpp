@@ -510,13 +510,16 @@ static void getCodeExtractorArguments(
   // outlined region. PremappedInputs are the arguments found by the
   // CodeExtractor, removing conditions such as sunken allocas, but that
   // may need to be remapped due to the extracted output values replacing
-  // the original values.
-  SetVector<Value *> OverallInputs, PremappedInputs, SinkCands, HoistCands;
+  // the original values. We use DummyOutputs for this first run of finding
+  // inputs and outputs since the outputs could change during findAllocas,
+  // the correct set of extracted outputs will be in the final Outputs ValueSet.
+  SetVector<Value *> OverallInputs, PremappedInputs, SinkCands, HoistCands,
+      DummyOutputs;
 
   // Use the code extractor to get the inputs and outputs, without sunken
   // allocas or removing llvm.assumes.
   CodeExtractor *CE = Region.CE;
-  CE->findInputsOutputs(OverallInputs, Outputs, SinkCands);
+  CE->findInputsOutputs(OverallInputs, DummyOutputs, SinkCands);
   assert(Region.StartBB && "Region must have a start BasicBlock!");
   Function *OrigF = Region.StartBB->getParent();
   CodeExtractorAnalysisCache CEAC(*OrigF);
@@ -1263,6 +1266,16 @@ void IROutliner::pruneIncompatibleRegions(
       continue;
 
     bool BadInst = any_of(IRSC, [this](IRInstructionData &ID) {
+      // We check if there is a discrepancy between the InstructionDataList
+      // and the actual next instruction in the module.  If there is, it means
+      // that an extra instruction was added, likely by the CodeExtractor.
+
+      // Since we do not have any similarity data about this particular
+      // instruction, we cannot confidently outline it, and must discard this
+      // candidate.
+      if (std::next(ID.getIterator())->Inst !=
+          ID.Inst->getNextNonDebugInstruction())
+        return true;
       return !this->InstructionClassifier.visit(ID.Inst);
     });
 
