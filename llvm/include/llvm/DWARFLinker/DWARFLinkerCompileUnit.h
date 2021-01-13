@@ -159,7 +159,7 @@ public:
   /// Compute the end offset for this unit. Must be called after the CU's DIEs
   /// have been cloned.  \returns the next unit offset (which is also the
   /// current debug_info section size).
-  uint64_t computeNextUnitOffset();
+  uint64_t computeNextUnitOffset(uint16_t DwarfVersion);
 
   /// Keep track of a forward reference to DIE \p Die in \p RefUnit by \p
   /// Attr. The attribute should be fixed up later to point to the absolute
