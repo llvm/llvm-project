@@ -58,7 +58,7 @@ public:
   public:
     /// Load the given object binary in memory.
     Error load(IntrusiveRefCntPtr<vfs::FileSystem> VFS, StringRef Filename,
-               TimestampTy Timestamp, bool Verbose = false);
+               bool Verbose = false);
 
     /// Access all owned ObjectFiles.
     std::vector<const object::ObjectFile *> getObjects() const;

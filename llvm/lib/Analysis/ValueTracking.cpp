@@ -4737,7 +4737,7 @@ static bool canCreateUndefOrPoison(const Operator *Op, bool PoisonOnly) {
         ShiftAmounts.push_back(C);
 
       bool Safe = llvm::all_of(ShiftAmounts, [](Constant *C) {
-        auto *CI = dyn_cast<ConstantInt>(C);
+        auto *CI = dyn_cast_or_null<ConstantInt>(C);
         return CI && CI->getValue().ult(C->getType()->getIntegerBitWidth());
       });
       return !Safe;

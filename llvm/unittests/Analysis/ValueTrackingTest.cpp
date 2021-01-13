@@ -943,6 +943,7 @@ TEST_F(ValueTrackingTest, isGuaranteedNotToBeUndefOrPoison_assume) {
 
 TEST(ValueTracking, canCreatePoisonOrUndef) {
   std::string AsmHead =
+      "@s = external dso_local global i32, align 1\n"
       "declare i32 @g(i32)\n"
       "define void @f(i32 %x, i32 %y, float %fx, float %fy, i1 %cond, "
       "<4 x i32> %vx, <4 x i32> %vx2, <vscale x 4 x i32> %svx, i8* %p) {\n";
@@ -1001,7 +1002,11 @@ TEST(ValueTracking, canCreatePoisonOrUndef) {
       {{true, false}, "call i32 @g(i32 %x)"},
       {{false, false}, "call noundef i32 @g(i32 %x)"},
       {{true, false}, "fcmp nnan oeq float %fx, %fy"},
-      {{false, false}, "fcmp oeq float %fx, %fy"}};
+      {{false, false}, "fcmp oeq float %fx, %fy"},
+      {{true, false},
+       "ashr <4 x i32> %vx, select (i1 icmp sgt (i32 ptrtoint (i32* @s to "
+       "i32), i32 1), <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 "
+       "2, i32 3>)"}};
 
   std::string AssemblyStr = AsmHead;
   for (auto &Itm : Data)
