@@ -206,7 +206,7 @@ body:             |
     $rax = MOV64rm $rsp, 1, $noreg, 32, $noreg :: (load 8 from %stack.5)
     MOV64mr $rsp, 1, $noreg, 48, $noreg, killed $rax :: (store 8 into %stack.3)
     $rax = MOV64ri @wibble
-    STATEPOINT 2882400000, 0, 0, killed $rax, 2, 0, 2, 0, 2, 30, 2, 1, 2, 0, 2, 99, 2, 0, 2, 12, 2, 0, 2, 10, 1, 8, $rsp, 24, 2, 10, 2, 0, 2, 10, 1, 8, $rsp, 16, 2, 10, 2, 4278124286, 2, 6, 2, 4278124286, 2, 7, 1, 8, $rsp, 8, 2, 99, 2, 0, 2, 7, 2, 4278124286, 2, 99, 2, 0, 2, 13, 1, 8, $rsp, 48, 2, 7, 2, 4278124286, 2, 99, 2, 0, csr_64, implicit-def $rsp :: (volatile load 8 from %stack.0), (volatile load 8 from %stack.1), (volatile load 8 from %stack.2), (volatile load 8 from %stack.3)
+    STATEPOINT 2882400000, 0, 0, killed $rax, 2, 0, 2, 0, 2, 30, 2, 1, 2, 0, 2, 99, 2, 0, 2, 12, 2, 0, 2, 10, 1, 8, $rsp, 24, 2, 10, 2, 0, 2, 10, 1, 8, $rsp, 16, 2, 10, 2, 4278124286, 2, 6, 2, 4278124286, 2, 7, 1, 8, $rsp, 8, 2, 99, 2, 0, 2, 7, 2, 4278124286, 2, 99, 2, 0, 2, 13, 1, 8, $rsp, 48, 2, 7, 2, 4278124286, 2, 99, 2, 0, 2, 0, 2, 0, 2, 0, csr_64, implicit-def $rsp :: (volatile load 8 from %stack.0), (volatile load 8 from %stack.1), (volatile load 8 from %stack.2), (volatile load 8 from %stack.3)
     $esi = XOR32rr undef $esi, undef $esi, implicit-def dead $eflags
     $r12 = IMPLICIT_DEF
   
@@ -283,11 +283,11 @@ body:             |
     MOVSDmr $rsp, 1, $noreg, 8, $noreg, killed $xmm0 :: (store 8 into %stack.2)
     $rax = MOV64ri @wobble
     $edi = MOV32ri -121
-    STATEPOINT 2882400000, 0, 1, killed $rax, $edi, 2, 0, 2, 0, 2, 38, 2, 1, 2, 0, 2, 270, 2, 4, 2, 12, 2, 0, 2, 11, 2, 4278124286, 2, 99, 2, 0, 2, 10, 1, 8, $rsp, 24, 2, 6, 2, 4278124286, 2, 99, 2, 0, 2, 99, 2, 0, 2, 10, 1, 8, $rsp, 16, 2, 10, 2, 4278124286, 2, 99, 2, 0, 2, 7, 1, 8, $rsp, 8, 2, 99, 2, 0, 2, 7, 2, 4278124286, 2, 99, 2, 0, 2, 13, 2, 4278124286, 2, 99, 2, 0, 2, 99, 2, 0, csr_64, implicit-def $rsp :: (volatile load 8 from %stack.0), (volatile load 8 from %stack.1), (volatile load 8 from %stack.2)
+    STATEPOINT 2882400000, 0, 1, killed $rax, $edi, 2, 0, 2, 0, 2, 38, 2, 1, 2, 0, 2, 270, 2, 4, 2, 12, 2, 0, 2, 11, 2, 4278124286, 2, 99, 2, 0, 2, 10, 1, 8, $rsp, 24, 2, 6, 2, 4278124286, 2, 99, 2, 0, 2, 99, 2, 0, 2, 10, 1, 8, $rsp, 16, 2, 10, 2, 4278124286, 2, 99, 2, 0, 2, 7, 1, 8, $rsp, 8, 2, 99, 2, 0, 2, 7, 2, 4278124286, 2, 99, 2, 0, 2, 13, 2, 4278124286, 2, 99, 2, 0, 2, 99, 2, 0, 2, 0, 2, 0, 2, 0, csr_64, implicit-def $rsp :: (volatile load 8 from %stack.0), (volatile load 8 from %stack.1), (volatile load 8 from %stack.2)
   
   bb.13.bb59:
     $rax = MOV64ri @wobble
     $edi = MOV32ri 8
-    STATEPOINT 2882400000, 0, 1, killed $rax, $edi, 2, 0, 2, 0, 2, 38, 2, 1, 2, 0, 2, 123, 2, 4, 2, 12, 2, 0, 2, 13, 2, 0, 2, 99, 2, 4278124286, 2, 13, 2, 0, 2, 10, 2, 4278124286, 2, 99, 2, 4278124286, 2, 99, 2, 4278124286, 2, 99, 2, 4278124286, 2, 99, 2, 0, 2, 99, 2, 4278124286, 2, 99, 2, 4278124286, 2, 99, 2, 0, 2, 99, 2, 4278124286, 2, 99, 2, 0, 2, 13, 2, 0, 2, 99, 2, 4278124286, 2, 99, 2, 0, csr_64, implicit-def $rsp
+    STATEPOINT 2882400000, 0, 1, killed $rax, $edi, 2, 0, 2, 0, 2, 38, 2, 1, 2, 0, 2, 123, 2, 4, 2, 12, 2, 0, 2, 13, 2, 0, 2, 99, 2, 4278124286, 2, 13, 2, 0, 2, 10, 2, 4278124286, 2, 99, 2, 4278124286, 2, 99, 2, 4278124286, 2, 99, 2, 4278124286, 2, 99, 2, 0, 2, 99, 2, 4278124286, 2, 99, 2, 4278124286, 2, 99, 2, 0, 2, 99, 2, 4278124286, 2, 99, 2, 0, 2, 13, 2, 0, 2, 99, 2, 4278124286, 2, 99, 2, 0, 2, 0, 2, 0, 2, 0, csr_64, implicit-def $rsp
 
 ...
