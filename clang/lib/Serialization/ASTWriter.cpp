@@ -4159,11 +4159,11 @@ void ASTWriter::WritePackPragmaOptions(Sema &SemaRef) {
     return;
 
   RecordData Record;
-  Record.push_back(SemaRef.AlignPackStack.CurrentValue);
+  AddAlignPackInfo(SemaRef.AlignPackStack.CurrentValue, Record);
   AddSourceLocation(SemaRef.AlignPackStack.CurrentPragmaLocation, Record);
   Record.push_back(SemaRef.AlignPackStack.Stack.size());
   for (const auto &StackEntry : SemaRef.AlignPackStack.Stack) {
-    Record.push_back(StackEntry.Value);
+    AddAlignPackInfo(StackEntry.Value, Record);
     AddSourceLocation(StackEntry.PragmaLocation, Record);
     AddSourceLocation(StackEntry.PragmaPushLocation, Record);
     AddString(StackEntry.StackSlotLabel, Record);
@@ -5105,6 +5105,12 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
     OffsetsRecord.push_back(GetDeclRef(D));
     OffsetsRecord.push_back(Record.Emit(DECL_UPDATES));
   }
+}
+
+void ASTWriter::AddAlignPackInfo(const Sema::AlignPackInfo &Info,
+                                 RecordDataImpl &Record) {
+  uint32_t Raw = Sema::AlignPackInfo::getRawEncoding(Info);
+  Record.push_back(Raw);
 }
 
 void ASTWriter::AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record) {

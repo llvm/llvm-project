@@ -6106,6 +6106,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                    options::OPT_fno_apple_pragma_pack, false))
     CmdArgs.push_back("-fapple-pragma-pack");
 
+  if (Args.hasFlag(options::OPT_fxl_pragma_pack,
+                   options::OPT_fno_xl_pragma_pack, RawTriple.isOSAIX()))
+    CmdArgs.push_back("-fxl-pragma-pack");
+
   // Remarks can be enabled with any of the `-f.*optimization-record.*` flags.
   if (willEmitRemarks(Args) && checkRemarksOptions(D, Args, Triple))
     renderRemarksOptions(Args, CmdArgs, Triple, Input, Output, JA);

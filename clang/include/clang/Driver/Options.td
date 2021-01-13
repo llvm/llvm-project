@@ -1026,6 +1026,8 @@ defm apple_pragma_pack : BoolFOption<"apple-pragma-pack",
   "LangOpts->ApplePragmaPack", DefaultsToFalse,
   ChangedBy<PosFlag, [], "Enable Apple gcc-compatible #pragma pack handling">,
   ResetBy<NegFlag>>;
+def fxl_pragma_pack : Flag<["-"], "fxl-pragma-pack">, Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"Enable IBM XL #pragma pack handling">;
 def shared_libsan : Flag<["-"], "shared-libsan">,
   HelpText<"Dynamically link the sanitizer runtime">;
 def static_libsan : Flag<["-"], "static-libsan">,
@@ -1966,6 +1968,7 @@ def fmudflapth : Flag<["-"], "fmudflapth">, Group<f_Group>;
 def fmudflap : Flag<["-"], "fmudflap">, Group<f_Group>;
 def fnested_functions : Flag<["-"], "fnested-functions">, Group<f_Group>;
 def fnext_runtime : Flag<["-"], "fnext-runtime">, Group<f_Group>;
+def fno_xl_pragma_pack : Flag<["-"], "fno-xl-pragma-pack">, Group<f_Group>;
 def fno_asm : Flag<["-"], "fno-asm">, Group<f_Group>;
 def fno_asynchronous_unwind_tables : Flag<["-"], "fno-asynchronous-unwind-tables">, Group<f_Group>;
 def fno_assume_sane_operator_new : Flag<["-"], "fno-assume-sane-operator-new">, Group<f_Group>,
