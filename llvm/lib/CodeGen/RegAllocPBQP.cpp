@@ -230,9 +230,9 @@ private:
       return false;
 
     if (NRegs < MRegs)
-      return D.count(IKey(NRegs, MRegs)) > 0;
+      return D.contains(IKey(NRegs, MRegs));
 
-    return D.count(IKey(MRegs, NRegs)) > 0;
+    return D.contains(IKey(MRegs, NRegs));
   }
 
   void setDisjointAllowedRegs(const PBQPRAGraph &G, PBQPRAGraph::NodeId NId,

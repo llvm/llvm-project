@@ -7,13 +7,13 @@
 // CHECK: declare void @return_void()
 llvm.func @return_void() -> !llvm.void
 // CHECK: declare half @return_half()
-llvm.func @return_half() -> !llvm.half
+llvm.func @return_half() -> f16
 // CHECK: declare bfloat @return_bfloat()
-llvm.func @return_bfloat() -> !llvm.bfloat
+llvm.func @return_bfloat() -> bf16
 // CHECK: declare float @return_float()
-llvm.func @return_float() -> !llvm.float
+llvm.func @return_float() -> f32
 // CHECK: declare double @return_double()
-llvm.func @return_double() -> !llvm.double
+llvm.func @return_double() -> f64
 // CHECK: declare fp128 @return_fp128()
 llvm.func @return_fp128() -> !llvm.fp128
 // CHECK: declare x86_fp80 @return_x86_fp80()
@@ -28,17 +28,17 @@ llvm.func @return_x86_mmx() -> !llvm.x86_mmx
 //
 
 // CHECK: declare void @f_void_i32(i32)
-llvm.func @f_void_i32(!llvm.i32) -> !llvm.void
+llvm.func @f_void_i32(i32) -> !llvm.void
 // CHECK: declare i32 @f_i32_empty()
-llvm.func @f_i32_empty() -> !llvm.i32
+llvm.func @f_i32_empty() -> i32
 // CHECK: declare i32 @f_i32_half_bfloat_float_double(half, bfloat, float, double)
-llvm.func @f_i32_half_bfloat_float_double(!llvm.half, !llvm.bfloat, !llvm.float, !llvm.double) -> !llvm.i32
+llvm.func @f_i32_half_bfloat_float_double(f16, bf16, f32, f64) -> i32
 // CHECK: declare i32 @f_i32_i32_i32(i32, i32)
-llvm.func @f_i32_i32_i32(!llvm.i32, !llvm.i32) -> !llvm.i32
+llvm.func @f_i32_i32_i32(i32, i32) -> i32
 // CHECK: declare void @f_void_variadic(...)
 llvm.func @f_void_variadic(...)
 // CHECK: declare void @f_void_i32_i32_variadic(i32, i32, ...)
-llvm.func @f_void_i32_i32_variadic(!llvm.i32, !llvm.i32, ...)
+llvm.func @f_void_i32_i32_variadic(i32, i32, ...)
 // CHECK: declare i32 (i32)* @f_f_i32_i32()
 llvm.func @f_f_i32_i32() -> !llvm.ptr<func<i32 (i32)>>
 
@@ -47,19 +47,19 @@ llvm.func @f_f_i32_i32() -> !llvm.ptr<func<i32 (i32)>>
 //
 
 // CHECK: declare i1 @return_i1()
-llvm.func @return_i1() -> !llvm.i1
+llvm.func @return_i1() -> i1
 // CHECK: declare i8 @return_i8()
-llvm.func @return_i8() -> !llvm.i8
+llvm.func @return_i8() -> i8
 // CHECK: declare i16 @return_i16()
-llvm.func @return_i16() -> !llvm.i16
+llvm.func @return_i16() -> i16
 // CHECK: declare i32 @return_i32()
-llvm.func @return_i32() -> !llvm.i32
+llvm.func @return_i32() -> i32
 // CHECK: declare i64 @return_i64()
-llvm.func @return_i64() -> !llvm.i64
+llvm.func @return_i64() -> i64
 // CHECK: declare i57 @return_i57()
-llvm.func @return_i57() -> !llvm.i57
+llvm.func @return_i57() -> i57
 // CHECK: declare i129 @return_i129()
-llvm.func @return_i129() -> !llvm.i129
+llvm.func @return_i129() -> i129
 
 //
 // Pointers.
@@ -68,7 +68,7 @@ llvm.func @return_i129() -> !llvm.i129
 // CHECK: declare i8* @return_pi8()
 llvm.func @return_pi8() -> !llvm.ptr<i8>
 // CHECK: declare float* @return_pfloat()
-llvm.func @return_pfloat() -> !llvm.ptr<float>
+llvm.func @return_pfloat() -> !llvm.ptr<f32>
 // CHECK: declare i8** @return_ppi8()
 llvm.func @return_ppi8() -> !llvm.ptr<ptr<i8>>
 // CHECK: declare i8***** @return_pppppi8()
@@ -87,15 +87,15 @@ llvm.func @return_ppi8_42_9() -> !llvm.ptr<ptr<i8, 42>, 9>
 //
 
 // CHECK: declare <4 x i32> @return_v4_i32()
-llvm.func @return_v4_i32() -> !llvm.vec<4 x i32>
+llvm.func @return_v4_i32() -> vector<4xi32>
 // CHECK: declare <4 x float> @return_v4_float()
-llvm.func @return_v4_float() -> !llvm.vec<4 x float>
+llvm.func @return_v4_float() -> vector<4xf32>
 // CHECK: declare <vscale x 4 x i32> @return_vs_4_i32()
-llvm.func @return_vs_4_i32() -> !llvm.vec<? x 4 x i32>
+llvm.func @return_vs_4_i32() -> !llvm.vec<?x4 x i32>
 // CHECK: declare <vscale x 8 x half> @return_vs_8_half()
-llvm.func @return_vs_8_half() -> !llvm.vec<? x 8 x half>
+llvm.func @return_vs_8_half() -> !llvm.vec<?x8 x f16>
 // CHECK: declare <4 x i8*> @return_v_4_pi8()
-llvm.func @return_v_4_pi8() -> !llvm.vec<4 x ptr<i8>>
+llvm.func @return_v_4_pi8() -> !llvm.vec<4xptr<i8>>
 
 //
 // Arrays.
@@ -104,11 +104,11 @@ llvm.func @return_v_4_pi8() -> !llvm.vec<4 x ptr<i8>>
 // CHECK: declare [10 x i32] @return_a10_i32()
 llvm.func @return_a10_i32() -> !llvm.array<10 x i32>
 // CHECK: declare [8 x float] @return_a8_float()
-llvm.func @return_a8_float() -> !llvm.array<8 x float>
+llvm.func @return_a8_float() -> !llvm.array<8 x f32>
 // CHECK: declare [10 x i32 addrspace(4)*] @return_a10_pi32_4()
 llvm.func @return_a10_pi32_4() -> !llvm.array<10 x ptr<i32, 4>>
 // CHECK: declare [10 x [4 x float]] @return_a10_a4_float()
-llvm.func @return_a10_a4_float() -> !llvm.array<10 x array<4 x float>>
+llvm.func @return_a10_a4_float() -> !llvm.array<10 x array<4 x f32>>
 
 //
 // Literal structures.
@@ -119,20 +119,20 @@ llvm.func @return_struct_empty() -> !llvm.struct<()>
 // CHECK: declare { i32 } @return_s_i32()
 llvm.func @return_s_i32() -> !llvm.struct<(i32)>
 // CHECK: declare { float, i32 } @return_s_float_i32()
-llvm.func @return_s_float_i32() -> !llvm.struct<(float, i32)>
+llvm.func @return_s_float_i32() -> !llvm.struct<(f32, i32)>
 // CHECK: declare { { i32 } } @return_s_s_i32()
 llvm.func @return_s_s_i32() -> !llvm.struct<(struct<(i32)>)>
 // CHECK: declare { i32, { i32 }, float } @return_s_i32_s_i32_float()
-llvm.func @return_s_i32_s_i32_float() -> !llvm.struct<(i32, struct<(i32)>, float)>
+llvm.func @return_s_i32_s_i32_float() -> !llvm.struct<(i32, struct<(i32)>, f32)>
 
 // CHECK: declare <{}> @return_sp_empty()
 llvm.func @return_sp_empty() -> !llvm.struct<packed ()>
 // CHECK: declare <{ i32 }> @return_sp_i32()
 llvm.func @return_sp_i32() -> !llvm.struct<packed (i32)>
 // CHECK: declare <{ float, i32 }> @return_sp_float_i32()
-llvm.func @return_sp_float_i32() -> !llvm.struct<packed (float, i32)>
+llvm.func @return_sp_float_i32() -> !llvm.struct<packed (f32, i32)>
 // CHECK: declare <{ i32, { i32, i1 }, float }> @return_sp_i32_s_i31_1_float()
-llvm.func @return_sp_i32_s_i31_1_float() -> !llvm.struct<packed (i32, struct<(i32, i1)>, float)>
+llvm.func @return_sp_i32_s_i31_1_float() -> !llvm.struct<packed (i32, struct<(i32, i1)>, f32)>
 
 // CHECK: declare { <{ i32 }> } @return_s_sp_i32()
 llvm.func @return_s_sp_i32() -> !llvm.struct<(struct<packed (i32)>)>
@@ -161,7 +161,7 @@ llvm.func @return_s_empty() -> !llvm.struct<"empty", ()>
 // CHECK: declare %opaque
 llvm.func @return_s_opaque() -> !llvm.struct<"opaque", opaque>
 // CHECK: declare %long
-llvm.func @return_s_long() -> !llvm.struct<"long", (i32, struct<(i32, i1)>, float, ptr<func<void ()>>)>
+llvm.func @return_s_long() -> !llvm.struct<"long", (i32, struct<(i32, i1)>, f32, ptr<func<void ()>>)>
 // CHECK: declare %self-recursive
 llvm.func @return_s_self_recursive() -> !llvm.struct<"self-recursive", (ptr<struct<"self-recursive">>)>
 // CHECK: declare %unpacked

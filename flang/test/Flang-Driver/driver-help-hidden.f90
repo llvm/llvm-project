@@ -19,6 +19,7 @@
 ! CHECK-EMPTY:
 ! CHECK-NEXT:OPTIONS:
 ! CHECK-NEXT: -###      Print (but do not run) the commands to run for this compilation
+! CHECK-NEXT: -c        Only run preprocess, compile, and assemble steps
 ! CHECK-NEXT: -D <macro>=<value>     Define <macro> to <value> (or 1 if <value> omitted)
 ! CHECK-NEXT: -E        Only run the preprocessor
 ! CHECK-NEXT: -fcolor-diagnostics    Enable colors in diagnostics

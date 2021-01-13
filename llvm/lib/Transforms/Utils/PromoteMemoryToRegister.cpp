@@ -129,8 +129,8 @@ struct AllocaInfo {
     // As we scan the uses of the alloca instruction, keep track of stores,
     // and decide whether all of the loads and stores to the alloca are within
     // the same basic block.
-    for (auto UI = AI->user_begin(), E = AI->user_end(); UI != E;) {
-      Instruction *User = cast<Instruction>(*UI++);
+    for (User *U : AI->users()) {
+      Instruction *User = cast<Instruction>(U);
 
       if (StoreInst *SI = dyn_cast<StoreInst>(User)) {
         // Remember the basic blocks which define new values for the alloca
@@ -366,8 +366,8 @@ static bool rewriteSingleStoreAlloca(AllocaInst *AI, AllocaInfo &Info,
   // Clear out UsingBlocks.  We will reconstruct it here if needed.
   Info.UsingBlocks.clear();
 
-  for (auto UI = AI->user_begin(), E = AI->user_end(); UI != E;) {
-    Instruction *UserInst = cast<Instruction>(*UI++);
+  for (User *U : make_early_inc_range(AI->users())) {
+    Instruction *UserInst = cast<Instruction>(U);
     if (UserInst == OnlyStore)
       continue;
     LoadInst *LI = cast<LoadInst>(UserInst);
@@ -480,8 +480,8 @@ static bool promoteSingleBlockAlloca(AllocaInst *AI, const AllocaInfo &Info,
 
   // Walk all of the loads from this alloca, replacing them with the nearest
   // store above them, if any.
-  for (auto UI = AI->user_begin(), E = AI->user_end(); UI != E;) {
-    LoadInst *LI = dyn_cast<LoadInst>(*UI++);
+  for (User *U : make_early_inc_range(AI->users())) {
+    LoadInst *LI = dyn_cast<LoadInst>(U);
     if (!LI)
       continue;
 

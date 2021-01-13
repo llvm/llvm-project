@@ -810,8 +810,11 @@ define void @dyn_insertelement_v8f64_const_s_v_v(double %val, i32 %idx) {
 ; GPRIDX-NEXT:    v_cndmask_b32_e64 v16, v16, v1, s[12:13]
 ; GPRIDX-NEXT:    v_cndmask_b32_e64 v18, v18, v1, s[14:15]
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[3:6], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[7:10], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[11:14], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[15:18], off
 ; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    s_setpc_b64 s[30:31]
@@ -874,8 +877,11 @@ define void @dyn_insertelement_v8f64_const_s_v_v(double %val, i32 %idx) {
 ; MOVREL-NEXT:    v_cndmask_b32_e64 v16, v16, v1, s8
 ; MOVREL-NEXT:    v_cndmask_b32_e64 v18, v18, v1, s9
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[3:6], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[7:10], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[11:14], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[15:18], off
 ; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    s_setpc_b64 s[30:31]
@@ -954,9 +960,13 @@ define amdgpu_ps void @dyn_insertelement_v8f64_s_s_v(<8 x double> inreg %vec, do
 ; GPRIDX-NEXT:    v_cndmask_b32_e64 v14, v14, v0, s[8:9]
 ; GPRIDX-NEXT:    v_cndmask_b32_e64 v16, v16, v0, s[10:11]
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[1:4], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[5:8], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[9:12], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[13:16], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    s_endpgm
 ;
 ; MOVREL-LABEL: dyn_insertelement_v8f64_s_s_v:
@@ -1020,9 +1030,13 @@ define amdgpu_ps void @dyn_insertelement_v8f64_s_s_v(<8 x double> inreg %vec, do
 ; MOVREL-NEXT:    v_cndmask_b32_e64 v15, v15, s30, s4
 ; MOVREL-NEXT:    v_cndmask_b32_e64 v16, v16, s31, s4
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[1:4], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[5:8], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[9:12], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[13:16], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    s_endpgm
 entry:
   %insert = insertelement <8 x double> %vec, double %val, i32 %idx
@@ -1078,9 +1092,13 @@ define amdgpu_ps void @dyn_insertelement_v8f64_s_v_s(<8 x double> inreg %vec, do
 ; GPRIDX-NEXT:    v_mov_b32_e32 v3, v1
 ; GPRIDX-NEXT:    s_set_gpr_idx_off
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[6:9], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[10:13], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[14:17], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    s_endpgm
 ;
 ; MOVREL-LABEL: dyn_insertelement_v8f64_s_v_s:
@@ -1121,9 +1139,13 @@ define amdgpu_ps void @dyn_insertelement_v8f64_s_v_s(<8 x double> inreg %vec, do
 ; MOVREL-NEXT:    v_movreld_b32_e32 v2, v0
 ; MOVREL-NEXT:    v_movreld_b32_e32 v3, v1
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[6:9], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[10:13], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[14:17], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    s_endpgm
 entry:
   %insert = insertelement <8 x double> %vec, double %val, i32 %idx
@@ -1147,9 +1169,13 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_s_s(<8 x double> %vec, double i
 ; GPRIDX-NEXT:    v_mov_b32_e32 v1, s3
 ; GPRIDX-NEXT:    s_set_gpr_idx_off
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[0:3], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[8:11], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[12:15], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    s_endpgm
 ;
 ; MOVREL-LABEL: dyn_insertelement_v8f64_v_s_s:
@@ -1158,9 +1184,13 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_s_s(<8 x double> %vec, double i
 ; MOVREL-NEXT:    v_movreld_b32_e32 v0, s2
 ; MOVREL-NEXT:    v_movreld_b32_e32 v1, s3
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[0:3], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[8:11], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[12:15], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    s_endpgm
 entry:
   %insert = insertelement <8 x double> %vec, double %val, i32 %idx
@@ -1235,9 +1265,13 @@ define amdgpu_ps void @dyn_insertelement_v8f64_s_v_v(<8 x double> inreg %vec, do
 ; GPRIDX-NEXT:    v_cndmask_b32_e64 v16, v16, v1, s[8:9]
 ; GPRIDX-NEXT:    v_cndmask_b32_e64 v18, v18, v1, s[10:11]
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[3:6], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[7:10], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[11:14], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[15:18], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    s_endpgm
 ;
 ; MOVREL-LABEL: dyn_insertelement_v8f64_s_v_v:
@@ -1299,9 +1333,13 @@ define amdgpu_ps void @dyn_insertelement_v8f64_s_v_v(<8 x double> inreg %vec, do
 ; MOVREL-NEXT:    v_cndmask_b32_e64 v16, v16, v1, s4
 ; MOVREL-NEXT:    v_cndmask_b32_e64 v18, v18, v1, s5
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[3:6], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[7:10], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[11:14], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[15:18], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    s_endpgm
 entry:
   %insert = insertelement <8 x double> %vec, double %val, i32 %idx
@@ -1346,9 +1384,13 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_s_v(<8 x double> %vec, double i
 ; GPRIDX-NEXT:    v_cndmask_b32_e64 v13, v13, v16, s[14:15]
 ; GPRIDX-NEXT:    v_cndmask_b32_e64 v15, v15, v16, s[12:13]
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[0:3], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[8:11], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[12:15], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    s_endpgm
 ;
 ; MOVREL-LABEL: dyn_insertelement_v8f64_v_s_v:
@@ -1378,9 +1420,13 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_s_v(<8 x double> %vec, double i
 ; MOVREL-NEXT:    v_cndmask_b32_e64 v14, v14, s2, vcc_lo
 ; MOVREL-NEXT:    v_cndmask_b32_e64 v15, v15, s3, vcc_lo
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[0:3], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[8:11], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[12:15], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    s_endpgm
 entry:
   %insert = insertelement <8 x double> %vec, double %val, i32 %idx
@@ -1404,9 +1450,13 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_v_s(<8 x double> %vec, double %
 ; GPRIDX-NEXT:    v_mov_b32_e32 v1, v17
 ; GPRIDX-NEXT:    s_set_gpr_idx_off
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[0:3], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[8:11], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[12:15], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    s_endpgm
 ;
 ; MOVREL-LABEL: dyn_insertelement_v8f64_v_v_s:
@@ -1415,9 +1465,13 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_v_s(<8 x double> %vec, double %
 ; MOVREL-NEXT:    v_movreld_b32_e32 v0, v16
 ; MOVREL-NEXT:    v_movreld_b32_e32 v1, v17
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[0:3], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[8:11], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[12:15], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    s_endpgm
 entry:
   %insert = insertelement <8 x double> %vec, double %val, i32 %idx
@@ -1460,9 +1514,13 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_v_v(<8 x double> %vec, double %
 ; GPRIDX-NEXT:    v_cndmask_b32_e64 v13, v13, v17, s[12:13]
 ; GPRIDX-NEXT:    v_cndmask_b32_e64 v15, v15, v17, s[10:11]
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[0:3], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[8:11], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[12:15], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    s_endpgm
 ;
 ; MOVREL-LABEL: dyn_insertelement_v8f64_v_v_v:
@@ -1494,9 +1552,13 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_v_v(<8 x double> %vec, double %
 ; MOVREL-NEXT:    v_cndmask_b32_e64 v13, v13, v17, s6
 ; MOVREL-NEXT:    v_cndmask_b32_e64 v15, v15, v17, s5
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[0:3], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[8:11], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[12:15], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    s_endpgm
 entry:
   %insert = insertelement <8 x double> %vec, double %val, i32 %idx
@@ -1978,24 +2040,25 @@ define amdgpu_ps void @dyn_insertelement_v8f64_s_s_s_add_1(<8 x double> inreg %v
 ; GPRIDX-NEXT:    v_mov_b32_e32 v2, s2
 ; GPRIDX-NEXT:    v_mov_b32_e32 v3, s3
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[0:3], off
-; GPRIDX-NEXT:    s_nop 0
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    v_mov_b32_e32 v0, s4
 ; GPRIDX-NEXT:    v_mov_b32_e32 v1, s5
 ; GPRIDX-NEXT:    v_mov_b32_e32 v2, s6
 ; GPRIDX-NEXT:    v_mov_b32_e32 v3, s7
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[0:3], off
-; GPRIDX-NEXT:    s_nop 0
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    v_mov_b32_e32 v0, s8
 ; GPRIDX-NEXT:    v_mov_b32_e32 v1, s9
 ; GPRIDX-NEXT:    v_mov_b32_e32 v2, s10
 ; GPRIDX-NEXT:    v_mov_b32_e32 v3, s11
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[0:3], off
-; GPRIDX-NEXT:    s_nop 0
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    v_mov_b32_e32 v0, s12
 ; GPRIDX-NEXT:    v_mov_b32_e32 v1, s13
 ; GPRIDX-NEXT:    v_mov_b32_e32 v2, s14
 ; GPRIDX-NEXT:    v_mov_b32_e32 v3, s15
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[0:3], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    s_endpgm
 ;
 ; MOVREL-LABEL: dyn_insertelement_v8f64_s_s_s_add_1:
@@ -2035,9 +2098,13 @@ define amdgpu_ps void @dyn_insertelement_v8f64_s_s_s_add_1(<8 x double> inreg %v
 ; MOVREL-NEXT:    v_mov_b32_e32 v14, s14
 ; MOVREL-NEXT:    v_mov_b32_e32 v15, s15
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[0:3], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[8:11], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[12:15], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    s_endpgm
 entry:
   %idx.add = add i32 %idx, 1
@@ -2082,9 +2149,13 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_v_v_add_1(<8 x double> %vec, do
 ; GPRIDX-NEXT:    v_cndmask_b32_e64 v13, v13, v17, s[12:13]
 ; GPRIDX-NEXT:    v_cndmask_b32_e64 v15, v15, v17, s[10:11]
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[0:3], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[8:11], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[12:15], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
 ; GPRIDX-NEXT:    s_endpgm
 ;
 ; MOVREL-LABEL: dyn_insertelement_v8f64_v_v_v_add_1:
@@ -2117,9 +2188,13 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_v_v_add_1(<8 x double> %vec, do
 ; MOVREL-NEXT:    v_cndmask_b32_e64 v13, v13, v17, s6
 ; MOVREL-NEXT:    v_cndmask_b32_e64 v15, v15, v17, s5
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[0:3], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[8:11], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[12:15], off
+; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    s_endpgm
 entry:
   %idx.add = add i32 %idx, 1

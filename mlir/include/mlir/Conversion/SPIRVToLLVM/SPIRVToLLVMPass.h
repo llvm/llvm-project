@@ -24,7 +24,7 @@ class OperationPass;
 /// the host module code to LLVM.
 ///
 /// This transformation creates a sequence of global variables that are later
-/// linked to the varables in the kernel module, and a series of copies to/from
+/// linked to the variables in the kernel module, and a series of copies to/from
 /// them to emulate the memory transfer from the host or to the device sides. It
 /// also converts the remaining Standard dialect into LLVM dialect, emitting C
 /// wrappers.

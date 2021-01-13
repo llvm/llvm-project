@@ -22,14 +22,6 @@ void PassInstrumentationCallbacks::addClassToPassName(StringRef ClassName,
   ClassToPassName[ClassName] = PassName.str();
 }
 
-bool PassInstrumentationCallbacks::hasPassName(StringRef PassName) {
-  for (const auto &E : ClassToPassName) {
-    if (E.getValue() == PassName)
-      return true;
-  }
-  return false;
-}
-
 StringRef
 PassInstrumentationCallbacks::getPassNameForClassName(StringRef ClassName) {
   return ClassToPassName[ClassName];

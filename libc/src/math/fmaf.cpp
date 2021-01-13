@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/math/fmaf.h"
 #include "src/__support/common.h"
 
 #include "utils/FPUtil/FEnv.h"
@@ -13,7 +14,7 @@
 
 namespace __llvm_libc {
 
-float LLVM_LIBC_ENTRYPOINT(fmaf)(float x, float y, float z) {
+LLVM_LIBC_FUNCTION(float, fmaf, (float x, float y, float z)){
   // Product is exact.
   double prod = static_cast<double>(x) * static_cast<double>(y);
   double z_d = static_cast<double>(z);

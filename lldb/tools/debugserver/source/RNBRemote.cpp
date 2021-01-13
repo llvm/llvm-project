@@ -1216,6 +1216,7 @@ void RNBRemote::StopReadRemoteDataThread() {
   PThreadEvent &events = m_ctx.Events();
   if ((events.GetEventBits() & RNBContext::event_read_thread_running) ==
       RNBContext::event_read_thread_running) {
+    DNBLog("debugserver about to shut down packet communications to lldb.");
     m_comm.Disconnect(true);
     struct timespec timeout_abstime;
     DNBTimer::OffsetTimeOfDay(&timeout_abstime, 2, 0);
@@ -3925,6 +3926,8 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
         return HandlePacket_ILLFORMED(
             __FILE__, __LINE__, p, "non-hex char in arg on 'vAttachWait' pkt");
       }
+      DNBLog("[LaunchAttach] START %d vAttachWait for process name '%s'",
+             getpid(), attach_name.c_str());
       const bool ignore_existing = true;
       attach_pid = DNBProcessAttachWait(
           &m_ctx, attach_name.c_str(), ignore_existing, NULL, 1000, err_str,
@@ -3938,6 +3941,9 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
             "non-hex char in arg on 'vAttachOrWait' pkt");
       }
       const bool ignore_existing = false;
+      DNBLog("[LaunchAttach] START %d vAttachWaitOrWait for process name "
+             "'%s'",
+             getpid(), attach_name.c_str());
       attach_pid = DNBProcessAttachWait(
           &m_ctx, attach_name.c_str(), ignore_existing, NULL, 1000, err_str,
           sizeof(err_str), RNBRemoteShouldCancelCallback);
@@ -3948,6 +3954,9 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
             __FILE__, __LINE__, p, "non-hex char in arg on 'vAttachName' pkt");
       }
 
+      DNBLog("[LaunchAttach] START %d vAttachName attach to process name "
+             "'%s'",
+             getpid(), attach_name.c_str());
       attach_pid = DNBProcessAttachByName(attach_name.c_str(), NULL,
                                           Context().GetUnmaskSignals(), err_str,
                                           sizeof(err_str));
@@ -3961,6 +3970,8 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
         // Wait at most 30 second for attach
         struct timespec attach_timeout_abstime;
         DNBTimer::OffsetTimeOfDay(&attach_timeout_abstime, 30, 0);
+        DNBLog("[LaunchAttach] START %d vAttach to pid %d", getpid(),
+               pid_attaching_to);
         attach_pid = DNBProcessAttach(pid_attaching_to, &attach_timeout_abstime,
                                       false, err_str, sizeof(err_str));
       }
@@ -3971,10 +3982,12 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
     if (attach_pid != INVALID_NUB_PROCESS) {
       if (m_ctx.ProcessID() != attach_pid)
         m_ctx.SetProcessID(attach_pid);
+      DNBLog("Successfully attached to pid %d", attach_pid);
       // Send a stop reply packet to indicate we successfully attached!
       NotifyThatProcessStopped();
       return rnb_success;
     } else {
+      DNBLogError("Attach failed");
       m_ctx.LaunchStatus().SetError(-1, DNBError::Generic);
       if (err_str[0])
         m_ctx.LaunchStatus().SetErrorString(err_str);
@@ -4645,10 +4658,14 @@ rnb_err_t RNBRemote::HandlePacket_C(const char *p) {
 // Detach from gdb.
 rnb_err_t RNBRemote::HandlePacket_D(const char *p) {
   if (m_ctx.HasValidProcessID()) {
+    DNBLog("detaching from pid %u due to D packet", m_ctx.ProcessID());
     if (DNBProcessDetach(m_ctx.ProcessID()))
       SendPacket("OK");
-    else
+    else {
+      DNBLog("error while detaching from pid %u due to D packet",
+             m_ctx.ProcessID());
       SendPacket("E");
+    }
   } else {
     SendPacket("E");
   }

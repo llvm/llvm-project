@@ -850,6 +850,9 @@ class LookupState {
   friend class ExecutionSession;
 
 public:
+  LookupState();
+  LookupState(LookupState &&);
+  LookupState &operator=(LookupState &&);
   ~LookupState();
 
   /// Continue the lookup. This can be called by DefinitionGenerators

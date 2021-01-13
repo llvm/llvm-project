@@ -64,6 +64,10 @@ cl::opt<bool> UseRegistersForDeoptValues(
     "use-registers-for-deopt-values", cl::Hidden, cl::init(false),
     cl::desc("Allow using registers for non pointer deopt args"));
 
+cl::opt<bool> UseRegistersForGCPointersInLandingPad(
+    "use-registers-for-gc-values-in-landing-pad", cl::Hidden, cl::init(false),
+    cl::desc("Allow using registers for gc pointer in landing pad"));
+
 cl::opt<unsigned> MaxRegistersForGCPointers(
     "max-registers-for-gc-values", cl::Hidden, cl::init(0),
     cl::desc("Max number of VRegs allowed to pass GC pointer meta args in"));
@@ -549,14 +553,15 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
   // Pointers used on exceptional path of invoke statepoint.
   // We cannot assing them to VRegs.
   SmallSet<SDValue, 8> LPadPointers;
-  if (auto *StInvoke = dyn_cast_or_null<InvokeInst>(SI.StatepointInstr)) {
-    LandingPadInst *LPI = StInvoke->getLandingPadInst();
-    for (auto *Relocate : SI.GCRelocates)
-      if (Relocate->getOperand(0) == LPI) {
-        LPadPointers.insert(Builder.getValue(Relocate->getBasePtr()));
-        LPadPointers.insert(Builder.getValue(Relocate->getDerivedPtr()));
-      }
-  }
+  if (!UseRegistersForGCPointersInLandingPad)
+    if (auto *StInvoke = dyn_cast_or_null<InvokeInst>(SI.StatepointInstr)) {
+      LandingPadInst *LPI = StInvoke->getLandingPadInst();
+      for (auto *Relocate : SI.GCRelocates)
+        if (Relocate->getOperand(0) == LPI) {
+          LPadPointers.insert(Builder.getValue(Relocate->getBasePtr()));
+          LPadPointers.insert(Builder.getValue(Relocate->getDerivedPtr()));
+        }
+    }
 
   LLVM_DEBUG(dbgs() << "Deciding how to lower GC Pointers:\n");
 

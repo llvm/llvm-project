@@ -18,6 +18,7 @@
 
 namespace llvm {
 class StringRef;
+class Twine;
 
 namespace object {
 class ELFObjectFileBase;
@@ -127,11 +128,11 @@ void printSymbolTable(const object::ObjectFile *O, StringRef ArchiveName,
 void printSymbol(const object::ObjectFile *O, const object::SymbolRef &Symbol,
                  StringRef FileName, StringRef ArchiveName,
                  StringRef ArchitectureName, bool DumpDynamic);
-LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, Twine Message);
+LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, const Twine &Message);
 LLVM_ATTRIBUTE_NORETURN void reportError(Error E, StringRef FileName,
                                          StringRef ArchiveName = "",
                                          StringRef ArchitectureName = "");
-void reportWarning(Twine Message, StringRef File);
+void reportWarning(const Twine &Message, StringRef File);
 
 template <typename T, typename... Ts>
 T unwrapOrError(Expected<T> EO, Ts &&... Args) {

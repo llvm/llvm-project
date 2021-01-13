@@ -39,7 +39,7 @@ body:             |
 
 # GCN-LABEL: name: fma_sgpr_use
 # GCN:      %0:sreg_64_xexec = IMPLICIT_DEF
-# GCN-NEXT: %4:vgpr_32 = nnan ninf nsz arcp contract afn reassoc V_FMA_F32 2, %0.sub0, 0, 1073741824, 0, %0.sub1, 0, 0, implicit $mode, implicit $exec
+# GCN-NEXT: %4:vgpr_32 = nnan ninf nsz arcp contract afn reassoc V_FMA_F32_e64 2, %0.sub0, 0, 1073741824, 0, %0.sub1, 0, 0, implicit $mode, implicit $exec
 ---
 name:            fma_sgpr_use
 body:             |

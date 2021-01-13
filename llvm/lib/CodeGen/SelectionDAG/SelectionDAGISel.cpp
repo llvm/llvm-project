@@ -3202,10 +3202,12 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       if (!::CheckOrImm(MatcherTable, MatcherIndex, N, *this)) break;
       continue;
     case OPC_CheckImmAllOnesV:
-      if (!ISD::isBuildVectorAllOnes(N.getNode())) break;
+      if (!ISD::isConstantSplatVectorAllOnes(N.getNode()))
+        break;
       continue;
     case OPC_CheckImmAllZerosV:
-      if (!ISD::isBuildVectorAllZeros(N.getNode())) break;
+      if (!ISD::isConstantSplatVectorAllZeros(N.getNode()))
+        break;
       continue;
 
     case OPC_CheckFoldableChainNode: {

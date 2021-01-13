@@ -151,7 +151,9 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   if (!useSoftFloat()) {
     if (hasSPE()) {
       addRegisterClass(MVT::f32, &PPC::GPRCRegClass);
-      addRegisterClass(MVT::f64, &PPC::SPERCRegClass);
+      // EFPU2 APU only supports f32
+      if (!Subtarget.hasEFPU2())
+        addRegisterClass(MVT::f64, &PPC::SPERCRegClass);
     } else {
       addRegisterClass(MVT::f32, &PPC::F4RCRegClass);
       addRegisterClass(MVT::f64, &PPC::F8RCRegClass);

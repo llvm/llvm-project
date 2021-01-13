@@ -358,8 +358,8 @@ public:
   /// described by \p Outs can fit into the return registers. If false
   /// is returned, an sret-demotion is performed.
   virtual bool canLowerReturn(MachineFunction &MF, CallingConv::ID CallConv,
-                              SmallVectorImpl<BaseArgInfo> &Outs, bool IsVarArg,
-                              LLVMContext &Context) const {
+                              SmallVectorImpl<BaseArgInfo> &Outs,
+                              bool IsVarArg) const {
     return true;
   }
 

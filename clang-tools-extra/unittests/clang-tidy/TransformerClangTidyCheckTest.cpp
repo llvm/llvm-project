@@ -10,8 +10,10 @@
 #include "ClangTidyTest.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Transformer/RangeSelector.h"
+#include "clang/Tooling/Transformer/RewriteRule.h"
 #include "clang/Tooling/Transformer/Stencil.h"
 #include "clang/Tooling/Transformer/Transformer.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace clang {
@@ -25,20 +27,21 @@ using transformer::change;
 using transformer::IncludeFormat;
 using transformer::makeRule;
 using transformer::node;
+using transformer::noopEdit;
 using transformer::RewriteRule;
+using transformer::RootID;
 using transformer::statement;
 
 // Invert the code of an if-statement, while maintaining its semantics.
 RewriteRule invertIf() {
   StringRef C = "C", T = "T", E = "E";
-  RewriteRule Rule =
-      makeRule(ifStmt(hasCondition(expr().bind(C)), hasThen(stmt().bind(T)),
-                      hasElse(stmt().bind(E))),
-               change(statement(std::string(RewriteRule::RootID)),
-                      cat("if(!(", node(std::string(C)), ")) ",
-                          statement(std::string(E)), " else ",
-                          statement(std::string(T)))),
-               cat("negate condition and reverse `then` and `else` branches"));
+  RewriteRule Rule = makeRule(
+      ifStmt(hasCondition(expr().bind(C)), hasThen(stmt().bind(T)),
+             hasElse(stmt().bind(E))),
+      change(statement(RootID), cat("if(!(", node(std::string(C)), ")) ",
+                                    statement(std::string(E)), " else ",
+                                    statement(std::string(T)))),
+      cat("negate condition and reverse `then` and `else` branches"));
   return Rule;
 }
 
@@ -66,6 +69,25 @@ TEST(TransformerClangTidyCheckTest, Basic) {
     }
   )";
   EXPECT_EQ(Expected, test::runCheckOnCode<IfInverterCheck>(Input));
+}
+
+TEST(TransformerClangTidyCheckTest, DiagnosticsCorrectlyGenerated) {
+  class DiagOnlyCheck : public TransformerClangTidyCheck {
+  public:
+    DiagOnlyCheck(StringRef Name, ClangTidyContext *Context)
+        : TransformerClangTidyCheck(
+              makeRule(returnStmt(), noopEdit(node(RootID)), cat("message")),
+              Name, Context) {}
+  };
+  std::string Input = "int h() { return 5; }";
+  std::vector<ClangTidyError> Errors;
+  EXPECT_EQ(Input, test::runCheckOnCode<DiagOnlyCheck>(Input, &Errors));
+  EXPECT_EQ(Errors.size(), 1U);
+  EXPECT_EQ(Errors[0].Message.Message, "message");
+  EXPECT_THAT(Errors[0].Ranges, testing::IsEmpty());
+
+  // The diagnostic is anchored to the match, "return 5".
+  EXPECT_EQ(Errors[0].Message.FileOffset, 10U);
 }
 
 class IntLitCheck : public TransformerClangTidyCheck {

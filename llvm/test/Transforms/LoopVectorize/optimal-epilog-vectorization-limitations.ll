@@ -99,27 +99,3 @@ for.end.loopexit:                                 ; preds = %for.body
 for.end:                                          ; preds = %for.end.loopexit, %entry
   ret void
 }
-
-; Currently we cannot handle scalable vectorization factors.
-; CHECK: LV: Checking a loop in "f4"
-; CHECK: LEV: Epilogue vectorization for scalable vectors not yet supported.
-
-define void @f4(i8* %A) {
-entry:
-  br label %for.body
-
-for.body:
-  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i8, i8* %A, i64 %iv
-  store i8 1, i8* %arrayidx, align 1
-  %iv.next = add nuw nsw i64 %iv, 1
-  %exitcond = icmp ne i64 %iv.next, 1024
-  br i1 %exitcond, label %for.body, label %exit, !llvm.loop !0
-
-exit:
-  ret void
-}
-
-!0 = !{!0, !1, !2}
-!1 = !{!"llvm.loop.vectorize.width", i32 4}
-!2 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}

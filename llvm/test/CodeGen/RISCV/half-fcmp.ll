@@ -97,22 +97,16 @@ define i32 @fcmp_ole(half %a, half %b) nounwind {
 define i32 @fcmp_one(half %a, half %b) nounwind {
 ; RV32IZFH-LABEL: fcmp_one:
 ; RV32IZFH:       # %bb.0:
-; RV32IZFH-NEXT:    feq.h a0, fa1, fa1
-; RV32IZFH-NEXT:    feq.h a1, fa0, fa0
-; RV32IZFH-NEXT:    and a0, a1, a0
-; RV32IZFH-NEXT:    feq.h a1, fa0, fa1
-; RV32IZFH-NEXT:    not a1, a1
-; RV32IZFH-NEXT:    and a0, a1, a0
+; RV32IZFH-NEXT:    flt.h a0, fa0, fa1
+; RV32IZFH-NEXT:    flt.h a1, fa1, fa0
+; RV32IZFH-NEXT:    or a0, a1, a0
 ; RV32IZFH-NEXT:    ret
 ;
 ; RV64IZFH-LABEL: fcmp_one:
 ; RV64IZFH:       # %bb.0:
-; RV64IZFH-NEXT:    feq.h a0, fa1, fa1
-; RV64IZFH-NEXT:    feq.h a1, fa0, fa0
-; RV64IZFH-NEXT:    and a0, a1, a0
-; RV64IZFH-NEXT:    feq.h a1, fa0, fa1
-; RV64IZFH-NEXT:    not a1, a1
-; RV64IZFH-NEXT:    and a0, a1, a0
+; RV64IZFH-NEXT:    flt.h a0, fa0, fa1
+; RV64IZFH-NEXT:    flt.h a1, fa1, fa0
+; RV64IZFH-NEXT:    or a0, a1, a0
 ; RV64IZFH-NEXT:    ret
   %1 = fcmp one half %a, %b
   %2 = zext i1 %1 to i32
@@ -141,22 +135,18 @@ define i32 @fcmp_ord(half %a, half %b) nounwind {
 define i32 @fcmp_ueq(half %a, half %b) nounwind {
 ; RV32IZFH-LABEL: fcmp_ueq:
 ; RV32IZFH:       # %bb.0:
-; RV32IZFH-NEXT:    feq.h a0, fa0, fa1
-; RV32IZFH-NEXT:    feq.h a1, fa1, fa1
-; RV32IZFH-NEXT:    feq.h a2, fa0, fa0
-; RV32IZFH-NEXT:    and a1, a2, a1
-; RV32IZFH-NEXT:    xori a1, a1, 1
-; RV32IZFH-NEXT:    or a0, a0, a1
+; RV32IZFH-NEXT:    flt.h a0, fa0, fa1
+; RV32IZFH-NEXT:    flt.h a1, fa1, fa0
+; RV32IZFH-NEXT:    or a0, a1, a0
+; RV32IZFH-NEXT:    xori a0, a0, 1
 ; RV32IZFH-NEXT:    ret
 ;
 ; RV64IZFH-LABEL: fcmp_ueq:
 ; RV64IZFH:       # %bb.0:
-; RV64IZFH-NEXT:    feq.h a0, fa0, fa1
-; RV64IZFH-NEXT:    feq.h a1, fa1, fa1
-; RV64IZFH-NEXT:    feq.h a2, fa0, fa0
-; RV64IZFH-NEXT:    and a1, a2, a1
-; RV64IZFH-NEXT:    xori a1, a1, 1
-; RV64IZFH-NEXT:    or a0, a0, a1
+; RV64IZFH-NEXT:    flt.h a0, fa0, fa1
+; RV64IZFH-NEXT:    flt.h a1, fa1, fa0
+; RV64IZFH-NEXT:    or a0, a1, a0
+; RV64IZFH-NEXT:    xori a0, a0, 1
 ; RV64IZFH-NEXT:    ret
   %1 = fcmp ueq half %a, %b
   %2 = zext i1 %1 to i32

@@ -890,13 +890,18 @@ enum NodeType {
   /// BRCOND - Conditional branch.  The first operand is the chain, the
   /// second is the condition, the third is the block to branch to if the
   /// condition is true.  If the type of the condition is not i1, then the
-  /// high bits must conform to getBooleanContents.
+  /// high bits must conform to getBooleanContents. If the condition is undef,
+  /// it nondeterministically jumps to the block.
+  /// TODO: Its semantics w.r.t undef requires further discussion; we need to
+  /// make it sure that it is consistent with optimizations in MIR & the
+  /// meaning of IMPLICIT_DEF. See https://reviews.llvm.org/D92015
   BRCOND,
 
   /// BR_CC - Conditional branch.  The behavior is like that of SELECT_CC, in
   /// that the condition is represented as condition code, and two nodes to
   /// compare, rather than as a combined SetCC node.  The operands in order
-  /// are chain, cc, lhs, rhs, block to branch to if condition is true.
+  /// are chain, cc, lhs, rhs, block to branch to if condition is true. If
+  /// condition is undef, it nondeterministically jumps to the block.
   BR_CC,
 
   /// INLINEASM - Represents an inline asm block.  This node always has two
@@ -1195,6 +1200,15 @@ static const int FIRST_TARGET_MEMORY_OPCODE = BUILTIN_OP_END + 500;
 /// Get underlying scalar opcode for VECREDUCE opcode.
 /// For example ISD::AND for ISD::VECREDUCE_AND.
 NodeType getVecReduceBaseOpcode(unsigned VecReduceOpcode);
+
+/// Whether this is a vector-predicated Opcode.
+bool isVPOpcode(unsigned Opcode);
+
+/// The operand position of the vector mask.
+Optional<unsigned> getVPMaskIdx(unsigned Opcode);
+
+/// The operand position of the explicit vector length parameter.
+Optional<unsigned> getVPExplicitVectorLengthIdx(unsigned Opcode);
 
 //===--------------------------------------------------------------------===//
 /// MemIndexedMode enum - This enum defines the load / store indexed

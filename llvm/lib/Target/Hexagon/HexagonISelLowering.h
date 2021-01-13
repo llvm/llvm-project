@@ -486,6 +486,7 @@ private:
   SDValue SplitHvxMemOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue WidenHvxLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue WidenHvxStore(SDValue Op, SelectionDAG &DAG) const;
+  SDValue WidenHvxSetCC(SDValue Op, SelectionDAG &DAG) const;
   SDValue WidenHvxExtend(SDValue Op, SelectionDAG &DAG) const;
   SDValue WidenHvxTruncate(SDValue Op, SelectionDAG &DAG) const;
 

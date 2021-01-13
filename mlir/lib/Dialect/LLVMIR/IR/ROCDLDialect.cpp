@@ -46,9 +46,9 @@ static ParseResult parseROCDLMubufLoadOp(OpAsmParser &parser,
     return failure();
 
   MLIRContext *context = parser.getBuilder().getContext();
-  auto int32Ty = LLVM::LLVMIntegerType::get(context, 32);
-  auto int1Ty = LLVM::LLVMIntegerType::get(context, 1);
-  auto i32x4Ty = LLVM::LLVMFixedVectorType::get(int32Ty, 4);
+  auto int32Ty = IntegerType::get(context, 32);
+  auto int1Ty = IntegerType::get(context, 1);
+  auto i32x4Ty = LLVM::getFixedVectorType(int32Ty, 4);
   return parser.resolveOperands(ops,
                                 {i32x4Ty, int32Ty, int32Ty, int1Ty, int1Ty},
                                 parser.getNameLoc(), result.operands);
@@ -65,9 +65,9 @@ static ParseResult parseROCDLMubufStoreOp(OpAsmParser &parser,
     return failure();
 
   MLIRContext *context = parser.getBuilder().getContext();
-  auto int32Ty = LLVM::LLVMIntegerType::get(context, 32);
-  auto int1Ty = LLVM::LLVMIntegerType::get(context, 1);
-  auto i32x4Ty = LLVM::LLVMFixedVectorType::get(int32Ty, 4);
+  auto int32Ty = IntegerType::get(context, 32);
+  auto int1Ty = IntegerType::get(context, 1);
+  auto i32x4Ty = LLVM::getFixedVectorType(int32Ty, 4);
 
   if (parser.resolveOperands(ops,
                              {type, i32x4Ty, int32Ty, int32Ty, int1Ty, int1Ty},

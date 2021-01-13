@@ -456,7 +456,7 @@ FunctionInfo<GlobalValue> StackSafetyLocalAnalysis::run() {
     analyzeAllUses(AI, UI, SL);
   }
 
-  for (Argument &A : make_range(F.arg_begin(), F.arg_end())) {
+  for (Argument &A : F.args()) {
     // Non pointers and bypass arguments are not going to be used in any global
     // processing.
     if (A.getType()->isPointerTy() && !A.hasByValAttr()) {

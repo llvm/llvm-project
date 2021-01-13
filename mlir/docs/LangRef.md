@@ -929,15 +929,15 @@ Syntax:
 ```
 memref-type ::= ranked-memref-type | unranked-memref-type
 
-ranked-memref-type ::= `memref` `<` dimension-list-ranked tensor-memref-element-type
+ranked-memref-type ::= `memref` `<` dimension-list-ranked type
                       (`,` layout-specification)? (`,` memory-space)? `>`
 
-unranked-memref-type ::= `memref` `<*x` tensor-memref-element-type
-                         (`,` memory-space)? `>`
+unranked-memref-type ::= `memref` `<*x` type (`,` memory-space)? `>`
 
 stride-list ::= `[` (dimension (`,` dimension)*)? `]`
 strided-layout ::= `offset:` dimension `,` `strides: ` stride-list
-layout-specification ::= semi-affine-map | strided-layout
+semi-affine-map-composition ::= (semi-affine-map `,` )* semi-affine-map
+layout-specification ::= semi-affine-map-composition | strided-layout
 memory-space ::= integer-literal /* | TODO: address-space-id */
 ```
 
@@ -1201,10 +1201,8 @@ where its value does not have a defined dynamic representation.
 Syntax:
 
 ```
-tensor-type ::= `tensor` `<` dimension-list tensor-memref-element-type `>`
-tensor-memref-element-type ::= vector-element-type | vector-type | complex-type
+tensor-type ::= `tensor` `<` dimension-list type `>`
 
-// memref requires a known rank, but tensor does not.
 dimension-list ::= dimension-list-ranked | (`*` `x`)
 dimension-list-ranked ::= (dimension `x`)*
 dimension ::= `?` | decimal-literal

@@ -772,7 +772,7 @@ public:
   /// effectively impossible for the backend to undo.
   /// TODO: If load combining is allowed in the IR optimizer, this analysis
   ///       may not be necessary.
-  bool isLoadCombineReductionCandidate(unsigned ReductionOpcode) const;
+  bool isLoadCombineReductionCandidate(RecurKind RdxKind) const;
 
   /// Assume that a vector of stores of bitwise-or/shifted/zexted loaded values
   /// can be load combined in the backend. Load combining may not be allowed in
@@ -2499,7 +2499,11 @@ BoUpSLP::~BoUpSLP() {
            "trying to erase instruction with users.");
     Pair.getFirst()->eraseFromParent();
   }
+#ifdef EXPENSIVE_CHECKS
+  // If we could guarantee that this call is not extremely slow, we could
+  // remove the ifdef limitation (see PR47712).
   assert(!verifyFunction(*F, &dbgs()));
+#endif
 }
 
 void BoUpSLP::eraseInstructions(ArrayRef<Value *> AV) {
@@ -3896,8 +3900,8 @@ static bool isLoadCombineCandidateImpl(Value *Root, unsigned NumElts,
   return true;
 }
 
-bool BoUpSLP::isLoadCombineReductionCandidate(unsigned RdxOpcode) const {
-  if (RdxOpcode != Instruction::Or)
+bool BoUpSLP::isLoadCombineReductionCandidate(RecurKind RdxKind) const {
+  if (RdxKind != RecurKind::Or)
     return false;
 
   unsigned NumElts = VectorizableTree[0]->Scalars.size();
@@ -6301,7 +6305,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
         Cost -= UserCost;
       }
 
-      MinCost = InstructionCost::min(MinCost, Cost);
+      MinCost = std::min(MinCost, Cost);
 
       if (Cost.isValid() && Cost < -SLPCostThreshold) {
         LLVM_DEBUG(dbgs() << "SLP: Vectorizing list at cost:" << Cost << ".\n");
@@ -6822,7 +6826,7 @@ public:
     while (!Stack.empty()) {
       Instruction *TreeN = Stack.back().first;
       unsigned EdgeToVisit = Stack.back().second++;
-      OperationData OpData = getOperationData(TreeN);
+      const OperationData OpData = getOperationData(TreeN);
       bool IsReducedValue = OpData != RdxTreeInst;
 
       // Postorder vist.
@@ -6853,49 +6857,38 @@ public:
 
       // Visit left or right.
       Value *NextV = TreeN->getOperand(EdgeToVisit);
-      if (NextV != Phi) {
-        auto *I = dyn_cast<Instruction>(NextV);
-        OpData = getOperationData(I);
-        // Continue analysis if the next operand is a reduction operation or
-        // (possibly) a reduced value. If the reduced value opcode is not set,
-        // the first met operation != reduction operation is considered as the
-        // reduced value class.
-        const bool IsRdxInst = OpData == RdxTreeInst;
-        if (I && (!RdxLeafVal || OpData == RdxLeafVal || IsRdxInst)) {
-          // Only handle trees in the current basic block.
-          if (!RdxTreeInst.hasSameParent(I, B->getParent(), IsRdxInst)) {
+      auto *I = dyn_cast<Instruction>(NextV);
+      const OperationData EdgeOpData = getOperationData(I);
+      // Continue analysis if the next operand is a reduction operation or
+      // (possibly) a reduced value. If the reduced value opcode is not set,
+      // the first met operation != reduction operation is considered as the
+      // reduced value class.
+      // Only handle trees in the current basic block.
+      // Each tree node needs to have minimal number of users except for the
+      // ultimate reduction.
+      const bool IsRdxInst = EdgeOpData == RdxTreeInst;
+      if (I && I != Phi && I != B &&
+          RdxTreeInst.hasSameParent(I, B->getParent(), IsRdxInst) &&
+          RdxTreeInst.hasRequiredNumberOfUses(I, IsRdxInst) &&
+          (!RdxLeafVal || EdgeOpData == RdxLeafVal || IsRdxInst)) {
+        if (IsRdxInst) {
+          // We need to be able to reassociate the reduction operations.
+          if (!EdgeOpData.isAssociative(I)) {
             // I is an extra argument for TreeN (its parent operation).
             markExtraArg(Stack.back(), I);
             continue;
           }
-
-          // Each tree node needs to have minimal number of users except for the
-          // ultimate reduction.
-          if (!RdxTreeInst.hasRequiredNumberOfUses(I, IsRdxInst) && I != B) {
-            // I is an extra argument for TreeN (its parent operation).
-            markExtraArg(Stack.back(), I);
-            continue;
-          }
-
-          if (IsRdxInst) {
-            // We need to be able to reassociate the reduction operations.
-            if (!OpData.isAssociative(I)) {
-              // I is an extra argument for TreeN (its parent operation).
-              markExtraArg(Stack.back(), I);
-              continue;
-            }
-          } else if (RdxLeafVal && RdxLeafVal != OpData) {
-            // Make sure that the opcodes of the operations that we are going to
-            // reduce match.
-            // I is an extra argument for TreeN (its parent operation).
-            markExtraArg(Stack.back(), I);
-            continue;
-          } else if (!RdxLeafVal) {
-            RdxLeafVal = OpData;
-          }
-          Stack.push_back(std::make_pair(I, OpData.getFirstOperandIndex()));
+        } else if (RdxLeafVal && RdxLeafVal != EdgeOpData) {
+          // Make sure that the opcodes of the operations that we are going to
+          // reduce match.
+          // I is an extra argument for TreeN (its parent operation).
+          markExtraArg(Stack.back(), I);
           continue;
+        } else if (!RdxLeafVal) {
+          RdxLeafVal = EdgeOpData;
         }
+        Stack.push_back(std::make_pair(I, EdgeOpData.getFirstOperandIndex()));
+        continue;
       }
       // NextV is an extra argument for TreeN (its parent operation).
       markExtraArg(Stack.back(), NextV);
@@ -6992,7 +6985,7 @@ public:
       }
       if (V.isTreeTinyAndNotFullyVectorizable())
         break;
-      if (V.isLoadCombineReductionCandidate(RdxTreeInst.getOpcode()))
+      if (V.isLoadCombineReductionCandidate(RdxTreeInst.getKind()))
         break;
 
       V.computeMinimumValueSizes();
@@ -7529,9 +7522,14 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
 
     // Collect the incoming values from the PHIs.
     Incoming.clear();
-    for (PHINode &P : BB->phis())
-      if (!VisitedInstrs.count(&P) && !R.isDeleted(&P))
-        Incoming.push_back(&P);
+    for (Instruction &I : *BB) {
+      PHINode *P = dyn_cast<PHINode>(&I);
+      if (!P)
+        break;
+
+      if (!VisitedInstrs.count(P) && !R.isDeleted(P))
+        Incoming.push_back(P);
+    }
 
     // Sort by type.
     llvm::stable_sort(Incoming, PhiTypeSorterFunc);
@@ -7586,7 +7584,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       continue;
     // We may go through BB multiple times so skip the one we have checked.
     if (!VisitedInstrs.insert(&*it).second) {
-      if (it->use_empty() && KeyNodes.count(&*it) > 0 &&
+      if (it->use_empty() && KeyNodes.contains(&*it) &&
           vectorizeSimpleInstructions(PostProcessInstructions, BB, R)) {
         // We would like to start over since some instructions are deleted
         // and the iterator may become invalid value.

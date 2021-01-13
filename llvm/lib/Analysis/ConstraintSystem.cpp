@@ -116,7 +116,7 @@ void ConstraintSystem::dump(ArrayRef<std::string> Names) const {
     for (unsigned I = 1, S = Row.size(); I < S; ++I) {
       if (Row[I] == 0)
         continue;
-      std::string Coefficient = "";
+      std::string Coefficient;
       if (Row[I] != 1)
         Coefficient = std::to_string(Row[I]) + " * ";
       Parts.push_back(Coefficient + Names[I - 1]);

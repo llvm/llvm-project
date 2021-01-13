@@ -81,7 +81,8 @@ def SDT_WebAssemblyWrapper    : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
                                                      SDTCisPtrTy<0>]>;
 def SDT_WebAssemblyWrapperPIC : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
                                                      SDTCisPtrTy<0>]>;
-def SDT_WebAssemblyThrow      : SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>;
+def SDT_WebAssemblyThrow      : SDTypeProfile<0, -1, []>;
+def SDT_WebAssemblyCatch      : SDTypeProfile<1, 1, [SDTCisPtrTy<0>]>;
 
 //===----------------------------------------------------------------------===//
 // WebAssembly-specific DAG Nodes.
@@ -107,6 +108,8 @@ def WebAssemblywrapperPIC  : SDNode<"WebAssemblyISD::WrapperPIC",
                                      SDT_WebAssemblyWrapperPIC>;
 def WebAssemblythrow : SDNode<"WebAssemblyISD::THROW", SDT_WebAssemblyThrow,
                               [SDNPHasChain, SDNPVariadic]>;
+def WebAssemblycatch : SDNode<"WebAssemblyISD::CATCH", SDT_WebAssemblyCatch,
+                              [SDNPHasChain, SDNPSideEffect]>;
 
 //===----------------------------------------------------------------------===//
 // WebAssembly-specific Operands.
@@ -242,7 +245,6 @@ defm "": ARGUMENT<I32, i32>;
 defm "": ARGUMENT<I64, i64>;
 defm "": ARGUMENT<F32, f32>;
 defm "": ARGUMENT<F64, f64>;
-defm "": ARGUMENT<EXNREF, exnref>;
 defm "": ARGUMENT<FUNCREF, funcref>;
 defm "": ARGUMENT<EXTERNREF, externref>;
 
@@ -314,7 +316,6 @@ defm "" : LOCAL<I64>;
 defm "" : LOCAL<F32>;
 defm "" : LOCAL<F64>;
 defm "" : LOCAL<V128>, Requires<[HasSIMD128]>;
-defm "" : LOCAL<EXNREF>, Requires<[HasExceptionHandling]>;
 defm "" : LOCAL<FUNCREF>, Requires<[HasReferenceTypes]>;
 defm "" : LOCAL<EXTERNREF>, Requires<[HasReferenceTypes]>;
 

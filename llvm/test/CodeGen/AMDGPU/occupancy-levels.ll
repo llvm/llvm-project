@@ -3,8 +3,8 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX10,GFX10W64,GFX1010,GFX1010W64 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1030 < %s | FileCheck --check-prefixes=GCN,GFX10,GFX10W32,GFX1030,GFX1030W32 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1030 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX10,GFX10W64,GFX1030,GFX1030W64 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 < %s | FileCheck --check-prefixes=GCN,GFX11,GFX11W32,GFX1100,GFX1100W32 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX11,GFX11W64,GFX1100,GFX1100W64 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 < %s | FileCheck --check-prefixes=GCN,GFX1100,GFX1100W32 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX1100,GFX1100W64 %s
 
 ; GCN-LABEL: {{^}}max_occupancy:
 ; GFX9:       ; Occupancy: 10

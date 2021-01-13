@@ -8,6 +8,7 @@
 //
 // UNSUPPORTED: libcpp-has-no-threads
 // XFAIL: c++03
+// XFAIL: !non-lockfree-atomics
 
 // This test requires the dylib support introduced in D68480,
 // which hasn't shipped yet.

@@ -85,3 +85,99 @@ define i1 @logical_or_not_cond_reuse(i1 %a, i1 %b) {
   %res = select i1 %a, i1 %a.not, i1 %b
   ret i1 %res
 }
+
+; Safe to convert to or due to poison implication.
+define i1 @logical_or_implies(i32 %x) {
+; CHECK-LABEL: @logical_or_implies(
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[X]], 42
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[C1]], i1 true, i1 [[C2]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %c1 = icmp eq i32 %x, 0
+  %c2 = icmp eq i32 %x, 42
+  %res = select i1 %c1, i1 true, i1 %c2
+  ret i1 %res
+}
+
+; Will fold after conversion to or.
+define i1 @logical_or_implies_folds(i32 %x) {
+; CHECK-LABEL: @logical_or_implies_folds(
+; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[C2:%.*]] = icmp sgt i32 [[X]], -1
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[C1]], i1 true, i1 [[C2]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %c1 = icmp slt i32 %x, 0
+  %c2 = icmp sge i32 %x, 0
+  %res = select i1 %c1, i1 true, i1 %c2
+  ret i1 %res
+}
+
+; Safe to convert to and due to poison implication.
+define i1 @logical_and_implies(i32 %x) {
+; CHECK-LABEL: @logical_and_implies(
+; CHECK-NEXT:    [[C1:%.*]] = icmp ne i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[C2:%.*]] = icmp ne i32 [[X]], 42
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[C1]], i1 [[C2]], i1 false
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %c1 = icmp ne i32 %x, 0
+  %c2 = icmp ne i32 %x, 42
+  %res = select i1 %c1, i1 %c2, i1 false
+  ret i1 %res
+}
+
+; Will fold after conversion to and.
+define i1 @logical_and_implies_folds(i32 %x) {
+; CHECK-LABEL: @logical_and_implies_folds(
+; CHECK-NEXT:    [[C1:%.*]] = icmp ugt i32 [[X:%.*]], 42
+; CHECK-NEXT:    [[C2:%.*]] = icmp ne i32 [[X]], 0
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[C1]], i1 [[C2]], i1 false
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %c1 = icmp ugt i32 %x, 42
+  %c2 = icmp ne i32 %x, 0
+  %res = select i1 %c1, i1 %c2, i1 false
+  ret i1 %res
+}
+
+; Noundef on condition has no effect.
+define i1 @logical_or_noundef_a(i1 noundef %a, i1 %b) {
+; CHECK-LABEL: @logical_or_noundef_a(
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %res = select i1 %a, i1 true, i1 %b
+  ret i1 %res
+}
+
+; Noundef on false value allows conversion to or.
+define i1 @logical_or_noundef_b(i1 %a, i1 noundef %b) {
+; CHECK-LABEL: @logical_or_noundef_b(
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %res = select i1 %a, i1 true, i1 %b
+  ret i1 %res
+}
+
+; Noundef on condition has no effect.
+define i1 @logical_and_noundef_a(i1 noundef %a, i1 %b) {
+; CHECK-LABEL: @logical_and_noundef_a(
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A:%.*]], i1 [[B:%.*]], i1 false
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %res = select i1 %a, i1 %b, i1 false
+  ret i1 %res
+}
+
+; Noundef on false value allows conversion to and.
+define i1 @logical_and_noundef_b(i1 %a, i1 noundef %b) {
+; CHECK-LABEL: @logical_and_noundef_b(
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A:%.*]], i1 [[B:%.*]], i1 false
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %res = select i1 %a, i1 %b, i1 false
+  ret i1 %res
+}

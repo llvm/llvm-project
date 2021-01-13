@@ -212,6 +212,11 @@ static const CoreDefinition g_core_definitions[] = {
     {eByteOrderLittle, 4, 4, 4, llvm::Triple::hexagon,
      ArchSpec::eCore_hexagon_hexagonv5, "hexagonv5"},
 
+    {eByteOrderLittle, 4, 2, 4, llvm::Triple::riscv32, ArchSpec::eCore_riscv32,
+     "riscv32"},
+    {eByteOrderLittle, 8, 2, 4, llvm::Triple::riscv64, ArchSpec::eCore_riscv64,
+     "riscv64"},
+
     {eByteOrderLittle, 4, 4, 4, llvm::Triple::UnknownArch,
      ArchSpec::eCore_uknownMach32, "unknown-mach-32"},
     {eByteOrderLittle, 8, 4, 4, llvm::Triple::UnknownArch,
@@ -395,6 +400,10 @@ static const ArchDefinitionEntry g_elf_arch_entries[] = {
      0xFFFFFFFFu, 0xFFFFFFFFu}, // ARC
     {ArchSpec::eCore_avr, llvm::ELF::EM_AVR, LLDB_INVALID_CPUTYPE,
      0xFFFFFFFFu, 0xFFFFFFFFu}, // AVR
+    {ArchSpec::eCore_riscv32, llvm::ELF::EM_RISCV,
+     ArchSpec::eRISCVSubType_riscv32, 0xFFFFFFFFu, 0xFFFFFFFFu}, // riscv32
+    {ArchSpec::eCore_riscv64, llvm::ELF::EM_RISCV,
+     ArchSpec::eRISCVSubType_riscv64, 0xFFFFFFFFu, 0xFFFFFFFFu}, // riscv64
 };
 
 static const ArchDefinition g_elf_arch_def = {

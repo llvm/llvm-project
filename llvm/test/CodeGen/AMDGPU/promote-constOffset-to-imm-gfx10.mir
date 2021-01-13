@@ -27,7 +27,7 @@ body:             |
     %16:vgpr_32 = COPY %12
     %17:vgpr_32, dead %18:sreg_32_xm0_xexec = V_ADDC_U32_e64 %16, %13, killed %15, 0, implicit $exec
     %19:vreg_64 = REG_SEQUENCE %14, %subreg.sub0, %17, %subreg.sub1
-    %20:vreg_64 = V_LSHLREV_B64 3, %9, implicit $exec
+    %20:vreg_64 = V_LSHLREV_B64_e64 3, %9, implicit $exec
     %21:vgpr_32, %22:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %14, %20.sub0, 0, implicit $exec
     %23:vgpr_32, dead %24:sreg_32_xm0_xexec = V_ADDC_U32_e64 %17, %20.sub1, killed %22, 0, implicit $exec
     %25:sgpr_32 = S_MOV_B32 4096
@@ -80,7 +80,7 @@ body:             |
     %16:vgpr_32 = COPY %12
     %17:vgpr_32, dead %18:sreg_32_xm0_xexec = V_ADDC_U32_e64 %16, %13, killed %15, 0, implicit $exec
     %19:vreg_64 = REG_SEQUENCE %14, %subreg.sub0, %17, %subreg.sub1
-    %20:vreg_64 = V_LSHLREV_B64 3, %9, implicit $exec
+    %20:vreg_64 = V_LSHLREV_B64_e64 3, %9, implicit $exec
     %21:vgpr_32, %22:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %14, %20.sub0, 0, implicit $exec
     %23:vgpr_32, dead %24:sreg_32_xm0_xexec = V_ADDC_U32_e64 %17, %20.sub1, killed %22, 0, implicit $exec
     %25:sgpr_32 = S_MOV_B32 8000
@@ -137,7 +137,7 @@ body:             |
     %16:vgpr_32 = COPY %12
     %17:vgpr_32, dead %18:sreg_32_xm0_xexec = V_ADDC_U32_e64 %16, %13, killed %15, 0, implicit $exec
     %19:vreg_64 = REG_SEQUENCE %14, %subreg.sub0, %17, %subreg.sub1
-    %20:vreg_64 = V_LSHLREV_B64 3, %9, implicit $exec
+    %20:vreg_64 = V_LSHLREV_B64_e64 3, %9, implicit $exec
     %21:vgpr_32, %22:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %14, %20.sub0, 0, implicit $exec
     %23:vgpr_32, dead %24:sreg_32_xm0_xexec = V_ADDC_U32_e64 %17, %20.sub1, killed %22, 0, implicit $exec
     %25:sgpr_32 = S_MOV_B32 6144
@@ -182,7 +182,7 @@ body:             |
     %16:vgpr_32 = COPY %12
     %17:vgpr_32, dead %18:sreg_32_xm0_xexec = V_ADDC_U32_e64 %16, %13, killed %15, 0, implicit $exec
     %19:vreg_64 = REG_SEQUENCE %14, %subreg.sub0, %17, %subreg.sub1
-    %20:vreg_64 = V_LSHLREV_B64 3, %9, implicit $exec
+    %20:vreg_64 = V_LSHLREV_B64_e64 3, %9, implicit $exec
     %21:vgpr_32, %22:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %14, %20.sub0, 0, implicit $exec
     %23:vgpr_32, dead %24:sreg_32_xm0_xexec = V_ADDC_U32_e64 %17, %20.sub1, killed %22, 0, implicit $exec
 

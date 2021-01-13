@@ -225,7 +225,13 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsAUnrankedMemRef(MlirType type);
  * same context as element type. The type is owned by the context. */
 MLIR_CAPI_EXPORTED MlirType mlirMemRefTypeGet(
     MlirType elementType, intptr_t rank, const int64_t *shape, intptr_t numMaps,
-    MlirAttribute const *affineMaps, unsigned memorySpace);
+    MlirAffineMap const *affineMaps, unsigned memorySpace);
+
+/** Same as "mlirMemRefTypeGet" but returns a nullptr-wrapping MlirType o
+ * illegal arguments, emitting appropriate diagnostics. */
+MLIR_CAPI_EXPORTED MlirType mlirMemRefTypeGetChecked(
+    MlirType elementType, intptr_t rank, const int64_t *shape, intptr_t numMaps,
+    MlirAffineMap const *affineMaps, unsigned memorySpace, MlirLocation loc);
 
 /** Creates a MemRef type with the given rank, shape, memory space and element
  * type in the same context as the element type. The type has no affine maps,

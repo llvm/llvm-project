@@ -705,10 +705,10 @@ define void @atomic_fetch_cmpxchg64() nounwind {
 ; I486-NEXT:    movl %esp, %ebp
 ; I486-NEXT:    andl $-8, %esp
 ; I486-NEXT:    subl $32, %esp
-; I486-NEXT:    leal sc64, %eax
 ; I486-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; I486-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; I486-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; I486-NEXT:    leal sc64, %eax
 ; I486-NEXT:    movl %esp, %eax
 ; I486-NEXT:    movl %ecx, 4(%eax)
 ; I486-NEXT:    movl $2, 20(%eax)
@@ -786,10 +786,10 @@ define void @atomic_fetch_swapf64(double %x) nounwind {
 ; I486-NEXT:    andl $-8, %esp
 ; I486-NEXT:    subl $24, %esp
 ; I486-NEXT:    fldl 8(%ebp)
-; I486-NEXT:    leal fsc64, %eax
 ; I486-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; I486-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; I486-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; I486-NEXT:    leal fsc64, %eax
 ; I486-NEXT:    movl %esp, %eax
 ; I486-NEXT:    movl %edx, 8(%eax)
 ; I486-NEXT:    movl %ecx, 4(%eax)

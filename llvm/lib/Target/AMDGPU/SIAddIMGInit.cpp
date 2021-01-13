@@ -17,14 +17,7 @@
 
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "SIInstrInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/IR/Function.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Target/TargetMachine.h"
 
 #define DEBUG_TYPE "si-img-init"
 

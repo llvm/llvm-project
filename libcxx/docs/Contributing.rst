@@ -14,6 +14,16 @@ Tasks and processes
 
 This file contains notes about various tasks and processes specific to libc++.
 
+Looking for pre-existing reviews
+================================
+
+Before you start working on any feature, please take a look at the open reviews
+to avoid duplicating someone else's work. You can do that by going to the website
+where code reviews are held, `Differential <https://reviews.llvm.org/differential>`__,
+and clicking on ``Libc++ Open Reviews`` in the sidebar to the left. If you see
+that your feature is already being worked on, please consider chiming in instead
+of duplicating work!
+
 Post-Release TODO
 =================
 

@@ -30,11 +30,27 @@ define i1 @test3(i1 %A) {
   ret i1 %B
 }
 
+define i1 @test3_logical(i1 %A) {
+; CHECK-LABEL: @test3_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %B = select i1 %A, i1 false, i1 false
+  ret i1 %B
+}
+
 define i1 @test4(i1 %A) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    ret i1 [[A:%.*]]
 ;
   %B = and i1 %A, true
+  ret i1 %B
+}
+
+define i1 @test4_logical(i1 %A) {
+; CHECK-LABEL: @test4_logical(
+; CHECK-NEXT:    ret i1 [[A:%.*]]
+;
+  %B = select i1 %A, i1 true, i1 false
   ret i1 %B
 }
 
@@ -51,6 +67,14 @@ define i1 @test6(i1 %A) {
 ; CHECK-NEXT:    ret i1 [[A:%.*]]
 ;
   %B = and i1 %A, %A
+  ret i1 %B
+}
+
+define i1 @test6_logical(i1 %A) {
+; CHECK-LABEL: @test6_logical(
+; CHECK-NEXT:    ret i1 [[A:%.*]]
+;
+  %B = select i1 %A, i1 %A, i1 false
   ret i1 %B
 }
 
@@ -135,6 +159,18 @@ define i1 @test12(i32 %A, i32 %B) {
   ret i1 %D
 }
 
+define i1 @test12_logical(i32 %A, i32 %B) {
+; CHECK-LABEL: @test12_logical(
+; CHECK-NEXT:    [[C1:%.*]] = icmp ult i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[C1]]
+;
+  %C1 = icmp ult i32 %A, %B
+  %C2 = icmp ule i32 %A, %B
+  ; (A < B) & (A <= B) === (A < B)
+  %D = select i1 %C1, i1 %C2, i1 false
+  ret i1 %D
+}
+
 define i1 @test13(i32 %A, i32 %B) {
 ; CHECK-LABEL: @test13(
 ; CHECK-NEXT:    ret i1 false
@@ -143,6 +179,17 @@ define i1 @test13(i32 %A, i32 %B) {
   %C2 = icmp ugt i32 %A, %B
   ; (A < B) & (A > B) === false
   %D = and i1 %C1, %C2
+  ret i1 %D
+}
+
+define i1 @test13_logical(i32 %A, i32 %B) {
+; CHECK-LABEL: @test13_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %C1 = icmp ult i32 %A, %B
+  %C2 = icmp ugt i32 %A, %B
+  ; (A < B) & (A > B) === false
+  %D = select i1 %C1, i1 %C2, i1 false
   ret i1 %D
 }
 
@@ -249,6 +296,17 @@ define i1 @test23(i32 %A) {
   ret i1 %D
 }
 
+define i1 @test23_logical(i32 %A) {
+; CHECK-LABEL: @test23_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[A:%.*]], 2
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %B = icmp sgt i32 %A, 1
+  %C = icmp sle i32 %A, 2
+  %D = select i1 %B, i1 %C, i1 false
+  ret i1 %D
+}
+
 ; FIXME: Vectors should fold too.
 define <2 x i1> @test23vec(<2 x i32> %A) {
 ; CHECK-LABEL: @test23vec(
@@ -275,6 +333,18 @@ define i1 @test24(i32 %A) {
   ret i1 %D
 }
 
+define i1 @test24_logical(i32 %A) {
+; CHECK-LABEL: @test24_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[A:%.*]], 2
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %B = icmp sgt i32 %A, 1
+  %C = icmp ne i32 %A, 2
+  ;; A > 2
+  %D = select i1 %B, i1 %C, i1 false
+  ret i1 %D
+}
+
 define i1 @test25(i32 %A) {
 ; CHECK-LABEL: @test25(
 ; CHECK-NEXT:    [[A_OFF:%.*]] = add i32 [[A:%.*]], -50
@@ -284,6 +354,18 @@ define i1 @test25(i32 %A) {
   %B = icmp sge i32 %A, 50
   %C = icmp slt i32 %A, 100
   %D = and i1 %B, %C
+  ret i1 %D
+}
+
+define i1 @test25_logical(i32 %A) {
+; CHECK-LABEL: @test25_logical(
+; CHECK-NEXT:    [[A_OFF:%.*]] = add i32 [[A:%.*]], -50
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A_OFF]], 50
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %B = icmp sge i32 %A, 50
+  %C = icmp slt i32 %A, 100
+  %D = select i1 %B, i1 %C, i1 false
   ret i1 %D
 }
 
@@ -758,6 +840,21 @@ define i1 @and_orn_cmp_1(i32 %a, i32 %b, i32 %c) {
   ret i1 %and
 }
 
+define i1 @and_orn_cmp_1_logical(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @and_orn_cmp_1_logical(
+; CHECK-NEXT:    [[X:%.*]] = icmp sgt i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = icmp ugt i32 [[C:%.*]], 42
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %x = icmp sgt i32 %a, %b
+  %x_inv = icmp sle i32 %a, %b
+  %y = icmp ugt i32 %c, 42      ; thwart complexity-based ordering
+  %or = select i1 %y, i1 true, i1 %x_inv
+  %and = select i1 %x, i1 %or, i1 false
+  ret i1 %and
+}
+
 ; Commute the 'and':
 ; ((Y | ~X) & X) -> (X & Y), where 'not' is an inverted cmp
 
@@ -791,6 +888,21 @@ define i1 @and_orn_cmp_3(i72 %a, i72 %b, i72 %c) {
   %y = icmp ugt i72 %c, 42      ; thwart complexity-based ordering
   %or = or i1 %x_inv, %y
   %and = and i1 %x, %or
+  ret i1 %and
+}
+
+define i1 @and_orn_cmp_3_logical(i72 %a, i72 %b, i72 %c) {
+; CHECK-LABEL: @and_orn_cmp_3_logical(
+; CHECK-NEXT:    [[X:%.*]] = icmp ugt i72 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = icmp ugt i72 [[C:%.*]], 42
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %x = icmp ugt i72 %a, %b
+  %x_inv = icmp ule i72 %a, %b
+  %y = icmp ugt i72 %c, 42      ; thwart complexity-based ordering
+  %or = select i1 %x_inv, i1 true, i1 %y
+  %and = select i1 %x, i1 %or, i1 false
   ret i1 %and
 }
 
@@ -830,6 +942,21 @@ define i1 @andn_or_cmp_1(i37 %a, i37 %b, i37 %c) {
   ret i1 %and
 }
 
+define i1 @andn_or_cmp_1_logical(i37 %a, i37 %b, i37 %c) {
+; CHECK-LABEL: @andn_or_cmp_1_logical(
+; CHECK-NEXT:    [[X_INV:%.*]] = icmp sle i37 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = icmp ugt i37 [[C:%.*]], 42
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[X_INV]], [[Y]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %x = icmp sgt i37 %a, %b
+  %x_inv = icmp sle i37 %a, %b
+  %y = icmp ugt i37 %c, 42      ; thwart complexity-based ordering
+  %or = select i1 %y, i1 true, i1 %x
+  %and = select i1 %x_inv, i1 %or, i1 false
+  ret i1 %and
+}
+
 ; Commute the 'and':
 ; ((Y | X) & ~X) -> (~X & Y), where 'not' is an inverted cmp
 
@@ -845,6 +972,21 @@ define i1 @andn_or_cmp_2(i16 %a, i16 %b, i16 %c) {
   %y = icmp ugt i16 %c, 42      ; thwart complexity-based ordering
   %or = or i1 %y, %x
   %and = and i1 %or, %x_inv
+  ret i1 %and
+}
+
+define i1 @andn_or_cmp_2_logical(i16 %a, i16 %b, i16 %c) {
+; CHECK-LABEL: @andn_or_cmp_2_logical(
+; CHECK-NEXT:    [[X_INV:%.*]] = icmp slt i16 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = icmp ugt i16 [[C:%.*]], 42
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[Y]], [[X_INV]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %x = icmp sge i16 %a, %b
+  %x_inv = icmp slt i16 %a, %b
+  %y = icmp ugt i16 %c, 42      ; thwart complexity-based ordering
+  %or = select i1 %y, i1 true, i1 %x
+  %and = select i1 %or, i1 %x_inv, i1 false
   ret i1 %and
 }
 
@@ -881,6 +1023,21 @@ define i1 @andn_or_cmp_4(i32 %a, i32 %b, i32 %c) {
   %y = icmp ugt i32 %c, 42      ; thwart complexity-based ordering
   %or = or i1 %x, %y
   %and = and i1 %or, %x_inv
+  ret i1 %and
+}
+
+define i1 @andn_or_cmp_4_logical(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @andn_or_cmp_4_logical(
+; CHECK-NEXT:    [[X_INV:%.*]] = icmp ne i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = icmp ugt i32 [[C:%.*]], 42
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[Y]], [[X_INV]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %x = icmp eq i32 %a, %b
+  %x_inv = icmp ne i32 %a, %b
+  %y = icmp ugt i32 %c, 42      ; thwart complexity-based ordering
+  %or = select i1 %x, i1 true, i1 %y
+  %and = select i1 %or, i1 %x_inv, i1 false
   ret i1 %and
 }
 

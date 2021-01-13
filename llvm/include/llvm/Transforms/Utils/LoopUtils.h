@@ -179,6 +179,12 @@ bool hoistRegion(DomTreeNode *, AAResults *, LoopInfo *, DominatorTree *,
 void deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
                     LoopInfo *LI, MemorySSA *MSSA = nullptr);
 
+/// Remove the backedge of the specified loop.  Handles loop nests and general
+/// loop structures subject to the precondition that the loop has no parent
+/// loop and has a single latch block.  Preserves all listed analyses.
+void breakLoopBackedge(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
+                       LoopInfo &LI, MemorySSA *MSSA);
+
 /// Try to promote memory values to scalars by sinking stores out of
 /// the loop and moving loads to before the loop.  We do this by looping over
 /// the stores in the loop, looking for stores to Must pointers which are

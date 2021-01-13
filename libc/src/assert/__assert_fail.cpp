@@ -24,8 +24,9 @@ static void writeToStderr(const char *s) {
   __llvm_libc::syscall(SYS_write, 2, s, length);
 }
 
-void LLVM_LIBC_ENTRYPOINT(__assert_fail)(const char *assertion, const char *file,
-                                         unsigned line, const char *function) {
+LLVM_LIBC_FUNCTION(void, __assert_fail,
+                   (const char *assertion, const char *file, unsigned line,
+                    const char *function)) {
   writeToStderr(file);
   writeToStderr(": Assertion failed: '");
   writeToStderr(assertion);

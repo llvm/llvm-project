@@ -160,8 +160,8 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
       // In this table, we will track which indices are loaded from the argument
       // (where direct loads are tracked as no indices).
       ScalarizeTable &ArgIndices = ScalarizedElements[&*I];
-      for (auto Iter = I->user_begin(), End = I->user_end(); Iter != End;) {
-        Instruction *UI = cast<Instruction>(*Iter++);
+      for (User *U : make_early_inc_range(I->users())) {
+        Instruction *UI = cast<Instruction>(U);
         Type *SrcTy;
         if (LoadInst *L = dyn_cast<LoadInst>(UI))
           SrcTy = L->getType();

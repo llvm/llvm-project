@@ -150,7 +150,7 @@ Symbols:
 # GNU2-NEXT:      0: {{.*}} NOTYPE  {{.*}} UND {{$}}
 # GNU2-NEXT:      1: {{.*}} SECTION {{.*}} RSV[0xffff] <?>
 
-# WARN2: warning: '{{.*}}.tmp2': extended symbol index (1) is past the end of the SHT_SYMTAB_SHNDX section of size 0
+# WARN2: warning: '{{.*}}.tmp2': found an extended symbol index (1), but unable to locate the extended symbol index table
 
 --- !ELF
 FileHeader:

@@ -85,7 +85,7 @@ struct GPUFuncOpLowering : ConvertOpToLLVMPattern<gpu::GPUFuncOp> {
       // Rewrite workgroup memory attributions to addresses of global buffers.
       rewriter.setInsertionPointToStart(&gpuFuncOp.front());
       unsigned numProperArguments = gpuFuncOp.getNumArguments();
-      auto i32Type = LLVM::LLVMIntegerType::get(rewriter.getContext(), 32);
+      auto i32Type = IntegerType::get(rewriter.getContext(), 32);
 
       Value zero = nullptr;
       if (!workgroupBuffers.empty())
@@ -114,7 +114,7 @@ struct GPUFuncOpLowering : ConvertOpToLLVMPattern<gpu::GPUFuncOp> {
       // Rewrite private memory attributions to alloca'ed buffers.
       unsigned numWorkgroupAttributions =
           gpuFuncOp.getNumWorkgroupAttributions();
-      auto int64Ty = LLVM::LLVMIntegerType::get(rewriter.getContext(), 64);
+      auto int64Ty = IntegerType::get(rewriter.getContext(), 64);
       for (auto en : llvm::enumerate(gpuFuncOp.getPrivateAttributions())) {
         Value attribution = en.value();
         auto type = attribution.getType().cast<MemRefType>();

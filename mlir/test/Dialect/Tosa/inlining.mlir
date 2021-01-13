@@ -19,11 +19,11 @@ func @inlined_if_fn(%arg0: tensor<f32>, %arg1: tensor<f32>, %arg2: tensor<i1>) -
   }) : (tensor<i1>, tensor<f32>, tensor<f32>) -> tensor<f32>
   return %0 : tensor<f32>
 }
-func @add(%arg0: tensor<f32>, %arg1: tensor<f32>) -> tensor<f32> attributes {sym_visibility = "private"} {
+func private @add(%arg0: tensor<f32>, %arg1: tensor<f32>) -> tensor<f32> {
   %0 = "tosa.add"(%arg0, %arg1) : (tensor<f32>, tensor<f32>) -> tensor<f32>
   return %0 : tensor<f32>
 }
-func @sub(%arg0: tensor<f32>, %arg1: tensor<f32>) -> tensor<f32> attributes {sym_visibility = "private"} {
+func private @sub(%arg0: tensor<f32>, %arg1: tensor<f32>) -> tensor<f32> {
   %0 = "tosa.sub"(%arg0, %arg1) : (tensor<f32>, tensor<f32>) -> tensor<f32>
   return %0 : tensor<f32>
 }
@@ -45,12 +45,12 @@ func @inlined_while_fn(%arg0: tensor<i32>, %arg1: tensor<i32>, %arg2: tensor<i32
   }) : (tensor<i32>, tensor<i32>, tensor<i32>, tensor<10xi32>) -> (tensor<i32>, tensor<i32>, tensor<i32>, tensor<10xi32>)
   return %1#3 : tensor<10xi32>
 }
-func @while_body_50(%arg0: tensor<i32>, %arg1: tensor<i32>, %arg2: tensor<i32>, %arg3: tensor<10xi32>) -> (tensor<i32>, tensor<i32>, tensor<i32>, tensor<10xi32>) attributes {sym_visibility = "private"} {
+func private @while_body_50(%arg0: tensor<i32>, %arg1: tensor<i32>, %arg2: tensor<i32>, %arg3: tensor<10xi32>) -> (tensor<i32>, tensor<i32>, tensor<i32>, tensor<10xi32>) {
   %1 = "tosa.add"(%arg0, %arg1) : (tensor<i32>, tensor<i32>) -> tensor<i32>
   %2 = "tosa.add"(%arg3, %1) : (tensor<10xi32>, tensor<i32>) -> tensor<10xi32>
   return %1, %arg1, %arg2, %2: tensor<i32>, tensor<i32>, tensor<i32>, tensor<10xi32>
 }
-func @while_cond_40(%arg0: tensor<i32>, %arg1: tensor<i32>, %arg2: tensor<i32>, %arg3: tensor<10xi32>) -> tensor<i1> attributes {sym_visibility = "private"} {
+func private @while_cond_40(%arg0: tensor<i32>, %arg1: tensor<i32>, %arg2: tensor<i32>, %arg3: tensor<10xi32>) -> tensor<i1> {
   %0 = "tosa.greater_equal"(%arg0, %arg1) : (tensor<i32>, tensor<i32>) -> tensor<i1>
   %1 = "tosa.logical_not"(%0) : (tensor<i1>) -> tensor<i1>
   return %1 : tensor<i1>

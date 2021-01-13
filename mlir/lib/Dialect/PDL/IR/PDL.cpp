@@ -7,11 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/PDL/IR/PDL.h"
+#include "mlir/Dialect/PDL/IR/PDLOps.h"
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::pdl;
@@ -25,38 +27,10 @@ void PDLDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/PDL/IR/PDLOps.cpp.inc"
       >();
-  addTypes<AttributeType, OperationType, TypeType, ValueType>();
-}
-
-Type PDLDialect::parseType(DialectAsmParser &parser) const {
-  StringRef keyword;
-  if (parser.parseKeyword(&keyword))
-    return Type();
-
-  Builder &builder = parser.getBuilder();
-  Type result = StringSwitch<Type>(keyword)
-                    .Case("attribute", builder.getType<AttributeType>())
-                    .Case("operation", builder.getType<OperationType>())
-                    .Case("type", builder.getType<TypeType>())
-                    .Case("value", builder.getType<ValueType>())
-                    .Default(Type());
-  if (!result)
-    parser.emitError(parser.getNameLoc(), "invalid 'pdl' type: `")
-        << keyword << "'";
-  return result;
-}
-
-void PDLDialect::printType(Type type, DialectAsmPrinter &printer) const {
-  if (type.isa<AttributeType>())
-    printer << "attribute";
-  else if (type.isa<OperationType>())
-    printer << "operation";
-  else if (type.isa<TypeType>())
-    printer << "type";
-  else if (type.isa<ValueType>())
-    printer << "value";
-  else
-    llvm_unreachable("unknown 'pdl' type");
+  addTypes<
+#define GET_TYPEDEF_LIST
+#include "mlir/Dialect/PDL/IR/PDLOpsTypes.cpp.inc"
+      >();
 }
 
 /// Returns true if the given operation is used by a "binding" pdl operation
@@ -296,7 +270,7 @@ static LogicalResult verify(OperationOp op) {
                             << resultTypes.size() << " constraints";
   }
 
-  // If the operation is within a rewrite body and doesn't have type inferrence,
+  // If the operation is within a rewrite body and doesn't have type inference,
   // ensure that the result types can be resolved.
   if (isWithinRewrite && !op.hasTypeInference()) {
     if (failed(verifyResultTypesAreInferrable(op, opResults, resultTypes)))
@@ -456,3 +430,27 @@ static LogicalResult verify(TypeOp op) {
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/PDL/IR/PDLOps.cpp.inc"
+
+//===----------------------------------------------------------------------===//
+// TableGen'd type method definitions
+//===----------------------------------------------------------------------===//
+
+#define GET_TYPEDEF_CLASSES
+#include "mlir/Dialect/PDL/IR/PDLOpsTypes.cpp.inc"
+
+Type PDLDialect::parseType(DialectAsmParser &parser) const {
+  StringRef keyword;
+  if (parser.parseKeyword(&keyword))
+    return Type();
+  if (Type type = generatedTypeParser(getContext(), parser, keyword))
+    return type;
+
+  parser.emitError(parser.getNameLoc(), "invalid 'pdl' type: `")
+      << keyword << "'";
+  return Type();
+}
+
+void PDLDialect::printType(Type type, DialectAsmPrinter &printer) const {
+  if (failed(generatedTypePrinter(type, printer)))
+    llvm_unreachable("unknown 'pdl' type");
+}

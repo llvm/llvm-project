@@ -13,7 +13,7 @@
 
 namespace __llvm_libc {
 
-char *LLVM_LIBC_ENTRYPOINT(strpbrk)(const char *src, const char *breakset) {
+LLVM_LIBC_FUNCTION(char *, strpbrk, (const char *src, const char *breakset)) {
   src += internal::complementary_span(src, breakset);
   return *src ? const_cast<char *>(src) : nullptr;
 }

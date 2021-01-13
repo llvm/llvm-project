@@ -820,7 +820,7 @@ define <vscale x 16 x i1> @wide_cmphi_b(<vscale x 16 x i1> %pg, <vscale x 16 x i
 
 define <vscale x 8 x i1> @ir_cmphi_h(<vscale x 8 x i16> %a) {
 ; CHECK-LABEL: ir_cmphi_h
-; CHECK: cmphi p0.h, p0/z, z0.h, #0
+; CHECK: cmpne p0.h, p0/z, z0.h, #0
 ; CHECK-NEXT: ret
   %elt   = insertelement <vscale x 8 x i16> undef, i16 0, i32 0
   %splat = shufflevector <vscale x 8 x i16> %elt, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
@@ -948,7 +948,7 @@ define <vscale x 16 x i1> @wide_cmphs_b(<vscale x 16 x i1> %pg, <vscale x 16 x i
 
 define <vscale x 8 x i1> @ir_cmphs_h(<vscale x 8 x i16> %a) {
 ; CHECK-LABEL: ir_cmphs_h
-; CHECK: cmphs p0.h, p0/z, z0.h, #0
+; CHECK: ptrue p0.h
 ; CHECK-NEXT: ret
   %elt   = insertelement <vscale x 8 x i16> undef, i16 0, i32 0
   %splat = shufflevector <vscale x 8 x i16> %elt, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
@@ -1076,7 +1076,7 @@ define <vscale x 16 x i1> @wide_cmplo_b(<vscale x 16 x i1> %pg, <vscale x 16 x i
 
 define <vscale x 8 x i1> @ir_cmplo_h(<vscale x 8 x i16> %a) {
 ; CHECK-LABEL: ir_cmplo_h
-; CHECK: cmplo p0.h, p0/z, z0.h, #0
+; CHECK: whilelo p0.h, xzr, xzr
 ; CHECK-NEXT: ret
   %elt   = insertelement <vscale x 8 x i16> undef, i16 0, i32 0
   %splat = shufflevector <vscale x 8 x i16> %elt, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer

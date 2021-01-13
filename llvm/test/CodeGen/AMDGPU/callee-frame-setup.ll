@@ -57,10 +57,10 @@ define void @callee_with_stack() #0 {
 ; GCN-NEXT: v_mov_b32_e32 v0, 0{{$}}
 ; MUBUF-NEXT:   buffer_store_dword v0, off, s[0:3], s33 offset:4{{$}}
 ; FLATSCR-NEXT: scratch_store_dword off, v0, s33 offset:4{{$}}
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:   s_sub_u32 s32, s32, 0x200
 ; FLATSCR-NEXT: s_sub_u32 s32, s32, 8
 ; GCN-NEXT: s_mov_b32 s33, [[FP_COPY]]
-; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define void @callee_with_stack_no_fp_elim_all() #1 {
   %alloca = alloca i32, addrspace(5)
@@ -346,10 +346,10 @@ define void @no_new_vgpr_for_fp_csr() #1 {
 ; GCN-NEXT:     v_mov_b32_e32 [[ZERO:v[0-9]+]], 0
 ; MUBUF-NEXT:   buffer_store_dword [[ZERO]], off, s[0:3], s33
 ; FLATSCR-NEXT: scratch_store_dword off, [[ZERO]], s33
+; GCN-NEXT: s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:   s_sub_u32 s32, s32, 0x100000
 ; FLATSCR-NEXT: s_sub_u32 s32, s32, 0x4000
 ; GCN-NEXT: s_mov_b32 s33, [[FP_COPY]]
-; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define void @realign_stack_no_fp_elim() #1 {
   %alloca = alloca i32, align 8192, addrspace(5)
@@ -366,6 +366,7 @@ define void @realign_stack_no_fp_elim() #1 {
 ; GCN: v_writelane_b32 v1, s31, 1
 ; MUBUF:   buffer_store_dword [[ZERO]], off, s[0:3], s33 offset:4
 ; FLATSCR: scratch_store_dword off, [[ZERO]], s33 offset:4
+; GCN-NEXT:     s_waitcnt vmcnt(0)
 ; GCN: ;;#ASMSTART
 ; MUBUF:        v_readlane_b32 s4, v1, 0
 ; MUBUF-NEXT:   s_add_u32 s32, s32, 0x200
@@ -376,7 +377,6 @@ define void @realign_stack_no_fp_elim() #1 {
 ; MUBUF-NEXT:   s_sub_u32 s32, s32, 0x200
 ; FLATSCR-NEXT: s_sub_u32 s32, s32, 8
 ; GCN-NEXT:     v_readlane_b32 s33, v1, 2
-; GCN-NEXT:     s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:   s_setpc_b64 s[4:5]
 ; FLATSCR-NEXT: s_setpc_b64 s[0:1]
 define void @no_unused_non_csr_sgpr_for_fp() #1 {

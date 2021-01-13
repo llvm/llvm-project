@@ -1,5 +1,5 @@
-; RUN: llc -fast-isel-sink-local-values -aarch64-load-store-renaming=true < %s -mtriple=arm64-apple-darwin -mcpu=cyclone -enable-misched=false -frame-pointer=all | FileCheck %s
-; RUN: llc -fast-isel-sink-local-values -aarch64-load-store-renaming=true  < %s -mtriple=arm64-apple-darwin -O0 -frame-pointer=all -fast-isel | FileCheck -check-prefix=FAST %s
+; RUN: llc -aarch64-load-store-renaming=true < %s -mtriple=arm64-apple-darwin -mcpu=cyclone -enable-misched=false -frame-pointer=all | FileCheck %s
+; RUN: llc -aarch64-load-store-renaming=true  < %s -mtriple=arm64-apple-darwin -O0 -frame-pointer=all -fast-isel | FileCheck -check-prefix=FAST %s
 
 ; rdar://12648441
 ; Generated from arm64-arguments.c with -O2.
@@ -456,11 +456,11 @@ entry:
 ; FAST: str {{x[0-9]+}}, [sp, #40]
 ; FAST: str {{x[0-9]+}}, [sp, #48]
 ; FAST: str {{x[0-9]+}}, [sp, #56]
-; FAST: str {{w[0-9]+}}, [sp]
 ; Address of s1 is passed on stack at sp+8
 ; FAST: sub x[[A:[0-9]+]], x29, #32
-; FAST: str x[[A]], [sp, #8]
 ; FAST: add x[[B:[0-9]+]], sp, #32
+; FAST: str {{w[0-9]+}}, [sp]
+; FAST: str x[[A]], [sp, #8]
 ; FAST: str x[[B]], [sp, #16]
   %tmp = alloca %struct.s43, align 16
   %tmp1 = alloca %struct.s43, align 16

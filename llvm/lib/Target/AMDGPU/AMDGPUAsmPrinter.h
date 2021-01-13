@@ -14,19 +14,10 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUASMPRINTER_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUASMPRINTER_H
 
-#include "AMDGPU.h"
-#include "AMDKernelCodeT.h"
-#include "AMDGPUHSAMetadataStreamer.h"
 #include "SIProgramInfo.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/AsmPrinter.h"
-#include "llvm/Support/AMDHSAKernelDescriptor.h"
-#include <cstddef>
-#include <cstdint>
-#include <limits>
-#include <memory>
-#include <string>
-#include <vector>
+
+struct amd_kernel_code_t;
 
 namespace llvm {
 
@@ -35,6 +26,16 @@ class AMDGPUTargetStreamer;
 class MCCodeEmitter;
 class MCOperand;
 class GCNSubtarget;
+
+namespace AMDGPU {
+namespace HSAMD {
+class MetadataStreamer;
+}
+} // namespace AMDGPU
+
+namespace amdhsa {
+struct kernel_descriptor_t;
+}
 
 class AMDGPUAsmPrinter final : public AsmPrinter {
 private:

@@ -13,7 +13,7 @@ name:            mai_hazard_pass_ordering_optimize_vcc_branch
 body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 1, implicit $exec
-    $vgpr2 = V_ACCVGPR_READ_B32 killed $agpr0, implicit $exec
+    $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec
     $sgpr8_sgpr9 = S_MOV_B64 -1
     $vgpr3 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     $vcc = S_ANDN2_B64 $exec, killed renamable $sgpr8_sgpr9, implicit-def dead $scc

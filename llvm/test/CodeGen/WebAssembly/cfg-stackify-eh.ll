@@ -1,16 +1,20 @@
 ; REQUIRES: asserts
+; TODO Reenable disabled lines after updating the backend to the new spec
 ; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -exception-model=wasm -mattr=+exception-handling | FileCheck %s
 ; RUN: llc < %s -disable-wasm-fallthrough-return-opt -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -exception-model=wasm -mattr=+exception-handling
 ; RUN: llc < %s -O0 -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -verify-machineinstrs -exception-model=wasm -mattr=+exception-handling | FileCheck %s --check-prefix=NOOPT
-; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -exception-model=wasm -mattr=+exception-handling -wasm-disable-ehpad-sort | FileCheck %s --check-prefix=NOSORT
-; RUN: llc < %s -disable-wasm-fallthrough-return-opt -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -exception-model=wasm -mattr=+exception-handling -wasm-disable-ehpad-sort | FileCheck %s --check-prefix=NOSORT-LOCALS
-; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -exception-model=wasm -mattr=+exception-handling -wasm-disable-ehpad-sort -stats 2>&1 | FileCheck %s --check-prefix=NOSORT-STAT
+; R UN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -exception-model=wasm -mattr=+exception-handling -wasm-disable-ehpad-sort | FileCheck %s --check-prefix=NOSORT
+; R UN: llc < %s -disable-wasm-fallthrough-return-opt -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -exception-model=wasm -mattr=+exception-handling -wasm-disable-ehpad-sort | FileCheck %s --check-prefix=NOSORT-LOCALS
+; R UN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -exception-model=wasm -mattr=+exception-handling -wasm-disable-ehpad-sort -stats 2>&1 | FileCheck %s --check-prefix=NOSORT-STAT
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 @_ZTIi = external constant i8*
 @_ZTId = external constant i8*
+
+%class.Object = type { i8 }
+%class.MyClass = type { i32 }
 
 ; Simple test case with two catch clauses
 ;
@@ -28,19 +32,19 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK:   call      foo
 ; CHECK: catch
 ; CHECK:   block
-; CHECK:     br_if     0, {{.*}}                       # 0: down to label2
+; CHECK:     br_if     0, {{.*}}                       # 0: down to label[[L0:[0-9]+]]
 ; CHECK:     call      $drop=, __cxa_begin_catch
 ; CHECK:     call      __cxa_end_catch
-; CHECK:     br        1                               # 1: down to label0
-; CHECK:   end_block                                   # label2:
+; CHECK:     br        1                               # 1: down to label[[L1:[0-9]+]]
+; CHECK:   end_block                                   # label[[L0]]:
 ; CHECK:   block
-; CHECK:     br_if     0, {{.*}}                       # 0: down to label3
+; CHECK:     br_if     0, {{.*}}                       # 0: down to label[[L2:[0-9]+]]
 ; CHECK:     call      $drop=, __cxa_begin_catch
 ; CHECK:     call      __cxa_end_catch
-; CHECK:     br        1                               # 1: down to label0
-; CHECK:   end_block                                   # label3:
-; CHECK:   rethrow   {{.*}}                            # to caller
-; CHECK: end_try                                       # label0:
+; CHECK:     br        1                               # 1: down to label[[L1]]
+; CHECK:   end_block                                   # label[[L2]]:
+; CHECK:   rethrow   0                                 # to caller
+; CHECK: end_try                                       # label[[L1]]:
 define void @test0() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:
   invoke void @foo()
@@ -73,7 +77,7 @@ catch:                                            ; preds = %catch.fallthrough
   catchret from %1 to label %try.cont
 
 rethrow:                                          ; preds = %catch.fallthrough
-  call void @llvm.wasm.rethrow.in.catch() [ "funclet"(token %1) ]
+  call void @llvm.wasm.rethrow() [ "funclet"(token %1) ]
   unreachable
 
 try.cont:                                         ; preds = %catch, %catch2, %entry
@@ -99,35 +103,35 @@ try.cont:                                         ; preds = %catch, %catch2, %en
 ; CHECK: catch
 ; CHECK:   block
 ; CHECK:     block
-; CHECK:       br_if     0, {{.*}}                     # 0: down to label7
+; CHECK:       br_if     0, {{.*}}                     # 0: down to label[[L0:[0-9]+]]
 ; CHECK:       call      $drop=, __cxa_begin_catch
 ; CHECK:       try
 ; CHECK:         call      foo
-; CHECK:         br        2                           # 2: down to label6
+; CHECK:         br        2                           # 2: down to label[[L1:[0-9]+]]
 ; CHECK:       catch
 ; CHECK:         try
 ; CHECK:           block
-; CHECK:             br_if     0, {{.*}}               # 0: down to label11
+; CHECK:             br_if     0, {{.*}}               # 0: down to label[[L2:[0-9]+]]
 ; CHECK:             call      $drop=, __cxa_begin_catch
 ; CHECK:             try
 ; CHECK:               call      foo
-; CHECK:               br        2                     # 2: down to label9
+; CHECK:               br        2                     # 2: down to label[[L3:[0-9]+]]
 ; CHECK:             catch
 ; CHECK:               call      __cxa_end_catch
-; CHECK:               rethrow   {{.*}}                # down to catch3
+; CHECK:               rethrow   0                     # down to catch[[C0:[0-9]+]]
 ; CHECK:             end_try
-; CHECK:           end_block                           # label11:
-; CHECK:           rethrow   {{.*}}                    # down to catch3
-; CHECK:         catch     {{.*}}                      # catch3:
+; CHECK:           end_block                           # label[[L2]]:
+; CHECK:           rethrow   0                         # down to catch[[C0]]
+; CHECK:         catch_all                             # catch[[C0]]:
 ; CHECK:           call      __cxa_end_catch
-; CHECK:           rethrow   {{.*}}                    # to caller
-; CHECK:         end_try                               # label9:
+; CHECK:           rethrow   0                         # to caller
+; CHECK:         end_try                               # label[[L3]]:
 ; CHECK:         call      __cxa_end_catch
-; CHECK:         br        2                           # 2: down to label6
+; CHECK:         br        2                           # 2: down to label[[L1]]
 ; CHECK:       end_try
-; CHECK:     end_block                                 # label7:
-; CHECK:     rethrow   {{.*}}                          # to caller
-; CHECK:   end_block                                   # label6:
+; CHECK:     end_block                                 # label[[L0]]:
+; CHECK:     rethrow   0                               # to caller
+; CHECK:   end_block                                   # label[[L1]]:
 ; CHECK:   call      __cxa_end_catch
 ; CHECK: end_try
 define void @test1() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
@@ -176,7 +180,7 @@ invoke.cont8:                                     ; preds = %catch6
   catchret from %9 to label %try.cont
 
 rethrow5:                                         ; preds = %catch.start3
-  invoke void @llvm.wasm.rethrow.in.catch() [ "funclet"(token %9) ]
+  invoke void @llvm.wasm.rethrow() [ "funclet"(token %9) ]
           to label %unreachable unwind label %ehcleanup9
 
 try.cont:                                         ; preds = %invoke.cont8, %catch
@@ -184,7 +188,7 @@ try.cont:                                         ; preds = %invoke.cont8, %catc
   catchret from %1 to label %try.cont11
 
 rethrow:                                          ; preds = %catch.start
-  call void @llvm.wasm.rethrow.in.catch() [ "funclet"(token %1) ]
+  call void @llvm.wasm.rethrow() [ "funclet"(token %1) ]
   unreachable
 
 try.cont11:                                       ; preds = %try.cont, %entry
@@ -219,13 +223,13 @@ unreachable:                                      ; preds = %rethrow5
 ; CHECK:   call      foo
 ; CHECK: catch
 ; CHECK:   call      $drop=, __cxa_begin_catch
-; CHECK:   loop                                        # label15:
+; CHECK:   loop                                        # label[[L0:[0-9]+]]:
 ; CHECK:     block
 ; CHECK:       block
-; CHECK:         br_if     0, {{.*}}                   # 0: down to label17
+; CHECK:         br_if     0, {{.*}}                   # 0: down to label[[L1:[0-9]+]]
 ; CHECK:         try
 ; CHECK:           call      foo
-; CHECK:           br        2                         # 2: down to label16
+; CHECK:           br        2                         # 2: down to label[[L2:[0-9]+]]
 ; CHECK:         catch
 ; CHECK:           try
 ; CHECK:             call      __cxa_end_catch
@@ -233,15 +237,15 @@ unreachable:                                      ; preds = %rethrow5
 ; CHECK:             call      __clang_call_terminate
 ; CHECK:             unreachable
 ; CHECK:           end_try
-; CHECK:           rethrow   {{.*}}                    # to caller
+; CHECK:           rethrow   0                         # to caller
 ; CHECK:         end_try
-; CHECK:       end_block                               # label17:
+; CHECK:       end_block                               # label[[L1]]:
 ; CHECK:       call      __cxa_end_catch
-; CHECK:       br        2                             # 2: down to label13
-; CHECK:     end_block                                 # label16:
-; CHECK:     br        0                               # 0: up to label15
+; CHECK:       br        2                             # 2: down to label[[L3:[0-9]+]]
+; CHECK:     end_block                                 # label[[L2]]:
+; CHECK:     br        0                               # 0: up to label[[L0]]
 ; CHECK:   end_loop
-; CHECK: end_try                                       # label13:
+; CHECK: end_try                                       # label[[L3]]:
 define void @test2() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:
   invoke void @foo()
@@ -377,10 +381,10 @@ try.cont:                                         ; preds = %catch.start, %loop
 ; destination mismatches. And we use -wasm-disable-ehpad-sort to create maximum
 ; number of mismatches in several tests below.
 
-; 'call bar''s original unwind destination was 'catch14', but after control flow
-; linearization, its unwind destination incorrectly becomes 'catch15'. We fix
-; this by wrapping the call with a nested try/catch/end_try and branching to the
-; right destination (label32).
+; 'call bar''s original unwind destination was 'C1', but after control flow
+; linearization, its unwind destination incorrectly becomes 'C0'. We fix this by
+; wrapping the call with a nested try/catch/end_try and branching to the right
+; destination (L0).
 
 ; NOSORT-LABEL: test5
 ; NOSORT:   block
@@ -391,16 +395,16 @@ try.cont:                                         ; preds = %catch.start, %loop
 ; NOSORT:         try
 ; NOSORT:           call      bar
 ; NOSORT:         catch     $drop=
-; NOSORT:           br        2                        # 2: down to label32
+; NOSORT:           br        2                        # 2: down to label[[L0:[0-9]+]]
 ; NOSORT:         end_try
 ; --- Nested try/catch/end_try ends
-; NOSORT:         br        2                          # 2: down to label31
-; NOSORT:       catch     $drop=                       # catch15:
-; NOSORT:         br        2                          # 2: down to label31
+; NOSORT:         br        2                          # 2: down to label[[L1:[0-9]+]]
+; NOSORT:       catch     $drop=                       # catch[[C0:[0-9]+]]:
+; NOSORT:         br        2                          # 2: down to label[[L1]]
 ; NOSORT:       end_try
-; NOSORT:     catch     $drop=                         # catch14:
-; NOSORT:     end_try                                  # label32:
-; NOSORT:   end_block                                  # label31:
+; NOSORT:     catch     $drop=                         # catch[[C1:[0-9]+]]:
+; NOSORT:     end_try                                  # label[[L0]]:
+; NOSORT:   end_block                                  # label[[L1]]:
 ; NOSORT:   return
 
 define void @test5() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
@@ -435,10 +439,9 @@ try.cont:                                         ; preds = %catch.start1, %catc
 }
 
 ; Two 'call bar''s original unwind destination was the caller, but after control
-; flow linearization, their unwind destination incorrectly becomes 'catch17'. We
-; fix this by wrapping the call with a nested try/catch/end_try and branching to
-; the right destination (label4), from which we rethrow the exception to the
-; caller.
+; flow linearization, their unwind destination incorrectly becomes 'C0'. We fix
+; this by wrapping the call with a nested try/catch/end_try and branching to the
+; right destination (L0), from which we rethrow the exception to the caller.
 
 ; And the return value of 'baz' should NOT be stackified because the BB is split
 ; during fixing unwind mismatches.
@@ -452,13 +455,13 @@ try.cont:                                         ; preds = %catch.start1, %catc
 ; NOSORT:       call      ${{[0-9]+}}=, baz
 ; NOSORT-NOT:   call      $push{{.*}}=, baz
 ; NOSORT:     catch     $[[REG:[0-9]+]]=
-; NOSORT:       br        1                            # 1: down to label35
+; NOSORT:       br        1                            # 1: down to label[[L0:[0-9]+]]
 ; NOSORT:     end_try
 ; --- Nested try/catch/end_try ends
 ; NOSORT:     return
-; NOSORT:   catch     $drop=                           # catch17:
+; NOSORT:   catch     $drop=                           # catch[[C0:[0-9]+]]:
 ; NOSORT:     return
-; NOSORT:   end_try                                    # label35:
+; NOSORT:   end_try                                    # label[[L0]]:
 ; NOSORT:   rethrow   $[[REG]]                         # to caller
 
 define void @test6() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
@@ -487,9 +490,9 @@ try.cont:                                         ; preds = %catch.start0
 
 ; Similar situation as @test6. Here 'call @qux''s original unwind destination
 ; was the caller, but after control flow linearization, their unwind destination
-; incorrectly becomes another catch within the function. We fix this by wrapping
-; the call with a nested try/catch/end_try and branching to the right
-; destination, from which we rethrow the exception to the caller.
+; incorrectly becomes 'C0' within the function. We fix this by wrapping the call
+; with a nested try/catch/end_try and branching to the right destination, from
+; which we rethrow the exception to the caller.
 
 ; Because 'call @qux' pops an argument pushed by 'i32.const 5' from stack, the
 ; nested 'try' should be placed before `i32.const 5', not between 'i32.const 5'
@@ -503,13 +506,13 @@ try.cont:                                         ; preds = %catch.start0
 ; NOSORT-NEXT:  i32.const $push{{[0-9]+}}=, 5
 ; NOSORT-NEXT:  call      ${{[0-9]+}}=, qux
 ; NOSORT:     catch     $[[REG:[0-9]+]]=
-; NOSORT:       br        1                            # 1: down to label37
+; NOSORT:       br        1                            # 1: down to label[[L0:[0-9]+]]
 ; NOSORT:     end_try
 ; --- Nested try/catch/end_try ends
 ; NOSORT:     return
-; NOSORT:   catch     $drop=                           # catch19:
+; NOSORT:   catch     $drop=                           # catch[[C0:[0-9]+]]:
 ; NOSORT:     return
-; NOSORT:   end_try                                    # label37:
+; NOSORT:   end_try                                    # label[[L0]]:
 ; NOSORT:   rethrow   $[[REG]]                         # to caller
 
 define i32 @test7() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
@@ -578,12 +581,12 @@ try.cont:                                         ; preds = %catch.start0
 ; i32 signature. But because we add a rethrow instruction at the end of the
 ; appendix block, now the LOOP marker does not have a signature (= has a void
 ; signature). Here the two calls two 'bar' are supposed to throw up to the
-; caller, but incorrectly unwind to 'catch19' after linearizing the CFG.
+; caller, but incorrectly unwind to 'C0' after linearizing the CFG.
 
 ; NOSORT-LABEL: test9
 ; NOSORT: block
 ; NOSORT-NOT: loop      i32
-; NOSORT:   loop                                       # label42:
+; NOSORT:   loop                                       # label[[L0:[0-9]+]]:
 ; NOSORT:     try
 ; NOSORT:       call      foo
 ; --- Nested try/catch/end_try starts
@@ -591,13 +594,13 @@ try.cont:                                         ; preds = %catch.start0
 ; NOSORT:         call      bar
 ; NOSORT:         call      bar
 ; NOSORT:       catch     $[[REG:[0-9]+]]=
-; NOSORT:         br        1                          # 1: down to label43
+; NOSORT:         br        1                          # 1: down to label[[L1:[0-9]+]]
 ; NOSORT:       end_try
 ; --- Nested try/catch/end_try ends
 ; NOSORT:       return    {{.*}}
-; NOSORT:     catch     $drop=                         # catch23:
-; NOSORT:       br        1                            # 1: up to label42
-; NOSORT:     end_try                                  # label43:
+; NOSORT:     catch     $drop=                         # catch[[C0:[0-9]+]]:
+; NOSORT:       br        1                            # 1: up to label[[L0]]
+; NOSORT:     end_try                                  # label[[L1]]:
 ; NOSORT:   end_loop
 ; NOSORT: end_block
 ; NOSORT: rethrow   $[[REG]]                           # to caller
@@ -646,38 +649,38 @@ try.cont:                                         ; preds = %catch.start
 ; NOSORT:         try
 ; NOSORT:           call      bar
 ; NOSORT:         catch     $[[REG0:[0-9]+]]=
-; NOSORT:           br        2                        # 2: down to label47
+; NOSORT:           br        2                        # 2: down to label[[L0:[0-9]+]]
 ; NOSORT:         end_try
 ; --- Nested try/catch/end_try ends
-; NOSORT:         br        2                          # 2: down to label46
+; NOSORT:         br        2                          # 2: down to label[[L1:[0-9]+]]
 ; NOSORT:       catch     {{.*}}
 ; NOSORT:         block     i32
-; NOSORT:           br_on_exn   0, {{.*}}              # 0: down to label50
+; NOSORT:           br_on_exn   0, {{.*}}              # 0: down to label[[L2:[0-9]+]]
 ; --- Nested try/catch/end_try starts
 ; NOSORT:           try
-; NOSORT:             rethrow   {{.*}}                 # down to catch28
-; NOSORT:           catch     $[[REG1:[0-9]+]]=        # catch28:
-; NOSORT:             br        5                      # 5: down to label45
+; NOSORT:             rethrow   0                      # down to catch[[C0:[0-9]+]]
+; NOSORT:           catch     $[[REG1:[0-9]+]]=        # catch[[C0]]:
+; NOSORT:             br        5                      # 5: down to label[[L3:[0-9]+]]
 ; NOSORT:           end_try
 ; --- Nested try/catch/end_try ends
-; NOSORT:         end_block                            # label50:
+; NOSORT:         end_block                            # label[[L2]]:
 ; NOSORT:         call      $drop=, __cxa_begin_catch
 ; --- Nested try/catch/end_try starts
 ; NOSORT:         try
 ; NOSORT:           call      __cxa_end_catch
 ; NOSORT:         catch     $[[REG1]]=
-; NOSORT:           br        4                        # 4: down to label45
+; NOSORT:           br        4                        # 4: down to label[[L3]]
 ; NOSORT:         end_try
 ; --- Nested try/catch/end_try ends
-; NOSORT:         br        2                          # 2: down to label46
+; NOSORT:         br        2                          # 2: down to label[[L1]]
 ; NOSORT:       end_try
 ; NOSORT:     catch     $[[REG0]]=
-; NOSORT:     end_try                                  # label47:
+; NOSORT:     end_try                                  # label[[L0]]:
 ; NOSORT:     call      $drop=, __cxa_begin_catch
 ; NOSORT:     call      __cxa_end_catch
-; NOSORT:   end_block                                  # label46:
+; NOSORT:   end_block                                  # label[[L1]]:
 ; NOSORT:   return
-; NOSORT: end_block                                    # label45:
+; NOSORT: end_block                                    # label[[L3]]:
 ; NOSORT: rethrow   $[[REG1]]                          # to caller
 define void @test10() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 bb0:
@@ -757,8 +760,6 @@ if.end:                                           ; preds = %cont, %catch.start,
   ret void
 }
 
-%class.Object = type { i8 }
-
 ; Intrinsics like memcpy, memmove, and memset don't throw and are lowered into
 ; calls to external symbols (not global addresses) in instruction selection,
 ; which will be eventually lowered to library function calls.
@@ -820,8 +821,6 @@ terminate:                                        ; preds = %entry
   unreachable
 }
 
-%class.MyClass = type { i32 }
-
 ; This crashed on debug mode (= when NDEBUG is not defined) when the logic for
 ; computing the innermost region was not correct, in which a loop region
 ; contains an exception region. This should pass CFGSort without crashing.
@@ -866,7 +865,7 @@ invoke.cont2:                                     ; preds = %catch
   catchret from %1 to label %for.inc
 
 rethrow:                                          ; preds = %catch.start
-  call void @llvm.wasm.rethrow.in.catch() #6 [ "funclet"(token %1) ]
+  call void @llvm.wasm.rethrow() #6 [ "funclet"(token %1) ]
   unreachable
 
 for.inc:                                          ; preds = %invoke.cont2, %for.body
@@ -936,7 +935,18 @@ last:                                             ; preds = %bb0
 }
 
 ; Tests if CFGStackify's removeUnnecessaryInstrs() removes unnecessary branches
-; correctly.
+; correctly. The code is in the form below, where 'br' is unnecessary because
+; after running the 'try' body the control flow will fall through to bb2 anyway.
+
+; bb0:
+;   try
+;     ...
+;     br bb2      <- Not necessary
+; bb1 (ehpad):
+;   catch
+;     ...
+; bb2:            <- Continuation BB
+;   end
 ; CHECK-LABEL: test17
 define void @test17(i32 %n) personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:
@@ -975,17 +985,91 @@ try.cont:                                         ; preds = %catch.start, %for.e
   ret void
 }
 
+; void foo();
+; void test18() {
+;   try {
+;     foo();
+;     try {
+;       foo();
+;     } catch (...) {
+;     }
+;   } catch (...) {
+;   }
+; }
+;
+; This tests whether the 'br' can be removed in code in the form as follows.
+; Here 'br' is inside an inner try, whose 'end' is in another EH pad. In this
+; case, after running an inner try body, the control flow should fall through to
+; bb3, so the 'br' in the code is unnecessary.
+
+; bb0:
+;   try
+;     try
+;       ...
+;       br bb3      <- Not necessary
+; bb1:
+;     catch
+; bb2:
+;     end_try
+;   catch
+;     ...
+; bb3:            <- Continuation BB
+;   end
+;
+; CHECK-LABEL: test18
+define void @test18() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+; CHECK: call foo
+entry:
+  invoke void @foo()
+          to label %invoke.cont unwind label %catch.dispatch3
+
+; CHECK: call foo
+; CHECK-NOT: br
+invoke.cont:                                      ; preds = %entry
+  invoke void @foo()
+          to label %try.cont8 unwind label %catch.dispatch
+
+catch.dispatch:                                   ; preds = %invoke.cont
+  %0 = catchswitch within none [label %catch.start] unwind label %catch.dispatch3
+
+; CHECK: catch
+catch.start:                                      ; preds = %catch.dispatch
+  %1 = catchpad within %0 [i8* null]
+  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %3 = call i32 @llvm.wasm.get.ehselector(token %1)
+  %4 = call i8* @__cxa_begin_catch(i8* %2) #2 [ "funclet"(token %1) ]
+  invoke void @__cxa_end_catch() [ "funclet"(token %1) ]
+          to label %invoke.cont2 unwind label %catch.dispatch3
+
+catch.dispatch3:                                  ; preds = %catch.start, %catch.dispatch, %entry
+  %5 = catchswitch within none [label %catch.start4] unwind to caller
+
+catch.start4:                                     ; preds = %catch.dispatch3
+  %6 = catchpad within %5 [i8* null]
+  %7 = call i8* @llvm.wasm.get.exception(token %6)
+  %8 = call i32 @llvm.wasm.get.ehselector(token %6)
+  %9 = call i8* @__cxa_begin_catch(i8* %7) #2 [ "funclet"(token %6) ]
+  call void @__cxa_end_catch() [ "funclet"(token %6) ]
+  catchret from %6 to label %try.cont8
+
+try.cont8:                                        ; preds = %invoke.cont, %invoke.cont2, %catch.start4
+  ret void
+
+invoke.cont2:                                     ; preds = %catch.start
+  catchret from %1 to label %try.cont8
+}
+
 ; Here an exception is semantically contained in a loop. 'ehcleanup' BB belongs
 ; to the exception, but does not belong to the loop (because it does not have a
 ; path back to the loop header), and is placed after the loop latch block
 ; 'invoke.cont' intentionally. This tests if 'end_loop' marker is placed
 ; correctly not right after 'invoke.cont' part but after 'ehcleanup' part,
-; NOSORT-LABEL: test18
+; NOSORT-LABEL: test19
 ; NOSORT: loop
 ; NOSORT: try
 ; NOSORT: end_try
 ; NOSORT: end_loop
-define void @test18(i32 %n) personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define void @test19(i32 %n) personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:
   br label %while.cond
 
@@ -1030,14 +1114,14 @@ while.end:                                        ; preds = %while.body, %while.
 ; before its corresponding `catch`, because both `try` and `catch` body should
 ; satisfy the return type requirements.
 
-; NOSORT-LABEL: test19
+; NOSORT-LABEL: test20
 ; NOSORT: try i32
 ; NOSORT: loop i32
 ; NOSORT: end_loop
 ; NOSORT: catch
 ; NOSORT: end_try
 ; NOSORT-NEXT: end_function
-define i32 @test19(i32 %n) personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define i32 @test20(i32 %n) personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:
   %t = alloca %class.Object, align 1
   br label %for.cond
@@ -1095,7 +1179,7 @@ declare %class.MyClass* @_ZN7MyClassC2ERKS_(%class.MyClass* returned, %class.MyC
 declare i32 @__gxx_wasm_personality_v0(...)
 declare i8* @llvm.wasm.get.exception(token)
 declare i32 @llvm.wasm.get.ehselector(token)
-declare void @llvm.wasm.rethrow.in.catch()
+declare void @llvm.wasm.rethrow()
 declare i32 @llvm.eh.typeid.for(i8*)
 declare i8* @__cxa_begin_catch(i8*)
 declare void @__cxa_end_catch()

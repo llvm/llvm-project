@@ -19,16 +19,7 @@
 
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
-#include "AMDGPUTargetMachine.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
-#include "llvm/IR/Function.h"
-#include "llvm/MC/SubtargetFeature.h"
-#include "llvm/Support/MathExtras.h"
-#include <cassert>
 
 namespace llvm {
 
@@ -54,11 +45,7 @@ class AMDGPUTTIImpl final : public BasicTTIImplBase<AMDGPUTTIImpl> {
   const TargetLoweringBase *getTLI() const { return TLI; }
 
 public:
-  explicit AMDGPUTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
-      : BaseT(TM, F.getParent()->getDataLayout()),
-        TargetTriple(TM->getTargetTriple()),
-        ST(static_cast<const GCNSubtarget *>(TM->getSubtargetImpl(F))),
-        TLI(ST->getTargetLowering()) {}
+  explicit AMDGPUTTIImpl(const AMDGPUTargetMachine *TM, const Function &F);
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP);
@@ -137,19 +124,7 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
   }
 
 public:
-  explicit GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
-      : BaseT(TM, F.getParent()->getDataLayout()),
-        ST(static_cast<const GCNSubtarget *>(TM->getSubtargetImpl(F))),
-        TLI(ST->getTargetLowering()), CommonTTI(TM, F),
-        IsGraphics(AMDGPU::isGraphics(F.getCallingConv())),
-        MaxVGPRs(ST->getMaxNumVGPRs(
-            std::max(ST->getWavesPerEU(F).first,
-                     ST->getWavesPerEUForWorkGroup(
-                         ST->getFlatWorkGroupSizes(F).second)))) {
-    AMDGPU::SIModeRegisterDefaults Mode(F);
-    HasFP32Denormals = Mode.allFP32Denormals();
-    HasFP64FP16Denormals = Mode.allFP64FP16Denormals();
-  }
+  explicit GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F);
 
   bool hasBranchDivergence() { return true; }
   bool useGPUDivergenceAnalysis() const;
@@ -278,11 +253,7 @@ class R600TTIImpl final : public BasicTTIImplBase<R600TTIImpl> {
   AMDGPUTTIImpl CommonTTI;
 
 public:
-  explicit R600TTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
-    : BaseT(TM, F.getParent()->getDataLayout()),
-      ST(static_cast<const R600Subtarget*>(TM->getSubtargetImpl(F))),
-      TLI(ST->getTargetLowering()),
-      CommonTTI(TM, F) {}
+  explicit R600TTIImpl(const AMDGPUTargetMachine *TM, const Function &F);
 
   const R600Subtarget *getST() const { return ST; }
   const AMDGPUTargetLowering *getTLI() const { return TLI; }

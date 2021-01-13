@@ -65,6 +65,17 @@ func @group_broadcast_negative_locid_vec4(%value: f32, %localid: vector<4xi32> )
 // -----
 
 //===----------------------------------------------------------------------===//
+// spv.SubgroupBallotKHR
+//===----------------------------------------------------------------------===//
+
+func @subgroup_ballot(%predicate: i1) -> vector<4xi32> {
+  %0 = spv.SubgroupBallotKHR %predicate: vector<4xi32>
+  return %0: vector<4xi32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spv.SubgroupBlockReadINTEL
 //===----------------------------------------------------------------------===//
 

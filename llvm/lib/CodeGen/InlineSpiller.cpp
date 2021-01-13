@@ -269,6 +269,14 @@ static Register isFullCopyOf(const MachineInstr &MI, Register Reg) {
   return Register();
 }
 
+static void getVDefInterval(const MachineInstr &MI, LiveIntervals &LIS) {
+  for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
+    const MachineOperand &MO = MI.getOperand(I);
+    if (MO.isReg() && MO.isDef() && Register::isVirtualRegister(MO.getReg()))
+      LIS.getInterval(MO.getReg());
+  }
+}
+
 /// isSnippet - Identify if a live interval is a snippet that should be spilled.
 /// It is assumed that SnipLI is a virtual register with the same original as
 /// Edit->getReg().
@@ -410,14 +418,21 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
     MII = DefMI;
     ++MII;
   }
+  MachineInstrSpan MIS(MII, MBB);
   // Insert spill without kill flag immediately after def.
   TII.storeRegToStackSlot(*MBB, MII, SrcReg, false, StackSlot,
                           MRI.getRegClass(SrcReg), &TRI);
+  LIS.InsertMachineInstrRangeInMaps(MIS.begin(), MII);
+  for (const MachineInstr &MI : make_range(MIS.begin(), MII))
+    getVDefInterval(MI, LIS);
   --MII; // Point to store instruction.
-  LIS.InsertMachineInstrInMaps(*MII);
   LLVM_DEBUG(dbgs() << "\thoisted: " << SrcVNI->def << '\t' << *MII);
 
-  HSpiller.addToMergeableSpills(*MII, StackSlot, Original);
+  // If there is only 1 store instruction is required for spill, add it
+  // to mergeable list. In X86 AMX, 2 intructions are required to store.
+  // We disable the merge for this case.
+  if (std::distance(MIS.begin(), MII) <= 1)
+    HSpiller.addToMergeableSpills(*MII, StackSlot, Original);
   ++NumSpills;
   return true;
 }
@@ -838,16 +853,13 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
       continue;
     }
 
-    if (UntieRegs && MO.isTied())
-      MI->untieRegOperand(Idx);
-
     if (!SpillSubRegs && MO.getSubReg())
       return false;
     // We cannot fold a load instruction into a def.
     if (LoadMI && MO.isDef())
       return false;
     // Tied use operands should not be passed to foldMemoryOperand.
-    if (!MI->isRegTiedToDefOperand(Idx))
+    if (UntieRegs || !MI->isRegTiedToDefOperand(Idx))
       FoldOps.push_back(Idx);
   }
 
@@ -858,11 +870,31 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
 
   MachineInstrSpan MIS(MI, MI->getParent());
 
+  SmallVector<std::pair<unsigned, unsigned> > TiedOps;
+  if (UntieRegs)
+    for (unsigned Idx : FoldOps) {
+      MachineOperand &MO = MI->getOperand(Idx);
+      if (!MO.isTied())
+        continue;
+      unsigned Tied = MI->findTiedOperandIdx(Idx);
+      if (MO.isUse())
+        TiedOps.emplace_back(Tied, Idx);
+      else {
+        assert(MO.isDef() && "Tied to not use and def?");
+        TiedOps.emplace_back(Idx, Tied);
+      }
+      MI->untieRegOperand(Idx);
+    }
+
   MachineInstr *FoldMI =
       LoadMI ? TII.foldMemoryOperand(*MI, FoldOps, *LoadMI, &LIS)
              : TII.foldMemoryOperand(*MI, FoldOps, StackSlot, &LIS, &VRM);
-  if (!FoldMI)
+  if (!FoldMI) {
+    // Re-tie operands.
+    for (auto Tied : TiedOps)
+      MI->tieOperands(Tied.first, Tied.second);
     return false;
+  }
 
   // Remove LIS for any dead defs in the original MI not in FoldMI.
   for (MIBundleOperands MO(*MI); MO.isValid(); ++MO) {
@@ -918,7 +950,11 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
     ++NumFolded;
   else if (Ops.front().second == 0) {
     ++NumSpills;
-    HSpiller.addToMergeableSpills(*FoldMI, StackSlot, Original);
+    // If there is only 1 store instruction is required for spill, add it
+    // to mergeable list. In X86 AMX, 2 intructions are required to store.
+    // We disable the merge for this case.
+    if (std::distance(MIS.begin(), MIS.end()) <= 1)
+      HSpiller.addToMergeableSpills(*FoldMI, StackSlot, Original);
   } else
     ++NumReloads;
   return true;
@@ -965,6 +1001,7 @@ void InlineSpiller::insertSpill(Register NewVReg, bool isKill,
   MachineInstrSpan MIS(MI, &MBB);
   MachineBasicBlock::iterator SpillBefore = std::next(MI);
   bool IsRealSpill = isRealSpill(*MI);
+
   if (IsRealSpill)
     TII.storeRegToStackSlot(MBB, SpillBefore, NewVReg, isKill, StackSlot,
                             MRI.getRegClass(NewVReg), &TRI);
@@ -978,11 +1015,16 @@ void InlineSpiller::insertSpill(Register NewVReg, bool isKill,
 
   MachineBasicBlock::iterator Spill = std::next(MI);
   LIS.InsertMachineInstrRangeInMaps(Spill, MIS.end());
+  for (const MachineInstr &MI : make_range(Spill, MIS.end()))
+    getVDefInterval(MI, LIS);
 
   LLVM_DEBUG(
       dumpMachineInstrRangeWithSlotIndex(Spill, MIS.end(), LIS, "spill"));
   ++NumSpills;
-  if (IsRealSpill)
+  // If there is only 1 store instruction is required for spill, add it
+  // to mergeable list. In X86 AMX, 2 intructions are required to store.
+  // We disable the merge for this case.
+  if (IsRealSpill && std::distance(Spill, MIS.end()) <= 1)
     HSpiller.addToMergeableSpills(*Spill, StackSlot, Original);
 }
 
@@ -1528,10 +1570,13 @@ void HoistSpillHelper::hoistAllSpills() {
     for (auto const &Insert : SpillsToIns) {
       MachineBasicBlock *BB = Insert.first;
       Register LiveReg = Insert.second;
-      MachineBasicBlock::iterator MI = IPA.getLastInsertPointIter(OrigLI, *BB);
-      TII.storeRegToStackSlot(*BB, MI, LiveReg, false, Slot,
+      MachineBasicBlock::iterator MII = IPA.getLastInsertPointIter(OrigLI, *BB);
+      MachineInstrSpan MIS(MII, BB);
+      TII.storeRegToStackSlot(*BB, MII, LiveReg, false, Slot,
                               MRI.getRegClass(LiveReg), &TRI);
-      LIS.InsertMachineInstrRangeInMaps(std::prev(MI), MI);
+      LIS.InsertMachineInstrRangeInMaps(MIS.begin(), MII);
+      for (const MachineInstr &MI : make_range(MIS.begin(), MII))
+        getVDefInterval(MI, LIS);
       ++NumSpills;
     }
 

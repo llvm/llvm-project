@@ -37,7 +37,7 @@ catch.start:                                      ; preds = %catch.dispatch
   br i1 %matches, label %catch, label %rethrow
 ; CHECK: catch.start:
 ; CHECK-NEXT:   %[[CATCHPAD:.*]] = catchpad
-; CHECK-NEXT:   %[[EXN:.*]] = call i8* @llvm.wasm.extract.exception()
+; CHECK-NEXT:   %[[EXN:.*]] = call i8* @llvm.wasm.catch(i32 0)
 ; CHECK-NEXT:   call void @llvm.wasm.landingpad.index(token %[[CATCHPAD]], i32 0)
 ; CHECK-NEXT:   store i32 0, i32* getelementptr inbounds ({ i32, i8*, i32 }, { i32, i8*, i32 }* @__wasm_lpad_context, i32 0, i32 0)
 ; CHECK-NEXT:   %[[LSDA:.*]] = call i8* @llvm.wasm.lsda()
@@ -54,7 +54,7 @@ catch:                                            ; preds = %catch.start
 ; CHECK-NEXT:  call i8* @__cxa_begin_catch(i8* %[[EXN]])
 
 rethrow:                                          ; preds = %catch.start
-  call void @llvm.wasm.rethrow.in.catch() [ "funclet"(token %1) ]
+  call void @llvm.wasm.rethrow() [ "funclet"(token %1) ]
   unreachable
 
 try.cont:                                         ; preds = %entry, %catch
@@ -125,7 +125,7 @@ catch4:                                           ; preds = %catch.start3
   catchret from %6 to label %try.cont7
 
 rethrow:                                          ; preds = %catch.start3
-  call void @llvm.wasm.rethrow.in.catch() [ "funclet"(token %6) ]
+  call void @llvm.wasm.rethrow() [ "funclet"(token %6) ]
   unreachable
 
 try.cont7:                                        ; preds = %try.cont, %catch4
@@ -189,7 +189,7 @@ catch6:                                           ; preds = %catch.start3
   catchret from %7 to label %try.cont
 
 rethrow5:                                         ; preds = %catch.start3
-  invoke void @llvm.wasm.rethrow.in.catch() [ "funclet"(token %7) ]
+  invoke void @llvm.wasm.rethrow() [ "funclet"(token %7) ]
           to label %unreachable unwind label %ehcleanup
 
 try.cont:                                         ; preds = %catch, %catch6
@@ -197,7 +197,7 @@ try.cont:                                         ; preds = %catch, %catch6
   catchret from %1 to label %try.cont9
 
 rethrow:                                          ; preds = %catch.start
-  call void @llvm.wasm.rethrow.in.catch() [ "funclet"(token %1) ]
+  call void @llvm.wasm.rethrow() [ "funclet"(token %1) ]
   unreachable
 
 try.cont9:                                        ; preds = %entry, %try.cont
@@ -274,7 +274,7 @@ catch4:                                           ; preds = %catch.start3
   catchret from %6 to label %try.cont
 
 rethrow:                                          ; preds = %catch.start3
-  invoke void @llvm.wasm.rethrow.in.catch() [ "funclet"(token %6) ]
+  invoke void @llvm.wasm.rethrow() [ "funclet"(token %6) ]
           to label %unreachable unwind label %ehcleanup
 
 try.cont:                                         ; preds = %catch.start, %catch4
@@ -380,7 +380,7 @@ catch11:                                          ; preds = %catch.start8
   catchret from %14 to label %try.cont
 
 rethrow10:                                        ; preds = %catch.start8
-  invoke void @llvm.wasm.rethrow.in.catch() [ "funclet"(token %14) ]
+  invoke void @llvm.wasm.rethrow() [ "funclet"(token %14) ]
           to label %unreachable unwind label %ehcleanup
 
 try.cont:                                         ; preds = %catch.start3, %catch11
@@ -395,7 +395,7 @@ try.cont16:                                       ; preds = %catch, %invoke.cont
   catchret from %1 to label %try.cont19
 
 rethrow:                                          ; preds = %catch.start
-  call void @llvm.wasm.rethrow.in.catch() [ "funclet"(token %1) ]
+  call void @llvm.wasm.rethrow() [ "funclet"(token %1) ]
   unreachable
 
 try.cont19:                                       ; preds = %entry, %try.cont16
@@ -473,7 +473,7 @@ terminate:                                        ; preds = %ehcleanup
   unreachable
 ; CHECK: terminate:
 ; CHECK-NEXT: cleanuppad
-; CHECK-NEXT:   %[[EXN:.*]] = call i8* @llvm.wasm.extract.exception
+; CHECK-NEXT:   %[[EXN:.*]] = call i8* @llvm.wasm.catch
 ; CHECK-NEXT:   call void @__clang_call_terminate(i8* %[[EXN]])
 }
 
@@ -604,7 +604,7 @@ declare i8* @llvm.wasm.get.exception(token)
 declare i32 @llvm.wasm.get.ehselector(token)
 declare i32 @llvm.eh.typeid.for(i8*)
 declare void @llvm.wasm.throw(i32, i8*)
-declare void @llvm.wasm.rethrow.in.catch()
+declare void @llvm.wasm.rethrow()
 declare i8* @__cxa_begin_catch(i8*)
 declare void @__cxa_end_catch()
 declare void @__clang_call_terminate(i8*)

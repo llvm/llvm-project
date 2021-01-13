@@ -378,7 +378,7 @@ public:
 private:
   /// Print the given operation in the generic form.
   void printGenericOp(Operation *op) override {
-    // Consider nested opertions for aliases.
+    // Consider nested operations for aliases.
     if (op->getNumRegions() != 0) {
       for (Region &region : op->getRegions())
         printRegion(region, /*printEntryBlockArgs=*/true,
@@ -611,7 +611,7 @@ void AliasInitializer::visit(Type type) {
   if (succeeded(generateAlias(type, aliasToType)))
     return;
 
-  // Visit several subtypes that contain types or atttributes.
+  // Visit several subtypes that contain types or attributes.
   if (auto funcType = type.dyn_cast<FunctionType>()) {
     // Visit input and result types for functions.
     for (auto input : funcType.getInputs())

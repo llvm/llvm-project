@@ -172,23 +172,17 @@ Type Importer::getStdTypeForAttr(Type type) {
   if (!type)
     return nullptr;
 
-  if (auto intType = type.dyn_cast<LLVMIntegerType>())
-    return b.getIntegerType(intType.getBitWidth());
-
-  if (type.isa<LLVMFloatType>())
-    return b.getF32Type();
-
-  if (type.isa<LLVMDoubleType>())
-    return b.getF64Type();
+  if (type.isa<IntegerType, FloatType>())
+    return type;
 
   // LLVM vectors can only contain scalars.
-  if (auto vectorType = type.dyn_cast<LLVM::LLVMVectorType>()) {
-    auto numElements = vectorType.getElementCount();
+  if (LLVM::isCompatibleVectorType(type)) {
+    auto numElements = LLVM::getVectorNumElements(type);
     if (numElements.isScalable()) {
       emitError(unknownLoc) << "scalable vectors not supported";
       return nullptr;
     }
-    Type elementType = getStdTypeForAttr(vectorType.getElementType());
+    Type elementType = getStdTypeForAttr(LLVM::getVectorElementType(type));
     if (!elementType)
       return nullptr;
     return VectorType::get(numElements.getKnownMinValue(), elementType);
@@ -206,16 +200,16 @@ Type Importer::getStdTypeForAttr(Type type) {
 
     // If the innermost type is a vector, use the multi-dimensional vector as
     // attribute type.
-    if (auto vectorType =
-            arrayType.getElementType().dyn_cast<LLVMVectorType>()) {
-      auto numElements = vectorType.getElementCount();
+    if (LLVM::isCompatibleVectorType(arrayType.getElementType())) {
+      auto numElements = LLVM::getVectorNumElements(arrayType.getElementType());
       if (numElements.isScalable()) {
         emitError(unknownLoc) << "scalable vectors not supported";
         return nullptr;
       }
       shape.push_back(numElements.getKnownMinValue());
 
-      Type elementType = getStdTypeForAttr(vectorType.getElementType());
+      Type elementType = getStdTypeForAttr(
+          LLVM::getVectorElementType(arrayType.getElementType()));
       if (!elementType)
         return nullptr;
       return VectorType::get(shape, elementType);
@@ -244,7 +238,7 @@ Attribute Importer::getConstantAsAttr(llvm::Constant *value) {
   if (auto *c = dyn_cast<llvm::ConstantFP>(value)) {
     if (c->getType()->isDoubleTy())
       return b.getFloatAttr(FloatType::getF64(context), c->getValueAPF());
-    else if (c->getType()->isFloatingPointTy())
+    if (c->getType()->isFloatingPointTy())
       return b.getFloatAttr(FloatType::getF32(context), c->getValueAPF());
   }
   if (auto *f = dyn_cast<llvm::Function>(value))
@@ -261,7 +255,7 @@ Attribute Importer::getConstantAsAttr(llvm::Constant *value) {
     if (!attrType)
       return nullptr;
 
-    if (type.isa<LLVMIntegerType>()) {
+    if (type.isa<IntegerType>()) {
       SmallVector<APInt, 8> values;
       values.reserve(cd->getNumElements());
       for (unsigned i = 0, e = cd->getNumElements(); i < e; ++i)
@@ -269,7 +263,7 @@ Attribute Importer::getConstantAsAttr(llvm::Constant *value) {
       return DenseElementsAttr::get(attrType, values);
     }
 
-    if (type.isa<LLVMFloatType>() || type.isa<LLVMDoubleType>()) {
+    if (type.isa<Float32Type, Float64Type>()) {
       SmallVector<APFloat, 8> values;
       values.reserve(cd->getNumElements());
       for (unsigned i = 0, e = cd->getNumElements(); i < e; ++i)

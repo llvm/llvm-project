@@ -74,3 +74,15 @@ define void @or_select_multipleuses(i32 %x, i1 %y) {
   call void @use_i32_i1(i32 %a, i1 %b)
   ret void
 }
+
+define void @or_select_multipleuses_logical(i32 %x, i1 %y) {
+; CHECK-LABEL: @or_select_multipleuses_logical(
+; CHECK-NEXT:    call void @use_i32_i1(i32 32, i1 [[Y:%.*]])
+; CHECK-NEXT:    ret void
+;
+  %f = freeze i1 undef
+  %a = select i1 %f, i32 %x, i32 32 ; prefers %f to be false
+  %b = select i1 %f, i1 true, i1 %y ; prefers %f to be true
+  call void @use_i32_i1(i32 %a, i1 %b)
+  ret void
+}

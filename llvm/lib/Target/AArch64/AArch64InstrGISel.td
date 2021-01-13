@@ -164,6 +164,8 @@ def : GINodeEquiv<G_EXT, AArch64ext>;
 def : GINodeEquiv<G_VASHR, AArch64vashr>;
 def : GINodeEquiv<G_VLSHR, AArch64vlshr>;
 
+def : GINodeEquiv<G_EXTRACT_VECTOR_ELT, vector_extract>;
+
 // These are patterns that we only use for GlobalISel via the importer.
 def : Pat<(f32 (fadd (vector_extract (v2f32 FPR64:$Rn), (i64 0)),
                      (vector_extract (v2f32 FPR64:$Rn), (i64 1)))),

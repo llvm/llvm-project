@@ -292,13 +292,25 @@ const NamedDecl *getPreferredDecl(const NamedDecl *D) {
   return D;
 }
 
-std::vector<LocatedSymbol> findOverrides(llvm::DenseSet<SymbolID> IDs,
-                                         const SymbolIndex *Index,
-                                         llvm::StringRef MainFilePath) {
+std::vector<LocatedSymbol> findImplementors(llvm::DenseSet<SymbolID> IDs,
+                                            RelationKind Predicate,
+                                            const SymbolIndex *Index,
+                                            llvm::StringRef MainFilePath) {
   if (IDs.empty())
     return {};
+  static constexpr trace::Metric FindImplementorsMetric(
+      "find_implementors", trace::Metric::Counter, "case");
+  switch (Predicate) {
+  case RelationKind::BaseOf:
+    FindImplementorsMetric.record(1, "find-base");
+    break;
+  case RelationKind::OverriddenBy:
+    FindImplementorsMetric.record(1, "find-override");
+    break;
+  }
+
   RelationsRequest Req;
-  Req.Predicate = RelationKind::OverriddenBy;
+  Req.Predicate = Predicate;
   Req.Subjects = std::move(IDs);
   std::vector<LocatedSymbol> Results;
   Index->relations(Req, [&](const SymbolID &Subject, const Symbol &Object) {
@@ -335,6 +347,8 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
   // Keep track of SymbolID -> index mapping, to fill in index data later.
   llvm::DenseMap<SymbolID, size_t> ResultIndex;
 
+  static constexpr trace::Metric LocateASTReferentMetric(
+      "locate_ast_referent", trace::Metric::Counter, "case");
   auto AddResultDecl = [&](const NamedDecl *D) {
     D = getPreferredDecl(D);
     auto Loc =
@@ -368,8 +382,10 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
       // saved in the AST.
       if (CMD->isPure()) {
         if (TouchedIdentifier && SM.getSpellingLoc(CMD->getLocation()) ==
-                                     TouchedIdentifier->location())
+                                     TouchedIdentifier->location()) {
           VirtualMethods.insert(getSymbolID(CMD));
+          LocateASTReferentMetric.record(1, "method-to-override");
+        }
       }
       // Special case: void foo() ^override: jump to the overridden method.
       const InheritableAttr *Attr = D->getAttr<OverrideAttr>();
@@ -378,6 +394,7 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
       if (Attr && TouchedIdentifier &&
           SM.getSpellingLoc(Attr->getLocation()) ==
               TouchedIdentifier->location()) {
+        LocateASTReferentMetric.record(1, "method-to-base");
         // We may be overridding multiple methods - offer them all.
         for (const NamedDecl *ND : CMD->overridden_methods())
           AddResultDecl(ND);
@@ -402,6 +419,7 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
     if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
       if (TouchedIdentifier &&
           D->getLocation() == TouchedIdentifier->location()) {
+        LocateASTReferentMetric.record(1, "template-specialization-to-primary");
         AddResultDecl(CTSD->getSpecializedTemplate());
         continue;
       }
@@ -417,9 +435,12 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
       if (const auto *ID = CD->getClassInterface())
         if (TouchedIdentifier &&
             (CD->getLocation() == TouchedIdentifier->location() ||
-             ID->getName() == TouchedIdentifier->text(SM)))
+             ID->getName() == TouchedIdentifier->text(SM))) {
+          LocateASTReferentMetric.record(1, "objc-category-to-class");
           AddResultDecl(ID);
+        }
 
+    LocateASTReferentMetric.record(1, "regular");
     // Otherwise the target declaration is the right one.
     AddResultDecl(D);
   }
@@ -458,7 +479,8 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
     });
   }
 
-  auto Overrides = findOverrides(VirtualMethods, Index, MainFilePath);
+  auto Overrides = findImplementors(VirtualMethods, RelationKind::OverriddenBy,
+                                    Index, MainFilePath);
   Result.insert(Result.end(), Overrides.begin(), Overrides.end());
   return Result;
 }
@@ -1239,12 +1261,20 @@ std::vector<LocatedSymbol> findImplementations(ParsedAST &AST, Position Pos,
   }
   DeclRelationSet Relations =
       DeclRelation::TemplatePattern | DeclRelation::Alias;
-  llvm::DenseSet<SymbolID> VirtualMethods;
-  for (const NamedDecl *ND : getDeclAtPosition(AST, *CurLoc, Relations))
-    if (const CXXMethodDecl *CXXMD = llvm::dyn_cast<CXXMethodDecl>(ND))
-      if (CXXMD->isVirtual())
-        VirtualMethods.insert(getSymbolID(ND));
-  return findOverrides(std::move(VirtualMethods), Index, *MainFilePath);
+  llvm::DenseSet<SymbolID> IDs;
+  RelationKind QueryKind;
+  for (const NamedDecl *ND : getDeclAtPosition(AST, *CurLoc, Relations)) {
+    if (const auto *CXXMD = llvm::dyn_cast<CXXMethodDecl>(ND)) {
+      if (CXXMD->isVirtual()) {
+        IDs.insert(getSymbolID(ND));
+        QueryKind = RelationKind::OverriddenBy;
+      }
+    } else if (const auto *RD = dyn_cast<CXXRecordDecl>(ND)) {
+      IDs.insert(getSymbolID(RD));
+      QueryKind = RelationKind::BaseOf;
+    }
+  }
+  return findImplementors(std::move(IDs), QueryKind, Index, *MainFilePath);
 }
 
 ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,

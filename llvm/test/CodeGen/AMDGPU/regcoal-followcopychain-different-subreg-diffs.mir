@@ -20,7 +20,7 @@ body:             |
     $m0 = S_MOV_B32 killed %16
     %19:vgpr_32 = V_INTERP_P2_F32 undef %19, undef %21:vgpr_32, 0, 1, implicit $m0, implicit $exec, implicit $mode
     %24:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    %23:vgpr_32 = V_MAD_F32 0, killed %19, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $mode
+    %23:vgpr_32 = V_MAD_F32_e64 0, killed %19, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $mode
     undef %75.sub0:vreg_128 = COPY %24
     %75.sub2:vreg_128 = COPY %24
     %26:vgpr_32 = nnan arcp contract reassoc V_MUL_F32_e64 0, 0, 0, killed %23, 1, 0, implicit $exec, implicit $mode
@@ -70,12 +70,12 @@ body:             |
     S_BRANCH %bb.6
   
   bb.6:
-    %43:vgpr_32 = V_MAD_F32 0, %8.sub0, 0, target-flags(amdgpu-gotprel) 0, 0, 0, 0, 0, implicit $exec, implicit $mode
+    %43:vgpr_32 = V_MAD_F32_e64 0, %8.sub0, 0, target-flags(amdgpu-gotprel) 0, 0, 0, 0, 0, implicit $exec, implicit $mode
     %44:vgpr_32 = COPY killed %43
     %44:vgpr_32 = V_MAC_F32_e32 target-flags(amdgpu-gotprel32-hi) 0, killed %8.sub2, %44, implicit $exec, implicit $mode
     %45:vgpr_32 = V_ADD_F32_e32 0, killed %44, implicit $exec, implicit $mode
     %47:vgpr_32 = V_MOV_B32_e32 1107296256, implicit $exec
-    %48:vgpr_32 = nnan arcp contract reassoc V_MAD_F32 0, killed %45, 0, killed %47, 0, 1056964608, 0, 0, implicit $exec, implicit $mode
+    %48:vgpr_32 = nnan arcp contract reassoc V_MAD_F32_e64 0, killed %45, 0, killed %47, 0, 1056964608, 0, 0, implicit $exec, implicit $mode
     %49:vgpr_32 = V_FLOOR_F32_e32 killed %48, implicit $exec, implicit $mode
     %50:vgpr_32 = V_CVT_I32_F32_e32 killed %49, implicit $exec, implicit $mode
     %81:vgpr_32 = V_ADD_CO_U32_e32 1, killed %50, implicit-def dead $vcc, implicit $exec

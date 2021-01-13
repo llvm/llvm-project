@@ -14,7 +14,6 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUSUBTARGET_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUSUBTARGET_H
 
-#include "AMDGPU.h"
 #include "AMDGPUCallLowering.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "R600FrameLowering.h"
@@ -23,20 +22,17 @@
 #include "SIFrameLowering.h"
 #include "SIISelLowering.h"
 #include "SIInstrInfo.h"
-#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
-#include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
-#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
-#include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
-#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
-#include "llvm/MC/MCInstrItineraries.h"
-#include "llvm/Support/MathExtras.h"
-#include <cassert>
-#include <cstdint>
-#include <memory>
-#include <utility>
+#include "llvm/IR/CallingConv.h"
+#include "llvm/Support/Alignment.h"
+
+namespace llvm {
+
+class MCInst;
+class MCInstrInfo;
+
+} // namespace llvm
 
 #define GET_SUBTARGETINFO_HEADER
 #include "AMDGPUGenSubtargetInfo.inc"
@@ -45,7 +41,12 @@
 
 namespace llvm {
 
+class Function;
+class Instruction;
+class MachineFunction;
 class StringRef;
+class TargetMachine;
+class GCNTargetMachine;
 
 class AMDGPUSubtarget {
 public:
@@ -136,9 +137,7 @@ public:
     return TargetTriple.getOS() == Triple::Mesa3D;
   }
 
-  bool isMesaKernel(const Function &F) const {
-    return isMesa3DOS() && !AMDGPU::isShader(F.getCallingConv());
-  }
+  bool isMesaKernel(const Function &F) const;
 
   bool isAmdHsaOrMesa(const Function &F) const {
     return isAmdHsaOS() || isMesaKernel(F);
@@ -250,11 +249,7 @@ public:
 
   /// \returns Number of bytes of arguments that are passed to a shader or
   /// kernel in addition to the explicit ones declared for the function.
-  unsigned getImplicitArgNumBytes(const Function &F) const {
-    if (isMesaKernel(F))
-      return 16;
-    return AMDGPU::getIntegerAttribute(F, "amdgpu-implicitarg-num-bytes", 0);
-  }
+  unsigned getImplicitArgNumBytes(const Function &F) const;
   uint64_t getExplicitKernArgSize(const Function &F, Align &MaxAlign) const;
   unsigned getKernArgSegmentSize(const Function &F, Align &MaxAlign) const;
 

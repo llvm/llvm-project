@@ -148,7 +148,7 @@ class DialectAsmPrinter;
 /// {0}: The name of the typeDef class.
 /// {1}: The name of the type base class.
 static const char *const typeDefDeclSingletonBeginStr = R"(
-  class {0}: public ::mlir::Type::TypeBase<{0}, {1}, ::mlir::TypeStorage> {{
+  class {0} : public ::mlir::Type::TypeBase<{0}, {1}, ::mlir::TypeStorage> {{
   public:
     /// Inherit some necessary constructors from 'TypeBase'.
     using Base::Base;
@@ -166,9 +166,9 @@ static const char *const typeDefDeclSingletonBeginStr = R"(
 static const char *const typeDefDeclParametricBeginStr = R"(
   namespace {2} {
     struct {3};
-  }
-  class {0}: public ::mlir::Type::TypeBase<{0}, {1},
-                                        {2}::{3}> {{
+  } // end namespace {2}
+  class {0} : public ::mlir::Type::TypeBase<{0}, {1},
+                                         {2}::{3}> {{
   public:
     /// Inherit some necessary constructors from 'TypeBase'.
     using Base::Base;
@@ -177,17 +177,67 @@ static const char *const typeDefDeclParametricBeginStr = R"(
 
 /// The snippet for print/parse.
 static const char *const typeDefParsePrint = R"(
-    static ::mlir::Type parse(::mlir::MLIRContext* ctxt, ::mlir::DialectAsmParser& parser);
-    void print(::mlir::DialectAsmPrinter& printer) const;
+    static ::mlir::Type parse(::mlir::MLIRContext *context,
+                              ::mlir::DialectAsmParser &parser);
+    void print(::mlir::DialectAsmPrinter &printer) const;
 )";
 
 /// The code block for the verifyConstructionInvariants and getChecked.
 ///
-/// {0}: List of parameters, parameters style.
+/// {0}: The name of the typeDef class.
+/// {1}: List of parameters, parameters style.
 static const char *const typeDefDeclVerifyStr = R"(
-    static ::mlir::LogicalResult verifyConstructionInvariants(::mlir::Location loc{0});
-    static ::mlir::Type getChecked(::mlir::Location loc{0});
+    static ::mlir::LogicalResult verifyConstructionInvariants(::mlir::Location loc{1});
 )";
+
+/// Emit the builders for the given type.
+static void emitTypeBuilderDecls(const TypeDef &typeDef, raw_ostream &os,
+                                 TypeParamCommaFormatter &paramTypes) {
+  StringRef typeClass = typeDef.getCppClassName();
+  bool genCheckedMethods = typeDef.genVerifyInvariantsDecl();
+  if (!typeDef.skipDefaultBuilders()) {
+    os << llvm::formatv(
+        "    static {0} get(::mlir::MLIRContext *context{1});\n", typeClass,
+        paramTypes);
+    if (genCheckedMethods) {
+      os << llvm::formatv(
+          "    static {0} getChecked(::mlir::Location loc{1});\n", typeClass,
+          paramTypes);
+    }
+  }
+
+  // Generate the builders specified by the user.
+  for (const TypeBuilder &builder : typeDef.getBuilders()) {
+    std::string paramStr;
+    llvm::raw_string_ostream paramOS(paramStr);
+    llvm::interleaveComma(
+        builder.getParameters(), paramOS,
+        [&](const TypeBuilder::Parameter &param) {
+          // Note: TypeBuilder parameters are guaranteed to have names.
+          paramOS << param.getCppType() << " " << *param.getName();
+          if (Optional<StringRef> defaultParamValue = param.getDefaultValue())
+            paramOS << " = " << *defaultParamValue;
+        });
+    paramOS.flush();
+
+    // Generate the `get` variant of the builder.
+    os << "    static " << typeClass << " get(";
+    if (!builder.hasInferredContextParameter()) {
+      os << "::mlir::MLIRContext *context";
+      if (!paramStr.empty())
+        os << ", ";
+    }
+    os << paramStr << ");\n";
+
+    // Generate the `getChecked` variant of the builder.
+    if (genCheckedMethods) {
+      os << "    static " << typeClass << " getChecked(::mlir::Location loc";
+      if (!paramStr.empty())
+        os << ", " << paramStr;
+      os << ");\n";
+    }
+  }
+}
 
 /// Generate the declaration for the given typeDef class.
 static void emitTypeDefDecl(const TypeDef &typeDef, raw_ostream &os) {
@@ -212,13 +262,13 @@ static void emitTypeDefDecl(const TypeDef &typeDef, raw_ostream &os) {
   TypeParamCommaFormatter emitTypeNamePairsAfterComma(
       TypeParamCommaFormatter::EmitFormat::TypeNamePairs, params);
   if (!params.empty()) {
-    os << llvm::formatv("    static {0} get(::mlir::MLIRContext* ctxt{1});\n",
-                        typeDef.getCppClassName(), emitTypeNamePairsAfterComma);
-  }
+    emitTypeBuilderDecls(typeDef, os, emitTypeNamePairsAfterComma);
 
-  // Emit the verify invariants declaration.
-  if (typeDef.genVerifyInvariantsDecl())
-    os << llvm::formatv(typeDefDeclVerifyStr, emitTypeNamePairsAfterComma);
+    // Emit the verify invariants declaration.
+    if (typeDef.genVerifyInvariantsDecl())
+      os << llvm::formatv(typeDefDeclVerifyStr, typeDef.getCppClassName(),
+                          emitTypeNamePairsAfterComma);
+  }
 
   // Emit the mnenomic, if specified.
   if (auto mnenomic = typeDef.getMnemonic()) {
@@ -226,7 +276,8 @@ static void emitTypeDefDecl(const TypeDef &typeDef, raw_ostream &os) {
        << "\"; }\n";
 
     // If mnemonic specified, emit print/parse declarations.
-    os << typeDefParsePrint;
+    if (typeDef.getParserCode() || typeDef.getPrinterCode() || !params.empty())
+      os << typeDefParsePrint;
   }
 
   if (typeDef.genAccessors()) {
@@ -330,17 +381,6 @@ static const char *const typeDefStorageClassConstructorReturn = R"(
     }
 )";
 
-/// The code block for the getChecked definition.
-///
-/// {0}: List of parameters, parameters style.
-/// {1}: C++ type class name.
-/// {2}: Comma separated list of parameter names.
-static const char *const typeDefDefGetCheckeStr = R"(
-    ::mlir::Type {1}::getChecked(Location loc{0}) {{
-      return Base::getChecked(loc{2});
-    }
-)";
-
 /// Use tgfmt to emit custom allocation code for each parameter, if necessary.
 static void emitParameterAllocationCode(TypeDef &typeDef, raw_ostream &os) {
   SmallVector<TypeParameter, 4> parameters;
@@ -403,13 +443,13 @@ static void emitStorageClass(TypeDef typeDef, raw_ostream &os) {
                               parameters, /* prependComma */ false));
 
   // 3) Emit the construct method.
-  if (typeDef.hasStorageCustomConstructor())
+  if (typeDef.hasStorageCustomConstructor()) {
     // If user wants to build the storage constructor themselves, declare it
     // here and then they can write the definition elsewhere.
     os << "    static " << typeDef.getStorageClassName()
        << " *construct(::mlir::TypeStorageAllocator &allocator, const KeyTy "
           "&key);\n";
-  else {
+  } else {
     // If not, autogenerate one.
 
     // First, unbox the parameters.
@@ -445,7 +485,7 @@ void emitParserPrinter(TypeDef typeDef, raw_ostream &os) {
     // Both the mnenomic and printerCode must be defined (for parity with
     // parserCode).
     os << "void " << typeDef.getCppClassName()
-       << "::print(::mlir::DialectAsmPrinter& printer) const {\n";
+       << "::print(::mlir::DialectAsmPrinter &printer) const {\n";
     if (*printerCode == "") {
       // If no code specified, emit error.
       PrintFatalError(typeDef.getLoc(),
@@ -460,7 +500,7 @@ void emitParserPrinter(TypeDef typeDef, raw_ostream &os) {
   if (auto parserCode = typeDef.getParserCode()) {
     // The mnenomic must be defined so the dispatcher knows how to dispatch.
     os << "::mlir::Type " << typeDef.getCppClassName()
-       << "::parse(::mlir::MLIRContext* ctxt, ::mlir::DialectAsmParser& "
+       << "::parse(::mlir::MLIRContext *context, ::mlir::DialectAsmParser &"
           "parser) "
           "{\n";
     if (*parserCode == "") {
@@ -470,51 +510,112 @@ void emitParserPrinter(TypeDef typeDef, raw_ostream &os) {
                           ": parser (if specified) must have non-empty code");
     }
     auto fmtCtxt =
-        FmtContext().addSubst("_parser", "parser").addSubst("_ctxt", "ctxt");
+        FmtContext().addSubst("_parser", "parser").addSubst("_ctxt", "context");
     os << tgfmt(*parserCode, &fmtCtxt) << "\n}\n";
   }
 }
 
-/// Print all the typedef-specific definition code.
-static void emitTypeDefDef(TypeDef typeDef, raw_ostream &os) {
-  NamespaceEmitter ns(os, typeDef.getDialect());
-  SmallVector<TypeParameter, 4> parameters;
-  typeDef.getParameters(parameters);
-
-  // Emit the storage class, if requested and necessary.
-  if (typeDef.genStorageClass() && typeDef.getNumParameters() > 0)
-    emitStorageClass(typeDef, os);
-
-  if (!parameters.empty()) {
+/// Emit the builders for the given type.
+static void emitTypeBuilderDefs(const TypeDef &typeDef, raw_ostream &os,
+                                ArrayRef<TypeParameter> typeDefParams) {
+  bool genCheckedMethods = typeDef.genVerifyInvariantsDecl();
+  StringRef typeClass = typeDef.getCppClassName();
+  if (!typeDef.skipDefaultBuilders()) {
     os << llvm::formatv(
-        "{0} {0}::get(::mlir::MLIRContext* ctxt{1}) {{\n"
-        "  return Base::get(ctxt{2});\n}\n",
-        typeDef.getCppClassName(),
+        "{0} {0}::get(::mlir::MLIRContext *context{1}) {{\n"
+        "  return Base::get(context{2});\n}\n",
+        typeClass,
         TypeParamCommaFormatter(
-            TypeParamCommaFormatter::EmitFormat::TypeNamePairs, parameters),
+            TypeParamCommaFormatter::EmitFormat::TypeNamePairs, typeDefParams),
         TypeParamCommaFormatter(TypeParamCommaFormatter::EmitFormat::JustParams,
-                                parameters));
+                                typeDefParams));
+    if (genCheckedMethods) {
+      os << llvm::formatv(
+          "{0} {0}::getChecked(::mlir::Location loc{1}) {{\n"
+          "  return Base::getChecked(loc{2});\n}\n",
+          typeClass,
+          TypeParamCommaFormatter(
+              TypeParamCommaFormatter::EmitFormat::TypeNamePairs,
+              typeDefParams),
+          TypeParamCommaFormatter(
+              TypeParamCommaFormatter::EmitFormat::JustParams, typeDefParams));
+    }
   }
 
-  // Emit the parameter accessors.
-  if (typeDef.genAccessors())
-    for (const TypeParameter &parameter : parameters) {
-      SmallString<16> name = parameter.getName();
-      name[0] = llvm::toUpper(name[0]);
-      os << formatv("{0} {3}::get{1}() const { return getImpl()->{2}; }\n",
-                    parameter.getCppType(), name, parameter.getName(),
-                    typeDef.getCppClassName());
+  // Generate the builders specified by the user.
+  auto builderFmtCtx = FmtContext().addSubst("_ctxt", "context");
+  auto checkedBuilderFmtCtx = FmtContext()
+                                  .addSubst("_loc", "loc")
+                                  .addSubst("_ctxt", "loc.getContext()");
+  for (const TypeBuilder &builder : typeDef.getBuilders()) {
+    Optional<StringRef> body = builder.getBody();
+    Optional<StringRef> checkedBody =
+        genCheckedMethods ? builder.getCheckedBody() : llvm::None;
+    if (!body && !checkedBody)
+      continue;
+    std::string paramStr;
+    llvm::raw_string_ostream paramOS(paramStr);
+    llvm::interleaveComma(builder.getParameters(), paramOS,
+                          [&](const TypeBuilder::Parameter &param) {
+                            // Note: TypeBuilder parameters are guaranteed to
+                            // have names.
+                            paramOS << param.getCppType() << " "
+                                    << *param.getName();
+                          });
+    paramOS.flush();
+
+    // Emit the `get` variant of the builder.
+    if (body) {
+      os << llvm::formatv("{0} {0}::get(", typeClass);
+      if (!builder.hasInferredContextParameter()) {
+        os << "::mlir::MLIRContext *context";
+        if (!paramStr.empty())
+          os << ", ";
+        os << llvm::formatv("{0}) {{\n  {1};\n}\n", paramStr,
+                            tgfmt(*body, &builderFmtCtx).str());
+      } else {
+        os << llvm::formatv("{0}) {{\n  {1};\n}\n", paramStr, *body);
+      }
     }
 
-  // Generate getChecked() method.
-  if (typeDef.genVerifyInvariantsDecl()) {
-    os << llvm::formatv(
-        typeDefDefGetCheckeStr,
-        TypeParamCommaFormatter(
-            TypeParamCommaFormatter::EmitFormat::TypeNamePairs, parameters),
-        typeDef.getCppClassName(),
-        TypeParamCommaFormatter(TypeParamCommaFormatter::EmitFormat::JustParams,
-                                parameters));
+    // Emit the `getChecked` variant of the builder.
+    if (checkedBody) {
+      os << llvm::formatv("{0} {0}::getChecked(::mlir::Location loc",
+                          typeClass);
+      if (!paramStr.empty())
+        os << ", " << paramStr;
+      os << llvm::formatv(") {{\n  {0};\n}\n",
+                          tgfmt(*checkedBody, &checkedBuilderFmtCtx));
+    }
+  }
+}
+
+/// Print all the typedef-specific definition code.
+static void emitTypeDefDef(const TypeDef &typeDef, raw_ostream &os) {
+  NamespaceEmitter ns(os, typeDef.getDialect());
+
+  SmallVector<TypeParameter, 4> parameters;
+  typeDef.getParameters(parameters);
+  if (!parameters.empty()) {
+    // Emit the storage class, if requested and necessary.
+    if (typeDef.genStorageClass())
+      emitStorageClass(typeDef, os);
+
+    // Emit the builders for this type.
+    emitTypeBuilderDefs(typeDef, os, parameters);
+
+    // Generate accessor definitions only if we also generate the storage class.
+    // Otherwise, let the user define the exact accessor definition.
+    if (typeDef.genAccessors() && typeDef.genStorageClass()) {
+      // Emit the parameter accessors.
+      for (const TypeParameter &parameter : parameters) {
+        SmallString<16> name = parameter.getName();
+        name[0] = llvm::toUpper(name[0]);
+        os << formatv("{0} {3}::get{1}() const { return getImpl()->{2}; }\n",
+                      parameter.getCppType(), name, parameter.getName(),
+                      typeDef.getCppClassName());
+      }
+    }
   }
 
   // If mnemonic is specified maybe print definitions for the parser and printer
@@ -534,9 +635,9 @@ static void emitParsePrintDispatch(ArrayRef<TypeDef> types, raw_ostream &os) {
 
   // The parser dispatch is just a list of if-elses, matching on the
   // mnemonic and calling the class's parse function.
-  os << "static ::mlir::Type generatedTypeParser(::mlir::MLIRContext* "
-        "ctxt, "
-        "::mlir::DialectAsmParser& parser, ::llvm::StringRef mnemonic) {\n";
+  os << "static ::mlir::Type generatedTypeParser(::mlir::MLIRContext *"
+        "context, ::mlir::DialectAsmParser &parser, "
+        "::llvm::StringRef mnemonic) {\n";
   for (const TypeDef &type : types) {
     if (type.getMnemonic()) {
       os << formatv("  if (mnemonic == {0}::{1}::getMnemonic()) return "
@@ -547,9 +648,9 @@ static void emitParsePrintDispatch(ArrayRef<TypeDef> types, raw_ostream &os) {
       // If the type has no parameters and no parser code, just invoke a normal
       // `get`.
       if (type.getNumParameters() == 0 && !type.getParserCode())
-        os << "get(ctxt);\n";
+        os << "get(context);\n";
       else
-        os << "parse(ctxt, parser);\n";
+        os << "parse(context, parser);\n";
     }
   }
   os << "  return ::mlir::Type();\n";
@@ -559,7 +660,7 @@ static void emitParsePrintDispatch(ArrayRef<TypeDef> types, raw_ostream &os) {
   // printer.
   os << "static ::mlir::LogicalResult generatedTypePrinter(::mlir::Type "
         "type, "
-        "::mlir::DialectAsmPrinter& printer) {\n"
+        "::mlir::DialectAsmPrinter &printer) {\n"
      << "  return ::llvm::TypeSwitch<::mlir::Type, "
         "::mlir::LogicalResult>(type)\n";
   for (const TypeDef &type : types) {
@@ -594,7 +695,7 @@ static bool emitTypeDefDefs(const llvm::RecordKeeper &recordKeeper,
 
   IfDefScope scope("GET_TYPEDEF_CLASSES", os);
   emitParsePrintDispatch(typeDefs, os);
-  for (auto typeDef : typeDefs)
+  for (const TypeDef &typeDef : typeDefs)
     emitTypeDefDef(typeDef, os);
 
   return false;

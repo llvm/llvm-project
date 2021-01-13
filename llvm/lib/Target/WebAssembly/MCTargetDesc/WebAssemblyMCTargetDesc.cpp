@@ -151,8 +151,6 @@ wasm::ValType WebAssembly::toValType(const MVT &Ty) {
     return wasm::ValType::FUNCREF;
   case MVT::externref:
     return wasm::ValType::EXTERNREF;
-  case MVT::exnref:
-    return wasm::ValType::EXNREF;
   default:
     llvm_unreachable("unexpected type");
   }

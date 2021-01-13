@@ -15,7 +15,6 @@
 #include "flang/Common/enum-set.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/tools.h"
-
 #include <unordered_map>
 
 namespace Fortran::semantics {
@@ -43,6 +42,9 @@ public:
 
   template <typename T> bool Pre(const parser::Statement<T> &statement) {
     currentStatementSourcePosition_ = statement.source;
+    if (statement.label.has_value()) {
+      labels_.insert(*statement.label);
+    }
     return true;
   }
 
@@ -53,6 +55,8 @@ public:
     }
   }
   void Post(const parser::StopStmt &) { EmitBranchOutError("STOP"); }
+
+  std::set<parser::Label> labels() { return labels_; }
 
 private:
   parser::MessageFormattedText GetEnclosingMsg() const {
@@ -103,6 +107,7 @@ private:
   parser::CharBlock sourcePosition_;
   std::string upperCaseDirName_;
   D currentDirective_;
+  std::set<parser::Label> labels_;
 };
 
 // Generic structure checker for directives/clauses language such as OpenMP
@@ -226,13 +231,14 @@ protected:
       SayNotMatching(beginDir.source, endDir.source);
     }
   }
+  // Check illegal branching out of `Parser::Block` for `Parser::Name` based
+  // nodes (examples `Parser::ExitStmt`) along with `Parser::Label`
+  // based nodes (example `Parser::GotoStmt`).
   void CheckNoBranching(const parser::Block &block, D directive,
       const parser::CharBlock &directiveSource);
 
   // Check that only clauses in set are after the specific clauses.
   void CheckOnlyAllowedAfter(C clause, common::EnumSet<C, ClauseEnumSize> set);
-
-  void CheckRequired(C clause);
 
   void CheckRequireAtLeastOneOf();
 
@@ -273,6 +279,11 @@ void DirectiveStructureChecker<D, C, PC, ClauseEnumSize>::CheckNoBranching(
   NoBranchingEnforce<D> noBranchingEnforce{
       context_, directiveSource, directive, ContextDirectiveAsFortran()};
   parser::Walk(block, noBranchingEnforce);
+
+  LabelEnforce directiveLabelEnforce{context_, noBranchingEnforce.labels(),
+      directiveSource,
+      parser::ToUpperCaseLetters(getDirectiveName(directive).str()).c_str()};
+  parser::Walk(block, directiveLabelEnforce);
 }
 
 // Check that only clauses included in the given set are present after the given
@@ -326,6 +337,8 @@ DirectiveStructureChecker<D, C, PC, ClauseEnumSize>::ClauseSetToString(
 template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
 void DirectiveStructureChecker<D, C, PC,
     ClauseEnumSize>::CheckRequireAtLeastOneOf() {
+  if (GetContext().requiredClauses.empty())
+    return;
   for (auto cl : GetContext().actualClauses) {
     if (GetContext().requiredClauses.test(cl))
       return;
@@ -445,17 +458,6 @@ void DirectiveStructureChecker<D, C, PC, ClauseEnumSize>::SayNotMatching(
       .Say(endSource, "Unmatched %s directive"_err_en_US,
           parser::ToUpperCaseLetters(endSource.ToString()))
       .Attach(beginSource, "Does not match directive"_en_US);
-}
-
-// Check that at least one of the required clauses is present on the directive.
-template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
-void DirectiveStructureChecker<D, C, PC, ClauseEnumSize>::CheckRequired(C c) {
-  if (!FindClause(c)) {
-    context_.Say(GetContext().directiveSource,
-        "At least one %s clause must appear on the %s directive"_err_en_US,
-        parser::ToUpperCaseLetters(getClauseName(c).str()),
-        ContextDirectiveAsFortran());
-  }
 }
 
 // Check the value of the clause is a positive parameter.

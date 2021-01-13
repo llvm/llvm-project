@@ -72,8 +72,8 @@ func private @index_type(!spv.array<4xindex>) -> ()
 
 // -----
 
-// expected-error @+1 {{cannot use '!llvm.i32' to compose SPIR-V types}}
-func private @llvm_type(!spv.array<4x!llvm.i32>) -> ()
+// expected-error @+1 {{cannot use '!llvm.struct<()>' to compose SPIR-V types}}
+func private @llvm_type(!spv.array<4x!llvm.struct<()>>) -> ()
 
 // -----
 

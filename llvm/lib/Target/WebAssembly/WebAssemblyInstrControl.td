@@ -131,14 +131,11 @@ defm THROW : I<(outs), (ins event_op:$tag, variable_ops),
                (outs), (ins event_op:$tag),
                [(WebAssemblythrow (WebAssemblywrapper texternalsym:$tag))],
                "throw   \t$tag", "throw   \t$tag", 0x08>;
-defm RETHROW : I<(outs), (ins EXNREF:$exn), (outs), (ins), [],
-                 "rethrow \t$exn", "rethrow", 0x09>;
-// Pseudo instruction to be the lowering target of int_wasm_rethrow_in_catch
-// intrinsic. Will be converted to the real rethrow instruction later.
-let isPseudo = 1 in
-defm RETHROW_IN_CATCH : NRI<(outs), (ins), [(int_wasm_rethrow_in_catch)],
-                            "rethrow_in_catch", 0>;
+defm RETHROW : NRI<(outs), (ins i32imm:$depth), [], "rethrow \t$depth", 0x09>;
 } // isTerminator = 1, hasCtrlDep = 1, isBarrier = 1
+// For C++ support, we only rethrow the latest exception, thus always setting
+// the depth to 0.
+def : Pat<(int_wasm_rethrow), (RETHROW 0)>;
 
 // Region within which an exception is caught: try / end_try
 let Uses = [VALUE_STACK], Defs = [VALUE_STACK] in {
@@ -146,26 +143,18 @@ defm TRY     : NRI<(outs), (ins Signature:$sig), [], "try     \t$sig", 0x06>;
 defm END_TRY : NRI<(outs), (ins), [], "end_try", 0x0b>;
 } // Uses = [VALUE_STACK], Defs = [VALUE_STACK]
 
-// Catching an exception: catch / extract_exception
-let hasCtrlDep = 1, hasSideEffects = 1 in
-defm CATCH : I<(outs EXNREF:$dst), (ins), (outs), (ins), [],
-               "catch   \t$dst", "catch", 0x07>;
-
-// Querying / extracing exception: br_on_exn
-// br_on_exn queries an exnref to see if it matches the corresponding exception
-// tag index. If true it branches to the given label and pushes the
-// corresponding argument values of the exception onto the stack.
-let isBranch = 1, isTerminator = 1, hasCtrlDep = 1 in
-defm BR_ON_EXN : I<(outs), (ins bb_op:$dst, event_op:$tag, EXNREF:$exn),
-                   (outs), (ins bb_op:$dst, event_op:$tag), [],
-                   "br_on_exn \t$dst, $tag, $exn", "br_on_exn \t$dst, $tag",
-                   0x0a>;
-// This is a pseudo instruction that simulates popping a value from stack, which
-// has been pushed by br_on_exn
-let isCodeGenOnly = 1, hasSideEffects = 1 in
-defm EXTRACT_EXCEPTION_I32 : NRI<(outs I32:$dst), (ins),
-                                 [(set I32:$dst, (int_wasm_extract_exception))],
-                                 "extract_exception\t$dst">;
+// Catching an exception: catch / catch_all
+let hasCtrlDep = 1, hasSideEffects = 1 in {
+// Currently 'catch' can only extract an i32, which is sufficient for C++
+// support, but according to the spec 'catch' can extract any number of values
+// based on the event type.
+defm CATCH : I<(outs I32:$dst), (ins event_op:$tag),
+               (outs), (ins event_op:$tag),
+               [(set I32:$dst,
+                 (WebAssemblycatch (WebAssemblywrapper texternalsym:$tag)))],
+               "catch   \t$dst, $tag", "catch   \t$tag", 0x07>;
+defm CATCH_ALL : NRI<(outs), (ins), [], "catch_all", 0x05>;
+}
 
 // Pseudo instructions: cleanupret / catchret
 let isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,

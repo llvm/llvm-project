@@ -1577,7 +1577,8 @@ define amdgpu_kernel void @v_insertelement_v4i16_2(<4 x i16> addrspace(1)* %out,
 define amdgpu_kernel void @v_insertelement_v4i16_dynamic_vgpr(<4 x i16> addrspace(1)* %out, <4 x i16> addrspace(1)* %in, i32 %val) #0 {
 ; GFX9-LABEL: v_insertelement_v4i16_dynamic_vgpr:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    global_load_dword v2, v[0:1], off
+; GFX9-NEXT:    global_load_dword v2, v[0:1], off glc
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX9-NEXT:    s_load_dword s4, s[4:5], 0x10
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
@@ -1585,7 +1586,6 @@ define amdgpu_kernel void @v_insertelement_v4i16_dynamic_vgpr(<4 x i16> addrspac
 ; GFX9-NEXT:    global_load_dwordx2 v[0:1], v4, s[2:3]
 ; GFX9-NEXT:    s_mov_b32 s3, 0
 ; GFX9-NEXT:    s_mov_b32 s2, 0xffff
-; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 4, v2
 ; GFX9-NEXT:    v_lshlrev_b64 v[2:3], v2, s[2:3]
 ; GFX9-NEXT:    s_pack_ll_b32_b16 s2, s4, s4
@@ -1604,7 +1604,8 @@ define amdgpu_kernel void @v_insertelement_v4i16_dynamic_vgpr(<4 x i16> addrspac
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s2, v2
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    flat_load_dword v4, v[0:1]
+; VI-NEXT:    flat_load_dword v4, v[0:1] glc
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
 ; VI-NEXT:    s_mov_b32 s2, 0xffff
 ; VI-NEXT:    v_mov_b32_e32 v3, s1
@@ -1614,7 +1615,6 @@ define amdgpu_kernel void @v_insertelement_v4i16_dynamic_vgpr(<4 x i16> addrspac
 ; VI-NEXT:    s_lshl_b32 s0, s1, 16
 ; VI-NEXT:    s_or_b32 s0, s1, s0
 ; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
-; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_lshlrev_b32_e32 v4, 4, v4
 ; VI-NEXT:    v_lshlrev_b64 v[4:5], v4, s[2:3]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -1632,7 +1632,8 @@ define amdgpu_kernel void @v_insertelement_v4i16_dynamic_vgpr(<4 x i16> addrspac
 ; CI-NEXT:    v_mov_b32_e32 v1, s3
 ; CI-NEXT:    v_add_i32_e32 v0, vcc, s2, v2
 ; CI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; CI-NEXT:    flat_load_dword v4, v[0:1]
+; CI-NEXT:    flat_load_dword v4, v[0:1] glc
+; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
 ; CI-NEXT:    s_mov_b32 s3, 0
 ; CI-NEXT:    s_mov_b32 s2, 0xffff
@@ -1642,7 +1643,6 @@ define amdgpu_kernel void @v_insertelement_v4i16_dynamic_vgpr(<4 x i16> addrspac
 ; CI-NEXT:    v_add_i32_e32 v2, vcc, s0, v2
 ; CI-NEXT:    s_or_b32 s0, s4, s1
 ; CI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
-; CI-NEXT:    s_waitcnt vmcnt(1)
 ; CI-NEXT:    v_lshlrev_b32_e32 v4, 4, v4
 ; CI-NEXT:    v_lshl_b64 v[4:5], s[2:3], v4
 ; CI-NEXT:    s_waitcnt vmcnt(0)

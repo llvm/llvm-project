@@ -657,9 +657,13 @@ static void HandleInlinedEHPad(InvokeInst *II, BasicBlock *FirstNewBlock,
   // edge from this block.
   SmallVector<Value *, 8> UnwindDestPHIValues;
   BasicBlock *InvokeBB = II->getParent();
-  for (PHINode &PHI : UnwindDest->phis())
+  for (Instruction &I : *UnwindDest) {
     // Save the value to use for this edge.
-    UnwindDestPHIValues.push_back(PHI.getIncomingValueForBlock(InvokeBB));
+    PHINode *PHI = dyn_cast<PHINode>(&I);
+    if (!PHI)
+      break;
+    UnwindDestPHIValues.push_back(PHI->getIncomingValueForBlock(InvokeBB));
+  }
 
   // Add incoming-PHI values to the unwind destination block for the given basic
   // block, using the values for the original invoke's source block.
@@ -1564,8 +1568,7 @@ static void updateCallProfile(Function *Callee, const ValueToValueMapTy &VMap,
     return;
   auto CallSiteCount = PSI ? PSI->getProfileCount(TheCall, CallerBFI) : None;
   int64_t CallCount =
-      std::min(CallSiteCount.hasValue() ? CallSiteCount.getValue() : 0,
-               CalleeEntryCount.getCount());
+      std::min(CallSiteCount.getValueOr(0), CalleeEntryCount.getCount());
   updateProfileCallee(Callee, -CallCount, &VMap);
 }
 

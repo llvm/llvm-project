@@ -43,6 +43,10 @@ void BufferedStackTrace::UnwindSlow(uptr pc, u32 max_depth) {
   trace_buffer[0] = pc;
 }
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wframe-larger-than="
+#endif
 void BufferedStackTrace::UnwindSlow(uptr pc, void *context, u32 max_depth) {
   CHECK(context);
   CHECK_GE(max_depth, 2);
@@ -74,6 +78,9 @@ void BufferedStackTrace::UnwindSlow(uptr pc, void *context, u32 max_depth) {
     trace_buffer[size++] = (uptr)stack_frame.AddrPC.Offset;
   }
 }
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 #endif  // #if !SANITIZER_GO
 
 #endif  // SANITIZER_WINDOWS

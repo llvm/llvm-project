@@ -153,7 +153,10 @@ static steady_clock::time_point __libcpp_steady_clock_now() {
 
   LARGE_INTEGER counter;
   (void) QueryPerformanceCounter(&counter);
-  return steady_clock::time_point(steady_clock::duration(counter.QuadPart * nano::den / freq.QuadPart));
+  auto seconds = counter.QuadPart / freq.QuadPart;
+  auto fractions = counter.QuadPart % freq.QuadPart;
+  auto dur = seconds * nano::den + fractions * nano::den / freq.QuadPart;
+  return steady_clock::time_point(steady_clock::duration(dur));
 }
 
 #elif defined(CLOCK_MONOTONIC)

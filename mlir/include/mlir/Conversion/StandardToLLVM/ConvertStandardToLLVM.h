@@ -150,8 +150,8 @@ private:
   /// Convert an integer type `i*` to `!llvm<"i*">`.
   Type convertIntegerType(IntegerType type);
 
-  /// Convert a floating point type: `f16` to `!llvm.half`, `f32` to
-  /// `!llvm.float` and `f64` to `!llvm.double`.  `bf16` is not supported
+  /// Convert a floating point type: `f16` to `f16`, `f32` to
+  /// `f32` and `f64` to `f64`.  `bf16` is not supported
   /// by LLVM.
   Type convertFloatType(FloatType type);
 
@@ -180,9 +180,9 @@ private:
   /// For example, memref<?x?xf32> is converted to the following list:
   /// - `!llvm<"float*">` (allocated pointer),
   /// - `!llvm<"float*">` (aligned pointer),
-  /// - `!llvm.i64` (offset),
-  /// - `!llvm.i64`, `!llvm.i64` (sizes),
-  /// - `!llvm.i64`, `!llvm.i64` (strides).
+  /// - `i64` (offset),
+  /// - `i64`, `i64` (sizes),
+  /// - `i64`, `i64` (strides).
   /// These types can be recomposed to a memref descriptor struct.
   SmallVector<Type, 5> getMemRefDescriptorFields(MemRefType type,
                                                  bool unpackAggregates);
@@ -193,7 +193,7 @@ private:
   /// - an integer rank, followed by
   /// - a pointer to the memref descriptor struct.
   /// For example, memref<*xf32> is converted to the following list:
-  /// !llvm.i64 (rank)
+  /// i64 (rank)
   /// !llvm<"i8*"> (type-erased pointer).
   /// These types can be recomposed to a unranked memref descriptor struct.
   SmallVector<Type, 2> getUnrankedMemRefDescriptorFields();
@@ -523,17 +523,17 @@ protected:
   /// strides and buffer size from these sizes.
   ///
   /// For example, memref<4x?xf32> emits:
-  /// `sizes[0]`   = llvm.mlir.constant(4 : index) : !llvm.i64
+  /// `sizes[0]`   = llvm.mlir.constant(4 : index) : i64
   /// `sizes[1]`   = `dynamicSizes[0]`
-  /// `strides[1]` = llvm.mlir.constant(1 : index) : !llvm.i64
+  /// `strides[1]` = llvm.mlir.constant(1 : index) : i64
   /// `strides[0]` = `sizes[0]`
-  /// %size        = llvm.mul `sizes[0]`, `sizes[1]` : !llvm.i64
-  /// %nullptr     = llvm.mlir.null : !llvm.ptr<float>
+  /// %size        = llvm.mul `sizes[0]`, `sizes[1]` : i64
+  /// %nullptr     = llvm.mlir.null : !llvm.ptr<f32>
   /// %gep         = llvm.getelementptr %nullptr[%size]
-  ///                  : (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
-  /// `sizeBytes`  = llvm.ptrtoint %gep : !llvm.ptr<float> to !llvm.i64
+  ///                  : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+  /// `sizeBytes`  = llvm.ptrtoint %gep : !llvm.ptr<f32> to i64
   void getMemRefDescriptorSizes(Location loc, MemRefType memRefType,
-                                ArrayRef<Value> dynamicSizes,
+                                ValueRange dynamicSizes,
                                 ConversionPatternRewriter &rewriter,
                                 SmallVectorImpl<Value> &sizes,
                                 SmallVectorImpl<Value> &strides,

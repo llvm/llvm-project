@@ -124,6 +124,7 @@ public:
 
   bool Pre(const parser::OpenACCRoutineConstruct &);
   bool Pre(const parser::AccBindClause &);
+  void Post(const parser::OpenACCStandaloneDeclarativeConstruct &);
 
   void Post(const parser::AccBeginBlockDirective &) {
     GetContext().withinConstruct = true;
@@ -215,6 +216,7 @@ private:
   void CheckMultipleAppearances(
       const parser::Name &, const Symbol &, Symbol::Flag);
   void AllowOnlyArrayAndSubArray(const parser::AccObjectList &objectList);
+  void DoNotAllowAssumedSizedArray(const parser::AccObjectList &objectList);
 };
 
 // Data-sharing and Data-mapping attributes for data-refs in OpenMP construct
@@ -470,6 +472,60 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCDeclarativeConstruct &x) {
   return true;
 }
 
+static const parser::AccObjectList &GetAccObjectList(
+    const parser::AccClause &clause) {
+  if (const auto *copyClause =
+          std::get_if<Fortran::parser::AccClause::Copy>(&clause.u)) {
+    return copyClause->v;
+  } else if (const auto *createClause =
+                 std::get_if<Fortran::parser::AccClause::Create>(&clause.u)) {
+    const Fortran::parser::AccObjectListWithModifier &listWithModifier =
+        createClause->v;
+    const Fortran::parser::AccObjectList &accObjectList =
+        std::get<Fortran::parser::AccObjectList>(listWithModifier.t);
+    return accObjectList;
+  } else if (const auto *copyinClause =
+                 std::get_if<Fortran::parser::AccClause::Copyin>(&clause.u)) {
+    const Fortran::parser::AccObjectListWithModifier &listWithModifier =
+        copyinClause->v;
+    const Fortran::parser::AccObjectList &accObjectList =
+        std::get<Fortran::parser::AccObjectList>(listWithModifier.t);
+    return accObjectList;
+  } else if (const auto *copyoutClause =
+                 std::get_if<Fortran::parser::AccClause::Copyout>(&clause.u)) {
+    const Fortran::parser::AccObjectListWithModifier &listWithModifier =
+        copyoutClause->v;
+    const Fortran::parser::AccObjectList &accObjectList =
+        std::get<Fortran::parser::AccObjectList>(listWithModifier.t);
+    return accObjectList;
+  } else if (const auto *presentClause =
+                 std::get_if<Fortran::parser::AccClause::Present>(&clause.u)) {
+    return presentClause->v;
+  } else if (const auto *deviceptrClause =
+                 std::get_if<Fortran::parser::AccClause::Deviceptr>(
+                     &clause.u)) {
+    return deviceptrClause->v;
+  } else if (const auto *deviceResidentClause =
+                 std::get_if<Fortran::parser::AccClause::DeviceResident>(
+                     &clause.u)) {
+    return deviceResidentClause->v;
+  } else if (const auto *linkClause =
+                 std::get_if<Fortran::parser::AccClause::Link>(&clause.u)) {
+    return linkClause->v;
+  } else {
+    llvm_unreachable("Clause without object list!");
+  }
+}
+
+void AccAttributeVisitor::Post(
+    const parser::OpenACCStandaloneDeclarativeConstruct &x) {
+  const auto &clauseList = std::get<parser::AccClauseList>(x.t);
+  for (const auto &clause : clauseList.v) {
+    // Restriction - line 2414
+    DoNotAllowAssumedSizedArray(GetAccObjectList(clause));
+  }
+}
+
 bool AccAttributeVisitor::Pre(const parser::OpenACCLoopConstruct &x) {
   const auto &beginDir{std::get<parser::AccBeginLoopDirective>(x.t)};
   const auto &loopDir{std::get<parser::AccLoopDirective>(beginDir.t)};
@@ -582,6 +638,30 @@ void AccAttributeVisitor::AllowOnlyArrayAndSubArray(
                   parser::ToUpperCaseLetters(
                       llvm::acc::getOpenACCDirectiveName(GetContext().directive)
                           .str()));
+            },
+        },
+        accObject.u);
+  }
+}
+
+void AccAttributeVisitor::DoNotAllowAssumedSizedArray(
+    const parser::AccObjectList &objectList) {
+  for (const auto &accObject : objectList.v) {
+    std::visit(
+        common::visitors{
+            [&](const parser::Designator &designator) {
+              const auto &name{GetLastName(designator)};
+              if (name.symbol && semantics::IsAssumedSizeArray(*name.symbol))
+                context_.Say(designator.source,
+                    "Assumed-size dummy arrays may not appear on the %s "
+                    "directive"_err_en_US,
+                    parser::ToUpperCaseLetters(
+                        llvm::acc::getOpenACCDirectiveName(
+                            GetContext().directive)
+                            .str()));
+            },
+            [&](const auto &name) {
+
             },
         },
         accObject.u);

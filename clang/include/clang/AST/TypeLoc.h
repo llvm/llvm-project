@@ -1749,30 +1749,79 @@ public:
 
 // FIXME: size expression and attribute locations (or keyword if we
 // ever fully support altivec syntax).
-class VectorTypeLoc : public InheritingConcreteTypeLoc<TypeSpecTypeLoc,
-                                                       VectorTypeLoc,
-                                                       VectorType> {
+struct VectorTypeLocInfo {
+  SourceLocation NameLoc;
+};
+
+class VectorTypeLoc : public ConcreteTypeLoc<UnqualTypeLoc, VectorTypeLoc,
+                                             VectorType, VectorTypeLocInfo> {
+public:
+  SourceLocation getNameLoc() const { return this->getLocalData()->NameLoc; }
+
+  void setNameLoc(SourceLocation Loc) { this->getLocalData()->NameLoc = Loc; }
+
+  SourceRange getLocalSourceRange() const {
+    return SourceRange(getNameLoc(), getNameLoc());
+  }
+
+  void initializeLocal(ASTContext &Context, SourceLocation Loc) {
+    setNameLoc(Loc);
+  }
+
+  TypeLoc getElementLoc() const { return getInnerTypeLoc(); }
+
+  QualType getInnerType() const { return this->getTypePtr()->getElementType(); }
 };
 
 // FIXME: size expression and attribute locations (or keyword if we
 // ever fully support altivec syntax).
 class DependentVectorTypeLoc
-    : public InheritingConcreteTypeLoc<TypeSpecTypeLoc,
-                                       DependentVectorTypeLoc,
-                                       DependentVectorType> {};
+    : public ConcreteTypeLoc<UnqualTypeLoc, DependentVectorTypeLoc,
+                             DependentVectorType, VectorTypeLocInfo> {
+public:
+  SourceLocation getNameLoc() const { return this->getLocalData()->NameLoc; }
+
+  void setNameLoc(SourceLocation Loc) { this->getLocalData()->NameLoc = Loc; }
+
+  SourceRange getLocalSourceRange() const {
+    return SourceRange(getNameLoc(), getNameLoc());
+  }
+
+  void initializeLocal(ASTContext &Context, SourceLocation Loc) {
+    setNameLoc(Loc);
+  }
+
+  TypeLoc getElementLoc() const { return getInnerTypeLoc(); }
+
+  QualType getInnerType() const { return this->getTypePtr()->getElementType(); }
+};
 
 // FIXME: size expression and attribute locations.
-class ExtVectorTypeLoc : public InheritingConcreteTypeLoc<VectorTypeLoc,
-                                                          ExtVectorTypeLoc,
-                                                          ExtVectorType> {
-};
+class ExtVectorTypeLoc
+    : public InheritingConcreteTypeLoc<VectorTypeLoc, ExtVectorTypeLoc,
+                                       ExtVectorType> {};
 
 // FIXME: attribute locations.
 // For some reason, this isn't a subtype of VectorType.
-class DependentSizedExtVectorTypeLoc :
-    public InheritingConcreteTypeLoc<TypeSpecTypeLoc,
-                                     DependentSizedExtVectorTypeLoc,
-                                     DependentSizedExtVectorType> {
+class DependentSizedExtVectorTypeLoc
+    : public ConcreteTypeLoc<UnqualTypeLoc, DependentSizedExtVectorTypeLoc,
+                             DependentSizedExtVectorType, VectorTypeLocInfo> {
+public:
+  SourceLocation getNameLoc() const { return this->getLocalData()->NameLoc; }
+
+  void setNameLoc(SourceLocation Loc) { this->getLocalData()->NameLoc = Loc; }
+
+  SourceRange getLocalSourceRange() const {
+    return SourceRange(getNameLoc(), getNameLoc());
+  }
+
+  void initializeLocal(ASTContext &Context, SourceLocation Loc) {
+    setNameLoc(Loc);
+  }
+
+  TypeLoc getElementLoc() const { return getInnerTypeLoc(); }
+
+  QualType getInnerType() const { return this->getTypePtr()->getElementType(); }
 };
 
 struct MatrixTypeLocInfo {

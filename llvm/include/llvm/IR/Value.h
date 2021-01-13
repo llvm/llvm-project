@@ -281,6 +281,10 @@ public:
   /// \note It is an error to call V->takeName(V).
   void takeName(Value *V);
 
+#ifndef NDEBUG
+  std::string getNameOrAsOperand() const;
+#endif
+
   /// Change all uses of this to point to a new Value.
   ///
   /// Go through the uses list for this definition and make each use point to

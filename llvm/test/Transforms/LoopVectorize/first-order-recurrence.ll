@@ -645,3 +645,235 @@ for.cond:
 for.end:
   ret void
 }
+
+define i32 @sink_into_replication_region(i32 %y) {
+; CHECK-LABEL: @sink_into_replication_region(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i32 [[Y]], i32 1
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[N_RND_UP:%.*]] = add nuw i32 [[TMP1]], 3
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -4
+; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = add nsw i32 [[TMP1]], -1
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_UDIV_CONTINUE9:%.*]] ]
+; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 0>, [[VECTOR_PH]] ], [ [[TMP21:%.*]], [[PRED_UDIV_CONTINUE9]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP23:%.*]], [[PRED_UDIV_CONTINUE9]] ]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i32 [[Y]], [[INDEX]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <4 x i32> poison, i32 [[INDEX]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT2]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[VEC_IV:%.*]] = or <4 x i32> [[BROADCAST_SPLAT3]], <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <4 x i32> [[VEC_IV]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[TMP2]], i32 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[PRED_UDIV_IF:%.*]], label [[PRED_UDIV_CONTINUE:%.*]]
+; CHECK:       pred.udiv.if:
+; CHECK-NEXT:    [[TMP4:%.*]] = udiv i32 219220132, [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[TMP4]], i32 0
+; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE]]
+; CHECK:       pred.udiv.continue:
+; CHECK-NEXT:    [[TMP6:%.*]] = phi <4 x i32> [ poison, [[VECTOR_BODY]] ], [ [[TMP5]], [[PRED_UDIV_IF]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP2]], i32 1
+; CHECK-NEXT:    br i1 [[TMP7]], label [[PRED_UDIV_IF4:%.*]], label [[PRED_UDIV_CONTINUE5:%.*]]
+; CHECK:       pred.udiv.if4:
+; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[OFFSET_IDX]], -1
+; CHECK-NEXT:    [[TMP9:%.*]] = udiv i32 219220132, [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[TMP9]], i32 1
+; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE5]]
+; CHECK:       pred.udiv.continue5:
+; CHECK-NEXT:    [[TMP11:%.*]] = phi <4 x i32> [ [[TMP6]], [[PRED_UDIV_CONTINUE]] ], [ [[TMP10]], [[PRED_UDIV_IF4]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP2]], i32 2
+; CHECK-NEXT:    br i1 [[TMP12]], label [[PRED_UDIV_IF6:%.*]], label [[PRED_UDIV_CONTINUE7:%.*]]
+; CHECK:       pred.udiv.if6:
+; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[OFFSET_IDX]], -2
+; CHECK-NEXT:    [[TMP14:%.*]] = udiv i32 219220132, [[TMP13]]
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[TMP14]], i32 2
+; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE7]]
+; CHECK:       pred.udiv.continue7:
+; CHECK-NEXT:    [[TMP16:%.*]] = phi <4 x i32> [ [[TMP11]], [[PRED_UDIV_CONTINUE5]] ], [ [[TMP15]], [[PRED_UDIV_IF6]] ]
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i1> [[TMP2]], i32 3
+; CHECK-NEXT:    br i1 [[TMP17]], label [[PRED_UDIV_IF8:%.*]], label [[PRED_UDIV_CONTINUE9]]
+; CHECK:       pred.udiv.if8:
+; CHECK-NEXT:    [[TMP18:%.*]] = add i32 [[OFFSET_IDX]], -3
+; CHECK-NEXT:    [[TMP19:%.*]] = udiv i32 219220132, [[TMP18]]
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i32> [[TMP16]], i32 [[TMP19]], i32 3
+; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE9]]
+; CHECK:       pred.udiv.continue9:
+; CHECK-NEXT:    [[TMP21]] = phi <4 x i32> [ [[TMP16]], [[PRED_UDIV_CONTINUE7]] ], [ [[TMP20]], [[PRED_UDIV_IF8]] ]
+; CHECK-NEXT:    [[TMP22:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[TMP21]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP23]] = add <4 x i32> [[VEC_PHI1]], [[TMP22]]
+; CHECK-NEXT:    [[TMP24:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[TMP23]], <4 x i32> [[VEC_PHI1]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP25:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof !45, [[LOOP46:!llvm.loop !.*]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[TMP24]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP24]], [[RDX_SHUF]]
+; CHECK-NEXT:    [[RDX_SHUF10:%.*]] = shufflevector <4 x i32> [[BIN_RDX]], <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[BIN_RDX11:%.*]] = add <4 x i32> [[BIN_RDX]], [[RDX_SHUF10]]
+; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x i32> [[BIN_RDX11]], i32 0
+; CHECK-NEXT:    br i1 true, label [[BB1:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    br label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ undef, [[BB2]] ], [ [[TMP26]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i32 [[TMP]]
+; CHECK:       bb2:
+; CHECK-NEXT:    br i1 undef, label [[BB1]], label [[BB2]], !prof !47, [[LOOP48:!llvm.loop !.*]]
+;
+bb:
+  br label %bb2
+
+  bb1:                                              ; preds = %bb2
+  %tmp = phi i32 [ %tmp6, %bb2 ]
+  ret i32 %tmp
+
+  bb2:                                              ; preds = %bb2, %bb
+  %tmp3 = phi i32 [ %tmp8, %bb2 ], [ %y, %bb ]
+  %tmp4 = phi i32 [ %tmp7, %bb2 ], [ 0, %bb ]
+  %tmp5 = phi i32 [ %tmp6, %bb2 ], [ 0, %bb ]
+  %tmp6 = add i32 %tmp5, %tmp4
+  %tmp7 = udiv i32 219220132, %tmp3
+  %tmp8 = add nsw i32 %tmp3, -1
+  %tmp9 = icmp slt i32 %tmp3, 2
+  br i1 %tmp9, label %bb1, label %bb2, !prof !2
+}
+
+define i32 @sink_into_replication_region_multiple(i32 *%x, i32 %y) {
+; CHECK-LABEL: @sink_into_replication_region_multiple(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i32 [[Y]], i32 1
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[N_RND_UP:%.*]] = add nuw i32 [[TMP1]], 3
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -4
+; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = add nsw i32 [[TMP1]], -1
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE16:%.*]] ]
+; CHECK-NEXT:    [[VEC_IND2:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[PRED_STORE_CONTINUE16]] ]
+; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 0>, [[VECTOR_PH]] ], [ [[TMP21:%.*]], [[PRED_STORE_CONTINUE16]] ]
+; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP23:%.*]], [[PRED_STORE_CONTINUE16]] ]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i32 [[Y]], [[INDEX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[OFFSET_IDX]], -1
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[OFFSET_IDX]], -2
+; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[OFFSET_IDX]], -3
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ule <4 x i32> [[VEC_IND2]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP5]], i32 0
+; CHECK-NEXT:    br i1 [[TMP6]], label [[PRED_UDIV_IF:%.*]], label [[PRED_UDIV_CONTINUE:%.*]]
+; CHECK:       pred.udiv.if:
+; CHECK-NEXT:    [[TMP7:%.*]] = udiv i32 219220132, [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> poison, i32 [[TMP7]], i32 0
+; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE]]
+; CHECK:       pred.udiv.continue:
+; CHECK-NEXT:    [[TMP9:%.*]] = phi <4 x i32> [ poison, [[VECTOR_BODY]] ], [ [[TMP8]], [[PRED_UDIV_IF]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP5]], i32 1
+; CHECK-NEXT:    br i1 [[TMP10]], label [[PRED_UDIV_IF5:%.*]], label [[PRED_UDIV_CONTINUE6:%.*]]
+; CHECK:       pred.udiv.if5:
+; CHECK-NEXT:    [[TMP11:%.*]] = udiv i32 219220132, [[TMP2]]
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> [[TMP9]], i32 [[TMP11]], i32 1
+; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE6]]
+; CHECK:       pred.udiv.continue6:
+; CHECK-NEXT:    [[TMP13:%.*]] = phi <4 x i32> [ [[TMP9]], [[PRED_UDIV_CONTINUE]] ], [ [[TMP12]], [[PRED_UDIV_IF5]] ]
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i1> [[TMP5]], i32 2
+; CHECK-NEXT:    br i1 [[TMP14]], label [[PRED_UDIV_IF7:%.*]], label [[PRED_UDIV_CONTINUE8:%.*]]
+; CHECK:       pred.udiv.if7:
+; CHECK-NEXT:    [[TMP15:%.*]] = udiv i32 219220132, [[TMP3]]
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x i32> [[TMP13]], i32 [[TMP15]], i32 2
+; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE8]]
+; CHECK:       pred.udiv.continue8:
+; CHECK-NEXT:    [[TMP17:%.*]] = phi <4 x i32> [ [[TMP13]], [[PRED_UDIV_CONTINUE6]] ], [ [[TMP16]], [[PRED_UDIV_IF7]] ]
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i1> [[TMP5]], i32 3
+; CHECK-NEXT:    br i1 [[TMP18]], label [[PRED_UDIV_IF9:%.*]], label [[PRED_UDIV_CONTINUE10:%.*]]
+; CHECK:       pred.udiv.if9:
+; CHECK-NEXT:    [[TMP19:%.*]] = udiv i32 219220132, [[TMP4]]
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i32> [[TMP17]], i32 [[TMP19]], i32 3
+; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE10]]
+; CHECK:       pred.udiv.continue10:
+; CHECK-NEXT:    [[TMP21]] = phi <4 x i32> [ [[TMP17]], [[PRED_UDIV_CONTINUE8]] ], [ [[TMP20]], [[PRED_UDIV_IF9]] ]
+; CHECK-NEXT:    [[TMP22:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[TMP21]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP23]] = add <4 x i32> [[VEC_PHI4]], [[TMP22]]
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i1> [[TMP5]], i32 0
+; CHECK-NEXT:    br i1 [[TMP24]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
+; CHECK:       pred.store.if:
+; CHECK-NEXT:    [[TMP25:%.*]] = sext i32 [[INDEX]] to i64
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i32, i32* [[X:%.*]], i64 [[TMP25]]
+; CHECK-NEXT:    store i32 [[OFFSET_IDX]], i32* [[TMP26]], align 4
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
+; CHECK:       pred.store.continue:
+; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i1> [[TMP5]], i32 1
+; CHECK-NEXT:    br i1 [[TMP27]], label [[PRED_STORE_IF11:%.*]], label [[PRED_STORE_CONTINUE12:%.*]]
+; CHECK:       pred.store.if11:
+; CHECK-NEXT:    [[TMP28:%.*]] = or i32 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP29:%.*]] = sext i32 [[TMP28]] to i64
+; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i32, i32* [[X]], i64 [[TMP29]]
+; CHECK-NEXT:    store i32 [[TMP2]], i32* [[TMP30]], align 4
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE12]]
+; CHECK:       pred.store.continue12:
+; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <4 x i1> [[TMP5]], i32 2
+; CHECK-NEXT:    br i1 [[TMP31]], label [[PRED_STORE_IF13:%.*]], label [[PRED_STORE_CONTINUE14:%.*]]
+; CHECK:       pred.store.if13:
+; CHECK-NEXT:    [[TMP32:%.*]] = or i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP33:%.*]] = sext i32 [[TMP32]] to i64
+; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i32, i32* [[X]], i64 [[TMP33]]
+; CHECK-NEXT:    store i32 [[TMP3]], i32* [[TMP34]], align 4
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE14]]
+; CHECK:       pred.store.continue14:
+; CHECK-NEXT:    [[TMP35:%.*]] = extractelement <4 x i1> [[TMP5]], i32 3
+; CHECK-NEXT:    br i1 [[TMP35]], label [[PRED_STORE_IF15:%.*]], label [[PRED_STORE_CONTINUE16]]
+; CHECK:       pred.store.if15:
+; CHECK-NEXT:    [[TMP36:%.*]] = or i32 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP37:%.*]] = sext i32 [[TMP36]] to i64
+; CHECK-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i32, i32* [[X]], i64 [[TMP37]]
+; CHECK-NEXT:    store i32 [[TMP4]], i32* [[TMP38]], align 4
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE16]]
+; CHECK:       pred.store.continue16:
+; CHECK-NEXT:    [[TMP39:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> [[TMP23]], <4 x i32> [[VEC_PHI4]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT3]] = add <4 x i32> [[VEC_IND2]], <i32 4, i32 4, i32 4, i32 4>
+; CHECK-NEXT:    [[TMP40:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP40]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof !45, [[LOOP49:!llvm.loop !.*]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[TMP39]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP39]], [[RDX_SHUF]]
+; CHECK-NEXT:    [[RDX_SHUF17:%.*]] = shufflevector <4 x i32> [[BIN_RDX]], <4 x i32> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[BIN_RDX18:%.*]] = add <4 x i32> [[BIN_RDX]], [[RDX_SHUF17]]
+; CHECK-NEXT:    [[TMP41:%.*]] = extractelement <4 x i32> [[BIN_RDX18]], i32 0
+; CHECK-NEXT:    br i1 true, label [[BB1:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    br label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ undef, [[BB2]] ], [ [[TMP41]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i32 [[TMP]]
+; CHECK:       bb2:
+; CHECK-NEXT:    br i1 undef, label [[BB1]], label [[BB2]], !prof !47, [[LOOP50:!llvm.loop !.*]]
+;
+bb:
+  br label %bb2
+
+  bb1:                                              ; preds = %bb2
+  %tmp = phi i32 [ %tmp6, %bb2 ]
+  ret i32 %tmp
+
+  bb2:                                              ; preds = %bb2, %bb
+  %tmp3 = phi i32 [ %tmp8, %bb2 ], [ %y, %bb ]
+  %iv = phi i32 [ %iv.next, %bb2 ], [ 0, %bb ]
+  %tmp4 = phi i32 [ %tmp7, %bb2 ], [ 0, %bb ]
+  %tmp5 = phi i32 [ %tmp6, %bb2 ], [ 0, %bb ]
+  %g = getelementptr inbounds i32, i32* %x, i32 %iv
+  %tmp6 = add i32 %tmp5, %tmp4
+  %tmp7 = udiv i32 219220132, %tmp3
+  store i32 %tmp3, i32* %g, align 4
+  %tmp8 = add nsw i32 %tmp3, -1
+  %iv.next = add nsw i32 %iv, 1
+  %tmp9 = icmp slt i32 %tmp3, 2
+  br i1 %tmp9, label %bb1, label %bb2, !prof !2
+}
+
+!2 = !{!"branch_weights", i32 1, i32 1}

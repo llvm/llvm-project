@@ -1,5 +1,4 @@
 ! RUN: %S/test_errors.sh %s %t %f18 -fopenmp
-! XFAIL: *
 
 ! OpenMP Version 4.5
 ! 2.5 parallel construct.
@@ -13,7 +12,7 @@ program omp_parallel
   do i = 1, 10
     do j = 1, 10
       print *, "Hello"
-      !ERROR: invalid branch to/from OpenMP structured block
+      !ERROR: Control flow escapes from PARALLEL
       goto 10
     end do
   end do

@@ -462,7 +462,7 @@ void MachineSinking::ProcessDbgInst(MachineInstr &MI) {
 
   DebugVariable Var(MI.getDebugVariable(), MI.getDebugExpression(),
                     MI.getDebugLoc()->getInlinedAt());
-  bool SeenBefore = SeenDbgVars.count(Var) != 0;
+  bool SeenBefore = SeenDbgVars.contains(Var);
 
   MachineOperand &MO = MI.getDebugOperand(0);
   if (MO.isReg() && MO.getReg().isVirtual())

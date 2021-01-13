@@ -74,7 +74,7 @@ def ScalableVectorType : ArmSVE_Type<"ScalableVector"> {
     VectorType vector;
     if ($_parser.parseType(vector))
       return Type();
-    return get(ctxt, vector.getShape(), vector.getElementType());
+    return get($_ctxt, vector.getShape(), vector.getElementType());
   }];
 
   let extraClassDeclaration = [{
@@ -165,7 +165,7 @@ def SmmlaOp : ArmSVE_Op<"smmla",
                 AllTypesMatch<["src1", "src2"]>,
                 AllTypesMatch<["acc", "dst"]>,
               ]> {
-  let summary = "Matrix-matrix mutiply and accumulate op";
+  let summary = "Matrix-matrix multiply and accumulate op";
   let description = [{
     SMMLA: Signed integer matrix multiply-accumulate.
 
@@ -228,7 +228,7 @@ def UmmlaOp : ArmSVE_Op<"ummla",
                 AllTypesMatch<["src1", "src2"]>,
                 AllTypesMatch<["acc", "dst"]>,
               ]> {
-  let summary = "Matrix-matrix mutiply and accumulate op";
+  let summary = "Matrix-matrix multiply and accumulate op";
   let description = [{
     UMMLA: Unsigned integer matrix multiply-accumulate.
 

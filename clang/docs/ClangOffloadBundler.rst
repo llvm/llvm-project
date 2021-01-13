@@ -44,7 +44,7 @@ The layout of a bundled code object is defined by the following table:
     Field                               Type    Size in Bytes    Description
     =================================== ======= ================ ===============================
     Magic String                        string  24               ``__CLANG_OFFLOAD_BUNDLE__``
-    Number Of Code Objects              integer 8                Number od bundled code objects.
+    Number Of Bundle Entries            integer 8                Number of bundle entries.
     1st Bundle Entry Code Object Offset integer 8                Byte offset from beginning of
                                                                  bundled code object to 1st code
                                                                  object.

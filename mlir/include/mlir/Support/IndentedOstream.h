@@ -67,7 +67,7 @@ public:
     return *this;
   }
 
-  /// Emits whitespace and sets the indendation for the stream.
+  /// Emits whitespace and sets the indentation for the stream.
   raw_indented_ostream &indent(int with) {
     os.indent(with);
     atStartOfLine = false;

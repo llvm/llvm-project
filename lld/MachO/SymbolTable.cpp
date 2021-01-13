@@ -18,7 +18,7 @@ using namespace lld;
 using namespace lld::macho;
 
 Symbol *SymbolTable::find(StringRef name) {
-  auto it = symMap.find(llvm::CachedHashStringRef(name));
+  auto it = symMap.find(CachedHashStringRef(name));
   if (it == symMap.end())
     return nullptr;
   return symVector[it->second];
@@ -135,7 +135,7 @@ Symbol *SymbolTable::addDylib(StringRef name, DylibFile *file, bool isWeakDef,
 }
 
 Symbol *SymbolTable::addLazy(StringRef name, ArchiveFile *file,
-                             const llvm::object::Archive::Symbol &sym) {
+                             const object::Archive::Symbol &sym) {
   Symbol *s;
   bool wasInserted;
   std::tie(s, wasInserted) = insert(name);

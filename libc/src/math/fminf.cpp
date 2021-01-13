@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/math/fminf.h"
 #include "src/__support/common.h"
 #include "utils/FPUtil/BasicOperations.h"
 
 namespace __llvm_libc {
 
-float LLVM_LIBC_ENTRYPOINT(fminf)(float x, float y) {
+LLVM_LIBC_FUNCTION(float, fminf, (float x, float y)) {
   return fputil::fmin(x, y);
 }
 

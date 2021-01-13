@@ -21,6 +21,16 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  isascii
+  SUITE
+    libc_ctype_unittests
+  SRCS
+    isascii_test.cpp
+  DEPENDS
+    libc.src.ctype.isascii
+)
+
+add_libc_unittest(
   isblank
   SUITE
     libc_ctype_unittests
@@ -118,6 +128,16 @@ add_libc_unittest(
     isxdigit_test.cpp
   DEPENDS
     libc.src.ctype.isxdigit
+)
+
+add_libc_unittest(
+  toascii
+  SUITE
+    libc_ctype_unittests
+  SRCS
+    toascii_test.cpp
+  DEPENDS
+    libc.src.ctype.toascii
 )
 
 add_libc_unittest(

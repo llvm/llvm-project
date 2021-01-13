@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/math/logbf.h"
 #include "src/__support/common.h"
 #include "utils/FPUtil/ManipulationFunctions.h"
 
 namespace __llvm_libc {
 
-float LLVM_LIBC_ENTRYPOINT(logbf)(float x) { return fputil::logb(x); }
+LLVM_LIBC_FUNCTION(float, logbf, (float x)) { return fputil::logb(x); }
 
 } // namespace __llvm_libc

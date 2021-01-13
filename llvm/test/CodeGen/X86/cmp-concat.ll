@@ -4,10 +4,8 @@
 define i1 @cmp_allbits_concat_i8(i8 %x, i8 %y) {
 ; CHECK-LABEL: cmp_allbits_concat_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzbl %sil, %eax
-; CHECK-NEXT:    shll $8, %edi
-; CHECK-NEXT:    orl %eax, %edi
-; CHECK-NEXT:    cmpw $-1, %di
+; CHECK-NEXT:    andl %esi, %edi
+; CHECK-NEXT:    cmpb $-1, %dil
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %zx = zext i8 %x to i16
@@ -21,10 +19,7 @@ define i1 @cmp_allbits_concat_i8(i8 %x, i8 %y) {
 define i1 @cmp_anybits_concat_i32(i32 %x, i32 %y) {
 ; CHECK-LABEL: cmp_anybits_concat_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    shlq $32, %rdi
-; CHECK-NEXT:    orq %rax, %rdi
+; CHECK-NEXT:    orl %esi, %edi
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
   %zx = zext i32 %x to i64
@@ -39,9 +34,9 @@ define i1 @cmp_anybits_concat_shl_shl_i16(i16 %x, i16 %y) {
 ; CHECK-LABEL: cmp_anybits_concat_shl_shl_i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    movzwl %di, %eax
 ; CHECK-NEXT:    movzwl %si, %ecx
-; CHECK-NEXT:    shlq $32, %rax
 ; CHECK-NEXT:    shlq $8, %rcx
 ; CHECK-NEXT:    orq %rax, %rcx
 ; CHECK-NEXT:    sete %al
@@ -59,9 +54,9 @@ define i1 @cmp_anybits_concat_shl_shl_i16_commute(i16 %x, i16 %y) {
 ; CHECK-LABEL: cmp_anybits_concat_shl_shl_i16_commute:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    movzwl %di, %eax
 ; CHECK-NEXT:    movzwl %si, %ecx
-; CHECK-NEXT:    shlq $32, %rax
 ; CHECK-NEXT:    shlq $8, %rcx
 ; CHECK-NEXT:    orq %rax, %rcx
 ; CHECK-NEXT:    sete %al
@@ -74,6 +69,9 @@ define i1 @cmp_anybits_concat_shl_shl_i16_commute(i16 %x, i16 %y) {
   %r = icmp eq i64 %or, 0
   ret i1 %r
 }
+
+; FIXME: Add vector support, but its only worth it if we can freely truncate the
+; concat'd vectors.
 
 define <16 x i8> @cmp_allbits_concat_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; CHECK-LABEL: cmp_allbits_concat_v16i8:

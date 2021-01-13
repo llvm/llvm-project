@@ -12,9 +12,11 @@ define dso_local signext i32 @test_comm() nounwind {
 ; NOOPT-LABEL: test_comm:
 ; NOOPT:       # %bb.0: # %entry
 ; NOOPT-NEXT:    addis 3, 2, comm_glob@toc@ha
-; NOOPT-NEXT:    addi 5, 3, comm_glob@toc@l
-; NOOPT-NEXT:    lwz 3, 0(5)
+; NOOPT-NEXT:    addi 3, 3, comm_glob@toc@l
+; NOOPT-NEXT:    lwz 3, 0(3)
 ; NOOPT-NEXT:    addi 4, 3, 1
+; NOOPT-NEXT:    addis 5, 2, comm_glob@toc@ha
+; NOOPT-NEXT:    addi 5, 5, comm_glob@toc@l
 ; NOOPT-NEXT:    stw 4, 0(5)
 ; NOOPT-NEXT:    extsw 3, 3
 ; NOOPT-NEXT:    blr

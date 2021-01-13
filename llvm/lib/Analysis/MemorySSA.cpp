@@ -1817,23 +1817,6 @@ MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I,
   return MUD;
 }
 
-/// Returns true if \p Replacer dominates \p Replacee .
-bool MemorySSA::dominatesUse(const MemoryAccess *Replacer,
-                             const MemoryAccess *Replacee) const {
-  if (isa<MemoryUseOrDef>(Replacee))
-    return DT->dominates(Replacer->getBlock(), Replacee->getBlock());
-  const auto *MP = cast<MemoryPhi>(Replacee);
-  // For a phi node, the use occurs in the predecessor block of the phi node.
-  // Since we may occur multiple times in the phi node, we have to check each
-  // operand to ensure Replacer dominates each operand where Replacee occurs.
-  for (const Use &Arg : MP->operands()) {
-    if (Arg.get() != Replacee &&
-        !DT->dominates(Replacer->getBlock(), MP->getIncomingBlock(Arg)))
-      return false;
-  }
-  return true;
-}
-
 /// Properly remove \p MA from all of MemorySSA's lookup tables.
 void MemorySSA::removeFromLookups(MemoryAccess *MA) {
   assert(MA->use_empty() &&

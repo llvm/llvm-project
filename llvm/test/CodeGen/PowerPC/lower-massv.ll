@@ -1,6 +1,6 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr9  < %s -mtriple=powerpc64le-unknown-linux-gnu | FileCheck -check-prefixes=CHECK-PWR9,CHECK-ALL %s 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr8  < %s -mtriple=powerpc64le-unknown-linux-gnu | FileCheck -check-prefixes=CHECK-PWR8,CHECK-ALL %s 
-; RUN: llc -verify-machineinstrs -mcpu=pwr8  < %s -mtriple=powerpc64le-unknown-linux-gnu | FileCheck -check-prefixes=CHECK-DFLT,CHECK-ALL %s 
+; RUN: llc -verify-machineinstrs -mcpu=pwr8  < %s -mtriple=powerpc64le-unknown-linux-gnu | FileCheck --check-prefix=CHECK-ALL %s 
 
 declare <2 x double> @__cbrtd2_massv(<2 x double>)
 declare <4 x float> @__cbrtf4_massv(<4 x float>)

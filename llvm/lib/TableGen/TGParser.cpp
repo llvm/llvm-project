@@ -95,7 +95,7 @@ static void checkConcrete(Record &R) {
     // done merely because existing targets have legitimate cases of
     // non-concrete variables in helper defs. Ideally, we'd introduce a
     // 'maybe' or 'optional' modifier instead of this.
-    if (RV.getPrefix())
+    if (RV.isNonconcreteOK())
       continue;
 
     if (Init *V = RV.getValue()) {
@@ -452,6 +452,8 @@ bool TGParser::addDefOne(std::unique_ptr<Record> Rec) {
   Rec->resolveReferences();
   checkConcrete(*Rec);
 
+  CheckRecordAsserts(*Rec);
+
   if (!isa<StringInit>(Rec->getNameInit())) {
     PrintError(Rec->getLoc(), Twine("record name '") +
                                   Rec->getNameInit()->getAsString() +
@@ -482,11 +484,12 @@ bool TGParser::addDefOne(std::unique_ptr<Record> Rec) {
 // Parser Code
 //===----------------------------------------------------------------------===//
 
-/// isObjectStart - Return true if this is a valid first token for an Object.
+/// isObjectStart - Return true if this is a valid first token for a statement.
 static bool isObjectStart(tgtok::TokKind K) {
-  return K == tgtok::Class || K == tgtok::Def || K == tgtok::Defm ||
-         K == tgtok::Let || K == tgtok::MultiClass || K == tgtok::Foreach ||
-         K == tgtok::Defset || K == tgtok::Defvar || K == tgtok::If;
+  return K == tgtok::Assert || K == tgtok::Class || K == tgtok::Def ||
+         K == tgtok::Defm || K == tgtok::Defset || K == tgtok::Defvar ||
+         K == tgtok::Foreach || K == tgtok::If || K == tgtok::Let ||
+         K == tgtok::MultiClass;
 }
 
 bool TGParser::consume(tgtok::TokKind K) {
@@ -844,8 +847,7 @@ RecTy *TGParser::ParseType() {
   }
 }
 
-/// ParseIDValue - This is just like ParseIDValue above, but it assumes the ID
-/// has already been read.
+/// ParseIDValue
 Init *TGParser::ParseIDValue(Record *CurRec, StringInit *Name, SMLoc NameLoc,
                              IDParseMode Mode) {
   if (CurRec) {
@@ -1596,8 +1598,9 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
       ParseRec = ParseRecTmp.get();
     }
 
-    ParseRec->addValue(RecordVal(A, Start->getType(), false));
-    ParseRec->addValue(RecordVal(B, ListType->getElementType(), false));
+    ParseRec->addValue(RecordVal(A, Start->getType(), RecordVal::FK_Normal));
+    ParseRec->addValue(RecordVal(B, ListType->getElementType(),
+                                 RecordVal::FK_Normal));
     Init *ExprUntyped = ParseValue(ParseRec);
     ParseRec->removeValue(A);
     ParseRec->removeValue(B);
@@ -1845,7 +1848,7 @@ Init *TGParser::ParseOperationForEachFilter(Record *CurRec, RecTy *ItemType) {
     ParseRec = ParseRecTmp.get();
   }
 
-  ParseRec->addValue(RecordVal(LHS, InEltType, false));
+  ParseRec->addValue(RecordVal(LHS, InEltType, RecordVal::FK_Normal));
   Init *RHS = ParseValue(ParseRec, ExprEltType);
   ParseRec->removeValue(LHS);
   if (!RHS)
@@ -2307,7 +2310,7 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
   return R;
 }
 
-/// ParseValue - Parse a tblgen value.  This returns null on error.
+/// ParseValue - Parse a TableGen value. This returns null on error.
 ///
 ///   Value       ::= SimpleValue ValueSuffix*
 ///   ValueSuffix ::= '{' BitList '}'
@@ -2618,8 +2621,10 @@ Init *TGParser::ParseDeclaration(Record *CurRec,
                              "::");
   }
 
-  // Add the value.
-  if (AddValue(CurRec, IdLoc, RecordVal(DeclName, IdLoc, Type, HasField)))
+  // Add the field to the record.
+  if (AddValue(CurRec, IdLoc, RecordVal(DeclName, IdLoc, Type,
+                                        HasField ? RecordVal::FK_NonconcreteOK
+                                                 : RecordVal::FK_Normal)))
     return nullptr;
 
   // If a value is present, parse it.
@@ -2760,12 +2765,16 @@ bool TGParser::ParseTemplateArgList(Record *CurRec) {
   return false;
 }
 
-/// ParseBodyItem - Parse a single item at within the body of a def or class.
+/// ParseBodyItem - Parse a single item within the body of a def or class.
 ///
 ///   BodyItem ::= Declaration ';'
 ///   BodyItem ::= LET ID OptionalBitList '=' Value ';'
 ///   BodyItem ::= Defvar
+///   BodyItem ::= Assert
 bool TGParser::ParseBodyItem(Record *CurRec) {
+  if (Lex.getCode() == tgtok::Assert)
+    return ParseAssert(nullptr, CurRec);
+
   if (Lex.getCode() == tgtok::Defvar)
     return ParseDefvar();
 
@@ -2827,7 +2836,7 @@ bool TGParser::ParseBody(Record *CurRec) {
     return false;
 
   if (!consume(tgtok::l_brace))
-    return TokError("Expected ';' or '{' to start body");
+    return TokError("Expected '{' to start body or ';' for declaration only");
 
   // An object body introduces a new scope for local variables.
   TGLocalVarScope *BodyScope = PushLocalScope();
@@ -2840,6 +2849,14 @@ bool TGParser::ParseBody(Record *CurRec) {
 
   // Eat the '}'.
   Lex.Lex();
+
+  // If we have a semicolon, print a gentle error.
+  SMLoc SemiLoc = Lex.getLoc();
+  if (consume(tgtok::semi)) {
+    PrintError(SemiLoc, "A class or def body should not end with a semicolon");
+    PrintNote("Semicolon ignored; remove to eliminate this error");    
+  }
+
   return false;
 }
 
@@ -3171,6 +3188,41 @@ bool TGParser::ParseIfBody(MultiClass *CurMultiClass, StringRef Kind) {
   return false;
 }
 
+/// ParseAssert - Parse an assert statement.
+///
+///   Assert ::= ASSERT condition , message ;
+bool TGParser::ParseAssert(MultiClass *CurMultiClass, Record *CurRec) {
+  assert(Lex.getCode() == tgtok::Assert && "Unknown tok");
+  Lex.Lex(); // Eat the 'assert' token.
+
+  SMLoc ConditionLoc = Lex.getLoc();
+  Init *Condition = ParseValue(CurRec);
+  if (!Condition)
+    return true;
+
+  if (!consume(tgtok::comma)) {
+    TokError("expected ',' in assert statement");
+    return true;
+  }
+
+  Init *Message = ParseValue(CurRec);
+  if (!Message)
+    return true;
+
+  if (!consume(tgtok::semi))
+    return TokError("expected ';'");
+
+  if (CurMultiClass) {
+    assert(false && "assert in multiclass not yet supported");
+  } else if (CurRec) {
+    CurRec->addAssertion(ConditionLoc, Condition, Message);
+  } else { // at top level
+    CheckAssert(ConditionLoc, Condition, Message);
+  }
+ 
+  return false;
+}
+
 /// ParseClass - Parse a tblgen class definition.
 ///
 ///   ClassInst ::= CLASS ID TemplateArgList? ObjectBody
@@ -3370,20 +3422,30 @@ bool TGParser::ParseMultiClass() {
     while (Lex.getCode() != tgtok::r_brace) {
       switch (Lex.getCode()) {
       default:
-        return TokError("expected 'let', 'def', 'defm', 'defvar', 'foreach' "
-                        "or 'if' in multiclass body");
-      case tgtok::Let:
+        return TokError("expected 'assert', 'def', 'defm', 'defvar', "
+                        "'foreach', 'if', or 'let' in multiclass body");
+      case tgtok::Assert:
+        return TokError("an assert statement in a multiclass is not yet supported");
+
       case tgtok::Def:
       case tgtok::Defm:
       case tgtok::Defvar:
       case tgtok::Foreach:
       case tgtok::If:
+      case tgtok::Let:
         if (ParseObject(CurMultiClass))
           return true;
         break;
       }
     }
     Lex.Lex();  // eat the '}'.
+
+    // If we have a semicolon, print a gentle error.
+    SMLoc SemiLoc = Lex.getLoc();
+    if (consume(tgtok::semi)) {
+      PrintError(SemiLoc, "A multiclass body should not end with a semicolon");
+      PrintNote("Semicolon ignored; remove to eliminate this error");    
+    }
 
     PopLocalScope(MulticlassScope);
   }
@@ -3528,22 +3590,23 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
 ///   Object ::= LETCommand Object
 ///   Object ::= Defset
 ///   Object ::= Defvar
+///   Object ::= Assert
 bool TGParser::ParseObject(MultiClass *MC) {
   switch (Lex.getCode()) {
   default:
-    return TokError("Expected class, def, defm, defset, multiclass, let, "
-                    "foreach or if");
-  case tgtok::Let:   return ParseTopLevelLet(MC);
-  case tgtok::Def:   return ParseDef(MC);
-  case tgtok::Foreach:   return ParseForeach(MC);
-  case tgtok::If:    return ParseIf(MC);
-  case tgtok::Defm:  return ParseDefm(MC);
+    return TokError(
+               "Expected assert, class, def, defm, defset, foreach, if, or let");
+  case tgtok::Assert:  return ParseAssert(MC, nullptr);
+  case tgtok::Def:     return ParseDef(MC);
+  case tgtok::Defm:    return ParseDefm(MC);
+  case tgtok::Defvar:  return ParseDefvar();
+  case tgtok::Foreach: return ParseForeach(MC);
+  case tgtok::If:      return ParseIf(MC);
+  case tgtok::Let:     return ParseTopLevelLet(MC);
   case tgtok::Defset:
     if (MC)
       return TokError("defset is not allowed inside multiclass");
     return ParseDefset();
-  case tgtok::Defvar:
-    return ParseDefvar();
   case tgtok::Class:
     if (MC)
       return TokError("class is not allowed inside multiclass");
@@ -3575,7 +3638,38 @@ bool TGParser::ParseFile() {
   if (Lex.getCode() == tgtok::Eof)
     return false;
 
-  return TokError("Unexpected input at top level");
+  return TokError("Unexpected token at top level");
+}
+
+// Check an assertion: Obtain the condition value and be sure it is true.
+// If not, print a nonfatal error along with the message.
+void TGParser::CheckAssert(SMLoc Loc, Init *Condition, Init *Message) {
+  auto *CondValue = dyn_cast_or_null<IntInit>(
+                        Condition->convertInitializerTo(IntRecTy::get()));
+  if (CondValue) {
+    if (!CondValue->getValue()) {
+      PrintError(Loc, "assertion failed");
+      if (auto *MessageInit = dyn_cast<StringInit>(Message))
+        PrintNote(MessageInit->getValue());
+      else
+        PrintNote("(assert message is not a string)");
+    }
+  } else {
+    PrintError(Loc, "assert condition must of type bit, bits, or int.");
+  }
+}
+
+// Check all record assertions: For each one, resolve the condition
+// and message, then call CheckAssert().
+void TGParser::CheckRecordAsserts(Record &Rec) {
+  RecordResolver R(Rec);
+  R.setFinal(true);
+
+  for (auto Assertion : Rec.getAssertions()) {
+    Init *Condition = std::get<1>(Assertion)->resolveReferences(R);
+    Init *Message = std::get<2>(Assertion)->resolveReferences(R);
+    CheckAssert(std::get<0>(Assertion), Condition, Message);
+  }
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

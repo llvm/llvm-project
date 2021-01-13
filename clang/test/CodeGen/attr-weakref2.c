@@ -8,7 +8,7 @@ int test1_h(void) {
   return test1_g;
 }
 
-// CHECK: @test2_f ={{.*}} global i32 0, align 4
+// CHECK: @test2_f = dso_local global i32 0, align 4
 int test2_f;
 static int test2_g __attribute__((weakref("test2_f")));
 int test2_h(void) {
@@ -25,7 +25,7 @@ int test3_h(void) {
   return test3_g;
 }
 
-// CHECK: @test4_f ={{.*}} global i32 0, align 4
+// CHECK: @test4_f = dso_local global i32 0, align 4
 extern int test4_f;
 static int test4_g __attribute__((weakref("test4_f")));
 int test4_h(void) {

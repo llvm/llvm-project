@@ -983,17 +983,27 @@ static bool shouldAssumeDSOLocal(const CodeGenModule &CGM,
   if (TT.isPPC64())
     return false;
 
-  // If we can use copy relocations we can assume it is local.
-  if (auto *Var = dyn_cast<llvm::GlobalVariable>(GV))
-    if (!Var->isThreadLocal() &&
-        (RM == llvm::Reloc::Static || CGOpts.PIECopyRelocations))
-      return true;
+  if (CGOpts.DirectAccessExternalData) {
+    // If -fdirect-access-external-data (default for -fno-pic), set dso_local
+    // for non-thread-local variables. If the symbol is not defined in the
+    // executable, a copy relocation will be needed at link time. dso_local is
+    // excluded for thread-local variables because they generally don't support
+    // copy relocations.
+    if (auto *Var = dyn_cast<llvm::GlobalVariable>(GV))
+      if (!Var->isThreadLocal())
+        return true;
 
-  // If we can use a plt entry as the symbol address we can assume it
-  // is local.
-  // FIXME: This should work for PIE, but the gold linker doesn't support it.
-  if (isa<llvm::Function>(GV) && !CGOpts.NoPLT && RM == llvm::Reloc::Static)
-    return true;
+    // -fno-pic sets dso_local on a function declaration to allow direct
+    // accesses when taking its address (similar to a data symbol). If the
+    // function is not defined in the executable, a canonical PLT entry will be
+    // needed at link time. -fno-direct-access-external-data can avoid the
+    // canonical PLT entry. We don't generalize this condition to -fpie/-fpic as
+    // it could just cause trouble without providing perceptible benefits.
+    if (isa<llvm::Function>(GV) && !CGOpts.NoPLT && RM == llvm::Reloc::Static)
+      return true;
+  }
+
+  // If we can use copy relocations we can assume it is local.
 
   // Otherwise don't assume it is local.
   return false;
@@ -1761,9 +1771,6 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
     if (D->hasAttr<MinSizeAttr>())
       B.addAttribute(llvm::Attribute::MinSize);
   }
-
-  if (D->hasAttr<NoMergeAttr>())
-    B.addAttribute(llvm::Attribute::NoMerge);
 
   F->addAttributes(llvm::AttributeList::FunctionIndex, B);
 

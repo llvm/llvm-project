@@ -1187,12 +1187,79 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
       Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
           << PragmaLoopHintString(Info->PragmaName, Info->Option);
     Hint.StateLoc = IdentifierLoc::create(Actions.Context, StateLoc, StateInfo);
+  } else if (OptionInfo && OptionInfo->getName() == "vectorize_width") {
+    PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/false,
+                        /*IsReinject=*/false);
+    ConsumeAnnotationToken();
+
+    SourceLocation StateLoc = Toks[0].getLocation();
+    IdentifierInfo *StateInfo = Toks[0].getIdentifierInfo();
+    StringRef IsScalableStr = StateInfo ? StateInfo->getName() : "";
+
+    // Look for vectorize_width(fixed|scalable)
+    if (IsScalableStr == "scalable" || IsScalableStr == "fixed") {
+      PP.Lex(Tok); // Identifier
+
+      if (Toks.size() > 2) {
+        Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
+            << PragmaLoopHintString(Info->PragmaName, Info->Option);
+        while (Tok.isNot(tok::eof))
+          ConsumeAnyToken();
+      }
+
+      Hint.StateLoc =
+          IdentifierLoc::create(Actions.Context, StateLoc, StateInfo);
+
+      ConsumeToken(); // Consume the constant expression eof terminator.
+    } else {
+      // Enter constant expression including eof terminator into token stream.
+      ExprResult R = ParseConstantExpression();
+
+      if (R.isInvalid() && !Tok.is(tok::comma))
+        Diag(Toks[0].getLocation(),
+             diag::note_pragma_loop_invalid_vectorize_option);
+
+      bool Arg2Error = false;
+      if (Tok.is(tok::comma)) {
+        PP.Lex(Tok); // ,
+
+        StateInfo = Tok.getIdentifierInfo();
+        IsScalableStr = StateInfo->getName();
+
+        if (IsScalableStr != "scalable" && IsScalableStr != "fixed") {
+          Diag(Tok.getLocation(),
+               diag::err_pragma_loop_invalid_vectorize_option);
+          Arg2Error = true;
+        } else
+          Hint.StateLoc =
+              IdentifierLoc::create(Actions.Context, StateLoc, StateInfo);
+
+        PP.Lex(Tok); // Identifier
+      }
+
+      // Tokens following an error in an ill-formed constant expression will
+      // remain in the token stream and must be removed.
+      if (Tok.isNot(tok::eof)) {
+        Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
+            << PragmaLoopHintString(Info->PragmaName, Info->Option);
+        while (Tok.isNot(tok::eof))
+          ConsumeAnyToken();
+      }
+
+      ConsumeToken(); // Consume the constant expression eof terminator.
+
+      if (Arg2Error || R.isInvalid() ||
+          Actions.CheckLoopHintExpr(R.get(), Toks[0].getLocation()))
+        return false;
+
+      // Argument is a constant expression with an integer type.
+      Hint.ValueExpr = R.get();
+    }
   } else {
     // Enter constant expression including eof terminator into token stream.
     PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/false,
                         /*IsReinject=*/false);
     ConsumeAnnotationToken();
-
     ExprResult R = ParseConstantExpression();
 
     // Tokens following an error in an ill-formed constant expression will

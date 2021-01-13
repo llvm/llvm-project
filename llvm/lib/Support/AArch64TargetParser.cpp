@@ -102,6 +102,10 @@ bool AArch64::getExtensionFeatures(uint64_t Extensions,
     Features.push_back("+rcpc");
   if (Extensions & AEK_BRBE)
     Features.push_back("+brbe");
+  if (Extensions & AEK_PAUTH)
+    Features.push_back("+pauth");
+  if (Extensions & AEK_FLAGM)
+    Features.push_back("+flagm");
 
   return true;
 }

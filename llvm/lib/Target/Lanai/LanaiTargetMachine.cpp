@@ -48,9 +48,7 @@ static std::string computeDataLayout() {
 }
 
 static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
-  if (!RM.hasValue())
-    return Reloc::PIC_;
-  return *RM;
+  return RM.getValueOr(Reloc::PIC_);
 }
 
 LanaiTargetMachine::LanaiTargetMachine(const Target &T, const Triple &TT,

@@ -384,7 +384,7 @@ int main(int argc, char *argv[]) {
   IFSStub Stub;
   std::map<std::string, IFSSymbol> SymbolMap;
 
-  std::string PreviousInputFilePath = "";
+  std::string PreviousInputFilePath;
   for (const std::string &InputFilePath : InputFilenames) {
     Expected<std::unique_ptr<IFSStub>> StubOrErr = readInputFile(InputFilePath);
     if (!StubOrErr) {

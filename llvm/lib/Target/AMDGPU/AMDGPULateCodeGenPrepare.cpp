@@ -16,15 +16,12 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/Utils/Local.h"
-#include <cassert>
-#include <iterator>
 
 #define DEBUG_TYPE "amdgpu-late-codegenprepare"
 

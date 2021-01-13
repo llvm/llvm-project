@@ -766,9 +766,11 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     D.Diag(diag::err_drv_argument_not_allowed_with)
         << ProfileGenerateArg->getSpelling() << ProfileUseArg->getSpelling();
 
-  if (CSPGOGenerateArg && PGOGenerateArg)
+  if (CSPGOGenerateArg && PGOGenerateArg) {
     D.Diag(diag::err_drv_argument_not_allowed_with)
         << CSPGOGenerateArg->getSpelling() << PGOGenerateArg->getSpelling();
+    PGOGenerateArg = nullptr;
+  }
 
   if (ProfileGenerateArg) {
     if (ProfileGenerateArg->getOption().matches(
@@ -2833,9 +2835,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   if (TrappingMath) {
     // FP Exception Behavior is also set to strict
     assert(FPExceptionBehavior.equals("strict"));
-    CmdArgs.push_back("-ftrapping-math");
-  } else if (TrappingMathPresent)
-    CmdArgs.push_back("-fno-trapping-math");
+  }
 
   // The default is IEEE.
   if (DenormalFPMath != llvm::DenormalMode::getIEEE()) {
@@ -4017,6 +4017,25 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
   if (DebuggerTuning == llvm::DebuggerKind::SCE)
     CmdArgs.push_back("-dwarf-explicit-import");
 
+  auto *DwarfFormatArg =
+      Args.getLastArg(options::OPT_gdwarf64, options::OPT_gdwarf32);
+  if (DwarfFormatArg &&
+      DwarfFormatArg->getOption().matches(options::OPT_gdwarf64)) {
+    const llvm::Triple &RawTriple = TC.getTriple();
+    if (EffectiveDWARFVersion < 3)
+      D.Diag(diag::err_drv_argument_only_allowed_with)
+          << DwarfFormatArg->getAsString(Args) << "DWARFv3 or greater";
+    else if (!RawTriple.isArch64Bit())
+      D.Diag(diag::err_drv_argument_only_allowed_with)
+          << DwarfFormatArg->getAsString(Args) << "64 bit architecture";
+    else if (!RawTriple.isOSBinFormatELF())
+      D.Diag(diag::err_drv_argument_only_allowed_with)
+          << DwarfFormatArg->getAsString(Args) << "ELF platforms";
+  }
+
+  if (DwarfFormatArg)
+    DwarfFormatArg->render(Args, CmdArgs);
+
   RenderDebugInfoCompressionArgs(Args, CmdArgs, D, TC);
 }
 
@@ -4832,11 +4851,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-mms-bitfields");
   }
 
-  if (Args.hasFlag(options::OPT_mpie_copy_relocations,
-                   options::OPT_mno_pie_copy_relocations,
-                   false)) {
-    CmdArgs.push_back("-mpie-copy-relocations");
-  }
+  // Non-PIC code defaults to -fdirect-access-external-data while PIC code
+  // defaults to -fno-direct-access-external-data. Pass the option if different
+  // from the default.
+  if (Arg *A = Args.getLastArg(options::OPT_fdirect_access_external_data,
+                               options::OPT_fno_direct_access_external_data))
+    if (A->getOption().matches(options::OPT_fdirect_access_external_data) !=
+        (PICLevel == 0))
+      A->render(Args, CmdArgs);
 
   if (Args.hasFlag(options::OPT_fno_plt, options::OPT_fplt, false)) {
     CmdArgs.push_back("-fno-plt");

@@ -12,28 +12,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUInstructionSelector.h"
-#include "AMDGPUInstrInfo.h"
+#include "AMDGPU.h"
 #include "AMDGPUGlobalISelUtils.h"
+#include "AMDGPUInstrInfo.h"
 #include "AMDGPURegisterBankInfo.h"
 #include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
-#include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
-#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
-#include "llvm/CodeGen/GlobalISel/Utils.h"
-#include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/Type.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "amdgpu-isel"
 
@@ -871,9 +861,9 @@ bool AMDGPUInstructionSelector::selectDivScale(MachineInstr &MI) const {
   LLT Ty = MRI->getType(Dst0);
   unsigned Opc;
   if (Ty == LLT::scalar(32))
-    Opc = AMDGPU::V_DIV_SCALE_F32;
+    Opc = AMDGPU::V_DIV_SCALE_F32_e64;
   else if (Ty == LLT::scalar(64))
-    Opc = AMDGPU::V_DIV_SCALE_F64;
+    Opc = AMDGPU::V_DIV_SCALE_F64_e64;
   else
     return false;
 
@@ -2033,7 +2023,7 @@ bool AMDGPUInstructionSelector::selectG_SZA_EXT(MachineInstr &I) const {
       return constrainSelectedInstRegOperands(*ExtI, TII, TRI, RBI);
     }
 
-    const unsigned BFE = Signed ? AMDGPU::V_BFE_I32 : AMDGPU::V_BFE_U32;
+    const unsigned BFE = Signed ? AMDGPU::V_BFE_I32_e64 : AMDGPU::V_BFE_U32_e64;
     MachineInstr *ExtI =
       BuildMI(MBB, I, DL, TII.get(BFE), DstReg)
       .addReg(SrcReg)
@@ -2878,7 +2868,7 @@ bool AMDGPUInstructionSelector::selectG_SHUFFLE_VECTOR(
         BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_AND_B32_e32), TmpReg)
           .addImm(0xFFFF)
           .addReg(SrcVec);
-        BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_LSHL_OR_B32), DstReg)
+        BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_LSHL_OR_B32_e64), DstReg)
           .addReg(TmpReg)
           .addImm(16)
           .addReg(TmpReg);
@@ -2908,7 +2898,7 @@ bool AMDGPUInstructionSelector::selectG_SHUFFLE_VECTOR(
         BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_LSHRREV_B32_e64), TmpReg)
           .addImm(16)
           .addReg(SrcVec);
-        BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_LSHL_OR_B32), DstReg)
+        BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_LSHL_OR_B32_e64), DstReg)
           .addReg(TmpReg)
           .addImm(16)
           .addReg(TmpReg);
@@ -2920,7 +2910,7 @@ bool AMDGPUInstructionSelector::selectG_SHUFFLE_VECTOR(
     }
   } else if (Mask[0] == 1 && Mask[1] == 0) {
     if (IsVALU) {
-      BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_ALIGNBIT_B32), DstReg)
+      BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_ALIGNBIT_B32_e64), DstReg)
         .addReg(SrcVec)
         .addReg(SrcVec)
         .addImm(16);

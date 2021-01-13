@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/math/nearbyintf.h"
 #include "src/__support/common.h"
 #include "utils/FPUtil/NearestIntegerOperations.h"
 
 namespace __llvm_libc {
 
-float LLVM_LIBC_ENTRYPOINT(nearbyintf)(float x) {
+LLVM_LIBC_FUNCTION(float, nearbyintf, (float x)) {
   return fputil::roundUsingCurrentRoundingMode(x);
 }
 

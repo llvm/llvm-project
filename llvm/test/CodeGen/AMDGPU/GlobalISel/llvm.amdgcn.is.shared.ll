@@ -14,9 +14,10 @@ define amdgpu_kernel void @is_local_vgpr(i8* addrspace(1)* %ptr.ptr) {
 ; CI-NEXT:    v_mov_b32_e32 v1, s1
 ; CI-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
 ; CI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; CI-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
+; CI-NEXT:    flat_load_dwordx2 v[0:1], v[0:1] glc
+; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    s_load_dword s0, s[4:5], 0x10
-; CI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_cmp_eq_u32_e32 vcc, s0, v1
 ; CI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; CI-NEXT:    flat_store_dword v[0:1], v0
@@ -27,10 +28,10 @@ define amdgpu_kernel void @is_local_vgpr(i8* addrspace(1)* %ptr.ptr) {
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_dwordx2 v[0:1], v0, s[0:1]
+; GFX9-NEXT:    global_load_dwordx2 v[0:1], v0, s[0:1] glc
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_SH_MEM_BASES, 16, 16)
 ; GFX9-NEXT:    s_lshl_b32 s0, s0, 16
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, s0, v1
 ; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX9-NEXT:    global_store_dword v[0:1], v0, off
@@ -59,6 +60,7 @@ define amdgpu_kernel void @is_local_sgpr(i8* %ptr) {
 ; CI-NEXT:  ; %bb.1: ; %bb0
 ; CI-NEXT:    v_mov_b32_e32 v0, 0
 ; CI-NEXT:    flat_store_dword v[0:1], v0
+; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:  BB1_2: ; %bb1
 ; CI-NEXT:    s_endpgm
 ;
@@ -76,6 +78,7 @@ define amdgpu_kernel void @is_local_sgpr(i8* %ptr) {
 ; GFX9-NEXT:  ; %bb.1: ; %bb0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    global_store_dword v[0:1], v0, off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:  BB1_2: ; %bb1
 ; GFX9-NEXT:    s_endpgm
   %val = call i1 @llvm.amdgcn.is.shared(i8* %ptr)

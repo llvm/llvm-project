@@ -176,8 +176,8 @@ body: |
     ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; GFX10: [[V_LSHRREV_B16_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B16_e64 [[COPY1]], [[COPY]], implicit $exec
-    ; GFX10: [[V_BFE_U32_:%[0-9]+]]:vgpr_32 = V_BFE_U32 [[V_LSHRREV_B16_e64_]], 0, 16, implicit $exec
-    ; GFX10: S_ENDPGM 0, implicit [[V_BFE_U32_]]
+    ; GFX10: [[V_BFE_U32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_U32_e64 [[V_LSHRREV_B16_e64_]], 0, 16, implicit $exec
+    ; GFX10: S_ENDPGM 0, implicit [[V_BFE_U32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
     %2:vgpr(s16) = G_TRUNC %0

@@ -625,10 +625,6 @@ public:
   /// function. Writing to a constant register has no effect.
   bool isConstantPhysReg(MCRegister PhysReg) const;
 
-  /// Returns true if either isConstantPhysReg or TRI->isCallerPreservedPhysReg
-  /// returns true. This is a utility member function.
-  bool isCallerPreservedOrConstPhysReg(MCRegister PhysReg) const;
-
   /// Get an iterator over the pressure sets affected by the given physical or
   /// virtual register. If RegUnit is physical, it must be a register unit (from
   /// MCRegUnitIterator).

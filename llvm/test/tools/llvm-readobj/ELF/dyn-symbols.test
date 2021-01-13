@@ -364,14 +364,14 @@ DynamicSymbols:
 
 # VERSIONED-SEC-SYM-XINDEX-LLVM:       Name: (0)
 # VERSIONED-SEC-SYM-XINDEX-LLVM:       Name: foo (12)
-# VERSIONED-SEC-SYM-XINDEX-LLVM:      warning: '[[FILE]]': extended symbol index (2) is past the end of the SHT_SYMTAB_SHNDX section of size 0
+# VERSIONED-SEC-SYM-XINDEX-LLVM:      warning: '[[FILE]]': found an extended symbol index (2), but unable to locate the extended symbol index table
 # VERSIONED-SEC-SYM-XINDEX-LLVM-NEXT: Symbol {
 # VERSIONED-SEC-SYM-XINDEX-LLVM-NEXT:  Name: <?> (0)
 # VERSIONED-SEC-SYM-XINDEX-LLVM:       Name: <?> (0)
 
 # VERSIONED-SEC-SYM-XINDEX-GNU:      Symbol table '.dynsym' contains 4 entries:
 # VERSIONED-SEC-SYM-XINDEX-GNU:         Num: {{.*}} Ndx Name
-# VERSIONED-SEC-SYM-XINDEX-GNU:      warning: '[[FILE]]': extended symbol index (2) is past the end of the SHT_SYMTAB_SHNDX section of size 0
+# VERSIONED-SEC-SYM-XINDEX-GNU:      warning: '[[FILE]]': found an extended symbol index (2), but unable to locate the extended symbol index table
 # VERSIONED-SEC-SYM-XINDEX-GNU-NEXT:      2: {{.*}} RSV[0xffff] <?>
 
 ## Case 8: Check what we print when:

@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/math/frexpf.h"
 #include "src/__support/common.h"
 #include "utils/FPUtil/ManipulationFunctions.h"
 
 namespace __llvm_libc {
 
-float LLVM_LIBC_ENTRYPOINT(frexpf)(float x, int *exp) {
+LLVM_LIBC_FUNCTION(float, frexpf, (float x, int *exp)) {
   return fputil::frexp(x, *exp);
 }
 

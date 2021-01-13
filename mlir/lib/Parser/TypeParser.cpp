@@ -181,12 +181,14 @@ ParseResult Parser::parseStridedLayout(int64_t &offset,
 ///   memref-type ::= ranked-memref-type | unranked-memref-type
 ///
 ///   ranked-memref-type ::= `memref` `<` dimension-list-ranked type
-///                          (`,` semi-affine-map-composition)? (`,`
-///                          memory-space)? `>`
+///                          (`,` layout-specification)? (`,` memory-space)? `>`
 ///
 ///   unranked-memref-type ::= `memref` `<*x` type (`,` memory-space)? `>`
 ///
+///   stride-list ::= `[` (dimension (`,` dimension)*)? `]`
+///   strided-layout ::= `offset:` dimension `,` `strides: ` stride-list
 ///   semi-affine-map-composition ::= (semi-affine-map `,` )* semi-affine-map
+///   layout-specification ::= semi-affine-map-composition | strided-layout
 ///   memory-space ::= integer-literal /* | TODO: address-space-id */
 ///
 Type Parser::parseMemRefType() {

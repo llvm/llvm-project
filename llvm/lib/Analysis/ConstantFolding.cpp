@@ -1456,6 +1456,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::launder_invariant_group:
   case Intrinsic::strip_invariant_group:
   case Intrinsic::masked_load:
+  case Intrinsic::get_active_lane_mask:
   case Intrinsic::abs:
   case Intrinsic::smax:
   case Intrinsic::smin:
@@ -1514,6 +1515,8 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::powi:
   case Intrinsic::fma:
   case Intrinsic::fmuladd:
+  case Intrinsic::fptoui_sat:
+  case Intrinsic::fptosi_sat:
   case Intrinsic::convert_from_fp16:
   case Intrinsic::convert_to_fp16:
   case Intrinsic::amdgcn_cos:
@@ -1849,8 +1852,11 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
   if (isa<UndefValue>(Operands[0])) {
     // cosine(arg) is between -1 and 1. cosine(invalid arg) is NaN.
     // ctpop() is between 0 and bitwidth, pick 0 for undef.
+    // fptoui.sat and fptosi.sat can always fold to zero (for a zero input).
     if (IntrinsicID == Intrinsic::cos ||
-        IntrinsicID == Intrinsic::ctpop)
+        IntrinsicID == Intrinsic::ctpop ||
+        IntrinsicID == Intrinsic::fptoui_sat ||
+        IntrinsicID == Intrinsic::fptosi_sat)
       return Constant::getNullValue(Ty);
     if (IntrinsicID == Intrinsic::bswap ||
         IntrinsicID == Intrinsic::bitreverse ||
@@ -1920,6 +1926,16 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       else
         return Signed ? ConstantInt::get(Ty, APInt::getSignedMaxValue(Width))
                       : ConstantInt::get(Ty, APInt::getMaxValue(Width));
+    }
+
+    if (IntrinsicID == Intrinsic::fptoui_sat ||
+        IntrinsicID == Intrinsic::fptosi_sat) {
+      // convertToInteger() already has the desired saturation semantics.
+      APSInt Int(Ty->getIntegerBitWidth(),
+                 IntrinsicID == Intrinsic::fptoui_sat);
+      bool IsExact;
+      U.convertToInteger(Int, APFloat::rmTowardZero, &IsExact);
+      return ConstantInt::get(Ty, Int);
     }
 
     if (!Ty->isHalfTy() && !Ty->isFloatTy() && !Ty->isDoubleTy())
@@ -2919,6 +2935,25 @@ static Constant *ConstantFoldVectorCall(StringRef Name,
       SmallVector<Constant *, 16> NCs;
       for (unsigned i = 0; i < Lanes; i++) {
         if (i < Limit)
+          NCs.push_back(ConstantInt::getTrue(Ty));
+        else
+          NCs.push_back(ConstantInt::getFalse(Ty));
+      }
+      return ConstantVector::get(NCs);
+    }
+    break;
+  }
+  case Intrinsic::get_active_lane_mask: {
+    auto *Op0 = dyn_cast<ConstantInt>(Operands[0]);
+    auto *Op1 = dyn_cast<ConstantInt>(Operands[1]);
+    if (Op0 && Op1) {
+      unsigned Lanes = FVTy->getNumElements();
+      uint64_t Base = Op0->getZExtValue();
+      uint64_t Limit = Op1->getZExtValue();
+
+      SmallVector<Constant *, 16> NCs;
+      for (unsigned i = 0; i < Lanes; i++) {
+        if (Base + i < Limit)
           NCs.push_back(ConstantInt::getTrue(Ty));
         else
           NCs.push_back(ConstantInt::getFalse(Ty));

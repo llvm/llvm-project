@@ -13,12 +13,11 @@
 
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUPALMETADATA_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUPALMETADATA_H
-
 #include "llvm/BinaryFormat/MsgPackDocument.h"
-#include "llvm/CodeGen/MachineFunction.h"
 
 namespace llvm {
 
+class MachineFunction;
 class Module;
 class StringRef;
 

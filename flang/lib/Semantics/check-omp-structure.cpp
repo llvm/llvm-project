@@ -125,14 +125,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
   CheckMatching<parser::OmpBlockDirective>(beginDir, endDir);
 
   PushContextAndClauseSets(beginDir.source, beginDir.v);
-
-  switch (beginDir.v) {
-  case llvm::omp::OMPD_parallel:
-    CheckNoBranching(block, llvm::omp::OMPD_parallel, beginDir.source);
-    break;
-  default:
-    break;
-  }
+  CheckNoBranching(block, beginDir.v, beginDir.source);
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPBlockConstruct &) {
@@ -393,8 +386,7 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
         llvm::omp::Clause::OMPC_copyprivate, {llvm::omp::Clause::OMPC_nowait});
   }
 
-  GetContext().requiredClauses.IterateOverMembers(
-      [this](llvm::omp::Clause c) { CheckRequired(c); });
+  CheckRequireAtLeastOneOf();
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause &x) {

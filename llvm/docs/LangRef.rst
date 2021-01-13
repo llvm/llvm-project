@@ -1193,7 +1193,8 @@ Currently, only the following parameter attributes are defined:
 
 ``nocapture``
     This indicates that the callee does not make any copies of the
-    pointer that outlive the callee itself. This is not a valid
+    pointer that outlive the callee itself in any form such as a pointer stored
+    in the memory or as a return value. This is not a valid
     attribute for return values.  Addresses used in volatile operations
     are considered to be captured.
 

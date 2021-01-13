@@ -635,12 +635,6 @@ static AffineMap promoteComposedSymbolsAsDims(AffineMap map,
     return map;
   }
 
-  // Sanity check on symbols.
-  for (auto sym : symbols) {
-    assert(isValidSymbol(sym) && "Expected only valid symbols");
-    (void)sym;
-  }
-
   // Extract the symbol positions that come from an AffineApplyOp and
   // needs to be rewritten as dims.
   auto symPositions = indicesFromAffineApplyOp(symbols);
@@ -2401,8 +2395,7 @@ LogicalResult AffineStoreOp::fold(ArrayRef<Attribute> cstOperands,
 // AffineMinMaxOpBase
 //===----------------------------------------------------------------------===//
 
-template <typename T>
-static LogicalResult verifyAffineMinMaxOp(T op) {
+template <typename T> static LogicalResult verifyAffineMinMaxOp(T op) {
   // Verify that operand count matches affine map dimension and symbol count.
   if (op.getNumOperands() != op.map().getNumDims() + op.map().getNumSymbols())
     return op.emitOpError(
@@ -2410,8 +2403,7 @@ static LogicalResult verifyAffineMinMaxOp(T op) {
   return success();
 }
 
-template <typename T>
-static void printAffineMinMaxOp(OpAsmPrinter &p, T op) {
+template <typename T> static void printAffineMinMaxOp(OpAsmPrinter &p, T op) {
   p << op.getOperationName() << ' ' << op->getAttr(T::getMapAttrName());
   auto operands = op.getOperands();
   unsigned numDims = op.map().getNumDims();

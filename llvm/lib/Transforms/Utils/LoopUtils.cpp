@@ -310,8 +310,7 @@ llvm::getOptionalElementCountLoopAttribute(Loop *TheLoop) {
   if (Width.hasValue()) {
     Optional<int> IsScalable = getOptionalIntLoopAttribute(
         TheLoop, "llvm.loop.vectorize.scalable.enable");
-    return ElementCount::get(*Width,
-                             IsScalable.hasValue() ? *IsScalable : false);
+    return ElementCount::get(*Width, IsScalable.getValueOr(false));
   }
 
   return None;
@@ -761,6 +760,38 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
     LI->destroy(L);
   }
 }
+
+void llvm::breakLoopBackedge(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
+                             LoopInfo &LI, MemorySSA *MSSA) {
+
+  assert(L->isOutermost() && "Can't yet preserve LCSSA for this case");
+  auto *Latch = L->getLoopLatch();
+  assert(Latch && "multiple latches not yet supported");
+  auto *Header = L->getHeader();
+
+  SE.forgetLoop(L);
+
+  // Note: By splitting the backedge, and then explicitly making it unreachable
+  // we gracefully handle corner cases such as non-bottom tested loops and the
+  // like.  We also have the benefit of being able to reuse existing well tested
+  // code.  It might be worth special casing the common bottom tested case at
+  // some point to avoid code churn.
+
+  std::unique_ptr<MemorySSAUpdater> MSSAU;
+  if (MSSA)
+    MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
+
+  auto *BackedgeBB = SplitEdge(Latch, Header, &DT, &LI, MSSAU.get());
+
+  DomTreeUpdater DTU(&DT, DomTreeUpdater::UpdateStrategy::Eager);
+  (void)changeToUnreachable(BackedgeBB->getTerminator(), /*UseTrap*/false,
+                            /*PreserveLCSSA*/true, &DTU, MSSAU.get());
+
+  // Erase (and destroy) this loop instance.  Handles relinking sub-loops
+  // and blocks within the loop as needed.
+  LI.erase(L);
+}
+
 
 /// Checks if \p L has single exit through latch block except possibly
 /// "deoptimizing" exits. Returns branch instruction terminating the loop

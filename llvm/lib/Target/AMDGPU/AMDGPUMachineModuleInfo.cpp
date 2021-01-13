@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUMachineModuleInfo.h"
-#include "llvm/IR/Module.h"
 
 namespace llvm {
 

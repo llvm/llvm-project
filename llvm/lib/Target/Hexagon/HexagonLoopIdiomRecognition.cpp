@@ -165,7 +165,6 @@ public:
     AU.addRequiredID(LoopSimplifyID);
     AU.addRequiredID(LCSSAID);
     AU.addRequired<AAResultsWrapperPass>();
-    AU.addPreserved<AAResultsWrapperPass>();
     AU.addRequired<ScalarEvolutionWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
@@ -2199,10 +2198,13 @@ CleanupAndExit:
     if (ParentL)
       ParentL->addBasicBlockToLoop(NewPreheader, *LF);
     IRBuilder<>(NewPreheader).CreateBr(Header);
-    for (PHINode &PN : Header->phis()) {
-      int bx = PN.getBasicBlockIndex(Preheader);
+    for (auto &In : *Header) {
+      PHINode *PN = dyn_cast<PHINode>(&In);
+      if (!PN)
+        break;
+      int bx = PN->getBasicBlockIndex(Preheader);
       if (bx >= 0)
-        PN.setIncomingBlock(bx, NewPreheader);
+        PN->setIncomingBlock(bx, NewPreheader);
     }
     DT->addNewBlock(NewPreheader, Preheader);
     DT->changeImmediateDominator(Header, NewPreheader);

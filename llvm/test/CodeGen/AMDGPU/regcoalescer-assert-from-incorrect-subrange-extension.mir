@@ -63,7 +63,7 @@ body:             |
     %64:vgpr_32 = V_ADD_CO_U32_e32 killed %12, killed %13, implicit-def dead $vcc, implicit $exec
     %17:sreg_32_xm0 = S_MOV_B32 0
     %18:vgpr_32 = TBUFFER_LOAD_FORMAT_X_IDXEN killed %64, undef %20:sgpr_128, 0, 28, 116, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 4 from constant-pool, align 1, addrspace 4)
-    dead %65:vgpr_32 = V_BFE_U32 killed %18, 28, 1, implicit $exec
+    dead %65:vgpr_32 = V_BFE_U32_e64 killed %18, 28, 1, implicit $exec
     S_CBRANCH_SCC0 %bb.2, implicit undef $scc
   
   bb.1:

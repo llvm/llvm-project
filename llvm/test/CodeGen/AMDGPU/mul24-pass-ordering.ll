@@ -154,8 +154,10 @@ define void @slsr1_0(i32 %b.arg, i32 %s.arg) #0 {
 ; GFX9-NEXT:    v_mul_u32_u24_e32 v3, v0, v1
 ; GFX9-NEXT:    v_and_b32_e32 v2, 0xffffff, v1
 ; GFX9-NEXT:    global_store_dword v[0:1], v3, off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mad_u32_u24 v0, v0, v1, v2
 ; GFX9-NEXT:    global_store_dword v[0:1], v0, off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_add_u32_e32 v0, v0, v2
 ; GFX9-NEXT:    global_store_dword v[0:1], v0, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)

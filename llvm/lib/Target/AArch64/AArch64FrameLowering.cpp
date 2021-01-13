@@ -249,7 +249,7 @@ static unsigned estimateRSStackSizeLimit(MachineFunction &MF) {
 
 TargetStackID::Value
 AArch64FrameLowering::getStackIDForScalableVectors() const {
-  return TargetStackID::SVEVector;
+  return TargetStackID::ScalableVector;
 }
 
 /// Returns the size of the fixed object area (allocated next to sp on entry)
@@ -496,7 +496,7 @@ void AArch64FrameLowering::emitCalleeSavedFrameMoves(
       continue;
 
     StackOffset Offset;
-    if (MFI.getStackID(Info.getFrameIdx()) == TargetStackID::SVEVector) {
+    if (MFI.getStackID(Info.getFrameIdx()) == TargetStackID::ScalableVector) {
       AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
       Offset =
           StackOffset::getScalable(MFI.getObjectOffset(Info.getFrameIdx())) -
@@ -1511,7 +1511,7 @@ static void InsertReturnAddressAuth(MachineFunction &MF,
   // this instruction can safely used for any v8a architecture.
   // From v8.3a onwards there are optimised authenticate LR and return
   // instructions, namely RETA{A,B}, that can be used instead.
-  if (Subtarget.hasV8_3aOps() && MBBI != MBB.end() &&
+  if (Subtarget.hasPAuth() && MBBI != MBB.end() &&
       MBBI->getOpcode() == AArch64::RET_ReallyLR) {
     BuildMI(MBB, MBBI, DL,
             TII->get(MFI.shouldSignWithBKey() ? AArch64::RETAB : AArch64::RETAA))
@@ -1856,7 +1856,7 @@ StackOffset AArch64FrameLowering::resolveFrameIndexReference(
   const auto &MFI = MF.getFrameInfo();
   int64_t ObjectOffset = MFI.getObjectOffset(FI);
   bool isFixed = MFI.isFixedObjectIndex(FI);
-  bool isSVE = MFI.getStackID(FI) == TargetStackID::SVEVector;
+  bool isSVE = MFI.getStackID(FI) == TargetStackID::ScalableVector;
   return resolveFrameOffsetReference(MF, ObjectOffset, isFixed, isSVE, FrameReg,
                                      PreferFP, ForSimm);
 }
@@ -2412,7 +2412,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     // Update the StackIDs of the SVE stack slots.
     MachineFrameInfo &MFI = MF.getFrameInfo();
     if (RPI.Type == RegPairInfo::ZPR || RPI.Type == RegPairInfo::PPR)
-      MFI.setStackID(RPI.FrameIdx, TargetStackID::SVEVector);
+      MFI.setStackID(RPI.FrameIdx, TargetStackID::ScalableVector);
 
   }
   return true;
@@ -2761,7 +2761,7 @@ static int64_t determineSVEStackObjectOffsets(MachineFrameInfo &MFI,
 #ifndef NDEBUG
   // First process all fixed stack objects.
   for (int I = MFI.getObjectIndexBegin(); I != 0; ++I)
-    assert(MFI.getStackID(I) != TargetStackID::SVEVector &&
+    assert(MFI.getStackID(I) != TargetStackID::ScalableVector &&
            "SVE vectors should never be passed on the stack by value, only by "
            "reference.");
 #endif
@@ -2791,7 +2791,7 @@ static int64_t determineSVEStackObjectOffsets(MachineFrameInfo &MFI,
   SmallVector<int, 8> ObjectsToAllocate;
   for (int I = 0, E = MFI.getObjectIndexEnd(); I != E; ++I) {
     unsigned StackID = MFI.getStackID(I);
-    if (StackID != TargetStackID::SVEVector)
+    if (StackID != TargetStackID::ScalableVector)
       continue;
     if (MaxCSFrameIndex >= I && I >= MinCSFrameIndex)
       continue;

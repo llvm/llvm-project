@@ -13,8 +13,11 @@
 
 #include "llvm/Transforms/Utils/UniqueInternalLinkageNames.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
@@ -27,15 +30,31 @@ static bool uniqueifyInternalLinkageNames(Module &M) {
   Md5.final(R);
   SmallString<32> Str;
   llvm::MD5::stringifyResult(R, Str);
+  // Convert MD5hash to Decimal. Demangler suffixes can either contain numbers
+  // or characters but not both.
+  APInt IntHash = APInt(128, Str.str(), 16);
   // Prepend "__uniq" before the hash for tools like profilers to understand that
   // this symbol is of internal linkage type.
-  std::string ModuleNameHash = (Twine(".__uniq.") + Twine(Str)).str();
+  std::string ModuleNameHash = (Twine(".__uniq.") + Twine(IntHash.toString(10, false))).str();
   bool Changed = false;
+  MDBuilder MDB(M.getContext());
 
   // Append the module hash to all internal linkage functions.
   for (auto &F : M) {
     if (F.hasInternalLinkage()) {
       F.setName(F.getName() + ModuleNameHash);
+      F.addFnAttr("sample-profile-suffix-elision-policy", "selected");
+      // Replace linkage names in the debug metadata.
+      if (DISubprogram *SP = F.getSubprogram()) {
+        if (SP->getRawLinkageName()) {
+          auto *Name = MDB.createString(F.getName());
+          SP->replaceRawLinkageName(Name);
+          if (DISubprogram *SPDecl = SP->getDeclaration()) {
+            if (SPDecl->getRawLinkageName())
+              SPDecl->replaceRawLinkageName(Name);
+          }
+        }
+      }
       Changed = true;
     }
   }

@@ -91,7 +91,7 @@ uint32_t TgtStackItemSize = 0;
   {}
 #endif
 
-#include "../../common/elf_common.c"
+#include "elf_common.h"
 
 /// Keep entries table per device
 struct FuncOrGblEntryTy {
@@ -638,7 +638,7 @@ void finiAsyncInfoPtr(__tgt_async_info *async_info_ptr) {
 }
 
 bool elf_machine_id_is_amdgcn(__tgt_device_image *image) {
-  const uint16_t amdgcnMachineID = EM_AMDGPU;
+  const uint16_t amdgcnMachineID = 224; // EM_AMDGPU may not be in system elf.h
   int32_t r = elf_check_machine(image, amdgcnMachineID);
   if (!r) {
     DP("Supported machine ID not found\n");

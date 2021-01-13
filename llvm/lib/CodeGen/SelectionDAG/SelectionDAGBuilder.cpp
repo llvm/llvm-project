@@ -1637,10 +1637,32 @@ void SelectionDAGBuilder::visitCleanupPad(const CleanupPadInst &CPI) {
   }
 }
 
-// For wasm, there's alwyas a single catch pad attached to a catchswitch, and
-// the control flow always stops at the single catch pad, as it does for a
-// cleanup pad. In case the exception caught is not of the types the catch pad
-// catches, it will be rethrown by a rethrow.
+// In wasm EH, even though a catchpad may not catch an exception if a tag does
+// not match, it is OK to add only the first unwind destination catchpad to the
+// successors, because there will be at least one invoke instruction within the
+// catch scope that points to the next unwind destination, if one exists, so
+// CFGSort cannot mess up with BB sorting order.
+// (All catchpads with 'catch (type)' clauses have a 'llvm.rethrow' intrinsic
+// call within them, and catchpads only consisting of 'catch (...)' have a
+// '__cxa_end_catch' call within them, both of which generate invokes in case
+// the next unwind destination exists, i.e., the next unwind destination is not
+// the caller.)
+//
+// Having at most one EH pad successor is also simpler and helps later
+// transformations.
+//
+// For example,
+// current:
+//   invoke void @foo to ... unwind label %catch.dispatch
+// catch.dispatch:
+//   %0 = catchswitch within ... [label %catch.start] unwind label %next
+// catch.start:
+//   ...
+//   ... in this BB or some other child BB dominated by this BB there will be an
+//   invoke that points to 'next' BB as an unwind destination
+//
+// next: ; We don't need to add this to 'current' BB's successor
+//   ...
 static void findWasmUnwindDestinations(
     FunctionLoweringInfo &FuncInfo, const BasicBlock *EHPadBB,
     BranchProbability Prob,
@@ -2785,7 +2807,7 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
     case Intrinsic::experimental_gc_statepoint:
       LowerStatepoint(cast<GCStatepointInst>(I), EHPadBB);
       break;
-    case Intrinsic::wasm_rethrow_in_catch: {
+    case Intrinsic::wasm_rethrow: {
       // This is usually done in visitTargetIntrinsic, but this intrinsic is
       // special because it can be invoked, so we manually lower it to a DAG
       // node here.
@@ -2793,7 +2815,7 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
       Ops.push_back(getRoot()); // inchain
       const TargetLowering &TLI = DAG.getTargetLoweringInfo();
       Ops.push_back(
-          DAG.getTargetConstant(Intrinsic::wasm_rethrow_in_catch, getCurSDLoc(),
+          DAG.getTargetConstant(Intrinsic::wasm_rethrow, getCurSDLoc(),
                                 TLI.getPointerTy(DAG.getDataLayout())));
       SDVTList VTs = DAG.getVTList(ArrayRef<EVT>({MVT::Other})); // outchain
       DAG.setRoot(DAG.getNode(ISD::INTRINSIC_VOID, getCurSDLoc(), VTs, Ops));

@@ -60,7 +60,7 @@ static unsigned calculateGlobalIndex(spirv::GlobalVariableOp op) {
 static void copy(Location loc, Value dst, Value src, Value size,
                  OpBuilder &builder) {
   MLIRContext *context = builder.getContext();
-  auto llvmI1Type = LLVM::LLVMIntegerType::get(context, 1);
+  auto llvmI1Type = IntegerType::get(context, 1);
   Value isVolatile = builder.create<LLVM::ConstantOp>(
       loc, llvmI1Type, builder.getBoolAttr(false));
   builder.create<LLVM::MemcpyOp>(loc, dst, src, size, isVolatile);
@@ -200,7 +200,7 @@ class GPULaunchLowering : public ConvertOpToLLVMPattern<gpu::LaunchFuncOp> {
     auto numKernelOperands = launchOp.getNumKernelOperands();
     auto kernelOperands = operands.take_back(numKernelOperands);
     for (auto operand : llvm::enumerate(kernelOperands)) {
-      // Check if the kernel's opernad is a ranked memref.
+      // Check if the kernel's operand is a ranked memref.
       auto memRefType = launchOp.getKernelOperand(operand.index())
                             .getType()
                             .dyn_cast<MemRefType>();
@@ -212,8 +212,8 @@ class GPULaunchLowering : public ConvertOpToLLVMPattern<gpu::LaunchFuncOp> {
       SmallVector<Value, 4> sizes;
       SmallVector<Value, 4> strides;
       Value sizeBytes;
-      getMemRefDescriptorSizes(loc, memRefType, operand.value(), rewriter,
-                               sizes, strides, sizeBytes);
+      getMemRefDescriptorSizes(loc, memRefType, {}, rewriter, sizes, strides,
+                               sizeBytes);
       MemRefDescriptor descriptor(operand.value());
       Value src = descriptor.allocatedPtr(rewriter, loc);
 

@@ -146,6 +146,13 @@ public:
   /// 'this' parameter of C++ instance methods.
   virtual bool isSRetParameterAfterThis() const { return false; }
 
+  /// Returns true if the ABI permits the argument to be a homogeneous
+  /// aggregate.
+  virtual bool
+  isPermittedToBeHomogeneousAggregate(const CXXRecordDecl *RD) const {
+    return true;
+  };
+
   /// Find the LLVM type used to represent the given member pointer
   /// type.
   virtual llvm::Type *

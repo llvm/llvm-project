@@ -2,7 +2,7 @@
 
 ; GCN-LABEL: {{^}}kernel_ieee_mode_default:
 ; GCN: {{buffer|global|flat}}_load_dword [[VAL0:v[0-9]+]]
-; GCN-NEXT: {{buffer|global|flat}}_load_dword [[VAL1:v[0-9]+]]
+; GCN: {{buffer|global|flat}}_load_dword [[VAL1:v[0-9]+]]
 ; GCN-DAG: v_mul_f32_e32 [[QUIET0:v[0-9]+]], 1.0, [[VAL0]]
 ; GCN-DAG: v_mul_f32_e32 [[QUIET1:v[0-9]+]], 1.0, [[VAL1]]
 ; GCN: v_min_f32_e32 [[MIN:v[0-9]+]], [[QUIET0]], [[QUIET1]]
@@ -17,7 +17,7 @@ define amdgpu_kernel void @kernel_ieee_mode_default() #0 {
 
 ; GCN-LABEL: {{^}}kernel_ieee_mode_on:
 ; GCN: {{buffer|global|flat}}_load_dword [[VAL0:v[0-9]+]]
-; GCN-NEXT: {{buffer|global|flat}}_load_dword [[VAL1:v[0-9]+]]
+; GCN: {{buffer|global|flat}}_load_dword [[VAL1:v[0-9]+]]
 ; GCN-DAG: v_mul_f32_e32 [[QUIET0:v[0-9]+]], 1.0, [[VAL0]]
 ; GCN-DAG: v_mul_f32_e32 [[QUIET1:v[0-9]+]], 1.0, [[VAL1]]
 ; GCN: v_min_f32_e32 [[MIN:v[0-9]+]], [[QUIET0]], [[QUIET1]]
@@ -32,7 +32,7 @@ define amdgpu_kernel void @kernel_ieee_mode_on() #1 {
 
 ; GCN-LABEL: {{^}}kernel_ieee_mode_off:
 ; GCN: {{buffer|global|flat}}_load_dword [[VAL0:v[0-9]+]]
-; GCN-NEXT: {{buffer|global|flat}}_load_dword [[VAL1:v[0-9]+]]
+; GCN: {{buffer|global|flat}}_load_dword [[VAL1:v[0-9]+]]
 ; GCN-NOT: [[VAL0]]
 ; GCN-NOT: [[VAL1]]
 ; GCN: v_min_f32_e32 [[MIN:v[0-9]+]], [[VAL0]], [[VAL1]]
@@ -47,7 +47,7 @@ define amdgpu_kernel void @kernel_ieee_mode_off() #2 {
 
 ; GCN-LABEL: {{^}}func_ieee_mode_default:
 ; GCN: {{buffer|global|flat}}_load_dword [[VAL0:v[0-9]+]]
-; GCN-NEXT: {{buffer|global|flat}}_load_dword [[VAL1:v[0-9]+]]
+; GCN: {{buffer|global|flat}}_load_dword [[VAL1:v[0-9]+]]
 ; GCN-DAG: v_mul_f32_e32 [[QUIET0:v[0-9]+]], 1.0, [[VAL0]]
 ; GCN-DAG: v_mul_f32_e32 [[QUIET1:v[0-9]+]], 1.0, [[VAL1]]
 ; GCN: v_min_f32_e32 [[MIN:v[0-9]+]], [[QUIET0]], [[QUIET1]]
@@ -62,7 +62,7 @@ define void @func_ieee_mode_default() #0 {
 
 ; GCN-LABEL: {{^}}func_ieee_mode_on:
 ; GCN: {{buffer|global|flat}}_load_dword [[VAL0:v[0-9]+]]
-; GCN-NEXT: {{buffer|global|flat}}_load_dword [[VAL1:v[0-9]+]]
+; GCN: {{buffer|global|flat}}_load_dword [[VAL1:v[0-9]+]]
 ; GCN-DAG: v_mul_f32_e32 [[QUIET0:v[0-9]+]], 1.0, [[VAL0]]
 ; GCN-DAG: v_mul_f32_e32 [[QUIET1:v[0-9]+]], 1.0, [[VAL1]]
 ; GCN: v_min_f32_e32 [[MIN:v[0-9]+]], [[QUIET0]], [[QUIET1]]
@@ -77,7 +77,7 @@ define void @func_ieee_mode_on() #1 {
 
 ; GCN-LABEL: {{^}}func_ieee_mode_off:
 ; GCN: {{buffer|global|flat}}_load_dword [[VAL0:v[0-9]+]]
-; GCN-NEXT: {{buffer|global|flat}}_load_dword [[VAL1:v[0-9]+]]
+; GCN: {{buffer|global|flat}}_load_dword [[VAL1:v[0-9]+]]
 ; GCN-NOT: [[VAL0]]
 ; GCN-NOT: [[VAL1]]
 ; GCN: v_min_f32_e32 [[MIN:v[0-9]+]], [[VAL0]], [[VAL1]]
@@ -92,7 +92,7 @@ define void @func_ieee_mode_off() #2 {
 
 ; GCN-LABEL: {{^}}cs_ieee_mode_default:
 ; GCN: {{buffer|global|flat}}_load_dword [[VAL0:v[0-9]+]]
-; GCN-NEXT: {{buffer|global|flat}}_load_dword [[VAL1:v[0-9]+]]
+; GCN: {{buffer|global|flat}}_load_dword [[VAL1:v[0-9]+]]
 ; GCN-NOT: [[VAL0]]
 ; GCN-NOT: [[VAL1]]
 ; GCN: v_min_f32_e32 [[MIN:v[0-9]+]], [[QUIET0]], [[QUIET1]]
@@ -107,7 +107,7 @@ define amdgpu_cs void @cs_ieee_mode_default() #0 {
 
 ; GCN-LABEL: {{^}}cs_ieee_mode_on:
 ; GCN: {{buffer|global|flat}}_load_dword [[VAL0:v[0-9]+]]
-; GCN-NEXT: {{buffer|global|flat}}_load_dword [[VAL1:v[0-9]+]]
+; GCN: {{buffer|global|flat}}_load_dword [[VAL1:v[0-9]+]]
 ; GCN-DAG: v_mul_f32_e32 [[QUIET0:v[0-9]+]], 1.0, [[VAL0]]
 ; GCN-DAG: v_mul_f32_e32 [[QUIET1:v[0-9]+]], 1.0, [[VAL1]]
 ; GCN: v_min_f32_e32 [[MIN:v[0-9]+]], [[QUIET0]], [[QUIET1]]
@@ -122,7 +122,7 @@ define amdgpu_cs void @cs_ieee_mode_on() #1 {
 
 ; GCN-LABEL: {{^}}cs_ieee_mode_off:
 ; GCN: {{buffer|global|flat}}_load_dword [[VAL0:v[0-9]+]]
-; GCN-NEXT: {{buffer|global|flat}}_load_dword [[VAL1:v[0-9]+]]
+; GCN: {{buffer|global|flat}}_load_dword [[VAL1:v[0-9]+]]
 ; GCN-NOT: [[VAL0]]
 ; GCN-NOT: [[VAL1]]
 ; GCN: v_min_f32_e32 [[MIN:v[0-9]+]], [[VAL0]], [[VAL1]]
@@ -137,7 +137,7 @@ define amdgpu_cs void @cs_ieee_mode_off() #2 {
 
 ; GCN-LABEL: {{^}}ps_ieee_mode_default:
 ; GCN: {{buffer|global|flat}}_load_dword [[VAL0:v[0-9]+]]
-; GCN-NEXT: {{buffer|global|flat}}_load_dword [[VAL1:v[0-9]+]]
+; GCN: {{buffer|global|flat}}_load_dword [[VAL1:v[0-9]+]]
 ; GCN-NOT: [[VAL0]]
 ; GCN-NOT: [[VAL1]]
 ; GCN: v_min_f32_e32 [[MIN:v[0-9]+]], [[VAL0]], [[VAL1]]
@@ -152,7 +152,7 @@ define amdgpu_ps void @ps_ieee_mode_default() #0 {
 
 ; GCN-LABEL: {{^}}ps_ieee_mode_on:
 ; GCN: {{buffer|global|flat}}_load_dword [[VAL0:v[0-9]+]]
-; GCN-NEXT: {{buffer|global|flat}}_load_dword [[VAL1:v[0-9]+]]
+; GCN: {{buffer|global|flat}}_load_dword [[VAL1:v[0-9]+]]
 ; GCN-DAG: v_mul_f32_e32 [[QUIET0:v[0-9]+]], 1.0, [[VAL0]]
 ; GCN-DAG: v_mul_f32_e32 [[QUIET1:v[0-9]+]], 1.0, [[VAL1]]
 ; GCN: v_min_f32_e32 [[MIN:v[0-9]+]], [[QUIET0]], [[QUIET1]]
@@ -167,7 +167,7 @@ define amdgpu_ps void @ps_ieee_mode_on() #1 {
 
 ; GCN-LABEL: {{^}}ps_ieee_mode_off:
 ; GCN: {{buffer|global|flat}}_load_dword [[VAL0:v[0-9]+]]
-; GCN-NEXT: {{buffer|global|flat}}_load_dword [[VAL1:v[0-9]+]]
+; GCN: {{buffer|global|flat}}_load_dword [[VAL1:v[0-9]+]]
 ; GCN-NOT: [[VAL0]]
 ; GCN-NOT: [[VAL1]]
 ; GCN: v_min_f32_e32 [[MIN:v[0-9]+]], [[VAL0]], [[VAL1]]

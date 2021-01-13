@@ -16,12 +16,11 @@ set(LIBOMPTARGET_SRC_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/api.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/device.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/interface.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/MemoryManager.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/rtl.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/omptarget.cpp
 )
 
-include_directories(${LIBOMPTARGET_LLVM_MAIN_INCLUDE_DIR})
+include_directories(${LIBOMPTARGET_LLVM_INCLUDE_DIRS})
 
 # Build libomptarget library with libdl dependency. Add LLVMSupport
 # dependency if building in-tree with profiling enabled.

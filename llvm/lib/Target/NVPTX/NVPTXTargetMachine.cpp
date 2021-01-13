@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetMachine.h"
@@ -170,11 +171,11 @@ public:
   void addFastRegAlloc() override;
   void addOptimizedRegAlloc() override;
 
-  bool addRegAssignmentFast() override {
+  bool addRegAssignAndRewriteFast() override {
     llvm_unreachable("should not be used");
   }
 
-  bool addRegAssignmentOptimized() override {
+  bool addRegAssignAndRewriteOptimized() override {
     llvm_unreachable("should not be used");
   }
 
@@ -203,6 +204,32 @@ void NVPTXTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
       PM.add(createNVVMReflectPass(Subtarget.getSmVersion()));
       PM.add(createNVVMIntrRangePass(Subtarget.getSmVersion()));
     });
+}
+
+void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
+                                                      bool DebugPassManager) {
+  PB.registerPipelineParsingCallback(
+      [](StringRef PassName, FunctionPassManager &PM,
+         ArrayRef<PassBuilder::PipelineElement>) {
+        if (PassName == "nvvm-reflect") {
+          PM.addPass(NVVMReflectPass());
+          return true;
+        }
+        if (PassName == "nvvm-intr-range") {
+          PM.addPass(NVVMIntrRangePass());
+          return true;
+        }
+        return false;
+      });
+
+  PB.registerPipelineStartEPCallback(
+      [this, DebugPassManager](ModulePassManager &PM,
+                               PassBuilder::OptimizationLevel Level) {
+        FunctionPassManager FPM(DebugPassManager);
+        FPM.addPass(NVVMReflectPass(Subtarget.getSmVersion()));
+        FPM.addPass(NVVMIntrRangePass(Subtarget.getSmVersion()));
+        PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+      });
 }
 
 TargetTransformInfo

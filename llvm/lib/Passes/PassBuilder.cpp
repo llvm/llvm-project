@@ -459,14 +459,6 @@ PassBuilder::PassBuilder(bool DebugLogging, TargetMachine *TM,
 #define CGSCC_ANALYSIS(NAME, CREATE_PASS)                                      \
   PIC->addClassToPassName(decltype(CREATE_PASS)::name(), NAME);
 #include "PassRegistry.def"
-    for (const auto &P : printBeforePasses()) {
-      if (!PIC->hasPassName(P))
-        report_fatal_error("unrecognized pass name: " + P);
-    }
-    for (const auto &P : printAfterPasses()) {
-      if (!PIC->hasPassName(P))
-        report_fatal_error("unrecognized pass name: " + P);
-    }
   }
 }
 
@@ -732,7 +724,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   LPM1.addPass(LoopRotatePass(Level != OptimizationLevel::Oz));
   // TODO: Investigate promotion cap for O1.
   LPM1.addPass(LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap));
-  LPM1.addPass(SimpleLoopUnswitchPass());
+  LPM1.addPass(SimpleLoopUnswitchPass(/* NonTrivial */ true));
   LPM2.addPass(LoopIdiomRecognizePass());
   LPM2.addPass(IndVarSimplifyPass());
 
