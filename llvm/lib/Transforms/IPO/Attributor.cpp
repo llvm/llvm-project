@@ -2459,7 +2459,7 @@ template <> struct DOTGraphTraits<AADepGraph *> : public DefaultDOTGraphTraits {
 
   static std::string getNodeLabel(const AADepGraphNode *Node,
                                   const AADepGraph *DG) {
-    std::string AAString = "";
+    std::string AAString;
     raw_string_ostream O(AAString);
     Node->print(O);
     return AAString;

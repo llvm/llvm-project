@@ -201,7 +201,7 @@ static Optional<LLTCodeGen> MVTToLLT(MVT::SimpleValueType SVT) {
 }
 
 static std::string explainPredicates(const TreePatternNode *N) {
-  std::string Explanation = "";
+  std::string Explanation;
   StringRef Separator = "";
   for (const TreePredicateCall &Call : N->getPredicateCalls()) {
     const TreePredicateFn &P = Call.Fn;
@@ -305,8 +305,8 @@ static Error failedImport(const Twine &Reason) {
 }
 
 static Error isTrivialOperatorNode(const TreePatternNode *N) {
-  std::string Explanation = "";
-  std::string Separator = "";
+  std::string Explanation;
+  std::string Separator;
 
   bool HasUnsupportedPredicate = false;
   for (const TreePredicateCall &Call : N->getPredicateCalls()) {

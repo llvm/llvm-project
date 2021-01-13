@@ -352,7 +352,7 @@ private:
     RemainingExpr = RemainingExpr.substr(1).ltrim();
 
     uint64_t StubAddr;
-    std::string ErrorMsg = "";
+    std::string ErrorMsg;
     std::tie(StubAddr, ErrorMsg) = Checker.getStubOrGOTAddrFor(
         StubContainerName, Symbol, PCtx.IsInsideLoad, IsStubAddr);
 
@@ -389,7 +389,7 @@ private:
     RemainingExpr = RemainingExpr.substr(1).ltrim();
 
     uint64_t StubAddr;
-    std::string ErrorMsg = "";
+    std::string ErrorMsg;
     std::tie(StubAddr, ErrorMsg) = Checker.getSectionAddr(
         FileName, SectionName, PCtx.IsInsideLoad);
 
