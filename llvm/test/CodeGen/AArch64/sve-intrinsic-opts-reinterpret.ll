@@ -67,6 +67,62 @@ define <vscale x 16 x i1> @reinterpret_test_d_rev(<vscale x 16 x i1> %a) {
   ret <vscale x 16 x i1> %2
 }
 
+define <vscale x 2 x i1> @reinterpret_test_full_chain(<vscale x 2 x i1> %a) {
+; OPT-LABEL: @reinterpret_test_full_chain(
+; OPT: ret <vscale x 2 x i1> %a
+  %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> %a)
+  %2 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %1)
+  %3 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %2)
+  %4 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %3)
+  %5 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %4)
+  %6 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %5)
+  ret <vscale x 2 x i1> %6
+}
+
+; The last two reinterprets are not necessary, since they are doing the same
+; work as the first two.
+define <vscale x 4 x i1> @reinterpret_test_partial_chain(<vscale x 2 x i1> %a) {
+; OPT-LABEL: @reinterpret_test_partial_chain(
+; OPT: %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> %a)
+; OPT-NEXT: %2 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %1)
+; OPT-NEXT: ret <vscale x 4 x i1> %2
+  %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> %a)
+  %2 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %1)
+  %3 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %2)
+  %4 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %3)
+  ret <vscale x 4 x i1> %4
+}
+
+; The chain cannot be reduced because of the second reinterpret, which causes
+; zeroing.
+define <vscale x 8 x i1> @reinterpret_test_irreducible_chain(<vscale x 8 x i1> %a) {
+; OPT-LABEL: @reinterpret_test_irreducible_chain(
+; OPT: %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %a)
+; OPT-NEXT: %2 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %1)
+; OPT-NEXT: %3 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %2)
+; OPT-NEXT: %4 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> %3)
+; OPT-NEXT: ret <vscale x 8 x i1> %4
+  %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %a)
+  %2 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %1)
+  %3 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %2)
+  %4 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> %3)
+  ret <vscale x 8 x i1> %4
+}
+
+; Here, the candidate list is larger than the number of instructions that we
+; end up removing.
+define <vscale x 4 x i1> @reinterpret_test_keep_some_candidates(<vscale x 8 x i1> %a) {
+; OPT-LABEL: @reinterpret_test_keep_some_candidates(
+; OPT: %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %a)
+; OPT-NEXT: %2 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %1)
+; OPT-NEXT: ret <vscale x 4 x i1> %2
+  %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %a)
+  %2 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %1)
+  %3 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %2)
+  %4 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %3)
+  ret <vscale x 4 x i1> %4
+}
+
 define <vscale x 2 x i1> @reinterpret_reductions(i32 %cond, <vscale x 2 x i1> %a, <vscale x 2 x i1> %b, <vscale x 2 x i1> %c) {
 ; OPT-LABEL: reinterpret_reductions
 ; OPT-NOT: convert

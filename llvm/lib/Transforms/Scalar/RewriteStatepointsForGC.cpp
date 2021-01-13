@@ -2110,10 +2110,10 @@ static Value* findRematerializableChainToBasePointer(
 
 // Helper function for the "rematerializeLiveValues". Compute cost of the use
 // chain we are going to rematerialize.
-static unsigned
-chainToBasePointerCost(SmallVectorImpl<Instruction*> &Chain,
+static InstructionCost
+chainToBasePointerCost(SmallVectorImpl<Instruction *> &Chain,
                        TargetTransformInfo &TTI) {
-  unsigned Cost = 0;
+  InstructionCost Cost = 0;
 
   for (Instruction *Instr : Chain) {
     if (CastInst *CI = dyn_cast<CastInst>(Instr)) {
@@ -2220,7 +2220,7 @@ static void rematerializeLiveValues(CallBase *Call,
       assert(Info.LiveSet.count(AlternateRootPhi));
     }
     // Compute cost of this chain
-    unsigned Cost = chainToBasePointerCost(ChainToBase, TTI);
+    InstructionCost Cost = chainToBasePointerCost(ChainToBase, TTI);
     // TODO: We can also account for cases when we will be able to remove some
     //       of the rematerialized values by later optimization passes. I.e if
     //       we rematerialized several intersecting chains. Or if original values

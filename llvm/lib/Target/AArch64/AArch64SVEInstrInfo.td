@@ -1648,6 +1648,9 @@ let Predicates = [HasSVE] in {
     def : Pat<(vscale (sve_cntd_imm_neg i32:$imm)), (SUBXrs XZR, (CNTD_XPiI 31, $imm), 0)>;
   }
 
+  def : Pat<(add GPR64:$op, (vscale (sve_rdvl_imm i32:$imm))),
+            (ADDVL_XXI GPR64:$op, $imm)>;
+
   // FIXME: BigEndian requires an additional REV instruction to satisfy the
   // constraint that none of the bits change when stored to memory as one
   // type, and and reloaded as another type.
