@@ -2144,7 +2144,7 @@ Value mlir::LLVM::createGlobalString(Location loc, OpBuilder &builder,
   assert(module && "builder points to an op outside of a module");
 
   // Create the global at the entry of the module.
-  OpBuilder moduleBuilder(module.getBodyRegion());
+  OpBuilder moduleBuilder(module.getBodyRegion(), builder.getListener());
   MLIRContext *ctx = builder.getContext();
   auto type = LLVM::LLVMArrayType::get(IntegerType::get(ctx, 8), value.size());
   auto global = moduleBuilder.create<LLVM::GlobalOp>(
