@@ -577,7 +577,10 @@ LookupState::LookupState(std::unique_ptr<InProgressLookupState> IPLS)
 
 void LookupState::reset(InProgressLookupState *IPLS) { this->IPLS.reset(IPLS); }
 
-LookupState::~LookupState() {}
+LookupState::LookupState() = default;
+LookupState::LookupState(LookupState &&) = default;
+LookupState &LookupState::operator=(LookupState &&) = default;
+LookupState::~LookupState() = default;
 
 void LookupState::continueLookup(Error Err) {
   assert(IPLS && "Cannot call continueLookup on empty LookupState");
