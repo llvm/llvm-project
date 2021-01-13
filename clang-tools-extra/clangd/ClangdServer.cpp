@@ -139,7 +139,8 @@ ClangdServer::Options::operator TUScheduler::Options() const {
 ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                            const ThreadsafeFS &TFS, const Options &Opts,
                            Callbacks *Callbacks)
-    : ConfigProvider(Opts.ConfigProvider), TFS(TFS), ServerCallbacks(Callbacks),
+    : ConfigProvider(Opts.ConfigProvider), CDB(CDB), TFS(TFS),
+      ServerCallbacks(Callbacks),
       DynamicIdx(Opts.BuildDynamicSymbolIndex
                      ? new FileIndex(Opts.HeavyweightDynamicSymbolIndex,
                                      Opts.CollectMainFileRefs)
@@ -870,6 +871,7 @@ Context ClangdServer::createProcessingContext(PathRef File) const {
 LLVM_NODISCARD bool
 ClangdServer::blockUntilIdleForTest(llvm::Optional<double> TimeoutSeconds) {
   return WorkScheduler.blockUntilIdle(timeoutSeconds(TimeoutSeconds)) &&
+         CDB.blockUntilIdle(timeoutSeconds(TimeoutSeconds)) &&
          (!BackgroundIdx ||
           BackgroundIdx->blockUntilIdleForTest(TimeoutSeconds));
 }

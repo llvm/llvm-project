@@ -636,5 +636,11 @@ tooling::CompileCommand DelegatingCDB::getFallbackCommand(PathRef File) const {
   return Base->getFallbackCommand(File);
 }
 
+bool DelegatingCDB::blockUntilIdle(Deadline D) const {
+  if (!Base)
+    return true;
+  return Base->blockUntilIdle(D);
+}
+
 } // namespace clangd
 } // namespace clang

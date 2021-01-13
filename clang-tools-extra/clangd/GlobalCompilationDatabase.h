@@ -51,6 +51,10 @@ public:
   /// Clangd should treat the results as unreliable.
   virtual tooling::CompileCommand getFallbackCommand(PathRef File) const;
 
+  /// If the CDB does any asynchronous work, wait for it to complete.
+  /// For use in tests.
+  virtual bool blockUntilIdle(Deadline D) const { return true; }
+
   using CommandChanged = Event<std::vector<std::string>>;
   /// The callback is notified when files may have new compile commands.
   /// The argument is a list of full file paths.
@@ -74,6 +78,8 @@ public:
   llvm::Optional<ProjectInfo> getProjectInfo(PathRef File) const override;
 
   tooling::CompileCommand getFallbackCommand(PathRef File) const override;
+
+  bool blockUntilIdle(Deadline D) const override;
 
 private:
   const GlobalCompilationDatabase *Base;
