@@ -115,10 +115,10 @@ public:
   //
 
   // Only to be called for symbols with ObjectEntityDetails
-  static bool HasImpureFinal(const Symbol &symbol) {
-    if (const Symbol * root{GetAssociationRoot(symbol)}) {
-      CHECK(root->has<ObjectEntityDetails>());
-      if (const DeclTypeSpec * symType{root->GetType()}) {
+  static bool HasImpureFinal(const Symbol &original) {
+    const Symbol &symbol{ResolveAssociations(original)};
+    if (symbol.has<ObjectEntityDetails>()) {
+      if (const DeclTypeSpec * symType{symbol.GetType()}) {
         if (const DerivedTypeSpec * derived{symType->AsDerived()}) {
           return semantics::HasImpureFinal(*derived);
         }
@@ -142,22 +142,21 @@ public:
 
   // Is it possible that we will we deallocate a polymorphic entity or one
   // of its components?
-  static bool MightDeallocatePolymorphic(const Symbol &entity,
+  static bool MightDeallocatePolymorphic(const Symbol &original,
       const std::function<bool(const Symbol &)> &WillDeallocate) {
-    if (const Symbol * root{GetAssociationRoot(entity)}) {
-      // Check the entity itself, no coarray exception here
-      if (IsPolymorphicAllocatable(*root)) {
-        return true;
-      }
-      // Check the components
-      if (const auto *details{root->detailsIf<ObjectEntityDetails>()}) {
-        if (const DeclTypeSpec * entityType{details->type()}) {
-          if (const DerivedTypeSpec * derivedType{entityType->AsDerived()}) {
-            UltimateComponentIterator ultimates{*derivedType};
-            for (const auto &ultimate : ultimates) {
-              if (WillDeallocatePolymorphic(ultimate, WillDeallocate)) {
-                return true;
-              }
+    const Symbol &symbol{ResolveAssociations(original)};
+    // Check the entity itself, no coarray exception here
+    if (IsPolymorphicAllocatable(symbol)) {
+      return true;
+    }
+    // Check the components
+    if (const auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
+      if (const DeclTypeSpec * entityType{details->type()}) {
+        if (const DerivedTypeSpec * derivedType{entityType->AsDerived()}) {
+          UltimateComponentIterator ultimates{*derivedType};
+          for (const auto &ultimate : ultimates) {
+            if (WillDeallocatePolymorphic(ultimate, WillDeallocate)) {
+              return true;
             }
           }
         }
@@ -561,9 +560,7 @@ private:
         // symbols
         for (const parser::Name &name : names->v) {
           if (const Symbol * symbol{parentScope.FindSymbol(name.source)}) {
-            if (const Symbol * root{GetAssociationRoot(*symbol)}) {
-              symbols.insert(*root);
-            }
+            symbols.insert(ResolveAssociations(*symbol));
           }
         }
       }
@@ -575,9 +572,7 @@ private:
     SymbolSet result;
     if (const auto *expr{GetExpr(expression)}) {
       for (const Symbol &symbol : evaluate::CollectSymbols(*expr)) {
-        if (const Symbol * root{GetAssociationRoot(symbol)}) {
-          result.insert(*root);
-        }
+        result.insert(ResolveAssociations(symbol));
       }
     }
     return result;

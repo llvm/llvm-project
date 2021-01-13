@@ -264,13 +264,12 @@ void SemanticsContext::PopConstruct() {
 
 void SemanticsContext::CheckIndexVarRedefine(const parser::CharBlock &location,
     const Symbol &variable, parser::MessageFixedText &&message) {
-  if (const Symbol * root{GetAssociationRoot(variable)}) {
-    auto it{activeIndexVars_.find(*root)};
-    if (it != activeIndexVars_.end()) {
-      std::string kind{EnumToString(it->second.kind)};
-      Say(location, std::move(message), kind, root->name())
-          .Attach(it->second.location, "Enclosing %s construct"_en_US, kind);
-    }
+  const Symbol &symbol{ResolveAssociations(variable)};
+  auto it{activeIndexVars_.find(symbol)};
+  if (it != activeIndexVars_.end()) {
+    std::string kind{EnumToString(it->second.kind)};
+    Say(location, std::move(message), kind, symbol.name())
+        .Attach(it->second.location, "Enclosing %s construct"_en_US, kind);
   }
 }
 
@@ -302,19 +301,16 @@ void SemanticsContext::ActivateIndexVar(
     const parser::Name &name, IndexVarKind kind) {
   CheckIndexVarRedefine(name);
   if (const Symbol * indexVar{name.symbol}) {
-    if (const Symbol * root{GetAssociationRoot(*indexVar)}) {
-      activeIndexVars_.emplace(*root, IndexVarInfo{name.source, kind});
-    }
+    activeIndexVars_.emplace(
+        ResolveAssociations(*indexVar), IndexVarInfo{name.source, kind});
   }
 }
 
 void SemanticsContext::DeactivateIndexVar(const parser::Name &name) {
   if (Symbol * indexVar{name.symbol}) {
-    if (const Symbol * root{GetAssociationRoot(*indexVar)}) {
-      auto it{activeIndexVars_.find(*root)};
-      if (it != activeIndexVars_.end() && it->second.location == name.source) {
-        activeIndexVars_.erase(it);
-      }
+    auto it{activeIndexVars_.find(ResolveAssociations(*indexVar))};
+    if (it != activeIndexVars_.end() && it->second.location == name.source) {
+      activeIndexVars_.erase(it);
     }
   }
 }

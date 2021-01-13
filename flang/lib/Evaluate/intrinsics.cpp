@@ -1559,7 +1559,12 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       if (const Expr<SomeType> *expr{arg->UnwrapExpr()}) {
         auto dc{characteristics::DummyArgument::FromActual(
             std::string{d.keyword}, *expr, context)};
-        CHECK(dc);
+        if (!dc) {
+          common::die("INTERNAL: could not characterize intrinsic function "
+                      "actual argument '%s'",
+              expr->AsFortran().c_str());
+          return std::nullopt;
+        }
         dummyArgs.emplace_back(std::move(*dc));
         if (d.typePattern.kindCode == KindCode::same && !sameDummyArg) {
           sameDummyArg = j;
