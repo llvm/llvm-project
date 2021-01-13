@@ -20077,7 +20077,7 @@ optimizer.
 
 .. _int_ssa_copy:
 
-'``llvm.ssa_copy``' Intrinsic
+'``llvm.ssa.copy``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -20085,7 +20085,7 @@ Syntax:
 
 ::
 
-      declare type @llvm.ssa_copy(type %operand) returned(1) readnone
+      declare type @llvm.ssa.copy(type %operand) returned(1) readnone
 
 Arguments:
 """"""""""
@@ -20095,7 +20095,7 @@ The first argument is an operand which is used as the returned value.
 Overview:
 """"""""""
 
-The ``llvm.ssa_copy`` intrinsic can be used to attach information to
+The ``llvm.ssa.copy`` intrinsic can be used to attach information to
 operations by copying them and giving them new names.  For example,
 the PredicateInfo utility uses it to build Extended SSA form, and
 attach various forms of information to operands that dominate specific
