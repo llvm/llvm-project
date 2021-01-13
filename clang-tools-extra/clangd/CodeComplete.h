@@ -50,17 +50,6 @@ struct CodeCompleteOptions {
   /// b})).
   bool EnableSnippets = false;
 
-  /// Add code patterns to completion results.
-  /// If EnableSnippets is false, this options is ignored and code patterns will
-  /// always be omitted.
-  bool IncludeCodePatterns = true;
-
-  /// Add macros to code completion results.
-  bool IncludeMacros = true;
-
-  /// Add comments to code completion results, if available.
-  bool IncludeComments = true;
-
   /// Include results that are not legal completions in the current context.
   /// For example, private members are usually inaccessible.
   bool IncludeIneligibleResults = false;
