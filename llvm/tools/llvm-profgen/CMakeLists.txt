@@ -17,4 +17,5 @@ add_llvm_tool(llvm-profgen
   PerfReader.cpp
   ProfiledBinary.cpp
   ProfileGenerator.cpp
+  PseudoProbe.cpp
   )
