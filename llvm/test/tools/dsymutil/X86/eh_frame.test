@@ -1,5 +1,6 @@
+REQUIRES: system-darwin
+
 FIXME: Replace otool with llvm-objcopy --dump-section=__TEXT,__eh_frame.
-REQUIRES : system-darwin
 
 $ cat eh_frame.cpp
 int f1()
