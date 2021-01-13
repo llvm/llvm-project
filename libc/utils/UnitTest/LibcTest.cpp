@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Test.h"
+#include "LibcTest.h"
 
 #include "utils/testutils/ExecuteFunction.h"
 #include <cassert>
