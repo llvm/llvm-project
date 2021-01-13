@@ -64,12 +64,24 @@ public:
 
 public:
   void generateProfile() override {
-    // Fill in function body samples
-    populateFunctionBodySamples();
+    for (const auto &BI : BinarySampleCounters) {
+      ProfiledBinary *Binary = BI.first;
+      for (const auto &CI : BI.second) {
+        const StringBasedCtxKey *CtxKey =
+            dyn_cast<StringBasedCtxKey>(CI.first.getPtr());
+        StringRef ContextId(CtxKey->Context);
+        // Get or create function profile for the range
+        FunctionSamples &FunctionProfile =
+            getFunctionProfileForContext(ContextId);
 
-    // Fill in boundary sample counts as well as call site samples for calls
-    populateFunctionBoundarySamples();
-
+        // Fill in function body samples
+        populateFunctionBodySamples(FunctionProfile, CI.second.RangeCounter,
+                                    Binary);
+        // Fill in boundary sample counts as well as call site samples for calls
+        populateFunctionBoundarySamples(ContextId, FunctionProfile,
+                                        CI.second.BranchCounter, Binary);
+      }
+    }
     // Fill in call site value sample for inlined calls and also use context to
     // infer missing samples. Since we don't have call count for inlined
     // functions, we estimate it from inlinee's profile using the entry of the
@@ -85,8 +97,13 @@ private:
                                            uint64_t Count);
   // Lookup or create FunctionSamples for the context
   FunctionSamples &getFunctionProfileForContext(StringRef ContextId);
-  void populateFunctionBodySamples();
-  void populateFunctionBoundarySamples();
+  void populateFunctionBodySamples(FunctionSamples &FunctionProfile,
+                                   const RangeSample &RangeCounters,
+                                   ProfiledBinary *Binary);
+  void populateFunctionBoundarySamples(StringRef ContextId,
+                                       FunctionSamples &FunctionProfile,
+                                       const BranchSample &BranchCounters,
+                                       ProfiledBinary *Binary);
   void populateInferredFunctionSamples();
 };
 

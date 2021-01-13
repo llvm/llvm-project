@@ -72,26 +72,39 @@ void VirtualUnwinder::unwindBranchWithinFrame(UnwindState &State) {
   State.InstPtr.update(Source);
 }
 
+SampleCounter &
+VirtualUnwinder::getOrCreateSampleCounter(const ProfiledBinary *Binary,
+                                          std::list<uint64_t> &CallStack) {
+  std::shared_ptr<StringBasedCtxKey> KeyStr =
+      std::make_shared<StringBasedCtxKey>();
+  KeyStr->Context = Binary->getExpandedContextStr(CallStack);
+  KeyStr->genHashCode();
+  auto Ret =
+      CtxCounterMap->emplace(Hashable<ContextKey>(KeyStr), SampleCounter());
+  return Ret.first->second;
+}
+
 void VirtualUnwinder::recordRangeCount(uint64_t Start, uint64_t End,
                                        UnwindState &State, uint64_t Repeat) {
-  std::string &&ContextId = State.getExpandedContextStr();
   uint64_t StartOffset = State.getBinary()->virtualAddrToOffset(Start);
   uint64_t EndOffset = State.getBinary()->virtualAddrToOffset(End);
-  SampleCounters->recordRangeCount(ContextId, StartOffset, EndOffset, Repeat);
+  SampleCounter &SCounter =
+      getOrCreateSampleCounter(State.getBinary(), State.CallStack);
+  SCounter.recordRangeCount(StartOffset, EndOffset, Repeat);
 }
 
 void VirtualUnwinder::recordBranchCount(const LBREntry &Branch,
                                         UnwindState &State, uint64_t Repeat) {
   if (Branch.IsArtificial)
     return;
-  std::string &&ContextId = State.getExpandedContextStr();
   uint64_t SourceOffset = State.getBinary()->virtualAddrToOffset(Branch.Source);
   uint64_t TargetOffset = State.getBinary()->virtualAddrToOffset(Branch.Target);
-  SampleCounters->recordBranchCount(ContextId, SourceOffset, TargetOffset,
-                                    Repeat);
+  SampleCounter &SCounter =
+      getOrCreateSampleCounter(State.getBinary(), State.CallStack);
+  SCounter.recordBranchCount(SourceOffset, TargetOffset, Repeat);
 }
 
-bool VirtualUnwinder::unwind(const HybridSample &Sample, uint64_t Repeat) {
+bool VirtualUnwinder::unwind(const HybridSample *Sample, uint64_t Repeat) {
   // Capture initial state as starting point for unwinding.
   UnwindState State(Sample);
 
@@ -198,10 +211,10 @@ ProfiledBinary *PerfReader::getBinary(uint64_t Address) {
   return Iter->second;
 }
 
-static void printSampleCounter(ContextRangeCounter &Counter) {
-  // Use ordered map to make the output deterministic
-  std::map<std::string, RangeSample> OrderedCounter(Counter.begin(),
-                                                    Counter.end());
+// Use ordered map to make the output deterministic
+using OrderedCounterForPrint = std::map<StringRef, RangeSample>;
+
+static void printSampleCounter(OrderedCounterForPrint &OrderedCounter) {
   for (auto Range : OrderedCounter) {
     outs() << Range.first << "\n";
     for (auto I : Range.second) {
@@ -211,20 +224,40 @@ static void printSampleCounter(ContextRangeCounter &Counter) {
   }
 }
 
+static void printRangeCounter(ContextSampleCounterMap &Counter) {
+  OrderedCounterForPrint OrderedCounter;
+  for (auto &CI : Counter) {
+    const StringBasedCtxKey *CtxKey =
+        dyn_cast<StringBasedCtxKey>(CI.first.getPtr());
+    OrderedCounter[CtxKey->Context] = CI.second.RangeCounter;
+  }
+  printSampleCounter(OrderedCounter);
+}
+
+static void printBranchCounter(ContextSampleCounterMap &Counter) {
+  OrderedCounterForPrint OrderedCounter;
+  for (auto &CI : Counter) {
+    const StringBasedCtxKey *CtxKey =
+        dyn_cast<StringBasedCtxKey>(CI.first.getPtr());
+    OrderedCounter[CtxKey->Context] = CI.second.BranchCounter;
+  }
+  printSampleCounter(OrderedCounter);
+}
+
 void PerfReader::printUnwinderOutput() {
   for (auto I : BinarySampleCounters) {
     const ProfiledBinary *Binary = I.first;
     outs() << "Binary(" << Binary->getName().str() << ")'s Range Counter:\n";
-    printSampleCounter(I.second.RangeCounter);
+    printRangeCounter(I.second);
     outs() << "\nBinary(" << Binary->getName().str() << ")'s Branch Counter:\n";
-    printSampleCounter(I.second.BranchCounter);
+    printBranchCounter(I.second);
   }
 }
 
 void PerfReader::unwindSamples() {
   for (const auto &Item : AggregatedSamples) {
-    const HybridSample &Sample = Item.first;
-    VirtualUnwinder Unwinder(&BinarySampleCounters[Sample.Binary]);
+    const HybridSample *Sample = dyn_cast<HybridSample>(Item.first.getPtr());
+    VirtualUnwinder Unwinder(&BinarySampleCounters[Sample->Binary]);
     Unwinder.unwind(Sample, Item.second);
   }
 
@@ -366,26 +399,27 @@ void PerfReader::parseHybridSample(TraceStream &TraceIt) {
   // 0x4005c8/0x4005dc/P/-/-/0   0x40062f/0x4005b0/P/-/-/0 ...
   //          ... 0x4005c8/0x4005dc/P/-/-/0    # LBR Entries
   //
-  HybridSample Sample;
+  std::shared_ptr<HybridSample> Sample = std::make_shared<HybridSample>();
 
   // Parsing call stack and populate into HybridSample.CallStack
-  if (!extractCallstack(TraceIt, Sample.CallStack)) {
+  if (!extractCallstack(TraceIt, Sample->CallStack)) {
     // Skip the next LBR line matched current call stack
     if (!TraceIt.isAtEoF() && TraceIt.getCurrentLine().startswith(" 0x"))
       TraceIt.advance();
     return;
   }
   // Set the binary current sample belongs to
-  Sample.Binary = getBinary(Sample.CallStack.front());
+  Sample->Binary = getBinary(Sample->CallStack.front());
 
   if (!TraceIt.isAtEoF() && TraceIt.getCurrentLine().startswith(" 0x")) {
     // Parsing LBR stack and populate into HybridSample.LBRStack
-    if (extractLBRStack(TraceIt, Sample.LBRStack, Sample.Binary)) {
+    if (extractLBRStack(TraceIt, Sample->LBRStack, Sample->Binary)) {
       // Canonicalize stack leaf to avoid 'random' IP from leaf frame skew LBR
       // ranges
-      Sample.CallStack.front() = Sample.LBRStack[0].Target;
+      Sample->CallStack.front() = Sample->LBRStack[0].Target;
       // Record samples by aggregation
-      AggregatedSamples[Sample]++;
+      Sample->genHashCode();
+      AggregatedSamples[Hashable<PerfSample>(Sample)]++;
     }
   } else {
     // LBR sample is encoded in single line after stack sample
