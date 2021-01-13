@@ -1,7 +1,7 @@
-// RUN: not llvm-mc -arch=amdgcn %s 2>&1 | FileCheck --check-prefix=GCN --check-prefix=SICI --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck --check-prefix=GCN --check-prefix=SICI --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=fiji %s 2>&1 | FileCheck --check-prefix=GCN --check-prefix=VI --check-prefix=SICIVI --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 %s 2>&1 | FileCheck --check-prefix=GCN --check-prefix=GFX10 --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn %s 2>&1 | FileCheck --check-prefixes=GCN,SICI --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck --check-prefixes=GCN,SICI --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=fiji %s 2>&1 | FileCheck --check-prefixes=GCN,SICIVI --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 %s 2>&1 | FileCheck --check-prefixes=GCN,GFX10 --implicit-check-not=error: %s
 
 //===----------------------------------------------------------------------===//
 // sendmsg
