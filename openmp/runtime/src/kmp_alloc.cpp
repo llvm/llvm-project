@@ -1348,7 +1348,7 @@ omp_allocator_handle_t __kmpc_init_allocator(int gtid, omp_memspace_handle_t ms,
   al->memspace = ms; // not used currently
   for (i = 0; i < ntraits; ++i) {
     switch (traits[i].key) {
-    case omp_atk_threadmodel:
+    case omp_atk_sync_hint:
     case omp_atk_access:
     case omp_atk_pinned:
       break;
