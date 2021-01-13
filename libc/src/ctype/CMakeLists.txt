@@ -25,6 +25,14 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  isascii
+  SRCS
+    isascii.cpp
+  HDRS
+    isascii.h
+)
+
+add_entrypoint_object(
   isblank
   SRCS
     isblank.cpp
@@ -124,6 +132,14 @@ add_entrypoint_object(
     tolower.h
   DEPENDS
     .ctype_utils
+)
+
+add_entrypoint_object(
+  toascii
+  SRCS
+    toascii.cpp
+  HDRS
+    toascii.h
 )
 
 add_entrypoint_object(

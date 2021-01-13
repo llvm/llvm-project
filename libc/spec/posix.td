@@ -235,7 +235,22 @@ def POSIX : StandardSpec<"POSIX"> {
     ]
   >;
 
+  HeaderSpec CType = HeaderSpec<
+    "ctype.h",
+    [], // Macros
+    [], // Types
+    [], // Enumerations
+    [
+        FunctionSpec<
+            "isascii",
+            RetValSpec<IntType>,
+            [ArgSpec<IntType>]
+        >,
+    ]
+  >;
+
   let Headers = [
+    CType,
     Errno,
     SysMMan,
     Signal,
