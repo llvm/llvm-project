@@ -62,6 +62,25 @@ protected:
   mutable CommandChanged OnCommandChanged;
 };
 
+// Helper class for implementing GlobalCompilationDatabases that wrap others.
+class DelegatingCDB : public GlobalCompilationDatabase {
+public:
+  DelegatingCDB(const GlobalCompilationDatabase *Base);
+  DelegatingCDB(std::unique_ptr<GlobalCompilationDatabase> Base);
+
+  llvm::Optional<tooling::CompileCommand>
+  getCompileCommand(PathRef File) const override;
+
+  llvm::Optional<ProjectInfo> getProjectInfo(PathRef File) const override;
+
+  tooling::CompileCommand getFallbackCommand(PathRef File) const override;
+
+private:
+  const GlobalCompilationDatabase *Base;
+  std::unique_ptr<GlobalCompilationDatabase> BaseOwner;
+  CommandChanged::Subscription BaseChanged;
+};
+
 /// Gets compile args from tooling::CompilationDatabases built for parent
 /// directories.
 class DirectoryBasedGlobalCompilationDatabase
@@ -143,7 +162,7 @@ getQueryDriverDatabase(llvm::ArrayRef<std::string> QueryDriverGlobs,
 
 /// Wraps another compilation database, and supports overriding the commands
 /// using an in-memory mapping.
-class OverlayCDB : public GlobalCompilationDatabase {
+class OverlayCDB : public DelegatingCDB {
 public:
   // Base may be null, in which case no entries are inherited.
   // FallbackFlags are added to the fallback compile command.
@@ -155,9 +174,6 @@ public:
   llvm::Optional<tooling::CompileCommand>
   getCompileCommand(PathRef File) const override;
   tooling::CompileCommand getFallbackCommand(PathRef File) const override;
-  /// Project info is gathered purely from the inner compilation database to
-  /// ensure consistency.
-  llvm::Optional<ProjectInfo> getProjectInfo(PathRef File) const override;
 
   /// Sets or clears the compilation command for a particular file.
   void
@@ -167,10 +183,8 @@ public:
 private:
   mutable std::mutex Mutex;
   llvm::StringMap<tooling::CompileCommand> Commands; /* GUARDED_BY(Mut) */
-  const GlobalCompilationDatabase *Base;
   tooling::ArgumentsAdjuster ArgsAdjuster;
   std::vector<std::string> FallbackFlags;
-  CommandChanged::Subscription BaseChanged;
 };
 
 } // namespace clangd
