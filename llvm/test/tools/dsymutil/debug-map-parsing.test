@@ -1,4 +1,3 @@
-RUN: touch %p/Inputs/basic.macho.x86_64.o
 RUN: dsymutil -dump-debug-map -oso-prepend-path=%p %p/Inputs/basic.macho.x86_64 | FileCheck %s
 RUN: dsymutil -dump-debug-map -oso-prepend-path=%p %p/Inputs/basic-lto.macho.x86_64 | FileCheck %s --check-prefix=CHECK-LTO
 RUN: dsymutil -verbose -dump-debug-map -oso-prepend-path=%p %p/Inputs/basic-archive.macho.x86_64 2>&1 | FileCheck %s --check-prefix=CHECK-ARCHIVE
@@ -47,8 +46,7 @@ opening the archive once if mulitple of its members are used).
 CHECK-ARCHIVE:      trying to open {{.*}}basic-archive.macho.x86_64'
 CHECK-ARCHIVE-NEXT: 	loaded object.
 CHECK-ARCHIVE-NEXT: trying to open {{.*}}/Inputs/basic1.macho.x86_64.o'
-CHECK-ARCHIVE-NEXT: warning: {{.*}}/Inputs/basic1.macho.x86_64.o: timestamp mismatch between object file ({{.*}}) and debug map ({{.*}})
-CHECK-ARCHIVE-NEXT: 	loaded object.
+CHECK-ARCHIVE: 	loaded object.
 CHECK-ARCHIVE-NEXT: trying to open {{.*}}/libbasic.a(basic2.macho.x86_64.o)'
 CHECK-ARCHIVE-NEXT: 	loaded archive {{.*}}/libbasic.a'
 CHECK-ARCHIVE-NEXT: 	found member in archive.
