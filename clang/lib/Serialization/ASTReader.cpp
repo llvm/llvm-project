@@ -3721,7 +3721,7 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
         Error("invalid pragma pack record");
         return Failure;
       }
-      PragmaAlignPackCurrentValue = Record[0];
+      PragmaAlignPackCurrentValue = ReadAlignPackInfo(Record[0]);
       PragmaAlignPackCurrentLocation = ReadSourceLocation(F, Record[1]);
       unsigned NumStackEntries = Record[2];
       unsigned Idx = 3;
@@ -3729,7 +3729,7 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       PragmaAlignPackStack.clear();
       for (unsigned I = 0; I < NumStackEntries; ++I) {
         PragmaAlignPackStackEntry Entry;
-        Entry.Value = Record[Idx++];
+        Entry.Value = ReadAlignPackInfo(Record[Idx++]);
         Entry.Location = ReadSourceLocation(F, Record[Idx++]);
         Entry.PushLocation = ReadSourceLocation(F, Record[Idx++]);
         PragmaAlignPackStrings.push_back(ReadString(Record, Idx));
@@ -7896,14 +7896,15 @@ void ASTReader::UpdateSema() {
           PragmaAlignPackStack.front().PushLocation);
       DropFirst = true;
     }
-    for (const auto &Entry :
-         llvm::makeArrayRef(PragmaAlignPackStack).drop_front(DropFirst ? 1 : 0))
+    for (const auto &Entry : llvm::makeArrayRef(PragmaAlignPackStack)
+                                 .drop_front(DropFirst ? 1 : 0)) {
       SemaObj->AlignPackStack.Stack.emplace_back(
           Entry.SlotLabel, Entry.Value, Entry.Location, Entry.PushLocation);
+    }
     if (PragmaAlignPackCurrentLocation.isInvalid()) {
       assert(*PragmaAlignPackCurrentValue ==
                  SemaObj->AlignPackStack.DefaultValue &&
-             "Expected a default alignment value");
+             "Expected a default align and pack value");
       // Keep the current values.
     } else {
       SemaObj->AlignPackStack.CurrentValue = *PragmaAlignPackCurrentValue;

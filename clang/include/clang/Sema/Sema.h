@@ -476,6 +476,108 @@ public:
     PSK_Pop_Set   = PSK_Pop | PSK_Set,  // #pragma (pop[, id], value)
   };
 
+  // #pragma pack and align.
+  class AlignPackInfo {
+  public:
+    // `Native` represents default align mode, which may vary based on the
+    // platform.
+    enum Mode : unsigned char { Native, Natural, Packed, Mac68k };
+
+    // #pragma pack info constructor
+    AlignPackInfo(AlignPackInfo::Mode M, unsigned Num, bool IsXL)
+        : PackAttr(true), AlignMode(M), PackNumber(Num), XLStack(IsXL) {
+      assert(Num == PackNumber && "The pack number has been truncated.");
+    }
+
+    // #pragma align info constructor
+    AlignPackInfo(AlignPackInfo::Mode M, bool IsXL)
+        : PackAttr(false), AlignMode(M),
+          PackNumber(M == Packed ? 1 : UninitPackVal), XLStack(IsXL) {}
+
+    explicit AlignPackInfo(bool IsXL) : AlignPackInfo(Native, IsXL) {}
+
+    AlignPackInfo() : AlignPackInfo(Native, false) {}
+
+    // When a AlignPackInfo itself cannot be used, this returns an 32-bit
+    // integer encoding for it. This should only be passed to
+    // AlignPackInfo::getFromRawEncoding, it should not be inspected directly.
+    static uint32_t getRawEncoding(const AlignPackInfo &Info) {
+      std::uint32_t Encoding{};
+      if (Info.IsXLStack())
+        Encoding |= IsXLMask;
+
+      Encoding |= static_cast<uint32_t>(Info.getAlignMode()) << 1;
+
+      if (Info.IsPackAttr())
+        Encoding |= PackAttrMask;
+
+      Encoding |= static_cast<uint32_t>(Info.getPackNumber()) << 4;
+
+      return Encoding;
+    }
+
+    static AlignPackInfo getFromRawEncoding(unsigned Encoding) {
+      bool IsXL = static_cast<bool>(Encoding & IsXLMask);
+      AlignPackInfo::Mode M =
+          static_cast<AlignPackInfo::Mode>((Encoding & AlignModeMask) >> 1);
+      int PackNumber = (Encoding & PackNumMask) >> 4;
+
+      if (Encoding & PackAttrMask)
+        return AlignPackInfo(M, PackNumber, IsXL);
+
+      return AlignPackInfo(M, IsXL);
+    }
+
+    bool IsPackAttr() const { return PackAttr; }
+
+    bool IsAlignAttr() const { return !PackAttr; }
+
+    Mode getAlignMode() const { return AlignMode; }
+
+    unsigned getPackNumber() const { return PackNumber; }
+
+    bool IsPackSet() const {
+      // #pragma align, #pragma pack(), and #pragma pack(0) do not set the pack
+      // attriute on a decl.
+      return PackNumber != UninitPackVal && PackNumber != 0;
+    }
+
+    bool IsXLStack() const { return XLStack; }
+
+    bool operator==(const AlignPackInfo &Info) const {
+      return std::tie(AlignMode, PackNumber, PackAttr, XLStack) ==
+             std::tie(Info.AlignMode, Info.PackNumber, Info.PackAttr,
+                      Info.XLStack);
+    }
+
+    bool operator!=(const AlignPackInfo &Info) const {
+      return !(*this == Info);
+    }
+
+  private:
+    /// \brief True if this is a pragma pack attribute,
+    ///         not a pragma align attribute.
+    bool PackAttr;
+
+    /// \brief The alignment mode that is in effect.
+    Mode AlignMode;
+
+    /// \brief The pack number of the stack.
+    unsigned char PackNumber;
+
+    /// \brief True if it is a XL #pragma align/pack stack.
+    bool XLStack;
+
+    /// \brief Uninitialized pack value.
+    static constexpr unsigned char UninitPackVal = -1;
+
+    // Masks to encode and decode an AlignPackInfo.
+    static constexpr uint32_t IsXLMask{0x0000'0001};
+    static constexpr uint32_t AlignModeMask{0x0000'0006};
+    static constexpr uint32_t PackAttrMask{0x00000'0008};
+    static constexpr uint32_t PackNumMask{0x0000'01F0};
+  };
+
   template<typename ValueType>
   struct PragmaStack {
     struct Slot {
@@ -568,13 +670,10 @@ public:
   /// 2: Always insert vtordisps to support RTTI on partially constructed
   ///    objects
   PragmaStack<MSVtorDispMode> VtorDispStack;
-  // #pragma pack.
-  // Sentinel to represent when the stack is set to mac68k alignment.
-  static const unsigned kMac68kAlignmentSentinel = ~0U;
-  PragmaStack<unsigned> AlignPackStack;
+  PragmaStack<AlignPackInfo> AlignPackStack;
   // The current #pragma align/pack values and locations at each #include.
   struct AlignPackIncludeState {
-    unsigned CurrentValue;
+    AlignPackInfo CurrentValue;
     SourceLocation CurrentPragmaLocation;
     bool HasNonDefaultValue, ShouldWarnOnInclude;
   };
@@ -12798,6 +12897,13 @@ struct LateParsedTemplate {
   /// The template function declaration to be late parsed.
   Decl *D;
 };
+
+template <>
+void Sema::PragmaStack<Sema::AlignPackInfo>::Act(SourceLocation PragmaLocation,
+                                                 PragmaMsStackAction Action,
+                                                 llvm::StringRef StackSlotLabel,
+                                                 AlignPackInfo Value);
+
 } // end namespace clang
 
 namespace llvm {
