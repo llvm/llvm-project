@@ -180,7 +180,7 @@ mlir::impl::parseFunctionLikeOp(OpAsmParser &parser, OperationState &result,
     return failure();
 
   // Parse the function signature.
-  auto signatureLocation = parser.getCurrentLocation();
+  llvm::SMLoc signatureLocation = parser.getCurrentLocation();
   bool isVariadic = false;
   if (parseFunctionSignature(parser, allowVariadic, entryArgs, argTypes,
                              argAttrs, isVariadic, resultTypes, resultAttrs))
@@ -196,8 +196,23 @@ mlir::impl::parseFunctionLikeOp(OpAsmParser &parser, OperationState &result,
            << (errorMessage.empty() ? "" : ": ") << errorMessage;
 
   // If function attributes are present, parse them.
-  if (parser.parseOptionalAttrDictWithKeyword(result.attributes))
+  NamedAttrList parsedAttributes;
+  llvm::SMLoc attributeDictLocation = parser.getCurrentLocation();
+  if (parser.parseOptionalAttrDictWithKeyword(parsedAttributes))
     return failure();
+
+  // Disallow attributes that are inferred from elsewhere in the attribute
+  // dictionary.
+  for (StringRef disallowed :
+       {SymbolTable::getVisibilityAttrName(), SymbolTable::getSymbolAttrName(),
+        getTypeAttrName()}) {
+    if (parsedAttributes.get(disallowed))
+      return parser.emitError(attributeDictLocation, "'")
+             << disallowed
+             << "' is an inferred attribute and should not be specified in the "
+                "explicit attribute dictionary";
+  }
+  result.attributes.append(parsedAttributes);
 
   // Add the attributes to the function arguments.
   assert(argAttrs.size() == argTypes.size());

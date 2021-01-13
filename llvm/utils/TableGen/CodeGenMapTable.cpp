@@ -374,7 +374,7 @@ unsigned MapTableEmitter::emitBinSearchTable(raw_ostream &OS) {
   for (unsigned i = 0; i < TotalNumInstr; i++) {
     Record *CurInstr = NumberedInstructions[i]->TheDef;
     std::vector<Record*> ColInstrs = MapTable[CurInstr];
-    std::string OutStr("");
+    std::string OutStr;
     unsigned RelExists = 0;
     if (!ColInstrs.empty()) {
       for (unsigned j = 0; j < NumCol; j++) {

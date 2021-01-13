@@ -890,7 +890,7 @@ extern int __kmp_hws_abs_flag; // absolute or per-item number requested
 typedef uintptr_t omp_uintptr_t;
 
 typedef enum {
-  omp_atk_threadmodel = 1,
+  omp_atk_sync_hint = 1,
   omp_atk_alignment = 2,
   omp_atk_access = 3,
   omp_atk_pool_size = 4,
@@ -903,10 +903,10 @@ typedef enum {
 typedef enum {
   omp_atv_false = 0,
   omp_atv_true = 1,
-  omp_atv_default = 2,
   omp_atv_contended = 3,
   omp_atv_uncontended = 4,
-  omp_atv_sequential = 5,
+  omp_atv_serialized = 5,
+  omp_atv_sequential = omp_atv_serialized, // (deprecated)
   omp_atv_private = 6,
   omp_atv_all = 7,
   omp_atv_thread = 8,
@@ -921,6 +921,7 @@ typedef enum {
   omp_atv_blocked = 17,
   omp_atv_interleaved = 18
 } omp_alloctrait_value_t;
+#define omp_atv_default ((omp_uintptr_t)-1)
 
 typedef void *omp_memspace_handle_t;
 extern omp_memspace_handle_t const omp_default_mem_space;

@@ -47,6 +47,7 @@ TEST_F(AArch64GISelMITest, MatchBinaryOp) {
     return;
   LLT s32 = LLT::scalar(32);
   LLT s64 = LLT::scalar(64);
+  LLT p0 = LLT::pointer(0, 64);
   auto MIBAdd = B.buildAdd(s64, Copies[0], Copies[1]);
   // Test case for no bind.
   bool match =
@@ -145,6 +146,13 @@ TEST_F(AArch64GISelMITest, MatchBinaryOp) {
   EXPECT_TRUE(match);
   EXPECT_EQ(Src0, Copies[0]);
   EXPECT_EQ(Src1, TruncCopy1.getReg(0));
+
+  // Build a G_PTR_ADD and check that we can match it.
+  auto PtrAdd = B.buildPtrAdd(p0, {B.buildUndef(p0)}, Copies[0]);
+  match = mi_match(PtrAdd.getReg(0), *MRI, m_GPtrAdd(m_Reg(Src0), m_Reg(Src1)));
+  EXPECT_TRUE(match);
+  EXPECT_EQ(Src0, PtrAdd->getOperand(1).getReg());
+  EXPECT_EQ(Src1, Copies[0]);
 }
 
 TEST_F(AArch64GISelMITest, MatchICmp) {

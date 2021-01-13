@@ -41,7 +41,7 @@ static cl::opt<std::string>
                    cl::desc("Record GlobalISel rule coverage files of this "
                             "prefix if instrumentation was generated"));
 #else
-static const std::string CoveragePrefix = "";
+static const std::string CoveragePrefix;
 #endif
 
 char InstructionSelect::ID = 0;

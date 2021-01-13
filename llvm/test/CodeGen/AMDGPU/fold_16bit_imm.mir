@@ -38,7 +38,7 @@ body:             |
 
     ; GCN-LABEL: name: fold_aimm_16_sub_to_phys
     ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; GCN: $agpr0 = V_ACCVGPR_WRITE_B32 0, implicit $exec
+    ; GCN: $agpr0 = V_ACCVGPR_WRITE_B32_e64 0, implicit $exec
     ; GCN: SI_RETURN_TO_EPILOG $agpr0_lo16
     %0:sreg_32 = S_MOV_B32 0
     $agpr0_lo16 = COPY killed %0.lo16

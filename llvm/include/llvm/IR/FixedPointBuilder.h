@@ -120,6 +120,16 @@ template <class IRBuilderTy> class FixedPointBuilder {
         C.isSigned(), C.isSaturated(), BothPadded);
   }
 
+  /// Given a floating point type and a fixed-point semantic, return a floating
+  /// point type which can accommodate the fixed-point semantic. This is either
+  /// \p Ty, or a floating point type with a larger exponent than Ty.
+  Type *getAccommodatingFloatType(Type *Ty, const FixedPointSemantics &Sema) {
+    const fltSemantics *FloatSema = &Ty->getFltSemantics();
+    while (!Sema.fitsInFloatSemantics(*FloatSema))
+      FloatSema = APFixedPoint::promoteFloatSemantics(FloatSema);
+    return Type::getFloatingPointTy(Ty->getContext(), *FloatSema);
+  }
+
 public:
   FixedPointBuilder(IRBuilderTy &Builder) : B(Builder) {}
 
@@ -157,6 +167,55 @@ public:
                    FixedPointSemantics::GetIntegerSemantics(
                        Src->getType()->getScalarSizeInBits(), SrcIsSigned),
                    DstSema, false);
+  }
+
+  Value *CreateFixedToFloating(Value *Src, const FixedPointSemantics &SrcSema,
+                               Type *DstTy) {
+    Value *Result;
+    Type *OpTy = getAccommodatingFloatType(DstTy, SrcSema);
+    // Convert the raw fixed-point value directly to floating point. If the
+    // value is too large to fit, it will be rounded, not truncated.
+    Result = SrcSema.isSigned() ? B.CreateSIToFP(Src, OpTy)
+                                : B.CreateUIToFP(Src, OpTy);
+    // Rescale the integral-in-floating point by the scaling factor. This is
+    // lossless, except for overflow to infinity which is unlikely.
+    Result = B.CreateFMul(Result,
+        ConstantFP::get(OpTy, std::pow(2, -(int)SrcSema.getScale())));
+    if (OpTy != DstTy)
+      Result = B.CreateFPTrunc(Result, DstTy);
+    return Result;
+  }
+
+  Value *CreateFloatingToFixed(Value *Src, const FixedPointSemantics &DstSema) {
+    bool UseSigned = DstSema.isSigned() || DstSema.hasUnsignedPadding();
+    Value *Result = Src;
+    Type *OpTy = getAccommodatingFloatType(Src->getType(), DstSema);
+    if (OpTy != Src->getType())
+      Result = B.CreateFPExt(Result, OpTy);
+    // Rescale the floating point value so that its significant bits (for the
+    // purposes of the conversion) are in the integral range.
+    Result = B.CreateFMul(Result,
+        ConstantFP::get(OpTy, std::pow(2, DstSema.getScale())));
+
+    Type *ResultTy = B.getIntNTy(DstSema.getWidth());
+    if (DstSema.isSaturated()) {
+      Intrinsic::ID IID =
+          UseSigned ? Intrinsic::fptosi_sat : Intrinsic::fptoui_sat;
+      Result = B.CreateIntrinsic(IID, {ResultTy, OpTy}, {Result});
+    } else {
+      Result = UseSigned ? B.CreateFPToSI(Result, ResultTy)
+                         : B.CreateFPToUI(Result, ResultTy);
+    }
+
+    // When saturating unsigned-with-padding using signed operations, we may
+    // get negative values. Emit an extra clamp to zero.
+    if (DstSema.isSaturated() && DstSema.hasUnsignedPadding()) {
+      Constant *Zero = Constant::getNullValue(Result->getType());
+      Result =
+          B.CreateSelect(B.CreateICmpSLT(Result, Zero), Zero, Result, "satmin");
+    }
+
+    return Result;
   }
 
   /// Add two fixed-point values and return the result in their common semantic.

@@ -178,8 +178,10 @@ static void generateFusedTensorOpRegion(PatternRewriter &rewriter,
 }
 
 static Optional<SmallVector<Value, 1>>
-fuseTensorOpsImpl(LinalgOp producer, LinalgOp consumer, unsigned consumerIdx,
+fuseTensorOpsImpl(LinalgOp producer, OpOperand &consumerOpOperand,
                   PatternRewriter &rewriter) {
+  LinalgOp consumer = cast<LinalgOp>(consumerOpOperand.getOwner());
+  unsigned consumerIdx = consumerOpOperand.getOperandNumber();
   if (!areTensorOpsFusable(producer, consumer, consumerIdx))
     return llvm::None;
 
@@ -1027,21 +1029,19 @@ struct FoldSplatConstants : public OpRewritePattern<LinalgOpTy> {
 } // namespace
 
 Optional<SmallVector<Value, 1>>
-mlir::linalg::fuseTensorOps(PatternRewriter &rewriter, Operation *consumer,
-                            unsigned consumerIdx) {
-  if (consumerIdx >= consumer->getNumOperands())
-    return llvm::None;
-  Operation *producer = consumer->getOperand(consumerIdx).getDefiningOp();
+mlir::linalg::fuseTensorOps(PatternRewriter &rewriter,
+                            OpOperand &consumerOpOperand) {
+  Operation *producer = consumerOpOperand.get().getDefiningOp();
   if (!producer || producer->getNumResults() != 1)
     return llvm::None;
 
   // Fuse when consumer is GenericOp or IndexedGenericOp.
-  if (!isa<GenericOp, IndexedGenericOp>(consumer) ||
+  if (!isa<GenericOp, IndexedGenericOp>(consumerOpOperand.getOwner()) ||
       !isa<GenericOp, IndexedGenericOp>(producer))
     return llvm::None;
 
-  return fuseTensorOpsImpl(cast<LinalgOp>(producer), cast<LinalgOp>(consumer),
-                           consumerIdx, rewriter);
+  return fuseTensorOpsImpl(cast<LinalgOp>(producer), consumerOpOperand,
+                           rewriter);
 }
 
 namespace {
@@ -1053,12 +1053,12 @@ struct FuseTensorOps : public OpRewritePattern<LinalgOpTy> {
   LogicalResult matchAndRewrite(LinalgOpTy op,
                                 PatternRewriter &rewriter) const override {
     // Find the first operand that is defined by another generic op on tensors.
-    for (auto operandNum : llvm::seq<unsigned>(0, op->getNumOperands())) {
-      Operation *producer = op->getOperand(operandNum).getDefiningOp();
+    for (OpOperand &opOperand : op.getShapedOpOperands()) {
+      Operation *producer = opOperand.get().getDefiningOp();
       if (!producer)
         continue;
       Optional<SmallVector<Value, 1>> fusedOpResults =
-          fuseTensorOps(rewriter, op, operandNum);
+          fuseTensorOps(rewriter, opOperand);
       if (fusedOpResults) {
         rewriter.replaceOp(op, *fusedOpResults);
         if (producer->use_empty())

@@ -471,6 +471,22 @@ define i32 @PR28476(i32 %x, i32 %y) {
   ret i32 %cond
 }
 
+define i32 @PR28476_logical(i32 %x, i32 %y) {
+; CHECK-LABEL: @PR28476_logical(
+; CHECK-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[Y:%.*]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = or i1 [[CMP0]], [[CMP1]]
+; CHECK-NEXT:    [[COND:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %cmp0 = icmp ne i32 %x, 0
+  %cmp1 = icmp ne i32 %y, 0
+  %and = select i1 %cmp0, i1 %cmp1, i1 false
+  %zext = zext i1 %and to i32
+  %cond = xor i32 %zext, 1
+  ret i32 %cond
+}
+
 ; ~(~(a | b) | (a & b)) --> (a | b) & ~(a & b) -> a ^ b
 
 define i32 @demorgan_plus_and_to_xor(i32 %a, i32 %b) {

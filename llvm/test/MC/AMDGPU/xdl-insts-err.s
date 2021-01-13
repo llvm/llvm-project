@@ -1,5 +1,5 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx906 %s 2>&1 | FileCheck --check-prefixes=GCN-ERR,GFX906-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx908 %s 2>&1 | FileCheck --check-prefixes=GCN-ERR,GFX908-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx906 %s 2>&1 | FileCheck --check-prefix=GFX906-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx908 %s 2>&1 | FileCheck --check-prefix=GFX908-ERR --implicit-check-not=error: %s
 
 // GFX906-ERR: error: instruction not supported on this GPU
 v_dot2c_f32_f16 v0, v1, v2

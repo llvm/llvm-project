@@ -119,4 +119,4 @@ attributes #0 = { "use-sample-profile" }
 
 ; REPLAY: _Z3sumii inlined into main
 ; REPLAY: _Z3subii inlined into main
-; REPLA-NOT: _Z3subii inlined into _Z3sumii
+; REPLAY-NOT: _Z3subii inlined into _Z3sumii

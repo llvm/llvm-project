@@ -12,6 +12,17 @@ define i1 @PR1738(double %x, double %y) {
   ret i1 %and
 }
 
+define i1 @PR1738_logical(double %x, double %y) {
+; CHECK-LABEL: @PR1738_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp1 = fcmp ord double %x, 0.0
+  %cmp2 = fcmp ord double %y, 0.0
+  %and = select i1 %cmp1, i1 %cmp2, i1 false
+  ret i1 %and
+}
+
 define <2 x i1> @PR1738_vec_undef(<2 x double> %x, <2 x double> %y) {
 ; CHECK-LABEL: @PR1738_vec_undef(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord <2 x double> [[X:%.*]], [[Y:%.*]]
@@ -36,6 +47,19 @@ define i1 @PR41069(i1 %z, float %c, float %d) {
   ret i1 %r
 }
 
+define i1 @PR41069_logical(i1 %z, float %c, float %d) {
+; CHECK-LABEL: @PR41069_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord float [[D:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ord1 = fcmp arcp ord float %c, 0.0
+  %and = select i1 %ord1, i1 %z, i1 false
+  %ord2 = fcmp afn ord float %d, 0.0
+  %r = select i1 %and, i1 %ord2, i1 false
+  ret i1 %r
+}
+
 define i1 @PR41069_commute(i1 %z, float %c, float %d) {
 ; CHECK-LABEL: @PR41069_commute(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ninf ord float [[D:%.*]], [[C:%.*]]
@@ -46,6 +70,19 @@ define i1 @PR41069_commute(i1 %z, float %c, float %d) {
   %and = and i1 %ord1, %z
   %ord2 = fcmp ninf reassoc ord float %d, 0.0
   %r = and i1 %ord2, %and
+  ret i1 %r
+}
+
+define i1 @PR41069_commute_logical(i1 %z, float %c, float %d) {
+; CHECK-LABEL: @PR41069_commute_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ninf ord float [[D:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ord1 = fcmp ninf ord float %c, 0.0
+  %and = select i1 %ord1, i1 %z, i1 false
+  %ord2 = fcmp ninf reassoc ord float %d, 0.0
+  %r = select i1 %ord2, i1 %and, i1 false
   ret i1 %r
 }
 
@@ -94,6 +131,19 @@ define i1 @PR15737(float %a, double %b) {
   ret i1 %and
 }
 
+define i1 @PR15737_logical(float %a, double %b) {
+; CHECK-LABEL: @PR15737_logical(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord float [[A:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ord double [[B:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP]], [[CMP1]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %cmp = fcmp ord float %a, 0.000000e+00
+  %cmp1 = fcmp ord double %b, 0.000000e+00
+  %and = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %and
+}
+
 define <2 x i1> @t9(<2 x float> %a, <2 x double> %b) {
 ; CHECK-LABEL: @t9(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord <2 x float> [[A:%.*]], zeroinitializer
@@ -118,6 +168,17 @@ define i1 @fcmp_ord_nonzero(float %x, float %y) {
   ret i1 %and
 }
 
+define i1 @fcmp_ord_nonzero_logical(float %x, float %y) {
+; CHECK-LABEL: @fcmp_ord_nonzero_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp1 = fcmp ord float %x, 1.0
+  %cmp2 = fcmp ord float %y, 2.0
+  %and = select i1 %cmp1, i1 %cmp2, i1 false
+  ret i1 %and
+}
+
 define <3 x i1> @fcmp_ord_nonzero_vec(<3 x float> %x, <3 x float> %y) {
 ; CHECK-LABEL: @fcmp_ord_nonzero_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord <3 x float> [[X:%.*]], [[Y:%.*]]
@@ -139,6 +200,16 @@ define i1 @auto_gen_0(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_0_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_0_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp false double %a, %b
+  %cmp1 = fcmp false double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_1(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_1(
 ; CHECK-NEXT:    ret i1 false
@@ -146,6 +217,16 @@ define i1 @auto_gen_1(double %a, double %b) {
   %cmp = fcmp oeq double %a, %b
   %cmp1 = fcmp false double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_1_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_1_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp oeq double %a, %b
+  %cmp1 = fcmp false double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -160,6 +241,17 @@ define i1 @auto_gen_2(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_2_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_2_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oeq double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp oeq double %a, %b
+  %cmp1 = fcmp oeq double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_3(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_3(
 ; CHECK-NEXT:    ret i1 false
@@ -170,6 +262,16 @@ define i1 @auto_gen_3(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_3_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_3_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp ogt double %a, %b
+  %cmp1 = fcmp false double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_4(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_4(
 ; CHECK-NEXT:    ret i1 false
@@ -177,6 +279,16 @@ define i1 @auto_gen_4(double %a, double %b) {
   %cmp = fcmp ogt double %a, %b
   %cmp1 = fcmp oeq double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_4_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_4_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp ogt double %a, %b
+  %cmp1 = fcmp oeq double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -191,6 +303,17 @@ define i1 @auto_gen_5(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_5_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_5_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ogt double %a, %b
+  %cmp1 = fcmp ogt double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_6(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_6(
 ; CHECK-NEXT:    ret i1 false
@@ -198,6 +321,16 @@ define i1 @auto_gen_6(double %a, double %b) {
   %cmp = fcmp oge double %a, %b
   %cmp1 = fcmp false double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_6_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_6_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp oge double %a, %b
+  %cmp1 = fcmp false double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -212,6 +345,17 @@ define i1 @auto_gen_7(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_7_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_7_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oeq double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp oge double %a, %b
+  %cmp1 = fcmp oeq double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_8(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_8(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt double [[A:%.*]], [[B:%.*]]
@@ -220,6 +364,17 @@ define i1 @auto_gen_8(double %a, double %b) {
   %cmp = fcmp oge double %a, %b
   %cmp1 = fcmp ogt double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_8_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_8_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp oge double %a, %b
+  %cmp1 = fcmp ogt double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -234,6 +389,17 @@ define i1 @auto_gen_9(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_9_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_9_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp oge double %a, %b
+  %cmp1 = fcmp oge double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_10(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_10(
 ; CHECK-NEXT:    ret i1 false
@@ -241,6 +407,16 @@ define i1 @auto_gen_10(double %a, double %b) {
   %cmp = fcmp olt double %a, %b
   %cmp1 = fcmp false double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_10_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_10_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp olt double %a, %b
+  %cmp1 = fcmp false double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -254,6 +430,16 @@ define i1 @auto_gen_11(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_11_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_11_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp olt double %a, %b
+  %cmp1 = fcmp oeq double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_12(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_12(
 ; CHECK-NEXT:    ret i1 false
@@ -264,6 +450,16 @@ define i1 @auto_gen_12(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_12_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_12_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp olt double %a, %b
+  %cmp1 = fcmp ogt double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_13(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_13(
 ; CHECK-NEXT:    ret i1 false
@@ -271,6 +467,16 @@ define i1 @auto_gen_13(double %a, double %b) {
   %cmp = fcmp olt double %a, %b
   %cmp1 = fcmp oge double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_13_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_13_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp olt double %a, %b
+  %cmp1 = fcmp oge double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -285,6 +491,17 @@ define i1 @auto_gen_14(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_14_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_14_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp olt double %a, %b
+  %cmp1 = fcmp olt double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_15(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_15(
 ; CHECK-NEXT:    ret i1 false
@@ -292,6 +509,16 @@ define i1 @auto_gen_15(double %a, double %b) {
   %cmp = fcmp ole double %a, %b
   %cmp1 = fcmp false double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_15_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_15_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp ole double %a, %b
+  %cmp1 = fcmp false double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -306,6 +533,17 @@ define i1 @auto_gen_16(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_16_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_16_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oeq double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ole double %a, %b
+  %cmp1 = fcmp oeq double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_17(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_17(
 ; CHECK-NEXT:    ret i1 false
@@ -313,6 +551,16 @@ define i1 @auto_gen_17(double %a, double %b) {
   %cmp = fcmp ole double %a, %b
   %cmp1 = fcmp ogt double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_17_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_17_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp ole double %a, %b
+  %cmp1 = fcmp ogt double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -327,6 +575,17 @@ define i1 @auto_gen_18(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_18_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_18_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oeq double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ole double %a, %b
+  %cmp1 = fcmp oge double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_19(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_19(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt double [[A:%.*]], [[B:%.*]]
@@ -335,6 +594,17 @@ define i1 @auto_gen_19(double %a, double %b) {
   %cmp = fcmp ole double %a, %b
   %cmp1 = fcmp olt double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_19_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_19_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ole double %a, %b
+  %cmp1 = fcmp olt double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -349,6 +619,17 @@ define i1 @auto_gen_20(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_20_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_20_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ole double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ole double %a, %b
+  %cmp1 = fcmp ole double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_21(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_21(
 ; CHECK-NEXT:    ret i1 false
@@ -359,6 +640,16 @@ define i1 @auto_gen_21(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_21_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_21_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp one double %a, %b
+  %cmp1 = fcmp false double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_22(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_22(
 ; CHECK-NEXT:    ret i1 false
@@ -366,6 +657,16 @@ define i1 @auto_gen_22(double %a, double %b) {
   %cmp = fcmp one double %a, %b
   %cmp1 = fcmp oeq double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_22_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_22_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp one double %a, %b
+  %cmp1 = fcmp oeq double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -380,6 +681,17 @@ define i1 @auto_gen_23(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_23_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_23_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp one double %a, %b
+  %cmp1 = fcmp ogt double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_24(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_24(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt double [[A:%.*]], [[B:%.*]]
@@ -388,6 +700,17 @@ define i1 @auto_gen_24(double %a, double %b) {
   %cmp = fcmp one double %a, %b
   %cmp1 = fcmp oge double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_24_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_24_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp one double %a, %b
+  %cmp1 = fcmp oge double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -402,6 +725,17 @@ define i1 @auto_gen_25(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_25_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_25_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp one double %a, %b
+  %cmp1 = fcmp olt double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_26(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_26(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt double [[A:%.*]], [[B:%.*]]
@@ -410,6 +744,17 @@ define i1 @auto_gen_26(double %a, double %b) {
   %cmp = fcmp one double %a, %b
   %cmp1 = fcmp ole double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_26_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_26_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp one double %a, %b
+  %cmp1 = fcmp ole double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -424,6 +769,17 @@ define i1 @auto_gen_27(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_27_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_27_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp one double %a, %b
+  %cmp1 = fcmp one double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_28(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_28(
 ; CHECK-NEXT:    ret i1 false
@@ -431,6 +787,16 @@ define i1 @auto_gen_28(double %a, double %b) {
   %cmp = fcmp ord double %a, %b
   %cmp1 = fcmp false double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_28_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_28_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp ord double %a, %b
+  %cmp1 = fcmp false double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -445,6 +811,17 @@ define i1 @auto_gen_29(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_29_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_29_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oeq double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ord double %a, %b
+  %cmp1 = fcmp oeq double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_30(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_30(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt double [[A:%.*]], [[B:%.*]]
@@ -453,6 +830,17 @@ define i1 @auto_gen_30(double %a, double %b) {
   %cmp = fcmp ord double %a, %b
   %cmp1 = fcmp ogt double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_30_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_30_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ord double %a, %b
+  %cmp1 = fcmp ogt double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -467,6 +855,17 @@ define i1 @auto_gen_31(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_31_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_31_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ord double %a, %b
+  %cmp1 = fcmp oge double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_32(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt double [[A:%.*]], [[B:%.*]]
@@ -475,6 +874,17 @@ define i1 @auto_gen_32(double %a, double %b) {
   %cmp = fcmp ord double %a, %b
   %cmp1 = fcmp olt double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_32_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_32_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ord double %a, %b
+  %cmp1 = fcmp olt double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -489,6 +899,17 @@ define i1 @auto_gen_33(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_33_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_33_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ole double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ord double %a, %b
+  %cmp1 = fcmp ole double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_34(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_34(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
@@ -497,6 +918,17 @@ define i1 @auto_gen_34(double %a, double %b) {
   %cmp = fcmp ord double %a, %b
   %cmp1 = fcmp one double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_34_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_34_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ord double %a, %b
+  %cmp1 = fcmp one double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -511,6 +943,17 @@ define i1 @auto_gen_35(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_35_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_35_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ord double %a, %b
+  %cmp1 = fcmp ord double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_36(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_36(
 ; CHECK-NEXT:    ret i1 false
@@ -518,6 +961,16 @@ define i1 @auto_gen_36(double %a, double %b) {
   %cmp = fcmp ueq double %a, %b
   %cmp1 = fcmp false double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_36_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_36_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp ueq double %a, %b
+  %cmp1 = fcmp false double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -532,6 +985,17 @@ define i1 @auto_gen_37(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_37_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_37_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oeq double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ueq double %a, %b
+  %cmp1 = fcmp oeq double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_38(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_38(
 ; CHECK-NEXT:    ret i1 false
@@ -539,6 +1003,16 @@ define i1 @auto_gen_38(double %a, double %b) {
   %cmp = fcmp ueq double %a, %b
   %cmp1 = fcmp ogt double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_38_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_38_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp ueq double %a, %b
+  %cmp1 = fcmp ogt double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -553,6 +1027,17 @@ define i1 @auto_gen_39(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_39_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_39_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oeq double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ueq double %a, %b
+  %cmp1 = fcmp oge double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_40(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_40(
 ; CHECK-NEXT:    ret i1 false
@@ -560,6 +1045,16 @@ define i1 @auto_gen_40(double %a, double %b) {
   %cmp = fcmp ueq double %a, %b
   %cmp1 = fcmp olt double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_40_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_40_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp ueq double %a, %b
+  %cmp1 = fcmp olt double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -574,6 +1069,17 @@ define i1 @auto_gen_41(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_41_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_41_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oeq double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ueq double %a, %b
+  %cmp1 = fcmp ole double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_42(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_42(
 ; CHECK-NEXT:    ret i1 false
@@ -581,6 +1087,16 @@ define i1 @auto_gen_42(double %a, double %b) {
   %cmp = fcmp ueq double %a, %b
   %cmp1 = fcmp one double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_42_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_42_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp ueq double %a, %b
+  %cmp1 = fcmp one double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -595,6 +1111,17 @@ define i1 @auto_gen_43(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_43_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_43_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oeq double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ueq double %a, %b
+  %cmp1 = fcmp ord double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_44(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_44(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ueq double [[A:%.*]], [[B:%.*]]
@@ -603,6 +1130,17 @@ define i1 @auto_gen_44(double %a, double %b) {
   %cmp = fcmp ueq double %a, %b
   %cmp1 = fcmp ueq double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_44_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_44_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ueq double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ueq double %a, %b
+  %cmp1 = fcmp ueq double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -616,6 +1154,16 @@ define i1 @auto_gen_45(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_45_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_45_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp ugt double %a, %b
+  %cmp1 = fcmp false double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_46(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_46(
 ; CHECK-NEXT:    ret i1 false
@@ -623,6 +1171,16 @@ define i1 @auto_gen_46(double %a, double %b) {
   %cmp = fcmp ugt double %a, %b
   %cmp1 = fcmp oeq double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_46_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_46_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp ugt double %a, %b
+  %cmp1 = fcmp oeq double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -637,6 +1195,17 @@ define i1 @auto_gen_47(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_47_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_47_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ugt double %a, %b
+  %cmp1 = fcmp ogt double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_48(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_48(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt double [[A:%.*]], [[B:%.*]]
@@ -645,6 +1214,17 @@ define i1 @auto_gen_48(double %a, double %b) {
   %cmp = fcmp ugt double %a, %b
   %cmp1 = fcmp oge double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_48_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_48_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ugt double %a, %b
+  %cmp1 = fcmp oge double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -658,6 +1238,16 @@ define i1 @auto_gen_49(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_49_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_49_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp ugt double %a, %b
+  %cmp1 = fcmp olt double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_50(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_50(
 ; CHECK-NEXT:    ret i1 false
@@ -665,6 +1255,16 @@ define i1 @auto_gen_50(double %a, double %b) {
   %cmp = fcmp ugt double %a, %b
   %cmp1 = fcmp ole double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_50_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_50_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp ugt double %a, %b
+  %cmp1 = fcmp ole double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -679,6 +1279,17 @@ define i1 @auto_gen_51(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_51_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_51_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ugt double %a, %b
+  %cmp1 = fcmp one double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_52(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_52(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt double [[A:%.*]], [[B:%.*]]
@@ -687,6 +1298,17 @@ define i1 @auto_gen_52(double %a, double %b) {
   %cmp = fcmp ugt double %a, %b
   %cmp1 = fcmp ord double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_52_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_52_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ugt double %a, %b
+  %cmp1 = fcmp ord double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -701,6 +1323,17 @@ define i1 @auto_gen_53(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_53_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_53_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ugt double %a, %b
+  %cmp1 = fcmp ueq double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_54(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_54(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ugt double [[A:%.*]], [[B:%.*]]
@@ -712,6 +1345,17 @@ define i1 @auto_gen_54(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_54_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_54_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ugt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ugt double %a, %b
+  %cmp1 = fcmp ugt double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_55(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_55(
 ; CHECK-NEXT:    ret i1 false
@@ -719,6 +1363,16 @@ define i1 @auto_gen_55(double %a, double %b) {
   %cmp = fcmp uge double %a, %b
   %cmp1 = fcmp false double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_55_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_55_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp uge double %a, %b
+  %cmp1 = fcmp false double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -733,6 +1387,17 @@ define i1 @auto_gen_56(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_56_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_56_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oeq double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp uge double %a, %b
+  %cmp1 = fcmp oeq double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_57(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_57(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt double [[A:%.*]], [[B:%.*]]
@@ -741,6 +1406,17 @@ define i1 @auto_gen_57(double %a, double %b) {
   %cmp = fcmp uge double %a, %b
   %cmp1 = fcmp ogt double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_57_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_57_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp uge double %a, %b
+  %cmp1 = fcmp ogt double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -755,6 +1431,17 @@ define i1 @auto_gen_58(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_58_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_58_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp uge double %a, %b
+  %cmp1 = fcmp oge double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_59(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_59(
 ; CHECK-NEXT:    ret i1 false
@@ -762,6 +1449,16 @@ define i1 @auto_gen_59(double %a, double %b) {
   %cmp = fcmp uge double %a, %b
   %cmp1 = fcmp olt double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_59_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_59_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp uge double %a, %b
+  %cmp1 = fcmp olt double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -776,6 +1473,17 @@ define i1 @auto_gen_60(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_60_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_60_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oeq double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp uge double %a, %b
+  %cmp1 = fcmp ole double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_61(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_61(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt double [[A:%.*]], [[B:%.*]]
@@ -784,6 +1492,17 @@ define i1 @auto_gen_61(double %a, double %b) {
   %cmp = fcmp uge double %a, %b
   %cmp1 = fcmp one double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_61_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_61_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp uge double %a, %b
+  %cmp1 = fcmp one double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -798,6 +1517,17 @@ define i1 @auto_gen_62(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_62_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_62_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp uge double %a, %b
+  %cmp1 = fcmp ord double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_63(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_63(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ueq double [[A:%.*]], [[B:%.*]]
@@ -806,6 +1536,17 @@ define i1 @auto_gen_63(double %a, double %b) {
   %cmp = fcmp uge double %a, %b
   %cmp1 = fcmp ueq double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_63_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_63_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ueq double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp uge double %a, %b
+  %cmp1 = fcmp ueq double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -820,6 +1561,17 @@ define i1 @auto_gen_64(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_64_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_64_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ugt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp uge double %a, %b
+  %cmp1 = fcmp ugt double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_65(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_65(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
@@ -828,6 +1580,17 @@ define i1 @auto_gen_65(double %a, double %b) {
   %cmp = fcmp uge double %a, %b
   %cmp1 = fcmp uge double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_65_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_65_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp uge double %a, %b
+  %cmp1 = fcmp uge double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -841,6 +1604,16 @@ define i1 @auto_gen_66(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_66_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_66_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp ult double %a, %b
+  %cmp1 = fcmp false double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_67(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_67(
 ; CHECK-NEXT:    ret i1 false
@@ -848,6 +1621,16 @@ define i1 @auto_gen_67(double %a, double %b) {
   %cmp = fcmp ult double %a, %b
   %cmp1 = fcmp oeq double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_67_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_67_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp ult double %a, %b
+  %cmp1 = fcmp oeq double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -861,6 +1644,16 @@ define i1 @auto_gen_68(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_68_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_68_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp ult double %a, %b
+  %cmp1 = fcmp ogt double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_69(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_69(
 ; CHECK-NEXT:    ret i1 false
@@ -868,6 +1661,16 @@ define i1 @auto_gen_69(double %a, double %b) {
   %cmp = fcmp ult double %a, %b
   %cmp1 = fcmp oge double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_69_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_69_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp ult double %a, %b
+  %cmp1 = fcmp oge double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -882,6 +1685,17 @@ define i1 @auto_gen_70(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_70_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_70_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ult double %a, %b
+  %cmp1 = fcmp olt double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_71(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_71(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt double [[A:%.*]], [[B:%.*]]
@@ -890,6 +1704,17 @@ define i1 @auto_gen_71(double %a, double %b) {
   %cmp = fcmp ult double %a, %b
   %cmp1 = fcmp ole double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_71_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_71_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ult double %a, %b
+  %cmp1 = fcmp ole double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -904,6 +1729,17 @@ define i1 @auto_gen_72(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_72_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_72_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ult double %a, %b
+  %cmp1 = fcmp one double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_73(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_73(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt double [[A:%.*]], [[B:%.*]]
@@ -912,6 +1748,17 @@ define i1 @auto_gen_73(double %a, double %b) {
   %cmp = fcmp ult double %a, %b
   %cmp1 = fcmp ord double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_73_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_73_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ult double %a, %b
+  %cmp1 = fcmp ord double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -926,6 +1773,17 @@ define i1 @auto_gen_74(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_74_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_74_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ult double %a, %b
+  %cmp1 = fcmp ueq double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_75(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_75(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
@@ -934,6 +1792,17 @@ define i1 @auto_gen_75(double %a, double %b) {
   %cmp = fcmp ult double %a, %b
   %cmp1 = fcmp ugt double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_75_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_75_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ult double %a, %b
+  %cmp1 = fcmp ugt double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -948,6 +1817,17 @@ define i1 @auto_gen_76(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_76_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_76_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ult double %a, %b
+  %cmp1 = fcmp uge double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_77(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_77(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ult double [[A:%.*]], [[B:%.*]]
@@ -959,6 +1839,17 @@ define i1 @auto_gen_77(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_77_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_77_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ult double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ult double %a, %b
+  %cmp1 = fcmp ult double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_78(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_78(
 ; CHECK-NEXT:    ret i1 false
@@ -966,6 +1857,16 @@ define i1 @auto_gen_78(double %a, double %b) {
   %cmp = fcmp ule double %a, %b
   %cmp1 = fcmp false double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_78_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_78_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp ule double %a, %b
+  %cmp1 = fcmp false double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -980,6 +1881,17 @@ define i1 @auto_gen_79(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_79_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_79_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oeq double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ule double %a, %b
+  %cmp1 = fcmp oeq double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_80(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_80(
 ; CHECK-NEXT:    ret i1 false
@@ -987,6 +1899,16 @@ define i1 @auto_gen_80(double %a, double %b) {
   %cmp = fcmp ule double %a, %b
   %cmp1 = fcmp ogt double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_80_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_80_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp ule double %a, %b
+  %cmp1 = fcmp ogt double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -1001,6 +1923,17 @@ define i1 @auto_gen_81(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_81_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_81_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oeq double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ule double %a, %b
+  %cmp1 = fcmp oge double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_82(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_82(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt double [[A:%.*]], [[B:%.*]]
@@ -1009,6 +1942,17 @@ define i1 @auto_gen_82(double %a, double %b) {
   %cmp = fcmp ule double %a, %b
   %cmp1 = fcmp olt double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_82_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_82_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ule double %a, %b
+  %cmp1 = fcmp olt double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -1023,6 +1967,17 @@ define i1 @auto_gen_83(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_83_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_83_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ole double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ule double %a, %b
+  %cmp1 = fcmp ole double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_84(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_84(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt double [[A:%.*]], [[B:%.*]]
@@ -1031,6 +1986,17 @@ define i1 @auto_gen_84(double %a, double %b) {
   %cmp = fcmp ule double %a, %b
   %cmp1 = fcmp one double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_84_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_84_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ule double %a, %b
+  %cmp1 = fcmp one double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -1045,6 +2011,17 @@ define i1 @auto_gen_85(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_85_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_85_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ole double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ule double %a, %b
+  %cmp1 = fcmp ord double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_86(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_86(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ueq double [[A:%.*]], [[B:%.*]]
@@ -1053,6 +2030,17 @@ define i1 @auto_gen_86(double %a, double %b) {
   %cmp = fcmp ule double %a, %b
   %cmp1 = fcmp ueq double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_86_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_86_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ueq double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ule double %a, %b
+  %cmp1 = fcmp ueq double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -1067,6 +2055,17 @@ define i1 @auto_gen_87(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_87_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_87_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ule double %a, %b
+  %cmp1 = fcmp ugt double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_88(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_88(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ueq double [[A:%.*]], [[B:%.*]]
@@ -1075,6 +2074,17 @@ define i1 @auto_gen_88(double %a, double %b) {
   %cmp = fcmp ule double %a, %b
   %cmp1 = fcmp uge double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_88_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_88_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ueq double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ule double %a, %b
+  %cmp1 = fcmp uge double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -1089,6 +2099,17 @@ define i1 @auto_gen_89(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_89_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_89_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ult double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ule double %a, %b
+  %cmp1 = fcmp ult double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_90(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_90(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
@@ -1097,6 +2118,17 @@ define i1 @auto_gen_90(double %a, double %b) {
   %cmp = fcmp ule double %a, %b
   %cmp1 = fcmp ule double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_90_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_90_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp ule double %a, %b
+  %cmp1 = fcmp ule double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -1110,6 +2142,16 @@ define i1 @auto_gen_91(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_91_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_91_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp une double %a, %b
+  %cmp1 = fcmp false double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_92(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_92(
 ; CHECK-NEXT:    ret i1 false
@@ -1117,6 +2159,16 @@ define i1 @auto_gen_92(double %a, double %b) {
   %cmp = fcmp une double %a, %b
   %cmp1 = fcmp oeq double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_92_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_92_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp une double %a, %b
+  %cmp1 = fcmp oeq double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -1131,6 +2183,17 @@ define i1 @auto_gen_93(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_93_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_93_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp une double %a, %b
+  %cmp1 = fcmp ogt double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_94(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_94(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt double [[A:%.*]], [[B:%.*]]
@@ -1139,6 +2202,17 @@ define i1 @auto_gen_94(double %a, double %b) {
   %cmp = fcmp une double %a, %b
   %cmp1 = fcmp oge double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_94_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_94_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp une double %a, %b
+  %cmp1 = fcmp oge double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -1153,6 +2227,17 @@ define i1 @auto_gen_95(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_95_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_95_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp une double %a, %b
+  %cmp1 = fcmp olt double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_96(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_96(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt double [[A:%.*]], [[B:%.*]]
@@ -1161,6 +2246,17 @@ define i1 @auto_gen_96(double %a, double %b) {
   %cmp = fcmp une double %a, %b
   %cmp1 = fcmp ole double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_96_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_96_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp une double %a, %b
+  %cmp1 = fcmp ole double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -1175,6 +2271,17 @@ define i1 @auto_gen_97(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_97_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_97_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp une double %a, %b
+  %cmp1 = fcmp one double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_98(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_98(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
@@ -1183,6 +2290,17 @@ define i1 @auto_gen_98(double %a, double %b) {
   %cmp = fcmp une double %a, %b
   %cmp1 = fcmp ord double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_98_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_98_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp une double %a, %b
+  %cmp1 = fcmp ord double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -1197,6 +2315,17 @@ define i1 @auto_gen_99(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_99_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_99_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp une double %a, %b
+  %cmp1 = fcmp ueq double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_100(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_100(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ugt double [[A:%.*]], [[B:%.*]]
@@ -1205,6 +2334,17 @@ define i1 @auto_gen_100(double %a, double %b) {
   %cmp = fcmp une double %a, %b
   %cmp1 = fcmp ugt double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_100_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_100_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ugt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp une double %a, %b
+  %cmp1 = fcmp ugt double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -1219,6 +2359,17 @@ define i1 @auto_gen_101(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_101_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_101_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ugt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp une double %a, %b
+  %cmp1 = fcmp uge double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_102(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_102(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ult double [[A:%.*]], [[B:%.*]]
@@ -1227,6 +2378,17 @@ define i1 @auto_gen_102(double %a, double %b) {
   %cmp = fcmp une double %a, %b
   %cmp1 = fcmp ult double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_102_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_102_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ult double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp une double %a, %b
+  %cmp1 = fcmp ult double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -1241,6 +2403,17 @@ define i1 @auto_gen_103(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_103_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_103_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ult double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp une double %a, %b
+  %cmp1 = fcmp ule double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_104(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_104(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
@@ -1249,6 +2422,17 @@ define i1 @auto_gen_104(double %a, double %b) {
   %cmp = fcmp une double %a, %b
   %cmp1 = fcmp une double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_104_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_104_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp une double %a, %b
+  %cmp1 = fcmp une double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -1262,6 +2446,16 @@ define i1 @auto_gen_105(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_105_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_105_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp uno double %a, %b
+  %cmp1 = fcmp false double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_106(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_106(
 ; CHECK-NEXT:    ret i1 false
@@ -1269,6 +2463,16 @@ define i1 @auto_gen_106(double %a, double %b) {
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp oeq double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_106_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_106_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp uno double %a, %b
+  %cmp1 = fcmp oeq double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -1282,6 +2486,16 @@ define i1 @auto_gen_107(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_107_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_107_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp uno double %a, %b
+  %cmp1 = fcmp ogt double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_108(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_108(
 ; CHECK-NEXT:    ret i1 false
@@ -1289,6 +2503,16 @@ define i1 @auto_gen_108(double %a, double %b) {
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp oge double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_108_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_108_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp uno double %a, %b
+  %cmp1 = fcmp oge double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -1302,6 +2526,16 @@ define i1 @auto_gen_109(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_109_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_109_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp uno double %a, %b
+  %cmp1 = fcmp olt double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_110(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_110(
 ; CHECK-NEXT:    ret i1 false
@@ -1309,6 +2543,16 @@ define i1 @auto_gen_110(double %a, double %b) {
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp ole double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_110_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_110_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp uno double %a, %b
+  %cmp1 = fcmp ole double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -1322,6 +2566,16 @@ define i1 @auto_gen_111(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_111_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_111_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp uno double %a, %b
+  %cmp1 = fcmp one double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_112(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_112(
 ; CHECK-NEXT:    ret i1 false
@@ -1329,6 +2583,16 @@ define i1 @auto_gen_112(double %a, double %b) {
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp ord double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_112_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_112_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp uno double %a, %b
+  %cmp1 = fcmp ord double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -1343,6 +2607,17 @@ define i1 @auto_gen_113(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_113_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_113_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp uno double %a, %b
+  %cmp1 = fcmp ueq double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_114(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_114(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
@@ -1351,6 +2626,17 @@ define i1 @auto_gen_114(double %a, double %b) {
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp ugt double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_114_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_114_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp uno double %a, %b
+  %cmp1 = fcmp ugt double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -1365,6 +2651,17 @@ define i1 @auto_gen_115(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_115_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_115_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp uno double %a, %b
+  %cmp1 = fcmp uge double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_116(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_116(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
@@ -1373,6 +2670,17 @@ define i1 @auto_gen_116(double %a, double %b) {
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp ult double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_116_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_116_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp uno double %a, %b
+  %cmp1 = fcmp ult double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -1387,6 +2695,17 @@ define i1 @auto_gen_117(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_117_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_117_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp uno double %a, %b
+  %cmp1 = fcmp ule double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_118(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_118(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
@@ -1395,6 +2714,17 @@ define i1 @auto_gen_118(double %a, double %b) {
   %cmp = fcmp uno double %a, %b
   %cmp1 = fcmp une double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_118_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_118_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp uno double %a, %b
+  %cmp1 = fcmp une double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -1409,6 +2739,17 @@ define i1 @auto_gen_119(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_119_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_119_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp = fcmp uno double %a, %b
+  %cmp1 = fcmp uno double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_120(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_120(
 ; CHECK-NEXT:    ret i1 false
@@ -1416,6 +2757,16 @@ define i1 @auto_gen_120(double %a, double %b) {
   %cmp = fcmp true double %a, %b
   %cmp1 = fcmp false double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_120_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_120_logical(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp true double %a, %b
+  %cmp1 = fcmp false double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -1430,6 +2781,17 @@ define i1 @auto_gen_121(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_121_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_121_logical(
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp oeq double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+  %cmp = fcmp true double %a, %b
+  %cmp1 = fcmp oeq double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_122(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_122(
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ogt double [[A:%.*]], [[B:%.*]]
@@ -1438,6 +2800,17 @@ define i1 @auto_gen_122(double %a, double %b) {
   %cmp = fcmp true double %a, %b
   %cmp1 = fcmp ogt double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_122_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_122_logical(
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ogt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+  %cmp = fcmp true double %a, %b
+  %cmp1 = fcmp ogt double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -1452,6 +2825,17 @@ define i1 @auto_gen_123(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_123_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_123_logical(
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp oge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+  %cmp = fcmp true double %a, %b
+  %cmp1 = fcmp oge double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_124(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_124(
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp olt double [[A:%.*]], [[B:%.*]]
@@ -1460,6 +2844,17 @@ define i1 @auto_gen_124(double %a, double %b) {
   %cmp = fcmp true double %a, %b
   %cmp1 = fcmp olt double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_124_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_124_logical(
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp olt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+  %cmp = fcmp true double %a, %b
+  %cmp1 = fcmp olt double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -1474,6 +2869,17 @@ define i1 @auto_gen_125(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_125_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_125_logical(
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ole double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+  %cmp = fcmp true double %a, %b
+  %cmp1 = fcmp ole double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_126(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_126(
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
@@ -1482,6 +2888,17 @@ define i1 @auto_gen_126(double %a, double %b) {
   %cmp = fcmp true double %a, %b
   %cmp1 = fcmp one double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_126_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_126_logical(
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+  %cmp = fcmp true double %a, %b
+  %cmp1 = fcmp one double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -1496,6 +2913,17 @@ define i1 @auto_gen_127(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_127_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_127_logical(
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ord double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+  %cmp = fcmp true double %a, %b
+  %cmp1 = fcmp ord double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_128(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_128(
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ueq double [[A:%.*]], [[B:%.*]]
@@ -1504,6 +2932,17 @@ define i1 @auto_gen_128(double %a, double %b) {
   %cmp = fcmp true double %a, %b
   %cmp1 = fcmp ueq double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_128_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_128_logical(
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ueq double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+  %cmp = fcmp true double %a, %b
+  %cmp1 = fcmp ueq double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -1518,6 +2957,17 @@ define i1 @auto_gen_129(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_129_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_129_logical(
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ugt double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+  %cmp = fcmp true double %a, %b
+  %cmp1 = fcmp ugt double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_130(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_130(
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
@@ -1526,6 +2976,17 @@ define i1 @auto_gen_130(double %a, double %b) {
   %cmp = fcmp true double %a, %b
   %cmp1 = fcmp uge double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_130_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_130_logical(
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp uge double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+  %cmp = fcmp true double %a, %b
+  %cmp1 = fcmp uge double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -1540,6 +3001,17 @@ define i1 @auto_gen_131(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_131_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_131_logical(
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ult double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+  %cmp = fcmp true double %a, %b
+  %cmp1 = fcmp ult double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_132(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_132(
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
@@ -1548,6 +3020,17 @@ define i1 @auto_gen_132(double %a, double %b) {
   %cmp = fcmp true double %a, %b
   %cmp1 = fcmp ule double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_132_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_132_logical(
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ule double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+  %cmp = fcmp true double %a, %b
+  %cmp1 = fcmp ule double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }
 
@@ -1562,6 +3045,17 @@ define i1 @auto_gen_133(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_133_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_133_logical(
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp une double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+  %cmp = fcmp true double %a, %b
+  %cmp1 = fcmp une double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_134(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_134(
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
@@ -1573,6 +3067,17 @@ define i1 @auto_gen_134(double %a, double %b) {
   ret i1 %retval
 }
 
+define i1 @auto_gen_134_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_134_logical(
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+  %cmp = fcmp true double %a, %b
+  %cmp1 = fcmp uno double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
+  ret i1 %retval
+}
+
 define i1 @auto_gen_135(double %a, double %b) {
 ; CHECK-LABEL: @auto_gen_135(
 ; CHECK-NEXT:    ret i1 true
@@ -1580,5 +3085,15 @@ define i1 @auto_gen_135(double %a, double %b) {
   %cmp = fcmp true double %a, %b
   %cmp1 = fcmp true double %a, %b
   %retval = and i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @auto_gen_135_logical(double %a, double %b) {
+; CHECK-LABEL: @auto_gen_135_logical(
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = fcmp true double %a, %b
+  %cmp1 = fcmp true double %a, %b
+  %retval = select i1 %cmp, i1 %cmp1, i1 false
   ret i1 %retval
 }

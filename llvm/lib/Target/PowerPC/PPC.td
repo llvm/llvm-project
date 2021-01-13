@@ -72,6 +72,9 @@ def FeatureAltivec   : SubtargetFeature<"altivec","HasAltivec", "true",
 def FeatureSPE       : SubtargetFeature<"spe","HasSPE", "true",
                                         "Enable SPE instructions",
                                         [FeatureHardFloat]>;
+def FeatureEFPU2 : SubtargetFeature<"efpu2", "HasEFPU2", "true", 
+                                        "Enable Embedded Floating-Point APU 2 instructions",
+                                        [FeatureSPE]>;
 def FeatureMFOCRF    : SubtargetFeature<"mfocrf","HasMFOCRF", "true",
                                         "Enable the MFOCRF instruction">;
 def FeatureFSqrt     : SubtargetFeature<"fsqrt","HasFSQRT", "true",
@@ -595,6 +598,13 @@ def PPCInstrInfo : InstrInfo {
   let noNamedPositionallyEncodedOperands = 1;
 }
 
+def PPCAsmWriter : AsmWriter {
+  string AsmWriterClassName  = "InstPrinter";
+  int PassSubtarget = 1;
+  int Variant = 0;
+  bit isMCAsmWriter = 1;
+}
+
 def PPCAsmParser : AsmParser {
   let ShouldEmitMatchRegisterName = 0;
 }
@@ -613,6 +623,7 @@ def PPC : Target {
   // Information about the instructions.
   let InstructionSet = PPCInstrInfo;
 
+  let AssemblyWriters = [PPCAsmWriter];
   let AssemblyParsers = [PPCAsmParser];
   let AssemblyParserVariants = [PPCAsmParserVariant];
   let AllowRegisterRenaming = 1;

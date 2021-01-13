@@ -530,8 +530,8 @@ body: |
 # GCN: $vgpr36_vgpr37_vgpr38_vgpr39 = IMPLICIT_DEF
 # GCN: $vgpr40_vgpr41_vgpr42_vgpr43 = IMPLICIT_DEF
 # GCN: $vgpr44_vgpr45_vgpr46_vgpr47 = IMPLICIT_DEF
-# GCN: $vgpr0_vgpr1 = V_ADD_F64 0, $vgpr11_vgpr12, 0, killed $vgpr16_vgpr17, 0, 0, implicit $mode, implicit $exec
-# GCN: $vgpr0_vgpr1 = V_ADD_F64 0, $vgpr9_vgpr10, 0, killed $vgpr14_vgpr15, 0, 0, implicit $mode, implicit $exec
+# GCN: $vgpr0_vgpr1 = V_ADD_F64_e64 0, $vgpr11_vgpr12, 0, killed $vgpr16_vgpr17, 0, 0, implicit $mode, implicit $exec
+# GCN: $vgpr0_vgpr1 = V_ADD_F64_e64 0, $vgpr9_vgpr10, 0, killed $vgpr14_vgpr15, 0, 0, implicit $mode, implicit $exec
 ---
 name:            vgpr_sub_dependence
 tracksRegLiveness: true
@@ -568,7 +568,7 @@ body: |
     %13 = IMPLICIT_DEF
     %14 = IMPLICIT_DEF
     %15 = IMPLICIT_DEF
-    %3 = V_ADD_F64 0, %0.sub2_sub3:vreg_128, 0, %1:vreg_64, 0, 0, implicit $mode, implicit $exec
-    %4 = V_ADD_F64 0, %0.sub0_sub1:vreg_128, 0, %2:vreg_64, 0, 0, implicit $mode, implicit $exec
+    %3 = V_ADD_F64_e64 0, %0.sub2_sub3:vreg_128, 0, %1:vreg_64, 0, 0, implicit $mode, implicit $exec
+    %4 = V_ADD_F64_e64 0, %0.sub0_sub1:vreg_128, 0, %2:vreg_64, 0, 0, implicit $mode, implicit $exec
     S_ENDPGM 0
 ...

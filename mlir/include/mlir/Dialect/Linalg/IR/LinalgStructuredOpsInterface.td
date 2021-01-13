@@ -728,6 +728,18 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     >,
     InterfaceMethod<
       /*desc=*/[{
+        Return the OpOperands for all the shaped operands.
+      }],
+      /*retTy=*/" OpOperand&",
+      /*methodName=*/"getShapedOpOperand",
+      /*args=*/(ins "unsigned":$i),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return *(this->getShapedOpOperands().begin() + i);
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
         Return the range over input and output operands.
       }],
       /*retTy=*/"SmallVector<ShapedType, 4>",

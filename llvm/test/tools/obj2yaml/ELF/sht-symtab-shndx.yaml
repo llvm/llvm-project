@@ -11,12 +11,11 @@
 # CASE1-NEXT:   Data:  ELFDATA2LSB
 # CASE1-NEXT:   Type:  ET_REL
 # CASE1-NEXT: Sections:
-# CASE1-NEXT:   - Name:    bar
-# CASE1-NEXT:     Type:    SHT_PROGBITS
-# CASE1-NEXT:   - Name:    .symtab_shndx
-# CASE1-NEXT:     Type:    SHT_SYMTAB_SHNDX
-# CASE1-NEXT:     Link:    .symtab
-# CASE1-NEXT:     EntSize: 0x4
+# CASE1-NEXT:   - Name: bar
+# CASE1-NEXT:     Type: SHT_PROGBITS
+# CASE1-NEXT:   - Name: .symtab_shndx
+# CASE1-NEXT:     Type: SHT_SYMTAB_SHNDX
+# CASE1-NEXT:     Link: .symtab
 # CASE1-NEXT:     Entries: [ 0, 1, 2 ]
 # CASE1-NEXT: Symbols:
 # CASE1-NEXT:   - Name:  bar
@@ -51,7 +50,7 @@ Symbols:
 # RUN: yaml2obj --docnum=2 %s -o %t2
 # RUN: not obj2yaml %t2 2>&1 | FileCheck %s -DFILE=%t2 --check-prefix=CASE2
 
-# CASE2: Error reading file: [[FILE]]: extended symbol index (1) is past the end of the SHT_SYMTAB_SHNDX section of size 0
+# CASE2: Error reading file: [[FILE]]: found an extended symbol index (1), but unable to locate the extended symbol index table
 
 --- !ELF
 FileHeader:
@@ -186,3 +185,36 @@ Sections:
     Link:    .foo
   - Name:    .foo
     Type:    SHT_PROGBITS
+
+## Check that we are unable to dump the SHT_SYMTAB_SHNDX section when its
+## sh_entsize has an unexpected value (not equal to 4).
+
+# RUN: yaml2obj -DENTSIZE=0xff --docnum=7 %s -o %t7.entsize.bad
+# RUN: not obj2yaml %t7.entsize.bad 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t7.entsize.bad --check-prefix=CASE7-BAD
+
+# CASE7-BAD: Error reading file: [[FILE]]: unable to read extended section indexes: section [index 1] has invalid sh_entsize: expected 4, but got 255
+
+## Check we don't print the "EntSize" field when the "sh_entsize" field has the default value.
+
+# RUN: yaml2obj -DENTSIZE=4 --docnum=7 %s -o %t7.entsize.ok
+# RUN: obj2yaml %t7.entsize.ok | FileCheck %s -DFILE=%t7.entsize.ok --check-prefix=CASE7
+
+# CASE7:      - Name:    .symtab_shndx
+# CASE7-NEXT:   Type:    SHT_SYMTAB_SHNDX
+# CASE7-NEXT:   Link:    .symtab
+# CASE7-NEXT:   Entries: [ 0 ]
+# CASE7-NEXT: Symbols:
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name:    .symtab_shndx
+    Type:    SHT_SYMTAB_SHNDX
+    EntSize: [[ENTSIZE]]
+    Entries: [ 0 ]
+    Link:    .symtab
+Symbols: []

@@ -225,6 +225,15 @@ public:
     return MI->getOperand(getNumDeoptArgsIdx()).getImm();
   }
 
+  /// Get index of number of gc map entries.
+  unsigned getNumGcMapEntriesIdx();
+
+  /// Get index of number of gc allocas.
+  unsigned getNumAllocaIdx();
+
+  /// Get index of number of GC pointers.
+  unsigned getNumGCPtrIdx();
+
   /// Get index of first GC pointer operand of -1 if there are none.
   int getFirstGCPtrIdx();
 

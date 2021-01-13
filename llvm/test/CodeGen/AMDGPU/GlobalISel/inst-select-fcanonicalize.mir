@@ -180,11 +180,11 @@ body: |
 
     ; GFX8-LABEL: name: fcanonicalize_f64_denorm
     ; GFX8: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; GFX8: %1:vreg_64 = nofpexcept V_MAX_F64 0, [[COPY]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8: %1:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[COPY]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX8: S_ENDPGM 0, implicit %1
     ; GFX9-LABEL: name: fcanonicalize_f64_denorm
     ; GFX9: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; GFX9: %1:vreg_64 = nofpexcept V_MAX_F64 0, [[COPY]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9: %1:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[COPY]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX9: S_ENDPGM 0, implicit %1
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_FCANONICALIZE %0
@@ -207,11 +207,11 @@ body: |
 
     ; GFX8-LABEL: name: fcanonicalize_f64_flush
     ; GFX8: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; GFX8: %1:vreg_64 = nofpexcept V_MUL_F64 0, 4607182418800017408, 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX8: %1:vreg_64 = nofpexcept V_MUL_F64_e64 0, 4607182418800017408, 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX8: S_ENDPGM 0, implicit %1
     ; GFX9-LABEL: name: fcanonicalize_f64_flush
     ; GFX9: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; GFX9: %1:vreg_64 = nofpexcept V_MAX_F64 0, [[COPY]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX9: %1:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[COPY]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX9: S_ENDPGM 0, implicit %1
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_FCANONICALIZE %0

@@ -256,9 +256,8 @@ class VirtRegMap;
       return Indexes->getMBBFromIndex(index);
     }
 
-    void insertMBBInMaps(MachineBasicBlock *MBB,
-                         MachineInstr *InsertionPoint = nullptr) {
-      Indexes->insertMBBInMaps(MBB, InsertionPoint);
+    void insertMBBInMaps(MachineBasicBlock *MBB) {
+      Indexes->insertMBBInMaps(MBB);
       assert(unsigned(MBB->getNumber()) == RegMaskBlocks.size() &&
              "Blocks must be added in order.");
       RegMaskBlocks.push_back(std::make_pair(RegMaskSlots.size(), 0));

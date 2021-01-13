@@ -90,10 +90,10 @@ func @ptr() {
 
 // CHECK-LABEL: @vec
 func @vec() {
-  // CHECK: !llvm.vec<4 x i32>
-  "some.op"() : () -> !llvm.vec<4 x i32>
-  // CHECK: !llvm.vec<4 x f32>
-  "some.op"() : () -> !llvm.vec<4 x f32>
+  // CHECK: vector<4xi32>
+  "some.op"() : () -> vector<4xi32>
+  // CHECK: vector<4xf32>
+  "some.op"() : () -> vector<4xf32>
   // CHECK: !llvm.vec<? x 4 x i32>
   "some.op"() : () -> !llvm.vec<? x 4 x i32>
   // CHECK: !llvm.vec<? x 8 x f16>

@@ -74,6 +74,12 @@ def testAffineMapGet():
       print(e)
 
     try:
+      AffineMap.get_permutation([1, 0, 1])
+    except RuntimeError as e:
+      # CHECK: Invalid permutation when attempting to create an AffineMap
+      print(e)
+
+    try:
       map3.get_submap([42])
     except ValueError as e:
       # CHECK: result position out of bounds

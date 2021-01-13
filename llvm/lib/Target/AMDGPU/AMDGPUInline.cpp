@@ -145,26 +145,6 @@ unsigned AMDGPUInliner::getInlineThreshold(CallBase &CB) const {
   return (unsigned)Thres;
 }
 
-// Check if call is just a wrapper around another call.
-// In this case we only have call and ret instructions.
-static bool isWrapperOnlyCall(CallBase &CB) {
-  Function *Callee = CB.getCalledFunction();
-  if (!Callee || Callee->size() != 1)
-    return false;
-  const BasicBlock &BB = Callee->getEntryBlock();
-  if (const Instruction *I = BB.getFirstNonPHI()) {
-    if (!isa<CallInst>(I)) {
-      return false;
-    }
-    if (isa<ReturnInst>(*std::next(I->getIterator()))) {
-      LLVM_DEBUG(dbgs() << "    Wrapper only call detected: "
-                        << Callee->getName() << '\n');
-      return true;
-    }
-  }
-  return false;
-}
-
 InlineCost AMDGPUInliner::getInlineCost(CallBase &CB) {
   Function *Callee = CB.getCalledFunction();
   Function *Caller = CB.getCaller();
@@ -185,9 +165,6 @@ InlineCost AMDGPUInliner::getInlineCost(CallBase &CB) {
       return llvm::InlineCost::getAlways("alwaysinline viable");
     return llvm::InlineCost::getNever(IsViable.getFailureReason());
   }
-
-  if (isWrapperOnlyCall(CB))
-    return llvm::InlineCost::getAlways("wrapper-only call");
 
   InlineParams LocalParams = Params;
   LocalParams.DefaultThreshold = (int)getInlineThreshold(CB);

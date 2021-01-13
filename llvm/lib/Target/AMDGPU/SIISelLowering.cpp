@@ -9075,7 +9075,7 @@ SDValue SITargetLowering::performAndCombine(SDNode *N,
   // and (op x, c1), (op y, c2) -> perm x, y, permute_mask(c1, c2)
   const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
   if (VT == MVT::i32 && LHS.hasOneUse() && RHS.hasOneUse() &&
-      N->isDivergent() && TII->pseudoToMCOpcode(AMDGPU::V_PERM_B32) != -1) {
+      N->isDivergent() && TII->pseudoToMCOpcode(AMDGPU::V_PERM_B32_e64) != -1) {
     uint32_t LHSMask = getPermuteMask(DAG, LHS);
     uint32_t RHSMask = getPermuteMask(DAG, RHS);
     if (LHSMask != ~0u && RHSMask != ~0u) {
@@ -9172,7 +9172,7 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
   // or (op x, c1), (op y, c2) -> perm x, y, permute_mask(c1, c2)
   const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
   if (VT == MVT::i32 && LHS.hasOneUse() && RHS.hasOneUse() &&
-      N->isDivergent() && TII->pseudoToMCOpcode(AMDGPU::V_PERM_B32) != -1) {
+      N->isDivergent() && TII->pseudoToMCOpcode(AMDGPU::V_PERM_B32_e64) != -1) {
     uint32_t LHSMask = getPermuteMask(DAG, LHS);
     uint32_t RHSMask = getPermuteMask(DAG, RHS);
     if (LHSMask != ~0u && RHSMask != ~0u) {
@@ -11073,8 +11073,8 @@ SDNode *SITargetLowering::PostISelFolding(MachineSDNode *Node,
   }
 
   switch (Opcode) {
-  case AMDGPU::V_DIV_SCALE_F32:
-  case AMDGPU::V_DIV_SCALE_F64: {
+  case AMDGPU::V_DIV_SCALE_F32_e64:
+  case AMDGPU::V_DIV_SCALE_F64_e64: {
     // Satisfy the operand register constraint when one of the inputs is
     // undefined. Ordinarily each undef value will have its own implicit_def of
     // a vreg, so force these to use a single register.

@@ -2,6 +2,11 @@
 
 include "llvm/Frontend/Directive/DirectiveBase.td"
 
+def TestDirectiveLanguage : DirectiveLanguage {
+  let name = "Tdl";
+  let cppNamespace = "tdl";
+}
+
 def TDLCV_vala : ClauseVal<"vala",1,1> {}
 def TDLCV_valb : ClauseVal<"valb",2,1> {}
 def TDLCV_valc : ClauseVal<"valc",3,0> { let isDefault = 1; }
@@ -22,5 +27,5 @@ def TDLC_ClauseA : Clause<"clausea"> {
 // CHECK:   "ClauseAKind",
 // CHECK:   "AKind Clause",
 // CHECK:   [AKindvala,AKindvalb]> {
-// CHECK:     let cppNamespace = "::mlir::omp";
+// CHECK:     let cppNamespace = "::mlir::tdl";
 // CHECK: }

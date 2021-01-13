@@ -13,28 +13,28 @@ spv.func @bitcast_float_to_integer_scalar(%arg0 : f32) "None" {
 
 // CHECK-LABEL: @bitcast_float_to_integer_vector
 spv.func @bitcast_float_to_integer_vector(%arg0 : vector<3xf32>) "None" {
-  // CHECK: {{.*}} = llvm.bitcast {{.*}} : !llvm.vec<3 x f32> to !llvm.vec<3 x i32>
+  // CHECK: {{.*}} = llvm.bitcast {{.*}} : vector<3xf32> to vector<3xi32>
   %0 = spv.Bitcast %arg0: vector<3xf32> to vector<3xi32>
   spv.Return
 }
 
 // CHECK-LABEL: @bitcast_vector_to_scalar
 spv.func @bitcast_vector_to_scalar(%arg0 : vector<2xf32>) "None" {
-  // CHECK: {{.*}} = llvm.bitcast {{.*}} : !llvm.vec<2 x f32> to i64
+  // CHECK: {{.*}} = llvm.bitcast {{.*}} : vector<2xf32> to i64
   %0 = spv.Bitcast %arg0: vector<2xf32> to i64
   spv.Return
 }
 
 // CHECK-LABEL: @bitcast_scalar_to_vector
 spv.func @bitcast_scalar_to_vector(%arg0 : f64) "None" {
-  // CHECK: {{.*}} = llvm.bitcast {{.*}} : f64 to !llvm.vec<2 x i32>
+  // CHECK: {{.*}} = llvm.bitcast {{.*}} : f64 to vector<2xi32>
   %0 = spv.Bitcast %arg0: f64 to vector<2xi32>
   spv.Return
 }
 
 // CHECK-LABEL: @bitcast_vector_to_vector
 spv.func @bitcast_vector_to_vector(%arg0 : vector<4xf32>) "None" {
-  // CHECK: {{.*}} = llvm.bitcast {{.*}} : !llvm.vec<4 x f32> to !llvm.vec<2 x i64>
+  // CHECK: {{.*}} = llvm.bitcast {{.*}} : vector<4xf32> to vector<2xi64>
   %0 = spv.Bitcast %arg0: vector<4xf32> to vector<2xi64>
   spv.Return
 }
@@ -59,7 +59,7 @@ spv.func @convert_float_to_signed_scalar(%arg0: f32) "None" {
 
 // CHECK-LABEL: @convert_float_to_signed_vector
 spv.func @convert_float_to_signed_vector(%arg0: vector<2xf32>) "None" {
-  // CHECK: llvm.fptosi %{{.*}} : !llvm.vec<2 x f32> to !llvm.vec<2 x i32>
+  // CHECK: llvm.fptosi %{{.*}} : vector<2xf32> to vector<2xi32>
     %0 = spv.ConvertFToS %arg0: vector<2xf32> to vector<2xi32>
   spv.Return
 }
@@ -77,7 +77,7 @@ spv.func @convert_float_to_unsigned_scalar(%arg0: f32) "None" {
 
 // CHECK-LABEL: @convert_float_to_unsigned_vector
 spv.func @convert_float_to_unsigned_vector(%arg0: vector<2xf32>) "None" {
-  // CHECK: llvm.fptoui %{{.*}} : !llvm.vec<2 x f32> to !llvm.vec<2 x i32>
+  // CHECK: llvm.fptoui %{{.*}} : vector<2xf32> to vector<2xi32>
     %0 = spv.ConvertFToU %arg0: vector<2xf32> to vector<2xi32>
   spv.Return
 }
@@ -95,7 +95,7 @@ spv.func @convert_signed_to_float_scalar(%arg0: i32) "None" {
 
 // CHECK-LABEL: @convert_signed_to_float_vector
 spv.func @convert_signed_to_float_vector(%arg0: vector<3xi32>) "None" {
-  // CHECK: llvm.sitofp %{{.*}} : !llvm.vec<3 x i32> to !llvm.vec<3 x f32>
+  // CHECK: llvm.sitofp %{{.*}} : vector<3xi32> to vector<3xf32>
     %0 = spv.ConvertSToF %arg0: vector<3xi32> to vector<3xf32>
   spv.Return
 }
@@ -113,7 +113,7 @@ spv.func @convert_unsigned_to_float_scalar(%arg0: i32) "None" {
 
 // CHECK-LABEL: @convert_unsigned_to_float_vector
 spv.func @convert_unsigned_to_float_vector(%arg0: vector<3xi32>) "None" {
-  // CHECK: llvm.uitofp %{{.*}} : !llvm.vec<3 x i32> to !llvm.vec<3 x f32>
+  // CHECK: llvm.uitofp %{{.*}} : vector<3xi32> to vector<3xf32>
     %0 = spv.ConvertUToF %arg0: vector<3xi32> to vector<3xf32>
   spv.Return
 }
@@ -134,10 +134,10 @@ spv.func @fconvert_scalar(%arg0: f32, %arg1: f64) "None" {
 
 // CHECK-LABEL: @fconvert_vector
 spv.func @fconvert_vector(%arg0: vector<2xf32>, %arg1: vector<2xf64>) "None" {
-  // CHECK: llvm.fpext %{{.*}} : !llvm.vec<2 x f32> to !llvm.vec<2 x f64>
+  // CHECK: llvm.fpext %{{.*}} : vector<2xf32> to vector<2xf64>
   %0 = spv.FConvert %arg0: vector<2xf32> to vector<2xf64>
 
-  // CHECK: llvm.fptrunc %{{.*}} : !llvm.vec<2 x f64> to !llvm.vec<2 x f32>
+  // CHECK: llvm.fptrunc %{{.*}} : vector<2xf64> to vector<2xf32>
   %1 = spv.FConvert %arg1: vector<2xf64> to vector<2xf32>
   spv.Return
 }
@@ -158,10 +158,10 @@ spv.func @sconvert_scalar(%arg0: i32, %arg1: i64) "None" {
 
 // CHECK-LABEL: @sconvert_vector
 spv.func @sconvert_vector(%arg0: vector<3xi32>, %arg1: vector<3xi64>) "None" {
-  // CHECK: llvm.sext %{{.*}} : !llvm.vec<3 x i32> to !llvm.vec<3 x i64>
+  // CHECK: llvm.sext %{{.*}} : vector<3xi32> to vector<3xi64>
   %0 = spv.SConvert %arg0: vector<3xi32> to vector<3xi64>
 
-  // CHECK: llvm.trunc %{{.*}} : !llvm.vec<3 x i64> to !llvm.vec<3 x i32>
+  // CHECK: llvm.trunc %{{.*}} : vector<3xi64> to vector<3xi32>
   %1 = spv.SConvert %arg1: vector<3xi64> to vector<3xi32>
   spv.Return
 }
@@ -182,10 +182,10 @@ spv.func @uconvert_scalar(%arg0: i32, %arg1: i64) "None" {
 
 // CHECK-LABEL: @uconvert_vector
 spv.func @uconvert_vector(%arg0: vector<3xi32>, %arg1: vector<3xi64>) "None" {
-  // CHECK: llvm.zext %{{.*}} : !llvm.vec<3 x i32> to !llvm.vec<3 x i64>
+  // CHECK: llvm.zext %{{.*}} : vector<3xi32> to vector<3xi64>
   %0 = spv.UConvert %arg0: vector<3xi32> to vector<3xi64>
 
-  // CHECK: llvm.trunc %{{.*}} : !llvm.vec<3 x i64> to !llvm.vec<3 x i32>
+  // CHECK: llvm.trunc %{{.*}} : vector<3xi64> to vector<3xi32>
   %1 = spv.UConvert %arg1: vector<3xi64> to vector<3xi32>
   spv.Return
 }

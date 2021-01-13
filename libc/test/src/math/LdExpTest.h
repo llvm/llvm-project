@@ -131,11 +131,11 @@ public:
     // The result should not be infinity.
     x = NormalFloat(-FPBits::exponentBias + 1, NormalFloat::one >> 10, 0);
     exp = FPBits::maxExponent + 5;
-    ASSERT_EQ(isinf(func(x, exp)), 0);
+    ASSERT_FALSE(FPBits(func(x, exp)).isInf());
     // But if the exp is large enough to oversome than the normalization shift,
     // then it should result in infinity.
     exp = FPBits::maxExponent + 15;
-    ASSERT_NE(isinf(func(x, exp)), 0);
+    ASSERT_FP_EQ(func(x, exp), inf);
   }
 };
 

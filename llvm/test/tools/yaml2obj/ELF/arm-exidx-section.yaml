@@ -56,7 +56,7 @@ Sections:
 # RUN: llvm-readelf --sections %t.props.o | FileCheck %s --check-prefix=PROPERTIES
 
 # PROPERTIES: [Nr] Name       Type      Address          Off    Size   ES Flg Lk    Inf Al
-# PROPERTIES: [ 1] .ARM.exidx ARM_EXIDX 0000000000001122 000055 000000 00 AMS 13124 0   85
+# PROPERTIES: [ 1] .ARM.exidx ARM_EXIDX 0000000000001122 000055 000000 66 AMS 13124 0   85
 
 --- !ELF
 FileHeader:

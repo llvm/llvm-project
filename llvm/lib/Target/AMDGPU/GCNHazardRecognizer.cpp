@@ -48,7 +48,7 @@ void GCNHazardRecognizer::EmitInstruction(MachineInstr *MI) {
 }
 
 static bool isDivFMas(unsigned Opcode) {
-  return Opcode == AMDGPU::V_DIV_FMAS_F32 || Opcode == AMDGPU::V_DIV_FMAS_F64;
+  return Opcode == AMDGPU::V_DIV_FMAS_F32_e64 || Opcode == AMDGPU::V_DIV_FMAS_F64_e64;
 }
 
 static bool isSGetReg(unsigned Opcode) {
@@ -114,8 +114,8 @@ static bool isSendMsgTraceDataOrGDS(const SIInstrInfo &TII,
 
 static bool isPermlane(const MachineInstr &MI) {
   unsigned Opcode = MI.getOpcode();
-  return Opcode == AMDGPU::V_PERMLANE16_B32 ||
-         Opcode == AMDGPU::V_PERMLANEX16_B32;
+  return Opcode == AMDGPU::V_PERMLANE16_B32_e64 ||
+         Opcode == AMDGPU::V_PERMLANEX16_B32_e64;
 }
 
 static unsigned getHWReg(const SIInstrInfo *TII, const MachineInstr &RegInstr) {
@@ -1193,7 +1193,7 @@ int GCNHazardRecognizer::checkMAIHazards(MachineInstr *MI) {
     return SIInstrInfo::isVALU(*MI);
   };
 
-  if (Opc != AMDGPU::V_ACCVGPR_READ_B32) { // MFMA or v_accvgpr_write
+  if (Opc != AMDGPU::V_ACCVGPR_READ_B32_e64) { // MFMA or v_accvgpr_write
     const int LegacyVALUWritesVGPRWaitStates = 2;
     const int VALUWritesExecWaitStates = 4;
     const int MaxWaitStates = 4;
@@ -1221,15 +1221,15 @@ int GCNHazardRecognizer::checkMAIHazards(MachineInstr *MI) {
 
   auto IsMFMAFn = [] (MachineInstr *MI) {
     return SIInstrInfo::isMAI(*MI) &&
-           MI->getOpcode() != AMDGPU::V_ACCVGPR_WRITE_B32 &&
-           MI->getOpcode() != AMDGPU::V_ACCVGPR_READ_B32;
+           MI->getOpcode() != AMDGPU::V_ACCVGPR_WRITE_B32_e64 &&
+           MI->getOpcode() != AMDGPU::V_ACCVGPR_READ_B32_e64;
   };
 
   for (const MachineOperand &Op : MI->explicit_operands()) {
     if (!Op.isReg() || !TRI.isAGPR(MF.getRegInfo(), Op.getReg()))
       continue;
 
-    if (Op.isDef() && Opc != AMDGPU::V_ACCVGPR_WRITE_B32)
+    if (Op.isDef() && Opc != AMDGPU::V_ACCVGPR_WRITE_B32_e64)
       continue;
 
     const int MFMAWritesAGPROverlappedSrcABWaitStates = 4;
@@ -1263,7 +1263,7 @@ int GCNHazardRecognizer::checkMAIHazards(MachineInstr *MI) {
     int OpNo = MI->getOperandNo(&Op);
     if (OpNo == SrcCIdx) {
       NeedWaitStates = MFMAWritesAGPROverlappedSrcCWaitStates;
-    } else if (Opc == AMDGPU::V_ACCVGPR_READ_B32) {
+    } else if (Opc == AMDGPU::V_ACCVGPR_READ_B32_e64) {
       switch (HazardDefLatency) {
       case 2:  NeedWaitStates = MFMA4x4WritesAGPRAccVgprReadWaitStates;
                break;
@@ -1273,7 +1273,7 @@ int GCNHazardRecognizer::checkMAIHazards(MachineInstr *MI) {
       default: NeedWaitStates = MFMA32x32WritesAGPRAccVgprReadWaitStates;
                break;
       }
-    } else if (Opc == AMDGPU::V_ACCVGPR_WRITE_B32) {
+    } else if (Opc == AMDGPU::V_ACCVGPR_WRITE_B32_e64) {
       switch (HazardDefLatency) {
       case 2:  NeedWaitStates = MFMA4x4WritesAGPRAccVgprWriteWaitStates;
                break;
@@ -1292,7 +1292,7 @@ int GCNHazardRecognizer::checkMAIHazards(MachineInstr *MI) {
       return WaitStatesNeeded; // Early exit.
 
     auto IsAccVgprWriteFn = [Reg, this] (MachineInstr *MI) {
-      if (MI->getOpcode() != AMDGPU::V_ACCVGPR_WRITE_B32)
+      if (MI->getOpcode() != AMDGPU::V_ACCVGPR_WRITE_B32_e64)
         return false;
       Register DstReg = MI->getOperand(0).getReg();
       return TRI.regsOverlap(Reg, DstReg);
@@ -1304,7 +1304,7 @@ int GCNHazardRecognizer::checkMAIHazards(MachineInstr *MI) {
     NeedWaitStates = AccVGPRWriteMFMAReadSrcABWaitStates;
     if (OpNo == SrcCIdx)
       NeedWaitStates = AccVGPRWriteMFMAReadSrcCWaitStates;
-    else if (Opc == AMDGPU::V_ACCVGPR_READ_B32)
+    else if (Opc == AMDGPU::V_ACCVGPR_READ_B32_e64)
       NeedWaitStates = AccVGPRWriteAccVgprReadWaitStates;
 
     WaitStatesNeededForUse = NeedWaitStates -
@@ -1315,7 +1315,7 @@ int GCNHazardRecognizer::checkMAIHazards(MachineInstr *MI) {
       return WaitStatesNeeded; // Early exit.
   }
 
-  if (Opc == AMDGPU::V_ACCVGPR_WRITE_B32) {
+  if (Opc == AMDGPU::V_ACCVGPR_WRITE_B32_e64) {
     const int MFMA4x4ReadSrcCAccVgprWriteWaitStates = 0;
     const int MFMA16x16ReadSrcCAccVgprWriteWaitStates = 5;
     const int MFMA32x32ReadSrcCAccVgprWriteWaitStates = 13;
@@ -1359,7 +1359,7 @@ int GCNHazardRecognizer::checkMAILdStHazards(MachineInstr *MI) {
   int WaitStatesNeeded = 0;
 
   auto IsAccVgprReadFn = [] (MachineInstr *MI) {
-    return MI->getOpcode() == AMDGPU::V_ACCVGPR_READ_B32;
+    return MI->getOpcode() == AMDGPU::V_ACCVGPR_READ_B32_e64;
   };
 
   for (const MachineOperand &Op : MI->explicit_uses()) {
@@ -1380,8 +1380,8 @@ int GCNHazardRecognizer::checkMAILdStHazards(MachineInstr *MI) {
       return WaitStatesNeeded; // Early exit.
 
     auto IsVALUAccVgprRdWrCheckFn = [Reg, this](MachineInstr *MI) {
-      if (MI->getOpcode() != AMDGPU::V_ACCVGPR_READ_B32 &&
-          MI->getOpcode() != AMDGPU::V_ACCVGPR_WRITE_B32)
+      if (MI->getOpcode() != AMDGPU::V_ACCVGPR_READ_B32_e64 &&
+          MI->getOpcode() != AMDGPU::V_ACCVGPR_WRITE_B32_e64)
         return false;
       auto IsVALUFn = [] (MachineInstr *MI) {
         return SIInstrInfo::isVALU(*MI) && !SIInstrInfo::isMAI(*MI);
@@ -1406,8 +1406,8 @@ bool GCNHazardRecognizer::ShouldPreferAnother(SUnit *SU) {
   auto IsMFMAFn = [&MAI] (MachineInstr *MI) {
     MAI = nullptr;
     if (SIInstrInfo::isMAI(*MI) &&
-        MI->getOpcode() != AMDGPU::V_ACCVGPR_WRITE_B32 &&
-        MI->getOpcode() != AMDGPU::V_ACCVGPR_READ_B32)
+        MI->getOpcode() != AMDGPU::V_ACCVGPR_WRITE_B32_e64 &&
+        MI->getOpcode() != AMDGPU::V_ACCVGPR_READ_B32_e64)
       MAI = MI;
     return MAI != nullptr;
   };

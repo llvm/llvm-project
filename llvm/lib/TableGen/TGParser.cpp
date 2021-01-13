@@ -2836,7 +2836,7 @@ bool TGParser::ParseBody(Record *CurRec) {
     return false;
 
   if (!consume(tgtok::l_brace))
-    return TokError("Expected ';' or '{' to start body");
+    return TokError("Expected '{' to start body or ';' for declaration only");
 
   // An object body introduces a new scope for local variables.
   TGLocalVarScope *BodyScope = PushLocalScope();
@@ -2849,6 +2849,14 @@ bool TGParser::ParseBody(Record *CurRec) {
 
   // Eat the '}'.
   Lex.Lex();
+
+  // If we have a semicolon, print a gentle error.
+  SMLoc SemiLoc = Lex.getLoc();
+  if (consume(tgtok::semi)) {
+    PrintError(SemiLoc, "A class or def body should not end with a semicolon");
+    PrintNote("Semicolon ignored; remove to eliminate this error");    
+  }
+
   return false;
 }
 
@@ -3432,6 +3440,13 @@ bool TGParser::ParseMultiClass() {
     }
     Lex.Lex();  // eat the '}'.
 
+    // If we have a semicolon, print a gentle error.
+    SMLoc SemiLoc = Lex.getLoc();
+    if (consume(tgtok::semi)) {
+      PrintError(SemiLoc, "A multiclass body should not end with a semicolon");
+      PrintNote("Semicolon ignored; remove to eliminate this error");    
+    }
+
     PopLocalScope(MulticlassScope);
   }
 
@@ -3623,7 +3638,7 @@ bool TGParser::ParseFile() {
   if (Lex.getCode() == tgtok::Eof)
     return false;
 
-  return TokError("Unexpected input at top level");
+  return TokError("Unexpected token at top level");
 }
 
 // Check an assertion: Obtain the condition value and be sure it is true.

@@ -935,7 +935,18 @@ last:                                             ; preds = %bb0
 }
 
 ; Tests if CFGStackify's removeUnnecessaryInstrs() removes unnecessary branches
-; correctly.
+; correctly. The code is in the form below, where 'br' is unnecessary because
+; after running the 'try' body the control flow will fall through to bb2 anyway.
+
+; bb0:
+;   try
+;     ...
+;     br bb2      <- Not necessary
+; bb1 (ehpad):
+;   catch
+;     ...
+; bb2:            <- Continuation BB
+;   end
 ; CHECK-LABEL: test17
 define void @test17(i32 %n) personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:
@@ -974,17 +985,91 @@ try.cont:                                         ; preds = %catch.start, %for.e
   ret void
 }
 
+; void foo();
+; void test18() {
+;   try {
+;     foo();
+;     try {
+;       foo();
+;     } catch (...) {
+;     }
+;   } catch (...) {
+;   }
+; }
+;
+; This tests whether the 'br' can be removed in code in the form as follows.
+; Here 'br' is inside an inner try, whose 'end' is in another EH pad. In this
+; case, after running an inner try body, the control flow should fall through to
+; bb3, so the 'br' in the code is unnecessary.
+
+; bb0:
+;   try
+;     try
+;       ...
+;       br bb3      <- Not necessary
+; bb1:
+;     catch
+; bb2:
+;     end_try
+;   catch
+;     ...
+; bb3:            <- Continuation BB
+;   end
+;
+; CHECK-LABEL: test18
+define void @test18() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+; CHECK: call foo
+entry:
+  invoke void @foo()
+          to label %invoke.cont unwind label %catch.dispatch3
+
+; CHECK: call foo
+; CHECK-NOT: br
+invoke.cont:                                      ; preds = %entry
+  invoke void @foo()
+          to label %try.cont8 unwind label %catch.dispatch
+
+catch.dispatch:                                   ; preds = %invoke.cont
+  %0 = catchswitch within none [label %catch.start] unwind label %catch.dispatch3
+
+; CHECK: catch
+catch.start:                                      ; preds = %catch.dispatch
+  %1 = catchpad within %0 [i8* null]
+  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %3 = call i32 @llvm.wasm.get.ehselector(token %1)
+  %4 = call i8* @__cxa_begin_catch(i8* %2) #2 [ "funclet"(token %1) ]
+  invoke void @__cxa_end_catch() [ "funclet"(token %1) ]
+          to label %invoke.cont2 unwind label %catch.dispatch3
+
+catch.dispatch3:                                  ; preds = %catch.start, %catch.dispatch, %entry
+  %5 = catchswitch within none [label %catch.start4] unwind to caller
+
+catch.start4:                                     ; preds = %catch.dispatch3
+  %6 = catchpad within %5 [i8* null]
+  %7 = call i8* @llvm.wasm.get.exception(token %6)
+  %8 = call i32 @llvm.wasm.get.ehselector(token %6)
+  %9 = call i8* @__cxa_begin_catch(i8* %7) #2 [ "funclet"(token %6) ]
+  call void @__cxa_end_catch() [ "funclet"(token %6) ]
+  catchret from %6 to label %try.cont8
+
+try.cont8:                                        ; preds = %invoke.cont, %invoke.cont2, %catch.start4
+  ret void
+
+invoke.cont2:                                     ; preds = %catch.start
+  catchret from %1 to label %try.cont8
+}
+
 ; Here an exception is semantically contained in a loop. 'ehcleanup' BB belongs
 ; to the exception, but does not belong to the loop (because it does not have a
 ; path back to the loop header), and is placed after the loop latch block
 ; 'invoke.cont' intentionally. This tests if 'end_loop' marker is placed
 ; correctly not right after 'invoke.cont' part but after 'ehcleanup' part,
-; NOSORT-LABEL: test18
+; NOSORT-LABEL: test19
 ; NOSORT: loop
 ; NOSORT: try
 ; NOSORT: end_try
 ; NOSORT: end_loop
-define void @test18(i32 %n) personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define void @test19(i32 %n) personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:
   br label %while.cond
 
@@ -1029,14 +1114,14 @@ while.end:                                        ; preds = %while.body, %while.
 ; before its corresponding `catch`, because both `try` and `catch` body should
 ; satisfy the return type requirements.
 
-; NOSORT-LABEL: test19
+; NOSORT-LABEL: test20
 ; NOSORT: try i32
 ; NOSORT: loop i32
 ; NOSORT: end_loop
 ; NOSORT: catch
 ; NOSORT: end_try
 ; NOSORT-NEXT: end_function
-define i32 @test19(i32 %n) personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define i32 @test20(i32 %n) personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:
   %t = alloca %class.Object, align 1
   br label %for.cond

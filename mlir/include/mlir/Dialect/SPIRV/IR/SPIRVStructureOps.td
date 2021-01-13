@@ -195,6 +195,56 @@ def SPV_EntryPointOp : SPV_Op<"EntryPoint", [InModuleScope]> {
 
 // -----
 
+def SPV_ExecutionModeOp : SPV_Op<"ExecutionMode", [InModuleScope]> {
+  let summary = "Declare an execution mode for an entry point.";
+
+  let description = [{
+    Entry Point must be the Entry Point <id> operand of an OpEntryPoint
+    instruction.
+
+    Mode is the execution mode. See Execution Mode.
+
+    This instruction is only valid when the Mode operand is an execution
+    mode that takes no Extra Operands, or takes Extra Operands that are not
+    <id> operands.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    execution-mode ::= "Invocations" | "SpacingEqual" |
+                       <and other SPIR-V execution modes...>
+
+    execution-mode-op ::= `spv.ExecutionMode ` ssa-use execution-mode
+                          (integer-literal (`, ` integer-literal)* )?
+    ```
+
+    #### Example:
+
+    ```mlir
+    spv.ExecutionMode @foo "ContractionOff"
+    spv.ExecutionMode @bar "LocalSizeHint", 3, 4, 5
+    ```
+  }];
+
+  let arguments = (ins
+    FlatSymbolRefAttr:$fn,
+    SPV_ExecutionModeAttr:$execution_mode,
+    I32ArrayAttr:$values
+  );
+
+  let results = (outs);
+
+  let verifier = [{ return success(); }];
+
+  let autogenSerialization = 0;
+
+  let builders = [
+    OpBuilderDAG<(ins "spirv::FuncOp":$function,
+      "spirv::ExecutionMode":$executionMode, "ArrayRef<int32_t>":$params)>];
+}
+
+// -----
+
 def SPV_FuncOp : SPV_Op<"func", [
     AutomaticAllocationScope, DeclareOpInterfaceMethods<CallableOpInterface>,
     FunctionLike, InModuleScope, IsolatedFromAbove, Symbol

@@ -117,8 +117,7 @@ mlir::linalg::LinalgBaseTilingPattern::LinalgBaseTilingPattern(
       options(options) {}
 
 LogicalResult mlir::linalg::LinalgBaseTilingPattern::matchAndRewriteBase(
-    Operation *op, PatternRewriter &rewriter,
-    SmallVectorImpl<Value> &tensorResults) const {
+    Operation *op, PatternRewriter &rewriter, TiledLinalgOp &result) const {
   LinalgOp linalgOp = dyn_cast<LinalgOp>(op);
   if (!linalgOp)
     return failure();
@@ -131,7 +130,7 @@ LogicalResult mlir::linalg::LinalgBaseTilingPattern::matchAndRewriteBase(
     return failure();
 
   // Return relevant information to derived pattern.
-  tensorResults = res->tensorResults;
+  result = *res;
 
   // New marker if specified.
   marker.replaceLinalgMarker(rewriter, res->op.getOperation());

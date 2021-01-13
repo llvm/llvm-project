@@ -16,7 +16,7 @@ frameInfo:
   isFrameAddressTaken: true
 stack:
   - { id: 0, name: '', size: 32761, alignment: 8 }
-  - { id: 1, stack-id: sve-vec, size: 16, alignment: 16 }
+  - { id: 1, stack-id: scalable-vector, size: 16, alignment: 16 }
 body: |
   bb.0:
     liveins: $x0, $x8
