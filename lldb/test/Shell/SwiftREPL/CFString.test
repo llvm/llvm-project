@@ -3,7 +3,6 @@
 // REQUIRES: swift
 
 // RUN: %lldb --repl < %s | FileCheck %s
-// CHECK: Welcome to {{.*}}Swift
 
 import Foundation
 
