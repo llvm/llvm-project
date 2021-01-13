@@ -6809,10 +6809,10 @@ public:
     if (!RdxTreeInst.isVectorizable(B))
       return false;
 
+    // Analyze "regular" integer/FP types for reductions - no target-specific
+    // types or pointers.
     Type *Ty = B->getType();
-    if (!isValidElementType(Ty))
-      return false;
-    if (!Ty->isIntOrIntVectorTy() && !Ty->isFPOrFPVectorTy())
+    if (!isValidElementType(Ty) || Ty->isPointerTy())
       return false;
 
     RdxLeafVal.clear();
