@@ -912,15 +912,14 @@ bool TargetLowering::SimplifyDemandedBits(
 
   if (Op.getOpcode() == ISD::Constant) {
     // We know all of the bits for a constant!
-    Known.One = cast<ConstantSDNode>(Op)->getAPIntValue();
-    Known.Zero = ~Known.One;
+    Known = KnownBits::makeConstant(cast<ConstantSDNode>(Op)->getAPIntValue());
     return false;
   }
 
   if (Op.getOpcode() == ISD::ConstantFP) {
     // We know all of the bits for a floating point constant!
-    Known.One = cast<ConstantFPSDNode>(Op)->getValueAPF().bitcastToAPInt();
-    Known.Zero = ~Known.One;
+    Known = KnownBits::makeConstant(
+        cast<ConstantFPSDNode>(Op)->getValueAPF().bitcastToAPInt());
     return false;
   }
 
