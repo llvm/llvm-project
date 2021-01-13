@@ -252,6 +252,11 @@ public:
     setDebugLoc(MI.getDebugLoc());
   }
 
+  MachineIRBuilder(MachineInstr &MI, GISelChangeObserver &Observer) :
+    MachineIRBuilder(MI) {
+    setChangeObserver(Observer);
+  }
+
   virtual ~MachineIRBuilder() = default;
 
   MachineIRBuilder(const MachineIRBuilderState &BState) : State(BState) {}
