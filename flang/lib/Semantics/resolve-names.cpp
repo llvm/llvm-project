@@ -2050,7 +2050,9 @@ Symbol &ScopeHandler::MakeSymbol(const parser::Name &name, Attrs attrs) {
 }
 Symbol &ScopeHandler::MakeHostAssocSymbol(
     const parser::Name &name, const Symbol &hostSymbol) {
-  Symbol &symbol{MakeSymbol(name, HostAssocDetails{hostSymbol})};
+  Symbol &symbol{*NonDerivedTypeScope()
+                      .try_emplace(name.source, HostAssocDetails{hostSymbol})
+                      .first->second};
   name.symbol = &symbol;
   symbol.attrs() = hostSymbol.attrs(); // TODO: except PRIVATE, PUBLIC?
   symbol.flags() = hostSymbol.flags();
