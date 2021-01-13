@@ -178,95 +178,76 @@ void CSProfileGenerator::updateBodySamplesforFunctionProfile(
   }
 }
 
-void CSProfileGenerator::populateFunctionBodySamples() {
-  for (const auto &BI : BinarySampleCounters) {
-    ProfiledBinary *Binary = BI.first;
-    for (const auto &CI : BI.second.RangeCounter) {
-      StringRef ContextId(CI.first);
-      // Get or create function profile for the range
-      FunctionSamples &FunctionProfile =
-          getFunctionProfileForContext(ContextId);
-      // Compute disjoint ranges first, so we can use MAX
-      // for calculating count for each location.
-      RangeSample Ranges;
-      findDisjointRanges(Ranges, CI.second);
+void CSProfileGenerator::populateFunctionBodySamples(
+    FunctionSamples &FunctionProfile, const RangeSample &RangeCounter,
+    ProfiledBinary *Binary) {
+  // Compute disjoint ranges first, so we can use MAX
+  // for calculating count for each location.
+  RangeSample Ranges;
+  findDisjointRanges(Ranges, RangeCounter);
+  for (auto Range : Ranges) {
+    uint64_t RangeBegin = Binary->offsetToVirtualAddr(Range.first.first);
+    uint64_t RangeEnd = Binary->offsetToVirtualAddr(Range.first.second);
+    uint64_t Count = Range.second;
+    // Disjoint ranges have introduce zero-filled gap that
+    // doesn't belong to current context, filter them out.
+    if (Count == 0)
+      continue;
 
-      for (auto Range : Ranges) {
-        uint64_t RangeBegin = Binary->offsetToVirtualAddr(Range.first.first);
-        uint64_t RangeEnd = Binary->offsetToVirtualAddr(Range.first.second);
-        uint64_t Count = Range.second;
-        // Disjoint ranges have introduce zero-filled gap that
-        // doesn't belong to current context, filter them out.
-        if (Count == 0)
-          continue;
+    InstructionPointer IP(Binary, RangeBegin, true);
 
-        InstructionPointer IP(Binary, RangeBegin, true);
+    // Disjoint ranges may have range in the middle of two instr,
+    // e.g. If Instr1 at Addr1, and Instr2 at Addr2, disjoint range
+    // can be Addr1+1 to Addr2-1. We should ignore such range.
+    if (IP.Address > RangeEnd)
+      continue;
 
-        // Disjoint ranges may have range in the middle of two instr,
-        // e.g. If Instr1 at Addr1, and Instr2 at Addr2, disjoint range
-        // can be Addr1+1 to Addr2-1. We should ignore such range.
-        if (IP.Address > RangeEnd)
-          continue;
-
-        while (IP.Address <= RangeEnd) {
-          uint64_t Offset = Binary->virtualAddrToOffset(IP.Address);
-          const FrameLocation &LeafLoc = Binary->getInlineLeafFrameLoc(Offset);
-          // Recording body sample for this specific context
-          updateBodySamplesforFunctionProfile(FunctionProfile, LeafLoc, Count);
-          // Move to next IP within the range
-          IP.advance();
-        }
-      }
+    while (IP.Address <= RangeEnd) {
+      uint64_t Offset = Binary->virtualAddrToOffset(IP.Address);
+      const FrameLocation &LeafLoc = Binary->getInlineLeafFrameLoc(Offset);
+      // Recording body sample for this specific context
+      updateBodySamplesforFunctionProfile(FunctionProfile, LeafLoc, Count);
+      // Move to next IP within the range
+      IP.advance();
     }
   }
 }
 
-void CSProfileGenerator::populateFunctionBoundarySamples() {
-  for (const auto &BI : BinarySampleCounters) {
-    ProfiledBinary *Binary = BI.first;
-    for (const auto &CI : BI.second.BranchCounter) {
-      StringRef ContextId(CI.first);
-      // Get or create function profile for branch Source
-      FunctionSamples &FunctionProfile =
-          getFunctionProfileForContext(ContextId);
+void CSProfileGenerator::populateFunctionBoundarySamples(
+    StringRef ContextId, FunctionSamples &FunctionProfile,
+    const BranchSample &BranchCounters, ProfiledBinary *Binary) {
 
-      for (auto Entry : CI.second) {
-        uint64_t SourceOffset = Entry.first.first;
-        uint64_t TargetOffset = Entry.first.second;
-        uint64_t Count = Entry.second;
-        // Get the callee name by branch target if it's a call branch
-        StringRef CalleeName = FunctionSamples::getCanonicalFnName(
-            Binary->getFuncFromStartOffset(TargetOffset));
-        if (CalleeName.size() == 0)
-          continue;
+  for (auto Entry : BranchCounters) {
+    uint64_t SourceOffset = Entry.first.first;
+    uint64_t TargetOffset = Entry.first.second;
+    uint64_t Count = Entry.second;
+    // Get the callee name by branch target if it's a call branch
+    StringRef CalleeName = FunctionSamples::getCanonicalFnName(
+        Binary->getFuncFromStartOffset(TargetOffset));
+    if (CalleeName.size() == 0)
+      continue;
 
-        // Record called target sample and its count
-        const FrameLocation &LeafLoc =
-            Binary->getInlineLeafFrameLoc(SourceOffset);
+    // Record called target sample and its count
+    const FrameLocation &LeafLoc = Binary->getInlineLeafFrameLoc(SourceOffset);
 
-        FunctionProfile.addCalledTargetSamples(LeafLoc.second.LineOffset,
-                                               LeafLoc.second.Discriminator,
-                                               CalleeName, Count);
-        FunctionProfile.addTotalSamples(Count);
+    FunctionProfile.addCalledTargetSamples(LeafLoc.second.LineOffset,
+                                           LeafLoc.second.Discriminator,
+                                           CalleeName, Count);
+    FunctionProfile.addTotalSamples(Count);
 
-        // Record head sample for called target(callee)
-        // TODO: Cleanup ' @ '
-        std::string CalleeContextId =
-            getCallSite(LeafLoc) + " @ " + CalleeName.str();
-        if (ContextId.find(" @ ") != StringRef::npos) {
-          CalleeContextId =
-              ContextId.rsplit(" @ ").first.str() + " @ " + CalleeContextId;
-        }
-
-        if (ProfileMap.find(CalleeContextId) != ProfileMap.end()) {
-          FunctionSamples &CalleeProfile = ProfileMap[CalleeContextId];
-          assert(Count != 0 && "Unexpected zero weight branch");
-          if (CalleeProfile.getName().size()) {
-            CalleeProfile.addHeadSamples(Count);
-          }
-        }
-      }
+    // Record head sample for called target(callee)
+    // TODO: Cleanup ' @ '
+    std::string CalleeContextId =
+        getCallSite(LeafLoc) + " @ " + CalleeName.str();
+    if (ContextId.find(" @ ") != StringRef::npos) {
+      CalleeContextId =
+          ContextId.rsplit(" @ ").first.str() + " @ " + CalleeContextId;
     }
+
+    FunctionSamples &CalleeProfile =
+        getFunctionProfileForContext(CalleeContextId);
+    assert(Count != 0 && "Unexpected zero weight branch");
+    CalleeProfile.addHeadSamples(Count);
   }
 }
 
