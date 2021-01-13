@@ -14695,18 +14695,22 @@ static SDValue PerformSplittingToNarrowingStores(StoreSDNode *St,
   // use the VMOVN over splitting the store. We are looking for patterns of:
   // !rev: 0 N 1 N+1 2 N+2 ...
   //  rev: N 0 N+1 1 N+2 2 ...
-  auto isVMOVNOriginalMask = [&](ArrayRef<int> M, bool rev) {
+  // The shuffle may either be a single source (in which case N = NumElts/2) or
+  // two inputs extended with concat to the same size (in which case N =
+  // NumElts).
+  auto isVMOVNShuffle = [&](ShuffleVectorSDNode *SVN, bool Rev) {
+    ArrayRef<int> M = SVN->getMask();
     unsigned NumElts = ToVT.getVectorNumElements();
-    if (NumElts != M.size())
-      return false;
+    if (SVN->getOperand(1).isUndef())
+      NumElts /= 2;
 
-    unsigned Off0 = rev ? NumElts : 0;
-    unsigned Off1 = rev ? 0 : NumElts;
+    unsigned Off0 = Rev ? NumElts : 0;
+    unsigned Off1 = Rev ? 0 : NumElts;
 
-    for (unsigned i = 0; i < NumElts; i += 2) {
-      if (M[i] >= 0 && M[i] != (int)(Off0 + i / 2))
+    for (unsigned I = 0; I < NumElts; I += 2) {
+      if (M[I] >= 0 && M[I] != (int)(Off0 + I / 2))
         return false;
-      if (M[i + 1] >= 0 && M[i + 1] != (int)(Off1 + i / 2))
+      if (M[I + 1] >= 0 && M[I + 1] != (int)(Off1 + I / 2))
         return false;
     }
 
@@ -14721,9 +14725,8 @@ static SDValue PerformSplittingToNarrowingStores(StoreSDNode *St,
       return SDValue();
     }
   }
-  if (auto *Shuffle = dyn_cast<ShuffleVectorSDNode>(Trunc->getOperand(0)))
-    if (isVMOVNOriginalMask(Shuffle->getMask(), false) ||
-        isVMOVNOriginalMask(Shuffle->getMask(), true))
+  if (auto *Shuffle = dyn_cast<ShuffleVectorSDNode>(Trunc.getOperand(0)))
+    if (isVMOVNShuffle(Shuffle, false) || isVMOVNShuffle(Shuffle, true))
       return SDValue();
 
   LLVMContext &C = *DAG.getContext();
