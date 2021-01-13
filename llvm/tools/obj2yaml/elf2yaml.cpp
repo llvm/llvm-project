@@ -731,29 +731,6 @@ Error ELFDumper<ELFT>::dumpRelocation(const RelT *Rel, const Elf_Shdr *SymTab,
 }
 
 template <class ELFT>
-static unsigned getDefaultShEntSize(ELFYAML::ELF_SHT SecType,
-                                    StringRef SecName) {
-  switch (SecType) {
-  case ELF::SHT_GROUP:
-    return sizeof(typename ELFT::Word);
-  case ELF::SHT_REL:
-    return sizeof(typename ELFT::Rel);
-  case ELF::SHT_RELA:
-    return sizeof(typename ELFT::Rela);
-  case ELF::SHT_RELR:
-    return sizeof(typename ELFT::Relr);
-  case ELF::SHT_DYNAMIC:
-    return sizeof(typename ELFT::Dyn);
-  case ELF::SHT_HASH:
-    return sizeof(typename ELFT::Word);
-  default:
-    if (SecName == ".debug_str")
-      return 1;
-    return 0;
-  }
-}
-
-template <class ELFT>
 Error ELFDumper<ELFT>::dumpCommonSection(const Elf_Shdr *Shdr,
                                          ELFYAML::Section &S) {
   // Dump fields. We do not dump the ShOffset field. When not explicitly
@@ -772,7 +749,8 @@ Error ELFDumper<ELFT>::dumpCommonSection(const Elf_Shdr *Shdr,
     return NameOrErr.takeError();
   S.Name = NameOrErr.get();
 
-  if (Shdr->sh_entsize != getDefaultShEntSize<ELFT>(S.Type, S.Name))
+  if (Shdr->sh_entsize != ELFYAML::getDefaultShEntSize<ELFT>(
+                              Obj.getHeader().e_machine, S.Type, S.Name))
     S.EntSize = static_cast<llvm::yaml::Hex64>(Shdr->sh_entsize);
 
   if (Shdr->sh_link != ELF::SHN_UNDEF) {

@@ -704,6 +704,12 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
     if (Sec->Link)
       SHeader.sh_link = toSectionIndex(*Sec->Link, Sec->Name);
 
+    if (Sec->EntSize)
+      SHeader.sh_entsize = *Sec->EntSize;
+    else
+      SHeader.sh_entsize = ELFYAML::getDefaultShEntSize<ELFT>(
+          Doc.Header.Machine.getValueOr(ELF::EM_NONE), Sec->Type, Sec->Name);
+
     if (IsFirstUndefSection) {
       if (auto RawSec = dyn_cast<ELFYAML::RawContentSection>(Sec)) {
         // We do not write any content for special SHN_UNDEF section.
@@ -712,8 +718,6 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
         if (RawSec->Info)
           SHeader.sh_info = *RawSec->Info;
       }
-      if (Sec->EntSize)
-        SHeader.sh_entsize = *Sec->EntSize;
 
       LocationCounter += SHeader.sh_size;
       overrideFields<ELFT>(Sec, SHeader);
@@ -1161,9 +1165,6 @@ template <class ELFT>
 void ELFState<ELFT>::writeSectionContent(
     Elf_Shdr &SHeader, const ELFYAML::RawContentSection &Section,
     ContiguousBlobAccumulator &CBA) {
-  if (Section.EntSize)
-    SHeader.sh_entsize = *Section.EntSize;
-
   if (Section.Info)
     SHeader.sh_info = *Section.Info;
 }
@@ -1182,12 +1183,6 @@ void ELFState<ELFT>::writeSectionContent(
           Section.Type == llvm::ELF::SHT_RELA) &&
          "Section type is not SHT_REL nor SHT_RELA");
 
-  bool IsRela = Section.Type == llvm::ELF::SHT_RELA;
-  if (Section.EntSize)
-    SHeader.sh_entsize = *Section.EntSize;
-  else
-    SHeader.sh_entsize = IsRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
-
   // For relocation section set link to .symtab by default.
   unsigned Link = 0;
   if (!Section.Link && !ExcludedSectionHeaders.count(".symtab") &&
@@ -1200,6 +1195,7 @@ void ELFState<ELFT>::writeSectionContent(
   if (!Section.Relocations)
     return;
 
+  const bool IsRela = Section.Type == llvm::ELF::SHT_RELA;
   for (const ELFYAML::Relocation &Rel : *Section.Relocations) {
     const bool IsDynamic = Section.Link && (*Section.Link == ".dynsym");
     unsigned SymIdx =
@@ -1228,9 +1224,6 @@ template <class ELFT>
 void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
                                          const ELFYAML::RelrSection &Section,
                                          ContiguousBlobAccumulator &CBA) {
-  SHeader.sh_entsize =
-      Section.EntSize ? uint64_t(*Section.EntSize) : sizeof(Elf_Relr);
-
   if (!Section.Entries)
     return;
 
@@ -1248,8 +1241,6 @@ template <class ELFT>
 void ELFState<ELFT>::writeSectionContent(
     Elf_Shdr &SHeader, const ELFYAML::SymtabShndxSection &Shndx,
     ContiguousBlobAccumulator &CBA) {
-  SHeader.sh_entsize = Shndx.EntSize ? (uint64_t)*Shndx.EntSize : 4;
-
   if (Shndx.Content || Shndx.Size) {
     SHeader.sh_size = writeContent(CBA, Shndx.Content, Shndx.Size);
     return;
@@ -1275,11 +1266,6 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
       SN2I.lookup(".symtab", Link))
     SHeader.sh_link = Link;
 
-  if (Section.EntSize)
-    SHeader.sh_entsize = *Section.EntSize;
-  else
-    SHeader.sh_entsize = sizeof(typename ELFT::Word);
-
   if (Section.Signature)
     SHeader.sh_info =
         toSymbolIndex(*Section.Signature, Section.Name, /*IsDynamic=*/false);
@@ -1302,8 +1288,6 @@ template <class ELFT>
 void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
                                          const ELFYAML::SymverSection &Section,
                                          ContiguousBlobAccumulator &CBA) {
-  SHeader.sh_entsize = Section.EntSize ? (uint64_t)*Section.EntSize : 2;
-
   if (!Section.Entries)
     return;
 
@@ -1409,11 +1393,6 @@ template <class ELFT>
 void ELFState<ELFT>::writeSectionContent(
     Elf_Shdr &SHeader, const ELFYAML::CallGraphProfileSection &Section,
     ContiguousBlobAccumulator &CBA) {
-  if (Section.EntSize)
-    SHeader.sh_entsize = *Section.EntSize;
-  else
-    SHeader.sh_entsize = 16;
-
   unsigned Link = 0;
   if (!Section.Link && !ExcludedSectionHeaders.count(".symtab") &&
       SN2I.lookup(".symtab", Link))
@@ -1441,11 +1420,6 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
   if (!Section.Link && !ExcludedSectionHeaders.count(".dynsym") &&
       SN2I.lookup(".dynsym", Link))
     SHeader.sh_link = Link;
-
-  if (Section.EntSize)
-    SHeader.sh_entsize = *Section.EntSize;
-  else
-    SHeader.sh_entsize = sizeof(typename ELFT::Word);
 
   if (!Section.Bucket)
     return;
@@ -1578,7 +1552,6 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
 
   object::Elf_Mips_ABIFlags<ELFT> Flags;
   zero(Flags);
-  SHeader.sh_entsize = sizeof(Flags);
   SHeader.sh_size = SHeader.sh_entsize;
 
   Flags.version = Section.Version;
@@ -1601,11 +1574,6 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
                                          ContiguousBlobAccumulator &CBA) {
   assert(Section.Type == llvm::ELF::SHT_DYNAMIC &&
          "Section type is not SHT_DYNAMIC");
-
-  if (Section.EntSize)
-    SHeader.sh_entsize = *Section.EntSize;
-  else
-    SHeader.sh_entsize = 2 * sizeof(uintX_t);
 
   if (!Section.Entries)
     return;
