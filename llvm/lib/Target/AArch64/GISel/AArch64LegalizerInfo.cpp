@@ -332,9 +332,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
         const auto &Ty = Query.Types[0];
         if (HasFP16 && Ty == s16)
           return true;
-        return Ty == s32 || Ty == s64;
+        return Ty == s32 || Ty == s64 || Ty == s128;
       })
-      .clampScalar(0, MinFPScalar, s64);
+      .clampScalar(0, MinFPScalar, s128);
 
   getActionDefinitionsBuilder({G_ICMP, G_FCMP})
       .legalFor({{s32, s32},
