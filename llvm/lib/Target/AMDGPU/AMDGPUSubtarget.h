@@ -389,6 +389,7 @@ protected:
   bool FlatGlobalInsts;
   bool FlatScratchInsts;
   bool ScalarFlatScratchInsts;
+  bool HasArchitectedFlatScratch;
   bool AddNoCarryInsts;
   bool HasUnpackedD16VMem;
   bool R600ALUInst;
@@ -396,6 +397,7 @@ protected:
   bool CFALUBug;
   bool LDSMisalignedBug;
   bool HasMFMAInlineLiteralBug;
+  bool HasPackedTID;
   bool HasVertexCache;
   short TexVTXClauseSize;
   bool UnalignedBufferAccess;
@@ -1160,6 +1162,8 @@ public:
   /// Return true if the target has the S_DELAY_ALU instruction.
   bool hasDelayAlu() const { return GFX11Insts; }
 
+  bool hasPackedTID() const { return HasPackedTID; }
+
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs
   unsigned getOccupancyWithNumSGPRs(unsigned SGPRs) const;
@@ -1179,6 +1183,12 @@ public:
   /// pointer to the wave's scratch memory rather than a size and offset.
   bool flatScratchIsPointer() const {
     return getGeneration() >= AMDGPUSubtarget::GFX9;
+  }
+
+  /// \returns true if the flat_scratch register is initialized by the HW.
+  /// In this case it is readonly.
+  bool flatScratchIsArchitected() const {
+    return HasArchitectedFlatScratch;
   }
 
   /// \returns true if the machine has merged shaders in which s0-s7 are

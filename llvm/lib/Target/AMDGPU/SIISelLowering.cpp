@@ -1804,23 +1804,37 @@ void SITargetLowering::allocateSpecialEntryInputVGPRs(CCState &CCInfo,
     MRI.setType(MF.addLiveIn(Reg, &AMDGPU::VGPR_32RegClass), S32);
 
     CCInfo.AllocateReg(Reg);
-    Info.setWorkItemIDX(ArgDescriptor::createRegister(Reg));
+    unsigned Mask = (Subtarget->hasPackedTID() &&
+                     Info.hasWorkItemIDY()) ? 0x3ff : ~0u;
+    Info.setWorkItemIDX(ArgDescriptor::createRegister(Reg, Mask));
   }
 
   if (Info.hasWorkItemIDY()) {
-    Register Reg = AMDGPU::VGPR1;
-    MRI.setType(MF.addLiveIn(Reg, &AMDGPU::VGPR_32RegClass), S32);
+    assert(Info.hasWorkItemIDX());
+    if (Subtarget->hasPackedTID()) {
+      Info.setWorkItemIDY(ArgDescriptor::createRegister(AMDGPU::VGPR0,
+                                                        0x3ff << 10));
+    } else {
+      unsigned Reg = AMDGPU::VGPR1;
+      MRI.setType(MF.addLiveIn(Reg, &AMDGPU::VGPR_32RegClass), S32);
 
-    CCInfo.AllocateReg(Reg);
-    Info.setWorkItemIDY(ArgDescriptor::createRegister(Reg));
+      CCInfo.AllocateReg(Reg);
+      Info.setWorkItemIDY(ArgDescriptor::createRegister(Reg));
+    }
   }
 
   if (Info.hasWorkItemIDZ()) {
-    Register Reg = AMDGPU::VGPR2;
-    MRI.setType(MF.addLiveIn(Reg, &AMDGPU::VGPR_32RegClass), S32);
+    assert(Info.hasWorkItemIDX() && Info.hasWorkItemIDY());
+    if (Subtarget->hasPackedTID()) {
+      Info.setWorkItemIDZ(ArgDescriptor::createRegister(AMDGPU::VGPR0,
+                                                        0x3ff << 20));
+    } else {
+      unsigned Reg = AMDGPU::VGPR2;
+      MRI.setType(MF.addLiveIn(Reg, &AMDGPU::VGPR_32RegClass), S32);
 
-    CCInfo.AllocateReg(Reg);
-    Info.setWorkItemIDZ(ArgDescriptor::createRegister(Reg));
+      CCInfo.AllocateReg(Reg);
+      Info.setWorkItemIDZ(ArgDescriptor::createRegister(Reg));
+    }
   }
 }
 

@@ -1234,6 +1234,10 @@ public:
     return getFeatureBits()[AMDGPU::FeatureFlatInstOffsets];
   }
 
+  bool hasArchitectedFlatScratch() const {
+    return getFeatureBits()[AMDGPU::FeatureArchitectedFlatScratch];
+  }
+
   bool hasSGPR102_SGPR103() const {
     return !isVI() && !isGFX9();
   }
@@ -4217,6 +4221,10 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
         return OutOfRangeError(ValRange);
       KD.private_segment_fixed_size = Val;
     } else if (ID == ".amdhsa_user_sgpr_private_segment_buffer") {
+      if (hasArchitectedFlatScratch())
+        return getParser().Error(IDRange.Start,
+            "directive is not supported with architected flat scratch",
+            IDRange);
       PARSE_BITS_ENTRY(KD.kernel_code_properties,
                        KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER,
                        Val, ValRange);
@@ -4247,6 +4255,10 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
       if (Val)
         UserSGPRCount += 2;
     } else if (ID == ".amdhsa_user_sgpr_flat_scratch_init") {
+      if (hasArchitectedFlatScratch())
+        return getParser().Error(IDRange.Start,
+            "directive is not supported with architected flat scratch",
+            IDRange);
       PARSE_BITS_ENTRY(KD.kernel_code_properties,
                        KERNEL_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT, Val,
                        ValRange);
@@ -4266,6 +4278,19 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
                        KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32,
                        Val, ValRange);
     } else if (ID == ".amdhsa_system_sgpr_private_segment_wavefront_offset") {
+      if (hasArchitectedFlatScratch())
+        return getParser().Error(IDRange.Start,
+            "directive is not supported with architected flat scratch",
+            IDRange);
+      PARSE_BITS_ENTRY(
+          KD.compute_pgm_rsrc2,
+          COMPUTE_PGM_RSRC2_ENABLE_PRIVATE_SEGMENT, Val,
+          ValRange);
+    } else if (ID == ".amdhsa_enable_private_segment") {
+      if (!hasArchitectedFlatScratch())
+        return getParser().Error(IDRange.Start,
+            "directive is not supported without architected flat scratch",
+            IDRange);
       PARSE_BITS_ENTRY(
           KD.compute_pgm_rsrc2,
           COMPUTE_PGM_RSRC2_ENABLE_PRIVATE_SEGMENT, Val,
@@ -4303,6 +4328,10 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
     } else if (ID == ".amdhsa_reserve_flat_scratch") {
       if (IVersion.Major < 7)
         return Error(IDRange.Start, "directive requires gfx7+", IDRange);
+      if (hasArchitectedFlatScratch())
+        return Error(IDRange.Start,
+            "directive is not supported with architected flat scratch",
+            IDRange);
       if (!isUInt<1>(Val))
         return OutOfRangeError(ValRange);
       ReserveFlatScr = Val;

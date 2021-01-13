@@ -1194,6 +1194,9 @@ namespace AMDGPU {
   LLVM_READONLY
   int getFlatScratchInstSSfromSV(uint16_t Opcode);
 
+  LLVM_READONLY
+  int getFlatScratchInstSVfromSVS(uint16_t Opcode);
+
   const uint64_t RSRC_DATA_FORMAT = 0xf00000000000LL;
   const uint64_t RSRC_ELEMENT_SIZE_SHIFT = (32 + 19);
   const uint64_t RSRC_INDEX_STRIDE_SHIFT = (32 + 21);

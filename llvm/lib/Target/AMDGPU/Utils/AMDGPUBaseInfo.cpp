@@ -1151,6 +1151,10 @@ bool hasGFX10_3Insts(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX10_3Insts];
 }
 
+bool hasArchitectedFlatScratch(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureArchitectedFlatScratch];
+}
+
 bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI) {
   const MCRegisterClass SGPRClass = TRI->getRegClass(AMDGPU::SReg_32RegClassID);
   const unsigned FirstSubReg = TRI->getSubReg(Reg, AMDGPU::sub0);

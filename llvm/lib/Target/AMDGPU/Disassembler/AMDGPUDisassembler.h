@@ -166,6 +166,8 @@ public:
   bool isGFX10Plus() const;
   bool isGFX11() const;
   bool isGFX11Plus() const;
+
+  bool hasArchitectedFlatScratch() const;
 };
 
 //===----------------------------------------------------------------------===//
