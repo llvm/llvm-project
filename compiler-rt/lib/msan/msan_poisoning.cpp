@@ -71,13 +71,12 @@ void CopyOrigin(const void *dst, const void *src, uptr size,
   if (beg < end) {
     // Align src up.
     uptr s = ((uptr)src + 3) & ~3UL;
-    uptr aligned_beg = ((uptr)dst + 3) & ~3UL;
     // FIXME: factor out to msan_copy_origin_aligned
     if (__msan_get_track_origins() > 1) {
       u32 *src = (u32 *)MEM_TO_ORIGIN(s);
       u32 *src_s = (u32 *)MEM_TO_SHADOW(s);
-      u32 *src_end = (u32 *)MEM_TO_ORIGIN(s + (end - aligned_beg));
-      u32 *dst = (u32 *)MEM_TO_ORIGIN(aligned_beg);
+      u32 *src_end = (u32 *)MEM_TO_ORIGIN(s + (end - beg));
+      u32 *dst = (u32 *)MEM_TO_ORIGIN(beg);
       u32 src_o = 0;
       u32 dst_o = 0;
       for (; src < src_end; ++src, ++src_s, ++dst) {
@@ -89,9 +88,8 @@ void CopyOrigin(const void *dst, const void *src, uptr size,
         *dst = dst_o;
       }
     } else {
-      REAL(memcpy)
-      ((void *)MEM_TO_ORIGIN(aligned_beg), (void *)MEM_TO_ORIGIN(s),
-       end - aligned_beg);
+      REAL(memcpy)((void *)MEM_TO_ORIGIN(beg), (void *)MEM_TO_ORIGIN(s),
+                   end - beg);
     }
   }
 }
