@@ -28,9 +28,9 @@ body: |
     ; GFX7: FLAT_STORE_DWORD [[COPY3]], %7, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
     ; GFX7: FLAT_STORE_DWORD [[COPY3]], %8, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
     ; GFX7: FLAT_STORE_DWORD [[COPY3]], %9, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
-    ; GFX7: %10:vreg_64 = nofpexcept V_MAX_F64 0, [[COPY4]], 0, [[COPY5]], 0, 0, implicit $mode, implicit $exec
-    ; GFX7: %11:vreg_64 = nofpexcept V_MAX_F64 0, [[COPY5]], 0, [[COPY4]], 0, 0, implicit $mode, implicit $exec
-    ; GFX7: %12:vreg_64 = nofpexcept V_MAX_F64 0, [[COPY5]], 0, [[COPY6]], 0, 0, implicit $mode, implicit $exec
+    ; GFX7: %10:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[COPY4]], 0, [[COPY5]], 0, 0, implicit $mode, implicit $exec
+    ; GFX7: %11:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[COPY5]], 0, [[COPY4]], 0, 0, implicit $mode, implicit $exec
+    ; GFX7: %12:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[COPY5]], 0, [[COPY6]], 0, 0, implicit $mode, implicit $exec
     ; GFX7: S_ENDPGM 0, implicit %10, implicit %11, implicit %12
     %0:sgpr(s32) = COPY $sgpr0
     %1:vgpr(s32) = COPY $vgpr0
@@ -94,9 +94,9 @@ body: |
     ; GFX7: FLAT_STORE_DWORD [[COPY3]], %7, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
     ; GFX7: FLAT_STORE_DWORD [[COPY3]], %8, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
     ; GFX7: FLAT_STORE_DWORD [[COPY3]], %9, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
-    ; GFX7: %10:vreg_64 = nofpexcept V_MAX_F64 0, [[COPY4]], 0, [[COPY5]], 0, 0, implicit $mode, implicit $exec
-    ; GFX7: %11:vreg_64 = nofpexcept V_MAX_F64 0, [[COPY5]], 0, [[COPY4]], 0, 0, implicit $mode, implicit $exec
-    ; GFX7: %12:vreg_64 = nofpexcept V_MAX_F64 0, [[COPY5]], 0, [[COPY6]], 0, 0, implicit $mode, implicit $exec
+    ; GFX7: %10:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[COPY4]], 0, [[COPY5]], 0, 0, implicit $mode, implicit $exec
+    ; GFX7: %11:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[COPY5]], 0, [[COPY4]], 0, 0, implicit $mode, implicit $exec
+    ; GFX7: %12:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[COPY5]], 0, [[COPY6]], 0, 0, implicit $mode, implicit $exec
     ; GFX7: S_ENDPGM 0, implicit %10, implicit %11, implicit %12
     %0:sgpr(s32) = COPY $sgpr0
     %1:vgpr(s32) = COPY $vgpr0

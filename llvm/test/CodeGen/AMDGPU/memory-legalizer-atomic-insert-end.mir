@@ -77,7 +77,7 @@ body:             |
 
     $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM $sgpr0_sgpr1, 11, 0, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
     $vgpr1 = V_ASHRREV_I32_e32 31, $vgpr0, implicit $exec
-    $vgpr1_vgpr2 = V_LSHL_B64 $vgpr0_vgpr1, 3, implicit $exec
+    $vgpr1_vgpr2 = V_LSHL_B64_e64 $vgpr0_vgpr1, 3, implicit $exec
     $sgpr7 = S_MOV_B32 61440
     $sgpr6 = S_MOV_B32 0
     S_WAITCNT 127

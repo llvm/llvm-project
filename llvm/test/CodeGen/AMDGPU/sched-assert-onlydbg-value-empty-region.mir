@@ -49,9 +49,9 @@ body:             |
   ; CHECK:   [[DEF1]].sub0:vreg_64 = GLOBAL_LOAD_DWORD [[DEF3]], 0, 0, 0, 0, implicit $exec
   ; CHECK:   dead %20:vgpr_32 = GLOBAL_LOAD_DWORD %11, 0, 0, 0, 0, implicit $exec
   ; CHECK:   dead %21:vgpr_32 = GLOBAL_LOAD_DWORD [[DEF6]], 0, 0, 0, 0, implicit $exec
-  ; CHECK:   [[V_LSHLREV_B64_:%[0-9]+]]:vreg_64 = V_LSHLREV_B64 2, [[DEF1]], implicit $exec
+  ; CHECK:   [[V_LSHLREV_B64_e64_:%[0-9]+]]:vreg_64 = V_LSHLREV_B64_e64 2, [[DEF1]], implicit $exec
   ; CHECK:   dead %22:vgpr_32 = GLOBAL_LOAD_DWORD [[DEF7]], 0, 0, 0, 0, implicit $exec
-  ; CHECK:   S_NOP 0, implicit [[DEF5]], implicit [[V_LSHLREV_B64_]].sub0, implicit [[DEF4]], implicit [[V_MOV_B32_e32_]]
+  ; CHECK:   S_NOP 0, implicit [[DEF5]], implicit [[V_LSHLREV_B64_e64_]].sub0, implicit [[DEF4]], implicit [[V_MOV_B32_e32_]]
   ; CHECK:   GLOBAL_STORE_DWORD [[DEF7]], [[V_MOV_B32_e32_1]], 0, 0, 0, 0, implicit $exec
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
@@ -96,7 +96,7 @@ body:             |
     %20:vgpr_32 = GLOBAL_LOAD_DWORD %11, 0, 0, 0, 0, implicit $exec
     %21:vgpr_32 = GLOBAL_LOAD_DWORD %14, 0, 0, 0, 0, implicit $exec
     %22:vgpr_32 = GLOBAL_LOAD_DWORD %15, 0, 0, 0, 0, implicit $exec
-    %23:vreg_64 = V_LSHLREV_B64 2, %8, implicit $exec
+    %23:vreg_64 = V_LSHLREV_B64_e64 2, %8, implicit $exec
     S_NOP 0, implicit %13, implicit %23.sub0, implicit %12, implicit %17
     GLOBAL_STORE_DWORD %15, %18, 0, 0, 0, 0, implicit $exec
 

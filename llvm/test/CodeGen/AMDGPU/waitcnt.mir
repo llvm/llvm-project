@@ -127,7 +127,7 @@ body: |
 # CHECK-NOT: S_WAITCNT
 
 # CHECK: bb.1:
-# CHECK-NEXT: V_LSHLREV_B64
+# CHECK-NEXT: V_LSHLREV_B64_e64
 # CHECK-NEXT: S_WAITCNT 112
 # CHECK-NEXT: FLAT_STORE_DWORD
 name: single_fallthrough_successor_no_end_block_wait
@@ -138,7 +138,7 @@ body: |
     $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
 
   bb.1:
-    $vgpr3_vgpr4 = V_LSHLREV_B64 4, $vgpr7_vgpr8, implicit $exec
+    $vgpr3_vgpr4 = V_LSHLREV_B64_e64 4, $vgpr7_vgpr8, implicit $exec
     FLAT_STORE_DWORD $vgpr3_vgpr4, $vgpr0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     S_ENDPGM 0
 ...
@@ -154,7 +154,7 @@ body: |
 # CHECK-NEXT: S_ENDPGM 0
 
 # CHECK: bb.2:
-# CHECK-NEXT: V_LSHLREV_B64
+# CHECK-NEXT: V_LSHLREV_B64_e64
 # CHECK-NEXT: S_WAITCNT 112
 # CHECK-NEXT: FLAT_STORE_DWORD
 name: single_branch_successor_not_next_block
@@ -170,7 +170,7 @@ body: |
     S_ENDPGM 0
 
   bb.2:
-     $vgpr3_vgpr4 = V_LSHLREV_B64 4, $vgpr7_vgpr8, implicit $exec
+     $vgpr3_vgpr4 = V_LSHLREV_B64_e64 4, $vgpr7_vgpr8, implicit $exec
     FLAT_STORE_DWORD $vgpr3_vgpr4, $vgpr0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     S_ENDPGM 0
 ...

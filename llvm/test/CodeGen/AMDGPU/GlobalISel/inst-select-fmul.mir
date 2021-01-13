@@ -53,9 +53,9 @@ body: |
     ; GCN: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
     ; GCN: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GCN: [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; GCN: %4:vreg_64 = nofpexcept V_MUL_F64 0, [[COPY1]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GCN: %5:vreg_64 = nofpexcept V_MUL_F64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GCN: %6:vreg_64 = nofpexcept V_MUL_F64 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
+    ; GCN: %4:vreg_64 = nofpexcept V_MUL_F64_e64 0, [[COPY1]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GCN: %5:vreg_64 = nofpexcept V_MUL_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GCN: %6:vreg_64 = nofpexcept V_MUL_F64_e64 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
     ; GCN: S_ENDPGM 0, implicit %4, implicit %5, implicit %6
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
     %1:vgpr(s64) = COPY $vgpr0_vgpr1
