@@ -19,6 +19,10 @@
 #include "type.h"
 #include <variant>
 
+namespace Fortran::evaluate::characteristics {
+class TypeAndShape;
+}
+
 namespace Fortran::evaluate {
 
 using namespace Fortran::parser::literals;
@@ -32,11 +36,13 @@ template <typename T> Expr<T> Fold(FoldingContext &context, Expr<T> &&expr) {
   return Expr<T>::Rewrite(context, std::move(expr));
 }
 
-template <typename T>
-std::optional<Expr<T>> Fold(
-    FoldingContext &context, std::optional<Expr<T>> &&expr) {
-  if (expr) {
-    return Fold(context, std::move(*expr));
+characteristics::TypeAndShape Fold(
+    FoldingContext &, characteristics::TypeAndShape &&);
+
+template <typename A>
+std::optional<A> Fold(FoldingContext &context, std::optional<A> &&x) {
+  if (x) {
+    return Fold(context, std::move(*x));
   } else {
     return std::nullopt;
   }
@@ -92,6 +98,14 @@ template <typename A>
 std::optional<std::int64_t> ToInt64(const std::optional<A> &x) {
   if (x) {
     return ToInt64(*x);
+  } else {
+    return std::nullopt;
+  }
+}
+
+template <typename A> std::optional<std::int64_t> ToInt64(const A *p) {
+  if (p) {
+    return ToInt64(*p);
   } else {
     return std::nullopt;
   }

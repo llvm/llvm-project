@@ -480,7 +480,7 @@ void CheckHelper::CheckObjectEntity(
       }
     }
   }
-  if (IsInitialized(symbol, true /* ignore DATA inits */)) { // C808
+  if (IsStaticallyInitialized(symbol, true /* ignore DATA inits */)) { // C808
     CheckPointerInitialization(symbol);
     if (IsAutomatic(symbol)) {
       messages_.Say(
