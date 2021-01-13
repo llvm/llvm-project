@@ -178,10 +178,8 @@ class PseudoProbeDecoder {
   /// Points to the end of the buffer.
   const uint8_t *End = nullptr;
 
-#ifndef NDEBUG
   /// SectionName used for debug
   std::string SectionName;
-#endif
 
   // Decoding helper function
   template <typename T> T readUnencodedNumber();
