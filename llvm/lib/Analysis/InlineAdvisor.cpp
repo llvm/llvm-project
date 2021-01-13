@@ -100,8 +100,7 @@ llvm::Optional<llvm::InlineCost> static getDefaultInlineAdvice(
                          GetBFI, PSI, RemarksEnabled ? &ORE : nullptr);
   };
   return llvm::shouldInline(CB, GetInlineCost, ORE,
-                            Params.EnableDeferral.hasValue() &&
-                                Params.EnableDeferral.getValue());
+                            Params.EnableDeferral.getValueOr(false));
 }
 
 std::unique_ptr<InlineAdvice> DefaultInlineAdvisor::getAdvice(CallBase &CB) {
