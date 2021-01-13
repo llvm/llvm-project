@@ -153,6 +153,21 @@ static MlirStringRef toMlirStringRef(const std::string &s) {
   return mlirStringRefCreate(s.data(), s.size());
 }
 
+template <typename PermutationTy>
+static bool isPermutation(std::vector<PermutationTy> permutation) {
+  llvm::SmallVector<bool, 8> seen(permutation.size(), false);
+  for (auto val : permutation) {
+    if (val < permutation.size()) {
+      if (seen[val])
+        return false;
+      seen[val] = true;
+      continue;
+    }
+    return false;
+  }
+  return true;
+}
+
 //------------------------------------------------------------------------------
 // Collections.
 //------------------------------------------------------------------------------
@@ -3914,6 +3929,9 @@ void mlir::python::populateIRSubmodule(py::module &m) {
           "get_permutation",
           [](std::vector<unsigned> permutation,
              DefaultingPyMlirContext context) {
+            if (!isPermutation(permutation))
+              throw py::cast_error("Invalid permutation when attempting to "
+                                   "create an AffineMap");
             MlirAffineMap affineMap = mlirAffineMapPermutationGet(
                 context->get(), permutation.size(), permutation.data());
             return PyAffineMap(context->getRef(), affineMap);
