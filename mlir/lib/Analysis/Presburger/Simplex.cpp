@@ -9,6 +9,7 @@
 #include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/Analysis/Presburger/Matrix.h"
 #include "mlir/Support/MathExtras.h"
+#include "llvm/ADT/Optional.h"
 
 namespace mlir {
 using Direction = Simplex::Direction;
@@ -482,7 +483,7 @@ Optional<Fraction> Simplex::computeRowOptimum(Direction direction,
 /// or None if it is unbounded.
 Optional<Fraction> Simplex::computeOptimum(Direction direction,
                                            ArrayRef<int64_t> coeffs) {
-  assert(!empty && "Tableau should not be empty");
+  assert(!empty && "Simplex should not be empty");
 
   unsigned snapshot = getSnapshot();
   unsigned conIndex = addRow(coeffs);
@@ -490,6 +491,34 @@ Optional<Fraction> Simplex::computeOptimum(Direction direction,
   Optional<Fraction> optimum = computeRowOptimum(direction, row);
   rollback(snapshot);
   return optimum;
+}
+
+Optional<Fraction> Simplex::computeOptimum(Direction direction, Unknown &u) {
+  assert(!empty && "Simplex should not be empty!");
+  if (u.orientation == Orientation::Column) {
+    unsigned column = u.pos;
+    Optional<unsigned> pivotRow = findPivotRow({}, direction, column);
+    // If no pivot is returned, the constraint is unbounded in the specified
+    // direction.
+    if (!pivotRow)
+      return {};
+    pivot(*pivotRow, column);
+  }
+
+  unsigned row = u.pos;
+  Optional<Fraction> optimum = computeRowOptimum(direction, row);
+  if (u.restricted && direction == Direction::Down &&
+      (!optimum || *optimum < Fraction(0, 1)))
+    restoreRow(u);
+  return optimum;
+}
+
+bool Simplex::isBoundedAlongConstraint(unsigned constraintIndex) {
+  assert(!empty && "It is not meaningful to ask whether a direction is bounded "
+                   "in an empty set.");
+  // The constraint's perpendicular is already bounded below, since it is a
+  // constraint. If it is also bounded above, we can return true.
+  return computeOptimum(Direction::Up, con[constraintIndex]).hasValue();
 }
 
 /// Redundant constraints are those that are in row orientation and lie in
