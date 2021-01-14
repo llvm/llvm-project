@@ -295,7 +295,7 @@ struct NMSymbol {
   uint64_t Address;
   uint64_t Size;
   char TypeChar;
-  StringRef Name;
+  std::string Name;
   StringRef SectionName;
   StringRef TypeName;
   BasicSymbolRef Sym;
@@ -309,7 +309,7 @@ struct NMSymbol {
   uint8_t NType;
   uint8_t NSect;
   uint16_t NDesc;
-  StringRef IndirectName;
+  std::string IndirectName;
 };
 } // anonymous namespace
 
@@ -815,7 +815,7 @@ static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
 
   for (const NMSymbol &S : SymbolList) {
     uint32_t SymFlags;
-    std::string Name = S.Name.str();
+    std::string Name = S.Name;
     MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(&Obj);
     if (Demangle) {
       if (Optional<std::string> Opt = demangle(S.Name, MachO))
@@ -1219,6 +1219,473 @@ static unsigned getNsectInMachO(MachOObjectFile &Obj, BasicSymbolRef Sym) {
   return (STE.n_type & MachO::N_TYPE) == MachO::N_SECT ? STE.n_sect : 0;
 }
 
+static void dumpSymbolsFromDLInfoMachO(MachOObjectFile &MachO) {
+  size_t I = SymbolList.size();
+  std::string ExportsNameBuffer;
+  raw_string_ostream EOS(ExportsNameBuffer);
+  std::string BindsNameBuffer;
+  raw_string_ostream BOS(BindsNameBuffer);
+  std::string LazysNameBuffer;
+  raw_string_ostream LOS(LazysNameBuffer);
+  std::string WeaksNameBuffer;
+  raw_string_ostream WOS(WeaksNameBuffer);
+  std::string FunctionStartsNameBuffer;
+  raw_string_ostream FOS(FunctionStartsNameBuffer);
+
+  MachO::mach_header H;
+  MachO::mach_header_64 H_64;
+  uint32_t HFlags = 0;
+  if (MachO.is64Bit()) {
+    H_64 = MachO.MachOObjectFile::getHeader64();
+    HFlags = H_64.flags;
+  } else {
+    H = MachO.MachOObjectFile::getHeader();
+    HFlags = H.flags;
+  }
+  uint64_t BaseSegmentAddress = 0;
+  for (const auto &Command : MachO.load_commands()) {
+    if (Command.C.cmd == MachO::LC_SEGMENT) {
+      MachO::segment_command Seg = MachO.getSegmentLoadCommand(Command);
+      if (Seg.fileoff == 0 && Seg.filesize != 0) {
+        BaseSegmentAddress = Seg.vmaddr;
+        break;
+      }
+    } else if (Command.C.cmd == MachO::LC_SEGMENT_64) {
+      MachO::segment_command_64 Seg = MachO.getSegment64LoadCommand(Command);
+      if (Seg.fileoff == 0 && Seg.filesize != 0) {
+        BaseSegmentAddress = Seg.vmaddr;
+        break;
+      }
+    }
+  }
+  if (DyldInfoOnly || AddDyldInfo ||
+      HFlags & MachO::MH_NLIST_OUTOFSYNC_WITH_DYLDINFO) {
+    unsigned ExportsAdded = 0;
+    Error Err = Error::success();
+    for (const llvm::object::ExportEntry &Entry : MachO.exports(Err)) {
+      bool found = false;
+      bool ReExport = false;
+      if (!DyldInfoOnly) {
+        for (const NMSymbol &S : SymbolList)
+          if (S.Address == Entry.address() + BaseSegmentAddress &&
+              S.Name == Entry.name()) {
+            found = true;
+            break;
+          }
+      }
+      if (!found) {
+        NMSymbol S = {};
+        S.Address = Entry.address() + BaseSegmentAddress;
+        S.Size = 0;
+        S.TypeChar = '\0';
+        S.Name = Entry.name().str();
+        // There is no symbol in the nlist symbol table for this so we set
+        // Sym effectivly to null and the rest of code in here must test for
+        // it and not do things like Sym.getFlags() for it.
+        S.Sym = BasicSymbolRef();
+        S.SymFlags = SymbolRef::SF_Global;
+        S.Section = SectionRef();
+        S.NType = 0;
+        S.NSect = 0;
+        S.NDesc = 0;
+
+        uint64_t EFlags = Entry.flags();
+        bool Abs = ((EFlags & MachO::EXPORT_SYMBOL_FLAGS_KIND_MASK) ==
+                    MachO::EXPORT_SYMBOL_FLAGS_KIND_ABSOLUTE);
+        bool Resolver = (EFlags & MachO::EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER);
+        ReExport = (EFlags & MachO::EXPORT_SYMBOL_FLAGS_REEXPORT);
+        bool WeakDef = (EFlags & MachO::EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION);
+        if (WeakDef)
+          S.NDesc |= MachO::N_WEAK_DEF;
+        if (Abs) {
+          S.NType = MachO::N_EXT | MachO::N_ABS;
+          S.TypeChar = 'A';
+        } else if (ReExport) {
+          S.NType = MachO::N_EXT | MachO::N_INDR;
+          S.TypeChar = 'I';
+        } else {
+          S.NType = MachO::N_EXT | MachO::N_SECT;
+          if (Resolver) {
+            S.Address = Entry.other() + BaseSegmentAddress;
+            if ((S.Address & 1) != 0 && !MachO.is64Bit() &&
+                H.cputype == MachO::CPU_TYPE_ARM) {
+              S.Address &= ~1LL;
+              S.NDesc |= MachO::N_ARM_THUMB_DEF;
+            }
+          } else {
+            S.Address = Entry.address() + BaseSegmentAddress;
+          }
+          StringRef SegmentName = StringRef();
+          StringRef SectionName = StringRef();
+          for (const SectionRef &Section : MachO.sections()) {
+            S.NSect++;
+
+            if (Expected<StringRef> NameOrErr = Section.getName())
+              SectionName = *NameOrErr;
+            else
+              consumeError(NameOrErr.takeError());
+
+            SegmentName =
+                MachO.getSectionFinalSegmentName(Section.getRawDataRefImpl());
+            if (S.Address >= Section.getAddress() &&
+                S.Address < Section.getAddress() + Section.getSize()) {
+              S.Section = Section;
+              break;
+            } else if (Entry.name() == "__mh_execute_header" &&
+                       SegmentName == "__TEXT" && SectionName == "__text") {
+              S.Section = Section;
+              S.NDesc |= MachO::REFERENCED_DYNAMICALLY;
+              break;
+            }
+          }
+          if (SegmentName == "__TEXT" && SectionName == "__text")
+            S.TypeChar = 'T';
+          else if (SegmentName == "__DATA" && SectionName == "__data")
+            S.TypeChar = 'D';
+          else if (SegmentName == "__DATA" && SectionName == "__bss")
+            S.TypeChar = 'B';
+          else
+            S.TypeChar = 'S';
+        }
+        SymbolList.push_back(S);
+
+        EOS << Entry.name();
+        EOS << '\0';
+        ExportsAdded++;
+
+        // For ReExports there are a two more things to do, first add the
+        // indirect name and second create the undefined symbol using the
+        // referened dynamic library.
+        if (ReExport) {
+
+          // Add the indirect name.
+          if (Entry.otherName().empty())
+            EOS << Entry.name();
+          else
+            EOS << Entry.otherName();
+          EOS << '\0';
+
+          // Now create the undefined symbol using the referened dynamic
+          // library.
+          NMSymbol U = {};
+          U.Address = 0;
+          U.Size = 0;
+          U.TypeChar = 'U';
+          if (Entry.otherName().empty())
+            U.Name = Entry.name().str();
+          else
+            U.Name = Entry.otherName().str();
+          // Again there is no symbol in the nlist symbol table for this so
+          // we set Sym effectivly to null and the rest of code in here must
+          // test for it and not do things like Sym.getFlags() for it.
+          U.Sym = BasicSymbolRef();
+          U.SymFlags = SymbolRef::SF_Global | SymbolRef::SF_Undefined;
+          U.Section = SectionRef();
+          U.NType = MachO::N_EXT | MachO::N_UNDF;
+          U.NSect = 0;
+          U.NDesc = 0;
+          // The library ordinal for this undefined symbol is in the export
+          // trie Entry.other().
+          MachO::SET_LIBRARY_ORDINAL(U.NDesc, Entry.other());
+          SymbolList.push_back(U);
+
+          // Finally add the undefined symbol's name.
+          if (Entry.otherName().empty())
+            EOS << Entry.name();
+          else
+            EOS << Entry.otherName();
+          EOS << '\0';
+          ExportsAdded++;
+        }
+      }
+    }
+    if (Err)
+      error(std::move(Err), MachO.getFileName());
+    // Set the symbol names and indirect names for the added symbols.
+    if (ExportsAdded) {
+      EOS.flush();
+      const char *Q = ExportsNameBuffer.c_str();
+      for (unsigned K = 0; K < ExportsAdded; K++) {
+        SymbolList[I].Name = Q;
+        Q += strlen(Q) + 1;
+        if (SymbolList[I].TypeChar == 'I') {
+          SymbolList[I].IndirectName = Q;
+          Q += strlen(Q) + 1;
+        }
+        I++;
+      }
+    }
+
+    // Add the undefined symbols from the bind entries.
+    unsigned BindsAdded = 0;
+    Error BErr = Error::success();
+    StringRef LastSymbolName = StringRef();
+    for (const llvm::object::MachOBindEntry &Entry : MachO.bindTable(BErr)) {
+      bool found = false;
+      if (LastSymbolName == Entry.symbolName())
+        found = true;
+      else if (!DyldInfoOnly) {
+        for (unsigned J = 0; J < SymbolList.size() && !found; ++J) {
+          if (SymbolList[J].Name == Entry.symbolName())
+            found = true;
+        }
+      }
+      if (!found) {
+        LastSymbolName = Entry.symbolName();
+        NMSymbol B = {};
+        B.Address = 0;
+        B.Size = 0;
+        B.TypeChar = 'U';
+        // There is no symbol in the nlist symbol table for this so we set
+        // Sym effectivly to null and the rest of code in here must test for
+        // it and not do things like Sym.getFlags() for it.
+        B.Sym = BasicSymbolRef();
+        B.SymFlags = SymbolRef::SF_Global | SymbolRef::SF_Undefined;
+        B.NType = MachO::N_EXT | MachO::N_UNDF;
+        B.NSect = 0;
+        B.NDesc = 0;
+        MachO::SET_LIBRARY_ORDINAL(B.NDesc, Entry.ordinal());
+        B.Name = Entry.symbolName().str();
+        SymbolList.push_back(B);
+        BOS << Entry.symbolName();
+        BOS << '\0';
+        BindsAdded++;
+      }
+    }
+    if (BErr)
+      error(std::move(BErr), MachO.getFileName());
+    // Set the symbol names and indirect names for the added symbols.
+    if (BindsAdded) {
+      BOS.flush();
+      const char *Q = BindsNameBuffer.c_str();
+      for (unsigned K = 0; K < BindsAdded; K++) {
+        SymbolList[I].Name = Q;
+        Q += strlen(Q) + 1;
+        if (SymbolList[I].TypeChar == 'I') {
+          SymbolList[I].IndirectName = Q;
+          Q += strlen(Q) + 1;
+        }
+        I++;
+      }
+    }
+
+    // Add the undefined symbols from the lazy bind entries.
+    unsigned LazysAdded = 0;
+    Error LErr = Error::success();
+    LastSymbolName = StringRef();
+    for (const llvm::object::MachOBindEntry &Entry :
+         MachO.lazyBindTable(LErr)) {
+      bool found = false;
+      if (LastSymbolName == Entry.symbolName())
+        found = true;
+      else {
+        // Here we must check to see it this symbol is already in the
+        // SymbolList as it might have already have been added above via a
+        // non-lazy (bind) entry.
+        for (unsigned J = 0; J < SymbolList.size() && !found; ++J) {
+          if (SymbolList[J].Name == Entry.symbolName())
+            found = true;
+        }
+      }
+      if (!found) {
+        LastSymbolName = Entry.symbolName();
+        NMSymbol L = {};
+        L.Name = Entry.symbolName().str();
+        L.Address = 0;
+        L.Size = 0;
+        L.TypeChar = 'U';
+        // There is no symbol in the nlist symbol table for this so we set
+        // Sym effectivly to null and the rest of code in here must test for
+        // it and not do things like Sym.getFlags() for it.
+        L.Sym = BasicSymbolRef();
+        L.SymFlags = SymbolRef::SF_Global | SymbolRef::SF_Undefined;
+        L.NType = MachO::N_EXT | MachO::N_UNDF;
+        L.NSect = 0;
+        // The REFERENCE_FLAG_UNDEFINED_LAZY is no longer used but here it
+        // makes sence since we are creating this from a lazy bind entry.
+        L.NDesc = MachO::REFERENCE_FLAG_UNDEFINED_LAZY;
+        MachO::SET_LIBRARY_ORDINAL(L.NDesc, Entry.ordinal());
+        SymbolList.push_back(L);
+        LOS << Entry.symbolName();
+        LOS << '\0';
+        LazysAdded++;
+      }
+    }
+    if (LErr)
+      error(std::move(LErr), MachO.getFileName());
+    // Set the symbol names and indirect names for the added symbols.
+    if (LazysAdded) {
+      LOS.flush();
+      const char *Q = LazysNameBuffer.c_str();
+      for (unsigned K = 0; K < LazysAdded; K++) {
+        SymbolList[I].Name = Q;
+        Q += strlen(Q) + 1;
+        if (SymbolList[I].TypeChar == 'I') {
+          SymbolList[I].IndirectName = Q;
+          Q += strlen(Q) + 1;
+        }
+        I++;
+      }
+    }
+
+    // Add the undefineds symbol from the weak bind entries which are not
+    // strong symbols.
+    unsigned WeaksAdded = 0;
+    Error WErr = Error::success();
+    LastSymbolName = StringRef();
+    for (const llvm::object::MachOBindEntry &Entry :
+         MachO.weakBindTable(WErr)) {
+      bool found = false;
+      unsigned J = 0;
+      if (LastSymbolName == Entry.symbolName() ||
+          Entry.flags() & MachO::BIND_SYMBOL_FLAGS_NON_WEAK_DEFINITION) {
+        found = true;
+      } else {
+        for (J = 0; J < SymbolList.size() && !found; ++J) {
+          if (SymbolList[J].Name == Entry.symbolName()) {
+            found = true;
+            break;
+          }
+        }
+      }
+      if (!found) {
+        LastSymbolName = Entry.symbolName();
+        NMSymbol W = {};
+        W.Name = Entry.symbolName().str();
+        W.Address = 0;
+        W.Size = 0;
+        W.TypeChar = 'U';
+        // There is no symbol in the nlist symbol table for this so we set
+        // Sym effectivly to null and the rest of code in here must test for
+        // it and not do things like Sym.getFlags() for it.
+        W.Sym = BasicSymbolRef();
+        W.SymFlags = SymbolRef::SF_Global | SymbolRef::SF_Undefined;
+        W.NType = MachO::N_EXT | MachO::N_UNDF;
+        W.NSect = 0;
+        // Odd that we are using N_WEAK_DEF on an undefined symbol but that is
+        // what is created in this case by the linker when there are real
+        // symbols in the nlist structs.
+        W.NDesc = MachO::N_WEAK_DEF;
+        SymbolList.push_back(W);
+        WOS << Entry.symbolName();
+        WOS << '\0';
+        WeaksAdded++;
+      } else {
+        // This is the case the symbol was previously been found and it could
+        // have been added from a bind or lazy bind symbol.  If so and not
+        // a definition also mark it as weak.
+        if (SymbolList[J].TypeChar == 'U')
+          // See comment above about N_WEAK_DEF.
+          SymbolList[J].NDesc |= MachO::N_WEAK_DEF;
+      }
+    }
+    if (WErr)
+      error(std::move(WErr), MachO.getFileName());
+    // Set the symbol names and indirect names for the added symbols.
+    if (WeaksAdded) {
+      WOS.flush();
+      const char *Q = WeaksNameBuffer.c_str();
+      for (unsigned K = 0; K < WeaksAdded; K++) {
+        SymbolList[I].Name = Q;
+        Q += strlen(Q) + 1;
+        if (SymbolList[I].TypeChar == 'I') {
+          SymbolList[I].IndirectName = Q;
+          Q += strlen(Q) + 1;
+        }
+        I++;
+      }
+    }
+
+    // Trying adding symbol from the function starts table and LC_MAIN entry
+    // point.
+    SmallVector<uint64_t, 8> FoundFns;
+    uint64_t lc_main_offset = UINT64_MAX;
+    for (const auto &Command : MachO.load_commands()) {
+      if (Command.C.cmd == MachO::LC_FUNCTION_STARTS) {
+        // We found a function starts segment, parse the addresses for
+        // consumption.
+        MachO::linkedit_data_command LLC =
+            MachO.getLinkeditDataLoadCommand(Command);
+
+        MachO.ReadULEB128s(LLC.dataoff, FoundFns);
+      } else if (Command.C.cmd == MachO::LC_MAIN) {
+        MachO::entry_point_command LCmain = MachO.getEntryPointCommand(Command);
+        lc_main_offset = LCmain.entryoff;
+      }
+    }
+    // See if these addresses are already in the symbol table.
+    unsigned FunctionStartsAdded = 0;
+    for (uint64_t f = 0; f < FoundFns.size(); f++) {
+      bool found = false;
+      for (unsigned J = 0; J < SymbolList.size() && !found; ++J) {
+        if (SymbolList[J].Address == FoundFns[f] + BaseSegmentAddress)
+          found = true;
+      }
+      // See this address is not already in the symbol table fake up an
+      // nlist for it.
+      if (!found) {
+        NMSymbol F = {};
+        F.Name = "<redacted function X>";
+        F.Address = FoundFns[f] + BaseSegmentAddress;
+        F.Size = 0;
+        // There is no symbol in the nlist symbol table for this so we set
+        // Sym effectivly to null and the rest of code in here must test for
+        // it and not do things like Sym.getFlags() for it.
+        F.Sym = BasicSymbolRef();
+        F.SymFlags = 0;
+        F.NType = MachO::N_SECT;
+        F.NSect = 0;
+        StringRef SegmentName = StringRef();
+        StringRef SectionName = StringRef();
+        for (const SectionRef &Section : MachO.sections()) {
+          if (Expected<StringRef> NameOrErr = Section.getName())
+            SectionName = *NameOrErr;
+          else
+            consumeError(NameOrErr.takeError());
+
+          SegmentName =
+              MachO.getSectionFinalSegmentName(Section.getRawDataRefImpl());
+          F.NSect++;
+          if (F.Address >= Section.getAddress() &&
+              F.Address < Section.getAddress() + Section.getSize()) {
+            F.Section = Section;
+            break;
+          }
+        }
+        if (SegmentName == "__TEXT" && SectionName == "__text")
+          F.TypeChar = 't';
+        else if (SegmentName == "__DATA" && SectionName == "__data")
+          F.TypeChar = 'd';
+        else if (SegmentName == "__DATA" && SectionName == "__bss")
+          F.TypeChar = 'b';
+        else
+          F.TypeChar = 's';
+        F.NDesc = 0;
+        SymbolList.push_back(F);
+        if (FoundFns[f] == lc_main_offset)
+          FOS << "<redacted LC_MAIN>";
+        else
+          FOS << "<redacted function " << f << ">";
+        FOS << '\0';
+        FunctionStartsAdded++;
+      }
+    }
+    if (FunctionStartsAdded) {
+      FOS.flush();
+      const char *Q = FunctionStartsNameBuffer.c_str();
+      for (unsigned K = 0; K < FunctionStartsAdded; K++) {
+        SymbolList[I].Name = Q;
+        Q += strlen(Q) + 1;
+        if (SymbolList[I].TypeChar == 'I') {
+          SymbolList[I].IndirectName = Q;
+          Q += strlen(Q) + 1;
+        }
+        I++;
+      }
+    }
+  }
+}
+
 static void dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
                                       StringRef ArchiveName = {},
                                       StringRef ArchitectureName = {}) {
@@ -1302,478 +1769,8 @@ static void dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
   // This is needed if strip(1) -T is run on a binary containing swift
   // language symbols for example.  The option -only-dyldinfo will fake up
   // all symbols from the dyld export trie as well as the bind info.
-  std::string ExportsNameBuffer;
-  raw_string_ostream EOS(ExportsNameBuffer);
-  std::string BindsNameBuffer;
-  raw_string_ostream BOS(BindsNameBuffer);
-  std::string LazysNameBuffer;
-  raw_string_ostream LOS(LazysNameBuffer);
-  std::string WeaksNameBuffer;
-  raw_string_ostream WOS(WeaksNameBuffer);
-  std::string FunctionStartsNameBuffer;
-  raw_string_ostream FOS(FunctionStartsNameBuffer);
-  if (MachO && !NoDyldInfo) {
-    MachO::mach_header H;
-    MachO::mach_header_64 H_64;
-    uint32_t HFlags = 0;
-    if (MachO->is64Bit()) {
-      H_64 = MachO->MachOObjectFile::getHeader64();
-      HFlags = H_64.flags;
-    } else {
-      H = MachO->MachOObjectFile::getHeader();
-      HFlags = H.flags;
-    }
-    uint64_t BaseSegmentAddress = 0;
-    for (const auto &Command : MachO->load_commands()) {
-      if (Command.C.cmd == MachO::LC_SEGMENT) {
-        MachO::segment_command Seg = MachO->getSegmentLoadCommand(Command);
-        if (Seg.fileoff == 0 && Seg.filesize != 0) {
-          BaseSegmentAddress = Seg.vmaddr;
-          break;
-        }
-      } else if (Command.C.cmd == MachO::LC_SEGMENT_64) {
-        MachO::segment_command_64 Seg = MachO->getSegment64LoadCommand(Command);
-        if (Seg.fileoff == 0 && Seg.filesize != 0) {
-          BaseSegmentAddress = Seg.vmaddr;
-          break;
-        }
-      }
-    }
-    if (DyldInfoOnly || AddDyldInfo ||
-        HFlags & MachO::MH_NLIST_OUTOFSYNC_WITH_DYLDINFO) {
-      unsigned ExportsAdded = 0;
-      Error Err = Error::success();
-      for (const llvm::object::ExportEntry &Entry : MachO->exports(Err)) {
-        bool found = false;
-        bool ReExport = false;
-        if (!DyldInfoOnly) {
-          for (const NMSymbol &S : SymbolList)
-            if (S.Address == Entry.address() + BaseSegmentAddress &&
-                S.Name == Entry.name()) {
-              found = true;
-              break;
-            }
-        }
-        if (!found) {
-          NMSymbol S = {};
-          S.Address = Entry.address() + BaseSegmentAddress;
-          S.Size = 0;
-          S.TypeChar = '\0';
-          S.Name = Entry.name();
-          // There is no symbol in the nlist symbol table for this so we set
-          // Sym effectivly to null and the rest of code in here must test for
-          // it and not do things like Sym.getFlags() for it.
-          S.Sym = BasicSymbolRef();
-          S.SymFlags = SymbolRef::SF_Global;
-          S.Section = SectionRef();
-          S.NType = 0;
-          S.NSect = 0;
-          S.NDesc = 0;
-          S.IndirectName = StringRef();
-
-          uint64_t EFlags = Entry.flags();
-          bool Abs = ((EFlags & MachO::EXPORT_SYMBOL_FLAGS_KIND_MASK) ==
-                      MachO::EXPORT_SYMBOL_FLAGS_KIND_ABSOLUTE);
-          bool Resolver = (EFlags &
-                           MachO::EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER);
-          ReExport = (EFlags & MachO::EXPORT_SYMBOL_FLAGS_REEXPORT);
-          bool WeakDef = (EFlags & MachO::EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION);
-          if (WeakDef)
-            S.NDesc |= MachO::N_WEAK_DEF;
-          if (Abs) {
-            S.NType = MachO::N_EXT | MachO::N_ABS;
-            S.TypeChar = 'A';
-          } else if (ReExport) {
-            S.NType = MachO::N_EXT | MachO::N_INDR;
-            S.TypeChar = 'I';
-          } else {
-            S.NType = MachO::N_EXT | MachO::N_SECT;
-            if (Resolver) {
-              S.Address = Entry.other() + BaseSegmentAddress;
-              if ((S.Address & 1) != 0 &&
-                  !MachO->is64Bit() && H.cputype == MachO::CPU_TYPE_ARM){
-                S.Address &= ~1LL;
-                S.NDesc |= MachO::N_ARM_THUMB_DEF;
-              }
-            } else {
-              S.Address = Entry.address() + BaseSegmentAddress;
-            }
-            StringRef SegmentName = StringRef();
-            StringRef SectionName = StringRef();
-            for (const SectionRef &Section : MachO->sections()) {
-              S.NSect++;
- 
-              if (Expected<StringRef> NameOrErr = Section.getName())
-                SectionName = *NameOrErr;
-              else
-                consumeError(NameOrErr.takeError());
-
-              SegmentName = MachO->getSectionFinalSegmentName(
-                                                  Section.getRawDataRefImpl());
-              if (S.Address >= Section.getAddress() &&
-                  S.Address < Section.getAddress() + Section.getSize()) {
-                S.Section = Section;
-                break;
-              } else if (Entry.name() == "__mh_execute_header" &&
-                         SegmentName == "__TEXT" && SectionName == "__text") {
-                S.Section = Section;
-                S.NDesc |= MachO::REFERENCED_DYNAMICALLY;
-                break;
-              }
-            }
-            if (SegmentName == "__TEXT" && SectionName == "__text")
-              S.TypeChar = 'T';
-            else if (SegmentName == "__DATA" && SectionName == "__data")
-              S.TypeChar = 'D';
-            else if (SegmentName == "__DATA" && SectionName == "__bss")
-              S.TypeChar = 'B';
-            else
-              S.TypeChar = 'S';
-          }
-          SymbolList.push_back(S);
-
-          EOS << Entry.name();
-          EOS << '\0';
-          ExportsAdded++;
-
-          // For ReExports there are a two more things to do, first add the
-          // indirect name and second create the undefined symbol using the
-          // referened dynamic library.
-          if (ReExport) {
-
-            // Add the indirect name.
-            if (Entry.otherName().empty())
-              EOS << Entry.name();
-            else
-              EOS << Entry.otherName();
-            EOS << '\0';
-
-            // Now create the undefined symbol using the referened dynamic
-            // library.
-            NMSymbol U = {};
-            U.Address = 0;
-            U.Size = 0;
-            U.TypeChar = 'U';
-            if (Entry.otherName().empty())
-              U.Name = Entry.name();
-            else
-              U.Name = Entry.otherName();
-            // Again there is no symbol in the nlist symbol table for this so
-            // we set Sym effectivly to null and the rest of code in here must
-            // test for it and not do things like Sym.getFlags() for it.
-            U.Sym = BasicSymbolRef();
-            U.SymFlags = SymbolRef::SF_Global | SymbolRef::SF_Undefined;
-            U.Section = SectionRef();
-            U.NType = MachO::N_EXT | MachO::N_UNDF;
-            U.NSect = 0;
-            U.NDesc = 0;
-            // The library ordinal for this undefined symbol is in the export
-            // trie Entry.other().
-            MachO::SET_LIBRARY_ORDINAL(U.NDesc, Entry.other());
-            U.IndirectName = StringRef();
-            SymbolList.push_back(U);
-
-            // Finally add the undefined symbol's name.
-            if (Entry.otherName().empty())
-              EOS << Entry.name();
-            else
-              EOS << Entry.otherName();
-            EOS << '\0';
-            ExportsAdded++;
-          }
-        }
-      }
-      if (Err)
-        error(std::move(Err), MachO->getFileName());
-      // Set the symbol names and indirect names for the added symbols.
-      if (ExportsAdded) {
-        EOS.flush();
-        const char *Q = ExportsNameBuffer.c_str();
-        for (unsigned K = 0; K < ExportsAdded; K++) {
-          SymbolList[I].Name = Q;
-          Q += strlen(Q) + 1;
-          if (SymbolList[I].TypeChar == 'I') {
-            SymbolList[I].IndirectName = Q;
-            Q += strlen(Q) + 1;
-          }
-          I++;
-        }
-      }
-
-      // Add the undefined symbols from the bind entries.
-      unsigned BindsAdded = 0;
-      Error BErr = Error::success();
-      StringRef LastSymbolName = StringRef();
-      for (const llvm::object::MachOBindEntry &Entry : MachO->bindTable(BErr)) {
-        bool found = false;
-        if (LastSymbolName == Entry.symbolName())
-          found = true;
-        else if(!DyldInfoOnly) {
-          for (unsigned J = 0; J < SymbolList.size() && !found; ++J) {
-            if (SymbolList[J].Name == Entry.symbolName())
-              found = true;
-          }
-        }
-        if (!found) {
-          LastSymbolName = Entry.symbolName();
-          NMSymbol B = {};
-          B.Address = 0;
-          B.Size = 0;
-          B.TypeChar = 'U';
-          // There is no symbol in the nlist symbol table for this so we set
-          // Sym effectivly to null and the rest of code in here must test for
-          // it and not do things like Sym.getFlags() for it.
-          B.Sym = BasicSymbolRef();
-          B.SymFlags = SymbolRef::SF_Global | SymbolRef::SF_Undefined;
-          B.NType = MachO::N_EXT | MachO::N_UNDF;
-          B.NSect = 0;
-          B.NDesc = 0;
-          MachO::SET_LIBRARY_ORDINAL(B.NDesc, Entry.ordinal());
-          B.IndirectName = StringRef();
-          B.Name = Entry.symbolName();
-          SymbolList.push_back(B);
-          BOS << Entry.symbolName();
-          BOS << '\0';
-          BindsAdded++;
-        }
-      }
-      if (BErr)
-        error(std::move(BErr), MachO->getFileName());
-      // Set the symbol names and indirect names for the added symbols.
-      if (BindsAdded) {
-        BOS.flush();
-        const char *Q = BindsNameBuffer.c_str();
-        for (unsigned K = 0; K < BindsAdded; K++) {
-          SymbolList[I].Name = Q;
-          Q += strlen(Q) + 1;
-          if (SymbolList[I].TypeChar == 'I') {
-            SymbolList[I].IndirectName = Q;
-            Q += strlen(Q) + 1;
-          }
-          I++;
-        }
-      }
-
-      // Add the undefined symbols from the lazy bind entries.
-      unsigned LazysAdded = 0;
-      Error LErr = Error::success();
-      LastSymbolName = StringRef();
-      for (const llvm::object::MachOBindEntry &Entry :
-           MachO->lazyBindTable(LErr)) {
-        bool found = false;
-        if (LastSymbolName == Entry.symbolName())
-          found = true;
-        else {
-          // Here we must check to see it this symbol is already in the
-          // SymbolList as it might have already have been added above via a
-          // non-lazy (bind) entry.
-          for (unsigned J = 0; J < SymbolList.size() && !found; ++J) {
-            if (SymbolList[J].Name == Entry.symbolName())
-              found = true;
-          }
-        }
-        if (!found) {
-          LastSymbolName = Entry.symbolName();
-          NMSymbol L = {};
-          L.Name = Entry.symbolName();
-          L.Address = 0;
-          L.Size = 0;
-          L.TypeChar = 'U';
-          // There is no symbol in the nlist symbol table for this so we set
-          // Sym effectivly to null and the rest of code in here must test for
-          // it and not do things like Sym.getFlags() for it.
-          L.Sym = BasicSymbolRef();
-          L.SymFlags = SymbolRef::SF_Global | SymbolRef::SF_Undefined;
-          L.NType = MachO::N_EXT | MachO::N_UNDF;
-          L.NSect = 0;
-          // The REFERENCE_FLAG_UNDEFINED_LAZY is no longer used but here it
-          // makes sence since we are creating this from a lazy bind entry.
-          L.NDesc = MachO::REFERENCE_FLAG_UNDEFINED_LAZY;
-          MachO::SET_LIBRARY_ORDINAL(L.NDesc, Entry.ordinal());
-          L.IndirectName = StringRef();
-          SymbolList.push_back(L);
-          LOS << Entry.symbolName();
-          LOS << '\0';
-          LazysAdded++;
-        }
-      }
-      if (LErr)
-        error(std::move(LErr), MachO->getFileName());
-      // Set the symbol names and indirect names for the added symbols.
-      if (LazysAdded) {
-        LOS.flush();
-        const char *Q = LazysNameBuffer.c_str();
-        for (unsigned K = 0; K < LazysAdded; K++) {
-          SymbolList[I].Name = Q;
-          Q += strlen(Q) + 1;
-          if (SymbolList[I].TypeChar == 'I') {
-            SymbolList[I].IndirectName = Q;
-            Q += strlen(Q) + 1;
-          }
-          I++;
-        }
-      }
-
-      // Add the undefineds symbol from the weak bind entries which are not
-      // strong symbols.
-      unsigned WeaksAdded = 0;
-      Error WErr = Error::success();
-      LastSymbolName = StringRef();
-      for (const llvm::object::MachOBindEntry &Entry :
-           MachO->weakBindTable(WErr)) {
-        bool found = false;
-        unsigned J = 0;
-        if (LastSymbolName == Entry.symbolName() ||
-            Entry.flags() & MachO::BIND_SYMBOL_FLAGS_NON_WEAK_DEFINITION) {
-          found = true;
-        } else {
-          for (J = 0; J < SymbolList.size() && !found; ++J) {
-            if (SymbolList[J].Name == Entry.symbolName()) {
-               found = true;
-               break;
-            }
-          }
-        }
-        if (!found) {
-          LastSymbolName = Entry.symbolName();
-          NMSymbol W = {};
-          W.Name = Entry.symbolName();
-          W.Address = 0;
-          W.Size = 0;
-          W.TypeChar = 'U';
-          // There is no symbol in the nlist symbol table for this so we set
-          // Sym effectivly to null and the rest of code in here must test for
-          // it and not do things like Sym.getFlags() for it.
-          W.Sym = BasicSymbolRef();
-          W.SymFlags = SymbolRef::SF_Global | SymbolRef::SF_Undefined;
-          W.NType = MachO::N_EXT | MachO::N_UNDF;
-          W.NSect = 0;
-          // Odd that we are using N_WEAK_DEF on an undefined symbol but that is
-          // what is created in this case by the linker when there are real
-          // symbols in the nlist structs.
-          W.NDesc = MachO::N_WEAK_DEF;
-          W.IndirectName = StringRef();
-          SymbolList.push_back(W);
-          WOS << Entry.symbolName();
-          WOS << '\0';
-          WeaksAdded++;
-        } else {
-          // This is the case the symbol was previously been found and it could
-          // have been added from a bind or lazy bind symbol.  If so and not
-          // a definition also mark it as weak.
-          if (SymbolList[J].TypeChar == 'U')
-            // See comment above about N_WEAK_DEF.
-            SymbolList[J].NDesc |= MachO::N_WEAK_DEF;
-        }
-      }
-      if (WErr)
-        error(std::move(WErr), MachO->getFileName());
-      // Set the symbol names and indirect names for the added symbols.
-      if (WeaksAdded) {
-        WOS.flush();
-        const char *Q = WeaksNameBuffer.c_str();
-        for (unsigned K = 0; K < WeaksAdded; K++) {
-          SymbolList[I].Name = Q;
-          Q += strlen(Q) + 1;
-          if (SymbolList[I].TypeChar == 'I') {
-            SymbolList[I].IndirectName = Q;
-            Q += strlen(Q) + 1;
-          }
-          I++;
-        }
-      }
-
-      // Trying adding symbol from the function starts table and LC_MAIN entry
-      // point.
-      SmallVector<uint64_t, 8> FoundFns;
-      uint64_t lc_main_offset = UINT64_MAX;
-      for (const auto &Command : MachO->load_commands()) {
-        if (Command.C.cmd == MachO::LC_FUNCTION_STARTS) {
-          // We found a function starts segment, parse the addresses for
-          // consumption.
-          MachO::linkedit_data_command LLC =
-            MachO->getLinkeditDataLoadCommand(Command);
-
-          MachO->ReadULEB128s(LLC.dataoff, FoundFns);
-        } else if (Command.C.cmd == MachO::LC_MAIN) {
-          MachO::entry_point_command LCmain =
-            MachO->getEntryPointCommand(Command);
-          lc_main_offset = LCmain.entryoff;
-        }
-      }
-      // See if these addresses are already in the symbol table.
-      unsigned FunctionStartsAdded = 0;
-      for (uint64_t f = 0; f < FoundFns.size(); f++) {
-        bool found = false;
-        for (unsigned J = 0; J < SymbolList.size() && !found; ++J) {
-          if (SymbolList[J].Address == FoundFns[f] + BaseSegmentAddress)
-            found = true;
-        }
-        // See this address is not already in the symbol table fake up an
-        // nlist for it.
-        if (!found) {
-          NMSymbol F = {};
-          F.Name = "<redacted function X>";
-          F.Address = FoundFns[f] + BaseSegmentAddress;
-          F.Size = 0;
-          // There is no symbol in the nlist symbol table for this so we set
-          // Sym effectivly to null and the rest of code in here must test for
-          // it and not do things like Sym.getFlags() for it.
-          F.Sym = BasicSymbolRef();
-          F.SymFlags = 0;
-          F.NType = MachO::N_SECT;
-          F.NSect = 0;
-          StringRef SegmentName = StringRef();
-          StringRef SectionName = StringRef();
-          for (const SectionRef &Section : MachO->sections()) {
-            if (Expected<StringRef> NameOrErr = Section.getName())
-              SectionName = *NameOrErr;
-            else
-              consumeError(NameOrErr.takeError());
-
-            SegmentName = MachO->getSectionFinalSegmentName(
-                                                Section.getRawDataRefImpl());
-            F.NSect++;
-            if (F.Address >= Section.getAddress() &&
-                F.Address < Section.getAddress() + Section.getSize()) {
-              F.Section = Section;
-              break;
-            }
-          }
-          if (SegmentName == "__TEXT" && SectionName == "__text")
-            F.TypeChar = 't';
-          else if (SegmentName == "__DATA" && SectionName == "__data")
-            F.TypeChar = 'd';
-          else if (SegmentName == "__DATA" && SectionName == "__bss")
-            F.TypeChar = 'b';
-          else
-            F.TypeChar = 's';
-          F.NDesc = 0;
-          F.IndirectName = StringRef();
-          SymbolList.push_back(F);
-          if (FoundFns[f] == lc_main_offset)
-            FOS << "<redacted LC_MAIN>";
-          else
-            FOS << "<redacted function " << f << ">";
-          FOS << '\0';
-          FunctionStartsAdded++;
-        }
-      }
-      if (FunctionStartsAdded) {
-        FOS.flush();
-        const char *Q = FunctionStartsNameBuffer.c_str();
-        for (unsigned K = 0; K < FunctionStartsAdded; K++) {
-          SymbolList[I].Name = Q;
-          Q += strlen(Q) + 1;
-          if (SymbolList[I].TypeChar == 'I') {
-            SymbolList[I].IndirectName = Q;
-            Q += strlen(Q) + 1;
-          }
-          I++;
-        }
-      }
-    }
-  }
+  if (MachO && !NoDyldInfo)
+    dumpSymbolsFromDLInfoMachO(*MachO);
 
   CurrentFilename = Obj.getFileName();
 
