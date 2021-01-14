@@ -198,13 +198,14 @@ public:
     // Allocator::disable calling GWPASan.disable). Disable GWP-ASan's atfork
     // handler.
     Opt.InstallForkHandlers = false;
-    Opt.Backtrace = gwp_asan::options::getBacktraceFunction();
+    Opt.Backtrace = gwp_asan::backtrace::getBacktraceFunction();
     GuardedAlloc.init(Opt);
 
     if (Opt.InstallSignalHandlers)
-      gwp_asan::crash_handler::installSignalHandlers(
-          &GuardedAlloc, Printf, gwp_asan::options::getPrintBacktraceFunction(),
-          gwp_asan::crash_handler::getSegvBacktraceFunction());
+      gwp_asan::segv_handler::installSignalHandlers(
+          &GuardedAlloc, Printf,
+          gwp_asan::backtrace::getPrintBacktraceFunction(),
+          gwp_asan::backtrace::getSegvBacktraceFunction());
 #endif // GWP_ASAN_HOOKS
   }
 
@@ -219,7 +220,7 @@ public:
     Primary.unmapTestOnly();
 #ifdef GWP_ASAN_HOOKS
     if (getFlags()->GWP_ASAN_InstallSignalHandlers)
-      gwp_asan::crash_handler::uninstallSignalHandlers();
+      gwp_asan::segv_handler::uninstallSignalHandlers();
     GuardedAlloc.uninitTestOnly();
 #endif // GWP_ASAN_HOOKS
   }
