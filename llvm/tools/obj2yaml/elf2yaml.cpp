@@ -187,7 +187,7 @@ bool ELFDumper<ELFT>::shouldPrintSection(const ELFYAML::Section &S,
   if (S.Type == ELF::SHT_NULL && (&SHdr == &Sections[0])) {
     const uint8_t *Begin = reinterpret_cast<const uint8_t *>(&SHdr);
     const uint8_t *End = Begin + sizeof(Elf_Shdr);
-    return std::find_if(Begin, End, [](uint8_t V) { return V != 0; }) != End;
+    return std::any_of(Begin, End, [](uint8_t V) { return V != 0; });
   }
 
   // Normally we use "DWARF:" to describe contents of DWARF sections. Sometimes
