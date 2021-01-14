@@ -181,6 +181,13 @@ public:
                            bool &is_complex) override;
   bool IsIntegerType(lldb::opaque_compiler_type_t type,
                      bool &is_signed) override;
+  bool IsScopedEnumerationType(lldb::opaque_compiler_type_t type) override {
+    return false;
+  }
+  CompilerType
+  GetEnumerationIntegerType(lldb::opaque_compiler_type_t type) override {
+    return {};
+  }
   bool IsScalarType(lldb::opaque_compiler_type_t type) override;
   bool IsCStringType(lldb::opaque_compiler_type_t type,
                      uint32_t &length) override {
