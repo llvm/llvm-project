@@ -689,8 +689,10 @@ Init *UnOpInit::Fold(Record *CurRec, bool IsFinal) const {
       if (DefInit *LHSd = dyn_cast<DefInit>(LHS))
         return StringInit::get(LHSd->getAsString());
 
-      if (IntInit *LHSi = dyn_cast<IntInit>(LHS))
+      if (IntInit *LHSi =
+              dyn_cast_or_null<IntInit>(LHS->convertInitializerTo(IntRecTy::get())))
         return StringInit::get(LHSi->getAsString());
+
     } else if (isa<RecordRecTy>(getType())) {
       if (StringInit *Name = dyn_cast<StringInit>(LHS)) {
         if (!CurRec && !IsFinal)
