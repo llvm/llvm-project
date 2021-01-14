@@ -359,8 +359,7 @@ using DwarfRegNumsVecTy = std::vector<DwarfRegNumsMapPair>;
 static void finalizeDwarfRegNumsKeys(DwarfRegNumsVecTy &DwarfRegNums) {
   // Sort and unique to get a map-like vector. We want the last assignment to
   // match previous behaviour.
-  std::stable_sort(DwarfRegNums.begin(), DwarfRegNums.end(),
-                   on_first<LessRecordRegister>());
+  llvm::stable_sort(DwarfRegNums, on_first<LessRecordRegister>());
   // Warn about duplicate assignments.
   const Record *LastSeenReg = nullptr;
   for (const auto &X : DwarfRegNums) {
