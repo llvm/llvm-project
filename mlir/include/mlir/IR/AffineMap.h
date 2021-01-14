@@ -327,6 +327,21 @@ AffineMap inversePermutation(AffineMap map);
 /// ```
 AffineMap concatAffineMaps(ArrayRef<AffineMap> maps);
 
+/// Returns the map that results from projecting out the dimensions specified in
+/// `projectedDimensions`. The projected dimensions are set to 0.
+///
+/// Example:
+/// 1) map                  : affine_map<(d0, d1, d2) -> (d0, d1)>
+///    projected_dimensions : {2}
+///    result               : affine_map<(d0, d1) -> (d0, d1)>
+///
+/// 2) map                  : affine_map<(d0, d1) -> (d0 + d1)>
+///    projected_dimensions : {1}
+///    result               : affine_map<(d0) -> (d0)>
+///
+/// 3) map                  : affine_map<(d0, d1, d2) -> (d0, d1)>
+///    projected_dimensions : {1}
+///    result               : affine_map<(d0, d1) -> (d0, 0)>
 AffineMap getProjectedMap(AffineMap map,
                           ArrayRef<unsigned> projectedDimensions);
 
