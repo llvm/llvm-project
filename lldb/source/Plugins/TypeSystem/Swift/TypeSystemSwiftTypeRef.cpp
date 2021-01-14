@@ -431,7 +431,6 @@ swift::Demangle::NodePointer TypeSystemSwiftTypeRef::Transform(
   for (NodePointer child : *node) {
     NodePointer transformed = Transform(dem, child, fn);
     changed |= (child != transformed);
-    assert(transformed && "callback returned a nullptr");
     if (transformed)
       children.push_back(transformed);
   }
@@ -1422,7 +1421,19 @@ static bool ContainsSugaredParen(swift::Demangle::NodePointer node) {
 
   return false;
 }
-  
+
+swift::Demangle::NodePointer
+StripPrivateDeclNames(swift::Demangle::Demangler &dem,
+                      swift::Demangle::NodePointer node) {
+  using namespace swift::Demangle;
+  return TypeSystemSwiftTypeRef::Transform(
+      dem, node, [&](NodePointer node) -> NodePointer {
+        if (node->getKind() == Node::Kind::PrivateDeclName)
+          return nullptr;
+        return node;
+      });
+}
+
 /// Compare two swift types from different type systems by comparing their
 /// (canonicalized) mangled name.
 template <> bool Equivalent<CompilerType>(CompilerType l, CompilerType r) {
@@ -1443,10 +1454,10 @@ template <> bool Equivalent<CompilerType>(CompilerType l, CompilerType r) {
   if (ContainsUnresolvedTypeAlias(r_node) ||
       ContainsGenericTypeParameter(r_node) || ContainsSugaredParen(r_node))
     return true;
-  if (swift::Demangle::mangleNode(
-          TypeSystemSwiftTypeRef::CanonicalizeSugar(dem, l_node)) ==
-      swift::Demangle::mangleNode(
-          TypeSystemSwiftTypeRef::CanonicalizeSugar(dem, r_node)))
+  if (swift::Demangle::mangleNode(StripPrivateDeclNames(
+          dem, TypeSystemSwiftTypeRef::CanonicalizeSugar(dem, l_node))) ==
+      swift::Demangle::mangleNode(StripPrivateDeclNames(
+          dem, TypeSystemSwiftTypeRef::CanonicalizeSugar(dem, r_node))))
     return true;
 
   // SwiftASTContext hardcodes some less-precise types.
