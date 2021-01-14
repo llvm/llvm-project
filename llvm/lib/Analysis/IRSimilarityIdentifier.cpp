@@ -402,7 +402,7 @@ static bool checkNumberingAndReplaceCommutative(
     DenseSet<unsigned> NewSet;
     for (unsigned &Curr : ValueMappingIt->second)
       // If we can find the value in the mapping, we add it to the new set.
-      if (TargetValueNumbers.find(Curr) != TargetValueNumbers.end())
+      if (TargetValueNumbers.contains(Curr))
         NewSet.insert(Curr);
 
     // If we could not find a Value, return 0.
