@@ -85,6 +85,8 @@ enum NodeType : unsigned {
   // Splats an i64 scalar to a vector type (with element type i64) where the
   // scalar is a sign-extended i32.
   SPLAT_VECTOR_I64,
+  // Read VLENB CSR
+  READ_VLENB,
 };
 } // namespace RISCVISD
 
@@ -123,6 +125,11 @@ public:
 
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
 
+  void computeKnownBitsForTargetNode(const SDValue Op,
+                                     KnownBits &Known,
+                                     const APInt &DemandedElts,
+                                     const SelectionDAG &DAG,
+                                     unsigned Depth) const override;
   unsigned ComputeNumSignBitsForTargetNode(SDValue Op,
                                            const APInt &DemandedElts,
                                            const SelectionDAG &DAG,
