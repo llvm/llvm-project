@@ -341,10 +341,10 @@ TEST(ParsedASTTest, CollectsMainFileMacroExpansions) {
   std::vector<Position> MacroExpansionPositions;
   for (const auto &SIDToRefs : AST.getMacros().MacroRefs) {
     for (const auto &R : SIDToRefs.second)
-      MacroExpansionPositions.push_back(R.start);
+      MacroExpansionPositions.push_back(R.Rng.start);
   }
   for (const auto &R : AST.getMacros().UnknownMacros)
-    MacroExpansionPositions.push_back(R.start);
+    MacroExpansionPositions.push_back(R.Rng.start);
   EXPECT_THAT(MacroExpansionPositions,
               testing::UnorderedElementsAreArray(TestCase.points()));
 }

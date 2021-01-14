@@ -991,7 +991,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     setPGOUseInstrumentor(Opts, Opts.ProfileInstrumentUsePath);
 
   Opts.CodeModel = TargetOpts.CodeModel;
-  Opts.Dwarf64 = Args.hasArg(OPT_gdwarf64);
 
   if (const Arg *A = Args.getLastArg(OPT_ftime_report, OPT_ftime_report_EQ)) {
     Opts.TimePasses = true;
@@ -1051,14 +1050,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     Opts.MemoryProfileOutput = MemProfileBasename;
 
   if (Opts.EmitGcovArcs || Opts.EmitGcovNotes) {
-    Opts.CoverageDataFile =
-        std::string(Args.getLastArgValue(OPT_coverage_data_file));
-    Opts.CoverageNotesFile =
-        std::string(Args.getLastArgValue(OPT_coverage_notes_file));
-    Opts.ProfileFilterFiles =
-        std::string(Args.getLastArgValue(OPT_fprofile_filter_files_EQ));
-    Opts.ProfileExcludeFiles =
-        std::string(Args.getLastArgValue(OPT_fprofile_exclude_files_EQ));
     if (Args.hasArg(OPT_coverage_version_EQ)) {
       StringRef CoverageVersion = Args.getLastArgValue(OPT_coverage_version_EQ);
       if (CoverageVersion.size() != 4) {
@@ -1091,11 +1082,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     }
   }
 
-  Opts.XRayTotalFunctionGroups =
-      getLastArgIntValue(Args, OPT_fxray_function_groups, 1, Diags);
-  Opts.XRaySelectedFunctionGroup =
-      getLastArgIntValue(Args, OPT_fxray_selected_function_group, 0, Diags);
-
   auto XRayInstrBundles =
       Args.getAllArgValues(OPT_fxray_instrumentation_bundle);
   if (XRayInstrBundles.empty())
@@ -1120,15 +1106,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     }
   }
 
-  if (const Arg *A = Args.getLastArg(OPT_compress_debug_sections_EQ)) {
-    auto DCT = llvm::StringSwitch<llvm::DebugCompressionType>(A->getValue())
-                   .Case("none", llvm::DebugCompressionType::None)
-                   .Case("zlib", llvm::DebugCompressionType::Z)
-                   .Case("zlib-gnu", llvm::DebugCompressionType::GNU)
-                   .Default(llvm::DebugCompressionType::None);
-    Opts.setCompressDebugSections(DCT);
-  }
-
   for (auto *A :
        Args.filtered(OPT_mlink_bitcode_file, OPT_mlink_builtin_bitcode)) {
     CodeGenOptions::BitcodeFileToLink F;
@@ -1142,29 +1119,10 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     }
     Opts.LinkBitcodeFiles.push_back(F);
   }
-  Opts.SSPBufferSize =
-      getLastArgIntValue(Args, OPT_stack_protector_buffer_size, 8, Diags);
-
-  Opts.StackProtectorGuard =
-      std::string(Args.getLastArgValue(OPT_mstack_protector_guard_EQ));
-
-  if (Arg *A = Args.getLastArg(OPT_mstack_protector_guard_offset_EQ)) {
-    StringRef Val = A->getValue();
-    unsigned Offset = Opts.StackProtectorGuardOffset;
-    Val.getAsInteger(10, Offset);
-    Opts.StackProtectorGuardOffset = Offset;
-  }
-
-  Opts.StackProtectorGuardReg =
-      std::string(Args.getLastArgValue(OPT_mstack_protector_guard_reg_EQ,
-                                       "none"));
-
 
   if (Args.getLastArg(OPT_femulated_tls) ||
       Args.getLastArg(OPT_fno_emulated_tls)) {
     Opts.ExplicitEmulatedTLS = true;
-    Opts.EmulatedTLS =
-        Args.hasFlag(OPT_femulated_tls, OPT_fno_emulated_tls, false);
   }
 
   if (Arg *A = Args.getLastArg(OPT_fdenormal_fp_math_EQ)) {

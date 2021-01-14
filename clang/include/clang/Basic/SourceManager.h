@@ -287,7 +287,7 @@ class FileInfo {
   /// The location of the \#include that brought in this file.
   ///
   /// This is an invalid SLOC for the main file (top of the \#include chain).
-  unsigned IncludeLoc; // Really a SourceLocation
+  SourceLocation IncludeLoc;
 
   /// Number of FileIDs (files and macros) that were created during
   /// preprocessing of this \#include, including this SLocEntry.
@@ -307,7 +307,7 @@ public:
   static FileInfo get(SourceLocation IL, ContentCache &Con,
                       CharacteristicKind FileCharacter, StringRef Filename) {
     FileInfo X;
-    X.IncludeLoc = IL.getRawEncoding();
+    X.IncludeLoc = IL;
     X.NumCreatedFIDs = 0;
     X.HasLineDirectives = false;
     X.ContentAndKind.setPointer(&Con);
@@ -317,7 +317,7 @@ public:
   }
 
   SourceLocation getIncludeLoc() const {
-    return SourceLocation::getFromRawEncoding(IncludeLoc);
+    return IncludeLoc;
   }
 
   const ContentCache &getContentCache() const {
@@ -348,7 +348,7 @@ class ExpansionInfo {
   // Really these are all SourceLocations.
 
   /// Where the spelling for the token can be found.
-  unsigned SpellingLoc;
+  SourceLocation SpellingLoc;
 
   /// In a macro expansion, ExpansionLocStart and ExpansionLocEnd
   /// indicate the start and end of the expansion. In object-like macros,
@@ -356,24 +356,23 @@ class ExpansionInfo {
   /// will be the identifier and the end will be the ')'. Finally, in
   /// macro-argument instantiations, the end will be 'SourceLocation()', an
   /// invalid location.
-  unsigned ExpansionLocStart, ExpansionLocEnd;
+  SourceLocation ExpansionLocStart, ExpansionLocEnd;
 
   /// Whether the expansion range is a token range.
   bool ExpansionIsTokenRange;
 
 public:
   SourceLocation getSpellingLoc() const {
-    SourceLocation SpellLoc = SourceLocation::getFromRawEncoding(SpellingLoc);
-    return SpellLoc.isInvalid() ? getExpansionLocStart() : SpellLoc;
+    return SpellingLoc.isInvalid() ? getExpansionLocStart() : SpellingLoc;
   }
 
   SourceLocation getExpansionLocStart() const {
-    return SourceLocation::getFromRawEncoding(ExpansionLocStart);
+    return ExpansionLocStart;
   }
 
   SourceLocation getExpansionLocEnd() const {
-    SourceLocation EndLoc = SourceLocation::getFromRawEncoding(ExpansionLocEnd);
-    return EndLoc.isInvalid() ? getExpansionLocStart() : EndLoc;
+    return ExpansionLocEnd.isInvalid() ? getExpansionLocStart()
+                                       : ExpansionLocEnd;
   }
 
   bool isExpansionTokenRange() const { return ExpansionIsTokenRange; }
@@ -386,13 +385,11 @@ public:
 
   bool isMacroArgExpansion() const {
     // Note that this needs to return false for default constructed objects.
-    return getExpansionLocStart().isValid() &&
-           SourceLocation::getFromRawEncoding(ExpansionLocEnd).isInvalid();
+    return getExpansionLocStart().isValid() && ExpansionLocEnd.isInvalid();
   }
 
   bool isMacroBodyExpansion() const {
-    return getExpansionLocStart().isValid() &&
-           SourceLocation::getFromRawEncoding(ExpansionLocEnd).isValid();
+    return getExpansionLocStart().isValid() && ExpansionLocEnd.isValid();
   }
 
   bool isFunctionMacroExpansion() const {
@@ -410,9 +407,9 @@ public:
                               SourceLocation End,
                               bool ExpansionIsTokenRange = true) {
     ExpansionInfo X;
-    X.SpellingLoc = SpellingLoc.getRawEncoding();
-    X.ExpansionLocStart = Start.getRawEncoding();
-    X.ExpansionLocEnd = End.getRawEncoding();
+    X.SpellingLoc = SpellingLoc;
+    X.ExpansionLocStart = Start;
+    X.ExpansionLocEnd = End;
     X.ExpansionIsTokenRange = ExpansionIsTokenRange;
     return X;
   }
@@ -507,7 +504,7 @@ public:
     SLocEntry E;
     E.Offset = Offset;
     E.IsExpansion = true;
-    E.Expansion = Expansion;
+    new (&E.Expansion) ExpansionInfo(Expansion);
     return E;
   }
 };

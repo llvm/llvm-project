@@ -39,22 +39,24 @@ public:
     FieldDesignator, ArrayDesignator, ArrayRangeDesignator
   };
 private:
+  Designator() {};
+
   DesignatorKind Kind;
 
   struct FieldDesignatorInfo {
     const IdentifierInfo *II;
-    unsigned DotLoc;
-    unsigned NameLoc;
+    SourceLocation DotLoc;
+    SourceLocation NameLoc;
   };
   struct ArrayDesignatorInfo {
     Expr *Index;
-    unsigned LBracketLoc;
-    mutable unsigned  RBracketLoc;
+    SourceLocation LBracketLoc;
+    mutable SourceLocation RBracketLoc;
   };
   struct ArrayRangeDesignatorInfo {
     Expr *Start, *End;
-    unsigned LBracketLoc, EllipsisLoc;
-    mutable unsigned RBracketLoc;
+    SourceLocation LBracketLoc, EllipsisLoc;
+    mutable SourceLocation RBracketLoc;
   };
 
   union {
@@ -77,12 +79,12 @@ public:
 
   SourceLocation getDotLoc() const {
     assert(isFieldDesignator() && "Invalid accessor");
-    return SourceLocation::getFromRawEncoding(FieldInfo.DotLoc);
+    return FieldInfo.DotLoc;
   }
 
   SourceLocation getFieldLoc() const {
     assert(isFieldDesignator() && "Invalid accessor");
-    return SourceLocation::getFromRawEncoding(FieldInfo.NameLoc);
+    return FieldInfo.NameLoc;
   }
 
   Expr *getArrayIndex() const {
@@ -103,32 +105,33 @@ public:
     assert((isArrayDesignator() || isArrayRangeDesignator()) &&
            "Invalid accessor");
     if (isArrayDesignator())
-      return SourceLocation::getFromRawEncoding(ArrayInfo.LBracketLoc);
+      return ArrayInfo.LBracketLoc;
     else
-      return SourceLocation::getFromRawEncoding(ArrayRangeInfo.LBracketLoc);
+      return ArrayRangeInfo.LBracketLoc;
   }
 
   SourceLocation getRBracketLoc() const {
     assert((isArrayDesignator() || isArrayRangeDesignator()) &&
            "Invalid accessor");
     if (isArrayDesignator())
-      return SourceLocation::getFromRawEncoding(ArrayInfo.RBracketLoc);
+      return ArrayInfo.RBracketLoc;
     else
-      return SourceLocation::getFromRawEncoding(ArrayRangeInfo.RBracketLoc);
+      return ArrayRangeInfo.RBracketLoc;
   }
 
   SourceLocation getEllipsisLoc() const {
     assert(isArrayRangeDesignator() && "Invalid accessor");
-    return SourceLocation::getFromRawEncoding(ArrayRangeInfo.EllipsisLoc);
+    return ArrayRangeInfo.EllipsisLoc;
   }
 
   static Designator getField(const IdentifierInfo *II, SourceLocation DotLoc,
                              SourceLocation NameLoc) {
     Designator D;
     D.Kind = FieldDesignator;
+    new (&D.FieldInfo) FieldDesignatorInfo;
     D.FieldInfo.II = II;
-    D.FieldInfo.DotLoc = DotLoc.getRawEncoding();
-    D.FieldInfo.NameLoc = NameLoc.getRawEncoding();
+    D.FieldInfo.DotLoc = DotLoc;
+    D.FieldInfo.NameLoc = NameLoc;
     return D;
   }
 
@@ -136,9 +139,10 @@ public:
                              SourceLocation LBracketLoc) {
     Designator D;
     D.Kind = ArrayDesignator;
+    new (&D.ArrayInfo) ArrayDesignatorInfo;
     D.ArrayInfo.Index = Index;
-    D.ArrayInfo.LBracketLoc = LBracketLoc.getRawEncoding();
-    D.ArrayInfo.RBracketLoc = 0;
+    D.ArrayInfo.LBracketLoc = LBracketLoc;
+    D.ArrayInfo.RBracketLoc = SourceLocation();
     return D;
   }
 
@@ -148,11 +152,12 @@ public:
                                   SourceLocation EllipsisLoc) {
     Designator D;
     D.Kind = ArrayRangeDesignator;
+    new (&D.ArrayRangeInfo) ArrayRangeDesignatorInfo;
     D.ArrayRangeInfo.Start = Start;
     D.ArrayRangeInfo.End = End;
-    D.ArrayRangeInfo.LBracketLoc = LBracketLoc.getRawEncoding();
-    D.ArrayRangeInfo.EllipsisLoc = EllipsisLoc.getRawEncoding();
-    D.ArrayRangeInfo.RBracketLoc = 0;
+    D.ArrayRangeInfo.LBracketLoc = LBracketLoc;
+    D.ArrayRangeInfo.EllipsisLoc = EllipsisLoc;
+    D.ArrayRangeInfo.RBracketLoc = SourceLocation();
     return D;
   }
 
@@ -160,9 +165,9 @@ public:
     assert((isArrayDesignator() || isArrayRangeDesignator()) &&
            "Invalid accessor");
     if (isArrayDesignator())
-      ArrayInfo.RBracketLoc = RBracketLoc.getRawEncoding();
+      ArrayInfo.RBracketLoc = RBracketLoc;
     else
-      ArrayRangeInfo.RBracketLoc = RBracketLoc.getRawEncoding();
+      ArrayRangeInfo.RBracketLoc = RBracketLoc;
   }
 
   /// ClearExprs - Null out any expression references, which prevents
