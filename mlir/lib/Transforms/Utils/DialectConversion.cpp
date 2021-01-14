@@ -1250,6 +1250,21 @@ ConversionPatternRewriter::ConversionPatternRewriter(MLIRContext *ctx)
       impl(new detail::ConversionPatternRewriterImpl(*this)) {}
 ConversionPatternRewriter::~ConversionPatternRewriter() {}
 
+/// PatternRewriter hook for replacing the results of an operation when the
+/// given functor returns true.
+void ConversionPatternRewriter::replaceOpWithIf(
+    Operation *op, ValueRange newValues, bool *allUsesReplaced,
+    llvm::unique_function<bool(OpOperand &) const> functor) {
+  // TODO: To support this we will need to rework a bit of how replacements are
+  // tracked, given that this isn't guranteed to replace all of the uses of an
+  // operation. The main change is that now an operation can be replaced
+  // multiple times, in parts. The current "set" based tracking is mainly useful
+  // for tracking if a replaced operation should be ignored, i.e. if all of the
+  // uses will be replaced.
+  llvm_unreachable(
+      "replaceOpWithIf is currently not supported by DialectConversion");
+}
+
 /// PatternRewriter hook for replacing the results of an operation.
 void ConversionPatternRewriter::replaceOp(Operation *op, ValueRange newValues) {
   LLVM_DEBUG({
