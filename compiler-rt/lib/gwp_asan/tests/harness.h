@@ -21,6 +21,7 @@ using Test = ::testing::Test;
 
 #include "gwp_asan/guarded_pool_allocator.h"
 #include "gwp_asan/optional/backtrace.h"
+#include "gwp_asan/optional/printf.h"
 #include "gwp_asan/optional/segv_handler.h"
 #include "gwp_asan/options.h"
 
@@ -30,7 +31,7 @@ namespace test {
 // their own signal-safe Printf function. In LLVM, we use
 // `optional/printf_sanitizer_common.cpp` which supplies the __sanitizer::Printf
 // for this purpose.
-crash_handler::Printf_t getPrintfFunction();
+Printf_t getPrintfFunction();
 
 // First call returns true, all the following calls return false.
 bool OnlyOnce();
@@ -86,19 +87,19 @@ public:
     gwp_asan::options::Options Opts;
     Opts.setDefaults();
 
-    Opts.Backtrace = gwp_asan::options::getBacktraceFunction();
+    Opts.Backtrace = gwp_asan::backtrace::getBacktraceFunction();
     Opts.InstallForkHandlers = gwp_asan::test::OnlyOnce();
     GPA.init(Opts);
 
-    gwp_asan::crash_handler::installSignalHandlers(
+    gwp_asan::segv_handler::installSignalHandlers(
         &GPA, gwp_asan::test::getPrintfFunction(),
-        gwp_asan::options::getPrintBacktraceFunction(),
-        gwp_asan::crash_handler::getSegvBacktraceFunction());
+        gwp_asan::backtrace::getPrintBacktraceFunction(),
+        gwp_asan::backtrace::getSegvBacktraceFunction());
   }
 
   void TearDown() override {
     GPA.uninitTestOnly();
-    gwp_asan::crash_handler::uninstallSignalHandlers();
+    gwp_asan::segv_handler::uninstallSignalHandlers();
   }
 
 protected:
