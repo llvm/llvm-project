@@ -5520,8 +5520,9 @@ Sema::MarkBaseAndMemberDestructorsReferenced(SourceLocation Location,
 
   // Bases.
   for (const auto &Base : ClassDecl->bases()) {
-    // Bases are always records in a well-formed non-dependent class.
     const RecordType *RT = Base.getType()->getAs<RecordType>();
+    if (!RT)
+      continue;
 
     // Remember direct virtual bases.
     if (Base.isVirtual()) {
