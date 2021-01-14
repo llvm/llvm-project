@@ -107,11 +107,7 @@ Sections:
     Link:    .dynstr
     Info:    0x1
     Entries:
-      - Version:    1
-        Flags:      0
-        VersionNdx: 0
-        Hash:       0
-        Names:
+      - Names:
           - FOO
     ShSize: 1
 DynamicSymbols:
@@ -137,11 +133,7 @@ Sections:
     Link:    .dynstr
     Info:    0x1
     Entries:
-      - Version:    1
-        Flags:      0
-        VersionNdx: 0
-        Hash:       0
-        Names:
+      - Names:
           - FOO
     ShSize: 21
 DynamicSymbols:
@@ -181,11 +173,7 @@ Sections:
     Link:    .strtab
     Info:    0x1
     Entries:
-      - Version:    1
-        Flags:      0
-        VersionNdx: 0
-        Hash:       0
-        Names:
+      - Names:
           - FOO
   - Name: .strtab
     Type: SHT_STRTAB
@@ -213,11 +201,7 @@ Sections:
     Link: .dynstr
     Info: 0x1
     Entries:
-      - Version:    1
-        Flags:      0
-        VersionNdx: 0
-        Hash:       0
-        Names:
+      - Names:
           - FOO
 DynamicSymbols:
   - Name: foo
@@ -266,10 +250,7 @@ Sections:
     Link: .dynstr
     Info: 0x1
     Entries:
-      - Version:    0xfefe
-        Flags:      0
-        VersionNdx: 0
-        Hash:       0
+      - Version: 0xfefe
         Names: []
 DynamicSymbols:
   - Name: foo
