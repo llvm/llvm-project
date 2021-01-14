@@ -554,7 +554,7 @@ static void getCodeExtractorArguments(
 
   // Sort the GVNs, since we now have constants included in the \ref InputGVNs
   // we need to make sure they are in a deterministic order.
-  stable_sort(InputGVNs.begin(), InputGVNs.end());
+  stable_sort(InputGVNs);
 }
 
 /// Look over the inputs and map each input argument to an argument in the
