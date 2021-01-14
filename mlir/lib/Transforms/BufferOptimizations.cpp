@@ -17,6 +17,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/Bufferize.h"
 #include "mlir/Transforms/Passes.h"
+#include "llvm/ADT/SetOperations.h"
 
 using namespace mlir;
 
@@ -453,6 +454,80 @@ public:
       potentialReuseMap.insert(
           std::pair<Value, SmallVector<Value, 4>>(itemA, potReuseVector));
     }
+
+    // The replacedSet contains all values that are going to be replaced.
+    DenseSet<Value> replacedSet;
+    // The currentReuserSet contains all values that are replacing another
+    // value in the current iteration. Note: This is necessary because the
+    // replacing property is not transitive.
+    DenseSet<Value> currentReuserSet;
+    // Fixpoint iteration over the potential reuses.
+    for (;;) {
+      // Clear the currentReuserSet for this iteration.
+      currentReuserSet.clear();
+      // Step 1 of the fixpoint iteration: Choose a value to be replaced for
+      // each value in the potentialReuseMap.
+      for (auto &potReuser : potentialReuseMap) {
+        Value item = potReuser.first;
+        SmallVector<Value, 4> potReuses = potReuser.second;
+
+        // If the current value is replaced already we have to skip it.
+        if (replacedSet.contains(item))
+          continue;
+
+        // Find a value that can be reused. If the value is already in the
+        // currentReuserSet then we have to break. Due to the order of the
+        // values we must not skip it, because it can potentially be replaced in
+        // the next iteration. However, we may skip the value if it is replaced
+        // by another value.
+        for (Value v : potReuses) {
+          if (currentReuserSet.contains(v))
+            break;
+          if (replacedSet.contains(v))
+            continue;
+
+          // Update the actualReuseMap.
+          if (actualReuseMap.count(item))
+            actualReuseMap[item].insert(v);
+          else
+            actualReuseMap.insert(
+                std::pair<Value, DenseSet<Value>>(item, DenseSet<Value>{v}));
+
+          // Join the aliases of the reusee and reuser.
+          llvm::set_union(aliasCache[item], aliasCache[v]);
+
+          // Check if the replaced value already replaces other values and also
+          // add them to the reused set.
+          if (actualReuseMap.count(v)) {
+            actualReuseMap[item].insert(actualReuseMap[v].begin(),
+                                        actualReuseMap[v].end());
+            actualReuseMap.erase(v);
+          }
+
+          Operation *itemLastUse = useRangeMap[item].lastUse;
+          Operation *vLastUse = useRangeMap[v].lastUse;
+          // If itemLastUse and vLast are in different branches set the last use
+          // to the next Postdominator. Otherwise, update the last use to the
+          // last used operation of the replaced value.
+          if (!isUsedBefore(itemLastUse, vLastUse) &&
+              !isUsedBefore(vLastUse, itemLastUse))
+            useRangeMap[item].lastUse =
+                &findCommonDominator(item, ValueSetT{v}, postDominators)
+                     ->front();
+          else
+            useRangeMap[item].lastUse = useRangeMap[v].lastUse;
+
+          currentReuserSet.insert(item);
+          replacedSet.insert(v);
+          break;
+        }
+      }
+
+      // If the currentReuseSet is empty we can terminate the fixpoint
+      // iteration.
+      if (currentReuserSet.empty())
+        break;
+    }
   }
 
 private:
@@ -568,6 +643,9 @@ private:
 
   /// The current postdominance info.
   PostDominanceInfo postDominators;
+
+  /// Maps a value to the set of values that it replaces.
+  llvm::MapVector<Value, DenseSet<Value>> actualReuseMap;
 };
 
 //===----------------------------------------------------------------------===//
