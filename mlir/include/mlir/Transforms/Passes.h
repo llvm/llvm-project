@@ -52,6 +52,9 @@ createPromoteBuffersToStackPass(unsigned maxAllocSizeInBytes = 1024,
 /// tensor_load and tensor_to_memref operations.
 std::unique_ptr<FunctionPass> createFinalizingBufferizePass();
 
+/// Creates a pass that reuses buffers which are already allocated.
+std::unique_ptr<Pass> createBufferReusePass();
+
 /// Creates a pass that converts memref function results to out-params.
 std::unique_ptr<Pass> createBufferResultsToOutParamsPass();
 
