@@ -40,11 +40,11 @@ func @rectangular(%arg0: memref<?x?xf32>) {
  scf.for %i = %c2 to %c44 step %c1 {
     // Upper bound for the inner loop min(%i + %step, %c44).
     // COMMON:      %[[stepped:.*]] = addi %[[i]], %[[step]]
-    // COMMON-NEXT: cmpi "slt", %c44, %[[stepped]]
+    // COMMON-NEXT: cmpi slt, %c44, %[[stepped]]
     // COMMON-NEXT: %[[ub:.*]] = select {{.*}}, %c44, %[[stepped]]
     //
     // TILE_74:      %[[stepped2:.*]] = addi %[[j]], %[[step2]]
-    // TILE_74-NEXT: cmpi "slt", %c44, %[[stepped2]]
+    // TILE_74-NEXT: cmpi slt, %c44, %[[stepped2]]
     // TILE_74-NEXT: %[[ub2:.*]] = select {{.*}}, %c44, %[[stepped2]]
 
     // Created inner scf.
@@ -108,10 +108,10 @@ func @triangular(%arg0: memref<?x?xf32>) {
  scf.for %i = %c2 to %c44 step %c1 {
     // Upper bound for the inner loop min(%i + %step, %c44).
     // COMMON:      %[[stepped:.*]] = addi %[[i]], %[[step]]
-    // COMMON-NEXT: cmpi "slt", %c44, %[[stepped]]
+    // COMMON-NEXT: cmpi slt, %c44, %[[stepped]]
     // COMMON-NEXT: %[[ub:.*]] = select {{.*}}, %c44, %[[stepped]]
     // TILE_74:      %[[stepped2:.*]] = addi %[[j]], %[[step2]]
-    // TILE_74-NEXT: cmpi "slt", %[[i]], %[[stepped2]]
+    // TILE_74-NEXT: cmpi slt, %[[i]], %[[stepped2]]
     // TILE_74-NEXT: %[[ub2:.*]] = select {{.*}}, %[[i]], %[[stepped2]]
     //
     // Created inner scf.

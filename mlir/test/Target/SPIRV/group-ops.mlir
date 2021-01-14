@@ -9,14 +9,14 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   }
   // CHECK-LABEL: @group_broadcast_1
   spv.func @group_broadcast_1(%value: f32, %localid: i32 ) -> f32 "None" {
-    // CHECK: spv.GroupBroadcast "Workgroup" %{{.*}}, %{{.*}} : f32, i32
-    %0 = spv.GroupBroadcast "Workgroup" %value, %localid : f32, i32
+    // CHECK: spv.GroupBroadcast Workgroup %{{.*}}, %{{.*}} : f32, i32
+    %0 = spv.GroupBroadcast Workgroup %value, %localid : f32, i32
     spv.ReturnValue %0: f32
   }
   // CHECK-LABEL: @group_broadcast_2
   spv.func @group_broadcast_2(%value: f32, %localid: vector<3xi32> ) -> f32 "None" {
-    // CHECK: spv.GroupBroadcast "Workgroup" %{{.*}}, %{{.*}} : f32, vector<3xi32>
-    %0 = spv.GroupBroadcast "Workgroup" %value, %localid : f32, vector<3xi32>
+    // CHECK: spv.GroupBroadcast Workgroup %{{.*}}, %{{.*}} : f32, vector<3xi32>
+    %0 = spv.GroupBroadcast Workgroup %value, %localid : f32, vector<3xi32>
     spv.ReturnValue %0: f32
   }
   // CHECK-LABEL: @subgroup_block_read_intel

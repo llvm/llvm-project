@@ -803,10 +803,10 @@ func @genbool_var_1d(%arg0: index) -> vector<3xi1> {
 // CHECK:      %[[c0:.*]] = constant 0 : index
 // CHECK:      %[[c1:.*]] = constant 1 : index
 // CHECK:      %[[T0:.*]] = vector.create_mask %[[B]] : vector<3xi1>
-// CHECK:      %[[T1:.*]] = cmpi "slt", %[[c0]], %[[A]] : index
+// CHECK:      %[[T1:.*]] = cmpi slt, %[[c0]], %[[A]] : index
 // CHECK:      %[[T2:.*]] = select %[[T1]], %[[T0]], %[[C1]] : vector<3xi1>
 // CHECK:      %[[T3:.*]] = vector.insert %[[T2]], %[[C2]] [0] : vector<3xi1> into vector<2x3xi1>
-// CHECK:      %[[T4:.*]] = cmpi "slt", %[[c1]], %[[A]] : index
+// CHECK:      %[[T4:.*]] = cmpi slt, %[[c1]], %[[A]] : index
 // CHECK:      %[[T5:.*]] = select %[[T4]], %[[T0]], %[[C1]] : vector<3xi1>
 // CHECK:      %[[T6:.*]] = vector.insert %[[T5]], %[[T3]] [1] : vector<3xi1> into vector<2x3xi1>
 // CHECK:      return %[[T6]] : vector<2x3xi1>
@@ -826,13 +826,13 @@ func @genbool_var_2d(%arg0: index, %arg1: index) -> vector<2x3xi1> {
 // CHECK:      %[[c0:.*]] = constant 0 : index
 // CHECK:      %[[c1:.*]] = constant 1 : index
 // CHECK:      %[[T0:.*]] = vector.create_mask %[[C]] : vector<7xi1>
-// CHECK:      %[[T1:.*]] = cmpi "slt", %[[c0]], %[[B]] : index
+// CHECK:      %[[T1:.*]] = cmpi slt, %[[c0]], %[[B]] : index
 // CHECK:      %[[T2:.*]] = select %[[T1]], %[[T0]], %[[C1]] : vector<7xi1>
 // CHECK:      %[[T3:.*]] = vector.insert %[[T2]], %[[C2]] [0] : vector<7xi1> into vector<1x7xi1>
-// CHECK:      %[[T4:.*]] = cmpi "slt", %[[c0]], %[[A]] : index
+// CHECK:      %[[T4:.*]] = cmpi slt, %[[c0]], %[[A]] : index
 // CHECK:      %[[T5:.*]] = select %[[T4]], %[[T3]], %[[C2]] : vector<1x7xi1>
 // CHECK:      %[[T6:.*]] = vector.insert %[[T5]], %[[C3]] [0] : vector<1x7xi1> into vector<2x1x7xi1>
-// CHECK:      %[[T7:.*]] = cmpi "slt", %[[c1]], %[[A]] : index
+// CHECK:      %[[T7:.*]] = cmpi slt, %[[c1]], %[[A]] : index
 // CHECK:      %[[T8:.*]] = select %[[T7]], %[[T3]], %[[C2]] : vector<1x7xi1>
 // CHECK:      %[[T9:.*]] = vector.insert %[[T8]], %[[T6]] [1] : vector<1x7xi1> into vector<2x1x7xi1>
 // CHECK:      return %[[T9]] : vector<2x1x7xi1>

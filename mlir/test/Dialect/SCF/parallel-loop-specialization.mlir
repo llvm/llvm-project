@@ -29,9 +29,9 @@ func @parallel_loop(%outer_i0: index, %outer_i1: index, %A: memref<?x?xf32>, %B:
 // CHECK:           [[VAL_10:%.*]] = affine.min #map0(){{\[}}[[VAL_8]], [[VAL_0]]]
 // CHECK:           [[VAL_11:%.*]] = affine.min #map1(){{\[}}[[VAL_9]], [[VAL_1]]]
 // CHECK:           [[VAL_12:%.*]] = constant 1024 : index
-// CHECK:           [[VAL_13:%.*]] = cmpi "eq", [[VAL_10]], [[VAL_12]] : index
+// CHECK:           [[VAL_13:%.*]] = cmpi eq, [[VAL_10]], [[VAL_12]] : index
 // CHECK:           [[VAL_14:%.*]] = constant 64 : index
-// CHECK:           [[VAL_15:%.*]] = cmpi "eq", [[VAL_11]], [[VAL_14]] : index
+// CHECK:           [[VAL_15:%.*]] = cmpi eq, [[VAL_11]], [[VAL_14]] : index
 // CHECK:           [[VAL_16:%.*]] = and [[VAL_13]], [[VAL_15]] : i1
 // CHECK:           scf.if [[VAL_16]] {
 // CHECK:             scf.parallel ([[VAL_17:%.*]], [[VAL_18:%.*]]) = ([[VAL_6]], [[VAL_6]]) to ([[VAL_12]], [[VAL_14]]) step ([[VAL_7]], [[VAL_7]]) {

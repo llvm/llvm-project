@@ -563,25 +563,25 @@ func @cmpi() -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1) {
   // CHECK-DAG: [[F:%.+]] = constant false
   // CHECK-DAG: [[T:%.+]] = constant true
   // CHECK-NEXT: return [[F]],
-  %0 = cmpi "eq", %c42, %cm1 : i32
+  %0 = cmpi eq, %c42, %cm1 : i32
   // CHECK-SAME: [[T]],
-  %1 = cmpi "ne", %c42, %cm1 : i32
+  %1 = cmpi ne, %c42, %cm1 : i32
   // CHECK-SAME: [[F]],
-  %2 = cmpi "slt", %c42, %cm1 : i32
+  %2 = cmpi slt, %c42, %cm1 : i32
   // CHECK-SAME: [[F]],
-  %3 = cmpi "sle", %c42, %cm1 : i32
+  %3 = cmpi sle, %c42, %cm1 : i32
   // CHECK-SAME: [[T]],
-  %4 = cmpi "sgt", %c42, %cm1 : i32
+  %4 = cmpi sgt, %c42, %cm1 : i32
   // CHECK-SAME: [[T]],
-  %5 = cmpi "sge", %c42, %cm1 : i32
+  %5 = cmpi sge, %c42, %cm1 : i32
   // CHECK-SAME: [[T]],
-  %6 = cmpi "ult", %c42, %cm1 : i32
+  %6 = cmpi ult, %c42, %cm1 : i32
   // CHECK-SAME: [[T]],
-  %7 = cmpi "ule", %c42, %cm1 : i32
+  %7 = cmpi ule, %c42, %cm1 : i32
   // CHECK-SAME: [[F]],
-  %8 = cmpi "ugt", %c42, %cm1 : i32
+  %8 = cmpi ugt, %c42, %cm1 : i32
   // CHECK-SAME: [[F]]
-  %9 = cmpi "uge", %c42, %cm1 : i32
+  %9 = cmpi uge, %c42, %cm1 : i32
   return %0, %1, %2, %3, %4, %5, %6, %7, %8, %9 : i1, i1, i1, i1, i1, i1, i1, i1, i1, i1
 }
 
@@ -594,37 +594,37 @@ func @cmpf_normal_numbers() -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, 
   // CHECK-DAG: [[F:%.+]] = constant false
   // CHECK-DAG: [[T:%.+]] = constant true
   // CHECK-NEXT: return [[F]],
-  %0 = cmpf "false", %c42, %cm1 : f32
+  %0 = cmpf false, %c42, %cm1 : f32
   // CHECK-SAME: [[F]],
-  %1 = cmpf "oeq", %c42, %cm1 : f32
+  %1 = cmpf oeq, %c42, %cm1 : f32
   // CHECK-SAME: [[T]],
-  %2 = cmpf "ogt", %c42, %cm1 : f32
+  %2 = cmpf ogt, %c42, %cm1 : f32
   // CHECK-SAME: [[T]],
-  %3 = cmpf "oge", %c42, %cm1 : f32
+  %3 = cmpf oge, %c42, %cm1 : f32
   // CHECK-SAME: [[F]],
-  %4 = cmpf "olt", %c42, %cm1 : f32
+  %4 = cmpf olt, %c42, %cm1 : f32
   // CHECK-SAME: [[F]],
-  %5 = cmpf "ole", %c42, %cm1 : f32
+  %5 = cmpf ole, %c42, %cm1 : f32
   // CHECK-SAME: [[T]],
-  %6 = cmpf "one", %c42, %cm1 : f32
+  %6 = cmpf one, %c42, %cm1 : f32
   // CHECK-SAME: [[T]],
-  %7 = cmpf "ord", %c42, %cm1 : f32
+  %7 = cmpf ord, %c42, %cm1 : f32
   // CHECK-SAME: [[F]],
-  %8 = cmpf "ueq", %c42, %cm1 : f32
+  %8 = cmpf ueq, %c42, %cm1 : f32
   // CHECK-SAME: [[T]],
-  %9 = cmpf "ugt", %c42, %cm1 : f32
+  %9 = cmpf ugt, %c42, %cm1 : f32
   // CHECK-SAME: [[T]],
-  %10 = cmpf "uge", %c42, %cm1 : f32
+  %10 = cmpf uge, %c42, %cm1 : f32
   // CHECK-SAME: [[F]],
-  %11 = cmpf "ult", %c42, %cm1 : f32
+  %11 = cmpf ult, %c42, %cm1 : f32
   // CHECK-SAME: [[F]],
-  %12 = cmpf "ule", %c42, %cm1 : f32
+  %12 = cmpf ule, %c42, %cm1 : f32
   // CHECK-SAME: [[T]],
-  %13 = cmpf "une", %c42, %cm1 : f32
+  %13 = cmpf une, %c42, %cm1 : f32
   // CHECK-SAME: [[F]],
-  %14 = cmpf "uno", %c42, %cm1 : f32
+  %14 = cmpf uno, %c42, %cm1 : f32
   // CHECK-SAME: [[T]]
-  %15 = cmpf "true", %c42, %cm1 : f32
+  %15 = cmpf true, %c42, %cm1 : f32
   return %0, %1, %2, %3, %4, %5, %6, %7, %8, %9, %10, %11, %12, %13, %14, %15 : i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1
 }
 
@@ -637,37 +637,37 @@ func @cmpf_nan() -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1,
   // CHECK-DAG: [[F:%.+]] = constant false
   // CHECK-DAG: [[T:%.+]] = constant true
   // CHECK-NEXT: return [[F]],
-  %0 = cmpf "false", %c42, %cqnan : f32
+  %0 = cmpf false, %c42, %cqnan : f32
   // CHECK-SAME: [[F]]
-  %1 = cmpf "oeq", %c42, %cqnan : f32
+  %1 = cmpf oeq, %c42, %cqnan : f32
   // CHECK-SAME: [[F]],
-  %2 = cmpf "ogt", %c42, %cqnan : f32
+  %2 = cmpf ogt, %c42, %cqnan : f32
   // CHECK-SAME: [[F]],
-  %3 = cmpf "oge", %c42, %cqnan : f32
+  %3 = cmpf oge, %c42, %cqnan : f32
   // CHECK-SAME: [[F]],
-  %4 = cmpf "olt", %c42, %cqnan : f32
+  %4 = cmpf olt, %c42, %cqnan : f32
   // CHECK-SAME: [[F]],
-  %5 = cmpf "ole", %c42, %cqnan : f32
+  %5 = cmpf ole, %c42, %cqnan : f32
   // CHECK-SAME: [[F]],
-  %6 = cmpf "one", %c42, %cqnan : f32
+  %6 = cmpf one, %c42, %cqnan : f32
   // CHECK-SAME: [[F]],
-  %7 = cmpf "ord", %c42, %cqnan : f32
+  %7 = cmpf ord, %c42, %cqnan : f32
   // CHECK-SAME: [[T]],
-  %8 = cmpf "ueq", %c42, %cqnan : f32
+  %8 = cmpf ueq, %c42, %cqnan : f32
   // CHECK-SAME: [[T]],
-  %9 = cmpf "ugt", %c42, %cqnan : f32
+  %9 = cmpf ugt, %c42, %cqnan : f32
   // CHECK-SAME: [[T]],
-  %10 = cmpf "uge", %c42, %cqnan : f32
+  %10 = cmpf uge, %c42, %cqnan : f32
   // CHECK-SAME: [[T]],
-  %11 = cmpf "ult", %c42, %cqnan : f32
+  %11 = cmpf ult, %c42, %cqnan : f32
   // CHECK-SAME: [[T]],
-  %12 = cmpf "ule", %c42, %cqnan : f32
+  %12 = cmpf ule, %c42, %cqnan : f32
   // CHECK-SAME: [[T]],
-  %13 = cmpf "une", %c42, %cqnan : f32
+  %13 = cmpf une, %c42, %cqnan : f32
   // CHECK-SAME: [[T]],
-  %14 = cmpf "uno", %c42, %cqnan : f32
+  %14 = cmpf uno, %c42, %cqnan : f32
   // CHECK-SAME: [[T]]
-  %15 = cmpf "true", %c42, %cqnan : f32
+  %15 = cmpf true, %c42, %cqnan : f32
   return %0, %1, %2, %3, %4, %5, %6, %7, %8, %9, %10, %11, %12, %13, %14, %15 : i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1
 }
 
@@ -680,37 +680,37 @@ func @cmpf_inf() -> (i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1,
   // CHECK-DAG: [[F:%.+]] = constant false
   // CHECK-DAG: [[T:%.+]] = constant true
   // CHECK-NEXT: return [[F]],
-  %0 = cmpf "false", %c42, %cpinf: f32
+  %0 = cmpf false, %c42, %cpinf: f32
   // CHECK-SAME: [[F]]
-  %1 = cmpf "oeq", %c42, %cpinf: f32
+  %1 = cmpf oeq, %c42, %cpinf: f32
   // CHECK-SAME: [[F]],
-  %2 = cmpf "ogt", %c42, %cpinf: f32
+  %2 = cmpf ogt, %c42, %cpinf: f32
   // CHECK-SAME: [[F]],
-  %3 = cmpf "oge", %c42, %cpinf: f32
+  %3 = cmpf oge, %c42, %cpinf: f32
   // CHECK-SAME: [[T]],
-  %4 = cmpf "olt", %c42, %cpinf: f32
+  %4 = cmpf olt, %c42, %cpinf: f32
   // CHECK-SAME: [[T]],
-  %5 = cmpf "ole", %c42, %cpinf: f32
+  %5 = cmpf ole, %c42, %cpinf: f32
   // CHECK-SAME: [[T]],
-  %6 = cmpf "one", %c42, %cpinf: f32
+  %6 = cmpf one, %c42, %cpinf: f32
   // CHECK-SAME: [[T]],
-  %7 = cmpf "ord", %c42, %cpinf: f32
+  %7 = cmpf ord, %c42, %cpinf: f32
   // CHECK-SAME: [[F]],
-  %8 = cmpf "ueq", %c42, %cpinf: f32
+  %8 = cmpf ueq, %c42, %cpinf: f32
   // CHECK-SAME: [[F]],
-  %9 = cmpf "ugt", %c42, %cpinf: f32
+  %9 = cmpf ugt, %c42, %cpinf: f32
   // CHECK-SAME: [[F]],
-  %10 = cmpf "uge", %c42, %cpinf: f32
+  %10 = cmpf uge, %c42, %cpinf: f32
   // CHECK-SAME: [[T]],
-  %11 = cmpf "ult", %c42, %cpinf: f32
+  %11 = cmpf ult, %c42, %cpinf: f32
   // CHECK-SAME: [[T]],
-  %12 = cmpf "ule", %c42, %cpinf: f32
+  %12 = cmpf ule, %c42, %cpinf: f32
   // CHECK-SAME: [[T]],
-  %13 = cmpf "une", %c42, %cpinf: f32
+  %13 = cmpf une, %c42, %cpinf: f32
   // CHECK-SAME: [[F]],
-  %14 = cmpf "uno", %c42, %cpinf: f32
+  %14 = cmpf uno, %c42, %cpinf: f32
   // CHECK-SAME: [[T]]
-  %15 = cmpf "true", %c42, %cpinf: f32
+  %15 = cmpf true, %c42, %cpinf: f32
   return %0, %1, %2, %3, %4, %5, %6, %7, %8, %9, %10, %11, %12, %13, %14, %15 : i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1, i1
 }
 

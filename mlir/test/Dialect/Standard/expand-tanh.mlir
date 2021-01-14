@@ -18,6 +18,6 @@ func @tanh(%arg: f32) -> f32 {
 // CHECK: %[[DIVIDEND2:.+]] = subf %[[EXP2]], %[[ONE]] : f32
 // CHECK: %[[DIVISOR2:.+]] = addf %[[EXP2]], %[[ONE]] : f32
 // CHECK: %[[RES2:.+]] = divf %[[DIVIDEND2]], %[[DIVISOR2]] : f32
-// CHECK: %[[COND:.+]] = cmpf "oge", %arg0, %[[ZERO]] : f32
+// CHECK: %[[COND:.+]] = cmpf oge, %arg0, %[[ZERO]] : f32
 // CHECK: %[[RESULT:.+]] = select %[[COND]], %[[RES1]], %[[RES2]] : f32
 // CHECK: return %[[RESULT]]
