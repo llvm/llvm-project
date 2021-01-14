@@ -23,6 +23,7 @@
 #include "InputChunks.h"
 #include "InputEvent.h"
 #include "InputGlobal.h"
+#include "InputTable.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 
@@ -166,6 +167,9 @@ void markLive() {
       for (InputEvent *e : obj->events)
         if (!e->live)
           message("removing unused section " + toString(e));
+      for (InputTable *t : obj->tables)
+        if (!t->live)
+          message("removing unused section " + toString(t));
     }
     for (InputChunk *c : symtab->syntheticFunctions)
       if (!c->live)
