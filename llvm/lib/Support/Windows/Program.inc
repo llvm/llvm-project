@@ -171,8 +171,7 @@ static HANDLE RedirectIO(Optional<StringRef> Path, int fd,
 static bool Execute(ProcessInfo &PI, StringRef Program,
                     ArrayRef<StringRef> Args, Optional<ArrayRef<StringRef>> Env,
                     ArrayRef<Optional<StringRef>> Redirects,
-                    unsigned MemoryLimit, std::string *ErrMsg,
-                    BitVector *AffinityMask) {
+                    unsigned MemoryLimit, std::string *ErrMsg) {
   if (!sys::fs::can_execute(Program)) {
     if (ErrMsg)
       *ErrMsg = "program not executable";
@@ -278,15 +277,11 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
     return false;
   }
 
-  unsigned CreateFlags = CREATE_UNICODE_ENVIRONMENT;
-  if (AffinityMask)
-    CreateFlags |= CREATE_SUSPENDED;
-
   std::vector<wchar_t> CommandUtf16(Command.size() + 1, 0);
   std::copy(Command.begin(), Command.end(), CommandUtf16.begin());
   BOOL rc = CreateProcessW(ProgramUtf16.data(), CommandUtf16.data(), 0, 0, TRUE,
-                           CreateFlags, EnvBlock.empty() ? 0 : EnvBlock.data(),
-                           0, &si, &pi);
+                           CREATE_UNICODE_ENVIRONMENT,
+                           EnvBlock.empty() ? 0 : EnvBlock.data(), 0, &si, &pi);
   DWORD err = GetLastError();
 
   // Regardless of whether the process got created or not, we are done with
@@ -332,13 +327,6 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
       WaitForSingleObject(pi.hProcess, INFINITE);
       return false;
     }
-  }
-
-  // Set the affinity mask
-  if (AffinityMask) {
-    ::SetProcessAffinityMask(pi.hProcess,
-                             (DWORD_PTR)AffinityMask->getData().front());
-    ::ResumeThread(pi.hThread);
   }
 
   return true;
