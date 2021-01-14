@@ -137,7 +137,7 @@ func @simple_loop_inner_control_flow(%arg0 : i32) -> i32 {
   // CHECK: cond_br %[[TRUE]], ^bb3, ^bb4
 
   %cst_20 = constant 20 : i32
-  %cond = cmpi "ult", %iv, %cst_20 : i32
+  %cond = cmpi ult, %iv, %cst_20 : i32
   cond_br %cond, ^bb3, ^bb4
 
 ^bb3:

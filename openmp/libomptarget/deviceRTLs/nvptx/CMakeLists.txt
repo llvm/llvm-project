@@ -89,13 +89,6 @@ if(LIBOMPTARGET_DEP_CUDA_FOUND)
       set(bc_flags ${bc_flags} -DOMPTARGET_NVPTX_DEBUG=0)
     endif()
 
-    # CUDA 9 header files use the nv_weak attribute which clang is not yet prepared
-    # to handle. Therefore, we use 'weak' instead. We are compiling only for the
-    # device, so it should be equivalent.
-    if(CUDA_VERSION_MAJOR GREATER 8)
-      set(bc_flags ${bc_flags} -Dnv_weak=weak)
-    endif()
-
     # Create target to build all Bitcode libraries.
     add_custom_target(omptarget-nvptx-bc)
 

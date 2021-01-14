@@ -470,6 +470,12 @@ public:
   // PatternRewriter Hooks
   //===--------------------------------------------------------------------===//
 
+  /// PatternRewriter hook for replacing the results of an operation when the
+  /// given functor returns true.
+  void replaceOpWithIf(
+      Operation *op, ValueRange newValues, bool *allUsesReplaced,
+      llvm::unique_function<bool(OpOperand &) const> functor) override;
+
   /// PatternRewriter hook for replacing the results of an operation.
   void replaceOp(Operation *op, ValueRange newValues) override;
   using PatternRewriter::replaceOp;

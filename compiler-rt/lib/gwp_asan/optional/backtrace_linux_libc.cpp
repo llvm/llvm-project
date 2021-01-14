@@ -13,7 +13,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "gwp_asan/definitions.h"
 #include "gwp_asan/optional/backtrace.h"
+#include "gwp_asan/optional/printf.h"
 #include "gwp_asan/options.h"
 
 namespace {
@@ -32,7 +34,7 @@ GWP_ASAN_ALWAYS_INLINE size_t SegvBacktrace(uintptr_t *TraceBuffer, size_t Size,
 }
 
 static void PrintBacktrace(uintptr_t *Trace, size_t TraceLength,
-                           gwp_asan::crash_handler::Printf_t Printf) {
+                           gwp_asan::Printf_t Printf) {
   if (TraceLength == 0) {
     Printf("  <not found (does your allocator support backtracing?)>\n\n");
     return;
@@ -55,14 +57,11 @@ static void PrintBacktrace(uintptr_t *Trace, size_t TraceLength,
 } // anonymous namespace
 
 namespace gwp_asan {
-namespace options {
-Backtrace_t getBacktraceFunction() { return Backtrace; }
-crash_handler::PrintBacktrace_t getPrintBacktraceFunction() {
-  return PrintBacktrace;
-}
-} // namespace options
+namespace backtrace {
 
-namespace crash_handler {
+options::Backtrace_t getBacktraceFunction() { return Backtrace; }
+PrintBacktrace_t getPrintBacktraceFunction() { return PrintBacktrace; }
 SegvBacktrace_t getSegvBacktraceFunction() { return SegvBacktrace; }
-} // namespace crash_handler
+
+} // namespace backtrace
 } // namespace gwp_asan

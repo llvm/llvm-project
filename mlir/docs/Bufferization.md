@@ -1,1164 +1,277 @@
-# Bufferization on MLIR
+# Bufferization
 
-The general task of bufferization is to move SSA values (like tensors) into
-allocated memory buffers that have to be freed when they are no longer needed.
-This also involves the placement of copies to clone contents of allocated
-memory buffers at specific locations (similar to register allocation). On the
-one hand, these copies are needed to ensure the right behavior of a program, on
-the other hand, introducing several aliases for a certain buffer could lead to
-a wrong freeing of buffers. Therefore, we have to take care of them and the
-program structure. The introduction of copies solves this problem. Several
-unnecessary introduced copies during this process can be eliminated afterwards.
+[TOC]
 
-```mlir
-func @func_on_tensors(%source: tensor<4xf32>) -> tensor<4xf32> {
-  %0 = mhlo.exp %source : (tensor<4xf32>) -> (tensor<4xf32>)
-  return %0 : tensor<4xf32>
-}
+## Overview
+
+Bufferization in MLIR is the process of converting the `tensor` type to the
+`memref` type. MLIR provides a composable system that allows dialects to
+systematically bufferize a program. This system is a simple application
+of MLIR's [dialect conversion](DialectConversion.md) infrastructure. The bulk of
+the code related to bufferization is a set of ordinary `ConversionPattern`'s
+that dialect authors write for converting ops that operate on `tensor`'s to ops
+that operate on `memref`'s. A set of conventions and best practices are followed
+that allow these patterns to be run across multiple independent passes (rather
+than requiring a single huge atomic conversion pass), which makes the
+compilation pipelines scalable, robust, and easy to debug.
+
+This document is targeted at people looking to utilize MLIR's bufferization
+functionality, along with people who want to extend it to cover their own ops.
+
+<a name="the-talk">**NOTE:**</a> Before reading this document, please watch the
+talk "Type Conversions the Not-So-Hard-Way: MLIR's New Bufferization
+Infrastructure"
+([slides](https://drive.google.com/file/d/1FVbzCXxZzS9LBLuvpPNLWJD-XDkt54ky/view?usp=sharing),
+[recording](https://drive.google.com/file/d/1VfVajitgf8ZPnd-HRkJvaJiFLhBsluXN/view?usp=sharing)).
+That talk gives a high-level overview of the bufferization infrastructure and
+important conceptual details related to using the MLIR dialect conversion
+infrastructure.
+
+## Bufferization's place in a compilation pipeline
+
+Bufferization itself does not free any of the buffers that have been allocated,
+nor does it do anything particularly intelligent with the placement of buffers
+w.r.t. control flow. Thus, a realistic compilation pipeline will usually consist
+of:
+
+1. Bufferization
+1. Buffer optimizations such as `buffer-hoisting`, `buffer-loop-hoisting`, and
+   `promote-buffers-to-stack`, which do optimizations that are only exposed
+   after bufferization.
+1. Finally, running the [buffer deallocation](BufferDeallocation.md) pass.
+
+After buffer deallocation has been completed, the program will be quite
+difficult to transform due to the presence of the deallocation ops. Thus, other
+optimizations such as linalg fusion on memrefs should be done before that stage.
+
+## General structure of the bufferization process
+
+Bufferization consists of running multiple _partial_ bufferization passes,
+followed by one _finalizing_ bufferization pass.
+
+There is typically one partial bufferization pass per dialect (though other
+subdivisions are possible). For example, for a dialect `X` there will typically
+be a pass `X-bufferize` that knows how to bufferize all the ops in that dialect.
+By running pass `X-bufferize` for each dialect `X` in the program, all the ops
+in the program are incrementally bufferized.
+
+Partial bufferization passes create programs where only some ops have been
+bufferized. These passes will create _materializations_ (also sometimes called
+"casts") that convert between the `tensor` and `memref` type, which allows
+bridging between ops that have been bufferized and ops that have not yet been
+bufferized.
+
+Finalizing bufferizations complete the bufferization process, and guarantee that
+there are no tensors remaining in the program. This involves eliminating the
+materializations. The pass `finalizing-bufferize` provides a minimal pass that
+only eliminates materializations and issues an error if any unbufferized ops
+exist in the program.
+
+However, it is possible for a finalizing bufferization to do more than just
+eliminate materializations. By adding patterns (just as a partial bufferization
+would), it is possible for a finalizing bufferization pass to simultaneously
+bufferize ops and eliminate materializations. This has a number of disadvantages
+discussed in the talk and should generally be avoided.
+
+### Example
+
+As a concrete example, we will look at the bufferization pipeline from the
+`mlir-npcomp` reference backend
+([code](https://github.com/llvm/mlir-npcomp/blob/97d6d04d41216e73d40b89ffd79620973fc14ce3/lib/RefBackend/RefBackend.cpp#L232)).
+The code, slightly simplified and annotated, is reproduced here:
+
+```c++
+  // Partial bufferization passes.
+  pm.addPass(createTensorConstantBufferizePass());
+  pm.addNestedPass<FuncOp>(createTCPBufferizePass()); // Bufferizes the downstream `tcp` dialect.
+  pm.addNestedPass<FuncOp>(createSCFBufferizePass());
+  pm.addNestedPass<FuncOp>(createLinalgBufferizePass());
+  pm.addNestedPass<FuncOp>(createStdBufferizePass());
+  pm.addNestedPass<FuncOp>(createTensorBufferizePass());
+  pm.addPass(createFuncBufferizePass());
+
+  // Finalizing bufferization pass.
+  pm.addNestedPass<FuncOp>(createFinalizingBufferizePass());
 ```
 
-Will be transformed to:
+Looking first at the partial bufferization passes, we see that there are a
+sequence of `FuncOp` passes (which run in parallel on functions). These function
+passes are bracketed by `tensor-constant-bufferize` and `func-bufferize`, which
+are module passes (and thus serialize the parallel compilation process). These
+two passes must be module passes because they make changes to the top-level
+module.
 
-```mlir
-func @func_on_buffers(%source: memref<4xf32>, %target: memref<4xf32>) {
-  %0 = alloc() : memref<4xf32>
-  lmhlo.exp %source, %0 : (memref<4xf32>, memref<4xf32>) -> ()
-  lmhlo.copy %0, %target : (memref<4xf32>, memref<4xf32>) -> ()
-  dealloc %0 : memref<4xf32>
-  return
-}
+The bulk of the bufferization work is done by the function passes. Most of these
+passes are provided as part of the upstream MLIR distribution and bufferize
+their respective dialects (e.g. `scf-bufferize` bufferizes the `scf` dialect).
+The `tcp-bufferize` pass is an exception -- it is a partial bufferization pass
+used to bufferize the downstream `tcp` dialect, and fits in perfectly with all
+the other passes provided upstream.
+
+The last pass is the finalizing bufferization pass. The `mlir-npcomp` reference
+backend has arranged that all ops are bufferized by partial bufferizations, so
+that the upstream `finalizing-bufferize` pass can be used as the finalizing
+bufferization pass. This gives excellent diagnostics when something goes wrong
+with the bufferization process, such as due to an op that wasn't handled by any
+pattern.
+
+## How to write a partial bufferization pass
+
+The contract of a partial bufferization pass is that a subset of ops (or kinds
+of ops, customizable by a ConversionTarget) get bufferized.
+
+A partial bufferization pass is just a pass that uses the
+[dialect conversion](DialectConversion.md) framework to apply
+`ConversionPattern`s with a `tensor` to `memref` type conversion.
+
+To describe how to write such a pass, we will walk through an example, the
+`tensor-bufferize` pass
+([code](https://github.com/llvm/llvm-project/blob/bc8acf2ce8ad6e8c9b1d97b2e02d3f4ad26e1d9d/mlir/lib/Dialect/Tensor/Transforms/Bufferize.cpp#L23),
+[test](https://github.com/llvm/llvm-project/blob/bc8acf2ce8ad6e8c9b1d97b2e02d3f4ad26e1d9d/mlir/test/Dialect/Tensor/bufferize.mlir#L1))
+that bufferizes the `tensor` dialect.
+
+The bulk of the code in the pass will be a set of conversion patterns, with a
+simple example being
+[BufferizeCastOp](https://github.com/llvm/llvm-project/blob/2bf6e443e54604c7818c4d1a1837f3d091023270/mlir/lib/Dialect/Tensor/Transforms/Bufferize.cpp#L23)).
+
 ```
-
-In general, Bufferization is split into three separate phases: a preparation
-phase, a bufferization phase and a post-processing phase. The assignment
-process happens during dialect conversion and allocates buffers for each value
-that should be moved into a memory buffer. This has to be implemented by each
-dialect using the following tools and patterns. Thereby, all  operations on
-memory buffers have to be changed to `memref<T>` types (see Preparation Phase).
-Afterwards, the placement transformation (see BufferDeallocation) adds all
-required deallocation operations, temporary buffers and copy operations
-automatically.
-
-## Preparation Phase
-
-In order to apply the BufferDeallocation code transformation, the input MLIR
-program needs to leverage allocations (buffers in general) and `memref<T>`
-types(as outlined above). If your input program does not work on buffers, you
-need to perform this preparation step in order to port it to the “buffer
-world”. This is a user-defined preparation step that is intended to be applied
-during dialect conversion. The user has to take care for the right conversion
-by providing conversion patterns relying on a type converter to assign buffers.
-
-A necessary step is to apply type and function signature conversion.
-Furthermore, after changing all function signatures, the associated return and
-call operations must comply with the new corresponding function signatures. For
-this purpose, three operation conversion patterns are introduced:
-
-* BufferizeFuncOpConverter
-* BufferizeReturnOpConverter
-* BufferizeCallOpConverter
-
-In order to use these conversion patterns, the user needs to define a custom
-BufferizeTypeConverter implementation.
-
-### BufferizeTypeConverter
-
-The BufferizeTypeConverter is an extension to the TypeConverter class that
-provides additional functionality for dialect developers to decide on the
-signature of a function. The extra features include:
-
-* `setResultConversionKind` to decide on a function result after the conversion
-with a specific type to be appended to the function argument list as an output
-argument or remains as a function result.
-* define their own callback function for type or value unwrapping.
-
-### ResultConversionKind
-
-ResultConversionKind is an enum with two values
-
-* AppendToArgumentList
-* KeepAsFunctionResult
-
-that defines how BufferizeFuncOpConverter should handle function results in
-order to convert the signature of the function. The other two operation
-conversion patterns also use ResultConversionKind to adapt themselves with the
-new function signature.
-
-`ResultConversionKind` can be set using `setResultConversionKind`, which needs
-two template parameters that correspond to the types before and after type
-conversion. This mapping specifies whether the resulting type should stay as a
-function result or should be appended to the arguments list after the
-conversion is done. Note that the default value for unspecified mappings is
-`KeepAsFunctionResult`. For instance, the following command updates the
-`BufferizeTypeConverter` instance that defines all MemRefType function results
-(converted from `RankedTensorTypes`). These results should be appended to the
-function argument list in BufferizeFuncOpConverter:
-
-```mlir
-converter.setResultConversionKind<RankedTensorType, MemRefType>(
-        BufferizeTypeConverter::AppendToArgumentsList);
-```
-
-## Callbacks for Unpacking Types
-
-```mlir
-func @func_on_tensors(%arg0: tuple<i1,f32>) -> (tuple<tensor<10xf32>, tensor<5xf32>>) {
-  ...
-}
-```
-
-Will be transformed to:
-
-```mlir
-func @func_on_buffers(%arg0: i1, %arg1: f32, %target0: memref<10xf32>, %target1: memref<5xf32>) {
-  ...
-}
-```
-
-BufferizeFuncOpConverter is also able to unpack the types of arguments and
-results of a function during function signature conversion. In the example
-above, it unwraps the tuple type and converts the type of each constituent.
-
-For this purpose, users can provide custom callbacks by using
-`addDecomposeTypeConversion` for the `BufferizeTypeConverter` instance to show
-how a specific type (i.e. TupleType) can be unpacked. However, when a type
-decomposition is provided, there are two additional callbacks that have to be
-defined as well. They specify how to pack or unpack values of that particular
-type. These two callbacks can be provided by the `addArgumentMaterialization`
-(packing) **and** `addDecomposeValueConversion` (unpacking) functions:
-
-The following piece of code demonstrates this functionality by flattening a
-`TupleType`.
-
-```mlir
-converter.addDecomposeTypeConversion(
-        [](TupleType tupleType, SmallVectorImpl<Type> &types) {
-          tupleType.getFlattenedTypes(types);
-          return success();
-        });
-
-converter.addArgumentMaterialization(
-        [](OpBuilder &builder, TupleType resultType, ValueRange inputs,
-           Location loc) -> Optional<Value> {
-          if (inputs.size() == 1)
-            return llvm::None;
-          TypeRange TypeRange = inputs.getTypes();
-          SmallVector<Type, 2> types(TypeRange.begin(), TypeRange.end());
-          TupleType tuple = TupleType::get(types, builder.getContext());
-          mlir::Value value = builder.create<MakeTupleOp>(loc, tuple, inputs);
-          return value;
-        });
-
-converter.addDecomposeValueConversion([](OpBuilder &builder, Location loc,
-                                         TupleType resultType, Value value,
-                                         SmallVectorImpl<Value> &values) {
-      for (unsigned i = 0, e = resultType.size(); i < e; ++i) {
-        Value res = builder.create<GetTupleElementOp>(
-            loc, resultType.getType(i), value, builder.getI32IntegerAttr(i));
-        values.push_back(res);
-      }
-      return success();
- });
-```
-
-In the scope of these callback functions, the elements of a tuple value can be
-decomposed using `GetTupleElementOp`. Conversely, `MakeTupleOp` is used to pack
-a list of values as a single tuple type.
-
-### Bufferization Operation Conversion Patterns
-
-The following conversion patterns can be used to conveniently transform the
-signature of a function, the return and call operations:
-
-* `BufferizeFuncOpConverter`
-* `BufferizeReturnOpConverter`
-* `BufferizeCallOpConverter`
-
-Any combination of these conversion patterns can be specified by the user. If
-you need to apply  all of these operation converters, you can use
-`populateWithBufferizeOpConversionPatterns` which sets up all converters.
-
-### BufferizeFuncOpConverter
-
-The BufferizeFuncOpConverter is the actual function operation converter that
-applies signature conversion by using a previously defined
-`BufferizeTypeConverter`.
-
-In the following example, we configure a `BufferizeTypeConverter` instance such
-that
-
-* all RankedTensorTypes should be converted to MemRefTypes.
-* all function results that are results of type conversion from
-RankedTensorTypes to MemRefTypes should be appended to the function argument
-list.
-* all TupleTypes should be flattened and decomposed to its constituents.
-
-```mlir
-converter.addConversion([](RankedTensorType type) {
-    return (Type)MemRefType::get(type.getShape(), type.getElementType());
-  });
-converter.setResultConversionKind<RankedTensorType, MemRefType>(
-        BufferizeTypeConverter::AppendToArgumentsList);
-converter.addDecomposeTypeConversion(
-        [](TupleType tupleType, SmallVectorImpl<Type> &types) {
-          tupleType.getFlattenedTypes(types);
-          return success();
-        });
-```
-
-Consider the following signature conversion:
-
-```mlir
-func @on_tensors(%arg1: tuple<i1,f32>) -> (tuple<memref<10xf32>, tensor<5xf32>>){
- ...
-}
-```
-
-Will be transformed to:
-
-```mlir
-func @on_buffers(%arg0: i1, %arg1: f32, %out: memref<5xf32>) -> memref<10xf32> {
- ...
-}
-```
-
-Using the presented converter setup, all TupleType arguments and results are
-decomposed first. The tensor<5xf32> result is converted to a memref<5xf32> type
-and appended to the argument list. There is no conversion for the types memref,
-i1, and f32. Therefore, the memref<10xf32> result is kept as it is and will
-also be kept as a function result since there is no ResultConversionKind
-mapping from a MemRefType to a MemRefType. However, if we change the
-result-conversion behavior via
-
-```mlir
-converter.setResultConversionKind<RankedTensorType, MemRefType>(
-        BufferizeTypeConverter::KeepAsFunctionResult);
-```
-
-the output will be:
-
-```mlir
-func @on_buffers(%arg0: i1, %arg1: f32) -> (memref<10xf32>, memref<5xf32>) {
- ...
-}
-```
-
-### BufferizeReturnOpConverter
-
-When changing the signature of a function, the return operands must match with
-the results of the corresponding function if buffer-typed-results have been
-configured to be appended to the function arguments list. This matching
-consists of two separate steps. First, we have to remove the operands that have
-been appended to the argument list as output arguments. Second, we have to
-introduce additional copies for each operand. However, since each dialect has
-its own dialect-dependent return and copy operations, this conversion pattern
-comes with three template parameters which are the original return operation,
-target return operation, and copy operation kinds.
-
-In the following example, two conversion patterns are inserted into the pattern
-list. The `BufferizeReturnOpConverter` is set to replace a standard return
-operation with the same operation type.
-
-```mlir
-patterns->insert<
-  BufferizeFuncOpConverter,
-  BufferizeReturnOpConverter
-    <mlir::ReturnOp, mlir::ReturnOp, linalg::CopyOp>
-                >(...)
-```
-
-Consider the following input/output program using a single return:
-
-```mlir
-func @on_tensors(%arg0: tensor<5xf32>, %arg1: i1) -> (tensor<5xf32>, i1) {
-  return %arg0, %arg1 : tensor<5xf32>, i1
-}
-```
-
-Will be transformed to:
-
-```mlir
-func @on_buffers(%arg0: memref<5xf32>, %arg1: i1, %out: memref<5xf32>) -> i1 {
-  linalg.copy(%arg0, %out) : memref<5xf32>, memref<5xf32>
-  return %arg1 : i1
-}
-```
-
-Based on our previously configured `BufferizeTypeConverter` instance which
-requires buffer-typed-function-results to be appended to the function argument
-list, the new `on_buffers` function signature is created. The operands of the
-return operation must be adapted with the new function signature. Therefore,
-the buffer-typed operand is removed from the operand list of the new return
-operation. Instead, a copy operation is inserted right before the return
-operation to copy the content of the operand buffer to the target buffer and
-yields the output as shown above.
-
-### BufferizeCallOpConverter
-
-The BufferizeCallOpConverter is a call operation converter that transforms and
-matches the operands and results of a call operation with the arguments and
-results of the callee. Besides converting operand and result types, it
-allocates a buffer for each buffer-based result of the called function that is
-appended to the argument list (if buffer typed results have been configured to
-be appended to the function arguments list).
-
-The following piece of code shows a sample call site, based on our previously
-configured `BufferizeTypeConversion`:
-
-```mlir
-func @callee(%arg0: tensor<5xf32>) -> (tensor<5xf32>) {
-  return %arg0 : tensor<5xf32>
-}
-
-func @caller(%arg0: tensor<5xf32>) -> tensor<5xf32> {
-  %x = call @callee(%arg0) : (tensor<5xf32>) -> tensor<5xf32>
-  return %x : tensor<5xf32>
-}
-```
-
-Will be transformed to:
-
-```mlir
-func @callee(%arg0: memref<5xf32>, %out: memref<5xf32>) {
-  linalg.copy(%arg0, %out) : memref<5xf32>, memref<5xf32>
-  return
-}
-
-func @caller(%arg0: memref<5xf32>, %out: memref<5xf32>) {
-  %0 = alloc() : memref<5xf32>
-  call @callee(%arg0, %0) : (memref<5xf32>, memref<5xf32>) -> ()
-  linalg.copy(%0, %out) : memref<5xf32>, memref<5xf32>
-  return
-}
-```
-
-### Summarizing Example
-
-To summarize all preparation converters, the following sample is a complete
-listing of an input IR program and its output after applying all converters:
-
-```mlir
-func @callee(%arg0: tuple<tensor<5xf32>,i1>) -> tuple<tensor<5xf32>,i1> {
-  return %arg0 : tuple<tensor<5xf32>,i1>
-}
-
-func @caller(%arg0: tuple<tensor<5xf32>,i1>) -> tuple<tensor<5xf32>,i1> {
-  %x = call @callee(%arg0) : (tuple<tensor<5xf32>,i1>) -> tuple<tensor<5xf32>,i1>
-  return %x : tuple<tensor<5xf32>,i1>
-}
-```
-
-Will be transformed to:
-
-```mlir
-func @callee(%arg0: memref<5xf32>, %arg1: i1, %arg2: memref<5xf32>) -> i1 {
-  %0 = "test.make_tuple"(%arg0, %arg1) : (memref<5xf32>, i1) -> tuple<memref<5xf32>, i1>
-  %1 = "test.get_tuple_element"(%0) {index = 0 : i32} : (tuple<memref<5xf32>, i1>) -> memref<5xf32>
-  %2 = "test.get_tuple_element"(%0) {index = 1 : i32} : (tuple<memref<5xf32>, i1>) -> i1
-  linalg.copy(%1, %arg2) : memref<5xf32>, memref<5xf32>
-  return %2 : i1
-}
-func @caller(%arg0: memref<5xf32>, %arg1: i1, %arg2: memref<5xf32>) -> i1 {
-  %0 = "test.make_tuple"(%arg0, %arg1) : (memref<5xf32>, i1) -> tuple<memref<5xf32>, i1>
-  %1 = "test.get_tuple_element"(%0) {index = 0 : i32} : (tuple<memref<5xf32>, i1>) -> memref<5xf32>
-  %2 = "test.get_tuple_element"(%0) {index = 1 : i32} : (tuple<memref<5xf32>, i1>) -> i1
-  %3 = alloc() : memref<5xf32>
-  %4 = call @callee(%1, %2, %3) : (memref<5xf32>, i1, memref<5xf32>) -> i1
-  %5 = "test.make_tuple"(%3, %4) : (memref<5xf32>, i1) -> tuple<memref<5xf32>, i1>
-  %6 = "test.get_tuple_element"(%5) {index = 0 : i32} : (tuple<memref<5xf32>, i1>) -> memref<5xf32>
-  %7 = "test.get_tuple_element"(%5) {index = 1 : i32} : (tuple<memref<5xf32>, i1>) -> i1
-  linalg.copy(%6, %arg2) : memref<5xf32>, memref<5xf32>
-  return %7 : i1
-}
-```
-
-## Buffer Deallocation - Internal Functionality
-
-This section covers the internal functionality of the BufferDeallocation
-transformation. The transformation consists of several passes. The main pass
-called BufferDeallocation can be applied via “-buffer-deallocation” on MLIR
-programs. Currently, there are three optimization passes, that move allocs and
-convert AllocOps to AllocaOps, if possible. The first and second pass can be
-applied using “-buffer-hoisting” or “-buffer-loop-hoisting”, the third one
-using “-promote-buffers-to-stack”. However, these optimizations must be applied
-before using the BufferDeallocation pass.
-
-### Requirements
-
-In order to use BufferDeallocation on an arbitrary dialect, several
-control-flow interfaces have to be implemented when using custom operations.
-This is particularly important to understand the implicit control-flow
-dependencies between different parts of the input program. Without implementing
-the following interfaces, control-flow relations cannot be discovered properly
-and the resulting program can become invalid:
-
-* Branch-like terminators should implement the `BranchOpInterface` to query and
-manipulate associated operands.
-* Operations involving structured control flow have to implement the
-`RegionBranchOpInterface` to model inter-region control flow.
-* Terminators yielding values to their parent operation (in particular in the
-scope of nested regions within `RegionBranchOpInterface`-based operations),
-should implement the `ReturnLike` trait to represent logical “value returns”.
-
-Example dialects that are fully compatible are the “std” and “scf” dialects
-with respect to all implemented interfaces.
-
-### Detection of Buffer Allocations
-
-The first step of the BufferDeallocation transformation is to identify
-manageable allocation operations that implement the `SideEffects` interface.
-Furthermore, these ops need to apply the effect `MemoryEffects::Allocate` to a
-particular result value while not using the resource
-`SideEffects::AutomaticAllocationScopeResource` (since it is currently reserved
-for allocations, like `Alloca` that will be automatically deallocated by a
-parent scope). Allocations that have not been detected in this phase will not
-be tracked internally, and thus, not deallocated automatically. However,
-BufferDeallocation is fully compatible with “hybrid” setups in which tracked
-and untracked allocations are mixed:
-
-```mlir
-func @mixedAllocation(%arg0: i1) {
-   %0 = alloca() : memref<2xf32>  // aliases: %2
-   %1 = alloc() : memref<2xf32>  // aliases: %2
-   cond_br %arg0, ^bb1, ^bb2
-^bb1:
-  use(%0)
-  br ^bb3(%0 : memref<2xf32>)
-^bb2:
-  use(%1)
-  br ^bb3(%1 : memref<2xf32>)
-^bb3(%2: memref<2xf32>):
-  ...
-}
-```
-
-Example of using a conditional branch with alloc and alloca. BufferDeallocation
-can detect and handle the different allocation types that might be intermixed.
-
-Note: the current version does not support allocation operations returning
-multiple result buffers.
-
-### Conversion from AllocOp to AllocaOp
-
-The PromoteBuffersToStack-pass converts AllocOps to AllocaOps, if possible. In
-some cases, it can be useful to use such stack-based buffers instead of
-heap-based buffers. The conversion is restricted to several constraints like:
-
-* Control flow
-* Buffer Size
-* Dynamic Size
-
-If a buffer is leaving a block, we are not allowed to convert it into an
-alloca. If the size of the buffer is large, we could convert it, but regarding
-stack overflow, it makes sense to limit the size of these buffers and only
-convert small ones. The size can be set via a pass option. The current default
-value is 1KB. Furthermore, we can not convert buffers with dynamic size, since
-the dimension is not known a priori.
-
-### Movement and Placement of Allocations
-
-Using the buffer hoisting pass, all buffer allocations are moved as far upwards
-as possible in order to group them and make upcoming optimizations easier by
-limiting the search space. Such a movement is shown in the following graphs.
-In addition, we are able to statically free an alloc, if we move it into a
-dominator of all of its uses. This simplifies further optimizations (e.g.
-buffer fusion) in the future. However, movement of allocations is limited by
-external data dependencies (in particular in the case of allocations of
-dynamically shaped types). Furthermore, allocations can be moved out of nested
-regions, if necessary. In order to move allocations to valid locations with
-respect to their uses only, we leverage Liveness information.
-
-The following code snippets shows a conditional branch before running the
-BufferHoisting pass:
-
-![branch_example_pre_move](/includes/img/branch_example_pre_move.svg)
-
-```mlir
-func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
-  cond_br %arg0, ^bb1, ^bb2
-^bb1:
-  br ^bb3(%arg1 : memref<2xf32>)
-^bb2:
-  %0 = alloc() : memref<2xf32>  // aliases: %1
-  use(%0)
-  br ^bb3(%0 : memref<2xf32>)
-^bb3(%1: memref<2xf32>):  // %1 could be %0 or %arg1
-  "linalg.copy"(%1, %arg2) : (memref<2xf32>, memref<2xf32>) -> ()
-  return
-}
-```
-
-Applying the BufferHoisting pass on this program results in the following piece
-of code:
-
-![branch_example_post_move](/includes/img/branch_example_post_move.svg)
-
-```mlir
-func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
-  %0 = alloc() : memref<2xf32>  // moved to bb0
-  cond_br %arg0, ^bb1, ^bb2
-^bb1:
-  br ^bb3(%arg1 : memref<2xf32>)
-^bb2:
-   use(%0)
-   br ^bb3(%0 : memref<2xf32>)
-^bb3(%1: memref<2xf32>):
-  "linalg.copy"(%1, %arg2) : (memref<2xf32>, memref<2xf32>) -> ()
-  return
-}
-```
-
-The alloc is moved from bb2 to the beginning and it is passed as an argument to
-bb3.
-
-The following example demonstrates an allocation using dynamically shaped
-types. Due to the data dependency of the allocation to %0, we cannot move the
-allocation out of bb2 in this case:
-
-```mlir
-func @condBranchDynamicType(
-  %arg0: i1,
-  %arg1: memref<?xf32>,
-  %arg2: memref<?xf32>,
-  %arg3: index) {
-  cond_br %arg0, ^bb1, ^bb2(%arg3: index)
-^bb1:
-  br ^bb3(%arg1 : memref<?xf32>)
-^bb2(%0: index):
-  %1 = alloc(%0) : memref<?xf32>   // cannot be moved upwards to the data
-                                   // dependency to %0
-  use(%1)
-  br ^bb3(%1 : memref<?xf32>)
-^bb3(%2: memref<?xf32>):
-  "linalg.copy"(%2, %arg2) : (memref<?xf32>, memref<?xf32>) -> ()
-  return
-}
-```
-
-### Introduction of Copies
-
-In order to guarantee that all allocated buffers are freed properly, we have to
-pay attention to the control flow and all potential aliases a buffer allocation
-can have. Since not all allocations can be safely freed with respect to their
-aliases (see the following code snippet), it is often required to introduce
-copies to eliminate them. Consider the following example in which the
-allocations have already been placed:
-
-```mlir
-func @branch(%arg0: i1) {
-  %0 = alloc() : memref<2xf32>  // aliases: %2
-  cond_br %arg0, ^bb1, ^bb2
-^bb1:
-  %1 = alloc() : memref<2xf32>  // resides here for demonstration purposes
-                                // aliases: %2
-  br ^bb3(%1 : memref<2xf32>)
-^bb2:
-  use(%0)
-  br ^bb3(%0 : memref<2xf32>)
-^bb3(%2: memref<2xf32>):
-  …
-  return
-}
-```
-
-The first alloc can be safely freed after the live range of its post-dominator
-block (bb3). The alloc in bb1 has an alias %2 in bb3 that also keeps this
-buffer alive until the end of bb3. Since we cannot determine the actual
-branches that will be taken at runtime, we have to ensure that all buffers are
-freed correctly in bb3 regardless of the branches we will take to reach the
-exit block. This makes it necessary to introduce a copy for %2, which allows us
-to free %alloc0 in bb0 and %alloc1 in bb1. Afterwards, we can continue
-processing all aliases of %2 (none in this case) and we can safely free %2 at
-the end of the sample program. This sample demonstrates that not all
-allocations can be safely freed in their associated post-dominator blocks.
-Instead, we have to pay attention to all of their aliases.
-
-Applying the BufferDeallocation pass to the program above yields the following
-result:
-
-```mlir
-func @branch(%arg0: i1) {
-  %0 = alloc() : memref<2xf32>
-  cond_br %arg0, ^bb1, ^bb2
-^bb1:
-  %1 = alloc() : memref<2xf32>
-  %3 = alloc() : memref<2xf32>  // temp copy for %1
-  "linalg.copy"(%1, %3) : (memref<2xf32>, memref<2xf32>) -> ()
-  dealloc %1 : memref<2xf32> // %1 can be safely freed here
-  br ^bb3(%3 : memref<2xf32>)
-^bb2:
-  use(%0)
-  %4 = alloc() : memref<2xf32>  // temp copy for %0
-  "linalg.copy"(%0, %4) : (memref<2xf32>, memref<2xf32>) -> ()
-  br ^bb3(%4 : memref<2xf32>)
-^bb3(%2: memref<2xf32>):
-  …
-  dealloc %2 : memref<2xf32> // free temp buffer %2
-  dealloc %0 : memref<2xf32> // %0 can be safely freed here
-  return
-}
-```
-
-Note that a temporary buffer for %2 was introduced to free all allocations
-properly. Note further that the unnecessary allocation of %3 can be easily
-removed using one of the post-pass transformations.
-
-Reconsider the previously introduced sample demonstrating dynamically shaped
-types:
-
-```mlir
-func @condBranchDynamicType(
-  %arg0: i1,
-  %arg1: memref<?xf32>,
-  %arg2: memref<?xf32>,
-  %arg3: index) {
-  cond_br %arg0, ^bb1, ^bb2(%arg3: index)
-^bb1:
-  br ^bb3(%arg1 : memref<?xf32>)
-^bb2(%0: index):
-  %1 = alloc(%0) : memref<?xf32>  // aliases: %2
-  use(%1)
-  br ^bb3(%1 : memref<?xf32>)
-^bb3(%2: memref<?xf32>):
-  "linalg.copy"(%2, %arg2) : (memref<?xf32>, memref<?xf32>) -> ()
-  return
-}
-```
-
-In the presence of DSTs, we have to parameterize the allocations with
-additional dimension information of the source buffers, we want to copy from.
-BufferDeallocation automatically introduces all required operations to extract
-dimension specifications and wires them with the associated allocations:
-
-```mlir
-func @condBranchDynamicType(
-  %arg0: i1,
-  %arg1: memref<?xf32>,
-  %arg2: memref<?xf32>,
-  %arg3: index) {
-  cond_br %arg0, ^bb1, ^bb2(%arg3 : index)
-^bb1:
-  %c0 = constant 0 : index
-  %0 = dim %arg1, %c0 : memref<?xf32>   // dimension operation to parameterize
-                                        // the following temp allocation
-  %1 = alloc(%0) : memref<?xf32>
-  "linalg.copy"(%arg1, %1) : (memref<?xf32>, memref<?xf32>) -> ()
-  br ^bb3(%1 : memref<?xf32>)
-^bb2(%2: index):
-  %3 = alloc(%2) : memref<?xf32>
-  use(%3)
-  %c0_0 = constant 0 : index
-  %4 = dim %3, %c0_0 : memref<?xf32>  // dimension operation to parameterize
-                                      // the following temp allocation
-  %5 = alloc(%4) : memref<?xf32>
-  "linalg.copy"(%3, %5) : (memref<?xf32>, memref<?xf32>) -> ()
-  dealloc %3 : memref<?xf32>  // %3 can be safely freed here
-  br ^bb3(%5 : memref<?xf32>)
-^bb3(%6: memref<?xf32>):
-  "linalg.copy"(%6, %arg2) : (memref<?xf32>, memref<?xf32>) -> ()
-  dealloc %6 : memref<?xf32>  // %6 can be safely freed here
-  return
-}
-```
-
-BufferDeallocation performs a fix-point iteration taking all aliases of all
-tracked allocations into account. We initialize the general iteration process
-using all tracked allocations and their associated aliases. As soon as we
-encounter an alias that is not properly dominated by our allocation, we mark
-this alias as _critical_ (needs to be freed and tracked by the internal
-fix-point iteration). The following sample demonstrates the presence of
-critical and non-critical aliases:
-
-![nested_branch_example_pre_move](/includes/img/nested_branch_example_pre_move.svg)
-
-```mlir
-func @condBranchDynamicTypeNested(
-  %arg0: i1,
-  %arg1: memref<?xf32>,  // aliases: %3, %4
-  %arg2: memref<?xf32>,
-  %arg3: index) {
-  cond_br %arg0, ^bb1, ^bb2(%arg3: index)
-^bb1:
-  br ^bb6(%arg1 : memref<?xf32>)
-^bb2(%0: index):
-  %1 = alloc(%0) : memref<?xf32>   // cannot be moved upwards due to the data
-                                   // dependency to %0
-                                   // aliases: %2, %3, %4
-  use(%1)
-  cond_br %arg0, ^bb3, ^bb4
-^bb3:
-  br ^bb5(%1 : memref<?xf32>)
-^bb4:
-  br ^bb5(%1 : memref<?xf32>)
-^bb5(%2: memref<?xf32>):  // non-crit. alias of %1, since %1 dominates %2
-  br ^bb6(%2 : memref<?xf32>)
-^bb6(%3: memref<?xf32>):  // crit. alias of %arg1 and %2 (in other words %1)
-  br ^bb7(%3 : memref<?xf32>)
-^bb7(%4: memref<?xf32>):  // non-crit. alias of %3, since %3 dominates %4
-  "linalg.copy"(%4, %arg2) : (memref<?xf32>, memref<?xf32>) -> ()
-  return
-}
-```
-
-Applying BufferDeallocation yields the following output:
-
-![nested_branch_example_post_move](/includes/img/nested_branch_example_post_move.svg)
-
-```mlir
-func @condBranchDynamicTypeNested(
-  %arg0: i1,
-  %arg1: memref<?xf32>,
-  %arg2: memref<?xf32>,
-  %arg3: index) {
-  cond_br %arg0, ^bb1, ^bb2(%arg3 : index)
-^bb1:
-  %c0 = constant 0 : index
-  %d0 = dim %arg1, %c0 : memref<?xf32>
-  %5 = alloc(%d0) : memref<?xf32>  // temp buffer required due to alias %3
-  "linalg.copy"(%arg1, %5) : (memref<?xf32>, memref<?xf32>) -> ()
-  br ^bb6(%5 : memref<?xf32>)
-^bb2(%0: index):
-  %1 = alloc(%0) : memref<?xf32>
-  use(%1)
-  cond_br %arg0, ^bb3, ^bb4
-^bb3:
-  br ^bb5(%1 : memref<?xf32>)
-^bb4:
-  br ^bb5(%1 : memref<?xf32>)
-^bb5(%2: memref<?xf32>):
-  %c0_0 = constant 0 : index
-  %d1 = dim %2, %c0_0 : memref<?xf32>
-  %6 = alloc(%d1) : memref<?xf32>  // temp buffer required due to alias %3
-  "linalg.copy"(%1, %6) : (memref<?xf32>, memref<?xf32>) -> ()
-  dealloc %1 : memref<?xf32>
-  br ^bb6(%6 : memref<?xf32>)
-^bb6(%3: memref<?xf32>):
-  br ^bb7(%3 : memref<?xf32>)
-^bb7(%4: memref<?xf32>):
-  "linalg.copy"(%4, %arg2) : (memref<?xf32>, memref<?xf32>) -> ()
-  dealloc %3 : memref<?xf32>  // free %3, since %4 is a non-crit. alias of %3
-  return
-}
-```
-
-Since %3 is a critical alias, BufferDeallocation introduces an additional
-temporary copy in all predecessor blocks. %3 has an additional (non-critical)
-alias %4 that extends the live range until the end of bb7. Therefore, we can
-free %3 after its last use, while taking all aliases into account. Note that %4
- does not need to be freed, since we did not introduce a copy for it.
-
-The actual introduction of buffer copies is done after the fix-point iteration
-has been terminated and all critical aliases have been detected. A critical
-alias can be either a block argument or another value that is returned by an
-operation. Copies for block arguments are handled by analyzing all predecessor
-blocks. This is primarily done by querying the `BranchOpInterface` of the
-associated branch terminators that can jump to the current block. Consider the
-following example which involves a simple branch and the critical block
-argument %2:
-
-```mlir
-  custom.br ^bb1(..., %0, : ...)
-  ...
-  custom.br ^bb1(..., %1, : ...)
-  ...
-^bb1(%2: memref<2xf32>):
-  ...
-```
-
-The `BranchOpInterface` allows us to determine the actual values that will be
-passed to block bb1 and its argument %2 by analyzing its predecessor blocks.
-Once we have resolved the values %0 and %1 (that are associated with %2 in this
-sample), we can introduce a temporary buffer and clone its contents into the
-new buffer. Afterwards, we rewire the branch operands to use the newly
-allocated buffer instead. However, blocks can have implicitly defined
-predecessors by parent ops that implement the `RegionBranchOpInterface`. This
-can be the case if this block argument belongs to the entry block of a region.
-In this setting, we have to identify all predecessor regions defined by the
-parent operation. For every region, we need to get all terminator operations
-implementing the `ReturnLike` trait, indicating that they can branch to our
-current block. Finally, we can use a similar functionality as described above
-to add the temporary copy. This time, we can modify the terminator operands
-directly without touching a high-level interface.
-
-Consider the following inner-region control-flow sample that uses an imaginary
-“custom.region_if” operation. It either executes the “then” or “else” region
-and always continues to the “join” region. The “custom.region_if_yield”
-operation returns a result to the parent operation. This sample demonstrates
-the use of the `RegionBranchOpInterface` to determine predecessors in order to
-infer the high-level control flow:
-
-```mlir
-func @inner_region_control_flow(
-  %arg0 : index,
-  %arg1 : index) -> memref<?x?xf32> {
-  %0 = alloc(%arg0, %arg0) : memref<?x?xf32>
-  %1 = custom.region_if %0 : memref<?x?xf32> -> (memref<?x?xf32>)
-   then(%arg2 : memref<?x?xf32>) {  // aliases: %arg4, %1
-    custom.region_if_yield %arg2 : memref<?x?xf32>
-   } else(%arg3 : memref<?x?xf32>) {  // aliases: %arg4, %1
-    custom.region_if_yield %arg3 : memref<?x?xf32>
-   } join(%arg4 : memref<?x?xf32>) {  // aliases: %1
-    custom.region_if_yield %arg4 : memref<?x?xf32>
-   }
-  return %1 : memref<?x?xf32>
-}
-```
-
-![region_branch_example_pre_move](/includes/img/region_branch_example_pre_move.svg)
-
-Non-block arguments (other values) can become aliases when they are returned by
-dialect-specific operations. BufferDeallocation supports this behavior via the
-`RegionBranchOpInterface`. Consider the following example that uses an “scf.if”
-operation to determine the value of %2 at runtime which creates an alias:
-
-```mlir
-func @nested_region_control_flow(%arg0 : index, %arg1 : index) -> memref<?x?xf32> {
-  %0 = cmpi "eq", %arg0, %arg1 : index
-  %1 = alloc(%arg0, %arg0) : memref<?x?xf32>
-  %2 = scf.if %0 -> (memref<?x?xf32>) {
-    scf.yield %1 : memref<?x?xf32>   // %2 will be an alias of %1
-  } else {
-    %3 = alloc(%arg0, %arg1) : memref<?x?xf32>  // nested allocation in a div.
-                                                // branch
-    use(%3)
-    scf.yield %1 : memref<?x?xf32>   // %2 will be an alias of %1
+class BufferizeCastOp : public OpConversionPattern<tensor::CastOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(tensor::CastOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto resultType = getTypeConverter()->convertType(op.getType());
+    rewriter.replaceOpWithNewOp<MemRefCastOp>(op, resultType, operands[0]);
+    return success();
   }
-  return %2 : memref<?x?xf32>
-}
+};
 ```
 
-In this example, a dealloc is inserted to release the buffer within the else
-block since it cannot be accessed by the remainder of the program. Accessing
-the `RegionBranchOpInterface`, allows us to infer that %2 is a non-critical
-alias of %1 which does not need to be tracked.
+See [the talk](#the-talk) for more details on how to write these patterns.
 
-```mlir
-func @nested_region_control_flow(%arg0: index, %arg1: index) -> memref<?x?xf32> {
-    %0 = cmpi "eq", %arg0, %arg1 : index
-    %1 = alloc(%arg0, %arg0) : memref<?x?xf32>
-    %2 = scf.if %0 -> (memref<?x?xf32>) {
-      scf.yield %1 : memref<?x?xf32>
-    } else {
-      %3 = alloc(%arg0, %arg1) : memref<?x?xf32>
-      use(%3)
-      dealloc %3 : memref<?x?xf32>  // %3 can be safely freed here
-      scf.yield %1 : memref<?x?xf32>
-    }
-    return %2 : memref<?x?xf32>
-}
+The
+[pass itself](https://github.com/llvm/llvm-project/blob/bc8acf2ce8ad6e8c9b1d97b2e02d3f4ad26e1d9d/mlir/lib/Dialect/Tensor/Transforms/Bufferize.cpp#L57)
+is very small, and follows the basic pattern of any dialect conversion pass.
+
 ```
-
-Analogous to the previous case, we have to detect all terminator operations in
-all attached regions of “scf.if” that provides a value to its parent operation
-(in this sample via scf.yield). Querying the `RegionBranchOpInterface` allows
-us to determine the regions that “return” a result to their parent operation.
-Like before, we have to update all `ReturnLike` terminators as described above.
-Reconsider a slightly adapted version of the “custom.region_if” example from
-above that uses a nested allocation:
-
-```mlir
-func @inner_region_control_flow_div(
-  %arg0 : index,
-  %arg1 : index) -> memref<?x?xf32> {
-  %0 = alloc(%arg0, %arg0) : memref<?x?xf32>
-  %1 = custom.region_if %0 : memref<?x?xf32> -> (memref<?x?xf32>)
-   then(%arg2 : memref<?x?xf32>) {  // aliases: %arg4, %1
-    custom.region_if_yield %arg2 : memref<?x?xf32>
-   } else(%arg3 : memref<?x?xf32>) {
-    %2 = alloc(%arg0, %arg1) : memref<?x?xf32>  // aliases: %arg4, %1
-    custom.region_if_yield %2 : memref<?x?xf32>
-   } join(%arg4 : memref<?x?xf32>) {  // aliases: %1
-    custom.region_if_yield %arg4 : memref<?x?xf32>
-   }
-  return %1 : memref<?x?xf32>
+void mlir::populateTensorBufferizePatterns(
+    MLIRContext *context, BufferizeTypeConverter &typeConverter,
+    OwningRewritePatternList &patterns) {
+  patterns.insert<BufferizeCastOp, BufferizeExtractOp>(typeConverter, context);
 }
-```
 
-Since the allocation %2 happens in a divergent branch and cannot be safely
-deallocated in a post-dominator, %arg4 will be considered a critical alias.
-Furthermore, %arg4 is returned to its parent operation and has an alias %1.
-This causes BufferDeallocation to introduce additional copies:
+struct TensorBufferizePass : public TensorBufferizeBase<TensorBufferizePass> {
+  void runOnFunction() override {
+    auto *context = &getContext();
+    BufferizeTypeConverter typeConverter;
+    OwningRewritePatternList patterns;
+    ConversionTarget target(*context);
 
-```mlir
-func @inner_region_control_flow_div(
-  %arg0 : index,
-  %arg1 : index) -> memref<?x?xf32> {
-  %0 = alloc(%arg0, %arg0) : memref<?x?xf32>
-  %1 = custom.region_if %0 : memref<?x?xf32> -> (memref<?x?xf32>)
-   then(%arg2 : memref<?x?xf32>) {
-    %c0 = constant 0 : index  // determine dimension extents for temp allocation
-    %2 = dim %arg2, %c0 : memref<?x?xf32>
-    %c1 = constant 1 : index
-    %3 = dim %arg2, %c1 : memref<?x?xf32>
-    %4 = alloc(%2, %3) : memref<?x?xf32>  // temp buffer required due to critic.
-                                          // alias %arg4
-    linalg.copy(%arg2, %4) : memref<?x?xf32>, memref<?x?xf32>
-    custom.region_if_yield %4 : memref<?x?xf32>
-   } else(%arg3 : memref<?x?xf32>) {
-    %2 = alloc(%arg0, %arg1) : memref<?x?xf32>
-    %c0 = constant 0 : index  // determine dimension extents for temp allocation
-    %3 = dim %2, %c0 : memref<?x?xf32>
-    %c1 = constant 1 : index
-    %4 = dim %2, %c1 : memref<?x?xf32>
-    %5 = alloc(%3, %4) : memref<?x?xf32>  // temp buffer required due to critic.
-                                          // alias %arg4
-    linalg.copy(%2, %5) : memref<?x?xf32>, memref<?x?xf32>
-    dealloc %2 : memref<?x?xf32>
-    custom.region_if_yield %5 : memref<?x?xf32>
-   } join(%arg4: memref<?x?xf32>) {
-    %c0 = constant 0 : index  // determine dimension extents for temp allocation
-    %2 = dim %arg4, %c0 : memref<?x?xf32>
-    %c1 = constant 1 : index
-    %3 = dim %arg4, %c1 : memref<?x?xf32>
-    %4 = alloc(%2, %3) : memref<?x?xf32>  // this allocation will be removed by
-                                          // applying the copy removal pass
-    linalg.copy(%arg4, %4) : memref<?x?xf32>, memref<?x?xf32>
-    dealloc %arg4 : memref<?x?xf32>
-    custom.region_if_yield %4 : memref<?x?xf32>
-   }
-  dealloc %0 : memref<?x?xf32>  // %0 can be safely freed here
-  return %1 : memref<?x?xf32>
-}
-```
+    populateTensorBufferizePatterns(context, typeConverter, patterns);
+    target.addIllegalOp<tensor::CastOp, tensor::ExtractOp>();
+    target.addLegalDialect<StandardOpsDialect>();
 
-### Placement of Deallocs
-
-After introducing allocs and copies, deallocs have to be placed to free
-allocated memory and avoid memory leaks. The deallocation needs to take place
-after the last use of the given value. The position can be determined by
-calculating the common post-dominator of all values using their remaining
-non-critical aliases. A special-case is the presence of back edges: since such
-edges can cause memory leaks when a newly allocated buffer flows back to
-another part of the program. In these cases, we need to free the associated
-buffer instances from the previous iteration by inserting additional deallocs.
-
-Consider the following “scf.for” use case containing a nested structured
-control-flow if:
-
-```mlir
-func @loop_nested_if(
-  %lb: index,
-  %ub: index,
-  %step: index,
-  %buf: memref<2xf32>,
-  %res: memref<2xf32>) {
-  %0 = scf.for %i = %lb to %ub step %step
-    iter_args(%iterBuf = %buf) -> memref<2xf32> {
-    %1 = cmpi "eq", %i, %ub : index
-    %2 = scf.if %1 -> (memref<2xf32>) {
-      %3 = alloc() : memref<2xf32>  // makes %2 a critical alias due to a
-                                    // divergent allocation
-      use(%3)
-      scf.yield %3 : memref<2xf32>
-    } else {
-      scf.yield %iterBuf : memref<2xf32>
-    }
-    scf.yield %2 : memref<2xf32>
+    if (failed(
+            applyPartialConversion(getFunction(), target, std::move(patterns))))
+      signalPassFailure();
   }
-  "linalg.copy"(%0, %res) : (memref<2xf32>, memref<2xf32>) -> ()
-  return
-}
+};
 ```
 
-In this example, the _then_ branch of the nested “scf.if” operation returns a
-newly allocated buffer.
+The pass has all the hallmarks of a dialect conversion pass that does type
+conversions: a `TypeConverter`, a `OwningRewritePatternList`, and a
+`ConversionTarget`, and a call to `applyPartialConversion`. Note that a function
+`populateTensorBufferizePatterns` is separated, so that power users can use the
+patterns independently, if necessary (such as to combine multiple sets of
+conversion patterns into a single conversion call, for performance).
 
-Since this allocation happens in the scope of a divergent branch, %2 becomes a
-critical alias that needs to be handled. As before, we have to insert
-additional copies to eliminate this alias using copies of %3 and %iterBuf. This
-guarantees that %2 will be a newly allocated buffer that is returned in each
-iteration. However, “returning” %2 to its alias %iterBuf turns %iterBuf into a
-critical alias as well. In other words, we have to create a copy of %2 to pass
-it to %iterBuf. Since this jump represents a back edge, and %2 will always be a
-new buffer, we have to free the buffer from the previous iteration to avoid
-memory leaks:
+One convenient utility provided by the MLIR bufferization infrastructure is the
+`BufferizeTypeConverter`, which comes pre-loaded with the necessary conversions
+and materializations between `tensor` and `memref`.
 
-```mlir
-func @loop_nested_if(
-  %lb: index,
-  %ub: index,
-  %step: index,
-  %buf: memref<2xf32>,
-  %res: memref<2xf32>) {
-  %4 = alloc() : memref<2xf32>
-  "linalg.copy"(%buf, %4) : (memref<2xf32>, memref<2xf32>) -> ()
-  %0 = scf.for %i = %lb to %ub step %step
-    iter_args(%iterBuf = %4) -> memref<2xf32> {
-    %1 = cmpi "eq", %i, %ub : index
-    %2 = scf.if %1 -> (memref<2xf32>) {
-      %3 = alloc() : memref<2xf32> // makes %2 a critical alias
-      use(%3)
-      %5 = alloc() : memref<2xf32> // temp copy due to crit. alias %2
-      "linalg.copy"(%3, %5) : memref<2xf32>, memref<2xf32>
-      dealloc %3 : memref<2xf32>
-      scf.yield %5 : memref<2xf32>
-    } else {
-      %6 = alloc() : memref<2xf32> // temp copy due to crit. alias %2
-      "linalg.copy"(%iterBuf, %6) : memref<2xf32>, memref<2xf32>
-      scf.yield %6 : memref<2xf32>
-    }
-    %7 = alloc() : memref<2xf32> // temp copy due to crit. alias %iterBuf
-    "linalg.copy"(%2, %7) : memref<2xf32>, memref<2xf32>
-    dealloc %2 : memref<2xf32>
-    dealloc %iterBuf : memref<2xf32> // free backedge iteration variable
-    scf.yield %7 : memref<2xf32>
-  }
-  "linalg.copy"(%0, %res) : (memref<2xf32>, memref<2xf32>) -> ()
-  dealloc %0 : memref<2xf32> // free temp copy %0
-  return
-}
-```
+In this case, the `StandardOpsDialect` is marked as legal, so the `tensor_load`
+and `tensor_to_memref` ops, which are inserted automatically by the dialect
+conversion framework as materializations, are legal. There is a helper
+`populateBufferizeMaterializationLegality`
+([code](https://github.com/llvm/llvm-project/blob/a0b65a7bcd6065688189b3d678c42ed6af9603db/mlir/include/mlir/Transforms/Bufferize.h#L53))
+which helps with this in general.
 
-Example for loop-like control flow. The CFG contains back edges that have to be
-handled to avoid memory leaks. The bufferization is able to free the backedge
-iteration variable %iterBuf.
+### Other partial bufferization examples
 
-### Private Analyses Implementations
+- `linalg-bufferize`
+  ([code](https://github.com/llvm/llvm-project/blob/bc8acf2ce8ad6e8c9b1d97b2e02d3f4ad26e1d9d/mlir/lib/Dialect/Linalg/Transforms/Bufferize.cpp#L1),
+  [test](https://github.com/llvm/llvm-project/blob/bc8acf2ce8ad6e8c9b1d97b2e02d3f4ad26e1d9d/mlir/test/Dialect/Linalg/bufferize.mlir#L1))
 
-The BufferDeallocation transformation relies on one primary control-flow
-analysis: BufferPlacementAliasAnalysis. Furthermore, we also use dominance and
-liveness to place and move nodes. The liveness analysis determines the live
-range of a given value. Within this range, a value is alive and can or will be
-used in the course of the program. After this range, the value is dead and can
-be discarded - in our case, the buffer can be freed. To place the allocs, we
-need to know from which position a value will be alive. The allocs have to be
-placed in front of this position. However, the most important analysis is the
-alias analysis that is needed to introduce copies and to place all
-deallocations.
+  - Bufferizes the `linalg` dialect.
+  - This is an example of how to simultaneously bufferize all the ops that
+    satisfy a certain OpInterface with a single pattern. Specifically,
+    `BufferizeAnyLinalgOp`
+    ([code](https://github.com/llvm/llvm-project/blob/daaaed6bb89044ac58a23f1bb1ccdd12342a5a58/mlir/lib/Dialect/Linalg/Transforms/Bufferize.cpp#L170))
+    bufferizes any ops that implements the `LinalgOp` interface.
 
-## Post Phase
+- `scf-bufferize`
+  ([code](https://github.com/llvm/llvm-project/blob/bc8acf2ce8ad6e8c9b1d97b2e02d3f4ad26e1d9d/mlir/lib/Dialect/SCF/Transforms/Bufferize.cpp#L1),
+  [test](https://github.com/llvm/llvm-project/blob/bc8acf2ce8ad6e8c9b1d97b2e02d3f4ad26e1d9d/mlir/test/Dialect/SCF/bufferize.mlir#L1))
 
-In order to limit the complexity of the BufferDeallocation transformation, some
-tiny code-polishing/optimization transformations are not applied on-the-fly
-during placement. Currently, there is only the CopyRemoval transformation to
-remove unnecessary copy and allocation operations.
+  - Bufferizes ops from the `scf` dialect.
+  - This is an example of how to bufferize ops that implement
+    `RegionBranchOpInterface` (that is, they use regions to represent control
+    flow).
+  - The bulk of the work is done by
+    `lib/Dialect/SCF/Transforms/StructuralTypeConversions.cpp`
+    ([code](https://github.com/llvm/llvm-project/blob/daaaed6bb89044ac58a23f1bb1ccdd12342a5a58/mlir/lib/Dialect/SCF/Transforms/StructuralTypeConversions.cpp#L1)),
+    which is well-commented and covers how to correctly convert ops that contain
+    regions.
 
-Note: further transformations might be added to the post-pass phase in the
-future.
+- `func-bufferize`
+  ([code](https://github.com/llvm/llvm-project/blob/bc8acf2ce8ad6e8c9b1d97b2e02d3f4ad26e1d9d/mlir/lib/Dialect/StandardOps/Transforms/FuncBufferize.cpp#L1),
+  [test](https://github.com/llvm/llvm-project/blob/bc8acf2ce8ad6e8c9b1d97b2e02d3f4ad26e1d9d/mlir/test/Dialect/Standard/func-bufferize.mlir#L1))
 
-### CopyRemoval Pass
+  - Bufferizes `func`, `call`, and `BranchOpInterface` ops.
+  - This is an example of how to bufferize ops that have multi-block regions.
+  - This is an example of a pass that is not split along dialect subdivisions.
 
-A common pattern that arises during placement is the introduction of
-unnecessary temporary copies that are used instead of the original source
-buffer. For this reason, there is a post-pass transformation that removes these
-allocations and copies via `-copy-removal`. This pass, besides removing
-unnecessary copy operations, will also remove the dead allocations and their
-corresponding deallocation operations. The CopyRemoval pass can currently be
-applied to operations that implement the `CopyOpInterface` in any of these two
-situations which are
+- `tensor-constant-bufferize`
+  ([code](https://github.com/llvm/llvm-project/blob/bc8acf2ce8ad6e8c9b1d97b2e02d3f4ad26e1d9d/mlir/lib/Dialect/StandardOps/Transforms/TensorConstantBufferize.cpp#L1),
+  [test](https://github.com/llvm/llvm-project/blob/bc8acf2ce8ad6e8c9b1d97b2e02d3f4ad26e1d9d/mlir/test/Dialect/Standard/tensor-constant-bufferize.mlir#L1))
+  - Bufferizes only `std.constant` ops of `tensor` type.
+  - This is an example of setting up the legality so that only a subset of
+    `std.constant` ops get bufferized.
+  - This is an example of a pass that is not split along dialect subdivisions.
 
-* reusing the source buffer of the copy operation.
-* reusing the target buffer of the copy operation.
+## How to write a finalizing bufferization pass
 
-### Reusing the Source Buffer of the Copy Operation
+The contract of a finalizing bufferization pass is that all tensors are gone
+from the program.
 
-In this case, the source of the copy operation can be used instead of target.
-The unused allocation and deallocation operations that are defined for this
-copy operation are also removed. Here is a working example generated by the
-BufferDeallocation pass that allocates a buffer with dynamic size. A deeper
-analysis of this sample reveals that the highlighted operations are redundant
-and can be removed.
+The easiest way to write a finalizing bufferize pass is to not write one at all!
+MLIR provides a pass `finalizing-bufferize` which eliminates the `tensor_load` /
+`tensor_to_memref` materialization ops inserted by partial bufferization passes
+and emits an error if that is not sufficient to remove all tensors from the
+program.
 
-```mlir
-func @dynamic_allocation(%arg0: index, %arg1: index) -> memref<?x?xf32> {
-  %7 = alloc(%arg0, %arg1) : memref<?x?xf32>
-  %c0_0 = constant 0 : index
-  %8 = dim %7, %c0_0 : memref<?x?xf32>
-  %c1_1 = constant 1 : index
-  %9 = dim %7, %c1_1 : memref<?x?xf32>
-  %10 = alloc(%8, %9) : memref<?x?xf32>
-  linalg.copy(%7, %10) : memref<?x?xf32>, memref<?x?xf32>
-  dealloc %7 : memref<?x?xf32>
-  return %10 : memref<?x?xf32>
-}
-```
+This pass is sufficient when partial bufferization passes have bufferized all
+the ops in the program, leaving behind only the materializations. When possible,
+it is recommended to structure your pass pipeline this way, as this has the
+significant advantage that if an op does not get bufferized (due to a missing
+pattern, bug in the code, etc.), `finalizing-bufferize` will emit a nice clean
+error, and the IR seen by `finalizing-bufferize` will only contain only one
+unbufferized op.
 
-Will be transformed to:
+However, before the current bufferization infrastructure was put in place,
+bufferization could only be done as a single finalizing bufferization
+mega-pass that used the `populate*BufferizePatterns` functions from multiple
+dialects to simultaneously bufferize everything at once. Thus, one might see
+code in downstream projects structured this way. This structure is not
+recommended in new code. A helper,
+`populateEliminateBufferizeMaterializationsPatterns`
+([code](https://github.com/llvm/llvm-project/blob/a0b65a7bcd6065688189b3d678c42ed6af9603db/mlir/include/mlir/Transforms/Bufferize.h#L58))
+is available for such passes to provide patterns that eliminate `tensor_load`
+and `tensor_to_memref`.
 
-```mlir
-func @dynamic_allocation(%arg0: index, %arg1: index) -> memref<?x?xf32> {
-  %7 = alloc(%arg0, %arg1) : memref<?x?xf32>
-  %c0_0 = constant 0 : index
-  %8 = dim %7, %c0_0 : memref<?x?xf32>
-  %c1_1 = constant 1 : index
-  %9 = dim %7, %c1_1 : memref<?x?xf32>
-  return %7 : memref<?x?xf32>
-}
-```
+## Changes since [the talk](#the-talk)
 
-In this case, the additional copy %10 can be replaced with its original source
-buffer %7. This also applies to the associated dealloc operation of %7.
-
-To limit the complexity of this transformation, it only removes copy operations
-when the following constraints are met:
-
-* The copy operation, the defining operation for the target value, and the
-deallocation of the source value lie in the same block.
-* There are no users/aliases of the target value between the defining operation
-of the target value and its copy operation.
-* There are no users/aliases of the source value between its associated copy
-operation and the deallocation of the source value.
-
-### Reusing the Target Buffer of the Copy Operation
-
-In this case, the target buffer of the copy operation can be used instead of
-its source. The unused allocation and deallocation operations that are defined
-for this copy operation are also removed.
-
-Consider the following example where a generic linalg operation writes the
-result to %temp and then copies %temp to %result. However, these two operations
-can be merged into a single step. Copy removal removes the copy operation and
-%temp, and replaces the uses of %temp with %result:
-
-```mlir
-func @reuseTarget(%arg0: memref<2xf32>, %result: memref<2xf32>){
-  %temp = alloc() : memref<2xf32>
-  linalg.generic {
-    args_in = 1 : i64,
-    args_out = 1 : i64,
-    indexing_maps = [#map0, #map0],
-    iterator_types = ["parallel"]} %arg0, %temp {
-  ^bb0(%gen2_arg0: f32, %gen2_arg1: f32):
-    %tmp2 = exp %gen2_arg0 : f32
-    linalg.yield %tmp2 : f32
-  }: memref<2xf32>, memref<2xf32>
-  "linalg.copy"(%temp, %result) : (memref<2xf32>, memref<2xf32>) -> ()
-  dealloc %temp : memref<2xf32>
-  return
-}
-```
-
-Will be transformed to:
-
-```mlir
-func @reuseTarget(%arg0: memref<2xf32>, %result: memref<2xf32>){
-  linalg.generic {
-    args_in = 1 : i64,
-    args_out = 1 : i64,
-    indexing_maps = [#map0, #map0],
-    iterator_types = ["parallel"]} %arg0, %result {
-  ^bb0(%gen2_arg0: f32, %gen2_arg1: f32):
-    %tmp2 = exp %gen2_arg0 : f32
-    linalg.yield %tmp2 : f32
-  }: memref<2xf32>, memref<2xf32>
-  return
-}
-```
-
-Like before, several constraints to use the transformation apply:
-
-* The copy operation, the defining operation of the source value, and the
-deallocation of the source value lie in the same block.
-* There are no users/aliases of the target value between the defining operation
-of the source value and the copy operation.
-* There are no users/aliases of the source value between the copy operation and
-the deallocation of the source value.
-
-## Known Limitations
-
-BufferDeallocation introduces additional copies using allocations from the
-“std” dialect (“std.alloc”). Analogous, all deallocations use the “std”
-dialect-free operation “std.dealloc”. The actual copy process is realized using
-“linalg.copy”. Furthermore, buffers are essentially immutable after their
-creation in a block. Another limitations are known in the case using
-unstructered control flow.
+- `func-bufferize` was changed to be a partial conversion pass, and there is a
+  new `finalizing-bufferize` which serves as a general finalizing bufferization
+  pass.

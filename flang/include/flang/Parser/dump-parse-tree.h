@@ -65,7 +65,7 @@ public:
   NODE(parser, AccBlockDirective)
   NODE(parser, AccClause)
 #define GEN_FLANG_DUMP_PARSE_TREE_CLAUSES
-#include "llvm/Frontend/OpenACC/ACC.cpp.inc"
+#include "llvm/Frontend/OpenACC/ACC.inc"
   NODE(parser, AccBindClause)
   NODE(parser, AccDefaultClause)
   static std::string GetNodeName(const llvm::acc::DefaultValue &x) {

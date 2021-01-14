@@ -62,7 +62,7 @@ size_t SegvBacktrace(uintptr_t *TraceBuffer, size_t Size, void *Context) {
 }
 
 static void PrintBacktrace(uintptr_t *Trace, size_t TraceLength,
-                           gwp_asan::crash_handler::Printf_t Printf) {
+                           gwp_asan::Printf_t Printf) {
   __sanitizer::StackTrace StackTrace;
   StackTrace.trace = reinterpret_cast<__sanitizer::uptr *>(Trace);
   StackTrace.size = TraceLength;
@@ -77,25 +77,23 @@ static void PrintBacktrace(uintptr_t *Trace, size_t TraceLength,
 } // anonymous namespace
 
 namespace gwp_asan {
-namespace options {
+namespace backtrace {
+
 // This function is thread-compatible. It must be synchronised in respect to any
 // other calls to getBacktraceFunction(), calls to getPrintBacktraceFunction(),
 // and calls to either of the functions that they return. Furthermore, this may
 // require synchronisation with any calls to sanitizer_common that use flags.
 // Generally, this function will be called during the initialisation of the
 // allocator, which is done in a thread-compatible manner.
-Backtrace_t getBacktraceFunction() {
+options::Backtrace_t getBacktraceFunction() {
   // The unwinder requires the default flags to be set.
   __sanitizer::SetCommonFlagsDefaults();
   __sanitizer::InitializeCommonFlags();
   return Backtrace;
 }
-crash_handler::PrintBacktrace_t getPrintBacktraceFunction() {
-  return PrintBacktrace;
-}
-} // namespace options
 
-namespace crash_handler {
+PrintBacktrace_t getPrintBacktraceFunction() { return PrintBacktrace; }
 SegvBacktrace_t getSegvBacktraceFunction() { return SegvBacktrace; }
-} // namespace crash_handler
+
+} // namespace backtrace
 } // namespace gwp_asan
