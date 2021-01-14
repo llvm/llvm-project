@@ -6679,9 +6679,6 @@ class HorizontalReduction {
   /// The operation data of the reduction operation.
   OperationData RdxTreeInst;
 
-  /// The operation data for the leaf values that we perform a reduction on.
-  OperationData RdxLeafVal;
-
   /// Checks if the ParentStackElem.first should be marked as a reduction
   /// operation with an extra argument or as extra argument itself.
   void markExtraArg(std::pair<Instruction *, unsigned> &ParentStackElem,
@@ -6825,8 +6822,10 @@ public:
     if (!isValidElementType(Ty) || Ty->isPointerTy())
       return false;
 
-    RdxLeafVal.clear();
     ReductionRoot = B;
+
+    // The operation data for the leaf values that we perform a reduction on.
+    OperationData RdxLeafVal;
 
     // Post order traverse the reduction tree starting at B. We only handle true
     // trees containing only binary operators.
