@@ -575,8 +575,7 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
     } else if (intrinsic->name == "all" || intrinsic->name == "any" ||
         intrinsic->name == "count" || intrinsic->name == "iall" ||
         intrinsic->name == "iany" || intrinsic->name == "iparity" ||
-        intrinsic->name == "maxloc" || intrinsic->name == "maxval" ||
-        intrinsic->name == "minloc" || intrinsic->name == "minval" ||
+        intrinsic->name == "maxval" || intrinsic->name == "minval" ||
         intrinsic->name == "norm2" || intrinsic->name == "parity" ||
         intrinsic->name == "product" || intrinsic->name == "sum") {
       // Reduction with DIM=
@@ -591,6 +590,25 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
               arrayShape->erase(arrayShape->begin() + (*dim - 1));
               return std::move(*arrayShape);
             }
+          }
+        }
+      }
+    } else if (intrinsic->name == "maxloc" || intrinsic->name == "minloc") {
+      // TODO: FINDLOC
+      if (call.arguments().size() >= 2) {
+        if (auto arrayShape{
+                (*this)(UnwrapExpr<Expr<SomeType>>(call.arguments().at(0)))}) {
+          auto rank{static_cast<int>(arrayShape->size())};
+          if (const auto *dimArg{
+                  UnwrapExpr<Expr<SomeType>>(call.arguments()[1])}) {
+            auto dim{ToInt64(*dimArg)};
+            if (dim && *dim >= 1 && *dim <= rank) {
+              arrayShape->erase(arrayShape->begin() + (*dim - 1));
+              return std::move(*arrayShape);
+            }
+          } else {
+            // xxxLOC(no DIM=) result is vector(1:RANK(ARRAY=))
+            return Shape{ExtentExpr{rank}};
           }
         }
       }
@@ -722,6 +740,10 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
             return shape;
           }
         }
+      }
+    } else if (intrinsic->name == "unpack") {
+      if (call.arguments().size() >= 2) {
+        return (*this)(call.arguments()[1]); // MASK=
       }
     } else if (intrinsic->characteristics.value().attrs.test(characteristics::
                        Procedure::Attr::NullPointer)) { // NULL(MOLD=)
