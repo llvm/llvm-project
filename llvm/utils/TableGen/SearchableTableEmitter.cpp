@@ -338,11 +338,10 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
     for (unsigned i = 0; i < Table.Entries.size(); ++i)
       Entries.emplace_back(Table.Entries[i], i);
 
-    std::stable_sort(Entries.begin(), Entries.end(),
-                     [&](const std::pair<Record *, unsigned> &LHS,
-                         const std::pair<Record *, unsigned> &RHS) {
-                       return compareBy(LHS.first, RHS.first, Index);
-                     });
+    llvm::stable_sort(Entries, [&](const std::pair<Record *, unsigned> &LHS,
+                                   const std::pair<Record *, unsigned> &RHS) {
+      return compareBy(LHS.first, RHS.first, Index);
+    });
 
     IndexRowsStorage.reserve(Entries.size());
     for (const auto &Entry : Entries) {
@@ -610,11 +609,11 @@ void SearchableTableEmitter::collectEnumEntries(
   }
 
   if (ValueField.empty()) {
-    std::stable_sort(Enum.Entries.begin(), Enum.Entries.end(),
-                     [](const std::unique_ptr<GenericEnum::Entry> &LHS,
-                        const std::unique_ptr<GenericEnum::Entry> &RHS) {
-                       return LHS->first < RHS->first;
-                     });
+    llvm::stable_sort(Enum.Entries,
+                      [](const std::unique_ptr<GenericEnum::Entry> &LHS,
+                         const std::unique_ptr<GenericEnum::Entry> &RHS) {
+                        return LHS->first < RHS->first;
+                      });
 
     for (size_t i = 0; i < Enum.Entries.size(); ++i)
       Enum.Entries[i]->second = i;
@@ -739,10 +738,9 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
                            TableRec->getValueAsListOfStrings("PrimaryKey"),
                            TableRec->getValueAsBit("PrimaryKeyEarlyOut"));
 
-      std::stable_sort(Table->Entries.begin(), Table->Entries.end(),
-                       [&](Record *LHS, Record *RHS) {
-                         return compareBy(LHS, RHS, *Table->PrimaryKey);
-                       });
+      llvm::stable_sort(Table->Entries, [&](Record *LHS, Record *RHS) {
+        return compareBy(LHS, RHS, *Table->PrimaryKey);
+      });
     }
 
     TableMap.insert(std::make_pair(TableRec, Table.get()));

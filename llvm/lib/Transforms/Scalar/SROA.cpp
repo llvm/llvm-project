@@ -1076,7 +1076,7 @@ AllocaSlices::AllocaSlices(const DataLayout &DL, AllocaInst &AI)
 
   // Sort the uses. This arranges for the offsets to be in ascending order,
   // and the sizes to be in descending order.
-  std::stable_sort(Slices.begin(), Slices.end());
+  llvm::stable_sort(Slices);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
