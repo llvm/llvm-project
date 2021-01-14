@@ -527,10 +527,64 @@ public:
       // iteration.
       if (currentReuserSet.empty())
         break;
+
+      // Step 2 of the fixpoint iteration: Update the potentialReuseVectors for
+      // each value in the potentialReuseMap. Due to the chosen replacements in
+      // step 1 some values might not be replaceable anymore. Also remove all
+      // replaced values from the potentialReuseMap.
+      for (auto itReuseMap = potentialReuseMap.begin();
+           itReuseMap != potentialReuseMap.end();) {
+        Value item = itReuseMap->first;
+        FirstAndLastUse uses = useRangeMap[item];
+        SmallVector<Value, 4> *potReuses = &itReuseMap->second;
+
+        // If the item is already reused, we can remove it from the
+        // potentialReuseMap.
+        if (replacedSet.contains(item)) {
+          potentialReuseMap.erase(itReuseMap);
+          continue;
+        }
+
+        // Iterate over the potential reuses and check if they can still be
+        // reused.
+        for (Value *potReuseValue = potReuses->begin();
+             potReuseValue != potReuses->end();) {
+          FirstAndLastUse potReuseUses = useRangeMap[*potReuseValue];
+
+          if (transitiveInterference(*potReuseValue, potReuses) ||
+              !isReusePossible(item, *potReuseValue, uses, potReuseUses))
+            potReuses->erase(potReuseValue);
+          else
+            ++potReuseValue;
+        }
+        ++itReuseMap;
+      }
+    }
+
+    // Delete the alloc of the value that is replaced and replace all uses of
+    // that value.
+    for (auto &reuse : actualReuseMap) {
+      for (Value reuseValue : reuse.second) {
+        reuseValue.getDefiningOp()->erase();
+        reuseValue.replaceAllUsesWith(reuse.first);
+      }
     }
   }
 
 private:
+  /// Checks if there is a transitive interference between potReuseValue and the
+  /// value that may replace it, we call this value V. potReuses is the vector
+  /// of all values that can potentially be replaced by V. If potReuseValue
+  /// already replaces any other value that is not part of the potReuses vector
+  /// it cannot be replaced by V anymore.
+  bool transitiveInterference(Value potReuseValue,
+                              SmallVector<Value, 4> *potReuses) {
+    return actualReuseMap.count(potReuseValue) &&
+           llvm::any_of(actualReuseMap[potReuseValue], [&](Value vReuse) {
+             return !std::count(potReuses->begin(), potReuses->end(), vReuse);
+           });
+  }
+
   /// Check if a reuse of two values and their first and last uses is possible.
   /// It depends on userange interferences, alias interference and real uses.
   /// Returns true if a reuse is possible.
