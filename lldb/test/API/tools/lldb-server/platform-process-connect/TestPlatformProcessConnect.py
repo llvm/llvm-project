@@ -1,44 +1,22 @@
-
-import time
-
+import socket
 import gdbremote_testcase
+import lldbgdbserverutils
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-
 class TestPlatformProcessConnect(gdbremote_testcase.GdbRemoteTestCaseBase):
     mydir = TestBase.compute_mydir(__file__)
 
-    @llgs_test
-    @no_debug_info_test
-    @skipIf(remote=False)
+    @skipIfRemote
     @expectedFailureAll(hostoslist=["windows"], triple='.*-android')
     def test_platform_process_connect(self):
         self.build()
 
-        working_dir = lldb.remote_platform.GetWorkingDirectory()
-        src = lldb.SBFileSpec(self.getBuildArtifact("a.out"))
-        dest = lldb.SBFileSpec(os.path.join(working_dir, "a.out"))
-        err = lldb.remote_platform.Put(src, dest)
-        if err.Fail():
-            raise RuntimeError(
-                "Unable copy '%s' to '%s'.\n>>> %s" %
-                (f, wd, err.GetCString()))
+        hostname = socket.getaddrinfo("localhost", 0, proto=socket.IPPROTO_TCP)[0][4][0]
+        listen_url = "[%s]:0"%hostname
 
-        m = re.search("^(.*)://([^:/]*)", configuration.lldb_platform_url)
-        protocol = m.group(1)
-        hostname = m.group(2)
-        unix_protocol = protocol.startswith("unix-")
-        if unix_protocol:
-            p = re.search("^(.*)-connect", protocol)
-            path = lldbutil.join_remote_paths(configuration.lldb_platform_working_dir,
-                    self.getBuildDirBasename(), "platform-%d.sock" % int(time.time()))
-            listen_url = "%s://%s" % (p.group(1), path)
-        else:
-            listen_url = "*:0"
-
-        port_file = "%s/port" % working_dir
+        port_file = self.getBuildArtifact("port")
         commandline_args = [
             "platform",
             "--listen",
@@ -46,25 +24,19 @@ class TestPlatformProcessConnect(gdbremote_testcase.GdbRemoteTestCaseBase):
             "--socket-file",
             port_file,
             "--",
-            "%s/a.out" %
-            working_dir,
+            self.getBuildArtifact("a.out"),
             "foo"]
         self.spawnSubprocess(
-            self.debug_monitor_exe,
-            commandline_args,
-            install_remote=False)
+            lldbgdbserverutils.get_lldb_server_exe(),
+            commandline_args)
 
         socket_id = lldbutil.wait_for_file_on_target(self, port_file)
 
         self.dbg.SetAsync(False)
-
-        new_platform = lldb.SBPlatform(lldb.remote_platform.GetName())
+        new_platform = lldb.SBPlatform("remote-" + self.getPlatform())
         self.dbg.SetSelectedPlatform(new_platform)
 
-        if unix_protocol:
-            connect_url = "%s://%s%s" % (protocol, hostname, socket_id)
-        else:
-            connect_url = "%s://%s:%s" % (protocol, hostname, socket_id)
+        connect_url = "connect://[%s]:%s" % (hostname, socket_id)
 
         command = "platform connect %s" % (connect_url)
         result = lldb.SBCommandReturnObject()
@@ -72,7 +44,7 @@ class TestPlatformProcessConnect(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertTrue(
             result.Succeeded(),
             "platform process connect failed: %s" %
-            result.GetOutput())
+            result.GetError())
 
         target = self.dbg.GetSelectedTarget()
         process = target.GetProcess()
