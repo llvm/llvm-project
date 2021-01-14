@@ -217,8 +217,7 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     auto CstVal = getConstantVRegVal(R, MRI);
     if (!CstVal)
       break;
-    Known.One = *CstVal;
-    Known.Zero = ~Known.One;
+    Known = KnownBits::makeConstant(*CstVal);
     break;
   }
   case TargetOpcode::G_FRAME_INDEX: {
