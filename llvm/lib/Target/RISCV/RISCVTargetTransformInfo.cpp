@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVTargetTransformInfo.h"
-#include "Utils/RISCVMatInt.h"
+#include "MCTargetDesc/RISCVMatInt.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/TargetLowering.h"
