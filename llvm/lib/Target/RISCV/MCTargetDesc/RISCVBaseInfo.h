@@ -393,11 +393,8 @@ void printVType(unsigned VType, raw_ostream &OS);
 
 namespace RISCVVPseudosTable {
 
-// The definition should be consistent with `class RISCVVPseudo` in
-// RISCVInstrInfoVPseudos.td.
-static const uint8_t InvalidIndex = 0x80;
-
 struct PseudoInfo {
+#include "MCTargetDesc/RISCVBaseInfo.h"
   uint16_t Pseudo;
   uint16_t BaseInstr;
 };
