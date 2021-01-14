@@ -417,6 +417,20 @@ def ConvertStandardToSPIRV : Pass<"convert-std-to-spirv", "ModuleOp"> {
 }
 
 //===----------------------------------------------------------------------===//
+// TosaToLinalg
+//===----------------------------------------------------------------------===//
+
+def TosaToLinalgOnTensors : FunctionPass<"tosa-to-linalg-on-tensors"> {
+  let summary = "Lower TOSA to LinAlg on tensors";
+  let description = [{
+    Pass that converts TOSA operations to the equivalent operations using the
+    tensor operations in LinAlg.
+  }];
+
+  let constructor = "tosa::createTosaToLinalgOnTensors()";
+}
+
+//===----------------------------------------------------------------------===//
 // VectorToSCF
 //===----------------------------------------------------------------------===//
 
