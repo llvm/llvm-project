@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/AffineStructures.h"
+#include "mlir/Analysis/LinearTransform.h"
 #include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
@@ -20,6 +21,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/MathExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -1034,21 +1036,152 @@ bool FlatAffineConstraints::isEmptyByGCDTest() const {
   return false;
 }
 
-// First, try the GCD test heuristic.
+// Returns a matrix where each row is a vector along which the polytope is
+// bounded. The span of the returned vectors is guaranteed to contain all
+// such vectors. The returned vectors are NOT guaranteed to be linearly
+// independent. This function should not be called on empty sets.
 //
-// If that doesn't find the set empty, check if the set is unbounded. If it is,
-// we cannot use the GBR algorithm and we conservatively return false.
-//
-// If the set is bounded, we use the complete emptiness check for this case
-// provided by Simplex::findIntegerSample(), which gives a definitive answer.
+// It is sufficient to check the perpendiculars of the constraints, as the set
+// of perpendiculars which are bounded must span all bounded directions.
+Matrix FlatAffineConstraints::getBoundedDirections() const {
+  // Note that it is necessary to add the equalities too (which the constructor
+  // does) even though we don't need to check if they are bounded; whether an
+  // inequality is bounded or not depends on what other constraints, including
+  // equalities, are present.
+  Simplex simplex(*this);
+
+  assert(!simplex.isEmpty() && "It is not meaningful to ask whether a "
+                               "direction is bounded in an empty set.");
+
+  SmallVector<unsigned, 8> boundedIneqs;
+  // The constructor adds the inequalities to the simplex first, so this
+  // processes all the inequalities.
+  for (unsigned i = 0, e = getNumInequalities(); i < e; ++i) {
+    if (simplex.isBoundedAlongConstraint(i))
+      boundedIneqs.push_back(i);
+  }
+
+  // The direction vector is given by the coefficients and does not include the
+  // constant term, so the matrix has one fewer column.
+  unsigned dirsNumCols = getNumCols() - 1;
+  Matrix dirs(boundedIneqs.size() + getNumEqualities(), dirsNumCols);
+
+  // Copy the bounded inequalities.
+  unsigned row = 0;
+  for (unsigned i : boundedIneqs) {
+    for (unsigned col = 0; col < dirsNumCols; ++col)
+      dirs(row, col) = atIneq(i, col);
+    ++row;
+  }
+
+  // Copy the equalities. All the equalities' perpendiculars are bounded.
+  for (unsigned i = 0, e = getNumEqualities(); i < e; ++i) {
+    for (unsigned col = 0; col < dirsNumCols; ++col)
+      dirs(row, col) = atEq(i, col);
+    ++row;
+  }
+
+  return dirs;
+}
+
+bool eqInvolvesSuffixDims(const FlatAffineConstraints &fac, unsigned eqIndex,
+                          unsigned numDims) {
+  for (unsigned e = fac.getNumDimIds(), j = e - numDims; j < e; ++j)
+    if (fac.atEq(eqIndex, j) != 0)
+      return true;
+  return false;
+}
+bool ineqInvolvesSuffixDims(const FlatAffineConstraints &fac,
+                            unsigned ineqIndex, unsigned numDims) {
+  for (unsigned e = fac.getNumDimIds(), j = e - numDims; j < e; ++j)
+    if (fac.atIneq(ineqIndex, j) != 0)
+      return true;
+  return false;
+}
+
+void removeConstraintsInvolvingSuffixDims(FlatAffineConstraints &fac,
+                                          unsigned unboundedDims) {
+  // We iterate backwards so that whether we remove constraint i - 1 or not, the
+  // next constraint to be tested is always i - 2.
+  for (unsigned i = fac.getNumEqualities(); i > 0; i--)
+    if (eqInvolvesSuffixDims(fac, i - 1, unboundedDims))
+      fac.removeEquality(i - 1);
+  for (unsigned i = fac.getNumInequalities(); i > 0; i--)
+    if (ineqInvolvesSuffixDims(fac, i - 1, unboundedDims))
+      fac.removeInequality(i - 1);
+}
+
+/// Let this set be S. If S is bounded then we directly call into the GBR
+/// sampling algorithm. Otherwise, there are some unbounded directions, i.e.,
+/// vectors v such that S extends to infininty along v or -v. In this case we
+/// use an algorithm described in the integer set library (isl) manual and used
+/// by the isl_set_sample function in that library. The algorithm is:
+///
+/// 1) Apply a unimodular transform T to S to obtain S*T, such that all
+/// dimensions in which S*T is bounded lie in the linear span of a prefix of the
+/// dimensions.
+///
+/// 2) Construct a set transformedSet by removing all constraints that involve
+/// the unbounded dimensions and also deleting the unbounded dimensions. Note
+/// that this is a bounded set.
+///
+/// 3) Check if transformedSet is empty using the GBR sampling algorithm.
+///
+/// 4) return S is empty iff transformedSet is empty.
+///
+/// Since T is unimodular, a vector v is a solution to S*T iff T*v is a
+/// solution to S. The following is a sketch of a proof that S*T is empty
+/// iff transformedSet is empty:
+///
+/// If transformedSet is empty, then S*T is certainly empty since transformedSet
+/// was obtained by removing constraints and deleting dimensions from S*T.
+///
+/// If transformedSet contains a sample, consider the set C obtained by
+/// substituting the sample for the bounded dimensions of S*T. All the
+/// constraints of S*T that did not involve unbounded dimensions are
+/// satisfied by this substitution.
+///
+/// In step 1, all dimensions in the linear span of the dimensions outside the
+/// prefix are unbounded in S*T. Substituting values for the bounded dimensions
+/// cannot makes these dimensions bounded, and these are the only remaining
+/// dimensions in C, so C is unbounded along every vector. C is hence a
+/// full-dimensional cone and therefore always contains an integer point, which
+/// we can then substitute to get a full solution to S*T.
 bool FlatAffineConstraints::isIntegerEmpty() const {
+  // First, try the GCD test heuristic.
   if (isEmptyByGCDTest())
     return true;
 
   Simplex simplex(*this);
-  if (simplex.isUnbounded())
-    return false;
-  return !simplex.findIntegerSample().hasValue();
+  if (simplex.isEmpty())
+    return true;
+
+  // For a bounded set, we directly call into the GBR sampling algorithm.
+  if (!simplex.isUnbounded())
+    return !simplex.findIntegerSample().hasValue();
+
+  // The set is unbounded. We cannot directly use the GBR algorithm.
+  //
+  // m is a matrix containing, in each row, a vector in which S is
+  // bounded, such that the linear span of all these dimensions contains all
+  // bounded dimensions in S.
+  Matrix m = getBoundedDirections();
+  // In column echelon form, each row of m occupies only the first rank(m)
+  // columns and has zeros on the other columns. The transform T that brings S
+  // to column echelon form is unimodular as well, so this is a suitable
+  // transform to use in step 1 of the algorithm.
+  std::pair<unsigned, LinearTransform> result =
+      LinearTransform::makeTransformToColumnEchelon(std::move(m));
+  FlatAffineConstraints transformedSet = result.second.applyTo(*this);
+
+  unsigned numBoundedDims = result.first;
+  unsigned numUnboundedDims = getNumIds() - numBoundedDims;
+  removeConstraintsInvolvingSuffixDims(transformedSet, numUnboundedDims);
+
+  // Remove all the unbounded dimensions.
+  transformedSet.removeIdRange(numBoundedDims, transformedSet.getNumIds());
+
+  return !Simplex(transformedSet).findIntegerSample().hasValue();
 }
 
 Optional<SmallVector<int64_t, 8>>

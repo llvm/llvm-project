@@ -58,6 +58,12 @@ public:
   /// Add `scale` multiples of the source row to the target row.
   void addToRow(unsigned sourceRow, unsigned targetRow, int64_t scale);
 
+  /// Add `scale` multiples of the source column to the target column.
+  void addToColumn(unsigned sourceColumn, unsigned targetColumn, int64_t scale);
+
+  /// Negate the specified column.
+  void negateColumn(unsigned column);
+
   /// Resize the matrix to the specified dimensions. If a dimension is smaller,
   /// the values are truncated; if it is bigger, the new values are default
   /// initialized.
