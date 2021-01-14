@@ -4,7 +4,7 @@
 # Check that we correctly assign register banks based off of instructions which
 # only use or only define FPRs.
 #
-# For example, G_SITOFP takes in a GPR, but only ever produces values on FPRs.
+# For example, G_SITOFP may take in a GPR, but only ever produces values on FPRs.
 # Some instructions can have inputs/outputs on either FPRs or GPRs. If one of
 # those instructions takes in the result of a G_SITOFP as a source, we should
 # put that source on a FPR.
@@ -361,3 +361,47 @@ body:             |
     %phi:_(s32) = G_PHI %gpr_copy(s32), %bb.0, %unmerge_1(s32), %bb.1
     $s0 = COPY %phi(s32)
     RET_ReallyLR implicit $s0
+
+...
+---
+name:            load_used_by_sitofp
+legalized:       true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    ; The load should be assigned an fpr bank because it's used by the sitofp.
+    ; The sitofp should assign both src and dest to FPR, resulting in no copies.
+    ; CHECK-LABEL: name: load_used_by_sitofp
+    ; CHECK: liveins: $x0
+    ; CHECK: [[COPY:%[0-9]+]]:gpr(p0) = COPY $x0
+    ; CHECK: [[LOAD:%[0-9]+]]:fpr(s32) = G_LOAD [[COPY]](p0) :: (load 4)
+    ; CHECK: [[SITOFP:%[0-9]+]]:fpr(s32) = G_SITOFP [[LOAD]](s32)
+    ; CHECK: $s0 = COPY [[SITOFP]](s32)
+    ; CHECK: RET_ReallyLR implicit $s0
+    %0:_(p0) = COPY $x0
+    %1:_(s32) = G_LOAD %0 :: (load 4)
+    %2:_(s32) = G_SITOFP %1:_(s32)
+    $s0 = COPY %2(s32)
+    RET_ReallyLR implicit $s0
+...
+---
+name:            load_used_by_uitofp
+legalized:       true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK-LABEL: name: load_used_by_uitofp
+    ; CHECK: liveins: $x0
+    ; CHECK: [[COPY:%[0-9]+]]:gpr(p0) = COPY $x0
+    ; CHECK: [[LOAD:%[0-9]+]]:fpr(s32) = G_LOAD [[COPY]](p0) :: (load 4)
+    ; CHECK: [[UITOFP:%[0-9]+]]:fpr(s32) = G_UITOFP [[LOAD]](s32)
+    ; CHECK: $s0 = COPY [[UITOFP]](s32)
+    ; CHECK: RET_ReallyLR implicit $s0
+    %0:_(p0) = COPY $x0
+    %1:_(s32) = G_LOAD %0 :: (load 4)
+    %2:_(s32) = G_UITOFP %1:_(s32)
+    $s0 = COPY %2(s32)
+    RET_ReallyLR implicit $s0
+...
