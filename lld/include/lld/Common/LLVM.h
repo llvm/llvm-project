@@ -49,8 +49,11 @@ struct WasmEventType;
 struct WasmFunction;
 struct WasmGlobal;
 struct WasmGlobalType;
+struct WasmLimits;
 struct WasmRelocation;
 struct WasmSignature;
+struct WasmTable;
+struct WasmTableType;
 } // namespace wasm
 } // namespace llvm
 
@@ -88,8 +91,11 @@ using llvm::wasm::WasmEventType;
 using llvm::wasm::WasmFunction;
 using llvm::wasm::WasmGlobal;
 using llvm::wasm::WasmGlobalType;
+using llvm::wasm::WasmLimits;
 using llvm::wasm::WasmRelocation;
 using llvm::wasm::WasmSignature;
+using llvm::wasm::WasmTable;
+using llvm::wasm::WasmTableType;
 } // end namespace lld.
 
 namespace std {

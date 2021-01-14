@@ -69,6 +69,7 @@ void InputChunk::verifyRelocTargets() const {
     case R_WASM_GLOBAL_INDEX_LEB:
     case R_WASM_EVENT_INDEX_LEB:
     case R_WASM_MEMORY_ADDR_LEB:
+    case R_WASM_TABLE_NUMBER_LEB:
       existingValue = decodeULEB128(loc, &bytesRead);
       break;
     case R_WASM_MEMORY_ADDR_LEB64:
@@ -152,6 +153,7 @@ void InputChunk::writeTo(uint8_t *buf) const {
     case R_WASM_GLOBAL_INDEX_LEB:
     case R_WASM_EVENT_INDEX_LEB:
     case R_WASM_MEMORY_ADDR_LEB:
+    case R_WASM_TABLE_NUMBER_LEB:
       encodeULEB128(value, loc, 5);
       break;
     case R_WASM_MEMORY_ADDR_LEB64:
@@ -233,6 +235,7 @@ static unsigned writeCompressedReloc(uint8_t *buf, const WasmRelocation &rel,
   case R_WASM_EVENT_INDEX_LEB:
   case R_WASM_MEMORY_ADDR_LEB:
   case R_WASM_MEMORY_ADDR_LEB64:
+  case R_WASM_TABLE_NUMBER_LEB:
     return encodeULEB128(value, buf);
   case R_WASM_TABLE_INDEX_SLEB:
   case R_WASM_TABLE_INDEX_SLEB64:
@@ -251,6 +254,7 @@ static unsigned getRelocWidthPadded(const WasmRelocation &rel) {
   case R_WASM_GLOBAL_INDEX_LEB:
   case R_WASM_EVENT_INDEX_LEB:
   case R_WASM_MEMORY_ADDR_LEB:
+  case R_WASM_TABLE_NUMBER_LEB:
   case R_WASM_TABLE_INDEX_SLEB:
   case R_WASM_MEMORY_ADDR_SLEB:
     return 5;

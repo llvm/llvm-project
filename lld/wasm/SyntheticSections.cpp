@@ -15,6 +15,7 @@
 #include "InputChunks.h"
 #include "InputEvent.h"
 #include "InputGlobal.h"
+#include "InputTable.h"
 #include "OutputSegment.h"
 #include "SymbolTable.h"
 #include "llvm/Support/Path.h"
@@ -91,6 +92,13 @@ void TypeSection::writeBody() {
     writeSig(bodyOutputStream, *sig);
 }
 
+ImportSection::ImportSection() : SyntheticSection(llvm::wasm::WASM_SEC_IMPORT) {
+  // FIXME: Remove when we treat __indirect_function_table as any other symbol.
+  if (config->importTable) {
+    numImportedTables++;
+  }
+}
+
 uint32_t ImportSection::getNumImports() const {
   assert(isSealed);
   uint32_t numImports = importedSymbols.size() + gotSymbols.size();
@@ -117,8 +125,10 @@ void ImportSection::addImport(Symbol *sym) {
     f->setFunctionIndex(numImportedFunctions++);
   else if (auto *g = dyn_cast<GlobalSymbol>(sym))
     g->setGlobalIndex(numImportedGlobals++);
+  else if (auto *e = dyn_cast<EventSymbol>(sym))
+    e->setEventIndex(numImportedEvents++);
   else
-    cast<EventSymbol>(sym)->setEventIndex(numImportedEvents++);
+    cast<TableSymbol>(sym)->setTableNumber(numImportedTables++);
 }
 
 void ImportSection::writeBody() {
@@ -163,6 +173,9 @@ void ImportSection::writeBody() {
     } else if (auto *g = dyn_cast<UndefinedGlobal>(sym)) {
       import.Field = g->importName ? *g->importName : sym->getName();
       import.Module = g->importModule ? *g->importModule : defaultModule;
+    } else if (auto *t = dyn_cast<UndefinedTable>(sym)) {
+      import.Field = t->importName ? *t->importName : sym->getName();
+      import.Module = t->importModule ? *t->importModule : defaultModule;
     } else {
       import.Field = sym->getName();
       import.Module = defaultModule;
@@ -174,11 +187,14 @@ void ImportSection::writeBody() {
     } else if (auto *globalSym = dyn_cast<GlobalSymbol>(sym)) {
       import.Kind = WASM_EXTERNAL_GLOBAL;
       import.Global = *globalSym->getGlobalType();
-    } else {
-      auto *eventSym = cast<EventSymbol>(sym);
+    } else if (auto *eventSym = dyn_cast<EventSymbol>(sym)) {
       import.Kind = WASM_EXTERNAL_EVENT;
       import.Event.Attribute = eventSym->getEventType()->Attribute;
       import.Event.SigIndex = out.typeSec->lookupType(*eventSym->signature);
+    } else {
+      auto *tableSym = cast<TableSymbol>(sym);
+      import.Kind = WASM_EXTERNAL_TABLE;
+      import.Table = *tableSym->getTableType();
     }
     writeImport(os, import);
   }
@@ -214,16 +230,37 @@ void FunctionSection::addFunction(InputFunction *func) {
 }
 
 void TableSection::writeBody() {
-  uint32_t tableSize = config->tableBase + out.elemSec->numEntries();
+  bool hasIndirectFunctionTable = !config->importTable;
+
+  uint32_t tableCount = inputTables.size();
+  if (hasIndirectFunctionTable)
+    tableCount++;
 
   raw_ostream &os = bodyOutputStream;
-  writeUleb128(os, 1, "table count");
-  WasmLimits limits;
-  if (config->growableTable)
-    limits = {0, tableSize, 0};
-  else
-    limits = {WASM_LIMITS_FLAG_HAS_MAX, tableSize, tableSize};
-  writeTableType(os, WasmTableType{WASM_TYPE_FUNCREF, limits});
+
+  writeUleb128(os, tableCount, "table count");
+
+  if (hasIndirectFunctionTable) {
+    uint32_t tableSize = config->tableBase + out.elemSec->numEntries();
+    WasmLimits limits;
+    if (config->growableTable)
+      limits = {0, tableSize, 0};
+    else
+      limits = {WASM_LIMITS_FLAG_HAS_MAX, tableSize, tableSize};
+    writeTableType(os, WasmTableType{WASM_TYPE_FUNCREF, limits});
+  }
+
+  for (const InputTable *table : inputTables)
+    writeTableType(os, table->getType());
+}
+
+void TableSection::addTable(InputTable *table) {
+  if (!table->live)
+    return;
+  uint32_t tableNumber =
+      out.importSec->getNumImportedTables() + inputTables.size();
+  inputTables.push_back(table);
+  table->setTableNumber(tableNumber);
 }
 
 void MemorySection::writeBody() {
@@ -456,6 +493,10 @@ void LinkingSection::writeBody() {
           writeStr(sub.os, sym->getName(), "sym name");
       } else if (auto *e = dyn_cast<EventSymbol>(sym)) {
         writeUleb128(sub.os, e->getEventIndex(), "index");
+        if (sym->isDefined() || (flags & WASM_SYMBOL_EXPLICIT_NAME) != 0)
+          writeStr(sub.os, sym->getName(), "sym name");
+      } else if (auto *t = dyn_cast<TableSymbol>(sym)) {
+        writeUleb128(sub.os, t->getTableNumber(), "table number");
         if (sym->isDefined() || (flags & WASM_SYMBOL_EXPLICIT_NAME) != 0)
           writeStr(sub.os, sym->getName(), "sym name");
       } else if (isa<DataSymbol>(sym)) {

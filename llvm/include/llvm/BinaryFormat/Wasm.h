@@ -192,8 +192,8 @@ struct WasmSymbolInfo {
   // For symbols to be exported from the final module
   Optional<StringRef> ExportName;
   union {
-    // For function or global symbols, the index in function or global index
-    // space.
+    // For function, table, or global symbols, the index in function, table, or
+    // global index space.
     uint32_t ElementIndex;
     // For a data symbols, the address of the data relative to segment.
     WasmDataReference DataRef;
