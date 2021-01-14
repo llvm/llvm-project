@@ -50,7 +50,6 @@ static_library("LLVMRISCVCodeGen") {
     "AsmParser:RISCVGenAsmMatcher",
     "MCTargetDesc",
     "TargetInfo",
-    "Utils",
     "//llvm/include/llvm/Config:llvm-config",
     "//llvm/lib/CodeGen",
     "//llvm/lib/CodeGen/AsmPrinter",
@@ -97,6 +96,5 @@ group("RISCV") {
     "Disassembler",
     "MCTargetDesc",
     "TargetInfo",
-    "Utils",
   ]
 }

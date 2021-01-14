@@ -24,6 +24,12 @@ tablegen("RISCVGenRegisterInfo") {
   td_file = "../RISCV.td"
 }
 
+tablegen("RISCVGenSearchableTables") {
+  visibility = [ ":tablegen" ]
+  args = [ "-gen-searchable-tables" ]
+  td_file = "../RISCV.td"
+}
+
 tablegen("RISCVGenSubtargetInfo") {
   visibility = [ ":tablegen" ]
   args = [ "-gen-subtarget" ]
@@ -36,11 +42,11 @@ tablegen("RISCVGenSubtargetInfo") {
 group("tablegen") {
   visibility = [
     ":MCTargetDesc",
-    "../Utils",
   ]
   public_deps = [
     ":RISCVGenInstrInfo",
     ":RISCVGenRegisterInfo",
+    ":RISCVGenSearchableTables",
     ":RISCVGenSubtargetInfo",
   ]
 }
@@ -54,11 +60,11 @@ static_library("MCTargetDesc") {
     "//llvm/lib/MC",
     "//llvm/lib/Support",
     "//llvm/lib/Target/RISCV:RISCVGenCompressInstEmitter",
-    "//llvm/lib/Target/RISCV/Utils",
   ]
   include_dirs = [ ".." ]
   sources = [
     "RISCVAsmBackend.cpp",
+    "RISCVBaseInfo.cpp",
     "RISCVELFObjectWriter.cpp",
     "RISCVELFStreamer.cpp",
     "RISCVInstPrinter.cpp",
@@ -66,6 +72,7 @@ static_library("MCTargetDesc") {
     "RISCVMCCodeEmitter.cpp",
     "RISCVMCExpr.cpp",
     "RISCVMCTargetDesc.cpp",
+    "RISCVMatInt.cpp",
     "RISCVTargetStreamer.cpp",
   ]
 }
