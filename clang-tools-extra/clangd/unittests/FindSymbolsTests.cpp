@@ -52,17 +52,7 @@ std::vector<SymbolInformation> getSymbols(TestTU &TU, llvm::StringRef Query,
   return *SymbolInfos;
 }
 
-// FIXME: We update two indexes during main file processing:
-//        - preamble index (static)
-//        - main-file index (dynamic)
-//        The macro in this test appears to be in the preamble index and not
-//        in the main-file index. According to our logic of indexes merging, we
-//        do not take this macro from the static (preamble) index, because it
-//        location within the file from the dynamic (main-file) index.
-//
-//        Possible solution is to exclude main-file symbols from the preamble
-//        index, after that we can enable this test again.
-TEST(WorkspaceSymbols, DISABLED_Macros) {
+TEST(WorkspaceSymbols, Macros) {
   TestTU TU;
   TU.Code = R"cpp(
        #define MACRO X

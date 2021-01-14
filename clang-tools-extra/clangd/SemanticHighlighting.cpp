@@ -397,10 +397,10 @@ std::vector<HighlightingToken> getSemanticHighlightings(ParsedAST &AST) {
   // Add highlightings for macro references.
   for (const auto &SIDToRefs : AST.getMacros().MacroRefs) {
     for (const auto &M : SIDToRefs.second)
-      Builder.addToken({HighlightingKind::Macro, M});
+      Builder.addToken({HighlightingKind::Macro, M.Rng});
   }
   for (const auto &M : AST.getMacros().UnknownMacros)
-    Builder.addToken({HighlightingKind::Macro, M});
+    Builder.addToken({HighlightingKind::Macro, M.Rng});
 
   return std::move(Builder).collect(AST);
 }
