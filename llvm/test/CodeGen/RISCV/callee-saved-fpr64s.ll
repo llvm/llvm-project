@@ -433,7 +433,7 @@ define void @caller() nounwind {
 ; ILP32-NEXT:    fsd ft0, 8(sp) # 8-byte Folded Spill
 ; ILP32-NEXT:    fld ft0, 248(s1)
 ; ILP32-NEXT:    fsd ft0, 0(sp) # 8-byte Folded Spill
-; ILP32-NEXT:    call callee
+; ILP32-NEXT:    call callee@plt
 ; ILP32-NEXT:    fld ft0, 0(sp) # 8-byte Folded Reload
 ; ILP32-NEXT:    fsd ft0, 248(s1)
 ; ILP32-NEXT:    fld ft0, 8(sp) # 8-byte Folded Reload
@@ -576,7 +576,7 @@ define void @caller() nounwind {
 ; LP64-NEXT:    fsd ft0, 16(sp) # 8-byte Folded Spill
 ; LP64-NEXT:    fld ft0, 248(s1)
 ; LP64-NEXT:    fsd ft0, 8(sp) # 8-byte Folded Spill
-; LP64-NEXT:    call callee
+; LP64-NEXT:    call callee@plt
 ; LP64-NEXT:    fld ft0, 8(sp) # 8-byte Folded Reload
 ; LP64-NEXT:    fsd ft0, 248(s1)
 ; LP64-NEXT:    fld ft0, 16(sp) # 8-byte Folded Reload
@@ -719,7 +719,7 @@ define void @caller() nounwind {
 ; ILP32D-NEXT:    fld fs5, 232(s1)
 ; ILP32D-NEXT:    fld fs6, 240(s1)
 ; ILP32D-NEXT:    fld fs7, 248(s1)
-; ILP32D-NEXT:    call callee
+; ILP32D-NEXT:    call callee@plt
 ; ILP32D-NEXT:    fsd fs7, 248(s1)
 ; ILP32D-NEXT:    fsd fs6, 240(s1)
 ; ILP32D-NEXT:    fsd fs5, 232(s1)
@@ -862,7 +862,7 @@ define void @caller() nounwind {
 ; LP64D-NEXT:    fld fs5, 232(s1)
 ; LP64D-NEXT:    fld fs6, 240(s1)
 ; LP64D-NEXT:    fld fs7, 248(s1)
-; LP64D-NEXT:    call callee
+; LP64D-NEXT:    call callee@plt
 ; LP64D-NEXT:    fsd fs7, 248(s1)
 ; LP64D-NEXT:    fsd fs6, 240(s1)
 ; LP64D-NEXT:    fsd fs5, 232(s1)
