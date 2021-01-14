@@ -98,7 +98,7 @@ MODULE_PASS("rewrite-symbols", RewriteSymbolPass())
 MODULE_PASS("rpo-function-attrs", ReversePostOrderFunctionAttrsPass())
 MODULE_PASS("sample-profile", SampleProfileLoaderPass())
 MODULE_PASS("scc-oz-module-inliner",
-  buildInlinerPipeline(OptimizationLevel::Oz, ThinLTOPhase::None, 
+  buildInlinerPipeline(OptimizationLevel::Oz, ThinOrFullLTOPhase::None, 
   /*MandatoryOnly=*/false))
 MODULE_PASS("loop-extract-single", LoopExtractorPass(1))
 MODULE_PASS("oz-module-optimizer",

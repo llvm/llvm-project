@@ -69,6 +69,20 @@ enum PassKind {
   PT_PassManager
 };
 
+/// This enumerates the LLVM full LTO or ThinLTO optimization phases.
+enum class ThinOrFullLTOPhase {
+  /// No LTO/ThinLTO behavior needed.
+  None,
+  /// ThinLTO prelink (summary) phase.
+  ThinLTOPreLink,
+  /// ThinLTO postlink (backend compile) phase.
+  ThinLTOPostLink,
+  /// Full LTO prelink phase.
+  FullLTOPreLink,
+  /// Full LTO postlink (backend compile) phase.
+  FullLTOPostLink
+};
+
 //===----------------------------------------------------------------------===//
 /// Pass interface - Implemented by all 'passes'.  Subclass this if you are an
 /// interprocedural optimization or you do not fit into any of the more

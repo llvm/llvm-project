@@ -159,18 +159,6 @@ public:
     std::vector<PipelineElement> InnerPipeline;
   };
 
-  /// ThinLTO phase.
-  ///
-  /// This enumerates the LLVM ThinLTO optimization phases.
-  enum class ThinLTOPhase {
-    /// No ThinLTO behavior needed.
-    None,
-    /// ThinLTO prelink (summary) phase.
-    PreLink,
-    /// ThinLTO postlink (backend compile) phase.
-    PostLink
-  };
-
   /// LLVM-provided high-level optimization levels.
   ///
   /// This enumerates the LLVM-provided high-level optimization levels. Each
@@ -342,7 +330,7 @@ public:
   /// \p Phase indicates the current ThinLTO phase.
   FunctionPassManager
   buildFunctionSimplificationPipeline(OptimizationLevel Level,
-                                      ThinLTOPhase Phase);
+                                      ThinOrFullLTOPhase Phase);
 
   /// Construct the core LLVM module canonicalization and simplification
   /// pipeline.
@@ -360,12 +348,12 @@ public:
   ///
   /// \p Phase indicates the current ThinLTO phase.
   ModulePassManager buildModuleSimplificationPipeline(OptimizationLevel Level,
-                                                      ThinLTOPhase Phase);
+                                                      ThinOrFullLTOPhase Phase);
 
   /// Construct the module pipeline that performs inlining as well as
   /// the inlining-driven cleanups.
   ModuleInlinerWrapperPass buildInlinerPipeline(OptimizationLevel Level,
-                                                ThinLTOPhase Phase,
+                                                ThinOrFullLTOPhase Phase,
                                                 bool MandatoryOnly);
 
   /// Construct the core LLVM module optimization pipeline.
@@ -722,7 +710,7 @@ private:
   // O1 pass pipeline
   FunctionPassManager
   buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
-                                        ThinLTOPhase Phase);
+                                        ThinOrFullLTOPhase Phase);
 
   void addRequiredLTOPreLinkPasses(ModulePassManager &MPM);
 
