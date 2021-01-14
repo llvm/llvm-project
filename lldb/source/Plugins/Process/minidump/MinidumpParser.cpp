@@ -391,19 +391,23 @@ std::vector<const minidump::Module *> MinidumpParser::GetFilteredModuleList() {
       filtered_modules.push_back(&module);
     } else {
       // We have a duplicate module entry. Check the linux regions to see if
-      // the module we already have is not really a mapped executable. If it
-      // isn't check to see if the current duplicate module entry is a real
-      // mapped executable, and if so, replace it. This can happen when a
-      // process mmap's in the file for an executable in order to read bytes
-      // from the executable file. A memory region mapping will exist for the
-      // mmap'ed version and for the loaded executable, but only one will have
-      // a consecutive region that is executable in the memory regions.
+      // either module is not really a mapped executable. If one but not the
+      // other is a real mapped executable, prefer the executable one. This
+      // can happen when a process mmap's in the file for an executable in
+      // order to read bytes from the executable file. A memory region mapping
+      // will exist for the mmap'ed version and for the loaded executable, but
+      // only one will have a consecutive region that is executable in the
+      // memory regions.
       auto dup_module = filtered_modules[iter->second];
       ConstString name(*ExpectedName);
-      if (!CheckForLinuxExecutable(name, linux_regions,
-                                   dup_module->BaseOfImage) &&
-          CheckForLinuxExecutable(name, linux_regions, module.BaseOfImage)) {
-        filtered_modules[iter->second] = &module;
+      bool is_executable =
+          CheckForLinuxExecutable(name, linux_regions, module.BaseOfImage);
+      bool dup_is_executable =
+          CheckForLinuxExecutable(name, linux_regions, dup_module->BaseOfImage);
+
+      if (is_executable != dup_is_executable) {
+        if (is_executable)
+          filtered_modules[iter->second] = &module;
         continue;
       }
       // This module has been seen. Modules are sometimes mentioned multiple
