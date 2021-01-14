@@ -33,7 +33,12 @@ namespace optional_detail {
 struct in_place_t {};
 
 /// Storage for any type.
-template <typename T, bool = is_trivially_copyable<T>::value>
+template <typename T, bool = (std::is_trivially_copy_constructible<T>::value &&
+                              std::is_trivially_copy_assignable<T>::value &&
+                              (std::is_trivially_move_constructible<T>::value ||
+                               !std::is_move_constructible<T>::value) &&
+                              (std::is_trivially_move_assignable<T>::value ||
+                               !std::is_move_assignable<T>::value))>
 class OptionalStorage {
   union {
     char empty;
