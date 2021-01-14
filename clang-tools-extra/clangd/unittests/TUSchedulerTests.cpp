@@ -14,6 +14,7 @@
 #include "Preamble.h"
 #include "TUScheduler.h"
 #include "TestFS.h"
+#include "TestIndex.h"
 #include "support/Cancellation.h"
 #include "support/Context.h"
 #include "support/Path.h"
@@ -48,6 +49,7 @@ using ::testing::ElementsAre;
 using ::testing::Eq;
 using ::testing::Field;
 using ::testing::IsEmpty;
+using ::testing::Pair;
 using ::testing::Pointee;
 using ::testing::SizeIs;
 using ::testing::UnorderedElementsAre;
@@ -679,12 +681,12 @@ TEST_F(TUSchedulerTests, EmptyPreamble) {
             cantFail(std::move(Preamble)).Preamble->Preamble.getBounds().Size,
             0u);
       });
-  // Wait for the preamble is being built.
+  // Wait while the preamble is being built.
   ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
 
   // Update the file which results in an empty preamble.
   S.update(Foo, getInputs(Foo, WithEmptyPreamble), WantDiagnostics::Auto);
-  // Wait for the preamble is being built.
+  // Wait while the preamble is being built.
   ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
   S.runWithPreamble(
       "getEmptyPreamble", Foo, TUScheduler::Stale,
@@ -694,6 +696,47 @@ TEST_F(TUSchedulerTests, EmptyPreamble) {
             cantFail(std::move(Preamble)).Preamble->Preamble.getBounds().Size,
             0u);
       });
+}
+
+TEST_F(TUSchedulerTests, ASTSignalsSmokeTests) {
+  TUScheduler S(CDB, optsForTest());
+  auto Foo = testPath("foo.cpp");
+  auto Header = testPath("foo.h");
+
+  FS.Files[Header] = "namespace tar { int foo(); }";
+  const char *Contents = R"cpp(
+  #include "foo.h"
+  namespace ns {
+  int func() {
+    return tar::foo());
+  }
+  } // namespace ns
+  )cpp";
+  // Update the file which results in an empty preamble.
+  S.update(Foo, getInputs(Foo, Contents), WantDiagnostics::Yes);
+  // Wait while the preamble is being built.
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  Notification TaskRun;
+  S.runWithPreamble(
+      "ASTSignals", Foo, TUScheduler::Stale,
+      [&](Expected<InputsAndPreamble> IP) {
+        ASSERT_FALSE(!IP);
+        std::vector<std::pair<StringRef, int>> NS;
+        for (const auto &P : IP->Signals->RelatedNamespaces)
+          NS.emplace_back(P.getKey(), P.getValue());
+        EXPECT_THAT(NS,
+                    UnorderedElementsAre(Pair("ns::", 1), Pair("tar::", 1)));
+
+        std::vector<std::pair<SymbolID, int>> Sym;
+        for (const auto &P : IP->Signals->ReferencedSymbols)
+          Sym.emplace_back(P.getFirst(), P.getSecond());
+        EXPECT_THAT(Sym, UnorderedElementsAre(Pair(ns("tar").ID, 1),
+                                              Pair(ns("ns").ID, 1),
+                                              Pair(func("tar::foo").ID, 1),
+                                              Pair(func("ns::func").ID, 1)));
+        TaskRun.notify();
+      });
+  TaskRun.wait();
 }
 
 TEST_F(TUSchedulerTests, RunWaitsForPreamble) {
