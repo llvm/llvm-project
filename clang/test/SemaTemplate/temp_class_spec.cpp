@@ -361,3 +361,17 @@ namespace PR6181 {
   };
   
 }
+
+// Check that we do not crash on invalid code that leads to invalid base.
+namespace {
+template <typename X>
+class Foo {};
+
+template <int Y>
+class Bar;
+
+template <typename Z>
+class Bar<0> : public Foo<Z> { // expected-error{{partial specialization of 'Bar' does not use any of its template parameters}}
+  Bar() : Foo<Z>() {}
+};
+} // namespace
