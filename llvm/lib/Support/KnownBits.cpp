@@ -91,34 +91,12 @@ KnownBits KnownBits::sextInReg(unsigned SrcBitWidth) const {
   if (SrcBitWidth == BitWidth)
     return *this;
 
-  // Sign extension.  Compute the demanded bits in the result that are not
-  // present in the input.
-  APInt NewBits = APInt::getHighBitsSet(BitWidth, BitWidth - SrcBitWidth);
-
-  // If the sign extended bits are demanded, we know that the sign
-  // bit is demanded.
-  APInt InSignMask = APInt::getSignMask(SrcBitWidth).zext(BitWidth);
-  APInt InDemandedBits = APInt::getLowBitsSet(BitWidth, SrcBitWidth);
-  if (NewBits.getBoolValue())
-    InDemandedBits |= InSignMask;
-
+  unsigned ExtBits = BitWidth - SrcBitWidth;
   KnownBits Result;
-  Result.One = One & InDemandedBits;
-  Result.Zero = Zero & InDemandedBits;
-
-  // If the sign bit of the input is known set or clear, then we know the
-  // top bits of the result.
-  if (Result.Zero.intersects(InSignMask)) { // Input sign bit known clear
-    Result.Zero |= NewBits;
-    Result.One &= ~NewBits;
-  } else if (Result.One.intersects(InSignMask)) { // Input sign bit known set
-    Result.One |= NewBits;
-    Result.Zero &= ~NewBits;
-  } else { // Input sign bit unknown
-    Result.Zero &= ~NewBits;
-    Result.One &= ~NewBits;
-  }
-
+  Result.One = One << ExtBits;
+  Result.Zero = Zero << ExtBits;
+  Result.One.ashrInPlace(ExtBits);
+  Result.Zero.ashrInPlace(ExtBits);
   return Result;
 }
 
