@@ -2941,6 +2941,7 @@ CXXNameMangler::mangleExtParameterInfo(FunctionProtoType::ExtParameterInfo PI) {
 
   // All of these start with "swift", so they come before "ns_consumed".
   case ParameterABI::SwiftContext:
+  case ParameterABI::SwiftAsyncContext:
   case ParameterABI::SwiftErrorResult:
   case ParameterABI::SwiftIndirectResult:
     mangleVendorQualifier(getParameterABISpelling(PI.getABI()));
