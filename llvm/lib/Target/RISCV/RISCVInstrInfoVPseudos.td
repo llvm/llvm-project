@@ -17,6 +17,8 @@
 def riscv_vmv_x_s : SDNode<"RISCVISD::VMV_X_S",
                            SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisVec<1>,
                                                 SDTCisInt<1>]>>;
+def riscv_read_vlenb : SDNode<"RISCVISD::READ_VLENB",
+                              SDTypeProfile<1, 0, [SDTCisVT<0, XLenVT>]>>;
 
 // X0 has special meaning for vsetvl/vsetvli.
 //  rd | rs1 |   AVL value | Effect on vl
@@ -2395,6 +2397,11 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def PseudoVMV2R_V : VPseudo<VMV2R_V, V_M2, (outs VRM2:$vd), (ins VRM2:$vs2)>;
   def PseudoVMV4R_V : VPseudo<VMV4R_V, V_M4, (outs VRM4:$vd), (ins VRM4:$vs2)>;
   def PseudoVMV8R_V : VPseudo<VMV8R_V, V_M8, (outs VRM8:$vd), (ins VRM8:$vs2)>;
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 1 in {
+  def PseudoReadVLENB : Pseudo<(outs GPR:$rd), (ins),
+                               [(set GPR:$rd, (riscv_read_vlenb))]>;
 }
 
 //===----------------------------------------------------------------------===//
