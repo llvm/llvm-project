@@ -2431,7 +2431,7 @@ void Parser::MaybeParseAndDiagnoseDeclSpecAfterCXX11VirtSpecifierSeq(
       const char *Name = (RefQualifierIsLValueRef ? "& " : "&& ");
       FixItHint Insertion = FixItHint::CreateInsertion(VS.getFirstLocation(), Name);
       Function.RefQualifierIsLValueRef = RefQualifierIsLValueRef;
-      Function.RefQualifierLoc = RefQualifierLoc.getRawEncoding();
+      Function.RefQualifierLoc = RefQualifierLoc;
 
       Diag(RefQualifierLoc, diag::err_declspec_after_virtspec)
         << (RefQualifierIsLValueRef ? "&" : "&&")
@@ -3908,7 +3908,7 @@ void Parser::ParseTrailingRequiresClause(Declarator &D) {
       auto &FunctionChunk = D.getFunctionTypeInfo();
       FunctionChunk.HasTrailingReturnType = TrailingReturnType.isUsable();
       FunctionChunk.TrailingReturnType = TrailingReturnType.get();
-      FunctionChunk.TrailingReturnTypeLoc = Range.getBegin().getRawEncoding();
+      FunctionChunk.TrailingReturnTypeLoc = Range.getBegin();
     } else
       SkipUntil({tok::equal, tok::l_brace, tok::arrow, tok::kw_try, tok::comma},
                 StopAtSemi | StopBeforeMatch);
