@@ -1519,6 +1519,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::SwiftError;
   case bitc::ATTR_KIND_SWIFT_SELF:
     return Attribute::SwiftSelf;
+  case bitc::ATTR_KIND_SWIFT_ASYNC:
+    return Attribute::SwiftAsync;
   case bitc::ATTR_KIND_UW_TABLE:
     return Attribute::UWTable;
   case bitc::ATTR_KIND_WILLRETURN:

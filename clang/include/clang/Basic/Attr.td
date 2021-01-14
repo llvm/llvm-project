@@ -2418,6 +2418,11 @@ def SwiftContext : ParameterABIAttr {
   let Documentation = [SwiftContextDocs];
 }
 
+def SwiftAsyncContext : ParameterABIAttr {
+  let Spellings = [Clang<"swift_async_context">];
+  let Documentation = [SwiftAsyncContextDocs];
+}
+
 def SwiftErrorResult : ParameterABIAttr {
   let Spellings = [Clang<"swift_error_result">];
   let Documentation = [SwiftErrorResultDocs];

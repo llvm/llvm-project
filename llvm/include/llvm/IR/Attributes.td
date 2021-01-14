@@ -241,6 +241,9 @@ def SwiftError : EnumAttr<"swifterror">;
 /// Argument is swift self/context.
 def SwiftSelf : EnumAttr<"swiftself">;
 
+/// Argument is swift async context.
+def SwiftAsync : EnumAttr<"swiftasync">;
+
 /// Function must be in a unwind table.
 def UWTable : EnumAttr<"uwtable">;
 

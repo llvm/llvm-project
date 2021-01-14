@@ -4551,6 +4551,19 @@ A context parameter must have pointer or reference type.
   }];
 }
 
+def SwiftAsyncContextDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The ``swift_async_context`` attribute marks a parameter as having the
+special asynchronous context-parameter ABI treatment.
+
+This treatment generally passes the context value in a special register
+which is normally callee-preserved.
+
+A context parameter must have pointer or reference type.
+  }];
+}
+
 def SwiftErrorResultDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{

@@ -54,6 +54,8 @@ addFlagsUsingAttrFn(ISD::ArgFlagsTy &Flags,
     Flags.setReturned();
   if (AttrFn(Attribute::SwiftSelf))
     Flags.setSwiftSelf();
+  if (AttrFn(Attribute::SwiftAsync))
+    Flags.setSwiftAsync();
   if (AttrFn(Attribute::SwiftError))
     Flags.setSwiftError();
 }
