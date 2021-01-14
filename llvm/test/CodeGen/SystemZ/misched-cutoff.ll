@@ -1,5 +1,7 @@
 ; RUN: llc -mtriple=s390x-linux-gnu -mcpu=z13 -misched-cutoff=1 -o /dev/null < %s
-;
+; REQUIRES: asserts
+; -misched=shuffle isn't available in NDEBUG builds!
+
 ; Test that the post-ra scheduler does not crash with -misched-cutoff.
 
 @g_184 = external dso_local global i16, align 2
