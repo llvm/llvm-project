@@ -101,8 +101,6 @@ MODULE_PASS("scc-oz-module-inliner",
   buildInlinerPipeline(OptimizationLevel::Oz, ThinOrFullLTOPhase::None, 
   /*MandatoryOnly=*/false))
 MODULE_PASS("loop-extract-single", LoopExtractorPass(1))
-MODULE_PASS("oz-module-optimizer",
-  buildModuleOptimizationPipeline(OptimizationLevel::Oz, /*LTOPreLink*/false))
 MODULE_PASS("strip", StripSymbolsPass())
 MODULE_PASS("strip-dead-debug-info", StripDeadDebugInfoPass())
 MODULE_PASS("pseudo-probe", SampleProfileProbePass(TM))
