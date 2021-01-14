@@ -15,22 +15,36 @@
 
 namespace mlir {
 
-/// If 'hasValue' is true, check that findIntegerSample returns a valid sample
+enum class TestFunction { Sample, Empty };
+
+/// If fn is TestFunction::Sample (default):
+/// If hasSample is true, check that findIntegerSample returns a valid sample
 /// for the FlatAffineConstraints fac.
+/// If hasSample is false, check that findIntegerSample returns None.
 ///
-/// If hasValue is false, check that findIntegerSample does not return None.
-static void checkSample(bool hasValue, const FlatAffineConstraints &fac) {
-  Optional<SmallVector<int64_t, 8>> maybeSample = fac.findIntegerSample();
-  if (!hasValue) {
-    EXPECT_FALSE(maybeSample.hasValue());
-    if (maybeSample.hasValue()) {
-      for (auto x : *maybeSample)
-        llvm::errs() << x << ' ';
-      llvm::errs() << '\n';
+/// If fn is TestFunction::Empty, check that isIntegerEmpty returns the
+/// opposite of hasSample.
+static void checkSample(bool hasSample, const FlatAffineConstraints &fac,
+                        TestFunction fn = TestFunction::Sample) {
+  Optional<SmallVector<int64_t, 8>> maybeSample;
+  switch (fn) {
+  case TestFunction::Sample:
+    maybeSample = fac.findIntegerSample();
+    if (!hasSample) {
+      EXPECT_FALSE(maybeSample.hasValue());
+      if (maybeSample.hasValue()) {
+        for (auto x : *maybeSample)
+          llvm::errs() << x << ' ';
+        llvm::errs() << '\n';
+      }
+    } else {
+      ASSERT_TRUE(maybeSample.hasValue());
+      EXPECT_TRUE(fac.containsPoint(*maybeSample));
     }
-  } else {
-    ASSERT_TRUE(maybeSample.hasValue());
-    EXPECT_TRUE(fac.containsPoint(*maybeSample));
+    break;
+  case TestFunction::Empty:
+    EXPECT_EQ(!hasSample, fac.isIntegerEmpty());
+    break;
   }
 }
 
@@ -52,9 +66,11 @@ makeFACFromConstraints(unsigned dims, ArrayRef<SmallVector<int64_t, 4>> ineqs,
 /// orderings may cause the algorithm to proceed differently. At least some of
 ///.these permutations should make it past the heuristics and test the
 /// implementation of the GBR algorithm itself.
-static void checkPermutationsSample(bool hasValue, unsigned nDim,
+/// Use TestFunction fn to test.
+static void checkPermutationsSample(bool hasSample, unsigned nDim,
                                     ArrayRef<SmallVector<int64_t, 4>> ineqs,
-                                    ArrayRef<SmallVector<int64_t, 4>> eqs) {
+                                    ArrayRef<SmallVector<int64_t, 4>> eqs,
+                                    TestFunction fn = TestFunction::Sample) {
   SmallVector<unsigned, 4> perm(nDim);
   std::iota(perm.begin(), perm.end(), 0);
   auto permute = [&perm](ArrayRef<int64_t> coeffs) {
@@ -71,8 +87,8 @@ static void checkPermutationsSample(bool hasValue, unsigned nDim,
     for (const auto &eq : eqs)
       permutedEqs.push_back(permute(eq));
 
-    checkSample(hasValue,
-                makeFACFromConstraints(nDim, permutedIneqs, permutedEqs));
+    checkSample(hasSample,
+                makeFACFromConstraints(nDim, permutedIneqs, permutedEqs), fn);
   } while (std::next_permutation(perm.begin(), perm.end()));
 }
 
@@ -206,17 +222,156 @@ TEST(FlatAffineConstraintsTest, IsIntegerEmptyTest) {
   EXPECT_FALSE(
       makeFACFromConstraints(1, {{5, -1}, {-5, 9}}, {}).isIntegerEmpty());
 
-  // An unbounded set, which isIntegerEmpty should detect as unbounded and
-  // return without calling findIntegerSample.
+  // Unbounded sets.
+  EXPECT_TRUE(makeFACFromConstraints(3,
+                                     {
+                                         {2, 0, 0, -1}, // 2x >= 1
+                                         {-2, 0, 0, 1}, // 2x <= 1
+                                         {0, 2, 0, -1}, // 2y >= 1
+                                         {0, -2, 0, 1}, // 2y <= 1
+                                         {0, 0, 2, -1}, // 2z >= 1
+                                     },
+                                     {})
+                  .isIntegerEmpty());
+
   EXPECT_FALSE(makeFACFromConstraints(3,
                                       {
-                                          {2, 0, 0, -1},
-                                          {-2, 0, 0, 1},
-                                          {0, 2, 0, -1},
-                                          {0, -2, 0, 1},
-                                          {0, 0, 2, -1},
+                                          {2, 0, 0, -1},  // 2x >= 1
+                                          {-3, 0, 0, 3},  // 3x <= 3
+                                          {0, 0, 5, -6},  // 5z >= 6
+                                          {0, 0, -7, 17}, // 7z <= 17
+                                          {0, 3, 0, -2},  // 3y >= 2
                                       },
                                       {})
+                   .isIntegerEmpty());
+
+  // 2D cone with apex at (10000, 10000) and
+  // edges passing through (1/3, 0) and (2/3, 0).
+  EXPECT_FALSE(
+      makeFACFromConstraints(
+          2, {{300000, -299999, -100000}, {-300000, 299998, 200000}}, {})
+          .isIntegerEmpty());
+
+  // Cartesian product of a tetrahedron and a 2D cone.
+  // The tetrahedron has vertices at
+  // (1/3, 0, 0), (2/3, 0, 0), (2/3, 0, 10000), and (10000, 10000, 10000).
+  // The first three points form a triangular base on the xz plane with the
+  // apex at the fourth point, which is the only integer point.
+  // The cone has apex at (10000, 10000) and
+  // edges passing through (1/3, 0) and (2/3, 0).
+  checkPermutationsSample(
+      true /* not empty */, 5,
+      {
+          // Tetrahedron contraints:
+          {0, 1, 0, 0, 0, 0},  // y >= 0
+          {0, -1, 1, 0, 0, 0}, // z >= y
+                               // -300000x + 299998y + 100000 + z <= 0.
+          {300000, -299998, -1, 0, 0, -100000},
+          // -150000x + 149999y + 100000 >= 0.
+          {-150000, 149999, 0, 0, 0, 100000},
+
+          // Triangle constraints:
+          // 300000p - 299999q >= 100000
+          {0, 0, 0, 300000, -299999, -100000},
+          // -300000p + 299998q + 200000 >= 0
+          {0, 0, 0, -300000, 299998, 200000},
+      },
+      {}, TestFunction::Empty);
+
+  // Cartesian product of same tetrahedron as above and {(p, q) : 1/3 <= p <=
+  // 2/3}. Since the second set is empty, the whole set is too.
+  checkPermutationsSample(
+      false /* empty */, 5,
+      {
+          // Tetrahedron contraints:
+          {0, 1, 0, 0, 0, 0},  // y >= 0
+          {0, -1, 1, 0, 0, 0}, // z >= y
+                               // -300000x + 299998y + 100000 + z <= 0.
+          {300000, -299998, -1, 0, 0, -100000},
+          // -150000x + 149999y + 100000 >= 0.
+          {-150000, 149999, 0, 0, 0, 100000},
+
+          // Second set constraints:
+          // 3p >= 1
+          {0, 0, 0, 3, 0, -1},
+          // 3p <= 2
+          {0, 0, 0, -3, 0, 2},
+      },
+      {}, TestFunction::Empty);
+
+  // Cartesian product of same tetrahedron as above and
+  // {(p, q, r) : 1 <= p <= 2 and p = 3q + 3r}.
+  // Since the second set is empty, the whole set is too.
+  checkPermutationsSample(
+      false /* empty */, 5,
+      {
+          // Tetrahedron contraints:
+          {0, 1, 0, 0, 0, 0, 0},  // y >= 0
+          {0, -1, 1, 0, 0, 0, 0}, // z >= y
+                                  // -300000x + 299998y + 100000 + z <= 0.
+          {300000, -299998, -1, 0, 0, 0, -100000},
+          // -150000x + 149999y + 100000 >= 0.
+          {-150000, 149999, 0, 0, 0, 0, 100000},
+
+          // Second set constraints:
+          // p >= 1
+          {0, 0, 0, 1, 0, 0, -1},
+          // p <= 2
+          {0, 0, 0, -1, 0, 0, 2},
+      },
+      {
+          {0, 0, 0, 1, -3, -3, 0}, // p = 3q + 3r
+      },
+      TestFunction::Empty);
+
+  // Cartesian product of a tetrahedron and a 2D cone.
+  // The tetrahedron is empty and has vertices at
+  // (1/3, 0, 0), (2/3, 0, 0), (2/3, 0, 100), and (100, 100 - 1/3, 100).
+  // The cone has apex at (10000, 10000) and
+  // edges passing through (1/3, 0) and (2/3, 0).
+  // Since the tetrahedron is empty, the Cartesian product is too.
+  checkPermutationsSample(false /* empty */, 5,
+                          {
+                              // Tetrahedron contraints:
+                              {0, 1, 0, 0, 0, 0},
+                              {0, -300, 299, 0, 0, 0},
+                              {300 * 299, -89400, -299, 0, 0, -100 * 299},
+                              {-897, 894, 0, 0, 0, 598},
+
+                              // Triangle constraints:
+                              // 300000p - 299999q >= 100000
+                              {0, 0, 0, 300000, -299999, -100000},
+                              // -300000p + 299998q + 200000 >= 0
+                              {0, 0, 0, -300000, 299998, 200000},
+                          },
+                          {}, TestFunction::Empty);
+
+  // Cartesian product of same tetrahedron as above and
+  // {(p, q) : 1/3 <= p <= 2/3}.
+  checkPermutationsSample(false /* empty */, 5,
+                          {
+                              // Tetrahedron contraints:
+                              {0, 1, 0, 0, 0, 0},
+                              {0, -300, 299, 0, 0, 0},
+                              {300 * 299, -89400, -299, 0, 0, -100 * 299},
+                              {-897, 894, 0, 0, 0, 598},
+
+                              // Second set constraints:
+                              // 3p >= 1
+                              {0, 0, 0, 3, 0, -1},
+                              // 3p <= 2
+                              {0, 0, 0, -3, 0, 2},
+                          },
+                          {}, TestFunction::Empty);
+
+  EXPECT_FALSE(makeFACFromConstraints(3,
+                                      {
+                                          {2, 0, 0, -1}, // 2x >= 1
+                                      },
+                                      {{
+                                          {1, -1, 0, -1}, // y = x - 1
+                                          {0, 1, -1, 0},  // z = y
+                                      }})
                    .isIntegerEmpty());
 
   // FlatAffineConstraints::isEmpty() does not detect the following sets to be
