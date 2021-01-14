@@ -64,6 +64,8 @@ inline bool operator<=(Fraction x, Fraction y) { return compare(x, y) <= 0; }
 
 inline bool operator==(Fraction x, Fraction y) { return compare(x, y) == 0; }
 
+inline bool operator!=(Fraction x, Fraction y) { return compare(x, y) != 0; }
+
 inline bool operator>(Fraction x, Fraction y) { return compare(x, y) > 0; }
 
 inline bool operator>=(Fraction x, Fraction y) { return compare(x, y) >= 0; }

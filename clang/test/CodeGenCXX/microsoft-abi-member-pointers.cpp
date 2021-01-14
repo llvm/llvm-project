@@ -148,6 +148,16 @@ const C table[] = {
 // CHECK-SAME:  %"struct.pr43803::C" { { i32, i32, i32 } { i32 8, i32 0, i32 0 }, [4 x i8] undef }]
 }
 
+namespace pr48687 {
+template <typename T> struct A {
+  T value;
+  static constexpr auto address = &A<T>::value;
+};
+extern template class A<float>;
+template class A<float>;
+// CHECK: @"?address@?$A@M@pr48687@@2QQ12@MQ12@" = weak_odr dso_local constant i32 0, comdat, align 4
+}
+
 struct PR26313_Y;
 typedef void (PR26313_Y::*PR26313_FUNC)();
 struct PR26313_X {

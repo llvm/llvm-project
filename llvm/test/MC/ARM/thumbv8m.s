@@ -1,12 +1,12 @@
 // RUN: not llvm-mc -triple=thumbv8m.base -show-encoding < %s 2>%t \
-// RUN:   | FileCheck --check-prefix=CHECK-BASELINE --check-prefix=CHECK %s
-// RUN:     FileCheck --check-prefix=UNDEF-BASELINE --check-prefix=UNDEF < %t %s
+// RUN:   | FileCheck --check-prefix=CHECK %s
+// RUN:     FileCheck --check-prefixes=UNDEF-BASELINE,UNDEF < %t %s
 // RUN: not llvm-mc -triple=thumbv8m.main -show-encoding < %s 2>%t \
-// RUN:   | FileCheck --check-prefix=CHECK-MAINLINE --check-prefix=CHECK %s
-// RUN:     FileCheck --check-prefix=UNDEF-MAINLINE --check-prefix=UNDEF < %t %s
+// RUN:   | FileCheck --check-prefixes=CHECK-MAINLINE,CHECK %s
+// RUN:     FileCheck --check-prefixes=UNDEF-MAINLINE,UNDEF < %t %s
 // RUN: not llvm-mc -triple=thumbv8m.main -mattr=+dsp -show-encoding < %s 2>%t \
-// RUN:   | FileCheck --check-prefix=CHECK-MAINLINE_DSP --check-prefix=CHECK %s
-// RUN:     FileCheck --check-prefix=UNDEF-MAINLINE_DSP --check-prefix=UNDEF < %t %s
+// RUN:   | FileCheck --check-prefixes=CHECK-MAINLINE_DSP,CHECK %s
+// RUN:     FileCheck --check-prefixes=UNDEF-MAINLINE_DSP,UNDEF < %t %s
 
 // Simple check that baseline is v6M and mainline is v7M
 // UNDEF-BASELINE: error: instruction requires: thumb2

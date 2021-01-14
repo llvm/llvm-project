@@ -205,13 +205,13 @@ end
 !  contains
 !    procedure,pass(x)::p1=>f1
 !    procedure::p3=>f3
-!    generic::.binary.=>p1
-!    generic::.unary.=>p3
+!    generic::operator(.binary.)=>p1
+!    generic::operator(.unary.)=>p3
 !  end type
 !  type,extends(t1)::t2
 !  contains
 !    procedure,pass(y)::p2=>f2
-!    generic::.binary.=>p2
+!    generic::operator(.binary.)=>p2
 !  end type
 !contains
 !  pure function f1(x,y)

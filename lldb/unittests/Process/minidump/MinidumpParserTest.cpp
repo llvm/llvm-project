@@ -792,6 +792,47 @@ Streams:
   EXPECT_EQ(0x400d0000u, filtered_modules[0]->BaseOfImage);
 }
 
+TEST_F(MinidumpParserTest, MinidumpDuplicateModuleMappedSecondHigh) {
+  ASSERT_THAT_ERROR(SetUpFromYaml(R"(
+--- !minidump
+Streams:
+  - Type:            ModuleList
+    Modules:
+      - Base of Image:   0x400d3000
+        Size of Image:   0x00002000
+        Module Name:     '/usr/lib/libc.so'
+        CodeView Record: ''
+      - Base of Image:   0x400d0000
+        Size of Image:   0x00001000
+        Module Name:     '/usr/lib/libc.so'
+        CodeView Record: ''
+  - Type:            LinuxMaps
+    Text:             |
+      400d0000-400d2000 r--p 00000000 b3:04 227        /usr/lib/libc.so
+      400d2000-400d3000 rw-p 00000000 00:00 0
+      400d3000-400d4000 r-xp 00010000 b3:04 227        /usr/lib/libc.so
+      400d4000-400d5000 rwxp 00001000 b3:04 227        /usr/lib/libc.so
+...
+)"),
+                    llvm::Succeeded());
+  // If we have a module mentioned twice in the module list, and we have full
+  // linux maps for all of the memory regions, make sure we pick the one that
+  // has a consecutive region with a matching path that has executable
+  // permissions. If clients open an object file with mmap, breakpad can create
+  // multiple mappings for a library errnoneously and the lowest address isn't
+  // always the right address. In this case we check the consective memory
+  // regions whose path matches starting at the base of image address and make
+  // sure one of the regions is executable and prefer that one.
+  //
+  // This test will make sure that if the executable is first in the module
+  // list, that it will remain the correctly selected module in the filtered
+  // list, even if the non-executable module was loaded at a lower base address.
+  std::vector<const minidump::Module *> filtered_modules =
+      parser->GetFilteredModuleList();
+  ASSERT_EQ(1u, filtered_modules.size());
+  EXPECT_EQ(0x400d3000u, filtered_modules[0]->BaseOfImage);
+}
+
 TEST_F(MinidumpParserTest, MinidumpDuplicateModuleSeparateCode) {
   ASSERT_THAT_ERROR(SetUpFromYaml(R"(
 --- !minidump

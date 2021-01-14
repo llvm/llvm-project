@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_TUSCHEDULER_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_TUSCHEDULER_H
 
+#include "ASTSignals.h"
 #include "Compiler.h"
 #include "Diagnostics.h"
 #include "GlobalCompilationDatabase.h"
@@ -43,6 +44,8 @@ struct InputsAndPreamble {
   const tooling::CompileCommand &Command;
   // This can be nullptr if no preamble is available.
   const PreambleData *Preamble;
+  // This can be nullptr if no ASTSignals are available.
+  const ASTSignals *Signals;
 };
 
 /// Determines whether diagnostics should be generated for a file snapshot.

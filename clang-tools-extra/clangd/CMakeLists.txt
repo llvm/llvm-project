@@ -46,6 +46,7 @@ include_directories(BEFORE "${CMAKE_CURRENT_BINARY_DIR}/../clang-tidy")
 
 add_clang_library(clangDaemon
   AST.cpp
+  ASTSignals.cpp
   ClangdLSPServer.cpp
   ClangdServer.cpp
   CodeComplete.cpp
