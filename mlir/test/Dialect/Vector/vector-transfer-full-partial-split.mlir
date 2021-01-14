@@ -33,10 +33,10 @@ func @split_vector_transfer_read_2d(%A: memref<?x8xf32>, %i: index, %j: index) -
   // %i + 4 <= dim(%A, 0)
   //      CHECK: %[[idx0:.*]] = affine.apply #[[$map_p4]]()[%[[i]]]
   //      CHECK: %[[d0:.*]] = dim %[[A]], %[[c0]] : memref<?x8xf32>
-  //      CHECK: %[[cmp0:.*]] = cmpi "sle", %[[idx0]], %[[d0]] : index
+  //      CHECK: %[[cmp0:.*]] = cmpi sle, %[[idx0]], %[[d0]] : index
   // %j + 8 <= dim(%A, 1)
   //      CHECK: %[[idx1:.*]] = affine.apply #[[$map_p8]]()[%[[j]]]
-  //      CHECK: %[[cmp1:.*]] = cmpi "sle", %[[idx1]], %[[c8]] : index
+  //      CHECK: %[[cmp1:.*]] = cmpi sle, %[[idx1]], %[[c8]] : index
   // are both conds true
   //      CHECK: %[[cond:.*]] = and %[[cmp0]], %[[cmp1]] : i1
   //      CHECK: %[[ifres:.*]]:3 = scf.if %[[cond]] -> (memref<?x8xf32>, index, index) {
@@ -67,10 +67,10 @@ func @split_vector_transfer_read_2d(%A: memref<?x8xf32>, %i: index, %j: index) -
   // %i + 4 <= dim(%A, 0)
   //      LINALG: %[[idx0:.*]] = affine.apply #[[$map_p4]]()[%[[i]]]
   //      LINALG: %[[d0:.*]] = dim %[[A]], %[[c0]] : memref<?x8xf32>
-  //      LINALG: %[[cmp0:.*]] = cmpi "sle", %[[idx0]], %[[d0]] : index
+  //      LINALG: %[[cmp0:.*]] = cmpi sle, %[[idx0]], %[[d0]] : index
   // %j + 8 <= dim(%A, 1)
   //      LINALG: %[[idx1:.*]] = affine.apply #[[$map_p8]]()[%[[j]]]
-  //      LINALG: %[[cmp1:.*]] = cmpi "sle", %[[idx1]], %[[c8]] : index
+  //      LINALG: %[[cmp1:.*]] = cmpi sle, %[[idx1]], %[[c8]] : index
   // are both conds true
   //      LINALG: %[[cond:.*]] = and %[[cmp0]], %[[cmp1]] : i1
   //      LINALG: %[[ifres:.*]]:3 = scf.if %[[cond]] -> (memref<?x8xf32>, index, index) {
@@ -121,10 +121,10 @@ func @split_vector_transfer_read_strided_2d(
   //      CHECK: %[[alloc:.*]] = alloca() {alignment = 32 : i64} : memref<4x8xf32>
   // %i + 4 <= dim(%A, 0)
   //      CHECK: %[[idx0:.*]] = affine.apply #[[$map_p4]]()[%[[i]]]
-  //      CHECK: %[[cmp0:.*]] = cmpi "sle", %[[idx0]], %[[c7]] : index
+  //      CHECK: %[[cmp0:.*]] = cmpi sle, %[[idx0]], %[[c7]] : index
   // %j + 8 <= dim(%A, 1)
   //      CHECK: %[[idx1:.*]] = affine.apply #[[$map_p8]]()[%[[j]]]
-  //      CHECK: %[[cmp1:.*]] = cmpi "sle", %[[idx1]], %[[c8]] : index
+  //      CHECK: %[[cmp1:.*]] = cmpi sle, %[[idx1]], %[[c8]] : index
   // are both conds true
   //      CHECK: %[[cond:.*]] = and %[[cmp0]], %[[cmp1]] : i1
   //      CHECK: %[[ifres:.*]]:3 = scf.if %[[cond]] -> (memref<?x8xf32, #[[$map_2d_stride_1]]>, index, index) {
@@ -159,10 +159,10 @@ func @split_vector_transfer_read_strided_2d(
   //      LINALG: %[[alloc:.*]] = alloca() {alignment = 32 : i64} : memref<4x8xf32>
   // %i + 4 <= dim(%A, 0)
   //      LINALG: %[[idx0:.*]] = affine.apply #[[$map_p4]]()[%[[i]]]
-  //      LINALG: %[[cmp0:.*]] = cmpi "sle", %[[idx0]], %[[c7]] : index
+  //      LINALG: %[[cmp0:.*]] = cmpi sle, %[[idx0]], %[[c7]] : index
   // %j + 8 <= dim(%A, 1)
   //      LINALG: %[[idx1:.*]] = affine.apply #[[$map_p8]]()[%[[j]]]
-  //      LINALG: %[[cmp1:.*]] = cmpi "sle", %[[idx1]], %[[c8]] : index
+  //      LINALG: %[[cmp1:.*]] = cmpi sle, %[[idx1]], %[[c8]] : index
   // are both conds true
   //      LINALG: %[[cond:.*]] = and %[[cmp0]], %[[cmp1]] : i1
   //      LINALG: %[[ifres:.*]]:3 = scf.if %[[cond]] -> (memref<?x8xf32, #[[$map_2d_stride_1]]>, index, index) {

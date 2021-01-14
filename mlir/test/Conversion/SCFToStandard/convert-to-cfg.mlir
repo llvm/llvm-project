@@ -3,7 +3,7 @@
 // CHECK-LABEL: func @simple_std_for_loop(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
 //  CHECK-NEXT:  br ^bb1(%{{.*}} : index)
 //  CHECK-NEXT:  ^bb1(%{{.*}}: index):    // 2 preds: ^bb0, ^bb2
-//  CHECK-NEXT:    %{{.*}} = cmpi "slt", %{{.*}}, %{{.*}} : index
+//  CHECK-NEXT:    %{{.*}} = cmpi slt, %{{.*}}, %{{.*}} : index
 //  CHECK-NEXT:    cond_br %{{.*}}, ^bb2, ^bb3
 //  CHECK-NEXT:  ^bb2:   // pred: ^bb1
 //  CHECK-NEXT:    %{{.*}} = constant 1 : index
@@ -21,13 +21,13 @@ func @simple_std_for_loop(%arg0 : index, %arg1 : index, %arg2 : index) {
 // CHECK-LABEL: func @simple_std_2_for_loops(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
 //  CHECK-NEXT:    br ^bb1(%{{.*}} : index)
 //  CHECK-NEXT:  ^bb1(%[[ub0:.*]]: index):    // 2 preds: ^bb0, ^bb5
-//  CHECK-NEXT:    %[[cond0:.*]] = cmpi "slt", %[[ub0]], %{{.*}} : index
+//  CHECK-NEXT:    %[[cond0:.*]] = cmpi slt, %[[ub0]], %{{.*}} : index
 //  CHECK-NEXT:    cond_br %[[cond0]], ^bb2, ^bb6
 //  CHECK-NEXT:  ^bb2:   // pred: ^bb1
 //  CHECK-NEXT:    %{{.*}} = constant 1 : index
 //  CHECK-NEXT:    br ^bb3(%{{.*}} : index)
 //  CHECK-NEXT:  ^bb3(%[[ub1:.*]]: index):    // 2 preds: ^bb2, ^bb4
-//  CHECK-NEXT:    %[[cond1:.*]] = cmpi "slt", %{{.*}}, %{{.*}} : index
+//  CHECK-NEXT:    %[[cond1:.*]] = cmpi slt, %{{.*}}, %{{.*}} : index
 //  CHECK-NEXT:    cond_br %[[cond1]], ^bb4, ^bb5
 //  CHECK-NEXT:  ^bb4:   // pred: ^bb3
 //  CHECK-NEXT:    %{{.*}} = constant 1 : index
@@ -111,7 +111,7 @@ func @simple_std_2_ifs(%arg0: i1) {
 // CHECK-LABEL: func @simple_std_for_loop_with_2_ifs(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index, %{{.*}}: i1) {
 //  CHECK-NEXT:   br ^bb1(%{{.*}} : index)
 //  CHECK-NEXT:   ^bb1(%{{.*}}: index):    // 2 preds: ^bb0, ^bb7
-//  CHECK-NEXT:     %{{.*}} = cmpi "slt", %{{.*}}, %{{.*}} : index
+//  CHECK-NEXT:     %{{.*}} = cmpi slt, %{{.*}}, %{{.*}} : index
 //  CHECK-NEXT:     cond_br %{{.*}}, ^bb2, ^bb8
 //  CHECK-NEXT:   ^bb2:   // pred: ^bb1
 //  CHECK-NEXT:     %{{.*}} = constant 1 : index
@@ -230,12 +230,12 @@ func @nested_if_yield(%arg0: i1) -> (index) {
 // CHECK:           [[VAL_5:%.*]] = constant 1 : index
 // CHECK:           br ^bb1([[VAL_0]] : index)
 // CHECK:         ^bb1([[VAL_6:%.*]]: index):
-// CHECK:           [[VAL_7:%.*]] = cmpi "slt", [[VAL_6]], [[VAL_2]] : index
+// CHECK:           [[VAL_7:%.*]] = cmpi slt, [[VAL_6]], [[VAL_2]] : index
 // CHECK:           cond_br [[VAL_7]], ^bb2, ^bb6
 // CHECK:         ^bb2:
 // CHECK:           br ^bb3([[VAL_1]] : index)
 // CHECK:         ^bb3([[VAL_8:%.*]]: index):
-// CHECK:           [[VAL_9:%.*]] = cmpi "slt", [[VAL_8]], [[VAL_3]] : index
+// CHECK:           [[VAL_9:%.*]] = cmpi slt, [[VAL_8]], [[VAL_3]] : index
 // CHECK:           cond_br [[VAL_9]], ^bb4, ^bb5
 // CHECK:         ^bb4:
 // CHECK:           [[VAL_10:%.*]] = constant 1 : index
@@ -265,7 +265,7 @@ func @parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
 // CHECK:        br ^[[COND:.*]](%[[LB]], %[[INIT0]], %[[INIT1]] : index, f32, f32)
 //
 // CHECK:      ^[[COND]](%[[ITER:.*]]: index, %[[ITER_ARG0:.*]]: f32, %[[ITER_ARG1:.*]]: f32):
-// CHECK:        %[[CMP:.*]] = cmpi "slt", %[[ITER]], %[[UB]] : index
+// CHECK:        %[[CMP:.*]] = cmpi slt, %[[ITER]], %[[UB]] : index
 // CHECK:        cond_br %[[CMP]], ^[[BODY:.*]], ^[[CONTINUE:.*]]
 //
 // CHECK:      ^[[BODY]]:
@@ -330,7 +330,7 @@ func @simple_parallel_reduce_loop(%arg0: index, %arg1: index,
   // Condition branch takes as arguments the current value of the iteration
   // variable and the current partially reduced value.
   // CHECK: ^[[COND]](%[[ITER:.*]]: index, %[[ITER_ARG:.*]]: f32
-  // CHECK:   %[[COMP:.*]] = cmpi "slt", %[[ITER]], %[[UB]]
+  // CHECK:   %[[COMP:.*]] = cmpi slt, %[[ITER]], %[[UB]]
   // CHECK:   cond_br %[[COMP]], ^[[BODY:.*]], ^[[CONTINUE:.*]]
 
   // Bodies of scf.reduce operations are folded into the main loop body. The
@@ -551,7 +551,7 @@ func @nested_while_ops(%arg0: f32) -> i64 {
 func @ifs_in_parallel(%arg1: index, %arg2: index, %arg3: index, %arg4: i1, %arg5: i1) {
   // CHECK:   br ^[[LOOP_LATCH:.*]](%[[ARG0]] : index)
   // CHECK: ^[[LOOP_LATCH]](%[[LOOP_IV:.*]]: index):
-  // CHECK:   %[[LOOP_COND:.*]] = cmpi "slt", %[[LOOP_IV]], %[[ARG1]] : index
+  // CHECK:   %[[LOOP_COND:.*]] = cmpi slt, %[[LOOP_IV]], %[[ARG1]] : index
   // CHECK:   cond_br %[[LOOP_COND]], ^[[LOOP_BODY:.*]], ^[[LOOP_CONT:.*]]
   // CHECK: ^[[LOOP_BODY]]:
   // CHECK:   cond_br %[[ARG3]], ^[[IF1_THEN:.*]], ^[[IF1_CONT:.*]]

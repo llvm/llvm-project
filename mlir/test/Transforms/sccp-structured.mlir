@@ -118,7 +118,7 @@ func @loop_inner_control_flow(%arg0 : index, %arg1 : index, %arg2 : index) -> i3
   %cst_1 = constant 1 : i32
   %result = scf.for %i0 = %arg0 to %arg1 step %arg2 iter_args(%si = %cst_1) -> (i32) {
     %cst_20 = constant 20 : i32
-    %cond = cmpi "ult", %si, %cst_20 : i32
+    %cond = cmpi ult, %si, %cst_20 : i32
     %inner_res = scf.if %cond -> (i32) {
       %1 = constant 1 : i32
       scf.yield %1 : i32

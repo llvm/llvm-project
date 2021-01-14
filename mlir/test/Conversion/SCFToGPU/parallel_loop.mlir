@@ -284,10 +284,10 @@ module {
 // CHECK:             [[VAL_43:%.*]] = affine.min #[[$MAP4]]([[VAL_29]]){{\[}}[[VAL_42]]]
 // CHECK:             [[VAL_44:%.*]] = subview [[VAL_2]]{{\[}}[[VAL_28]], [[VAL_29]]] {{\[}}[[VAL_41]], [[VAL_43]]] {{\[}}%[[C1]], %[[C1]]] : memref<?x?xf32, #[[$MAP0]]> to memref<?x?xf32, #[[$MAP5]]>
 // CHECK:             [[VAL_45:%.*]] = affine.apply #[[$MAP2]]([[VAL_22]]){{\[}}%[[C1]], %[[C0]]]
-// CHECK:             [[VAL_46:%.*]] = cmpi "slt", [[VAL_45]], [[VAL_31_SQUARED]] : index
+// CHECK:             [[VAL_46:%.*]] = cmpi slt, [[VAL_45]], [[VAL_31_SQUARED]] : index
 // CHECK:             scf.if [[VAL_46]] {
 // CHECK:               [[VAL_47:%.*]] = affine.apply #[[$MAP2]]([[VAL_23]]){{\[}}%[[C1]], %[[C0]]]
-// CHECK:               [[VAL_48:%.*]] = cmpi "slt", [[VAL_47]], [[VAL_33]] : index
+// CHECK:               [[VAL_48:%.*]] = cmpi slt, [[VAL_47]], [[VAL_33]] : index
 // CHECK:               scf.if [[VAL_48]] {
 // CHECK:                 [[VAL_49:%.*]] = load [[VAL_34]]{{\[}}[[VAL_45]], [[VAL_47]]] : memref<?x?xf32, #[[$MAP5]]>
 // CHECK:                 [[VAL_50:%.*]] = load [[VAL_39]]{{\[}}[[VAL_45]], [[VAL_47]]] : memref<?x?xf32, #[[$MAP5]]>

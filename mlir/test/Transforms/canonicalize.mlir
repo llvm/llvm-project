@@ -577,7 +577,7 @@ func @lowered_affine_mod() -> (index, index) {
   %c42 = constant 42 : index
   %0 = remi_signed %c-43, %c42 : index
   %c0 = constant 0 : index
-  %1 = cmpi "slt", %0, %c0 : index
+  %1 = cmpi slt, %0, %c0 : index
   %2 = addi %0, %c42 : index
   %3 = select %1, %2, %0 : index
 // CHECK-NEXT: {{.*}} = constant 1 : index
@@ -585,7 +585,7 @@ func @lowered_affine_mod() -> (index, index) {
   %c42_0 = constant 42 : index
   %4 = remi_signed %c43, %c42_0 : index
   %c0_1 = constant 0 : index
-  %5 = cmpi "slt", %4, %c0_1 : index
+  %5 = cmpi slt, %4, %c0_1 : index
   %6 = addi %4, %c42_0 : index
   %7 = select %5, %6, %4 : index
   return %3, %7 : index, index
@@ -603,7 +603,7 @@ func @lowered_affine_floordiv() -> (index, index) {
   %c42 = constant 42 : index
   %c0 = constant 0 : index
   %c-1 = constant -1 : index
-  %0 = cmpi "slt", %c-43, %c0 : index
+  %0 = cmpi slt, %c-43, %c0 : index
   %1 = subi %c-1, %c-43 : index
   %2 = select %0, %1, %c-43 : index
   %3 = divi_signed %2, %c42 : index
@@ -614,7 +614,7 @@ func @lowered_affine_floordiv() -> (index, index) {
   %c42_0 = constant 42 : index
   %c0_1 = constant 0 : index
   %c-1_2 = constant -1 : index
-  %6 = cmpi "slt", %c43, %c0_1 : index
+  %6 = cmpi slt, %c43, %c0_1 : index
   %7 = subi %c-1_2, %c43 : index
   %8 = select %6, %7, %c43 : index
   %9 = divi_signed %8, %c42_0 : index
@@ -635,7 +635,7 @@ func @lowered_affine_ceildiv() -> (index, index) {
   %c42 = constant 42 : index
   %c0 = constant 0 : index
   %c1 = constant 1 : index
-  %0 = cmpi "sle", %c-43, %c0 : index
+  %0 = cmpi sle, %c-43, %c0 : index
   %1 = subi %c0, %c-43 : index
   %2 = subi %c-43, %c1 : index
   %3 = select %0, %1, %2 : index
@@ -648,7 +648,7 @@ func @lowered_affine_ceildiv() -> (index, index) {
   %c42_0 = constant 42 : index
   %c0_1 = constant 0 : index
   %c1_2 = constant 1 : index
-  %8 = cmpi "sle", %c43, %c0_1 : index
+  %8 = cmpi sle, %c43, %c0_1 : index
   %9 = subi %c0_1, %c43 : index
   %10 = subi %c43, %c1_2 : index
   %11 = select %8, %9, %10 : index

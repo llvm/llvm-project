@@ -187,8 +187,8 @@ test.format_optional_unit_attribute
 // CHECK: test.format_optional_unit_attribute_no_elide unit
 test.format_optional_unit_attribute_no_elide unit
 
-// CHECK: test.format_optional_enum_attr "case5"
-test.format_optional_enum_attr "case5"
+// CHECK: test.format_optional_enum_attr case5
+test.format_optional_enum_attr case5
 
 // CHECK: test.format_optional_enum_attr
 // CHECK-NOT: "case5"
