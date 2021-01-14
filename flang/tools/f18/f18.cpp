@@ -389,8 +389,7 @@ void Link(std::vector<std::string> &liblist, std::vector<std::string> &objects,
 
 int printVersion() {
   llvm::errs() << "\nf18 compiler (under development), version "
-               << FLANG_VERSION_MAJOR << "." << FLANG_VERSION_MINOR << "."
-               << FLANG_VERSION_PATCHLEVEL << "\n";
+               << FLANG_VERSION_STRING << "\n";
   return exitStatus;
 }
 
