@@ -390,8 +390,8 @@ public:
                  uint64_t size) override {
     if (m_local_buffer) {
       auto addr = address.getAddressData();
-      if (addr >= m_local_buffer &&
-          addr + size <= m_local_buffer + m_local_buffer_size) {
+      if (addr >= *m_local_buffer &&
+          addr + size <= *m_local_buffer + m_local_buffer_size) {
         // If this crashes, the assumptions stated in
         // GetDynamicTypeAndAddress_Protocol() most likely no longer
         // hold.
@@ -481,7 +481,7 @@ public:
 
   void popLocalBuffer() {
     lldbassert(m_local_buffer);
-    m_local_buffer = 0;
+    m_local_buffer.reset();
     m_local_buffer_size = 0;
   }
 
@@ -489,7 +489,7 @@ private:
   Process &m_process;
   size_t m_max_read_amount;
 
-  uint64_t m_local_buffer = 0;
+  llvm::Optional<uint64_t> m_local_buffer;
   uint64_t m_local_buffer_size = 0;
 };
 
