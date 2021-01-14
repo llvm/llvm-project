@@ -26,11 +26,12 @@
 
 /// ... unless -fthinlto-index= is specified.
 // RUN: echo > %t.bc
-// RUN: %clang -### -c -target x86_64 -fthinlto-index=dummy -gsplit-dwarf %t.bc 2>&1 | FileCheck %s --check-prefix=THINLTO
+// RUN: %clang -### -c -target x86_64 -fthinlto-index=dummy -gsplit-dwarf %t.bc 2>&1 | FileCheck %s --check-prefix=IR
+// RUN: %clang -### -c -target x86_64 -gsplit-dwarf -x ir %t.bc 2>&1 | FileCheck %s --check-prefix=IR
 
-// THINLTO-NOT:  "-debug-info-kind=
-// THINLTO:      "-ggnu-pubnames"
-// THINLTO-SAME: "-split-dwarf-file" "{{.*}}.dwo" "-split-dwarf-output" "{{.*}}.dwo"
+// IR-NOT:  "-debug-info-kind=
+// IR:      "-ggnu-pubnames"
+// IR-SAME: "-split-dwarf-file" "{{.*}}.dwo" "-split-dwarf-output" "{{.*}}.dwo"
 
 /// -gno-split-dwarf disables debug fission.
 // RUN: %clang -### -c -target x86_64 -gsplit-dwarf -g -gno-split-dwarf %s 2>&1 | FileCheck %s --check-prefix=NOSPLIT
