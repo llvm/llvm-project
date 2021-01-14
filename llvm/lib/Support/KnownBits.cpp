@@ -271,9 +271,6 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS) {
 Optional<bool> KnownBits::eq(const KnownBits &LHS, const KnownBits &RHS) {
   if (LHS.isConstant() && RHS.isConstant())
     return Optional<bool>(LHS.getConstant() == RHS.getConstant());
-  if (LHS.getMaxValue().ult(RHS.getMinValue()) ||
-      LHS.getMinValue().ugt(RHS.getMaxValue()))
-    return Optional<bool>(false);
   if (LHS.One.intersects(RHS.Zero) || RHS.One.intersects(LHS.Zero))
     return Optional<bool>(false);
   return None;
@@ -286,8 +283,6 @@ Optional<bool> KnownBits::ne(const KnownBits &LHS, const KnownBits &RHS) {
 }
 
 Optional<bool> KnownBits::ugt(const KnownBits &LHS, const KnownBits &RHS) {
-  if (LHS.isConstant() && RHS.isConstant())
-    return Optional<bool>(LHS.getConstant().ugt(RHS.getConstant()));
   // LHS >u RHS -> false if umax(LHS) <= umax(RHS)
   if (LHS.getMaxValue().ule(RHS.getMinValue()))
     return Optional<bool>(false);
@@ -312,8 +307,6 @@ Optional<bool> KnownBits::ule(const KnownBits &LHS, const KnownBits &RHS) {
 }
 
 Optional<bool> KnownBits::sgt(const KnownBits &LHS, const KnownBits &RHS) {
-  if (LHS.isConstant() && RHS.isConstant())
-    return Optional<bool>(LHS.getConstant().sgt(RHS.getConstant()));
   // LHS >s RHS -> false if smax(LHS) <= smax(RHS)
   if (LHS.getSignedMaxValue().sle(RHS.getSignedMinValue()))
     return Optional<bool>(false);
