@@ -37,9 +37,9 @@ static FlatSymbolRefAttr getOrInsertPrintf(PatternRewriter &rewriter,
 
   // Create a function declaration for printf, the signature is:
   //   * `i32 (i8*, ...)`
-  auto llvmI32Ty = LLVM::LLVMIntegerType::get(context, 32);
+  auto llvmI32Ty = IntegerType::get(context, 32);
   auto llvmI8PtrTy =
-      LLVM::LLVMPointerType::get(LLVM::LLVMIntegerType::get(context, 8));
+      LLVM::LLVMPointerType::get(IntegerType::get(context, 8));
   auto llvmFnType = LLVM::LLVMFunctionType::get(llvmI32Ty, llvmI8PtrTy,
                                                 /*isVarArg=*/true);
 
