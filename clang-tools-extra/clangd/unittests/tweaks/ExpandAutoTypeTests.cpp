@@ -80,6 +80,9 @@ TEST_F(ExpandAutoTypeTest, Test) {
   // unknown types in a template should not be replaced
   EXPECT_THAT(apply("template <typename T> void x() { ^auto y = T::z(); }"),
               StartsWith("fail: Could not deduce type for 'auto' type"));
+
+  ExtraArgs.push_back("-std=c++17");
+  EXPECT_UNAVAILABLE("template <au^to X> class Y;");
 }
 
 } // namespace
