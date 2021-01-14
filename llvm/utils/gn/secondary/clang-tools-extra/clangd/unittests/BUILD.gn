@@ -42,6 +42,7 @@ unittest("ClangdTests") {
     target_gen_dir,
   ]
   sources = [
+    "ASTSignalsTests.cpp",
     "ASTTests.cpp",
     "Annotations.cpp",
     "BackgroundIndexTests.cpp",
