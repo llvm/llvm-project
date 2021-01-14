@@ -17,6 +17,7 @@
 #ifndef FORTRAN_LOWER_CONVERTEXPR_H
 #define FORTRAN_LOWER_CONVERTEXPR_H
 
+#include "flang/Evaluate/shape.h"
 #include "flang/Lower/Support/BoxValue.h"
 
 namespace mlir {
@@ -30,14 +31,7 @@ class ArrayLoadOp;
 class ShapeOp;
 } // namespace fir
 
-namespace Fortran {
-namespace evaluate {
-template <typename>
-class Expr;
-struct SomeType;
-} // namespace evaluate
-
-namespace lower {
+namespace Fortran::lower {
 
 class AbstractConverter;
 class StatementContext;
@@ -82,6 +76,8 @@ createSomeArraySubspace(AbstractConverter &converter,
                         SymMap &symMap, StatementContext &stmtCtx);
 
 /// Create an array temporary.
+/// When lowering an array expression, it may be necessary to allocate temporary
+/// space for a ephemeral array value to be stored.
 fir::AllocMemOp
 createSomeArrayTemp(AbstractConverter &converter,
                     const evaluate::Expr<evaluate::SomeType> &expr,
@@ -91,10 +87,16 @@ createSomeArrayTemp(AbstractConverter &converter,
 /// is fully evaluated prior to being assigned back to the destination array.
 fir::ExtendedValue
 createSomeNewArrayValue(AbstractConverter &converter, fir::ArrayLoadOp dst,
+                        const std::optional<evaluate::Shape> &shape,
                         const evaluate::Expr<evaluate::SomeType> &expr,
                         SymMap &symMap, StatementContext &stmtCtx);
 
-} // namespace lower
-} // namespace Fortran
+/// Lower an designator expression to a value of type box.
+fir::ExtendedValue
+createSomeArrayBox(AbstractConverter &converter,
+                   const evaluate::Expr<evaluate::SomeType> &expr,
+                   SymMap &symMap, StatementContext &stmtCtx);
+
+} // namespace Fortran::lower
 
 #endif // FORTRAN_LOWER_CONVERTEXPR_H

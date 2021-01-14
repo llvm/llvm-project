@@ -110,6 +110,25 @@ translateFloatRelational(Fortran::common::RelationalOperator rop) {
   llvm_unreachable("unhandled REAL relational operator");
 }
 
+/// Clone subexpression and wrap it as a generic `Fortran::evaluate::Expr`.
+template <typename A>
+Fortran::evaluate::Expr<Fortran::evaluate::SomeType> toEvExpr(const A &x) {
+  return Fortran::evaluate::AsGenericExpr(Fortran::common::Clone(x));
+}
+
+/// Lower `opt` (from front-end shape analysis) to MLIR. If `opt` is `nullopt`
+/// then issue an error.
+static mlir::Value
+convertOptExtentExpr(Fortran::lower::AbstractConverter &converter,
+                     Fortran::lower::StatementContext &stmtCtx,
+                     const Fortran::evaluate::MaybeExtentExpr &opt) {
+  auto loc = converter.getCurrentLocation();
+  if (!opt.has_value())
+    fir::emitFatalError(loc, "shape analysis failed to return an expression");
+  auto e = toEvExpr(*opt);
+  return fir::getBase(converter.genExprValue(&e, stmtCtx, loc));
+}
+
 namespace {
 
 /// Lowering of Fortran::evaluate::Expr<T> expressions
@@ -126,6 +145,17 @@ public:
 
   fir::ExtendedValue genExtAddr(const Fortran::lower::SomeExpr &expr) {
     return gen(expr);
+  }
+
+  /// Lower `expr` to be passed as an argument. The expression is passed by
+  /// reference.
+  fir::ExtendedValue genExtArg(const Fortran::lower::SomeExpr &expr,
+                               bool mayUseBox) {
+    bool saveUseBoxArg = useBoxArg;
+    useBoxArg = mayUseBox;
+    auto result = genExtAddr(expr);
+    useBoxArg = saveUseBoxArg;
+    return result;
   }
 
   fir::ExtendedValue genExtValue(const Fortran::lower::SomeExpr &expr) {
@@ -988,10 +1018,9 @@ public:
   }
 
   static bool isSlice(const Fortran::evaluate::ArrayRef &aref) {
-    for (auto &sub : aref.subscript()) {
+    for (auto &sub : aref.subscript())
       if (std::holds_alternative<Fortran::evaluate::Triplet>(sub.u))
         return true;
-    }
     return false;
   }
 
@@ -1339,14 +1368,14 @@ public:
 
       if (arg.passBy == PassBy::MutableBox) {
         auto mutableBox = genMutableBoxValue(*expr);
-        auto IRbox = Fortran::lower::getMutableIRBox(builder, loc, mutableBox);
-        caller.placeInput(arg, IRbox);
+        auto irBox = Fortran::lower::getMutableIRBox(builder, loc, mutableBox);
+        caller.placeInput(arg, irBox);
         // TODO: no need to add this to the list if intent(in)
         mutableModifiedByCall.emplace_back(std::move(mutableBox));
         continue;
       }
 
-      auto argRef = genExtAddr(*expr);
+      auto argRef = genExtArg(*expr, arg.passBy == PassBy::Box);
 
       auto helper = Fortran::lower::CharacterExprHelper{builder, loc};
       if (arg.passBy == PassBy::BaseAddress) {
@@ -1461,9 +1490,9 @@ public:
     for (const auto &mutableBox : mutableModifiedByCall)
       Fortran::lower::syncMutableBoxFromIRBox(builder, loc, mutableBox);
     // Handle case where result was passed as argument
-    if (caller.getPassedResult()) {
+    if (caller.getPassedResult())
       return resRef.getValue();
-    }
+
     if (resultType.size() == 0)
       return mlir::Value{}; // subroutine call
     // For now, Fortran returned values are implemented with a single MLIR
@@ -1495,40 +1524,65 @@ public:
   }
   template <typename A>
   fir::ExtendedValue asArray(const A &x) {
-    auto temp = createSomeArrayTemp(
-        converter, Fortran::evaluate::AsGenericExpr(Fortran::common::Clone(x)),
-        symMap, stmtCtx);
+    auto temp = createSomeArrayTemp(converter, toEvExpr(x), symMap, stmtCtx);
     auto arrTy = fir::dyn_cast_ptrEleTy(temp.getType())
                      .template cast<fir::SequenceType>();
     auto arrShape = arrTy.getShape();
     auto shapeTy = fir::ShapeType::get(builder.getContext(), arrShape.size());
     auto idxTy = builder.getIndexType();
     llvm::SmallVector<mlir::Value, 8> exprShape;
+    auto loc = getLoc();
     if (arrTy.hasConstantShape()) {
       for (auto s : arrShape)
-        exprShape.push_back(builder.createIntegerConstant(getLoc(), idxTy, s));
+        exprShape.push_back(builder.createIntegerConstant(loc, idxTy, s));
     } else {
       for (auto s : temp.getShapeOperands())
-        exprShape.push_back(builder.createConvert(getLoc(), idxTy, s));
+        exprShape.push_back(builder.createConvert(loc, idxTy, s));
     }
-    auto shape = builder.create<fir::ShapeOp>(getLoc(), shapeTy, exprShape);
+    auto shape = builder.create<fir::ShapeOp>(loc, shapeTy, exprShape);
     mlir::Value slice;
-    auto arrLd = builder.create<fir::ArrayLoadOp>(getLoc(), arrTy, temp, shape,
+    auto arrLd = builder.create<fir::ArrayLoadOp>(loc, arrTy, temp, shape,
                                                   slice, llvm::None);
     auto loopRes = Fortran::lower::createSomeNewArrayValue(
-        converter, arrLd,
-        Fortran::evaluate::AsGenericExpr(Fortran::common::Clone(x)), symMap,
-        stmtCtx);
+        converter, arrLd, {}, toEvExpr(x), symMap, stmtCtx);
     auto tempRes = temp.getResult();
-    builder.create<fir::ArrayMergeStoreOp>(getLoc(), arrLd,
-                                           fir::getBase(loopRes), tempRes);
+    builder.create<fir::ArrayMergeStoreOp>(loc, arrLd, fir::getBase(loopRes),
+                                           tempRes);
     return tempRes;
+  }
+
+  /// Lower an array value as an argument. This argument can be passed as a box
+  /// value, so it may be possible to avoid making a temporary.
+  template <typename A>
+  fir::ExtendedValue asArrayArg(const Fortran::evaluate::Expr<A> &x) {
+    return std::visit([&](const auto &e) { return asArrayArg(e, x); }, x.u);
+  }
+  template <typename A, typename B>
+  fir::ExtendedValue asArrayArg(const Fortran::evaluate::Expr<A> &x,
+                                const B &y) {
+    return std::visit([&](const auto &e) { return asArrayArg(e, y); }, x.u);
+  }
+  template <typename A, typename B>
+  fir::ExtendedValue asArrayArg(const Fortran::evaluate::Designator<A> &,
+                                const B &x) {
+    // Designator is being passed as an argument to a procedure. Lower the
+    // expression to a boxed value.
+    return Fortran::lower::createSomeArrayBox(converter, toEvExpr(x), symMap,
+                                              stmtCtx);
+  }
+  template <typename A, typename B>
+  fir::ExtendedValue asArrayArg(const A &, const B &x) {
+    // If the expression to pass as an argument is not a designator, then create
+    // an array temp.
+    return asArray(x);
   }
 
   template <typename A>
   fir::ExtendedValue gen(const Fortran::evaluate::Expr<A> &x) {
     if (isScalar(x) || Fortran::evaluate::UnwrapWholeSymbolDataRef(x))
       return std::visit([&](const auto &e) { return genref(e); }, x.u);
+    if (useBoxArg)
+      return asArrayArg(x);
     return asArray(x);
   }
   template <typename A>
@@ -1596,6 +1650,7 @@ private:
   Fortran::lower::StatementContext &stmtCtx;
   Fortran::lower::SymMap &symMap;
   bool inInitializer;
+  bool useBoxArg{false}; // expression lowered as argument
 };
 } // namespace
 
@@ -1618,6 +1673,11 @@ class ArrayExprLowering {
       indices[i] = v;
     }
 
+    void insertIndexValue(std::size_t i, mlir::Value v) {
+      assert(i <= indices.size());
+      indices.insert(indices.begin() + i, v);
+    }
+
   private:
     mlir::Value inArg;
     mlir::Value outRes;
@@ -1635,8 +1695,7 @@ public:
       Fortran::lower::AbstractConverter &converter,
       Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx,
       const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &expr) {
-    ArrayExprLowering ael{converter, stmtCtx, symMap};
-    ael.setInProjection();
+    ArrayExprLowering ael{converter, stmtCtx, symMap, /*inProjection=*/true};
     return ael.lowerArrayProjection(expr);
   }
 
@@ -1659,9 +1718,19 @@ public:
       Fortran::lower::AbstractConverter &converter,
       Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx,
       fir::ArrayLoadOp dst,
+      const std::optional<Fortran::evaluate::Shape> &shape,
       const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &expr) {
-    ArrayExprLowering ael{converter, stmtCtx, symMap, dst};
+    ArrayExprLowering ael{converter, stmtCtx, symMap, dst, shape};
     return ael.lowerArrayExpr(expr);
+  }
+
+  static ExtValue lowerAndBoxArrayExpression(
+      Fortran::lower::AbstractConverter &converter,
+      Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx,
+      const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &expr) {
+    ArrayExprLowering ael{converter, stmtCtx, symMap};
+    ael.setUseEmbox();
+    return ael.boxArrayExpr(expr);
   }
 
   /// For an elemental array expression.
@@ -1688,6 +1757,20 @@ public:
         exp.u);
   }
 
+  ExtValue boxArrayExpr(
+      const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &exp) {
+    return std::visit(
+        [&](const auto &e) {
+          auto f = genarr(e);
+          auto exv = f(IterationSpace{});
+          if (auto *defOp = fir::getBase(exv).getDefiningOp())
+            if (auto arrLd = mlir::dyn_cast<fir::EmboxOp>(defOp))
+              return exv;
+          llvm::report_fatal_error("array must be emboxed");
+        },
+        exp.u);
+  }
+
   std::pair<IterationSpace, mlir::OpBuilder::InsertPoint> genIterSpace() {
     auto loc = getLoc();
     auto idxTy = builder.getIndexType();
@@ -1696,10 +1779,21 @@ public:
     llvm::SmallVector<mlir::Value, 8> loopUppers;
 
     // Convert the shape to closed interval form.
-    for (auto s : destination.getExtents()) {
-      auto ub = builder.createConvert(loc, idxTy, s);
-      auto up = builder.create<mlir::SubIOp>(loc, ub, one);
-      loopUppers.push_back(up);
+    if (destShape.has_value()) {
+      // Use the shape provided.
+      for (const auto &s : *destShape) {
+        auto ub = builder.createConvert(
+            loc, idxTy, convertOptExtentExpr(converter, stmtCtx, s));
+        auto up = builder.create<mlir::SubIOp>(loc, ub, one);
+        loopUppers.push_back(up);
+      }
+    } else {
+      // Otherwise, use the array's declared shape.
+      for (auto s : destination.getExtents()) {
+        auto ub = builder.createConvert(loc, idxTy, s);
+        auto up = builder.create<mlir::SubIOp>(loc, ub, one);
+        loopUppers.push_back(up);
+      }
     }
 
     // Iteration space is created with outermost columns, innermost rows
@@ -1976,12 +2070,12 @@ public:
       const Fortran::evaluate::Convert<
           Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer, 8>,
           FROM> &x) {
-    return Fortran::evaluate::AsGenericExpr(Fortran::common::Clone(x.left()));
+    return toEvExpr(x.left());
   }
   template <typename A>
   static Fortran::evaluate::Expr<Fortran::evaluate::SomeType>
   ignoreEvConvert(const A &x) {
-    return Fortran::evaluate::AsGenericExpr(Fortran::common::Clone(x));
+    return toEvExpr(x);
   }
 
   // Get the `Se::Symbol*` for the subscript expression, `x`. This symbol can be
@@ -2004,6 +2098,12 @@ public:
 
   /// Array reference with subscripts. Since this has rank > 0, this is a form
   /// of an array section (slice).
+  ///
+  /// There are two "slicing" primitives that may be applied on a dimension by
+  /// dimension basis: (1) triple notation and (2) vector addressing. Since
+  /// dimensions can be selectively sliced, some dimensions may contain regular
+  /// scalar expressions and those dimensions do not participate in the array
+  /// expression evaluation.
   CC genarr(const Fortran::evaluate::ArrayRef &x) {
     llvm::SmallVector<mlir::Value, 9> trips;
     auto loc = getLoc();
@@ -2036,6 +2136,10 @@ public:
                   // Note: 9.5.3.3.3(3) specifies undefined behavior for
                   // multiple updates to any specific array element through a
                   // vector subscript with replicated values.
+                  auto base = x.base();
+                  ScalarExprLowering sel{loc, converter, symMap, stmtCtx};
+                  auto exv = base.IsSymbol() ? sel.gen(base.GetFirstSymbol())
+                                             : sel.gen(base.GetComponent());
                   auto arrExpr = ignoreEvConvert(e);
                   mlir::Value arrLd =
                       lowerArraySubspace(converter, symMap, stmtCtx, arrExpr);
@@ -2043,13 +2147,31 @@ public:
                       arrLd.getType().cast<fir::SequenceType>().getEleTy();
                   auto currentPC = pc;
                   auto dim = sub.index();
+                  auto getLBound =
+                      [&](const fir::AbstractArrayBox &v) -> mlir::Value {
+                    auto &lbounds = v.getLBounds();
+                    if (lbounds.empty())
+                      return one;
+                    return lbounds[dim];
+                  };
+                  auto lb = exv.match(
+                      [&](const fir::ArrayBoxValue &v) { return getLBound(v); },
+                      [&](const fir::CharArrayBoxValue &v) {
+                        return getLBound(v);
+                      },
+                      [&](const fir::BoxValue &v) { return getLBound(v); },
+                      [&](auto) -> mlir::Value {
+                        fir::emitFatalError(loc, "expected array");
+                      });
                   pc = [=](IterSpace iters) {
                     IterationSpace newIters = currentPC(iters);
                     auto iter = newIters.iterVec()[dim];
                     auto fetch = builder.create<fir::ArrayFetchOp>(
                         loc, eleTy, arrLd, mlir::ValueRange{iter});
-                    auto val = builder.createConvert(loc, idxTy, fetch);
-                    newIters.setIndexValue(sub.index(), val);
+                    auto cast = builder.createConvert(loc, idxTy, fetch);
+                    auto val =
+                        builder.create<mlir::SubIOp>(loc, idxTy, cast, lb);
+                    newIters.setIndexValue(dim, val);
                     return newIters;
                   };
                   auto useInexactRange = [&]() {
@@ -2083,12 +2205,50 @@ public:
                   }
                 } else {
                   // A regular scalar index, which does not yield an array
-                  // section. Use a degenerate slice operation `(e:e:1)` in this
-                  // dimension as a placeholder.
+                  // section. Use a degenerate slice operation `(e:undef:undef)`
+                  // in this dimension as a placeholder. This does not
+                  // necessarily change the rank of the original array, so the
+                  // iteration space must also be extended to include this
+                  // expression in this dimension to adjust to the array's
+                  // declared rank.
+                  auto base = x.base();
+                  ScalarExprLowering sel{loc, converter, symMap, stmtCtx};
+                  auto exv = base.IsSymbol() ? sel.gen(base.GetFirstSymbol())
+                                             : sel.gen(base.GetComponent());
                   auto v = fir::getBase(asScalar(e));
                   trips.push_back(v);
-                  trips.push_back(v);
-                  trips.push_back(one);
+                  auto undef = builder.create<fir::UndefOp>(loc, idxTy);
+                  trips.push_back(undef);
+                  trips.push_back(undef);
+                  auto currentPC = pc;
+                  auto dim = sub.index();
+                  // Cast `e` to index type.
+                  auto iv = builder.createConvert(loc, idxTy, v);
+                  auto getLBound =
+                      [&](const fir::AbstractArrayBox &v) -> mlir::Value {
+                    auto &lbounds = v.getLBounds();
+                    if (lbounds.empty())
+                      return one;
+                    return lbounds[dim];
+                  };
+                  auto lb = exv.match(
+                      [&](const fir::ArrayBoxValue &v) { return getLBound(v); },
+                      [&](const fir::CharArrayBoxValue &v) {
+                        return getLBound(v);
+                      },
+                      [&](const fir::BoxValue &v) { return getLBound(v); },
+                      [&](auto) -> mlir::Value {
+                        fir::emitFatalError(loc, "expected array");
+                      });
+                  // Normalize `e` by subtracting the declared lbound.
+                  mlir::Value ivAdj =
+                      builder.create<mlir::SubIOp>(loc, idxTy, iv, lb);
+                  // Add lbound adjusted value of `e` to the iteration vector.
+                  pc = [=](IterSpace iters) {
+                    IterationSpace newIters = currentPC(iters);
+                    newIters.insertIndexValue(dim, ivAdj);
+                    return newIters;
+                  };
                 }
               }},
           sub.value().u);
@@ -2147,8 +2307,14 @@ public:
                    << eleTy << ", " << arrTy << '\n');
       }
     }
+    if (useEmbox) {
+      auto boxTy = fir::BoxType::get(reduceRank(arrTy, slice));
+      mlir::Value embox = builder.create<fir::EmboxOp>(
+          loc, boxTy, memref, shape, slice, /*lenParams=*/llvm::None);
+      return [=](IterSpace) -> ExtValue { return embox; };
+    }
     mlir::Value arrLd = builder.create<fir::ArrayLoadOp>(
-        loc, arrTy, memref, shape, slice, llvm::None);
+        loc, arrTy, memref, shape, slice, /*lenParams=*/llvm::None);
     if (inProjection)
       return [=](IterSpace) -> ExtValue { return arrLd; };
     auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();
@@ -2156,6 +2322,25 @@ public:
       return builder.create<fir::ArrayFetchOp>(loc, eleTy, arrLd,
                                                iters.iterVec());
     };
+  }
+
+  /// Reduce the rank of a array to be boxed based on the slice's operands.
+  static mlir::Type reduceRank(mlir::Type arrTy, mlir::Value slice) {
+    if (slice) {
+      auto slOp = mlir::dyn_cast<fir::SliceOp>(slice.getDefiningOp());
+      assert(slOp);
+      auto seqTy = arrTy.dyn_cast<fir::SequenceType>();
+      assert(seqTy);
+      auto triples = slOp.triples();
+      fir::SequenceType::Shape shape;
+      // reduce the rank for each invariant dimension
+      for (unsigned i = 1, end = triples.size(); i < end; i += 3)
+        if (!mlir::isa_and_nonnull<fir::UndefOp>(triples[i].getDefiningOp()))
+          shape.push_back(fir::SequenceType::getUnknownExtent());
+      return fir::SequenceType::get(shape, seqTy.getEleTy());
+    }
+    // not sliced, so no change in rank
+    return arrTy;
   }
 
   /// Example: <code>array%baz%qux%waldo</code>
@@ -2167,6 +2352,7 @@ public:
     auto lf = genPathSlice(sym, components);
     return [=](IterSpace iters) { return lf(iters); };
   }
+
   /// The `Ev::Component` structure is tailmost down to head, so the expression
   /// <code>a%b%c</code> will be presented as <code>(component (dataref
   /// (component (dataref (symbol 'a)) (symbol 'b))) (symbol 'c))</code>.
@@ -2195,9 +2381,9 @@ public:
                      TODO("field name and coarray arguments");
                    }},
                dr.u);
-  };
+  }
 
-  /// Example: array%RE
+  /// Example: <code>array%RE</code>
   CC genarr(const Fortran::evaluate::ComplexPart &x) {
     auto loc = getLoc();
     auto i32Ty = builder.getI32Type(); // llvm's GEP requires i32
@@ -2398,6 +2584,14 @@ private:
       : converter{converter}, builder{converter.getFirOpBuilder()},
         stmtCtx{stmtCtx}, symMap{symMap}, destination{dst} {}
 
+  explicit ArrayExprLowering(
+      Fortran::lower::AbstractConverter &converter,
+      Fortran::lower::StatementContext &stmtCtx, Fortran::lower::SymMap &symMap,
+      fir::ArrayLoadOp dst,
+      const std::optional<Fortran::evaluate::Shape> &shape)
+      : converter{converter}, builder{converter.getFirOpBuilder()},
+        stmtCtx{stmtCtx}, symMap{symMap}, destination{dst}, destShape{shape} {}
+
   explicit ArrayExprLowering(Fortran::lower::AbstractConverter &converter,
                              Fortran::lower::StatementContext &stmtCtx,
                              Fortran::lower::SymMap &symMap, bool projection,
@@ -2407,134 +2601,44 @@ private:
                                                                 projection} {}
 
   mlir::Location getLoc() { return converter.getCurrentLocation(); }
-  void setInProjection(bool on = true) { inProjection = on; }
+  void setUseEmbox(bool embox = true) { useEmbox = embox; }
 
   Fortran::lower::AbstractConverter &converter;
   Fortran::lower::FirOpBuilder &builder;
   Fortran::lower::StatementContext &stmtCtx;
   Fortran::lower::SymMap &symMap;
   fir::ArrayLoadOp destination;
+  std::optional<Fortran::evaluate::Shape> destShape;
   llvm::SmallVector<mlir::Value, 8> sliceTriple;
   llvm::SmallVector<mlir::Value, 8> slicePath;
+  bool useEmbox{false};
   bool inSlice{false};
   bool inProjection{false};
 };
 } // namespace
 
-namespace {
-/// WIP: this is a stub at the moment. The issue being addressed is when there
-/// is a subexpression such as `A + B` where A has non-zero rank and the
-/// subexpression is part of a larger expression. Operationally, `A + B` creates
-/// a temporary array. The shape of that temporary may or may not be constant at
-/// compile-time. The algorithm discovers the shape (regardless of whether it is
-/// constant) of the temporary by walking over the subexpression.
-struct IntraexprShapeAnalyzer
-    : public Fortran::evaluate::AnyTraverse<IntraexprShapeAnalyzer,
-                                            Fortran::lower::SymbolBox> {
-  // FIXME: The `AnyTraverse` pattern doesn't short-circuit its visitation. That
-  // is, the entire `Ev::Expr` tree is visited, but only the first non-`None`
-  // result wins. The root cause is the use of `Combine()` in the `Traverse`
-  // visitor pattern. Furthermore, the `operator()` methods are all `const`, a
-  // usage obstacle such that any visitor class has to use `mutable` internal
-  // state to be able to carry its own context.
-
-  using Result = Fortran::lower::SymbolBox;
-  using Base = Fortran::evaluate::AnyTraverse<IntraexprShapeAnalyzer, Result>;
-
-  IntraexprShapeAnalyzer(Fortran::lower::SymMap &symMap)
-      : Base(*this), symMap(symMap), rankedObj(false) {}
-
-  using Base::operator();
-
-  template <typename A>
-  Result visit(const A &x) const {
-    auto saved = rankedObj;
-    rankedObj = true;
-    auto result = Base::operator()(x);
-    rankedObj = saved;
-    return result;
-  }
-
-  Result operator()(const Fortran::evaluate::Component &x) const {
-    if (x.Rank())
-      TODO("derived type component");
-    return {};
-  }
-  Result operator()(const Fortran::evaluate::NamedEntity &x) const {
-    if (x.Rank())
-      return visit(x);
-    return {};
-  }
-  Result operator()(const Fortran::evaluate::ArrayRef &x) const {
-    if (x.Rank())
-      TODO("array ref");
-    return {};
-  }
-  Result operator()(const Fortran::evaluate::CoarrayRef &x) const {
-    if (x.Rank())
-      TODO("coarray ref");
-    return {};
-  }
-  Result operator()(const Fortran::evaluate::DataRef &x) const {
-    if (x.Rank())
-      return visit(x);
-    return {};
-  }
-  Result operator()(const Fortran::evaluate::ProcedureRef &x) const {
-    // FIXME: just want the return value shape of a function result here
-    if (x.Rank()) {
-      TODO("function result");
-      return visit(x.proc());
-    }
-    return {};
-  }
-  template <typename A>
-  Result operator()(const Fortran::evaluate::Designator<A> &x) const {
-    if (x.Rank())
-      return visit(x);
-    return {};
-  }
-  template <typename A>
-  Result operator()(const Fortran::evaluate::Variable<A> &x) const {
-    if (x.Rank())
-      return visit(x);
-    return {};
-  }
-  Result operator()(const Fortran::semantics::Symbol &s) const {
-    if (rankedObj) {
-      LLVM_DEBUG(llvm::dbgs() << "intraexpr scope symbol: "
-                              << toStringRef(s.name()) << '\n');
-      return symMap.lookupSymbol(s);
-    }
-    return {};
-  }
-
-  Fortran::lower::SymMap &symMap;
-  mutable bool rankedObj;
-};
-} // namespace
-
-// Given an array expression, the shape of the expression might be a runtime
-// value. In that case, drill down into the expression and find the
-// subexpression for which that dynamic shape can be found.
-// Return a vector of the ssa-values that describe the shape.
-static std::vector<mlir::Value> scavengeShapeFromSomeExpr(
-    const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &x,
-    Fortran::lower::SymMap &symMap) {
-  if (auto sBox = IntraexprShapeAnalyzer(symMap)(x)) {
+/// Given an array expression, `x`, the shape of the expression might be a
+/// runtime value. In that case, drill down into the expression and find the
+/// subexpression for which that dynamic shape can be found.
+/// Return a vector of the ssa-values that describe the shape.
+template <typename A>
+static std::vector<mlir::Value>
+scavengeShapeFromSomeExpr(Fortran::lower::AbstractConverter &converter,
+                          const A &x,
+                          Fortran::lower::StatementContext &stmtCtx) {
+  auto optShape = Fortran::evaluate::GetShape(converter.getFoldingContext(), x);
+  auto loc = converter.getCurrentLocation();
+  if (optShape.has_value()) {
     std::vector<mlir::Value> extents;
-    auto f = [&](const fir::AbstractArrayBox &box) {
-      const auto &exts = box.getExtents();
-      extents.insert(extents.end(), exts.begin(), exts.end());
-    };
-    sBox.toExtendedValue().match(
-        [&](const fir::ArrayBoxValue &box) { f(box); },
-        [&](const fir::CharArrayBoxValue &box) { f(box); },
-        [&](const fir::BoxValue &box) { f(box); },
-        [](auto) { llvm::report_fatal_error("not an array"); });
+    for (const auto &se : *optShape) {
+      auto ext = convertOptExtentExpr(converter, stmtCtx, se);
+      auto &builder = converter.getFirOpBuilder();
+      auto idxTy = builder.getIndexType();
+      extents.push_back(builder.createConvert(loc, idxTy, ext));
+    }
     return extents;
   }
-  llvm::report_fatal_error("cannot find a shape");
+  fir::emitFatalError(loc, "shape analysis failed");
 }
 
 fir::ExtendedValue Fortran::lower::createSomeExtendedExpression(
@@ -2588,9 +2692,9 @@ fir::AllocMemOp Fortran::lower::createSomeArrayTemp(
     stmtCtx.attachCleanup([=]() { bldr->create<fir::FreeMemOp>(loc, res); });
     return result;
   }
-  auto result =
-      bldr->create<fir::AllocMemOp>(loc, ty, ".array.expr", llvm::None,
-                                    scavengeShapeFromSomeExpr(expr, symMap));
+  auto result = bldr->create<fir::AllocMemOp>(
+      loc, ty, ".array.expr", llvm::None,
+      scavengeShapeFromSomeExpr(converter, expr, stmtCtx));
   auto res = result.getResult();
   stmtCtx.attachCleanup([=]() { bldr->create<fir::FreeMemOp>(loc, res); });
   return result;
@@ -2598,11 +2702,21 @@ fir::AllocMemOp Fortran::lower::createSomeArrayTemp(
 
 fir::ExtendedValue Fortran::lower::createSomeNewArrayValue(
     Fortran::lower::AbstractConverter &converter, fir::ArrayLoadOp dst,
+    const std::optional<Fortran::evaluate::Shape> &shape,
     const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &expr,
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx) {
   LLVM_DEBUG(expr.AsFortran(llvm::dbgs() << "array value: ") << '\n');
   return ArrayExprLowering::lowerArrayExpression(converter, symMap, stmtCtx,
-                                                 dst, expr);
+                                                 dst, shape, expr);
+}
+
+fir::ExtendedValue Fortran::lower::createSomeArrayBox(
+    Fortran::lower::AbstractConverter &converter,
+    const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &expr,
+    Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx) {
+  LLVM_DEBUG(expr.AsFortran(llvm::dbgs() << "box designator: ") << '\n');
+  return ArrayExprLowering::lowerAndBoxArrayExpression(converter, symMap,
+                                                       stmtCtx, expr);
 }
 
 fir::ExtendedValue Fortran::lower::createStringLiteral(

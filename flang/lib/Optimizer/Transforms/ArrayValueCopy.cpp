@@ -64,11 +64,11 @@ public:
 
   mlir::Operation *getOperation() const { return operation; }
 
-  /// Return true iff the `array_store` has potential conflicts.
+  /// Return true iff the `array_merge_store` has potential conflicts.
   bool hasPotentialConflict(mlir::Operation *op) const {
     LLVM_DEBUG(llvm::dbgs()
                << "looking for a conflict on " << *op
-               << " and the set has a total of " << conflicts.size());
+               << " and the set has a total of " << conflicts.size() << '\n');
     return conflicts.contains(op);
   }
 
@@ -110,6 +110,7 @@ static void populateSets(llvm::SmallVectorImpl<mlir::Operation *> &reach,
     // `val` is defined by an Op, process the defining Op.
     // If `val` is defined by a region containing Op, we want to drill down and
     // through that Op's region(s).
+    LLVM_DEBUG(llvm::dbgs() << "popset: " << val << '\n');
     auto popFn = [&](auto rop) {
       auto resNum = val.cast<mlir::OpResult>().getResultNumber();
       llvm::SmallVector<mlir::Value, 2> results;
@@ -164,7 +165,7 @@ static void populateSets(llvm::SmallVectorImpl<mlir::Operation *> &reach,
 }
 
 /// Return all ops that produce the array value that is stored into the
-/// `array_store`, st.
+/// `array_merge_store`.
 static void reachingValues(llvm::SmallVectorImpl<mlir::Operation *> &reach,
                            mlir::Value seq) {
   reach.clear();
@@ -258,6 +259,9 @@ void ArrayCopyAnalysis::arrayAccesses(
   loadMapSets.insert({load, visited});
 }
 
+/// Is there a conflict between the array value that was updated and to be
+/// stored to `st` and the set of arrays loaded (`reach`) and used to compute
+/// the updated value?
 static bool conflictOnLoad(llvm::ArrayRef<mlir::Operation *> reach,
                            ArrayMergeStoreOp st) {
   mlir::Value load;
@@ -269,6 +273,8 @@ static bool conflictOnLoad(llvm::ArrayRef<mlir::Operation *> reach,
           dyn_cast_ptrEleTy(st.memref().getType()) == dyn_cast_ptrEleTy(ldTy))
         return true;
       if (ld.memref() == addr) {
+        if (ld.getResult() != st.original())
+          return true;
         if (load)
           return true;
         load = ld;
@@ -514,9 +520,11 @@ public:
     // Build loop nest from column to row.
     for (auto sh : llvm::reverse(shape)) {
       auto idxTy = rewriter.getIndexType();
-      auto ub = rewriter.create<fir::ConvertOp>(loc, idxTy, sh);
+      auto ubi = rewriter.create<fir::ConvertOp>(loc, idxTy, sh);
+      auto zero = rewriter.create<mlir::ConstantIndexOp>(loc, 0);
       auto one = rewriter.create<mlir::ConstantIndexOp>(loc, 1);
-      auto loop = rewriter.create<fir::DoLoopOp>(loc, one, ub, one);
+      auto ub = rewriter.create<mlir::SubIOp>(loc, idxTy, ubi, one);
+      auto loop = rewriter.create<fir::DoLoopOp>(loc, zero, ub, one);
       rewriter.setInsertionPointToStart(loop.getBody());
       indices.push_back(loop.getInductionVar());
     }

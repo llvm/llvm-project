@@ -12,6 +12,7 @@
 
 #include "CGOps.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
+#include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 
 /// FIR codegen dialect constructor.
@@ -30,3 +31,11 @@ fir::FIRCodeGenDialect::~FIRCodeGenDialect() {
 
 #define GET_OP_CLASSES
 #include "flang/Optimizer/CodeGen/CGOps.cpp.inc"
+
+unsigned fir::cg::XEmboxOp::getOutRank() {
+  if (slice().empty())
+    return getRank();
+  auto outRank = fir::SliceOp::getOutputRank(slice());
+  assert(outRank >= 1);
+  return outRank;
+}

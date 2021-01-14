@@ -59,14 +59,25 @@ def fircg_XEmboxOp : fircg_Op<"ext_embox", [AttrSizedOperandSegments]> {
   let results = (outs fir_BoxType);
 
   let assemblyFormat = [{
-    $memref (`(`$shape^`)`)? (`origin` $shift^)? (`[`$slice^`]`)? (`path` $subcomponent^)? (`typeparams` $lenParams^)? attr-dict `:` functional-type(operands, results)
+    $memref (`(`$shape^`)`)? (`origin` $shift^)? (`[`$slice^`]`)?
+      (`path` $subcomponent^)? (`typeparams` $lenParams^)? attr-dict
+      `:` functional-type(operands, results)
   }];
 
   let extraClassDeclaration = [{
+    // The rank of the entity being emboxed
     unsigned getRank() { return shape().size(); }
+
+    // The rank of the result. A slice op can reduce the rank.
+    unsigned getOutRank();
+
+    // The shape operands are mandatory and always start at 1.
+    unsigned shapeOffset() { return 1; }
+    unsigned shiftOffset() { return shapeOffset() + shape().size(); }
+    unsigned sliceOffset() { return shiftOffset() + shift().size(); }
+    unsigned subcomponentOffset() { return sliceOffset() + slice().size(); }
     unsigned lenParamOffset() {
-      return 1 + shape().size() + shift().size() + slice().size() +
-        subcomponent().size();
+      return subcomponentOffset() + subcomponent().size();
     }
   }];
 }
@@ -107,7 +118,9 @@ def fircg_XArrayCoorOp : fircg_Op<"ext_array_coor", [AttrSizedOperandSegments]> 
   let results = (outs fir_ReferenceType);
 
   let assemblyFormat = [{
-    $memref (`(`$shape^`)`)? (`origin` $shift^)? (`[`$slice^`]`)? (`path` $subcomponent^)? `<`$indices`>` (`typeparams` $lenParams^)? attr-dict `:` functional-type(operands, results)
+    $memref (`(`$shape^`)`)? (`origin` $shift^)? (`[`$slice^`]`)?
+      (`path` $subcomponent^)? `<`$indices`>` (`typeparams` $lenParams^)?
+      attr-dict `:` functional-type(operands, results)
   }];
 
   let extraClassDeclaration = [{
