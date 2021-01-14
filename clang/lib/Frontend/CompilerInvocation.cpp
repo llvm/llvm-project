@@ -1228,8 +1228,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     }
     Opts.LinkBitcodeFiles.push_back(F);
   }
-  Opts.SSPBufferSize =
-      getLastArgIntValue(Args, OPT_stack_protector_buffer_size, 8, Diags);
 
   Opts.StackProtectorGuard =
       std::string(Args.getLastArgValue(OPT_mstack_protector_guard_EQ));
