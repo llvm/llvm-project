@@ -37,7 +37,7 @@ swift::SILValue SwiftSILManipulator::emitLValueForVariable(
     swift::VarDecl *var, SwiftExpressionParser::SILVariableInfo &info) {
   swift::SILFunction &function = m_builder.getFunction();
 
-  swift::SILBasicBlock &entry_block = *function.getBlocks().begin();
+  swift::SILBasicBlock &entry_block = *function.getEntryBlock();
 
   swift::SILArgument *struct_argument = nullptr;
 
