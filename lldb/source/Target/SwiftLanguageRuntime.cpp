@@ -259,6 +259,13 @@ public:
     return {};
   }
 
+  llvm::Optional<std::string> GetEnumCaseName(CompilerType type,
+                                              const DataExtractor &data,
+                                              ExecutionContext *exe_ctx) {
+    STUB_LOG();
+    return {};
+  }
+
   llvm::Optional<size_t> GetIndexOfChildMemberWithName(
       CompilerType type, llvm::StringRef name, ExecutionContext *exe_ctx,
       bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) {
@@ -2166,6 +2173,11 @@ llvm::Optional<uint64_t> SwiftLanguageRuntime::GetMemberVariableOffset(
 llvm::Optional<unsigned>
 SwiftLanguageRuntime::GetNumChildren(CompilerType type, ValueObject *valobj) {
   FORWARD(GetNumChildren, type, valobj);
+}
+
+llvm::Optional<std::string> SwiftLanguageRuntime::GetEnumCaseName(
+    CompilerType type, const DataExtractor &data, ExecutionContext *exe_ctx) {
+  FORWARD(GetEnumCaseName, type, data, exe_ctx);
 }
 
 llvm::Optional<size_t> SwiftLanguageRuntime::GetIndexOfChildMemberWithName(
