@@ -1828,6 +1828,27 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (auto GORC = combineORToGORC(SDValue(N, 0), DCI.DAG, Subtarget))
       return GORC;
     break;
+  case RISCVISD::SELECT_CC: {
+    // Transform
+    // (select_cc (xor X, 1), 0, setne, trueV, falseV) ->
+    // (select_cc X, 0, seteq, trueV, falseV) if we can prove X is 0/1.
+    // This can occur when legalizing some floating point comparisons.
+    SDValue LHS = N->getOperand(0);
+    SDValue RHS = N->getOperand(1);
+    auto CCVal = static_cast<ISD::CondCode>(N->getConstantOperandVal(2));
+    APInt Mask = APInt::getBitsSetFrom(LHS.getValueSizeInBits(), 1);
+    if ((CCVal == ISD::SETNE || CCVal == ISD::SETEQ) && isNullConstant(RHS) &&
+        LHS.getOpcode() == ISD::XOR && isOneConstant(LHS.getOperand(1)) &&
+        DAG.MaskedValueIsZero(LHS.getOperand(0), Mask)) {
+      SDLoc DL(N);
+      CCVal = ISD::getSetCCInverse(CCVal, LHS.getValueType());
+      SDValue TargetCC = DAG.getConstant(CCVal, DL, Subtarget.getXLenVT());
+      return DAG.getNode(RISCVISD::SELECT_CC, DL, N->getValueType(0),
+                         {LHS.getOperand(0), RHS, TargetCC, N->getOperand(3),
+                          N->getOperand(4)});
+    }
+    break;
+  }
   }
 
   return SDValue();

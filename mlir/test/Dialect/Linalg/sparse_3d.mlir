@@ -1260,11 +1260,8 @@ func @kernel_3d(%arga: tensor<?x?xf32>,
 // CHECK:           %[[VAL_3:.*]] = constant 0 : index
 // CHECK:           %[[VAL_4:.*]] = constant 1 : index
 // CHECK:           %[[VAL_5:.*]] = alloca(%[[VAL_2]]) : memref<?xindex>
-// CHECK:           %[[VAL_6:.*]] = alloca(%[[VAL_2]]) : memref<?xindex>
 // CHECK:           %[[VAL_7:.*]] = alloca(%[[VAL_2]]) : memref<?xindex>
-// CHECK:           %[[VAL_8:.*]] = alloca(%[[VAL_2]]) : memref<?xindex>
 // CHECK:           %[[VAL_9:.*]] = alloca(%[[VAL_2]]) : memref<?xindex>
-// CHECK:           %[[VAL_10:.*]] = alloca(%[[VAL_2]]) : memref<?xindex>
 // CHECK:           %[[VAL_11:.*]] = alloca(%[[VAL_2]]) : memref<?xf32>
 // CHECK:           %[[VAL_12:.*]] = alloca() : memref<f32>
 // CHECK:           %[[VAL_13:.*]] = load %[[VAL_5]]{{\[}}%[[VAL_3]]] : memref<?xindex>

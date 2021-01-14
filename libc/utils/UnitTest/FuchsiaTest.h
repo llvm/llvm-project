@@ -10,11 +10,5 @@
 #define LLVM_LIBC_UTILS_UNITTEST_FUCHSIATEST_H
 
 #include <zxtest/zxtest.h>
-// isascii is being undef'd because Fuchsia's headers define a macro for
-// isascii. that macro causes errors when isascii_test.cpp references
-// __llvm_libc::isascii since the macro is applied first.
-#ifdef isascii
-#undef isascii
-#endif
 
 #endif // LLVM_LIBC_UTILS_UNITTEST_FUCHSIATEST_H

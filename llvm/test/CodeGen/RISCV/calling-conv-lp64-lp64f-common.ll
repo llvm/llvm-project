@@ -36,7 +36,7 @@ define i64 @caller_double_in_regs() nounwind {
 ; RV64I-NEXT:    addi a0, zero, 1
 ; RV64I-NEXT:    slli a1, a0, 62
 ; RV64I-NEXT:    addi a0, zero, 1
-; RV64I-NEXT:    call callee_double_in_regs
+; RV64I-NEXT:    call callee_double_in_regs@plt
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -58,7 +58,7 @@ define i64 @caller_double_ret() nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    call callee_double_ret
+; RV64I-NEXT:    call callee_double_ret@plt
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
