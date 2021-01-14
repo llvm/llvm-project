@@ -27,7 +27,7 @@ using AccClauseSet =
     Fortran::common::EnumSet<llvm::acc::Clause, llvm::acc::Clause_enumSize>;
 
 #define GEN_FLANG_DIRECTIVE_CLAUSE_SETS
-#include "llvm/Frontend/OpenACC/ACC.cpp.inc"
+#include "llvm/Frontend/OpenACC/ACC.inc"
 
 namespace Fortran::semantics {
 
@@ -38,7 +38,7 @@ public:
   AccStructureChecker(SemanticsContext &context)
       : DirectiveStructureChecker(context,
 #define GEN_FLANG_DIRECTIVE_CLAUSE_MAP
-#include "llvm/Frontend/OpenACC/ACC.cpp.inc"
+#include "llvm/Frontend/OpenACC/ACC.inc"
         ) {
   }
 
