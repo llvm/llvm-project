@@ -4209,14 +4209,10 @@ SourceLocation DesignatedInitExpr::getBeginLoc() const {
   SourceLocation StartLoc;
   auto *DIE = const_cast<DesignatedInitExpr *>(this);
   Designator &First = *DIE->getDesignator(0);
-  if (First.isFieldDesignator()) {
-    if (GNUSyntax)
-      StartLoc = SourceLocation::getFromRawEncoding(First.Field.FieldLoc);
-    else
-      StartLoc = SourceLocation::getFromRawEncoding(First.Field.DotLoc);
-  } else
-    StartLoc =
-      SourceLocation::getFromRawEncoding(First.ArrayOrRange.LBracketLoc);
+  if (First.isFieldDesignator())
+    StartLoc = GNUSyntax ? First.Field.FieldLoc : First.Field.DotLoc;
+  else
+    StartLoc = First.ArrayOrRange.LBracketLoc;
   return StartLoc;
 }
 
