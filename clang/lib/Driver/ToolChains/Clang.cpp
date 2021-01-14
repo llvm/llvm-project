@@ -3754,7 +3754,12 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
       Args.hasFlag(options::OPT_fsplit_dwarf_inlining,
                    options::OPT_fno_split_dwarf_inlining, false);
 
-  if (const Arg *A = Args.getLastArg(options::OPT_g_Group)) {
+  // Normally -gsplit-dwarf is only useful with -gN. For -gsplit-dwarf in the
+  // backend phase of a distributed ThinLTO which does object file generation
+  // and no IR generation, -gN should not be needed. So allow -gsplit-dwarf with
+  // either -gN or -fthinlto-index=.
+  if (Args.hasArg(options::OPT_g_Group) ||
+      Args.hasArg(options::OPT_fthinlto_index_EQ)) {
     Arg *SplitDWARFArg;
     DwarfFission = getDebugFissionKind(D, Args, SplitDWARFArg);
     if (DwarfFission != DwarfFissionKind::None &&
@@ -3762,7 +3767,8 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
       DwarfFission = DwarfFissionKind::None;
       SplitDWARFInlining = false;
     }
-
+  }
+  if (const Arg *A = Args.getLastArg(options::OPT_g_Group)) {
     DebugInfoKind = codegenoptions::LimitedDebugInfo;
 
     // If the last option explicitly specified a debug-info level, use it.

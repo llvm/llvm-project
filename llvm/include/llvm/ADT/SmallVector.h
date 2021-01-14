@@ -545,11 +545,9 @@ public:
 private:
   template <bool ForOverwrite> void resizeImpl(size_type N) {
     if (N < this->size()) {
-      this->destroy_range(this->begin()+N, this->end());
-      this->set_size(N);
+      this->pop_back_n(this->size() - N);
     } else if (N > this->size()) {
-      if (this->capacity() < N)
-        this->grow(N);
+      this->reserve(N);
       for (auto I = this->end(), E = this->begin() + N; I != E; ++I)
         if (ForOverwrite)
           new (&*I) T;
@@ -570,8 +568,7 @@ public:
       return;
 
     if (N < this->size()) {
-      this->destroy_range(this->begin()+N, this->end());
-      this->set_size(N);
+      this->pop_back_n(this->size() - N);
       return;
     }
 
@@ -606,9 +603,7 @@ public:
   void append(in_iter in_start, in_iter in_end) {
     this->assertSafeToAddRange(in_start, in_end);
     size_type NumInputs = std::distance(in_start, in_end);
-    if (NumInputs > this->capacity() - this->size())
-      this->grow(this->size()+NumInputs);
-
+    this->reserve(this->size() + NumInputs);
     this->uninitialized_copy(in_start, in_end, this->end());
     this->set_size(this->size() + NumInputs);
   }
@@ -630,8 +625,7 @@ public:
   void assign(size_type NumElts, const T &Elt) {
     this->assertSafeToReferenceAfterResize(&Elt, 0);
     clear();
-    if (this->capacity() < NumElts)
-      this->grow(NumElts);
+    this->reserve(NumElts);
     this->set_size(NumElts);
     std::uninitialized_fill(this->begin(), this->end(), Elt);
   }
@@ -892,10 +886,8 @@ void SmallVectorImpl<T>::swap(SmallVectorImpl<T> &RHS) {
     std::swap(this->Capacity, RHS.Capacity);
     return;
   }
-  if (RHS.size() > this->capacity())
-    this->grow(RHS.size());
-  if (this->size() > RHS.capacity())
-    RHS.grow(this->size());
+  this->reserve(RHS.size());
+  RHS.reserve(this->size());
 
   // Swap the shared elements.
   size_t NumShared = this->size();
@@ -950,8 +942,7 @@ SmallVectorImpl<T> &SmallVectorImpl<T>::
   // FIXME: don't do this if they're efficiently moveable.
   if (this->capacity() < RHSSize) {
     // Destroy current elements.
-    this->destroy_range(this->begin(), this->end());
-    this->set_size(0);
+    this->clear();
     CurSize = 0;
     this->grow(RHSSize);
   } else if (CurSize) {
@@ -1010,8 +1001,7 @@ SmallVectorImpl<T> &SmallVectorImpl<T>::operator=(SmallVectorImpl<T> &&RHS) {
   // elements.
   if (this->capacity() < RHSSize) {
     // Destroy current elements.
-    this->destroy_range(this->begin(), this->end());
-    this->set_size(0);
+    this->clear();
     CurSize = 0;
     this->grow(RHSSize);
   } else if (CurSize) {
