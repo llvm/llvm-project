@@ -811,7 +811,7 @@ func @mixed_named_arguments(f32,
 // `tensor` as operator rather than as a type.
 func @f(f32) {
 ^bb0(%a : f32):
-  %18 = cmpi "slt", %idx, %idx : index
+  %18 = cmpi slt, %idx, %idx : index
   tensor<42 x index  // expected-error {{custom op 'tensor' is unknown}}
   return
 }
