@@ -608,10 +608,18 @@ semantics:
     perform multiple updates.
 2.  Each tensor may only be used with a single indexing expression.
 
+A `"""`-wrapped doc string can be attached to the named op. It should contain a
+oneliner for summary first, followed by lengthy description.
+
 The following specification may be used to define a named `batchmatmul` op:
 
 ```
-def batchmatmul(A: f32(Batch, M, K), B: f32(K, N)) -> (C: f32(Batch, M, N)) {
+def batchmatmul(A: f32(Batch, M, K), B: f32(K, N)) -> (C: f32(Batch, M, N))
+"""Batch matrix-multiply operation.
+
+This operation performs batch matrix-multiply over ...
+"""
+{
   C(b, m, n) = std_addf<k>(std_mulf(A(b, m, k), B(k, n)));
 }
 ```
