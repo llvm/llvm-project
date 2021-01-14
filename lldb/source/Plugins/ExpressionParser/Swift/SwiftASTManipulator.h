@@ -48,7 +48,7 @@ public:
   public:
     virtual ~VariableMetadataResult();
     constexpr static unsigned Type() { return 'Resu'; }
-    virtual unsigned GetType() { return Type(); }
+    unsigned GetType() override { return Type(); }
   };
 
   class VariableMetadataError
@@ -56,7 +56,7 @@ public:
   public:
     virtual ~VariableMetadataError();
     constexpr static unsigned Type() { return 'Erro'; }
-    virtual unsigned GetType() { return Type(); }
+    unsigned GetType() override { return Type(); }
   };
 
   typedef std::shared_ptr<VariableMetadata> VariableMetadataSP;

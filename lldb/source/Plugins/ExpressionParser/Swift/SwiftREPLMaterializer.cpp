@@ -87,7 +87,7 @@ public:
   }
 
   void Materialize(lldb::StackFrameSP &frame_sp, IRMemoryMap &map,
-                   lldb::addr_t process_address, Status &err) {
+                   lldb::addr_t process_address, Status &err) override {
     // no action required
   }
 
@@ -194,7 +194,7 @@ public:
 
   void Dematerialize(lldb::StackFrameSP &frame_sp, IRMemoryMap &map,
                      lldb::addr_t process_address, lldb::addr_t frame_top,
-                     lldb::addr_t frame_bottom, Status &err) {
+                     lldb::addr_t frame_bottom, Status &err) override {
     IRExecutionUnit *execution_unit =
         llvm::cast<SwiftREPLMaterializer>(m_parent)->GetExecutionUnit();
 
@@ -231,7 +231,8 @@ public:
         "Couldn't dematerialize result: corresponding symbol wasn't found");
   }
 
-  void DumpToLog(IRMemoryMap &map, lldb::addr_t process_address, Log *log) {
+  void DumpToLog(IRMemoryMap &map, lldb::addr_t process_address,
+                 Log *log) override {
     StreamString dump_stream;
 
     const lldb::addr_t load_addr = process_address + m_offset;
@@ -293,7 +294,7 @@ public:
     log->PutCString(dump_stream.GetData());
   }
 
-  void Wipe(IRMemoryMap &map, lldb::addr_t process_address) {
+  void Wipe(IRMemoryMap &map, lldb::addr_t process_address) override {
     m_temporary_allocation = LLDB_INVALID_ADDRESS;
     m_temporary_allocation_size = 0;
   }
@@ -337,13 +338,13 @@ public:
   }
 
   void Materialize(lldb::StackFrameSP &frame_sp, IRMemoryMap &map,
-                   lldb::addr_t process_address, Status &err) {
+                   lldb::addr_t process_address, Status &err) override {
     // no action required
   }
 
   void Dematerialize(lldb::StackFrameSP &frame_sp, IRMemoryMap &map,
                      lldb::addr_t process_address, lldb::addr_t frame_top,
-                     lldb::addr_t frame_bottom, Status &err) {
+                     lldb::addr_t frame_bottom, Status &err) override {
     if (llvm::cast<SwiftExpressionVariable>(m_persistent_variable_sp.get())
             ->GetIsComputed())
       return;
@@ -432,7 +433,8 @@ public:
         m_persistent_variable_sp->GetName().GetCString());
   }
 
-  void DumpToLog(IRMemoryMap &map, lldb::addr_t process_address, Log *log) {
+  void DumpToLog(IRMemoryMap &map, lldb::addr_t process_address,
+                 Log *log) override {
     StreamString dump_stream;
 
     Status err;
@@ -491,7 +493,7 @@ public:
     log->PutCString(dump_stream.GetData());
   }
 
-  void Wipe(IRMemoryMap &map, lldb::addr_t process_address) {}
+  void Wipe(IRMemoryMap &map, lldb::addr_t process_address) override {}
 
 private:
   lldb::ExpressionVariableSP m_persistent_variable_sp;
