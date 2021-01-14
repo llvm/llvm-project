@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -o - %s | FileCheck %s
 // CHECK: ModuleID
+// CHECK: target triple = "
 // CHECK-NOT: opaque
 // CHECK-LABEL: define{{.*}} void @f0
 
