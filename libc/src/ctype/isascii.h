@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_CTYPE_ISASCII_H
 #define LLVM_LIBC_SRC_CTYPE_ISASCII_H
 
+#undef isascii
+
 namespace __llvm_libc {
 
 int isascii(int c);
