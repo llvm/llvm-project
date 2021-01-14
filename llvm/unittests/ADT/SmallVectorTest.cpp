@@ -1135,12 +1135,14 @@ TYPED_TEST(SmallVectorReferenceInvalidationTest, Resize) {
   auto &V = this->V;
   (void)V;
   int N = this->NumBuiltinElts(V);
-#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
-  EXPECT_DEATH(V.resize(N + 1, V.back()), this->AssertionMessage);
-#endif
+  V.resize(N + 1, V.back());
+  EXPECT_EQ(N, V.back());
 
-  // No assertion when shrinking, since the parameter isn't accessed.
-  V.resize(N - 1, V.back());
+  // Resize to add enough elements that V will grow again. If reference
+  // invalidation breaks in the future, sanitizers should be able to catch a
+  // use-after-free here.
+  V.resize(V.capacity() + 1, V.front());
+  EXPECT_EQ(1, V.back());
 }
 
 TYPED_TEST(SmallVectorReferenceInvalidationTest, Append) {
