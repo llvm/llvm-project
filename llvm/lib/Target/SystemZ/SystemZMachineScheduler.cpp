@@ -72,6 +72,7 @@ advanceTo(MachineBasicBlock::iterator NextBegin) {
 }
 
 void SystemZPostRASchedStrategy::initialize(ScheduleDAGMI *dag) {
+  Available.clear();  // -misched-cutoff.
   LLVM_DEBUG(HazardRec->dumpState(););
 }
 
