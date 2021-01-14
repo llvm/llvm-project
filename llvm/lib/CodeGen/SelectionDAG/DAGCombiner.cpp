@@ -1928,7 +1928,7 @@ SDValue DAGCombiner::visitTokenFactor(SDNode *N) {
   auto AddToWorklist = [&](unsigned CurIdx, SDNode *Op, unsigned OpNumber) {
     // If this is an Op, we can remove the op from the list. Remark any
     // search associated with it as from the current OpNumber.
-    if (SeenOps.count(Op) != 0) {
+    if (SeenOps.contains(Op)) {
       Changed = true;
       DidPruneOps = true;
       unsigned OrigOpNumber = 0;

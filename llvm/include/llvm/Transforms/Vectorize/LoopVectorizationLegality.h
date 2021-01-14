@@ -339,7 +339,7 @@ public:
 
   /// Returns true if vector representation of the instruction \p I
   /// requires mask.
-  bool isMaskRequired(const Instruction *I) { return (MaskedOp.count(I) != 0); }
+  bool isMaskRequired(const Instruction *I) { return MaskedOp.contains(I); }
 
   unsigned getNumStores() const { return LAI->getNumStores(); }
   unsigned getNumLoads() const { return LAI->getNumLoads(); }

@@ -118,7 +118,7 @@ private:
   ///
   /// (see markBlockJoinDivergent).
   bool isJoinDivergent(const BasicBlock &Block) const {
-    return DivergentJoinBlocks.find(&Block) != DivergentJoinBlocks.end();
+    return DivergentJoinBlocks.contains(&Block);
   }
 
 private:
