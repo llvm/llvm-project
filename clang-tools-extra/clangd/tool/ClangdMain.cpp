@@ -312,14 +312,15 @@ opt<bool> RecoveryAST{
     "recovery-ast",
     cat(Features),
     desc("Preserve expressions in AST for broken code."),
-    init(ClangdServer::Options().BuildRecoveryAST),
+    init(false),
+    Hidden,
 };
 
 opt<bool> RecoveryASTType{
     "recovery-ast-type",
     cat(Features),
     desc("Preserve the type for recovery AST."),
-    init(ClangdServer::Options().PreserveRecoveryASTType),
+    init(false),
     Hidden,
 };
 
@@ -813,8 +814,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     Opts.StaticIndex = PAI.get();
   }
   Opts.AsyncThreadsCount = WorkerThreadsCount;
-  Opts.BuildRecoveryAST = RecoveryAST;
-  Opts.PreserveRecoveryASTType = RecoveryASTType;
   Opts.FoldingRanges = FoldingRanges;
   Opts.MemoryCleanup = getMemoryCleanupFunction();
 

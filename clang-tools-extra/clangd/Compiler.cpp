@@ -85,11 +85,6 @@ buildCompilerInvocation(const ParseInputs &Inputs, clang::DiagnosticConsumer &D,
   // Don't crash on `#pragma clang __debug parser_crash`
   CI->getPreprocessorOpts().DisablePragmaDebugCrash = true;
 
-  if (Inputs.Opts.BuildRecoveryAST)
-    CI->getLangOpts()->RecoveryAST = true;
-  if (Inputs.Opts.PreserveRecoveryASTType)
-    CI->getLangOpts()->RecoveryASTType = true;
-
   return CI;
 }
 

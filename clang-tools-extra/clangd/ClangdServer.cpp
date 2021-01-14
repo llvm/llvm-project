@@ -147,8 +147,6 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                      : nullptr),
       ClangTidyProvider(Opts.ClangTidyProvider),
       SuggestMissingIncludes(Opts.SuggestMissingIncludes),
-      BuildRecoveryAST(Opts.BuildRecoveryAST),
-      PreserveRecoveryASTType(Opts.PreserveRecoveryASTType),
       WorkspaceRoot(Opts.WorkspaceRoot),
       // Pass a callback into `WorkScheduler` to extract symbols from a newly
       // parsed file and rebuild the file index synchronously each time an AST
@@ -214,8 +212,6 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
   Inputs.Opts = std::move(Opts);
   Inputs.Index = Index;
   Inputs.ClangTidyProvider = ClangTidyProvider;
-  Inputs.Opts.BuildRecoveryAST = BuildRecoveryAST;
-  Inputs.Opts.PreserveRecoveryASTType = PreserveRecoveryASTType;
   bool NewFile = WorkScheduler.update(File, Inputs, WantDiags);
   // If we loaded Foo.h, we want to make sure Foo.cpp is indexed.
   if (NewFile && BackgroundIdx)
@@ -253,8 +249,6 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
     }
     ParseInputs ParseInput{IP->Command, &TFS, IP->Contents.str()};
     ParseInput.Index = Index;
-    ParseInput.Opts.BuildRecoveryAST = BuildRecoveryAST;
-    ParseInput.Opts.PreserveRecoveryASTType = PreserveRecoveryASTType;
 
     CodeCompleteOpts.MainFileSignals = IP->Signals;
     // FIXME(ibiryukov): even if Preamble is non-null, we may want to check
@@ -300,8 +294,6 @@ void ClangdServer::signatureHelp(PathRef File, Position Pos,
 
     ParseInputs ParseInput{IP->Command, &TFS, IP->Contents.str()};
     ParseInput.Index = Index;
-    ParseInput.Opts.BuildRecoveryAST = BuildRecoveryAST;
-    ParseInput.Opts.PreserveRecoveryASTType = PreserveRecoveryASTType;
     CB(clangd::signatureHelp(File, Pos, *PreambleData, ParseInput));
   };
 
