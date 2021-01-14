@@ -3121,11 +3121,11 @@ static void diagnoseRedundantReturnTypeQualifiers(Sema &S, QualType RetTy,
           diag::warn_qual_return_type,
           PTI.TypeQuals,
           SourceLocation(),
-          SourceLocation::getFromRawEncoding(PTI.ConstQualLoc),
-          SourceLocation::getFromRawEncoding(PTI.VolatileQualLoc),
-          SourceLocation::getFromRawEncoding(PTI.RestrictQualLoc),
-          SourceLocation::getFromRawEncoding(PTI.AtomicQualLoc),
-          SourceLocation::getFromRawEncoding(PTI.UnalignedQualLoc));
+          PTI.ConstQualLoc,
+          PTI.VolatileQualLoc,
+          PTI.RestrictQualLoc,
+          PTI.AtomicQualLoc,
+          PTI.UnalignedQualLoc);
       return;
     }
 
@@ -6087,7 +6087,7 @@ namespace {
       }
 
       // Finally fill in MemberPointerLocInfo fields.
-      TL.setStarLoc(SourceLocation::getFromRawEncoding(Chunk.Mem.StarLoc));
+      TL.setStarLoc(Chunk.Mem.StarLoc);
       TL.setClassTInfo(ClsTInfo);
     }
     void VisitLValueReferenceTypeLoc(LValueReferenceTypeLoc TL) {
@@ -6164,7 +6164,7 @@ static void fillAtomicQualLoc(AtomicTypeLoc ATL, const DeclaratorChunk &Chunk) {
     llvm_unreachable("cannot be _Atomic qualified");
 
   case DeclaratorChunk::Pointer:
-    Loc = SourceLocation::getFromRawEncoding(Chunk.Ptr.AtomicQualLoc);
+    Loc = Chunk.Ptr.AtomicQualLoc;
     break;
 
   case DeclaratorChunk::BlockPointer:
