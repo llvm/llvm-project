@@ -545,8 +545,7 @@ public:
 private:
   template <bool ForOverwrite> void resizeImpl(size_type N) {
     if (N < this->size()) {
-      this->destroy_range(this->begin()+N, this->end());
-      this->set_size(N);
+      this->pop_back_n(this->size() - N);
     } else if (N > this->size()) {
       if (this->capacity() < N)
         this->grow(N);
@@ -570,8 +569,7 @@ public:
       return;
 
     if (N < this->size()) {
-      this->destroy_range(this->begin()+N, this->end());
-      this->set_size(N);
+      this->pop_back_n(this->size() - N);
       return;
     }
 
