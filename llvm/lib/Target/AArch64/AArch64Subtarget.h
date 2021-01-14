@@ -45,6 +45,7 @@ public:
     AppleA11,
     AppleA12,
     AppleA13,
+    AppleA14,
     Carmel,
     CortexA35,
     CortexA53,
