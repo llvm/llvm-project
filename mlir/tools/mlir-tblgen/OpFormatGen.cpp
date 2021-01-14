@@ -1287,10 +1287,16 @@ void OperationFormat::genParserTypeResolution(Operator &op,
     if (Optional<int> val = resolver.getBuilderIdx()) {
       body << "odsBuildableType" << *val;
     } else if (const NamedTypeConstraint *var = resolver.getVariable()) {
-      if (Optional<StringRef> tform = resolver.getVarTransformer())
-        body << tgfmt(*tform, &FmtContext().withSelf(var->name + "Types[0]"));
-      else
+      if (Optional<StringRef> tform = resolver.getVarTransformer()) {
+        FmtContext fmtContext;
+        if (var->isVariadic())
+          fmtContext.withSelf(var->name + "Types");
+        else
+          fmtContext.withSelf(var->name + "Types[0]");
+        body << tgfmt(*tform, &fmtContext);
+      } else {
         body << var->name << "Types";
+      }
     } else if (const NamedAttribute *attr = resolver.getAttribute()) {
       if (Optional<StringRef> tform = resolver.getVarTransformer())
         body << tgfmt(*tform,

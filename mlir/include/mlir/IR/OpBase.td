@@ -2191,15 +2191,27 @@ class AllTypesMatch<list<string> names> :
     AllMatchSameOperatorTrait<names, "$_self.getType()", "type">;
 
 // A type constraint that denotes `transform(lhs.getType()) == rhs.getType()`.
+// An optional comparator function may be provided that changes the above form
+// into: `comparator(transform(lhs.getType()), rhs.getType())`.
 class TypesMatchWith<string summary, string lhsArg, string rhsArg,
-                     string transform> :
-    PredOpTrait<summary, CPred<
-      !subst("$_self", "$" # lhsArg # ".getType()", transform)
-      # " == $" # rhsArg # ".getType()">> {
+                     string transform, string comparator = "std::equal_to<>()">
+  : PredOpTrait<summary, CPred<
+      comparator # "(" #
+      !subst("$_self", "$" # lhsArg # ".getType()", transform) #
+      ", $" # rhsArg # ".getType())">> {
   string lhs = lhsArg;
   string rhs = rhsArg;
   string transformer = transform;
 }
+
+// Special variant of `TypesMatchWith` that provides a comparator suitable for
+// ranged arguments.
+class RangedTypesMatchWith<string summary, string lhsArg, string rhsArg,
+                           string transform>
+  : TypesMatchWith<summary, lhsArg, rhsArg, transform,
+    "[](auto &&lhs, auto &&rhs) { "
+    "return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());"
+    " }">;
 
 // Type Constraint operand `idx`'s Element type is `type`.
 class TCopVTEtIs<int idx, Type type> : And<[
