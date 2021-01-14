@@ -565,7 +565,7 @@ public:
   /// Like resize, but \ref T is POD, the new values won't be initialized.
   void resize_for_overwrite(size_type N) { resizeImpl<true>(N); }
 
-  void resize(size_type N, const T &NV) {
+  void resize(size_type N, ValueParamT NV) {
     if (N == this->size())
       return;
 
@@ -575,11 +575,8 @@ public:
       return;
     }
 
-    this->assertSafeToReferenceAfterResize(&NV, N);
-    if (this->capacity() < N)
-      this->grow(N);
-    std::uninitialized_fill(this->end(), this->begin() + N, NV);
-    this->set_size(N);
+    // N > this->size(). Defer to append.
+    this->append(N - this->size(), NV);
   }
 
   void reserve(size_type N) {
