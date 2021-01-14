@@ -221,6 +221,18 @@ def PromoteBuffersToStack : FunctionPass<"promote-buffers-to-stack"> {
   ];
 }
 
+def BufferReuse : FunctionPass<"buffer-reuse"> {
+  let summary = "Reuses already allocated buffers to save allocation "
+                "operations if all criteria are met";
+  let description = [{
+    This pass tries to reuse already allocated buffers if they have the same
+    size, are in the right appearance order, have no interference among
+    themselves and have a short distance between those buffers (this prevents
+    unnecessary allocated memory for long distances).
+  }];
+  let constructor = "mlir::createBufferReusePass()";
+}
+
 def BufferResultsToOutParams : Pass<"buffer-results-to-out-params", "ModuleOp">  {
   let summary = "Converts memref-typed function results to out-params";
   let description = [{

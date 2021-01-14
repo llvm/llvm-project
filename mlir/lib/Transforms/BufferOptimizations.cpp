@@ -315,6 +315,147 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
+// BufferReuse
+//===----------------------------------------------------------------------===//
+
+/// Reuses already allocated buffer to save allocation operations.
+class BufferReuse : BufferPlacementTransformationBase {
+public:
+  BufferReuse(Operation *op)
+      : BufferPlacementTransformationBase(op), dominators(op),
+        postDominators(op) {}
+
+  /// An implementation for the first and last use of a value.
+  struct FirstAndLastUse {
+    Operation *firstUse;
+    Operation *lastUse;
+
+    bool operator==(const FirstAndLastUse &other) const {
+      return firstUse == other.firstUse && lastUse == other.lastUse;
+    }
+
+    bool operator!=(const FirstAndLastUse &other) const {
+      return firstUse != other.firstUse || lastUse != other.lastUse;
+    }
+  };
+
+  /// Reuses already allocated buffers to save allocation operations.
+  void reuse() {
+    // Find all first and last uses for all allocated values and their aliases
+    // and save them in the useRangeMap.
+    llvm::MapVector<Value, FirstAndLastUse> useRangeMap;
+    for (BufferPlacementAllocs::AllocEntry &entry : allocs) {
+      Value allocValue = std::get<0>(entry);
+
+      // Resolve all aliases for the allocValue to later save them in a cache.
+      ValueSetT aliasSet = aliases.resolve(allocValue);
+
+      // Iterate over the aliasSet and compute the use range.
+      for (Value aliasValue : aliasSet) {
+        Value::user_range users = aliasValue.getUsers();
+        // Check if the allocValue/alias is already processed or has no users.
+        if (useRangeMap.count(aliasValue) || users.empty())
+          continue;
+
+        FirstAndLastUse firstAndLastUse{};
+        // Iterate over all uses of the allocValue/alias and find their first
+        // and last use.
+        for (Operation *user : users) {
+          // No update is needed if the operation has already been considered.
+          if (firstAndLastUse.firstUse == user ||
+              firstAndLastUse.lastUse == user)
+            continue;
+
+          updateFirstOp(firstAndLastUse.firstUse, user, [&]() {
+            return &findCommonDominator(aliasValue, ValueSetT{aliasValue},
+                                        dominators)
+                        ->back();
+          });
+
+          updateLastOp(firstAndLastUse.lastUse, user, [&]() {
+            return &findCommonDominator(aliasValue, ValueSetT{aliasValue},
+                                        postDominators)
+                        ->front();
+          });
+        }
+        useRangeMap.insert(
+            std::pair<Value, FirstAndLastUse>(aliasValue, firstAndLastUse));
+      }
+
+      // Remove the allocValue from its own aliasList to prevent reflexive
+      // checks and ensure correct behavior after we insert the aliases of the
+      // reused buffer.
+      aliasSet.erase(allocValue);
+      aliasCache.insert(std::pair<Value, ValueSetT>(allocValue, aliasSet));
+    }
+  }
+
+private:
+  /// Updates the first Operation from the two given ones.
+  template <typename DominatorFunc>
+  void updateFirstOp(Operation *&op, Operation *user, DominatorFunc domFunc) {
+    if (!op || isUsedBefore(user, op))
+      op = user;
+    else if (!isUsedBefore(op, user) && !isUsedBefore(user, op))
+      op = domFunc();
+  }
+
+  /// Updates the last Operation from the two given ones.
+  template <typename DominatorFunc>
+  void updateLastOp(Operation *&op, Operation *user, DominatorFunc domFunc) {
+    if (!op || isUsedBefore(op, user))
+      op = user;
+    else if (!isUsedBefore(op, user) && !isUsedBefore(user, op))
+      op = domFunc();
+  }
+
+  /// Returns true if op is used before other.
+  bool isUsedBefore(Operation *op, Operation *other) {
+    Block *opBlock = op->getBlock();
+    Block *otherBlock = other->getBlock();
+
+    // Both Operations are in the same block.
+    if (opBlock == otherBlock)
+      return op->isBeforeInBlock(other);
+
+    // Check if op is used in a dominator of other.
+    if (dominators.dominates(opBlock, otherBlock))
+      return true;
+
+    // Recursive call to find if the otherBlock is a successor of opBlock. The
+    // common postdominator is used as a termination condition.
+    Block *postDom =
+        postDominators.findNearestCommonDominator(opBlock, otherBlock);
+    return isSuccessor(opBlock, otherBlock, postDom, SmallPtrSet<Block *, 6>{});
+  }
+
+  /// Recursive function that returns true if the target Block is a successor of
+  /// the currentBlock.
+  bool isSuccessor(Block *currentBlock, Block *target, Block *postDom,
+                   SmallPtrSet<Block *, 6> visited) {
+    if (currentBlock == target)
+      return true;
+    if (currentBlock == postDom)
+      return false;
+    for (Block *succ : currentBlock->getSuccessors()) {
+      if (visited.insert(succ).second &&
+          isSuccessor(succ, target, postDom, visited))
+        return true;
+    }
+    return false;
+  }
+
+  /// Cache the alias lists for all values to avoid the recomputation.
+  BufferAliasAnalysis::ValueMapT aliasCache;
+
+  /// The current dominance info.
+  DominanceInfo dominators;
+
+  /// The current postdominance info.
+  PostDominanceInfo postDominators;
+};
+
+//===----------------------------------------------------------------------===//
 // BufferOptimizationPasses
 //===----------------------------------------------------------------------===//
 
@@ -359,6 +500,17 @@ struct PromoteBuffersToStackPass
   }
 };
 
+/// The buffer reuse pass that uses already allocated buffers if all critera
+/// are met.
+struct BufferReusePass : BufferReuseBase<BufferReusePass> {
+
+  void runOnFunction() override {
+    // Reuse allocated buffer instead of new allocation.
+    BufferReuse optimizer(getFunction());
+    optimizer.reuse();
+  }
+};
+
 } // end anonymous namespace
 
 std::unique_ptr<Pass> mlir::createBufferHoistingPass() {
@@ -374,4 +526,8 @@ mlir::createPromoteBuffersToStackPass(unsigned maxAllocSizeInBytes,
                                       unsigned bitwidthOfIndexType) {
   return std::make_unique<PromoteBuffersToStackPass>(maxAllocSizeInBytes,
                                                      bitwidthOfIndexType);
+}
+
+std::unique_ptr<Pass> mlir::createBufferReusePass() {
+  return std::make_unique<BufferReusePass>();
 }
