@@ -41,14 +41,6 @@ define void @_start() {
 ; CHECK:        - Type:            IMPORT
 ; CHECK-NEXT:     Imports:
 ; CHECK-NEXT:       - Module:          env
-; CHECK-NEXT:         Field:           __indirect_function_table
-; CHECK-NEXT:         Kind:            TABLE
-; CHECK-NEXT:         Table:
-; CHECK-NEXT:           Index:           0
-; CHECK-NEXT:           ElemType:        FUNCREF
-; CHECK-NEXT:           Limits:
-; CHECK-NEXT:             Initial:         0x1
-; CHECK-NEXT:       - Module:          env
 ; CHECK-NEXT:         Field:           __stack_pointer
 ; CHECK-NEXT:         Kind:            GLOBAL
 ; CHECK-NEXT:         GlobalType:      I32
@@ -63,6 +55,14 @@ define void @_start() {
 ; CHECK-NEXT:         Kind:            GLOBAL
 ; CHECK-NEXT:         GlobalType:      I32
 ; CHECK-NEXT:         GlobalMutable:   false
+; CHECK-NEXT:       - Module:          env
+; CHECK-NEXT:         Field:           __indirect_function_table
+; CHECK-NEXT:         Kind:            TABLE
+; CHECK-NEXT:         Table:
+; CHECK-NEXT:           Index:           0
+; CHECK-NEXT:           ElemType:        FUNCREF
+; CHECK-NEXT:           Limits:
+; CHECK-NEXT:             Initial:         0x1
 
 ; CHECK:        - Type:            START
 ; CHECK-NEXT:     StartFunction:   2

@@ -745,6 +745,19 @@ void Writer::createCommandExportWrappers() {
   }
 }
 
+static void finalizeIndirectFunctionTable() {
+  if (!WasmSym::indirectFunctionTable)
+    return;
+
+  uint32_t tableSize = config->tableBase + out.elemSec->numEntries();
+  WasmLimits limits = {0, tableSize, 0};
+  if (WasmSym::indirectFunctionTable->isDefined() && !config->growableTable) {
+    limits.Flags |= WASM_LIMITS_FLAG_HAS_MAX;
+    limits.Maximum = limits.Initial;
+  }
+  WasmSym::indirectFunctionTable->setLimits(limits);
+}
+
 static void scanRelocations() {
   for (ObjFile *file : symtab->objectFiles) {
     LLVM_DEBUG(dbgs() << "scanRelocations: " << file->getName() << "\n");
@@ -791,6 +804,9 @@ void Writer::assignIndexes() {
     for (InputTable *table : file->tables)
       out.tableSec->addTable(table);
   }
+
+  for (InputTable *table : symtab->syntheticTables)
+    out.tableSec->addTable(table);
 
   out.globalSec->assignIndexes();
 }
@@ -1341,6 +1357,8 @@ void Writer::run() {
 
   log("-- scanRelocations");
   scanRelocations();
+  log("-- finalizeIndirectFunctionTable");
+  finalizeIndirectFunctionTable();
   log("-- createSyntheticInitFunctions");
   createSyntheticInitFunctions();
   log("-- assignIndexes");
