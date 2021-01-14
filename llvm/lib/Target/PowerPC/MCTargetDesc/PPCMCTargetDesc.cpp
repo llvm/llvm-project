@@ -78,7 +78,17 @@ static MCRegisterInfo *createPPCMCRegisterInfo(const Triple &TT) {
 
 static MCSubtargetInfo *createPPCMCSubtargetInfo(const Triple &TT,
                                                  StringRef CPU, StringRef FS) {
-  return createPPCMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
+  // Set some default feature to MC layer.
+  std::string FullFS = std::string(FS);
+
+  if (TT.isOSAIX()) {
+    if (!FullFS.empty())
+      FullFS = "+aix," + FullFS;
+    else
+      FullFS = "+aix";
+  }
+
+  return createPPCMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FullFS);
 }
 
 static MCAsmInfo *createPPCMCAsmInfo(const MCRegisterInfo &MRI,
