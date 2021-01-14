@@ -7923,10 +7923,18 @@ def : Pat<(int_ptrauth_blend GPR64:$Rd, GPR64:$Rn),
 let Predicates = [HasLS64] in {
   def LD64B: LoadStore64B<0b101, "ld64b", (ins GPR64sp:$Rn),
                                           (outs GPR64x8:$Rt)>;
-  def ST64B: LoadStore64B<0b001, "st64b", (ins GPR64sp:$Rn, GPR64x8:$Rt),
+  def ST64B: LoadStore64B<0b001, "st64b", (ins GPR64x8:$Rt, GPR64sp:$Rn),
                                           (outs)>;
   def ST64BV:   Store64BV<0b011, "st64bv">;
   def ST64BV0:  Store64BV<0b010, "st64bv0">;
+
+  class ST64BPattern<Intrinsic intrinsic, Instruction instruction>
+    : Pat<(intrinsic GPR64sp:$addr, GPR64:$x0, GPR64:$x1, GPR64:$x2, GPR64:$x3, GPR64:$x4, GPR64:$x5, GPR64:$x6, GPR64:$x7),
+          (instruction (REG_SEQUENCE GPR64x8Class, $x0, x8sub_0, $x1, x8sub_1, $x2, x8sub_2, $x3, x8sub_3, $x4, x8sub_4, $x5, x8sub_5, $x6, x8sub_6, $x7, x8sub_7), $addr)>;
+
+  def : ST64BPattern<int_aarch64_st64b, ST64B>;
+  def : ST64BPattern<int_aarch64_st64bv, ST64BV>;
+  def : ST64BPattern<int_aarch64_st64bv0, ST64BV0>;
 }
 
 include "AArch64InstrAtomics.td"

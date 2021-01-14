@@ -99,6 +99,12 @@ BUILTIN(__builtin_arm_tcommit, "v", "n")
 BUILTIN(__builtin_arm_tcancel, "vWUIi", "n")
 BUILTIN(__builtin_arm_ttest, "WUi", "nc")
 
+// Armv8.7-A load/store 64-byte intrinsics
+BUILTIN(__builtin_arm_ld64b, "vvC*WUi*", "n")
+BUILTIN(__builtin_arm_st64b, "vv*WUiC*", "n")
+BUILTIN(__builtin_arm_st64bv, "WUiv*WUiC*", "n")
+BUILTIN(__builtin_arm_st64bv0, "WUiv*WUiC*", "n")
+
 TARGET_HEADER_BUILTIN(_BitScanForward, "UcUNi*UNi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_BitScanReverse, "UcUNi*UNi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_BitScanForward64, "UcUNi*ULLi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
