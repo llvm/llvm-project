@@ -1518,6 +1518,8 @@ eCommandProcessMustBeLaunched = _lldb.eCommandProcessMustBeLaunched
 
 eCommandProcessMustBePaused = _lldb.eCommandProcessMustBePaused
 
+eCommandProcessMustBeTraced = _lldb.eCommandProcessMustBeTraced
+
 eTypeSummaryCapped = _lldb.eTypeSummaryCapped
 
 eTypeSummaryUncapped = _lldb.eTypeSummaryUncapped
@@ -10536,6 +10538,7 @@ class SBTarget(object):
         BreakpointCreateByLocation(SBTarget self, SBFileSpec file_spec, uint32_t line, lldb::addr_t offset) -> SBBreakpoint
         BreakpointCreateByLocation(SBTarget self, SBFileSpec file_spec, uint32_t line, lldb::addr_t offset, SBFileSpecList module_list) -> SBBreakpoint
         BreakpointCreateByLocation(SBTarget self, SBFileSpec file_spec, uint32_t line, uint32_t column, lldb::addr_t offset, SBFileSpecList module_list) -> SBBreakpoint
+        BreakpointCreateByLocation(SBTarget self, SBFileSpec file_spec, uint32_t line, uint32_t column, lldb::addr_t offset, SBFileSpecList module_list, bool move_to_nearest_code) -> SBBreakpoint
         """
         return _lldb.SBTarget_BreakpointCreateByLocation(self, *args)
 
@@ -12079,6 +12082,10 @@ class SBType(object):
         r"""IsAnonymousType(SBType self) -> bool"""
         return _lldb.SBType_IsAnonymousType(self)
 
+    def IsScopedEnumerationType(self):
+        r"""IsScopedEnumerationType(SBType self) -> bool"""
+        return _lldb.SBType_IsScopedEnumerationType(self)
+
     def GetPointerType(self):
         r"""GetPointerType(SBType self) -> SBType"""
         return _lldb.SBType_GetPointerType(self)
@@ -12106,6 +12113,10 @@ class SBType(object):
     def GetCanonicalType(self):
         r"""GetCanonicalType(SBType self) -> SBType"""
         return _lldb.SBType_GetCanonicalType(self)
+
+    def GetEnumerationIntegerType(self):
+        r"""GetEnumerationIntegerType(SBType self) -> SBType"""
+        return _lldb.SBType_GetEnumerationIntegerType(self)
 
     def GetArrayElementType(self):
         r"""GetArrayElementType(SBType self) -> SBType"""
@@ -12153,6 +12164,10 @@ class SBType(object):
     def GetEnumMembers(self):
         r"""GetEnumMembers(SBType self) -> SBTypeEnumMemberList"""
         return _lldb.SBType_GetEnumMembers(self)
+
+    def GetModule(self):
+        r"""GetModule(SBType self) -> SBModule"""
+        return _lldb.SBType_GetModule(self)
 
     def GetName(self):
         r"""GetName(SBType self) -> char const *"""
@@ -12223,6 +12238,7 @@ class SBType(object):
             return template_args
         return None
 
+    module = property(GetModule, None, doc='''A read only property that returns the module in which type is defined.''') 
     name = property(GetName, None, doc='''A read only property that returns the name for this type as a string.''')
     size = property(GetByteSize, None, doc='''A read only property that returns size in bytes for this type as an integer.''')
     is_pointer = property(IsPointerType, None, doc='''A read only property that returns a boolean value that indicates if this type is a pointer type.''')

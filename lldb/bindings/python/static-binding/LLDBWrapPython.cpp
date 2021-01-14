@@ -56247,13 +56247,92 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SBTarget_BreakpointCreateByLocation__SWIG_5(PyObject *SWIGUNUSEDPARM(self), Py_ssize_t nobjs, PyObject **swig_obj) {
+  PyObject *resultobj = 0;
+  lldb::SBTarget *arg1 = (lldb::SBTarget *) 0 ;
+  lldb::SBFileSpec *arg2 = 0 ;
+  uint32_t arg3 ;
+  uint32_t arg4 ;
+  lldb::addr_t arg5 ;
+  lldb::SBFileSpecList *arg6 = 0 ;
+  bool arg7 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  unsigned int val3 ;
+  int ecode3 = 0 ;
+  unsigned int val4 ;
+  int ecode4 = 0 ;
+  unsigned long long val5 ;
+  int ecode5 = 0 ;
+  void *argp6 = 0 ;
+  int res6 = 0 ;
+  bool val7 ;
+  int ecode7 = 0 ;
+  lldb::SBBreakpoint result;
+  
+  if ((nobjs < 7) || (nobjs > 7)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_lldb__SBTarget, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBTarget_BreakpointCreateByLocation" "', argument " "1"" of type '" "lldb::SBTarget *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBTarget * >(argp1);
+  res2 = SWIG_ConvertPtr(swig_obj[1], &argp2, SWIGTYPE_p_lldb__SBFileSpec,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SBTarget_BreakpointCreateByLocation" "', argument " "2"" of type '" "lldb::SBFileSpec const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "SBTarget_BreakpointCreateByLocation" "', argument " "2"" of type '" "lldb::SBFileSpec const &""'"); 
+  }
+  arg2 = reinterpret_cast< lldb::SBFileSpec * >(argp2);
+  ecode3 = SWIG_AsVal_unsigned_SS_int(swig_obj[2], &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "SBTarget_BreakpointCreateByLocation" "', argument " "3"" of type '" "uint32_t""'");
+  } 
+  arg3 = static_cast< uint32_t >(val3);
+  ecode4 = SWIG_AsVal_unsigned_SS_int(swig_obj[3], &val4);
+  if (!SWIG_IsOK(ecode4)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "SBTarget_BreakpointCreateByLocation" "', argument " "4"" of type '" "uint32_t""'");
+  } 
+  arg4 = static_cast< uint32_t >(val4);
+  ecode5 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[4], &val5);
+  if (!SWIG_IsOK(ecode5)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "SBTarget_BreakpointCreateByLocation" "', argument " "5"" of type '" "lldb::addr_t""'");
+  } 
+  arg5 = static_cast< lldb::addr_t >(val5);
+  res6 = SWIG_ConvertPtr(swig_obj[5], &argp6, SWIGTYPE_p_lldb__SBFileSpecList,  0 );
+  if (!SWIG_IsOK(res6)) {
+    SWIG_exception_fail(SWIG_ArgError(res6), "in method '" "SBTarget_BreakpointCreateByLocation" "', argument " "6"" of type '" "lldb::SBFileSpecList &""'"); 
+  }
+  if (!argp6) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "SBTarget_BreakpointCreateByLocation" "', argument " "6"" of type '" "lldb::SBFileSpecList &""'"); 
+  }
+  arg6 = reinterpret_cast< lldb::SBFileSpecList * >(argp6);
+  ecode7 = SWIG_AsVal_bool(swig_obj[6], &val7);
+  if (!SWIG_IsOK(ecode7)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode7), "in method '" "SBTarget_BreakpointCreateByLocation" "', argument " "7"" of type '" "bool""'");
+  } 
+  arg7 = static_cast< bool >(val7);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (arg1)->BreakpointCreateByLocation((lldb::SBFileSpec const &)*arg2,arg3,arg4,arg5,*arg6,arg7);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_NewPointerObj((new lldb::SBBreakpoint(static_cast< const lldb::SBBreakpoint& >(result))), SWIGTYPE_p_lldb__SBBreakpoint, SWIG_POINTER_OWN |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_SBTarget_BreakpointCreateByLocation(PyObject *self, PyObject *args) {
   Py_ssize_t argc;
-  PyObject *argv[7] = {
+  PyObject *argv[8] = {
     0
   };
   
-  if (!(argc = SWIG_Python_UnpackTuple(args, "SBTarget_BreakpointCreateByLocation", 0, 6, argv))) SWIG_fail;
+  if (!(argc = SWIG_Python_UnpackTuple(args, "SBTarget_BreakpointCreateByLocation", 0, 7, argv))) SWIG_fail;
   --argc;
   if (argc == 3) {
     int _v;
@@ -56384,6 +56463,48 @@ SWIGINTERN PyObject *_wrap_SBTarget_BreakpointCreateByLocation(PyObject *self, P
       }
     }
   }
+  if (argc == 7) {
+    int _v;
+    void *vptr = 0;
+    int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_lldb__SBTarget, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      int res = SWIG_ConvertPtr(argv[1], 0, SWIGTYPE_p_lldb__SBFileSpec, SWIG_POINTER_NO_NULL | 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        {
+          int res = SWIG_AsVal_unsigned_SS_int(argv[2], NULL);
+          _v = SWIG_CheckState(res);
+        }
+        if (_v) {
+          {
+            int res = SWIG_AsVal_unsigned_SS_int(argv[3], NULL);
+            _v = SWIG_CheckState(res);
+          }
+          if (_v) {
+            {
+              int res = SWIG_AsVal_unsigned_SS_long_SS_long(argv[4], NULL);
+              _v = SWIG_CheckState(res);
+            }
+            if (_v) {
+              void *vptr = 0;
+              int res = SWIG_ConvertPtr(argv[5], &vptr, SWIGTYPE_p_lldb__SBFileSpecList, SWIG_POINTER_NO_NULL);
+              _v = SWIG_CheckState(res);
+              if (_v) {
+                {
+                  int res = SWIG_AsVal_bool(argv[6], NULL);
+                  _v = SWIG_CheckState(res);
+                }
+                if (_v) {
+                  return _wrap_SBTarget_BreakpointCreateByLocation__SWIG_5(self, argc, argv);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
   
 fail:
   SWIG_Python_RaiseOrModifyTypeError("Wrong number or type of arguments for overloaded function 'SBTarget_BreakpointCreateByLocation'.\n"
@@ -56392,7 +56513,8 @@ fail:
     "    lldb::SBTarget::BreakpointCreateByLocation(lldb::SBFileSpec const &,uint32_t)\n"
     "    lldb::SBTarget::BreakpointCreateByLocation(lldb::SBFileSpec const &,uint32_t,lldb::addr_t)\n"
     "    lldb::SBTarget::BreakpointCreateByLocation(lldb::SBFileSpec const &,uint32_t,lldb::addr_t,lldb::SBFileSpecList &)\n"
-    "    lldb::SBTarget::BreakpointCreateByLocation(lldb::SBFileSpec const &,uint32_t,uint32_t,lldb::addr_t,lldb::SBFileSpecList &)\n");
+    "    lldb::SBTarget::BreakpointCreateByLocation(lldb::SBFileSpec const &,uint32_t,uint32_t,lldb::addr_t,lldb::SBFileSpecList &)\n"
+    "    lldb::SBTarget::BreakpointCreateByLocation(lldb::SBFileSpec const &,uint32_t,uint32_t,lldb::addr_t,lldb::SBFileSpecList &,bool)\n");
   return 0;
 }
 
@@ -66722,6 +66844,33 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SBType_IsScopedEnumerationType(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBType *arg1 = (lldb::SBType *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject *swig_obj[1] ;
+  bool result;
+  
+  if (!args) SWIG_fail;
+  swig_obj[0] = args;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_lldb__SBType, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBType_IsScopedEnumerationType" "', argument " "1"" of type '" "lldb::SBType *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBType * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (bool)(arg1)->IsScopedEnumerationType();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_SBType_GetPointerType(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   lldb::SBType *arg1 = (lldb::SBType *) 0 ;
@@ -66902,6 +67051,33 @@ SWIGINTERN PyObject *_wrap_SBType_GetCanonicalType(PyObject *SWIGUNUSEDPARM(self
   {
     SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (arg1)->GetCanonicalType();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_NewPointerObj((new lldb::SBType(static_cast< const lldb::SBType& >(result))), SWIGTYPE_p_lldb__SBType, SWIG_POINTER_OWN |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBType_GetEnumerationIntegerType(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBType *arg1 = (lldb::SBType *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject *swig_obj[1] ;
+  lldb::SBType result;
+  
+  if (!args) SWIG_fail;
+  swig_obj[0] = args;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_lldb__SBType, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBType_GetEnumerationIntegerType" "', argument " "1"" of type '" "lldb::SBType *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBType * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (arg1)->GetEnumerationIntegerType();
     SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = SWIG_NewPointerObj((new lldb::SBType(static_cast< const lldb::SBType& >(result))), SWIGTYPE_p_lldb__SBType, SWIG_POINTER_OWN |  0 );
@@ -67303,6 +67479,33 @@ SWIGINTERN PyObject *_wrap_SBType_GetEnumMembers(PyObject *SWIGUNUSEDPARM(self),
     SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = SWIG_NewPointerObj((new lldb::SBTypeEnumMemberList(static_cast< const lldb::SBTypeEnumMemberList& >(result))), SWIGTYPE_p_lldb__SBTypeEnumMemberList, SWIG_POINTER_OWN |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBType_GetModule(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBType *arg1 = (lldb::SBType *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject *swig_obj[1] ;
+  lldb::SBModule result;
+  
+  if (!args) SWIG_fail;
+  swig_obj[0] = args;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_lldb__SBType, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBType_GetModule" "', argument " "1"" of type '" "lldb::SBType *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBType * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (arg1)->GetModule();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_NewPointerObj((new lldb::SBModule(static_cast< const lldb::SBModule& >(result))), SWIGTYPE_p_lldb__SBModule, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
   return NULL;
@@ -83654,6 +83857,7 @@ static PyMethodDef SwigMethods[] = {
 		"SBTarget_BreakpointCreateByLocation(SBTarget self, SBFileSpec file_spec, uint32_t line, lldb::addr_t offset) -> SBBreakpoint\n"
 		"SBTarget_BreakpointCreateByLocation(SBTarget self, SBFileSpec file_spec, uint32_t line, lldb::addr_t offset, SBFileSpecList module_list) -> SBBreakpoint\n"
 		"SBTarget_BreakpointCreateByLocation(SBTarget self, SBFileSpec file_spec, uint32_t line, uint32_t column, lldb::addr_t offset, SBFileSpecList module_list) -> SBBreakpoint\n"
+		"SBTarget_BreakpointCreateByLocation(SBTarget self, SBFileSpec file_spec, uint32_t line, uint32_t column, lldb::addr_t offset, SBFileSpecList module_list, bool move_to_nearest_code) -> SBBreakpoint\n"
 		""},
 	 { "SBTarget_BreakpointCreateByName", _wrap_SBTarget_BreakpointCreateByName, METH_VARARGS, "\n"
 		"SBTarget_BreakpointCreateByName(SBTarget self, char const * symbol_name, char const * module_name=None) -> SBBreakpoint\n"
@@ -84244,6 +84448,7 @@ static PyMethodDef SwigMethods[] = {
 	 { "SBType_IsVectorType", _wrap_SBType_IsVectorType, METH_O, "SBType_IsVectorType(SBType self) -> bool"},
 	 { "SBType_IsTypedefType", _wrap_SBType_IsTypedefType, METH_O, "SBType_IsTypedefType(SBType self) -> bool"},
 	 { "SBType_IsAnonymousType", _wrap_SBType_IsAnonymousType, METH_O, "SBType_IsAnonymousType(SBType self) -> bool"},
+	 { "SBType_IsScopedEnumerationType", _wrap_SBType_IsScopedEnumerationType, METH_O, "SBType_IsScopedEnumerationType(SBType self) -> bool"},
 	 { "SBType_GetPointerType", _wrap_SBType_GetPointerType, METH_O, "SBType_GetPointerType(SBType self) -> SBType"},
 	 { "SBType_GetPointeeType", _wrap_SBType_GetPointeeType, METH_O, "SBType_GetPointeeType(SBType self) -> SBType"},
 	 { "SBType_GetReferenceType", _wrap_SBType_GetReferenceType, METH_O, "SBType_GetReferenceType(SBType self) -> SBType"},
@@ -84251,6 +84456,7 @@ static PyMethodDef SwigMethods[] = {
 	 { "SBType_GetDereferencedType", _wrap_SBType_GetDereferencedType, METH_O, "SBType_GetDereferencedType(SBType self) -> SBType"},
 	 { "SBType_GetUnqualifiedType", _wrap_SBType_GetUnqualifiedType, METH_O, "SBType_GetUnqualifiedType(SBType self) -> SBType"},
 	 { "SBType_GetCanonicalType", _wrap_SBType_GetCanonicalType, METH_O, "SBType_GetCanonicalType(SBType self) -> SBType"},
+	 { "SBType_GetEnumerationIntegerType", _wrap_SBType_GetEnumerationIntegerType, METH_O, "SBType_GetEnumerationIntegerType(SBType self) -> SBType"},
 	 { "SBType_GetArrayElementType", _wrap_SBType_GetArrayElementType, METH_O, "SBType_GetArrayElementType(SBType self) -> SBType"},
 	 { "SBType_GetArrayType", _wrap_SBType_GetArrayType, METH_VARARGS, "SBType_GetArrayType(SBType self, uint64_t size) -> SBType"},
 	 { "SBType_GetVectorElementType", _wrap_SBType_GetVectorElementType, METH_O, "SBType_GetVectorElementType(SBType self) -> SBType"},
@@ -84265,6 +84471,7 @@ static PyMethodDef SwigMethods[] = {
 	 { "SBType_GetDirectBaseClassAtIndex", _wrap_SBType_GetDirectBaseClassAtIndex, METH_VARARGS, "SBType_GetDirectBaseClassAtIndex(SBType self, uint32_t idx) -> SBTypeMember"},
 	 { "SBType_GetVirtualBaseClassAtIndex", _wrap_SBType_GetVirtualBaseClassAtIndex, METH_VARARGS, "SBType_GetVirtualBaseClassAtIndex(SBType self, uint32_t idx) -> SBTypeMember"},
 	 { "SBType_GetEnumMembers", _wrap_SBType_GetEnumMembers, METH_O, "SBType_GetEnumMembers(SBType self) -> SBTypeEnumMemberList"},
+	 { "SBType_GetModule", _wrap_SBType_GetModule, METH_O, "SBType_GetModule(SBType self) -> SBModule"},
 	 { "SBType_GetName", _wrap_SBType_GetName, METH_O, "SBType_GetName(SBType self) -> char const *"},
 	 { "SBType_GetDisplayTypeName", _wrap_SBType_GetDisplayTypeName, METH_O, "SBType_GetDisplayTypeName(SBType self) -> char const *"},
 	 { "SBType_GetTypeClass", _wrap_SBType_GetTypeClass, METH_O, "SBType_GetTypeClass(SBType self) -> lldb::TypeClass"},
@@ -87229,6 +87436,7 @@ SWIG_init(void) {
   SWIG_Python_SetConstant(d, "eCommandTryTargetAPILock",SWIG_From_int(static_cast< int >(lldb::eCommandTryTargetAPILock)));
   SWIG_Python_SetConstant(d, "eCommandProcessMustBeLaunched",SWIG_From_int(static_cast< int >(lldb::eCommandProcessMustBeLaunched)));
   SWIG_Python_SetConstant(d, "eCommandProcessMustBePaused",SWIG_From_int(static_cast< int >(lldb::eCommandProcessMustBePaused)));
+  SWIG_Python_SetConstant(d, "eCommandProcessMustBeTraced",SWIG_From_int(static_cast< int >(lldb::eCommandProcessMustBeTraced)));
   SWIG_Python_SetConstant(d, "eTypeSummaryCapped",SWIG_From_bool(static_cast< bool >(lldb::eTypeSummaryCapped)));
   SWIG_Python_SetConstant(d, "eTypeSummaryUncapped",SWIG_From_bool(static_cast< bool >(lldb::eTypeSummaryUncapped)));
   SWIG_Python_SetConstant(d, "eCommandInterpreterResultSuccess",SWIG_From_int(static_cast< int >(lldb::eCommandInterpreterResultSuccess)));
