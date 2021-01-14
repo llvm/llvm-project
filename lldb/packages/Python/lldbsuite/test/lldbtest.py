@@ -384,7 +384,8 @@ class _LocalProcess(_BaseProcess):
             [executable] + args,
             stdout=open(
                 os.devnull) if not self._trace_on else None,
-            stdin=PIPE)
+            stdin=PIPE,
+            preexec_fn=lldbplatformutil.enable_attach)
 
     def terminate(self):
         if self._proc.poll() is None:
