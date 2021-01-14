@@ -85,7 +85,11 @@ KnownBits KnownBits::computeForAddSub(bool Add, bool NSW,
 
 KnownBits KnownBits::sextInReg(unsigned SrcBitWidth) const {
   unsigned BitWidth = getBitWidth();
-  assert(BitWidth >= SrcBitWidth && "Illegal sext-in-register");
+  assert(0 < SrcBitWidth && SrcBitWidth <= BitWidth &&
+         "Illegal sext-in-register");
+
+  if (SrcBitWidth == BitWidth)
+    return *this;
 
   // Sign extension.  Compute the demanded bits in the result that are not
   // present in the input.

@@ -427,7 +427,7 @@ TEST(KnownBitsTest, SExtOrTrunc) {
 
 TEST(KnownBitsTest, SExtInReg) {
   unsigned Bits = 4;
-  for (unsigned FromBits = 1; FromBits != Bits; ++FromBits) {
+  for (unsigned FromBits = 1; FromBits <= Bits; ++FromBits) {
     ForeachKnownBits(Bits, [&](const KnownBits &Known) {
       APInt CommonOne = APInt::getAllOnesValue(Bits);
       APInt CommonZero = APInt::getAllOnesValue(Bits);
