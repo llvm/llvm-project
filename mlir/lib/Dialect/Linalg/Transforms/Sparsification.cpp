@@ -274,6 +274,11 @@ public:
     return false;
   }
 
+  // Returns true if tensor has any sparse dimension.
+  bool isSparseTensor(unsigned t) const {
+    return llvm::any_of(dims[t], [](Dim d) { return d == Dim::kSparse; });
+  }
+
   // Setter
   void setDim(unsigned t, unsigned i, Dim d) { dims[t][i] = d; }
 
@@ -382,17 +387,22 @@ static bool topSortDFS(unsigned i, std::vector<unsigned> &visit,
 /// for sparse storage formats since these only support access along fixed
 /// dimensions. Even for dense storage formats, however, the natural index
 /// order yields innermost unit-stride access with better spatial locality.
-static bool computeIterationGraph(linalg::GenericOp op,
-                                  std::vector<unsigned> &topSort) {
+static bool computeIterationGraph(Merger &merger, linalg::GenericOp op,
+                                  std::vector<unsigned> &topSort,
+                                  bool sparseOnly) {
   // Set up an n x n from/to adjacency matrix of the iteration graph
   // for the implicit loop indices i_0 .. i_n-1.
   unsigned n = op.getNumLoops();
   std::vector<std::vector<bool>> adjM(n, std::vector<bool>(n, false));
 
   // Iterate over the indexing maps of every tensor in the tensor expression.
-  for (auto imap : llvm::enumerate(op.indexing_maps())) {
-    auto map = imap.value().template cast<AffineMapAttr>().getValue();
+  unsigned numTensors = op.getNumShapedOperands();
+  for (unsigned t = 0; t < numTensors; t++) {
+    auto map = op.getIndexingMap(t);
     assert(map.getNumDims() == n);
+    // Skip dense tensor constraints when sparse only is requested.
+    if (sparseOnly && !merger.isSparseTensor(t))
+      continue;
     // At the moment, we take the index variables in the tensor access
     // expression in the order in which they appear (conceptually a
     // "row-major" layout of every tensor). So, a tensor access A_ijk
@@ -407,6 +417,7 @@ static bool computeIterationGraph(linalg::GenericOp op,
 
   // Topologically sort the iteration graph to determine loop order.
   // Report failure for a cyclic iteration graph.
+  topSort.clear();
   topSort.reserve(n);
   std::vector<unsigned> visit(n, 0);
   for (unsigned i = 0; i < n; i++)
@@ -1207,10 +1218,9 @@ public:
     // tensors are visited in natural index order. Fails on cycles.
     // This assumes that higher-level passes have already put the
     // tensors in each tensor expression in a feasible order.
-    // TODO: try again without *dense* constraints on failure or
-    //       even try to insert sparse reorderings to resolve cycles
     std::vector<unsigned> topSort;
-    if (!computeIterationGraph(op, topSort))
+    if (!computeIterationGraph(merger, op, topSort, /*sparseOnly=*/false) &&
+        !computeIterationGraph(merger, op, topSort, /*sparseOnly=*/true))
       return failure();
 
     // Finds the terminating yield statement and builds the tensor
