@@ -2119,6 +2119,54 @@ struct DeduplicateInputs : public RewritePattern {
   }
 };
 
+/// Remove generic/indexed_generic operations (on tensors) that are just copying
+/// the values from inputs to the results. Requirements are
+/// 1) All iterator types are parallel
+/// 2) The body contains just a yield operation with the yielded values being
+///    the arguments corresponding to the operands.
+struct RemoveIdentityLinalgOps : public RewritePattern {
+  RemoveIdentityLinalgOps(PatternBenefit benefit = 1)
+      : RewritePattern(benefit, MatchAnyOpTypeTag()) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    if (!isa<GenericOp, IndexedGenericOp>(op))
+      return failure();
+    LinalgOp genericOp = cast<LinalgOp>(op);
+    if (!genericOp.hasTensorSemantics())
+      return failure();
+    // Check all indexing maps are identity.
+    if (llvm::any_of(genericOp.getIndexingMaps(),
+                     [](AffineMap map) { return !map.isIdentity(); }))
+      return failure();
+
+    // Check that the body of the linalg operation is just a linalg.yield
+    // operation.
+    Block &body = op->getRegion(0).front();
+    if (!llvm::hasSingleElement(body))
+      return failure();
+    auto yieldOp = dyn_cast<linalg::YieldOp>(body.getTerminator());
+    if (!yieldOp)
+      return failure();
+
+    // Get the argument number of the returned values. That is the operand
+    // number to use for replacing uses of this operation.
+    unsigned numIndexArgs = genericOp.getNumPayloadInductionVariables();
+    SmallVector<Value, 4> returnedArgs;
+    for (Value yieldVal : yieldOp.values()) {
+      auto yieldArg = yieldVal.dyn_cast<BlockArgument>();
+      if (!yieldArg)
+        return failure();
+      unsigned argumentNumber = yieldArg.getArgNumber();
+      if (argumentNumber < numIndexArgs)
+        return failure();
+      returnedArgs.push_back(op->getOperand(argumentNumber - numIndexArgs));
+    }
+    rewriter.replaceOp(genericOp, returnedArgs);
+    return success();
+  }
+};
+
 /// Canonicalize a `linalgOp` -> `dim` pattern by replacing the `dim` arg
 /// with the corresponding output tensor argument of the linalg op.
 struct ReplaceDimOfLinalgResult : public OpRewritePattern<DimOp> {
@@ -2143,7 +2191,8 @@ struct ReplaceDimOfLinalgResult : public OpRewritePattern<DimOp> {
 #define CANONICALIZERS_AND_FOLDERS(XXX)                                        \
   void XXX::getCanonicalizationPatterns(OwningRewritePatternList &results,     \
                                         MLIRContext *context) {                \
-    results.insert<DeduplicateInputs, EraseDeadLinalgOp, FoldTensorCastOp>();  \
+    results.insert<DeduplicateInputs, EraseDeadLinalgOp, FoldTensorCastOp,     \
+                   RemoveIdentityLinalgOps>();                                 \
     results.insert<ReplaceDimOfLinalgResult>(context);                         \
   }                                                                            \
                                                                                \
