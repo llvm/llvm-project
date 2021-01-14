@@ -81,6 +81,17 @@ static bool hasAllocationScope(Value alloc,
   return false;
 }
 
+/// Checks if a given operation uses a value.
+static bool isRealUse(Value value, Operation *op) {
+  return llvm::any_of(op->getOperands(),
+                      [&](Value operand) { return operand == value; });
+}
+
+/// Checks if the types of the given values are compatible for a replacement.
+static bool checkTypeCompatibility(Value a, Value b) {
+  return a.getType() == b.getType();
+}
+
 namespace {
 
 //===----------------------------------------------------------------------===//
@@ -388,9 +399,113 @@ public:
       aliasSet.erase(allocValue);
       aliasCache.insert(std::pair<Value, ValueSetT>(allocValue, aliasSet));
     }
+
+    // Create a list of values that can potentially be replaced for each value
+    // in the useRangeMap. The potentialReuseMap maps each value to the
+    // respective list.
+    llvm::MapVector<Value, SmallVector<Value, 4>> potentialReuseMap;
+
+    for (auto const &useRangeItemA : useRangeMap) {
+      SmallVector<Value, 4> potReuseVector;
+      Value itemA = useRangeItemA.first;
+      for (auto const &useRangeItemB : useRangeMap) {
+        Value itemB = useRangeItemB.first;
+        // Do not compare an item to itself and make sure that the value of item
+        // B is not a BlockArgument. BlockArguments cannot be reused. Also
+        // perform a type check.
+        if (useRangeItemA == useRangeItemB || BlockArgument::classof(itemB) ||
+            !checkTypeCompatibility(itemA, itemB))
+          continue;
+
+        FirstAndLastUse usesA = useRangeItemA.second;
+        FirstAndLastUse usesB = useRangeItemB.second;
+
+        // Check if itemA can replace itemB.
+        if (!isReusePossible(itemA, itemB, usesA, usesB))
+          continue;
+
+        // Get the defining operation of itemA.
+        Operation *defOp = BlockArgument::classof(itemA)
+                               ? &itemA.getParentBlock()->front()
+                               : itemA.getDefiningOp();
+
+        // The defining OP of itemA has to dominate the first use of itemB.
+        if (!dominators.dominates(defOp->getBlock(),
+                                  usesB.firstUse->getBlock()))
+          continue;
+
+        // Insert itemB into the right place of the potReuseVector. The order of
+        // the vector is defined via the program order of the first use of each
+        // item.
+        auto it = potReuseVector.begin();
+        while (it != potReuseVector.end()) {
+          if (isUsedBefore(useRangeMap[itemB].firstUse,
+                           useRangeMap[*it].firstUse)) {
+            potReuseVector.insert(it, itemB);
+            break;
+          }
+          ++it;
+        }
+        if (it == potReuseVector.end())
+          potReuseVector.push_back(itemB);
+      }
+
+      potentialReuseMap.insert(
+          std::pair<Value, SmallVector<Value, 4>>(itemA, potReuseVector));
+    }
   }
 
 private:
+  /// Check if a reuse of two values and their first and last uses is possible.
+  /// It depends on userange interferences, alias interference and real uses.
+  /// Returns true if a reuse is possible.
+  bool isReusePossible(Value itemA, Value itemB, FirstAndLastUse usesA,
+                       FirstAndLastUse usesB) {
+    // Check if the last use of itemA is before the first use of itemB.
+    if (isUsedBefore(usesA.lastUse, usesB.firstUse)) {
+      // If this is the case we need to check if itemB is used after the
+      // introduction of an alias of itemA. Should this be the case we must not
+      // replace it with itemA as there might be an alias interference.
+      if (usedInAliasBlock(itemA, usesB.firstUse))
+        return false;
+    }
+    // Check if the first use of itemB is not before the last use of itemA.
+    // This is the case if the two uses are either in neighbour branches or if
+    // they are the same OP.
+    else if (!isUsedBefore(usesB.firstUse, usesA.lastUse)) {
+      // If they are the same OP we can still replace itemB with itemA if the OP
+      // is not a ``real use''. This is the case if we had to choose a postDom
+      // OP as the last use for itemA.
+      if (usesA.lastUse == usesB.firstUse) {
+        if (isRealUse(itemA, usesA.lastUse))
+          return false;
+      }
+      // This checks a special case which would change the sementics of the
+      // program.
+      else if (!isUsedBeforePostDom(itemA, itemB, usesB.lastUse))
+        return false;
+    } else
+      return false;
+    return true;
+  }
+
+  /// Check if otherLastUse is used before the first operation of PostDominator
+  /// of value v and other.
+  bool isUsedBeforePostDom(Value v, Value other, Operation *otherLastUse) {
+    Block *postDom = findCommonDominator(v, ValueSetT{other}, postDominators);
+    return isUsedBefore(otherLastUse, &postDom->front());
+  }
+
+  /// Check if the given operation is inside the Block of an alias of the given
+  /// value.
+  bool usedInAliasBlock(Value v, Operation *otherFirstUse) {
+    return llvm::any_of(aliasCache[v], [&](Value alias) {
+      Operation *firstOpInBlock = &alias.getParentBlock()->front();
+      return isUsedBefore(firstOpInBlock, otherFirstUse) ||
+             alias.getParentBlock() == otherFirstUse->getBlock();
+    });
+  }
+
   /// Updates the first Operation from the two given ones.
   template <typename DominatorFunc>
   void updateFirstOp(Operation *&op, Operation *user, DominatorFunc domFunc) {
