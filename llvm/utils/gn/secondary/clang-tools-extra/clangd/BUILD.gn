@@ -67,6 +67,7 @@ static_library("clangd") {
   ]
   sources = [
     "AST.cpp",
+    "ASTSignals.cpp",
     "ClangdLSPServer.cpp",
     "ClangdServer.cpp",
     "CodeComplete.cpp",
