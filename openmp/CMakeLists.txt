@@ -64,6 +64,8 @@ set(OPENMP_TEST_OPENMP_FLAGS ${OPENMP_TEST_COMPILER_OPENMP_FLAGS} CACHE STRING
 # Build host runtime library.
 add_subdirectory(runtime)
 
+# Build OMPD
+add_subdirectory(libompd)
 
 set(ENABLE_LIBOMPTARGET ON)
 # Currently libomptarget cannot be compiled on Windows or MacOS X.
