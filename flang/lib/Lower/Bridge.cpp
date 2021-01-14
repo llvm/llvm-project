@@ -1543,8 +1543,10 @@ private:
     localSymbols.pushScope();
     auto dst =
         createSomeArraySubspace(*this, assign.lhs, localSymbols, stmtCtx);
-    auto exv =
-        createSomeNewArrayValue(*this, dst, assign.rhs, localSymbols, stmtCtx);
+    auto exv = createSomeNewArrayValue(
+        *this, dst,
+        Fortran::evaluate::GetShape(getFoldingContext(), assign.lhs),
+        assign.rhs, localSymbols, stmtCtx);
     builder->create<fir::ArrayMergeStoreOp>(loc, dst, fir::getBase(exv),
                                             dst.memref());
     localSymbols.popScope();

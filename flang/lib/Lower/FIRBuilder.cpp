@@ -38,7 +38,7 @@ Fortran::lower::FirOpBuilder::getNamedGlobal(mlir::ModuleOp modOp,
 }
 
 mlir::Type Fortran::lower::FirOpBuilder::getRefType(mlir::Type eleTy) {
-  assert(!eleTy.isa<fir::ReferenceType>());
+  assert(!eleTy.isa<fir::ReferenceType>() && "cannot be a reference type");
   return fir::ReferenceType::get(eleTy);
 }
 
@@ -291,6 +291,8 @@ mlir::Value
 Fortran::lower::FirOpBuilder::createBox(mlir::Location loc,
                                         const fir::ExtendedValue &exv) {
   auto itemAddr = fir::getBase(exv);
+  if (itemAddr.getType().isa<fir::BoxType>())
+     return itemAddr;
   auto elementType = fir::dyn_cast_ptrEleTy(itemAddr.getType());
   if (!elementType)
     mlir::emitError(loc, "internal: expected a memory reference type ")

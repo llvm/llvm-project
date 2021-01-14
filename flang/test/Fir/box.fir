@@ -27,14 +27,8 @@ func private @ga(%b : !fir.box<!fir.array<?xf32>>)
 // CHECK: (float* %[[ARG:.*]])
 func @f(%a : !fir.ref<f32>) {
   // CHECK: %[[DESC:.*]] = alloca { float*, i64, i32, i8, i8, i8, i8 }
-  // CHECK: %[[INS0:.*]] = insertvalue {{.*}} undef, float* %[[ARG]], 0
-  // CHECK: %[[INS1:.*]] = insertvalue {{.*}} %[[INS0]], i64 4, 1
-  // CHECK: %[[INS2:.*]] = insertvalue {{.*}} %[[INS1]], i32 {{.*}}, 2
-  // CHECK: %[[INS3:.*]] = insertvalue {{.*}} %[[INS2]], i8 0, 3
-  // CHECK: %[[INS4:.*]] = insertvalue {{.*}} %[[INS3]], i8 25, 4
-  // CHECK: %[[INS5:.*]] = insertvalue {{.*}} %[[INS4]], i8 0, 5
-  // CHECK: %[[INS6:.*]] = insertvalue {{.*}} %[[INS5]], i8 0, 6
-  // CHECK: store {{.*}} %[[INS6]], {{.*}}* %[[DESC]]
+  // CHECK: %[[INS0:.*]] = insertvalue {{.*}} { float* undef, i64 4, i32 20180515, i8 0, i8 25, i8 0, i8 0 }, float* %[[ARG]], 0
+  // CHECK: store {{.*}} %[[INS0]], {{.*}}* %[[DESC]]
   %b = fir.embox %a : (!fir.ref<f32>) -> !fir.box<f32>
 
   // CHECK: call void @g({{.*}} %[[DESC]])
@@ -50,9 +44,8 @@ func @fa(%a : !fir.ref<!fir.array<100xf32>>) {
   %c1 = constant 1 : index
   %c100 = constant 100 : index
   %d = fir.shape %c100 : (index) -> !fir.shape<1>
-  // CHECK: %[[INS70:.*]] = insertvalue {{.*}} %{{.*}}, i64 0, 7, 0, 0
-  // CHECK: %[[INS71:.*]] = insertvalue {{.*}} %[[INS70]], i64 100, 7, 0, 1
-  // CHECK: %[[INS72:.*]] = insertvalue {{.*}} %[[INS71]], i64 4, 7, 0, 2
+  // CHECK: %[[bitcast:.*]] = bitcast [100 x float]* %
+  // CHECK: %[[INS70:.*]] = insertvalue {{.*}} { float* undef, i64 4, i32 20180515, i8 1, i8 25, i8 0, i8 0, {{.*}} }, float* %[[bitcast]], 0
   %b = fir.embox %c(%d) : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
   // CHECK: call void @ga(
   fir.call @ga(%b) : (!fir.box<!fir.array<?xf32>>) -> ()
@@ -64,9 +57,9 @@ func @fa(%a : !fir.ref<!fir.array<100xf32>>) {
 // CHECK-LABEL: define { i8*, i64, i32, i8, i8, i8, i8 }* @b1(
 // CHECK-SAME: i8* %[[arg0:.*]], i64 %[[arg1:.*]])
 func @b1(%arg0 : !fir.ref<!fir.char<1,?>>, %arg1 : index) -> !fir.box<!fir.char<1,?>> {
-  // CHECK: insertvalue {{.*}} i8* %[[arg0]], 0
-  // CHECK: insertvalue {{.*}} i64 %[[arg1]], 1
+  // CHECK: insertvalue {{.*}} undef, i64 %[[arg1]], 1
   // CHECK: insertvalue {{.*}} i32 20180515, 2
+  // CHECK: insertvalue {{.*}} i8* %[[arg0]], 0
   %x = fir.embox %arg0 typeparams %arg1 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
   return %x : !fir.box<!fir.char<1,?>>
 }
@@ -76,11 +69,9 @@ func @b1(%arg0 : !fir.ref<!fir.char<1,?>>, %arg1 : index) -> !fir.box<!fir.char<
 // CHECK-SAME: [5 x i8]* %[[arg0:.*]], i64 %[[arg1:.*]])
 func @b2(%arg0 : !fir.ref<!fir.array<?x!fir.char<1,5>>>, %arg1 : index) -> !fir.box<!fir.array<?x!fir.char<1,5>>> {
   %1 = fir.shape %arg1 : (index) -> !fir.shape<1>
+  // CHECK: insertvalue {{.*}} { [5 x i8]* undef, i64 5, i32 20180515, i8 1, i8 32, i8 0, i8 0, {{.*}} }, i64 %[[arg1]], 7, 0, 1
+  // CHECK: insertvalue {{.*}} %{{.*}}, i64 5, 7, 0, 2
   // CHECK: insertvalue {{.*}} [5 x i8]* %[[arg0]], 0
-  // CHECK: insertvalue {{.*}} i64 5, 1
-  // CHECK: insertvalue {{.*}} i32 20180515, 2
-  // CHECK: insertvalue {{.*}} i64 %[[arg1]], 7, 0, 1
-  // CHECK: insertvalue {{.*}} i64 5, 7, 0, 2
   %2 = fir.embox %arg0(%1) : (!fir.ref<!fir.array<?x!fir.char<1,5>>>, !fir.shape<1>) -> !fir.box<!fir.array<?x!fir.char<1,5>>>
   return %2 : !fir.box<!fir.array<?x!fir.char<1,5>>>
 }
@@ -90,11 +81,11 @@ func @b2(%arg0 : !fir.ref<!fir.array<?x!fir.char<1,5>>>, %arg1 : index) -> !fir.
 // CHECK-SAME: i8* %[[arg0:.*]], i64 %[[arg1:.*]], i64 %[[arg2:.*]])
 func @b3(%arg0 : !fir.ref<!fir.array<?x!fir.char<1,?>>>, %arg1 : index, %arg2 : index) -> !fir.box<!fir.array<?x!fir.char<1,?>>> {
   %1 = fir.shape %arg2 : (index) -> !fir.shape<1>
-  // CHECK: insertvalue {{.*}} i8* %[[arg0]], 0
   // CHECK: insertvalue {{.*}} i64 %[[arg1]], 1
   // CHECK: insertvalue {{.*}} i32 20180515, 2
   // CHECK: insertvalue {{.*}} i64 %[[arg2]], 7, 0, 1
   // CHECK: insertvalue {{.*}} i64 %[[arg1]], 7, 0, 2
+  // CHECK: insertvalue {{.*}} i8* %[[arg0]], 0
   %2 = fir.embox %arg0(%1) typeparams %arg1 : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
   return %2 : !fir.box<!fir.array<?x!fir.char<1,?>>>
 }
@@ -105,11 +96,11 @@ func @b3(%arg0 : !fir.ref<!fir.array<?x!fir.char<1,?>>>, %arg1 : index, %arg2 : 
 func @b4(%arg0 : !fir.ref<!fir.array<7x!fir.char<1,?>>>, %arg1 : index) -> !fir.box<!fir.array<7x!fir.char<1,?>>> {
   %c_7 = constant 7 : index
   %1 = fir.shape %c_7 : (index) -> !fir.shape<1>
-  // CHECK: insertvalue {{.*}} i8* %[[arg0]], 0
   // CHECK: insertvalue {{.*}} i64 %[[arg1]], 1
   // CHECK: insertvalue {{.*}} i32 20180515, 2
   // CHECK: insertvalue {{.*}} i64 7, 7, 0, 1
   // CHECK: insertvalue {{.*}} i64 %[[arg1]], 7, 0, 2
+  // CHECK: insertvalue {{.*}} i8* %[[arg0]], 0
   %x = fir.embox %arg0(%1) typeparams %arg1 : (!fir.ref<!fir.array<7x!fir.char<1,?>>>, !fir.shape<1>, index) -> !fir.box<!fir.array<7x!fir.char<1,?>>>
   return %x : !fir.box<!fir.array<7x!fir.char<1,?>>>
 }
@@ -123,3 +114,37 @@ func @b5(%arg0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>, %arg1 : !fi
   // CHECK: store { float*, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] } %[[boxLoad]], { float*, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] }* %[[arg0]]
   return
 }
+
+func private @callee6(!fir.box<none>) -> i32
+
+// CHECK-LABEL: define i32 @box6(
+// CHECK-SAME: float* %[[ARG0:.*]], i64 %[[ARG1:.*]], i64 %[[ARG2:.*]])
+func @box6(%0 : !fir.ref<!fir.array<?x?x?x?xf32>>, %1 : index, %2 : index) -> i32 {
+  %c100 = constant 100 : index
+  %c50 = constant 50 : index
+  %c30 = constant 30 : index
+  %c6 = constant 6 : index
+  %shape = fir.shape %c100, %c50, %c30, %c6 : (index, index, index, index) -> !fir.shape<4>
+  %3 = fir.undefined index
+  %c41 = constant 41 : index
+  %c2 = constant 2 : index
+  %c24 = constant 24 : index
+  %c1 = constant 1 : index
+  %c3 = constant 3 : index
+  // CHECK: %[[BASE:.*]] = getelementptr float, float* %[[ARG0]], i64 40
+  // CHECK: %[[B0:.*]] = insertvalue {{.*}} { float* undef, i64 4, i32 20180515, i8 2, i8 25, i8 0, i8 0, {{.*}} undef }, i64 %{{.*}}, 7, 0, 0
+  // CHECK: %[[B1:.*]] = insertvalue {{.*}} %[[B0]], i64 %{{.*}}, 7, 0, 1
+  // CHECK: %[[B2:.*]] = insertvalue {{.*}} %[[B1]], i64 800, 7, 0, 2
+  // CHECK: %[[B3:.*]] = insertvalue {{.*}} %[[B2]], i64 -5, 7, 1, 0
+  // CHECK: %[[B4:.*]] = insertvalue {{.*}} %[[B3]], i64 4, 7, 1, 1
+  // CHECK: %[[B5:.*]] = insertvalue {{.*}} %[[B4]], i64 120000, 7, 1, 2
+  %slice = fir.slice %c41, %3, %3, %1, %2, %c2, %c6, %c24, %c6, %c3, %3, %3 : (index, index, index, index, index, index, index, index, index, index, index, index) -> !fir.slice<4>
+  // CHECK: %[[BASE2:.*]] = getelementptr float, float* %[[BASE]], i64 300000
+  // CHECK: insertvalue {{.*}} %[[B5]], float* %[[BASE2]], 0
+  %box = fir.embox %0(%shape)[%slice] : (!fir.ref<!fir.array<?x?x?x?xf32>>, !fir.shape<4>, !fir.slice<4>) -> !fir.box<!fir.array<?x?x?x?xf32>>
+  %nonebox = fir.convert %box : (!fir.box<!fir.array<?x?x?x?xf32>>) -> !fir.box<none>
+  // CHECK: call i32 @callee6({{.*}}* %
+  %rv = fir.call @callee6(%nonebox) : (!fir.box<none>) -> i32
+  return %rv : i32
+}
+
