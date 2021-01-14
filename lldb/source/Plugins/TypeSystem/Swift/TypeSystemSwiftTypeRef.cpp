@@ -36,6 +36,8 @@
 #include "clang/APINotes/APINotesManager.h"
 #include "clang/APINotes/APINotesReader.h"
 
+#include "llvm/ADT/ScopeExit.h"
+
 #include <algorithm>
 #include <sstream>
 
