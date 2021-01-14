@@ -806,8 +806,7 @@ def GPU_WaitOp : GPU_Op<"wait", [GPU_AsyncOpInterface]> {
 
 def GPU_AllocOp : GPU_Op<"alloc", [
     GPU_AsyncOpInterface,
-    AttrSizedOperandSegments,
-    MemoryEffects<[MemAlloc<DefaultResource>]>
+    AttrSizedOperandSegments
   ]> {
 
   let summary = "GPU memory allocation operation.";
@@ -831,7 +830,7 @@ def GPU_AllocOp : GPU_Op<"alloc", [
 
   let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
                    Variadic<Index>:$dynamicSizes, Variadic<Index>:$symbolOperands);
-  let results = (outs Res<AnyMemRef, "", [MemAlloc<DefaultResource>]>:$memref,
+  let results = (outs Res<AnyMemRef, "", [MemAlloc]>:$memref,
                  Optional<GPU_AsyncToken>:$asyncToken);
 
   let extraClassDeclaration = [{
@@ -844,9 +843,7 @@ def GPU_AllocOp : GPU_Op<"alloc", [
   }];
 }
 
-def GPU_DeallocOp : GPU_Op<"dealloc", [
-    GPU_AsyncOpInterface, MemoryEffects<[MemFree]>
-  ]> {
+def GPU_DeallocOp : GPU_Op<"dealloc", [GPU_AsyncOpInterface]> {
 
   let summary = "GPU memory deallocation operation";
 
@@ -879,9 +876,7 @@ def GPU_DeallocOp : GPU_Op<"dealloc", [
   }];
 }
 
-def GPU_MemcpyOp : GPU_Op<"memcpy", [
-    GPU_AsyncOpInterface, MemoryEffects<[MemRead, MemWrite]>
-  ]> {
+def GPU_MemcpyOp : GPU_Op<"memcpy", [GPU_AsyncOpInterface]> {
 
   let summary = "GPU memcpy operation";
 
