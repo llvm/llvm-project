@@ -665,7 +665,7 @@ static swift::Demangle::NodePointer Desugar(swift::Demangle::Demangler &dem,
 }
 
 /// Helper for \p GetSwiftName.
-static template <typename ContextInfo>
+template <typename ContextInfo>
 std::string ExtractSwiftName(
     clang::api_notes::APINotesReader::VersionedInfo<ContextInfo> info) {
   if (auto version = info.getSelected()) {
