@@ -26,20 +26,17 @@ using namespace sys;
 static bool Execute(ProcessInfo &PI, StringRef Program,
                     ArrayRef<StringRef> Args, Optional<ArrayRef<StringRef>> Env,
                     ArrayRef<Optional<StringRef>> Redirects,
-                    unsigned MemoryLimit, std::string *ErrMsg,
-                    BitVector *AffinityMask);
+                    unsigned MemoryLimit, std::string *ErrMsg);
 
 int sys::ExecuteAndWait(StringRef Program, ArrayRef<StringRef> Args,
                         Optional<ArrayRef<StringRef>> Env,
                         ArrayRef<Optional<StringRef>> Redirects,
                         unsigned SecondsToWait, unsigned MemoryLimit,
                         std::string *ErrMsg, bool *ExecutionFailed,
-                        Optional<ProcessStatistics> *ProcStat,
-                        BitVector *AffinityMask) {
+                        Optional<ProcessStatistics> *ProcStat) {
   assert(Redirects.empty() || Redirects.size() == 3);
   ProcessInfo PI;
-  if (Execute(PI, Program, Args, Env, Redirects, MemoryLimit, ErrMsg,
-              AffinityMask)) {
+  if (Execute(PI, Program, Args, Env, Redirects, MemoryLimit, ErrMsg)) {
     if (ExecutionFailed)
       *ExecutionFailed = false;
     ProcessInfo Result =
@@ -58,13 +55,12 @@ ProcessInfo sys::ExecuteNoWait(StringRef Program, ArrayRef<StringRef> Args,
                                Optional<ArrayRef<StringRef>> Env,
                                ArrayRef<Optional<StringRef>> Redirects,
                                unsigned MemoryLimit, std::string *ErrMsg,
-                               bool *ExecutionFailed, BitVector *AffinityMask) {
+                               bool *ExecutionFailed) {
   assert(Redirects.empty() || Redirects.size() == 3);
   ProcessInfo PI;
   if (ExecutionFailed)
     *ExecutionFailed = false;
-  if (!Execute(PI, Program, Args, Env, Redirects, MemoryLimit, ErrMsg,
-               AffinityMask))
+  if (!Execute(PI, Program, Args, Env, Redirects, MemoryLimit, ErrMsg))
     if (ExecutionFailed)
       *ExecutionFailed = true;
 
