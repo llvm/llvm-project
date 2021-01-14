@@ -11,7 +11,8 @@
 
 #include "../ClangTidyCheck.h"
 
-#include <unordered_set>
+#include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/DenseSet.h"
 
 namespace clang {
 namespace tidy {
@@ -32,7 +33,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  std::unordered_set<unsigned> MatchedTemplateLocations;
+  llvm::DenseSet<SourceLocation> MatchedTemplateLocations;
 };
 
 } // namespace abseil

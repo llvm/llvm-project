@@ -85,7 +85,11 @@ KnownBits KnownBits::computeForAddSub(bool Add, bool NSW,
 
 KnownBits KnownBits::sextInReg(unsigned SrcBitWidth) const {
   unsigned BitWidth = getBitWidth();
-  assert(BitWidth >= SrcBitWidth && "Illegal sext-in-register");
+  assert(0 < SrcBitWidth && SrcBitWidth <= BitWidth &&
+         "Illegal sext-in-register");
+
+  if (SrcBitWidth == BitWidth)
+    return *this;
 
   // Sign extension.  Compute the demanded bits in the result that are not
   // present in the input.
@@ -271,9 +275,6 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS) {
 Optional<bool> KnownBits::eq(const KnownBits &LHS, const KnownBits &RHS) {
   if (LHS.isConstant() && RHS.isConstant())
     return Optional<bool>(LHS.getConstant() == RHS.getConstant());
-  if (LHS.getMaxValue().ult(RHS.getMinValue()) ||
-      LHS.getMinValue().ugt(RHS.getMaxValue()))
-    return Optional<bool>(false);
   if (LHS.One.intersects(RHS.Zero) || RHS.One.intersects(LHS.Zero))
     return Optional<bool>(false);
   return None;
@@ -286,8 +287,6 @@ Optional<bool> KnownBits::ne(const KnownBits &LHS, const KnownBits &RHS) {
 }
 
 Optional<bool> KnownBits::ugt(const KnownBits &LHS, const KnownBits &RHS) {
-  if (LHS.isConstant() && RHS.isConstant())
-    return Optional<bool>(LHS.getConstant().ugt(RHS.getConstant()));
   // LHS >u RHS -> false if umax(LHS) <= umax(RHS)
   if (LHS.getMaxValue().ule(RHS.getMinValue()))
     return Optional<bool>(false);
@@ -312,8 +311,6 @@ Optional<bool> KnownBits::ule(const KnownBits &LHS, const KnownBits &RHS) {
 }
 
 Optional<bool> KnownBits::sgt(const KnownBits &LHS, const KnownBits &RHS) {
-  if (LHS.isConstant() && RHS.isConstant())
-    return Optional<bool>(LHS.getConstant().sgt(RHS.getConstant()));
   // LHS >s RHS -> false if smax(LHS) <= smax(RHS)
   if (LHS.getSignedMaxValue().sle(RHS.getSignedMinValue()))
     return Optional<bool>(false);
