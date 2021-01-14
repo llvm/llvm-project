@@ -304,7 +304,7 @@ collectRegionsConstants(OutlinableRegion &Region,
       unsigned GVN = GVNOpt.getValue();
 
       // Check if this global value has been found to not be the same already.
-      if (NotSame.find(GVN) != NotSame.end()) {
+      if (NotSame.contains(GVN)) {
         if (isa<Constant>(V))
           ConstantsTheSame = false;
         continue;
@@ -421,8 +421,7 @@ static void findConstants(IRSimilarityCandidate &C, DenseSet<unsigned> &NotSame,
       // global value numbering.
       unsigned GVN = C.getGVN(V).getValue();
       if (isa<Constant>(V))
-        if (NotSame.find(GVN) != NotSame.end() &&
-            Seen.find(GVN) == Seen.end()) {
+        if (NotSame.contains(GVN) && !Seen.contains(GVN)) {
           Inputs.push_back(GVN);
           Seen.insert(GVN);
         }
@@ -673,7 +672,7 @@ findExtractedOutputToOverallOutputMapping(OutlinableRegion &Region,
       if (Group.ArgumentTypes[Jdx] != PointerType::getUnqual(Output->getType()))
         continue;
 
-      if (AggArgsUsed.find(Jdx) != AggArgsUsed.end())
+      if (AggArgsUsed.contains(Jdx))
         continue;
 
       TypeFound = true;
@@ -925,7 +924,7 @@ collectRelevantInstructions(Function &F,
   std::vector<Instruction *> RelevantInstructions;
 
   for (BasicBlock &BB : F) {
-    if (ExcludeBlocks.find(&BB) != ExcludeBlocks.end())
+    if (ExcludeBlocks.contains(&BB))
       continue;
 
     for (Instruction &Inst : BB) {
