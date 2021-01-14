@@ -1219,6 +1219,53 @@ findFieldWithName(const std::vector<swift::reflection::FieldInfo> &fields,
   return child_indexes.size();
 }
 
+static llvm::Optional<std::string>
+GetMultiPayloadEnumCaseName(const swift::reflection::EnumTypeInfo *eti,
+                            const DataExtractor &data) {
+  using namespace swift::reflection;
+  assert(eti->getEnumKind() == EnumKind::MultiPayloadEnum);
+  const auto &cases = eti->getCases();
+  auto it = std::max_element(cases.begin(), cases.end(),
+                             [](const auto &a, const auto &b) {
+                               return a.TI.getSize() < b.TI.getSize();
+                             });
+  if (it == cases.end())
+    return {};
+
+  auto payload_capacity = it->TI.getSize();
+  if (data.GetByteSize() == payload_capacity + 1) {
+    auto tag = data.GetDataStart()[payload_capacity];
+    if (tag >= 0 && tag < cases.size())
+      return cases[tag].Name;
+  }
+
+  return {};
+}
+
+llvm::Optional<std::string> SwiftLanguageRuntimeImpl::GetEnumCaseName(
+    CompilerType type, const DataExtractor &data, ExecutionContext *exe_ctx) {
+  using namespace swift::reflection;
+  using namespace swift::remote;
+  auto *ti = GetTypeInfo(type, exe_ctx->GetFramePtr());
+  assert(ti->getKind() == TypeInfoKind::Enum && "Expected enum type");
+  if (ti->getKind() != TypeInfoKind::Enum)
+    return {};
+
+  auto *eti = llvm::cast<EnumTypeInfo>(ti);
+  PushLocalBuffer((int64_t)data.GetDataStart(), data.GetByteSize());
+  auto defer = llvm::make_scope_exit([&] { PopLocalBuffer(); });
+  RemoteAddress addr(data.GetDataStart());
+  int case_index;
+  if (eti->projectEnumValue(*GetMemoryReader(), addr, &case_index))
+    return eti->getCases()[case_index].Name;
+
+  // Temporary workaround.
+  if (eti->getEnumKind() == EnumKind::MultiPayloadEnum)
+    return GetMultiPayloadEnumCaseName(eti, data);
+
+  return {};
+}
+
 llvm::Optional<size_t> SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
     CompilerType type, llvm::StringRef name, ExecutionContext *exe_ctx,
     bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) {

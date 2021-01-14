@@ -123,6 +123,10 @@ public:
   llvm::Optional<unsigned> GetNumFields(CompilerType type,
                                         ExecutionContext *exe_ctx);
 
+  llvm::Optional<std::string> GetEnumCaseName(CompilerType type,
+                                              const DataExtractor &data,
+                                              ExecutionContext *exe_ctx);
+
   llvm::Optional<size_t> GetIndexOfChildMemberWithName(
       CompilerType type, llvm::StringRef name, ExecutionContext *exe_ctx,
       bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes);

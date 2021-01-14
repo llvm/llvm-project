@@ -2315,9 +2315,6 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
           if (llvm::StringRef(AsMangledName(type))
                   .endswith("sSo18NSNotificationNameaD"))
             return GetTypeFromMangledTypename(ConstString("$sSo8NSStringCD"));
-          // FIXME: Private discriminators come out in a different format.
-          if (result.GetMangledTypeName().GetStringRef().count('$') > 1)
-            return fallback();
           return result;
         }
     }
@@ -2778,37 +2775,14 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
     size_t data_byte_size, uint32_t bitfield_bit_size,
     uint32_t bitfield_bit_offset, ExecutionContextScope *exe_scope,
     bool is_base_class) {
-  if (!type)
-    return false;
-
-  using namespace swift::Demangle;
-  Demangler dem;
-  auto *node = DemangleCanonicalType(dem, type);
-  auto kind = node->getKind();
-
-  switch (kind) {
-  case Node::Kind::Structure: {
-    // TODO: Handle ObjC enums masquerading as structs.
-    // In rare instances, a Swift `Structure` wraps an ObjC enum. An example is
-    // `$sSo16ComparisonResultVD`. For now, use `SwiftASTContext` to handle
-    // these enum structs.
-    auto resolved = ResolveTypeAlias(m_swift_ast_context, dem, node, true);
-    auto clang_type = std::get<CompilerType>(resolved);
-    bool is_signed;
-    if (!clang_type.IsEnumerationType(is_signed))
-        break;
-    LLVM_FALLTHROUGH;
-  }
-  case Node::Kind::Enum:
-  case Node::Kind::BoundGenericEnum:
-    // TODO: Add support for Enums.
-    return m_swift_ast_context->DumpTypeValue(
-        ReconstructType(type), s, format, data, data_offset, data_byte_size,
-        bitfield_bit_size, bitfield_bit_offset, exe_scope, is_base_class);
-  }
-
   auto impl = [&]() -> bool {
-    switch (kind) {
+    if (!type)
+      return false;
+
+    using namespace swift::Demangle;
+    Demangler dem;
+    auto *node = DemangleCanonicalType(dem, type);
+    switch (node->getKind()) {
     case Node::Kind::Class:
     case Node::Kind::BoundGenericClass:
       if (is_base_class)
@@ -2868,9 +2842,35 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
           s, format, data, data_offset, data_byte_size, bitfield_bit_size,
           bitfield_bit_offset, exe_scope, is_base_class);
     }
-    case Node::Kind::Structure:
     case Node::Kind::BoundGenericStructure:
       return false;
+    case Node::Kind::Structure: {
+      // In rare instances, a Swift `Structure` wraps an ObjC enum. An example
+      // is `$sSo16ComparisonResultVD`. For now, use `SwiftASTContext` to handle
+      // these enum structs.
+      auto resolved = ResolveTypeAlias(m_swift_ast_context, dem, node, true);
+      auto clang_type = std::get<CompilerType>(resolved);
+      bool is_signed;
+      if (!clang_type.IsEnumerationType(is_signed))
+        return false;
+      LLVM_FALLTHROUGH;
+    }
+    case Node::Kind::Enum:
+    case Node::Kind::BoundGenericEnum: {
+      if (exe_scope)
+        if (auto runtime =
+                SwiftLanguageRuntime::Get(exe_scope->CalculateProcess())) {
+          ExecutionContext exe_ctx;
+          exe_scope->CalculateExecutionContext(exe_ctx);
+          if (auto case_name =
+                  runtime->GetEnumCaseName({this, type}, data, &exe_ctx)) {
+            s->PutCString(*case_name);
+            return true;
+          }
+        }
+      s->PutCString("<unknown type>");
+      return false;
+    }
     default:
       assert(false && "Unhandled node kind");
       LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
