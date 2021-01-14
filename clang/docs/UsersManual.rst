@@ -41,7 +41,8 @@ specific section:
    variants depending on base language.
 -  :ref:`C++ Language <cxx>`
 -  :ref:`Objective C++ Language <objcxx>`
--  :ref:`OpenCL C Language <opencl>`: v1.0, v1.1, v1.2, v2.0.
+-  :ref:`OpenCL Kernel Language <opencl>`: OpenCL C v1.0, v1.1, v1.2, v2.0,
+   plus C++ for OpenCL.
 
 In addition to these base languages and their dialects, Clang supports a
 broad variety of language extensions, which are documented in the
@@ -2796,8 +2797,8 @@ OpenCL Features
 ===============
 
 Clang can be used to compile OpenCL kernels for execution on a device
-(e.g. GPU). It is possible to compile the kernel into a binary (e.g. for AMD or
-Nvidia targets) that can be uploaded to run directly on a device (e.g. using
+(e.g. GPU). It is possible to compile the kernel into a binary (e.g. for AMDGPU)
+that can be uploaded to run directly on a device (e.g. using
 `clCreateProgramWithBinary
 <https://www.khronos.org/registry/OpenCL/specs/opencl-1.1.pdf#111>`_) or
 into generic bitcode files loadable into other toolchains.
@@ -2824,12 +2825,25 @@ Compiling to bitcode can be done as follows:
 
      $ clang -c -emit-llvm test.cl
 
-This will produce a generic test.bc file that can be used in vendor toolchains
+This will produce a file `test.bc` that can be used in vendor toolchains
 to perform machine code generation.
 
-Clang currently supports OpenCL C language standards up to v2.0. Starting from
-clang 9 a C++ mode is available for OpenCL (see
+Note that if compiled to bitcode for generic targets such as SPIR,
+portable IR is produced that can be used with various vendor
+tools as well as open source tools such as `SPIRV-LLVM Translator
+<https://github.com/KhronosGroup/SPIRV-LLVM-Translator>`_
+to produce SPIR-V binary.
+
+
+Clang currently supports OpenCL C language standards up to v2.0. Clang mainly
+supports full profile. There is only very limited support of the embedded
+profile. 
+Starting from clang 9 a C++ mode is available for OpenCL (see
 :ref:`C++ for OpenCL <cxx_for_opencl>`).
+
+There is ongoing support for OpenCL v3.0 that is documented along with other
+experimental functionality and features in development on :doc:`OpenCLSupport`
+page.
 
 OpenCL Specific Options
 -----------------------
@@ -2847,24 +2861,31 @@ Some extra options are available to support special OpenCL features.
 
 .. option:: -finclude-default-header
 
-Loads standard includes during compilations. By default OpenCL headers are not
-loaded and therefore standard library includes are not available. To load them
-automatically a flag has been added to the frontend (see also :ref:`the section
-on the OpenCL Header <opencl_header>`):
+Adds most of builtin types and function declarations during compilations. By
+default the OpenCL headers are not loaded and therefore certain builtin
+types and most of builtin functions are not declared. To load them
+automatically this flag can be passed to the frontend (see also :ref:`the
+section on the OpenCL Header <opencl_header>`):
 
    .. code-block:: console
 
      $ clang -Xclang -finclude-default-header test.cl
 
-Alternatively ``-include`` or ``-I`` followed by the path to the header location
-can be given manually.
+Note that this is a frontend-only flag and therefore it requires the use of
+flags that forward options to the frontend, e.g. ``-cc1`` or ``-Xclang``.
+
+Alternatively the internal header `opencl-c.h` containing the declarations
+can be included manually using ``-include`` or ``-I`` followed by the path
+to the header location. The header can be found in the clang source tree or
+installation directory.
 
    .. code-block:: console
 
-     $ clang -I<path to clang>/lib/Headers/opencl-c.h test.cl
+     $ clang -I<path to clang sources>/lib/Headers/opencl-c.h test.cl
+     $ clang -I<path to clang installation>/lib/clang/<llvm version>/include/opencl-c.h/opencl-c.h test.cl
 
-In this case the kernel code should contain ``#include <opencl-c.h>`` just as a
-regular C include.
+In this example it is assumed that the kernel code contains
+``#include <opencl-c.h>`` just as a regular C include.
 
 .. _opencl_cl_ext:
 
@@ -2874,10 +2895,14 @@ Disables support of OpenCL extensions. All OpenCL targets provide a list
 of extensions that they support. Clang allows to amend this using the ``-cl-ext``
 flag with a comma-separated list of extensions prefixed with ``'+'`` or ``'-'``.
 The syntax: ``-cl-ext=<(['-'|'+']<extension>[,])+>``,  where extensions
-can be either one of `the OpenCL specification extensions
-<https://www.khronos.org/registry/cl/sdk/2.0/docs/man/xhtml/EXTENSION.html>`_
-or any known vendor extension. Alternatively, ``'all'`` can be used to enable
+can be either one of `the OpenCL published extensions
+<https://www.khronos.org/registry/OpenCL>`_
+or any vendor extension. Alternatively, ``'all'`` can be used to enable
 or disable all known extensions.
+
+Note that this is a frontend-only flag and therefore it requires the use of
+flags that forward options to the frontend e.g. ``-cc1`` or ``-Xclang``.
+
 Example disabling double support for the 64-bit SPIR target:
 
    .. code-block:: console
@@ -2896,7 +2921,7 @@ Enabling all extensions except double support in R600 AMD GPU can be done using:
 
 Overrides the target address space map with a fake map.
 This allows adding explicit address space IDs to the bitcode for non-segmented
-memory architectures that don't have separate IDs for each of the OpenCL
+memory architectures that do not have separate IDs for each of the OpenCL
 logical address spaces by default. Passing ``-ffake-address-space-map`` will
 add/override address spaces of the target compiled for with the following values:
 ``1-global``, ``2-constant``, ``3-local``, ``4-generic``. The private address
@@ -2905,7 +2930,10 @@ also :ref:`the section on the address space attribute <opencl_addrsp>`).
 
    .. code-block:: console
 
-     $ clang -ffake-address-space-map test.cl
+     $ clang -cc1 -ffake-address-space-map test.cl
+
+Note that this is a frontend-only flag and therefore it requires the use of
+flags that forward options to the frontend e.g. ``-cc1`` or ``-Xclang``.
 
 Some other flags used for the compilation for C can also be passed while
 compiling for OpenCL, examples: ``-c``, ``-O<1-4|s>``, ``-o``, ``-emit-llvm``, etc.
@@ -2945,12 +2973,15 @@ Generic Targets
 
    .. code-block:: console
 
-    $ clang -target spir-unknown-unknown test.cl
-    $ clang -target spir64-unknown-unknown test.cl
+    $ clang -cc1 -triple=spir test.cl
+    $ clang -cc1 -triple=spir64 test.cl
+
+  Note that this is a frontend-only target and therefore it requires the use of
+  flags that forward options to the frontend e.g. ``-cc1`` or ``-Xclang``.
 
   All known OpenCL extensions are supported in the SPIR targets. Clang will
   generate SPIR v1.2 compatible IR for OpenCL versions up to 2.0 and SPIR v2.0
-  for OpenCL v2.0.
+  for OpenCL v2.0 or C++ for OpenCL.
 
 - x86 is used by some implementations that are x86 compatible and currently
   remains for backwards compatibility (with older implementations prior to
@@ -2972,7 +3003,8 @@ OpenCL Header
 By default Clang will not include standard headers and therefore OpenCL builtin
 functions and some types (i.e. vectors) are unknown. The default CL header is,
 however, provided in the Clang installation and can be enabled by passing the
-``-finclude-default-header`` flag to the Clang frontend.
+``-finclude-default-header`` flag (see :ref:`flags description <opencl_cl_ext>`
+for more details).
 
    .. code-block:: console
 
@@ -2992,10 +3024,10 @@ To enable modules for OpenCL:
 OpenCL Extensions
 -----------------
 
-All of the ``cl_khr_*`` extensions from `the official OpenCL specification
-<https://www.khronos.org/registry/OpenCL/sdk/2.0/docs/man/xhtml/EXTENSION.html>`_
-up to and including version 2.0 are available and set per target depending on the
-support available in the specific architecture.
+Most of the ``cl_khr_*`` extensions to OpenCL C from `the official OpenCL
+registry <https://www.khronos.org/registry/OpenCL/>`_ are available and
+configured per target depending on the support available in the specific
+architecture.
 
 It is possible to alter the default extensions setting per target using
 ``-cl-ext`` flag. (See :ref:`flags description <opencl_cl_ext>` for more details).
@@ -3022,7 +3054,10 @@ function to the custom ``my_ext`` extension.
        void my_func(my_t);
        #pragma OPENCL EXTENSION my_ext : end
 
-Declaring the same types in different vendor extensions is disallowed.
+There is no conflict resolution for identifier clashes among extensions.
+It is therefore recommended that the identifiers are prefixed with a
+double underscore to avoid clashing with user space identifiers. Vendor
+extension should use reserved identifier prefix e.g. amd, arm, intel.
 
 Clang also supports language extensions documented in `The OpenCL C Language
 Extensions Documentation
@@ -3203,13 +3238,14 @@ implementation of `OpenCL C++
 <https://www.khronos.org/registry/OpenCL/specs/2.2/pdf/OpenCL_Cxx.pdf>`_ and
 there is no plan to support it in clang in any new releases in the near future.
 
-For detailed information about this language refer to `The C++ for OpenCL
-Programming Language Documentation
-<https://github.com/KhronosGroup/Khronosdotorg/blob/master/api/opencl/assets/CXX_for_OpenCL.pdf>`_.
 
-Since C++ features are to be used on top of OpenCL C functionality, all existing
-restrictions from OpenCL C v2.0 will inherently apply. All OpenCL C builtin types
-and function libraries are supported and can be used in this mode.
+Clang currently supports C++ for OpenCL v1.0.
+For detailed information about this language refer to the C++ for OpenCL
+Programming Language Documentation available
+in `the latest build
+<https://github.com/KhronosGroup/Khronosdotorg/blob/master/api/opencl/assets/CXX_for_OpenCL.pdf>`_
+or in `the official release
+<https://github.com/KhronosGroup/OpenCL-Docs/releases/tag/cxxforopencl-v1.0-r1>`_.
 
 To enable the C++ for OpenCL mode, pass one of following command line options when
 compiling ``.cl`` file ``-cl-std=clc++``, ``-cl-std=CLC++``, ``-std=clc++`` or
@@ -3236,31 +3272,46 @@ compiling ``.cl`` file ``-cl-std=clc++``, ``-cl-std=CLC++``, ``-std=clc++`` or
 Constructing and destroying global objects
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Global objects must be constructed before the first kernel using the global objects
-is executed and destroyed just after the last kernel using the program objects is
-executed. In OpenCL v2.0 drivers there is no specific API for invoking global
-constructors. However, an easy workaround would be to enqueue a constructor
-initialization kernel that has a name ``_GLOBAL__sub_I_<compiled file name>``.
-This kernel is only present if there are any global objects to be initialized in
-the compiled binary. One way to check this is by passing ``CL_PROGRAM_KERNEL_NAMES``
-to ``clGetProgramInfo`` (OpenCL v2.0 s5.8.7).
+Global objects with non-trivial constructors require the constructors to be run
+before the first kernel using the global objects is executed. Similarly global
+objects with non-trivial destructors require destructor invocation just after
+the last kernel using the program objects is executed.
+In OpenCL versions earlier than v2.2 there is no support for invoking global
+constructors. However, an easy workaround is to manually enqueue the
+constructor initialization kernel that has the following name scheme
+``_GLOBAL__sub_I_<compiled file name>``.
+This kernel is only present if there are global objects with non-trivial
+constructors present in the compiled binary. One way to check this is by 
+passing ``CL_PROGRAM_KERNEL_NAMES`` to ``clGetProgramInfo`` (OpenCL v2.0
+s5.8.7) and then checking whether any kernel name matches the naming scheme of
+global constructor initialization kernel above.
 
-Note that if multiple files are compiled and linked into libraries, multiple kernels
-that initialize global objects for multiple modules would have to be invoked.
+Note that if multiple files are compiled and linked into libraries, multiple
+kernels that initialize global objects for multiple modules would have to be
+invoked.
 
-Applications are currently required to run initialization of global objects manually
-before running any kernels in which the objects are used.
+Applications are currently required to run initialization of global objects
+manually before running any kernels in which the objects are used.
 
    .. code-block:: console
 
      clang -cl-std=clc++ test.cl
 
-If there are any global objects to be initialized, the final binary will contain
-the ``_GLOBAL__sub_I_test.cl`` kernel to be enqueued.
+If there are any global objects to be initialized, the final binary will
+contain the ``_GLOBAL__sub_I_test.cl`` kernel to be enqueued.
 
-Global destructors can not be invoked in OpenCL v2.0 drivers. However, all memory used
-for program scope objects is released on ``clReleaseProgram``.
+Note that the manual workaround only applies to objects declared at the
+program scope. There is no manual workaround for the construction of static
+objects with non-trivial constructors inside functions.
 
+Global destructors can not be invoked manually in the OpenCL v2.0 drivers.
+However, all memory used for program scope objects should be released on
+``clReleaseProgram``.
+
+Libraries
+^^^^^^^^^
+Limited experimental support of C++ standard libraries for OpenCL is
+described in :doc:`OpenCLSupport` page.
 
 .. _target_features:
 
