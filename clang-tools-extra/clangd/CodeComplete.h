@@ -82,16 +82,6 @@ struct CodeCompleteOptions {
   /// Expose origins of completion items in the label (for debugging).
   bool ShowOrigins = false;
 
-  /// If set to true, this will send an asynchronous speculative index request,
-  /// based on the index request for the last code completion on the same file
-  /// and the filter text typed before the cursor, before sema code completion
-  /// is invoked. This can reduce the code completion latency (by roughly
-  /// latency of sema code completion) if the speculative request is the same as
-  /// the one generated for the ongoing code completion from sema. As a sequence
-  /// of code completions often have the same scopes and proximity paths etc,
-  /// this should be effective for a number of code completions.
-  bool SpeculativeIndexRequest = false;
-
   // Populated internally by clangd, do not set.
   /// If `Index` is set, it is used to augment the code completion
   /// results.
