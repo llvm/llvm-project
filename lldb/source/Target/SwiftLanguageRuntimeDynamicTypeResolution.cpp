@@ -292,7 +292,7 @@ public:
       } else {
         *result = 0;
       }
-      break;
+      return true;
     }
     case DLQ_GetPointerSize: {
       auto result = static_cast<uint8_t *>(outBuffer);
@@ -302,6 +302,15 @@ public:
     case DLQ_GetSizeSize: {
       auto result = static_cast<uint8_t *>(outBuffer);
       *result = m_process.GetAddressByteSize(); // FIXME: sizeof(size_t)
+      return true;
+    }
+    case DLQ_GetLeastValidPointerValue: {
+      auto *result = (uint64_t *)outBuffer;
+      auto &triple = m_process.GetTarget().GetArchitecture().GetTriple();
+      if (triple.isOSDarwin() && triple.isArch64Bit())
+        *result = 0x100000000;
+      else
+        *result = 0x1000;
       return true;
     }
     }
