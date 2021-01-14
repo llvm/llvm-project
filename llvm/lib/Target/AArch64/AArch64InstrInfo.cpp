@@ -4887,7 +4887,7 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
   MachineFunction &MF = *MBB.getParent();
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
 
-  MachineInstr *MUL;
+  MachineInstr *MUL = nullptr;
   const TargetRegisterClass *RC;
   unsigned Opc;
   switch (Pattern) {
@@ -5708,6 +5708,9 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
   }
   } // end switch (Pattern)
   // Record MUL and ADD/SUB for deletion
+  // FIXME: This assertion fails in CodeGen/AArch64/tailmerging_in_mbp.ll and
+  // CodeGen/AArch64/urem-seteq-nonzero.ll.
+  // assert(MUL && "MUL was never set");
   DelInstrs.push_back(MUL);
   DelInstrs.push_back(&Root);
 }
