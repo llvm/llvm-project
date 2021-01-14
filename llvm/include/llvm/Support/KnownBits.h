@@ -125,7 +125,7 @@ public:
     // Assume that all bits that aren't known-ones are zeros.
     APInt Min = One;
     // Sign bit is unknown.
-    if (Zero.isSignBitClear() && One.isSignBitClear())
+    if (Zero.isSignBitClear())
       Min.setSignBit();
     return Min;
   }
@@ -141,7 +141,7 @@ public:
     // Assume that all bits that aren't known-zeros are ones.
     APInt Max = ~Zero;
     // Sign bit is unknown.
-    if (Zero.isSignBitClear() && One.isSignBitClear())
+    if (One.isSignBitClear())
       Max.clearSignBit();
     return Max;
   }
