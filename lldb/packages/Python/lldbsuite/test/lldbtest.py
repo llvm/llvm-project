@@ -1770,6 +1770,19 @@ class Base(unittest2.TestCase):
                 "Don't know how to do cleanup with dictionary: " +
                 dictionary)
 
+    def invoke(self, obj, name, trace=False):
+        """Use reflection to call a method dynamically with no argument."""
+        trace = (True if traceAlways else trace)
+
+        method = getattr(obj, name)
+        import inspect
+        self.assertTrue(inspect.ismethod(method),
+                        name + "is a method name of object: " + str(obj))
+        result = method()
+        with recording(self, trace) as sbuf:
+            print(str(method) + ":", result, file=sbuf)
+        return result
+
     def getLLDBLibraryEnvVal(self):
         """ Returns the path that the OS-specific library search environment variable
             (self.dylibPath) should be set to in order for a program to find the LLDB
@@ -2628,19 +2641,6 @@ FileCheck output:
                                  summary=summary, children=children)
         value_check.check_value(self, eval_result, str(eval_result))
         return eval_result
-
-    def invoke(self, obj, name, trace=False):
-        """Use reflection to call a method dynamically with no argument."""
-        trace = (True if traceAlways else trace)
-
-        method = getattr(obj, name)
-        import inspect
-        self.assertTrue(inspect.ismethod(method),
-                        name + "is a method name of object: " + str(obj))
-        result = method()
-        with recording(self, trace) as sbuf:
-            print(str(method) + ":", result, file=sbuf)
-        return result
 
     def build(
             self,
