@@ -10,7 +10,7 @@ set(GWP_ASAN_UNITTEST_CFLAGS
 
 file(GLOB GWP_ASAN_HEADERS ../*.h)
 set(GWP_ASAN_UNITTESTS
-  optional/printf_sanitizer_common.cpp
+  platform_specific/printf_sanitizer_common.cpp
   alignment.cpp
   backtrace.cpp
   basic.cpp
