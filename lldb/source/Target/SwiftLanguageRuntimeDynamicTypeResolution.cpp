@@ -1256,7 +1256,6 @@ llvm::Optional<std::string> SwiftLanguageRuntimeImpl::GetEnumCaseName(
   using namespace swift::reflection;
   using namespace swift::remote;
   auto *ti = GetTypeInfo(type, exe_ctx->GetFramePtr());
-  assert(ti->getKind() == TypeInfoKind::Enum && "Expected enum type");
   if (ti->getKind() != TypeInfoKind::Enum)
     return {};
 
