@@ -13,4 +13,6 @@
 ## added to the update invocation below.
 # RUN: %update_test_checks %t.ll
 # RUN: diff -u %t.ll %S/Inputs/various_ir_values.ll.funcsig.expected
-
+## Also try the --check-globals flag
+# RUN: %update_test_checks %t.ll --check-globals
+# RUN: diff -u %t.ll %S/Inputs/various_ir_values.ll.funcsig.globals.expected

@@ -9,7 +9,7 @@
 
 define i32* @foo(%struct.ST* %s) nounwind uwtable readnone optsize ssp {
 ; CHECK-LABEL: define {{[^@]+}}@foo
-; CHECK-SAME: (%struct.ST* nofree readnone [[S:%.*]]) [[ATTR0:#.*]] {
+; CHECK-SAME: (%struct.ST* nofree readnone [[S:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_ST:%.*]], %struct.ST* [[S]], i64 1, i32 2, i32 1, i64 5, i64 13
 ; CHECK-NEXT:    ret i32* [[ARRAYIDX]]
