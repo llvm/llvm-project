@@ -29,6 +29,8 @@ following conversions are currently implemented:
 -   `f16` converts to `f16`
 -   `f32` converts to `f32`
 -   `f64` converts to `f64`
+-   `f80` converts to `f80`
+-   `f128` converts to `f128`
 
 ### Index Type
 

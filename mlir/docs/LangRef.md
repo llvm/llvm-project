@@ -850,7 +850,7 @@ Syntax:
 
 ```
 // Floating point.
-float-type ::= `f16` | `bf16` | `f32` | `f64`
+float-type ::= `f16` | `bf16` | `f32` | `f64` | `f80` | `f128`
 ```
 
 MLIR supports float types of certain widths that are widely used as indicated

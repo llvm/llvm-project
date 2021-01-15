@@ -102,6 +102,20 @@ def Builtin_Float64 : Builtin_FloatType<"Float64"> {
 }
 
 //===----------------------------------------------------------------------===//
+// Float80Type
+
+def Builtin_Float80 : Builtin_FloatType<"Float80"> {
+  let summary = "80-bit floating-point type";
+}
+
+//===----------------------------------------------------------------------===//
+// Float128Type
+
+def Builtin_Float128 : Builtin_FloatType<"Float128"> {
+  let summary = "128-bit floating-point type";
+}
+
+//===----------------------------------------------------------------------===//
 // FunctionType
 //===----------------------------------------------------------------------===//
 
