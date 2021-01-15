@@ -1,9 +1,5 @@
 [
     {
-        "name": "FilterLength",
-        "kind": "NUMBER"
-    },
-    {
         "name": "IsDeprecated",
         "kind": "NUMBER"
     },
@@ -20,11 +16,15 @@
         "kind": "NUMBER"
     },
     {
-        "name": "IsNameInContext",
+        "name": "NumNameInContext",
         "kind": "NUMBER"
     },
     {
-        "name": "IsForbidden",
+        "name": "FractionNameInContext",
+        "kind": "NUMBER"
+    },
+    {
+        "name": "IsNameInContext",
         "kind": "NUMBER"
     },
     {
@@ -32,7 +32,7 @@
         "kind": "NUMBER"
     },
     {
-        "name": "FileProximityDistance",
+        "name": "FileProximityDistanceCost",
         "kind": "NUMBER"
     },
     {
@@ -40,7 +40,7 @@
         "kind": "NUMBER"
     },
     {
-        "name": "SymbolScopeDistance",
+        "name": "SymbolScopeDistanceCost",
         "kind": "NUMBER"
     },
     {
