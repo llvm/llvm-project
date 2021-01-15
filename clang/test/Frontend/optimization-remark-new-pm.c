@@ -1,8 +1,8 @@
 // Verify that remarks for the inliner appear. The remarks under the new PM will
 // be slightly different than those emitted by the legacy PM. The new PM inliner
 // also doesnot appear to be added at O0, so we test at O1.
-// RUN: %clang_cc1 %s -Rpass=inline -Rpass-analysis=inline -Rpass-missed=inline -O1 -fexperimental-new-pass-manager -emit-llvm-only -verify -mllvm -mandatory-inlining-first=0
-// RUN: %clang_cc1 %s -Rpass=inline -Rpass-analysis=inline -Rpass-missed=inline -O1 -fexperimental-new-pass-manager -emit-llvm-only -debug-info-kind=line-tables-only -verify -mllvm -mandatory-inlining-first=0
+// RUN: %clang_cc1 %s -Rpass=inline -Rpass-analysis=inline -Rpass-missed=inline -O1 -fexperimental-new-pass-manager -emit-llvm-only -mllvm -mandatory-inlining-first=false -verify
+// RUN: %clang_cc1 %s -Rpass=inline -Rpass-analysis=inline -Rpass-missed=inline -O1 -fexperimental-new-pass-manager -emit-llvm-only -debug-info-kind=line-tables-only -mllvm -mandatory-inlining-first=false -verify
 
 int foo(int x, int y) __attribute__((always_inline));
 int foo(int x, int y) { return x + y; }
