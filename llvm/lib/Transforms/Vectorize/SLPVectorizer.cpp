@@ -6877,12 +6877,6 @@ public:
             markExtraArg(Stack.back(), I);
             continue;
           }
-        } else if (RdxLeafVal && RdxLeafVal != EdgeOpData) {
-          // Make sure that the opcodes of the operations that we are going to
-          // reduce match.
-          // I is an extra argument for TreeN (its parent operation).
-          markExtraArg(Stack.back(), I);
-          continue;
         } else if (!RdxLeafVal) {
           RdxLeafVal = EdgeOpData;
         }

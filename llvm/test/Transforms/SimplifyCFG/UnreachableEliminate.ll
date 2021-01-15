@@ -69,7 +69,6 @@ define void @test5(i1 %cond, i8* %ptr) {
 ; CHECK-NEXT:    store i8 2, i8* [[PTR:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
-
 entry:
   br i1 %cond, label %bb1, label %bb3
 
@@ -88,11 +87,10 @@ bb2:
 define void @test5_no_null_opt(i1 %cond, i8* %ptr) #0 {
 ; CHECK-LABEL: @test5_no_null_opt(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DOTPTR:%.*]] = select i1 [[COND:%.*]], i8* null, i8* [[PTR:%.*]]
-; CHECK-NEXT:    store i8 2, i8* [[DOTPTR]], align 8
+; CHECK-NEXT:    [[PTR_2:%.*]] = select i1 [[COND:%.*]], i8* null, i8* [[PTR:%.*]]
+; CHECK-NEXT:    store i8 2, i8* [[PTR_2]], align 8
 ; CHECK-NEXT:    ret void
 ;
-
 entry:
   br i1 %cond, label %bb1, label %bb3
 
@@ -205,5 +203,297 @@ else:
   call void %phi()
   ret void
 }
+
+declare i8* @fn_nonnull_noundef_arg(i8* nonnull noundef %p)
+declare i8* @fn_nonnull_arg(i8* nonnull %p)
+declare i8* @fn_noundef_arg(i8* noundef %p)
+
+define void @test9(i1 %X, i8* %Y) {
+; CHECK-LABEL: @test9(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @fn_nonnull_noundef_arg(i8* [[Y:%.*]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %X, label %if, label %else
+
+if:
+  br label %else
+
+else:
+  %phi = phi i8* [ %Y, %entry ], [ null, %if ]
+  call i8* @fn_nonnull_noundef_arg(i8* %phi)
+  ret void
+}
+
+define void @test9_undef(i1 %X, i8* %Y) {
+; CHECK-LABEL: @test9_undef(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i8* @fn_noundef_arg(i8* [[Y:%.*]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %X, label %if, label %else
+
+if:
+  br label %else
+
+else:
+  %phi = phi i8* [ %Y, %entry ], [ undef, %if ]
+  call i8* @fn_noundef_arg(i8* %phi)
+  ret void
+}
+
+define void @test9_undef_null_defined(i1 %X, i8* %Y) #0 {
+; CHECK-LABEL: @test9_undef_null_defined(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i8* @fn_noundef_arg(i8* [[Y:%.*]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %X, label %if, label %else
+
+if:
+  br label %else
+
+else:
+  %phi = phi i8* [ %Y, %entry ], [ undef, %if ]
+  call i8* @fn_noundef_arg(i8* %phi)
+  ret void
+}
+
+define void @test9_null_callsite(i1 %X, i8* %Y) {
+; CHECK-LABEL: @test9_null_callsite(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @fn_nonnull_arg(i8* noundef nonnull [[Y:%.*]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %X, label %if, label %else
+
+if:
+  br label %else
+
+else:
+  %phi = phi i8* [ %Y, %entry ], [ null, %if ]
+  call i8* @fn_nonnull_arg(i8* nonnull noundef %phi)
+  ret void
+}
+
+define void @test9_gep_mismatch(i1 %X, i8* %Y,  i8* %P) {
+; CHECK-LABEL: @test9_gep_mismatch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[X:%.*]], i8* null, i8* [[Y:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, i8* [[P:%.*]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = call i8* @fn_nonnull_noundef_arg(i8* [[GEP]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %X, label %if, label %else
+
+if:
+  br label %else
+
+else:
+  %phi = phi i8* [ %Y, %entry ], [ null, %if ]
+  %gep = getelementptr inbounds i8, i8* %P, i64 0
+  call i8* @fn_nonnull_noundef_arg(i8* %gep)
+  ret void
+}
+
+define void @test9_gep_zero(i1 %X, i8* %Y) {
+; CHECK-LABEL: @test9_gep_zero(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, i8* [[Y:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @fn_nonnull_noundef_arg(i8* [[GEP]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %X, label %if, label %else
+
+if:
+  br label %else
+
+else:
+  %phi = phi i8* [ %Y, %entry ], [ null, %if ]
+  %gep = getelementptr inbounds i8, i8* %phi, i64 0
+  call i8* @fn_nonnull_noundef_arg(i8* %gep)
+  ret void
+}
+
+define void @test9_gep_bitcast(i1 %X, i32* %Y) {
+; CHECK-LABEL: @test9_gep_bitcast(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, i32* [[Y:%.*]], i64 0
+; CHECK-NEXT:    [[BC:%.*]] = bitcast i32* [[GEP]] to i8*
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @fn_nonnull_noundef_arg(i8* [[BC]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %X, label %if, label %else
+
+if:
+  br label %else
+
+else:
+  %phi = phi i32* [ %Y, %entry ], [ null, %if ]
+  %gep = getelementptr inbounds i32, i32* %phi, i64 0
+  %bc = bitcast i32* %gep to i8*
+  call i8* @fn_nonnull_noundef_arg(i8* %bc)
+  ret void
+}
+
+define void @test9_gep_nonzero(i1 %X, i8* %Y) {
+; CHECK-LABEL: @test9_gep_nonzero(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[X:%.*]], i8* null, i8* [[Y:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, i8* [[SPEC_SELECT]], i64 12
+; CHECK-NEXT:    [[TMP0:%.*]] = call i8* @fn_nonnull_noundef_arg(i8* [[GEP]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %X, label %if, label %else
+
+if:
+  br label %else
+
+else:
+  %phi = phi i8* [ %Y, %entry ], [ null, %if ]
+  %gep = getelementptr i8, i8* %phi, i64 12
+  call i8* @fn_nonnull_noundef_arg(i8* %gep)
+  ret void
+}
+
+define void @test9_gep_inbounds_nonzero(i1 %X, i8* %Y) {
+; CHECK-LABEL: @test9_gep_inbounds_nonzero(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[X:%.*]], i8* null, i8* [[Y:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, i8* [[SPEC_SELECT]], i64 12
+; CHECK-NEXT:    [[TMP0:%.*]] = call i8* @fn_nonnull_noundef_arg(i8* [[GEP]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %X, label %if, label %else
+
+if:
+  br label %else
+
+else:
+  %phi = phi i8* [ %Y, %entry ], [ null, %if ]
+  %gep = getelementptr inbounds i8, i8* %phi, i64 12
+  call i8* @fn_nonnull_noundef_arg(i8* %gep)
+  ret void
+}
+
+
+define void @test9_gep_inbouds_unknown_null(i1 %X, i8* %Y, i64 %I) {
+; CHECK-LABEL: @test9_gep_inbouds_unknown_null(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[X:%.*]], i8* null, i8* [[Y:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, i8* [[SPEC_SELECT]], i64 [[I:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i8* @fn_nonnull_noundef_arg(i8* [[GEP]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %X, label %if, label %else
+
+if:
+  br label %else
+
+else:
+  %phi = phi i8* [ %Y, %entry ], [ null, %if ]
+  %gep = getelementptr inbounds i8, i8* %phi, i64 %I
+  call i8* @fn_nonnull_noundef_arg(i8* %gep)
+  ret void
+}
+
+define void @test9_gep_unknown_null(i1 %X, i8* %Y, i64 %I) {
+; CHECK-LABEL: @test9_gep_unknown_null(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[X:%.*]], i8* null, i8* [[Y:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, i8* [[SPEC_SELECT]], i64 [[I:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i8* @fn_nonnull_noundef_arg(i8* [[GEP]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %X, label %if, label %else
+
+if:
+  br label %else
+
+else:
+  %phi = phi i8* [ %Y, %entry ], [ null, %if ]
+  %gep = getelementptr i8, i8* %phi, i64 %I
+  call i8* @fn_nonnull_noundef_arg(i8* %gep)
+  ret void
+}
+
+define void @test9_gep_unknown_undef(i1 %X, i8* %Y, i64 %I) {
+; CHECK-LABEL: @test9_gep_unknown_undef(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, i8* [[Y:%.*]], i64 [[I:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i8* @fn_noundef_arg(i8* [[GEP]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %X, label %if, label %else
+
+if:
+  br label %else
+
+else:
+  %phi = phi i8* [ %Y, %entry ], [ undef, %if ]
+  %gep = getelementptr i8, i8* %phi, i64 %I
+  call i8* @fn_noundef_arg(i8* %gep)
+  ret void
+}
+
+define void @test9_missing_noundef(i1 %X, i8* %Y) {
+; CHECK-LABEL: @test9_missing_noundef(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[X:%.*]], i8* null, i8* [[Y:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i8* @fn_nonnull_arg(i8* [[SPEC_SELECT]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %X, label %if, label %else
+
+if:
+  br label %else
+
+else:
+  %phi = phi i8* [ %Y, %entry ], [ null, %if ]
+  call i8* @fn_nonnull_arg(i8* %phi)
+  ret void
+}
+
+define void @test9_null_defined(i1 %X, i8* %Y) #0 {
+; CHECK-LABEL: @test9_null_defined(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[X:%.*]], i8* null, i8* [[Y:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i8* @fn_nonnull_noundef_arg(i8* [[SPEC_SELECT]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %X, label %if, label %else
+
+if:
+  br label %else
+
+else:
+  %phi = phi i8* [ %Y, %entry ], [ null, %if ]
+  call i8* @fn_nonnull_noundef_arg(i8* %phi)
+  ret void
+}
+
+
 
 attributes #0 = { null_pointer_is_valid }

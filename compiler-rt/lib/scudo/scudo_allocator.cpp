@@ -672,7 +672,8 @@ static BackendT &getBackend() {
 void initScudo() {
   Instance.init();
 #ifdef GWP_ASAN_HOOKS
-  gwp_asan::options::initOptions();
+  gwp_asan::options::initOptions(__sanitizer::GetEnv("GWP_ASAN_OPTIONS"),
+                                 Printf);
   gwp_asan::options::Options &Opts = gwp_asan::options::getOptions();
   Opts.Backtrace = gwp_asan::backtrace::getBacktraceFunction();
   GuardedAlloc.init(Opts);
