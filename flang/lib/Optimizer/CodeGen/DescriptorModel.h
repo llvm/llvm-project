@@ -71,6 +71,12 @@ TypeBuilderFunc getModel<unsigned long long>() {
   };
 }
 template <>
+TypeBuilderFunc getModel<long long>() {
+  return [](mlir::MLIRContext *context) -> mlir::LLVM::LLVMType {
+    return mlir::LLVM::LLVMIntegerType::get(context, sizeof(long long) * 8);
+  };
+}
+template <>
 TypeBuilderFunc getModel<Fortran::ISO::CFI_rank_t>() {
   return [](mlir::MLIRContext *context) -> mlir::LLVM::LLVMType {
     return mlir::LLVM::LLVMIntegerType::get(
