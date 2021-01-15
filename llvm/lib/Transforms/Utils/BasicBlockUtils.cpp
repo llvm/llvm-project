@@ -659,11 +659,31 @@ BasicBlock *llvm::splitBlockBefore(BasicBlock *Old, Instruction *SplitPt,
 /// Update DominatorTree, LoopInfo, and LCCSA analysis information.
 static void UpdateAnalysisInformation(BasicBlock *OldBB, BasicBlock *NewBB,
                                       ArrayRef<BasicBlock *> Preds,
-                                      DominatorTree *DT, LoopInfo *LI,
-                                      MemorySSAUpdater *MSSAU,
+                                      DomTreeUpdater *DTU, DominatorTree *DT,
+                                      LoopInfo *LI, MemorySSAUpdater *MSSAU,
                                       bool PreserveLCSSA, bool &HasLoopExit) {
   // Update dominator tree if available.
-  if (DT) {
+  if (DTU) {
+    // Recalculation of DomTree is needed when updating a forward DomTree and
+    // the Entry BB is replaced.
+    if (NewBB == &NewBB->getParent()->getEntryBlock() && DTU->hasDomTree()) {
+      // The entry block was removed and there is no external interface for
+      // the dominator tree to be notified of this change. In this corner-case
+      // we recalculate the entire tree.
+      DTU->recalculate(*NewBB->getParent());
+    } else {
+      // Split block expects NewBB to have a non-empty set of predecessors.
+      SmallVector<DominatorTree::UpdateType, 8> Updates;
+      SmallSetVector<BasicBlock *, 8> UniquePreds(Preds.begin(), Preds.end());
+      Updates.push_back({DominatorTree::Insert, NewBB, OldBB});
+      Updates.reserve(Updates.size() + 2 * UniquePreds.size());
+      for (auto *UniquePred : UniquePreds) {
+        Updates.push_back({DominatorTree::Insert, UniquePred, NewBB});
+        Updates.push_back({DominatorTree::Delete, UniquePred, OldBB});
+      }
+      DTU->applyUpdates(Updates);
+    }
+  } else if (DT) {
     if (OldBB == DT->getRootNode()->getBlock()) {
       assert(NewBB == &NewBB->getParent()->getEntryBlock());
       DT->setNewRoot(NewBB);
@@ -681,6 +701,8 @@ static void UpdateAnalysisInformation(BasicBlock *OldBB, BasicBlock *NewBB,
   if (!LI)
     return;
 
+  if (DTU && DTU->hasDomTree())
+    DT = &DTU->getDomTree();
   assert(DT && "DT should be available to update LoopInfo!");
   Loop *L = LI->getLoopFor(OldBB);
 
@@ -814,11 +836,17 @@ static void UpdatePHINodes(BasicBlock *OrigBB, BasicBlock *NewBB,
   }
 }
 
-BasicBlock *llvm::SplitBlockPredecessors(BasicBlock *BB,
-                                         ArrayRef<BasicBlock *> Preds,
-                                         const char *Suffix, DominatorTree *DT,
-                                         LoopInfo *LI, MemorySSAUpdater *MSSAU,
-                                         bool PreserveLCSSA) {
+static void SplitLandingPadPredecessorsImpl(
+    BasicBlock *OrigBB, ArrayRef<BasicBlock *> Preds, const char *Suffix1,
+    const char *Suffix2, SmallVectorImpl<BasicBlock *> &NewBBs,
+    DomTreeUpdater *DTU, DominatorTree *DT, LoopInfo *LI,
+    MemorySSAUpdater *MSSAU, bool PreserveLCSSA);
+
+static BasicBlock *
+SplitBlockPredecessorsImpl(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
+                           const char *Suffix, DomTreeUpdater *DTU,
+                           DominatorTree *DT, LoopInfo *LI,
+                           MemorySSAUpdater *MSSAU, bool PreserveLCSSA) {
   // Do not attempt to split that which cannot be split.
   if (!BB->canSplitPredecessors())
     return nullptr;
@@ -829,8 +857,8 @@ BasicBlock *llvm::SplitBlockPredecessors(BasicBlock *BB,
     SmallVector<BasicBlock*, 2> NewBBs;
     std::string NewName = std::string(Suffix) + ".split-lp";
 
-    SplitLandingPadPredecessors(BB, Preds, Suffix, NewName.c_str(), NewBBs, DT,
-                                LI, MSSAU, PreserveLCSSA);
+    SplitLandingPadPredecessorsImpl(BB, Preds, Suffix, NewName.c_str(), NewBBs,
+                                    DTU, DT, LI, MSSAU, PreserveLCSSA);
     return NewBBs[0];
   }
 
@@ -882,7 +910,7 @@ BasicBlock *llvm::SplitBlockPredecessors(BasicBlock *BB,
 
   // Update DominatorTree, LoopInfo, and LCCSA analysis information.
   bool HasLoopExit = false;
-  UpdateAnalysisInformation(BB, NewBB, Preds, DT, LI, MSSAU, PreserveLCSSA,
+  UpdateAnalysisInformation(BB, NewBB, Preds, DTU, DT, LI, MSSAU, PreserveLCSSA,
                             HasLoopExit);
 
   if (!Preds.empty()) {
@@ -902,13 +930,29 @@ BasicBlock *llvm::SplitBlockPredecessors(BasicBlock *BB,
   return NewBB;
 }
 
-void llvm::SplitLandingPadPredecessors(BasicBlock *OrigBB,
-                                       ArrayRef<BasicBlock *> Preds,
-                                       const char *Suffix1, const char *Suffix2,
-                                       SmallVectorImpl<BasicBlock *> &NewBBs,
-                                       DominatorTree *DT, LoopInfo *LI,
-                                       MemorySSAUpdater *MSSAU,
-                                       bool PreserveLCSSA) {
+BasicBlock *llvm::SplitBlockPredecessors(BasicBlock *BB,
+                                         ArrayRef<BasicBlock *> Preds,
+                                         const char *Suffix, DominatorTree *DT,
+                                         LoopInfo *LI, MemorySSAUpdater *MSSAU,
+                                         bool PreserveLCSSA) {
+  return SplitBlockPredecessorsImpl(BB, Preds, Suffix, /*DTU=*/nullptr, DT, LI,
+                                    MSSAU, PreserveLCSSA);
+}
+BasicBlock *llvm::SplitBlockPredecessors(BasicBlock *BB,
+                                         ArrayRef<BasicBlock *> Preds,
+                                         const char *Suffix,
+                                         DomTreeUpdater *DTU, LoopInfo *LI,
+                                         MemorySSAUpdater *MSSAU,
+                                         bool PreserveLCSSA) {
+  return SplitBlockPredecessorsImpl(BB, Preds, Suffix, DTU,
+                                    /*DT=*/nullptr, LI, MSSAU, PreserveLCSSA);
+}
+
+static void SplitLandingPadPredecessorsImpl(
+    BasicBlock *OrigBB, ArrayRef<BasicBlock *> Preds, const char *Suffix1,
+    const char *Suffix2, SmallVectorImpl<BasicBlock *> &NewBBs,
+    DomTreeUpdater *DTU, DominatorTree *DT, LoopInfo *LI,
+    MemorySSAUpdater *MSSAU, bool PreserveLCSSA) {
   assert(OrigBB->isLandingPad() && "Trying to split a non-landing pad!");
 
   // Create a new basic block for OrigBB's predecessors listed in Preds. Insert
@@ -933,8 +977,8 @@ void llvm::SplitLandingPadPredecessors(BasicBlock *OrigBB,
   }
 
   bool HasLoopExit = false;
-  UpdateAnalysisInformation(OrigBB, NewBB1, Preds, DT, LI, MSSAU, PreserveLCSSA,
-                            HasLoopExit);
+  UpdateAnalysisInformation(OrigBB, NewBB1, Preds, DTU, DT, LI, MSSAU,
+                            PreserveLCSSA, HasLoopExit);
 
   // Update the PHI nodes in OrigBB with the values coming from NewBB1.
   UpdatePHINodes(OrigBB, NewBB1, Preds, BI1, HasLoopExit);
@@ -969,7 +1013,7 @@ void llvm::SplitLandingPadPredecessors(BasicBlock *OrigBB,
 
     // Update DominatorTree, LoopInfo, and LCCSA analysis information.
     HasLoopExit = false;
-    UpdateAnalysisInformation(OrigBB, NewBB2, NewBB2Preds, DT, LI, MSSAU,
+    UpdateAnalysisInformation(OrigBB, NewBB2, NewBB2Preds, DTU, DT, LI, MSSAU,
                               PreserveLCSSA, HasLoopExit);
 
     // Update the PHI nodes in OrigBB with the values coming from NewBB2.
@@ -1004,6 +1048,29 @@ void llvm::SplitLandingPadPredecessors(BasicBlock *OrigBB,
     LPad->replaceAllUsesWith(Clone1);
     LPad->eraseFromParent();
   }
+}
+
+void llvm::SplitLandingPadPredecessors(BasicBlock *OrigBB,
+                                       ArrayRef<BasicBlock *> Preds,
+                                       const char *Suffix1, const char *Suffix2,
+                                       SmallVectorImpl<BasicBlock *> &NewBBs,
+                                       DominatorTree *DT, LoopInfo *LI,
+                                       MemorySSAUpdater *MSSAU,
+                                       bool PreserveLCSSA) {
+  return SplitLandingPadPredecessorsImpl(
+      OrigBB, Preds, Suffix1, Suffix2, NewBBs,
+      /*DTU=*/nullptr, DT, LI, MSSAU, PreserveLCSSA);
+}
+void llvm::SplitLandingPadPredecessors(BasicBlock *OrigBB,
+                                       ArrayRef<BasicBlock *> Preds,
+                                       const char *Suffix1, const char *Suffix2,
+                                       SmallVectorImpl<BasicBlock *> &NewBBs,
+                                       DomTreeUpdater *DTU, LoopInfo *LI,
+                                       MemorySSAUpdater *MSSAU,
+                                       bool PreserveLCSSA) {
+  return SplitLandingPadPredecessorsImpl(OrigBB, Preds, Suffix1, Suffix2,
+                                         NewBBs, DTU, /*DT=*/nullptr, LI, MSSAU,
+                                         PreserveLCSSA);
 }
 
 ReturnInst *llvm::FoldReturnIntoUncondBranch(ReturnInst *RI, BasicBlock *BB,
