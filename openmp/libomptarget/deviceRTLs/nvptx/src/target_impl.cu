@@ -56,7 +56,6 @@ DEVICE double __kmpc_impl_get_wtime() {
 }
 
 // In Cuda 9.0, __ballot(1) from Cuda 8.0 is replaced with __activemask().
-
 DEVICE __kmpc_impl_lanemask_t __kmpc_impl_activemask() {
 #if CUDA_VERSION >= 9000
   return __activemask();
@@ -66,7 +65,6 @@ DEVICE __kmpc_impl_lanemask_t __kmpc_impl_activemask() {
 }
 
 // In Cuda 9.0, the *_sync() version takes an extra argument 'mask'.
-
 DEVICE int32_t __kmpc_impl_shfl_sync(__kmpc_impl_lanemask_t Mask, int32_t Var,
                                      int32_t SrcLane) {
 #if CUDA_VERSION >= 9000
@@ -86,14 +84,7 @@ DEVICE int32_t __kmpc_impl_shfl_down_sync(__kmpc_impl_lanemask_t Mask,
 #endif // CUDA_VERSION
 }
 
-DEVICE void __kmpc_impl_syncthreads() {
-  // Use original __syncthreads if compiled by nvcc or clang >= 9.0.
-#if !defined(__clang__) || __clang_major__ >= 9
-  __syncthreads();
-#else
-  asm volatile("bar.sync %0;" : : "r"(0) : "memory");
-#endif // __clang__
-}
+DEVICE void __kmpc_impl_syncthreads() { __syncthreads(); }
 
 DEVICE void __kmpc_impl_syncwarp(__kmpc_impl_lanemask_t Mask) {
 #if CUDA_VERSION >= 9000
@@ -145,11 +136,11 @@ DEVICE void __kmpc_impl_destroy_lock(omp_lock_t *lock) {
 DEVICE void __kmpc_impl_set_lock(omp_lock_t *lock) {
   // TODO: not sure spinning is a good idea here..
   while (__kmpc_atomic_cas(lock, UNSET, SET) != UNSET) {
-    clock_t start = clock();
-    clock_t now;
+    int32_t start = __nvvm_read_ptx_sreg_clock();
+    int32_t now;
     for (;;) {
-      now = clock();
-      clock_t cycles = now > start ? now - start : now + (0xffffffff - start);
+      now = __nvvm_read_ptx_sreg_clock();
+      int32_t cycles = now > start ? now - start : now + (0xffffffff - start);
       if (cycles >= __OMP_SPIN * GetBlockIdInKernel()) {
         break;
       }
