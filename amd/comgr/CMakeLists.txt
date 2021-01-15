@@ -116,7 +116,7 @@ if (ADDRESS_SANITIZER)
 
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ASAN_COMPILER_FLAGS}")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ASAN_COMPILER_FLAGS}")
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${ASAN_LINKER_FLAGS}")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${ASAN_LINKER_FLAGS} -s")
   set(CMAKE_SHARED_LINKER_FLAGS
     "${CMAKE_SHARED_LINKER_FLAGS} ${ASAN_LINKER_FLAGS}")
 endif()
@@ -318,11 +318,11 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   # Add packaging directives for amd_comgr
   set(CPACK_PACKAGE_NAME comgr)
   set(CPACK_PACKAGE_VENDOR "Advanced Micro Devices, Inc.")
-  set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Library to provide support functions")
+  set(CPACK_PACKAGE_DESCRIPTION "Library to provide support functions\nfor ROCm code objects.")
   set(CPACK_PACKAGE_VERSION_MAJOR "${amd_comgr_VERSION_MAJOR}")
   set(CPACK_PACKAGE_VERSION_MINOR "${amd_comgr_VERSION_MINOR}")
   set(CPACK_PACKAGE_VERSION_PATCH "${amd_comgr_VERSION_PATCH}")
-  set(CPACK_PACKAGE_CONTACT "Advanced Micro Devices, Inc.")
+  set(CPACK_PACKAGE_CONTACT "ROCm Compiler Support <rocm.compiler.support@amd.com>")
   set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
 
   # Make proper version for appending
