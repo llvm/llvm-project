@@ -80,6 +80,10 @@ unsigned FloatType::getWidth() {
     return 32;
   if (isa<Float64Type>())
     return 64;
+  if (isa<Float80Type>())
+    return 80;
+  if (isa<Float128Type>())
+    return 128;
   llvm_unreachable("unexpected float type");
 }
 
@@ -93,6 +97,10 @@ const llvm::fltSemantics &FloatType::getFloatSemantics() {
     return APFloat::IEEEsingle();
   if (isa<Float64Type>())
     return APFloat::IEEEdouble();
+  if (isa<Float80Type>())
+    return APFloat::x87DoubleExtended();
+  if (isa<Float128Type>())
+    return APFloat::IEEEquad();
   llvm_unreachable("non-floating point type used");
 }
 

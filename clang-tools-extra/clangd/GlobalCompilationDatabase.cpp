@@ -271,7 +271,8 @@ parseJSON(PathRef Path, llvm::StringRef Data, std::string &Error) {
 }
 static std::unique_ptr<tooling::CompilationDatabase>
 parseFixed(PathRef Path, llvm::StringRef Data, std::string &Error) {
-  return tooling::FixedCompilationDatabase::loadFromBuffer(Path, Data, Error);
+  return tooling::FixedCompilationDatabase::loadFromBuffer(
+      llvm::sys::path::parent_path(Path), Data, Error);
 }
 
 bool DirectoryBasedGlobalCompilationDatabase::DirectoryCache::load(

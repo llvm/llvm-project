@@ -82,6 +82,15 @@ bool isDeducedAsLambda(const SelectionTree::Node *Node, SourceLocation Loc) {
   return false;
 }
 
+// Returns true iff "auto" in Node is really part of the template parameter,
+// which we cannot expand.
+bool isTemplateParam(const SelectionTree::Node *Node) {
+  if (Node->Parent)
+    if (Node->Parent->ASTNode.get<NonTypeTemplateParmDecl>())
+      return true;
+  return false;
+}
+
 bool ExpandAutoType::prepare(const Selection& Inputs) {
   CachedLocation = llvm::None;
   if (auto *Node = Inputs.ASTSelection.commonAncestor()) {
@@ -90,7 +99,8 @@ bool ExpandAutoType::prepare(const Selection& Inputs) {
         // Code in apply() does handle 'decltype(auto)' yet.
         if (!Result.getTypePtr()->isDecltypeAuto() &&
             !isStructuredBindingType(Node) &&
-            !isDeducedAsLambda(Node, Result.getBeginLoc()))
+            !isDeducedAsLambda(Node, Result.getBeginLoc()) &&
+            !isTemplateParam(Node))
           CachedLocation = Result;
       }
     }

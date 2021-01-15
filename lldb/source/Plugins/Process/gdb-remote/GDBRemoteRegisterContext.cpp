@@ -31,19 +31,20 @@ using namespace lldb_private::process_gdb_remote;
 // GDBRemoteRegisterContext constructor
 GDBRemoteRegisterContext::GDBRemoteRegisterContext(
     ThreadGDBRemote &thread, uint32_t concrete_frame_idx,
-    GDBRemoteDynamicRegisterInfo &reg_info, bool read_all_at_once,
+    GDBRemoteDynamicRegisterInfoSP reg_info_sp, bool read_all_at_once,
     bool write_all_at_once)
-    : RegisterContext(thread, concrete_frame_idx), m_reg_info(reg_info),
-      m_reg_valid(), m_reg_data(), m_read_all_at_once(read_all_at_once),
+    : RegisterContext(thread, concrete_frame_idx),
+      m_reg_info_sp(std::move(reg_info_sp)), m_reg_valid(), m_reg_data(),
+      m_read_all_at_once(read_all_at_once),
       m_write_all_at_once(write_all_at_once) {
   // Resize our vector of bools to contain one bool for every register. We will
   // use these boolean values to know when a register value is valid in
   // m_reg_data.
-  m_reg_valid.resize(reg_info.GetNumRegisters());
+  m_reg_valid.resize(m_reg_info_sp->GetNumRegisters());
 
   // Make a heap based buffer that is big enough to store all registers
   DataBufferSP reg_data_sp(
-      new DataBufferHeap(reg_info.GetRegisterDataByteSize(), 0));
+      new DataBufferHeap(m_reg_info_sp->GetRegisterDataByteSize(), 0));
   m_reg_data.SetData(reg_data_sp);
   m_reg_data.SetByteOrder(thread.GetProcess()->GetByteOrder());
 }
@@ -62,12 +63,12 @@ void GDBRemoteRegisterContext::SetAllRegisterValid(bool b) {
 }
 
 size_t GDBRemoteRegisterContext::GetRegisterCount() {
-  return m_reg_info.GetNumRegisters();
+  return m_reg_info_sp->GetNumRegisters();
 }
 
 const RegisterInfo *
 GDBRemoteRegisterContext::GetRegisterInfoAtIndex(size_t reg) {
-  RegisterInfo *reg_info = m_reg_info.GetRegisterInfoAtIndex(reg);
+  RegisterInfo *reg_info = m_reg_info_sp->GetRegisterInfoAtIndex(reg);
 
   if (reg_info && reg_info->dynamic_size_dwarf_expr_bytes) {
     const ArchSpec &arch = m_thread.GetProcess()->GetTarget().GetArchitecture();
@@ -78,11 +79,11 @@ GDBRemoteRegisterContext::GetRegisterInfoAtIndex(size_t reg) {
 }
 
 size_t GDBRemoteRegisterContext::GetRegisterSetCount() {
-  return m_reg_info.GetNumRegisterSets();
+  return m_reg_info_sp->GetNumRegisterSets();
 }
 
 const RegisterSet *GDBRemoteRegisterContext::GetRegisterSet(size_t reg_set) {
-  return m_reg_info.GetRegisterSet(reg_set);
+  return m_reg_info_sp->GetRegisterSet(reg_set);
 }
 
 bool GDBRemoteRegisterContext::ReadRegister(const RegisterInfo *reg_info,
@@ -209,9 +210,10 @@ bool GDBRemoteRegisterContext::ReadRegisterBytes(const RegisterInfo *reg_info,
           SetAllRegisterValid(true);
           return true;
         } else if (buffer_sp->GetByteSize() > 0) {
-          const int regcount = m_reg_info.GetNumRegisters();
+          const int regcount = m_reg_info_sp->GetNumRegisters();
           for (int i = 0; i < regcount; i++) {
-            struct RegisterInfo *reginfo = m_reg_info.GetRegisterInfoAtIndex(i);
+            struct RegisterInfo *reginfo =
+                m_reg_info_sp->GetRegisterInfoAtIndex(i);
             if (reginfo->byte_offset + reginfo->byte_size 
                    <= buffer_sp->GetByteSize()) {
               m_reg_valid[i] = true;
@@ -506,7 +508,7 @@ bool GDBRemoteRegisterContext::ReadAllRegisterValues(
       // m_reg_data buffer
     }
     data_sp = std::make_shared<DataBufferHeap>(
-        m_reg_data.GetDataStart(), m_reg_info.GetRegisterDataByteSize());
+        m_reg_data.GetDataStart(), m_reg_info_sp->GetRegisterDataByteSize());
     return true;
   } else {
 
@@ -708,7 +710,7 @@ bool GDBRemoteRegisterContext::WriteAllRegisterValues(
 
 uint32_t GDBRemoteRegisterContext::ConvertRegisterKindToRegisterNumber(
     lldb::RegisterKind kind, uint32_t num) {
-  return m_reg_info.ConvertRegisterKindToRegisterNumber(kind, num);
+  return m_reg_info_sp->ConvertRegisterKindToRegisterNumber(kind, num);
 }
 
 void GDBRemoteDynamicRegisterInfo::HardcodeARMRegisters(bool from_scratch) {

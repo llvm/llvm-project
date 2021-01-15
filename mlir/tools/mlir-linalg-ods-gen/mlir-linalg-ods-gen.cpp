@@ -1768,6 +1768,7 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
     std::string odsType = llvm::StringSwitch<std::string>(elementType)
                               .Case("f32", "F32")
                               .Case("i32", "I32")
+                              .Case("i64", "I64")
                               .Default("");
     if (odsType.empty()) {
       parser.emitError("unimplemented support for attribute element type: " +
@@ -1811,7 +1812,8 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
       let regions = (region AnyRegion:$region);
 
       let skipDefaultBuilders = 1;
-      let builders = [ OpBuilderDAG<
+      let builders = [
+        OpBuilderDAG<
         (ins "ValueRange":$inputs, "ValueRange":$outputs),
         [{{
           $_state.addOperands(inputs);
@@ -1826,7 +1828,8 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
             $_state,
             TypeRange(inputs),
             TypeRange(outputs));
-        }]>, OpBuilderDAG<
+        }]>,
+        OpBuilderDAG<
         (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
              "ValueRange":$outputs),
         [{{
@@ -1843,7 +1846,8 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
             $_state,
             TypeRange(inputs),
             TypeRange(outputs));
-        }]>, OpBuilderDAG<
+        }]>,
+        OpBuilderDAG<
         (ins "TypeRange":$resultTensorTypes, "ValueRange":$operands,
              CArg<"ArrayRef<NamedAttribute>", "{{}">:$attributes),
         [{{
@@ -1852,6 +1856,7 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
           $_state.addTypes(resultTensorTypes);
           (void)$_state.addRegion();
         }]>
+        {5}
       ];
       let printer = [{{ return ::printNamedStructuredOp(p, *this); }];
       let parser = [{{ return ::parseNamedStructuredOp<{0}>(parser, result); }];
@@ -1873,8 +1878,8 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
       }];
   })FMT";
 
+  // Generate documentation.
   std::string doc;
-
   if (!docString.empty()) {
     const char *docFmt = R"FMT(
       let summary = [{ {0} }];
@@ -1888,8 +1893,47 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
     doc = llvm::formatv(docFmt, summary.trim(), description.trim());
   }
 
+  // Generate an additional builder that has parameters for attributes.
+  std::string attrBuilder;
+  if (!registeredAttrs.empty()) {
+    SmallVector<std::string, 4> attrParams, attrStmts;
+    for (const auto &attr : registeredAttrs) {
+      llvm::StringRef name = attr.first;
+      attrParams.push_back(llvm::formatv("\"Attribute\":${0}", name));
+      attrStmts.push_back(
+          llvm::formatv("$_state.addAttribute(\"{0}\", {0});", name));
+    }
+    std::string attrParamsList = llvm::join(attrParams, ", ");
+    std::string attrStmtsList = llvm::join(attrStmts, "\n");
+
+    const char *builderFmt = R"FMT(
+      , OpBuilderDAG<
+      (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
+           "ValueRange":$outputs, {1}),
+      [{{
+        $_state.addOperands(inputs);
+        $_state.addOperands(outputs);
+        $_state.addTypes(resultTensorTypes);
+        $_state.addAttribute(
+          "operand_segment_sizes",
+          $_builder.getI32VectorAttr({{
+            static_cast<int32_t>(inputs.size()),
+            static_cast<int32_t>(outputs.size())}));
+        buildNamedStructuredOpRegionAndAttributes<{0}>(
+          $_builder,
+          $_state,
+          TypeRange(inputs),
+          TypeRange(outputs));
+        {2}
+      }]>
+    )FMT";
+    attrBuilder =
+        llvm::formatv(builderFmt, cppOpName, attrParamsList, attrStmtsList);
+  }
+
+  // Finally put everything together.
   os << llvm::formatv(header, cppOpName, linalgOpName, doc, attrList,
-                      state.orderedTensorArgs.size());
+                      state.orderedTensorArgs.size(), attrBuilder);
 }
 
 /// Print the C++ StructuredOpsInterface impl of `iterator_types`.
@@ -2146,13 +2190,15 @@ TCParser::RegisteredAttr::getValueFn(ArrayRef<uint64_t> indices) const {
       return llvm::formatv("getValue<float>({ {0} })", indexList);
     if (elementType == "i32")
       return llvm::formatv("getValue<int>({ {0} })", indexList);
+    if (elementType == "i64")
+      return llvm::formatv("getValue<int64_t>({ {0} })", indexList);
 
     return "";
   }
 
   if (elementType == "f32")
     return "getValue().convertToFloat()";
-  if (elementType == "i32")
+  if (elementType == "i32" || elementType == "i64")
     return "getInt()";
   return "";
 }

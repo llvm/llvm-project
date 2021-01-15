@@ -42,6 +42,14 @@ ThreadGDBRemote::ThreadGDBRemote(Process &process, lldb::tid_t tid)
   Log *log(GetLogIfAnyCategoriesSet(GDBR_LOG_THREAD));
   LLDB_LOG(log, "this = {0}, pid = {1}, tid = {2}", this, process.GetID(),
            GetID());
+  // At this point we can clone reg_info for architectures supporting
+  // run-time update to register sizes and offsets..
+  auto &gdb_process = static_cast<ProcessGDBRemote &>(process);
+  if (!gdb_process.m_register_info_sp->IsReconfigurable())
+    m_reg_info_sp = gdb_process.m_register_info_sp;
+  else
+    m_reg_info_sp = std::make_shared<GDBRemoteDynamicRegisterInfo>(
+        *gdb_process.m_register_info_sp);
 }
 
 ThreadGDBRemote::~ThreadGDBRemote() {
@@ -307,8 +315,8 @@ ThreadGDBRemote::CreateRegisterContextForFrame(StackFrame *frame) {
           !pSupported || gdb_process->m_use_g_packet_for_reading;
       bool write_all_registers_at_once = !pSupported;
       reg_ctx_sp = std::make_shared<GDBRemoteRegisterContext>(
-          *this, concrete_frame_idx, gdb_process->m_register_info,
-          read_all_registers_at_once, write_all_registers_at_once);
+          *this, concrete_frame_idx, m_reg_info_sp, read_all_registers_at_once,
+          write_all_registers_at_once);
     }
   } else {
     reg_ctx_sp = GetUnwinder().CreateRegisterContextForFrame(frame);

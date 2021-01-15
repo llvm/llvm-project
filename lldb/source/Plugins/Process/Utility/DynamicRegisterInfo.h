@@ -17,6 +17,10 @@
 #include "lldb/lldb-private.h"
 
 class DynamicRegisterInfo {
+protected:
+  DynamicRegisterInfo(DynamicRegisterInfo &) = default;
+  DynamicRegisterInfo &operator=(DynamicRegisterInfo &) = default;
+
 public:
   DynamicRegisterInfo() = default;
 
@@ -24,9 +28,6 @@ public:
                       const lldb_private::ArchSpec &arch);
 
   virtual ~DynamicRegisterInfo() = default;
-
-  DynamicRegisterInfo(DynamicRegisterInfo &) = delete;
-  void operator=(DynamicRegisterInfo &) = delete;
 
   DynamicRegisterInfo(DynamicRegisterInfo &&info);
   DynamicRegisterInfo &operator=(DynamicRegisterInfo &&info);
@@ -63,6 +64,8 @@ public:
 
   void Clear();
 
+  bool IsReconfigurable();
+
 protected:
   // Classes that inherit from DynamicRegisterInfo can see and modify these
   typedef std::vector<lldb_private::RegisterInfo> reg_collection;
@@ -79,6 +82,8 @@ protected:
 
   void MoveFrom(DynamicRegisterInfo &&info);
 
+  void ConfigureOffsets();
+
   reg_collection m_regs;
   set_collection m_sets;
   set_reg_num_collection m_set_reg_nums;
@@ -89,5 +94,6 @@ protected:
   size_t m_reg_data_byte_size = 0u; // The number of bytes required to store
                                     // all registers
   bool m_finalized = false;
+  bool m_is_reconfigurable = false;
 };
 #endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_DYNAMICREGISTERINFO_H

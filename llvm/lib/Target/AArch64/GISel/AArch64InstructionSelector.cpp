@@ -1947,8 +1947,11 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
     // Otherwise, it ends up matching an fpr/gpr variant and adding a cross-bank
     // copy.
     Register SrcReg = I.getOperand(1).getReg();
-    if (MRI.getType(SrcReg).isVector())
+    LLT SrcTy = MRI.getType(SrcReg);
+    LLT DstTy = MRI.getType(I.getOperand(0).getReg());
+    if (SrcTy.isVector() || SrcTy.getSizeInBits() != DstTy.getSizeInBits())
       return false;
+
     if (RBI.getRegBank(SrcReg, MRI, TRI)->getID() == AArch64::FPRRegBankID) {
       if (I.getOpcode() == TargetOpcode::G_SITOFP)
         I.setDesc(TII.get(AArch64::G_SITOF));

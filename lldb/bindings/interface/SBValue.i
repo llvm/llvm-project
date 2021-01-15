@@ -13,7 +13,7 @@ namespace lldb {
 
 SBValue supports iteration through its child, which in turn is represented
 as an SBValue.  For example, we can get the general purpose registers of a
-frame as an SBValue, and iterate through all the registers,
+frame as an SBValue, and iterate through all the registers,::
 
     registerSet = frame.registers # Returns an SBValueList.
     for regs in registerSet:
@@ -25,30 +25,30 @@ frame as an SBValue, and iterate through all the registers,
     for reg in GPRs:
         print('Name: ', reg.name, ' Value: ', reg.value)
 
-produces the output:
+produces the output: ::
 
-General Purpose Registers (number of children = 21):
-Name:  rax  Value:  0x0000000100000c5c
-Name:  rbx  Value:  0x0000000000000000
-Name:  rcx  Value:  0x00007fff5fbffec0
-Name:  rdx  Value:  0x00007fff5fbffeb8
-Name:  rdi  Value:  0x0000000000000001
-Name:  rsi  Value:  0x00007fff5fbffea8
-Name:  rbp  Value:  0x00007fff5fbffe80
-Name:  rsp  Value:  0x00007fff5fbffe60
-Name:  r8  Value:  0x0000000008668682
-Name:  r9  Value:  0x0000000000000000
-Name:  r10  Value:  0x0000000000001200
-Name:  r11  Value:  0x0000000000000206
-Name:  r12  Value:  0x0000000000000000
-Name:  r13  Value:  0x0000000000000000
-Name:  r14  Value:  0x0000000000000000
-Name:  r15  Value:  0x0000000000000000
-Name:  rip  Value:  0x0000000100000dae
-Name:  rflags  Value:  0x0000000000000206
-Name:  cs  Value:  0x0000000000000027
-Name:  fs  Value:  0x0000000000000010
-Name:  gs  Value:  0x0000000000000048
+    General Purpose Registers (number of children = 21):
+    Name:  rax  Value:  0x0000000100000c5c
+    Name:  rbx  Value:  0x0000000000000000
+    Name:  rcx  Value:  0x00007fff5fbffec0
+    Name:  rdx  Value:  0x00007fff5fbffeb8
+    Name:  rdi  Value:  0x0000000000000001
+    Name:  rsi  Value:  0x00007fff5fbffea8
+    Name:  rbp  Value:  0x00007fff5fbffe80
+    Name:  rsp  Value:  0x00007fff5fbffe60
+    Name:  r8  Value:  0x0000000008668682
+    Name:  r9  Value:  0x0000000000000000
+    Name:  r10  Value:  0x0000000000001200
+    Name:  r11  Value:  0x0000000000000206
+    Name:  r12  Value:  0x0000000000000000
+    Name:  r13  Value:  0x0000000000000000
+    Name:  r14  Value:  0x0000000000000000
+    Name:  r15  Value:  0x0000000000000000
+    Name:  rip  Value:  0x0000000100000dae
+    Name:  rflags  Value:  0x0000000000000206
+    Name:  cs  Value:  0x0000000000000027
+    Name:  fs  Value:  0x0000000000000010
+    Name:  gs  Value:  0x0000000000000048
 
 See also linked_list_iter() for another perspective on how to iterate through an
 SBValue instance which interprets the value object as representing the head of a
