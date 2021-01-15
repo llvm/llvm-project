@@ -1113,7 +1113,7 @@ bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(Instruction *TI,
       if (!SafeToMergeTerminators(TI, PTI, &FailBlocks)) {
         for (auto *Succ : FailBlocks) {
           if (!SplitBlockPredecessors(Succ, TI->getParent(), ".fold.split",
-                                      DTU ? &DTU->getDomTree() : nullptr))
+                                      DTU))
             return false;
         }
       }
@@ -1977,8 +1977,7 @@ static bool SinkCommonCodeFromPredecessors(BasicBlock *BB,
     LLVM_DEBUG(dbgs() << "SINK: Splitting edge\n");
     // We have a conditional edge and we're going to sink some instructions.
     // Insert a new block postdominating all blocks we're going to sink from.
-    if (!SplitBlockPredecessors(BB, UnconditionalPreds, ".sink.split",
-                                DTU ? &DTU->getDomTree() : nullptr))
+    if (!SplitBlockPredecessors(BB, UnconditionalPreds, ".sink.split", DTU))
       // Edges couldn't be split.
       return false;
     Changed = true;
@@ -3391,8 +3390,7 @@ static bool mergeConditionalStoreToAddress(
     // branch to QFB and PostBB.
     BasicBlock *TruePred = QTB ? QTB : QFB->getSinglePredecessor();
     BasicBlock *NewBB =
-        SplitBlockPredecessors(PostBB, {QFB, TruePred}, "condstore.split",
-                               DTU ? &DTU->getDomTree() : nullptr);
+        SplitBlockPredecessors(PostBB, {QFB, TruePred}, "condstore.split", DTU);
     if (!NewBB)
       return false;
     PostBB = NewBB;
@@ -4827,9 +4825,8 @@ static void createUnreachableSwitchDefault(SwitchInst *Switch,
                                            DomTreeUpdater *DTU) {
   LLVM_DEBUG(dbgs() << "SimplifyCFG: switch default is dead.\n");
   auto *BB = Switch->getParent();
-  BasicBlock *NewDefaultBlock =
-      SplitBlockPredecessors(Switch->getDefaultDest(), Switch->getParent(), "",
-                             DTU ? &DTU->getDomTree() : nullptr);
+  BasicBlock *NewDefaultBlock = SplitBlockPredecessors(
+      Switch->getDefaultDest(), Switch->getParent(), "", DTU);
   auto *OrigDefaultBlock = Switch->getDefaultDest();
   Switch->setDefaultDest(&*NewDefaultBlock);
   if (DTU)
