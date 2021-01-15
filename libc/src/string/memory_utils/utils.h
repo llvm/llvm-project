@@ -60,6 +60,10 @@ static inline intptr_t offset_to_next_cache_line(const void *ptr) {
   return offset_to_next_aligned<LLVM_LIBC_CACHELINE_SIZE>(ptr);
 }
 
+template <size_t alignment, typename T> static T *assume_aligned(T *ptr) {
+  return reinterpret_cast<T *>(__builtin_assume_aligned(ptr, alignment));
+}
+
 } // namespace __llvm_libc
 
 #endif // LLVM_LIBC_SRC_MEMORY_UTILS_H
