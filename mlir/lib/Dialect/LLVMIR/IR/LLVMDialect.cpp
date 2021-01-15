@@ -2042,8 +2042,6 @@ void LLVMDialect::initialize() {
 
   // clang-format off
   addTypes<LLVMVoidType,
-           LLVMFP128Type,
-           LLVMX86FP80Type,
            LLVMPPCFP128Type,
            LLVMX86MMXType,
            LLVMTokenType,

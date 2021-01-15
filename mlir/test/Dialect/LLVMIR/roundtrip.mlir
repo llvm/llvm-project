@@ -128,10 +128,10 @@ func @ops(%arg0: i32, %arg1: f32,
 
 // Extended and Quad floating point
 //
-// CHECK: %{{.*}} = llvm.fpext %[[FLOAT]] : f32 to !llvm.x86_fp80
-// CHECK: %{{.*}} = llvm.fpext %[[FLOAT]] : f32 to !llvm.fp128
-  %27 = llvm.fpext %arg1 : f32 to !llvm.x86_fp80
-  %28 = llvm.fpext %arg1 : f32 to !llvm.fp128
+// CHECK: %{{.*}} = llvm.fpext %[[FLOAT]] : f32 to f80
+// CHECK: %{{.*}} = llvm.fpext %[[FLOAT]] : f32 to f128
+  %27 = llvm.fpext %arg1 : f32 to f80
+  %28 = llvm.fpext %arg1 : f32 to f128
 
 // CHECK: %{{.*}} = llvm.fneg %[[FLOAT]] : f32
   %29 = llvm.fneg %arg1 : f32

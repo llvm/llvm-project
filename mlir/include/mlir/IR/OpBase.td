@@ -466,6 +466,8 @@ class FloatOfWidths<list<int> widths> :
 def F16 : F<16>;
 def F32 : F<32>;
 def F64 : F<64>;
+def F80 : F<80>;
+def F128 : F<128>;
 
 def BF16 : Type<CPred<"$_self.isBF16()">, "bfloat16 type">,
            BuildableType<"$_builder.getBF16Type()">;

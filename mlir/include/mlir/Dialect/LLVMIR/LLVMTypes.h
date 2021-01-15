@@ -36,9 +36,6 @@ struct LLVMStructTypeStorage;
 struct LLVMTypeAndSizeStorage;
 } // namespace detail
 
-class LLVMFP128Type;
-class LLVMX86FP80Type;
-
 //===----------------------------------------------------------------------===//
 // Trivial types.
 //===----------------------------------------------------------------------===//
@@ -51,8 +48,6 @@ class LLVMX86FP80Type;
   }
 
 DEFINE_TRIVIAL_LLVM_TYPE(LLVMVoidType);
-DEFINE_TRIVIAL_LLVM_TYPE(LLVMFP128Type);
-DEFINE_TRIVIAL_LLVM_TYPE(LLVMX86FP80Type);
 DEFINE_TRIVIAL_LLVM_TYPE(LLVMPPCFP128Type);
 DEFINE_TRIVIAL_LLVM_TYPE(LLVMX86MMXType);
 DEFINE_TRIVIAL_LLVM_TYPE(LLVMTokenType);
