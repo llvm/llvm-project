@@ -9,6 +9,9 @@
 #ifndef MLIR_DIALECT_LINALG_LINALGTYPES_H_
 #define MLIR_DIALECT_LINALG_LINALGTYPES_H_
 
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Types.h"
 
