@@ -491,6 +491,11 @@ static unsigned getOptimizationLevelSize(ArgList &Args) {
   return 0;
 }
 
+static std::string GetOptName(llvm::opt::OptSpecifier OptSpecifier) {
+  static const OptTable &OptTable = getDriverOptTable();
+  return OptTable.getOption(OptSpecifier).getPrefixedName();
+}
+
 static void addDiagnosticArgs(ArgList &Args, OptSpecifier Group,
                               OptSpecifier GroupWithValue,
                               std::vector<std::string> &Diagnostics) {
@@ -2137,6 +2142,15 @@ static const StringRef GetInputKindName(InputKind IK) {
   llvm_unreachable("unknown input language");
 }
 
+static void GenerateLangArgs(const LangOptions &Opts,
+                             SmallVectorImpl<const char *> &Args,
+                             CompilerInvocation::StringAllocator SA) {
+  if (Opts.IncludeDefaultHeader)
+    Args.push_back(SA(GetOptName(OPT_finclude_default_header)));
+  if (Opts.DeclareOpenCLBuiltins)
+    Args.push_back(SA(GetOptName(OPT_fdeclare_opencl_builtins)));
+}
+
 static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
                           const llvm::Triple &T,
                           std::vector<std::string> &Includes,
@@ -2211,6 +2225,10 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   }
 
   Opts.SYCLIsDevice = Opts.SYCL && Args.hasArg(options::OPT_fsycl_is_device);
+
+  // These need to be parsed now. They are used to set OpenCL defaults.
+  Opts.IncludeDefaultHeader = Args.hasArg(OPT_finclude_default_header);
+  Opts.DeclareOpenCLBuiltins = Args.hasArg(OPT_fdeclare_opencl_builtins);
 
   CompilerInvocation::setLangDefaults(Opts, IK, T, Includes, LangStd);
 
@@ -3163,6 +3181,8 @@ void CompilerInvocation::generateCC1CommandLine(
 #undef DIAG_OPTION_WITH_MARSHALLING
 #undef OPTION_WITH_MARSHALLING
 #undef GENERATE_OPTION_WITH_MARSHALLING
+
+  GenerateLangArgs(*LangOpts, Args, SA);
 }
 
 IntrusiveRefCntPtr<llvm::vfs::FileSystem>
