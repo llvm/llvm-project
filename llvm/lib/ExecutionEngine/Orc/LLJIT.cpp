@@ -954,8 +954,9 @@ Error LLJITBuilderState::prepareForConstruction() {
       JTMB->setRelocationModel(Reloc::PIC_);
       JTMB->setCodeModel(CodeModel::Small);
       CreateObjectLinkingLayer =
-          [TPC = this->TPC](ExecutionSession &ES,
-                            const Triple &) -> std::unique_ptr<ObjectLayer> {
+          [TPC = this->TPC](
+              ExecutionSession &ES,
+              const Triple &) -> Expected<std::unique_ptr<ObjectLayer>> {
         std::unique_ptr<ObjectLinkingLayer> ObjLinkingLayer;
         if (TPC)
           ObjLinkingLayer =
@@ -1011,7 +1012,7 @@ Expected<JITEvaluatedSymbol> LLJIT::lookupLinkerMangled(JITDylib &JD,
       makeJITDylibSearchOrder(&JD, JITDylibLookupFlags::MatchAllSymbols), Name);
 }
 
-std::unique_ptr<ObjectLayer>
+Expected<std::unique_ptr<ObjectLayer>>
 LLJIT::createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES) {
 
   // If the config state provided an ObjectLinkingLayer factory then use it.
@@ -1057,8 +1058,7 @@ LLJIT::createCompileFunction(LLJITBuilderState &S,
 
 LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
     : ES(S.ES ? std::move(S.ES) : std::make_unique<ExecutionSession>()), Main(),
-      DL(""), TT(S.JTMB->getTargetTriple()),
-      ObjLinkingLayer(createObjectLinkingLayer(S, *ES)) {
+      DL(""), TT(S.JTMB->getTargetTriple()) {
 
   ErrorAsOutParameter _(&Err);
 
@@ -1078,6 +1078,12 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
     return;
   }
 
+  auto ObjLayer = createObjectLinkingLayer(S, *ES);
+  if (!ObjLayer) {
+    Err = ObjLayer.takeError();
+    return;
+  }
+  ObjLinkingLayer = std::move(*ObjLayer);
   ObjTransformLayer =
       std::make_unique<ObjectTransformLayer>(*ES, *ObjLinkingLayer);
 
