@@ -492,8 +492,6 @@ void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
   int64_t NewOffset = OffsetOp->getImm() + Offset;
 
 #ifndef NDEBUG
-  MachineBasicBlock *MBB = MI.getParent();
-  MachineFunction *MF = MBB->getParent();
   assert(FIOp && FIOp->isFI() && "frame index must be address operand");
   assert(TII->isMUBUF(MI) || TII->isFLATScratch(MI));
 
@@ -506,10 +504,7 @@ void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
   }
 
   MachineOperand *SOffset = TII->getNamedOperand(MI, AMDGPU::OpName::soffset);
-  assert((SOffset->isReg() &&
-          SOffset->getReg() ==
-              MF->getInfo<SIMachineFunctionInfo>()->getStackPtrOffsetReg()) ||
-         (SOffset->isImm() && SOffset->getImm() == 0));
+  assert(SOffset->isImm() && SOffset->getImm() == 0);
 #endif
 
   assert(SIInstrInfo::isLegalMUBUFImmOffset(NewOffset) &&
@@ -1700,18 +1695,10 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                           AMDGPU::OpName::vaddr));
 
         auto &SOffset = *TII->getNamedOperand(*MI, AMDGPU::OpName::soffset);
-        assert((SOffset.isReg() &&
-                SOffset.getReg() == MFI->getStackPtrOffsetReg()) ||
-               (SOffset.isImm() && SOffset.getImm() == 0));
-        if (SOffset.isReg()) {
-          if (FrameReg == AMDGPU::NoRegister) {
-            SOffset.ChangeToImmediate(0);
-          } else {
-            SOffset.setReg(FrameReg);
-          }
-        } else if (SOffset.isImm() && FrameReg != AMDGPU::NoRegister) {
+        assert((SOffset.isImm() && SOffset.getImm() == 0));
+
+        if (FrameReg != AMDGPU::NoRegister)
           SOffset.ChangeToRegister(FrameReg, false);
-        }
 
         int64_t Offset = FrameInfo.getObjectOffset(Index);
         int64_t OldImm
