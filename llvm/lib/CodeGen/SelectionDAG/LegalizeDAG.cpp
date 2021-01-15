@@ -3966,16 +3966,16 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     (void)Legalized;
     assert(Legalized && "Can't legalize BR_CC with legal condition!");
 
-    assert(!NeedInvert && "Don't know how to invert BR_CC!");
-
     // If we expanded the SETCC by swapping LHS and RHS, create a new BR_CC
     // node.
     if (Tmp4.getNode()) {
+      assert(!NeedInvert && "Don't know how to invert BR_CC!");
+
       Tmp1 = DAG.getNode(ISD::BR_CC, dl, Node->getValueType(0), Tmp1,
                          Tmp4, Tmp2, Tmp3, Node->getOperand(4));
     } else {
       Tmp3 = DAG.getConstant(0, dl, Tmp2.getValueType());
-      Tmp4 = DAG.getCondCode(ISD::SETNE);
+      Tmp4 = DAG.getCondCode(NeedInvert ? ISD::SETEQ : ISD::SETNE);
       Tmp1 = DAG.getNode(ISD::BR_CC, dl, Node->getValueType(0), Tmp1, Tmp4,
                          Tmp2, Tmp3, Node->getOperand(4));
     }
