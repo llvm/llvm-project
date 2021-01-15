@@ -11,11 +11,11 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_DIALECT_FIRCG_OPS
-#define FORTRAN_DIALECT_FIRCG_OPS
+#ifndef FIR_DIALECT_CG_OPS
+#define FIR_DIALECT_CG_OPS
 
 include "mlir/IR/SymbolInterfaces.td"
-include "flang/Optimizer/Dialect/FIRTypes.td"
+include "flang/Optimizer/TypePredicates.td"
 
 def fircg_Dialect : Dialect {
   let name = "fircg";
@@ -59,72 +59,17 @@ def fircg_XEmboxOp : fircg_Op<"ext_embox", [AttrSizedOperandSegments]> {
   let results = (outs fir_BoxType);
 
   let assemblyFormat = [{
-    $memref (`(`$shape^`)`)? (`origin` $shift^)? (`[`$slice^`]`)?
-      (`path` $subcomponent^)? (`typeparams` $lenParams^)? attr-dict
-      `:` functional-type(operands, results)
+    $memref (`(`$shape^`)`)? (`origin` $shift^)? (`[`$slice^`]`)? (`path` $subcomponent^)? (`typeparams` $lenParams^)? attr-dict `:` functional-type(operands, results)
   }];
 
   let extraClassDeclaration = [{
-    // The rank of the entity being emboxed
     unsigned getRank() { return shape().size(); }
-
-    // The rank of the result. A slice op can reduce the rank.
-    unsigned getOutRank();
-
-    // The shape operands are mandatory and always start at 1.
-    unsigned shapeOffset() { return 1; }
-    unsigned shiftOffset() { return shapeOffset() + shape().size(); }
-    unsigned sliceOffset() { return shiftOffset() + shift().size(); }
-    unsigned subcomponentOffset() { return sliceOffset() + slice().size(); }
     unsigned lenParamOffset() {
-      return subcomponentOffset() + subcomponent().size();
+      return 1 + shape().size() + shift().size() + slice().size() +
+        subcomponent().size();
     }
   }];
 }
-
-// Extended rebox operation.
-def fircg_XReboxOp : fircg_Op<"ext_rebox", [AttrSizedOperandSegments]> {
-  let summary = "for internal conversion only";
-
-  let description = [{
-    Prior to lowering to LLVM IR dialect, a non-scalar non-trivial rebox op will
-    be converted to an extended rebox. This op will have the following sets of
-    arguments.
-
-       - box: The box being reboxed.
-       - shape: A vector that is the new runtime shape for the array
-       - shift: A vector that is the new runtime origin of the first element.
-         The default is a vector of the value 1.
-       - slice: A vector of triples that describe an array slice.
-       - subcomponent: A vector of indices for subobject slicing.
-
-    The box argument is mandatory, the other arguments are optional.
-    There must not both be a shape and slice/subcomponent arguments
-  }];
-
-  let arguments = (ins
-    fir_BoxType:$box,
-    Variadic<AnyIntegerType>:$shape,
-    Variadic<AnyIntegerType>:$shift,
-    Variadic<AnyIntegerType>:$slice,
-    Variadic<AnyCoordinateType>:$subcomponent
-  );
-  let results = (outs fir_BoxType);
-
-  let assemblyFormat = [{
-    $box (`(`$shape^`)`)? (`origin` $shift^)? (`[`$slice^`]`)?
-      (`path` $subcomponent^) ? attr-dict
-      `:` functional-type(operands, results)
-  }];
-
-  let extraClassDeclaration = [{
-    // The rank of the entity being reboxed
-    unsigned getRank();
-    // The rank of the result box
-    unsigned getOutRank();
-  }];
-}
-
 
 // Extended array coordinate operation.
 def fircg_XArrayCoorOp : fircg_Op<"ext_array_coor", [AttrSizedOperandSegments]> {
@@ -135,8 +80,7 @@ def fircg_XArrayCoorOp : fircg_Op<"ext_array_coor", [AttrSizedOperandSegments]> 
     be converted to an extended embox. This op will have the following sets of
     arguments.
 
-       - memref: The memory reference of the array's data. It can be a fir.box if
-         the underlying data is not contiguous.
+       - memref: The memory reference of the array's data.
        - shape: A vector that is the runtime shape of the underlying array.
        - shift: A vector that is the runtime origin of the first element.
          The default is a vector of the value 1.
@@ -147,13 +91,12 @@ def fircg_XArrayCoorOp : fircg_Op<"ext_array_coor", [AttrSizedOperandSegments]> 
        - LEN type parameters: A vector of runtime LEN type parameters that
          describe an correspond to the elemental derived type.
 
-    The memref and indices arguments are mandatory.
-    The shape argument is mandatory if the memref is not a box, and should be
-    omitted otherwise. The rest of the arguments are optional.
+    The memref, shape, and indices arguments are mandatory. The rest are
+    optional.
   }];
 
   let arguments = (ins
-    AnyRefOrBox:$memref,
+    AnyReferenceLike:$memref,
     Variadic<AnyIntegerType>:$shape,
     Variadic<AnyIntegerType>:$shift,
     Variadic<AnyIntegerType>:$slice,
@@ -164,13 +107,11 @@ def fircg_XArrayCoorOp : fircg_Op<"ext_array_coor", [AttrSizedOperandSegments]> 
   let results = (outs fir_ReferenceType);
 
   let assemblyFormat = [{
-    $memref (`(`$shape^`)`)? (`origin` $shift^)? (`[`$slice^`]`)?
-      (`path` $subcomponent^)? `<`$indices`>` (`typeparams` $lenParams^)?
-      attr-dict `:` functional-type(operands, results)
+    $memref (`(`$shape^`)`)? (`origin` $shift^)? (`[`$slice^`]`)? (`path` $subcomponent^)? `<`$indices`>` (`typeparams` $lenParams^)? attr-dict `:` functional-type(operands, results)
   }];
 
   let extraClassDeclaration = [{
-    unsigned getRank();
+    unsigned getRank() { return shape().size(); }
   }];
 }
 

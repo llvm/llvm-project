@@ -1,4 +1,3 @@
-
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 
 add_flang_library(FIROptimizer
@@ -13,6 +12,7 @@ add_flang_library(FIROptimizer
 
   Analysis/IteratedDominanceFrontier.cpp
 
+  CodeGen/CGOps.cpp
   CodeGen/CodeGen.cpp
   CodeGen/PreCGRewrite.cpp
   CodeGen/Target.cpp
@@ -33,6 +33,7 @@ add_flang_library(FIROptimizer
   FIROpsIncGen
   FIROptCodeGenPassIncGen
   FIROptTransformsPassIncGen
+  CGOpsIncGen
   RewritePatternsIncGen
   ${dialect_libs}
 

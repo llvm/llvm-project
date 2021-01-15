@@ -12,7 +12,6 @@
 
 #include "CGOps.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
-#include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 
 /// FIR codegen dialect constructor.
@@ -31,34 +30,3 @@ fir::FIRCodeGenDialect::~FIRCodeGenDialect() {
 
 #define GET_OP_CLASSES
 #include "flang/Optimizer/CodeGen/CGOps.cpp.inc"
-
-unsigned fir::cg::XEmboxOp::getOutRank() {
-  if (slice().empty())
-    return getRank();
-  auto outRank = fir::SliceOp::getOutputRank(slice());
-  assert(outRank >= 1);
-  return outRank;
-}
-
-unsigned fir::cg::XReboxOp::getOutRank() {
-  if (auto seqTy =
-          fir::dyn_cast_ptrOrBoxEleTy(getType()).dyn_cast<fir::SequenceType>())
-    return seqTy.getDimension();
-  return 0;
-}
-
-unsigned fir::cg::XReboxOp::getRank() {
-  if (auto seqTy = fir::dyn_cast_ptrOrBoxEleTy(box().getType())
-                       .dyn_cast<fir::SequenceType>())
-    return seqTy.getDimension();
-  return 0;
-}
-
-unsigned fir::cg::XArrayCoorOp::getRank() {
-  auto memrefTy = memref().getType();
-  if (memrefTy.isa<fir::BoxType>())
-    if (auto seqty =
-            fir::dyn_cast_ptrOrBoxEleTy(memrefTy).dyn_cast<fir::SequenceType>())
-      return seqty.getDimension();
-  return shape().size();
-}

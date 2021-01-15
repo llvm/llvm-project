@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CGOps.h"
 #include "PassDetail.h"
 #include "flang/Optimizer/CodeGen/CodeGen.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
@@ -76,9 +77,9 @@ public:
       auto extVal = rewriter.create<mlir::ConstantOp>(loc, idxTy, iAttr);
       shapeOpers.push_back(extVal);
     }
-    auto xbox = rewriter.create<XEmboxOp>(loc, embox.getType(), embox.memref(),
-                                          shapeOpers, llvm::None, llvm::None,
-                                          llvm::None, embox.lenParams());
+    auto xbox = rewriter.create<cg::XEmboxOp>(
+        loc, embox.getType(), embox.memref(), shapeOpers, llvm::None,
+        llvm::None, llvm::None, embox.lenParams());
     LLVM_DEBUG(llvm::dbgs() << "rewriting " << embox << " to " << xbox << '\n');
     rewriter.replaceOp(embox, xbox.getOperation()->getResults());
     return mlir::success();
@@ -105,9 +106,9 @@ public:
         sliceOpers.append(sliceOp.triples().begin(), sliceOp.triples().end());
         subcompOpers.append(sliceOp.fields().begin(), sliceOp.fields().end());
       }
-    auto xbox = rewriter.create<XEmboxOp>(loc, embox.getType(), embox.memref(),
-                                          shapeOpers, shiftOpers, sliceOpers,
-                                          subcompOpers, embox.lenParams());
+    auto xbox = rewriter.create<cg::XEmboxOp>(
+        loc, embox.getType(), embox.memref(), shapeOpers, shiftOpers,
+        sliceOpers, subcompOpers, embox.lenParams());
     LLVM_DEBUG(llvm::dbgs() << "rewriting " << embox << " to " << xbox << '\n');
     rewriter.replaceOp(embox, xbox.getOperation()->getResults());
     return mlir::success();
@@ -142,7 +143,7 @@ public:
         sliceOpers.append(sliceOp.triples().begin(), sliceOp.triples().end());
         subcompOpers.append(sliceOp.fields().begin(), sliceOp.fields().end());
       }
-    auto xArrCoor = rewriter.create<XArrayCoorOp>(
+    auto xArrCoor = rewriter.create<cg::XArrayCoorOp>(
         loc, arrCoor.getType(), arrCoor.memref(), shapeOpers, shiftOpers,
         sliceOpers, subcompOpers, arrCoor.indices(), arrCoor.lenParams());
     LLVM_DEBUG(llvm::dbgs()
@@ -159,7 +160,8 @@ public:
     auto &context = getContext();
     mlir::OpBuilder rewriter(&context);
     mlir::ConversionTarget target(context);
-    target.addLegalDialect<FIROpsDialect, mlir::StandardOpsDialect>();
+    target.addLegalDialect<FIROpsDialect, FIRCodeGenDialect,
+                           mlir::StandardOpsDialect>();
     target.addIllegalOp<ArrayCoorOp>();
     target.addDynamicallyLegalOp<EmboxOp>([](EmboxOp embox) {
       return !(embox.getShape() ||
