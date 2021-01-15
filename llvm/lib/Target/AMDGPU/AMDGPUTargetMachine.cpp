@@ -1225,6 +1225,12 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
 
   MFI->initializeBaseYamlFields(YamlMFI);
 
+  if (MFI->Occupancy == 0) {
+    // Fixup the subtarget dependent default value.
+    const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+    MFI->Occupancy = ST.computeOccupancy(MF.getFunction(), MFI->getLDSSize());
+  }
+
   auto parseRegister = [&](const yaml::StringValue &RegName, Register &RegVal) {
     Register TempReg;
     if (parseNamedRegisterReference(PFS, TempReg, RegName.Value, Error)) {
