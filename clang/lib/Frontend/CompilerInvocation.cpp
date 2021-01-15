@@ -405,6 +405,8 @@ static void FixupInvocation(CompilerInvocation &Invocation,
   llvm::Triple T(TargetOpts.Triple);
   llvm::Triple::ArchType Arch = T.getArch();
 
+  CodeGenOpts.CodeModel = TargetOpts.CodeModel;
+
   if (LangOpts.getExceptionHandling() != llvm::ExceptionHandling::None &&
       T.isWindowsMSVCEnvironment())
     Diags.Report(diag::err_fe_invalid_exception_model)
@@ -987,11 +989,9 @@ static bool parsePointerAuthOptions(PointerAuthOptions &Opts,
 
 static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
                              DiagnosticsEngine &Diags,
-                             const LangOptions &LangOpts,
-                             const TargetOptions &TargetOpts,
-                             const FrontendOptions &FrontendOpts) {
+                             const LangOptions &LangOpts, const llvm::Triple &T,
+                             const std::string &OutputFile) {
   bool Success = true;
-  llvm::Triple Triple = llvm::Triple(TargetOpts.Triple);
 
   unsigned OptimizationLevel = getOptimizationLevel(Args, IK, Diags);
   // TODO: This could be done in Driver
@@ -1050,7 +1050,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
       llvm::Triple::arm, llvm::Triple::armeb, llvm::Triple::mips,
       llvm::Triple::mipsel, llvm::Triple::mips64, llvm::Triple::mips64el};
 
-  llvm::Triple T(TargetOpts.Triple);
   if (Opts.OptimizationLevel > 0 && Opts.hasReducedDebugInfo() &&
       llvm::is_contained(DebugEntryValueArchs, T.getArch()))
     Opts.EmitCallSiteInfo = true;
@@ -1075,8 +1074,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
 
   if (!Opts.ProfileInstrumentUsePath.empty())
     setPGOUseInstrumentor(Opts, Opts.ProfileInstrumentUsePath);
-
-  Opts.CodeModel = TargetOpts.CodeModel;
 
   if (const Arg *A = Args.getLastArg(OPT_ftime_report, OPT_ftime_report_EQ)) {
     Opts.TimePasses = true;
@@ -1122,8 +1119,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   if (Arg *A = Args.getLastArg(OPT_save_temps_EQ))
     Opts.SaveTempsFilePrefix =
         llvm::StringSwitch<std::string>(A->getValue())
-            .Case("obj", FrontendOpts.OutputFile)
-            .Default(llvm::sys::path::filename(FrontendOpts.OutputFile).str());
+            .Case("obj", OutputFile)
+            .Default(llvm::sys::path::filename(OutputFile).str());
 
   // The memory profile runtime appends the pid to make this name more unique.
   const char *MemProfileBasename = "memprof.profraw";
@@ -1352,7 +1349,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.EmitVersionIdentMetadata = Args.hasFlag(OPT_Qy, OPT_Qn, true);
 
   Success &=
-      parsePointerAuthOptions(Opts.PointerAuth, Args, LangOpts, Triple, Diags);
+      parsePointerAuthOptions(Opts.PointerAuth, Args, LangOpts, T, Diags);
 
   // -f[no-]split-cold-code
   // This may only be enabled when optimizing, and when small code size
@@ -3092,13 +3089,12 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   InputKind DashX = ParseFrontendArgs(Res.getFrontendOpts(), Args, Diags,
                                       LangOpts.IsHeaderFile);
   ParseTargetArgs(Res.getTargetOpts(), Args, Diags);
+  llvm::Triple T(Res.getTargetOpts().Triple);
   ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args,
                         Res.getFileSystemOpts().WorkingDir);
   ParseAPINotesArgs(Res.getAPINotesOpts(), Args, Diags);
-
   ParsePointerAuthArgs(LangOpts, Args);
 
-  llvm::Triple T(Res.getTargetOpts().Triple);
   if (DashX.getFormat() == InputKind::Precompiled ||
       DashX.getLanguage() == Language::LLVM_IR) {
     // ObjCAAutoRefCount and Sanitize LangOpts are used to setup the
@@ -3127,8 +3123,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   }
 
   Success &= ParseCodeGenArgs(Res.getCodeGenOpts(), Args, DashX, Diags,
-                              LangOpts, Res.getTargetOpts(),
-                              Res.getFrontendOpts());
+                              LangOpts, T, Res.getFrontendOpts().OutputFile);
 
   if (LangOpts.CUDA) {
     // During CUDA device-side compilation, the aux triple is the
