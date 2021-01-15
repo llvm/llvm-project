@@ -523,11 +523,13 @@ TEST(DocumentSymbols, InHeaderFile) {
       }
       )cpp";
   TU.Code = R"cpp(
+      int i; // declaration to finish preamble
       #include "bar.h"
       int test() {
       }
       )cpp";
-  EXPECT_THAT(getSymbols(TU.build()), ElementsAre(WithName("test")));
+  EXPECT_THAT(getSymbols(TU.build()),
+              ElementsAre(WithName("i"), WithName("test")));
 }
 
 TEST(DocumentSymbols, Template) {
