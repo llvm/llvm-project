@@ -2019,11 +2019,10 @@ static void sinkSpillUsesAfterCoroBegin(Function &F,
 
   // Sort by dominance.
   SmallVector<Instruction *, 64> InsertionList(ToMove.begin(), ToMove.end());
-  std::sort(InsertionList.begin(), InsertionList.end(),
-            [&Dom](Instruction *A, Instruction *B) -> bool {
-              // If a dominates b it should preceed (<) b.
-              return Dom.dominates(A, B);
-            });
+  llvm::sort(InsertionList, [&Dom](Instruction *A, Instruction *B) -> bool {
+    // If a dominates b it should preceed (<) b.
+    return Dom.dominates(A, B);
+  });
 
   Instruction *InsertPt = CoroBegin->getNextNode();
   for (Instruction *Inst : InsertionList)

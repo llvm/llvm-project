@@ -795,7 +795,7 @@ void ModuleSanitizerCoverage::InjectTraceForSwitch(
           C = ConstantExpr::getCast(CastInst::ZExt, It.getCaseValue(), Int64Ty);
         Initializers.push_back(C);
       }
-      llvm::sort(Initializers.begin() + 2, Initializers.end(),
+      llvm::sort(drop_begin(Initializers, 2),
                  [](const Constant *A, const Constant *B) {
                    return cast<ConstantInt>(A)->getLimitedValue() <
                           cast<ConstantInt>(B)->getLimitedValue();
