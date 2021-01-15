@@ -45,14 +45,16 @@ def Blurmpq_eq : Flag<["--"], "blurmp=">;
 
 def DashDash : Option<["--"], "", KIND_REMAINING_ARGS>;
 
+class XOpts<string base> : KeyPathAndMacro<"X->", base> {}
+
 def marshalled_flag_d : Flag<["-"], "marshalled-flag-d">,
-  MarshallingInfoFlag<"MarshalledFlagD">;
+  MarshallingInfoFlag<XOpts<"MarshalledFlagD">>;
 def marshalled_flag_c : Flag<["-"], "marshalled-flag-c">,
-  MarshallingInfoFlag<"MarshalledFlagC">,
+  MarshallingInfoFlag<XOpts<"MarshalledFlagC">>,
   ImpliedByAnyOf<[marshalled_flag_d], "true">;
 def marshalled_flag_b : Flag<["-"], "marshalled-flag-b">,
-  MarshallingInfoFlag<"MarshalledFlagB">,
+  MarshallingInfoFlag<XOpts<"MarshalledFlagB">>,
   ImpliedByAnyOf<[marshalled_flag_d], "true">;
 def marshalled_flag_a : Flag<["-"], "marshalled-flag-a">,
-  MarshallingInfoFlag<"MarshalledFlagA">,
+  MarshallingInfoFlag<XOpts<"MarshalledFlagA">>,
   ImpliedByAnyOf<[marshalled_flag_c, marshalled_flag_b]>;

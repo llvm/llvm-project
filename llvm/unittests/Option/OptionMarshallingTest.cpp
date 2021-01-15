@@ -34,22 +34,22 @@ TEST(OptionMarshalling, EmittedOrderSameAsDefinitionOrder) {
 }
 
 TEST(OptionMarshalling, EmittedSpecifiedKeyPath) {
-  ASSERT_STREQ(MarshallingTable[0].KeyPath, "MarshalledFlagD");
-  ASSERT_STREQ(MarshallingTable[1].KeyPath, "MarshalledFlagC");
-  ASSERT_STREQ(MarshallingTable[2].KeyPath, "MarshalledFlagB");
-  ASSERT_STREQ(MarshallingTable[3].KeyPath, "MarshalledFlagA");
+  ASSERT_STREQ(MarshallingTable[0].KeyPath, "X->MarshalledFlagD");
+  ASSERT_STREQ(MarshallingTable[1].KeyPath, "X->MarshalledFlagC");
+  ASSERT_STREQ(MarshallingTable[2].KeyPath, "X->MarshalledFlagB");
+  ASSERT_STREQ(MarshallingTable[3].KeyPath, "X->MarshalledFlagA");
 }
 
 TEST(OptionMarshalling, ImpliedCheckContainsDisjunctionOfKeypaths) {
   ASSERT_STREQ(MarshallingTable[0].ImpliedCheck, "false");
 
-  ASSERT_STREQ(MarshallingTable[1].ImpliedCheck, "false || MarshalledFlagD");
+  ASSERT_STREQ(MarshallingTable[1].ImpliedCheck, "false || X->MarshalledFlagD");
   ASSERT_STREQ(MarshallingTable[1].ImpliedValue, "true");
 
-  ASSERT_STREQ(MarshallingTable[2].ImpliedCheck, "false || MarshalledFlagD");
+  ASSERT_STREQ(MarshallingTable[2].ImpliedCheck, "false || X->MarshalledFlagD");
   ASSERT_STREQ(MarshallingTable[2].ImpliedValue, "true");
 
   ASSERT_STREQ(MarshallingTable[3].ImpliedCheck,
-               "false || MarshalledFlagC || MarshalledFlagB");
+               "false || X->MarshalledFlagC || X->MarshalledFlagB");
   ASSERT_STREQ(MarshallingTable[3].ImpliedValue, "true");
 }
