@@ -82,10 +82,7 @@ define void @stack_alloc(i32 signext %size) {
 ; RV64-NEXT:    slli a0, a0, 32
 ; RV64-NEXT:    srli a0, a0, 32
 ; RV64-NEXT:    addi a0, a0, 15
-; RV64-NEXT:    addi a1, zero, 1
-; RV64-NEXT:    slli a1, a1, 33
-; RV64-NEXT:    addi a1, a1, -16
-; RV64-NEXT:    and a0, a0, a1
+; RV64-NEXT:    andi a0, a0, -16
 ; RV64-NEXT:    sub a0, sp, a0
 ; RV64-NEXT:    mv sp, a0
 ; RV64-NEXT:    call callee_with_args@plt
@@ -129,10 +126,7 @@ define void @stack_alloc(i32 signext %size) {
 ; RV64-WITHFP-NEXT:    slli a0, a0, 32
 ; RV64-WITHFP-NEXT:    srli a0, a0, 32
 ; RV64-WITHFP-NEXT:    addi a0, a0, 15
-; RV64-WITHFP-NEXT:    addi a1, zero, 1
-; RV64-WITHFP-NEXT:    slli a1, a1, 33
-; RV64-WITHFP-NEXT:    addi a1, a1, -16
-; RV64-WITHFP-NEXT:    and a0, a0, a1
+; RV64-WITHFP-NEXT:    andi a0, a0, -16
 ; RV64-WITHFP-NEXT:    sub a0, sp, a0
 ; RV64-WITHFP-NEXT:    mv sp, a0
 ; RV64-WITHFP-NEXT:    call callee_with_args@plt

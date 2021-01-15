@@ -361,10 +361,7 @@ define i32 @va1_va_arg_alloca(i8* %fmt, ...) nounwind {
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    slli a0, a1, 32
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    srli a0, a0, 32
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    addi a0, a0, 15
-; LP64-LP64F-LP64D-FPELIM-NEXT:    addi a1, zero, 1
-; LP64-LP64F-LP64D-FPELIM-NEXT:    slli a1, a1, 33
-; LP64-LP64F-LP64D-FPELIM-NEXT:    addi a1, a1, -16
-; LP64-LP64F-LP64D-FPELIM-NEXT:    and a0, a0, a1
+; LP64-LP64F-LP64D-FPELIM-NEXT:    andi a0, a0, -16
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    sub a0, sp, a0
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    mv sp, a0
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    call notdead@plt
@@ -396,10 +393,7 @@ define i32 @va1_va_arg_alloca(i8* %fmt, ...) nounwind {
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    slli a0, a1, 32
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    srli a0, a0, 32
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    addi a0, a0, 15
-; LP64-LP64F-LP64D-WITHFP-NEXT:    addi a1, zero, 1
-; LP64-LP64F-LP64D-WITHFP-NEXT:    slli a1, a1, 33
-; LP64-LP64F-LP64D-WITHFP-NEXT:    addi a1, a1, -16
-; LP64-LP64F-LP64D-WITHFP-NEXT:    and a0, a0, a1
+; LP64-LP64F-LP64D-WITHFP-NEXT:    andi a0, a0, -16
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    sub a0, sp, a0
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    mv sp, a0
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    call notdead@plt
