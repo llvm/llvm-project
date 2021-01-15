@@ -2276,13 +2276,15 @@ struct RemoveIdentityLinalgOps : public RewritePattern {
     SmallVector<Value, 4> returnedArgs;
     for (Value yieldVal : yieldOp.values()) {
       auto yieldArg = yieldVal.dyn_cast<BlockArgument>();
-      if (!yieldArg)
+      if (!yieldArg || yieldArg.getOwner() != &body)
         return failure();
       unsigned argumentNumber = yieldArg.getArgNumber();
       if (argumentNumber < numIndexArgs)
         return failure();
       returnedArgs.push_back(op->getOperand(argumentNumber - numIndexArgs));
     }
+    if (returnedArgs.size() != genericOp.getOperation()->getNumResults())
+      return failure();
     rewriter.replaceOp(genericOp, returnedArgs);
     return success();
   }

@@ -615,3 +615,56 @@ func @remove_no_op(%arg0 : tensor<?x?x?xf32>, %arg1 : tensor<?x?x?xf32>)
 //  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?x?x?xf32>
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: tensor<?x?x?xf32>
 //       CHECK:     return %[[ARG1]], %[[ARG0]]
+
+// -----
+
+#map = affine_map<(d0, d1) -> (d0, d1)>
+func @keep_not_noop(%arg0 : tensor<?x?xf32>) -> tensor<?x?xf32> {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %cst = constant 1.000000e+00 : f32
+  %0 = dim %arg0, %c0 : tensor<?x?xf32>
+  %1 = dim %arg0, %c1 : tensor<?x?xf32>
+  %2 = linalg.init_tensor [%0, %1] : tensor<?x?xf32>
+  br ^bb1(%cst : f32)
+
+^bb1(%arg1 : f32):
+  %3 = linalg.generic
+    {indexing_maps = [#map, #map], iterator_types = ["parallel", "parallel"]}
+    ins(%arg0 : tensor<?x?xf32>) outs(%2 : tensor<?x?xf32>) {
+    ^bb0(%arg2: f32, %arg3 : f32):
+      linalg.yield %arg1 : f32
+    } -> tensor<?x?xf32>
+  return %3 : tensor<?x?xf32>
+}
+// CHECK-LABEL: func @keep_not_noop
+//       CHECK:   %[[RESULT:.+]] = linalg.generic
+//       CHECK:   return %[[RESULT]]
+
+// -----
+
+#map = affine_map<(d0, d1) -> (d0, d1)>
+func @keep_not_noop(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>)
+  -> (tensor<?x?xf32>, tensor<?x?xf32>) {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %cst = constant 1.000000e+00 : f32
+  %0 = dim %arg0, %c0 : tensor<?x?xf32>
+  %1 = dim %arg0, %c1 : tensor<?x?xf32>
+  %2 = linalg.init_tensor [%0, %1] : tensor<?x?xf32>
+  br ^bb1(%cst : f32)
+
+^bb1(%arg2 : f32):
+  %3:2 = linalg.generic
+    {indexing_maps = [#map, #map, #map, #map],
+     iterator_types = ["parallel", "parallel"]}
+    ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
+    outs(%2, %2 : tensor<?x?xf32>, tensor<?x?xf32>) {
+    ^bb0(%arg3: f32, %arg4 : f32, %arg5 : f32, %arg6 : f32):
+      linalg.yield %arg2, %arg4 : f32, f32
+    } -> tensor<?x?xf32>, tensor<?x?xf32>
+  return %3#0, %3#1 : tensor<?x?xf32>, tensor<?x?xf32>
+}
+// CHECK-LABEL: func @keep_not_noop
+//       CHECK:   %[[RESULT:.+]]:2 = linalg.generic
+//       CHECK:   return %[[RESULT]]#0, %[[RESULT]]#1
