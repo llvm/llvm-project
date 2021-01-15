@@ -2358,7 +2358,11 @@ ModuleVisitor::SymbolRename ModuleVisitor::AddUse(
         useModuleScope_->GetName().value());
     return {};
   }
-  if (useSymbol->attrs().test(Attr::PRIVATE)) {
+  if (useSymbol->attrs().test(Attr::PRIVATE) &&
+      !FindModuleFileContaining(currScope())) {
+    // Privacy is not enforced in module files so that generic interfaces
+    // can be resolved to private specific procedures in specification
+    // expressions.
     Say(useName, "'%s' is PRIVATE in '%s'"_err_en_US, MakeOpName(useName),
         useModuleScope_->GetName().value());
     return {};
