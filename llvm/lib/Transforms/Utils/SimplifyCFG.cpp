@@ -3421,9 +3421,9 @@ static bool mergeConditionalStoreToAddress(
     QPred = QB.CreateNot(QPred);
   Value *CombinedPred = QB.CreateOr(PPred, QPred);
 
-  auto *T = SplitBlockAndInsertIfThen(
-      CombinedPred, &*QB.GetInsertPoint(), /*Unreachable=*/false,
-      /*BranchWeights=*/nullptr, DTU ? &DTU->getDomTree() : nullptr);
+  auto *T = SplitBlockAndInsertIfThen(CombinedPred, &*QB.GetInsertPoint(),
+                                      /*Unreachable=*/false,
+                                      /*BranchWeights=*/nullptr, DTU);
   QB.SetInsertPoint(T);
   StoreInst *SI = cast<StoreInst>(QB.CreateStore(QPHI, Address));
   AAMDNodes AAMD;
