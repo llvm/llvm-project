@@ -301,7 +301,7 @@ public:
   void sortRegisters(SmallVectorImpl<Register> &Regs) {
     if (!FixupSCSExtendSlotSize)
       return;
-    llvm::sort(Regs.begin(), Regs.end(), [&](Register &A, Register &B) {
+    llvm::sort(Regs, [&](Register &A, Register &B) {
       return getRegisterSize(TRI, A) > getRegisterSize(TRI, B);
     });
   }
