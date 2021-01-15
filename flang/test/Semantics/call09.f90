@@ -1,5 +1,8 @@
 ! RUN: %S/test_errors.sh %s %t %f18
 ! Test 15.5.2.9(2,3,5) dummy procedure requirements
+! C843
+!   An entity with the INTENT attribute shall be a dummy data object or a 
+!   dummy procedure pointer.
 
 module m
  contains
@@ -21,6 +24,10 @@ module m
   end subroutine
   subroutine s03(p)
     procedure(realfunc) :: p
+  end subroutine
+  subroutine s04(p)
+    !ERROR: A dummy procedure without the POINTER attribute may not have an INTENT attribute
+    procedure(realfunc), intent(in) :: p
   end subroutine
 
   subroutine selemental1(p)
