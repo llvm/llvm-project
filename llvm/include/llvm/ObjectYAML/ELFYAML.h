@@ -522,10 +522,10 @@ struct SymverSection : Section {
 };
 
 struct VerdefEntry {
-  uint16_t Version;
-  uint16_t Flags;
-  uint16_t VersionNdx;
-  uint32_t Hash;
+  Optional<uint16_t> Version;
+  Optional<uint16_t> Flags;
+  Optional<uint16_t> VersionNdx;
+  Optional<uint32_t> Hash;
   std::vector<StringRef> VerNames;
 };
 

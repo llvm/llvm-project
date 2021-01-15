@@ -1315,10 +1315,19 @@ ELFDumper<ELFT>::dumpVerdefSection(const Elf_Shdr *Shdr) {
   while (Buf) {
     const Elf_Verdef *Verdef = reinterpret_cast<const Elf_Verdef *>(Buf);
     ELFYAML::VerdefEntry Entry;
-    Entry.Version = Verdef->vd_version;
-    Entry.Flags = Verdef->vd_flags;
-    Entry.VersionNdx = Verdef->vd_ndx;
-    Entry.Hash = Verdef->vd_hash;
+    if (Verdef->vd_version != 1)
+      return createStringError(errc::invalid_argument,
+                               "invalid SHT_GNU_verdef section version: " +
+                                   Twine(Verdef->vd_version));
+
+    if (Verdef->vd_flags != 0)
+      Entry.Flags = Verdef->vd_flags;
+
+    if (Verdef->vd_ndx != 0)
+      Entry.VersionNdx = Verdef->vd_ndx;
+
+    if (Verdef->vd_hash != 0)
+      Entry.Hash = Verdef->vd_hash;
 
     const uint8_t *BufAux = Buf + Verdef->vd_aux;
     while (BufAux) {
