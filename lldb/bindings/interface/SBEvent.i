@@ -13,27 +13,27 @@ class SBBroadcaster;
 %feature("docstring",
 "API clients can register to receive events.
 
-For example, check out the following output:
+For example, check out the following output: ::
 
-Try wait for event...
-Event description: 0x103d0bb70 Event: broadcaster = 0x1009c8410, type = 0x00000001, data = { process = 0x1009c8400 (pid = 21528), state = running}
-Event data flavor: Process::ProcessEventData
-Process state: running
+    Try wait for event...
+    Event description: 0x103d0bb70 Event: broadcaster = 0x1009c8410, type = 0x00000001, data = { process = 0x1009c8400 (pid = 21528), state = running}
+    Event data flavor: Process::ProcessEventData
+    Process state: running
 
-Try wait for event...
-Event description: 0x103a700a0 Event: broadcaster = 0x1009c8410, type = 0x00000001, data = { process = 0x1009c8400 (pid = 21528), state = stopped}
-Event data flavor: Process::ProcessEventData
-Process state: stopped
+    Try wait for event...
+    Event description: 0x103a700a0 Event: broadcaster = 0x1009c8410, type = 0x00000001, data = { process = 0x1009c8400 (pid = 21528), state = stopped}
+    Event data flavor: Process::ProcessEventData
+    Process state: stopped
 
-Try wait for event...
-Event description: 0x103d0d4a0 Event: broadcaster = 0x1009c8410, type = 0x00000001, data = { process = 0x1009c8400 (pid = 21528), state = exited}
-Event data flavor: Process::ProcessEventData
-Process state: exited
+    Try wait for event...
+    Event description: 0x103d0d4a0 Event: broadcaster = 0x1009c8410, type = 0x00000001, data = { process = 0x1009c8400 (pid = 21528), state = exited}
+    Event data flavor: Process::ProcessEventData
+    Process state: exited
 
-Try wait for event...
-timeout occurred waiting for event...
+    Try wait for event...
+    timeout occurred waiting for event...
 
-from test/python_api/event/TestEventspy:
+from test/python_api/event/TestEventspy: ::
 
     def do_listen_for_and_print_event(self):
         '''Create a listener and use SBEvent API to print the events received.'''

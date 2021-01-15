@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+avx                | FileCheck %s --check-prefixes=AVX,AVX-SLOW,AVX1-SLOW
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+avx,fast-hops      | FileCheck %s --check-prefixes=AVX,AVX-FAST,AVX1-FAST
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+avx512f            | FileCheck %s --check-prefixes=AVX,AVX-SLOW,AVX512,AVX512-SLOW
-; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+avx512f,fast-hops  | FileCheck %s --check-prefixes=AVX,AVX-FAST,AVX512
+; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+avx512f,fast-hops  | FileCheck %s --check-prefixes=AVX,AVX-FAST,AVX512,AVX512-FAST
 
 ; Verify that we correctly fold horizontal binop even in the presence of UNDEFs.
 
@@ -1190,13 +1190,20 @@ define <4 x double> @PR34724_add_v4f64_u123(<4 x double> %0, <4 x double> %1) {
 ; AVX-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX-SLOW-NEXT:    retq
 ;
-; AVX-FAST-LABEL: PR34724_add_v4f64_u123:
-; AVX-FAST:       # %bb.0:
-; AVX-FAST-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX-FAST-NEXT:    vblendpd {{.*#+}} ymm2 = ymm0[0,1],ymm1[2,3]
-; AVX-FAST-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX-FAST-NEXT:    vhaddpd %ymm2, %ymm0, %ymm0
-; AVX-FAST-NEXT:    retq
+; AVX1-FAST-LABEL: PR34724_add_v4f64_u123:
+; AVX1-FAST:       # %bb.0:
+; AVX1-FAST-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-FAST-NEXT:    vblendpd {{.*#+}} ymm2 = ymm0[0,1],ymm1[2,3]
+; AVX1-FAST-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-FAST-NEXT:    vhaddpd %ymm2, %ymm0, %ymm0
+; AVX1-FAST-NEXT:    retq
+;
+; AVX512-FAST-LABEL: PR34724_add_v4f64_u123:
+; AVX512-FAST:       # %bb.0:
+; AVX512-FAST-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX512-FAST-NEXT:    vhaddpd %ymm1, %ymm0, %ymm0
+; AVX512-FAST-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,0,3]
+; AVX512-FAST-NEXT:    retq
   %3 = shufflevector <4 x double> %0, <4 x double> %1, <2 x i32> <i32 2, i32 4>
   %4 = shufflevector <4 x double> %0, <4 x double> %1, <2 x i32> <i32 3, i32 5>
   %5 = fadd <2 x double> %3, %4
@@ -1286,12 +1293,18 @@ define <4 x double> @PR34724_add_v4f64_01u3(<4 x double> %0, <4 x double> %1) {
 ; AVX-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX-SLOW-NEXT:    retq
 ;
-; AVX-FAST-LABEL: PR34724_add_v4f64_01u3:
-; AVX-FAST:       # %bb.0:
-; AVX-FAST-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
-; AVX-FAST-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3]
-; AVX-FAST-NEXT:    vhaddpd %ymm2, %ymm0, %ymm0
-; AVX-FAST-NEXT:    retq
+; AVX1-FAST-LABEL: PR34724_add_v4f64_01u3:
+; AVX1-FAST:       # %bb.0:
+; AVX1-FAST-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
+; AVX1-FAST-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3]
+; AVX1-FAST-NEXT:    vhaddpd %ymm2, %ymm0, %ymm0
+; AVX1-FAST-NEXT:    retq
+;
+; AVX512-FAST-LABEL: PR34724_add_v4f64_01u3:
+; AVX512-FAST:       # %bb.0:
+; AVX512-FAST-NEXT:    vhaddpd %ymm1, %ymm0, %ymm0
+; AVX512-FAST-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,3,1,3]
+; AVX512-FAST-NEXT:    retq
   %3 = shufflevector <4 x double> %0, <4 x double> undef, <2 x i32> <i32 0, i32 2>
   %4 = shufflevector <4 x double> %0, <4 x double> undef, <2 x i32> <i32 1, i32 3>
   %5 = fadd <2 x double> %3, %4

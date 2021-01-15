@@ -227,6 +227,11 @@ alias_address:
 # CHECK-NEXT:         Flags:           [ BINDING_WEAK, VISIBILITY_HIDDEN, NO_STRIP ]
 # CHECK-NEXT:         Segment:         0
 # CHECK-NEXT:         Size:            4
+# CHECK-NEXT:       - Index:           10
+# CHECK-NEXT:         Kind:            TABLE
+# CHECK-NEXT:         Name:            __indirect_function_table
+# CHECK-NEXT:         Flags:           [ UNDEFINED, NO_STRIP ]
+# CHECK-NEXT:         Table:           0
 # CHECK-NEXT:     SegmentInfo:
 # CHECK-NEXT:       - Index:           0
 # CHECK-NEXT:         Name:            .data.bar

@@ -17,13 +17,8 @@ endif()
 # the sphinx-build command.
 #
 # ``project`` should be the project name
-#
-# Named arguments:
-# ``ENV_VARS`` should be a list of environment variables that should be set when
-#              running Sphinx. Each environment variable should be a string with
-#              the form KEY=VALUE.
 function (add_sphinx_target builder project)
-  cmake_parse_arguments(ARG "" "SOURCE_DIR" "ENV_VARS" ${ARGN})
+  cmake_parse_arguments(ARG "" "SOURCE_DIR" "" ${ARGN})
   set(SPHINX_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/${builder}")
   set(SPHINX_DOC_TREE_DIR "${CMAKE_CURRENT_BINARY_DIR}/_doctrees-${project}-${builder}")
   set(SPHINX_TARGET_NAME docs-${project}-${builder})
@@ -39,8 +34,7 @@ function (add_sphinx_target builder project)
   endif()
 
   add_custom_target(${SPHINX_TARGET_NAME}
-                    COMMAND ${CMAKE_COMMAND} -E env ${ARG_ENV_VARS}
-                            ${SPHINX_EXECUTABLE}
+                    COMMAND ${SPHINX_EXECUTABLE}
                             -b ${builder}
                             -d "${SPHINX_DOC_TREE_DIR}"
                             -q # Quiet: no output other than errors and warnings.

@@ -43114,30 +43114,32 @@ static SDValue combineHorizOpWithShuffle(SDNode *N, SelectionDAG &DAG,
   // Attempt to fold HOP(SHUFFLE(X,Y),SHUFFLE(X,Y)) -> SHUFFLE(HOP(X,Y)).
   // TODO: Relax shuffle scaling to support sub-128-bit subvector shuffles.
   if (VT.is256BitVector() && Subtarget.hasInt256()) {
-    if (auto *SVN0 = dyn_cast<ShuffleVectorSDNode>(N0)) {
-      if (auto *SVN1 = dyn_cast<ShuffleVectorSDNode>(N1)) {
-        SmallVector<int, 2> ShuffleMask0, ShuffleMask1;
-        if (scaleShuffleElements(SVN0->getMask(), 2, ShuffleMask0) &&
-            scaleShuffleElements(SVN1->getMask(), 2, ShuffleMask1)) {
-          SDValue Op00 = SVN0->getOperand(0);
-          SDValue Op01 = SVN0->getOperand(1);
-          SDValue Op10 = SVN1->getOperand(0);
-          SDValue Op11 = SVN1->getOperand(1);
-          if ((Op00 == Op11) && (Op01 == Op10)) {
-            std::swap(Op10, Op11);
-            ShuffleVectorSDNode::commuteMask(ShuffleMask1);
-          }
-          if ((Op00 == Op10) && (Op01 == Op11)) {
-            SmallVector<int, 4> ShuffleMask;
-            ShuffleMask.append(ShuffleMask0.begin(), ShuffleMask0.end());
-            ShuffleMask.append(ShuffleMask1.begin(), ShuffleMask1.end());
-            SDLoc DL(N);
-            MVT ShufVT = VT.isFloatingPoint() ? MVT::v4f64 : MVT::v4i64;
-            SDValue Res = DAG.getNode(Opcode, DL, VT, Op00, Op01);
-            Res = DAG.getBitcast(ShufVT, Res);
-            Res = DAG.getVectorShuffle(ShufVT, DL, Res, Res, ShuffleMask);
-            return DAG.getBitcast(VT, Res);
-          }
+    SmallVector<int> Mask0, Mask1;
+    SmallVector<SDValue> Ops0, Ops1;
+    if (getTargetShuffleInputs(N0, Ops0, Mask0, DAG) && !isAnyZero(Mask0) &&
+        getTargetShuffleInputs(N1, Ops1, Mask1, DAG) && !isAnyZero(Mask1) &&
+        !Ops0.empty() && !Ops1.empty()) {
+      SDValue Op00 = Ops0.front(), Op01 = Ops0.back();
+      SDValue Op10 = Ops1.front(), Op11 = Ops1.back();
+      SmallVector<int, 2> ShuffleMask0, ShuffleMask1;
+      if (Op00.getValueType() == SrcVT && Op01.getValueType() == SrcVT &&
+          Op11.getValueType() == SrcVT && Op11.getValueType() == SrcVT &&
+          scaleShuffleElements(Mask0, 2, ShuffleMask0) &&
+          scaleShuffleElements(Mask1, 2, ShuffleMask1)) {
+        if ((Op00 == Op11) && (Op01 == Op10)) {
+          std::swap(Op10, Op11);
+          ShuffleVectorSDNode::commuteMask(ShuffleMask1);
+        }
+        if ((Op00 == Op10) && (Op01 == Op11)) {
+          SmallVector<int, 4> ShuffleMask;
+          ShuffleMask.append(ShuffleMask0.begin(), ShuffleMask0.end());
+          ShuffleMask.append(ShuffleMask1.begin(), ShuffleMask1.end());
+          SDLoc DL(N);
+          MVT ShufVT = VT.isFloatingPoint() ? MVT::v4f64 : MVT::v4i64;
+          SDValue Res = DAG.getNode(Opcode, DL, VT, Op00, Op01);
+          Res = DAG.getBitcast(ShufVT, Res);
+          Res = DAG.getVectorShuffle(ShufVT, DL, Res, Res, ShuffleMask);
+          return DAG.getBitcast(VT, Res);
         }
       }
     }
