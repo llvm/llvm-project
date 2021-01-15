@@ -62,41 +62,17 @@ define dso_local i32 @test_501_504(i32* nocapture readonly %x) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    adr r2, .LCPI1_0
-; CHECK-NEXT:    mov.w lr, #126
-; CHECK-NEXT:    vldrw.u32 q0, [r2]
-; CHECK-NEXT:    adr r2, .LCPI1_1
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
-; CHECK-NEXT:    dls lr, lr
-; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    movw r1, #501
 ; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    dlstp.32 lr, r1
 ; CHECK-NEXT:  .LBB1_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vadd.i32 q2, q0, r1
-; CHECK-NEXT:    vdup.32 q3, r1
-; CHECK-NEXT:    vcmp.u32 hi, q3, q2
-; CHECK-NEXT:    adds r1, #4
-; CHECK-NEXT:    vpnot
-; CHECK-NEXT:    vpsttt
-; CHECK-NEXT:    vcmpt.u32 hi, q1, q2
-; CHECK-NEXT:    vldrwt.u32 q2, [r0], #16
-; CHECK-NEXT:    vaddvat.u32 r2, q2
-; CHECK-NEXT:    le lr, .LBB1_1
+; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
+; CHECK-NEXT:    vaddva.u32 r2, q0
+; CHECK-NEXT:    letp lr, .LBB1_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    pop {r7, pc}
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  @ %bb.3:
-; CHECK-NEXT:  .LCPI1_0:
-; CHECK-NEXT:    .long 0 @ 0x0
-; CHECK-NEXT:    .long 1 @ 0x1
-; CHECK-NEXT:    .long 2 @ 0x2
-; CHECK-NEXT:    .long 3 @ 0x3
-; CHECK-NEXT:  .LCPI1_1:
-; CHECK-NEXT:    .long 501 @ 0x1f5
-; CHECK-NEXT:    .long 501 @ 0x1f5
-; CHECK-NEXT:    .long 501 @ 0x1f5
-; CHECK-NEXT:    .long 501 @ 0x1f5
 entry:
   br label %vector.body
 
@@ -123,41 +99,17 @@ define dso_local i32 @test_502_504(i32* nocapture readonly %x) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    adr r2, .LCPI2_0
-; CHECK-NEXT:    mov.w lr, #126
-; CHECK-NEXT:    vldrw.u32 q0, [r2]
-; CHECK-NEXT:    adr r2, .LCPI2_1
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
-; CHECK-NEXT:    dls lr, lr
-; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    mov.w r1, #502
 ; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    dlstp.32 lr, r1
 ; CHECK-NEXT:  .LBB2_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vadd.i32 q2, q0, r1
-; CHECK-NEXT:    vdup.32 q3, r1
-; CHECK-NEXT:    vcmp.u32 hi, q3, q2
-; CHECK-NEXT:    adds r1, #4
-; CHECK-NEXT:    vpnot
-; CHECK-NEXT:    vpsttt
-; CHECK-NEXT:    vcmpt.u32 hi, q1, q2
-; CHECK-NEXT:    vldrwt.u32 q2, [r0], #16
-; CHECK-NEXT:    vaddvat.u32 r2, q2
-; CHECK-NEXT:    le lr, .LBB2_1
+; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
+; CHECK-NEXT:    vaddva.u32 r2, q0
+; CHECK-NEXT:    letp lr, .LBB2_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    pop {r7, pc}
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  @ %bb.3:
-; CHECK-NEXT:  .LCPI2_0:
-; CHECK-NEXT:    .long 0 @ 0x0
-; CHECK-NEXT:    .long 1 @ 0x1
-; CHECK-NEXT:    .long 2 @ 0x2
-; CHECK-NEXT:    .long 3 @ 0x3
-; CHECK-NEXT:  .LCPI2_1:
-; CHECK-NEXT:    .long 502 @ 0x1f6
-; CHECK-NEXT:    .long 502 @ 0x1f6
-; CHECK-NEXT:    .long 502 @ 0x1f6
-; CHECK-NEXT:    .long 502 @ 0x1f6
 entry:
   br label %vector.body
 
@@ -221,36 +173,17 @@ define dso_local i32 @test_504_504(i32* nocapture readonly %x) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    mov.w lr, #126
-; CHECK-NEXT:    adr r2, .LCPI4_0
-; CHECK-NEXT:    vldrw.u32 q0, [r2]
-; CHECK-NEXT:    mov.w r2, #504
-; CHECK-NEXT:    dls lr, lr
-; CHECK-NEXT:    vdup.32 q1, r2
-; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    mov.w r1, #504
 ; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    dlstp.32 lr, r1
 ; CHECK-NEXT:  .LBB4_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vadd.i32 q2, q0, r1
-; CHECK-NEXT:    vdup.32 q3, r1
-; CHECK-NEXT:    vcmp.u32 hi, q3, q2
-; CHECK-NEXT:    adds r1, #4
-; CHECK-NEXT:    vpnot
-; CHECK-NEXT:    vpsttt
-; CHECK-NEXT:    vcmpt.u32 hi, q1, q2
-; CHECK-NEXT:    vldrwt.u32 q2, [r0], #16
-; CHECK-NEXT:    vaddvat.u32 r2, q2
-; CHECK-NEXT:    le lr, .LBB4_1
+; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
+; CHECK-NEXT:    vaddva.u32 r2, q0
+; CHECK-NEXT:    letp lr, .LBB4_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    pop {r7, pc}
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  @ %bb.3:
-; CHECK-NEXT:  .LCPI4_0:
-; CHECK-NEXT:    .long 0 @ 0x0
-; CHECK-NEXT:    .long 1 @ 0x1
-; CHECK-NEXT:    .long 2 @ 0x2
-; CHECK-NEXT:    .long 3 @ 0x3
 entry:
   br label %vector.body
 

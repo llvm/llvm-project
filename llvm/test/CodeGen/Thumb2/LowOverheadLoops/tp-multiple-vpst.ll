@@ -5,53 +5,25 @@ define dso_local arm_aapcs_vfpcc i32 @minmaxval4(i32* nocapture readonly %x, i32
 ; CHECK-LABEL: minmaxval4:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    vpush {d8, d9, d10, d11}
-; CHECK-NEXT:    sub sp, #8
-; CHECK-NEXT:    mov.w lr, #3
-; CHECK-NEXT:    adr r3, .LCPI0_0
-; CHECK-NEXT:    dls lr, lr
-; CHECK-NEXT:    vldrw.u32 q2, [r3]
 ; CHECK-NEXT:    vmov.i32 q0, #0x80000000
 ; CHECK-NEXT:    vmvn.i32 q1, #0x80000000
-; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    vmov.i32 q3, #0xa
+; CHECK-NEXT:    movs r2, #10
+; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:  .LBB0_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vadd.i32 q4, q2, r2
-; CHECK-NEXT:    vdup.32 q5, r2
-; CHECK-NEXT:    vcmp.u32 hi, q5, q4
-; CHECK-NEXT:    adds r2, #4
-; CHECK-NEXT:    vpnot
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vcmpt.u32 hi, q3, q4
-; CHECK-NEXT:    vstr p0, [sp, #4] @ 4-byte Spill
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vldrwt.u32 q4, [r0], #16
-; CHECK-NEXT:    vldr p0, [sp, #4] @ 4-byte Reload
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vcmpt.s32 gt, q4, q0
-; CHECK-NEXT:    vpsel q0, q4, q0
-; CHECK-NEXT:    vldr p0, [sp, #4] @ 4-byte Reload
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vcmpt.s32 gt, q1, q4
-; CHECK-NEXT:    vpsel q1, q4, q1
-; CHECK-NEXT:    le lr, .LBB0_1
+; CHECK-NEXT:    vldrw.u32 q2, [r0], #16
+; CHECK-NEXT:    vpt.s32 gt, q2, q0
+; CHECK-NEXT:    vmovt q0, q2
+; CHECK-NEXT:    vpt.s32 gt, q1, q2
+; CHECK-NEXT:    vmovt q1, q2
+; CHECK-NEXT:    letp lr, .LBB0_1
 ; CHECK-NEXT:  @ %bb.2: @ %middle.block
 ; CHECK-NEXT:    mvn r0, #-2147483648
 ; CHECK-NEXT:    vminv.s32 r0, q1
 ; CHECK-NEXT:    str r0, [r1]
 ; CHECK-NEXT:    mov.w r0, #-2147483648
 ; CHECK-NEXT:    vmaxv.s32 r0, q0
-; CHECK-NEXT:    add sp, #8
-; CHECK-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEXT:    pop {r7, pc}
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  @ %bb.3:
-; CHECK-NEXT:  .LCPI0_0:
-; CHECK-NEXT:    .long 0 @ 0x0
-; CHECK-NEXT:    .long 1 @ 0x1
-; CHECK-NEXT:    .long 2 @ 0x2
-; CHECK-NEXT:    .long 3 @ 0x3
 entry:
   br label %vector.body
 
