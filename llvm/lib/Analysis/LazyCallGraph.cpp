@@ -866,7 +866,7 @@ LazyCallGraph::RefSCC::switchInternalEdgeToRef(Node &SourceN, Node &TargetN) {
             PendingSCCStack.clear();
             while (!DFSStack.empty())
               OldSCC.Nodes.push_back(DFSStack.pop_back_val().first);
-            for (Node &N : make_range(OldSCC.begin() + OldSize, OldSCC.end())) {
+            for (Node &N : drop_begin(OldSCC, OldSize)) {
               N.DFSNumber = N.LowLink = -1;
               G->SCCMap[&N] = &OldSCC;
             }
