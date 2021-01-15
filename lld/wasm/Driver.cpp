@@ -10,6 +10,7 @@
 #include "Config.h"
 #include "InputChunks.h"
 #include "InputGlobal.h"
+#include "InputTable.h"
 #include "MarkLive.h"
 #include "SymbolTable.h"
 #include "Writer.h"
@@ -787,6 +788,58 @@ static void wrapSymbols(ArrayRef<WrappedSymbol> wrapped) {
     symtab->wrap(w.sym, w.real, w.wrap);
 }
 
+static TableSymbol *createDefinedIndirectFunctionTable(StringRef name) {
+  const uint32_t invalidIndex = -1;
+  WasmLimits limits{0, 0, 0}; // Set by the writer.
+  WasmTableType type{uint8_t(ValType::FUNCREF), limits};
+  WasmTable desc{invalidIndex, type, name};
+  InputTable *table = make<InputTable>(desc, nullptr);
+  uint32_t flags = config->exportTable ? 0 : WASM_SYMBOL_VISIBILITY_HIDDEN;
+  TableSymbol *sym = symtab->addSyntheticTable(name, flags, table);
+  sym->markLive();
+  sym->forceExport = config->exportTable;
+  return sym;
+}
+
+static TableSymbol *createUndefinedIndirectFunctionTable(StringRef name) {
+  WasmLimits limits{0, 0, 0}; // Set by the writer.
+  WasmTableType *type = make<WasmTableType>();
+  type->ElemType = uint8_t(ValType::FUNCREF);
+  type->Limits = limits;
+  StringRef module(defaultModule);
+  uint32_t flags = config->exportTable ? 0 : WASM_SYMBOL_VISIBILITY_HIDDEN;
+  flags |= WASM_SYMBOL_UNDEFINED;
+  Symbol *sym =
+      symtab->addUndefinedTable(name, name, module, flags, nullptr, type);
+  sym->markLive();
+  sym->forceExport = config->exportTable;
+  return cast<TableSymbol>(sym);
+}
+
+static TableSymbol *resolveIndirectFunctionTable() {
+  // Even though we may not need a table, if the user explicitly specified
+  // --import-table or --export-table, ensure a table is residualized.
+  if (config->importTable)
+    return createUndefinedIndirectFunctionTable(functionTableName);
+  if (config->exportTable)
+    return createDefinedIndirectFunctionTable(functionTableName);
+
+  // Otherwise, check to the symtab to find the indirect function table.
+  if (Symbol *sym = symtab->find(functionTableName)) {
+    if (sym->isLive()) {
+      if (auto *t = dyn_cast<TableSymbol>(sym)) {
+        return t->isDefined()
+                   ? t
+                   : createDefinedIndirectFunctionTable(functionTableName);
+      }
+    }
+  }
+
+  // An indirect function table will only be present in the symbol table if
+  // needed by a reloc; if we get here, we don't need one.
+  return nullptr;
+}
+
 void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   WasmOptTable parser;
   opt::InputArgList args = parser.parse(argsArr.slice(1));
@@ -975,6 +1028,12 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Do size optimizations: garbage collection
   markLive();
+
+  // Provide the indirect funciton table if needed.
+  WasmSym::indirectFunctionTable = resolveIndirectFunctionTable();
+
+  if (errorCount())
+    return;
 
   // Write the result to the file.
   writeResult();

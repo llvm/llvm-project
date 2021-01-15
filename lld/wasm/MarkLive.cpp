@@ -177,6 +177,9 @@ void markLive() {
     for (InputGlobal *g : symtab->syntheticGlobals)
       if (!g->live)
         message("removing unused section " + toString(g));
+    for (InputTable *t : symtab->syntheticTables)
+      if (!t->live)
+        message("removing unused section " + toString(t));
   }
 }
 
