@@ -16,7 +16,11 @@
 ! FLANG FRONTEND DRIVER (flang-new -fc1)
 !----------------------------------------
 ! TEST 4: Write to a file (implicit)
-! RUN: %flang-new -fc1 -test-io  %s 2>&1 && FileCheck %s --match-full-lines --input-file=%S/input-output-file.txt
+! This particular test case generates an output file in the same directory as the input file. We need to copy the input file into a
+! temporary directory to avoid polluting the source directory.
+! RUN: rm -rf %t-dir && mkdir -p %t-dir && cd %t-dir
+! RUN: cp %s .
+! RUN: %flang-new -fc1 -test-io input-output-file.f90  2>&1 && FileCheck %s --match-full-lines --input-file=input-output-file.txt
 ! TEST 5: Write to a file (explicit)
 ! RUN: %flang-new -fc1 -test-io  -o %t %s 2>&1 && FileCheck %s --match-full-lines --input-file=%t
 
