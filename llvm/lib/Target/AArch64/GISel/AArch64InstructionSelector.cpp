@@ -1873,7 +1873,6 @@ void AArch64InstructionSelector::materializeLargeCMVal(
                               AArch64II::MO_G1 | AArch64II::MO_NC, 16, 0);
   DstReg = BuildMovK(DstReg, AArch64II::MO_G2 | AArch64II::MO_NC, 32, 0);
   BuildMovK(DstReg, AArch64II::MO_G3, 48, I.getOperand(0).getReg());
-  return;
 }
 
 bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
@@ -1940,6 +1939,24 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
     MRI.setRegBank(NewSrc.getReg(0), RBI.getRegBank(AArch64::GPRRegBankID));
     I.getOperand(1).setReg(NewSrc.getReg(0));
     return true;
+  }
+  case TargetOpcode::G_UITOFP:
+  case TargetOpcode::G_SITOFP: {
+    // If both source and destination regbanks are FPR, then convert the opcode
+    // to G_SITOF so that the importer can select it to an fpr variant.
+    // Otherwise, it ends up matching an fpr/gpr variant and adding a cross-bank
+    // copy.
+    Register SrcReg = I.getOperand(1).getReg();
+    if (MRI.getType(SrcReg).isVector())
+      return false;
+    if (RBI.getRegBank(SrcReg, MRI, TRI)->getID() == AArch64::FPRRegBankID) {
+      if (I.getOpcode() == TargetOpcode::G_SITOFP)
+        I.setDesc(TII.get(AArch64::G_SITOF));
+      else
+        I.setDesc(TII.get(AArch64::G_UITOF));
+      return true;
+    }
+    return false;
   }
   default:
     return false;

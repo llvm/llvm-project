@@ -649,5 +649,4 @@ void SpecialTableSymbolNode::output(OutputStream &OS, OutputFlags Flags) const {
     TargetName->output(OS, Flags);
     OS << "'}";
   }
-  return;
 }

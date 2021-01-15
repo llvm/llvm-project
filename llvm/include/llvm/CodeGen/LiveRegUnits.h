@@ -67,7 +67,6 @@ public:
         UsedRegUnits.addReg(Reg);
       }
     }
-    return;
   }
 
   /// Initialize and clear the set.

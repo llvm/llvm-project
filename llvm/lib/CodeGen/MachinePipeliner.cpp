@@ -1751,7 +1751,6 @@ void SwingSchedulerDAG::checkNodeSets(NodeSetType &NodeSets) {
   }
   NodeSets.clear();
   LLVM_DEBUG(dbgs() << "Clear recurrence node-sets\n");
-  return;
 }
 
 /// Add the nodes that do not belong to a recurrence set into groups
