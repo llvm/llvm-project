@@ -7679,7 +7679,7 @@ def err_no_typeid_with_fno_rtti : Error<
 def err_no_dynamic_cast_with_fno_rtti : Error<
   "use of dynamic_cast requires -frtti">;
 def warn_no_dynamic_cast_with_rtti_disabled: Warning<
-  "dynamic_cast will not work since RTTI data is disabled by " 
+  "dynamic_cast will not work since RTTI data is disabled by "
   "%select{-fno-rtti-data|/GR-}0">, InGroup<RTTI>;
 def warn_no_typeid_with_rtti_disabled: Warning<
   "typeid will not work since RTTI data is disabled by "
@@ -7695,8 +7695,7 @@ def warn_condition_is_assignment : Warning<"using the result of an "
   InGroup<Parentheses>;
 def warn_free_nonheap_object
   : Warning<"attempt to call %0 on non-heap object %1">,
-    InGroup<DiagGroup<"free-nonheap-object">>,
-    DefaultIgnore; // FIXME: add to -Wall after sufficient testing
+    InGroup<FreeNonHeapObject>;
 
 // Completely identical except off by default.
 def warn_condition_is_idiomatic_assignment : Warning<"using the result "
