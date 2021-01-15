@@ -1113,7 +1113,7 @@ bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(Instruction *TI,
       if (!SafeToMergeTerminators(TI, PTI, &FailBlocks)) {
         for (auto *Succ : FailBlocks) {
           if (!SplitBlockPredecessors(Succ, TI->getParent(), ".fold.split",
-                                      DTU ? &DTU->getDomTree() : nullptr))
+                                      DTU))
             return false;
         }
       }
@@ -1977,8 +1977,7 @@ static bool SinkCommonCodeFromPredecessors(BasicBlock *BB,
     LLVM_DEBUG(dbgs() << "SINK: Splitting edge\n");
     // We have a conditional edge and we're going to sink some instructions.
     // Insert a new block postdominating all blocks we're going to sink from.
-    if (!SplitBlockPredecessors(BB, UnconditionalPreds, ".sink.split",
-                                DTU ? &DTU->getDomTree() : nullptr))
+    if (!SplitBlockPredecessors(BB, UnconditionalPreds, ".sink.split", DTU))
       // Edges couldn't be split.
       return false;
     Changed = true;
@@ -3391,8 +3390,7 @@ static bool mergeConditionalStoreToAddress(
     // branch to QFB and PostBB.
     BasicBlock *TruePred = QTB ? QTB : QFB->getSinglePredecessor();
     BasicBlock *NewBB =
-        SplitBlockPredecessors(PostBB, {QFB, TruePred}, "condstore.split",
-                               DTU ? &DTU->getDomTree() : nullptr);
+        SplitBlockPredecessors(PostBB, {QFB, TruePred}, "condstore.split", DTU);
     if (!NewBB)
       return false;
     PostBB = NewBB;
@@ -3421,9 +3419,9 @@ static bool mergeConditionalStoreToAddress(
     QPred = QB.CreateNot(QPred);
   Value *CombinedPred = QB.CreateOr(PPred, QPred);
 
-  auto *T = SplitBlockAndInsertIfThen(
-      CombinedPred, &*QB.GetInsertPoint(), /*Unreachable=*/false,
-      /*BranchWeights=*/nullptr, DTU ? &DTU->getDomTree() : nullptr);
+  auto *T = SplitBlockAndInsertIfThen(CombinedPred, &*QB.GetInsertPoint(),
+                                      /*Unreachable=*/false,
+                                      /*BranchWeights=*/nullptr, DTU);
   QB.SetInsertPoint(T);
   StoreInst *SI = cast<StoreInst>(QB.CreateStore(QPHI, Address));
   AAMDNodes AAMD;
@@ -4187,9 +4185,8 @@ bool SimplifyCFGOpt::SimplifyBranchOnICmpChain(BranchInst *BI,
   // then we evaluate them with an explicit branch first. Split the block
   // right before the condbr to handle it.
   if (ExtraCase) {
-    BasicBlock *NewBB =
-        SplitBlock(BB, BI, DTU ? &DTU->getDomTree() : nullptr, /*LI=*/nullptr,
-                   /*MSSAU=*/nullptr, "switch.early.test");
+    BasicBlock *NewBB = SplitBlock(BB, BI, DTU, /*LI=*/nullptr,
+                                   /*MSSAU=*/nullptr, "switch.early.test");
 
     // Remove the uncond branch added to the old block.
     Instruction *OldTI = BB->getTerminator();
@@ -4828,16 +4825,14 @@ static void createUnreachableSwitchDefault(SwitchInst *Switch,
                                            DomTreeUpdater *DTU) {
   LLVM_DEBUG(dbgs() << "SimplifyCFG: switch default is dead.\n");
   auto *BB = Switch->getParent();
-  BasicBlock *NewDefaultBlock =
-      SplitBlockPredecessors(Switch->getDefaultDest(), Switch->getParent(), "",
-                             DTU ? &DTU->getDomTree() : nullptr);
+  BasicBlock *NewDefaultBlock = SplitBlockPredecessors(
+      Switch->getDefaultDest(), Switch->getParent(), "", DTU);
   auto *OrigDefaultBlock = Switch->getDefaultDest();
   Switch->setDefaultDest(&*NewDefaultBlock);
   if (DTU)
     DTU->applyUpdates({{DominatorTree::Insert, BB, &*NewDefaultBlock},
                        {DominatorTree::Delete, BB, OrigDefaultBlock}});
-  SplitBlock(&*NewDefaultBlock, &NewDefaultBlock->front(),
-             DTU ? &DTU->getDomTree() : nullptr);
+  SplitBlock(&*NewDefaultBlock, &NewDefaultBlock->front(), DTU);
   SmallVector<DominatorTree::UpdateType, 2> Updates;
   for (auto *Successor : successors(NewDefaultBlock))
     Updates.push_back({DominatorTree::Delete, NewDefaultBlock, Successor});
@@ -5399,20 +5394,25 @@ static void RemoveSwitchAfterSelectConversion(SwitchInst *SI, PHINode *PHI,
                                               Value *SelectValue,
                                               IRBuilder<> &Builder,
                                               DomTreeUpdater *DTU) {
+  std::vector<DominatorTree::UpdateType> Updates;
+
   BasicBlock *SelectBB = SI->getParent();
+  BasicBlock *DestBB = PHI->getParent();
+
+  if (!is_contained(predecessors(DestBB), SelectBB))
+    Updates.push_back({DominatorTree::Insert, SelectBB, DestBB});
+  Builder.CreateBr(DestBB);
+
+  // Remove the switch.
+
   while (PHI->getBasicBlockIndex(SelectBB) >= 0)
     PHI->removeIncomingValue(SelectBB);
   PHI->addIncoming(SelectValue, SelectBB);
 
-  Builder.CreateBr(PHI->getParent());
-
-  std::vector<DominatorTree::UpdateType> Updates;
-
-  // Remove the switch.
   for (unsigned i = 0, e = SI->getNumSuccessors(); i < e; ++i) {
     BasicBlock *Succ = SI->getSuccessor(i);
 
-    if (Succ == PHI->getParent())
+    if (Succ == DestBB)
       continue;
     Succ->removePredecessor(SelectBB);
     Updates.push_back({DominatorTree::Delete, SelectBB, Succ});

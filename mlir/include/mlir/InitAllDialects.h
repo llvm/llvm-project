@@ -19,6 +19,7 @@
 #include "mlir/Dialect/ArmNeon/ArmNeonDialect.h"
 #include "mlir/Dialect/ArmSVE/ArmSVEDialect.h"
 #include "mlir/Dialect/Async/IR/Async.h"
+#include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMAVX512Dialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMArmNeonDialect.h"
@@ -52,6 +53,7 @@ inline void registerAllDialects(DialectRegistry &registry) {
                   arm_neon::ArmNeonDialect,
                   async::AsyncDialect,
                   avx512::AVX512Dialect,
+                  complex::ComplexDialect,
                   gpu::GPUDialect,
                   LLVM::LLVMAVX512Dialect,
                   LLVM::LLVMDialect,
