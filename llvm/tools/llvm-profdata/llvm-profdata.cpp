@@ -2254,7 +2254,6 @@ static void dumpHotFunctionList(const std::vector<std::string> &ColumnTitle,
     FOS.PadToColumn(ColumnOffset[3]);
     FOS << R.FuncName << "\n";
   }
-  return;
 }
 
 static int

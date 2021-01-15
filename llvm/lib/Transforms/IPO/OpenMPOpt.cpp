@@ -1134,7 +1134,6 @@ private:
 
       RFI.foreachUse(SCC, CheckGlobalization);
     }
-    return;
   }
 
   /// Maps the values stored in the offload arrays passed as arguments to

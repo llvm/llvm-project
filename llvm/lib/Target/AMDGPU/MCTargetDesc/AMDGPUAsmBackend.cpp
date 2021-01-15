@@ -58,7 +58,6 @@ void AMDGPUAsmBackend::relaxInstruction(MCInst &Inst,
   Res.setOpcode(RelaxedOpcode);
   Res.addOperand(Inst.getOperand(0));
   Inst = std::move(Res);
-  return;
 }
 
 bool AMDGPUAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,

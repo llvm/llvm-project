@@ -1769,7 +1769,6 @@ void llvm::UpgradeInlineAsmString(std::string *AsmStr) {
       (Pos = AsmStr->find("# marker")) != std::string::npos) {
     AsmStr->replace(Pos, 1, ";");
   }
-  return;
 }
 
 /// Upgrade a call to an old intrinsic. All argument and return casting must be

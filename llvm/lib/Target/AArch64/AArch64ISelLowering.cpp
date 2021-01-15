@@ -3955,7 +3955,6 @@ void selectGatherScatterAddrMode(SDValue &BasePtr, SDValue &Index, EVT MemVT,
   Opcode = NewOp;
   BasePtr = Index->getOperand(0);
   Index = ConstOffset;
-  return;
 }
 
 SDValue AArch64TargetLowering::LowerMGATHER(SDValue Op,

@@ -108,8 +108,6 @@ void ProfiledBinary::load() {
   ProEpilogTracker.inferEpilogOffsets(RetAddrs);
 
   // TODO: decode other sections.
-
-  return;
 }
 
 bool ProfiledBinary::inlineContextEqual(uint64_t Address1,

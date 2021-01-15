@@ -2011,8 +2011,6 @@ static void sinkSpillUsesAfterCoroBegin(Function &F,
   Instruction *InsertPt = CoroBegin->getNextNode();
   for (Instruction *Inst : InsertionList)
     Inst->moveBefore(InsertPt);
-
-  return;
 }
 
 /// For each local variable that all of its user are only used inside one of

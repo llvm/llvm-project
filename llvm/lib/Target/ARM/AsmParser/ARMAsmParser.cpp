@@ -3087,7 +3087,6 @@ public:
     // This is container for the immediate that we will create the constant
     // pool from
     addExpr(Inst, getConstantPoolImm());
-    return;
   }
 
   void addMemTBBOperands(MCInst &Inst, unsigned N) const {
