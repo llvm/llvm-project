@@ -147,7 +147,7 @@ int main(int argc, char *argv[]) {
                     ES, std::make_unique<jitlink::InProcessMemoryManager>());
                 // Add an instance of our plugin.
                 ObjLinkingLayer->addPlugin(std::make_unique<MyPlugin>());
-                return ObjLinkingLayer;
+                return std::move(ObjLinkingLayer);
               })
           .create());
 
