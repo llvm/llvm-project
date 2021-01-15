@@ -7025,6 +7025,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I, DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ResultVT, Vec, Index));
     return;
   }
+  case Intrinsic::experimental_vector_reverse:
+    visitVectorReverse(I);
+    return;
   }
 }
 
@@ -10834,6 +10837,29 @@ void SelectionDAGBuilder::visitSwitch(const SwitchInst &SI) {
 
     lowerWorkItem(W, SI.getCondition(), SwitchMBB, DefaultMBB);
   }
+}
+
+void SelectionDAGBuilder::visitVectorReverse(const CallInst &I) {
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+
+  SDLoc DL = getCurSDLoc();
+  SDValue V = getValue(I.getOperand(0));
+  assert(VT == V.getValueType() && "Malformed vector.reverse!");
+
+  if (VT.isScalableVector()) {
+    setValue(&I, DAG.getNode(ISD::VECTOR_REVERSE, DL, VT, V));
+    return;
+  }
+
+  // Use VECTOR_SHUFFLE for the fixed-length vector
+  // to maintain existing behavior.
+  SmallVector<int, 8> Mask;
+  unsigned NumElts = VT.getVectorMinNumElements();
+  for (unsigned i = 0; i != NumElts; ++i)
+    Mask.push_back(NumElts - 1 - i);
+
+  setValue(&I, DAG.getVectorShuffle(VT, DL, V, DAG.getUNDEF(VT), Mask));
 }
 
 void SelectionDAGBuilder::visitFreeze(const FreezeInst &I) {

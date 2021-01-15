@@ -16233,6 +16233,33 @@ runtime, then the result vector is undefined. The ``idx`` parameter must be a
 vector index constant type (for most targets this will be an integer pointer
 type).
 
+'``llvm.experimental.vector.reverse``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <2 x i8> @llvm.experimental.vector.reverse.v2i8(<2 x i8> %a)
+      declare <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> %a)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.vector.reverse.*``' intrinsics reverse a vector.
+The intrinsic takes a single vector and returns a vector of matching type but
+with the original lane order reversed. These intrinsics work for both fixed
+and scalable vectors. While this intrinsic is marked as experimental the
+recommended way to express reverse operations for fixed-width vectors is still
+to use a shufflevector, as that may allow for more optimization opportunities.
+
+Arguments:
+""""""""""
+
+The argument to this intrinsic must be a vector.
+
 Matrix Intrinsics
 -----------------
 

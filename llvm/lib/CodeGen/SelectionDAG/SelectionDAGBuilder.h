@@ -773,6 +773,7 @@ private:
   void visitGCResult(const GCResultInst &I);
 
   void visitVectorReduce(const CallInst &I, unsigned Intrinsic);
+  void visitVectorReverse(const CallInst &I);
 
   void visitUserOp1(const Instruction &I) {
     llvm_unreachable("UserOp1 should not exist at instruction selection time!");
