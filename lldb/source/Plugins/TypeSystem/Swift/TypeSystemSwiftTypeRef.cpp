@@ -2856,14 +2856,20 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
     case Node::Kind::BoundGenericStructure:
       return false;
     case Node::Kind::Structure: {
-      // In rare instances, a Swift `Structure` wraps an ObjC enum. An example
-      // is `$sSo16ComparisonResultVD`. For now, use `SwiftASTContext` to handle
-      // these enum structs.
+      // In some instances, a swift `structure` wraps an objc enum. The enum
+      // case needs to be handled, but structs are no-ops.
       auto resolved = ResolveTypeAlias(m_swift_ast_context, dem, node, true);
       auto clang_type = std::get<CompilerType>(resolved);
+      if (!clang_type)
+        return false;
+
       bool is_signed;
       if (!clang_type.IsEnumerationType(is_signed))
+        // The type is a clang struct, not an enum.
         return false;
+
+      // The type is an enum imported from clang. Try Swift type metadata first,
+      // and failing that fallback to the AST.
       LLVM_FALLTHROUGH;
     }
     case Node::Kind::Enum:
@@ -2879,8 +2885,8 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
             return true;
           }
         }
-      s->PutCString("<unknown type>");
-      return false;
+
+      return {};
     }
     default:
       assert(false && "Unhandled node kind");
