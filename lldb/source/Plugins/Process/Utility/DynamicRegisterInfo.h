@@ -82,6 +82,8 @@ protected:
 
   void MoveFrom(DynamicRegisterInfo &&info);
 
+  void ConfigureOffsets();
+
   reg_collection m_regs;
   set_collection m_sets;
   set_reg_num_collection m_set_reg_nums;
