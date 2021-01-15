@@ -130,6 +130,7 @@ class TestGdbRemoteGPacket(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr48420")
     @expectedFailureNetBSD
+    @skipIfDarwin # g packet not supported
     def test_g_returns_correct_data_with_suffix(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -137,6 +138,7 @@ class TestGdbRemoteGPacket(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr48420")
     @expectedFailureNetBSD
+    @skipIfDarwin # g packet not supported
     def test_g_returns_correct_data_no_suffix(self):
         self.build()
         self.set_inferior_startup_launch()
