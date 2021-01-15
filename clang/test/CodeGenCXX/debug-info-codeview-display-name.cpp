@@ -20,11 +20,9 @@ void freefunc() { }
 
 namespace N {
   int b() { return 0; }
-// UNQUAL-DAG: "b"
-// QUAL-DAG: "N::b"
+// CHECK-DAG: "b"
   namespace { void func() { } }
-// UNQUAL-DAG: "func"
-// QUAL-DAG: "N::`anonymous namespace'::func"
+// CHECK-DAG: "func"
 }
 
 void _c(void) {
@@ -35,24 +33,19 @@ void _c(void) {
 struct foo {
   int operator+(int);
   foo(){}
-// UNQUAL-DAG: "foo"
-// QUAL-DAG: "foo::foo"
+// CHECK-DAG: "foo"
 
   ~foo(){}
-// UNQUAL-DAG: "~foo"
-// QUAL-DAG: "foo::~foo"
+// CHECK-DAG: "~foo"
 
   foo(int i){}
-// UNQUAL-DAG: "foo"
-// QUAL-DAG: "foo::foo"
+// CHECK-DAG: "foo"
 
   foo(char *q){}
-// UNQUAL-DAG: "foo"
-// QUAL-DAG: "foo::foo"
+// CHECK-DAG: "foo"
 
   static foo* static_method() { return 0; }
-// UNQUAL-DAG: "static_method"
-// QUAL-DAG: "foo::static_method"
+// CHECK-DAG: "static_method"
 
 };
 
@@ -61,8 +54,7 @@ void use_foo() {
   foo::static_method();
 }
 
-// UNQUAL-DAG: "operator+"
-// QUAL-DAG: "foo::operator+"
+// CHECK-DAG: "operator+"
 int foo::operator+(int a) { return a; }
 
 // PR17371
@@ -82,17 +74,11 @@ void OverloadedNewDelete::operator delete(void *) { }
 void OverloadedNewDelete::operator delete[](void *) { }
 int OverloadedNewDelete::operator+(int x) { return x; };
 
-// UNQUAL-DAG: "operator new"
-// UNQUAL-DAG: "operator new[]"
-// UNQUAL-DAG: "operator delete"
-// UNQUAL-DAG: "operator delete[]"
-// UNQUAL-DAG: "operator+"
-// QUAL-DAG: "OverloadedNewDelete::operator new"
-// QUAL-DAG: "OverloadedNewDelete::operator new[]"
-// QUAL-DAG: "OverloadedNewDelete::operator delete"
-// QUAL-DAG: "OverloadedNewDelete::operator delete[]"
-// QUAL-DAG: "OverloadedNewDelete::operator+"
-
+// CHECK-DAG: "operator new"
+// CHECK-DAG: "operator new[]"
+// CHECK-DAG: "operator delete"
+// CHECK-DAG: "operator delete[]"
+// CHECK-DAG: "operator+"
 
 template <typename T, void (*)(void)>
 void fn_tmpl() {}
