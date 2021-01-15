@@ -1757,7 +1757,7 @@ int32_t __tgt_rtl_run_target_team_region_locked(
                 loop_tripcount, // From run_region arg
                 KernelInfo->device_id);
 
-  if (print_kernel_trace == 4)
+  if (print_kernel_trace >= 1)
     // enum modes are SPMD, GENERIC, NONE 0,1,2
     fprintf(stderr,
             "DEVID:%2d SGN:%1d ConstWGSize:%-4d args:%2d teamsXthrds:(%4dX%4d) "

@@ -25,7 +25,7 @@ define i32 @caller_double_in_fpr() nounwind {
 ; RV32-ILP32D-NEXT:    lui a0, %hi(.LCPI1_0)
 ; RV32-ILP32D-NEXT:    fld fa0, %lo(.LCPI1_0)(a0)
 ; RV32-ILP32D-NEXT:    addi a0, zero, 1
-; RV32-ILP32D-NEXT:    call callee_double_in_fpr
+; RV32-ILP32D-NEXT:    call callee_double_in_fpr@plt
 ; RV32-ILP32D-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-ILP32D-NEXT:    addi sp, sp, 16
 ; RV32-ILP32D-NEXT:    ret
@@ -63,7 +63,7 @@ define i32 @caller_double_in_fpr_exhausted_gprs() nounwind {
 ; RV32-ILP32D-NEXT:    mv a3, zero
 ; RV32-ILP32D-NEXT:    mv a5, zero
 ; RV32-ILP32D-NEXT:    mv a7, zero
-; RV32-ILP32D-NEXT:    call callee_double_in_fpr_exhausted_gprs
+; RV32-ILP32D-NEXT:    call callee_double_in_fpr_exhausted_gprs@plt
 ; RV32-ILP32D-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-ILP32D-NEXT:    addi sp, sp, 16
 ; RV32-ILP32D-NEXT:    ret
@@ -114,7 +114,7 @@ define i32 @caller_double_in_gpr_exhausted_fprs() nounwind {
 ; RV32-ILP32D-NEXT:    fld fa7, %lo(.LCPI5_7)(a0)
 ; RV32-ILP32D-NEXT:    lui a1, 262688
 ; RV32-ILP32D-NEXT:    mv a0, zero
-; RV32-ILP32D-NEXT:    call callee_double_in_gpr_exhausted_fprs
+; RV32-ILP32D-NEXT:    call callee_double_in_gpr_exhausted_fprs@plt
 ; RV32-ILP32D-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-ILP32D-NEXT:    addi sp, sp, 16
 ; RV32-ILP32D-NEXT:    ret
@@ -173,7 +173,7 @@ define i32 @caller_double_in_gpr_and_stack_almost_exhausted_gprs_fprs() nounwind
 ; RV32-ILP32D-NEXT:    mv a3, zero
 ; RV32-ILP32D-NEXT:    mv a5, zero
 ; RV32-ILP32D-NEXT:    mv a7, zero
-; RV32-ILP32D-NEXT:    call callee_double_in_gpr_and_stack_almost_exhausted_gprs_fprs
+; RV32-ILP32D-NEXT:    call callee_double_in_gpr_and_stack_almost_exhausted_gprs_fprs@plt
 ; RV32-ILP32D-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-ILP32D-NEXT:    addi sp, sp, 16
 ; RV32-ILP32D-NEXT:    ret
@@ -230,7 +230,7 @@ define i32 @caller_double_on_stack_exhausted_gprs_fprs() nounwind {
 ; RV32-ILP32D-NEXT:    mv a3, zero
 ; RV32-ILP32D-NEXT:    mv a5, zero
 ; RV32-ILP32D-NEXT:    mv a7, zero
-; RV32-ILP32D-NEXT:    call callee_double_on_stack_exhausted_gprs_fprs
+; RV32-ILP32D-NEXT:    call callee_double_on_stack_exhausted_gprs_fprs@plt
 ; RV32-ILP32D-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-ILP32D-NEXT:    addi sp, sp, 16
 ; RV32-ILP32D-NEXT:    ret
@@ -254,7 +254,7 @@ define i32 @caller_double_ret() nounwind {
 ; RV32-ILP32D:       # %bb.0:
 ; RV32-ILP32D-NEXT:    addi sp, sp, -16
 ; RV32-ILP32D-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-ILP32D-NEXT:    call callee_double_ret
+; RV32-ILP32D-NEXT:    call callee_double_ret@plt
 ; RV32-ILP32D-NEXT:    fsd fa0, 0(sp)
 ; RV32-ILP32D-NEXT:    lw a0, 0(sp)
 ; RV32-ILP32D-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload

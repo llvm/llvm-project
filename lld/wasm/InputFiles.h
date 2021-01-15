@@ -32,6 +32,7 @@ class InputFunction;
 class InputSegment;
 class InputGlobal;
 class InputEvent;
+class InputTable;
 class InputSection;
 
 // If --reproduce option is given, all input files are written
@@ -139,6 +140,7 @@ public:
   std::vector<InputFunction *> functions;
   std::vector<InputGlobal *> globals;
   std::vector<InputEvent *> events;
+  std::vector<InputTable *> tables;
   std::vector<InputSection *> customSections;
   llvm::DenseMap<uint32_t, InputSection *> customSectionsByIndex;
 
@@ -148,12 +150,14 @@ public:
   GlobalSymbol *getGlobalSymbol(uint32_t index) const;
   SectionSymbol *getSectionSymbol(uint32_t index) const;
   EventSymbol *getEventSymbol(uint32_t index) const;
+  TableSymbol *getTableSymbol(uint32_t index) const;
 
 private:
   Symbol *createDefined(const WasmSymbol &sym);
   Symbol *createUndefined(const WasmSymbol &sym, bool isCalledDirectly);
 
   bool isExcludedByComdat(InputChunk *chunk) const;
+  void synthesizeTableSymbols();
 
   std::unique_ptr<WasmObjectFile> wasmObj;
 };

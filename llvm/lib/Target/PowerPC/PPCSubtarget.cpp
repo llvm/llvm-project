@@ -133,6 +133,8 @@ void PPCSubtarget::initializeEnvironment() {
   UsePPCPostRASchedStrategy = false;
   PairedVectorMemops = false;
   PredictableSelectIsExpensive = false;
+  HasModernAIXAs = false;
+  IsAIX = false;
 
   HasPOPCNTD = POPCNTD_Unavailable;
 }

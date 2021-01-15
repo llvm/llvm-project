@@ -828,7 +828,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     Opts.CodeComplete.IncludeIndicator.Insert.clear();
     Opts.CodeComplete.IncludeIndicator.NoInsert.clear();
   }
-  Opts.CodeComplete.SpeculativeIndexRequest = Opts.StaticIndex;
   Opts.CodeComplete.EnableFunctionArgSnippets = EnableFunctionArgSnippets;
   Opts.CodeComplete.AllScopes = AllScopesCompletion;
   Opts.CodeComplete.RunParser = CodeCompletionParse;

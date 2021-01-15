@@ -902,7 +902,8 @@ static bool checkSimpleDecomposition(
     llvm::function_ref<ExprResult(SourceLocation, Expr *, unsigned)> GetInit) {
   if ((int64_t)Bindings.size() != NumElems) {
     S.Diag(Src->getLocation(), diag::err_decomp_decl_wrong_number_bindings)
-        << DecompType << (unsigned)Bindings.size() << NumElems.toString(10)
+        << DecompType << (unsigned)Bindings.size()
+        << (unsigned)NumElems.getLimitedValue(UINT_MAX) << NumElems.toString(10)
         << (NumElems < Bindings.size());
     return true;
   }
@@ -1148,8 +1149,9 @@ static bool checkTupleLikeDecomposition(Sema &S,
                                         const llvm::APSInt &TupleSize) {
   if ((int64_t)Bindings.size() != TupleSize) {
     S.Diag(Src->getLocation(), diag::err_decomp_decl_wrong_number_bindings)
-        << DecompType << (unsigned)Bindings.size() << TupleSize.toString(10)
-        << (TupleSize < Bindings.size());
+        << DecompType << (unsigned)Bindings.size()
+        << (unsigned)TupleSize.getLimitedValue(UINT_MAX)
+        << TupleSize.toString(10) << (TupleSize < Bindings.size());
     return true;
   }
 
@@ -1373,7 +1375,7 @@ static bool checkMemberDecomposition(Sema &S, ArrayRef<BindingDecl*> Bindings,
                       [](FieldDecl *FD) { return !FD->isUnnamedBitfield(); });
     assert(Bindings.size() != NumFields);
     S.Diag(Src->getLocation(), diag::err_decomp_decl_wrong_number_bindings)
-        << DecompType << (unsigned)Bindings.size() << NumFields
+        << DecompType << (unsigned)Bindings.size() << NumFields << NumFields
         << (NumFields < Bindings.size());
     return true;
   };
@@ -5518,8 +5520,9 @@ Sema::MarkBaseAndMemberDestructorsReferenced(SourceLocation Location,
 
   // Bases.
   for (const auto &Base : ClassDecl->bases()) {
-    // Bases are always records in a well-formed non-dependent class.
     const RecordType *RT = Base.getType()->getAs<RecordType>();
+    if (!RT)
+      continue;
 
     // Remember direct virtual bases.
     if (Base.isVirtual()) {

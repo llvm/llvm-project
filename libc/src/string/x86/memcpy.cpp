@@ -12,6 +12,26 @@
 
 namespace __llvm_libc {
 
+// Whether to use only rep;movsb.
+constexpr bool kUseOnlyRepMovsb =
+    LLVM_LIBC_IS_DEFINED(LLVM_LIBC_MEMCPY_X86_USE_ONLY_REPMOVSB);
+
+// kRepMovsBSize == -1 : Only CopyAligned is used.
+// kRepMovsBSize ==  0 : Only RepMovsb is used.
+// else CopyAligned is used up to kRepMovsBSize and then RepMovsb.
+constexpr size_t kRepMovsBSize =
+#ifdef LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE
+    LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE;
+#else
+    -1;
+#endif // LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE
+
+// Whether target supports AVX instructions.
+constexpr bool kHasAvx = LLVM_LIBC_IS_DEFINED(__AVX__);
+
+// The chunk size used for the loop copy strategy.
+constexpr size_t kLoopCopyBlockSize = kHasAvx ? 64 : 32;
+
 static void CopyRepMovsb(char *__restrict dst, const char *__restrict src,
                          size_t count) {
   // FIXME: Add MSVC support with
@@ -20,12 +40,6 @@ static void CopyRepMovsb(char *__restrict dst, const char *__restrict src,
   //         reinterpret_cast<const unsigned char *>(src), count);
   asm volatile("rep movsb" : "+D"(dst), "+S"(src), "+c"(count) : : "memory");
 }
-
-#if defined(__AVX__)
-#define BEST_SIZE 64
-#else
-#define BEST_SIZE 32
-#endif
 
 // Design rationale
 // ================
@@ -47,6 +61,9 @@ static void CopyRepMovsb(char *__restrict dst, const char *__restrict src,
 //   with little change on the code side.
 static void memcpy_x86(char *__restrict dst, const char *__restrict src,
                        size_t count) {
+  if (kUseOnlyRepMovsb)
+    return CopyRepMovsb(dst, src, count);
+
   if (count == 0)
     return;
   if (count == 1)
@@ -67,16 +84,10 @@ static void memcpy_x86(char *__restrict dst, const char *__restrict src,
     return CopyBlockOverlap<32>(dst, src, count);
   if (count < 128)
     return CopyBlockOverlap<64>(dst, src, count);
-#if defined(__AVX__)
-  if (count < 256)
+  if (kHasAvx && count < 256)
     return CopyBlockOverlap<128>(dst, src, count);
-#endif
-  // kRepMovsBSize == -1 : Only CopyAligned is used.
-  // kRepMovsBSize ==  0 : Only RepMovsb is used.
-  // else CopyAligned is used to to kRepMovsBSize and then RepMovsb.
-  constexpr size_t kRepMovsBSize = -1;
   if (count <= kRepMovsBSize)
-    return CopyAlignedBlocks<BEST_SIZE>(dst, src, count);
+    return CopyAlignedBlocks<kLoopCopyBlockSize>(dst, src, count);
   return CopyRepMovsb(dst, src, count);
 }
 

@@ -67,6 +67,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  memmove
+  SRCS
+    memmove.cpp
+  HDRS
+    memmove.h
+  DEPENDS
+    libc.include.unistd
+    libc.src.stdlib.abs_utils
+    libc.src.string.memcpy
+)
+
+add_entrypoint_object(
   strchr
   SRCS
     strchr.cpp

@@ -1334,7 +1334,7 @@ void X86AsmPrinter::LowerPATCHABLE_OP(const MachineInstr &MI,
 
   MCInst MCI;
   MCI.setOpcode(Opcode);
-  for (auto &MO : make_range(MI.operands_begin() + 2, MI.operands_end()))
+  for (auto &MO : drop_begin(MI.operands(), 2))
     if (auto MaybeOperand = MCIL.LowerMachineOperand(&MI, MO))
       MCI.addOperand(MaybeOperand.getValue());
 
@@ -1710,7 +1710,7 @@ void X86AsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
   unsigned OpCode = MI.getOperand(0).getImm();
   MCInst Ret;
   Ret.setOpcode(OpCode);
-  for (auto &MO : make_range(MI.operands_begin() + 1, MI.operands_end()))
+  for (auto &MO : drop_begin(MI.operands(), 1))
     if (auto MaybeOperand = MCIL.LowerMachineOperand(&MI, MO))
       Ret.addOperand(MaybeOperand.getValue());
   OutStreamer->emitInstruction(Ret, getSubtargetInfo());
@@ -1749,7 +1749,7 @@ void X86AsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI,
   // Before emitting the instruction, add a comment to indicate that this is
   // indeed a tail call.
   OutStreamer->AddComment("TAILCALL");
-  for (auto &MO : make_range(MI.operands_begin() + 1, MI.operands_end()))
+  for (auto &MO : drop_begin(MI.operands(), 1))
     if (auto MaybeOperand = MCIL.LowerMachineOperand(&MI, MO))
       TC.addOperand(MaybeOperand.getValue());
   OutStreamer->emitInstruction(TC, getSubtargetInfo());

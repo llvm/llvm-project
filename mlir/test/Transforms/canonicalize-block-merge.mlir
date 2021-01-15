@@ -231,7 +231,7 @@ func private @print(%arg0: i32, %arg1: i32)
 // CHECK-LABEL: @nomerge
 func @nomerge(%arg0: i32, %i: i32) {
   %c1_i32 = constant 1 : i32
-  %icmp = cmpi "slt", %i, %arg0 : i32
+  %icmp = cmpi slt, %i, %arg0 : i32
   cond_br %icmp, ^bb2, ^bb3
 
 ^bb2:  // pred: ^bb1
@@ -243,7 +243,7 @@ func @nomerge(%arg0: i32, %i: i32) {
   br ^bb4(%jp1 : i32)
 
 ^bb4(%j: i32):  // 2 preds: ^bb2, ^bb7
-  %jcmp = cmpi "slt", %j, %arg0 : i32
+  %jcmp = cmpi slt, %j, %arg0 : i32
 // CHECK-NOT:  call @print(%[[arg1:.+]], %[[arg1]])
   call @print(%j, %ip1) : (i32, i32) -> ()
   cond_br %jcmp, ^bb7, ^bb3

@@ -205,7 +205,7 @@ Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
                                platform_port, platform_path);
     UNUSED_IF_ASSERT_DISABLED(ok);
     assert(ok);
-    url << platform_ip.str() << ":" << *port;
+    url << '[' << platform_ip.str() << "]:" << *port;
   } else {
     socket_name = GetDomainSocketPath("gdbserver").GetPath();
     url << socket_name;

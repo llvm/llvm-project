@@ -471,11 +471,11 @@ end module
 subroutine s1()
   use m20
   interface operator(.not.)
-    !ERROR: Procedure 'f' is already specified in generic 'OPERATOR(.NOT.)'
+    !ERROR: Procedure 'f' from module 'm20' is already specified in generic 'OPERATOR(.NOT.)'
     procedure f
   end interface
   interface operator(+)
-    !ERROR: Procedure 'f' is already specified in generic 'OPERATOR(+)'
+    !ERROR: Procedure 'f' from module 'm20' is already specified in generic 'OPERATOR(+)'
     procedure f
   end interface
 end subroutine s1

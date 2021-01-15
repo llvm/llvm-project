@@ -987,8 +987,11 @@ def : InstAlias<"cntlzw. $rA, $rS", (CNTLZW8_rec g8rc:$rA, g8rc:$rS)>;
 def : InstAlias<"mtxer $Rx", (MTSPR8 1, g8rc:$Rx)>;
 def : InstAlias<"mfxer $Rx", (MFSPR8 g8rc:$Rx, 1)>;
 
-def : InstAlias<"mtudscr $Rx", (MTSPR8 3, g8rc:$Rx)>;
-def : InstAlias<"mfudscr $Rx", (MFSPR8 g8rc:$Rx, 3)>;
+//Disable this alias on AIX for now because as does not support them.
+let Predicates = [ModernAs] in {
+  def : InstAlias<"mtudscr $Rx", (MTSPR8 3, g8rc:$Rx)>;
+  def : InstAlias<"mfudscr $Rx", (MFSPR8 g8rc:$Rx, 3)>;
+}
 
 def : InstAlias<"mfrtcu $Rx", (MFSPR8 g8rc:$Rx, 4)>;
 def : InstAlias<"mfrtcl $Rx", (MFSPR8 g8rc:$Rx, 5)>;

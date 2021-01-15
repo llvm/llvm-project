@@ -470,8 +470,9 @@ def err_decomp_decl_not_alone : Error<
 def err_decomp_decl_requires_init : Error<
   "decomposition declaration %0 requires an initializer">;
 def err_decomp_decl_wrong_number_bindings : Error<
-  "type %0 decomposes into %2 elements, but %select{only |}3%1 "
-  "names were provided">;
+  "type %0 decomposes into %3 %plural{1:element|:elements}2, but "
+  "%select{%plural{0:no|:only %1}1|%1}4 "
+  "%plural{1:name was|:names were}1 provided">;
 def err_decomp_decl_unbindable_type : Error<
   "cannot decompose %select{union|non-class, non-array}1 type %2">;
 def err_decomp_decl_multiple_bases_with_members : Error<

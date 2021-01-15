@@ -84,7 +84,7 @@ func @func_loop(%arg0 : i32, %arg1 : i32) -> i32 {
   // CHECK-NEXT:     %2 = cmpi
   // CHECK-NEXT:     cond_br
   // CHECK-NEXT: EndLiveness
-  %lessThan = cmpi "slt", %counter, %arg1 : i32
+  %lessThan = cmpi slt, %counter, %arg1 : i32
   cond_br %lessThan, ^loopBody(%i : i32), ^exit(%i : i32)
 ^loopBody(%val : i32):
   // CHECK: Block: 2

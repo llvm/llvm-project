@@ -3022,7 +3022,7 @@ bool AsmParser::parseDirectiveAscii(StringRef IDVal, bool ZeroTerminated) {
     if (checkForValidSection())
       return true;
     // Only support spaces as separators for .ascii directive for now. See the
-    // discusssion at https://reviews.llvm.org/D91460 for more details
+    // discusssion at https://reviews.llvm.org/D91460 for more details.
     do {
       if (parseEscapedString(Data))
         return true;

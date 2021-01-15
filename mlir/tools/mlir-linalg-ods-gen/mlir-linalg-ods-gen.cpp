@@ -30,6 +30,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ToolOutputFile.h"
 
@@ -85,6 +86,7 @@ public:
     // Tokens with no info.
     colon,
     comma,
+    doc_str,
     equal,
     gt,
     l_brace,
@@ -182,6 +184,9 @@ private:
 
   // Lex an integer.
   Token lexInteger(const char *tokStart);
+
+  // Lex a string.
+  Token lexString(const char *tokStart);
 
   // Skip a comment line, starting with a '//'.
   void skipComment();
@@ -287,6 +292,8 @@ Token Lexer::lexToken() {
       return formToken(Token::Kind::star, tokStart);
     case '?':
       return formToken(Token::Kind::question, tokStart);
+    case '"':
+      return lexString(tokStart);
     case '/':
       if (*curPtr == '/') {
         skipComment();
@@ -331,6 +338,36 @@ Token Lexer::lexInteger(const char *tokStart) {
 
   StringRef str(tokStart, curPtr - tokStart);
   return Token(Token::Kind::integer, str);
+}
+
+Token Lexer::lexString(const char *tokStart) {
+  assert(curPtr[-1] == '"');
+
+  if (*curPtr == '"' && *(curPtr + 1) == '"') {
+    curPtr += 2;
+    while (true) {
+      switch (*curPtr++) {
+      case '"':
+        if (*curPtr == '"' && *(curPtr + 1) == '"') {
+          Token token(Token::Kind::doc_str,
+                      StringRef(tokStart + 3, curPtr - tokStart - 4));
+          curPtr += 2;
+          return token;
+        }
+        continue;
+      case 0:
+        // If this is a random nul character in the middle of the doc string,
+        // just include it.  If it is the end of file, then it is an error.
+        if (curPtr - 1 != curBuffer.end())
+          continue;
+        return emitError(curPtr - 1, "expected '\"\"\"' to end doc string");
+      default:
+        continue;
+      }
+    }
+  }
+
+  return emitError(curPtr - 1, "expected '\"\"\"' to start doc string");
 }
 
 /// Skip a comment line, starting with a '//'.
@@ -1134,6 +1171,8 @@ private:
   /// Attributes are per TC def.
   std::map<std::string, RegisteredAttr> registeredAttrs;
 
+  StringRef docString;
+
   Parser &parser;
 };
 } // namespace
@@ -1655,6 +1694,14 @@ LogicalResult TCParser::parseAndEmitODSDef(llvm::raw_ostream &os) {
       return failure();
   }
 
+  // Parse optional doc string
+  if (parser.curToken.is(Token::Kind::doc_str)) {
+    docString = parser.curToken.getSpelling();
+    parser.consumeToken();
+    LLVM_DEBUG(llvm::dbgs()
+               << "parsed doc string: '''" << docString << "'''\n");
+  }
+
   // Since we don't declare symbols separately, we discover them eagerly: each
   // newly encountered id in a tensor shape expression is treated as a new
   // symbolic. At this point, all tensors have been parsed and all the symbols
@@ -1755,9 +1802,10 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
     AttrSizedOperandSegments,
     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
     SingleBlockImplicitTerminator<"YieldOp">]> {
+      {2}
       let arguments = (ins
         Variadic<AnyShaped>:$inputs,
-        Variadic<AnyShaped>:$outputs{4}
+        Variadic<AnyShaped>:$outputs{3}
       );
       let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
       let regions = (region AnyRegion:$region);
@@ -1818,23 +1866,30 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
         static std::function<void(Block &)> getRegionBuilder() {{ return regionBuilder; }
 
         // Generic methods.
-        static unsigned getNumRegionArgs() {{ return {5}; }
+        static unsigned getNumRegionArgs() {{ return {4}; }
         std::string getLibraryCallName() {{
           return generateLibraryCallName(getOperation());
         }
       }];
   })FMT";
 
-  unsigned nInputs = 0, nOutputs = 0;
-  for (auto &t : registeredTensors) {
-    if (t.getValue().isOutput)
-      nOutputs++;
-    else
-      nInputs++;
+  std::string doc;
+
+  if (!docString.empty()) {
+    const char *docFmt = R"FMT(
+      let summary = [{ {0} }];
+      let description = [{
+        {1}
+      }];
+    )FMT";
+
+    StringRef summary, description;
+    std::tie(summary, description) = docString.trim().split('\n');
+    doc = llvm::formatv(docFmt, summary.trim(), description.trim());
   }
 
-  os << llvm::formatv(header, cppOpName, linalgOpName, nInputs, nOutputs,
-                      attrList, state.orderedTensorArgs.size());
+  os << llvm::formatv(header, cppOpName, linalgOpName, doc, attrList,
+                      state.orderedTensorArgs.size());
 }
 
 /// Print the C++ StructuredOpsInterface impl of `iterator_types`.

@@ -1907,7 +1907,6 @@ void DumpOutputStyle::dumpSectionHeaders(StringRef Label, DbgHeaderType Type) {
                             P.getIndentLevel(), Header.Characteristics, 1, ""));
     ++I;
   }
-  return;
 }
 
 Error DumpOutputStyle::dumpSectionContribs() {

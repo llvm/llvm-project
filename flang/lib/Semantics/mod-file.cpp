@@ -198,6 +198,15 @@ bool ModFileWriter::PutSymbols(const Scope &scope) {
   }
 }
 
+static llvm::raw_ostream &PutGenericName(
+    llvm::raw_ostream &os, const Symbol &symbol) {
+  if (IsGenericDefinedOp(symbol)) {
+    return os << "operator(" << symbol.name() << ')';
+  } else {
+    return os << symbol.name();
+  }
+}
+
 // Emit a symbol to decls_, except for bindings in a derived type (type-bound
 // procedures, type-bound generics, final procedures) which go to typeBindings.
 void ModFileWriter::PutSymbol(
@@ -210,8 +219,8 @@ void ModFileWriter::PutSymbol(
                    if (symbol.owner().IsDerivedType()) {
                      // generic binding
                      for (const Symbol &proc : x.specificProcs()) {
-                       typeBindings << "generic::" << symbol.name() << "=>"
-                                    << proc.name() << '\n';
+                       PutGenericName(typeBindings << "generic::", symbol)
+                           << "=>" << proc.name() << '\n';
                      }
                    } else {
                      PutGeneric(symbol);
@@ -392,15 +401,6 @@ static bool IsIntrinsicOp(const Symbol &symbol) {
   }
 }
 
-static llvm::raw_ostream &PutGenericName(
-    llvm::raw_ostream &os, const Symbol &symbol) {
-  if (IsGenericDefinedOp(symbol)) {
-    return os << "operator(" << symbol.name() << ')';
-  } else {
-    return os << symbol.name();
-  }
-}
-
 void ModFileWriter::PutGeneric(const Symbol &symbol) {
   const auto &genericOwner{symbol.owner()};
   auto &details{symbol.get<GenericDetails>()};
@@ -429,6 +429,9 @@ void ModFileWriter::PutUse(const Symbol &symbol) {
   uses_ << '\n';
   PutUseExtraAttr(Attr::VOLATILE, symbol, use);
   PutUseExtraAttr(Attr::ASYNCHRONOUS, symbol, use);
+  if (symbol.attrs().test(Attr::PRIVATE)) {
+    PutGenericName(useExtraAttrs_ << "private::", symbol) << '\n';
+  }
 }
 
 // We have "USE local => use" in this module. If attr was added locally
@@ -439,6 +442,31 @@ void ModFileWriter::PutUseExtraAttr(
     PutAttr(useExtraAttrs_, attr) << "::";
     useExtraAttrs_ << local.name() << '\n';
   }
+}
+
+// When a generic interface has the same name as a derived type
+// in the same scope, the generic shadows the derived type.
+// If the derived type were declared first, emit the generic
+// interface at the position of derived type's declaration.
+// (ReplaceName() is not used for this purpose because doing so
+// would confusingly position error messages pertaining to the generic
+// interface upon the derived type's declaration.)
+static inline SourceName NameInModuleFile(const Symbol &symbol) {
+  if (const auto *generic{symbol.detailsIf<GenericDetails>()}) {
+    if (const auto *derivedTypeOverload{generic->derivedType()}) {
+      if (derivedTypeOverload->name().begin() < symbol.name().begin()) {
+        return derivedTypeOverload->name();
+      }
+    }
+  } else if (const auto *use{symbol.detailsIf<UseDetails>()}) {
+    if (use->symbol().attrs().test(Attr::PRIVATE)) {
+      // Avoid the use in sorting of names created to access private
+      // specific procedures as a result of generic resolution;
+      // they're not in the cooked source.
+      return use->symbol().name();
+    }
+  }
+  return symbol.name();
 }
 
 // Collect the symbols of this scope sorted by their original order, not name.
@@ -464,7 +492,7 @@ void CollectSymbols(
   // Sort most symbols by name: use of Symbol::ReplaceName ensures the source
   // location of a symbol's name is the first "real" use.
   std::sort(sorted.begin(), sorted.end(), [](SymbolRef x, SymbolRef y) {
-    return x->name().begin() < y->name().begin();
+    return NameInModuleFile(x).begin() < NameInModuleFile(y).begin();
   });
   sorted.insert(sorted.end(), namelist.begin(), namelist.end());
   for (const auto &pair : scope.commonBlocks()) {
@@ -818,13 +846,15 @@ Scope *ModFileReader::Read(const SourceName &name, Scope *ancestor) {
   } else {
     parentScope = ancestor;
   }
-  ResolveNames(context_, *parseTree);
-  const auto &it{parentScope->find(name)};
-  if (it == parentScope->end()) {
+  auto pair{parentScope->try_emplace(name, UnknownDetails{})};
+  if (!pair.second) {
     return nullptr;
   }
-  auto &modSymbol{*it->second};
+  Symbol &modSymbol{*pair.first->second};
   modSymbol.set(Symbol::Flag::ModFile);
+  ResolveNames(context_, *parseTree);
+  CHECK(modSymbol.has<ModuleDetails>());
+  CHECK(modSymbol.test(Symbol::Flag::ModFile));
   return modSymbol.scope();
 }
 
@@ -973,14 +1003,16 @@ bool SubprogramSymbolCollector::NeedImport(
     const SourceName &name, const Symbol &symbol) {
   if (!isInterface_) {
     return false;
-  } else if (symbol.owner() != scope_.parent()) {
-    // detect import from parent of use-associated symbol
-    // can be null in the case of a use-associated derived type's parent type
-    const auto *found{scope_.FindSymbol(name)};
-    CHECK(found || symbol.has<DerivedTypeDetails>());
-    return found && found->has<UseDetails>() && found->owner() != scope_;
-  } else {
+  } else if (symbol.owner().Contains(scope_)) {
     return true;
+  } else if (const Symbol * found{scope_.FindSymbol(name)}) {
+    // detect import from ancestor of use-associated symbol
+    return found->has<UseDetails>() && found->owner() != scope_;
+  } else {
+    // "found" can be null in the case of a use-associated derived type's parent
+    // type
+    CHECK(symbol.has<DerivedTypeDetails>());
+    return false;
   }
 }
 

@@ -25,7 +25,7 @@ func @for(%outer: index, %A: memref<?xf32>, %B: memref<?xf32>,
 // CHECK:           [[DIM_0:%.*]] = dim [[ARG1]], [[CST_0]] : memref<?xf32>
 // CHECK:           [[MIN:%.*]] = affine.min #map(){{\[}}[[DIM_0]], [[ARG0]]]
 // CHECK:           [[CST_1024:%.*]] = constant 1024 : index
-// CHECK:           [[PRED:%.*]] = cmpi "eq", [[MIN]], [[CST_1024]] : index
+// CHECK:           [[PRED:%.*]] = cmpi eq, [[MIN]], [[CST_1024]] : index
 // CHECK:           scf.if [[PRED]] {
 // CHECK:             scf.for [[IDX0:%.*]] = [[CST_0]] to [[CST_1024]] step [[CST_1]] {
 // CHECK:               store

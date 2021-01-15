@@ -1114,6 +1114,7 @@ bool DIExpression::isValid() const {
       return I->get() == expr_op_begin()->get() && I->getArg(0) == 1 &&
              getNumElements() == 2;
     }
+    case dwarf::DW_OP_LLVM_implicit_pointer:
     case dwarf::DW_OP_LLVM_convert:
     case dwarf::DW_OP_LLVM_tag_offset:
     case dwarf::DW_OP_constu:

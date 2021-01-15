@@ -685,8 +685,6 @@ void expand_tilde(const Twine &path, SmallVectorImpl<char> &dest) {
 
   path.toVector(dest);
   expandTildeExpr(dest);
-
-  return;
 }
 
 static file_type typeForMode(mode_t Mode) {

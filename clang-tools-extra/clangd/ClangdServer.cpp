@@ -243,15 +243,11 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
       // No speculation in Fallback mode, as it's supposed to be much faster
       // without compiling.
       vlog("Build for file {0} is not ready. Enter fallback mode.", File);
-    } else {
-      if (CodeCompleteOpts.Index && CodeCompleteOpts.SpeculativeIndexRequest) {
-        SpecFuzzyFind.emplace();
-        {
-          std::lock_guard<std::mutex> Lock(
-              CachedCompletionFuzzyFindRequestMutex);
-          SpecFuzzyFind->CachedReq =
-              CachedCompletionFuzzyFindRequestByFile[File];
-        }
+    } else if (CodeCompleteOpts.Index) {
+      SpecFuzzyFind.emplace();
+      {
+        std::lock_guard<std::mutex> Lock(CachedCompletionFuzzyFindRequestMutex);
+        SpecFuzzyFind->CachedReq = CachedCompletionFuzzyFindRequestByFile[File];
       }
     }
     ParseInputs ParseInput{IP->Command, &TFS, IP->Contents.str()};

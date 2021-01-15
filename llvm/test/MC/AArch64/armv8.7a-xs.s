@@ -1,9 +1,9 @@
 // RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+v8.4a,+xs < %s 2>%t | FileCheck %s
-// RUN: FileCheck --check-prefix=CHECK-ERR --check-prefix=CHECK-XS-ERR %s < %t
+// RUN: FileCheck --check-prefix=CHECK-ERR %s < %t
 // RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+v8.7a < %s 2>%t | FileCheck %s
-// RUN: FileCheck --check-prefix=CHECK-ERR --check-prefix=CHECK-XS-ERR %s < %t
+// RUN: FileCheck --check-prefix=CHECK-ERR %s < %t
 // RUN: not llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.4a < %s 2> %t
-// RUN: FileCheck --check-prefix=CHECK-ERR --check-prefix=CHECK-NO-XS-ERR %s < %t
+// RUN: FileCheck --check-prefixes=CHECK-ERR,CHECK-NO-XS-ERR %s < %t
 
   dsb #16
   dsb #20

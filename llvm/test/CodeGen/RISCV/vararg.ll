@@ -429,7 +429,7 @@ define void @va1_caller() nounwind {
 ; ILP32-ILP32F-FPELIM-NEXT:    lui a3, 261888
 ; ILP32-ILP32F-FPELIM-NEXT:    addi a4, zero, 2
 ; ILP32-ILP32F-FPELIM-NEXT:    mv a2, zero
-; ILP32-ILP32F-FPELIM-NEXT:    call va1
+; ILP32-ILP32F-FPELIM-NEXT:    call va1@plt
 ; ILP32-ILP32F-FPELIM-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; ILP32-ILP32F-FPELIM-NEXT:    addi sp, sp, 16
 ; ILP32-ILP32F-FPELIM-NEXT:    ret
@@ -443,7 +443,7 @@ define void @va1_caller() nounwind {
 ; ILP32-ILP32F-WITHFP-NEXT:    lui a3, 261888
 ; ILP32-ILP32F-WITHFP-NEXT:    addi a4, zero, 2
 ; ILP32-ILP32F-WITHFP-NEXT:    mv a2, zero
-; ILP32-ILP32F-WITHFP-NEXT:    call va1
+; ILP32-ILP32F-WITHFP-NEXT:    call va1@plt
 ; ILP32-ILP32F-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; ILP32-ILP32F-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; ILP32-ILP32F-WITHFP-NEXT:    addi sp, sp, 16
@@ -456,7 +456,7 @@ define void @va1_caller() nounwind {
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    lui a3, 261888
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    addi a4, zero, 2
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    mv a2, zero
-; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    call va1
+; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    call va1@plt
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    addi sp, sp, 16
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    ret
@@ -468,7 +468,7 @@ define void @va1_caller() nounwind {
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    addi a0, zero, 1023
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    slli a1, a0, 52
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    addi a2, zero, 2
-; LP64-LP64F-LP64D-FPELIM-NEXT:    call va1
+; LP64-LP64F-LP64D-FPELIM-NEXT:    call va1@plt
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    addi sp, sp, 16
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    ret
@@ -482,7 +482,7 @@ define void @va1_caller() nounwind {
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    addi a0, zero, 1023
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    slli a1, a0, 52
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    addi a2, zero, 2
-; LP64-LP64F-LP64D-WITHFP-NEXT:    call va1
+; LP64-LP64F-LP64D-WITHFP-NEXT:    call va1@plt
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    addi sp, sp, 16
@@ -754,7 +754,7 @@ define void @va2_caller() nounwind {
 ; ILP32-ILP32F-FPELIM-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; ILP32-ILP32F-FPELIM-NEXT:    lui a3, 261888
 ; ILP32-ILP32F-FPELIM-NEXT:    mv a2, zero
-; ILP32-ILP32F-FPELIM-NEXT:    call va2
+; ILP32-ILP32F-FPELIM-NEXT:    call va2@plt
 ; ILP32-ILP32F-FPELIM-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; ILP32-ILP32F-FPELIM-NEXT:    addi sp, sp, 16
 ; ILP32-ILP32F-FPELIM-NEXT:    ret
@@ -767,7 +767,7 @@ define void @va2_caller() nounwind {
 ; ILP32-ILP32F-WITHFP-NEXT:    addi s0, sp, 16
 ; ILP32-ILP32F-WITHFP-NEXT:    lui a3, 261888
 ; ILP32-ILP32F-WITHFP-NEXT:    mv a2, zero
-; ILP32-ILP32F-WITHFP-NEXT:    call va2
+; ILP32-ILP32F-WITHFP-NEXT:    call va2@plt
 ; ILP32-ILP32F-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; ILP32-ILP32F-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; ILP32-ILP32F-WITHFP-NEXT:    addi sp, sp, 16
@@ -779,7 +779,7 @@ define void @va2_caller() nounwind {
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    lui a3, 261888
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    mv a2, zero
-; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    call va2
+; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    call va2@plt
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    addi sp, sp, 16
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    ret
@@ -790,7 +790,7 @@ define void @va2_caller() nounwind {
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    addi a0, zero, 1023
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    slli a1, a0, 52
-; LP64-LP64F-LP64D-FPELIM-NEXT:    call va2
+; LP64-LP64F-LP64D-FPELIM-NEXT:    call va2@plt
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    addi sp, sp, 16
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    ret
@@ -803,7 +803,7 @@ define void @va2_caller() nounwind {
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    addi s0, sp, 16
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    addi a0, zero, 1023
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    slli a1, a0, 52
-; LP64-LP64F-LP64D-WITHFP-NEXT:    call va2
+; LP64-LP64F-LP64D-WITHFP-NEXT:    call va2@plt
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    addi sp, sp, 16
@@ -1090,7 +1090,7 @@ define void @va3_caller() nounwind {
 ; ILP32-ILP32F-FPELIM-NEXT:    lui a5, 262144
 ; ILP32-ILP32F-FPELIM-NEXT:    mv a2, zero
 ; ILP32-ILP32F-FPELIM-NEXT:    mv a4, zero
-; ILP32-ILP32F-FPELIM-NEXT:    call va3
+; ILP32-ILP32F-FPELIM-NEXT:    call va3@plt
 ; ILP32-ILP32F-FPELIM-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; ILP32-ILP32F-FPELIM-NEXT:    addi sp, sp, 16
 ; ILP32-ILP32F-FPELIM-NEXT:    ret
@@ -1106,7 +1106,7 @@ define void @va3_caller() nounwind {
 ; ILP32-ILP32F-WITHFP-NEXT:    lui a5, 262144
 ; ILP32-ILP32F-WITHFP-NEXT:    mv a2, zero
 ; ILP32-ILP32F-WITHFP-NEXT:    mv a4, zero
-; ILP32-ILP32F-WITHFP-NEXT:    call va3
+; ILP32-ILP32F-WITHFP-NEXT:    call va3@plt
 ; ILP32-ILP32F-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; ILP32-ILP32F-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; ILP32-ILP32F-WITHFP-NEXT:    addi sp, sp, 16
@@ -1121,7 +1121,7 @@ define void @va3_caller() nounwind {
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    lui a5, 262144
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    mv a2, zero
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    mv a4, zero
-; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    call va3
+; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    call va3@plt
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    addi sp, sp, 16
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    ret
@@ -1134,7 +1134,7 @@ define void @va3_caller() nounwind {
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    slli a2, a0, 62
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    addi a0, zero, 2
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    addi a1, zero, 1111
-; LP64-LP64F-LP64D-FPELIM-NEXT:    call va3
+; LP64-LP64F-LP64D-FPELIM-NEXT:    call va3@plt
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    addi sp, sp, 16
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    ret
@@ -1149,7 +1149,7 @@ define void @va3_caller() nounwind {
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    slli a2, a0, 62
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    addi a0, zero, 2
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    addi a1, zero, 1111
-; LP64-LP64F-LP64D-WITHFP-NEXT:    call va3
+; LP64-LP64F-LP64D-WITHFP-NEXT:    call va3@plt
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    addi sp, sp, 16

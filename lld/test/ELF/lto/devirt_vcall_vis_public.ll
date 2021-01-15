@@ -1,24 +1,24 @@
 ; REQUIRES: x86
-; Test that --lto-whole-program-visibility enables devirtualization.
+;; Test that --lto-whole-program-visibility enables devirtualization.
 
-; Note that the --export-dynamic used below is simply to ensure symbols are
-; retained during linking.
+;; Note that the --export-dynamic used below is simply to ensure symbols are
+;; retained during linking.
 
-; Index based WPD
-; Generate unsplit module with summary for ThinLTO index-based WPD.
+;; Index based WPD
+;; Generate unsplit module with summary for ThinLTO index-based WPD.
 ; RUN: opt --thinlto-bc -o %t2.o %s
 ; RUN: ld.lld %t2.o -o %t3 -save-temps --lto-whole-program-visibility \
 ; RUN: 	 -mllvm -pass-remarks=. --export-dynamic 2>&1 | FileCheck %s --check-prefix=REMARK
 ; RUN: llvm-dis %t2.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
 
-; Hybrid WPD
-; Generate split module with summary for hybrid Thin/Regular LTO WPD.
+;; Hybrid WPD
+;; Generate split module with summary for hybrid Thin/Regular LTO WPD.
 ; RUN: opt --thinlto-bc --thinlto-split-lto-unit -o %t.o %s
 ; RUN: ld.lld %t.o -o %t3 -save-temps --lto-whole-program-visibility \
 ; RUN: 	 -mllvm -pass-remarks=. --export-dynamic 2>&1 | FileCheck %s --check-prefix=REMARK
 ; RUN: llvm-dis %t.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
 
-; Regular LTO WPD
+;; Regular LTO WPD
 ; RUN: opt -o %t4.o %s
 ; RUN: ld.lld %t4.o -o %t3 -save-temps --lto-whole-program-visibility \
 ; RUN: 	 -mllvm -pass-remarks=. --export-dynamic 2>&1 | FileCheck %s --check-prefix=REMARK
@@ -27,24 +27,24 @@
 ; REMARK-DAG: single-impl: devirtualized a call to _ZN1A1nEi
 ; REMARK-DAG: single-impl: devirtualized a call to _ZN1D1mEi
 
-; Try everything again but without -whole-program-visibility to confirm
-; WPD fails
+;; Try everything again but without -whole-program-visibility to confirm
+;; WPD fails
 
-; Index based WPD
+;; Index based WPD
 ; RUN: ld.lld %t2.o -o %t3 -save-temps \
 ; RUN: 	 -mllvm -pass-remarks=. --export-dynamic 2>&1 | FileCheck %s --implicit-check-not single-impl --allow-empty
 ; RUN: llvm-dis %t2.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-NODEVIRT-IR
-; Ensure --no-lto-whole-program-visibility overrides explicit --lto-whole-program-visibility.
+;; Ensure --no-lto-whole-program-visibility overrides explicit --lto-whole-program-visibility.
 ; RUN: ld.lld %t2.o -o %t3 -save-temps --lto-whole-program-visibility --no-lto-whole-program-visibility \
 ; RUN: 	 -mllvm -pass-remarks=. --export-dynamic 2>&1 | FileCheck %s --implicit-check-not single-impl --allow-empty
 ; RUN: llvm-dis %t2.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-NODEVIRT-IR
 
-; Hybrid WPD
+;; Hybrid WPD
 ; RUN: ld.lld %t.o -o %t3 -save-temps \
 ; RUN: 	 -mllvm -pass-remarks=. --export-dynamic 2>&1 | FileCheck %s --implicit-check-not single-impl --allow-empty
 ; RUN: llvm-dis %t.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-NODEVIRT-IR
 
-; Regular LTO WPD
+;; Regular LTO WPD
 ; RUN: ld.lld %t4.o -o %t3 -save-temps \
 ; RUN: 	 -mllvm -pass-remarks=. --export-dynamic 2>&1 | FileCheck %s --implicit-check-not single-impl --allow-empty
 ; RUN: llvm-dis %t3.0.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-NODEVIRT-IR
@@ -74,7 +74,7 @@ entry:
   %2 = bitcast i8** %fptrptr to i32 (%struct.A*, i32)**
   %fptr1 = load i32 (%struct.A*, i32)*, i32 (%struct.A*, i32)** %2, align 8
 
-  ; Check that the call was devirtualized.
+  ;; Check that the call was devirtualized.
   ; CHECK-IR: %call = tail call i32 @_ZN1A1nEi
   ; CHECK-NODEVIRT-IR: %call = tail call i32 %fptr1
   %call = tail call i32 %fptr1(%struct.A* nonnull %obj, i32 %a)
@@ -82,7 +82,7 @@ entry:
   %3 = bitcast i8** %vtable to i32 (%struct.A*, i32)**
   %fptr22 = load i32 (%struct.A*, i32)*, i32 (%struct.A*, i32)** %3, align 8
 
-  ; We still have to call it as virtual.
+  ;; We still have to call it as virtual.
   ; CHECK-IR: %call3 = tail call i32 %fptr22
   ; CHECK-NODEVIRT-IR: %call3 = tail call i32 %fptr22
   %call3 = tail call i32 %fptr22(%struct.A* nonnull %obj, i32 %call)
@@ -96,7 +96,7 @@ entry:
   %6 = bitcast i8** %vtable2 to i32 (%struct.D*, i32)**
   %fptr33 = load i32 (%struct.D*, i32)*, i32 (%struct.D*, i32)** %6, align 8
 
-  ; Check that the call was devirtualized.
+  ;; Check that the call was devirtualized.
   ; CHECK-IR: %call4 = tail call i32 @_ZN1D1mEi
   ; CHECK-NODEVIRT-IR: %call4 = tail call i32 %fptr33
   %call4 = tail call i32 %fptr33(%struct.D* nonnull %obj2, i32 %call3)
@@ -124,7 +124,7 @@ define i32 @_ZN1D1mEi(%struct.D* %this, i32 %a) #0 {
    ret i32 0;
 }
 
-; Make sure we don't inline or otherwise optimize out the direct calls.
+;; Make sure we don't inline or otherwise optimize out the direct calls.
 attributes #0 = { noinline optnone }
 
 !0 = !{i64 16, !"_ZTS1A"}

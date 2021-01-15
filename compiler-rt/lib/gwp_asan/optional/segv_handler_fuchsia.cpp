@@ -11,12 +11,12 @@
 // GWP-ASan on Fuchsia doesn't currently support signal handlers.
 
 namespace gwp_asan {
-namespace crash_handler {
+namespace segv_handler {
 void installSignalHandlers(gwp_asan::GuardedPoolAllocator * /* GPA */,
                            Printf_t /* Printf */,
-                           PrintBacktrace_t /* PrintBacktrace */,
-                           SegvBacktrace_t /* SegvBacktrace */) {}
+                           backtrace::PrintBacktrace_t /* PrintBacktrace */,
+                           backtrace::SegvBacktrace_t /* SegvBacktrace */) {}
 
 void uninstallSignalHandlers() {}
-} // namespace crash_handler
+} // namespace segv_handler
 } // namespace gwp_asan

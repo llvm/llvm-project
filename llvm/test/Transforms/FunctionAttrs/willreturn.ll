@@ -16,8 +16,11 @@ define i32 @mustprogress_load(i32* %ptr) mustprogress {
 ; CHECK-NEXT: define i32 @mustprogress_load(
 ;
 entry:
+  br label %while.body
+
+while.body:
   %r = load i32, i32* %ptr
-  ret i32 %r
+  br label %while.body
 }
 
 define void @mustprogress_store(i32* %ptr) mustprogress {
@@ -25,8 +28,11 @@ define void @mustprogress_store(i32* %ptr) mustprogress {
 ; CHECK: define void @mustprogress_store(
 ;
 entry:
+  br label %while.body
+
+while.body:
   store i32 0, i32* %ptr
-  ret void
+  br label %while.body
 }
 
 declare void @unknown_fn()
@@ -65,4 +71,59 @@ B:
   ret i64 0
 }
 
+define void @willreturn_no_loop(i1 %c, i32* %p) {
+; CHECK-NOT: Function Attrs: {{.*}}willreturn
+; CHECK: define void @willreturn_no_loop(
+;
+  br i1 %c, label %if, label %else
+
+if:
+  load atomic i32, i32* %p seq_cst, align 4
+  call void @fn_willreturn()
+  br label %end
+
+else:
+  store atomic i32 0, i32* %p seq_cst, align 4
+  br label %end
+
+end:
+  ret void
+}
+
+define void @willreturn_non_returning_function(i1 %c, i32* %p) {
+; CHECK-NOT: Function Attrs: {{.*}}willreturn
+; CHECK: define void @willreturn_non_returning_function(
+;
+  call void @unknown_fn()
+  ret void
+}
+
+define void @willreturn_loop() {
+; CHECK-NOT: Function Attrs: {{.*}}willreturn
+; CHECK: define void @willreturn_loop(
+;
+  br label %loop
+
+loop:
+  br label %loop
+}
+
+define void @willreturn_finite_loop() {
+; CHECK-NOT: Function Attrs: {{.*}}willreturn
+; CHECK: define void @willreturn_finite_loop(
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry], [ %i.inc, %loop ]
+  %i.inc = add nuw i32 %i, 1
+  %c = icmp ne i32 %i.inc, 100
+  br i1 %c, label %loop, label %end
+
+end:
+  ret void
+}
+
 declare i64 @fn_noread() readnone
+declare void @fn_willreturn() willreturn

@@ -125,3 +125,22 @@ def test5(I: f32(N, H, W, C), K: f32(F, KH, KW, C)) -> (O: f32(N, H, W, F))
   O(n, h, w, f) = std_addf<kh, kw>(std_mulf(
     I(n, h * strides[0] + kh, w * strides[1] + kw, c), K(f, kh, kw, c)));
 }
+
+// ODS-LABEL: def Test6Op
+// ODS:       let summary = [{ My magic op. }];
+// ODS-NEXT:  let description = [{
+// ODS-NEXT:    It has two inputs.
+// ODS-NEXT:    It has one output.
+// ODS-NEXT:  }];
+//
+ods_def<Test6Op>:
+def test6(A: f32(M, K), B: f32(K)) -> (C: f32(M))
+"""
+My magic op.
+
+It has two inputs.
+It has one output.
+"""
+{
+  C(m) = std_addf<k>(std_mulf(A(m, k), B(k)));
+}

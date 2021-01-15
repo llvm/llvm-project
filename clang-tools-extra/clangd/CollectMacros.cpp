@@ -13,8 +13,8 @@
 namespace clang {
 namespace clangd {
 
-void CollectMainFileMacros::add(const Token &MacroNameTok,
-                                const MacroInfo *MI) {
+void CollectMainFileMacros::add(const Token &MacroNameTok, const MacroInfo *MI,
+                                bool IsDefinition) {
   if (!InMainFile)
     return;
   auto Loc = MacroNameTok.getLocation();
@@ -26,9 +26,9 @@ void CollectMainFileMacros::add(const Token &MacroNameTok,
   auto Range = halfOpenToRange(
       SM, CharSourceRange::getCharRange(Loc, MacroNameTok.getEndLoc()));
   if (auto SID = getSymbolID(Name, MI, SM))
-    Out.MacroRefs[SID].push_back(Range);
+    Out.MacroRefs[SID].push_back({Range, IsDefinition});
   else
-    Out.UnknownMacros.push_back(Range);
+    Out.UnknownMacros.push_back({Range, IsDefinition});
 }
 } // namespace clangd
 } // namespace clang

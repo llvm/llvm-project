@@ -35,10 +35,10 @@ gpu.module @kernels {
     // CHECK:   [[VAL_27:%.*]] = addi [[VAL_25]], [[VAL_18]] : i32
     // CHECK:   [[VAL_28:%.*]] = muli [[VAL_26]], [[VAL_16]] : i32
     // CHECK:   [[VAL_29:%.*]] = and [[VAL_27]], [[VAL_2]] : i32
-    // CHECK:   [[VAL_30:%.*]] = cmpi "eq", [[VAL_29]], [[VAL_3]] : i32
+    // CHECK:   [[VAL_30:%.*]] = cmpi eq, [[VAL_29]], [[VAL_3]] : i32
     // CHECK:   [[VAL_31:%.*]] = subi [[VAL_27]], [[VAL_29]] : i32
     // CHECK:   [[VAL_32:%.*]] = subi [[VAL_28]], [[VAL_31]] : i32
-    // CHECK:   [[VAL_33:%.*]] = cmpi "slt", [[VAL_32]], [[VAL_5]] : i32
+    // CHECK:   [[VAL_33:%.*]] = cmpi slt, [[VAL_32]], [[VAL_5]] : i32
     // CHECK:   cond_br [[VAL_33]], ^bb1, ^bb17
     // CHECK: ^bb1:
     // CHECK:   [[VAL_34:%.*]], [[VAL_35:%.*]] = gpu.shuffle [[VAL_0]], [[VAL_6]], [[VAL_32]] xor : f32
@@ -107,12 +107,12 @@ gpu.module @kernels {
     // CHECK:   gpu.barrier
     // CHECK:   [[VAL_72:%.*]] = addi [[VAL_28]], [[VAL_2]] : i32
     // CHECK:   [[VAL_73:%.*]] = divi_signed [[VAL_72]], [[VAL_5]] : i32
-    // CHECK:   [[VAL_74:%.*]] = cmpi "slt", [[VAL_27]], [[VAL_73]] : i32
+    // CHECK:   [[VAL_74:%.*]] = cmpi slt, [[VAL_27]], [[VAL_73]] : i32
     // CHECK:   cond_br [[VAL_74]], ^bb22, ^bb41
     // CHECK: ^bb22:
     // CHECK:   [[VAL_75:%.*]] = index_cast [[VAL_27]] : i32 to index
     // CHECK:   [[VAL_76:%.*]] = load [[VAL_1]]{{\[}}[[VAL_75]]] : memref<32xf32, 3>
-    // CHECK:   [[VAL_77:%.*]] = cmpi "slt", [[VAL_73]], [[VAL_5]] : i32
+    // CHECK:   [[VAL_77:%.*]] = cmpi slt, [[VAL_73]], [[VAL_5]] : i32
     // CHECK:   cond_br [[VAL_77]], ^bb23, ^bb39
     // CHECK: ^bb23:
     // CHECK:   [[VAL_78:%.*]], [[VAL_79:%.*]] = gpu.shuffle [[VAL_76]], [[VAL_6]], [[VAL_73]] xor : f32

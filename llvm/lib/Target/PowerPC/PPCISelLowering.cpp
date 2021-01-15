@@ -13805,7 +13805,6 @@ static void fixupShuffleMaskForPermutedSToV(SmallVectorImpl<int> &ShuffV,
     if ((Idx >= 0 && Idx < LHSMaxIdx) || (Idx >= RHSMinIdx && Idx < RHSMaxIdx))
       ShuffV[i] += HalfVec;
   }
-  return;
 }
 
 // Replace a SCALAR_TO_VECTOR with a SCALAR_TO_VECTOR_PERMUTED except if

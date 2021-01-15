@@ -210,4 +210,13 @@ void llvm::LowerRISCVMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
     if (LowerRISCVMachineOperandToMCOperand(MO, MCOp, AP))
       OutMI.addOperand(MCOp);
   }
+
+  if (OutMI.getOpcode() == RISCV::PseudoReadVLENB) {
+    OutMI.setOpcode(RISCV::CSRRS);
+    OutMI.addOperand(MCOperand::createImm(
+        RISCVSysReg::lookupSysRegByName("VLENB")->Encoding));
+    OutMI.addOperand(MCOperand::createReg(RISCV::X0));
+    return;
+  }
+
 }

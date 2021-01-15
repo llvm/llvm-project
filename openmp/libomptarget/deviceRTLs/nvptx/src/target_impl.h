@@ -84,48 +84,17 @@ enum DATA_SHARING_SIZES {
   DS_Shared_Memory_Size = 128,
 };
 
-INLINE void __kmpc_impl_unpack(uint64_t val, uint32_t &lo, uint32_t &hi) {
-  asm volatile("mov.b64 {%0,%1}, %2;" : "=r"(lo), "=r"(hi) : "l"(val));
-}
-
-INLINE uint64_t __kmpc_impl_pack(uint32_t lo, uint32_t hi) {
-  uint64_t val;
-  asm volatile("mov.b64 %0, {%1,%2};" : "=l"(val) : "r"(lo), "r"(hi));
-  return val;
-}
-
 enum : __kmpc_impl_lanemask_t {
   __kmpc_impl_all_lanes = ~(__kmpc_impl_lanemask_t)0
 };
 
-INLINE __kmpc_impl_lanemask_t __kmpc_impl_lanemask_lt() {
-  __kmpc_impl_lanemask_t res;
-  asm("mov.u32 %0, %%lanemask_lt;" : "=r"(res));
-  return res;
-}
-
-INLINE __kmpc_impl_lanemask_t __kmpc_impl_lanemask_gt() {
-  __kmpc_impl_lanemask_t res;
-  asm("mov.u32 %0, %%lanemask_gt;" : "=r"(res));
-  return res;
-}
-
-INLINE uint32_t __kmpc_impl_smid() {
-  uint32_t id;
-  asm("mov.u32 %0, %%smid;" : "=r"(id));
-  return id;
-}
-
-INLINE double __kmpc_impl_get_wtick() {
-  // Timer precision is 1ns
-  return ((double)1E-9);
-}
-
-INLINE double __kmpc_impl_get_wtime() {
-  unsigned long long nsecs;
-  asm("mov.u64  %0, %%globaltimer;" : "=l"(nsecs));
-  return (double)nsecs * __kmpc_impl_get_wtick();
-}
+DEVICE void __kmpc_impl_unpack(uint64_t val, uint32_t &lo, uint32_t &hi);
+DEVICE uint64_t __kmpc_impl_pack(uint32_t lo, uint32_t hi);
+DEVICE __kmpc_impl_lanemask_t __kmpc_impl_lanemask_lt();
+DEVICE __kmpc_impl_lanemask_t __kmpc_impl_lanemask_gt();
+DEVICE uint32_t __kmpc_impl_smid();
+DEVICE double __kmpc_impl_get_wtick();
+DEVICE double __kmpc_impl_get_wtime();
 
 INLINE uint32_t __kmpc_impl_ffs(uint32_t x) { return __ffs(x); }
 
@@ -139,90 +108,45 @@ template <typename T> INLINE T __kmpc_impl_min(T x, T y) {
 #error CUDA_VERSION macro is undefined, something wrong with cuda.
 #endif
 
-// In Cuda 9.0, __ballot(1) from Cuda 8.0 is replaced with __activemask().
+DEVICE __kmpc_impl_lanemask_t __kmpc_impl_activemask();
 
-INLINE __kmpc_impl_lanemask_t __kmpc_impl_activemask() {
-#if CUDA_VERSION >= 9000
-  return __activemask();
-#else
-  return __ballot(1);
-#endif
-}
+DEVICE int32_t __kmpc_impl_shfl_sync(__kmpc_impl_lanemask_t Mask, int32_t Var,
+                                     int32_t SrcLane);
 
-// In Cuda 9.0, the *_sync() version takes an extra argument 'mask'.
-
-INLINE int32_t __kmpc_impl_shfl_sync(__kmpc_impl_lanemask_t Mask, int32_t Var,
-                                     int32_t SrcLane) {
-#if CUDA_VERSION >= 9000
-  return __shfl_sync(Mask, Var, SrcLane);
-#else
-  return __shfl(Var, SrcLane);
-#endif // CUDA_VERSION
-}
-
-INLINE int32_t __kmpc_impl_shfl_down_sync(__kmpc_impl_lanemask_t Mask,
+DEVICE int32_t __kmpc_impl_shfl_down_sync(__kmpc_impl_lanemask_t Mask,
                                           int32_t Var, uint32_t Delta,
-                                          int32_t Width) {
-#if CUDA_VERSION >= 9000
-  return __shfl_down_sync(Mask, Var, Delta, Width);
-#else
-  return __shfl_down(Var, Delta, Width);
-#endif // CUDA_VERSION
-}
+                                          int32_t Width);
 
-INLINE void __kmpc_impl_syncthreads() {
-  // Use original __syncthreads if compiled by nvcc or clang >= 9.0.
-#if !defined(__clang__) || __clang_major__ >= 9
-  __syncthreads();
-#else
-  asm volatile("bar.sync %0;" : : "r"(0) : "memory");
-#endif // __clang__
-}
-
-INLINE void __kmpc_impl_syncwarp(__kmpc_impl_lanemask_t Mask) {
-#if CUDA_VERSION >= 9000
-  __syncwarp(Mask);
-#else
-  // In Cuda < 9.0 no need to sync threads in warps.
-#endif // CUDA_VERSION
-}
+DEVICE void __kmpc_impl_syncthreads();
+DEVICE void __kmpc_impl_syncwarp(__kmpc_impl_lanemask_t Mask);
 
 // NVPTX specific kernel initialization
-INLINE void __kmpc_impl_target_init() { /* nvptx needs no extra setup */
-}
+DEVICE void __kmpc_impl_target_init();
 
 // Barrier until num_threads arrive.
-INLINE void __kmpc_impl_named_sync(uint32_t num_threads) {
-  // The named barrier for active parallel threads of a team in an L1 parallel
-  // region to synchronize with each other.
-  int barrier = 1;
-  asm volatile("bar.sync %0, %1;"
-               :
-               : "r"(barrier), "r"(num_threads)
-               : "memory");
-}
+DEVICE void __kmpc_impl_named_sync(uint32_t num_threads);
 
-INLINE void __kmpc_impl_threadfence(void) { __threadfence(); }
-INLINE void __kmpc_impl_threadfence_block(void) { __threadfence_block(); }
-INLINE void __kmpc_impl_threadfence_system(void) { __threadfence_system(); }
+DEVICE void __kmpc_impl_threadfence();
+DEVICE void __kmpc_impl_threadfence_block();
+DEVICE void __kmpc_impl_threadfence_system();
 
 // Calls to the NVPTX layer (assuming 1D layout)
-INLINE int GetThreadIdInBlock() { return threadIdx.x; }
-INLINE int GetBlockIdInKernel() { return blockIdx.x; }
-INLINE int GetNumberOfBlocksInKernel() { return gridDim.x; }
-INLINE int GetNumberOfThreadsInBlock() { return blockDim.x; }
-INLINE unsigned GetWarpId() { return GetThreadIdInBlock() / WARPSIZE; }
-INLINE unsigned GetLaneId() { return GetThreadIdInBlock() & (WARPSIZE - 1); }
+DEVICE int GetThreadIdInBlock();
+DEVICE int GetBlockIdInKernel();
+DEVICE int GetNumberOfBlocksInKernel();
+DEVICE int GetNumberOfThreadsInBlock();
+DEVICE unsigned GetWarpId();
+DEVICE unsigned GetLaneId();
 
 // Locks
-EXTERN void __kmpc_impl_init_lock(omp_lock_t *lock);
-EXTERN void __kmpc_impl_destroy_lock(omp_lock_t *lock);
-EXTERN void __kmpc_impl_set_lock(omp_lock_t *lock);
-EXTERN void __kmpc_impl_unset_lock(omp_lock_t *lock);
-EXTERN int __kmpc_impl_test_lock(omp_lock_t *lock);
+DEVICE void __kmpc_impl_init_lock(omp_lock_t *lock);
+DEVICE void __kmpc_impl_destroy_lock(omp_lock_t *lock);
+DEVICE void __kmpc_impl_set_lock(omp_lock_t *lock);
+DEVICE void __kmpc_impl_unset_lock(omp_lock_t *lock);
+DEVICE int __kmpc_impl_test_lock(omp_lock_t *lock);
 
 // Memory
-INLINE void *__kmpc_impl_malloc(size_t x) { return malloc(x); }
-INLINE void __kmpc_impl_free(void *x) { free(x); }
+DEVICE void *__kmpc_impl_malloc(size_t);
+DEVICE void __kmpc_impl_free(void *);
 
 #endif

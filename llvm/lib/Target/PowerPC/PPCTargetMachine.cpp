@@ -190,6 +190,13 @@ static std::string computeFSAdditions(StringRef FS, CodeGenOpt::Level OL,
       FullFS = "+invariant-function-descriptors";
   }
 
+  if (TT.isOSAIX()) {
+    if (!FullFS.empty())
+      FullFS = "+aix," + FullFS;
+    else
+      FullFS = "+aix";
+  }
+
   return FullFS;
 }
 
