@@ -35,14 +35,6 @@ entry:
 ; CHECK-NEXT:         ReturnTypes:     []
 ; CHECK-NEXT:   - Type:            FUNCTION
 ; CHECK-NEXT:     FunctionTypes:   [ 0, 1 ]
-; CHECK-NEXT:   - Type:            TABLE
-; CHECK-NEXT:     Tables:
-; CHECK-NEXT:       - Index:           0
-; CHECK-NEXT:         ElemType:        FUNCREF
-; CHECK-NEXT:         Limits:
-; CHECK-NEXT:           Flags:           [ HAS_MAX ]
-; CHECK-NEXT:           Initial:         0x1
-; CHECK-NEXT:           Maximum:         0x1
 ; CHECK-NEXT:   - Type:            MEMORY
 ; CHECK-NEXT:     Memories:
 ; CHECK-NEXT:       - Initial:         0x2
