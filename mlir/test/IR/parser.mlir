@@ -67,6 +67,8 @@ func private @sint_types(si2, si4) -> (si7, si1023)
 // CHECK: func private @uint_types(ui2, ui4) -> (ui7, ui1023)
 func private @uint_types(ui2, ui4) -> (ui7, ui1023)
 
+// CHECK: func private @float_types(f80, f128)
+func private @float_types(f80, f128)
 
 // CHECK: func private @vectors(vector<1xf32>, vector<2x4xf32>)
 func private @vectors(vector<1 x f32>, vector<2x4xf32>)

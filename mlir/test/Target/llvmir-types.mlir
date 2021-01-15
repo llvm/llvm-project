@@ -15,9 +15,9 @@ llvm.func @return_float() -> f32
 // CHECK: declare double @return_double()
 llvm.func @return_double() -> f64
 // CHECK: declare fp128 @return_fp128()
-llvm.func @return_fp128() -> !llvm.fp128
+llvm.func @return_fp128() -> f128
 // CHECK: declare x86_fp80 @return_x86_fp80()
-llvm.func @return_x86_fp80() -> !llvm.x86_fp80
+llvm.func @return_x86_fp80() -> f80
 // CHECK: declare ppc_fp128 @return_ppc_fp128()
 llvm.func @return_ppc_fp128() -> !llvm.ppc_fp128
 // CHECK: declare x86_mmx @return_x86_mmx()

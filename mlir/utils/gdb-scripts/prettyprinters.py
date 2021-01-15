@@ -203,6 +203,8 @@ for name in [
     'Float16Type',
     'Float32Type',
     'Float64Type',
+    'Float80Type',
+    'Float128Type',
     'NoneType',
     'VectorType',
     'RankedTensorType',
