@@ -1873,7 +1873,6 @@ void AArch64InstructionSelector::materializeLargeCMVal(
                               AArch64II::MO_G1 | AArch64II::MO_NC, 16, 0);
   DstReg = BuildMovK(DstReg, AArch64II::MO_G2 | AArch64II::MO_NC, 32, 0);
   BuildMovK(DstReg, AArch64II::MO_G3, 48, I.getOperand(0).getReg());
-  return;
 }
 
 bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {

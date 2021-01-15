@@ -1127,8 +1127,6 @@ void createSwitchStatement(Module &M, OutlinableGroup &OG, BasicBlock *EndBB,
     Term->moveBefore(*EndBB, EndBB->end());
     OutputBlock->eraseFromParent();
   }
-
-  return;
 }
 
 /// Fill the new function that will serve as the replacement function for all of

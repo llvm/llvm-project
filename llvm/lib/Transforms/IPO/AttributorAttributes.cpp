@@ -3499,7 +3499,6 @@ struct AADereferenceableImpl : AADereferenceable {
         State.addAccessedBytes(Offset, Size);
       }
     }
-    return;
   }
 
   /// See followUsesInMBEC

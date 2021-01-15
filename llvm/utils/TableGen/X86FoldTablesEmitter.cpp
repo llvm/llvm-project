@@ -571,8 +571,6 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInstr,
         getRegOperandSize(RegOpRec) == getMemOperandSize(MemOpRec))
       addEntryWithFlags(Table0, RegInstr, MemInstr, S, 0);
   }
-
-  return;
 }
 
 void X86FoldTablesEmitter::run(formatted_raw_ostream &OS) {
