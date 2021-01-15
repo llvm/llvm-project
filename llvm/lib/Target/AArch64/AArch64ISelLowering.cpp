@@ -4585,6 +4585,9 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
       continue;
     }
 
+    if (Ins[i].Flags.isSwiftAsync())
+      MF.getInfo<AArch64FunctionInfo>()->setHasSwiftAsyncContext(true);
+
     SDValue ArgValue;
     if (VA.isRegLoc()) {
       // Arguments stored in registers.

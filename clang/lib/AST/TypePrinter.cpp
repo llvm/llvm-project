@@ -847,6 +847,8 @@ StringRef clang::getParameterABISpelling(ParameterABI ABI) {
     llvm_unreachable("asking for spelling of ordinary parameter ABI");
   case ParameterABI::SwiftContext:
     return "swift_context";
+  case ParameterABI::SwiftAsyncContext:
+    return "swift_async_context";
   case ParameterABI::SwiftErrorResult:
     return "swift_error_result";
   case ParameterABI::SwiftIndirectResult:

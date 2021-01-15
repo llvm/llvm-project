@@ -5000,6 +5000,16 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
     I.eraseFromParent();
     return true;
   }
+  case Intrinsic::swift_async_context_addr:
+    MIRBuilder
+        .buildInstr(AArch64::SUBXri, {I.getOperand(0).getReg()},
+                    {Register(AArch64::FP)})
+        .addImm(8)
+        .addImm(0);
+    MF->getFrameInfo().setFrameAddressIsTaken(true);
+    MF->getInfo<AArch64FunctionInfo>()->setHasSwiftAsyncContext(true);
+    I.eraseFromParent();
+    return true;
   }
   return false;
 }
