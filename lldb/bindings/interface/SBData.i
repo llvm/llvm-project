@@ -9,6 +9,9 @@
 
 namespace lldb {
 
+%feature("docstring",
+"Represents a data buffer."
+) SBData;
 class SBData
 {
 public:
