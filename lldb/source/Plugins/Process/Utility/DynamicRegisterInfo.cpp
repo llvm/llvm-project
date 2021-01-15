@@ -650,6 +650,8 @@ void DynamicRegisterInfo::Finalize(const ArchSpec &arch) {
   }
 }
 
+bool DynamicRegisterInfo::IsReconfigurable() { return m_is_reconfigurable; }
+
 size_t DynamicRegisterInfo::GetNumRegisters() const { return m_regs.size(); }
 
 size_t DynamicRegisterInfo::GetNumRegisterSets() const { return m_sets.size(); }
