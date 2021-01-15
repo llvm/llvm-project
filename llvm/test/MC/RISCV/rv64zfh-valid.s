@@ -2,7 +2,7 @@
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+experimental-zfh < %s \
 # RUN:     | llvm-objdump --mattr=+experimental-zfh -M no-aliases -d -r - \
-# RUN:     | FileCheck -check-prefixes=CHECK-OBJ,CHECK-ASM-AND-OBJ %s
+# RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 #
 # RUN: not llvm-mc -triple riscv32 -mattr=+experimental-zfh < %s 2>&1 \
 # RUN:     | FileCheck -check-prefix=CHECK-RV32 %s
