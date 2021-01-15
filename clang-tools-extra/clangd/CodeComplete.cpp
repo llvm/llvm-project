@@ -70,6 +70,7 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include <algorithm>
 #include <iterator>
+#include <limits>
 
 // We log detailed candidate here if you run with -debug-only=codecomplete.
 #define DEBUG_TYPE "CodeComplete"
@@ -1655,9 +1656,10 @@ private:
           evaluateSymbolAndRelevance(Scores.Quality, Scores.Relevance);
       // NameMatch is in fact a multiplier on total score, so rescoring is
       // sound.
-      Scores.ExcludingName = Relevance.NameMatch
-                                 ? Scores.Total / Relevance.NameMatch
-                                 : Scores.Quality;
+      Scores.ExcludingName =
+          Relevance.NameMatch > std::numeric_limits<float>::epsilon()
+              ? Scores.Total / Relevance.NameMatch
+              : Scores.Quality;
       return Scores;
 
     case RM::DecisionForest:
