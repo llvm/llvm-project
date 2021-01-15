@@ -9,14 +9,15 @@
 #ifndef GWP_ASAN_OPTIONAL_OPTIONS_PARSER_H_
 #define GWP_ASAN_OPTIONAL_OPTIONS_PARSER_H_
 
-#include "gwp_asan/optional/backtrace.h"
+#include "gwp_asan/optional/printf.h"
 #include "gwp_asan/options.h"
-#include "sanitizer_common/sanitizer_common.h"
 
 namespace gwp_asan {
 namespace options {
-// Parse the options from the GWP_ASAN_FLAGS environment variable.
-void initOptions();
+// Parse the options from the GWP_ASAN_OPTIONS environment variable.
+void initOptions(Printf_t PrintfForWarnings = nullptr);
+// Parse the options from the provided string.
+void initOptions(const char *OptionsStr, Printf_t PrintfForWarnings = nullptr);
 // Returns the initialised options. Call initOptions() prior to calling this
 // function.
 Options &getOptions();
@@ -24,8 +25,7 @@ Options &getOptions();
 } // namespace gwp_asan
 
 extern "C" {
-SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE const char *
-__gwp_asan_default_options();
+__attribute__((weak)) const char *__gwp_asan_default_options();
 }
 
 #endif // GWP_ASAN_OPTIONAL_OPTIONS_PARSER_H_

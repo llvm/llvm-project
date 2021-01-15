@@ -120,7 +120,7 @@ set(SCUDO_OBJECT_LIBS)
 
 if (COMPILER_RT_HAS_GWP_ASAN)
   list(APPEND SCUDO_OBJECT_LIBS
-       RTGwpAsan RTGwpAsanBacktraceLibc RTGwpAsanSegvHandler)
+       RTGwpAsan RTGwpAsanBacktraceLibc RTGwpAsanSegvHandler RTGwpAsanOptionsParser)
   list(APPEND SCUDO_CFLAGS -DGWP_ASAN_HOOKS)
 endif()
 

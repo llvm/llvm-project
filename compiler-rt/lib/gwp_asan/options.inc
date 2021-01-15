@@ -62,3 +62,18 @@ GWP_ASAN_OPTION(
 GWP_ASAN_OPTION(bool, InstallForkHandlers, true,
                 "Install GWP-ASan atfork handlers to acquire internal locks "
                 "before fork and release them after.")
+
+GWP_ASAN_OPTION(bool, help, false, "Print a summary of the available options.")
+
+// =============================================================================
+// ==== WARNING
+// =============================================================================
+// If you are adding flags to GWP-ASan, please note that GWP-ASan flag strings
+// may be parsed by trusted system components (on Android, GWP-ASan flag strings
+// are parsed by libc during the dynamic loader). This means that GWP-ASan
+// should never feature flags like log paths on disk, because this can lead to
+// arbitrary file write and thus privilege escalation. For an example, see the
+// setuid ASan log_path exploits: https://www.exploit-db.com/exploits/46241.
+//
+// Please place all new flags above this warning, so that the warning always
+// stays at the bottom.
