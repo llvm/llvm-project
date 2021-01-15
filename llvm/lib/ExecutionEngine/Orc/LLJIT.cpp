@@ -11,6 +11,7 @@
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/OrcError.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcessControl.h"
@@ -997,7 +998,7 @@ Error LLJIT::addObjectFile(ResourceTrackerSP RT,
                            std::unique_ptr<MemoryBuffer> Obj) {
   assert(Obj && "Can not add null object");
 
-  return ObjTransformLayer.add(std::move(RT), std::move(Obj));
+  return ObjTransformLayer->add(std::move(RT), std::move(Obj));
 }
 
 Error LLJIT::addObjectFile(JITDylib &JD, std::unique_ptr<MemoryBuffer> Obj) {
@@ -1057,8 +1058,7 @@ LLJIT::createCompileFunction(LLJITBuilderState &S,
 LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
     : ES(S.ES ? std::move(S.ES) : std::make_unique<ExecutionSession>()), Main(),
       DL(""), TT(S.JTMB->getTargetTriple()),
-      ObjLinkingLayer(createObjectLinkingLayer(S, *ES)),
-      ObjTransformLayer(*this->ES, *ObjLinkingLayer) {
+      ObjLinkingLayer(createObjectLinkingLayer(S, *ES)) {
 
   ErrorAsOutParameter _(&Err);
 
@@ -1078,6 +1078,9 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
     return;
   }
 
+  ObjTransformLayer =
+      std::make_unique<ObjectTransformLayer>(*ES, *ObjLinkingLayer);
+
   {
     auto CompileFunction = createCompileFunction(S, std::move(*S.JTMB));
     if (!CompileFunction) {
@@ -1085,7 +1088,7 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
       return;
     }
     CompileLayer = std::make_unique<IRCompileLayer>(
-        *ES, ObjTransformLayer, std::move(*CompileFunction));
+        *ES, *ObjTransformLayer, std::move(*CompileFunction));
     TransformLayer = std::make_unique<IRTransformLayer>(*ES, *CompileLayer);
     InitHelperTransformLayer =
         std::make_unique<IRTransformLayer>(*ES, *TransformLayer);
