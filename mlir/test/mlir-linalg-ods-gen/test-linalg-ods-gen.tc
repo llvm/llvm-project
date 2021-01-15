@@ -88,6 +88,7 @@ def test3(A: f32(Batch, M, K), B: f32(K, N)) -> (C: f32(Batch, M, N)) {
 // ODS: F32:$f32_attr,
 // ODS: RankedF32ElementsAttr<[4]>:$fvec_attr,
 // ODS: I32:$i32_attr,
+// ODS: I64:$i64_attr,
 // ODS: RankedI32ElementsAttr<[5, 6]>:$ivec_attr,
 // ODS: OptionalAttr<F32>:$optional_attr
 //
@@ -96,6 +97,7 @@ def test4(A: f32(Batch, M, K), B: f32(K, N)) -> (C: f32(Batch, M, N))
 attr(
   f32_attr: f32,
   i32_attr: i32,
+  i64_attr: i64,
   fvec_attr: 4xf32,
   ivec_attr: 5x6xi32,
   array_attr : f32[],
@@ -126,6 +128,7 @@ def test5(I: f32(N, H, W, C), K: f32(F, KH, KW, C)) -> (O: f32(N, H, W, F))
     I(n, h * strides[0] + kh, w * strides[1] + kw, c), K(f, kh, kw, c)));
 }
 
+// Test documentation
 // ODS-LABEL: def Test6Op
 // ODS:       let summary = [{ My magic op. }];
 // ODS-NEXT:  let description = [{
@@ -141,6 +144,21 @@ My magic op.
 It has two inputs.
 It has one output.
 """
+{
+  C(m) = std_addf<k>(std_mulf(A(m, k), B(k)));
+}
+
+// Test attribute builder
+// ODS-LABEL: def Test7Op
+// ODS:         OpBuilderDAG<
+// ODS:           (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
+// ODS:            "ValueRange":$outputs, "Attribute":$attr_a, "Attribute":$attr_b)
+// ODS:           $_state.addAttribute("attr_a", attr_a);
+// ODS:           $_state.addAttribute("attr_b", attr_b);
+//
+ods_def<Test7Op>:
+def test7(A: f32(M, K), B: f32(K)) -> (C: f32(M))
+     attr(attr_a: f32, attr_b: 4xi32)
 {
   C(m) = std_addf<k>(std_mulf(A(m, k), B(k)));
 }

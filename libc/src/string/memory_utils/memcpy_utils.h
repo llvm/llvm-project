@@ -72,28 +72,35 @@ static void CopyBlockOverlap(char *__restrict dst, const char *__restrict src,
 
 // Copies `count` bytes by blocks of `kBlockSize` bytes.
 // Copies at the start and end of the buffer are unaligned.
-// Copies in the middle of the buffer are aligned to `kBlockSize`.
+// Copies in the middle of the buffer are aligned to `kAlignment`.
 //
 // e.g. with
 // [12345678123456781234567812345678]
-// [__XXXXXXXXXXXXXXXXXXXXXXXXXXX___]
-// [__XXXXXXXX______________________]
-// [________XXXXXXXX________________]
-// [________________XXXXXXXX________]
-// [_____________________XXXXXXXX___]
+// [__XXXXXXXXXXXXXXXXXXXXXXXXXXXX___]
+// [__XXXX___________________________]
+// [_____XXXXXXXX____________________]
+// [_____________XXXXXXXX____________]
+// [_____________________XXXXXXXX____]
+// [______________________XXXXXXXX___]
 //
-// Precondition: `count > 2 * kBlockSize` for efficiency.
-//               `count >= kBlockSize` for correctness.
-template <size_t kBlockSize>
+// Precondition: `kAlignment <= kBlockSize`
+//               `count > 2 * kBlockSize` for efficiency.
+//               `count >= kAlignment` for correctness.
+template <size_t kBlockSize, size_t kAlignment = kBlockSize>
 static void CopyAlignedBlocks(char *__restrict dst, const char *__restrict src,
                               size_t count) {
-  CopyBlock<kBlockSize>(dst, src); // Copy first block
+  static_assert(is_power2(kAlignment), "kAlignment must be a power of two");
+  static_assert(is_power2(kBlockSize), "kBlockSize must be a power of two");
+  static_assert(kAlignment <= kBlockSize,
+                "kAlignment must be less or equal to block size");
+  CopyBlock<kAlignment>(dst, src); // Copy first block
 
   // Copy aligned blocks
-  const size_t ofla = offset_from_last_aligned<kBlockSize>(src);
+  const size_t ofla = offset_from_last_aligned<kAlignment>(src);
   const size_t limit = count + ofla - kBlockSize;
-  for (size_t offset = kBlockSize; offset < limit; offset += kBlockSize)
-    CopyBlock<kBlockSize>(dst - ofla + offset, src - ofla + offset);
+  for (size_t offset = kAlignment; offset < limit; offset += kBlockSize)
+    CopyBlock<kBlockSize>(dst - ofla + offset,
+                          assume_aligned<kAlignment>(src - ofla + offset));
 
   CopyLastBlock<kBlockSize>(dst, src, count); // Copy last block
 }

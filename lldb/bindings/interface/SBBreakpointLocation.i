@@ -15,7 +15,7 @@ A breakpoint location is defined by the breakpoint that produces it,
 and the address that resulted in this particular instantiation.
 Each breakpoint location has its settable options.
 
-SBBreakpoint contains SBBreakpointLocation(s). See docstring of SBBreakpoint
+:py:class:`SBBreakpoint` contains SBBreakpointLocation(s). See docstring of SBBreakpoint
 for retrieval of an SBBreakpointLocation from an SBBreakpoint."
 ) SBBreakpointLocation;
 class SBBreakpointLocation

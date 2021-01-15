@@ -501,12 +501,24 @@ evaluateDecisionForest(const SymbolQualitySignals &Quality,
 
   SymbolRelevanceSignals::DerivedSignals Derived =
       Relevance.calculateDerivedSignals();
-  E.setIsNameInContext(Derived.NameMatchesContext);
-  E.setIsForbidden(Relevance.Forbidden);
+  int NumMatch = 0;
+  if (Relevance.ContextWords) {
+    for (const auto &Word : Relevance.ContextWords->keys()) {
+      if (Relevance.Name.contains_lower(Word)) {
+        ++NumMatch;
+      }
+    }
+  }
+  E.setIsNameInContext(NumMatch > 0);
+  E.setNumNameInContext(NumMatch);
+  E.setFractionNameInContext(
+      Relevance.ContextWords && Relevance.ContextWords->size() > 0
+          ? NumMatch * 1.0 / Relevance.ContextWords->size()
+          : 0);
   E.setIsInBaseClass(Relevance.InBaseClass);
-  E.setFileProximityDistance(Derived.FileProximityDistance);
+  E.setFileProximityDistanceCost(Derived.FileProximityDistance);
   E.setSemaFileProximityScore(Relevance.SemaFileProximityScore);
-  E.setSymbolScopeDistance(Derived.ScopeProximityDistance);
+  E.setSymbolScopeDistanceCost(Derived.ScopeProximityDistance);
   E.setSemaSaysInScope(Relevance.SemaSaysInScope);
   E.setScope(Relevance.Scope);
   E.setContextKind(Relevance.Context);
@@ -514,7 +526,6 @@ evaluateDecisionForest(const SymbolQualitySignals &Quality,
   E.setHadContextType(Relevance.HadContextType);
   E.setHadSymbolType(Relevance.HadSymbolType);
   E.setTypeMatchesPreferred(Relevance.TypeMatchesPreferred);
-  E.setFilterLength(Relevance.FilterLength);
 
   DecisionForestScores Scores;
   // Exponentiating DecisionForest prediction makes the score of each tree a
@@ -525,6 +536,9 @@ evaluateDecisionForest(const SymbolQualitySignals &Quality,
   // data that needs fixits is not-feasible.
   if (Relevance.NeedsFixIts)
     Scores.ExcludingName *= 0.5;
+  if (Relevance.Forbidden)
+    Scores.ExcludingName *= 0;
+
   // NameMatch should be a multiplier on total score to support rescoring.
   Scores.Total = Relevance.NameMatch * Scores.ExcludingName;
   return Scores;

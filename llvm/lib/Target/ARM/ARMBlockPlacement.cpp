@@ -58,6 +58,8 @@ INITIALIZE_PASS(ARMBlockPlacement, DEBUG_TYPE, "ARM block placement", false,
                 false)
 
 bool ARMBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+      return false;
   const ARMSubtarget &ST = static_cast<const ARMSubtarget &>(MF.getSubtarget());
   if (!ST.hasLOB())
     return false;
@@ -77,6 +79,8 @@ bool ARMBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   // LE branch then move the target block after the preheader.
   for (auto *ML : *MLI) {
     MachineBasicBlock *Preheader = ML->getLoopPredecessor();
+    if (!Preheader)
+      continue;
 
     for (auto &Terminator : Preheader->terminators()) {
       if (Terminator.getOpcode() != ARM::t2WhileLoopStart)

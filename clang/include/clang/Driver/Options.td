@@ -5363,12 +5363,13 @@ def fdefault_calling_conv_EQ : Joined<["-"], "fdefault-calling-conv=">,
   NormalizedValuesScope<"LangOptions">,
   NormalizedValues<["DCC_CDecl", "DCC_FastCall", "DCC_StdCall", "DCC_VectorCall", "DCC_RegCall"]>,
   MarshallingInfoString<LangOpts<"DefaultCallingConv">, "DCC_None">, AutoNormalizeEnum;
+
+// These options cannot be marshalled, because they are used to set up the LangOptions defaults.
 def finclude_default_header : Flag<["-"], "finclude-default-header">,
-  HelpText<"Include default header file for OpenCL">,
-  MarshallingInfoFlag<LangOpts<"IncludeDefaultHeader">>;
+  HelpText<"Include default header file for OpenCL">;
 def fdeclare_opencl_builtins : Flag<["-"], "fdeclare-opencl-builtins">,
-  HelpText<"Add OpenCL builtin function declarations (experimental)">,
-  MarshallingInfoFlag<LangOpts<"DeclareOpenCLBuiltins">>;
+  HelpText<"Add OpenCL builtin function declarations (experimental)">;
+
 def fpreserve_vec3_type : Flag<["-"], "fpreserve-vec3-type">,
   HelpText<"Preserve 3-component vector type">,
   MarshallingInfoFlag<CodeGenOpts<"PreserveVec3Type">>;

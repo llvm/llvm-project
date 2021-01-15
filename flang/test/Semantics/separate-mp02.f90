@@ -157,9 +157,9 @@ end
 module m3
   interface
     module subroutine s1(x, y, z)
-      procedure(real), intent(in) :: x
-      procedure(real), intent(out) :: y
-      procedure(real), intent(out) :: z
+      procedure(real), pointer, intent(in) :: x
+      procedure(real), pointer, intent(out) :: y
+      procedure(real), pointer, intent(out) :: z
     end
     module subroutine s2(x, y)
       procedure(real), pointer :: x
@@ -171,11 +171,11 @@ end
 submodule(m3) sm3
 contains
   module subroutine s1(x, y, z)
-    procedure(real), intent(in) :: x
+    procedure(real), pointer, intent(in) :: x
     !ERROR: The intent of dummy argument 'y' does not match the intent of the corresponding argument in the interface body
-    procedure(real), intent(inout) :: y
+    procedure(real), pointer, intent(inout) :: y
     !ERROR: The intent of dummy argument 'z' does not match the intent of the corresponding argument in the interface body
-    procedure(real) :: z
+    procedure(real), pointer :: z
   end
   module subroutine s2(x, y)
     !ERROR: Dummy argument 'x' has the OPTIONAL attribute; the corresponding argument in the interface body does not
