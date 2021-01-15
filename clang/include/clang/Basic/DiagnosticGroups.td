@@ -110,6 +110,7 @@ def FloatConversion :
                                  FloatZeroConversion]>;
 
 def FrameAddress : DiagGroup<"frame-address">;
+def FreeNonHeapObject : DiagGroup<"free-nonheap-object">;
 def DoublePromotion : DiagGroup<"double-promotion">;
 def EnumTooLarge : DiagGroup<"enum-too-large">;
 def UnsupportedNan : DiagGroup<"unsupported-nan">;
