@@ -487,16 +487,17 @@ EXTERN int64_t __tgt_mapper_num_components(void *rt_mapper_handle) {
 
 // Push back one component for a user-defined mapper.
 EXTERN void __tgt_push_mapper_component(void *rt_mapper_handle, void *base,
-                                        void *begin, int64_t size,
-                                        int64_t type) {
+                                        void *begin, int64_t size, int64_t type,
+                                        void *name) {
   TIMESCOPE();
   DP("__tgt_push_mapper_component(Handle=" DPxMOD
      ") adds an entry (Base=" DPxMOD ", Begin=" DPxMOD ", Size=%" PRId64
-     ", Type=0x%" PRIx64 ").\n",
-     DPxPTR(rt_mapper_handle), DPxPTR(base), DPxPTR(begin), size, type);
+     ", Type=0x%" PRIx64 ", Name=%s).\n",
+     DPxPTR(rt_mapper_handle), DPxPTR(base), DPxPTR(begin), size, type,
+     (name) ? getNameFromMapping(name).c_str() : "unknown");
   auto *MapperComponentsPtr = (struct MapperComponentsTy *)rt_mapper_handle;
   MapperComponentsPtr->Components.push_back(
-      MapComponentInfoTy(base, begin, size, type));
+      MapComponentInfoTy(base, begin, size, type, name));
 }
 
 EXTERN void __kmpc_push_target_tripcount(ident_t *loc, int64_t device_id,

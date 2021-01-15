@@ -48,9 +48,11 @@ struct MapComponentInfoTy {
   void *Begin;
   int64_t Size;
   int64_t Type;
+  void *Name;
   MapComponentInfoTy() = default;
-  MapComponentInfoTy(void *Base, void *Begin, int64_t Size, int64_t Type)
-      : Base(Base), Begin(Begin), Size(Size), Type(Type) {}
+  MapComponentInfoTy(void *Base, void *Begin, int64_t Size, int64_t Type,
+                     void *Name)
+      : Base(Base), Begin(Begin), Size(Size), Type(Type), Name(Name) {}
 };
 
 // This structure stores all components of a user-defined mapper. The number of
@@ -64,8 +66,10 @@ struct MapperComponentsTy {
 // The mapper function pointer type. It follows the signature below:
 // void .omp_mapper.<type_name>.<mapper_id>.(void *rt_mapper_handle,
 //                                           void *base, void *begin,
-//                                           size_t size, int64_t type);
-typedef void (*MapperFuncPtrTy)(void *, void *, void *, int64_t, int64_t);
+//                                           size_t size, int64_t type,
+//                                           void * name);
+typedef void (*MapperFuncPtrTy)(void *, void *, void *, int64_t, int64_t,
+                                void *);
 
 // Function pointer type for target_data_* functions (targetDataBegin,
 // targetDataEnd and targetDataUpdate).

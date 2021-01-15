@@ -209,15 +209,16 @@ static int32_t getParentIndex(int64_t type) {
 /// Call the user-defined mapper function followed by the appropriate
 // target_data_* function (target_data_{begin,end,update}).
 int targetDataMapper(DeviceTy &Device, void *arg_base, void *arg,
-                     int64_t arg_size, int64_t arg_type, void *arg_mapper,
+                     int64_t arg_size, int64_t arg_type,
+                     map_var_info_t arg_names, void *arg_mapper,
                      TargetDataFuncPtrTy target_data_function) {
   DP("Calling the mapper function " DPxMOD "\n", DPxPTR(arg_mapper));
 
   // The mapper function fills up Components.
   MapperComponentsTy MapperComponents;
   MapperFuncPtrTy MapperFuncPtr = (MapperFuncPtrTy)(arg_mapper);
-  (*MapperFuncPtr)((void *)&MapperComponents, arg_base, arg, arg_size,
-      arg_type);
+  (*MapperFuncPtr)((void *)&MapperComponents, arg_base, arg, arg_size, arg_type,
+                   arg_names);
 
   // Construct new arrays for args_base, args, arg_sizes and arg_types
   // using the information in MapperComponents and call the corresponding
@@ -226,6 +227,7 @@ int targetDataMapper(DeviceTy &Device, void *arg_base, void *arg,
   std::vector<void *> MapperArgs(MapperComponents.Components.size());
   std::vector<int64_t> MapperArgSizes(MapperComponents.Components.size());
   std::vector<int64_t> MapperArgTypes(MapperComponents.Components.size());
+  std::vector<void *> MapperArgNames(MapperComponents.Components.size());
 
   for (unsigned I = 0, E = MapperComponents.Components.size(); I < E; ++I) {
     auto &C =
@@ -235,12 +237,13 @@ int targetDataMapper(DeviceTy &Device, void *arg_base, void *arg,
     MapperArgs[I] = C.Begin;
     MapperArgSizes[I] = C.Size;
     MapperArgTypes[I] = C.Type;
+    MapperArgNames[I] = C.Name;
   }
 
   int rc = target_data_function(Device, MapperComponents.Components.size(),
                                 MapperArgsBase.data(), MapperArgs.data(),
                                 MapperArgSizes.data(), MapperArgTypes.data(),
-                                /*arg_names*/ nullptr, /*arg_mappers*/ nullptr,
+                                MapperArgNames.data(), /*arg_mappers*/ nullptr,
                                 /*__tgt_async_info*/ nullptr);
 
   return rc;
@@ -264,8 +267,10 @@ int targetDataBegin(DeviceTy &Device, int32_t arg_num, void **args_base,
       // with new arguments.
       DP("Calling targetDataMapper for the %dth argument\n", i);
 
+      map_var_info_t arg_name = (!arg_names) ? nullptr : arg_names[i];
       int rc = targetDataMapper(Device, args_base[i], args[i], arg_sizes[i],
-                                arg_types[i], arg_mappers[i], targetDataBegin);
+                                arg_types[i], arg_name, arg_mappers[i],
+                                targetDataBegin);
 
       if (rc != OFFLOAD_SUCCESS) {
         REPORT("Call to targetDataBegin via targetDataMapper for custom mapper"
@@ -329,7 +334,7 @@ int targetDataBegin(DeviceTy &Device, int32_t arg_num, void **args_base,
       // PTR_AND_OBJ entry is handled below, and so the allocation might fail
       // when HasPresentModifier.
       PointerTgtPtrBegin = Device.getOrAllocTgtPtr(
-          HstPtrBase, HstPtrBase, sizeof(void *), HstPtrName, Pointer_IsNew,
+          HstPtrBase, HstPtrBase, sizeof(void *), nullptr, Pointer_IsNew,
           IsHostPtr, IsImplicit, UpdateRef, HasCloseModifier,
           HasPresentModifier);
       if (!PointerTgtPtrBegin) {
@@ -464,8 +469,10 @@ int targetDataEnd(DeviceTy &Device, int32_t ArgNum, void **ArgBases,
       // with new arguments.
       DP("Calling targetDataMapper for the %dth argument\n", I);
 
-      Ret = targetDataMapper(Device, ArgBases[I], Args[I], ArgSizes[I],
-                             ArgTypes[I], ArgMappers[I], targetDataEnd);
+      map_var_info_t ArgName = (!ArgNames) ? nullptr : ArgNames[I];
+      Ret =
+          targetDataMapper(Device, ArgBases[I], Args[I], ArgSizes[I],
+                           ArgTypes[I], ArgName, ArgMappers[I], targetDataEnd);
 
       if (Ret != OFFLOAD_SUCCESS) {
         REPORT("Call to targetDataEnd via targetDataMapper for custom mapper"
@@ -785,8 +792,10 @@ int targetDataUpdate(DeviceTy &Device, int32_t ArgNum, void **ArgsBase,
       // with new arguments.
       DP("Calling targetDataMapper for the %dth argument\n", I);
 
+      map_var_info_t ArgName = (!ArgNames) ? nullptr : ArgNames[I];
       int Ret = targetDataMapper(Device, ArgsBase[I], Args[I], ArgSizes[I],
-                                 ArgTypes[I], ArgMappers[I], targetDataUpdate);
+                                 ArgTypes[I], ArgName, ArgMappers[I],
+                                 targetDataUpdate);
 
       if (Ret != OFFLOAD_SUCCESS) {
         REPORT("Call to targetDataUpdate via targetDataMapper for custom mapper"

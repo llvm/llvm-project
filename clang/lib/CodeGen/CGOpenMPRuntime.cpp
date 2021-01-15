@@ -9502,7 +9502,8 @@ getNestedDistributeDirective(ASTContext &Ctx, const OMPExecutableDirective &D) {
 /// \code
 /// void .omp_mapper.<type_name>.<mapper_id>.(void *rt_mapper_handle,
 ///                                           void *base, void *begin,
-///                                           int64_t size, int64_t type) {
+///                                           int64_t size, int64_t type,
+///                                           void *name = nullptr) {
 ///   // Allocate space for an array section first.
 ///   if (size > 1 && !maptype.IsDelete)
 ///     __tgt_push_mapper_component(rt_mapper_handle, base, begin,
@@ -9513,10 +9514,11 @@ getNestedDistributeDirective(ASTContext &Ctx, const OMPExecutableDirective &D) {
 ///     for (auto c : all_components) {
 ///       if (c.hasMapper())
 ///         (*c.Mapper())(rt_mapper_handle, c.arg_base, c.arg_begin, c.arg_size,
-///                       c.arg_type);
+///                       c.arg_type, c.arg_name);
 ///       else
 ///         __tgt_push_mapper_component(rt_mapper_handle, c.arg_base,
-///                                     c.arg_begin, c.arg_size, c.arg_type);
+///                                     c.arg_begin, c.arg_size, c.arg_type,
+///                                     c.arg_name);
 ///     }
 ///   }
 ///   // Delete the array section.
@@ -9549,12 +9551,15 @@ void CGOpenMPRuntime::emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
                             ImplicitParamDecl::Other);
   ImplicitParamDecl TypeArg(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr, Int64Ty,
                             ImplicitParamDecl::Other);
+  ImplicitParamDecl NameArg(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr, C.VoidPtrTy,
+                            ImplicitParamDecl::Other);
   FunctionArgList Args;
   Args.push_back(&HandleArg);
   Args.push_back(&BaseArg);
   Args.push_back(&BeginArg);
   Args.push_back(&SizeArg);
   Args.push_back(&TypeArg);
+  Args.push_back(&NameArg);
   const CGFunctionInfo &FnInfo =
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, Args);
   llvm::FunctionType *FnTy = CGM.getTypes().GetFunctionType(FnInfo);
@@ -9654,6 +9659,10 @@ void CGOpenMPRuntime::emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
     llvm::Value *CurBeginArg = MapperCGF.Builder.CreateBitCast(
         Info.Pointers[I], CGM.getTypes().ConvertTypeForMem(C.VoidPtrTy));
     llvm::Value *CurSizeArg = Info.Sizes[I];
+    llvm::Value *CurNameArg =
+        (CGM.getCodeGenOpts().getDebugInfo() == codegenoptions::NoDebugInfo)
+            ? llvm::ConstantPointerNull::get(CGM.VoidPtrTy)
+            : emitMappingInformation(MapperCGF, OMPBuilder, Info.Exprs[I]);
 
     // Extract the MEMBER_OF field from the map type.
     llvm::BasicBlock *MemberBB = MapperCGF.createBasicBlock("omp.member");
@@ -9742,8 +9751,8 @@ void CGOpenMPRuntime::emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
     CurMapType->addIncoming(FromMapType, FromBB);
     CurMapType->addIncoming(MemberMapType, ToElseBB);
 
-    llvm::Value *OffloadingArgs[] = {Handle, CurBaseArg, CurBeginArg,
-                                     CurSizeArg, CurMapType};
+    llvm::Value *OffloadingArgs[] = {Handle,     CurBaseArg, CurBeginArg,
+                                     CurSizeArg, CurMapType, CurNameArg};
     if (Info.Mappers[I]) {
       // Call the corresponding mapper function.
       llvm::Function *MapperFunc = getOrCreateUserDefinedMapperFunc(
@@ -9833,9 +9842,12 @@ void CGOpenMPRuntime::emitUDMapperArrayInitOrDel(
       MapType,
       MapperCGF.Builder.getInt64(~(MappableExprsHandler::OMP_MAP_TO |
                                    MappableExprsHandler::OMP_MAP_FROM)));
+  llvm::Value *MapNameArg = llvm::ConstantPointerNull::get(CGM.VoidPtrTy);
+
   // Call the runtime API __tgt_push_mapper_component to fill up the runtime
   // data structure.
-  llvm::Value *OffloadingArgs[] = {Handle, Base, Begin, ArraySize, MapTypeArg};
+  llvm::Value *OffloadingArgs[] = {Handle,    Base,       Begin,
+                                   ArraySize, MapTypeArg, MapNameArg};
   MapperCGF.EmitRuntimeCall(
       OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
                                             OMPRTL___tgt_push_mapper_component),
