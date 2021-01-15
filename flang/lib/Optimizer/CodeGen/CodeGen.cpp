@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/CodeGen/CodeGen.h"
+#include "CGOps.h"
 #include "DescriptorModel.h"
 #include "Target.h"
 #include "flang/Lower/Todo.h" // remove when TODO's are done
@@ -1148,11 +1149,11 @@ struct EmboxOpConversion : public EmboxCommonConversion<fir::EmboxOp> {
 };
 
 /// create a generic box on a memory reference
-struct XEmboxOpConversion : public EmboxCommonConversion<fir::XEmboxOp> {
+struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
   using EmboxCommonConversion::EmboxCommonConversion;
 
   mlir::LogicalResult
-  matchAndRewrite(fir::XEmboxOp xbox, OperandTy operands,
+  matchAndRewrite(fir::cg::XEmboxOp xbox, OperandTy operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     auto rank = xbox.getRank();
     auto [boxTy, dest, eleSize] = consDescriptorPrefix(
@@ -1431,11 +1432,11 @@ struct InsertOnRangeOpConversion
 /// (See the static restriction on coordinate_of.) array_coor determines the
 /// coordinate (location) of a specific element.
 struct XArrayCoorOpConversion
-    : public FIROpAndTypeConversion<fir::XArrayCoorOp> {
+   : public FIROpAndTypeConversion<fir::cg::XArrayCoorOp> {
   using FIROpAndTypeConversion::FIROpAndTypeConversion;
 
   mlir::LogicalResult
-  doRewrite(fir::XArrayCoorOp coor, mlir::Type ty, OperandTy operands,
+  doRewrite(fir::cg::XArrayCoorOp coor, mlir::Type ty, OperandTy operands,
             mlir::ConversionPatternRewriter &rewriter) const override {
     auto loc = coor.getLoc();
     auto rank = coor.getRank();
