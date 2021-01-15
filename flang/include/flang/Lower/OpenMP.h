@@ -29,10 +29,6 @@ struct Evaluation;
 
 void genOpenMPConstruct(AbstractConverter &, pft::Evaluation &,
                         const parser::OpenMPConstruct &);
-
-void genOpenMPEndLoop(AbstractConverter &, pft::Evaluation &,
-                      const parser::OmpEndLoopDirective &);
-
 } // namespace lower
 } // namespace Fortran
 

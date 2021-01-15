@@ -1174,7 +1174,8 @@ private:
   }
 
   void genFIR(const Fortran::parser::OmpEndLoopDirective &omp) {
-    genOpenMPEndLoop(*this, getEval(), omp);
+    // `OmpEndLoopDirective` can be captured as part of `OpenMPLoopConstruct`
+    // so For now Lower this as a NOP.
   }
 
   void genFIR(const Fortran::parser::SelectCaseStmt &stmt) {
