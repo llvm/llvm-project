@@ -77,12 +77,15 @@ endif()
 include(CheckLibraryExists)
 include(CheckCCompilerFlag)
 
-# We don't have libc++ (yet)...
-set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdinc++ -nostdlib++")
+# Disable use of the installed C++ standard library when building runtimes. If
+# MSVC is true, we must be using the clang-cl driver, which doesn't understand
+# these flags.
+if (NOT MSVC)
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdinc++ -nostdlib++")
 
-# ...but we need access to libc++ headers for CMake checks to succeed.
-if (LLVM_EXTERNAL_LIBCXX_SOURCE_DIR AND "libcxx" IN_LIST LLVM_ENABLE_RUNTIMES)
-  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -isystem ${LLVM_EXTERNAL_LIBCXX_SOURCE_DIR}/include")
+  if (LLVM_EXTERNAL_LIBCXX_SOURCE_DIR AND "libcxx" IN_LIST LLVM_ENABLE_RUNTIMES)
+    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -isystem ${LLVM_EXTERNAL_LIBCXX_SOURCE_DIR}/include")
+  endif()
 endif()
 
 # Avoid checking whether the compiler is working.
