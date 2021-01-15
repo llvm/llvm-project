@@ -760,7 +760,8 @@ static FunctionModRefBehavior getModRefBehaviorFromAttrs(AttributeSet Attrs) {
 }
 
 /// Returns the behavior when calling the given call site.
-FunctionModRefBehavior BasicAAResult::getModRefBehavior(const CallBase *Call) {
+FunctionModRefBehavior BasicAAResult::getModRefBehavior(const CallBase *Call,
+                                                        AAQueryInfo &AAQI) {
   FunctionModRefBehavior Min =
       getModRefBehaviorFromAttrs(Call->getAttributes().getFnAttrs());
 
@@ -1012,12 +1013,12 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call1,
   // possibilities for guard intrinsics.
 
   if (isIntrinsicCall(Call1, Intrinsic::experimental_guard))
-    return isModSet(getModRefBehavior(Call2).getModRef())
+    return isModSet(getModRefBehavior(Call2, AAQI).getModRef())
                ? ModRefInfo::Ref
                : ModRefInfo::NoModRef;
 
   if (isIntrinsicCall(Call2, Intrinsic::experimental_guard))
-    return isModSet(getModRefBehavior(Call1).getModRef())
+    return isModSet(getModRefBehavior(Call1, AAQI).getModRef())
                ? ModRefInfo::Mod
                : ModRefInfo::NoModRef;
 

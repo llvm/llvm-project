@@ -883,6 +883,8 @@ private:
   ModRefInfo callCapturesBefore(const Instruction *I,
                                 const MemoryLocation &MemLoc, DominatorTree *DT,
                                 AAQueryInfo &AAQIP);
+  FunctionModRefBehavior getModRefBehavior(const CallBase *Call,
+                                           AAQueryInfo &AAQI);
 
   class Concept;
 
@@ -937,7 +939,7 @@ public:
     return AA.getArgModRefInfo(Call, ArgIdx);
   }
   FunctionModRefBehavior getModRefBehavior(const CallBase *Call) {
-    return AA.getModRefBehavior(Call);
+    return AA.getModRefBehavior(Call, AAQI);
   }
   bool isMustAlias(const MemoryLocation &LocA, const MemoryLocation &LocB) {
     return alias(LocA, LocB) == AliasResult::MustAlias;
@@ -1005,7 +1007,8 @@ public:
                                       unsigned ArgIdx) = 0;
 
   /// Return the behavior of the given call site.
-  virtual FunctionModRefBehavior getModRefBehavior(const CallBase *Call) = 0;
+  virtual FunctionModRefBehavior getModRefBehavior(const CallBase *Call,
+                                                   AAQueryInfo &AAQI) = 0;
 
   /// Return the behavior when calling the given function.
   virtual FunctionModRefBehavior getModRefBehavior(const Function *F) = 0;
@@ -1056,8 +1059,9 @@ public:
     return Result.getArgModRefInfo(Call, ArgIdx);
   }
 
-  FunctionModRefBehavior getModRefBehavior(const CallBase *Call) override {
-    return Result.getModRefBehavior(Call);
+  FunctionModRefBehavior getModRefBehavior(const CallBase *Call,
+                                           AAQueryInfo &AAQI) override {
+    return Result.getModRefBehavior(Call, AAQI);
   }
 
   FunctionModRefBehavior getModRefBehavior(const Function *F) override {
@@ -1134,9 +1138,10 @@ protected:
                  : CurrentResult.getArgModRefInfo(Call, ArgIdx);
     }
 
-    FunctionModRefBehavior getModRefBehavior(const CallBase *Call) {
-      return AAR ? AAR->getModRefBehavior(Call)
-                 : CurrentResult.getModRefBehavior(Call);
+    FunctionModRefBehavior getModRefBehavior(const CallBase *Call,
+                                             AAQueryInfo &AAQI) {
+      return AAR ? AAR->getModRefBehavior(Call, AAQI)
+                 : CurrentResult.getModRefBehavior(Call, AAQI);
     }
 
     FunctionModRefBehavior getModRefBehavior(const Function *F) {
@@ -1190,7 +1195,8 @@ public:
     return ModRefInfo::ModRef;
   }
 
-  FunctionModRefBehavior getModRefBehavior(const CallBase *Call) {
+  FunctionModRefBehavior getModRefBehavior(const CallBase *Call,
+                                           AAQueryInfo &AAQI) {
     return FunctionModRefBehavior::unknown();
   }
 
