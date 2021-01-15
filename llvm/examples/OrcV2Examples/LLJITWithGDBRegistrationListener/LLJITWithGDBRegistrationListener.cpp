@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
                       // Make sure the debug info sections aren't stripped.
                       ObjLinkingLayer->setProcessAllSections(true);
 
-                      return std::move(ObjLinkingLayer);
+                      return ObjLinkingLayer;
                     })
                     .create());
 
