@@ -271,7 +271,7 @@ BasicBlock *SplitBlock(BasicBlock *Old, Instruction *SplitPt,
 /// old block are joined by inserting an unconditional branch to the end of the
 /// new block. The new block with name \p BBName is returned.
 BasicBlock *splitBlockBefore(BasicBlock *Old, Instruction *SplitPt,
-                             DominatorTree *DT, LoopInfo *LI,
+                             DomTreeUpdater *DTU, LoopInfo *LI,
                              MemorySSAUpdater *MSSAU, const Twine &BBName = "");
 
 /// This method introduces at least one new basic block into the function and
