@@ -261,7 +261,7 @@ void splitAndWriteThinLTOBitcode(
         if (!RT || RT->getBitWidth() > 64 || F->arg_empty() ||
             !F->arg_begin()->use_empty())
           return;
-        for (auto &Arg : make_range(std::next(F->arg_begin()), F->arg_end())) {
+        for (auto &Arg : drop_begin(F->args(), 1)) {
           auto *ArgT = dyn_cast<IntegerType>(Arg.getType());
           if (!ArgT || ArgT->getBitWidth() > 64)
             return;
