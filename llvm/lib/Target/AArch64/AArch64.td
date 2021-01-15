@@ -553,6 +553,7 @@ include "AArch64SchedExynosM4.td"
 include "AArch64SchedExynosM5.td"
 include "AArch64SchedThunderX.td"
 include "AArch64SchedThunderX2T99.td"
+include "AArch64SchedA64FX.td"
 include "AArch64SchedThunderX3T110.td"
 include "AArch64SchedTSV110.td"
 
@@ -743,7 +744,10 @@ def ProcA64FX : SubtargetFeature<"a64fx", "ARMProcFamily", "A64FX",
                                   FeatureFullFP16,
                                   FeatureSVE,
                                   FeaturePostRAScheduler,
-                                  FeatureComplxNum
+                                  FeatureComplxNum,
+                                  FeatureAggressiveFMA,
+                                  FeatureArithmeticBccFusion,
+                                  FeaturePredictableSelectIsExpensive
                                   ]>;
 
 def ProcCarmel : SubtargetFeature<"carmel", "ARMProcFamily", "Carmel",
@@ -1154,8 +1158,7 @@ def : ProcessorModel<"apple-s5", CycloneModel, [ProcAppleA12]>;
 def : ProcessorModel<"apple-latest", CycloneModel, [ProcAppleA13]>;
 
 // Fujitsu A64FX
-// FIXME: Scheduling model is not implemented yet.
-def : ProcessorModel<"a64fx", NoSchedModel, [ProcA64FX]>;
+def : ProcessorModel<"a64fx", A64FXModel, [ProcA64FX]>;
 
 // Nvidia Carmel
 def : ProcessorModel<"carmel", NoSchedModel, [ProcCarmel]>;

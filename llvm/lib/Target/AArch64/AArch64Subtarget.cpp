@@ -110,8 +110,12 @@ void AArch64Subtarget::initializeProperties() {
     break;
   case A64FX:
     CacheLineSize = 256;
-    PrefFunctionLogAlignment = 5;
-    PrefLoopLogAlignment = 5;
+    PrefFunctionLogAlignment = 3;
+    PrefLoopLogAlignment = 2;
+    MaxInterleaveFactor = 4;
+    PrefetchDistance = 128;
+    MinPrefetchStride = 1024;
+    MaxPrefetchIterationsAhead = 4;
     break;
   case AppleA7:
   case AppleA10:
