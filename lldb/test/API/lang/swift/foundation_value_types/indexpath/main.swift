@@ -20,7 +20,7 @@ func main() {
    //% self.expect("frame variable short_path", substrs=['2 indices'])
    //% self.expect("frame variable very_short_path", substrs=['1 index'])   
    //% self.expect("frame variable empty_path", substrs=['0 indices'])
-   // disabled self.expect("expression -d run -- path", substrs=['5 indices'])
+   //% self.expect("expression -d run -- path", substrs=['5 indices'])
 }
 
 main()
