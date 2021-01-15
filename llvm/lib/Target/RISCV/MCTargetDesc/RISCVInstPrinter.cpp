@@ -165,7 +165,6 @@ void RISCVInstPrinter::printAtomicMemOp(const MCInst *MI, unsigned OpNo,
   O << "(";
   printRegName(O, MO.getReg());
   O << ")";
-  return;
 }
 
 void RISCVInstPrinter::printVTypeI(const MCInst *MI, unsigned OpNo,

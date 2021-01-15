@@ -1809,7 +1809,6 @@ public:
 
       for (Value *Op : cast<Instruction>(V)->operand_values())
         collectSharedInfo(Leaf, Op, ExprsInSubprogram, Shared);
-      return;
     }
 
     /// Calculate the number of exclusive and shared op counts for expression
