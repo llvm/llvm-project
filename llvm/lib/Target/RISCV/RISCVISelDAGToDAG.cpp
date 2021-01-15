@@ -149,7 +149,8 @@ static SDValue createTuple(SelectionDAG &CurDAG, ArrayRef<SDValue> Regs,
   }
 }
 
-void RISCVDAGToDAGISel::selectVLSEG(SDNode *Node, unsigned IntNo) {
+void RISCVDAGToDAGISel::selectVLSEG(SDNode *Node, unsigned IntNo,
+                                    bool IsStrided) {
   SDLoc DL(Node);
   unsigned NF = Node->getNumValues() - 1;
   EVT VT = Node->getValueType(0);
@@ -157,9 +158,16 @@ void RISCVDAGToDAGISel::selectVLSEG(SDNode *Node, unsigned IntNo) {
   MVT XLenVT = Subtarget->getXLenVT();
   RISCVVLMUL LMUL = getLMUL(VT);
   SDValue SEW = CurDAG->getTargetConstant(ScalarSize, DL, XLenVT);
-  SDValue Operands[] = {Node->getOperand(2),       // Base pointer.
-                        Node->getOperand(3),       // VL.
-                        SEW, Node->getOperand(0)}; // Chain
+  SmallVector<SDValue, 5> Operands;
+  Operands.push_back(Node->getOperand(2)); // Base pointer.
+  if (IsStrided) {
+    Operands.push_back(Node->getOperand(3)); // Stride.
+    Operands.push_back(Node->getOperand(4)); // VL.
+  } else {
+    Operands.push_back(Node->getOperand(3)); // VL.
+  }
+  Operands.push_back(SEW);
+  Operands.push_back(Node->getOperand(0)); // Chain.
   const RISCVZvlssegTable::RISCVZvlsseg *P = RISCVZvlssegTable::getPseudo(
       IntNo, ScalarSize, static_cast<unsigned>(LMUL));
   SDNode *Load =
@@ -174,7 +182,8 @@ void RISCVDAGToDAGISel::selectVLSEG(SDNode *Node, unsigned IntNo) {
   CurDAG->RemoveDeadNode(Node);
 }
 
-void RISCVDAGToDAGISel::selectVLSEGMask(SDNode *Node, unsigned IntNo) {
+void RISCVDAGToDAGISel::selectVLSEGMask(SDNode *Node, unsigned IntNo,
+                                        bool IsStrided) {
   SDLoc DL(Node);
   unsigned NF = Node->getNumValues() - 1;
   EVT VT = Node->getValueType(0);
@@ -184,12 +193,19 @@ void RISCVDAGToDAGISel::selectVLSEGMask(SDNode *Node, unsigned IntNo) {
   SDValue SEW = CurDAG->getTargetConstant(ScalarSize, DL, XLenVT);
   SmallVector<SDValue, 8> Regs(Node->op_begin() + 2, Node->op_begin() + 2 + NF);
   SDValue MaskedOff = createTuple(*CurDAG, Regs, NF, LMUL);
-  SDValue Operands[] = {MaskedOff,
-                        Node->getOperand(NF + 2), // Base pointer.
-                        Node->getOperand(NF + 3), // Mask.
-                        Node->getOperand(NF + 4), // VL.
-                        SEW,
-                        Node->getOperand(0)}; // Chain.
+  SmallVector<SDValue, 7> Operands;
+  Operands.push_back(MaskedOff);
+  Operands.push_back(Node->getOperand(NF + 2)); // Base pointer.
+  if (IsStrided) {
+    Operands.push_back(Node->getOperand(NF + 3)); // Stride.
+    Operands.push_back(Node->getOperand(NF + 4)); // Mask.
+    Operands.push_back(Node->getOperand(NF + 5)); // VL.
+  } else {
+    Operands.push_back(Node->getOperand(NF + 3)); // Mask.
+    Operands.push_back(Node->getOperand(NF + 4)); // VL.
+  }
+  Operands.push_back(SEW);
+  Operands.push_back(Node->getOperand(0)); /// Chain.
   const RISCVZvlssegTable::RISCVZvlsseg *P = RISCVZvlssegTable::getPseudo(
       IntNo, ScalarSize, static_cast<unsigned>(LMUL));
   SDNode *Load =
@@ -377,7 +393,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::riscv_vlseg6:
     case Intrinsic::riscv_vlseg7:
     case Intrinsic::riscv_vlseg8: {
-      selectVLSEG(Node, IntNo);
+      selectVLSEG(Node, IntNo, /*IsStrided=*/false);
       return;
     }
     case Intrinsic::riscv_vlseg2_mask:
@@ -387,7 +403,27 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::riscv_vlseg6_mask:
     case Intrinsic::riscv_vlseg7_mask:
     case Intrinsic::riscv_vlseg8_mask: {
-      selectVLSEGMask(Node, IntNo);
+      selectVLSEGMask(Node, IntNo, /*IsStrided=*/false);
+      return;
+    }
+    case Intrinsic::riscv_vlsseg2:
+    case Intrinsic::riscv_vlsseg3:
+    case Intrinsic::riscv_vlsseg4:
+    case Intrinsic::riscv_vlsseg5:
+    case Intrinsic::riscv_vlsseg6:
+    case Intrinsic::riscv_vlsseg7:
+    case Intrinsic::riscv_vlsseg8: {
+      selectVLSEG(Node, IntNo, /*IsStrided=*/true);
+      return;
+    }
+    case Intrinsic::riscv_vlsseg2_mask:
+    case Intrinsic::riscv_vlsseg3_mask:
+    case Intrinsic::riscv_vlsseg4_mask:
+    case Intrinsic::riscv_vlsseg5_mask:
+    case Intrinsic::riscv_vlsseg6_mask:
+    case Intrinsic::riscv_vlsseg7_mask:
+    case Intrinsic::riscv_vlsseg8_mask: {
+      selectVLSEGMask(Node, IntNo, /*IsStrided=*/true);
       return;
     }
     }
