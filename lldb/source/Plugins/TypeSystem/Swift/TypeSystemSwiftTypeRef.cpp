@@ -431,6 +431,7 @@ swift::Demangle::NodePointer TypeSystemSwiftTypeRef::Transform(
   for (NodePointer child : *node) {
     NodePointer transformed = Transform(dem, child, fn);
     changed |= (child != transformed);
+    assert(transformed && "callback returned a nullptr");
     if (transformed)
       children.push_back(transformed);
   }
@@ -1423,15 +1424,22 @@ static bool ContainsSugaredParen(swift::Demangle::NodePointer node) {
 }
 
 swift::Demangle::NodePointer
-StripPrivateDeclNames(swift::Demangle::Demangler &dem,
-                      swift::Demangle::NodePointer node) {
+StripPrivateIDs(swift::Demangle::Demangler &dem,
+                swift::Demangle::NodePointer node) {
   using namespace swift::Demangle;
-  return TypeSystemSwiftTypeRef::Transform(
-      dem, node, [&](NodePointer node) -> NodePointer {
-        if (node->getKind() == Node::Kind::PrivateDeclName)
-          return nullptr;
-        return node;
-      });
+  return TypeSystemSwiftTypeRef::Transform(dem, node, [&](NodePointer node) {
+    if (node->getKind() != Node::Kind::PrivateDeclName ||
+        node->getNumChildren() != 2)
+      return node;
+
+    assert(node->getFirstChild()->getKind() == Node::Kind::Identifier);
+    assert(node->getLastChild()->getKind() == Node::Kind::Identifier);
+    auto *new_node = dem.createNode(Node::Kind::PrivateDeclName);
+    auto *ident = dem.createNodeWithAllocatedText(
+        Node::Kind::Identifier, node->getLastChild()->getText());
+    new_node->addChild(ident, dem);
+    return new_node;
+  });
 }
 
 /// Compare two swift types from different type systems by comparing their
@@ -1454,9 +1462,9 @@ template <> bool Equivalent<CompilerType>(CompilerType l, CompilerType r) {
   if (ContainsUnresolvedTypeAlias(r_node) ||
       ContainsGenericTypeParameter(r_node) || ContainsSugaredParen(r_node))
     return true;
-  if (swift::Demangle::mangleNode(StripPrivateDeclNames(
+  if (swift::Demangle::mangleNode(StripPrivateIDs(
           dem, TypeSystemSwiftTypeRef::CanonicalizeSugar(dem, l_node))) ==
-      swift::Demangle::mangleNode(StripPrivateDeclNames(
+      swift::Demangle::mangleNode(StripPrivateIDs(
           dem, TypeSystemSwiftTypeRef::CanonicalizeSugar(dem, r_node))))
     return true;
 
