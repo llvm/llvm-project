@@ -93,6 +93,22 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
             llvm::omp::Directive::OMPD_master});
     PushContextAndClauseSets(beginDir.source, llvm::omp::Directive::OMPD_do);
   }
+  SetLoopInfo(x);
+}
+const parser::Name OmpStructureChecker::GetLoopIndex(
+    const parser::DoConstruct *x) {
+  using Bounds = parser::LoopControl::Bounds;
+  return std::get<Bounds>(x->GetLoopControl()->u).name.thing;
+}
+void OmpStructureChecker::SetLoopInfo(const parser::OpenMPLoopConstruct &x) {
+  if (const auto &loopConstruct{
+          std::get<std::optional<parser::DoConstruct>>(x.t)}) {
+    const parser::DoConstruct *loop{&*loopConstruct};
+    if (loop && loop->IsDoNormal()) {
+      const parser::Name &itrVal{GetLoopIndex(loop)};
+      SetLoopIv(itrVal.symbol);
+    }
+  }
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPLoopConstruct &) {
@@ -123,6 +139,13 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
   const parser::Block &block{std::get<parser::Block>(x.t)};
 
   CheckMatching<parser::OmpBlockDirective>(beginDir, endDir);
+
+  // TODO: This check needs to be extended while implementing nesting of regions
+  // checks.
+  if (beginDir.v == llvm::omp::Directive::OMPD_single) {
+    HasInvalidWorksharingNesting(
+        beginDir.source, {llvm::omp::Directive::OMPD_do});
+  }
 
   PushContextAndClauseSets(beginDir.source, beginDir.v);
   CheckNoBranching(block, beginDir.v, beginDir.source);
@@ -401,7 +424,6 @@ CHECK_SIMPLE_CLAUSE(Copyprivate, OMPC_copyprivate)
 CHECK_SIMPLE_CLAUSE(Default, OMPC_default)
 CHECK_SIMPLE_CLAUSE(Device, OMPC_device)
 CHECK_SIMPLE_CLAUSE(Final, OMPC_final)
-CHECK_SIMPLE_CLAUSE(Firstprivate, OMPC_firstprivate)
 CHECK_SIMPLE_CLAUSE(From, OMPC_from)
 CHECK_SIMPLE_CLAUSE(Inbranch, OMPC_inbranch)
 CHECK_SIMPLE_CLAUSE(IsDevicePtr, OMPC_is_device_ptr)
@@ -485,6 +507,23 @@ void OmpStructureChecker::CheckIsVarPartOfAnotherVar(
             [&](const parser::Name &name) {},
         },
         ompObject.u);
+  }
+}
+void OmpStructureChecker::Enter(const parser::OmpClause::Firstprivate &x) {
+  CheckAllowed(llvm::omp::Clause::OMPC_firstprivate);
+  CheckIsLoopIvPartOfClause(llvmOmpClause::OMPC_firstprivate, x.v);
+}
+void OmpStructureChecker::CheckIsLoopIvPartOfClause(
+    llvmOmpClause clause, const parser::OmpObjectList &ompObjectList) {
+  for (const auto &ompObject : ompObjectList.v) {
+    if (const parser::Name * name{parser::Unwrap<parser::Name>(ompObject)}) {
+      if (name->symbol == GetContext().loopIV) {
+        context_.Say(name->source,
+            "DO iteration variable %s is not allowed in %s clause."_err_en_US,
+            name->ToString(),
+            parser::ToUpperCaseLetters(getClauseName(clause).str()));
+      }
+    }
   }
 }
 // Following clauses have a seperate node in parse-tree.h.

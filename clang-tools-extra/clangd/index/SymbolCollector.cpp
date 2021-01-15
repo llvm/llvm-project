@@ -386,16 +386,31 @@ void SymbolCollector::handleMacros(const MainFileMacros &MacroRefsToIndex) {
   const auto MainFileURI = toURI(SM, MainFileEntry->getName(), Opts);
   // Add macro references.
   for (const auto &IDToRefs : MacroRefsToIndex.MacroRefs) {
-    for (const auto &Range : IDToRefs.second) {
+    for (const auto &MacroRef : IDToRefs.second) {
+      const auto &Range = MacroRef.Rng;
+      bool IsDefinition = MacroRef.IsDefinition;
       Ref R;
       R.Location.Start.setLine(Range.start.line);
       R.Location.Start.setColumn(Range.start.character);
       R.Location.End.setLine(Range.end.line);
       R.Location.End.setColumn(Range.end.character);
       R.Location.FileURI = MainFileURI.c_str();
-      // FIXME: Add correct RefKind information to MainFileMacros.
-      R.Kind = RefKind::Reference;
+      R.Kind = IsDefinition ? RefKind::Definition : RefKind::Reference;
       Refs.insert(IDToRefs.first, R);
+      if (IsDefinition) {
+        Symbol S;
+        S.ID = IDToRefs.first;
+        auto StartLoc = cantFail(sourceLocationInMainFile(SM, Range.start));
+        auto EndLoc = cantFail(sourceLocationInMainFile(SM, Range.end));
+        S.Name = toSourceCode(SM, SourceRange(StartLoc, EndLoc));
+        S.SymInfo.Kind = index::SymbolKind::Macro;
+        S.SymInfo.SubKind = index::SymbolSubKind::None;
+        S.SymInfo.Properties = index::SymbolPropertySet();
+        S.SymInfo.Lang = index::SymbolLanguage::C;
+        S.Origin = Opts.Origin;
+        S.CanonicalDeclaration = R.Location;
+        Symbols.insert(S);
+      }
     }
   }
 }

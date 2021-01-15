@@ -60,6 +60,8 @@ public:
                            InputGlobal *g);
   Symbol *addDefinedEvent(StringRef name, uint32_t flags, InputFile *file,
                           InputEvent *e);
+  Symbol *addDefinedTable(StringRef name, uint32_t flags, InputFile *file,
+                          InputTable *t);
 
   Symbol *addUndefinedFunction(StringRef name,
                                llvm::Optional<StringRef> importName,
@@ -73,6 +75,11 @@ public:
                              llvm::Optional<StringRef> importModule,
                              uint32_t flags, InputFile *file,
                              const WasmGlobalType *type);
+  Symbol *addUndefinedTable(StringRef name,
+                            llvm::Optional<StringRef> importName,
+                            llvm::Optional<StringRef> importModule,
+                            uint32_t flags, InputFile *file,
+                            const WasmTableType *type);
 
   void addLazy(ArchiveFile *f, const llvm::object::Archive::Symbol *sym);
 
@@ -86,6 +93,8 @@ public:
   DefinedData *addOptionalDataSymbol(StringRef name, uint64_t value = 0);
   DefinedGlobal *addOptionalGlobalSymbols(StringRef name, uint32_t flags,
                                           InputGlobal *global);
+  DefinedTable *addSyntheticTable(StringRef name, uint32_t flags,
+                                  InputTable *global);
 
   void handleSymbolVariants();
   void handleWeakUndefines();
@@ -96,6 +105,7 @@ public:
   std::vector<BitcodeFile *> bitcodeFiles;
   std::vector<InputFunction *> syntheticFunctions;
   std::vector<InputGlobal *> syntheticGlobals;
+  std::vector<InputTable *> syntheticTables;
 
 private:
   std::pair<Symbol *, bool> insert(StringRef name, const InputFile *file);

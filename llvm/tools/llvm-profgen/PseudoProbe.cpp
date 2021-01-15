@@ -219,7 +219,7 @@ void PseudoProbeDecoder::buildAddress2ProbeMap(const uint8_t *Start,
       Index = readUnsignedNumber<uint32_t>();
     }
     // Switch/add to a new tree node(inlinee)
-    Cur = Cur->getOrAddNode({Cur->GUID, Index});
+    Cur = Cur->getOrAddNode(std::make_tuple(Cur->GUID, Index));
     // Read guid
     Cur->GUID = readUnencodedNumber<uint64_t>();
     // Read number of probes in the current node.

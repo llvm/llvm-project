@@ -2603,36 +2603,43 @@ void InterfaceVisitor::ResolveSpecificsInGeneric(Symbol &generic) {
       Say(*name, "Procedure '%s' not found"_err_en_US);
       continue;
     }
-    symbol = &symbol->GetUltimate();
     if (symbol == &generic) {
       if (auto *specific{generic.get<GenericDetails>().specific()}) {
         symbol = specific;
       }
     }
-    if (!symbol->has<SubprogramDetails>() &&
-        !symbol->has<SubprogramNameDetails>()) {
+    const Symbol &ultimate{symbol->GetUltimate()};
+    if (!ultimate.has<SubprogramDetails>() &&
+        !ultimate.has<SubprogramNameDetails>()) {
       Say(*name, "'%s' is not a subprogram"_err_en_US);
       continue;
     }
     if (kind == ProcedureKind::ModuleProcedure) {
-      if (const auto *nd{symbol->detailsIf<SubprogramNameDetails>()}) {
+      if (const auto *nd{ultimate.detailsIf<SubprogramNameDetails>()}) {
         if (nd->kind() != SubprogramKind::Module) {
           Say(*name, "'%s' is not a module procedure"_err_en_US);
         }
       } else {
         // USE-associated procedure
-        const auto *sd{symbol->detailsIf<SubprogramDetails>()};
+        const auto *sd{ultimate.detailsIf<SubprogramDetails>()};
         CHECK(sd);
-        if (symbol->owner().kind() != Scope::Kind::Module ||
+        if (ultimate.owner().kind() != Scope::Kind::Module ||
             sd->isInterface()) {
           Say(*name, "'%s' is not a module procedure"_err_en_US);
         }
       }
     }
-    if (!symbolsSeen.insert(*symbol).second) {
-      Say(name->source,
-          "Procedure '%s' is already specified in generic '%s'"_err_en_US,
-          name->source, MakeOpName(generic.name()));
+    if (!symbolsSeen.insert(ultimate).second) {
+      if (symbol == &ultimate) {
+        Say(name->source,
+            "Procedure '%s' is already specified in generic '%s'"_err_en_US,
+            name->source, MakeOpName(generic.name()));
+      } else {
+        Say(name->source,
+            "Procedure '%s' from module '%s' is already specified in generic '%s'"_err_en_US,
+            ultimate.name(), ultimate.owner().GetName().value(),
+            MakeOpName(generic.name()));
+      }
       continue;
     }
     details.AddSpecificProc(*symbol, name->source);

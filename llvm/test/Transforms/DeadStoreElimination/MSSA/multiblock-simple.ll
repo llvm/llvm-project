@@ -33,7 +33,7 @@ define void @test3(i32* noalias %P) {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
+; CHECK-NEXT:    store i32 1, i32* [[P]], align 4
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret void
@@ -43,7 +43,7 @@ define void @test3(i32* noalias %P) {
 bb1:
   br label %bb3
 bb2:
-  store i32 0, i32* %P
+  store i32 1, i32* %P
   br label %bb3
 bb3:
   ret void
@@ -99,7 +99,7 @@ define void @test9(i32* noalias %P) {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb3:
-; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
+; CHECK-NEXT:    store i32 1, i32* [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
   store i32 0, i32* %P
@@ -109,7 +109,7 @@ bb1:
 bb2:
   ret void
 bb3:
-  store i32 0, i32* %P
+  store i32 1, i32* %P
   ret void
 }
 
@@ -153,7 +153,7 @@ define void @test10(i32* %P) {
 ; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    br i1 true, label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
+; CHECK-NEXT:    store i32 1, i32* [[P]], align 4
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    ret void
@@ -163,7 +163,7 @@ define void @test10(i32* %P) {
   store i32 0, i32* %P
   br i1 true, label %bb1, label %bb2
 bb1:
-  store i32 0, i32* %P
+  store i32 1, i32* %P
   br label %bb3
 bb2:
   ret void

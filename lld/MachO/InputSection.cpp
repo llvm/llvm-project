@@ -50,7 +50,7 @@ void InputSection::writeTo(uint8_t *buf) {
         // relative to the start of the thread-local data memory area, which
         // is initialized via copying all the TLV data sections (which are all
         // contiguous).
-        if (auto *defined = dyn_cast<Defined>(referentSym))
+        if (isa<Defined>(referentSym))
           referentVA -= firstTLVDataSection->addr;
       }
     } else if (auto *referentIsec = r.referent.dyn_cast<InputSection *>()) {

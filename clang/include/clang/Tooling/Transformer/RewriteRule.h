@@ -213,10 +213,12 @@ ASTEdit addInclude(RangeSelector Target, StringRef Header,
                    IncludeFormat Format = IncludeFormat::Quoted);
 
 /// Adds an include directive for the given header to the file associated with
-/// `RootID`.
+/// `RootID`. If `RootID` matches inside a macro expansion, will add the
+/// directive to the file in which the macro was expanded (as opposed to the
+/// file in which the macro is defined).
 inline ASTEdit addInclude(StringRef Header,
                           IncludeFormat Format = IncludeFormat::Quoted) {
-  return addInclude(node(RootID), Header, Format);
+  return addInclude(expansion(node(RootID)), Header, Format);
 }
 
 // FIXME: If `Metadata` returns an `llvm::Expected<T>` the `AnyGenerator` will
@@ -312,8 +314,8 @@ inline RewriteRule makeRule(ast_matchers::internal::DynTypedMatcher M,
 /// \code
 ///   auto R = makeRule(callExpr(callee(functionDecl(hasName("foo")))),
 ///            changeTo(cat("bar()")));
-///   AddInclude(R, "path/to/bar_header.h");
-///   AddInclude(R, "vector", IncludeFormat::Angled);
+///   addInclude(R, "path/to/bar_header.h");
+///   addInclude(R, "vector", IncludeFormat::Angled);
 /// \endcode
 void addInclude(RewriteRule &Rule, llvm::StringRef Header,
                 IncludeFormat Format = IncludeFormat::Quoted);

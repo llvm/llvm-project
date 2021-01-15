@@ -304,7 +304,7 @@ collectRegionsConstants(OutlinableRegion &Region,
       unsigned GVN = GVNOpt.getValue();
 
       // Check if this global value has been found to not be the same already.
-      if (NotSame.find(GVN) != NotSame.end()) {
+      if (NotSame.contains(GVN)) {
         if (isa<Constant>(V))
           ConstantsTheSame = false;
         continue;
@@ -421,8 +421,7 @@ static void findConstants(IRSimilarityCandidate &C, DenseSet<unsigned> &NotSame,
       // global value numbering.
       unsigned GVN = C.getGVN(V).getValue();
       if (isa<Constant>(V))
-        if (NotSame.find(GVN) != NotSame.end() &&
-            Seen.find(GVN) == Seen.end()) {
+        if (NotSame.contains(GVN) && !Seen.contains(GVN)) {
           Inputs.push_back(GVN);
           Seen.insert(GVN);
         }
@@ -555,7 +554,7 @@ static void getCodeExtractorArguments(
 
   // Sort the GVNs, since we now have constants included in the \ref InputGVNs
   // we need to make sure they are in a deterministic order.
-  stable_sort(InputGVNs.begin(), InputGVNs.end());
+  stable_sort(InputGVNs);
 }
 
 /// Look over the inputs and map each input argument to an argument in the
@@ -673,7 +672,7 @@ findExtractedOutputToOverallOutputMapping(OutlinableRegion &Region,
       if (Group.ArgumentTypes[Jdx] != PointerType::getUnqual(Output->getType()))
         continue;
 
-      if (AggArgsUsed.find(Jdx) != AggArgsUsed.end())
+      if (AggArgsUsed.contains(Jdx))
         continue;
 
       TypeFound = true;
@@ -925,7 +924,7 @@ collectRelevantInstructions(Function &F,
   std::vector<Instruction *> RelevantInstructions;
 
   for (BasicBlock &BB : F) {
-    if (ExcludeBlocks.find(&BB) != ExcludeBlocks.end())
+    if (ExcludeBlocks.contains(&BB))
       continue;
 
     for (Instruction &Inst : BB) {
@@ -1128,8 +1127,6 @@ void createSwitchStatement(Module &M, OutlinableGroup &OG, BasicBlock *EndBB,
     Term->moveBefore(*EndBB, EndBB->end());
     OutputBlock->eraseFromParent();
   }
-
-  return;
 }
 
 /// Fill the new function that will serve as the replacement function for all of

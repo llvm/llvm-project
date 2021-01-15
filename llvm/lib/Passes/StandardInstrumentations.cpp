@@ -501,7 +501,6 @@ void PrintIRInstrumentation::printBeforePass(StringRef PassID, Any IR) {
 
   SmallString<20> Banner = formatv("*** IR Dump Before {0} ***", PassID);
   unwrapAndPrint(dbgs(), IR, Banner, forcePrintModuleIR());
-  return;
 }
 
 void PrintIRInstrumentation::printAfterPass(StringRef PassID, Any IR) {

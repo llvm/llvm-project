@@ -148,7 +148,7 @@ private:
     /// location of the 'return', 'throw', or 'new' keyword,
     /// respectively. When Kind == EK_Temporary, the location where
     /// the temporary is being created.
-    unsigned Location;
+    SourceLocation Location;
 
     /// Whether the entity being initialized may end up using the
     /// named return value optimization (NRVO).
@@ -174,7 +174,7 @@ private:
     IdentifierInfo *VarID;
 
     /// The source location at which the capture occurs.
-    unsigned Location;
+    SourceLocation Location;
   };
 
   union {
@@ -209,7 +209,7 @@ private:
     struct C Capture;
   };
 
-  InitializedEntity() = default;
+  InitializedEntity() {};
 
   /// Create the initialization entity for a variable.
   InitializedEntity(VarDecl *Var, EntityKind EK = EK_Variable)
@@ -221,7 +221,8 @@ private:
   InitializedEntity(EntityKind Kind, SourceLocation Loc, QualType Type,
                     bool NRVO = false)
       : Kind(Kind), Type(Type) {
-    LocAndNRVO.Location = Loc.getRawEncoding();
+    new (&LocAndNRVO) LN;
+    LocAndNRVO.Location = Loc;
     LocAndNRVO.NRVO = NRVO;
   }
 
@@ -238,8 +239,9 @@ private:
   /// Create the initialization entity for a lambda capture.
   InitializedEntity(IdentifierInfo *VarID, QualType FieldType, SourceLocation Loc)
       : Kind(EK_LambdaCapture), Type(FieldType) {
+    new (&Capture) C;
     Capture.VarID = VarID;
-    Capture.Location = Loc.getRawEncoding();
+    Capture.Location = Loc;
   }
 
 public:
@@ -501,14 +503,14 @@ public:
   /// the result of a function call.
   SourceLocation getReturnLoc() const {
     assert(getKind() == EK_Result && "No 'return' location!");
-    return SourceLocation::getFromRawEncoding(LocAndNRVO.Location);
+    return LocAndNRVO.Location;
   }
 
   /// Determine the location of the 'throw' keyword when initializing
   /// an exception object.
   SourceLocation getThrowLoc() const {
     assert(getKind() == EK_Exception && "No 'throw' location!");
-    return SourceLocation::getFromRawEncoding(LocAndNRVO.Location);
+    return LocAndNRVO.Location;
   }
 
   /// If this is an array, vector, or complex number element, get the
@@ -537,7 +539,7 @@ public:
   /// field from a captured variable in a lambda.
   SourceLocation getCaptureLoc() const {
     assert(getKind() == EK_LambdaCapture && "Not a lambda capture!");
-    return SourceLocation::getFromRawEncoding(Capture.Location);
+    return Capture.Location;
   }
 
   void setParameterCFAudited() {

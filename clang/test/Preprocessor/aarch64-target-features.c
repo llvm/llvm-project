@@ -441,6 +441,12 @@
 // CHECK-BFLOAT: __ARM_FEATURE_BF16 1
 // CHECK-BFLOAT: __ARM_FEATURE_BF16_VECTOR_ARITHMETIC 1
 
+// ================== Check Armv8.7-A LS64 extension.
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.7-a+ls64 -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-LS64 %s
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.7-a      -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-NO-LS64 %s
+// CHECK-LS64: __ARM_FEATURE_LS64 1
+// CHECK-NO-LS64-NOT: __ARM_FEATURE_LS64 1
+
 // ================== Check sve-vector-bits flag.
 // RUN: %clang -target aarch64-arm-none-eabi -march=armv8-a+sve -msve-vector-bits=128  -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-SVE-VECTOR-BITS -D#VBITS=128  %s
 // RUN: %clang -target aarch64-arm-none-eabi -march=armv8-a+sve -msve-vector-bits=256  -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-SVE-VECTOR-BITS -D#VBITS=256  %s

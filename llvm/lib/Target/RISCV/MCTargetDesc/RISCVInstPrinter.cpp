@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVInstPrinter.h"
-#include "MCTargetDesc/RISCVMCExpr.h"
-#include "Utils/RISCVBaseInfo.h"
+#include "RISCVBaseInfo.h"
+#include "RISCVMCExpr.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -165,7 +165,6 @@ void RISCVInstPrinter::printAtomicMemOp(const MCInst *MI, unsigned OpNo,
   O << "(";
   printRegName(O, MO.getReg());
   O << ")";
-  return;
 }
 
 void RISCVInstPrinter::printVTypeI(const MCInst *MI, unsigned OpNo,

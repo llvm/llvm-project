@@ -7,9 +7,9 @@
 func @std_for(%arg0 : index, %arg1 : index, %arg2 : index) {
   scf.for %i0 = %arg0 to %arg1 step %arg2 {
     scf.for %i1 = %arg0 to %arg1 step %arg2 {
-      %min_cmp = cmpi "slt", %i0, %i1 : index
+      %min_cmp = cmpi slt, %i0, %i1 : index
       %min = select %min_cmp, %i0, %i1 : index
-      %max_cmp = cmpi "sge", %i0, %i1 : index
+      %max_cmp = cmpi sge, %i0, %i1 : index
       %max = select %max_cmp, %i0, %i1 : index
       scf.for %i2 = %min to %max step %i1 {
       }
@@ -20,9 +20,9 @@ func @std_for(%arg0 : index, %arg1 : index, %arg2 : index) {
 // CHECK-LABEL: func @std_for(
 //  CHECK-NEXT:   scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
 //  CHECK-NEXT:     scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
-//  CHECK-NEXT:       %{{.*}} = cmpi "slt", %{{.*}}, %{{.*}} : index
+//  CHECK-NEXT:       %{{.*}} = cmpi slt, %{{.*}}, %{{.*}} : index
 //  CHECK-NEXT:       %{{.*}} = select %{{.*}}, %{{.*}}, %{{.*}} : index
-//  CHECK-NEXT:       %{{.*}} = cmpi "sge", %{{.*}}, %{{.*}} : index
+//  CHECK-NEXT:       %{{.*}} = cmpi sge, %{{.*}}, %{{.*}} : index
 //  CHECK-NEXT:       %{{.*}} = select %{{.*}}, %{{.*}}, %{{.*}} : index
 //  CHECK-NEXT:       scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
 
@@ -55,9 +55,9 @@ func @std_parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
   %step = constant 1 : index
   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
                                           step (%arg4, %step) {
-    %min_cmp = cmpi "slt", %i0, %i1 : index
+    %min_cmp = cmpi slt, %i0, %i1 : index
     %min = select %min_cmp, %i0, %i1 : index
-    %max_cmp = cmpi "sge", %i0, %i1 : index
+    %max_cmp = cmpi sge, %i0, %i1 : index
     %max = select %max_cmp, %i0, %i1 : index
     %zero = constant 0.0 : f32
     %int_zero = constant 0 : i32
@@ -88,9 +88,9 @@ func @std_parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
 //       CHECK:   %[[STEP:.*]] = constant 1 : index
 //  CHECK-NEXT:   scf.parallel (%[[I0:.*]], %[[I1:.*]]) = (%[[ARG0]], %[[ARG1]]) to
 //       CHECK:   (%[[ARG2]], %[[ARG3]]) step (%[[ARG4]], %[[STEP]]) {
-//  CHECK-NEXT:     %[[MIN_CMP:.*]] = cmpi "slt", %[[I0]], %[[I1]] : index
+//  CHECK-NEXT:     %[[MIN_CMP:.*]] = cmpi slt, %[[I0]], %[[I1]] : index
 //  CHECK-NEXT:     %[[MIN:.*]] = select %[[MIN_CMP]], %[[I0]], %[[I1]] : index
-//  CHECK-NEXT:     %[[MAX_CMP:.*]] = cmpi "sge", %[[I0]], %[[I1]] : index
+//  CHECK-NEXT:     %[[MAX_CMP:.*]] = cmpi sge, %[[I0]], %[[I1]] : index
 //  CHECK-NEXT:     %[[MAX:.*]] = select %[[MAX_CMP]], %[[I0]], %[[I1]] : index
 //  CHECK-NEXT:     %[[ZERO:.*]] = constant 0.000000e+00 : f32
 //  CHECK-NEXT:     %[[INT_ZERO:.*]] = constant 0 : i32
@@ -209,7 +209,7 @@ func @conditional_reduce(%buffer: memref<1024xf32>, %lb: index, %ub: index, %ste
   %c0 = constant 0.0 : f32
   %sum = scf.for %iv = %lb to %ub step %step iter_args(%sum_iter = %sum_0) -> (f32) {
 	  %t = load %buffer[%iv] : memref<1024xf32>
-	  %cond = cmpf "ugt", %t, %c0 : f32
+	  %cond = cmpf ugt, %t, %c0 : f32
 	  %sum_next = scf.if %cond -> (f32) {
 	    %new_sum = addf %sum_iter, %t : f32
       scf.yield %new_sum : f32
@@ -230,7 +230,7 @@ func @conditional_reduce(%buffer: memref<1024xf32>, %lb: index, %ub: index, %ste
 //  CHECK-NEXT: %[[RESULT:.*]] = scf.for %[[IV:.*]] = %[[ARG1]] to %[[ARG2]] step %[[ARG3]]
 //  CHECK-SAME: iter_args(%[[ITER:.*]] = %[[INIT]]) -> (f32) {
 //  CHECK-NEXT: %[[T:.*]] = load %[[ARG0]][%[[IV]]]
-//  CHECK-NEXT: %[[COND:.*]] = cmpf "ugt", %[[T]], %[[ZERO]]
+//  CHECK-NEXT: %[[COND:.*]] = cmpf ugt, %[[T]], %[[ZERO]]
 //  CHECK-NEXT: %[[IFRES:.*]] = scf.if %[[COND]] -> (f32) {
 //  CHECK-NEXT: %[[THENRES:.*]] = addf %[[ITER]], %[[T]]
 //  CHECK-NEXT: scf.yield %[[THENRES]] : f32

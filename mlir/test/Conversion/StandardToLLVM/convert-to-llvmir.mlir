@@ -40,7 +40,7 @@ func @simple_loop() {
 // CHECK32-NEXT:  {{.*}} = llvm.icmp "slt" {{.*}}, {{.*}} : i32
 // CHECK32-NEXT:  llvm.cond_br {{.*}}, ^bb3, ^bb4
 ^bb2(%0: index):	// 2 preds: ^bb1, ^bb3
-  %1 = cmpi "slt", %0, %c42 : index
+  %1 = cmpi slt, %0, %c42 : index
   cond_br %1, ^bb3, ^bb4
 
 // CHECK:      ^bb3:	// pred: ^bb2
@@ -193,7 +193,7 @@ func @func_args(i32, i32) -> i32 {
 // CHECK32-NEXT:  {{.*}} = llvm.icmp "slt" {{.*}}, {{.*}} : i32
 // CHECK32-NEXT:  llvm.cond_br {{.*}}, ^bb3, ^bb4
 ^bb2(%0: index):	// 2 preds: ^bb1, ^bb3
-  %1 = cmpi "slt", %0, %c42 : index
+  %1 = cmpi slt, %0, %c42 : index
   cond_br %1, ^bb3, ^bb4
 
 // CHECK-NEXT: ^bb3:	// pred: ^bb2
@@ -266,7 +266,7 @@ func @imperfectly_nested_loops() {
 // CHECK-NEXT:  {{.*}} = llvm.icmp "slt" {{.*}}, {{.*}} : i64
 // CHECK-NEXT:  llvm.cond_br {{.*}}, ^bb3, ^bb8
 ^bb2(%0: index):	// 2 preds: ^bb1, ^bb7
-  %1 = cmpi "slt", %0, %c42 : index
+  %1 = cmpi slt, %0, %c42 : index
   cond_br %1, ^bb3, ^bb8
 
 // CHECK-NEXT: ^bb3:
@@ -289,7 +289,7 @@ func @imperfectly_nested_loops() {
 // CHECK-NEXT:  {{.*}} = llvm.icmp "slt" {{.*}}, {{.*}} : i64
 // CHECK-NEXT:  llvm.cond_br {{.*}}, ^bb6, ^bb7
 ^bb5(%2: index):	// 2 preds: ^bb4, ^bb6
-  %3 = cmpi "slt", %2, %c56 : index
+  %3 = cmpi slt, %2, %c56 : index
   cond_br %3, ^bb6, ^bb7
 
 // CHECK-NEXT: ^bb6:	// pred: ^bb5
@@ -382,7 +382,7 @@ func @more_imperfectly_nested_loops() {
   %c42 = constant 42 : index
   br ^bb2(%c0 : index)
 ^bb2(%0: index):	// 2 preds: ^bb1, ^bb11
-  %1 = cmpi "slt", %0, %c42 : index
+  %1 = cmpi slt, %0, %c42 : index
   cond_br %1, ^bb3, ^bb12
 ^bb3:	// pred: ^bb2
   call @pre(%0) : (index) -> ()
@@ -392,7 +392,7 @@ func @more_imperfectly_nested_loops() {
   %c56 = constant 56 : index
   br ^bb5(%c7 : index)
 ^bb5(%2: index):	// 2 preds: ^bb4, ^bb6
-  %3 = cmpi "slt", %2, %c56 : index
+  %3 = cmpi slt, %2, %c56 : index
   cond_br %3, ^bb6, ^bb7
 ^bb6:	// pred: ^bb5
   call @body2(%0, %2) : (index, index) -> ()
@@ -407,7 +407,7 @@ func @more_imperfectly_nested_loops() {
   %c37 = constant 37 : index
   br ^bb9(%c18 : index)
 ^bb9(%5: index):	// 2 preds: ^bb8, ^bb10
-  %6 = cmpi "slt", %5, %c37 : index
+  %6 = cmpi slt, %5, %c37 : index
   cond_br %6, ^bb10, ^bb11
 ^bb10:	// pred: ^bb9
   call @body3(%0, %5) : (index, index) -> ()
@@ -528,7 +528,7 @@ func @ops(f32, f32, i32, i32, f64) -> (f32, i32) {
 // CHECK-NEXT:  %1 = llvm.sub %arg2, %arg3 : i32
   %1 = subi %arg2, %arg3: i32
 // CHECK-NEXT:  %2 = llvm.icmp "slt" %arg2, %1 : i32
-  %2 = cmpi "slt", %arg2, %1 : i32
+  %2 = cmpi slt, %arg2, %1 : i32
 // CHECK-NEXT:  %3 = llvm.sdiv %arg2, %arg3 : i32
   %3 = divi_signed %arg2, %arg3 : i32
 // CHECK-NEXT:  %4 = llvm.udiv %arg2, %arg3 : i32
@@ -808,20 +808,20 @@ func @fcmp(f32, f32) -> () {
   // CHECK-NEXT: llvm.fcmp "une" %arg0, %arg1 : f32
   // CHECK-NEXT: llvm.fcmp "uno" %arg0, %arg1 : f32
   // CHECK-NEXT: llvm.return
-  %1 = cmpf "oeq", %arg0, %arg1 : f32
-  %2 = cmpf "ogt", %arg0, %arg1 : f32
-  %3 = cmpf "oge", %arg0, %arg1 : f32
-  %4 = cmpf "olt", %arg0, %arg1 : f32
-  %5 = cmpf "ole", %arg0, %arg1 : f32
-  %6 = cmpf "one", %arg0, %arg1 : f32
-  %7 = cmpf "ord", %arg0, %arg1 : f32
-  %8 = cmpf "ueq", %arg0, %arg1 : f32
-  %9 = cmpf "ugt", %arg0, %arg1 : f32
-  %10 = cmpf "uge", %arg0, %arg1 : f32
-  %11 = cmpf "ult", %arg0, %arg1 : f32
-  %12 = cmpf "ule", %arg0, %arg1 : f32
-  %13 = cmpf "une", %arg0, %arg1 : f32
-  %14 = cmpf "uno", %arg0, %arg1 : f32
+  %1 = cmpf oeq, %arg0, %arg1 : f32
+  %2 = cmpf ogt, %arg0, %arg1 : f32
+  %3 = cmpf oge, %arg0, %arg1 : f32
+  %4 = cmpf olt, %arg0, %arg1 : f32
+  %5 = cmpf ole, %arg0, %arg1 : f32
+  %6 = cmpf one, %arg0, %arg1 : f32
+  %7 = cmpf ord, %arg0, %arg1 : f32
+  %8 = cmpf ueq, %arg0, %arg1 : f32
+  %9 = cmpf ugt, %arg0, %arg1 : f32
+  %10 = cmpf uge, %arg0, %arg1 : f32
+  %11 = cmpf ult, %arg0, %arg1 : f32
+  %12 = cmpf ule, %arg0, %arg1 : f32
+  %13 = cmpf une, %arg0, %arg1 : f32
+  %14 = cmpf uno, %arg0, %arg1 : f32
 
   return
 }
@@ -1296,19 +1296,19 @@ func @subview_mixed_static_dynamic(%0 : memref<64x4xf32, offset: 0, strides: [4,
 
 // CHECK-LABEL: func @atomic_rmw
 func @atomic_rmw(%I : memref<10xi32>, %ival : i32, %F : memref<10xf32>, %fval : f32, %i : index) {
-  atomic_rmw "assign" %fval, %F[%i] : (f32, memref<10xf32>) -> f32
+  atomic_rmw assign %fval, %F[%i] : (f32, memref<10xf32>) -> f32
   // CHECK: llvm.atomicrmw xchg %{{.*}}, %{{.*}} acq_rel
-  atomic_rmw "addi" %ival, %I[%i] : (i32, memref<10xi32>) -> i32
+  atomic_rmw addi %ival, %I[%i] : (i32, memref<10xi32>) -> i32
   // CHECK: llvm.atomicrmw add %{{.*}}, %{{.*}} acq_rel
-  atomic_rmw "maxs" %ival, %I[%i] : (i32, memref<10xi32>) -> i32
+  atomic_rmw maxs %ival, %I[%i] : (i32, memref<10xi32>) -> i32
   // CHECK: llvm.atomicrmw max %{{.*}}, %{{.*}} acq_rel
-  atomic_rmw "mins" %ival, %I[%i] : (i32, memref<10xi32>) -> i32
+  atomic_rmw mins %ival, %I[%i] : (i32, memref<10xi32>) -> i32
   // CHECK: llvm.atomicrmw min %{{.*}}, %{{.*}} acq_rel
-  atomic_rmw "maxu" %ival, %I[%i] : (i32, memref<10xi32>) -> i32
+  atomic_rmw maxu %ival, %I[%i] : (i32, memref<10xi32>) -> i32
   // CHECK: llvm.atomicrmw umax %{{.*}}, %{{.*}} acq_rel
-  atomic_rmw "minu" %ival, %I[%i] : (i32, memref<10xi32>) -> i32
+  atomic_rmw minu %ival, %I[%i] : (i32, memref<10xi32>) -> i32
   // CHECK: llvm.atomicrmw umin %{{.*}}, %{{.*}} acq_rel
-  atomic_rmw "addf" %fval, %F[%i] : (f32, memref<10xf32>) -> f32
+  atomic_rmw addf %fval, %F[%i] : (f32, memref<10xf32>) -> f32
   // CHECK: llvm.atomicrmw fadd %{{.*}}, %{{.*}} acq_rel
   return
 }

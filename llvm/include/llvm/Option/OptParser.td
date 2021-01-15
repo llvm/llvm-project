@@ -146,58 +146,67 @@ class ValuesCode<code valuecode> { code ValuesCode = valuecode; }
 
 // Helpers for defining marshalling information.
 
+class KeyPathAndMacro<string key_path_prefix, string key_path_base,
+                      string macro_prefix = ""> {
+  code KeyPath = !strconcat(key_path_prefix, key_path_base);
+  code MacroPrefix = macro_prefix;
+}
+
+def EmptyKPM : KeyPathAndMacro<"", "">;
+
 class ImpliedByAnyOf<list<Option> options, code value = "true"> {
   code ImpliedCheck = !foldl("false", options, accumulator, option,
                              !strconcat(accumulator, " || ", option.KeyPath));
   code ImpliedValue = value;
 }
 
-class MarshallingInfo<code keypath, code defaultvalue> {
-  code KeyPath = keypath;
+class MarshallingInfo<KeyPathAndMacro kpm, code defaultvalue> {
+  code KeyPath = kpm.KeyPath;
+  code MacroPrefix = kpm.MacroPrefix;
   code DefaultValue = defaultvalue;
 }
 
-class MarshallingInfoString<code keypath, code defaultvalue="std::string()">
-  : MarshallingInfo<keypath, defaultvalue> {
+class MarshallingInfoString<KeyPathAndMacro kpm, code defaultvalue="std::string()">
+  : MarshallingInfo<kpm, defaultvalue> {
   code Normalizer = "normalizeString";
   code Denormalizer = "denormalizeString";
 }
 
-class MarshallingInfoStringInt<code keypath, code defaultvalue="0", code type="unsigned">
-  : MarshallingInfo<keypath, defaultvalue> {
+class MarshallingInfoStringInt<KeyPathAndMacro kpm, code defaultvalue="0", code type="unsigned">
+  : MarshallingInfo<kpm, defaultvalue> {
   code Normalizer = "normalizeStringIntegral<"#type#">";
   code Denormalizer = "denormalizeString";
 }
 
-class MarshallingInfoStringVector<code keypath>
-  : MarshallingInfo<keypath, "std::vector<std::string>({})"> {
+class MarshallingInfoStringVector<KeyPathAndMacro kpm>
+  : MarshallingInfo<kpm, "std::vector<std::string>({})"> {
   code Normalizer = "normalizeStringVector";
   code Denormalizer = "denormalizeStringVector";
 }
 
-class MarshallingInfoFlag<code keypath, code defaultvalue = "false">
-  : MarshallingInfo<keypath, defaultvalue> {
+class MarshallingInfoFlag<KeyPathAndMacro kpm, code defaultvalue = "false">
+  : MarshallingInfo<kpm, defaultvalue> {
   code Normalizer = "normalizeSimpleFlag";
   code Denormalizer = "denormalizeSimpleFlag";
 }
 
-class MarshallingInfoNegativeFlag<code keypath, code defaultvalue = "true">
-  : MarshallingInfo<keypath, defaultvalue> {
+class MarshallingInfoNegativeFlag<KeyPathAndMacro kpm, code defaultvalue = "true">
+  : MarshallingInfo<kpm, defaultvalue> {
   code Normalizer = "normalizeSimpleNegativeFlag";
   code Denormalizer = "denormalizeSimpleFlag";
 }
 
-class MarshallingInfoBitfieldFlag<code keypath, code value>
-  : MarshallingInfoFlag<keypath, "0u"> {
+class MarshallingInfoBitfieldFlag<KeyPathAndMacro kpm, code value>
+  : MarshallingInfoFlag<kpm, "0u"> {
   code Normalizer = "makeFlagToValueNormalizer("#value#")";
   code ValueMerger = "mergeMaskValue";
   code ValueExtractor = "(extractMaskValue<unsigned, decltype("#value#"), "#value#">)";
 }
 
 // Marshalling info for booleans. Applied to the flag setting keypath to false.
-class MarshallingInfoBooleanFlag<code keypath, code defaultvalue, code value, code name,
+class MarshallingInfoBooleanFlag<KeyPathAndMacro kpm, code defaultvalue, code value, code name,
                                  code other_value, code other_name>
-  : MarshallingInfoFlag<keypath, defaultvalue> {
+  : MarshallingInfoFlag<kpm, defaultvalue> {
   code Normalizer = "makeBooleanOptionNormalizer("#value#", "#other_value#", OPT_"#other_name#")";
   code Denormalizer = "makeBooleanOptionDenormalizer("#value#")";
 }

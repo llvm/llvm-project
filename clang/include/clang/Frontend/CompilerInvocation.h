@@ -176,11 +176,12 @@ public:
   /// \param Opts - The LangOptions object to set up.
   /// \param IK - The input language.
   /// \param T - The target triple.
-  /// \param PPOpts - The PreprocessorOptions affected.
+  /// \param Includes - The affected list of included files.
   /// \param LangStd - The input language standard.
-  static void setLangDefaults(LangOptions &Opts, InputKind IK,
-                   const llvm::Triple &T, PreprocessorOptions &PPOpts,
-                   LangStandard::Kind LangStd = LangStandard::lang_unspecified);
+  static void
+  setLangDefaults(LangOptions &Opts, InputKind IK, const llvm::Triple &T,
+                  std::vector<std::string> &Includes,
+                  LangStandard::Kind LangStd = LangStandard::lang_unspecified);
 
   /// Retrieve a module hash string that is suitable for uniquely
   /// identifying the conditions under which the module was built.

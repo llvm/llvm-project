@@ -3094,6 +3094,16 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     case Instruction::Store: {
       // Check if the stores are consecutive or if we need to swizzle them.
       llvm::Type *ScalarTy = cast<StoreInst>(VL0)->getValueOperand()->getType();
+      // Avoid types that are padded when being allocated as scalars, while
+      // being packed together in a vector (such as i1).
+      if (DL->getTypeSizeInBits(ScalarTy) !=
+          DL->getTypeAllocSizeInBits(ScalarTy)) {
+        BS.cancelScheduling(VL, VL0);
+        newTreeEntry(VL, None /*not vectorized*/, S, UserTreeIdx,
+                     ReuseShuffleIndicies);
+        LLVM_DEBUG(dbgs() << "SLP: Gathering stores of non-packed type.\n");
+        return;
+      }
       // Make sure all stores in the bundle are simple - we can't vectorize
       // atomic or volatile stores.
       SmallVector<Value *, 4> PointerOps(VL.size());
@@ -6669,9 +6679,6 @@ class HorizontalReduction {
   /// The operation data of the reduction operation.
   OperationData RdxTreeInst;
 
-  /// The operation data for the leaf values that we perform a reduction on.
-  OperationData RdxLeafVal;
-
   /// Checks if the ParentStackElem.first should be marked as a reduction
   /// operation with an extra argument or as extra argument itself.
   void markExtraArg(std::pair<Instruction *, unsigned> &ParentStackElem,
@@ -6815,8 +6822,10 @@ public:
     if (!isValidElementType(Ty) || Ty->isPointerTy())
       return false;
 
-    RdxLeafVal.clear();
     ReductionRoot = B;
+
+    // The operation data for the leaf values that we perform a reduction on.
+    OperationData RdxLeafVal;
 
     // Post order traverse the reduction tree starting at B. We only handle true
     // trees containing only binary operators.

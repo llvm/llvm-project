@@ -853,7 +853,6 @@ void MVEGatherScatterLowering::pushOutMul(PHINode *&Phi,
   Phi->addIncoming(NewIncrement, Phi->getIncomingBlock(LoopIncrement));
   Phi->removeIncomingValue((unsigned)0);
   Phi->removeIncomingValue((unsigned)0);
-  return;
 }
 
 // Check whether all usages of this instruction are as offsets of

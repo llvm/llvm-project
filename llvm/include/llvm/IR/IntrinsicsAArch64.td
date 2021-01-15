@@ -810,6 +810,14 @@ def int_aarch64_tcancel : GCCBuiltin<"__builtin_arm_tcancel">,
 def int_aarch64_ttest   : GCCBuiltin<"__builtin_arm_ttest">,
                           Intrinsic<[llvm_i64_ty], [],
                                     [IntrNoMem, IntrHasSideEffects]>;
+
+// Armv8.7-A load/store 64-byte intrinsics
+defvar data512 = !listsplat(llvm_i64_ty, 8);
+def int_aarch64_ld64b: Intrinsic<data512, [llvm_ptr_ty]>;
+def int_aarch64_st64b: Intrinsic<[], !listconcat([llvm_ptr_ty], data512)>;
+def int_aarch64_st64bv: Intrinsic<[llvm_i64_ty], !listconcat([llvm_ptr_ty], data512)>;
+def int_aarch64_st64bv0: Intrinsic<[llvm_i64_ty], !listconcat([llvm_ptr_ty], data512)>;
+
 }
 
 def llvm_nxv2i1_ty  : LLVMType<nxv2i1>;

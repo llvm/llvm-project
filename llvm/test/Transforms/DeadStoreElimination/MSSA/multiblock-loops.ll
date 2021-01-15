@@ -183,7 +183,7 @@ define void @loop_multiple_def_uses(i32* noalias %P) {
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[FOR_BODY:%.*]], label [[END:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    store i32 1, i32* [[P]], align 4
+; CHECK-NEXT:    store i32 2, i32* [[P]], align 4
 ; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[P]], align 4
 ; CHECK-NEXT:    br label [[FOR_HEADER]]
 ; CHECK:       end:
@@ -199,7 +199,7 @@ for.header:
   br i1 %c1, label %for.body, label %end
 
 for.body:
-  store i32 1, i32* %P, align 4
+  store i32 2, i32* %P, align 4
   %lv = load i32, i32* %P
   br label %for.header
 

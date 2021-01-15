@@ -350,7 +350,7 @@ bool DirectoryBasedGlobalCompilationDatabase::DirectoryCache::load(
     }
     // Don't log Error here, it's usually just "couldn't find <file>".
   }
-  vlog("No compilation database at {0}", Path);
+  dlog("No compilation database at {0}", Path);
   return true;
 }
 

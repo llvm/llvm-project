@@ -2906,6 +2906,10 @@ static bool unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI,
   if (!NonTrivial && !EnableNonTrivialUnswitch)
     return false;
 
+  // Skip non-trivial unswitching for optsize functions.
+  if (L.getHeader()->getParent()->hasOptSize())
+    return false;
+
   // For non-trivial unswitching, because it often creates new loops, we rely on
   // the pass manager to iterate on the loops rather than trying to immediately
   // reach a fixed point. There is no substantial advantage to iterating

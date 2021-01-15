@@ -1311,7 +1311,7 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
       if (Refs != IDToRefs.end()) {
         for (const auto &Ref : Refs->second) {
           Location Result;
-          Result.range = Ref;
+          Result.range = Ref.Rng;
           Result.uri = URIMainFile;
           Results.References.push_back(std::move(Result));
         }

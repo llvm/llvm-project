@@ -170,7 +170,6 @@ class AllocLikeOp<string mnemonic,
                   list<OpTrait> traits = []> :
     Std_Op<mnemonic,
     !listconcat([
-      MemoryEffects<[MemAlloc<resource>]>,
       AttrSizedOperandSegments
     ], traits)> {
 
@@ -1507,8 +1506,7 @@ def SinOp : FloatUnaryOp<"sin"> {
 // DeallocOp
 //===----------------------------------------------------------------------===//
 
-def DeallocOp : Std_Op<"dealloc",
-    [MemoryEffects<[MemFree]>, MemRefsNormalizable]> {
+def DeallocOp : Std_Op<"dealloc", [MemRefsNormalizable]> {
   let summary = "memory deallocation operation";
   let description = [{
     The `dealloc` operation frees the region of memory referenced by a memref

@@ -1456,10 +1456,10 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
     const ELFYAML::VerdefEntry &E = (*Section.Entries)[I];
 
     Elf_Verdef VerDef;
-    VerDef.vd_version = E.Version;
-    VerDef.vd_flags = E.Flags;
-    VerDef.vd_ndx = E.VersionNdx;
-    VerDef.vd_hash = E.Hash;
+    VerDef.vd_version = E.Version.getValueOr(1);
+    VerDef.vd_flags = E.Flags.getValueOr(0);
+    VerDef.vd_ndx = E.VersionNdx.getValueOr(0);
+    VerDef.vd_hash = E.Hash.getValueOr(0);
     VerDef.vd_aux = sizeof(Elf_Verdef);
     VerDef.vd_cnt = E.VerNames.size();
     if (I == Section.Entries->size() - 1)

@@ -139,7 +139,10 @@ protected:
     const PC *clause{nullptr};
     std::multimap<C, const PC *> clauseInfo;
     std::list<C> actualClauses;
+    Symbol *loopIV{nullptr};
   };
+
+  void SetLoopIv(Symbol *symbol) { GetContext().loopIV = symbol; }
 
   // back() is the top of the stack
   DirectiveContext &GetContext() {
@@ -160,6 +163,7 @@ protected:
     GetContext().allowedExclusiveClauses = {};
     GetContext().requiredClauses = {};
     GetContext().clauseInfo = {};
+    GetContext().loopIV = {nullptr};
   }
 
   void SetContextDirectiveSource(const parser::CharBlock &directive) {
@@ -280,9 +284,9 @@ void DirectiveStructureChecker<D, C, PC, ClauseEnumSize>::CheckNoBranching(
       context_, directiveSource, directive, ContextDirectiveAsFortran()};
   parser::Walk(block, noBranchingEnforce);
 
+  auto construct{parser::ToUpperCaseLetters(getDirectiveName(directive).str())};
   LabelEnforce directiveLabelEnforce{context_, noBranchingEnforce.labels(),
-      directiveSource,
-      parser::ToUpperCaseLetters(getDirectiveName(directive).str()).c_str()};
+      directiveSource, construct.c_str()};
   parser::Walk(block, directiveLabelEnforce);
 }
 

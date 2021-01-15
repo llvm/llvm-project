@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
+#include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -94,6 +95,7 @@ struct TestSparsification
                                           typeOption(indType));
     // Apply rewriting.
     linalg::populateSparsificationPatterns(ctx, patterns, options);
+    vector::populateVectorToVectorCanonicalizationPatterns(patterns, ctx);
     applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
   }
 };

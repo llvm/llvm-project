@@ -247,6 +247,10 @@ private:
   enum class VisitKind { No, OnlyDecl, OnlyChildren, DeclAndChildren };
 
   void traverseDecl(Decl *D, std::vector<DocumentSymbol> &Results) {
+    // Skip symbols which do not originate from the main file.
+    if (!isInsideMainFile(D->getLocation(), AST.getSourceManager()))
+      return;
+
     if (auto *Templ = llvm::dyn_cast<TemplateDecl>(D)) {
       // TemplatedDecl might be null, e.g. concepts.
       if (auto *TD = Templ->getTemplatedDecl())

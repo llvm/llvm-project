@@ -144,6 +144,25 @@ static inline EVT getPackedSVEVectorVT(EVT VT) {
     return MVT::nxv4f32;
   case MVT::f64:
     return MVT::nxv2f64;
+  case MVT::bf16:
+    return MVT::nxv8bf16;
+  }
+}
+
+// NOTE: Currently there's only a need to return integer vector types. If this
+// changes then just add an extra "type" parameter.
+static inline EVT getPackedSVEVectorVT(ElementCount EC) {
+  switch (EC.getKnownMinValue()) {
+  default:
+    llvm_unreachable("unexpected element count for vector");
+  case 16:
+    return MVT::nxv16i8;
+  case 8:
+    return MVT::nxv8i16;
+  case 4:
+    return MVT::nxv4i32;
+  case 2:
+    return MVT::nxv2i64;
   }
 }
 
@@ -3955,7 +3974,6 @@ void selectGatherScatterAddrMode(SDValue &BasePtr, SDValue &Index, EVT MemVT,
   Opcode = NewOp;
   BasePtr = Index->getOperand(0);
   Index = ConstOffset;
-  return;
 }
 
 SDValue AArch64TargetLowering::LowerMGATHER(SDValue Op,
@@ -3989,14 +4007,10 @@ SDValue AArch64TargetLowering::LowerMGATHER(SDValue Op,
       !static_cast<const AArch64Subtarget &>(DAG.getSubtarget()).hasBF16())
     return SDValue();
 
-  // Handle FP data
+  // Handle FP data by using an integer gather and casting the result.
   if (VT.isFloatingPoint()) {
-    ElementCount EC = VT.getVectorElementCount();
-    auto ScalarIntVT =
-        MVT::getIntegerVT(AArch64::SVEBitsPerBlock / EC.getKnownMinValue());
-    PassThru = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL,
-                           MVT::getVectorVT(ScalarIntVT, EC), PassThru);
-
+    EVT PassThruVT = getPackedSVEVectorVT(VT.getVectorElementCount());
+    PassThru = getSVESafeBitCast(PassThruVT, PassThru, DAG);
     InputVT = DAG.getValueType(MemVT.changeVectorElementTypeToInteger());
   }
 
@@ -4016,7 +4030,7 @@ SDValue AArch64TargetLowering::LowerMGATHER(SDValue Op,
   SDValue Gather = DAG.getNode(Opcode, DL, VTs, Ops);
 
   if (VT.isFloatingPoint()) {
-    SDValue Cast = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, VT, Gather);
+    SDValue Cast = getSVESafeBitCast(VT, Gather, DAG);
     return DAG.getMergeValues({Cast, Gather}, DL);
   }
 
@@ -4053,15 +4067,10 @@ SDValue AArch64TargetLowering::LowerMSCATTER(SDValue Op,
       !static_cast<const AArch64Subtarget &>(DAG.getSubtarget()).hasBF16())
     return SDValue();
 
-  // Handle FP data
+  // Handle FP data by casting the data so an integer scatter can be used.
   if (VT.isFloatingPoint()) {
-    VT = VT.changeVectorElementTypeToInteger();
-    ElementCount EC = VT.getVectorElementCount();
-    auto ScalarIntVT =
-        MVT::getIntegerVT(AArch64::SVEBitsPerBlock / EC.getKnownMinValue());
-    StoreVal = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL,
-                           MVT::getVectorVT(ScalarIntVT, EC), StoreVal);
-
+    EVT StoreValVT = getPackedSVEVectorVT(VT.getVectorElementCount());
+    StoreVal = getSVESafeBitCast(StoreValVT, StoreVal, DAG);
     InputVT = DAG.getValueType(MemVT.changeVectorElementTypeToInteger());
   }
 
@@ -10956,43 +10965,6 @@ bool AArch64TargetLowering::shouldSinkOperands(
 
     return true;
   }
-  case Instruction::Mul: {
-    bool IsProfitable = false;
-    for (auto &Op : I->operands()) {
-      // Make sure we are not already sinking this operand
-      if (any_of(Ops, [&](Use *U) { return U->get() == Op; }))
-        continue;
-
-      ShuffleVectorInst *Shuffle = dyn_cast<ShuffleVectorInst>(Op);
-      if (!Shuffle || !Shuffle->isZeroEltSplat())
-        continue;
-
-      Value *ShuffleOperand = Shuffle->getOperand(0);
-      InsertElementInst *Insert = dyn_cast<InsertElementInst>(ShuffleOperand);
-      if (!Insert)
-        continue;
-
-      Instruction *OperandInstr = dyn_cast<Instruction>(Insert->getOperand(1));
-      if (!OperandInstr)
-        continue;
-
-      ConstantInt *ElementConstant =
-          dyn_cast<ConstantInt>(Insert->getOperand(2));
-      // Check that the insertelement is inserting into element 0
-      if (!ElementConstant || ElementConstant->getZExtValue() != 0)
-        continue;
-
-      unsigned Opcode = OperandInstr->getOpcode();
-      if (Opcode != Instruction::SExt && Opcode != Instruction::ZExt)
-        continue;
-
-      Ops.push_back(&Shuffle->getOperandUse(0));
-      Ops.push_back(&Op);
-      IsProfitable = true;
-    }
-
-    return IsProfitable;
-  }
   default:
     return false;
   }
@@ -17194,4 +17166,41 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorSetccToSVE(
   EVT PromoteVT = ContainerVT.changeTypeToInteger();
   auto Promote = DAG.getBoolExtOrTrunc(Cmp, DL, PromoteVT, InVT);
   return convertFromScalableVector(DAG, Op.getValueType(), Promote);
+}
+
+SDValue AArch64TargetLowering::getSVESafeBitCast(EVT VT, SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  EVT InVT = Op.getValueType();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+
+  assert(VT.isScalableVector() && TLI.isTypeLegal(VT) &&
+         InVT.isScalableVector() && TLI.isTypeLegal(InVT) &&
+         "Only expect to cast between legal scalable vector types!");
+  assert((VT.getVectorElementType() == MVT::i1) ==
+             (InVT.getVectorElementType() == MVT::i1) &&
+         "Cannot cast between data and predicate scalable vector types!");
+
+  if (InVT == VT)
+    return Op;
+
+  if (VT.getVectorElementType() == MVT::i1)
+    return DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, VT, Op);
+
+  EVT PackedVT = getPackedSVEVectorVT(VT.getVectorElementType());
+  EVT PackedInVT = getPackedSVEVectorVT(InVT.getVectorElementType());
+  assert((VT == PackedVT || InVT == PackedInVT) &&
+         "Cannot cast between unpacked scalable vector types!");
+
+  // Pack input if required.
+  if (InVT != PackedInVT)
+    Op = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, PackedInVT, Op);
+
+  Op = DAG.getNode(ISD::BITCAST, DL, PackedVT, Op);
+
+  // Unpack result if required.
+  if (VT != PackedVT)
+    Op = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, VT, Op);
+
+  return Op;
 }

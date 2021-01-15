@@ -146,6 +146,16 @@ def G_VLSHR : AArch64GenericInstruction {
   let InOperandList = (ins type0:$src1, untyped_imm_0:$imm);
 }
 
+// Represents an integer to FP conversion on the FPR bank.
+def G_SITOF : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src);
+}
+def G_UITOF : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src);
+}
+
 def : GINodeEquiv<G_REV16, AArch64rev16>;
 def : GINodeEquiv<G_REV32, AArch64rev32>;
 def : GINodeEquiv<G_REV64, AArch64rev64>;
@@ -163,6 +173,8 @@ def : GINodeEquiv<G_TRN2, AArch64trn2>;
 def : GINodeEquiv<G_EXT, AArch64ext>;
 def : GINodeEquiv<G_VASHR, AArch64vashr>;
 def : GINodeEquiv<G_VLSHR, AArch64vlshr>;
+def : GINodeEquiv<G_SITOF, AArch64sitof>;
+def : GINodeEquiv<G_UITOF, AArch64uitof>;
 
 def : GINodeEquiv<G_EXTRACT_VECTOR_ELT, vector_extract>;
 
