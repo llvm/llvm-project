@@ -966,9 +966,13 @@ def : BccSwapPat<setle, BGE>;
 def : BccSwapPat<setugt, BLTU>;
 def : BccSwapPat<setule, BGEU>;
 
-// An extra pattern is needed for a brcond without a setcc (i.e. where the
+// Extra patterns are needed for a brcond without a setcc (i.e. where the
 // condition was calculated elsewhere).
 def : Pat<(brcond GPR:$cond, bb:$imm12), (BNE GPR:$cond, X0, bb:$imm12)>;
+// In this pattern, the `(xor $cond, 1)` functions like (boolean) `not`, as the
+// `brcond` only uses the lowest bit.
+def : Pat<(brcond (XLenVT (xor GPR:$cond, 1)), bb:$imm12),
+          (BEQ GPR:$cond, X0, bb:$imm12)>;
 
 let isBarrier = 1, isBranch = 1, isTerminator = 1 in
 def PseudoBR : Pseudo<(outs), (ins simm21_lsb0_jal:$imm20), [(br bb:$imm20)]>,
