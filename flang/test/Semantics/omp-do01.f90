@@ -1,17 +1,17 @@
 ! RUN: %S/test_errors.sh %s %t %f18 -fopenmp
-! XFAIL: *
-
 ! OpenMP Version 4.5
 ! 2.7.1 Loop Construct
-! collapse(n) where n > num of loops
+! The loop iteration variable may not appear in a firstprivate directive.
 
 program omp_do
   integer i, j, k
 
-  !ERROR: Not enough do loops for collapsed !$OMP DO
-  !$omp do collapse(2)
+  !ERROR: DO iteration variable i is not allowed in FIRSTPRIVATE clause.
+  !$omp do firstprivate(k,i)
   do i = 1, 10
-    print *, "hello"
+    do j = 1, 10
+      print *, "Hello"
+    end do
   end do
   !$omp end do
 
