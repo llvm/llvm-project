@@ -1941,6 +1941,24 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
     I.getOperand(1).setReg(NewSrc.getReg(0));
     return true;
   }
+  case TargetOpcode::G_UITOFP:
+  case TargetOpcode::G_SITOFP: {
+    // If both source and destination regbanks are FPR, then convert the opcode
+    // to G_SITOF so that the importer can select it to an fpr variant.
+    // Otherwise, it ends up matching an fpr/gpr variant and adding a cross-bank
+    // copy.
+    Register SrcReg = I.getOperand(1).getReg();
+    if (MRI.getType(SrcReg).isVector())
+      return false;
+    if (RBI.getRegBank(SrcReg, MRI, TRI)->getID() == AArch64::FPRRegBankID) {
+      if (I.getOpcode() == TargetOpcode::G_SITOFP)
+        I.setDesc(TII.get(AArch64::G_SITOF));
+      else
+        I.setDesc(TII.get(AArch64::G_UITOF));
+      return true;
+    }
+    return false;
+  }
   default:
     return false;
   }
