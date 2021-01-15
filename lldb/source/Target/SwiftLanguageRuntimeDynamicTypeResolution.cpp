@@ -1231,23 +1231,14 @@ findFieldWithName(const std::vector<swift::reflection::FieldInfo> &fields,
 static llvm::Optional<std::string>
 GetMultiPayloadEnumCaseName(const swift::reflection::EnumTypeInfo *eti,
                             const DataExtractor &data) {
-  using namespace swift::reflection;
-  assert(eti->getEnumKind() == EnumKind::MultiPayloadEnum);
-  const auto &cases = eti->getCases();
-  auto it = std::max_element(cases.begin(), cases.end(),
-                             [](const auto &a, const auto &b) {
-                               return a.TI.getSize() < b.TI.getSize();
-                             });
-  if (it == cases.end())
-    return {};
-
-  auto payload_capacity = it->TI.getSize();
+  assert(eti->getEnumKind() == swift::reflection::EnumKind::MultiPayloadEnum);
+  auto payload_capacity = eti->getPayloadSize();
   if (data.GetByteSize() == payload_capacity + 1) {
     auto tag = data.GetDataStart()[payload_capacity];
+    const auto &cases = eti->getCases();
     if (tag >= 0 && tag < cases.size())
       return cases[tag].Name;
   }
-
   return {};
 }
 
@@ -1268,7 +1259,9 @@ llvm::Optional<std::string> SwiftLanguageRuntimeImpl::GetEnumCaseName(
     return eti->getCases()[case_index].Name;
 
   // Temporary workaround.
-  if (eti->getEnumKind() == EnumKind::MultiPayloadEnum)
+  if (eti->getEnumKind() == EnumKind::MultiPayloadEnum &&
+      type.GetMangledTypeName().GetStringRef().startswith(
+          "$s10Foundation9IndexPathV7Storage10"))
     return GetMultiPayloadEnumCaseName(eti, data);
 
   return {};
