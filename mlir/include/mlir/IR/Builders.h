@@ -66,6 +66,8 @@ public:
   FloatType getF16Type();
   FloatType getF32Type();
   FloatType getF64Type();
+  FloatType getF80Type();
+  FloatType getF128Type();
 
   IndexType getIndexType();
 

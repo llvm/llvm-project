@@ -50,9 +50,9 @@ struct BuiltinOpAsmDialectInterface : public OpAsmDialectInterface {
 
 void BuiltinDialect::initialize() {
   addTypes<ComplexType, BFloat16Type, Float16Type, Float32Type, Float64Type,
-           FunctionType, IndexType, IntegerType, MemRefType, UnrankedMemRefType,
-           NoneType, OpaqueType, RankedTensorType, TupleType,
-           UnrankedTensorType, VectorType>();
+           Float80Type, Float128Type, FunctionType, IndexType, IntegerType,
+           MemRefType, UnrankedMemRefType, NoneType, OpaqueType,
+           RankedTensorType, TupleType, UnrankedTensorType, VectorType>();
   addAttributes<AffineMapAttr, ArrayAttr, DenseIntOrFPElementsAttr,
                 DenseStringElementsAttr, DictionaryAttr, FloatAttr,
                 SymbolRefAttr, IntegerAttr, IntegerSetAttr, OpaqueAttr,

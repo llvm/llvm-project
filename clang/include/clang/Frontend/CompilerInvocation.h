@@ -247,6 +247,18 @@ private:
   /// \returns - True if parsing was successful, false otherwise
   bool parseSimpleArgs(const llvm::opt::ArgList &Args,
                        DiagnosticsEngine &Diags);
+
+  /// Parse command line options that map to LangOptions.
+  static void ParseLangArgs(LangOptions &Opts, llvm::opt::ArgList &Args,
+                            InputKind IK, const llvm::Triple &T,
+                            std::vector<std::string> &Includes,
+                            DiagnosticsEngine &Diags);
+
+  /// Parse command line options that map to CodeGenOptions.
+  static bool ParseCodeGenArgs(CodeGenOptions &Opts, llvm::opt::ArgList &Args,
+                               InputKind IK, DiagnosticsEngine &Diags,
+                               const llvm::Triple &T,
+                               const std::string &OutputFile);
 };
 
 IntrusiveRefCntPtr<llvm::vfs::FileSystem>

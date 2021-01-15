@@ -79,6 +79,8 @@ bool ARMBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   // LE branch then move the target block after the preheader.
   for (auto *ML : *MLI) {
     MachineBasicBlock *Preheader = ML->getLoopPredecessor();
+    if (!Preheader)
+      continue;
 
     for (auto &Terminator : Preheader->terminators()) {
       if (Terminator.getOpcode() != ARM::t2WhileLoopStart)

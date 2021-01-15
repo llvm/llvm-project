@@ -214,7 +214,8 @@ LLVM dialect accepts a subset of built-in types that are referred to as _LLVM
 dialect-compatible types_. The following types are compatible:
 
 -   Signless integers - `iN` (`IntegerType`).
--   Floating point types - `bfloat`, `half`, `float`, `double` (`FloatType`).
+-   Floating point types - `bfloat`, `half`, `float`, `double` , `f80`, `f128`
+    (`FloatType`).
 -   1D vectors of signless integers or floating point types - `vector<NxT>`
     (`VectorType`).
 
@@ -228,9 +229,6 @@ compatibility check.
 The following non-parametric types derived from the LLVM IR are available in the
 LLVM dialect:
 
--   `!llvm.fp128` (`LLVMFP128Type`) - 128-bit floating-point value as per
-    IEEE-754-2008.
--   `!llvm.x86_fp80` (`LLVMX86FP80Type`) - 80-bit floating-point value (x87).
 -   `!llvm.x86_mmx` (`LLVMX86MMXType`) - value held in an MMX register on x86
     machine.
 -   `!llvm.ppc_fp128` (`LLVMPPCFP128Type`) - 128-bit floating-point value (two

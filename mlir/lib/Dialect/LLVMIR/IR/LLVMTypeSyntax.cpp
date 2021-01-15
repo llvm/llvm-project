@@ -33,8 +33,6 @@ static void dispatchPrint(DialectAsmPrinter &printer, Type type) {
 static StringRef getTypeKeyword(Type type) {
   return TypeSwitch<Type, StringRef>(type)
       .Case<LLVMVoidType>([&](Type) { return "void"; })
-      .Case<LLVMFP128Type>([&](Type) { return "fp128"; })
-      .Case<LLVMX86FP80Type>([&](Type) { return "x86_fp80"; })
       .Case<LLVMPPCFP128Type>([&](Type) { return "ppc_fp128"; })
       .Case<LLVMX86MMXType>([&](Type) { return "x86_mmx"; })
       .Case<LLVMTokenType>([&](Type) { return "token"; })
@@ -460,8 +458,16 @@ static Type dispatchParse(DialectAsmParser &parser, bool allowAny = true) {
               emitWarning(loc) << "deprecated syntax, use f64 instead";
               return Float64Type::get(ctx);
             })
-      .Case("fp128", [&] { return LLVMFP128Type::get(ctx); })
-      .Case("x86_fp80", [&] { return LLVMX86FP80Type::get(ctx); })
+      .Case("fp128",
+            [&] {
+              emitWarning(loc) << "deprecated syntax, use f128 instead";
+              return Float128Type::get(ctx);
+            })
+      .Case("x86_fp80",
+            [&] {
+              emitWarning(loc) << "deprecated syntax, use f80 instead";
+              return Float80Type::get(ctx);
+            })
       .Case("ppc_fp128", [&] { return LLVMPPCFP128Type::get(ctx); })
       .Case("x86_mmx", [&] { return LLVMX86MMXType::get(ctx); })
       .Case("token", [&] { return LLVMTokenType::get(ctx); })
