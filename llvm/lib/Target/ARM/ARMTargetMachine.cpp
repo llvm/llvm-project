@@ -553,11 +553,11 @@ void ARMPassConfig::addPreEmitPass() {
     return MF.getSubtarget<ARMSubtarget>().isThumb2();
   }));
 
-  addPass(createARMBlockPlacementPass());
-
-  // Don't optimize barriers at -O0.
-  if (getOptLevel() != CodeGenOpt::None)
+  // Don't optimize barriers or block placement at -O0.
+  if (getOptLevel() != CodeGenOpt::None) {
+    addPass(createARMBlockPlacementPass());
     addPass(createARMOptimizeBarriersPass());
+  }
 }
 
 void ARMPassConfig::addPreEmitPass2() {
