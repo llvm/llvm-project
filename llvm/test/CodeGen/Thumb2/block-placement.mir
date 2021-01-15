@@ -25,6 +25,16 @@
   entry:
     unreachable
   }
+
+  define void @no_preheader(i32 %N, i32 %M, i32* nocapture %a, i32* nocapture %b, i32* nocapture %c) local_unnamed_addr #0 {
+  entry:
+    unreachable
+  }
+
+  declare dso_local i32 @g(...) local_unnamed_addr #1
+
+  declare dso_local i32 @h(...) local_unnamed_addr #1
+
 ...
 ---
 name:            backwards_branch
@@ -342,4 +352,92 @@ body:             |
     renamable $lr = t2LoopEndDec killed renamable $lr, %bb.3, implicit-def dead $cpsr
     t2B %bb.1, 14 /* CC::al */, $noreg
 
+...
+---
+name:            no_preheader
+body:             |
+  ; CHECK-LABEL: name: no_preheader
+  ; CHECK: bb.0:
+  ; CHECK:   successors: %bb.2(0x30000000), %bb.1(0x50000000)
+  ; CHECK:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r4, killed $r5, $r7, killed $lr, implicit-def $sp, implicit $sp
+  ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 16
+  ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
+  ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
+  ; CHECK:   frame-setup CFI_INSTRUCTION offset $r5, -12
+  ; CHECK:   frame-setup CFI_INSTRUCTION offset $r4, -16
+  ; CHECK:   $r7 = frame-setup tADDrSPi $sp, 2, 14 /* CC::al */, $noreg
+  ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa $r7, 8
+  ; CHECK:   $r4 = tMOVr killed $r0, 14 /* CC::al */, $noreg
+  ; CHECK:   tBL 14 /* CC::al */, $noreg, @g, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $r0
+  ; CHECK:   tCMPi8 killed renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK:   t2Bcc %bb.2, 0 /* CC::eq */, killed $cpsr
+  ; CHECK: bb.1:
+  ; CHECK:   successors: %bb.4(0x80000000)
+  ; CHECK:   renamable $r0, dead $cpsr = tMOVi8 4, 14 /* CC::al */, $noreg
+  ; CHECK:   renamable $r5 = t2LDRSHi12 killed renamable $r0, 0, 14 /* CC::al */, $noreg
+  ; CHECK:   t2B %bb.4, 14 /* CC::al */, $noreg
+  ; CHECK: bb.2:
+  ; CHECK:   successors: %bb.4(0x80000000)
+  ; CHECK:   renamable $r5, dead $cpsr = tMOVi8 0, 14 /* CC::al */, $noreg
+  ; CHECK:   t2B %bb.4, 14 /* CC::al */, $noreg
+  ; CHECK: bb.3:
+  ; CHECK:   successors: %bb.4(0x80000000)
+  ; CHECK:   $r0 = tMOVr $r5, 14 /* CC::al */, $noreg
+  ; CHECK:   tBL 14 /* CC::al */, $noreg, @h, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit-def $sp, implicit-def dead $r0
+  ; CHECK: bb.4:
+  ; CHECK:   successors: %bb.5(0x04000000), %bb.3(0x7c000000)
+  ; CHECK:   renamable $r0 = tLDRi renamable $r4, 0, 14 /* CC::al */, $noreg
+  ; CHECK:   tCMPi8 killed renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK:   t2Bcc %bb.3, 1 /* CC::ne */, killed $cpsr
+  ; CHECK: bb.5:
+  ; CHECK:   frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r4, def $r5, def $r7, def $pc
+  bb.0:
+    successors: %bb.1(0x30000000), %bb.2(0x50000000)
+    liveins: $r0, $r4, $r5, $lr
+
+    frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r4, killed $r5, $r7, killed $lr, implicit-def $sp, implicit $sp
+    frame-setup CFI_INSTRUCTION def_cfa_offset 16
+    frame-setup CFI_INSTRUCTION offset $lr, -4
+    frame-setup CFI_INSTRUCTION offset $r7, -8
+    frame-setup CFI_INSTRUCTION offset $r5, -12
+    frame-setup CFI_INSTRUCTION offset $r4, -16
+    $r7 = frame-setup tADDrSPi $sp, 2, 14 /* CC::al */, $noreg
+    frame-setup CFI_INSTRUCTION def_cfa $r7, 8
+    $r4 = tMOVr killed $r0, 14 /* CC::al */, $noreg
+    tBL 14 /* CC::al */, $noreg, @g, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $r0
+    tCMPi8 killed renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    t2Bcc %bb.1, 0 /* CC::eq */, killed $cpsr
+
+  bb.2:
+    successors: %bb.3(0x80000000)
+    liveins: $r4
+
+    renamable $r0, dead $cpsr = tMOVi8 4, 14 /* CC::al */, $noreg
+    renamable $r5 = t2LDRSHi12 killed renamable $r0, 0, 14 /* CC::al */, $noreg
+    t2B %bb.3, 14 /* CC::al */, $noreg
+
+  bb.1:
+    successors: %bb.3(0x80000000)
+    liveins: $r4
+
+    renamable $r5, dead $cpsr = tMOVi8 0, 14 /* CC::al */, $noreg
+    t2B %bb.3, 14 /* CC::al */, $noreg
+
+  bb.4:
+    successors: %bb.3(0x80000000)
+    liveins: $r4, $r5
+
+    $r0 = tMOVr $r5, 14 /* CC::al */, $noreg
+    tBL 14 /* CC::al */, $noreg, @h, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit-def $sp, implicit-def dead $r0
+
+  bb.3:
+    successors: %bb.5(0x04000000), %bb.4(0x7c000000)
+    liveins: $r4, $r5
+
+    renamable $r0 = tLDRi renamable $r4, 0, 14 /* CC::al */, $noreg
+    tCMPi8 killed renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    t2Bcc %bb.4, 1 /* CC::ne */, killed $cpsr
+
+  bb.5:
+    frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r4, def $r5, def $r7, def $pc
 ...
