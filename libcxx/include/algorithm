@@ -1639,68 +1639,42 @@ search_n(_ForwardIterator __first, _ForwardIterator __last, _Size __count, const
                            __value_, __equal_to<__v, _Tp>());
 }
 
-// copy
-template <class _Iter>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-_Iter
-__unwrap_iter(_Iter __i)
-{
-    return __i;
-}
+// __unwrap_iter
 
-template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-typename enable_if
-<
-    is_trivially_copy_assignable<_Tp>::value,
-    _Tp*
->::type
-__unwrap_iter(move_iterator<_Tp*> __i)
-{
-    return __i.base();
-}
+// The job of __unwrap_iter is to lower iterators-that-are-tantamount-to-pointers
+// (such as vector<T>::iterator) into pointers, to reduce the number of template
+// instantiations and to enable pointer-based optimizations e.g. in std::copy.
+// In debug mode, we don't do this.
+
+template <class _Iter, bool = __is_cpp17_contiguous_iterator<_Iter>::value>
+struct __unwrap_iter_impl {
+    static _LIBCPP_CONSTEXPR _Iter
+    __apply(_Iter __i) _NOEXCEPT {
+        return __i;
+    }
+};
 
 #if _LIBCPP_DEBUG_LEVEL < 2
 
-template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-typename enable_if
-<
-    is_trivially_copy_assignable<_Tp>::value,
-    _Tp*
->::type
-__unwrap_iter(__wrap_iter<_Tp*> __i)
-{
-    return __i.base();
-}
-
-template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-typename enable_if
-<
-    is_trivially_copy_assignable<_Tp>::value,
-    const _Tp*
->::type
-__unwrap_iter(__wrap_iter<const _Tp*> __i)
-{
-    return __i.base();
-}
-
-#else
-
-template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-typename enable_if
-<
-    is_trivially_copy_assignable<_Tp>::value,
-    __wrap_iter<_Tp*>
->::type
-__unwrap_iter(__wrap_iter<_Tp*> __i)
-{
-    return __i;
-}
+template <class _Iter>
+struct __unwrap_iter_impl<_Iter, true> {
+    static _LIBCPP_CONSTEXPR decltype(_VSTD::__to_address(declval<_Iter>()))
+    __apply(_Iter __i) _NOEXCEPT {
+        return _VSTD::__to_address(__i);
+    }
+};
 
 #endif  // _LIBCPP_DEBUG_LEVEL < 2
+
+template<class _Iter, class _Impl = __unwrap_iter_impl<_Iter> >
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+decltype(_Impl::__apply(_VSTD::declval<_Iter>()))
+__unwrap_iter(_Iter __i) _NOEXCEPT
+{
+    return _Impl::__apply(__i);
+}
+
+// copy
 
 template <class _InputIterator, class _OutputIterator>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
@@ -1894,7 +1868,7 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
 typename enable_if
 <
     is_same<typename remove_const<_Tp>::type, _Up>::value &&
-    is_trivially_copy_assignable<_Up>::value,
+    is_trivially_move_assignable<_Up>::value,
     _Up*
 >::type
 __move(_Tp* __first, _Tp* __last, _Up* __result)
@@ -1942,7 +1916,7 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
 typename enable_if
 <
     is_same<typename remove_const<_Tp>::type, _Up>::value &&
-    is_trivially_copy_assignable<_Up>::value,
+    is_trivially_move_assignable<_Up>::value,
     _Up*
 >::type
 __move_backward(_Tp* __first, _Tp* __last, _Up* __result)
