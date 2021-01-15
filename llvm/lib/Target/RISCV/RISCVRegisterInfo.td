@@ -383,10 +383,6 @@ let RegAltNameIndices = [ABIRegAltName] in {
   def VXRM   : RISCVReg<0, "vxrm", ["vxrm"]>;
 }
 
-class RegisterTypes<list<ValueType> reg_types> {
-  list<ValueType> types = reg_types;
-}
-
 class VReg<list<ValueType> regTypes, dag regList, int Vlmul>
   : RegisterClass<"RISCV",
                   regTypes,
