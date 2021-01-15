@@ -37939,6 +37939,33 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
 
     if (SDValue HAddSub = foldShuffleOfHorizOp(N, DAG))
       return HAddSub;
+
+    // Merge shuffles through binops if its likely we'll be able to merge it
+    // with other shuffles.
+    // shuffle(bop(shuffle(x,y),shuffle(z,w)),bop(shuffle(a,b),shuffle(c,d)))
+    // TODO: We might be able to move this to DAGCombiner::visitVECTOR_SHUFFLE.
+    if (auto *SVN = dyn_cast<ShuffleVectorSDNode>(N)) {
+      unsigned SrcOpcode = N->getOperand(0).getOpcode();
+      if (SrcOpcode == N->getOperand(1).getOpcode() && TLI.isBinOp(SrcOpcode) &&
+          N->isOnlyUserOf(N->getOperand(0).getNode()) &&
+          N->isOnlyUserOf(N->getOperand(1).getNode()) &&
+          VT.getScalarSizeInBits() >= 32) {
+        SDValue Op00 = N->getOperand(0).getOperand(0);
+        SDValue Op10 = N->getOperand(1).getOperand(0);
+        SDValue Op01 = N->getOperand(0).getOperand(1);
+        SDValue Op11 = N->getOperand(1).getOperand(1);
+        if ((Op00.getOpcode() == ISD::VECTOR_SHUFFLE ||
+             Op10.getOpcode() == ISD::VECTOR_SHUFFLE) &&
+            (Op01.getOpcode() == ISD::VECTOR_SHUFFLE ||
+             Op11.getOpcode() == ISD::VECTOR_SHUFFLE)) {
+          SDLoc DL(N);
+          ArrayRef<int> Mask = SVN->getMask();
+          SDValue LHS = DAG.getVectorShuffle(VT, DL, Op00, Op10, Mask);
+          SDValue RHS = DAG.getVectorShuffle(VT, DL, Op01, Op11, Mask);
+          return DAG.getNode(SrcOpcode, DL, VT, LHS, RHS);
+        }
+      }
+    }
   }
 
   // Attempt to combine into a vector load/broadcast.
