@@ -5284,6 +5284,33 @@ The current supported opcode vocabulary is limited:
   of the stack. This opcode can be used to calculate bounds of fortran assumed
   rank array which has rank known at run time and current dimension number is
   implicitly first element of the stack.
+- ``DW_OP_LLVM_implicit_pointer`` It specifies the dereferenced value. It can
+  be used to represent pointer variables which are optimized out but the value
+  it points to is known. This operator is required as it is different than DWARF
+  operator DW_OP_implicit_pointer in representation and specification (number
+  and types of operands) and later can not be used as multiple level.
+
+.. code-block:: text
+
+    IR for "*ptr = 4;"
+    --------------
+    call void @llvm.dbg.value(metadata i32 4, metadata !17, metadata !20)
+    !17 = !DILocalVariable(name: "ptr1", scope: !12, file: !3, line: 5,
+                           type: !18)
+    !18 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !19, size: 64)
+    !19 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+    !20 = !DIExpression(DW_OP_LLVM_implicit_pointer))
+
+    IR for "**ptr = 4;"
+    --------------
+    call void @llvm.dbg.value(metadata i32 4, metadata !17, metadata !21)
+    !17 = !DILocalVariable(name: "ptr1", scope: !12, file: !3, line: 5,
+                           type: !18)
+    !18 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !19, size: 64)
+    !19 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !20, size: 64)
+    !20 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+    !21 = !DIExpression(DW_OP_LLVM_implicit_pointer,
+                        DW_OP_LLVM_implicit_pointer))
 
 DWARF specifies three kinds of simple location descriptions: Register, memory,
 and implicit location descriptions.  Note that a location description is
