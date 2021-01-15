@@ -1355,6 +1355,10 @@ static void ParseDependencyOutputArgs(DependencyOutputOptions &Opts,
     }
   }
 
+  // -fprofile-list= dependencies.
+  for (const auto &Filename : Args.getAllArgValues(OPT_fprofile_list_EQ))
+    Opts.ExtraDeps.push_back(Filename);
+
   // Propagate the extra dependencies.
   for (const auto *A : Args.filtered(OPT_fdepfile_entry)) {
     Opts.ExtraDeps.push_back(A->getValue());
