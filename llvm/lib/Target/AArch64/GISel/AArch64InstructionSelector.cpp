@@ -4224,6 +4224,14 @@ AArch64InstructionSelector::emitFPCompare(Register LHS, Register RHS,
   // to explicitly materialize a constant.
   const ConstantFP *FPImm = getConstantFPVRegVal(RHS, MRI);
   bool ShouldUseImm = FPImm && (FPImm->isZero() && !FPImm->isNegative());
+  if (!ShouldUseImm) {
+    // Try commutating the operands.
+    const ConstantFP *LHSImm = getConstantFPVRegVal(LHS, MRI);
+    if (LHSImm && (LHSImm->isZero() && !LHSImm->isNegative())) {
+      ShouldUseImm = true;
+      std::swap(LHS, RHS);
+    }
+  }
   unsigned CmpOpcTbl[2][2] = {{AArch64::FCMPSrr, AArch64::FCMPDrr},
                               {AArch64::FCMPSri, AArch64::FCMPDri}};
   unsigned CmpOpc = CmpOpcTbl[ShouldUseImm][OpSize == 64];
