@@ -19,6 +19,10 @@ class StandardOpsDialect;
 template <typename ConcreteDialect>
 void registerDialect(DialectRegistry &registry);
 
+namespace complex {
+class ComplexDialect;
+} // end namespace complex
+
 namespace gpu {
 class GPUDialect;
 class GPUModuleOp;

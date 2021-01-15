@@ -6,6 +6,7 @@
 // CHECK-NEXT: arm_sve
 // CHECK-NEXT: async
 // CHECK-NEXT: avx512
+// CHECK-NEXT: complex
 // CHECK-NEXT: gpu
 // CHECK-NEXT: linalg
 // CHECK-NEXT: llvm
