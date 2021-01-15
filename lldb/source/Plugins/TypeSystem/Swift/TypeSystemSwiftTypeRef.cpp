@@ -2452,9 +2452,9 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
       ast_child_name = suffix.str();
     assert((llvm::StringRef(child_name).contains('.') ||
             Equivalent(child_name, ast_child_name)));
-    assert((Equivalent(llvm::Optional<uint64_t>(child_byte_size),
-                       llvm::Optional<uint64_t>(ast_child_byte_size)) ||
-            ast_language_flags));
+    assert(ast_language_flags ||
+           (Equivalent(llvm::Optional<uint64_t>(child_byte_size),
+                       llvm::Optional<uint64_t>(ast_child_byte_size))));
     assert(Equivalent(llvm::Optional<uint64_t>(child_byte_offset),
                       llvm::Optional<uint64_t>(ast_child_byte_offset)));
     assert(
