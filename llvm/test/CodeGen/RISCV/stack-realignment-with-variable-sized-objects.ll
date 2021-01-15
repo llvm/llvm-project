@@ -51,10 +51,7 @@ define void @caller(i32 %n) {
 ; RV64I-NEXT:    slli a0, a0, 32
 ; RV64I-NEXT:    srli a0, a0, 32
 ; RV64I-NEXT:    addi a0, a0, 15
-; RV64I-NEXT:    addi a1, zero, 1
-; RV64I-NEXT:    slli a1, a1, 33
-; RV64I-NEXT:    addi a1, a1, -16
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    andi a0, a0, -16
 ; RV64I-NEXT:    sub a0, sp, a0
 ; RV64I-NEXT:    mv sp, a0
 ; RV64I-NEXT:    mv a1, s1
