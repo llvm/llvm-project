@@ -10,7 +10,7 @@
 
 #include "src/ctype/isascii.h"
 
-TEST(IsAscii, DefaultLocale) {
+TEST(LlvmLibcIsAscii, DefaultLocale) {
   // Loops through all characters, verifying that ascii characters
   //    (which are all 7 bit unsigned integers)
   // return a non-zero integer and everything else returns zero.

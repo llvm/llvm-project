@@ -19,7 +19,7 @@ DECLARE_SPECIAL_CONSTANTS(float)
 
 namespace mpfr = __llvm_libc::testing::mpfr;
 
-TEST(FabsfTest, SpecialNumbers) {
+TEST(LlvmLibcFabsfTest, SpecialNumbers) {
   EXPECT_FP_EQ(aNaN, __llvm_libc::fabsf(aNaN));
 
   EXPECT_FP_EQ(inf, __llvm_libc::fabsf(inf));
@@ -29,7 +29,7 @@ TEST(FabsfTest, SpecialNumbers) {
   EXPECT_FP_EQ(zero, __llvm_libc::fabsf(negZero));
 }
 
-TEST(FabsfTest, InFloatRange) {
+TEST(LlvmLibcFabsfTest, InFloatRange) {
   using UIntType = FPBits::UIntType;
   constexpr UIntType count = 1000000;
   constexpr UIntType step = UIntType(-1) / count;

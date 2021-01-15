@@ -140,16 +140,16 @@ public:
 };
 
 #define LIST_LDEXP_TESTS(T, func)                                              \
-  using LdExpTest = LdExpTestTemplate<T>;                                      \
-  TEST_F(LdExpTest, SpecialNumbers) { testSpecialNumbers(&func); }             \
-  TEST_F(LdExpTest, PowersOfTwo) { testPowersOfTwo(&func); }                   \
-  TEST_F(LdExpTest, OverFlow) { testOverflow(&func); }                         \
-  TEST_F(LdExpTest, UnderflowToZeroOnNormal) {                                 \
+  using LlvmLibcLdExpTest = LdExpTestTemplate<T>;                              \
+  TEST_F(LlvmLibcLdExpTest, SpecialNumbers) { testSpecialNumbers(&func); }     \
+  TEST_F(LlvmLibcLdExpTest, PowersOfTwo) { testPowersOfTwo(&func); }           \
+  TEST_F(LlvmLibcLdExpTest, OverFlow) { testOverflow(&func); }                 \
+  TEST_F(LlvmLibcLdExpTest, UnderflowToZeroOnNormal) {                         \
     testUnderflowToZeroOnNormal(&func);                                        \
   }                                                                            \
-  TEST_F(LdExpTest, UnderflowToZeroOnSubnormal) {                              \
+  TEST_F(LlvmLibcLdExpTest, UnderflowToZeroOnSubnormal) {                      \
     testUnderflowToZeroOnSubnormal(&func);                                     \
   }                                                                            \
-  TEST_F(LdExpTest, NormalOperation) { testNormalOperation(&func); }
+  TEST_F(LlvmLibcLdExpTest, NormalOperation) { testNormalOperation(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_LDEXPTEST_H
