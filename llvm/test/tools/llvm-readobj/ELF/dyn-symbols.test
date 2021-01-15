@@ -308,16 +308,10 @@ Sections:
     AddressAlign: 0x4
     Info:         0x2
     Entries:
-      - Version:    1
-        Flags:      0
-        VersionNdx: 2
-        Hash:       0
+      - VersionNdx: 2
         Names:
           - Default
-      - Version:    1
-        Flags:      0
-        VersionNdx: 3
-        Hash:       0
+      - VersionNdx: 3
         Names:
           - NonDefault
 DynamicSymbols:
