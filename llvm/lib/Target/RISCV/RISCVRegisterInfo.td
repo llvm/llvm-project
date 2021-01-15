@@ -386,11 +386,10 @@ let RegAltNameIndices = [ABIRegAltName] in {
 class VReg<list<ValueType> regTypes, dag regList, int Vlmul>
   : RegisterClass<"RISCV",
                   regTypes,
-                  // FIXME: Spill alignment set to 16 bytes.
-                  128,
+                  64, // The maximum supported ELEN is 64.
                   regList> {
   int VLMul = Vlmul;
-  int Size = !mul(Vlmul, 64); // FIXME: assuming ELEN=64
+  int Size = !mul(Vlmul, 64);
 }
 
 def VR : VReg<[vint8mf2_t, vint8mf4_t, vint8mf8_t,
