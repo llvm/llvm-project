@@ -139,7 +139,10 @@ protected:
     const PC *clause{nullptr};
     std::multimap<C, const PC *> clauseInfo;
     std::list<C> actualClauses;
+    Symbol *loopIV{nullptr};
   };
+
+  void SetLoopIv(Symbol *symbol) { GetContext().loopIV = symbol; }
 
   // back() is the top of the stack
   DirectiveContext &GetContext() {
@@ -160,6 +163,7 @@ protected:
     GetContext().allowedExclusiveClauses = {};
     GetContext().requiredClauses = {};
     GetContext().clauseInfo = {};
+    GetContext().loopIV = {nullptr};
   }
 
   void SetContextDirectiveSource(const parser::CharBlock &directive) {
