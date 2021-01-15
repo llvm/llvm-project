@@ -226,3 +226,30 @@ LogicalResult mlir::hoistAffineIfOp(AffineIfOp ifOp, bool *folded) {
 
   return success();
 }
+
+// Return the min expr after replacing the given dim.
+AffineExpr mlir::substWithMin(AffineExpr e, AffineExpr dim, AffineExpr min,
+                              AffineExpr max, bool positivePath) {
+  if (e == dim)
+    return positivePath ? min : max;
+  if (auto bin = e.dyn_cast<AffineBinaryOpExpr>()) {
+    AffineExpr lhs = bin.getLHS();
+    AffineExpr rhs = bin.getRHS();
+    if (bin.getKind() == mlir::AffineExprKind::Add)
+      return substWithMin(lhs, dim, min, max, positivePath) +
+             substWithMin(rhs, dim, min, max, positivePath);
+
+    auto c1 = bin.getLHS().dyn_cast<AffineConstantExpr>();
+    auto c2 = bin.getRHS().dyn_cast<AffineConstantExpr>();
+    if (c1 && c1.getValue() < 0)
+      return getAffineBinaryOpExpr(
+          bin.getKind(), c1, substWithMin(rhs, dim, min, max, !positivePath));
+    if (c2 && c2.getValue() < 0)
+      return getAffineBinaryOpExpr(
+          bin.getKind(), substWithMin(lhs, dim, min, max, !positivePath), c2);
+    return getAffineBinaryOpExpr(
+        bin.getKind(), substWithMin(lhs, dim, min, max, positivePath),
+        substWithMin(rhs, dim, min, max, positivePath));
+  }
+  return e;
+}
