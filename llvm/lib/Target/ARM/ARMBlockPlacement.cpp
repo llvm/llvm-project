@@ -58,6 +58,8 @@ INITIALIZE_PASS(ARMBlockPlacement, DEBUG_TYPE, "ARM block placement", false,
                 false)
 
 bool ARMBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+      return false;
   const ARMSubtarget &ST = static_cast<const ARMSubtarget &>(MF.getSubtarget());
   if (!ST.hasLOB())
     return false;
