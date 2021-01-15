@@ -907,9 +907,11 @@ static void setPGOUseInstrumentor(CodeGenOptions &Opts,
     Opts.setProfileUse(CodeGenOptions::ProfileClangInstr);
 }
 
-static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
-                             DiagnosticsEngine &Diags, const llvm::Triple &T,
-                             const std::string &OutputFile) {
+bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
+                                          InputKind IK,
+                                          DiagnosticsEngine &Diags,
+                                          const llvm::Triple &T,
+                                          const std::string &OutputFile) {
   bool Success = true;
 
   unsigned OptimizationLevel = getOptimizationLevel(Args, IK, Diags);
@@ -2151,10 +2153,10 @@ static void GenerateLangArgs(const LangOptions &Opts,
     Args.push_back(SA(GetOptName(OPT_fdeclare_opencl_builtins)));
 }
 
-static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
-                          const llvm::Triple &T,
-                          std::vector<std::string> &Includes,
-                          DiagnosticsEngine &Diags) {
+void CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
+                                       InputKind IK, const llvm::Triple &T,
+                                       std::vector<std::string> &Includes,
+                                       DiagnosticsEngine &Diags) {
   // FIXME: Cleanup per-file based stuff.
   LangStandard::Kind LangStd = LangStandard::lang_unspecified;
   if (const Arg *A = Args.getLastArg(OPT_std_EQ)) {
