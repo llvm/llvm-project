@@ -279,6 +279,17 @@ TEST(GlobalCompilationDatabaseTest, BuildDir) {
       << "x/build/compile_flags.json only applicable to x/";
 }
 
+TEST(GlobalCompilationDatabaseTest, CompileFlagsDirectory) {
+  MockFS FS;
+  FS.Files[testPath("x/compile_flags.txt")] = "-DFOO";
+  DirectoryBasedGlobalCompilationDatabase CDB(FS);
+  auto Commands = CDB.getCompileCommand(testPath("x/y.cpp"));
+  ASSERT_TRUE(Commands.hasValue());
+  EXPECT_THAT(Commands.getValue().CommandLine, Contains("-DFOO"));
+  // Make sure we pick the right working directory.
+  EXPECT_EQ(testPath("x"), Commands.getValue().Directory);
+}
+
 TEST(GlobalCompilationDatabaseTest, NonCanonicalFilenames) {
   OverlayCDB DB(nullptr);
   std::vector<std::string> DiscoveredFiles;
