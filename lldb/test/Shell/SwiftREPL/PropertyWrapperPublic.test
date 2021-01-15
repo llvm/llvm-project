@@ -2,7 +2,7 @@
 // [public].
 // REQUIRES: swift
 
-// RUN: %lldb --repl < %s | FileCheck %s
+// RUN: %lldb --repl < %s
 
 @propertyWrapper
 struct Wrapper<T> {
@@ -21,7 +21,5 @@ struct Foo {
 func patatino() {
   _ = Foo(x: 5)
 }
-
-// CHECK: Welcome
 
 patatino()
