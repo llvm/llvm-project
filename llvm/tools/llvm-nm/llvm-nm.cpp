@@ -1698,8 +1698,7 @@ static void dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
     }
     Symbols = E->getDynamicSymbolIterators();
   }
-  std::string NameBuffer;
-  raw_string_ostream OS(NameBuffer);
+
   // If a "-s segname sectname" option was specified and this is a Mach-O
   // file get the section number for that section in this object file.
   unsigned int Nsect = 0;
@@ -1742,6 +1741,8 @@ static void dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
       }
       S.TypeName = getNMTypeName(Obj, Sym);
       S.TypeChar = getNMSectionTagAndName(Obj, Sym, S.SectionName);
+
+      raw_string_ostream OS(S.Name);
       if (Error E = Sym.printName(OS)) {
         if (MachO) {
           OS << "bad string index";
@@ -1749,18 +1750,9 @@ static void dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
         } else
           error(std::move(E), Obj.getFileName());
       }
-      OS << '\0';
       S.Sym = Sym;
       SymbolList.push_back(S);
     }
-  }
-
-  OS.flush();
-  const char *P = NameBuffer.c_str();
-  unsigned I;
-  for (I = 0; I < SymbolList.size(); ++I) {
-    SymbolList[I].Name = P;
-    P += strlen(P) + 1;
   }
 
   // If this is a Mach-O file where the nlist symbol table is out of sync
