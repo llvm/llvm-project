@@ -29,4 +29,27 @@
 #define LLVM_LIBC_FUNCTION(type, name, arglist) type name arglist
 #endif
 
+namespace __llvm_libc {
+namespace internal {
+constexpr bool same_string(char const *lhs, char const *rhs) {
+  for (; *lhs || *rhs; ++lhs, ++rhs)
+    if (*lhs != *rhs)
+      return false;
+  return true;
+}
+} // namespace internal
+} // namespace __llvm_libc
+
+// LLVM_LIBC_IS_DEFINED checks whether a particular macro is defined.
+// Usage: constexpr bool kUseAvx = LLVM_LIBC_IS_DEFINED(__AVX__);
+//
+// This works by comparing the stringified version of the macro with and without
+// evaluation. If FOO is not undefined both stringifications yield "FOO". If FOO
+// is defined, one stringification yields "FOO" while the other yields its
+// stringified value "1".
+#define LLVM_LIBC_IS_DEFINED(macro)                                            \
+  !__llvm_libc::internal::same_string(                                         \
+      LLVM_LIBC_IS_DEFINED__EVAL_AND_STRINGIZE(macro), #macro)
+#define LLVM_LIBC_IS_DEFINED__EVAL_AND_STRINGIZE(s) #s
+
 #endif // LLVM_LIBC_SUPPORT_COMMON_H
