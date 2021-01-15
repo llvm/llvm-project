@@ -260,8 +260,23 @@ BasicBlock *SplitEdge(BasicBlock *From, BasicBlock *To,
 /// Everything before \p SplitPt stays in \p Old and everything starting with \p
 /// SplitPt moves to a new block. The two blocks are joined by an unconditional
 /// branch. The new block with name \p BBName is returned.
+///
+/// FIXME: deprecated, switch to the DomTreeUpdater-based one.
+BasicBlock *SplitBlock(BasicBlock *Old, Instruction *SplitPt, DominatorTree *DT,
+                       LoopInfo *LI = nullptr,
+                       MemorySSAUpdater *MSSAU = nullptr,
+                       const Twine &BBName = "", bool Before = false);
+
+/// Split the specified block at the specified instruction.
+///
+/// If \p Before is true, splitBlockBefore handles the block
+/// splitting. Otherwise, execution proceeds as described below.
+///
+/// Everything before \p SplitPt stays in \p Old and everything starting with \p
+/// SplitPt moves to a new block. The two blocks are joined by an unconditional
+/// branch. The new block with name \p BBName is returned.
 BasicBlock *SplitBlock(BasicBlock *Old, Instruction *SplitPt,
-                       DominatorTree *DT = nullptr, LoopInfo *LI = nullptr,
+                       DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr,
                        MemorySSAUpdater *MSSAU = nullptr,
                        const Twine &BBName = "", bool Before = false);
 

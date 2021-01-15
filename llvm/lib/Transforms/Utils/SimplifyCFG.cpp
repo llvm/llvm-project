@@ -4187,9 +4187,8 @@ bool SimplifyCFGOpt::SimplifyBranchOnICmpChain(BranchInst *BI,
   // then we evaluate them with an explicit branch first. Split the block
   // right before the condbr to handle it.
   if (ExtraCase) {
-    BasicBlock *NewBB =
-        SplitBlock(BB, BI, DTU ? &DTU->getDomTree() : nullptr, /*LI=*/nullptr,
-                   /*MSSAU=*/nullptr, "switch.early.test");
+    BasicBlock *NewBB = SplitBlock(BB, BI, DTU, /*LI=*/nullptr,
+                                   /*MSSAU=*/nullptr, "switch.early.test");
 
     // Remove the uncond branch added to the old block.
     Instruction *OldTI = BB->getTerminator();
@@ -4836,8 +4835,7 @@ static void createUnreachableSwitchDefault(SwitchInst *Switch,
   if (DTU)
     DTU->applyUpdates({{DominatorTree::Insert, BB, &*NewDefaultBlock},
                        {DominatorTree::Delete, BB, OrigDefaultBlock}});
-  SplitBlock(&*NewDefaultBlock, &NewDefaultBlock->front(),
-             DTU ? &DTU->getDomTree() : nullptr);
+  SplitBlock(&*NewDefaultBlock, &NewDefaultBlock->front(), DTU);
   SmallVector<DominatorTree::UpdateType, 2> Updates;
   for (auto *Successor : successors(NewDefaultBlock))
     Updates.push_back({DominatorTree::Delete, NewDefaultBlock, Successor});
