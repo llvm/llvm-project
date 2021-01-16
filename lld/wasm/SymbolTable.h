@@ -93,8 +93,6 @@ public:
   DefinedData *addOptionalDataSymbol(StringRef name, uint64_t value = 0);
   DefinedGlobal *addOptionalGlobalSymbols(StringRef name, uint32_t flags,
                                           InputGlobal *global);
-  DefinedTable *addSyntheticTable(StringRef name, uint32_t flags,
-                                  InputTable *global);
 
   void handleSymbolVariants();
   void handleWeakUndefines();
@@ -105,7 +103,6 @@ public:
   std::vector<BitcodeFile *> bitcodeFiles;
   std::vector<InputFunction *> syntheticFunctions;
   std::vector<InputGlobal *> syntheticGlobals;
-  std::vector<InputTable *> syntheticTables;
 
 private:
   std::pair<Symbol *, bool> insert(StringRef name, const InputFile *file);

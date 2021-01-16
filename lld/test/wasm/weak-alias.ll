@@ -276,11 +276,6 @@ entry:
 ; RELOC-NEXT:         Name:            call_direct_ptr
 ; RELOC-NEXT:         Flags:           [  ]
 ; RELOC-NEXT:         Function:        5
-; RELOC-NEXT:       - Index:           8
-; RELOC-NEXT:         Kind:            TABLE
-; RELOC-NEXT:         Name:            __indirect_function_table
-; RELOC-NEXT:         Flags:           [ VISIBILITY_HIDDEN ]
-; RELOC-NEXT:         Table:           0
 ; RELOC-NEXT:   - Type:            CUSTOM
 ; RELOC-NEXT:     Name:            name
 ; RELOC-NEXT:     FunctionNames:
