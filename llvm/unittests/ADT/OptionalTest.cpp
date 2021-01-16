@@ -8,6 +8,7 @@
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest-spi.h"
 #include "gtest/gtest.h"
@@ -388,6 +389,143 @@ TEST(OptionalTest, ImmovableEmplace) {
   EXPECT_EQ(4, A->val);
   EXPECT_EQ(1u, Immovable::Constructions);
   EXPECT_EQ(0u, Immovable::Destructions);
+}
+
+// Craft a class which is_trivially_copyable, but not
+// is_trivially_copy_constructible.
+struct NonTCopy {
+  NonTCopy() = default;
+
+  // Delete the volatile copy constructor to engage the "rule of 3" and delete
+  // any unspecified copy assignment or constructor.
+  NonTCopy(volatile NonTCopy const &) = delete;
+
+  // Leave the non-volatile default copy constructor unspecified (deleted by
+  // rule of 3)
+
+  // This template can serve as the copy constructor, but isn't chosen
+  // by =default in a class with a 'NonTCopy' member.
+  template <typename Self = NonTCopy>
+  NonTCopy(Self const &Other) : Val(Other.Val) {}
+
+  NonTCopy &operator=(NonTCopy const &) = default;
+
+  int Val{0};
+};
+
+#if defined(_MSC_VER) && _MSC_VER >= 1927 && !defined(__clang__)
+// Currently only true on recent MSVC releases.
+static_assert(std::is_trivially_copyable<NonTCopy>::value,
+              "Expect NonTCopy to be trivially copyable");
+
+static_assert(!std::is_trivially_copy_constructible<NonTCopy>::value,
+              "Expect NonTCopy not to be trivially copy constructible.");
+#endif // defined(_MSC_VER) && _MSC_VER >= 1927
+
+TEST(OptionalTest, DeletedCopyConstructor) {
+
+  // Expect compile to fail if 'trivial' version of
+  // optional_detail::OptionalStorage is chosen.
+  using NonTCopyOptT = Optional<NonTCopy>;
+  NonTCopyOptT NonTCopy1;
+
+  // Check that the Optional can be copy constructed.
+  NonTCopyOptT NonTCopy2{NonTCopy1};
+
+  // Check that the Optional can be copy assigned.
+  NonTCopy1 = NonTCopy2;
+}
+
+// Craft a class which is_trivially_copyable, but not
+// is_trivially_copy_assignable.
+class NonTAssign {
+public:
+  NonTAssign() = default;
+  NonTAssign(NonTAssign const &) = default;
+
+  // Delete the volatile copy assignment to engage the "rule of 3" and delete
+  // any unspecified copy assignment or constructor.
+  NonTAssign &operator=(volatile NonTAssign const &) = delete;
+
+  // Leave the non-volatile default copy assignment unspecified (deleted by rule
+  // of 3).
+
+  // This template can serve as the copy assignment, but isn't chosen
+  // by =default in a class with a 'NonTAssign' member.
+  template <typename Self = NonTAssign>
+  NonTAssign &operator=(Self const &Other) {
+    A = Other.A;
+    return *this;
+  }
+
+  int A{0};
+};
+
+#if defined(_MSC_VER) && _MSC_VER >= 1927 && !defined(__clang__)
+// Currently only true on recent MSVC releases.
+static_assert(std::is_trivially_copyable<NonTAssign>::value,
+              "Expect NonTAssign to be trivially copyable");
+
+static_assert(!std::is_trivially_copy_assignable<NonTAssign>::value,
+              "Expect NonTAssign not to be trivially assignable.");
+#endif // defined(_MSC_VER) && _MSC_VER >= 1927
+
+TEST(OptionalTest, DeletedCopyAssignment) {
+
+  // Expect compile to fail if 'trivial' version of
+  // optional_detail::OptionalStorage is chosen.
+  using NonTAssignOptT = Optional<NonTAssign>;
+  NonTAssignOptT NonTAssign1;
+
+  // Check that the Optional can be copy constructed.
+  NonTAssignOptT NonTAssign2{NonTAssign1};
+
+  // Check that the Optional can be copy assigned.
+  NonTAssign1 = NonTAssign2;
+}
+
+struct NoTMove {
+  NoTMove() = default;
+  NoTMove(NoTMove const &) = default;
+  NoTMove &operator=(NoTMove const &) = default;
+
+  // Delete move constructor / assignment.  Compiler should fall-back to the
+  // trivial copy constructor / assignment in the trivial OptionalStorage
+  // specialization.
+  NoTMove(NoTMove &&) = delete;
+  NoTMove &operator=(NoTMove &&) = delete;
+
+  int Val{0};
+};
+
+TEST(OptionalTest, DeletedMoveConstructor) {
+  using NoTMoveOptT = Optional<NoTMove>;
+
+  NoTMoveOptT NonTMove1;
+  NoTMoveOptT NonTMove2{std::move(NonTMove1)};
+
+  NonTMove1 = std::move(NonTMove2);
+
+  static_assert(
+      std::is_trivially_copyable<NoTMoveOptT>::value,
+      "Expect Optional<NoTMove> to still use the trivial specialization "
+      "of OptionalStorage despite the deleted move constructor / assignment.");
+}
+
+class NoCopyStringMap {
+public:
+  NoCopyStringMap() = default;
+
+private:
+  llvm::StringMap<std::unique_ptr<int>> Map;
+};
+
+TEST(OptionalTest, DeletedCopyStringMap) {
+  // Old versions of gcc (7.3 and prior) instantiate the copy constructor when
+  // std::is_trivially_copyable is instantiated.  This test will fail
+  // compilation if std::is_trivially_copyable is used in the OptionalStorage
+  // specialization condition by gcc <= 7.3.
+  Optional<NoCopyStringMap> TestInstantiation;
 }
 
 #if LLVM_HAS_RVALUE_REFERENCE_THIS
