@@ -5416,7 +5416,8 @@ void TypeSystemClang::ForEachEnumerator(
 
 #pragma mark Aggregate Types
 
-uint32_t TypeSystemClang::GetNumFields(lldb::opaque_compiler_type_t type) {
+uint32_t TypeSystemClang::GetNumFields(lldb::opaque_compiler_type_t type,
+                                       ExecutionContext *exe_ctx) {
   if (!type)
     return 0;
 

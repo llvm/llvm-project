@@ -152,7 +152,8 @@ public:
   uint32_t GetNumChildren(lldb::opaque_compiler_type_t type,
                           bool omit_empty_base_classes,
                           const ExecutionContext *exe_ctx) override;
-  uint32_t GetNumFields(lldb::opaque_compiler_type_t type) override;
+  uint32_t GetNumFields(lldb::opaque_compiler_type_t type,
+                        ExecutionContext *exe_ctx = nullptr) override;
   CompilerType GetFieldAtIndex(lldb::opaque_compiler_type_t type, size_t idx,
                                std::string &name, uint64_t *bit_offset_ptr,
                                uint32_t *bitfield_bit_size_ptr,

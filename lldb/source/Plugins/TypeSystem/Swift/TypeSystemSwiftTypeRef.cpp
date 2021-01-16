@@ -2231,9 +2231,31 @@ TypeSystemSwiftTypeRef::GetNumChildren(opaque_compiler_type_t type,
         ReconstructType(type), omit_empty_base_classes, exe_ctx);
 }
 
-uint32_t TypeSystemSwiftTypeRef::GetNumFields(opaque_compiler_type_t type) {
-  return m_swift_ast_context->GetNumFields(ReconstructType(type));
+uint32_t TypeSystemSwiftTypeRef::GetNumFields(opaque_compiler_type_t type,
+                                              ExecutionContext *exe_ctx) {
+  if (exe_ctx)
+    if (auto *runtime = SwiftLanguageRuntime::Get(exe_ctx->GetProcessSP()))
+      if (auto num_fields =
+              runtime->GetNumFields(GetCanonicalType(type), exe_ctx))
+        // Use a lambda to intercept & unwrap the `Optional` return value from
+        // `SwiftLanguageRuntime::GetNumFields`.
+        return [&] {
+          auto impl = [&]() -> llvm::Optional<uint32_t> {
+            if (!type)
+              return 0;
+            return num_fields;
+          };
+          VALIDATE_AND_RETURN(impl, GetNumFields, type,
+                              (ReconstructType(type), exe_ctx));
+        }().getValue();
+
+  LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+            "Using SwiftASTContext::GetNumFields fallback for type %s",
+            AsMangledName(type));
+
+  return m_swift_ast_context->GetNumFields(ReconstructType(type), exe_ctx);
 }
+
 CompilerType TypeSystemSwiftTypeRef::GetFieldAtIndex(
     opaque_compiler_type_t type, size_t idx, std::string &name,
     uint64_t *bit_offset_ptr, uint32_t *bitfield_bit_size_ptr,
