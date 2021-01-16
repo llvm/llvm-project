@@ -485,16 +485,17 @@ public:
 
   template <typename T> Result operator()(const FunctionRef<T> &x) const {
     if (const auto *symbol{x.proc().GetSymbol()}) {
-      if (!semantics::IsPureProcedure(*symbol)) {
-        return "reference to impure function '"s + symbol->name().ToString() +
+      const Symbol &ultimate{symbol->GetUltimate()};
+      if (!semantics::IsPureProcedure(ultimate)) {
+        return "reference to impure function '"s + ultimate.name().ToString() +
             "'";
       }
-      if (semantics::IsStmtFunction(*symbol)) {
+      if (semantics::IsStmtFunction(ultimate)) {
         return "reference to statement function '"s +
-            symbol->name().ToString() + "'";
+            ultimate.name().ToString() + "'";
       }
       if (scope_.IsDerivedType()) { // C750, C754
-        return "reference to function '"s + symbol->name().ToString() +
+        return "reference to function '"s + ultimate.name().ToString() +
             "' not allowed for derived type components or type parameter"
             " values";
       }
