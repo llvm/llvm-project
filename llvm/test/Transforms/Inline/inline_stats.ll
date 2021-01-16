@@ -30,7 +30,7 @@
 ; CHECK: non-imported functions inlined anywhere: 1 [33.33% of non-imported functions]
 ; CHECK: non-imported functions inlined into importing module: 1 [33.33% of non-imported functions]
 
-; MANDATORY-FIRST: - Summary:
+; MANDATORY-FIRST: -- Summary:
 ; MANDATORY-FIRST: All functions: 10, imported functions: 7
 ; MANDATORY-FIRST: inlined functions: 4 [40% of all functions]
 ; MANDATORY-FIRST: imported functions inlined anywhere: 3 [42.86% of imported functions]
