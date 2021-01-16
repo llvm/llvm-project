@@ -30,11 +30,28 @@ define dso_local void @varying_outer_2d_reduction(i16* nocapture readonly %Input
 ; ENABLED-NEXT:    mov r9, r12
 ; ENABLED-NEXT:    uxth r0, r0
 ; ENABLED-NEXT:    rsbs r5, r0, #0
-; ENABLED-NEXT:    b .LBB0_4
-; ENABLED-NEXT:  .LBB0_2: @ in Loop: Header=BB0_4 Depth=1
-; ENABLED-NEXT:    movs r0, #0
-; ENABLED-NEXT:  .LBB0_3: @ %for.end
-; ENABLED-NEXT:    @ in Loop: Header=BB0_4 Depth=1
+; ENABLED-NEXT:    b .LBB0_5
+; ENABLED-NEXT:  .LBB0_2: @ %vector.body
+; ENABLED-NEXT:    @ Parent Loop BB0_5 Depth=1
+; ENABLED-NEXT:    @ => This Inner Loop Header: Depth=2
+; ENABLED-NEXT:    vctp.32 r4
+; ENABLED-NEXT:    vmov q0, q1
+; ENABLED-NEXT:    vpstt
+; ENABLED-NEXT:    vldrht.s32 q1, [r0], #8
+; ENABLED-NEXT:    vldrht.s32 q2, [r7], #8
+; ENABLED-NEXT:    mov lr, r6
+; ENABLED-NEXT:    vmul.i32 q1, q2, q1
+; ENABLED-NEXT:    subs r6, #1
+; ENABLED-NEXT:    vshl.s32 q1, r5
+; ENABLED-NEXT:    subs r4, #4
+; ENABLED-NEXT:    vadd.i32 q1, q1, q0
+; ENABLED-NEXT:    le lr, .LBB0_2
+; ENABLED-NEXT:  @ %bb.3: @ %middle.block
+; ENABLED-NEXT:    @ in Loop: Header=BB0_5 Depth=1
+; ENABLED-NEXT:    vpsel q0, q1, q0
+; ENABLED-NEXT:    vaddv.u32 r0, q0
+; ENABLED-NEXT:  .LBB0_4: @ %for.end
+; ENABLED-NEXT:    @ in Loop: Header=BB0_5 Depth=1
 ; ENABLED-NEXT:    lsrs r0, r0, #16
 ; ENABLED-NEXT:    sub.w r9, r9, #1
 ; ENABLED-NEXT:    strh.w r0, [r1, r8, lsl #1]
@@ -42,13 +59,13 @@ define dso_local void @varying_outer_2d_reduction(i16* nocapture readonly %Input
 ; ENABLED-NEXT:    add.w r10, r10, #2
 ; ENABLED-NEXT:    cmp r8, r3
 ; ENABLED-NEXT:    beq .LBB0_8
-; ENABLED-NEXT:  .LBB0_4: @ %for.body
+; ENABLED-NEXT:  .LBB0_5: @ %for.body
 ; ENABLED-NEXT:    @ =>This Loop Header: Depth=1
-; ENABLED-NEXT:    @ Child Loop BB0_6 Depth 2
+; ENABLED-NEXT:    @ Child Loop BB0_2 Depth 2
 ; ENABLED-NEXT:    cmp r2, r8
-; ENABLED-NEXT:    ble .LBB0_2
-; ENABLED-NEXT:  @ %bb.5: @ %vector.ph
-; ENABLED-NEXT:    @ in Loop: Header=BB0_4 Depth=1
+; ENABLED-NEXT:    ble .LBB0_7
+; ENABLED-NEXT:  @ %bb.6: @ %vector.ph
+; ENABLED-NEXT:    @ in Loop: Header=BB0_5 Depth=1
 ; ENABLED-NEXT:    bic r0, r9, #3
 ; ENABLED-NEXT:    movs r7, #1
 ; ENABLED-NEXT:    subs r0, #4
@@ -62,26 +79,10 @@ define dso_local void @varying_outer_2d_reduction(i16* nocapture readonly %Input
 ; ENABLED-NEXT:    mov r7, r10
 ; ENABLED-NEXT:    dls lr, r0
 ; ENABLED-NEXT:    ldr r0, [sp] @ 4-byte Reload
-; ENABLED-NEXT:  .LBB0_6: @ %vector.body
-; ENABLED-NEXT:    @ Parent Loop BB0_4 Depth=1
-; ENABLED-NEXT:    @ => This Inner Loop Header: Depth=2
-; ENABLED-NEXT:    vctp.32 r4
-; ENABLED-NEXT:    vmov q0, q1
-; ENABLED-NEXT:    vpstt
-; ENABLED-NEXT:    vldrht.s32 q1, [r0], #8
-; ENABLED-NEXT:    vldrht.s32 q2, [r7], #8
-; ENABLED-NEXT:    mov lr, r6
-; ENABLED-NEXT:    vmul.i32 q1, q2, q1
-; ENABLED-NEXT:    subs r6, #1
-; ENABLED-NEXT:    vshl.s32 q1, r5
-; ENABLED-NEXT:    subs r4, #4
-; ENABLED-NEXT:    vadd.i32 q1, q1, q0
-; ENABLED-NEXT:    le lr, .LBB0_6
-; ENABLED-NEXT:  @ %bb.7: @ %middle.block
-; ENABLED-NEXT:    @ in Loop: Header=BB0_4 Depth=1
-; ENABLED-NEXT:    vpsel q0, q1, q0
-; ENABLED-NEXT:    vaddv.u32 r0, q0
-; ENABLED-NEXT:    b .LBB0_3
+; ENABLED-NEXT:    b .LBB0_2
+; ENABLED-NEXT:  .LBB0_7: @ in Loop: Header=BB0_5 Depth=1
+; ENABLED-NEXT:    movs r0, #0
+; ENABLED-NEXT:    b .LBB0_4
 ; ENABLED-NEXT:  .LBB0_8: @ %for.end17
 ; ENABLED-NEXT:    add sp, #4
 ; ENABLED-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, pc}
@@ -101,11 +102,28 @@ define dso_local void @varying_outer_2d_reduction(i16* nocapture readonly %Input
 ; NOREDUCTIONS-NEXT:    mov r9, r12
 ; NOREDUCTIONS-NEXT:    uxth r0, r0
 ; NOREDUCTIONS-NEXT:    rsbs r5, r0, #0
-; NOREDUCTIONS-NEXT:    b .LBB0_4
-; NOREDUCTIONS-NEXT:  .LBB0_2: @ in Loop: Header=BB0_4 Depth=1
-; NOREDUCTIONS-NEXT:    movs r0, #0
-; NOREDUCTIONS-NEXT:  .LBB0_3: @ %for.end
-; NOREDUCTIONS-NEXT:    @ in Loop: Header=BB0_4 Depth=1
+; NOREDUCTIONS-NEXT:    b .LBB0_5
+; NOREDUCTIONS-NEXT:  .LBB0_2: @ %vector.body
+; NOREDUCTIONS-NEXT:    @ Parent Loop BB0_5 Depth=1
+; NOREDUCTIONS-NEXT:    @ => This Inner Loop Header: Depth=2
+; NOREDUCTIONS-NEXT:    vctp.32 r4
+; NOREDUCTIONS-NEXT:    vmov q0, q1
+; NOREDUCTIONS-NEXT:    vpstt
+; NOREDUCTIONS-NEXT:    vldrht.s32 q1, [r0], #8
+; NOREDUCTIONS-NEXT:    vldrht.s32 q2, [r7], #8
+; NOREDUCTIONS-NEXT:    mov lr, r6
+; NOREDUCTIONS-NEXT:    vmul.i32 q1, q2, q1
+; NOREDUCTIONS-NEXT:    subs r6, #1
+; NOREDUCTIONS-NEXT:    vshl.s32 q1, r5
+; NOREDUCTIONS-NEXT:    subs r4, #4
+; NOREDUCTIONS-NEXT:    vadd.i32 q1, q1, q0
+; NOREDUCTIONS-NEXT:    le lr, .LBB0_2
+; NOREDUCTIONS-NEXT:  @ %bb.3: @ %middle.block
+; NOREDUCTIONS-NEXT:    @ in Loop: Header=BB0_5 Depth=1
+; NOREDUCTIONS-NEXT:    vpsel q0, q1, q0
+; NOREDUCTIONS-NEXT:    vaddv.u32 r0, q0
+; NOREDUCTIONS-NEXT:  .LBB0_4: @ %for.end
+; NOREDUCTIONS-NEXT:    @ in Loop: Header=BB0_5 Depth=1
 ; NOREDUCTIONS-NEXT:    lsrs r0, r0, #16
 ; NOREDUCTIONS-NEXT:    sub.w r9, r9, #1
 ; NOREDUCTIONS-NEXT:    strh.w r0, [r1, r8, lsl #1]
@@ -113,13 +131,13 @@ define dso_local void @varying_outer_2d_reduction(i16* nocapture readonly %Input
 ; NOREDUCTIONS-NEXT:    add.w r10, r10, #2
 ; NOREDUCTIONS-NEXT:    cmp r8, r3
 ; NOREDUCTIONS-NEXT:    beq .LBB0_8
-; NOREDUCTIONS-NEXT:  .LBB0_4: @ %for.body
+; NOREDUCTIONS-NEXT:  .LBB0_5: @ %for.body
 ; NOREDUCTIONS-NEXT:    @ =>This Loop Header: Depth=1
-; NOREDUCTIONS-NEXT:    @ Child Loop BB0_6 Depth 2
+; NOREDUCTIONS-NEXT:    @ Child Loop BB0_2 Depth 2
 ; NOREDUCTIONS-NEXT:    cmp r2, r8
-; NOREDUCTIONS-NEXT:    ble .LBB0_2
-; NOREDUCTIONS-NEXT:  @ %bb.5: @ %vector.ph
-; NOREDUCTIONS-NEXT:    @ in Loop: Header=BB0_4 Depth=1
+; NOREDUCTIONS-NEXT:    ble .LBB0_7
+; NOREDUCTIONS-NEXT:  @ %bb.6: @ %vector.ph
+; NOREDUCTIONS-NEXT:    @ in Loop: Header=BB0_5 Depth=1
 ; NOREDUCTIONS-NEXT:    bic r0, r9, #3
 ; NOREDUCTIONS-NEXT:    movs r7, #1
 ; NOREDUCTIONS-NEXT:    subs r0, #4
@@ -133,26 +151,10 @@ define dso_local void @varying_outer_2d_reduction(i16* nocapture readonly %Input
 ; NOREDUCTIONS-NEXT:    mov r7, r10
 ; NOREDUCTIONS-NEXT:    dls lr, r0
 ; NOREDUCTIONS-NEXT:    ldr r0, [sp] @ 4-byte Reload
-; NOREDUCTIONS-NEXT:  .LBB0_6: @ %vector.body
-; NOREDUCTIONS-NEXT:    @ Parent Loop BB0_4 Depth=1
-; NOREDUCTIONS-NEXT:    @ => This Inner Loop Header: Depth=2
-; NOREDUCTIONS-NEXT:    vctp.32 r4
-; NOREDUCTIONS-NEXT:    vmov q0, q1
-; NOREDUCTIONS-NEXT:    vpstt
-; NOREDUCTIONS-NEXT:    vldrht.s32 q1, [r0], #8
-; NOREDUCTIONS-NEXT:    vldrht.s32 q2, [r7], #8
-; NOREDUCTIONS-NEXT:    mov lr, r6
-; NOREDUCTIONS-NEXT:    vmul.i32 q1, q2, q1
-; NOREDUCTIONS-NEXT:    subs r6, #1
-; NOREDUCTIONS-NEXT:    vshl.s32 q1, r5
-; NOREDUCTIONS-NEXT:    subs r4, #4
-; NOREDUCTIONS-NEXT:    vadd.i32 q1, q1, q0
-; NOREDUCTIONS-NEXT:    le lr, .LBB0_6
-; NOREDUCTIONS-NEXT:  @ %bb.7: @ %middle.block
-; NOREDUCTIONS-NEXT:    @ in Loop: Header=BB0_4 Depth=1
-; NOREDUCTIONS-NEXT:    vpsel q0, q1, q0
-; NOREDUCTIONS-NEXT:    vaddv.u32 r0, q0
-; NOREDUCTIONS-NEXT:    b .LBB0_3
+; NOREDUCTIONS-NEXT:    b .LBB0_2
+; NOREDUCTIONS-NEXT:  .LBB0_7: @ in Loop: Header=BB0_5 Depth=1
+; NOREDUCTIONS-NEXT:    movs r0, #0
+; NOREDUCTIONS-NEXT:    b .LBB0_4
 ; NOREDUCTIONS-NEXT:  .LBB0_8: @ %for.end17
 ; NOREDUCTIONS-NEXT:    add sp, #4
 ; NOREDUCTIONS-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, pc}
