@@ -394,8 +394,7 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
     }
 
     LiveInterval &DestLI = LIS->getInterval(DestReg);
-    assert(DestLI.begin() != DestLI.end() &&
-           "PHIs should have nonempty LiveIntervals.");
+    assert(!DestLI.empty() && "PHIs should have nonempty LiveIntervals.");
     if (DestLI.endIndex().isDead()) {
       // A dead PHI's live range begins and ends at the start of the MBB, but
       // the lowered copy, which will still be dead, needs to begin and end at
