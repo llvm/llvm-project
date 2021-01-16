@@ -3385,7 +3385,7 @@ Value *FortifiedLibCallSimplifier::optimizeMemCCpyChk(CallInst *CI,
 Value *FortifiedLibCallSimplifier::optimizeSNPrintfChk(CallInst *CI,
                                                        IRBuilderBase &B) {
   if (isFortifiedCallFoldable(CI, 3, 1, None, 2)) {
-    SmallVector<Value *, 8> VariadicArgs(CI->arg_begin() + 5, CI->arg_end());
+    SmallVector<Value *, 8> VariadicArgs(drop_begin(CI->args(), 5));
     return emitSNPrintf(CI->getArgOperand(0), CI->getArgOperand(1),
                         CI->getArgOperand(4), VariadicArgs, B, TLI);
   }
@@ -3396,7 +3396,7 @@ Value *FortifiedLibCallSimplifier::optimizeSNPrintfChk(CallInst *CI,
 Value *FortifiedLibCallSimplifier::optimizeSPrintfChk(CallInst *CI,
                                                       IRBuilderBase &B) {
   if (isFortifiedCallFoldable(CI, 2, None, None, 1)) {
-    SmallVector<Value *, 8> VariadicArgs(CI->arg_begin() + 4, CI->arg_end());
+    SmallVector<Value *, 8> VariadicArgs(drop_begin(CI->args(), 4));
     return emitSPrintf(CI->getArgOperand(0), CI->getArgOperand(3), VariadicArgs,
                        B, TLI);
   }

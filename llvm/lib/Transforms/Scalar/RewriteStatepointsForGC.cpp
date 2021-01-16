@@ -1487,9 +1487,7 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
   uint32_t NumPatchBytes = 0;
   uint32_t Flags = uint32_t(StatepointFlags::None);
 
-  SmallVector<Value *, 8> CallArgs;
-  for (Value *Arg : Call->args())
-    CallArgs.push_back(Arg);
+  SmallVector<Value *, 8> CallArgs(Call->args());
   Optional<ArrayRef<Use>> DeoptArgs;
   if (auto Bundle = Call->getOperandBundle(LLVMContext::OB_deopt))
     DeoptArgs = Bundle->Inputs;
