@@ -924,6 +924,7 @@ const internal::VariadicDynCastAllOfMatcher<Stmt, BinaryOperator>
 const internal::MapAnyOfMatcher<BinaryOperator, CXXOperatorCallExpr,
                                 CXXRewrittenBinaryOperator>
     binaryOperation;
+const internal::MapAnyOfMatcher<CallExpr, CXXConstructExpr> invocation;
 const internal::VariadicDynCastAllOfMatcher<Stmt, UnaryOperator> unaryOperator;
 const internal::VariadicDynCastAllOfMatcher<Stmt, ConditionalOperator>
     conditionalOperator;

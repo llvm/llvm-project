@@ -2829,6 +2829,42 @@ extern const internal::MapAnyOfMatcher<BinaryOperator, CXXOperatorCallExpr,
                                        CXXRewrittenBinaryOperator>
     binaryOperation;
 
+/// Matches function calls and constructor calls
+///
+/// Because CallExpr and CXXConstructExpr do not share a common
+/// base class with API accessing arguments etc, AST Matchers for code
+/// which should match both are typically duplicated. This matcher
+/// removes the need for duplication.
+///
+/// Given code
+/// \code
+/// struct ConstructorTakesInt
+/// {
+///   ConstructorTakesInt(int i) {}
+/// };
+///
+/// void callTakesInt(int i)
+/// {
+/// }
+///
+/// void doCall()
+/// {
+///   callTakesInt(42);
+/// }
+///
+/// void doConstruct()
+/// {
+///   ConstructorTakesInt cti(42);
+/// }
+/// \endcode
+///
+/// The matcher
+/// \code
+/// invocation(hasArgument(0, integerLiteral(equals(42))))
+/// \endcode
+/// matches the expression in both doCall and doConstruct
+extern const internal::MapAnyOfMatcher<CallExpr, CXXConstructExpr> invocation;
+
 /// Matches unary expressions that have a specific type of argument.
 ///
 /// Given
