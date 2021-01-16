@@ -839,9 +839,7 @@ protected:
            "NewBB should have a single successor!");
     NodeRef NewBBSucc = *GraphT::child_begin(NewBB);
 
-    SmallVector<NodeRef, 4> PredBlocks;
-    for (auto Pred : children<Inverse<N>>(NewBB))
-      PredBlocks.push_back(Pred);
+    SmallVector<NodeRef, 4> PredBlocks(children<Inverse<N>>(NewBB));
 
     assert(!PredBlocks.empty() && "No predblocks?");
 
