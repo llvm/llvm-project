@@ -6784,7 +6784,7 @@ public:
   /// Try to find a reduction tree.
   bool matchAssociativeReduction(PHINode *Phi, Instruction *B) {
     assert((!Phi || is_contained(Phi->operands(), B)) &&
-           "Thi phi needs to use the binary operator");
+           "Phi needs to use the binary operator");
 
     RdxTreeInst = getOperationData(B);
 
@@ -6831,7 +6831,7 @@ public:
       const OperationData OpData = getOperationData(TreeN);
       bool IsReducedValue = OpData != RdxTreeInst;
 
-      // Postorder vist.
+      // Postorder visit.
       if (IsReducedValue || EdgeToVisit == OpData.getNumberOfOperands()) {
         if (IsReducedValue)
           ReducedVals.push_back(TreeN);
