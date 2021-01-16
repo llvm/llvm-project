@@ -1173,7 +1173,7 @@ bool HexagonExpandCondsets::coalesceRegisters(RegisterRef R1, RegisterRef R2) {
     }
     L1.addSegment(LiveRange::Segment(I->start, I->end, NewVN));
   }
-  while (L2.begin() != L2.end())
+  while (!L2.empty())
     L2.removeSegment(*L2.begin());
   LIS->removeInterval(R2.Reg);
 

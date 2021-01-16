@@ -441,7 +441,7 @@ MachineInstr *AMDGPUCFGStructurizer::insertInstrBefore(MachineBasicBlock *MBB,
                                                        const DebugLoc &DL) {
   MachineInstr *MI =
       MBB->getParent()->CreateMachineInstr(TII->get(NewOpcode), DL);
-  if (MBB->begin() != MBB->end())
+  if (!MBB->empty())
     MBB->insert(MBB->begin(), MI);
   else
     MBB->push_back(MI);
