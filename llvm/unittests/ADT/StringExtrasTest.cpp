@@ -216,16 +216,16 @@ TEST(StringExtras, IToStr) {
   EXPECT_EQ(std::to_string(MaxInt64), itostr(MaxInt64));
 }
 
-TEST(StringExtras, SubsequentDelim) {
-  SubsequentDelim SD;
-  StringRef S = SD;
+TEST(StringExtras, ListSeparator) {
+  ListSeparator LS;
+  StringRef S = LS;
   EXPECT_EQ(S, "");
-  S = SD;
+  S = LS;
   EXPECT_EQ(S, ", ");
 
-  SubsequentDelim SD2(" ");
-  S = SD2;
+  ListSeparator LS2(" ");
+  S = LS2;
   EXPECT_EQ(S, "");
-  S = SD2;
+  S = LS2;
   EXPECT_EQ(S, " ");
 }
