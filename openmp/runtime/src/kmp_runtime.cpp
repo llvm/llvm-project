@@ -32,6 +32,11 @@
 #include "ompt-specific.h"
 #endif
 
+#if OMPTARGET_PROFILING_SUPPORT
+#include "llvm/Support/TimeProfiler.h"
+static char *ProfileTraceFile = nullptr;
+#endif
+
 /* these are temporary issues to be dealt with */
 #define KMP_USE_PRCTL 0
 
@@ -5701,6 +5706,13 @@ void __kmp_free_thread(kmp_info_t *this_th) {
 /* ------------------------------------------------------------------------ */
 
 void *__kmp_launch_thread(kmp_info_t *this_thr) {
+#if OMPTARGET_PROFILING_SUPPORT
+  ProfileTraceFile = getenv("LIBOMPTARGET_PROFILE");
+  // TODO: add a configuration option for time granularity
+  if (ProfileTraceFile)
+    llvm::timeTraceProfilerInitialize(500 /* us */, "libomptarget");
+#endif
+
   int gtid = this_thr->th.th_info.ds.ds_gtid;
   /*    void                 *stack_data;*/
   kmp_team_t **volatile pteam;
@@ -5801,6 +5813,10 @@ void *__kmp_launch_thread(kmp_info_t *this_thr) {
 
   KA_TRACE(10, ("__kmp_launch_thread: T#%d done\n", gtid));
   KMP_MB();
+
+#if OMPTARGET_PROFILING_SUPPORT
+  llvm::timeTraceProfilerFinishThread();
+#endif
   return this_thr;
 }
 
