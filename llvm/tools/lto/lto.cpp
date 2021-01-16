@@ -41,18 +41,6 @@ OptLevel("O",
          cl::ZeroOrMore,
          cl::init('2'));
 
-static cl::opt<bool>
-DisableInline("disable-inlining", cl::init(false),
-  cl::desc("Do not run the inliner pass"));
-
-static cl::opt<bool>
-DisableGVNLoadPRE("disable-gvn-loadpre", cl::init(false),
-  cl::desc("Do not run the GVN load PRE pass"));
-
-static cl::opt<bool> DisableLTOVectorization(
-    "disable-lto-vectorization", cl::init(false),
-    cl::desc("Do not run loop or slp vectorization during LTO"));
-
 static cl::opt<bool> EnableFreestanding(
     "lto-freestanding", cl::init(false),
     cl::desc("Enable Freestanding (disable builtins / TLI) during LTO"));
@@ -448,9 +436,7 @@ bool lto_codegen_write_merged_modules(lto_code_gen_t cg, const char *path) {
 const void *lto_codegen_compile(lto_code_gen_t cg, size_t *length) {
   maybeParseOptions(cg);
   LibLTOCodeGenerator *CG = unwrap(cg);
-  CG->NativeObjectFile =
-      CG->compile(DisableVerify, DisableInline, DisableGVNLoadPRE,
-                  DisableLTOVectorization);
+  CG->NativeObjectFile = CG->compile(DisableVerify);
   if (!CG->NativeObjectFile)
     return nullptr;
   *length = CG->NativeObjectFile->getBufferSize();
@@ -459,8 +445,7 @@ const void *lto_codegen_compile(lto_code_gen_t cg, size_t *length) {
 
 bool lto_codegen_optimize(lto_code_gen_t cg) {
   maybeParseOptions(cg);
-  return !unwrap(cg)->optimize(DisableVerify, DisableInline, DisableGVNLoadPRE,
-                               DisableLTOVectorization);
+  return !unwrap(cg)->optimize(DisableVerify);
 }
 
 const void *lto_codegen_compile_optimized(lto_code_gen_t cg, size_t *length) {
@@ -475,9 +460,7 @@ const void *lto_codegen_compile_optimized(lto_code_gen_t cg, size_t *length) {
 
 bool lto_codegen_compile_to_file(lto_code_gen_t cg, const char **name) {
   maybeParseOptions(cg);
-  return !unwrap(cg)->compile_to_file(
-      name, DisableVerify, DisableInline, DisableGVNLoadPRE,
-      DisableLTOVectorization);
+  return !unwrap(cg)->compile_to_file(name, DisableVerify);
 }
 
 void lto_codegen_debug_options(lto_code_gen_t cg, const char *opt) {
