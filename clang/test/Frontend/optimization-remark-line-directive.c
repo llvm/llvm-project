@@ -6,7 +6,7 @@
 
 // The new PM inliner is not added to the default pipeline at O0, so we add
 // some optimizations to trigger it.
-// RUN: %clang_cc1 %s -Rpass=inline -fexperimental-new-pass-manager -O1 -debug-info-kind=line-tables-only -emit-llvm-only -verify -mllvm -mandatory-inlining-first=0
+// RUN: %clang_cc1 %s -Rpass=inline -fexperimental-new-pass-manager -O1 -debug-info-kind=line-tables-only -emit-llvm-only -mllvm -mandatory-inlining-first=false -verify
 
 int foo(int x, int y) __attribute__((always_inline));
 int foo(int x, int y) { return x + y; }

@@ -66,6 +66,7 @@
 ; CHECK-O123SZ-NEXT: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-O123SZ-NEXT: Starting CGSCC pass manager run.
 ; CHECK-O123SZ-NEXT: Running pass: InlinerPass on (foo)
+; CHECK-O123SZ-NEXT: Running pass: InlinerPass on (foo)
 ; CHECK-O123SZ-NEXT: Running pass: SROA on foo
 ; CHECK-O123SZ-NEXT: Running pass: EarlyCSEPass on foo
 ; CHECK-O123SZ-NEXT: Running pass: SimplifyCFGPass on foo
@@ -89,6 +90,10 @@
 ; CHECK-O-NEXT: Running analysis: OptimizationRemarkEmitterAnalysis on foo
 ; CHECK-O-NEXT: Running pass: ModuleInlinerWrapperPass
 ; CHECK-O-NEXT: Starting {{.*}}Module pass manager run.
+; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}GlobalsAA	
+; CHECK-O-NEXT: Running analysis: GlobalsAA	
+; CHECK-O-NEXT: Running analysis: CallGraphAnalysis	
+; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}ProfileSummaryAnalysis	
 ; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O-NEXT: Running analysis: LazyCallGraphAnalysis
 ; CHECK-O-NEXT: Running analysis: TargetLibraryAnalysis on foo
@@ -97,16 +102,6 @@
 ; CHECK-O-NEXT: Running pass: DevirtSCCRepeatedPass
 ; CHECK-O-NEXT: Starting CGSCC pass manager run.
 ; CHECK-O-NEXT: Running pass: InlinerPass
-; CHECK-O-NEXT: Finished CGSCC pass manager run.
-; CHECK-O-NEXT: Finished {{.*}}Module pass manager run.
-; CHECK-O-NEXT: Running pass: ModuleInlinerWrapperPass
-; CHECK-O-NEXT: Starting {{.*}}Module pass manager run.
-; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}GlobalsAA
-; CHECK-O-NEXT: Running analysis: GlobalsAA
-; CHECK-O-NEXT: Running analysis: CallGraphAnalysis
-; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}ProfileSummaryAnalysis
-; CHECK-O-NEXT: Running pass: DevirtSCCRepeatedPass
-; CHECK-O-NEXT: Starting CGSCC pass manager run.
 ; CHECK-O-NEXT: Running pass: InlinerPass
 ; CHECK-O-NEXT: Running pass: PostOrderFunctionAttrsPass
 ; CHECK-O-NEXT: Running analysis: AAManager on foo

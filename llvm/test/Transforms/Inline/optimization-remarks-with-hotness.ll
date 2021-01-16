@@ -4,7 +4,7 @@
 ; RUN: opt < %s -passes=inline -pass-remarks=inline -pass-remarks-missed=inline \
 ; RUN:     -pass-remarks-analysis=inline -pass-remarks-with-hotness -S 2>&1 \
 ; RUN:     | FileCheck %s
-; RUN: opt < %s -passes=inliner-wrapper -pass-remarks=inline -pass-remarks-missed=inline \
+; RUN: opt < %s -passes=inliner-wrapper-no-mandatory-first -pass-remarks=inline -pass-remarks-missed=inline \
 ; RUN:     -pass-remarks-analysis=inline -pass-remarks-with-hotness -S 2>&1 \
 ; RUN:     | FileCheck %s
 
