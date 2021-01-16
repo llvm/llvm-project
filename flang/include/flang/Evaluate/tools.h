@@ -336,6 +336,9 @@ template <typename A> const Symbol *GetFirstSymbol(const A &x) {
   }
 }
 
+// GetLastPointerSymbol(A%PTR1%B%PTR2%C) -> PTR2
+const Symbol *GetLastPointerSymbol(const evaluate::DataRef &);
+
 // Creation of conversion expressions can be done to either a known
 // specific intrinsic type with ConvertToType<T>(x) or by converting
 // one arbitrary expression to the type of another with ConvertTo(to, from).
