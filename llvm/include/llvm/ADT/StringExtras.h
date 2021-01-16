@@ -470,9 +470,9 @@ inline std::string join_items(Sep Separator, Args &&... Items) {
 /// list from a loop like so:
 ///
 /// \code
-///   ListSeparator SD;
+///   ListSeparator LS;
 ///   for (auto &I : C)
-///     OS << SD << I.getName();
+///     OS << LS << I.getName();
 /// \end
 class ListSeparator {
   bool First = true;
