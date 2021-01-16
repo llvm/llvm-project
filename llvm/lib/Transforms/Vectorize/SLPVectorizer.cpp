@@ -6814,8 +6814,11 @@ public:
 
     ReductionRoot = B;
 
-    // The operation data for the leaf values that we perform a reduction on.
-    OperationData RdxLeafVal;
+    // The opcode for leaf values that we perform a reduction on.
+    // For example: load(x) + load(y) + load(z) + fptoui(w)
+    // The leaf opcode for 'w' does not match, so we don't include it as a
+    // potential candidate for the reduction.
+    unsigned LeafOpcode = 0;
 
     // Post order traverse the reduction tree starting at B. We only handle true
     // trees containing only binary operators.
@@ -6859,9 +6862,9 @@ public:
       auto *I = dyn_cast<Instruction>(NextV);
       const OperationData EdgeOpData = getOperationData(I);
       // Continue analysis if the next operand is a reduction operation or
-      // (possibly) a reduced value. If the reduced value opcode is not set,
+      // (possibly) a leaf value. If the leaf value opcode is not set,
       // the first met operation != reduction operation is considered as the
-      // reduced value class.
+      // leaf opcode.
       // Only handle trees in the current basic block.
       // Each tree node needs to have minimal number of users except for the
       // ultimate reduction.
@@ -6869,7 +6872,7 @@ public:
       if (I && I != Phi && I != B &&
           RdxTreeInst.hasSameParent(I, B->getParent(), IsRdxInst) &&
           RdxTreeInst.hasRequiredNumberOfUses(I, IsRdxInst) &&
-          (!RdxLeafVal || EdgeOpData == RdxLeafVal || IsRdxInst)) {
+          (!LeafOpcode || LeafOpcode == I->getOpcode() || IsRdxInst)) {
         if (IsRdxInst) {
           // We need to be able to reassociate the reduction operations.
           if (!EdgeOpData.isAssociative(I)) {
@@ -6877,8 +6880,8 @@ public:
             markExtraArg(Stack.back(), I);
             continue;
           }
-        } else if (!RdxLeafVal) {
-          RdxLeafVal = EdgeOpData;
+        } else if (!LeafOpcode) {
+          LeafOpcode = I->getOpcode();
         }
         Stack.push_back(std::make_pair(I, EdgeOpData.getFirstOperandIndex()));
         continue;
