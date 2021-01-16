@@ -21983,8 +21983,7 @@ static bool matchScalarReduction(SDValue Op, ISD::NodeType BinOp,
     if (M == SrcOpMap.end()) {
       VT = Src.getValueType();
       // Quit if not the same type.
-      if (SrcOpMap.begin() != SrcOpMap.end() &&
-          VT != SrcOpMap.begin()->first.getValueType())
+      if (!SrcOpMap.empty() && VT != SrcOpMap.begin()->first.getValueType())
         return false;
       unsigned NumElts = VT.getVectorNumElements();
       APInt EltCount = APInt::getNullValue(NumElts);

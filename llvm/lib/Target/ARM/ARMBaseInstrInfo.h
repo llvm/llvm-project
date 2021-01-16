@@ -634,6 +634,11 @@ static inline bool isJumpTableBranchOpcode(int Opc) {
          Opc == ARM::t2BR_JT;
 }
 
+static inline bool isLowOverheadTerminatorOpcode(int Opc) {
+  return Opc == ARM::t2DoLoopStartTP || Opc == ARM::t2WhileLoopStart ||
+         Opc == ARM::t2LoopEnd || Opc == ARM::t2LoopEndDec;
+}
+
 static inline
 bool isIndirectBranchOpcode(int Opc) {
   return Opc == ARM::BX || Opc == ARM::MOVPCRX || Opc == ARM::tBRIND;

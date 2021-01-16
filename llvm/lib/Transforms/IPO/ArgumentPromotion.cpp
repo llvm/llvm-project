@@ -822,8 +822,7 @@ static bool canPaddingBeAccessed(Argument *arg) {
 
   // Scan through the uses recursively to make sure the pointer is always used
   // sanely.
-  SmallVector<Value *, 16> WorkList;
-  WorkList.insert(WorkList.end(), arg->user_begin(), arg->user_end());
+  SmallVector<Value *, 16> WorkList(arg->users());
   while (!WorkList.empty()) {
     Value *V = WorkList.back();
     WorkList.pop_back();

@@ -200,10 +200,7 @@ VPBlockBase *VPBlockBase::getEnclosingBlockWithPredecessors() {
 }
 
 void VPBlockBase::deleteCFG(VPBlockBase *Entry) {
-  SmallVector<VPBlockBase *, 8> Blocks;
-
-  for (VPBlockBase *Block : depth_first(Entry))
-    Blocks.push_back(Block);
+  SmallVector<VPBlockBase *, 8> Blocks(depth_first(Entry));
 
   for (VPBlockBase *Block : Blocks)
     delete Block;

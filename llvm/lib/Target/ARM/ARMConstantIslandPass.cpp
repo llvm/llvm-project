@@ -2095,8 +2095,7 @@ static bool jumpTableFollowsTB(MachineInstr *JTMI, MachineInstr *CPEMI) {
   MachineFunction *MF = MBB->getParent();
   ++MBB;
 
-  return MBB != MF->end() && MBB->begin() != MBB->end() &&
-         &*MBB->begin() == CPEMI;
+  return MBB != MF->end() && !MBB->empty() && &*MBB->begin() == CPEMI;
 }
 
 static void RemoveDeadAddBetweenLEAAndJT(MachineInstr *LEAMI,

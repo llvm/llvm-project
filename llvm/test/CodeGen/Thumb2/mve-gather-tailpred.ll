@@ -17,23 +17,25 @@ define arm_aapcs_vfpcc void @gather_inc_v4i32_simple(i32* noalias nocapture read
 ; CHECK-NEXT:    adr r3, .LCPI0_0
 ; CHECK-NEXT:    vldrw.u32 q0, [r3]
 ; CHECK-NEXT:    vadd.i32 q0, q0, r0
-; CHECK-NEXT:  .LBB0_2: @ %vector.ph
-; CHECK-NEXT:    @ =>This Loop Header: Depth=1
-; CHECK-NEXT:    @ Child Loop BB0_3 Depth 2
-; CHECK-NEXT:    dls lr, r4
-; CHECK-NEXT:    mov r0, r1
-; CHECK-NEXT:    vmov q1, q0
-; CHECK-NEXT:  .LBB0_3: @ %vector.body
-; CHECK-NEXT:    @ Parent Loop BB0_2 Depth=1
+; CHECK-NEXT:    b .LBB0_4
+; CHECK-NEXT:  .LBB0_2: @ %vector.body
+; CHECK-NEXT:    @ Parent Loop BB0_4 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    vldrw.u32 q2, [q1, #16]!
 ; CHECK-NEXT:    vstrb.8 q2, [r0], #16
-; CHECK-NEXT:    le lr, .LBB0_3
-; CHECK-NEXT:  @ %bb.4: @ %middle.block
-; CHECK-NEXT:    @ in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:    le lr, .LBB0_2
+; CHECK-NEXT:  @ %bb.3: @ %middle.block
+; CHECK-NEXT:    @ in Loop: Header=BB0_4 Depth=1
 ; CHECK-NEXT:    cmp r12, r2
-; CHECK-NEXT:    bne .LBB0_2
-; CHECK-NEXT:  @ %bb.5: @ %for.cond.cleanup
+; CHECK-NEXT:    beq .LBB0_5
+; CHECK-NEXT:  .LBB0_4: @ %vector.ph
+; CHECK-NEXT:    @ =>This Loop Header: Depth=1
+; CHECK-NEXT:    @ Child Loop BB0_2 Depth 2
+; CHECK-NEXT:    dls lr, r4
+; CHECK-NEXT:    mov r0, r1
+; CHECK-NEXT:    vmov q1, q0
+; CHECK-NEXT:    b .LBB0_2
+; CHECK-NEXT:  .LBB0_5: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r4, pc}
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.6:

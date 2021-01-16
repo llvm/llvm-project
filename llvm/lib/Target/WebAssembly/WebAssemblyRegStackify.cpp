@@ -692,7 +692,7 @@ class TreeWalkerState {
 public:
   explicit TreeWalkerState(MachineInstr *Insert) {
     const iterator_range<mop_iterator> &Range = Insert->explicit_uses();
-    if (Range.begin() != Range.end())
+    if (!Range.empty())
       Worklist.push_back(reverse(Range));
   }
 
@@ -702,10 +702,9 @@ public:
     RangeTy &Range = Worklist.back();
     MachineOperand &Op = *Range.begin();
     Range = drop_begin(Range, 1);
-    if (Range.begin() == Range.end())
+    if (Range.empty())
       Worklist.pop_back();
-    assert((Worklist.empty() ||
-            Worklist.back().begin() != Worklist.back().end()) &&
+    assert((Worklist.empty() || !Worklist.back().empty()) &&
            "Empty ranges shouldn't remain in the worklist");
     return Op;
   }
@@ -713,7 +712,7 @@ public:
   /// Push Instr's operands onto the stack to be visited.
   void pushOperands(MachineInstr *Instr) {
     const iterator_range<mop_iterator> &Range(Instr->explicit_uses());
-    if (Range.begin() != Range.end())
+    if (!Range.empty())
       Worklist.push_back(reverse(Range));
   }
 
@@ -732,7 +731,7 @@ public:
     if (Worklist.empty())
       return false;
     const RangeTy &Range = Worklist.back();
-    return Range.begin() != Range.end() && Range.begin()->getParent() == Instr;
+    return !Range.empty() && Range.begin()->getParent() == Instr;
   }
 
   /// Test whether the given register is present on the stack, indicating an

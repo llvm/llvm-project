@@ -135,8 +135,7 @@ const PfmCountersInfo &ExegesisTarget::getPfmCounters(StringRef CpuName) const {
   auto Found = llvm::lower_bound(CpuPfmCounters, CpuName);
   if (Found == CpuPfmCounters.end() || StringRef(Found->CpuName) != CpuName) {
     // Use the default.
-    if (CpuPfmCounters.begin() != CpuPfmCounters.end() &&
-        CpuPfmCounters.begin()->CpuName[0] == '\0') {
+    if (!CpuPfmCounters.empty() && CpuPfmCounters.begin()->CpuName[0] == '\0') {
       Found = CpuPfmCounters.begin(); // The target specifies a default.
     } else {
       return PfmCountersInfo::Default; // No default for the target.

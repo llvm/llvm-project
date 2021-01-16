@@ -48,7 +48,7 @@ llvm::object::computeSymbolSizes(const ObjectFile &O) {
 
   if (const auto *E = dyn_cast<ELFObjectFileBase>(&O)) {
     auto Syms = E->symbols();
-    if (Syms.begin() == Syms.end())
+    if (Syms.empty())
       Syms = E->getDynamicSymbolIterators();
     for (ELFSymbolRef Sym : Syms)
       Ret.push_back({Sym, Sym.getSize()});

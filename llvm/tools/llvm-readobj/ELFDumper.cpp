@@ -733,7 +733,7 @@ void ELFDumper<ELFT>::printSymbolsHelper(bool IsDynamic) const {
           toString(SymsOrErr.takeError()));
     Entries = DotSymtabSec->getEntityCount();
   }
-  if (Syms.begin() == Syms.end())
+  if (Syms.empty())
     return;
 
   // The st_other field has 2 logical parts. The first two bits hold the symbol
