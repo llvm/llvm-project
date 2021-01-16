@@ -2264,6 +2264,8 @@ static Value *SimplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
 
   // (~A & B) | ~(A | B) --> ~A
   // (~A & B) | ~(B | A) --> ~A
+  // (B & ~A) | ~(A | B) --> ~A
+  // (B & ~A) | ~(B | A) --> ~A
   if (match(Op0, m_And(m_Not(m_Value(A)), m_Value(B))) &&
       match(Op1, m_Not(m_c_Or(m_Specific(A), m_Specific(B)))))
     return cast<BinaryOperator>(Op0)->getOperand(0);
