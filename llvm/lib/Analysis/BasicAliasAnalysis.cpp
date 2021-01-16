@@ -1619,13 +1619,13 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
     if (!Entry.isDefinitive()) {
       // Remember that we used an assumption.
       ++Entry.NumAssumptionUses;
-      ++NumAssumptionUses;
+      ++AAQI.NumAssumptionUses;
     }
     return Entry.Result;
   }
 
-  int OrigNumAssumptionUses = NumAssumptionUses;
-  unsigned OrigNumAssumptionBasedResults = AssumptionBasedResults.size();
+  int OrigNumAssumptionUses = AAQI.NumAssumptionUses;
+  unsigned OrigNumAssumptionBasedResults = AAQI.AssumptionBasedResults.size();
   AliasResult Result = aliasCheckRecursive(V1, V1Size, V1AAInfo, V2, V2Size,
                                            V2AAInfo, AAQI, O1, O2);
 
@@ -1639,7 +1639,7 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
     Result = MayAlias;
 
   // This is a definitive result now, when considered as a root query.
-  NumAssumptionUses -= Entry.NumAssumptionUses;
+  AAQI.NumAssumptionUses -= Entry.NumAssumptionUses;
   Entry.Result = Result;
   Entry.NumAssumptionUses = -1;
 
@@ -1647,13 +1647,13 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   // been based on this assumption. Do this after the Entry updates above to
   // avoid iterator invalidation.
   if (AssumptionDisproven)
-    while (AssumptionBasedResults.size() > OrigNumAssumptionBasedResults)
-      AAQI.AliasCache.erase(AssumptionBasedResults.pop_back_val());
+    while (AAQI.AssumptionBasedResults.size() > OrigNumAssumptionBasedResults)
+      AAQI.AliasCache.erase(AAQI.AssumptionBasedResults.pop_back_val());
 
   // The result may still be based on assumptions higher up in the chain.
   // Remember it, so it can be purged from the cache later.
-  if (OrigNumAssumptionUses != NumAssumptionUses && Result != MayAlias)
-    AssumptionBasedResults.push_back(Locs);
+  if (OrigNumAssumptionUses != AAQI.NumAssumptionUses && Result != MayAlias)
+    AAQI.AssumptionBasedResults.push_back(Locs);
   return Result;
 }
 
