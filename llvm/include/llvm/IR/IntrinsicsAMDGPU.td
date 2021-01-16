@@ -1381,8 +1381,16 @@ def int_amdgcn_ps_live : Intrinsic <
   [],
   [IntrNoMem, IntrWillReturn]>;
 
-// Like ps.live, but cannot be moved by LICM.
-def int_amdgcn_wqm_helper : Intrinsic <[llvm_i1_ty], [], []>;
+// Similar to int_amdgcn_ps_live, but cannot be moved by LICM.
+// Returns true if lane is not a helper.
+def int_amdgcn_live_mask : Intrinsic <[llvm_i1_ty],
+  [], [IntrReadMem, IntrInaccessibleMemOnly, IntrWillReturn]
+>;
+
+// Clone of int_amdgcn_live_mask for capability.
+def int_amdgcn_wqm_helper : Intrinsic <[llvm_i1_ty],
+  [], [IntrReadMem, IntrInaccessibleMemOnly]
+>;
 
 def int_amdgcn_mbcnt_lo :
   GCCBuiltin<"__builtin_amdgcn_mbcnt_lo">,
@@ -1614,7 +1622,9 @@ def int_amdgcn_endpgm : GCCBuiltin<"__builtin_amdgcn_endpgm">,
 >;
 
 // If false, mark all active lanes as helper lanes until the end of program.
-def int_amdgcn_wqm_demote : Intrinsic<[], [llvm_i1_ty], []>;
+def int_amdgcn_wqm_demote : Intrinsic<[],
+  [llvm_i1_ty], [IntrWriteMem, IntrInaccessibleMemOnly]
+>;
 
 // Copies the active channels of the source value to the destination value,
 // with the guarantee that the source value is computed as if the entire

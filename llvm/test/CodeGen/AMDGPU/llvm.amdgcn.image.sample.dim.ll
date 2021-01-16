@@ -38,18 +38,18 @@ main_body:
 define amdgpu_ps <4 x float> @sample_1d_tfe(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 addrspace(1)* inreg %out, float %s) {
 ; VERDE-LABEL: sample_1d_tfe:
 ; VERDE:       ; %bb.0: ; %main_body
-; VERDE-NEXT:    s_mov_b64 s[16:17], exec
+; VERDE-NEXT:    s_mov_b64 s[14:15], exec
 ; VERDE-NEXT:    s_wqm_b64 exec, exec
 ; VERDE-NEXT:    v_mov_b32_e32 v5, v0
 ; VERDE-NEXT:    v_mov_b32_e32 v0, 0
-; VERDE-NEXT:    s_mov_b32 s15, 0xf000
-; VERDE-NEXT:    s_mov_b32 s14, -1
 ; VERDE-NEXT:    v_mov_b32_e32 v1, v0
 ; VERDE-NEXT:    v_mov_b32_e32 v2, v0
 ; VERDE-NEXT:    v_mov_b32_e32 v3, v0
 ; VERDE-NEXT:    v_mov_b32_e32 v4, v0
-; VERDE-NEXT:    s_and_b64 exec, exec, s[16:17]
+; VERDE-NEXT:    s_and_b64 exec, exec, s[14:15]
 ; VERDE-NEXT:    image_sample v[0:4], v5, s[0:7], s[8:11] dmask:0xf tfe
+; VERDE-NEXT:    s_mov_b32 s15, 0xf000
+; VERDE-NEXT:    s_mov_b32 s14, -1
 ; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    buffer_store_dword v4, off, s[12:15], 0
 ; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
@@ -65,12 +65,12 @@ define amdgpu_ps <4 x float> @sample_1d_tfe(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX6789-NEXT:    v_mov_b32_e32 v8, v6
 ; GFX6789-NEXT:    v_mov_b32_e32 v9, v6
 ; GFX6789-NEXT:    v_mov_b32_e32 v10, v6
-; GFX6789-NEXT:    s_and_b64 exec, exec, s[14:15]
 ; GFX6789-NEXT:    v_mov_b32_e32 v0, v6
 ; GFX6789-NEXT:    v_mov_b32_e32 v1, v7
 ; GFX6789-NEXT:    v_mov_b32_e32 v2, v8
 ; GFX6789-NEXT:    v_mov_b32_e32 v3, v9
 ; GFX6789-NEXT:    v_mov_b32_e32 v4, v10
+; GFX6789-NEXT:    s_and_b64 exec, exec, s[14:15]
 ; GFX6789-NEXT:    image_sample v[0:4], v5, s[0:7], s[8:11] dmask:0xf tfe
 ; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    global_store_dword v6, v4, s[12:13]
@@ -87,12 +87,12 @@ define amdgpu_ps <4 x float> @sample_1d_tfe(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX10-NEXT:    v_mov_b32_e32 v8, v6 ; encoding: [0x06,0x03,0x10,0x7e]
 ; GFX10-NEXT:    v_mov_b32_e32 v9, v6 ; encoding: [0x06,0x03,0x12,0x7e]
 ; GFX10-NEXT:    v_mov_b32_e32 v10, v6 ; encoding: [0x06,0x03,0x14,0x7e]
-; GFX10-NEXT:    s_and_b32 exec_lo, exec_lo, s28 ; encoding: [0x7e,0x1c,0x7e,0x87]
 ; GFX10-NEXT:    v_mov_b32_e32 v0, v6 ; encoding: [0x06,0x03,0x00,0x7e]
 ; GFX10-NEXT:    v_mov_b32_e32 v1, v7 ; encoding: [0x07,0x03,0x02,0x7e]
 ; GFX10-NEXT:    v_mov_b32_e32 v2, v8 ; encoding: [0x08,0x03,0x04,0x7e]
 ; GFX10-NEXT:    v_mov_b32_e32 v3, v9 ; encoding: [0x09,0x03,0x06,0x7e]
 ; GFX10-NEXT:    v_mov_b32_e32 v4, v10 ; encoding: [0x0a,0x03,0x08,0x7e]
+; GFX10-NEXT:    s_and_b32 exec_lo, exec_lo, s28 ; encoding: [0x7e,0x1c,0x7e,0x87]
 ; GFX10-NEXT:    image_sample v[0:4], v5, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D tfe ; encoding: [0x00,0x0f,0x81,0xf0,0x05,0x00,0x40,0x00]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    global_store_dword v6, v4, s[12:13] ; encoding: [0x00,0x80,0x70,0xdc,0x06,0x04,0x0c,0x00]
@@ -458,18 +458,18 @@ main_body:
 define amdgpu_ps <4 x float> @sample_1d_lwe(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 addrspace(1)* inreg %out, float %s) {
 ; VERDE-LABEL: sample_1d_lwe:
 ; VERDE:       ; %bb.0: ; %main_body
-; VERDE-NEXT:    s_mov_b64 s[16:17], exec
+; VERDE-NEXT:    s_mov_b64 s[14:15], exec
 ; VERDE-NEXT:    s_wqm_b64 exec, exec
 ; VERDE-NEXT:    v_mov_b32_e32 v5, v0
 ; VERDE-NEXT:    v_mov_b32_e32 v0, 0
-; VERDE-NEXT:    s_mov_b32 s15, 0xf000
-; VERDE-NEXT:    s_mov_b32 s14, -1
 ; VERDE-NEXT:    v_mov_b32_e32 v1, v0
 ; VERDE-NEXT:    v_mov_b32_e32 v2, v0
 ; VERDE-NEXT:    v_mov_b32_e32 v3, v0
 ; VERDE-NEXT:    v_mov_b32_e32 v4, v0
-; VERDE-NEXT:    s_and_b64 exec, exec, s[16:17]
+; VERDE-NEXT:    s_and_b64 exec, exec, s[14:15]
 ; VERDE-NEXT:    image_sample v[0:4], v5, s[0:7], s[8:11] dmask:0xf lwe
+; VERDE-NEXT:    s_mov_b32 s15, 0xf000
+; VERDE-NEXT:    s_mov_b32 s14, -1
 ; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    buffer_store_dword v4, off, s[12:15], 0
 ; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
@@ -485,12 +485,12 @@ define amdgpu_ps <4 x float> @sample_1d_lwe(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX6789-NEXT:    v_mov_b32_e32 v8, v6
 ; GFX6789-NEXT:    v_mov_b32_e32 v9, v6
 ; GFX6789-NEXT:    v_mov_b32_e32 v10, v6
-; GFX6789-NEXT:    s_and_b64 exec, exec, s[14:15]
 ; GFX6789-NEXT:    v_mov_b32_e32 v0, v6
 ; GFX6789-NEXT:    v_mov_b32_e32 v1, v7
 ; GFX6789-NEXT:    v_mov_b32_e32 v2, v8
 ; GFX6789-NEXT:    v_mov_b32_e32 v3, v9
 ; GFX6789-NEXT:    v_mov_b32_e32 v4, v10
+; GFX6789-NEXT:    s_and_b64 exec, exec, s[14:15]
 ; GFX6789-NEXT:    image_sample v[0:4], v5, s[0:7], s[8:11] dmask:0xf lwe
 ; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    global_store_dword v6, v4, s[12:13]
@@ -507,12 +507,12 @@ define amdgpu_ps <4 x float> @sample_1d_lwe(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX10-NEXT:    v_mov_b32_e32 v8, v6 ; encoding: [0x06,0x03,0x10,0x7e]
 ; GFX10-NEXT:    v_mov_b32_e32 v9, v6 ; encoding: [0x06,0x03,0x12,0x7e]
 ; GFX10-NEXT:    v_mov_b32_e32 v10, v6 ; encoding: [0x06,0x03,0x14,0x7e]
-; GFX10-NEXT:    s_and_b32 exec_lo, exec_lo, s28 ; encoding: [0x7e,0x1c,0x7e,0x87]
 ; GFX10-NEXT:    v_mov_b32_e32 v0, v6 ; encoding: [0x06,0x03,0x00,0x7e]
 ; GFX10-NEXT:    v_mov_b32_e32 v1, v7 ; encoding: [0x07,0x03,0x02,0x7e]
 ; GFX10-NEXT:    v_mov_b32_e32 v2, v8 ; encoding: [0x08,0x03,0x04,0x7e]
 ; GFX10-NEXT:    v_mov_b32_e32 v3, v9 ; encoding: [0x09,0x03,0x06,0x7e]
 ; GFX10-NEXT:    v_mov_b32_e32 v4, v10 ; encoding: [0x0a,0x03,0x08,0x7e]
+; GFX10-NEXT:    s_and_b32 exec_lo, exec_lo, s28 ; encoding: [0x7e,0x1c,0x7e,0x87]
 ; GFX10-NEXT:    image_sample v[0:4], v5, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D lwe ; encoding: [0x00,0x0f,0x82,0xf0,0x05,0x00,0x40,0x00]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    global_store_dword v6, v4, s[12:13] ; encoding: [0x00,0x80,0x70,0xdc,0x06,0x04,0x0c,0x00]

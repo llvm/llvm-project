@@ -4,7 +4,9 @@
 
 ; GCN-LABEL: {{^}}if_with_kill_true_cond:
 ; GCN:      v_cmp_ne_u32_e32 vcc,
-; GCN-NEXT: s_and_b64 exec, exec, vcc
+; GCN-NEXT: s_xor_b64 [[KILLED:s\[[0-9+]:[0-9+]\]]], vcc, exec
+; GCN-NEXT: s_andn2_b64 [[LIVE:s\[[0-9+]:[0-9+]\]]], exec, [[KILLED]]
+; GCN-NEXT: s_cbranch_scc0
 define amdgpu_ps void @if_with_kill_true_cond(i32 %arg) #2 {
 .entry:
   %cmp = icmp eq i32 %arg, 32
@@ -22,7 +24,9 @@ endif:
 
 ; GCN-LABEL: {{^}}if_with_kill_false_cond:
 ; GCN:      v_cmp_eq_u32_e32 vcc,
-; GCN-NEXT: s_and_b64 exec, exec, vcc
+; GCN-NEXT: s_xor_b64 [[KILLED:s\[[0-9+]:[0-9+]\]]], vcc, exec
+; GCN-NEXT: s_andn2_b64 [[LIVE:s\[[0-9+]:[0-9+]\]]], exec, [[KILLED]]
+; GCN-NEXT: s_cbranch_scc0
 define amdgpu_ps void @if_with_kill_false_cond(i32 %arg) #2 {
 .entry:
   %cmp = icmp eq i32 %arg, 32
@@ -248,7 +252,7 @@ define amdgpu_ps <4 x float> @wqm_kill_to_demote4(<8 x i32> inreg %rsrc, <4 x i3
 ; GCN-LABEL: {{^}}sinking_image_sample:
 ; GCN-NEXT: ; %.entry
 ; GCN-NOT: image_sample
-; GCN: s_cbranch_exec
+; GCN: s_cbranch_scc0
 ; GCN: image_sample
 define amdgpu_ps void @sinking_image_sample(float %arg0, <8 x i32> inreg %arg1, <4 x i32> inreg %arg2, float %arg3) #2 {
 .entry:

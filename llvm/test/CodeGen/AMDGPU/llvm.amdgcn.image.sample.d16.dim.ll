@@ -51,14 +51,14 @@ define amdgpu_ps half @image_sample_2d_f16_tfe(<8 x i32> inreg %rsrc, <4 x i32> 
 ; TONGA-NEXT:    s_mov_b64 s[14:15], exec
 ; TONGA-NEXT:    s_wqm_b64 exec, exec
 ; TONGA-NEXT:    v_mov_b32_e32 v2, 0
-; TONGA-NEXT:    v_mov_b32_e32 v4, s12
-; TONGA-NEXT:    v_mov_b32_e32 v5, s13
 ; TONGA-NEXT:    v_mov_b32_e32 v3, v2
 ; TONGA-NEXT:    s_and_b64 exec, exec, s[14:15]
 ; TONGA-NEXT:    image_sample v[2:3], v[0:1], s[0:7], s[8:11] dmask:0x1 tfe d16
+; TONGA-NEXT:    v_mov_b32_e32 v0, s12
+; TONGA-NEXT:    v_mov_b32_e32 v1, s13
 ; TONGA-NEXT:    s_waitcnt vmcnt(0)
+; TONGA-NEXT:    flat_store_dword v[0:1], v3
 ; TONGA-NEXT:    v_mov_b32_e32 v0, v2
-; TONGA-NEXT:    flat_store_dword v[4:5], v3
 ; TONGA-NEXT:    s_waitcnt vmcnt(0)
 ; TONGA-NEXT:    ; return to shader part epilog
 ;
@@ -67,14 +67,14 @@ define amdgpu_ps half @image_sample_2d_f16_tfe(<8 x i32> inreg %rsrc, <4 x i32> 
 ; GFX81-NEXT:    s_mov_b64 s[14:15], exec
 ; GFX81-NEXT:    s_wqm_b64 exec, exec
 ; GFX81-NEXT:    v_mov_b32_e32 v2, 0
-; GFX81-NEXT:    v_mov_b32_e32 v4, s12
-; GFX81-NEXT:    v_mov_b32_e32 v5, s13
 ; GFX81-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX81-NEXT:    s_and_b64 exec, exec, s[14:15]
 ; GFX81-NEXT:    image_sample v[2:3], v[0:1], s[0:7], s[8:11] dmask:0x1 tfe d16
+; GFX81-NEXT:    v_mov_b32_e32 v0, s12
+; GFX81-NEXT:    v_mov_b32_e32 v1, s13
 ; GFX81-NEXT:    s_waitcnt vmcnt(0)
+; GFX81-NEXT:    flat_store_dword v[0:1], v3
 ; GFX81-NEXT:    v_mov_b32_e32 v0, v2
-; GFX81-NEXT:    flat_store_dword v[4:5], v3
 ; GFX81-NEXT:    s_waitcnt vmcnt(0)
 ; GFX81-NEXT:    ; return to shader part epilog
 ;
@@ -84,9 +84,9 @@ define amdgpu_ps half @image_sample_2d_f16_tfe(<8 x i32> inreg %rsrc, <4 x i32> 
 ; GFX9-NEXT:    s_wqm_b64 exec, exec
 ; GFX9-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v5, v4
-; GFX9-NEXT:    s_and_b64 exec, exec, s[14:15]
 ; GFX9-NEXT:    v_mov_b32_e32 v2, v4
 ; GFX9-NEXT:    v_mov_b32_e32 v3, v5
+; GFX9-NEXT:    s_and_b64 exec, exec, s[14:15]
 ; GFX9-NEXT:    image_sample v[2:3], v[0:1], s[0:7], s[8:11] dmask:0x1 tfe d16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v2
@@ -100,9 +100,9 @@ define amdgpu_ps half @image_sample_2d_f16_tfe(<8 x i32> inreg %rsrc, <4 x i32> 
 ; GFX10-NEXT:    s_wqm_b32 exec_lo, exec_lo
 ; GFX10-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v5, v4
-; GFX10-NEXT:    s_and_b32 exec_lo, exec_lo, s28
 ; GFX10-NEXT:    v_mov_b32_e32 v2, v4
 ; GFX10-NEXT:    v_mov_b32_e32 v3, v5
+; GFX10-NEXT:    s_and_b32 exec_lo, exec_lo, s28
 ; GFX10-NEXT:    image_sample v[2:3], v[0:1], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D tfe d16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v0, v2
