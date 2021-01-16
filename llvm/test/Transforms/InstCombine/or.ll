@@ -1370,3 +1370,112 @@ define i32 @test5_use3(i32 %x, i32 %y) {
   ret i32 %or1
 }
 
+define i32 @test6(i32 %A, i32 %B) {
+; CHECK-LABEL: @test6(
+; CHECK-NEXT:    [[I:%.*]] = xor i32 [[B:%.*]], -1
+; CHECK-NEXT:    [[I2:%.*]] = and i32 [[I]], [[A:%.*]]
+; CHECK-NEXT:    [[I3:%.*]] = or i32 [[B]], [[A]]
+; CHECK-NEXT:    [[I4:%.*]] = xor i32 [[I3]], -1
+; CHECK-NEXT:    [[I5:%.*]] = or i32 [[I2]], [[I4]]
+; CHECK-NEXT:    ret i32 [[I5]]
+;
+  %i = xor i32 %B, -1
+  %i2 = and i32 %i, %A
+  %i3 = or i32 %B, %A
+  %i4 = xor i32 %i3, -1
+  %i5 = or i32 %i2, %i4
+  ret i32 %i5
+}
+
+define i32 @test7(i32 %A, i32 %B) {
+; CHECK-LABEL: @test7(
+; CHECK-NEXT:    [[I:%.*]] = xor i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[I2:%.*]] = and i32 [[I]], [[B:%.*]]
+; CHECK-NEXT:    [[I3:%.*]] = or i32 [[B]], [[A]]
+; CHECK-NEXT:    [[I4:%.*]] = xor i32 [[I3]], -1
+; CHECK-NEXT:    [[I5:%.*]] = or i32 [[I2]], [[I4]]
+; CHECK-NEXT:    ret i32 [[I5]]
+;
+  %i = xor i32 %A, -1
+  %i2 = and i32 %i, %B
+  %i3 = or i32 %B, %A
+  %i4 = xor i32 %i3, -1
+  %i5 = or i32 %i2, %i4
+  ret i32 %i5
+}
+
+define <4 x i32> @test8_vec(<4 x i32> %A, <4 x i32> %B) {
+; CHECK-LABEL: @test8_vec(
+; CHECK-NEXT:    [[I:%.*]] = xor <4 x i32> [[A:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[I2:%.*]] = and <4 x i32> [[I]], [[B:%.*]]
+; CHECK-NEXT:    [[I3:%.*]] = or <4 x i32> [[B]], [[A]]
+; CHECK-NEXT:    [[I4:%.*]] = xor <4 x i32> [[I3]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[I5:%.*]] = or <4 x i32> [[I2]], [[I4]]
+; CHECK-NEXT:    ret <4 x i32> [[I5]]
+;
+  %i = xor <4 x i32> %A, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %i2 = and <4 x i32> %i, %B
+  %i3 = or <4 x i32> %B, %A
+  %i4 = xor <4 x i32> %i3, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %i5 = or <4 x i32> %i2, %i4
+  ret <4 x i32> %i5
+}
+
+define i32 @test9_use(i32 %A, i32 %B) {
+; CHECK-LABEL: @test9_use(
+; CHECK-NEXT:    [[I:%.*]] = xor i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[I2:%.*]] = and i32 [[I]], [[B:%.*]]
+; CHECK-NEXT:    tail call void @use(i32 [[I2]])
+; CHECK-NEXT:    [[I3:%.*]] = or i32 [[B]], [[A]]
+; CHECK-NEXT:    [[I4:%.*]] = xor i32 [[I3]], -1
+; CHECK-NEXT:    [[I5:%.*]] = or i32 [[I2]], [[I4]]
+; CHECK-NEXT:    ret i32 [[I5]]
+;
+  %i = xor i32 %A, -1
+  %i2 = and i32 %i, %B
+  tail call void @use(i32 %i2)
+  %i3 = or i32 %B, %A
+  %i4 = xor i32 %i3, -1
+  %i5 = or i32 %i2, %i4
+  ret i32 %i5
+}
+
+define i32 @test9_use2(i32 %A, i32 %B) {
+; CHECK-LABEL: @test9_use2(
+; CHECK-NEXT:    [[I:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[I2:%.*]] = xor i32 [[I]], -1
+; CHECK-NEXT:    tail call void @use(i32 [[I2]])
+; CHECK-NEXT:    [[I3:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[I4:%.*]] = and i32 [[I3]], [[B]]
+; CHECK-NEXT:    [[I5:%.*]] = or i32 [[I4]], [[I2]]
+; CHECK-NEXT:    ret i32 [[I5]]
+;
+  %i = or i32 %B, %A
+  %i2 = xor i32 %i, -1
+  tail call void @use(i32 %i2)
+  %i3 = xor i32 %A, -1
+  %i4 = and i32 %i3, %B
+  %i5 = or i32 %i4, %i2
+  ret i32 %i5
+}
+
+define i32 @test9_use3(i32 %A, i32 %B) {
+; CHECK-LABEL: @test9_use3(
+; CHECK-NEXT:    [[I:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[I2:%.*]] = xor i32 [[I]], -1
+; CHECK-NEXT:    tail call void @use(i32 [[I2]])
+; CHECK-NEXT:    [[I3:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[I4:%.*]] = and i32 [[I3]], [[B]]
+; CHECK-NEXT:    tail call void @use(i32 [[I4]])
+; CHECK-NEXT:    [[I5:%.*]] = or i32 [[I4]], [[I2]]
+; CHECK-NEXT:    ret i32 [[I5]]
+;
+  %i = or i32 %B, %A
+  %i2 = xor i32 %i, -1
+  tail call void @use(i32 %i2)
+  %i3 = xor i32 %A, -1
+  %i4 = and i32 %i3, %B
+  tail call void @use(i32 %i4)
+  %i5 = or i32 %i4, %i2
+  ret i32 %i5
+}
