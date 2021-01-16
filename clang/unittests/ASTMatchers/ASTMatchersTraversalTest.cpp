@@ -1313,6 +1313,85 @@ TEST(MatchBinaryOperator, HasLHSAndHasRHS) {
       traverse(TK_AsIs, hasRHS(hasType(pointsTo(qualType())))));
   EXPECT_TRUE(matches("void x() { 1[\"abc\"]; }", OperatorIntPointer));
   EXPECT_TRUE(notMatches("void x() { \"abc\"[1]; }", OperatorIntPointer));
+
+  StringRef Code = R"cpp(
+struct HasOpEqMem
+{
+    bool operator==(const HasOpEqMem& other) const
+    {
+        return true;
+    }
+};
+
+struct HasOpFree
+{
+};
+bool operator==(const HasOpFree& lhs, const HasOpFree& rhs)
+{
+    return true;
+}
+
+void opMem()
+{
+    HasOpEqMem s1;
+    HasOpEqMem s2;
+    if (s1 == s2)
+        return;
+}
+
+void opFree()
+{
+    HasOpFree s1;
+    HasOpFree s2;
+    if (s1 == s2)
+        return;
+}
+)cpp";
+  auto s1Expr = declRefExpr(to(varDecl(hasName("s1"))));
+  auto s2Expr = declRefExpr(to(varDecl(hasName("s2"))));
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               cxxOperatorCallExpr(forFunction(functionDecl(hasName("opMem"))),
+                                   hasOperatorName("=="), hasLHS(s1Expr),
+                                   hasRHS(s2Expr)))));
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                     cxxOperatorCallExpr(
+                         forFunction(functionDecl(hasName("opMem"))),
+                         hasAnyOperatorName("!=", "=="), hasLHS(s1Expr)))));
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                     cxxOperatorCallExpr(
+                         forFunction(functionDecl(hasName("opMem"))),
+                         hasOperatorName("=="), hasOperands(s1Expr, s2Expr)))));
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                     cxxOperatorCallExpr(
+                         forFunction(functionDecl(hasName("opMem"))),
+                         hasOperatorName("=="), hasEitherOperand(s2Expr)))));
+
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               cxxOperatorCallExpr(forFunction(functionDecl(hasName("opFree"))),
+                                   hasOperatorName("=="), hasLHS(s1Expr),
+                                   hasRHS(s2Expr)))));
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                     cxxOperatorCallExpr(
+                         forFunction(functionDecl(hasName("opFree"))),
+                         hasAnyOperatorName("!=", "=="), hasLHS(s1Expr)))));
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                     cxxOperatorCallExpr(
+                         forFunction(functionDecl(hasName("opFree"))),
+                         hasOperatorName("=="), hasOperands(s1Expr, s2Expr)))));
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                     cxxOperatorCallExpr(
+                         forFunction(functionDecl(hasName("opFree"))),
+                         hasOperatorName("=="), hasEitherOperand(s2Expr)))));
 }
 
 TEST(MatchBinaryOperator, HasEitherOperand) {
@@ -1461,6 +1540,60 @@ TEST(MatchUnaryOperator, HasUnaryOperand) {
 
   EXPECT_TRUE(matches("void x() { !false; }", OperatorOnFalse));
   EXPECT_TRUE(notMatches("void x() { !true; }", OperatorOnFalse));
+
+  StringRef Code = R"cpp(
+struct HasOpBangMem
+{
+    bool operator!() const
+    {
+        return false;
+    }
+};
+struct HasOpBangFree
+{
+};
+bool operator!(HasOpBangFree const&)
+{
+    return false;
+}
+
+void opMem()
+{
+    HasOpBangMem s1;
+    if (!s1)
+        return;
+}
+void opFree()
+{
+    HasOpBangFree s1;
+    if (!s1)
+        return;
+}
+)cpp";
+  auto s1Expr = declRefExpr(to(varDecl(hasName("s1"))));
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                     cxxOperatorCallExpr(
+                         forFunction(functionDecl(hasName("opMem"))),
+                         hasOperatorName("!"), hasUnaryOperand(s1Expr)))));
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               cxxOperatorCallExpr(forFunction(functionDecl(hasName("opMem"))),
+                                   hasAnyOperatorName("+", "!"),
+                                   hasUnaryOperand(s1Expr)))));
+
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                     cxxOperatorCallExpr(
+                         forFunction(functionDecl(hasName("opFree"))),
+                         hasOperatorName("!"), hasUnaryOperand(s1Expr)))));
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               cxxOperatorCallExpr(forFunction(functionDecl(hasName("opFree"))),
+                                   hasAnyOperatorName("+", "!"),
+                                   hasUnaryOperand(s1Expr)))));
 }
 
 TEST(Matcher, UnaryOperatorTypes) {

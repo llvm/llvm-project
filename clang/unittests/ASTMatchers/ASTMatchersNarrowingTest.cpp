@@ -516,6 +516,238 @@ void F() {
   EXPECT_TRUE(matches(
       Code, traverse(TK_IgnoreUnlessSpelledInSource,
                      mapAnyOf(callExpr, cxxConstructExpr).bind("call"))));
+
+  Code = R"cpp(
+struct HasOpNeqMem
+{
+    bool operator!=(const HasOpNeqMem& other) const
+    {
+        return true;
+    }
+};
+struct HasOpFree
+{
+};
+bool operator!=(const HasOpFree& lhs, const HasOpFree& rhs)
+{
+    return true;
+}
+
+void binop()
+{
+    int s1;
+    int s2;
+    if (s1 != s2)
+        return;
+}
+
+void opMem()
+{
+    HasOpNeqMem s1;
+    HasOpNeqMem s2;
+    if (s1 != s2)
+        return;
+}
+
+void opFree()
+{
+    HasOpFree s1;
+    HasOpFree s2;
+    if (s1 != s2)
+        return;
+}
+)cpp";
+
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               mapAnyOf(binaryOperator, cxxOperatorCallExpr)
+                   .with(hasOperatorName("!="),
+                         forFunction(functionDecl(hasName("binop"))),
+                         hasLHS(declRefExpr(to(varDecl(hasName("s1"))))),
+                         hasRHS(declRefExpr(to(varDecl(hasName("s2")))))))));
+
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               mapAnyOf(binaryOperator, cxxOperatorCallExpr)
+                   .with(hasOperatorName("!="),
+                         forFunction(functionDecl(hasName("opMem"))),
+                         hasLHS(declRefExpr(to(varDecl(hasName("s1"))))),
+                         hasRHS(declRefExpr(to(varDecl(hasName("s2")))))))));
+
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               mapAnyOf(binaryOperator, cxxOperatorCallExpr)
+                   .with(hasOperatorName("!="),
+                         forFunction(functionDecl(hasName("opFree"))),
+                         hasLHS(declRefExpr(to(varDecl(hasName("s1"))))),
+                         hasRHS(declRefExpr(to(varDecl(hasName("s2")))))))));
+
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                     mapAnyOf(binaryOperator, cxxOperatorCallExpr)
+                         .with(hasOperatorName("!="),
+                               forFunction(functionDecl(hasName("binop"))),
+                               hasEitherOperand(
+                                   declRefExpr(to(varDecl(hasName("s1"))))),
+                               hasEitherOperand(
+                                   declRefExpr(to(varDecl(hasName("s2")))))))));
+
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                     mapAnyOf(binaryOperator, cxxOperatorCallExpr)
+                         .with(hasOperatorName("!="),
+                               forFunction(functionDecl(hasName("opMem"))),
+                               hasEitherOperand(
+                                   declRefExpr(to(varDecl(hasName("s1"))))),
+                               hasEitherOperand(
+                                   declRefExpr(to(varDecl(hasName("s2")))))))));
+
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                     mapAnyOf(binaryOperator, cxxOperatorCallExpr)
+                         .with(hasOperatorName("!="),
+                               forFunction(functionDecl(hasName("opFree"))),
+                               hasEitherOperand(
+                                   declRefExpr(to(varDecl(hasName("s1"))))),
+                               hasEitherOperand(
+                                   declRefExpr(to(varDecl(hasName("s2")))))))));
+
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(
+          TK_IgnoreUnlessSpelledInSource,
+          mapAnyOf(binaryOperator, cxxOperatorCallExpr)
+              .with(hasOperatorName("!="),
+                    forFunction(functionDecl(hasName("binop"))),
+                    hasOperands(declRefExpr(to(varDecl(hasName("s1")))),
+                                declRefExpr(to(varDecl(hasName("s2"))))),
+                    hasOperands(declRefExpr(to(varDecl(hasName("s2")))),
+                                declRefExpr(to(varDecl(hasName("s1")))))))));
+
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(
+          TK_IgnoreUnlessSpelledInSource,
+          mapAnyOf(binaryOperator, cxxOperatorCallExpr)
+              .with(hasOperatorName("!="),
+                    forFunction(functionDecl(hasName("opMem"))),
+                    hasOperands(declRefExpr(to(varDecl(hasName("s1")))),
+                                declRefExpr(to(varDecl(hasName("s2"))))),
+                    hasOperands(declRefExpr(to(varDecl(hasName("s2")))),
+                                declRefExpr(to(varDecl(hasName("s1")))))))));
+
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(
+          TK_IgnoreUnlessSpelledInSource,
+          mapAnyOf(binaryOperator, cxxOperatorCallExpr)
+              .with(hasOperatorName("!="),
+                    forFunction(functionDecl(hasName("opFree"))),
+                    hasOperands(declRefExpr(to(varDecl(hasName("s1")))),
+                                declRefExpr(to(varDecl(hasName("s2"))))),
+                    hasOperands(declRefExpr(to(varDecl(hasName("s2")))),
+                                declRefExpr(to(varDecl(hasName("s1")))))))));
+
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                     mapAnyOf(binaryOperator, cxxOperatorCallExpr)
+                         .with(hasAnyOperatorName("==", "!="),
+                               forFunction(functionDecl(hasName("binop")))))));
+
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                     mapAnyOf(binaryOperator, cxxOperatorCallExpr)
+                         .with(hasAnyOperatorName("==", "!="),
+                               forFunction(functionDecl(hasName("opMem")))))));
+
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                     mapAnyOf(binaryOperator, cxxOperatorCallExpr)
+                         .with(hasAnyOperatorName("==", "!="),
+                               forFunction(functionDecl(hasName("opFree")))))));
+
+  Code = R"cpp(
+struct HasOpBangMem
+{
+    bool operator!() const
+    {
+        return false;
+    }
+};
+struct HasOpBangFree
+{
+};
+bool operator!(HasOpBangFree const&)
+{
+    return false;
+}
+
+void unop()
+{
+    int s1;
+    if (!s1)
+        return;
+}
+
+void opMem()
+{
+    HasOpBangMem s1;
+    if (!s1)
+        return;
+}
+
+void opFree()
+{
+    HasOpBangFree s1;
+    if (!s1)
+        return;
+}
+)cpp";
+
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                     mapAnyOf(unaryOperator, cxxOperatorCallExpr)
+                         .with(hasOperatorName("!"),
+                               forFunction(functionDecl(hasName("unop"))),
+                               hasUnaryOperand(
+                                   declRefExpr(to(varDecl(hasName("s1")))))))));
+
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                     mapAnyOf(unaryOperator, cxxOperatorCallExpr)
+                         .with(hasOperatorName("!"),
+                               forFunction(functionDecl(hasName("opMem"))),
+                               hasUnaryOperand(
+                                   declRefExpr(to(varDecl(hasName("s1")))))))));
+
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                     mapAnyOf(unaryOperator, cxxOperatorCallExpr)
+                         .with(hasOperatorName("!"),
+                               forFunction(functionDecl(hasName("opFree"))),
+                               hasUnaryOperand(
+                                   declRefExpr(to(varDecl(hasName("s1")))))))));
+
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                     mapAnyOf(unaryOperator, cxxOperatorCallExpr)
+                         .with(hasAnyOperatorName("+", "!"),
+                               forFunction(functionDecl(hasName("unop")))))));
+
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                     mapAnyOf(unaryOperator, cxxOperatorCallExpr)
+                         .with(hasAnyOperatorName("+", "!"),
+                               forFunction(functionDecl(hasName("opMem")))))));
+
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                     mapAnyOf(unaryOperator, cxxOperatorCallExpr)
+                         .with(hasAnyOperatorName("+", "!"),
+                               forFunction(functionDecl(hasName("opFree")))))));
 }
 
 TEST_P(ASTMatchersTest, IsDerivedFrom) {
