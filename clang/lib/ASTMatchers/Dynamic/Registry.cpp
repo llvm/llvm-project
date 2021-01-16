@@ -143,6 +143,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(autoreleasePoolStmt)
   REGISTER_MATCHER(binaryConditionalOperator);
   REGISTER_MATCHER(binaryOperator);
+  REGISTER_MATCHER(binaryOperation);
   REGISTER_MATCHER(blockDecl);
   REGISTER_MATCHER(blockExpr);
   REGISTER_MATCHER(blockPointerType);

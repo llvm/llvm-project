@@ -470,6 +470,10 @@ TEST_P(ASTMatchersTest, MapAnyOf) {
     return;
   }
 
+  if (GetParam().hasDelayedTemplateParsing()) {
+    return;
+  }
+
   StringRef Code = R"cpp(
 void F() {
   if (true) {}
@@ -553,6 +557,15 @@ void opFree()
 {
     HasOpFree s1;
     HasOpFree s2;
+    if (s1 != s2)
+        return;
+}
+
+template<typename T>
+void templ()
+{
+    T s1;
+    T s2;
     if (s1 != s2)
         return;
 }
@@ -668,6 +681,38 @@ void opFree()
                      mapAnyOf(binaryOperator, cxxOperatorCallExpr)
                          .with(hasAnyOperatorName("==", "!="),
                                forFunction(functionDecl(hasName("opFree")))))));
+
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                     binaryOperation(
+                         hasOperatorName("!="),
+                         forFunction(functionDecl(hasName("binop"))),
+                         hasLHS(declRefExpr(to(varDecl(hasName("s1"))))),
+                         hasRHS(declRefExpr(to(varDecl(hasName("s2")))))))));
+
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                     binaryOperation(
+                         hasOperatorName("!="),
+                         forFunction(functionDecl(hasName("opMem"))),
+                         hasLHS(declRefExpr(to(varDecl(hasName("s1"))))),
+                         hasRHS(declRefExpr(to(varDecl(hasName("s2")))))))));
+
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                     binaryOperation(
+                         hasOperatorName("!="),
+                         forFunction(functionDecl(hasName("opFree"))),
+                         hasLHS(declRefExpr(to(varDecl(hasName("s1"))))),
+                         hasRHS(declRefExpr(to(varDecl(hasName("s2")))))))));
+
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                     binaryOperation(
+                         hasOperatorName("!="),
+                         forFunction(functionDecl(hasName("templ"))),
+                         hasLHS(declRefExpr(to(varDecl(hasName("s1"))))),
+                         hasRHS(declRefExpr(to(varDecl(hasName("s2")))))))));
 
   Code = R"cpp(
 struct HasOpBangMem
