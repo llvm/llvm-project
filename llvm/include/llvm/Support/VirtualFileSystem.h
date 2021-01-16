@@ -516,7 +516,7 @@ struct YAMLVFSEntry {
   bool IsDirectory = false;
 };
 
-class VFSFromYamlDirIterImpl;
+class RedirectingFSDirIterImpl;
 class RedirectingFileSystemParser;
 
 /// A virtual file system parsed from a YAML file.
@@ -591,17 +591,19 @@ public:
     EntryKind getKind() const { return Kind; }
   };
 
-  class RedirectingDirectoryEntry : public Entry {
+  class DirectoryEntry : public Entry {
     std::vector<std::unique_ptr<Entry>> Contents;
     Status S;
 
   public:
-    RedirectingDirectoryEntry(StringRef Name,
-                              std::vector<std::unique_ptr<Entry>> Contents,
-                              Status S)
+    /// Constructs a directory entry with explicitly specified contents.
+    DirectoryEntry(StringRef Name, std::vector<std::unique_ptr<Entry>> Contents,
+                   Status S)
         : Entry(EK_Directory, Name), Contents(std::move(Contents)),
           S(std::move(S)) {}
-    RedirectingDirectoryEntry(StringRef Name, Status S)
+
+    /// Constructs an empty directory entry.
+    DirectoryEntry(StringRef Name, Status S)
         : Entry(EK_Directory, Name), S(std::move(S)) {}
 
     Status getStatus() { return S; }
@@ -620,7 +622,7 @@ public:
     static bool classof(const Entry *E) { return E->getKind() == EK_Directory; }
   };
 
-  class RedirectingFileEntry : public Entry {
+  class FileEntry : public Entry {
   public:
     enum NameKind { NK_NotSet, NK_External, NK_Virtual };
 
@@ -629,8 +631,7 @@ public:
     NameKind UseName;
 
   public:
-    RedirectingFileEntry(StringRef Name, StringRef ExternalContentsPath,
-                         NameKind UseName)
+    FileEntry(StringRef Name, StringRef ExternalContentsPath, NameKind UseName)
         : Entry(EK_File, Name), ExternalContentsPath(ExternalContentsPath),
           UseName(UseName) {}
 
@@ -648,7 +649,7 @@ public:
   };
 
 private:
-  friend class VFSFromYamlDirIterImpl;
+  friend class RedirectingFSDirIterImpl;
   friend class RedirectingFileSystemParser;
 
   bool shouldUseExternalFS() const { return IsFallthrough; }
@@ -657,6 +658,10 @@ private:
   /// a VFS request, do not bother about symlinks in the path components
   /// but canonicalize in order to perform the correct entry search.
   std::error_code makeCanonical(SmallVectorImpl<char> &Path) const;
+
+  /// Whether to fall back to the external file system when an operation fails
+  /// with the given error code.
+  bool shouldFallBackToExternalFS(std::error_code EC) const;
 
   // In a RedirectingFileSystem, keys can be specified in Posix or Windows
   // style (or even a mixture of both), so this comparison helper allows
