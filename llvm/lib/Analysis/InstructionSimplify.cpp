@@ -2236,7 +2236,7 @@ static Value *SimplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
 
   // Commute the 'or' operands.
   // (A ^ B) | (A & ~B) -> (A ^ B)
-  // (A ^ B) | (~B & A) -> (A ^ B)D94870
+  // (A ^ B) | (~B & A) -> (A ^ B)
   // (B ^ A) | (A & ~B) -> (B ^ A)
   // (B ^ A) | (~B & A) -> (B ^ A)
   if (match(Op0, m_Xor(m_Value(A), m_Value(B))) &&
