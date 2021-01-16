@@ -470,22 +470,22 @@ inline std::string join_items(Sep Separator, Args &&... Items) {
 /// list from a loop like so:
 ///
 /// \code
-///   SubsequentDelim SD;
+///   ListSeparator SD;
 ///   for (auto &I : C)
 ///     OS << SD << I.getName();
 /// \end
-class SubsequentDelim {
+class ListSeparator {
   bool First = true;
-  StringRef Delim;
+  StringRef Separator;
 
- public:
-  SubsequentDelim(StringRef Delim = ", ") : Delim(Delim) {}
+public:
+  ListSeparator(StringRef Separator = ", ") : Separator(Separator) {}
   operator StringRef() {
     if (First) {
       First = false;
       return {};
     }
-    return Delim;
+    return Separator;
   }
 };
 
