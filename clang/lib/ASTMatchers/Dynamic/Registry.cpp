@@ -192,6 +192,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(cxxOperatorCallExpr);
   REGISTER_MATCHER(cxxRecordDecl);
   REGISTER_MATCHER(cxxReinterpretCastExpr);
+  REGISTER_MATCHER(cxxRewrittenBinaryOperator);
   REGISTER_MATCHER(cxxStaticCastExpr);
   REGISTER_MATCHER(cxxStdInitializerListExpr);
   REGISTER_MATCHER(cxxTemporaryObjectExpr);
