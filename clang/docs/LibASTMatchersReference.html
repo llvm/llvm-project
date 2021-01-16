@@ -2593,6 +2593,29 @@ Usable as: Any Matcher
 </pre></td></tr>
 
 
+<tr><td><em>unspecified</em></td><td class="name" onclick="toggle('mapAnyOf0')"><a name="mapAnyOf0Anchor">mapAnyOf</a></td><td>nodeMatcherFunction...</td></tr>
+<tr><td colspan="4" class="doc" id="mapAnyOf0"><pre>Matches any of the NodeMatchers with InnerMatchers nested within
+
+Given
+  if (true);
+  for (; true; );
+with the matcher
+  mapAnyOf(ifStmt, forStmt).with(
+    hasCondition(cxxBoolLiteralExpr(equals(true)))
+    ).bind("trueCond")
+matches the if and the for. It is equivalent to:
+  auto trueCond = hasCondition(cxxBoolLiteralExpr(equals(true)));
+  anyOf(
+    ifStmt(trueCond).bind("trueCond"),
+    forStmt(trueCond).bind("trueCond")
+    );
+
+The with() chain-call accepts zero or more matchers which are combined
+as-if with allOf() in each of the node matchers.
+Usable as: Any Matcher
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;*&gt;</td><td class="name" onclick="toggle('unless0')"><a name="unless0Anchor">unless</a></td><td>Matcher&lt;*&gt;</td></tr>
 <tr><td colspan="4" class="doc" id="unless0"><pre>Matches if the provided matcher does not match.
 
@@ -2980,7 +3003,7 @@ cxxDeductionGuideDecl(isExplicit()) will match #6, but not #5.
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXDependentScopeMemberExpr.html">CXXDependentScopeMemberExpr</a>&gt;</td><td class="name" onclick="toggle('hasMemberName0')"><a name="hasMemberName0Anchor">hasMemberName</a></td><td>std::string N</td></tr>
-<tr><td colspan="4" class="doc" id="hasMemberName0"><pre>Matches template-dependent, but known, member names
+<tr><td colspan="4" class="doc" id="hasMemberName0"><pre>Matches template-dependent, but known, member names.
 
 In template declarations, dependent members are not resolved and so can
 not be matched to particular named declarations.

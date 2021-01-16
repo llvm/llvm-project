@@ -465,6 +465,59 @@ TEST_P(ASTMatchersTest, AnyOf) {
               cxxCatchStmt(anyOf(hasDescendant(varDecl()), isCatchAll()))));
 }
 
+TEST_P(ASTMatchersTest, MapAnyOf) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+
+  StringRef Code = R"cpp(
+void F() {
+  if (true) {}
+  for ( ; false; ) {}
+}
+)cpp";
+
+  auto trueExpr = cxxBoolLiteral(equals(true));
+  auto falseExpr = cxxBoolLiteral(equals(false));
+
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                     mapAnyOf(ifStmt, forStmt).with(hasCondition(trueExpr)))));
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                     mapAnyOf(ifStmt, forStmt).with(hasCondition(falseExpr)))));
+
+  Code = R"cpp(
+void func(bool b) {}
+struct S {
+  S(bool b) {}
+};
+void F() {
+  func(false);
+  S s(true);
+}
+)cpp";
+  EXPECT_TRUE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                                     mapAnyOf(callExpr, cxxConstructExpr)
+                                         .with(hasArgument(0, trueExpr)))));
+  EXPECT_TRUE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                                     mapAnyOf(callExpr, cxxConstructExpr)
+                                         .with(hasArgument(0, falseExpr)))));
+
+  EXPECT_TRUE(
+      matches(Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                             mapAnyOf(callExpr, cxxConstructExpr)
+                                 .with(hasArgument(0, expr()),
+                                       hasDeclaration(functionDecl())))));
+
+  EXPECT_TRUE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                                     mapAnyOf(callExpr, cxxConstructExpr))));
+
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                     mapAnyOf(callExpr, cxxConstructExpr).bind("call"))));
+}
+
 TEST_P(ASTMatchersTest, IsDerivedFrom) {
   if (!GetParam().isCXX()) {
     return;

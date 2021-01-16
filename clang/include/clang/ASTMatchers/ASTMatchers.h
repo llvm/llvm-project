@@ -847,6 +847,12 @@ traverse(TraversalKind TK, const internal::PolymorphicMatcherWithParam2<
       TK, InnerMatcher);
 }
 
+template <typename... T>
+internal::Matcher<typename internal::GetClade<T...>::Type>
+traverse(TraversalKind TK, const internal::MapAnyOfHelper<T...> &InnerMatcher) {
+  return traverse(TK, InnerMatcher.with());
+}
+
 /// Matches expressions that match InnerMatcher after any implicit AST
 /// nodes are stripped off.
 ///
@@ -2692,6 +2698,36 @@ extern const internal::VariadicOperatorMatcherFunc<1, 1> optionally;
 extern const internal::VariadicDynCastAllOfMatcher<Stmt,
                                                    UnaryExprOrTypeTraitExpr>
     unaryExprOrTypeTraitExpr;
+
+/// Matches any of the \p NodeMatchers with InnerMatchers nested within
+///
+/// Given
+/// \code
+///   if (true);
+///   for (; true; );
+/// \endcode
+/// with the matcher
+/// \code
+///   mapAnyOf(ifStmt, forStmt).with(
+///     hasCondition(cxxBoolLiteralExpr(equals(true)))
+///     ).bind("trueCond")
+/// \endcode
+/// matches the \c if and the \c for. It is equivalent to:
+/// \code
+///   auto trueCond = hasCondition(cxxBoolLiteralExpr(equals(true)));
+///   anyOf(
+///     ifStmt(trueCond).bind("trueCond"),
+///     forStmt(trueCond).bind("trueCond")
+///     );
+/// \endcode
+///
+/// The with() chain-call accepts zero or more matchers which are combined
+/// as-if with allOf() in each of the node matchers.
+/// Usable as: Any Matcher
+template <typename T, typename... U>
+auto mapAnyOf(internal::VariadicDynCastAllOfMatcher<T, U> const &...) {
+  return internal::MapAnyOfHelper<U...>();
+}
 
 /// Matches unary expressions that have a specific type of argument.
 ///
