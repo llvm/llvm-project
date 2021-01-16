@@ -165,7 +165,7 @@ private:
   }
   void SayNoMatch(const std::string &, bool isAssignment = false);
   std::string TypeAsFortran(std::size_t);
-  bool AnyUntypedOperand();
+  bool AnyUntypedOrMissingOperand();
 
   ExpressionAnalyzer &context_;
   ActualArguments actuals_;
@@ -1943,7 +1943,8 @@ const Symbol *ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
               *procedure, localActuals, GetFoldingContext())) {
         if (CheckCompatibleArguments(*procedure, localActuals)) {
           if (!procedure->IsElemental()) {
-            return &specific; // takes priority over elemental match
+            // takes priority over elemental match
+            return &AccessSpecific(symbol, specific);
           }
           elemental = &specific;
         }
@@ -1951,7 +1952,7 @@ const Symbol *ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
     }
   }
   if (elemental) {
-    return elemental;
+    return &AccessSpecific(symbol, *elemental);
   }
   // Check parent derived type
   if (const auto *parentScope{symbol.owner().GetDerivedTypeParent()}) {
@@ -1968,6 +1969,33 @@ const Symbol *ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
     return details.derivedType();
   }
   return nullptr;
+}
+
+const Symbol &ExpressionAnalyzer::AccessSpecific(
+    const Symbol &originalGeneric, const Symbol &specific) {
+  if (const auto *hosted{
+          originalGeneric.detailsIf<semantics::HostAssocDetails>()}) {
+    return AccessSpecific(hosted->symbol(), specific);
+  } else if (const auto *used{
+                 originalGeneric.detailsIf<semantics::UseDetails>()}) {
+    const auto &scope{originalGeneric.owner()};
+    auto iter{scope.find(specific.name())};
+    if (iter != scope.end() && iter->second->has<semantics::UseDetails>() &&
+        &iter->second->get<semantics::UseDetails>().symbol() == &specific) {
+      return specific;
+    } else {
+      // Create a renaming USE of the specific procedure.
+      auto rename{context_.SaveTempName(
+          used->symbol().owner().GetName().value().ToString() + "$" +
+          specific.name().ToString())};
+      return *const_cast<semantics::Scope &>(scope)
+                  .try_emplace(rename, specific.attrs(),
+                      semantics::UseDetails{rename, specific})
+                  .first->second;
+    }
+  } else {
+    return specific;
+  }
 }
 
 void ExpressionAnalyzer::EmitGenericResolutionError(const Symbol &symbol) {
@@ -2956,7 +2984,7 @@ bool ArgumentAnalyzer::CheckConformance() const {
 
 MaybeExpr ArgumentAnalyzer::TryDefinedOp(
     const char *opr, parser::MessageFixedText &&error, bool isUserOp) {
-  if (AnyUntypedOperand()) {
+  if (AnyUntypedOrMissingOperand()) {
     context_.Say(
         std::move(error), ToUpperCase(opr), TypeAsFortran(0), TypeAsFortran(1));
     return std::nullopt;
@@ -3271,7 +3299,9 @@ void ArgumentAnalyzer::SayNoMatch(const std::string &opr, bool isAssignment) {
 }
 
 std::string ArgumentAnalyzer::TypeAsFortran(std::size_t i) {
-  if (std::optional<DynamicType> type{GetType(i)}) {
+  if (i >= actuals_.size() || !actuals_[i]) {
+    return "missing argument";
+  } else if (std::optional<DynamicType> type{GetType(i)}) {
     return type->category() == TypeCategory::Derived
         ? "TYPE("s + type->AsFortran() + ')'
         : type->category() == TypeCategory::Character
@@ -3282,9 +3312,9 @@ std::string ArgumentAnalyzer::TypeAsFortran(std::size_t i) {
   }
 }
 
-bool ArgumentAnalyzer::AnyUntypedOperand() {
+bool ArgumentAnalyzer::AnyUntypedOrMissingOperand() {
   for (const auto &actual : actuals_) {
-    if (!actual.value().GetType()) {
+    if (!actual || !actual->GetType()) {
       return true;
     }
   }
