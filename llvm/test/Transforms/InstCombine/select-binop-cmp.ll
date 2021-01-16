@@ -1084,4 +1084,104 @@ define i32 @select_sdiv_icmp_bad(i32 %x, i32 %y, i32 %z) {
   ret i32 %C
 }
 
+define i32 @select_replace_one_use(i32 %x, i32 %y) {
+; CHECK-LABEL: @select_replace_one_use(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[SUB]], i32 [[Y]]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %c = icmp eq i32 %x, 0
+  %sub = sub i32 %x, %y
+  %s = select i1 %c, i32 %sub, i32 %y
+  ret i32 %s
+}
+
+define i32 @select_replace_multi_use(i32 %x, i32 %y) {
+; CHECK-LABEL: @select_replace_multi_use(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use_i32(i32 [[SUB]])
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[SUB]], i32 [[Y]]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %c = icmp eq i32 %x, 0
+  %sub = sub i32 %x, %y
+  call void @use_i32(i32 %sub)
+  %s = select i1 %c, i32 %sub, i32 %y
+  ret i32 %s
+}
+
+define i32 @select_replace_fold(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @select_replace_fold(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[FSHR:%.*]] = call i32 @llvm.fshr.i32(i32 [[Y:%.*]], i32 [[Z:%.*]], i32 [[X]])
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[FSHR]], i32 [[Y]]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %c = icmp eq i32 %x, 0
+  %fshr = call i32 @llvm.fshr.i32(i32 %y, i32 %z, i32 %x)
+  %s = select i1 %c, i32 %fshr, i32 %y
+  ret i32 %s
+}
+
+define i32 @select_replace_multiple_ops(i32 %x, i32 %y) {
+; CHECK-LABEL: @select_replace_multiple_ops(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @dummy_call(i32 [[X]], i32 [[X]], i32 [[X]])
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[CALL]], i32 [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %c = icmp eq i32 %x, 0
+  %call = call i32 @dummy_call(i32 %x, i32 %x, i32 %x)
+  %s = select i1 %c, i32 %call, i32 %y
+  ret i32 %s
+}
+
+define i32 @select_replace_nested(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @select_replace_nested(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[Y:%.*]], [[X]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SUB]], [[Z:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[ADD]], i32 [[Y]]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %c = icmp eq i32 %x, 0
+  %sub = sub i32 %y, %x
+  %add = add i32 %sub, %z
+  %s = select i1 %c, i32 %add, i32 %y
+  ret i32 %s
+}
+
+define i32 @select_replace_constexpr(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @select_replace_constexpr(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], ptrtoint (i32* @g to i32)
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[ADD]], i32 [[Z:%.*]]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %c = icmp eq i32 %x, ptrtoint (i32* @g to i32)
+  %add = add i32 %x, %y
+  %s = select i1 %c, i32 %add, i32 %z
+  ret i32 %s
+}
+
+define <2 x i32> @select_replace_undef(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @select_replace_undef(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i32> [[X:%.*]], <i32 0, i32 undef>
+; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i32> [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = select <2 x i1> [[C]], <2 x i32> [[SUB]], <2 x i32> [[Y]]
+; CHECK-NEXT:    ret <2 x i32> [[S]]
+;
+  %c = icmp eq <2 x i32> %x, <i32 0, i32 undef>
+  %sub = sub <2 x i32> %x, %y
+  %s = select <2 x i1> %c, <2 x i32> %sub, <2 x i32> %y
+  ret <2 x i32> %s
+}
+
+@g = global i32 0
+declare i32 @llvm.fshr.i32(i32, i32, i32)
+declare i32 @dummy_call(i32, i32, i32)
+declare void @use_i32(i32)
+
 !0 = !{!"branch_weights", i32 2, i32 10}
