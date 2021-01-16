@@ -1443,6 +1443,13 @@ struct ArgumentAdaptingMatcherFunc {
   operator()(const Matcher<T> &InnerMatcher) const {
     return create(InnerMatcher);
   }
+
+  template <typename... T>
+  ArgumentAdaptingMatcherFuncAdaptor<ArgumentAdapterT,
+                                     typename GetClade<T...>::Type, ToTypes>
+  operator()(const MapAnyOfHelper<T...> &InnerMatcher) const {
+    return create(InnerMatcher.with());
+  }
 };
 
 template <typename T> class TraversalMatcher : public MatcherInterface<T> {
