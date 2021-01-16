@@ -452,6 +452,13 @@ IRBuilderBase::CreateAssumption(Value *Cond,
   return createCallHelper(FnAssume, Ops, this, "", nullptr, OpBundles);
 }
 
+Instruction *IRBuilderBase::CreateNoAliasScopeDeclaration(Value *Scope) {
+  Module *M = BB->getModule();
+  auto *FnIntrinsic = Intrinsic::getDeclaration(
+      M, Intrinsic::experimental_noalias_scope_decl, {});
+  return createCallHelper(FnIntrinsic, {Scope}, this);
+}
+
 /// Create a call to a Masked Load intrinsic.
 /// \p Ptr       - base pointer for the load
 /// \p Alignment - alignment of the source location
