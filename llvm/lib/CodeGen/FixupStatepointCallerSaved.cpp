@@ -434,7 +434,7 @@ public:
 
     // To insert reload at the end of MBB, insert it before last instruction
     // and then swap them.
-    assert(MBB->begin() != MBB->end() && "Empty block");
+    assert(!MBB->empty() && "Empty block");
     --It;
     TII.loadRegFromStackSlot(*MBB, It, Reg, FI, RC, &TRI);
     MachineInstr *Reload = It->getPrevNode();
