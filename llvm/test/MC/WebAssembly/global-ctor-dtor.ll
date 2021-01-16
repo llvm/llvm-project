@@ -170,11 +170,6 @@ declare void @func3()
 ; CHECK-NEXT:         Name:            func0
 ; CHECK-NEXT:         Flags:           [ UNDEFINED ]
 ; CHECK-NEXT:         Function:        4
-; CHECK-NEXT:       - Index:           11
-; CHECK-NEXT:         Kind:            TABLE
-; CHECK-NEXT:         Name:            __indirect_function_table
-; CHECK-NEXT:         Flags:           [ UNDEFINED, NO_STRIP ]
-; CHECK-NEXT:         Table:           0
 ; CHECK-NEXT:     SegmentInfo:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Name:            .data.global1

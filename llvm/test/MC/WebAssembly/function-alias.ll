@@ -41,14 +41,4 @@ define i8* @func() {
 ; CHECK-NEXT:     ]
 ; CHECK-NEXT:     ElementIndex: 0x0
 ; CHECK-NEXT:   }
-; CHECK-NEXT:   Symbol {
-; CHECK-NEXT:     Name: __indirect_function_table
-; CHECK-NEXT:     Type: TABLE (0x5)
-; CHECK-NEXT:     Flags [ (0x90)
-; CHECK-NEXT:       NO_STRIP (0x80)
-; CHECK-NEXT:       UNDEFINED (0x10)
-; CHECK-NEXT:     ]
-; CHECK-NEXT:     ImportModule: env
-; CHECK-NEXT:     ElementIndex: 0x0
-; CHECK-NEXT:   }
 ; CHECK-NEXT: ]
