@@ -19603,6 +19603,82 @@ Semantics:
 This function returns the same values as the libm ``trunc`` functions
 would and handles error conditions in the same way.
 
+.. _int_experimental_noalias_scope_decl:
+
+'``llvm.experimental.noalias.scope.decl``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+
+::
+
+      declare void @llvm.experimental.noalias.scope.decl(metadata !id.scope.list)
+
+Overview:
+"""""""""
+
+The ``llvm.experimental.noalias.scope.decl`` intrinsic identifies where a
+noalias scope is declared. When the intrinsic is duplicated, a decision must
+also be made about the scope: depending on the reason of the duplication,
+the scope might need to be duplicated as well.
+
+
+Arguments:
+""""""""""
+
+The ``!id.scope.list`` argument is metadata that is a list of ``noalias``
+metadata references. The format is identical to that required for ``noalias``
+metadata. This list must have exactly one element.
+
+Semantics:
+""""""""""
+
+The ``llvm.experimental.noalias.scope.decl`` intrinsic identifies where a
+noalias scope is declared. When the intrinsic is duplicated, a decision must
+also be made about the scope: depending on the reason of the duplication,
+the scope might need to be duplicated as well.
+
+For example, when the intrinsic is used inside a loop body, and that loop is
+unrolled, the associated noalias scope must also be duplicated. Otherwise, the
+noalias property it signifies would spill across loop iterations, whereas it
+was only valid within a single iteration.
+
+.. code-block:: llvm
+
+  ; This examples shows two possible positions for noalias.decl and how they impact the semantics:
+  ; If it is outside the loop (Version 1), then %a and %b are noalias across *all* iterations.
+  ; If it is inside the loop (Version 2), then %a and %b are noalias only within *one* iteration.
+  declare void @decl_in_loop(i8* %a.base, i8* %b.base) {
+  entry:
+    ; call void @llvm.experimental.noalias.scope.decl(metadata !2) ; Version 1: noalias decl outside loop
+    br label %loop
+  
+  loop:
+    %a = phi i8* [ %a.base, %entry ], [ %a.inc, %loop ]
+    %b = phi i8* [ %b.base, %entry ], [ %b.inc, %loop ]
+    ; call void @llvm.experimental.noalias.scope.decl(metadata !2) ; Version 2: noalias decl inside loop
+    %val = load i8, i8* %a, !alias.scope !2
+    store i8 %val, i8* %b, !noalias !2
+    %a.inc = getelementptr inbounds i8, i8* %a, i64 1
+    %b.inc = getelementptr inbounds i8, i8* %b, i64 1
+    %cond = call i1 @cond()
+    br i1 %cond, label %loop, label %exit
+  
+  exit:
+    ret void
+  }
+  
+  !0 = !{!0} ; domain
+  !1 = !{!1, !0} ; scope
+  !2 = !{!1} ; scope list
+
+Multiple calls to `@llvm.experimental.noalias.scope.decl` for the same scope
+are possible, but one should never dominate another. Violations are pointed out
+by the verifier as they indicate a problem in either a transformation pass or
+the input.
+
 
 Floating Point Environment Manipulation intrinsics
 --------------------------------------------------
