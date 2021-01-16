@@ -2794,7 +2794,7 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
     size_t data_byte_size, uint32_t bitfield_bit_size,
     uint32_t bitfield_bit_offset, ExecutionContextScope *exe_scope,
     bool is_base_class) {
-  auto impl = [&]() -> llvm::Optional<bool> {
+  auto impl = [&]() -> bool {
     if (!type)
       return false;
 
@@ -2894,7 +2894,13 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
           }
         }
 
-      return {};
+      // No result available from the runtime, fallback to the AST.
+      // This can happen in two cases:
+      // 1. MultiPayloadEnums not currently supported by Swift reflection
+      // 2. Some clang imported enums
+      return m_swift_ast_context->DumpTypeValue(
+          ReconstructType(type), s, format, data, data_offset, data_byte_size,
+          bitfield_bit_size, bitfield_bit_offset, exe_scope, is_base_class);
     }
     default:
       assert(false && "Unhandled node kind");
@@ -2906,34 +2912,17 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
   };
 
 #ifndef NDEBUG
-  auto result = impl();
-  if (!result) {
-    if (!m_swift_ast_context)
-      return false;
-    // Swift reflection provided no result, fallback to the AST.
-    return m_swift_ast_context->DumpTypeValue(
-        ReconstructType(type), s, format, data, data_offset, data_byte_size,
-        bitfield_bit_size, bitfield_bit_offset, exe_scope, is_base_class);
-  }
-  auto ast_type = ReconstructType(type);
-  if (!ast_type)
-    return false; /* missing .swiftmodule */
   StreamString ast_s;
-  bool eq_result =
-      Equivalent(result, m_swift_ast_context->DumpTypeValue(
-                             ast_type, &ast_s, format, data, data_offset,
-                             data_byte_size, bitfield_bit_size,
-                             bitfield_bit_offset, exe_scope, is_base_class));
-  bool eq_stream = Equivalent(ConstString(ast_s.GetString()),
-                              ConstString(((StreamString *)s)->GetString()));
-  if (!eq_result || !eq_stream)
-    llvm::dbgs() << "failing type was " << (const char *)type << "\n";
-  assert(eq_result && eq_stream &&
-         "TypeSystemSwiftTypeRef diverges from SwiftASTContext");
-  return *result;
-#else
-  return impl().getValueOr(false);
+  auto defer = llvm::make_scope_exit([&] {
+    assert(Equivalent(ConstString(ast_s.GetString()),
+                      ConstString(((StreamString *)s)->GetString())) &&
+           "TypeSystemSwiftTypeRef diverges from SwiftASTContext");
+  });
 #endif
+  VALIDATE_AND_RETURN(impl, DumpTypeValue, type,
+                      (ReconstructType(type), &ast_s, format, data, data_offset,
+                       data_byte_size, bitfield_bit_size, bitfield_bit_offset,
+                       exe_scope, is_base_class));
 }
 
 void TypeSystemSwiftTypeRef::DumpTypeDescription(opaque_compiler_type_t type,
