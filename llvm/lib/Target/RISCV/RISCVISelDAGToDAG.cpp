@@ -220,9 +220,12 @@ void RISCVDAGToDAGISel::selectVLSEGMask(SDNode *Node, unsigned IntNo,
   CurDAG->RemoveDeadNode(Node);
 }
 
-void RISCVDAGToDAGISel::selectVSSEG(SDNode *Node, unsigned IntNo) {
+void RISCVDAGToDAGISel::selectVSSEG(SDNode *Node, unsigned IntNo,
+                                    bool IsStrided) {
   SDLoc DL(Node);
   unsigned NF = Node->getNumOperands() - 4;
+  if (IsStrided)
+    NF--;
   EVT VT = Node->getOperand(2)->getValueType(0);
   unsigned ScalarSize = VT.getScalarSizeInBits();
   MVT XLenVT = Subtarget->getXLenVT();
@@ -230,10 +233,17 @@ void RISCVDAGToDAGISel::selectVSSEG(SDNode *Node, unsigned IntNo) {
   SDValue SEW = CurDAG->getTargetConstant(ScalarSize, DL, XLenVT);
   SmallVector<SDValue, 8> Regs(Node->op_begin() + 2, Node->op_begin() + 2 + NF);
   SDValue StoreVal = createTuple(*CurDAG, Regs, NF, LMUL);
-  SDValue Operands[] = {StoreVal,
-                        Node->getOperand(2 + NF),  // Base pointer.
-                        Node->getOperand(3 + NF),  // VL.
-                        SEW, Node->getOperand(0)}; // Chain
+  SmallVector<SDValue, 6> Operands;
+  Operands.push_back(StoreVal);
+  Operands.push_back(Node->getOperand(2 + NF)); // Base pointer.
+  if (IsStrided) {
+    Operands.push_back(Node->getOperand(3 + NF)); // Stride.
+    Operands.push_back(Node->getOperand(4 + NF)); // VL.
+  } else {
+    Operands.push_back(Node->getOperand(3 + NF)); // VL.
+  }
+  Operands.push_back(SEW);
+  Operands.push_back(Node->getOperand(0)); // Chain.
   const RISCVZvlssegTable::RISCVZvlsseg *P = RISCVZvlssegTable::getPseudo(
       IntNo, ScalarSize, static_cast<unsigned>(LMUL));
   SDNode *Store =
@@ -241,9 +251,12 @@ void RISCVDAGToDAGISel::selectVSSEG(SDNode *Node, unsigned IntNo) {
   ReplaceNode(Node, Store);
 }
 
-void RISCVDAGToDAGISel::selectVSSEGMask(SDNode *Node, unsigned IntNo) {
+void RISCVDAGToDAGISel::selectVSSEGMask(SDNode *Node, unsigned IntNo,
+                                        bool IsStrided) {
   SDLoc DL(Node);
   unsigned NF = Node->getNumOperands() - 5;
+  if (IsStrided)
+    NF--;
   EVT VT = Node->getOperand(2)->getValueType(0);
   unsigned ScalarSize = VT.getScalarSizeInBits();
   MVT XLenVT = Subtarget->getXLenVT();
@@ -251,12 +264,19 @@ void RISCVDAGToDAGISel::selectVSSEGMask(SDNode *Node, unsigned IntNo) {
   SDValue SEW = CurDAG->getTargetConstant(ScalarSize, DL, XLenVT);
   SmallVector<SDValue, 8> Regs(Node->op_begin() + 2, Node->op_begin() + 2 + NF);
   SDValue StoreVal = createTuple(*CurDAG, Regs, NF, LMUL);
-  SDValue Operands[] = {StoreVal,
-                        Node->getOperand(2 + NF), // Base pointer.
-                        Node->getOperand(3 + NF), // Mask.
-                        Node->getOperand(4 + NF), // VL.
-                        SEW,
-                        Node->getOperand(0)}; // Chain
+  SmallVector<SDValue, 7> Operands;
+  Operands.push_back(StoreVal);
+  Operands.push_back(Node->getOperand(2 + NF)); // Base pointer.
+  if (IsStrided) {
+    Operands.push_back(Node->getOperand(3 + NF)); // Stride.
+    Operands.push_back(Node->getOperand(4 + NF)); // Mask.
+    Operands.push_back(Node->getOperand(5 + NF)); // VL.
+  } else {
+    Operands.push_back(Node->getOperand(3 + NF)); // Mask.
+    Operands.push_back(Node->getOperand(4 + NF)); // VL.
+  }
+  Operands.push_back(SEW);
+  Operands.push_back(Node->getOperand(0)); // Chain.
   const RISCVZvlssegTable::RISCVZvlsseg *P = RISCVZvlssegTable::getPseudo(
       IntNo, ScalarSize, static_cast<unsigned>(LMUL));
   SDNode *Store =
@@ -439,7 +459,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::riscv_vsseg6:
     case Intrinsic::riscv_vsseg7:
     case Intrinsic::riscv_vsseg8: {
-      selectVSSEG(Node, IntNo);
+      selectVSSEG(Node, IntNo, /*IsStrided=*/false);
       return;
     }
     case Intrinsic::riscv_vsseg2_mask:
@@ -449,7 +469,27 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     case Intrinsic::riscv_vsseg6_mask:
     case Intrinsic::riscv_vsseg7_mask:
     case Intrinsic::riscv_vsseg8_mask: {
-      selectVSSEGMask(Node, IntNo);
+      selectVSSEGMask(Node, IntNo, /*IsStrided=*/false);
+      return;
+    }
+    case Intrinsic::riscv_vssseg2:
+    case Intrinsic::riscv_vssseg3:
+    case Intrinsic::riscv_vssseg4:
+    case Intrinsic::riscv_vssseg5:
+    case Intrinsic::riscv_vssseg6:
+    case Intrinsic::riscv_vssseg7:
+    case Intrinsic::riscv_vssseg8: {
+      selectVSSEG(Node, IntNo, /*IsStrided=*/true);
+      return;
+    }
+    case Intrinsic::riscv_vssseg2_mask:
+    case Intrinsic::riscv_vssseg3_mask:
+    case Intrinsic::riscv_vssseg4_mask:
+    case Intrinsic::riscv_vssseg5_mask:
+    case Intrinsic::riscv_vssseg6_mask:
+    case Intrinsic::riscv_vssseg7_mask:
+    case Intrinsic::riscv_vssseg8_mask: {
+      selectVSSEGMask(Node, IntNo, /*IsStrided=*/true);
       return;
     }
     }
