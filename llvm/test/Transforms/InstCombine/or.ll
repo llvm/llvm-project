@@ -1369,4 +1369,3 @@ define i32 @test5_use3(i32 %x, i32 %y) {
   %or1 = or i32 %xor, %neg
   ret i32 %or1
 }
-
