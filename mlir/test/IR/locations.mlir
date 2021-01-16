@@ -27,6 +27,20 @@ func @inline_notation() -> i32 {
 // CHECK-LABEL: func private @loc_attr(i1 {foo.loc_attr = loc(callsite("foo" at "mysource.cc":10:8))})
 func private @loc_attr(i1 {foo.loc_attr = loc(callsite("foo" at "mysource.cc":10:8))})
 
+  // Check that locations get properly escaped.
+// CHECK-LABEL: func @escape_strings()
+func @escape_strings() {
+  // CHECK: loc("escaped\0A")
+  "foo"() : () -> () loc("escaped\n")
+
+  // CHECK: loc("escaped\0A")
+  "foo"() : () -> () loc("escaped\0A")
+
+  // CHECK: loc("escaped\0A":0:0)
+  "foo"() : () -> () loc("escaped\n":0:0)
+  return
+}
+
 // CHECK-ALIAS: "foo.op"() : () -> () loc(#[[LOC:.*]])
 "foo.op"() : () -> () loc(#loc)
 
