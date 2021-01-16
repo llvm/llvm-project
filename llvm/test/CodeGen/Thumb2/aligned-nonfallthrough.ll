@@ -57,6 +57,7 @@ define i64 @loopif(i32* nocapture readonly %x, i32 %y, i32 %n) {
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    mov r1, r3
 ; CHECK-NEXT:    pop {r7, pc}
+; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  .LBB1_4:
 ; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:    movs r3, #0
