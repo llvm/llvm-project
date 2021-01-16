@@ -52,6 +52,11 @@ const Scope *FindModuleContaining(const Scope &start) {
       start, [](const Scope &scope) { return scope.IsModule(); });
 }
 
+const Scope *FindModuleFileContaining(const Scope &start) {
+  return FindScopeContaining(
+      start, [](const Scope &scope) { return scope.IsModuleFile(); });
+}
+
 const Scope &GetProgramUnitContaining(const Scope &start) {
   CHECK(!start.IsGlobal());
   return DEREF(FindScopeContaining(start, [](const Scope &scope) {
@@ -960,7 +965,12 @@ std::optional<parser::MessageFormattedText> CheckAccessibleComponent(
     const Scope &scope, const Symbol &symbol) {
   CHECK(symbol.owner().IsDerivedType()); // symbol must be a component
   if (symbol.attrs().test(Attr::PRIVATE)) {
-    if (const Scope * moduleScope{FindModuleContaining(symbol.owner())}) {
+    if (FindModuleFileContaining(scope)) {
+      // Don't enforce component accessibility checks in module files;
+      // there may be forward-substituted named constants of derived type
+      // whose structure constructors reference private components.
+    } else if (const Scope *
+        moduleScope{FindModuleContaining(symbol.owner())}) {
       if (!moduleScope->Contains(scope)) {
         return parser::MessageFormattedText{
             "PRIVATE component '%s' is only accessible within module '%s'"_err_en_US,
