@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
+#include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
@@ -330,38 +331,6 @@ LogicalResult mlir::linalg::applyStagedPatterns(
     }
   }
   return success();
-}
-
-/// Traverse `e` and return an AffineExpr where all occurrences of `dim` have
-/// been replaced by either:
-///  - `min` if `positivePath` is true when we reach an occurrence of `dim`
-///  - `max` if `positivePath` is true when we reach an occurrence of `dim`
-/// `positivePath` is negated each time we hit a multiplicative or divisive
-/// binary op with a constant negative coefficient.
-static AffineExpr substWithMin(AffineExpr e, AffineExpr dim, AffineExpr min,
-                               AffineExpr max, bool positivePath = true) {
-  if (e == dim)
-    return positivePath ? min : max;
-  if (auto bin = e.dyn_cast<AffineBinaryOpExpr>()) {
-    AffineExpr lhs = bin.getLHS();
-    AffineExpr rhs = bin.getRHS();
-    if (bin.getKind() == mlir::AffineExprKind::Add)
-      return substWithMin(lhs, dim, min, max, positivePath) +
-             substWithMin(rhs, dim, min, max, positivePath);
-
-    auto c1 = bin.getLHS().dyn_cast<AffineConstantExpr>();
-    auto c2 = bin.getRHS().dyn_cast<AffineConstantExpr>();
-    if (c1 && c1.getValue() < 0)
-      return getAffineBinaryOpExpr(
-          bin.getKind(), c1, substWithMin(rhs, dim, min, max, !positivePath));
-    if (c2 && c2.getValue() < 0)
-      return getAffineBinaryOpExpr(
-          bin.getKind(), substWithMin(lhs, dim, min, max, !positivePath), c2);
-    return getAffineBinaryOpExpr(
-        bin.getKind(), substWithMin(lhs, dim, min, max, positivePath),
-        substWithMin(rhs, dim, min, max, positivePath));
-  }
-  return e;
 }
 
 /// Given the `lbVal`, `ubVal` and `stepVal` of a loop, append `lbVal` and

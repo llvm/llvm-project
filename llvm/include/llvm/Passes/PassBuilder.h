@@ -353,8 +353,7 @@ public:
   /// Construct the module pipeline that performs inlining as well as
   /// the inlining-driven cleanups.
   ModuleInlinerWrapperPass buildInlinerPipeline(OptimizationLevel Level,
-                                                ThinOrFullLTOPhase Phase,
-                                                bool MandatoryOnly);
+                                                ThinOrFullLTOPhase Phase);
 
   /// Construct the core LLVM module optimization pipeline.
   ///

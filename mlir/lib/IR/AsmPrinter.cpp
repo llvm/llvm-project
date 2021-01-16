@@ -1257,12 +1257,19 @@ void ModulePrinter::printLocationInternal(LocationAttr loc, bool pretty) {
           os << "unknown";
       })
       .Case<FileLineColLoc>([&](FileLineColLoc loc) {
-        StringRef mayQuote = pretty ? "" : "\"";
-        os << mayQuote << loc.getFilename() << mayQuote << ':' << loc.getLine()
-           << ':' << loc.getColumn();
+        if (pretty) {
+          os << loc.getFilename();
+        } else {
+          os << "\"";
+          printEscapedString(loc.getFilename(), os);
+          os << "\"";
+        }
+        os << ':' << loc.getLine() << ':' << loc.getColumn();
       })
       .Case<NameLoc>([&](NameLoc loc) {
-        os << '\"' << loc.getName() << '\"';
+        os << '\"';
+        printEscapedString(loc.getName(), os);
+        os << '\"';
 
         // Print the child if it isn't unknown.
         auto childLoc = loc.getChildLoc();

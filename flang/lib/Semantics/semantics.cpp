@@ -325,16 +325,20 @@ SymbolVector SemanticsContext::GetIndexVars(IndexVarKind kind) {
   return result;
 }
 
+SourceName SemanticsContext::SaveTempName(std::string &&name) {
+  return {*tempNames_.emplace(std::move(name)).first};
+}
+
 SourceName SemanticsContext::GetTempName(const Scope &scope) {
   for (const auto &str : tempNames_) {
-    SourceName name{str};
-    if (scope.find(name) == scope.end()) {
-      return name;
+    if (str.size() > 5 && str.substr(0, 5) == ".F18.") {
+      SourceName name{str};
+      if (scope.find(name) == scope.end()) {
+        return name;
+      }
     }
   }
-  tempNames_.emplace_back(".F18.");
-  tempNames_.back() += std::to_string(tempNames_.size());
-  return {tempNames_.back()};
+  return SaveTempName(".F18."s + std::to_string(tempNames_.size()));
 }
 
 bool Semantics::Perform() {
