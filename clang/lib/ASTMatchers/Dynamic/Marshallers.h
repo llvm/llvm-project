@@ -925,6 +925,50 @@ private:
   const StringRef MatcherName;
 };
 
+template <typename CladeType, typename... MatcherT>
+class MapAnyOfMatcherDescriptor : public MatcherDescriptor {
+  std::vector<DynCastAllOfMatcherDescriptor> Funcs;
+
+public:
+  MapAnyOfMatcherDescriptor(StringRef MatcherName)
+      : Funcs{DynCastAllOfMatcherDescriptor(
+            ast_matchers::internal::VariadicDynCastAllOfMatcher<CladeType,
+                                                                MatcherT>{},
+            MatcherName)...} {}
+
+  VariantMatcher create(SourceRange NameRange, ArrayRef<ParserValue> Args,
+                        Diagnostics *Error) const override {
+    std::vector<VariantMatcher> InnerArgs;
+
+    for (auto const &F : Funcs) {
+      InnerArgs.push_back(F.create(NameRange, Args, Error));
+      if (!Error->errors().empty())
+        return {};
+    }
+    return VariantMatcher::SingleMatcher(
+        ast_matchers::internal::BindableMatcher<CladeType>(
+            VariantMatcher::VariadicOperatorMatcher(
+                ast_matchers::internal::DynTypedMatcher::VO_AnyOf,
+                std::move(InnerArgs))
+                .getTypedMatcher<CladeType>()));
+  }
+
+  bool isVariadic() const override { return true; }
+  unsigned getNumArgs() const override { return 0; }
+
+  void getArgKinds(ASTNodeKind ThisKind, unsigned,
+                   std::vector<ArgKind> &Kinds) const override {
+    Kinds.push_back(ThisKind);
+  }
+
+  bool isConvertibleTo(ASTNodeKind Kind, unsigned *Specificity,
+                       ASTNodeKind *LeastDerivedKind) const override {
+    return llvm::all_of(Funcs, [=](const auto &F) {
+      return F.isConvertibleTo(Kind, Specificity, LeastDerivedKind);
+    });
+  }
+};
+
 /// Helper functions to select the appropriate marshaller functions.
 /// They detect the number of arguments, arguments types and return type.
 
@@ -1027,6 +1071,14 @@ std::unique_ptr<MatcherDescriptor> makeMatcherAutoMarshall(
     StringRef MatcherName) {
   return std::make_unique<VariadicOperatorMatcherDescriptor>(
       MinCount, MaxCount, Func.Op, MatcherName);
+}
+
+template <typename CladeType, typename... MatcherT>
+std::unique_ptr<MatcherDescriptor> makeMatcherAutoMarshall(
+    ast_matchers::internal::MapAnyOfMatcherImpl<CladeType, MatcherT...>,
+    StringRef MatcherName) {
+  return std::make_unique<MapAnyOfMatcherDescriptor<CladeType, MatcherT...>>(
+      MatcherName);
 }
 
 } // namespace internal

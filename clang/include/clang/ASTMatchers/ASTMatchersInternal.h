@@ -1882,6 +1882,160 @@ struct GetBodyMatcher<Ty, typename std::enable_if<
   }
 };
 
+template <typename NodeType>
+inline Optional<BinaryOperatorKind>
+equivalentBinaryOperator(const NodeType &Node) {
+  return Node.getOpcode();
+}
+
+template <>
+inline Optional<BinaryOperatorKind>
+equivalentBinaryOperator<CXXOperatorCallExpr>(const CXXOperatorCallExpr &Node) {
+  if (Node.getNumArgs() != 2)
+    return None;
+  switch (Node.getOperator()) {
+  default:
+    return None;
+  case OO_ArrowStar:
+    return BO_PtrMemI;
+  case OO_Star:
+    return BO_Mul;
+  case OO_Slash:
+    return BO_Div;
+  case OO_Percent:
+    return BO_Rem;
+  case OO_Plus:
+    return BO_Add;
+  case OO_Minus:
+    return BO_Sub;
+  case OO_LessLess:
+    return BO_Shl;
+  case OO_GreaterGreater:
+    return BO_Shr;
+  case OO_Spaceship:
+    return BO_Cmp;
+  case OO_Less:
+    return BO_LT;
+  case OO_Greater:
+    return BO_GT;
+  case OO_LessEqual:
+    return BO_LE;
+  case OO_GreaterEqual:
+    return BO_GE;
+  case OO_EqualEqual:
+    return BO_EQ;
+  case OO_ExclaimEqual:
+    return BO_NE;
+  case OO_Amp:
+    return BO_And;
+  case OO_Caret:
+    return BO_Xor;
+  case OO_Pipe:
+    return BO_Or;
+  case OO_AmpAmp:
+    return BO_LAnd;
+  case OO_PipePipe:
+    return BO_LOr;
+  case OO_Equal:
+    return BO_Assign;
+  case OO_StarEqual:
+    return BO_MulAssign;
+  case OO_SlashEqual:
+    return BO_DivAssign;
+  case OO_PercentEqual:
+    return BO_RemAssign;
+  case OO_PlusEqual:
+    return BO_AddAssign;
+  case OO_MinusEqual:
+    return BO_SubAssign;
+  case OO_LessLessEqual:
+    return BO_ShlAssign;
+  case OO_GreaterGreaterEqual:
+    return BO_ShrAssign;
+  case OO_AmpEqual:
+    return BO_AndAssign;
+  case OO_CaretEqual:
+    return BO_XorAssign;
+  case OO_PipeEqual:
+    return BO_OrAssign;
+  case OO_Comma:
+    return BO_Comma;
+  }
+}
+
+template <typename NodeType>
+inline Optional<UnaryOperatorKind>
+equivalentUnaryOperator(const NodeType &Node) {
+  return Node.getOpcode();
+}
+
+template <>
+inline Optional<UnaryOperatorKind>
+equivalentUnaryOperator<CXXOperatorCallExpr>(const CXXOperatorCallExpr &Node) {
+  if (Node.getNumArgs() != 1)
+    return None;
+  switch (Node.getOperator()) {
+  default:
+    return None;
+  case OO_Plus:
+    return UO_Plus;
+  case OO_Minus:
+    return UO_Minus;
+  case OO_Amp:
+    return UO_AddrOf;
+  case OO_Tilde:
+    return UO_Not;
+  case OO_Exclaim:
+    return UO_LNot;
+  case OO_PlusPlus: {
+    const auto *FD = Node.getDirectCallee();
+    if (!FD)
+      return None;
+    return FD->getNumParams() > 0 ? UO_PostInc : UO_PreInc;
+  }
+  case OO_MinusMinus: {
+    const auto *FD = Node.getDirectCallee();
+    if (!FD)
+      return None;
+    return FD->getNumParams() > 0 ? UO_PostDec : UO_PreDec;
+  }
+  case OO_Coawait:
+    return UO_Coawait;
+  }
+}
+
+template <typename NodeType> inline const Expr *getLHS(const NodeType &Node) {
+  return Node.getLHS();
+}
+template <>
+inline const Expr *
+getLHS<CXXOperatorCallExpr>(const CXXOperatorCallExpr &Node) {
+  if (!internal::equivalentBinaryOperator(Node))
+    return nullptr;
+  return Node.getArg(0);
+}
+template <typename NodeType> inline const Expr *getRHS(const NodeType &Node) {
+  return Node.getRHS();
+}
+template <>
+inline const Expr *
+getRHS<CXXOperatorCallExpr>(const CXXOperatorCallExpr &Node) {
+  if (!internal::equivalentBinaryOperator(Node))
+    return nullptr;
+  return Node.getArg(1);
+}
+template <typename NodeType>
+inline const Expr *getSubExpr(const NodeType &Node) {
+  return Node.getSubExpr();
+}
+template <>
+inline const Expr *
+getSubExpr<CXXOperatorCallExpr>(const CXXOperatorCallExpr &Node) {
+  if (!internal::equivalentUnaryOperator(Node))
+    return nullptr;
+  return Node.getArg(0);
+}
+
 template <typename Ty>
 struct HasSizeMatcher {
   static bool hasSize(const Ty &Node, unsigned int N) {
@@ -1929,6 +2083,26 @@ llvm::Optional<SourceLocation>
 getExpansionLocOfMacro(StringRef MacroName, SourceLocation Loc,
                        const ASTContext &Context);
 
+inline Optional<StringRef> getOpName(const UnaryOperator &Node) {
+  return Node.getOpcodeStr(Node.getOpcode());
+}
+inline Optional<StringRef> getOpName(const BinaryOperator &Node) {
+  return Node.getOpcodeStr();
+}
+inline StringRef getOpName(const CXXRewrittenBinaryOperator &Node) {
+  return Node.getOpcodeStr();
+}
+inline Optional<StringRef> getOpName(const CXXOperatorCallExpr &Node) {
+  auto optBinaryOpcode = equivalentBinaryOperator(Node);
+  if (!optBinaryOpcode) {
+    auto optUnaryOpcode = equivalentUnaryOperator(Node);
+    if (!optUnaryOpcode)
+      return None;
+    return UnaryOperator::getOpcodeStr(*optUnaryOpcode);
+  }
+  return BinaryOperator::getOpcodeStr(*optBinaryOpcode);
+}
+
 /// Matches overloaded operators with a specific name.
 ///
 /// The type argument ArgT is not used by this matcher but is used by
@@ -1936,8 +2110,11 @@ getExpansionLocOfMacro(StringRef MacroName, SourceLocation Loc,
 template <typename T, typename ArgT = std::vector<std::string>>
 class HasAnyOperatorNameMatcher : public SingleNodeMatcherInterface<T> {
   static_assert(std::is_same<T, BinaryOperator>::value ||
+                    std::is_same<T, CXXOperatorCallExpr>::value ||
+                    std::is_same<T, CXXRewrittenBinaryOperator>::value ||
                     std::is_same<T, UnaryOperator>::value,
-                "Matcher only supports `BinaryOperator` and `UnaryOperator`");
+                "Matcher only supports `BinaryOperator`, `UnaryOperator`, "
+                "`CXXOperatorCallExpr` and `CXXRewrittenBinaryOperator`");
   static_assert(std::is_same<ArgT, std::vector<std::string>>::value,
                 "Matcher ArgT must be std::vector<std::string>");
 
@@ -1946,26 +2123,42 @@ public:
       : SingleNodeMatcherInterface<T>(), Names(std::move(Names)) {}
 
   bool matchesNode(const T &Node) const override {
-    StringRef OpName = getOpName(Node);
-    return llvm::any_of(
-        Names, [&](const std::string &Name) { return Name == OpName; });
+    Optional<StringRef> OptOpName = getOpName(Node);
+    if (!OptOpName)
+      return false;
+    return llvm::any_of(Names, [OpName = *OptOpName](const std::string &Name) {
+      return Name == OpName;
+    });
   }
 
 private:
-  static StringRef getOpName(const UnaryOperator &Node) {
+  static Optional<StringRef> getOpName(const UnaryOperator &Node) {
     return Node.getOpcodeStr(Node.getOpcode());
   }
-  static StringRef getOpName(const BinaryOperator &Node) {
+  static Optional<StringRef> getOpName(const BinaryOperator &Node) {
     return Node.getOpcodeStr();
+  }
+  static StringRef getOpName(const CXXRewrittenBinaryOperator &Node) {
+    return Node.getOpcodeStr();
+  }
+  static Optional<StringRef> getOpName(const CXXOperatorCallExpr &Node) {
+    auto optBinaryOpcode = equivalentBinaryOperator(Node);
+    if (!optBinaryOpcode) {
+      auto optUnaryOpcode = equivalentUnaryOperator(Node);
+      if (!optUnaryOpcode)
+        return None;
+      return UnaryOperator::getOpcodeStr(*optUnaryOpcode);
+    }
+    return BinaryOperator::getOpcodeStr(*optBinaryOpcode);
   }
 
   const std::vector<std::string> Names;
 };
 
-using HasOpNameMatcher =
-    PolymorphicMatcherWithParam1<HasAnyOperatorNameMatcher,
-                                 std::vector<std::string>,
-                                 void(TypeList<BinaryOperator, UnaryOperator>)>;
+using HasOpNameMatcher = PolymorphicMatcherWithParam1<
+    HasAnyOperatorNameMatcher, std::vector<std::string>,
+    void(TypeList<BinaryOperator, CXXOperatorCallExpr,
+                  CXXRewrittenBinaryOperator, UnaryOperator>)>;
 
 HasOpNameMatcher hasAnyOperatorNameFunc(ArrayRef<const StringRef *> NameRefs);
 
@@ -1986,6 +2179,68 @@ bool matchesAnyBase(const CXXRecordDecl &Node,
 std::shared_ptr<llvm::Regex> createAndVerifyRegex(StringRef Regex,
                                                   llvm::Regex::RegexFlags Flags,
                                                   StringRef MatcherID);
+
+template <typename F, typename Tuple, std::size_t... I>
+constexpr auto applyMatcherImpl(F &&f, Tuple &&args,
+                                std::index_sequence<I...>) {
+  return std::forward<F>(f)(std::get<I>(std::forward<Tuple>(args))...);
+}
+
+template <typename F, typename Tuple>
+constexpr auto applyMatcher(F &&f, Tuple &&args) {
+  return applyMatcherImpl(
+      std::forward<F>(f), std::forward<Tuple>(args),
+      std::make_index_sequence<
+          std::tuple_size<typename std::decay<Tuple>::type>::value>());
+}
+
+template <typename T, bool IsBaseOf, typename Head, typename Tail>
+struct GetCladeImpl {
+  using Type = Head;
+};
+template <typename T, typename Head, typename Tail>
+struct GetCladeImpl<T, false, Head, Tail>
+    : GetCladeImpl<T, std::is_base_of<typename Tail::head, T>::value,
+                   typename Tail::head, typename Tail::tail> {};
+
+template <typename T, typename... U>
+struct GetClade : GetCladeImpl<T, false, T, AllNodeBaseTypes> {};
+
+template <typename CladeType, typename... MatcherTypes>
+struct MapAnyOfMatcherImpl {
+
+  template <typename... InnerMatchers>
+  BindableMatcher<CladeType>
+  operator()(InnerMatchers &&... InnerMatcher) const {
+    // TODO: Use std::apply from c++17
+    return VariadicAllOfMatcher<CladeType>()(applyMatcher(
+        internal::VariadicOperatorMatcherFunc<
+            0, std::numeric_limits<unsigned>::max()>{
+            internal::DynTypedMatcher::VO_AnyOf},
+        applyMatcher(
+            [&](auto... Matcher) {
+              return std::make_tuple(Matcher(
+                  std::forward<decltype(InnerMatcher)>(InnerMatcher)...)...);
+            },
+            std::tuple<
+                VariadicDynCastAllOfMatcher<CladeType, MatcherTypes>...>())));
+  }
+};
+
+template <typename... MatcherTypes>
+using MapAnyOfMatcher =
+    MapAnyOfMatcherImpl<typename GetClade<MatcherTypes...>::Type,
+                        MatcherTypes...>;
+
+template <typename... MatcherTypes> struct MapAnyOfHelper {
+  using CladeType = typename GetClade<MatcherTypes...>::Type;
+
+  MapAnyOfMatcher<MatcherTypes...> with;
+
+  operator BindableMatcher<CladeType>() const { return with(); }
+
+  Matcher<CladeType> bind(StringRef ID) const { return with().bind(ID); }
+};
 
 } // namespace internal
 
