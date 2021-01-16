@@ -198,7 +198,7 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-// Small runtime support "lib" for vector.print lowering during codegen.
+// Small runtime support library for vector.print lowering during codegen.
 //===----------------------------------------------------------------------===//
 extern "C" MLIR_CRUNNERUTILS_EXPORT void printI64(int64_t i);
 extern "C" MLIR_CRUNNERUTILS_EXPORT void printU64(uint64_t u);
@@ -210,15 +210,13 @@ extern "C" MLIR_CRUNNERUTILS_EXPORT void printComma();
 extern "C" MLIR_CRUNNERUTILS_EXPORT void printNewline();
 
 //===----------------------------------------------------------------------===//
-// Small runtime support for sparse tensors.
+// Small runtime support library for sparse tensors.
 //===----------------------------------------------------------------------===//
-extern "C" MLIR_CRUNNERUTILS_EXPORT void openMatrixC(char *filename,
-                                                     uint64_t *mdata,
-                                                     uint64_t *ndata,
-                                                     uint64_t *nnzdata);
+extern "C" MLIR_CRUNNERUTILS_EXPORT void *openTensorC(char *filename,
+                                                      uint64_t *idata);
 extern "C" MLIR_CRUNNERUTILS_EXPORT void
-readMatrixItemC(uint64_t *idata, uint64_t *jdata, double *ddata);
-extern "C" MLIR_CRUNNERUTILS_EXPORT void closeMatrix();
-extern "C" MLIR_CRUNNERUTILS_EXPORT char *getMatrix(uint64_t id);
+readTensorItemC(void *tensor, uint64_t *idata, double *ddata);
+extern "C" MLIR_CRUNNERUTILS_EXPORT void closeTensor(void *tensor);
+extern "C" MLIR_CRUNNERUTILS_EXPORT char *getTensorFilename(uint64_t id);
 
 #endif // EXECUTIONENGINE_CRUNNERUTILS_H_
