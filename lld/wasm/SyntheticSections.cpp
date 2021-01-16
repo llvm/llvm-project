@@ -92,10 +92,19 @@ void TypeSection::writeBody() {
     writeSig(bodyOutputStream, *sig);
 }
 
+ImportSection::ImportSection() : SyntheticSection(llvm::wasm::WASM_SEC_IMPORT) {
+  // FIXME: Remove when we treat __indirect_function_table as any other symbol.
+  if (config->importTable) {
+    numImportedTables++;
+  }
+}
+
 uint32_t ImportSection::getNumImports() const {
   assert(isSealed);
   uint32_t numImports = importedSymbols.size() + gotSymbols.size();
   if (config->importMemory)
+    ++numImports;
+  if (config->importTable)
     ++numImports;
   return numImports;
 }
@@ -142,6 +151,17 @@ void ImportSection::writeBody() {
       import.Memory.Flags |= WASM_LIMITS_FLAG_IS_SHARED;
     if (config->is64.getValueOr(false))
       import.Memory.Flags |= WASM_LIMITS_FLAG_IS_64;
+    writeImport(os, import);
+  }
+
+  if (config->importTable) {
+    uint32_t tableSize = config->tableBase + out.elemSec->numEntries();
+    WasmImport import;
+    import.Module = defaultModule;
+    import.Field = functionTableName;
+    import.Kind = WASM_EXTERNAL_TABLE;
+    import.Table.ElemType = WASM_TYPE_FUNCREF;
+    import.Table.Limits = {0, tableSize, 0};
     writeImport(os, import);
   }
 
@@ -210,9 +230,26 @@ void FunctionSection::addFunction(InputFunction *func) {
 }
 
 void TableSection::writeBody() {
+  bool hasIndirectFunctionTable = !config->importTable;
+
+  uint32_t tableCount = inputTables.size();
+  if (hasIndirectFunctionTable)
+    tableCount++;
+
   raw_ostream &os = bodyOutputStream;
 
-  writeUleb128(os, inputTables.size(), "table count");
+  writeUleb128(os, tableCount, "table count");
+
+  if (hasIndirectFunctionTable) {
+    uint32_t tableSize = config->tableBase + out.elemSec->numEntries();
+    WasmLimits limits;
+    if (config->growableTable)
+      limits = {0, tableSize, 0};
+    else
+      limits = {WASM_LIMITS_FLAG_HAS_MAX, tableSize, tableSize};
+    writeTableType(os, WasmTableType{WASM_TYPE_FUNCREF, limits});
+  }
+
   for (const InputTable *table : inputTables)
     writeTableType(os, table->getType());
 }
