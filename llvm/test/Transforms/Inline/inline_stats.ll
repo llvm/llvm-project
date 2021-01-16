@@ -6,11 +6,11 @@
 ; RUN: opt -S -passes=inline -inliner-function-import-stats=basic < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-BASIC,CHECK
 ; RUN: opt -S -passes=inline -inliner-function-import-stats=verbose < %s 2>&1 | FileCheck %s --check-prefixes="CHECK-VERBOSE",CHECK
 
-; RUN: opt -S -passes=inliner-wrapper -inliner-function-import-stats=basic < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-BASIC,CHECK
-; RUN: opt -S -passes=inliner-wrapper -inliner-function-import-stats=verbose < %s 2>&1 | FileCheck %s --check-prefixes="CHECK-VERBOSE",CHECK
+; RUN: opt -S -passes=inliner-wrapper-no-mandatory-first -inliner-function-import-stats=basic < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-BASIC,CHECK
+; RUN: opt -S -passes=inliner-wrapper-no-mandatory-first -inliner-function-import-stats=verbose < %s 2>&1 | FileCheck %s --check-prefixes="CHECK-VERBOSE",CHECK
 
-; RUN: opt -S -passes=always-inliner-wrapper,inliner-wrapper -inliner-function-import-stats=basic < %s 2>&1 | FileCheck %s -check-prefix=WRAPPER
-; RUN: opt -S -passes=always-inliner-wrapper,inliner-wrapper -inliner-function-import-stats=verbose < %s 2>&1 | FileCheck %s --check-prefixes=WRAPPER-VERBOSE,WRAPPER
+; RUN: opt -S -passes=inliner-wrapper -inliner-function-import-stats=basic < %s 2>&1 | FileCheck %s --check-prefix=MANDATORY-FIRST
+; RUN: opt -S -passes=inliner-wrapper -inliner-function-import-stats=verbose < %s 2>&1 | FileCheck %s --check-prefix=MANDATORY-FIRST
 
 ; CHECK: ------- Dumping inliner stats for [<stdin>] -------
 ; CHECK-BASIC-NOT: -- List of inlined functions:
@@ -30,15 +30,20 @@
 ; CHECK: non-imported functions inlined anywhere: 1 [33.33% of non-imported functions]
 ; CHECK: non-imported functions inlined into importing module: 1 [33.33% of non-imported functions]
 
-; WRAPPER-VERBOSE: -- List of inlined functions:
-; WRAPPER-VERBOSE: Inlined imported function [external5]: #inlines = 1, #inlines_to_importing_module = 1
-; WRAPPER: -- Summary:
-; WRAPPER: All functions: 10, imported functions: 7
-; WRAPPER: inlined functions: 1 [10% of all functions]
-; WRAPPER: imported functions inlined anywhere: 1 [14.29% of imported functions]
-; WRAPPER: imported functions inlined into importing module: 1 [14.29% of imported functions], remaining: 6 [85.71% of imported functions]
-; WRAPPER: non-imported functions inlined anywhere: 0 [0% of non-imported functions]
-; WRAPPER: non-imported functions inlined into importing module: 0 [0% of non-imported functions]
+; MANDATORY-FIRST: - Summary:
+; MANDATORY-FIRST: All functions: 10, imported functions: 7
+; MANDATORY-FIRST: inlined functions: 4 [40% of all functions]
+; MANDATORY-FIRST: imported functions inlined anywhere: 3 [42.86% of imported functions]
+; MANDATORY-FIRST: imported functions inlined into importing module: 2 [28.57% of imported functions], remaining: 5 [71.43% of imported functions]
+; MANDATORY-FIRST: non-imported functions inlined anywhere: 1 [33.33% of non-imported functions]
+; MANDATORY-FIRST: non-imported functions inlined into importing module: 1 [33.33% of non-imported functions]
+; MANDATORY-FIRST: -- Summary:
+; MANDATORY-FIRST: All functions: 10, imported functions: 7
+; MANDATORY-FIRST: inlined functions: 1 [10% of all functions]
+; MANDATORY-FIRST: imported functions inlined anywhere: 1 [14.29% of imported functions]
+; MANDATORY-FIRST: imported functions inlined into importing module: 1 [14.29% of imported functions], remaining: 6 [85.71% of imported functions]
+; MANDATORY-FIRST: non-imported functions inlined anywhere: 0 [0% of non-imported functions]
+; MANDATORY-FIRST: non-imported functions inlined into importing module: 0 [0% of non-imported functions]
 
 define void @internal() {
     call fastcc void @external1()

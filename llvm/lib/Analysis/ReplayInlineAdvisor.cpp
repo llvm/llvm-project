@@ -56,7 +56,7 @@ ReplayInlineAdvisor::ReplayInlineAdvisor(FunctionAnalysisManager &FAM,
   HasReplayRemarks = true;
 }
 
-std::unique_ptr<InlineAdvice> ReplayInlineAdvisor::getAdvice(CallBase &CB) {
+std::unique_ptr<InlineAdvice> ReplayInlineAdvisor::getAdviceImpl(CallBase &CB) {
   assert(HasReplayRemarks);
 
   Function &Caller = *CB.getCaller();

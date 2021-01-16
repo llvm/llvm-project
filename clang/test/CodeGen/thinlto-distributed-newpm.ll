@@ -63,19 +63,10 @@
 ; CHECK-O: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-O: Running pass: SimplifyCFGPass on main
 ; CHECK-O: Finished {{.*}}Function pass manager run.
-; CHECK-O: Running pass: ModuleInlinerWrapperPass
-; CHECK-O: Running analysis: InlineAdvisorAnalysis
 ; CHECK-O: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O: Running analysis: LazyCallGraphAnalysis
 ; CHECK-O: Running analysis: FunctionAnalysisManagerCGSCCProxy on (main)
 ; CHECK-O: Running analysis: OuterAnalysisManagerProxy
-; CHECK-O: Running pass: InlinerPass on (main)
-; CHECK-O: Finished {{.*}}Module pass manager run
-; CHECK-O: Running pass: ModuleInlinerWrapperPass
-; CHECK-O: Running pass: RequireAnalysisPass<{{.*}}GlobalsAA
-; CHECK-O: Running analysis: GlobalsAA
-; CHECK-O: Running analysis: CallGraphAnalysis
-; CHECK-O: Running pass: RequireAnalysisPass<{{.*}}ProfileSummaryAnalysis
 ; CHECK-O: Starting CGSCC pass manager run.
 ; CHECK-O: Running pass: InlinerPass on (main)
 ; CHECK-O: Running pass: PostOrderFunctionAttrsPass on (main)
