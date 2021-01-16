@@ -502,7 +502,7 @@ define i32 @select_xor_icmp_bad_2(i32 %x, i32 %y, i32 %z, i32 %k) {
 define i32 @select_xor_icmp_bad_3(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_xor_icmp_bad_3(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 [[X:%.*]], 3
-; CHECK-NEXT:    [[B:%.*]] = xor i32 [[X]], [[Z:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = xor i32 [[Z:%.*]], 3
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[B]], i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -541,7 +541,7 @@ define i32 @select_xor_icmp_bad_5(i32 %x, i32 %y, i32 %z) {
 define i32 @select_xor_icmp_bad_6(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_xor_icmp_bad_6(
 ; CHECK-NEXT:    [[A_NOT:%.*]] = icmp eq i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[B:%.*]] = xor i32 [[X]], [[Z:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = xor i32 [[Z:%.*]], 1
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[A_NOT]], i32 [[B]], i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -554,7 +554,7 @@ define i32 @select_xor_icmp_bad_6(i32 %x, i32 %y, i32 %z) {
 define <2 x i8> @select_xor_icmp_vec_bad(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
 ; CHECK-LABEL: @select_xor_icmp_vec_bad(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 5, i8 3>
-; CHECK-NEXT:    [[B:%.*]] = xor <2 x i8> [[X]], [[Z:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = xor <2 x i8> [[Z:%.*]], <i8 5, i8 3>
 ; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[A]], <2 x i8> [[B]], <2 x i8> [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[C]]
 ;
@@ -581,7 +581,7 @@ define <2 x i8> @select_xor_icmp_vec_undef(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z
 define i32 @select_mul_icmp_bad(i32 %x, i32 %y, i32 %z, i32 %k) {
 ; CHECK-LABEL: @select_mul_icmp_bad(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 [[X:%.*]], 3
-; CHECK-NEXT:    [[B:%.*]] = mul i32 [[X]], [[Z:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = mul i32 [[Z:%.*]], 3
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[B]], i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -594,7 +594,7 @@ define i32 @select_mul_icmp_bad(i32 %x, i32 %y, i32 %z, i32 %k) {
 define i32 @select_add_icmp_bad(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_add_icmp_bad(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[B:%.*]] = add i32 [[X]], [[Z:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = add i32 [[Z:%.*]], 1
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[B]], i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -619,7 +619,7 @@ define i32 @select_and_icmp_zero(i32 %x, i32 %y, i32 %z) {
 define i32 @select_or_icmp_bad(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_or_icmp_bad(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 [[X:%.*]], 3
-; CHECK-NEXT:    [[B:%.*]] = or i32 [[X]], [[Z:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = or i32 [[Z:%.*]], 3
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[B]], i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -940,7 +940,7 @@ define float @select_fsub_fcmp_bad_2(float %x, float %y, float %z) {
 define i32 @select_sub_icmp_bad(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_sub_icmp_bad(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[B:%.*]] = sub i32 [[X]], [[Z:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = sub i32 0, [[Z:%.*]]
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[B]], i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -953,7 +953,7 @@ define i32 @select_sub_icmp_bad(i32 %x, i32 %y, i32 %z) {
 define i32 @select_sub_icmp_bad_2(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_sub_icmp_bad_2(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[B:%.*]] = sub i32 [[Z:%.*]], [[X]]
+; CHECK-NEXT:    [[B:%.*]] = add i32 [[Z:%.*]], -1
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[B]], i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -1022,7 +1022,7 @@ define i32 @select_sub_icmp_bad_5(i32 %x, i32 %y, i32 %z, i32 %k) {
 define i32 @select_shl_icmp_bad(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_shl_icmp_bad(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[B:%.*]] = shl i32 [[Z:%.*]], [[X]]
+; CHECK-NEXT:    [[B:%.*]] = shl i32 [[Z:%.*]], 1
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[B]], i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -1035,7 +1035,7 @@ define i32 @select_shl_icmp_bad(i32 %x, i32 %y, i32 %z) {
 define i32 @select_lshr_icmp_bad(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_lshr_icmp_bad(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[B:%.*]] = lshr i32 [[Z:%.*]], [[X]]
+; CHECK-NEXT:    [[B:%.*]] = lshr i32 [[Z:%.*]], 1
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[B]], i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -1048,7 +1048,7 @@ define i32 @select_lshr_icmp_bad(i32 %x, i32 %y, i32 %z) {
 define i32 @select_ashr_icmp_bad(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_ashr_icmp_bad(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[B:%.*]] = ashr i32 [[Z:%.*]], [[X]]
+; CHECK-NEXT:    [[B:%.*]] = ashr i32 [[Z:%.*]], 1
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[B]], i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -1061,7 +1061,7 @@ define i32 @select_ashr_icmp_bad(i32 %x, i32 %y, i32 %z) {
 define i32 @select_udiv_icmp_bad(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_udiv_icmp_bad(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 [[X:%.*]], 3
-; CHECK-NEXT:    [[B:%.*]] = udiv i32 [[Z:%.*]], [[X]]
+; CHECK-NEXT:    [[B:%.*]] = udiv i32 [[Z:%.*]], 3
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[B]], i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -1074,7 +1074,7 @@ define i32 @select_udiv_icmp_bad(i32 %x, i32 %y, i32 %z) {
 define i32 @select_sdiv_icmp_bad(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_sdiv_icmp_bad(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 [[X:%.*]], 3
-; CHECK-NEXT:    [[B:%.*]] = sdiv i32 [[Z:%.*]], [[X]]
+; CHECK-NEXT:    [[B:%.*]] = sdiv i32 [[Z:%.*]], 3
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], i32 [[B]], i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
@@ -1084,10 +1084,11 @@ define i32 @select_sdiv_icmp_bad(i32 %x, i32 %y, i32 %z) {
   ret i32 %C
 }
 
+; Can replace %x with 0, because sub is only used in the select.
 define i32 @select_replace_one_use(i32 %x, i32 %y) {
 ; CHECK-LABEL: @select_replace_one_use(
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[Y:%.*]]
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[SUB]], i32 [[Y]]
 ; CHECK-NEXT:    ret i32 [[S]]
 ;
@@ -1097,6 +1098,7 @@ define i32 @select_replace_one_use(i32 %x, i32 %y) {
   ret i32 %s
 }
 
+; Can not replace %x with 0, because %sub has other uses as well.
 define i32 @select_replace_multi_use(i32 %x, i32 %y) {
 ; CHECK-LABEL: @select_replace_multi_use(
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 0
@@ -1112,11 +1114,11 @@ define i32 @select_replace_multi_use(i32 %x, i32 %y) {
   ret i32 %s
 }
 
+; Case where the replacement allows the instruction to fold away.
 define i32 @select_replace_fold(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_replace_fold(
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[FSHR:%.*]] = call i32 @llvm.fshr.i32(i32 [[Y:%.*]], i32 [[Z:%.*]], i32 [[X]])
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[FSHR]], i32 [[Y]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[Z:%.*]], i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[S]]
 ;
   %c = icmp eq i32 %x, 0
@@ -1125,10 +1127,11 @@ define i32 @select_replace_fold(i32 %x, i32 %y, i32 %z) {
   ret i32 %s
 }
 
+; Case where %x can be replaced by 0 in multiple operands of the same instr.
 define i32 @select_replace_multiple_ops(i32 %x, i32 %y) {
 ; CHECK-LABEL: @select_replace_multiple_ops(
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @dummy_call(i32 [[X]], i32 [[X]], i32 [[X]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @dummy_call(i32 0, i32 0, i32 0)
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[CALL]], i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[S]]
 ;
@@ -1138,6 +1141,8 @@ define i32 @select_replace_multiple_ops(i32 %x, i32 %y) {
   ret i32 %s
 }
 
+; Case where the use of %x is in a nested instruction.
+; FIXME: We only perform replacements one level up right now.
 define i32 @select_replace_nested(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_replace_nested(
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 0
@@ -1153,6 +1158,9 @@ define i32 @select_replace_nested(i32 %x, i32 %y, i32 %z) {
   ret i32 %s
 }
 
+; Do not replace with constant expressions. The profitability in this case is
+; unclear, and such replacements have historically lead to infinite combine
+; loops.
 define i32 @select_replace_constexpr(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_replace_constexpr(
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], ptrtoint (i32* @g to i32)
@@ -1166,6 +1174,8 @@ define i32 @select_replace_constexpr(i32 %x, i32 %y, i32 %z) {
   ret i32 %s
 }
 
+; Don't replace with a potentially undef constant, as undef could evaluate
+; to different values for both uses.
 define <2 x i32> @select_replace_undef(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @select_replace_undef(
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i32> [[X:%.*]], <i32 0, i32 undef>

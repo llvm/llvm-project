@@ -17,7 +17,7 @@ define i1 @cond_eq_and(i8 %X, i8 %Y, i8 noundef %C) {
 define i1 @cond_eq_and_const(i8 %X, i8 %Y) {
 ; CHECK-LABEL: @cond_eq_and_const(
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[X:%.*]], 10
-; CHECK-NEXT:    [[LHS:%.*]] = icmp ult i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[LHS:%.*]] = icmp ugt i8 [[Y:%.*]], 10
 ; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND]], i1 [[LHS]], i1 false
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
@@ -43,7 +43,7 @@ define i1 @cond_eq_or(i8 %X, i8 %Y, i8 noundef %C) {
 define i1 @cond_eq_or_const(i8 %X, i8 %Y) {
 ; CHECK-LABEL: @cond_eq_or_const(
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ne i8 [[X:%.*]], 10
-; CHECK-NEXT:    [[LHS:%.*]] = icmp ult i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[LHS:%.*]] = icmp ugt i8 [[Y:%.*]], 10
 ; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND]], i1 true, i1 [[LHS]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
