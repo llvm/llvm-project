@@ -374,7 +374,8 @@ bool ARMBaseInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
     }
 
     if (isIndirectBranchOpcode(I->getOpcode()) ||
-        isJumpTableBranchOpcode(I->getOpcode())) {
+        isJumpTableBranchOpcode(I->getOpcode()) ||
+        isLowOverheadTerminatorOpcode(I->getOpcode())) {
       // Indirect branches and jump tables can't be analyzed, but we still want
       // to clean up any instructions at the tail of the basic block.
       CantAnalyze = true;

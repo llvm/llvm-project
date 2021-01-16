@@ -66,8 +66,7 @@ define i32 @vcmp_new_vpst_combination(i32 %len, i32* nocapture readonly %arr) {
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    pop {r7, pc}
 ; CHECK-NEXT:  .LBB1_4:
-; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %cmp7 = icmp sgt i32 %len, 0
