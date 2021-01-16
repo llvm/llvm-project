@@ -399,11 +399,7 @@ define i32 @and_or_not_or4_use3(i32 %A, i32 %B) {
 define i32 @and_or_not_or5(i32 %A, i32 %B) {
 ; CHECK-LABEL: @and_or_not_or5(
 ; CHECK-NEXT:    [[I:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[I2:%.*]] = and i32 [[B:%.*]], [[I]]
-; CHECK-NEXT:    [[I3:%.*]] = or i32 [[B]], [[A]]
-; CHECK-NEXT:    [[I4:%.*]] = xor i32 [[I3]], -1
-; CHECK-NEXT:    [[I5:%.*]] = or i32 [[I2]], [[I4]]
-; CHECK-NEXT:    ret i32 [[I5]]
+; CHECK-NEXT:    ret i32 [[I]]
 ;
   %i = xor i32 %A, -1
   %i2 = and i32 %B, %i
@@ -416,11 +412,7 @@ define i32 @and_or_not_or5(i32 %A, i32 %B) {
 define i32 @and_or_not_or6(i32 %A, i32 %B) {
 ; CHECK-LABEL: @and_or_not_or6(
 ; CHECK-NEXT:    [[I:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[I2:%.*]] = and i32 [[I]], [[B:%.*]]
-; CHECK-NEXT:    [[I3:%.*]] = or i32 [[B]], [[A]]
-; CHECK-NEXT:    [[I4:%.*]] = xor i32 [[I3]], -1
-; CHECK-NEXT:    [[I5:%.*]] = or i32 [[I4]], [[I2]]
-; CHECK-NEXT:    ret i32 [[I5]]
+; CHECK-NEXT:    ret i32 [[I]]
 ;
   %i = xor i32 %A, -1
   %i2 = and i32 %i, %B
@@ -433,11 +425,7 @@ define i32 @and_or_not_or6(i32 %A, i32 %B) {
 define i32 @and_or_not_or7(i32 %A, i32 %B) {
 ; CHECK-LABEL: @and_or_not_or7(
 ; CHECK-NEXT:    [[I:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[I2:%.*]] = and i32 [[B:%.*]], [[I]]
-; CHECK-NEXT:    [[I3:%.*]] = or i32 [[B]], [[A]]
-; CHECK-NEXT:    [[I4:%.*]] = xor i32 [[I3]], -1
-; CHECK-NEXT:    [[I5:%.*]] = or i32 [[I4]], [[I2]]
-; CHECK-NEXT:    ret i32 [[I5]]
+; CHECK-NEXT:    ret i32 [[I]]
 ;
   %i = xor i32 %A, -1
   %i2 = and i32 %B, %i
@@ -450,11 +438,7 @@ define i32 @and_or_not_or7(i32 %A, i32 %B) {
 define i32 @and_or_not_or8(i32 %A, i32 %B) {
 ; CHECK-LABEL: @and_or_not_or8(
 ; CHECK-NEXT:    [[I:%.*]] = xor i32 [[B:%.*]], -1
-; CHECK-NEXT:    [[I2:%.*]] = and i32 [[A:%.*]], [[I]]
-; CHECK-NEXT:    [[I3:%.*]] = or i32 [[B]], [[A]]
-; CHECK-NEXT:    [[I4:%.*]] = xor i32 [[I3]], -1
-; CHECK-NEXT:    [[I5:%.*]] = or i32 [[I4]], [[I2]]
-; CHECK-NEXT:    ret i32 [[I5]]
+; CHECK-NEXT:    ret i32 [[I]]
 ;
   %i = xor i32 %B, -1
   %i2 = and i32 %A, %i
