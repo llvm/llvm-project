@@ -498,6 +498,42 @@ void func() {
 </td>
 
 </tr>
+
+
+
+
+
+<tr>
+  <td>Rewritten binary operators
+<pre>
+binaryOperator(
+  hasOperatorName("&lt;"),
+  hasRHS(integerLiteral(equals(0)))
+  )
+</pre>
+given:
+<pre>
+#include &lt;compare&gt;
+
+class HasSpaceship {
+public:
+   int x;
+   bool operator==(const HasSpaceship&) const = default;
+   std::strong_ordering operator<=>(const HasSpaceship&) const = default;
+};
+
+bool isLess(const HasSpaceship& a, const HasSpaceship& b) {
+   return a < b;
+}
+</pre>
+</td>
+<td>
+1 match found.
+</td>
+<td>
+No match found.
+</td>
+</tr>
 </table>
 
 <!-- ======================================================================= -->
@@ -1520,6 +1556,25 @@ more readable.
 
 Example matches reinterpret_cast&lt;char*&gt;(&amp;p) in
   void* p = reinterpret_cast&lt;char*&gt;(&amp;p);
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('cxxRewrittenBinaryOperator0')"><a name="cxxRewrittenBinaryOperator0Anchor">cxxRewrittenBinaryOperator</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXRewrittenBinaryOperator.html">CXXRewrittenBinaryOperator</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="cxxRewrittenBinaryOperator0"><pre>Matches rewritten binary operators
+
+Example matches use of "&lt;":
+  #include &lt;compare&gt;
+  struct HasSpaceshipMem {
+    int a;
+    constexpr auto operator&lt;=&gt;(const HasSpaceshipMem&amp;) const = default;
+  };
+  void compare() {
+    HasSpaceshipMem hs1, hs2;
+    if (hs1 &lt; hs2)
+        return;
+  }
+See also the binaryOperation() matcher for more-general matching
+of this AST node.
 </pre></td></tr>
 
 
@@ -3405,6 +3460,53 @@ Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Func
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXRewrittenBinaryOperator.html">CXXRewrittenBinaryOperator</a>&gt;</td><td class="name" onclick="toggle('hasAnyOperatorName2')"><a name="hasAnyOperatorName2Anchor">hasAnyOperatorName</a></td><td>StringRef, ..., StringRef</td></tr>
+<tr><td colspan="4" class="doc" id="hasAnyOperatorName2"><pre>Matches operator expressions (binary or unary) that have any of the
+specified names.
+
+   hasAnyOperatorName("+", "-")
+ Is equivalent to
+   anyOf(hasOperatorName("+"), hasOperatorName("-"))
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXRewrittenBinaryOperator.html">CXXRewrittenBinaryOperator</a>&gt;</td><td class="name" onclick="toggle('hasOperatorName2')"><a name="hasOperatorName2Anchor">hasOperatorName</a></td><td>std::string Name</td></tr>
+<tr><td colspan="4" class="doc" id="hasOperatorName2"><pre>Matches the operator Name of operator expressions (binary or
+unary).
+
+Example matches a || b (matcher = binaryOperator(hasOperatorName("||")))
+  !(a || b)
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXRewrittenBinaryOperator.html">CXXRewrittenBinaryOperator</a>&gt;</td><td class="name" onclick="toggle('isAssignmentOperator2')"><a name="isAssignmentOperator2Anchor">isAssignmentOperator</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isAssignmentOperator2"><pre>Matches all kinds of assignment operators.
+
+Example 1: matches a += b (matcher = binaryOperator(isAssignmentOperator()))
+  if (a == b)
+    a += b;
+
+Example 2: matches s1 = s2
+           (matcher = cxxOperatorCallExpr(isAssignmentOperator()))
+  struct S { S&amp; operator=(const S&amp;); };
+  void x() { S s1, s2; s1 = s2; }
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXRewrittenBinaryOperator.html">CXXRewrittenBinaryOperator</a>&gt;</td><td class="name" onclick="toggle('isComparisonOperator2')"><a name="isComparisonOperator2Anchor">isComparisonOperator</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isComparisonOperator2"><pre>Matches comparison operators.
+
+Example 1: matches a == b (matcher = binaryOperator(isComparisonOperator()))
+  if (a == b)
+    a += b;
+
+Example 2: matches s1 &lt; s2
+           (matcher = cxxOperatorCallExpr(isComparisonOperator()))
+  struct S { bool operator&lt;(const S&amp; other); };
+  void x(S s1, S s2) { bool b1 = s1 &lt; s2; }
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXUnresolvedConstructExpr.html">CXXUnresolvedConstructExpr</a>&gt;</td><td class="name" onclick="toggle('argumentCountIs2')"><a name="argumentCountIs2Anchor">argumentCountIs</a></td><td>unsigned N</td></tr>
 <tr><td colspan="4" class="doc" id="argumentCountIs2"><pre>Checks that a call expression or a constructor call expression has
 a specific number of arguments (including absent default arguments).
@@ -5174,8 +5276,8 @@ should be passed as a quoted string. e.g., ofKind("UETT_SizeOf").
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1UnaryOperator.html">UnaryOperator</a>&gt;</td><td class="name" onclick="toggle('hasAnyOperatorName2')"><a name="hasAnyOperatorName2Anchor">hasAnyOperatorName</a></td><td>StringRef, ..., StringRef</td></tr>
-<tr><td colspan="4" class="doc" id="hasAnyOperatorName2"><pre>Matches operator expressions (binary or unary) that have any of the
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1UnaryOperator.html">UnaryOperator</a>&gt;</td><td class="name" onclick="toggle('hasAnyOperatorName3')"><a name="hasAnyOperatorName3Anchor">hasAnyOperatorName</a></td><td>StringRef, ..., StringRef</td></tr>
+<tr><td colspan="4" class="doc" id="hasAnyOperatorName3"><pre>Matches operator expressions (binary or unary) that have any of the
 specified names.
 
    hasAnyOperatorName("+", "-")
@@ -5184,8 +5286,8 @@ specified names.
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1UnaryOperator.html">UnaryOperator</a>&gt;</td><td class="name" onclick="toggle('hasOperatorName2')"><a name="hasOperatorName2Anchor">hasOperatorName</a></td><td>std::string Name</td></tr>
-<tr><td colspan="4" class="doc" id="hasOperatorName2"><pre>Matches the operator Name of operator expressions (binary or
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1UnaryOperator.html">UnaryOperator</a>&gt;</td><td class="name" onclick="toggle('hasOperatorName3')"><a name="hasOperatorName3Anchor">hasOperatorName</a></td><td>std::string Name</td></tr>
+<tr><td colspan="4" class="doc" id="hasOperatorName3"><pre>Matches the operator Name of operator expressions (binary or
 unary).
 
 Example matches a || b (matcher = binaryOperator(hasOperatorName("||")))
@@ -5446,13 +5548,16 @@ match expressions.</p>
 
 The code
   var1 != var2;
-might be represented in the clang AST as a binaryOperator or a
-cxxOperatorCallExpr, depending on
+might be represented in the clang AST as a binaryOperator, a
+cxxOperatorCallExpr or a cxxRewrittenBinaryOperator, depending on
 
 * whether the types of var1 and var2 are fundamental (binaryOperator) or at
   least one is a class type (cxxOperatorCallExpr)
 * whether the code appears in a template declaration, if at least one of the
   vars is a dependent-type (binaryOperator)
+* whether the code relies on a rewritten binary operator, such as a
+spaceship operator or an inverted equality operator
+(cxxRewrittenBinaryOperator)
 
 This matcher elides details in places where the matchers for the nodes are
 compatible.
@@ -5479,6 +5584,31 @@ matches each use of "!=" in:
   {
      1 != 2;
      T() != S();
+  }
+  struct HasOpEq
+  {
+      bool operator==(const HasOpEq &amp;) const;
+  };
+
+  void inverse()
+  {
+      HasOpEq s1;
+      HasOpEq s2;
+      if (s1 != s2)
+          return;
+  }
+
+  struct HasSpaceship
+  {
+      bool operator&lt;=&gt;(const HasOpEq &amp;) const;
+  };
+
+  void use_spaceship()
+  {
+      HasSpaceship s1;
+      HasSpaceship s2;
+      if (s1 != s2)
+          return;
   }
 </pre></td></tr>
 
@@ -5753,16 +5883,16 @@ arraySubscriptExpression(hasIndex(integerLiteral()))
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ArraySubscriptExpr.html">ArraySubscriptExpr</a>&gt;</td><td class="name" onclick="toggle('hasLHS2')"><a name="hasLHS2Anchor">hasLHS</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasLHS2"><pre>Matches the left hand side of binary operator expressions.
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ArraySubscriptExpr.html">ArraySubscriptExpr</a>&gt;</td><td class="name" onclick="toggle('hasLHS3')"><a name="hasLHS3Anchor">hasLHS</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasLHS3"><pre>Matches the left hand side of binary operator expressions.
 
 Example matches a (matcher = binaryOperator(hasLHS()))
   a || b
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ArraySubscriptExpr.html">ArraySubscriptExpr</a>&gt;</td><td class="name" onclick="toggle('hasRHS2')"><a name="hasRHS2Anchor">hasRHS</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasRHS2"><pre>Matches the right hand side of binary operator expressions.
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ArraySubscriptExpr.html">ArraySubscriptExpr</a>&gt;</td><td class="name" onclick="toggle('hasRHS3')"><a name="hasRHS3Anchor">hasRHS</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasRHS3"><pre>Matches the right hand side of binary operator expressions.
 
 Example matches b (matcher = binaryOperator(hasRHS()))
   a || b
@@ -6477,6 +6607,40 @@ In the following example, Bar matches isDerivedFrom(hasName("X")):
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXRecordDecl.html">CXXRecordDecl</a>&gt;</td><td class="name" onclick="toggle('isSameOrDerivedFrom0')"><a name="isSameOrDerivedFrom0Anchor">isSameOrDerivedFrom</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1NamedDecl.html">NamedDecl</a>&gt; Base</td></tr>
 <tr><td colspan="4" class="doc" id="isSameOrDerivedFrom0"><pre>Similar to isDerivedFrom(), but also matches classes that directly
 match Base.
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXRewrittenBinaryOperator.html">CXXRewrittenBinaryOperator</a>&gt;</td><td class="name" onclick="toggle('hasEitherOperand2')"><a name="hasEitherOperand2Anchor">hasEitherOperand</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasEitherOperand2"><pre>Matches if either the left hand side or the right hand side of a
+binary operator matches.
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXRewrittenBinaryOperator.html">CXXRewrittenBinaryOperator</a>&gt;</td><td class="name" onclick="toggle('hasLHS2')"><a name="hasLHS2Anchor">hasLHS</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasLHS2"><pre>Matches the left hand side of binary operator expressions.
+
+Example matches a (matcher = binaryOperator(hasLHS()))
+  a || b
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXRewrittenBinaryOperator.html">CXXRewrittenBinaryOperator</a>&gt;</td><td class="name" onclick="toggle('hasOperands2')"><a name="hasOperands2Anchor">hasOperands</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; Matcher1, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; Matcher2</td></tr>
+<tr><td colspan="4" class="doc" id="hasOperands2"><pre>Matches if both matchers match with opposite sides of the binary operator.
+
+Example matcher = binaryOperator(hasOperands(integerLiteral(equals(1),
+                                             integerLiteral(equals(2)))
+  1 + 2 // Match
+  2 + 1 // Match
+  1 + 1 // No match
+  2 + 2 // No match
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXRewrittenBinaryOperator.html">CXXRewrittenBinaryOperator</a>&gt;</td><td class="name" onclick="toggle('hasRHS2')"><a name="hasRHS2Anchor">hasRHS</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasRHS2"><pre>Matches the right hand side of binary operator expressions.
+
+Example matches b (matcher = binaryOperator(hasRHS()))
+  a || b
 </pre></td></tr>
 
 

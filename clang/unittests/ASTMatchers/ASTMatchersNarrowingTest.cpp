@@ -715,6 +715,65 @@ void templ()
                          hasRHS(declRefExpr(to(varDecl(hasName("s2")))))))));
 
   Code = R"cpp(
+struct HasOpEq
+{
+    bool operator==(const HasOpEq &) const;
+};
+
+void inverse()
+{
+    HasOpEq s1;
+    HasOpEq s2;
+    if (s1 != s2)
+        return;
+}
+
+namespace std {
+struct strong_ordering {
+  int n;
+  constexpr operator int() const { return n; }
+  static const strong_ordering equal, greater, less;
+};
+constexpr strong_ordering strong_ordering::equal = {0};
+constexpr strong_ordering strong_ordering::greater = {1};
+constexpr strong_ordering strong_ordering::less = {-1};
+}
+
+struct HasSpaceshipMem {
+  int a;
+  constexpr auto operator<=>(const HasSpaceshipMem&) const = default;
+};
+
+void rewritten()
+{
+    HasSpaceshipMem s1;
+    HasSpaceshipMem s2;
+    if (s1 != s2)
+        return;
+}
+)cpp";
+
+  EXPECT_TRUE(matchesConditionally(
+      Code,
+      traverse(
+          TK_IgnoreUnlessSpelledInSource,
+          binaryOperation(hasOperatorName("!="),
+                          forFunction(functionDecl(hasName("inverse"))),
+                          hasLHS(declRefExpr(to(varDecl(hasName("s1"))))),
+                          hasRHS(declRefExpr(to(varDecl(hasName("s2"))))))),
+      true, {"-std=c++20"}));
+
+  EXPECT_TRUE(matchesConditionally(
+      Code,
+      traverse(
+          TK_IgnoreUnlessSpelledInSource,
+          binaryOperation(hasOperatorName("!="),
+                          forFunction(functionDecl(hasName("rewritten"))),
+                          hasLHS(declRefExpr(to(varDecl(hasName("s1"))))),
+                          hasRHS(declRefExpr(to(varDecl(hasName("s2"))))))),
+      true, {"-std=c++20"}));
+
+  Code = R"cpp(
 struct HasOpBangMem
 {
     bool operator!() const
