@@ -1971,6 +1971,8 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, CXXDefaultArgExpr>
 ///   ostream &o; int b = 1, c = 1;
 ///   o << b << c;
 /// \endcode
+/// See also the binaryOperation() matcher for more-general matching of binary
+/// uses of this AST node.
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, CXXOperatorCallExpr>
     cxxOperatorCallExpr;
 
@@ -2393,6 +2395,7 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, StmtExpr> stmtExpr;
 /// \code
 ///   !(a || b)
 /// \endcode
+/// See also the binaryOperation() matcher for more-general matching.
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, BinaryOperator>
     binaryOperator;
 
@@ -2728,6 +2731,53 @@ template <typename T, typename... U>
 auto mapAnyOf(internal::VariadicDynCastAllOfMatcher<T, U> const &...) {
   return internal::MapAnyOfHelper<U...>();
 }
+
+/// Matches nodes which can be used with binary operators.
+///
+/// The code
+/// \code
+///   var1 != var2;
+/// \endcode
+/// might be represented in the clang AST as a binaryOperator or a
+/// cxxOperatorCallExpr, depending on
+///
+/// * whether the types of var1 and var2 are fundamental (binaryOperator) or at
+///   least one is a class type (cxxOperatorCallExpr)
+/// * whether the code appears in a template declaration, if at least one of the
+///   vars is a dependent-type (binaryOperator)
+///
+/// This matcher elides details in places where the matchers for the nodes are
+/// compatible.
+///
+/// Given
+/// \code
+///   binaryOperation(
+///     hasOperatorName("!="),
+///     hasLHS(expr().bind("lhs")),
+///     hasRHS(expr().bind("rhs"))
+///   )
+/// \endcode
+/// matches each use of "!=" in:
+/// \code
+///   struct S{
+///       bool operator!=(const S&) const;
+///   };
+///
+///   void foo()
+///   {
+///      1 != 2;
+///      S() != S();
+///   }
+///
+///   template<typename T>
+///   void templ()
+///   {
+///      1 != 2;
+///      T() != S();
+///   }
+/// \endcode
+extern const internal::MapAnyOfMatcher<BinaryOperator, CXXOperatorCallExpr>
+    binaryOperation;
 
 /// Matches unary expressions that have a specific type of argument.
 ///

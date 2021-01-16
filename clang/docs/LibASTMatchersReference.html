@@ -1206,6 +1206,7 @@ Example matches a ?: b
 
 Example matches a || b
   !(a || b)
+See also the binaryOperation() matcher for more-general matching.
 </pre></td></tr>
 
 
@@ -1505,6 +1506,8 @@ Example matches both operator&lt;&lt;((o &lt;&lt; b), c) and operator&lt;&lt;(o,
   ostream &amp;operator&lt;&lt; (ostream &amp;out, int i) { };
   ostream &amp;o; int b = 1, c = 1;
   o &lt;&lt; b &lt;&lt; c;
+See also the binaryOperation() matcher for more-general matching of binary
+uses of this AST node.
 </pre></td></tr>
 
 
@@ -5437,6 +5440,48 @@ match expressions.</p>
 <table>
 <tr style="text-align:left"><th>Return type</th><th>Name</th><th>Parameters</th></tr>
 <!-- START_TRAVERSAL_MATCHERS -->
+
+<tr><td>Matcher&lt;*&gt;</td><td class="name" onclick="toggle('binaryOperation0')"><a name="binaryOperation0Anchor">binaryOperation</a></td><td>Matcher&lt;*&gt;...Matcher&lt;*&gt;</td></tr>
+<tr><td colspan="4" class="doc" id="binaryOperation0"><pre>Matches nodes which can be used with binary operators.
+
+The code
+  var1 != var2;
+might be represented in the clang AST as a binaryOperator or a
+cxxOperatorCallExpr, depending on
+
+* whether the types of var1 and var2 are fundamental (binaryOperator) or at
+  least one is a class type (cxxOperatorCallExpr)
+* whether the code appears in a template declaration, if at least one of the
+  vars is a dependent-type (binaryOperator)
+
+This matcher elides details in places where the matchers for the nodes are
+compatible.
+
+Given
+  binaryOperation(
+    hasOperatorName("!="),
+    hasLHS(expr().bind("lhs")),
+    hasRHS(expr().bind("rhs"))
+  )
+matches each use of "!=" in:
+  struct S{
+      bool operator!=(const S&amp;) const;
+  };
+
+  void foo()
+  {
+     1 != 2;
+     S() != S();
+  }
+
+  template&lt;typename T&gt;
+  void templ()
+  {
+     1 != 2;
+     T() != S();
+  }
+</pre></td></tr>
+
 
 <tr><td>Matcher&lt;*&gt;</td><td class="name" onclick="toggle('eachOf0')"><a name="eachOf0Anchor">eachOf</a></td><td>Matcher&lt;*&gt;, ..., Matcher&lt;*&gt;</td></tr>
 <tr><td colspan="4" class="doc" id="eachOf0"><pre>Matches if any of the given matchers matches.
