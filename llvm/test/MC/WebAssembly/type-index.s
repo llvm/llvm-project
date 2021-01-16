@@ -66,9 +66,4 @@ test0:
 # BIN-NEXT:         Name:            test0
 # BIN-NEXT:         Flags:           [ BINDING_LOCAL ]
 # BIN-NEXT:         Function:        0
-# BIN-NEXT:       - Index:           1
-# BIN-NEXT:         Kind:            TABLE
-# BIN-NEXT:         Name:            __indirect_function_table
-# BIN-NEXT:         Flags:           [ UNDEFINED, NO_STRIP ]
-# BIN-NEXT:         Table:           0
 # BIN-NEXT: ...

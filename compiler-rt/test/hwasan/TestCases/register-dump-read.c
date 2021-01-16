@@ -1,11 +1,11 @@
-// RUN: %clang_hwasan -ffixed-x10 -ffixed-x20 -ffixed-x27 -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK
-// RUN: %clang_hwasan -ffixed-x10 -ffixed-x20 -ffixed-x27 -O1 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK
-// RUN: %clang_hwasan -ffixed-x10 -ffixed-x20 -ffixed-x27 -O2 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK
-// RUN: %clang_hwasan -ffixed-x10 -ffixed-x20 -ffixed-x27 -O3 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK
+// RUN: %clang_hwasan -ffixed-x10 -ffixed-x23 -ffixed-x27 -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK
+// RUN: %clang_hwasan -ffixed-x10 -ffixed-x23 -ffixed-x27 -O1 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK
+// RUN: %clang_hwasan -ffixed-x10 -ffixed-x23 -ffixed-x27 -O2 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK
+// RUN: %clang_hwasan -ffixed-x10 -ffixed-x23 -ffixed-x27 -O3 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK
 // REQUIRES: aarch64-target-arch
 
-// RUN: %clang_hwasan -ffixed-x10 -ffixed-x20 -ffixed-x27 -O2 %s -o %t && not %env_hwasan_opts=fast_unwind_on_fatal=true %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK
-// RUN: %clang_hwasan -ffixed-x10 -ffixed-x20 -ffixed-x27 -O2 %s -o %t && not %env_hwasan_opts=fast_unwind_on_fatal=false %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK
+// RUN: %clang_hwasan -ffixed-x10 -ffixed-x23 -ffixed-x27 -O2 %s -o %t && not %env_hwasan_opts=fast_unwind_on_fatal=true %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK
+// RUN: %clang_hwasan -ffixed-x10 -ffixed-x23 -ffixed-x27 -O2 %s -o %t && not %env_hwasan_opts=fast_unwind_on_fatal=false %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK
 
 #include <stdlib.h>
 #include <stdio.h>

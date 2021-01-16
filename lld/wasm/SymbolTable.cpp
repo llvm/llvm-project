@@ -270,18 +270,6 @@ DefinedGlobal *SymbolTable::addOptionalGlobalSymbols(StringRef name,
   return replaceSymbol<DefinedGlobal>(s, name, flags, nullptr, global);
 }
 
-DefinedTable *SymbolTable::addSyntheticTable(StringRef name, uint32_t flags,
-                                             InputTable *table) {
-  LLVM_DEBUG(dbgs() << "addSyntheticTable: " << name << " -> " << table
-                    << "\n");
-  Symbol *s = find(name);
-  assert(!s || s->isUndefined());
-  if (!s)
-    s = insertName(name).first;
-  syntheticTables.emplace_back(table);
-  return replaceSymbol<DefinedTable>(s, name, flags, nullptr, table);
-}
-
 static bool shouldReplace(const Symbol *existing, InputFile *newFile,
                           uint32_t newFlags) {
   // If existing symbol is undefined, replace it.

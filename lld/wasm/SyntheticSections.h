@@ -98,7 +98,7 @@ protected:
 
 class ImportSection : public SyntheticSection {
 public:
-  ImportSection() : SyntheticSection(llvm::wasm::WASM_SEC_IMPORT) {}
+  ImportSection();
   bool isNeeded() const override { return getNumImports() > 0; }
   void writeBody() override;
   void addImport(Symbol *sym);
@@ -150,7 +150,16 @@ class TableSection : public SyntheticSection {
 public:
   TableSection() : SyntheticSection(llvm::wasm::WASM_SEC_TABLE) {}
 
-  bool isNeeded() const override { return inputTables.size() > 0; };
+  bool isNeeded() const override {
+    // The linker currently always writes an indirect function table to the
+    // output, so unless the indirect function table is imported, we need a
+    // table section.  FIXME: Treat __indirect_function_table as a normal
+    // symbol, and only residualize a table section as needed.
+    if (!config->importTable)
+      return true;
+    return inputTables.size() > 0;
+  }
+
   void writeBody() override;
   void addTable(InputTable *table);
 

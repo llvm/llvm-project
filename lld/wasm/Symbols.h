@@ -568,11 +568,6 @@ struct WasmSym {
   // Used in PIC code for offset of global data
   static UndefinedGlobal *memoryBase;
   static DefinedData *definedMemoryBase;
-
-  // __indirect_function_table
-  // Used as an address space for function pointers, with each function that is
-  // used as a function pointer being allocated a slot.
-  static TableSymbol *indirectFunctionTable;
 };
 
 // A buffer class that is large enough to hold any Symbol-derived
