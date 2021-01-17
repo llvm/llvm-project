@@ -39,10 +39,7 @@ define i1 @poison2(i32 %x) {
 
 define i1 @mul_div_cmp_smaller(i8 %x) {
 ; CHECK-LABEL: @mul_div_cmp_smaller(
-; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[MUL]], 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[DIV]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %mul = mul i8 %x, 3
   %div = udiv i8 %mul, 4
@@ -52,10 +49,7 @@ define i1 @mul_div_cmp_smaller(i8 %x) {
 
 define i1 @mul_div_cmp_equal(i8 %x) {
 ; CHECK-LABEL: @mul_div_cmp_equal(
-; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[MUL]], 3
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[DIV]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %mul = mul i8 %x, 3
   %div = udiv i8 %mul, 3
@@ -78,10 +72,7 @@ define i1 @mul_div_cmp_greater(i8 %x) {
 }
 define i1 @mul_div_cmp_ugt(i8 %x) {
 ; CHECK-LABEL: @mul_div_cmp_ugt(
-; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[MUL]], 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[DIV]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %mul = mul i8 %x, 3
   %div = udiv i8 %mul, 4
@@ -133,10 +124,7 @@ define i1 @mul_div_cmp_wrong_operand(i8 %x, i8 %y) {
 
 define i1 @mul_lshr_cmp_smaller(i8 %x) {
 ; CHECK-LABEL: @mul_lshr_cmp_smaller(
-; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[DIV:%.*]] = lshr i8 [[MUL]], 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[DIV]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %mul = mul i8 %x, 3
   %div = lshr i8 %mul, 2
@@ -146,10 +134,7 @@ define i1 @mul_lshr_cmp_smaller(i8 %x) {
 
 define i1 @mul_lshr_cmp_equal(i8 %x) {
 ; CHECK-LABEL: @mul_lshr_cmp_equal(
-; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[X:%.*]], 4
-; CHECK-NEXT:    [[DIV:%.*]] = lshr i8 [[MUL]], 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[DIV]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %mul = mul i8 %x, 4
   %div = lshr i8 %mul, 2
@@ -172,10 +157,7 @@ define i1 @mul_lshr_cmp_greater(i8 %x) {
 
 define i1 @shl_div_cmp_smaller(i8 %x) {
 ; CHECK-LABEL: @shl_div_cmp_smaller(
-; CHECK-NEXT:    [[MUL:%.*]] = shl i8 [[X:%.*]], 2
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[MUL]], 5
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[DIV]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %mul = shl i8 %x, 2
   %div = udiv i8 %mul, 5
@@ -185,10 +167,7 @@ define i1 @shl_div_cmp_smaller(i8 %x) {
 
 define i1 @shl_div_cmp_equal(i8 %x) {
 ; CHECK-LABEL: @shl_div_cmp_equal(
-; CHECK-NEXT:    [[MUL:%.*]] = shl i8 [[X:%.*]], 2
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[MUL]], 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[DIV]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %mul = shl i8 %x, 2
   %div = udiv i8 %mul, 4
