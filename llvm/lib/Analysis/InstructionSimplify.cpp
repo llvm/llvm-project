@@ -2901,6 +2901,28 @@ static Value *simplifyICmpWithBinOpOnLHS(
       return getTrue(ITy);
   }
 
+  // (x*C1)/C2 <= x for C1 <= C2.
+  // This holds even if the multiplication overflows: Assume that x != 0 and
+  // arithmetic is modulo M. For overflow to occur we must have C1 >= M/x and
+  // thus C2 >= M/x. It follows that (x*C1)/C2 <= (M-1)/C2 <= ((M-1)*x)/M < x.
+  //
+  // Additionally, either the multiplication and division might be represented
+  // as shifts:
+  // (x*C1)>>C2 <= x for C1 < 2**C2.
+  // (x<<C1)/C2 <= x for 2**C1 < C2.
+  const APInt *C1, *C2;
+  if ((match(LBO, m_UDiv(m_Mul(m_Specific(RHS), m_APInt(C1)), m_APInt(C2))) &&
+       C1->ule(*C2)) ||
+      (match(LBO, m_LShr(m_Mul(m_Specific(RHS), m_APInt(C1)), m_APInt(C2))) &&
+       C1->ule(APInt(C2->getBitWidth(), 1) << *C2)) ||
+      (match(LBO, m_UDiv(m_Shl(m_Specific(RHS), m_APInt(C1)), m_APInt(C2))) &&
+       (APInt(C1->getBitWidth(), 1) << *C1).ule(*C2))) {
+    if (Pred == ICmpInst::ICMP_UGT)
+      return getFalse(ITy);
+    if (Pred == ICmpInst::ICMP_ULE)
+      return getTrue(ITy);
+  }
+
   return nullptr;
 }
 
