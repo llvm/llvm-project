@@ -2619,7 +2619,7 @@ struct FIRToLLVMLoweringPass
     // The OpenMP dialect is legal for Operations without regions, for those
     // which contains regions it is legal if the region contains only the
     // LLVM dialect.
-    target.addDynamicallyLegalOp<omp::ParallelOp, omp::WsLoopOp>(
+    target.addDynamicallyLegalOp<omp::ParallelOp, omp::WsLoopOp, omp::MasterOp>(
         [&](Operation *op) {
           return typeConverter.isLegal(&op->getRegion(0));
         });
