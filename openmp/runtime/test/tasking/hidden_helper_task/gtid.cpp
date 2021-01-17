@@ -121,7 +121,7 @@ int main(int argc, char *argv[]) {
 
     // FIXME: 8 here is not accurate
     assert_gtid<false>(data1);
-    assert_gtid<true>(data2);
+    assert_gtid<false>(data2);
     assert_gtid<false>(data3);
   }
 

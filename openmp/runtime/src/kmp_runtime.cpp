@@ -8591,7 +8591,7 @@ kmp_info_t **__kmp_hidden_helper_threads;
 kmp_info_t *__kmp_hidden_helper_main_thread;
 kmp_int32 __kmp_hidden_helper_threads_num = 8;
 std::atomic<kmp_int32> __kmp_unexecuted_hidden_helper_tasks;
-kmp_int32 __kmp_enable_hidden_helper = TRUE;
+kmp_int32 __kmp_enable_hidden_helper = FALSE;
 
 namespace {
 std::atomic<kmp_int32> __kmp_hit_hidden_helper_threads_num;
