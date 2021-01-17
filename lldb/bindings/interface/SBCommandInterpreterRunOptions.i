@@ -12,6 +12,7 @@ namespace lldb {
 "SBCommandInterpreterRunOptions controls how the RunCommandInterpreter runs the code it is fed.
 
 A default SBCommandInterpreterRunOptions object has:
+
 * StopOnContinue: false
 * StopOnError:    false
 * StopOnCrash:    false

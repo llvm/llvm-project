@@ -27,8 +27,6 @@ SBProcess supports thread iteration. For example (from test/lldbutil.py), ::
             if t.GetStopReason() == reason:
                 threads.append(t)
         return threads
-
-...
 "
 ) SBProcess;
 class SBProcess
