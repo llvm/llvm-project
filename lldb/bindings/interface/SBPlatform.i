@@ -9,6 +9,9 @@
 namespace lldb {
 
 
+%feature("docstring",
+"Describes how :py:class:`SBPlatform.ConnectRemote` connects to a remote platform."
+) SBPlatformConnectOptions;
 class SBPlatformConnectOptions
 {
 public:
@@ -42,6 +45,9 @@ public:
     SetLocalCacheDirectory(const char *path);
 };
 
+%feature("docstring",
+"Represents a shell command that can be run by :py:class:`SBPlatform.Run`."
+) SBPlatformShellCommand;
 class SBPlatformShellCommand
 {
 public:
