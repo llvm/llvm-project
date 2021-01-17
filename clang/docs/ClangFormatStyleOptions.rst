@@ -2181,30 +2181,6 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**IndentPragmas** (``bool``)
-  Indent pragmas
-
-  When ``false``, pragmas are flushed left or follow IndentPPDirectives.
-  When ``true``, pragmas are indented to the current scope level.
-
-  .. code-block:: c++
-
-    false:                                  true:
-    #pragma once                   vs       #pragma once
-    void foo() {                            void foo() {
-    #pragma omp simd                          #pragma omp simd
-      for (int i=0;i<10;i++) {                for (int i=0;i<10;i++) {
-    #pragma omp simd                            #pragma omp simd
-        for (int i=0;i<10;i++) {                for (int i=0;i<10;i++) {
-        }                                       }
-    #if 1                                   #if 1
-    #pragma omp simd                            #pragma omp simd
-        for (int i=0;i<10;i++) {                for (int i=0;i<10;i++) {
-        }                                       }
-    #endif                                  #endif
-      }                                       }
-    }                                       }
-
 **IndentRequires** (``bool``)
   Indent the requires clause in a template
 

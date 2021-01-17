@@ -1237,21 +1237,10 @@ void UnwrappedLineFormatter::formatFirstToken(
   }
 
   // Preprocessor directives get indented before the hash only if specified
-  if (Line.Type == LT_PreprocessorDirective ||
-      Line.Type == LT_ImportStatement) {
-    switch (Style.IndentPPDirectives) {
-    case FormatStyle::PPDIS_AfterHash:
-      Indent = 0;
-      break;
-    case FormatStyle::PPDIS_None:
-    case FormatStyle::PPDIS_BeforeHash: {
-      // If we want to indent pragmas.
-      bool isPragmaLine = RootToken.startsSequence(tok::hash, tok::pp_pragma);
-      if (!Style.IndentPragmas && isPragmaLine)
-        Indent = 0;
-    } break;
-    }
-  }
+  if (Style.IndentPPDirectives != FormatStyle::PPDIS_BeforeHash &&
+      (Line.Type == LT_PreprocessorDirective ||
+       Line.Type == LT_ImportStatement))
+    Indent = 0;
 
   Whitespaces->replaceWhitespace(RootToken, Newlines, Indent, Indent,
                                  /*IsAligned=*/false,

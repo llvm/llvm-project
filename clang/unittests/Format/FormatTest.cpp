@@ -14282,7 +14282,6 @@ TEST_F(FormatTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(IndentCaseLabels);
   CHECK_PARSE_BOOL(IndentCaseBlocks);
   CHECK_PARSE_BOOL(IndentGotoLabels);
-  CHECK_PARSE_BOOL(IndentPragmas);
   CHECK_PARSE_BOOL(IndentRequires);
   CHECK_PARSE_BOOL(IndentWrappedFunctionNames);
   CHECK_PARSE_BOOL(KeepEmptyLinesAtTheStartOfBlocks);
@@ -17739,129 +17738,6 @@ TEST_F(FormatTest, ConceptsAndRequires) {
                "struct constant;",
                Style);
 }
-
-TEST_F(FormatTest, IndentPragmas) {
-  FormatStyle Style = getLLVMStyle();
-  Style.IndentPPDirectives = FormatStyle::PPDIS_None;
-
-  Style.IndentPragmas = false;
-  verifyFormat("#pragma once", Style);
-  verifyFormat("#pragma omp simd\n"
-               "for (int i = 0; i < 10; i++) {\n"
-               "}",
-               Style);
-  verifyFormat("void foo() {\n"
-               "#pragma omp simd\n"
-               "  for (int i = 0; i < 10; i++) {\n"
-               "  }\n"
-               "}",
-               Style);
-  verifyFormat("void foo() {\n"
-               "// outer loop\n"
-               "#pragma omp simd\n"
-               "  for (int k = 0; k < 10; k++) {\n"
-               "// inner loop\n"
-               "#pragma omp simd\n"
-               "    for (int j = 0; j < 10; j++) {\n"
-               "    }\n"
-               "  }\n"
-               "}",
-               Style);
-
-  verifyFormat("void foo() {\n"
-               "// outer loop\n"
-               "#if 1\n"
-               "#pragma omp simd\n"
-               "  for (int k = 0; k < 10; k++) {\n"
-               "// inner loop\n"
-               "#pragma omp simd\n"
-               "    for (int j = 0; j < 10; j++) {\n"
-               "    }\n"
-               "  }\n"
-               "#endif\n"
-               "}",
-               Style);
-
-  Style.IndentPragmas = true;
-  verifyFormat("#pragma once", Style);
-  verifyFormat("#pragma omp simd\n"
-               "for (int i = 0; i < 10; i++) {\n"
-               "}",
-               Style);
-  verifyFormat("void foo() {\n"
-               "  #pragma omp simd\n"
-               "  for (int i = 0; i < 10; i++) {\n"
-               "  }\n"
-               "}",
-               Style);
-  verifyFormat("void foo() {\n"
-               "  #pragma omp simd\n"
-               "  for (int i = 0; i < 10; i++) {\n"
-               "    #pragma omp simd\n"
-               "    for (int j = 0; j < 10; j++) {\n"
-               "    }\n"
-               "  }\n"
-               "}",
-               Style);
-
-  verifyFormat("void foo() {\n"
-               "  #pragma omp simd\n"
-               "  for (...) {\n"
-               "    #pragma omp simd\n"
-               "    for (...) {\n"
-               "    }\n"
-               "  }\n"
-               "}",
-               Style);
-
-  Style.IndentPPDirectives = FormatStyle::PPDIS_AfterHash;
-
-  verifyFormat("void foo() {\n"
-               "# pragma omp simd\n"
-               "  for (int i = 0; i < 10; i++) {\n"
-               "#   pragma omp simd\n"
-               "    for (int j = 0; j < 10; j++) {\n"
-               "    }\n"
-               "  }\n"
-               "}",
-               Style);
-
-  verifyFormat("void foo() {\n"
-               "#if 1\n"
-               "# pragma omp simd\n"
-               "  for (int k = 0; k < 10; k++) {\n"
-               "#   pragma omp simd\n"
-               "    for (int j = 0; j < 10; j++) {\n"
-               "    }\n"
-               "  }\n"
-               "#endif\n"
-               "}",
-               Style);
-
-  Style.IndentPPDirectives = FormatStyle::PPDIS_BeforeHash;
-  EXPECT_EQ("void foo() {\n"
-            "#if 1\n"
-            "  #pragma omp simd\n"
-            "  for (int k = 0; k < 10; k++) {\n"
-            "    #pragma omp simd\n"
-            "    for (int j = 0; j < 10; j++) {\n"
-            "    }\n"
-            "  }\n"
-            "#endif\n"
-            "}",
-            format("void foo() {\n"
-                   "#if 1\n"
-                   "  #pragma omp simd\n"
-                   "  for (int k = 0; k < 10; k++) {\n"
-                   "    #pragma omp simd\n"
-                   "    for (int j = 0; j < 10; j++) {\n"
-                   "    }\n"
-                   "  }\n"
-                   "#endif\n"
-                   "}",
-                   Style));
-}
-
 } // namespace
 } // namespace format
 } // namespace clang
