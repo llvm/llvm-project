@@ -284,11 +284,7 @@ static bool verifyDagOpCount(CodeGenInstruction &Inst, DagInit *Dag,
 }
 
 static bool validateArgsTypes(Init *Arg1, Init *Arg2) {
-  DefInit *Type1 = dyn_cast<DefInit>(Arg1);
-  DefInit *Type2 = dyn_cast<DefInit>(Arg2);
-  assert(Type1 && ("Arg1 type not found\n"));
-  assert(Type2 && ("Arg2 type not found\n"));
-  return Type1->getDef() == Type2->getDef();
+  return cast<DefInit>(Arg1)->getDef() == cast<DefInit>(Arg2)->getDef();
 }
 
 // Creates a mapping between the operand name in the Dag (e.g. $rs1) and
