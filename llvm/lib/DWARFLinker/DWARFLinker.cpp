@@ -2590,7 +2590,7 @@ bool DWARFLinker::link() {
     std::vector<std::pair<StringRef, DebugInfoSize>> Sorted;
     for (auto &E : SizeByObject)
       Sorted.emplace_back(E.first(), E.second);
-    llvm::sort(Sorted.begin(), Sorted.end(), [](auto &LHS, auto &RHS) {
+    llvm::sort(Sorted, [](auto &LHS, auto &RHS) {
       return LHS.second.Output > RHS.second.Output;
     });
 

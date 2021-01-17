@@ -259,18 +259,17 @@ static void dumpSectionContents(raw_ostream &OS, LinkGraph &G) {
   for (auto &S : G.sections())
     Sections.push_back(&S);
 
-  std::sort(Sections.begin(), Sections.end(),
-            [](const Section *LHS, const Section *RHS) {
-              if (llvm::empty(LHS->symbols()) && llvm::empty(RHS->symbols()))
-                return false;
-              if (llvm::empty(LHS->symbols()))
-                return false;
-              if (llvm::empty(RHS->symbols()))
-                return true;
-              SectionRange LHSRange(*LHS);
-              SectionRange RHSRange(*RHS);
-              return LHSRange.getStart() < RHSRange.getStart();
-            });
+  llvm::sort(Sections, [](const Section *LHS, const Section *RHS) {
+    if (llvm::empty(LHS->symbols()) && llvm::empty(RHS->symbols()))
+      return false;
+    if (llvm::empty(LHS->symbols()))
+      return false;
+    if (llvm::empty(RHS->symbols()))
+      return true;
+    SectionRange LHSRange(*LHS);
+    SectionRange RHSRange(*RHS);
+    return LHSRange.getStart() < RHSRange.getStart();
+  });
 
   for (auto *S : Sections) {
     OS << S->getName() << " content:";
