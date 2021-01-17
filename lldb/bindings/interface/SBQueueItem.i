@@ -8,6 +8,9 @@
 
 namespace lldb {
 
+%feature("docstring",
+"This class represents an item in an :py:class:`SBQueue`."
+) SBQueueItem;
 class SBQueueItem
 {
 public:

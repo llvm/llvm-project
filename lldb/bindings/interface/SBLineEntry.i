@@ -10,7 +10,9 @@ namespace lldb {
 
 %feature("docstring",
 "Specifies an association with a contiguous range of instructions and
-a source file location. :py:class:`SBCompileUnit` contains SBLineEntry(s). For example, ::
+a source file location.
+
+:py:class:`SBCompileUnit` contains SBLineEntry(s). For example, ::
 
     for lineEntry in compileUnit:
         print('line entry: %s:%d' % (str(lineEntry.GetFileSpec()),

@@ -13,6 +13,9 @@
 
 namespace lldb {
 
+%feature("docstring",
+"Represents a (machine language) instruction."
+) SBInstruction;
 class SBInstruction
 {
 public:
