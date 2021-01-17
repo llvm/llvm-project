@@ -537,20 +537,14 @@ static void printPredicates(std::vector<const Record *> &Predicates,
   }
 }
 
-static std::string mergeCondAndCode(raw_string_ostream &CondStream,
-                                    raw_string_ostream &CodeStream) {
-  std::string S;
-  raw_string_ostream CombinedStream(S);
-  CombinedStream.indent(4)
-      << "if ("
-      << CondStream.str().substr(
-             6, CondStream.str().length() -
-                    10) // remove first indentation and last '&&'.
-      << ") {\n";
-  CombinedStream << CodeStream.str();
+static void mergeCondAndCode(raw_ostream &CombinedStream, StringRef CondStr,
+                             StringRef CodeStr) {
+  // Remove first indentation and last '&&'.
+  CondStr = CondStr.drop_front(6).drop_back(4);
+  CombinedStream.indent(4) << "if (" << CondStr << ") {\n";
+  CombinedStream << CodeStr;
   CombinedStream.indent(4) << "  return true;\n";
   CombinedStream.indent(4) << "} // if\n";
-  return CombinedStream.str();
 }
 
 void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
@@ -812,7 +806,7 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
     }
     if (CompressOrUncompress)
       CodeStream.indent(6) << "OutInst.setLoc(MI.getLoc());\n";
-    CaseStream << mergeCondAndCode(CondStream, CodeStream);
+    mergeCondAndCode(CaseStream, CondStream.str(), CodeStream.str());
     PrevOp = CurOp;
   }
   Func << CaseStream.str() << "\n";
