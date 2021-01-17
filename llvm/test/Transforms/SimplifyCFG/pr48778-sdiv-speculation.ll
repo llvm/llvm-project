@@ -4,11 +4,14 @@
 ; sdiv INT_MIN / -1 should not be speculated.
 define i32 @test(i1 %cmp) {
 ; CHECK-LABEL: @test(
-; CHECK-NEXT:  else:
+; CHECK-NEXT:    br i1 [[CMP:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 -2147483648, -1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[DIV]], 0
-; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[CMP:%.*]], [[CMP2]]
-; CHECK-NEXT:    [[MERGE:%.*]] = select i1 [[OR_COND]], i32 1, i32 0
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP2]], i32 1, i32 0
+; CHECK-NEXT:    br label [[ELSE]]
+; CHECK:       else:
+; CHECK-NEXT:    [[MERGE:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[SPEC_SELECT]], [[IF]] ]
 ; CHECK-NEXT:    ret i32 [[MERGE]]
 ;
   br i1 %cmp, label %if, label %else
