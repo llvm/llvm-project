@@ -109,7 +109,7 @@ cl::opt<unsigned> X86PadMaxPrefixSize(
     cl::desc("Maximum number of prefixes to use for padding"));
 
 cl::opt<bool> X86PadForAlign(
-    "x86-pad-for-align", cl::init(true), cl::Hidden,
+    "x86-pad-for-align", cl::init(false), cl::Hidden,
     cl::desc("Pad previous instructions to implement align directives"));
 
 cl::opt<bool> X86PadForBranchAlign(
@@ -957,6 +957,9 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm,
   if (!X86PadForAlign && !X86PadForBranchAlign)
     return;
 
+  // The processed regions are delimitered by LabeledFragments. -g may have more
+  // MCSymbols and therefore different relaxation results. X86PadForAlign is
+  // disabled by default to eliminate the -g vs non -g difference.
   DenseSet<MCFragment *> LabeledFragments;
   for (const MCSymbol &S : Asm.symbols())
     LabeledFragments.insert(S.getFragment(false));
