@@ -509,14 +509,13 @@ getReqFeatures(std::set<std::pair<bool, StringRef>> &FeaturesSet,
 static unsigned getPredicates(DenseMap<const Record *, unsigned> &PredicateMap,
                               std::vector<const Record *> &Predicates,
                               Record *Rec, StringRef Name) {
-  unsigned Entry = PredicateMap[Rec];
+  unsigned &Entry = PredicateMap[Rec];
   if (Entry)
     return Entry;
 
   if (!Rec->isValueUnset(Name)) {
     Predicates.push_back(Rec);
     Entry = Predicates.size();
-    PredicateMap[Rec] = Entry;
     return Entry;
   }
 
@@ -751,14 +750,16 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
         } else {
           // Handling immediate operands.
           if (CompressOrUncompress) {
-            unsigned Entry = getPredicates(MCOpPredicateMap, MCOpPredicates,
-              DestOperand.Rec, StringRef("MCOperandPredicate"));
+            unsigned Entry =
+                getPredicates(MCOpPredicateMap, MCOpPredicates, DestOperand.Rec,
+                              "MCOperandPredicate");
             CondStream.indent(6)
                 << Namespace << "ValidateMCOperand("
                 << "MI.getOperand(" << OpIdx << "), STI, " << Entry << ") &&\n";
           } else {
-            unsigned Entry = getPredicates(ImmLeafPredicateMap, ImmLeafPredicates,
-              DestOperand.Rec, StringRef("ImmediateCode"));
+            unsigned Entry =
+                getPredicates(ImmLeafPredicateMap, ImmLeafPredicates,
+                              DestOperand.Rec, "ImmediateCode");
             CondStream.indent(6)
                 << "MI.getOperand(" << OpIdx << ").isImm() &&\n";
             CondStream.indent(6) << Namespace << "ValidateMachineOperand("
@@ -774,14 +775,14 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
       case OpData::Imm: {
         if (CompressOrUncompress) {
           unsigned Entry = getPredicates(MCOpPredicateMap, MCOpPredicates,
-            DestOperand.Rec, StringRef("MCOperandPredicate"));
+                                         DestOperand.Rec, "MCOperandPredicate");
           CondStream.indent(6)
               << Namespace << "ValidateMCOperand("
               << "MCOperand::createImm(" << DestOperandMap[OpNo].Data.Imm
               << "), STI, " << Entry << ") &&\n";
         } else {
           unsigned Entry = getPredicates(ImmLeafPredicateMap, ImmLeafPredicates,
-            DestOperand.Rec, StringRef("ImmediateCode"));
+                                         DestOperand.Rec, "ImmediateCode");
           CondStream.indent(6)
               << Namespace
               << "ValidateMachineOperand(MachineOperand::CreateImm("
