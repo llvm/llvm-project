@@ -251,6 +251,7 @@ public:
   VariantValue(double Double);
   VariantValue(unsigned Unsigned);
   VariantValue(StringRef String);
+  VariantValue(ASTNodeKind NodeKind);
   VariantValue(const VariantMatcher &Matchers);
 
   /// Constructs an \c unsigned value (disambiguation from bool).
@@ -279,6 +280,10 @@ public:
   bool isString() const;
   const std::string &getString() const;
   void setString(StringRef String);
+
+  bool isNodeKind() const;
+  const ASTNodeKind &getNodeKind() const;
+  void setNodeKind(ASTNodeKind NodeKind);
 
   /// Matcher value functions.
   bool isMatcher() const;
@@ -316,7 +321,8 @@ private:
     VT_Double,
     VT_Unsigned,
     VT_String,
-    VT_Matcher
+    VT_Matcher,
+    VT_NodeKind
   };
 
   /// All supported value types.
@@ -326,6 +332,7 @@ private:
     bool Boolean;
     std::string *String;
     VariantMatcher *Matcher;
+    ASTNodeKind *NodeKind;
   };
 
   ValueType Type;
