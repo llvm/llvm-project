@@ -20,7 +20,7 @@
 
 using namespace llvm;
 
-static const std::string getOptionName(const Record &R) {
+static std::string getOptionName(const Record &R) {
   // Use the record name unless EnumName is defined.
   if (isa<UnsetInit>(R.getValueInit("EnumName")))
     return std::string(R.getName());
@@ -35,8 +35,7 @@ static raw_ostream &write_cstring(raw_ostream &OS, llvm::StringRef Str) {
   return OS;
 }
 
-static const std::string getOptionSpelling(const Record &R,
-                                           size_t &PrefixLength) {
+static std::string getOptionSpelling(const Record &R, size_t &PrefixLength) {
   std::vector<StringRef> Prefixes = R.getValueAsListOfStrings("Prefixes");
   StringRef Name = R.getValueAsString("Name");
 
@@ -49,7 +48,7 @@ static const std::string getOptionSpelling(const Record &R,
   return (Twine(Prefixes[0]) + Twine(Name)).str();
 }
 
-static const std::string getOptionSpelling(const Record &R) {
+static std::string getOptionSpelling(const Record &R) {
   size_t PrefixLength;
   return getOptionSpelling(R, PrefixLength);
 }

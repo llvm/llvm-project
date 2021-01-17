@@ -68,7 +68,7 @@ public:
   ~CodeGenTarget();
 
   Record *getTargetRecord() const { return TargetRec; }
-  const StringRef getName() const;
+  StringRef getName() const;
 
   /// getInstNamespace - Return the target-specific instruction namespace.
   ///
