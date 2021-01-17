@@ -164,7 +164,7 @@ interesting areas to contribute to lldb.
    :maxdepth: 1
    :caption: Reference
 
-   Public Python API <https://lldb.llvm.org/python_reference/index.html>
+   Public Python API <python_api>
    Public C++ API <https://lldb.llvm.org/cpp_reference/namespacelldb.html>
    Private C++ API <https://lldb.llvm.org/cpp_reference/index.html>
    Man Page <man/lldb>
