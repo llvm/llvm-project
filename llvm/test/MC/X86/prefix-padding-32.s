@@ -1,4 +1,4 @@
-# RUN: llvm-mc -filetype=obj -triple i386-pc-linux-gnu %s -x86-pad-max-prefix-size=15 | llvm-objdump -d --section=.text - | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple i386-pc-linux-gnu %s -x86-pad-max-prefix-size=15 -x86-pad-for-align=1 | llvm-objdump -d - | FileCheck %s
 
 # Check prefix padding generation for all cases on 32 bit x86.
 
