@@ -23,6 +23,7 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/KindMapping.h"
 #include "flang/Optimizer/Support/TypeCode.h"
+#include "mlir/Conversion/OpenMPToLLVM/ConvertOpenMPToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
@@ -2612,8 +2613,16 @@ struct FIRToLLVMLoweringPass
         UnboxProcOpConversion, UndefOpConversion, UnreachableOpConversion,
         XArrayCoorOpConversion, XEmboxOpConversion>(context, typeConverter);
     mlir::populateStdToLLVMConversionPatterns(typeConverter, pattern);
+    mlir::populateOpenMPToLLVMConversionPatterns(typeConverter, pattern);
     mlir::ConversionTarget target{*context};
     target.addLegalDialect<mlir::LLVM::LLVMDialect>();
+    // The OpenMP dialect is legal for Operations without regions, for those
+    // which contains regions it is legal if the region contains only the
+    // LLVM dialect.
+    target.addDynamicallyLegalOp<omp::ParallelOp, omp::WsLoopOp>(
+        [&](Operation *op) {
+          return typeConverter.isLegal(&op->getRegion(0));
+        });
     target.addLegalDialect<mlir::omp::OpenMPDialect>();
 
     // required NOPs for applying a full conversion
