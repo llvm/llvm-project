@@ -73,6 +73,7 @@ protected:
 
 %feature("docstring",
 "Represents a list of SBTypeEnumMembers.
+
 SBTypeEnumMemberList supports SBTypeEnumMember iteration.
 It also supports [] access either by index, or by enum
 element name by doing: ::

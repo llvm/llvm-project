@@ -9,7 +9,7 @@
 namespace lldb {
 
     %feature("docstring",
-"Represents a member of a type in lldb.") SBTypeMember;
+"Represents a member of a type.") SBTypeMember;
 
 class SBTypeMember
 {
@@ -60,6 +60,9 @@ protected:
     std::unique_ptr<lldb_private::TypeMemberImpl> m_opaque_ap;
 };
 
+%feature("docstring",
+"Represents a member function of a type."
+) SBTypeMemberFunction;
 class SBTypeMemberFunction
 {
 public:
@@ -431,8 +434,9 @@ public:
 };
 
 %feature("docstring",
-"Represents a list of :py:class:`SBType` s.  The FindTypes() method of
-:py:class:`SBTarget`/:py:class:`SBModule` returns a SBTypeList.
+"Represents a list of :py:class:`SBType` s.
+
+The FindTypes() method of :py:class:`SBTarget`/:py:class:`SBModule` returns a SBTypeList.
 
 SBTypeList supports :py:class:`SBType` iteration. For example,
 
