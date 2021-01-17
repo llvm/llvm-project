@@ -284,11 +284,7 @@ static bool verifyDagOpCount(CodeGenInstruction &Inst, DagInit *Dag,
 }
 
 static bool validateArgsTypes(Init *Arg1, Init *Arg2) {
-  DefInit *Type1 = dyn_cast<DefInit>(Arg1);
-  DefInit *Type2 = dyn_cast<DefInit>(Arg2);
-  assert(Type1 && ("Arg1 type not found\n"));
-  assert(Type2 && ("Arg2 type not found\n"));
-  return Type1->getDef() == Type2->getDef();
+  return cast<DefInit>(Arg1)->getDef() == cast<DefInit>(Arg2)->getDef();
 }
 
 // Creates a mapping between the operand name in the Dag (e.g. $rs1) and
@@ -513,14 +509,13 @@ getReqFeatures(std::set<std::pair<bool, StringRef>> &FeaturesSet,
 static unsigned getPredicates(DenseMap<const Record *, unsigned> &PredicateMap,
                               std::vector<const Record *> &Predicates,
                               Record *Rec, StringRef Name) {
-  unsigned Entry = PredicateMap[Rec];
+  unsigned &Entry = PredicateMap[Rec];
   if (Entry)
     return Entry;
 
   if (!Rec->isValueUnset(Name)) {
     Predicates.push_back(Rec);
     Entry = Predicates.size();
-    PredicateMap[Rec] = Entry;
     return Entry;
   }
 
@@ -530,31 +525,25 @@ static unsigned getPredicates(DenseMap<const Record *, unsigned> &PredicateMap,
   return 0;
 }
 
-static void printPredicates(std::vector<const Record *> &Predicates,
+static void printPredicates(const std::vector<const Record *> &Predicates,
                             StringRef Name, raw_ostream &o) {
   for (unsigned i = 0; i < Predicates.size(); ++i) {
     StringRef Pred = Predicates[i]->getValueAsString(Name);
     o << "  case " << i + 1 << ": {\n"
       << "  // " << Predicates[i]->getName() << "\n"
-      << "  " << Pred.data() << "\n"
+      << "  " << Pred << "\n"
       << "  }\n";
   }
 }
 
-static std::string mergeCondAndCode(raw_string_ostream &CondStream,
-                                    raw_string_ostream &CodeStream) {
-  std::string S;
-  raw_string_ostream CombinedStream(S);
-  CombinedStream.indent(4)
-      << "if ("
-      << CondStream.str().substr(
-             6, CondStream.str().length() -
-                    10) // remove first indentation and last '&&'.
-      << ") {\n";
-  CombinedStream << CodeStream.str();
+static void mergeCondAndCode(raw_ostream &CombinedStream, StringRef CondStr,
+                             StringRef CodeStr) {
+  // Remove first indentation and last '&&'.
+  CondStr = CondStr.drop_front(6).drop_back(4);
+  CombinedStream.indent(4) << "if (" << CondStr << ") {\n";
+  CombinedStream << CodeStr;
   CombinedStream.indent(4) << "  return true;\n";
   CombinedStream.indent(4) << "} // if\n";
-  return CombinedStream.str();
 }
 
 void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
@@ -565,7 +554,7 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
                     "'PassSubtarget' is false. SubTargetInfo object is needed "
                     "for target features.\n");
 
-  std::string Namespace = std::string(Target.getName());
+  StringRef Namespace = Target.getName();
 
   // Sort entries in CompressPatterns to handle instructions that can have more
   // than one candidate for compression\uncompression, e.g ADD can be
@@ -634,8 +623,8 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
 
   std::string CaseString;
   raw_string_ostream CaseStream(CaseString);
-  std::string PrevOp;
-  std::string CurOp;
+  StringRef PrevOp;
+  StringRef CurOp;
   CaseStream << "  switch (MI.getOpcode()) {\n";
   CaseStream << "    default: return false;\n";
 
@@ -658,10 +647,10 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
     IndexedMap<OpData> &DestOperandMap = CompressOrCheck ?
       CompressPat.DestOperandMap : CompressPat.SourceOperandMap;
 
-    CurOp = Source.TheDef->getName().str();
+    CurOp = Source.TheDef->getName();
     // Check current and previous opcode to decide to continue or end a case.
     if (CurOp != PrevOp) {
-      if (PrevOp != "")
+      if (!PrevOp.empty())
         CaseStream.indent(6) << "break;\n    } // case " + PrevOp + "\n";
       CaseStream.indent(4) << "case " + Namespace + "::" + CurOp + ": {\n";
     }
@@ -761,14 +750,16 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
         } else {
           // Handling immediate operands.
           if (CompressOrUncompress) {
-            unsigned Entry = getPredicates(MCOpPredicateMap, MCOpPredicates,
-              DestOperand.Rec, StringRef("MCOperandPredicate"));
+            unsigned Entry =
+                getPredicates(MCOpPredicateMap, MCOpPredicates, DestOperand.Rec,
+                              "MCOperandPredicate");
             CondStream.indent(6)
                 << Namespace << "ValidateMCOperand("
                 << "MI.getOperand(" << OpIdx << "), STI, " << Entry << ") &&\n";
           } else {
-            unsigned Entry = getPredicates(ImmLeafPredicateMap, ImmLeafPredicates,
-              DestOperand.Rec, StringRef("ImmediateCode"));
+            unsigned Entry =
+                getPredicates(ImmLeafPredicateMap, ImmLeafPredicates,
+                              DestOperand.Rec, "ImmediateCode");
             CondStream.indent(6)
                 << "MI.getOperand(" << OpIdx << ").isImm() &&\n";
             CondStream.indent(6) << Namespace << "ValidateMachineOperand("
@@ -784,14 +775,14 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
       case OpData::Imm: {
         if (CompressOrUncompress) {
           unsigned Entry = getPredicates(MCOpPredicateMap, MCOpPredicates,
-            DestOperand.Rec, StringRef("MCOperandPredicate"));
+                                         DestOperand.Rec, "MCOperandPredicate");
           CondStream.indent(6)
               << Namespace << "ValidateMCOperand("
               << "MCOperand::createImm(" << DestOperandMap[OpNo].Data.Imm
               << "), STI, " << Entry << ") &&\n";
         } else {
           unsigned Entry = getPredicates(ImmLeafPredicateMap, ImmLeafPredicates,
-            DestOperand.Rec, StringRef("ImmediateCode"));
+                                         DestOperand.Rec, "ImmediateCode");
           CondStream.indent(6)
               << Namespace
               << "ValidateMachineOperand(MachineOperand::CreateImm("
@@ -816,7 +807,7 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
     }
     if (CompressOrUncompress)
       CodeStream.indent(6) << "OutInst.setLoc(MI.getLoc());\n";
-    CaseStream << mergeCondAndCode(CondStream, CodeStream);
+    mergeCondAndCode(CaseStream, CondStream.str(), CodeStream.str());
     PrevOp = CurOp;
   }
   Func << CaseStream.str() << "\n";
