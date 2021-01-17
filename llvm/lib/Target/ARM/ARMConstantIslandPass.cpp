@@ -338,6 +338,32 @@ LLVM_DUMP_METHOD void ARMConstantIslands::dumpBBs() {
 }
 #endif
 
+// Align blocks where the previous block does not fall through. This may add
+// extra NOP's but they will not be executed. It uses the PrefLoopAlignment as a
+// measure of how much to align, and only runs at CodeGenOpt::Aggressive.
+static bool AlignBlocks(MachineFunction *MF) {
+  if (MF->getTarget().getOptLevel() != CodeGenOpt::Aggressive ||
+      MF->getFunction().hasOptSize())
+    return false;
+
+  auto *TLI = MF->getSubtarget().getTargetLowering();
+  const Align Alignment = TLI->getPrefLoopAlignment();
+  if (Alignment < 4)
+    return false;
+
+  bool Changed = false;
+  bool PrevCanFallthough = true;
+  for (auto &MBB : *MF) {
+    if (!PrevCanFallthough) {
+      Changed = true;
+      MBB.setAlignment(Alignment);
+    }
+    PrevCanFallthough = MBB.canFallThrough();
+  }
+
+  return Changed;
+}
+
 bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
   MF = &mf;
   MCP = mf.getConstantPool();
@@ -379,6 +405,9 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
     // Blocks may have shifted around. Keep the numbering up to date.
     MF->RenumberBlocks();
   }
+
+  // Align any non-fallthrough blocks
+  MadeChange |= AlignBlocks(MF);
 
   // Perform the initial placement of the constant pool entries.  To start with,
   // we put them all at the end of the function.
@@ -2095,8 +2124,7 @@ static bool jumpTableFollowsTB(MachineInstr *JTMI, MachineInstr *CPEMI) {
   MachineFunction *MF = MBB->getParent();
   ++MBB;
 
-  return MBB != MF->end() && MBB->begin() != MBB->end() &&
-         &*MBB->begin() == CPEMI;
+  return MBB != MF->end() && !MBB->empty() && &*MBB->begin() == CPEMI;
 }
 
 static void RemoveDeadAddBetweenLEAAndJT(MachineInstr *LEAMI,

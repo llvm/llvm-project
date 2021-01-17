@@ -1403,7 +1403,7 @@ ReoptimizeBlock:
       LLVM_DEBUG(dbgs() << "\nMerging into block: " << PrevBB
                         << "From MBB: " << *MBB);
       // Remove redundant DBG_VALUEs first.
-      if (PrevBB.begin() != PrevBB.end()) {
+      if (!PrevBB.empty()) {
         MachineBasicBlock::iterator PrevBBIter = PrevBB.end();
         --PrevBBIter;
         MachineBasicBlock::iterator MBBIter = MBB->begin();

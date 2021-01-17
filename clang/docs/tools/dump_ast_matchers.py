@@ -119,8 +119,15 @@ def add_matcher(result_type, name, args, comment, is_dyncast=False):
   ids[name] += 1
   args = unify_arguments(args)
   result_type = unify_type(result_type)
+
+  docs_result_type = esc('Matcher<%s>' % result_type);
+
+  if name == 'mapAnyOf':
+    args = "nodeMatcherFunction..."
+    docs_result_type = "<em>unspecified</em>"
+
   matcher_html = TD_TEMPLATE % {
-    'result': esc('Matcher<%s>' % result_type),
+    'result': docs_result_type,
     'name': name,
     'args': esc(args),
     'comment': esc(strip_doxygen(comment)),
@@ -135,7 +142,7 @@ def add_matcher(result_type, name, args, comment, is_dyncast=False):
   # exclude known narrowing matchers that also take other matchers as
   # arguments.
   elif ('Matcher<' not in args or
-        name in ['allOf', 'anyOf', 'anything', 'unless']):
+        name in ['allOf', 'anyOf', 'anything', 'unless', 'mapAnyOf']):
     dict = narrowing_matchers
     lookup = result_type + name + esc(args)
   else:
@@ -372,6 +379,14 @@ Flags can be combined with '|' example \"IgnoreCase | BasicRegex\"
         add_matcher('*', name, 'Matcher<*>, ..., Matcher<*>', comment)
         return
 
+    m = re.match(
+        r"""^.*MapAnyOfMatcher<.*>\s*
+              ([a-zA-Z]*);$""",
+        declaration, flags=re.X)
+    if m:
+      name = m.groups()[0]
+      add_matcher('*', name, 'Matcher<*>...Matcher<*>', comment)
+      return
 
     # Parse free standing matcher functions, like:
     #   Matcher<ResultType> Name(Matcher<ArgumentType> InnerMatcher) {

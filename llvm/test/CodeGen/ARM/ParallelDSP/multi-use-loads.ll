@@ -26,6 +26,7 @@ define i32 @add_user(i32 %arg, i32* nocapture readnone %arg1, i16* nocapture rea
 ; CHECK-LE-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-LE-NEXT:    add.w r0, r12, r1
 ; CHECK-LE-NEXT:    pop {r4, pc}
+; CHECK-LE-NEXT:    .p2align 2
 ; CHECK-LE-NEXT:  .LBB0_4:
 ; CHECK-LE-NEXT:    mov.w r12, #0
 ; CHECK-LE-NEXT:    movs r1, #0
@@ -58,6 +59,7 @@ define i32 @add_user(i32 %arg, i32* nocapture readnone %arg1, i16* nocapture rea
 ; CHECK-BE-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-BE-NEXT:    add.w r0, r12, r1
 ; CHECK-BE-NEXT:    pop {r4, r5, r6, pc}
+; CHECK-BE-NEXT:    .p2align 2
 ; CHECK-BE-NEXT:  .LBB0_4:
 ; CHECK-BE-NEXT:    mov.w r12, #0
 ; CHECK-BE-NEXT:    movs r1, #0
@@ -129,6 +131,7 @@ define i32 @mul_bottom_user(i32 %arg, i32* nocapture readnone %arg1, i16* nocapt
 ; CHECK-LE-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-LE-NEXT:    add.w r0, r12, r1
 ; CHECK-LE-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-LE-NEXT:    .p2align 2
 ; CHECK-LE-NEXT:  .LBB1_4:
 ; CHECK-LE-NEXT:    mov.w r12, #0
 ; CHECK-LE-NEXT:    movs r1, #0
@@ -161,6 +164,7 @@ define i32 @mul_bottom_user(i32 %arg, i32* nocapture readnone %arg1, i16* nocapt
 ; CHECK-BE-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-BE-NEXT:    add.w r0, r12, r1
 ; CHECK-BE-NEXT:    pop {r4, r5, r6, pc}
+; CHECK-BE-NEXT:    .p2align 2
 ; CHECK-BE-NEXT:  .LBB1_4:
 ; CHECK-BE-NEXT:    mov.w r12, #0
 ; CHECK-BE-NEXT:    movs r1, #0
@@ -232,6 +236,7 @@ define i32 @mul_top_user(i32 %arg, i32* nocapture readnone %arg1, i16* nocapture
 ; CHECK-LE-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-LE-NEXT:    add.w r0, r12, r1
 ; CHECK-LE-NEXT:    pop {r4, pc}
+; CHECK-LE-NEXT:    .p2align 2
 ; CHECK-LE-NEXT:  .LBB2_4:
 ; CHECK-LE-NEXT:    mov.w r12, #0
 ; CHECK-LE-NEXT:    movs r1, #0
@@ -264,6 +269,7 @@ define i32 @mul_top_user(i32 %arg, i32* nocapture readnone %arg1, i16* nocapture
 ; CHECK-BE-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-BE-NEXT:    add.w r0, r12, r1
 ; CHECK-BE-NEXT:    pop {r4, r5, r6, pc}
+; CHECK-BE-NEXT:    .p2align 2
 ; CHECK-BE-NEXT:  .LBB2_4:
 ; CHECK-BE-NEXT:    mov.w r12, #0
 ; CHECK-BE-NEXT:    movs r1, #0
@@ -335,6 +341,7 @@ define i32 @and_user(i32 %arg, i32* nocapture readnone %arg1, i16* nocapture rea
 ; CHECK-LE-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-LE-NEXT:    add.w r0, r12, r1
 ; CHECK-LE-NEXT:    pop {r4, pc}
+; CHECK-LE-NEXT:    .p2align 2
 ; CHECK-LE-NEXT:  .LBB3_4:
 ; CHECK-LE-NEXT:    mov.w r12, #0
 ; CHECK-LE-NEXT:    movs r1, #0
@@ -367,6 +374,7 @@ define i32 @and_user(i32 %arg, i32* nocapture readnone %arg1, i16* nocapture rea
 ; CHECK-BE-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-BE-NEXT:    add.w r0, r12, r1
 ; CHECK-BE-NEXT:    pop {r4, r5, r6, pc}
+; CHECK-BE-NEXT:    .p2align 2
 ; CHECK-BE-NEXT:  .LBB3_4:
 ; CHECK-BE-NEXT:    mov.w r12, #0
 ; CHECK-BE-NEXT:    movs r1, #0
@@ -440,6 +448,7 @@ define i32 @multi_uses(i32 %arg, i32* nocapture readnone %arg1, i16* nocapture r
 ; CHECK-LE-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-LE-NEXT:    add.w r0, lr, r12
 ; CHECK-LE-NEXT:    pop {r4, pc}
+; CHECK-LE-NEXT:    .p2align 2
 ; CHECK-LE-NEXT:  .LBB4_4:
 ; CHECK-LE-NEXT:    mov.w lr, #0
 ; CHECK-LE-NEXT:    mov.w r12, #0
@@ -474,6 +483,7 @@ define i32 @multi_uses(i32 %arg, i32* nocapture readnone %arg1, i16* nocapture r
 ; CHECK-BE-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-BE-NEXT:    add.w r0, r12, lr
 ; CHECK-BE-NEXT:    pop {r4, r5, r6, pc}
+; CHECK-BE-NEXT:    .p2align 2
 ; CHECK-BE-NEXT:  .LBB4_4:
 ; CHECK-BE-NEXT:    mov.w r12, #0
 ; CHECK-BE-NEXT:    mov.w lr, #0

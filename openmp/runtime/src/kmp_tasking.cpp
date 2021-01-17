@@ -325,6 +325,12 @@ static void __kmp_realloc_task_deque(kmp_info_t *thread,
 static kmp_int32 __kmp_push_task(kmp_int32 gtid, kmp_task_t *task) {
   kmp_info_t *thread = __kmp_threads[gtid];
   kmp_taskdata_t *taskdata = KMP_TASK_TO_TASKDATA(task);
+
+  if (taskdata->td_flags.hidden_helper) {
+    gtid = KMP_GTID_TO_SHADOW_GTID(gtid);
+    thread = __kmp_threads[gtid];
+  }
+
   kmp_task_team_t *task_team = thread->th.th_task_team;
   kmp_int32 tid = __kmp_tid_from_gtid(gtid);
   kmp_thread_data_t *thread_data;
@@ -363,7 +369,9 @@ static kmp_int32 __kmp_push_task(kmp_int32 gtid, kmp_task_t *task) {
   // Find tasking deque specific to encountering thread
   thread_data = &task_team->tt.tt_threads_data[tid];
 
-  // No lock needed since only owner can allocate
+  // No lock needed since only owner can allocate. If the task is hidden_helper,
+  // we don't need it either because we have initialized the dequeue for hidden
+  // helper thread data.
   if (UNLIKELY(thread_data->td.td_deque == NULL)) {
     __kmp_alloc_task_deque(thread, thread_data);
   }
@@ -428,6 +436,12 @@ static kmp_int32 __kmp_push_task(kmp_int32 gtid, kmp_task_t *task) {
                 thread_data->td.td_deque_head, thread_data->td.td_deque_tail));
 
   __kmp_release_bootstrap_lock(&thread_data->td.td_deque_lock);
+
+  // Signal one worker thread to execute the task
+  if (taskdata->td_flags.hidden_helper) {
+    // Wake hidden helper threads up if they're sleeping
+    __kmp_hidden_helper_worker_thread_signal();
+  }
 
   return TASK_SUCCESSFULLY_PUSHED;
 }
@@ -721,7 +735,6 @@ static void __kmp_free_task(kmp_int32 gtid, kmp_taskdata_t *taskdata,
 #else /* ! USE_FAST_MEMORY */
   __kmp_thread_free(thread, taskdata);
 #endif
-
   KA_TRACE(20, ("__kmp_free_task: T#%d freed task %p\n", gtid, taskdata));
 }
 
@@ -918,6 +931,12 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
     if (ompt)
       __ompt_task_finish(task, resumed_task, ompt_task_complete);
 #endif
+
+    if (taskdata->td_flags.hidden_helper) {
+      KMP_DEBUG_ASSERT(taskdata->td_parent_task_team);
+      KMP_ATOMIC_DEC(
+          &taskdata->td_parent_task_team->tt.tt_unfinished_hidden_helper_tasks);
+    }
 
     // Only need to keep track of count if team parallel and tasking not
     // serialized, or task is detachable and event has already been fulfilled
@@ -1171,12 +1190,34 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
   kmp_task_t *task;
   kmp_taskdata_t *taskdata;
   kmp_info_t *thread = __kmp_threads[gtid];
+  kmp_info_t *encountering_thread = thread;
+  kmp_int32 encountering_gtid = gtid;
   kmp_team_t *team = thread->th.th_team;
   kmp_taskdata_t *parent_task = thread->th.th_current_task;
   size_t shareds_offset;
 
   if (UNLIKELY(!TCR_4(__kmp_init_middle)))
     __kmp_middle_initialize();
+
+  if (flags->hidden_helper) {
+    if (__kmp_enable_hidden_helper) {
+      if (!TCR_4(__kmp_init_hidden_helper))
+        __kmp_hidden_helper_initialize();
+
+      // For a hidden helper task encountered by a regular thread, we will push
+      // the task to the (gtid%__kmp_hidden_helper_threads_num)-th hidden helper
+      // thread.
+      if (!KMP_HIDDEN_HELPER_THREAD(gtid)) {
+        thread = __kmp_threads[KMP_GTID_TO_SHADOW_GTID(gtid)];
+        team = thread->th.th_team;
+        // We don't change the parent-child relation for hidden helper task as
+        // we need that to do per-task-region synchronization.
+      }
+    } else {
+      // If the hidden helper task is not enabled, reset the flag to FALSE.
+      flags->hidden_helper = FALSE;
+    }
+  }
 
   KA_TRACE(10, ("__kmp_task_alloc(enter): T#%d loc=%p, flags=(0x%x) "
                 "sizeof_task=%ld sizeof_shared=%ld entry=%p\n",
@@ -1188,6 +1229,7 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
     }
     flags->final = 1;
   }
+
   if (flags->tiedness == TASK_UNTIED && !team->t.t_serialized) {
     // Untied task encountered causes the TSC algorithm to check entire deque of
     // the victim thread. If no untied task encountered, then checking the head
@@ -1248,13 +1290,13 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
   KA_TRACE(30, ("__kmp_task_alloc: T#%d Second malloc size: %ld\n", gtid,
                 sizeof_shareds));
 
-// Avoid double allocation here by combining shareds with taskdata
+  // Avoid double allocation here by combining shareds with taskdata
 #if USE_FAST_MEMORY
-  taskdata = (kmp_taskdata_t *)__kmp_fast_allocate(thread, shareds_offset +
-                                                               sizeof_shareds);
+  taskdata = (kmp_taskdata_t *)__kmp_fast_allocate(
+      encountering_thread, shareds_offset + sizeof_shareds);
 #else /* ! USE_FAST_MEMORY */
-  taskdata = (kmp_taskdata_t *)__kmp_thread_malloc(thread, shareds_offset +
-                                                               sizeof_shareds);
+  taskdata = (kmp_taskdata_t *)__kmp_thread_malloc(
+      encountering_thread, shareds_offset + sizeof_shareds);
 #endif /* USE_FAST_MEMORY */
   ANNOTATE_HAPPENS_AFTER(taskdata);
 
@@ -1282,7 +1324,7 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
 
   taskdata->td_task_id = KMP_GEN_TASK_ID();
   taskdata->td_team = team;
-  taskdata->td_alloc_thread = thread;
+  taskdata->td_alloc_thread = encountering_thread;
   taskdata->td_parent = parent_task;
   taskdata->td_level = parent_task->td_level + 1; // increment nesting level
   KMP_ATOMIC_ST_RLX(&taskdata->td_untied_count, 0);
@@ -1301,6 +1343,9 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
   taskdata->td_flags.destructors_thunk = flags->destructors_thunk;
   taskdata->td_flags.proxy = flags->proxy;
   taskdata->td_flags.detachable = flags->detachable;
+  taskdata->td_flags.hidden_helper = flags->hidden_helper;
+  taskdata->td_parent_task_team = encountering_thread->th.th_task_team;
+  taskdata->encountering_gtid = encountering_gtid;
   taskdata->td_task_team = thread->th.th_task_team;
   taskdata->td_size_alloc = shareds_offset + sizeof_shareds;
   taskdata->td_flags.tasktype = TASK_EXPLICIT;
@@ -1358,6 +1403,17 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
     }
   }
 
+  if (flags->hidden_helper) {
+    // Increment the number of hidden helper tasks to be executed
+    KMP_ATOMIC_INC(&__kmp_unexecuted_hidden_helper_tasks);
+    if (kmp_task_team_t *parent_team = taskdata->td_parent_task_team) {
+      KMP_ATOMIC_INC(&parent_team->tt.tt_unfinished_hidden_helper_tasks);
+      if (!parent_team->tt.tt_hidden_helper_task_encountered) {
+        TCW_4(parent_team->tt.tt_hidden_helper_task_encountered, TRUE);
+      }
+    }
+  }
+
   KA_TRACE(20, ("__kmp_task_alloc(exit): T#%d created task %p parent=%p\n",
                 gtid, taskdata, taskdata->td_parent));
   ANNOTATE_HAPPENS_BEFORE(task);
@@ -1395,6 +1451,14 @@ kmp_task_t *__kmpc_omp_target_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
                                          size_t sizeof_shareds,
                                          kmp_routine_entry_t task_entry,
                                          kmp_int64 device_id) {
+  if (__kmp_enable_hidden_helper) {
+    auto &input_flags = reinterpret_cast<kmp_tasking_flags_t &>(flags);
+    input_flags.hidden_helper = TRUE;
+    // Hidden helper thread is always final for now because it is created by the
+    // compiler and used only for async offloading
+    input_flags.final = TRUE;
+  }
+
   return __kmpc_omp_task_alloc(loc_ref, gtid, flags, sizeof_kmp_task_t,
                                sizeof_shareds, task_entry);
 }
@@ -1466,6 +1530,13 @@ static void __kmp_invoke_task(kmp_int32 gtid, kmp_task_t *task,
     taskdata->ompt_task_info.frame.exit_frame.ptr = OMPT_GET_FRAME_ADDRESS(0);
   }
 #endif
+
+  // Decreament the counter of hidden helper tasks to be executed
+  if (taskdata->td_flags.hidden_helper) {
+    // Hidden helper tasks can only be executed by hidden helper threads
+    KMP_ASSERT(KMP_HIDDEN_HELPER_THREAD(gtid));
+    KMP_ATOMIC_DEC(&__kmp_unexecuted_hidden_helper_tasks);
+  }
 
   // Proxy tasks are not handled by the runtime
   if (taskdata->td_flags.proxy != TASK_PROXY) {
@@ -1869,6 +1940,12 @@ static kmp_int32 __kmpc_omp_taskwait_template(ident_t *loc_ref, kmp_int32 gtid,
 
     must_wait = must_wait || (thread->th.th_task_team != NULL &&
                               thread->th.th_task_team->tt.tt_found_proxy_tasks);
+    // If hidden helper thread is encountered, we must enable wait here.
+    must_wait =
+        must_wait ||
+        (__kmp_enable_hidden_helper && thread->th.th_task_team != NULL &&
+         thread->th.th_task_team->tt.tt_hidden_helper_task_encountered);
+
     if (must_wait) {
       kmp_flag_32<false, false> flag(
           RCAST(std::atomic<kmp_uint32> *,
@@ -2835,6 +2912,11 @@ static inline int __kmp_execute_tasks_template(
 
   thread->th.th_reap_state = KMP_NOT_SAFE_TO_REAP;
   threads_data = (kmp_thread_data_t *)TCR_PTR(task_team->tt.tt_threads_data);
+
+  // This can happen when hidden helper task is enabled
+  if (__kmp_enable_hidden_helper && threads_data == nullptr)
+    return FALSE;
+
   KMP_DEBUG_ASSERT(threads_data != NULL);
 
   nthreads = task_team->tt.tt_nproc;
@@ -2919,8 +3001,8 @@ static inline int __kmp_execute_tasks_template(
         }
       }
 
-      if (task == NULL) // break out of tasking loop
-        break;
+      if (task == NULL)
+        break; // break out of tasking loop
 
 // Found a task; execute it
 #if USE_ITT_BUILD && USE_ITT_NOTIFY
@@ -3394,6 +3476,8 @@ static kmp_task_team_t *__kmp_allocate_task_team(kmp_info_t *thread,
   task_team->tt.tt_nproc = nthreads = team->t.t_nproc;
 
   KMP_ATOMIC_ST_REL(&task_team->tt.tt_unfinished_threads, nthreads);
+  KMP_ATOMIC_ST_REL(&task_team->tt.tt_unfinished_hidden_helper_tasks, 0);
+  TCW_4(task_team->tt.tt_hidden_helper_task_encountered, FALSE);
   TCW_4(task_team->tt.tt_active, TRUE);
 
   KA_TRACE(20, ("__kmp_allocate_task_team: T#%d exiting; task_team = %p "
@@ -3566,6 +3650,26 @@ void __kmp_task_team_setup(kmp_info_t *this_thr, kmp_team_t *team, int always) {
                     ((team != NULL) ? team->t.t_id : -1), other_team));
     }
   }
+
+  // For regular thread, task enabling should be called when the task is going
+  // to be pushed to a dequeue. However, for the hidden helper thread, we need
+  // it ahead of time so that some operations can be performed without race
+  // condition.
+  if (this_thr == __kmp_hidden_helper_main_thread) {
+    for (int i = 0; i < 2; ++i) {
+      kmp_task_team_t *task_team = team->t.t_task_team[i];
+      if (KMP_TASKING_ENABLED(task_team)) {
+        continue;
+      }
+      __kmp_enable_tasking(task_team, this_thr);
+      for (int j = 0; j < task_team->tt.tt_nproc; ++j) {
+        kmp_thread_data_t *thread_data = &task_team->tt.tt_threads_data[j];
+        if (thread_data->td.td_deque == NULL) {
+          __kmp_alloc_task_deque(__kmp_hidden_helper_threads[j], thread_data);
+        }
+      }
+    }
+  }
 }
 
 // __kmp_task_team_sync: Propagation of task team data from team to threads
@@ -3634,6 +3738,11 @@ void __kmp_task_team_wait(
 
     TCW_PTR(this_thr->th.th_task_team, NULL);
   }
+
+  if (__kmp_enable_hidden_helper && task_team &&
+      task_team->tt.tt_hidden_helper_task_encountered)
+    while (KMP_ATOMIC_LD_ACQ(&task_team->tt.tt_unfinished_hidden_helper_tasks))
+      ;
 }
 
 // __kmp_tasking_barrier:

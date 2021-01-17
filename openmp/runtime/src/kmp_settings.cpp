@@ -506,6 +506,11 @@ int __kmp_initial_threads_capacity(int req_nproc) {
   if (nth < (4 * __kmp_xproc))
     nth = (4 * __kmp_xproc);
 
+  // If hidden helper task is enabled, we initialize the thread capacity with
+  // extra
+  // __kmp_hidden_helper_threads_num.
+  nth += __kmp_hidden_helper_threads_num;
+
   if (nth > __kmp_max_nth)
     nth = __kmp_max_nth;
 
@@ -1163,6 +1168,33 @@ static void __kmp_stg_parse_num_threads(char const *name, char const *value,
   }
   K_DIAG(1, ("__kmp_dflt_team_nth == %d\n", __kmp_dflt_team_nth));
 } // __kmp_stg_parse_num_threads
+
+static void __kmp_stg_parse_num_hidden_helper_threads(char const *name,
+                                                      char const *value,
+                                                      void *data) {
+  __kmp_stg_parse_int(name, value, 0, 16, &__kmp_hidden_helper_threads_num);
+  // If the number of hidden helper threads is zero, we disable hidden helper
+  // task
+  if (__kmp_hidden_helper_threads_num == 0) {
+    __kmp_enable_hidden_helper = FALSE;
+  }
+} // __kmp_stg_parse_num_hidden_helper_threads
+
+static void __kmp_stg_print_num_hidden_helper_threads(kmp_str_buf_t *buffer,
+                                                      char const *name,
+                                                      void *data) {
+  __kmp_stg_print_int(buffer, name, __kmp_hidden_helper_threads_num);
+} // __kmp_stg_print_num_hidden_helper_threads
+
+static void __kmp_stg_parse_use_hidden_helper(char const *name,
+                                              char const *value, void *data) {
+  __kmp_stg_parse_bool(name, value, &__kmp_enable_hidden_helper);
+} // __kmp_stg_parse_use_hidden_helper
+
+static void __kmp_stg_print_use_hidden_helper(kmp_str_buf_t *buffer,
+                                              char const *name, void *data) {
+  __kmp_stg_print_bool(buffer, name, __kmp_enable_hidden_helper);
+} // __kmp_stg_print_use_hidden_helper
 
 static void __kmp_stg_print_num_threads(kmp_str_buf_t *buffer, char const *name,
                                         void *data) {
@@ -4995,6 +5027,11 @@ static kmp_setting_t __kmp_stg_table[] = {
      __kmp_stg_print_omp_cancellation, NULL, 0, 0},
     {"OMP_ALLOCATOR", __kmp_stg_parse_allocator, __kmp_stg_print_allocator,
      NULL, 0, 0},
+    {"LIBOMP_USE_HIDDEN_HELPER_TASK", __kmp_stg_parse_use_hidden_helper,
+     __kmp_stg_print_use_hidden_helper, NULL, 0, 0},
+    {"LIBOMP_NUM_HIDDEN_HELPER_THREADS",
+     __kmp_stg_parse_num_hidden_helper_threads,
+     __kmp_stg_print_num_hidden_helper_threads, NULL, 0, 0},
 
 #if OMPT_SUPPORT
     {"OMP_TOOL", __kmp_stg_parse_omp_tool, __kmp_stg_print_omp_tool, NULL, 0,

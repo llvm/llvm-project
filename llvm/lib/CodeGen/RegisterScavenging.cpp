@@ -91,7 +91,7 @@ void RegScavenger::enterBasicBlockEnd(MachineBasicBlock &MBB) {
   LiveUnits.addLiveOuts(MBB);
 
   // Move internal iterator at the last instruction of the block.
-  if (MBB.begin() != MBB.end()) {
+  if (!MBB.empty()) {
     MBBI = std::prev(MBB.end());
     Tracking = true;
   }

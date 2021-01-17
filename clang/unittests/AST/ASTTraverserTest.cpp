@@ -1733,4 +1733,64 @@ ClassTemplateSpecializationDecl 'TemplStruct'
   }
 }
 
+TEST(Traverse, CXXRewrittenBinaryOperator) {
+
+  auto AST = buildASTFromCodeWithArgs(R"cpp(
+namespace std {
+struct strong_ordering {
+  int n;
+  constexpr operator int() const { return n; }
+  static const strong_ordering equal, greater, less;
+};
+constexpr strong_ordering strong_ordering::equal = {0};
+constexpr strong_ordering strong_ordering::greater = {1};
+constexpr strong_ordering strong_ordering::less = {-1};
+}
+
+struct HasSpaceshipMem {
+  int a;
+  constexpr auto operator<=>(const HasSpaceshipMem&) const = default;
+};
+
+void binop()
+{
+    HasSpaceshipMem hs1, hs2;
+    if (hs1 < hs2)
+        return;
+}
+)cpp",
+                                      {"-std=c++20"});
+  {
+    auto BN = ast_matchers::match(cxxRewrittenBinaryOperator().bind("binop"),
+                                  AST->getASTContext());
+    EXPECT_EQ(BN.size(), 1u);
+
+    EXPECT_EQ(dumpASTString(TK_AsIs, BN[0].getNodeAs<Stmt>("binop")),
+              R"cpp(
+CXXRewrittenBinaryOperator
+`-BinaryOperator
+  |-ImplicitCastExpr
+  | `-CXXMemberCallExpr
+  |   `-MemberExpr
+  |     `-ImplicitCastExpr
+  |       `-MaterializeTemporaryExpr
+  |         `-CXXOperatorCallExpr
+  |           |-ImplicitCastExpr
+  |           | `-DeclRefExpr 'operator<=>'
+  |           |-ImplicitCastExpr
+  |           | `-DeclRefExpr 'hs1'
+  |           `-ImplicitCastExpr
+  |             `-DeclRefExpr 'hs2'
+  `-IntegerLiteral
+)cpp");
+    EXPECT_EQ(dumpASTString(TK_IgnoreUnlessSpelledInSource,
+                            BN[0].getNodeAs<Stmt>("binop")),
+              R"cpp(
+CXXRewrittenBinaryOperator
+|-DeclRefExpr 'hs1'
+`-DeclRefExpr 'hs2'
+)cpp");
+  }
+}
+
 } // namespace clang

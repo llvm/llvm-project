@@ -833,7 +833,7 @@ incorporateNewSCCRange(const SCCRangeT &NewSCCRange, LazyCallGraph &G,
                        CGSCCAnalysisManager &AM, CGSCCUpdateResult &UR) {
   using SCC = LazyCallGraph::SCC;
 
-  if (NewSCCRange.begin() == NewSCCRange.end())
+  if (NewSCCRange.empty())
     return C;
 
   // Add the current SCC to the worklist as its shape has changed.
