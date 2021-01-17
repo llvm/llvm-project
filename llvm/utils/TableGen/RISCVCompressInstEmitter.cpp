@@ -526,13 +526,13 @@ static unsigned getPredicates(DenseMap<const Record *, unsigned> &PredicateMap,
   return 0;
 }
 
-static void printPredicates(std::vector<const Record *> &Predicates,
+static void printPredicates(const std::vector<const Record *> &Predicates,
                             StringRef Name, raw_ostream &o) {
   for (unsigned i = 0; i < Predicates.size(); ++i) {
     StringRef Pred = Predicates[i]->getValueAsString(Name);
     o << "  case " << i + 1 << ": {\n"
       << "  // " << Predicates[i]->getName() << "\n"
-      << "  " << Pred.data() << "\n"
+      << "  " << Pred << "\n"
       << "  }\n";
   }
 }
@@ -555,7 +555,7 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
                     "'PassSubtarget' is false. SubTargetInfo object is needed "
                     "for target features.\n");
 
-  std::string Namespace = std::string(Target.getName());
+  StringRef Namespace = Target.getName();
 
   // Sort entries in CompressPatterns to handle instructions that can have more
   // than one candidate for compression\uncompression, e.g ADD can be
@@ -624,8 +624,8 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
 
   std::string CaseString;
   raw_string_ostream CaseStream(CaseString);
-  std::string PrevOp;
-  std::string CurOp;
+  StringRef PrevOp;
+  StringRef CurOp;
   CaseStream << "  switch (MI.getOpcode()) {\n";
   CaseStream << "    default: return false;\n";
 
@@ -648,10 +648,10 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
     IndexedMap<OpData> &DestOperandMap = CompressOrCheck ?
       CompressPat.DestOperandMap : CompressPat.SourceOperandMap;
 
-    CurOp = Source.TheDef->getName().str();
+    CurOp = Source.TheDef->getName();
     // Check current and previous opcode to decide to continue or end a case.
     if (CurOp != PrevOp) {
-      if (PrevOp != "")
+      if (!PrevOp.empty())
         CaseStream.indent(6) << "break;\n    } // case " + PrevOp + "\n";
       CaseStream.indent(4) << "case " + Namespace + "::" + CurOp + ": {\n";
     }
