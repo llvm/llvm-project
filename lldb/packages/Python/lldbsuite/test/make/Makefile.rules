@@ -604,20 +604,6 @@ ifneq "$(strip $(ARCHIVE_OBJCXX_SOURCES))" ""
 	endif
 endif
 
-#----------------------------------------------------------------------
-# Check if we are compiling with gcc 4.6
-#----------------------------------------------------------------------
-ifneq "$(strip $(CXX_SOURCES) $(OBJCXX_SOURCES))" ""
-ifneq "$(filter g++,$(CXX))" ""
-	CXXVERSION = $(shell $(CXX) -dumpversion | cut -b 1-3)
-	ifeq "$(CXXVERSION)" "4.6"
-		# GCC 4.6 cannot handle -std=c++11, so replace it with -std=c++0x
-		# instead. FIXME: remove once GCC version is upgraded.
-		override CXXFLAGS := $(subst -std=c++11,-std=c++0x,$(CXXFLAGS))
-	endif
-endif
-endif
-
 ifeq ($(findstring clang, $(CXX)), clang)
 	CXXFLAGS += --driver-mode=g++
 endif
