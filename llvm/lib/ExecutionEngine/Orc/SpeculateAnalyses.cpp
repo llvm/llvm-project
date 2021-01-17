@@ -106,11 +106,10 @@ BlockFreqQuery::ResultTy BlockFreqQuery::operator()(Function &F) {
 
   assert(IBBs.size() == BBFreqs.size() && "BB Count Mismatch");
 
-  llvm::sort(BBFreqs.begin(), BBFreqs.end(),
-             [](decltype(BBFreqs)::const_reference BBF,
-                decltype(BBFreqs)::const_reference BBS) {
-               return BBF.second > BBS.second ? true : false;
-             });
+  llvm::sort(BBFreqs, [](decltype(BBFreqs)::const_reference BBF,
+                         decltype(BBFreqs)::const_reference BBS) {
+    return BBF.second > BBS.second ? true : false;
+  });
 
   // ignoring number of direct calls in a BB
   auto Topk = numBBToGet(BBFreqs.size());

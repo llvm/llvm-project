@@ -84,7 +84,7 @@ void HexagonBlockRanges::RangeList::unionize(bool MergeAdjacent) {
   if (empty())
     return;
 
-  llvm::sort(begin(), end());
+  llvm::sort(*this);
   iterator Iter = begin();
 
   while (Iter != end()-1) {
