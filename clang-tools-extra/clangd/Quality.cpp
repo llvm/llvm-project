@@ -512,7 +512,7 @@ evaluateDecisionForest(const SymbolQualitySignals &Quality,
   E.setIsNameInContext(NumMatch > 0);
   E.setNumNameInContext(NumMatch);
   E.setFractionNameInContext(
-      Relevance.ContextWords && Relevance.ContextWords->empty()
+      Relevance.ContextWords && !Relevance.ContextWords->empty()
           ? NumMatch * 1.0 / Relevance.ContextWords->size()
           : 0);
   E.setIsInBaseClass(Relevance.InBaseClass);
