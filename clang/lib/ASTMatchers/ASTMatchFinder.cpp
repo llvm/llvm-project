@@ -257,10 +257,7 @@ public:
       return true;
     ScopedIncrement ScopedDepth(&CurrentDepth);
 
-    if (!match(*Node->getDecomposedForm().LHS) ||
-        !match(*Node->getDecomposedForm().RHS))
-      return false;
-    return true;
+    return match(*Node->getLHS()) && match(*Node->getRHS());
   }
   bool TraverseLambdaExpr(LambdaExpr *Node) {
     if (!Finder->isTraversalIgnoringImplicitNodes())
