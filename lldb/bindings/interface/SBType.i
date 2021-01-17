@@ -458,12 +458,12 @@ SBTypeList supports :py:class:`SBType` iteration. For example,
 
     # find_type.py:
 
-        # Get the type 'Task'.
-        type_list = target.FindTypes('Task')
-        self.assertTrue(len(type_list) == 1)
-        # To illustrate the SBType iteration.
-        for type in type_list:
-            # do something with type
+    # Get the type 'Task'.
+    type_list = target.FindTypes('Task')
+    self.assertTrue(len(type_list) == 1)
+    # To illustrate the SBType iteration.
+    for type in type_list:
+        # do something with type
 
 ") SBTypeList;
 class SBTypeList
