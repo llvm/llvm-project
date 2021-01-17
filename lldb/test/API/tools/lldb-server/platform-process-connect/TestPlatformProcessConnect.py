@@ -10,6 +10,8 @@ class TestPlatformProcessConnect(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @skipIfRemote
     @expectedFailureAll(hostoslist=["windows"], triple='.*-android')
+    @skipIfWindows # lldb-server does not terminate correctly
+    @skipIfDarwin # lldb-server not found correctly
     def test_platform_process_connect(self):
         self.build()
 
