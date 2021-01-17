@@ -169,7 +169,7 @@ llvm::Error GsymCreator::finalize(llvm::raw_ostream &OS) {
   Finalized = true;
 
   // Sort function infos so we can emit sorted functions.
-  llvm::sort(Funcs.begin(), Funcs.end());
+  llvm::sort(Funcs);
 
   // Don't let the string table indexes change by finalizing in order.
   StrTab.finalizeInOrder();

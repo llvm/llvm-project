@@ -775,10 +775,10 @@ bool AMDGPUPromoteAllocaImpl::hasSufficientLocalMem(const Function &F) {
   //
   // FIXME: We should really do something to fix the addresses to a more optimal
   // value instead
-  llvm::sort(AllocatedSizes.begin(), AllocatedSizes.end(),
-             [](std::pair<uint64_t, Align> LHS, std::pair<uint64_t, Align> RHS) {
-               return LHS.second < RHS.second;
-             });
+  llvm::sort(AllocatedSizes, [](std::pair<uint64_t, Align> LHS,
+                                std::pair<uint64_t, Align> RHS) {
+    return LHS.second < RHS.second;
+  });
 
   // Check how much local memory is being used by global objects
   CurrentLocalMemUsage = 0;
