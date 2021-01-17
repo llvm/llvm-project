@@ -835,25 +835,27 @@ if (someThings[i][j][k].Contains(myThing)) {
 TEST_F(FormatTestCSharp, CSharpGenericTypeConstraints) {
   FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
 
-  verifyFormat(R"(//
-class ItemFactory<T>
-    where T : new() {})",
+  EXPECT_TRUE(Style.BraceWrapping.SplitEmptyRecord);
+
+  verifyFormat("class ItemFactory<T>\n"
+               "    where T : new() {\n"
+               "}",
                Style);
 
-  verifyFormat(R"(//
-class Dictionary<TKey, TVal>
-    where TKey : IComparable<TKey>
-    where TVal : IMyInterface {
-  public void MyMethod<T>(T t)
-      where T : IMyInterface {
-    doThing();
-  }
-})",
+  verifyFormat("class Dictionary<TKey, TVal>\n"
+               "    where TKey : IComparable<TKey>\n"
+               "    where TVal : IMyInterface {\n"
+               "  public void MyMethod<T>(T t)\n"
+               "      where T : IMyInterface {\n"
+               "    doThing();\n"
+               "  }\n"
+               "}",
                Style);
 
-  verifyFormat(R"(//
-class ItemFactory<T>
-    where T : new(), IAnInterface<T>, IAnotherInterface<T>, IAnotherInterfaceStill<T> {})",
+  verifyFormat("class ItemFactory<T>\n"
+               "    where T : new(), IAnInterface<T>, IAnotherInterface<T>, "
+               "IAnotherInterfaceStill<T> {\n"
+               "}",
                Style);
 
   Style.ColumnLimit = 50; // Force lines to be wrapped.
@@ -862,7 +864,8 @@ class ItemFactory<T, U>
     where T : new(),
               IAnInterface<T>,
               IAnotherInterface<T, U>,
-              IAnotherInterfaceStill<T, U> {})",
+              IAnotherInterfaceStill<T, U> {
+})",
                Style);
 
   // In other languages `where` can be used as a normal identifier.
