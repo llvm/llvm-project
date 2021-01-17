@@ -706,7 +706,7 @@ public:
   const ComplexPattern &getPattern() const { return Pattern; }
   unsigned getMatchNumber() const { return MatchNumber; }
 
-  const std::string getName() const { return Name; }
+  std::string getName() const { return Name; }
   unsigned getFirstResult() const { return FirstResult; }
 
   static bool classof(const Matcher *N) {
