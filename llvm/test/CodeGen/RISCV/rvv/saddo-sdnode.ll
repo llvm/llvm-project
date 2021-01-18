@@ -4,7 +4,7 @@
 declare { <vscale x 2 x i32>, <vscale x 2 x i1> } @llvm.sadd.with.overflow.nxv2i32(<vscale x 2 x i32>, <vscale x 2 x i32>)
 
 define <vscale x 2 x i32> @saddo_nvx2i32(<vscale x 2 x i32> %x, <vscale x 2 x i32> %y) {
-; CHECK-LABEL: foo:
+; CHECK-LABEL: saddo_nvx2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32,m1,ta,mu
 ; CHECK-NEXT:    vmslt.vx v25, v17, zero
