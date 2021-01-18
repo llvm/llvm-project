@@ -6619,7 +6619,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     EVT OverflowVT = MVT::i1;
     if (ResultVT.isVector())
       OverflowVT = EVT::getVectorVT(
-          *Context, OverflowVT, ResultVT.getVectorElementCount());
+          *Context, OverflowVT, ResultVT.getVectorNumElements());
 
     SDVTList VTs = DAG.getVTList(ResultVT, OverflowVT);
     setValue(&I, DAG.getNode(Op, sdl, VTs, Op1, Op2));
