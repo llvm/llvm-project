@@ -811,16 +811,16 @@ def int_aarch64_stgp  : DefaultAttrsIntrinsic<[], [llvm_ptr_ty, llvm_i64_ty, llv
 // Transactional Memory Extension (TME) Intrinsics
 let TargetPrefix = "aarch64" in {
 def int_aarch64_tstart  : GCCBuiltin<"__builtin_arm_tstart">,
-                         DefaultAttrsIntrinsic<[llvm_i64_ty]>;
+                         Intrinsic<[llvm_i64_ty], [], [IntrWillReturn]>;
 
-def int_aarch64_tcommit : GCCBuiltin<"__builtin_arm_tcommit">, DefaultAttrsIntrinsic<[]>;
+def int_aarch64_tcommit : GCCBuiltin<"__builtin_arm_tcommit">, Intrinsic<[], [], [IntrWillReturn]>;
 
 def int_aarch64_tcancel : GCCBuiltin<"__builtin_arm_tcancel">,
-                          DefaultAttrsIntrinsic<[], [llvm_i64_ty], [ImmArg<ArgIndex<0>>]>;
+                          Intrinsic<[], [llvm_i64_ty], [IntrWillReturn, ImmArg<ArgIndex<0>>]>;
 
 def int_aarch64_ttest   : GCCBuiltin<"__builtin_arm_ttest">,
-                          DefaultAttrsIntrinsic<[llvm_i64_ty], [],
-                                    [IntrNoMem, IntrHasSideEffects]>;
+                          Intrinsic<[llvm_i64_ty], [],
+                                    [IntrNoMem, IntrHasSideEffects, IntrWillReturn]>;
 
 // Armv8.7-A load/store 64-byte intrinsics
 defvar data512 = !listsplat(llvm_i64_ty, 8);
