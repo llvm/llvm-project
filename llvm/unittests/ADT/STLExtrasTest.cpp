@@ -400,6 +400,17 @@ TEST(STLExtrasTest, DropBeginTest) {
   }
 }
 
+TEST(STLExtrasTest, DropBeginDefaultTest) {
+  SmallVector<int, 5> vec{0, 1, 2, 3, 4};
+
+  int i = 1;
+  for (auto &v : drop_begin(vec)) {
+    EXPECT_EQ(v, i);
+    i += 1;
+  }
+  EXPECT_EQ(i, 5);
+}
+
 TEST(STLExtrasTest, EarlyIncrementTest) {
   std::list<int> L = {1, 2, 3, 4};
 
