@@ -255,6 +255,7 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
     ParseInput.Opts.BuildRecoveryAST = BuildRecoveryAST;
     ParseInput.Opts.PreserveRecoveryASTType = PreserveRecoveryASTType;
 
+    CodeCompleteOpts.MainFileSignals = IP->Signals;
     // FIXME(ibiryukov): even if Preamble is non-null, we may want to check
     // both the old and the new version in case only one of them matches.
     CodeCompleteResult Result = clangd::codeComplete(

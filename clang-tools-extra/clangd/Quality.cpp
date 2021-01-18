@@ -294,6 +294,38 @@ void SymbolRelevanceSignals::merge(const Symbol &IndexResult) {
   if (!(IndexResult.Flags & Symbol::VisibleOutsideFile)) {
     Scope = AccessibleScope::FileScope;
   }
+  if (MainFileSignals) {
+    MainFileRefs =
+        std::max(MainFileRefs,
+                 MainFileSignals->ReferencedSymbols.lookup(IndexResult.ID));
+    ScopeRefsInFile =
+        std::max(ScopeRefsInFile,
+                 MainFileSignals->RelatedNamespaces.lookup(IndexResult.Scope));
+  }
+}
+
+void SymbolRelevanceSignals::computeASTSignals(
+    const CodeCompletionResult &SemaResult) {
+  if (!MainFileSignals)
+    return;
+  if ((SemaResult.Kind != CodeCompletionResult::RK_Declaration) &&
+      (SemaResult.Kind != CodeCompletionResult::RK_Pattern))
+    return;
+  if (const NamedDecl *ND = SemaResult.getDeclaration()) {
+    auto ID = getSymbolID(ND);
+    if (!ID)
+      return;
+    MainFileRefs =
+        std::max(MainFileRefs, MainFileSignals->ReferencedSymbols.lookup(ID));
+    if (const auto *NSD = dyn_cast<NamespaceDecl>(ND->getDeclContext())) {
+      if (NSD->isAnonymousNamespace())
+        return;
+      std::string Scope = printNamespaceScope(*NSD);
+      if (!Scope.empty())
+        ScopeRefsInFile = std::max(
+            ScopeRefsInFile, MainFileSignals->RelatedNamespaces.lookup(Scope));
+    }
+  }
 }
 
 void SymbolRelevanceSignals::merge(const CodeCompletionResult &SemaCCResult) {
@@ -315,6 +347,7 @@ void SymbolRelevanceSignals::merge(const CodeCompletionResult &SemaCCResult) {
     InBaseClass |= SemaCCResult.InBaseClass;
   }
 
+  computeASTSignals(SemaCCResult);
   // Declarations are scoped, others (like macros) are assumed global.
   if (SemaCCResult.Declaration)
     Scope = std::min(Scope, computeScope(SemaCCResult.Declaration));

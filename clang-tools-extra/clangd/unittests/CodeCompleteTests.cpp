@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ASTSignals.h"
 #include "Annotations.h"
 #include "ClangdServer.h"
 #include "CodeComplete.h"
@@ -51,6 +52,8 @@ using ContextKind = CodeCompletionContext::Kind;
 
 // GMock helpers for matching completion items.
 MATCHER_P(Named, Name, "") { return arg.Name == Name; }
+MATCHER_P(MainFileRefs, Refs, "") { return arg.MainFileRefs == Refs; }
+MATCHER_P(ScopeRefs, Refs, "") { return arg.ScopeRefsInFile == Refs; }
 MATCHER_P(NameStartsWith, Prefix, "") {
   return llvm::StringRef(arg.Name).startswith(Prefix);
 }
@@ -1108,6 +1111,49 @@ TEST(CompletionTest, RecordCCResultCallback) {
   completions("int xy1, xy2; int a = xy^", /*IndexSymbols=*/{}, Opts);
   EXPECT_THAT(RecordedCompletions,
               UnorderedElementsAre(Named("xy1"), Named("xy2")));
+}
+
+TEST(CompletionTest, ASTSignals) {
+  struct Completion {
+    std::string Name;
+    unsigned MainFileRefs;
+    unsigned ScopeRefsInFile;
+  };
+  CodeCompleteOptions Opts;
+  std::vector<Completion> RecordedCompletions;
+  Opts.RecordCCResult = [&RecordedCompletions](const CodeCompletion &CC,
+                                               const SymbolQualitySignals &,
+                                               const SymbolRelevanceSignals &R,
+                                               float Score) {
+    RecordedCompletions.push_back({CC.Name, R.MainFileRefs, R.ScopeRefsInFile});
+  };
+  ASTSignals MainFileSignals;
+  MainFileSignals.ReferencedSymbols[var("xy1").ID] = 3;
+  MainFileSignals.ReferencedSymbols[var("xy2").ID] = 1;
+  MainFileSignals.ReferencedSymbols[var("xyindex").ID] = 10;
+  MainFileSignals.RelatedNamespaces["tar::"] = 5;
+  MainFileSignals.RelatedNamespaces["bar::"] = 3;
+  Opts.MainFileSignals = &MainFileSignals;
+  Opts.AllScopes = true;
+  completions(
+      R"cpp(
+      int xy1;
+      int xy2;
+      namespace bar {
+      int xybar = 1;
+      int a = xy^
+      }
+      )cpp",
+      /*IndexSymbols=*/{var("xyindex"), var("tar::xytar"), var("bar::xybar")},
+      Opts);
+  EXPECT_THAT(RecordedCompletions,
+              UnorderedElementsAre(
+                  AllOf(Named("xy1"), MainFileRefs(3u), ScopeRefs(0u)),
+                  AllOf(Named("xy2"), MainFileRefs(1u), ScopeRefs(0u)),
+                  AllOf(Named("xyindex"), MainFileRefs(10u), ScopeRefs(0u)),
+                  AllOf(Named("xytar"), MainFileRefs(0u), ScopeRefs(5u)),
+                  AllOf(/*both from sema and index*/ Named("xybar"),
+                        MainFileRefs(0u), ScopeRefs(3u))));
 }
 
 SignatureHelp signatures(llvm::StringRef Text, Position Point,
