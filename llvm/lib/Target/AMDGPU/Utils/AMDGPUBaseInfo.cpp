@@ -340,7 +340,6 @@ void AMDGPUTargetID::setTargetIDFromTargetIDStream(StringRef TargetID) {
   SmallVector<StringRef, 3> TargetIDSplit;
   TargetID.split(TargetIDSplit, ':');
 
-  Optional<bool> FeatureStatus;
   for (const auto &FeatureString : TargetIDSplit) {
     if (FeatureString.startswith("xnack"))
       XnackSetting = getTargetIDSettingFromFeatureString(FeatureString);

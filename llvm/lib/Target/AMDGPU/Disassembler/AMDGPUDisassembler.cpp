@@ -1386,7 +1386,6 @@ AMDGPUDisassembler::decodeKernelDescriptorDirective(
 
   uint16_t TwoByteBuffer = 0;
   uint32_t FourByteBuffer = 0;
-  uint64_t EightByteBuffer = 0;
 
   StringRef ReservedBytes;
   StringRef Indent = "\t";
