@@ -60,7 +60,7 @@ public:
   /// Return the intersection of this set and the given set.
   PresburgerSet intersect(const PresburgerSet &set) const;
 
-  /// Return true if the set contains the given point, or false otherwise.
+  /// Return true if the set contains the given point, and false otherwise.
   bool containsPoint(ArrayRef<int64_t> point) const;
 
   /// Print the set's internal state.
@@ -73,6 +73,9 @@ public:
   /// Return the set difference of this set and the given set, i.e.,
   /// return `this \ set`.
   PresburgerSet subtract(const PresburgerSet &set) const;
+
+  /// Return true if this set is equal to the given set, and false otherwise.
+  bool isEqual(const PresburgerSet &set) const;
 
   /// Return a universe set of the specified type that contains all points.
   static PresburgerSet getUniverse(unsigned nDim = 0, unsigned nSym = 0);
