@@ -158,7 +158,7 @@ DynamicSymbols:
 
 # BROKEN-AUX-GNU:      Version symbols section '.gnu.version' contains 1 entries:
 # BROKEN-AUX-GNU-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 3 (.dynsym)
-# BROKEN-AUX-GNU-NEXT: warning: '[[FILE]]': unable to get a version for entry 0 of SHT_GNU_versym section with index 1: invalid SHT_GNU_verneed section with index 2: found a misaligned auxiliary entry at offset 0x11
+# BROKEN-AUX-GNU-NEXT: warning: '[[FILE]]': invalid SHT_GNU_verneed section with index 2: found a misaligned auxiliary entry at offset 0x11
 # BROKEN-AUX-GNU-NEXT:  000:   2 (<corrupt>)
 
 # BROKEN-AUX-LLVM:      VersionSymbols [
