@@ -1,6 +1,5 @@
 add_subdirectory(mlir-cuda-runner)
 add_subdirectory(mlir-cpu-runner)
-add_subdirectory(mlir-linalg-ods-gen)
 add_subdirectory(mlir-opt)
 add_subdirectory(mlir-reduce)
 add_subdirectory(mlir-rocm-runner)
