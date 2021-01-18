@@ -11,17 +11,19 @@ function(add_linalg_ods_gen tc_filename output_file)
     PROPERTIES GENERATED TRUE)
   add_custom_command(
     OUTPUT ${GEN_ODS_FILE} ${GEN_CPP_FILE}
-    COMMAND mlir-linalg-ods-gen -gen-ods-decl ${TC_SOURCE} > ${GEN_ODS_FILE}
-    COMMAND mlir-linalg-ods-gen -gen-impl ${TC_SOURCE} > ${GEN_CPP_FILE}
+    COMMAND ${MLIR_LINALG_ODS_GEN_EXE} -gen-ods-decl ${TC_SOURCE} > ${GEN_ODS_FILE}
+    COMMAND ${MLIR_LINALG_ODS_GEN_EXE} -gen-impl ${TC_SOURCE} > ${GEN_CPP_FILE}
     MAIN_DEPENDENCY
     ${TC_SOURCE}
     DEPENDS
-    mlir-linalg-ods-gen
+    ${MLIR_LINALG_ODS_GEN_EXE}
+    ${MLIR_LINALG_ODS_GEN_TARGET}
     VERBATIM)
   add_custom_target(
     MLIR${output_file}IncGen
     DEPENDS
-    mlir-linalg-ods-gen
+    ${MLIR_LINALG_ODS_GEN_EXE}
+    ${MLIR_LINALG_ODS_GEN_TARGET}
     ${GEN_ODS_FILE} ${GEN_CPP_FILE})
 endfunction()
 
