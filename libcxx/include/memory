@@ -1462,7 +1462,7 @@ class _LIBCPP_UNIQUE_PTR_TRIVIAL_ABI _LIBCPP_TEMPLATE_VIS unique_ptr {
 public:
   typedef _Tp element_type;
   typedef _Dp deleter_type;
-  typedef _LIBCPP_NODEBUG_TYPE typename __pointer_type<_Tp, deleter_type>::type pointer;
+  typedef _LIBCPP_NODEBUG_TYPE typename __pointer<_Tp, deleter_type>::type pointer;
 
   static_assert(!is_rvalue_reference<deleter_type>::value,
                 "the specified deleter type cannot be an rvalue reference");
@@ -1670,7 +1670,7 @@ class _LIBCPP_UNIQUE_PTR_TRIVIAL_ABI _LIBCPP_TEMPLATE_VIS unique_ptr<_Tp[], _Dp>
 public:
   typedef _Tp element_type;
   typedef _Dp deleter_type;
-  typedef typename __pointer_type<_Tp, deleter_type>::type pointer;
+  typedef typename __pointer<_Tp, deleter_type>::type pointer;
 
 private:
   __compressed_pair<pointer, deleter_type> __ptr_;
