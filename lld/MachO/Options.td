@@ -477,7 +477,7 @@ def dependency_info : Separate<["-"], "dependency_info">,
      Flags<[HelpHidden]>,
      Group<grp_introspect>;
 def save_temps : Flag<["-"], "save-temps">,
-     HelpText<"Save temporary files instead of deleting them">,
+     HelpText<"Save intermediate LTO compilation results">,
      Group<grp_introspect>;
 
 def grp_symtab : OptionGroup<"symtab">, HelpText<"SYMBOL TABLE OPTIMIZATIONS">;

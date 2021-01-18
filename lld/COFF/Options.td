@@ -68,7 +68,7 @@ def lldltocache : P<"lldltocache",
 def lldltocachepolicy : P<"lldltocachepolicy",
     "Pruning policy for the ThinLTO cache">;
 def lldsavetemps : F<"lldsavetemps">,
-    HelpText<"Save temporary files instead of deleting them">;
+    HelpText<"Save intermediate LTO compilation results">;
 def machine : P<"machine", "Specify target platform">;
 def merge   : P<"merge", "Combine sections">;
 def mllvm   : P<"mllvm", "Options to pass to LLVM">;
