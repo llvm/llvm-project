@@ -21,7 +21,6 @@ Sections:
   - Name:    .gnu.version_d
     Type:    SHT_GNU_verdef
     Link:    [[LINK]]
-    Info:    0x0
     Entries: []
 
 ## Check that we report a warning when the sh_link field of a SHT_GNU_verdef section references a non-string table section.
@@ -48,8 +47,6 @@ FileHeader:
 Sections:
   - Name:     .gnu.version_d
     Type:     SHT_GNU_verdef
-    Link:     .dynstr
-    Info:     0x0
     Entries:  []
     ShOffset: [[SHOFFSET=<none>]]
     ShName:   [[SHNAME=<none>]]
@@ -102,10 +99,8 @@ FileHeader:
   Data:  ELFDATA2LSB
   Type:  ET_DYN
 Sections:
-  - Name:    .gnu.version_d
-    Type:    SHT_GNU_verdef
-    Link:    .dynstr
-    Info:    0x1
+  - Name: .gnu.version_d
+    Type: SHT_GNU_verdef
     Entries:
       - Names:
           - FOO
@@ -128,10 +123,8 @@ FileHeader:
   Data:  ELFDATA2LSB
   Type:  ET_DYN
 Sections:
-  - Name:    .gnu.version_d
-    Type:    SHT_GNU_verdef
-    Link:    .dynstr
-    Info:    0x1
+  - Name: .gnu.version_d
+    Type: SHT_GNU_verdef
     Entries:
       - Names:
           - FOO
@@ -168,10 +161,9 @@ FileHeader:
   Data:  ELFDATA2LSB
   Type:  ET_DYN
 Sections:
-  - Name:    .gnu.version_d
-    Type:    SHT_GNU_verdef
-    Link:    .strtab
-    Info:    0x1
+  - Name: .gnu.version_d
+    Type: SHT_GNU_verdef
+    Link: .strtab
     Entries:
       - Names:
           - FOO
@@ -286,14 +278,12 @@ Sections:
   - Name:         .gnu.version
     Type:         SHT_GNU_versym
     Flags:        [ SHF_ALLOC ]
-    Link:         .dynsym
     AddressAlign: 0x0000000000000002
     EntSize:      0x0000000000000002
     Entries:      [ 0, 2 ]
   - Name:         .gnu.version_d
     Type:         SHT_GNU_verdef
     Flags:        [ SHF_ALLOC ]
-    Link:         .dynstr
     AddressAlign: 0x4
     Info:         0x1
     Entries: []
