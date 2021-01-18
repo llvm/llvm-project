@@ -12033,7 +12033,8 @@ static SDValue performCommonVectorExtendCombine(SDValue VectorShuffle,
 
   SDValue InsertVectorNode = DAG.getNode(
       InsertVectorElt.getOpcode(), DL, PreExtendVT, DAG.getUNDEF(PreExtendVT),
-      Extend.getOperand(0), DAG.getConstant(0, DL, MVT::i64));
+      DAG.getAnyExtOrTrunc(Extend.getOperand(0), DL, PreExtendType),
+      DAG.getConstant(0, DL, MVT::i64));
 
   std::vector<int> ShuffleMask(TargetType.getVectorElementCount().getValue());
 
@@ -12041,9 +12042,8 @@ static SDValue performCommonVectorExtendCombine(SDValue VectorShuffle,
       DAG.getVectorShuffle(PreExtendVT, DL, InsertVectorNode,
                            DAG.getUNDEF(PreExtendVT), ShuffleMask);
 
-  SDValue ExtendNode =
-      DAG.getNode(IsSExt ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND, DL, TargetType,
-                  VectorShuffleNode, DAG.getValueType(TargetType));
+  SDValue ExtendNode = DAG.getNode(IsSExt ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND,
+                                   DL, TargetType, VectorShuffleNode);
 
   return ExtendNode;
 }
