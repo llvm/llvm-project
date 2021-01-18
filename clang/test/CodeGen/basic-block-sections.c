@@ -41,4 +41,4 @@ int another(int a) {
 //
 // UNIQUE: .section .text.world.world.__part.1,
 // UNIQUE: .section .text.another.another.__part.1,
-// ERROR: error:  unable to load basic block sections function list: '{{[Nn]}}o such file or directory'
+// ERROR: error:  unable to load basic block sections function list: '{{.*}}{{[Nn]}}o such file or directory'
