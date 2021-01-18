@@ -352,3 +352,93 @@ def create_my_op():
   builder.my_op()
   return m
 ```
+
+## Integration with ODS
+
+The MLIR Python bindings integrate with the tablegen-based ODS system for
+providing user-friendly wrappers around MLIR dialects and operations. There
+are multiple parts to this integration, outlined below. Most details have
+been elided: refer to the build rules and python sources under `mlir.dialects`
+for the canonical way to use this facility.
+
+### Generating `{DIALECT_NAMESPACE}.py` wrapper modules
+
+Each dialect with a mapping to python requires that an appropriate
+`{DIALECT_NAMESPACE}.py` wrapper module is created. This is done by invoking
+`mlir-tablegen` on a python-bindings specific tablegen wrapper that includes
+the boilerplate and actual dialect specific `td` file. An example, for the
+`StandardOps` (which is assigned the namespace `std` as a special case):
+
+```tablegen
+#ifndef PYTHON_BINDINGS_STANDARD_OPS
+#define PYTHON_BINDINGS_STANDARD_OPS
+
+include "mlir/Bindings/Python/Attributes.td"
+include "mlir/Dialect/StandardOps/IR/Ops.td"
+
+#endif
+```
+
+In the main repository, building the wrapper is done via the CMake function
+`add_mlir_dialect_python_bindings`, which invokes:
+
+```
+mlir-tablegen -gen-python-op-bindings -bind-dialect={DIALECT_NAMESPACE} \
+    {PYTHON_BINDING_TD_FILE}
+```
+
+### Extending the search path for wrapper modules
+
+When the python bindings need to locate a wrapper module, they consult the
+`dialect_search_path` and use it to find an appropriately named module. For
+the main repository, this search path is hard-coded to include the
+`mlir.dialects` module, which is where wrappers are emitted by the abobe build
+rule. Out of tree dialects and add their modules to the search path by calling:
+
+```python
+mlir._cext.append_dialect_search_prefix("myproject.mlir.dialects")
+```
+
+### Wrapper module code organization
+
+The wrapper module tablegen emitter outputs:
+
+* A `_Dialect` class (extending `mlir.ir.Dialect`) with a `DIALECT_NAMESPACE`
+  attribute.
+* An `{OpName}` class for each operation (extending `mlir.ir.OpView`).
+* Decorators for each of the above to register with the system.
+
+Note: In order to avoid naming conflicts, all internal names used by the wrapper
+module are prefixed by `_ods_`.
+
+Each concrete `OpView` subclass further defines several attributes:
+
+* `OPERATION_NAME` attribute with the `str` fully qualified operation name
+  (i.e. `std.absf`).
+* An `__init__` method for the *default builder* if one is defined or inferred
+  for the operation.
+* `@property` getter for each operand or result (using an auto-generated name
+  for unnamed of each).
+* `@property` getter, setter and deleter for each declared attribute.
+
+#### Builders
+
+Presently, only a single, default builder is mapped to the `__init__` method.
+Generalizing this facility is under active development. It currently accepts
+arguments:
+
+* One argument for each declared result:
+  * For single-valued results: Each will accept an `mlir.ir.Type`.
+  * For variadic results: Each will accept a `List[mlir.ir.Type]`.
+* One argument for each declared operand or attribute:
+  * For single-valued operands: Each will accept an `mlir.ir.Value`.
+  * For variadic operands: Each will accept a `List[mlir.ir.Value]`.
+  * For attributes, it will accept an `mlir.ir.Attribute`.
+* Trailing usage-specific, optional keyword arguments:
+  * `loc`: An explicit `mlir.ir.Location` to use. Defaults to the location
+    bound to the thread (i.e. `with Location.unknown():`) or an error if none
+    is bound nor specified.
+  * `context`: An explicit `mlir.ir.Context` to use. Default to the context
+    bound to the thread (i.e. `with Context():` or implicitly via `Location` or
+    `InsertionPoint` context managers) or an error if none is bound nor
+    specified.
