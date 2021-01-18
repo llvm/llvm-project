@@ -122,7 +122,7 @@ LogicalResult AsyncRefCountingPass::addAutomaticRefCounting(Value value) {
 
   // Drop the reference count immediately if the value has no uses.
   if (value.getUses().empty()) {
-    builder.create<DropRefOp>(loc, value, IntegerAttr::get(i32, 1));
+    builder.create<RuntimeDropRefOp>(loc, value, IntegerAttr::get(i32, 1));
     return success();
   }
 
@@ -200,7 +200,7 @@ LogicalResult AsyncRefCountingPass::addAutomaticRefCounting(Value value) {
 
     // Add a drop_ref immediately after the last user.
     builder.setInsertionPointAfter(lastUser);
-    builder.create<DropRefOp>(loc, value, IntegerAttr::get(i32, 1));
+    builder.create<RuntimeDropRefOp>(loc, value, IntegerAttr::get(i32, 1));
   }
 
   // ------------------------------------------------------------------------ //
@@ -232,7 +232,7 @@ LogicalResult AsyncRefCountingPass::addAutomaticRefCounting(Value value) {
   // their `liveIn` set.
   for (Block *dropRefSuccessor : dropRefSuccessors) {
     builder.setInsertionPointToStart(dropRefSuccessor);
-    builder.create<DropRefOp>(loc, value, IntegerAttr::get(i32, 1));
+    builder.create<RuntimeDropRefOp>(loc, value, IntegerAttr::get(i32, 1));
   }
 
   // ------------------------------------------------------------------------ //
@@ -267,11 +267,12 @@ LogicalResult AsyncRefCountingPass::addAutomaticRefCounting(Value value) {
     // Add a reference before the execute operation to keep the reference
     // counted alive before the async region completes execution.
     builder.setInsertionPoint(execute.getOperation());
-    builder.create<AddRefOp>(loc, value, IntegerAttr::get(i32, 1));
+    builder.create<RuntimeAddRefOp>(loc, value, IntegerAttr::get(i32, 1));
 
     // Drop the reference inside the async region before completion.
     OpBuilder executeBuilder = OpBuilder::atBlockTerminator(execute.getBody());
-    executeBuilder.create<DropRefOp>(loc, value, IntegerAttr::get(i32, 1));
+    executeBuilder.create<RuntimeDropRefOp>(loc, value,
+                                            IntegerAttr::get(i32, 1));
   }
 
   return success();
@@ -284,7 +285,7 @@ void AsyncRefCountingPass::runOnFunction() {
   // because otherwise automatic reference counting will produce incorrect
   // results.
   WalkResult refCountingWalk = func.walk([&](Operation *op) -> WalkResult {
-    if (isa<AddRefOp, DropRefOp>(op))
+    if (isa<RuntimeAddRefOp, RuntimeDropRefOp>(op))
       return op->emitError() << "explicit reference counting is not supported";
     return WalkResult::advance();
   });
