@@ -379,13 +379,13 @@ public:
     Get an SBData wrapping what this SBValue points to.
 
     This method will dereference the current SBValue, if its
-    data type is a `T\*` or `T[]`, and extract `item_count` elements
-    of type `T` from it, copying their contents in an :py:class:`SBData`.
+    data type is a ``T\*`` or ``T[]``, and extract ``item_count`` elements
+    of type ``T`` from it, copying their contents in an :py:class:`SBData`.
 
     :param item_idx: The index of the first item to retrieve. For an array
         this is equivalent to array[item_idx], for a pointer
-        to `\*(pointer + item_idx)`. In either case, the measurement
-        unit for item_idx is the `sizeof(T)` rather than the byte
+        to ``\*(pointer + item_idx)``. In either case, the measurement
+        unit for item_idx is the ``sizeof(T)`` rather than the byte
     :param item_count: How many items should be copied into the output. By default
         only one item is copied, but more can be asked for.
     :return: The contents of the copied items on success. An empty :py:class:`SBData` otherwise.
