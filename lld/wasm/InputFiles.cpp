@@ -310,6 +310,71 @@ static void setRelocs(const std::vector<T *> &chunks,
   }
 }
 
+// Since LLVM 12, we expect that if an input file defines or uses a table, it
+// declares the tables using symbols and records each use with a relocation.
+// This way when the linker combines inputs, it can collate the tables used by
+// the inputs, assigning them distinct table numbers, and renumber all the uses
+// as appropriate.  At the same time, the linker has special logic to build the
+// indirect function table if it is needed.
+//
+// However, object files produced by LLVM 11 and earlier neither write table
+// symbols nor record relocations, and yet still use tables via call_indirect,
+// and via function pointer bitcasts.  We can detect these object files, as they
+// declare tables as imports or define them locally, but don't have table
+// symbols.  synthesizeTableSymbols serves as a shim when loading these older
+// input files, defining the missing symbols to allow the indirect function
+// table to be built.
+//
+// Table uses in these older files won't be relocated, as they have no
+// relocations.  In practice this isn't a problem, as these object files
+// typically just declare a single table named __indirect_function_table and
+// having table number 0, so relocation would be idempotent anyway.
+void ObjFile::synthesizeTableSymbols() {
+  uint32_t tableNumber = 0;
+  const WasmGlobalType *globalType = nullptr;
+  const WasmEventType *eventType = nullptr;
+  const WasmSignature *signature = nullptr;
+  if (wasmObj->getNumImportedTables()) {
+    for (const auto &import : wasmObj->imports()) {
+      if (import.Kind == WASM_EXTERNAL_TABLE) {
+        auto *info = make<WasmSymbolInfo>();
+        info->Name = import.Field;
+        info->Kind = WASM_SYMBOL_TYPE_TABLE;
+        info->ImportModule = import.Module;
+        info->ImportName = import.Field;
+        info->Flags = WASM_SYMBOL_UNDEFINED;
+        info->Flags |= WASM_SYMBOL_NO_STRIP;
+        info->ElementIndex = tableNumber++;
+        LLVM_DEBUG(dbgs() << "Synthesizing symbol for table import: "
+                          << info->Name << "\n");
+        auto *wasmSym = make<WasmSymbol>(*info, globalType, &import.Table,
+                                         eventType, signature);
+        symbols.push_back(createUndefined(*wasmSym, false));
+        // Because there are no TABLE_NUMBER relocs in this case, we can't
+        // compute accurate liveness info; instead, just mark the symbol as
+        // always live.
+        symbols.back()->markLive();
+      }
+    }
+  }
+  for (const auto &table : tables) {
+    auto *info = make<llvm::wasm::WasmSymbolInfo>();
+    // Empty name.
+    info->Kind = WASM_SYMBOL_TYPE_TABLE;
+    info->Flags = WASM_SYMBOL_BINDING_LOCAL;
+    info->Flags |= WASM_SYMBOL_VISIBILITY_HIDDEN;
+    info->Flags |= WASM_SYMBOL_NO_STRIP;
+    info->ElementIndex = tableNumber++;
+    LLVM_DEBUG(dbgs() << "Synthesizing symbol for table definition: "
+                      << info->Name << "\n");
+    auto *wasmSym = make<WasmSymbol>(*info, globalType, &table->getType(),
+                                     eventType, signature);
+    symbols.push_back(createDefined(*wasmSym));
+    // Mark live, for the same reasons as for imported tables.
+    symbols.back()->markLive();
+  }
+}
+
 void ObjFile::parse(bool ignoreComdats) {
   // Parse a memory buffer as a wasm file.
   LLVM_DEBUG(dbgs() << "Parsing object: " << toString(this) << "\n");
@@ -424,8 +489,11 @@ void ObjFile::parse(bool ignoreComdats) {
 
   // Populate `Symbols` based on the symbols in the object.
   symbols.reserve(wasmObj->getNumberOfSymbols());
+  bool haveTableSymbol = false;
   for (const SymbolRef &sym : wasmObj->symbols()) {
     const WasmSymbol &wasmSym = wasmObj->getWasmSymbol(sym.getRawDataRefImpl());
+    if (wasmSym.isTypeTable())
+      haveTableSymbol = true;
     if (wasmSym.isDefined()) {
       // createDefined may fail if the symbol is comdat excluded in which case
       // we fall back to creating an undefined symbol
@@ -437,6 +505,13 @@ void ObjFile::parse(bool ignoreComdats) {
     size_t idx = symbols.size();
     symbols.push_back(createUndefined(wasmSym, isCalledDirectly[idx]));
   }
+
+  // As a stopgap measure while implementing table support, if the object file
+  // has table definitions or imports but no table symbols, synthesize symbols
+  // for those tables.  Mark as NO_STRIP to ensure they reach the output file,
+  // even if there are no TABLE_NUMBER relocs against them.
+  if (!haveTableSymbol)
+    synthesizeTableSymbols();
 }
 
 bool ObjFile::isExcludedByComdat(InputChunk *chunk) const {

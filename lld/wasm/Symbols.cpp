@@ -91,6 +91,7 @@ UndefinedGlobal *WasmSym::tableBase;
 DefinedData *WasmSym::definedTableBase;
 UndefinedGlobal *WasmSym::memoryBase;
 DefinedData *WasmSym::definedMemoryBase;
+TableSymbol *WasmSym::indirectFunctionTable;
 
 WasmSymbolType Symbol::getWasmType() const {
   if (isa<FunctionSymbol>(this))
