@@ -272,7 +272,7 @@ template <typename ContainerTy> bool hasSingleElement(ContainerTy &&C) {
 
 /// Return a range covering \p RangeOrContainer with the first N elements
 /// excluded.
-template <typename T> auto drop_begin(T &&RangeOrContainer, size_t N) {
+template <typename T> auto drop_begin(T &&RangeOrContainer, size_t N = 1) {
   return make_range(std::next(adl_begin(RangeOrContainer), N),
                     adl_end(RangeOrContainer));
 }

@@ -28,6 +28,10 @@ def SDTSplatI64 : SDTypeProfile<1, 1, [
 
 def rv32_splat_i64 : SDNode<"RISCVISD::SPLAT_VECTOR_I64", SDTSplatI64>;
 
+def riscv_trunc_vector : SDNode<"RISCVISD::TRUNCATE_VECTOR",
+                                SDTypeProfile<1, 1,
+                                 [SDTCisVec<0>, SDTCisVec<1>]>>;
+
 // Penalize the generic form with Complexity=1 to give the simm5/uimm5 variants
 // precedence
 def SplatPat       : ComplexPattern<vAny, 1, "selectVSplat", [], [], 1>;
@@ -306,6 +310,15 @@ defm "" : VPatBinarySDNode_VV_VX_VI<xor, "PseudoVXOR">;
 defm "" : VPatBinarySDNode_VV_VX_VI<shl, "PseudoVSLL", uimm5>;
 defm "" : VPatBinarySDNode_VV_VX_VI<srl, "PseudoVSRL", uimm5>;
 defm "" : VPatBinarySDNode_VV_VX_VI<sra, "PseudoVSRA", uimm5>;
+
+// 12.7. Vector Narrowing Integer Right Shift Instructions
+foreach vtiTofti = AllFractionableVF2IntVectors in {
+  defvar vti = vtiTofti.Vti;
+  defvar fti = vtiTofti.Fti;
+  def : Pat<(fti.Vector (riscv_trunc_vector (vti.Vector vti.RegClass:$rs1))),
+            (!cast<Instruction>("PseudoVNSRL_WI_"#fti.LMul.MX)
+                vti.RegClass:$rs1, 0, VLMax, fti.SEW)>;
+}
 
 // 12.8. Vector Integer Comparison Instructions
 defm "" : VPatIntegerSetCCSDNode_VV_VX_VI<SETEQ,  "PseudoVMSEQ">;

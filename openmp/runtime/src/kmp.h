@@ -2341,8 +2341,7 @@ typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
   unsigned priority_specified : 1; /* set if the compiler provides priority
                                       setting for the task */
   unsigned detachable : 1; /* 1 == can detach */
-  unsigned hidden_helper : 1; /* 1 == hidden helper task */
-  unsigned reserved : 8; /* reserved for compiler use */
+  unsigned reserved : 9; /* reserved for compiler use */
 
   /* Library flags */ /* Total library flags must be 16 bits */
   unsigned tasktype : 1; /* task is either explicit(1) or implicit (0) */
@@ -2390,18 +2389,6 @@ struct kmp_taskdata { /* aligned during dynamic allocation       */
   kmp_depnode_t
       *td_depnode; // Pointer to graph node if this task has dependencies
   kmp_task_team_t *td_task_team;
-  // The parent task team. Usually we could access it via
-  // parent_task->td_task_team, but it is possible to be nullptr because of late
-  // initialization. Sometimes we must use it. Since the td_task_team of the
-  // encountering thread is never nullptr, we set it when this task is created.
-  kmp_task_team_t *td_parent_task_team;
-  // The global thread id of the encountering thread. We need it because when a
-  // regular task depends on a hidden helper task, and the hidden helper task
-  // is finished on a hidden helper thread, it will call __kmp_release_deps to
-  // release all dependences. If now the task is a regular task, we need to pass
-  // the encountering gtid such that the task will be picked up and executed by
-  // its encountering team instead of hidden helper team.
-  kmp_int32 encountering_gtid;
   size_t td_size_alloc; // Size of task structure, including shareds etc.
 #if defined(KMP_GOMP_COMPAT)
   // 4 or 8 byte integers for the loop bounds in GOMP_taskloop
@@ -2469,15 +2456,9 @@ typedef struct kmp_base_task_team {
   kmp_int32 tt_max_threads; // # entries allocated for threads_data array
   kmp_int32 tt_found_proxy_tasks; // found proxy tasks since last barrier
   kmp_int32 tt_untied_task_encountered;
-  // There is hidden helper thread encountered in this task team so that we must
-  // wait when waiting on task team
-  kmp_int32 tt_hidden_helper_task_encountered;
 
   KMP_ALIGN_CACHE
   std::atomic<kmp_int32> tt_unfinished_threads; /* #threads still active */
-
-  KMP_ALIGN_CACHE
-  std::atomic<kmp_int32> tt_unfinished_hidden_helper_tasks;
 
   KMP_ALIGN_CACHE
   volatile kmp_uint32
@@ -2943,7 +2924,6 @@ extern volatile int __kmp_init_parallel;
 extern volatile int __kmp_init_monitor;
 #endif
 extern volatile int __kmp_init_user_locks;
-extern volatile int __kmp_init_hidden_helper_threads;
 extern int __kmp_init_counter;
 extern int __kmp_root_counter;
 extern int __kmp_version;
@@ -4017,45 +3997,6 @@ static inline void __kmp_resume_if_hard_paused() {
 }
 
 extern void __kmp_omp_display_env(int verbose);
-
-// 1: it is initializing hidden helper team
-extern volatile int __kmp_init_hidden_helper;
-// 1: the hidden helper team is done
-extern volatile int __kmp_hidden_helper_team_done;
-// 1: enable hidden helper task
-extern kmp_int32 __kmp_enable_hidden_helper;
-// Main thread of hidden helper team
-extern kmp_info_t *__kmp_hidden_helper_main_thread;
-// Descriptors for the hidden helper threads
-extern kmp_info_t **__kmp_hidden_helper_threads;
-// Number of hidden helper threads
-extern kmp_int32 __kmp_hidden_helper_threads_num;
-// Number of hidden helper tasks that have not been executed yet
-extern std::atomic<kmp_int32> __kmp_unexecuted_hidden_helper_tasks;
-
-extern void __kmp_hidden_helper_initialize();
-extern void __kmp_hidden_helper_threads_initz_routine();
-extern void __kmp_do_initialize_hidden_helper_threads();
-extern void __kmp_hidden_helper_threads_initz_wait();
-extern void __kmp_hidden_helper_initz_release();
-extern void __kmp_hidden_helper_threads_deinitz_wait();
-extern void __kmp_hidden_helper_threads_deinitz_release();
-extern void __kmp_hidden_helper_main_thread_wait();
-extern void __kmp_hidden_helper_worker_thread_wait();
-extern void __kmp_hidden_helper_worker_thread_signal();
-extern void __kmp_hidden_helper_main_thread_release();
-
-// Check whether a given thread is a hidden helper thread
-#define KMP_HIDDEN_HELPER_THREAD(gtid)                                         \
-  ((gtid) >= 1 && (gtid) <= __kmp_hidden_helper_threads_num)
-
-#define KMP_HIDDEN_HELPER_WORKER_THREAD(gtid)                                  \
-  ((gtid) > 1 && (gtid) <= __kmp_hidden_helper_threads_num)
-
-// Map a gtid to a hidden helper thread. The first hidden helper thread, a.k.a
-// main thread, is skipped.
-#define KMP_GTID_TO_SHADOW_GTID(gtid)                                          \
-  ((gtid) % (__kmp_hidden_helper_threads_num - 1) + 2)
 
 #ifdef __cplusplus
 }

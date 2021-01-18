@@ -25,7 +25,6 @@
 #include <alloca.h>
 #endif
 #include <math.h> // HUGE_VAL.
-#include <semaphore.h>
 #include <sys/resource.h>
 #include <sys/syscall.h>
 #include <sys/time.h>
@@ -2448,7 +2447,7 @@ int __kmp_invoke_microtask(microtask_t pkfn, int gtid, int tid, int argc,
                            ,
                            void **exit_frame_ptr
 #endif
-) {
+                           ) {
 #if OMPT_SUPPORT
   *exit_frame_ptr = OMPT_GET_FRAME_ADDRESS(0);
 #endif
@@ -2526,166 +2525,5 @@ int __kmp_invoke_microtask(microtask_t pkfn, int gtid, int tid, int argc,
 }
 
 #endif
-
-// Functions for hidden helper task
-namespace {
-// Condition variable for initializing hidden helper team
-pthread_cond_t hidden_helper_threads_initz_cond_var;
-pthread_mutex_t hidden_helper_threads_initz_lock;
-volatile int hidden_helper_initz_signaled = FALSE;
-
-// Condition variable for deinitializing hidden helper team
-pthread_cond_t hidden_helper_threads_deinitz_cond_var;
-pthread_mutex_t hidden_helper_threads_deinitz_lock;
-volatile int hidden_helper_deinitz_signaled = FALSE;
-
-// Condition variable for the wrapper function of main thread
-pthread_cond_t hidden_helper_main_thread_cond_var;
-pthread_mutex_t hidden_helper_main_thread_lock;
-volatile int hidden_helper_main_thread_signaled = FALSE;
-
-// Semaphore for worker threads. We don't use condition variable here in case
-// that when multiple signals are sent at the same time, only one thread might
-// be waken.
-sem_t hidden_helper_task_sem;
-} // namespace
-
-void __kmp_hidden_helper_worker_thread_wait() {
-  int status = sem_wait(&hidden_helper_task_sem);
-  KMP_CHECK_SYSFAIL("sem_wait", status);
-}
-
-void __kmp_do_initialize_hidden_helper_threads() {
-  // Initialize condition variable
-  int status =
-      pthread_cond_init(&hidden_helper_threads_initz_cond_var, nullptr);
-  KMP_CHECK_SYSFAIL("pthread_cond_init", status);
-
-  status = pthread_cond_init(&hidden_helper_threads_deinitz_cond_var, nullptr);
-  KMP_CHECK_SYSFAIL("pthread_cond_init", status);
-
-  status = pthread_cond_init(&hidden_helper_main_thread_cond_var, nullptr);
-  KMP_CHECK_SYSFAIL("pthread_cond_init", status);
-
-  status = pthread_mutex_init(&hidden_helper_threads_initz_lock, nullptr);
-  KMP_CHECK_SYSFAIL("pthread_mutex_init", status);
-
-  status = pthread_mutex_init(&hidden_helper_threads_deinitz_lock, nullptr);
-  KMP_CHECK_SYSFAIL("pthread_mutex_init", status);
-
-  status = pthread_mutex_init(&hidden_helper_main_thread_lock, nullptr);
-  KMP_CHECK_SYSFAIL("pthread_mutex_init", status);
-
-  // Initialize the semaphore
-  status = sem_init(&hidden_helper_task_sem, 0, 0);
-  KMP_CHECK_SYSFAIL("sem_init", status);
-
-  // Create a new thread to finish initialization
-  pthread_t handle;
-  status = pthread_create(
-      &handle, nullptr,
-      [](void *) -> void * {
-        __kmp_hidden_helper_threads_initz_routine();
-        return nullptr;
-      },
-      nullptr);
-  KMP_CHECK_SYSFAIL("pthread_create", status);
-}
-
-void __kmp_hidden_helper_threads_initz_wait() {
-  // Initial thread waits here for the completion of the initialization. The
-  // condition variable will be notified by main thread of hidden helper teams.
-  int status = pthread_mutex_lock(&hidden_helper_threads_initz_lock);
-  KMP_CHECK_SYSFAIL("pthread_mutex_lock", status);
-
-  if (!TCR_4(hidden_helper_initz_signaled)) {
-    status = pthread_cond_wait(&hidden_helper_threads_initz_cond_var,
-                               &hidden_helper_threads_initz_lock);
-    KMP_CHECK_SYSFAIL("pthread_cond_wait", status);
-  }
-
-  status = pthread_mutex_unlock(&hidden_helper_threads_initz_lock);
-  KMP_CHECK_SYSFAIL("pthread_mutex_unlock", status);
-}
-
-void __kmp_hidden_helper_initz_release() {
-  // After all initialization, reset __kmp_init_hidden_helper_threads to false.
-  int status = pthread_mutex_lock(&hidden_helper_threads_initz_lock);
-  KMP_CHECK_SYSFAIL("pthread_mutex_lock", status);
-
-  status = pthread_cond_signal(&hidden_helper_threads_initz_cond_var);
-  KMP_CHECK_SYSFAIL("pthread_cond_wait", status);
-
-  TCW_SYNC_4(hidden_helper_initz_signaled, TRUE);
-
-  status = pthread_mutex_unlock(&hidden_helper_threads_initz_lock);
-  KMP_CHECK_SYSFAIL("pthread_mutex_unlock", status);
-}
-
-void __kmp_hidden_helper_main_thread_wait() {
-  // The main thread of hidden helper team will be blocked here. The
-  // condition variable can only be signal in the destructor of RTL.
-  int status = pthread_mutex_lock(&hidden_helper_main_thread_lock);
-  KMP_CHECK_SYSFAIL("pthread_mutex_lock", status);
-
-  if (!TCR_4(hidden_helper_main_thread_signaled)) {
-    status = pthread_cond_wait(&hidden_helper_main_thread_cond_var,
-                               &hidden_helper_main_thread_lock);
-    KMP_CHECK_SYSFAIL("pthread_cond_wait", status);
-  }
-
-  status = pthread_mutex_unlock(&hidden_helper_main_thread_lock);
-  KMP_CHECK_SYSFAIL("pthread_mutex_unlock", status);
-}
-
-void __kmp_hidden_helper_main_thread_release() {
-  // The initial thread of OpenMP RTL should call this function to wake up the
-  // main thread of hidden helper team.
-  int status = pthread_mutex_lock(&hidden_helper_main_thread_lock);
-  KMP_CHECK_SYSFAIL("pthread_mutex_lock", status);
-
-  status = pthread_cond_signal(&hidden_helper_main_thread_cond_var);
-  KMP_CHECK_SYSFAIL("pthread_cond_signal", status);
-
-  // The hidden helper team is done here
-  TCW_SYNC_4(hidden_helper_main_thread_signaled, TRUE);
-
-  status = pthread_mutex_unlock(&hidden_helper_main_thread_lock);
-  KMP_CHECK_SYSFAIL("pthread_mutex_unlock", status);
-}
-
-void __kmp_hidden_helper_worker_thread_signal() {
-  int status = sem_post(&hidden_helper_task_sem);
-  KMP_CHECK_SYSFAIL("sem_post", status);
-}
-
-void __kmp_hidden_helper_threads_deinitz_wait() {
-  // Initial thread waits here for the completion of the deinitialization. The
-  // condition variable will be notified by main thread of hidden helper teams.
-  int status = pthread_mutex_lock(&hidden_helper_threads_deinitz_lock);
-  KMP_CHECK_SYSFAIL("pthread_mutex_lock", status);
-
-  if (!TCR_4(hidden_helper_deinitz_signaled)) {
-    status = pthread_cond_wait(&hidden_helper_threads_deinitz_cond_var,
-                               &hidden_helper_threads_deinitz_lock);
-    KMP_CHECK_SYSFAIL("pthread_cond_wait", status);
-  }
-
-  status = pthread_mutex_unlock(&hidden_helper_threads_deinitz_lock);
-  KMP_CHECK_SYSFAIL("pthread_mutex_unlock", status);
-}
-
-void __kmp_hidden_helper_threads_deinitz_release() {
-  int status = pthread_mutex_lock(&hidden_helper_threads_deinitz_lock);
-  KMP_CHECK_SYSFAIL("pthread_mutex_lock", status);
-
-  status = pthread_cond_signal(&hidden_helper_threads_deinitz_cond_var);
-  KMP_CHECK_SYSFAIL("pthread_cond_wait", status);
-
-  TCW_SYNC_4(hidden_helper_deinitz_signaled, TRUE);
-
-  status = pthread_mutex_unlock(&hidden_helper_threads_deinitz_lock);
-  KMP_CHECK_SYSFAIL("pthread_mutex_unlock", status);
-}
 
 // end of file //

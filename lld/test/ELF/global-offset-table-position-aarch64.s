@@ -27,4 +27,4 @@ _start:
 // CHECK-NEXT:     Other [ (0x2)
 // CHECK-NEXT:       STV_HIDDEN (0x2)
 // CHECK-NEXT:     ]
-// CHECK-NEXT:     Section: .got.plt
+// CHECK-NEXT:     Section: .got

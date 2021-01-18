@@ -140,7 +140,7 @@ void StackLayout::computeLayout() {
 
   // Sort objects by size (largest first) to reduce fragmentation.
   if (StackObjects.size() > 2)
-    llvm::stable_sort(drop_begin(StackObjects, 1),
+    llvm::stable_sort(drop_begin(StackObjects),
                       [](const StackObject &a, const StackObject &b) {
                         return a.Size > b.Size;
                       });

@@ -714,11 +714,15 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
   }
 
   // Scalable vectors cannot be global variables, since we don't know
-  // the runtime size. If the global is a struct or an array containing
-  // scalable vectors, that will be caught by the isValidElementType methods
-  // in StructType or ArrayType instead.
+  // the runtime size. If the global is an array containing scalable vectors,
+  // that will be caught by the isValidElementType methods in StructType or
+  // ArrayType instead.
   Assert(!isa<ScalableVectorType>(GV.getValueType()),
          "Globals cannot contain scalable vectors", &GV);
+
+  if (auto *STy = dyn_cast<StructType>(GV.getValueType()))
+    Assert(!STy->containsScalableVectorType(),
+           "Globals cannot contain scalable vectors", &GV);
 
   if (!GV.hasInitializer()) {
     visitGlobalValue(GV);

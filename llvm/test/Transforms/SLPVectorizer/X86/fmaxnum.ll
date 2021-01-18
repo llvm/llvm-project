@@ -392,6 +392,33 @@ define float @reduction_v4f32_nnan(float* %p) {
   ret float %m3
 }
 
+define float @reduction_v4f32_not_fast(float* %p) {
+; CHECK-LABEL: @reduction_v4f32_not_fast(
+; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds float, float* [[P:%.*]], i64 1
+; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds float, float* [[P]], i64 2
+; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds float, float* [[P]], i64 3
+; CHECK-NEXT:    [[T0:%.*]] = load float, float* [[P]], align 4
+; CHECK-NEXT:    [[T1:%.*]] = load float, float* [[G1]], align 4
+; CHECK-NEXT:    [[T2:%.*]] = load float, float* [[G2]], align 4
+; CHECK-NEXT:    [[T3:%.*]] = load float, float* [[G3]], align 4
+; CHECK-NEXT:    [[M1:%.*]] = tail call float @llvm.maxnum.f32(float [[T1]], float [[T0]])
+; CHECK-NEXT:    [[M2:%.*]] = tail call float @llvm.maxnum.f32(float [[T2]], float [[M1]])
+; CHECK-NEXT:    [[M3:%.*]] = tail call float @llvm.maxnum.f32(float [[T3]], float [[M2]])
+; CHECK-NEXT:    ret float [[M3]]
+;
+  %g1 = getelementptr inbounds float, float* %p, i64 1
+  %g2 = getelementptr inbounds float, float* %p, i64 2
+  %g3 = getelementptr inbounds float, float* %p, i64 3
+  %t0 = load float, float* %p, align 4
+  %t1 = load float, float* %g1, align 4
+  %t2 = load float, float* %g2, align 4
+  %t3 = load float, float* %g3, align 4
+  %m1 = tail call float @llvm.maxnum.f32(float %t1, float %t0)
+  %m2 = tail call float @llvm.maxnum.f32(float %t2, float %m1)
+  %m3 = tail call float @llvm.maxnum.f32(float %t3, float %m2)
+  ret float %m3
+}
+
 define float @reduction_v8f32_fast(float* %p) {
 ; CHECK-LABEL: @reduction_v8f32_fast(
 ; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds float, float* [[P:%.*]], i64 1
@@ -482,6 +509,33 @@ define double @reduction_v4f64_fast(double* %p) {
   %m1 = tail call fast double @llvm.maxnum.f64(double %t1, double %t0)
   %m2 = tail call fast double @llvm.maxnum.f64(double %t2, double %m1)
   %m3 = tail call fast double @llvm.maxnum.f64(double %t3, double %m2)
+  ret double %m3
+}
+
+define double @reduction_v4f64_wrong_fmf(double* %p) {
+; CHECK-LABEL: @reduction_v4f64_wrong_fmf(
+; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds double, double* [[P:%.*]], i64 1
+; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds double, double* [[P]], i64 2
+; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds double, double* [[P]], i64 3
+; CHECK-NEXT:    [[T0:%.*]] = load double, double* [[P]], align 4
+; CHECK-NEXT:    [[T1:%.*]] = load double, double* [[G1]], align 4
+; CHECK-NEXT:    [[T2:%.*]] = load double, double* [[G2]], align 4
+; CHECK-NEXT:    [[T3:%.*]] = load double, double* [[G3]], align 4
+; CHECK-NEXT:    [[M1:%.*]] = tail call ninf nsz double @llvm.maxnum.f64(double [[T1]], double [[T0]])
+; CHECK-NEXT:    [[M2:%.*]] = tail call ninf nsz double @llvm.maxnum.f64(double [[T2]], double [[M1]])
+; CHECK-NEXT:    [[M3:%.*]] = tail call ninf nsz double @llvm.maxnum.f64(double [[T3]], double [[M2]])
+; CHECK-NEXT:    ret double [[M3]]
+;
+  %g1 = getelementptr inbounds double, double* %p, i64 1
+  %g2 = getelementptr inbounds double, double* %p, i64 2
+  %g3 = getelementptr inbounds double, double* %p, i64 3
+  %t0 = load double, double* %p, align 4
+  %t1 = load double, double* %g1, align 4
+  %t2 = load double, double* %g2, align 4
+  %t3 = load double, double* %g3, align 4
+  %m1 = tail call ninf nsz double @llvm.maxnum.f64(double %t1, double %t0)
+  %m2 = tail call ninf nsz double @llvm.maxnum.f64(double %t2, double %m1)
+  %m3 = tail call ninf nsz double @llvm.maxnum.f64(double %t3, double %m2)
   ret double %m3
 }
 

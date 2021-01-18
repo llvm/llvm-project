@@ -704,7 +704,9 @@ Variables and aliases can have a
 :ref:`Thread Local Storage Model <tls_model>`.
 
 :ref:`Scalable vectors <t_vector>` cannot be global variables or members of
-structs or arrays because their size is unknown at compile time.
+arrays because their size is unknown at compile time. They are allowed in
+structs to facilitate intrinsics returning multiple values. Structs containing
+scalable vectors cannot be used in loads, stores, allocas, or GEPs.
 
 Syntax::
 
