@@ -1485,6 +1485,9 @@ public:
   OperandMatchResultTy parseDim(OperandVector &Operands);
   OperandMatchResultTy parseDPP8(OperandVector &Operands);
   OperandMatchResultTy parseDPPCtrl(OperandVector &Operands);
+  bool isSupportedDPPCtrl(StringRef Ctrl, const OperandVector &Operands);
+  int64_t parseDPPCtrlSel(StringRef Ctrl);
+  int64_t parseDPPCtrlPerm();
   AMDGPUOperand::Ptr defaultRowMask() const;
   AMDGPUOperand::Ptr defaultBankMask() const;
   AMDGPUOperand::Ptr defaultBoundCtrl() const;
@@ -4952,7 +4955,7 @@ bool AMDGPUAsmParser::ParseInstruction(ParseInstructionInfo &Info,
         Error(getLoc(), Msg);
       }
       while (!trySkipToken(AsmToken::EndOfStatement)) {
-        Parser.Lex();
+        lex();
       }
       return true;
     }
@@ -7227,7 +7230,7 @@ OperandMatchResultTy AMDGPUAsmParser::parseDim(OperandVector &Operands) {
   if (isToken(AsmToken::Integer)) {
     SMLoc Loc = getToken().getEndLoc();
     Token = std::string(getTokenStr());
-    Parser.Lex();
+    lex();
     if (getLoc() != Loc)
       return MatchOperand_ParseFail;
   }
@@ -7243,7 +7246,7 @@ OperandMatchResultTy AMDGPUAsmParser::parseDim(OperandVector &Operands) {
   if (!DimInfo)
     return MatchOperand_ParseFail;
 
-  Parser.Lex();
+  lex();
 
   Operands.push_back(AMDGPUOperand::CreateImm(this, DimInfo->Encoding, S,
                                               AMDGPUOperand::ImmTyDim));
@@ -7287,116 +7290,138 @@ OperandMatchResultTy AMDGPUAsmParser::parseDPP8(OperandVector &Operands) {
   return MatchOperand_Success;
 }
 
+bool
+AMDGPUAsmParser::isSupportedDPPCtrl(StringRef Ctrl,
+                                    const OperandVector &Operands) {
+  if (Ctrl == "row_share" ||
+      Ctrl == "row_xmask")
+    return isGFX10Plus();
+
+  if (Ctrl == "wave_shl" ||
+      Ctrl == "wave_shr" ||
+      Ctrl == "wave_rol" ||
+      Ctrl == "wave_ror" ||
+      Ctrl == "row_bcast")
+    return isVI() || isGFX9();
+
+  return Ctrl == "row_mirror" ||
+         Ctrl == "row_half_mirror" ||
+         Ctrl == "quad_perm" ||
+         Ctrl == "row_shl" ||
+         Ctrl == "row_shr" ||
+         Ctrl == "row_ror";
+}
+
+int64_t
+AMDGPUAsmParser::parseDPPCtrlPerm() {
+  // quad_perm:[%d,%d,%d,%d]
+
+  if (!skipToken(AsmToken::LBrac, "expected an opening square bracket"))
+    return -1;
+
+  int64_t Val = 0;
+  for (int i = 0; i < 4; ++i) {
+    if (i > 0 && !skipToken(AsmToken::Comma, "expected a comma"))
+      return -1;
+
+    int64_t Temp;
+    SMLoc Loc = getLoc();
+    if (getParser().parseAbsoluteExpression(Temp))
+      return -1;
+    if (Temp < 0 || Temp > 3) {
+      Error(Loc, "expected a 2-bit value");
+      return -1;
+    }
+
+    Val += (Temp << i * 2);
+  }
+
+  if (!skipToken(AsmToken::RBrac, "expected a closing square bracket"))
+    return -1;
+
+  return Val;
+}
+
+int64_t
+AMDGPUAsmParser::parseDPPCtrlSel(StringRef Ctrl) {
+  using namespace AMDGPU::DPP;
+
+  // sel:%d
+
+  int64_t Val;
+  SMLoc Loc = getLoc();
+
+  if (getParser().parseAbsoluteExpression(Val))
+    return -1;
+
+  struct DppCtrlCheck {
+    int64_t Ctrl;
+    int Lo;
+    int Hi;
+  };
+
+  DppCtrlCheck Check = StringSwitch<DppCtrlCheck>(Ctrl)
+    .Case("wave_shl",  {DppCtrl::WAVE_SHL1,       1,  1})
+    .Case("wave_rol",  {DppCtrl::WAVE_ROL1,       1,  1})
+    .Case("wave_shr",  {DppCtrl::WAVE_SHR1,       1,  1})
+    .Case("wave_ror",  {DppCtrl::WAVE_ROR1,       1,  1})
+    .Case("row_shl",   {DppCtrl::ROW_SHL0,        1, 15})
+    .Case("row_shr",   {DppCtrl::ROW_SHR0,        1, 15})
+    .Case("row_ror",   {DppCtrl::ROW_ROR0,        1, 15})
+    .Case("row_share", {DppCtrl::ROW_SHARE_FIRST, 0, 15})
+    .Case("row_xmask", {DppCtrl::ROW_XMASK_FIRST, 0, 15})
+    .Default({-1});
+
+  bool Valid;
+  if (Check.Ctrl == -1) {
+    Valid = (Ctrl == "row_bcast" && (Val == 15 || Val == 31));
+    Val = (Val == 15)? DppCtrl::BCAST15 : DppCtrl::BCAST31;
+  } else {
+    Valid = Check.Lo <= Val && Val <= Check.Hi;
+    Val = (Check.Lo == Check.Hi) ? Check.Ctrl : (Check.Ctrl | Val);
+  }
+
+  if (!Valid) {
+    Error(Loc, Twine("invalid ", Ctrl) + Twine(" value"));
+    return -1;
+  }
+
+  return Val;
+}
+
 OperandMatchResultTy
 AMDGPUAsmParser::parseDPPCtrl(OperandVector &Operands) {
   using namespace AMDGPU::DPP;
 
-  SMLoc S = getLoc();
-  StringRef Prefix;
-  int64_t Int;
-
-  if (isToken(AsmToken::Identifier)) {
-    Prefix = getTokenStr();
-  } else {
+  if (!isToken(AsmToken::Identifier) ||
+      !isSupportedDPPCtrl(getTokenStr(), Operands))
     return MatchOperand_NoMatch;
-  }
 
-  if (Prefix == "row_mirror") {
-    Int = DppCtrl::ROW_MIRROR;
-    Parser.Lex();
-  } else if (Prefix == "row_half_mirror") {
-    Int = DppCtrl::ROW_HALF_MIRROR;
-    Parser.Lex();
+  SMLoc S = getLoc();
+  int64_t Val = -1;
+  StringRef Ctrl;
+
+  parseId(Ctrl);
+
+  if (Ctrl == "row_mirror") {
+    Val = DppCtrl::ROW_MIRROR;
+  } else if (Ctrl == "row_half_mirror") {
+    Val = DppCtrl::ROW_HALF_MIRROR;
   } else {
-    // Check to prevent parseDPPCtrlOps from eating invalid tokens
-    if (Prefix != "quad_perm"
-        && Prefix != "row_shl"
-        && Prefix != "row_shr"
-        && Prefix != "row_ror"
-        && Prefix != "wave_shl"
-        && Prefix != "wave_rol"
-        && Prefix != "wave_shr"
-        && Prefix != "wave_ror"
-        && Prefix != "row_bcast"
-        && Prefix != "row_share"
-        && Prefix != "row_xmask") {
-      return MatchOperand_NoMatch;
-    }
-
-    if (!isGFX10Plus() && (Prefix == "row_share" || Prefix == "row_xmask"))
-      return MatchOperand_NoMatch;
-
-    if (!isVI() && !isGFX9() &&
-        (Prefix == "wave_shl" || Prefix == "wave_shr" ||
-         Prefix == "wave_rol" || Prefix == "wave_ror" ||
-         Prefix == "row_bcast"))
-      return MatchOperand_NoMatch;
-
-    Parser.Lex();
-    if (!isToken(AsmToken::Colon))
-      return MatchOperand_ParseFail;
-
-    if (Prefix == "quad_perm") {
-      // quad_perm:[%d,%d,%d,%d]
-      Parser.Lex();
-      if (!trySkipToken(AsmToken::LBrac))
-        return MatchOperand_ParseFail;
-
-      if (getParser().parseAbsoluteExpression(Int) || !(0 <= Int && Int <=3))
-        return MatchOperand_ParseFail;
-
-      for (int i = 0; i < 3; ++i) {
-        if (!trySkipToken(AsmToken::Comma))
-          return MatchOperand_ParseFail;
-
-        int64_t Temp;
-        if (getParser().parseAbsoluteExpression(Temp) || !(0 <= Temp && Temp <=3))
-          return MatchOperand_ParseFail;
-        const int shift = i*2 + 2;
-        Int += (Temp << shift);
-      }
-
-      if (!trySkipToken(AsmToken::RBrac))
-        return MatchOperand_ParseFail;
-    } else {
-      // sel:%d
-      Parser.Lex();
-      if (getParser().parseAbsoluteExpression(Int))
-        return MatchOperand_ParseFail;
-
-      if (Prefix == "row_shl" && 1 <= Int && Int <= 15) {
-        Int |= DppCtrl::ROW_SHL0;
-      } else if (Prefix == "row_shr" && 1 <= Int && Int <= 15) {
-        Int |= DppCtrl::ROW_SHR0;
-      } else if (Prefix == "row_ror" && 1 <= Int && Int <= 15) {
-        Int |= DppCtrl::ROW_ROR0;
-      } else if (Prefix == "wave_shl" && 1 == Int) {
-        Int = DppCtrl::WAVE_SHL1;
-      } else if (Prefix == "wave_rol" && 1 == Int) {
-        Int = DppCtrl::WAVE_ROL1;
-      } else if (Prefix == "wave_shr" && 1 == Int) {
-        Int = DppCtrl::WAVE_SHR1;
-      } else if (Prefix == "wave_ror" && 1 == Int) {
-        Int = DppCtrl::WAVE_ROR1;
-      } else if (Prefix == "row_bcast") {
-        if (Int == 15) {
-          Int = DppCtrl::BCAST15;
-        } else if (Int == 31) {
-          Int = DppCtrl::BCAST31;
-        } else {
-          return MatchOperand_ParseFail;
-        }
-      } else if (Prefix == "row_share" && 0 <= Int && Int <= 15) {
-        Int |= DppCtrl::ROW_SHARE_FIRST;
-      } else if (Prefix == "row_xmask" && 0 <= Int && Int <= 15) {
-        Int |= DppCtrl::ROW_XMASK_FIRST;
+    if (skipToken(AsmToken::Colon, "expected a colon")) {
+      if (Ctrl == "quad_perm") {
+        Val = parseDPPCtrlPerm();
       } else {
-        return MatchOperand_ParseFail;
+        Val = parseDPPCtrlSel(Ctrl);
       }
     }
   }
 
-  Operands.push_back(AMDGPUOperand::CreateImm(this, Int, S, AMDGPUOperand::ImmTyDppCtrl));
+  if (Val == -1)
+    return MatchOperand_ParseFail;
+
+  Operands.push_back(
+    AMDGPUOperand::CreateImm(this, Val, S, AMDGPUOperand::ImmTyDppCtrl));
   return MatchOperand_Success;
 }
 

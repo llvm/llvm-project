@@ -116,6 +116,19 @@ s_atomic_swap s5, s[2:3], 0x1FFFFF
 // CHECK-NEXT:{{^}}                          ^
 
 //==============================================================================
+// expected a 2-bit value
+
+v_mov_b32_dpp v5, v1 quad_perm:[3,2,1,4] row_mask:0x0 bank_mask:0x0
+// CHECK: error: expected a 2-bit value
+// CHECK-NEXT:{{^}}v_mov_b32_dpp v5, v1 quad_perm:[3,2,1,4] row_mask:0x0 bank_mask:0x0
+// CHECK-NEXT:{{^}}                                      ^
+
+v_mov_b32_dpp v5, v1 quad_perm:[3,-1,1,3] row_mask:0x0 bank_mask:0x0
+// CHECK: error: expected a 2-bit value
+// CHECK-NEXT:{{^}}v_mov_b32_dpp v5, v1 quad_perm:[3,-1,1,3] row_mask:0x0 bank_mask:0x0
+// CHECK-NEXT:{{^}}                                  ^
+
+//==============================================================================
 // expected a 3-bit value
 
 v_mov_b32_dpp v5, v1 dpp8:[-1,1,2,3,4,5,6,7]
@@ -210,6 +223,11 @@ v_mov_b32_dpp v5, v1 dpp8:[0,1,2,3,4,5,6,7)
 // CHECK-NEXT:{{^}}v_mov_b32_dpp v5, v1 dpp8:[0,1,2,3,4,5,6,7)
 // CHECK-NEXT:{{^}}                                          ^
 
+v_mov_b32_dpp v5, v1 quad_perm:[3,2,1,0) row_mask:0x0 bank_mask:0x0
+// CHECK: error: expected a closing square bracket
+// CHECK-NEXT:{{^}}v_mov_b32_dpp v5, v1 quad_perm:[3,2,1,0) row_mask:0x0 bank_mask:0x0
+// CHECK-NEXT:{{^}}                                       ^
+
 //==============================================================================
 // expected a colon
 
@@ -250,6 +268,11 @@ v_mov_b32_dpp v5, v1 dpp8:[0,1,2,3,4,5,6]
 // CHECK: error: expected a comma
 // CHECK-NEXT:{{^}}v_mov_b32_dpp v5, v1 dpp8:[0,1,2,3,4,5,6]
 // CHECK-NEXT:{{^}}                                        ^
+
+v_mov_b32_dpp v5, v1 quad_perm:[3,2] row_mask:0x0 bank_mask:0x0
+// CHECK: error: expected a comma
+// CHECK-NEXT:{{^}}v_mov_b32_dpp v5, v1 quad_perm:[3,2] row_mask:0x0 bank_mask:0x0
+// CHECK-NEXT:{{^}}                                   ^
 
 //==============================================================================
 // expected a comma or a closing parenthesis
@@ -379,6 +402,16 @@ v_mov_b32_dpp v5, v1 dpp8:[0,1,2,x,4,5,6,7]
 // CHECK-NEXT:{{^}}v_mov_b32_dpp v5, v1 dpp8:[0,1,2,x,4,5,6,7]
 // CHECK-NEXT:{{^}}                                 ^
 
+v_mov_b32_dpp v5, v1 quad_perm:[3,x,1,0] row_mask:0x0 bank_mask:0x0
+// CHECK: error: expected absolute expression
+// CHECK-NEXT:{{^}}v_mov_b32_dpp v5, v1 quad_perm:[3,x,1,0] row_mask:0x0 bank_mask:0x0
+// CHECK-NEXT:{{^}}                                  ^
+
+v_mov_b32_dpp v5, v1 row_share:x row_mask:0x0 bank_mask:0x0
+// CHECK: error: expected absolute expression
+// CHECK-NEXT:{{^}}v_mov_b32_dpp v5, v1 row_share:x row_mask:0x0 bank_mask:0x0
+// CHECK-NEXT:{{^}}                               ^
+
 //==============================================================================
 // expected a message name or an absolute expression
 
@@ -457,6 +490,11 @@ v_mov_b32_dpp v5, v1 dpp8:(0,1,2,3,4,5,6,7)
 // CHECK: error: expected an opening square bracket
 // CHECK-NEXT:{{^}}v_mov_b32_dpp v5, v1 dpp8:(0,1,2,3,4,5,6,7)
 // CHECK-NEXT:{{^}}                          ^
+
+v_mov_b32_dpp v5, v1 quad_perm:(3,2,1,0) row_mask:0x0 bank_mask:0x0
+// CHECK: error: expected an opening square bracket
+// CHECK-NEXT:{{^}}v_mov_b32_dpp v5, v1 quad_perm:(3,2,1,0) row_mask:0x0 bank_mask:0x0
+// CHECK-NEXT:{{^}}                               ^
 
 //==============================================================================
 // expected an operation name or an absolute expression
@@ -799,6 +837,19 @@ s_mov_b64 s[10:11], [x0,s1]
 // CHECK: error: invalid register name
 // CHECK-NEXT:{{^}}s_mov_b64 s[10:11], [x0,s1]
 // CHECK-NEXT:{{^}}                     ^
+
+//==============================================================================
+// invalid row_share value
+
+v_mov_b32_dpp v5, v1 row_share:16 row_mask:0x0 bank_mask:0x0
+// CHECK: error: invalid row_share value
+// CHECK-NEXT:{{^}}v_mov_b32_dpp v5, v1 row_share:16 row_mask:0x0 bank_mask:0x0
+// CHECK-NEXT:{{^}}                               ^
+
+v_mov_b32_dpp v5, v1 row_share:-1 row_mask:0x0 bank_mask:0x0
+// CHECK: error: invalid row_share value
+// CHECK-NEXT:{{^}}v_mov_b32_dpp v5, v1 row_share:-1 row_mask:0x0 bank_mask:0x0
+// CHECK-NEXT:{{^}}                               ^
 
 //==============================================================================
 // invalid syntax, expected 'neg' modifier
