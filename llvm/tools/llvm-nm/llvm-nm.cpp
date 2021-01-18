@@ -1686,8 +1686,15 @@ static void dumpSymbolsFromDLInfoMachO(MachOObjectFile &MachO) {
   }
 }
 
+namespace {
+struct SymbolVersion {
+  std::string Name;
+  bool IsDefault;
+};
+}; // namespace
+
 template <class ELFT>
-static Expected<std::vector<std::string>>
+static Expected<std::vector<SymbolVersion>>
 readSymbolVersionsELF(const ELFFile<ELFT> &Obj, StringRef FileName,
                       ELFObjectFileBase::elf_symbol_iterator_range Symbols) {
   using Elf_Shdr = typename ELFT::Shdr;
@@ -1707,14 +1714,14 @@ readSymbolVersionsELF(const ELFFile<ELFT> &Obj, StringRef FileName,
   }
 
   if (!SymVerSec)
-    return std::vector<std::string>{};
+    return std::vector<SymbolVersion>{};
 
   Expected<SmallVector<Optional<VersionEntry>, 0>> MapOrErr =
       Obj.loadVersionMap(SymVerNeedSec, SymVerDefSec);
   if (!MapOrErr)
     return MapOrErr.takeError();
 
-  std::vector<std::string> Ret;
+  std::vector<SymbolVersion> Ret;
   size_t I = 0;
   for (auto It = Symbols.begin(), E = Symbols.end(); It != E; ++It) {
     ++I;
@@ -1725,21 +1732,27 @@ readSymbolVersionsELF(const ELFFile<ELFT> &Obj, StringRef FileName,
                          " from " + describe(Obj, *SymVerSec) + ": " +
                          toString(VerEntryOrErr.takeError()));
 
+    Expected<uint32_t> FlagsOrErr = It->getFlags();
+    if (!FlagsOrErr)
+      return createError("unable to read flags for symbol with index " +
+                         Twine(I) + ": " + toString(FlagsOrErr.takeError()));
+
     bool IsDefault;
     Expected<StringRef> VerOrErr = Obj.getSymbolVersionByIndex(
-        (*VerEntryOrErr)->vs_index, IsDefault, *MapOrErr, /*IsSymHidden=*/None);
+        (*VerEntryOrErr)->vs_index, IsDefault, *MapOrErr,
+        (*FlagsOrErr) & SymbolRef::SF_Undefined);
     if (!VerOrErr)
       return createError("unable to get a version for entry " + Twine(I) +
                          " of " + describe(Obj, *SymVerSec) + ": " +
                          toString(VerOrErr.takeError()));
 
-    Ret.push_back((*VerOrErr).str());
+    Ret.push_back({(*VerOrErr).str(), IsDefault});
   }
 
   return Ret;
 }
 
-static Expected<std::vector<std::string>>
+static Expected<std::vector<SymbolVersion>>
 readSymbolVersionsELF(const ELFObjectFileBase &Obj,
                       ELFObjectFileBase::elf_symbol_iterator_range Symbols) {
   if (const auto *ELF = dyn_cast<ELF32LEObjectFile>(&Obj))
@@ -1756,7 +1769,7 @@ static void dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
                                       StringRef ArchiveName = {},
                                       StringRef ArchitectureName = {}) {
   auto Symbols = Obj.symbols();
-  std::vector<std::string> SymbolVersions;
+  std::vector<SymbolVersion> SymbolVersions;
   if (DynamicSyms) {
     const auto *E = dyn_cast<ELFObjectFileBase>(&Obj);
     if (!E) {
@@ -1765,7 +1778,7 @@ static void dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
     }
     Symbols = E->getDynamicSymbolIterators();
 
-    if (Expected<std::vector<std::string>> VersionsOrErr =
+    if (Expected<std::vector<SymbolVersion>> VersionsOrErr =
             readSymbolVersionsELF(*E, Symbols))
       SymbolVersions = std::move(*VersionsOrErr);
     else
@@ -1827,8 +1840,9 @@ static void dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
         } else
           error(std::move(E), Obj.getFileName());
       }
-      if (!SymbolVersions.empty() && !SymbolVersions[I].empty())
-        S.Name += "@" + SymbolVersions[I];
+      if (!SymbolVersions.empty() && !SymbolVersions[I].Name.empty())
+        S.Name +=
+            (SymbolVersions[I].IsDefault ? "@@" : "@") + SymbolVersions[I].Name;
 
       S.Sym = Sym;
       SymbolList.push_back(S);
