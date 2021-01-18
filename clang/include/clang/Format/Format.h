@@ -2678,7 +2678,8 @@ struct FormatStyle {
 
   /// Macros which are ignored in front of a statement, as if they were an
   /// attribute. So that they are not parsed as identifier, for example for Qts
-  /// emit. \code
+  /// emit.
+  /// \code
   ///   AlignConsecutiveDeclarations: true
   ///   StatementAttributeLikeMacros: []
   ///   unsigned char data = 'x';
