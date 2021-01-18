@@ -620,6 +620,11 @@ public:
       return false;
     int32_t Key = *MaybeKey;
 
+    // Skip if the key is used for either the tombstone or empty special values.
+    if (DenseMapInfo<int32_t>::getTombstoneKey() == Key ||
+        DenseMapInfo<int32_t>::getEmptyKey() == Key)
+      return false;
+
     // Skip if there is already a member with the same index.
     if (Members.find(Key) != Members.end())
       return false;
