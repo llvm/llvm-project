@@ -29,6 +29,11 @@ enum class MachineCombinerPattern {
   REASSOC_XY_AMM_BMM,
   REASSOC_XMM_AMM_BMM,
 
+  // These are patterns matched by the PowerPC to reassociate FMA and FSUB to
+  // reduce register pressure.
+  REASSOC_XY_BCA,
+  REASSOC_XY_BAC,
+
   // These are multiply-add patterns matched by the AArch64 machine combiner.
   MULADDW_OP1,
   MULADDW_OP2,
